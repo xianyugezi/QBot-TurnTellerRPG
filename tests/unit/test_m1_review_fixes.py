@@ -169,3 +169,21 @@ def test_p18_dup_helpers_removed():
     # effects.DamagePipeline 类是拦截链核心（合法）；damage.DamageContext 已删（P1-1）
     from qbot_rpg.core import damage as D
     assert not hasattr(D, "DamageContext"), "damage.DamageContext 已删"
+
+
+# ---------------- 定稿对照修复（审查_M1_formula_定稿对照_20260818.md）----------------
+def test_formula_h1_monster_hp_pct():
+    """H1：定稿 §二③ L137 [怪物血量百分比] 占位符映射生效。"""
+    from qbot_rpg.core.formula_engine import EvaluatorCtx, evaluate
+    ctx = EvaluatorCtx(attacker={}, target={"hp_pct": 0.5}, battle={}, rng_state=1)
+    assert evaluate("[怪物血量百分比]", ctx) == 0.5
+    assert evaluate("[怪物血量百分比]*100", ctx) == 50.0
+
+
+def test_formula_whitelist_boolean_and_string():
+    """H3/D1：结果类型白名单对齐定稿 L38——boolean→1/0、数值字符串→数值、非数值字符串→0。"""
+    from qbot_rpg.core.formula_engine import EvaluatorCtx, evaluate
+    ctx = EvaluatorCtx(attacker={}, target={}, battle={}, rng_state=1)
+    assert evaluate("true", ctx) == 1.0
+    assert evaluate("false", ctx) == 0.0
+    assert evaluate("'123'", ctx) == 123.0   # 数值字符串（JS 字符串字面量）

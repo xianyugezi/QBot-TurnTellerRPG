@@ -208,6 +208,7 @@ _FIXED_PLACEHOLDERS: Dict[str, Tuple[str, str]] = {
     "[怪物意图]": ("target", "intent"),
     "[怪物行动计数]": ("target", "action_count"),
     "[怪物行动状态]": ("target", "action_state"),
+    "[怪物血量百分比]": ("target", "hp_pct"),  # 定稿 §二③ L137 目标血量 %（H1 定稿对照修复）
     "[当前地图]": ("battle", "map_id"),
     "[BOSS阶段]": ("battle", "boss_phase"),
     # ④ 长线进度/养成类（定稿 §二④；战斗外快照纳入结算引用）
@@ -881,8 +882,17 @@ def _evaluate_fast(js_expr: str, ctx: EvaluatorCtx) -> Optional[Tuple[float, Lis
         value = ev.eval_node(tree.body)
     except Exception:  # noqa: BLE001 —— 白名单求值异常（算术异常/越界等）→ 降级 Node（F-3 兜底）
         return None
-    # 结果类型白名单（定稿 §1.2，对齐 Node `_invoke_runner` 侧）
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
+    # 结果类型白名单（定稿 §1.2 L38：number/boolean/string≤1KB；H3/D1 对齐，与 Node 侧一致）
+    if isinstance(value, bool):
+        value = 1 if value else 0
+    elif isinstance(value, str):
+        if len(value) > 1024:
+            return 0.0, ["result_type:string_too_long"]
+        try:
+            value = float(value)  # 数值字符串（'123' → 123.0）
+        except (ValueError, TypeError):
+            return 0.0, ["result_type:string_non_numeric"]
+    elif not isinstance(value, (int, float)):
         return 0.0, [f"result_type:{type(value).__name__ if value is not None else 'none'}"]
     if isinstance(value, float) and not math.isfinite(value):
         return 0.0, ["result_type:non_finite"]
@@ -954,8 +964,9 @@ def evaluate_detail(expr: str, ctx: EvaluatorCtx) -> Tuple[float, Tuple[str, ...
       4) Python 白名单快路径（ast.parse + 白名单节点/名称求值，μs~ms 级）——大部分公式命中；
          任何白名单外节点/名称/运算异常 → 降级第 5 步（Node fallback，不回退语义）
       5) Node vm.runInNewContext 隔离求值，10ms 超时（F-3）
-      6) 结果类型白名单 int/float；NaN/Infinity/其他类型 → 0 + warning
-    """
+      6) 结果类型白名单（定稿 §1.2 L38：number / boolean / string≤1KB）——boolean→1/0、
+         string≤1KB→尝试数值化（非数值 0+warning）；NaN/Infinity/其他/超长 → 0 + warning
+      """
     warnings: List[str] = []
     if not isinstance(expr, str):
         warnings.append(f"expr_type:{type(expr).__name__}")
@@ -990,7 +1001,19 @@ def evaluate_detail(expr: str, ctx: EvaluatorCtx) -> Tuple[float, Tuple[str, ...
     if not ok:
         warnings.append(f"eval_failed:{err}")
         return 0.0, tuple(warnings)
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
+    # 定稿 §1.2 L38 结果类型白名单：boolean/string(≤1KB) 数值化；其他/超长 → 0（H3/D1 对齐）
+    if isinstance(value, bool):
+        return float(1 if value else 0), tuple(warnings)
+    if isinstance(value, str):
+        if len(value) > 1024:
+            warnings.append("result_type:string_too_long")
+            return 0.0, tuple(warnings)
+        try:
+            return float(value), tuple(warnings)  # 数值字符串（"123" → 123.0）
+        except (ValueError, TypeError):
+            warnings.append("result_type:string_non_numeric")
+            return 0.0, tuple(warnings)
+    if not isinstance(value, (int, float)):
         warnings.append(f"result_type:{type(value).__name__ if value is not None else 'none'}")
         return 0.0, tuple(warnings)
     return float(value), tuple(warnings)

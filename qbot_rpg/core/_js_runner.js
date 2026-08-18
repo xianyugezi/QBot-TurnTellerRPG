@@ -75,10 +75,17 @@ function run(code, sandbox, timeoutMs) {
     filename: 'qbot_formula.js',
   });
 
-  // 结果类型白名单（定稿 §1.2 / 任务要求 int/float）：NaN/Infinity/boolean/string/其他 → 失败兜底
+  // 结果类型白名单（定稿 §1.2 L38：number / boolean / string≤1KB）——boolean/string 数值化交给
+  // Python 侧（evaluate_detail）；超长字符串与 NaN/Infinity/对象 → 失败兜底
   const type = typeof result;
   if (type === 'number' && Number.isFinite(result)) {
     return { ok: true, value: result, type: 'number' };
+  }
+  if (type === 'boolean') {
+    return { ok: true, value: result ? 1 : 0, type: 'boolean' };
+  }
+  if (type === 'string' && result.length <= 1024) {
+    return { ok: true, value: result, type: 'string' };
   }
   return { ok: false, error: 'result_type', type: type, value: null };
 }

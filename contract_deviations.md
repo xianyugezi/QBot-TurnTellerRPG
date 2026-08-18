@@ -48,7 +48,8 @@
 | F-20 | formula_engine 性能专项：每次求值起 Node 子进程 ~100-150ms（已接入 effects 默认求值），战斗内多公式求值会触「单指令 <200ms」预算——Python 白名单快路径 + Node fallback 或常驻 runner | M1-批2 前置 |
 | F-21 | prepare_defense 战斗路径接入：整包效果/状态 → 防御行归一化（P1-2） | M1-批2 battle 组装 |
 | F-22 | 反弹落地闭环：battle 层消费 reflect 副作用事件 → deliver_reflect 回注对方（P1-3） | M1-批2 |
-| F-23 | S6/S7 攻防/三维组合上限接线到效果值聚合（P1-6） | M1-批2 |
+| F-23 | S6/S7 攻防/三维组合上限接线到效果值聚合（P1-6） | M1-批2 已做 |
+| F-24 | 1g1b T2 MP 资源校验缺失（1g1c TC-27「MP 不足被拒不改连段」不可满足）——技能 MP 消耗体系（普攻0/小技5-10/大招15-25，1a §2.2）待技能库阶段接线 | M5 技能库 |
 
 ## 三、跨文档冲突裁决（2026-08-18 主 agent 对照定稿裁决，用户授权）
 
@@ -76,5 +77,13 @@
 - **P1-1 total_damage pipeline 死代码**：删 pipeline 参数 + DamageContext/DamagePipeline 类型（接口不兼容，拦截链由 battle 直连 effects）→ test_p18
 - **P1-7 派生封顶无消费**：新增 apply_derived_cap 纯函数（T32）→ test_p17
 - G-1 快照五块 roundtrip 固化 → test_g1
+
+### M1-批2 审查修复（审查_M1_batch2_20260818.md，2026-08-18）
+- **P0-01 回合开始 dot 致死 ACT→DTH 非法迁移**：_LEGAL_EDGES 补 (ACT,DTH) → test_p001
+- **P0-02 回合结束 tick dot 致死无死亡挂点**（0HP 不死单位/玩家死锁）：end_turn tick 后补 _death_check_side 挂点 → test_p002/test_p004
+- **P1-01 F-21 每段结算前 _refresh_defenses**：新施加防御状态（reflect/absorb/mitigation）次击生效 → test_b7 改走真实装配
+- **P1-02 _make_eval_formula 侧映射按当前行动者**：敌方技能/道具公式语义修正 → test_b8（补敌方侧）
+- **P1-03 R3 dual 2 槽满分支补 _r3_resist**（与 P1-5 收敛目标自洽）
+- BUG-1（trigger_halve 配置生效）在验收缺口路修复
 
 *M0 门禁：96 pytest 用例全绿 + G0 ARCH-OK + verify_m0 G1 exit 0。*

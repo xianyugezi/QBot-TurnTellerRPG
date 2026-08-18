@@ -351,3 +351,16 @@ def test_g4_wild_rest_not_implemented():
     """G-4 野图非战斗 /休息：冷却 -3、HP/MP +20%、一天 3 次上限、战斗中不可用——
     依赖 M3 生活系统（时间引擎/休息指令/回春池），M1 战斗核心无野图状态机 → 不可测。"""
     pytest.skip("G-4 依赖 M3 生活系统（时间/休息指令/回春池），M1 无野图非战斗状态机")
+
+
+# ---------------- 定稿对照修复（审查_M1_effects_定稿对照_20260818.md G3） ----------------
+def test_g3_reflect_also_mitigates():
+    """定稿 §3.4③ L138「按 % 减伤并反弹」：反弹 20% 承受 100 → 实伤 80 + 反弹 20 给攻击者。
+    （G3 修复：原实现只反弹不减伤。）"""
+    pipe = DamagePipeline()
+    snap = base_snapshot()
+    snap["enemy"]["defenses"]["reflect"] = {"value": 20, "pct": True, "active": True}
+    r = pipe.damage_pipeline(ctx(snap, 100), EffectRuntime())
+    refl = [e for e in r.side_effects if e["type"] == "reflect"]
+    assert len(refl) == 1 and refl[0]["damage"] == 20
+    assert r.final_damage == 80, f"反弹应同时减伤：{r.final_damage}"

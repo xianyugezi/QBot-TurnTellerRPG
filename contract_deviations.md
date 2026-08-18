@@ -50,6 +50,11 @@
 | F-22 | 反弹落地闭环：battle 层消费 reflect 副作用事件 → deliver_reflect 回注对方（P1-3） | M1-批2 |
 | F-23 | S6/S7 攻防/三维组合上限接线到效果值聚合（P1-6） | M1-批2 已做 |
 | F-24 | 1g1b T2 MP 资源校验缺失（1g1c TC-27「MP 不足被拒不改连段」不可满足）——技能 MP 消耗体系（普攻0/小技5-10/大招15-25，1a §2.2）待技能库阶段接线 | M5 技能库 |
+| F-25 | element_modifier 元素附加/转化触发容器未实现（effects 定稿对照 G1） | M2/M5 |
+| F-26 | pierce 魔法穿透 target=spr（无视一定百分比精神，定稿 §3.2/L121）未承接——execute_action pierce 仅 def，battle 元素管线未接 | M5 技能库 |
+| F-27 | tpl_* 生存模板库（tpl_shield_30/15、tpl_mitigation_*、tpl_lifesteal_10、tpl_heal_* 等）零实现 + effects/statuses/marks 三表内容沉淀（G4） | 数据包阶段 |
+| F-28 | 免死约束校验器空转（定稿 §9.2-6/H1：免死 1-3 次+致命免疫+续行互斥提示+PVP 可禁）未接线（G5） | M1 批3 / 效果校验 |
+| F-29 | 反击特效引擎归口——反击=proc(on_hit) 容器接线未完成（G6，内容包作者配 defense 特效） | M1 批3 |
 
 ## 三、跨文档冲突裁决（2026-08-18 主 agent 对照定稿裁决，用户授权）
 

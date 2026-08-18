@@ -67,6 +67,7 @@ from qbot_rpg.core.damage import (
     channel_elem,
     channel_phys,
     crit_roll,
+    crit_prob,
     defense_factor,
     effective_con,
     elem_factor,
@@ -1127,9 +1128,16 @@ class BattleEngine:
             lck = float(ac.get("lck", 50))
             super_crit_lv = int(ac.get("super_crit_lv", 0) or 0)
             crit_r = self._roll()
+            # G1 定稿对照修复（damage 定稿对照 G1）：斩击会心 +5%（数值层 L92/L216
+            # type_affinity.slash_crit）实战零生效——crit_prob 原全库零调用、crit_roll 无加成/
+            # cap。现在先算有效 P（含 slash 加成 + cap 95，判定前应用，细化_1a §5-⑦）再判档。
+            slash_bonus = p.type_affinity.slash_crit if atk_type == "slash" else 0.0
+            p_eff = crit_prob(lck, p_coef=p.crit.p_coef, crit_bonus=0.0,
+                              cap=p.crit.cap, slash_crit=slash_bonus)
             crit_id, crit_mult = crit_roll(
                 crit_r, lck, p_coef=p.crit.p_coef, tiers=p.crit.tiers,
                 tier_p=p.crit.tier_p, super_crit_level=super_crit_lv,
+                p_override=p_eff,
             )
             rating["crit"] = crit_id
 
@@ -1156,6 +1164,9 @@ class BattleEngine:
             attack_value = float(ac.get("atk", 0))
             if magic:
                 attack_value = float(ac.get("int", ac.get("mag", attack_value)))
+            # G3 定稿对照修复（damage 定稿对照 G3）：base_attack_mult（M2 全局攻击倍率基线，
+            # 数值层 L179/细化_1a §1.2）实战零消费——现乘入物理通道首因子。
+            attack_value *= p.base_attack_mult
             weak_mult = float(seg.get("weakness_mult", 1.0))
             ch_phys = channel_phys(attack_value, skill_mult, weak_mult, crit_mult, df,
                                    monster_def_rate=p.monster_def_rate)

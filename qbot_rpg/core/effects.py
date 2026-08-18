@@ -1126,7 +1126,7 @@ class DamagePipeline:
         return d
 
     def _stage_reflect(self, ctx: DamageCtx, runtime: EffectRuntime, se: list, d: int) -> int:
-        """③ 反弹（细化_1b §2 阶段③ / 定稿 §3.4③：反弹伤害不触发反弹，§3.5）。"""
+        """③ 反弹（细化_1b §2 阶段③ / 定稿 §3.4③：**按 % 减伤并反弹**；反弹伤害不触发反弹，§3.5）。"""
         if ctx.variables.get("is_reflect_damage", False):
             return d  # 派生伤害不触发对侧反弹（定稿 §3.5）
         defs = self._defense(ctx, ctx.target)
@@ -1144,6 +1144,9 @@ class DamagePipeline:
                     "damage": reflect_damage,
                 }
             )
+            # G3 定稿对照修复（定稿 §3.4③ L138「按 % 减伤并反弹」）：反弹同时按同 % 减少本次实伤
+            # —— 原实现只反弹不减伤（审查_M1_effects_定稿对照 G3 缺漏半支）。
+            d = max(0, d - reflect_damage)
         return d
 
     def _stage_absorb(self, ctx: DamageCtx, runtime: EffectRuntime, se: list, d: int) -> int:

@@ -646,6 +646,7 @@ class EffectRuntime:
                 self.status_instances(target).append(inst)
                 side_effects.append({"type": "status_dual_added", "target": target, "status_id": status_id})
                 self._after_apply(inst, raw, negative, target, status_id)
+                self._r3_resist(target, status_id, raw, negative)   # P1-03（dsh 批2）：2 槽满覆盖同属施加成功，R3 抗性不漏
                 return StatusApplyResult(True, status_id, inst, "dual_added", side_effects)
             inst = self._new_instance(status_id, name, first_action_value, turns, charges, decay, decay_subject, source, category=category)
             inst["level"] = 1

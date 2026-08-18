@@ -108,8 +108,11 @@ def test_b6_turn_advance_and_next_round_act():
 
 
 def test_b7_reflect_lands_on_attacker():
-    eng = make().start(PLAYER, ENEMY, random_seed=17)
-    eng._snap["enemy"]["defenses"] = {"reflect": {"value": 20, "pct": True, "active": True}}
+    # 走真实装配（F-21 prepare_defense）：effect type=reflect -> defenses.reflect（P1-01 后手动注入会被每段刷新洗掉）
+    refl = {"id": "refl", "name": "反伤", "class": "effect", "type": "reflect",
+            "actions": [{"type": "reflect", "value": 20, "pct": True}]}
+    eng = make(defs={"refl": refl}).start(PLAYER, ENEMY, random_seed=17)
+    eng.set_effect_ids("enemy", ["refl"])  # 触发 _refresh_defenses 折叠
     hp0 = eng.battle_state()["player"]["hp"]
     eng.do_action("player", {"type": "normal", "mult": 1.0})
     hp1 = eng.battle_state()["player"]["hp"]
@@ -120,3 +123,40 @@ def test_b8_formula_injection():
     eng = make().start(PLAYER, ENEMY, random_seed=18)
     fn = eng._make_eval_formula()
     assert fn("[我方攻击]*2+10") == 210.0
+
+
+# ---------------- P0 回归（dsh 批2 审查）：dot 致死两通道 ----------------
+def test_p001_turn_start_dot_lethal():
+    """P0-01 回归：回合开始 dot 致死不抛 BattleStateError，正常终局（1g1c TC-02/13）。"""
+    enemy = dict(ENEMY); enemy["hp"] = 50
+    eng = make().start(PLAYER, enemy, random_seed=19)   # 回合1 ACT（start_turn 已跑，无 dot）
+    eng._snap["enemy"]["dot_pool"] = {"poison": {"value": 100, "tick": "turn_start", "turns": 1,
+                                                 "source": "player"}}
+    # 走完整一轮：guard（玩家不攻击避免打死）-> 敌后手 -> end_turn 内部 start_turn（回合2）
+    # ① turn_start dot 打 enemy 50->0 -> 死亡挂点（原 ACT->DTH 抛 BattleStateError）
+    eng.do_action("player", {"type": "guard"})
+    eng.enemy_act()
+    eng.end_turn()
+    assert eng.finished, "dot 致死应触发终局而非崩溃"
+    assert eng.battle_state()["status"] == "win"
+
+
+def test_p002_turn_end_tick_dot_lethal():
+    """P0-02 回归：回合结束 tick dot 致死 → 死亡挂点 + 终局（1g1c TC-03，死不穿透回合边界）。"""
+    enemy = dict(ENEMY); enemy["hp"] = 50
+    eng = make().start(PLAYER, enemy, random_seed=20)
+    eng._snap["enemy"]["dot_pool"] = {"fire": {"value": 100, "tick": "turn_end", "turns": 1,
+                                               "source": "player"}}
+    rep = eng.end_turn()   # tick 内 dot -> 50 -> 0 -> 死亡挂点（原 HP=0 不死单位死锁）
+    assert eng.finished, "tick dot 致死应终局而非 0HP 不死单位"
+    assert eng.battle_state()["status"] == "win"
+
+
+def test_p004_tick_dot_on_player_lose():
+    """P0-02 玩家侧：回合结束 tick dot 打玩家致 0 → mark_lose（原玩家死锁）。"""
+    player = dict(PLAYER); player["hp"] = 30
+    eng = make().start(player, ENEMY, random_seed=21)
+    eng._snap["player"]["dot_pool"] = {"bleed": {"value": 100, "tick": "turn_end", "turns": 1,
+                                                 "source": "enemy"}}
+    rep = eng.end_turn()
+    assert eng.finished and eng.battle_state()["status"] == "lose"

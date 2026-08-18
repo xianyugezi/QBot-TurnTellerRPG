@@ -141,6 +141,8 @@ _LEGAL_EDGES: frozenset = frozenset(
         (STATE_ACT, STATE_RES),      # 1g1b T2
         (STATE_ACT, STATE_FLY),      # 1g1b T6 边界逃跑
         (STATE_ACT, STATE_SNP),      # 1g1b T7 边界中断
+        (STATE_ACT, STATE_DTH),      # （P0-01 修复）回合开始 dot 即死通道：start_turn ① 段
+                                     # 在 ACT 态挂 DTH（1g1b 不变量2 回合开始②；1g1c TC-02/13）
         (STATE_RES, STATE_DTH),      # 1g1b T3 每段扣血后
         (STATE_RES, STATE_ACT),      # 1g1b T8（下一行动者/后手）
         (STATE_DTH, STATE_RES),      # 1g1b T3 未死回结算 / 套内续段 A4
@@ -425,9 +427,12 @@ class BattleEngine:
         c.setdefault("miss_streak", 0)
         return c
 
-    def _make_eval_formula(self) -> Callable[[str], float]:
+    def _make_eval_formula(self, attacker: str = "player", target: str = "enemy") -> Callable[[str], float]:
         """公式引擎接线：注入 formula_engine.evaluate，携带战斗 rng_state 确定性，
         并组装 EvaluatorCtx（attacker/target/battle 变量映射，变量体系 §一/§二）。
+
+        P1-02 修复（dsh 批2 P1-02）：原实现闭包固定 player/enemy，敌方技能/道具内
+        含 [我方攻击]/[对方攻击] 的公式按错误侧解析。现在按当前行动者参数组装侧映射。
 
         依据：细化_1b F 组（F-1~F-5）+ contract_deviations P0-2；effects
         _resolve_value 优先取 ctx.variables['eval_formula']（P0-2 修复路径）。
@@ -444,8 +449,8 @@ class BattleEngine:
 
         def _eval(expr: str) -> float:
             ectx = EvaluatorCtx(
-                attacker=self._combat_map("player"),
-                target=self._combat_map("enemy"),
+                attacker=self._combat_map(attacker),
+                target=self._combat_map(target),
                 battle=battle_map,
                 rng_state=self._rng_seed,
             )
@@ -458,7 +463,7 @@ class BattleEngine:
         return {
             "rng": self._rng,
             "rng_state": self._rng_seed,
-            "eval_formula": self._make_eval_formula(),
+            "eval_formula": self._make_eval_formula(attacker, target),  # P1-02：随当前行动者切换侧映射
             "pipeline": self._pipeline,
             "is_reflect_damage": False,
             "attacker": self._combat_map(attacker),
@@ -1094,6 +1099,10 @@ class BattleEngine:
 
         for idx, seg in enumerate(segments, start=1):
             seg = dict(seg)
+            # P1-01 修复（dsh 批2 P1-01）：每段结算前刷新防御行——战斗中新施加的
+            # 反射/吸收/减伤状态（status_actions 折叠）次击即可进 defenses 生效
+            # （F-21 prepare_defense 归一化，docstring 自述「每次结算前刷新」）。
+            self._refresh_defenses()
             rt = self._new_runtime()
             # ---- ① 命中（1a §1 签名：hit_rate(专注, 对方敏捷)）----
             focus = float(ac.get("foc", 50))
@@ -1314,6 +1323,13 @@ class BattleEngine:
         rt = self._new_runtime()
         log = tick_turn_end(self._snap, rt)
         self._absorb_runtime(rt)
+
+        # P0-02 修复：回合结束 tick 内 dot（tick=turn_end）扣血致死 → 死亡判定挂点
+        # （1g1c §1.4「死而未结算不得穿透回合边界」/ TC-03）。原实现 tick 后只读
+        # result.marks 不读 HP → HP=0 不死单位、怪物胜被无限推迟、玩家死则死锁。
+        for side in BATTLE_SIDES:
+            if int(self._combat(side).get("hp", 0)) <= 0:
+                self._death_check_side(side, "turn_end_dot")
 
         # ⑦⑧ 互杀 + 战斗结束判定
         out = self._resolve_battle_end(force=False)

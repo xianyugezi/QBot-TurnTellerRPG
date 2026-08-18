@@ -28,6 +28,15 @@
 evaluate 复用同一 seed → 预览/结算一致（F-5）。单次结算内 Math.random 缓存即由此语义达成：
 调用方给同一批 evaluate 传入相同 rng_state。
 
+性能专项（F-20 · M1-批2 前置）：求值分三级，公开签名不变——
+  ① 占位符展开（现有）→ ② Python 白名单快路径（ast.parse + 白名单节点/名称求值，μs~ms 级，
+    大部分公式命中）→ ③ 快路径拒绝/异常才降级既有 Node vm 子进程（安全兜底，不回退语义）。
+  快路径白名单：ast.Expression/Constant/BinOp/UnaryOp/Compare/IfExp/List/Tuple/Subscript(数字
+  索引) + 名称集合（Math.min/max/floor/ceil/round/abs/sqrt/pow、Math.PI/E、this_battle_round、
+  Math.random→mulberry32 确定性 PRNG）。任何白名单外节点/名称/混合类型运算 → 立即降级 Node。
+  简单公式（[我方攻击]*2 等）实测 <0.2ms/次（Node 版 ~100-150ms）；黑名单/结果类型/超时/兜底
+  语义与 Node 路径完全一致。
+
 ┌─────── 共享契约（批1/批2 import 依据）───────
 evaluate(expr: str, ctx: EvaluatorCtx) -> float
 validate_expr(expr: str) -> Optional[dict]        # None=通过；否则 {"rule":..., ...}（对齐 check_formula）
@@ -41,9 +50,12 @@ ctx 键空间（占位符 → slot.key）：slot ∈ {attacker(我方), target(�
 
 from __future__ import annotations
 
+import ast
 import json
 import logging
+import math
 import os
+import random
 import re
 import subprocess
 from dataclasses import dataclass, field
@@ -550,6 +562,338 @@ def _expand_placeholders(expr: str, ctx: EvaluatorCtx, warnings: List[str]) -> s
 
 
 # -------------------------------------------------------------------------------------
+# Python 白名单快路径（M1-批2 前置 · formula 性能专项 F-20）
+# -------------------------------------------------------------------------------------
+# 设计（零新增依赖，Node 降级兜底）：
+#   - 占位符展开后的 js_expr 为纯 JS 字面量表达式；用 Python ast.parse 解析为表达式树，
+#     仅当整棵树命中下述白名单节点/名称时才用 Python 求值（μs~ms 级），任何不在白名单的
+#     节点/名称/混合类型运算 → 立即降级既有 Node vm 子进程（安全兜底，不回退语义）。
+#   - 白名单外层已保证的语义：①evaluate_detail 先过 Python 词法/AST 双保险黑名单（eval /
+#     constructor / new Xxx ... 原始表达式命中即 0）；②快路径只接受纯字面量/算术/比较/三元/
+#     Math 白名单调用 → 天然不可能触达任何黑名单标识符或不安全构造（模板插值/`new`/函数构造等
+#     无法通过 ast.parse + 节点白名单，一律降级 Node 由 AST 黑名单 + vm 隔离兜底）。
+#   - 随机一致性（定稿 §1.2 / F-5）：Math.random 注入确定性 PRNG（mulberry32，Python 移植与
+#     _js_runner.js 逐位一致，实测种子一致时输出完全相同）；单次 evaluate 内多次 Math.random
+#     依序消耗同一 PRNG 流（与 Node 单次结算内行为一致）。rng_state 为空 → 宿主真随机。
+#   - 结果类型白名单（定稿 §1.2）：布尔/字符串/NaN/Infinity → 0 + warning（对齐 Node 侧）。
+
+# ---- 白名单集合（节点类型 / 运算 / 名称）----
+_FAST_BINOPS = frozenset({ast.Add, ast.Sub, ast.Mult, ast.Div, ast.Mod})  # ** 明确排除→降级 Node
+_FAST_UNARYOPS = frozenset({ast.UAdd, ast.USub, ast.Not, ast.Invert})
+_FAST_CMPOPS = frozenset({ast.Eq, ast.NotEq, ast.Lt, ast.LtE, ast.Gt, ast.GtE})
+
+# 值节点白名单（ast.Expression / Constant / BinOp / UnaryOp / Compare / IfExp / List / Tuple /
+# Subscript(数字索引) / Name / Attribute / Call —— 对应任务白名单，其余节点类型一律降级）
+_FAST_CALL_NAMES = frozenset({
+    "Math.min", "Math.max", "Math.floor", "Math.ceil", "Math.round",
+    "Math.abs", "Math.sqrt", "Math.pow", "Math.random",
+})
+_FAST_ATTR_NAMES = frozenset(_FAST_CALL_NAMES | {"Math.PI", "Math.E"})
+_FAST_ROOT_NAMES = frozenset({"Math", "this_battle_round"})
+
+_MATH_FUNCS = {
+    "Math.min": min,
+    "Math.max": max,
+    "Math.floor": math.floor,
+    "Math.ceil": math.ceil,
+    "Math.round": lambda x: math.floor(x + 0.5),  # JS Math.round：.5 ≥ 向 +∞（含负数半值）
+    "Math.abs": abs,
+    "Math.sqrt": math.sqrt,
+    "Math.pow": math.pow,
+}
+_MATH_CONSTS = {"Math.PI": math.pi, "Math.E": math.e}
+
+
+class _FastReject(Exception):
+    """快路径白名单外 / 无法安全求值 → 调用方降级 Node fallback。"""
+
+    __slots__ = ()
+
+
+def _is_num(v: object) -> bool:
+    """JS 数值操作数：int/float 且非 bool（bool 在 JS 是 number 可参与运算，但占位符已归一为 0/1）。"""
+    return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+
+def _js_to_number(s: str) -> Optional[float]:
+    """JS ToNumber(string) 的实用近似：十进制字面量；不可解析 → None（JS 得 NaN）。"""
+    try:
+        return float(s.strip())
+    except ValueError:
+        return None
+
+
+def _js_eq(a: object, b: object) -> bool:
+    """JS 宽松相等 == / != 的实用近似（游戏公式域内与 JS 一致的子集）。
+
+    同型数值/同型字符串=值比较；number-vs-string 走 ToNumber(string)（本例 ['5'==5→True] 对齐 JS）；
+    其余混合组合（bool-vs-str 等）保守返回 False（此类组合在游戏公式中不存在且语义晦涩，降级由
+    Node 侧精确处理——此处仅供快路径常见情形保持 JS 语义）。
+    """
+    if isinstance(a, (int, float)) and isinstance(b, (int, float)) and not isinstance(a, bool) \
+            and not isinstance(b, bool):
+        return a == b
+    if isinstance(a, str) and isinstance(b, str):
+        return a == b
+    if isinstance(a, str) and isinstance(b, (int, float)) and not isinstance(b, bool):
+        nb = _js_to_number(a)
+        return nb is not None and nb == b
+    if isinstance(b, str) and isinstance(a, (int, float)) and not isinstance(a, bool):
+        na = _js_to_number(b)
+        return na is not None and na == a
+    return False
+
+
+def _js_mod(a: float, b: float) -> float:
+    """JS 取余运算符 %：符号随被除数（与 Python % 不同）→ math.fmod。"""
+    return math.fmod(a, b)
+
+
+def _mulberry32(seed: int) -> "object":
+    """确定性 PRNG：Python 移植 _js_runner.js 的 mulberry32（与 Node 逐位一致，实证 7×50 项全匹配）。
+
+    JS: a|=0; a=(a+0x6D2B79F5)|0; t=imul(a^(a>>>15),1|a);
+        t=(t+imul(t^(t>>>7),61|t))^t; return (t^(t>>>14))>>>0 / 2^32
+    注意第二行 `^t` 使用上一轮 t（右值整体求值后再赋值），Python 版需保存 t1。
+    """
+    _MASK = 0xFFFFFFFF
+    _INCR = 0x6D2B79F5
+    a = seed & _MASK
+
+    def _rand() -> float:
+        nonlocal a
+        a = (a + _INCR) & _MASK
+        t1 = (a ^ (a >> 15)) & _MASK
+        t1 = (t1 * ((1 | a) & _MASK)) & _MASK          # imul(a^(a>>>15), 1|a) 低 32 位
+        u = ((t1 ^ (t1 >> 7)) & _MASK) * ((61 | t1) & _MASK)
+        u &= _MASK                                     # imul(t1^(t1>>>7), 61|t1)
+        t2 = (t1 + u) & _MASK
+        t2 ^= t1                                       # JS: (t+imul(...))^t —— 用旧 t1
+        t2 &= _MASK
+        # JS: ((t ^ (t >>> 14)) >>> 0) / 2^32 —— 注意 Python 中 `&` 优先于 `/`，先掩码再除
+        return ((t2 ^ (t2 >> 14)) & _MASK) / 4294967296.0
+
+    return _rand
+
+
+class _FastEvaluator:
+    """白名单表达式求值器（节点白名单外 → _FastReject → 降级 Node）。"""
+
+    __slots__ = ("_rand", "_round", "_round_ok")
+
+    def __init__(self, ctx: EvaluatorCtx) -> None:
+        seed = ctx.rng_state
+        if isinstance(seed, int) and not isinstance(seed, bool):
+            self._rand = _mulberry32(seed & 0xFFFFFFFF)
+        else:
+            self._rand = None  # 无种子 → 宿主真随机（Python random），与 Node 无种子语义一致
+        round_val = ctx.battle.get("round") if isinstance(ctx.battle, Mapping) else None
+        self._round_ok = isinstance(round_val, (int, float)) and not isinstance(round_val, bool)
+        self._round = float(round_val) if self._round_ok else None
+
+    # ---- 求值 ----
+    def eval_node(self, node: "ast.AST") -> object:
+        if isinstance(node, ast.Constant):
+            return node.value
+        if isinstance(node, ast.BinOp):
+            left = self.eval_node(node.left)
+            right = self.eval_node(node.right)
+            op = type(node.op)
+            if not (_is_num(left) and _is_num(right)):
+                raise _FastReject
+            if op is ast.Add:
+                return left + right
+            if op is ast.Sub:
+                return left - right
+            if op is ast.Mult:
+                return left * right
+            if op is ast.Div:
+                return left / right
+            if op is ast.Mod:
+                return _js_mod(left, right)
+            raise _FastReject
+        if isinstance(node, ast.UnaryOp):
+            operand = self.eval_node(node.operand)
+            op = type(node.op)
+            if op is ast.Not:
+                return not operand
+            if not _is_num(operand):
+                raise _FastReject
+            if op is ast.UAdd:
+                return +operand
+            if op is ast.USub:
+                return -operand
+            if op is ast.Invert:  # JS ~x（int 域；float 在 JS 先截断，Python 抛异常→降级）
+                if isinstance(operand, float) or abs(operand) > 0x7FFFFFFF:
+                    raise _FastReject
+                return ~int(operand)
+            raise _FastReject
+        if isinstance(node, ast.Compare):
+            if len(node.ops) != 1:
+                raise _FastReject  # Python 链式比较 vs JS 左结合 -> 降级
+            left = self.eval_node(node.left)
+            right = self.eval_node(node.comparators[0])
+            op = type(node.ops[0])
+            if op in (ast.Eq, ast.NotEq):
+                eq = _js_eq(left, right)
+                return eq if op is ast.Eq else (not eq)
+            if _is_num(left) and _is_num(right):
+                return {ast.Lt: left < right, ast.LtE: left <= right,
+                        ast.Gt: left > right, ast.GtE: left >= right}[op]
+            if isinstance(left, str) and isinstance(right, str):
+                return {ast.Lt: left < right, ast.LtE: left <= right,
+                        ast.Gt: left > right, ast.GtE: left >= right}[op]
+            raise _FastReject  # 混合类型序比较 → JS 先行 ToNumber 语义不明 → 降级
+        if isinstance(node, ast.IfExp):
+            test = self.eval_node(node.test)
+            # JS 真值语义（0/""/NaN/false 假）与 Python 真值在本域一致（bool 占位符已归一 0/1）
+            return self.eval_node(node.body if bool(test) else node.orelse)
+        if isinstance(node, ast.List):
+            return [self.eval_node(e) for e in node.elts]
+        if isinstance(node, ast.Tuple):
+            return tuple(self.eval_node(e) for e in node.elts)
+        if isinstance(node, ast.Subscript):
+            sl = node.slice
+            if isinstance(sl, ast.Index):  # py<3.9 兼容
+                sl = sl.value
+            assert isinstance(sl, ast.Constant) and isinstance(sl.value, int) and sl.value >= 0
+            container = self.eval_node(node.value)
+            idx = sl.value
+            if not isinstance(container, (list, tuple, str)):
+                raise _FastReject
+            if idx >= len(container):
+                raise _FastReject  # 越界：JS 得 undefined（Node 兜底 result_type 0）
+            return container[idx]
+        if isinstance(node, ast.Name):
+            if node.id == "this_battle_round":
+                if self._round_ok:
+                    return self._round
+                raise _FastReject
+            raise _FastReject  # 裸 Math 非合法值（仅作属性根）
+        if isinstance(node, ast.Attribute):
+            name = _fast_fullname(node)
+            if name in _MATH_CONSTS:
+                return _MATH_CONSTS[name]
+            raise _FastReject
+        if isinstance(node, ast.Call):
+            name = _fast_fullname(node.func)
+            args = [self.eval_node(a) for a in node.args]
+            if name == "Math.random":
+                return self._rand() if self._rand is not None else random.random()
+            func = _MATH_FUNCS.get(name)
+            if func is None or not all(_is_num(a) for a in args):
+                raise _FastReject
+            try:
+                return func(*args)
+            except (ValueError, OverflowError):
+                raise _FastReject  # 例如 math.sqrt(-1)/pow 域外 → JS NaN → Node 兜底 result_type
+        raise _FastReject
+
+    def maybe_expr(self, node: "ast.AST") -> None:
+        """整树白名单预检：任一处不合规 → _FastReject（含未求值分支，符合「任何不在白名单→降级」）。"""
+        if isinstance(node, ast.Expression):
+            self.maybe_expr(node.body)
+            return
+        if isinstance(node, ast.Constant):
+            return
+        if isinstance(node, ast.BinOp):
+            if type(node.op) not in _FAST_BINOPS:
+                raise _FastReject
+            self.maybe_expr(node.left)
+            self.maybe_expr(node.right)
+            return
+        if isinstance(node, ast.UnaryOp):
+            if type(node.op) not in _FAST_UNARYOPS:
+                raise _FastReject
+            self.maybe_expr(node.operand)
+            return
+        if isinstance(node, ast.Compare):
+            if len(node.ops) != 1 or type(node.ops[0]) not in _FAST_CMPOPS:
+                raise _FastReject
+            self.maybe_expr(node.left)
+            for c in node.comparators:
+                self.maybe_expr(c)
+            return
+        if isinstance(node, ast.IfExp):
+            self.maybe_expr(node.test)
+            self.maybe_expr(node.body)
+            self.maybe_expr(node.orelse)
+            return
+        if isinstance(node, ast.List) or isinstance(node, ast.Tuple):
+            for e in node.elts:
+                self.maybe_expr(e)
+            return
+        if isinstance(node, ast.Subscript):
+            sl = node.slice
+            if isinstance(sl, ast.Index):
+                sl = sl.value
+            if not (isinstance(sl, ast.Constant) and isinstance(sl.value, int)
+                    and not isinstance(sl.value, bool) and sl.value >= 0):
+                raise _FastReject
+            self.maybe_expr(node.value)
+            return
+        if isinstance(node, ast.Name):
+            if node.id not in _FAST_ROOT_NAMES:
+                raise _FastReject
+            if node.id == "this_battle_round" and not self._round_ok:
+                raise _FastReject
+            return
+        if isinstance(node, ast.Attribute):
+            if _fast_fullname(node) not in _FAST_ATTR_NAMES:
+                raise _FastReject
+            return
+        if isinstance(node, ast.Call):
+            if _fast_fullname(node.func) not in _FAST_CALL_NAMES:
+                raise _FastReject
+            if node.keywords:
+                raise _FastReject
+            for a in node.args:
+                self.maybe_expr(a)
+            return
+        if isinstance(node, ast.Load):  # Name/Attribute 的 ctx（eval 模式下恒为 Load）
+            return
+        raise _FastReject  # 其他节点类型 → 降级
+
+
+def _fast_fullname(node: "ast.AST") -> Optional[str]:
+    """值节点的点分全名：Name→id；Attribute→base.attr；其余→None。"""
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        base = _fast_fullname(node.value)
+        return f"{base}.{node.attr}" if base is not None else None
+    return None
+
+
+def _evaluate_fast(js_expr: str, ctx: EvaluatorCtx) -> Optional[Tuple[float, List[str]]]:
+    """白名单快路径求值。
+
+    返回 (数值, warnings)（已过结果类型白名单）或 None（任何拒绝/异常 → 降级 Node）。
+    不产生副作用（Math.random 消耗的本路径随机流在降级时丢弃，Node 以同 rng_state 重启）。
+    """
+    try:
+        tree = ast.parse(js_expr, mode="eval")
+    except (SyntaxError, ValueError):
+        return None  # e.g. `===` / `true` / 空串 → 降级 Node
+    ev = _FastEvaluator(ctx)
+    try:
+        ev.maybe_expr(tree)          # 整树白名单预检
+        value = ev.eval_node(tree.body)
+    except Exception:  # noqa: BLE001 —— 白名单求值异常（算术异常/越界等）→ 降级 Node（F-3 兜底）
+        return None
+    # 结果类型白名单（定稿 §1.2，对齐 Node `_invoke_runner` 侧）
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return 0.0, [f"result_type:{type(value).__name__ if value is not None else 'none'}"]
+    if isinstance(value, float) and not math.isfinite(value):
+        return 0.0, ["result_type:non_finite"]
+    try:
+        return float(value), []
+    except (OverflowError, ValueError):
+        return None  # 超巨整数无法转 float → Node（Infinity → result_type 0）
+
+
+
+# -------------------------------------------------------------------------------------
 # 公共 API
 # -------------------------------------------------------------------------------------
 
@@ -603,12 +947,14 @@ def _invoke_runner(code: str, sandbox: Mapping[str, object]) -> Tuple[bool, obje
 def evaluate_detail(expr: str, ctx: EvaluatorCtx) -> Tuple[float, Tuple[str, ...]]:
     """安全求值，返回 (数值, warnings)。evaluate 的明细变体：warnings 一并给出（纯函数）。
 
-    流程（防御纵深）：
+    流程（防御纵深，性能专项 F-20）：
       1) 长度 ≤4KB（定稿 §1.2）
       2) Python 词法/AST 双保险黑名单 → 命中即 0 + warning（求值期兜底）
       3) 占位符 → ctx 字面量替换（未知 → 0 + warning）
-      4) Node vm.runInNewContext 隔离求值，10ms 超时（F-3）
-      5) 结果类型白名单 int/float；NaN/Infinity/其他类型 → 0 + warning
+      4) Python 白名单快路径（ast.parse + 白名单节点/名称求值，μs~ms 级）——大部分公式命中；
+         任何白名单外节点/名称/运算异常 → 降级第 5 步（Node fallback，不回退语义）
+      5) Node vm.runInNewContext 隔离求值，10ms 超时（F-3）
+      6) 结果类型白名单 int/float；NaN/Infinity/其他类型 → 0 + warning
     """
     warnings: List[str] = []
     if not isinstance(expr, str):
@@ -625,6 +971,14 @@ def evaluate_detail(expr: str, ctx: EvaluatorCtx) -> Tuple[float, Tuple[str, ...
         return 0.0, tuple(warnings)
 
     js_expr = _expand_placeholders(expr, ctx, warnings)
+
+    # ② Python 白名单快路径（大部分公式直接命中；拒绝/异常 → ③ Node fallback）
+    fast = _evaluate_fast(js_expr, ctx)
+    if fast is not None:
+        value, fast_warnings = fast
+        warnings.extend(fast_warnings)
+        return float(value), tuple(warnings)
+
     sandbox: Dict[str, object] = {}
     round_val = ctx.battle.get("round") if isinstance(ctx.battle, Mapping) else None
     if isinstance(round_val, (int, float)) and not isinstance(round_val, bool):

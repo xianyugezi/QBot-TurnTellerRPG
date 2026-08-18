@@ -725,7 +725,9 @@ class EffectRuntime:
         """施加后处理：I6 消耗性免疫计数与 D4 trigger 衰减形态落库。"""
         if isinstance(inst, dict):
             inst.setdefault("category", str(raw.get("category", "other")))
-            inst.setdefault("trigger_halve", bool(raw.get("trigger_halve", False)))
+            # BUG-1 修复：原 setdefault 不覆盖 _new_instance 硬编码的 False → trigger_halve:true
+            # 被静默忽略（40→39→38 而非 40→20→10）。decay 形态是 status 配置，由 raw 决定。
+            inst["trigger_halve"] = bool(raw.get("trigger_halve", False))
             immunity = raw.get("immune_vs") or ""
             if immunity in ("status", "damage", "interrupt", "all"):
                 uses = int(raw.get("immune_uses") or 0)

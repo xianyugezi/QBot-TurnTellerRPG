@@ -10,9 +10,9 @@
 | # | 接缝 | 定稿内并存写法 | 本 schema 裁决 | 依据 |
 |---|---|---|---|---|
 | S1 | 行动概率语义 | ① action.json `probability` 注释"入池开关（0=锚点/1=入池，数值不参与概率计算）"；② §6.2 "weight 归一化：普攻 50/重击 30/蓄力 20，probability=1 入池"；③ §十二 enemies 条目同含 probability+weight | **probability ∈ {0,1} 纯入池开关；概率=weight 归一化，仅 probability=1 条目参与随机池；probability=0 只被链/条件/状态机触发**（三处一致，无歧义，只做字段化） | L138、L145、L279 |
-| S2 | 连招载体 | ① action.json 内嵌 `chain`（历史写法）；② "新配置连招一律走 enemies 顶层 `chains` 表" | **顶层 `chains` 为唯一新配置载体（可选字段，见 1.1-F14）；旧 action.json `chain` 保留读兼容，校验器提示迁移** | L137、L269；AI 定稿 L502、L512-515 |
+| S2 | 连招载体 | ① action.json 内嵌 `chain`（历史写法）；② "新配置连招一律走 enemies 顶层 `chains` 表" | **顶层 `chains` 为唯一新配置载体（可选字段，见 1.1-F14）；旧 action.json `chain` 保留读兼容，校验器提示迁移** | L137、L269；AI 定稿 L248-266 |
 | S3 | 特殊行动触发类 | ① §7.1 面向示例 5 类；② 权威枚举=怪物行动AI定稿 §二 13 类（hp_below/pv_broken/get_up/battle_start/after_action/player_status/player_hp_below/turn_count/phase_changed/zone_changed/ally_dead/combo_broken/script，x_ 前缀可扩展）；旧枚举为兼容别名（R-01 裁决） | **以 AI 定稿权威 13 类枚举为准**（细化_0 R-01）；§7.1 的 5 类为其语义缩略，映射见 1.4-表 | L156-161 vs L296 |
-| S4 | 触发示例别名 | §七示例 JSON 用 `pv_broken`/`get_up`/`battle_start`，校验器枚举为 `broken`/`revive`/`enter_phase` | **canonical = 枚举名；示例名为别名，校验器接受并提示规范化（不拦截）** | L178-183 vs L296 |
+| S4 | 触发示例别名 | §七示例 JSON 用 `pv_broken`/`get_up`/`battle_start`（=权威枚举名）；旧稿的 `broken`/`revive`/`enter_phase` 为兼容别名 | **canonical = AI 定稿权威名（pv_broken/get_up/battle_start）；旧名 broken/revive/enter_phase 为兼容别名，校验器接受并提示规范化（细化_0 R-01）** | L178-183 vs AI 定稿 §二 |
 | S5 | 木桩与八段结构 | §一结构示例 `pv:30` 等为普通怪占位；§十五另立 training 特例 | **木桩判定优先：tier:"training" 或 type:"dummy" 任一命中即按木桩特例处理（pv 强制 0 等）**，普通怪八段字段照常 | L15-33 vs L325-392 |
 
 引用约定：`[Lxx]` = 定稿行号；`[AI Lxx]` = BOSS战编排设计定稿行号；"派生" = 由定稿语义直接推出的防呆规则（标注推出来源）。
@@ -38,7 +38,7 @@
 | F11 | `resistance` | object | 选填 | 空（无天然抗性） | 初始抗性 map（0-100）+ `immune` 数组，见 1.3 | L27、L106-118 |
 | F12 | `actions` | array | 必填（普通怪） | 无 | 条目见 1.4；行动表规模按档：普通 1-2 招 / 精英 2-4 招 / BOSS 4-6 招 | L28、L237-239 |
 | F13 | `special_actions` | array | 选填 | `[]` | 条目见 1.4；数量按档：普通 0 / 精英 1 / BOSS 2-4 | L29、L237-239 |
-| F14 | `chains` | array | 选填 | `[]` | **顶层连招表（新配置唯一载体）**；节点结构以 AI 定稿 §七为准（本表只登记不展开）；旧 action.json 内嵌 `chain` 读兼容+迁移提示 | L137、L269；AI L502、L512-515 |
+| F14 | `chains` | array | 选填 | `[]` | **顶层连招表（新配置唯一载体）**；节点结构以 AI 定稿 §七为准（本表只登记不展开）；旧 action.json 内嵌 `chain` 读兼容+迁移提示 | L137、L269；AI L248-266 |
 | F15 | `drops` | object | 必填（普通怪） | 三类均 `[]` | `battle` / `special` / `death` 三类容器，见 1.5 | L30、L189-212 |
 | F16 | `lore` | array | 选填 | `[]` | 条目 `{unlock, desc}`；unlock 1-100 递增；**解锁状态落玩家存档 codex_state，本文件不存状态** | L31、L216-230、L230 |
 | F17 | `def_base` | number | 选填（木桩向） | 无 | ≥0；防御基准直读代入 或 映射 stats 体质，**二选一**（同配提示一致性） | L339 |
@@ -79,7 +79,7 @@
 |---|---|---|---|---|---|
 | A01 | `actions[].action` | string | 必填 | 引用 action.json 的行动 ID，**引用必须存在**（校验器） | L279、L295 |
 | A02 | `actions[].probability` | number | 必填 | **∈ {0,1}**：1=入池（参与随机池）、0=锚点（只被链/条件/状态机触发）；数值不参与概率计算 | L138、L145、L279 |
-| A03 | `actions[].weight` | number | 必填 | ≥0；随机池内归一化权重（例：普攻 50/重击 30/蓄力 20 → 5/8、3/8、2/8）；**至少一个 probability=1 且 weight>0 的条目**（防空随机池，派生自归一化语义） | L145、L279 |
+| A03 | `actions[].weight` | number | 必填 | ≥0；随机池内归一化权重（例：普攻 50/重击 30/蓄力 20 → 归一化 1/2、3/10、1/5）；**至少一个 probability=1 且 weight>0 的条目**（防空随机池，派生自归一化语义） | L145、L279 |
 
 **special_actions 条目**（2 字段 + trigger 5 参数）：
 
@@ -96,12 +96,12 @@
 | §7.1 语义 | 示例写法（L178-183） | canonical 枚举 | timing 示例 |
 |---|---|---|---|
 | ① 血量低于 xx%（狂暴/残血大招） | `hp_below` | `hp_below` | current_turn |
-| ② 防护崩溃后（破防反扑） | `pv_broken`（别名） | `broken` | next_turn |
-| ③ 起身后（被击倒/控制恢复） | `get_up`（别名） | `revive` | next_turn |
-| ④ 进入战斗时（开场技：第一回合、**换区后第一回合**） | `battle_start`（别名） | `enter_phase` | first_turn |
+| ② 防护崩溃后（破防反扑） | `pv_broken`（权威） | `broken`（旧别名） | next_turn |
+| ③ 起身后（被击倒/控制恢复） | `get_up`（权威） | `revive`（旧别名） | next_turn |
+| ④ 进入战斗时（开场技：第一回合、**换区后第一回合**） | `battle_start`（权威） | `enter_phase`（旧别名） | first_turn |
 | ⑤ xx 行动后（固定连招锚点） | `after_action` | `after_action` | next_turn |
 
-**chains 顶层表**（F14）：节点 `{action, chance 0-100, role: opener/anchor/mid/finisher, armor?, condition?}`，结构以 AI 定稿 §七为准 [AI L502、L512-515]；校验：action 引用存在 + chance 0-100 + role 枚举（拦截），链不成环（提示不拦截）[AI L524-525]。
+**chains 顶层表**（F14）：节点 `{action, chance 0-1（示例 0.8/1.0）, role: chain\|finisher, armor?}`，结构以 AI 定稿 §八为准 [AI L248-266]；校验：action 引用存在 + chance 0-1 + role ∈ {chain, finisher}（拦截），链不成环（提示不拦截）[AI L265]；condition 若配置为【工程补白】扩展（AI 定稿节点无 condition 字段）。
 
 ### 1.5 drops —— 三类容器与掉落条目
 
@@ -142,7 +142,7 @@
 |---|---|---|---|---|---|---|---|---|
 | 低 | normal | 全部属性 1×（同玩家同级基准） | 默认 10* / 0-20 | 1-2 招 | 0 | 1 类 | 3-8 回合 | L43、L101、L237-238、L61 |
 | 中 | elite | **HP×2.5 / 攻击×1.2 / 防御×1.3**，其余 1× | 默认 75* / 50-100 | 2-4 招 | 1 | 2 类 | 10-15 回合 | L44、L101、L238、L61 |
-| 高 | boss | **HP×10+ / 攻击×1.3 / 防御×1.5**（×10 为下限，可上调），其余 1× | 默认 300* / 200-500 | 4-6 招 | 2-4（阶段机制） | 2-3 类 | 15 分钟+（模拟器 40-60 回合参考） | L45、L101、L239、L61、AI L529 |
+| 高 | boss | **HP×10+ / 攻击×1.3 / 防御×1.5**（×10 为下限，可上调），其余 1× | 默认 300* / 200-500 | 4-6 招 | 2-4（阶段机制） | 2-3 类 | 15 分钟+（模拟器 40-60 回合参考） | L45、L101、L239、L61、AI L205 |
 
 *细化定型：定稿仅给区间（L101），默认取区间中值（10/75/300），可改。
 
@@ -208,10 +208,10 @@
 | R9 | stats 键合法：9 键 ∈ 固定键集、数值≥0；漏配键按难度模板补全并提示（派生自模板语义） | 拦截 / 提示 | L40-45、L42、L318 |
 | R10 | 概率语义：probability ∈ {0,1}；weight ≥0；随机池=probability=1 条目按 weight 归一化；**至少一个入池条目 weight>0**（防空随机池） | 拦截 | L138、L145、L279 |
 | R11 | 触发参数完整性：按 type 校验必带参数（hp_below→value；after_action→action+chance）；chance 0-100；timing ∈ {current_turn,next_turn,first_turn} | 拦截 | L178-183 |
-| R12 | 触发别名规范化：pv_broken/get_up/battle_start 接受（兼容 §七 示例），提示归一为 broken/revive/enter_phase | 提示 | L178-181 vs L296 |
+| R12 | 触发别名规范化：旧别名 broken/revive/enter_phase 接受（兼容旧配置），提示归一为权威名 pv_broken/get_up/battle_start（细化_0 R-01） | 提示 | AI 定稿 §二 vs L296 |
 | R13 | 掉落扩展域：condition ∈ {pv_broken, no_damage, after_action:<action_id>}；count 为 number 或 [min,max] 且 min≤max、非负 | 拦截 | L198-199、L212、L307 |
 | R14 | 木桩数值与一致性：HP/def_base/elem_res 非负；def_base 直读与 stats 体质映射**二选一**（同配提示一致性）；木桩豁免 ≥1 弱点约束 | 拦截 / 提示 | L339、L363 |
-| R15 | chains（若配置）：节点 action 引用存在 + chance 0-100 + role ∈ {opener,anchor,mid,finisher}（拦截）；链不成环（成环提示不拦截——环形链=有意的循环连招时放行）；旧 action.json 内嵌 chain 读兼容并提示迁移顶层 chains | 拦截 / 提示 | AI L524-525；L137、L269 |
+| R15 | chains（若配置）：节点 action 引用存在 + chance 0-1 + role ∈ {chain, finisher}（拦截，AI 定稿 §八）；链不成环（成环提示不拦截——环形链=有意的循环连招时放行）；旧 action.json 内嵌 chain 读兼容并提示迁移顶层 chains | 拦截 / 提示 | AI L248-266、L265；L137、L269 |
 
 编辑器联动（只读引用）：怪物页 9 标签页；勾选木桩后折叠为"属性+木桩"表单（dummy 开关 + 多档防御/元素抗性基准）；特殊行动条件表单=13 类触发下拉+参数；掉落条件下拉=破防/无伤/特定行动 [L303-307]。
 
@@ -230,7 +230,7 @@
 | TC-05 | PV 约束 | ① `pv: -1`；② normal 怪 `pv: 80` | ① 拦截"PV 非负"；② 提示"PV 超出该档常见区间，确认？"（不拦截） |
 | TC-06 | 行动引用缺失 | `actions: [{"action":"clawX",...}]` | 拦截（action.json 无 clawX） |
 | TC-07 | 概率归一化语义 | `{claw,p=1,w=50}`、`{rock_roll,p=1,w=30}`、`{hard_body,p=0,w=100}` | 随机池=前两招：概率 50/80、30/80；hard_body 不入池（只被锚点/链触发）；p∉{0,1} → 拦截 |
-| TC-08 | 触发类型与别名 | ① `type:"hp_above"`；② after_action 缺 chance；③ `type:"pv_broken"`（旧枚举别名）；④ `type:"player_status"`（权威枚举） | ① 拦截（非 13 类）；② 拦截（参数不完整）；③ 通过 + 黄提示归一为权威名；④ 通过（权威枚举，R-01） |
+| TC-08 | 触发类型与别名 | ① `type:"hp_above"`；② after_action 缺 chance；③ `type:"pv_broken"`（旧枚举别名）；④ `type:"player_status"`（权威枚举） | ① 拦截（非 13 类）；② 拦截（参数不完整）；③ 通过（权威枚举 pv_broken，R-01）；④ 通过（权威枚举） |
 | TC-09 | 掉落扩展域 | ① `chance:150`；② `count:[3,1]`；③ `condition:"random"` | ① 拦截（0-100）；② 拦截（min>max）；③ 拦截（非枚举） |
 | TC-10 | lore 递增 | `unlock:[10,50,40]`；`unlock:0` | 拦截（非递增）；拦截（超出 1-100） |
 | TC-11 | 木桩忽略项 | `tier:"training"` 且配 drops/lore/`pv:30` | 三条黄提示"木桩忽略掉落/图鉴/PV"（不拦截）；运行期 pv 强制 0 |
@@ -256,4 +256,4 @@
 | 难度分层数值 | L234-242 |
 | 校验器 / 编辑器 | L291-308 |
 | 训练木桩全节 | L325-392 |
-| chains 载体 / 节点 / 校验 | 定稿 L137、L269；AI L502、L512-515、L524-525 |
+| chains 载体 / 节点 / 校验 | 定稿 L137、L269；AI 定稿 L248-266、L265 |

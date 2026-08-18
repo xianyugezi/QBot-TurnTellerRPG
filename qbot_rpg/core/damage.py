@@ -53,13 +53,11 @@ __all__ = [
     "TypeAffinityParams",
     "DerivedParams",
     "DamageFormulaParams",
-    # 管线上下文与类型别名
-    "DamageContext",
-    "DamagePipeline",
     # 纯函数
     "hit_rate",
     "crit_prob",
     "crit_roll",
+    "apply_derived_cap",
     "block_rate",
     "defense_factor",
     "pierce_pct",
@@ -244,32 +242,19 @@ class DamageFormulaParams:
     monster_def_rate: float = O1_MONSTER_DEF_RATE
 
 
-# 伤害拦截链上下文：total_damage 算出的“拦截链前”伤害与阶段元数据（细化_1a 拦截链接线）。
-@dataclass(frozen=True)
-class DamageContext:
-    """传给伤害拦截链 pipeline 的上下文（细化_1a 拦截链接线 / 数值层 L36）。
+# P1-1 修复：DamageContext dataclass 与 DamagePipeline 类型别名已删除——
+# 总伤害只输出 (raw, blocked)，拦截链由 battle 层直连 core/effects.DamagePipeline
+# （见 total_damage docstring，dsh M1-批1 P1-1：原 pipeline 挂钩接口不兼容即死代码）。
 
-    - ch_phys/ch_elem: 双通道通道末 floor 后的值（各自 ≥1）
-    - rng:             本段乱数（闭区间 [0.9,1.1] 内，双通道共用一次判定）
-    - blocked:         格挡实际生效（魔攻击无视后仍为 True 才 True）
-    - guard:           防御指令是否生效
-    - magic:           是否魔攻击
-    - raw:             拦截链前总伤害 = max(1, floor(双通道和 × 格挡 × 防御指令 × 乱数))
+
+def apply_derived_cap(current_mult: float, *, max_total_mult: float = 1.5) -> float:
+    """派生累计倍率封顶（细化_1a §1.2/M2 + T32；数值层 L129/L229：派生累计 ≤1.5×）。
+
+    P1-7 修复：派生累计封顶原先仅定义参数（max_total_mult）无引擎消费路径——
+    本纯函数由批2 连段引擎在累计倍率超限时调用（min(累计, 封顶) 后再入通道）；
+    负值按 0（运行期护栏）。
     """
-
-    ch_phys: int
-    ch_elem: int
-    rng: float
-    blocked: bool
-    guard: bool
-    magic: bool
-    raw: int
-
-
-# 伤害拦截链：ctx -> (扣血 最终伤害, 副作用事件列表)（细化_1a 拦截链接线；
-# 批2 battle.py 注入 core/effects.DamagePipeline）；None 表示直通（纯公式单测）。
-DamagePipeline = Callable[[DamageContext], Tuple[int, Sequence[Any]]]
-
+    return min(max(0.0, float(current_mult)), max(0.0, float(max_total_mult)))
 
 # ---------------------------------------------------------------------------
 # ⑤ 会心频率（M5）
@@ -521,11 +506,10 @@ def total_damage(
     guard: bool = False,
     magic_ignores_block: bool = True,
     halve_after_block: bool = True,
-    pipeline: Optional[DamagePipeline] = None,
 ) -> Tuple[int, bool]:
     """总伤害（拦截链前）求值，返回 (raw_damage, blocked)。
 
-    依据：细化_1a §0.2/§1.7-1.9；数值层 L34-35/L36（拦截链衔接）。
+    依据：细化_1a §0.2/§1.7-1.9；数值层 L34-35。
 
     计算顺序（写死，细化_1a §0.1）：
        双通道和 = ch_phys + ch_elem（各自已独立 floor，数值层 L16/L38）
@@ -535,10 +519,11 @@ def total_damage(
        → 乱数 ×rng（M9 闭区间 [0.9,1.1]，一次判定双通道共用，L35）
        → max(1, floor(...))（L34，最低伤害恒 ≥1）
 
-    拦截链接线：pipeline 为可选的伤害拦截链（细化_1a 拦截链接线 / 数值层 L36 ⑦）。
-       - 传入：ctx = DamageContext(...) 实例，pipeline(ctx) -> (最终扣血, 副作用)，
-         返回 (最终扣血, blocked)（批2 battle.py 注入 core/effects.DamagePipeline）。
-       - None：直通（纯公式单测/无效果系统环境），返回 (raw, blocked)。
+    拦截链接线（P1-1 收敛）：本函数只算「拦截链前」总伤害（纯公式层）。
+    伤害拦截链 8 阶段由战斗层直连 core/effects.DamagePipeline（battle.resolve_damage
+    拿 raw 后构造 effects.DamageCtx → damage_pipeline），不在此函数注入——
+    原 pipeline 参数与 effects.DamageCtx 接口不兼容（类型/签名/返回三者均异），
+    属死代码，已删除（dsh M1-批1 审查 P1-1）。
 
     返回的 blocked 为“格挡实际生效”标记（魔攻击被无视时为 False，对齐
     数值层 §8.1 记录字段 blocked:false 语义）。
@@ -551,17 +536,4 @@ def total_damage(
         value *= 0.5
     value *= rng
     raw = max(1, math.floor(value))
-
-    if pipeline is None:
-        return raw, blocked_eff
-    ctx = DamageContext(
-        ch_phys=int(ch_phys),
-        ch_elem=int(ch_elem),
-        rng=rng,
-        blocked=blocked_eff,
-        guard=bool(guard),
-        magic=bool(magic),
-        raw=raw,
-    )
-    final_damage, _side_effects = pipeline(ctx)
-    return int(final_damage), blocked_eff
+    return raw, blocked_eff

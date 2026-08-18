@@ -17,9 +17,9 @@
      落点）。这与 data/battle.BattleSnapshot.frozen 冲突（frozen 快照不可改 HP），
      故 battle.py 组装 ctx 时**必须传一份可变工作拷贝**。
   2. value 三型（数字 / "N%"/ 公式框）：数字与百分比运行时直接支持；含运算符/
-     [变量] 的公式框依赖公式引擎（core/damage.DamageCalculator M1 未实装）——
-     默认返回 0 + warnings.warn（对齐变量定稿 F-3「运行期异常返回 0 不崩溃」），
-     可通过 ctx.variables["eval_formula"](expr) 注入求值器。
+     [变量] 的公式框默认走 core/formula_engine（P0-2 接线，F-1~F-5 生效）——
+     失败兜底 0 + warnings.warn（变量定稿 F-3「运行期异常返回 0 不崩溃」），
+     可通过 ctx.variables["eval_formula"](expr) 注入自定义求值器。
   3. dot/control 运行期登记存于 combatant 字典的 dot_pool / control_state 额外键
      （可 JSON，循 BattleSnapshot 快照哲学，不入五块键）。
   4. 抗性施加量 resist_gain 默认 +10（细化_1b §4.3 R3 未给数值，定稿 §6.3 只声明
@@ -48,9 +48,6 @@ __all__ = [
     "DamagePipeline",
     "execute_action",
     "execute_proc_action",
-    "apply_lifesteal",
-    "apply_pierce",
-    "apply_mitigation",
     "tick_turn_end",
     "tick_after_action",
     "DEFAULT_PIPELINE_ORDER",
@@ -424,6 +421,16 @@ class EffectRuntime:
         self.ensure_actor(side)
         self.resist_table[side][status_id] = self.resist(side, status_id) + value
 
+    def _r3_resist(self, target: str, status_id: str, raw: Mapping[str, Any], negative: bool) -> None:
+        """R3 施加后抗性统一出口（P1-5）：叠加框架无关，施加成功后目标获对应抗性。
+
+        收敛 level_based/dual/新建/S5-renewed/S1-replaced/stack 各成功分支的残留调用，
+        避免分叉遗漏（细化_1b §4.3 R3：resist_gain 开启 + 该状态开启才加，越挂越难）。
+        """
+        if negative and self.config.get("resist_gain_enabled") and isinstance(raw, Mapping) and raw.get("resist_gain"):
+            self.add_resist(target, status_id,
+                            int(raw.get("resist_gain_step") or self.config.get("resist_gain_step") or 10))
+
     # ---------------- 免疫维度（细化_1b §4.4 I1-I4/I8，定稿 §6.4） ----------------
 
     def immune_dims(
@@ -590,16 +597,17 @@ class EffectRuntime:
                 self._reset_duration(existing, turns, charges)
                 side_effects.append({"type": "status_level_up", "target": target, "status_id": status_id, "level": existing["level"]})
             self._after_apply(existing, raw, negative, target, status_id)
+            self._r3_resist(target, status_id, raw, negative)
             res = StatusApplyResult(True, status_id, existing, "applied", side_effects)
-            if negative and self.config["resist_gain_enabled"] and raw.get("resist_gain"):
-                self.add_resist(target, status_id, int(raw.get("resist_gain_step") or self.config["resist_gain_step"]))  # R3
             return res
 
         # S5 同来源同侧：只保留一个（强覆盖弱，等强覆盖重置持续，细化_1b §4.1 S5）
         if existing is not None:
             prev_source = str(existing.get("source", ""))
             if source and prev_source == source:
-                if power >= self._boost_of(sdef):
+                # P0-1 修复：原 `power >= self._boost_of(sdef)` 系自身比较恒真，S5/S1 覆盖规则失效。
+                # 统一强度口径 = 原值（first_action_value 与 existing["value"] 均为 int 原值）。
+                if first_action_value >= float(existing.get("value", 0)):
                     # 强覆盖（等强覆盖重置持续时间）
                     self._reset_duration(existing, turns, charges)
                     existing["value"] = first_action_value
@@ -607,11 +615,12 @@ class EffectRuntime:
                 else:
                     return StatusApplyResult(False, status_id, existing, "covered_low", side_effects)
                 self._after_apply(existing, raw, negative, target, status_id)
+                self._r3_resist(target, status_id, raw, negative)   # R3（P1-5 统一出口）
                 return StatusApplyResult(True, status_id, existing, "renewed", side_effects)
 
         if existing is not None and frame == "single":
             # S1 high covers low（细化_1b §4.1 S1，默认框架）
-            if power >= self._boost_of(sdef):
+            if first_action_value >= float(existing.get("value", 0)):
                 # 高覆盖低 → 新覆盖旧（重置）
                 existing["value"] = first_action_value
                 existing["level"] = 1
@@ -621,6 +630,7 @@ class EffectRuntime:
             else:
                 return StatusApplyResult(False, status_id, existing, "covered_low", side_effects)
             self._after_apply(existing, raw, negative, target, status_id)
+            self._r3_resist(target, status_id, raw, negative)       # R3（P1-5）
             return StatusApplyResult(True, status_id, existing, "applied", side_effects)
 
         if existing is not None and frame == "dual":
@@ -643,9 +653,7 @@ class EffectRuntime:
             self.status_instances(target).append(inst)
             side_effects.append({"type": "status_dual_added", "target": target, "status_id": status_id})
             self._after_apply(inst, raw, negative, target, status_id)
-            # R3
-            if negative and self.config["resist_gain_enabled"] and raw.get("resist_gain"):
-                self.add_resist(target, status_id, int(raw.get("resist_gain_step") or self.config["resist_gain_step"]))
+            self._r3_resist(target, status_id, raw, negative)
             return StatusApplyResult(True, status_id, inst, "dual_added", side_effects)
 
         if existing is not None and frame == "stack":
@@ -657,6 +665,7 @@ class EffectRuntime:
             self._reset_duration(existing, turns, charges)
             side_effects.append({"type": "status_stacked", "target": target, "status_id": status_id, "stacks": existing["stacks"]})
             self._after_apply(existing, raw, negative, target, status_id)
+            self._r3_resist(target, status_id, raw, negative)
             return StatusApplyResult(True, status_id, existing, "stacked", side_effects)
 
         # 无既有实例 → 新建
@@ -666,8 +675,7 @@ class EffectRuntime:
         self.status_instances(target).append(inst)
         side_effects.append({"type": "status_applied", "target": target, "status_id": status_id})
         self._after_apply(inst, raw, negative, target, status_id)
-        if negative and self.config["resist_gain_enabled"] and raw.get("resist_gain"):
-            self.add_resist(target, status_id, int(raw.get("resist_gain_step") or self.config["resist_gain_step"]))
+        self._r3_resist(target, status_id, raw, negative)
         return StatusApplyResult(True, status_id, inst, "applied", side_effects)
 
     def _new_instance(
@@ -1321,6 +1329,28 @@ def _get_pipeline(ctx: DamageCtx) -> DamagePipeline:
     return _DEFAULT_PIPELINE
 
 
+def _default_eval_formula(expr: str, ctx: DamageCtx) -> float:
+    """默认公式求值（P0-2 修复：formula_engine 默认注入，F-1~F-5 验收落地）。
+
+    原实现全库无人注入 ctx.variables['eval_formula'] → 任何含运算符/占位符的 L0 公式框
+    恒返回 0（仅 warning，细化 F 组零实现）。现在 default 接入 core/formula_engine：
+    - 中文占位符替换 + AST 黑名单 + 4KB + 超时 + 兜底 0 全部生效；
+    - 战斗层可注入 ctx.variables['eval_formula'] 覆盖（带 rng_state/完整变量映射）。
+    注：formula_engine 每次求值起 Node 子进程（~100-150ms）——批2 接战斗前做性能专项
+    （Python 快路径 / 常驻 runner），登记 contract_deviations.md F-20。
+    """
+    from qbot_rpg.core.formula_engine import EvaluatorCtx, evaluate  # lazy：避免循环 import
+
+    vmap = ctx.variables if isinstance(ctx.variables, Mapping) else {}
+    evaluator = EvaluatorCtx(
+        attacker=vmap.get("attacker", vmap),
+        target=vmap.get("target", {}),
+        battle=vmap.get("battle", vmap),
+        rng_state=vmap.get("rng_state"),
+    )
+    return evaluate(expr, evaluator)
+
+
 def _resolve_side(actor: str, which: str) -> str:
     """L0 动作 target/self/enemy 的相对侧解析（细化_1b §3.1：target 与技能伤害 target 独立）。"""
     if which in ("self", "player"):
@@ -1338,8 +1368,9 @@ def _resolve_value(
 ) -> int:
     """value 三型求值（细化_1b §1.1 actions[].item：数字框/百分比框/公式框）。
 
-    数字/百分比运行时直接支持；公式框默认返回 0 + 警告（公式引擎 M1 未接线，
-    对齐变量定稿 F-3），可注入 ctx.variables["eval_formula"]。
+    数字/百分比运行时直接支持；公式框（含运算符 / [变量] / Math 前缀）默认走
+    core.formula_engine 求值（P0-2 接线，F-1~F-5 生效），失败兜底 0 + 警告（F-3）；
+    可注入 ctx.variables['eval_formula'] 覆盖默认引擎（带 rng_state/完整变量映射）。
     """
     if isinstance(value, bool):
         return int(value)
@@ -1352,10 +1383,15 @@ def _resolve_value(
                 return int(round((float(s.rstrip("%")) / 100.0) * int(base)))
             except (ValueError, TypeError):
                 return 0
-        eval_fn = ctx.variables.get("eval_formula")
-        if callable(eval_fn) and (s.startswith(("[", "Math", "mind")) or any(op in s for op in ("+", "-", "*", "/", "(", ")"))):
+        is_formula = s.startswith(("[", "Math", "mind")) or any(op in s for op in ("+", "-", "*", "/", "(", ")"))
+        if is_formula:
+            eval_fn = ctx.variables.get("eval_formula")
             try:
-                return int(float(str(eval_fn(s))))
+                if callable(eval_fn):
+                    v = eval_fn(s)
+                else:
+                    v = _default_eval_formula(s, ctx)   # P0-2 默认注入 formula_engine
+                return int(float(str(v)))
             except Exception:  # noqa: BLE001 —— 求值异常不崩溃，F-3
                 warnings.warn(f"L0 公式求值失败，返回 0：{value}")
                 return 0
@@ -1381,10 +1417,13 @@ def _chance_roll(
     value = float(chance.get("value", -1)) if isinstance(chance, dict) else -1.0
     rng_ = ctx.variables.get("rng")
     roll = rng_.random() if rng_ is not None else random.random()
-    if str(mode) == "-1":
+    mode_s = str(mode).strip()
+    if mode_s in ("-1", "always"):
         return True
-    if str(mode).isdigit() or str(mode).lstrip("+").isdigit():
-        if not str(mode).startswith("+"):
+    # P1-4 修复：识别字面 "lucky"（细化_1b A-3：mode=lucky, value=20 =>
+    #（√我方幸运−√对方幸运+value）%）；"+" 前缀与 "lucky" 同走幸运修正分支
+    if mode_s.isdigit() or mode_s.lstrip("+").isdigit() or mode_s == "lucky":
+        if mode_s.isdigit() and not mode_s.startswith("+"):
             return (roll * 100.0) <= value  # 固定概率（不幸运修正）
         lucky = (math.sqrt(max(0, attacker_luck)) - math.sqrt(max(0, target_luck)) + value) / 100.0
         lucky = max(0.0, min(1.0, lucky))
@@ -1665,26 +1704,6 @@ def execute_proc_action(
     return ActionResult(True, side_effects)
 
 
-def apply_lifesteal(
-    damage: int, pct: float, actor: str, ctx: DamageCtx, runtime: EffectRuntime
-) -> int:
-    """L0 结算修正器·生命偷取（细化_1b §3.2 / 定稿 §3.2）：造成伤害时按伤害 % 回复生命。"""
-    heal = int(round(damage * pct / 100.0))
-    c = ctx.snapshot.get(actor)
-    if isinstance(c, dict) and heal > 0:
-        c["hp"] = min(int(c.get("max_hp", 0)), int(c.get("hp", 0)) + heal)
-    return heal
-
-
-def apply_pierce(defense: int, pct: float) -> int:
-    """L0 结算修正器·穿透（细化_1b §3.2 / 定稿 §7.1③）：有效防御 = 防御×(1−穿透%)。"""
-    return int(round(defense * (1 - max(0.0, pct) / 100.0)))
-
-
-def apply_mitigation(
-    value: int, scope: str, target: str, ctx: DamageCtx, runtime: EffectRuntime
-) -> None:
-    """L0 结算修正器·减伤（细化_1b §3.2 / 定稿 §7.2②）：向目标防御行追加减伤条目。"""
-    defs = ctx.snapshot.get(target, {}).get("defenses")
-    if isinstance(defs, dict):
-        defs.setdefault("mitigation", []).append({"value": value, "scope": scope})
+# P1-8 修复：apply_lifesteal / apply_pierce / apply_mitigation 三个独立 helper 已删除——
+# 它们与 execute_action 内联分支（L1460-1472）为双份实现且全库无调用方（违反「同语义
+# 唯一实现」纪律，细化_1b §3.4）。修正器唯一实现 = execute_action 内联（P0 修复记录）。

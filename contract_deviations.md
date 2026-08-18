@@ -45,6 +45,10 @@
 | F-17 | content 旧局旧配置引用计数（D-05/SNAP-5） | 会话层 |
 | F-18 | 3d 模板注册表 14 条全量登记（D-05 程序化锚点） | message_format/commands（M1 前） |
 | F-19 | data TypeAlias/NewType 静态强校验、PlayerAttributes 单一 build_white 入口 | data/core |
+| F-20 | formula_engine 性能专项：每次求值起 Node 子进程 ~100-150ms（已接入 effects 默认求值），战斗内多公式求值会触「单指令 <200ms」预算——Python 白名单快路径 + Node fallback 或常驻 runner | M1-批2 前置 |
+| F-21 | prepare_defense 战斗路径接入：整包效果/状态 → 防御行归一化（P1-2） | M1-批2 battle 组装 |
+| F-22 | 反弹落地闭环：battle 层消费 reflect 副作用事件 → deliver_reflect 回注对方（P1-3） | M1-批2 |
+| F-23 | S6/S7 攻防/三维组合上限接线到效果值聚合（P1-6） | M1-批2 |
 
 ## 三、跨文档冲突裁决（2026-08-18 主 agent 对照定稿裁决，用户授权）
 
@@ -62,5 +66,15 @@
 - **P1-1 formula 插值绕过 + 块注释误报**（content 审查）：插值保留扫描 + 块注释剥离 → test_dsh_regress
 - **P1-1 idem_claim IDEM-2 陷阱**（storage 审查）：只查不插 + 事务内 idem_exists → test_idempotency* 
 - **P1-1~P1-4**（coredata 审查）：conditional 接线 / 前缀格式泄漏 / 截断信号 / 负数黄提示 → test_coredata_regress
+
+### M1-批1 审查修复（审查_M1_batch1_20260818.md，2026-08-18）
+- **P0-1 S1/S5 覆盖规则恒真**：`power >= _boost_of(sdef)` 自身比较恒真 → 改为 `first_action_value >= existing.value`（统一原值口径）+ covered_low 分支可达 → test_m1_review_fixes（反向用例）
+- **P0-2 formula_engine 零接线**：effects L0 公式框默认注入 formula_engine（_default_eval_formula），F-1~F-5 生效；性能专项登记 F-20 → test_m1_review_fixes
+- **P1-4 chance lucky 模式**：mode="lucky" 走幸运修正分支（A-3）→ test_p14
+- **P1-5 R3 resist_gain 统一出口**：S5-renewed/S1-replaced/stack 分支补 _r3_resist → test_p15
+- **P1-8 重复修正器**：apply_lifesteal/apply_pierce/apply_mitigation 双份实现删除 + docstring 悬空引用修复 → test_p18
+- **P1-1 total_damage pipeline 死代码**：删 pipeline 参数 + DamageContext/DamagePipeline 类型（接口不兼容，拦截链由 battle 直连 effects）→ test_p18
+- **P1-7 派生封顶无消费**：新增 apply_derived_cap 纯函数（T32）→ test_p17
+- G-1 快照五块 roundtrip 固化 → test_g1
 
 *M0 门禁：96 pytest 用例全绿 + G0 ARCH-OK + verify_m0 G1 exit 0。*

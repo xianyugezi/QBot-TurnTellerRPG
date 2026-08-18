@@ -132,6 +132,11 @@ class HotReloadWatcher:
         失败路径会把触发源写进 `_last_attempt`，同签名坏包不再 3s 空转；
         连续失败达阈值 → 置 `_paused`（手动 /reload 仍可用；作者新保存=签名变化
         仍可被检测触发一次，成功即自动恢复轮询）。停止用 stop()。
+
+        【设计收敛 C-3，2026-08-18】：定稿《开发规则》L110「定时任务统一走
+        nonebot_plugin_apscheduler」是硬约束。本方法保留为 **M0 零依赖可测默认**
+        （asyncio 循环，可脱机单测）；M4 壳层接线时将改用 `poll_once()` +
+        apscheduler 定时驱动（见 poll_once docstring），本方法届时收归壳层调度。
         """
         self._running.set()
         while not self._stop.is_set():
@@ -143,6 +148,30 @@ class HotReloadWatcher:
                     await asyncio.to_thread(self._reload_sync, "poll", tuple(events))
             await asyncio.sleep(self._poll_interval_s)
         self._running.clear()
+
+    async def poll_once(self) -> ReloadResult:
+        """单次轮询检测 + 重载（C-3 收敛：供 M4 壳层用 apscheduler 定时驱动）。
+
+        与 run() 的区别：不自行 while+sleep，每次调用做一次变更检测——
+        有「新事件」才重载；无新事件直接返回（防空转逻辑与 run() 完全一致，
+        同签名坏包不重复触发）。M4 接线示例（nonebot_plugin_apscheduler）：
+
+            scheduler.add_job(watcher.poll_once, "interval", seconds=3)
+
+        返回：本次 ReloadResult（无变更时返回 last_result 或「no change」占位结果）。
+        """
+        events = await asyncio.to_thread(self._detect_changes)
+        if not events:
+            prev = self._last_result
+            if prev is not None:
+                return prev
+            return ReloadResult(
+                pack_id=self._pack_id, ok=True, changed_modules=(), warnings=(), errors=(),
+                restored=False, paused=self._paused, generation=self._generation,
+                note="no change",
+            )
+        async with self._lock:
+            return await asyncio.to_thread(self._reload_sync, "poll", tuple(events))
 
     async def stop(self) -> None:
         self._stop.set()

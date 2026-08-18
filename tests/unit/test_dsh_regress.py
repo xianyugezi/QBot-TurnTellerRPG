@@ -127,3 +127,36 @@ async def test_three_consecutive_failures_pauses(tmp_path):
         await _reload_direct(w, "poll", ("effects",))
     assert w.consecutive_failures >= 3
     assert w.paused is True, "连续 3 次失败后未暂停自动轮询"
+
+
+# ------------------------- C-3 poll_once（apscheduler 驱动接口）------------------------
+@pytest.mark.asyncio
+async def test_poll_once_no_change(tmp_path):
+    """poll_once 无事件：不触发重载（防空转，供 apscheduler 驱动）。"""
+    tmp = tmp_path / "pollonce"
+    tmp.mkdir()
+    _write_pack(tmp, good=True)
+    w = HotReloadWatcher(tmp)
+    await w.poll_once()          # 首次装载（gen 1，基线 build）
+    gen_after_first = w.generation
+    await w.poll_once()          # 无变更
+    assert w.generation == gen_after_first, f"无事件不应触发重载 gen {gen_after_first}->{w.generation}"
+
+
+@pytest.mark.asyncio
+async def test_poll_once_reloads_with_event(tmp_path):
+    """poll_once 有事件：触发重载（供 apscheduler 每 3s 驱动，C-3）。"""
+    tmp = tmp_path / "pollonce2"
+    tmp.mkdir()
+    _write_pack(tmp, good=True)
+    w = HotReloadWatcher(tmp)
+    await w.poll_once()
+    # 修改 effects（power 50 → 88 但保持合法结构）
+    import json
+    eff = [{"id": "heal", "type": "heal", "name": "回复", "power": 88}]
+    (tmp / "effects.json").write_text(json.dumps(eff, ensure_ascii=False), encoding="utf-8")
+    r = await w.poll_once()
+    assert r.ok and r.changed_modules == ("effects",)
+    # 新 registry 生效：解析 effects 的 power=88
+    defs = w.registry.resolve("heal", "effect")
+    assert defs is not None and defs.raw.get("power") == 88

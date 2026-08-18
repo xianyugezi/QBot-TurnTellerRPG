@@ -46,13 +46,13 @@
 | F-18 | 3d 模板注册表 14 条全量登记（D-05 程序化锚点） | message_format/commands（M1 前） |
 | F-19 | data TypeAlias/NewType 静态强校验、PlayerAttributes 单一 build_white 入口 | data/core |
 
-## 三、跨文档冲突上报（用户/仲裁拍板，实现已取其一，不擅自裁决）
+## 三、跨文档冲突裁决（2026-08-18 主 agent 对照定稿裁决，用户授权）
 
-| # | 冲突 | 实现当前取 | 建议 |
-|---|---|---|---|
-| C-1 | 3b §3.2「source==target → 黄提示（自身增益合法）」 vs 3b TC-05「X→X 自环 → 红色拦截」 | TC-05 红（conditional 自环 R-5） | 建议保留红拦，同步修正 §3.2 表格文字 |
-| C-2 | 3b ADR-05/TC-17「未注册自定义属性键 → 红拦」 vs 3e Y-7「未注册键 → 黄提示不拦」 | 条件加成 source/target 未注册键 → R-4 红（3b 场景语义）；effects.patch.target 等未注册键 → Y-7 黄（3e） | 建议按消费方语义区分并文档化 |
-| C-3 | 3e §1.6「轮询=独立后台任务」 vs 3e2 D-02/TRG-6「轮询=apscheduler」 | 3e（asyncio 后台任务，零 NoneBot 依赖） | 项目接入定时器后统一接线（F-15） |
+| # | 冲突 | 裁决 | 依据（定稿） | 落地 |
+|---|---|---|---|---|
+| C-1 | 3b §3.2「source==target → 黄提示」 vs TC-05「自环 → 红拦」 | **红拦**（统一自环/互环红拦） | 《玩家属性方案定稿》L148「每点力量+1智力——**防循环**」：条件加成设计意图即防自引用失稳 | 3b §3.2 文字已修正（2026-08-18 仲裁 C-1 标注）；validator conditional 自环 R-5（实现已对齐） |
+| C-2 | 3b ADR-05/TC-17「未注册属性键红拦」 vs 3e Y-7「未注册键黄提示」 | **非真冲突**：两语境不同——属性定义/条件加成侧（3b，source/target ∈ 注册表）红拦；效果系统引用属性键侧（3e Y-7 stats 消费方）黄提示 | 《玩家属性方案定稿》L220「自定义属性**注册制（引用存在性校验）**」（属性侧红拦）＋ 3e §2.2 Y-7「消费方引用未注册键→提示」（消费侧黄） | 实现已区分：conditional source/target R-4；effects.patch.target 等 Y-7 |
+| C-3 | 3e §1.6「轮询=独立后台任务」 vs 3e2 D-02/TRG-6「轮询=apscheduler」 | **定稿 L110 为准**：最终统一 apscheduler；M0 提供 `poll_once()` 供 M4 壳层 apscheduler 驱动，`run()` 保留为可测默认 | 《开发规则文档》L110「定时任务统一走 nonebot_plugin_apscheduler，与“操作时懒计算”并存」 | hot_reload.poll_once() 已实现（C-3 标注）；M4 接线 scheduler.add_job(watcher.poll_once, "interval", seconds=3) |
 
 ## 四、审查后修复记录（P0/P1 已修，单测闭环）
 

@@ -1,0 +1,3 @@
+[
+  { "id": "fire_mark", "name": "火印", "type": "mark", "max_stack": 3, "duration": 0, "probability": 0.3 }
+]

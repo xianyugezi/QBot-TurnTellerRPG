@@ -1,0 +1,4 @@
+{
+  "atk": { "name": "攻击", "type": "combat", "base": 10 },
+  "lck": { "name": "幸运", "type": "combat", "base": 10 }
+}

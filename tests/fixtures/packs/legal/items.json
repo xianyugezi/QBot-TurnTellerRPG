@@ -1,0 +1,4 @@
+[
+  { "id": "potion", "name": "药水", "type": "consumable", "price": 100, "effects": ["heal_small"], "usable": true },
+  { "id": "hi_potion", "name": "高级药水", "type": "consumable", "price": 220, "effects": ["heal_small", "power_slash"], "usable": true }
+]

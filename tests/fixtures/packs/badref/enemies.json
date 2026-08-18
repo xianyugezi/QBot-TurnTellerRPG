@@ -1,0 +1,3 @@
+[
+  { "id": "slime", "name": "史莱姆", "hp": 100, "atk": 10, "def": 5, "effects": ["heal_small"], "actions": [] }
+]

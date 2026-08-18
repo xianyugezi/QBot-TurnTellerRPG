@@ -1,0 +1,5 @@
+[
+  { "id": "slime", "name": "史莱姆", "type": "monster", "hp": 100, "atk": 10, "def": 5, "drop_rate": 0.4, "effects": ["heal_small"], "traits": [], "actions": [] },
+  { "id": "forest_wolf", "name": "森林狼", "type": "monster", "hp": 220, "atk": 24, "def": 8, "drop_rate": 0.2, "effects": ["power_slash"], "traits": [], "actions": [] },
+  { "id": "oak_golem", "name": "橡木傀儡", "type": "boss", "hp": 5000, "atk": 60, "def": 40, "drop_rate": 0.05, "effects": [], "traits": [], "actions": [] }
+]

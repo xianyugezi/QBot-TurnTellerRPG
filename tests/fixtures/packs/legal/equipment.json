@@ -1,0 +1,4 @@
+[
+  { "id": "iron_sword", "name": "铁剑", "type": "weapon", "price": 200, "atk": 5, "slot": "weapon", "excludes": [] },
+  { "id": "iron_shield", "name": "铁盾", "type": "shield", "price": 180, "def": 3, "slot": "shield", "excludes": ["weapon"] }
+]

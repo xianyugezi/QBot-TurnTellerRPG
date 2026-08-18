@@ -1,0 +1,5 @@
+[
+  { "id": "heal_small", "name": "小回复", "type": "heal", "power": 50 },
+  { "id": "power_slash", "name": "强力斩击", "type": "attack", "power": 45, "probability": 0.8 },
+  { "id": "rage_up", "name": "狂暴", "type": "buff", "apply_status": "berserk", "duration": 3 }
+]

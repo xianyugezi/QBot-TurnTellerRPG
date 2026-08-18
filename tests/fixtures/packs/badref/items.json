@@ -1,0 +1,4 @@
+[
+  { "id": "potion", "name": "药水", "price": 100, "effects": ["heal_small"] },
+  { "id": "cursed_blade", "name": "诅咒之刃", "price": 10, "effects": ["ghost_effect"] }
+]

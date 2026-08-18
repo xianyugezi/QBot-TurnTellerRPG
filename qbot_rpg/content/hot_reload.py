@@ -128,17 +128,19 @@ class HotReloadWatcher:
     async def run(self) -> None:
         """后台轮询循环：每 poll_interval_s（默认 3s）检测变更（TRG-1/T1）。
 
-        防空转（BLK-5）：连续失败阈值后暂停「轮询触发」，但作者新保存（签名变化）仍会尝试一次；
-        成功一次即恢复自动轮询。停止用 stop()。
+        防空转（BLK-5）：`_detect_changes` 按「签名≠基线 且 ≠最近尝试」过滤，
+        失败路径会把触发源写进 `_last_attempt`，同签名坏包不再 3s 空转；
+        连续失败达阈值 → 置 `_paused`（手动 /reload 仍可用；作者新保存=签名变化
+        仍可被检测触发一次，成功即自动恢复轮询）。停止用 stop()。
         """
         self._running.set()
         while not self._stop.is_set():
             events = await asyncio.to_thread(self._detect_changes)
             if events:
-                # 新事件（签名 ≠ 基线 且 ≠ 上次尝试）：
-                #   未暂停 → 正常重载；已暂停 → 仅对「新保存」尝试一次（文件恢复合法 → 自动恢复轮询）
+                # 新事件（签名 ≠ 基线 且 ≠ 上次尝试）：把触发源传给 _reload_sync，
+                # 失败路径据此写防空转签名（build_pack 抛异常时它自己拿不到 changed）
                 async with self._lock:
-                    await asyncio.to_thread(self._reload_sync, "poll")
+                    await asyncio.to_thread(self._reload_sync, "poll", tuple(events))
             await asyncio.sleep(self._poll_interval_s)
         self._running.clear()
 
@@ -180,13 +182,18 @@ class HotReloadWatcher:
         return changes
 
     # ------------------------------------------------------------------ 管线（同步，to_thread 内执行）
-    def _reload_sync(self, source: str) -> ReloadResult:
+    def _reload_sync(
+        self, source: str, detected: Optional[Tuple[str, ...]] = None
+    ) -> ReloadResult:
         """热重载 = 重走五段管线（细化_3e §4.2 / F2）：
 
         ① 快照当前有效 registry（旧配置不变，天然可用）
         ② 增量解析 + 全量校验（新配置整体，ATO-3）
         ③ 红拦/异常 → 不发布（新对象弃用）+ 回退旧快照（字节一致，L178）+ 失败记账/节流（BLK-5）
         ④ 通过 → 构建新 registry（generation+1）→ 指针级替换（D-03）→ 基线更新 + 快照入队（N=2）
+
+        :param detected: 本次触发源（_detect_changes 的 events）。失败路径用它写
+            `_last_attempt` 签名（build_pack 抛异常时无法得到 changed，缺此防空转失效）。
         """
         pre = self._registry.snapshot()  # ① 快照（回退对象）
         changed: Tuple[str, ...] = ()
@@ -221,11 +228,12 @@ class HotReloadWatcher:
         # ---- 失败路径（SNAP-1~3 / BLK-5）----
         # ② 恢复内存指向 = 最近一次校验通过的 registry（pre 即当前有效，回退保证字节一致，L178）
         self._registry = Registry.from_snapshot(pre)
-        # 防同签名空转：记录本次失败文件的签名（坏包不重复打转；新保存改动签名才再触发）
-        for m in changed:
+        # 防同签名空转：记录本次失败文件的签名（坏包不重复打转；新保存改动签名才再触发）。
+        # build_pack 抛异常时拿不到 changed，必须回退到调用方传入的 detected（触发源）。
+        failed_mods = tuple(detected) if detected else changed
+        for m in failed_mods:
             self._last_attempt[m] = file_signature(self._pack_dir / f"{m}.json")
-        # manifest 改动但解析失败时同样记录
-        if "manifest" in changed:
+        if "manifest" in failed_mods:
             self._last_attempt["manifest"] = file_signature(self._pack_dir / "manifest.json")
         self._fail_count += 1
         paused = self._fail_count >= self._max_failures

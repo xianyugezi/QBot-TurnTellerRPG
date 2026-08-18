@@ -1,0 +1,20 @@
+[
+  {
+    "id": "regen",
+    "name": "再生",
+    "type": "buff",
+    "max_stack": 3,
+    "duration": 3,
+    "decay": "per_turn",
+    "effects": ["heal_small"],
+    "on_tick": "heal_small"
+  },
+  {
+    "id": "berserk",
+    "name": "狂暴",
+    "type": "buff",
+    "max_stack": 1,
+    "duration": 2,
+    "effects": ["power_slash"]
+  }
+]

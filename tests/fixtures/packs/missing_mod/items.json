@@ -1,0 +1,3 @@
+[
+  { "id": "potion", "name": "药水", "price": 100, "effects": ["heal_small"] }
+]

@@ -1,0 +1,3 @@
+[
+  { "id": "regen", "name": "再生", "type": "buff", "max_stack": 3, "duration": 3, "effects": ["heal_small"] }
+]

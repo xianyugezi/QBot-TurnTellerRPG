@@ -75,17 +75,20 @@ def check_formula(expr: str) -> Optional[Mapping[str, object]]:
 
 
 def _strip_literals(expr: str) -> str:
-    """剥离单/双引号字符串、模板串与 `//` 行注释，避免黑名单词藏进字符串误放行。"""
+    """剥离字符串字面量 / 模板串字面量部分 / 注释，保留模板插值 `${...}` 继续扫描。
+
+    修复（2026-08-18 dsh 审查 P1-1）：
+      - 模板串 `${eval(...)}` 插值此前随反引号整体剥离 → 黑名单绕过；现插值表达式
+        原样保留进 out，供标识符检查（`${` 配对用花括号 depth + 内部字符串跳过）。
+      - `/* ... */` 块注释未剥离 → 注释内黑名单词误红拦；现一并剥离。
+    """
     out: List[str] = []
     i, n = 0, len(expr)
     while i < n:
         c = expr[i]
-        if c in ("'", '"', "`"):
+        if c in ("'", '"'):
             quote = c
             i += 1
-            if quote != "`" and i < n and expr[i] == quote:  # 空字符串 ''
-                i += 1
-                continue
             while i < n:
                 if expr[i] == "\\":
                     i += 2
@@ -95,10 +98,56 @@ def _strip_literals(expr: str) -> str:
                 i += 1
             i += 1
             continue
-        if c == "/" and i + 1 < n and expr[i + 1] == "/":
-            while i < n and expr[i] != "\n":
+        if c == "`":
+            # 模板串：剥离纯文本字面量；`${...}` 插值表达式保留（内部引号/花括号正确处理）
+            i += 1
+            while i < n:
+                e = expr[i]
+                if e == "\\":
+                    i += 2
+                    continue
+                if e == "$" and i + 1 < n and expr[i + 1] == "{":
+                    # 收集插值内容（丢弃 ${ 标记本身——否则 $ 与后续标识符合并成
+                    # '$eval' 单 token 绕过黑名单检查；JS 词法里 ${} 是分隔符）
+                    i += 2
+                    depth = 1
+                    while i < n and depth > 0:
+                        ch = expr[i]
+                        if ch in ("'", '"', "`"):
+                            q = ch
+                            i += 1
+                            while i < n:
+                                if expr[i] == "\\":
+                                    i += 2
+                                    continue
+                                if expr[i] == q:
+                                    break
+                                i += 1
+                            i += 1
+                            continue
+                        if ch == "{":
+                            depth += 1
+                        elif ch == "}":
+                            depth -= 1
+                        if depth > 0:
+                            out.append(ch)
+                        i += 1
+                    continue
                 i += 1
+            i += 1  # 跳过收尾反引号
             continue
+        if c == "/" and i + 1 < n:
+            nxt = expr[i + 1]
+            if nxt == "/":  # `//` 行注释
+                while i < n and expr[i] != "\n":
+                    i += 1
+                continue
+            if nxt == "*":  # `/* ... */` 块注释
+                i += 2
+                while i + 1 < n and not (expr[i] == "*" and expr[i + 1] == "/"):
+                    i += 1
+                i += 2
+                continue
         out.append(c)
         i += 1
     return "".join(out)
@@ -514,8 +563,11 @@ class _Checker:
 
         互斥边为无向边：A 与 B 互斥 = 一条边 {A,B}；含环（≥3 条边）→ 环上任一部位都与其它冲突，
         谁都装不上。互斥声明为 entry.{mutex_field} = [部位 id, ...]，配 entry.slot 作自方节点。
+        修复记录（M0 测试验收 2026-08-18）：原实现把每条互斥的两端都加进邻接表，
+        导致互斥对（武器↔盾 双向）被当作两条边重复 union，二次处理时两端已同集 →
+        任意 f含 excludes 的合法装备包都误判成环 R-5。现改为先去重为无向边集合再并查集。
         """
-        edges: Dict[str, set] = {}
+        undirected: set = set()  # {frozenset{a,b}, ...} 无向边去重（杜绝对称重复导致误报）
         for _, entry in self._iter_entries(module_name, data, mmeta):
             entry_map = self._as_mapping(entry)
             if entry_map is None:
@@ -529,9 +581,8 @@ class _Checker:
             if not isinstance(excl, list):
                 continue
             for other in excl:
-                if isinstance(other, str):
-                    edges.setdefault(core, set()).add(other)
-                    edges.setdefault(other, set()).add(core)
+                if isinstance(other, str) and other != core:
+                    undirected.add(frozenset((core, other)))
         # 无向环检测（并查集：新增边两端已在同一集合 → 有环）
         parent: Dict[str, str] = {}
 
@@ -549,12 +600,12 @@ class _Checker:
             parent[ra] = rb
             return True
 
-        for u, vs in edges.items():
-            for v in vs:
-                if not union(u, v):
-                    self._err(module_name, f"{module_name}.? ({u} <-> {v})", "R-5",
-                              rule="slot_mutex_cycle", slots=[u, v])
-                    return
+        for pair in undirected:
+            u, v = tuple(pair)
+            if not union(u, v):
+                self._err(module_name, f"{module_name}.? ({u} <-> {v})", "R-5",
+                          rule="slot_mutex_cycle", slots=[u, v])
+                return
 
 
 # -------------------------------------------------------------------------------------

@@ -1,0 +1,16 @@
+{
+  "name": "M0 测试合法包",
+  "version": "1.0.0",
+  "schema_version": 1,
+  "author": "m0-tester",
+  "modules": [
+    "effects",
+    "statuses",
+    "marks",
+    "items",
+    "equipment",
+    "enemies",
+    "stats",
+    "formula"
+  ]
+}

@@ -1,0 +1,15 @@
+[
+  {
+    "id": "moon_wolf",
+    "name": "蚀月之狼",
+    "kind": "hidden_boss",
+    "condition": "[图鉴完成度:怪物] >= 60",
+    "lore": "每逢雷雨之夜，传说之狼会现身于雾沼。"
+  },
+  {
+    "id": "moss_stone",
+    "name": "雾沼石像",
+    "kind": "hidden_interact",
+    "condition": "nostalgia_points >= 1"
+  }
+]

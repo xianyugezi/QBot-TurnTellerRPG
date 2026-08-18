@@ -1,0 +1,7 @@
+{
+  "name": "M0 测试旧 schema 包",
+  "version": "0.0.1",
+  "schema_version": 0,
+  "author": "legacy-author",
+  "modules": ["effects", "items", "enemies"]
+}

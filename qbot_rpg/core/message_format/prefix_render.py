@@ -16,11 +16,14 @@
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from typing import Dict, Mapping, Optional
 
 __all__ = [
     "DEFAULT_PREFIX_FORMAT",
+    "PrefixResult",
     "render_prefix",
+    "render_prefix_result",
 ]
 
 # 默认格式模板（TPL-01，【前缀】L22）：占位符自由组合，作者可配 format 字段。
@@ -41,7 +44,15 @@ def _worn(title: object) -> str:
     return s
 
 
-def render_prefix(
+@dataclass(frozen=True)
+class PrefixResult:
+    """前缀渲染结果（P1-3 修复：截断成为可观察事件 → TC-13 黄提示可达）。"""
+
+    prefix: str
+    truncated: bool  # 本次渲染是否触发 prefix_max_len 截断（壳层据此发「前缀过长已截断」黄提示）
+
+
+def render_prefix_result(
     level: int,
     name: str,
     title: Optional[str] = None,
@@ -51,23 +62,17 @@ def render_prefix(
     empty_title_text: str = "-",
     prefix_max_len: int = DEFAULT_PREFIX_MAX_LEN,
     extra: Optional[Mapping[str, object]] = None,
-) -> str:
-    """按 message_prefix 模板渲染前缀（细化_3d §1.2/§1.3/§1.4）。
+) -> PrefixResult:
+    """按 message_prefix 模板渲染前缀，并报告是否截断（细化_3d §3.3）。
 
-    :param level: 玩家当前等级（[等级]，角色存档 level）
-    :param name:  玩家名（[玩家名]）
-    :param title: 当前佩戴称号（[称号]）；None/空 = 无称号 → 走三态
-    :param format_template: 作者可配格式（TPL-01~06 范例）；缺省 DEFAULT_PREFIX_FORMAT
-    :param hide_when_empty: hide_when_empty（【前缀】L46）：空称号整段省略 [称号] 及相邻装饰
-    :param empty_title_text: 空称号文本（【前缀】L61，默认 "-"；"" = 仅隐占位符本体）
-    :param prefix_max_len: 前缀截断上限（3d §3.3），0 = 不限
-    :param extra: 额外占位符映射（[群名]/[职业] 等，供 TPL-05/TPL-06 扩展，templates 驱动）
-    :return: 纯 str 前缀（无 CQ 码、无平台占位符；3a §5.2 S1/S2/S3）
+    截断语义（3d §3.3）：prefix_max_len（默认 40，0=不限）；截断 + 黄提示归属壳层
+    sender（「前缀过长已截断」，不阻断正文）；正文防刷屏判定不计前缀。
     """
     fmt: str = DEFAULT_PREFIX_FORMAT if format_template is None else format_template
     title_str = _worn(title)
 
-    # 1) [称号] 三态（细化_3d §1.4）
+    # 1) [称号] 三态（细化_3d §1.4）——先做对称装饰替换，再对残留占位符兜底，
+    #    保证作者自定义 format（此如 TPL-05/06 任意组合）下 [称号] 永不泄漏（P1-2 修复）。
     if title_str:
         fmt = fmt.replace("[称号]", title_str)
     elif hide_when_empty:
@@ -75,16 +80,22 @@ def render_prefix(
         fmt = re.sub(
             r"\s*" + _TITLE_DECOR + r"\[称号\]" + r"\s*" + _TITLE_DECOR + r"\s*",
             "", fmt,
-        ).rstrip(" ")
+        )
+        if "[称号]" in fmt:  # 无装饰/单侧装饰的自定义 format：残留占位符直接删除
+            fmt = fmt.replace("[称号]", "")
+        fmt = _collapse_space(fmt).rstrip()
     else:
         if empty_title_text in ("-", ""):
             # TPL-02/TPL-04：文档口径 —— 默认装饰「 -[称号]-」空称号时渲染为「 - -」
-            # （empty_title_text="-": 显示空称号文本；"" : 仅隐本体，装饰符保留 → 文档示例均为此形）
             fmt = re.sub(
                 r"\s*(" + _TITLE_DECOR + r")\s*\[称号\]\s*(" + _TITLE_DECOR + r")\s*",
                 r" \1 \2 ",
                 fmt,
-            ).rstrip(" ")
+            )
+            if "[称号]" in fmt:  # 自定义 format 无装饰/单侧：仅隐占位符本体，装饰符保留
+                fmt = fmt.replace("[称号]", empty_title_text)
+            else:
+                fmt = _collapse_space(fmt).rstrip()
         else:
             # 自定义空称号文本：占位符本体替换，装饰符保留（合理泛化）
             fmt = fmt.replace("[称号]", empty_title_text)
@@ -96,6 +107,33 @@ def render_prefix(
             fmt = fmt.replace("[" + key + "]", str(value))
 
     # 3) 前缀超长截断（3d §3.3；截断 + 提示归属壳层 sender，正文不受影响）
+    truncated = False
     if prefix_max_len and prefix_max_len > 0 and len(fmt) > prefix_max_len:
         fmt = fmt[:prefix_max_len]
-    return fmt
+        truncated = True
+    return PrefixResult(prefix=fmt, truncated=truncated)
+
+
+def render_prefix(
+    level: int,
+    name: str,
+    title: Optional[str] = None,
+    *,
+    format_template: Optional[str] = None,
+    hide_when_empty: bool = False,
+    empty_title_text: str = "-",
+    prefix_max_len: int = DEFAULT_PREFIX_MAX_LEN,
+    extra: Optional[Mapping[str, object]] = None,
+) -> str:
+    """纯 str 前缀（3a §5.2 S1/S2/S3 兼容旧调用）；需截断信号请用 render_prefix_result。"""
+    return render_prefix_result(
+        level, name, title,
+        format_template=format_template, hide_when_empty=hide_when_empty,
+        empty_title_text=empty_title_text, prefix_max_len=prefix_max_len,
+        extra=extra,
+    ).prefix
+
+
+def _collapse_space(s: str) -> str:
+    """折叠连续空白为单个空格（整段省略后清理残留装饰符间的多余空白）。"""
+    return re.sub(r"[ \t]+", " ", s)

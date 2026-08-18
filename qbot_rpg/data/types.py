@@ -17,7 +17,11 @@
     区分语义，供 content/registry 与 content/validator 类型标注。
 """
 
-from typing import NewType, TypeAlias  # Python >=3.10；Python 3.9 由 typing_extensions 兜底
+try:
+    from typing import TypeAlias  # Python >=3.10
+except ImportError:  # Python 3.9 兜底（P2-13 修复：注释承诺的 typing_extensions 兜底落地）
+    from typing_extensions import TypeAlias  # type: ignore[no-redef]
+from typing import NewType
 
 # ---------------------------------------------------------------------------
 # M0 共享接口契约：玩家数据层 TypeAlias（B/C 组按此 import，字段名/类型不可改）

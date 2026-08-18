@@ -59,8 +59,16 @@ WORLD_STATE_FIELDS: Tuple[str, ...] = (
 )
 
 # job_id 在 players 宽表无独立列（4a §1.2 唯一数据源），按 D-01「固定列只承载
-# 框架必须字段」折入 persistent_state 保留键。（见 contract_deviations）
+# 框架必须字段」折入 persistent_state 保留键。（见 contract_deviations.md）
 _JOB_ID_KEY: str = "job_id"
+
+
+class _WorldCasConflict(Exception):
+    """内部哨兵异常：世界资源 CAS 冲突 → 强制事务 ROLLBACK。
+
+    修复（2026-08-18 dsh 审查 P0-1）：原实现在事务体内 `return False` 走 COMMIT，
+    冲突前已写的键半写落盘。raise 后 tx() 的 except 分支统一 ROLLBACK（4a TX-3 整体回滚）。
+    """
 
 
 # ===========================================================================
@@ -298,13 +306,20 @@ class Repository:
         return self._db
 
     async def _bootstrap(self) -> None:
-        """懒迁移：首次访问前执行 ensure_meta + migrate_database（D-06 懒迁移）。"""
+        """懒迁移：首次访问前执行 ensure_meta + migrate_database（D-06 懒迁移）。
+
+        迁移失败（state=="failed"）不置 _booted，下次访问重试；并打印告警
+        （P2-8 修复：迁移结果可观测、取消信号不吞）。
+        """
         if self._booted:
             return
         async with self._boot_lock:
             if self._booted:
                 return
-            await migrate_database(self._db)
+            result = await migrate_database(self._db)
+            if result.state == "failed":
+                print(f"[storage] 存档迁移失败，携带旧版 schema 继续运行: {result.note}")
+                return  # 不置 _booted → 下次访问重试迁移（服务不崩）
             self._booted = True
 
     async def close(self) -> None:
@@ -417,8 +432,9 @@ class Repository:
         """世界状态 CAS 单事务写回（TX-3）。
 
         对每个字段行执行 UPDATE ... WHERE key=? AND version=?（version+1）；
-        对不存在行 INSERT（要求期望版本 0）。任一冲突 → 整体 ROLLBACK 返回
-        False（调用方重读重试）；全部命中 → 单事务 COMMIT。
+        对不存在行 INSERT（要求期望版本 0）。任一冲突 → raise 哨兵异常强制整体
+        ROLLBACK 后返回 False（P0-1 修复：冲突前已写的键不得半写落盘）；调用方
+        重读版本后重试；全部命中 → 单事务 COMMIT 返回 True。
         """
         ts = now or _now()
         values: Dict[str, object] = {
@@ -428,28 +444,31 @@ class Repository:
             "dummy_override": ws.dummy_override,
             "last_spawn_time": ws.last_spawn_time,
         }
-        async with self.tx() as tx:
-            for key in WORLD_STATE_FIELDS:
-                exp = int(expected_versions.get(key, 0))
-                cur = await tx.fetchone(
-                    "SELECT version FROM world_state WHERE key = ?", (key,)
-                )
-                if cur is None:
-                    if exp != 0:
-                        return False                    # 期望已存在但实际缺失
-                    await tx.execute(
-                        "INSERT INTO world_state (key, value_json, version, updated_at)"
-                        " VALUES (?,?,?,?)",
-                        (key, _j(values[key]), 1, ts),
+        try:
+            async with self.tx() as tx:
+                for key in WORLD_STATE_FIELDS:
+                    exp = int(expected_versions.get(key, 0))
+                    cur = await tx.fetchone(
+                        "SELECT version FROM world_state WHERE key = ?", (key,)
                     )
-                else:
-                    if int(cur["version"]) != exp:
-                        return False                    # CAS 冲突 → 整体回滚
-                    await tx.execute(
-                        "UPDATE world_state SET value_json = ?, version = version + 1,"
-                        " updated_at = ? WHERE key = ? AND version = ?",
-                        (_j(values[key]), ts, key, exp),
-                    )
+                    if cur is None:
+                        if exp != 0:
+                            raise _WorldCasConflict()          # 期望已存在但实际缺失
+                        await tx.execute(
+                            "INSERT INTO world_state (key, value_json, version, updated_at)"
+                            " VALUES (?,?,?,?)",
+                            (key, _j(values[key]), 1, ts),
+                        )
+                    else:
+                        if int(cur["version"]) != exp:
+                            raise _WorldCasConflict()          # CAS 冲突 → 整体回滚
+                        await tx.execute(
+                            "UPDATE world_state SET value_json = ?, version = version + 1,"
+                            " updated_at = ? WHERE key = ? AND version = ?",
+                            (_j(values[key]), ts, key, exp),
+                        )
+        except _WorldCasConflict:
+            return False                                     # 任何冲突 → 全部回滚
         return True
 
     # =======================================================================
@@ -460,29 +479,27 @@ class Repository:
         return "message_id = ? AND group_id = ? AND player_qid = ?"
 
     async def idem_claim(self, key: IdemKey) -> bool:
-        """幂等判定 + 同事务插入（F4 便捷路径 / IDEM-2）。
+        """幂等状态检查（只读，不插入）。
 
-        返回 True = 已存在（幂等命中，直接重放，业务零执行，TC-08）；
-        返回 False = 首次（本事务已插入幂等键，调用方应把业务写并入同一事务
-        以满足 IDEM-2：async with repo.tx() as tx:
-            await tx.write_idem_key(key); <业务写>）。
+        修复（2026-08-18 dsh 审查 P1-1）：原实现自带事务先插入幂等键再返回，导致
+        幂等键在独立事务提前 COMMIT，违反 IDEM-2「幂等键与业务写同事务」——业务
+        随后失败回滚会留下孤儿幂等键，同 message_id 重试被幂等空吞（操作黑洞）。
+        现在只查不插；插入必须由调用方在业务事务内 write_idem_key：
+
+            async with repo.tx() as tx:
+                if await tx.idem_exists(key):   # 已处理 → 幂等重放
+                    return True
+                await tx.write_idem_key(key)    # 与业务写同事务（IDEM-2）
+                <业务写>
+
+        返回 True = 已处理（幂等重放，业务零执行）；返回 False = 首次（未处理）。
         """
         await self._bootstrap()
-        async with self.tx() as tx:
-            row = await tx.fetchone(
-                f"SELECT * FROM idempotency_keys WHERE {self._idem_where()}",
-                (key.message_id, key.group_id, key.player_qid),
-            )
-            if row is not None:
-                return True
-            await tx.execute(
-                "INSERT OR IGNORE INTO idempotency_keys"
-                " (message_id, group_id, player_qid, command, result_hash, created_at)"
-                " VALUES (?,?,?,?,?,?)",
-                (key.message_id, key.group_id, key.player_qid, key.command,
-                 key.result_hash, key.created_at or _now()),
-            )
-            return False
+        row = await self._db.fetchone_read(
+            f"SELECT 1 FROM idempotency_keys WHERE {self._idem_where()}",
+            (key.message_id, key.group_id, key.player_qid),
+        )
+        return row is not None
 
     async def idem_find(
         self, message_id: str, group_id: str, qid: str
@@ -704,6 +721,15 @@ class RepoTransaction:
             (key.message_id, key.group_id, key.player_qid, key.command,
              key.result_hash, key.created_at or _now()),
         )
+
+    async def idem_exists(self, key: IdemKey) -> bool:
+        """幂等状态查询（事务内 F4 判定）。返回 True = 已处理（幂等重放）。"""
+        row = await self.fetchone(
+            f"SELECT 1 FROM idempotency_keys WHERE "
+            f"message_id = ? AND group_id = ? AND player_qid = ?",
+            (key.message_id, key.group_id, key.player_qid),
+        )
+        return row is not None
 
 
 __all__ = [

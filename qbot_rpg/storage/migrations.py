@@ -227,7 +227,7 @@ async def migrate_database(
                     (json.dumps(logs, ensure_ascii=False), entry["at"], META_KEY),
                 )
             applied.append((from_v, to_v))
-        except BaseException as exc:  # noqa: BLE001 — 失败回滚后整体交接
+        except Exception as exc:  # noqa: BLE001 — 失败回滚后整体交接；CancelledError 需重抛（P2-8）
             try:
                 await append_migration_log(
                     db,

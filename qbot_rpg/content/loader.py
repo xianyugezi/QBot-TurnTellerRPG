@@ -154,6 +154,7 @@ _KIND_FOR_MODULE: Mapping[str, str] = {
     "stats": "stat",
     "npc": "npc",
     "formula": "formula",
+    "conditional": "conditional",  # 条件加成规则（细化_3b §3.2）
 }
 
 

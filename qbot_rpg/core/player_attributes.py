@@ -180,6 +180,15 @@ def calc_final_attr(
       - 仅出口 floor 一次（ADR-04）
     """
     white = base + growth * (level - 1) + free_points
+    if base < 0 or growth < 0 or free_points < 0:
+        # 3b §4.2/TC-17：负数 → 黄提示 + 运行期按 0 兜底（不把负值代入白值放大）
+        if base < 0:
+            base = 0.0
+        if growth < 0:
+            growth = 0.0
+        if free_points < 0:
+            free_points = 0.0
+        white = base + growth * (level - 1) + free_points
     base_total = white + flat_bonus
     cond = cond_rule(base_total) if cond_rule is not None else 0.0
     raw = _pipestep(

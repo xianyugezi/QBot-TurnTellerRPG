@@ -232,8 +232,7 @@ class Database:
         if not self._schema_ready:
             # 只读路径也确保 schema 就位（防御：任何读都不得因空库 no such table）
             await self._writer()
-        if self._read_sem.locked() and self._max_readers <= 0:
-            raise StoragePoolExhaustedError("只读连接池不可用")
+        # 池耗尽由下方 wait_for(acquire, timeout) 兜底（P2-1：原死分支已删）
         acquired = False
         try:
             await asyncio.wait_for(self._read_sem.acquire(), timeout=self._pool_wait_timeout)

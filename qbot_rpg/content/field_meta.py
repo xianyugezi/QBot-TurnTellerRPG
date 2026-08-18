@@ -61,8 +61,9 @@ F_DROP_RATE = FieldMeta(type="number", probability=True, range_min=0.0, range_ma
 STAT_CHILDREN: Dict[str, FieldMeta] = {
     "name": FieldMeta(type="str"),
     "type": FieldMeta(type="str"),  # resource|combat（正式表注入枚举）
-    "base": FieldMeta(type="number", range_min=0, range_max=5000),
-    "growth": FieldMeta(type="number", range_min=0, range_max=50),
+    # 3b §4.2/TC-17：base/growth 负数 → 黄提示（allow_negative），运行期按 0（calc 兜底）
+    "base": FieldMeta(type="number", range_min=0, range_max=5000, allow_negative=True),
+    "growth": FieldMeta(type="number", range_min=0, range_max=50, allow_negative=True),
     "max": FieldMeta(type="number", range_min=0, range_max=999999),
     "min": FieldMeta(type="number", range_min=0, range_max=999999),
     "display": FieldMeta(type="str"),
@@ -173,6 +174,24 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "price": F_PRICE,
         "items": FieldMeta(type="list", element=FieldMeta(type="ref", ref_target="item")),
     }
+    # 条件加成（细化_3b §3.2 join/属性联动配置）：每点 source → target +per_point
+    # 结构 conditional.json = { "conditional": [ {id, source, target, per_point, note} ] }
+    conditional_fields: Dict[str, FieldMeta] = {
+        "conditional": FieldMeta(
+            type="list",
+            element=FieldMeta(
+                type="obj",
+                children={
+                    "id": F_ID,
+                    "name": F_NAME,
+                    "source": FieldMeta(type="str", required=True),   # 触发属性（引 stats 键空间）
+                    "target": FieldMeta(type="str", required=True),   # 产出属性（引 stats 键空间）
+                    "per_point": FieldMeta(type="number"),            # 每点产出量（缺省 1）
+                    "note": FieldMeta(type="str"),
+                },
+            ),
+        ),
+    }
 
     return {
         "manifest": ModuleMeta(entry_type="object", fields=manifest_fields),
@@ -192,6 +211,9 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "stats": ModuleMeta(entry_type="map", fields=stats_fields, kind="stat", namespace="stat_lib",
                             key_regex=r"[a-z][a-z0-9_]*"),
         "npc": ModuleMeta(entry_type="list", fields=npc_fields, kind="npc", namespace="npc_lib"),
+        # 条件加成（细化_3b §3.2；环 + 引用存在性专项校验见 validator._check_conditional）
+        "conditional": ModuleMeta(entry_type="object", fields=conditional_fields,
+                                  kind="conditional", namespace="cond_lib"),
     }
 
 

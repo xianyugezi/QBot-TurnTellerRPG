@@ -82,6 +82,7 @@ async def test_purchase_rollback():
 
 
 # IDEM-2/TC-08：幂等键首次 False、二次 True、可回查
+# （P1-1 修复：idem_claim 只查不插，插入由业务事务内 write_idem_key 承担，同事务 IDEM-2）
 @pytest.mark.asyncio
 async def test_idempotency():
     db = Database(":memory:")
@@ -90,10 +91,63 @@ async def test_idempotency():
         await repo.save_player(make_player("10001"))
         k = IdemKey(message_id="m1", group_id="g1", player_qid="10001",
                     command="/购买", result_hash="h1")
-        assert await repo.idem_claim(k) is False
-        assert await repo.idem_claim(k) is True
+        assert await repo.idem_claim(k) is False  # 未处理（只读检查，不插入）
+        async with repo.tx() as tx:               # 幂等键与业务写同事务（IDEM-2）
+            assert await tx.idem_exists(k) is False
+            await tx.write_idem_key(k)
+        assert await repo.idem_claim(k) is True   # 已处理 → 幂等重放
         found = await repo.idem_find("m1", "g1", "10001")
         assert found is not None and found.result_hash == "h1"
+    finally:
+        await repo.close()
+
+
+# P1-1：幂等键不随独立事务早提交——claim 后业务失败 → 无孤儿幂等键，重试可重执行业务
+@pytest.mark.asyncio
+async def test_idempotency_no_orphan_on_biz_failure():
+    db = Database(":memory:")
+    repo = Repository(db)
+    try:
+        await repo.save_player(make_player("10001"))
+        k = IdemKey(message_id="m2", group_id="g1", player_qid="10001", command="/强化")
+        # 模拟：调用方错误地在 claim+insert 后业务写失败回滚
+        try:
+            async with repo.tx() as tx:
+                await tx.write_idem_key(k)
+                raise RuntimeError("业务失败")
+        except RuntimeError:
+            pass
+        # 业务失败 → 幂等键同事务回滚，不应残留孤儿键；重试可干净重做
+        assert await repo.idem_claim(k) is False
+        assert await repo.idem_find("m2", "g1", "10001") is None
+    finally:
+        await repo.close()
+
+
+# TX-3/TC-18：多键冲突整体回滚（P0-1 修复：冲突前已写的键不得半写落盘）
+@pytest.mark.asyncio
+async def test_world_cas_mid_way_conflict_rolls_back_all():
+    db = Database(":memory:")
+    repo = Repository(db)
+    try:
+        ws = WorldState(map_boss={"b1": {"name": "旧BOSS"}}, world_stock={"potion": 3},
+                        spawn_timers={}, dummy_override={}, last_spawn_time="")
+        # 首写成功（所有键 version -> 1）
+        assert await repo.save_world_state(ws, {"map_boss": 0, "world_stock": 0,
+                                                "spawn_timers": 0, "dummy_override": 0,
+                                                "last_spawn_time": 0}) is True
+        # 第二次写：map_boss 版本 =1（期望 1，命中写入新值），
+        # 但 world_stock 期望 0（实际 1）→ 第 2 键冲突 → 整体回滚，map_boss 不得半写更新
+        ws2 = WorldState(map_boss={"b1": {"name": "新BOSS"}}, world_stock={"potion": 99},
+                         spawn_timers={}, dummy_override={}, last_spawn_time="")
+        ok = await repo.save_world_state(ws2, {"map_boss": 1, "world_stock": 0,  # world_stock 期望旧版 0 → 冲突
+                                               "spawn_timers": 1, "dummy_override": 1,
+                                               "last_spawn_time": 1})
+        assert ok is False
+        # 验证回滚：map_boss 仍是旧值（未被半写），world_stock 也未变
+        ws_read = await repo.load_world_state()
+        assert ws_read.map_boss.get("b1", {}).get("name") == "旧BOSS", "map_boss 被半写更新"
+        assert ws_read.world_stock.get("potion") == 3
     finally:
         await repo.close()
 

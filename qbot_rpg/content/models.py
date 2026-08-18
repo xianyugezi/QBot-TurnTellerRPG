@@ -277,6 +277,7 @@ DEF_CLASSES: Mapping[str, Any] = {
     "map": MapDef,
     "stat": StatDef,
     "npc": NpcDef,
+    "conditional": BaseDef,  # 条件加成规则（细化_3b §3.2）——BaseDef 承载 id+raw，无专属字段
 }
 
 

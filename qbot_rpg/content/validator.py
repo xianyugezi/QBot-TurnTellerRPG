@@ -307,6 +307,65 @@ class _Checker:
             self._check_chain_cycle(module_name, data, mmeta)
         if mmeta.mutex_field:
             self._check_mutex_cycle(module_name, data, mmeta)
+        # 条件加成（细化_3b §3.2 / TC-05 / ADR-05）：source/target 引用 stats 键空间（R-4）
+        # + 依赖图环（含自环）→ R-5。口径说明：3b ADR-05「未注册键红拦」vs 3e Y-7「未注册键
+        # 黄提示」为跨文档冲突（dsh 审查 P2-9，上报用户/仲裁）；此处按 3b 场景语义取红。
+        if module_name == "conditional":
+            self._check_conditional(module_name, data)
+
+    def _check_conditional(self, module_name: str, data: object) -> None:
+        """条件加成专项（P1-1 接线：加载期红拦可达，3b TC-05/ADR-05）。"""
+        if not isinstance(data, Mapping):
+            return  # 结构错误已由泛型 _check_module 报
+        rules = data.get("conditional")
+        if not isinstance(rules, list):
+            return
+        stat_keys: set = set(self._id_space.get("stat", {}).keys())
+        edges: Dict[str, set] = {}
+        seen: set = set()
+        for idx, rule in enumerate(rules):
+            rm = rule if isinstance(rule, Mapping) else {}
+            rid = str(rm.get("id") or "")
+            src = str(rm.get("source") or "")
+            tgt = str(rm.get("target") or "")
+            base = f"{module_name}.conditional.{idx}"
+            if not rid:
+                self._err(module_name, base, "R-5", rule="required_missing", name="id")
+            elif rid in seen:
+                self._err(module_name, base, "R-5", rule="id_duplicate", id=rid)
+            else:
+                seen.add(rid)
+            for key, label in ((src, "source"), (tgt, "target")):
+                if key and key not in stat_keys:
+                    self._err(module_name, f"{base}.{label}", "R-4",
+                              rule="ref_missing", ref=key, ref_kind="stat")
+            if src and tgt:
+                edges.setdefault(src, set()).add(tgt)
+        if self._graph_has_cycle(edges):
+            self._err(module_name, "conditional", "R-5", rule="conditional_cycle",
+                      edges={k: sorted(v) for k, v in edges.items()})
+
+    @staticmethod
+    def _graph_has_cycle(edges: Dict[str, set]) -> bool:
+        """有向图 DFS 三色判环（含自环 source==target）。"""
+        WHITE, GRAY, BLACK = 0, 1, 2
+        color: Dict[str, int] = {}
+
+        def dfs(u: str) -> bool:
+            color[u] = GRAY
+            for v in edges.get(u, ()):
+                c = color.get(v, WHITE)
+                if c == GRAY:
+                    return True
+                if c == WHITE and dfs(v):
+                    return True
+            color[u] = BLACK
+            return False
+
+        for u in list(edges):
+            if color.get(u, WHITE) == WHITE and dfs(u):
+                return True
+        return False
 
     # ---- map 形态模块值校验（stats/formula）----
     def _check_map_value(
@@ -462,8 +521,6 @@ class _Checker:
                 self._err(module_name, path, "R-3", rule="not_a_number", value=value)
                 return
             if not fmeta.allow_negative and value < 0:
-                if integer and value != int(value):
-                    pass
                 self._err(module_name, path, "R-2", rule="negative", value=value)
                 return
             self._hint_number(path, key, value, fmeta)

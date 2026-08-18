@@ -11,7 +11,7 @@
 |---|---|---|---|---|
 | S1 | 行动概率语义 | ① action.json `probability` 注释"入池开关（0=锚点/1=入池，数值不参与概率计算）"；② §6.2 "weight 归一化：普攻 50/重击 30/蓄力 20，probability=1 入池"；③ §十二 enemies 条目同含 probability+weight | **probability ∈ {0,1} 纯入池开关；概率=weight 归一化，仅 probability=1 条目参与随机池；probability=0 只被链/条件/状态机触发**（三处一致，无歧义，只做字段化） | L138、L145、L279 |
 | S2 | 连招载体 | ① action.json 内嵌 `chain`（历史写法）；② "新配置连招一律走 enemies 顶层 `chains` 表" | **顶层 `chains` 为唯一新配置载体（可选字段，见 1.1-F14）；旧 action.json `chain` 保留读兼容，校验器提示迁移** | L137、L269；AI 定稿 L502、L512-515 |
-| S3 | 特殊行动触发类 | ① §7.1 面向示例 5 类；② 校验器"13 类枚举"（hp_below/phase_below/cooldown_ready/turn_elapsed/after_action/chain_complete/broken/revive/ally_dead/script/tag_trigger/enter_phase/delayed，x_ 前缀可扩展） | **以 13 类枚举为权威**；§7.1 的 5 类为其语义缩略，映射见 1.4-表 | L156-161 vs L296 |
+| S3 | 特殊行动触发类 | ① §7.1 面向示例 5 类；② 权威枚举=怪物行动AI定稿 §二 13 类（hp_below/pv_broken/get_up/battle_start/after_action/player_status/player_hp_below/turn_count/phase_changed/zone_changed/ally_dead/combo_broken/script，x_ 前缀可扩展）；旧枚举为兼容别名（R-01 裁决） | **以 AI 定稿权威 13 类枚举为准**（细化_0 R-01）；§7.1 的 5 类为其语义缩略，映射见 1.4-表 | L156-161 vs L296 |
 | S4 | 触发示例别名 | §七示例 JSON 用 `pv_broken`/`get_up`/`battle_start`，校验器枚举为 `broken`/`revive`/`enter_phase` | **canonical = 枚举名；示例名为别名，校验器接受并提示规范化（不拦截）** | L178-183 vs L296 |
 | S5 | 木桩与八段结构 | §一结构示例 `pv:30` 等为普通怪占位；§十五另立 training 特例 | **木桩判定优先：tier:"training" 或 type:"dummy" 任一命中即按木桩特例处理（pv 强制 0 等）**，普通怪八段字段照常 | L15-33 vs L325-392 |
 
@@ -86,7 +86,7 @@
 | # | 字段 | 类型 | 必填 | 约束 | 来源 |
 |---|---|---|---|---|---|
 | A04 | `special_actions[].action` | string | 必填 | 引用 action.json 的行动 ID，引用存在 | L178、L296 |
-| A05 | `special_actions[].trigger.type` | enum | 必填 | **13 类枚举**：`hp_below`/`phase_below`/`cooldown_ready`/`turn_elapsed`/`after_action`/`chain_complete`/`broken`/`revive`/`ally_dead`/`script`/`tag_trigger`/`enter_phase`/`delayed`；`x_` 前缀可自定义扩展 | L296 |
+| A05 | `special_actions[].trigger.type` | enum | 必填 | **13 类枚举**：`hp_below`/`pv_broken`/`get_up`/`battle_start`/`after_action`/`player_status`/`player_hp_below`/`turn_count`/`phase_changed`/`zone_changed`/`ally_dead`/`combo_broken`/`script`（权威=怪物行动AI定稿 §二）；`x_` 前缀可自定义扩展；旧枚举（phase_below/cooldown_ready/turn_elapsed/chain_complete/broken/revive/tag_trigger/enter_phase/delayed）为兼容别名可写不拦截 | L296 |
 | A06 | `trigger.value` | number | 按类型 | 阈值类必带（`hp_below` 示例 value:30） | L178 |
 | A07 | `trigger.timing` | enum | 按类型 | `current_turn`（当前回合）/ `next_turn`（下一回合）/ `first_turn`（第一回合） | L178-182 |
 | A08 | `trigger.action` + `trigger.chance` | string + number | 按类型 | `after_action` 必带：action=衔接的行动 ID、chance 0-100（示例 80） | L182 |
@@ -198,7 +198,7 @@
 | # | 规则 | 级别 | 来源 |
 |---|---|---|---|
 | R1 | 行动 ID 引用存在（actions[].action ∈ action.json） | 拦截 | L295（校验 1） |
-| R2 | 特殊行动触发条件合法：trigger.type ∈ 13 类枚举（`x_` 前缀可扩展自定义）+ action 引用存在 | 拦截 | L296（校验 2） |
+| R2 | 特殊行动触发条件合法：trigger.type ∈ 权威 13 类枚举（怪物行动AI定稿 §二，`x_` 前缀可扩展自定义）+ action 引用存在；旧枚举经别名归一表接受（黄提示迁移不拦截）| 拦截 | L296（校验 2）+ 细化_0 R-01 |
 | R3 | 弱点允许 0 → 警告"该怪无弱点"；元素 ID ∈ 元素注册表（引用检查） | 警告 / 拦截 | L297（校验 3） |
 | R4 | PV 非负（<0 拦截）；难度档常见区间仅提示"PV 超出该档常见区间，确认？" | 拦截 / 提示 | L298（校验 4） |
 | R5 | 掉落 item 引用存在（条目结构对齐统一 reward 条目 schema，item/count 同键）+ chance 0-100 | 拦截 | L299（校验 5） |
@@ -230,7 +230,7 @@
 | TC-05 | PV 约束 | ① `pv: -1`；② normal 怪 `pv: 80` | ① 拦截"PV 非负"；② 提示"PV 超出该档常见区间，确认？"（不拦截） |
 | TC-06 | 行动引用缺失 | `actions: [{"action":"clawX",...}]` | 拦截（action.json 无 clawX） |
 | TC-07 | 概率归一化语义 | `{claw,p=1,w=50}`、`{rock_roll,p=1,w=30}`、`{hard_body,p=0,w=100}` | 随机池=前两招：概率 50/80、30/80；hard_body 不入池（只被锚点/链触发）；p∉{0,1} → 拦截 |
-| TC-08 | 触发类型与别名 | ① `type:"hp_above"`；② after_action 缺 chance；③ `type:"pv_broken"` | ① 拦截（非 13 类枚举）；② 拦截（参数不完整）；③ 通过 + 提示归一为 `broken` |
+| TC-08 | 触发类型与别名 | ① `type:"hp_above"`；② after_action 缺 chance；③ `type:"pv_broken"`（旧枚举别名）；④ `type:"player_status"`（权威枚举） | ① 拦截（非 13 类）；② 拦截（参数不完整）；③ 通过 + 黄提示归一为权威名；④ 通过（权威枚举，R-01） |
 | TC-09 | 掉落扩展域 | ① `chance:150`；② `count:[3,1]`；③ `condition:"random"` | ① 拦截（0-100）；② 拦截（min>max）；③ 拦截（非枚举） |
 | TC-10 | lore 递增 | `unlock:[10,50,40]`；`unlock:0` | 拦截（非递增）；拦截（超出 1-100） |
 | TC-11 | 木桩忽略项 | `tier:"training"` 且配 drops/lore/`pv:30` | 三条黄提示"木桩忽略掉落/图鉴/PV"（不拦截）；运行期 pv 强制 0 |

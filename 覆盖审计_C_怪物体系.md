@@ -86,7 +86,7 @@
 
 ### P1（高：实现将出现双实现/互相拦截的冲突）1 项
 
-**M-01 — 特殊行动触发枚举双源冲突（⚠️，F-13/A-06）**
+**M-01 — 特殊行动触发枚举双源冲突（⚠️，F-13/A-06）✅ 已关闭：按细化_0 R-01 修订完成（1e A05/R2/TC-08 已改引 AI 定稿权威枚举，旧枚举降级兼容别名）**
 - 证据：定稿① L296"13 类枚举：hp_below/phase_below/cooldown_ready/turn_elapsed/after_action/chain_complete/broken/revive/ally_dead/script/tag_trigger/enter_phase/delayed，**枚举以怪物行动AI定稿为准**"；定稿② §二 L63-76 权威 13 类 = hp_below/pv_broken/get_up/battle_start/after_action/player_status/player_hp_below/turn_count/phase_changed/zone_changed/ally_dead/combo_broken/script。两表**交集仅 4 类**（hp_below/after_action/ally_dead/script）。
 - 细化侧分裂：细化_1e A05（L89）/R2（L201）/TC-08（L233）把**旧枚举**当权威；细化_1f ②（L75）与实现层规划 L317 用**AI 定稿权威枚举**；两处对同一字段给出互斥的合法值集合——按 1e R2 硬拦，AI 定稿的 `player_status/turn_count/phase_changed/zone_changed/combo_broken` 会被拒绝入库。1e 又自造别名归一（broken/revive/enter_phase，S4 L15）与实现层规划采用的 pv_broken/get_up/battle_start 相反。
 - 建议（P1，改动范围小）：修订 细化_1e A05/R2/R12/TC-08，以 AI 定稿 §二 枚举为唯一权威（遵循定稿① L296 自指）；旧枚举改列"兼容别名（黄提示迁移）"，与 S4 别名逻辑合并为一张归一表；同步 1f 引用索引。

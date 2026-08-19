@@ -142,6 +142,12 @@
   | rarity 注册表 | 素材唯一稀有度口径 | 数据包/M5 |
 - **R 级高价值登记**：会心三处文字复写死值统一 formula crit.* / 命中 K 双定稿打架（0.2 vs 1）/ power 上限三处冲突（500/400/999）/ PV 减半 0.5 与换区恢复 0.5 参数化 / 经济基准（50 级尖峰/倍率带/斩杀回合）归口 formula.json 措辞「建议基准(可配)」/ 珠同名递减倍率配置化
 
+### R 级高价值落地（2026-08-19 · 3 路子 agent 并行，17 项 · 15 份定稿）
+- **战斗核心系** ✅：会心三处复写统一 formula crit.*（p_coef/tiers/super_tiers 可配）+ 超会心档数配置化（默认 4 档 0-3）+ 命中 K 统一（**默认 0.2，与实现层 damage.py 公式验收一致**；主 agent 修正 0.2↔1.0 方向）+ power 双路径上限统一（power.max=500 + formxul_max）
+- **怪物职业系** ✅：PV 减半 `pv_half_ratio`（默认 0.5,0=不启用）逐怪可配 + 换区 `zone_change.pv_recover` + 经济基准措辞「建议基准（可配）」+ AI 默认值可配标注（breath_rounds/hungry/chain≥80%）
+- **系统玩法系 R1-R9** ✅：对话深度 `max_dialog_depth` / 珠递减 `gem_diminish` / SP 解锁 `sp_panel[].value` / 幸运公式 `luck_formula+luck_scale` / 鱼饵 `bait_bonus+rod_full_bonus` / 90% 软锚 `milestone.items[i].desc_anchor` / 30 天回收统一 `lifecycle.recycle_days+backup_retention_days` / BOSS 阶段 `phases[]` per-entity / 刷新时刻 `refresh_time` 05:00（「4 点」清零）
+- **待同步承接**：超会心 `super_tiers` ≡ 实现层 crit_mult_up（公式配置化阶段对齐字段名）；power 上限另两处权威（数值经济 400 封顶 / 技能库 999 自由）后续引用 formula.power.*
+
 ### M1 定稿冲突拍板（用户 2026-08-19）
 - **D5 互杀**：拍板「先手击杀生效→先手胜（玩家对怪物，玩家胜利）」——order 互杀分支若
   player_killed_enemy 置位 → 玩家胜；无先手击杀双死（dot 双杀）→ 平局（test_g4_* 两用例）

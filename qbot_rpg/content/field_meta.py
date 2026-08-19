@@ -103,13 +103,19 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "on_expire": FieldMeta(type="ref", ref_target="effect"),
     }
     marks_fields: Dict[str, FieldMeta] = {
+        # 印记定稿 §八 数据结构汇总（2026-08-19 定稿对照 P0-1 修复）：
+        # id | name | icon | type=mark | max_stack | appliable_to | polarity
+        #  | element(可选) | duration | desc
         "id": F_ID, "name": F_NAME,
+        "icon": FieldMeta(type="str"),
         "type": FieldMeta(type="enum", enum=("mark",)),
-        "max_stack": F_MAX_STACK, "duration": F_DURATION,
-        "probability": F_PROBABILITY,
-        "require_status": FieldMeta(type="ref", ref_target="status"),
-        "apply_status": FieldMeta(type="ref", ref_target="status"),
-        "apply_effect": FieldMeta(type="ref", ref_target="effect"),
+        "max_stack": F_MAX_STACK,
+        "appliable_to": FieldMeta(type="str"),   # 可挂目标（AT-01/05；枚举值权威源在数据包）
+        "polarity": FieldMeta(type="enum", enum=("positive", "negative")),
+        "element": FieldMeta(type="str"),        # 可选元素引用（element 表 M2 时代入）
+        "duration": F_DURATION,
+        "desc": FieldMeta(type="str"),
+        "probability": F_PROBABILITY,            # mark_add 概率 proc（AT-10）
     }
     skill_chains_fields: Dict[str, FieldMeta] = {
         "id": F_ID, "name": F_NAME, "type": F_TYPE,

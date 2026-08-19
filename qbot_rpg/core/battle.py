@@ -669,8 +669,9 @@ class BattleEngine:
             if basis == "order":
                 # G4 定稿对照修复（定稿 L60-62）：互杀场景下（双方死亡标记并存）——
                 # 「先手反伤/同归于尽致死且后手亦死 → 平局」「回合开始 dot 双杀 → 平局」。
-                # 原实现误判 player_killed_enemy→玩家胜（反射双死被判胜，TC-11 语义破坏）。
-                # 修正：order 基准下真互杀一律按 mutual_kill_result 结算。
+                # [H2 修正，2026-08-19] 原实现取「互杀一律平局」。注：定稿 L62（反伤互杀→平局）
+                # 与 1g1c TC-11（先手击杀生效→先手胜）存在内部语义冲突，已登记仲裁册，
+                # 不由实现单方归平；被删的「player_killed_enemy→玩家胜」分支见 git 历史。
                 p_dead, e_dead = True, True  # 双死
             else:  # hp_ratio（定稿 L63：比较「致死前一刻」双方剩余 HP 百分比，高者胜）
                 p_before = float(self._combat("player").get("_hp_before_death", 0))
@@ -832,8 +833,8 @@ class BattleEngine:
         if config:
             self._config.update(config)
         self._rng_seed = random_seed if random_seed is not None else random.SystemRandom().randint(0, 2**31 - 1)
-        # 尊重调用方注入的自定义确定性 RNG（测试 QueueRNG 等；isinstance Random → 按 seed 重建），
-        # 生产构造默认 _rng=None → 按 seed 建 Random（4a TC-17 同种子可复现）。
+        # 尊重调用方注入的自定义确定性 RNG（测试 QueueRNG 等；内置 Random → 按 seed 重建），
+        # 生产构造 _reset_state 已建默认 Random() → isinstance(Random) 走 seed 重建（4a TC-17 同种子可复现）。
         if getattr(self, "_rng", None) is None or isinstance(self._rng, random.Random):
             self._rng = random.Random(self._rng_seed)
 
@@ -1137,23 +1138,25 @@ class BattleEngine:
         """连段性行动（1c1a/b/c + 1c2）：combo 引擎判定 → 被拒短路 / 派生表单 → 伤害结算。
 
         M1-批3 主 agent 收口：combo.py 引擎已实现但本 battle 接线缺失（子代理撞迭代上限）。
-        - ⑥ 被拒（MP/冷却/条件不足）：不改连段、不耗回合、可反复尝试（1c1c TC-04/23）——
-          状态保持 ACT（未推 RES），调用方可直接再次 do_action。
+        - ⑥ 被拒（MP/冷却/条件不足）：不改连段、不耗回合、可反复尝试（1c1c TC-DEF-04 /
+          1c2 §2.4 / 1c3 TC-30）——状态保持 ACT（未推 RES），调用方可直接再次 do_action。
         - 派生/自动替换：ComboActionResult.form_id 覆写 action.skill_id 后走既有伤害通道。
         """
         target = self._opposite(attacker)
         ca = dict(action)
         if not ca.get("skill_id"):
             ca["skill_id"] = ca.get("id", "")
+        sd = self.combo_engine().resolve_skill(str(ca.get("skill_id") or "")) or {}
+        ca.setdefault("tag", str(sd.get("tag", "")))           # D4：skill def 合并 tag
+        ca.setdefault("armor", bool(sd.get("armor", False)))   # D4：skill def armor
+        if "effects" not in ca:
+            ca["effects"] = list(sd.get("effects") or [])      # D4：skill def effects（标准技能路径也能执行印记/打断等）
         ca.setdefault("mult", float(ca.get("mult", 1.0)))
 
-        def _marks_lookup(which: str, mark_id: Optional[str]) -> int:
-            # P0-1：combo 派生条件内印记子句（1d §3.1 C-1..C-5）经 battle 接 marks 状态
+        def _marks_lookup(kind: str, which: str, rule: Mapping[str, Any], mark_id: Optional[str] = None) -> bool:
+            # D1 定稿对照修复：combo 印记条件子句全量转接 MarksManager.evaluate（1d §3.1 唯一正确实现）
             side = attacker if which == "self" else target
-            mm = self.marks_manager()
-            if mark_id is None:
-                return mm.total(side)
-            return mm.count(side, mark_id)
+            return self.marks_manager().evaluate(kind, side, dict(rule), mark_id)
 
         result = self.combo_engine().apply_action(attacker, ca, self._snap, self._armor_active,
                                                   marks_lookup=_marks_lookup)
@@ -1182,15 +1185,16 @@ class BattleEngine:
         # ---- P1-3/P1-4（dsh 批3）：技能 effects 消费 + 打断/霸体闭环 ----
         # 1c2 §1.3 字段 24「effects 归口效果系统；interrupt 唯一实现走 effects.json」：
         # 印记施加/消除、打断等 L0 动作经 execute_action 真实进战斗（原仅道具路径可达）。
-        tag = str(action.get("tag") or "")
-        eff_list = action.get("effects") or []
+        tag = str(ca.get("tag") or "")
+        eff_list = ca.get("effects") or []
+        armor_flag = bool(ca.get("armor", False))
         if tag == "interrupt" or any(
             (e or {}).get("type") == "interrupt" for e in eff_list if isinstance(e, dict)
         ):
             # P1-4：打断技攻击窗口三条件（1c2 §2.2）——目标连段清零
             self.combo_engine().apply_interrupt(attacker, target, self._snap, self._armor_active)
-        if result.armor:
-            self._armor_active[attacker] = True        # 霸体：本行动期间免疫打断
+        if result.armor or armor_flag:
+            self._armor_active[attacker] = True        # 霸体：本行动阶段期间免疫打断（1c2 §2.2）
         rt = self._new_runtime()
         hit_effects: List[Mapping[str, Any]] = []
         if eff_list:
@@ -1202,7 +1206,8 @@ class BattleEngine:
                 if isinstance(eff_raw, dict):
                     hit_effects.extend(execute_action(eff_raw, ctx, rt).side_effects)
             self._absorb_runtime(rt)
-        self._armor_active[attacker] = False           # 行动结算完成，霸体窗口结束
+        # 霸体窗口=行动阶段结束（D2 修复：原在技能结算内清位→同回合敌后手打断不免疫，
+        # 1c2 §2.2「使用期间」应为整个行动阶段；清位移至 _after_actor_action）
         out = self._resolve_damage_action(attacker, action)
         if hit_effects:
             out = ActionOutcome(
@@ -1440,6 +1445,7 @@ class BattleEngine:
         state 回行动选择（T8：下一行动者）以便下一个 actor 进入。"""
         if self._finished:
             return
+        self._armor_active[actor] = False   # D2：霸体窗口=行动阶段结束（1c2 §2.2「使用期间」）
         nxt = self.next_action_owner()
         if nxt is not None and self._state in (STATE_RES,):
             self._to_state(STATE_ACT, "next_actor")

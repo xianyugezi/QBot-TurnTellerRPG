@@ -273,8 +273,9 @@ class MarksManager:
         return True, max_stack
 
     def apply_remove(self, cmd: RemoveMark) -> int:
-        """mark_remove：寻址 = side + polarity 过滤（+可选 mark，D-02）；FIFO 按层数消；
-        超量=饱和减法至 0（D-03，不报错）。返回移除总层数。"""
+        """mark_remove：寻址 = side + polarity 过滤（+可选 mark，D-02）；按层数消、
+        超量=饱和减法至 0（D-03，不报错）。返回移除总层数。
+        （2026-08-19 定稿对照：消除顺序定稿未规定，「FIFO」系原注释自加细节，已去。）"""
         remaining = max(0, int(cmd.count))
         removed = 0
         survivors: List[Dict[str, Any]] = []

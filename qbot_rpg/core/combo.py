@@ -369,40 +369,40 @@ def _status_has(cond: Mapping[str, Any], ctx: ConditionCtx) -> bool:
     return False
 
 
-def _eval_marks(sub: Any, which: str, marks_lookup: Optional[Callable[[str, Optional[str]], int]]) -> bool:
-    """印记条件子句（1d §3.1 C-1..C-5，经 marks_lookup 层数查询）。
+def _eval_marks_sub(
+    sub: Any,
+    which: str,
+    marks_lookup: Optional[Callable[[str, str, Mapping[str, Any], Optional[str]], bool]],
+    mkey: str,
+) -> bool:
+    """印记条件子句（细化_1d §3.1 C-1..C-5）→ 转接 marks_lookup（battle 注入的
+    MarksManager.evaluate，唯一正确实现）。
 
-    - {has: [ids], all?: bool} → 全部成立（marks_set）/ 任一成立（marks_any）
-    - {min|max|eq} → 该侧印记总数比对
-    - 无 marks_lookup（未接线）→ False（安全失败，P0-1 修复）
+    - C-1/C-2（self_marks/target_marks）：`{mark_id: {min|max}}` 任一满足（V-2 至少其一，
+      1d L146-147）；退化 `{min|max}` → 总数
+    - C-3 marks_total / C-4 marks_set(all) / C-5 marks_any(种类数)：rule 直传
+    - 无 marks_lookup → False（安全失败，1c3 TC-13）
     """
     if marks_lookup is None:
-        return False  # 无印记上下文 → 条件不满足（TC-13 安全失败）
+        return False
     if not isinstance(sub, Mapping):
         return False
-    ids = sub.get("has")
-    ids_l = [ids] if isinstance(ids, str) else (list(ids) if isinstance(ids, list) else [])
-    if ids_l:
-        vals = [marks_lookup(which, i) for i in ids_l if isinstance(i, str)]
-        if sub.get("all", True):   # marks_set
-            return all(v > 0 for v in vals)
-        return any(v > 0 for v in vals)   # marks_any
-    total = marks_lookup(which, None)
-    eq = sub.get("eq")
-    if eq is not None:
-        return total == int(eq)
-    mn, mx = sub.get("min"), sub.get("max")
-    if mn is not None and total < int(mn):
+    if mkey in ("self_marks", "target_marks"):
+        for mid, r in sub.items():
+            if isinstance(mid, str) and isinstance(r, Mapping):
+                if marks_lookup(mkey, which, r, mid):
+                    return True  # 任一指定印记满足（V-2）
+        # 退化：sub 直接是 {min|max}(:N)（无印记指定）→ 总数口径；否则指定印记均不满足 → False
+        if "min" in sub or "max" in sub or "eq" in sub:
+            return bool(marks_lookup(mkey, which, sub, None))
         return False
-    if mx is not None and total > int(mx):
-        return False
-    return True
+    return bool(marks_lookup(mkey, which, sub, None))
 
 
 def evaluate_condition(
     cond: Optional[Mapping[str, Any]],
     ctx: ConditionCtx,
-    marks_lookup: Optional[Callable[[str, Optional[str]], int]] = None,
+    marks_lookup: Optional[Callable[[str, str, Mapping[str, Any], Optional[str]], bool]] = None,
 ) -> bool:
     """ConditionObject 递归求值；求值失败/未知键默认「条件不满足」（安全失败）。
 
@@ -465,10 +465,12 @@ def evaluate_condition(
         if evaluate_condition(c["not"], ctx, marks_lookup):
             result = False
 
-    # 印记条件（1d §3.1；marks_lookup 由 battle 接线——P0-1）
+    # 印记条件（1d §3.1 C-1..C-5；marks_lookup 由 battle 接线，转 MarksManager.evaluate——
+    # D1 定稿对照修复：原自建 _eval_marks 语法与 1d 规范不符（C-1 指定印记 min/max、
+    # C-4 all 齐备、C-5 种类数），改全量转接 marks.py 唯一正确实现）
     for mkey, which in (("self_marks", "self"), ("target_marks", "target"),
                         ("marks_total", "self"), ("marks_set", "self"), ("marks_any", "self")):
-        if mkey in c and not _eval_marks(c[mkey], which, marks_lookup):
+        if mkey in c and not _eval_marks_sub(c[mkey], which, marks_lookup, mkey):
             result = False
 
     # 未知键 → 安全失败（1c3 TC-13；P0-1 修复：原静默忽略恒 True）
@@ -692,9 +694,9 @@ class ComboEngine:
         registry: Any = None,
         resolver: Optional[Callable[[str, str], Any]] = None,
         config: Optional[Mapping[str, Any]] = None,
-        marks_lookup: Optional[Callable[[str, Optional[str]], int]] = None,
+        marks_lookup: Optional[Callable[[str, str, Mapping[str, Any], Optional[str]], bool]] = None,
     ) -> None:
-        self._marks_lookup = marks_lookup   # 印记条件求值注入（P0-1；battle 构造后绑定）
+        self._marks_lookup = marks_lookup   # 印记条件求值注入（P0-1/D1；battle 构造后绑定，转 MarksManager.evaluate）
         if resolver is not None:
             self._resolver = resolver
         elif registry is not None:
@@ -1092,7 +1094,7 @@ class ComboEngine:
         action: Mapping[str, Any],
         snap: Dict[str, Any],
         armor_active: Optional[Mapping[str, bool]] = None,
-        marks_lookup: Optional[Callable[[str, Optional[str]], int]] = None,
+        marks_lookup: Optional[Callable[[str, str, Mapping[str, Any], Optional[str]], bool]] = None,
     ) -> ComboActionResult:
         """玩家侧连段性行动结算（1c1b 主迁移 ①②③④⑤⑥ + A4 无标签自断）。
 
@@ -1258,12 +1260,20 @@ class ComboEngine:
                 consumed = max_step.consume
 
         after = new_state.count if derived_count_override is None else derived_count_override
+        # D4（combo 定稿对照 2026-08-19）：派生/自动替换命中步写入 step_index（1c1a §2.1
+        # 字段 5「最近执行步骤索引」——原实现从不写 ≥0，互派生形态机进度无载体）
+        _step_index = new_state.step_index
+        if step is not None:
+            _step_index = step.index
         post_state = (
             ComboState(
                 chain_id=new_state.chain_id, chain_name=new_state.chain_name,
-                count=after, hold=new_state.hold, step_index=new_state.step_index,
+                count=after, hold=new_state.hold, step_index=_step_index,
             )
-            if derived_count_override is not None else new_state
+            if derived_count_override is not None else
+            (ComboState(chain_id=new_state.chain_id, chain_name=new_state.chain_name,
+                        count=new_state.count, hold=new_state.hold, step_index=_step_index)
+             if step is not None else new_state)
         )
         self.write_state(snap, side, post_state)
         pending_post = tuple(r for r in self.pending_derivations(side, snap))
@@ -1377,7 +1387,9 @@ class ComboEngine:
                 pick = max(avail, key=lambda s: (s.priority, -s.index))
                 return {"derived": True, "step": pick, "auto_replaced": False,
                         "rejected": False, "reason": ""}
-            # 路径 b：cast to 但条件不满足 → 降级源技能（TC-04 强行使用按原技能）
+            # 路径 b：cast to 但条件不满足 → 按要求返回被拒（H2 修正，2026-08-19 定稿对照：
+            # 原注释称「降级源技能（TC-04 强行使用按原技能）」，但实现=整体被拒——TC-04
+            # （强行使用按原技能）∨ TC-32（条件不足派生整体被拒）同场景冲突，已上报仲裁。
             base = to_steps[0]
             return {"derived": False, "step": None, "auto_replaced": False,
                     "rejected": True,

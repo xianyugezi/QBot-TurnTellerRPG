@@ -109,4 +109,21 @@
 - 附带基建：start() 尊重调用方注入自定义 RNG（测试 QueueRNG 确定性修复）
 - P2×15 登记（target_hp_pct 简写语义/死代码/hold 免疫反馈/冷却降级分支/consume_marks 等，多数随 M5 或数据包）
 
+### M1 定稿对照·批3 补测（审查_M1_{battle2}_定稿对照_20260819.md，2026-08-19）
+- **P0-D1 印记条件语法复发修复**：combo 自建 _eval_marks 与 1d §3.1 规范语法不符（C-1 指定印记 min/max / C-4 all 齐备 / C-5 种类数）→ 全量转接 MarksManager.evaluate（唯一正确实现）+ 退化分支修正 → test_p0_marks_condition_with_lookup（AT-14 五原语）
+- **D2 霸体窗口过早清位**（同回合敌后手打断不免疫）→ 清位移至 _after_actor_action（1c2 §2.2「使用期间」=行动阶段）
+- **D4 技能 tag/effects/armor 未从 skills.json 合并**（标准技能路径不执行效果）→ _resolve_combo_action 从 resolve_skill 合并（sd.get）
+- 幻觉注释 H1/H2/H3 修正（被拒 TC 引用、互杀 TC-11 措辞、start rng 注释）
+- **D5 仲裁登记：定稿 L62（反伤互杀→平局）∨ 1g1c TC-11（先手击杀生效→先手胜）内部冲突**——实现取 L62（互杀一律平局），但按铁律上报用户/仲裁拍板，不得单方归平
+- D3（interrupt 双实现归口 effects.json）、D6（印记按「结算末尾施加」顺序）、D7（被拒审计噪音）、D8（hp_ratio 致死着弹后记录）→ 登记递延，随 M1 收口/数据包处理
+- **consume_marks 全库未实现**（1d P-1/AT-16/AT-17：消耗印记成功 / 不足即拒——不耗回合不改连段不清印记）→ 登记递延（数据包/技能库阶段，F-24 MP 通道一并）
+- **marks 热重载降级不完整**（AT-08：apply_add 对未注册 mark 无门禁，0=不限重建无限叠）→ 登记 M 收口（apply_add 加未注册门禁 + 上限兜底）
+
+### M1 定稿对照·批3 补测 combo（审查_M1_combo_定稿对照_20260819.md，2026-08-19；无 P0）
+- **D4 step_index 写侧修复**（1c1a §2.1 形态机进度：派生/自动替换命中步从不写 step_index，前 P1-1 只修回读）→ apply_action 派生命中步写入 → test_c04 断言
+- **D2 仲裁登记：TC-04（强行使用 cast to 按原技能降级）∨ TC-32（条件不足派生整体被拒）同场景冲突**——实现取 TC-32（整体被拒），上报裁决（原注释误称降级，已诚实化 H2）
+- **D11 仲裁登记：loader skill_chains schema 与 ChainConfig 脱节 + R-5 环检 ∨ 1c3 TC-16「环=特性」冲突**——上报
+- D1 冷却降级分支（定稿 L203/TC-31）、D3 validate_chain 零调用（校验器空转→接线数据包/loader）、D4b/D5-D10（节点出路/大招必填/缺省 tag 继承/overflow 配置/退出免疫反馈）→ 登记递延
+- 幻觉注释 H1（行号交串 L355/356）/H3（缺省 tag 继承恒 +0）/H4（is_armored 声称两源）→ 修正/登记
+
 *M0 门禁：96 pytest 用例全绿 + G0 ARCH-OK + verify_m0 G1 exit 0。*

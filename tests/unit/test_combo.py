@@ -69,12 +69,14 @@ def test_c03_plain_skill_breaks_chain():
 
 
 def test_c04_derive_form_replace():
-    """③ 派生（自动替换→to，计数保留）：count>=2 时 a 派生为 b。"""
+    """③ 派生（自动替换→to，计数保留）：count>=2 时 a 派生为 b，step_index 记录步索引（D4）。"""
     eng = engine()
     s = snap(chain=True, count=2)
     r = eng.apply_action("player", {"skill_id": "a", "tag": "combo"}, s)
     assert r.ok and r.derivation is True
     assert r.form_id == "b" and r.count_before == 2 and r.count_after == 2  # 派生计数保留
+    assert r.step is not None and r.step.index >= 0
+    assert s["combo_state"]["player"].get("step_index", -1) == 0  # D4：形态机进度写入
 
 
 # ---------------- 到顶清零（1c1c TOP-*） ----------------
@@ -161,19 +163,29 @@ def test_p0_marks_condition_fails_safe_without_lookup():
 
 
 def test_p0_marks_condition_with_lookup():
-    """P0-1 回归：marks_lookup 接线后印记条件正常求值（1d §3.1 C-1..C-5）。"""
+    """P0-1/D1 回归：marks_lookup 接线后按 1d §3.1 规范语法（AT-14 五原语）正确求值——
+    C-1 指定印记 min / C-2 target max / C-3 total / C-4 all 齐备 / C-5 种类数。"""
     from qbot_rpg.core.combo import ConditionCtx, evaluate_condition
+    from qbot_rpg.core.marks import AddMark, MarksManager
     cctx = ConditionCtx(count=3, target_hp_pct=50.0, round_=3)
+    mm = MarksManager({"player": [], "enemy": []})
+    mm.apply_add(AddMark(side="player", mark="火印", count=3))
+    mm.apply_add(AddMark(side="player", mark="水印", count=2))
+    mm.apply_add(AddMark(side="enemy", mark="诅咒印", count=1))
 
-    def lookup(which, mark_id):
-        if mark_id is None:
-            return 6 if which == "self" else 0
-        return 2 if (which == "self" and mark_id == "火印") else 0
+    def lookup(kind, which, rule, mark_id=None):
+        side = "player" if which == "self" else "enemy"
+        return mm.evaluate(kind, side, dict(rule), mark_id)
 
+    # AT-14 五原语全真（施放者 3 火 + 2 水；目标 1 诅咒）
+    assert evaluate_condition({"self_marks": {"火印": {"min": 3}}}, cctx, lookup) is True
+    assert evaluate_condition({"target_marks": {"诅咒印": {"max": 1}}}, cctx, lookup) is True
     assert evaluate_condition({"marks_total": {"min": 5}}, cctx, lookup) is True
-    assert evaluate_condition({"marks_total": {"min": 7}}, cctx, lookup) is False
-    assert evaluate_condition({"self_marks": {"has": ["火印"]}}, cctx, lookup) is True
-    assert evaluate_condition({"marks_set": {"has": ["火印", "雷印"]}}, cctx, lookup) is False
+    assert evaluate_condition({"marks_set": {"all": ["火印", "水印"]}}, cctx, lookup) is True
+    assert evaluate_condition({"marks_any": {"min": 2}}, cctx, lookup) is True   # 种类数 2
+    # 反例
+    assert evaluate_condition({"self_marks": {"火印": {"min": 5}}}, cctx, lookup) is False
+    assert evaluate_condition({"marks_any": {"min": 3}}, cctx, lookup) is False  # 种类数 2 < 3
 
 
 def test_p1_step_index_roundtrip():

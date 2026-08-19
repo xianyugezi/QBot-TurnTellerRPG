@@ -171,3 +171,38 @@ def test_r09_monster_def_rate_per_monster():
     out1 = eng1.do_action("player", {"type": "normal", "mult": 1.0})
     # 双通道各自 floor → 总伤害约 50%（允许 floor 累计误差 ±2）
     assert abs(out2.raw_damage * 2 - out1.raw_damage) <= 2, (out1.raw_damage, out2.raw_damage)
+
+
+def test_g2_flee_rate_uses_agi():
+    """G2（定稿对照）：逃跑成功率 = 敏捷比 agi/(agi+敌agi)（玩家属性定稿 L185）——
+    玩家敏捷远低于敌时（20 vs 200 → ~9%）roll 0.5 失败、战斗继续。"""
+    player = dict(PLAYER); player["agi"] = 20
+    enemy = dict(ENEMY); enemy["agi"] = 200
+    eng = make().start(player, enemy, random_seed=23)
+    out = eng.do_action("player", {"type": "flee"})
+    assert out.action_type == "flee" and out.battle_ended is False
+    assert eng.finished is False and eng.battle_state()["status"] != "escape"
+
+
+def test_g4_mutual_kill_order_draw():
+    """G4（定稿对照）：互杀场景下 order 基准——即使曾先手击杀（player_killed_enemy），
+    「先手反伤/同归于尽致死且后手亦死 → 平局」（定稿 L60-62；原实现误判玩家胜）。"""
+    eng = make().start(PLAYER, ENEMY, random_seed=24)
+    eng._snap["result"]["mark_lose"] = True              # 玩家亦死（被反弹/反伤）
+    eng._snap["result"]["mark_win"] = True               # 敌人死
+    eng._snap["result"]["player_killed_enemy"] = True    # 曾先手击杀
+    out = eng._resolve_battle_end(force=True)
+    assert out is not None and out.status == "draw", out
+
+
+def test_g4_mutual_hp_ratio_higher_predeath_wins():
+    """G4：hp_ratio 基准用「致死前一刻」HP 比（定稿 L63）——致死前 HP 占比高者胜。"""
+    eng = make().start(PLAYER, ENEMY, random_seed=25)
+    eng._snap["result"]["mark_lose"] = True
+    eng._snap["result"]["mark_win"] = True
+    eng._snap["player"]["_hp_before_death"] = 400        # 致死前 400/500 = 80%
+    eng._snap["enemy"]["_hp_before_death"] = 100         # 致死前 100/400 = 25%
+    eng._snap["_guard_active"] = {"player": False, "enemy": False}
+    eng._config["mutual_kill_basis"] = "hp_ratio"
+    out = eng._resolve_battle_end(force=True)
+    assert out is not None and out.status == "win", out

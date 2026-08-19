@@ -92,4 +92,11 @@
 - **P1-03 R3 dual 2 槽满分支补 _r3_resist**（与 P1-5 收敛目标自洽）
 - BUG-1（trigger_halve 配置生效）在验收缺口路修复
 
+### M1 定稿对照修复（审查_M1_{damage,effects,battle,formula}_定稿对照_20260818.md，2026-08-18）
+- damage **H1 O1 怪物防御率冒充「细化裁决」**→ 改【工程补白·待策划裁决】+ 登记 R-09（用户拍板：每怪物可配字段，见上表）
+- damage **G1 斩击会心 +5% 悬空**（crit_prob 零调用）→ battle 会心接入 crit_prob+cap（p_override）/ **G3 base_attack_mult 零消费**→ battle 乘入攻击值 / P2 编造行号修正
+- effects **G3 反弹「按 % 减伤并反弹」半支**（定稿 §3.4③ L138）→ 反弹同 % 减伤实伤 → test_g3_reflect_also_mitigates
+- battle **G2 逃跑成功率接敏捷公式**（玩家属性定稿 L185 agi/(agi+敌agi)）→ test_g2 / **G3 stats_collector 补 weak_type/weak_elem**（定稿 §8.1 L326-327）→ / **G4 互杀 order 恒平局 + hp_ratio 致死前基准**（定稿 L60-63，原反射双死误判玩家胜）→ test_g4* / R-09 每怪可配（test_r09）
+- formula **H1 补 [怪物血量百分比]**（定稿 §二③ L137）+ **H3/D1 结果类型白名单对齐**（定稿 L38 boolean/string≤1KB）
+
 *M0 门禁：96 pytest 用例全绿 + G0 ARCH-OK + verify_m0 G1 exit 0。*

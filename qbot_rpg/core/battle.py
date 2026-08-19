@@ -551,6 +551,8 @@ class BattleEngine:
                 "crit": rating.get("crit", "low"),
                 "blocked": bool(rating.get("blocked", False)),
                 "pierce": rating.get("pierce", 0.0),
+                "weak_type": rating.get("weak_type", 1.0),   # G3（定稿 §8.1 L326）：类型弱点倍率
+                "weak_elem": rating.get("weak_elem", 1.0),   # G3（定稿 §8.1 L327）：元素弱点倍率
                 "final": damage.get("final", 0),
             })
         return self._seq
@@ -567,6 +569,7 @@ class BattleEngine:
         c = self._combat(side)
         if not c or c.get("dead_mark"):
             return
+        c["_hp_before_death"] = float(c.get("hp", 0))   # G4：致死前 HP 记录（hp_ratio 互杀基准 L63）
         c["dead_mark"] = True
         c["hp"] = 0
         self._death_order.append(side)
@@ -624,15 +627,18 @@ class BattleEngine:
             result["mutual_kill"] = True
             basis = str(self._config.get("mutual_kill_basis", "order"))
             if basis == "order":
-                # order（L60-62/TC-11）：先手击杀生效→玩家胜；回合开始 dot 双杀
-                # （无先后）→ draw（可配 player_loss，L236）
-                if bool(result.get("player_killed_enemy", False)):
-                    p_dead, e_dead = False, True
-                else:
-                    p_dead, e_dead = True, True  # 无先手击杀 → 双死
-            else:  # hp_ratio（L63/L237）
-                pr = self._combat("player").get("hp", 0) / max(1, self._combat("player").get("max_hp", 1))
-                er = self._combat("enemy").get("hp", 0) / max(1, self._combat("enemy").get("max_hp", 1))
+                # G4 定稿对照修复（定稿 L60-62）：互杀场景下（双方死亡标记并存）——
+                # 「先手反伤/同归于尽致死且后手亦死 → 平局」「回合开始 dot 双杀 → 平局」。
+                # 原实现误判 player_killed_enemy→玩家胜（反射双死被判胜，TC-11 语义破坏）。
+                # 修正：order 基准下真互杀一律按 mutual_kill_result 结算。
+                p_dead, e_dead = True, True  # 双死
+            else:  # hp_ratio（定稿 L63：比较「致死前一刻」双方剩余 HP 百分比，高者胜）
+                p_before = float(self._combat("player").get("_hp_before_death", 0))
+                e_before = float(self._combat("enemy").get("_hp_before_death", 0))
+                p_max = max(1, float(self._combat("player").get("max_hp", 1)))
+                e_max = max(1, float(self._combat("enemy").get("max_hp", 1)))
+                pr = p_before / p_max
+                er = e_before / e_max
                 if abs(pr - er) < 1e-9:
                     p_dead, e_dead = True, True
                 elif pr < er:
@@ -1030,8 +1036,14 @@ class BattleEngine:
             return ActionOutcome(False, seq, attacker, "flee", target, False, "low", False,
                                  0, 0, int(self._combat(target).get("hp", 0)),
                                  ({"type": "flee_blocked", "reason": "boss"},), "BOSS 战禁止逃跑")
-        chance = float(self._config.get("flee_chance", 1.0))
-        ok = chance >= 1.0 or self._roll() < chance
+        # G2 定稿对照修复（玩家属性定稿 L185「敏捷 = 逃跑成功率 agi/(agi+敌agi)」）：
+        # 原实现 config.flee_chance 默认 1.0 恒成功，未接敏捷公式。现在成功率 = 敏捷比
+        # （双方 agi 均 0 时按 1.0 兜底），config.flee_chance 作附加修正系数（作者可调）。
+        agi_self = float(self._combat(attacker).get("agi", 0))
+        agi_opp = float(self._combat(target).get("agi", 0))
+        base = 1.0 if (agi_self + agi_opp) <= 0 else agi_self / (agi_self + agi_opp)
+        chance = max(0.0, min(1.0, base * float(self._config.get("flee_chance", 1.0))))
+        ok = chance >= 1.0 or self._roll() <= chance
         # 定稿 action_record 语义：逃跑动作仍按段记录（1g1c TC-17）
         seq = self._record_action(
             attacker, "flee", target,
@@ -1168,6 +1180,10 @@ class BattleEngine:
             # 数值层 L179/细化_1a §1.2）实战零消费——现乘入物理通道首因子。
             attack_value *= p.base_attack_mult
             weak_mult = float(seg.get("weakness_mult", 1.0))
+            # G3（定稿 §8.1 L326-327）：弱点倍率入 rating 供 stats_collector 记录
+            #（类型/元素弱点当前共用统一 weak_mult；怪物配置 weakness 细分在数据包阶段引入）
+            rating["weak_type"] = weak_mult
+            rating["weak_elem"] = weak_mult
             # R-09 拍板（用户 2026-08-18）：O1 怪物防御率为**每怪物可配字段**
             # （enemies.json per-monster monster_def_rate，缺省 1.0 普通同玩家）——
             # 取自目标 combatant 配置，回退全局 DamageFormulaParams.monster_def_rate。

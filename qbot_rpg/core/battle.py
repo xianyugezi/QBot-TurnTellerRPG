@@ -1168,12 +1168,16 @@ class BattleEngine:
             # 数值层 L179/细化_1a §1.2）实战零消费——现乘入物理通道首因子。
             attack_value *= p.base_attack_mult
             weak_mult = float(seg.get("weakness_mult", 1.0))
+            # R-09 拍板（用户 2026-08-18）：O1 怪物防御率为**每怪物可配字段**
+            # （enemies.json per-monster monster_def_rate，缺省 1.0 普通同玩家）——
+            # 取自目标 combatant 配置，回退全局 DamageFormulaParams.monster_def_rate。
+            mdr = float(tc.get("monster_def_rate", p.monster_def_rate) or p.monster_def_rate)
             ch_phys = channel_phys(attack_value, skill_mult, weak_mult, crit_mult, df,
-                                   monster_def_rate=p.monster_def_rate)
+                                   monster_def_rate=mdr)
             elem_atk = float(ac.get("elem_atk", 0) or 0)
             elem_f = elem_factor(float(tc.get("elem_res", 0)), k=p.defense.k)
             ch_elem = channel_elem(elem_atk, float(seg.get("elem_mult", 0.0)), weak_mult,
-                                   crit_mult, elem_f, monster_def_rate=p.monster_def_rate)
+                                   crit_mult, elem_f, monster_def_rate=mdr)
             seg_damage["ch_phys"], seg_damage["ch_elem"] = ch_phys, ch_elem
 
             # ---- ⑤ 总伤害（1a §1.7-1.9：格挡×0.5 / 防御指令×0.5 / 乱数[0.9,1.1]）----

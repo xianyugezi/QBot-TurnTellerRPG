@@ -151,6 +151,8 @@ def _module_table() -> Dict[str, ModuleMeta]:
     enemies_fields: Dict[str, FieldMeta] = {
         "id": F_ID, "name": F_NAME, "type": F_TYPE,
         "hp": F_HP, "atk": F_ATK, "def": F_DEF,
+        # R-09（2026-08-18 用户拍板）：每怪可配怪物防御率（默认 1.0=普通同玩家；负数黄提示）
+        "monster_def_rate": FieldMeta(type="number", range_min=0, range_max=5),
         "drop_rate": F_DROP_RATE,
         "effects": F_EFFECTS,
         "traits": FieldMeta(type="list", element=FieldMeta(type="ref", ref_target="trait")),

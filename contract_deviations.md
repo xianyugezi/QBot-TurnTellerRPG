@@ -63,6 +63,7 @@
 | C-1 | 3b §3.2「source==target → 黄提示」 vs TC-05「自环 → 红拦」 | **红拦**（统一自环/互环红拦） | 《玩家属性方案定稿》L148「每点力量+1智力——**防循环**」：条件加成设计意图即防自引用失稳 | 3b §3.2 文字已修正（2026-08-18 仲裁 C-1 标注）；validator conditional 自环 R-5（实现已对齐） |
 | C-2 | 3b ADR-05/TC-17「未注册属性键红拦」 vs 3e Y-7「未注册键黄提示」 | **非真冲突**：两语境不同——属性定义/条件加成侧（3b，source/target ∈ 注册表）红拦；效果系统引用属性键侧（3e Y-7 stats 消费方）黄提示 | 《玩家属性方案定稿》L220「自定义属性**注册制（引用存在性校验）**」（属性侧红拦）＋ 3e §2.2 Y-7「消费方引用未注册键→提示」（消费侧黄） | 实现已区分：conditional source/target R-4；effects.patch.target 等 Y-7 |
 | C-3 | 3e §1.6「轮询=独立后台任务」 vs 3e2 D-02/TRG-6「轮询=apscheduler」 | **定稿 L110 为准**：最终统一 apscheduler；M0 提供 `poll_once()` 供 M4 壳层 apscheduler 驱动，`run()` 保留为可测默认 | 《开发规则文档》L110「定时任务统一走 nonebot_plugin_apscheduler，与“操作时懒计算”并存」 | hot_reload.poll_once() 已实现（C-3 标注）；M4 接线 scheduler.add_job(watcher.poll_once, "interval", seconds=3) |
+| R-09 | O1 怪物防御率（定稿 L27/L32 无算法，原「待策划裁决」） | **每怪物可配字段**：enemies.json per-monster `monster_def_rate`（默认 1.0=普通同玩家），战斗引擎取目标 combatant 配置乘入 ④⑤ 通道末因子；语义与怪物三档防御倍率（普通/精英×1.3/BOSS×1.5，定稿 L135-137）一致 | 用户 2026-08-18 拍板："怪物防御让用户自己给每个怪物都能调" | 细化_1a §1.11 更新；battle/channel 已接；用户=内容包作者 |
 
 ## 四、审查后修复记录（P0/P1 已修，单测闭环）
 

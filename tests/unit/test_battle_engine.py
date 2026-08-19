@@ -160,3 +160,14 @@ def test_p004_tick_dot_on_player_lose():
                                                  "source": "enemy"}}
     rep = eng.end_turn()
     assert eng.finished and eng.battle_state()["status"] == "lose"
+
+
+def test_r09_monster_def_rate_per_monster():
+    """R-09 拍板：怪物防御率每怪可配（enemy.monster_def_rate）——2.0 时玩家伤害约减半。"""
+    enemy2 = dict(ENEMY); enemy2["monster_def_rate"] = 2.0
+    eng2 = make().start(PLAYER, enemy2, random_seed=22)
+    out2 = eng2.do_action("player", {"type": "normal", "mult": 1.0})
+    eng1 = make().start(PLAYER, dict(ENEMY), random_seed=22)   # 缺省 1.0
+    out1 = eng1.do_action("player", {"type": "normal", "mult": 1.0})
+    # 双通道各自 floor → 总伤害约 50%（允许 floor 累计误差 ±2）
+    assert abs(out2.raw_damage * 2 - out1.raw_damage) <= 2, (out1.raw_damage, out2.raw_damage)

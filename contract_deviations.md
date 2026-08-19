@@ -126,6 +126,22 @@
 - D1 冷却降级分支（定稿 L203/TC-31）、D3 validate_chain 零调用（校验器空转→接线数据包/loader）、D4b/D5-D10（节点出路/大招必填/缺省 tag 继承/overflow 配置/退出免疫反馈）→ 登记递延
 - 幻觉注释 H1（行号交串 L355/356）/H3（缺省 tag 继承恒 +0）/H4（is_armored 声称两源）→ 修正/登记
 
+### 硬编码审计 M 级落地（2026-08-19 · 33 份定稿 3 路审计，M×8/R×24/S×37）
+- **审计报告**：审查报告/硬编码审计_{战斗核心系,怪物职业系,系统玩法系}.md
+- **M 文档修改已完成**（已落在 /root/docs_archive/RPG框架项目/ 8 份定稿）：
+  M1 怪物防御率 R-09 回写（战斗数值层）/ M2 判定顺序 pipeline_order 开放 / M3 四时术士校验器降黄 season_group_max / M4 怪物难度 difficulty_template / M5 品质档位注册表 quality_tiers（统一 普通/精良/史诗/传说）/ M6 熟练度 tier_names 数组即级数（默认 7 级）/ M7 季节时段开放枚举（默认 4 季/5 时段）/ M8 素材稀有度唯一注册表
+- **实现层承接登记（随各系统阶段落地）**：
+  | 承接项 | 配置落点 | 落地阶段 |
+  |---|---|---|
+  | pipeline_order | formula.json 有序数组（默认现序） | 公式配置化（M2/数据包） |
+  | season_group_max | skills 校验器软提示（默认5,0=不限） | 技能库校验 |
+  | difficulty_template | enemies.json difficulty 档位/逐怪乘数覆盖 | M2 怪物 |
+  | quality_tiers | 注册表数组（3/5/7 档均可） | M5 生活/强化 |
+  | tier_names=级数 | proficiency.json（任意 1-N 级） | M5 生活 |
+  | season/period 枚举开放 | 时间引擎配置（默认 4/5 保序） | M3 时间天气 |
+  | rarity 注册表 | 素材唯一稀有度口径 | 数据包/M5 |
+- **R 级高价值登记**：会心三处文字复写死值统一 formula crit.* / 命中 K 双定稿打架（0.2 vs 1）/ power 上限三处冲突（500/400/999）/ PV 减半 0.5 与换区恢复 0.5 参数化 / 经济基准（50 级尖峰/倍率带/斩杀回合）归口 formula.json 措辞「建议基准(可配)」/ 珠同名递减倍率配置化
+
 ### M1 定稿冲突拍板（用户 2026-08-19）
 - **D5 互杀**：拍板「先手击杀生效→先手胜（玩家对怪物，玩家胜利）」——order 互杀分支若
   player_killed_enemy 置位 → 玩家胜；无先手击杀双死（dot 双杀）→ 平局（test_g4_* 两用例）

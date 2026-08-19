@@ -86,6 +86,12 @@ from qbot_rpg.core.effects import (
     tick_after_action,
     tick_turn_end,
 )
+from qbot_rpg.core.marks import MarksManager
+from qbot_rpg.core.combo import (
+    ComboActionResult,
+    ComboEngine,
+    InterruptResult,
+)
 
 __all__ = [
     "BattleEngine",
@@ -285,13 +291,15 @@ class BattleEngine:
         registry: Any = None,
         defs: Optional[Mapping[str, Any]] = None,
         config: Optional[Mapping[str, Any]] = None,
+        combo_engine: Optional[ComboEngine] = None,
     ) -> None:
         """构造引擎。
 
         pipeline/runtime：效果/配置源注入（默认自建）；params：伤害公式参数载
         体（damage.DamageFormulaParams，细化_1a §2.1）；registry/defs：内容包
         配置源（effects/statuses 解析，F-21/F-23 用）；config：引擎配置
-        （death_check 四项等，1g1b §三）。
+        （death_check 四项等，1g1b §三）；combo_engine：连段引擎（细化_1c；
+        默认自建，与 registry/defs 同源解析技能/链配置）。
 
         兼容旧签名：BattleEngine() / BattleEngine(pipeline, runtime) 原样可用。
         """
@@ -307,6 +315,10 @@ class BattleEngine:
         self._registry: Any = registry
         self._defs: Optional[Mapping[str, Any]] = defs
         self._resolver: Callable[[str, str], Any] = _make_battle_resolver(registry, defs)
+        self._combo: ComboEngine = combo_engine or ComboEngine(
+            defs=defs, registry=registry,
+            config={"enforce_mp": bool(self._config.get("combo_enforce_mp", False))},
+        )
         self._reset_state()
 
     # ------------------------- 内部状态字段 -------------------------
@@ -322,6 +334,8 @@ class BattleEngine:
         self._guard_active: Dict[str, bool] = {"player": False, "enemy": False}
         self._turn_acted: Dict[str, bool] = {"player": False, "enemy": False}
         self._effect_ids: Dict[str, List[str]] = {"player": [], "enemy": []}
+        # 霸体瞬态（1c2 §2.2：行动开始 → 本次结算完成；打断判定依据）
+        self._armor_active: Dict[str, bool] = {"player": False, "enemy": False}
         self._death_order: List[str] = []   # 死亡登记顺序（互杀审计，1g1b A2）
         self._current_actor: Optional[str] = None      # 当前行动者（先手击杀判定，TC-11）
         self._qualified_kill_origin: bool = False      # 敌人死因=玩家行动直击（order 基准）
@@ -397,6 +411,28 @@ class BattleEngine:
                 rt.status_instances(side),
             )
 
+    def marks_manager(self) -> MarksManager:
+        """印记状态管理器访问器（细化_1d §2.1/§3）：绑定当前快照 marks_state
+        （唯一权威双向表），施加/消除/条件求值/公式 [印记:X] 共用同一状态。
+
+        对快照的写入即时生效（同一 dict 对象）；缺键时惰性补建 {player:[],enemy:[]}。
+        """
+        ms = self._snap.get("marks_state")
+        if not isinstance(ms, dict):
+            ms = {"player": [], "enemy": []}
+            self._snap["marks_state"] = ms
+        return MarksManager(ms, resolver=self._resolver)
+
+    def combo_engine(self) -> ComboEngine:
+        """连段引擎访问器（细化_1c）：绑定当前快照（以快照 combo_state 为权威）。
+        用于技能/链配置解析、条件评估、派生/打断判定。"""
+        return self._combo
+
+    @property
+    def armor_active(self) -> Dict[str, bool]:
+        """霸体瞬态（读/写：测试与结算窗口控制，1c2 §2.2）。"""
+        return self._armor_active
+
     def _combat(self, side: str) -> Dict[str, Any]:
         c = self._snap.get(side)
         return c if isinstance(c, dict) else {}
@@ -426,6 +462,10 @@ class BattleEngine:
         c.setdefault("level", 0)
         c.setdefault("hit_streak", 0)
         c.setdefault("miss_streak", 0)
+        # 印记→公式视图（细化_1d §3.1/§3.3 + 变量体系 §二⑤）：[印记:名]（_PARAM_RULES
+        # 我方印记:/对方印记: → slot["marks"][名]）与 [印记总数]（marks_total）经
+        # MarksManager 取同一 marks_state 双向表，不另存状态（1d §0.2 单一数据源）。
+        c.update(self.marks_manager().formula_view(side))
         return c
 
     def _make_eval_formula(self, attacker: str = "player", target: str = "enemy") -> Callable[[str], float]:
@@ -687,6 +727,8 @@ class BattleEngine:
             self._snap["combo_zeroed_at"] = zero_reason
         else:
             zero_reason = None
+        # P1-2（dsh 批3）：marks_state 与连段双轴生命周期一致——战斗结束/逃跑成功清零
+        self._snap["marks_state"] = {"player": [], "enemy": []}
         self._finished = True
         self._state = {STATUS_WIN: STATE_WIN, STATUS_LOSE: STATE_LOSE,
                        STATUS_ESCAPE: STATE_FLY, STATUS_DRAW: STATE_LOSE}[status]
@@ -790,7 +832,10 @@ class BattleEngine:
         if config:
             self._config.update(config)
         self._rng_seed = random_seed if random_seed is not None else random.SystemRandom().randint(0, 2**31 - 1)
-        self._rng = random.Random(self._rng_seed)
+        # 尊重调用方注入的自定义确定性 RNG（测试 QueueRNG 等；isinstance Random → 按 seed 重建），
+        # 生产构造默认 _rng=None → 按 seed 建 Random（4a TC-17 同种子可复现）。
+        if getattr(self, "_rng", None) is None or isinstance(self._rng, random.Random):
+            self._rng = random.Random(self._rng_seed)
 
         def _combatant(data: Mapping[str, Any]) -> Dict[str, Any]:
             merged: Dict[str, Any] = dict(_DEFAULT_STATS)
@@ -834,6 +879,7 @@ class BattleEngine:
         self._finished = False
         self._death_order = []
         self._guard_active = {"player": False, "enemy": False}
+        self._armor_active = {"player": False, "enemy": False}
         self._turn_acted = {"player": False, "enemy": False}
         # 效果列表（F-21：effect_ids 装配源，玩家“装备”效果由外部注入）
         self._effect_ids.setdefault("player", [])
@@ -979,7 +1025,7 @@ class BattleEngine:
             atype = "normal"
 
         if atype in ("normal", "skill"):
-            return self._resolve_damage_action(attacker, dict(action_dict))
+            return self._resolve_combo_action(attacker, dict(action_dict))
         if atype == "item":
             return self._resolve_item_action(attacker, dict(action_dict))
         raise ValueError(f"未知动作类型：{atype}（1g1b T2 动作词汇）")
@@ -1086,6 +1132,86 @@ class BattleEngine:
         return ActionOutcome(True, seq, attacker, "item", target, True, "low", False,
                              0, 0, int(self._combat(target).get("hp", 0)), tuple(effects),
                              "道具使用成功")
+
+    def _resolve_combo_action(self, attacker: str, action: Dict[str, Any]) -> ActionOutcome:
+        """连段性行动（1c1a/b/c + 1c2）：combo 引擎判定 → 被拒短路 / 派生表单 → 伤害结算。
+
+        M1-批3 主 agent 收口：combo.py 引擎已实现但本 battle 接线缺失（子代理撞迭代上限）。
+        - ⑥ 被拒（MP/冷却/条件不足）：不改连段、不耗回合、可反复尝试（1c1c TC-04/23）——
+          状态保持 ACT（未推 RES），调用方可直接再次 do_action。
+        - 派生/自动替换：ComboActionResult.form_id 覆写 action.skill_id 后走既有伤害通道。
+        """
+        target = self._opposite(attacker)
+        ca = dict(action)
+        if not ca.get("skill_id"):
+            ca["skill_id"] = ca.get("id", "")
+        ca.setdefault("mult", float(ca.get("mult", 1.0)))
+
+        def _marks_lookup(which: str, mark_id: Optional[str]) -> int:
+            # P0-1：combo 派生条件内印记子句（1d §3.1 C-1..C-5）经 battle 接 marks 状态
+            side = attacker if which == "self" else target
+            mm = self.marks_manager()
+            if mark_id is None:
+                return mm.total(side)
+            return mm.count(side, mark_id)
+
+        result = self.combo_engine().apply_action(attacker, ca, self._snap, self._armor_active,
+                                                  marks_lookup=_marks_lookup)
+        if result.rejected:
+            # P1-5（dsh 批3）：被拒不耗回合——回滚 _do_action_inner 前置的 _turn_acted，
+            # 否则 next_action_owner/to_snapshot 把被拒当已行动（"不耗回合"被打穿）。
+            self._turn_acted[attacker] = False
+            seq = self._record_action(
+                attacker, str(action.get("type", "skill")), target,
+                {"hit": False, "crit": "low", "blocked": False, "pierce": 0.0, "multi": 1.0,
+                 "combo_rejected": True, "combo_reason": result.reject_reason},
+                {"ch_phys": 0, "ch_elem": 0, "final": 0}, self._phase)
+            msg = result.messages[0] if result.messages else f"指令被拒（{result.reject_reason}）"
+            return ActionOutcome(False, seq, attacker, str(action.get("type", "skill")), target,
+                                 False, "low", False, 0, 0, int(self._combat(target).get("hp", 0)),
+                                 (), msg)
+        if result.form_id and result.form_id != ca.get("skill_id"):
+            action = dict(action)
+            action["skill_id"] = result.form_id
+            action["_derived"] = bool(result.derivation)
+            if result.step is not None:
+                step_tag = getattr(result.step, "tag", None)
+                if step_tag:
+                    action.setdefault("tag", step_tag)
+
+        # ---- P1-3/P1-4（dsh 批3）：技能 effects 消费 + 打断/霸体闭环 ----
+        # 1c2 §1.3 字段 24「effects 归口效果系统；interrupt 唯一实现走 effects.json」：
+        # 印记施加/消除、打断等 L0 动作经 execute_action 真实进战斗（原仅道具路径可达）。
+        tag = str(action.get("tag") or "")
+        eff_list = action.get("effects") or []
+        if tag == "interrupt" or any(
+            (e or {}).get("type") == "interrupt" for e in eff_list if isinstance(e, dict)
+        ):
+            # P1-4：打断技攻击窗口三条件（1c2 §2.2）——目标连段清零
+            self.combo_engine().apply_interrupt(attacker, target, self._snap, self._armor_active)
+        if result.armor:
+            self._armor_active[attacker] = True        # 霸体：本行动期间免疫打断
+        rt = self._new_runtime()
+        hit_effects: List[Mapping[str, Any]] = []
+        if eff_list:
+            ctx = DamageCtx(
+                raw_damage=0, attack_type="skill", attacker=attacker, target=target,
+                snapshot=self._snap, variables=self._base_variables(attacker, target),
+            )
+            for eff_raw in eff_list:
+                if isinstance(eff_raw, dict):
+                    hit_effects.extend(execute_action(eff_raw, ctx, rt).side_effects)
+            self._absorb_runtime(rt)
+        self._armor_active[attacker] = False           # 行动结算完成，霸体窗口结束
+        out = self._resolve_damage_action(attacker, action)
+        if hit_effects:
+            out = ActionOutcome(
+                out.ok, out.seq, out.actor, out.action_type, out.target, out.hit,
+                out.crit, out.blocked, out.raw_damage, out.final_damage, out.target_hp,
+                tuple(hit_effects) + out.side_effects, out.message,
+                battle_ended=out.battle_ended, status=out.status,
+            )
+        return out
 
     def _resolve_damage_action(self, attacker: str, action: Dict[str, Any]) -> ActionOutcome:
         """伤害行动闭环（核心）：命中→会心→格挡→双通道→总伤害→拦截链→扣血→

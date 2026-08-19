@@ -99,4 +99,14 @@
 - battle **G2 逃跑成功率接敏捷公式**（玩家属性定稿 L185 agi/(agi+敌agi)）→ test_g2 / **G3 stats_collector 补 weak_type/weak_elem**（定稿 §8.1 L326-327）→ / **G4 互杀 order 恒平局 + hp_ratio 致死前基准**（定稿 L60-63，原反射双死误判玩家胜）→ test_g4* / R-09 每怪可配（test_r09）
 - formula **H1 补 [怪物血量百分比]**（定稿 §二③ L137）+ **H3/D1 结果类型白名单对齐**（定稿 L38 boolean/string≤1KB）
 
+### M1-批3 审查修复（审查_M1_batch3_20260818.md，2026-08-18）
+- **P0-1 条件求值未知键静默恒 True**（含印记条件的派生无条件触发，反安全）→ evaluate_condition 未知键安全失败（1c3 TC-13）+ marks 子句（C-1..C-5）经 battle marks_lookup 接线 → test_p0_marks_condition*
+- **P1-1 ComboState.step_index `0 or -1` 快照回读错位** → from_dict 去 or-1 → test_p1_step_index
+- **P1-2 marks_state 战末/逃跑不清零** → _settle 与 combo 双轴同清 → test_p1_marks_cleared
+- **P1-3 技能 effects 零执行**（印记/打断仅道具路径可达）→ _resolve_combo_action 消费 skills effects（execute_action）
+- **P1-4 打断/霸体闭环零接线**（apply_interrupt 零调用 + armor_active 永不置位）→ battle 技能 tag=interrupt → apply_interrupt；result.armor → armor_active
+- **P1-5 被拒 _turn_acted 前置残留**（"不耗回合"被打穿 + 快照误判）→ 被拒回滚 + should_reject 补 skill def mp_cost → test_p1_rejected
+- 附带基建：start() 尊重调用方注入自定义 RNG（测试 QueueRNG 确定性修复）
+- P2×15 登记（target_hp_pct 简写语义/死代码/hold 免疫反馈/冷却降级分支/consume_marks 等，多数随 M5 或数据包）
+
 *M0 门禁：96 pytest 用例全绿 + G0 ARCH-OK + verify_m0 G1 exit 0。*

@@ -39,6 +39,13 @@ import warnings
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
+from qbot_rpg.core.marks import (
+    AddMark,
+    ClearMarks,
+    MarksManager,
+    RemoveMark,
+)
+
 __all__ = [
     "DamageCtx",
     "PipelineResult",
@@ -276,51 +283,22 @@ class EffectRuntime:
         self.ensure_actor(side)
         return self.marks_state[side]  # type: ignore[return-value]
 
+    def marks_manager(self) -> MarksManager:
+        """印记状态管理器访问器（细化_1d §2.1/§3）：绑定当前 marks_state 同一 dict
+        对象，施加/消除/条件/生命周期 tick 的唯一实现在 core/marks.MarksManager
+        （本类 add_marks/remove_marks/clear_marks 为薄转接层，避免双实现）。"""
+        return MarksManager(self.marks_state, resolver=self._resolver)
+
     def add_marks(
         self, mark_id: str, side: str, count: int = 1, applier: Optional[str] = None
     ) -> Tuple[bool, int]:
         """mark_add 三动作之一（细化_1d §3.2 A-1 / 印记定稿 §4.1）：
 
-        - 施加必中（独立于伤害判定）；
-        - 重复 = +count 至上限（max_stack，0=不限，到顶不再涨）。
-        """
-        mark_def = self._resolver(mark_id, "mark")
-        max_stack = 0
-        if mark_def is not None:
-            ms = mark_def.raw.get("max_stack") if hasattr(mark_def, "raw") else mark_def.get("max_stack")
-            try:
-                max_stack = int(ms or 0)
-            except (TypeError, ValueError):
-                max_stack = 0
-        applier = applier or "player"
-        for inst in self.marks(side):
-            if inst.get("mark_id") == mark_id:
-                old = int(inst.get("count", 0))
-                if max_stack and old + count > max_stack:
-                    inst["count"] = max_stack
-                else:
-                    inst["count"] = old + count
-                return True, max_stack
-        inst = {
-            "mark_id": mark_id,
-            "name": (mark_def.name if mark_def is not None and hasattr(mark_def, "name") else mark_id),
-            "count": count if not max_stack else min(count, max_stack),
-            "applier": applier,
-            "polarity": str(
-                mark_def.raw.get("polarity", "positive")
-                if mark_def is not None and hasattr(mark_def, "raw")
-                else "positive"
-            ),
-        }
-        if mark_def is not None and hasattr(mark_def, "raw"):
-            dur = mark_def.raw.get("duration", "battle")
-            if isinstance(dur, str) and dur.startswith("turns:"):
-                try:
-                    inst["remaining_turns"] = int(dur.split(":")[1])
-                except (ValueError, IndexError):
-                    pass
-        self.marks(side).append(inst)
-        return True, max_stack
+        施加必中（独立于伤害判定）；重复 = +count 至上限（max_stack，0=不限，
+        到顶不再涨）。转接 MarksManager.apply_add（唯一实现）。"""
+        return self.marks_manager().apply_add(
+            AddMark(side=side, mark=mark_id, count=count, applier=applier)
+        )
 
     def remove_marks(
         self,
@@ -331,47 +309,21 @@ class EffectRuntime:
     ) -> int:
         """mark_remove 三动作之一（细化_1d §3.2 A-2 / 印记定稿 §4.2）：
 
-        寻址 = marks_on + polarity 过滤（+可选 mark 精确指定）；按层数消；
+        寻址 = marks_on + polarity 过滤（+可选 mark 精确指定，D-02）；按层数消；
         FIFO（先施加的先被清）；count 超过现有层数=饱和减法至 0（D-03）。
-        """
-        remaining = max(0, count)
-        removed = 0
-        lst = self.marks(side)
-        survivors: List[Dict[str, Any]] = []
-        for inst in lst:
-            if (
-                remaining > 0
-                and inst.get("polarity") == polarity
-                and (mark is None or inst.get("mark_id") == mark)
-            ):
-                cur = int(inst.get("count", 0))
-                sub = min(cur, remaining)
-                cur -= sub
-                removed += sub
-                remaining -= sub
-                if cur > 0:
-                    inst["count"] = cur
-                    survivors.append(inst)
-            else:
-                survivors.append(inst)
-        self.marks_state[side] = survivors
-        return removed
+        转接 MarksManager.apply_remove（唯一实现）。"""
+        return self.marks_manager().apply_remove(
+            RemoveMark(side=side, polarity=polarity, count=count, mark=mark)
+        )
 
     def clear_marks(
         self, side: str, polarity: str, mark: Optional[str] = None
     ) -> int:
-        """clear_marks 三动作之一（细化_1d §3.2 A-3 / 印记定稿 §4.2）：整组清空（无 count）。"""
-        survivors = [
-            inst
-            for inst in self.marks(side)
-            if not (
-                inst.get("polarity") == polarity
-                and (mark is None or inst.get("mark_id") == mark)
-            )
-        ]
-        n = len(self.marks(side)) - len(survivors)
-        self.marks_state[side] = survivors
-        return n
+        """clear_marks 三动作之一（细化_1d §3.2 A-3 / 印记定稿 §4.2）：整组清空（无 count）。
+        转接 MarksManager.apply_clear（唯一实现）。"""
+        return self.marks_manager().apply_clear(
+            ClearMarks(side=side, polarity=polarity, mark=mark)
+        )
 
     # ---------------- effect_triggers（细化_1b §2.4 / §8.3） ----------------
 
@@ -1297,16 +1249,10 @@ def tick_turn_end(snapshot: Mapping[str, Any], runtime: EffectRuntime) -> List[D
             max_hp = int(c.get("max_hp", 0))
             c["hp"] = min(max_hp, hp + v)
             log.append({"type": "regen", "side": side, "heal": v})
-        # ④ 持续双维·回合扣减 + 限时印记扣减
+        # ④ 持续双维·回合扣减 + 限时印记扣减（细化_1d §2.2/§三：remaining_turns 统一
+        #    tick 扣减、归零移除入快照 —— 委托 MarksManager.tick_turn 唯一实现）
         runtime.tick_turns(side)
-        for inst in runtime.marks(side):
-            rt = inst.get("remaining_turns")
-            if isinstance(rt, int) and rt > 0:
-                inst["remaining_turns"] = rt - 1
-        runtime.marks_state[side] = [
-            m for m in runtime.marks(side)
-            if not (isinstance(m.get("remaining_turns"), int) and int(m.get("remaining_turns") or 0) <= 0)
-        ]
+        runtime.marks_manager().tick_turn(side)
         # ⑤ 每回合触发计数重置
         runtime.reset_turn_triggers(side)
         runtime.tick_cooldowns(side)

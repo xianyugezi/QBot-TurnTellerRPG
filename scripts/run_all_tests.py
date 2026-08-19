@@ -17,12 +17,13 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent
 PY = REPO.parent / ".venv" / "bin" / "python"
-VERIFY = REPO / "verify" / "verify_m0.py"
+VERIFY_M0 = REPO / "verify" / "verify_m0.py"
+VERIFY_M1 = REPO / "verify" / "verify_m1.py"
 
-# 里程碑 → verify 脚本（M1~M6 尚未实现，置 None 标记）
+# 里程碑 → verify 脚本（M2~M6 尚未实现，置 None 标记）
 MILESTONES: dict[str, Path | None] = {
-    "m0": VERIFY,
-    "m1": None,  # M1 战斗核心（细化 1a/1b/1c/1d/1g）—— 后续接入
+    "m0": VERIFY_M0,
+    "m1": VERIFY_M1,
     "m2": None,  # M2 怪物体系（1e/1f/1g4）
     "m3": None,  # M3 地图副本时间（2a 系）
     "m4": None,  # M4 指令系统（2b/4f/3c/3d）

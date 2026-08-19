@@ -163,8 +163,9 @@ def test_p004_tick_dot_on_player_lose():
 
 
 def test_r09_monster_def_rate_per_monster():
-    """R-09 拍板：怪物防御率每怪可配（enemy.monster_def_rate）——2.0 时玩家伤害约减半。"""
-    enemy2 = dict(ENEMY); enemy2["monster_def_rate"] = 2.0
+    """R-09 拍板：怪物防御率每怪可配（enemy.monster_def_rate）——0.5 时玩家伤害约减半
+    （定稿 L27/L32 公式因子「× 怪物防御率」：0.5=怪物受一半伤害/防御高；默认 1.0）。"""
+    enemy2 = dict(ENEMY); enemy2["monster_def_rate"] = 0.5
     eng2 = make().start(PLAYER, enemy2, random_seed=22)
     out2 = eng2.do_action("player", {"type": "normal", "mult": 1.0})
     eng1 = make().start(PLAYER, dict(ENEMY), random_seed=22)   # 缺省 1.0
@@ -206,3 +207,32 @@ def test_g4_mutual_hp_ratio_higher_predeath_wins():
     eng._config["mutual_kill_basis"] = "hp_ratio"
     out = eng._resolve_battle_end(force=True)
     assert out is not None and out.status == "win", out
+
+
+# ---------------- dsh 批3 审查修复回归（审查_M1_batch3） ----------------
+def test_p1_marks_cleared_on_battle_end():
+    """P1-2 回归：战斗结束/逃跑成功 marks_state 与连段双轴一致清零（1d §2.3/AT-07）。"""
+    from qbot_rpg.core.marks import AddMark
+    eng = make().start(PLAYER, ENEMY, random_seed=26)
+    eng.marks_manager().apply_add(AddMark(side="enemy", mark="火印", count=2))
+    assert eng.marks_manager().count("enemy", "火印") == 2
+    eng.do_action("player", {"type": "flee"})   # 敏捷 50 vs 40 → 55%；roll 0.5 成功
+    assert eng.finished
+    assert eng.battle_state()["marks_state"]["enemy"] == []
+
+
+def test_p1_rejected_keeps_act_and_no_turn():
+    """P1-5 回归：指令被拒（MP 不足）→ 状态保持 ACT、不改连段、_turn_acted 回滚
+    （"不耗回合、可反复尝试" 1c1c TC-DEF-04）。"""
+    _chain = {"id": "c1", "name": "试链", "trigger_skill": "a", "max_combo": 3,
+              "max_combo_behavior": "reset", "steps": []}
+    _skill = {"a": {"id": "a", "name": "火球", "tag": "combo", "mp_cost": 100}}
+    player = dict(PLAYER); player["mp"] = 0
+    eng = BattleEngine(defs={"c1": _chain, **_skill}, config={"combo_enforce_mp": True})
+    eng._rng = QueueRNG([0.5, 0.5, 0.5, 1.0])
+    eng.start(player, ENEMY, random_seed=27)
+    out = eng.do_action("player", {"type": "skill", "skill_id": "a", "tag": "combo", "mult": 1.0})
+    assert out.ok is False, "MP 不足应被拒"
+    assert eng.state == "act", "被拒后状态保持 ACT（可反复尝试）"
+    assert eng.battle_state()["combo_state"].get("player", {}).get("count", 0) == 0, "不改连段"
+    assert eng.battle_state()["player"]["mp"] == 0, "不耗 MP"

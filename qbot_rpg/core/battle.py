@@ -667,12 +667,14 @@ class BattleEngine:
             result["mutual_kill"] = True
             basis = str(self._config.get("mutual_kill_basis", "order"))
             if basis == "order":
-                # G4 定稿对照修复（定稿 L60-62）：互杀场景下（双方死亡标记并存）——
-                # 「先手反伤/同归于尽致死且后手亦死 → 平局」「回合开始 dot 双杀 → 平局」。
-                # [H2 修正，2026-08-19] 原实现取「互杀一律平局」。注：定稿 L62（反伤互杀→平局）
-                # 与 1g1c TC-11（先手击杀生效→先手胜）存在内部语义冲突，已登记仲裁册，
-                # 不由实现单方归平；被删的「player_killed_enemy→玩家胜」分支见 git 历史。
-                p_dead, e_dead = True, True  # 双死
+                # 互杀判定（定稿 L60-62 + 1g1c TC-11）——【D5 拍板，用户 2026-08-19】：
+                # 「先手击杀生效 → 先手胜」（玩家对怪物：玩家先手击杀怪物即使同归于尽也判玩家胜）；
+                # 无先手击杀的双死（回合开始 dot 双杀等）→ 平局。原实现 L62 互杀一律平局已按拍板覆盖。
+                if bool(result.get("player_killed_enemy", False)):
+                    # player_killed_enemy 由 _mark_dead 在「敌人死于玩家行动阶段」时置位
+                    p_dead, e_dead = False, True   # 先手击杀生效 → 玩家胜（玩家视为存活结算）
+                else:
+                    p_dead, e_dead = True, True    # 无先手击杀（dot 双杀等）→ 平局
             else:  # hp_ratio（定稿 L63：比较「致死前一刻」双方剩余 HP 百分比，高者胜）
                 p_before = float(self._combat("player").get("_hp_before_death", 0))
                 e_before = float(self._combat("enemy").get("_hp_before_death", 0))

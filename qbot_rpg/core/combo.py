@@ -599,7 +599,8 @@ def validate_chain(raw: Mapping[str, Any], warnings: Optional[List[str]] = None)
     - reset 模式 eq=max → 死配置提示（L357/TC-TOP-03），建议 hold 或 min-max；
     - count 条件 min/max 与 max_combo 矛盾（1c2 §1.4/L355-356）；
     - eq > max_combo → 死配置提示（L355-356）；
-    - 环形链从入口不可达节点 → **报错**（TC-17 死配置禁止加载，L358）；
+    - 环形链：**环=特性允许**（D11 拍板，用户 2026-08-19 / TC-16「环=特性」）——只查
+      「从 trigger_skill 入口可达性」，不可达节点为死配置 → 提示（TC-17）；环本身不报错；
     - armor 步骤无任何代价配置 → 「霸体无代价」提示（1c2 §2.5/§10.5）。
     """
     out: List[str] = []

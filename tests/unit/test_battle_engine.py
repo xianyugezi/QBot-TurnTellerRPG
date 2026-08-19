@@ -185,13 +185,23 @@ def test_g2_flee_rate_uses_agi():
     assert eng.finished is False and eng.battle_state()["status"] != "escape"
 
 
-def test_g4_mutual_kill_order_draw():
-    """G4（定稿对照）：互杀场景下 order 基准——即使曾先手击杀（player_killed_enemy），
-    「先手反伤/同归于尽致死且后手亦死 → 平局」（定稿 L60-62；原实现误判玩家胜）。"""
+def test_g4_mutual_kill_order_tc11_first_strike_wins():
+    """D5 拍板（用户 2026-08-19 / 1g1c TC-11）：互杀 + 先手击杀生效 → 先手胜
+    （玩家先手击杀怪物即使同归于尽也判玩家胜利）。"""
     eng = make().start(PLAYER, ENEMY, random_seed=24)
     eng._snap["result"]["mark_lose"] = True              # 玩家亦死（被反弹/反伤）
     eng._snap["result"]["mark_win"] = True               # 敌人死
-    eng._snap["result"]["player_killed_enemy"] = True    # 曾先手击杀
+    eng._snap["result"]["player_killed_enemy"] = True    # 先手击杀生效
+    out = eng._resolve_battle_end(force=True)
+    assert out is not None and out.status == "win", out
+
+
+def test_g4_dot_double_kill_draw():
+    """D5 拍板：无先手击杀的双死（回合开始 dot 双杀等）→ 平局（定稿 L62）。"""
+    eng = make().start(PLAYER, ENEMY, random_seed=24)
+    eng._snap["result"]["mark_lose"] = True
+    eng._snap["result"]["mark_win"] = True
+    eng._snap["result"]["player_killed_enemy"] = False
     out = eng._resolve_battle_end(force=True)
     assert out is not None and out.status == "draw", out
 

@@ -132,7 +132,8 @@ def _register_def(
     kind = _KIND_FOR_MODULE.get(module_name, module_name)
     cls = DEF_CLASSES.get(kind, BaseDef)
     if isinstance(entry, Mapping):
-        d = cls.from_entry(entry)  # id/name/raw 深拷贝
+        # P1-3：显式传 eid（map 形态键 = ID 时值对象无 id 键，否则 Def.id 空串）
+        d = cls.from_entry(entry, id_override=eid)  # id/name/raw 深拷贝
     else:
         d = BaseDef(id=eid, name=eid, raw={"_expr": copy.deepcopy(entry)})  # formula 字符串值等
     tables.setdefault(kind, {})[eid] = d
@@ -194,9 +195,16 @@ def build_pack(
                                 dict(rule="manifest_invalid_json", error=str(e))))
         return _raise_if_blocked(ValidationReport(errors=tuple(errors), warnings=tuple(warnings)))
 
-    # manifest 自身结构校验（必填缺失/类型错误 → R-5/R-1，细化_3e §1.2）
-    manifest_check = check_pack({"manifest": manifest_raw}, meta or default_field_meta_table())
-    errors.extend(manifest_check.errors)
+    # manifest 自身结构校验（P1-2：顶层非 Mapping 直接报 R-5 module_structure 并早停，
+    # 防 Manifest.from_dict 抛 AttributeError 绕过 PackLoadError 错误模型）。
+    # P1-1：不再对 manifest 做独立 check_pack + errors.extend——C 阶段全量校验已含
+    # manifest（validator._ordered_defined_modules 会再校验一次），提前校验会造成
+    # 同一批 manifest 红拦在 combined.errors 重复上报（破坏 D-01「一次给全量」）。
+    if not isinstance(manifest_raw, Mapping):
+        manifest_check = check_pack({"manifest": manifest_raw},
+                                    meta or default_field_meta_table())
+        _raise_if_blocked(ValidationReport(errors=manifest_check.errors,
+                                           warnings=manifest_check.warnings))
     manifest = Manifest.from_dict(manifest_raw)
 
     # ---- B 阶段：按声明顺序 + 注册顺序加载（缺失文件 → Y-6 继续；未声明文件不加载）----

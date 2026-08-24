@@ -168,6 +168,18 @@
 - **P1-1 架构门禁漏检**（scripts/check_architecture）：`find_nonebot_imports` 补 `ast.ImportFrom` 的 `node.module` 判断（原只比对 alias.name，漏检 `from nonebot import X`）→ test_find_nonebot_imports_catches_from_import
 - **run_all_tests.py 路径 bug**（顺带修复）：cwd=REPO(scripts/) 却传相对仓库根的 tests/unit → 阶段 1 恒红；cwd 改 REPO.parent，全量回归恢复绿
 
+### M0 复查批2 修复（审查报告/审查_M0复查_content_*_20260824.md，2026-08-24 · P0×1 / P1×12 / P2×44）
+- **P0-1 monster_def_rate 负数误红拦**（field_meta）：`allow_negative=True`——负数 → Y-1 黄提示 + 运行期按 0（R-09 用户 08-18 拍板「负值→黄提示不红拦」）→ test_monster_def_rate_negative_hint_not_red
+- **P1-1 marks/statuses duration 类型错注册**（field_meta）：statuses.duration → obj {turns,charges}（1b §1.2）；marks.duration → str "battle"/"turns:N"（1d §1.1），不再用 F_DURATION(number) → fixture statuses.json 同步对象形态
+- **P1-2 marks.appliable_to 类型错注册**（field_meta）：str → list[string]（1d §1.1 字段6）→ fixture marks.json 重写（fire_mark 对齐样例 + 补 curse_mark，V-8 兑现）
+- **P1-3 docstring 冒充细化字段表**（field_meta）：改述「M0 引擎简化口径，不冒充细化_1e 顶层 18 字段 / 3b §4.2 完整表」
+- **P1-1 formula 安全例外两条绕过**（validator）：`_normalize_unicode_escapes`（\uXXXX/\xXX → 字符，封 `F\u0075nction`/`ev\x61l`）+ 方括号字符串键黑名单检查（封 `a["constructor"]["constructor"]("return process")()`）→ test_formula_blacklist_escape_bypasses_red
+- **P1-1 manifest 错误重复上报**（loader）：删除 manifest 独立 check_pack + errors.extend（C 阶段全量已含，重复造成红拦翻倍）→ test_manifest_error_reported_once
+- **P1-2 非法顶层 manifest AttributeError**（loader/models）：非 Mapping → 直接 R-5 module_structure 并早停 → test_manifest_non_mapping_blocked
+- **P1-3 map 形态 Def.id 空串**（loader/models）：`from_entry` 加 `id_override`，loader 对 map 分支显式传键 → test_map_module_def_id_equals_key
+- **P1-1 integrity_check 冒充自检 A**（registry）：删恒不可达 kind 内重复检查（dict 键天然唯一），补 modules⊇loaded + schema_version 一致两断言（跨表唯一注明由 validator NAMESPACES 前置拦截）→ test_registry_integrity_check_selfcheck_a
+- **P1-1 BLK-5 暂停未兑现**（hot_reload）：paused 时 run() 循环/poll_once() 完全停止自动检测与重载（转手动 /reload，BLK-5 兑现；手动 reload 成功即复位）→ test_hot_reload_paused_poll_once_no_auto_reload
+
 ## 五、职业设计规范 F 承接登记（JD-F 系 · 规范 v2.2 §十四 提议）
 
 > 来源：职业设计规范 v2.2（三源整合 + 3 路审查）。**JD-F 前缀 = 职业设计规范侧编号**（避免与上文工程 F-1~F-29 冲突）；落地=框架工程需实现才能支撑对应职业。未实现前，设计引用标「规范层提议」。

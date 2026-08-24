@@ -60,18 +60,45 @@ def check_formula(expr: str) -> Optional[Mapping[str, object]]:
 
     简化词法扫描（M0 无外部 JS 解析器依赖）：剥离字符串字面量/注释后检查
     标识符黑名单与 `new Xxx` 表达式；长度上限独立检查（L449）。
+
+    P1-1（2026-08-24 M0 复查）补两条绕过封堵：
+      - Unicode 转义归一化：`F\\u0061nction` → `Function`（否则标识符正则遇
+        反斜杠断词，黑名单不可见）；
+      - 方括号字符串键：`a["constructor"]["constructor"]("return process")()`
+        的字面量键被 _strip_literals 整体剥离导致黑名单不可见 → 对原始表达式
+        单独检查 `[ "黑名单词" ]` 形态（与字符串字面量内含词区分）。
     """
     if len(expr) > FORMULA_MAX_LENGTH:
         return {"rule": "formula_too_long", "length": len(expr), "max": FORMULA_MAX_LENGTH}
-    stripped = _strip_literals(expr)
+    # P1-1：先归一化 Unicode/十六进制转义（\uXXXX / \xXX → 字符），防断词绕过
+    normalized = _normalize_unicode_escapes(expr)
+    stripped = _strip_literals(normalized)
     tokens = _FORMULA_IDENT_RE.findall(stripped)
     for tok in tokens:
         if tok in FORMULA_BLACKLIST:
             return {"rule": "formula_ast_blacklist", "identifier": tok}
+    # P1-1：方括号字符串键取构造器——`x["constructor"]["constructor"](...)` 经典 RCE 链。
+    # 对归一化后的原始表达式扫描（stripped 已把键字面量剥离，看不到）；
+    # 与「字符串字面量内含黑名单词」区分：仅命中 `[ '词' ]` / `[ "词" ]` 访问器形态。
+    for m in re.finditer(r"\[\s*([\"'])(.*?)\1\s*\]", normalized):
+        key = m.group(2)
+        if key in FORMULA_BLACKLIST:
+            return {"rule": "formula_ast_blacklist", "identifier": key}
     # `new Xxx(...)` 表达式：剥离后找 "new" 且下一词为标识符
     for m in re.finditer(r"\bnew\s+([A-Za-z_$][A-Za-z0-9_$]*)", stripped):
         return {"rule": "formula_new_expression", "constructor_name": m.group(1)}
     return None
+
+
+def _normalize_unicode_escapes(expr: str) -> str:
+    """Unicode/十六进制转义归一化（P1-1）：`\\uXXXX` / `\\xXX` → 对应字符。
+
+    防止标识符经转义断词绕过黑名单（如 `F\\u0061nction` 归一化为 `Function`、
+    `ev\\x61l` → `eval`）。仅处理字符转义；反斜杠本身（路径等）原样保留。
+    """
+    expr = re.sub(r"\\u([0-9a-fA-F]{4})", lambda m: chr(int(m.group(1), 16)), expr)
+    expr = re.sub(r"\\x([0-9a-fA-F]{2})", lambda m: chr(int(m.group(1), 16)), expr)
+    return expr
 
 
 def _strip_literals(expr: str) -> str:

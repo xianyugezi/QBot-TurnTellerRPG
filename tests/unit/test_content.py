@@ -335,6 +335,104 @@ def test_formula_blacklist_hidden_in_string_ok() -> None:
     assert check_formula("'eval' + x") is None
 
 
+# ===========================================================================
+# M0 复查（2026-08-24）批2 P1 修复回归
+# ===========================================================================
+
+# P1-1（validator）：formula 安全例外两条绕过路径必须被拦
+def test_formula_blacklist_escape_bypasses_red() -> None:
+    """P1-1（M0 复查）：AST 黑名单经「简化词法」的两条绕过路径必须红拦：
+
+    - 方括号字符串键取构造器：a["constructor"]["constructor"]("return process")()
+    - Unicode 转义断词：F\\u0061nction / ev\\x61l
+    """
+    bypasses = [
+        'a["constructor"]["constructor"]("return process")()',
+        "a['constructor']['constructor']('return process')()",
+        "F\\u0075nction('x')",   # \u0075=u → Function
+        "\\u0065val(1)",          # \u0065=e → eval
+        "ev\\x61l(1)",            # \x61=a → eval
+    ]
+    for bad in bypasses:
+        hit = check_formula(bad)
+        assert hit is not None and hit["rule"] == "formula_ast_blacklist", \
+            f"{bad!r} 应命中 formula_ast_blacklist，实际 {hit}"
+        assert hit["identifier"] in ("constructor", "Function", "eval"), \
+            f"{bad!r} 命中标识符异常: {hit}"
+
+
+# P1-1（loader）：manifest 红拦只报一次（不重复上报）
+def test_manifest_error_reported_once(tmp_path: Path) -> None:
+    """P1-1（M0 复查）：manifest 缺 modules → 红拦恰好 1 条（不再重复上报）。"""
+    bad = {"name": "t", "version": "1.0.0", "schema_version": 1}  # 缺 modules
+    p = _write_pack(tmp_path, bad, {})
+    with pytest.raises(PackLoadError) as ei:
+        build_pack(p)
+    manifest_errs = [e for e in ei.value.errors if e.module == "manifest"]
+    assert len(manifest_errs) == 1, f"manifest 红拦应恰 1 条，实际 {len(manifest_errs)}: {manifest_errs}"
+
+
+# P1-2（loader/models）：manifest 顶层非 Mapping → PackLoadError 而非 AttributeError
+def test_manifest_non_mapping_blocked(tmp_path: Path) -> None:
+    """P1-2（M0 复查）：manifest.json 顶层为数组 → PackLoadError（R-5），不抛 AttributeError。"""
+    (tmp_path / "manifest.json").write_text("[1,2,3]", encoding="utf-8")
+    with pytest.raises(PackLoadError) as ei:
+        build_pack(tmp_path)
+    assert any(e.kind == "R-5" for e in ei.value.errors)
+
+
+# P1-3（loader/models）：map 形态模块（stats）注册的 Def.id = 键
+def test_map_module_def_id_equals_key(tmp_path: Path) -> None:
+    """P1-3（M0 复查）：stats.json 键即 ID → resolve("hp","stat").id == "hp"（非空串）。"""
+    p = _write_pack(
+        tmp_path,
+        _manifest(["stats"]),
+        {"stats": {"hp": {"name": "生命", "type": "combat", "base": 10}}},
+    )
+    pack, _ = build_pack(p)
+    d = pack.registry.resolve("hp", "stat")
+    assert d is not None and d.id == "hp", f"map 形态 Def.id 应为键 'hp'，实际 {d and d.id!r}"
+
+
+# P1-1（registry）：自检 A 两项断言（modules ⊇ loaded / schema_version 一致）
+def test_registry_integrity_check_selfcheck_a() -> None:
+    """P1-1（M0 复查）：integrity_check 补 modules ⊇ loaded 与 schema_version 断言。"""
+    from qbot_rpg.content.models import Manifest
+    from qbot_rpg.content.registry import Registry
+
+    mf = Manifest(name="t", version="1.0.0", schema_version=2, author="",
+                  modules=("stats",), raw={})
+    # schema_version 不一致（直接构造，build() 会强制同步 manifest 值）→ 非 None
+    r_bad = Registry(pack_id="p", tables={"stat": {}}, names={},
+                     modules_raw={"stats": {}}, manifest=mf, schema_version=1)
+    assert r_bad.integrity_check() is not None, "schema_version 不一致应报自检 A"
+    # 声明模块未加载 → 非 None
+    r_missing = Registry(pack_id="p", tables={"stat": {}}, names={},
+                         modules_raw={}, manifest=mf, schema_version=2)
+    assert r_missing.integrity_check() is not None, "modules 声明未加载应报自检 A"
+    # 一致 → None
+    mf_ok = Manifest(name="t", version="1.0.0", schema_version=2, author="",
+                     modules=("stats",), raw={})
+    r_ok = Registry(pack_id="p", tables={"stat": {"hp": object()}}, names={"hp": "生命"},
+                    modules_raw={"stats": {}}, manifest=mf_ok, schema_version=2)
+    assert r_ok.integrity_check() is None
+
+
+# P0-1（field_meta）：monster_def_rate 负数 → 黄提示不红拦（R-09 用户拍板）
+def test_monster_def_rate_negative_hint_not_red(tmp_path: Path) -> None:
+    """P0-1（M0 复查）：R-09 拍板「负数 → 黄提示 + 运行期按 0」，不得 R-2 红拦。"""
+    p = _write_pack(
+        tmp_path,
+        _manifest(["enemies"]),
+        {"enemies": [{"id": "slime", "name": "史莱姆", "monster_def_rate": -0.5}]},
+    )
+    pack, _ = build_pack(p)  # 不抛 PackLoadError = 未红拦
+    assert pack.report.ok, f"负数 monster_def_rate 不应红拦：{pack.report.errors}"
+    assert any(
+        w.kind == "Y-1" for w in pack.report.warnings
+    ), f"负数应有 Y-1 黄提示：{[(w.kind, dict(w.detail)) for w in pack.report.warnings]}"
+
+
 # ---------------------------------------------------------------------------
 # 热重载（3e2 TRG 系列 / 3a#TC-13/14 / 3e#TC-22/23）
 # ---------------------------------------------------------------------------
@@ -397,6 +495,28 @@ async def test_hot_reload_consecutive_failure_pauses(tmp_path: Path) -> None:
     r4 = await watcher.reload()
     assert r4.ok, f"恢复后重载应成功: {r4.note}"
     assert watcher.paused is False, "重载成功后应恢复自动轮询"
+
+
+async def test_hot_reload_paused_poll_once_no_auto_reload(tmp_path: Path) -> None:
+    """P1-1（M0 复查）：BLK-5 暂停后 poll_once() 不自动重载（转手动 /reload）。"""
+    _write_json(tmp_path / "manifest.json", _manifest(["items"]))
+    _write_json(tmp_path / "items.json", [{"id": "p1", "name": "药水", "price": 100}])
+    watcher = HotReloadWatcher(tmp_path, poll_interval_s=0.05, max_consecutive_failures=1)
+    await watcher.start()
+    # 触发一次失败 → 达阈值暂停
+    (tmp_path / "items.json").write_text('{bad json', encoding="utf-8")
+    r = await watcher.reload()
+    assert not r.ok
+    assert watcher.paused is True
+    # paused 期间 poll_once：即使文件随后恢复合法（新签名）也不自动重载
+    _write_json(tmp_path / "items.json", [{"id": "p1", "name": "药水", "price": 200}])
+    pr = await watcher.poll_once()
+    assert pr.paused is True, "paused 期间 poll_once 应保持 paused"
+    assert watcher.consecutive_failures == 1, "paused 期间不应重试（计数不变）"
+    # 手动 reload 恢复
+    r2 = await watcher.reload()
+    assert r2.ok, f"手动 reload 应成功: {r2.note}"
+    assert watcher.paused is False
 
 
 def test_parse_cache_incremental(tmp_path: Path) -> None:

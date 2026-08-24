@@ -180,15 +180,34 @@ class Registry:
             schema_version=manifest.schema_version if manifest else None,
         )
 
-    # ---- 一致性自检（细化_3e2 自检 A）----
+    # ---- 一致性自检（细化_3e2 自检 A 子集）----
     def integrity_check(self) -> Optional[str]:
-        """返回 None=通过；否则返回断言失败原因。热重载后必须通过。"""
+        """返回 None=通过；否则返回断言失败原因。热重载后必须通过。
+
+        覆盖细化_3e2 自检 A（3e2 L215）可静态判定的两项：
+          ① modules 声明 ⊇ 已加载模块（manifest 声明的模块必须都被构建进来）；
+          ② schema_version 与 manifest 声明一致。
+        名称冗余（OLD-2）已由 _names 检查。
+        跨表 ID 唯一性（自检 A 第三项）由 validator 按 field_meta NAMESPACES
+        前置拦截（validator._register_id），registry 侧不重复实现（防循环依赖）。
+        P1-1（2026-08-24 M0 复查）：原实现 kind 内重复检查对 dict 恒不可达
+        （dict 键天然唯一），已删除；补上述可判定断言。
+        """
+        # ① modules 声明 ⊇ 已加载（modules_raw 已含 manifest 键）
+        if self._manifest is not None:
+            declared = set(self._manifest.modules or ())
+            loaded = {k for k in self._modules_raw if k != "manifest"}
+            missing = declared - loaded
+            if missing:
+                return f"declared modules 未加载: {sorted(missing)!r}（自检 A）"
+        # ② schema_version 一致
+        if self._manifest is not None and self._schema_version != self._manifest.schema_version:
+            return (
+                f"schema_version 不一致: registry={self._schema_version}, "
+                f"manifest={self._manifest.schema_version}（自检 A）"
+            )
+        # 名称冗余（OLD-2）：每个 id 必须有显示名
         for kind, ids in self._tables.items():
-            seen = set()
-            for did in ids:
-                if did in seen:
-                    return f"duplicate id {did!r} in kind {kind!r}"
-                seen.add(did)
             for did in ids:
                 names = self._names.get(did)
                 if names is None:

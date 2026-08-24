@@ -160,8 +160,15 @@ class BaseDef:
         return self.raw.get(key, default)
 
     @classmethod
-    def from_entry(cls, entry: Mapping[str, object], name_field: str = "name") -> "BaseDef":
-        eid = str(entry.get("id", ""))
+    def from_entry(cls, entry: Mapping[str, object], name_field: str = "name",
+                   id_override: Optional[str] = None) -> "BaseDef":
+        """从配置条目构造 Def。
+
+        P1-3（2026-08-24 M0 复查）：map 形态模块（stats/formula 对象值）的
+        「键 = ID」由 loader 显式传 id_override——否则值对象无 id 键时
+        Def.id 为空串，违反 §1.5「ID → 定义对象」与名称冗余契约。
+        """
+        eid = str(id_override if id_override is not None else entry.get("id", ""))
         name = str(entry.get(name_field, "") or eid)
         return cls(id=eid, name=name, raw=copy.deepcopy(dict(entry)))
 

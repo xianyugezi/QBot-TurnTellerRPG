@@ -1,3 +1,25 @@
 [
-  { "id": "fire_mark", "name": "火印", "type": "mark", "max_stack": 3, "duration": 0, "probability": 0.3 }
+  {
+    "id": "fire_mark",
+    "name": "火印",
+    "icon": "🔥",
+    "type": "mark",
+    "max_stack": 3,
+    "appliable_to": ["self", "enemy"],
+    "polarity": "positive",
+    "element": "fire",
+    "duration": "battle",
+    "desc": "元素之力凝聚的火焰印记"
+  },
+  {
+    "id": "curse_mark",
+    "name": "诅咒印",
+    "icon": "🩸",
+    "type": "mark",
+    "max_stack": 5,
+    "appliable_to": ["enemy"],
+    "polarity": "negative",
+    "duration": "turns:3",
+    "desc": "施加于敌人的威胁印记（细化_1d V-8 内置样例）"
+  }
 ]

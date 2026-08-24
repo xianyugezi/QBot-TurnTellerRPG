@@ -5,9 +5,13 @@
     formula/items/equipment/traits/enemies/maps/stats/npc）
   - 细化_3e_loader校验接线 §5.3（全部字段的 名称/类型/默认值/范围/引用目标 从本表读取；缺失字段默认放行）
   - 细化_3a_架构分层契约 §3.3 U2（Def 类落 content/，本表同为 content/ 数据）
-  - 细化_1e_怪物八段schema（enemies 字段：hp/atk/def/drop_rate/actions/probability/weight）
   - 细化_1d_印记系统契约（marks：type="mark"、max_stack=0 不限、duration "battle"/"turns:N"）
-  - 细化_3b_玩家属性三层 §4.2（StatDef：base/growth/max/min/type=resource|combat）
+  - 细化_3b_玩家属性三层 §4.2（StatDef：name/type/base/growth/role/mh_map/note）
+
+⚠️ 字段口径说明（2026-08-24 M0 复查诚实化）：enemies/stats 等模块本表为 **M0 引擎简化口径**
+（旧框架 schema，fixture tests/fixtures/packs/legal/*.json 同构；正式表在编辑器里程碑注入）。
+简化口径字段**不冒充** 细化_1e 顶层 18 字段表（hp 嵌套于 stats、无顶层 atk/def/drop_rate）或
+细化_3b §4.2 完整字段表（必填 role/mh_map/note 未注册——M0 无需职业映射，正式表补）。
 
 铁律：只提供「字段口径」默认值；editor/CSV/Schema/validator 四处共用一张元数据表（L140），
 正式表在编辑器里程碑注入，本文件为 M0 引擎可运行的缺省口径。枚举尽量宽松，避免误阻断合法包。
@@ -95,7 +99,13 @@ def _module_table() -> Dict[str, ModuleMeta]:
     }
     statuses_fields: Dict[str, FieldMeta] = {
         "id": F_ID, "name": F_NAME, "type": F_TYPE,
-        "max_stack": F_MAX_STACK, "duration": F_DURATION,
+        "max_stack": F_MAX_STACK,
+        # duration 权威形态 = 对象 {turns:int, charges:int}（细化_1b §1.2 字段9/子结构 2a）
+        # —— 不再用 F_DURATION(number)，否则合法 {turns,charges} 会被 R-1 误拦
+        "duration": FieldMeta(type="obj", children={
+            "turns": FieldMeta(type="int", range_min=0, range_max=9999),
+            "charges": FieldMeta(type="int", range_min=0, range_max=9999),
+        }),
         "decay": FieldMeta(type="str"),  # 枚举（per_turn…）由正式表注入
         "effects": F_EFFECTS,
         "on_enter": FieldMeta(type="ref", ref_target="effect"),
@@ -103,17 +113,21 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "on_expire": FieldMeta(type="ref", ref_target="effect"),
     }
     marks_fields: Dict[str, FieldMeta] = {
-        # 印记定稿 §八 数据结构汇总（2026-08-19 定稿对照 P0-1 修复）：
+        # 印记定稿 §八 数据结构汇总（2026-08-19 定稿对照 P0-1 **部分**修复——5 字段已补；
+        # duration/appliable_to 类型本轮 2026-08-24 对齐）：
         # id | name | icon | type=mark | max_stack | appliable_to | polarity
         #  | element(可选) | duration | desc
         "id": F_ID, "name": F_NAME,
         "icon": FieldMeta(type="str"),
         "type": FieldMeta(type="enum", enum=("mark",)),
         "max_stack": F_MAX_STACK,
-        "appliable_to": FieldMeta(type="str"),   # 可挂目标（AT-01/05；枚举值权威源在数据包）
+        # appliable_to 权威 = string[]（细化_1d §1.1 字段6，非空子集 ⊆{self,enemy}）
+        "appliable_to": FieldMeta(type="list", element=FieldMeta(type="str")),
         "polarity": FieldMeta(type="enum", enum=("positive", "negative")),
         "element": FieldMeta(type="str"),        # 可选元素引用（element 表 M2 时代入）
-        "duration": F_DURATION,
+        # duration 权威 = "battle" | "turns:N" 字符串（细化_1d §1.1 字段9；印记定稿 §八）
+        # —— 不再用 F_DURATION(number)；枚举校验由正式表注入（turns:N 为动态值无法静态枚举）
+        "duration": FieldMeta(type="str"),
         "desc": FieldMeta(type="str"),
         "probability": F_PROBABILITY,            # mark_add 概率 proc（AT-10）
     }
@@ -157,8 +171,9 @@ def _module_table() -> Dict[str, ModuleMeta]:
     enemies_fields: Dict[str, FieldMeta] = {
         "id": F_ID, "name": F_NAME, "type": F_TYPE,
         "hp": F_HP, "atk": F_ATK, "def": F_DEF,
-        # R-09（2026-08-18 用户拍板）：每怪可配怪物防御率（默认 1.0=普通同玩家；负数黄提示）
-        "monster_def_rate": FieldMeta(type="number", range_min=0, range_max=5),
+        # R-09（2026-08-18 用户拍板）：每怪可配怪物防御率（默认 1.0=普通同玩家；
+        # 负数 → Y-1 黄提示 + 运行期按 0 护栏，不红拦——allow_negative=True）
+        "monster_def_rate": FieldMeta(type="number", range_min=0, range_max=5, allow_negative=True),
         "drop_rate": F_DROP_RATE,
         "effects": F_EFFECTS,
         "traits": FieldMeta(type="list", element=FieldMeta(type="ref", ref_target="trait")),

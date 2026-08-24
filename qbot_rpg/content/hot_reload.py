@@ -130,8 +130,9 @@ class HotReloadWatcher:
 
         防空转（BLK-5）：`_detect_changes` 按「签名≠基线 且 ≠最近尝试」过滤，
         失败路径会把触发源写进 `_last_attempt`，同签名坏包不再 3s 空转；
-        连续失败达阈值 → 置 `_paused`（手动 /reload 仍可用；作者新保存=签名变化
-        仍可被检测触发一次，成功即自动恢复轮询）。停止用 stop()。
+        连续失败达阈值 → 置 `_paused`（P1-1 2026-08-24：paused 期间本循环
+        **完全停止自动检测与重载**，转手动 /reload 才可触发——BLK-5「自动
+        暂停自动轮询重载、转手动」兑现；手动 reload() 成功即复位）。停止用 stop()。
 
         【设计收敛 C-3，2026-08-18】：定稿《开发规则》L110「定时任务统一走
         nonebot_plugin_apscheduler」是硬约束。本方法保留为 **M0 零依赖可测默认**
@@ -140,6 +141,11 @@ class HotReloadWatcher:
         """
         self._running.set()
         while not self._stop.is_set():
+            if self._paused:
+                # BLK-5：自动暂停——不做变更检测、不重载（省 IO、防空转）；
+                # 作者新保存也不自动触发，须手动 /reload（成功后 _commit_success 复位）
+                await asyncio.sleep(self._poll_interval_s)
+                continue
             events = await asyncio.to_thread(self._detect_changes)
             if events:
                 # 新事件（签名 ≠ 基线 且 ≠ 上次尝试）：把触发源传给 _reload_sync，
@@ -154,12 +160,24 @@ class HotReloadWatcher:
 
         与 run() 的区别：不自行 while+sleep，每次调用做一次变更检测——
         有「新事件」才重载；无新事件直接返回（防空转逻辑与 run() 完全一致，
-        同签名坏包不重复触发）。M4 接线示例（nonebot_plugin_apscheduler）：
+        同签名坏包不重复触发）。P1-1（2026-08-24）：paused 时直接返回
+        last_result / no change，不检测不重载（BLK-5 自动暂停语义，与 run() 一致）。
+        M4 接线示例（nonebot_plugin_apscheduler）：
 
             scheduler.add_job(watcher.poll_once, "interval", seconds=3)
 
         返回：本次 ReloadResult（无变更时返回 last_result 或「no change」占位结果）。
         """
+        if self._paused:
+            # BLK-5：自动暂停——不做检测/重载，返回最近结果（转手动 /reload）
+            prev = self._last_result
+            if prev is not None:
+                return prev
+            return ReloadResult(
+                pack_id=self._pack_id, ok=True, changed_modules=(), warnings=(), errors=(),
+                restored=False, paused=True, generation=self._generation,
+                note="paused（BLK-5 自动暂停，需手动 /reload）",
+            )
         events = await asyncio.to_thread(self._detect_changes)
         if not events:
             prev = self._last_result

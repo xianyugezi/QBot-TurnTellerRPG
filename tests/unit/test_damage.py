@@ -32,7 +32,8 @@ def test_t02_hit_clamp_high():
 
 
 def test_t03_hit_mid_range():
-    assert 0.75 <= hit_rate(50, 50) <= 0.95  # 50/60=0.833
+    # K=1（2026-08-24 用户拍板统一 3b/1a 口径）：同级 50/50 → 0.5
+    assert round(hit_rate(50, 50), 3) == 0.5  # 50/(50+1*50)=0.5
 
 
 def test_t05_crit_prob_formula():
@@ -133,7 +134,7 @@ def test_t27_spec_sample_214_96_310():
 def test_formula_params_defaults():
     p = DamageFormulaParams()
     assert p.monster_def_rate == 1.0        # O1 裁决：默认 1.0
-    assert p.hit.k == 0.2 and p.hit.cap_min == 10 and p.hit.cap_max == 95
+    assert p.hit.k == 1.0 and p.hit.cap_min == 10 and p.hit.cap_max == 95
     assert p.crit.cap == 95 and p.crit.p_coef == 0.5
     assert p.block.cap == 40 and p.block.magic_ignores is True
     assert p.rng == (0.9, 1.1) and p.derived.max_total_mult == 1.5

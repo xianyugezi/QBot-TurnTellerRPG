@@ -34,6 +34,11 @@ F3_LANDED = "TC-21（校验器可达性：隐藏要素引用未注册条件键 �
 F3_DEFERRED = ("TC-01~20（/日志 /调查 隐藏要素 图鉴闭环 —— "
                "依赖 M3/M4/M6：时间天气/任务/NPC/图鉴引擎/编辑器数据包，后续里程碑覆盖）")
 
+# P1-1（M0 复查）：门禁通过下限——防止"删到只剩 1 条用例仍 G1 绿"。
+# M0 实际落地断言远超此值（unit+contract+e2e 现 200+ 条）；此下限是"防退化"护栏，
+# 精确 TC 条数映射随 TC-5d-08 细化文档扫描在 M1 补。
+MIN_PASS_COUNT = 100
+
 SEGMENT_CMDS = {
     "unit": ["tests/unit"],
     "contract": ["tests/contract"],
@@ -54,22 +59,45 @@ def _pytest(paths: list[str]) -> tuple[bool, int, int, list[str], str]:
 
 
 def _validate_fixtures() -> list[str]:
-    from qbot_rpg.content.loader import load_pack
+    """契约层前置：四件套 validator 全量，**带断言**（P1-3：原实现恒打印 ✓ 无断言）。
+
+    - legal：必须加载成功且 0 errors（rep.ok）
+    - badref / missing_mod：必须被红拦（PackLoadError）
+    - old_schema：M0 未实现迁移链——显式声明「迁移链 M6 覆盖」（细化_5d §5.1：
+      旧 schema 包应走迁移而非拦截；M0 阶段迁移未实装，故此处仅确认可加载路径，
+      不做「预期被拦」的语义断言）
+    任一不满足 → 抛 AssertionError（计入门禁失败）。
+    """
+    from qbot_rpg.content.loader import PackLoadError, load_pack
     from tests.conftest import PACKS_DIR
 
-    async def _run_each() -> list[str]:
-        notes = []
+    notes: list[str] = []
+    failures: list[str] = []
+
+    async def _check_each() -> None:
         for name in ("legal", "badref", "missing_mod", "old_schema"):
             d = PACKS_DIR / name
             try:
                 pack = await load_pack(d)
                 w = [x.kind for x in pack.warnings]
                 notes.append(f"   ✓ {name} 加载 exit=ok·warnings={w or '无'}")
-            except Exception as exc:  # noqa: BLE001 — badref/old_schema 预期被拦
-                notes.append(f"   ✓ {name} 加载被拦（预期）·{type(exc).__name__}")
-        return notes
+                if name == "legal" and not pack.report.ok:
+                    failures.append(f"legal 包应 0 errors，实际 {len(pack.report.errors)}")
+            except PackLoadError as exc:
+                kinds = sorted({e.kind for e in exc.errors})
+                notes.append(f"   ✓ {name} 加载被拦（预期）·kinds={kinds}")
+                if name in ("legal",):
+                    failures.append(f"legal 包不应被拦，实际 kinds={kinds}")
+                if name == "old_schema":
+                    failures.append(
+                        f"old_schema 不应按『预期被拦』断言——细化_5d §5.1 旧包走迁移"
+                        f"（M0 迁移链未实装，登记 M6 覆盖）；当前被拦 kinds={kinds}"
+                    )
 
-    return asyncio.run(_run_each())
+    asyncio.run(_check_each())
+    if failures:
+        raise AssertionError("契约层前置失败:\n" + "\n".join(failures))
+    return notes
 
 
 def main() -> int:
@@ -85,8 +113,10 @@ def main() -> int:
     print("\n【1】覆盖清单")
     for doc, n, note in TARGETS:
         print(f"   ✓ {doc}：{n} 条 ｜ {note}")
+    print("   ⚠ 声明条数为目标文档 TC 总数；实际落地断言见各 tests/ 文件"
+          "（未达 TC 显式登记 defer，不冒充已覆盖——P1-1）")
 
-    print("\n【2】契约层前置（fixtures 四件套 validator 全量）")
+    print("\n【2】契约层前置（fixtures 四件套 validator 全量，带断言）")
     for note in _validate_fixtures():
         print(note)
 
@@ -113,18 +143,24 @@ def main() -> int:
     print(f"   已落地：{F3_LANDED}")
     print(f"   后续覆盖：{F3_DEFERRED}")
 
-    print("\n【5】覆盖率（engine/+content/ ≥80% —— 提示不拦截）")
+    print("\n【5】覆盖率核算（engine/+content/ ≥80% —— 硬门禁，未核算不标通过）")
     try:
         import coverage  # noqa: F401
-        print("   coverage 已装：精确行覆盖请 `coverage run --source=qbot_rpg/core,qbot_rpg/content -m pytest && coverage report`")
+        print("   coverage 已装：请 `coverage run --source=qbot_rpg/core,qbot_rpg/content"
+              " -m pytest && coverage report` 核算；本脚本暂不执行（P1-2：原「估算口径」"
+              "系无据声明，细化_5d 无降级条款——显式登记为简版，M1 恢复硬门禁）")
     except ImportError:
-        print("   coverage 未装：以 pytest 全绿 + 冒烟断言作为 M0 门禁简版（细化_5d 允许的估算口径）")
+        print("   coverage 未装：覆盖率未核算（简版口径，M1 恢复 ≥80% 硬门禁——"
+              "P1-2 按 5d §7.4 显式标注，不暗示已达标）")
 
     print("\n" + "=" * 62)
-    if total_f == 0 and total_p > 0 and not all_failed:
+    # P1-1：门禁下限 = 非零通过数 + 无失败（防"删到只剩 1 条用例仍绿"）；
+    # 精确 TC 条数映射随 TC-5d-08 细化文档扫描在 M1 补（本脚本声明条数仅展示）。
+    if total_f == 0 and total_p >= MIN_PASS_COUNT and not all_failed:
         print("M0 门禁：通过（G1 全绿）")
         return 0
-    print("M0 门禁：不通过（修复后重跑）")
+    print(f"M0 门禁：不通过（需 ≥{MIN_PASS_COUNT} 条通过且 0 失败；当前 {total_p} passed"
+          f" / {total_f} failed）")
     return 1
 
 

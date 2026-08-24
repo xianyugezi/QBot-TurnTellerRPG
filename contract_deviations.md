@@ -180,6 +180,16 @@
 - **P1-1 integrity_check 冒充自检 A**（registry）：删恒不可达 kind 内重复检查（dict 键天然唯一），补 modules⊇loaded + schema_version 一致两断言（跨表唯一注明由 validator NAMESPACES 前置拦截）→ test_registry_integrity_check_selfcheck_a
 - **P1-1 BLK-5 暂停未兑现**（hot_reload）：paused 时 run() 循环/poll_once() 完全停止自动检测与重载（转手动 /reload，BLK-5 兑现；手动 reload 成功即复位）→ test_hot_reload_paused_poll_once_no_auto_reload
 
+### M0 复查批3 修复（审查报告/审查_M0复查_core_*_20260824.md + tests_m0，2026-08-24 · P0×1 / P1×8 / P2×31）
+- **P0-1 空洞断言恒真**（tests/contract/test_message_format）：`assert ... or True` 删除，改真实断言「面板首行无裸 @」→ test_render_is_plain_string
+- **P1-1 命中率 K 跨文档冲突**（用户拍板 K=1 唯一权威）：HitParams.k 默认 0.2→1.0、damage.hit_rate 默认 k→1.0，3b/1a 同口径；test_damage 断言同步（t03 50/50→0.5、默认值）→ 战斗命中率数值变化
+- **P1-2 派生属性双套同名异构**（用户拍板可配置方案）：player_attributes 7 个派生函数全部改为委托 damage 参数化版（唯一实现，常数经 formula.json 可配），保持 3b % 对外口径；damage.crit_prob 补 cap=0 不限语义；mag_reduce 补测试 → test_mag_reduce_formula
+- **P1-1 面板只读 base 白值**（message_format）：render_stats_line/render_panel 改消费 calc_all_final_attributes（加成/临时/条件层并入），面板值=战斗最终值；注释诚实化（原「M0 口径」冒充）→ 面板显示数值变化
+- **P1-1 verify_m0 门禁盲区**：覆盖率段伪托「5d 允许估算口径」删除（基准无此条款，按 §7.4 显式标注简版）；门禁加 MIN_PASS_COUNT=100 防退化
+- **P1-3 _validate_fixtures 无断言**：改为带断言版（legal 必须 0 errors；old_schema 改「迁移链 M6 覆盖」声明，不再「预期被拦」）
+- **P1-4 test_message_format docstring 过度声明**：诚实化为「部分 TC」+ 未达项归 defer
+- **P1-1 worldtime 骨架接口不对齐**：按 2a4c IF01~IF12 重建占位签名（原 now/is_daytime/tick_forward 完全不对齐且 now 语义反向）；里程碑 M1→M3 修正；删除 dummy_override 无据注释
+
 ## 五、职业设计规范 F 承接登记（JD-F 系 · 规范 v2.2 §十四 提议）
 
 > 来源：职业设计规范 v2.2（三源整合 + 3 路审查）。**JD-F 前缀 = 职业设计规范侧编号**（避免与上文工程 F-1~F-29 冲突）；落地=框架工程需实现才能支撑对应职业。未实现前，设计引用标「规范层提议」。

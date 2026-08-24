@@ -9,7 +9,7 @@ import math
 from qbot_rpg.core.message_format.prefix_render import render_prefix
 from qbot_rpg.core.player_attributes import (
     block_rate, calc_final_attr, crit_rate, crit_roll, elem_reduce,
-    hit_rate, phys_reduce,
+    hit_rate, mag_reduce, phys_reduce,
 )
 
 
@@ -81,6 +81,13 @@ def test_block_phys_elem():
     assert block_rate(150.0) == 40.0        # cap 40%
     assert phys_reduce(100.0) == 50.0       # K=100
     assert elem_reduce(100.0) == 50.0
+
+
+def test_mag_reduce_formula():
+    """M0 复查补测：mag_reduce 委托 damage.defense_factor（精神 100 → 50%）。"""
+    assert mag_reduce(100.0) == 50.0        # K=100
+    assert mag_reduce(0.0) == 0.0           # 0 精神 → 0% 减伤
+    assert mag_reduce(300.0) == 75.0        # 300/(300+100)=75%
 
 
 # ---- 3d TC-01~03 前缀三态 ----

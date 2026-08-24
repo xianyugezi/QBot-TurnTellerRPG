@@ -1,6 +1,10 @@
-"""message_format 纯字符串契约（细化_3a §5 / 细化_3d#TC-12~19）。
+"""message_format 纯字符串契约（细化_3a §5 / 细化_3d 部分 TC）。
 
-断言：渲染结果恒 str、无 [CQ:、无 at/图片占位、无装饰 emoji、5 条页上限。
+P1-4（M0 复查）：原 docstring 声称覆盖 TC-12~19 过度声明——本文件实际断言：
+  - 渲染结果恒 str、无 [CQ:、无 at 占位（S1/S2/S3，TC-07/08/11 条数语义）
+  - 无装饰 emoji 扫描（TC-18 部分：M0 样本集 4 个输出，非全量管线）
+未达 TC（页脚 TPL-08、折叠 TPL-09、✅❌ 标记 TPL-10/11、截断黄提示）依赖
+壳层/后续里程碑，显式归入 defer（不冒充已覆盖）。
 """
 from __future__ import annotations
 
@@ -21,7 +25,9 @@ def test_render_is_plain_string(player):
     s = render_panel(player)
     assert isinstance(s, str)
     assert "[CQ:" not in s
-    assert "@" not in s.split("\n")[0] or True  # at 依赖壳层构造，不深究字面
+    # P0（M0 复查）：原 `or True` 恒真空洞断言已修——首行不应含裸 @（at 占位）。
+    # at 若需要由壳层构造，应显式注入而非出现在渲染产物；此处断言渲染产物纯净。
+    assert "@" not in s.split("\n")[0]
 
 
 def test_prefix_no_emoji():

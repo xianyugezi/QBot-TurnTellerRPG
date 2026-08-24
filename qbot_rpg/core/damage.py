@@ -123,11 +123,13 @@ class CritMultUp:
 class HitParams:
     """命中率参数（细化_1a §1 命中 / 数值层 L21、L185-186 ``hit`` 段）。
 
-    - k:       K_hit，默认 0.2（防同级 50% 命中挫败，数值层 L185 注释）
+    - k:       K_hit，默认 1.0（2026-08-24 用户拍板统一：3b §5.2 派生口径与
+               1a 战斗口径同用 K=1，消除跨文档冲突；数值层 L185「防同级挫败」
+               注释的口径由 formula.json 可配覆盖）
     - cap_min/cap_max: clamp 门槛 10% / 95%（数值层 L21）
     """
 
-    k: float = 0.2
+    k: float = 1.0
     cap_min: float = 10.0
     cap_max: float = 95.0
 
@@ -285,7 +287,10 @@ def crit_prob(
     if lck < 0.0:
         lck = 0.0
     p = math.sqrt(lck) * p_coef / 100.0 + crit_bonus + slash_crit
-    return min(p, cap / 100.0)
+    # cap=0 = 不限（对齐 3b §5.1 L217「cap 0 不封顶」，否则 0 会被 min 钳成 0%）
+    if cap and cap > 0.0:
+        p = min(p, cap / 100.0)
+    return p
 
 
 def crit_roll(
@@ -334,7 +339,7 @@ def hit_rate(
     focus: float,
     enemy_spd: float,
     *,
-    k: float = 0.2,
+    k: float = 1.0,
     cap_min: float = 10.0,
     cap_max: float = 95.0,
 ) -> float:
@@ -346,8 +351,8 @@ def hit_rate(
       特例先于 clamp（细化_1a §3-E / 3b §5.2 L83-84）：
         - 对方敏捷 ≤ 0 → 1.0（100%），含“双方都为 0”的 0/0 兜底
         - 专注 ≤ 0（且敌敏 > 0）→ 按 0 → clamp 到 cap_min（10%）
-    K_hit 战斗口径默认 0.2（数值层 L21；区别于 3b 派生属性 hit.k=1——本模块为 1a 权威口径）。
-    返回值小数：focus/enemy 同级 50/50 → 0.8333。
+    K_hit 默认 1.0（2026-08-24 用户拍板统一 3b/1a 口径，消除跨文档冲突；
+    可经 formula.json hit.k 覆盖）。返回值小数：focus/enemy 同级 50/50 → 0.5。
     """
     if enemy_spd <= 0.0:
         return 1.0

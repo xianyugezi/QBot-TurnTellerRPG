@@ -32,6 +32,18 @@ from typing import Callable, Dict, List, Mapping, Optional, Sequence, Set
 from qbot_rpg.data.player import PlayerAttributes
 from qbot_rpg.data.types import StatKey as AttrID  # stats.json 顶层键 = 属性 ID（细化_3b §4.1）
 
+# 2026-08-24 M0 复查收敛：派生属性的唯一参数化实现在 core/damage（1a 战斗口径，
+# 常数经 formula.json 可配），本文件派生函数 = 3b 语义薄封装（% 对外口径），
+# 全部委托 damage 版，消除「同名异构双套实现」。
+from qbot_rpg.core.damage import (
+    block_rate as damage_block_rate,
+    crit_prob as damage_crit_prob,
+    crit_roll as damage_crit_roll,
+    defense_factor as damage_defense_factor,
+    elem_factor as damage_elem_factor,
+    hit_rate as damage_hit_rate,
+)
+
 __all__ = [
     "ConditionalRule",
     "ConditionalRuleCycleError",
@@ -283,18 +295,18 @@ def crit_rate(
 ) -> float:
     """会心率 %（细化_3b §5.1 / L41-45）。
 
-    formula = min(cap, √√最终幸运 × 0.5 + crit_bonus)
+    formula = min(cap, √最终幸运 × 0.5 + crit_bonus)
       - √幸运×0.5%：属性驱动基础（借绮谭必杀率口径）
       - crit_bonus：装备/技能/效果提供的会心加成（效果系统挂载）
       - cap 默认 95%，cap=0 = 不限（L217）
     返回值即为百分比数值（幸运 100 → 5.0，即 5%）。双通道共用一次会心判定（L44）。
+
+    2026-08-24 M0 复查收敛：唯一实现在 core/damage.crit_prob（1a 参数化版，
+    p_coef=0.5 即 ×0.5 口径），本函数为 3b 语义薄封装（% 对外口径）。
+    crit_bonus 为百分数（3.0=3%），委托时 ÷100 转 damage 版小数口径。
     """
-    if final_luck < 0:
-        final_luck = 0.0
-    value = math.sqrt(final_luck) * 0.5 + crit_bonus
-    if cap and cap > 0:
-        value = min(value, cap)
-    return value
+    return damage_crit_prob(final_luck, p_coef=0.5,
+                            crit_bonus=crit_bonus / 100.0, cap=cap) * 100.0
 
 
 def crit_roll(
@@ -311,16 +323,18 @@ def crit_roll(
     判定严格按「先高级再中级其余低级」顺序（L52-54 区间嵌套，避免重叠歧义）。
     超会心 Lv1-3 各档 +0.05×等级（效果系统 crit_mult_up 提供，L66）。
     示例（L65）：幸运 100 → P=5 → 高级 5% / 中级 10% / 低级 85%。
+
+    2026-08-24 M0 复查收敛：唯一实现在 core/damage.crit_roll（1a 参数化版，
+    随机数域 [0,1]、返回 (档位, 倍率)），本函数为 3b 语义薄封装（r 域 1~100 → /100，
+    取倍率返回）。超会心等级经 damage 版 +0.05×level 三档齐加。
     """
-    if final_luck < 0:
-        final_luck = 0.0
-    p = math.sqrt(final_luck) / 2.0
-    boost = 0.05 * max(0, int(super_crit_level))
-    if random_roll <= p:
-        return 2.2 + boost
-    if random_roll <= p * 3.0:
-        return 1.7 + boost
-    return 1.3 + boost
+    _tier, mult = damage_crit_roll(
+        random_roll / 100.0,
+        final_luck,
+        p_coef=0.5,
+        super_crit_level=super_crit_level,
+    )
+    return float(mult)
 
 
 def hit_rate(
@@ -330,45 +344,58 @@ def hit_rate(
 ) -> float:
     """命中率 %（细化_3b §5.2 / L81-85）。
 
-    clamp(final_focus / (final_focus + K × 最终对方敏捷), 10%, 95%)，"%"。
+    clamp(final_focus / (final_focus + K × 最终对方敏捷), 10%, 95%)，"%”。
     特例先于 clamp（L83/L84）：
       - 对方敏捷 ≤ 0 → 100%（L83）
       - 双方都为 0 → 100%（0/0 兜底，L84）
-    K 可配，默认 1（L82）。
+    K 可配，默认 1（L82；2026-08-24 用户拍板统一 3b/1a 同口径 K=1）。
+
+    2026-08-24 M0 复查收敛：唯一实现在 core/damage.hit_rate（参数化版，
+    K 经 formula.json hit.k 可配），本函数为 3b 语义薄封装（% 对外口径）。
     """
-    if enemy_spd <= 0:
-        return 100.0
-    ratio = final_focus / (final_focus + k * enemy_spd)
-    return max(10.0, min(95.0, ratio * 100.0))
+    return damage_hit_rate(final_focus, enemy_spd, k=k,
+                           cap_min=10.0, cap_max=95.0) * 100.0
 
 
-def block_rate(final_focus: float) -> float:
+def block_rate(final_focus: float, k: float = 150.0, cap: float = 40.0) -> float:
     """格挡率 %（细化_3b §5.3 / L90-92）。
 
     min(40%, 最终专注 / (最终专注 + 150))。格挡 = 会心后最终伤害减半（L91）。
     （当回合格挡率减半、1v1 单次不消费等为战斗状态机职责，见细化_1g / M1。）
+
+    2026-08-24 M0 复查收敛：唯一实现在 core/damage.block_rate（参数化版，
+    k/cap 经 formula.json 可配），本函数为 3b 语义薄封装（% 对外口径）。
     """
-    return min(40.0, final_focus / (final_focus + 150.0) * 100.0)
+    return damage_block_rate(final_focus, k=k, cap=cap) * 100.0
 
 
 def phys_reduce(final_con: float, k: float = 100.0) -> float:
     """物理减伤 %（细化_3b §5.4 / L20 / L31-32）。
 
     final_con / (final_con + K)，K=100 可配；无悬崖无封顶。
+
+    2026-08-24 M0 复查收敛：唯一实现在 core/damage.defense_factor
+    （系数 = K/(体质+K)，减伤率 = 1 − 系数），本函数为 3b 语义薄封装（% 对外口径）。
     """
-    return final_con / (final_con + k) * 100.0
+    return (1.0 - damage_defense_factor(final_con, k=k)) * 100.0
 
 
 def mag_reduce(final_spr: float, k: float = 100.0) -> float:
-    """魔法减伤 %（细化_3b §5.4 / L21 / L31）。与物理同构除算，K=100 可配。"""
+    """魔法减伤 %（细化_3b §5.4 / L21 / L31）。与物理同构除算，K=100 可配。
 
-    return final_spr / (final_spr + k) * 100.0
+    2026-08-24 M0 复查收敛：唯一实现在 core/damage.defense_factor
+    （系数 = K/(精神+K)，减伤率 = 1 − 系数），本函数为 3b 语义薄封装（% 对外口径）。
+    """
+    return (1.0 - damage_defense_factor(final_spr, k=k)) * 100.0
 
 
-def elem_reduce(elem_res: float) -> float:
+def elem_reduce(elem_res: float, k: float = 100.0) -> float:
     """元素减伤率 %（细化_3b §5.4 / L126-127）。
 
     elem_res / (elem_res + 100)；elem_res 来自装备词条（加成层 flat 口径），
     默认 0（即无元素减伤）。
+
+    2026-08-24 M0 复查收敛：唯一实现在 core/damage.elem_factor
+    （系数 = K/(抗性+K)，减伤率 = 1 − 系数），本函数为 3b 语义薄封装（% 对外口径）。
     """
-    return elem_res / (elem_res + 100.0) * 100.0
+    return (1.0 - damage_elem_factor(elem_res, k=k)) * 100.0

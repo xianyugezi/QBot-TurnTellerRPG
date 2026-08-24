@@ -13,6 +13,7 @@ import math
 from typing import Any, Dict, List, Optional, Tuple
 
 from qbot_rpg.core.message_format.prefix_render import render_prefix
+from qbot_rpg.core.player_attributes import calc_all_final_attributes
 from qbot_rpg.data.player import Player, PlayerAttributes
 
 __all__ = [
@@ -46,11 +47,16 @@ def _worn_title(player: Player) -> Optional[str]:
 
 
 def render_stats_line(attributes: PlayerAttributes) -> str:
-    """九预置属性一条简况（细化_3b §4.2）。纯文本，无 emoji（3d D-01）。"""
+    """九预置属性一条简况（细化_3b §4.2）。纯文本，无 emoji（3d D-01）。
+
+    P1-1（M0 复查）：消费 calc_all_final_attributes 合并加成/临时/条件层，
+    面板显示值 = 战斗最终属性（fixture base+bonus 下 str 显示 20 而非 15）。
+    """
+    final = calc_all_final_attributes(attributes)
     parts: List[str] = []
     for attr_id in _STAT_ORDER:
         label = _STAT_LABELS.get(attr_id, attr_id)
-        value = attributes.base.get(attr_id, 0)
+        value = final.get(attr_id, 0)
         parts.append(f"{label} {int(value)}")
     return "  ".join(parts)
 
@@ -68,8 +74,10 @@ def render_panel(player: Player, *, include_prefix: bool = True) -> str:
 
     lines.append(f"职业：{player.job_id}    等级：{player.level}    EXP：{player.exp}")
 
-    max_hp = int(player.attributes.base.get("hp", 0) or player.hp)
-    max_mp = int(player.attributes.base.get("mp", 0) or player.mp)
+    # P1-1（M0 复查）：生命/魔法上限改用最终属性（含 pct 加成，如 fixture hp 110 而非 100）
+    final = calc_all_final_attributes(player.attributes)
+    max_hp = int(final.get("hp", 0) or player.hp)
+    max_mp = int(final.get("mp", 0) or player.mp)
     lines.append(f"生命：{player.hp}/{max_hp}    魔法：{player.mp}/{max_mp}")
 
     gold = 0
@@ -77,7 +85,7 @@ def render_panel(player: Player, *, include_prefix: bool = True) -> str:
         gold = int(player.currencies.get("gold", 0))
     lines.append(f"金币：{gold}")
 
-    # 属性简况行（加成已含于存档 base 白值，M0 口径；完整管线见 core.player_attributes）
+    # 属性简况行（完整三层管线，见 core.player_attributes）
     lines.append(render_stats_line(player.attributes))
     return "\n".join(lines)
 

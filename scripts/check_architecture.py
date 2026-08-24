@@ -135,17 +135,23 @@ def find_nonebot_imports(tree: ast.Module, file: str) -> List[Tuple[str, str, in
 
     遍历**活代码**（walk_live 跳过 `if False:` / `if TYPE_CHECKING:` 类死分支），
     与运行时行为一致 —— 死分支里的 import 不构成真实 nonebot 依赖（R1/R2 口径）。
+
+    P1-1（架构复查）：ImportFrom 节点同时检查 `node.module` 与符号名——
+    `from nonebot import on_command` 的 module 才是 "nonebot"，只比对 alias.name
+    会漏检这一契约明文点名的形态（NoneBot 插件最惯用写法）。
     """
     hits: List[Tuple[str, str, int]] = []
     for node in walk_live(tree):
-        if isinstance(node, (ast.Import, ast.ImportFrom)):
-            names: Sequence[ast.alias]
-            names = node.names if isinstance(node, ast.Import) else node.names
-            for alias in names:
+        if isinstance(node, ast.Import):
+            for alias in node.names:
                 mod = alias.name
                 if mod == "nonebot" or mod.startswith("nonebot."):
-                    kind = "import" if isinstance(node, ast.Import) else "from ... import"
-                    hits.append((file, f"{kind} {mod}", node.lineno))
+                    hits.append((file, f"import {mod}", node.lineno))
+        elif isinstance(node, ast.ImportFrom):
+            mod = node.module or ""
+            if mod == "nonebot" or mod.startswith("nonebot."):
+                names = ", ".join(a.name for a in node.names)
+                hits.append((file, f"from {mod} import {names}", node.lineno))
     for f, desc in _importlib_dynamic(tree, file):
         hits.append((f, desc, 0))
     return hits

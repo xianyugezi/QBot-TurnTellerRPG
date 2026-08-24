@@ -22,7 +22,7 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from qbot_rpg.storage.connection import Database, StorageError
+from qbot_rpg.storage.connection import Database, StorageError, Transaction
 from qbot_rpg.storage.schema import CREATE_INDEXES, CREATE_TABLE_META, SCHEMA_TABLES
 
 # ---------------------------------------------------------------------------
@@ -91,18 +91,19 @@ def utcnow() -> str:
 # 字段级迁移工具（MIG-1）
 # ---------------------------------------------------------------------------
 async def add_column_if_missing(
-    db: Database, table: str, column: str, ddl: str
+    tx: "Transaction", table: str, column: str, ddl: str
 ) -> bool:
     """列级字段迁移：缺补默认（ADD COLUMN ... DEFAULT）/ 多忽略（已存在跳过）。
 
-    返回是否实际加了列。调用方负责包进单事务（MIG-5 每级单事务）。
+    返回是否实际加了列。**必须在 db.tx() 事务内调用并传事务句柄 tx**（MIG-5
+    每级单事务；P1-3：传 db 会在 tx() 体内再抢 _write_lock 造成永久死锁）。
     """
     cols = set()
-    for row in await db.fetchall(f"PRAGMA table_info({table})"):
+    for row in await tx.fetchall(f"PRAGMA table_info({table})"):
         cols.add(str(row["name"]))
     if column in cols:
         return False
-    await db.execute(f"ALTER TABLE {table} ADD COLUMN {ddl}")
+    await tx.execute(f"ALTER TABLE {table} ADD COLUMN {ddl}")
     return True
 
 
@@ -182,6 +183,11 @@ async def migrate_database(
     """启动/首次访问懒迁移：检测 → 备份 → 逐级单事务 → 履历 → 提交。
 
     任一级失败：该级事务回滚，服务继续跑旧版 schema（绝不因迁移起不来）。
+    P1-1：迁移前备份失败同样不直抛——记录失败履历返回 state=failed，
+    repository._bootstrap 按既有失败路径告警并重试，绝不因备份起不来。
+    P1-2：迁移链完整性校验（首步 from == 当前版本、相邻步衔接、末步 to ==
+    当前目标）；全部应用后读回 meta 版本验证收敛 + round-trip 抽查，失败按
+    failed 处理，不谎报 migrated。
     """
     version = await ensure_meta(db, now=now)
     if version >= DB_SCHEMA_VERSION:
@@ -191,9 +197,46 @@ async def migrate_database(
         (s for s in MIGRATION_STEPS if s[0] >= version and s[1] <= DB_SCHEMA_VERSION),
         key=lambda s: s[0],
     )
+    # P1-2：迁移链完整性校验——断档/跳级不静默执行（MIG-5「meta.migration_log 有始有终」）
+    cur = version
+    for from_v, to_v, _fn in ordered:
+        if from_v != cur:
+            return MigrationResult(
+                version, version, state="failed",
+                note=f"迁移链断档: 期望 from={cur}，实际 from={from_v}（MIG-5）",
+            )
+        if to_v <= from_v:
+            return MigrationResult(
+                version, version, state="failed",
+                note=f"迁移步非法: from={from_v} to={to_v}（to 必须 > from）",
+            )
+        cur = to_v
+    if cur != DB_SCHEMA_VERSION:
+        # P1-2：零步骤/链不完整时不得谎报 migrated（版本永不收敛的静默 bug）
+        return MigrationResult(
+            version, version, state="failed",
+            note=f"迁移链不完整: 末步到 {cur}，目标 {DB_SCHEMA_VERSION}（缺迁移步）",
+        )
+
     backup_id: Optional[str] = None
     if force_backup:
-        backup_id = await pre_migration_backup(db, now=now)
+        # P1-1：备份失败不直抛——回退为 failed，由 _bootstrap 告警后携带旧版继续
+        try:
+            backup_id = await pre_migration_backup(db, now=now)
+        except Exception as exc:  # noqa: BLE001 — 备份失败兜底（RW-4 场景：磁盘满/写失败）
+            try:
+                await append_migration_log(
+                    db,
+                    {"from": version, "to": version, "at": now or utcnow(),
+                     "result": "failed", "error": f"迁移前备份失败 {type(exc).__name__}: {exc}"},
+                    now=now,
+                )
+            except BaseException:
+                pass
+            return MigrationResult(
+                version, version, state="failed",
+                backup_id=None, note=f"迁移前备份失败: {exc}",
+            )
 
     applied: List[Tuple[int, int]] = []
     for from_v, to_v, fn in ordered:
@@ -241,6 +284,18 @@ async def migrate_database(
                 version, version, applied_steps=tuple(applied), state="failed",
                 backup_id=backup_id, note=str(exc),
             )
+
+    # P1-2：全部步应用后读回 meta 版本，验证收敛到目标（防版本停滞/谎报）
+    final_row = await db.fetchone(
+        "SELECT db_schema_version FROM meta WHERE key = ?", (META_KEY,)
+    )
+    if final_row is None or int(final_row["db_schema_version"]) != DB_SCHEMA_VERSION:
+        return MigrationResult(
+            version, version, applied_steps=tuple(applied), state="failed",
+            backup_id=backup_id,
+            note=f"迁移后版本未收敛: meta={final_row and final_row['db_schema_version']}, "
+                 f"目标={DB_SCHEMA_VERSION}（MIG-5 round-trip）",
+        )
 
     return MigrationResult(
         version, DB_SCHEMA_VERSION, applied_steps=tuple(applied),

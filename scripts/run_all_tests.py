@@ -40,7 +40,8 @@ LAYER_PATHS = {
 def _pytest(paths: list[str], *, report: bool = False) -> int:
     # 不用 -q：该环境捕获下 -q 会吞掉 "N passed" 汇总行
     cmd = [str(PY), "-m", "pytest", "-rN", "--disable-warnings", *paths]
-    r = subprocess.run(cmd, cwd=str(REPO), capture_output=True, text=True)
+    # cwd 必须为仓库根（REPO=scripts/，LAYER_PATHS 是相对仓库根的路径）
+    r = subprocess.run(cmd, cwd=str(REPO.parent), capture_output=True, text=True)
     tail = "\n".join((r.stdout + r.stderr).splitlines()[-1:]).strip()
     if report or r.returncode != 0:
         print(f"  [{'通过' if r.returncode == 0 else '失败'}] pytest {paths} → {tail}")
@@ -83,7 +84,7 @@ def main() -> int:
                 print(f"  [未实现] {key}（后续接入）")
                 continue
             print(f"  [运行] {key} → {script.name}")
-            r = subprocess.run([str(PY), str(script)], cwd=str(REPO))
+            r = subprocess.run([str(PY), str(script)], cwd=str(REPO.parent))
             fail = fail or (r.returncode != 0)
         print("\n[阶段 3] 覆盖率核算（engine/+content/ ≥80%）：见 verify_m0 §5 估算口径")
 

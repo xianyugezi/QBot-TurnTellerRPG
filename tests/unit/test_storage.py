@@ -183,7 +183,9 @@ async def test_recycle_scan():
         async with repo.tx() as tx:
             await tx.upsert_session(old)
             await tx.upsert_session(new)
-        recycled = await repo.recycle_scan()
+        # P1-1：无 settle 时默认拒绝删除（保护材料）；此处显式 allow_unsettled
+        # 仅测试回收机制本身（会话删除 + 新鲜保留），结算语义由 settle 注入侧负责
+        recycled = await repo.recycle_scan(allow_unsettled=True)
         assert "10001" in recycled
         assert await repo.load_session("10001") is None
         kept = await repo.load_session("10003")
@@ -220,3 +222,126 @@ async def test_migration_noop():
         assert row is not None and int(row["db_schema_version"]) >= 1
     finally:
         await repo.close()
+
+
+# ===========================================================================
+# M0 复查（2026-08-24）P1 修复回归
+# ===========================================================================
+
+# P1-1（connection）：只读池 _open 失败必须归还信号量令牌，容量不永久缩水
+@pytest.mark.asyncio
+async def test_read_pool_token_returned_on_open_failure(monkeypatch):
+    db = Database(":memory:")
+    try:
+        # 先确保 schema 就位（_writer 建表成功，使后续只读路径不再触发 _writer）
+        await db.fetchone_read("SELECT 1 FROM meta LIMIT 1")
+        # 清空 idle 池，让下一次 _read_conn 必须走 _open(writer=False)
+        db._read_idle.clear()
+        sem_before = db._read_sem._value
+
+        async def failing_open(writer: bool = False):
+            if not writer:
+                raise OSError("mock 只读连接打开失败")
+            # writer 路径不应被走到（schema 已就位）；若走到直接放行原实现
+            raise AssertionError("只读路径不应触发 writer")
+
+        monkeypatch.setattr(db, "_open", failing_open)
+        with pytest.raises(OSError):
+            async with db._read_conn():
+                pass
+        # 令牌必须已归还（P1-1：acquire 成功但 _open 失败 → finally 仍 release）
+        assert db._read_sem._value == sem_before, "只读池信号量在 _open 失败路径泄漏"
+    finally:
+        await db.close()
+
+
+# P1-1（repository）：回收默认 settle=None 不删除（防静默丢玩家材料）
+@pytest.mark.asyncio
+async def test_recycle_scan_skips_without_settle():
+    db = Database(":memory:")
+    repo = Repository(db)
+    try:
+        await repo.save_player(make_player("10009"))
+        old = SessionRow(player_qid="10009", session_type="battle", payload={"turn": 1},
+                         random_seed=1, last_active_at=iso_ago(31))
+        async with repo.tx() as tx:
+            await tx.upsert_session(old)
+        # 默认 settle=None 且未 allow_unsettled → 拒绝删除（会话保留）
+        recycled = await repo.recycle_scan()
+        assert "10009" not in recycled
+        assert await repo.load_session("10009") is not None
+    finally:
+        await repo.close()
+
+
+# P1-1（migrations）：迁移前备份失败 → 返回 failed 而非直抛（服务携带旧版继续）
+@pytest.mark.asyncio
+async def test_migrate_backup_failure_returns_failed(monkeypatch):
+    import qbot_rpg.storage.migrations as mig
+
+    db = Database(":memory:")
+    try:
+        async def boom_backup(db, now=None):
+            raise OSError("mock 磁盘满备份失败")
+
+        monkeypatch.setattr(mig, "pre_migration_backup", boom_backup)
+        monkeypatch.setattr(mig, "DB_SCHEMA_VERSION", 2)
+        monkeypatch.setattr(mig, "MIGRATION_STEPS", [(1, 2, _noop_step)])
+        # 构造一个 version=1 的老库触发迁移路径
+        await db.execute(
+            "INSERT INTO meta (key, db_schema_version, migration_log, created_at, updated_at)"
+            " VALUES ('global', 1, '[]', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z')"
+        )
+        result = await mig.migrate_database(db, force_backup=True)
+        assert result.state == "failed", f"备份失败应返回 failed，实际 {result.state}"
+        assert "备份失败" in result.note
+        # 服务仍可读旧档（meta 版本未变）
+        row = await db.fetchone_read("SELECT db_schema_version FROM meta WHERE key='global'")
+        assert int(row["db_schema_version"]) == 1
+    finally:
+        await db.close()
+
+
+# P1-2（migrations）：迁移链断档 → failed 不静默（MIG-5 完整性）
+@pytest.mark.asyncio
+async def test_migrate_chain_gap_returns_failed(monkeypatch):
+    import qbot_rpg.storage.migrations as mig
+
+    db = Database(":memory:")
+    try:
+        monkeypatch.setattr(mig, "DB_SCHEMA_VERSION", 4)
+        monkeypatch.setattr(mig, "MIGRATION_STEPS", [(1, 2, _noop_step), (3, 4, _noop_step)])
+        await db.execute(
+            "INSERT INTO meta (key, db_schema_version, migration_log, created_at, updated_at)"
+            " VALUES ('global', 1, '[]', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z')"
+        )
+        result = await mig.migrate_database(db)
+        assert result.state == "failed"
+        assert "断档" in result.note or "迁移链" in result.note
+    finally:
+        await db.close()
+
+
+# P1-2（migrations）：迁移链不完整（末步 < 目标）→ failed 不谎报 migrated
+@pytest.mark.asyncio
+async def test_migrate_chain_incomplete_returns_failed(monkeypatch):
+    import qbot_rpg.storage.migrations as mig
+
+    db = Database(":memory:")
+    try:
+        monkeypatch.setattr(mig, "DB_SCHEMA_VERSION", 5)
+        monkeypatch.setattr(mig, "MIGRATION_STEPS", [(1, 2, _noop_step)])
+        await db.execute(
+            "INSERT INTO meta (key, db_schema_version, migration_log, created_at, updated_at)"
+            " VALUES ('global', 1, '[]', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z')"
+        )
+        result = await mig.migrate_database(db)
+        assert result.state == "failed"
+        assert "不完整" in result.note
+    finally:
+        await db.close()
+
+
+async def _noop_step(tx, db, now=None):
+    """迁移步占位：no-op，供链完整性/备份失败测试用。"""
+    return None

@@ -55,6 +55,7 @@
 | F-27 | tpl_* 生存模板库（tpl_shield_30/15、tpl_mitigation_*、tpl_lifesteal_10、tpl_heal_* 等）零实现 + effects/statuses/marks 三表内容沉淀（G4） | 数据包阶段 |
 | F-28 | 免死约束校验器空转（定稿 §9.2-6/H1：免死 1-3 次+致命免疫+续行互斥提示+PVP 可禁）未接线（G5） | M1 批3 / 效果校验 |
 | F-29 | 反击特效引擎归口——反击=proc(on_hit) 容器接线未完成（G6，内容包作者配 defense 特效） | M1 批3 |
+| F-30 | data 层双轨收敛：`StatusInstance`（status.py）与 `BattleSnapshot/CombatantSnapshot`（battle.py）为 3a §3.2 契约 spec 类型，但效果系统实际以 dict 形态落地（effects.py status_state：decay=str 类型+decay_subject/value、duration 扁平）、战斗快照实际为 1g3 dict（core/battle.py to_snapshot）——字段结构不一致、全库零消费。M0 复查已在两文件头标注【当前实现口径】；**M1 会话接线时收敛**（to_snapshot→BattleSnapshot 构造 / StatusInstance 补 decay_subject/value）或显式登记双轨保留。收敛前 U3「frozen 防误改」对真实 dict 快照未生效 | M1 会话接线 |
 
 ## 三、跨文档冲突裁决（2026-08-18 主 agent 对照定稿裁决，用户授权）
 
@@ -153,6 +154,19 @@
   player_killed_enemy 置位 → 玩家胜；无先手击杀双死（dot 双杀）→ 平局（test_g4_* 两用例）
 - **D2 派生被拒**：拍板「条件不足派生整体被拒」（TC-32）——实现已取，无改动
 - **D11 链环**：拍板「环=特性允许」（TC-16）——validate_chain 只查入口可达性，环本身不报错（死配置=不可达节点提示，TC-17；实现已合规，措辞落档）
+
+### M0 复查修复（审查报告/审查_M0复查_*_20260824.md，2026-08-24 · P0×0 / P1×11 / P2×41）
+- **P1-1 只读池信号量泄漏**（connection）：acquire 成功但 `_open(writer=False)` 失败 → finally 仍 release 令牌，池容量不永久缩水 → test_read_pool_token_returned_on_open_failure
+- **P1-2 integrity 失败坏连接复用**（connection）：`_writer` 校验失败时关闭坏连接并保持 `_write=None/_schema_ready=False`，复用重新走完整建库+校验流程（自动 .bak 回退仍登记 F-2 递延）
+- **P1-1 回收默认丢数据**（repository）：`recycle_scan` 无 settle 且未 `allow_unsettled=True` → 拒绝删除（打告警跳过），防静默丢玩家材料 → test_recycle_scan_skips_without_settle
+- **P1-2 缓存失效竞态**（repository）：写代际号 `_write_generation`，load_player fetch 返回后比对代际丢弃旧快照不写缓存；tx() 出口对事务内 dirty_qids 提交后统一失效 → 闭合「失效→提交」窗口
+- **P1-1 迁移备份失败直抛**（migrations）：`pre_migration_backup` 异常包进 try → 返回 failed + 履历，由 _bootstrap 告警重试，服务携带旧版继续 → test_migrate_backup_failure_returns_failed
+- **P1-2 迁移链完整性缺失**（migrations）：断档/跳级/末步<目标 → failed 不静默；全部应用后读回 meta 版本验证收敛 → test_migrate_chain_gap/incomplete_returns_failed
+- **P1-3 add_column_if_missing 死锁 footgun**（migrations）：改为收事务句柄 tx（PRAGMA+ALTER 走 tx.fetchall/execute），消除 tx() 体内抢锁挂起
+- **P1-1 ItemInstance 缺 stack_max**（data/item）：补 `stack_max: int = 99` 字段（4a §1.2 行格式；默认对齐 4b ITM-07）
+- **P1-2/P1-3 data 双轨**（data/status、data/battle）：文件头标注【当前实现口径】（spec vs dict 落地），错引行号修正（3b §1.2→1b §1.4；4a §5.1→§0.1 术语表），收敛登记 F-30
+- **P1-1 架构门禁漏检**（scripts/check_architecture）：`find_nonebot_imports` 补 `ast.ImportFrom` 的 `node.module` 判断（原只比对 alias.name，漏检 `from nonebot import X`）→ test_find_nonebot_imports_catches_from_import
+- **run_all_tests.py 路径 bug**（顺带修复）：cwd=REPO(scripts/) 却传相对仓库根的 tests/unit → 阶段 1 恒红；cwd 改 REPO.parent，全量回归恢复绿
 
 ## 五、职业设计规范 F 承接登记（JD-F 系 · 规范 v2.2 §十四 提议）
 

@@ -4,8 +4,17 @@
 CombatantSnapshot、回合数、combo_state、ai_state、status_state、marks_state、
 resist_table、effect_triggers/cooldowns、formula_state{random_seed}；CombatantSnapshot
 为 frozen 正例，细化_规则 L81-87 原样）；细化_1g1c_战斗状态数据（会话快照全量
-状态登记）；细化_4a_存储层契约 §0.1/§5.1（会话快照 ID+名称冗余存储，按旧配置
+状态登记）；细化_4a_存储层契约 §0.1 术语表（会话快照 ID+名称冗余存储，按旧配置
 结算，D-05 —— storage 经此快照持久化，结算语义归会话管理器）。
+
+⚠️ 当前实现口径（P1-3 复查登记）：实际战斗快照以 **1g3 dict 格式**落地
+（core/battle.py `to_snapshot()` 返回 Dict：schema_version/snapshot_at/context/
+units/ai_state/combo_state/turn/stats_collector/...），字段结构与本 dataclass
+（player/enemy(CombatantSnapshot)/resist_table/effect_triggers...）**不同**。
+本 dataclass 为契约 spec 类型（3a §3.2 唯一快照类型声明），M1 会话接线时须把
+to_snapshot 收敛为本类型构造（player/enemy 映射 CombatantSnapshot、formula_state
+注入 random_seed）或登记双轨保留——收敛前 U3「frozen 防误改」对真实 dict 快照
+未生效。
 
 formula_state 含 random_seed 键：中断恢复后同一回合随机序列一致（4a TC-17）。
 frozen=True：快照不可变，防战斗中被误改（U3；细化_1g3 快照续战）。

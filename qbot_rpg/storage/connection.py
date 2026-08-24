@@ -205,14 +205,21 @@ class Database:
         if self._write is None:
             async with self._create_lock:
                 if self._write is None:      # 双检：首个协程建表，其余等待后复用
-                    self._write = await self._open(writer=True)
-                    self._schema_ready = True
-                    self._integrity_ok = await self._check_integrity(self._write)
-                    if not self._integrity_ok:
+                    conn = await self._open(writer=True)
+                    ok = await self._check_integrity(conn)
+                    if not ok:
+                        # 校验失败：关闭坏连接并保持 _write=None/_schema_ready=False，
+                        # 使任何复用都重新触发完整建库+校验流程，杜绝「坏连接被静默复用」。
+                        # 自动 .bak 回退 + round-trip 抽样为 4a RW-6 语义，已登记
+                        # contract_deviations（前批 P1-3 递延项），本轮至少做状态重置（P1-2）。
+                        await conn.close()
                         raise StorageIntegrityError(
                             f"存档库 integrity_check 失败: {self.path}（4a RW-6/D-04，"
                             "应回退最近 .bak 后重试，服务不崩）"
                         )
+                    self._write = conn
+                    self._schema_ready = True
+                    self._integrity_ok = True
         return self._write
 
     @staticmethod
@@ -232,26 +239,29 @@ class Database:
         if not self._schema_ready:
             # 只读路径也确保 schema 就位（防御：任何读都不得因空库 no such table）
             await self._writer()
-        # 池耗尽由下方 wait_for(acquire, timeout) 兜底（P2-1：原死分支已删）
-        acquired = False
         try:
             await asyncio.wait_for(self._read_sem.acquire(), timeout=self._pool_wait_timeout)
-            acquired = True
         except asyncio.TimeoutError:
+            # 池耗尽由 wait_for(acquire, timeout) 兜底（P2-1：原死分支已删）
             raise StoragePoolExhaustedError(
                 f"只读连接池耗尽（上限 {self._max_readers}）：{self.path}（RC-5）"
             ) from None
+        # acquire 成功后，任何异常路径都必须归还令牌：
+        # _open(writer=False) 失败（磁盘 I/O/PRAGMA 报错）也会进入下方 finally 归还，
+        # 池容量不永久缩水（P1-1：原实现在 _open 失败路径泄漏信号量）
         conn: Optional[aiosqlite.Connection] = None
-        if self._read_idle:
-            conn = self._read_idle.pop()
-        else:
-            conn = await self._open(writer=False)
-        self._read_active += 1
         try:
-            yield conn
+            if self._read_idle:
+                conn = self._read_idle.pop()
+            else:
+                conn = await self._open(writer=False)
+            self._read_active += 1
+            try:
+                yield conn
+            finally:
+                self._read_active -= 1
+                self._read_idle.append(conn)
         finally:
-            self._read_active -= 1
-            self._read_idle.append(conn)
             self._read_sem.release()
 
     async def _fetch_on_read(self, sql: str, params: Sequence[Any]) -> List[Row]:

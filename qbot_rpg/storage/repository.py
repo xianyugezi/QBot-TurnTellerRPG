@@ -28,6 +28,7 @@ from typing import (
     List,
     Optional,
     Sequence,
+    Set,
     Tuple,
     cast,
 )
@@ -297,6 +298,9 @@ class Repository:
         self._player_cache: Dict[str, Tuple[float, Player]] = {}
         self._negative_cache: Dict[str, float] = {}       # 负缓存（防抖查）
         self._negative_ttl = 5.0
+        # 写代际号：每次 invalidate_player 自增；load_player 在 DB fetch 返回后比对，
+        # 期间若有失效则丢弃本次结果不写缓存（P1-2：消除「失效→提交」窗口旧快照回写缓存）
+        self._write_generation = 0
         self._boot_lock = asyncio.Lock()
         self._booted = False
 
@@ -335,15 +339,27 @@ class Repository:
     async def tx(self) -> AsyncIterator["RepoTransaction"]:
         await self._bootstrap()
         async with self._db.tx() as base:
-            yield RepoTransaction(base, self)
+            rtx = RepoTransaction(base, self)
+            yield rtx
+        # 提交后统一失效事务内写过的 qid（P1-2）：事务体内 upsert_player 的 invalidate
+        # 发生在提交前，若并发读在「失效→提交」窗口开始，可能拿到旧快照；提交后再
+        # invalidate 一次（代际号再自增）使该窗口内启动的 load_player 检测到代际变化
+        # 而丢弃结果，消除旧快照回写缓存的竞态。
+        for qid in rtx.dirty_qids:
+            self.invalidate_player(qid)
 
     # =======================================================================
     # 玩家读写（F1：懒加载 + 60s 短缓存，指令级失效；RW-3 单事务 upsert）
     # =======================================================================
     def invalidate_player(self, qid: str) -> None:
-        """指令级失效：任何写路径后调用，规避陈旧读缓存。"""
+        """指令级失效：任何写路径后调用，规避陈旧读缓存。
+
+        P1-2：同时自增写代际号，使进行中的 load_player 读路径能检测到「读期间
+        发生失效」并丢弃本次结果，消除失效后旧快照回写缓存的竞态。
+        """
         self._player_cache.pop(qid, None)
         self._negative_cache.pop(qid, None)
+        self._write_generation += 1
 
     def invalidate_all(self) -> None:
         self._player_cache.clear()
@@ -358,14 +374,20 @@ class Repository:
         neg = self._negative_cache.get(qid)
         if neg is not None and neg + self._negative_ttl > _now_ms():
             return None
+        # P1-2：记录读起始代际号；fetch 返回后若期间发生过失效（写代际号已变），
+        # 本次结果可能取自失效前的旧快照 → 不写缓存直接返回，下次读会重新查 DB，
+        # 消除「失效→提交」窗口内旧快照回写缓存覆盖结算的竞态。
+        gen = self._write_generation
         row = await self._db.fetchone_read(
             "SELECT * FROM players WHERE player_qid = ?", (qid,)
         )
         if row is None:
-            self._negative_cache[qid] = _now_ms()
+            if self._write_generation == gen:
+                self._negative_cache[qid] = _now_ms()
             return None
         player = row_to_player(row)
-        self._player_cache[qid] = (_now_ms(), player)
+        if self._write_generation == gen:
+            self._player_cache[qid] = (_now_ms(), player)
         return player
 
     async def player_exists(self, qid: str) -> bool:
@@ -546,11 +568,14 @@ class Repository:
         settle: Optional[Callable[[Player, object], Optional[Player]]] = None,
         max_days: float = 30.0,
         now: Optional[str] = None,
+        allow_unsettled: bool = False,
     ) -> List[str]:
         """单事务回收过期会话（last_active_at < now-30d）。返回被回收 qid 列表。
 
         settle(player, session_payload) 由会话管理器注入（D-05：storage 不自行
-        决定结算语义）；默认 None = 不结算仅删除会话行。结算与删除同一事务
+        决定结算语义）；默认 None = 不结算。**无 settle 时不删除**（P1-1：默认
+        settle=None 静默删会话会丢玩家材料）——除非显式传 allow_unsettled=True
+        （仅测试/已确认无材料可结算的场景）。结算与删除同一事务
         （RC-1 / TC-15，中途失败不残留半结算）。
         """
         await self._bootstrap()
@@ -558,6 +583,7 @@ class Repository:
         if now is not None and parse_utc(now) < parse_utc(deadline):
             deadline = now
         recycled: List[str] = []
+        skipped: List[str] = []
         async with self.tx() as tx:
             rows = await tx.fetchall(
                 "SELECT * FROM sessions WHERE last_active_at < ?", (deadline,)
@@ -571,6 +597,14 @@ class Repository:
                         p2 = settle(p, payload)
                         if p2 is not None:
                             await _upsert_player(tx, p2)
+                elif not allow_unsettled:
+                    # P1-1：无 settle 且未显式允许 → 拒绝删除，防静默丢玩家材料
+                    print(
+                        f"[storage] 回收跳过 {qid}（无 settle 回调且 allow_unsettled=False，"
+                        "不删除会话以保护材料/状态）"
+                    )
+                    skipped.append(qid)
+                    continue
                 await tx.execute("DELETE FROM sessions WHERE player_qid = ?", (qid,))
                 recycled.append(qid)
         for qid in recycled:
@@ -664,11 +698,13 @@ def _payload_to_json(payload: object) -> str:
 class RepoTransaction:
     """F3 事务句柄：基础执行原语 + 领域级 upsert（data dataclass，禁裸 dict）。"""
 
-    __slots__ = ("_base", "_repo")
+    __slots__ = ("_base", "_repo", "dirty_qids")
 
     def __init__(self, base: Transaction, repo: Repository) -> None:
         self._base = base
         self._repo = repo
+        # 本事务内 upsert 过的 qid 集合：tx() 出口提交后统一失效（P1-2）
+        self.dirty_qids: Set[str] = set()
 
     @property
     def is_active(self) -> bool:
@@ -690,6 +726,7 @@ class RepoTransaction:
     # -- 领域级（F3 模板：同事务提交）--------------------------------------------
     async def upsert_player(self, player: Player) -> None:
         await _upsert_player(self, player)
+        self.dirty_qids.add(player.qid)
         self._repo.invalidate_player(player.qid)
 
     async def upsert_session(self, session: SessionRow) -> None:

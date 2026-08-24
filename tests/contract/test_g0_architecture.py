@@ -59,6 +59,26 @@ def test_nonebot_only_in_commands():
     assert not offenders, offenders
 
 
+def test_find_nonebot_imports_catches_from_import():
+    """P1-1（架构复查）：find_nonebot_imports 必须命中 `from nonebot import X` / 
+    `from nonebot.adapters.onebot.v11 import Bot`（ImportFrom 形态，契约 R1 点名形态）。
+
+    旧实现只比对 alias.name，漏检 node.module=="nonebot" 的 ImportFrom——门禁静默放行。
+    """
+    cases = [
+        ("import nonebot", "import nonebot"),
+        ("import nonebot.adapters", "import nonebot.adapters"),
+        ("from nonebot import on_command", "from nonebot import on_command"),
+        ("from nonebot.adapters.onebot.v11 import Bot, Message",
+         "from nonebot.adapters.onebot.v11 import Bot, Message"),
+    ]
+    for src, expected_desc in cases:
+        tree = ast.parse(src, filename="<test>")
+        hits = arch.find_nonebot_imports(tree, "fake.py")
+        assert any(desc == expected_desc for _, desc, _ in hits), \
+            f"漏检 {src!r}：hits={hits}"
+
+
 def test_commands_web_not_depended():
     """R3/D-05：commands/web 不被任何 qbot_rpg 模块 import（最外壳）。"""
     dep_edges = set()

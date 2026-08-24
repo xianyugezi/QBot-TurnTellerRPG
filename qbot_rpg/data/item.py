@@ -30,6 +30,7 @@ class ItemInstance:
     count: int                                 # 堆叠数量
     quality: str                               # 品质（四档枚举，细化_3a §3.2）
     bound: bool                                # 绑定物品不可赠送/掉落
+    stack_max: int = 99                        # 堆叠上限（4a §1.2 inventory 行格式字段；默认值对齐 4b ITM-07 items.json 定义级默认 99）
     slot: Optional[str] = None                 # 装备槽位（可装备时）
     stats_bonus: Dict[str, float] = field(default_factory=dict)  # 装备词条/虚拟属性键（细化_3b §4.1 ele_atk_*）
     traits: Tuple[str, ...] = ()               # 特性（tuple 保证冻结语义）

@@ -21,6 +21,10 @@ from pathlib import Path
 from typing import Dict, List, Mapping, Optional, Tuple
 
 from qbot_rpg.content.field_meta import default_field_meta_table
+from qbot_rpg.data.logging_utils import get_logger
+
+_logger = get_logger("content.loader")
+
 from qbot_rpg.content.models import (
     BaseDef,
     DEF_CLASSES,
@@ -256,8 +260,15 @@ def build_pack(
 
 
 def _raise_if_blocked(report: ValidationReport) -> Tuple[Pack, Tuple[str, ...]]:
-    """工具函数：errors 非空 → 抛 PackLoadError；否则返回占位（实际不会走到）。"""
+    """工具函数：errors 非空 → 抛 PackLoadError；否则返回占位（实际不会走到）。
+
+    规则 ⑪：红拦阻断前记日志（关键步骤 + 报错信息）。
+    """
     if not report.ok:
+        _logger.warning("pack 校验未通过（红拦阻断）: %d error(s) %d warning(s)",
+                        len(report.errors), len(report.warnings))
+        for e in report.errors:
+            _logger.debug("  red-block %s/%s: %s", e.module, e.field, dict(e.detail))
         raise PackLoadError(report)
     raise AssertionError("_raise_if_blocked called with ok report")  # pragma: no cover
 

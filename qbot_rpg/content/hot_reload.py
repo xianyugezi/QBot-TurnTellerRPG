@@ -22,6 +22,10 @@ from typing import Deque, Dict, List, Mapping, Optional, Tuple
 
 from qbot_rpg.content.field_meta import default_field_meta_table
 from qbot_rpg.content.loader import PackLoadError, build_pack, file_signature
+from qbot_rpg.data.logging_utils import get_logger
+
+_logger = get_logger("content.hot_reload")
+
 from qbot_rpg.content.models import (
     FieldMetaTable,
     PackError,
@@ -256,12 +260,18 @@ class HotReloadWatcher:
             report_errors = exc.errors
             report_warnings = exc.report.warnings
             note = f"load blocked by {len(report_errors)} red-block error(s)"
+            # 规则 ⑪：报错信息落日志（含首个错误详情）
+            _logger.warning("hot_reload %s 加载被红拦: %s", self._pack_id, note)
+            for e in report_errors[:3]:
+                _logger.debug("  reload red-block %s/%s: %s", e.module, e.field, dict(e.detail))
         except Exception as exc:  # IO/意外异常 → 按校验失败处理（SNAP-2）
             report_errors = (
                 PackError("pack", "pack", "R-5",
                           dict(rule="unexpected_error", error=type(exc).__name__, message=str(exc))),
             )
             note = f"unexpected load error: {type(exc).__name__}"
+            # 规则 ⑪⑫：意外异常记完整堆栈（logger.exception），随后走快照回退兜底
+            _logger.exception("hot_reload %s 意外加载异常（回退旧 registry）", self._pack_id)
         else:
             # ③ 通过后自检 A（接口完整性，细化_3e2 自检 A）
             issue = pack.registry.integrity_check()

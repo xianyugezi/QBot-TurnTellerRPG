@@ -26,6 +26,10 @@ from typing import Any, AsyncIterator, Dict, List, Optional, Sequence, Tuple
 
 import aiosqlite
 
+from qbot_rpg.data.logging_utils import get_logger
+
+_logger = get_logger("storage.connection")
+
 from qbot_rpg.storage.schema import (
     PRAGMA_AUTO_VACUUM,
     PRAGMA_BUSY_TIMEOUT_MS,
@@ -213,6 +217,8 @@ class Database:
                         # 自动 .bak 回退 + round-trip 抽样为 4a RW-6 语义，已登记
                         # contract_deviations（前批 P1-3 递延项），本轮至少做状态重置（P1-2）。
                         await conn.close()
+                        # 规则 ⑪：报错信息落日志（含路径，便于定位坏库）
+                        _logger.error("存档库 integrity_check 失败: %s（4a RW-6/D-04，应回退 .bak 重试）", self.path)
                         raise StorageIntegrityError(
                             f"存档库 integrity_check 失败: {self.path}（4a RW-6/D-04，"
                             "应回退最近 .bak 后重试，服务不崩）"

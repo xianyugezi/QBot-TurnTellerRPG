@@ -7,11 +7,18 @@
   - 细化_3a_架构分层契约 §3.3 U2（Def 类落 content/，本表同为 content/ 数据）
   - 细化_1d_印记系统契约（marks：type="mark"、max_stack=0 不限、duration "battle"/"turns:N"）
   - 细化_3b_玩家属性三层 §4.2（StatDef：name/type/base/growth/role/mh_map/note）
+  - 细化_1e_怪物八段schema §1.1~1.6（enemies 八段 18 顶层字段 + stats 九键 + 双维弱点 + 行动表/
+    特殊行动/连招 + 掉落三类 + lore）+ m2_shared_contract 第一、四节（M2 A1 路权威字段表）
+  - T26（action.json AI 字段：weight/probability/intent/cooldown/condition/hungry/chain/charge_*/
+    preview/preview_chain/reveal_condition/armor/interrupt/tags）
 
-⚠️ 字段口径说明（2026-08-24 M0 复查诚实化）：enemies/stats 等模块本表为 **M0 引擎简化口径**
-（旧框架 schema，fixture tests/fixtures/packs/legal/*.json 同构；正式表在编辑器里程碑注入）。
-简化口径字段**不冒充** 细化_1e 顶层 18 字段表（hp 嵌套于 stats、无顶层 atk/def/drop_rate）或
-细化_3b §4.2 完整字段表（必填 role/mh_map/note 未注册——M0 无需职业映射，正式表补）。
+⚠️ 字段口径说明（M2 2026-08-26 升级）：enemies 表已由 M0 简化口径（顶层 hp/atk/def/drop_rate/
+monster_def_rate）重建为**八段正式表**（细化_1e F01~F18）。M0 旧键**保留注册但标记废弃**
+（测试依赖其 R-2/Y-1/Y-2 行为：enemies[].hp 负值红拦、drop_rate 极值黄提示、monster_def_rate
+负数容错）；八段新字段按 细化_1e 逐行登记。`type`（dummy 标记）保留 str 不设枚举——
+M0 旧包 type:"monster" 需继续放行，枚举判定归 A2 校验器路。条件必填（普通怪八段齐备 vs 木桩豁免）
+属 A2 判定口径，本表一律不设 required（避免误拦 M0 旧包）；联合形态字段（drops.count =
+number|[min,max]）不注册、走 §2.3 默认放行，防泛型校验器 R-1 误判（A2 R13 专项校验）。
 
 铁律：只提供「字段口径」默认值；editor/CSV/Schema/validator 四处共用一张元数据表（L140），
 正式表在编辑器里程碑注入，本文件为 M0 引擎可运行的缺省口径。枚举尽量宽松，避免误阻断合法包。
@@ -60,6 +67,92 @@ F_PROBABILITY = FieldMeta(type="number", probability=True, range_min=0.0, range_
 F_DROP_RATE = FieldMeta(type="number", probability=True, range_min=0.0, range_max=1.0)
 
 # -------------------------------------------------------------------------------------
+# enemies 八段子结构（细化_1e §1.1~1.6 / m2_shared_contract 第一节；M2 A1 路）
+# -------------------------------------------------------------------------------------
+# stats 九键（1.2 S01-S09；漏配键按难度模板补全 → 不设 required）
+ENEMY_STATS_CHILDREN: Dict[str, FieldMeta] = {
+    "hp": FieldMeta(type="number", range_min=0, range_max=99999),
+    "mp": FieldMeta(type="number", range_min=0, range_max=99999),
+    "str": FieldMeta(type="number", range_min=0, range_max=9999),
+    "int": FieldMeta(type="number", range_min=0, range_max=9999),
+    "con": FieldMeta(type="number", range_min=0, range_max=9999),
+    "spr": FieldMeta(type="number", range_min=0, range_max=9999),
+    "foc": FieldMeta(type="number", range_min=0, range_max=9999),
+    "agi": FieldMeta(type="number", range_min=0, range_max=9999),
+    "luk": FieldMeta(type="number", range_min=0, range_max=9999),
+}
+# 双维弱点（1.3 W01-W02；elements 键=元素 ID → 增伤倍率，元素注册表引用检查归 A2 R3）
+WEAKNESS_CHILDREN: Dict[str, FieldMeta] = {
+    "types": FieldMeta(type="list", element=FieldMeta(type="str")),
+    "elements": FieldMeta(type="obj"),
+}
+# 天然抗性（1.3 W03-W04；其余键=负面效果 ID → 0-100，未注册键默认放行、A2 引用检查）
+RESISTANCE_CHILDREN: Dict[str, FieldMeta] = {
+    "immune": FieldMeta(type="list", element=FieldMeta(type="str")),
+}
+# actions[] 条目（1.4 A01-A03d；probability 纯入池开关 0/1 → 不挂 probability 旗标防 Y-2 噪音）
+ACTION_ENTRY_CHILDREN: Dict[str, FieldMeta] = {
+    "action": FieldMeta(type="ref", ref_target="action", required=True),
+    "probability": FieldMeta(type="number", range_min=0, range_max=1),
+    "weight": FieldMeta(type="number", range_min=0, range_max=100),
+    "condition": FieldMeta(type="str"),  # 条件权重修正（obj 形态 A2 放宽）
+    "cooldown": FieldMeta(type="number", range_min=0, range_max=999),
+    "hungry": FieldMeta(type="number", range_min=0, range_max=999),
+}
+# special_actions[].trigger（1.4 A06-A09；type 13 类枚举 + x_ 前缀 → str，A2 R2/R11/R12）
+SPECIAL_ACTION_TRIGGER_CHILDREN: Dict[str, FieldMeta] = {
+    "type": FieldMeta(type="str"),
+    "value": FieldMeta(type="number"),
+    "timing": FieldMeta(type="str"),  # current_turn/next_turn/first_turn（A2）
+    "action": FieldMeta(type="str"),
+    "chance": FieldMeta(type="number", range_min=0, range_max=100),
+}
+# special_actions[] 条目（1.4 A04-A15）
+SPECIAL_ACTION_CHILDREN: Dict[str, FieldMeta] = {
+    "id": FieldMeta(type="str"),
+    "action": FieldMeta(type="ref", ref_target="action", required=True),
+    "trigger": FieldMeta(type="obj", children=SPECIAL_ACTION_TRIGGER_CHILDREN),
+    "once": FieldMeta(type="bool"),
+    "priority": FieldMeta(type="number"),
+    "trigger_cooldown": FieldMeta(type="number", range_min=0, range_max=999),
+    "max_triggers": FieldMeta(type="number", range_min=0, range_max=999),
+    "post_state": FieldMeta(type="obj", children={
+        "state": FieldMeta(type="str"),
+        "turns": FieldMeta(type="number"),
+    }),
+    "chain_ref": FieldMeta(type="str"),  # → chains[].id（引用存在 A2 R15）
+}
+# chains[].actions[] 节点（1.4 F14 / AI 定稿 §八：{action, chance 0-1, role, armor}）
+CHAIN_NODE_CHILDREN: Dict[str, FieldMeta] = {
+    "action": FieldMeta(type="ref", ref_target="action", required=True),
+    "chance": FieldMeta(type="number", range_min=0.0, range_max=1.0),
+    "role": FieldMeta(type="enum", enum=("chain", "finisher")),
+    "armor": FieldMeta(type="bool"),  # 霸体免疫打断
+}
+# chains[] 条目（F14）
+CHAIN_ENTRY_CHILDREN: Dict[str, FieldMeta] = {
+    "id": FieldMeta(type="str"),
+    "actions": FieldMeta(type="list", element=FieldMeta(type="obj", children=CHAIN_NODE_CHILDREN)),
+}
+# drops 三类容器条目（1.5 D01-D04；count 联合形态 number|[min,max] → 不注册默认放行，A2 R13）
+DROP_ENTRY_CHILDREN: Dict[str, FieldMeta] = {
+    "item": FieldMeta(type="ref", ref_target="item", required=True),
+    "chance": FieldMeta(type="number", range_min=0, range_max=100),
+    "condition": FieldMeta(type="str"),  # pv_broken/no_damage/after_action:<id>（A2 R13）
+    # "count": 不注册（number | [min,max] 联合形态；泛型校验器无联合类型，误判风险 → §2.3 默认放行）
+}
+DROPS_CHILDREN: Dict[str, FieldMeta] = {
+    "battle": FieldMeta(type="list", element=FieldMeta(type="obj", children=DROP_ENTRY_CHILDREN)),
+    "special": FieldMeta(type="list", element=FieldMeta(type="obj", children=DROP_ENTRY_CHILDREN)),
+    "death": FieldMeta(type="list", element=FieldMeta(type="obj", children=DROP_ENTRY_CHILDREN)),
+}
+# lore[] 条目（1.6 L01-L02；unlock 1-100 递增 → 递增判定 A2 R6）
+LORE_ENTRY_CHILDREN: Dict[str, FieldMeta] = {
+    "unlock": FieldMeta(type="number", range_min=1, range_max=100, required=True),
+    "desc": FieldMeta(type="str"),
+}
+
+# -------------------------------------------------------------------------------------
 # stat（stats.json 键空间条目）
 # -------------------------------------------------------------------------------------
 STAT_CHILDREN: Dict[str, FieldMeta] = {
@@ -72,6 +165,47 @@ STAT_CHILDREN: Dict[str, FieldMeta] = {
     "min": FieldMeta(type="number", range_min=0, range_max=999999),
     "display": FieldMeta(type="str"),
 }
+
+# -------------------------------------------------------------------------------------
+# 1g4 世界边界：settings.death_penalty（F-01~F-04）+ settings.currencies + maps 复活点
+# （F-05/F-06）。依据：细化_1g4 §6.1/§6.2/§6.3 + docs/m2_shared_contract 第七节。
+# 硬拦规则（F-02 货币引用存在 / F-02·F-04 数值合法 / 超时键不识别）见 validator
+# `_check_settings_1g4`（本表只做字段口径 + 泛型 R-1~R-5/Y-1~Y-8；专用规则走专项钩子）。
+# -------------------------------------------------------------------------------------
+DEATH_PENALTY_CHILDREN: Dict[str, FieldMeta] = {
+    # F-01 虚弱时长（秒）默认 60【框架 L285】；负数 → R-2 泛型硬拦；0=不虚弱仅建议不拦截
+    "weak_duration_sec": FieldMeta(type="int", range_min=0, range_max=86400),
+    # F-02 掉落货币清单 [{currency, ratio}]；空=不掉【框架 L287】；currency 引用存在性 +
+    # ratio∈(0,1] 硬拦归 _check_settings_1g4（ref 目标为 settings 内部键空间，非注册表 kind）
+    "drop_currency": FieldMeta(type="list", element=FieldMeta(type="obj", children={
+        "currency": FieldMeta(type="str"),
+        "ratio": FieldMeta(type="number", range_min=0.0, range_max=1.0),
+    })),
+    # F-03 掉落经验 {enabled, percent}【框架 L288】；enabled=false 时 percent 惰性不校验（6.3）
+    "drop_exp": FieldMeta(type="obj", children={
+        "enabled": FieldMeta(type="bool"),
+        "percent": FieldMeta(type="number", range_min=0.0, range_max=100.0),
+    }),
+    # F-04 随机掉落物品件数 {enabled, count}【框架 L289】；count ≥ 1 整数硬拦归 _check_settings_1g4
+    "drop_items": FieldMeta(type="obj", children={
+        "enabled": FieldMeta(type="bool"),
+        "count": FieldMeta(type="int", range_min=1, range_max=9999),
+    }),
+}
+CURRENCY_ENTRY_CHILDREN: Dict[str, FieldMeta] = {
+    # 货币键空间（3h §5.1 / 框架 L1096-1097）：id=机器键 snake_case、cap 0=不设上限
+    "id": F_ID, "name": FieldMeta(type="str"), "icon": FieldMeta(type="str"),
+    "cap": FieldMeta(type="int", range_min=0, range_max=999999),
+    "note": FieldMeta(type="str"),
+}
+# settings 模块已注册字段（其余段 level_cap/pvp/time_cycle/... 由 3h 路登记，缺省放行 §2.3）
+SETTINGS_FIELDS: Dict[str, FieldMeta] = {
+    "currencies": FieldMeta(type="list", element=FieldMeta(type="obj", children=CURRENCY_ENTRY_CHILDREN)),
+    "death_penalty": FieldMeta(type="obj", children=DEATH_PENALTY_CHILDREN),
+}
+# 默认模板货币键空间（F-02 引用存在性兜底：settings 未配 currencies 时按此默认，3h §5.1）
+DEFAULT_CURRENCY_IDS: Tuple[str, ...] = ("coins", "diamond")
+
 
 # -------------------------------------------------------------------------------------
 # 模块元数据
@@ -140,11 +274,35 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "effects": F_EFFECTS,
     }
     action_fields: Dict[str, FieldMeta] = {
-        "id": F_ID, "name": F_NAME, "type": F_TYPE,
-        "power": F_POWER, "cost": FieldMeta(type="number", range_min=0, range_max=9999),
-        "cool": FieldMeta(type="number", range_min=0, range_max=9999),
-        "probability": F_PROBABILITY, "weight": FieldMeta(type="number", range_min=0, range_max=100),
+        # ---- ActionCore 基础（T24-T26 / m2_shared_contract §四）----
+        "id": F_ID, "name": F_NAME,
+        "kind": FieldMeta(type="str"),  # basic/active/...（枚举判定 A2 路）
+        "type": F_TYPE,                  # 旧键兼容
+        "power": F_POWER,
+        "attack_type": FieldMeta(type="str"),  # 斩/打/突/魔（枚举判定 A2 路）
+        "element": FieldMeta(type="str"),      # 元素 ID（元素注册表引用检查 A2/M2）
         "effects": F_EFFECTS,
+        "cost": FieldMeta(type="number", range_min=0, range_max=9999),  # 旧键
+        "cool": FieldMeta(type="number", range_min=0, range_max=9999),  # 旧键（cooldown 规范名）
+        # ---- AI 字段（怪物侧扩展，T26 / m2 §四；缺省兜底不报错）----
+        "weight": FieldMeta(type="number", range_min=0, range_max=100),
+        # P2-4 修复：不挂 probability 旗标（Y-2 极值误报——0/1 是入池开关非概率值，
+        # 与 enemies.actions[].probability 口径一致，1e S1 语义）
+        "probability": FieldMeta(type="number", range_min=0, range_max=1),
+        "intent": FieldMeta(type="str"),  # 伤害/防御/蓄力/治疗/控制/buff/debuff/印记/功能（枚举 A2）
+        "cooldown": FieldMeta(type="number", range_min=0, range_max=999),
+        # P2-9 修复：condition 条件权重修正为 obj/string 双形态（1e A03b），
+        # str 注册会误拦合法 obj 形态 → 不注册（未知字段默认放行），形态校验留 A2/运行期
+        "hungry": FieldMeta(type="number", range_min=0, range_max=999),
+        "chain": FieldMeta(type="list", element=FieldMeta(type="str")),  # 历史写法（行动 ID 列表，S2 兼容）
+        "armor": FieldMeta(type="bool"),     # 霸体免疫打断（AI 定稿 §八）
+        "interrupt": FieldMeta(type="bool"), # 打断行动标记（T19 interrupt 唯一归口）
+        "tags": FieldMeta(type="list", element=FieldMeta(type="str")),
+        "preview": FieldMeta(type="obj"),          # 意图预告（结构以 1d 系/A2 为准）
+        "preview_chain": FieldMeta(type="obj"),    # 链预告（结构以 1d 系/A2 为准）
+        "reveal_condition": FieldMeta(type="str"), # 预告揭示条件
+        # charge_* 蓄力字段：前缀未知键默认放行（§2.3，键名前缀登记）；结构待 1d 系（A2 专项）
+        # ---- M1 旧引用字段（保留）----
         "require_status": FieldMeta(type="ref", ref_target="status"),
         "apply_status": FieldMeta(type="ref", ref_target="status"),
         "skill": FieldMeta(type="ref", ref_target="skill_or_any"),
@@ -169,7 +327,30 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "apply_status": FieldMeta(type="ref", ref_target="status"),
     }
     enemies_fields: Dict[str, FieldMeta] = {
-        "id": F_ID, "name": F_NAME, "type": F_TYPE,
+        # ---- 八段：基础（细化_1e F01-F06 / m2_shared_contract 第一节）----
+        "id": F_ID, "name": F_NAME,
+        "tier": FieldMeta(type="enum", enum=("normal", "elite", "boss", "training")),  # F03（默认 normal）
+        "type": FieldMeta(type="str"),  # F04 "dummy" 标记；M0 旧包 type:"monster" 兼容 → 枚举判定 A2
+        "area": FieldMeta(type="str"),  # F05
+        "desc": FieldMeta(type="str"),  # F06
+        # ---- stats 九键（F07 / 1.2）----
+        "stats": FieldMeta(type="obj", children=ENEMY_STATS_CHILDREN),
+        # ---- 弱点 / PV / 抗性（F08-F11 / 1.3）----
+        "weakness": FieldMeta(type="obj", children=WEAKNESS_CHILDREN),
+        "pv": FieldMeta(type="number", range_min=0, range_max=500),  # F09（档区间仅提示；木桩强制 0 A2）
+        "pv_recover": FieldMeta(type="enum", enum=("battle_end", "none")),  # F10
+        "resistance": FieldMeta(type="obj", children=RESISTANCE_CHILDREN),  # F11
+        # ---- 行动表 / 特殊行动 / 连招（F12-F14 / 1.4）----
+        "actions": FieldMeta(type="list", element=FieldMeta(type="obj", children=ACTION_ENTRY_CHILDREN)),  # F12
+        "special_actions": FieldMeta(type="list", element=FieldMeta(type="obj", children=SPECIAL_ACTION_CHILDREN)),  # F13
+        "chains": FieldMeta(type="list", element=FieldMeta(type="obj", children=CHAIN_ENTRY_CHILDREN)),  # F14
+        # ---- 掉落 / 图鉴（F15-F16 / 1.5-1.6）----
+        "drops": FieldMeta(type="obj", children=DROPS_CHILDREN),  # F15
+        "lore": FieldMeta(type="list", element=FieldMeta(type="obj", children=LORE_ENTRY_CHILDREN)),  # F16
+        # ---- 木桩向（F17-F18）----
+        "def_base": FieldMeta(type="number", range_min=0, range_max=99999),  # F17（≥0）
+        "elem_res": FieldMeta(type="obj"),  # F18（元素 ID → 正减伤/负增伤；注册表引用检查 A2）
+        # ---- M0 旧键兼容（已废弃，保留注册：测试依赖 R-2/Y-1/Y-2 行为）----
         "hp": F_HP, "atk": F_ATK, "def": F_DEF,
         # R-09（2026-08-18 用户拍板）：每怪可配怪物防御率（默认 1.0=普通同玩家；
         # 负数 → Y-1 黄提示 + 运行期按 0 护栏，不红拦——allow_negative=True）
@@ -177,7 +358,6 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "drop_rate": F_DROP_RATE,
         "effects": F_EFFECTS,
         "traits": FieldMeta(type="list", element=FieldMeta(type="ref", ref_target="trait")),
-        "actions": FieldMeta(type="list", element=FieldMeta(type="ref", ref_target="action")),
         "skills": FieldMeta(type="list", element=FieldMeta(type="str")),  # 技能库 M6 注入
     }
     maps_fields: Dict[str, FieldMeta] = {
@@ -188,6 +368,10 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "min": FieldMeta(type="int"), "max": FieldMeta(type="int"),
         "lower": FieldMeta(type="int"), "upper": FieldMeta(type="int"),
         "reset": FieldMeta(type="obj"),
+        # 1g4 F-05/F-06（细化_1g4 §6.2 / 框架 L291）：safe_zone=是否安全区；
+        # respawn_point=复活点指向（引用已注册地图 id，泛型 R-4 存在性检查）
+        "safe_zone": FieldMeta(type="bool"),
+        "respawn_point": FieldMeta(type="ref", ref_target="map"),
     }
     stats_fields: Dict[str, FieldMeta] = {}
     formula_fields: Dict[str, FieldMeta] = {}
@@ -237,6 +421,9 @@ def _module_table() -> Dict[str, ModuleMeta]:
         # 条件加成（细化_3b §3.2；环 + 引用存在性专项校验见 validator._check_conditional）
         "conditional": ModuleMeta(entry_type="object", fields=conditional_fields,
                                   kind="conditional", namespace="cond_lib"),
+        # 通用设置（细化_1g4 §6.1 death_penalty + currencies 段；其余段由 3h 路登记缺省放行）。
+        # 注意：settings.json 为常驻模块（3h D-01），本表仅登记字段口径；loader 常驻加载归 3h/M 接线。
+        "settings": ModuleMeta(entry_type="object", fields=SETTINGS_FIELDS),
     }
 
 
@@ -263,4 +450,9 @@ def default_field_meta_table() -> FieldMetaTable:
     return FieldMetaTable(modules=modules, namespaces=dict(NAMESPACES))
 
 
-__all__ = ["default_field_meta_table", "FieldMeta", "ModuleMeta", "FieldMetaTable"]
+__all__ = [
+    "default_field_meta_table", "FieldMeta", "ModuleMeta", "FieldMetaTable",
+    # 1g4 世界边界（细化_1g4 §6；settings 段 + maps F-05/F-06 字段口径）
+    "DEATH_PENALTY_CHILDREN", "CURRENCY_ENTRY_CHILDREN", "SETTINGS_FIELDS",
+    "DEFAULT_CURRENCY_IDS",
+]

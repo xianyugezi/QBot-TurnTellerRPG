@@ -5,7 +5,10 @@ CombatantSnapshot、回合数、combo_state、ai_state、status_state、marks_st
 resist_table、effect_triggers/cooldowns、formula_state{random_seed}；CombatantSnapshot
 为 frozen 正例，细化_规则 L81-87 原样）；细化_1g1c_战斗状态数据（会话快照全量
 状态登记）；细化_4a_存储层契约 §0.1 术语表（会话快照 ID+名称冗余存储，按旧配置
-结算，D-05 —— storage 经此快照持久化，结算语义归会话管理器）。
+结算，D-05 —— storage 经此快照持久化，结算语义归会话管理器）；
+细化_1g4_战斗世界边界 §6.2 F-08（丢失挂起子态 lost_pending：目标引用
+{id,name 冗余 [4a·SCHEMA-5]} + 所在图 + 挂起起始时间；刷新后清除；30 天回收时
+随会话清理——结构【工程补白】）+ docs/m2_shared_contract 第七节（1g4 世界边界）。
 
 ⚠️ 当前实现口径（P1-3 复查登记）：实际战斗快照以 **1g3 dict 格式**落地
 （core/battle.py `to_snapshot()` 返回 Dict：schema_version/snapshot_at/context/
@@ -21,7 +24,7 @@ frozen=True：快照不可变，防战斗中被误改（U3；细化_1g3 快照�
 """
 
 from dataclasses import dataclass, field
-from typing import Dict
+from typing import Dict, Optional
 
 __all__ = ["CombatantSnapshot", "BattleSnapshot"]
 
@@ -65,3 +68,8 @@ class BattleSnapshot:
     effect_triggers: Dict[str, object] = field(default_factory=dict)
     effect_cooldowns: Dict[str, int] = field(default_factory=dict)
     formula_state: Dict[str, object] = field(default_factory=dict)  # 必含 random_seed 键
+    # F-08 丢失挂起子态（细化_1g4 §6.2 / m2_shared_contract 第七节）：
+    #   { "target_ref": {"id": str, "name": str}, "map_id": str, "pending_since": int }
+    # 目标被他人击败 → 写入；刷新后清除（LOST-03）；无刷新按退出（LOST-04）；
+    # 30 天回收随会话清理（TIME-05）。挂起不新增战斗状态机（1g4 §1.1）。
+    lost_pending: Optional[Dict[str, object]] = None

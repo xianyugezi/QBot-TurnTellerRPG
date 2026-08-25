@@ -49,7 +49,14 @@ def test_legal_pack_full_green(legal_pack_dir: Path) -> None:
     assert pack.registry.generation == 1
     assert set(pack.registry.all_ids("item")) == {"potion", "hi_potion"}
     assert set(pack.registry.all_ids("effect")) == {"heal_small", "power_slash", "rage_up"}
-    assert set(pack.registry.all_ids("enemy")) == {"slime", "forest_wolf", "oak_golem"}
+    # M2 A3（细化_1e）：legal enemies 重建为八段合法怪（普通/精英/BOSS/木桩各一），action 模块已声明
+    assert set(pack.registry.all_ids("enemy")) == {
+        "rock_weasel", "stone_skink", "ember_drake", "training_dummy",
+    }
+    assert set(pack.registry.all_ids("action")) == {
+        "claw_swipe", "tail_sweep", "rock_roll", "hard_body", "roar", "fireball",
+        "doomsday_breath",
+    }
     # ID 唯一（效果家族三表统一命名空间）：max_stack 不重复
     assert pack.registry.resolve("heal_small", "effect") is not None
     assert pack.registry.resolve("potion", "item") is not None

@@ -23,6 +23,10 @@ battle_state 为本场战斗唯一权威状态）。零 NoneBot import（细化_
   - 细化_1b_效果系统契约（DamagePipeline/DamageCtx/EffectRuntime/tick_turn_end/
     tick_after_action）、细化_1a_伤害公式数值（十乘区纯函数）、细化_1c(连段)、
     细化_1f(怪物 AI)—— AI 仅留默认普攻反击钩子（后手，细化_1g2 §1.1）。
+  - M2-C1（怪物 AI × 战斗引擎集成）：docs/m2_shared_contract.md §六（battle 挂接点：
+    enemy_act None 分支用 MonsterAI.decide 产出行动 → 走既有 _do_action/_resolve_damage_action
+    执行通道；决策后 ai_state 回灌快照；打断=套完结）＋ §五（ai_state 快照 14 键形态）＋
+    细化_1f ⑥ TC-08/15/16/17/18。MonsterAI 只读注入（enemy_ai），本模块不改写 monster_ai.py。
 
 【工程补白】（设计文档未显式定义、实现需收敛处，显式标注）：
   1. 工作快照形态：effects.damage_pipeline / tick_turn_end 要求 combatant 位于
@@ -92,6 +96,8 @@ from qbot_rpg.core.combo import (
     ComboEngine,
     InterruptResult,
 )
+# M2-C1：怪物连招打断=套完结（monster_chains.on_chain_broken，contract §六 / 细化_1f ⑤5.4）
+from qbot_rpg.core.monster_chains import on_chain_broken
 
 __all__ = [
     "BattleEngine",
@@ -292,6 +298,10 @@ class BattleEngine:
         defs: Optional[Mapping[str, Any]] = None,
         config: Optional[Mapping[str, Any]] = None,
         combo_engine: Optional[ComboEngine] = None,
+        enemy_ai: Any = None,
+        enemy_def: Optional[Mapping[str, Any]] = None,
+        ai_action_lib: Any = None,
+        ai_rng: Any = None,
     ) -> None:
         """构造引擎。
 
@@ -300,6 +310,12 @@ class BattleEngine:
         配置源（effects/statuses 解析，F-21/F-23 用）；config：引擎配置
         （death_check 四项等，1g1b §三）；combo_engine：连段引擎（细化_1c；
         默认自建，与 registry/defs 同源解析技能/链配置）。
+
+        M2-C1（contract §六）：enemy_ai=怪物 AI 决策引擎实例（MonsterAI，只读注入；
+        None=保留 M1 默认普攻反击）。显式 enemy_ai 优先；enemy_def 给出时自动构造
+        （action_lib 缺省用 defs 映射；ai_rng 缺省自建——确定性测试请显式注入
+        enemy_ai 或 ai_rng，铁律 6）。enemy_def/ai_action_lib/ai_rng 亦经
+        from_snapshot 透传（快照续玩不丢 AI 引擎）。
 
         兼容旧签名：BattleEngine() / BattleEngine(pipeline, runtime) 原样可用。
         """
@@ -319,6 +335,19 @@ class BattleEngine:
             defs=defs, registry=registry,
             config={"enforce_mp": bool(self._config.get("combo_enforce_mp", False))},
         )
+        # M2-C1：怪物 AI 注入（enemy_ai 显式优先；enemy_def 自动构造）
+        self._enemy_ai: Any = None
+        if enemy_ai is not None:
+            self._enemy_ai = enemy_ai
+        elif enemy_def is not None:
+            from qbot_rpg.core.monster_ai import MonsterAI
+
+            lib = ai_action_lib if ai_action_lib is not None else (
+                defs if isinstance(defs, Mapping) else None
+            )
+            self._enemy_ai = MonsterAI(
+                enemy_def, lib, ai_rng if ai_rng is not None else random.Random()
+            )
         self._reset_state()
 
     # ------------------------- 内部状态字段 -------------------------
@@ -868,6 +897,9 @@ class BattleEngine:
             "combo_state": {},
             "combo_zeroed_at": None,
             "ai_state": {},
+            # M2 审查 P2-3：lost_pending 预留（1g4 F-08 丢失挂起子态；M4 丢失判定写入，
+            # to_snapshot 深拷贝自动携带——快照结构稳定，M4 读路径键存在）
+            "lost_pending": None,
             "stats_collector": {"per_action": []},
             "formula_state": {"random_seed": self._rng_seed},
             "timestamps": {"created_at": now, "updated_at": now, "snapshot_at": None},
@@ -1195,6 +1227,11 @@ class BattleEngine:
         ):
             # P1-4：打断技攻击窗口三条件（1c2 §2.2）——目标连段清零
             self.combo_engine().apply_interrupt(attacker, target, self._snap, self._armor_active)
+            # M2-C1（contract §六）：玩家 interrupt 命中怪物 → 套完结（在途链/蓄力清空，
+            # 下一回合随机流程；怪物连招走 ai_state，combo 引擎对怪物恒 no_active，
+            # 故独立评估 _interrupt_enemy_ai，免疫/霸体检查在内部）
+            if target == "enemy":
+                self._interrupt_enemy_ai()
         if result.armor or armor_flag:
             self._armor_active[attacker] = True        # 霸体：本行动阶段期间免疫打断（1c2 §2.2）
         rt = self._new_runtime()
@@ -1233,7 +1270,7 @@ class BattleEngine:
         segments = action.get("segments") or [action]
         ac, tc = self._combat(attacker), self._combat(target)
         p = self._params
-        atk_type = str(action.get("attack_type") or "slash")
+        atk_type = self._normalize_attack_type(str(action.get("attack_type") or "slash"))
 
         # 连段/派生累计（1c1a/1a derived：≤1.5× 封顶，damage.apply_derived_cap）
         seg_total: int = 0
@@ -1245,6 +1282,18 @@ class BattleEngine:
 
         for idx, seg in enumerate(segments, start=1):
             seg = dict(seg)
+            # M2-C1 修复（0 倍率占行动槽/功能技不造成伤害）：max(1,) 通道保底会把
+            # mult=0 抬成每通道 1 点——蓄力起手/起身演出误伤 2、吼叫类 0 倍率 buff 误伤。
+            # 0 倍率段：记录 0 伤害 action_record，跳过命中/会心/格挡/通道结算
+            # （技能 effects 已在上游 _resolve_combo_action L1236-1244 执行，不受影响）。
+            _raw_mult0 = seg.get("mult")
+            if _raw_mult0 is not None and float(_raw_mult0) <= 0:
+                self._record_action(
+                    attacker, str(action.get("type", "normal")), target,
+                    {"hit": True, "crit": "low", "blocked": False, "pierce": 0.0, "multi": 0.0},
+                    {"ch_phys": 0, "ch_elem": 0, "final": 0}, self._phase,
+                )
+                continue
             # P1-01 修复（dsh 批2 P1-01）：每段结算前刷新防御行——战斗中新施加的
             # 反射/吸收/减伤状态（status_actions 折叠）次击即可进 defenses 生效
             # （F-21 prepare_defense 归一化，docstring 自述「每次结算前刷新」）。
@@ -1301,10 +1350,17 @@ class BattleEngine:
             eff_con = effective_con(float(tc.get("con", 50)), pierce)
             df = defense_factor(eff_con, k=p.defense.k)
             # M2 技能倍率 = 基础 ×（1 + F-23 效果加成/100）→ F-23 消费点
-            base_mult = float(seg.get("mult", 1.0) or 1.0)
+            # M2-C1 修复（怪物 AI 蓄力/起身占行动槽 mult=0 语义）：原 `or 1.0` 把显式 0 吞成 1.0，
+            # 蓄力播报/0 倍率 buff 行动误造成伤害——仅缺省（None/缺失）回落 1.0，0.0 原样保留
+            _raw_mult = seg.get("mult")
+            base_mult = float(_raw_mult) if _raw_mult is not None else 1.0
             skill_mult = self._apply_boost_to_mult(attacker, base_mult, "atk")
             # 派生累计 ≤1.5× 封顶（1a L129/L229；damage.apply_derived_cap，P1-7 消费）
-            skill_mult = apply_derived_cap(skill_mult, max_total_mult=p.derived.max_total_mult)
+            # M2-C1 修正：封顶只对「派生技」（action._derived，_resolve_combo_action 打标）
+            # 生效——派生累计是派生链叠加的封顶，单技能基础倍率（技能库预算小技 150-200%）
+            # 不应被封顶（tc16 怪物行动 fireball power 1.6 期望 multi==1.6）。
+            if action.get("_derived"):
+                skill_mult = apply_derived_cap(skill_mult, max_total_mult=p.derived.max_total_mult)
             rating["multi"] = skill_mult
             attack_value = float(ac.get("atk", 0))
             if magic:
@@ -1452,17 +1508,113 @@ class BattleEngine:
         if nxt is not None and self._state in (STATE_RES,):
             self._to_state(STATE_ACT, "next_actor")
 
+    def _normalize_attack_type(self, atk: str) -> str:
+        """内容层 attack_type 中文枚举 → 伤害通道 token（m2_shared_contract §四：斩/打/突/魔；
+        伤害通道口径 slash/blunt/thrust/magic，battle L987/L1236）。未识别原样透传。"""
+        return {"斩": "slash", "打": "blunt", "突": "thrust", "魔": "magic"}.get(str(atk), str(atk))
+
+    def _ai_action_dict(self) -> Optional[Dict[str, Any]]:
+        """M2-C1：MonsterAI 决策产出 action_dict（enemy_act None 分支，contract §六）。
+
+        依据：m2_shared_contract §六（enemy_act None 时用 MonsterAI.decide 产出行动，
+        走既有 _do_action 执行通道）＋ §五（action_dict 形态：{type, skill_id, mult, kind,
+        action_id, action, source, ai_state, [charging|progress|chain_id]}）。
+        - decide 同步更新 battle_state['ai_state']（原地）；返回 ai_state 回灌快照（吸收返回，
+          contract §六）；MonsterAI 无状态，ai_state 以快照为权威。
+        - 执行侧字段合并：action 定义（decide 已把 power→mult）的 attack_type/armor/effects
+          归一化到 action_dict 顶层（T24 同构双库：技能=怪物行动=一次出手，复用玩家伤害通道）。
+        - 无 AI 注入 / decide 异常返回 None → 调用方落 M1 默认普攻。
+        """
+        if self._enemy_ai is None:
+            return None
+        try:
+            act = self._enemy_ai.decide(self._snap)
+        except Exception as exc:  # M2 审查 P2-1：decide 异常回落 M1 默认普攻（docstring 承诺落地）
+            self._snap.setdefault("ai_errors", []).append(str(exc)[:200])
+            return None
+        if not isinstance(act, Mapping):
+            return None
+        ai = act.get("ai_state")
+        if isinstance(ai, Mapping):
+            self._snap["ai_state"] = ai  # 回灌快照（吸收返回）
+        # M2 审查 P1-1：combo_broken 为「本回合连招被打断」一次性标记——
+        # 打断同回合的怪物决策（本轮反击）应命中一次（立即反应），决策后清除，
+        # 防跨回合/跨快照续玩无限期触发（monster_conditions._eval_combo_broken 消费）
+        self._snap.pop("combo_broken", None)
+        ad = dict(act)
+        ad.pop("ai_state", None)  # 已回灌，不随行动 dict 下传
+        # 蓄力起手/进度播报（charging）与起身演出（get_up）：占行动槽不造成伤害
+        # （细化_1f：蓄力起手回合播报 1/N；起身演出占用行动槽；行动本体在 L0 释放/起身完成）
+        if ad.get("charging") or ad.get("kind") == "get_up":
+            ad["mult"] = 0.0
+        adef = ad.get("action")
+        if isinstance(adef, Mapping):
+            atk = adef.get("attack_type")
+            if atk:
+                ad.setdefault("attack_type", self._normalize_attack_type(atk))
+            ad.setdefault("armor", bool(adef.get("armor", False)))
+            ad.setdefault("effects", list(adef.get("effects") or []))
+        return ad
+
+    def _interrupt_enemy_ai(self) -> bool:
+        """M2-C1：玩家 interrupt 命中怪物 → 套完结（contract §六 / 细化_1f ⑤5.4 核心规则3）。
+
+        怪物连招（chain_queue / exec_state=in_chain）与蓄力（exec_state=charging）被打断：
+        - 在途链 → monster_chains.on_chain_broken（清队列、回 idle、当前链进冷却，
+          下一回合走随机流程 L6，不继续原套）；
+        - 蓄力 → 清除 charge（蓄力可被打断；armor=true 霸体免疫，细化_1f ①1.1 核心规则7）；
+        - 免疫检查：蓄力 charge.armor、战斗瞬态 armor_active（1c2 §2.2 霸体窗口）、
+          效果系统 I3 打断免疫（effects.immune_to_interrupt，1b §4.4）。
+        返回是否实际打断（供消息/测试）。链节点 armor（finisher 霸体）细化留 M3（TODO）。
+        """
+        ai = self._snap.get("ai_state")
+        if not isinstance(ai, dict):
+            return False
+        exec_state = ai.get("exec_state")
+        # M2 审查 P2-2：在途链判定以 chain_queue 为真（真实在途链必有非空队列）——
+        # 单行动（长度 1 套）执行后 exec_state 停留 in_chain 是执行中态，非在途链，
+        # 避免对已完成单行动的打断误判（on_chain_broken 无链可断 + combo_broken 误置）
+        in_chain = bool(ai.get("chain_queue"))
+        charging = exec_state == "charging"
+        if not (in_chain or charging):
+            return False
+        if bool(self._armor_active.get("enemy", False)):
+            return False
+        ch = ai.get("charge") or {}
+        if charging and bool(ch.get("armor")):
+            return False
+        rt = self._new_runtime()
+        if rt.immune_to_interrupt("enemy", self._combat("enemy").get("defenses")):
+            return False
+        broken_chain = ai.get("chain_id")
+        if in_chain:
+            on_chain_broken(ai)
+        if charging:
+            ai["charge"] = None
+            ai["exec_state"] = "idle"
+        # 打断标记（monster_conditions._eval_combo_broken 消费：本回合连招被打断 →
+        # 下一回合 L3 可评估 combo_broken 触发行动，细化_1f ②L3）
+        self._snap["combo_broken"] = True
+        self._snap.setdefault("combo_events", []).append({
+            "type": "monster_chain_broken", "side": "enemy",
+            "chain_id": broken_chain, "charge_cleared": bool(charging),
+        })
+        return True
+
     def enemy_act(self, action_dict: Optional[Mapping[str, Any]] = None) -> Optional[ActionOutcome]:
         """⑤ 后手行动（1g2 §1.2 ⑤ / 1g1b A3）：怪物反击。
 
         被先手击杀的怪物不执行反击（1g2 §1.1 特例 写死）；目标无存活→
         no_target_action 兜底（fallback=空挥/skip，1g1b A3 / L56-57/L238）。
-        action_dict 缺省用默认普攻（细化_1f AI 钩子：默认 normal）。
+        action_dict 缺省：注入 MonsterAI 时由 decide 产出行动（M2-C1，contract §六），
+        否则用 M1 默认普攻（细化_1f AI 钩子：默认 normal）。
         """
         if self._finished:
             return None
         if not self._alive("enemy") or self._dead("enemy"):
             return None  # 被先手击杀不反击（写死，1g2 §1.1 特例）
+        if action_dict is None:
+            action_dict = self._ai_action_dict()
         if action_dict is None:
             action_dict = {"type": "normal", "mult": 1.0}
         if self._dead("player"):
@@ -1495,6 +1647,13 @@ class BattleEngine:
         for side in BATTLE_SIDES:
             if int(self._combat(side).get("hp", 0)) <= 0:
                 self._death_check_side(side, "turn_end_dot")
+
+        # M2-C1（contract §五/§六）：怪物 AI 冷却回合收尾递减（MonsterAI.tick 递减
+        # action/trigger/chain 三类冷却）。decide() 不递减（工程收敛 4，避免双重递减），
+        # 本处为回合边界单点——end_turn 每轮恰一次。
+        ai = self._snap.get("ai_state")
+        if self._enemy_ai is not None and isinstance(ai, dict):
+            self._enemy_ai.tick(ai)
 
         # ⑦⑧ 互杀 + 战斗结束判定
         out = self._resolve_battle_end(force=False)
@@ -1612,14 +1771,21 @@ class BattleEngine:
         pipeline: Optional[DamagePipeline] = None,
         defs: Optional[Mapping[str, Any]] = None,
         config: Optional[Mapping[str, Any]] = None,
+        enemy_ai: Any = None,
+        enemy_def: Optional[Mapping[str, Any]] = None,
+        ai_action_lib: Any = None,
+        ai_rng: Any = None,
     ) -> "BattleEngine":
         """快照还原（1g3 §2.3 恢复时序①-⑤）：还原最近回合边界状态 → T7 回 PREP →
         start_turn 回 ① 继续。
 
         死亡判定已先于快照写入（1g3 S0/E-05）：恢复后状态=最近回合边界，无歧义。
         随机种子随 formula_state.random_seed 恢复 → 续玩随机序列一致（4a TC-17）。
+        M2-C1（contract §六）：ai_state 随快照原样还原（MonsterAI 写入内容不丢）；
+        enemy_ai/enemy_def 透传构造（MonsterAI 无状态=配置，需随还原引擎重建）。
         """
-        eng = cls(pipeline=pipeline, defs=defs, config=config)
+        eng = cls(pipeline=pipeline, defs=defs, config=config, enemy_ai=enemy_ai,
+                  enemy_def=enemy_def, ai_action_lib=ai_action_lib, ai_rng=ai_rng)
         eng._snap = copy.deepcopy(dict(data))
         eng._rng_seed = int((data.get("formula_state") or {}).get("random_seed", 0) or 0)
         eng._rng = random.Random(eng._rng_seed)
@@ -1653,9 +1819,10 @@ class BattleEngine:
         return eng
 
     def resume(self, data: Mapping[str, Any]) -> "BattleEngine":
-        """旧名兼容：快照续战（M1 占位签名升级，细化_1g3 §2.3）。"""
+        """旧名兼容：快照续战（M1 占位签名升级，细化_1g3 §2.3）。
+        M2-C1：沿用当前 enemy_ai（MonsterAI 无状态，随还原引擎重建同配置实例）。"""
         return self.__class__.from_snapshot(data, pipeline=self._pipeline, defs=self._defs,
-                                           config=self._config)
+                                            config=self._config, enemy_ai=self._enemy_ai)
 
     # ------------------------- 服务查询 -------------------------
 

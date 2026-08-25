@@ -1,5 +1,212 @@
 [
-  { "id": "slime", "name": "史莱姆", "type": "monster", "hp": 100, "atk": 10, "def": 5, "drop_rate": 0.4, "effects": ["heal_small"], "traits": [], "actions": [] },
-  { "id": "forest_wolf", "name": "森林狼", "type": "monster", "hp": 220, "atk": 24, "def": 8, "drop_rate": 0.2, "effects": ["power_slash"], "traits": [], "actions": [] },
-  { "id": "oak_golem", "name": "橡木傀儡", "type": "boss", "hp": 5000, "atk": 60, "def": 40, "drop_rate": 0.05, "effects": [], "traits": [], "actions": [] }
+  {
+    "id": "rock_weasel",
+    "name": "岩皮鼬",
+    "tier": "normal",
+    "area": "乱石滩",
+    "desc": "岩石皮肤的小型野兽，皮糙肉厚，破防后会滚石反击。",
+    "stats": {
+      "hp": 120,
+      "mp": 20,
+      "str": 12,
+      "int": 8,
+      "con": 14,
+      "spr": 8,
+      "foc": 10,
+      "agi": 12,
+      "luk": 8
+    },
+    "weakness": {
+      "types": ["魔"],
+      "elements": { "water": 1.3 }
+    },
+    "pv": 20,
+    "pv_recover": "battle_end",
+    "resistance": {
+      "stun": 30,
+      "immune": ["poison"]
+    },
+    "actions": [
+      { "action": "claw_swipe", "probability": 1, "weight": 50 },
+      { "action": "hard_body", "weight": 100, "hungry": 4 }
+    ],
+    "special_actions": [
+      {
+        "id": "weasel_last_stand",
+        "action": "rock_roll",
+        "trigger": { "type": "hp_below", "value": 30, "timing": "current_turn" },
+        "once": true,
+        "priority": 5
+      }
+    ],
+    "drops": {
+      "battle": [ { "item": "potion", "chance": 60, "count": [1, 3] } ],
+      "special": [ { "item": "potion", "chance": 100, "condition": "pv_broken", "count": 1 } ],
+      "death": [ { "item": "potion", "chance": 100, "count": [1, 2] } ]
+    },
+    "lore": [
+      { "unlock": 10, "desc": "岩皮鼬弱水系，魔击破防更快。" },
+      { "unlock": 50, "desc": "血量低于 30% 会滚石反击，注意防御。" },
+      { "unlock": 100, "desc": "战斗中有概率掉落药水。" }
+    ]
+  },
+  {
+    "id": "stone_skink",
+    "name": "石甲蜥",
+    "tier": "elite",
+    "area": "乱石滩",
+    "desc": "覆满石甲的巨型蜥蜴，爪击后尾扫衔接迅猛。",
+    "stats": {
+      "hp": 320,
+      "mp": 40,
+      "str": 22,
+      "int": 12,
+      "con": 26,
+      "spr": 10,
+      "foc": 14,
+      "agi": 16,
+      "luk": 6
+    },
+    "weakness": {
+      "types": ["魔", "突"],
+      "elements": { "water": 1.3 }
+    },
+    "pv": 75,
+    "pv_recover": "battle_end",
+    "resistance": {
+      "stun": 20,
+      "shock": 10
+    },
+    "actions": [
+      { "action": "claw_swipe", "probability": 1, "weight": 40 },
+      { "action": "tail_sweep", "probability": 1, "weight": 30 },
+      { "action": "hard_body", "weight": 100, "hungry": 3 }
+    ],
+    "special_actions": [
+      {
+        "id": "skink_counter",
+        "action": "tail_sweep",
+        "trigger": { "type": "after_action", "action": "claw_swipe", "chance": 80, "timing": "next_turn" },
+        "priority": 8,
+        "trigger_cooldown": 2
+      }
+    ],
+    "drops": {
+      "battle": [ { "item": "potion", "chance": 50, "count": [1, 2] } ],
+      "special": [],
+      "death": [ { "item": "potion", "chance": 100, "count": 1 } ]
+    },
+    "lore": [
+      { "unlock": 10, "desc": "石甲蜥弱水系与突刺。" },
+      { "unlock": 50, "desc": "爪击后大概率衔接尾扫，可用打断破招。" },
+      { "unlock": 100, "desc": "死亡必掉药水。" }
+    ]
+  },
+  {
+    "id": "ember_drake",
+    "name": "烬火龙",
+    "tier": "boss",
+    "area": "烬火谷",
+    "desc": "盘踞烬火谷的成年火龙，残血时会蓄力灭世龙息。",
+    "stats": {
+      "hp": 1500,
+      "mp": 200,
+      "str": 40,
+      "int": 50,
+      "con": 35,
+      "spr": 30,
+      "foc": 25,
+      "agi": 20,
+      "luk": 10
+    },
+    "weakness": {
+      "types": ["斩", "突"],
+      "elements": { "water": 1.3, "void": 1.5 }
+    },
+    "pv": 300,
+    "pv_recover": "battle_end",
+    "resistance": {
+      "stun": 20,
+      "immune": ["poison"]
+    },
+    "actions": [
+      { "action": "claw_swipe", "probability": 1, "weight": 20 },
+      { "action": "tail_sweep", "probability": 1, "weight": 25 },
+      { "action": "fireball", "probability": 1, "weight": 35 },
+      { "action": "roar", "probability": 1, "weight": 60, "hungry": 5 },
+      { "action": "hard_body", "weight": 100, "condition": "pv_broken" }
+    ],
+    "special_actions": [
+      {
+        "id": "drake_opener",
+        "action": "fireball",
+        "trigger": { "type": "battle_start", "timing": "first_turn" },
+        "once": true,
+        "priority": 30
+      },
+      {
+        "id": "drake_enrage",
+        "action": "doomsday_breath",
+        "trigger": { "type": "hp_below", "value": 50, "timing": "current_turn" },
+        "once": true,
+        "priority": 20,
+        "trigger_cooldown": 5,
+        "post_state": { "state": "enraged", "turns": 3 }
+      },
+      {
+        "id": "drake_combo_entry",
+        "action": "tail_sweep",
+        "trigger": { "type": "after_action", "action": "fireball", "chance": 60, "timing": "next_turn" },
+        "priority": 10,
+        "chain_ref": "drake_breath_combo"
+      }
+    ],
+    "chains": [
+      {
+        "id": "drake_breath_combo",
+        "actions": [
+          { "action": "claw_swipe", "chance": 0.8, "role": "chain" },
+          { "action": "tail_sweep", "chance": 0.6, "role": "chain" },
+          { "action": "doomsday_breath", "chance": 1.0, "role": "finisher", "armor": true }
+        ]
+      }
+    ],
+    "drops": {
+      "battle": [ { "item": "hi_potion", "chance": 40, "count": [1, 2] } ],
+      "special": [ { "item": "potion", "chance": 100, "condition": "after_action:fireball", "count": 1 } ],
+      "death": [ { "item": "potion", "chance": 100, "count": [1, 2] } ]
+    },
+    "lore": [
+      { "unlock": 20, "desc": "烬火龙弱水与虚空，斩突可破石甲。" },
+      { "unlock": 60, "desc": "残血时蓄力灭世龙息，打断可破。" },
+      { "unlock": 100, "desc": "火球后衔接尾扫连招，防住尾扫可断链。" }
+    ]
+  },
+  {
+    "id": "training_dummy",
+    "name": "练兵木桩",
+    "tier": "training",
+    "type": "dummy",
+    "desc": "训练场木桩：HP 极大不可击破，用于伤害测量。",
+    "stats": {
+      "hp": 50000,
+      "mp": 10,
+      "str": 10,
+      "int": 10,
+      "con": 10,
+      "spr": 10,
+      "foc": 10,
+      "agi": 10,
+      "luk": 10
+    },
+    "def_base": 200,
+    "elem_res": {
+      "earth": 0.5,
+      "fire": -0.2
+    },
+    "weakness": {
+      "types": ["斩"],
+      "elements": { "fire": 1.3 }
+    }
+  }
 ]

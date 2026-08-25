@@ -1,0 +1,20 @@
+[
+  {
+    "id": "claw_swipe",
+    "name": "爪击",
+    "kind": "basic",
+    "power": 1.0,
+    "attack_type": "斩",
+    "element": "earth",
+    "effects": []
+  },
+  {
+    "id": "fireball",
+    "name": "火球",
+    "kind": "active",
+    "power": 1.8,
+    "attack_type": "魔",
+    "element": "fire",
+    "effects": []
+  }
+]

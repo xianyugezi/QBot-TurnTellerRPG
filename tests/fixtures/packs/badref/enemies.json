@@ -1,3 +1,73 @@
 [
-  { "id": "slime", "name": "史莱姆", "hp": 100, "atk": 10, "def": 5, "effects": ["heal_small"], "actions": [] }
+  {
+    "id": "bad_trigger",
+    "name": "坏触发怪",
+    "tier": "normal",
+    "stats": {
+      "hp": 100, "mp": 10, "str": 10, "int": 10, "con": 10,
+      "spr": 10, "foc": 10, "agi": 10, "luk": 10
+    },
+    "weakness": { "types": ["斩"], "elements": { "fire": 1.3 } },
+    "pv": 10,
+    "actions": [ { "action": "claw_swipe", "probability": 1, "weight": 50 } ],
+    "special_actions": [
+      {
+        "id": "s_bad_trigger",
+        "action": "fireball",
+        "trigger": { "type": "hp_above", "value": 50 }
+      }
+    ],
+    "drops": {
+      "battle": [ { "item": "potion", "chance": 60, "count": 1 } ],
+      "special": [],
+      "death": []
+    },
+    "lore": [
+      { "unlock": 10, "desc": "a" },
+      { "unlock": 50, "desc": "b" },
+      { "unlock": 40, "desc": "c" }
+    ]
+  },
+  {
+    "id": "bad_ref",
+    "name": "坏引用怪",
+    "tier": "elite",
+    "stats": {
+      "hp": 250, "mp": 20, "str": 18, "int": 12, "con": 16,
+      "spr": 10, "foc": 12, "agi": 14, "luk": 8
+    },
+    "weakness": { "types": ["打"], "elements": { "ice": 1.3 } },
+    "pv": 75,
+    "actions": [ { "action": "ghost_claw", "probability": 1, "weight": 30 } ],
+    "special_actions": [
+      {
+        "id": "s_bad_ref",
+        "action": "ghost_roar",
+        "trigger": { "type": "turn_count", "value": 3 },
+        "chain_ref": "ghost_chain"
+      }
+    ],
+    "drops": {
+      "battle": [ { "item": "ghost_item", "chance": 100, "count": 1 } ],
+      "special": [],
+      "death": []
+    }
+  },
+  {
+    "id": "bad_enum",
+    "name": "坏枚举怪",
+    "tier": "legendary",
+    "stats": {
+      "hp": 200, "mp": 20, "str": 16, "int": 14, "con": 14,
+      "spr": 12, "foc": 12, "agi": 12, "luk": 10
+    },
+    "weakness": { "types": ["斩"], "elements": { "fire": 1.3 } },
+    "pv": 80,
+    "actions": [ { "action": "claw_swipe", "probability": 1, "weight": 50 } ],
+    "drops": {
+      "battle": [ { "item": "potion", "chance": 150, "count": [3, 1] } ],
+      "special": [],
+      "death": []
+    }
+  }
 ]

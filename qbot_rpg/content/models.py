@@ -5,6 +5,7 @@
   - 细化_3e_loader校验接线 §5.3（字段元数据表 = 校验唯一数据源：名称/类型/默认值/范围/引用目标；缺失字段默认放行）
   - 细化_3a_架构分层契约 §3.3 U2（配置类型 Def 系落 content/，运行时实例落 data/）+ §3.4（配置/运行分工）
   - 细化_3e_loader校验接线 §1.7（PackLoadError 领域异常放 loader.py；本文件只定义校验/元数据/Def 结构）
+  - 细化_1e_怪物八段schema §1.1~1.6 + m2_shared_contract 第一、四节（M2 A1 路：EnemyDef 八段 18 字段访问器 / ActionDef 怪物侧 AI 字段访问器）
 
 铁律：零 NoneBot import；frozen dataclass；完整类型标注（typing 3.9 兼容）；仅依赖 qbot_rpg.data 的 TypeAlias。
 """
@@ -58,11 +59,26 @@ class PackWarning:
 
 
 @dataclass(frozen=True)
+class PackNote:
+    """信息级提示条目（细化_1e §⑤ 提示级：模板补全 / 别名规范化 / 档区间确认 / 链成环提示等）。
+
+    三分级之一（拦截=errors / 警告=warnings / 提示=notes）；只进 report.notes 不阻断，
+    语义为「建议信息」——供编辑器/命令层聚合展示（D-03 同款聚合机制），与 PackWarning 同结构。
+    """
+
+    module: str
+    field: str
+    kind: str  # N-1..N-5（提示家族）
+    detail: Mapping[str, object]
+
+
+@dataclass(frozen=True)
 class ValidationReport:
-    """整包校验报告：errors 非空即阻断（D-01/D-02）。"""
+    """整包校验报告：errors 非空即阻断（D-01/D-02）；warnings/notes 均不阻断。"""
 
     errors: Tuple[PackError, ...] = ()
     warnings: Tuple[PackWarning, ...] = ()
+    notes: Tuple[PackNote, ...] = ()
 
     @property
     def ok(self) -> bool:
@@ -217,7 +233,101 @@ class SkillChainDef(BaseDef):
 
 @dataclass(frozen=True)
 class ActionDef(BaseDef):
-    """action.json 条目。"""
+    """action.json 条目（ActionCore + 怪物侧 AI 字段，m2_shared_contract §四 / 细化_1e 1.4 / T26）。
+
+    依据：细化_1e §1.4（A01~A03d）+ m2_shared_contract 第四节（T24-T26 ActionCore + AI 字段）。
+    注意：BaseDef.kind 为注册表 kind（"action"），action.json 的 ActionCore `kind`
+    （basic/active/...）经 raw.get("kind") / BaseDef.get("kind") 读取，不设同名访问器。
+    """
+
+    # ---- 数值/字符串/列表辅助（与 EffectDef._f 同风格）----
+    def _num(self, key: str) -> Optional[float]:
+        v = self.raw.get(key)
+        return v if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+
+    def _str(self, key: str) -> Optional[str]:
+        v = self.raw.get(key)
+        return v if isinstance(v, str) else None
+
+    def _str_list(self, key: str) -> Tuple[str, ...]:
+        v = self.raw.get(key)
+        return tuple(x for x in v if isinstance(x, str)) if isinstance(v, list) else ()
+
+    # ---- AI 字段（怪物侧扩展，T26 / m2 §四；缺省兜底不报错）----
+    @property
+    def weight(self) -> Optional[float]:
+        """随机池内归一化权重（≥0，缺省兜底）。"""
+        return self._num("weight")
+
+    @property
+    def probability(self) -> Optional[float]:
+        """入池开关：0=锚点（只被链/条件/状态机触发）、1=入池、其他正值等价 1；漏配默认 0。"""
+        return self._num("probability")
+
+    @property
+    def intent(self) -> Optional[str]:
+        """意图预告类别（伤害/防御/蓄力/治疗/控制/buff/debuff/印记/功能；枚举校验 A2 路）。"""
+        return self._str("intent")
+
+    @property
+    def cooldown(self) -> Optional[float]:
+        """行动冷却回合数（默认 0）。"""
+        return self._num("cooldown")
+
+    @property
+    def condition(self) -> object:
+        """条件权重修正（如 pv_broken 时 ×2），默认 None（obj 形态由 A2 放宽）。"""
+        return self.raw.get("condition")
+
+    @property
+    def hungry(self) -> Optional[float]:
+        """饥饿保底：连续 N 回合未选中则强制选，默认 0=关。"""
+        return self._num("hungry")
+
+    @property
+    def chain(self) -> Tuple[str, ...]:
+        """连招（历史写法，S2 兼容解析）：行动 ID 列表；新配置一律走 enemies 顶层 chains 表。"""
+        return self._str_list("chain")
+
+    @property
+    def charge(self) -> Optional[Mapping[str, object]]:
+        """蓄力子对象（charge 键，防御性读取）；结构以 1d 系细化为准。"""
+        v = self.raw.get("charge")
+        return v if isinstance(v, Mapping) else None
+
+    def charge_fields(self) -> Mapping[str, object]:
+        """所有 `charge_` 前缀蓄力字段（键名前缀登记，结构待 1d 系落地；A2 路专项校验）。"""
+        return {k: v for k, v in self.raw.items() if isinstance(k, str) and k.startswith("charge_")}
+
+    @property
+    def preview(self) -> object:
+        """意图预告配置（意图分级显示用；结构以 1d 系/A2 为准）。"""
+        return self.raw.get("preview")
+
+    @property
+    def preview_chain(self) -> object:
+        """连招预告配置（意图分级显示用）。"""
+        return self.raw.get("preview_chain")
+
+    @property
+    def reveal_condition(self) -> object:
+        """预告揭示条件。"""
+        return self.raw.get("reveal_condition")
+
+    @property
+    def armor(self) -> object:
+        """霸体免疫打断（AI 定稿 §八：true=霸体）。"""
+        return self.raw.get("armor")
+
+    @property
+    def interrupt(self) -> object:
+        """打断行动标记（T19 interrupt 唯一归口）。"""
+        return self.raw.get("interrupt")
+
+    @property
+    def tags(self) -> Tuple[str, ...]:
+        """行动标签。"""
+        return self._str_list("tags")
 
 
 @dataclass(frozen=True)
@@ -242,17 +352,168 @@ class TraitDef(BaseDef):
 
 @dataclass(frozen=True)
 class EnemyDef(BaseDef):
-    """enemies.json 条目。"""
+    """enemies.json 条目（八段结构 18 顶层字段，细化_1e §1.1；m2_shared_contract 第一节权威）。
 
+    依据：细化_1e §1.1~1.6（F01~F18 / stats 九键 / weakness / actions / special_actions /
+    chains / drops / lore）+ m2_shared_contract 第一节。
+    M0 旧键 hp/atk 保留顶层读兼容（旧包可继续解析）；八段 schema 下生命/攻击落在
+    stats.hp / stats.str 等九键（stats_hp / stats_str... 访问器）。
+    """
+
+    # ---- 数值/字符串/映射/列表辅助（与 EffectDef._f 同风格）----
+    def _num(self, key: str) -> Optional[float]:
+        v = self.raw.get(key)
+        return v if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+
+    def _str(self, key: str) -> Optional[str]:
+        v = self.raw.get(key)
+        return v if isinstance(v, str) else None
+
+    def _mapping(self, key: str) -> Mapping[str, object]:
+        v = self.raw.get(key)
+        return v if isinstance(v, Mapping) else {}
+
+    def _entries(self, key: str) -> Tuple[Mapping[str, object], ...]:
+        v = self.raw.get(key)
+        return tuple(e for e in v if isinstance(e, Mapping)) if isinstance(v, list) else ()
+
+    # ---- M0 旧键兼容（顶层 hp/atk；废弃但保留解析——测试依赖 R-2/Y-1 行为）----
     @property
     def hp(self) -> Optional[float]:
-        v = self.raw.get("hp")
-        return v if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+        """旧 schema 顶层 hp（M0）；八段 schema 请用 stats_hp / stats.hp。"""
+        return self._num("hp")
 
     @property
     def atk(self) -> Optional[float]:
-        v = self.raw.get("atk")
+        """旧 schema 顶层 atk（M0）；八段 schema 请用 stats_str / stats.str。"""
+        return self._num("atk")
+
+    # ---- 八段：基础（F01-F06）----
+    @property
+    def tier(self) -> Optional[str]:
+        """难度档：normal/elite/boss/training（F03；默认 normal 由 A2/模板路）。"""
+        return self._str("tier")
+
+    @property
+    def type(self) -> Optional[str]:
+        """"dummy" 标记（F04；tier:training 或 type:dummy 任一命中=木桩）。"""
+        return self._str("type")
+
+    @property
+    def area(self) -> Optional[str]:
+        """出没地图名（F05；木桩不配）。"""
+        return self._str("area")
+
+    @property
+    def desc(self) -> Optional[str]:
+        """一句话描述（F06）。"""
+        return self._str("desc")
+
+    # ---- stats（F07 / 1.2 九键；漏配键按难度模板补全）----
+    @property
+    def stats(self) -> Mapping[str, object]:
+        """九属性对象（hp/mp/str/int/con/spr/foc/agi/luk）；缺省空对象。"""
+        return self._mapping("stats")
+
+    def stat(self, key: str) -> Optional[float]:
+        """按键取九属性数值（类型不符/缺失 → None）。"""
+        v = self.stats.get(key)
         return v if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+
+    @property
+    def stats_hp(self) -> Optional[float]:
+        return self.stat("hp")
+
+    @property
+    def stats_mp(self) -> Optional[float]:
+        return self.stat("mp")
+
+    @property
+    def stats_str(self) -> Optional[float]:
+        return self.stat("str")
+
+    @property
+    def stats_int(self) -> Optional[float]:
+        return self.stat("int")
+
+    @property
+    def stats_con(self) -> Optional[float]:
+        return self.stat("con")
+
+    @property
+    def stats_spr(self) -> Optional[float]:
+        return self.stat("spr")
+
+    @property
+    def stats_foc(self) -> Optional[float]:
+        return self.stat("foc")
+
+    @property
+    def stats_agi(self) -> Optional[float]:
+        return self.stat("agi")
+
+    @property
+    def stats_luk(self) -> Optional[float]:
+        return self.stat("luk")
+
+    # ---- 弱点 / PV / 抗性（F08-F11 / 1.3）----
+    @property
+    def weakness(self) -> Mapping[str, object]:
+        """双维弱点 {types: string[], elements: {元素ID: 倍率}}（F08）。"""
+        return self._mapping("weakness")
+
+    @property
+    def pv(self) -> Optional[float]:
+        """防护值（F09；≥0，档默认 10/75/300；木桩强制 0）。"""
+        return self._num("pv")
+
+    @property
+    def pv_recover(self) -> Optional[str]:
+        """战斗结束 PV 是否重置：battle_end/none（F10）。"""
+        return self._str("pv_recover")
+
+    @property
+    def resistance(self) -> Mapping[str, object]:
+        """初始抗性 map（负面效果 ID → 0-100）+ immune 数组（F11 / W03-W04）。"""
+        return self._mapping("resistance")
+
+    # ---- 行动表 / 特殊行动 / 连招（F12-F14 / 1.4）----
+    @property
+    def actions(self) -> Tuple[Mapping[str, object], ...]:
+        """行动表条目（A01-A03d：action/probability/weight/condition/cooldown/hungry）。"""
+        return self._entries("actions")
+
+    @property
+    def special_actions(self) -> Tuple[Mapping[str, object], ...]:
+        """特殊行动条目（A04-A15：id/action/trigger/once/priority/.../chain_ref）。"""
+        return self._entries("special_actions")
+
+    @property
+    def chains(self) -> Tuple[Mapping[str, object], ...]:
+        """顶层连招表条目（F14：{id, actions:[{action, chance, role, armor}]}，连招唯一载体）。"""
+        return self._entries("chains")
+
+    # ---- 掉落 / 图鉴（F15-F16 / 1.5-1.6）----
+    @property
+    def drops(self) -> Mapping[str, object]:
+        """三类掉落容器 {battle:[], special:[], death:[]}（F15）。"""
+        return self._mapping("drops")
+
+    @property
+    def lore(self) -> Tuple[Mapping[str, object], ...]:
+        """图鉴情报条目 {unlock: 1-100 递增, desc}（F16）。"""
+        return self._entries("lore")
+
+    # ---- 木桩向（F17-F18）----
+    @property
+    def def_base(self) -> Optional[float]:
+        """防御基准（F17；≥0；配置=直读，未配=映射 stats.con）。"""
+        return self._num("def_base")
+
+    @property
+    def elem_res(self) -> Mapping[str, object]:
+        """元素抗性基准（F18；元素 ID → 正=减伤/负=增伤）。"""
+        return self._mapping("elem_res")
 
 
 @dataclass(frozen=True)

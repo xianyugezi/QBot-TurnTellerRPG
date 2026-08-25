@@ -2,7 +2,7 @@
 
 > 2026-08-18 · 对齐审查角色铁律：实现里出现设计文档没有的内容 = 疑点，必须显式标注；
 > 本文件登记 M0 未实现/有意收敛/跨文档冲突的全部条目，供 M1+ 排期与用户/仲裁拍板。
-> 参考：审查报告/审查_M0_content|storage|coredata_20260818.md（P1/P2 详述）。
+> 参考：docs/审查报告/审查_M0_content|storage|coredata_20260818.md（P1/P2 详述）。
 
 ## 一、M0 已实现的契约收敛（【补白】）
 
@@ -128,7 +128,7 @@
 - 幻觉注释 H1（行号交串 L355/356）/H3（缺省 tag 继承恒 +0）/H4（is_armored 声称两源）→ 修正/登记
 
 ### 硬编码审计 M 级落地（2026-08-19 · 33 份定稿 3 路审计，M×8/R×24/S×37）
-- **审计报告**：审查报告/硬编码审计_{战斗核心系,怪物职业系,系统玩法系}.md
+- **审计报告**：docs/审查报告/硬编码审计_{战斗核心系,怪物职业系,系统玩法系}.md
 - **M 文档修改已完成**（已落在 /root/docs_archive/RPG框架项目/ 8 份定稿）：
   M1 怪物防御率 R-09 回写（战斗数值层）/ M2 判定顺序 pipeline_order 开放 / M3 四时术士校验器降黄 season_group_max / M4 怪物难度 difficulty_template / M5 品质档位注册表 quality_tiers（统一 普通/精良/史诗/传说）/ M6 熟练度 tier_names 数组即级数（默认 7 级）/ M7 季节时段开放枚举（默认 4 季/5 时段）/ M8 素材稀有度唯一注册表
 - **实现层承接登记（随各系统阶段落地）**：
@@ -155,7 +155,7 @@
 - **D2 派生被拒**：拍板「条件不足派生整体被拒」（TC-32）——实现已取，无改动
 - **D11 链环**：拍板「环=特性允许」（TC-16）——validate_chain 只查入口可达性，环本身不报错（死配置=不可达节点提示，TC-17；实现已合规，措辞落档）
 
-### M0 复查修复（审查报告/审查_M0复查_*_20260824.md，2026-08-24 · P0×0 / P1×11 / P2×41）
+### M0 复查修复（docs/审查报告/审查_M0复查_*_20260824.md，2026-08-24 · P0×0 / P1×11 / P2×41）
 - **P1-1 只读池信号量泄漏**（connection）：acquire 成功但 `_open(writer=False)` 失败 → finally 仍 release 令牌，池容量不永久缩水 → test_read_pool_token_returned_on_open_failure
 - **P1-2 integrity 失败坏连接复用**（connection）：`_writer` 校验失败时关闭坏连接并保持 `_write=None/_schema_ready=False`，复用重新走完整建库+校验流程（自动 .bak 回退仍登记 F-2 递延）
 - **P1-1 回收默认丢数据**（repository）：`recycle_scan` 无 settle 且未 `allow_unsettled=True` → 拒绝删除（打告警跳过），防静默丢玩家材料 → test_recycle_scan_skips_without_settle
@@ -168,7 +168,7 @@
 - **P1-1 架构门禁漏检**（scripts/check_architecture）：`find_nonebot_imports` 补 `ast.ImportFrom` 的 `node.module` 判断（原只比对 alias.name，漏检 `from nonebot import X`）→ test_find_nonebot_imports_catches_from_import
 - **run_all_tests.py 路径 bug**（顺带修复）：cwd=REPO(scripts/) 却传相对仓库根的 tests/unit → 阶段 1 恒红；cwd 改 REPO.parent，全量回归恢复绿
 
-### M0 复查批2 修复（审查报告/审查_M0复查_content_*_20260824.md，2026-08-24 · P0×1 / P1×12 / P2×44）
+### M0 复查批2 修复（docs/审查报告/审查_M0复查_content_*_20260824.md，2026-08-24 · P0×1 / P1×12 / P2×44）
 - **P0-1 monster_def_rate 负数误红拦**（field_meta）：`allow_negative=True`——负数 → Y-1 黄提示 + 运行期按 0（R-09 用户 08-18 拍板「负值→黄提示不红拦」）→ test_monster_def_rate_negative_hint_not_red
 - **P1-1 marks/statuses duration 类型错注册**（field_meta）：statuses.duration → obj {turns,charges}（1b §1.2）；marks.duration → str "battle"/"turns:N"（1d §1.1），不再用 F_DURATION(number) → fixture statuses.json 同步对象形态
 - **P1-2 marks.appliable_to 类型错注册**（field_meta）：str → list[string]（1d §1.1 字段6）→ fixture marks.json 重写（fire_mark 对齐样例 + 补 curse_mark，V-8 兑现）
@@ -180,7 +180,7 @@
 - **P1-1 integrity_check 冒充自检 A**（registry）：删恒不可达 kind 内重复检查（dict 键天然唯一），补 modules⊇loaded + schema_version 一致两断言（跨表唯一注明由 validator NAMESPACES 前置拦截）→ test_registry_integrity_check_selfcheck_a
 - **P1-1 BLK-5 暂停未兑现**（hot_reload）：paused 时 run() 循环/poll_once() 完全停止自动检测与重载（转手动 /reload，BLK-5 兑现；手动 reload 成功即复位）→ test_hot_reload_paused_poll_once_no_auto_reload
 
-### M0 复查批3 修复（审查报告/审查_M0复查_core_*_20260824.md + tests_m0，2026-08-24 · P0×1 / P1×8 / P2×31）
+### M0 复查批3 修复（docs/审查报告/审查_M0复查_core_*_20260824.md + tests_m0，2026-08-24 · P0×1 / P1×8 / P2×31）
 - **P0-1 空洞断言恒真**（tests/contract/test_message_format）：`assert ... or True` 删除，改真实断言「面板首行无裸 @」→ test_render_is_plain_string
 - **P1-1 命中率 K 跨文档冲突**（用户拍板 K=1 唯一权威）：HitParams.k 默认 0.2→1.0、damage.hit_rate 默认 k→1.0，3b/1a 同口径；test_damage 断言同步（t03 50/50→0.5、默认值）→ 战斗命中率数值变化
 - **P1-2 派生属性双套同名异构**（用户拍板可配置方案）：player_attributes 7 个派生函数全部改为委托 damage 参数化版（唯一实现，常数经 formula.json 可配），保持 3b % 对外口径；damage.crit_prob 补 cap=0 不限语义；mag_reduce 补测试 → test_mag_reduce_formula

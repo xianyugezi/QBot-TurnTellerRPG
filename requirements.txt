@@ -1,0 +1,11 @@
+# QBot-TurnTellerRPG 依赖清单（规则 8：锁定版本号）
+# 生成自当前 venv（pip freeze），2026-08-25
+# M0 核心为纯逻辑包（qbot_rpg），仅 storage 层依赖 aiosqlite；
+# NoneBot 壳层依赖随 M4 壳层接线补充。
+
+# ---- 运行时 ----
+aiosqlite==0.22.1
+
+# ---- 开发/测试 ----
+pytest==9.1.1
+pytest-asyncio==1.4.0

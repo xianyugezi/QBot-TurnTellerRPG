@@ -9,3 +9,13 @@ __pycache__/
 *.bak
 *.pending
 .DS_Store
+# 规则 9/10：环境配置与敏感信息不入库
+.env
+.env.*
+!.env.example
+*.log
+logs/
+.coverage
+htmlcov/
+coverage.xml
+.hermes/

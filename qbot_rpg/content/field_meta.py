@@ -415,6 +415,9 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "traits": ModuleMeta(entry_type="list", fields=traits_fields, kind="trait", namespace="trait_lib"),
         "enemies": ModuleMeta(entry_type="list", fields=enemies_fields, kind="enemy", namespace="enemy_lib"),
         "maps": ModuleMeta(entry_type="list", fields=maps_fields, kind="map", namespace="map_lib"),
+        # M3 副本（m3_shared_contract §4）：新结构由 dungeon_models.validate_dungeons 专项全权，
+        # fields={} 空表防泛型误拦（专项自校验 type/maps/boss/safe_zone 等深结构）
+        "dungeon": ModuleMeta(entry_type="list", fields={}, kind="dungeon", namespace="dungeon_lib"),
         "stats": ModuleMeta(entry_type="map", fields=stats_fields, kind="stat", namespace="stat_lib",
                             key_regex=r"[a-z][a-z0-9_]*"),
         "npc": ModuleMeta(entry_type="list", fields=npc_fields, kind="npc", namespace="npc_lib"),

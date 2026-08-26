@@ -466,6 +466,23 @@ class _Checker:
         if module_name == "enemies":
             self._check_enemies(module_name, data, mmeta)
             return
+        # M3 地图专项（m3_shared_contract §2）：maps 新结构（spawn/exits/dungeon_entrances）
+        # 由 map_models.validate_maps 补深结构校验；随后继续泛型 _check_entry（旧 maps_fields
+        # 的 min/max 死配置检测保留，新结构未知字段默认放行 §2.3 不误伤）
+        if module_name == "maps":
+            from qbot_rpg.content.map_models import validate_maps
+            validate_maps(self._modules, self)
+        if module_name == "dungeon":
+            from qbot_rpg.content.dungeon_models import validate_dungeons
+            # dungeon_models 为 ValidationReport 合并模式（非 _Checker 鸭子类型）→ 桥接回填
+            vrep = validate_dungeons(self._modules, None)
+            for e in vrep.errors:
+                self._err(e.module, e.field, e.kind, **e.detail)
+            for w in vrep.warnings:
+                self._warn(w.module, w.field, w.kind, **w.detail)
+            for n in vrep.notes:
+                self._note(n.module, n.field, n.kind, **n.detail)
+            return
         # 逐条目校验
         for idx, entry in self._iter_entries(module_name, data, mmeta):
             self._check_entry(module_name, idx, entry, mmeta)
@@ -484,6 +501,9 @@ class _Checker:
         # 超时类键不识别（load 警告+忽略）。泛型字段校验已在上方逐条目循环跑（R-1~R-5）。
         if module_name == "settings":
             self._check_settings_1g4(module_name, data)
+            # M3 时间引擎配置（M31 · m3_shared_contract §5.2/§6.2）：time_cycle 段 V1-V4 校验
+            from qbot_rpg.engine.worldtime import validate_time_cycle
+            validate_time_cycle(data if isinstance(data, Mapping) else {}, self)
 
     # ---- M2 怪物八段专项（依据：细化_1e §⑤ R1-R15 / §② 模板 / §④ 木桩）----
     def _check_enemies(self, module_name: str, data: object, mmeta: Optional[ModuleMeta]) -> None:

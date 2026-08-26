@@ -125,6 +125,12 @@
     },
     "pv": 300,
     "pv_recover": "battle_end",
+    "zone_change": {
+      "enabled": true,
+      "hp_threshold": 0.3,
+      "targets": ["molten_corridor", "molten_core"],
+      "timing": "after_action"
+    },
     "resistance": {
       "stun": 20,
       "immune": ["poison"]

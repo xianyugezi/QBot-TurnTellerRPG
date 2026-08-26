@@ -156,6 +156,7 @@ _KIND_FOR_MODULE: Mapping[str, str] = {
     "traits": "trait",
     "enemies": "enemy",
     "maps": "map",
+    "dungeon": "dungeon",  # M3 副本（m3_shared_contract §4）；DEF_CLASSES 缺省 BaseDef 回退
     "stats": "stat",
     "npc": "npc",
     "formula": "formula",

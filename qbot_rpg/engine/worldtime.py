@@ -6,13 +6,17 @@
       + 细化_2a4c §1.1（IF09 check_changes / IF10 maybe_broadcast）/ §1.2（广播配置默认关）。
 本文件 = 细化_2a4c §1.1 公开接口的「游戏周期层」纯函数骨架：
   批次0·路C 交付 IF01~IF07（锚点整除公式 / 查询 / 倒计时）；
-  批次1·路D 追加 IF09/IF10（三周期独立推进的变化检测钩子 + 懒广播纯文案产出）：
+  批次1·路D 追加 IF09/IF10（三周期独立推进的变化检测钩子 + 懒广播纯文案产出）；
+  批次2·路G 追加 IF04/IF05/IF08（天气查询 / 生效池 / 等概率确定性抽签）+ validate_weather_pool：
 
   IF01 is_enabled()             系统总开关（读 settings.time_cycle.enabled，缺省 true）
   IF02 season_now(now)          季节查询（spring/summer/autumn/winter；0 基 0春 1夏 2秋 3冬）
   IF03 period_now(now)          时段查询（dawn/noon/dusk/night/midnight；0 基 0晨 1午 2昏 3夜 4午夜）
+  IF04 weather_now(map_id, now=None, map_pools=None)  当前图当前天气键（上下文绑定；tick=cycle_tick("weather")）
+  IF05 map_pool(map_id, map_pools=None)               生效池键列表：覆盖池 else 默认池（排序供种子）
   IF06 cycle_tick(kind, now)    周期索引/节拍（season/period/weather 整除公式，纯函数）
   IF07 time_remaining(kind,now) 距下次变化秒数（/时间 数据源）
+  IF08 map_weather(map_id, tick, now=None, map_pools=None)  生效池等概率确定性抽签（sha256 纯函数）
   IF09 check_changes(cached, player_ctx=None)  变化检测钩子：比较缓存索引与重算值 → list[Change]
   IF10 maybe_broadcast(changes, ctx=None, seen=None)  懒广播：broadcast.enabled 缺省 false → []
       （按 template 占位符产出播报文案列表，零消息发送；去重状态由路E 持久化，本路仅读不改）
@@ -33,6 +37,12 @@ weather_tick=…不取模。零定时器、不存历史、随时可重算。
     需调用方取键后挂 Change['name'/'emoji']，未挂载则占位符留空（纯透传，不冒充解析）。
   - IF09 签名补白：契约伪码为 check_changes(player, map_id)；本路引擎侧收 cached 缓存索引 +
     player_ctx（可选带 now 键注入时间戳，缺省=当前，纯函数可测）；天气值解析留待批次2。
+  - 批次2（IF04/IF05/IF08）补白：map_pools 为调用方注入的 {map_id: [天气键]} 覆盖池映射
+    （maps.json 顶层 weather_pool 由调用方装载后传入；本模块纯函数零 IO，不读 maps.json）；
+    池条目兼容两种形态——str 键（既有 IF）或 {key,name,emoji} 对象（细化_2a4b §1.2，
+    validate_weather_pool 按对象形态红拦：非空 / 键唯一 / 键+中文名齐全）。
+  - 抽签确定性（细化_2a4b §2.3 R11/R12）：seed = sha256(生效池键列表排序后 + str(tick))，
+    同 tick + 同池 → 跨群/跨进程/重启一致、重启不重抽；等概率无权重（R10），权重为后续版本预留。
   - 类型/下限合法性交 validate_time_cycle()（本模块）在 load 阶段红拦；引擎对坏配置惰性回退默认
     不崩溃（与契约 IF11 存档「缺补默认多忽略」同口径，字段级缺省）。
   - 校验器收口：validate_time_cycle(settings, report) 供主 agent 接入 check_pack —— report 兼容
@@ -44,6 +54,7 @@ weather_tick=…不取模。零定时器、不存历史、随时可重算。
 
 from __future__ import annotations
 
+import hashlib
 import time
 from datetime import datetime, timedelta, timezone
 from typing import List, Mapping, Optional
@@ -55,6 +66,7 @@ __all__ = [
     "DEFAULT_POOL",
     "WorldTime",
     "validate_time_cycle",
+    "validate_weather_pool",
 ]
 
 # -------------------------------------------------------------------------------------
@@ -320,6 +332,85 @@ class WorldTime:
             return _PERIOD_EMOJI[index % len(_PERIOD_EMOJI)]
         return ""
 
+    # ---- IF05 生效池 / IF08 等概率确定性抽签 / IF04 天气查询（M3 批次2·路G 追加） ----
+    # 依据：细化_2a4b_天气引擎（§1.2 默认池结构 / §2.2-2.3 等概率抽签与确定性 seed /
+    #      §3.1-3.2 地图 weather_pool 覆盖 / §6.1 纯函数签名）+ m3_shared_contract §6（6.1 核心规则）。
+    @staticmethod
+    def _pool_keys(pool: object) -> List[str]:
+        """把池条目提取为天气键列表：str 键直接取；{key,...} 对象取 .key；非法条目过滤（防御）。
+
+        兼容两种配置形态（见文件头补白）：① 字符串键列表（既有 IF）；② {key,name,emoji} 对象列表
+        （细化_2a4b §1.2）。纯函数，无 IO。
+        """
+        if not isinstance(pool, (list, tuple)):
+            return []
+        keys: List[str] = []
+        for entry in pool:
+            if isinstance(entry, Mapping):
+                k = entry.get("key")
+                if isinstance(k, str) and k:
+                    keys.append(k)
+            elif isinstance(entry, str) and entry:
+                keys.append(entry)
+        return keys
+
+    def _default_pool_raw(self) -> object:
+        """cfg.weather.default_pool 原始配置（保留条目形态）；缺省/空数组 → DEFAULT_POOL（R18）。"""
+        sec = self._tc.get("weather")
+        if isinstance(sec, Mapping):
+            p = sec.get("default_pool")
+            if isinstance(p, (list, tuple)) and p:
+                return p
+        return list(DEFAULT_POOL)
+
+    def map_pool(self, map_id: str, map_pools: Optional[Mapping[str, object]] = None) -> List[str]:
+        """IF05 生效池：地图覆盖池 else 默认池；返回生效池键列表（排序后供种子计算）。
+
+        map_pools: 调用方注入的 {map_id: [天气键]} 覆盖池映射（maps.json 顶层 weather_pool 由调用方
+        装载后传入；本模块零 IO 不读文件）。语义（细化_2a4b §3.2 R13/R18）：
+          覆盖池非空数组且提取出合法键 → 覆盖生效（R19：该图天气按覆盖池抽签）；
+          缺省 / 空数组 / 键全非法 → 回退默认池（R18：空数组或未配置 = 统一用默认池）。
+        覆盖池只改取值不改节拍（R20：同一 tick 不同图可不同值，变化时刻全世界一致）。
+        返回列表恒排序（同池跨端一致，seed 输入与配置顺序无关，细化_2a4b §6.1）。
+        """
+        if isinstance(map_pools, Mapping):
+            ov = map_pools.get(map_id)
+            if isinstance(ov, (list, tuple)) and ov:
+                keys = self._pool_keys(ov)
+                if keys:
+                    return sorted(keys)
+        return sorted(self._pool_keys(self._default_pool_raw()))
+
+    def map_weather(self, map_id: str, tick: int, now: Optional[int] = None,
+                    map_pools: Optional[Mapping[str, object]] = None) -> str:
+        """IF08 确定性抽签：生效池等概率抽一签，返回天气键。
+
+        seed = sha256(生效池键列表排序后 + str(tick))（细化_2a4b §2.3 R11/L58）：
+          idx = int(seed.hexdigest(), 16) % len(pool) → 等概率命中（每次变化 tick+1 抽一，R10）。
+        确定性语义（R12）：同 tick + 同池 → 跨群/跨进程/重启一致同值、重启不重抽（懒计算刚需，
+        无定时器也能重算出与上次一致的值）；池编辑（增删键改变键列表）→ 后续抽签序列整体重排（R14）。
+        跨年/大 tick 稳定：weather_tick 只增不取模（IF06），tick 为大整数/负数均按公式逐字计算。
+        等概率（v1 无权重）：权重倍率为后续版本预留——届时并入 seed 或改加权选择，本函数保持纯净。
+        now 参数为 IF04/契约签名兼容保留（本函数以显式 tick 为准，不参与计算）。
+        防御：生效池为空（调用方坏配置/条目全非法）→ 返回 ""，不抛异常。纯函数，零 IO。
+        """
+        pool = self.map_pool(map_id, map_pools)
+        if not pool:
+            return ""  # 防御：空池 → 无天气可取
+        seed = hashlib.sha256(("".join(sorted(pool)) + str(tick)).encode("utf-8")).hexdigest()
+        idx = int(seed, 16) % len(pool)
+        return pool[idx]
+
+    def weather_now(self, map_id: str, now: Optional[int] = None,
+                    map_pools: Optional[Mapping[str, object]] = None) -> str:
+        """IF04 天气查询：玩家当前所在图当前天气键（上下文绑定，细化_2a4b §5.1 R29）。
+
+        当前 weather_tick = cycle_tick("weather", now)（IF06，只增不取模）→ 交给 IF08 map_weather
+        从生效池抽签；now 缺省 = 当前 UTC+8 epoch 秒。纯函数：同刻同参必同值，随时可重算。
+        """
+        tick = self.cycle_tick("weather", now)
+        return self.map_weather(map_id, tick, now=now, map_pools=map_pools)
+
 
 # -------------------------------------------------------------------------------------
 # time_cycle 段校验（M31 · V1-V3 + enabled bool + default_pool 非空键唯一）
@@ -418,3 +509,58 @@ def validate_time_cycle(settings: Mapping[str, object], report: object) -> None:
                           msg=f"默认天气池天气键重复了：{k}")
                 else:
                     seen[k] = i
+
+
+def validate_weather_pool(cfg: Mapping[str, object], report: object) -> None:
+    """默认天气池 V4 校验（细化_2a4b §1.2 R3/R4 + m3_shared_contract §6.2 V4）。
+
+    独立入口供主 agent 收口接入 check_pack（与 validate_time_cycle 并存：后者校验「字符串池」形态的
+    time_cycle 段；本函数按细化_2a4b §1.2 的 {key,name,emoji} 对象形态红拦，与 R3/R4 逐条对齐）：
+      - default_pool 非空（至少 1 种天气，删到 0 硬拦，R4）；
+      - 键唯一（key 全池唯一，R3）；
+      - 键 + 中文名齐全（key / name 任一缺失或非字符串红拦，R3）。
+    cfg:    完整 settings dict（可含 time_cycle.weather.default_pool；缺省段/缺字段 = 框架默认，零红拦）。
+    report: 收集器（二选一）——a) `_err(module, field, kind, **detail)`（与 content/validator.py
+            `_Checker` 同签名）；b) `errors: list`（追加 {"module","field","kind","detail"} dict）。
+    红拦均带人话报错 detail["msg"]（如「天气『雪』缺中文名 name」），供命令层直接拼用户文案。
+    纯函数，零 IO，零 NoneBot。
+    """
+    if not isinstance(cfg, Mapping):
+        return
+    tc = cfg.get("time_cycle")
+    if not isinstance(tc, Mapping):
+        return
+    weather = tc.get("weather")
+    if not isinstance(weather, Mapping) or "default_pool" not in weather:
+        return  # 缺省段/缺字段 = 用框架默认，零红拦
+    pool = weather["default_pool"]
+    base = "time_cycle.weather.default_pool"
+    if not isinstance(pool, (list, tuple)):
+        _emit(report, "settings", base, "V4", rule="pool_type", got=pool,
+              msg="默认天气池要填数组")
+        return
+    if len(pool) == 0:
+        _emit(report, "settings", base, "V4", rule="pool_empty", got=pool,
+              msg="默认天气池至少要 1 种天气")
+        return
+    seen: dict = {}
+    for i, entry in enumerate(pool):
+        field = f"{base}.{i}"
+        if not isinstance(entry, Mapping):
+            _emit(report, "settings", field, "V4", rule="pool_entry_type", got=entry,
+                  msg=f"默认天气池第 {i} 项要填对象（含 key/name）")
+            continue
+        key = entry.get("key")
+        if not isinstance(key, str) or not key:
+            _emit(report, "settings", field, "V4", rule="pool_key_missing", got=key,
+                  msg="默认天气池天气条目缺 key（英文小写机器键）")
+        elif key in seen:
+            _emit(report, "settings", field, "V4", rule="pool_key_dup", key=key,
+                  msg=f"默认天气池天气键重复了：{key}")
+        else:
+            seen[key] = i
+        name = entry.get("name")
+        label = key if isinstance(key, str) and key else f"第 {i} 项"
+        if not isinstance(name, str) or not name:
+            _emit(report, "settings", field, "V4", rule="pool_name_missing", key=key,
+                  msg=f"天气『{label}』缺中文名 name")

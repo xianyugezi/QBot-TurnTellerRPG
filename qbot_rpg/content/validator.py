@@ -504,6 +504,9 @@ class _Checker:
             # M3 时间引擎配置（M31 · m3_shared_contract §5.2/§6.2）：time_cycle 段 V1-V4 校验
             from qbot_rpg.engine.worldtime import validate_time_cycle
             validate_time_cycle(data if isinstance(data, Mapping) else {}, self)
+            # M3 天气校验（M41 · m3_shared_contract §6.2）：V5-V8 硬校验 + 黄提示（依赖 modules 消费方扫描）
+            from qbot_rpg.content.weather_validator import validate_weather
+            validate_weather(self._modules, data if isinstance(data, Mapping) else {}, self)
 
     # ---- M2 怪物八段专项（依据：细化_1e §⑤ R1-R15 / §② 模板 / §④ 木桩）----
     def _check_enemies(self, module_name: str, data: object, mmeta: Optional[ModuleMeta]) -> None:

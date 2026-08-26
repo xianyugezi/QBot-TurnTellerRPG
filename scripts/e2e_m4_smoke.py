@@ -28,10 +28,11 @@ tests/fixtures/packs/legal/；注入固定 now（2026-08-01 12:00 UTC+8，dayrol
      （per_player=1/period=day，裁决⑤ 库存+限购同条目并存），items 注册表同步补注册秘药。
   3. legal checkin.json 未开启补签：冒烟为 checkin_loop 补配 makeup{enabled, cost, max_per_month}
      （裁决⑦ 补签只计不补发验证用）。
-  4. 签到引擎接口漂移桥接：core/checkin.py（路F2）暴露 checkin_do/checkin_state/checkin_makeup/
-     resolve_checkin_table；commands/checkin_commands.py（路F3）按 checkin_today/checkin_status/
-     checkin_makeup(table_id, ctx) 消费（F2 未收口时的契约签名）。冒烟经文档化注入点
-     ctx["checkin_engine"] 挂薄适配器 CheckinAdapter 桥接两套接口（不改任何生产模块）。
+  4. 签到引擎接口（审查批次2 P0-1 修复）：core/checkin.py（路F2）暴露 checkin_do/checkin_state/
+     checkin_makeup(ctx, table_id)/resolve_checkin_table；commands/checkin_commands.py（路F3）已改为
+     直接消费真实引擎接口（checkin_do/checkin_state/checkin_makeup(ctx, tid)，正文按 tables 重建）。
+     冒烟经文档化注入点 ctx["checkin_engine"] 直接注入真实 core/checkin 模块（旧 CheckinAdapter 桥接
+     已随 P0-1 移除）。
   5. NPC 动作执行（dispatch_action）与已听集合持久化（heard 落玩家存档）/事件计数（longline_counters）
      /商店移交（current_shop_ref）属装配层职责：冒烟在状态机结果驱动处就地应用
      mark_heard/events/shop_refs（与 e2e_m3_smoke 的补白口径一致）。
@@ -103,9 +104,6 @@ GREEN_LINE = "M4 端到端冒烟全绿（NPC→商店→任务→签到→快捷
 # dayroll 固定 now → today（2026-08-01 12:00 > 05:00 重置时刻）
 _TODAY = "2026-08-01"
 
-# 签到表类型中文标注（镜像 core/checkin._TYPE_CN，适配器渲染用）
-_TYPE_CN: dict = {"loop": "常驻循环", "monthly": "月度签到", "activity": "活动"}
-
 
 # -------------------------------------------------------------------------------------
 # 断言收集器
@@ -133,120 +131,6 @@ class Smoke:
         self.failed += 1
         self.failures.append(f"{label}：期望 {want!r}，实际 {got!r}")
         return False
-
-
-# -------------------------------------------------------------------------------------
-# 签到引擎接口桥接适配器（工程补白 4）
-# -------------------------------------------------------------------------------------
-def _grant_label(grant: Mapping) -> str:
-    """grant 记录 → 简短标签（镜像 core/checkin._grant_label 展示口径，供适配器渲染）。"""
-    typ = grant.get("type")
-    if typ == "item":
-        return f"{grant.get('item')}×{grant.get('count')}"
-    if typ == "currency":
-        return f"{grant.get('amount')} {grant.get('currency')}"
-    if typ == "exp":
-        return f"exp{grant.get('amount')}"
-    if typ == "rep":
-        return f"声望{grant.get('amount')}"
-    return str(grant)
-
-
-class CheckinAdapter:
-    """checkin 引擎接口桥接（工程补白 4）：把 core/checkin.py（路F2）接口适配为
-    commands/checkin_commands.py（路F3）消费接口。挂 ctx['checkin_engine'] 注入点。"""
-
-    def __init__(self, engine: Any) -> None:
-        self._eng = engine
-
-    def resolve_checkin_table(self, ctx: Mapping, arg: object) -> Optional[str]:
-        """路F3 期望表 id（str）；路F2 引擎 resolve_checkin_table 仅按表 id 精确解析。
-
-        【工程补白 4 延伸】路F2 引擎未实现「表名/序号/类型/缺省」解析（checkin_commands
-        消费契约），本适配器按命令层契约补齐：缺省 → 主表 loop（裁决⑧）；表 id / 表名 /
-        类型名 / 序号 1..N → 表 id；查无 → None。
-        """
-        tables = ctx.get("checkin_tables")
-        if not isinstance(tables, Mapping) or not tables:
-            return None
-        if arg is None or str(arg).strip() == "":
-            if "checkin_loop" in tables:
-                return "checkin_loop"
-            return next(iter(tables))
-        s = str(arg).strip()
-        if s in tables:
-            return s
-        for tid, t in tables.items():
-            if isinstance(t, Mapping) and (str(t.get("name")) == s or str(t.get("type")) == s):
-                return tid
-        if s.isdigit():
-            idx = int(s)
-            keys = list(tables)
-            if 1 <= idx <= len(keys):
-                return keys[idx - 1]
-        return None
-
-    def _rows_of(self, t: Mapping) -> List[str]:
-        rows: List[str] = []
-        if t.get("already_signed"):
-            rows.append("今天已签到（不重复发奖）")
-        elif t.get("failed"):
-            rows.append(t.get("message", "结算失败，已回滚"))
-        else:
-            daily = t.get("daily_granted") or []
-            rows.append("今日奖励：" + ("、".join(_grant_label(g) for g in daily[:4]) if daily else "无"))
-            for n in t.get("notes") or []:
-                rows.append(str(n))
-            for h in t.get("streak_hits") or []:
-                labs = "、".join(_grant_label(g) for g in (h.get("granted") or [])[:4])
-                rows.append(f"[连签里程碑达成] {labs}（连签 {h.get('days')} 天）")
-            for h in t.get("month_hits") or []:
-                labs = "、".join(_grant_label(g) for g in (h.get("granted") or [])[:4])
-                rows.append(f"[月度累计达成] {labs}（本月签满 {h.get('days')} 天）")
-        pc, pt = t.get("progress_current"), t.get("progress_total")
-        rows.append(f"连签天数：{t.get('streak', 0)} 天 ｜ 进度 {pc}/{pt}")
-        return rows
-
-    def checkin_today(self, ctx: MutableMapping) -> dict:
-        res = self._eng.checkin_do(ctx)
-        if not res.get("ok"):
-            return {"ok": False, "message": res.get("message") or "❌ 签到暂不可用"}
-        tables = [t for t in res.get("tables") or [] if t.get("active", True)]
-        # 幂等口径：仅看引擎 already_signed（今日已结算）；today_signed=1 在首次结算表上也成立，
-        # 不能作为「重复指令」判据（D-02）
-        all_already = bool(tables) and all(bool(t.get("already_signed")) for t in tables)
-        msg = "今天已签到（重复指令，未重复发放）" if all_already else "✅ 今日签到完成"
-        sections: List[dict] = []
-        total = 0
-        for t in tables:
-            rows = self._rows_of(t)
-            title = f"{t.get('name') or t.get('table_id')}（{_TYPE_CN.get(t.get('type'), t.get('type'))}）"
-            sections.append({"title": title, "rows": rows})
-            total += len(rows)
-        return {"ok": True, "message": msg, "sections": sections, "total": total}
-
-    def checkin_status(self, ctx: Mapping) -> dict:
-        res = self._eng.checkin_state(ctx)
-        if not res.get("ok"):
-            return {"ok": False, "message": "❌ 签到暂不可用"}
-        sections: List[dict] = []
-        total = 0
-        for t in res.get("tables") or []:
-            if not t.get("active"):
-                continue
-            rows = [
-                f"连签天数：{t.get('streak', 0)} 天",
-                f"本月累计：{t.get('month_days', 0)} 天",
-                f"今日已签：{'是' if t.get('today_signed') else '否'}",
-            ]
-            title = f"{t.get('name') or t.get('table_id')}（{_TYPE_CN.get(t.get('type'), t.get('type'))}）"
-            sections.append({"title": title, "rows": rows})
-            total += len(rows)
-        return {"ok": True, "message": "✅ 签到状态", "sections": sections, "total": total}
-
-    def checkin_makeup(self, table_id: object, ctx: MutableMapping) -> dict:
-        """路F3 消费签名 checkin_makeup(table_id, ctx)；路F2 引擎签名 checkin_makeup(ctx, table_id)。"""
-        return self._eng.checkin_makeup(ctx, table_id)
 
 
 # -------------------------------------------------------------------------------------
@@ -355,7 +239,7 @@ def build_ctx(*, now: Optional[int] = None, **overrides) -> dict:
         "rng": random.Random(SEED),
         "now": int(now) if now is not None else FIXED_NOW,
         "quest_engine": quest_engine,        # 指令层引擎注入（quest_commands 工程补白 1）
-        "checkin_engine": CheckinAdapter(checkin_engine),  # 指令层引擎注入（工程补白 4）
+        "checkin_engine": checkin_engine,  # 指令层引擎注入（审查批次2 P0-1：真实 core/checkin 直接注入，删旧 CheckinAdapter）
     }
     ctx.update(overrides)  # 子场景覆盖（如 currencies 低保）
     return ctx

@@ -6,7 +6,8 @@ NPC系统设计定稿 L153（id ≡ item 键）+ M4 设计审查裁决 P1-2（�
 
 覆盖：内联串等价（D-05/TC-02）· exp 直入（TC-13）· 货币入账（TC-14）· 物品入包（TC-15）·
 rep 入 reputation_state 不入货币表（TC-16）· 组合数组按序（TC-17）· 逐条目失败跳过（P1-2）·
-幂等（A1）· 默认绑定 · 货币键空间校验 · id 别名 · 批级失败兜底。
+幂等（A1）· 默认绑定 · 货币键空间校验 · id 别名 · 批级失败兜底 · 无 add_item hook 时物品条目
+skip(item_add_failed)（M4 实现审查批次1 P1-1）。
 """
 from __future__ import annotations
 
@@ -172,12 +173,19 @@ def test_item_id_alias_npc_give_item():
     assert r["granted"][0]["item"] == "药水"
 
 
-def test_item_no_add_hook_applied_false():
-    """无 add_item hook → 条目照常 granted（applied=False），入包由调用方兜底（工程补白）。"""
+def test_item_no_add_hook_skips_p1_1():
+    """M4 实现审查批次1 P1-1：无 add_item hook → 该条 skip(item_add_failed)（不伪装 granted）。
+
+    旧行为把"未入包"记成 granted(applied=False)（静默丢奖根源）；现改为条目级 skip 携带 reason，
+    由消费方（quest.py）对 item_add_failed 整单回滚 + 不封口幂等兜底。
+    """
     ctx = make_ctx()
     r = dispatch_reward([{"item": "铁矿", "count": 3}], ctx)
-    assert r["ok"] and r["granted"][0]["applied"] is False
-    assert r["granted"][0]["bound"] is True
+    assert r["ok"] is True and r["granted"] == []
+    assert len(r["skipped"]) == 1
+    s = r["skipped"][0]
+    assert s["type"] == "item" and s["reason"] == "item_add_failed"
+    assert s["item"] == "铁矿" and s["count"] == 3
 
 
 # ---------------------------------------------------------------------------
@@ -363,6 +371,32 @@ def test_idempotent_records_ledger_even_with_skips():
     r2 = dispatch_reward([{"item": "不存在之物", "count": 1}, {"exp": 50}], ctx)
     assert r2["idempotent"] is True and r2["granted"] == []
     assert ctx["exp"] == 50
+
+
+def test_idempotent_item_add_failed_not_sealed_p1_1():
+    """P1-1：批次含 item_add_failed → 不封口幂等；补接 hook 后同 tx 重试可补发。
+
+    旧行为：批次完成（含 skipped）即记 ledger → 物品未入包也被封口，静默丢奖无法重试。
+    新行为：item_add_failed 不记 ledger → 同 tx 重试补发成功后再封口。
+    """
+    ctx = make_ctx()
+    ctx["tx_id"] = "tx-p11"
+    ctx["ledger"] = set()
+    r1 = dispatch_reward([{"item": "铁矿", "count": 3}], ctx)
+    assert r1["ok"] and r1["granted"] == []
+    assert r1["skipped"][0]["reason"] == "item_add_failed"
+    assert "tx-p11" not in ctx["ledger"]  # 未封口 → 可重试
+
+    calls = record_adds(ctx)  # 补接入包 hook
+    r2 = dispatch_reward([{"item": "铁矿", "count": 3}], ctx)
+    assert r2["ok"] and r2["granted"] == [{"type": "item", "item": "铁矿", "count": 3,
+                                           "bound": True, "applied": True}]
+    assert calls == [("铁矿", 3, True)]
+    assert "tx-p11" in ctx["ledger"]  # 成功后封口
+
+    r3 = dispatch_reward([{"item": "铁矿", "count": 3}], ctx)
+    assert r3["idempotent"] is True and r3["granted"] == []
+    assert len(calls) == 1  # 不二次入包
 
 
 # ---------------------------------------------------------------------------

@@ -17,6 +17,7 @@
     校验链 L338-344 + 当前商店 L305-327 + 多货币 L193/L238-242 + 置灰不隐藏 L81/L219-220 +
     出售价 L191-192/L353-360 + 声望 5 级制【任务】L220/L229-240：陌生0/熟悉100/信赖300/崇敬600/传说1000）
   - M4 设计审查裁决（审查_M4设计_批次3_jspace.md P1-3 限购清零以 period 为准 / P1-4 默认 refresh=none）
+  - M4 实现审查批次4（审查_M4实现_批次4_jspace.md P1-1：黑市 listing_count 引擎读取 + N 解析统一口径）
 
 【工程补白 · 显式标注】（契约/定稿未给字段名或落点，按"只建议不限制"取点定型，命名可改）：
   1) 引擎零 IO、零 NoneBot import、纯函数（ctx dict 进出，就地改写可变子结构）；事务（SQLite）由调用方
@@ -38,9 +39,11 @@
   4) 刷新时刻：统一配置键 refresh_time（默认 05:00，dayroll A3 唯一实现）；商店显式配 hour（daily/weekly）
      时按该店覆盖（2b3 §1.3「hour 默认 5」+ TC-41 黑市 hour:20）。个人限购 period 清零边界一律走
      全局 refresh_time（裁决⑤「独立驱动」），week 边界默认周一（settings.week_start 可配，默认 1=周一）。
-  5) 黑市上架数 N：= len(shop["items"]) 若非空；items 为空时回退 len(pool)（示例 black_market items=[]
-     pool=3 → 全池上架，工程收敛）。刷新重抽：rng 注入确定性（ctx["rng"]，Random 实例或 random 模块），
-     不重复抽样；上架价 = 基准价 × (1 ± price_fluctuation%)（randint，整型取整）；混合支付池条目不浮动。
+  5) 黑市上架数 N（审查_M4实现_批次4 P1-1 统一口径，与 content/shop_models.blackmarket_listing_n/校验器一致）：
+     listing_count>0 → N=listing_count；items 非空 → len(items)；否则 → len(pool)（示例 black_market
+     items=[] pool=3 → 全池上架，定稿 L216/L507 正典）。刷新重抽：rng 注入确定性（ctx["rng"]，Random 实例
+     或 random 模块），不重复抽样；上架价 = 基准价 × (1 ± price_fluctuation%)（randint，整型取整）；
+     混合支付池条目不浮动。
   6) 校验链顺序即提示优先级（D-01）：①店存在且可见→②门槛→③限购→④库存→⑤货币→⑥数量上限。
      ⑥「提示不拦截」（D-05/TC-03）：先按上限截断执行量（余额/库存按截断后数量校验），再跑 ③④⑤；
      截断提示随结果携带（TC-03「按 99 截断执行」优先于链序）。
@@ -562,13 +565,21 @@ def _fluctuate(base: int, pct: object, rng) -> int:
 
 
 def _redraw_blackmarket(shop: Mapping, ctx: Mapping[str, Any]) -> list:
-    """黑市重抽（刷新三件事③ / TC-41）：pool 不重复抽样 N 件，上架价 = 基准价 × (1±浮动率)。"""
+    """黑市重抽（刷新三件事③ / TC-41）：pool 不重复抽样 N 件，上架价 = 基准价 × (1±浮动率)。
+    N 解析（审查_M4实现_批次4 P1-1 统一口径，对齐定稿 L216/L507 正典）：listing_count>0 → 该值；
+    items 非空 → len(items)；否则 → len(pool)；k 上限夹取 len(pool)。"""
     pool = shop.get("pool")
     if not isinstance(pool, list) or not pool:
         return []
     fluct = shop.get("price_fluctuation")
     items_cfg = shop.get("items")
-    n = len(items_cfg) if isinstance(items_cfg, list) and items_cfg else len(pool)
+    listing = _as_int(shop.get("listing_count"))
+    if listing is not None and listing > 0:
+        n = listing
+    elif isinstance(items_cfg, list) and items_cfg:
+        n = len(items_cfg)
+    else:
+        n = len(pool)
     rng = _rng(ctx)
     k = max(0, min(int(n), len(pool)))
     idxs = rng.sample(range(len(pool)), k)

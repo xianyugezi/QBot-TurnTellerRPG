@@ -12,6 +12,9 @@
     的 id ≡ item 键，同一发放器）
   - M4 设计审查裁决 P1-2（reward 发放器逐条目失败黄字跳过、不中断整批结算；单事务=结算簿记
     原子性（main_progress/移出/quest_daily），条目失败不触发整单回滚）
+  - M4 实现审查批次1（审查_M4实现_批次1_jspace.md P1-1）：物品入包失败（无 add_item hook 或 hook
+    返回 False/抛错）→ 条目级 skip(item_add_failed) 而非静默 granted(applied=False)（现状把
+    "未入包"伪装成"已发放"是静默丢奖根源）；"不封口幂等"由消费方（quest.py）整单回滚兜底。
 
 【工程补白 · 显式标注】
   1) 货币表来源：ctx["currencies"]（玩家货币表 dict，就地累加）；货币键空间 = ctx["settings"]
@@ -22,13 +25,15 @@
      板 ID，取值 entry.board > entry.param > ctx["rep_board"] > "global"（缺省全局，任务定稿 L226）。
      rep 不入货币表。
   3) 入包落点：ctx["add_item"] hook（由调用方/背包引擎提供，签名 add_item(item_id, count, bound)）；
-     hook 缺省 → 该条目记 granted[].applied=False，实际入包由调用方兜底（InventoryEngine 为 M1 骨架
-     未实装，本解析器不直接调用）。
+     hook 缺失或返回 False/抛错 → 该条目 skip(item_add_failed)（P1-1：不把"未入包"伪装成"已发放"，
+     防静默丢奖）；item 条目 granted 恒 applied=True。消费方（quest/checkin 等）对 item_add_failed
+     负责"不封口幂等"（quest.py 已整单回滚兜底）。
   4) 物品存在性：ctx["items"] 注册表（dict）或 ctx["resolve_item"] 解析器；注册表缺失或查无 →
      该条 skip（item_registry_missing / item_not_found）。
   5) 幂等：ctx["tx_id"]（结算唯一 id）与 ctx["ledger"]（已结算集合，调用方持有）同给才生效；
      同 tx 重复调用 → 直接返回 {ok, granted:[], skipped:[], idempotent:True}，不重复入账。
-     批次完成（含 skipped 条目）即记 ledger；batch 级失败（ok=False）不记。
+     批次完成（含普通 skipped 条目）即记 ledger；batch 级失败（ok=False）不记；含 item_add_failed
+     （物品未实际入包，P1-1）不记 → 不封口幂等，由消费方整单回滚兜底、可重试。
   6) 黄字渲染不属于本解析器（纯函数，零 NoneBot import）：skipped[].reason 由调用方渲染黄字提示。
 
 纯函数约定：ctx dict 进出——就地改写其可变子结构（currencies / exp / reputation_state / ledger），
@@ -190,21 +195,22 @@ def _grant_item(entry: Mapping[str, Any], ctx: Mapping[str, Any]) -> Optional[di
         return {"ok": False, "skip": {"type": "item", "item": item_id, "count": count,
                                       "reason": "item_not_found"}}
 
-    # 入包（工程补白③）：经 ctx["add_item"] hook；缺省 → applied=False 由调用方兜底
-    applied = False
+    # 入包（工程补白③ + M4 实现审查批次1 P1-1）：经 ctx["add_item"] hook 实际入包；
+    # hook 缺失或返回 False/抛错 → 该条 skip(item_add_failed)（不伪装 granted，防静默丢奖）
     add_item = ctx.get("add_item")
-    if callable(add_item):
-        try:
-            result = add_item(item_id, count, bound)
-        except Exception:
-            result = False
-        if result is False:
-            return {"ok": False, "skip": {"type": "item", "item": item_id, "count": count,
-                                          "reason": "item_add_failed"}}
-        applied = True
+    if not callable(add_item):
+        return {"ok": False, "skip": {"type": "item", "item": item_id, "count": count,
+                                      "reason": "item_add_failed"}}
+    try:
+        result = add_item(item_id, count, bound)
+    except Exception:
+        result = False
+    if result is False:
+        return {"ok": False, "skip": {"type": "item", "item": item_id, "count": count,
+                                      "reason": "item_add_failed"}}
 
     return {"ok": True, "grant": {"type": "item", "item": item_id, "count": count,
-                                  "bound": bound, "applied": applied}}
+                                  "bound": bound, "applied": True}}
 
 
 def _write_ctx_int(ctx: Mapping[str, Any], key: str, value: int) -> bool:
@@ -311,7 +317,8 @@ def dispatch_reward(entries: Any, ctx: Optional[Mapping[str, Any]] = None) -> di
     返回：{"ok": bool, "granted": [grant...], "skipped": [skip...], [idempotent]: bool}
       - ok=True：批次完成（内容级失败已逐条 skip，不中断整批，P1-2）；ok=False 仅顶层/ctx 级
         失败（ctx 非法 / entries 顶层形态非法）。
-      - granted：按数组顺序的入账记录；item 含 applied（是否经 hook 实际入包）。
+      - granted：按数组顺序的入账记录；item 恒 applied=True（入包失败走 skip(item_add_failed)，
+        P1-1 不伪装"已发放"）。
       - skipped：逐条失败记录，携带 reason（调用方渲染黄字提示）。
       - idempotent=True：同 tx_id 已在 ledger（重复调用不重复入账）。
     """
@@ -348,8 +355,14 @@ def dispatch_reward(entries: Any, ctx: Optional[Mapping[str, Any]] = None) -> di
         else:
             skipped.append(out["skip"])
 
-    # 幂等落账：批次完成（含 skipped 条目）即记 ledger；ok=False（batch 级失败）不记
+    # 幂等落账：批次完成（含普通 skipped 条目）即记 ledger；ok=False（batch 级失败）不记；
+    # item_add_failed（物品未实际入包，P1-1）不记 → 不封口幂等，可重试（防静默丢奖）
     if tx_id is not None and isinstance(ledger, MutableSet):
-        ledger.add(tx_id)
+        if not any(
+            isinstance(s, Mapping) and s.get("type") == "item"
+            and s.get("reason") == "item_add_failed"
+            for s in skipped
+        ):
+            ledger.add(tx_id)
 
     return {"ok": True, "granted": granted, "skipped": skipped}

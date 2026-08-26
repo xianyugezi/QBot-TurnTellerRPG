@@ -8,6 +8,11 @@
   - docs/审查参考/指令分隔符统一规范.md v1.1（权威 246 行）
   - 2026-08-27 裁决①（M4 设计审查 P0-1）：战斗中裸数字 = 快捷绑定（无会话上下文，
     快捷表生效），不送战斗状态机；选技能用带指令词「/攻击 2」（序号不带 *）。
+  - M4 实现审查批次1 P1-2（审查_M4实现_批次1_jspace.md）：双管线口径漂移修复 ③——
+    GM 判定从「prefix_required 集合」升级为「spec.is_gm 且前缀必须真正落在展开串上」
+    （对齐 router._trigger_allowed W07/L128：快捷授权不豁免 GM，触发消息的 '/' 不算数）；
+    新增 gm_commands 参数承载 GM 指令集合（与 router spec.is_gm 对拍），并补
+    tests/unit/test_dual_pipeline_parity.py 同输入两管线一致性测试。
 
 铁律（m4_shared_contract §0 / M3 沿用）：
   - 纯逻辑、零 NoneBot import（commands 层同为纯解析；唯一 NoneBot 接触点=装配入口）。
@@ -55,6 +60,7 @@ __all__ = [
     "FIXED_SUBWORDS",
     "DEFAULT_WHITELIST",
     "DEFAULT_PREFIX_REQUIRED",
+    "DEFAULT_GM_COMMANDS",
     "DEFAULT_QUANTITY_COMMANDS",
     "DEFAULT_NO_QUANTITY_COMMANDS",
     "DEFAULT_MAX_QTY",
@@ -121,6 +127,12 @@ DEFAULT_WHITELIST = frozenset(
 # 需 / 前缀的指令（免前缀一律忽略）：GM 指令（L128）+ /对话（m4 §2.3 接缝裁决：
 # 可快捷绑定、不可免前缀直发）
 DEFAULT_PREFIX_REQUIRED = frozenset({"重载", "封禁", "日志", "编辑", "设置", "对话"})
+
+# GM 指令（5b L160 长清单：重载/封禁/日志/编辑/设置；L128 强制 / 前缀 + 永不快捷 +
+# 快捷禁绑 C02）。与 router spec.is_gm 对齐（P1-2c 对拍）：GM 判定用本集合而非
+# prefix_required（后者另含非 GM 的 /对话）；GM 要求 '/' 前缀**真正落在当前展开串上**，
+# 快捷展开的触发 '/' 不豁免（对齐 router._trigger_allowed）。
+DEFAULT_GM_COMMANDS = frozenset({"重载", "封禁", "日志", "编辑", "设置"})
 
 # 旧空格数量格式兼容回退适用指令（规范 L238-239；调用方可覆盖）
 DEFAULT_QUANTITY_COMMANDS = frozenset({"使用", "购买", "合成", "投料", "出售", "炼金", "调合"})
@@ -567,6 +579,7 @@ def parse_command(
     aliases: Optional[Mapping[str, Any]] = None,
     whitelist: Optional[Iterable[str]] = None,
     prefix_required: Optional[Iterable[str]] = None,
+    gm_commands: Optional[Iterable[str]] = None,
     session_active: bool = False,
     in_battle: bool = False,
     max_qty: int = DEFAULT_MAX_QTY,
@@ -587,6 +600,9 @@ def parse_command(
       aliases       全局指令别名配置（规范 6.7；两种形态，见 _normalize_aliases）
       whitelist     指令白名单（框架+内容包注册指令，动态注册表；默认 DEFAULT_WHITELIST）
       prefix_required  需 / 前缀的指令（GM + /对话 接缝裁决；默认 DEFAULT_PREFIX_REQUIRED）
+      gm_commands   GM 指令集合（5b L160 长清单；默认 DEFAULT_GM_COMMANDS）。GM 判定用本
+                    集合且要求 '/' 前缀真正落在当前展开串上（P1-2c 对拍 router spec.is_gm：
+                    快捷展开的触发 '/' 不豁免 GM，防权限绕过）
       session_active 是否对话会话激活（2b2 生命周期；**战斗按裁决① 传 False**）
       in_battle     是否战斗内（combat_shortcut 模式判定用；战斗裸数字走快捷表，不送会话）
       max_qty       数量上限（默认 99，仅提示不拦截，L33/L73）
@@ -610,6 +626,9 @@ def parse_command(
         whitelist=frozenset(whitelist if whitelist is not None else DEFAULT_WHITELIST),
         prefix_required=frozenset(
             prefix_required if prefix_required is not None else DEFAULT_PREFIX_REQUIRED
+        ),
+        gm_commands=frozenset(
+            gm_commands if gm_commands is not None else DEFAULT_GM_COMMANDS
         ),
         session_active=session_active,
         in_battle=in_battle,
@@ -641,6 +660,7 @@ def _parse_text(
     aliases: Dict[str, Any],
     whitelist: frozenset,
     prefix_required: frozenset,
+    gm_commands: frozenset,
     session_active: bool,
     in_battle: bool,
     max_qty: int,
@@ -677,9 +697,9 @@ def _parse_text(
 
     if text.startswith("/"):
         text = text[1:].strip()
-        prefix_stripped = True
+        slash_on_text = True
     else:
-        prefix_stripped = False
+        slash_on_text = False
         # 免前缀是否被模式允许（规范 6.1 L88-98；快捷名跟随前缀模式 L177）。
         # 仅约束触发消息：prefix_gate_passed=True（快捷展开重入）时不再判定。
         if not prefix_gate_passed and (
@@ -690,8 +710,10 @@ def _parse_text(
                 return ParsedCommand._session(raw, text)
             return ParsedCommand._ignored(raw, text)
 
-    # 合并上级剥离标记（P05：原始消息是否剥离 '/' / @提及；快捷展开后保留触发消息标记）
-    prefix_stripped = prefix_stripped or prefix_stripped_in
+    # 合并上级剥离标记（P05：原始消息是否剥离 '/' / @提及；快捷展开后保留触发消息标记）。
+    # slash_on_text = 当前这层文本是否真实以 '/' 开头（P1-2c：GM 判定用当前层标记，
+    # 不沿用触发消息的 '/'——快捷授权不豁免 GM，对齐 router._trigger_allowed）。
+    prefix_stripped = slash_on_text or prefix_stripped_in
 
     # ---- S1/S2 会话路由判定（裁决①：战斗永不置会话激活，裸数字走快捷表） ----
     if session_active and not in_battle and is_session_subword(text):
@@ -712,6 +734,7 @@ def _parse_text(
             aliases=aliases,
             whitelist=whitelist,
             prefix_required=prefix_required,
+            gm_commands=gm_commands,
             session_active=session_active,
             in_battle=in_battle,
             max_qty=max_qty,
@@ -749,8 +772,14 @@ def _parse_text(
         # keep_original:false 原指令隐藏禁用 → 引导提示（A04 / L212）
         return ParsedCommand._alias_hidden(raw, text, command, orig_to_alias[command])
 
-    # S5 GM/需前缀指令：无 '/' 前缀 → 忽略（GM 永不快捷 L128；/对话 接缝裁决）
-    if command in prefix_required and not prefix_stripped:
+    # S5 GM/需前缀指令：GM 指令要求 '/' 前缀**真正落在当前展开串上**（P1-2c 修复：
+    # GM 判定 = spec.is_gm（gm_commands 集合）且 slash_on_text=True——快捷展开的触发
+    # '/' 不豁免 GM，对齐 router._trigger_allowed W07/L128）；非 GM 需前缀指令
+    # （/对话 接缝裁决：可快捷绑定、不可免前缀直发）沿用触发消息剥离标记 prefix_stripped。
+    if command in gm_commands:
+        if not slash_on_text:
+            return ParsedCommand._ignored(raw, text)
+    elif command in prefix_required and not prefix_stripped:
         return ParsedCommand._ignored(raw, text)
 
     # ---- S6 TOKENIZE：紧凑/空格双认 → token 流 ----

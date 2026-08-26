@@ -16,6 +16,7 @@ L305-327 当前商店 + L193 混合支付 + 声望 5 级制）
 
 from __future__ import annotations
 
+import copy
 import datetime
 import random
 
@@ -615,6 +616,29 @@ def test_tc41_blackmarket_redraw_deterministic():
     assert shop_lazy_refresh("black_market", ctx_a)["refreshed"] is True
     g2 = ctx_a["blackmarket_goods"]["black_market"]
     assert len(g2) == 3 and ctx_a["last_refresh"]["black_market"] == "2026-08-27"
+
+
+def test_blackmarket_listing_count_engine_consumed():
+    """审查_M4实现_批次4 P1-1：引擎 _redraw_blackmarket 读取 listing_count
+    （配 listing_count:1 → 首次与次日重抽均只上架 1 件；listing_count 超池 → 夹取 len(pool)）。"""
+    # listing_count:1（items=[] pool=3 正典形态）→ 只上架 1 件
+    shops = copy.deepcopy(SHOPS)
+    shops["black_market"]["listing_count"] = 1
+    ctx = make_ctx(shops=shops, now=_ts(2026, 8, 26, 21, 0, 0))
+    r = shop_browse("black_market", ctx)
+    assert r["ok"] is True and r["total"] == 1
+    assert len(ctx["blackmarket_goods"]["black_market"]) == 1
+    # 次日重抽同样受 listing_count 约束（rng 注入确定性，同一 ctx 同序列）
+    ctx["now"] = _ts(2026, 8, 27, 21, 0, 0)
+    assert shop_lazy_refresh("black_market", ctx)["refreshed"] is True
+    assert len(ctx["blackmarket_goods"]["black_market"]) == 1
+    # listing_count 超池 → 夹取 len(pool)=3（不多抽）
+    shops = copy.deepcopy(SHOPS)
+    shops["black_market"]["listing_count"] = 99
+    ctx = make_ctx(shops=shops, now=_ts(2026, 8, 26, 21, 0, 0))
+    r = shop_browse("black_market", ctx)
+    assert r["ok"] is True and r["total"] == 3
+    assert len(ctx["blackmarket_goods"]["black_market"]) == 3
 
 
 def test_next_stock_message():

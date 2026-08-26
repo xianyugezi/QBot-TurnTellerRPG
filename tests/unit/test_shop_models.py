@@ -768,15 +768,24 @@ def test_open_condition_combos() -> None:
 # 黑市专项（TC-41 / 定稿 §四 / 【工程补白】2）
 # ---------------------------------------------------------------------------
 def test_blackmarket_pool_and_listing() -> None:
-    """黑市：pool 空 → 黄提示；未配上架数量（listing_count 与 items 皆空）→ 黄提示。"""
+    """黑市：pool 空 → 黄提示；listing_count/items/pool 三者皆空 → 黄提示（审查 P1-1 统一口径）。"""
     bm = copy.deepcopy(_shop_by_id(_legal_shops(), "black_market"))
     bm["pool"] = []
     rep = _check([bm])
     assert not rep.errors
     assert len(_warns(rep, "shop_blackmarket_pool_empty")) == 1
+    # 正典形态 items=[] 无 listing_count（pool 非空）→ 不再误报（回退 len(pool)，定稿 L507）
     bm = copy.deepcopy(_shop_by_id(_legal_shops(), "black_market"))
     bm.pop(BLACKMARKET_LISTING_FIELD)
     bm["items"] = []
+    rep = _check([bm])
+    assert not rep.errors
+    assert not _warns(rep, "shop_blackmarket_no_listing")
+    # 三者皆空 → 黄提示
+    bm = copy.deepcopy(_shop_by_id(_legal_shops(), "black_market"))
+    bm.pop(BLACKMARKET_LISTING_FIELD)
+    bm["items"] = []
+    bm["pool"] = []
     rep = _check([bm])
     assert not rep.errors
     assert len(_warns(rep, "shop_blackmarket_no_listing")) == 1
@@ -788,7 +797,8 @@ def test_blackmarket_pool_and_listing() -> None:
 
 
 def test_blackmarket_listing_n_resolution() -> None:
-    """【工程补白】2：黑市上架数量 N 解析（listing_count>0 → 该值；否则 len(items)）。"""
+    """【工程补白】2 / 审查_M4实现_批次4 P1-1：黑市上架数量 N 解析统一口径
+    （listing_count>0 → 该值；items 非空 → len(items)；否则 → len(pool)，对齐定稿 L216/L507 正典）。"""
     bm = _shop_by_id(_legal_shops(), "black_market")
     d = ShopDef.from_entry(bm)
     assert d.blackmarket_listing_n == 3   # listing_count=3
@@ -797,11 +807,19 @@ def test_blackmarket_listing_n_resolution() -> None:
     bm2["items"] = [{"item": "stardust", "price": 800}]
     d2 = ShopDef.from_entry(bm2)
     assert d2.blackmarket_listing_n == 1  # 回退 len(items)
+    # 正典形态：items=[] 无 listing_count → 回退 len(pool)（定稿 L507，不再判 0）
     bm3 = copy.deepcopy(bm)
     bm3.pop(BLACKMARKET_LISTING_FIELD)
     bm3["items"] = []
     d3 = ShopDef.from_entry(bm3)
-    assert d3.blackmarket_listing_n == 0  # 皆缺省 → 0（黄提示侧）
+    assert d3.blackmarket_listing_n == len(bm3["pool"]) == 3  # 回退 len(pool)
+    # items 与 pool 皆空 → 0（黄提示侧）
+    bm4 = copy.deepcopy(bm)
+    bm4.pop(BLACKMARKET_LISTING_FIELD)
+    bm4["items"] = []
+    bm4["pool"] = []
+    d4 = ShopDef.from_entry(bm4)
+    assert d4.blackmarket_listing_n == 0
 
 
 # ---------------------------------------------------------------------------

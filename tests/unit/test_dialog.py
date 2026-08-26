@@ -5,11 +5,13 @@
   无 NPC 提示 §五 / 恢复简报 §2.3 / 验收 TC-01~TC-21）
 + 审查参考/NPC系统设计定稿.md（L37-53 / L55-71 / L83-102 / L108-123 / L289 / L316-328）
 + 2026-08-27 裁决③（settings.max_dialog_depth 默认 2，0=不限，超深软拦）。
++ 审查_M4实现_批次3_jspace.md P1-1/2/3（修复回归：reply 不置灰可重复 / reply text[] 叙述 /
++ EXEC 中断恢复→完成→mark_heard 非空）。
 
 覆盖：/对话 参数解析（TC-01~08）· 会话子词/路由（R1-R5，TC-15~18）· 状态机主链（TC-09）·
 条件不满足（TC-10）· 已听置灰（TC-11）· 长叙述翻页（TC-12）· 结束词三同义（TC-13）·
 子界面中断恢复（TC-14）· 菜单折叠（TC-19/20/21）· 深度可配（裁决③）· 恢复简报 · 事件计数 ·
-15 迁移全覆盖 · 快照 round-trip。
+15 迁移全覆盖 · 快照 round-trip · 批次3 P1-1/2/3 修复回归。
 """
 
 from __future__ import annotations
@@ -22,6 +24,7 @@ from qbot_rpg.core.dialog import (
     DIALOG_EMPTY_MAP_HINT,
     DIALOG_NOT_FOUND_HINT,
     DEFAULT_MAX_DIALOG_DEPTH,
+    INFO_ACTIONS,
     S_END,
     S_EXEC,
     S_IDLE,
@@ -713,3 +716,69 @@ def test_condition_hint_one_line():
 def test_render_npc_list_icon_and_name():
     lines = render_npc_list(MAP_NPCS)
     assert lines[0] == "这里的人：1.🔨铁匠·老周 2.🧺杂货商人·林 3.📖学者·杜Ⅱ"
+
+
+# ===========================================================================
+# 十一、审查_M4实现_批次3 P1-1/2/3 修复回归（jspace 审查报告）
+# ===========================================================================
+
+def test_p11_reply_not_info_repeatable_not_greyed():
+    """P1-1：reply 非信息类——交付后不置灰、不 mark_heard、可重复选择（2b1 AC10 / L90）。"""
+    assert INFO_ACTIONS == frozenset({"intel", "tutorial"})   # 对齐 npc.py，无 reply
+    s = DialogSession()
+    ctx = make_ctx()
+    s.step(("dialog", {"mode": "index", "value": 2}), ctx)     # 杂货商人·林（shop + reply）
+    r = s.step(("select", 2), ctx)                             # 2.随便聊聊 → T07 EXEC
+    assert r["transition"] == "T07"
+    assert r["to_state"] == S_EXEC
+    assert r["output"][0] == "随便聊聊"                        # 叙述可见（不空白屏）
+    r = s.step(("continue", None), ctx)                        # 末段 → T10 回菜单
+    assert r["transition"] == "T10"
+    assert r["mark_heard"] == []                               # 闲聊不落已听
+    assert "已听" not in "".join(r["output"])                  # 菜单不置灰
+    # 重选同项 → 不被「你已经听过了」拦截，可重复闲聊
+    r = s.step(("select", 2), ctx)
+    assert r["transition"] == "T07"
+    assert r["to_state"] == S_EXEC
+    assert r["output"][0] == "随便聊聊"
+
+
+def test_p12_reply_text_list_narration_not_blank():
+    """P1-2：reply text[] 列表 → 叙述多段显示（不再空白屏，对齐 npc.py _action_reply）。"""
+    npc = {
+        "id": "bard_you", "name": "吟游诗人·优", "icon": "🎻", "type": "chat",
+        "visible": True,
+        "interactions": [
+            {"action": "reply", "text": ["你听说过海那边的传说吗？", "传说有一条会唱歌的鲸鱼。"]},
+        ],
+    }
+    ctx = make_ctx(npcs=[npc])
+    s = DialogSession()
+    s.step(("dialog", {"mode": "index", "value": 1}), ctx)
+    r = s.step(("select", 1), ctx)
+    assert r["transition"] == "T07"
+    assert r["to_state"] == S_EXEC
+    assert r["output"][0] == "你听说过海那边的传说吗？"        # 第一段不再空白
+    r = s.step(("continue", None), ctx)
+    assert r["transition"] == "T11"
+    assert r["output"][0] == "传说有一条会唱歌的鲸鱼。"
+    r = s.step(("continue", None), ctx)                        # 末段 → T10 回菜单
+    assert r["transition"] == "T10"
+    assert r["mark_heard"] == []                               # 闲聊不落已听
+
+
+def test_p13_exec_interrupt_resume_complete_mark_heard():
+    """P1-3：EXEC 中断→快照恢复→继续到末段→info_key 正确→mark_heard 非空（已听置灰不丢）。"""
+    s = DialogSession()
+    ctx = make_ctx()
+    s.step(("dialog", {"mode": "index", "value": 1}), ctx)     # 铁匠·老周
+    s.step(("select", 4), ctx)                                 # 打听消息 intel EXEC（2 段）
+    s.step(("continue", None), ctx)                            # page 1
+    assert s.state == S_EXEC
+    snap = s.to_snapshot()
+    assert snap["exec_index"] == 3                             # 快照携带 exec_index
+    s2 = DialogSession.from_snapshot(snap)
+    assert s2._exec_index == 3                                 # 恢复 exec_index
+    r = s2.step(("continue", None), ctx)                       # 末段 → T10 单轮交付
+    assert r["transition"] == "T10"
+    assert r["mark_heard"] == ["intel:lao:1"]                  # 已听标记不丢（情报不重复领）

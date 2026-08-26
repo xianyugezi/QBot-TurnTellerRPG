@@ -10,6 +10,13 @@
     §2.2 当前商店机制 L73-81；§2.3 一次一物 L83-92；§2.4 对话恢复简报 L94-102；
     §3.0 菜单上限 ≤6 L108-113；§3.1 交互流程 L115-123；§三 对话结构 L316-336（深度可配 L324/L328）；
     L289 [事件:NPC对话:ID] 事件计数）
+  - 审查_M4实现_批次3_jspace.md P1-1/2/3（本文件修复依据）：
+      P1-1：INFO_ACTIONS 去掉 "reply"（对齐同批 npc.py INFO_ACTIONS=("intel","tutorial")）；
+            reply 属闲聊不触发一次一物、不置灰可重复（2b1 AC10 / 定稿 L90），_is_info 按
+            「显式 info:true 优先、否则 action∈INFO_ACTIONS」判定，reply 需按信息类须显式 "info": true。
+      P1-2：_narration_of 叙述提取补 text[] 列表（与 lines 同逻辑），reply 选择流不再空白屏。
+      P1-3：to_snapshot 携带 exec_index、from_snapshot 恢复 _exec_index，EXEC 中断续读完成后
+            mark_heard 正确（已听置灰不丢，情报不重复领）。
   - 2026-08-27 M4 设计审查裁决③（m4_shared_contract §0 第 3 条 / 细化_2b1 裁决 P1-1）：对话树深度
     恢复可配 settings.max_dialog_depth（默认 2，0=不限），超深软拦（L328 提示不拦截）。
 
@@ -122,8 +129,10 @@ DIALOG_DEPTH_HINT = "对话太深，拆成多 NPC 或事件牌组"  # L328 超�
 # 菜单 ≤6 折叠（2b2 §四 / L110-111）
 MENU_MAX_OPTIONS = 6
 
-# 信息类动作（交付置灰「已听」，L86-89）；其余功能类不置灰（L90）【工程补白】
-INFO_ACTIONS: frozenset = frozenset({"intel", "tutorial", "reply"})
+# 信息类动作（交付置灰「已听」，L86-89）；其余功能类不置灰（L90）【工程补白】。
+# 对齐同批 npc.py INFO_ACTIONS=("intel","tutorial")（审查_M4实现_批次3_jspace.md P1-1）：
+# reply 属闲聊（2b1 AC10：不触发一次一物/不置灰可重复），不列入；如需按信息类须显式 "info": true。
+INFO_ACTIONS: frozenset = frozenset({"intel", "tutorial"})
 
 
 # -------------------------------------------------------------------------------------
@@ -487,6 +496,7 @@ class DialogSession:
             "menu_page": self.menu_page,
             "narration": list(self.narration),
             "exec_option": self._exec_option,
+            "exec_index": self._exec_index,  # P1-3：EXEC 续读完成需按序号推导 info_key → 已听置灰不丢
         }
 
     @classmethod
@@ -499,6 +509,7 @@ class DialogSession:
                 setattr(s, k, snap[k])
         s.narration = list(snap.get("narration") or [])
         s._exec_option = snap.get("exec_option")
+        s._exec_index = snap.get("exec_index")  # P1-3：恢复 EXEC 序号，_exec_done 能推导 info_key
         for k, v in overrides.items():
             setattr(s, k, v)
         return s
@@ -825,6 +836,11 @@ class DialogSession:
         return set()
 
     def _is_info(self, option: Mapping[str, Any]) -> bool:
+        """信息类判定（L86-89 / 审查_M4实现_批次3_jspace.md P1-1）：显式 info:true 优先，否则 action∈INFO_ACTIONS。
+
+        注意：reply 不在 INFO_ACTIONS（闲聊不触发一次一物/不置灰可重复，2b1 AC10）；
+        「info: false」逃生口对 reply 生效；若某 reply 确需按信息类，须显式 "info": true。
+        """
         if option.get("info") is True:
             return True
         return option.get("action") in INFO_ACTIONS
@@ -846,10 +862,11 @@ class DialogSession:
             return False
 
     def _narration_of(self, option: Mapping[str, Any], ctx: Mapping[str, Any]) -> List[str]:
-        """EXEC 叙述段（intel/tutorial/reply 信息类多段 / sub_dialog 节点以叙述交付【工程补白】）。
+        """EXEC 叙述段（intel/tutorial 信息类多段 + reply 闲聊 text[]，sub_dialog 节点以叙述交付【工程补白】）。
 
         功能类（quest/shop/heal/give_item/buff/repair/teleport/dealer）不产叙述（handler 经
-        exec_done 回执）；信息类取 lines/narration/content 多段或 text 单段；sub_dialog 节点取
+        exec_done 回执）；叙述型动作（信息类 + reply，AC10 text[]）取 lines/narration/content/text
+        多段（列表或单字符串，审查_M4实现_批次3_jspace.md P1-2）；sub_dialog 节点取
         子节点 greeting + 各选项文本。
         """
         hook = ctx.get("get_narration")
@@ -868,17 +885,16 @@ class DialogSession:
             for opt in sub.get("options") or []:
                 segs.append(str(opt.get("text") or opt.get("action") or "…"))
             return segs
-        if not self._is_info(option):
+        # 叙述型动作才取叙述：信息类（intel/tutorial）置灰交付 + 闲聊 reply（P1-2 补 text[]）；
+        # 其余功能类（quest/shop/heal/give_item/buff/repair/teleport）不产叙述。
+        if not self._is_info(option) and option.get("action") != "reply":
             return []
-        for key in ("lines", "narration", "content"):
+        for key in ("lines", "narration", "content", "text"):
             val = option.get(key)
             if isinstance(val, list):
                 return [str(x) for x in val]
             if isinstance(val, str) and val.strip():
                 return [val]
-        text = option.get("text")
-        if isinstance(text, str) and text.strip():
-            return [text]
         return []
 
     def _handoff_of(self, option: Mapping[str, Any]) -> Optional[dict]:

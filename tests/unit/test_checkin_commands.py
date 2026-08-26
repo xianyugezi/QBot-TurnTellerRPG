@@ -6,23 +6,26 @@
 补签；§五 幂等 D-02「今天已签到」仍附进度）+ 细化_3d（TPL-08/TPL-12、5 条/页、页码夹取）+
 2026-08-27 用户裁决②（页码夹取最后一页；0/负数/非数字 → TPL-12）+ 裁决⑦⑧。
 
-集成口径：core/checkin.py（路F2 同批并行）尚未落盘，本测试以**契约忠实替身**驱动——注入
-ctx["checkin_engine"] = FakeCheckinEngine（实现本层文件头声明的消费接口 checkin_today /
-checkin_status / checkin_makeup / resolve_checkin_table，输出对齐 2b5 §2.3/§2.4/§四 口径），
-断言命令层解析/渲染/路由/装配/错误全链路输出。路F2 落盘后替身可整体替换为真实引擎，断言不破。
+集成口径：审查_M4实现_批次2_jspace.md P0-1/P1-1 修复——本测试**注入真实 core/checkin 引擎**
+（对齐 test_quest_commands 模式，删除原「契约忠实替身」FakeCheckinEngine：替身接口与真实引擎
+不可互换、曾掩盖 P0-1），断言命令层解析/渲染/路由/装配/错误全链路消费真实引擎输出。
+命令层正文按 checkin_do/checkin_state 的 tables 重建（纯文本，去 📅/⚠ 装饰 emoji）。
 
-覆盖：/签到 无参（多表各表奖励 + 连签/月累计进度 + 里程碑提示 + 5 条/页 + TPL-08 页脚）· 页码翻页 ·
-超页夹取 + 已到最后一页（裁决②）· 0/负数/非数字 → TPL-12 · 幂等「今天已签到」仍附进度（D-02）·
-/签到 状态（连签/月累计/本月已签日期列表 + 可翻页）· 补签（表名/序号/缺省=主表 loop/未开启/月上限/
-表不存在值域文案；裁决⑦ 只计不补发提示透传）· 注册与解析接线 · 懒加载/待接线防御 · 页脚 TPL-08 逐字 ·
-无装饰 emoji · 渲染/扁平化工具纯函数。
+覆盖：/签到 无参（多表各表奖励 + 连签/月累计进度 + 5 条/页 + TPL-08 页脚）· 页码翻页 · 超页夹取 +
+已到最后一页（裁决②）· 0/负数/非数字 → TPL-12 · 幂等「今天已签到」仍附进度（D-02）· /签到 状态
+（连签/本月累计/今日已签 + 可翻页）· 补签（表 id/类型名/序号/名称/缺省=主表 loop/未开启/月上限/
+表不存在值域文案；裁决⑦ 只计不补发提示透传）· 注册与解析接线 · 懒加载/待接线防御 · 页脚 TPL-08
+逐字 · 无装饰 emoji · 渲染/扁平化工具纯函数。
 """
 
 from __future__ import annotations
 
+import datetime
+
 import pytest
 
 import qbot_rpg.commands.checkin_commands as cc
+import qbot_rpg.core.checkin as real_checkin
 from qbot_rpg.commands.checkin_commands import (
     CHECKIN_CMD,
     SUB_MAKEUP,
@@ -37,114 +40,63 @@ from qbot_rpg.commands.checkin_commands import (
 from qbot_rpg.commands.parsers import ParsedCommand, parse_command
 from qbot_rpg.commands.router import Router
 
+_TZ_UTC8 = datetime.timezone(datetime.timedelta(hours=8))
+NOW = int(datetime.datetime(2026, 8, 26, 12, 0, 0, tzinfo=_TZ_UTC8).timestamp())  # 2026-08-26 12:00 UTC+8
+
 # ---------------------------------------------------------------------------
-# 契约忠实替身：实现 core/checkin.py（路F2）消费接口，输出对齐 2b5 口径
+# 真实引擎驱动：表定义 + 玩家 ctx（对齐 core/checkin.py 契约；注入真实引擎模块）
 # ---------------------------------------------------------------------------
+
+ITEMS = {
+    "药水": {"id": "药水", "name": "药水", "quality": "normal"},
+    "钻石": {"id": "钻石", "name": "钻石", "quality": "rare"},
+    "强化石": {"id": "强化石", "name": "强化石", "quality": "rare"},
+}
+
+SETTINGS = {"refresh_time": "05:00", "currencies": [{"id": "coins"}, {"id": "gem"}]}
 
 TABLES = {
-    "loop": {"id": "loop", "name": "常驻循环", "type": "loop"},
-    "monthly": {"id": "monthly", "name": "月度签到", "type": "monthly"},
-    "activity": {"id": "activity", "name": "xx庆典", "type": "activity"},
+    "loop": {"id": "loop", "name": "常驻循环", "type": "loop",
+             "period": {"cycle_days": 7, "reset_on_break": True},
+             "rewards": {"daily": [{"day": 1, "items": [{"id": "药水", "count": 2}],
+                                    "coins": 50, "exp": 20}],
+                          "streak": [{"days": 7, "items": [{"id": "钻石", "count": 1}], "gem": 3}]},
+             "makeup": {"enabled": True, "cost": {"coins": 100}, "max_per_month": 3},
+             "bonus": None},
+    "monthly": {"id": "monthly", "name": "月度签到", "type": "monthly",
+                "period": {"reset_on_break": True},
+                "rewards": {"daily": [{"day": 1, "coins": 60, "exp": 25}],
+                             "monthly_total": [{"days": 15, "items": [{"id": "强化石", "count": 3}]}]},
+                "makeup": {"enabled": False}},
+    "activity": {"id": "activity", "name": "xx庆典", "type": "activity",
+                 "period": {"start": "2026-08-01 00:00", "end": "2026-08-31 23:59",
+                            "cycle_days": 14},
+                 "rewards": {"daily": [{"day": 1, "items": [{"id": "药水", "count": 4}],
+                                        "coins": 30}]},
+                 "makeup": {"enabled": False}},
 }
-
-# 各表结算流水（2b5 §2.4：今日奖励 / 连签天数+进度 / 里程碑提示）
-_TODAY_ROWS = {
-    "loop": ["今日奖励：药水×2、金币+50、exp+20",
-             "连签天数：8 天 ｜ 进度 8/31",
-             "[连签里程碑达成] 钻石×1（连签 7 天）"],
-    "monthly": ["今日奖励：金币+60、exp+25",
-                "连签天数：3 天 ｜ 本月进度 15/31",
-                "[月度累计达成] 强化石×3（本月签满 15 天）"],
-    "activity": ["今日奖励（活动）×2 倍：药水×4",
-                 "连签天数：5 天 ｜ 进度 5/14"],
-}
-
-# 各表状态流水（连签 / 月度累计（不要求连续）/ 本月已签日期列表）
-_STATUS_ROWS = {
-    "loop": ["连签天数：8 天",
-             "本月已签：2026-08-01、2026-08-02、2026-08-03、2026-08-04、2026-08-05"],
-    "monthly": ["连签天数：3 天",
-                "月度累计：15/31 天",
-                "本月已签：2026-08-01～2026-08-15"],
-    "activity": ["连签天数：5 天",
-                 "本月已签：2026-08-16～2026-08-20"],
-}
-
-
-class FakeCheckinEngine:
-    """core/checkin.py 契约替身（见 checkin_commands.py 文件头消费接口）。"""
-
-    def __init__(self, tables=None):
-        self.tables = {k: dict(v) for k, v in (tables if tables is not None else TABLES).items()}
-
-    def resolve_checkin_table(self, ctx, arg):
-        """表名/序号/缺省(None=主表 loop，裁决⑧) → 表 id；找不到 → None。"""
-        if not self.tables:
-            return None
-        if arg is None:
-            return "loop" if "loop" in self.tables else next(iter(self.tables))
-        s = str(arg)
-        if s in self.tables:
-            return s
-        for tid, t in self.tables.items():
-            if t.get("name") == s:
-                return tid
-        try:
-            idx = int(s)
-        except ValueError:
-            return None
-        if 1 <= idx <= len(self.tables):
-            return list(self.tables)[idx - 1]
-        return None
-
-    def _sections(self, rows_map):
-        """段标题 = 表名 + 类型标注（2b5 §2.4 活动表「xx庆典（活动）」口径）。"""
-        out = []
-        for tid, t in self.tables.items():
-            title = t["name"]
-            if t.get("type") == "activity":
-                title = f"{title}（活动）"
-            out.append({"title": title, "rows": rows_map[tid]})
-        return out
-
-    def checkin_today(self, ctx):
-        """结算：跨天 → 发奖；同天 → 幂等「今天已签到」仍附进度（D-02，不重复发奖）。"""
-        if ctx.get("checkin_idempotent"):
-            return {"ok": True, "message": "今天已签到", "total": 8,
-                    "sections": self._sections(_TODAY_ROWS)}
-        return {"ok": True, "message": "✅ 今日签到完成", "total": 8,
-                "sections": self._sections(_TODAY_ROWS)}
-
-    def checkin_status(self, ctx):
-        return {"ok": True, "message": "✅ 签到状态", "total": 7,
-                "sections": self._sections(_STATUS_ROWS)}
-
-    def checkin_makeup(self, table_id, ctx):
-        """裁决⑦：只恢复 signed_days/streak，不补发所补日期 daily 奖励；里程碑不重复。"""
-        t = self.tables.get(table_id)
-        if t is None:
-            return {"ok": False, "message": TPL_NO_TABLE}
-        if ctx.get("checkin_makeup_enabled") is False:
-            return {"ok": False, "message": "❌ 当前未开启补签"}
-        if ctx.get("checkin_makeup_limit_hit"):
-            return {"ok": False, "message": "❌ 本月补签已达上限"}
-        return {"ok": True,
-                "message": f"✅ 补签成功：{t['name']}（只恢复签到记录，不补发当日奖励，里程碑不重复）"}
 
 
 def make_ctx(**over):
-    """全字段玩家签到 ctx（checkin_engine 注入替身；每场景新造避免互污染）。"""
+    """全字段玩家签到 ctx（注入真实 core/checkin 模块；每场景新造避免互污染）。"""
     base = {
         "name": "阿伟",
         "level": 5,
-        "currencies": {"coins": 1000, "gems": 5},
-        "inventory": {},
-        "items": {},
-        "settings": {},
-        "now": 1787706000,  # 2026-08-26 09:00 UTC+8（确定性）
+        "settings": SETTINGS,
         "checkin_tables": {k: dict(v) for k, v in TABLES.items()},
         "checkin_state": {},
-        "checkin_engine": FakeCheckinEngine(),
+        "longline_counters": {},
+        "event_counts": {},
+        "inventory": {},
+        "currencies": {"coins": 1000, "gem": 5},
+        "exp": 0,
+        "reputation_state": {},
+        "items": ITEMS,
+        "add_item": lambda item_id, count, bound=True: True,
+        "remove_item": lambda item_id, count: True,
+        "count_item": lambda item_id: 0,
+        "now": NOW,
+        "checkin_engine": real_checkin,  # 审查批次2 P0-1：真实引擎注入，替身已删
     }
     base.update(over)
     return base
@@ -160,18 +112,16 @@ def parse(raw: str) -> ParsedCommand:
 # ---------------------------------------------------------------------------
 
 def test_checkin_noarg_today_page1():
-    """/签到 → 多表结算汇总：各表奖励 + 连签/月累计进度 + 里程碑提示；5 条/页 + TPL-08 页脚。"""
+    """/签到 → 多表结算汇总：各表奖励 + 连签进度；5 条/页 + TPL-08 页脚（审查批次2 P0-1 真实引擎）。"""
     out = cmd_checkin(parse("/签到"), make_ctx())
     assert out.startswith("✅ 今日签到完成")
-    # 常驻循环表（表段头 + 今日奖励 + 连签进度 + 里程碑提示）
-    assert "━━ 常驻循环 ━━" in out
-    assert "今日奖励：药水×2、金币+50、exp+20" in out
-    assert "连签天数：8 天 ｜ 进度 8/31" in out
-    assert "[连签里程碑达成] 钻石×1（连签 7 天）" in out
-    # 月度表（页 1 为 rows 4-5：今日奖励 + 连签进度；[月度累计达成] 在页 2）
-    assert "━━ 月度签到 ━━" in out
-    assert "今日奖励：金币+60、exp+25" in out
-    assert "本月进度 15/31" in out
+    # 常驻循环表（表段头 + 今日奖励 + 连签进度）
+    assert "━━ 常驻循环（常驻循环） ━━" in out
+    assert "今日奖励：药水×2、50 coins、exp20" in out
+    assert "连签天数：1 天 ｜ 进度 1/7" in out
+    # 月度表（页 1 为 rows 4-5：今日奖励 + 兜底提示 + 连签进度）
+    assert "━━ 月度签到（月度签到） ━━" in out
+    assert "今日奖励：60 coins、exp25" in out
     # 5 条/页（m4 §2.2）：第 1 页 5 条 + TPL-08 页脚
     assert "— 第 1/2 页 · 共 8 条 · 输入 /签到 页码 翻页 —" in out
     # 活动表在页 2（8 条流水 → 2 页），页 1 不出现
@@ -179,12 +129,11 @@ def test_checkin_noarg_today_page1():
 
 
 def test_checkin_today_page2():
-    """/签到 2 → 第 2 页：月度表尾行 + 活动表段头 + 活动表流水 + 页脚。"""
+    """/签到 2 → 第 2 页：活动表段头 + 活动表流水 + 页脚。"""
     out = cmd_checkin(parse("/签到 2"), make_ctx())
-    assert "[月度累计达成] 强化石×3（本月签满 15 天）" in out
     assert "━━ xx庆典（活动） ━━" in out
-    assert "今日奖励（活动）×2 倍：药水×4" in out
-    assert "连签天数：5 天 ｜ 进度 5/14" in out
+    assert "今日奖励：药水×4、30 coins" in out
+    assert "连签天数：1 天 ｜ 进度 26/14" in out
     assert "— 第 2/2 页 · 共 8 条 · 输入 /签到 页码 翻页 —" in out
 
 
@@ -197,7 +146,7 @@ def test_checkin_clamp_last_page():
     """裁决②：/签到 9 超总页数 → 夹取最后一页 + （已到最后一页）。"""
     out = cmd_checkin(parse("/签到 9"), make_ctx())
     assert "━━ xx庆典（活动） ━━" in out
-    assert "连签天数：5 天 ｜ 进度 5/14" in out
+    assert "连签天数：1 天 ｜ 进度 26/14" in out
     assert "（已到最后一页）" in out
     assert "— 第 2/2 页 · 共 8 条 · 输入 /签到 页码 翻页 —" in out
 
@@ -216,17 +165,19 @@ def test_checkin_invalid_input_tpl12(raw, fragment):
 
 def test_checkin_idempotent_still_shows_progress():
     """2b5 §五 D-02：同日重复 /签到 → 「今天已签到」，不重复发奖但仍附各表当前连签+进度。"""
-    out = cmd_checkin(parse("/签到"), make_ctx(checkin_idempotent=True))
-    assert out.startswith("今天已签到")
-    assert "连签天数：8 天 ｜ 进度 8/31" in out   # 附进度
-    assert "今日奖励：药水×2、金币+50、exp+20" in out  # 附流水（不重复发奖语义由引擎保证）
-    assert "— 第 1/2 页 · 共 8 条 · 输入 /签到 页码 翻页 —" in out
+    ctx = make_ctx()
+    cmd_checkin(parse("/签到"), ctx)
+    out = cmd_checkin(parse("/签到"), ctx)
+    assert out.startswith("今天已签到（重复指令，未重复发放）")
+    assert "连签天数：1 天 ｜ 进度 1/7" in out   # 附进度
+    assert "今天已签到（不重复发奖）" in out    # 各表幂等行（不重复发奖语义由引擎保证）
+    assert "— 第 1/2 页 · 共 6 条 · 输入 /签到 页码 翻页 —" in out
 
 
 def test_checkin_today_engine_fail_message():
     """引擎 ok=False → 失败文案透传（如无生效签到表），不渲染段。"""
     class Boom:
-        def checkin_today(self, ctx):
+        def checkin_do(self, ctx):
             return {"ok": False, "message": "❌ 今日无生效签到表"}
     out = cmd_checkin(parse("/签到"), make_ctx(checkin_engine=Boom()))
     assert out == "❌ 今日无生效签到表"
@@ -235,42 +186,49 @@ def test_checkin_today_engine_fail_message():
 def test_checkin_today_message_only_no_rows():
     """引擎返回空流水 → 只输出 message（幂等且无流水边界）。"""
     class Empty:
-        def checkin_today(self, ctx):
-            return {"ok": True, "message": "✅ 今日签到完成", "total": 0, "sections": []}
+        def checkin_do(self, ctx):
+            return {"ok": True, "tables": []}
     out = cmd_checkin(parse("/签到"), make_ctx(checkin_engine=Empty()))
     assert out == "✅ 今日签到完成"
 
 
 # ---------------------------------------------------------------------------
-# /签到 状态：连签/月累计/本月已签日期列表（可翻页）
+# /签到 状态：连签/本月累计/今日已签（可翻页）
 # ---------------------------------------------------------------------------
 
 def test_checkin_status_page1():
-    """/签到 状态 → 连签/月累计/本月已签日期列表 + 5 条/页 + TPL-08 页脚（指令名=签到 状态）。"""
-    out = cmd_checkin(parse("/签到 状态"), make_ctx())
+    """/签到 状态 → 连签/本月累计/今日已签 + 5 条/页 + TPL-08 页脚（指令名=签到 状态）。"""
+    ctx = make_ctx()
+    cmd_checkin(parse("/签到"), ctx)
+    out = cmd_checkin(parse("/签到 状态"), ctx)
     assert out.startswith("✅ 签到状态")
-    assert "━━ 常驻循环 ━━" in out
-    assert "连签天数：8 天" in out
-    assert "本月已签：2026-08-01、2026-08-02、2026-08-03、2026-08-04、2026-08-05" in out
-    assert "━━ 月度签到 ━━" in out
-    assert "月度累计：15/31 天" in out
+    assert "━━ 常驻循环（常驻循环） ━━" in out
+    assert "连签天数：1 天" in out
+    assert "本月累计：1 天" in out
+    assert "今日已签：是" in out
+    assert "补签：0/3" in out
+    assert "━━ 月度签到（月度签到） ━━" in out
     # 页脚指令名 = 签到 状态（TPL-08 引导翻页）
-    assert "— 第 1/2 页 · 共 7 条 · 输入 /签到 状态 页码 翻页 —" in out
+    assert "— 第 1/2 页 · 共 10 条 · 输入 /签到 状态 页码 翻页 —" in out
     assert "━━ xx庆典（活动） ━━" not in out
 
 
 def test_checkin_status_page2():
     """/签到 状态 2 → 活动表段头 + 活动表状态流水 + 页脚。"""
-    out = cmd_checkin(parse("/签到 状态 2"), make_ctx())
+    ctx = make_ctx()
+    cmd_checkin(parse("/签到"), ctx)
+    out = cmd_checkin(parse("/签到 状态 2"), ctx)
     assert "━━ xx庆典（活动） ━━" in out
-    assert "本月已签：2026-08-16～2026-08-20" in out
-    assert "— 第 2/2 页 · 共 7 条 · 输入 /签到 状态 页码 翻页 —" in out
+    assert "今日已签：是" in out
+    assert "— 第 2/2 页 · 共 10 条 · 输入 /签到 状态 页码 翻页 —" in out
 
 
 def test_checkin_status_clamp():
     """裁决②：/签到 状态 9 超总页数 → 夹取最后一页 + （已到最后一页）。"""
-    out = cmd_checkin(parse("/签到 状态 9"), make_ctx())
-    assert "本月已签：2026-08-16～2026-08-20" in out
+    ctx = make_ctx()
+    cmd_checkin(parse("/签到"), ctx)
+    out = cmd_checkin(parse("/签到 状态 9"), ctx)
+    assert "━━ xx庆典（活动） ━━" in out
     assert "（已到最后一页）" in out
 
 
@@ -286,40 +244,43 @@ def test_checkin_status_invalid_page_tpl12(raw):
 # ---------------------------------------------------------------------------
 
 def test_checkin_makeup_by_table_id():
-    """/签到 补签 loop → 引擎消息透传（裁决⑦：只恢复记录、不补发当日奖励、里程碑不重复）。"""
+    """/签到 补签 loop → 类型名解析 → 引擎消息透传（裁决⑦：只计不补发）。"""
     out = cmd_checkin(parse("/签到 补签 loop"), make_ctx())
-    assert out == "✅ 补签成功：常驻循环（只恢复签到记录，不补发当日奖励，里程碑不重复）"
+    assert out == "✅ 补签成功（currency）· 只计不补发"
     assert "不补发" in out  # 裁决⑦ 只计不补发提示由引擎合成、命令层透传
 
 
 def test_checkin_makeup_by_table_name():
-    """/签到 补签 月度签到 → 名称解析 → 月度表。"""
+    """/签到 补签 月度签到 → 名称解析 → 月度表（makeup 未开启 → 引擎文案透传）。"""
     out = cmd_checkin(parse("/签到 补签 月度签到"), make_ctx())
-    assert out.startswith("✅ 补签成功：月度签到")
+    assert out == "❌ 当前未开启补签"
 
 
 def test_checkin_makeup_default_main_loop():
-    """/签到 补签（无表名）→ 缺省 = 主表 loop（裁决⑧ 缺省口径，工程补白 4）。"""
+    """/签到 补签（无表名）→ 缺省 = 主表 loop（裁决⑧ 缺省口径，工程补白 4；P0-1：直接传 None 引擎解析）。"""
     out = cmd_checkin(parse("/签到 补签"), make_ctx())
-    assert out == "✅ 补签成功：常驻循环（只恢复签到记录，不补发当日奖励，里程碑不重复）"
+    assert out == "✅ 补签成功（currency）· 只计不补发"
 
 
 def test_checkin_makeup_by_seq():
-    """/签到 补签 2 → 序号解析 → 第 2 表（月度）。"""
+    """/签到 补签 2 → 序号解析 → 第 2 表（月度，makeup 未开启）。"""
     out = cmd_checkin(parse("/签到 补签 2"), make_ctx())
-    assert out.startswith("✅ 补签成功：月度签到")
+    assert out == "❌ 当前未开启补签"
 
 
 def test_checkin_makeup_disabled():
     """2b5 §四 4.3：makeup 未开启 → 引擎「❌ 当前未开启补签」透传（不扣任何资源）。"""
-    out = cmd_checkin(parse("/签到 补签 loop"), make_ctx(checkin_makeup_enabled=False))
+    out = cmd_checkin(parse("/签到 补签 monthly"), make_ctx())
     assert out == "❌ 当前未开启补签"
 
 
 def test_checkin_makeup_monthly_limit():
-    """2b5 §四 4.3：本月已补 ≥ max_per_month → 拒绝补签。"""
-    out = cmd_checkin(parse("/签到 补签 loop"), make_ctx(checkin_makeup_limit_hit=True))
-    assert out == "❌ 本月补签已达上限"
+    """2b5 §四 4.3：本月已补 ≥ max_per_month → 拒绝补签（跨月归一口径引擎侧单测覆盖）。"""
+    ctx = make_ctx(checkin_state={
+        "loop": {"makeup_month": "2026-08", "makeup_used": 3, "signed_days": []},
+    })
+    out = cmd_checkin(parse("/签到 补签 loop"), ctx)
+    assert out == "❌ 本月补签已达上限 3 次"
 
 
 def test_checkin_makeup_no_table_value_domain():
@@ -331,9 +292,11 @@ def test_checkin_makeup_no_table_value_domain():
 
 def test_checkin_makeup_compact():
     """紧凑双认：/签到补签loop / 签到补签 → 子词经紧凑解析仍正确路由。"""
-    assert cmd_checkin(parse("/签到补签loop"), make_ctx()).startswith("✅ 补签成功：常驻循环")
-    assert cmd_checkin(parse("/签到补签"), make_ctx()).startswith("✅ 补签成功：常驻循环")
-    assert cmd_checkin(parse("/签到状态"), make_ctx()).startswith("✅ 签到状态")
+    assert cmd_checkin(parse("/签到补签loop"), make_ctx()) == "✅ 补签成功（currency）· 只计不补发"
+    assert cmd_checkin(parse("/签到补签"), make_ctx()) == "✅ 补签成功（currency）· 只计不补发"
+    ctx = make_ctx()
+    cmd_checkin(parse("/签到"), ctx)
+    assert cmd_checkin(parse("/签到状态"), ctx).startswith("✅ 签到状态")
 
 
 # ---------------------------------------------------------------------------
@@ -353,22 +316,22 @@ def test_checkin_parse_error_tpl12():
 
 def test_render_summary_pagination():
     """"5 条/页边界：8 条 → 页 1 五条 + 页脚，页 2 三条 + 段头 + 页脚（裁决② 夹取已单测）。"""
-    res = FakeCheckinEngine().checkin_today(make_ctx())
+    res = real_checkin.checkin_do(make_ctx())
     p1 = render_summary(res, 1)
     headers1 = sum(1 for line in p1.splitlines() if line.startswith("━━"))
     assert headers1 == 2                   # 常驻循环 + 月度签到 两个段头
-    assert "━━ 常驻循环 ━━" in p1
+    assert "━━ 常驻循环（常驻循环） ━━" in p1
     assert "— 第 1/2 页 · 共 8 条 · 输入 /签到 页码 翻页 —" in p1
     p2 = render_summary(res, 2)
     headers2 = sum(1 for line in p2.splitlines() if line.startswith("━━"))
-    assert headers2 == 2                   # 月度（跨页重现）+ 活动 段头
+    assert headers2 == 1                   # 活动 段头（页 2 仅活动流水）
     assert "━━ xx庆典（活动） ━━" in p2
     assert "— 第 2/2 页 · 共 8 条 · 输入 /签到 页码 翻页 —" in p2
 
 
 def test_render_summary_invalid_page_raises():
     """非法页码（0/负数/非数字）→ render_summary 抛 ValueError（壳层应先判 TPL-12）。"""
-    res = FakeCheckinEngine().checkin_today(make_ctx())
+    res = real_checkin.checkin_do(make_ctx())
     for bad in (0, -1, "abc"):
         with pytest.raises(ValueError):
             render_summary(res, bad)
@@ -398,15 +361,16 @@ def test_table_arg_of():
 
 
 def test_resolve_checkin_table_arg():
-    """resolve_checkin_table_arg：表 id / 名称 / 序号 / 缺省 → 表 id；None=找不到。"""
-    eng = FakeCheckinEngine()
+    """resolve_checkin_table_arg：表 id / 类型名 / 名称 / 序号 → 表 id；None=找不到；
+    arg=None → None（缺省主表由引擎按 None 解析，审查批次2 P0-1）。"""
     ctx = make_ctx()
-    assert cc.resolve_checkin_table_arg(ctx, eng, None) == "loop"
-    assert cc.resolve_checkin_table_arg(ctx, eng, "monthly") == "monthly"
-    assert cc.resolve_checkin_table_arg(ctx, eng, "月度签到") == "monthly"
-    assert cc.resolve_checkin_table_arg(ctx, eng, "2") == "monthly"
-    assert cc.resolve_checkin_table_arg(ctx, eng, "不存在") is None
-    assert cc.resolve_checkin_table_arg(ctx, eng, "99") is None
+    assert cc.resolve_checkin_table_arg(ctx, real_checkin, None) is None
+    assert cc.resolve_checkin_table_arg(ctx, real_checkin, "loop") == "loop"
+    assert cc.resolve_checkin_table_arg(ctx, real_checkin, "monthly") == "monthly"
+    assert cc.resolve_checkin_table_arg(ctx, real_checkin, "月度签到") == "monthly"
+    assert cc.resolve_checkin_table_arg(ctx, real_checkin, "2") == "monthly"
+    assert cc.resolve_checkin_table_arg(ctx, real_checkin, "不存在") is None
+    assert cc.resolve_checkin_table_arg(ctx, real_checkin, "99") is None
 
 
 # ---------------------------------------------------------------------------
@@ -430,20 +394,12 @@ def test_register_without_make_context_raises():
 
 
 def test_lazy_import_engine_fallback(monkeypatch):
-    """懒加载回退：ctx 未注入 checkin_engine → import_module('qbot_rpg.core.checkin')（路F2 落盘后）。"""
-    fake = FakeCheckinEngine()
-    real_import = cc.importlib.import_module
-
-    def fake_import(name):
-        if name == "qbot_rpg.core.checkin":
-            return fake
-        return real_import(name)
-
-    monkeypatch.setattr(cc.importlib, "import_module", fake_import)
+    """懒加载回退：ctx 未注入 checkin_engine → import_module('qbot_rpg.core.checkin') 真实模块。"""
     ctx = make_ctx()
     ctx.pop("checkin_engine")
     out = cmd_checkin(parse("/签到"), ctx)
     assert out.startswith("✅ 今日签到完成")
+    assert "今日奖励：药水×2、50 coins、exp20" in out
 
 
 def test_engine_missing_raises_wiring_pending(monkeypatch):
@@ -481,19 +437,22 @@ def test_subword_constants():
 
 def test_footer_tpl08_exact():
     """3d TC-12：页脚 TPL-08 逐字（无自造变体）。"""
-    out = cmd_checkin(parse("/签到"), make_ctx())
+    ctx = make_ctx()
+    out = cmd_checkin(parse("/签到"), ctx)
     assert "— 第 1/2 页 · 共 8 条 · 输入 /签到 页码 翻页 —" in out
-    out2 = cmd_checkin(parse("/签到 状态"), make_ctx())
-    assert "— 第 1/2 页 · 共 7 条 · 输入 /签到 状态 页码 翻页 —" in out2
+    out2 = cmd_checkin(parse("/签到 状态"), ctx)
+    assert "— 第 1/2 页 · 共 10 条 · 输入 /签到 状态 页码 翻页 —" in out2
 
 
 def test_no_decorative_emoji():
-    """3d §四 D-01：命令层渲染输出零装饰 emoji（仅 ✅/❌ 功能性标记允许；━━ 段头为排版符非 emoji）。"""
+    """3d §四 D-01：命令层渲染输出零装饰 emoji（仅 ✅/❌ 功能性标记允许；━━ 段头为排版符非 emoji）。
+    审查批次2 P0-1：引擎 message 的 📅/⚠ 不再透传为正文（正文按 tables 纯文本重建）。"""
     ctx = make_ctx()
+    cmd_checkin(parse("/签到"), ctx)
     outputs = [
-        cmd_checkin(parse("/签到"), ctx),
-        cmd_checkin(parse("/签到 2"), ctx),
-        cmd_checkin(parse("/签到 9"), ctx),
+        cmd_checkin(parse("/签到"), make_ctx()),
+        cmd_checkin(parse("/签到 2"), make_ctx()),
+        cmd_checkin(parse("/签到 9"), make_ctx()),
         cmd_checkin(parse("/签到 状态"), ctx),
         cmd_checkin(parse("/签到 状态 2"), ctx),
         cmd_checkin(parse("/签到 补签 loop"), ctx),

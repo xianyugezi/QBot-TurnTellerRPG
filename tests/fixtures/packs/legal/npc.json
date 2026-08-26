@@ -68,7 +68,7 @@
     "type": "narrator",
     "desc": "石甲蜥巢穴的守夜人，知道不少旧事。",
     "interactions": [
-      { "action": "reply", "text": "夜里落石机关最容易触发，绕着走。" }
+      { "action": "reply", "text": "夜里落石机关最容易触发，绕着走。", "info": true }
     ]
   }
 ]

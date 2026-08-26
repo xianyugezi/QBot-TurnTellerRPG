@@ -14,6 +14,8 @@
     示例 shop.json L437-511 / 旧字段兼容 L183）
   - 2026-08-27 裁决⑤⑥（m4_shared_contract §0.5-6）：**裁决⑤** stock+per_player 同条目并存（scope 只管
     默认侧，L450/L465 型无损表达）；**裁决⑥** 不配置 refresh = 永不刷新（TC-36 一致）
+  - M4 实现审查批次4（审查_M4实现_批次4_jspace.md P1-1：黑市 listing_count 引擎读取 + N 解析统一口径，
+    对齐定稿 L216/L507 正典）
 
 本文件为批次 3·路D1 的**独立模块**（主 agent 收口时并入 content/models.py + validator.py 的
 check_pack，同 npc_models 批次 2 收口模式）：
@@ -32,9 +34,10 @@ check_pack，同 npc_models 批次 2 收口模式）：
      per_player_period 为定稿 L183 旧字段兼容（裁决⑤ L450/L465 型并存），提供只读访问器与兼容解析。
   2. 黑市上架数量 N 来源：定稿 14 顶层字段表无「上架数量」字段，仅编辑器 §十 L393 提「上架数量」滑条
      （L216 字面「按 items 配置数量从池中抽 N 个上架」）。本实现新增可选顶层字段 `listing_count`
-     （int ≥0，黑市专用，【工程补白】命名）承接编辑器「上架数量」；N 解析：
-     listing_count > 0 → N = listing_count；否则 N = len(items)（对齐 L216 字面口径）；
-     两者皆缺省 → N=0（不上架任何商品）+ 黄提示「黑市未配上架数量」。
+     （int ≥0，黑市专用，【工程补白】命名）承接编辑器「上架数量」；N 解析（审查_M4实现_批次4 P1-1
+     统一口径，与 core/shop.py 引擎一致，对齐定稿 L216/L507 正典 items=[] pool=3 全池上架）：
+     listing_count>0 → N=listing_count；items 非空 → len(items)；否则 → len(pool)；
+     三者皆空才黄提示「黑市未配上架数量」。
   3. open_condition 条件结构校验本地镜像 engine/condition_engine 规则（同 npc_models 补白 1 口径：
      content 层仅允许依赖 data，不得反向依赖 engine——content → data 单向铁律，细化_3a §2.2）。
   4. 「同物不同价」（定稿 L427）/「未使用商店」（定稿 L426）黄提示在引用靶模块（items / npc）**已声明**
@@ -108,7 +111,7 @@ LEGACY_PER_PLAYER_PERIOD: str = "per_player_period"  # 旧 period → period 语
 
 # 【工程补白】2：黑市上架数量 N（编辑器「上架数量」落点，不在定稿 14 顶层字段表内）
 BLACKMARKET_LISTING_FIELD: str = "listing_count"
-BLACKMARKET_LISTING_DEFAULT: int = 0  # 0=按 items 数量（L216 字面口径）
+BLACKMARKET_LISTING_DEFAULT: int = 0  # 0=未显式配置 → 按 items/池数量（L216/L507 正典，审查 P1-1）
 
 # 条件引擎镜像常量（【工程补白】3：本地镜像 engine/condition_engine，不 import engine）
 COND_OPERATORS: Tuple[str, ...] = ("gt", "ge", "lt", "le", "eq", "ne", "between", "is", "not")
@@ -427,16 +430,18 @@ class ShopDef(BaseDef):
     # ---- 【工程补白】2：黑市上架数量 N ----
     @property
     def listing_count(self) -> Optional[int]:
-        """黑市上架数量（【工程补白】命名，承接编辑器「上架数量」；≥0，0=按 items 数量）。"""
+        """黑市上架数量（【工程补白】命名，承接编辑器「上架数量」；≥0，0=按 items/池数量）。"""
         return self._int(BLACKMARKET_LISTING_FIELD)
 
     @property
     def blackmarket_listing_n(self) -> int:
-        """黑市每次刷新上架数量 N 的解析结果：listing_count>0 → 该值；否则 len(items)
-        （定稿 L216「按 items 配置数量从池中抽 N 个上架」字面口径；两者皆缺省 → 0）。"""
+        """黑市每次刷新上架数量 N 的解析结果（审查_M4实现_批次4 P1-1 统一口径，对齐定稿 L216/L507 正典）：
+        listing_count>0 → 该值；items 非空 → len(items)；否则 → len(pool)。"""
         if self.listing_count is not None and self.listing_count > 0:
             return self.listing_count
-        return len(self.items)
+        if self.items:
+            return len(self.items)
+        return len(self.pool)
 
 
 def parse_shops(modules: Mapping[str, object]) -> Tuple[ShopDef, ...]:
@@ -988,7 +993,7 @@ def _check_shop(report: object, shop: Mapping[str, object], node_id: str, refs: 
         if not isinstance(v, int) or isinstance(v, bool) or v < 0:
             _err(report, f"shop.{BLACKMARKET_LISTING_FIELD}", "R-2",
                  rule="shop_listing_count_invalid", node_id=node_id, value=v,
-                 msg="%s 需 ≥0 整数（0=按 items 数量；【工程补白】黑市上架数量）"
+                 msg="%s 需 ≥0 整数（0=按 items/池数量；【工程补白】黑市上架数量）"
                      % (BLACKMARKET_LISTING_FIELD,))
 
     # items[] / pool[] 条目（同一 ShopItemDef 12 字段；pool 黑市专用）
@@ -1016,15 +1021,17 @@ def _check_shop(report: object, shop: Mapping[str, object], node_id: str, refs: 
         if not pool:
             _warn(report, "shop.pool", "Y-4", rule="shop_blackmarket_pool_empty",
                   node_id=node_id, msg="黑市商品池 pool 为空，无候选可抽？（定稿 L140/L216）")
-        # 上架数量 N 解析（【工程补白】2）：listing_count 与 items 皆缺省 → N=0 黄提示
+        # 上架数量 N 解析（【工程补白】2 / 审查_M4实现_批次4 P1-1 统一口径，对齐定稿 L216/L507 正典）：
+        # listing_count>0 → N；items 非空 → len(items)；否则 → len(pool)；三者皆空才黄提示
         listing = shop.get(BLACKMARKET_LISTING_FIELD)
         item_count = len(items) if isinstance(items, list) else 0
+        pool_count = len(pool) if isinstance(pool, list) else 0
         n = listing if isinstance(listing, int) and not isinstance(listing, bool) and listing > 0 \
-            else item_count
+            else (item_count if item_count > 0 else pool_count)
         if n <= 0:
             _warn(report, f"shop.{BLACKMARKET_LISTING_FIELD}", "Y-4",
                   rule="shop_blackmarket_no_listing", node_id=node_id,
-                  msg="黑市未配上架数量（%s 与 items 均空）→ 每次刷新不上架任何商品？确认"
+                  msg="黑市未配上架数量（%s/items/pool 均空）→ 每次刷新不上架任何商品？确认"
                       % (BLACKMARKET_LISTING_FIELD,))
 
 

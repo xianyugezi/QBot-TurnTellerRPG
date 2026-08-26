@@ -243,6 +243,7 @@ def test_loop_day_rotation_cycle_7():
 def test_daily_fallback_first_day_note():
     """TC-10：daily 只配 day1/2，签到第 3 天 → 按第 1 天奖励兜底 + 补全提示。"""
     ctx = make_ctx([make_monthly()])
+    record_adds(ctx)  # 物品奖励经 add_item hook 入包（生产装配注入；P1-1 无 hook 时 item 走 skipped）
     ctx["now"] = _ts(2026, 8, 3, 12, 0, 0)
     r = checkin_do(ctx)
     m = row(ctx, r, "checkin_monthly")
@@ -291,6 +292,7 @@ def test_streak_independent_per_table():
 def test_streak_milestone_extra_reward():
     """TC-14：streak 配 days=7 → 连签到第 7 天，每日奖励之外额外发 钻石×1。"""
     ctx = make_ctx([make_monthly()])
+    record_adds(ctx)  # 物品奖励经 add_item hook 入包（生产装配注入；P1-1 无 hook 时 item 走 skipped）
     hits = []
     for n in range(1, 8):
         ctx["now"] = _ts(2026, 8, n, 12, 0, 0)
@@ -343,6 +345,7 @@ def test_break_no_reset_accumulates():
 def test_monthly_total_fragmented_accumulate():
     """TC-17：monthly_total 不要求连续——断断续续合计第 15 天仍发 强化石×3（碎片化铁律）。"""
     ctx = make_ctx([make_monthly()])
+    record_adds(ctx)  # M4 实现审查 P1-1：注入入包 hook（物品奖励不再 skip）
     granted = None
     for i in range(1, 31, 2):  # 1,3,5,...,29（15 天，全部断签）
         ctx["now"] = _ts(2026, 8, i, 12, 0, 0)
@@ -396,6 +399,25 @@ def test_month_milestone_once_per_month():
 # =============================================================================
 # ③ bonus 乘算（D-04 / TC-33）
 # =============================================================================
+
+
+def test_bonus_mult_mult_key_engine_consumed():
+    """M4 实现审查批次5 P1-3：引擎 _bonus_multiplier 读 mult（内容层正典键）——{"mult": 2} 生效。"""
+    ctx = make_ctx([make_loop(bonus={"mult": 2})])
+    r = checkin_do(ctx)
+    l = row(ctx, r, "checkin_loop")
+    assert l["daily_granted"]
+    # 对齐 test_bonus_multiplier_scaling 口径：coins 默认 50 ×2 = 100，exp 20 ×2 = 40
+    assert ctx["currencies"].get("coins", 0) == 100, f"mult 键未生效，coins={ctx['currencies'].get('coins')}"
+    assert ctx["exp"] == 40, f"mult 键未生效，exp={ctx['exp']}"
+
+def test_bonus_mult_compat_keys_still_work():
+    """P1-3 兼容键保留：multiplier/rate/倍率 仍可读。"""
+    for key in ("multiplier", "rate", "倍率"):
+        ctx = make_ctx([make_loop(bonus={key: 2})])
+        r = checkin_do(ctx)
+        l = row(ctx, r, "checkin_loop")
+        assert l["daily_granted"], f"{key} 兼容键失效"
 def test_bonus_multiplier_scaling():
     """TC-33：bonus 倍率 2 → 当日 items.count/coins/exp 统一 ×2（向下取整）。"""
     ctx = make_ctx([make_loop(bonus={"multiplier": 2})])
@@ -544,6 +566,47 @@ def test_makeup_default_table_is_primary_loop():
     assert "checkin_monthly" not in ctx["checkin_state"]
 
 
+def test_makeup_cross_month_limit_resets_and_count():
+    """审查_M4实现_批次5_jspace.md P1-1：8 月补满 3 次（max=3），9 月首日直接补签 →
+    不误拦（新月份重新计数）、makeup_used=1（不再沿用上月 used 错计）。"""
+    ctx = make_ctx([make_loop(makeup={"enabled": True, "cost": {"coins": 10},
+                                      "max_per_month": 3})])
+    ctx["currencies"]["coins"] = 1000
+    # 8 月补满 3 次（不同日期）
+    for n in (1, 2, 3):
+        ctx["now"] = _ts(2026, 8, n, 12, 0, 0)
+        r = checkin_makeup(ctx)
+        assert r["ok"] is True
+    st = ctx["checkin_state"]["checkin_loop"]
+    assert st["makeup_month"] == "2026-08" and st["makeup_used"] == 3
+    # 9 月首日（未先普通 /签到）直接补签 → 应成功且 makeup_used=1（跨月视为 0 重新计数）
+    ctx["now"] = _ts(2026, 9, 1, 12, 0, 0)
+    r = checkin_makeup(ctx)
+    assert r["ok"] is True
+    assert r["makeup_used"] == 1
+    st = ctx["checkin_state"]["checkin_loop"]
+    assert st["makeup_month"] == "2026-09"
+    assert st["makeup_used"] == 1
+    assert st["month_total"] == 1          # 当月累计从新月份起算
+    assert "2026-09-01" in st["signed_days"]
+
+
+def test_makeup_cross_month_unlimited_no_miscount():
+    """审查批次5 P1-1 反例：max_per_month=0（不限）时，9 月首笔补签不沿用上月 used 错计
+    （修复前为 4，修复后应为 1）。"""
+    ctx = make_ctx([make_loop(makeup={"enabled": True, "cost": {"coins": 10},
+                                      "max_per_month": 0})])
+    ctx["currencies"]["coins"] = 1000
+    for n in (1, 2, 3):
+        ctx["now"] = _ts(2026, 8, n, 12, 0, 0)
+        assert checkin_makeup(ctx)["ok"] is True
+    assert ctx["checkin_state"]["checkin_loop"]["makeup_used"] == 3
+    ctx["now"] = _ts(2026, 9, 1, 12, 0, 0)
+    r = checkin_makeup(ctx)
+    assert r["ok"] is True and r["makeup_used"] == 1
+    assert ctx["checkin_state"]["checkin_loop"]["makeup_used"] == 1
+
+
 # =============================================================================
 # ⑤ 状态查询 / 三键取值（TC-32 + 裁决⑧）
 # =============================================================================
@@ -598,6 +661,29 @@ def test_three_keys_monthly_and_activity():
     # 未知表名/字段 → 0
     assert checkin_value(ctx, "bogus", "连续天数") == 0
     assert checkin_value(ctx, "loop", "不存在的字段") == 0
+
+
+def test_three_keys_table_id_qualifier():
+    """审查_M4实现_批次5_jspace.md P1-2：表 id 限定键与生效 type 限定键等价可求值
+    （校验器「双口径」承诺兑现：checkin_value 按 id 解析 + condition_engine id→type 映射）。"""
+    ctx = make_ctx(DEFAULT_TABLES)
+    checkin_do(ctx)
+    checkin_condition_ctx(ctx)
+    # core.checkin_value 按表 id 解析（表 id 恰为定稿正典示例 checkin_monthly / checkin_loop）
+    assert checkin_value(ctx, "checkin_monthly", "本月天数") == 1
+    assert checkin_value(ctx, "checkin_monthly", "连续天数") == 1
+    assert checkin_value(ctx, "checkin_loop", "连续天数") == 1
+    assert checkin_value(ctx, "checkin_loop", "今日已签") == 1
+    # condition_engine 消费表 id 限定键（不再静默 False）
+    assert eval_condition(
+        {"var": "[签到:checkin_monthly.本月天数]", "op": "ge", "value": 1}, ctx) is True
+    assert eval_condition(
+        {"var": "[签到:checkin_monthly.连续天数]", "op": "ge", "value": 2}, ctx) is False
+    assert eval_condition(
+        {"var": "[签到:checkin_loop.今日已签]", "op": "eq", "value": 1}, ctx) is True
+    # 与 type 限定键（monthly / loop）同值
+    assert checkin_value(ctx, "checkin_monthly", "本月天数") == checkin_value(
+        ctx, "monthly", "本月天数")
 
 
 def test_condition_engine_consumes_checkin_projection():

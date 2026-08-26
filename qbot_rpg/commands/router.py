@@ -8,6 +8,11 @@
   - docs/细化/细化_2b2_对话会话状态机.md（会话激活区间 = 建会话→会话收尾；结束词三同义 离开·再见·退出；
     R1-R5 判定表）
   - 2026-08-27 裁决①（战斗中裸数字 = 快捷绑定，无会话上下文，快捷表生效；选技能用带指令词「/攻击 2」）
+  - M4 实现审查批次1 P1-2（审查_M4实现_批次1_jspace.md）：双管线口径漂移修复 ①②——
+    ① require_at 下裸 / 不再豁免 @（无 @ 一律忽略）；② 剥离顺序统一「先 @ 后 /」
+    （@机器人 /攻击 2 组合可命中，对齐 parsers S0）；并补 at_gate_passed 让快捷展开串
+    不再重复要求 @（对齐 parsers 展开重入 require_at=False），配套
+    tests/unit/test_dual_pipeline_parity.py 同输入两管线一致性测试。
 
 职责（细化_3a §1.3 壳层职责清单 · 唯一 NoneBot 适配器接触点）——本模块实装：
   ① 指令注册表（CommandSpec：名称/解析函数/白名单标记/GM 权限标记/别名/权限等级/冷却）
@@ -26,7 +31,9 @@ ParsedCommand 细粒度 token 化（分隔符全集 / 紧凑双认 / command_mod
   1) 别名紧凑形态（如「炼丹3」）3c 未显式定义：按最长前缀匹配，与白名单紧凑双认（S6 L109-112）同构。
   2) route_message 带 allow_shortcut 参数；快捷展开深度 = 1（S7 裁决：命中快捷后替换为指令串，从
      指令名层续走，不再回查快捷表，防 A→B→A 无限循环）。
-  3) require_at 开启时：输入既无 @机器人 前缀也无 / 前缀 → 忽略（非指令触发；L102-104/L178）。
+  3) require_at 开启时：@机器人 是唯一放行入口——输入无 @（含裸 / 前缀）一律忽略
+     （非指令触发；L102-104/L178）；@ 剥离后紧随的 / 一并剥离（@机器人 /攻击 2 组合）。
+     快捷展开串经 at_gate_passed 传递 @ 门（对齐 parsers 展开重入 require_at=False）。
   4) keep_original=false 时发原指令 → 独立路由结果 kind="hidden_original"，供调用方渲染
      「没有这个指令，试试『XX』？」（A04 / TC-33）。
   5) 权限/频率/防抖等执行层职责仍由下游（on_command 装配 / 5b GM 层）承担；本模块仅暴露
@@ -363,20 +370,34 @@ def _split_first(text: str) -> tuple:
     return parts[0], (parts[1] if len(parts) > 1 else "")
 
 
-def _strip_trigger_prefix(text: str, ctx: RoutingContext) -> tuple:
-    """S0 预处理：剥离 / 前缀（记录 prefix_stripped）；require_at 时剥离 @机器人。
+def _strip_trigger_prefix(text: str, ctx: RoutingContext, *,
+                          at_gate_passed: bool = False) -> tuple:
+    """S0 预处理：剥离触发前缀（记录 prefix_stripped / at_stripped）。
+
+    剥离顺序统一为「先 @ 后 /」（与 parsers S0 同序，P1-2b 对拍）：
+      - require_at 开启：@机器人 是唯一放行入口——先剥 @，再剥紧随的 /（@机器人 /攻击 2）；
+        输入无 @ 且非快捷展开（at_gate_passed=False）→ 一律不剥（裸 / 也不豁免 @，P1-2a，
+        与 parsers 一致）；at_gate_passed=True（快捷展开串，触发消息已过 @ 门）时展开串的
+        / 正常剥离（对齐 parsers 展开重入 require_at=False）。
+      - require_at 关闭：只剥前导 /。
 
     返回 (text, prefix_stripped, at_stripped)。
-    【工程补白】require_at 开启时输入无 @ 也无 / → 调用方应忽略（非指令触发）。
     """
     prefix_stripped = False
     at_stripped = False
-    if text.startswith("/"):
+    if ctx.require_at:
+        if text.startswith(ctx.at_text):
+            text = text[len(ctx.at_text):].lstrip()
+            at_stripped = True
+            if text.startswith("/"):
+                text = text[1:].strip()
+                prefix_stripped = True
+        elif at_gate_passed and text.startswith("/"):
+            text = text[1:].strip()
+            prefix_stripped = True
+    elif text.startswith("/"):
         text = text[1:].strip()
         prefix_stripped = True
-    elif ctx.require_at and text.startswith(ctx.at_text):
-        text = text[len(ctx.at_text):].lstrip()
-        at_stripped = True
     return text, prefix_stripped, at_stripped
 
 
@@ -466,7 +487,8 @@ def _trigger_allowed(spec: CommandSpec, prefix_stripped: bool, ctx: RoutingConte
 
 
 def route_message(raw: str, ctx: Any = None, *, allow_shortcut: bool = True,
-                  authorized_prefix: bool = False) -> RouteResult:
+                  authorized_prefix: bool = False,
+                  at_gate_passed: bool = False) -> RouteResult:
     """路由管线单级判定（3c §5.3 优先级总表 + 2b2 R1-R5 + 裁决①）：
 
       ① 对话会话激活 且 输入 ∈ {纯数字, 继续, 退出/离开/再见, 选择 N} → 送状态机
@@ -479,6 +501,8 @@ def route_message(raw: str, ctx: Any = None, *, allow_shortcut: bool = True,
     allow_shortcut=False 时跳过 ① 会话与 ② 快捷（S7 裁决：快捷展开后从指令名层 S4 续走，不再回查）。
     authorized_prefix=True 时按已授权前缀放行（E01/E05：快捷以 / 触发后，展开串不再受前缀模式门控，
     由 route_and_expand 注入）。
+    at_gate_passed=True 时跳过 require_at @ 门（P1-2 对拍：触发消息已过 @ 门，快捷展开串不再
+    重复要求 @，对齐 parsers 展开重入 require_at=False；由 route_and_expand 注入）。
     返回 RouteResult。
     """
     c = _as_ctx(ctx)
@@ -486,12 +510,13 @@ def route_message(raw: str, ctx: Any = None, *, allow_shortcut: bool = True,
     if not text:
         return RouteResult(ROUTE_IGNORED, raw=raw, text="", reason="empty")
 
-    text, prefix_stripped, at_stripped = _strip_trigger_prefix(text, c)
+    text, prefix_stripped, at_stripped = _strip_trigger_prefix(text, c, at_gate_passed=at_gate_passed)
     if not text:
         return RouteResult(ROUTE_IGNORED, raw=raw, text=text, prefix_stripped=prefix_stripped,
                            reason="empty_after_prefix")
     # 【工程补白】require_at 开启但输入既无 @ 也无 / → 非指令触发，忽略
-    if c.require_at and not prefix_stripped and not at_stripped:
+    # （P1-2a：裸 / 也不豁免 @；at_gate_passed=True 时触发消息已过 @ 门，不重复判定）
+    if c.require_at and not prefix_stripped and not at_stripped and not at_gate_passed:
         return RouteResult(ROUTE_IGNORED, raw=raw, text=text, prefix_stripped=prefix_stripped,
                            reason="require_at_miss")
 
@@ -576,7 +601,8 @@ def route_and_expand(raw: str, ctx: Any = None) -> RouteResult:
         # 工程补白：快捷命中断言其展开串存在（kind=shortcut 时必置）
         return first
     second = route_message(first.shortcut_command, ctx, allow_shortcut=False,
-                           authorized_prefix=first.prefix_stripped)
+                           authorized_prefix=first.prefix_stripped,
+                           at_gate_passed=True)
     # 保留快捷来源信息（P03 mode=shortcut / P04 expand_count=1）
     second.raw = raw
     second.mode = MODE_SHORTCUT

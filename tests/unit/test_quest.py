@@ -8,8 +8,8 @@ P3-2 接取数记录供面板）。
 覆盖：三原语求值（值型/累计型/事件型/op 双写/全与/失败降级）· 接取（accept_limit≤5/0=不限/主线计入/
 unlock_chain/已完成拦截/每日接取计数）· 进度（逐条件 current/target/met + 交付判定）· 完成结算
 （reward 发放 exp/货币/物品/rep / 完成即移出 / daily_limit≤10/0=不限 / main_progress / consume 扣物 /
-重复衰减 / 幂等 / 条目失败跳过）· 任务板（主线置顶/板槽/NPC 支线/序号/active 标记/zone 排除）·
-quest_daily 懒计算（05:00 重置）· 放弃。
+重复衰减 / 幂等 / 条目失败跳过 / 物品未入包整单回滚不封口幂等 P1-1）· 任务板（主线置顶/板槽/NPC 支线/
+序号/active 标记/zone 排除）· quest_daily 懒计算（05:00 重置）· 放弃。
 """
 
 from __future__ import annotations
@@ -524,6 +524,59 @@ def test_complete_entry_failure_skips_p1_2():
     # 结算簿记仍完成（单事务=簿记原子性，条目失败不触发整单回滚）
     assert "q1" not in ctx["quest_active"]
     assert ctx["quest_daily"]["completed"] == 1
+
+
+def test_complete_item_no_add_hook_rolls_back_retryable_p1_1():
+    """M4 实现审查批次1 P1-1：无 add_item hook → 物品奖励未入包 → 整单回滚 + 黄字提示 + 可重试。
+
+    旧行为：物品条目 granted(applied=False) 且幂等封口 → 静默丢奖无法补救。
+    新行为：reward 层 skip(item_add_failed)，本引擎结算后判定 → 整单回滚（exp/coins 也回滚、
+    quest 仍在 active、daily 不计）、ledger 不封口、message 提示"物品未入包"。
+    """
+    ctx = _prepare_complete([{"exp": 50}, {"item": "铁矿", "count": 3}], conditions=[])
+    ctx["tx_id"] = "tx-p11"
+    ctx["ledger"] = set()
+    out = quest_complete("q1", ctx)
+    assert out["ok"] is False and out["reason"] == "item_add_failed"
+    assert out["retryable"] is True
+    assert "物品未入包" in out["message"]
+    # 整单回滚：exp 未入账、任务仍在进行中、daily 不计、幂等 ledger 未封口
+    assert ctx["exp"] == 0 and ctx["currencies"] == {}
+    assert "q1" in ctx["quest_active"]
+    assert ctx["quest_daily"]["completed"] == 0
+    assert "tx-p11" not in ctx["ledger"]
+
+
+def test_complete_item_no_hook_retry_after_wire_succeeds_p1_1():
+    """P1-1：物品未入包回滚且不封口幂等 → 补接 add_item hook 后同 tx 重试成功，且可再次幂等。"""
+    ctx = _prepare_complete([{"exp": 50}, {"item": "铁矿", "count": 3}], conditions=[])
+    ctx["tx_id"] = "tx-p11"
+    ctx["ledger"] = set()
+    out1 = quest_complete("q1", ctx)
+    assert out1["ok"] is False and out1["reason"] == "item_add_failed"
+    assert "tx-p11" not in ctx["ledger"]  # 未封口 → 可重试
+
+    adds = record_adds(ctx)  # 装配补接入包 hook（批次 7 make_context 注入 add_item）
+    out2 = quest_complete("q1", ctx)
+    assert out2["ok"] is True
+    assert ctx["exp"] == 50 and ("铁矿", 3, True) in adds  # 奖励完整入账
+    assert "tx-p11" in ctx["ledger"]  # 成功后封口
+
+    out3 = quest_complete("q1", ctx)
+    assert out3["idempotent"] is True and ctx["exp"] == 50  # 不二次发放
+
+
+def test_complete_item_hook_returns_false_rolls_back_p1_1():
+    """P1-1：add_item hook 存在但返回 False（背包拒绝）→ 同样整单回滚 + 不封口幂等。"""
+    ctx = _prepare_complete([{"item": "铁矿", "count": 3}], conditions=[])
+    ctx["add_item"] = lambda item_id, count, bound: False
+    ctx["tx_id"] = "tx-p11"
+    ctx["ledger"] = set()
+    out = quest_complete("q1", ctx)
+    assert out["ok"] is False and out["reason"] == "item_add_failed"
+    assert "物品未入包" in out["message"]
+    assert "q1" in ctx["quest_active"]
+    assert "tx-p11" not in ctx["ledger"]
 
 
 # ===========================================================================

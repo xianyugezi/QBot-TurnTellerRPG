@@ -56,7 +56,9 @@
      （quest_available），进度 current 仅供面板展示，不参与判定。
   8) 发放器唯一实现 = core/reward.dispatch_reward（A1）：逐条目失败黄字跳过不中断整批（P1-2）；
      仅 batch 级失败（ctx 非法 / reward 形态非法）触发整单回滚。幂等：ctx["tx_id"]+ctx["ledger"]
-     （A1 模式），同 tx 重复调用 → idempotent，不二次发放。
+     （A1 模式），同 tx 重复调用 → idempotent，不二次发放。M4 实现审查批次1 P1-1：物品入包失败
+     （无 add_item hook / hook 返回 False）在 reward 层为条目级 skip(item_add_failed)，本引擎结算后
+     判定"物品未入包"→ 整单回滚 + 不封口幂等（黄字提示，可重试），防静默丢奖。
   9) 重复衰减（F-4 / TC-23）：repeatable=true 无衰减；repeatable={decay,cap} 第 n 次奖励 ×decay^n
      至 cap 下限（标量数值 int 向下取整、物品数量 floor 至 ≥1）；完成次数记 quest_daily.decay。
 
@@ -801,15 +803,34 @@ def _mark_idempotent(ctx: MutableMapping[str, Any]) -> None:
         ledger.add(tx_id)
 
 
+def _item_reward_failed(rw: Mapping[str, Any]) -> bool:
+    """P1-1 判定：物品奖励是否未实际入包。
+
+    - rw["skipped"] 中 type==item 且 reason==item_add_failed（hook 缺失 / 返回 False / 抛错）；
+    - rw["granted"] 中 type==item 且 applied is False（防御：历史/未来路径残留的伪 granted）。
+
+    命中 → 该物品奖励未入包，须整单回滚 + 不封口幂等（可重试），防静默丢奖。
+    """
+    for s in rw.get("skipped") or []:
+        if (isinstance(s, Mapping) and s.get("type") == "item"
+                and s.get("reason") == "item_add_failed"):
+            return True
+    for g in rw.get("granted") or []:
+        if isinstance(g, Mapping) and g.get("type") == "item" and g.get("applied") is False:
+            return True
+    return False
+
+
 def quest_complete(quest_id: str, ctx: MutableMapping[str, Any]) -> dict:
     """/交付 N：完成结算（D-04 单事务语义）。
 
     校验链：①存在 → ②进行中（quest_active 含该任务）→ ③条件全真（三原语交付判定）→
     ④每日完成上限 F-1（daily_limit≤10，0=不限）→ ⑤consume=true 背包够数。
     结算（快照-回滚，单事务）：①reward 发放（dispatch_reward，逐条目失败黄字跳过 P1-2，batch 失败
-    回滚）→ ②main_progress +1（若 main:true）→ ③移出 quest_active（完成即移出）→
-    ④quest_daily.completed +1 / 衰减计数更新 → ⑤quest_completed 登记（非 repeatable）。
-    幂等：同 tx_id 重复调用 → idempotent，不二次发放。
+    回滚；物品未入包 item_add_failed → 整单回滚，P1-1）→ ②main_progress +1（若 main:true）→
+    ③移出 quest_active（完成即移出）→ ④quest_daily.completed +1 / 衰减计数更新 →
+    ⑤quest_completed 登记（非 repeatable）。
+    幂等：同 tx_id 重复调用 → idempotent，不二次发放；物品未入包回滚时**不封口幂等**（可重试，P1-1）。
     """
     if _idempotent_hit(ctx):
         return {"ok": True, "idempotent": True,
@@ -860,6 +881,10 @@ def quest_complete(quest_id: str, ctx: MutableMapping[str, Any]) -> dict:
         rw = dispatch_reward(_scale_reward(entries, mult, cap_amt), ctx)
         if not rw["ok"]:
             raise _Rollback("reward_failed")
+        # M4 实现审查批次1 P1-1：物品奖励未实际入包（无 add_item hook / hook 失败）→
+        # 整单回滚 + 不封口幂等（黄字提示"物品未入包"，可重试），防静默丢奖
+        if _item_reward_failed(rw):
+            raise _Rollback("item_add_failed")
         # ② main_progress 累计（主线 done 计数，落 longline_counters，定稿 L61）
         if quest.get("main") is True:
             llc = ctx.setdefault("longline_counters", {})
@@ -884,6 +909,11 @@ def quest_complete(quest_id: str, ctx: MutableMapping[str, Any]) -> dict:
                     completed.append(quest_id)
     except _Rollback as exc:
         _restore(ctx, snap)
+        if exc.reason == "item_add_failed":
+            # P1-1：物品未入包 → 回滚已完成、不封口幂等（ledger 未写），黄字提示可重试
+            return {"ok": False, "reason": "item_add_failed",
+                    "message": "⚠️ 物品未入包（奖励未发放，可重试）",
+                    "quest_id": quest_id, "retryable": True}
         return {"ok": False, "reason": exc.reason, "message": "❌ 结算失败，已回滚"}
 
     _mark_idempotent(ctx)

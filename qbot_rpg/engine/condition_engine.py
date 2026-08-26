@@ -249,18 +249,33 @@ def _parse_event_var(var: str) -> Tuple[str, Optional[str]]:
     return var, None
 
 
-def _parse_checkin_body(body: str) -> Tuple[Optional[str], Optional[str]]:
-    """[签到:<表名>.<字段>] 解析 → (表名, 内部字段)；缺省表名 = 主表 loop（用户裁决⑧）。"""
+def _parse_checkin_body(body: str, ctx: Optional[Mapping] = None) -> Tuple[Optional[str], Optional[str]]:
+    """[签到:<表名>.<字段>] 解析 → (表名, 内部字段)；缺省表名 = 主表 loop（用户裁决⑧）。
+
+    表名双口径（审查_M4实现_批次5_jspace.md P1-2）：生效 type 名（loop/monthly/activity）直接通过；
+    表 id 限定键（如 [签到:checkin_monthly.本月天数]，表 id 恰为定稿正典示例）经 ctx["checkin_tables"]
+    映射到生效 type 再消费——兑现内容层校验器「表 id 或生效 type 两口径皆可解析」承诺，条件不再静默 False。"""
     if "." in body:
         table, field = body.split(".", 1)
     else:
         table, field = "loop", body
-    if table not in CHECKIN_TABLES:
-        return None, None
-    field_internal = CHECKIN_FIELDS.get(field)
-    if field_internal is None:
-        return None, None
-    return table, field_internal
+    if table in CHECKIN_TABLES:
+        field_internal = CHECKIN_FIELDS.get(field)
+        if field_internal is None:
+            return None, None
+        return table, field_internal
+    if isinstance(ctx, Mapping):
+        tables = ctx.get("checkin_tables")
+        if isinstance(tables, Mapping):
+            hit = tables.get(table)
+            if isinstance(hit, Mapping):
+                typ = hit.get("type", "loop")
+                if typ in CHECKIN_TABLES:
+                    field_internal = CHECKIN_FIELDS.get(field)
+                    if field_internal is None:
+                        return None, None
+                    return typ, field_internal
+    return None, None
 
 
 # -------------------------------------------------------------------------------------
@@ -568,7 +583,7 @@ def _resolve_checkin(ctx: Mapping[str, Any], var: str) -> object:
     body = var[len("[签到:"):]
     if body.endswith("]"):
         body = body[:-1]
-    table, field = _parse_checkin_body(body)
+    table, field = _parse_checkin_body(body, ctx)
     if table is None or field is None:
         return None
     ck = ctx.get("checkin")

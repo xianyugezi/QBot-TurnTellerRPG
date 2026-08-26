@@ -47,7 +47,8 @@
      （含已补）→ 幂等返回不重复扣费（D-03 / TC-24）。补签卡物品 ID 缺省常量「补签卡」，可经
      makeup.card_item / ctx["makeup_card_item"] 覆盖（schema 无显式卡 ID 字段，工程补白）。
   6) bonus（D-04）：倍率作用于本次实际发放条目 items.count/coins/gem/exp，int 向下取整；物品数量下限
-     1（防倍率削 0），标量下限 0。bonus 形态：{multiplier:N} / {rate:N} / {倍率:N} / 裸数值 N。
+     1（防倍率削 0），标量下限 0。bonus 形态：{mult:N}（内容层/校验器正典键，P1-3 对齐）/
+     {multiplier:N} / {rate:N} / {倍率:N} / 裸数值 N（multiplier/rate/倍率 为兼容键保留）。
   7) 发奖失败兜底（D-05 / TC-27）：reward 单条失败（物品不存在等）黄字跳过、不吞整次签到；单表 batch
      级失败（ctx 非法 / reward 形态非法）→ 该表快照回滚（含发奖桶与 state），跨表继续。daily 漏配天数
      → 按第 1 天奖励兜底 + notes「第 X 天未配置，已按第 1 天奖励补全」（TC-10 / 定稿 L27）。
@@ -296,6 +297,16 @@ def _table_id_for_type(ctx: Mapping[str, Any], typ: str) -> Optional[str]:
     return None
 
 
+def _table_id_for(ctx: Mapping[str, Any], table: str) -> Optional[str]:
+    """表限定符 → 表 ID（裁决⑧ 双口径：生效 type 名 或 表 id 皆可解析——
+    审查_M4实现_批次5_jspace.md P1-2 消费侧统一支持表 id，兑现内容层校验器「双口径」承诺）。"""
+    tid = _table_id_for_type(ctx, table)
+    if tid is not None:
+        return tid
+    hit = resolve_checkin_table(ctx, table)
+    return table if isinstance(hit, Mapping) else None
+
+
 def _primary_table_id(ctx: Mapping[str, Any]) -> Optional[str]:
     """主表 = 首个 loop 表；无 loop → 首表（裁决⑧ 缺省表名 = 主表 loop）。"""
     tables = _all_checkin_tables(ctx)
@@ -400,6 +411,17 @@ def _normalize_month(node: MutableMapping, today: object) -> None:
         node["makeup_used"] = 0
 
 
+def _monthly_makeup_used(node: Optional[Mapping], today: object) -> int:
+    """当月有效补签次数（审查_M4实现_批次5_jspace.md P1-1 跨月归一口径）：
+    节点 makeup_month == 当前月 → 该月 makeup_used；跨月/缺失 → 0（新月份重新计数，
+    不做 8 月旧 used 的误拦/错计）。守卫期与支付后应用期共用，确保月上限判定与写入同源。"""
+    if not isinstance(node, Mapping):
+        return 0
+    if node.get("makeup_month") != _month_key(today):
+        return 0
+    return _as_int(node.get("makeup_used"))
+
+
 def _channel_entries(entry: Mapping) -> List[dict]:
     """通道条目 {day/days, items[]{id,count}, coins, gem, exp, rep} → 单目的 reward 条目数组
     （wrapper 键剔除；items 逐条 {item,count,bound}；标量逐键 {key:value}），供 dispatch_reward。"""
@@ -428,14 +450,16 @@ def _channel_entries(entry: Mapping) -> List[dict]:
 
 
 def _bonus_multiplier(table: Mapping) -> float:
-    """bonus 倍率（D-04 / TC-33）：{multiplier|rate|倍率:N} 或裸数值；无 → 1.0。"""
+    """bonus 倍率（D-04 / TC-33）：{mult|multiplier|rate|倍率:N} 或裸数值；无 → 1.0。
+    mult 为内容层/校验器/编辑器正典键（审查_M4实现_批次5_jspace.md P1-3 键名分裂修复）；
+    multiplier/rate/倍率 为兼容键保留。"""
     bonus = table.get("bonus")
     if isinstance(bonus, bool):
         return 1.0
     if isinstance(bonus, (int, float)):
         return float(bonus)
     if isinstance(bonus, Mapping):
-        for k in ("multiplier", "rate", "倍率"):
+        for k in ("mult", "multiplier", "rate", "倍率"):
             v = bonus.get(k)
             if isinstance(v, bool):
                 continue
@@ -539,7 +563,8 @@ def _reward_ctx(ctx: MutableMapping[str, Any], table_id: str, channel: str) -> M
 def checkin_value(ctx: Mapping[str, Any], table: Optional[str] = None,
                   field: Optional[str] = None) -> int:
     """三键取值（裁决⑧）：连续天数=指定表 streak / 本月天数=指定表当月 signed_days / 今日已签=指定表
-    今日已签；缺省表名 = 主表 loop。table ∈ 表类型名（loop/monthly/activity）；field 中文/英文皆可。
+    今日已签；缺省表名 = 主表 loop。table 双口径（审查_M4实现_批次5_jspace.md P1-2）：生效 type 名
+    （loop/monthly/activity）或 表 id 皆可；field 中文/英文皆可。
     查无表/字段/状态 → 0（对齐 condition_engine._resolve_checkin 缺省 0，未签/未满语义）。"""
     if table is None:
         table = "loop"
@@ -548,7 +573,7 @@ def checkin_value(ctx: Mapping[str, Any], table: Optional[str] = None,
     internal = CHECKIN_FIELDS.get(str(field), str(field))
     if internal not in ("streak", "month_days", "today_signed"):
         return 0
-    table_id = _table_id_for_type(ctx, str(table))
+    table_id = _table_id_for(ctx, str(table))
     if table_id is None:
         return 0
     node = ctx.get("checkin_state")
@@ -788,36 +813,36 @@ def _grant_label(grant: Mapping) -> str:
 
 def _summary_lines(results: List[dict], today: str) -> List[str]:
     """汇总单条消息（定稿 L25/L210 防刷屏：一次 /签到 汇总所有生效表单条消息输出；2.4 模板口径）。
-    渲染为结构化行；指令层可覆写格式。"""
-    lines = ["┌─ 📅 签到汇总 ────────────────"]
+    纯文本渲染（3d D-01：去除 ┌─📅 表框 / ⚠ 装饰 emoji——审查_M4实现_批次2_jspace.md 后续衔接提醒
+    L221；指令层仍按 tables 重建正文，本 message 仅作引擎侧兜底/测试口径）。"""
+    lines = ["签到汇总"]
     for r in results:
         if not r.get("active", True):
             continue
-        lines.append(f"│ ═══ {r.get('name')}（{_TYPE_CN.get(r.get('type'), r.get('type'))}）═══")
+        lines.append(f"═══ {r.get('name')}（{_TYPE_CN.get(r.get('type'), r.get('type'))}）═══")
         if r.get("already_signed"):
-            lines.append("│   今天已签到（不重复发奖）")
+            lines.append("今天已签到（不重复发奖）")
             pc, pt = r.get("progress_current"), r.get("progress_total")
-            lines.append(f"│   连签天数：{r.get('streak', 0)} 天 ｜ 进度 {pc}/{pt}")
+            lines.append(f"连签天数：{r.get('streak', 0)} 天 ｜ 进度 {pc}/{pt}")
             continue
         if r.get("failed"):
-            lines.append("│   " + r.get("message", "结算失败，已回滚"))
+            lines.append(r.get("message", "结算失败，已回滚"))
             continue
         daily = r.get("daily_granted") or []
         if daily:
-            lines.append("│   今日奖励：" + "、".join(_grant_label(g) for g in daily[:4]))
+            lines.append("今日奖励：" + "、".join(_grant_label(g) for g in daily[:4]))
         else:
-            lines.append("│   今日奖励：无")
+            lines.append("今日奖励：无")
         for n in r.get("notes") or []:
-            lines.append(f"│   ⚠ {n}")
+            lines.append(str(n))
         pc, pt = r.get("progress_current"), r.get("progress_total")
-        lines.append(f"│   连签天数：{r.get('streak', 0)} 天 ｜ 进度 {pc}/{pt}")
+        lines.append(f"连签天数：{r.get('streak', 0)} 天 ｜ 进度 {pc}/{pt}")
         for h in r.get("streak_hits") or []:
             labs = "、".join(_grant_label(g) for g in h["granted"][:4])
-            lines.append(f"│   [连签里程碑达成] {labs}（连签 {h['days']} 天）")
+            lines.append(f"[连签里程碑达成] {labs}（连签 {h['days']} 天）")
         for h in r.get("month_hits") or []:
             labs = "、".join(_grant_label(g) for g in h["granted"][:4])
-            lines.append(f"│   [月度累计达成] {labs}（本月签满 {h['days']} 天）")
-    lines.append("└──────────────────────────────")
+            lines.append(f"[月度累计达成] {labs}（本月签满 {h['days']} 天）")
     return lines
 
 
@@ -857,7 +882,8 @@ def checkin_makeup(ctx: MutableMapping[str, Any], table_id: Optional[str] = None
     """/签到 补签：作用于目标表当前归属日 today（工程补白 5）。
 
     校验链：① ctx 合法 → ② 幂等闸（重放不双扣）→ ③ 目标表存在且生效 → ④ makeup.enabled 开 →
-    ⑤ 同日幂等（今日已签/已补 → 不重复扣费，D-03/TC-24）→ ⑥ 月上限 max_per_month（0=不限）→
+    ⑤ 同日幂等（今日已签/已补 → 不重复扣费，D-03/TC-24）→ ⑥ 月上限 max_per_month（0=不限；
+    按「makeup_month 与当前月比对后的当月有效 used」判定，跨月视为 0——审查批次5 P1-1）→
     ⑦ 两通道任一满足（① 补签卡 ② 货币 cost）。
     应用（裁决⑦ 只计不补发）：signed_days 追加 today + streak 连续性保持 + month_total +1 +
     makeup_used +1；**不补发所补日期 daily 奖励、不触发任何里程碑**；longline 只增不减。
@@ -895,11 +921,12 @@ def checkin_makeup(ctx: MutableMapping[str, Any], table_id: Optional[str] = None
                 "message": "今日已补过/已签到，无需重复补签", "table_id": table_id,
                 "streak": _as_int(node.get("streak")) if isinstance(node, Mapping) else 0,
                 "month_days": len(sd),
-                "makeup_used": _as_int(node.get("makeup_used")) if isinstance(node, Mapping) else 0}
+                "makeup_used": _monthly_makeup_used(node, today)}
 
-    # 月上限（TC-22/23）
+    # 月上限（TC-22/23；审查_M4实现_批次5_jspace.md P1-1：按「makeup_month 与当前月比对后的
+    # 当月有效 used」判定，跨月视为 0 —— 新月份首日补签不误拦、不限 0 时不错计）
     max_per_month = _as_int(makeup.get("max_per_month"), 0)
-    used = _as_int(node.get("makeup_used")) if isinstance(node, Mapping) else 0
+    used = _monthly_makeup_used(node, today)
     if max_per_month > 0 and used >= max_per_month:
         return {"ok": False, "reason": "makeup_limit",
                 "message": f"❌ 本月补签已达上限 {max_per_month} 次", "table_id": table_id,
@@ -939,7 +966,9 @@ def checkin_makeup(ctx: MutableMapping[str, Any], table_id: Optional[str] = None
         if node.get("last_date") != today:
             node["streak"] = _as_int(node.get("streak")) + 1
             node["last_date"] = today
-        node["makeup_used"] = used + 1
+        # P1-1 跨月归一口径：_normalize_month 后 makeup_month 已对齐当前月，
+        # 用「当月有效 used + 1」写入（跨月首笔 = 1，不再沿用上月 used 错计）
+        node["makeup_used"] = _monthly_makeup_used(node, today) + 1
         node["longline"] = _as_int(node.get("longline")) + 1
         llc = ctx.get("longline_counters")
         if isinstance(llc, MutableMapping):

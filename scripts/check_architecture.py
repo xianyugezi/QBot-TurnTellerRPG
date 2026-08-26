@@ -31,7 +31,9 @@ ZERO_NB_LAYERS: Tuple[str, ...] = ("core", "world", "storage", "content", "data"
 ALLOWED_DEP: Dict[str, Set[str]] = {
     "commands": {"core", "world", "storage", "content", "data"},
     "web": {"content", "core", "storage", "data"},
-    "core": {"data", "content", "world", "storage"},
+    "core": {"data", "content", "world", "storage", "engine"},
+    # core 允许依赖 engine：M4 A2 统一条件引擎（condition_engine，纯逻辑层仅依赖 data）——
+    # 任务/NPC/商店/签到全系统复用（m4_shared_contract §1 A2），core/npc.py 为首批消费方。
     "world": {"data", "storage", "content"},
     "storage": {"data"},
     "content": {"data"},

@@ -1,13 +1,13 @@
 """基础指令组接线单测（M4 批次6·路G1 · qbot_rpg/commands/basic_commands.py）。
 
 依据：m4_shared_contract §2.3 + 4f + 裁决②
-  - m4_shared_contract.md §2.3（基础指令组：/查看 /背包 /装备 /技能 /帮助，4f RUL-01~34，页码夹取
+  - m4_shared_contract.md §2.3（基础指令组：/角色 /背包 /装备 /技能 /帮助，4f RUL-01~34，页码夹取
     口径）+ §2.2（列表 5 条/页上限、页脚固定 TPL-08、页码越界夹取 +「已到最后一页」2026-08-27
     用户裁决②、0/负数/非数字 → TPL-12、错误模板统一、emoji 纪律：数据型功能图标豁免）
   - docs/细化/细化_4f_基础指令组契约.md（RUL-08 注册门槛/B6 /帮助 豁免、RUL-16~19 /背包、RUL-20~25
-    /帮助 分组与 GM 保密、面板三层 → /查看）
+    /帮助 分组与 GM 保密、面板三层 → /角色）
   - docs/细化/细化_3d_消息模板规范.md（TPL-08/TPL-12、5 条/页、D-01 emoji 禁令）
-  - docs/细化/细化_3b_玩家属性三层.md（白值/加成/临时 → /查看 管线）
+  - docs/细化/细化_3b_玩家属性三层.md（白值/加成/临时 → /角色 管线）
   - docs/细化/细化_6a_技能库契约.md（技能 type/mp/desc/chain_refs/job_restrict → /技能 派生指向）
   - docs/细化/细化_4b_物品与背包契约.md（INV-01~07 → /背包 行格式/acquired_at 排序）
   - 2026-08-27 用户裁决②（页码夹取最后一页；0/负数/非数字 → TPL-12）
@@ -15,9 +15,9 @@
 集成口径：装备引擎 core/equipment.py（M1 骨架）未实装，本测试以**契约忠实替身**驱动——注入
 ctx["equip_engine"] = FakeEquipEngine（实现本层文件头声明的消费接口 equip_wear / equip_remove），
 断言命令层解析/渲染/路由/装配/错误全链路输出；装备栏渲染为纯函数直读 ctx["equipment"]，不依赖
-引擎。其余命令（/查看 /背包 /技能 /帮助）为纯渲染，直接构造 ctx 驱动。
+引擎。其余命令（/角色 /背包 /技能 /帮助）为纯渲染，直接构造 ctx 驱动。
 
-覆盖：/查看（LV 行固定头部 + 属性三层白值/加成/临时 + 5 条/页 + TPL-08 + 裁决② 夹取 + 资源型
+覆盖：/角色（LV 行固定头部 + 属性三层白值/加成/临时 + 5 条/页 + TPL-08 + 裁决② 夹取 + 资源型
 当前/上限 + 满级头 + 0/负数/非数字 → TPL-12）· /背包（物品行 RUL-19 行格式：图标/×数量/品质/绑定 +
 acquired_at 倒序 + 空背包 + 夹取 + TPL-12）· /装备（装备栏 5 条/页 + 空槽 + 页码 + 穿/卸子词 +
 槽位解析值域文案 + TPL-12 + 引擎注入/待接线防御）· /技能（LV 行固定头部 + 类型/MP/描述 + 派生指向
@@ -181,17 +181,17 @@ def make_ctx(**over):
 
 
 def parse(raw: str) -> ParsedCommand:
-    """parse_command 封装（parsers.DEFAULT_WHITELIST 已含 查看/背包/装备/技能/帮助）。"""
+    """parse_command 封装（parsers.DEFAULT_WHITELIST 已含 角色/背包/装备/技能/帮助）。"""
     return parse_command(raw)
 
 
 # ---------------------------------------------------------------------------
-# /查看：玩家属性面板（LV 行固定头部 + 属性三层结构 + 5 条/页 + TPL-08 + 裁决②）
+# /角色：玩家属性面板（LV 行固定头部 + 属性三层结构 + 5 条/页 + TPL-08 + 裁决②）
 # ---------------------------------------------------------------------------
 
 def test_view_noarg_page1():
-    """/查看 → LV 行固定头部 + 属性三层结构前 5 条（白值/加成/临时）+ TPL-08 页脚。"""
-    out = cmd_view(parse("/查看"), make_ctx())
+    """/角色 → LV 行固定头部 + 属性三层结构前 5 条（白值/加成/临时）+ TPL-08 页脚。"""
+    out = cmd_view(parse("/角色"), make_ctx())
     lines = out.splitlines()
     assert lines[0] == "【角色】Lv3.阿伟（战士） ｜ 经验 320/1000"
     # 资源型：当前/上限
@@ -201,30 +201,30 @@ def test_view_noarg_page1():
     assert "3. 【力量】29（白值 15 ｜ 加成 +5·+10% ｜ 临时 +3·+20%）" in out
     assert "4. 【智力】15（白值 15 ｜ 加成 0 ｜ 临时 0）" in out
     assert "5. 【体质】10（白值 10 ｜ 加成 0 ｜ 临时 0）" in out
-    assert "— 第 1/2 页 · 共 9 条 · 输入 /查看 页码 翻页 —" in out
+    assert "— 第 1/2 页 · 共 9 条 · 输入 /角色 页码 翻页 —" in out
     # 第 2 页条目不在页 1
     assert "幸运" not in out
 
 
 def test_view_page2():
-    """/查看 2 → 第 2 页（精神/专注/敏捷/幸运）+ 页脚。"""
-    out = cmd_view(parse("/查看 2"), make_ctx())
+    """/角色 2 → 第 2 页（精神/专注/敏捷/幸运）+ 页脚。"""
+    out = cmd_view(parse("/角色 2"), make_ctx())
     assert "6. 【精神】10（白值 10 ｜ 加成 0 ｜ 临时 0）" in out
     assert "7. 【专注】10（白值 10 ｜ 加成 0 ｜ 临时 0）" in out
     assert "8. 【敏捷】10（白值 10 ｜ 加成 0 ｜ 临时 0）" in out
     assert "9. 【幸运】10（白值 10 ｜ 加成 0 ｜ 临时 0）" in out
-    assert "— 第 2/2 页 · 共 9 条 · 输入 /查看 页码 翻页 —" in out
+    assert "— 第 2/2 页 · 共 9 条 · 输入 /角色 页码 翻页 —" in out
 
 
 def test_view_clamp_last_page():
-    """裁决②：/查看 9 超总页数 → 夹取最后一页 + （已到最后一页）。"""
-    out = cmd_view(parse("/查看 9"), make_ctx())
+    """裁决②：/角色 9 超总页数 → 夹取最后一页 + （已到最后一页）。"""
+    out = cmd_view(parse("/角色 9"), make_ctx())
     assert "9. 【幸运】10（白值 10 ｜ 加成 0 ｜ 临时 0）" in out
     assert "（已到最后一页）" in out
-    assert "— 第 2/2 页 · 共 9 条 · 输入 /查看 页码 翻页 —" in out
+    assert "— 第 2/2 页 · 共 9 条 · 输入 /角色 页码 翻页 —" in out
 
 
-@pytest.mark.parametrize("raw", ["/查看 0", "/查看 -1", "/查看 abc", "/查看 1 2"])
+@pytest.mark.parametrize("raw", ["/角色 0", "/角色 -1", "/角色 abc", "/角色 1 2"])
 def test_view_invalid_tpl12(raw):
     """裁决② + 3d §5.1：0/负数/非数字/超参 → TPL-12。"""
     out = cmd_view(parse(raw), make_ctx())
@@ -232,13 +232,13 @@ def test_view_invalid_tpl12(raw):
 
 
 def test_view_noarg_equiv_page1():
-    """/查看 与 /查看 1 输出一致。"""
-    assert cmd_view(parse("/查看"), make_ctx()) == cmd_view(parse("/查看 1"), make_ctx())
+    """/角色 与 /角色 1 输出一致。"""
+    assert cmd_view(parse("/角色"), make_ctx()) == cmd_view(parse("/角色 1"), make_ctx())
 
 
 def test_view_max_level_header():
-    """/查看 满级头：Lv≥max_level → 【已满级】。"""
-    out = cmd_view(parse("/查看"), make_ctx(level=45, max_level=45, exp=99999))
+    """/角色 满级头：Lv≥max_level → 【已满级】。"""
+    out = cmd_view(parse("/角色"), make_ctx(level=45, max_level=45, exp=99999))
     assert "【角色】Lv45.阿伟（战士） ｜ 【已满级】" in out.splitlines()[0]
 
 
@@ -513,7 +513,7 @@ def test_help_directory_normal():
     """/帮助 → 普通玩家 5 组目录单页（无 GM 组、无页脚）。"""
     out = cmd_help(parse("/帮助"), make_ctx())
     assert "【指令总览】输入 /帮助 组名 查看该组指令" in out
-    assert "冒险 —— 查看/背包/装备/位置/进入…（/帮助 冒险）" in out
+    assert "冒险 —— 角色/背包/装备/位置/进入…（/帮助 冒险）" in out
     assert "战斗 —— 攻击/防御/道具/逃跑/技能（/帮助 战斗）" in out
     assert "快捷 —— 快捷绑定/快捷解绑/快捷列表（/帮助 快捷）" in out
     assert "GM" not in out                 # RUL-25 普通玩家不渲染 GM 组
@@ -535,7 +535,7 @@ def test_help_group_page():
     """/帮助 冒险 → 冒险组指令列表 5 条/页 + TPL-08（页脚指令=帮助 冒险）。"""
     out = cmd_help(parse("/帮助 冒险"), make_ctx())
     assert "【冒险】" in out
-    assert "1. 查看 —— 查看角色属性面板" in out
+    assert "1. 角色 —— 查看角色属性面板" in out
     assert "5. 进入 —— 进入地图" in out
     assert "— 第 1/2 页 · 共 6 条 · 输入 /帮助 冒险 页码 翻页 —" in out
 
@@ -571,16 +571,16 @@ def test_help_invalid_page_tpl12(raw):
 def test_help_directory_clamp_normal():
     """裁决②：/帮助 2（普通玩家目录 1 页）→ 夹取最后一页 + （已到最后一页）。"""
     out = cmd_help(parse("/帮助 2"), make_ctx())
-    assert "冒险 —— 查看/背包/装备/位置/进入…（/帮助 冒险）" in out
+    assert "冒险 —— 角色/背包/装备/位置/进入…（/帮助 冒险）" in out
     assert "（已到最后一页）" in out
 
 
 def test_help_unregistered_guide():
-    """/帮助 未注册 → 注册引导版（B6 豁免；仅注册/查看/背包引导）。"""
+    """/帮助 未注册 → 注册引导版（B6 豁免；仅注册/角色/背包引导）。"""
     out = cmd_help(parse("/帮助"), make_ctx(registered=False))
     assert "【新手引导】发 /注册 名字 职业 创建角色" in out
     assert "注册 —— 创建角色（未注册必需）" in out
-    assert "查看 —— 查看角色属性面板" in out
+    assert "角色 —— 查看角色属性面板" in out
     assert "背包 —— 查看背包物品" in out
 
 
@@ -594,7 +594,7 @@ def test_help_groups_constants():
 
 def test_group_page_line_pure():
     """group_page_line：`{序号}. {指令} —— {说明}`。"""
-    assert group_page_line(1, ("查看", "查看角色属性面板")) == "1. 查看 —— 查看角色属性面板"
+    assert group_page_line(1, ("角色", "查看角色属性面板")) == "1. 角色 —— 查看角色属性面板"
 
 
 # ---------------------------------------------------------------------------
@@ -602,10 +602,10 @@ def test_group_page_line_pure():
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("cmd, raw", [
-    (cmd_view, "/查看"), (cmd_bag, "/背包"), (cmd_equip, "/装备"), (cmd_skill, "/技能"),
+    (cmd_view, "/角色"), (cmd_bag, "/背包"), (cmd_equip, "/装备"), (cmd_skill, "/技能"),
 ])
 def test_register_gate_rul08(cmd, raw):
-    """/查看 /背包 /装备 /技能 未注册 → RUL-08 拦截文案；/帮助 豁免。"""
+    """/角色 /背包 /装备 /技能 未注册 → RUL-08 拦截文案；/帮助 豁免。"""
     out = cmd(parse(raw), make_ctx(registered=False))
     assert out == TPL_REGISTER_GATE
     assert "/帮助" not in out or TPL_REGISTER_GATE in out  # 拦截文案不含 /帮助 引导
@@ -619,8 +619,8 @@ def test_help_exempt_gate():
 
 
 def test_parse_command_integration():
-    """/查看 /背包 /装备 /技能 /帮助 各形态经 parsers.parse_command 产出结构化字段。"""
-    p = parse("/查看 2")
+    """/角色 /背包 /装备 /技能 /帮助 各形态经 parsers.parse_command 产出结构化字段。"""
+    p = parse("/角色 2")
     assert p.command == VIEW_CMD and p.args == ["2"]
     p = parse("/背包")
     assert p.command == BAG_CMD and p.args == []
@@ -640,7 +640,7 @@ def test_subword_constants():
 
 
 def test_register_basic_commands():
-    """批次7 装配入口：注册 查看/背包/装备/技能/帮助 五条 CommandSpec（可快捷白名单）。"""
+    """批次7 装配入口：注册 角色/背包/装备/技能/帮助 五条 CommandSpec（可快捷白名单）。"""
     router = Router()
     register_basic_commands(router, make_context=lambda p: make_ctx())
     for name in (VIEW_CMD, BAG_CMD, EQUIP_CMD, SKILL_CMD, HELP_CMD):
@@ -653,14 +653,14 @@ def test_register_without_make_context_raises():
     router = Router()
     register_basic_commands(router)
     with pytest.raises(RuntimeError):
-        router.get(VIEW_CMD).handler(parse("/查看"))
+        router.get(VIEW_CMD).handler(parse("/角色"))
 
 
 def test_router_parse_integration():
-    """/查看 经 parse_command + register 后 handler 可执行（完整链路）。"""
+    """/角色 经 parse_command + register 后 handler 可执行（完整链路）。"""
     router = Router()
     register_basic_commands(router, make_context=lambda p: make_ctx())
-    out = router.get(VIEW_CMD).handler(parse("/查看"))
+    out = router.get(VIEW_CMD).handler(parse("/角色"))
     assert out.startswith("【角色】Lv3.阿伟（战士）")
 
 
@@ -669,9 +669,9 @@ def test_router_parse_integration():
 # ---------------------------------------------------------------------------
 
 def test_footer_tpl08_exact():
-    """/查看 /背包 /装备 /技能 /帮助 组页 页脚 TPL-08 逐字（无自造变体）。"""
+    """/角色 /背包 /装备 /技能 /帮助 组页 页脚 TPL-08 逐字（无自造变体）。"""
     ctx = make_ctx()
-    assert "— 第 1/2 页 · 共 9 条 · 输入 /查看 页码 翻页 —" in cmd_view(parse("/查看"), ctx)
+    assert "— 第 1/2 页 · 共 9 条 · 输入 /角色 页码 翻页 —" in cmd_view(parse("/角色"), ctx)
     assert "— 第 1/2 页 · 共 6 条 · 输入 /背包 页码 翻页 —" in cmd_bag(parse("/背包"), ctx)
     assert "— 第 1/2 页 · 共 6 条 · 输入 /装备 页码 翻页 —" in cmd_equip(parse("/装备"), ctx)
     assert "— 第 1/2 页 · 共 6 条 · 输入 /技能 页码 翻页 —" in cmd_skill(parse("/技能"), ctx)
@@ -683,9 +683,9 @@ def test_no_decorative_emoji():
     测试数据 icon 取自禁用清单外字符，输出扫描 0 命中。"""
     ctx = make_ctx()
     outputs = [
-        cmd_view(parse("/查看"), ctx),
-        cmd_view(parse("/查看 2"), ctx),
-        cmd_view(parse("/查看 9"), ctx),
+        cmd_view(parse("/角色"), ctx),
+        cmd_view(parse("/角色 2"), ctx),
+        cmd_view(parse("/角色 9"), ctx),
         cmd_bag(parse("/背包"), ctx),
         cmd_bag(parse("/背包 2"), ctx),
         cmd_equip(parse("/装备"), ctx),

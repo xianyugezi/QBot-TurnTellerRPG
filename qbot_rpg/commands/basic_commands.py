@@ -1,17 +1,17 @@
 """基础指令组接线 basic_commands.py（M4 批次6·路G1 · qbot_rpg/commands/basic_commands.py）。
 
 依据：m4_shared_contract §2.3 + 4f + 裁决②
-  - m4_shared_contract.md §2.3（基础指令组：/查看 /背包 /装备 /技能 /帮助 等，4f RUL-01~34，
+  - m4_shared_contract.md §2.3（基础指令组：/角色 /背包 /装备 /技能 /帮助 等，4f RUL-01~34，
     页码夹取口径）+ §2.2（列表 5 条/页上限、页脚固定 TPL-08、页码越界夹取 +「已到最后一页」
     2026-08-27 用户裁决②、0/负数/非数字 → TPL-12、错误模板统一、emoji 纪律：
     数据型功能图标豁免（物品 icon/NPC 类型图标/recommended_newbie 角标/GM 结果前缀））
-  - docs/细化/细化_4f_基础指令组契约.md（RUL-01~34：/状态 面板五区 B4 裁决 → 本路 /查看 承载
+  - docs/细化/细化_4f_基础指令组契约.md（RUL-01~34：/状态 面板五区 B4 裁决 → 本路 /角色 承载
     「LV 行固定头部 + 属性三层结构」玩家面板；/背包 RUL-16~19 行格式与分页；/装备 4b §三 装备栏
     穿戴；/技能 6a 技能库字段 + M2 技能卡「LV 行固定头部 + 派生指向」；/帮助 RUL-20~25 分组目录
     与 GM 保密、RUL-08 注册门槛 + B6 /帮助 豁免）
   - docs/细化/细化_3d_消息模板规范.md（TPL-08 页脚 / TPL-12 指令出错 / D-01 emoji 禁令 / D-04 错误
     文案唯一源 / §2.2 页码输入 + 裁决② 尾注）
-  - docs/细化/细化_3b_玩家属性三层.md（白值/加成/临时三层结构 → /查看 面板，管线出口
+  - docs/细化/细化_3b_玩家属性三层.md（白值/加成/临时三层结构 → /角色 面板，管线出口
     qbot_rpg/core/player_attributes.calc_all_final_attributes）
   - docs/细化/细化_6a_技能库契约.md（skills.json 字段：type/mp_cost/desc/chain_refs/job_restrict；
     chain_refs → skill_chains.json 派生链 → 「可派生成：XX」指向）
@@ -19,7 +19,7 @@
     排序 acquired_at 倒序 INV-07/RUL-17）
   - 2026-08-27 用户裁决②（列表页码超总页数 → 夹取最后一页 +「已到最后一页」；0/负数/非数字 → TPL-12）
 
-职责（细化_3a §1.3 壳层职责 · 唯一指令执行壳）：把 /查看 /背包 /装备 /技能 /帮助 五条基础指令从
+职责（细化_3a §1.3 壳层职责 · 唯一指令执行壳）：把 /角色 /背包 /装备 /技能 /帮助 五条基础指令从
 Router 接到 core 层——指令解析（parsers.parse_command 已 token 化 → 本模块取页码/子词/序号）、
 玩家面板/背包/装备栏/技能列表渲染（core/message_format/list_render 5 条/页 + TPL-08 页脚 +
 裁决② 夹取）、装备穿卸委托装备引擎（core/equipment.py，M1 骨架，注入优先 → 懒加载 →
@@ -38,15 +38,15 @@ Router 接到 core 层——指令解析（parsers.parse_command 已 token 化 �
 
 --------------------------------------------------------------------------------
 【工程补白 · 显式标注】
-  1) **5 条/页横切由本层统一**：/查看 属性三层明细、/背包 物品行、/装备 槽位、/技能 技能行、
+  1) **5 条/页横切由本层统一**：/角色 属性三层明细、/背包 物品行、/装备 槽位、/技能 技能行、
      /帮助 目录/组页 全部按 m4 §2.2 5 条/页 + TPL-08 页脚（render_footer，禁止自造页脚）；
-     页脚指令名：/查看=/查看、/背包=/背包、/装备=/装备、/技能=/技能、/帮助 组页=/帮助 <组名>
+     页脚指令名：/角色=/角色、/背包=/背包、/装备=/装备、/技能=/技能、/帮助 组页=/帮助 <组名>
      （对齐 checkin「签到 状态」口径）。
   2) **4f TPL-4F-06 目录页脚「输入 /帮助 组名 翻页」归一**：m4 §2.2「页脚固定 TPL-08，禁止各系统
      自造页脚」为实现层唯一权威 → /帮助 目录页脚用 TPL-08（/帮助 页码 翻页）；组页页脚用
      「/帮助 <组名> 页码 翻页」（与 checkin「签到 状态」同构）。
-  3) **/查看 = 玩家属性面板（B4 裁决承接）**：4f /状态 面板五区中「前缀行/位置行/效果区」由装配层
-     prefix_render 与后续批次承接；本路 /查看 聚焦任务口径「LV 行固定头部 + 属性三层结构
+  3) **/角色 = 玩家属性面板（B4 裁决承接）**：4f /状态 面板五区中「前缀行/位置行/效果区」由装配层
+     prefix_render 与后续批次承接；本路 /角色 聚焦任务口径「LV 行固定头部 + 属性三层结构
      （白值/加成/临时）」，9 项属性 5 条/页 = 2 页 + TPL-08 + 裁决② 夹取。resource 型（生命/魔力）
      显示 当前/上限（当前取 ctx["hp"]/ctx["mp"]）；最终值经 3b 管线 calc_all_final_attributes。
   4) **/装备 整数参数 = 页码**（m4 §2.2 翻页 + TPL-08 页脚「/装备 页码 翻页」横切），切换装备走
@@ -59,7 +59,7 @@ Router 接到 core 层——指令解析（parsers.parse_command 已 token 化 �
   6) **/帮助 分组目录**：内置分组表（冒险/战斗/成长/制造生活/快捷 + GM 组 B8 仅 GM 渲染）；
      普通玩家 5 组单页；GM 6 组 2 页（带 TPL-08）；组内指令列表 5 条/页。未注册玩家返回注册引导版
      （B6 豁免）。GM 判定读 ctx["is_gm"]（缺省 False=普通玩家，对齐 RUL-25 静默隐藏）。
-  7) **注册门槛（RUL-08）**：/查看 /背包 /装备 /技能 在 ctx["registered"] is False 时统一返回
+  7) **注册门槛（RUL-08）**：/角色 /背包 /装备 /技能 在 ctx["registered"] is False 时统一返回
      「❌ 请先 /注册 创建角色（/注册 名字 职业）」；/帮助 豁免（B6）。ctx 缺省 registered=True
      （未注入时不拦截，保持既有命令壳纯函数可测）。
   8) **/背包 数据源**：ctx["inventory"]（ItemInstance 或 dict 行均可，兼容 4a 存档行形态）优先，
@@ -111,7 +111,7 @@ __all__ = [
 # 常量：指令名 / 子指令词 / 业务文案
 # ---------------------------------------------------------------------------
 
-VIEW_CMD = "查看"
+VIEW_CMD = "角色"
 BAG_CMD = "背包"
 EQUIP_CMD = "装备"
 SKILL_CMD = "技能"
@@ -172,7 +172,7 @@ _DEFAULT_STAT_ORDER: tuple = ("hp", "mp", "str", "int", "con", "spr", "foc", "ag
 
 # /帮助 分组目录（4f RUL-21 六组顺序：冒险/战斗/成长/制造生活/快捷/GM；组内指令按框架章节顺序）
 HELP_GROUPS: Tuple[Tuple[str, Tuple[Tuple[str, str], ...]], ...] = (
-    ("冒险", (("查看", "查看角色属性面板"), ("背包", "查看背包物品"), ("装备", "查看/切换装备"),
+    ("冒险", (("角色", "查看角色属性面板"), ("背包", "查看背包物品"), ("装备", "查看/切换装备"),
               ("位置", "查看当前地点"), ("进入", "进入地图"), ("休息", "休息恢复"))),
     ("战斗", (("攻击", "选择技能攻击目标"), ("防御", "防御一回合"), ("道具", "使用战斗道具"),
               ("逃跑", "逃离战斗"), ("技能", "查看技能列表"))),
@@ -192,11 +192,11 @@ GM_HELP_GROUP: Tuple[str, Tuple[Tuple[str, str], ...]] = (
 # 分组名常量（目录页/组页引用）
 GROUP_ORDER: Tuple[str, ...] = tuple(g[0] for g in HELP_GROUPS) + (GM_HELP_GROUP[0],)
 
-# /帮助 注册引导版（B6：仅注册/查看/背包 三项引导 + 分组目录提示；单页无页脚）
+# /帮助 注册引导版（B6：仅注册/角色/背包 三项引导 + 分组目录提示；单页无页脚）
 _REGISTER_GUIDE: str = "\n".join([
     "【新手引导】发 /注册 名字 职业 创建角色",
     "注册 —— 创建角色（未注册必需）",
-    "查看 —— 查看角色属性面板",
+    "角色 —— 查看角色属性面板",
     "背包 —— 查看背包物品",
     "装备/技能 等更多指令注册后可用，发 /帮助 查看完整列表",
 ])
@@ -261,7 +261,7 @@ def _gate(ctx: Mapping[str, Any]) -> Optional[str]:
 
 
 # ---------------------------------------------------------------------------
-# /查看：玩家属性面板（LV 行固定头部 + 属性三层结构，5 条/页 + TPL-08 + 裁决②）
+# /角色：玩家属性面板（LV 行固定头部 + 属性三层结构，5 条/页 + TPL-08 + 裁决②）
 # ---------------------------------------------------------------------------
 
 def _player_fields(ctx: Mapping[str, Any]) -> Mapping[str, Any]:
@@ -394,7 +394,7 @@ def attr_line(idx: int, attr_id: str, stat_name: str, final: int,
 
 
 def _render_attr_page(ctx: Mapping[str, Any], page: int) -> str:
-    """/查看 正文：LV 行固定头部 + 属性三层行 5 条/页 + TPL-08 + 裁决② 夹取。"""
+    """/角色 正文：LV 行固定头部 + 属性三层行 5 条/页 + TPL-08 + 裁决② 夹取。"""
     attrs = _to_attributes(ctx)
     f = _player_fields(ctx)
     final = calc_all_final_attributes(
@@ -442,7 +442,7 @@ def _resource_pct(ctx: Mapping[str, Any]) -> bool:
 
 
 def cmd_view(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
-    """/查看 [页码]：玩家属性面板（LV 行固定头部 + 属性三层结构 5 条/页 + TPL-08 + 裁决② 夹取；
+    """/角色 [页码]：玩家属性面板（LV 行固定头部 + 属性三层结构 5 条/页 + TPL-08 + 裁决② 夹取；
     0/负数/非数字 → TPL-12；超参/未知子词 → TPL-12）。"""
     g = _gate(ctx)
     if g is not None:
@@ -980,7 +980,7 @@ def _help_groups(ctx: Mapping[str, Any]) -> Tuple[Tuple[str, Tuple[Tuple[str, st
 
 
 def _group_summary(group: Tuple[str, Tuple[Tuple[str, str], ...]]) -> str:
-    """目录行（4f RUL-22）：`冒险 —— 查看/背包/装备/位置/进入…（/帮助 冒险）`。"""
+    """目录行（4f RUL-22）：`冒险 —— 角色/背包/装备/位置/进入…（/帮助 冒险）`。"""
     name, cmds = group
     names = [c[0] for c in cmds]
     shown = "/".join(names[:5])
@@ -1081,7 +1081,7 @@ def cmd_help(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 
 def register_basic_commands(router: Any, *, make_context: Optional[Callable[[Any], dict]] = None) -> Any:
-    """把 /查看 /背包 /装备 /技能 /帮助 注册进 Router（CommandSpec.handler 消费 ParsedCommand）。
+    """把 /角色 /背包 /装备 /技能 /帮助 注册进 Router（CommandSpec.handler 消费 ParsedCommand）。
 
     :param make_context: ParsedCommand → 玩家 ctx dict（name/level/exp/job_id/attributes/inventory/
         equipment/skills/skill_chains/stats/items/jobs/slots/settings/registered/is_gm/equip_engine

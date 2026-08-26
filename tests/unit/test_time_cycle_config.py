@@ -451,3 +451,135 @@ def test_custom_enum_condition_keys() -> None:
     ctx = {"season_now": "s2", "season_keys": ("s1", "s2", "s3")}
     assert eval_condition({"var": "season", "op": "eq", "param": "s2"}, ctx) is True
     assert eval_condition({"var": "season", "param": "summer"}, ctx) is False  # 默认键不命中
+
+
+# =====================================================================================
+# 审查 M3 批次2 回归：P1-4 对象形态 default_pool 全链路干净键 + 校验器双形态
+# =====================================================================================
+def test_default_pool_object_form_clean_keys() -> None:
+    """P1-4：default_pool() 对 {key,name,emoji} 对象形态返回干净键（非 str(dict) 垃圾键）。"""
+    from qbot_rpg.engine.worldtime import WorldTime
+
+    cfg = {"time_cycle": {"weather": {"default_pool": [
+        {"key": "clear", "name": "晴"}, {"key": "rain", "name": "雨"}]}}}
+    assert WorldTime(cfg).default_pool() == ["clear", "rain"]
+    # 混合形态（str + 对象）同样归一
+    cfg2 = {"time_cycle": {"weather": {"default_pool": ["a", {"key": "b", "name": "b"}]}}}
+    assert WorldTime(cfg2).default_pool() == ["a", "b"]
+    # 坏配置（对象缺 key）→ 提取不出键 → 空池 []（与 map_pool 防御分支同口径，不崩溃）
+    cfg3 = {"time_cycle": {"weather": {"default_pool": [{"emoji": "☀️"}]}}}
+    assert WorldTime(cfg3).default_pool() == []
+
+
+def test_content_v4_accepts_object_pool_entries() -> None:
+    """P1-4：content 层 V4（接线 check_pack 的 validate_time_cycle）不再误红拦对象条目。"""
+    from qbot_rpg.content.time_validator import validate_time_cycle
+
+    r = _Reporter()
+    validate_time_cycle({"time_cycle": {"weather": {"default_pool": [
+        {"key": "clear", "name": "晴"}, {"key": "rain", "name": "雨"}]}}}, r)
+    assert r.errors == []
+
+
+def test_content_v4_object_dup_and_bad_key_red() -> None:
+    """P1-4：对象条目重复键 / 缺 key 仍红拦（V4 语义保留）。"""
+    from qbot_rpg.content.time_validator import validate_time_cycle
+
+    r = _Reporter()
+    validate_time_cycle({"time_cycle": {"weather": {"default_pool": [
+        {"key": "clear", "name": "晴"}, {"key": "clear", "name": "晴2"}]}}}, r)
+    dup = [e for e in r.errors if e["detail"].get("rule") == "pool_key_dup"]
+    assert len(dup) == 1 and dup[0]["detail"]["key"] == "clear"
+    r2 = _Reporter()
+    validate_time_cycle({"time_cycle": {"weather": {"default_pool": [{"name": "晴"}]}}}, r2)
+    assert any(e["detail"].get("rule") == "pool_key_type" for e in r2.errors)
+
+
+def test_content_validate_weather_pool_dual_form() -> None:
+    """P1-4：validate_weather_pool 兼容双形态——字符串条目合法（不 pool_entry_type 误伤），
+    对象条目 key/name 齐全才合法，其它条目 pool_entry_type 红拦。"""
+    from qbot_rpg.content.time_validator import validate_weather_pool
+
+    r = _Reporter()
+    validate_weather_pool({"time_cycle": {"weather": {"default_pool":
+                                                      ["clear", {"key": "rain", "name": "雨"}]}}}, r)
+    assert r.errors == []
+    r2 = _Reporter()
+    validate_weather_pool({"time_cycle": {"weather": {"default_pool":
+                                                      [{"key": "snow", "emoji": "x"}]}}}, r2)
+    assert any(e["detail"].get("rule") == "pool_name_missing" for e in r2.errors)
+    r3 = _Reporter()
+    validate_weather_pool({"time_cycle": {"weather": {"default_pool": ["clear", 7]}}}, r3)
+    assert any(e["detail"].get("rule") == "pool_entry_type" for e in r3.errors)
+
+
+def test_check_pack_object_pool_full_pass() -> None:
+    """P1-4 收口接线：对象形态 default_pool 经 check_pack 全链路（V4 + validate_weather_pool）
+    零红拦（规范配置可通过）。"""
+    from qbot_rpg.content.validator import check_pack
+
+    rep = check_pack({"settings": {"time_cycle": {
+        "season": {"season_days": 7},
+        "period": {"period_minutes": 60},
+        "weather": {"weather_minutes": 60,
+                    "default_pool": [{"key": "clear", "name": "晴"},
+                                     {"key": "rain", "name": "雨"}]}}}})
+    assert rep.ok, f"对象形态默认池不应红拦：{[str(e.detail.get('rule')) for e in rep.errors]}"
+    rules = [str(e.detail.get("rule")) for e in rep.errors]
+    assert "pool_entry_type" not in rules and "pool_key_type" not in rules
+
+
+def test_check_pack_missing_name_reds() -> None:
+    """P1-4 收口接线：对象条目缺 name → check_pack 红拦（定稿 V4「键+中文名齐全」生效）。"""
+    from qbot_rpg.content.validator import check_pack
+
+    rep = check_pack({"settings": {"time_cycle": {"weather": {
+        "default_pool": [{"key": "snow"}]}}}})
+    rules = [str(e.detail.get("rule")) for e in rep.errors]
+    assert "pool_name_missing" in rules
+
+
+def test_check_pack_string_pool_still_ok() -> None:
+    """P1-4 防误伤：字符串形态默认池不受 validate_weather_pool 接线影响（仍合法）。"""
+    from qbot_rpg.content.validator import check_pack
+
+    rep = check_pack({"settings": {"time_cycle": {"weather": {
+        "default_pool": ["clear", "rain"]}}}})
+    assert rep.ok
+    rules = [str(e.detail.get("rule")) for e in rep.errors]
+    assert "pool_entry_type" not in rules and "pool_key_type" not in rules
+
+
+# =====================================================================================
+# 审查 M3 批次2 回归：P1-6 单值枚举提示走黄通道（合法配置不可硬拦）
+# =====================================================================================
+def test_singleton_enum_warn_not_error() -> None:
+    """P1-6：Y1/Y2 单值枚举（恒定季节/时段）→ warnings 黄通道，errors 为空。"""
+    from qbot_rpg.content.time_validator import validate_time_cycle
+
+    r = _Reporter()
+    validate_time_cycle({"time_cycle": {"season": {"season_days": 7, "enum": ["only"]},
+                                        "period": {"period_minutes": 60, "enum": ["onlyp"]}}}, r)
+    assert r.errors == []
+    rules = [w["detail"].get("rule") for w in r.warnings]
+    assert "season_enum_singleton" in rules and "period_enum_singleton" in rules
+
+
+def test_singleton_enum_warn_list_fallback() -> None:
+    """P1-6：warnings 列表形态收集器（无 _warn 方法）同样收黄提示。"""
+    from qbot_rpg.content.time_validator import validate_time_cycle
+
+    report = {"warnings": []}
+    validate_time_cycle({"time_cycle": {"season": {"enum": ["only"]}}}, report)
+    assert len(report["warnings"]) == 1
+    assert report["warnings"][0]["kind"] == "Y1"
+
+
+def test_singleton_enum_check_pack_warns() -> None:
+    """P1-6 收口：单值枚举经 check_pack → 不红拦（rep.ok），黄提示落 warnings。"""
+    from qbot_rpg.content.validator import check_pack
+
+    rep = check_pack({"settings": {"time_cycle": {"season": {"enum": ["only"]}}}})
+    assert rep.ok, "单值枚举合法配置不可硬拦"
+    rules = [str(w.detail.get("rule")) for w in rep.warnings]
+    assert "season_enum_singleton" in rules

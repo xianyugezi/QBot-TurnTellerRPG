@@ -88,6 +88,16 @@ def eval_condition(cond: object, ctx: object) -> bool:
     """
     if not isinstance(cond, Mapping) or not isinstance(ctx, Mapping):
         return False
+    # TC-22 / 2a4c TC-22：time_cycle.enabled=false → 三键全部失效（审查 M3 批次2 P1-5）。
+    # 缺省 true；ctx["enabled"] 显式开关优先，否则自动读 ctx["worldtime"].is_enabled()
+    # （收口接线时把 WorldTime 实例注入 ctx 即天然受总开关门控）。
+    enabled = ctx.get("enabled")
+    if enabled is None:
+        wt = ctx.get("worldtime")
+        fn = getattr(wt, "is_enabled", None)
+        enabled = fn() if callable(fn) else True
+    if not enabled:
+        return False
     var = cond.get("var")
     if var not in REGISTERED_KEYS:
         return False
@@ -200,6 +210,8 @@ def validate_condition_keys(
     cond: object,
     report: object,
     registered_weather: Optional[Iterable[str]] = None,
+    season_keys: Optional[Iterable[str]] = None,
+    period_keys: Optional[Iterable[str]] = None,
 ) -> None:
     """三键条件表达式枚举校验（契约 §6.2 V6 / 2a1d V-4Z）。
 
@@ -208,13 +220,18 @@ def validate_condition_keys(
     report: 收集器（鸭子类型，见 _emit；收口时直传 validator._Checker 实例）。
     registered_weather: 注册天气集（default_pool keys 可迭代）；None = 收口未注入 →
             天气键值域校验跳过（值域依赖内容包注册集，2a1d LC-D 不崩）；季节/时段
-            固定枚举恒校验。
+            按声明枚举集恒校验。
+    season_keys / period_keys: 声明枚举集（内容包 enum 可配，2026-08-26 拍板）——
+            None = 缺省回退模块级 SEASON_KEYS/PERIOD_KEYS（审查 M3 批次2 P1-3：
+            校验目标改「引用键 ∈ 声明枚举集」，自定义枚举内容包的合法条件不再误红拦）。
     红拦（error）：var 不在三键 / op 非 eq/== / param 非字符串或非法枚举 /（注入时）
     weather 键不在注册天气集。均带人话 msg，供命令层直接拼用户文案。
     """
+    sk: Tuple[str, ...] = tuple(season_keys) if season_keys is not None else SEASON_KEYS
+    pk: Tuple[str, ...] = tuple(period_keys) if period_keys is not None else PERIOD_KEYS
     if isinstance(cond, (list, tuple)):
         for item in cond:
-            validate_condition_keys(item, report, registered_weather)
+            validate_condition_keys(item, report, registered_weather, sk, pk)
         return
     if not isinstance(cond, Mapping):
         _emit(report, "condition", "condition", "V6",
@@ -240,15 +257,15 @@ def validate_condition_keys(
               rule="param_invalid", param=param,
               msg="条件参数要填字符串枚举值")
         return
-    if var == "season" and param not in SEASON_KEYS:
+    if var == "season" and param not in sk:
         _emit(report, "condition", "condition.param", "V6",
-              rule="season_enum_invalid", param=param, allowed=list(SEASON_KEYS),
-              msg="季节 %r 不认识，只有 春夏秋冬（%s）" % (param, "/".join(SEASON_KEYS)))
+              rule="season_enum_invalid", param=param, allowed=list(sk),
+              msg="季节 %r 不认识，只有 春夏秋冬（%s）" % (param, "/".join(sk)))
         return
-    if var == "period" and param not in PERIOD_KEYS:
+    if var == "period" and param not in pk:
         _emit(report, "condition", "condition.param", "V6",
-              rule="period_enum_invalid", param=param, allowed=list(PERIOD_KEYS),
-              msg="时段 %r 不认识，只有 晨午昏夜午夜（%s）" % (param, "/".join(PERIOD_KEYS)))
+              rule="period_enum_invalid", param=param, allowed=list(pk),
+              msg="时段 %r 不认识，只有 晨午昏夜午夜（%s）" % (param, "/".join(pk)))
         return
     if var == "weather":
         if registered_weather is None:

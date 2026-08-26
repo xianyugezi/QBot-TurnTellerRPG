@@ -32,9 +32,10 @@ LEGAL_DIR = Path(__file__).resolve().parents[1] / "fixtures" / "packs" / "legal"
 # 夹具辅助
 # ---------------------------------------------------------------------------
 def _legal_maps() -> list:
-    """legal/maps.json 深拷贝（3 图：rubble_field/crag_den/lava_tunnel，含双向/单向/隐藏）。"""
+    """legal/maps.json 深拷贝（4 图：rubble_field/crag_den/lava_tunnel/volcanic_path，
+    含双向/单向/隐藏）。"""
     data = json.loads((LEGAL_DIR / "maps.json").read_text(encoding="utf-8"))
-    assert isinstance(data, list) and len(data) == 3
+    assert isinstance(data, list) and len(data) == 4
     return copy.deepcopy(data)
 
 
@@ -200,9 +201,9 @@ def test_can_move_hidden_evaluator_raises() -> None:
 # M02 can_move：方向缺失 = 死路（R2）
 # ---------------------------------------------------------------------------
 def test_can_move_dead_end_direction_missing() -> None:
-    """/进入 未配置方向 → "此路不通"（R2 / TC-03）：left 未配、lava_tunnel.down 未配。"""
+    """/进入 未配置方向 → "此路不通"（R2 / TC-03）：volcanic_path.left 未配、lava_tunnel.down 未配。"""
     maps = _legal_maps()
-    r1 = can_move("rubble_field", "left", _ctx(maps))
+    r1 = can_move("volcanic_path", "left", _ctx(maps))
     assert r1["ok"] is False and r1["blocked_reason"] == BLOCKED_NO_PASSAGE and r1["to"] is None
     r2 = can_move("lava_tunnel", "down", _ctx(maps))
     assert r2["ok"] is False and r2["blocked_reason"] == BLOCKED_NO_PASSAGE

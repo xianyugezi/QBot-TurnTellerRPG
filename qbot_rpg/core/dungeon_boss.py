@@ -26,16 +26,30 @@
   3. 三阶段阈值：默认 (100, 60, 30)，边界归下阶段（60% 整 → 阶段2、30% 整 → 阶段3，
      衔接 monster_phases PhaseTable 工程收敛 1）。phases 配置可覆盖（构造器 phases
      参数 > boss_def.phases > 默认阈值）。phase_for 对输入夹取至 [0,100] 百分比定义域。
-  4. on_chase_continue 返回续战准备标记 + PV 半值计算值：pv_half_value =
-     floor(pv_max × pv_recover)（2a2 §2.1 满值口径，pv_recover 取 zone_change 子段或
-     缺省 0.5）。标记键与契约 §3.2 续战语义一一对应（resume 续战 / hp_keep 残血保持
-     R12-R13 / pv_half PV 半恢复 R9 / opening_skill 换区后第一回合开场技 R20）。
+     定稿 phases 形态 {hp_from, hp_to, behavior}（副本定稿 L241-246）由 PhaseTable 归一
+     （threshold 缺失时 hp_from→threshold，审查批次3 P2-5），不再恒阶段 1。
+  4. on_chase_continue 返回续战准备标记 + PV 恢复后值：pv_half_value = 当前值 +
+     floor((pv_max − 当前值) × pv_recover)（缺失量口径；2026-08-26 用户拍板裁决，
+     见细化_2a2 文末注记；pv_recover 取 zone_change 子段或缺省 0.5）。恢复后值随
+     boss_state.pv 就地落库（审查批次3 P2-2：换区瞬间 apply_zone_change_pv_restore
+     恢复并持久化，on_chase_continue 透传落库值，避免双处计算漂移）。标记键与契约 §3.2
+     续战语义一一对应（resume 续战 / hp_keep 残血保持 R12-R13 / pv_half PV 半恢复 R9 /
+     opening_skill 换区后第一回合开场技 R20）；语义别名 pv_restored / pv_restored_value
+     （审查批次3 P2-1 收口：名称对齐「恢复后值」，非「满值一半」）。
   5. 战斗资源操作零直扣：本模块产出纯判定/准备数据；残血保持、PV 半恢复、开场技的实际
      战斗接线由批次 6 经 1g4 battle_boundary 通道消费（批次6 world/chase.py 负责换区
      逃跑/候选区随机/玩家走通道追击/实际续战接线；本路只做 BOSS 三阶段状态机 + 换区
      触发接口预留）。
   6. 入场限制（entry_item 扣道具 / entry_limit 次数，场所校验先于消耗）属副本入口
      M1 → S0 流程，为 core/dungeon.py enter_dungeon（批次5·路N）职责，本路不重复实现。
+  7. 换区配置形态兼容（审查批次3 P2-6）：以 m3 §3.1 hp_threshold（小数，0.3）为准；
+     2a2 §7.1 / 副本定稿 L142-146 嵌套 trigger:{type:"hp_below", value:30}（百分比）
+     形态兼容归一（value/100 → 小数阈值；trigger.hp_below 同义兜底）；pv_recover
+     配置源优先级 boss.zone_change → dungeon.zone_change（副本定稿 L222 dungeon 级
+     落点）。
+  8. 会话形态（审查批次3 P2-3）：_cfg_get / _session_get 支持 DungeonSession dataclass
+     字段直读（getattr），BossFlow 对 DungeonSession 形态不再静默降级（boss_state /
+     chasing / chase_target / zone_chase_context 可读）。
 
 铁律：零 NoneBot import；纯函数无 IO；平台无关（m3 铁律 4）；每功能可追溯（铁律 8）。
 """
@@ -50,6 +64,7 @@ __all__ = [
     "BossFlow",
     "DEFAULT_PHASE_THRESHOLDS",
     "DEFAULT_PV_RECOVER",
+    "SESSION_BOSS_PV_RESTORED_KEY",
     "SESSION_GATE_GUARDS_KEY",
     "ZC_TRIGGER_AFTER_ACTION",
     "ZC_TRIGGER_PHASE_CHANGED",
@@ -68,6 +83,10 @@ DEFAULT_PV_RECOVER: float = 0.5
 #: session 已击败守门怪标记键（工程补白 1）。
 SESSION_GATE_GUARDS_KEY: str = "gate_guards_defeated"
 
+#: boss_state 内 PV 恢复落库标记键（审查批次3 P2-2：换区瞬间恢复后值随 boss_state 落库；
+#: on_chase_continue 读该标记 → 透传落库值，避免二次恢复漂移）。
+SESSION_BOSS_PV_RESTORED_KEY: str = "pv_restored"
+
 #: zone_change.timing 枚举键：行动后触发（怪物回合行动结算后，2a2 R5）。
 ZC_TRIGGER_AFTER_ACTION: str = "after_action"
 
@@ -81,7 +100,8 @@ ZC_TRIGGER_PHASE_CHANGED: str = "phase_changed"
 
 
 def _cfg_get(cfg: Any, key: str, default: Any = None) -> Any:
-    """从 dict / Mapping / BaseDef（.get）等任意带 get 的对象读取配置值。"""
+    """从 dict / Mapping / BaseDef（.get）等任意带 get 的对象读取配置值；
+    无 get 的 dataclass（DungeonSession）按字段直读（审查批次3 P2-3）。"""
     if cfg is None:
         return default
     if isinstance(cfg, Mapping):
@@ -89,7 +109,31 @@ def _cfg_get(cfg: Any, key: str, default: Any = None) -> Any:
     getter = getattr(cfg, "get", None)
     if callable(getter):
         return getter(key, default)
-    return default
+    try:
+        return getattr(cfg, key, default)
+    except Exception:
+        return default
+
+
+def _zc_threshold(cfg: Any) -> Any:
+    """zone_change 阈值归一（审查批次3 P2-6）。
+
+    m3 §3.1 hp_threshold（小数，如 0.3）为准；2a2 §7.1 / 副本定稿 L142-146 嵌套
+    trigger:{type:"hp_below", value:30}（百分比）形态兼容归一：value/100 → 小数阈值
+    （trigger.hp_below 同义兜底）。不可解 → None（视为无法判定，不触发）。
+    """
+    t = _cfg_get(cfg, "hp_threshold")
+    if isinstance(t, (int, float)) and not isinstance(t, bool):
+        return t
+    trig = _cfg_get(cfg, "trigger")
+    if isinstance(trig, Mapping):
+        ttype = trig.get("type")
+        if ttype in ("hp_below", "hp_under", "hp_threshold"):
+            for k in ("value", "hp_below"):
+                v = trig.get(k)
+                if isinstance(v, (int, float)) and not isinstance(v, bool):
+                    return float(v) / 100.0
+    return None
 
 
 def _hp_pct(enemy_state: Mapping[str, Any]) -> Optional[float]:
@@ -188,6 +232,18 @@ class BossFlow:
 
     def _session_get(self, key: str, default: Any = None) -> Any:
         return _cfg_get(self._session, key, default)
+
+    def _resolve_pv_recover(self) -> float:
+        """PV 恢复比例解析（审查批次3 P2-6：boss.zone_change → dungeon.zone_change
+        → 缺省 0.5；副本定稿 L222 dungeon 级 zone_change.pv_recover 落点兼容）。"""
+        for src in (self._boss, self._dungeon):
+            zc = _cfg_get(src, "zone_change")
+            if not isinstance(zc, Mapping):
+                continue
+            r = _cfg_get(zc, "pv_recover", DEFAULT_PV_RECOVER)
+            if isinstance(r, (int, float)) and not isinstance(r, bool):
+                return float(r)
+        return DEFAULT_PV_RECOVER
 
     def _resolve_boss_room(self) -> Optional[str]:
         """BOSS 房地图 ID（dungeon_def.boss_room，m3 §4.1）。"""
@@ -332,11 +388,13 @@ class BossFlow:
     ) -> bool:
         """BOSS 残血换区触发判定（M20 换区联动 / m3 §3.2 R1-R6 + 2a2 §1.1）。
 
-        cfg = enemies zone_change 配置 {enabled, hp_threshold, targets, timing,
-        pv_recover?}；cfg 缺省 → 取 boss_def.zone_change。判定链（2a2 R1-R4/R3）：
+        cfg = enemies zone_change 配置 {enabled, hp_threshold|trigger, targets, timing,
+        pv_recover?}；cfg 缺省 → 取 boss_def.zone_change → dungeon_def.zone_change
+        （审查批次3 P2-6）。判定链（2a2 R1-R4/R3）：
           1. cfg 缺失 / enabled=False / targets 空 → 永不换区（R4）
           2. hp=0 → 击杀优先，不进换区（R3）
-          3. hp_pct > hp_threshold×100 → 不触发（R1/R2，不残血不换区）
+          3. hp_pct > 阈值×100 → 不触发（R1/R2，不残血不换区；阈值 = hp_threshold 小数
+             或 trigger:{type:"hp_below", value} 百分比归一，P2-6）
           4. timing=phase_changed 且本结算点无阶段切换（enemy_state.phase_changed
              假或未传）→ 不触发（衔接 monster_phases phase_changed 语义）
           5. 其余 → 触发（条件满足即必换区，无概率博弈，R6）
@@ -344,10 +402,13 @@ class BossFlow:
         Args:
             enemy_state: 怪物状态 {hp, max_hp} 或 {hp_pct}（百分比）；phase_changed
                 可选标志（timing=phase_changed 时参与判定）。
-            cfg: zone_change 配置子段；缺省 → boss_def.zone_change。
+            cfg: zone_change 配置子段；缺省 → boss_def.zone_change → dungeon_def.zone_change。
         """
         if not isinstance(cfg, Mapping):
             cfg = _cfg_get(self._boss, "zone_change")
+        if not isinstance(cfg, Mapping):
+            # 副本定稿 L222：zone_change 亦可落 dungeon.json 级（审查批次3 P2-6）
+            cfg = _cfg_get(self._dungeon, "zone_change")
         if not isinstance(cfg, Mapping):
             return False
         if _cfg_get(cfg, "enabled", True) is False:
@@ -357,7 +418,7 @@ class BossFlow:
         pct = _hp_pct(enemy_state)
         if pct is None:
             return False
-        threshold = _cfg_get(cfg, "hp_threshold")
+        threshold = _zc_threshold(cfg)
         if not isinstance(threshold, (int, float)) or isinstance(threshold, bool):
             return False
         threshold = float(threshold)
@@ -373,18 +434,77 @@ class BossFlow:
 
     # ------------------------------------------------------------ 追到续战准备
 
+    def apply_zone_change_pv_restore(self, cfg: Any = None) -> dict:
+        """换区瞬间 PV 恢复落库（审查批次3 P2-2 / 2a2 §2.2 R10 + TC-09）。
+
+        换区结算点（chase_trigger/begin_chase 之后）调用：按缺失量公式把 boss_state.pv
+        就地更新为恢复后值并落库，并置 SESSION_BOSS_PV_RESTORED_KEY 标记 → 之后
+        on_chase_continue 透传该落库值（避免双处计算漂移）。boss_state 为共享可变 dict，
+        dict 会话与 DungeonSession dataclass 内嵌 boss_state 均可原地写。
+
+        Args:
+            cfg: zone_change 配置子段（读 pv_recover）；缺省 → boss.zone_change →
+                dungeon.zone_change（优先级见 _resolve_pv_recover）。
+
+        Returns:
+            {"restored": True, "pv", "pv_max", "pv_recover", "boss_state_written": bool}
+            无 boss_state 可写 → {"restored": False, "reason": "no_boss_state"}。
+        """
+        boss_state = self._session_get("boss_state")
+        if not isinstance(boss_state, Mapping):
+            return {"restored": False, "reason": "no_boss_state"}
+        # 幂等（e2e 双触发验证暴露）：已恢复过（标记在）→ 不再二次恢复，返回当前值
+        if boss_state.get(SESSION_BOSS_PV_RESTORED_KEY):
+            cur = boss_state.get("pv")
+            return {
+                "restored": True,
+                "pv": float(cur) if isinstance(cur, (int, float)) and not isinstance(cur, bool) else None,
+                "pv_max": _cfg_get(self._boss, "pv"),
+                "pv_recover": self._resolve_pv_recover(),
+                "already_restored": True,
+            }
+        pv_max = _cfg_get(self._boss, "pv")
+        if not isinstance(pv_max, (int, float)) or isinstance(pv_max, bool):
+            pv_max = None
+        recover = self._resolve_pv_recover()
+        pv_cur = boss_state.get("pv")
+        current: Optional[float] = (
+            float(pv_cur)
+            if isinstance(pv_cur, (int, float)) and not isinstance(pv_cur, bool)
+            else None
+        )
+        restored = _pv_half_value(current, pv_max, recover)
+        written = False
+        if isinstance(boss_state, dict):
+            boss_state["pv"] = restored
+            boss_state[SESSION_BOSS_PV_RESTORED_KEY] = True
+            written = True
+        return {
+            "restored": True,
+            "pv": restored,
+            "pv_max": pv_max,
+            "pv_recover": recover,
+            "boss_state_written": written,
+        }
+
     def on_chase_continue(
         self, player_ctx: Optional[Mapping[str, Any]] = None
     ) -> dict:
         """追到续战准备（M6 追到 → S4 决战：残血保持 + PV 半恢复 + 开场技）。
 
-        返回续战标记 + PV 半值计算值；不直扣任何战斗资源——实际续战战斗接线由批次 6 经
+        返回续战标记 + PV 恢复后值；不直扣任何战斗资源——实际续战战斗接线由批次 6 经
         1g4 battle_boundary 通道消费本 dict：
           resume: True       进行中战斗续战（追到触发遭遇，2a2 R19）
           hp_keep: True      残血保持（不重置不回血，R12/R13）
           pv_half: True      PV 半恢复触发标记（R9）
-          pv_half_value      floor(pv_max × pv_recover)（满值口径向下取整，§2.1）
-          pv_recover         恢复比例（zone_change.pv_recover 或缺省 0.5）
+          pv_half_value      恢复后值 = 当前值 + floor((pv_max − 当前值) × pv_recover)
+                             （缺失量口径；2026-08-26 用户拍板，见细化_2a2 文末注记）。
+                             换区瞬间已由 apply_zone_change_pv_restore 落库 → 直接透传
+                             落库值（避免二次恢复漂移，审查批次3 P2-2）
+          pv_restored       True（语义别名，审查批次3 P2-1 收口：对齐「恢复后值」命名，
+                             非「满值一半」）
+          pv_restored_value = pv_half_value（别名键）
+          pv_recover         恢复比例（boss.zone_change → dungeon.zone_change → 缺省 0.5）
           opening_skill: True 换区后第一回合怪物开场技（R20 / 细化_1f 开场技触发点）
           timing             "chase_continue"
         player_ctx 为签名对齐预留（批次 6 接线传续战上下文；本路不消费）。
@@ -392,27 +512,37 @@ class BossFlow:
         pv_max = _cfg_get(self._boss, "pv")
         if not isinstance(pv_max, (int, float)) or isinstance(pv_max, bool):
             pv_max = None
-        zc = _cfg_get(self._boss, "zone_change")
-        recover = DEFAULT_PV_RECOVER
-        if isinstance(zc, Mapping):
-            r = _cfg_get(zc, "pv_recover", DEFAULT_PV_RECOVER)
-            if isinstance(r, (int, float)) and not isinstance(r, bool):
-                recover = float(r)
+        recover = self._resolve_pv_recover()
 
         # 当前 PV：session.boss_state.pv（残血换区时的防护值，缺失兜底近似满值 → 未破防不降）
         boss_state = self._session_get("boss_state")
         pv_current: Optional[float] = None
+        already_restored = False
         if isinstance(boss_state, Mapping):
             pv = boss_state.get("pv")
             if isinstance(pv, (int, float)) and not isinstance(pv, bool):
                 pv_current = float(pv)
+            already_restored = bool(boss_state.get(SESSION_BOSS_PV_RESTORED_KEY))
+
+        if already_restored and pv_current is not None:
+            # 审查批次3 P2-2：换区瞬间已落库恢复后值 → 直接透传（不二次恢复，避免漂移）
+            pv_half_value = int(pv_current)
+        else:
+            pv_half_value = _pv_half_value(pv_current, pv_max, recover)
+            # 自愈写回（未走换区结算点的直接调用）：收敛落库值，与
+            # apply_zone_change_pv_restore 同口径（审查批次3 P2-2）
+            if isinstance(boss_state, dict):
+                boss_state["pv"] = pv_half_value
+                boss_state[SESSION_BOSS_PV_RESTORED_KEY] = True
 
         result: dict = {
             "resume": True,
             "hp_keep": True,
             "pv_half": True,
-            "pv_half_value": _pv_half_value(pv_current, pv_max, recover),
+            "pv_half_value": pv_half_value,
             "pv_recover": recover,
+            "pv_restored": True,           # 审查批次3 P2-1 收口别名（缺失量口径）
+            "pv_restored_value": pv_half_value,
             "opening_skill": True,
             "timing": "chase_continue",
         }

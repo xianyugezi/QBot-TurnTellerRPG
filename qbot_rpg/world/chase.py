@@ -12,34 +12,47 @@
 职责（world 层纯逻辑装配，零 NoneBot import、零 IO、纯函数）：
   chase_trigger        M12 换区触发装配：调 core/dungeon_boss.BossFlow.should_zone_change
                        （boss_flow 未注入 → 按契约 §3.2 本地实现判定，判定链同口径）；
-                       triggered 时 pick_chase_target 从 targets 确定性选一
+                       triggered 时 pick_chase_target 从 targets 确定性选一；触发且注入
+                       boss_flow 时调 apply_zone_change_pv_restore 换区瞬间恢复 PV 并落库
   pick_chase_target    M12 候选区确定性选一（注入 rng 优先；未注入固定种子，同状态同值）
   begin_chase          M13 追击态开启：session chasing:true + 提示「BOSS 逃向了【XX】」
-                       （目标区显示名 = maps.name）
+                       （目标区显示名 = maps.name；DungeonSession dataclass 走 with_chase）
   pursue               M13 追击行走与错失窗口：/进入 <方向> 走通道（调 movement.resolve_move）；
-                       到达 chase_ctx.target_map → 捕获 {caught: True}；未到达 →
-                       {caught: False, missed} —— 连续走错 ≥ 错失上限（默认 3）或
+                       到达 chase_ctx.target_map → 捕获 {caught: True}；未到达 → 计错仅限
+                       「偏离可达目标」的移动（走回起始区 / 走回已访问图 / 本次移动后目标
+                       不可达），合法中间推进不计错——连续走错 ≥ 错失上限（默认 3）或
                        走回起始区 → BOSS 回满/离开副本（chase_ctx.miss_count 递增）
 
 【工程补白】（显式标注，不冒充定稿）：
   1. boss_flow 未注入时 _contract_should_zone_change 为契约 §3.2 / 2a2 §1.1 的本地实现，
      判定链与 BossFlow.should_zone_change 完全同口径（R1-R6：enabled/targets 非空/hp
-     百分比 ≤ 阈值×100 / timing=phase_changed 需 phase_changed 标志）；注入时以注入实现为准。
+     百分比 ≤ 阈值×100 / timing=phase_changed 需 phase_changed 标志；阈值 hp_threshold
+     小数与嵌套 trigger:{type:"hp_below", value} 百分比形态均兼容，审查批次3 P2-6）；
+     注入时以注入实现为准。
   2. pick_chase_target 未注入 rng 时以 targets 稳定摘要（sha256）为固定种子——同候选集
      必同值（跨进程稳定，m3 §八 2）；注入 rng 时优先 rng.choice，无 choice 回退
      rng.random() 索引映射（对齐 ScriptedRng 形态）。
   3. begin_chase 落盘键 = session["chasing"]=True + session["chase_target"]=<目标图 id>
-     （契约 §4.2 追击态标志 chasing:true；持久化落库由快照批次接线，本路只改传入 dict）。
-  4. 错失窗口两条件（2a2 §4.4 R18 + §5.1 R24 工程解读）：连续走错次数 ≥ miss_limit
-     （chase_ctx.miss_limit 可配，默认 3）或走回起始区（chase_ctx.start_map）→ 返回
-     boss_reset 信号（BOSS 回满/离开副本由调用方按 R24 执行重置），本路不直改战斗资源。
+     （契约 §4.2 追击态标志 chasing:true；持久化落库由快照批次接线，本路只改传入 dict）；
+     DungeonSession frozen dataclass 形态经 with_chase 返回新实例（审查批次3 P2-3）。
+  4. 错失窗口（2a2 §4.4 R18 + §5.1 R24 工程解读，审查批次3 P1-1 修正）：计错仅针对
+     「偏离可达目标」的移动——本次移动后目标不可达（target_reachable/path_exists 判定）
+     或走回起始区（chase_ctx.start_map）或走回已访问图（chase_ctx.visited，含起始区）
+     → miss_count 递增；合法中间推进（目标仍可达且首次到达）不计错——深图（≥4 步）正确
+     追击不再误触发 BOSS 重置。连续走错次数 ≥ miss_limit（chase_ctx.miss_limit 可配，
+     默认 3）或走回起始区 → 返回 boss_reset 信号（BOSS 回满/离开副本由调用方按 R24 执行
+     重置），本路不直改战斗资源。
   5. 走通道失败（死路/隐藏条件未满足/非法方向）不计入 miss_count（2a1b R11 / 2a2 §4.2：
      「此方向没有通道」不消耗行动资源）。
   6. pursue 捕获后可选续战准备：chase_ctx 携带 boss_flow（BossFlow 实例）时调
      on_chase_continue() 取续战标记（resume/hp_keep/pv_half/opening_skill，路O 已测）；
      未携带则只报捕获信号，续战接线由调用方自理（M14 续战）。
   7. pursue 走错分支附 reachable 信息位（map_graph.path_exists BFS，2a1b R5 捷径连通），
-     仅信息性提示「当前图是否仍可达目标区」，不驱动错失判定（判定严格按补白 4 两条件）。
+     仅信息性提示「当前图是否仍可达目标区」，不驱动错失判定（判定严格按补白 4 三条件）。
+  8. 换区瞬间 PV 恢复落库（审查批次3 P2-2）：chase_trigger 触发且注入 boss_flow 时调
+     BossFlow.apply_zone_change_pv_restore(cfg)，把 boss_state.pv 就地更新为恢复后值并
+     落库（2a2 §2.2 R10 / TC-09）；未注入 boss_flow → 无 BOSS 信息源，恢复由调用方自理。
+  9. 追击进度 visited 集合随 chase_ctx 持久化（补白 4 回退检测用；list 形态 JSON 友好）。
 
 铁律：零 NoneBot import（m3 §八 4）；纯函数无 IO；确定性（随机一律注入 rng，m3 §八 2）；
 平台无关；每功能可追溯（m3 §八 8）。
@@ -135,6 +148,27 @@ def _targets_list(cfg: Any) -> List[str]:
     return [str(t) for t in raw if str(t)]
 
 
+def _zc_threshold(cfg: Any) -> Any:
+    """zone_change 阈值归一（审查批次3 P2-6，与 dungeon_boss._zc_threshold 同口径）。
+
+    m3 §3.1 hp_threshold（小数，如 0.3）为准；2a2 §7.1 / 副本定稿 L142-146 嵌套
+    trigger:{type:"hp_below", value:30}（百分比）形态兼容归一：value/100 → 小数阈值
+    （trigger.hp_below 同义兜底）。不可解 → None（视为无法判定，不触发）。
+    """
+    t = _cfg_get(cfg, "hp_threshold")
+    if isinstance(t, (int, float)) and not isinstance(t, bool):
+        return t
+    trig = _cfg_get(cfg, "trigger")
+    if isinstance(trig, Mapping):
+        ttype = trig.get("type")
+        if ttype in ("hp_below", "hp_under", "hp_threshold"):
+            for k in ("value", "hp_below"):
+                v = trig.get(k)
+                if isinstance(v, (int, float)) and not isinstance(v, bool):
+                    return float(v) / 100.0
+    return None
+
+
 # -------------------------------------------------------------------------------------
 # M12 触发判定：契约本地实现（boss_flow 未注入时的兜底，判定链同 BossFlow）
 # -------------------------------------------------------------------------------------
@@ -158,7 +192,7 @@ def _contract_should_zone_change(enemy_state: Any, cfg: Any) -> bool:
     pct = _hp_pct(enemy_state)
     if pct is None:
         return False
-    threshold = _cfg_get(cfg, "hp_threshold")
+    threshold = _zc_threshold(cfg)
     if not isinstance(threshold, (int, float)) or isinstance(threshold, bool):
         return False
     threshold = float(threshold)
@@ -234,17 +268,20 @@ def chase_trigger(
 
     触发判定：boss_flow 注入时调 BossFlow.should_zone_change(enemy_state, cfg)（路O 已测
     实现优先）；未注入 → 契约本地实现 _contract_should_zone_change（判定链同口径）。
-    触发时 pick_chase_target 从 targets 确定性选一（注入 rng / 固定种子）。
+    触发时 pick_chase_target 从 targets 确定性选一（注入 rng / 固定种子）；触发且注入
+    boss_flow 时调 BossFlow.apply_zone_change_pv_restore(cfg) 换区瞬间恢复 PV 并落库
+    （审查批次3 P2-2：2a2 §2.2 R10 / TC-09），结果置于返回的 pv_restore 键。
 
     Args:
         enemy_state: 怪物状态 {hp, max_hp} 或 {hp_pct}（百分比）；phase_changed 可选标志。
-        cfg: enemies zone_change 配置子段（enabled/hp_threshold/targets/timing）。
+        cfg: enemies zone_change 配置子段（enabled/hp_threshold|trigger/targets/timing）。
         boss_flow: 注入 BossFlow（或带 should_zone_change 的对象）；None → 本地契约实现。
         rng: 注入确定性随机源（候选区选一用）。
 
     Returns:
-        {"triggered": bool, "targets": list[str], "target": str|None}
-        —— triggered=False 时 target 恒为 None（R4/R1/R3 任一不满足）。
+        {"triggered": bool, "targets": list[str], "target": str|None,
+         "pv_restore"?}——triggered=False 时 target 恒为 None（R4/R1/R3 任一不满足）；
+        pv_restore 仅触发且注入 boss_flow 时存在（apply_zone_change_pv_restore 结果）。
     """
     targets = _targets_list(cfg)
     if boss_flow is not None and callable(getattr(boss_flow, "should_zone_change", None)):
@@ -252,7 +289,13 @@ def chase_trigger(
     else:
         triggered = _contract_should_zone_change(enemy_state, cfg)
     target = pick_chase_target(cfg, rng=rng) if triggered else None
-    return {"triggered": triggered, "targets": targets, "target": target}
+    out: dict = {"triggered": triggered, "targets": targets, "target": target}
+    if triggered and boss_flow is not None:
+        apply = getattr(boss_flow, "apply_zone_change_pv_restore", None)
+        if callable(apply):
+            # 审查批次3 P2-2：换区瞬间恢复 PV 并落库（2a2 §2.2 R10 / TC-09）
+            out["pv_restore"] = apply(cfg)
+    return out
 
 
 # -------------------------------------------------------------------------------------
@@ -306,26 +349,38 @@ def begin_chase(session: Any, target_map: Any, map_names: Any = None) -> dict:
 
     - session（dict）原地落盘追击态：session["chasing"]=True + session["chase_target"]=<id>
       （工程补白 3；存储层落库由快照批次接线）。
-    - 返回 {chasing: True, target_map, target_name, hint}；hint = 「BOSS 逃向了【显示名】」
-      （显示名 = maps.name；未知图回退 map_id）。
+    - session（DungeonSession frozen dataclass）经 with_chase 返回新实例（工程补白 3 /
+      审查批次3 P2-3），置于返回的 "session" 键——原实例不可变不被改写。
+    - 返回 {chasing: True, target_map, target_name, hint, session?}；hint =
+      「BOSS 逃向了【显示名】」（显示名 = maps.name；未知图回退 map_id）。
 
     Args:
-        session: 副本会话（dict；原地写入 chasing 标志，非 dict 则仅返回不落盘）。
+        session: 副本会话（dict 原地写 / DungeonSession dataclass → 新实例）；
+            其他形态仅返回不落盘。
         target_map: 逃跑目标图 id。
         map_names: 地图名解析源（{map_id: name} / 地图列表 / 容器 / 单节点，见
             _map_display_name）；None → 显示名回退 map_id。
     """
     target = "" if target_map is None else str(target_map)
     name = _map_display_name(map_names, target) or target
+    updated_session = None
     if isinstance(session, dict):
         session[SESSION_CHASING_KEY] = True
         session[SESSION_CHASE_TARGET_KEY] = target
-    return {
+    elif hasattr(session, "__dataclass_fields__"):
+        # 审查批次3 P2-3：frozen dataclass 不可原地写 → with_chase 返回新实例
+        wc = getattr(session, "with_chase", None)
+        if callable(wc):
+            updated_session = wc(target)
+    out: dict = {
         "chasing": True,
         "target_map": target,
         "target_name": name,
         "hint": CHASE_HINT_TEMPLATE.format(name=name),
     }
+    if updated_session is not None:
+        out["session"] = updated_session
+    return out
 
 
 # -------------------------------------------------------------------------------------
@@ -359,6 +414,17 @@ def target_reachable(
         return False
 
 
+def _chase_visited(chase_ctx: dict, start_map: Optional[str]) -> set:
+    """chase_ctx.visited 归一（set/frozenset/list/tuple → set[str]；缺省空集）；起始区预置。"""
+    raw = chase_ctx.get("visited")
+    v: set = set()
+    if isinstance(raw, (set, frozenset, list, tuple)):
+        v = {str(x) for x in raw}
+    if start_map:
+        v.add(start_map)
+    return v
+
+
 def pursue(
     player_ctx: dict,
     direction: Any,
@@ -369,25 +435,30 @@ def pursue(
 
     玩家 /进入 <方向> 走通道追击：调 movement.resolve_move（成功则原地更新
     player_ctx 位置）；到达 chase_ctx.target_map → {caught: True}（续战准备见补白 6）；
-    未到达 → {caught: False, missed}：
+    未到达 → {caught: False, missed}，计错仅限「偏离可达目标」的移动（审查批次3 P1-1）：
 
       - 走通道失败（死路/隐藏未满足/非法方向）→ 不计错（补白 5，不消耗行动资源）；
-      - 走错一步 → chase_ctx.miss_count 递增（原地写回）；
-      - 错失窗口关闭：连续走错 ≥ chase_ctx.miss_limit（默认 3）或走回起始区
-        chase_ctx.start_map → {missed: True, boss_reset: True}（BOSS 回满/离开副本
-        信号，按 R24 由调用方执行重置；本路不直改战斗资源）。
+      - 合法中间推进（本次移动后目标仍可达且首次到达）→ 不计错（深图正确追击不再
+        误触发 BOSS 重置）；chase_ctx.visited 记录已访问图（补白 9）；
+      - 偏离/回退计错：走回起始区 chase_ctx.start_map / 走回已访问图 / 本次移动后
+        目标不可达（target_reachable BFS 判定）→ chase_ctx.miss_count 递增（原地写回）；
+      - 错失窗口关闭：连续走错 ≥ chase_ctx.miss_limit（默认 3）或走回起始区 →
+        {missed: True, boss_reset: True}（BOSS 回满/离开副本信号，按 R24 由调用方执行
+        重置；本路不直改战斗资源）。
 
     Args:
         player_ctx: 玩家上下文 {map_id, player:{map_id}, time_state?, maps?}（dict，原地改）。
         direction: 方向字面量（上/下/左/右 + 别名，movement.DIRECTION_ALIASES）。
         chase_ctx: 追击上下文 dict {target_map, start_map?, miss_count?, miss_limit?,
-            chasing?, boss_flow?}；miss_count/miss_limit 原地递增写回。
+            visited?, chasing?, boss_flow?}；miss_count/visited 原地递增写回。
         maps: 地图源（list / 容器 / None → player_ctx["maps"]）。
 
     Returns:
         捕获:   {"caught": True, "moved": True, "missed": False, "target_map",
                  "chase_over": True, "continue_data"?}
-        走错:   {"caught": False, "moved": True, "missed": False, "miss_count",
+        合法推进: {"caught": False, "moved": True, "missed": False, "miss_count",
+                 "miss_limit", "reachable": True}
+        走错(计数): {"caught": False, "moved": True, "missed": False, "miss_count",
                  "miss_limit", "reachable"?}
         错失:   {"caught": False, "moved": True, "missed": True, "miss_count",
                  "miss_limit", "boss_reset": True, "reason", "message"}
@@ -438,40 +509,64 @@ def pursue(
             out["continue_data"] = bf.on_chase_continue()  # 续战准备（补白 6，M14 消费）
         return out
 
-    # 未到达目标图：本次移动 = 走错一步（2a2 §4.4 R18），计数递增并回写
-    miss_count += 1
-    chase_ctx["miss_count"] = miss_count
+    # ---- 未到达目标图：错失窗口判定（审查批次3 P1-1 修正）----------------------------
+    # 计错仅限「偏离可达目标」的移动：走回起始区 / 走回已访问图 / 本次移动后目标不可达；
+    # 合法中间推进（目标仍可达且首次到达）不计错——深图（≥4 步）正确追击不再误触发重置。
+    maps_src = maps if maps is not None else player_ctx.get("maps")
+    visited = _chase_visited(chase_ctx, start_map)
+    revisit = new_map in visited
+    if not revisit:
+        visited.add(new_map)
+        chase_ctx["visited"] = sorted(visited)  # 补白 9：list 形态 JSON 友好
     back_to_start = bool(start_map) and new_map == start_map
-    over_limit = miss_count >= miss_limit
-    missed = over_limit or back_to_start
-    if missed:
-        # 错失窗口关闭：BOSS 回满/离开副本（2a2 §5.1 R24；信号交付，资源重置调用方执行）
-        chase_ctx[SESSION_CHASING_KEY] = False
-        chase_ctx["boss_reset"] = True
-        reason = "back_to_start" if back_to_start else "miss_limit"
-        message = (
-            "走回起始区，BOSS 回满并离开了副本"
-            if back_to_start
-            else f"连续走错已达上限（{miss_limit} 次），BOSS 回满并离开了副本"
-        )
-        return {
+    deviated = False
+    if not back_to_start and not revisit and target_map:
+        # 本次移动后目标是否仍可达（BFS）；不可达 = 偏离正确路径 → 计错
+        deviated = not target_reachable(new_map, target_map, maps_src)
+
+    if back_to_start or revisit or deviated:
+        miss_count += 1
+        chase_ctx["miss_count"] = miss_count
+        over_limit = miss_count >= miss_limit
+        missed = over_limit or back_to_start
+        if missed:
+            # 错失窗口关闭：BOSS 回满/离开副本（2a2 §5.1 R24；信号交付，资源重置调用方执行）
+            chase_ctx[SESSION_CHASING_KEY] = False
+            chase_ctx["boss_reset"] = True
+            reason = "back_to_start" if back_to_start else "miss_limit"
+            message = (
+                "走回起始区，BOSS 回满并离开了副本"
+                if back_to_start
+                else f"连续走错已达上限（{miss_limit} 次），BOSS 回满并离开了副本"
+            )
+            return {
+                "caught": False,
+                "moved": True,
+                "missed": True,
+                "miss_count": miss_count,
+                "miss_limit": miss_limit,
+                "boss_reset": True,
+                "reason": reason,
+                "message": message,
+            }
+        out = {
             "caught": False,
             "moved": True,
-            "missed": True,
+            "missed": False,
             "miss_count": miss_count,
             "miss_limit": miss_limit,
-            "boss_reset": True,
-            "reason": reason,
-            "message": message,
         }
+        if target_map:
+            out["reachable"] = target_reachable(new_map, target_map, maps_src)  # 信息位（补白 7）
+        return out
 
+    # 合法中间推进：目标仍可达且首次到达 → 不计错（P1-1）
     out = {
         "caught": False,
         "moved": True,
         "missed": False,
         "miss_count": miss_count,
         "miss_limit": miss_limit,
+        "reachable": True,
     }
-    if target_map:
-        out["reachable"] = target_reachable(new_map, target_map, maps)  # 信息位（补白 7）
     return out

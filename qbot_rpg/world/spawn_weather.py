@@ -131,6 +131,9 @@ def weather_weighted_refresh(
 
     懒计算写回（world_state 为可变 dict 时）：last_refresh += 已消耗间隔数 × interval
     （消耗全部已流逝间隔，防重复补刷；0 权重行不推进）；alive += 实际补刷数。
+    被地图级 max_alive 聚合上限拦截的行（allowed==0 且 due>0，requested>0）**冻结计时**
+    （欠账保留，下次让位后补刷）——审查_M3_批次4 P1-1 修复：此前被拦行仍推进 last_refresh，
+    已流逝间隔被消耗，补刷欠账永久丢失。
     零定时器、不存刷新历史、随时可重算。
 
     返回：补刷产物列表 [{enemy, count, row_index, weather, weight}, ...]。
@@ -174,8 +177,11 @@ def weather_weighted_refresh(
                 "weight": weight,
             })
             total_alive += allowed
-        # 懒计算写回：消耗已流逝的刷新间隔（防重复补刷）；0 权重行不推进计时
-        if due > 0:
+        # 懒计算写回：仅当 ① 行已满/无欠账（requested==0，计时随自然流逝推进）或 ② 本次实际
+        # 获批（allowed>0）时才消耗已流逝的刷新间隔（防重复补刷）；被地图级 max_alive 上限
+        # 拦截（allowed==0 且 due>0 且 requested>0）时**冻结计时**——欠账保留，下次让位后补刷
+        # （审查_M3_批次4 P1-1）。0 权重行（weight<=0 已 continue）不推进计时。
+        if due > 0 and (requested == 0 or allowed > 0):
             st_new = dict(st)
             st_new["alive"] = alive + allowed
             st_new["last_refresh"] = min(

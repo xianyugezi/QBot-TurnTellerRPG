@@ -317,15 +317,15 @@ class TestPursue:
         assert ctx["player"]["map_id"] == "boss_den"           # 3 玩家位置原地更新至目标图
         assert cc[SESSION_CHASING_KEY] is False                # 4 追击态关闭
 
-    def test_wrong_step_not_caught_and_counted(self) -> None:
+    def test_legal_progress_not_counted(self) -> None:
         ctx = _pctx("s_room")
         cc = _chase()
-        out = pursue(ctx, "down", cc, maps=_CHASE_MAPS)
+        out = pursue(ctx, "down", cc, maps=_CHASE_MAPS)       # 合法中间推进：s_room → dead_end
         assert out["caught"] is False                          # 1 未捕获
         assert out["missed"] is False                          # 2 未达错失窗口
-        assert out["miss_count"] == 1                          # 3 走错计数 1
-        assert cc["miss_count"] == 1                           # 4 计数原地回写
-        assert out["reachable"] is True                        # 5 死胡同仍可达目标（BFS 信息位）
+        assert out["miss_count"] == 0                          # 3 合法推进（目标仍可达）不计错
+        assert cc["miss_count"] == 0                           # 4 计数未递增
+        assert out["reachable"] is True                        # 5 目标仍可达（BFS 信息位）
 
     def test_blocked_move_not_counted(self) -> None:
         ctx = _pctx("s_room")
@@ -339,35 +339,40 @@ class TestPursue:
     def test_back_to_start_misses(self) -> None:
         ctx = _pctx("s_room")
         cc = _chase()
-        out1 = pursue(ctx, "up", cc, maps=_CHASE_MAPS)         # 走错 1：s_room → corridor
-        assert out1["missed"] is False and cc["miss_count"] == 1  # 1 未错失、计数 1
+        out1 = pursue(ctx, "up", cc, maps=_CHASE_MAPS)         # 合法推进：s_room → corridor
+        assert out1["missed"] is False and cc["miss_count"] == 0  # 1 未错失、合法推进不计错
         out2 = pursue(ctx, "down", cc, maps=_CHASE_MAPS)       # 走回起始区 s_room
         assert out2["missed"] is True                          # 2 走回起始区 = 错失
         assert out2["boss_reset"] is True                      # 3 BOSS 回满/离开副本信号
         assert out2["reason"] == "back_to_start"               # 4 错失原因 = 回起始区
-        assert cc["miss_count"] == 2                           # 5 计数递增至 2
+        assert cc["miss_count"] == 1                           # 5 计数递增至 1
 
     def test_miss_limit_default_three(self) -> None:
         assert MISS_LIMIT_DEFAULT == 3                         # 1 默认错失上限 3
         ctx = _pctx("s_room")
         cc = _chase()
-        out1 = pursue(ctx, "up", cc, maps=_CHASE_MAPS)         # 错 1 → corridor
-        assert out1["missed"] is False and out1["miss_count"] == 1  # 2 首错未错失
-        out2 = pursue(ctx, "left", cc, maps=_CHASE_MAPS)       # 错 2 → loop_a
-        assert out2["missed"] is False and out2["miss_count"] == 2  # 3 二错未错失
-        out3 = pursue(ctx, "right", cc, maps=_CHASE_MAPS)      # 错 3 → corridor（连续走错）
-        assert out3["missed"] is True                          # 4 三错达上限 = 错失
-        assert out3["reason"] == "miss_limit"                  # 5 错失原因 = 超限
-        assert out3["boss_reset"] is True                      # 6 BOSS 回满/离开副本信号
-        assert cc[SESSION_CHASING_KEY] is False                # 7 追击态关闭
+        out1 = pursue(ctx, "up", cc, maps=_CHASE_MAPS)         # 合法推进：s_room → corridor
+        assert out1["missed"] is False and out1["miss_count"] == 0  # 2 合法推进不计错
+        out2 = pursue(ctx, "left", cc, maps=_CHASE_MAPS)       # 合法推进：corridor → loop_a
+        assert out2["missed"] is False and out2["miss_count"] == 0  # 3 合法推进不计错
+        out3 = pursue(ctx, "right", cc, maps=_CHASE_MAPS)      # 回已访问图 corridor → 计错 1
+        assert out3["missed"] is False and out3["miss_count"] == 1  # 4 回访计错 1 未达上限
+        out4 = pursue(ctx, "left", cc, maps=_CHASE_MAPS)       # 回已访问图 loop_a → 计错 2
+        assert out4["missed"] is False and out4["miss_count"] == 2  # 5 回访计错 2 未达上限
+        out5 = pursue(ctx, "right", cc, maps=_CHASE_MAPS)      # 再回 corridor → 计错 3 = 上限
+        assert out5["missed"] is True                          # 6 三错达上限 = 错失
+        assert out5["reason"] == "miss_limit"                  # 7 错失原因 = 超限
+        assert out5["boss_reset"] is True                      # 8 BOSS 回满/离开副本信号
+        assert cc[SESSION_CHASING_KEY] is False                # 9 追击态关闭
 
     def test_custom_miss_limit(self) -> None:
         ctx = _pctx("s_room")
         cc = _chase(miss_limit=1)
-        out = pursue(ctx, "up", cc, maps=_CHASE_MAPS)
+        out = pursue(ctx, "right", cc, maps=_CHASE_MAPS)       # 单向入虚空房 → 目标不可达 = 偏离
         assert out["missed"] is True                           # 1 自定义上限 1：首错即错失
         assert out["miss_count"] == 1                          # 2 计数 = 上限
-        assert out["boss_reset"] is True                       # 3 超限 BOSS 回满信号
+        assert out["reason"] == "miss_limit"                   # 3 错失原因 = 超限
+        assert out["boss_reset"] is True                       # 4 超限 BOSS 回满信号
 
     def test_unreachable_after_wrong_move_info_flag(self) -> None:
         ctx = _pctx("s_room")

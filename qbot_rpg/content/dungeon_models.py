@@ -150,6 +150,26 @@ def _collect_enemy_ids(modules: Mapping[str, object]) -> Optional[Set[str]]:
     return None
 
 
+def _maps_with_entrances(modules: Mapping[str, object]) -> Set[str]:
+    """maps 模块中挂副本入口（dungeon_entrances 非空）的地图 id 集。
+
+    反向 R2 校验靶（审查_M3_批次1 P1-1）：副本内部地图（∈ dungeon.maps）不得再挂副本入口。
+    maps 模块缺失 / 非 list / 无挂载 → 空集（不误拦）。
+    """
+    maps_data = modules.get("maps")
+    if not isinstance(maps_data, list):
+        return set()
+    out: Set[str] = set()
+    for e in maps_data:
+        if not isinstance(e, Mapping):
+            continue
+        eid = e.get("id")
+        de = e.get("dungeon_entrances")
+        if isinstance(eid, str) and eid and isinstance(de, list) and de:
+            out.add(eid)
+    return out
+
+
 # -------------------------------------------------------------------------------------
 # zone_change 子段校验（enemies.json 怪物级，m3_shared_contract §3.1 4 字段）
 # -------------------------------------------------------------------------------------

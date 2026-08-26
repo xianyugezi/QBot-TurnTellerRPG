@@ -8,10 +8,22 @@
         "enemy": "rock_weasel",
         "count": 3,
         "respawn_minutes": 10,
-        "active_time": { "from": "20:00", "to": "06:00" },
-        "seasons": ["autumn", "winter"],
-        "periods": ["night", "midnight"],
-        "weather_weights": { "fog": 2, "rain": 0.5 }
+        "active_time": {
+          "from": "20:00",
+          "to": "06:00"
+        },
+        "seasons": [
+          "autumn",
+          "winter"
+        ],
+        "periods": [
+          "night",
+          "midnight"
+        ],
+        "weather_weights": {
+          "fog": 2,
+          "rain": 0.5
+        }
       },
       {
         "enemy": "stone_skink",
@@ -20,33 +32,65 @@
       }
     ],
     "exits": {
-      "up": { "to": "crag_den", "mode": "bidirectional" },
-      "down": { "to": "lava_tunnel", "mode": "one_way" },
+      "up": {
+        "to": "crag_den",
+        "mode": "bidirectional"
+      },
+      "down": {
+        "to": "lava_tunnel",
+        "mode": "one_way"
+      },
       "right": {
         "to": "lava_tunnel",
         "mode": "hidden",
-        "condition": { "var": "subquest_done", "op": "eq", "param": "learn_mechanic" }
+        "condition": {
+          "var": "subquest_done",
+          "op": "eq",
+          "param": "learn_mechanic"
+        }
+      },
+      "left": {
+        "to": "volcanic_path",
+        "mode": "bidirectional"
       }
     },
-    "mechanics": [],
-    "dungeon_entrances": [
-      { "dungeon": "molten_dungeon", "name": "熔岩洞窟·讨伐" }
-    ]
+    "mechanics": []
   },
   {
     "id": "crag_den",
     "name": "石甲蜥巢穴",
     "desc": "石甲蜥盘踞的巢穴，岩壁设有落石机关；练习木桩也架设在此。",
     "monsters": [
-      { "enemy": "stone_skink", "count": 2, "respawn_minutes": 15 },
-      { "enemy": "training_dummy", "count": 1, "respawn_minutes": 5 }
+      {
+        "enemy": "stone_skink",
+        "count": 2,
+        "respawn_minutes": 15
+      },
+      {
+        "enemy": "training_dummy",
+        "count": 1,
+        "respawn_minutes": 5
+      }
     ],
     "exits": {
-      "down": { "to": "rubble_field", "mode": "bidirectional" },
-      "left": { "to": "lava_tunnel", "mode": "bidirectional" }
+      "down": {
+        "to": "rubble_field",
+        "mode": "bidirectional"
+      },
+      "left": {
+        "to": "lava_tunnel",
+        "mode": "bidirectional"
+      }
     },
     "mechanics": [
-      { "id": "rockfall", "desc": "每隔数回合落石，探索版先学会躲避。", "on_step": { "type": "trap", "damage": 10 } }
+      {
+        "id": "rockfall",
+        "desc": "每隔数回合落石，探索版先学会躲避。",
+        "on_step": {
+          "type": "trap",
+          "damage": 10
+        }
+      }
     ]
   },
   {
@@ -54,13 +98,41 @@
     "name": "熔岩坑道",
     "desc": "通往熔岩深处的单向坑道，烬火龙镇守此地；从乱石滩可沿捷径直捣此处。",
     "monsters": [
-      { "enemy": "ember_drake", "count": 1, "respawn_minutes": 60 }
+      {
+        "enemy": "ember_drake",
+        "count": 1,
+        "respawn_minutes": 60
+      }
     ],
     "exits": {
-      "up": { "to": "rubble_field", "mode": "one_way" },
-      "right": { "to": "crag_den", "mode": "bidirectional" }
+      "up": {
+        "to": "rubble_field",
+        "mode": "one_way"
+      },
+      "right": {
+        "to": "crag_den",
+        "mode": "bidirectional"
+      }
     },
     "gate_guard": "ember_drake",
     "mechanics": []
+  },
+  {
+    "id": "volcanic_path",
+    "name": "熔岩小径",
+    "desc": "通往熔岩洞窟的火山小径。",
+    "monsters": [],
+    "exits": {
+      "up": {
+        "to": "rubble_field",
+        "mode": "bidirectional"
+      }
+    },
+    "dungeon_entrances": [
+      {
+        "dungeon": "molten_dungeon_boss",
+        "name": "熔岩洞窟·讨伐"
+      }
+    ]
   }
 ]

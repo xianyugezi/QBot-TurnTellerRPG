@@ -19,9 +19,12 @@ phases 单处，状态机不重复声明血量阈值；phase_changed 触发可�
      配置传入 phases=[{threshold, ...}] 即覆盖默认。
   3. resolve_phase(hp_pct, max_hp, phases)：max_hp 传且 >0 时第一参数按**绝对 HP**
      换算为百分比（hp/max_hp×100）；否则第一参数按 0-100 百分比直读。
-  4. 阶段条目可选键：threshold（必，HP% 上界）/ actions（阶段专属行动表）/
+  4. 阶段条目可选键：threshold（HP% 上界）/ actions（阶段专属行动表）/
      enter_action（入强制队列；str 或 {action}） / broadcast（演出文案，含
      {monster} 占位）/ name（阶段名）。未知键忽略（校验器兜底，此处不拦截）。
+     定稿 phases 形态 {hp_from, hp_to, behavior}（副本定稿 L241-246：hp_from=高血端
+     上限、hp_to=低血端下限）在 threshold 缺失时归一（hp_from→threshold，hp_to 兜底，
+     审查批次3 P2-5），避免定稿形态配置被忽略而恒阶段 1。
   5. phase_changed 事件形态 {type:"phase_changed", value, phase, from}——与
      monster_ai._eval_condition 内建 phase_changed（phase >= value 即成立）兼容：
      主 agent 切 ai_state.phase 后 evaluate_transitions 即可联动；或直接把事件
@@ -67,6 +70,15 @@ class PhaseTable:
         )
         for p in raw:
             p.setdefault("actions", [])
+            # 审查批次3 P2-5：定稿 phases 形态 {hp_from, hp_to, behavior} 归一 → threshold
+            # （副本定稿 L241-246：hp_from=高血端上限、hp_to=低血端下限；threshold 缺失时
+            #  显式映射 hp_from→threshold（hp_to 兜底），保留既有「阈值处归下阶段」区间语义）
+            if not _is_num(p.get("threshold")):
+                hi = p.get("hp_from")
+                lo = p.get("hp_to")
+                norm = hi if _is_num(hi) else (lo if _is_num(lo) else None)
+                if norm is not None:
+                    p["threshold"] = float(norm)
         # threshold 降序；同 threshold 保序（工程收敛 1）
         raw.sort(key=lambda p: -float(p.get("threshold", 0.0)))
         self._phases: List[Dict[str, Any]] = raw
@@ -219,6 +231,11 @@ def phase_changed_event(old_phase: int, new_phase: int) -> Optional[Dict[str, An
 
 
 # ================================================================ 内部
+
+
+def _is_num(value: Any) -> bool:
+    """数值校验（排除 bool——bool 是 int 子类；审查批次3 P2-5 键形态归一用）。"""
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
 
 
 def _to_pct(hp_pct: float, max_hp: Optional[float]) -> float:

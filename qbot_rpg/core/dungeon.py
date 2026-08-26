@@ -124,8 +124,24 @@ class DungeonSession:
     external_anchor: Optional[str] = None
     content_pack_id: Optional[str] = None
     content_pack_version: Optional[str] = None
+    # M3 审查批次3 P2-3：追击态字段（chase 管线与 frozen dataclass 互操作）——
+    # begin_chase 经 with_chase 返回新实例；持久化随 to_dict/from_dict 落库
+    chasing: bool = False
+    chase_target: Optional[str] = None
+    zone_chase_context: Optional[Dict[str, Any]] = None  # 换区追击上下文（chase_ctx 快照）
 
     # ---- 不可变更新辅助 ---------------------------------------------------------
+    def with_chase(
+        self,
+        chasing: bool,
+        target: Optional[str] = None,
+        ctx: Optional[Dict[str, Any]] = None,
+    ) -> "DungeonSession":
+        """追击态更新（M3 审查批次3 P2-3）：返回新实例，chasing/chase_target/zone_chase_context 落位。"""
+        return dataclasses.replace(
+            self, chasing=chasing, chase_target=target, zone_chase_context=ctx
+        )
+
     def with_state(self, state: str) -> "DungeonSession":
         return dataclasses.replace(self, state=state)
 
@@ -153,6 +169,9 @@ class DungeonSession:
             "boss_state": dict(self.boss_state),
             "rest_count": self.rest_count,
             "external_anchor": self.external_anchor,
+            "chasing": self.chasing,
+            "chase_target": self.chase_target,
+            "zone_chase_context": dict(self.zone_chase_context) if self.zone_chase_context else None,
             "content_pack_id": self.content_pack_id,
             "content_pack_version": self.content_pack_version,
         }
@@ -184,6 +203,9 @@ class DungeonSession:
             rest_count=int(data.get("rest_count", 0) or 0),
             external_anchor=data.get("external_anchor"),
             content_pack_id=data.get("content_pack_id"),
+            chasing=bool(data.get("chasing", False)),
+            chase_target=data.get("chase_target"),
+            zone_chase_context=dict(data["zone_chase_context"]) if isinstance(data.get("zone_chase_context"), Mapping) else None,
             content_pack_version=data.get("content_pack_version"),
         )
 

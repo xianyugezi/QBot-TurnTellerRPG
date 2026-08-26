@@ -505,6 +505,11 @@ class _Checker:
             # （G0 架构修复：校验函数在 content 层，避免 content→engine 反向依赖）
             from qbot_rpg.content.time_validator import validate_time_cycle
             validate_time_cycle(data if isinstance(data, Mapping) else {}, self)
+            # M3 天气池对象形态校验（M41 · 细化_2a4b §1.2 R3/R4 · 审查 M3 批次2 P1-4）：
+            # default_pool {key,name,emoji} 对象条目「键+中文名齐全」红拦——收口接入 check_pack
+            # （与 validate_time_cycle V4 并存：字符串池键形态前者已覆盖，本函数按对象形态补强）
+            from qbot_rpg.content.time_validator import validate_weather_pool
+            validate_weather_pool(data if isinstance(data, Mapping) else {}, self)
             # M3 天气校验（M41 · m3_shared_contract §6.2）：V5-V8 硬校验 + 黄提示（依赖 modules 消费方扫描）
             from qbot_rpg.content.weather_validator import validate_weather
             validate_weather(self._modules, data if isinstance(data, Mapping) else {}, self)

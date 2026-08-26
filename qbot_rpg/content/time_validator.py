@@ -50,7 +50,8 @@ def validate_time_cycle(settings: Mapping[str, object], report: object) -> None:
                   rule="season_enum_invalid", got=ev,
                   msg="季节枚举要填非空字符串数组（如 [\"spring\",\"summer\",\"autumn\",\"winter\"]）")
         elif len(ev) == 1:
-            _emit(report, "settings", "time_cycle.season.enum", "Y1",
+            # 审查 M3 批次2 P1-6：单值枚举（恒定季节）合法——改走黄提示通道（_warn），不硬拦
+            _warn(report, "settings", "time_cycle.season.enum", "Y1",
                   rule="season_enum_singleton", got=ev,
                   msg="季节枚举只有 1 种（恒定无季节轮换）——只提示，如需固定季节可忽略")
 
@@ -71,7 +72,8 @@ def validate_time_cycle(settings: Mapping[str, object], report: object) -> None:
                   rule="period_enum_invalid", got=ev,
                   msg="时段枚举要填非空字符串数组（如 [\"dawn\",\"noon\",\"dusk\",\"night\",\"midnight\"]）")
         elif len(ev) == 1:
-            _emit(report, "settings", "time_cycle.period.enum", "Y2",
+            # 审查 M3 批次2 P1-6：单值枚举（恒定时段）合法——改走黄提示通道（_warn），不硬拦
+            _warn(report, "settings", "time_cycle.period.enum", "Y2",
                   rule="period_enum_singleton", got=ev,
                   msg="时段枚举只有 1 种（恒定无时段轮换）——只提示，如需固定时段可忽略")
 
@@ -97,17 +99,21 @@ def validate_time_cycle(settings: Mapping[str, object], report: object) -> None:
                   msg="默认天气池至少要 1 种天气")
         else:
             seen: dict = {}
-            for i, k in enumerate(pool):
-                if not isinstance(k, str):
+            for i, entry in enumerate(pool):
+                # 池条目双形态（审查 M3 批次2 P1-4）：str 键（既有 IF）或 {key,name,emoji} 对象
+                # （细化_2a4b §1.2）——对象条目提取 .key 参与非空/唯一校验，不再误红拦规范形态
+                key = entry if isinstance(entry, str) \
+                    else (entry.get("key") if isinstance(entry, Mapping) else None)
+                if not isinstance(key, str) or not key:
                     _emit(report, "settings", f"time_cycle.weather.default_pool.{i}", "V4",
-                          rule="pool_key_type", got=k,
-                          msg="默认天气池的天气键要填字符串")
-                elif k in seen:
+                          rule="pool_key_type", got=entry,
+                          msg="默认天气池的天气条目要填字符串或 {key, name} 对象")
+                elif key in seen:
                     _emit(report, "settings", f"time_cycle.weather.default_pool.{i}", "V4",
-                          rule="pool_key_dup", key=k,
-                          msg=f"默认天气池天气键重复了：{k}")
+                          rule="pool_key_dup", key=key,
+                          msg=f"默认天气池天气键重复了：{key}")
                 else:
-                    seen[k] = i
+                    seen[key] = i
 
 
 
@@ -146,9 +152,18 @@ def validate_weather_pool(cfg: Mapping[str, object], report: object) -> None:
     seen: dict = {}
     for i, entry in enumerate(pool):
         field = f"{base}.{i}"
+        if isinstance(entry, str):
+            # 字符串键形态（既有 IF）：非空/唯一已由 validate_time_cycle V4 覆盖，此处只参与
+            # 跨形态重复检测（审查 M3 批次2 P1-4：接线 check_pack 后不得误红拦字符串池）
+            if entry in seen:
+                _emit(report, "settings", field, "V4", rule="pool_key_dup", key=entry,
+                      msg=f"默认天气池天气键重复了：{entry}")
+            else:
+                seen[entry] = i
+            continue
         if not isinstance(entry, Mapping):
             _emit(report, "settings", field, "V4", rule="pool_entry_type", got=entry,
-                  msg=f"默认天气池第 {i} 项要填对象（含 key/name）")
+                  msg=f"默认天气池第 {i} 项要填字符串或对象（含 key/name）")
             continue
         key = entry.get("key")
         if not isinstance(key, str) or not key:
@@ -164,6 +179,28 @@ def validate_weather_pool(cfg: Mapping[str, object], report: object) -> None:
         if not isinstance(name, str) or not name:
             _emit(report, "settings", field, "V4", rule="pool_name_missing", key=key,
                   msg=f"天气『{label}』缺中文名 name")
+
+
+def _warn(report: object, module: str, field: str, kind: str, **detail: object) -> None:
+    """向 report 追加一条黄提示：优先 _warn(module, field, kind, **detail)；否则 `.warnings`
+    列表 append dict；其次 Mapping['warnings'] 列表（与 _emit 同构，黄通道）。
+
+    审查 M3 批次2 P1-6：单值枚举提示（Y1/Y2）须走黄通道——合法配置不可硬拦
+    （2026-08-26 裁决「档位数量/命名只提示不拦截」）。"""
+    if report is None:
+        return
+    warn = getattr(report, "_warn", None)
+    if callable(warn):
+        warn(module, field, kind, **detail)
+        return
+    warnings = getattr(report, "warnings", None)
+    if isinstance(warnings, list):
+        warnings.append({"module": module, "field": field, "kind": kind, "detail": dict(detail)})
+        return
+    if isinstance(report, Mapping):
+        warnings = report.get("warnings")
+        if isinstance(warnings, list):
+            warnings.append({"module": module, "field": field, "kind": kind, "detail": dict(detail)})
 
 
 def _emit(report: object, module: str, field: str, kind: str, **detail: object) -> None:

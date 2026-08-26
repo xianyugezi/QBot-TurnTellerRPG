@@ -227,13 +227,13 @@ class TestRestInDungeon:
         assert out2["mp_restored"] == 200                    # 17 floor(500×1.0) 封顶 200
 
     def test_cooldown_reduction_default(self) -> None:
-        """冷却缩减缺省 −1 回合（本路默认；1b effect_cooldowns 表）。"""
+        """冷却缩减缺省 −3 回合（M25/TC-2a3-15 定稿默认 3；1b effect_cooldowns 表）。"""
         out = rest_in_dungeon(_session(), _player_ctx())
-        assert out["cooldown_reduction"] == DEFAULT_COOLDOWN_REDUCTION  # 18 默认 1
-        assert out["cooldown_reduction"] == 1                # 19
+        assert out["cooldown_reduction"] == DEFAULT_COOLDOWN_REDUCTION  # 18 默认 3
+        assert out["cooldown_reduction"] == 3                # 19
         assert out["cooldowns_affected"] == ("flame_burst", "frost_aura")  # 20 仅冷却中技能
-        assert out["cooldowns_after"] == {"flame_burst": 2, "frost_aura": 0,
-                                          "passive_heal": 0}  # 21 缩减后（min 0）
+        assert out["cooldowns_after"] == {"flame_burst": 0, "frost_aura": 0,
+                                          "passive_heal": 0}  # 21 缩减后（−3 全清零，min 0）
 
     def test_cooldown_reduction_config(self) -> None:
         """冷却缩减量可配（M25：−N 回合）：N=3 全清零。"""
@@ -246,7 +246,7 @@ class TestRestInDungeon:
         """冷却表取源回退：ctx.effect_cooldowns → player.cooldowns（【补白 7】）。"""
         out = rest_in_dungeon(_session(), _player_ctx(battle_state=None,
                                                       effect_cooldowns={"flame_burst": 2}))
-        assert out["cooldowns_after"] == {"flame_burst": 1}  # 24 ctx 层冷却表
+        assert out["cooldowns_after"] == {"flame_burst": 0}  # 24 ctx 层冷却表（−3 → min 0）
         out2 = rest_in_dungeon(_session(), _player_ctx(
             battle_state=None, player={"hp": 500, "cooldowns": {"frost_aura": 1}}))
         assert out2["cooldowns_after"] == {"frost_aura": 0}  # 25 player 层冷却表
@@ -270,12 +270,12 @@ class TestRestInDungeon:
         assert out["hp_restored"] == 0                       # 33 不恢复
 
     def test_limit_zero_unlimited(self) -> None:
-        """rest_limit=0 不限（M25：0=不限）。"""
+        """rest_limit=0 不限（M25：0=不限；副本定稿 rest_per_dungeon 缺省 null=不限）。"""
         out = rest_in_dungeon(_session(rest_count=99), _player_ctx(),
                               cfg={"rest_limit": 0})
         assert out["rested"] is True                         # 34 0=不限
         assert out["rest_count"] == 100                      # 35
-        assert DEFAULT_REST_LIMIT == 3                       # 36 默认上限常量 3
+        assert DEFAULT_REST_LIMIT == 0                       # 36 默认上限常量 0（不限）
 
     def test_not_safe_zone_rejected(self) -> None:
         """非安全区拒绝 /休息（2a3 R16 / TC-2a3-15）。"""

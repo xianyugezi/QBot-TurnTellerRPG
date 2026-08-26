@@ -297,6 +297,18 @@ class TestOnChaseContinue:
         out = _flow(session={"boss_state": {"pv": 250}}).on_chase_continue()
         assert out["pv_half_value"] == 275            # 250 + floor(50×0.5)
 
+
+    def test_pv_restore_idempotent(self) -> None:
+        """M3 审查批次3 P2-2 幂等（e2e 双触发验证暴露）：已恢复过（标记在）→ 不再二次恢复。"""
+        sess = {"boss_state": {"pv": 0}}
+        flow = _flow(session=sess)
+        r1 = flow.apply_zone_change_pv_restore()
+        assert r1["pv"] == 150            # 首次：0 + floor(300×0.5)
+        assert sess["boss_state"]["pv"] == 150
+        assert sess["boss_state"].get("pv_restored") is True
+        r2 = flow.apply_zone_change_pv_restore()
+        assert r2["pv"] == 150            # 幂等：不再二次恢复（150 + 75 ≠ 225）
+        assert r2.get("already_restored") is True
     def test_boss_state_hp_passthrough(self) -> None:
         session = {"boss_state": {"hp": 375, "max_hp": 1500}}
         out = _flow(session=session).on_chase_continue()

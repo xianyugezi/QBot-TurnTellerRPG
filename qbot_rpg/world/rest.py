@@ -24,12 +24,16 @@
                         （chase_ctx 保留），不触发副本重置（与 M15 离开重置互斥）
 
 工程补白（定稿/契约未明示处，显式标注，不冒充定稿）：
-  1. 冷却缩减缺省值：规划 M25 定稿「当前冷却中技能/特效冷却 −N 回合默认 3」；本批次指令按
-     批次收口取默认 1（可配 cfg.cooldown_reduction）。两口径并存时以本模块常量
-     DEFAULT_COOLDOWN_REDUCTION 为准（可配）。
+  1. 冷却缩减缺省值：规划 M25 定稿「当前冷却中技能/特效冷却 −N 回合默认 3」+ 验收
+     TC-2a3-15（副本定稿 §2.1「默认 3」）→ 本模块 DEFAULT_COOLDOWN_REDUCTION = 3
+     （审查_M3_批次4 P2-8 修复：此前取 1 偏离仓内唯一权威默认 3，可配
+     cfg.cooldown_reduction 覆盖）。
   2. 次数限制口径：规划 M25 定稿含「每日 3 次/天随存档持久化」与「rest_per_dungeon 每副本
-     上限」两套口径。本路 rest_limit 语义 = 每副本上限（rest_per_dungeon 对齐，0=不限，
-     默认 3）；每日口径/rest_auto 自动结算由批次接线（本模块不接每日重置）。
+     上限」两套口径。本路 rest_limit 语义 = 每副本上限（rest_per_dungeon 对齐，0=不限）；
+     副本定稿 rest_per_dungeon 缺省 = null（不限）→ 本模块 DEFAULT_REST_LIMIT = 0（不限）
+     （审查_M3_批次4 P2-9 修复：此前默认 3 误把「每日 3 次」用到每副本上限，未配 rest_limit
+     的 BOSS 副本第 4 次休息被拦，与定稿「不限」冲突）。每日口径/rest_auto 自动结算由批次
+     接线（本模块不接每日重置）。
   3. safe_zone 配置形态：m3_shared_contract §4.1 / DungeonDef 为单字符串；规划 M24 提「safe_zone
      数组」多安全区。本路防御兼容 str / list 两形态，并按 M24 取并集语义：安全区集合 =
      {入口区} ∪ {safe_zone 配置} ∪ {maps 节点 safe_zone 标记}（core.dungeon._safe_zone 为单图
@@ -76,11 +80,11 @@ __all__ = [
 #: HP/MP 部分恢复比例缺省值（M25：各 20% 可配倾向百分比）。
 DEFAULT_HP_MP_PCT: float = 0.2
 
-#: 冷却缩减量缺省值（−N 回合；【补白 1】：批次指令取 1，定稿 M25 默认 3，可配）。
-DEFAULT_COOLDOWN_REDUCTION: int = 1
+#: 冷却缩减量缺省值（−N 回合；【补白 1】：M25 / TC-2a3-15 定稿默认 3，可配）。
+DEFAULT_COOLDOWN_REDUCTION: int = 3
 
-#: 每副本休息次数上限缺省值（rest_per_dungeon 对齐；0=不限；【补白 2】）。
-DEFAULT_REST_LIMIT: int = 3
+#: 每副本休息次数上限缺省值（rest_per_dungeon 对齐；0=不限；【补白 2】：副本定稿缺省=null 不限）。
+DEFAULT_REST_LIMIT: int = 0
 
 #: 恢复模式：全满（mode="full"）。
 REST_MODE_FULL: str = "full"
@@ -394,8 +398,8 @@ def rest_in_dungeon(session: Any, player_ctx: Mapping[str, Any],
         player_ctx: 玩家上下文（hp/mp/max_hp/max_mp 读取；battle_state.effect_cooldowns
             冷却表，【补白 5/7】）。纯函数不改写入参。
         cfg: 配置（可空）——mode("full"|"pct"，缺省 pct) / hp_mp_pct(缺省 0.2) /
-            hp_pct / mp_pct / cooldown_reduction(缺省 1) / rest_limit(缺省 3，0=不限) /
-            maps（安全区判定地图源）。
+            hp_pct / mp_pct / cooldown_reduction(缺省 3，M25/TC-2a3-15) / rest_limit(缺省
+            0=不限，副本定稿 rest_per_dungeon 缺省 null) / maps（安全区判定地图源）。
 
     Returns:
         成功：{rested: True, hp_restored, mp_restored, cooldown_reduction,

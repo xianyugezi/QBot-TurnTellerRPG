@@ -173,12 +173,17 @@ class WorldTime:
         return self._int_field("weather", "weather_minutes", _DEFAULT_WEATHER_MINUTES, 30)
 
     def default_pool(self) -> List[str]:
-        """默认天气池（非空键唯一；缺省 5 种【工程补白】示例键）。"""
+        """默认天气池（非空键唯一；缺省 5 种【工程补白】示例键）。
+
+        审查 M3 批次2 P1-4：原 `[str(k) for k in p]` 对 {key,name,emoji} 对象形态产出
+        str(dict) 垃圾键 → 改走 `_pool_keys` 提取 key（str 键 / {key,...} 对象双形态兼容，
+        与 map_pool 同口径）。
+        """
         sec = self._tc.get("weather")
         if isinstance(sec, Mapping):
             p = sec.get("default_pool")
             if isinstance(p, (list, tuple)) and p:
-                return [str(k) for k in p]
+                return self._pool_keys(p)
         return list(DEFAULT_POOL)
 
     # ---- 锚点基础 ----

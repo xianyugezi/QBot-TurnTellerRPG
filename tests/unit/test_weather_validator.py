@@ -377,3 +377,69 @@ def test_legal_full_config_zero():
     validate_weather(mods, cfg, rep)
     assert not rep.errors, f"合法全量配置不应红拦：{rep.errors}"
     assert not rep.warnings, f"合法全量配置不应黄提示：{rep.warnings}"
+
+
+# =====================================================================================
+# 审查 M3 批次2 回归：P1-3 V6 按声明枚举集比对（读 cfg.time_cycle.season.enum / period.enum）
+# =====================================================================================
+def test_v6_custom_enum_legal() -> None:
+    # 自定义 season.enum/period.enum：条件引用自定义键不再误红拦（2026-08-26 拍板可配）
+    mods = _mods(enemies=[{"id": "e1", "special_actions": [
+        {"id": "sa1", "action": "a1",
+         "trigger": {"type": "hp_below", "value": 50,
+                     "condition": {"var": "season", "op": "eq", "param": "s2"}}},
+        {"id": "sa2", "action": "a2",
+         "trigger": {"type": "hp_below", "value": 50,
+                     "condition": {"var": "period", "op": "eq", "param": "p1"}}},
+    ]}])
+    cfg = _cfg(season={"season_days": 7, "enum": ["s1", "s2", "s3"]},
+               period={"period_minutes": 60, "enum": ["p1", "p2"]})
+    rep = _Report()
+    validate_weather(mods, cfg, rep)
+    assert not rep.errors, f"自定义枚举合法条件不应红拦：{rep.errors}"
+
+
+def test_v6_custom_enum_bracket_legal() -> None:
+    # 字符串形态 [季节:s2] 同样按声明集比对
+    mods = _mods(enemies=[{"id": "e1", "lore": [
+        {"unlock": 10, "desc": "图鉴", "condition": "[季节:s2]"},
+        {"unlock": 50, "desc": "图鉴", "condition": "[时段:p1]"},
+    ]}])
+    cfg = _cfg(season={"season_days": 7, "enum": ["s1", "s2", "s3"]},
+               period={"period_minutes": 60, "enum": ["p1", "p2"]})
+    rep = _Report()
+    validate_weather(mods, cfg, rep)
+    assert not rep.errors, f"自定义枚举合法括号条件不应红拦：{rep.errors}"
+
+
+def test_v6_custom_enum_outside_declared_red() -> None:
+    # 声明集之外的自定义键（s4）仍红拦
+    mods = _mods(enemies=[{"id": "e1", "special_actions": [
+        {"id": "sa1", "action": "a1",
+         "trigger": {"type": "hp_below", "value": 50,
+                     "condition": {"var": "season", "op": "eq", "param": "s4"}}}]}])
+    cfg = _cfg(season={"season_days": 7, "enum": ["s1", "s2", "s3"]})
+    rep = _Report()
+    validate_weather(mods, cfg, rep)
+    errs = _errs(rep, "season_enum_invalid")
+    assert len(errs) == 1
+    assert errs[0]["detail"]["param"] == "s4"
+    assert errs[0]["detail"]["allowed"] == ["s1", "s2", "s3"]
+
+
+def test_v6_custom_enum_default_fallback() -> None:
+    # 未声明 enum → 回退默认 4 季/5 时段：默认键合法、自定义键红拦（行为不变）
+    mods = _mods(enemies=[{"id": "e1", "special_actions": [
+        {"id": "sa1", "action": "a1",
+         "trigger": {"type": "hp_below", "value": 50,
+                     "condition": {"var": "season", "op": "eq", "param": "summer"}}}]}])
+    rep = _Report()
+    validate_weather(mods, _cfg(), rep)
+    assert not rep.errors
+    mods2 = _mods(enemies=[{"id": "e1", "special_actions": [
+        {"id": "sa1", "action": "a1",
+         "trigger": {"type": "hp_below", "value": 50,
+                     "condition": {"var": "season", "op": "eq", "param": "s2"}}}]}])
+    rep2 = _Report()
+    validate_weather(mods2, _cfg(), rep2)
+    assert len(_errs(rep2, "season_enum_invalid")) == 1

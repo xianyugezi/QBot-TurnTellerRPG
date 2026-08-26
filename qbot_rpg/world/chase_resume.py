@@ -1,14 +1,16 @@
 """换区追击续战装配 + 离开副本重置（M3 批次6·路R：M14 换区续战装配 + M15 离开副本重置）。
 
 依据：
-  - 细化_2a2_换区追击流程.md §2-4（PV 半恢复 R9/R10/R11：满值口径向下取整 + 门禁语义 debuff
-    层数保留破防全量爆发；血量保持不重置 R12/R13；追到续战 R19-R21：残血 + PV 半值 + 开场技；
+  - 细化_2a2_换区追击流程.md §2-4（PV 恢复 R9/R10/R11：缺失量口径向下取整——恢复「已损失
+    的一半」，2026-08-26 用户拍板裁决（文末注记，取代满值口径）+ 门禁语义 debuff 层数
+    保留破防全量爆发；血量保持不重置 R12/R13；追到续战 R19-R21：残血 + PV 半值 + 开场技；
     快照与持久化 §3.3）+ §5（离开副本重置 R24/R25）
   - m3_shared_contract §3.2（换区规则要点：续战 BOSS 残血保持 + PV 半恢复向下取整 + 开场技 +
     血量不重置；门禁语义 debuff 层数保留）+ §4.4（快照续玩 ai_state+combo_state 全保留；
     死亡 ≠ 离开，离开即重置；副本会话持久化含换区上下文）
-  - 规划_路2a_地图副本.md M14（换区后战斗续接：不新建战斗实体、同会话续接、PV=floor(PV×pv_recover)）
-    + M15（离开副本重置界定：非战斗离开、恢复入口明示）
+  - 规划_路2a_地图副本.md M14（换区后战斗续接：不新建战斗实体、同会话续接、
+    PV=当前值+floor((PVmax−当前值)×pv_recover)）+ M15（离开副本重置界定：非战斗离开、
+    恢复入口明示）
   - 衔接细化_1g4_战斗世界边界.md J-01（换区 PV 恢复裁决：HP 残血保留 + PV 恢复半值 + 开场技
     并行不冲突）/ 1g3（战斗快照续战）/ 1f（开场技 battle_start 触发点）
 
@@ -23,16 +25,20 @@
      {caught: True, target_map, chase_over: True, continue_data?}（chase.py 补白 6：
      捕获时内嵌 bf.on_chase_continue() 结果于 continue_data）。追到与否由 caught 判定：
      未追到 → 拒绝装配（resume: False, reason: not_caught），不产出续战标记。
-  2. pv_half_value 满值口径优先级（2a2 §2.1）：chase_ctx.continue_data.pv_half_value
-     （路O on_chase_continue 按 boss_def.pv 满值预计算，权威）→ chase_ctx.pv_half_value
-     → enemy_state.pv_max / max_pv → enemy_state.pv（当前值近似满值，仅兜底）。公式
-     floor(pv_max × pv_recover)，pv_recover 取 continue_data.pv_recover /
-     chase_ctx.pv_recover / zone_change.pv_recover / 缺省 0.5。
+  2. pv_half_value 缺失量口径优先级（2026-08-26 用户拍板，审查批次3 P2-1 口径统一）：
+     chase_ctx.continue_data.pv_half_value（路O on_chase_continue 按缺失量公式预计算并
+     落库，权威）→ chase_ctx.pv_half_value → enemy_state.pv_max / max_pv →
+     enemy_state.pv（当前值近似满值，仅兜底）。公式
+     当前值 + floor((pv_max − 当前值) × pv_recover)，pv_recover 取 continue_data.pv_recover /
+     chase_ctx.pv_recover / zone_change.pv_recover / 缺省 0.5。语义别名键 pv_restored /
+     pv_restored_value 与本 dict 的 pv_half / pv_half_value 同值（审查批次3 P2-1 收口：
+     名称对齐「恢复后值」，非「满值一半」）。
   3. 开场技 opening_skill 仅为续战标记；实际战斗首回合开场技触发由战斗侧接线（细化_1f
      battle_start 触发点，2a2 §4.5 R20），本路不接线、不触发。
   4. PV 门禁语义（R11）：pv_half_value > 0 即门禁重新建立——此前 debuff 层数保留、效果减半，
      破防（PV=0）后全量爆发；层数保留/减半的实际战斗结算由 1g4 battle_boundary 通道消费本
-     dict 的 pv_half / pv_half_value 键，本路只产标记。
+     dict 的 pv_half / pv_half_value（缺失量口径）键（pv_restored / pv_restored_value 为
+     同值别名，审查批次3 P2-1），本路只产标记。
   5. battle_ready 反映是否持有进行中战斗快照（battle_state 非空）→ 同会话续接；battle_state
      缺省（None）时 battle_ready: False、reason: missing_snapshot，resume 语义仍成立
      （残血/PV 半值/开场技由接线按副本 BOSS 状态持久化重建战斗实体——2a2 §3.3）。
@@ -149,7 +155,7 @@ def prepare_resume_battle(
             continue_data?}；continue_data = 路O on_chase_continue 结果（预计算
             pv_half_value / pv_recover / boss_hp，补白 1/2）。
         enemy_state: 怪物战斗状态 {hp, max_hp, pv, pv_max?}；血量保持残血不重置
-            （R12/R13），PV 满值口径取 pv_max / max_pv / pv（补白 2）。
+            （R12/R13），PV 缺失量口径取 pv_max / max_pv / pv（补白 2）。
         battle_state: 进行中战斗快照（1g4 BattleSnapshot dict 形态；透传，ai_state /
             combo_state 保留——m3 §4.4，1g3 快照续战）。
 
@@ -158,7 +164,10 @@ def prepare_resume_battle(
           resume: True              进行中战斗续战（追到触发遭遇，R19）
           hp_keep: True             残血保持（血量不重置不回血，R12/R13）
           pv_half: True             PV 半恢复触发标记（R9）
-          pv_half_value             floor(pv_max × pv_recover)（满值口径向下取整）
+          pv_half_value             恢复后值 = 当前值 + floor((pv_max − 当前值) ×
+                                     pv_recover)（缺失量口径向下取整，2026-08-26 用户拍板）
+          pv_restored: True         PV 恢复标记别名（审查批次3 P2-1 收口，= pv_half 同义）
+          pv_restored_value         = pv_half_value（别名键）
           pv_recover                恢复比例（continue_data / chase_ctx / zone_change /
                                     缺省 0.5）
           opening_skill: True       换区后第一回合怪物开场技（R20；触发由战斗侧接线，补白 3）
@@ -241,6 +250,8 @@ def prepare_resume_battle(
         "hp_keep": True,
         "pv_half": True,
         "pv_half_value": pv_half_value,
+        "pv_restored": True,           # 审查批次3 P2-1 收口别名（缺失量口径）
+        "pv_restored_value": pv_half_value,
         "pv_recover": pv_recover,
         "opening_skill": True,
         "battle_ready": snap is not None,

@@ -63,10 +63,10 @@ def _legal_enemies() -> list:
 
 
 def _base_maps() -> list:
-    """legal/maps.json 的深拷贝（3 图：rubble_field/crag_den/lava_tunnel），供用例构造输入。"""
+    """legal/maps.json 的深拷贝（4 图：rubble_field/crag_den/lava_tunnel/volcanic_path），供用例构造输入。"""
     data = _load_pack_json(LEGAL_DIR, "maps")
     assert isinstance(data, list)
-    assert len(data) == 3
+    assert len(data) == 4
     return copy.deepcopy(data)
 
 
@@ -99,7 +99,7 @@ def _warns(rep, rule: str | None = None) -> list:
 # 合法包零红拦 + 8 字段访问器（M01 装载形状）
 # ---------------------------------------------------------------------------
 def test_legal_maps_full_green() -> None:
-    """合法 maps.json（3 图：双向/单向/隐藏 exits、spawn 2 行、gate_guard、dungeon_entrances）
+    """合法 maps.json（4 图：双向/单向/隐藏 exits、spawn 2 行、gate_guard、dungeon_entrances）
     整包零红拦零黄（契约 §2.2 ④ 双向对称）→ 全绿。"""
     maps = _base_maps()
     rep = _check(maps, enemies=_legal_enemies())
@@ -128,13 +128,13 @@ def test_map_def_8_field_accessors() -> None:
     """MapDef 8 字段访问器 + SpawnDef/ExitDef 派生访问器（风格对齐 EnemyDef）。"""
     maps = _base_maps()
     defs = parse_maps({"maps": maps})
-    assert len(defs) == 3 and all(isinstance(m, MapDef) for m in defs)
+    assert len(defs) == 4 and all(isinstance(m, MapDef) for m in defs)
 
     rubble = next(m for m in defs if m.id == "rubble_field")
     assert rubble.name == "乱石滩入口"
     assert isinstance(rubble.desc, str) and rubble.desc
-    # exits：up 双向 / down 单向 / right 隐藏（含 condition）→ 4 方向键枚举
-    assert rubble.exit_dirs == ("up", "down", "right")
+    # exits：up 双向 / down 单向 / right 隐藏（含 condition）/ left 双向（→volcanic_path）
+    assert rubble.exit_dirs == ("up", "down", "right", "left")
     up_exit = rubble.exit("up")
     down_exit = rubble.exit("down")
     hidden = rubble.exit("right")
@@ -143,7 +143,9 @@ def test_map_def_8_field_accessors() -> None:
     assert down_exit.mode == "one_way"
     assert hidden.mode == "hidden" and hidden.condition == {"var": "subquest_done", "op": "eq",
                                                             "param": "learn_mechanic"}
-    assert rubble.exit("left") is None  # 未配置方向 = 死路
+    left_exit = rubble.exit("left")
+    assert left_exit is not None and left_exit.mode == "bidirectional" \
+        and left_exit.to == "volcanic_path"
     # spawn：2 行 → SpawnDef 七字段访问器
     spawns = rubble.spawn_defs()
     assert len(spawns) == 2 and all(isinstance(s, SpawnDef) for s in spawns)
@@ -153,10 +155,14 @@ def test_map_def_8_field_accessors() -> None:
     assert weasel.seasons == ("autumn", "winter") and weasel.periods == ("night", "midnight")
     assert weasel.weather_weights == {"fog": 2, "rain": 0.5}  # 概率小数 0.5
     assert spawns[1].count == 1 and spawns[1].respawn_minutes == 30  # 缺省 active_time/seasons 空
-    # gate_guard + dungeon_entrances（引用将来 dungeon 的合法样例，2a1c）
+    # gate_guard + dungeon_entrances（2a1c R1 引用真实 dungeon；入口挂世界图 volcanic_path）
     lava = next(m for m in defs if m.id == "lava_tunnel")
     assert lava.gate_guard == "ember_drake"
-    assert rubble.dungeon_entrances == ({"dungeon": "molten_dungeon", "name": "熔岩洞窟·讨伐"},)
+    assert rubble.dungeon_entrances == ()  # 入口已移出 rubble_field（M3 审查裁决）
+    volcanic = next(m for m in defs if m.id == "volcanic_path")
+    assert volcanic.exit_dirs == ("up",)
+    assert volcanic.dungeon_entrances == ({"dungeon": "molten_dungeon_boss",
+                                           "name": "熔岩洞窟·讨伐"},)
     # mechanics（场地效果承载）
     crag = next(m for m in defs if m.id == "crag_den")
     assert crag.mechanics and crag.mechanics[0]["id"] == "rockfall"

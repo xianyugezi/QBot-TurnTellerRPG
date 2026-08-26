@@ -24,7 +24,7 @@ from qbot_rpg.engine.time_query import (
     weather_name,
     weather_status,
 )
-from qbot_rpg.engine.worldtime import DEFAULT_POOL, PERIODS, SEASONS
+from qbot_rpg.engine.worldtime import DEFAULT_POOL, PERIODS, SEASONS, WorldTime
 
 _TZ_UTC8 = datetime.timezone(datetime.timedelta(hours=8))
 
@@ -133,9 +133,10 @@ def test_period_status_cross_hour_boundary():
 # weather_status：pool_label 两种 + key 取值 + 倒计时
 # -------------------------------------------------------------------------------------
 def test_weather_status_coverage_pool_label():
-    # 覆盖池（≠ 默认池）→ 「使用本图天气池」；key 按 pool_keys[0]（IF08 抽签落地前补白）
+    # 覆盖池（≠ 默认池）→ 「使用本图天气池」；key 按 IF08 确定性抽签（审查 M3 批次2 P1-1，
+    # 替换原 pool[0] 占位）——["fog","rain"] @tick233376 手算 sha256("fograin233376")%2=1 → rain
     st = weather_status("mist_forest", ["fog", "rain"], _ts(2026, 8, 16), default_cfg())
-    assert st == {"key": "fog", "name": "雾", "remaining_minutes": 60, "pool_label": "使用本图天气池"}
+    assert st == {"key": "rain", "name": "雨", "remaining_minutes": 60, "pool_label": "使用本图天气池"}
 
 
 def test_weather_status_default_pool_label():
@@ -145,9 +146,10 @@ def test_weather_status_default_pool_label():
 
 
 def test_weather_status_unknown_key_fallback_name():
-    # 内容包自定义键（未登记）→ 中文名回退原键，仍判为覆盖池
+    # 内容包自定义键（未登记）→ 中文名回退原键，仍判为覆盖池；key 按 IF08 抽签
+    # （["snow","blizzard"] 排序后 seed "blizzardsnow233376"%2=0 → blizzard）
     st = weather_status("snow_map", ["snow", "blizzard"], _ts(2026, 8, 16), default_cfg())
-    assert st["key"] == "snow" and st["name"] == "snow"
+    assert st["key"] == "blizzard" and st["name"] == "blizzard"
     assert st["pool_label"] == "使用本图天气池"
 
 
@@ -196,11 +198,11 @@ def test_period_status_cfg_period_minutes_reconfig():
 
 
 def test_weather_status_cfg_default_pool_reconfig():
-    # 自定义 default_pool=["fog","rain"]：同键生效池 → 判为默认池、key=fog
+    # 自定义 default_pool=["fog","rain"]：同键生效池 → 判为默认池、key 按 IF08 抽签=rain
     cfg = default_cfg()
     cfg["time_cycle"]["weather"]["default_pool"] = ["fog", "rain"]
     st = weather_status("plains", ["fog", "rain"], _ts(2026, 8, 16), cfg)
-    assert st == {"key": "fog", "name": "雾", "remaining_minutes": 60, "pool_label": "默认池"}
+    assert st == {"key": "rain", "name": "雨", "remaining_minutes": 60, "pool_label": "默认池"}
     # 同一池在默认配置（默认池=5 键）下应判为覆盖池
     assert weather_status("plains", ["fog", "rain"], _ts(2026, 8, 16),
                           default_cfg())["pool_label"] == "使用本图天气池"
@@ -219,3 +221,85 @@ def test_query_functions_are_pure():
     assert period_status(now, default_cfg()) == period_status(now, default_cfg())
     assert weather_status("plains", list(DEFAULT_POOL), now, default_cfg()) == \
         weather_status("plains", list(DEFAULT_POOL), now, default_cfg())
+
+
+# =====================================================================================
+# 审查 M3 批次2 回归：P1-1 weather_status 接 IF08 确定性抽签（替换 pool[0] 占位）
+# =====================================================================================
+def test_weather_status_key_matches_weather_now_draw():
+    # P1-1：key == WorldTime(cfg).weather_now(map_id, now, map_pools={map_id: 生效池})——
+    # 与引擎 IF04 同值（默认池 + 覆盖池两形态），且与 pool_label 同源
+    now = _ts(2026, 8, 16)
+    for map_id, pool in (("plains", list(DEFAULT_POOL)), ("mist", ["fog", "rain"])):
+        st = weather_status(map_id, pool, now, default_cfg())
+        wt = WorldTime(default_cfg())
+        expected = wt.weather_now(map_id, now, map_pools={map_id: pool})
+        assert st["key"] == expected
+        assert st["key"] in pool
+
+
+def test_weather_status_key_hand_calc_sha256():
+    # P1-1 确定性公式逐字对齐：seed=sha256(排序池键 + str(tick))，idx=int(hex,16)%len(排序池)
+    import hashlib
+    now = _ts(2026, 8, 16)
+    wt = WorldTime(default_cfg())
+    tick = wt.cycle_tick("weather", now)
+    pool = ["fog", "rain"]
+    sp = sorted(pool)
+    seed = hashlib.sha256(("".join(sp) + str(tick)).encode("utf-8")).hexdigest()
+    idx = int(seed, 16) % len(sp)
+    st = weather_status("m", pool, now, default_cfg())
+    assert st["key"] == sp[idx]
+
+
+# =====================================================================================
+# 审查 M3 批次2 回归：P1-2 季节/时段查询兼容自定义枚举（2026-08-26 拍板可配）
+# =====================================================================================
+def test_season_status_custom_enum_no_crash():
+    # 自定义 season.enum=["s1","s2","s3"]：不再 ValueError/KeyError；中文名回退原键、next_key 按声明集
+    cfg = default_cfg()
+    cfg["time_cycle"]["season"]["enum"] = ["s1", "s2", "s3"]
+    st = season_status(_ts(2026, 8, 16), cfg)
+    assert st == {"key": "s1", "name": "s1", "remaining_days": 6, "next_key": "s2"}
+    # 默认配置同刻仍是 summer（证明自定义枚举确实驱动了查询层）
+    assert season_status(_ts(2026, 8, 16), default_cfg())["key"] == "summer"
+
+
+def test_season_status_custom_enum_rollover():
+    # 自定义 3 季整轮回 s1（2000-01-01 + 21 天：floor(21/7)%3=0）
+    cfg = default_cfg()
+    cfg["time_cycle"]["season"]["enum"] = ["s1", "s2", "s3"]
+    st = season_status(_ts(2000, 1, 22), cfg)
+    assert st["key"] == "s1" and st["next_key"] == "s2"
+
+
+def test_period_status_custom_enum_no_crash():
+    # 自定义 period.enum=["p1","p2"]：不崩溃、中文名回退原键、next_key 按声明集
+    cfg = default_cfg()
+    cfg["time_cycle"]["period"]["enum"] = ["p1", "p2"]
+    st = period_status(_ts(2026, 8, 16), cfg)
+    assert st == {"key": "p1", "name": "p1", "remaining_minutes": 60, "next_key": "p2"}
+    assert period_status(_ts(2026, 8, 16), default_cfg())["key"] == "noon"
+
+
+# =====================================================================================
+# 审查 M3 批次2 回归：P1-4 对象形态 default_pool（{key,name,emoji}）全链路干净键
+# =====================================================================================
+def test_weather_status_object_form_default_pool():
+    # P1-4：default_pool 用 {key,name,emoji} 对象形态 → default_pool() 返回干净键、
+    # pool_label 判定正确（同键 = 默认池，不再是 str(dict) 垃圾键比较）
+    obj_pool = [{"key": "clear", "name": "晴"}, {"key": "rain", "name": "雨"},
+                {"key": "fog", "name": "雾"}]
+    cfg = default_cfg()
+    cfg["time_cycle"]["weather"]["default_pool"] = obj_pool
+    wt = WorldTime(cfg)
+    # default_pool() 返回配置序干净键（不再是 str(dict) 垃圾键）；集合比较判 label 与顺序无关
+    assert wt.default_pool() == ["clear", "rain", "fog"]
+    st = weather_status("m", ["clear", "fog", "rain"], _ts(2026, 8, 16), cfg)
+    assert st["pool_label"] == "默认池"  # 生效池 == 配置默认池（对象形态）→ 不再误判覆盖池
+    # 同样本键在默认配置（字符串 5 键默认池）下 = 覆盖池
+    assert weather_status("m", ["clear", "fog", "rain"], _ts(2026, 8, 16),
+                          default_cfg())["pool_label"] == "使用本图天气池"
+    # 对象形态生效池（覆盖池）也归一为干净键
+    st2 = weather_status("m", [{"key": "snow", "name": "雪"}], _ts(2026, 8, 16), cfg)
+    assert st2["key"] == "snow" and st2["name"] == "snow" and st2["pool_label"] == "使用本图天气池"

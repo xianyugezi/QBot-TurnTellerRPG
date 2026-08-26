@@ -16,11 +16,13 @@
   - 倒计时折算（M36 粒度）：IF07 返回秒，本层换算——季节 remaining_days = 秒 // 86400
     （整天下取，小时余量本层丢弃；如需定稿「X 天 Y 小时」粒度，文案层可直接调
     WorldTime.time_remaining 自取秒再拆分）；时段/天气 remaining_minutes = 秒 // 60（整分下取）。
-  - 天气当前值：按 IF04 weather_now 语义（生效池抽签）。确定性抽签（IF08 map_weather，
-    批次 2）未落地前，本路先按 pool_keys[0] 取——【工程补白】weather_now 完整实现依赖
-    批次 2 IF08；抽签落地后仅需替换本模块取值一行，返回结构不变。
+  - 天气当前值：按 IF04 weather_now 语义（生效池确定性抽签，IF08 map_weather）。
+    审查 M3 批次2 P1-1：批次 2 IF08 已落地，原「先按 pool_keys[0] 取」补白占位已替换为
+    `WorldTime(cfg).weather_now(map_id, now)`（并把生效池注入 map_pools，保证 key 与
+    pool_label 同源：覆盖池同图同刻可不同天气），返回结构不变。
   - 生效池标注（pool_label）：pool_source 显式传 "coverage"/"default" 时按显式来源标注；
-    缺省按「生效池 == 配置默认池」比较推导（覆盖池=「使用本图天气池」/默认池=「默认池」）。
+    缺省按「生效池与配置默认池键集合相等」比较推导（集合比较顺序无关：map_pool 返回排序键、
+    default_pool 为配置序，同一池两序皆判「默认池」；覆盖池=「使用本图天气池」/默认池=「默认池」）。
     空生效池（pool_keys 空/None）按 IF05 map_pool 语义回退默认池（M38 缺省/空数组 = 用默认池）。
   - DEFAULT_WEATHER_NAMES 为细化_2a4a §1.1「如 clear/cloudy/rain/storm/fog → 晴/多云/雨/雷雨/雾」
     示例落值（与 worldtime.DEFAULT_POOL 补白示例键同口径）；天气键为内容包自定义，
@@ -31,7 +33,7 @@ from __future__ import annotations
 
 from typing import Mapping, Optional
 
-from qbot_rpg.engine.worldtime import PERIODS, SEASONS, WorldTime
+from qbot_rpg.engine.worldtime import WorldTime
 
 __all__ = [
     "SEASON_NAMES",
@@ -87,20 +89,24 @@ def season_status(now: Optional[int] = None, cfg: Optional[Mapping] = None) -> d
     """M36 /时间 · 季节行数据组装。
 
     返回 {key, name, remaining_days, next_key}：
-      key             当前季节键（spring/summer/autumn/winter）
-      name            中文名（春/夏/秋/冬）
+      key             当前季节键（默认 spring/summer/autumn/winter；内容包 enum 可自定义）
+      name            中文名（春/夏/秋/冬；自定义键回退原键，同 weather_name 口径）
       remaining_days  距下次变化天数（IF07 秒 // 86400 整天下取，见文件头补白）
-      next_key        下一季节键（顺序循环 春→夏→秋→冬）
+      next_key        下一季节键（按注入枚举顺序循环）
+
+    审查 M3 批次2 P1-2：原用固定 SEASONS 求 idx/next_key + SEASON_NAMES[key] 中文名——
+    自定义枚举（2026-08-26 拍板可配）会 ValueError/KeyError 崩溃。改用注入 wt 的
+    `_seasons` 求 idx/next_key；中文名自定义键回退原键（不崩溃）。
     """
     wt = WorldTime(cfg)
     key = wt.season_now(now)
-    idx = SEASONS.index(key)
+    idx = wt._seasons.index(key)
     remaining_days = wt.time_remaining("season", now) // _DAY_SECONDS
     return {
         "key": key,
-        "name": SEASON_NAMES[key],
+        "name": SEASON_NAMES.get(key, key),
         "remaining_days": remaining_days,
-        "next_key": SEASONS[(idx + 1) % len(SEASONS)],
+        "next_key": wt._seasons[(idx + 1) % len(wt._seasons)],
     }
 
 
@@ -108,20 +114,23 @@ def period_status(now: Optional[int] = None, cfg: Optional[Mapping] = None) -> d
     """M36 /时间 · 时段行数据组装。
 
     返回 {key, name, remaining_minutes, next_key}：
-      key               当前时段键（dawn/noon/dusk/night/midnight）
-      name              中文名（晨/午/昏/夜/午夜）
+      key               当前时段键（默认 dawn/noon/dusk/night/midnight；enum 可自定义）
+      name              中文名（晨/午/昏/夜/午夜；自定义键回退原键）
       remaining_minutes 距下次变化分钟数（IF07 秒 // 60 整分下取）
-      next_key          下一时段键（顺序循环 晨→午→昏→夜→午夜）
+      next_key          下一时段键（按注入枚举顺序循环）
+
+    审查 M3 批次2 P1-2：同 season_status —— 改用注入 wt 的 `_periods` 求 idx/next_key，
+    中文名自定义键回退原键（不崩溃）。
     """
     wt = WorldTime(cfg)
     key = wt.period_now(now)
-    idx = PERIODS.index(key)
+    idx = wt._periods.index(key)
     remaining_minutes = wt.time_remaining("period", now) // 60
     return {
         "key": key,
-        "name": PERIOD_NAMES[key],
+        "name": PERIOD_NAMES.get(key, key),
         "remaining_minutes": remaining_minutes,
-        "next_key": PERIODS[(idx + 1) % len(PERIODS)],
+        "next_key": wt._periods[(idx + 1) % len(wt._periods)],
     }
 
 
@@ -135,20 +144,20 @@ def weather_status(
     """M36 /天气 · 数据组装。
 
     返回 {key, name, remaining_minutes, pool_label}：
-      key               当前天气键——按 IF04 weather_now 语义（生效池抽签）；本路先按
-                        pool_keys[0] 取【工程补白：weather_now 完整实现依赖批次 2 IF08】
+      key               当前天气键——IF04 weather_now 语义（IF08 确定性抽签，审查 M3 批次2 P1-1）
       name              天气中文名（内容包自定义未登记键回退原键）
       remaining_minutes 距下次变化分钟数（IF07 秒 // 60 整分下取）
       pool_label        「使用本图天气池」（覆盖池）/「默认池」
 
-    map_id:      玩家当前所在图（IF04 上下文绑定；本路仅签名预留，批次 2 抽签落地后参与取值）。
+    map_id:      玩家当前所在图（IF04 上下文绑定：weather_now 按图取生效池抽签）。
     pool_keys:   生效池键列表（IF05 map_pool 语义：覆盖池 else 默认池）；空/None → 回退默认池。
+                 兼容 str 键与 {key,name,emoji} 对象两种条目形态（_pool_keys 归一）。
     pool_source: 生效池来源显式标注（"coverage"/"default"）；None = 按生效池与配置默认池比较推导。
     cfg:         settings dict（WorldTime 构造注入；None = 默认配置）。
     """
     wt = WorldTime(cfg)
-    default_pool = wt.default_pool()
-    pool = [str(k) for k in pool_keys] if isinstance(pool_keys, (list, tuple)) else []
+    default_pool = wt.default_pool()  # 对象形态 default_pool 也返回干净键（P1-4 修复后）
+    pool = wt._pool_keys(pool_keys) if isinstance(pool_keys, (list, tuple)) else []
     if not pool:
         pool = default_pool  # IF05/M38：空/缺省生效池 = 用默认池
     if pool_source == "coverage":
@@ -156,8 +165,12 @@ def weather_status(
     elif pool_source == "default":
         label = "默认池"
     else:
-        label = "使用本图天气池" if pool != default_pool else "默认池"
-    key = pool[0] if pool else None  # 空态防御（default_pool 恒非空，实际不会触发）
+        # 集合比较（顺序无关，审查 M3 批次2 P1-4）：map_pool 返回排序键、default_pool 为配置
+        # 序——同一池两序皆判「默认池」，否则真实调用方（传 map_pool 排序结果）恒误判覆盖池
+        label = "使用本图天气池" if set(pool) != set(default_pool) else "默认池"
+    # P1-1：IF04 weather_now 确定性抽签（IF08 已落地，替换原 pool[0] 补白占位）；生效池注入
+    # map_pools 使 key 与 pool_label 同源（覆盖池同图同刻可不同天气，R19/R20）
+    key = wt.weather_now(map_id, now, map_pools={map_id: pool} if pool else None)
     return {
         "key": key,
         "name": weather_name(key),

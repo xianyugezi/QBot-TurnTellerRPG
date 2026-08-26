@@ -129,6 +129,21 @@ def _registered_weather(cfg: Mapping[str, object]) -> List[str]:
     return list(DEFAULT_POOL)
 
 
+def _declared_enum(cfg: Mapping[str, object], section_key: str,
+                   default: Tuple[str, ...]) -> Tuple[str, ...]:
+    """声明枚举集（2026-08-26 拍板枚举可配 / 审查 M3 批次2 P1-3）：读
+    cfg.time_cycle.<section_key>.enum（非空 string 数组 → tuple）；缺省/坏配置回退默认集。
+
+    与 engine WorldTime._enum_field 同口径（V1b/V2b 已红拦非法 enum，这里只做惰性读取）。
+    """
+    tc = cfg.get("time_cycle") if isinstance(cfg, Mapping) else None
+    sec = tc.get(section_key) if isinstance(tc, Mapping) else None
+    ev = sec.get("enum") if isinstance(sec, Mapping) else None
+    if isinstance(ev, (list, tuple)) and ev and all(isinstance(x, str) and x for x in ev):
+        return tuple(ev)
+    return default
+
+
 # -------------------------------------------------------------------------------------
 # V6 消费方条件扫描（enemies special_actions 条件 / lore 图鉴 condition）
 # -------------------------------------------------------------------------------------
@@ -163,11 +178,15 @@ def _check_condition(
     module: str,
     report: object,
     reg: Iterable[str],
+    season_keys: Tuple[str, ...] = SEASON_KEYS,
+    period_keys: Tuple[str, ...] = PERIOD_KEYS,
 ) -> None:
     """单条三键条件枚举校验（V6）：param 非法枚举 → 红拦。
 
     rule 命名对齐 M40 weather_conditions.validate_condition_keys（season_enum_invalid /
     period_enum_invalid / weather_key_not_registered / param_invalid），消费方一致口径。
+    season_keys / period_keys: 声明枚举集（读 cfg.time_cycle.season.enum / period.enum，
+    审查 M3 批次2 P1-3——比对目标 = 声明集，自定义枚举内容包的合法条件不再误红拦）。
     """
     if not isinstance(cond, Mapping):
         _err(report, module, field, "V6", rule="condition_not_object",
@@ -181,15 +200,15 @@ def _check_condition(
         _err(report, module, field, "V6", rule="param_invalid", param=param,
              msg="天气条件参数要填字符串枚举值")
         return
-    if var == "season" and param not in SEASON_KEYS:
+    if var == "season" and param not in season_keys:
         _err(report, module, field, "V6", rule="season_enum_invalid", param=param,
-             allowed=list(SEASON_KEYS),
-             msg="季节 %r 不认识，只有 春夏秋冬（%s）" % (param, "/".join(SEASON_KEYS)))
+             allowed=list(season_keys),
+             msg="季节 %r 不认识，只有 春夏秋冬（%s）" % (param, "/".join(season_keys)))
         return
-    if var == "period" and param not in PERIOD_KEYS:
+    if var == "period" and param not in period_keys:
         _err(report, module, field, "V6", rule="period_enum_invalid", param=param,
-             allowed=list(PERIOD_KEYS),
-             msg="时段 %r 不认识，只有 晨午昏夜午夜（%s）" % (param, "/".join(PERIOD_KEYS)))
+             allowed=list(period_keys),
+             msg="时段 %r 不认识，只有 晨午昏夜午夜（%s）" % (param, "/".join(period_keys)))
         return
     if var == "weather" and param not in reg:
         _err(report, module, field, "V6", rule="weather_key_not_registered", param=param,
@@ -229,6 +248,9 @@ def validate_weather(
     if not isinstance(cfg, Mapping):
         cfg = {}
     reg = _registered_weather(cfg)
+    # 声明枚举集（2026-08-26 拍板可配 / 审查 M3 批次2 P1-3）：V6 比对目标 = 声明集
+    season_keys = _declared_enum(cfg, "season", SEASON_KEYS)
+    period_keys = _declared_enum(cfg, "period", PERIOD_KEYS)
     tc = cfg.get("time_cycle")
     tc_ok = isinstance(tc, Mapping)
     consumer_refs = 0  # W5 无消费方引用计数（V5 池元素 + V6 条件/采集 + V7 mults 键）
@@ -336,7 +358,8 @@ def validate_weather(
                     _collect_weather_conditions(sa, f"{base}.special_actions.{si}", refs)
                     for field, cond in refs:
                         consumer_refs += 1
-                        _check_condition(cond, field, "enemies", report, reg)
+                        _check_condition(cond, field, "enemies", report, reg,
+                                         season_keys, period_keys)
             lore = entry.get("lore")
             if isinstance(lore, (list, tuple)):
                 for li, l in enumerate(lore):
@@ -347,7 +370,8 @@ def validate_weather(
                                                 f"{base}.lore.{li}.condition", refs)
                     for field, cond in refs:
                         consumer_refs += 1
-                        _check_condition(cond, field, "enemies", report, reg)
+                        _check_condition(cond, field, "enemies", report, reg,
+                                         season_keys, period_keys)
 
     # ---- V7 combat.weather_mult.mults 键 ∈ 注册天气集（settings time_cycle.combat 段）----
     if tc_ok:

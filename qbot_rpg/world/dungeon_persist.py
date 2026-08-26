@@ -56,6 +56,10 @@
      为 core.dungeon 补白 3 口径）；S0/S5/S6/S7 拒绝（S6 已死亡不重复结算）。
   8. 虚弱时长：death_policy.weak_duration_sec 可配，缺省 60 秒（1g4 DEATH-01 / 框架
      L285）；now_iso 未提供时仅出 weakened 标记不出 weak_until（时间态由接线补齐）。
+     **0 = 不虚弱**（对齐 battle_boundary.apply_weakness「0 → 不虚弱」口径）：不写
+     weakened/weak_until 标记（含会话与 ctx 镜像），死亡仅复活不进入虚弱期
+     （审查_M3_批次4 P1-2 修复：此前 weak_duration_sec=0 仍写 weakened=True 且无
+     weak_until，is_weakened 回退布尔标记 → 玩家被永久禁入非安全区）。
   9. on_dungeon_death 玩家位置落点：→ 复活点（与 core.dungeon enter/_step_death 同口径
      就地改 player_ctx["map_id"] + player["map_id"]；纯数据契约，无 IO）。
 
@@ -417,7 +421,8 @@ def on_dungeon_death(
 
     Returns:
         成功：{revived: True, state: "DEAD_RECOVER", respawn_point, respawn_source,
-          weakened: True, weak_until, boss_state_preserved, session: 更新后持久化 dict,
+          weakened: bool（weak_duration_sec>0 时 True，0=不虚弱）, weak_until,
+          boss_state_preserved, session: 更新后持久化 dict,
           progress: {penalty, rolled_back, checkpoint_zone, degraded_to_reset}, note}
         拒绝：{revived: False, reason, state, session}（原会话不变、不改 ctx）。
     """
@@ -490,9 +495,11 @@ def on_dungeon_death(
     boss_cleared = penalty == PENALTY_RESET or degraded_to_reset or policy["boss_state"] == BOSS_STATE_RESET
     new_boss = {} if boss_cleared else _mapping_dict(sess.get("boss_state"))
 
-    # ---- 虚弱标记（补白 2/8）-------------------------------------------------------
+    # ---- 虚弱标记（补白 2/8）：weak_duration_sec==0 → 不虚弱（不写 weakened/weak_until，
+    # 对齐 battle_boundary.apply_weakness「0 → 不虚弱」；审查_M3_批次4 P1-2 修复）------------
+    weaken = policy["weak_duration_sec"] > 0
     weak_until: Optional[str] = None
-    if now_iso and policy["weak_duration_sec"] > 0:
+    if weaken and now_iso:
         weak_until = _add_iso_seconds(now_iso, policy["weak_duration_sec"])
 
     # ---- 会话更新（持久化 dict 形态）-----------------------------------------------
@@ -504,19 +511,23 @@ def on_dungeon_death(
         "subquest_progress": new_sub,
         "boss_state": new_boss,
         "rest_count": new_rest,
-        WEAKENED_KEY: True,
     })
-    if weak_until is not None:
-        new_sess[WEAK_UNTIL_KEY] = weak_until
+    if weaken:
+        new_sess[WEAKENED_KEY] = True
+        if weak_until is not None:
+            new_sess[WEAK_UNTIL_KEY] = weak_until
     else:
+        new_sess.pop(WEAKENED_KEY, None)
         new_sess.pop(WEAK_UNTIL_KEY, None)
 
     # 玩家位置 → 复活点 + 虚弱镜像（纯数据契约；权威时间态由 M4 结算链落地）
     _set_map_id(player_ctx, respawn)
-    player_ctx[WEAKENED_KEY] = True
-    if weak_until is not None:
-        player_ctx[WEAK_UNTIL_KEY] = weak_until
+    if weaken:
+        player_ctx[WEAKENED_KEY] = True
+        if weak_until is not None:
+            player_ctx[WEAK_UNTIL_KEY] = weak_until
     else:
+        player_ctx.pop(WEAKENED_KEY, None)
         player_ctx.pop(WEAK_UNTIL_KEY, None)
 
     return {
@@ -524,7 +535,7 @@ def on_dungeon_death(
         "state": STATE_DEAD_RECOVER,
         "respawn_point": respawn,
         "respawn_source": info.get("source"),
-        "weakened": True,
+        "weakened": weaken,
         "weak_until": weak_until,
         "boss_state_preserved": not boss_cleared,
         "session": new_sess,
@@ -630,19 +641,23 @@ def _normalize_session_dict(doc: Mapping[str, Any]) -> Dict[str, Any]:
     return sess
 
 
-def load_dungeon_session(store: object, content_pack_id: Optional[str] = None) -> dict:
+def load_dungeon_session(store: object, content_pack_id: Optional[str] = None,
+                         expected_version: Optional[str] = None) -> dict:
     """反序列化副本会话（M30）：缺补默认；content_pack 不匹配 → 拒绝信号不串档。
 
     Args:
         store: 存档文档（save_dungeon_session 产物 / 存储层读回同形文档）。
         content_pack_id: 当前内容包 ID；提供时校验文档 content_pack_id 一致（防跨包
             串档）。文档缺 content_pack_id（旧档）且提供期望 → 按不匹配拒绝（保守）。
+        expected_version: 当前内容包版本；提供时校验文档 content_pack_version 一致
+            （契约 §4.4「id+version 防跨包串档」的 version 侧；审查_M3_批次4 P2-15）。
+            文档缺 content_pack_version（旧档）且提供期望 → 按不匹配拒绝（保守）。
 
     Returns:
         成功：{ok: True, session: 会话持久化 dict（缺补默认后）, dungeon_id,
           content_pack_id, content_pack_version, schema_version}
-        拒绝：{ok: False, reason: "invalid_store" | "content_pack_mismatch", session: None,
-           ...}（不产出会话，不串档）
+        拒绝：{ok: False, reason: "invalid_store" | "content_pack_mismatch"
+          | "content_pack_version_mismatch", session: None, ...}（不产出会话，不串档）
     """
     if not isinstance(store, Mapping):
         return {"ok": False, "reason": "invalid_store", "session": None,
@@ -657,6 +672,15 @@ def load_dungeon_session(store: object, content_pack_id: Optional[str] = None) -
         return {"ok": False, "reason": "content_pack_mismatch",
                 "expected": content_pack_id, "found": found, "session": None,
                 "note": "存档 content_pack 与当前内容包不匹配：拒绝加载，防跨包串档（M30）"}
+    if expected_version is not None:
+        found_ver = store.get("content_pack_version")
+        found_ver = str(found_ver) if isinstance(found_ver, str) and found_ver else None
+        if found_ver != expected_version:
+            return {"ok": False, "reason": "content_pack_version_mismatch",
+                    "expected_version": expected_version, "found_version": found_ver,
+                    "session": None,
+                    "note": "存档 content_pack_version 与当前内容包版本不匹配：拒绝加载，"
+                            "防跨包串档（M30 / 契约 §4.4 id+version 双侧）"}
 
     sess = _normalize_session_dict(store)
     return {

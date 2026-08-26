@@ -285,3 +285,86 @@ def test_validate_checker_integration() -> None:
     assert len(checker.errors) == 1
     assert checker.errors[0].kind == "V6"
     assert checker.errors[0].detail["rule"] == "weather_key_not_registered"
+
+
+# =====================================================================================
+# 审查 M3 批次2 回归：P1-5 time_cycle.enabled=false → 三键全部失效（TC-22）
+# =====================================================================================
+def test_enabled_false_all_three_keys_off() -> None:
+    # ctx["enabled"]=False：季节/时段/天气三键全部 False（即使直接值命中）
+    ctx = {"season_now": "summer", "period_now": "noon", "weather_now": "rain",
+           "map_id": "m", "enabled": False}
+    assert eval_condition({"var": "season", "op": "eq", "param": "summer"}, ctx) is False
+    assert eval_condition({"var": "period", "op": "eq", "param": "noon"}, ctx) is False
+    assert eval_condition({"var": "weather", "op": "eq", "param": "rain"}, ctx) is False
+
+
+def test_enabled_true_when_explicit() -> None:
+    # ctx["enabled"]=True 显式开关 → 正常求值
+    ctx = {"season_now": "summer", "enabled": True}
+    assert eval_condition({"var": "season", "op": "eq", "param": "summer"}, ctx) is True
+    assert eval_condition({"var": "season", "op": "eq", "param": "winter"}, ctx) is False
+
+
+def test_enabled_defaults_from_worldtime_is_enabled() -> None:
+    # 未显式传 enabled：自动读 ctx["worldtime"].is_enabled()（真实 WorldTime 总开关）
+    wt_off = WorldTime({"time_cycle": {"enabled": False}})
+    ctx_off = {"worldtime": wt_off, "now": ANCHOR}
+    assert eval_condition({"var": "season", "op": "eq", "param": "spring"}, ctx_off) is False
+    assert eval_condition({"var": "period", "op": "eq", "param": "dawn"}, ctx_off) is False
+    assert eval_condition({"var": "weather", "op": "eq", "param": "clear"}, ctx_off) is False
+    wt_on = WorldTime({"time_cycle": {"enabled": True}})
+    ctx_on = {"worldtime": wt_on, "now": ANCHOR}
+    assert eval_condition({"var": "season", "op": "eq", "param": "spring"}, ctx_on) is True
+
+
+def test_enabled_default_true_without_switch() -> None:
+    # 无 enabled 键且 worldtime 无 is_enabled（桩）→ 缺省 true，行为不变
+    wt = _StubWorldTime(season="summer")
+    assert eval_condition({"var": "season", "op": "eq", "param": "summer"},
+                          {"worldtime": wt}) is True
+
+
+# =====================================================================================
+# 审查 M3 批次2 回归：P1-3 校验器按声明枚举集比对（自定义枚举不误红拦）
+# =====================================================================================
+def test_validate_custom_season_enum_legal() -> None:
+    rep = _Report()
+    validate_condition_keys({"var": "season", "op": "eq", "param": "s2"}, rep,
+                            season_keys=["s1", "s2", "s3"])
+    assert rep.errors == []
+
+
+def test_validate_custom_period_enum_legal() -> None:
+    rep = _Report()
+    validate_condition_keys({"var": "period", "op": "eq", "param": "p1"}, rep,
+                            period_keys=["p1", "p2"])
+    assert rep.errors == []
+
+
+def test_validate_custom_enum_outside_declared_red() -> None:
+    rep = _Report()
+    validate_condition_keys({"var": "season", "op": "eq", "param": "summer"}, rep,
+                            season_keys=["s1", "s2", "s3"])
+    assert len(_errs(rep, "season_enum_invalid")) == 1
+    rep2 = _Report()
+    validate_condition_keys({"var": "period", "op": "eq", "param": "night"}, rep2,
+                            period_keys=["p1", "p2"])
+    assert len(_errs(rep2, "period_enum_invalid")) == 1
+
+
+def test_validate_custom_enum_default_fallback() -> None:
+    # 未注入声明集 → 回退默认 4 季/5 时段：自定义键仍红拦（行为不变）
+    rep = _Report()
+    validate_condition_keys({"var": "season", "op": "eq", "param": "s2"}, rep)
+    assert len(_errs(rep, "season_enum_invalid")) == 1
+
+
+def test_validate_custom_enum_list_recursion() -> None:
+    # 列表逐项校验时声明集透传（AND 列表含自定义键合法）
+    rep = _Report()
+    validate_condition_keys([
+        {"var": "season", "op": "eq", "param": "s2"},
+        {"var": "period", "op": "eq", "param": "p1"},
+    ], rep, season_keys=["s1", "s2", "s3"], period_keys=["p1", "p2"])
+    assert rep.errors == []

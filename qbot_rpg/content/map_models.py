@@ -17,10 +17,14 @@
 仅依赖 qbot_rpg.content.models 的 BaseDef。概率/倍率一律小数（weather_weights 0.5 等）。
 工程补白显式标注：【工程补白】处见正文——不冒充定稿。
 
-【工程补白】收口边界（本模块不做、待后续批次）：
-  1. spawn.weather_weights 的 **key ∈ 注册天气集** 校验依赖天气引擎（M38/M41，契约 §6.2 V5/V6），
-     本模块只校验值为非负小数（2a1b R26）；key 空间校验归 M41。
-  2. dungeon_entrances[].dungeon 引用存在（红拦）依赖 dungeon.json（M16，契约 §4.1），此处不校验。
+【工程补白】收口边界：
+  1. spawn.weather_weights 的 **key ∈ 注册天气集**（2a1b R25 硬拦）已收口本模块：键引用
+     settings.time_cycle.weather.default_pool（缺省回退引擎内建默认池，见 DEFAULT_WEATHER_POOL），
+     key 不在注册集 → 红拦（审查_M3_批次1 P1-2 修复：此前标注「归 M41」双端无人校验）；
+     值非负（R26）亦本模块。天气条件引用（V6）仍归 weather_validator。
+  2. dungeon_entrances[].dungeon 引用存在 + 防嵌套（2a1c R1/R2 + 契约 §4.1）已收口本模块：
+     dungeon 模块存在时红拦（审查_M3_批次1 P1-1 修复：此前标注「依赖 M16」双端不校验）；
+     validate_dungeons 侧另做反向 R2 交叉校验（dungeon.maps 内的图不得挂入口）。
   3. 地图级 max_alive 聚合上限（2a1b R21）与 spawn_weight（R22）为工程补白可配项，本模块不校验。
 """
 
@@ -41,6 +45,11 @@ PERIODS_ENUM: Tuple[str, ...] = ("dawn", "noon", "dusk", "night", "midnight")  #
 SPAWN_COUNT_DEFAULT: int = 1  # 【工程补白】contract §2.3：spawn count 缺省 1
 SPAWN_RESPAWN_MIN: int = 1  # contract §2.3：respawn_minutes 必填 ≥1
 SPAWN_WEATHER_MIN: float = 0.0  # weather_weights 值非负（2a1b R26；0 = 该天气不刷）
+
+# 注册天气集缺省（2a1b R25 硬拦靶）：settings.time_cycle.weather.default_pool 缺省时回退
+# 引擎内建默认天气池。G0 架构修复：content 层仅允许依赖 data，不得反向依赖 engine —— 此处
+# 与 qbot_rpg/content/weather_validator.py 的 DEFAULT_POOL 同源镜像（收口对齐见其文件头补白 4）。
+DEFAULT_WEATHER_POOL: Tuple[str, ...] = ("clear", "cloudy", "rain", "storm", "fog")
 
 
 # =====================================================================================
@@ -205,10 +214,13 @@ def parse_maps(modules: Mapping[str, object]) -> Tuple[MapDef, ...]:
 #   硬拦 R-4：exits.<方向>.to 目标地图 ID 存在（契约 §2.2 ①）；spawn[].enemy 引用存在（2a1b R24）
 #   硬拦 R-1：mode ∈ 三枚举（契约 §2.2 ②）；spawn 结构/枚举（seasons/periods R25）
 #   硬拦 R-5：hidden 必带 condition（契约 §2.2 ③）；节点/出口/行结构缺失
-#   硬拦 R-2：count ≥ 0 整数、respawn_minutes ≥ 1 整数（2a1b R26）；weather_weights 值 ≥ 0
+#   硬拦 R-2：count ≥ 0 整数、respawn_minutes ≥ 1 整数（2a1b R26）；weather_weights 值 ≥ 0；
+#             dungeon_entrances 防嵌套（2a1c R2，本图 ∈ 任何 dungeon.maps 时）
+#   硬拦 R-4：dungeon_entrances[].dungeon ∈ 注册 dungeon id（2a1c R1 + 契约 §4.1；dungeon
+#             模块存在时）；weather_weights 键 ∈ 注册天气集（2a1b R25，默认池键集）
 #   黄提示 Y-8：双向不对称（A→B 双向而 B→A 非双向，契约 §2.2 ④ / 2a1b §1.4 ④）；
 #               condition 配在非 hidden 通道（2a1b §1.4：双向/单向不可配置）
-#   【工程补白】天气 key 空间（M41）、dungeon_entrances 引用（M16）不在此校验
+#   天气 key 空间（R25）与 dungeon_entrances 引用（R1/R2）已收口本模块（批1 P1-1/P1-2）
 
 
 def _emit(report: object, method: str, *args: object, **kwargs: object) -> None:
@@ -244,6 +256,102 @@ def _enemy_refs(enemies: object) -> Optional[set]:
         if isinstance(ename, str) and ename:
             refs.add(ename)
     return refs
+
+
+def _registered_weather(modules: Mapping[str, object]) -> List[str]:
+    """注册天气集（2a1b R25 硬拦靶；审查_M3_批次1 P1-2 收口）。
+
+    settings.time_cycle.weather.default_pool（V4 已校验非空键唯一）→ 缺省回退
+    DEFAULT_WEATHER_POOL（与 weather_validator._registered_weather 同口径）。
+    """
+    settings = modules.get("settings")
+    if isinstance(settings, Mapping):
+        tc = settings.get("time_cycle")
+        if isinstance(tc, Mapping):
+            weather = tc.get("weather")
+            if isinstance(weather, Mapping):
+                pool = weather.get("default_pool")
+                if isinstance(pool, (list, tuple)) and pool:
+                    return [str(k) for k in pool]
+    return list(DEFAULT_WEATHER_POOL)
+
+
+def _dungeon_refs(modules: Mapping[str, object]) -> Tuple[Optional[set], set]:
+    """dungeon 注册 id 集 + 副本内部地图 id 集（2a1c R1/R2 校验靶）。
+
+    dungeon 模块缺失/非 list/无任何合法 id → 返回 (None, set())：调用方跳过 R1/R2
+    引用校验（与 dungeon_models._collect_map_ids「模块内键存在时检查」同口径）。
+    """
+    d = modules.get("dungeon")
+    if not isinstance(d, list):
+        return None, set()
+    ids: set = set()
+    interior: set = set()
+    for e in d:
+        if not isinstance(e, Mapping):
+            continue
+        eid = e.get("id")
+        if isinstance(eid, str) and eid:
+            ids.add(eid)
+        maps = e.get("maps")
+        if isinstance(maps, list):
+            interior.update(str(m) for m in maps if isinstance(m, str) and m)
+    return (ids if ids else None), interior
+
+
+def _check_dungeon_entrances(
+    report: object,
+    entry: Mapping[str, object],
+    idx: int,
+    node_id: object,
+    dungeon_ids: Optional[set],
+    interior_maps: set,
+) -> None:
+    """dungeon_entrances 校验（2a1c R1/R2 + 契约 §4.1；审查_M3_批次1 P1-1 收口）。
+
+    - R1（红拦）：entrance.dungeon ∈ 已注册 dungeon id（dungeon 模块存在时；缺失 → 跳过
+      引用检查，结构 ③ 仍查）。
+    - R2（红拦）：本图（挂入口的图）id ∉ 任何 dungeon.maps —— 副本内部地图禁止再挂副本入口
+      （防嵌套/递归工程护栏）。
+    - ③ 条目结构：dungeon 必填非空 string；name 可选 string（非法 → 红拦）。
+    """
+    de = entry.get("dungeon_entrances")
+    if de is None:
+        return
+    if not isinstance(de, list):
+        _emit(report, "error", "maps", f"maps.{idx}.dungeon_entrances", "R-1",
+              rule="map_dungeon_entrances_not_list", node_id=node_id)
+        return
+    node = str(node_id) if node_id is not None else f"<maps.{idx}>"
+    base = f"maps.{idx}.dungeon_entrances"
+    for ei, ent in enumerate(de):
+        ebase = f"{base}.{ei}"
+        if not isinstance(ent, Mapping):
+            _emit(report, "error", "maps", ebase, "R-5",
+                  rule="map_dungeon_entrance_not_object", node_id=node,
+                  got=type(ent).__name__)
+            continue
+        dref = ent.get("dungeon")
+        if dref is None:
+            _emit(report, "error", "maps", f"{ebase}.dungeon", "R-5",
+                  rule="map_dungeon_entrance_dungeon_required", node_id=node)
+        elif not isinstance(dref, str) or not dref:
+            _emit(report, "error", "maps", f"{ebase}.dungeon", "R-1",
+                  rule="map_dungeon_entrance_dungeon_invalid", node_id=node, dungeon=dref)
+        elif dungeon_ids is not None and dref not in dungeon_ids:
+            # 2a1c R1 + 契约 §4.1：dungeon 引用必须存在（红拦）
+            _emit(report, "error", "maps", f"{ebase}.dungeon", "R-4",
+                  rule="map_dungeon_entrance_ref_missing", node_id=node, ref=dref,
+                  registered=sorted(dungeon_ids))
+        name = ent.get("name")
+        if name is not None and not isinstance(name, str):
+            _emit(report, "error", "maps", f"{ebase}.name", "R-1",
+                  rule="map_dungeon_entrance_name_invalid", node_id=node, name=name)
+    # 2a1c R2：副本内部地图不得再挂副本入口（防嵌套/递归红拦）
+    if dungeon_ids is not None and node in interior_maps:
+        _emit(report, "error", "maps", base, "R-2",
+              rule="map_dungeon_entrance_nested", node_id=node,
+              note="副本内部地图不得再挂副本入口（2a1c R2 防嵌套/递归）")
 
 
 def _check_exits(
@@ -333,8 +441,9 @@ def _check_spawn(
     idx: int,
     node_id: object,
     enemy_refs: Optional[set],
+    weather_keys: List[str],
 ) -> None:
-    """spawn 校验（契约 §2.3 + 2a1b R24-R26）。"""
+    """spawn 校验（契约 §2.3 + 2a1b R24-R26 + R25 键空间）。"""
     spawn = entry.get("monsters")
     if spawn is None:
         return  # 可有（BOSS 房/纯机关区可空，contract §2.1）
@@ -396,11 +505,16 @@ def _check_spawn(
                 _emit(report, "error", "maps", f"{base}.weather_weights", "R-1",
                       rule="map_spawn_weather_weights_not_object", node_id=node_id)
             else:
-                # 值非负（R26）；key ∈ 注册天气集归 M41（契约 §6.2 V5/V6）【工程补白】
+                # 值非负（R26）；key ∈ 注册天气集（R25 硬拦，审查_M3_批次1 P1-2 收口）
                 for wk, wv in ww.items():
                     if not isinstance(wv, (int, float)) or isinstance(wv, bool) or wv < SPAWN_WEATHER_MIN:
                         _emit(report, "error", "maps", f"{base}.weather_weights.{wk}", "R-2",
                               rule="map_spawn_weather_weight_invalid", node_id=node_id, key=wk, value=wv)
+                    if not isinstance(wk, str) or wk not in weather_keys:
+                        # 2a1b R25：weather_weights 键 ∈ 注册天气集（默认池键集）
+                        _emit(report, "error", "maps", f"{base}.weather_weights.{wk}", "R-1",
+                              rule="map_spawn_weather_key_not_registered", node_id=node_id,
+                              key=wk, registered=sorted(weather_keys))
 
 
 def _check_bidirectional_symmetry(
@@ -479,6 +593,8 @@ def validate_maps(modules: Mapping[str, object], report: object) -> None:
             if isinstance(eid, str) and eid:
                 map_ids.add(eid)
     enemy_refs = _enemy_refs(modules.get("enemies"))
+    weather_keys = _registered_weather(modules)          # R25 键空间硬拦靶（批1 P1-2）
+    dungeon_ids, interior_maps = _dungeon_refs(modules)  # R1/R2 引用靶（批1 P1-1）
     for idx, entry in enumerate(maps):
         if not isinstance(entry, Mapping):
             _emit(report, "error", "maps", f"maps.{idx}", "R-5",
@@ -498,13 +614,10 @@ def validate_maps(modules: Mapping[str, object], report: object) -> None:
             elif enemy_refs is not None and gate not in enemy_refs:
                 _emit(report, "error", "maps", f"maps.{idx}.gate_guard", "R-4",
                       rule="map_gate_guard_missing", node_id=node_id, ref=gate)
-        # dungeon_entrances 引用（dungeon.json）依赖 M16【工程补白】：此处仅结构提示，不校验存在
-        de = entry.get("dungeon_entrances")
-        if de is not None and not isinstance(de, list):
-            _emit(report, "error", "maps", f"maps.{idx}.dungeon_entrances", "R-1",
-                  rule="map_dungeon_entrances_not_list", node_id=node_id)
+        # dungeon_entrances（2a1c R1/R2 + 契约 §4.1；审查_M3_批次1 P1-1 收口）
+        _check_dungeon_entrances(report, entry, idx, node_id, dungeon_ids, interior_maps)
         _check_exits(report, entry, idx, node_id, map_ids)
-        _check_spawn(report, entry, idx, node_id, enemy_refs)
+        _check_spawn(report, entry, idx, node_id, enemy_refs, weather_keys)
     _check_bidirectional_symmetry(report, maps, map_ids)
 
 
@@ -519,4 +632,5 @@ __all__ = [
     "SEASONS_ENUM",
     "PERIODS_ENUM",
     "SPAWN_COUNT_DEFAULT",
+    "DEFAULT_WEATHER_POOL",
 ]

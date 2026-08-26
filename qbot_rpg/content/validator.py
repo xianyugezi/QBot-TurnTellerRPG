@@ -17,6 +17,9 @@
   - m4_shared_contract §2.3（批次 6 校验器+manifest 注册）+ §3.1~3.4 + 细化_2b1/2b3/2b4/2b5
     （M4 交互系统：npc/shop/quest/checkin 四模块专项校验器接线，`_check_module` 分支调用
     validate_npcs / validate_shops / validate_quests / validate_checkins，专项全权 + 泛型并行）
+  - m5_shared_contract §1.4 + 细化_3d 附·校验器行 L358 +【前缀】§九 L110-121
+    （M5-02 message_prefix 段校验：`_check_message_prefix`，红拦 kind=MP-1 / 黄提示 kind=MP-2；
+    3h V9~V12 通用黄提示不覆盖 message_prefix）
 
 纯函数无副作用：check_pack(modules, meta) -> ValidationReport（D-01：errors/warnings/notes 全量收集，一次给全）。
 零 NoneBot；仅依赖 qbot_rpg.content.models / qbot_rpg.content.field_meta / qbot_rpg.data.types。
@@ -311,6 +314,39 @@ def apply_enemy_difficulty_template(
 
 
 # -------------------------------------------------------------------------------------
+# M5-02 message_prefix 段校验（【前缀】§九 L110-121 + 细化_3d 附·校验器行 L358 /
+# m5_shared_contract §1.4；3h V9~V12 通用黄提示不覆盖 message_prefix）
+# -------------------------------------------------------------------------------------
+# 占位符白名单 5 个（【前缀】§四 L66-72 / 3d §1.2）：等级 / 玩家名 / 称号 / 群名 / 职业
+MESSAGE_PREFIX_PLACEHOLDERS: Tuple[str, ...] = ("等级", "玩家名", "称号", "群名", "职业")
+# per_channel 枚举（【前缀】L45/L59：all 群聊+私聊 / group 仅群聊 / private 仅私聊）
+MESSAGE_PREFIX_PER_CHANNEL: Tuple[str, ...] = ("all", "group", "private")
+# 默认格式模板 TPL-01（【前缀】L43/L127；content 层依赖方向仅 data，不 import core，
+# 镜像 prefix_render.DEFAULT_PREFIX_FORMAT 并标注来源——同 _DEFAULT_ELEMENTS 口径）
+MESSAGE_PREFIX_DEFAULT_FORMAT: str = "Lv[等级].[玩家名] -[称号]-"
+# format 超长 >80 字符 或 占位符 >10 个 → 「模板有点长，注意前缀别刷屏」（【前缀】L119）
+MESSAGE_PREFIX_FORMAT_MAX_LEN: int = 80
+MESSAGE_PREFIX_PLACEHOLDER_MAX: int = 10
+# prefix_max_len 超常见区间 >200 → 确认提示（【前缀】L121）
+MESSAGE_PREFIX_MAX_LEN_COMMON: int = 200
+# 占位符提取正则（[xxx] 原样 token；含未知，供黄提示原样输出）
+_MESSAGE_PREFIX_PLACEHOLDER_RE = re.compile(r"\[([^\]]+)\]")
+
+
+def message_prefix_unknown_placeholders(format_str: str) -> List[str]:
+    """模板中未知占位符清单（不在【前缀】§四 5 个白名单内；返回 `[xxx]` 原样 token）。
+
+    未知占位符原样输出 + 黄提示「模板里有不认识的东西 [xxx]，会原样显示，确认？」，
+    不拦截加载（【前缀】L75/L117）；渲染层同样原样透传（prefix_render TC-06）。
+    """
+    unknown: List[str] = []
+    for name in _MESSAGE_PREFIX_PLACEHOLDER_RE.findall(format_str):
+        if name not in MESSAGE_PREFIX_PLACEHOLDERS:
+            unknown.append(f"[{name}]")
+    return unknown
+
+
+# -------------------------------------------------------------------------------------
 # 校验引擎
 # -------------------------------------------------------------------------------------
 
@@ -522,6 +558,12 @@ class _Checker:
         # 超时类键不识别（load 警告+忽略）。泛型字段校验已在上方逐条目循环跑（R-1~R-5）。
         if module_name == "settings":
             self._check_settings_1g4(module_name, data)
+            # M5-02 message_prefix 段校验（【前缀】§九 L112-121 + 细化_3d 附·校验器行 L358 /
+            # m5_shared_contract §1.4）：红拦 MP-1（enabled 非布尔 / format 非字符串 /
+            # prefix_max_len 负数 / 段结构错误）+ 黄提示 MP-2（未知占位符 / format 空补全 /
+            # format 超长或占位符过多 / per_channel 非法按 all / prefix_max_len>200）。
+            # 3h V9~V12 通用黄提示不覆盖 message_prefix → 本段独立 校验行。
+            self._check_message_prefix(module_name, data)
             # M3 时间引擎配置（M31 · m3_shared_contract §5.2/§6.2）：time_cycle 段 V1-V4 校验
             # （G0 架构修复：校验函数在 content 层，避免 content→engine 反向依赖）
             from qbot_rpg.content.time_validator import validate_time_cycle
@@ -1347,6 +1389,92 @@ class _Checker:
                 self._err(module_name, f"{base}.drop_items.count", "R-1",
                           rule="drop_item_count_invalid", count=cnt)
 
+    def _check_message_prefix(self, module_name: str, data: object) -> None:
+        """settings.message_prefix 段校验（M5-02，【前缀】§九 L112-121 + 细化_3d 附·校验器行 L358）。
+
+        红拦（kind=MP-1，拒绝加载）：enabled 非布尔 / format 非字符串 / prefix_max_len 负数 /
+            结构错误（message_prefix 段非对象 → 人话模板 msg）。字段全部有默认值
+            （【前缀】§3.1 字段表全列默认；§十 示例 5 `{enabled:false}` 合法）→ 段内无强制
+            必填键；JSON 格式坏由 loader 解析层拦截，校验器侧「必填缺失/结构错误」= 段形态错误。
+        黄提示（kind=MP-2，可加载）：未知占位符原样输出 / format 空按默认补全 /
+            format 超长（>80 字符）或占位符过多（>10 个）/ per_channel 枚举非法按 all 补全 /
+            prefix_max_len>200 确认。
+        """
+        if not isinstance(data, Mapping):
+            return
+        if "message_prefix" not in data:
+            return  # 段未配置 → 走默认模板（3d §1.2），无需校验
+        base = "settings.message_prefix"
+        mp = data["message_prefix"]
+        # 结构错误（红，人话模板）：段显式 null / 非对象 → 拒绝加载
+        if mp is None:
+            self._err(module_name, base, "MP-1", rule="section_structure", got="null",
+                      msg="message_prefix 段是空值 null，请填对象 { ... }"
+                          "（如 {\"enabled\": true, \"format\": \"...\"}）或删掉该段")
+            return
+        if not isinstance(mp, Mapping):
+            self._err(module_name, base, "MP-1", rule="section_structure",
+                      got=type(mp).__name__,
+                      msg="message_prefix 段要填对象（配置块 { ... }），"
+                          "请检查 settings.json 该段的写法")
+            return
+        # enabled 非布尔（红）
+        enabled = mp.get("enabled")
+        if enabled is not None and not isinstance(enabled, bool):
+            self._err(module_name, f"{base}.enabled", "MP-1", rule="enabled_type",
+                      got=type(enabled).__name__,
+                      msg="message_prefix.enabled 要填 true/false（是否启用前缀），请改成布尔值")
+        # format 非字符串（红）；非字符串无法做占位符/长度分析 → 直接返回
+        fmt = mp.get("format")
+        if fmt is not None and not isinstance(fmt, str):
+            self._err(module_name, f"{base}.format", "MP-1", rule="format_type",
+                      got=type(fmt).__name__,
+                      msg="message_prefix.format 要填字符串（前缀格式模板），请改成文本")
+            return
+        # prefix_max_len 负数（红，提示按 0=不限 修正）
+        pml = mp.get("prefix_max_len")
+        if isinstance(pml, (int, float)) and not isinstance(pml, bool) and pml < 0:
+            self._err(module_name, f"{base}.prefix_max_len", "MP-1",
+                      rule="prefix_max_len_negative", value=pml,
+                      msg="message_prefix.prefix_max_len 不能是负数，"
+                          "请改成 0（=不限长度）或正数")
+        # ---- 黄提示（可加载，kind=MP-2）----
+        if isinstance(fmt, str):
+            if not fmt.strip():
+                # format 空 → 按默认补全提示（【前缀】L118）
+                self._warn(module_name, f"{base}.format", "MP-2", rule="format_empty",
+                           default=MESSAGE_PREFIX_DEFAULT_FORMAT,
+                           msg="message_prefix.format 是空的，已按默认格式补全："
+                               f"{MESSAGE_PREFIX_DEFAULT_FORMAT}")
+            else:
+                # 未知占位符 → 原样输出 + 黄提示（【前缀】L117/L75；不拦截加载）
+                for token in message_prefix_unknown_placeholders(fmt):
+                    self._warn(module_name, f"{base}.format", "MP-2",
+                               rule="placeholder_unknown", placeholder=token,
+                               msg=f"模板里有不认识的东西 {token}，会原样显示，确认？")
+                # format 超长（>80 字符）或占位符过多（>10 个）→ 防刷屏提示（【前缀】L119）
+                count = len(_MESSAGE_PREFIX_PLACEHOLDER_RE.findall(fmt))
+                if len(fmt) > MESSAGE_PREFIX_FORMAT_MAX_LEN or count > MESSAGE_PREFIX_PLACEHOLDER_MAX:
+                    self._warn(module_name, f"{base}.format", "MP-2",
+                               rule="format_too_long", length=len(fmt),
+                               placeholder_count=count,
+                               msg="模板有点长，注意前缀别刷屏")
+        # per_channel 枚举非法 → 按默认 all 补全提示（【前缀】L120）
+        pc = mp.get("per_channel")
+        if pc is not None and pc not in MESSAGE_PREFIX_PER_CHANNEL:
+            self._warn(module_name, f"{base}.per_channel", "MP-2",
+                       rule="per_channel_invalid", got=pc,
+                       allowed=list(MESSAGE_PREFIX_PER_CHANNEL),
+                       msg="message_prefix.per_channel 只能填 all/group/private，"
+                           "已按默认 all 补全")
+        # prefix_max_len 超常见区间（>200）→ 确认提示（【前缀】L121）
+        if isinstance(pml, (int, float)) and not isinstance(pml, bool) \
+                and pml > MESSAGE_PREFIX_MAX_LEN_COMMON:
+            self._warn(module_name, f"{base}.prefix_max_len", "MP-2",
+                       rule="prefix_max_len_large", value=pml,
+                       msg="message_prefix.prefix_max_len 超过 200，确认是故意的？"
+                           "（前缀可能刷屏）")
+
     # ---- map 形态模块值校验（stats/formula）----
     def _check_map_value(
         self, module_name: str, path: str, value: object, vmeta: FieldMeta
@@ -1683,4 +1811,12 @@ __all__ = [
     "TRIGGER_LEGACY",
     "TRIGGER_TIMINGS",
     "DROP_CONDITIONS",
+    # M5-02 message_prefix（【前缀】§九 / 3d 附·校验器行 L358 / m5_shared_contract §1.4）
+    "message_prefix_unknown_placeholders",
+    "MESSAGE_PREFIX_PLACEHOLDERS",
+    "MESSAGE_PREFIX_PER_CHANNEL",
+    "MESSAGE_PREFIX_DEFAULT_FORMAT",
+    "MESSAGE_PREFIX_FORMAT_MAX_LEN",
+    "MESSAGE_PREFIX_PLACEHOLDER_MAX",
+    "MESSAGE_PREFIX_MAX_LEN_COMMON",
 ]

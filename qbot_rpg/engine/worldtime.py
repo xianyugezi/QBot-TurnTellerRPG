@@ -1,14 +1,21 @@
-"""世界时间引擎 —— M3 批次0·路C（M31）时间引擎骨架。
+"""世界时间引擎 —— M3 批次0·路C（M31）时间引擎骨架 + 批次1·路D（M33/M34）变化检测与懒广播。
 
-依据：细化_2a4a_时间引擎（§1 三周期注册表 / §1.3 可配项 / §二 锚点整除公式）
-      + m3_shared_contract §5（5.1 周期注册表 / 5.2 time_cycle 配置段 / 5.3 IF01~IF07 接口 / 锚点公式）。
-本文件 = 细化_2a4c §1.1 公开接口 IF01~IF07 的「游戏周期层」纯函数骨架（本批次交付）：
+依据：细化_2a4a_时间引擎（§1 三周期注册表 / §1.3 可配项 / §二 锚点整除公式 / §3.1 变化检测钩子
+      / §3.2 配置即重排 / §3.3 一次 ≤3 条顺序固定 / §4.3 跨群去重）
+      + m3_shared_contract §5（5.1 周期注册表 / 5.2 time_cycle 配置段 / 5.3 IF01~IF10 接口 / 锚点公式）
+      + 细化_2a4c §1.1（IF09 check_changes / IF10 maybe_broadcast）/ §1.2（广播配置默认关）。
+本文件 = 细化_2a4c §1.1 公开接口的「游戏周期层」纯函数骨架：
+  批次0·路C 交付 IF01~IF07（锚点整除公式 / 查询 / 倒计时）；
+  批次1·路D 追加 IF09/IF10（三周期独立推进的变化检测钩子 + 懒广播纯文案产出）：
 
   IF01 is_enabled()             系统总开关（读 settings.time_cycle.enabled，缺省 true）
   IF02 season_now(now)          季节查询（spring/summer/autumn/winter；0 基 0春 1夏 2秋 3冬）
   IF03 period_now(now)          时段查询（dawn/noon/dusk/night/midnight；0 基 0晨 1午 2昏 3夜 4午夜）
   IF06 cycle_tick(kind, now)    周期索引/节拍（season/period/weather 整除公式，纯函数）
   IF07 time_remaining(kind,now) 距下次变化秒数（/时间 数据源）
+  IF09 check_changes(cached, player_ctx=None)  变化检测钩子：比较缓存索引与重算值 → list[Change]
+  IF10 maybe_broadcast(changes, ctx=None, seen=None)  懒广播：broadcast.enabled 缺省 false → []
+      （按 template 占位符产出播报文案列表，零消息发送；去重状态由路E 持久化，本路仅读不改）
 
 锚点（契约 §5.3）：ANCHOR = 2000-01-01 00:00:00 UTC+8；now = UTC+8 秒级时间戳（Unix epoch 秒，
 缺省=当前）。season_idx=floor((now−ANCHOR)/(season_days×86400))%4、period_idx=…%5、
@@ -20,6 +27,12 @@ weather_tick=…不取模。零定时器、不存历史、随时可重算。
   - 配置缺省 = 细化_2a4a §1.3 拍板值：enabled=true / season_days=7 / period_minutes=60 /
     weather_minutes=60；weather.default_pool 默认「5 种」的具体键（clear/cloudy/rain/storm/fog）
     为 2a4a §1.1「如 …」示例落值（定稿未拍死具体键，故标注补白）。
+  - IF09/IF10 展示字段【工程补白】：季节/时段中文名（春/夏/秋/冬 · 晨/午/昏/夜/午夜）依据
+    2a4a §1.1「中文名（展示用）」列；emoji 定稿未拍死具体符号，取本模块约定值（调用方可经
+    Change['emoji'] 覆盖）；天气键值解析（IF04/IF08 确定性抽签）属批次2——本路天气播报文案
+    需调用方取键后挂 Change['name'/'emoji']，未挂载则占位符留空（纯透传，不冒充解析）。
+  - IF09 签名补白：契约伪码为 check_changes(player, map_id)；本路引擎侧收 cached 缓存索引 +
+    player_ctx（可选带 now 键注入时间戳，缺省=当前，纯函数可测）；天气值解析留待批次2。
   - 类型/下限合法性交 validate_time_cycle()（本模块）在 load 阶段红拦；引擎对坏配置惰性回退默认
     不崩溃（与契约 IF11 存档「缺补默认多忽略」同口径，字段级缺省）。
   - 校验器收口：validate_time_cycle(settings, report) 供主 agent 接入 check_pack —— report 兼容
@@ -63,6 +76,25 @@ SEASONS: tuple = ("spring", "summer", "autumn", "winter")
 PERIODS: tuple = ("dawn", "noon", "dusk", "night", "midnight")
 # 默认天气池（细化_2a4a §1.1「如 clear/cloudy/rain/storm/fog」示例落值，§1.3 默认 5 种）
 DEFAULT_POOL: tuple = ("clear", "cloudy", "rain", "storm", "fog")
+
+# -------------------------------------------------------------------------------------
+# IF09/IF10 变化检测 + 懒广播（M3 批次1·路D 追加）：kind → time_state 缓存键 / 播报顺序 /
+# 展示名与 emoji（工程补白见文件头）
+# -------------------------------------------------------------------------------------
+# kind → time_state 缓存索引键（契约 IF11 time_state 字段名：season_idx/period_idx/weather_tick）
+_CHANGE_CACHE_KEY: dict = {"season": "season_idx", "period": "period_idx", "weather": "weather_tick"}
+# 变化/播报固定顺序：季节→时段→天气（契约 IF09「一次 ≤3 条顺序固定 季节→时段→天气」）
+_CHANGE_ORDER: tuple = ("season", "period", "weather")
+# 展示中文名（细化_2a4a §1.1「中文名（展示用）」列；天气键 = 内容包自定义 → 需 IF04/IF08 解析）
+_SEASON_CN: tuple = ("春", "夏", "秋", "冬")
+_PERIOD_CN: tuple = ("晨", "午", "昏", "夜", "午夜")
+# 展示 emoji【工程补白：定稿未拍死具体符号，取本模块约定值；调用方可经 Change['emoji'] 覆盖】
+_SEASON_EMOJI: tuple = ("🌸", "☀️", "🍂", "❄️")
+_PERIOD_EMOJI: tuple = ("🌅", "☀️", "🌇", "🌙", "🌌")
+# 播报类型中文名（template {type} 占位符）
+_TYPE_CN: dict = {"season": "季节", "period": "时段", "weather": "天气"}
+# 缺省播报模板（细化_2a4a §1.3 / 细化_2a4c §1.2：`{emoji} {name}`）
+_DEFAULT_BROADCAST_TEMPLATE = "{emoji} {name}"
 
 # 可配项缺省（细化_2a4a §1.3：enabled true / season_days 7 / period_minutes 60 / weather_minutes 60）
 _DEFAULT_ENABLED = True
@@ -171,6 +203,122 @@ class WorldTime:
         diff = self._diff(now)
         length = self._cycle_len(kind)
         return length - (diff % length)
+
+    # ---- IF09 变化检测钩子（纯函数；比较缓存索引与公式重算值） ----
+    def check_changes(self, cached: Optional[Mapping[str, object]],
+                      player_ctx: Optional[Mapping[str, object]] = None) -> List[dict]:
+        """IF09 变化检测钩子：比较 time_state 缓存索引与公式重算值 → 变化列表（list[Change]）。
+
+        cached:      time_state 缓存索引 dict（{season_idx, period_idx, weather_tick}）；
+                     缺键 / 非 Mapping = 该 kind 无历史缓存 → 报首次变化（old=None，契约「首次全变化」）。
+        player_ctx:  预留上下文（契约伪码签名含 player/map_id；天气值解析 IF04/IF08 属批次2，
+                     见文件头补白）。可选带 ``now`` 键注入 UTC+8 时间戳（缺省=当前，纯函数可测）。
+        返回 Change = {kind, old, new}；顺序固定 季节→时段→天气，一次 ≤3 条，每条 kind 只出现一次
+        （离线跨多周期只报最新值——直接比较缓存索引与当前重算值，不逐条追报；与 IF11
+        「缓存与重算相等不播」同口径）。纯函数，零 IO。"""
+        cache = cached if isinstance(cached, Mapping) else {}
+        raw_now = player_ctx.get("now") if isinstance(player_ctx, Mapping) else None
+        now: Optional[int] = raw_now if isinstance(raw_now, int) else None
+        changes: List[dict] = []
+        for kind in _CHANGE_ORDER:
+            new = self.cycle_tick(kind, now)
+            old = cache.get(_CHANGE_CACHE_KEY[kind])
+            if old != new:
+                changes.append({"kind": kind, "old": old, "new": new})
+        return changes[:3]  # 上限 3 条（三 kind 天然 ≤3，切片兜底）
+
+    # ---- IF10 懒广播（默认关；纯文案产出，零消息发送） ----
+    def maybe_broadcast(self, changes: Optional[object], ctx: Optional[Mapping[str, object]] = None,
+                        seen: Optional[Mapping[str, object]] = None) -> List[str]:
+        """IF10 懒广播：broadcast.enabled 缺省 false（或 time_cycle.enabled=false）→ 不播报，返回 []。
+
+        开启后按 template 占位符 {type,name,emoji,map} 为每条变化生成一行播报文案（缺省模板
+        `{emoji} {name}`）；季节→时段→天气顺序，一次 ≤3 条；「合并一行」由调用方 join 本列表
+        （本路只产出文案列表，零消息发送）。
+        跨群去重：ctx/seen 传「已播索引」dict（{season_idx, period_idx, weather_tick}），
+        某 kind 的新值 == 已播索引 → 该条跳过（与 IF11「缓存与重算相等不播」同口径）；
+        去重状态由路E 持久化进 data/time_state，本路仅读不改（纯函数）。
+        展示字段：type/name/emoji/map 优先取 Change 自带（天气需调用方经 IF04/IF08 取键后挂载），
+        缺省由引擎按 kind+new 自解（季节/时段中文名 + emoji 约定值，见文件头补白）。"""
+        if not self.is_enabled() or not self._broadcast_enabled():
+            return []
+        if not isinstance(changes, (list, tuple)):
+            return []
+        seen_idx: Mapping[str, object] = seen if isinstance(seen, Mapping) else {}
+        if not seen_idx and isinstance(ctx, Mapping):
+            ctx_seen = ctx.get("seen")
+            if isinstance(ctx_seen, Mapping):
+                seen_idx = ctx_seen
+        template = self._broadcast_template()
+        lines: List[str] = []
+        for ch in changes:
+            if not isinstance(ch, Mapping):
+                continue
+            kind = ch.get("kind")
+            new = ch.get("new")
+            ckey: Optional[str] = _CHANGE_CACHE_KEY.get(kind) if isinstance(kind, str) else None
+            if ckey is not None and seen_idx.get(ckey) == new:
+                continue  # 已播索引命中 → 跨群去重（该周期已播过，不重复）
+            lines.append(self._render_broadcast(ch, template, ctx))
+        return lines[:3]  # 一次 ≤3 条（季节+时段+天气）
+
+    def _broadcast_enabled(self) -> bool:
+        """广播总开关：读 broadcast.enabled（缺省 false）；坏配置（非 bool）→ false。"""
+        sec = self._tc.get("broadcast")
+        if not isinstance(sec, Mapping):
+            return False
+        v = sec.get("enabled", False)
+        return v if isinstance(v, bool) else False
+
+    def _broadcast_template(self) -> str:
+        """播报模板：读 broadcast.template（缺省 `{emoji} {name}`）；空/非字符串 → 缺省。"""
+        sec = self._tc.get("broadcast")
+        if not isinstance(sec, Mapping):
+            return _DEFAULT_BROADCAST_TEMPLATE
+        v = sec.get("template")
+        return v if isinstance(v, str) and v else _DEFAULT_BROADCAST_TEMPLATE
+
+    def _render_broadcast(self, ch: Mapping[str, object], template: str,
+                          ctx: Optional[Mapping[str, object]]) -> str:
+        """把单条 Change 渲染进模板：{type,name,emoji,map} 占位符替换（缺省自解 + 调用方覆盖）。"""
+        kind = ch.get("kind")
+        new = ch.get("new")
+        type_ = ch.get("type")
+        if type_ is None:
+            type_ = _TYPE_CN.get(kind, kind if isinstance(kind, str) else "")
+        name = ch.get("name")
+        if name is None:
+            name = self._value_cn(kind, new)
+        emoji = ch.get("emoji")
+        if emoji is None:
+            emoji = self._value_emoji(kind, new)
+        map_ = ch.get("map")
+        if map_ is None and isinstance(ctx, Mapping):
+            map_ = ctx.get("map")
+        if map_ is None:
+            map_ = ""
+        return (template.replace("{type}", str(type_))
+                        .replace("{name}", str(name))
+                        .replace("{emoji}", str(emoji))
+                        .replace("{map}", str(map_)))
+
+    @staticmethod
+    def _value_cn(kind: object, index: object) -> str:
+        """kind+index → 展示中文名：季节/时段自解；天气键需 IF04/IF08 解析 → 空（调用方挂 name）。"""
+        if kind == "season" and isinstance(index, int):
+            return _SEASON_CN[index % len(_SEASON_CN)]
+        if kind == "period" and isinstance(index, int):
+            return _PERIOD_CN[index % len(_PERIOD_CN)]
+        return ""
+
+    @staticmethod
+    def _value_emoji(kind: object, index: object) -> str:
+        """kind+index → 展示 emoji（本模块约定值，可被 Change['emoji'] 覆盖）；天气 → 空。"""
+        if kind == "season" and isinstance(index, int):
+            return _SEASON_EMOJI[index % len(_SEASON_EMOJI)]
+        if kind == "period" and isinstance(index, int):
+            return _PERIOD_EMOJI[index % len(_PERIOD_EMOJI)]
+        return ""
 
 
 # -------------------------------------------------------------------------------------

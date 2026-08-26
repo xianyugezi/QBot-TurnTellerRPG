@@ -28,6 +28,7 @@ from types import SimpleNamespace
 import pytest
 
 import qbot_rpg.commands.battle_commands as bc
+from qbot_rpg.core.message_format import battle_render as br
 from qbot_rpg.commands.parsers import parse_command
 from qbot_rpg.commands.prefix_wiring import (
     DEFAULT_MESSAGE_PREFIX_SETTINGS,
@@ -373,3 +374,45 @@ def test_battle_rewards_from_fn_and_ctx() -> None:
     assert r2 == {"exp": 3, "gold": 2, "drops": ()}
     r3 = bc._battle_rewards(make_ctx(RecordingSender(), engine=eng), eng, report)
     assert r3 == {"exp": 0, "gold": 0, "drops": ()}
+
+
+# ---------------------------------------------------------------------------
+# P1-3 连段段行生产可达（_build_segments + 注入 + render 段行）
+# ---------------------------------------------------------------------------
+
+def test_combo_segments_injection_renders_seg_lines() -> None:
+    """P1-3：snap action_record >1 段 → 注入 segments → 战报含「第 N 段」段行。
+
+    段号 = 收集器累计 index（action_record 位置，5e §5.1）；单段不注入（走聚合 BREP-02）。
+    """
+    snap = {
+        "action_record": [
+            {"turn": 1, "actor": "player", "action": "连斩", "target": "enemy",
+             "rating": {"crit": "low", "blocked": False}, "damage": {"final": 5}},
+            {"turn": 2, "actor": "player", "action": "连斩", "target": "enemy",
+             "rating": {"crit": "mid", "blocked": False}, "damage": {"final": 6}},
+            {"turn": 2, "actor": "player", "action": "连斩", "target": "enemy",
+             "rating": {"crit": "low", "blocked": False}, "damage": {"final": 7}},
+        ],
+    }
+    segs = bc._build_segments(snap, turn=2)
+    assert len(segs) == 2                       # 本轮玩家两段 → 注入
+    assert segs[0]["seg"] == 2 and segs[1]["seg"] == 3   # 收集器累计段号
+    assert bc._build_segments(snap, turn=1) == []        # 单段 → 不注入
+
+    report = SimpleNamespace(
+        turn=2, phases=(), player=30, enemy=25, ended=False, status=None, log=(),
+        outcomes=(SimpleNamespace(
+            ok=True, seq=1, actor="player", action_type="连斩", target="enemy",
+            hit=True, crit="low", blocked=False, raw_damage=12, final_damage=12,
+            target_hp=18, side_effects=(), message="", battle_ended=False, status=None,
+        ),),
+    )
+    enriched = bc.enrich_round_report(
+        report, enemy_name="史莱姆", player_max_hp=30, enemy_max_hp=40, segments=segs,
+    )
+    text = br.render_battle_round(enriched)
+    assert "第 2 段：连斩 造成 6 伤害" in text
+    assert "第 3 段：连斩 造成 7 伤害" in text
+    assert "（史莱姆 18/40）" in text          # target_hp 聚合末值近似 + 展示名
+    assert "（会心·中阶 ×1.7）" in text       # 段内会心附注（第 2 段 crit=mid）

@@ -16,10 +16,14 @@ from __future__ import annotations
 from typing import Any, Callable, Mapping, MutableMapping, Optional
 
 from .router import CommandSpec
+from .sender import format_tpl12
 
 # 指令名（对齐 parsers 白名单：进入/休息 已在 DEFAULT_WHITELIST）
 ENTER_CMD = "进入"
 REST_CMD = "休息"
+
+# RUL-08 注册门槛（对齐 basic_commands：未注册玩家使用游玩指令 → 统一拦截）
+TPL_REGISTER_GATE = "❌ 请先 /注册 创建角色（/注册 名字 职业）"
 
 __all__ = [
     "ENTER_CMD", "REST_CMD",
@@ -32,9 +36,11 @@ def _fragment(parsed: Any) -> str:
     return str(getattr(parsed, "raw", None) or getattr(parsed, "text", "") or "").strip()
 
 
-def _tpl12(fragment: str) -> str:
-    """对齐 3d §5.1 TPL-12 句式（本壳不依赖 sender 常量，字面量同源）。"""
-    return f"❌ 指令不正确：{fragment}。输入 /帮助 查看可用指令。"
+def _gate(ctx: Mapping[str, Any]) -> Optional[str]:
+    """RUL-08 注册门槛：registered is False → 拦截文案（缺省视为已注册，对齐 basic）。"""
+    if ctx.get("registered", True) is False:
+        return TPL_REGISTER_GATE
+    return None
 
 
 def _render_enter(result: Mapping[str, Any]) -> str:
@@ -79,8 +85,11 @@ def _player_ctx(ctx: Mapping[str, Any]) -> Mapping[str, Any]:
 
 def cmd_enter(parsed: Any, ctx: Mapping[str, Any]) -> str:
     """/进入 <方向|序号|名称>：通道行走 / 副本入口 → 1 条结果消息。"""
+    g = _gate(ctx)
+    if g is not None:
+        return g
     if parsed.error:
-        return _tpl12(_fragment(parsed))
+        return format_tpl12(_fragment(parsed))
     args = list(getattr(parsed, "args", None) or [])
     if not args:
         return "❌ /进入：输入方向（上/下/左/右）或副本入口（序号/名称）"
@@ -101,8 +110,11 @@ def cmd_enter(parsed: Any, ctx: Mapping[str, Any]) -> str:
 
 def cmd_rest(parsed: Any, ctx: Mapping[str, Any]) -> str:
     """/休息：副本安全区休息 → 1 条结果消息。"""
+    g = _gate(ctx)
+    if g is not None:
+        return g
     if parsed.error:
-        return _tpl12(_fragment(parsed))
+        return format_tpl12(_fragment(parsed))
     args = list(getattr(parsed, "args", None) or [])
     if len(args) > 1:
         return "❌ 指令不正确：/休息 不需要参数。输入 /帮助 查看可用指令。"

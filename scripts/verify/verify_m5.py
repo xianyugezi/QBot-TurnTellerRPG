@@ -189,7 +189,7 @@ COVERAGE: dict = {
         "DELAYED：cmd_help 未消费别名表（组目录别名替换无专项用例）；指令别名机制已由 M4 2.1-05 承载，组目录别名待批次",
     "4f TC-18 GM 保密（普通玩家无 GM 组 / GM 目录含第 6 组共 2 页）":
         "pytest:test_basic_commands.py::test_help_directory_gm_two_pages",
-    "4f TC-19 快捷绑定+触发（走完整管线：回合/反击/一条消息合并照常）":
+    "4f TC-19 快捷绑定+触发（走完整管线：回合/反击/一条消息合并照常）【机制级承载：绑定校验（router）+ 路由展开；/快捷绑定 指令 handler 未注册 CommandSpec，注册随批次7 装配】":
         "pytest:test_parsers.py::test_bind_with_arg + test_router.py::test_shortcut_binding_ok_and_format_hint_c03 + test_router.py::test_tc24_shortcut_exact_full_message_match",
     "4f TC-20 冲突/GM 拒绑":
         "pytest:test_router.py::test_tc28_shortcut_name_conflict_c01 + test_router.py::test_tc29_gm_forbidden_binding_c02",
@@ -568,6 +568,13 @@ def t_gate_emoji_static() -> None:
 def t_gate_no_bare_send() -> None:
     """④e 无裸 send（D2 + 铁律 7）：battle_commands 源码不直接实例化 Sender()，
     全部战斗消息经 ctx['sender'] 注入的统一出口；运行时 mock 断言见 ④b。
+
+    【范围声明】本检查覆盖 battle_commands.py（战斗指令出口，M5-08）；D2「全仓无裸
+    send」审查由指令壳统一 str 返回结构保证（basic/explore/shop/checkin/quest 各壳
+    返回渲染文本，发送统一走装配层 Sender 出口，无自持 Sender）。链式调用（如
+    `BattlePipeline.from_ctx(ctx).send(`）为括号表达式前导，正则不捕获；此类调用
+    均解析为 BattlePipeline 自身出口（内部转注入 sender），视为合规——由 ④b 运行时
+    mock 断言兜底（send 调用次数 = 合并消息数）。
     """
     import re as _re
     src = (REPO / "qbot_rpg" / "commands" / "battle_commands.py").read_text(encoding="utf-8")

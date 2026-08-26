@@ -71,6 +71,27 @@ def render_battle_start(
     return "\n".join(lines)
 
 
+def _fold_message_lines(lines: List[str], *, max_lines: int = 16) -> List[str]:
+    """16 行折叠（铁律 11 / 3d §3.2 L184 / 5e TC-06 / TPL-09）：战斗轮消息超限时
+    按「正文尾部 → 中间过程行」优先折叠。
+
+    保留首行（前缀/首行动）与末尾关键段（状态差分/结算/操作提示行），折叠中间
+    过程行（连段段行/拦截链行等）为省略行 `…（其余 {N} 行已折叠）`。折叠行计入
+    ≤16 行上限（3d §3.2 L184）；只折叠不截断（3d §3.2 L183）。BREP-25 明细块的
+    分页折叠走 _fold_item_lines（列表页可查），本函数服务战斗轮消息。
+    """
+    if len(lines) <= max_lines:
+        return lines
+    keep_head = 1          # 首行（前缀/首行动）
+    keep_tail = max_lines - keep_head - 1  # 末段关键行（-1 给省略行）
+    if keep_tail < 1:
+        keep_tail = 1
+    head = lines[:keep_head]
+    tail = lines[-keep_tail:]
+    folded = len(lines) - keep_head - keep_tail
+    return head + [f"…（其余 {folded} 行已折叠）"] + tail
+
+
 def render_battle_round(round_result: Any) -> str:
     """战斗一轮渲染（IF31 · 先手→击杀→后手→结算，铁律 9 / 5e §1.2 军规4）。
 
@@ -112,6 +133,9 @@ def render_battle_round(round_result: Any) -> str:
                         lines.append(kill)
         elif actor == "enemy":
             # 后手行（M5-05 BREP-10~14；玩家防御中受击 → BREP-06，M5-05 分发）
+            # 守卫：玩家 HP<=0（已倒下）时不渲染反击行（数值层 L49-52 写死语义防引擎时序异常）
+            if int(getattr(round_result, "player", 1) or 1) <= 0:
+                continue
             enemy = _render_template("_render_enemy_action", oc)
             if enemy:
                 lines.append(enemy)
@@ -132,7 +156,8 @@ def render_battle_round(round_result: Any) -> str:
     if hint:
         lines.append(hint)
 
-    return "\n".join(lines)
+    # 16 行折叠（铁律 11 / 5e TC-06）：超限折叠中间过程行，保留首行 + 末段关键行
+    return "\n".join(_fold_message_lines(lines))
 
 
 def render_battle_end(

@@ -126,6 +126,13 @@ def test_filter_invalid_category():
     assert "没有「传说」这个物品类型" in out
 
 
+def test_filter_page_invalid_tpl12():
+    """裁决②：/背包筛选装备 0/-1/负数 页码 → TPL-12（不崩溃、不当筛选词）。"""
+    for raw in ["/背包筛选装备 0", "/背包筛选装备 -1", "/背包筛选装备 -3"]:
+        out = cmd_bag_filter(parse(raw), make_ctx())
+        assert out == f"❌ 指令不正确：{raw}。输入 /帮助 查看可用指令。", raw
+
+
 def test_filter_missing_category():
     """缺物品类型词 → ❌ 用法提示。"""
     out = cmd_bag_filter(parse("/背包筛选"), make_ctx())

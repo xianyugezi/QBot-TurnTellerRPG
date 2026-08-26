@@ -4,7 +4,7 @@
   - m4_shared_contract.md §2.3（基础指令组：/角色 /背包 /装备 /技能 /帮助 等，4f RUL-01~34，
     页码夹取口径）+ §2.2（列表 5 条/页上限、页脚固定 TPL-08、页码越界夹取 +「已到最后一页」
     2026-08-27 用户裁决②、0/负数/非数字 → TPL-12、错误模板统一、emoji 纪律：
-    数据型功能图标豁免（物品 icon/NPC 类型图标/recommended_newbie 角标/GM 结果前缀））
+    icon 字段渲染剥离 emoji（M5 裁决「不用 emoji」；m4 §2.2 数据型功能图标豁免已作废，以 docs/全局图标登记表.md 为准））
   - docs/细化/细化_4f_基础指令组契约.md（RUL-01~34：/状态 面板五区 B4 裁决 → 本路 /角色 承载
     「LV 行固定头部 + 属性三层结构」玩家面板；/背包 RUL-16~19 行格式与分页；/装备 4b §三 装备栏
     穿戴；/技能 6a 技能库字段 + M2 技能卡「LV 行固定头部 + 派生指向」；/帮助 RUL-20~25 分组目录
@@ -16,6 +16,7 @@
   - docs/细化/细化_6a_技能库契约.md（skills.json 字段：type/mp_cost/desc/chain_refs/job_restrict；
     chain_refs → skill_chains.json 派生链 → 「可派生成：XX」指向）
   - docs/细化/细化_4b_物品与背包契约.md（INV-01~07 行结构 + RUL-19 行格式：图标/×数量/品质/绑定；
+    icon 字段渲染剥离 emoji（M5 裁决「不用 emoji」，docs/全局图标登记表.md 作废 m4 §2.2 数据型图标豁免）
     排序 acquired_at 倒序 INV-07/RUL-17）
   - 2026-08-27 用户裁决②（列表页码超总页数 → 夹取最后一页 +「已到最后一页」；0/负数/非数字 → TPL-12）
 
@@ -28,7 +29,7 @@ Router 接到 core 层——指令解析（parsers.parse_command 已 token 化 �
 
 铁律（m4_shared_contract §0 / 3a R1）：**零 NoneBot import**、纯函数、确定性（now/rng 由 ctx
 注入）；工程补白一律【工程补白】标注；错误走 TPL-12 统一模板；装饰性 emoji 全局禁用（仅 ✅/❌
-功能性标记 + 数据型物品 icon 豁免 m4 §2.2）。本模块只做「装配接线 + 渲染」，状态变更全部委托引擎。
+功能性标记；icon 字段渲染剥离 emoji（M5 裁决，m4 §2.2 豁免已作废，登记表为准）。本模块只做「装配接线 + 渲染」，状态变更全部委托引擎。
 
 --------------------------------------------------------------------------------
 消费接口（core/equipment.py · M1 骨架占位 · 本层按以下契约签名消费，注入优先）：
@@ -64,7 +65,7 @@ Router 接到 core 层——指令解析（parsers.parse_command 已 token 化 �
      （未注入时不拦截，保持既有命令壳纯函数可测）。
   8) **/背包 数据源**：ctx["inventory"]（ItemInstance 或 dict 行均可，兼容 4a 存档行形态）优先，
      ctx["player"].inventory 兜底；排序 = acquired_at 倒序（INV-07/RUL-17），无时间字段保持存储序
-     （稳定排序）；图标读 items.json 配置（数据型功能图标豁免 3d §4.2/m4 §2.2），缺省不显示。
+     （稳定排序）；图标读 items.json 配置（渲染剥离 emoji，M5 裁决；m4 §2.2 数据型图标豁免已作废），缺省不显示。
   9) 本模块的玩家上下文工厂 make_context（NoneBot 事件 + 存储 → ctx dict）由装配层注入
      （register_basic_commands 的 make_context 参数），**批次7 装配待接线**；注入前本层可纯
      函数单测（直接构造 ctx + 注入真实/替身装备引擎）。
@@ -748,6 +749,13 @@ def cmd_bag_filter(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     if parsed.error:
         return format_tpl12(_fragment(parsed))
     args = list(getattr(parsed, "args", None) or [])
+    # 裁决②：尾随数字页码 0/负数 → TPL-12（非数字保留为筛选词容错，见 _parse_filter_args）
+    if args:
+        last = args[-1]
+        if last.isdigit() and int(last) < 1:
+            return format_tpl12(_fragment(parsed))
+        if len(last) > 1 and last[0] == "-" and last[1:].isdigit():
+            return format_tpl12(_fragment(parsed))
     cat_word, sub_word, qual_word, page = _parse_filter_args(args)
     if not cat_word:
         # 缺物品类型词 → 提示用法（值域/用法问题，非 TPL-12 指令错误；对齐 4f 提示风）

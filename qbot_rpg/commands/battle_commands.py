@@ -206,17 +206,20 @@ def enrich_round_report(
     gold: int = 0,
     drops: Sequence[Any] = (),
     status_changes: Sequence[Any] = (),
+    segments: Optional[Sequence[Mapping[str, Any]]] = None,
 ) -> EnrichedTurnReport:
     """TurnReport → EnrichedTurnReport（纯函数，测试/装配可直接消费）。
 
     outcomes 经 _inject_display_outcomes 注入展示字段（怪物展示名/最大 HP——
-    ActionOutcome.target 为战斗侧 "enemy"，非展示名，5e §2.1/§3.1 由接线层注入）。
+    ActionOutcome.target 为战斗侧 "enemy"，非展示名，5e §2.1/§3.1 由接线层注入）；
+    segments（P1-3）：本轮玩家多段行动段记录，>1 段注入连段段行（BREP-21）。
     """
     outcomes = _inject_display_outcomes(
         getattr(report, "outcomes", ()) or (),
         enemy_name=enemy_name,
         player_max_hp=player_max_hp,
         enemy_max_hp=enemy_max_hp,
+        segments=segments,
     )
     return EnrichedTurnReport(
         turn=int(getattr(report, "turn", 0)),
@@ -373,6 +376,7 @@ def _inject_display_outcomes(
     enemy_name: str,
     player_max_hp: Optional[int],
     enemy_max_hp: Optional[int],
+    segments: Optional[Sequence[Mapping[str, Any]]] = None,
 ) -> Tuple[Any, ...]:
     """ActionOutcome → 渲染用副本（接线层注入展示字段，M5-08；不改引擎不改模板）。
 
@@ -381,17 +385,27 @@ def _inject_display_outcomes(
     由接线层注入：
       - 玩家行动 outcome：target=怪物展示名、target_max_hp=怪物最大 HP（BREP-02/03/15）；
       - 怪物行动 outcome：attacker_name/actor_name=怪物展示名、player_max_hp=玩家最大 HP
-        （BREP-10/11/13/06）。
+        （BREP-10/11/13/06）；
+      - segments（P1-3 连段段行生产可达）：本轮玩家多段行动（连段技能）的段记录序列，
+        注入到玩家 outcome，供 _render_combo_segments 输出 BREP-21 段行（>1 段才触发，
+        单段走聚合 BREP-02）。target_hp 用聚合末值近似（引擎逐段扣血未导出，段行 HP 示意）。
     其余字段原样复制；无法归类的 outcome 原样透传。
     """
     injected: List[Any] = []
     for oc in outcomes or ():
         actor = str(getattr(oc, "actor", "") or "")
         if actor == "player":
-            injected.append(
-                _outcome_copy(oc, target=enemy_name, target_max_hp=enemy_max_hp,
-                              player_max_hp=player_max_hp)
-            )
+            overrides: dict = dict(target=enemy_name, target_max_hp=enemy_max_hp,
+                                   player_max_hp=player_max_hp)
+            if segments:
+                final_hp = getattr(oc, "target_hp", None)
+                overrides["segments"] = [
+                    {**s, "target": enemy_name,
+                     "target_max_hp": enemy_max_hp if enemy_max_hp is not None else final_hp,
+                     "target_hp": final_hp}
+                    for s in segments
+                ]
+            injected.append(_outcome_copy(oc, **overrides))
         elif actor == "enemy":
             injected.append(
                 _outcome_copy(oc, attacker_name=enemy_name, actor_name=enemy_name,
@@ -400,6 +414,37 @@ def _inject_display_outcomes(
         else:
             injected.append(oc)
     return tuple(injected)
+
+
+def _build_segments(snap: Mapping[str, Any], turn: int) -> List[Mapping[str, Any]]:
+    """从引擎快照 action_record 构造本轮玩家行动段记录（P1-3 连段段行生产可达）。
+
+    action_record 每段（battle.py L602-612）：seq/turn/phase/actor/action/target/
+    rating/damage/ts；段号 = 收集器 seg（累计 index，5e §5.1）。过滤本轮玩家行动，
+    段数 >1（连段/多段技能）才返回段记录序列（单段走聚合 BREP-02 单行）。target_hp
+    未导出 → 由 _inject_display_outcomes 用聚合末值近似填充。
+    """
+    ar = snap.get("action_record") or ()
+    segs: List[Mapping[str, Any]] = []
+    for i, entry in enumerate(ar):
+        if not isinstance(entry, Mapping):
+            continue
+        if entry.get("turn") != turn or entry.get("actor") != "player":
+            continue
+        dmg = entry.get("damage") if isinstance(entry.get("damage"), Mapping) else {}
+        rating = entry.get("rating") if isinstance(entry.get("rating"), Mapping) else {}
+        segs.append({
+            "seg": i + 1,                                   # 收集器 seg（累计段号）
+            "action": str(entry.get("action") or ""),
+            "final_damage": int(dmg.get("final", 0) or 0),
+            "target_hp": None,                              # 聚合末值由注入侧填充
+            "target_max_hp": None,
+            "target": str(entry.get("target") or ""),
+            "crit": str(rating.get("crit", "low") or "low"),
+            "blocked": bool(rating.get("blocked", False)),
+            "derived_capped": False,
+        })
+    return segs if len(segs) > 1 else []
 
 
 # ---------------------------------------------------------------------------
@@ -601,6 +646,7 @@ def dispatch_round(
     e: Mapping[str, Any] = snap.get("enemy") or {}
     e_name = str(e.get("name") or "怪物")
     reward = _battle_rewards(ctx, engine, report)
+    segments = _build_segments(snap, int(getattr(report, "turn", 0)))
     enriched = enrich_round_report(
         report,
         enemy_name=e_name,
@@ -610,6 +656,7 @@ def dispatch_round(
         gold=reward["gold"],
         drops=reward["drops"],
         status_changes=ctx.get("battle_status_changes") or (),
+        segments=segments,
     )
     player_outcome = _first_player_outcome(report)
     atype = str(getattr(player_outcome, "action_type", "") or "") if player_outcome else ""

@@ -22,6 +22,7 @@ from types import SimpleNamespace
 from typing import Any, Dict
 
 import pytest
+import qbot_rpg.core.message_format.battle_render as br
 
 from qbot_rpg.core.message_format.battle_render import (
     render_battle_end,
@@ -282,3 +283,42 @@ def test_tc06_no_fold_within_limit() -> None:
     assert len(lines) <= 16
     assert "已折叠" not in text
     assert len(lines) == 2 + 1 + 6                       # 前缀+BREP-24 + 摘要 + 6 条
+
+
+# ---------------------------------------------------------------------------
+# P2-2 战斗轮消息 16 行折叠（铁律 11 / 5e TC-06 / _fold_message_lines）
+# ---------------------------------------------------------------------------
+
+def test_fold_message_lines_round_message() -> None:
+    """战斗轮消息超 16 行 → 折叠中间过程行（保留首行 + 末段关键行 + 省略行）。"""
+    lines = [f"第 {i} 行" for i in range(20)]
+    folded = br._fold_message_lines(lines, max_lines=16)
+    assert len(folded) == 16
+    assert folded[0] == "第 0 行"              # 保留首行（前缀/首行动）
+    assert folded[-1] == "第 19 行"            # 保留末行（操作提示/结算）
+    assert "…（其余 5 行已折叠）" in folded     # 折叠中间 5 行（head1 + tail14 + fold1）
+
+
+def test_render_battle_round_folds_over16() -> None:
+    """TC-06：render_battle_round 输出超 16 行（多段连段）→ 单条消息 ≤16 行。"""
+    segs = [
+        {"seg": i + 1, "action": "连斩", "final_damage": 5, "target_hp": 30 - i,
+         "target_max_hp": 40, "target": "史莱姆", "crit": "low", "blocked": False}
+        for i in range(20)
+    ]
+    oc = {
+        "ok": True, "seq": 1, "actor": "player", "action_type": "连斩", "target": "enemy",
+        "hit": True, "crit": "low", "blocked": False, "raw_damage": 100,
+        "final_damage": 100, "target_hp": 10, "side_effects": (), "message": "",
+        "battle_ended": False, "status": None, "segments": segs,
+    }
+    # 直接调 _render_combo_segments 产 20 段行 → 折叠
+    from types import SimpleNamespace
+    out = SimpleNamespace(**oc)
+    seg_lines = br._render_combo_segments(out)
+    assert len(seg_lines) == 20                      # 段行 20 行（未折叠）
+    folded = br._fold_message_lines(seg_lines, max_lines=16)
+    assert len(folded) == 16
+    assert "第 1 段" in folded[0]              # 保留首段
+    assert "…（其余 5 行已折叠）" in folded     # 折叠中间 5 段（head1 + tail14 + fold1）
+    assert "第 20 段" in folded[-1]            # 保留末段

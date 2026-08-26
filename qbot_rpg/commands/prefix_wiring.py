@@ -127,9 +127,11 @@ def read_message_prefix_settings(
     # enabled 总开关（默认 true；false = 完全无前缀，【前缀】L42）
     if "enabled" in seg and seg["enabled"] is not None:
         cfg["enabled"] = bool(seg["enabled"])
-    # format 格式模板（默认 TPL-01；占位符自由组合）
+    # format 格式模板（默认 TPL-01；占位符自由组合；空串按默认补全——对齐校验器
+    # 「format 空按默认补全」黄提示口径，避免提示与实际渲染不一致，P2-4）
     if "format" in seg and seg["format"] is not None:
-        cfg["format"] = str(seg["format"])
+        fmt = str(seg["format"])
+        cfg["format"] = fmt if fmt else str(DEFAULT_MESSAGE_PREFIX_SETTINGS["format"])
     # show_on_system 系统消息豁免（默认 false）
     if "show_on_system" in seg and seg["show_on_system"] is not None:
         cfg["show_on_system"] = bool(seg["show_on_system"])
@@ -200,13 +202,23 @@ def apply_message_prefix(
     if is_system and not cfg["show_on_system"]:
         return PrefixWiringResult(text=body)
 
+    # 私聊 [群名]="私聊" 兜底（定稿 §五.5 / shared_contract §1.2）：私聊渠道且调用方
+    # 未提供「群名」extra 且 format 含 [群名] → 注入「私聊」，避免原样输出占位符，P2-2
+    extra_eff: Mapping[str, object] = dict(extra) if extra else {}
+    if (
+        channel == CHANNEL_PRIVATE
+        and "群名" not in extra_eff
+        and "[群名]" in str(cfg["format"])
+    ):
+        extra_eff["群名"] = "私聊"
+
     res = render_prefix_result(
         level, name, title,
         format_template=cfg["format"],
         hide_when_empty=cfg["hide_when_empty"],
         empty_title_text=cfg["empty_title_text"],
         prefix_max_len=cfg["prefix_max_len"],
-        extra=extra,
+        extra=extra_eff,
     )
     if not res.prefix:
         return PrefixWiringResult(text=body)

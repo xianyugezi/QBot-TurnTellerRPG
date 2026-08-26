@@ -163,7 +163,7 @@
 
 | 项 | 状态 |
 |---|---|
-| panel_render.py 总览面板（/状态） | ✅ |
+| panel_render.py 渲染助手（render_panel/render_stats_line/paginate 存在；**/状态 指令未注册**，面板五区随装配层批次承接——verify_m5 4f TC-07/09/10 DELAYED 同口径） | ✅ 助手存在 / ⬜ 指令待装配 |
 | /角色 三层明细（cmd_view/attr_line） | ✅ |
 | **battle_render.py 实装（BREP-01~25 + 27 TC）** | ⬜ M5 最大块 |
 | **战斗渲染接线**（引擎 ActionOutcome→battle_render→消息合并/前缀首行） | ⬜ M5 |

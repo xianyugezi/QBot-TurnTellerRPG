@@ -93,7 +93,7 @@ from .sender import format_tpl12
 
 __all__ = [
     # 指令名 / 子指令词
-    "VIEW_CMD", "BAG_CMD", "EQUIP_CMD", "SKILL_CMD", "HELP_CMD",
+    "VIEW_CMD", "BAG_CMD", "BAG_FILTER_CMD", "EQUIP_CMD", "SKILL_CMD", "HELP_CMD",
     "SUB_WEAR", "SUB_REMOVE",
     # 渲染常量
     "TPL_REGISTER_GATE", "TPL_EMPTY_BAG", "TPL_NO_SLOT",
@@ -581,6 +581,181 @@ def cmd_bag(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     if page is None:
         return format_tpl12(_fragment(parsed))
     return _render_bag_page(ctx, page)
+
+
+# ---------------------------------------------------------------------------
+# /背包筛选：筛选链（框架 §7.4 L1336-1344 / 4f RUL-16 / TC-14）
+# 语法：背包筛选 <物品类型> [类型 <子类目>] [品质 <品质>] [页码]
+# 筛选链：物品类型 → 类型(子类目) → 品质，可叠加；结果 >5 条分页 5 条/页 + TPL-08
+# ---------------------------------------------------------------------------
+
+BAG_FILTER_CMD = "背包筛选"
+
+# 物品大类判定（items.json type 键 → 大类）：装备=部位键、consumable=消耗品、
+# material=材料、quest=任务、其余 → 其他
+_EQUIP_SLOT_KEYS = frozenset({
+    "weapon", "armor_head", "armor_body", "armor_hand", "armor_leg", "armor_foot",
+})
+_CATEGORY_BY_TYPE = {
+    **{k: "装备" for k in _EQUIP_SLOT_KEYS},
+    "consumable": "消耗品",
+    "material": "材料",
+    "quest": "任务",
+}
+# 物品类型词表（语料兜底：未知大类词 → 不匹配，展示原分类）
+_CATEGORY_WORDS = frozenset(_CATEGORY_BY_TYPE.values()) | {"其他"}
+
+
+def _item_def(ctx: Mapping[str, Any], item_id: str) -> Optional[Mapping[str, Any]]:
+    """items.json 物品定义（ctx[\"items\"]；非 Mapping/缺 id → None）。"""
+    if not item_id:
+        return None
+    items = ctx.get("items")
+    if isinstance(items, Mapping):
+        d = items.get(item_id)
+        if isinstance(d, Mapping):
+            return d
+    return None
+
+
+def _row_type_key(row: Any, ctx: Mapping[str, Any], f: Mapping[str, Any]) -> str:
+    """物品子类键（type）：row 直接字段优先 → items.json 定义兜底。"""
+    if isinstance(row, Mapping):
+        t = row.get("type")
+        if t:
+            return str(t)
+    else:
+        t = getattr(row, "type", None)
+        if t:
+            return str(t)
+    d = _item_def(ctx, f["item_id"])
+    if d is not None:
+        return str(d.get("type") or "")
+    return ""
+
+
+def _item_category(type_key: str) -> str:
+    """子类键 → 大类中文（框架 §7.4 物品类型）。"""
+    return _CATEGORY_BY_TYPE.get(type_key, "其他")
+
+
+def _quality_key(word: str) -> Optional[str]:
+    """品质词 → 内部键（中文标签或直接键；未知 → None）。"""
+    if word in QUALITY_LABELS:
+        return word
+    rev = {v: k for k, v in QUALITY_LABELS.items() if v}
+    return rev.get(word)
+
+
+def _subtype_match(word: str, type_key: str) -> bool:
+    """子类词匹配：直接键（weapon）或中文部位名（武器）。"""
+    if not word:
+        return True
+    if word == type_key:
+        return True
+    return DEFAULT_SLOT_NAMES.get(type_key) == word
+
+
+def _parse_filter_args(args: List[str]) -> Tuple[str, Optional[str], Optional[str], int]:
+    """解析筛选链参数 → (物品类型词, 子类词, 品质词, 页码)。
+
+    语法（框架 §7.4）：`<物品类型> [类型 <子类目>] [品质 <品质>] [页码]`；
+    末尾纯数字 = 页码；其余按「类型/品质」键值对解析，裸词按 品质→子类 容错。
+    """
+    if not args:
+        return "", None, None, 1
+    page = 1
+    if args[-1].isdigit():
+        page = int(args[-1])
+        args = args[:-1]
+    if not args:
+        return "", None, None, page
+    cat_word = args[0]
+    sub_word: Optional[str] = None
+    qual_word: Optional[str] = None
+    rest = args[1:]
+    i = 0
+    while i < len(rest):
+        w = rest[i]
+        if w in ("类型", "子类") and i + 1 < len(rest):
+            sub_word = rest[i + 1]
+            i += 2
+        elif w == "品质" and i + 1 < len(rest):
+            qual_word = rest[i + 1]
+            i += 2
+        elif qual_word is None and _quality_key(w) is not None:
+            qual_word = w
+            i += 1
+        elif sub_word is None:
+            sub_word = w
+            i += 1
+        else:
+            i += 1  # 无法识别的词跳过（不阻断）
+    return cat_word, sub_word, qual_word, page
+
+
+def _filter_inventory_rows(rows: Sequence[Any], ctx: Mapping[str, Any],
+                           cat_word: str, sub_word: Optional[str],
+                           qual_word: Optional[str]) -> List[Any]:
+    """筛选链逐级过滤（物品类型 → 子类 → 品质 可叠加）。"""
+    out: List[Any] = []
+    for r in rows:
+        f = _row_fields(r, ctx)
+        type_key = _row_type_key(r, ctx, f)
+        if cat_word and _item_category(type_key) != cat_word:
+            continue
+        if sub_word and not _subtype_match(sub_word, type_key):
+            continue
+        if qual_word:
+            qk = _quality_key(qual_word)
+            if qk is None or f["quality"] != qk:
+                continue
+        out.append(r)
+    return out
+
+
+def _render_rows_page(ctx: Mapping[str, Any], rows: Sequence[Any], cmd: str,
+                      page: int) -> str:
+    """通用列表分页渲染（5 条/页 + TPL-08 + 裁决② 夹取；空 → TPL_EMPTY_BAG）。"""
+    if not rows:
+        return TPL_EMPTY_BAG
+    res = resolve_page(page, len(rows), DEFAULT_PAGE_SIZE)
+    if res.invalid:
+        raise ValueError(
+            "页码非法（0/负数/非数字）：壳层应经 parse_page_arg 判定并转 TPL-12（3d §2.2/裁决②）"
+        )
+    assert res.page is not None
+    start = (res.page - 1) * DEFAULT_PAGE_SIZE
+    slice_rows = rows[start:start + DEFAULT_PAGE_SIZE]
+    lines: List[str] = [bag_line(start + i + 1, r, ctx) for i, r in enumerate(slice_rows)]
+    if res.clamped:
+        lines.append(LAST_PAGE_HINT)
+    footer = render_footer(res.page, res.total_pages, res.total, cmd)
+    if footer:
+        lines.append(footer)
+    return "\n".join(lines)
+
+
+def cmd_bag_filter(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """/背包筛选 <物品类型> [类型 <子类目>] [品质 <品质>] [页码]：筛选链（4f RUL-16）。
+
+    物品类型（装备/消耗品/材料/任务/其他）→ 类型(子类目) → 品质 可叠加过滤；
+    结果 >5 条分页 5 条/页 + TPL-08 + 裁决② 夹取；空筛选 → TPL_EMPTY_BAG。
+    """
+    g = _gate(ctx)
+    if g is not None:
+        return g
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    args = list(getattr(parsed, "args", None) or [])
+    cat_word, sub_word, qual_word, page = _parse_filter_args(args)
+    if not cat_word:
+        # 缺物品类型词 → 提示用法（值域/用法问题，非 TPL-12 指令错误；对齐 4f 提示风）
+        return "❌ 背包筛选：输入物品类型（装备/消耗品/材料/任务/其他），如「背包筛选装备」"
+    if cat_word not in _CATEGORY_WORDS:
+        return f"❌ 没有「{cat_word}」这个物品类型（装备/消耗品/材料/任务/其他）"
+    rows = _filter_inventory_rows(_inventory_rows(ctx), ctx, cat_word, sub_word, qual_word)
+    return _render_rows_page(ctx, rows, BAG_FILTER_CMD, page)
 
 
 # ---------------------------------------------------------------------------
@@ -1105,6 +1280,7 @@ def register_basic_commands(router: Any, *, make_context: Optional[Callable[[Any
 
     router.register(CommandSpec(VIEW_CMD, handler=_wrap(cmd_view)))
     router.register(CommandSpec(BAG_CMD, handler=_wrap(cmd_bag)))
+    router.register(CommandSpec(BAG_FILTER_CMD, handler=_wrap(cmd_bag_filter)))
     router.register(CommandSpec(EQUIP_CMD, handler=_wrap(cmd_equip)))
     router.register(CommandSpec(SKILL_CMD, handler=_wrap(cmd_skill)))
     router.register(CommandSpec(HELP_CMD, handler=_wrap(cmd_help)))

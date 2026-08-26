@@ -111,7 +111,7 @@ DEFAULT_WHITELIST = frozenset(
         # W02 制造可快捷（全局模式下）
         "合成", "炼金", "锻造", "强化", "调合", "镶嵌", "拆珠",
         # W03 状态查询
-        "状态", "背包", "怪物", "地图",
+        "状态", "背包", "背包筛选", "怪物", "地图",
         # 基础指令组（4f 常见）
         "角色", "装备", "技能", "帮助", "休息", "对话",
         "任务", "商店", "购买", "出售", "签到",
@@ -127,6 +127,11 @@ DEFAULT_WHITELIST = frozenset(
 # 需 / 前缀的指令（免前缀一律忽略）：GM 指令（L128）+ /对话（m4 §2.3 接缝裁决：
 # 可快捷绑定、不可免前缀直发）
 DEFAULT_PREFIX_REQUIRED = frozenset({"重载", "封禁", "日志", "编辑", "设置", "对话"})
+
+# 自由参数指令（M5-09 筛选链）：位置参数数量不限（豁免 S7 铁律 3「第 3 参数起强制
+# 列表/键值」+ ≤2 上限）。框架 §7.4 L1336 语法 `<功能>筛选 <物品类型> [类型 <子类目>]
+# [品质 <品质>]` —— 空格分隔的多词筛选条件按位置参数直取（4f RUL-16 / TC-14）。
+DEFAULT_FREE_ARG_COMMANDS = frozenset({"背包筛选"})
 
 # GM 指令（5b L160 长清单：重载/封禁/日志/编辑/设置；L128 强制 / 前缀 + 永不快捷 +
 # 快捷禁绑 C02）。与 router spec.is_gm 对齐（P1-2c 对拍）：GM 判定用本集合而非
@@ -441,6 +446,7 @@ def _subparse(
     quantity_commands: frozenset,
     no_quantity_commands: frozenset,
     max_qty: int,
+    free_arg_commands: frozenset,
 ) -> Dict[str, Any]:
     """S7 SUBPARSE：参数内子解析（顺序写死 , → * → =，S3 裁决背书 L69）+ 后置修饰
     （+ 等级 / - 连招 / > 路径）+ 固定子词抽离（L71）+ 错误判定（L72）+ 数量超限提示（L73）。
@@ -475,8 +481,9 @@ def _subparse(
         is_list = _contains_list_sep(tok)
         is_kv = "=" in tok
 
-        # 铁律 3：第 3 参数起强制列表/键值（L46-51 / TC-11）
-        if idx >= 2 and not is_list and not is_kv:
+        # 铁律 3：第 3 参数起强制列表/键值（L46-51 / TC-11）；自由参数指令（筛选链等，
+        # M5-09 / 4f RUL-16）豁免——多词筛选条件按位置参数直取（框架 §7.4）
+        if idx >= 2 and not is_list and not is_kv and command not in free_arg_commands:
             error = ERR_TOO_MANY
             continue
 
@@ -496,8 +503,8 @@ def _subparse(
                 positional_count += 1
             continue
 
-        # 普通位置参数（≤2）
-        if positional_count >= 2:
+        # 普通位置参数（≤2；自由参数指令不限，M5-09 筛选链）
+        if positional_count >= 2 and command not in free_arg_commands:
             error = ERR_TOO_MANY
             continue
         args.append(tok)
@@ -585,6 +592,7 @@ def parse_command(
     max_qty: int = DEFAULT_MAX_QTY,
     quantity_commands: Optional[Iterable[str]] = None,
     no_quantity_commands: Optional[Iterable[str]] = None,
+    free_arg_commands: Optional[Iterable[str]] = None,
     command_specs: Optional[Mapping[str, Mapping[str, Any]]] = None,
 ) -> ParsedCommand:
     """全系统唯一解析入口（3c §三 S0-S8）。
@@ -608,6 +616,8 @@ def parse_command(
       max_qty       数量上限（默认 99，仅提示不拦截，L33/L73）
       quantity_commands 旧空格数量兼容指令集（默认 DEFAULT_QUANTITY_COMMANDS）
       no_quantity_commands 禁止 `*` 的指令（默认 {强化}，L34）
+      free_arg_commands  自由参数指令（位置参数数量不限；默认 DEFAULT_FREE_ARG_COMMANDS，
+                          含「背包筛选」——筛选链多词条件豁免 S7 铁律 3，M5-09 / 4f RUL-16）
       command_specs 指令参数声明 {指令名: {"min_args": N}}（缺参判定，可选）
 
     返回：ParsedCommand（mode=session_digit 表示应送激活会话状态机——本模块只标记
@@ -643,6 +653,9 @@ def parse_command(
             if no_quantity_commands is not None
             else DEFAULT_NO_QUANTITY_COMMANDS
         ),
+        free_arg_commands=frozenset(
+            free_arg_commands if free_arg_commands is not None else DEFAULT_FREE_ARG_COMMANDS
+        ),
         command_specs=dict(command_specs or {}),
     )
 
@@ -666,6 +679,7 @@ def _parse_text(
     max_qty: int,
     quantity_commands: frozenset,
     no_quantity_commands: frozenset,
+    free_arg_commands: frozenset,
     command_specs: Dict[str, Mapping[str, Any]],
     prefix_gate_passed: bool = False,
     prefix_stripped_in: bool = False,
@@ -740,6 +754,7 @@ def _parse_text(
             max_qty=max_qty,
             quantity_commands=quantity_commands,
             no_quantity_commands=no_quantity_commands,
+            free_arg_commands=free_arg_commands,
             command_specs=command_specs,
             prefix_gate_passed=True,  # 触发消息已通过前缀门槛（含 '/' 或模式允许）
             prefix_stripped_in=prefix_stripped or prefix_stripped_in,
@@ -792,6 +807,7 @@ def _parse_text(
         quantity_commands=quantity_commands,
         no_quantity_commands=no_quantity_commands,
         max_qty=max_qty,
+        free_arg_commands=free_arg_commands,
     )
     args: List[str] = sub["args"]
     error: Optional[str] = sub["error"]

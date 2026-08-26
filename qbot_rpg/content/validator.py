@@ -502,7 +502,8 @@ class _Checker:
         if module_name == "settings":
             self._check_settings_1g4(module_name, data)
             # M3 时间引擎配置（M31 · m3_shared_contract §5.2/§6.2）：time_cycle 段 V1-V4 校验
-            from qbot_rpg.engine.worldtime import validate_time_cycle
+            # （G0 架构修复：校验函数在 content 层，避免 content→engine 反向依赖）
+            from qbot_rpg.content.time_validator import validate_time_cycle
             validate_time_cycle(data if isinstance(data, Mapping) else {}, self)
             # M3 天气校验（M41 · m3_shared_contract §6.2）：V5-V8 硬校验 + 黄提示（依赖 modules 消费方扫描）
             from qbot_rpg.content.weather_validator import validate_weather

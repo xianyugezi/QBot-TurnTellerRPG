@@ -35,6 +35,7 @@ ALLOWED_DEP: Dict[str, Set[str]] = {
     "world": {"data", "storage", "content"},
     "storage": {"data"},
     "content": {"data"},
+    "engine": {"data"},  # M3 时间/天气引擎（纯逻辑层；仅允许依赖 data）
     "data": set(),
     "root": set(),  # qbot_rpg/__init__.py 包元信息；不参与方向约束（M0 无业务 import）
 }

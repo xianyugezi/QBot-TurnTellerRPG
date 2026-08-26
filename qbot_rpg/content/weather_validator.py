@@ -49,18 +49,13 @@ from __future__ import annotations
 import re
 from typing import Iterable, List, Mapping, Optional, Tuple
 
-# REGISTERED_KEYS / SEASON_KEYS / PERIOD_KEYS：优先复用 engine/weather_conditions（M40 路H）；
-# 未落盘时本地镜像定义（收口对齐，见文件头补白 4）。
-try:
-    from qbot_rpg.engine.weather_conditions import PERIOD_KEYS, REGISTERED_KEYS, SEASON_KEYS
-except ImportError:  # pragma: no cover —— 路H 未落盘时的收口对齐兜底
-    # 与 engine/weather_conditions.py 同源镜像（M40 三键注册表；SEASONS/PERIODS 同 worldtime）。
-    # 路H 落盘后本分支不再触发（上方 import 优先复用）。
-    SEASON_KEYS: Tuple[str, ...] = ("spring", "summer", "autumn", "winter")
-    PERIOD_KEYS: Tuple[str, ...] = ("dawn", "noon", "dusk", "night", "midnight")
-    REGISTERED_KEYS: dict = {"season": SEASON_KEYS, "period": PERIOD_KEYS, "weather": None}
-
-from qbot_rpg.engine.worldtime import DEFAULT_POOL  # 引擎内建默认天气池（seed 基准）
+# REGISTERED_KEYS / SEASON_KEYS / PERIOD_KEYS / DEFAULT_POOL：
+# 2026-08-26 G0 架构修复——content 层仅允许依赖 data，不得反向依赖 engine；
+# 常量本地镜像（与 engine/weather_conditions.py / worldtime.py 同源，收口对齐见文件头补白 4）
+SEASON_KEYS: Tuple[str, ...] = ("spring", "summer", "autumn", "winter")
+PERIOD_KEYS: Tuple[str, ...] = ("dawn", "noon", "dusk", "night", "midnight")
+REGISTERED_KEYS: dict = {"season": SEASON_KEYS, "period": PERIOD_KEYS, "weather": None}
+DEFAULT_POOL = ("clear", "cloudy", "rain", "storm", "fog")  # 引擎内建默认天气池（seed 基准）
 
 __all__ = ["validate_weather"]
 

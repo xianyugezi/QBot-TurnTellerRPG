@@ -7,7 +7,7 @@
   - m3_shared_contract §2.4（can_move / bidirectional_consistent / path_exists 签名与语义；
     MoveResult={ok,to,mode,hidden_ok,blocked_reason?}；双向不对称黄提示 ④）
 
-测试目标：qbot_rpg.core.map_graph（纯逻辑零 NoneBot；数据 = legal/maps.json 深拷贝 +
+测试目标：qbot_rpg.content.map_graph（纯逻辑零 NoneBot；数据 = legal/maps.json 深拷贝 +
 内联构造的单向门/捷径回环用例，对齐 test_maps_schema 的 _base_maps 风格）。
 """
 from __future__ import annotations
@@ -16,7 +16,7 @@ import copy
 import json
 from pathlib import Path
 
-from qbot_rpg.core.map_graph import (
+from qbot_rpg.content.map_graph import (
     BLOCKED_NO_CHANNEL,
     BLOCKED_NO_PASSAGE,
     RULE_BIDIRECTIONAL_ASYMMETRY,

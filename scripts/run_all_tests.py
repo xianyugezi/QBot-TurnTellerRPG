@@ -20,13 +20,14 @@ PY = REPO.parent / ".venv" / "bin" / "python"
 VERIFY_M0 = REPO / "verify" / "verify_m0.py"
 VERIFY_M1 = REPO / "verify" / "verify_m1.py"
 VERIFY_M2 = REPO / "verify" / "verify_m2.py"
+VERIFY_M3 = REPO / "verify" / "verify_m3.py"
 
-# 里程碑 → verify 脚本（M3~M6 尚未实现，置 None 标记）
+# 里程碑 → verify 脚本（M4~M6 尚未实现，置 None 标记）
 MILESTONES: dict[str, Path | None] = {
     "m0": VERIFY_M0,
     "m1": VERIFY_M1,
     "m2": VERIFY_M2,  # M2 怪物体系（1e/1f/1g4）
-    "m3": None,  # M3 地图副本时间（2a 系）
+    "m3": VERIFY_M3,  # M3 地图副本时间（2a 系）
     "m4": None,  # M4 指令系统（2b/4f/3c/3d）
     "m5": None,  # M5 生活生产（2c 系）
     "m6": None,  # M6 数据框架（5a/5b/4c/4d/4e/6 系）

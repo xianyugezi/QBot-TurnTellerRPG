@@ -216,7 +216,7 @@ def _can_move(map_id: str, direction: str, ctx: dict) -> dict:
     maps（地图源）/ conditions（条件求值 callable）——收口对齐。
     """
     try:
-        from qbot_rpg.core.map_graph import can_move  # 路J：批次3 同步落盘
+        from qbot_rpg.content.map_graph import can_move  # 路J：批次3 同步落盘
     except Exception:
         return _contract_can_move(map_id, direction, ctx)
     res = can_move(map_id, direction, ctx)

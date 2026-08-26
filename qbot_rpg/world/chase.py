@@ -347,7 +347,7 @@ def target_reachable(
     if not isinstance(maps, (list, tuple)):
         return False
     try:
-        from qbot_rpg.core.map_graph import path_exists
+        from qbot_rpg.content.map_graph import path_exists
     except Exception:
         return False
     ctx: dict = {"maps": list(maps)}

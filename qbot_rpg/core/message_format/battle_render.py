@@ -71,11 +71,18 @@ def render_battle_round(round_result: Any) -> str:
     for oc in outcomes:
         actor = str(getattr(oc, "actor", "") or "")
         if actor == "player":
-            lines.extend(_render_player_action(oc))                # BREP-02~05（+07）
-            if int(getattr(oc, "target_hp", 1)) <= 0:              # 扣血后立即查击杀（L54）
-                kill = _render_template("_render_kill_line", oc)   # M5-06 BREP-15
-                if kill:
-                    lines.append(kill)
+            combo = _render_combo_segments(oc)                     # M5-06 BREP-21（段行，每段独立行）
+            if combo:
+                lines.extend(combo)                                # 连段行动：段行替代聚合单行（D-5C）
+                settle = _render_combo_settle(oc)                  # M5-06 BREP-22（套完结/鞭尸/提前结束）
+                if settle:
+                    lines.append(settle)
+            else:
+                lines.extend(_render_player_action(oc))            # BREP-02~05（+07）
+                if int(getattr(oc, "target_hp", 1)) <= 0:          # 扣血后立即查击杀（L54）
+                    kill = _render_template("_render_kill_line", oc)  # M5-06 BREP-15
+                    if kill:
+                        lines.append(kill)
         elif actor == "enemy":
             # 后手行（M5-05 BREP-10~14；玩家防御中受击 → BREP-06，M5-05 分发）
             enemy = _render_template("_render_enemy_action", oc)
@@ -449,3 +456,386 @@ def _render_template(name: str, *args: Any) -> Optional[str]:
         return None
     line = fn(*args)
     return line if isinstance(line, str) and line else None
+
+# ---------------------------------------------------------------------------
+# M5-05 · BREP-10~14（怪物行动模板：反击命中/未命中/意图预告/特殊行动/拦截链）
+# 依据：细化_5e_战斗战报格式 §1.4（BREP-10/11/12/13/14）+ §3.1~§3.4 + TC-12~15
+#       + D-5E（意图预告固定句式）+ shared_contract §5.1/§5.2（ActionOutcome
+#       真实字段：伤害取 final_damage、目标 HP 取 target_hp；P2-8 不直接复用引擎
+#       message）+ 数值层 L58-61（后手行动：目标死则不反击写死）、L38/L240（拦截链）。
+# 挂接：render_battle_round 后手分支经 _render_template("_render_enemy_action", oc)
+#       接入；玩家防御中受击 → 分发 BREP-06（5e §3.1），不再输出 BREP-10。
+# 取数：{怪物} 展示名（attacker_name/actor_name）与玩家最大 HP（player_max_hp）
+#       非 ActionOutcome 字段，由接线层（M5-08）注入，缺省回落「怪物」/当前 HP。
+# ---------------------------------------------------------------------------
+
+# 怪物行动 action_type 归类（接线层/行动 AI 注入；未命中识别走 hit 字段兜底）
+_INTENT_TYPES: frozenset = frozenset(
+    {"charge", "intent", "telegraph", "preview", "read"}
+)
+_SPECIAL_TYPES: frozenset = frozenset(
+    {"special", "rage", "enrage", "summon", "mark", "buff", "heal_enemy"}
+)
+
+
+def _enemy_name(outcome: Any) -> str:
+    """怪物展示名解析（后手模板 {怪物}）：优先接线层注入 attacker_name，其次 actor_name；
+    缺省「怪物」（真实 ActionOutcome 无展示名字段，M5-08 注入）。"""
+    name = getattr(outcome, "attacker_name", None) or getattr(outcome, "actor_name", None)
+    return str(name) if name else "怪物"
+
+
+def _side_effect_int(fx: Mapping[str, object], *keys: str, default: int = 0) -> int:
+    """拦截链效果 dict 数值提取（首个可转 int 的键；全缺省 default）。"""
+    for k in keys:
+        v = fx.get(k)
+        if isinstance(v, bool):
+            continue
+        if isinstance(v, (int, str, float)):
+            return int(v)
+    return default
+
+
+def _render_enemy_hit(
+    outcome: Any,
+    *,
+    attacker_name: Optional[str] = None,
+    action_phrase: Optional[str] = None,
+    player_max_hp: Optional[int] = None,
+) -> str:
+    """BREP-10 怪物反击命中（5e §3.1 / TC-12）：
+    `❌ {怪物}{攻击动作}，你受到 {伤害} 伤害（HP {剩余}/{最大}）`。
+
+    玩家视角标记 ❌；取数：伤害=final_damage、玩家剩余 HP=target_hp（ActionOutcome
+    真实字段，扣血后即时值）；{怪物}（attacker_name/actor_name）与玩家最大 HP
+    （player_max_hp）由接线层提供（ActionOutcome 无展示名/最大 HP 字段），缺省回落
+    当前 HP。{攻击动作} 取 _default_action_phrase（action_name 优先，普攻→「攻击」）。
+    """
+    name = attacker_name if attacker_name is not None else _enemy_name(outcome)
+    damage = int(getattr(outcome, "final_damage", 0))
+    hp = int(getattr(outcome, "target_hp", 0))
+    max_hp = int(
+        player_max_hp if player_max_hp is not None
+        else getattr(outcome, "player_max_hp", hp)
+    )
+    phrase = action_phrase if action_phrase is not None else _default_action_phrase(outcome)
+    return f"❌ {name}{phrase}，你受到 {damage} 伤害（HP {hp}/{max_hp}）"
+
+
+def _render_enemy_miss(
+    outcome: Any,
+    *,
+    attacker_name: Optional[str] = None,
+    player_max_hp: Optional[int] = None,
+) -> str:
+    """BREP-11 怪物攻击未命中（5e §3.1）：
+    `✅ {怪物}的攻击被你躲开（HP {剩余}/{最大}）`。
+
+    miss → 伤害 0（数值层 L24），对玩家是成功 → 行首 ✅；HP 取 target_hp（真实字段，
+    未命中不扣血，当前=剩余）；{怪物}（attacker_name/actor_name）与玩家最大 HP
+    （player_max_hp）由接线层提供。
+    """
+    name = attacker_name if attacker_name is not None else _enemy_name(outcome)
+    hp = int(getattr(outcome, "target_hp", 0))
+    max_hp = int(
+        player_max_hp if player_max_hp is not None
+        else getattr(outcome, "player_max_hp", hp)
+    )
+    return f"✅ {name}的攻击被你躲开（HP {hp}/{max_hp}）"
+
+
+def _render_enemy_intent(
+    outcome: Any,
+    *,
+    attacker_name: Optional[str] = None,
+) -> Optional[str]:
+    """BREP-12 怪物意图预告（5e §3.2 / TC-14，固定句式 D-5E）：
+    `{怪物} 蓄力中（下回合发动「{招名}」）`。
+
+    无 emoji；招名取 outcome.intent_skill（接线层注入），缺失 → None（调用方省略该行）；
+    预告行不计入怪物回合行动行数（5e §3.2「预告不是行动」）。
+    """
+    skill = getattr(outcome, "intent_skill", None)
+    if not skill:
+        return None
+    name = attacker_name if attacker_name is not None else _enemy_name(outcome)
+    return f"{name} 蓄力中（下回合发动「{skill}」）"
+
+
+def _render_enemy_special(
+    outcome: Any,
+    *,
+    attacker_name: Optional[str] = None,
+) -> str:
+    """BREP-13 怪物特殊行动（5e §3.3 / TC-15）：
+    `{怪物} {特殊行动}（{效果变化}）`。
+
+    狂暴/召唤/印记等 HP 阈值触发行为（数值层 L149/L292-294）；特殊行动名取
+    outcome.special_action（接线层注入，缺省回落动作短语），效果变化取 effect_change
+    （纯文字，禁 emoji），空效果不输出空括号。
+    """
+    name = attacker_name if attacker_name is not None else _enemy_name(outcome)
+    act = str(getattr(outcome, "special_action", "") or "")
+    if not act:
+        act = _default_action_phrase(outcome)
+    change = str(getattr(outcome, "effect_change", "") or "")
+    suffix = f"（{change}）" if change else ""
+    return f"{name} {act}{suffix}"
+
+
+def _render_interception_lines(outcome: Any) -> List[str]:
+    """BREP-14 拦截链效果行（5e §3.4）：
+    `{盾} 吸收了 {n} 点伤害` / `反弹 {n} 伤害给{目标}` / `免疫了{效果}`。
+
+    拦截链（减伤→护盾→反弹→吸收→免疫→续行→扣血，数值层 L38/L240）各环节触发时
+    输出；数据源 ActionOutcome.side_effects（效果 dict 序列），按 kind/type/effect 键
+    归类（absorb/shield / reflect / immune），无法识别环节跳过（不臆造文案）。反弹为
+    派生伤害，渲染在段行之后、击杀判定之前（5e §3.4，扣血后即查 L54）。
+    """
+    lines: List[str] = []
+    for fx in getattr(outcome, "side_effects", ()) or ():
+        if not isinstance(fx, dict):
+            continue
+        kind = str(fx.get("kind") or fx.get("type") or fx.get("effect") or "").lower()
+        if kind in ("absorb", "shield", "absorption"):
+            shield = str(fx.get("name") or fx.get("shield") or "护盾")
+            n = _side_effect_int(fx, "amount", "absorbed", "value")
+            lines.append(f"{shield} 吸收了 {n} 点伤害")
+        elif kind in ("reflect", "counter", "rebound"):
+            n = _side_effect_int(fx, "amount", "value")
+            target = str(fx.get("target") or "目标")
+            lines.append(f"反弹 {n} 伤害给{target}")
+        elif kind in ("immune", "immunity"):
+            eff = str(fx.get("effect") or fx.get("name") or "该效果")
+            lines.append(f"免疫了{eff}")
+    return lines
+
+
+def _render_enemy_action(outcome: Any) -> Optional[str]:
+    """怪物后手行动行集（M5-05 BREP-10~14，render_battle_round 后手分支接入）。
+
+    分发序（5e §3.1~§3.4）：玩家防御中受击 → BREP-06（不再输出 BREP-10）；意图预告
+    （action_type 蓄力/读招 或携带 intent_skill）→ BREP-12；特殊行动（action_type
+    狂暴/召唤/印记 或携带 special_action）→ BREP-13；miss → BREP-11；其余命中 →
+    BREP-10；side_effects 触发拦截链环节 → BREP-14 各一行，拼在行动行之后（§3.4）。
+    先手击杀的怪物不产出本行——由引擎 enemy_act 保证（数值层 L61 写死，返回 None
+    无 outcome，渲染层不收到后手流水即不渲染）。多行以换行拼接（单条消息内多行）。
+    """
+    lines: List[str] = []
+    atype = str(getattr(outcome, "action_type", "") or "")
+    hit = bool(getattr(outcome, "hit", False))
+    guarding = bool(getattr(outcome, "player_guarding", False)) or bool(
+        getattr(outcome, "defending", False)
+    )
+
+    if guarding and hit:
+        lines.append(_render_player_defend_hit(outcome))          # BREP-06（5e §3.1）
+    elif atype in _INTENT_TYPES or getattr(outcome, "intent_skill", None):
+        line = _render_enemy_intent(outcome)                      # BREP-12
+        if line:
+            lines.append(line)
+    elif atype in _SPECIAL_TYPES or getattr(outcome, "special_action", None):
+        lines.append(_render_enemy_special(outcome))              # BREP-13
+    elif not hit:
+        lines.append(_render_enemy_miss(outcome))                 # BREP-11
+    else:
+        lines.append(_render_enemy_hit(outcome))                  # BREP-10
+
+    lines.extend(_render_interception_lines(outcome))             # BREP-14
+    if not lines:
+        return None
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# M5-06 · BREP-15~22（结算模板：击杀/死亡/胜负/互杀平局/经验掉落 + 连段模板：段行/结算行）
+# 依据：细化_5e_战斗战报格式 §4.1~§4.3（结算）+ §5.1~§5.2（连段）+ TC-16~23
+#       + 铁律 11 / 军规5（结算一次性：胜负/奖励/掉落当轮事件末尾结算一次，经验/掉落
+#       只在战斗结束消息输出一次）+ shared_contract §5.1/§5.2（取数 final_damage /
+#       target_hp；P2-8 不直接复用引擎 message）+ 数值层 L50-57/L63-69/L132-133/L171。
+# 挂接：render_battle_round 玩家分支经 _render_combo_segments/_render_combo_settle
+#       接入（连段段行替代聚合单行，D-5C；段内击杀紧跟 BREP-15，铁律9）；胜负/掉落经
+#       _render_template("_render_settlement") 接入（round_result.ended 时当轮事件
+#       末尾结算一次，军规5）。击杀行经 _render_template("_render_kill_line") 接入
+#       （扣血后立即查，L54）。
+# 取数：{怪物} 展示名 / 连段 segments / 经验金币掉落 非 ActionOutcome 字段，由接线层
+#       （M5-08）注入；缺省优雅省略（不报错不输出空行，收口接线补齐）。
+# ---------------------------------------------------------------------------
+
+
+def _render_kill_line(outcome: Any) -> Optional[str]:
+    """BREP-15 击杀行（5e §4.1 / 数值层 L54）：`✅ 你击败了{怪物}！`。
+
+    紧跟造成击杀的伤害行（render_battle_round 扣血后立即查，target_hp<=0 即调，L54）；
+    {怪物} 取 outcome.target（引擎真实字段），缺省「怪物」。兼容 mapping 形态
+    （连段段行内部对 seg dict 复用本行，保持击杀文案单一来源）。
+    """
+    if isinstance(outcome, Mapping):
+        target = str(outcome.get("target", "") or outcome.get("target_name", "") or "怪物")
+    else:
+        target = str(
+            getattr(outcome, "target", "") or getattr(outcome, "target_name", "") or "怪物"
+        )
+    return f"✅ 你击败了{target}！"
+
+
+def _render_reward_line(exp: int, gold: int, drops: Any = None) -> str:
+    """BREP-20 经验与掉落行（5e §4.3 / 数值层 L68/L171）：
+    `✅ 获得 经验 {n}、金币 {n}、{素材}×{n}`——多素材以 `、` 分隔；只在战斗结束
+    消息输出一次（军规5，调用方 _render_settlement 保证，禁止逐怪逐段刷掉落）。
+    drops 为 (名称, 数量) 二元组序列或含 name/素材 + count/n 键的 dict 序列。
+    """
+    parts: List[str] = [f"经验 {exp}", f"金币 {gold}"]
+    for d in drops or ():
+        if isinstance(d, Mapping):
+            name = str(d.get("name", "") or d.get("素材", "") or "素材")
+            count = int(d.get("count", d.get("n", 0)))
+        else:
+            name, count = str(d[0]), int(d[1])
+        parts.append(f"{name}×{count}")
+    return "✅ 获得 " + "、".join(parts)
+
+
+def _render_settlement(round_result: Any) -> Optional[str]:
+    """结算行集（M5-06 BREP-16~20；当轮事件末尾结算一次，军规5 / 5e §4）。
+
+    round_result.ended 时由 render_battle_round 调用一次，按引擎终态 status
+    （win/lose/draw/escape，battle.py STATUS_*）分发胜负横幅 + 经验掉落：
+      - win  → BREP-17 `✅ 战斗胜利！` + BREP-20 经验掉落（仅此一次）；
+      - lose → BREP-16 `❌ 你倒下了…` + BREP-18 `❌ 战斗失败：你被{怪物}击败了`
+        （玩家死亡 → 失败标记，5e §4.1/§4.2；lose 即玩家死，数值层 L50-51）；
+      - draw → BREP-19 `双方同归于尽，战斗以平局结束`（默认 draw；可配
+        mutual_kill_result=player_loss 时引擎已落 lose → 走 BREP-18，本层只读
+        status 不重复判定，5e §4.2）；
+      - escape → 无横幅（不臆造胜负文案）。
+    掉落数据（exp/gold/drops）由接线层注入，缺省省略该行；胜利/掉落不输出时
+    返回 None（调用方省略结算块）。
+    """
+    if not bool(getattr(round_result, "ended", False)):
+        return None
+    status = str(getattr(round_result, "status", "") or "")
+    enemy_name = str(getattr(round_result, "enemy_name", "") or "敌人")
+    lines: List[str] = []
+    if status == "win":
+        lines.append("✅ 战斗胜利！")                                # BREP-17
+    elif status == "lose":
+        lines.append("❌ 你倒下了…")                                 # BREP-16
+        lines.append(f"❌ 战斗失败：你被{enemy_name}击败了")          # BREP-18
+    elif status == "draw":
+        lines.append("双方同归于尽，战斗以平局结束")                  # BREP-19
+    # 经验/掉落只在战斗结束消息输出一次（军规5）；仅胜利结算掉落（TC-20 失败无掉落）
+    if status == "win" and (
+        hasattr(round_result, "exp")
+        or hasattr(round_result, "gold")
+        or hasattr(round_result, "drops")
+    ):
+        reward = _render_reward_line(
+            int(getattr(round_result, "exp", 0)),
+            int(getattr(round_result, "gold", 0)),
+            getattr(round_result, "drops", None),
+        )
+        if reward:
+            lines.append(reward)                                     # BREP-20
+    if not lines:
+        return None
+    return "\n".join(lines)
+
+
+def _render_combo_seg_note(seg: Mapping[str, Any]) -> str:
+    """BREP-21 段行附注：BREP-04 会心/格挡（复用 _CRIT_TIERS 档位表，数值层 L25-26）。
+
+    段内判定各跑一次完整管线（L16/L132），段行尾可拼会心附注（5e §5.1 示例
+    `（会心·中阶 ×1.7）`）；低级会心默认省略（D-5D 防噪声，对齐 _render_crit_block_note）。
+    """
+    notes: List[str] = []
+    crit = str(seg.get("crit", "") or "")
+    if crit in _CRIT_TIERS and crit != "low":
+        tier, mult = _CRIT_TIERS[crit]
+        notes.append(f"（会心·{tier} ×{mult}）")
+    if bool(seg.get("blocked", False)):
+        notes.append("（被格挡，伤害减半）")
+    return "".join(notes)
+
+
+def _render_combo_segments(outcome: Any) -> List[str]:
+    """BREP-21 连段段行（5e §5.1 / D-5C）：每段独立一行、每段独立取整。
+
+    `第 {N} 段：{动作} 造成 {伤害} 伤害（{目标} {剩余HP}/{最大HP}）`——段号 N 即
+    收集器 seg 字段（数值层 L319），段行即收集器记录的人类可读镜像（D-5C）。数据源
+    outcome.segments（接线层注入的段记录序列，每段含 seg/action/final_damage/
+    target_hp/target_max_hp/target/crit/blocked/derived_capped），缺省 → 空列表
+    （调用方走聚合单行路径，收口接线补齐）。
+
+    段内击杀（target_hp<=0）→ 紧跟 BREP-15 击杀行（L54，击杀行紧跟伤害行，铁律9）；
+    early_end（BOSS/最后目标死亡，L57/L69）→ 击杀后立即结束，后续段数作废不渲染
+    （TC-23，不鞭尸）。派生倍率封顶（≤1.5×，L133）→ 段行尾附 `（派生倍率已达上限
+    1.5×）`——纯文字提示，禁 emoji。
+    """
+    segs = getattr(outcome, "segments", None)
+    if not segs:
+        return []
+    early_end = bool(getattr(outcome, "early_end", False))
+    killed = False
+    lines: List[str] = []
+    for s in segs:
+        if not isinstance(s, Mapping):
+            continue
+        seg_no = int(s.get("seg", len(lines) + 1))
+        action = str(s.get("action", "") or "")
+        dmg = int(s.get("final_damage", 0))
+        target = str(s.get("target", "") or getattr(outcome, "target", "") or "目标")
+        hp = int(s.get("target_hp", 0))
+        max_hp = int(s.get("target_max_hp", hp))
+        note = _render_combo_seg_note(s)                             # BREP-04 附注
+        line = f"第 {seg_no} 段：{action} 造成 {dmg} 伤害{note}（{target} {hp}/{max_hp}）"
+        if bool(s.get("derived_capped", False)):
+            line += "（派生倍率已达上限 1.5×）"                       # 派生封顶附注（L133）
+        lines.append(line)
+        # 击杀行只渲染一次（致杀一击，L54）：已倒下的鞭尸段不再重复「你击败了…」
+        if not killed and hp <= 0:
+            kill = _render_kill_line(s)                               # BREP-15 紧跟伤害行
+            if kill:
+                lines.append(kill)
+            killed = True
+            if early_end:
+                break                                                 # 后续段作废（L57/L69）
+    return lines
+
+
+def _render_combo_settle_line(total_segs: int, remark: str = "") -> str:
+    """BREP-22 连段结算行模板：`连段 {N} 段已结算（{备注}）`（5e §5.2）。
+
+    - 正常完结：`连段 3 段已结算`（remark 空串省略括号）；
+    - 鞭尸（目标套中击杀，L55-56）：remark=`目标已倒下，下一回合退出战场`；
+    - BOSS/最后目标提前结束（L57/L69）：remark=`BOSS 已倒下，战斗结束，后续段数作废`；
+    - 派生倍率封顶（L133）：remark=`派生倍率已达上限 1.5×`。
+    """
+    suffix = f"（{remark}）" if remark else ""
+    return f"连段 {total_segs} 段已结算{suffix}"
+
+
+def _render_combo_settle(outcome: Any) -> Optional[str]:
+    """BREP-22 连段结算行（M5-06；outcome.segments 存在时输出一次，5e §5.2）。
+
+    段数 N = 实际执行段数：early_end（BOSS 提前结束）时击杀段即最后执行段，后续段数
+    作废不计入（L57/L69，TC-23）；否则 = segments 长度。备注缺省按终态推断：
+    early_end → BOSS 提前结束；target_hp<=0（目标已倒下）→ 鞭尸；否则正常完结无备注。
+    备注可由接线层经 outcome.combo_remark 显式注入（覆盖推断）。无 segments 数据
+    → None（调用方省略该行）。
+    """
+    segs = getattr(outcome, "segments", None)
+    if not segs:
+        return None
+    early_end = bool(getattr(outcome, "early_end", False))
+    total = 0
+    for s in segs:
+        total += 1
+        if early_end and int(s.get("target_hp", 0)) <= 0:
+            break                                                     # 击杀段即最后执行段
+    remark = str(getattr(outcome, "combo_remark", "") or "")
+    if not remark:
+        if early_end:
+            remark = "BOSS 已倒下，战斗结束，后续段数作废"
+        elif int(getattr(outcome, "target_hp", 1)) <= 0:
+            remark = "目标已倒下，下一回合退出战场"
+    return _render_combo_settle_line(total, remark)

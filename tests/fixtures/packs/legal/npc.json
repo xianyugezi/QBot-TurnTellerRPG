@@ -1,0 +1,74 @@
+[
+  {
+    "id": "blacksmith_zhou",
+    "name": "铁匠·老周",
+    "icon": "🔨",
+    "map": "rubble_field",
+    "type": "merchant",
+    "desc": "乱石滩入口的铁匠，兼售杂货。",
+    "visible": true,
+    "dialogues": {
+      "greeting": "欢迎光临铁匠铺。",
+      "options": [
+        { "text": "看看货架", "action": "shop", "shop_refs": ["village_shop"] },
+        { "text": "打听消息", "action": "reply", "text": "附近岩皮鼬猖獗，进山小心点。" },
+        { "text": "离开" }
+      ]
+    },
+    "interactions": [
+      { "action": "shop", "text": "买东西", "shop_refs": ["village_shop"] },
+      { "action": "repair", "text": "修理装备", "cost": { "coins": 20 } }
+    ],
+    "shop_refs": ["village_shop"]
+  },
+  {
+    "id": "quest_giver_ling",
+    "name": "发布员·小玲",
+    "icon": "📜",
+    "map": "rubble_field",
+    "type": "quest_giver",
+    "desc": "乱石滩的委托发布员。",
+    "dialogues": {
+      "greeting": "有委托想接吗？",
+      "options": [
+        { "text": "接任务", "action": "quest", "quests": [{ "quest_id": "q_potion_supply" }] },
+        { "text": "离开" }
+      ]
+    },
+    "interactions": [
+      { "action": "quest", "text": "查看任务", "quests": [{ "quest_id": "q_potion_supply" }] }
+    ],
+    "quests": [{ "quest_id": "q_potion_supply" }]
+  },
+  {
+    "id": "traveling_dealer",
+    "name": "行商·骆驼",
+    "icon": "🐫",
+    "map": "volcanic_path",
+    "type": "dealer",
+    "desc": "游历四方的行商，兜售奇闻轶事。",
+    "dialogues": { "greeting": "今天想听点什么？" },
+    "dealer": {
+      "strategy": "rotate",
+      "pool": [
+        {
+          "id": "tale_1",
+          "weight": 1,
+          "once": true,
+          "deliver": { "action": "reply", "text": ["远方有个熔岩洞窟的传说…"] }
+        }
+      ]
+    }
+  },
+  {
+    "id": "elder_mo",
+    "name": "长者·阿墨",
+    "icon": "🏮",
+    "map": "crag_den",
+    "type": "narrator",
+    "desc": "石甲蜥巢穴的守夜人，知道不少旧事。",
+    "interactions": [
+      { "action": "reply", "text": "夜里落石机关最容易触发，绕着走。" }
+    ]
+  }
+]

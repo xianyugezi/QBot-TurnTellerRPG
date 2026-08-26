@@ -1,0 +1,19 @@
+[
+  {
+    "id": "q_potion_supply",
+    "name": "药水补给",
+    "type": "collect",
+    "desc": "收集药水交给发布员。",
+    "zone": "rubble_field",
+    "conditions": [
+      { "var": "item_count", "op": "ge", "value": 2, "param": "potion" }
+    ],
+    "reward": [
+      { "item": "potion", "count": 2 }
+    ],
+    "npc": { "id": "quest_giver_ling" },
+    "main": false,
+    "consume": false,
+    "repeatable": false
+  }
+]

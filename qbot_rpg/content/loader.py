@@ -7,6 +7,8 @@
   - 细化_3e_loader校验接线 §1.6（load_pack 整体走 asyncio.to_thread，>50ms 禁止阻塞事件循环，D-05）
   - 细化_3e_loader校验接线 §1.7（PackLoadError 领域异常携带结构化 errors，人话由 commands 层翻译）
   - 细化_3e2_热重载契约 TRG-3（mtime 增量：未变更模块复用解析结果，引用存在性仍全量重跑）
+  - m4_shared_contract §2.3 + §3.1~3.4（批次 6 校验器接线：npc/shop/quest/checkin 四模块
+    _KIND_FOR_MODULE 登记，registry kind = shop/quest/checkin；Def 类缺省 BaseDef 回退工程补白）
 
 零 NoneBot；仅依赖 qbot_rpg.content.models/validator/registry/field_meta + qbot_rpg.data.types。
 """
@@ -161,6 +163,12 @@ _KIND_FOR_MODULE: Mapping[str, str] = {
     "npc": "npc",
     "formula": "formula",
     "conditional": "conditional",  # 条件加成规则（细化_3b §3.2）
+    # M4 交互系统（m4_shared_contract §3.1~3.4）：shop/quest/checkin 登记注册表 kind；
+    # DEF_CLASSES 无专属 Def 类 → 缺省 BaseDef 回退（同 dungeon 口径，工程补白显式标注：
+    # 运行期 Def 解析由各 core/*.py 经 parse_* 读取 modules_raw，不依赖 registry Def 类）
+    "shop": "shop",
+    "quest": "quest",
+    "checkin": "checkin",
 }
 
 

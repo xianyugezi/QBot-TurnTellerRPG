@@ -1,0 +1,1109 @@
+"""基础指令组接线 basic_commands.py（M4 批次6·路G1 · qbot_rpg/commands/basic_commands.py）。
+
+依据：m4_shared_contract §2.3 + 4f + 裁决②
+  - m4_shared_contract.md §2.3（基础指令组：/查看 /背包 /装备 /技能 /帮助 等，4f RUL-01~34，
+    页码夹取口径）+ §2.2（列表 5 条/页上限、页脚固定 TPL-08、页码越界夹取 +「已到最后一页」
+    2026-08-27 用户裁决②、0/负数/非数字 → TPL-12、错误模板统一、emoji 纪律：
+    数据型功能图标豁免（物品 icon/NPC 类型图标/recommended_newbie 角标/GM 结果前缀））
+  - docs/细化/细化_4f_基础指令组契约.md（RUL-01~34：/状态 面板五区 B4 裁决 → 本路 /查看 承载
+    「LV 行固定头部 + 属性三层结构」玩家面板；/背包 RUL-16~19 行格式与分页；/装备 4b §三 装备栏
+    穿戴；/技能 6a 技能库字段 + M2 技能卡「LV 行固定头部 + 派生指向」；/帮助 RUL-20~25 分组目录
+    与 GM 保密、RUL-08 注册门槛 + B6 /帮助 豁免）
+  - docs/细化/细化_3d_消息模板规范.md（TPL-08 页脚 / TPL-12 指令出错 / D-01 emoji 禁令 / D-04 错误
+    文案唯一源 / §2.2 页码输入 + 裁决② 尾注）
+  - docs/细化/细化_3b_玩家属性三层.md（白值/加成/临时三层结构 → /查看 面板，管线出口
+    qbot_rpg/core/player_attributes.calc_all_final_attributes）
+  - docs/细化/细化_6a_技能库契约.md（skills.json 字段：type/mp_cost/desc/chain_refs/job_restrict；
+    chain_refs → skill_chains.json 派生链 → 「可派生成：XX」指向）
+  - docs/细化/细化_4b_物品与背包契约.md（INV-01~07 行结构 + RUL-19 行格式：图标/×数量/品质/绑定；
+    排序 acquired_at 倒序 INV-07/RUL-17）
+  - 2026-08-27 用户裁决②（列表页码超总页数 → 夹取最后一页 +「已到最后一页」；0/负数/非数字 → TPL-12）
+
+职责（细化_3a §1.3 壳层职责 · 唯一指令执行壳）：把 /查看 /背包 /装备 /技能 /帮助 五条基础指令从
+Router 接到 core 层——指令解析（parsers.parse_command 已 token 化 → 本模块取页码/子词/序号）、
+玩家面板/背包/装备栏/技能列表渲染（core/message_format/list_render 5 条/页 + TPL-08 页脚 +
+裁决② 夹取）、装备穿卸委托装备引擎（core/equipment.py，M1 骨架，注入优先 → 懒加载 →
+【待接线】RuntimeError，与 checkin_commands 同模式）、错误统一 TPL-12（sender.format_tpl12，
+文案唯一源 errors.py D-04）。
+
+铁律（m4_shared_contract §0 / 3a R1）：**零 NoneBot import**、纯函数、确定性（now/rng 由 ctx
+注入）；工程补白一律【工程补白】标注；错误走 TPL-12 统一模板；装饰性 emoji 全局禁用（仅 ✅/❌
+功能性标记 + 数据型物品 icon 豁免 m4 §2.2）。本模块只做「装配接线 + 渲染」，状态变更全部委托引擎。
+
+--------------------------------------------------------------------------------
+消费接口（core/equipment.py · M1 骨架占位 · 本层按以下契约签名消费，注入优先）：
+  equip_wear(index: int, ctx) -> dict   {ok, message}    装备背包第 index 件（切换）
+  equip_remove(slot_id: str, ctx) -> dict  {ok, message} 卸下槽位装备
+  （装备栏渲染由本层纯函数从 ctx["equipment"] 直读，不依赖引擎）
+
+--------------------------------------------------------------------------------
+【工程补白 · 显式标注】
+  1) **5 条/页横切由本层统一**：/查看 属性三层明细、/背包 物品行、/装备 槽位、/技能 技能行、
+     /帮助 目录/组页 全部按 m4 §2.2 5 条/页 + TPL-08 页脚（render_footer，禁止自造页脚）；
+     页脚指令名：/查看=/查看、/背包=/背包、/装备=/装备、/技能=/技能、/帮助 组页=/帮助 <组名>
+     （对齐 checkin「签到 状态」口径）。
+  2) **4f TPL-4F-06 目录页脚「输入 /帮助 组名 翻页」归一**：m4 §2.2「页脚固定 TPL-08，禁止各系统
+     自造页脚」为实现层唯一权威 → /帮助 目录页脚用 TPL-08（/帮助 页码 翻页）；组页页脚用
+     「/帮助 <组名> 页码 翻页」（与 checkin「签到 状态」同构）。
+  3) **/查看 = 玩家属性面板（B4 裁决承接）**：4f /状态 面板五区中「前缀行/位置行/效果区」由装配层
+     prefix_render 与后续批次承接；本路 /查看 聚焦任务口径「LV 行固定头部 + 属性三层结构
+     （白值/加成/临时）」，9 项属性 5 条/页 = 2 页 + TPL-08 + 裁决② 夹取。resource 型（生命/魔力）
+     显示 当前/上限（当前取 ctx["hp"]/ctx["mp"]）；最终值经 3b 管线 calc_all_final_attributes。
+  4) **/装备 整数参数 = 页码**（m4 §2.2 翻页 + TPL-08 页脚「/装备 页码 翻页」横切），切换装备走
+     显式子词「穿 <序号>」（背包序号）/「卸 <槽位>」（槽位名/id/序号，本层 resolve_equip_slot 纯
+     解析 → 引擎）；槽位名/序号解析失败 = 值域文案「❌ 没有这个装备槽位」（命令合法，不走 TPL-12，
+     对齐 quest「任务不存在」口径）。
+  5) **/技能 派生指向**：skill.chain_refs → ctx["skill_chains"] 链定义（steps[].from == 本技能 →
+     收集 steps[].to → 技能名解析，1c2 派生链语义）；无派生链 → 不输出「可派生成」。技能按
+     type 排序 basic→active→passive→trigger（6a §1.5 普攻固定第 1 位），job_restrict 过滤当前职业。
+  6) **/帮助 分组目录**：内置分组表（冒险/战斗/成长/制造生活/快捷 + GM 组 B8 仅 GM 渲染）；
+     普通玩家 5 组单页；GM 6 组 2 页（带 TPL-08）；组内指令列表 5 条/页。未注册玩家返回注册引导版
+     （B6 豁免）。GM 判定读 ctx["is_gm"]（缺省 False=普通玩家，对齐 RUL-25 静默隐藏）。
+  7) **注册门槛（RUL-08）**：/查看 /背包 /装备 /技能 在 ctx["registered"] is False 时统一返回
+     「❌ 请先 /注册 创建角色（/注册 名字 职业）」；/帮助 豁免（B6）。ctx 缺省 registered=True
+     （未注入时不拦截，保持既有命令壳纯函数可测）。
+  8) **/背包 数据源**：ctx["inventory"]（ItemInstance 或 dict 行均可，兼容 4a 存档行形态）优先，
+     ctx["player"].inventory 兜底；排序 = acquired_at 倒序（INV-07/RUL-17），无时间字段保持存储序
+     （稳定排序）；图标读 items.json 配置（数据型功能图标豁免 3d §4.2/m4 §2.2），缺省不显示。
+  9) 本模块的玩家上下文工厂 make_context（NoneBot 事件 + 存储 → ctx dict）由装配层注入
+     （register_basic_commands 的 make_context 参数），**批次7 装配待接线**；注入前本层可纯
+     函数单测（直接构造 ctx + 注入真实/替身装备引擎）。
+"""
+
+from __future__ import annotations
+
+import importlib
+from typing import Any, Callable, List, Mapping, MutableMapping, Optional, Sequence, Tuple
+
+from qbot_rpg.core.message_format.list_render import (
+    DEFAULT_PAGE_SIZE,
+    LAST_PAGE_HINT,
+    render_footer,
+    resolve_page,
+)
+from qbot_rpg.core.player_attributes import calc_all_final_attributes
+from qbot_rpg.data.player import PlayerAttributes
+
+# 同包兄弟模块：相对导入（G0 架构门禁 test_commands_web_not_depended 不产生
+# `qbot_rpg.commands` 前缀反向依赖边；同层兄弟引用架构合规，与 sender.py 同口径）。
+from .parsers import parse_int
+from .router import CommandSpec
+from .sender import format_tpl12
+
+__all__ = [
+    # 指令名 / 子指令词
+    "VIEW_CMD", "BAG_CMD", "EQUIP_CMD", "SKILL_CMD", "HELP_CMD",
+    "SUB_WEAR", "SUB_REMOVE",
+    # 渲染常量
+    "TPL_REGISTER_GATE", "TPL_EMPTY_BAG", "TPL_NO_SLOT",
+    "QUALITY_LABELS", "TYPE_LABELS", "DEFAULT_SLOT_NAMES",
+    "HELP_GROUPS", "GM_HELP_GROUP", "GROUP_ORDER",
+    # 指令处理器（纯函数：parsed + ctx → 回复正文）
+    "cmd_view", "cmd_bag", "cmd_equip", "cmd_skill", "cmd_help",
+    # 渲染 / 工具
+    "attr_line", "bag_line", "equip_line", "skill_line", "group_page_line",
+    "resolve_equip_slot", "parse_page_arg", "view_header", "skill_rows",
+    # 装配
+    "register_basic_commands",
+]
+
+# ---------------------------------------------------------------------------
+# 常量：指令名 / 子指令词 / 业务文案
+# ---------------------------------------------------------------------------
+
+VIEW_CMD = "查看"
+BAG_CMD = "背包"
+EQUIP_CMD = "装备"
+SKILL_CMD = "技能"
+HELP_CMD = "帮助"
+
+# 装备子指令词（非解析器固定子词，经 args 位置参数识别；对齐 checkin「状态/补签」模式）
+SUB_WEAR = "穿"
+SUB_REMOVE = "卸"
+
+# RUL-08 注册门槛（4f §1.4 / TC-05；/帮助 豁免见 B6）
+TPL_REGISTER_GATE = "❌ 请先 /注册 创建角色（/注册 名字 职业）"
+
+# /背包 空背包（4f §3.4 边界：对齐 L1353 反向兜底）
+TPL_EMPTY_BAG = "❌ 背包空空如也"
+
+# /装备 槽位解析失败（值域问题，命令合法，不走 TPL-12；工程补白 4）
+TPL_NO_SLOT = "❌ 没有这个装备槽位"
+
+# 品质四档（4b GRD-x 唯一注册表；RUL-19：仅非 normal 档标注）
+QUALITY_LABELS: Mapping[str, str] = {
+    "normal": "",
+    "fine": "精良",
+    "epic": "史诗",
+    "legendary": "传说",
+}
+
+# 技能 type 四类中文（6a §1.4）
+TYPE_LABELS: Mapping[str, str] = {
+    "basic": "普攻",
+    "active": "主动",
+    "passive": "被动",
+    "trigger": "触发",
+}
+
+# 装备槽位缺省中文名（slots.json 未配置时兜底；EQP-04 slot_schema 引用）
+DEFAULT_SLOT_NAMES: Mapping[str, str] = {
+    "weapon": "武器",
+    "armor_head": "头部",
+    "armor_body": "身体",
+    "armor_hand": "手部",
+    "armor_leg": "腿部",
+    "armor_foot": "脚部",
+}
+
+# 槽位缺省顺序（4b §3.1：武器 + 五部位；ctx["slot_order"] 可覆盖）
+DEFAULT_SLOT_ORDER: tuple = (
+    "weapon", "armor_head", "armor_body", "armor_hand", "armor_leg", "armor_foot",
+)
+
+# 属性名兜底（stats.json name 缺失时；4f RUL-12 全中文）
+_DEFAULT_STAT_NAMES: Mapping[str, str] = {
+    "hp": "生命", "mp": "魔力", "str": "力量", "int": "智力", "con": "体质",
+    "spr": "精神", "foc": "专注", "agi": "敏捷", "lck": "幸运",
+}
+
+# 属性默认展示顺序（stats.json 键序缺失时；九预置 3b §4.1）
+_DEFAULT_STAT_ORDER: tuple = ("hp", "mp", "str", "int", "con", "spr", "foc", "agi", "lck")
+
+# /帮助 分组目录（4f RUL-21 六组顺序：冒险/战斗/成长/制造生活/快捷/GM；组内指令按框架章节顺序）
+HELP_GROUPS: Tuple[Tuple[str, Tuple[Tuple[str, str], ...]], ...] = (
+    ("冒险", (("查看", "查看角色属性面板"), ("背包", "查看背包物品"), ("装备", "查看/切换装备"),
+              ("位置", "查看当前地点"), ("进入", "进入地图"), ("休息", "休息恢复"))),
+    ("战斗", (("攻击", "选择技能攻击目标"), ("防御", "防御一回合"), ("道具", "使用战斗道具"),
+              ("逃跑", "逃离战斗"), ("技能", "查看技能列表"))),
+    ("成长", (("使用", "使用物品/穿戴装备"), ("强化", "强化装备"), ("转职", "转职职业"))),
+    ("制造生活", (("合成", "合成物品"), ("炼金", "炼金制作"), ("锻造", "锻造装备"),
+                   ("采集", "采集资源"))),
+    ("快捷", (("快捷绑定", "绑定快捷指令"), ("快捷解绑", "解绑快捷指令"),
+              ("快捷列表", "查看快捷列表"))),
+)
+
+# GM 组（RUL-25：无 GM 权限不渲染、不提示存在；GM 可见）
+GM_HELP_GROUP: Tuple[str, Tuple[Tuple[str, str], ...]] = (
+    "GM", (("重载", "重载内容包"), ("封禁", "封禁玩家"), ("日志", "查看日志"),
+           ("编辑", "编辑配置"), ("设置", "设置参数")),
+)
+
+# 分组名常量（目录页/组页引用）
+GROUP_ORDER: Tuple[str, ...] = tuple(g[0] for g in HELP_GROUPS) + (GM_HELP_GROUP[0],)
+
+# /帮助 注册引导版（B6：仅注册/查看/背包 三项引导 + 分组目录提示；单页无页脚）
+_REGISTER_GUIDE: str = "\n".join([
+    "【新手引导】发 /注册 名字 职业 创建角色",
+    "注册 —— 创建角色（未注册必需）",
+    "查看 —— 查看角色属性面板",
+    "背包 —— 查看背包物品",
+    "装备/技能 等更多指令注册后可用，发 /帮助 查看完整列表",
+])
+
+# 目录头（4f TPL-4F-06）
+_DIRECTORY_TITLE = "【指令总览】输入 /帮助 组名 查看该组指令"
+
+
+# ---------------------------------------------------------------------------
+# 工具（纯函数）
+# ---------------------------------------------------------------------------
+
+def _fragment(parsed: Any) -> str:
+    """TPL-12 原文片段（parsed.raw 优先；缺省重构）。"""
+    if getattr(parsed, "raw", None):
+        return str(parsed.raw)
+    cmd = getattr(parsed, "command", None) or ""
+    args = getattr(parsed, "args", None) or []
+    tail = (" " + " ".join(str(a) for a in args)) if args else ""
+    return f"/{cmd}{tail}"
+
+
+def _fmt_num(v: object) -> str:
+    """数值渲染：整数去小数、浮点去尾零、非法原样。"""
+    if isinstance(v, bool):
+        return str(v)
+    if isinstance(v, int):
+        return str(v)
+    if isinstance(v, float):
+        if v == int(v):
+            return str(int(v))
+        s = f"{v:.2f}".rstrip("0").rstrip(".")
+        return s if s not in ("", "-0") else "0"
+    return str(v)
+
+
+def _fmt_bonus(flat: float, pct: float) -> str:
+    """加成/临时层摘要：`+5·+10%`；双零 → `0`。"""
+    parts: List[str] = []
+    if flat:
+        parts.append(f"+{_fmt_num(flat)}")
+    if pct:
+        parts.append(f"+{_fmt_num(pct)}%")
+    return "·".join(parts) if parts else "0"
+
+
+def parse_page_arg(text: Optional[str]) -> Optional[int]:
+    """页码参数归一：None → 1；整数 ≥1 → 原值；0/负数/非数字 → None（壳层转 TPL-12，裁决②）。"""
+    if text is None:
+        return 1
+    n = parse_int(text)
+    if n is None or n < 1:
+        return None
+    return n
+
+
+def _gate(ctx: Mapping[str, Any]) -> Optional[str]:
+    """RUL-08 注册门槛：ctx["registered"] is False → 拦截文案；缺省视为已注册（工程补白 7）。"""
+    if ctx.get("registered", True) is False:
+        return TPL_REGISTER_GATE
+    return None
+
+
+# ---------------------------------------------------------------------------
+# /查看：玩家属性面板（LV 行固定头部 + 属性三层结构，5 条/页 + TPL-08 + 裁决②）
+# ---------------------------------------------------------------------------
+
+def _player_fields(ctx: Mapping[str, Any]) -> Mapping[str, Any]:
+    """玩家基础字段归一（ctx 直取 → ctx["player"] dataclass 兜底）。"""
+    p = ctx.get("player")
+    if p is not None and not isinstance(p, Mapping):
+        return {
+            "name": str(getattr(p, "name", None) or ctx.get("name") or "?"),
+            "level": int(getattr(p, "level", None) or ctx.get("level") or 1),
+            "exp": getattr(p, "exp", None) if getattr(p, "exp", None) is not None else ctx.get("exp"),
+            "job_id": str(getattr(p, "job_id", None) or ctx.get("job_id") or ""),
+            "hp": getattr(p, "hp", None) if getattr(p, "hp", None) is not None else ctx.get("hp"),
+            "mp": getattr(p, "mp", None) if getattr(p, "mp", None) is not None else ctx.get("mp"),
+        }
+    return {
+        "name": str(ctx.get("name") or "?"),
+        "level": int(ctx.get("level") or 1),
+        "exp": ctx.get("exp"),
+        "job_id": str(ctx.get("job_id") or ""),
+        "hp": ctx.get("hp"),
+        "mp": ctx.get("mp"),
+    }
+
+
+def _job_name(ctx: Mapping[str, Any], job_id: str) -> Optional[str]:
+    """职业 id → 中文名（ctx["jobs"] 映射；缺失返回 None）。"""
+    if not job_id:
+        return None
+    jobs = ctx.get("jobs")
+    if isinstance(jobs, Mapping):
+        d = jobs.get(job_id)
+        if isinstance(d, Mapping):
+            return str(d.get("name")) if d.get("name") else None
+        if d is not None and hasattr(d, "get"):
+            n = d.get("name")
+            return str(n) if n else None
+    return None
+
+
+def _base_header(ctx: Mapping[str, Any], label: str) -> str:
+    """LV 行固定头部基座：`【{label}】Lv3.阿伟（战士）`。"""
+    f = _player_fields(ctx)
+    job = str(ctx.get("job_name") or _job_name(ctx, f["job_id"]) or "?")
+    return f"【{label}】Lv{f['level']}.{f['name']}（{job}）"
+
+
+def view_header(ctx: Mapping[str, Any]) -> str:
+    """LV 行固定头部（4f RUL-11 + 任务口径）：`【角色】Lv3.阿伟（战士） ｜ 经验 320/1000`。"""
+    head = _base_header(ctx, "角色")
+    f = _player_fields(ctx)
+    max_lv = ctx.get("max_level")
+    if max_lv is not None and f["level"] >= int(max_lv):
+        head += " ｜ 【已满级】"
+    elif f["exp"] is not None:
+        nxt = ctx.get("exp_next")
+        if nxt is not None:
+            head += f" ｜ 经验 {_fmt_num(f['exp'])}/{_fmt_num(nxt)}"
+        else:
+            head += f" ｜ 经验 {_fmt_num(f['exp'])}"
+    return head
+
+
+def _to_attributes(ctx: Mapping[str, Any]) -> PlayerAttributes:
+    """属性三层归一为 PlayerAttributes（3b §4.4 三子层键空间；dict 形态兼容，工程补白 3）。"""
+    attrs = ctx.get("attributes")
+    if isinstance(attrs, PlayerAttributes):
+        return attrs
+    raw = attrs if isinstance(attrs, Mapping) else ctx.get("attr_layers")
+    if raw is None:
+        raw = {}
+    bonus = dict(raw.get("bonus") or {}) if isinstance(raw.get("bonus"), Mapping) else {}
+    temp = dict(raw.get("temp") or {}) if isinstance(raw.get("temp"), Mapping) else {}
+    return PlayerAttributes(
+        base=dict(raw.get("base") or {}),
+        bonus={
+            "flat": dict(bonus.get("flat") or {}),
+            "pct": dict(bonus.get("pct") or {}),
+        },
+        temp={
+            "pct": dict(temp.get("pct") or {}),
+            "flat": dict(temp.get("flat") or {}),
+        },
+        cond=dict(raw.get("cond") or {}),
+    )
+
+
+def _stat_name(ctx: Mapping[str, Any], attr_id: str) -> str:
+    """属性 id → 中文名（stats.json 配置优先；缺省兜底表）。"""
+    stats = ctx.get("stats")
+    if isinstance(stats, Mapping):
+        d = stats.get(attr_id)
+        if isinstance(d, Mapping) and d.get("name"):
+            return str(d["name"])
+        if d is not None and hasattr(d, "get"):
+            n = d.get("name")
+            if n:
+                return str(n)
+    return _DEFAULT_STAT_NAMES.get(attr_id, attr_id)
+
+
+def _stat_order(ctx: Mapping[str, Any], attrs: PlayerAttributes) -> List[str]:
+    """属性展示顺序：stats.json 键序优先（含最终键并集），缺省九预置顺序。"""
+    stats = ctx.get("stats")
+    if isinstance(stats, Mapping) and stats:
+        order = [str(k) for k in stats.keys()]
+    else:
+        order = list(_DEFAULT_STAT_ORDER)
+    union = set(attrs.base) | set(attrs.flat_bonus()) | set(attrs.pct_bonus()) \
+        | set(attrs.temp_flat()) | set(attrs.temp_pct()) | set(attrs.cond)
+    for k in union:
+        if k not in order:
+            order.append(k)
+    return order
+
+
+def attr_line(idx: int, attr_id: str, stat_name: str, final: int,
+              attrs: PlayerAttributes, current: Optional[int] = None) -> str:
+    """属性行（三层结构）：`1. 【力量】26（白值 15 ｜ 加成 +5·+10% ｜ 临时 +3·+20%）`；
+    resource 型（current 非空）→ `当前/上限`。"""
+    base = float(attrs.base.get(attr_id, 0.0))
+    flat = float(attrs.flat_bonus().get(attr_id, 0.0))
+    pct = float(attrs.pct_bonus().get(attr_id, 0.0))
+    tflat = float(attrs.temp_flat().get(attr_id, 0.0))
+    tpct = float(attrs.temp_pct().get(attr_id, 0.0))
+    bonus = _fmt_bonus(flat, pct)
+    temp = _fmt_bonus(tflat, tpct)
+    if current is not None:
+        return f"{idx}. 【{stat_name}】{_fmt_num(current)}/{final}（白值 {_fmt_num(base)} ｜ 加成 {bonus} ｜ 临时 {temp}）"
+    return f"{idx}. 【{stat_name}】{final}（白值 {_fmt_num(base)} ｜ 加成 {bonus} ｜ 临时 {temp}）"
+
+
+def _render_attr_page(ctx: Mapping[str, Any], page: int) -> str:
+    """/查看 正文：LV 行固定头部 + 属性三层行 5 条/页 + TPL-08 + 裁决② 夹取。"""
+    attrs = _to_attributes(ctx)
+    f = _player_fields(ctx)
+    final = calc_all_final_attributes(
+        attrs,
+        conditional_rules=ctx.get("conditional_rules") or (),
+        resource_pct=_resource_pct(ctx),
+        attr_types=ctx.get("attr_types"),
+    )
+    order = _stat_order(ctx, attrs)
+    items: List[Tuple[str, Optional[int]]] = []
+    for attr_id in order:
+        if attr_id not in final:
+            continue
+        current = None
+        if attr_id in ("hp", "mp"):
+            cur = f.get(attr_id)
+            current = int(cur) if cur is not None else None
+        items.append((attr_id, current))
+    res = resolve_page(page, len(items), DEFAULT_PAGE_SIZE)
+    if res.invalid:
+        raise ValueError(
+            "页码非法（0/负数/非数字）：壳层应经 parse_page_arg 判定并转 TPL-12（3d §2.2/裁决②）"
+        )
+    assert res.page is not None
+    start = (res.page - 1) * DEFAULT_PAGE_SIZE
+    slice_items = items[start:start + DEFAULT_PAGE_SIZE]
+    lines: List[str] = [view_header(ctx)]
+    for i, (attr_id, cur) in enumerate(slice_items):
+        lines.append(attr_line(start + i + 1, attr_id, _stat_name(ctx, attr_id),
+                               final[attr_id], attrs, current=cur))
+    if res.clamped:
+        lines.append(LAST_PAGE_HINT)
+    footer = render_footer(res.page, res.total_pages, res.total, VIEW_CMD)
+    if footer:
+        lines.append(footer)
+    return "\n".join(lines)
+
+
+def _resource_pct(ctx: Mapping[str, Any]) -> bool:
+    """settings.resource_pct（3b ADR-02：resource 型百分比默认关）。"""
+    settings = ctx.get("settings")
+    if isinstance(settings, Mapping):
+        return bool(settings.get("resource_pct", False))
+    return False
+
+
+def cmd_view(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """/查看 [页码]：玩家属性面板（LV 行固定头部 + 属性三层结构 5 条/页 + TPL-08 + 裁决② 夹取；
+    0/负数/非数字 → TPL-12；超参/未知子词 → TPL-12）。"""
+    g = _gate(ctx)
+    if g is not None:
+        return g
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    if getattr(parsed, "fixed_subword", None):
+        return format_tpl12(_fragment(parsed))
+    args = list(getattr(parsed, "args", None) or [])
+    if len(args) > 1:
+        return format_tpl12(_fragment(parsed))
+    page = parse_page_arg(args[0] if args else None)
+    if page is None:
+        return format_tpl12(_fragment(parsed))
+    return _render_attr_page(ctx, page)
+
+
+# ---------------------------------------------------------------------------
+# /背包：物品列表（5 条/页 + ×数量/品质/绑定 + TPL-08 + 裁决②）
+# ---------------------------------------------------------------------------
+
+def _inventory_rows(ctx: Mapping[str, Any]) -> list:
+    """背包行归一（ctx["inventory"] 优先 → ctx["player"].inventory 兜底）；按 acquired_at 倒序
+    （INV-07/RUL-17），无时间字段保持存储序（稳定排序，工程补白 8）。"""
+    inv = ctx.get("inventory")
+    if inv is None:
+        player = ctx.get("player")
+        if player is not None:
+            inv = getattr(player, "inventory", None)
+    rows = list(inv) if inv else []
+
+    def _key(r: Any) -> str:
+        if isinstance(r, Mapping):
+            t = r.get("acquired_at")
+            return str(t) if t is not None else ""
+        return ""
+
+    try:
+        return sorted(rows, key=_key, reverse=True)
+    except TypeError:  # 混合类型时间字段 → 保持原序
+        return rows
+
+
+def _item_icon(ctx: Mapping[str, Any], item_id: str) -> str:
+    """物品图标（items.json 配置，数据型功能图标豁免 3d §4.2/m4 §2.2；缺省空）。"""
+    if not item_id:
+        return ""
+    items = ctx.get("items")
+    if isinstance(items, Mapping):
+        d = items.get(item_id)
+        if isinstance(d, Mapping):
+            return str(d.get("icon") or "")
+        if d is not None and hasattr(d, "get"):
+            return str(d.get("icon") or "")
+    return ""
+
+
+def _row_fields(row: Any, ctx: Mapping[str, Any]) -> Mapping[str, Any]:
+    """背包行字段归一（ItemInstance dataclass 与 dict 行兼容，4a 存档行形态）。"""
+    if isinstance(row, Mapping):
+        item_id = str(row.get("item_id") or "")
+        name = str(row.get("name") or item_id or "?")
+        count = row.get("count", 1)
+        quality = str(row.get("quality") or "normal")
+        bound = bool(row.get("bound"))
+        icon = str(row.get("icon") or "") or _item_icon(ctx, item_id)
+    else:
+        item_id = str(getattr(row, "item_id", "") or "")
+        name = str(getattr(row, "name", None) or item_id or "?")
+        count = getattr(row, "count", 1)
+        quality = str(getattr(row, "quality", None) or "normal")
+        bound = bool(getattr(row, "bound", False))
+        icon = _item_icon(ctx, item_id)
+    try:
+        count = int(count)
+    except (TypeError, ValueError):
+        count = 1
+    return {
+        "item_id": item_id, "name": name, "count": count,
+        "quality": quality, "bound": bound, "icon": icon,
+    }
+
+
+def bag_line(index: int, row: Any, ctx: Mapping[str, Any]) -> str:
+    """物品行（RUL-19）：`{序号}. {图标}{名称}{×数量}{（品质）}{（绑定）}`；×1 省略、normal 品质
+    不标、绑定追加（绑定）；`×` 为展示符号（输入侧一律 `*`，铁律 1）。"""
+    f = _row_fields(row, ctx)
+    line = f"{index}. {f['icon']} {f['name']}" if f["icon"] else f"{index}. {f['name']}"
+    if f["count"] > 1:
+        line += f" ×{f['count']}"
+    q = QUALITY_LABELS.get(f["quality"])
+    if q:
+        line += f"（{q}）"
+    if f["bound"]:
+        line += "（绑定）"
+    return line
+
+
+def _render_bag_page(ctx: Mapping[str, Any], page: int) -> str:
+    """/背包 正文：物品行 5 条/页 + TPL-08 + 裁决② 夹取；空背包 → TPL_EMPTY_BAG。"""
+    rows = _inventory_rows(ctx)
+    if not rows:
+        return TPL_EMPTY_BAG
+    res = resolve_page(page, len(rows), DEFAULT_PAGE_SIZE)
+    if res.invalid:
+        raise ValueError(
+            "页码非法（0/负数/非数字）：壳层应经 parse_page_arg 判定并转 TPL-12（3d §2.2/裁决②）"
+        )
+    assert res.page is not None
+    start = (res.page - 1) * DEFAULT_PAGE_SIZE
+    slice_rows = rows[start:start + DEFAULT_PAGE_SIZE]
+    lines: List[str] = [bag_line(start + i + 1, r, ctx) for i, r in enumerate(slice_rows)]
+    if res.clamped:
+        lines.append(LAST_PAGE_HINT)
+    footer = render_footer(res.page, res.total_pages, res.total, BAG_CMD)
+    if footer:
+        lines.append(footer)
+    return "\n".join(lines)
+
+
+def cmd_bag(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """/背包 [页码]：物品列表（5 条/页 + TPL-08 + 裁决② 夹取；0/负数/非数字 → TPL-12）。"""
+    g = _gate(ctx)
+    if g is not None:
+        return g
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    if getattr(parsed, "fixed_subword", None):
+        return format_tpl12(_fragment(parsed))
+    args = list(getattr(parsed, "args", None) or [])
+    if len(args) > 1:
+        return format_tpl12(_fragment(parsed))
+    page = parse_page_arg(args[0] if args else None)
+    if page is None:
+        return format_tpl12(_fragment(parsed))
+    return _render_bag_page(ctx, page)
+
+
+# ---------------------------------------------------------------------------
+# /装备：装备栏（5 条/页 + TPL-08 + 裁决②）/ 切换（穿 <序号> / 卸 <槽位>）
+# ---------------------------------------------------------------------------
+
+def _slot_order(ctx: Mapping[str, Any]) -> List[str]:
+    """槽位顺序：ctx["slot_order"] 覆盖；缺省武器+五部位（4b §3.1）。"""
+    order = ctx.get("slot_order")
+    if isinstance(order, (list, tuple)) and order:
+        return [str(s) for s in order]
+    return list(DEFAULT_SLOT_ORDER)
+
+
+def _slot_name(ctx: Mapping[str, Any], slot_id: str) -> str:
+    """槽位 id → 中文名（ctx["slots"] 配置优先；缺省兜底表）。"""
+    slots = ctx.get("slots")
+    if isinstance(slots, Mapping):
+        d = slots.get(slot_id)
+        if isinstance(d, Mapping) and d.get("name"):
+            return str(d["name"])
+        if d is not None and hasattr(d, "get"):
+            n = d.get("name")
+            if n:
+                return str(n)
+    return DEFAULT_SLOT_NAMES.get(slot_id, slot_id)
+
+
+def _equipment_map(ctx: Mapping[str, Any]) -> Mapping[str, Any]:
+    """玩家装备栏（ctx["equipment"] → ctx["player"].equipment 兜底）。"""
+    eq = ctx.get("equipment")
+    if eq is None:
+        player = ctx.get("player")
+        if player is not None:
+            eq = getattr(player, "equipment", None)
+    return eq if isinstance(eq, Mapping) else {}
+
+
+def _slot_info(slot: Any) -> Optional[Mapping[str, Any]]:
+    """槽位实例归一（EquipmentSlot dataclass / dict）；空槽 → None。"""
+    if slot is None:
+        return None
+    if isinstance(slot, Mapping):
+        if not slot.get("item_id") and not slot.get("name"):
+            return None
+        return {
+            "item_id": str(slot.get("item_id") or ""),
+            "name": str(slot.get("name") or slot.get("item_id") or "?"),
+            "enhance": int(slot.get("slot_level", slot.get("enhance", 0)) or 0),
+            "locked": bool(slot.get("locked")),
+        }
+    item_id = getattr(slot, "item_id", None)
+    name = getattr(slot, "name", None)
+    if not item_id and not name:
+        return None
+    return {
+        "item_id": str(item_id or ""),
+        "name": str(name or item_id or "?"),
+        "enhance": int(getattr(slot, "slot_level", 0) or 0),
+        "locked": bool(getattr(slot, "locked", False)),
+    }
+
+
+def equip_line(index: int, slot_id: str, slot: Any, ctx: Mapping[str, Any]) -> str:
+    """装备栏行：`1. 武器：铁剑 +3` / `2. 头部：（空）`。"""
+    slot_name = _slot_name(ctx, slot_id)
+    info = _slot_info(slot)
+    if info is None:
+        return f"{index}. {slot_name}：（空）"
+    line = f"{index}. {slot_name}：{info['name']}"
+    if info["enhance"]:
+        line += f" +{info['enhance']}"
+    return line
+
+
+def _render_equip_page(ctx: Mapping[str, Any], page: int) -> str:
+    """/装备 正文：装备栏槽位 5 条/页 + TPL-08 + 裁决② 夹取。"""
+    order = _slot_order(ctx)
+    eq = _equipment_map(ctx)
+    # 槽位视图 = 顺序槽位全集（含空槽）；ctx 内额外槽位追加（内容包自定义部位 EQP-04）
+    items = list(order)
+    for sid in eq:
+        if sid not in items:
+            items.append(sid)
+    res = resolve_page(page, len(items), DEFAULT_PAGE_SIZE)
+    if res.invalid:
+        raise ValueError(
+            "页码非法（0/负数/非数字）：壳层应经 parse_page_arg 判定并转 TPL-12（3d §2.2/裁决②）"
+        )
+    assert res.page is not None
+    start = (res.page - 1) * DEFAULT_PAGE_SIZE
+    slice_items = items[start:start + DEFAULT_PAGE_SIZE]
+    lines: List[str] = [_base_header(ctx, "装备")]
+    for i, sid in enumerate(slice_items):
+        lines.append(equip_line(start + i + 1, sid, eq.get(sid), ctx))
+    if res.clamped:
+        lines.append(LAST_PAGE_HINT)
+    footer = render_footer(res.page, res.total_pages, res.total, EQUIP_CMD)
+    if footer:
+        lines.append(footer)
+    return "\n".join(lines)
+
+
+def resolve_equip_slot(ctx: Mapping[str, Any], arg: object) -> Optional[str]:
+    """槽位参数 → slot_id（槽位 id / 中文名 / 序号）；找不到 → None（值域文案，工程补白 4）。"""
+    if arg is None:
+        return None
+    s = str(arg)
+    order = _slot_order(ctx)
+    if s in order:
+        return s
+    for sid in order:
+        if _slot_name(ctx, sid) == s:
+            return sid
+    n = parse_int(s)
+    if n is not None and 1 <= n <= len(order):
+        return order[n - 1]
+    return None
+
+
+def _equip_engine(ctx: Mapping[str, Any]) -> Any:
+    """装备引擎解析（注入优先 → 懒加载 core.equipment；均不可得 → 【待接线】RuntimeError，
+    与 checkin_commands 同模式，工程补白 9）。"""
+    eng = ctx.get("equip_engine")
+    if eng is not None:
+        return eng
+    try:
+        return importlib.import_module("qbot_rpg.core.equipment")
+    except Exception as exc:  # ModuleNotFoundError / ImportError
+        raise RuntimeError(
+            "【待接线】core/equipment.py（M1 骨架）装备引擎不可用；"
+            "装配时注入 ctx['equip_engine']（equip_wear/equip_remove 消费接口）"
+        ) from exc
+
+
+def _cmd_equip_wear(ctx: Mapping[str, Any], index: int) -> str:
+    """/装备 穿 <序号>：切换穿戴背包第 index 件（引擎 equip_wear，消息透传）。"""
+    engine = _equip_engine(ctx)
+    try:
+        res = engine.equip_wear(index, ctx)
+    except Exception:
+        res = {}
+    return str(res.get("message") or "❌ 装备失败")
+
+
+def _cmd_equip_remove(ctx: Mapping[str, Any], slot_id: str) -> str:
+    """/装备 卸 <槽位>：卸下槽位装备（引擎 equip_remove，消息透传）。"""
+    engine = _equip_engine(ctx)
+    try:
+        res = engine.equip_remove(slot_id, ctx)
+    except Exception:
+        res = {}
+    return str(res.get("message") or "❌ 卸下失败")
+
+
+def cmd_equip(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """/装备 [参数] 主入口（4b §三 装备穿戴 + m4 §2.2 页码横切）：
+
+      无参            → 装备栏第 1 页（5 条/页 + TPL-08 + 裁决② 夹取）
+      <整数>          → 装备栏页码翻页（工程补白 4：整数 = 页码）
+      穿 <序号>       → 切换穿戴背包第 N 件（引擎）
+      卸 <槽位>       → 卸下槽位装备（槽位名/id/序号；解析失败 → 值域文案 TPL_NO_SLOT）
+    """
+    g = _gate(ctx)
+    if g is not None:
+        return g
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    if getattr(parsed, "fixed_subword", None):
+        return format_tpl12(_fragment(parsed))
+    args = list(getattr(parsed, "args", None) or [])
+    if not args:
+        return _render_equip_page(ctx, 1)
+    first = str(args[0])
+    if first == SUB_WEAR:
+        seq = args[1] if len(args) > 1 else None
+        n = parse_int(seq) if seq is not None else None
+        if n is None or n < 1:
+            return format_tpl12(_fragment(parsed))
+        if len(args) > 2:
+            return format_tpl12(_fragment(parsed))
+        return _cmd_equip_wear(ctx, n)
+    if first == SUB_REMOVE:
+        slot_arg = args[1] if len(args) > 1 else None
+        if slot_arg is None or len(args) > 2:
+            return format_tpl12(_fragment(parsed))
+        sid = resolve_equip_slot(ctx, slot_arg)
+        if sid is None:
+            return TPL_NO_SLOT
+        return _cmd_equip_remove(ctx, sid)
+    # 整数 = 页码
+    page = parse_page_arg(first)
+    if page is None:
+        return format_tpl12(_fragment(parsed))
+    if len(args) > 1:
+        return format_tpl12(_fragment(parsed))
+    return _render_equip_page(ctx, page)
+
+
+# ---------------------------------------------------------------------------
+# /技能：技能列表（LV 行固定头部 + 类型/MP/描述 + 派生指向「可派生成：XX」）
+# ---------------------------------------------------------------------------
+
+def _skill_def(ctx: Mapping[str, Any], sid: str) -> Any:
+    """技能定义解析（ctx["skills"] 映射 / resolve_skill 解析器）；查无 → None。"""
+    if not sid:
+        return None
+    skills = ctx.get("skills")
+    if isinstance(skills, Mapping):
+        d = skills.get(sid)
+        if d is not None:
+            return d
+    resolver = ctx.get("resolve_skill")
+    if callable(resolver):
+        try:
+            return resolver(sid)
+        except Exception:
+            return None
+    return None
+
+
+def _skill_name(ctx: Mapping[str, Any], sid: str) -> str:
+    """技能 id → 显示名（定义 name 冗余；查无 → id 原样）。"""
+    d = _skill_def(ctx, sid)
+    if d is None:
+        return sid
+    if isinstance(d, Mapping):
+        return str(d.get("name") or sid)
+    n = getattr(d, "name", None)
+    return str(n or sid)
+
+
+def _skill_field(defn: Any, key: str, default: Any = None) -> Any:
+    """技能定义字段取值（Mapping / Def.get 双兼容）。"""
+    if isinstance(defn, Mapping):
+        return defn.get(key, default)
+    if defn is not None and hasattr(defn, "get"):
+        try:
+            return defn.get(key, default)
+        except Exception:
+            return default
+    return default
+
+
+def _chain_def(ctx: Mapping[str, Any], cid: str) -> Any:
+    """派生链定义解析（ctx["skill_chains"] 映射 / resolve_chain 解析器）；查无 → None。"""
+    if not cid:
+        return None
+    chains = ctx.get("skill_chains")
+    if isinstance(chains, Mapping):
+        d = chains.get(cid)
+        if d is not None:
+            return d
+    resolver = ctx.get("resolve_chain")
+    if callable(resolver):
+        try:
+            return resolver(cid)
+        except Exception:
+            return None
+    return None
+
+
+def _derived_names(ctx: Mapping[str, Any], sid: str, chain_refs: Sequence[Any]) -> List[str]:
+    """派生指向（1c2 派生链 + 6a F14 chain_refs）：链 steps[].from == sid → steps[].to 技能名。"""
+    out: List[str] = []
+    seen: set = set()
+    for ref in chain_refs or ():
+        cid = str(ref)
+        chain = _chain_def(ctx, cid)
+        if chain is None:
+            continue
+        steps = _skill_field(chain, "steps")
+        if not isinstance(steps, list):
+            continue
+        for step in steps:
+            if not isinstance(step, Mapping):
+                continue
+            if str(step.get("from") or "") != sid:
+                continue
+            to_id = step.get("to")
+            if not to_id:
+                continue
+            to_id = str(to_id)
+            if to_id in seen:
+                continue
+            seen.add(to_id)
+            out.append(_skill_name(ctx, to_id))
+    return out
+
+
+def skill_line(index: int, sid: str, ctx: Mapping[str, Any]) -> str:
+    """技能行：`{序号}. {名称}（{类型}）{MP} MP ｜ {描述} ｜ 可派生成：XX`（M2 技能卡派生指向）。
+    MP 仅 >0 显示；无描述不输出描述段；无派生链不输出指向（工程补白 5）。"""
+    defn = _skill_def(ctx, sid)
+    name = _skill_name(ctx, sid)
+    type_label = TYPE_LABELS.get(str(_skill_field(defn, "type", "active")), "主动")
+    parts: List[str] = [f"{index}. {name}（{type_label}）"]
+    mp = _skill_field(defn, "mp_cost", 0)
+    try:
+        mp = int(mp)
+    except (TypeError, ValueError):
+        mp = 0
+    if mp > 0:
+        parts[0] += f" {mp} MP"
+    desc = _skill_field(defn, "desc")
+    if isinstance(desc, str) and desc:
+        parts.append(desc)
+    chain_refs = _skill_field(defn, "chain_refs")
+    if isinstance(chain_refs, (list, tuple)) and chain_refs:
+        derived = _derived_names(ctx, sid, chain_refs)
+        if derived:
+            parts.append("可派生成：" + "、".join(derived))
+    return " ｜ ".join(parts)
+
+
+def _job_visible(ctx: Mapping[str, Any], sid: str) -> bool:
+    """技能对当前职业可见性（6a §4.3 装配过滤：job_restrict 空=通用；非空须含当前职业）。"""
+    job_id = str(_player_fields(ctx)["job_id"])
+    restrict = _skill_field(_skill_def(ctx, sid), "job_restrict", None)
+    if isinstance(restrict, (list, tuple)) and restrict:
+        return job_id in {str(r) for r in restrict}
+    return True
+
+
+def skill_rows(ctx: Mapping[str, Any]) -> List[str]:
+    """当前职业可见技能 id 列表（job_restrict 过滤 + type 排序 basic→active→passive→trigger，
+    6a §1.5 普攻固定第 1 位；工程补白 5）。"""
+    skills = ctx.get("skills")
+    ids: List[str] = []
+    if isinstance(skills, Mapping):
+        ids = [str(k) for k in skills.keys()]
+    else:
+        resolver = ctx.get("resolve_skill")
+        ids = list(ctx.get("skill_ids") or ()) if callable(resolver) else []
+    order_map = {"basic": 0, "active": 1, "passive": 2, "trigger": 3}
+
+    def _key(sid: str) -> tuple:
+        t = str(_skill_field(_skill_def(ctx, sid), "type", "active"))
+        return (order_map.get(t, 4), sid)
+
+    visible = [sid for sid in ids if _job_visible(ctx, sid)]
+    visible.sort(key=_key)
+    return visible
+
+
+def _render_skill_page(ctx: Mapping[str, Any], page: int) -> str:
+    """/技能 正文：LV 行固定头部 + 技能行 5 条/页 + TPL-08 + 裁决② 夹取。"""
+    sids = skill_rows(ctx)
+    res = resolve_page(page, len(sids), DEFAULT_PAGE_SIZE)
+    if res.invalid:
+        raise ValueError(
+            "页码非法（0/负数/非数字）：壳层应经 parse_page_arg 判定并转 TPL-12（3d §2.2/裁决②）"
+        )
+    assert res.page is not None
+    start = (res.page - 1) * DEFAULT_PAGE_SIZE
+    slice_ids = sids[start:start + DEFAULT_PAGE_SIZE]
+    f = _player_fields(ctx)
+    job = str(ctx.get("job_name") or _job_name(ctx, f["job_id"]) or "?")
+    lines: List[str] = [f"【技能】Lv{f['level']}.{f['name']}（{job}）｜ 技能 {len(sids)} 项"]
+    for i, sid in enumerate(slice_ids):
+        lines.append(skill_line(start + i + 1, sid, ctx))
+    if res.clamped:
+        lines.append(LAST_PAGE_HINT)
+    footer = render_footer(res.page, res.total_pages, res.total, SKILL_CMD)
+    if footer:
+        lines.append(footer)
+    return "\n".join(lines)
+
+
+def cmd_skill(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """/技能 [页码]：技能列表（LV 行固定头部 + 类型/MP/描述 + 派生指向「可派生成：XX」；
+    5 条/页 + TPL-08 + 裁决② 夹取；0/负数/非数字 → TPL-12）。"""
+    g = _gate(ctx)
+    if g is not None:
+        return g
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    if getattr(parsed, "fixed_subword", None):
+        return format_tpl12(_fragment(parsed))
+    args = list(getattr(parsed, "args", None) or [])
+    if len(args) > 1:
+        return format_tpl12(_fragment(parsed))
+    page = parse_page_arg(args[0] if args else None)
+    if page is None:
+        return format_tpl12(_fragment(parsed))
+    return _render_skill_page(ctx, page)
+
+
+# ---------------------------------------------------------------------------
+# /帮助：分组目录（5 组单页 / GM 6 组 2 页）+ 组页指令列表（5 条/页）+ 注册引导版（B6）
+# ---------------------------------------------------------------------------
+
+def _help_groups(ctx: Mapping[str, Any]) -> Tuple[Tuple[str, Tuple[Tuple[str, str], ...]], ...]:
+    """分组目录：普通玩家 5 组；GM 追加第 6 组（B8/RUL-25，GM 判定 ctx["is_gm"]）。"""
+    groups = list(HELP_GROUPS)
+    if ctx.get("is_gm"):
+        groups.append(GM_HELP_GROUP)
+    return tuple(groups)
+
+
+def _group_summary(group: Tuple[str, Tuple[Tuple[str, str], ...]]) -> str:
+    """目录行（4f RUL-22）：`冒险 —— 查看/背包/装备/位置/进入…（/帮助 冒险）`。"""
+    name, cmds = group
+    names = [c[0] for c in cmds]
+    shown = "/".join(names[:5])
+    if len(names) > 5:
+        shown += "…"
+    return f"{name} —— {shown}（/帮助 {name}）"
+
+
+def _render_help_directory(ctx: Mapping[str, Any], page: int) -> str:
+    """/帮助 目录：组摘要 5 条/页 + TPL-08 + 裁决② 夹取（普通玩家 5 组单页无页脚；GM 6 组 2 页）。"""
+    groups = _help_groups(ctx)
+    res = resolve_page(page, len(groups), DEFAULT_PAGE_SIZE)
+    if res.invalid:
+        raise ValueError(
+            "页码非法（0/负数/非数字）：壳层应经 parse_page_arg 判定并转 TPL-12（3d §2.2/裁决②）"
+        )
+    assert res.page is not None
+    start = (res.page - 1) * DEFAULT_PAGE_SIZE
+    slice_groups = groups[start:start + DEFAULT_PAGE_SIZE]
+    lines: List[str] = [_DIRECTORY_TITLE]
+    for i, g in enumerate(slice_groups):
+        lines.append(_group_summary(g))
+    if res.clamped:
+        lines.append(LAST_PAGE_HINT)
+    footer = render_footer(res.page, res.total_pages, res.total, HELP_CMD)
+    if footer:
+        lines.append(footer)
+    return "\n".join(lines)
+
+
+def group_page_line(index: int, cmd: Tuple[str, str]) -> str:
+    """组页指令行（4f RUL-23）：`/状态 —— 查看角色状态与身上效果`。"""
+    return f"{index}. {cmd[0]} —— {cmd[1]}"
+
+
+def _render_help_group(ctx: Mapping[str, Any], group_name: str, page: int) -> str:
+    """/帮助 <组名>：组内指令列表 5 条/页 + TPL-08（页脚指令=帮助 <组名>）+ 裁决② 夹取。"""
+    groups = _help_groups(ctx)
+    group = next((g for g in groups if g[0] == group_name), None)
+    if group is None:
+        return format_tpl12(f"/{HELP_CMD} {group_name}")
+    cmds = list(group[1])
+    res = resolve_page(page, len(cmds), DEFAULT_PAGE_SIZE)
+    if res.invalid:
+        raise ValueError(
+            "页码非法（0/负数/非数字）：壳层应经 parse_page_arg 判定并转 TPL-12（3d §2.2/裁决②）"
+        )
+    assert res.page is not None
+    start = (res.page - 1) * DEFAULT_PAGE_SIZE
+    slice_cmds = cmds[start:start + DEFAULT_PAGE_SIZE]
+    lines: List[str] = [f"【{group_name}】"]
+    for i, c in enumerate(slice_cmds):
+        lines.append(group_page_line(start + i + 1, c))
+    if res.clamped:
+        lines.append(LAST_PAGE_HINT)
+    footer = render_footer(res.page, res.total_pages, res.total, f"{HELP_CMD} {group_name}")
+    if footer:
+        lines.append(footer)
+    return "\n".join(lines)
+
+
+def cmd_help(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """/帮助 [参数] 主入口（4f RUL-20 + B6）：
+
+      无参            → 分组目录（普通 5 组单页；GM 6 组 2 页）
+      <组名>          → 指定分组指令列表（5 条/页 + TPL-08；未知组名 → TPL-12）
+      <整数>          → 目录页码（裁决②：超页夹取最后一页 + 已到最后一页；0/负数/非数字 → TPL-12）
+      未注册（B6）    → 注册引导版（豁免注册门槛）
+    """
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    if getattr(parsed, "fixed_subword", None):
+        return format_tpl12(_fragment(parsed))
+    # B6 注册引导版（豁免）
+    if ctx.get("registered", True) is False:
+        return _REGISTER_GUIDE
+    args = list(getattr(parsed, "args", None) or [])
+    if not args:
+        return _render_help_directory(ctx, 1)
+    first = str(args[0])
+    if len(args) > 2:
+        return format_tpl12(_fragment(parsed))
+    if first in GROUP_ORDER:
+        page = parse_page_arg(args[1] if len(args) > 1 else None)
+        if page is None:
+            return format_tpl12(_fragment(parsed))
+        return _render_help_group(ctx, first, page)
+    page = parse_page_arg(first)
+    if page is None:
+        return format_tpl12(_fragment(parsed))
+    if len(args) > 1:
+        return format_tpl12(_fragment(parsed))
+    return _render_help_directory(ctx, page)
+
+
+# ---------------------------------------------------------------------------
+# 装配（Router 注册；make_context 由装配层注入，批次7 待接线）
+# ---------------------------------------------------------------------------
+
+def register_basic_commands(router: Any, *, make_context: Optional[Callable[[Any], dict]] = None) -> Any:
+    """把 /查看 /背包 /装备 /技能 /帮助 注册进 Router（CommandSpec.handler 消费 ParsedCommand）。
+
+    :param make_context: ParsedCommand → 玩家 ctx dict（name/level/exp/job_id/attributes/inventory/
+        equipment/skills/skill_chains/stats/items/jobs/slots/settings/registered/is_gm/equip_engine
+        等，见本模块各渲染函数消费契约）。None 时 handler 调用抛 RuntimeError
+        （【待接线】批次7 装配注入）。
+    """
+    def _ctx(parsed: Any) -> dict:
+        if make_context is None:
+            raise RuntimeError(
+                "【待接线】basic_commands.register_basic_commands 需要 make_context"
+                "（玩家上下文工厂，由装配层注入）"
+            )
+        return make_context(parsed)
+
+    def _wrap(handler: Callable[..., str]) -> Callable[..., str]:
+        def _h(parsed: Any, *a: Any, **k: Any) -> str:
+            return handler(parsed, _ctx(parsed))
+        return _h
+
+    router.register(CommandSpec(VIEW_CMD, handler=_wrap(cmd_view)))
+    router.register(CommandSpec(BAG_CMD, handler=_wrap(cmd_bag)))
+    router.register(CommandSpec(EQUIP_CMD, handler=_wrap(cmd_equip)))
+    router.register(CommandSpec(SKILL_CMD, handler=_wrap(cmd_skill)))
+    router.register(CommandSpec(HELP_CMD, handler=_wrap(cmd_help)))
+    return router

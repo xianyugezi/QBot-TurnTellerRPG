@@ -14,6 +14,9 @@
   - 细化_1g4_战斗世界边界 §6.3 + m2_shared_contract 第七节（settings 段 1g4 专项：
     F-02 货币引用存在 / F-02·F-04 数值合法 / F-03 disabled 惰性 / F-05·F-06 引用存在 /
     超时类键不识别 —— `_check_settings_1g4`）
+  - m4_shared_contract §2.3（批次 6 校验器+manifest 注册）+ §3.1~3.4 + 细化_2b1/2b3/2b4/2b5
+    （M4 交互系统：npc/shop/quest/checkin 四模块专项校验器接线，`_check_module` 分支调用
+    validate_npcs / validate_shops / validate_quests / validate_checkins，专项全权 + 泛型并行）
 
 纯函数无副作用：check_pack(modules, meta) -> ValidationReport（D-01：errors/warnings/notes 全量收集，一次给全）。
 零 NoneBot；仅依赖 qbot_rpg.content.models / qbot_rpg.content.field_meta / qbot_rpg.data.types。
@@ -483,6 +486,24 @@ class _Checker:
             for n in vrep.notes:
                 self._note(n.module, n.field, n.kind, **n.detail)
             return
+        # M4 交互系统（m4_shared_contract §3.1~3.4 + §2.3 批次6 校验器接线）：npc/shop/quest/checkin
+        # 专项校验器 + 泛型并行（同 maps 模式：专项全权深结构后继续泛型 _check_entry；字段口径
+        # fields={} 空表 → 泛型仅结构/ID 收集与死配置检测，未知字段 §2.3 默认放行不误伤）。
+        # 依据：细化_2b1（validate_npcs）/ 细化_2b3（validate_shops）/ 细化_2b4（validate_quests）/
+        #       细化_2b5（validate_checkins）——四者均为 (modules, report) 纯函数，report 鸭子类型
+        #       （_Checker._err/_warn/_note 与各 _emit 签名一致）。
+        if module_name == "npc":
+            from qbot_rpg.content.npc_models import validate_npcs
+            validate_npcs(self._modules, self)
+        if module_name == "shop":
+            from qbot_rpg.content.shop_models import validate_shops
+            validate_shops(self._modules, self)
+        if module_name == "quest":
+            from qbot_rpg.content.quest_models import validate_quests
+            validate_quests(self._modules, self)
+        if module_name == "checkin":
+            from qbot_rpg.content.checkin_models import validate_checkins
+            validate_checkins(self._modules, self)
         # 逐条目校验
         for idx, entry in self._iter_entries(module_name, data, mmeta):
             self._check_entry(module_name, idx, entry, mmeta)

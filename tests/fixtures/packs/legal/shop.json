@@ -1,0 +1,27 @@
+[
+  {
+    "id": "village_shop",
+    "name": "铁匠铺",
+    "icon": "🏪",
+    "type": "normal",
+    "currency": "coins",
+    "desc": "乱石滩入口的杂货兼铁匠铺。",
+    "visible": true,
+    "items": [
+      { "item": "potion", "price": 100, "stock": 10, "sold_out_once": false },
+      { "item": "hi_potion", "price": 220, "stock": 10 }
+    ]
+  },
+  {
+    "id": "supply_shop",
+    "name": "补给站",
+    "icon": "🎒",
+    "type": "normal",
+    "currency": "coins",
+    "desc": "熔岩小径入口的补给站。",
+    "items": [
+      { "item": "potion", "price": 100, "stock": 20 },
+      { "item": "hi_potion", "price": 220, "stock": 20 }
+    ]
+  }
+]

@@ -43,6 +43,10 @@ NAMESPACES: Dict[str, Tuple[str, ...]] = {
     "map_lib": ("maps",),
     "stat_lib": ("stats",),
     "npc_lib": ("npc",),
+    # M4 交互系统（m4_shared_contract §3.1~3.4）：商店/任务/签到独立注册表
+    "shop_lib": ("shop",),
+    "quest_lib": ("quest",),
+    "checkin_lib": ("checkin",),
 }
 
 # -------------------------------------------------------------------------------------
@@ -375,12 +379,11 @@ def _module_table() -> Dict[str, ModuleMeta]:
     }
     stats_fields: Dict[str, FieldMeta] = {}
     formula_fields: Dict[str, FieldMeta] = {}
-    npc_fields: Dict[str, FieldMeta] = {
-        "id": F_ID, "name": F_NAME,
-        "favor": FieldMeta(type="number", range_min=0, range_max=9999),
-        "price": F_PRICE,
-        "items": FieldMeta(type="list", element=FieldMeta(type="ref", ref_target="item")),
-    }
+    # M4 交互系统 4 模块（m4_shared_contract §3.1~3.4）：字段口径 fields={} 专项全权——
+    # 校验唯一落点 = 各 validate_* 专项校验器（npc_models.validate_npcs / shop_models.validate_shops /
+    # quest_models.validate_quests / checkin_models.validate_checkins），泛型字段表空表防误拦
+    # （同 dungeon 专项全权口径，细化_3e §5.3 未知字段默认放行 §2.3）。
+    # npc 旧占位字段（favor/price/items）为 M0 简化口径，非 2b1 顶层 15 字段 → 移除，由 validate_npcs 全权。
     # 条件加成（细化_3b §3.2 join/属性联动配置）：每点 source → target +per_point
     # 结构 conditional.json = { "conditional": [ {id, source, target, per_point, note} ] }
     conditional_fields: Dict[str, FieldMeta] = {
@@ -420,7 +423,12 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "dungeon": ModuleMeta(entry_type="list", fields={}, kind="dungeon", namespace="dungeon_lib"),
         "stats": ModuleMeta(entry_type="map", fields=stats_fields, kind="stat", namespace="stat_lib",
                             key_regex=r"[a-z][a-z0-9_]*"),
-        "npc": ModuleMeta(entry_type="list", fields=npc_fields, kind="npc", namespace="npc_lib"),
+        # M4 交互系统（m4_shared_contract §3.1~3.4）：npc/shop/quest/checkin 专项全权
+        # （fields={} 空表防泛型误拦；深结构由各 validate_* 专项校验器全权，同 dungeon 口径）
+        "npc": ModuleMeta(entry_type="list", fields={}, kind="npc", namespace="npc_lib"),
+        "shop": ModuleMeta(entry_type="list", fields={}, kind="shop", namespace="shop_lib"),
+        "quest": ModuleMeta(entry_type="list", fields={}, kind="quest", namespace="quest_lib"),
+        "checkin": ModuleMeta(entry_type="list", fields={}, kind="checkin", namespace="checkin_lib"),
         # 条件加成（细化_3b §3.2；环 + 引用存在性专项校验见 validator._check_conditional）
         "conditional": ModuleMeta(entry_type="object", fields=conditional_fields,
                                   kind="conditional", namespace="cond_lib"),

@@ -73,6 +73,45 @@ def test_legal_manifest_registration_order(legal_pack_dir: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
+# M4 批次6 · 校验器接线集成（m4_shared_contract §2.3 + 各 validate_*）
+# ---------------------------------------------------------------------------
+def test_legal_pack_m4_interaction_modules(legal_pack_dir: Path) -> None:
+    """M4 批次6 集成：legal 包新增 npc/shop/quest/checkin 四模块全绿基线。
+
+    覆盖（m4_shared_contract §2.3 校验器接线 + §3.1~3.4）：
+      - 合法包仍全绿（0 errors / 0 warnings）：4 专项校验器（validate_npcs/validate_shops/
+        validate_quests/validate_checkins）接线后不误伤既有模块
+      - 4 模块 registry kind 全量注册且 ID 唯一（loader _KIND_FOR_MODULE + field_meta 专项全权）
+      - 跨模块引用闭环：npc→shop（shop_refs）/ npc→quest（quests）/ npc→maps（map）/
+        quest→items（reward）/ quest→maps（zone）/ quest→npc（npc.id）/ shop→items（item）
+        checkin→items（rewards）——全部可 resolve
+    """
+    pack, changed = build_pack(legal_pack_dir)
+    assert changed  # 首载即全模块变更
+    assert pack.report.ok, f"M4 legal 包不应有红拦：{pack.report.errors}"
+    assert not pack.report.warnings, f"M4 legal 包应为零黄提示：{pack.report.warnings}"
+
+    # 4 模块 registry 注册（loader _KIND_FOR_MODULE：npc/shop/quest/checkin）
+    assert set(pack.registry.all_ids("npc")) == {
+        "blacksmith_zhou", "quest_giver_ling", "traveling_dealer", "elder_mo",
+    }
+    assert set(pack.registry.all_ids("shop")) == {"village_shop", "supply_shop"}
+    assert set(pack.registry.all_ids("quest")) == {"q_potion_supply"}
+    assert set(pack.registry.all_ids("checkin")) == {
+        "checkin_loop", "checkin_monthly", "checkin_activity",
+    }
+
+    # 跨模块引用闭环 resolve
+    assert pack.registry.resolve("blacksmith_zhou", "npc") is not None
+    assert pack.registry.resolve("village_shop", "shop") is not None
+    assert pack.registry.resolve("q_potion_supply", "quest") is not None
+    assert pack.registry.resolve("checkin_loop", "checkin") is not None
+    # 引用靶既有模块不受影响
+    assert pack.registry.resolve("potion", "item") is not None
+    assert pack.registry.resolve("rubble_field", "map") is not None
+
+
+# ---------------------------------------------------------------------------
 # 坏引用包：R-4 红拦 + registry 不污染（3e#TC-05 / 3a#TC-10 / 5d§5.1）
 # ---------------------------------------------------------------------------
 def test_badref_pack_blocked(badref_pack_dir: Path) -> None:

@@ -75,6 +75,7 @@ from __future__ import annotations
 import importlib
 from typing import Any, Callable, List, Mapping, MutableMapping, Optional, Sequence, Tuple
 
+from qbot_rpg.core.message_format import strip_icon_emoji
 from qbot_rpg.core.message_format.list_render import (
     DEFAULT_PAGE_SIZE,
     LAST_PAGE_HINT,
@@ -487,16 +488,17 @@ def _inventory_rows(ctx: Mapping[str, Any]) -> list:
 
 
 def _item_icon(ctx: Mapping[str, Any], item_id: str) -> str:
-    """物品图标（items.json 配置，数据型功能图标豁免 3d §4.2/m4 §2.2；缺省空）。"""
+    """物品图标（items.json 配置；M5 裁决不用 emoji——渲染出口剥离 emoji 字符，保纯文本
+    /自定义文本符号，作者可配「剑」「+」等；缺省空）。"""
     if not item_id:
         return ""
     items = ctx.get("items")
     if isinstance(items, Mapping):
         d = items.get(item_id)
         if isinstance(d, Mapping):
-            return str(d.get("icon") or "")
+            return strip_icon_emoji(d.get("icon") or "")
         if d is not None and hasattr(d, "get"):
-            return str(d.get("icon") or "")
+            return strip_icon_emoji(d.get("icon") or "")
     return ""
 
 
@@ -508,14 +510,14 @@ def _row_fields(row: Any, ctx: Mapping[str, Any]) -> Mapping[str, Any]:
         count = row.get("count", 1)
         quality = str(row.get("quality") or "normal")
         bound = bool(row.get("bound"))
-        icon = str(row.get("icon") or "") or _item_icon(ctx, item_id)
+        icon = strip_icon_emoji(str(row.get("icon") or "") or _item_icon(ctx, item_id))
     else:
         item_id = str(getattr(row, "item_id", "") or "")
         name = str(getattr(row, "name", None) or item_id or "?")
         count = getattr(row, "count", 1)
         quality = str(getattr(row, "quality", None) or "normal")
         bound = bool(getattr(row, "bound", False))
-        icon = _item_icon(ctx, item_id)
+        icon = strip_icon_emoji(_item_icon(ctx, item_id))
     try:
         count = int(count)
     except (TypeError, ValueError):

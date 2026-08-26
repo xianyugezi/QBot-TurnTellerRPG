@@ -55,9 +55,12 @@ weather_tick=…不取模。零定时器、不存历史、随时可重算。
 from __future__ import annotations
 
 import hashlib
+import re
 import time
 from datetime import datetime, timedelta, timezone
 from typing import List, Mapping, Optional
+
+from qbot_rpg.data.emoji_sanitize import strip_icon_emoji
 
 __all__ = [
     "ANCHOR",
@@ -102,9 +105,10 @@ _CHANGE_ORDER: tuple = ("season", "period", "weather")
 # 展示中文名（细化_2a4a §1.1「中文名（展示用）」列；天气键 = 内容包自定义 → 需 IF04/IF08 解析）
 _SEASON_CN: tuple = ("春", "夏", "秋", "冬")
 _PERIOD_CN: tuple = ("晨", "午", "昏", "夜", "午夜")
-# 展示 emoji【工程补白：定稿未拍死具体符号，取本模块约定值；调用方可经 Change['emoji'] 覆盖】
-_SEASON_EMOJI: tuple = ("🌸", "☀️", "🍂", "❄️")
-_PERIOD_EMOJI: tuple = ("🌅", "☀️", "🌇", "🌙", "🌌")
+# 展示 emoji【M5 裁决不用 emoji：季节/时段展示统一降级纯文本（中文名已承担语义），
+# 常量留空；调用方可经 Change['emoji'] 覆盖，渲染出口 strip_icon_emoji 兜底剥离】
+_SEASON_EMOJI: tuple = ("", "", "", "")
+_PERIOD_EMOJI: tuple = ("", "", "", "", "")
 # 播报类型中文名（template {type} 占位符）
 _TYPE_CN: dict = {"season": "季节", "period": "时段", "weather": "天气"}
 # 缺省播报模板（细化_2a4a §1.3 / 细化_2a4c §1.2：`{emoji} {name}`）
@@ -324,6 +328,10 @@ class WorldTime:
         emoji = ch.get("emoji")
         if emoji is None:
             emoji = self._value_emoji(kind, new)
+        emoji = strip_icon_emoji(emoji)  # M5 裁决不用 emoji：天气/季节/时段 emoji 降级纯文本
+        if not emoji:
+            # 降级后无 emoji：把 {emoji} 占位符连同相邻空白一并移除（避免输出空段/双空格）
+            template = re.sub(r"\s*\{emoji\}\s*", "", template)
         map_ = ch.get("map")
         if map_ is None and isinstance(ctx, Mapping):
             map_ = ctx.get("map")
@@ -331,7 +339,7 @@ class WorldTime:
             map_ = ""
         return (template.replace("{type}", str(type_))
                         .replace("{name}", str(name))
-                        .replace("{emoji}", str(emoji))
+                        .replace("{emoji}", emoji)
                         .replace("{map}", str(map_)))
 
     @staticmethod
@@ -345,7 +353,8 @@ class WorldTime:
 
     @staticmethod
     def _value_emoji(kind: object, index: object) -> str:
-        """kind+index → 展示 emoji（本模块约定值，可被 Change['emoji'] 覆盖）；天气 → 空。"""
+        """kind+index → 展示 emoji（M5 裁决不用 emoji：本模块约定值已降级为空串，
+        渲染出口统一剥离；调用方可经 Change['emoji'] 覆盖）。"""
         if kind == "season" and isinstance(index, int):
             return _SEASON_EMOJI[index % len(_SEASON_EMOJI)]
         if kind == "period" and isinstance(index, int):

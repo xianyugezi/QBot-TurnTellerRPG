@@ -164,23 +164,23 @@ def test_broadcast_disabled_returns_empty():
 def test_broadcast_enabled_renders_default_template():
     """开启后缺省模板 `{emoji} {name}`：季节/时段中文名 + emoji 由引擎自解。"""
     wt = WorldTime(broadcast_cfg())
-    assert wt.maybe_broadcast([{"kind": "season", "old": 0, "new": 1}]) == ["☀️ 夏"]
-    assert wt.maybe_broadcast([{"kind": "season", "old": 1, "new": 2}]) == ["🍂 秋"]
-    assert wt.maybe_broadcast([{"kind": "period", "old": 2, "new": 3}]) == ["🌙 夜"]
+    assert wt.maybe_broadcast([{"kind": "season", "old": 0, "new": 1}]) == ["夏"]
+    assert wt.maybe_broadcast([{"kind": "season", "old": 1, "new": 2}]) == ["秋"]
+    assert wt.maybe_broadcast([{"kind": "period", "old": 2, "new": 3}]) == ["夜"]
 
 
 def test_broadcast_template_placeholder_replacement():
     """自定义模板占位符 {type,name,emoji,map} 替换；天气经调用方挂展示字段。"""
     wt = WorldTime(broadcast_cfg(template="【{type}】{emoji} {name}（{map}）"))
     chs = [{"kind": "season", "old": 0, "new": 1}]
-    assert wt.maybe_broadcast(chs, {"map": "初始之森"}) == ["【季节】☀️ 夏（初始之森）"]
+    assert wt.maybe_broadcast(chs, {"map": "初始之森"}) == ["【季节】夏（初始之森）"]
     # 天气：调用方经 IF04/IF08 取键后挂 name/emoji/map（批次2 接线；本路纯透传）
-    wch = {"kind": "weather", "old": 10, "new": 30, "name": "雷雨", "emoji": "⛈️", "map": "暴风峡谷"}
-    assert wt.maybe_broadcast([wch]) == ["【天气】⛈️ 雷雨（暴风峡谷）"]
+    wch = {"kind": "weather", "old": 10, "new": 30, "name": "雷雨", "emoji": "", "map": "暴风峡谷"}
+    assert wt.maybe_broadcast([wch]) == ["【天气】雷雨（暴风峡谷）"]
     # Change 自带 map 优先于 ctx 传入的 map
     assert wt.maybe_broadcast(
         [{"kind": "period", "old": 1, "new": 0, "map": "海边"}], {"map": "别处"}
-    ) == ["【时段】🌅 晨（海边）"]
+    ) == ["【时段】晨（海边）"]
 
 
 def test_broadcast_multiple_changes_merged_ordered():
@@ -189,10 +189,10 @@ def test_broadcast_multiple_changes_merged_ordered():
     chs = [
         {"kind": "season", "old": 0, "new": 1},
         {"kind": "period", "old": 4, "new": 0},
-        {"kind": "weather", "old": 10, "new": 30, "name": "雨", "emoji": "🌧️"},
+        {"kind": "weather", "old": 10, "new": 30, "name": "雨", "emoji": ""},
     ]
     out = wt.maybe_broadcast(chs)
-    assert out == ["☀️ 夏", "🌅 晨", "🌧️ 雨"]
+    assert out == ["夏", "晨", "雨"]
     assert len(out) <= 3
 
 
@@ -203,9 +203,9 @@ def test_broadcast_cross_group_dedup_by_seen_index():
         {"kind": "season", "old": 0, "new": 1},
         {"kind": "period", "old": 4, "new": 0},
     ]
-    assert wt.maybe_broadcast(chs, seen={"season_idx": 1}) == ["🌅 晨"]
+    assert wt.maybe_broadcast(chs, seen={"season_idx": 1}) == ["晨"]
     # ctx 传 seen 同效
-    assert wt.maybe_broadcast(chs, {"seen": {"season_idx": 1}}) == ["🌅 晨"]
+    assert wt.maybe_broadcast(chs, {"seen": {"season_idx": 1}}) == ["晨"]
     # 全部已播 → 空（无新变化可播）
     assert wt.maybe_broadcast(chs, seen={"season_idx": 1, "period_idx": 0}) == []
 
@@ -221,4 +221,4 @@ def test_broadcast_weather_without_display_fields_documents_boundary():
     """【工程补白】天气值解析属 IF04/IF08（批次2）：未挂 name/emoji → 占位符留空（不崩溃）。"""
     wt = WorldTime(broadcast_cfg())
     out = wt.maybe_broadcast([{"kind": "weather", "old": 0, "new": 5}])
-    assert out == [" "]  # 缺省模板 `{emoji} {name}` → 两个占位符均空；文案待调用方补齐
+    assert out == [""]  # 缺省模板 `{emoji} {name}` → 两个占位符均空；M5「不用 emoji」后空占位符输出空串（无残留空格），文案待调用方补齐

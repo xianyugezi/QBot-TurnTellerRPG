@@ -335,7 +335,7 @@ def test_build_audit_record_fields():
     audit_ts_hmac；params 截断 200；group_id 缺省 0（私聊）。"""
     rec = build_audit_record(qq="10001", group_id="20001", command=GM_CMD_BAN,
                              params="123456 7天 原因=刷屏", target_qq="123456",
-                             result="success", detail="🚫 已封禁", ref="123456",
+                             result="success", detail="❌ 已封禁", ref="123456",
                              now="2026-08-26T12:00:00Z")
     assert rec["id"]
     assert rec["ts"] == "2026-08-26T12:00:00Z"
@@ -604,7 +604,7 @@ def test_settings_admin_switch():
     ctx = make_ctx()
     res = handle_gm_command(p("/设置 command_mode=global_shortcut"), ctx)
     assert res.ok and res.message is None  # 静默执行
-    assert "⚙️ command_mode：global_shortcut" in res.audit["detail"]
+    assert "command_mode：global_shortcut" in res.audit["detail"]
     assert ctx["gm_backend"].settings == {"command_mode": "global_shortcut"}
 
 
@@ -778,15 +778,16 @@ def test_log_page_footer_exact():
 
 
 def test_no_decorative_emoji():
-    """装饰性 emoji 禁用：列表行/页脚/错误纯文本；GM 结果前缀（✅/🚫/⚙️/📝）为数据型
-    功能图标豁免（3d §四），仅出现于审计 detail 且不出现于列表页脚。"""
+    """M5 裁决不用 emoji：列表行/页脚/错误纯文本（仅 ✅/❌ 功能性标记 + 排版符号）；
+    GM 结果前缀（🚫/⚙️/📝 等数据型功能图标）已降级——封禁行用 ❌，日志/编辑/设置无前缀。"""
     ctx = make_ctx(role="gm", gm_backend=_backend(_events(12)))
     body = handle_gm_command(p("/日志"), ctx).message
-    assert "✅" not in body and "🚫" not in body and "⚙️" not in body
+    assert "✅" not in body and "❌" not in body  # 列表骨架为纯文本（功能性标记不属列表）
     err = handle_gm_command(p("/重载"), make_ctx()).message
     assert "❌" in err  # 功能性标记保留
     ban = handle_gm_command(p("/封禁 123456 7天 原因=刷屏"), make_ctx(role="gm")).audit["detail"]
-    assert "🚫" in ban  # GM 结果前缀豁免
+    assert "❌" in ban  # 封禁行降级为 ❌ 功能性标记（M5 裁决）
+    assert "🚫" not in ban and "⚙️" not in ban and "📝" not in ban  # 数据型图标已降级
 
 
 def test_render_log_page_plain_helpers():

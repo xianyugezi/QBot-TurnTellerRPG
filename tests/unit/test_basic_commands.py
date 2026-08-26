@@ -256,25 +256,25 @@ def test_attr_line_pure():
 def test_bag_page1_rows_and_footer():
     """/背包 → 第 1 页 5 行（acquired_at 倒序）+ 行格式（图标/×数量/品质/绑定）+ TPL-08 页脚。"""
     out = cmd_bag(parse("/背包"), make_ctx())
-    assert out.splitlines()[0] == "1. ✚ 疗伤药 ×5"          # 10:00 最新在前；×数量
+    assert out.splitlines()[0] == "1. 疗伤药 ×5"          # 10:00 最新在前；×数量（icon 剥离 emoji）
     assert "2. 粗布" in out                                   # ×1 省略 + 无图标
     assert "3. ◈ 铁矿 ×20" in out                             # ×数量
-    assert "4. ✉ 任务信物（绑定）" in out                      # 绑定标签
-    assert "5. ⚒ 铁剑（精良）" in out                          # 品质（非 normal 标注）
+    assert "4. 任务信物（绑定）" in out                      # 绑定标签
+    assert "5. 铁剑（精良）" in out                          # 品质（非 normal 标注）
     assert "— 第 1/2 页 · 共 6 条 · 输入 /背包 页码 翻页 —" in out
 
 
 def test_bag_page2():
     """/背包 2 → 第 2 页（最早获得的疗伤药 ×10）。"""
     out = cmd_bag(parse("/背包 2"), make_ctx())
-    assert "6. ✚ 疗伤药 ×10" in out
+    assert "6. 疗伤药 ×10" in out
     assert "— 第 2/2 页 · 共 6 条 · 输入 /背包 页码 翻页 —" in out
 
 
 def test_bag_clamp_last_page():
     """裁决②：/背包 9 超总页数 → 夹取最后一页 + （已到最后一页）。"""
     out = cmd_bag(parse("/背包 9"), make_ctx())
-    assert "6. ✚ 疗伤药 ×10" in out
+    assert "6. 疗伤药 ×10" in out
     assert "（已到最后一页）" in out
 
 
@@ -295,7 +295,7 @@ def test_bag_single_page_no_footer():
     out = cmd_bag(parse("/背包"), make_ctx(inventory=_INVENTORY[:3]))
     assert "输入 /背包 页码 翻页" not in out
     # acquired_at 倒序：09:40 信物 → 09:35 铁剑 → 09:30 疗伤药
-    assert out.splitlines()[-1] == "3. ✚ 疗伤药 ×10"
+    assert out.splitlines()[-1] == "3. 疗伤药 ×10"
 
 
 def test_bag_iteminstance_dataclass_support():
@@ -306,8 +306,8 @@ def test_bag_iteminstance_dataclass_support():
         ItemInstance(item_id="iron_sword", name="铁剑", count=1, quality="fine", bound=True),
     )
     out = cmd_bag(parse("/背包"), make_ctx(inventory=list(inv)))
-    assert "1. ✚ 疗伤药 ×3" in out
-    assert "2. ⚒ 铁剑（精良）（绑定）" in out
+    assert "1. 疗伤药 ×3" in out
+    assert "2. 铁剑（精良）（绑定）" in out
 
 
 def test_bag_line_pure():
@@ -679,8 +679,8 @@ def test_footer_tpl08_exact():
 
 
 def test_no_decorative_emoji():
-    """3d §四 D-01：命令层渲染输出零装饰 emoji（仅 ✅/❌ 功能性标记 + 数据型物品 icon 豁免）；
-    测试数据 icon 取自禁用清单外字符，输出扫描 0 命中。"""
+    """M5 裁决不用 emoji：命令层渲染输出零装饰 emoji（仅 ✅/❌ 功能性标记 + 排版符号）；
+    数据型物品 icon 渲染出口剥离 emoji 字符（保纯文本/自定义符号），输出扫描 0 命中。"""
     ctx = make_ctx()
     outputs = [
         cmd_view(parse("/角色"), ctx),

@@ -2,7 +2,7 @@
   {
     "id": "fire_mark",
     "name": "火印",
-    "icon": "🔥",
+    "icon": "火",
     "type": "mark",
     "max_stack": 3,
     "appliable_to": ["self", "enemy"],
@@ -14,7 +14,7 @@
   {
     "id": "curse_mark",
     "name": "诅咒印",
-    "icon": "🩸",
+    "icon": "血",
     "type": "mark",
     "max_stack": 5,
     "appliable_to": ["enemy"],

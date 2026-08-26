@@ -989,7 +989,7 @@ class ComboEngine:
             names = str(c.get("name") or target)
             return InterruptResult(
                 False, target, "armor",
-                f"🛡 {names}（霸体）！无视打断",
+                f"{names}（霸体）！无视打断",
                 t_state.count, t_state.count,
             )
         # ③ hold 到顶免疫（被动态，仅 combo==max）
@@ -1002,7 +1002,7 @@ class ComboEngine:
         # 生效：清零
         before = t_state.count
         self.clear(target, snap, "interrupted_by_shield_bash")
-        msg = f"⚡ {attacker} 打断 {target} 连段！连段中断"
+        msg = f"{attacker} 打断 {target} 连段！连段中断"
         return InterruptResult(
             True, target, "cleared", msg, before, 0,
         )
@@ -1282,7 +1282,7 @@ class ComboEngine:
         msgs: List[str] = []
         if step is not None:
             form_name = self._skill_name(step.to) or step.to
-            msgs.append(f"🔥 完美连段！{form_name}")
+            msgs.append(f"✅ 完美连段！{form_name}")
         if derived_count_override == 0:
             msgs.append(f"连段到顶（{chain.max_combo}），归零重打")
         if post_state.count >= chain.max_combo and chain.behavior == BEHAVIOR_HOLD and consumed > 0:

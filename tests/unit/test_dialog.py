@@ -191,7 +191,7 @@ def test_tc01_no_args_list_enters_s1():
     assert r["transition"] == "T01"
     assert r["to_state"] == S_LIST
     assert r["session_active"] is True
-    assert r["output"][0] == "这里的人：1.🔨铁匠·老周 2.🧺杂货商人·林 3.📖学者·杜Ⅱ"
+    assert r["output"][0] == "这里的人：1.铁匠·老周 2.杂货商人·林 3.学者·杜Ⅱ"  # icon 剥离 emoji
 
 
 def test_tc02_index_shortcut_to_menu():
@@ -715,7 +715,7 @@ def test_condition_hint_one_line():
 # ===========================================================================
 def test_render_npc_list_icon_and_name():
     lines = render_npc_list(MAP_NPCS)
-    assert lines[0] == "这里的人：1.🔨铁匠·老周 2.🧺杂货商人·林 3.📖学者·杜Ⅱ"
+    assert lines[0] == "这里的人：1.铁匠·老周 2.杂货商人·林 3.学者·杜Ⅱ"  # icon 剥离 emoji（M5 不用 emoji 裁定）
 
 
 # ===========================================================================

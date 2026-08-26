@@ -48,6 +48,7 @@ from __future__ import annotations
 import math
 from typing import Any, Callable, List, Mapping, MutableMapping, Optional
 
+from qbot_rpg.core.message_format import strip_icon_emoji
 from qbot_rpg.core.message_format.list_render import (
     DEFAULT_PAGE_SIZE,
     LAST_PAGE_HINT,
@@ -241,7 +242,7 @@ def _paginate(items: list, page: object, command: str,
 def _browse_header(shop: Mapping[str, Any]) -> str:
     """商品列表头：`{icon}{name} {类型徽标} {desc}`（表头不计入 5 条上限，3d §2.1）。"""
     parts: List[str] = []
-    name = f"{shop.get('icon', '')}{shop.get('name', '')}"
+    name = f"{strip_icon_emoji(shop.get('icon', ''))}{shop.get('name', '')}"
     parts.append(name or "商店")
     t = shop.get("type", "normal")
     if t in TYPE_BADGES:
@@ -291,7 +292,7 @@ def render_shop_items(shop: Mapping[str, Any], rows: list, page: object,
 
 def _shop_row(index: int, row: Mapping[str, Any]) -> str:
     """商店一览行（定稿 L42/L367-370）：`序号. {icon}{name} {类型徽标} {desc} {门槛标记}`。"""
-    name = f"{row.get('icon', '')}{row.get('name', '')}"
+    name = f"{strip_icon_emoji(row.get('icon', ''))}{row.get('name', '')}"
     parts: List[str] = [f"{index}. {name or '?'}"]
     t = row.get("type", "normal")
     if t in TYPE_BADGES:

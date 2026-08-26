@@ -2,7 +2,7 @@
   {
     "id": "blacksmith_zhou",
     "name": "铁匠·老周",
-    "icon": "🔨",
+    "icon": "锤",
     "map": "rubble_field",
     "type": "merchant",
     "desc": "乱石滩入口的铁匠，兼售杂货。",
@@ -24,7 +24,7 @@
   {
     "id": "quest_giver_ling",
     "name": "发布员·小玲",
-    "icon": "📜",
+    "icon": "卷",
     "map": "rubble_field",
     "type": "quest_giver",
     "desc": "乱石滩的委托发布员。",
@@ -43,7 +43,7 @@
   {
     "id": "traveling_dealer",
     "name": "行商·骆驼",
-    "icon": "🐫",
+    "icon": "驼",
     "map": "volcanic_path",
     "type": "dealer",
     "desc": "游历四方的行商，兜售奇闻轶事。",
@@ -63,7 +63,7 @@
   {
     "id": "elder_mo",
     "name": "长者·阿墨",
-    "icon": "🏮",
+    "icon": "灯",
     "map": "crag_den",
     "type": "narrator",
     "desc": "石甲蜥巢穴的守夜人，知道不少旧事。",

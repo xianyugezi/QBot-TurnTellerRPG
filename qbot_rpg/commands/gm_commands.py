@@ -4,7 +4,8 @@
   - m4_shared_contract.md §2.3（GM 指令：/gm 权限三级 + 静默 + 留痕 + 禁绑；**GM 指令清单以
     分隔符规范 L160 长清单为准（+设置）**）+ §2.2（列表 5 条/页上限、页脚固定 TPL-08、
     页码越界夹取 +「已到最后一页」2026-08-27 用户裁决②、0/负数/非数字 → TPL-12、
-    错误模板统一、emoji 纪律：数据型功能图标豁免含 GM 结果前缀）
+    错误模板统一、emoji 纪律：M5 裁决不用 emoji——GM 结果前缀（日志/编辑/设置等
+    数据型功能图标）一律降级纯文本，仅 ✅/❌ 功能性标记 + 排版符号）
   - docs/细化/细化_5b_GM指令契约.md（§1 权限模型：三级权限 机主/GM/普通玩家、判定优先级、
     静默语义（无权限→直接无视不报错不提示不写审计）、权限存储不进玩家存档、绑定层+执行层
     双检查；§2 GM 指令集 G1-G14 逐条契约；§3.1 /日志 双分支（权限 ≥ GM → 系统日志）；
@@ -15,7 +16,7 @@
   - 2026-08-27 用户裁决②（页码超总页数 → 夹取最后一页 +「已到最后一页」；0/负数/非数字 →
     TPL-12）
   - docs/细化/细化_3d_消息模板规范.md（TPL-08 页脚 / TPL-12 指令出错；§四 emoji 禁令——
-    GM 结果前缀属数据型功能图标豁免；§5.4 错误文案唯一源 errors.py D-04）
+    M5 裁决：GM 结果前缀数据型功能图标一律降级纯文本；§5.4 错误文案唯一源 errors.py D-04）
   - qbot_rpg/commands/router.py（PERM_OWNER/PERM_GM/PERM_USER 权限常量、CommandSpec.is_gm
     强制前缀位、check_shortcut_binding GM 禁绑 C02、is_gm_command 判定）
 
@@ -29,8 +30,9 @@
 
 铁律（m4_shared_contract §0 / 3a R1）：**零 NoneBot import**（GM 后端/权限存储/审计存储
 全部经 ctx 注入，可脱离平台单测）、纯函数、确定性（now 由 ctx 注入）；工程补白一律
-【工程补白】标注；装饰性 emoji 全局禁用（仅 ✅/❌ 功能性标记 + 5b 定稿 GM 结果前缀
-🚫/⚙️/📝 等数据型功能图标豁免，3d §四）。本模块只做「装配接线 + 权限 + 渲染 + 留痕」，
+【工程补白】标注；装饰性 emoji 全局禁用（M5 裁决不用 emoji：仅 ✅/❌ 功能性标记 +
+排版符号 | → × / 「」【】；GM 结果前缀等数据型功能图标一律降级纯文本）。
+本模块只做「装配接线 + 权限 + 渲染 + 留痕」，
 业务执行（重载内容包/封禁玩家/读系统日志/编辑器链接/改设置）全部委托 GM 后端引擎。
 
 --------------------------------------------------------------------------------
@@ -571,7 +573,7 @@ def cmd_gm_ban(parsed: Any, ctx: MutableMapping[str, Any],
                                   detail=msg, parsed=parsed, params=f"{qq} {duration}",
                                   target_qq=qq)
     expires = res.get("expires")
-    detail = f"🚫 已封禁 {qq}（{duration}）"
+    detail = f"❌ 已封禁 {qq}（{duration}）"
     if expires:
         detail += f" 到期 {expires}"
     if reason:
@@ -612,8 +614,8 @@ def cmd_gm_log(parsed: Any, ctx: MutableMapping[str, Any],
     # 传原始页码 → render_list_page_text 内部裁决② 夹取最后一页 +「已到最后一页」提示
     body = render_log_page(events, page, command=GM_CMD_LOG)
     # 日志查询本身也写审计（5b §2：所有 GM 指令成败皆写）
-    detail = f"📋 系统日志 {count} 条窗口 第 {res.page}/{res.total_pages} 页" \
-        if res.total_pages > 1 else f"📋 系统日志 {count} 条窗口"
+    detail = f"系统日志 {count} 条窗口 第 {res.page}/{res.total_pages} 页" \
+        if res.total_pages > 1 else f"系统日志 {count} 条窗口"
     if res.clamped:
         detail += f"（{LAST_PAGE_HINT}）"
     return _record_and_return(ctx, command=GM_CMD_LOG, result="success", detail=detail,
@@ -630,7 +632,7 @@ def cmd_gm_edit(parsed: Any, ctx: MutableMapping[str, Any],
     res = _backend(ctx).editor_link(perm.level, ctx)
     url = str(res.get("url") or "")
     hint = str(res.get("hint") or "")
-    line = f"📝 编辑器：{url}" if url else "📝 编辑器：暂未配置链接"
+    line = f"编辑器：{url}" if url else "编辑器：暂未配置链接"
     if hint:
         line += f"（{hint}）"
     return _record_and_return(ctx, command=GM_CMD_EDIT, result="success", detail=line,
@@ -660,7 +662,7 @@ def cmd_gm_settings(parsed: Any, ctx: MutableMapping[str, Any],
         return _record_and_return(ctx, command=GM_CMD_SETTINGS, result="failed",
                                   detail=msg, parsed=parsed, params=f"{key}={value}", ref=key)
     current = res.get("current")
-    detail = f"⚙️ {key}：{current}" if current is not None else f"⚙️ 已设置 {key}={value}"
+    detail = f"{key}：{current}" if current is not None else f"已设置 {key}={value}"
     return _record_and_return(ctx, command=GM_CMD_SETTINGS, result="success",
                               detail=detail, parsed=parsed, params=f"{key}={value}", ref=key)
 

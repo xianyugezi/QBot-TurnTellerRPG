@@ -17,12 +17,20 @@ from __future__ import annotations
 
 from typing import Any, List, Mapping, Optional, Tuple
 
+from qbot_rpg.core.message_format.list_render import (
+    DEFAULT_PAGE_SIZE,
+    page_items,
+    render_footer,
+    resolve_page,
+)
 from qbot_rpg.core.message_format.prefix_render import render_prefix
 
 __all__ = [
     "render_battle_start",
     "render_battle_round",
     "render_battle_end",
+    # M5-07（BREP-25 木桩明细分页块，/木桩 翻页消费）
+    "render_battle_summary",
     # M5-04（BREP-07~09，玩家技能 / 状态差分 / 操作提示行）
     "DEFAULT_MAX_STATUS",
     "first_alive_enemy",
@@ -32,16 +40,35 @@ __all__ = [
     "render_status_diff",
 ]
 
-_NOT_IMPL_MSG = "M1 实装：战斗渲染（细化_1g / 细化_1a / 细化_5e / 细化_3d §三）"
-
-
 def render_battle_start(
     party: Any,
     enemy: Any,
     hint: Optional[str] = None,
 ) -> str:
-    """战斗开始渲染（围：锁定开战消息；含双方概况与操作提示）。TODO(M1)。"""
-    raise NotImplementedError(_NOT_IMPL_MSG)
+    """BREP-23 战斗开始（5e §6.1 / TC-24）：独立 1 条消息（铁律2 / 3d 承接表）。
+
+    `与{怪物}的战斗开始！{怪物} {HP}/{最大HP}` + hint（意图/弱点情报行，如
+    `弱点：火（×1.3）`，hint=None 时省略）。战斗开始是**独立一条消息**（铁律 2），
+    首行仍按玩家回复渲染前缀（TC-24「开始消息同样带前缀首行」，【前缀】L80）：
+    party 承载 level/name/title，缺失时前缀省略（_render_prefix_line 优雅回落）。
+
+    取数：{怪物} 展示名取 enemy.name/enemy_name（缺省「怪物」）；HP/最大HP 取
+    enemy.hp / enemy.max_hp（最大缺省回落当前 HP）。hint 由接线层提供（类型/元素
+    弱点 ×1.3 / BOSS 阶段机制预告 / BREP-12 意图预告），纯文本禁 emoji（D-01）。
+    """
+    lines: List[str] = []
+    prefix = _render_prefix_line(party)                # 前缀首行（TC-24）
+    if prefix:
+        lines.append(prefix)
+    name = str(
+        getattr(enemy, "name", "") or getattr(enemy, "enemy_name", "") or "怪物"
+    )
+    hp = int(getattr(enemy, "hp", 0))
+    max_hp = int(getattr(enemy, "max_hp", hp))
+    lines.append(f"与{name}的战斗开始！{name} {hp}/{max_hp}")   # BREP-23
+    if hint:
+        lines.append(str(hint))                        # 意图/弱点情报行（可选）
+    return "\n".join(lines)
 
 
 def render_battle_round(round_result: Any) -> str:
@@ -114,8 +141,32 @@ def render_battle_end(
     winner: str,
     summary: Optional[Any] = None,
 ) -> str:
-    """战斗结束渲染（围：胜负/经验/掉落/存活状态）。TODO(M1)。"""
-    raise NotImplementedError(_NOT_IMPL_MSG)
+    """BREP-24/25 战斗结束汇总 + 木桩明细（5e §6.2/§6.3 / TC-25~27，铁律 11）。
+
+    BREP-24 汇总行：`战斗结束：{胜负结果}｜回合数 {N}｜输入 /战斗记录 查看明细`
+    （胜负结果 = 胜利/失败/平局，winner 接受引擎 status win/lose/draw 或中文）；
+    回合数 N 依次取 enemy/player/summary 的 turns|turn（接线层注入，缺省 0）。
+
+    summary 非 None 时追加 BREP-25 木桩明细块（摘要行 + 条目行 + ≤16 行折叠
+    TPL-09，铁律 11 / 3d D-03）；summary=None（普通战斗默认）→ 明细省略
+    （5e L350，TC-27）。军规5：胜负横幅/经验掉落（BREP-17~20）由
+    render_battle_round 当轮事件末尾统一结算一次（M5-06 _render_settlement），
+    本函数只输出汇总与明细，不重复结算奖励（结算一次性）。
+
+    返回：单条消息字符串（首行前缀 + BREP-24 [+ 明细块]），明细超长自动折叠。
+    """
+    lines: List[str] = []
+    prefix = _render_prefix_line(player)               # 前缀首行（TC-25）
+    if prefix:
+        lines.append(prefix)
+    label = _winner_label(winner)                      # 胜利/失败/平局
+    turns = _battle_turns(player, enemy, summary)      # 回合数 N
+    lines.append(f"战斗结束：{label}｜回合数 {turns}｜输入 /战斗记录 查看明细")  # BREP-24
+    if summary is not None:
+        block = _render_summary_block(summary, overhead=len(lines))
+        if block:
+            lines.extend(block)                        # BREP-25 木桩明细块
+    return "\n".join(lines)
 
 
 # ---------------------------------------------------------------------------
@@ -839,3 +890,210 @@ def _render_combo_settle(outcome: Any) -> Optional[str]:
         elif int(getattr(outcome, "target_hp", 1)) <= 0:
             remark = "目标已倒下，下一回合退出战场"
     return _render_combo_settle_line(total, remark)
+
+
+# ---------------------------------------------------------------------------
+# M5-07 · BREP-23~25（战斗开始/结束/木桩明细：开始 BREP-23 / 结束汇总 BREP-24 /
+#        木桩明细块 BREP-25 + 16 行折叠 TPL-09）
+# 依据：细化_5e_战斗战报格式 §6.1~§6.3（开始/结束/明细）+ TC-24~27
+#       + 铁律 2（战斗开始=1 条 / 战斗结束=1 条）+ 铁律 11（结算一次性 + 16 行
+#       折叠 TPL-09，3d D-03/L184）+ shared_contract §5.1（winner=胜负结果、
+#       summary 承载 BREP-24/25 汇总与明细）+ m5_batch_plan M5-07。
+# 挂接：render_battle_start / render_battle_end（公共入口，M5-08 接线消费）；
+#       /木桩 分页浏览经 render_battle_summary（独立公共函数，5 条/页 + 页脚
+#       TPL-08 复用 list_render，3d D-02 / 数值层 L348）。
+# 取数：{怪物} 展示名 / HP / 回合数 / 收集器聚合（total/max_hit/crits/blocks/
+#       items）由接线层注入（非 ActionOutcome 字段），缺省优雅回落（不报错）；
+#       明细条目按总伤害降序、占比 = 总伤害占比取整（数值层 L340/L347）。
+# ---------------------------------------------------------------------------
+
+
+# 胜负结果中文标签（BREP-24 {胜负结果}，5e §4.2）：win/lose/draw → 胜利/失败/平局
+_WINNER_LABELS: Mapping[str, str] = {
+    "win": "胜利",
+    "lose": "失败",
+    "draw": "平局",
+    "escape": "逃跑",
+}
+
+# BREP-24 明细入口指令（5e §6.2「输入 /战斗记录 查看明细」；折叠 TPL-09 页码同源）
+_BREP24_ENTRY_COMMAND = "战斗记录"
+
+# 单条消息总渲染行数上限（3d D-03 / 铁律 11：含前缀/正文/页脚/折叠行 TPL-09）
+_FOLD_LIMIT = 16
+
+
+def _winner_label(winner: Any) -> str:
+    """胜负结果中文标签（BREP-24 {胜负结果}）：win/lose/draw → 胜利/失败/平局，
+    escape → 逃跑；已是中文（胜利/失败/平局）原样透传；未知回落原文，空回落「?」。"""
+    s = str(winner or "").strip()
+    if s in _WINNER_LABELS:
+        return _WINNER_LABELS[s]
+    if s in ("胜利", "失败", "平局", "逃跑"):
+        return s
+    return s or "?"
+
+
+def _battle_turns(player: Any, enemy: Any, summary: Any) -> int:
+    """回合数提取（BREP-24 {N}）：依次取 enemy/player/summary 的 turns|turn
+    （接线层注入；TurnReport.turn 亦可，回合数对照斩杀回合基准 L139-147），
+    首个非负整数生效；全缺省回落 0。"""
+    for obj in (enemy, player, summary):
+        if obj is None:
+            continue
+        for attr in ("turns", "turn"):
+            v = obj.get(attr) if isinstance(obj, Mapping) else getattr(obj, attr, None)
+            if isinstance(v, int) and v >= 0:
+                return v
+    return 0
+
+
+def _summary_field(summary: Any, *keys: str, default: int = 0) -> int:
+    """收集器聚合字段提取（BREP-25）：Mapping 键 / 对象属性双形态，布尔跳过；
+    首个可转 int 的键生效（对齐 _side_effect_int 口径）。"""
+    for k in keys:
+        v = summary.get(k) if isinstance(summary, Mapping) else getattr(summary, k, None)
+        if v is None or isinstance(v, bool):
+            continue
+        try:
+            return int(v)
+        except (TypeError, ValueError):
+            continue
+    return default
+
+
+def _summary_items(summary: Any) -> List[Tuple[str, int]]:
+    """明细条目归一为 (来源, 总伤害) 序列（BREP-25 {来源} {总伤害}）：取
+    items/entries/明细 键或属性；条目支持 Mapping（source/来源/name + damage/
+    总伤害/value）/二元组/对象。按总伤害降序（占比降序，数值层 L340/L347）。"""
+    if isinstance(summary, Mapping):
+        raw = summary.get("items", summary.get("entries", summary.get("明细", ())))
+    else:
+        raw = getattr(summary, "items", None)
+        if not raw:
+            raw = getattr(summary, "entries", None)
+    result: List[Tuple[str, int]] = []
+    for item in raw or ():
+        if isinstance(item, Mapping):
+            source = str(
+                item.get("source", item.get("来源", item.get("name", ""))) or "?"
+            )
+            damage = int(item.get("damage", item.get("总伤害", item.get("value", 0))))
+        elif isinstance(item, (tuple, list)) and len(item) >= 2:
+            source, damage = str(item[0]), int(item[1])
+        else:
+            source = str(
+                getattr(item, "source", "") or getattr(item, "来源", "") or "?"
+            )
+            damage = int(getattr(item, "damage", getattr(item, "总伤害", 0)))
+        result.append((source, damage))
+    result.sort(key=lambda sd: sd[1], reverse=True)            # 占比降序
+    return result
+
+
+def _summary_header(summary: Any) -> str:
+    """BREP-25 摘要行：`摘要：总伤害 {N}｜最大单段 {M}｜会心 {K} 次｜格挡 {G} 次`
+    （对齐收集器聚合字段，数值层 L340 / TC-26）。"""
+    total = _summary_field(summary, "total", "总伤害")
+    max_hit = _summary_field(summary, "max_hit", "max_seg", "最大单段")
+    crits = _summary_field(summary, "crits", "crit", "会心")
+    blocks = _summary_field(summary, "blocks", "block", "格挡")
+    return (
+        f"摘要：总伤害 {total}｜最大单段 {max_hit}｜会心 {crits} 次｜格挡 {blocks} 次"
+    )
+
+
+def _summary_item_line(index: int, source: str, damage: int, pct: int) -> str:
+    """BREP-25 条目行：`{序号}. {来源} {总伤害}（{占比}%）`（5e §6.3 / TC-26）。"""
+    return f"{index}. {source} {damage}（{pct}%）"
+
+
+def _summary_item_lines(items: List[Tuple[str, int]], total: int, *, start: int = 1) -> List[str]:
+    """条目行批量渲染：占比 = 总伤害占比取整（total<=0 时 0，防除零）；序号可偏移
+    （render_battle_summary 分页续号用）。"""
+    return [
+        _summary_item_line(
+            i, src, dmg, round(dmg / total * 100) if total > 0 else 0
+        )
+        for i, (src, dmg) in enumerate(items, start=start)
+    ]
+
+
+def _fold_item_lines(
+    item_lines: List[str],
+    *,
+    keep: int,
+    command: str,
+    per_page: int,
+) -> List[str]:
+    """16 行折叠（铁律 11 / 3d D-03 / TPL-09）：条目行超 keep 时按「正文尾部 →
+    中间过程行」优先折叠为省略行 `…（其余 {N} 条已折叠，输入 /{command} {page}
+    查看）`。
+
+    保留前 keep 条（正文头部，占比降序前段），N = 被折叠条目数，page = 被折叠
+    内容在 per_page 分页口径下第一条所在页码（`…` 折叠行亦计入 16 行，L184）。
+    只折叠不截断语义：折叠内容仍在后续页可查（3d §3.2，L183）。
+    """
+    if len(item_lines) <= keep:
+        return item_lines
+    head = item_lines[:keep]
+    folded = len(item_lines) - keep
+    page = (keep + per_page) // per_page                    # 第一条被折叠条目所在页
+    head.append(f"…（其余 {folded} 条已折叠，输入 /{command} {page} 查看）")
+    return head
+
+
+def _render_summary_block(
+    summary: Any,
+    *,
+    overhead: int = 0,
+    limit: int = _FOLD_LIMIT,
+    command: str = _BREP24_ENTRY_COMMAND,
+    per_page: int = DEFAULT_PAGE_SIZE,
+) -> List[str]:
+    """BREP-25 木桩明细块（5e §6.3，render_battle_end 内联形态）：摘要行 + 条目行
+    + ≤16 行折叠 TPL-09（铁律 11）。
+
+    消息总行数（overhead = 前缀/BREP-24 行数，摘要行与 TPL-09 折叠行各占 1 行）
+    ≤ limit（默认 16，3d D-03/L184）——超限时条目行按正文尾部折叠（keep =
+    limit - overhead - 2：1 行留给摘要行、1 行留给 TPL-09）。占比降序（L347）。"""
+    items = _summary_items(summary)
+    total = _summary_field(summary, "total", "总伤害")
+    header = _summary_header(summary)
+    item_lines = _summary_item_lines(items, total)
+    keep = max(0, limit - overhead - 2)                     # 1=摘要行 1=TPL-09 折叠行
+    return [header] + _fold_item_lines(
+        item_lines, keep=keep, command=command, per_page=per_page
+    )
+
+
+def render_battle_summary(
+    summary: Any,
+    *,
+    page: Any = 1,               # 页码（int 或 str，经 list_render.resolve_page 归一/夹取/判非法）
+    command: str = "木桩",
+    per_page: int = DEFAULT_PAGE_SIZE,
+) -> str:
+    """BREP-25 木桩明细分页块（5e §6.3 / TC-26）：摘要行 + 条目行 + 5 条/页 + 页脚 TPL-08。
+
+    `/木桩` 战后明细浏览：摘要行 + 当页条目（每页最多 5 条，D-02）+ 多页时页脚
+    TPL-08（复用 list_render.render_footer，3d §2.3「禁止各系统自造页脚」；
+    单页无页脚）。页码非法（0/负数/非数字）→ ValueError（壳层应先经 resolve_page
+    判定转 TPL-12，对齐 list_render 契约）。条目占比按总伤害占比取整、降序排列
+    （数值层 L340/L347）。
+    """
+    items = _summary_items(summary)
+    total = _summary_field(summary, "total", "总伤害")
+    res = resolve_page(page, len(items), per_page)
+    if res.invalid:
+        raise ValueError(
+            "页码非法（0/负数/非数字）：壳层应经 resolve_page 判定并转 TPL-12（3d §2.2）"
+        )
+    assert res.page is not None                              # 非法已拦截，夹取后恒有页码
+    page_slice = page_items(items, page, per_page)
+    lines = [_summary_header(summary)]
+    lines.extend(_summary_item_lines(page_slice, total))
+    footer = render_footer(res.page, res.total_pages, len(items), command)
+    if footer:
+        lines.append(footer)                                 # TPL-08（多页时）
+    return "\n".join(lines)

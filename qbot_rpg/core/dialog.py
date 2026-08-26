@@ -56,6 +56,8 @@ from __future__ import annotations
 import re
 from typing import Any, Iterable, List, Mapping, Optional, Sequence, Tuple
 
+from qbot_rpg.core.message_format import strip_icon_emoji
+
 __all__ = [
     # 七态
     "S_IDLE", "S_LIST", "S_NPCSEL", "S_MENU", "S_EXEC", "S_SUBUI", "S_END", "STATES",
@@ -276,6 +278,7 @@ def render_npc_list(npcs: Sequence[Mapping[str, Any]]) -> List[str]:
         icon = str(npc.get("icon") or "")
         if not icon:
             icon = str(npc.get("type") or "?")[:1]
+        icon = strip_icon_emoji(icon)  # M5 裁决不用 emoji：渲染出口剥离 emoji 字符
         parts.append(f"{i}.{icon}{name}")
     return ["这里的人：" + " ".join(parts)]
 

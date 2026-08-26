@@ -912,7 +912,7 @@ def quest_complete(quest_id: str, ctx: MutableMapping[str, Any]) -> dict:
         if exc.reason == "item_add_failed":
             # P1-1：物品未入包 → 回滚已完成、不封口幂等（ledger 未写），黄字提示可重试
             return {"ok": False, "reason": "item_add_failed",
-                    "message": "⚠️ 物品未入包（奖励未发放，可重试）",
+                    "message": "❌ 物品未入包（奖励未发放，可重试）",
                     "quest_id": quest_id, "retryable": True}
         return {"ok": False, "reason": exc.reason, "message": "❌ 结算失败，已回滚"}
 

@@ -30,7 +30,7 @@
 | `id` | string | 是 | 地图唯一 ID；dungeon.json `maps` 引用（探索/BOSS 共用同一组地图 ID） |
 | `name` | string | 是 | 玩家可见地图名（换区提示/候选区用） |
 | `desc` | string | 建议 | 地形/通道/机制/宝箱预告文本 |
-| `spawn` | Spawn[] | 否 | 怪物分布（引用 enemies.json，BOSS 房可空） |
+| `monsters` | MonsterRow[] | 否 | 怪物行（引用 enemies.json，BOSS 房可空；键名对齐时间天气定稿「怪物行」，2026-08-26 拍板） |
 | `exits` | object | 否 | 4 方向通道（up/down/left/right；缺省=死路） |
 | `mechanics` | Mechanic[] | 否 | 场地效果（落石/陷阱/机关；探索/BOSS 共用） |
 | `gate_guard` | string | 否 | 守门怪（enemies.json 怪物 ID） |
@@ -99,7 +99,7 @@ def path_exists(from_id: str, to_id: str, maps: list, ctx: dict) -> bool  # 捷�
 - **逃跑行为**：进入 `chasing:true`，提示"XX 逃向了【候选区】"（目标区名 = maps.name）
 - **候选区**：targets 列表随机选一（固定种子可复现）；玩家不熟悉地图 → 绕路/遇精英
 - **追击**：玩家 `/进入 <方向>` 走通道；**走错/错过 → 错失窗口**（BOSS 回满/离开副本）
-- **续战**（M14）：追到后触发遭遇 → BOSS **残血保持 + PV 半恢复（向下取整）+ 开场技**；血量**不重置**
+- **续战**（M14）：追到后触发遭遇 → BOSS **残血保持 + PV 恢复（缺失量口径：current + floor((max−current)×pv_recover)，向下取整）+ 开场技**；血量**不重置**。2026-08-26 用户拍板：恢复「已损失的一半」——pv_recover=0 → 不恢复（保持当前值）、1 → 补满全恢复（对齐时间天气定稿「0=不恢复/1=全恢复」锚点）
 - **门禁语义**：PV 半恢复受 debuff 门禁（效果减半层数保留，破防全量爆发——1g4 PV 防护值机制）
 - **离开副本重置**（M15）：非战斗离开 → BOSS 状态/残血/进度全清，下次满状态重打
 
@@ -185,11 +185,11 @@ def dungeon_state_machine(state: str, event: str, ctx: dict) -> str  # S0-S7 迁
 | # | 接口 | 签名 | 语义 |
 |---|---|---|---|
 | IF01 | 总开关 | `is_enabled() -> bool` | false → 查询提示未启用、条件键失效、spawn 退化为仅 active_time |
-| IF02 | 季节查询 | `season_now(now=None) -> str` | 固定枚举 |
-| IF03 | 时段查询 | `period_now(now=None) -> str` | 固定枚举 |
+| IF02 | 季节查询 | `season_now(now=None) -> str` | 枚举开放可配（缺省四季） |
+| IF03 | 时段查询 | `period_now(now=None) -> str` | 枚举开放可配（缺省五时段） |
 | IF04 | 天气查询 | `weather_now(map_id, now=None) -> str` | 玩家当前图天气（上下文绑定） |
 | IF05 | 生效池 | `map_pool(map_id) -> list[str]` | 覆盖池 else 默认池（排序供种子） |
-| IF06 | 周期索引 | `cycle_tick(kind, now=None) -> int` | season_idx=floor((now−ANCHOR)/(days×86400))%4；period_idx %5；weather_tick 不取模 |
+| IF06 | 周期索引 | `cycle_tick(kind, now=None) -> int` | season_idx=floor((now−ANCHOR)/(days×86400))%len(season.enum)；period_idx %len(period.enum)（2026-08-26 拍板枚举可配）；weather_tick 不取模 |
 | IF07 | 倒计时 | `time_remaining(kind, now=None) -> int` | 距下次变化秒（/时间 数据源） |
 | IF08 | 确定性抽签 | `map_weather(map_id, tick, now=None) -> str` | 生效池[pick(sha256(池键排序+str(tick)))]；同 tick 跨群/进程/重启同值 |
 | IF09 | 变化检测 | `check_changes(player, map_id) -> list[Change]` | 每条指令处理前调；比较缓存索引与重算值；一次 ≤3 条顺序固定 季节→时段→天气；离线只播最新 |
@@ -201,7 +201,7 @@ def dungeon_state_machine(state: str, event: str, ctx: dict) -> str  # S0-S7 迁
 
 ### 5.4 条件键三键（M40，条件引擎注册表）
 
-`{var:"season", op:"eq", param:X}` [季节:X] X∈四季固定；`{var:"period",...}` [时段:X] X∈五时段固定；`{var:"weather",...}` [天气:X] X∈注册天气集（内容包自定义，按玩家当前所在图取值）。季节/时段全局值；非法枚举红拦。
+`{var:"season", op:"eq", param:X}` [季节:X] X∈季节枚举（缺省四季，内容包可扩展 `season.enum`）；`{var:"period",...}` [时段:X] X∈时段枚举（缺省五时段，`period.enum` 可扩展）；`{var:"weather",...}` [天气:X] X∈注册天气集（内容包自定义，按玩家当前所在图取值）。季节/时段全局值；非法枚举红拦（2026-08-26 拍板：枚举开放可配，内容包显式声明完整枚举集）。
 
 ---
 

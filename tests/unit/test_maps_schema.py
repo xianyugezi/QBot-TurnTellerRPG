@@ -267,7 +267,7 @@ def test_bidirectional_asymmetry_back_missing_yellow() -> None:
 def test_spawn_enemy_dangling_red() -> None:
     """spawn[].enemy 引用 enemies.json 不存在的 ID → 硬拦（R-4 map_spawn_enemy_missing）。"""
     maps = _base_maps()
-    _map_by_id(maps, "rubble_field")["spawn"][0]["enemy"] = "ghost_spirit"
+    _map_by_id(maps, "rubble_field")["monsters"][0]["enemy"] = "ghost_spirit"
     rep = _check(maps, enemies=_legal_enemies())
     errs = _errs(rep, "map_spawn_enemy_missing")
     assert len(errs) == 1 and errs[0]["detail"]["ref"] == "ghost_spirit"
@@ -277,7 +277,7 @@ def test_spawn_enemy_dangling_red() -> None:
 def test_spawn_enemy_by_name_passes() -> None:
     """spawn[].enemy 用 enemies.json 的 name（契约 §2.3「id/name 均可」）→ 通过。"""
     maps = _base_maps()
-    _map_by_id(maps, "rubble_field")["spawn"][0]["enemy"] = "岩皮鼬"  # rock_weasel 的 name
+    _map_by_id(maps, "rubble_field")["monsters"][0]["enemy"] = "岩皮鼬"  # rock_weasel 的 name
     rep = _check(maps, enemies=_legal_enemies())
     assert not _errs(rep, "map_spawn_enemy_missing"), f"name 引用应通过，实际 {rep.errors}"
 
@@ -285,7 +285,7 @@ def test_spawn_enemy_by_name_passes() -> None:
 def test_spawn_enemy_required_red() -> None:
     """spawn 行缺 enemy → 硬拦（R-5 map_spawn_enemy_required；契约 §2.3 必填）。"""
     maps = _base_maps()
-    del _map_by_id(maps, "rubble_field")["spawn"][0]["enemy"]
+    del _map_by_id(maps, "rubble_field")["monsters"][0]["enemy"]
     rep = _check(maps, enemies=_legal_enemies())
     assert _errs(rep, "map_spawn_enemy_required"), f"缺 enemy 应硬拦，实际 {rep.errors}"
 
@@ -297,14 +297,14 @@ def test_spawn_count_non_negative_integer_red() -> None:
     """count 负数 / 非整数 → 硬拦（R-2 map_spawn_count_invalid）；缺省（=1）通过。"""
     for bad in (-1, 2.5, "3", True):
         maps = _base_maps()
-        _map_by_id(maps, "rubble_field")["spawn"][0]["count"] = bad
+        _map_by_id(maps, "rubble_field")["monsters"][0]["count"] = bad
         rep = _check(maps, enemies=_legal_enemies())
         errs = _errs(rep, "map_spawn_count_invalid")
         assert len(errs) == 1 and errs[0]["detail"]["value"] == bad, (
             f"count={bad!r} 应硬拦，实际 {rep.errors}")
     # count 缺省 = 1【工程补白】不拦
     maps = _base_maps()
-    del _map_by_id(maps, "rubble_field")["spawn"][0]["count"]
+    del _map_by_id(maps, "rubble_field")["monsters"][0]["count"]
     rep = _check(maps, enemies=_legal_enemies())
     assert not _errs(rep, "map_spawn_count_invalid")
 
@@ -312,12 +312,12 @@ def test_spawn_count_non_negative_integer_red() -> None:
 def test_spawn_respawn_minutes_validation_red() -> None:
     """respawn_minutes 缺省 / 0 / 非整数 → 硬拦（契约 §2.3 必填且 ≥1）。"""
     maps = _base_maps()
-    del _map_by_id(maps, "rubble_field")["spawn"][0]["respawn_minutes"]
+    del _map_by_id(maps, "rubble_field")["monsters"][0]["respawn_minutes"]
     rep = _check(maps, enemies=_legal_enemies())
     assert _errs(rep, "map_spawn_respawn_required"), f"缺 respawn 应硬拦，实际 {rep.errors}"
     for bad in (0, -5, 2.5, "10"):
         maps = _base_maps()
-        _map_by_id(maps, "rubble_field")["spawn"][0]["respawn_minutes"] = bad
+        _map_by_id(maps, "rubble_field")["monsters"][0]["respawn_minutes"] = bad
         rep = _check(maps, enemies=_legal_enemies())
         errs = _errs(rep, "map_spawn_respawn_invalid")
         assert len(errs) == 1 and errs[0]["detail"]["value"] == bad, (
@@ -330,12 +330,12 @@ def test_spawn_respawn_minutes_validation_red() -> None:
 def test_spawn_seasons_periods_enum_red() -> None:
     """seasons ∉ 四季 / periods ∉ 五时段 → 硬拦（R-1，2a1b R25）。"""
     maps = _base_maps()
-    _map_by_id(maps, "rubble_field")["spawn"][0]["seasons"] = ["monday"]
+    _map_by_id(maps, "rubble_field")["monsters"][0]["seasons"] = ["monday"]
     rep = _check(maps, enemies=_legal_enemies())
     errs = _errs(rep, "map_spawn_seasons_invalid")
     assert len(errs) == 1 and errs[0]["detail"]["allowed"] == list(SEASONS_ENUM)
     maps = _base_maps()
-    _map_by_id(maps, "rubble_field")["spawn"][0]["periods"] = ["noon_extra"]
+    _map_by_id(maps, "rubble_field")["monsters"][0]["periods"] = ["noon_extra"]
     rep = _check(maps, enemies=_legal_enemies())
     assert _errs(rep, "map_spawn_periods_invalid") and \
         _errs(rep, "map_spawn_periods_invalid")[0]["detail"]["allowed"] == list(PERIODS_ENUM)
@@ -344,7 +344,7 @@ def test_spawn_seasons_periods_enum_red() -> None:
 def test_spawn_active_time_structure_red() -> None:
     """active_time 缺 from/to 或非 {from,to} 结构 → 硬拦（R-1 map_spawn_active_time_invalid）。"""
     maps = _base_maps()
-    _map_by_id(maps, "rubble_field")["spawn"][0]["active_time"] = {"from": "20:00"}  # 缺 to
+    _map_by_id(maps, "rubble_field")["monsters"][0]["active_time"] = {"from": "20:00"}  # 缺 to
     rep = _check(maps, enemies=_legal_enemies())
     errs = _errs(rep, "map_spawn_active_time_invalid")
     assert len(errs) == 1 and errs[0]["detail"]["key"] == "to"
@@ -355,14 +355,14 @@ def test_spawn_weather_weights_non_negative_red() -> None:
     key ∈ 注册天气集归 M41（契约 §6.2 V5/V6），此处不校验。"""
     for bad in (-1, -0.5, "foggy"):
         maps = _base_maps()
-        _map_by_id(maps, "rubble_field")["spawn"][0]["weather_weights"] = {"fog": bad}
+        _map_by_id(maps, "rubble_field")["monsters"][0]["weather_weights"] = {"fog": bad}
         rep = _check(maps, enemies=_legal_enemies())
         errs = _errs(rep, "map_spawn_weather_weight_invalid")
         assert len(errs) == 1 and errs[0]["detail"]["value"] == bad, (
             f"weight={bad!r} 应硬拦，实际 {rep.errors}")
     # 0 = 该天气不刷（合法）；小数倍率合法
     maps = _base_maps()
-    _map_by_id(maps, "rubble_field")["spawn"][0]["weather_weights"] = {"storm": 0, "fog": 0.25}
+    _map_by_id(maps, "rubble_field")["monsters"][0]["weather_weights"] = {"storm": 0, "fog": 0.25}
     rep = _check(maps, enemies=_legal_enemies())
     assert not _errs(rep, "map_spawn_weather_weight_invalid")
 
@@ -385,7 +385,7 @@ def test_gate_guard_dangling_red() -> None:
 def test_spawn_not_list_red() -> None:
     """spawn 非数组 → 硬拦（R-1 map_spawn_not_list）。"""
     maps = _base_maps()
-    _map_by_id(maps, "rubble_field")["spawn"] = {"enemy": "rock_weasel"}
+    _map_by_id(maps, "rubble_field")["monsters"] = {"enemy": "rock_weasel"}
     rep = _check(maps, enemies=_legal_enemies())
     assert _errs(rep, "map_spawn_not_list"), f"spawn 非数组应硬拦，实际 {rep.errors}"
 
@@ -402,7 +402,7 @@ def test_maps_missing_module_default_allow() -> None:
     assert not rep.errors and not rep.warnings
     # enemies 未声明时跳过 enemy 引用检查（不误拦）
     maps = _base_maps()
-    _map_by_id(maps, "rubble_field")["spawn"][0]["enemy"] = "ghost_spirit"
+    _map_by_id(maps, "rubble_field")["monsters"][0]["enemy"] = "ghost_spirit"
     rep2 = _check(maps, enemies=None)
     assert not _errs(rep2, "map_spawn_enemy_missing"), "enemies 未声明应跳过引用检查"
 
@@ -421,3 +421,21 @@ def test_check_pack_generic_ignores_new_maps_fields() -> None:
     rep = check_pack(modules)
     assert not rep.errors, f"泛型校验不应有红拦：{rep.errors}"
     assert not rep.warnings, f"泛型校验不应有黄提示：{rep.warnings}"
+
+
+# ================================================================== M3 审查 P0-1 回归
+def test_checker_integration_bad_pack_errors() -> None:
+    """M3 审查 P0-1 回归：坏包直传真实 _Checker 应产生 errors（防 _emit 适配断裂静默空转）。
+
+    此前 _emit 只找 error/_error，而 _Checker 只有 _err/_warn——生产 check_pack 路径
+    所有 maps 深校验静默丢弃；本用例直接喂真实 _Checker 验证坏输入必产出红拦。
+    """
+    from qbot_rpg.content.map_models import validate_maps
+    from qbot_rpg.content.validator import _Checker, default_field_meta_table
+
+    modules = {"maps": [{"id": "a", "name": "A",
+                         "exits": {"up": {"to": "ghost_map", "mode": "bidirectional"}}}],
+               "enemies": []}
+    checker = _Checker(modules, default_field_meta_table())
+    validate_maps(modules, checker)
+    assert checker.errors, f"坏包直传 _Checker 应产生 errors（P0-1 防空转），实际 {checker.errors}"

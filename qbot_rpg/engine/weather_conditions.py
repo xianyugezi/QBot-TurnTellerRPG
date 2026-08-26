@@ -41,7 +41,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Iterable, Mapping, Optional
+from typing import Any, Iterable, Mapping, Optional, Tuple
 
 from qbot_rpg.engine.worldtime import PERIODS, SEASONS
 
@@ -95,12 +95,18 @@ def eval_condition(cond: object, ctx: object) -> bool:
     if op not in _KNOWN_OPS:
         return False
     param = cond.get("param")
+    # 枚举开放可配（用户拍板 2026-08-26）：ctx 可注入 season_keys/period_keys（内容包自定义完整枚举集），
+    # 缺省模块级 SEASON_KEYS/PERIOD_KEYS
+    _sk = ctx.get("season_keys")
+    _pk = ctx.get("period_keys")
+    season_keys: Tuple[str, ...] = tuple(_sk) if isinstance(_sk, (tuple, list)) else SEASON_KEYS
+    period_keys: Tuple[str, ...] = tuple(_pk) if isinstance(_pk, (tuple, list)) else PERIOD_KEYS
     if var == "season":
-        if not isinstance(param, str) or param not in SEASON_KEYS:
+        if not isinstance(param, str) or param not in season_keys:
             return False
         return _season_now(ctx) == param
     if var == "period":
-        if not isinstance(param, str) or param not in PERIOD_KEYS:
+        if not isinstance(param, str) or param not in period_keys:
             return False
         return _period_now(ctx) == param
     # var == "weather"：X ∈ 注册天气集；值域动态 → 求值侧仅字符串相等比较（键合法性归校验器）

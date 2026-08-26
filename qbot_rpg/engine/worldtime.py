@@ -70,8 +70,10 @@ __all__ = [
 ]
 
 # -------------------------------------------------------------------------------------
-# 锚点与固定枚举（契约 §5.3 / 细化_2a4a §1.2：季节/时段枚举固定写死，防碎片化）
-# -------------------------------------------------------------------------------------
+# 锚点与默认枚举（契约 §5.3 / 细化_2a4a §1.2 + 时间天气定稿 L44：枚举开放可配——
+# 2026-08-26 用户拍板（设计审查批次3 P1-1）：内容包可显式声明完整枚举集
+# （settings time_cycle.season.enum / period.enum），缺省即下方默认模板 4 季 5 时段）
+# ------------------------------------------------------------------------------------------------------------------------------------
 _TZ_UTC8 = timezone(timedelta(hours=8))
 
 
@@ -129,6 +131,19 @@ class WorldTime:
     def __init__(self, cfg: Optional[Mapping[str, object]] = None) -> None:
         tc = cfg.get("time_cycle") if isinstance(cfg, Mapping) else None
         self._tc: Mapping[str, object] = tc if isinstance(tc, Mapping) else {}
+        # 枚举开放可配（用户拍板 2026-08-26）：season.enum/period.enum 缺省默认模板
+        self._seasons: tuple = self._enum_field("season", SEASONS)
+        self._periods: tuple = self._enum_field("period", PERIODS)
+
+    def _enum_field(self, section_key: str, default: tuple) -> tuple:
+        """从 cfg.time_cycle.<key>.enum 读完整枚举集（非空 string 数组 → tuple；坏配置回退默认）。"""
+        sec = self._tc.get(section_key)
+        if not isinstance(sec, Mapping):
+            return default
+        v = sec.get("enum")
+        if isinstance(v, (list, tuple)) and v and all(isinstance(x, str) and x for x in v):
+            return tuple(v)
+        return default
 
     # ---- 配置解析（字段级缺省；坏配置惰性回退默认，不崩溃） ----
     def is_enabled(self) -> bool:
@@ -194,19 +209,19 @@ class WorldTime:
         length = self._cycle_len(kind)
         tick = diff // length
         if kind == "season":
-            return tick % len(SEASONS)
+            return tick % len(self._seasons)
         if kind == "period":
-            return tick % len(PERIODS)
+            return tick % len(self._periods)
         return tick  # weather：不取模
 
     # ---- IF02/IF03 查询（纯函数） ----
     def season_now(self, now: Optional[int] = None) -> str:
-        """IF02 季节查询（spring/summer/autumn/winter）。"""
-        return SEASONS[self.cycle_tick("season", now)]
+        """IF02 季节查询（缺省 spring/summer/autumn/winter；内容包 enum 可扩展）。"""
+        return self._seasons[self.cycle_tick("season", now)]
 
     def period_now(self, now: Optional[int] = None) -> str:
-        """IF03 时段查询（dawn/noon/dusk/night/midnight）。"""
-        return PERIODS[self.cycle_tick("period", now)]
+        """IF03 时段查询（缺省 dawn/noon/dusk/night/midnight；内容包 enum 可扩展）。"""
+        return self._periods[self.cycle_tick("period", now)]
 
     # ---- IF07 倒计时（纯函数） ----
     def time_remaining(self, kind: str, now: Optional[int] = None) -> int:

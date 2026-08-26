@@ -59,6 +59,7 @@ _REASON_NO_EXIT = "此方向没有通道"          # 未配置方向 = 死路 / 
 _REASON_HIDDEN = "此处无通道"               # hidden 条件未满足（契约 §2.4）
 _REASON_BLOCKED = "此路不通"                # 兜底拦截（契约 §2.4 单向反向拦截口径）
 _REASON_NO_ENTRANCE = "此处没有副本入口"     # 非入口节点（2a1c TC-14）
+_REASON_INVALID_ENTRANCE = "入口序号无效"     # M3 审查 P1-3：Unicode 数字/越界序号
 _REASON_NOT_FOUND = "没有这个入口/方向"      # 名称/序号未命中（任务口径）
 _REASON_NO_ARG = "/进入 需要参数：方向 / 序号 / 入口名（便捷指令未开放）"  # 2a1c TC-23
 
@@ -369,11 +370,16 @@ def enter_context_route(player_ctx: dict, arg: Optional[str],
         return {"type": "move", **res}
 
     # 2. 纯数字序号（R14 优先级 2 / R16）→ 当前图入口列表（1 起始）
-    if arg_s.isdigit():
+    # M3 审查 P1-3 修复：isdigit() 对 ¹/② 等 Unicode 数字返回 True 但 int() 抛 ValueError
+    # → try/except 拦截，防用户输入 /进入 ² 崩溃（指令路由是用户直触面）
+    if arg_s.isascii() and arg_s.isdigit():
         entries = _current_entrances(index, cur)
         if not entries:
             return {"ok": False, "reason": _REASON_NO_ENTRANCE}
-        idx = int(arg_s)
+        try:
+            idx = int(arg_s)
+        except ValueError:
+            return {"ok": False, "reason": _REASON_INVALID_ENTRANCE}
         if 1 <= idx <= len(entries):
             return _dungeon_signal(entries[idx - 1], dungeons, player_ctx)
         return {"ok": False, "reason": f"序号 {arg_s} 无效/不存在"}

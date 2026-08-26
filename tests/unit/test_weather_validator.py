@@ -286,7 +286,7 @@ def test_w4_map_pool_single_constant():
 
 
 def test_w5_no_consumer_refs():
-    mods = _mods(maps=[{"id": "m1", "spawn": []}], enemies=[{"id": "e1"}])
+    mods = _mods(maps=[{"id": "m1", "monsters": []}], enemies=[{"id": "e1"}])
     rep = _Report()
     validate_weather(mods, _cfg(), rep)
     assert len(_warns(rep, "no_consumer_refs")) == 1

@@ -376,3 +376,78 @@ def test_validate_none_settings_no_crash():
     r = _Reporter()
     validate_time_cycle(None, r)  # type: ignore[arg-type]
     assert r.errors == []
+
+
+# ================================================================== M3 审查 P0-2 回归
+def test_time_cycle_invalid_via_check_pack() -> None:
+    """M3 审查 P0-2 回归：非法 time_cycle 经 check_pack 产出 V1 错误不崩溃。
+
+    此前 time_validator 迁移时丢失 _emit 定义——非法配置触发 NameError 崩溃而非校验错误。
+    """
+    from qbot_rpg.content.validator import check_pack
+
+    rep = check_pack({"settings": {"time_cycle": {"season": {"season_days": 0}}}})
+    assert not rep.ok, "season_days=0 应红拦"
+    rules = [str(e.detail.get("rule", "")) for e in rep.errors]
+    assert any("season_days" in r for r in rules), f"应产出 season_days 校验规则，实际 {rules}"
+
+
+# ================================================================== 枚举开放可配（用户拍板 2026-08-26 / 设计审查批次3 P1-1）
+def test_custom_season_enum_effective() -> None:
+    """自定义 season.enum（内容包扩展）：cycle_tick 用 len(custom)，season_now 返回自定义键。"""
+    from qbot_rpg.engine.worldtime import WorldTime
+
+    cfg = {"time_cycle": {"season": {"season_days": 7, "enum": ["s1", "s2", "s3"]},
+                          "period": {"period_minutes": 60}}}
+    wt = WorldTime(cfg)
+    # 2000-01-01 锚点 + 7 天：diff=0 → idx0 → s1
+    assert wt.season_now(946684800) == "s1"
+    # 7 天后 → idx1 → s2
+    assert wt.season_now(946684800 + 7 * 86400) == "s2"
+    # 21 天后 → idx3 % 3 = 0 → s1（自定义 3 枚举循环）
+    assert wt.season_now(946684800 + 21 * 86400) == "s1"
+
+
+def test_custom_period_enum_effective() -> None:
+    """自定义 period.enum：period_now 返回自定义键。"""
+    from qbot_rpg.engine.worldtime import WorldTime
+
+    cfg = {"time_cycle": {"period": {"period_minutes": 60, "enum": ["p1", "p2"]}}}
+    wt = WorldTime(cfg)
+    assert wt.period_now(946684800) == "p1"
+    assert wt.period_now(946684800 + 3600) == "p2"
+    assert wt.period_now(946684800 + 7200) == "p1"  # %2 循环
+
+
+def test_season_enum_invalid_red() -> None:
+    """season.enum 非法（空数组/非字符串）→ V1b 红拦；缺省配置零红拦。"""
+    from qbot_rpg.content.time_validator import validate_time_cycle
+
+    class Chk:
+        def __init__(self):
+            self.errors, self.warnings = [], []
+        def _err(self, *a, **k):
+            self.errors.append(k)
+        def _warn(self, *a, **k):
+            self.warnings.append(k)
+
+    c = Chk()
+    validate_time_cycle({"time_cycle": {"season": {"enum": []}}}, c)
+    assert any("enum_invalid" in str(e.get("rule", "")) for e in c.errors), f"空枚举应红拦，实际 {c.errors}"
+
+    c2 = Chk()
+    validate_time_cycle({"time_cycle": {"season": {"enum": ["a", 1]}}}, c2)
+    assert any("enum_invalid" in str(e.get("rule", "")) for e in c2.errors), "非字符串枚举应红拦"
+
+    c3 = Chk()
+    validate_time_cycle({"time_cycle": {"season": {"season_days": 7}}}, c3)
+    assert not c3.errors, "缺省枚举零红拦"
+
+
+def test_custom_enum_condition_keys() -> None:
+    """条件键三键随枚举可配：ctx 注入 season_keys 后自定义键可命中。"""
+    from qbot_rpg.engine.weather_conditions import eval_condition
+
+    ctx = {"season_now": "s2", "season_keys": ("s1", "s2", "s3")}
+    assert eval_condition({"var": "season", "op": "eq", "param": "s2"}, ctx) is True
+    assert eval_condition({"var": "season", "param": "summer"}, ctx) is False  # 默认键不命中

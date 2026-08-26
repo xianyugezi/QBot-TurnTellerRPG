@@ -116,18 +116,28 @@ def _hp_pct(enemy_state: Mapping[str, Any]) -> Optional[float]:
     return None
 
 
-def _pv_half_value(pv_max: Optional[float], pv_recover: float) -> int:
-    """PV 半恢复值：floor(pv_max × pv_recover)（2a2 §2.1 满值口径，向下取整）。
+def _pv_half_value(
+    pv_current: Optional[float], pv_max: Optional[float], pv_recover: float
+) -> int:
+    """PV 恢复后值：current + floor((max − current) × pv_recover)（缺失量口径，向下取整）。
 
-    例：PV=300 → 150；PV=201（奇数）→ 100；普通怪 PV=15 → 7。不可解 → 0。
+    2026-08-26 用户拍板（设计审查批次2 P1-1）：恢复「已损失的一半」——
+    pv_recover=0 → 不恢复（保持当前值）、1 → 补满全恢复（与定稿 L98 双锚点自洽）；
+    破防场景 current=0 与原满值口径数值一致。pv_current 缺失 → 近似 pv_max（未破防不降）。
     """
     if pv_max is None or pv_max < 0:
         return 0
     try:
-        product = float(pv_max) * float(pv_recover)
+        cur = (
+            float(pv_current)
+            if isinstance(pv_current, (int, float)) and not isinstance(pv_current, bool)
+            else float(pv_max)
+        )
+        cur = min(cur, float(pv_max))
+        loss = float(pv_max) - cur
+        return int((cur + loss * float(pv_recover)) // 1)
     except (TypeError, ValueError):
         return 0
-    return int(product // 1)
 
 
 # -------------------------------------------------------------------------------------
@@ -389,17 +399,24 @@ class BossFlow:
             if isinstance(r, (int, float)) and not isinstance(r, bool):
                 recover = float(r)
 
+        # 当前 PV：session.boss_state.pv（残血换区时的防护值，缺失兜底近似满值 → 未破防不降）
+        boss_state = self._session_get("boss_state")
+        pv_current: Optional[float] = None
+        if isinstance(boss_state, Mapping):
+            pv = boss_state.get("pv")
+            if isinstance(pv, (int, float)) and not isinstance(pv, bool):
+                pv_current = float(pv)
+
         result: dict = {
             "resume": True,
             "hp_keep": True,
             "pv_half": True,
-            "pv_half_value": _pv_half_value(pv_max, recover),
+            "pv_half_value": _pv_half_value(pv_current, pv_max, recover),
             "pv_recover": recover,
             "opening_skill": True,
             "timing": "chase_continue",
         }
         # 残血保持数据源透传（session.boss_state 血量快照；供批次 6 接线核对）
-        boss_state = self._session_get("boss_state")
         if isinstance(boss_state, Mapping):
             hp = boss_state.get("hp")
             mhp = boss_state.get("max_hp")

@@ -107,18 +107,29 @@ def _num(value: Any) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool)
 
 
-def _pv_half_value(pv_max: Optional[float], pv_recover: float) -> int:
-    """PV 半恢复值：floor(pv_max × pv_recover)（2a2 §2.1 满值口径，向下取整）。
+def _pv_half_value(
+    pv_current: Optional[float], pv_max: Optional[float], pv_recover: float
+) -> int:
+    """PV 恢复后值：current + floor((max − current) × pv_recover)（缺失量口径，向下取整）。
 
-    例：PV=300 → 150；PV=201（奇数）→ 100；普通怪 PV=15 → 7；不可解 → 0。
+    2026-08-26 用户拍板（设计审查批次2 P1-1）：恢复「已损失的一半」——
+    pv_recover=0 → 不恢复（保持当前值）、1 → 补满全恢复（与定稿 L98 双锚点自洽）；
+    破防场景 current=0 与原满值口径数值一致（例：PV=300 破防 → 150；PV=201 破防 → 100）。
+    pv_current 缺失 → 近似 pv_max（未破防不降）。
     """
     if pv_max is None or pv_max < 0:
         return 0
     try:
-        product = float(pv_max) * float(pv_recover)
+        cur = (
+            float(pv_current)
+            if isinstance(pv_current, (int, float)) and not isinstance(pv_current, bool)
+            else float(pv_max)
+        )
+        cur = min(cur, float(pv_max))
+        loss = float(pv_max) - cur
+        return int((cur + loss * float(pv_recover)) // 1)
     except (TypeError, ValueError):
         return 0
-    return int(product // 1)
 
 
 # -------------------------------------------------------------------------------------
@@ -215,9 +226,10 @@ def prepare_resume_battle(
             if _num(v):
                 pv_max = v
                 break
-        if pv_max is None and _num(enemy.get("pv")):
-            pv_max = enemy.get("pv")  # 兜底：当前值近似满值（补白 2）
-        pv_half_value = _pv_half_value(pv_max, pv_recover)
+        pv_current_value: Optional[float] = enemy.get("pv") if _num(enemy.get("pv")) else None
+        if pv_max is None:
+            pv_max = pv_current_value  # 兜底：无上限字段时以当前值近似（补白 2）
+        pv_half_value = _pv_half_value(pv_current_value, pv_max, pv_recover)
 
     # ---- 战斗快照续接（1g3/1g4；m3 §4.4：ai_state + combo_state 全保留） --------------
     snap = battle_state if isinstance(battle_state, Mapping) else None

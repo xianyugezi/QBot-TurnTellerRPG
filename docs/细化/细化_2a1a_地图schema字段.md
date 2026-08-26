@@ -139,3 +139,14 @@ maps.json                        // 文件根
 ---
 
 *依据定稿：《副本系统设计定稿》L12/L37-51/L54-60/L75-77/L156-160/L191/L207/L229-232/L270；《怪物模块设计定稿》L13/L19/L44-45/L95/L145/L295*
+
+---
+
+## 【2026-08-26 设计审查裁决（设计审查_批次1 P0-1/P0-2，用户拍板）】
+
+本文件 `spawns`（{enemy, rank, chance?}）与 `exits`（Exit[] 数组）结构**作废**，以 m3_shared_contract §2 为准：
+
+1. **怪物行键名统一为 `monsters`**（时间天气定稿「怪物行」；2a1b 曾用 spawn、本文件曾用 spawns——拍板对齐定稿）。
+2. **删除幻觉字段 `rank:"gate"` / `chance`**：tier 仅 normal/elite/boss（怪物定稿 L21），守门怪是配置概念（【副本】L231）非枚举值；遭遇概率字段定稿无依据。
+3. **exits 统一为按方向键对象** `{up:{to,mode,condition},...}`（2a1b §1.4 结构），`shortcut`/`hidden` 字段合并进 mode/condition；本文件的 `{direction,target,...}` 数组结构废弃。
+4. 怪物行七字段以 2a1b §2.1 + 契约 §2.3 为准（enemy/count/respawn_minutes/active_time/seasons/periods/weather_weights）。

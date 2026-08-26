@@ -443,7 +443,7 @@ def boss_path(smoke: Smoke, wt: WorldTime, now: int, pack: dict) -> dict:
     smoke.check_eq(flow.phase_for(15.0), 3, "BOSS 版：15% → 阶段3")
 
     # ---- 残血换区（M20 should_zone_change + M12 chase_trigger 装配；固定种子）----
-    sess_dict["boss_state"] = {"hp": 300, "max_hp": 1500}  # 【补白 3】残血快照（20%）
+    sess_dict["boss_state"] = {"hp": 300, "max_hp": 1500, "pv": 0}  # 【补白 3】残血快照（20%）+ 破防（缺失量口径）
     smoke.check(bool(flow.should_zone_change({"hp": 300, "max_hp": 1500}, zc_cfg)),
                 "BOSS 版：残血 20% ≤ 阈值 30% 触发换区")
     smoke.check(not bool(flow.should_zone_change({"hp": 500, "max_hp": 1500}, zc_cfg)),
@@ -502,7 +502,7 @@ def boss_path(smoke: Smoke, wt: WorldTime, now: int, pack: dict) -> dict:
                    "combo_state": {"chain": 0, "combo": "drake_breath_combo"}}
     resume = prepare_resume_battle(
         caught_out,
-        enemy_state={"hp": 300, "max_hp": 1500, "pv": 300},
+        enemy_state={"hp": 300, "max_hp": 1500, "pv": 0},  # 破防场景（缺失量口径：0+floor(300×0.5)=150）
         battle_state=battle_snap,
     )
     smoke.check(bool(resume.get("resume")), "BOSS 版：续战装配 resume=True")

@@ -42,6 +42,18 @@ def validate_time_cycle(settings: Mapping[str, object], report: object) -> None:
                   rule="season_days_min", minimum=1, got=v,
                   msg="季节天数要填整数，最少 1 天")
 
+    # V1b 枚举开放可配（用户拍板 2026-08-26 / 时间天气定稿 L44）：season.enum 非空 string[] 硬拦
+    if isinstance(season, Mapping) and "enum" in season:
+        ev = season["enum"]
+        if not (isinstance(ev, (list, tuple)) and ev and all(isinstance(x, str) and x for x in ev)):
+            _emit(report, "settings", "time_cycle.season.enum", "V1b",
+                  rule="season_enum_invalid", got=ev,
+                  msg="季节枚举要填非空字符串数组（如 [\"spring\",\"summer\",\"autumn\",\"winter\"]）")
+        elif len(ev) == 1:
+            _emit(report, "settings", "time_cycle.season.enum", "Y1",
+                  rule="season_enum_singleton", got=ev,
+                  msg="季节枚举只有 1 种（恒定无季节轮换）——只提示，如需固定季节可忽略")
+
     # V2 时段分钟 ≥30 整数
     period = tc.get("period")
     if isinstance(period, Mapping) and "period_minutes" in period:
@@ -50,6 +62,18 @@ def validate_time_cycle(settings: Mapping[str, object], report: object) -> None:
             _emit(report, "settings", "time_cycle.period.period_minutes", "V2",
                   rule="period_minutes_min", minimum=30, got=v,
                   msg="时段分钟要填整数，最少 30 分钟")
+
+    # V2b 枚举开放可配（用户拍板 2026-08-26 / 时间天气定稿 L44）：period.enum 非空 string[] 硬拦
+    if isinstance(period, Mapping) and "enum" in period:
+        ev = period["enum"]
+        if not (isinstance(ev, (list, tuple)) and ev and all(isinstance(x, str) and x for x in ev)):
+            _emit(report, "settings", "time_cycle.period.enum", "V2b",
+                  rule="period_enum_invalid", got=ev,
+                  msg="时段枚举要填非空字符串数组（如 [\"dawn\",\"noon\",\"dusk\",\"night\",\"midnight\"]）")
+        elif len(ev) == 1:
+            _emit(report, "settings", "time_cycle.period.enum", "Y2",
+                  rule="period_enum_singleton", got=ev,
+                  msg="时段枚举只有 1 种（恒定无时段轮换）——只提示，如需固定时段可忽略")
 
     # V3 天气分钟 ≥30 整数
     weather = tc.get("weather")
@@ -140,3 +164,25 @@ def validate_weather_pool(cfg: Mapping[str, object], report: object) -> None:
         if not isinstance(name, str) or not name:
             _emit(report, "settings", field, "V4", rule="pool_name_missing", key=key,
                   msg=f"天气『{label}』缺中文名 name")
+
+
+def _emit(report: object, module: str, field: str, kind: str, **detail: object) -> None:
+    """向 report 追加一条红拦：优先 _err(module, field, kind, **detail)；否则 `.errors` 列表 append dict。
+
+    兼容三种收集器形态：① 带 `_err` 方法（content/validator.py `_Checker` 同签名）；
+    ② 带 `.errors` 列表属性；③ 带 `errors` 键的 Mapping（如 {"errors": []}）。"""
+    if report is None:
+        return
+    err = getattr(report, "_err", None)
+    if callable(err):
+        err(module, field, kind, **detail)
+        return
+    errors = getattr(report, "errors", None)
+    if isinstance(errors, list):
+        errors.append({"module": module, "field": field, "kind": kind, "detail": dict(detail)})
+        return
+    if isinstance(report, Mapping):
+        errors = report.get("errors")
+        if isinstance(errors, list):
+            errors.append({"module": module, "field": field, "kind": kind, "detail": dict(detail)})
+

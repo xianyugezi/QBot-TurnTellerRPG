@@ -109,27 +109,27 @@ class TestPrepareResumeBattle:
 
     def test_pv_half_value_floor_odd(self) -> None:
         """PV 半值向下取整（2a2 §2.1：floor(pv_max × pv_recover)，奇数/普通/缺省）。"""
-        out = prepare_resume_battle({"caught": True}, {"pv_max": 300})
-        assert out["pv_half_value"] == 150            # 1 BOSS 300 → 150
-        out2 = prepare_resume_battle({"caught": True}, {"pv_max": 201})
-        assert out2["pv_half_value"] == 100           # 2 奇数 201 → 100（向下取整验证）
-        out3 = prepare_resume_battle({"caught": True}, {"pv_max": 15})
-        assert out3["pv_half_value"] == 7             # 3 普通怪 15 → 7
+        out = prepare_resume_battle({"caught": True}, {"pv_max": 300, "pv": 0})
+        assert out["pv_half_value"] == 150            # 1 BOSS 300 破防 → 150
+        out2 = prepare_resume_battle({"caught": True}, {"pv_max": 201, "pv": 0})
+        assert out2["pv_half_value"] == 100           # 2 奇数 201 破防 → 100（向下取整验证）
+        out3 = prepare_resume_battle({"caught": True}, {"pv_max": 15, "pv": 0})
+        assert out3["pv_half_value"] == 7             # 3 普通怪 15 破防 → 7
         out4 = prepare_resume_battle({"caught": True}, {})
         assert out4["pv_half_value"] == 0             # 4 无 PV 源 → 0
 
     def test_pv_recover_source(self) -> None:
         """恢复比例取源：chase_ctx.pv_recover > zone_change.pv_recover > 缺省 0.5。"""
-        out = prepare_resume_battle({"caught": True, "pv_recover": 0.25}, {"pv_max": 300})
+        out = prepare_resume_battle({"caught": True, "pv_recover": 0.25}, {"pv_max": 300, "pv": 0})
         assert out["pv_half_value"] == 75             # 1 floor(300×0.25)=75
         out2 = prepare_resume_battle(
-            {"caught": True, "zone_change": {"pv_recover": 0.4}}, {"pv_max": 300})
-        assert out2["pv_half_value"] == 120           # 2 floor(300×0.4)=120
+            {"caught": True, "zone_change": {"pv_recover": 0.4}}, {"pv_max": 300, "pv": 0})
+        assert out2["pv_half_value"] == 120           # 2 破防：0+floor(300×0.4)=120
         out3 = prepare_resume_battle({"caught": True, "pv_recover": "bad"}, {"pv_max": 300})
         assert out3["pv_recover"] == 0.5              # 3 非法恢复比 → 缺省
 
     def test_continue_data_precedence(self) -> None:
-        """PV 满值源优先级：路O continue_data（on_chase_continue）> 顶层键 > enemy_state 推算。"""
+        """PV 值源优先级：路O continue_data（on_chase_continue）> 顶层键 > enemy_state 推算（缺失量口径）。"""
         out = prepare_resume_battle(
             {"caught": True, "continue_data": {"pv_half_value": 160, "pv_recover": 0.25}},
             {"pv_max": 300},
@@ -139,7 +139,7 @@ class TestPrepareResumeBattle:
         out2 = prepare_resume_battle({"caught": True, "pv_half_value": 130}, {"pv_max": 300})
         assert out2["pv_half_value"] == 130           # 3 顶层键次优先
         out3 = prepare_resume_battle({"caught": True}, {"pv": 240, "max_pv": 250})
-        assert out3["pv_half_value"] == 125           # 4 max_pv=250 → floor(250×0.5)=125
+        assert out3["pv_half_value"] == 245           # 4 缺失量口径：240+floor(10×0.5)=245（未破防回升）
 
     def test_battle_snapshot_passthrough_ai_state(self) -> None:
         """战斗快照续接（1g4 战斗会话，m3 §4.4）：battle_state 透传，ai_state/combo_state 保留。"""

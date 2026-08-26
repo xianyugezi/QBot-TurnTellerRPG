@@ -274,7 +274,7 @@ class TestOnChaseContinue:
     """追到续战准备（M6 追到 → S4 决战；2a2 R9/R12-R13/R19-R20，实际战斗接线批次 6）。"""
 
     def test_markers_and_pv_half_value(self) -> None:
-        flow = _flow()  # ember_drake pv=300，zone_change.pv_recover 缺省 → 0.5
+        flow = _flow(session={"boss_state": {"pv": 0}})  # 破防场景（缺失量口径：0 + floor(300×0.5)=150）
         out = flow.on_chase_continue()
         assert out["resume"] is True                 # 1 续战标记
         assert out["hp_keep"] is True                # 2 残血保持（不重置不回血）
@@ -284,13 +284,18 @@ class TestOnChaseContinue:
 
     def test_pv_half_value_floor_odd(self) -> None:
         boss = _ember_drake(pv=201)
-        out = _flow(boss=boss).on_chase_continue()
-        assert out["pv_half_value"] == 100           # 1 floor(201×0.5) 向下取整
+        out = _flow(boss=boss, session={"boss_state": {"pv": 0}}).on_chase_continue()
+        assert out["pv_half_value"] == 100           # 1 破防：0 + floor(201×0.5) 向下取整
 
     def test_pv_half_value_custom_recover(self) -> None:
         boss = _ember_drake(zone_change=dict(EMBER_ZONE_CHANGE, pv_recover=0.25))
-        out = _flow(boss=boss).on_chase_continue()
-        assert out["pv_half_value"] == 75            # 1 floor(300×0.25) 可配恢复比例
+        out = _flow(boss=boss, session={"boss_state": {"pv": 0}}).on_chase_continue()
+        assert out["pv_half_value"] == 75            # 1 破防：0 + floor(300×0.25) 可配恢复比例
+
+    def test_pv_half_value_missing_amount_unbroken(self) -> None:
+        """缺失量口径（用户拍板 2026-08-26）：未破防 250/300 换区 → 补缺口一半 = 275（回升）。"""
+        out = _flow(session={"boss_state": {"pv": 250}}).on_chase_continue()
+        assert out["pv_half_value"] == 275            # 250 + floor(50×0.5)
 
     def test_boss_state_hp_passthrough(self) -> None:
         session = {"boss_state": {"hp": 375, "max_hp": 1500}}

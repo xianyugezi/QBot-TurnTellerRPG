@@ -152,7 +152,7 @@ class MapDef(BaseDef):
     @property
     def spawn(self) -> Tuple[Mapping[str, object], ...]:
         """怪物分布原始行（引用 enemies.json；BOSS 房可空，contract §2.1）。"""
-        return self._entries("spawn")
+        return self._entries("monsters")
 
     def spawn_defs(self) -> Tuple[SpawnDef, ...]:
         """spawn 行 → SpawnDef 元组（带行序号 index）。"""
@@ -212,14 +212,16 @@ def parse_maps(modules: Mapping[str, object]) -> Tuple[MapDef, ...]:
 
 
 def _emit(report: object, method: str, *args: object, **kwargs: object) -> None:
-    """收集器鸭子类型适配：优先 report.<method>，其次 validator._Checker 的 _<method>（_err/_warn）。
+    """收集器鸭子类型适配：优先 report.<method>，其次 validator._Checker 的 _<method>。
 
-    主 agent 收口时可直接传 _Checker 实例（其 _err(module, field, kind, **detail) 签名与本函数一致），
-    或传自定义收集器（暴露 error/warning）。零依赖，不 import validator。
+    M3 审查 P0-1 修复（2026-08-26）：_Checker 方法名是 _err/_warn/_note（非 _error/_warning），
+    加显式映射避免生产路径静默丢弃（此前 `_emit(report, "error", ...)` 找不到 callable 全丢弃，
+    maps 深校验在生产 check_pack 空转）。零依赖，不 import validator。
     """
+    _MAP = {"error": "_err", "warning": "_warn", "note": "_note"}
     fn = getattr(report, method, None)
     if not callable(fn):
-        fn = getattr(report, "_" + method, None)
+        fn = getattr(report, _MAP.get(method, "_" + method), None)
     if callable(fn):
         fn(*args, **kwargs)
 
@@ -333,7 +335,7 @@ def _check_spawn(
     enemy_refs: Optional[set],
 ) -> None:
     """spawn 校验（契约 §2.3 + 2a1b R24-R26）。"""
-    spawn = entry.get("spawn")
+    spawn = entry.get("monsters")
     if spawn is None:
         return  # 可有（BOSS 房/纯机关区可空，contract §2.1）
     if not isinstance(spawn, list):

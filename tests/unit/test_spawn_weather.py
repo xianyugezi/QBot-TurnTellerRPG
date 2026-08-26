@@ -293,7 +293,7 @@ def test_filter_eligible_accepts_spawndef() -> None:
     # SpawnDef 形态（map_models）与 raw dict 同语义
     maps = parse_maps({"maps": [{
         "id": "m1", "name": "M1",
-        "spawn": [
+        "monsters": [
             {"enemy": "X", "count": 2, "respawn_minutes": 10, "seasons": ["winter"]},
             {"enemy": "Y", "count": 2, "respawn_minutes": 10},
         ],
@@ -308,7 +308,7 @@ def test_filter_eligible_accepts_spawndef() -> None:
 # ---------------------------------------------------------------------------
 _MAP_RAW = {
     "id": "molten_corridor", "name": "熔岩走廊",
-    "spawn": [
+    "monsters": [
         {"enemy": "幽灵", "count": 5, "respawn_minutes": 10,
          "seasons": ["autumn"], "periods": ["night"],
          "weather_weights": {"fog": 2.0, "storm": 0}},
@@ -316,7 +316,7 @@ _MAP_RAW = {
     ],
     "gate_guard": "熔岩守卫",
 }
-_MAP_NO_GUARD = {"id": "molten_core", "name": "熔岩核心", "spawn": []}
+_MAP_NO_GUARD = {"id": "molten_core", "name": "熔岩核心", "monsters": []}
 
 
 class _FakeSpawnManager:

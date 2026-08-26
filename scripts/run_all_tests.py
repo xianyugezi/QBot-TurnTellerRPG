@@ -5,11 +5,15 @@
 四门禁（M0~M3）+ M4 门禁 + 全量回归；端到端冒烟入 L4 e2e 层）。
 
 模式：
-  无参           全量回归（M0~M4 已实现门禁；M5/M6 标记未实现，进阶段后接入）
+  无参           全量回归（M0~M5 已实现门禁；M6 标记未实现，进阶段后接入）
   --only m0      只跑 verify_m0.py（里程碑过滤）
   --only unit    只跑 unit 单测
   --fast         冒烟模式（跳过抽查/抽样收缩）
 退出码 0 = 全绿。
+
+静态检查声明（M5-11 登记表配套）：全仓渲染输出 emoji 扫描由
+tests/unit/test_emoji_discipline.py 承担（位于 L1 unit 层，随全量与 --only unit 执行；
+verify_m5 于 M5-12 接入后仍保留该测试）。允许集合见 docs/全局图标登记表.md。
 """
 from __future__ import annotations
 
@@ -25,15 +29,16 @@ VERIFY_M1 = REPO / "verify" / "verify_m1.py"
 VERIFY_M2 = REPO / "verify" / "verify_m2.py"
 VERIFY_M3 = REPO / "verify" / "verify_m3.py"
 VERIFY_M4 = REPO / "verify" / "verify_m4.py"
+VERIFY_M5 = REPO / "verify" / "verify_m5.py"
 
-# 里程碑 → verify 脚本（M5/M6 尚未实现，置 None 标记）
+# 里程碑 → verify 脚本（M6 尚未实现，置 None 标记）
 MILESTONES: dict[str, Path | None] = {
     "m0": VERIFY_M0,
     "m1": VERIFY_M1,
     "m2": VERIFY_M2,  # M2 怪物体系（1e/1f/1g4）
     "m3": VERIFY_M3,  # M3 地图副本时间（2a 系）
     "m4": VERIFY_M4,  # M4 指令系统（2b/4f/3c/3d，m4_shared_contract §5）
-    "m5": None,  # M5 生活生产（2c 系）
+    "m5": VERIFY_M5,  # M5 消息模板与渲染层（3d/5e/4f，m5_shared_contract §六，verify_m5）
     "m6": None,  # M6 数据框架（5a/5b/4c/4d/4e/6 系）
 }
 LAYER_PATHS = {
@@ -79,11 +84,13 @@ def main() -> int:
         print(f"运行 {only} 层 ...")
         fail = _pytest(LAYER_PATHS[only], report=True) != 0
     else:
-        # 全量：L1~L4 + 已实现里程碑 verify（M0~M4）+ 覆盖率提示
+        # 全量：L1~L4 + 已实现里程碑 verify（M0~M5）+ 覆盖率提示
         print("\n[阶段 1] 金字塔单测（L1 unit / L3 contract / L4 e2e）")
         for name, paths in LAYER_PATHS.items():
             if _pytest(paths) != 0:
                 fail = True
+        # M5-11：emoji 静态检查由 tests/unit/test_emoji_discipline.py 承担（见模块 docstring）
+        print("  [静态检查] emoji 扫描由 tests/unit/test_emoji_discipline.py 承担（M5-11 登记表配套，docs/全局图标登记表.md）")
         print("\n[阶段 2] 里程碑 verify")
         for key, script in MILESTONES.items():
             if script is None:

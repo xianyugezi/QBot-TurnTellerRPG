@@ -101,3 +101,36 @@ def test_fixtures_no_emoji_icon():
             if _EMOJI.match(ch):
                 bad.append((str(f.relative_to(fixtures)), ch))
     assert not bad, f"fixture 含 emoji icon：{bad[:10]}"
+
+
+def test_registry_allowed_markers():
+    """登记表（M5-11 docs/全局图标登记表.md）：唯二功能性标记 = ✅/❌，白名单禁止意外扩宽。
+
+    与扫描实现 `_ALLOWED` 一致性断言——新增 emoji 出口必须同步登记表，反之亦然。
+    """
+    assert _ALLOWED == {"\u2705", "\u274c"}
+
+
+def test_strip_icon_emoji_registry_contract():
+    """登记表数据 icon 渲染剥离规则（§二）：strip_icon_emoji 行为与登记表声明一致。
+
+    - 保留 ✅/❌ 功能性标记 + 排版符号（| → × / 「」【】）+ CJK/ASCII 文本符号
+    - 剥离禁用 emoji（数据 icon 字段渲染出口一律降级纯文本）
+    - 非字符串入参容错（None → 空串）
+    """
+    from qbot_rpg.data.emoji_sanitize import strip_icon_emoji
+
+    # 功能性标记保留
+    assert strip_icon_emoji("✅ 成功") == "✅ 成功"
+    assert strip_icon_emoji("❌ 失败") == "❌ 失败"
+    # 排版符号 + 文本符号保留
+    assert (
+        strip_icon_emoji("剑 | 盾 → 结算 × 2 / 「精钢」【史诗】")
+        == "剑 | 盾 → 结算 × 2 / 「精钢」【史诗】"
+    )
+    # 禁用 emoji 剥离（数据 icon 降级纯文本，保文本/CJK）
+    assert strip_icon_emoji("🔥 火焰") == " 火焰"
+    assert strip_icon_emoji("⚔️ 剑") == " 剑"
+    assert strip_icon_emoji("💰 钱袋") == " 钱袋"
+    # 非字符串容错
+    assert strip_icon_emoji(None) == ""

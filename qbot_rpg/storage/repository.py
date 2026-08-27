@@ -66,6 +66,18 @@ from qbot_rpg.storage.pending import (
 
 _logger = get_logger("storage.repository")
 
+
+def _is_write_blocking_error(exc: sqlite3.OperationalError) -> bool:
+    """IO 类写阻断错误判定（M6 批5A P2-1 修复）：SQLITE_FULL=13 / SQLITE_IOERR=10 /
+    SQLITE_CANTOPEN=14 / SQLITE_READONLY=8 或消息含 disk/full/IO 字样 → 转写 pending；
+    SQLITE_BUSY 等非盘满错误原样上抛（不污染 pending、不误报磁盘人话）。"""
+    code = getattr(exc, "sqlite_errorcode", None)
+    if code in (13, 10, 14, 8):  # FULL / IOERR / CANTOPEN / READONLY
+        return True
+    msg = str(exc).lower()
+    return any(k in msg for k in ("disk", "database or disk is full", "i/o error",
+                                  "io error", "readonly", "unable to open"))
+
 # 世界状态字段 → world_state.key（4a §1.3 / §0.1；常驻不回收）
 WORLD_STATE_FIELDS: Tuple[str, ...] = (
     "map_boss",
@@ -473,6 +485,11 @@ class Repository:
             # P1-1 修复（M6 批5A 审查）：真实磁盘满经 sqlite3 抛 OperationalError
             #（SQLITE_FULL "database or disk is full"）非 OSError 子类——原只捕 OSError
             # 使 .pending 兜底在生产主触发场景失效（测试 mock OSError 掩盖错配）。
+            # P2-1 修复：OperationalError 过滤——仅 IO 类（FULL/IOERR/CANTOPEN/READONLY/
+            # 消息含 disk/full）转写 pending；SQLITE_BUSY 等非盘满错误原样上抛（不污染
+            # pending、不误报磁盘人话、不掩盖编程错误）。
+            if isinstance(exc, sqlite3.OperationalError) and not _is_write_blocking_error(exc):
+                raise
             await self._transcribe_pending(ACTION_PLAYER_UPSERT, player_to_row(player),
                                            player.qid)
             raise StorageError(f"{SAVE_FAILURE_MESSAGE}（{exc}）") from exc
@@ -482,25 +499,40 @@ class Repository:
         """RW-4 磁盘恢复后重放 `.pending` 回主库（FLT-15 / 4a TC-09）。
 
         启动 bootstrap + 定时检测的触发入口（批次6/7 装配在启动与 apscheduler 节拍调用）：
+        - **P1-1 修复（M6 批5A dsh 审查）**：先 `os.replace(path, path.replay)` 原子切分——
+          重放事务窗口内新写入的 pending 条目落新原路径文件，天然隔离；重放 .replay
+          文件成功后删除之；失败保留（原路径新条目不受影响、.replay 条目不丢）
         - 逐条按 action 重放回主库（**单事务**，任一条失败 → 整体 ROLLBACK）
-        - 全部成功 → 清空 `.pending.jsonl`；失败 → 保留条目不丢（下次重放幂等安全）
+        - 全部成功 → 删除 `.pending.jsonl.replay`；失败 → 保留条目不丢（下次重放幂等安全）
         - 返回成功重放条数；未配置 pending 或空队列 → 0
         """
         q = self.pending
-        if q is None:
+        if q is None or not q.exists():
             return 0
-        entries = await q.read_all()
+        replay_path = Path(str(q.path) + ".replay")
+        try:
+            os.replace(q.path, replay_path)  # 原子切分：重放窗口与新 append 隔离
+        except OSError:
+            _logger.exception("pending 切分失败，跳过本次重放（条目仍在原文件）")
+            return 0
+        tmp = PendingQueue(q.data_dir)
+        tmp._path = replay_path
+        entries = await tmp.read_all()
         if not entries:
+            await tmp.clear()
             return 0
         try:
             async with self.tx() as tx:
                 for entry in entries:
                     await self._apply_pending_entry(tx, entry)
         except Exception:
-            # 单事务整体回滚 → 文件保留，条目不丢（FLT-15「重放失败保留条目不丢」）
-            _logger.exception("pending 重放失败，条目不丢（保留 .pending.jsonl，下次重放）")
+            # 单事务整体回滚 → .replay 文件保留，条目不丢（FLT-15「重放失败保留」）
+            _logger.exception("pending 重放失败，条目不丢（保留 .pending.jsonl.replay，下次重放）")
             return 0
-        await q.clear()
+        try:
+            await tmp.clear()  # 删除 .replay（P2-2 兜底：unlink 失败写空文件）
+        except OSError:
+            _logger.warning("pending .replay 清理失败（条目已重放，残留不影响）")
         return len(entries)
 
     async def _apply_pending_entry(self, tx: "RepoTransaction", entry: PendingEntry) -> None:

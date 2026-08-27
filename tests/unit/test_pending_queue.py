@@ -100,3 +100,62 @@ async def test_save_player_catches_operational_error(tmp_path):
     entries = await repo.pending.read_all()
     assert len(entries) == 1 and entries[0].player_qid == "10001"
     await repo.close()
+
+
+@pytest.mark.asyncio
+async def test_replay_success_clears_and_keeps_new_appends(tmp_path):
+    """P1-1/FLT-15：重放成功 → .replay 删除；重放后新 append 落原文件不受影响（窗口隔离）。"""
+    db = Database(str(tmp_path / "t.db"))
+    repo = Repository(db, pending_dir=str(tmp_path))
+    await repo.save_player(make_player("20001"))
+    orig_commit = repo.db._commit  # 保存原方法（恢复用，勿置 None——会破坏生产路径）
+
+    async def boom_commit(conn) -> None:  # type: ignore[no-untyped-def]
+        raise sqlite3.OperationalError("database or disk is full")
+
+    repo.db._commit = boom_commit
+    try:
+        with pytest.raises(StorageError):
+            await repo.save_player(make_player("10001"))
+    finally:
+        repo.db._commit = orig_commit
+
+    # 重放（恢复原 commit）
+    n = await repo.replay_pending()
+    assert n == 1
+    assert not (tmp_path / ".pending.jsonl.replay").exists()  # .replay 已删
+    assert await repo.load_player("10001") is not None       # 已回主库
+    # 重放后新 append 原文件（隔离窗口语义：新条目不受 .replay 清理影响）
+    repo.db._commit = boom_commit
+    try:
+        with pytest.raises(StorageError):
+            await repo.save_player(make_player("10003"))
+    finally:
+        repo.db._commit = orig_commit
+    assert (tmp_path / ".pending.jsonl").exists()
+    entries = await repo.pending.read_all()
+    assert [e.player_qid for e in entries] == ["10003"]  # 只剩新条目
+    await repo.close()
+
+
+@pytest.mark.asyncio
+async def test_replay_failure_keeps_replay_file(tmp_path):
+    """FLT-15 负路径：重放事务失败 → 返回 0 + .replay 保留（条目不丢）。"""
+    db = Database(str(tmp_path / "t.db"))
+    repo = Repository(db, pending_dir=str(tmp_path))
+    await repo.save_player(make_player("20001"))
+    q = repo.pending
+    assert q is not None
+    await q.append(PendingEntry(player_qid="10001", action=ACTION_PLAYER_UPSERT,
+                                row_payload={"player_qid": "10001", "nickname": "X", "level": 1},
+                                created_at="2026-08-27T12:00:00Z"))
+    # 注入重放失败：_apply_pending_entry 抛错（模拟主库仍不可写）
+    async def boom_apply(tx, entry):  # type: ignore[no-untyped-def]
+        raise sqlite3.OperationalError("database or disk is full")
+
+    repo._apply_pending_entry = boom_apply  # 实例遮蔽
+    n = await repo.replay_pending()
+    assert n == 0
+    assert (tmp_path / ".pending.jsonl.replay").exists()  # 条目不丢
+    assert not (tmp_path / ".pending.jsonl").exists()     # 已切分（原文件为空）
+    await repo.close()

@@ -172,8 +172,11 @@ class PendingQueue:
                 # P2-2 修复（M6 批5A 审查）：校验 row_payload 为含 player_qid 的非空 dict
                 # ——残缺合法 JSON（payload 空/缺失 qid）跳过保留，防重放默认值覆盖真实玩家
                 payload_ok = isinstance(payload, dict) and bool(payload.get("player_qid"))
+                # P2-7 修复（M6 批5A dsh 审查）：条目 qid 与 payload qid 一致性校验
+                # （不一致的篡改行按坏条目跳过，防 delete_session 删错会话）
+                qid_consistent = payload_ok and str(payload.get("player_qid")) == str(entry.player_qid)
                 if (not entry.player_qid or entry.action not in VALID_ACTIONS
-                        or not payload_ok):
+                        or not qid_consistent):
                     _logger.warning("pending 第 %s 行字段非法跳过（保留原文件）：%r", line_no, entry)
                     continue
                 entries.append(entry)

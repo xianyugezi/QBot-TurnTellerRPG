@@ -236,8 +236,9 @@ def test_end_one_message_with_summary_block() -> None:
 
 
 def test_battle_end_flow_summary_and_drops() -> None:
-    """/攻击 击杀弱怪：结束流程 ≤2 条——当轮消息（击杀+胜利+掉落 BREP-20，军规5 一次性）
-    + 结束汇总 1 条（BREP-24）；掉落只在结束流程输出一次。"""
+    """/攻击 击杀弱怪：结束流程 ≤2 条——当轮消息（行动+击杀 BREP-15）+ 结束消息
+    1 条（BREP-17 胜利 + BREP-20 掉落 + BREP-24 汇总，M5 裁决 P1-1 方案 A：同一消息
+    含胜利+掉落+汇总，满足 5e TC-18）；掉落只在结束消息输出一次（军规5）。"""
     sender = RecordingSender()
     eng = start_battle(enemy=WEAK_ENEMY, seed=7)
     rewards = {"exp": 100, "gold": 50, "drops": [("史莱姆粘液", 2)]}
@@ -248,8 +249,9 @@ def test_battle_end_flow_summary_and_drops() -> None:
     assert len(sender.calls) == 2                     # 当轮 1 条 + 结束 1 条（≤2 条，铁律 2）
     round_msg, end_msg = sender.calls
     assert "✅ 你击败了史莱姆！" in round_msg          # BREP-15 击杀紧跟伤害行
-    assert "✅ 战斗胜利！" in round_msg                # BREP-17
-    assert "✅ 获得 经验 100、金币 50、史莱姆粘液×2" in round_msg   # BREP-20 掉落（仅此一次）
+    assert "✅ 战斗胜利！" not in round_msg            # 结算已移结束消息（P1-1）
+    assert "✅ 战斗胜利！" in end_msg                  # BREP-17（结束消息同一消息含结算）
+    assert "✅ 获得 经验 100、金币 50、史莱姆粘液×2" in end_msg   # BREP-20 掉落（仅此一次）
     assert "战斗结束：胜利｜回合数 1｜输入 /战斗记录 查看明细" in end_msg   # BREP-24 汇总
     assert end_msg.split("\n")[0] == PREFIX
     _assert_no_banned_emoji(round_msg)

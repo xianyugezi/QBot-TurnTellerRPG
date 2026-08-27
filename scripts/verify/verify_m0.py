@@ -69,7 +69,10 @@ def _validate_fixtures() -> list[str]:
     任一不满足 → 抛 AssertionError（计入门禁失败）。
     """
     from qbot_rpg.content.loader import PackLoadError, load_pack
-    from tests.conftest import PACKS_DIR
+
+    # 直接用 REPO 推导 fixtures 路径（不 import tests.conftest——`tests` 包名可能被
+    # 环境内其他 regular package 抢占（如 hermes-agent/tests），包解析不稳定，P2-3 修复）
+    PACKS_DIR = REPO / "tests" / "fixtures" / "packs"
 
     notes: list[str] = []
     failures: list[str] = []

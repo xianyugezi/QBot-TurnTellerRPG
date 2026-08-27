@@ -15,6 +15,7 @@ M1 实装依据：
 """
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import Any, List, Mapping, Optional, Tuple
 
 from qbot_rpg.core.message_format.list_render import (
@@ -145,11 +146,8 @@ def render_battle_round(round_result: Any) -> str:
     if status_line:
         lines.append(status_line)
 
-    # 结算行（M5-06/07：击杀/胜负/经验掉落 BREP-15~20/24；军规5 只结算一次）
-    if getattr(round_result, "ended", False):
-        settle = _render_template("_render_settlement", round_result)
-        if settle:
-            lines.append(settle)
+    # 【M5 裁决 P1-1】结算（BREP-16~20）移入 render_battle_end（结束消息一次性输出，
+    # TC-18「同一消息含胜利+汇总+掉落」）；当轮只出行动+击杀（BREP-15），不重复结算。
 
     # BREP-09 操作提示行（M5-04 render_action_hint，5e §1.5 战报末行）
     hint = _render_action_hint_from_report(round_result)
@@ -165,25 +163,41 @@ def render_battle_end(
     enemy: Any,
     winner: str,
     summary: Optional[Any] = None,
+    *,
+    status: Optional[str] = None,
+    exp: int = 0,
+    gold: int = 0,
+    drops: Any = None,
+    enemy_name: Optional[str] = None,
 ) -> str:
-    """BREP-24/25 战斗结束汇总 + 木桩明细（5e §6.2/§6.3 / TC-25~27，铁律 11）。
+    """BREP-17~20 结算 + BREP-24/25 汇总明细（5e §6.2/§6.3 / TC-18/25~27，铁律 11）。
+
+    **M5 裁决（2026-08-27 P1-1 方案 A）**：结束消息 = 胜负横幅（BREP-17/18/19）
+    + 经验掉落（BREP-20）+ 汇总行（BREP-24）+ 木桩明细（BREP-25）——满足 5e
+    TC-18「同一消息含 `✅ 战斗胜利！` + 汇总行 + 掉落」；当轮消息只出行动+击杀
+    （BREP-15），结算统一在结束消息一次性输出（军规5，结算不重复）。
 
     BREP-24 汇总行：`战斗结束：{胜负结果}｜回合数 {N}｜输入 /战斗记录 查看明细`
     （胜负结果 = 胜利/失败/平局，winner 接受引擎 status win/lose/draw 或中文）；
     回合数 N 依次取 enemy/player/summary 的 turns|turn（接线层注入，缺省 0）。
 
-    summary 非 None 时追加 BREP-25 木桩明细块（摘要行 + 条目行 + ≤16 行折叠
-    TPL-09，铁律 11 / 3d D-03）；summary=None（普通战斗默认）→ 明细省略
-    （5e L350，TC-27）。军规5：胜负横幅/经验掉落（BREP-17~20）由
-    render_battle_round 当轮事件末尾统一结算一次（M5-06 _render_settlement），
-    本函数只输出汇总与明细，不重复结算奖励（结算一次性）。
+    status 非 None 时渲染结算块（胜负横幅 + 掉落，仅 win 结算掉落——TC-20 失败
+    无掉落）；summary 非 None 时追加 BREP-25 木桩明细块（≤16 行折叠 TPL-09）。
 
-    返回：单条消息字符串（首行前缀 + BREP-24 [+ 明细块]），明细超长自动折叠。
+    返回：单条消息字符串（首行前缀 + 结算 + 汇总 [+ 明细块]）。
     """
     lines: List[str] = []
     prefix = _render_prefix_line(player)               # 前缀首行（TC-25）
     if prefix:
         lines.append(prefix)
+    if status:
+        settle = _render_settlement(SimpleNamespace(
+            ended=True, status=status,
+            exp=exp, gold=gold, drops=drops or (),
+            enemy_name=enemy_name or (getattr(enemy, "name", "") if enemy else "") or "敌人",
+        ))
+        if settle:
+            lines.extend(settle.split("\n"))           # BREP-16~20 结算块（军规5 一次性）
     label = _winner_label(winner)                      # 胜利/失败/平局
     turns = _battle_turns(player, enemy, summary)      # 回合数 N
     lines.append(f"战斗结束：{label}｜回合数 {turns}｜输入 /战斗记录 查看明细")  # BREP-24

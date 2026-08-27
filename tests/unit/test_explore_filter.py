@@ -62,9 +62,9 @@ def make_ctx(**over):
 def test_filter_by_category():
     """/背包筛选装备 → 只显示装备（铁剑/钢剑/铁盔，acquired_at 倒序）；单页无页脚（D-02）。"""
     out = cmd_bag_filter(parse("/背包筛选装备"), make_ctx())
-    assert "1. 铁剑（精良）" in out
-    assert "2. 钢剑（史诗）" in out
-    assert "3. 铁盔" in out
+    assert "1.[铁剑]×1（精良）" in out
+    assert "2.[钢剑]×1（史诗）" in out
+    assert "3.[铁盔]×1" in out
     assert "药水" not in out and "铁矿" not in out and "任务印章" not in out
     assert "页脚" not in out and "—" not in out
 
@@ -77,33 +77,33 @@ def test_filter_many_pages():
                            "type": "weapon", "quality": "fine"} for i in range(7)}
     ctx = make_ctx(inventory=inv, items=items)
     out1 = cmd_bag_filter(parse("/背包筛选装备"), ctx)
-    assert "1. 剑0（精良）" in out1 and "5. 剑4（精良）" in out1
-    assert "6. 剑5" not in out1
-    assert "— 第 1/2 页 · 共 7 条 · 输入 /背包筛选 页码 翻页 —" in out1
+    assert "1.[剑0]×1（精良）" in out1 and "5.[剑4]×1（精良）" in out1
+    assert "6.[剑5]×1" not in out1
+    assert "当前页：1/2(共7条)" in out1
     out2 = cmd_bag_filter(parse("/背包筛选装备 2"), ctx)
-    assert "6. 剑5（精良）" in out2 and "7. 剑6（精良）" in out2
-    assert "— 第 2/2 页 · 共 7 条 · 输入 /背包筛选 页码 翻页 —" in out2
+    assert "6.[剑5]×1（精良）" in out2 and "7.[剑6]×1（精良）" in out2
+    assert "当前页：2/2(共7条)" in out2
 
 
 def test_filter_category_consumable():
     """/背包筛选消耗品 → 药水/高级药水。"""
     out = cmd_bag_filter(parse("/背包筛选消耗品"), make_ctx())
-    assert "1. 药水 ×3" in out
-    assert "2. 高级药水 ×2（精良）" in out
+    assert "1.[药水]×3" in out
+    assert "2.[高级药水]×2（精良）" in out
     assert "铁剑" not in out
 
 
 def test_filter_chain_subtype_and_quality():
     """筛选链叠加：/背包筛选装备 类型 武器 品质 史诗 → 钢剑。"""
     out = cmd_bag_filter(parse("/背包筛选装备 类型 武器 品质 史诗"), make_ctx())
-    assert "钢剑（史诗）" in out
+    assert "1.[钢剑]×1（史诗）" in out
     assert "铁剑" not in out and "铁盔" not in out
 
 
 def test_filter_bare_word_subtype():
     """裸词容错：/背包筛选装备 武器 → 子类=武器。"""
     out = cmd_bag_filter(parse("/背包筛选装备 武器"), make_ctx())
-    assert "铁剑（精良）" in out and "钢剑（史诗）" in out
+    assert "1.[铁剑]×1（精良）" in out and "2.[钢剑]×1（史诗）" in out
     assert "铁盔" not in out
 
 
@@ -111,7 +111,7 @@ def test_filter_page_clamp():
     """/背包筛选装备 9 超总页 → 夹取最后页 +（已到最后一页）。"""
     out = cmd_bag_filter(parse("/背包筛选装备 9"), make_ctx())
     assert "（已到最后一页）" in out
-    assert "3. 铁盔" in out
+    assert "3.[铁盔]×1" in out
 
 
 def test_filter_empty_result():

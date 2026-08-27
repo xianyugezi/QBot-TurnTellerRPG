@@ -530,12 +530,15 @@ def _row_fields(row: Any, ctx: Mapping[str, Any]) -> Mapping[str, Any]:
 
 
 def bag_line(index: int, row: Any, ctx: Mapping[str, Any]) -> str:
-    """物品行（RUL-19）：`{序号}. {图标}{名称}{×数量}{（品质）}{（绑定）}`；×1 省略、normal 品质
-    不标、绑定追加（绑定）；`×` 为展示符号（输入侧一律 `*`，铁律 1）。"""
+    """物品行（用户 2026-08-27 自定义模板）：`{序号}.[{名称}]×{数量}`。
+
+    方括号包名称（标识清晰，替代 icon 显示——M5 不用 emoji 后 icon 剥离，用户模板
+    无图标）；×数量**恒显示**（含 ×1，对齐用户模板）；非 normal 品质追加 `（精良）`
+    （4b GRD-x 注册表，RUL-19 仅非 normal 标注）；绑定追加 `（绑定）`。`×` 为展示
+    符号（输入侧一律 `*`，铁律 1）。
+    """
     f = _row_fields(row, ctx)
-    line = f"{index}. {f['icon']} {f['name']}" if f["icon"] else f"{index}. {f['name']}"
-    if f["count"] > 1:
-        line += f" ×{f['count']}"
+    line = f"{index}.[{f['name']}]×{f['count']}"
     q = QUALITY_LABELS.get(f["quality"])
     if q:
         line += f"（{q}）"
@@ -544,8 +547,46 @@ def bag_line(index: int, row: Any, ctx: Mapping[str, Any]) -> str:
     return line
 
 
+def _currency_display_name(ctx: Mapping[str, Any], key: str) -> str:
+    """货币键 → 中文名（settings currencies[].name 优先；缺省兜底 coins=金币/gem=钻石，
+    框架 §8.1 默认模板「金币 + 钻石」）。"""
+    settings = ctx.get("settings")
+    currencies = settings.get("currencies") if isinstance(settings, Mapping) else None
+    if isinstance(currencies, list):
+        for e in currencies:
+            if (isinstance(e, Mapping) and str(e.get("key", "")) == str(key)
+                    and e.get("name")):
+                return str(e["name"])
+    return {"coins": "金币", "gem": "钻石"}.get(str(key), str(key))
+
+
+def _currency_lines(ctx: Mapping[str, Any]) -> List[str]:
+    """货币行（用户模板：`金币：0` / `钻石：0`）——遍历 ctx["currencies"]（key→余额）。"""
+    cur = ctx.get("currencies")
+    if not isinstance(cur, Mapping) or not cur:
+        return []
+    return [f"{_currency_display_name(ctx, str(k))}：{v}" for k, v in cur.items()]
+
+
+# /背包 尾段（用户 2026-08-27 自定义模板：页数放尾部 + Tip）
+_BAG_TAIL_TIP = "Tip:发送'使用+物品名'即可使用物品"
+
+
+def _bag_tail_lines(page: int, total_pages: int, total: int, clamped: bool,
+                    ctx: Mapping[str, Any]) -> List[str]:
+    """/背包 尾段：货币行 + `当前页：{page}/{total_pages}(共{total}条)` + 夹取提示 + Tip。"""
+    lines: List[str] = []
+    lines.extend(_currency_lines(ctx))
+    lines.append(f"当前页：{page}/{total_pages}(共{total}条)")
+    if clamped:
+        lines.append("（已到最后一页）")
+    lines.append(_BAG_TAIL_TIP)
+    return lines
+
+
 def _render_bag_page(ctx: Mapping[str, Any], page: int) -> str:
-    """/背包 正文：物品行 5 条/页 + TPL-08 + 裁决② 夹取；空背包 → TPL_EMPTY_BAG。"""
+    """/背包 正文（用户自定义模板）：物品行 5 条/页 `{序号}.[{名称}]×{数量}` + 货币行
+    + 当前页 + Tip；裁决② 夹取；空背包 → TPL_EMPTY_BAG。"""
     rows = _inventory_rows(ctx)
     if not rows:
         return TPL_EMPTY_BAG
@@ -558,11 +599,7 @@ def _render_bag_page(ctx: Mapping[str, Any], page: int) -> str:
     start = (res.page - 1) * DEFAULT_PAGE_SIZE
     slice_rows = rows[start:start + DEFAULT_PAGE_SIZE]
     lines: List[str] = [bag_line(start + i + 1, r, ctx) for i, r in enumerate(slice_rows)]
-    if res.clamped:
-        lines.append(LAST_PAGE_HINT)
-    footer = render_footer(res.page, res.total_pages, res.total, BAG_CMD)
-    if footer:
-        lines.append(footer)
+    lines.extend(_bag_tail_lines(res.page, res.total_pages, res.total, res.clamped, ctx))
     return "\n".join(lines)
 
 
@@ -717,7 +754,7 @@ def _filter_inventory_rows(rows: Sequence[Any], ctx: Mapping[str, Any],
 
 def _render_rows_page(ctx: Mapping[str, Any], rows: Sequence[Any], cmd: str,
                       page: int) -> str:
-    """通用列表分页渲染（5 条/页 + TPL-08 + 裁决② 夹取；空 → TPL_EMPTY_BAG）。"""
+    """通用列表分页渲染（5 条/页 + 用户 /背包 尾段：货币/当前页/Tip + 裁决② 夹取；空 → TPL_EMPTY_BAG）。"""
     if not rows:
         return TPL_EMPTY_BAG
     res = resolve_page(page, len(rows), DEFAULT_PAGE_SIZE)
@@ -729,11 +766,7 @@ def _render_rows_page(ctx: Mapping[str, Any], rows: Sequence[Any], cmd: str,
     start = (res.page - 1) * DEFAULT_PAGE_SIZE
     slice_rows = rows[start:start + DEFAULT_PAGE_SIZE]
     lines: List[str] = [bag_line(start + i + 1, r, ctx) for i, r in enumerate(slice_rows)]
-    if res.clamped:
-        lines.append(LAST_PAGE_HINT)
-    footer = render_footer(res.page, res.total_pages, res.total, cmd)
-    if footer:
-        lines.append(footer)
+    lines.extend(_bag_tail_lines(res.page, res.total_pages, res.total, res.clamped, ctx))
     return "\n".join(lines)
 
 

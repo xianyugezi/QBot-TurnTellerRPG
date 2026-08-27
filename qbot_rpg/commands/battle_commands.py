@@ -581,14 +581,21 @@ class BattlePipeline:
         return self.send(render_battle_round(report), to=to)
 
     def send_end(self, player: Any, enemy: Any, winner: str, *,
-                 summary: Any = None, to: Any = None) -> List[str]:
-        """战斗结束独立 1 条（BREP-24 汇总 + 可选 BREP-25 明细；TC-25，铁律 11）。
+                 summary: Any = None, to: Any = None,
+                 status: Optional[str] = None, exp: int = 0, gold: int = 0,
+                 drops: Any = None, enemy_name: Optional[str] = None) -> List[str]:
+        """战斗结束独立 1 条（BREP-17~20 结算 + BREP-24 汇总 + 可选 BREP-25 明细；
+        TC-18/TC-25，铁律 11）。
 
-        军规5：胜负横幅/经验掉落由当轮 render_battle_round 结算一次（_render_settlement），
-        本出口只输出汇总与明细，不重复结算奖励（结算一次性）。
+        **M5 裁决（P1-1 方案 A）**：结束消息 = 胜负横幅 + 经验掉落（BREP-17~20，
+        军规5 只输出一次）+ 汇总行（BREP-24）+ 木桩明细（BREP-25）——满足 5e
+        TC-18「同一消息含 `✅ 战斗胜利！` + 汇总行 + 掉落」；当轮消息只出行动+击杀。
+        status 非 None 才渲染结算块（status/exp/gold/drops 由接线层注入）。
         """
         body = render_battle_end(
             _prefix_free_ns(player), _enemy_ns(enemy), winner, summary=summary,
+            status=status, exp=exp, gold=gold, drops=drops,
+            enemy_name=enemy_name or (getattr(enemy, "name", "") if enemy else None),
         )
         return self.send(body, to=to)
 
@@ -687,6 +694,10 @@ def dispatch_round(
                 _enemy_ns(e, turn=report.turn),
                 winner,
                 summary=ctx.get("battle_summary"),
+                status=report.status,
+                exp=reward["exp"],
+                gold=reward["gold"],
+                drops=reward["drops"],
             )
         )
     return delivered

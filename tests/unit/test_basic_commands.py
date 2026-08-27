@@ -256,25 +256,26 @@ def test_attr_line_pure():
 def test_bag_page1_rows_and_footer():
     """/背包 → 第 1 页 5 行（acquired_at 倒序）+ 行格式（图标/×数量/品质/绑定）+ TPL-08 页脚。"""
     out = cmd_bag(parse("/背包"), make_ctx())
-    assert out.splitlines()[0] == "1. 疗伤药 ×5"          # 10:00 最新在前；×数量（icon 剥离 emoji）
-    assert "2. 粗布" in out                                   # ×1 省略 + 无图标
-    assert "3. ◈ 铁矿 ×20" in out                             # ×数量
-    assert "4. 任务信物（绑定）" in out                      # 绑定标签
-    assert "5. 铁剑（精良）" in out                          # 品质（非 normal 标注）
-    assert "— 第 1/2 页 · 共 6 条 · 输入 /背包 页码 翻页 —" in out
+    assert out.splitlines()[0] == "1.[疗伤药]×5"          # 10:00 最新在前；[名称]×数量（用户模板）
+    assert "2.[粗布]×1" in out                                # ×1 恒显示（用户模板）
+    assert "3.[铁矿]×20" in out                               # ×数量（icon 剥离，方括号）
+    assert "4.[任务信物]×1（绑定）" in out                    # 绑定标签
+    assert "5.[铁剑]×1（精良）" in out                        # 品质（非 normal 标注）
+    assert "当前页：1/2(共6条)" in out                        # 页数放尾部（用户模板）
+    assert "Tip:发送'使用+物品名'即可使用物品" in out
 
 
 def test_bag_page2():
     """/背包 2 → 第 2 页（最早获得的疗伤药 ×10）。"""
     out = cmd_bag(parse("/背包 2"), make_ctx())
-    assert "6. 疗伤药 ×10" in out
-    assert "— 第 2/2 页 · 共 6 条 · 输入 /背包 页码 翻页 —" in out
+    assert "6.[疗伤药]×10" in out
+    assert "当前页：2/2(共6条)" in out
 
 
 def test_bag_clamp_last_page():
     """裁决②：/背包 9 超总页数 → 夹取最后一页 + （已到最后一页）。"""
     out = cmd_bag(parse("/背包 9"), make_ctx())
-    assert "6. 疗伤药 ×10" in out
+    assert "6.[疗伤药]×10" in out
     assert "（已到最后一页）" in out
 
 
@@ -293,9 +294,9 @@ def test_bag_empty():
 def test_bag_single_page_no_footer():
     """/背包 ≤5 条 → 单页无页脚（3d D-02）。"""
     out = cmd_bag(parse("/背包"), make_ctx(inventory=_INVENTORY[:3]))
-    assert "输入 /背包 页码 翻页" not in out
+    assert "当前页：1/1(共3条)" in out                    # 单页也显示当前页（用户模板）
     # acquired_at 倒序：09:40 信物 → 09:35 铁剑 → 09:30 疗伤药
-    assert out.splitlines()[-1] == "3. 疗伤药 ×10"
+    assert out.splitlines()[-1] == "Tip:发送'使用+物品名'即可使用物品"
 
 
 def test_bag_iteminstance_dataclass_support():
@@ -306,15 +307,15 @@ def test_bag_iteminstance_dataclass_support():
         ItemInstance(item_id="iron_sword", name="铁剑", count=1, quality="fine", bound=True),
     )
     out = cmd_bag(parse("/背包"), make_ctx(inventory=list(inv)))
-    assert "1. 疗伤药 ×3" in out
-    assert "2. 铁剑（精良）（绑定）" in out
+    assert "1.[疗伤药]×3" in out
+    assert "2.[铁剑]×1（精良）（绑定）" in out
 
 
 def test_bag_line_pure():
-    """bag_line 纯函数：RUL-19 行格式边界。"""
+    """bag_line 纯函数：用户自定义模板 `{序号}.[{名称}]×{数量}` 行格式边界。"""
     ctx = make_ctx()
-    assert bag_line(1, {"item_id": "a", "name": "药", "count": 10, "quality": "normal", "bound": False}, ctx) == "1. 药 ×10"
-    assert bag_line(2, {"item_id": "b", "name": "剑", "count": 1, "quality": "epic", "bound": True}, ctx) == "2. 剑（史诗）（绑定）"
+    assert bag_line(1, {"item_id": "a", "name": "药", "count": 10, "quality": "normal", "bound": False}, ctx) == "1.[药]×10"
+    assert bag_line(2, {"item_id": "b", "name": "剑", "count": 1, "quality": "epic", "bound": True}, ctx) == "2.[剑]×1（史诗）（绑定）"
 
 
 # ---------------------------------------------------------------------------
@@ -669,10 +670,12 @@ def test_router_parse_integration():
 # ---------------------------------------------------------------------------
 
 def test_footer_tpl08_exact():
-    """/角色 /背包 /装备 /技能 /帮助 组页 页脚 TPL-08 逐字（无自造变体）。"""
+    """/角色 /装备 /技能 /帮助 组页 页脚 TPL-08 逐字（无自造变体）；/背包 走用户自定义模板
+    （当前页放尾部 + Tip，2026-08-27 用户拍板，不用 TPL-08 页脚）。"""
     ctx = make_ctx()
     assert "— 第 1/2 页 · 共 9 条 · 输入 /角色 页码 翻页 —" in cmd_view(parse("/角色"), ctx)
-    assert "— 第 1/2 页 · 共 6 条 · 输入 /背包 页码 翻页 —" in cmd_bag(parse("/背包"), ctx)
+    assert "当前页：1/2(共6条)" in cmd_bag(parse("/背包"), ctx)      # /背包 自定义模板
+    assert "Tip:发送'使用+物品名'即可使用物品" in cmd_bag(parse("/背包"), ctx)
     assert "— 第 1/2 页 · 共 6 条 · 输入 /装备 页码 翻页 —" in cmd_equip(parse("/装备"), ctx)
     assert "— 第 1/2 页 · 共 6 条 · 输入 /技能 页码 翻页 —" in cmd_skill(parse("/技能"), ctx)
     assert "— 第 1/2 页 · 共 6 条 · 输入 /帮助 冒险 页码 翻页 —" in cmd_help(parse("/帮助 冒险"), ctx)

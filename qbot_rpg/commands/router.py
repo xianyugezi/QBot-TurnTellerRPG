@@ -199,7 +199,8 @@ class Router:
     # -- 注册表 CRUD ----------------------------------------------------------
 
     def register(self, spec: CommandSpec, *, replace: bool = False) -> CommandSpec:
-        """注册指令。重名冲突 → ValueError（默认）；replace=True 允许覆盖（热重载/内容包升级）。"""
+        """注册指令。重名冲突 → ValueError（默认）；replace=True 允许覆盖
+        （预留：内容包驱动指令注册未接线，M6 WIR-18 声明——指令为代码注册）。"""
         if not isinstance(spec, CommandSpec):
             raise TypeError(f"register 需要 CommandSpec，收到 {type(spec).__name__}")
         if spec.name in self._specs and not replace:

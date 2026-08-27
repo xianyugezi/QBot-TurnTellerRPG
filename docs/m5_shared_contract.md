@@ -63,7 +63,7 @@
 | **enabled / show_on_system / per_channel 消费接线**（总开关/系统消息豁免/渠道限定，装配层） | ⬜ M5-01 接线（prefix_render 无这些参数，由调用方控制） |
 | **截断黄提示发射**（消费 `PrefixResult.truncated` →「前缀过长已截断」，归属发起群，不阻断正文；3d §3.3 / TC-13） | ⬜ M5-01 装配层 |
 | **前缀挂到玩家回复首行**（所有指令出口） | ⬜ M5 接线（装配层统一注入） |
-| message_prefix 校验器（**来源【前缀】§九 + 3d 附校验器行 L358**：硬拦 enabled 非布尔/format 非字符串/prefix_max_len 负数/结构错误；黄提示未知占位符/format 空补全/超长>80/占位符>10/per_channel 非法按 all/prefix_max_len>200） | ⬜ M5-02 接线（settings 校验器） |
+| message_prefix 校验器（**来源【前缀】§九 + 3d 附校验器行 L358**：硬拦 enabled 非布尔/format 非字符串/prefix_max_len 负数/结构错误；黄提示未知占位符/format 空补全/超长>80/占位符>10/per_channel 非法按 all/prefix_max_len>200） | ✅ 已实装（M6 D3 WIR-20 回填：validator._check_message_prefix，MP-1/MP-2 红黄规则在案） |
 
 ---
 

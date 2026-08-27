@@ -4,7 +4,8 @@
   - 细化_M6_质量门禁（D7）TC-COV-04「阈值断言」：人工喂假覆盖率数据 → 断言 exit≠0/exit 0
   - 批7A 审查 P1-1：_aggregate_cov 抽纯函数后喂假 JSON 双向验证（<80% 拦截 / ≥80% 放行 /
     零语句目录不达标 / 目录缺失）
-  - scripts/run_all_tests.py（COV_SOURCES/COV_DIRS/COV_THRESHOLD/_aggregate_cov/_write_coverage_archive）
+  - scripts/run_all_tests.py（COV_SOURCES/COV_DIRS/COV_THRESHOLD/_aggregate_cov/
+    _write_coverage_archive）
 """
 
 from __future__ import annotations
@@ -13,8 +14,6 @@ import importlib.util
 import sys
 from pathlib import Path
 
-import pytest
-
 REPO = Path(__file__).resolve().parents[2]
 RUN_ALL = REPO / "scripts" / "run_all_tests.py"
 
@@ -22,7 +21,7 @@ _spec = importlib.util.spec_from_file_location("run_all_tests_mod", RUN_ALL)
 assert _spec and _spec.loader
 _mod = importlib.util.module_from_spec(_spec)
 sys.modules["run_all_tests_mod"] = _mod
-_spec.loader.exec_module(_mod)  # type: ignore[attr-defined]
+_spec.loader.exec_module(_mod)
 
 
 def _fake_cov(core: float, engine: float, content: float, *, zero_dir: str | None = None) -> dict:

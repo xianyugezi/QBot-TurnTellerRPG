@@ -349,6 +349,11 @@ def test_invariant2_noncrit_closed_interval(
         assert lo <= found.total <= hi, (
             f"乱数端点 {endpoint} 越出真实带 [floor(基础×rng[0]), floor(基础×rng[1])]: {found}"
         )
+        # P2-4 修复（M6 批6B 审查）：端点已知 → 精确等值断言（与生产同 float 运算序，
+        # 锁「rng 乘区应用 + 末位 floor 位置」——宽带断言无法区分乱数越带与乱数未生效）
+        assert found.total == max(1, int(found.base * endpoint)), (
+            f"乱数端点 {endpoint} 应精确等于 max(1, floor(基础×rng)): {found}"
+        )
 
 def test_invariant3_crit_rate_and_tier_bounds(
     seeded_rng: Callable[..., Random], formula_params: DamageFormulaParams
@@ -430,11 +435,12 @@ def test_prp8_deterministic_regression(
 
     依据：【规则】L331；D6 PRP-8（固定种子无抖动，对齐 run_all_tests --fast 抽样
     仍可复现）。经 §2.5 派生种子形 seeded_rng(offset=N) 取两个状态相同的新实例，
-    跑同一性质管线 300 组，断言 (通道/档位/倍率/P/总伤害) 元组逐位一致。
+    跑同一性质管线 1000 组（P2-5 修复：TC-PRP-01「每函数 ≥1000」口径对齐），
+    断言 (通道/档位/倍率/P/总伤害) 元组逐位一致。
     """
-    sig_a = _property_signature(seeded_rng(offset=8), formula_params, count=300)
-    sig_b = _property_signature(seeded_rng(offset=8), formula_params, count=300)
-    assert len(sig_a) == len(sig_b) == 300
+    sig_a = _property_signature(seeded_rng(offset=8), formula_params, count=1000)
+    sig_b = _property_signature(seeded_rng(offset=8), formula_params, count=1000)
+    assert len(sig_a) == len(sig_b) == 1000
     assert sig_a == sig_b, "同 seed 两次运行输出不一致（确定性回归失败）"
 
 def _property_signature(

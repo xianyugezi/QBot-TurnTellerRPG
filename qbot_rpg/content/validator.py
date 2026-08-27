@@ -1495,12 +1495,14 @@ class _Checker:
                 # 15 条段参数红黄校验（hit 0.05-1 / cap 10-100 / tiers 低<中<高等）归
                 # 实现层规划 T01「formula.json 唯一配置源与校验器」，此处不重复实现。
             else:
-                # M6 批6·路A FIX-2（D6 FIX-1/D6 §四）：formula 模块允许顶层标量参数透传
-                # （如 monster_def_rate: 1.0 怪物防御率公式系数）——红拦仅留给明确非法
-                # 类型（list 等非公式/非对象/非标量结构）
-                if isinstance(value, (int, float, bool)):
+                # M6 批6·路A/批6B FIX-2（D6 §三 FIX-1 / §3.4 边界异常）：formula 模块允许
+                # 顶层数值标量参数透传（如 monster_def_rate: 1.0 怪物防御率公式系数）——
+                # 红拦仅留给明确非法类型（list/None 等非公式/非对象/非数值结构）。
+                # P2-2 修复（批6B 审查）：bool 排除——与全库数字语义一致（_check_number
+                # 明确 bool→R-1，避免 float(True)=1.0 在 FIX 读取器侧静默变真值）。
+                if isinstance(value, (int, float)) and not isinstance(value, bool):
                     return
-                self._err(module_name, path, "R-1", rule="type", expect="formula|obj|scalar",
+                self._err(module_name, path, "R-1", rule="type", expect="formula|obj|number",
                           got=type(value).__name__)
             return
         if vmeta.type == "obj":

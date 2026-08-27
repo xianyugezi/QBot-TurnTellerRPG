@@ -381,6 +381,34 @@ def test_formula_blacklist_hidden_in_string_ok() -> None:
     assert check_formula("'eval' + x") is None
 
 
+def test_formula_passthrough_boundaries(tmp_path: Path) -> None:
+    """M6 批6B 审查 P2-1：FIX-1/FIX-2 formula 标量/容器透传红拦边界锁定（防未来透传扩到字符串绕过安全例外）。"""
+    ok_cases = [
+        {"formula": {"monster_def_rate": 1.0, "damage_base": "atk*2"}},  # 数值标量 + 公式字符串并发
+        {"formula": {"hit": {"k": 1.0}, "crit": {"cap": 95}}},            # 段级参数容器（FIX-1 透传）
+    ]
+    for f in ok_cases:
+        p = _write_pack(tmp_path, _manifest(["formula"]), f)
+        build_pack(p)  # 不抛
+    # 非法类型 → R-1（list / bool / None；P2-2 收紧后 bool 与全库数字语义一致）
+    for bad in ({"formula": {"x": [1]}}, {"formula": {"x": True}}, {"formula": {"x": None}}):
+        p = _write_pack(tmp_path, _manifest(["formula"]), bad)
+        with pytest.raises(PackLoadError) as ei:
+            build_pack(p)
+        assert any(e.kind == "R-1" for e in ei.value.errors), f"{bad} 应红拦 R-1"
+    # formula 键非字符串 → R-5（既有语义保持）
+    p = _write_pack(tmp_path, _manifest(["formula"]), {"formula": {"x": {"formula": 123}}})
+    with pytest.raises(PackLoadError) as ei:
+        build_pack(p)
+    assert any(e.kind == "R-5" for e in ei.value.errors)
+    # 字符串路径黑名单仍红（透传未吞并 formula 安全例外）
+    p = _write_pack(tmp_path, _manifest(["formula"]), {"formula": {"mid": {"formula": "eval(1)"}}})
+    with pytest.raises(PackLoadError) as ei:
+        build_pack(p)
+    assert any(e.kind == "R-5" and e.detail.get("rule") == "formula_safety"
+               for e in ei.value.errors)
+
+
 # ===========================================================================
 # M0 复查（2026-08-24）批2 P1 修复回归
 # ===========================================================================

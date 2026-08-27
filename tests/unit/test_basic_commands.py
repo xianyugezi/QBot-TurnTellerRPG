@@ -195,12 +195,12 @@ def test_view_noarg_page1():
     lines = out.splitlines()
     assert lines[0] == "【角色】Lv3.阿伟（战士） ｜ 经验 320/1000"
     # 资源型：当前/上限
-    assert "1. 【生命】30/100" in out
-    assert "2. 【魔力】8/30" in out
+    assert "【生命】30/100" in out
+    assert "【魔力】8/30" in out
     # 简洁版：只显最终值，无三层标注
-    assert "3. 【力量】29" in out
-    assert "4. 【智力】15" in out
-    assert "5. 【体质】10" in out
+    assert "【力量】29" in out
+    assert "【智力】15" in out
+    assert "【体质】10" in out
     assert "白值" not in out and "加成" not in out and "临时" not in out   # 简洁版不显示三层
     assert "当前页：1/2" in out
     # 第 2 页条目不在页 1
@@ -210,25 +210,25 @@ def test_view_noarg_page1():
 def test_view_detail_three_layers():
     """/角色详细 → 完整三层明细（白值/加成/临时，2026-08-27 用户拍板 /角色详细 才显示）。"""
     out = cmd_view_detail(parse("/角色详细"), make_ctx())
-    assert "3. 【力量】29（白值 15 ｜ 加成 +5·+10% ｜ 临时 +3·+20%）" in out
-    assert "1. 【生命】30/100（白值 100 ｜ 加成 0 ｜ 临时 0）" in out
+    assert "【力量】29（白值 15 ｜ 加成 +5·+10% ｜ 临时 +3·+20%）" in out
+    assert "【生命】30/100（白值 100 ｜ 加成 0 ｜ 临时 0）" in out
     assert "当前页：1/2" in out
 
 
 def test_view_page2():
     """/角色 2 → 第 2 页（精神/专注/敏捷/幸运）+ 页脚。"""
     out = cmd_view(parse("/角色 2"), make_ctx())
-    assert "6. 【精神】10" in out
-    assert "7. 【专注】10" in out
-    assert "8. 【敏捷】10" in out
-    assert "9. 【幸运】10" in out
+    assert "【精神】10" in out
+    assert "【专注】10" in out
+    assert "【敏捷】10" in out
+    assert "【幸运】10" in out
     assert "当前页：2/2" in out
 
 
 def test_view_clamp_last_page():
     """裁决②：/角色 9 超总页数 → 夹取最后一页 + （已到最后一页）。"""
     out = cmd_view(parse("/角色 9"), make_ctx())
-    assert "9. 【幸运】10" in out
+    assert "【幸运】10" in out
     assert "（已到最后一页）" in out
     assert "当前页：2/2" in out
 
@@ -254,10 +254,10 @@ def test_view_max_level_header():
 def test_attr_line_pure():
     """attr_line 纯函数：三层结构行（resource 当前/上限 / combat 单值）。"""
     attrs = bc._to_attributes(make_ctx())
-    assert attr_line(1, "str", "力量", 29, attrs) == "1. 【力量】29"                       # 默认简洁版
-    assert attr_line(1, "hp", "生命", 100, attrs, current=30) == "1. 【生命】30/100"
-    assert attr_line(1, "str", "力量", 29, attrs, detail=True) == "1. 【力量】29（白值 15 ｜ 加成 +5·+10% ｜ 临时 +3·+20%）"
-    assert attr_line(1, "hp", "生命", 100, attrs, current=30, detail=True) == "1. 【生命】30/100（白值 100 ｜ 加成 0 ｜ 临时 0）"
+    assert attr_line("str", "力量", 29, attrs) == "【力量】29"                       # 默认简洁版
+    assert attr_line("hp", "生命", 100, attrs, current=30) == "【生命】30/100"
+    assert attr_line("str", "力量", 29, attrs, detail=True) == "【力量】29（白值 15 ｜ 加成 +5·+10% ｜ 临时 +3·+20%）"
+    assert attr_line("hp", "生命", 100, attrs, current=30, detail=True) == "【生命】30/100（白值 100 ｜ 加成 0 ｜ 临时 0）"
 
 
 # ---------------------------------------------------------------------------

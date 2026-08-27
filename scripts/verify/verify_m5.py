@@ -540,13 +540,13 @@ def t_gate_char_three_layer() -> None:
     out = cmd_view(parse_command("/角色"), ctx)
     lines = out.splitlines()
     assert lines[0] == "【角色】Lv3.阿伟（战士） ｜ 经验 320/1000", f"LV 行头部不齐：{lines[0]!r}"
-    # /角色 简洁版：只显最终值，无三层标注（2026-08-27 用户拍板）
-    assert "3. 【力量】29" in out
+    # /角色 简洁版：只显最终值，无序号无三层标注（2026-08-27 用户拍板）
+    assert "【力量】29" in out
     assert "白值" not in out and "加成" not in out, "简洁版不应显示三层标注"
     assert "当前页：1/2" in out  # CakeGame 式尾段（2026-08-27 用户拍板替代 TPL-08）
     # /角色详细：三层明细（RUL-38 示例 29 逐字：白值 15 + 加成 +5·+10% + 临时 +3·+20% → 最终 29）
     det = cmd_view_detail(parse_command("/角色详细"), ctx)
-    assert "3. 【力量】29（白值 15 ｜ 加成 +5·+10% ｜ 临时 +3·+20%）" in det
+    assert "【力量】29（白值 15 ｜ 加成 +5·+10% ｜ 临时 +3·+20%）" in det
     _assert_no_banned_emoji(out)
     _assert_no_banned_emoji(det)
 

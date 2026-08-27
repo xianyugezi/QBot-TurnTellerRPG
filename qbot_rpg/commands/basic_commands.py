@@ -383,17 +383,16 @@ def _stat_order(ctx: Mapping[str, Any], attrs: PlayerAttributes) -> List[str]:
     return order
 
 
-def attr_line(idx: int, attr_id: str, stat_name: str, final: int,
+def attr_line(attr_id: str, stat_name: str, final: int,
               attrs: PlayerAttributes, current: Optional[int] = None,
               *, detail: bool = False) -> str:
-    """属性行：detail=False（/角色 简洁版）→ `1. 【力量】29` / resource `1. 【生命】30/100`；
-    detail=True（/角色详细 完整版）→ `1. 【力量】29（白值 15 ｜ 加成 +5·+10% ｜ 临时 +3·+20%）`。
-
-    2026-08-27 用户拍板：/角色 默认不显示白值/加成/临时（不然有点花），/角色详细 才显示三层明细。"""
+    """属性行（无序号，2026-08-27 用户拍板 /角色 面板属性前不加序号）：
+    detail=False（/角色 简洁版）→ `【力量】29` / resource `【生命】30/100`；
+    detail=True（/角色详细 完整版）→ `【力量】29（白值 15 ｜ 加成 +5·+10% ｜ 临时 +3·+20%）`。"""
     if not detail:
         if current is not None:
-            return f"{idx}. 【{stat_name}】{_fmt_num(current)}/{final}"
-        return f"{idx}. 【{stat_name}】{final}"
+            return f"【{stat_name}】{_fmt_num(current)}/{final}"
+        return f"【{stat_name}】{final}"
     base = float(attrs.base.get(attr_id, 0.0))
     flat = float(attrs.flat_bonus().get(attr_id, 0.0))
     pct = float(attrs.pct_bonus().get(attr_id, 0.0))
@@ -402,8 +401,8 @@ def attr_line(idx: int, attr_id: str, stat_name: str, final: int,
     bonus = _fmt_bonus(flat, pct)
     temp = _fmt_bonus(tflat, tpct)
     if current is not None:
-        return f"{idx}. 【{stat_name}】{_fmt_num(current)}/{final}（白值 {_fmt_num(base)} ｜ 加成 {bonus} ｜ 临时 {temp}）"
-    return f"{idx}. 【{stat_name}】{final}（白值 {_fmt_num(base)} ｜ 加成 {bonus} ｜ 临时 {temp}）"
+        return f"【{stat_name}】{_fmt_num(current)}/{final}（白值 {_fmt_num(base)} ｜ 加成 {bonus} ｜ 临时 {temp}）"
+    return f"【{stat_name}】{final}（白值 {_fmt_num(base)} ｜ 加成 {bonus} ｜ 临时 {temp}）"
 
 
 def _render_attr_page(ctx: Mapping[str, Any], page: int, *, detail: bool = False) -> str:
@@ -438,7 +437,7 @@ def _render_attr_page(ctx: Mapping[str, Any], page: int, *, detail: bool = False
     slice_items = items[start:start + DEFAULT_PAGE_SIZE]
     lines: List[str] = [view_header(ctx)]
     for i, (attr_id, cur) in enumerate(slice_items):
-        lines.append(attr_line(start + i + 1, attr_id, _stat_name(ctx, attr_id),
+        lines.append(attr_line(attr_id, _stat_name(ctx, attr_id),
                                final[attr_id], attrs, current=cur, detail=detail))
     if items:
         lines.append(_cake_tail(res.page, res.total_pages, tip=_VIEW_TAIL_TIP, clamped=res.clamped))

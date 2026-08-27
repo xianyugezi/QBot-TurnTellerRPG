@@ -59,13 +59,16 @@ def _pytest(paths: list[str]) -> tuple[bool, int, int, list[str], str]:
 
 
 def _validate_fixtures() -> list[str]:
-    """契约层前置：四件套 validator 全量，**带断言**（P1-3：原实现恒打印 ✓ 无断言）。
+    """契约层前置：四件套 validator 全量，**带真实断言**（D4 SMK-12/13/14 修正空断言）。
 
-    - legal：必须加载成功且 0 errors（rep.ok）
-    - badref / missing_mod：必须被红拦（PackLoadError）
-    - old_schema：M0 未实现迁移链——显式声明「迁移链 M6 覆盖」（细化_5d §5.1：
-      旧 schema 包应走迁移而非拦截；M0 阶段迁移未实装，故此处仅确认可加载路径，
-      不做「预期被拦」的语义断言）
+    - legal：必须加载成功 + report.ok（0 errors）+ 0 warnings + registry 全量注册（SMK-12）
+    - badref：必须被红拦（PackLoadError，含 R-4 引用缺失）+ registry 未污染
+      （红拦后 legal 重载仍全绿 = 原子快照替换语义）（SMK-12 / 5d L200-201）
+    - missing_mod：**软放行**（SMK-13，承接批2B P1-1 / 批2A P1-4：修正原「必须被红拦」误标）——
+      加载成功 + warnings 含 Y-6(statuses) + 未声明 npc.json 不加载 + 挂载（items.potion 可 resolve）
+    - old_schema：**容忍加载**（SMK-14 / 总纲 ADR-02：旧 schema 走迁移而非拦截）——
+      report.ok + 缺补默认（old_slime.hp=None）+ 多忽略（old_potion 放行）；
+      M6 不实现内容包迁移链（「迁移链」仅指存档迁移 storage/migrations.py MIG-1~5）
     任一不满足 → 抛 AssertionError（计入门禁失败）。
     """
     from qbot_rpg.content.loader import PackLoadError, load_pack
@@ -82,20 +85,74 @@ def _validate_fixtures() -> list[str]:
             d = PACKS_DIR / name
             try:
                 pack = await load_pack(d)
-                w = [x.kind for x in pack.warnings]
-                notes.append(f"   ✓ {name} 加载 exit=ok·warnings={w or '无'}")
-                if name == "legal" and not pack.report.ok:
-                    failures.append(f"legal 包应 0 errors，实际 {len(pack.report.errors)}")
             except PackLoadError as exc:
+                # ---- 红拦分支 ----
                 kinds = sorted({e.kind for e in exc.errors})
-                notes.append(f"   ✓ {name} 加载被拦（预期）·kinds={kinds}")
-                if name in ("legal",):
+                notes.append(f"   ✓ {name} 加载被拦（预期红拦）·kinds={kinds}")
+                if name == "legal":
                     failures.append(f"legal 包不应被拦，实际 kinds={kinds}")
+                if name == "missing_mod":
+                    failures.append(
+                        f"missing_mod 不应红拦——SMK-13 缺模块=软放行（Y-6 黄提示 + 未声明不加载），"
+                        f"实际被拦 kinds={kinds}")
                 if name == "old_schema":
                     failures.append(
-                        f"old_schema 不应按『预期被拦』断言——细化_5d §5.1 旧包走迁移"
-                        f"（M0 迁移链未实装，登记 M6 覆盖）；当前被拦 kinds={kinds}"
-                    )
+                        f"old_schema 不应红拦——SMK-14 容忍加载（缺补默认/多忽略），"
+                        f"实际被拦 kinds={kinds}")
+                if name == "badref":
+                    if not any(e.kind == "R-4" for e in exc.errors):
+                        failures.append(
+                            f"badref 应含 R-4 引用缺失（SMK-12 registry 未污染判定），"
+                            f"实际 kinds={kinds}")
+                    # registry 未污染（5d L201）：红拦后重新加载 legal 仍全绿
+                    try:
+                        await load_pack(PACKS_DIR / "legal")
+                    except PackLoadError as legal_exc:
+                        failures.append(
+                            f"badref 红拦后 legal 重载不应失败（registry 未污染），"
+                            f"实际 kinds={sorted({e.kind for e in legal_exc.errors})}")
+                continue
+            # ---- 加载成功分支 ----
+            w = [x.kind for x in pack.warnings]
+            notes.append(f"   ✓ {name} 加载 exit=ok·warnings={w or '无'}")
+            if name == "legal":
+                # SMK-12：合法基线 = 0 红 0 黄 + registry 全量注册
+                if not pack.report.ok:
+                    failures.append(f"legal 包应 0 errors，实际 {len(pack.report.errors)}")
+                if pack.report.count_warnings:
+                    failures.append(
+                        f"legal 包应 0 warnings（SMK-12 全绿基线），实际 "
+                        f"{[dict(x.detail) for x in pack.report.warnings]}")
+                if pack.registry.resolve("potion", "item") is None or \
+                        pack.registry.resolve("rock_weasel", "enemy") is None:
+                    failures.append(
+                        "legal 包 registry 应全量注册（potion/rock_weasel 均可 resolve）")
+            if name == "missing_mod":
+                # SMK-13：软放行真实断言——加载成功 + Y-6(statuses) + 未声明不加载 + 挂载
+                y6 = [x for x in pack.warnings
+                      if x.kind == "Y-6" and x.detail.get("rule") == "module_missing"
+                      and x.detail.get("module") == "statuses"]
+                if not y6:
+                    failures.append(
+                        f"missing_mod 应有 Y-6(statuses) 黄提示（SMK-13），实际 "
+                        f"{[dict(x.detail) for x in pack.warnings]}")
+                if pack.registry.resolve("villager", "npc") is not None:
+                    failures.append(
+                        "missing_mod 未声明 npc.json 不应加载（SMK-13 未声明不加载），"
+                        "实际 npc.villager 已注册")
+                if pack.registry.resolve("potion", "item") is None:
+                    failures.append(
+                        "missing_mod 应挂载（items.potion 可 resolve，SMK-13），实际缺失")
+            if name == "old_schema":
+                # SMK-14：容忍加载——不红拦 + 缺补默认（hp=None）+ 多忽略（x_future_field 放行）
+                if not pack.report.ok:
+                    failures.append(
+                        f"old_schema 不应红拦（SMK-14 容忍加载），实际 {len(pack.report.errors)}")
+                old = pack.registry.resolve("old_slime", "enemy")
+                if old is None or getattr(old, "hp", None) is not None:
+                    failures.append(
+                        "old_schema 缺补默认应 hp=None（SMK-14），实际 "
+                        f"{getattr(old, 'hp', '<未注册>') if old else '<未注册>'}")
 
     asyncio.run(_check_each())
     if failures:

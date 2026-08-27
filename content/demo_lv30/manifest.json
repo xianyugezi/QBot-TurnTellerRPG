@@ -1,0 +1,20 @@
+{
+  "name": "成长演示包 1-30",
+  "version": "1.0.0",
+  "schema_version": 1,
+  "author": "m6-content",
+  "modules": [
+    "settings",
+    "stats",
+    "formula",
+    "effects",
+    "statuses",
+    "marks",
+    "items",
+    "equipment",
+    "action",
+    "enemies",
+    "maps",
+    "dungeon"
+  ]
+}

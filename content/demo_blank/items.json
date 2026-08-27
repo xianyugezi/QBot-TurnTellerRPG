@@ -1,0 +1,12 @@
+[
+  {
+    "id": "potion",
+    "name": "药水",
+    "type": "consumable",
+    "price": 100,
+    "effects": [
+      "heal_small"
+    ],
+    "usable": true
+  }
+]

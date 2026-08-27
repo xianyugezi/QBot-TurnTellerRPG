@@ -1,0 +1,136 @@
+[
+  {
+    "id": "rock_weasel",
+    "name": "岩皮鼬",
+    "tier": "normal",
+    "area": "乱石滩",
+    "desc": "岩石皮肤的小型野兽，皮糙肉厚，破防后会滚石反击。",
+    "stats": {
+      "hp": 120,
+      "mp": 20,
+      "str": 12,
+      "int": 8,
+      "con": 14,
+      "spr": 8,
+      "foc": 10,
+      "agi": 12,
+      "luk": 8
+    },
+    "weakness": {
+      "types": [
+        "魔"
+      ],
+      "elements": {
+        "water": 1.3
+      }
+    },
+    "pv": 20,
+    "pv_recover": "battle_end",
+    "resistance": {
+      "stun": 30,
+      "immune": [
+        "poison"
+      ]
+    },
+    "actions": [
+      {
+        "action": "claw_swipe",
+        "probability": 1,
+        "weight": 50
+      },
+      {
+        "action": "hard_body",
+        "weight": 100,
+        "hungry": 4
+      }
+    ],
+    "special_actions": [
+      {
+        "id": "weasel_last_stand",
+        "action": "rock_roll",
+        "trigger": {
+          "type": "hp_below",
+          "value": 30,
+          "timing": "current_turn"
+        },
+        "once": true,
+        "priority": 5
+      }
+    ],
+    "drops": {
+      "battle": [
+        {
+          "item": "potion",
+          "chance": 60,
+          "count": [
+            1,
+            3
+          ]
+        }
+      ],
+      "special": [
+        {
+          "item": "potion",
+          "chance": 100,
+          "condition": "pv_broken",
+          "count": 1
+        }
+      ],
+      "death": [
+        {
+          "item": "potion",
+          "chance": 100,
+          "count": [
+            1,
+            2
+          ]
+        }
+      ]
+    },
+    "lore": [
+      {
+        "unlock": 10,
+        "desc": "岩皮鼬弱水系，魔击破防更快。"
+      },
+      {
+        "unlock": 50,
+        "desc": "血量低于 30% 会滚石反击，注意防御。"
+      },
+      {
+        "unlock": 100,
+        "desc": "战斗中有概率掉落药水。"
+      }
+    ]
+  },
+  {
+    "id": "training_dummy",
+    "name": "练兵木桩",
+    "tier": "training",
+    "type": "dummy",
+    "desc": "训练场木桩：HP 极大不可击破，用于伤害测量。",
+    "stats": {
+      "hp": 50000,
+      "mp": 10,
+      "str": 10,
+      "int": 10,
+      "con": 10,
+      "spr": 10,
+      "foc": 10,
+      "agi": 10,
+      "luk": 10
+    },
+    "def_base": 200,
+    "elem_res": {
+      "earth": 0.5,
+      "fire": -0.2
+    },
+    "weakness": {
+      "types": [
+        "斩"
+      ],
+      "elements": {
+        "fire": 1.3
+      }
+    }
+  }
+]

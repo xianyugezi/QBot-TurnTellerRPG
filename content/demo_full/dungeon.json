@@ -1,0 +1,76 @@
+[
+  {
+    "id": "molten_dungeon_explore",
+    "name": "熔岩洞窟·探索",
+    "type": "explore",
+    "entry_item": null,
+    "entry_limit": 0,
+    "maps": [
+      "rubble_field",
+      "crag_den",
+      "lava_tunnel"
+    ],
+    "subquests": [],
+    "safe_zone": "rubble_field",
+    "drops": {
+      "normal": [
+        {
+          "item": "potion",
+          "chance": 0.5
+        }
+      ],
+      "first_clear": {
+        "items": [
+          {
+            "item": "potion",
+            "count": 1
+          }
+        ],
+        "title": null,
+        "codex": []
+      }
+    }
+  },
+  {
+    "id": "molten_dungeon_boss",
+    "name": "熔岩洞窟·讨伐",
+    "type": "boss",
+    "entry_item": "potion",
+    "entry_limit": 3,
+    "maps": [
+      "rubble_field",
+      "crag_den",
+      "lava_tunnel"
+    ],
+    "boss_room": "lava_tunnel",
+    "boss": "ember_drake",
+    "subquests": [],
+    "safe_zone": "rubble_field",
+    "drops": {
+      "normal": [
+        {
+          "item": "potion",
+          "chance": 0.5
+        }
+      ],
+      "boss": [
+        {
+          "item": "hi_potion",
+          "chance": 1.0
+        }
+      ],
+      "first_clear": {
+        "items": [
+          {
+            "item": "hi_potion",
+            "count": 1
+          }
+        ],
+        "title": "熔岩征服者",
+        "codex": [
+          "monster:ember_drake"
+        ]
+      }
+    }
+  }
+]

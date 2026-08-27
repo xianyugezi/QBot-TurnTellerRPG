@@ -1,0 +1,24 @@
+[
+  {
+    "id": "village_shop",
+    "name": "铁匠铺",
+    "icon": "店",
+    "type": "normal",
+    "currency": "coins",
+    "desc": "乱石滩入口的杂货兼铁匠铺。",
+    "visible": true,
+    "items": [
+      {
+        "item": "potion",
+        "price": 100,
+        "stock": 10,
+        "sold_out_once": false
+      },
+      {
+        "item": "hi_potion",
+        "price": 220,
+        "stock": 10
+      }
+    ]
+  }
+]

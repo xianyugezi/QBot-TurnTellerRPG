@@ -39,11 +39,16 @@ MILESTONES: dict[str, Path | None] = {
     "m3": VERIFY_M3,  # M3 地图副本时间（2a 系）
     "m4": VERIFY_M4,  # M4 指令系统（2b/4f/3c/3d，m4_shared_contract §5）
     "m5": VERIFY_M5,  # M5 消息模板与渲染层（3d/5e/4f，m5_shared_contract §六，verify_m5）
-    "m6": None,  # M6 数据框架（5a/5b/4c/4d/4e/6 系）
+    # M6 数据框架（5a/5b/4c/4d/4e/6 系）：D4《细化_M6_内容包冒烟》§四 SMK-17 接入声明——
+    # 本批（M6 批4·路B）只声明接入点：pytest 包装 tests/unit/test_e2e_m6_smoke.py 随 L4 e2e 层执行
+    # （LAYER_PATHS["e2e"] L47 由 D8 接入 m6 时纳入）；verify_m6 段一「冒烟闭环」承接（VM6-1 项2）。
+    # MILESTONES["m6"] 置位归 D8，本批保持 None。
+    "m6": None,  # M6 数据框架（5a/5b/4c/4d/4e/6 系）——置位归 D8（SMK-17）
 }
 LAYER_PATHS = {
     "unit": ["tests/unit"],
     "contract": ["tests/contract"],
+    # L4 e2e 层（SMK-17 接入点）：D8 接入 m6 时纳入 tests/unit/test_e2e_m6_smoke.py
     "e2e": ["tests/contract/test_e2e_smoke.py", "tests/contract/test_3f_patch.py"],
 }
 

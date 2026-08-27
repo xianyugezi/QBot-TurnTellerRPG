@@ -1,0 +1,150 @@
+[
+  {
+    "id": "claw_swipe",
+    "name": "爪击",
+    "kind": "basic",
+    "power": 1.0,
+    "attack_type": "斩",
+    "element": "earth",
+    "effects": [
+      "power_slash"
+    ],
+    "weight": 50,
+    "probability": 0.5,
+    "intent": "伤害",
+    "cooldown": 0,
+    "hungry": 0,
+    "tags": [
+      "物理",
+      "近战"
+    ]
+  },
+  {
+    "id": "tail_sweep",
+    "name": "尾扫",
+    "kind": "active",
+    "power": 0.8,
+    "attack_type": "打",
+    "element": "wind",
+    "effects": [
+      "power_slash"
+    ],
+    "weight": 30,
+    "probability": 0.5,
+    "intent": "伤害",
+    "cooldown": 1,
+    "hungry": 0,
+    "tags": [
+      "物理",
+      "范围"
+    ]
+  },
+  {
+    "id": "rock_roll",
+    "name": "滚石",
+    "kind": "active",
+    "power": 1.5,
+    "attack_type": "打",
+    "element": "earth",
+    "effects": [],
+    "weight": 20,
+    "probability": 0.5,
+    "intent": "伤害",
+    "cooldown": 2,
+    "hungry": 0,
+    "condition": "pv_broken",
+    "tags": [
+      "物理",
+      "破防联动"
+    ]
+  },
+  {
+    "id": "hard_body",
+    "name": "硬化",
+    "kind": "active",
+    "power": 0.0,
+    "attack_type": "魔",
+    "element": "crystal",
+    "effects": [
+      "rage_up"
+    ],
+    "weight": 100,
+    "intent": "buff",
+    "cooldown": 0,
+    "hungry": 4,
+    "tags": [
+      "防御"
+    ]
+  },
+  {
+    "id": "roar",
+    "name": "吼叫",
+    "kind": "active",
+    "power": 0.0,
+    "attack_type": "魔",
+    "element": "wind",
+    "effects": [
+      "rage_up"
+    ],
+    "weight": 60,
+    "probability": 0.5,
+    "intent": "buff",
+    "cooldown": 3,
+    "hungry": 0,
+    "condition": "player_hp_below",
+    "armor": true,
+    "tags": [
+      "威压"
+    ]
+  },
+  {
+    "id": "fireball",
+    "name": "火球",
+    "kind": "active",
+    "power": 1.8,
+    "attack_type": "魔",
+    "element": "fire",
+    "effects": [
+      "power_slash"
+    ],
+    "weight": 25,
+    "probability": 0.5,
+    "intent": "伤害",
+    "cooldown": 1,
+    "hungry": 0,
+    "tags": [
+      "元素",
+      "远程"
+    ]
+  },
+  {
+    "id": "doomsday_breath",
+    "name": "灭世龙息",
+    "kind": "active",
+    "power": 4.0,
+    "attack_type": "魔",
+    "element": "void",
+    "effects": [
+      "power_slash"
+    ],
+    "weight": 0,
+    "intent": "蓄力",
+    "cooldown": 5,
+    "hungry": 0,
+    "charge_turns": 2,
+    "charge_armor": true,
+    "interrupt": false,
+    "preview": {
+      "level": 2,
+      "category": "蓄力"
+    },
+    "preview_chain": {
+      "reveal": "all"
+    },
+    "reveal_condition": "charge_start",
+    "tags": [
+      "终极",
+      "蓄力"
+    ]
+  }
+]

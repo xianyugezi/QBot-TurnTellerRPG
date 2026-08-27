@@ -1,0 +1,160 @@
+[
+  {
+    "id": "checkin_loop",
+    "name": "每日签到",
+    "type": "loop",
+    "desc": "常驻循环签到，7 天一轮。",
+    "period": {
+      "cycle_days": 7,
+      "reset_on_break": true
+    },
+    "rewards": {
+      "daily": [
+        {
+          "day": 1,
+          "items": [
+            {
+              "id": "potion",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "day": 2,
+          "coins": 50
+        },
+        {
+          "day": 3,
+          "items": [
+            {
+              "id": "potion",
+              "count": 2
+            }
+          ],
+          "exp": 20
+        }
+      ],
+      "streak": [
+        {
+          "days": 7,
+          "items": [
+            {
+              "id": "hi_potion",
+              "count": 1
+            }
+          ]
+        }
+      ],
+      "monthly_total": [
+        {
+          "days": 30,
+          "items": [
+            {
+              "id": "potion",
+              "count": 3
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "checkin_monthly",
+    "name": "月度签到",
+    "type": "monthly",
+    "desc": "自然月签到。",
+    "rewards": {
+      "daily": [
+        {
+          "day": 1,
+          "items": [
+            {
+              "id": "potion",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "day": 15,
+          "coins": 200
+        },
+        {
+          "day": 30,
+          "items": [
+            {
+              "id": "hi_potion",
+              "count": 1
+            }
+          ]
+        }
+      ],
+      "streak": [
+        {
+          "days": 28,
+          "items": [
+            {
+              "id": "hi_potion",
+              "count": 1
+            }
+          ]
+        }
+      ],
+      "monthly_total": [
+        {
+          "days": 30,
+          "items": [
+            {
+              "id": "potion",
+              "count": 3
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "checkin_activity",
+    "name": "庆典签到",
+    "type": "activity",
+    "desc": "周年庆典活动签到。",
+    "period": {
+      "start": "2099-01-01",
+      "end": "2099-12-31",
+      "cycle_days": 14
+    },
+    "rewards": {
+      "daily": [
+        {
+          "day": 1,
+          "items": [
+            {
+              "id": "potion",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "day": 7,
+          "items": [
+            {
+              "id": "hi_potion",
+              "count": 1
+            }
+          ],
+          "coins": 100
+        }
+      ],
+      "streak": [
+        {
+          "days": 7,
+          "items": [
+            {
+              "id": "hi_potion",
+              "count": 2
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

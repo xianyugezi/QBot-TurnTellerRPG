@@ -1,0 +1,4 @@
+{
+  "damage_base": "atk * 2 - def",
+  "heal_rate": "power * 0.5"
+}

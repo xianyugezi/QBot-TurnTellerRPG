@@ -1,0 +1,13 @@
+{
+  "name": "空白演示包",
+  "version": "1.0.0",
+  "schema_version": 1,
+  "author": "m6-content",
+  "modules": [
+    "settings",
+    "stats",
+    "formula",
+    "effects",
+    "items"
+  ]
+}

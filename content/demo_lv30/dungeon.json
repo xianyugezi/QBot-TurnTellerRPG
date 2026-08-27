@@ -1,0 +1,34 @@
+[
+  {
+    "id": "molten_dungeon_explore",
+    "name": "熔岩洞窟·探索",
+    "type": "explore",
+    "entry_item": null,
+    "entry_limit": 0,
+    "maps": [
+      "rubble_field",
+      "crag_den",
+      "lava_tunnel"
+    ],
+    "subquests": [],
+    "safe_zone": "rubble_field",
+    "drops": {
+      "normal": [
+        {
+          "item": "potion",
+          "chance": 0.5
+        }
+      ],
+      "first_clear": {
+        "items": [
+          {
+            "item": "potion",
+            "count": 1
+          }
+        ],
+        "title": null,
+        "codex": []
+      }
+    }
+  }
+]

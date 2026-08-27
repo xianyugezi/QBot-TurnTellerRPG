@@ -437,15 +437,21 @@ def test_tc22_buy_rollback_on_add_failure():
 
 
 def test_tc23_buy_idempotent_tx():
-    """TC-23：同一会话快照 tx_id 重发 → 幂等不双扣。"""
+    """TC-23：同一会话快照 tx_id 重发 → 幂等不双扣（货币/背包/限购三态各断言）。
+
+    FLT-27/TC-FLT-16（D5 细化_M6_故障注入 §六）：补 personal_buys 限购计数断言——
+    同 tx_id 重放幂等 + 限购计数恰 +1（不 +2）双断言。疗伤药 limit=3（period=day），
+    首次买入 count 0→1；同 tx_id 重发幂等返回，count 保持 1（SEG-7/D-04 语义）。
+    """
     ctx = make_ctx(tx_id="T1", ledger=set())
-    b1 = shop_buy("grocery", "药水", 5, ctx)
+    b1 = shop_buy("grocery", "疗伤药", 1, ctx)
     assert b1["ok"] is True and b1["idempotent"] is False
     coins_after = ctx["currencies"]["coins"]
-    b2 = shop_buy("grocery", "药水", 5, ctx)
+    b2 = shop_buy("grocery", "疗伤药", 1, ctx)
     assert b2["ok"] is True and b2["idempotent"] is True
-    assert ctx["currencies"]["coins"] == coins_after
-    assert ctx["inventory"].get("药水", 0) == 2 + 5  # 只入一次
+    assert ctx["currencies"]["coins"] == coins_after                       # 幂等不双扣（货币）
+    assert ctx["inventory"].get("疗伤药", 0) == 1                           # 只入一次（背包）
+    assert ctx["personal_buys"]["grocery"]["疗伤药"]["count"] == 1          # 限购计数恰 +1（FLT-27）
 
 
 def test_buy_no_item_and_not_open():

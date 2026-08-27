@@ -6,7 +6,8 @@
 （IDEM-1~5，7 天保留滚动清理）、§五 回收（RC-1 僵尸会话 30 天回收，D-05
 storage 只提供「按 last_active_at 扫描 + 按退出结算写回」单事务接口）、§六
 迁移（首次访问懒迁移 D-06）、SCHEMA-5（ID+名称冗余）、SCHEMA-6（JSON 列兜底）、
-MIG-1（字段级迁移：缺补默认/多忽略）。
+MIG-1（字段级迁移：缺补默认/多忽略）、RW-4（写失败兜底：`.pending` 暂存补写，
+D5 FLT-11~17 实装，见 qbot_rpg/storage/pending.py 与 save_player/replay_pending）。
 
 约束：仅 import qbot_rpg.data 与 storage 自身层；零 NoneBot（3a R1）。
 """
@@ -19,7 +20,9 @@ import copy
 import dataclasses
 import datetime
 import json
+import os
 from dataclasses import dataclass, field  # noqa: F401（field 供类型注释可读）
+from pathlib import Path
 from typing import (
     Any,
     AsyncIterator,
@@ -30,6 +33,7 @@ from typing import (
     Sequence,
     Set,
     Tuple,
+    Union,
     cast,
 )
 
@@ -40,6 +44,7 @@ from qbot_rpg.data import (
     PlayerAttributes,
     WorldState,
 )
+from qbot_rpg.data.logging_utils import get_logger
 from qbot_rpg.data.types import ItemID, PlayerQID
 from qbot_rpg.storage.connection import Database, StorageError, Transaction
 from qbot_rpg.storage.migrations import (
@@ -49,6 +54,16 @@ from qbot_rpg.storage.migrations import (
     migrate_database,
     utcnow,
 )
+from qbot_rpg.storage.pending import (
+    ACTION_DELETE_SESSION,
+    ACTION_PLAYER_UPSERT,
+    ACTION_SESSION_UPSERT,
+    SAVE_FAILURE_MESSAGE,
+    PendingEntry,
+    PendingQueue,
+)
+
+_logger = get_logger("storage.repository")
 
 # 世界状态字段 → world_state.key（4a §1.3 / §0.1；常驻不回收）
 WORLD_STATE_FIELDS: Tuple[str, ...] = (
@@ -292,7 +307,13 @@ def _now() -> str:
 class Repository:
     """存档读写仓库（storage 门面：load/save/事务/幂等/回收/round-trip）。"""
 
-    def __init__(self, db: Database, *, cache_ttl_seconds: float = 60.0) -> None:
+    def __init__(
+        self,
+        db: Database,
+        *,
+        cache_ttl_seconds: float = 60.0,
+        pending_dir: Optional[Union[str, Path]] = None,
+    ) -> None:
         self._db = db
         self._cache_ttl = cache_ttl_seconds
         self._player_cache: Dict[str, Tuple[float, Player]] = {}
@@ -303,11 +324,50 @@ class Repository:
         self._write_generation = 0
         self._boot_lock = asyncio.Lock()
         self._booted = False
+        # RW-4 `.pending` 暂存补写队列（D5 FLT-14/15；contract_deviations F-1 核销）：
+        # pending_dir 显式指定（装配/测试）→ 用之；缺省 → 文件库取 DB 同目录，内存库禁用。
+        self._pending_dir: Optional[Path] = (
+            Path(pending_dir) if pending_dir is not None else self._default_pending_dir()
+        )
+        self._pending: Optional[PendingQueue] = None
 
     # -- 生命周期 ------------------------------------------------------------
     @property
     def db(self) -> Database:
         return self._db
+
+    def _default_pending_dir(self) -> Optional[Path]:
+        """缺省 `.pending` 数据目录：文件库 = DB 所在目录（4a RW-4「数据目录」）；内存库无目录 → None。"""
+        if self._db.is_memory:
+            return None
+        parent = os.path.dirname(os.path.abspath(self._db.path))
+        return Path(parent) if parent else None
+
+    @property
+    def pending(self) -> Optional[PendingQueue]:
+        """RW-4 `.pending` 暂存队列（未配置目录 → None，写失败仅显式上抛人话）。"""
+        if self._pending is None and self._pending_dir is not None:
+            self._pending = PendingQueue(self._pending_dir)
+        return self._pending
+
+    async def _transcribe_pending(self, action: str, row_payload: Dict[str, Any],
+                                  qid: str) -> bool:
+        """写失败转写 `.pending`（FLT-13/14：绝不静默丢数据）。
+
+        追加写失败（磁盘仍满）→ 记 critical 日志显式告警（数据无法落盘已是硬失败，禁止静默吞）。
+        """
+        q = self.pending
+        if q is None:
+            return False
+        try:
+            await q.append(PendingEntry(player_qid=qid, action=action,
+                                        row_payload=row_payload))
+            return True
+        except OSError:
+            _logger.exception(
+                "写盘失败且 `.pending` 暂存亦失败（磁盘持续不可写），数据未落盘：%s/%s", action, qid
+            )
+            return False
 
     async def _bootstrap(self) -> None:
         """懒迁移：首次访问前执行 ensure_meta + migrate_database（D-06 懒迁移）。
@@ -397,10 +457,68 @@ class Repository:
         )) is not None
 
     async def save_player(self, player: Player) -> None:
-        """单事务 upsert 玩家行（RW-3；引擎层按 F3 与 session/幂等键同事务）。"""
-        async with self.tx() as tx:
-            await tx.upsert_player(player)
+        """单事务 upsert 玩家行（RW-3；引擎层按 F3 与 session/幂等键同事务）。
+
+        RW-4 写失败兜底（D5 FLT-11~14 / contract_deviations F-1）：tx 内任一步（含
+        COMMIT，connection._commit 注入接缝）抛 OSError（磁盘满）→ 本方法捕获 → 转写
+        `.pending` 暂存（原行 payload 完整保留）→ 抛 StorageError（人话「保存失败，
+        请检查磁盘空间」，命令层捕获透传；绝不静默丢数据）。未配置 pending 目录 → 仅
+        显式上抛人话（数据无法落盘即硬失败，禁止静默）。
+        """
+        try:
+            async with self.tx() as tx:
+                await tx.upsert_player(player)
+        except OSError as exc:
+            await self._transcribe_pending(ACTION_PLAYER_UPSERT, player_to_row(player),
+                                           player.qid)
+            raise StorageError(f"{SAVE_FAILURE_MESSAGE}（{exc}）") from exc
         self.invalidate_player(player.qid)
+
+    async def replay_pending(self) -> int:
+        """RW-4 磁盘恢复后重放 `.pending` 回主库（FLT-15 / 4a TC-09）。
+
+        启动 bootstrap + 定时检测的触发入口（批次6/7 装配在启动与 apscheduler 节拍调用）：
+        - 逐条按 action 重放回主库（**单事务**，任一条失败 → 整体 ROLLBACK）
+        - 全部成功 → 清空 `.pending.jsonl`；失败 → 保留条目不丢（下次重放幂等安全）
+        - 返回成功重放条数；未配置 pending 或空队列 → 0
+        """
+        q = self.pending
+        if q is None:
+            return 0
+        entries = await q.read_all()
+        if not entries:
+            return 0
+        try:
+            async with self.tx() as tx:
+                for entry in entries:
+                    await self._apply_pending_entry(tx, entry)
+        except Exception:
+            # 单事务整体回滚 → 文件保留，条目不丢（FLT-15「重放失败保留条目不丢」）
+            _logger.exception("pending 重放失败，条目不丢（保留 .pending.jsonl，下次重放）")
+            return 0
+        await q.clear()
+        return len(entries)
+
+    async def _apply_pending_entry(self, tx: "RepoTransaction", entry: PendingEntry) -> None:
+        """按 action 整行写回（F-02/F-03：player_upsert / session_upsert / delete_session）。"""
+        if entry.action == ACTION_PLAYER_UPSERT:
+            # 行 → Player（row_to_player 接受 dict：keys() + 下标，MIG-1 缺补默认）→ 整行 upsert
+            await tx.upsert_player(row_to_player(entry.row_payload))
+        elif entry.action == ACTION_SESSION_UPSERT:
+            rp = entry.row_payload
+            await tx.upsert_session(SessionRow(
+                player_qid=entry.player_qid,
+                session_type=str(rp.get("session_type") or "battle"),
+                payload=rp.get("payload", {}),
+                random_seed=int(rp.get("random_seed") or 0),
+                version=int(rp.get("version") or 1),
+                created_at=str(rp.get("created_at") or ""),
+                last_active_at=str(rp.get("last_active_at") or ""),
+            ))
+        elif entry.action == ACTION_DELETE_SESSION:
+            await tx.delete_session(entry.player_qid)
+        else:
+            raise ValueError(f"未知 pending action：{entry.action!r}")
 
     # =======================================================================
     # 会话读写（单玩家 1 会话互斥 = 主键，SCHEMA-7）
@@ -781,4 +899,8 @@ __all__ = [
     "StorageError",
     "DB_SCHEMA_VERSION",
     "META_KEY",
+    # RW-4 `.pending` 暂存补写（D5 FLT-14/15）再导出，供命令/装配层消费
+    "SAVE_FAILURE_MESSAGE",
+    "PendingEntry",
+    "PendingQueue",
 ]

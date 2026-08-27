@@ -21,7 +21,7 @@
 
 | # | 条目 | 递延理由 | 落点 |
 |---|---|---|---|
-| F-1 | `.pending` 暂存补写 + 写失败人话兜底（RW-4/TC-09） | 涉及并发写队列与磁盘恢复重放，M4 指令层实装时落地（storage 已抛 StorageError 上层可捕获翻译） | M4 |
+| F-1 | `.pending` 暂存补写 + 写失败人话兜底（RW-4/TC-09） | **M6 已实装**（细化_M6_故障注入 D5 FLT-11~17：qbot_rpg/storage/pending.py `.pending.jsonl` 暂存队列 + repository.save_player 写失败转写 + replay_pending 单事务重放清空；写失败人话「保存失败，请检查磁盘空间」；TC-09 由 tests/fault/fault_inject_save.py 与单元用例双承载） | M6 |
 | F-2 | 启动 integrity 失败自动回退最近 .bak + 关键表 round-trip 抽样（RW-6/D-04/TC-11） | 恢复流程与启动器协作，编辑器/启动器里程碑实装（当前失败显式抛 StorageIntegrityError 不静默） | M6/启动器 |
 | F-3 | 回收站四接口 add/restore/cleanup/clear/usage（RC-2/3/TC-16） | 表结构已建（schema OK），编辑器/会话管理器依赖时实装 | M6 编辑器 |
 | F-4 | content 部位引用存在性 R-4（3e §5.2/TC-07） | 部位键空间语义依赖装备系统；field_meta 注释已标「正式表可注入 ref_target=slot」 | M2 装备 |

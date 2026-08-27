@@ -357,7 +357,7 @@ class Database:
                 raise
             else:
                 try:
-                    await conn.execute("COMMIT")
+                    await self._commit(conn)
                 except BaseException:
                     with contextlib.suppress(BaseException):
                         await conn.execute("ROLLBACK")
@@ -366,6 +366,15 @@ class Database:
                     raise
                 tr._finalize()
                 self._tx_owner = prev_owner
+
+    async def _commit(self, conn: aiosqlite.Connection) -> None:
+        """事务 COMMIT 原语（D5 FLT-11 写路径注入接缝）。
+
+        抽出为独立方法供故障注入在**测试实例**上打点：mock 本方法抛 OSError 即模拟
+        tx() COMMIT 磁盘满（4a TC-09 / 规则 L320），上层（repository.save_player）捕获后
+        转写 `.pending` 暂存 + 人话提示（FLT-13/14，绝不静默丢数据）。生产路径行为不变。
+        """
+        await conn.execute("COMMIT")
 
     # ------------------------------------------------------------------
     # 连接池统计与泄漏自检（RC-5）

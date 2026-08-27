@@ -460,7 +460,7 @@ def quest_flow(smoke: Smoke, ctx: MutableMapping) -> dict:
     out = cmd_quest(_parse("/任务"), ctx)
     smoke.check("━━ NPC 支线 ━━" in out, "任务：任务板含 NPC 支线段头")
     smoke.check("1. 药水补给" in out, "任务：任务板条目 1.药水补给")
-    smoke.check("/任务 接取 <序号>" in out, "任务：操作指引行")
+    smoke.check("Tip:发送'任务 接取 序号'即可领取任务" in out, "任务：操作指引行（CakeGame 式 Tip）")
     _trace_append(trace, "/任务 板", out)
 
     # ---- /任务 接取 1 ----
@@ -726,7 +726,7 @@ def pageclamp_flow(smoke: Smoke, ctx: MutableMapping) -> dict:
     # ---- /签到 状态 9：状态视图夹取（6 行 → 2 页）----
     out = cmd_checkin(_parse("/签到 状态 9"), fresh2)
     smoke.check("（已到最后一页）" in out, "夹取：/签到 状态 9 → 已到最后一页")
-    smoke.check("第 2/2 页" in out, "夹取：/签到 状态 夹到第 2/2 页")
+    smoke.check("当前页：2/2" in out, "夹取：/签到 状态 夹到第 2/2 页（CakeGame 式当前页）")
     _trace_append(trace, "/签到 页码", "clamp + TPL-12")
 
     result = {"trace": trace, "assertions": smoke.passed}

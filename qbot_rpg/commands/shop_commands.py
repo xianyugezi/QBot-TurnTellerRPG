@@ -26,10 +26,11 @@ list_render 5 条/页 + TPL-08 页脚 + 裁决② 页码夹取）、购买/出�
   1) **跨路分页口径收敛**：引擎 core/shop.py shop_browse/shop_list 按定稿 L82「一次一屏 ≤10」切片
      （_PAGE_SIZE=10）；m4 §2.2 / 3d D-02 横切要求**列表 5 条/页 + TPL-08 页脚**（m4 实现层唯一权威）。
      本模块以「逐页取全量行 → 5 条/页重分页」收敛：`_all_browse_rows`/`_all_shop_rows` 把引擎
-     10 条切片合并为全量，再由 list_render 口径分页渲染；页脚只用 render_footer（TPL-08），
-     禁止自造页脚。裁决② 夹取与 TPL-12 由本层统一判定（引擎侧 10 条夹取被本层 5 条口径覆盖）。
+     10 条切片合并为全量，再由 list_render 口径分页渲染；尾段只用 render_cake_tail
+     （CakeGame 式「当前页 + Tip」，2026-08-27 用户拍板），禁止自造页脚。裁决② 夹取与
+     TPL-12 由本层统一判定（引擎侧 10 条夹取被本层 5 条口径覆盖）。
   2) **/商店 <整数> 二义性裁决（2b3 TC-02 序号切换 vs 3d/m4 §2.2 页码横切）**：整数参数**页码优先**
-     （m4 §2.2「/商店 2 翻页」+ TPL-08 页脚「/商店 页码 翻页」跨系统自洽）；页码超当前店 5 条总页数
+     （m4 §2.2「/商店 2 翻页」+ CakeGame 尾段「当前页：X/Y」跨系统自洽）；页码超当前店 5 条总页数
      且命中可用商店序号（resolve_shop_arg）→ 商店切换（TC-02）；两者皆不中 → 夹取最后一页 +
      「已到最后一页」（裁决②）。0/负数/非数字 → TPL-12（裁决②）。商店切换另经「/商店 <名称>」
      （名称精确匹配，定稿 L39/L131）与「/商店 列表」一览。
@@ -52,7 +53,7 @@ from qbot_rpg.core.message_format import strip_icon_emoji
 from qbot_rpg.core.message_format.list_render import (
     DEFAULT_PAGE_SIZE,
     LAST_PAGE_HINT,
-    render_footer,
+    render_cake_tail,
     resolve_page,
 )
 from qbot_rpg.core.shop import (
@@ -112,8 +113,9 @@ _EMPTY_SHOP = "（这家店空空的）"
 # 列表一览标题行
 _LIST_TITLE = "可用商店一览"
 
-# 页脚指令名（TPL-08 引导输入；/商店 列表 用「商店 列表」）
-_LIST_FOOTER_COMMAND = f"{SHOP_CMD} {LIST_KEYWORD}"
+# CakeGame 式尾段 Tip 内容（`Tip:` 之后部分，2026-08-27 用户拍板统一列表尾段；无斜杠指令名）
+_BROWSE_TAIL_TIP = "发送'购买 物品名'即可购买物品"   # /商店 商品列表
+_LIST_TAIL_TIP = "发送'商店 <名称>'即可进入商店"     # /商店 列表 一览
 
 
 # ---------------------------------------------------------------------------
@@ -218,14 +220,14 @@ def _all_shop_rows(ctx: MutableMapping[str, Any]) -> tuple:
 
 
 # ---------------------------------------------------------------------------
-# 渲染（5 条/页 + TPL-08 页脚 + 裁决② 页码夹取；纯文本，零装饰 emoji）
+# 渲染（5 条/页 + CakeGame 式尾段（当前页 + Tip）+ 裁决② 页码夹取；纯文本，零装饰 emoji）
 # ---------------------------------------------------------------------------
 
-def _paginate(items: list, page: object, command: str,
+def _paginate(items: list, page: object,
               per_page: int = DEFAULT_PAGE_SIZE) -> tuple:
     """5 条/页分页（裁决②：超页夹取 + clamped 标记；非法页码由调用方先经 resolve_page 判 TPL-12）。
 
-    返回 (slice, page, pages, total, clamped, footer)。
+    返回 (slice, page, total_pages, total, clamped)。
     """
     res = resolve_page(page, len(items), per_page)
     if res.invalid:
@@ -235,8 +237,7 @@ def _paginate(items: list, page: object, command: str,
     assert res.page is not None
     start = (res.page - 1) * per_page
     sl = list(items[start:start + per_page])
-    footer = render_footer(res.page, res.total_pages, res.total, command)
-    return sl, res.page, res.total_pages, res.total, res.clamped, footer
+    return sl, res.page, res.total_pages, res.total, res.clamped
 
 
 def _browse_header(shop: Mapping[str, Any]) -> str:
@@ -275,18 +276,19 @@ def _browse_row_text(row: Mapping[str, Any], ctx: Mapping[str, Any]) -> str:
 
 
 def render_shop_items(shop: Mapping[str, Any], rows: list, page: object,
-                      ctx: Mapping[str, Any], *, command: str = SHOP_CMD,
+                      ctx: Mapping[str, Any], *,
                       per_page: int = DEFAULT_PAGE_SIZE) -> str:
-    """商店商品列表正文：店名头 + 商品行（条目间分隔线）+ 夹取提示 + TPL-08 页脚。"""
-    sl, pg, pgs, total, clamped, footer = _paginate(rows, page, command, per_page)
+    """商店商品列表正文：店名头 + 商品行（条目间分隔线）+ CakeGame 式尾段（当前页 + Tip）；
+    裁决② 夹取 → （已到最后一页）插在 Tip 前。"""
+    sl, pg, pgs, total, clamped = _paginate(rows, page, per_page)
     if not sl:
         return f"{_browse_header(shop)}\n{_EMPTY_SHOP}"
     body = f"\n{_ROW_SEPARATOR}\n".join(_browse_row_text(r, ctx) for r in sl)
     out: List[str] = [_browse_header(shop), body]
+    tail = render_cake_tail(pg, pgs, tip=_BROWSE_TAIL_TIP)
     if clamped:
-        out.append(LAST_PAGE_HINT)
-    if footer:
-        out.append(footer)
+        tail = tail.replace("\n", f"\n{LAST_PAGE_HINT}\n", 1)
+    out.append(tail)
     return "\n".join(out)
 
 
@@ -307,17 +309,17 @@ def _shop_row(index: int, row: Mapping[str, Any]) -> str:
 
 
 def render_shops_overview(rows: list, page: object, *,
-                          command: str = _LIST_FOOTER_COMMAND,
                           per_page: int = DEFAULT_PAGE_SIZE) -> str:
-    """/商店 列表：可用商店一览（类型图标/门槛标记，置灰不隐藏）+ 5 条/页 + TPL-08 + 裁决② 夹取。"""
-    sl, pg, pgs, total, clamped, footer = _paginate(rows, page, command, per_page)
+    """/商店 列表：可用商店一览（类型图标/门槛标记，置灰不隐藏）+ 5 条/页 + CakeGame 式尾段
+    （当前页 + Tip）+ 裁决② 夹取。"""
+    sl, pg, pgs, total, clamped = _paginate(rows, page, per_page)
     lines: List[str] = [_LIST_TITLE]
     start = (pg - 1) * per_page
     lines.extend(_shop_row(start + i + 1, r) for i, r in enumerate(sl))
+    tail = render_cake_tail(pg, pgs, tip=_LIST_TAIL_TIP)
     if clamped:
-        lines.append(LAST_PAGE_HINT)
-    if footer:
-        lines.append(footer)
+        tail = tail.replace("\n", f"\n{LAST_PAGE_HINT}\n", 1)
+    lines.append(tail)
     return "\n".join(lines)
 
 
@@ -327,7 +329,7 @@ def render_shops_overview(rows: list, page: object, *,
 
 def cmd_shop_browse(parsed: Any, ctx: MutableMapping[str, Any], shop_id: Optional[str],
                     page: object) -> str:
-    """浏览指定商店商品列表（页夹取 + TPL-08 页脚；店不存在/未开门 → 引擎消息透传）。"""
+    """浏览指定商店商品列表（页夹取 + CakeGame 式尾段；店不存在/未开门 → 引擎消息透传）。"""
     if not shop_id:
         return TPL_NO_SHOP
     rows, meta = _all_browse_rows(shop_id, ctx)
@@ -348,7 +350,7 @@ def cmd_shop(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     """/商店 [参数] 主入口：
 
       无参        → 当前商店（地图级）商品列表第 1 页；无则全局默认 normal 兜底（D-06/TC-01）
-      列表 [页码] → 可用商店一览（5 条/页 + TPL-08 + 裁决② 夹取）
+      列表 [页码] → 可用商店一览（5 条/页 + CakeGame 式尾段 + 裁决② 夹取）
       <名称>     → 名称精确切换商店 → 浏览其商品（TC-02；可带页码，3d §2.2 最后整数=页码）
       <整数>     → 页码优先（m4 §2.2 翻页）→ 超页命中商店序号则切店（TC-02）→ 否则夹取（裁决②）
     """

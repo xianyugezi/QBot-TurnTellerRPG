@@ -24,7 +24,6 @@ import pytest
 import qbot_rpg.commands.quest_commands as qc
 from qbot_rpg.commands.parsers import parse_command
 from qbot_rpg.commands.quest_commands import (
-    OPERATION_HINT,
     QUEST_CMD,
     board_line,
     cmd_quest,
@@ -116,9 +115,9 @@ def test_quest_noarg_board_page1():
     assert "4. 清剿熔岩甲虫  进度 5/3" in out
     assert "5. 打造武器  进度 1/1" in out
     # 5 条/页（m4 §2.2）：第 1 页 5 条 + TPL-08 页脚
-    assert "— 第 1/2 页 · 共 6 条 · 输入 /任务 页码 翻页 —" in out
+    assert "当前页：1/2" in out
     # 操作指引行（2b4 §5.2 语义，收敛为 /任务 接取 <序号>）
-    assert OPERATION_HINT in out
+    assert "Tip:发送'任务 接取 序号'即可领取任务" in out
 
 
 def test_quest_board_npc_section_page2():
@@ -126,7 +125,7 @@ def test_quest_board_npc_section_page2():
     out = cmd_quest(parse("/任务 2"), make_ctx())
     assert "━━ NPC 支线 ━━" in out
     assert "6. 矿洞侦察" in out
-    assert "— 第 2/2 页 · 共 6 条 · 输入 /任务 页码 翻页 —" in out
+    assert "当前页：2/2" in out
 
 
 def test_quest_noarg_command_equivalence():
@@ -139,7 +138,7 @@ def test_quest_clamp_last_page():
     out = cmd_quest(parse("/任务 9"), make_ctx())
     assert "6. 矿洞侦察" in out
     assert "（已到最后一页）" in out
-    assert "— 第 2/2 页 · 共 6 条 · 输入 /任务 页码 翻页 —" in out
+    assert "当前页：2/2" in out
 
 
 @pytest.mark.parametrize("raw, fragment", [
@@ -375,7 +374,7 @@ def test_render_board_sections_pagination():
     assert "5. 打造武器" in p1
     p2 = render_board(board, 2)
     assert "6. 矿洞侦察" in p2
-    assert "— 第 2/2 页 · 共 6 条 · 输入 /任务 页码 翻页 —" in p2
+    assert "当前页：2/2" in p2
 
 
 def test_board_line_markers():
@@ -443,7 +442,7 @@ def test_parse_command_integration():
 def test_footer_tpl08_exact():
     """3d TC-12：页脚 TPL-08 逐字（无自造变体）。"""
     out = cmd_quest(parse("/任务"), make_ctx())
-    assert "— 第 1/2 页 · 共 6 条 · 输入 /任务 页码 翻页 —" in out
+    assert "当前页：1/2" in out
 
 
 def test_no_decorative_emoji():

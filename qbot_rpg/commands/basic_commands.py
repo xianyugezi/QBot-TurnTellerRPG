@@ -22,8 +22,9 @@
 
 职责（细化_3a §1.3 壳层职责 · 唯一指令执行壳）：把 /角色 /背包 /装备 /技能 /帮助 五条基础指令从
 Router 接到 core 层——指令解析（parsers.parse_command 已 token 化 → 本模块取页码/子词/序号）、
-玩家面板/背包/装备栏/技能列表渲染（core/message_format/list_render 5 条/页 + TPL-08 页脚 +
-裁决② 夹取）、装备穿卸委托装备引擎（core/equipment.py，M1 骨架，注入优先 → 懒加载 →
+玩家面板/背包/装备栏/技能列表渲染（core/message_format/list_render 5 条/页 + 裁决② 夹取；
+尾段统一 CakeGame 式「当前页 + Tip」render_cake_tail，2026-08-27 用户拍板）、
+装备穿卸委托装备引擎（core/equipment.py，M1 骨架，注入优先 → 懒加载 →
 【待接线】RuntimeError，与 checkin_commands 同模式）、错误统一 TPL-12（sender.format_tpl12，
 文案唯一源 errors.py D-04）。
 
@@ -40,17 +41,18 @@ Router 接到 core 层——指令解析（parsers.parse_command 已 token 化 �
 --------------------------------------------------------------------------------
 【工程补白 · 显式标注】
   1) **5 条/页横切由本层统一**：/角色 属性三层明细、/背包 物品行、/装备 槽位、/技能 技能行、
-     /帮助 目录/组页 全部按 m4 §2.2 5 条/页 + TPL-08 页脚（render_footer，禁止自造页脚）；
-     页脚指令名：/角色=/角色、/背包=/背包、/装备=/装备、/技能=/技能、/帮助 组页=/帮助 <组名>
-     （对齐 checkin「签到 状态」口径）。
-  2) **4f TPL-4F-06 目录页脚「输入 /帮助 组名 翻页」归一**：m4 §2.2「页脚固定 TPL-08，禁止各系统
-     自造页脚」为实现层唯一权威 → /帮助 目录页脚用 TPL-08（/帮助 页码 翻页）；组页页脚用
-     「/帮助 <组名> 页码 翻页」（与 checkin「签到 状态」同构）。
+     /帮助 目录/组页 全部按 m4 §2.2 5 条/页；尾段统一 CakeGame 式「当前页 + Tip 尾行」
+     （render_cake_tail，2026-08-27 用户拍板，替代 TPL-08 页脚）：当前页恒显示 + 各指令定制
+     Tip（/角色=查看当前装备、/装备=穿戴、/技能=技能说明、/帮助=翻页查看指令；/背包/背包筛选
+     带货币行 + 类型词）。
+  2) **4f TPL-4F-06 目录页脚「输入 /帮助 组名 翻页」归一**：2026-08-27 用户拍板后基础指令组
+     列表尾段不再用 TPL-08，统一 CakeGame 式（当前页 + Tip）；/帮助 目录/组页 Tip =
+     「发送'帮助 组名'翻页查看指令」。
   3) **/角色 = 玩家属性面板（B4 裁决承接）**：4f /状态 面板五区中「前缀行/位置行/效果区」由装配层
      prefix_render 与后续批次承接；本路 /角色 聚焦任务口径「LV 行固定头部 + 属性三层结构
-     （白值/加成/临时）」，9 项属性 5 条/页 = 2 页 + TPL-08 + 裁决② 夹取。resource 型（生命/魔力）
+     （白值/加成/临时）」，9 项属性 5 条/页 = 2 页 + CakeGame 尾段（当前页 + Tip）+ 裁决② 夹取。resource 型（生命/魔力）
      显示 当前/上限（当前取 ctx["hp"]/ctx["mp"]）；最终值经 3b 管线 calc_all_final_attributes。
-  4) **/装备 整数参数 = 页码**（m4 §2.2 翻页 + TPL-08 页脚「/装备 页码 翻页」横切），切换装备走
+  4) **/装备 整数参数 = 页码**（m4 §2.2 翻页横切 + CakeGame 尾段），切换装备走
      显式子词「穿 <序号>」（背包序号）/「卸 <槽位>」（槽位名/id/序号，本层 resolve_equip_slot 纯
      解析 → 引擎）；槽位名/序号解析失败 = 值域文案「❌ 没有这个装备槽位」（命令合法，不走 TPL-12，
      对齐 quest「任务不存在」口径）。
@@ -58,7 +60,7 @@ Router 接到 core 层——指令解析（parsers.parse_command 已 token 化 �
      收集 steps[].to → 技能名解析，1c2 派生链语义）；无派生链 → 不输出「可派生成」。技能按
      type 排序 basic→active→passive→trigger（6a §1.5 普攻固定第 1 位），job_restrict 过滤当前职业。
   6) **/帮助 分组目录**：内置分组表（冒险/战斗/成长/制造生活/快捷 + GM 组 B8 仅 GM 渲染）；
-     普通玩家 5 组单页；GM 6 组 2 页（带 TPL-08）；组内指令列表 5 条/页。未注册玩家返回注册引导版
+     普通玩家 5 组单页；GM 6 组 2 页（带 CakeGame 尾段）；组内指令列表 5 条/页。未注册玩家返回注册引导版
      （B6 豁免）。GM 判定读 ctx["is_gm"]（缺省 False=普通玩家，对齐 RUL-25 静默隐藏）。
   7) **注册门槛（RUL-08）**：/角色 /背包 /装备 /技能 在 ctx["registered"] is False 时统一返回
      「❌ 请先 /注册 创建角色（/注册 名字 职业）」；/帮助 豁免（B6）。ctx 缺省 registered=True
@@ -80,7 +82,7 @@ from qbot_rpg.core.message_format import strip_icon_emoji
 from qbot_rpg.core.message_format.list_render import (
     DEFAULT_PAGE_SIZE,
     LAST_PAGE_HINT,
-    render_footer,
+    render_cake_tail,
     resolve_page,
 )
 from qbot_rpg.core.player_attributes import calc_all_final_attributes
@@ -427,11 +429,8 @@ def _render_attr_page(ctx: Mapping[str, Any], page: int) -> str:
     for i, (attr_id, cur) in enumerate(slice_items):
         lines.append(attr_line(start + i + 1, attr_id, _stat_name(ctx, attr_id),
                                final[attr_id], attrs, current=cur))
-    if res.clamped:
-        lines.append(LAST_PAGE_HINT)
-    footer = render_footer(res.page, res.total_pages, res.total, VIEW_CMD)
-    if footer:
-        lines.append(footer)
+    if items:
+        lines.append(_cake_tail(res.page, res.total_pages, tip=_VIEW_TAIL_TIP, clamped=res.clamped))
     return "\n".join(lines)
 
 
@@ -568,8 +567,25 @@ def _currency_lines(ctx: Mapping[str, Any]) -> List[str]:
     return [f"{_currency_display_name(ctx, str(k))}：{v}" for k, v in cur.items()]
 
 
-# /背包 尾段（用户 2026-08-27 自定义模板：页数放尾部 + Tip）
-_BAG_TAIL_TIP = "Tip:发送'使用+物品名'即可使用物品"
+# CakeGame 式尾段 Tip 内容（`Tip:` 之后部分，2026-08-27 用户拍板统一列表尾段；无斜杠指令名）
+_BAG_TAIL_TIP = "发送'使用+物品名'即可使用物品"      # /背包（含货币行 + 类型词）
+_VIEW_TAIL_TIP = "发送'装备'查看当前装备"           # /角色（属性面板下一步）
+_EQUIP_TAIL_TIP = "发送'装备 穿 序号'穿戴装备"      # /装备（穿戴引导）
+_SKILL_TAIL_TIP = "发送'帮助 技能'查看技能说明"     # /技能（技能说明引导）
+_HELP_TAIL_TIP = "发送'帮助 组名'翻页查看指令"      # /帮助 目录/组页
+
+
+def _cake_tail(page: int, total_pages: int, *, category_word: Optional[str] = None,
+               tip: str = "", clamped: bool = False) -> str:
+    """CakeGame 式尾段（当前页 + 可选夹取提示 + Tip 尾行）。
+
+    夹取提示（裁决② LAST_PAGE_HINT）由本层按各指令 clamped 逻辑插入「当前页」与「Tip」之间，
+    对齐 /背包 尾段顺序：`当前页：X/Y` → `（已到最后一页）` → `Tip:...`。
+    """
+    tail = render_cake_tail(page, total_pages, category_word=category_word, tip=tip)
+    if clamped:
+        tail = tail.replace("\n", f"\n{LAST_PAGE_HINT}\n", 1)
+    return tail
 
 
 def _bag_tail_lines(page: int, total_pages: int, total: int, clamped: bool,
@@ -578,12 +594,9 @@ def _bag_tail_lines(page: int, total_pages: int, total: int, clamped: bool,
 
     （类型词 = 当前筛选的物品类型，用户 2026-08-27 拍板：/背包 → 全部，/背包筛选
     装备 → 装备、/背包筛选药剂 → 药剂 等；原「共 N 条」改显示筛选类型。）"""
-    lines: List[str] = []
-    lines.extend(_currency_lines(ctx))
-    lines.append(f"当前页：{page}/{total_pages}({category_word})")
-    if clamped:
-        lines.append("（已到最后一页）")
-    lines.append(_BAG_TAIL_TIP)
+    lines: List[str] = list(_currency_lines(ctx))
+    lines.append(_cake_tail(page, total_pages, category_word=category_word,
+                            tip=_BAG_TAIL_TIP, clamped=clamped))
     return lines
 
 
@@ -918,11 +931,8 @@ def _render_equip_page(ctx: Mapping[str, Any], page: int) -> str:
     lines: List[str] = [_base_header(ctx, "装备")]
     for i, sid in enumerate(slice_items):
         lines.append(equip_line(start + i + 1, sid, eq.get(sid), ctx))
-    if res.clamped:
-        lines.append(LAST_PAGE_HINT)
-    footer = render_footer(res.page, res.total_pages, res.total, EQUIP_CMD)
-    if footer:
-        lines.append(footer)
+    if items:
+        lines.append(_cake_tail(res.page, res.total_pages, tip=_EQUIP_TAIL_TIP, clamped=res.clamped))
     return "\n".join(lines)
 
 
@@ -1184,11 +1194,8 @@ def _render_skill_page(ctx: Mapping[str, Any], page: int) -> str:
     lines: List[str] = [f"【技能】Lv{f['level']}.{f['name']}（{job}）｜ 技能 {len(sids)} 项"]
     for i, sid in enumerate(slice_ids):
         lines.append(skill_line(start + i + 1, sid, ctx))
-    if res.clamped:
-        lines.append(LAST_PAGE_HINT)
-    footer = render_footer(res.page, res.total_pages, res.total, SKILL_CMD)
-    if footer:
-        lines.append(footer)
+    if sids:
+        lines.append(_cake_tail(res.page, res.total_pages, tip=_SKILL_TAIL_TIP, clamped=res.clamped))
     return "\n".join(lines)
 
 
@@ -1247,11 +1254,8 @@ def _render_help_directory(ctx: Mapping[str, Any], page: int) -> str:
     lines: List[str] = [_DIRECTORY_TITLE]
     for i, g in enumerate(slice_groups):
         lines.append(_group_summary(g))
-    if res.clamped:
-        lines.append(LAST_PAGE_HINT)
-    footer = render_footer(res.page, res.total_pages, res.total, HELP_CMD)
-    if footer:
-        lines.append(footer)
+    if groups:
+        lines.append(_cake_tail(res.page, res.total_pages, tip=_HELP_TAIL_TIP, clamped=res.clamped))
     return "\n".join(lines)
 
 
@@ -1278,11 +1282,8 @@ def _render_help_group(ctx: Mapping[str, Any], group_name: str, page: int) -> st
     lines: List[str] = [f"【{group_name}】"]
     for i, c in enumerate(slice_cmds):
         lines.append(group_page_line(start + i + 1, c))
-    if res.clamped:
-        lines.append(LAST_PAGE_HINT)
-    footer = render_footer(res.page, res.total_pages, res.total, f"{HELP_CMD} {group_name}")
-    if footer:
-        lines.append(footer)
+    if cmds:
+        lines.append(_cake_tail(res.page, res.total_pages, tip=_HELP_TAIL_TIP, clamped=res.clamped))
     return "\n".join(lines)
 
 

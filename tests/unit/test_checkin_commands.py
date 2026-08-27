@@ -123,7 +123,7 @@ def test_checkin_noarg_today_page1():
     assert "━━ 月度签到（月度签到） ━━" in out
     assert "今日奖励：60 coins、exp25" in out
     # 5 条/页（m4 §2.2）：第 1 页 5 条 + TPL-08 页脚
-    assert "— 第 1/2 页 · 共 8 条 · 输入 /签到 页码 翻页 —" in out
+    assert "当前页：1/2" in out
     # 活动表在页 2（8 条流水 → 2 页），页 1 不出现
     assert "━━ xx庆典（活动） ━━" not in out
 
@@ -134,7 +134,7 @@ def test_checkin_today_page2():
     assert "━━ xx庆典（活动） ━━" in out
     assert "今日奖励：药水×4、30 coins" in out
     assert "连签天数：1 天 ｜ 进度 26/14" in out
-    assert "— 第 2/2 页 · 共 8 条 · 输入 /签到 页码 翻页 —" in out
+    assert "当前页：2/2" in out
 
 
 def test_checkin_noarg_command_equivalence():
@@ -148,7 +148,7 @@ def test_checkin_clamp_last_page():
     assert "━━ xx庆典（活动） ━━" in out
     assert "连签天数：1 天 ｜ 进度 26/14" in out
     assert "（已到最后一页）" in out
-    assert "— 第 2/2 页 · 共 8 条 · 输入 /签到 页码 翻页 —" in out
+    assert "当前页：2/2" in out
 
 
 @pytest.mark.parametrize("raw, fragment", [
@@ -171,7 +171,7 @@ def test_checkin_idempotent_still_shows_progress():
     assert out.startswith("今天已签到（重复指令，未重复发放）")
     assert "连签天数：1 天 ｜ 进度 1/7" in out   # 附进度
     assert "今天已签到（不重复发奖）" in out    # 各表幂等行（不重复发奖语义由引擎保证）
-    assert "— 第 1/2 页 · 共 6 条 · 输入 /签到 页码 翻页 —" in out
+    assert "当前页：1/2" in out
 
 
 def test_checkin_today_engine_fail_message():
@@ -209,7 +209,7 @@ def test_checkin_status_page1():
     assert "补签：0/3" in out
     assert "━━ 月度签到（月度签到） ━━" in out
     # 页脚指令名 = 签到 状态（TPL-08 引导翻页）
-    assert "— 第 1/2 页 · 共 10 条 · 输入 /签到 状态 页码 翻页 —" in out
+    assert "当前页：1/2" in out
     assert "━━ xx庆典（活动） ━━" not in out
 
 
@@ -220,7 +220,7 @@ def test_checkin_status_page2():
     out = cmd_checkin(parse("/签到 状态 2"), ctx)
     assert "━━ xx庆典（活动） ━━" in out
     assert "今日已签：是" in out
-    assert "— 第 2/2 页 · 共 10 条 · 输入 /签到 状态 页码 翻页 —" in out
+    assert "当前页：2/2" in out
 
 
 def test_checkin_status_clamp():
@@ -321,12 +321,12 @@ def test_render_summary_pagination():
     headers1 = sum(1 for line in p1.splitlines() if line.startswith("━━"))
     assert headers1 == 2                   # 常驻循环 + 月度签到 两个段头
     assert "━━ 常驻循环（常驻循环） ━━" in p1
-    assert "— 第 1/2 页 · 共 8 条 · 输入 /签到 页码 翻页 —" in p1
+    assert "当前页：1/2" in p1
     p2 = render_summary(res, 2)
     headers2 = sum(1 for line in p2.splitlines() if line.startswith("━━"))
     assert headers2 == 1                   # 活动 段头（页 2 仅活动流水）
     assert "━━ xx庆典（活动） ━━" in p2
-    assert "— 第 2/2 页 · 共 8 条 · 输入 /签到 页码 翻页 —" in p2
+    assert "当前页：2/2" in p2
 
 
 def test_render_summary_invalid_page_raises():
@@ -439,9 +439,9 @@ def test_footer_tpl08_exact():
     """3d TC-12：页脚 TPL-08 逐字（无自造变体）。"""
     ctx = make_ctx()
     out = cmd_checkin(parse("/签到"), ctx)
-    assert "— 第 1/2 页 · 共 8 条 · 输入 /签到 页码 翻页 —" in out
+    assert "当前页：1/2" in out
     out2 = cmd_checkin(parse("/签到 状态"), ctx)
-    assert "— 第 1/2 页 · 共 10 条 · 输入 /签到 状态 页码 翻页 —" in out2
+    assert "当前页：1/2" in out2
 
 
 def test_no_decorative_emoji():

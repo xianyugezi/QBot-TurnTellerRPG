@@ -9,11 +9,16 @@
 渲染纪律：单次操作最多 1-2 条消息（本壳一律 1 条返回文本）；emoji 仅 ✅/❌ + 排版符号
 （| → × / 「」【】）；前缀首行注入由装配层（M5-01 prefix_wiring）统一处理，本壳不拼前缀。
 
+/进入 move（通道行走）结果按 CakeGame 模板 28 风格丰富（用户 2026-08-27 拍板）：
+  ✅ 你来到了「name」+ 地图介绍 + 活动怪物（序号.名称×数量）+ 通道（上/下/左/右：目标地图名）
+  + Tip（发送'位置'查询当前位置）；区域角色（NPC）行省略——maps 节点无 npcs 字段
+  （登记 DELAYED，NPC 数据源待 M6 数据框架）。
+
 依据：docs/m5_shared_contract.md §三 / 铁律 2 / 框架 §7.3 L1279-1281（/采集 /进入）/ §7.4。
 """
 from __future__ import annotations
 
-from typing import Any, Callable, Mapping, MutableMapping, Optional
+from typing import Any, Callable, Dict, List, Mapping, MutableMapping, Optional, Tuple
 
 from .router import CommandSpec
 from .sender import format_tpl12
@@ -43,23 +48,155 @@ def _gate(ctx: Mapping[str, Any]) -> Optional[str]:
     return None
 
 
-def _render_enter(result: Mapping[str, Any]) -> str:
-    """/进入 结果 → 1 条消息文本（move / dungeon / 失败）。"""
+# =====================================================================================
+# /进入 move（通道行走）丰富渲染 —— CakeGame 模板 28 风格（用户 2026-08-27 拍板）：
+#   ✅ 你来到了「name」+ 地图介绍 + 活动怪物（序号.名称×数量）+ 通道（上/下/左/右：目标名）+ Tip
+# 区域角色（NPC）行省略：maps 节点无 npcs 字段——登记 DELAYED（NPC 数据源待 M6 数据框架）
+# =====================================================================================
+
+# 通道方向 → 中文标签（对齐 movement.DIRECTION_ALIASES：up=上/down=下/left=左/right=右）
+_EXIT_DIR_LABELS: Dict[str, str] = {"up": "上", "down": "下", "left": "左", "right": "右"}
+_EXIT_DIR_ORDER: Tuple[str, ...] = ("up", "down", "left", "right")
+
+# /进入 Tip（对齐 /背包 尾段 Tip 句式：无斜杠）
+_ENTER_TIP = "Tip:发送'位置'即可查询当前位置信息"
+
+# 活动怪物展示上限（铁律 11：单条消息 ≤16 行折叠上限；超 5 只截断折叠）
+_MONSTER_SHOW_LIMIT = 5
+
+
+def _maps_index_for(ctx: Optional[Mapping[str, Any]]) -> Dict[str, Any]:
+    """maps 索引（同 resolve_move._maps_index 口径：ctx["maps"]；缺失/引擎未加载 → 空表）。"""
+    if not ctx:
+        return {}
+    try:
+        from qbot_rpg.world.movement import _maps_index  # noqa: PLC0415
+    except ImportError:
+        return {}
+    index = _maps_index(ctx.get("maps"))
+    return dict(index) if isinstance(index, Mapping) else {}
+
+
+def _monster_names(ctx: Optional[Mapping[str, Any]]) -> Dict[str, str]:
+    """enemy id → 怪物名 映射（ctx["monsters"] 优先，兜底 ctx["enemies"]；拿不到 → 空表）。
+
+    monsters/enemies 条目形态兼容：{id: {name, ...}}（映射）或 [{id, name, ...}, ...]（列表）。
+    """
+    if not ctx:
+        return {}
+    src = ctx.get("monsters")
+    if src is None:
+        src = ctx.get("enemies")
+    out: Dict[str, str] = {}
+    if isinstance(src, Mapping):
+        for eid, entry in src.items():
+            if isinstance(entry, Mapping):
+                nm = entry.get("name")
+                if isinstance(nm, str) and nm:
+                    out[str(eid)] = nm
+    elif isinstance(src, (list, tuple)):
+        for e in src:
+            if isinstance(e, Mapping):
+                eid = e.get("id")
+                nm = e.get("name")
+                if isinstance(eid, str) and eid and isinstance(nm, str) and nm:
+                    out[eid] = nm
+    return out
+
+
+def _map_name(index: Mapping[str, Any], map_id: str) -> str:
+    """目标地图 id → 地图名（index 项 MapDef 或 raw dict 兼容；未知 → id 兜底）。"""
+    entry = index.get(map_id)
+    nm = entry.get("name") if isinstance(entry, Mapping) else getattr(entry, "name", None)
+    return nm if isinstance(nm, str) and nm else map_id
+
+
+def _monster_line(ctx: Optional[Mapping[str, Any]], target: Any) -> Optional[str]:
+    """活动怪物行：`活动怪物：1.岩皮鼬×3 2.石甲蜥×1`（对齐 /背包 行格式 ×数量）。
+
+    数据源 = maps 目标图 monsters 行（{enemy, count, ...}）；enemy id → 怪物名经
+    ctx["monsters"]/ctx["enemies"] 解析，拿不到直接显示 enemy id；>5 只截断折叠（铁律 11）。
+    无怪物 → None（行省略）。
+    """
+    if target is None:
+        return None
+    if isinstance(target, Mapping):
+        raw = target.get("monsters")
+        rows = tuple(e for e in raw if isinstance(e, Mapping)) if isinstance(raw, list) else ()
+    else:
+        rows = target.spawn or ()
+    if not rows:
+        return None
+    names = _monster_names(ctx)
+    parts: List[str] = []
+    for i, row in enumerate(rows[:_MONSTER_SHOW_LIMIT], 1):
+        eid = row.get("enemy")
+        nm = names.get(str(eid)) or (str(eid) if eid else "?")
+        cnt = row.get("count", 1)
+        try:
+            cnt = int(cnt)
+        except (TypeError, ValueError):
+            cnt = 1
+        parts.append(f"{i}.{nm}×{cnt}")
+    line = "活动怪物：" + " ".join(parts)
+    if len(rows) > _MONSTER_SHOW_LIMIT:
+        line += " …"
+    return line
+
+
+def _channel_lines(index: Mapping[str, Any], target: Any) -> List[str]:
+    """通道行：`上：{目标地图名}`…（仅渲染已配置方向；缺省方向=死路，行省略）。"""
+    lines: List[str] = []
+    if target is None:
+        return lines
+    if isinstance(target, Mapping):
+        raw = target.get("exits")
+        exits_map = raw if isinstance(raw, Mapping) else {}
+        for d in _EXIT_DIR_ORDER:
+            ex = exits_map.get(d)
+            if not isinstance(ex, Mapping) or not ex.get("to"):
+                continue
+            lines.append(f"{_EXIT_DIR_LABELS.get(d, d)}：{_map_name(index, str(ex.get('to')))}")
+        return lines
+    for d in _EXIT_DIR_ORDER:
+        ex = target.exit(d)
+        if ex is None or not ex.to:
+            continue
+        lines.append(f"{_EXIT_DIR_LABELS.get(d, d)}：{_map_name(index, str(ex.to))}")
+    return lines
+
+
+def _render_enter(result: Mapping[str, Any],
+                  ctx: Optional[Mapping[str, Any]] = None) -> str:
+    """/进入 结果 → 1 条消息文本（move / dungeon / 失败）。
+
+    move（通道行走）按 CakeGame 模板 28 风格：✅ 你来到了「name」+ 地图介绍 + 活动怪物
+    （序号.名称×数量）+ 通道（上/下/左/右：目标地图名）+ Tip；区域角色（NPC）行省略
+    （maps 节点无 npcs 字段——登记 DELAYED，NPC 数据源待 M6 数据框架）。
+    """
     if not result.get("ok"):
         return f"❌ {result.get('reason') or '无法进入'}"
     kind = result.get("type")
     if kind == "dungeon":
         name = result.get("name") or result.get("dungeon_id") or ""
         return f"✅ 你进入了「{name}」（副本）"
-    # move：通道行走 → 新地图信息
+    # move：通道行走 → 新地图信息（CakeGame 模板 28 风格丰富）
     name = result.get("name") or ""
     lines = [f"✅ 你来到了「{name}」"]
     desc = result.get("desc") or ""
     if desc:
-        lines.append(str(desc))
+        lines.append(f"地图介绍：{desc}")
     lore = result.get("lore") or ""
     if lore:
         lines.append(str(lore))
+    index = _maps_index_for(ctx)
+    target = index.get(str(result.get("to"))) if result.get("to") else None
+    mline = _monster_line(ctx, target)
+    if mline:
+        lines.append(mline)
+    # 区域角色（NPC）行省略：maps 节点无 npcs 字段（登记 DELAYED，NPC 数据源待 M6 数据框架）
+    lines.extend(_channel_lines(index, target))
+    lines.append(_ENTER_TIP)
     return "\n".join(lines)
 
 
@@ -105,7 +242,7 @@ def cmd_enter(parsed: Any, ctx: Mapping[str, Any]) -> str:
     )
     if not isinstance(result, Mapping):
         return "❌ 进入失败（引擎返回异常）"
-    return _render_enter(result)
+    return _render_enter(result, ctx)
 
 
 def cmd_rest(parsed: Any, ctx: Mapping[str, Any]) -> str:

@@ -19,6 +19,7 @@ from qbot_rpg.core.message_format.list_render import (
     ListPage,
     PageResolution,
     page_items,
+    render_cake_tail,
     render_footer,
     render_item_line,
     render_list_page,

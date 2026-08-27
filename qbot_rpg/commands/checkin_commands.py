@@ -23,11 +23,11 @@
     P1-1（补签跨月归一口径）/P1-2（[签到:*] 表 id 双口径消费）/P1-3（bonus mult 键）——本文件承载
     P0-1（消费真实引擎 / tables 重建纯文本 / 缺省表名传 None / resolve 取 .get("id")）。
 
-职责（细化_3a §1.3 壳层职责 · 唯一指令执行壳）：把 /签到（无参=今日结算汇总 5 条/页 + TPL-08
-页脚 + 裁决② 夹取；子词「状态」= 连签/月累计/今日已签；子词「补签 <表名>」= 补签）
+职责（细化_3a §1.3 壳层职责 · 唯一指令执行壳）：把 /签到（无参=今日结算汇总 5 条/页 +
+CakeGame 式尾段（当前页 + Tip）+ 裁决② 夹取；子词「状态」= 连签/月累计/今日已签；子词「补签 <表名>」= 补签）
 从 Router 接到 core/checkin.py 引擎——指令解析（parsers.parse_command 已 token 化 → 本模块取
 子指令词 + 页码/表名）、结算/状态/补签结果渲染（core/message_format/list_render 5 条/页 +
-TPL-08 页脚 + 裁决② 夹取 + 表段头，正文按 2b5 §2.4 从引擎 tables 重建纯文本）、补签结果透传
+CakeGame 式尾段 + 裁决② 夹取 + 表段头，正文按 2b5 §2.4 从引擎 tables 重建纯文本）、补签结果透传
 （引擎已按定稿合成 ✅/❌ 业务文案，含裁决⑦「只计不补发」提示）、错误统一 TPL-12
 （sender.format_tpl12，文案唯一源 errors.py D-04）。
 
@@ -69,13 +69,13 @@ TPL-08 页脚 + 裁决② 夹取 + 表段头，正文按 2b5 §2.4 从引擎 tab
      重建（P0-1：引擎 message 的汇总框不再透传为正文）。
   3) **5 条/页横切由本层统一**：引擎 tables 全量重建 sections 后本层扁平化按 5 条/页重分页
      （跨路分页口径收敛，与 quest_commands/shop_commands 同模式）；表头不计条数（3d §2.1）；
-     页脚只用 render_footer（TPL-08），禁止自造页脚。
+     尾段只用 render_cake_tail（CakeGame 式「当前页 + Tip」），禁止自造页脚。
   4) **补签表名参数**：2b5 §2.1 仅定「/签到 补签」；多表并存时补签需指定表（任务要求
      「/签到 补签 <表名>」）。缺省表名 → 直接传 None 给 checkin_makeup(ctx, None)，由引擎按
      主表 loop 解析（裁决⑧「缺省表名=主表 loop」——P0-1 修复：不再经 resolve 转 None 触发 TPL_NO_TABLE）。
-  5) **/签到 状态 可翻页**：本月累计/连签/今日已签 行数可能超 5 行，按 m4 §2.2 5 条/页 + TPL-08
-     页脚（footer 指令名「签到 状态」）横切；页码 0/负数/非数字 → TPL-12（裁决②）。
-  6) **/签到 <整数> 二义性**：整数参数 = 页码（m4 §2.2 翻页 + TPL-08 页脚「/签到 页码 翻页」），
+  5) **/签到 状态 可翻页**：本月累计/连签/今日已签 行数可能超 5 行，按 m4 §2.2 5 条/页 +
+     CakeGame 式尾段（当前页 + Tip）横切；页码 0/负数/非数字 → TPL-12（裁决②）。
+  6) **/签到 <整数> 二义性**：整数参数 = 页码（m4 §2.2 翻页 + CakeGame 尾段「当前页：X/Y」），
      0/负数/非数字 → TPL-12（裁决②）；超总页数 → 夹取最后一页 +「已到最后一页」（裁决②）。
   7) **补签表名非法/不存在**（resolve_checkin_table_arg → None）：返回「❌ 没有这个签到表」
      （值域问题，命令本身合法，不走 TPL-12；对齐 quest_commands 工程补白 6 口径）。
@@ -96,7 +96,7 @@ from typing import Any, Callable, List, Mapping, MutableMapping, Optional
 from qbot_rpg.core.message_format.list_render import (
     DEFAULT_PAGE_SIZE,
     LAST_PAGE_HINT,
-    render_footer,
+    render_cake_tail,
     resolve_page,
 )
 
@@ -110,7 +110,7 @@ __all__ = [
     # 指令名 / 子指令词
     "CHECKIN_CMD", "SUB_STATUS", "SUB_MAKEUP", "SUBWORDS",
     # 渲染常量
-    "TPL_NO_CHECKIN", "TPL_NO_TABLE", "STATUS_FOOTER_COMMAND",
+    "TPL_NO_CHECKIN", "TPL_NO_TABLE",
     # 指令处理器（纯函数：parsed + ctx → 回复正文）
     "cmd_checkin", "cmd_checkin_today", "cmd_checkin_status", "cmd_checkin_makeup",
     # 渲染 / 工具
@@ -130,8 +130,8 @@ SUB_STATUS = "状态"
 SUB_MAKEUP = "补签"
 SUBWORDS: tuple = (SUB_STATUS, SUB_MAKEUP)
 
-# 状态视图页脚指令名（TPL-08 引导输入：/签到 状态 页码 翻页）
-STATUS_FOOTER_COMMAND: str = f"{CHECKIN_CMD} {SUB_STATUS}"
+# CakeGame 式尾段 Tip 内容（`Tip:` 之后部分，2026-08-27 用户拍板统一列表尾段；无斜杠指令名）
+_TAIL_TIP = "发送'签到 补签'即可补签"   # /签到 结算汇总与状态视图（补签为真实子指令）
 
 # 结算/状态不可用兜底（引擎 ok=False 且无 message 时）
 TPL_NO_CHECKIN = "❌ 签到暂不可用"
@@ -319,7 +319,7 @@ def _engine_of(ctx: Mapping[str, Any]) -> Any:
 
 
 # ---------------------------------------------------------------------------
-# 汇总/状态渲染（sections 扁平化 → 5 条/页 + 段头 + TPL-08 页脚 + 裁决② 夹取）
+# 汇总/状态渲染（sections 扁平化 → 5 条/页 + 段头 + CakeGame 式尾段 + 裁决② 夹取）
 # ---------------------------------------------------------------------------
 
 def _today_message(res: Mapping[str, Any]) -> str:
@@ -334,7 +334,6 @@ def _today_message(res: Mapping[str, Any]) -> str:
 
 
 def render_summary(res: Mapping[str, Any], page: object, *,
-                   command: str = CHECKIN_CMD,
                    per_page: int = DEFAULT_PAGE_SIZE) -> str:
     """结算/状态正文渲染（工程补白 2/3/5）：
 
@@ -342,7 +341,8 @@ def render_summary(res: Mapping[str, Any], page: object, *,
       首次出现输出（表头不计条数，3d §2.1）；
     - 页码超总页数 → 夹取最后一页 + LAST_PAGE_HINT（裁决②）；0/负数/非数字 → raise ValueError
       （壳层应先经 resolve_page 判 TPL-12）；
-    - TPL-08 页脚（render_footer，禁止自造页脚）；空流水 → 返回 ""（由调用方只输出 message）。
+    - CakeGame 式尾段（当前页 + Tip，2026-08-27 用户拍板统一列表尾段）；空流水 → 返回 ""
+      （由调用方只输出 message）。
     """
     pairs = flatten_sections(res)
     total = int(res.get("total", len(pairs)))
@@ -363,11 +363,10 @@ def render_summary(res: Mapping[str, Any], page: object, *,
             lines.append(f"━━ {title} ━━")
             seen.add(title)
         lines.append(row)
+    tail = render_cake_tail(pg.page, pg.total_pages, tip=_TAIL_TIP)
     if pg.clamped:
-        lines.append(LAST_PAGE_HINT)
-    footer = render_footer(pg.page, pg.total_pages, total, command)
-    if footer:
-        lines.append(footer)
+        tail = tail.replace("\n", f"\n{LAST_PAGE_HINT}\n", 1)
+    lines.append(tail)
     return "\n".join(lines)
 
 
@@ -384,19 +383,19 @@ def _assemble(msg: str, body: str) -> str:
 
 def cmd_checkin_today(ctx: Mapping[str, Any], page: object) -> str:
     """/签到 [页码]：今日结算汇总（多表各表奖励 + 连签/月累计进度 + 里程碑提示；
-    5 条/页 + TPL-08 页脚 + 裁决② 夹取；幂等 D-02「今天已签到」仍附进度；板不可用 → 引擎消息透传）。
+    5 条/页 + CakeGame 式尾段 + 裁决② 夹取；幂等 D-02「今天已签到」仍附进度；板不可用 → 引擎消息透传）。
     消费真实引擎 checkin_do(ctx)，正文从 tables 重建（审查批次2 P0-1）。"""
     engine = _engine_of(ctx)
     res = engine.checkin_do(ctx)
     if not res or not res.get("ok"):
         return str(res.get("message") or TPL_NO_CHECKIN) if res else TPL_NO_CHECKIN
     msg = _today_message(res)
-    body = render_summary(res, page, command=CHECKIN_CMD)
+    body = render_summary(res, page)
     return _assemble(msg, body)
 
 
 def cmd_checkin_status(ctx: Mapping[str, Any], page: object) -> str:
-    """/签到 状态 [页码]：连签/本月累计/今日已签（5 条/页 + TPL-08 页脚 + 裁决② 夹取；
+    """/签到 状态 [页码]：连签/本月累计/今日已签（5 条/页 + CakeGame 式尾段 + 裁决② 夹取；
     页码 0/负数/非数字 → TPL-12 由主入口判定）。消费真实引擎 checkin_state(ctx)，正文从 tables 重建
     （审查批次2 P0-1）。"""
     engine = _engine_of(ctx)
@@ -404,7 +403,7 @@ def cmd_checkin_status(ctx: Mapping[str, Any], page: object) -> str:
     if not res or not res.get("ok"):
         return str(res.get("message") or TPL_NO_CHECKIN) if res else TPL_NO_CHECKIN
     msg = "✅ 签到状态"
-    body = render_summary(res, page, command=STATUS_FOOTER_COMMAND)
+    body = render_summary(res, page)
     return _assemble(msg, body)
 
 
@@ -427,7 +426,7 @@ def cmd_checkin(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     """/签到 [参数] 主入口（m4 §3.4 + 2b5 §2.1 收口形式）：
 
       无参            → 今日结算汇总第 1 页（多表各表奖励 + 连签/月累计进度 + 里程碑提示，
-                         5 条/页 + TPL-08 页脚 + 双表段头）
+                         5 条/页 + CakeGame 式尾段 + 双表段头）
       <整数>          → 页码翻页（裁决②：超页夹取最后一页 + 已到最后一页；0/负数/非数字 → TPL-12）
       状态 [页码]     → 连签/月累计/今日已签（可翻页，工程补白 5）
       补签 [<表名>]   → 补签（表名缺省 = 主表 loop，工程补白 4；裁决⑦ 只计不补发提示透传）

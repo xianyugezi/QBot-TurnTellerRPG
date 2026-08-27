@@ -14,7 +14,10 @@
 - 装饰性 emoji 全局禁用（3d §四 D-01）：本模块输出（条目行/页脚/夹取提示）均为纯文本，零 emoji。
 
 （注：panel_render.paginate 为 M0 遗留切片工具；本模块是 M4 列表模板唯一实现——5 条/页 +
-裁决② 夹取 + TPL-08 页脚。后续系统按 3d D-05 引用本模块，不另造页脚。）
+裁决② 夹取 + TPL-08 页脚。后续系统按 3d D-05 引用本模块，不另造页脚。
+2026-08-27 用户拍板：列表尾段统一 CakeGame 消息模板风格（当前页 + Tip 尾行，
+render_cake_tail）；/背包 已按此落地，本批起 /角色 /装备 /技能 /帮助 及 /商店 /任务 /签到
+列表尾段同步切换，TPL-08 render_footer 仍供 gm/battle 等既有系统沿用。）
 """
 from __future__ import annotations
 
@@ -28,6 +31,7 @@ __all__ = [
     "ListPage",
     "PageResolution",
     "page_items",
+    "render_cake_tail",
     "render_footer",
     "render_item_line",
     "render_list_page",
@@ -140,6 +144,35 @@ def render_footer(page: int, total_pages: int, total: int, command: str) -> str:
     if total_pages <= 1 or not command:
         return ""
     return f"— 第 {page}/{total_pages} 页 · 共 {total} 条 · 输入 /{command} 页码 翻页 —"
+
+
+def render_cake_tail(
+    page: int,
+    total_pages: int,
+    *,
+    category_word: Optional[str] = None,
+    tip: str = "",
+) -> str:
+    """CakeGame 式列表尾段：``当前页：{page}/{total_pages}[({category_word})]`` + Tip 行。
+
+    2026-08-27 用户拍板：基础指令组列表尾段统一 CakeGame 消息模板风格（当前页 + Tip 尾行，
+    替代 TPL-08 页脚）；/背包 已按此落地（basic_commands._bag_tail_lines），本函数为通用实现。
+
+    - 当前页**恒显示**（含单页 1/1，对齐 /背包 模板）；category_word 为当前页类型词（可选，
+      如 /背包筛选 装备 → ``当前页：1/2(装备)``）。
+    - tip 非空时追加 ``Tip:{tip}`` 行——tip 为 ``Tip:`` 之后的完整内容：CakeGame 通用形
+      ``发送'...'即可...`` 由 tip 自行拼装（如 ``发送'使用+物品名'即可使用物品``），
+      各指令可按需定制尾句（如 ``发送'装备'查看当前装备``）。
+    - 夹取提示（LAST_PAGE_HINT）由调用方按裁决② clamped 逻辑处理（本 helper 不含，
+      保证「当前页 →（已到最后一页）→ Tip」顺序由壳层编排）。
+    """
+    line = f"当前页：{page}/{total_pages}"
+    if category_word:
+        line += f"({category_word})"
+    parts = [line]
+    if tip:
+        parts.append(f"Tip:{tip}")
+    return "\n".join(parts)
 
 
 def _default_item_line(index: int, item: Any) -> str:

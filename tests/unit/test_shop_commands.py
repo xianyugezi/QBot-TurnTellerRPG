@@ -126,7 +126,7 @@ def test_shop_noarg_browses_current_default_shop():
     assert "1. 药水 ｜ 商品单价：50(金币)" in out
     assert "5. 金珠 ｜ 商品单价：80000(金币) ｜ 原价 100000(金币) [折扣 -20%]" in out
     # 5 条/页（m4 §2.2）：第 1 页 5 条 + TPL-08 页脚
-    assert "— 第 1/2 页 · 共 6 条 · 输入 /商店 页码 翻页 —" in out
+    assert "当前页：1/2" in out
     # 条目间分隔线（2b3 TC-05）
     assert out.count("---------------") == 4
 
@@ -157,7 +157,7 @@ def test_shop_integer_page_flip_precedence():
     """TC-06 + 3d §2.2：/商店 2 在当前店有 ≥2 页时 = 商品列表翻页（页码优先横切）。"""
     out = cmd_shop(parse("/商店 2"), make_ctx())
     assert "6. 回城卷轴 ｜ 商品单价：100(金币) 全服剩 5" in out
-    assert "— 第 2/2 页 · 共 6 条 · 输入 /商店 页码 翻页 —" in out
+    assert "当前页：2/2" in out
 
 
 def test_shop_integer_switch_when_page_out_of_range():
@@ -172,7 +172,7 @@ def test_shop_integer_clamp_last_page():
     out = cmd_shop(parse("/商店 9"), make_ctx())
     assert "6. 回城卷轴 ｜ 商品单价：100(金币) 全服剩 5" in out
     assert "（已到最后一页）" in out
-    assert "— 第 2/2 页 · 共 6 条 · 输入 /商店 页码 翻页 —" in out
+    assert "当前页：2/2" in out
 
 
 @pytest.mark.parametrize("raw, fragment", [
@@ -204,14 +204,14 @@ def test_shop_list_overview_page1():
     assert "1. 杂货铺 [普通商店] 新手村杂货铺" in out
     assert "3. 冒险者公会商店 [声望商店] 公会专属 需要 熟悉" in out
     assert "5. 神秘商人 [黑市] 深夜黑市" in out
-    assert "— 第 1/2 页 · 共 6 条 · 输入 /商店 列表 页码 翻页 —" in out
+    assert "当前页：1/2" in out
 
 
 def test_shop_list_overview_page2():
     """列表第 2 页（第 6 家 + 门槛标记）。"""
     out = cmd_shop(parse("/商店 列表 2"), make_ctx())
     assert "6. 炼金工坊 [普通商店] 炼金材料 需要 LV10" in out
-    assert "— 第 2/2 页 · 共 6 条 · 输入 /商店 列表 页码 翻页 —" in out
+    assert "当前页：2/2" in out
 
 
 def test_shop_list_clamp_last_page():
@@ -409,7 +409,7 @@ def test_parse_error_routes_tpl12():
 def test_footer_tpl08_exact():
     """3d TC-12：页脚 TPL-08 逐字（无自造变体）。"""
     out = cmd_shop(parse("/商店 2"), make_ctx())
-    assert "— 第 2/2 页 · 共 6 条 · 输入 /商店 页码 翻页 —" in out
+    assert "当前页：2/2" in out
 
 
 def test_no_decorative_emoji():
@@ -442,8 +442,9 @@ def test_render_shop_items_per_page_boundary():
              "discount": 0, "original_unit": 10, "markers": []} for i in range(1, 7)]
     ctx = make_ctx()
     p1 = render_shop_items({}, rows, 1, ctx)
-    assert p1.count("物品") == 5
-    assert "— 第 1/2 页 · 共 6 条 · 输入 /商店 页码 翻页 —" in p1
+    assert p1.count("｜ 商品单价") == 5              # 5 个商品行（Tip 行含「物品名」不计）
+    assert "1. 物品1" in p1 and "5. 物品5" in p1
+    assert "当前页：1/2" in p1
     p2 = render_shop_items({}, rows, 2, ctx)
     assert "6. 物品6" in p2
-    assert "— 第 2/2 页 · 共 6 条 · 输入 /商店 页码 翻页 —" in p2
+    assert "当前页：2/2" in p2

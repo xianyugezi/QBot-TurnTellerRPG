@@ -201,7 +201,7 @@ def test_view_noarg_page1():
     assert "3. 【力量】29（白值 15 ｜ 加成 +5·+10% ｜ 临时 +3·+20%）" in out
     assert "4. 【智力】15（白值 15 ｜ 加成 0 ｜ 临时 0）" in out
     assert "5. 【体质】10（白值 10 ｜ 加成 0 ｜ 临时 0）" in out
-    assert "— 第 1/2 页 · 共 9 条 · 输入 /角色 页码 翻页 —" in out
+    assert "当前页：1/2" in out
     # 第 2 页条目不在页 1
     assert "幸运" not in out
 
@@ -213,7 +213,7 @@ def test_view_page2():
     assert "7. 【专注】10（白值 10 ｜ 加成 0 ｜ 临时 0）" in out
     assert "8. 【敏捷】10（白值 10 ｜ 加成 0 ｜ 临时 0）" in out
     assert "9. 【幸运】10（白值 10 ｜ 加成 0 ｜ 临时 0）" in out
-    assert "— 第 2/2 页 · 共 9 条 · 输入 /角色 页码 翻页 —" in out
+    assert "当前页：2/2" in out
 
 
 def test_view_clamp_last_page():
@@ -221,7 +221,7 @@ def test_view_clamp_last_page():
     out = cmd_view(parse("/角色 9"), make_ctx())
     assert "9. 【幸运】10（白值 10 ｜ 加成 0 ｜ 临时 0）" in out
     assert "（已到最后一页）" in out
-    assert "— 第 2/2 页 · 共 9 条 · 输入 /角色 页码 翻页 —" in out
+    assert "当前页：2/2" in out
 
 
 @pytest.mark.parametrize("raw", ["/角色 0", "/角色 -1", "/角色 abc", "/角色 1 2"])
@@ -332,14 +332,14 @@ def test_equip_view_page1():
     assert "3. 身体：锁子甲" in out       # 无强化不显示 +0
     assert "4. 手部：（空）" in out
     assert "5. 腿部：（空）" in out
-    assert "— 第 1/2 页 · 共 6 条 · 输入 /装备 页码 翻页 —" in out
+    assert "当前页：1/2" in out
 
 
 def test_equip_view_page2():
     """/装备 2 → 第 2 页（脚部空槽）。"""
     out = cmd_equip(parse("/装备 2"), make_ctx())
     assert "6. 脚部：（空）" in out
-    assert "— 第 2/2 页 · 共 6 条 · 输入 /装备 页码 翻页 —" in out
+    assert "当前页：2/2" in out
 
 
 def test_equip_view_clamp():
@@ -458,14 +458,14 @@ def test_skill_page1():
     assert "3. 重击（主动） 8 MP ｜ 重击地面目标 ｜ 可派生成：陨星落" in out
     assert "4. 陨星落（主动） 30 MP ｜ 跃空重击倒地目标" in out        # 无派生链 → 无指向
     assert "5. 战意（被动） ｜ 每回合回复少量 HP" in out
-    assert "— 第 1/2 页 · 共 6 条 · 输入 /技能 页码 翻页 —" in out
+    assert "当前页：1/2" in out
 
 
 def test_skill_page2():
     """/技能 2 → 第 2 页（反击·触发）。"""
     out = cmd_skill(parse("/技能 2"), make_ctx())
     assert "6. 反击（触发） ｜ 受击时反击" in out
-    assert "— 第 2/2 页 · 共 6 条 · 输入 /技能 页码 翻页 —" in out
+    assert "当前页：2/2" in out
 
 
 def test_skill_job_filter():
@@ -525,11 +525,11 @@ def test_help_directory_gm_two_pages():
     """/帮助 GM → 6 组 2 页（第 1 页 5 组 + TPL-08 页脚；GM 组在第 2 页）。"""
     out = cmd_help(parse("/帮助"), make_ctx(is_gm=True))
     # 工程补白 2：目录页脚归一为 TPL-08（m4 §2.2 固定页脚，4f「共 N 组」表述不采用）
-    assert "— 第 1/2 页 · 共 6 条 · 输入 /帮助 页码 翻页 —" in out
+    assert "当前页：1/2" in out
     assert "GM —— 重载/封禁/日志/编辑/设置（/帮助 GM）" not in out  # GM 组在页 2
     out2 = cmd_help(parse("/帮助 2"), make_ctx(is_gm=True))
     assert "GM —— 重载/封禁/日志/编辑/设置（/帮助 GM）" in out2
-    assert "— 第 2/2 页 · 共 6 条 · 输入 /帮助 页码 翻页 —" in out2
+    assert "当前页：2/2" in out2
 
 
 def test_help_group_page():
@@ -538,14 +538,14 @@ def test_help_group_page():
     assert "【冒险】" in out
     assert "1. 角色 —— 查看角色属性面板" in out
     assert "5. 进入 —— 进入地图" in out
-    assert "— 第 1/2 页 · 共 6 条 · 输入 /帮助 冒险 页码 翻页 —" in out
+    assert "当前页：1/2" in out
 
 
 def test_help_group_page2():
     """/帮助 冒险 2 → 第 2 页（休息）。"""
     out = cmd_help(parse("/帮助 冒险 2"), make_ctx())
     assert "6. 休息 —— 休息恢复" in out
-    assert "— 第 2/2 页 · 共 6 条 · 输入 /帮助 冒险 页码 翻页 —" in out
+    assert "当前页：2/2" in out
 
 
 def test_help_group_single_page_no_footer():
@@ -673,12 +673,12 @@ def test_footer_tpl08_exact():
     """/角色 /装备 /技能 /帮助 组页 页脚 TPL-08 逐字（无自造变体）；/背包 走用户自定义模板
     （当前页放尾部 + Tip，2026-08-27 用户拍板，不用 TPL-08 页脚）。"""
     ctx = make_ctx()
-    assert "— 第 1/2 页 · 共 9 条 · 输入 /角色 页码 翻页 —" in cmd_view(parse("/角色"), ctx)
+    assert "当前页：1/2" in cmd_view(parse("/角色"), ctx)
     assert "当前页：1/2(全部)" in cmd_bag(parse("/背包"), ctx)       # /背包 自定义模板
     assert "Tip:发送'使用+物品名'即可使用物品" in cmd_bag(parse("/背包"), ctx)
-    assert "— 第 1/2 页 · 共 6 条 · 输入 /装备 页码 翻页 —" in cmd_equip(parse("/装备"), ctx)
-    assert "— 第 1/2 页 · 共 6 条 · 输入 /技能 页码 翻页 —" in cmd_skill(parse("/技能"), ctx)
-    assert "— 第 1/2 页 · 共 6 条 · 输入 /帮助 冒险 页码 翻页 —" in cmd_help(parse("/帮助 冒险"), ctx)
+    assert "当前页：1/2" in cmd_equip(parse("/装备"), ctx)
+    assert "当前页：1/2" in cmd_skill(parse("/技能"), ctx)
+    assert "当前页：1/2" in cmd_help(parse("/帮助 冒险"), ctx)
 
 
 def test_no_decorative_emoji():

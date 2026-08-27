@@ -11,15 +11,16 @@
   - docs/细化/细化_3d_消息模板规范.md（§1.2 TPL-08 页脚 / TPL-12 指令出错；§二 列表分页；
     §四 emoji 禁令；§5.4 错误文案唯一源）
   - 2026-08-27 用户裁决②（超总页数 → 夹取最后一页 +「已到最后一页」；0/负数/非数字 → TPL-12）
+  - 2026-08-27 用户拍板：列表尾段统一 CakeGame 式「当前页 + Tip」（render_cake_tail）
   - qbot_rpg/core/quest.py（M4 批次4·路E2 同批并行 · 收口接口：quest_board(ctx)->{sections,total,tip} /
     resolve_board_index(ctx, seq)->quest_id / quest_accept / quest_complete / quest_abandon /
     quest_progress(quest_id, ctx)）与 qbot_rpg/core/reward.py（A1 dispatch_reward 唯一发放器）
 
-职责（细化_3a §1.3 壳层职责 · 唯一指令执行壳）：把 /任务（无参=任务板 5 条/页 + TPL-08 页脚 +
-裁决② 页码夹取；日常+主线双板主线置顶）与 /任务 接取 N / 交付 N / 信息 N / 放弃 N 四条子指令
-从 Router 接到 core/quest.py 引擎——指令解析（parsers.parse_command 已 token 化 → 本模块取
-子指令词 + 序号）、展示序号 → quest_id（引擎 resolve_board_index）、任务板渲染
-（core/message_format/list_render 5 条/页 + TPL-08 页脚 + 裁决② 夹取 + 双板段头）、
+职责（细化_3a §1.3 壳层职责 · 唯一指令执行壳）：把 /任务（无参=任务板 5 条/页 + CakeGame 式尾段
+（当前页 + Tip）+ 裁决② 页码夹取；日常+主线双板主线置顶）与 /任务 接取 N / 交付 N / 信息 N /
+放弃 N 四条子指令从 Router 接到 core/quest.py 引擎——指令解析（parsers.parse_command 已 token 化
+→ 本模块取子指令词 + 序号）、展示序号 → quest_id（引擎 resolve_board_index）、任务板渲染
+（core/message_format/list_render 5 条/页 + CakeGame 式尾段 + 裁决② 夹取 + 双板段头）、
 接取/交付/信息/放弃结果透传（引擎按定稿合成 ✅/❌ 业务文案；交付奖励统一发放结果提示，
 含 P1-2 逐条目失败黄字跳过注记）、错误统一 TPL-12（sender.format_tpl12，文案唯一源 errors.py
 D-04）。
@@ -52,13 +53,12 @@ D-04）。
      后按 m4 §2.2 5 条/页重分页（跨路分页口径收敛，与 shop_commands 同模式）；页脚只用
      render_footer（TPL-08），禁止自造页脚。
   3) **双板段头**：引擎 sections 已带标题（"主线（常驻）"/"每日板上任务"/"NPC 支线"），本层
-     按 2b4 §5.2 排版包成「━━ 标题 ━━」；操作指引行**不用引擎 tip**（引擎 tip 为 §5.1 裸
-     `/接取` 旧口径），以本层 OPERATION_HINT 为准（`/任务 接取 <序号>`，m4 §3.3 子词形式），
-     放在 TPL-08 页脚之前。
+     按 2b4 §5.2 排版包成「━━ 标题 ━━」；尾段 Tip **不用引擎 tip**（引擎 tip 为 §5.1 裸
+     `/接取` 旧口径），以本层 _BOARD_TAIL_TIP 为准（`任务 接取 序号`，m4 §3.3 子词形式）。
   4) **裸 /接取 /交付 /放弃 /任务信息 不注册**（2b4 §5.1 旧列法与 §5.4 双板仲裁）：本批只接
      m4 §3.3 收口形式 `/任务 <子词> <N>`（任务派工单口径），避免与批次 6 基础指令组注册冲突；
      委托板（/委托）独立板不在本批范围。
-  5) **/任务 <整数> 二义性**：整数参数 = 页码（m4 §2.2 翻页 + TPL-08 页脚「/任务 页码 翻页」），
+  5) **/任务 <整数> 二义性**：整数参数 = 页码（m4 §2.2 翻页 + CakeGame 尾段「当前页：X/Y」），
      0/负数/非数字 → TPL-12（裁决②）；超总页数 → 夹取最后一页 +「已到最后一页」（裁决②）。
   6) **展示序号越界/非法**（resolve_board_index → None）：返回引擎口径「❌ 任务不存在」
      （对齐 quest_accept no_quest message），不走 TPL-12（命令本身合法，参数值域问题）。
@@ -78,7 +78,7 @@ from typing import Any, Callable, List, Mapping, MutableMapping, Optional
 from qbot_rpg.core.message_format.list_render import (
     DEFAULT_PAGE_SIZE,
     LAST_PAGE_HINT,
-    render_footer,
+    render_cake_tail,
     resolve_page,
 )
 
@@ -92,7 +92,7 @@ __all__ = [
     # 指令名 / 子指令词
     "QUEST_CMD", "SUB_ACCEPT", "SUB_DELIVER", "SUB_INFO", "SUB_ABANDON", "SUBWORDS",
     # 渲染常量
-    "OPERATION_HINT", "TPL_NO_BOARD", "TPL_NO_QUEST", "BOARD_PAGE_SIZE",
+    "TPL_NO_BOARD", "TPL_NO_QUEST", "BOARD_PAGE_SIZE",
     # 指令处理器（纯函数：parsed + ctx → 回复正文）
     "cmd_quest", "cmd_quest_board", "cmd_quest_accept",
     "cmd_quest_deliver", "cmd_quest_info", "cmd_quest_abandon",
@@ -118,8 +118,8 @@ SUBWORDS: tuple = (SUB_ACCEPT, SUB_DELIVER, SUB_INFO, SUB_ABANDON)
 # 任务板分页每页上限（m4 §2.2 横切；引擎 sections 全量返回后由本层重分页，工程补白 2）
 BOARD_PAGE_SIZE: int = DEFAULT_PAGE_SIZE  # 5 条/页
 
-# 操作指引行（2b4 §5.2 语义，指令词收敛为 /任务 接取 <序号>，工程补白 3）
-OPERATION_HINT = "请发送 /任务 接取 <序号> 接取任务（* 为已接取）"
+# CakeGame 式尾段 Tip 内容（`Tip:` 之后部分，2026-08-27 用户拍板统一列表尾段；无斜杠指令名）
+_BOARD_TAIL_TIP = "发送'任务 接取 序号'即可领取任务"   # /任务 任务板
 
 # 任务板不可用兜底（引擎 ok=False 且无 message 时）
 TPL_NO_BOARD = "❌ 任务板暂不可用"
@@ -278,7 +278,7 @@ def _engine_of(ctx: Mapping[str, Any]) -> Any:
 
 
 # ---------------------------------------------------------------------------
-# 任务板渲染（5 条/页 + 双板段头 + TPL-08 页脚 + 裁决② 夹取；纯文本零装饰 emoji）
+# 任务板渲染（5 条/页 + 双板段头 + CakeGame 式尾段 + 裁决② 夹取；纯文本零装饰 emoji）
 # ---------------------------------------------------------------------------
 
 def _flatten_sections(board: Mapping[str, Any]) -> list:
@@ -295,7 +295,6 @@ def _flatten_sections(board: Mapping[str, Any]) -> list:
 
 
 def render_board(board: Mapping[str, Any], page: object, *,
-                 command: str = QUEST_CMD,
                  per_page: int = BOARD_PAGE_SIZE) -> str:
     """/任务 任务板列表正文（工程补白 2/3）：
 
@@ -303,7 +302,7 @@ def render_board(board: Mapping[str, Any], page: object, *,
       （表头不计条数，3d §2.1）；
     - 页码超总页数 → 夹取最后一页 + LAST_PAGE_HINT（裁决②）；0/负数/非数字 → raise ValueError
       （壳层应先经 resolve_page 判 TPL-12）；
-    - 操作指引行 + TPL-08 页脚（render_footer，禁止自造页脚）。
+    - CakeGame 式尾段（当前页 + Tip，2026-08-27 用户拍板统一列表尾段）。
     """
     pairs = _flatten_sections(board)
     total = int(board.get("total", len(pairs)))
@@ -324,12 +323,10 @@ def render_board(board: Mapping[str, Any], page: object, *,
             lines.append(f"━━ {title} ━━")
             seen.add(title)
         lines.append(board_line(start + i + 1, row))
+    tail = render_cake_tail(res.page, res.total_pages, tip=_BOARD_TAIL_TIP)
     if res.clamped:
-        lines.append(LAST_PAGE_HINT)
-    lines.append(OPERATION_HINT)
-    footer = render_footer(res.page, res.total_pages, total, command)
-    if footer:
-        lines.append(footer)
+        tail = tail.replace("\n", f"\n{LAST_PAGE_HINT}\n", 1)
+    lines.append(tail)
     return "\n".join(lines)
 
 

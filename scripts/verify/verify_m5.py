@@ -57,7 +57,7 @@ COVERAGE: dict = {
         "pytest:test_message_prefix_wiring.py::test_extra_placeholders_group_and_job",
     "3d TC-06 未知占位符原样输出 + 校验器黄提示不拦截加载":
         "pytest:test_message_prefix_validator.py::test_unknown_placeholder_yellow + test_message_prefix_validator.py::test_unknown_placeholders_each_emits_yellow + test_message_prefix_validator.py::test_unknown_placeholder_helper",
-    "3d TC-07 列表 5 条/页（TPL-07 条目 + TPL-08 页脚，单页不超 5 条）":
+    "3d TC-07 列表 5 条/页（TPL-07 条目 + CakeGame 式尾段「当前页+Tip」，单页不超 5 条）":
         "pytest:test_list_render.py::test_page_items_five_per_page + test_list_render.py::test_item_line_tpl07 + test_list_render.py::test_render_list_page_first_page",
     "3d TC-08 /指令 2 渲染第 2 页（不重渲染前缀以外旧页内容）":
         "pytest:test_list_render.py::test_render_list_page_text_composition + test_basic_commands.py::test_bag_page2",
@@ -67,7 +67,7 @@ COVERAGE: dict = {
         "pytest:test_list_render.py::test_resolve_page_invalid_zero_negative_nonnum + test_basic_commands.py::test_view_invalid_tpl12 + test_sender.py::test_page_error_tpl12_invalid_page",
     "3d TC-11 单页省略页脚（≤5 条防刷屏）":
         "pytest:test_list_render.py::test_render_list_page_single_page_no_footer + test_basic_commands.py::test_bag_single_page_no_footer",
-    "3d TC-12 页脚逐字校验（TPL-08 原样，无自造变体）":
+    "3d TC-12 尾段逐字校验（CakeGame 式「当前页+Tip」原样，无自造变体）":
         "pytest:test_list_render.py::test_footer_tpl08_exact + test_list_render.py::test_footer_uses_command_verbatim + test_basic_commands.py::test_footer_tpl08_exact",
     "3d TC-13 前缀超长截断 + 黄提示「前缀过长已截断」+ 正文不受影响":
         "pytest:test_message_prefix_wiring.py::test_truncation_hint_and_body_untouched + test_message_prefix_wiring.py::test_default_max_len_truncates_long_title + test_coredata_regress.py::test_prefix_truncation_signal",
@@ -148,7 +148,7 @@ COVERAGE: dict = {
         "pytest:test_battle_render_startend.py::test_tc24_start_exact_with_prefix_and_hint + test_battle_render_startend.py::test_tc24_start_hint_none_omits_hint_line + test_battle_wiring.py::test_start_one_message_with_hint",
     "5e TC-25 BOSS 战胜利结束汇总（BREP-24 回合数 + 明细入口）":
         "pytest:test_battle_render_startend.py::test_tc25_end_summary_line_exact_with_turns + test_battle_render_startend.py::test_tc25_winner_labels_win_lose_draw + test_battle_wiring.py::test_end_one_message_summary",
-    "5e TC-26 /木桩 战后明细（BREP-25 摘要 + 5 条/页 + TPL-08 页脚 + 翻页）":
+    "5e TC-26 /木桩 战后明细（BREP-25 摘要 + 5 条/页 + CakeGame 式尾段 + 翻页）":
         "pytest:test_battle_render_startend.py::test_tc26_summary_page1_5_items_plus_footer + test_battle_render_startend.py::test_tc26_summary_page2_3_items_footer + test_battle_render_startend.py::test_tc26_single_page_no_footer + test_battle_render_startend.py::test_tc26_invalid_page_raises_valueerror",
     "5e TC-27 普通战斗（非木桩）明细默认不展示（BREP-25 开关）":
         "pytest:test_battle_render_startend.py::test_tc27_normal_battle_no_detail_by_default + test_battle_render_startend.py::test_tc27_end_with_summary_appends_detail_block",
@@ -173,7 +173,7 @@ COVERAGE: dict = {
         "DELAYED：效果区渲染未实装（/状态 面板五区中效果区归属后续批次；panel_render 无效果区消费测试）",
     "4f TC-10 战斗内 /状态（面板四区 + 【目标】行）":
         "DELAYED：/状态 未实装 + 战斗内目标行未实装（同 TC-07）",
-    "4f TC-11 /背包 默认第一页 5 条（行格式 + TPL-08 页脚）":
+    "4f TC-11 /背包 默认第一页 5 条（行格式 + CakeGame 式尾段「当前页+Tip」）":
         "pytest:test_basic_commands.py::test_bag_page1_rows_and_footer + test_basic_commands.py::test_bag_page2",
     "4f TC-12 /背包 2 与 背包2 两种翻页语法等价":
         "pytest:test_parsers.py::test_compact_digit + test_parsers.py::test_space_equivalent + test_basic_commands.py::test_bag_page2",
@@ -183,7 +183,7 @@ COVERAGE: dict = {
         "pytest:test_explore_filter.py::test_filter_chain_subtype_and_quality + test_explore_filter.py::test_filter_by_category + test_explore_filter.py::test_filter_many_pages",
     "4f TC-15 /帮助 分组目录（普通玩家 5 组单页 + 页脚）":
         "pytest:test_basic_commands.py::test_help_directory_normal + test_basic_commands.py::test_help_groups_constants",
-    "4f TC-16 /帮助 组页分页（5 条/页 + TPL-08）":
+    "4f TC-16 /帮助 组页分页（5 条/页 + CakeGame 式尾段「当前页+Tip」）":
         "pytest:test_basic_commands.py::test_help_group_page + test_basic_commands.py::test_help_group_page2 + test_basic_commands.py::test_help_group_single_page_no_footer",
     "4f TC-17 别名显示替换（帮助目录仅显示 炼丹 不显示 炼金）":
         "DELAYED：cmd_help 未消费别名表（组目录别名替换无专项用例）；指令别名机制已由 M4 2.1-05 承载，组目录别名待批次",
@@ -201,7 +201,7 @@ COVERAGE: dict = {
         "DELAYED：/快捷列表 无 handler（parse 层仅保留字词），持久化用例未落盘",
     "4f TC-24 前缀联动与防误触（已绑 1 执行 / 随机文本忽略）":
         "pytest:test_router.py::test_shortcut_before_alias_before_whitelist_priority + test_router.py::test_ignore_non_command_message_w06 + test_parsers.py::test_random_text_ignored",
-    "4f TC-25 /角色 三层明细面板（LV 行固定头部 + 属性三层行 5 条/页 + TPL-08）":
+    "4f TC-25 /角色 三层明细面板（LV 行固定头部 + 属性三层行 5 条/页 + CakeGame 式尾段）":
         "pytest:test_basic_commands.py::test_view_noarg_page1 + test_basic_commands.py::test_view_page2 + test_basic_commands.py::test_attr_line_pure",
     "4f TC-26 /角色 页码夹取/非法（裁决② + TPL-12）":
         "pytest:test_basic_commands.py::test_view_clamp_last_page + test_basic_commands.py::test_view_invalid_tpl12 + test_basic_commands.py::test_view_noarg_equiv_page1",
@@ -515,7 +515,7 @@ def t_gate_round_one_message() -> None:
 
 def t_gate_char_three_layer() -> None:
     """④c /角色 三层行（4f RUL-38 示例 29 / TC-25）：LV 行固定头部 + 属性三层行
-    （白值/加成/临时），9 项 5 条/页 + TPL-08。断言逐字对齐定稿示例。
+    （白值/加成/临时），9 项 5 条/页 + CakeGame 式尾段。断言逐字对齐定稿示例。
     """
     from qbot_rpg.commands.basic_commands import cmd_view
     from qbot_rpg.commands.parsers import parse_command
@@ -542,7 +542,7 @@ def t_gate_char_three_layer() -> None:
     assert lines[0] == "【角色】Lv3.阿伟（战士） ｜ 经验 320/1000", f"LV 行头部不齐：{lines[0]!r}"
     # RUL-38 示例 29 逐字（白值 15 + 加成 +5·+10% + 临时 +3·+20% → 最终 29）
     assert "3. 【力量】29（白值 15 ｜ 加成 +5·+10% ｜ 临时 +3·+20%）" in out
-    assert "— 第 1/2 页 · 共 9 条 · 输入 /角色 页码 翻页 —" in out  # TPL-08
+    assert "当前页：1/2" in out  # CakeGame 式尾段（2026-08-27 用户拍板替代 TPL-08）
     _assert_no_banned_emoji(out)
 
 

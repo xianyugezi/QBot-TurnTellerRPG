@@ -183,3 +183,91 @@ def test_explore_shell_single_message():
     ]:
         out = handler(parse(raw), ctx)
         assert isinstance(out, str) and out
+
+
+# ---------------------------------------------------------------------------
+# /进入 move 成功：CakeGame 模板 28 风格丰富（地图介绍 + 活动怪物 + 通道 + Tip）
+# ---------------------------------------------------------------------------
+
+_ENTER_MAPS = [
+    {
+        "id": "start_village", "name": "起始村落", "desc": "宁静的小村",
+        "monsters": [
+            {"enemy": "rock_weasel", "count": 3, "respawn_minutes": 10},
+        ],
+        "exits": {"up": {"to": "forest_edge", "mode": "bidirectional"}},
+    },
+    {
+        "id": "forest_edge", "name": "林间边缘", "desc": "树影幢幢的林缘",
+        "monsters": [
+            {"enemy": "rock_weasel", "count": 2, "respawn_minutes": 10},
+            {"enemy": "stone_skink", "count": 1, "respawn_minutes": 30},
+        ],
+        "exits": {
+            "down": {"to": "start_village", "mode": "bidirectional"},
+            "right": {"to": "lava_tunnel", "mode": "bidirectional"},
+        },
+    },
+    {
+        "id": "lava_tunnel", "name": "熔岩坑道", "desc": "单向坑道",
+        "monsters": [],
+        "exits": {"left": {"to": "forest_edge", "mode": "bidirectional"}},
+    },
+]
+
+_ENTER_MONSTERS = {
+    "rock_weasel": {"name": "岩皮鼬"},
+    "stone_skink": {"name": "石甲蜥"},
+}
+
+
+def _enter_ctx() -> dict:
+    """/进入 move 成功 ctx：玩家位于起始村落 + maps + 怪物名映射。"""
+    ctx = make_ctx(
+        player={"map_id": "start_village", "name": "阿伟"},
+        maps=[dict(m) for m in _ENTER_MAPS],
+        monsters={k: dict(v) for k, v in _ENTER_MONSTERS.items()},
+    )
+    ctx["map_id"] = "start_village"
+    return ctx
+
+
+def test_enter_move_enriched():
+    """/进入 上 → move 成功：地图介绍 + 活动怪物（序号.名称×数量）+ 通道（方向：目标名）+ Tip。"""
+    out = cmd_enter(parse("/进入 上"), _enter_ctx())
+    assert out.startswith("✅ 你来到了「林间边缘」")
+    assert "地图介绍：树影幢幢的林缘" in out
+    assert "活动怪物：1.岩皮鼬×2 2.石甲蜥×1" in out
+    assert "下：起始村落" in out
+    assert "右：熔岩坑道" in out
+    assert "左：" not in out              # 无通道方向省略
+    assert "Tip:发送'位置'即可查询当前位置信息" in out
+    assert "区域角色" not in out          # maps 无 npcs 字段 → 行省略（DELAYED）
+
+
+def test_enter_move_unknown_monster_id_fallback():
+    """/进入 目标怪物名映射缺失 → 直接显示 enemy id（拿不到映射不崩溃）。"""
+    maps = [
+        {
+            "id": "start_village", "name": "起始村落", "desc": "宁静的小村",
+            "monsters": [], "exits": {"up": {"to": "waste_plain", "mode": "bidirectional"}},
+        },
+        {
+            "id": "waste_plain", "name": "荒原", "desc": "荒芜之地",
+            "monsters": [{"enemy": "wild_beast", "count": 4, "respawn_minutes": 10}],
+            "exits": {"down": {"to": "start_village", "mode": "bidirectional"}},
+        },
+    ]
+    ctx = make_ctx(player={"map_id": "start_village", "name": "阿伟"}, maps=maps)
+    ctx["map_id"] = "start_village"
+    out = cmd_enter(parse("/进入 上"), ctx)
+    assert out.startswith("✅ 你来到了「荒原」")
+    assert "活动怪物：1.wild_beast×4" in out
+
+
+def test_enter_move_no_emoji():
+    """/进入 move 成功输出无装饰 emoji（仅 ✅/❌ + 排版符号）。"""
+    import re
+    out = cmd_enter(parse("/进入 上"), _enter_ctx())
+    out_allowed = out.replace("✅", "").replace("❌", "")
+    assert not re.search(r"[\U0001F000-\U0001FAFF]|[\U00002600-\U000027BF]", out_allowed)

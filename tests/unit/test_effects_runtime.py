@@ -6,7 +6,6 @@
 断言组：B-1..B-9（拦截链）、C-1/C-3/C-6/C-9/C-10（四模型）、D-1/D-2/D-3/D-5（免疫）、
 I7（免死约束）、L0（mark_add/mark_remove/heal/proc/interrupt）、battle.py 接线。
 """
-import random
 import warnings
 
 import pytest

@@ -26,11 +26,9 @@
 参数取自 formula.json damage.rng，【1a】§3-E L320 端点合法）；端点复现同时由 ① 全区间
 抽样（每 50 组强制端点）覆盖。
 
-【工程补白·路A未落盘暂驻】D6 §三 formula.json 段级参数与 §二 seed/seeded_rng conftest
-fixture 由路A 同期实装；本文件按契约接口同名定义三个本地 fixture（seed/seeded_rng/
-formula_params）作等值实现。路A 落盘 tests/conftest.py 后删除本文件「本地 fixture」
-段即可（用例函数签名不变，自动改用 conftest 注入）。formula.json 当前仅
-damage_base/heal_rate 两键（无 1a 段级参数，FIX §3.4 段缺省回退 dataclass 默认值）。
+【工程补白·fixture 来源】seed/seeded_rng/formula_params 三 fixture 由路A 落盘于
+tests/conftest.py（D6 §二/§三），本文件用例直接消费 conftest 注入（无本地遮蔽、无双源）；
+formula.json 已全段落位（F-FIX-01~27，路A），段缺省回退 dataclass 默认（FIX §3.4）。
 """
 from __future__ import annotations
 

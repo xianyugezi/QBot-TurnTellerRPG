@@ -275,3 +275,33 @@ def test_router_parse_integration():
     out = router.get(STATUS_CMD).handler(parse("/状态"))
     assert out.startswith("Lv3.阿伟 -斩龙者-")
     assert "【效果】无" in out
+
+
+def test_stt_imprints_zone():
+    """P2-1（M6 批1B 审查）：印记区（RUL-13/STT-01⑤）——ctx["imprints"] 渲染【印记】行。"""
+    ctx = make_ctx(imprints=[
+        {"name": "火焰印记", "count": 2, "source": "敌方施放"},
+        {"name": "寒霜印记", "source": "敌方施放"},
+        {"name": "无来源印记"},
+    ])
+    out = sc.imprints_line(ctx)
+    assert "【印记】火焰印记×2（敌方施放）" in out
+    assert "寒霜印记（敌方施放）" in out          # count 缺省不显 ×
+    assert "无来源印记" in out
+    # 无印记 → None（不渲染）
+    assert sc.imprints_line(make_ctx()) is None
+    assert sc.imprints_line(make_ctx(imprints=[])) is None
+    # /状态 完整链路含印记行（效果区后）
+    out2 = cmd_status(parse("/状态"), ctx)
+    assert "【印记】火焰印记×2（敌方施放）" in out2
+    assert "【效果】无" in out2
+
+
+def test_stt_target_partial_fields_degrade():
+    """P2-9（M6 批1B 审查）：target 字段不全（hp/max_hp/turn 任一 None）→ 整行降级 None，
+    防 `【目标】xx None/None（第 None 回合）`。"""
+    assert target_line(make_ctx(target={"name": "史莱姆", "hp": None, "max_hp": 30, "turn": 3})) is None
+    assert target_line(make_ctx(target={"name": "史莱姆", "hp": 18, "max_hp": None, "turn": 3})) is None
+    assert target_line(make_ctx(target={"name": "史莱姆", "hp": 18, "max_hp": 30, "turn": None})) is None
+    assert target_line(make_ctx(target={"name": "史莱姆", "hp": 18, "max_hp": 30, "turn": 3})) \
+        == "【目标】史莱姆 18/30（第 3 回合）"

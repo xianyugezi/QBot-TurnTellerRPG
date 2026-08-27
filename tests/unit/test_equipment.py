@@ -270,3 +270,18 @@ def test_supplement_slots_json_wrapper_shape():
 
     assert eng.equip(player, sword, "weapon")["ok"] is True
     assert eng.equip(player, shield, "shield")["reason"] == "mutual_exclusion"
+
+
+def test_regress_p1_1_aggregate_takes_one_of_duplicate_id():
+    """P1-1 回归（M6 批1A 审查）：同 item_id 两件（词条不同）并存、只穿一件 →
+    aggregate_bonus 只取该件词条，不把未穿戴行词条翻倍计入加成层。"""
+    eng = EquipmentEngine(slots={"weapon": {"name": "武器", "max": 1}})
+    sword_a = _item("iron_sword", "铁剑", slot="weapon", stats_bonus={"str": 5.0})
+    sword_b = _item("iron_sword", "铁剑", slot="weapon", stats_bonus={"str": 7.0})
+    player = make_eq_player(inventory=[sword_a, sword_b])
+
+    assert eng.equip(player, sword_a, "weapon")["ok"] is True
+    snapshot = eng.aggregate_bonus(player)
+    assert snapshot["flat"] == {"str": 5.0}
+    assert snapshot["pct"] == {}
+    assert player["attributes"].bonus["flat"] == {"str": 5.0}

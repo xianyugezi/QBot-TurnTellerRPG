@@ -9,6 +9,8 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import pytest
 
 from qbot_rpg.commands.basic_commands import EquipmentEngineAdapter
@@ -200,3 +202,35 @@ def test_eqp_adapter_no_decorative_emoji():
     out = ctx["equip_engine"].equip_wear(1, ctx)["message"]
     out += ctx["equip_engine"].equip_remove("weapon", ctx)["message"]
     assert not any(ch in BANNED_EMOJI for ch in out)
+
+
+@dataclass(frozen=True)
+class _DatedItem(ItemInstance):
+    """带 acquired_at 的实例行（P1-2 测试用；对齐 /背包 4a 存档 dict 行的时间排序口径）。"""
+    acquired_at: str = ""
+
+
+def test_regress_p1_2_wear_uses_display_order():
+    """P1-2 回归（M6 批1B 审查）：/背包 显示序 = acquired_at 倒序；穿装序号按显示序取。
+
+    存储序 [旧, 新]（新后存）→ 显示序 [新, 旧]（新时间靠前）→ 穿 1 应取新铁剑
+    （而非存储序第 1 件的旧铁剑）。同时验证聚合取显示序首件的词条（P1-1 同址）。"""
+    eng = EquipmentEngineAdapter(slots={"weapon": {"name": "武器", "max": 1}})
+    old = _DatedItem(
+        "iron_sword", "旧铁剑", 1, "normal", False, stack_max=1, slot="weapon",
+        stats_bonus={"str": 5.0}, acquired_at="2026-08-01T00:00:00Z",
+    )
+    new = _DatedItem(
+        "iron_sword", "新铁剑", 1, "normal", False, stack_max=1, slot="weapon",
+        stats_bonus={"str": 7.0}, acquired_at="2026-08-10T00:00:00Z",
+    )
+    player = {
+        "inventory": [old, new],  # 存储序：旧在前
+        "equipment": {},
+        "attributes": PlayerAttributes(base={"str": 15.0}),
+    }
+    ctx = {"player": player, "equip_engine": eng}
+    r = eng.equip_wear(1, ctx)  # 显示序第 1 件 = 新铁剑（时间新）
+    assert r["ok"] is True
+    assert "新铁剑" in r["message"]
+    assert ctx["player"]["attributes"].bonus["flat"] == {"str": 7.0}

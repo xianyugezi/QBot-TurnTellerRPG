@@ -198,3 +198,18 @@ def test_router_parse_integration():
     assert out == "✅ 已解绑『1』"
     out2 = router.get(SHORTCUT_LIST_CMD).handler(parse("/快捷列表"))
     assert "【快捷（1/20）】" in out2
+
+
+def test_regress_p2_5_list_fixed_subword_tpl12():
+    """P2-5 回归（M6 批1B 审查）：`/快捷列表 自动` 固定子词被解析器抽走 → TPL-12，
+    不静默渲染第 1 页。"""
+    ctx = make_ctx()
+    out = cmd_shortcut_list(parse("/快捷列表 自动"), ctx)
+    assert out.startswith("❌ 指令不正确：/快捷列表 自动")
+
+
+def test_regress_p2_4_shortcut_max_zero_unlimited():
+    """P2-4 回归（M6 批1B 审查）：shortcut_max=0（不限，RUL-26）→ 列表头分母「不限」。"""
+    ctx = make_ctx(shortcut_max=0)
+    out = cmd_shortcut_list(parse("/快捷列表"), ctx)
+    assert "【快捷（2/不限）】" in out

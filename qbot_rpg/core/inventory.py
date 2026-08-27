@@ -30,6 +30,10 @@
      加成层时登记、装配层在移除时同步撤销——纯逻辑引擎只触发重算钩子）；不阻塞主操作。
   6) 引擎零 IO、零 NoneBot import、纯函数（3a R1）；入包/扣减事务由装配层 save_player 包裹
      （INV-04/LIF-R10，防重放双扣）。
+  7) **INV-07 add 侧绑定来源（P2-02 标注，M6 批1A 审查）**：add_item 无 source 参数，行级
+     绑定完全由调用方传入的 item.bound 决定（购买/奖励/掉落/锻造按来源写绑定的职责在装配
+     层构造 item 时实现，引擎不越权）；与扣减侧绑定拒移（工程补白 4）对称，均在引擎侧只做
+     校验、装配层定来源。
 
 铁律：零 NoneBot import；纯函数（同刻同参必同值）；now 注入确定性；工程补白显式标注。
 """
@@ -233,10 +237,14 @@ class InventoryEngine:
                 }
 
         inv[:] = working + plan
+        new_rows = [r.item_id for r in plan]  # 本次实际新增行（INV-01/02/03 计划产出）
         result: dict = {
             "ok": True,
             "added": count,
-            "rows": [r.item_id for r in plan] + [r.item_id for r in working],
+            "new_rows": new_rows,
+            # P2-10 语义澄清（M6 批1A 审查）：rows = 全量行快照（含既有行），
+            # 新消费方用 new_rows 判新增；rows 仅为快照参考，勿按 rows 计新增。
+            "rows": new_rows + [r.item_id for r in working],
             "truncated": truncated,
         }
         if truncated:

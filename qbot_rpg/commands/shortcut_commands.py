@@ -120,14 +120,19 @@ def _shortcuts(ctx: MutableMapping[str, Any]) -> MutableMapping[str, str]:
     return fresh
 
 
-def _shortcut_max(ctx: Mapping[str, Any]) -> int:
-    """快捷上限（ctx["shortcut_max"] 缺省 20；0/负数按缺省兜底）。"""
-    m = ctx.get("shortcut_max", DEFAULT_SHORTCUT_MAX)
+def _shortcut_max(ctx: Mapping[str, Any]) -> Optional[int]:
+    """快捷上限（ctx["shortcut_max"] 缺省 20；**0 = 不限**（RUL-26/规范 L172），返回 None；
+    P2-4 修复：0 不再兜底成 20，列表头分母按「不限」渲染）。"""
+    m = ctx.get("shortcut_max")
+    if m is None:
+        return DEFAULT_SHORTCUT_MAX
     try:
         m = int(m)
     except (TypeError, ValueError):
         return DEFAULT_SHORTCUT_MAX
-    return m if m > 0 else DEFAULT_SHORTCUT_MAX
+    if m <= 0:
+        return None  # 0 = 不限
+    return m
 
 
 # ---------------------------------------------------------------------------
@@ -169,6 +174,10 @@ def cmd_shortcut_list(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         return g
     if parsed.error:
         return format_tpl12(_fragment(parsed))
+    # P2-5 修复（M6 批1B 审查）：fixed_subword（自动/继续 等会话子词）非空即 TPL-12，
+    # 防止 `/快捷列表 自动` 被解析器抽走参数后静默渲染第 1 页。
+    if getattr(parsed, "fixed_subword", None):
+        return format_tpl12(_fragment(parsed))
     args = list(getattr(parsed, "args", None) or [])
     if len(args) > 1:
         return format_tpl12(_fragment(parsed))
@@ -192,7 +201,8 @@ def cmd_shortcut_list(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     slice_items = items[start:start + DEFAULT_PAGE_SIZE]
 
     cap = _shortcut_max(ctx)
-    lines: List[str] = [f"【快捷（{len(items)}/{cap}）】"]
+    cap_disp = "不限" if cap is None else str(cap)
+    lines: List[str] = [f"【快捷（{len(items)}/{cap_disp}）】"]
     for name, cmd in slice_items:
         lines.append(f"{name} → {cmd}")
     tail = render_cake_tail(res.page, res.total_pages, tip=_LIST_TAIL_TIP)

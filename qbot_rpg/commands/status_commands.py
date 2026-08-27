@@ -70,6 +70,7 @@ __all__ = [
     "attr_line",
     "location_line",
     "effects_line",
+    "imprints_line",
     "target_line",
     # 装配
     "register_status_commands",
@@ -215,6 +216,15 @@ def prefix_line(ctx: Mapping[str, Any]) -> str:
     return f"Lv{f['level']}.{f['name']} - -"
 
 
+def _fmt_exp(v: object) -> str:
+    """经验值渲染归一（P2-9 修复）：None → 空串；float 整数 → int（320.0 → 320）。"""
+    if v is None:
+        return ""
+    if isinstance(v, float) and v == int(v):
+        return str(int(v))
+    return str(v)
+
+
 def level_line(ctx: Mapping[str, Any]) -> str:
     """② 等级/经验行（RUL-11/STT-02）：`【等级】3 ｜ 经验 320/1000`；
     满级 → `【等级】45【已满级】`（LVL-11 口径，工程补白 3）。"""
@@ -230,9 +240,10 @@ def level_line(ctx: Mapping[str, Any]) -> str:
     if ctx.get("exp_next") == 0:
         return f"【等级】{level}【已满级】"
     nxt = ctx.get("exp_next")
+    exp = _fmt_exp(f["exp"])
     if nxt is not None:
-        return f"【等级】{level} ｜ 经验 {f['exp']}/{nxt}"
-    return f"【等级】{level} ｜ 经验 {f['exp']}"
+        return f"【等级】{level} ｜ 经验 {exp}/{nxt}"
+    return f"【等级】{level} ｜ 经验 {exp}"
 
 
 def attr_line(ctx: Mapping[str, Any]) -> str:
@@ -292,9 +303,33 @@ def effects_line(ctx: Mapping[str, Any]) -> str:
     return "【效果】" + " ｜ ".join(parts)
 
 
+def imprints_line(ctx: Mapping[str, Any]) -> Optional[str]:
+    """印记区（RUL-13/STT-01⑤，P2-1 修复）：`【印记】火焰印记×2（敌方施放）`；
+    ctx["imprints"]（[{name, count?, source?}]）缺省/空 → None（不渲染印记行）。
+    count 缺省 1 不显 ×；source 缺省省略来源。"""
+    imprints = ctx.get("imprints")
+    if not imprints:
+        return None
+    segs: List[str] = []
+    for imp in imprints:
+        if not isinstance(imp, Mapping):
+            continue
+        name = str(imp.get("name") or "?")
+        count = imp.get("count")
+        seg = f"{name}×{count}" if count not in (None, 1) else name
+        src = imp.get("source")
+        if src:
+            seg += f"（{src}）"
+        segs.append(seg)
+    if not segs:
+        return None
+    return "【印记】" + " ｜ ".join(segs)
+
+
 def target_line(ctx: Mapping[str, Any]) -> Optional[str]:
     """战斗内【目标】行（RUL-15/STT-04）：`【目标】史莱姆 18/30（第 3 回合）`；
-    ctx["target"] 缺省 → None（不渲染）。"""
+    ctx["target"] 缺省或字段不全（hp/max_hp/turn 任一 None）→ 整行降级 None（P2-9 修复，
+    防 `【目标】xx None/None（第 None 回合）`）。"""
     t = ctx.get("target")
     if not isinstance(t, Mapping):
         return None
@@ -302,6 +337,8 @@ def target_line(ctx: Mapping[str, Any]) -> Optional[str]:
     hp = t.get("hp")
     mx = t.get("max_hp")
     turn = t.get("turn")
+    if hp is None or mx is None or turn is None:
+        return None
     return f"【目标】{name} {hp}/{mx}（第 {turn} 回合）"
 
 
@@ -338,6 +375,9 @@ def cmd_status(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     if tgt is not None:
         lines.append(tgt)
     lines.append(effects_line(ctx))
+    imp = imprints_line(ctx)
+    if imp is not None:
+        lines.append(imp)
     return "\n".join(lines)
 
 

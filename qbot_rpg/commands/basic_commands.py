@@ -24,9 +24,9 @@
 Router 接到 core 层——指令解析（parsers.parse_command 已 token 化 → 本模块取页码/子词/序号）、
 玩家面板/背包/装备栏/技能列表渲染（core/message_format/list_render 5 条/页 + 裁决② 夹取；
 尾段统一 CakeGame 式「当前页 + Tip」render_cake_tail，2026-08-27 用户拍板）、
-装备穿卸委托装备引擎（core/equipment.py，M1 骨架，注入优先 → 懒加载 →
-【待接线】RuntimeError，与 checkin_commands 同模式）、错误统一 TPL-12（sender.format_tpl12，
-文案唯一源 errors.py D-04）。
+装备穿卸委托装备引擎（core/equipment.py，M6 批1 已实装 EquipmentEngine + 适配层，
+注入优先 → 懒加载 →【待接线】RuntimeError，与 checkin_commands 同模式）、错误统一
+TPL-12（sender.format_tpl12，文案唯一源 errors.py D-04）。
 
 铁律（m4_shared_contract §0 / 3a R1）：**零 NoneBot import**、纯函数、确定性（now/rng 由 ctx
 注入）；工程补白一律【工程补白】标注；错误走 TPL-12 统一模板；装饰性 emoji 全局禁用（仅 ✅/❌
@@ -98,6 +98,7 @@ from qbot_rpg.core.message_format.list_render import (
 )
 from qbot_rpg.core.player_attributes import calc_all_final_attributes
 from qbot_rpg.data.item import ItemInstance
+from qbot_rpg.data.logging_utils import get_logger
 from qbot_rpg.data.player import EquipmentSlot, PlayerAttributes
 
 # 同包兄弟模块：相对导入（G0 架构门禁 test_commands_web_not_depended 不产生
@@ -211,11 +212,11 @@ GM_HELP_GROUP: Tuple[str, Tuple[Tuple[str, str], ...]] = (
 # 分组名常量（目录页/组页引用）
 GROUP_ORDER: Tuple[str, ...] = tuple(g[0] for g in HELP_GROUPS) + (GM_HELP_GROUP[0],)
 
-# /帮助 注册引导版（B6：仅注册/角色/背包 三项引导 + 分组目录提示；单页无页脚）
+# /帮助 注册引导版（B6：仅分组目录+注册/状态/背包 三项引导，4f B6 裁决原文；单页无页脚）
 _REGISTER_GUIDE: str = "\n".join([
     "【新手引导】发 /注册 名字 职业 创建角色",
     "注册 —— 创建角色（未注册必需）",
-    "角色 —— 查看角色属性面板",
+    "状态 —— 查看角色状态面板",
     "背包 —— 查看背包物品",
     "装备/技能 等更多指令注册后可用，发 /帮助 查看完整列表",
 ])
@@ -885,17 +886,25 @@ def cmd_bag_filter(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 
 def _slot_order(ctx: Mapping[str, Any]) -> List[str]:
-    """槽位顺序：ctx["slot_order"] 覆盖；缺省武器+五部位（4b §3.1）。"""
+    """槽位顺序：ctx["slot_order"] 覆盖；slots.json 包装形态 {"slots":{...}} 取键序；
+    缺省武器+五部位（4b §3.1，P2-8 修复对齐 EquipmentEngine 构造形态）。"""
     order = ctx.get("slot_order")
     if isinstance(order, (list, tuple)) and order:
         return [str(s) for s in order]
+    slots = ctx.get("slots")
+    if isinstance(slots, Mapping) and "slots" in slots and isinstance(slots["slots"], Mapping):
+        keys = list(slots["slots"].keys())
+        if keys:
+            return [str(s) for s in keys]
     return list(DEFAULT_SLOT_ORDER)
 
 
 def _slot_name(ctx: Mapping[str, Any], slot_id: str) -> str:
-    """槽位 id → 中文名（ctx["slots"] 配置优先；缺省兜底表）。"""
+    """槽位 id → 中文名（ctx["slots"] 配置优先，含包装形态 {"slots":{...}}；缺省兜底表）。"""
     slots = ctx.get("slots")
     if isinstance(slots, Mapping):
+        if "slots" in slots and isinstance(slots["slots"], Mapping):
+            slots = slots["slots"]  # P2-8 修复：包装形态取内层
         d = slots.get(slot_id)
         if isinstance(d, Mapping) and d.get("name"):
             return str(d["name"])
@@ -1031,15 +1040,36 @@ class EquipmentEngineAdapter:
         p = ctx.get("player")
         return p if isinstance(p, MutableMapping) else None
 
+    @staticmethod
+    def _sorted_inventory(player: MutableMapping[str, Any]) -> list:
+        """背包行展示序（P1-2 修复，M6 批1B 审查）：与 /背包 _inventory_rows 同口径——
+        按 acquired_at 倒序（RUL-17），无时间字段保持存储序（稳定排序）。适配层按此序
+        取穿装序号，避免「/背包 显示第 N 件」与「穿第 N 件」错位。"""
+        inv = player.get("inventory")
+        if not isinstance(inv, (list, tuple)):
+            return []
+        rows = list(inv)
+
+        def _key(r: Any) -> str:
+            if isinstance(r, Mapping):
+                t = r.get("acquired_at")
+                return str(t) if t is not None else ""
+            return str(getattr(r, "acquired_at", "") or "")
+
+        try:
+            return sorted(rows, key=_key, reverse=True)
+        except TypeError:  # 混合类型时间字段 → 保持原序
+            return rows
+
     def equip_wear(self, index: int, ctx: MutableMapping[str, Any]) -> dict:
-        """装备背包第 index 件（1 起）；返回 {ok, message, ...}。"""
+        """装备背包第 index 件（1 起，按 /背包 展示序=acquired_at 倒序）；返回 {ok, message, ...}。"""
         player = self._player(ctx)
         if player is None:
             return {"ok": False, "message": "❌ 玩家状态缺失（请先 /注册 创建角色）"}
-        inv = player.get("inventory")
-        if not isinstance(inv, (list, tuple)) or not (1 <= index <= len(inv)):
+        sorted_inv = self._sorted_inventory(player)
+        if not (1 <= index <= len(sorted_inv)):
             return {"ok": False, "message": "❌ 背包里没有这件物品"}
-        item = inv[index - 1]
+        item = sorted_inv[index - 1]
         if not isinstance(item, ItemInstance):
             return {"ok": False, "message": "❌ 这件物品不能装备"}
         if not item.slot:
@@ -1091,6 +1121,9 @@ class EquipmentEngineAdapter:
         return f"❌ {reason_cn.get(reason, fallback)}"
 
 
+_logger = get_logger("basic_commands.equip")
+
+
 def _equip_engine(ctx: Mapping[str, Any]) -> Any:
     """装备引擎解析（注入优先 → 懒加载真实 EquipmentEngine 适配层（EQP-12）；均不可得 →
     【待接线】RuntimeError，与 checkin_commands 同模式，工程补白 9）。
@@ -1107,7 +1140,7 @@ def _equip_engine(ctx: Mapping[str, Any]) -> Any:
         return EquipmentEngineAdapter(slots=ctx.get("slots"))
     except Exception as exc:  # ModuleNotFoundError / ImportError / 构造失败
         raise RuntimeError(
-            "【待接线】core/equipment.py（M1 骨架）装备引擎不可用；"
+            "【待接线】core/equipment.py（M6 批1 已实装 EquipmentEngine + 适配层）装备引擎不可用；"
             "装配时注入 ctx['equip_engine']（equip_wear/equip_remove 消费接口）"
         ) from exc
 
@@ -1117,7 +1150,8 @@ def _cmd_equip_wear(ctx: Mapping[str, Any], index: int) -> str:
     engine = _equip_engine(ctx)
     try:
         res = engine.equip_wear(index, ctx)
-    except Exception:
+    except Exception as exc:  # P2-3 修复：裸吞异常留日志（防故障不可诊断）
+        _logger.exception("equip_wear 异常（index=%s）: %s", index, exc)
         res = {}
     return str(res.get("message") or "❌ 装备失败")
 
@@ -1127,7 +1161,8 @@ def _cmd_equip_remove(ctx: Mapping[str, Any], slot_id: str) -> str:
     engine = _equip_engine(ctx)
     try:
         res = engine.equip_remove(slot_id, ctx)
-    except Exception:
+    except Exception as exc:  # P2-3 修复：裸吞异常留日志（防故障不可诊断）
+        _logger.exception("equip_remove 异常（slot=%s）: %s", slot_id, exc)
         res = {}
     return str(res.get("message") or "❌ 卸下失败")
 
@@ -1470,13 +1505,14 @@ def cmd_help(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
       <整数>          → 目录页码（裁决②：超页夹取最后一页 + 已到最后一页；0/负数/非数字 → TPL-12）
       未注册（B6）    → 注册引导版（豁免注册门槛）
     """
+    # B6 注册引导版（豁免）——P2-6 修复：未注册判定前置到 parsed.error 之前，
+    # 未注册玩家任意 /帮助（含解析错误）均返回引导版（B6「/帮助 豁免注册门槛」）。
+    if ctx.get("registered", True) is False:
+        return _REGISTER_GUIDE
     if parsed.error:
         return format_tpl12(_fragment(parsed))
     if getattr(parsed, "fixed_subword", None):
         return format_tpl12(_fragment(parsed))
-    # B6 注册引导版（豁免）
-    if ctx.get("registered", True) is False:
-        return _REGISTER_GUIDE
     args = list(getattr(parsed, "args", None) or [])
     if not args:
         return _render_help_directory(ctx, 1)

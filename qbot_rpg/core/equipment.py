@@ -40,6 +40,13 @@
      reason: "mutual_exclusion"} 人话拒绝。
   8) 返回 dict 结果，拒绝场景 {ok: False, reason, message} 不抛异常（仅 EQP-08 加载期
      校验抛 ValueError 由上层翻译）；message 为人话文案（命令壳薄适配层透传）。
+  9) **P1-1 修复（M6 批1A 审查）**：aggregate_bonus 每槽只取一件匹配行（_worn_rows[0]）——
+     同 item_id 多件实例行并存时不再遍历全部（防未穿戴行词条翻倍）；同 id 异词条的
+     「穿戴行身份」精确区分需数据模型改进（EquipmentSlot 增行引用/ItemInstance 增
+     instance_key），登记 M9 强化接线前置项。
+  10) **P1-2 登记（M6 批1A 审查）**：unequip/后装覆盖会丢弃原 EquipmentSlot 的
+     slot_level/locked/gems（强化/镶嵌数据）——当前强化/镶嵌未接线为潜伏；M9 锻造强化
+     接线前必须在数据模型层解决（ItemInstance 补强化字段或引擎侧暂存恢复）。
 
 铁律：零 NoneBot import；纯函数（同刻同参必同值）；工程补白显式标注。
 """
@@ -200,11 +207,40 @@ class EquipmentEngine:
     ) -> List[ItemInstance]:
         """槽位对应背包行（B-3 双向一致）：按 equipment 槽实例的 item_id 回查背包行。
 
-        注（工程补白 2/8）：ItemInstance.slot 为可装备槽位类型、非穿戴状态标记，
-        故不以 slot 匹配（同槽类型多件并存时无法区分穿戴与否）；同 item_id 多件的
-        词条一致，任取皆等价。
+        注（工程补白 2/8 + P1-1/P1-2 修复）：ItemInstance.slot 为可装备槽位类型、非穿戴状态标记，
+        故不以 slot 匹配；同 item_id 多件词条**不再假设一致**——精确穿戴行解析走
+        `_resolve_worn_row`（_worn_refs 行引用优先），本函数仅作兜底匹配源。
         """
         return [r for r in inv if r.item_id == item_id]
+
+    def _worn_refs(self, player: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        """穿戴行引用表 {slot_id: 背包行对象引用}（P1-1/P1-2 修复，引擎私有进程态）。
+
+        equip 成功时登记、覆盖时更新、unequip 时移除；aggregate_bonus 按此精确取
+        穿戴行（同 id 多件只取穿戴行词条、穿显示序行不取错）。装配层序列化时忽略
+        `_worn_rows` 键（引擎私有态，随玩家状态 dict 但不入 Player 领域类型）。
+        """
+        refs = player.get("_worn_rows")
+        if not isinstance(refs, MutableMapping):
+            refs = {}
+            player["_worn_rows"] = refs
+        return refs
+
+    def _resolve_worn_row(
+        self, player: MutableMapping[str, Any], slot_id: str, item_id: str
+    ) -> Optional[ItemInstance]:
+        """精确穿戴行解析：_worn_refs[slot] 行引用优先（同 id 多件/异词条取对行）；
+        无引用（旧档/直接构造）兜底 item_id 第一匹配行（P1-1 保守）。"""
+        ref = self._worn_refs(player).get(slot_id)
+        inv = self._inv(player)
+        if ref is not None:
+            for r in inv:
+                if r is ref:
+                    return r
+        for r in inv:
+            if r.item_id == item_id:
+                return r
+        return None
 
     def _recalc(self, player: MutableMapping[str, Any]) -> dict:
         """aggregate_bonus（EQP-06）→ 全链重算（EQP-07）→ 返回 {snapshot, final_attributes}。"""
@@ -307,6 +343,8 @@ class EquipmentEngine:
             equipment[slot] = old
         else:
             equipment[slot] = EquipmentSlot(item_id=item.item_id, name=item.name)
+        # P1-1/P1-2：登记穿戴行引用（精确聚合；覆盖时更新为新行）
+        self._worn_refs(player)[slot] = row
 
         recalc = self._recalc(player)
         return {
@@ -346,6 +384,8 @@ class EquipmentEngine:
                 bound=False, stack_max=1,
             ))
         del equipment[slot]
+        # P1-1/P1-2：移除穿戴行引用（卸下后不再聚合该行）
+        self._worn_refs(player).pop(slot, None)
 
         recalc = self._recalc(player)
         return {
@@ -368,21 +408,25 @@ class EquipmentEngine:
                 inv = self._inv(player)
                 for slot_id, slot_obj in equipment.items():
                     item_id = getattr(slot_obj, "item_id", None) or slot_id
-                    for worn in self._worn_rows(inv, slot_id, str(item_id)):
-                        bonus = getattr(worn, "stats_bonus", None)
-                        if isinstance(bonus, Mapping):
-                            for k, v in bonus.items():
-                                try:
-                                    flat[str(k)] = flat.get(str(k), 0.0) + float(v)
-                                except (TypeError, ValueError):
-                                    continue
-                        pct_map = getattr(worn, "stats_pct", None)  # 钩子（ItemInstance 暂无该字段）
-                        if isinstance(pct_map, Mapping):
-                            for k, v in pct_map.items():
-                                try:
-                                    pct[str(k)] = pct.get(str(k), 0.0) + float(v)
-                                except (TypeError, ValueError):
-                                    continue
+                    # P1-1/P1-2 修复（M6 批1A/1B 审查）：精确穿戴行解析——_worn_refs
+                    # 行引用优先（同 item_id 多件/异词条只取穿戴行），兜底 item_id 首行。
+                    worn = self._resolve_worn_row(player, slot_id, str(item_id))
+                    if worn is None:
+                        continue
+                    bonus = getattr(worn, "stats_bonus", None)
+                    if isinstance(bonus, Mapping):
+                        for k, v in bonus.items():
+                            try:
+                                flat[str(k)] = flat.get(str(k), 0.0) + float(v)
+                            except (TypeError, ValueError):
+                                continue
+                    pct_map = getattr(worn, "stats_pct", None)  # 钩子（ItemInstance 暂无该字段）
+                    if isinstance(pct_map, Mapping):
+                        for k, v in pct_map.items():
+                            try:
+                                pct[str(k)] = pct.get(str(k), 0.0) + float(v)
+                            except (TypeError, ValueError):
+                                continue
         attributes = player.get("attributes")
         if isinstance(attributes, PlayerAttributes):
             attributes.bonus["flat"] = flat

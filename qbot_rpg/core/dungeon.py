@@ -24,8 +24,8 @@
      R31 死亡≠离开）对无 BOSS 语境同适用。复活点落位（默认=入口=safe_zone，
      death_policy.revive_point 可配）在 flow 层执行。
   4. 入口校验背包形态：以 player_ctx["inventory"] = {item_id: count} count-map 契约为准
-     （回退 player_ctx["player"]["inventory"]；InventoryEngine 为 M1 骨架，真实背包结算
-     由批次 7 接线）。入场次数落点 player_ctx["dungeon_entries"] = {dungeon_id: count}
+     （回退 player_ctx["player"]["inventory"]；InventoryEngine 已实装（M6 批1），真实背包
+     结算接线归装配层）。入场次数落点 player_ctx["dungeon_entries"] = {dungeon_id: count}
      （每日口径由批次 7 持久化）。校验先于消耗（2a1c §2.1：不足/超限拦截，不扣道具、
      不消耗次数）。
   5. 通关掉落结算（drops 实际发奖/首通奖励）由批次 7 接线（奖励管线 P 路）；本路仅出结算

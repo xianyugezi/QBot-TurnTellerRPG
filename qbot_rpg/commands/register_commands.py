@@ -413,7 +413,10 @@ def cmd_register(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     """
     if parsed.error:
         return format_tpl12(_fragment(parsed))
-    if getattr(parsed, "fixed_subword", None) and not getattr(parsed, "args", None):
+    # P1-1 修复（M6 批1B 审查）：fixed_subword（自动/继续/退出/选择N 等会话子词）非空
+    # 即 TPL-12——解析器已把首参抽为 fixed_subword，若放行则 args[0] 变职业、角色名静默
+    # 错位（/注册 自动 战士 → 注册名「战士」）。角色名含会话子词无法经解析器，明确拒绝。
+    if getattr(parsed, "fixed_subword", None):
         return format_tpl12(_fragment(parsed))
     args = list(getattr(parsed, "args", None) or [])
     if len(args) < 1 or len(args) > 2:

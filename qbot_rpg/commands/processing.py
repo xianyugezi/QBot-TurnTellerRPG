@@ -185,7 +185,17 @@ class PerPlayerQueue:
         q = self._queues[player_qid]
         while True:
             item = await q.get()
-            result = await self._process_one(item)
+            try:
+                result = await self._process_one(item)
+            except BaseException:
+                # P2-5 修复（M6 批2 审查）：消费者异常/取消（CancelledError 等，_process_one
+                # 仅 catch Exception）时 future 兜底 resolve——否则 process_message 的
+                # `await fut` 永久挂起（close() 取消在途任务路径）。
+                if item.future is not None and not item.future.done():
+                    item.future.set_result(
+                        _failure_reply(item.idem_key.command, RuntimeError("队列消费者异常"))
+                    )
+                raise
             if item.future is not None and not item.future.done():
                 item.future.set_result(result)
             # 发送出口（IDEM-1：发送仅是崩溃注入点；失败不阻塞队列 POOL-6）

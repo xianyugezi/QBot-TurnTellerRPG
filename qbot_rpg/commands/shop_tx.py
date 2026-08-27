@@ -175,8 +175,10 @@ def _ctx_inventory_to_player(
             continue
         pool = by_id.get(item_id, [])
         if pool:
+            # P1-1 修复（M6 批2 审查）：ctx 背包为 {item_id: count} 扁平计数，n 已是同 id
+            # 多实例的合并总量——其余实例必须移除（count 归并到首实例），否则
+            # pool[1:] 原计数 + 合并总量 = 计数膨胀（静默数据损坏）。
             out.append(replace(pool[0], count=n))
-            out.extend(pool[1:])
             by_id[item_id] = []
         else:
             name = ""
@@ -330,8 +332,11 @@ async def buy_in_tx(
     async with repo.tx() as tx:
         # SEG-5/IDEM-3/4：事务内幂等权威判定（查重只读；写键与业务同事务提交）
         if idem_key is not None and await tx.idem_exists(idem_key):
+            # P2-2 统一（M6 批2 审查）：幂等重放语义与 processing._replay_reply 一致——
+            # ok=False（非新处理）+ idempotent=True（唯一重放信号）；装配层凭 idempotent
+            # 位区分重放，不按 ok 误判为失败（send 抑制由装配层按 idempotent 处理）。
             return {
-                "ok": True,
+                "ok": False,
                 "idempotent": True,
                 "message": "✅ 已结算（重复指令，未重复扣款）",
                 "bought": {}, "paid": {}, "remaining": {},

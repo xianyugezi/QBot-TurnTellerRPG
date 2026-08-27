@@ -104,12 +104,15 @@ def make_bump_handler(
 
 
 async def _send_counter() -> tuple:
+    """发送出口计数 + 完成事件（P2-7 修复：测试用事件同步替代 sleep 等待发送出口）。"""
     sent: List[Dict[str, Any]] = []
+    done = asyncio.Event()
 
     async def sender(result: Dict[str, Any]) -> None:
         sent.append(result)
+        done.set()
 
-    return sent, sender
+    return sent, sender, done
 
 
 @pytest.mark.asyncio
@@ -118,13 +121,13 @@ async def test_idem_01_first_process_writes_key(repo_factory):
     repo = await repo_factory()
     queue = PerPlayerQueue(repo)
     try:
-        sent, sender = await _send_counter()
+        sent, sender, sended = await _send_counter()
         res = await process_message(
             repo, queue,
             message_id="m1", group_id="g1", player_qid="10001", command="/签到",
             handler=make_bump_handler("10001", 100), sender=sender,
         )
-        await asyncio.sleep(0.01)  # 等消费者完成发送出口调用
+        await asyncio.wait_for(sended.wait(), timeout=5.0)  # P2-7：等发送出口完成（替代 sleep）
         assert res["ok"] is True
         assert res["queued"] is True
         assert res["idempotent"] is False
@@ -225,7 +228,10 @@ async def test_idem_05_crash_before_reply_no_double_settle(repo_factory):
     repo = await repo_factory()
     queue = PerPlayerQueue(repo)
     try:
+        crash_done = asyncio.Event()
+
         async def crash_sender(result: Dict[str, Any]) -> None:
+            crash_done.set()
             raise RuntimeError("发送出口崩溃（回复前崩溃注入）")
 
         res1 = await process_message(
@@ -233,7 +239,7 @@ async def test_idem_05_crash_before_reply_no_double_settle(repo_factory):
             message_id="m5", group_id="g1", player_qid="10001", command="/逃跑",
             handler=make_bump_handler("10001", 100), sender=crash_sender,
         )
-        await asyncio.sleep(0.01)  # 等消费者完成发送出口（抛异常被吞，不阻塞队列）
+        await asyncio.wait_for(crash_done.wait(), timeout=5.0)  # P2-7：等发送出口（抛异常被吞）
         assert res1["ok"] is True
         # 断言对象 = 幂等键已落（非发送出口，【批5B】P1-4 修正）
         assert await repo.idem_find("m5", "g1", "10001") is not None

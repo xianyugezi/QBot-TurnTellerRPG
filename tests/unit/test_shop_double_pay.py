@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from dataclasses import replace
 
 import pytest
 
@@ -284,7 +285,7 @@ async def test_seg_idempotent_replay_no_double_deduct(repo):
     assert r1["ok"] is True and r1["committed"] is True and r1["idem_key_written"] is True
     r2 = await buy_in_tx(repo, player_qid="u1", shop_id="grocery", target="药水", qty=1,
                          idem_key=key, world_ctx=world)  # 同 message_id 重发
-    assert r2["ok"] is True and r2["idempotent"] is True and r2["applied"] is False
+    assert r2["ok"] is False and r2["idempotent"] is True and r2["applied"] is False  # P2-2：重放 ok=False
     assert r2["committed"] is False
     p = await _db_player(repo, "u1")
     assert p.currencies["coins"] == 750      # 只扣一次（不重复扣款，IDEM-5/SEG-5）
@@ -367,3 +368,47 @@ async def test_seg_in_tx_reread_beats_stale_cache(repo):
     assert res["ok"] is False and res["reason"] == "funds"   # 事务内重读真实余额 → 拦截
     p = await _db_player(repo, "u1")
     assert p.currencies["coins"] == 100
+
+
+@pytest.mark.asyncio
+async def test_regress_p1_1_multi_instance_inventory_count_conserved():
+    """P1-1 回归（M6 批2 审查）：同 item_id 多实例（不同 quality/bound）往返总量守恒。
+
+    ctx 背包为 {item_id: count} 扁平计数，`_inventory_from_player` 合并 A(2)+B(3)=5；
+    回写 `_ctx_inventory_to_player` 若保留 pool[1:] 原计数 + 合并总量 → 5+3=8 膨胀。
+    修复后总量归并到首实例、其余移除 → 5（总量守恒，无静默数据损坏）。"""
+    from qbot_rpg.commands.shop_tx import _ctx_inventory_to_player, _inventory_from_player
+    from qbot_rpg.data.item import ItemInstance
+
+    a = ItemInstance("potion", "药水", 2, "normal", False, stack_max=99, slot=None)
+    b = ItemInstance("potion", "药水", 3, "rare", True, stack_max=99, slot=None)
+    old = (a, b)
+    p1 = replace(make_player("u1"), inventory=old)
+    assert _inventory_from_player(p1) == {"potion": 5}
+
+    out = _ctx_inventory_to_player({"potion": 5}, old, {})
+    total = sum(int(i.count) for i in out)
+    assert total == 5                       # 总量守恒（不得 2+3+5=8）
+    assert len(out) == 1                    # 合并到首实例（其余移除）
+    assert out[0].count == 5
+    assert out[0].quality == "normal"       # 保留首实例字段
+
+
+@pytest.mark.asyncio
+async def test_regress_p2_12_pure_currency_path_concurrent(repo):
+    """P2-12 补测（M6 批2 审查）：纯货币路径并发——无限购/无限库存商品 + 余额仅够一次 →
+    并发两条购买 → 一条成功、另一条事务内重读余额不足（⑤funds 拦截）→ 货币恰扣一份总额。
+    （原 TC-SEG-02/03 均用限购商品制造单方失败，本用例真正隔离「货币不足」拦截路径。）"""
+    await repo.save_player(make_player("u1", coins=400))  # 药水 250/个，仅够买 1
+    world = make_world_ctx()
+    r1, r2 = await asyncio.gather(
+        _buy(repo, "u1", "m1", target="药水", qty=1, world_ctx=world),
+        _buy(repo, "u1", "m2", target="药水", qty=1, world_ctx=world),
+    )
+    oks = [r for r in (r1, r2) if r["ok"]]
+    fails = [r for r in (r1, r2) if not r["ok"]]
+    assert len(oks) == 1 and len(fails) == 1
+    assert fails[0]["reason"] == "funds"      # 另一路事务内重读余额不足（⑤货币，SEG-2/SEG-6）
+    p = await _db_player(repo, "u1")
+    assert p.currencies["coins"] == 150       # 恰扣一份总额 250（非 400-500 双扣/负余额）
+    assert len(await _idem_rows(repo)) == 1

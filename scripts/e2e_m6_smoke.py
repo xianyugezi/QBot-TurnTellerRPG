@@ -105,8 +105,12 @@ def _load_legal(name: str) -> list:
 
 
 def _enemy_combatant() -> Dict[str, Any]:
-    """legal enemies.json 的 rock_weasel（岩皮鼬）→ combatant dict（stats 映射）。"""
-    enemies = _load_legal("enemies")
+    """content/demo_lv15 enemies.json 的 rock_weasel（岩皮鼬）→ combatant dict（stats 映射）。
+
+    P1-2 修复（M6 批4 审查 / PCK-10）：五档包数据装配战斗——改用 demo_lv15 档数据，
+    一处覆盖 SMK-10（攻击步用内容包数据）+ PCK-10（五档包可装配真实战斗）。"""
+    data = json.loads((REPO / "content" / "demo_lv15" / "enemies.json").read_text(encoding="utf-8"))
+    enemies = data if isinstance(data, list) else []
     entry = next(e for e in enemies if e["id"] == "rock_weasel")
     st = entry["stats"]
     return {
@@ -164,9 +168,11 @@ def step_register(s: Smoke) -> None:
     # 注册后放行：真实 cmd_register（D1 REG-06）
     reg_out = cmd_register(parse("/注册 冒烟侠 战士"), ctx)
     s.check("✅" in str(reg_out) and ctx.get("registered") is True, "注册门槛·cmd_register 置 registered=True")
-    # 注册后 _gate 放行（指令不再返回 TPL_REGISTER_GATE）
-    out2 = cmd_view(parse("/角色"), ctx)
-    s.check(out2 != TPL_REGISTER_GATE, "注册门槛·注册后指令放行")
+    # 注册后 4 指令统一放行（P2-6 修复：不再只回归 /角色）
+    for cmd_name, handler in (("角色", cmd_view), ("背包", cmd_bag), ("装备", cmd_equip),
+                              ("技能", cmd_skill)):
+        s.check(handler(parse(f"/{cmd_name}"), ctx) != TPL_REGISTER_GATE,
+                f"注册门槛·注册后 /{cmd_name} 放行")
 
 
 def step_lock(s: Smoke) -> None:
@@ -186,7 +192,8 @@ def step_lock(s: Smoke) -> None:
     s.check(eng.state == "act", "锁定·start 后 state=act")
     bs = eng.battle_state()
     s.check(int(bs.get("turn", 0)) == 1, "锁定·start 后 turn=1")
-    s.check(bs["enemy"]["name"] == "岩皮鼬", "锁定·combatant 来自 legal 包（岩皮鼬）")
+    s.check(bs["enemy"]["name"] == "岩皮鼬", "锁定·combatant 来自内容包（岩皮鼬）")
+    s.check_eq(int(bs["enemy"]["hp"]), 120, "锁定·combatant 数值来自 demo_lv15（hp=120）")  # P2-5
 
 
 def step_attack(s: Smoke) -> None:
@@ -202,16 +209,22 @@ def step_attack(s: Smoke) -> None:
     hp_after = eng.battle_state()["enemy"]["hp"]
     s.check(out.final_damage > 0, f"攻击·final_damage>0（实得 {out.final_damage}）")
     s.check_eq(hp_before - hp_after, out.final_damage, "攻击·HP 差分=final_damage")
-    # 一轮一条（D4 SMK-10：dispatch_round 恰 1 次 send；对齐 verify_m5 ④b）
-    sends: List[str] = []
-    try:
-        pipeline = BattlePipeline()
-        msgs = dispatch_round(eng, eng.battle_state(), pipeline, {"player": dict(SMOKE_PLAYER)},
-                              player_action={"type": "normal", "mult": 1.0})
-        sends.extend(msgs or [])
-    except Exception:  # noqa: BLE001 —— pipeline 依赖装配，冒烟降级为引擎级单条断言
-        sends = []
-    s.check(len(sends) <= 2, f"攻击·一轮消息合并（≤2 条，实得 {len(sends)}）")
+    # 一轮一条（D4 SMK-10 / TC-SMK-06：dispatch_round 恰 1 次 send，行动+反击合并单条；
+    # 对齐 verify_m5 ④b 范本：start 后 player_act 产 TurnReport + BattlePipeline(mock sender)。
+    # P0-1 修复（M6 批4 审查）：独立新引擎——不能复用上方 do_action 已推进状态的引擎
+    # （其 state 已离开 act，player_act 状态错乱会致 send=2）；start→player_act 一轮时序。）
+    import unittest.mock as _mock
+
+    eng1 = BattleEngine()
+    eng1._rng = _FixedRng()
+    eng1.start(dict(SMOKE_PLAYER), _enemy_combatant(), random_seed=SEED)
+    mock = _mock.Mock()
+    mock.send.return_value = []
+    pipeline = BattlePipeline(mock, level=35, name="冒烟侠", title="-", to="smoke")
+    report = eng1.player_act("normal")
+    dispatch_round(eng1, report, pipeline, {"battle_engine": eng1, "sender": mock,
+                                            "battle_status_changes": ()})
+    s.check_eq(mock.send.call_count, 1, "攻击·一轮行动+反击合并恰 1 次 send")
 
 
 def step_settle(s: Smoke) -> None:
@@ -229,6 +242,9 @@ def step_settle(s: Smoke) -> None:
             eng.end_turn()
     state = eng.battle_state()
     s.check(eng.finished or int(state["enemy"]["hp"]) <= 0, "结算·敌方 hp≤0 终局")
+    # P2-4 修复（M6 批4 审查 / SMK-11）：victory 标志断言（result.flag == win）
+    flag = (state.get("result") or {}).get("flag")
+    s.check_eq(str(flag or ""), "win", "结算·victory 标志（result.flag=win）")
     # 回合数（BREP-24 口径：D4 偏离声明——win 模板不含「回合数 N」行，改断言引擎 turn）
     turn = int(state.get("turn", 0))
     s.check(turn >= 1, f"结算·回合数 N≥1（实得 {turn}）")
@@ -263,7 +279,7 @@ def validator_matrix(s: Smoke) -> None:
         mp, _ = _load_pack("missing_mod")
         y6 = any("Y-6" in str(w.kind) or "statuses" in str(w.module) for w in mp.report.warnings)
         s.check(mp.report.ok, "validator·missing_mod 软放行加载成功")
-        s.check(len(mp.report.warnings) > 0, "validator·missing_mod 有黄提示")
+        s.check(y6, "validator·missing_mod 含 Y-6(statuses) 黄提示")  # P1-1 修复：签名断言补消费
     except PackLoadError:
         s.check(False, "validator·missing_mod 应软放行非红拦")
     # old_schema：容忍加载（不红拦 report.ok）
@@ -299,6 +315,10 @@ def main() -> int:
     print(f"第一次摘要：passed={a['passed']} failed={a['failed']}")
     print(f"重放一致：{a == b}")
     if not ok:
+        # P2-7 修复（M6 批4 审查）：重放不一致时打印两摘要差异，便于回溯
+        if a != b:
+            print(f"  摘要 A：passed={a['passed']} failed={a['failed']} failures={a['failures']}")
+            print(f"  摘要 B：passed={b['passed']} failed={b['failed']} failures={b['failures']}")
         for f in a["failures"]:
             print(f"  ✗ {f}")
         print("M6 内容包冒烟失败")

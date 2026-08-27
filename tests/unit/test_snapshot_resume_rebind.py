@@ -122,12 +122,14 @@ def test_rebind_fallback_degraded_warns(caplog):
 
 
 def test_rebind_none_not_bound():
-    """无可用档（目标低于全部档）→ 不绑定（registry=None，走 RSM-04 降级：默认解析不崩）。"""
+    """无可用档（目标低于全部档）→ 不绑定（registry=None）+ degraded=True（P1-RSM-02 可观测性）。
+
+    世代滚出可取范围 = 半套复发最高频场景——none 降级不再静默（RSM-09 告警 + degraded）。"""
     snapshot = {"registry_generation": 0}
     watcher = _watcher(_snap(3))
     reg, status, target, rebound, degraded = rebind_registry_for_snapshot(snapshot, watcher)
     assert reg is None and status == "none"
-    assert rebound is None and degraded is False
+    assert rebound is None and degraded is True  # P1-RSM-02：none 与 fallback 可观测性对齐
 
 
 def test_rebind_skipped_without_watcher():
@@ -167,3 +169,86 @@ def test_rsm_snapshot_resume_degrades_not_crash():
     assert degraded2 is True  # RSM-09 世代不一致告警
     # 引擎侧降级（from_snapshot registry=None 走默认 defs/pipeline，不抛异常）——由
     # test_battle_snapshot_generation.py::test_rsm_03_from_snapshot_without_registry_backward_compat 覆盖
+
+
+# ---------------------------------------------------------------------------
+# P1-RSM-01 补测：resume_from_snapshot 端到端世代重绑定（TC-RSM-02/03）
+# ---------------------------------------------------------------------------
+def _snap_dict(registry_generation: int = 0, **over):
+    """完整战斗快照替身（ai_state/combo_state/turn 齐全 + registry_generation 覆盖）。"""
+    base = {
+        "turn": 12,
+        "ai_state": {"ai_memory": []},
+        "combo_state": {"combo_count": 0},
+        "registry_generation": registry_generation,
+    }
+    base.update(over)
+    return base
+
+
+def test_resume_from_snapshot_watcher_rebind_exact():
+    """TC-RSM-02 端到端：注入 watcher → 世代重绑定 exact → registry 注入工厂（旧局旧配置）。
+
+    P1-RSM-01 补测（M6 批3B 审查）：resume_from_snapshot(watcher=...) 主链路——
+    快照世代 4 命中 watcher 档 → rebind_status=exact、rebound_generation=4、
+    registry 透传工厂（stub 须接受 registry 关键字）。"""
+    from qbot_rpg.world.snapshot_resume import resume_from_snapshot
+
+    snap = _snap_dict(registry_generation=4)
+    watcher = _watcher(_snap(3), _snap(4))
+    received: dict = {}
+
+    def factory(s, *, registry=None):
+        received["registry"] = registry
+        return object()
+
+    out = resume_from_snapshot({}, snap, battle_factory=factory, watcher=watcher)
+    assert out["resumed"] is True
+    assert out["rebind_status"] == "exact"
+    assert out["rebound_generation"] == 4
+    assert out["degraded"] is False
+    assert received["registry"] is not None
+    assert received["registry"].generation == 4  # 引擎解析走旧 registry（半套禁绝）
+
+
+def test_resume_from_snapshot_watcher_rebind_none_degraded(caplog):
+    """TC-RSM-04 + P1-RSM-02 补测：目标世代低于全部档 → none 降级 degraded=True + 告警（不崩）。"""
+    from qbot_rpg.world.snapshot_resume import resume_from_snapshot
+
+    snap = _snap_dict(registry_generation=0)  # 低于 watcher 档（无 ≤ 档可取 → none）
+    watcher = _watcher(_snap(1))
+    with caplog.at_level("WARNING"):
+        out = resume_from_snapshot({}, snap, battle_factory=lambda s, *, registry=None: object(),
+                                   watcher=watcher)
+    assert out["resumed"] is True           # 不拒绝恢复（ADR-D3-03）
+    assert out["rebind_status"] == "none"
+    assert out["degraded"] is True          # P1-RSM-02：none 降级不再静默
+    assert out["rebound_generation"] is None
+    assert "世代重绑定无可用档" in caplog.text  # RSM-09 告警义务兑现
+
+
+def test_resume_from_snapshot_watcher_rebind_fallback(caplog):
+    """TC-RSM-04：世代超档 → fallback（取最近 ≤ 档）degraded=True + 告警。"""
+    from qbot_rpg.world.snapshot_resume import resume_from_snapshot
+
+    snap = _snap_dict(registry_generation=2)
+    watcher = _watcher(_snap(1), _snap(3))
+    with caplog.at_level("WARNING"):
+        out = resume_from_snapshot({}, snap, battle_factory=lambda s, *, registry=None: object(),
+                                   watcher=watcher)
+    assert out["resumed"] is True
+    assert out["rebind_status"] == "fallback"
+    assert out["rebound_generation"] == 1
+    assert out["degraded"] is True
+    assert "世代不一致" in caplog.text
+
+
+def test_resume_from_snapshot_without_watcher_skipped():
+    """未注入 watcher → rebind_status=skipped（旧行为零影响）。"""
+    from qbot_rpg.world.snapshot_resume import resume_from_snapshot
+
+    snap = _snap_dict(registry_generation=4)
+    out = resume_from_snapshot({}, snap, battle_factory=lambda s: object())
+    assert out["resumed"] is True
+    assert out["rebind_status"] == "skipped"
+    assert out["rebound_generation"] is None

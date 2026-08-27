@@ -890,9 +890,13 @@ class BattleEngine:
             # P0-1 续战旧配置修复（M6 D3 RSM-02 / F-RSM-01）：世代绑定键——start 写当前
             # registry 世代；中断/回合边界快照经 to_snapshot 深拷贝自动沿用；旧快照缺该
             # 字段 → 续战入口兼容读取默认 0（走 RSM-04 降级）。
+            # P2-RSM-05 修复：非数值 generation（畸形注入）回落 0，不崩（对齐 _num 防御口径）。
             "registry_generation": (
                 int(getattr(self._registry, "generation", 0))
-                if self._registry is not None else 0
+                if self._registry is not None
+                and isinstance(getattr(self._registry, "generation", 0), (int, float))
+                and not isinstance(getattr(self._registry, "generation", 0), bool)
+                else 0
             ),
             "turn": 0,
             "round_phase": PHASE_TURN_START,

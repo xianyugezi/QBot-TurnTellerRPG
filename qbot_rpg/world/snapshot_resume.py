@@ -179,8 +179,10 @@ def snapshot_registry_generation(snapshot: Mapping[str, Any]) -> int:
     """读取快照 registry_generation（M6 D3 RSM-02 / F-RSM-01）。
 
     旧快照缺该字段 → 兼容读取默认 0（RSM-02：旧快照走 RSM-04 降级路径）；非数值/布尔
-    同样按 0（防御）。续战世代绑定的键。
+    同样按 0（防御）。续战世代绑定的键。非 Mapping（dataclass 快照形态）→ 默认 0（P2-RSM-04）。
     """
+    if not isinstance(snapshot, Mapping):
+        return 0
     v = snapshot.get("registry_generation", 0)
     if isinstance(v, bool) or not isinstance(v, (int, float)):
         return 0
@@ -221,7 +223,8 @@ def pick_registry_snapshot(
     if callable(backup):
         try:
             bs = backup()  # RSM-05：当前有效 registry 快照（路A 激活的公开接口）
-        except Exception:  # noqa: BLE001 —— 契约防御：取档失败按无此档处理，不吞细节
+        except Exception as exc:  # noqa: BLE001 —— 契约防御：取档失败按无此档处理（P2-RSM-07 补日志）
+            _logger.debug("backup_snapshot() 取档失败：%s（按无此档降级，双口候选不受影响）", exc)
             bs = None
         if bs is not None and id(bs) not in seen:
             candidates.append(bs)
@@ -253,8 +256,26 @@ def rebind_registry_for_snapshot(
     target = snapshot_registry_generation(snapshot)
     snap, status = pick_registry_snapshot(watcher, target)
     if snap is None:
-        return None, status, target, None, False
-    reg: Registry = Registry.from_snapshot(snap)
+        if status == _REBIND_SKIPPED:
+            # 未注入 watcher：不重绑定、不告警（零影响既有调用方，degraded=False）
+            return None, status, target, None, False
+        # P1-RSM-02 修复（M6 批3B 审查）：none 降级路径（世代滚出 N=2 窗口 = 半套复发
+        # 最高频场景）补告警 + degraded=True——RSM-09「日志」义务与 fallback 可观测性对齐。
+        _logger.warning(
+            "续战世代重绑定无可用档：快照世代=%s（watcher 无 ≤ 目标档可绑定，回退默认解析，"
+            "半套配置风险；M6 D3 RSM-09 / ADR-D3-03 不拒绝恢复）", target,
+        )
+        return None, status, target, None, True
+    try:
+        # P2-RSM-03 修复（M6 批3B 审查）：畸形档（缺 tables/names/modules_raw 的契约替身）
+        # → Registry.from_snapshot 异常不穿透 resume_from_snapshot，按降级 (None, none, True)
+        reg: Registry = Registry.from_snapshot(snap)
+    except Exception:  # noqa: BLE001 —— 契约防御：快照档残缺按无可绑定档降级
+        _logger.warning(
+            "续战世代重绑定快照档残缺：目标世代=%s（Registry.from_snapshot 失败，按无档降级）",
+            target,
+        )
+        return None, "none", target, None, True
     rebound = _snap_generation(snap)
     degraded = rebound != target
     if degraded:

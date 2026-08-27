@@ -35,14 +35,11 @@ import pytest
 
 from qbot_rpg.commands.processing import PerPlayerQueue, process_message
 from qbot_rpg.commands.sender import SenderSendError
+from qbot_rpg.storage.connection import Database
 from qbot_rpg.storage.repository import Repository, SessionRow, row_to_player
 from qbot_rpg.world.battle_boundary import settle_exit_idempotent
 
 from conftest import make_player
-
-import pytest
-from qbot_rpg.storage.connection import Database
-from qbot_rpg.storage.repository import Repository
 
 
 @pytest.fixture

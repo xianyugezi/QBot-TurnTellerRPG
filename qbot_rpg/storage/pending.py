@@ -168,7 +168,12 @@ class PendingQueue:
                     # 坏行不丢：记告警并跳过（重放仍按其余条目进行；坏行保留待人工审计）
                     _logger.warning("pending 第 %s 行解析失败跳过（保留原文件）：%s", line_no, exc)
                     continue
-                if not entry.player_qid or entry.action not in VALID_ACTIONS:
+                payload = entry.row_payload
+                # P2-2 修复（M6 批5A 审查）：校验 row_payload 为含 player_qid 的非空 dict
+                # ——残缺合法 JSON（payload 空/缺失 qid）跳过保留，防重放默认值覆盖真实玩家
+                payload_ok = isinstance(payload, dict) and bool(payload.get("player_qid"))
+                if (not entry.player_qid or entry.action not in VALID_ACTIONS
+                        or not payload_ok):
                     _logger.warning("pending 第 %s 行字段非法跳过（保留原文件）：%r", line_no, entry)
                     continue
                 entries.append(entry)

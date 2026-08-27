@@ -20,6 +20,7 @@ import copy
 import dataclasses
 import datetime
 import json
+import sqlite3
 import os
 from dataclasses import dataclass, field  # noqa: F401（field 供类型注释可读）
 from pathlib import Path
@@ -468,7 +469,10 @@ class Repository:
         try:
             async with self.tx() as tx:
                 await tx.upsert_player(player)
-        except OSError as exc:
+        except (OSError, sqlite3.OperationalError) as exc:
+            # P1-1 修复（M6 批5A 审查）：真实磁盘满经 sqlite3 抛 OperationalError
+            #（SQLITE_FULL "database or disk is full"）非 OSError 子类——原只捕 OSError
+            # 使 .pending 兜底在生产主触发场景失效（测试 mock OSError 掩盖错配）。
             await self._transcribe_pending(ACTION_PLAYER_UPSERT, player_to_row(player),
                                            player.qid)
             raise StorageError(f"{SAVE_FAILURE_MESSAGE}（{exc}）") from exc

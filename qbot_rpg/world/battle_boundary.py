@@ -21,7 +21,9 @@ TIME×7 规则 + 字段 F-01~F-08 + 裁定 J-01~J-06 + 验收 TC-01~17；判定�
 **不做完整接线**（接口预留点全带 NotImplementedError + docstring，接线 TODO）：
   - 战斗会话挂接（BattleSnapshot.lost_pending 读写、丢失判定挂到指令流）→ M4 指令路由
   - 刷怪/刷新判定（spawn 行存在/可刷新/补刷）→ M3 spawn（2a1b R17/R23）
-  - 存储事务（回血+解锁 CAS 写、锁写入、结算落库、30 天回收扫描）→ M4/4a（TX-3/IDEM/RC）
+  - 存储事务（回血+解锁 CAS 写、锁写入、30 天回收扫描）→ M4/4a（TX-3/IDEM/RC）
+    ⚠️ **例外：退出结算幂等入口 `settle_exit_idempotent` 已按 IDEM-8 实装**（M6 批2·路A，
+    真实事务结算 + 写幂等键；见函数 docstring 工程补白——TIME-06 接口预留即带 repository）
   - 内容包 settings 校验接线 → content/validator.py `_check_settings_1g4`（本模块不含校验器）
 
 铁律：纯逻辑零 IO（无真实数据库写——事务接口仅签名 + docstring 说明）；平台无关零
@@ -39,6 +41,7 @@ from typing import Dict, Iterable, Mapping, Optional, Sequence, Tuple
 from qbot_rpg.data.battle import BattleSnapshot
 from qbot_rpg.data.item import ItemInstance
 from qbot_rpg.data.player import Player
+from qbot_rpg.storage.repository import IdemKey
 
 __all__ = [
     # ① 丢失（LOST）
@@ -779,6 +782,42 @@ def should_zombie_recycle(
     return (now - last) >= timedelta(days=zombie_days)
 
 
+# 结算幂等键 group_id 哨兵：settle_exit_idempotent 不接收指令 group_id，幂等键语义
+# (player_qid, settlement_kind, message_id) 不含群（IDEM-8），缺失时以 "dm" 兜底
+# （D2 §1.4 边界异常；与 commands/processing.py 的 DM_GROUP_SENTINEL 同值，附录 A：
+# 装配层落地时统一在 ctx 构建处收敛一处定义）。
+DM_GROUP_SENTINEL: str = "dm"
+
+
+def _session_player_qid(session: object) -> str:
+    """从会话对象/字典提取 player_qid（settle_exit_idempotent 幂等键要素之一）。"""
+    if isinstance(session, Mapping):
+        return str(session.get("player_qid", "") or "")
+    return str(getattr(session, "player_qid", "") or "")
+
+
+def _session_group_id(session: object) -> str:
+    """结算幂等键的 group_id：优先会话携带的发起群（origin_group/context.group_id），
+    缺失 → "dm" 哨兵兜底（D2 §1.4 边界异常）。"""
+    if isinstance(session, Mapping):
+        g = session.get("group_id") or session.get("origin_group")
+        payload = session.get("payload")
+    else:
+        g = getattr(session, "group_id", None) or getattr(session, "origin_group", None)
+        payload = getattr(session, "payload", None)
+    if g:
+        return str(g)
+    if isinstance(payload, Mapping):
+        g = payload.get("origin_group") or payload.get("group_id")
+        if not g:
+            ctx = payload.get("context")
+            if isinstance(ctx, Mapping):
+                g = ctx.get("group_id") or ctx.get("origin_group")
+        if g:
+            return str(g)
+    return DM_GROUP_SENTINEL
+
+
 async def settle_exit_idempotent(
     *,
     session: object,
@@ -786,16 +825,60 @@ async def settle_exit_idempotent(
     message_id: str,
     repository: object,
 ) -> bool:
-    """接口预留（TIME-06 / TC-04）：退出结算幂等入口——**唯一**退出结算接口。
+    """退出结算幂等入口——**唯一**退出结算接口（IDEM-8 实装 / TIME-06 / TC-04）。
 
     丢失按退出（LOST-05）/ 逃跑 / 僵尸回收（TIME-05）/ 主动放弃共用同一入口；以
-    会话 version + 幂等键（message_id）防双扣/重复结算（4a IDEM-3 / 框架 L343）。
-    结算语义 = [1g1b·主迁移⑥] 逃跑结算：清空战斗内资源（连段清零，[1c1b·⑦]）、
-    退出战场回地图/战前入口。并发双指令（丢失瞬间 /逃跑，TC-04）仅结算一次。
+    幂等键（player_qid + settlement_kind + message_id）防双扣/重复结算（4a IDEM-3 /
+    框架 L343）。结算语义 = [1g1b·主迁移⑥] 逃跑结算：清空战斗内资源（连段清零，
+    [1c1b·⑦]）、退出战场回地图/战前入口。
 
-    接线 TODO（M4/4a）：
-      1. repository 按 (session.player_qid, settlement_kind, message_id) 幂等键查重
-      2. 未结算 → version 乐观锁 + 单事务结算（连段清零/回地图/资源清空）
-      3. 已结算（幂等键命中/version 不符）→ 直接返回 False（无双扣）
+    ⚠️ 接线要求（IDEM-8 / 细化_4a TX-1 单指令单事务）：本函数自行开事务，调用方
+    **不得**在已持有的 repo.tx() 内调用（connection.py _tx_owner 拒绝同任务嵌套 tx）。
+
+    幂等键构成：
+      - message_id        = 触发结算的 QQ 消息 id（IDEM-8 键要素）
+      - player_qid        = session.player_qid（任务约束：session 为 object 取 qid）
+      - settlement_kind   = 并入 command 字段，形如 "settle:{kind}"（IDEM-8；F-IDEM-04
+        command 供审计/幂等重放识别）
+      - group_id          = 会话携带的发起群；缺失 → "dm" 哨兵兜底（D2 §1.4 边界异常）
+    注（schema 约束）：idempotency_keys 复合主键 = (message_id, group_id, player_qid)
+    （schema.py L71-81），command **不参与去重**——同 message_id+group+qid 的不同结算
+    类型视为已结算（先到者胜，不双结算），kind 仅落 command 列供审计；不同 message_id
+    结算各自独立。
+
+    流程（IDEM-3/4/6 语义）：
+      ① repository.idem_claim 只读查重（快速路径）→ 命中 → 返回 False（已结算，不双结算）
+      ② 未命中 → 单事务【结算 + write_idem_key】：
+           tx.idem_exists 二次确认（权威判定，D2 §1.4）→ 命中 → False
+           未命中 → tx.delete_session(player_qid)（清空战斗会话：连段/战斗资源随会话
+                   删除即清零，退出战场回地图）+ tx.write_idem_key(key) → COMMIT
+      ③ 事务内异常 → tx() 已 ROLLBACK（IDEM-6：无孤儿键、无半结算），异常向上抛
+         （调用方按 POOL-4 转人话消息；结算失败未落键，可干净重试）
+    返回 True = 本次完成结算（未结算过）；False = 已结算/无法建立幂等键（不双结算）。
+
+    【工程补白 · 显式标注】
+      - 本函数为 IDEM-8 / 【批5A】P1-1 明确要求的例外：TIME-06 接口预留即带 repository
+        参数，实装为**真实事务结算入口**；battle_boundary 模块其余部分仍保持纯逻辑零 IO。
+      - 「连段清零/资源清空」由删除战斗会话原子达成（会话即战斗内资源唯一载体），
+        不另改玩家行——玩家侧战斗标记清理归装配层会话流程（批次6/7）。
     """
-    raise NotImplementedError("M4 实装：退出结算幂等入口（细化_4a IDEM / 细化_1g4 TIME-06）")
+    qid = _session_player_qid(session)
+    if not qid or not message_id or not settlement_kind:
+        # 幂等键要素缺失 → 无法建立键，保守不结算（不写键不删会话，防误删战斗状态）
+        return False
+    key = IdemKey(
+        message_id=message_id,
+        group_id=_session_group_id(session),
+        player_qid=qid,
+        command=f"settle:{settlement_kind}",
+    )
+    # ① 入口只读查重（IDEM-3 只查不插；命中 → 已结算，不双结算）
+    if await repository.idem_claim(key):
+        return False
+    # ② 单事务结算 + 写键（IDEM-4；异常由 tx() ROLLBACK 后向上抛，IDEM-6）
+    async with repository.tx() as tx:
+        if await tx.idem_exists(key):
+            return False
+        await tx.delete_session(qid)
+        await tx.write_idem_key(key)
+    return True

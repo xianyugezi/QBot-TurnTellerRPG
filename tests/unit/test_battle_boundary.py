@@ -14,11 +14,9 @@ F-06 复活点 BFS）＋ docs/m2_shared_contract.md §七（1g4 世界边界：�
   超时键不识别（battle_timeout/turn_timeout 拒绝；正常配置无超时键）
   30 天僵尸回收（30 天回收 / 29 天不回收）
 
-确定性：settle_item_drops 注入固定 seed random.Random（可复现，铁律 8）；其余纯规则。
+确定性：settle_item_drops 注入 seeded_rng fixture（D6 SED-4 迁移①，可复现，铁律 8）；其余纯规则。
 """
 from __future__ import annotations
-
-import random
 
 from qbot_rpg.data.item import ItemInstance
 from qbot_rpg.world.battle_boundary import (
@@ -127,7 +125,7 @@ def test_try_acquire_lock():
 
 # ================================================================== 5. 死亡结算（DEATH-01/03/04/05/06）
 
-def test_settle_death_drops():
+def test_settle_death_drops(seeded_rng):
     cur, lost = settle_currency_drops({"金币": 1000, "钻石": 50}, [CurrencyDrop("金币", 0.1)])
     assert lost["金币"] == 100 and cur["金币"] == 900, lost
     exp_left, exp_lost = settle_exp_drop(100, 5, True)
@@ -138,7 +136,7 @@ def test_settle_death_drops():
              {"item_id": "b", "name": "绑定", "count": 1, "quality": "n", "bound": True,
               "stack_max": 99}]
     ii = [ItemInstance(**dict(x)) for x in items]
-    kept, dropped = settle_item_drops(tuple(ii), 1, True, rng=random.Random(1))
+    kept, dropped = settle_item_drops(tuple(ii), 1, True, rng=seeded_rng())
     assert len(dropped) == 1 and dropped[0].item_id == "a", \
         "绑定物品免疫掉落"
 

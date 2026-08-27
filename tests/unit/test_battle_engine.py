@@ -35,8 +35,8 @@ def make(**kw):
     return eng
 
 
-def test_b1_full_damage_loop():
-    eng = make().start(PLAYER, ENEMY, random_seed=11)
+def test_b1_full_damage_loop(seed: int):
+    eng = make().start(PLAYER, ENEMY, random_seed=seed)
     assert eng.state == "act" and eng.battle_state()["turn"] == 1
     out = eng.do_action("player", {"type": "normal", "mult": 1.0})
     assert out.hit is True and out.action_type == "normal"
@@ -45,8 +45,8 @@ def test_b1_full_damage_loop():
     assert eng.battle_state()["action_record"][-1]["action"] == "normal"
 
 
-def test_b2_guard_defense_command_halves():
-    eng = make().start(PLAYER, ENEMY, random_seed=12)
+def test_b2_guard_defense_command_halves(seed: int):
+    eng = make().start(PLAYER, ENEMY, random_seed=seed)
     g = eng.do_action("player", {"type": "guard"})
     assert g.action_type == "guard" and g.ok
     assert eng.battle_state()["player"]["hp"] == PLAYER["hp"]  # 防御本回合不扣血
@@ -60,10 +60,10 @@ def test_b2_guard_defense_command_halves():
     assert out_en.final_damage <= raw_noguard  # guard 减半生效（enemy_act 内部应用）
 
 
-def test_b3_status_apply_and_halve_decay():
+def test_b3_status_apply_and_halve_decay(seed: int):
     defs = {"atk_boost": {"id":"atk_boost","name":"强攻","class":"status","category":"enhance",
                           "stack_frame":"single","actions":[{"type":"stat_modifier","stat":"atk","value":"50%"}]}}
-    eng = make(defs=defs).start(PLAYER, ENEMY, random_seed=13)
+    eng = make(defs=defs).start(PLAYER, ENEMY, random_seed=seed)
     rt = eng._new_runtime()
     assert rt.apply_status("atk_boost", "player", force=True).applied
     eng._absorb_runtime(rt)
@@ -75,16 +75,16 @@ def test_b3_status_apply_and_halve_decay():
     assert eng._snap["status_state"]["player"][0]["value"] == 25  # halve 50->25（D5）
 
 
-def test_b4_flee_ends_battle():
-    eng = make().start(PLAYER, ENEMY, random_seed=14)
+def test_b4_flee_ends_battle(seed: int):
+    eng = make().start(PLAYER, ENEMY, random_seed=seed)
     out = eng.do_action("player", {"type": "flee"})
     assert out.action_type == "flee" and out.battle_ended
     assert eng.finished and eng.state == STATE_FLY
     assert eng.battle_state()["status"] == "escape"
 
 
-def test_b5_snapshot_json_roundtrip():
-    eng = make().start(PLAYER, ENEMY, random_seed=15)
+def test_b5_snapshot_json_roundtrip(seed: int):
+    eng = make().start(PLAYER, ENEMY, random_seed=seed)
     eng.do_action("player", {"type": "normal", "mult": 1.0})
     eng.enemy_act()
     eng.end_turn()  # 回合边界（1g3 快照只落回合边界）
@@ -96,8 +96,8 @@ def test_b5_snapshot_json_roundtrip():
     assert eng2.battle_state()["action_record"] == eng.battle_state()["action_record"]
 
 
-def test_b6_turn_advance_and_next_round_act():
-    eng = make().start(PLAYER, ENEMY, random_seed=16)
+def test_b6_turn_advance_and_next_round_act(seed: int):
+    eng = make().start(PLAYER, ENEMY, random_seed=seed)
     eng.do_action("player", {"type": "normal"})
     eng.enemy_act()
     eng.end_turn()  # 内部 ⑨ 自动 start_turn 进入下一回合（turn+1、state=act）
@@ -107,11 +107,11 @@ def test_b6_turn_advance_and_next_round_act():
     assert out2.hit is True
 
 
-def test_b7_reflect_lands_on_attacker():
+def test_b7_reflect_lands_on_attacker(seed: int):
     # 走真实装配（F-21 prepare_defense）：effect type=reflect -> defenses.reflect（P1-01 后手动注入会被每段刷新洗掉）
     refl = {"id": "refl", "name": "反伤", "class": "effect", "type": "reflect",
             "actions": [{"type": "reflect", "value": 20, "pct": True}]}
-    eng = make(defs={"refl": refl}).start(PLAYER, ENEMY, random_seed=17)
+    eng = make(defs={"refl": refl}).start(PLAYER, ENEMY, random_seed=seed)
     eng.set_effect_ids("enemy", ["refl"])  # 触发 _refresh_defenses 折叠
     hp0 = eng.battle_state()["player"]["hp"]
     eng.do_action("player", {"type": "normal", "mult": 1.0})
@@ -119,17 +119,17 @@ def test_b7_reflect_lands_on_attacker():
     assert hp1 < hp0  # 反弹伤害已回注玩家（F-22 落地）
 
 
-def test_b8_formula_injection():
-    eng = make().start(PLAYER, ENEMY, random_seed=18)
+def test_b8_formula_injection(seed: int):
+    eng = make().start(PLAYER, ENEMY, random_seed=seed)
     fn = eng._make_eval_formula()
     assert fn("[我方攻击]*2+10") == 210.0
 
 
 # ---------------- P0 回归（dsh 批2 审查）：dot 致死两通道 ----------------
-def test_p001_turn_start_dot_lethal():
+def test_p001_turn_start_dot_lethal(seed: int):
     """P0-01 回归：回合开始 dot 致死不抛 BattleStateError，正常终局（1g1c TC-02/13）。"""
     enemy = dict(ENEMY); enemy["hp"] = 50
-    eng = make().start(PLAYER, enemy, random_seed=19)   # 回合1 ACT（start_turn 已跑，无 dot）
+    eng = make().start(PLAYER, enemy, random_seed=seed)   # 回合1 ACT（start_turn 已跑，无 dot）
     eng._snap["enemy"]["dot_pool"] = {"poison": {"value": 100, "tick": "turn_start", "turns": 1,
                                                  "source": "player"}}
     # 走完整一轮：guard（玩家不攻击避免打死）-> 敌后手 -> end_turn 内部 start_turn（回合2）
@@ -141,10 +141,10 @@ def test_p001_turn_start_dot_lethal():
     assert eng.battle_state()["status"] == "win"
 
 
-def test_p002_turn_end_tick_dot_lethal():
+def test_p002_turn_end_tick_dot_lethal(seed: int):
     """P0-02 回归：回合结束 tick dot 致死 → 死亡挂点 + 终局（1g1c TC-03，死不穿透回合边界）。"""
     enemy = dict(ENEMY); enemy["hp"] = 50
-    eng = make().start(PLAYER, enemy, random_seed=20)
+    eng = make().start(PLAYER, enemy, random_seed=seed)
     eng._snap["enemy"]["dot_pool"] = {"fire": {"value": 100, "tick": "turn_end", "turns": 1,
                                                "source": "player"}}
     rep = eng.end_turn()   # tick 内 dot -> 50 -> 0 -> 死亡挂点（原 HP=0 不死单位死锁）
@@ -152,43 +152,43 @@ def test_p002_turn_end_tick_dot_lethal():
     assert eng.battle_state()["status"] == "win"
 
 
-def test_p004_tick_dot_on_player_lose():
+def test_p004_tick_dot_on_player_lose(seed: int):
     """P0-02 玩家侧：回合结束 tick dot 打玩家致 0 → mark_lose（原玩家死锁）。"""
     player = dict(PLAYER); player["hp"] = 30
-    eng = make().start(player, ENEMY, random_seed=21)
+    eng = make().start(player, ENEMY, random_seed=seed)
     eng._snap["player"]["dot_pool"] = {"bleed": {"value": 100, "tick": "turn_end", "turns": 1,
                                                  "source": "enemy"}}
     rep = eng.end_turn()
     assert eng.finished and eng.battle_state()["status"] == "lose"
 
 
-def test_r09_monster_def_rate_per_monster():
+def test_r09_monster_def_rate_per_monster(seed: int):
     """R-09 拍板：怪物防御率每怪可配（enemy.monster_def_rate）——0.5 时玩家伤害约减半
     （定稿 L27/L32 公式因子「× 怪物防御率」：0.5=怪物受一半伤害/防御高；默认 1.0）。"""
     enemy2 = dict(ENEMY); enemy2["monster_def_rate"] = 0.5
-    eng2 = make().start(PLAYER, enemy2, random_seed=22)
+    eng2 = make().start(PLAYER, enemy2, random_seed=seed)
     out2 = eng2.do_action("player", {"type": "normal", "mult": 1.0})
-    eng1 = make().start(PLAYER, dict(ENEMY), random_seed=22)   # 缺省 1.0
+    eng1 = make().start(PLAYER, dict(ENEMY), random_seed=seed)   # 缺省 1.0
     out1 = eng1.do_action("player", {"type": "normal", "mult": 1.0})
     # 双通道各自 floor → 总伤害约 50%（允许 floor 累计误差 ±2）
     assert abs(out2.raw_damage * 2 - out1.raw_damage) <= 2, (out1.raw_damage, out2.raw_damage)
 
 
-def test_g2_flee_rate_uses_agi():
+def test_g2_flee_rate_uses_agi(seed: int):
     """G2（定稿对照）：逃跑成功率 = 敏捷比 agi/(agi+敌agi)（玩家属性定稿 L185）——
     玩家敏捷远低于敌时（20 vs 200 → ~9%）roll 0.5 失败、战斗继续。"""
     player = dict(PLAYER); player["agi"] = 20
     enemy = dict(ENEMY); enemy["agi"] = 200
-    eng = make().start(player, enemy, random_seed=23)
+    eng = make().start(player, enemy, random_seed=seed)
     out = eng.do_action("player", {"type": "flee"})
     assert out.action_type == "flee" and out.battle_ended is False
     assert eng.finished is False and eng.battle_state()["status"] != "escape"
 
 
-def test_g4_mutual_kill_order_tc11_first_strike_wins():
+def test_g4_mutual_kill_order_tc11_first_strike_wins(seed: int):
     """D5 拍板（用户 2026-08-19 / 1g1c TC-11）：互杀 + 先手击杀生效 → 先手胜
     （玩家先手击杀怪物即使同归于尽也判玩家胜利）。"""
-    eng = make().start(PLAYER, ENEMY, random_seed=24)
+    eng = make().start(PLAYER, ENEMY, random_seed=seed)
     eng._snap["result"]["mark_lose"] = True              # 玩家亦死（被反弹/反伤）
     eng._snap["result"]["mark_win"] = True               # 敌人死
     eng._snap["result"]["player_killed_enemy"] = True    # 先手击杀生效
@@ -196,9 +196,9 @@ def test_g4_mutual_kill_order_tc11_first_strike_wins():
     assert out is not None and out.status == "win", out
 
 
-def test_g4_dot_double_kill_draw():
+def test_g4_dot_double_kill_draw(seed: int):
     """D5 拍板：无先手击杀的双死（回合开始 dot 双杀等）→ 平局（定稿 L62）。"""
-    eng = make().start(PLAYER, ENEMY, random_seed=24)
+    eng = make().start(PLAYER, ENEMY, random_seed=seed)
     eng._snap["result"]["mark_lose"] = True
     eng._snap["result"]["mark_win"] = True
     eng._snap["result"]["player_killed_enemy"] = False
@@ -206,9 +206,9 @@ def test_g4_dot_double_kill_draw():
     assert out is not None and out.status == "draw", out
 
 
-def test_g4_mutual_hp_ratio_higher_predeath_wins():
+def test_g4_mutual_hp_ratio_higher_predeath_wins(seed: int):
     """G4：hp_ratio 基准用「致死前一刻」HP 比（定稿 L63）——致死前 HP 占比高者胜。"""
-    eng = make().start(PLAYER, ENEMY, random_seed=25)
+    eng = make().start(PLAYER, ENEMY, random_seed=seed)
     eng._snap["result"]["mark_lose"] = True
     eng._snap["result"]["mark_win"] = True
     eng._snap["player"]["_hp_before_death"] = 400        # 致死前 400/500 = 80%
@@ -220,10 +220,10 @@ def test_g4_mutual_hp_ratio_higher_predeath_wins():
 
 
 # ---------------- dsh 批3 审查修复回归（审查_M1_batch3） ----------------
-def test_p1_marks_cleared_on_battle_end():
+def test_p1_marks_cleared_on_battle_end(seed: int):
     """P1-2 回归：战斗结束/逃跑成功 marks_state 与连段双轴一致清零（1d §2.3/AT-07）。"""
     from qbot_rpg.core.marks import AddMark
-    eng = make().start(PLAYER, ENEMY, random_seed=26)
+    eng = make().start(PLAYER, ENEMY, random_seed=seed)
     eng.marks_manager().apply_add(AddMark(side="enemy", mark="火印", count=2))
     assert eng.marks_manager().count("enemy", "火印") == 2
     eng.do_action("player", {"type": "flee"})   # 敏捷 50 vs 40 → 55%；roll 0.5 成功
@@ -231,7 +231,7 @@ def test_p1_marks_cleared_on_battle_end():
     assert eng.battle_state()["marks_state"]["enemy"] == []
 
 
-def test_p1_rejected_keeps_act_and_no_turn():
+def test_p1_rejected_keeps_act_and_no_turn(seed: int):
     """P1-5 回归：指令被拒（MP 不足）→ 状态保持 ACT、不改连段、_turn_acted 回滚
     （"不耗回合、可反复尝试" 1c1c TC-DEF-04）。"""
     _chain = {"id": "c1", "name": "试链", "trigger_skill": "a", "max_combo": 3,
@@ -240,7 +240,7 @@ def test_p1_rejected_keeps_act_and_no_turn():
     player = dict(PLAYER); player["mp"] = 0
     eng = BattleEngine(defs={"c1": _chain, **_skill}, config={"combo_enforce_mp": True})
     eng._rng = QueueRNG([0.5, 0.5, 0.5, 1.0])
-    eng.start(player, ENEMY, random_seed=27)
+    eng.start(player, ENEMY, random_seed=seed)
     out = eng.do_action("player", {"type": "skill", "skill_id": "a", "tag": "combo", "mult": 1.0})
     assert out.ok is False, "MP 不足应被拒"
     assert eng.state == "act", "被拒后状态保持 ACT（可反复尝试）"

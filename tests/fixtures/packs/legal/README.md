@@ -20,7 +20,10 @@
     含 chains 顶层连招 + chain_ref）/ training_dummy 练兵木桩（tier:training + type:dummy，木桩特例，
     未配置 drops/lore/pv/actions → 零黄提示）。全部过 A2 校验器（R1-R15）无红拦无黄提示。
   - `stats.json`：九预置键空间（resource: hp/mp；combat: str/int/con/spr/foc/agi/lck）
-  - `formula.json`：damage_base / heal_rate（无黑名单词，合法公式）
+  - `formula.json`：damage_base / heal_rate（无黑名单词，合法公式）+ F-FIX-01~27 段级参数
+    （damage/hit/crit/block/defense/weakness/type_affinity/derived/monster_def_rate/elements，
+    细化_1a §2.1 默认值；M6 批6·路A FIX-1 —— 读取器 tests/conftest.py formula_params，
+    详细化_M6 测试体系强化 D6 §三 F-FIX-01~27）
   - `npc.json`（M4 批次6 · 校验器接线，依据：m4_shared_contract §3.1 + 细化_2b1 validate_npcs）：
     4 只 NPC（merchant/quest_giver/dealer/narrator），map 挂点引用既有 maps（rubble_field 等）、
     shop_refs 引用 shop.village_shop、quests 引用 quest.q_potion_supply、dealer.pool 非空（无孤寂卡）、

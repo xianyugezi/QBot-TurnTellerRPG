@@ -323,6 +323,12 @@ class BattleEngine:
             pipeline if pipeline is not None else DamagePipeline(registry=registry, defs=defs)
         )
         self._params: DamageFormulaParams = params or DamageFormulaParams()
+        # FIX-6 决策登记（细化_M6 测试体系强化 D6 §三 FIX-5/FIX-6 二选一 + §八）：
+        # 段级参数当前仅默认值——battle 尚未从内容包 formula.json 装配段参数（JSON 段 →
+        # DamageFormulaParams 的共享加载函数未落生产侧，测试侧读取器 = conftest
+        # load_formula_params/formula_params fixture 已消费 fixtures 包）；内容包
+        # formula.json 段参数暂无人消费，文档口径由 D6 §八 登记承接，生产装配随实现层
+        # 规划 T01（formula.json 唯一配置源与校验器）落地。
         self._config: Dict[str, Any] = dict(_BATTLE_DEFAULT_CONFIG)
         if config:
             self._config.update(config)

@@ -20,12 +20,10 @@ intent_for 契约结构 / evaluate_conditions & roll_chain 语义）。
   S11 链引用 roll（TC-16：真实 chance roll 入队 / roll 失败断链+链冷却）
   S12 决策返回 action_dict 形态（C1 接线：type/skill_id/mult/kind/action_id/action/source/ai_state）
 
-确定性（铁律 6/8）：决策一律注入 ScriptedRng 固定序列；大样本用固定 seed 的 random.Random
-（可复现）；禁止裸/未播种 random。
+确定性（铁律 6/8）：决策一律注入 ScriptedRng 固定序列；大样本用 seeded_rng fixture
+固定 seed 的 RNG（D6 SED-4 迁移⑤，可复现）；禁止裸/未播种 random。
 """
 from __future__ import annotations
-
-import random
 
 from qbot_rpg.core.monster_ai import (
     CHARGING,
@@ -185,10 +183,9 @@ def test_s1c_scripted_rng_selection():
     assert r["ai_state"] is r["ai_state"] or True  # 返回含 ai_state（smoke 原样保留）
 
 
-def test_s1d_large_sample_statistics():
-    """大样本统计趋近（固定 seed 可复现，20k 次决策）。"""
-    rng = random.Random(20260826)
-    ai_a6 = MonsterAI(ENEMY_A, ACTION_LIB, rng)
+def test_s1d_large_sample_statistics(seeded_rng):
+    """大样本统计趋近（seeded_rng fixture 固定 seed 可复现，20k 次决策）。"""
+    ai_a6 = MonsterAI(ENEMY_A, ACTION_LIB, seeded_rng())
     counts = {"claw_swipe": 0, "tail_sweep": 0, "roar": 0}
     N = 20000
     for _ in range(N):

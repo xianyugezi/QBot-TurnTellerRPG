@@ -1,4 +1,59 @@
 {
   "damage_base": "atk * 2 - def",
-  "heal_rate": "power * 0.5"
+  "heal_rate": "power * 0.5",
+  "damage": {
+    "schema_version": 1,
+    "base_attack_mult": 1.0,
+    "rng": [0.9, 1.1],
+    "floor_mode": "channel_end",
+    "deep_floor": false
+  },
+  "hit": {
+    "k": 1.0,
+    "cap_min": 10,
+    "cap_max": 95
+  },
+  "crit": {
+    "p_coef": 0.5,
+    "cap": 95,
+    "tiers": {"high": 2.2, "mid": 1.7, "low": 1.3},
+    "tier_p": [1, 3],
+    "crit_mult_up": {"lv1": 0.05, "lv2": 0.10, "lv3": 0.15}
+  },
+  "block": {
+    "k": 150,
+    "cap": 40,
+    "magic_ignores": true,
+    "halve_after_block": true
+  },
+  "defense": {
+    "mode": "ratio",
+    "k": 100,
+    "pierce_types": {"blunt": 0.2}
+  },
+  "weakness": {
+    "type_mult": 1.3,
+    "element_mult": 1.3
+  },
+  "type_affinity": {
+    "enabled": true,
+    "blunt_pierce": 0.2,
+    "thrust_hit": 0.05,
+    "slash_crit": 0.05,
+    "magic_ignore_block": true
+  },
+  "derived": {
+    "max_total_mult": 1.5
+  },
+  "monster_def_rate": 1.0,
+  "elements": {
+    "earth": "地",
+    "fire": "火",
+    "water": "水",
+    "wind": "风",
+    "thunder": "雷",
+    "crystal": "晶",
+    "moon": "月",
+    "void": "无"
+  }
 }

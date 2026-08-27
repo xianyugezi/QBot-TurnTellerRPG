@@ -18,13 +18,10 @@
 """
 from __future__ import annotations
 
-import random
-
 import pytest
 
 from qbot_rpg.core.battle import BattleEngine
 from qbot_rpg.core.damage import (
-    DamageFormulaParams,
     apply_derived_cap,
     channel_elem,
     channel_phys,
@@ -74,11 +71,15 @@ def base_snapshot(enemy_hp=1000):
     }
 
 
-def ctx(snap, raw, atype="skill", attacker="player", target="enemy", **vars_):
-    v = dict(vars_)
-    v.setdefault("rng", random.Random(42))
-    return DamageCtx(raw_damage=raw, attack_type=atype, attacker=attacker, target=target,
-                     snapshot=snap, variables=v)
+@pytest.fixture
+def ctx(seeded_rng):
+    """DamageCtx 工厂（D6 SED-4 迁移②：缺省 rng 经 seeded_rng() 注入，禁内联 random.Random(N)）。"""
+    def _ctx(snap, raw, atype="skill", attacker="player", target="enemy", **vars_):
+        v = dict(vars_)
+        v.setdefault("rng", seeded_rng())
+        return DamageCtx(raw_damage=raw, attack_type=atype, attacker=attacker, target=target,
+                         snapshot=snap, variables=v)
+    return _ctx
 
 
 # ---------------- T04 未命中 → 0 伤害（L22 / 细化_1a §3-G） ----------------
@@ -122,7 +123,7 @@ def test_t12_block_halves_once():
 # ---------------- T13 魔攻击无视格挡（L25/L197） ----------------
 
 
-def test_t13_magic_ignores_block():
+def test_t13_magic_ignores_block(formula_params):
     # 魔攻击被格挡不生效：不需要 ×0.5，blocked 标记为 False（对齐 §8.1 blocked:false 语义）
     raw, blocked = total_damage(214, 96, rng=1.0, blocked=True, magic=True,
                                 magic_ignores_block=True)
@@ -132,14 +133,14 @@ def test_t13_magic_ignores_block():
                                     magic_ignores_block=False)
     assert (m_raw, m_blocked) == (155, True)
     # 默认参数：魔攻击无视格挡默认开启（formula.json block.magic_ignores=true）
-    assert DamageFormulaParams().block.magic_ignores is True
+    assert formula_params.block.magic_ignores is True
 
 
 # ---------------- T17 打类型内置破防（L30/L90/L203） ----------------
 
 
-def test_t17_blunt_builtin_pierce_auto():
-    p = DamageFormulaParams()
+def test_t17_blunt_builtin_pierce_auto(formula_params):
+    p = formula_params
     # 打类型(blunt) 自动携带破防 0.2；其余类型 0（formula.json defense.pierce_types / type_affinity.blunt_pierce）
     assert pierce_pct("blunt") == 0.2
     assert pierce_pct("blunt", blunt_pierce=p.type_affinity.blunt_pierce) == 0.2
@@ -155,8 +156,8 @@ def test_t17_blunt_builtin_pierce_auto():
 # ---------------- T21 双弱点叠加（L102-103，契约记录①见文件头） ----------------
 
 
-def test_t21_dual_weakness_both_apply():
-    p = DamageFormulaParams()
+def test_t21_dual_weakness_both_apply(formula_params):
+    p = formula_params
     # 类型弱点(斩)→物理通道 ×1.3；元素弱点(火)→元素通道 ×1.3
     assert p.weakness.type_mult == 1.3 and p.weakness.element_mult == 1.3
     # 乘法语义总增益 = 1.3×1.3 = 1.69（文档断言值）
@@ -188,8 +189,8 @@ def test_t22_channel_floor_once_not_segmented():
 # ---------------- T25 乱数闭区间共用（L35/L180） ----------------
 
 
-def test_t25_rng_closed_interval_shared():
-    p = DamageFormulaParams()
+def test_t25_rng_closed_interval_shared(formula_params):
+    p = formula_params
     assert p.rng == (0.9, 1.1)  # 闭区间配置（两端合法，L35/L180）
     # 共用同一乱数值：总伤害 = floor(双通道和 × rng)，非逐通道各乘
     # 310×0.9 = 279（若逐通道：floor(214×0.9)+floor(96×0.9) = 192+86 = 278）→ 279 证明共用
@@ -201,8 +202,8 @@ def test_t25_rng_closed_interval_shared():
 # ---------------- T28 判定顺序不可配（L16/L262，formula.json 无顺序字段） ----------------
 
 
-def test_t28_order_not_configurable_in_formula():
-    p = DamageFormulaParams()
+def test_t28_order_not_configurable_in_formula(formula_params):
+    p = formula_params
     # formula.json 段级参数载体无顺序字段（顺序写死，不可配）
     assert not hasattr(p, "order")
     # 拦截链 8 阶段顺序固定：减伤→护盾→反弹→吸收→免疫→续行→扣血→死亡判定（L36）
@@ -218,7 +219,7 @@ def test_t28_order_not_configurable_in_formula():
 # ---------------- T29 拦截链必经（L36） ----------------
 
 
-def test_t29_any_damage_passes_full_chain_then_deduct():
+def test_t29_any_damage_passes_full_chain_then_deduct(ctx):
     pipe = DamagePipeline()
     # 无任何防御配置：8 阶段全跑（pipeline 结构必经），扣血阶段必然产出 hp_change
     snap = base_snapshot()
@@ -244,15 +245,15 @@ def test_t29_any_damage_passes_full_chain_then_deduct():
 # ---------------- T31 50 级尖峰 ≈3374 不破万（L157 / 细化_1a §3-D） ----------------
 
 
-def test_t31_lv50_peak_under_10000():
+def test_t31_lv50_peak_under_10000(formula_params):
     """默认参数（全乘区最大组合）算 50 级尖峰上界：< 10000 硬护栏 + 尖峰存在性。
 
     因属性派生管线（细化_3b）与装备白值未在 M1 接全，不追求精确 3374（文档以 §4.5 验证
-    脚本为准）；本测试用默认 formula 参数 + 定稿数值（力量 88.5@50 级 L117 + 武器白值 11、
-    大招 400% L127、类型弱点 1.3、高级会心 2.2、目标 0 防御=系数 1.0、怪物防御率默认 1.0）
-    叠满求确定性上界，断言落在合理区间且远高于 1 级普攻 10-15。
+    脚本为准）；本测试用 formula_params fixture 参数 + 定稿数值（力量 88.5@50 级 L117 +
+    武器白值 11、大招 400% L127、类型弱点 1.3、高级会心 2.2、目标 0 防御=系数 1.0、
+    怪物防御率默认 1.0）叠满求确定性上界，断言落在合理区间且远高于 1 级普攻 10-15。
     """
-    P = DamageFormulaParams()
+    P = formula_params
     atk, skill, weak, crit, df = 88.5 + 11, 4.0, P.weakness.type_mult, 2.2, 1.0
     ph = channel_phys(atk, skill, weak, crit, df, P.monster_def_rate)
     el = channel_elem(74, 2.0, P.weakness.element_mult, 2.2, 1.0)
@@ -270,7 +271,7 @@ def test_t31_lv50_peak_under_10000():
 # ---------------- T32 派生累计封顶（L129/L229） ----------------
 
 
-def test_t32_derived_cap_1_5():
+def test_t32_derived_cap_1_5(formula_params):
     # 纯函数封顶：1.5 内不截，超 1.5 截到 1.5，负值按 0
     assert apply_derived_cap(1.0) == 1.0
     assert apply_derived_cap(1.5) == 1.5
@@ -279,5 +280,5 @@ def test_t32_derived_cap_1_5():
     assert apply_derived_cap(-1.0) == 0.0
     # 封顶后入 M2 技能倍率通道生效：100 攻 × 封顶 1.5 = 150
     assert channel_phys(100, apply_derived_cap(3.0), 1.0, 1.0, 1.0) == 150
-    # 默认参数与文档一致
-    assert DamageFormulaParams().derived.max_total_mult == 1.5
+    # 默认参数与文档一致（D6 FIX-3：经 formula_params fixture 注入）
+    assert formula_params.derived.max_total_mult == 1.5

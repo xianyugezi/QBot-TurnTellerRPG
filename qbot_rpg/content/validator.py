@@ -1480,17 +1480,27 @@ class _Checker:
         self, module_name: str, path: str, value: object, vmeta: FieldMeta
     ) -> None:
         if vmeta.type == "formula":
-            # formula 模块：值为公式字符串，或 {formula: 表达式, ...}
+            # formula 模块：值为公式字符串，或 {formula: 表达式, ...}，或段级参数容器
+            # （细化_M6 测试体系强化 D6 FIX-1：damage/hit/crit/.../elements 段，细化_1a §2.1）。
             if isinstance(value, str):
                 self._check_value(module_name, path, "formula", value, vmeta)
             elif isinstance(value, Mapping):
                 expr = value.get("formula")
                 if isinstance(expr, str):
                     self._check_value(module_name, f"{path}.formula", "formula", expr, vmeta)
-                else:
+                elif "formula" in value:
                     self._err(module_name, path, "R-5", rule="formula_missing", name="formula")
+                # M6 批6·路A FIX-1（D6 FIX-8）：无 formula 键的段级参数容器 → 透传不红拦
+                # （_element_registry 已按 elements 段消费引用存在校验，validator.py L644-652）；
+                # 15 条段参数红黄校验（hit 0.05-1 / cap 10-100 / tiers 低<中<高等）归
+                # 实现层规划 T01「formula.json 唯一配置源与校验器」，此处不重复实现。
             else:
-                self._err(module_name, path, "R-1", rule="type", expect="formula|obj",
+                # M6 批6·路A FIX-2（D6 FIX-1/D6 §四）：formula 模块允许顶层标量参数透传
+                # （如 monster_def_rate: 1.0 怪物防御率公式系数）——红拦仅留给明确非法
+                # 类型（list 等非公式/非对象/非标量结构）
+                if isinstance(value, (int, float, bool)):
+                    return
+                self._err(module_name, path, "R-1", rule="type", expect="formula|obj|scalar",
                           got=type(value).__name__)
             return
         if vmeta.type == "obj":

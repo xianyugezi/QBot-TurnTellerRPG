@@ -112,16 +112,20 @@ def make_ctx(sender: Sender, *, engine=None, **over) -> dict:
     return ctx
 
 
-def start_battle(player=PLAYER, enemy=ENEMY, seed: int = 42) -> BattleEngine:
-    """真实引擎开战（确定性随机种子；每测试新造）。"""
-    return BattleEngine().start(dict(player), dict(enemy), random_seed=seed)
+@pytest.fixture
+def start_battle(seed: int):
+    """真实引擎开战工厂（D6 SED-4 迁移⑥ / SED-5：random_seed 一律来自 seed fixture，
+    不写死魔法数；确定性随机种子，每测试新造）。"""
+    def _start_battle(player=PLAYER, enemy=ENEMY, seed_: int = seed) -> BattleEngine:
+        return BattleEngine().start(dict(player), dict(enemy), random_seed=seed_)
+    return _start_battle
 
 
 # ---------------------------------------------------------------------------
 # 一轮 1 条（玩家行动+怪物反击合并；mock Sender 断言调用次数）
 # ---------------------------------------------------------------------------
 
-def test_round_one_message_attack_merged() -> None:
+def test_round_one_message_attack_merged(start_battle) -> None:
     """/攻击 一轮 = 1 条：玩家行动 + 怪物反击合并进 render_battle_round 单条
     （军规3 / 铁律 2）；真实 Sender 仅 1 次调用。"""
     sender = RecordingSender()
@@ -140,7 +144,7 @@ def test_round_one_message_attack_merged() -> None:
     assert any("史莱姆 2" in ln for ln in lines) or any("→ /攻击" in ln for ln in lines)  # 提示行（BREP-09）
 
 
-def test_round_one_message_mock_sender_call_count() -> None:
+def test_round_one_message_mock_sender_call_count(start_battle) -> None:
     """无裸 send：mock Sender 断言 send 调用次数 = 合并消息数（一轮 1 条）。"""
     mock = unittest.mock.Mock()
     mock.send.return_value = []                      # Mock.send 返回可迭代空列表（pipeline extend）
@@ -152,7 +156,7 @@ def test_round_one_message_mock_sender_call_count() -> None:
     assert len(delivered) == 0                      # mock 不产生真实段
 
 
-def test_round_prefix_only_first_line() -> None:
+def test_round_prefix_only_first_line(start_battle) -> None:
     """前缀只加首行（铁律 1 / TC-01）：多行战报仅首行带前缀，其余行无前缀。"""
     sender = RecordingSender()
     eng = start_battle()
@@ -164,7 +168,7 @@ def test_round_prefix_only_first_line() -> None:
         assert f"{NAME}" not in rest or rest.startswith("你 ")  # 正文行不重复前缀
 
 
-def test_defend_round_one_message() -> None:
+def test_defend_round_one_message(start_battle) -> None:
     """/防御 一轮 1 条：BREP-05 进入防御 + 怪物反击合并（×0.5 减伤由引擎）。"""
     sender = RecordingSender()
     eng = start_battle()
@@ -177,7 +181,7 @@ def test_defend_round_one_message() -> None:
     assert text.split("\n")[0] == PREFIX
 
 
-def test_item_round_one_message() -> None:
+def test_item_round_one_message(start_battle) -> None:
     """/道具 <物品> 一轮 1 条：道具使用行 + 怪物反击合并（工程补白 2，无 BREP 模板）。"""
     sender = RecordingSender()
     eng = start_battle()
@@ -235,12 +239,12 @@ def test_end_one_message_with_summary_block() -> None:
     assert "摘要：总伤害 1220" in text
 
 
-def test_battle_end_flow_summary_and_drops() -> None:
+def test_battle_end_flow_summary_and_drops(start_battle) -> None:
     """/攻击 击杀弱怪：结束流程 ≤2 条——当轮消息（行动+击杀 BREP-15）+ 结束消息
     1 条（BREP-17 胜利 + BREP-20 掉落 + BREP-24 汇总，M5 裁决 P1-1 方案 A：同一消息
     含胜利+掉落+汇总，满足 5e TC-18）；掉落只在结束消息输出一次（军规5）。"""
     sender = RecordingSender()
-    eng = start_battle(enemy=WEAK_ENEMY, seed=7)
+    eng = start_battle(enemy=WEAK_ENEMY)
     rewards = {"exp": 100, "gold": 50, "drops": [("史莱姆粘液", 2)]}
     res = bc.cmd_battle_attack(
         parse_command("/攻击"), make_ctx(sender, engine=eng, battle_rewards=rewards),
@@ -263,7 +267,7 @@ def test_battle_end_flow_summary_and_drops() -> None:
 # 逃跑 / 战斗外 / 前缀开关
 # ---------------------------------------------------------------------------
 
-def test_flee_two_messages() -> None:
+def test_flee_two_messages(start_battle) -> None:
     """/逃跑：逃跑结果 1 条 + 结束汇总 1 条（单次操作 ≤2 条；军规5 结算一次）。
     敌方 agi=0 → 敏捷比恒 1.0 必成功（数值层 L185 敏捷 = agi/(agi+敌agi)）。"""
     sender = RecordingSender()
@@ -275,7 +279,7 @@ def test_flee_two_messages() -> None:
     assert "战斗结束：逃跑｜回合数 1｜输入 /战斗记录 查看明细" in sender.calls[1]
 
 
-def test_flee_failed_one_message_merged() -> None:
+def test_flee_failed_one_message_merged(start_battle) -> None:
     """/逃跑 失败：1 条合并（逃跑结果 + 怪物反击，铁律 2/军规3），战斗未结束。
     敌方高敏 → 敏捷比 < 1（数值层 L185 敏捷 = agi/(agi+敌agi)）。"""
     sender = RecordingSender()
@@ -309,7 +313,7 @@ def test_no_battle_clean_error_not_affect_others() -> None:
     assert len(sender.calls) == 1                     # 非战斗指令不产生战斗消息
 
 
-def test_prefix_disabled_no_prefix() -> None:
+def test_prefix_disabled_no_prefix(start_battle) -> None:
     """enabled=false（M5-01 总开关）→ 战斗消息无前缀（【前缀】L42）。"""
     sender = RecordingSender()
     settings = dict(DEFAULT_MESSAGE_PREFIX_SETTINGS, enabled=False)
@@ -335,7 +339,7 @@ def test_register_battle_commands_routes_four() -> None:
 # 渲染接线细节：展示名注入 / 状态差分行
 # ---------------------------------------------------------------------------
 
-def test_enrich_injects_display_names() -> None:
+def test_enrich_injects_display_names(start_battle) -> None:
     """enrich_round_report 注入展示字段（M5-08 接线层）：玩家 outcome.target=怪物展示名、
     怪物 outcome.attacker_name=怪物展示名、最大 HP 注入（BREP-02/10 取数）。"""
     eng = start_battle()
@@ -363,7 +367,7 @@ def test_apply_battle_prefix_delegates_m5_01() -> None:
     assert res.truncated is False and res.hint == ""
 
 
-def test_battle_rewards_from_fn_and_ctx() -> None:
+def test_battle_rewards_from_fn_and_ctx(start_battle) -> None:
     """奖励/掉落解析（工程补白 3）：battle_reward_fn 注入优先；battle_rewards 直给兜底。"""
     eng = start_battle(enemy=WEAK_ENEMY)
     report = eng.player_act("normal")

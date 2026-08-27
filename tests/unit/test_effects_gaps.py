@@ -18,8 +18,6 @@ AlwaysZero/AlwaysHigh——自包含复制，不依赖测试文件间 import）�
 """
 from __future__ import annotations
 
-import random
-
 import pytest
 
 from qbot_rpg.core.effects import (
@@ -65,11 +63,15 @@ def base_snapshot(enemy_hp=1000):
     }
 
 
-def ctx(snap, raw, atype="skill", attacker="player", target="enemy", **vars_):
-    v = dict(vars_)
-    v.setdefault("rng", random.Random(42))
-    return DamageCtx(raw_damage=raw, attack_type=atype, attacker=attacker, target=target,
-                     snapshot=snap, variables=v)
+@pytest.fixture
+def ctx(seeded_rng):
+    """DamageCtx 工厂（D6 SED-4 迁移④：缺省 rng 经 seeded_rng() 注入，禁内联 random.Random(N)）。"""
+    def _ctx(snap, raw, atype="skill", attacker="player", target="enemy", **vars_):
+        v = dict(vars_)
+        v.setdefault("rng", seeded_rng())
+        return DamageCtx(raw_damage=raw, attack_type=atype, attacker=attacker, target=target,
+                         snapshot=snap, variables=v)
+    return _ctx
 
 
 class _Def:
@@ -116,7 +118,7 @@ pipe = DamagePipeline()
 # ---------------- C 组 · dual 并存相加（细化_1b §5 C-2 / §4.1 S2） ----------------
 
 
-def test_c2_dual_coexist_and_add():
+def test_c2_dual_coexist_and_add(ctx):
     rt = eff_rt(atk_a=sdef("atk_a", "降攻A", frame="dual", value=10),
                 atk_b=sdef("atk_b", "降攻B", frame="dual", value=14))
     c = ctx(base_snapshot(), 0)
@@ -137,7 +139,7 @@ def test_c2_dual_coexist_and_add():
 # ---------------- C 组 · level_based 叠至 max_level（细化_1b §5 C-4 / §4.1 S4） ----------------
 
 
-def test_c4_level_based_to_max_level():
+def test_c4_level_based_to_max_level(ctx):
     rt = eff_rt(ice=sdef("ice", "冰结", frame="single", value=20, level_based=True))
     c = ctx(base_snapshot(), 0)
     for i in range(5):  # 连续施加 5 次 → 等级 1..5
@@ -215,7 +217,7 @@ def test_c8_trigger_halve():
 # ---------------- D 组 · 弱体盾 Mount 抵消一次弱体（细化_1b §5 D-4 / §4.4 I5） ----------------
 
 
-def test_d4_mount_absorbs_one_debuff():
+def test_d4_mount_absorbs_one_debuff(ctx):
     defs = {
         "curse": sdef("curse", "恶咒", cat="weak"),
         "seal": sdef("seal", "封锁", cat="seal"),
@@ -275,7 +277,7 @@ def test_d6_fatal_guard_limits_and_pvp_disable():
 # ---------------- E 组 · 追击→偷取可链 + 链深 ≤3（细化_1b §5 E-7 / §2.5 / §1.1-12） ----------------
 
 
-def test_e7_proc_chain_and_depth_limit():
+def test_e7_proc_chain_and_depth_limit(ctx):
     snap = base_snapshot()
     c = ctx(snap, 0)
     def _proc(id_):
@@ -308,7 +310,7 @@ def test_e7_proc_chain_and_depth_limit():
 # ---------------- G 组 · 触发计数上限（细化_1b §5 G-2 / §2.4，每回合 10 + 每场 99 + 免死 1-3） ----------------
 
 
-def test_g2_trigger_capacity_limits():
+def test_g2_trigger_capacity_limits(ctx):
     # 默认容量：每回合 10 / 每场 99 / 免死类 1-3（细化_1b §1.1 / I7）
     assert _DEFAULT_CONFIG["max_triggers_per_turn"] == 10
     assert _DEFAULT_CONFIG["max_triggers_per_battle"] == 99
@@ -354,7 +356,7 @@ def test_g4_wild_rest_not_implemented():
 
 
 # ---------------- 定稿对照修复（审查_M1_effects_定稿对照_20260818.md G3） ----------------
-def test_g3_reflect_also_mitigates():
+def test_g3_reflect_also_mitigates(ctx):
     """定稿 §3.4③ L138「按 % 减伤并反弹」：反弹 20% 承受 100 → 实伤 80 + 反弹 20 给攻击者。
     （G3 修复：原实现只反弹不减伤。）"""
     pipe = DamagePipeline()

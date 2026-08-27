@@ -18,7 +18,6 @@ from qbot_rpg.core.damage import (
     elem_factor,
     hit_rate,
     total_damage,
-    DamageFormulaParams,
 )
 
 
@@ -130,11 +129,27 @@ def test_t27_spec_sample_214_96_310():
     assert raw == 310
 
 
-# ---------------- H 默认参数与护栏 ----------------
-def test_formula_params_defaults():
-    p = DamageFormulaParams()
-    assert p.monster_def_rate == 1.0        # O1 裁决：默认 1.0
+# ---------------- H 公式参数 fixture 对照（FIX-4 承接：D6 F-FIX-01~27 经
+# formula_params 读取器注入，禁测试内硬编码 dataclass 默认值，TC-5d-05） ----------------
+def test_formula_params_fixture_matches_segments(formula_params):
+    """FIX-2 读取器装配对照（D6 TC-FIX-02 抽样）：fixture 值 = legal formula.json 段参数
+    = F-FIX 表默认（base_attack_mult=1.0 / rng=[0.9,1.1] / hit.k=1.0 / crit.tiers=2.2,1.7,1.3 /
+    block.k=150 / defense.k=100 / weakness.type_mult=1.3 / derived=1.5 / monster_def_rate=1.0）。"""
+    p = formula_params
+    assert p.base_attack_mult == 1.0
+    assert p.rng == (0.9, 1.1)
     assert p.hit.k == 1.0 and p.hit.cap_min == 10 and p.hit.cap_max == 95
     assert p.crit.cap == 95 and p.crit.p_coef == 0.5
-    assert p.block.cap == 40 and p.block.magic_ignores is True
-    assert p.rng == (0.9, 1.1) and p.derived.max_total_mult == 1.5
+    assert p.crit.tiers.high == 2.2 and p.crit.tiers.mid == 1.7 and p.crit.tiers.low == 1.3
+    assert p.crit.tier_p == (1, 3)
+    assert p.crit.crit_mult_up.lv1 == 0.05 and p.crit.crit_mult_up.lv3 == 0.15
+    assert p.block.k == 150 and p.block.cap == 40 and p.block.magic_ignores is True
+    assert p.block.halve_after_block is True
+    assert p.defense.mode == "ratio" and p.defense.k == 100
+    assert p.defense.pierce_types == {"blunt": 0.2}
+    assert p.weakness.type_mult == 1.3 and p.weakness.element_mult == 1.3
+    assert p.type_affinity.enabled is True and p.type_affinity.slash_crit == 0.05
+    assert p.type_affinity.magic_ignore_block is True
+    assert p.derived.max_total_mult == 1.5
+    assert p.monster_def_rate == 1.0        # O1 裁决：默认 1.0
+    assert p.elements["earth"] == "地" and len(p.elements) == 8

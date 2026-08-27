@@ -55,11 +55,15 @@ def base_snapshot(enemy_hp=1000):
     }
 
 
-def ctx(snap, raw, atype="skill", attacker="player", target="enemy", **vars_):
-    v = dict(vars_)
-    v.setdefault("rng", random.Random(42))
-    return DamageCtx(raw_damage=raw, attack_type=atype, attacker=attacker, target=target,
-                     snapshot=snap, variables=v)
+@pytest.fixture
+def ctx(seeded_rng):
+    """DamageCtx 工厂（D6 SED-4 迁移③：缺省 rng 经 seeded_rng() 注入，禁内联 random.Random(N)）。"""
+    def _ctx(snap, raw, atype="skill", attacker="player", target="enemy", **vars_):
+        v = dict(vars_)
+        v.setdefault("rng", seeded_rng())
+        return DamageCtx(raw_damage=raw, attack_type=atype, attacker=attacker, target=target,
+                         snapshot=snap, variables=v)
+    return _ctx
 
 
 class _Def:
@@ -112,14 +116,14 @@ pipe = DamagePipeline()
 # ---------------- B 组 · 伤害拦截链 8 阶段（细化_1b §5 B-1..B-9） ----------------
 
 
-def test_b1_mitigation_10pct():
+def test_b1_mitigation_10pct(ctx):
     snap = base_snapshot()
     snap["enemy"]["defenses"]["mitigation"] = [{"value": 10, "scope": "all"}]
     r = pipe.damage_pipeline(ctx(snap, 100), EffectRuntime())
     assert r.final_damage == 90 and r.target_hp == 910
 
 
-def test_b2_shield_first():
+def test_b2_shield_first(ctx):
     snap = base_snapshot()
     snap["enemy"]["defenses"]["shield"] = {"value": 30, "remaining": 30, "turns": 2, "max": 30}
     r = pipe.damage_pipeline(ctx(snap, 100), EffectRuntime())
@@ -127,7 +131,7 @@ def test_b2_shield_first():
     assert snap["enemy"]["defenses"]["shield"]["remaining"] == 0
 
 
-def test_b3_reflect_and_no_rereflect():
+def test_b3_reflect_and_no_rereflect(ctx, seeded_rng):
     snap = base_snapshot()
     snap["enemy"]["defenses"]["reflect"] = {"value": 20, "pct": True, "active": True}
     r = pipe.damage_pipeline(ctx(snap, 100), EffectRuntime())
@@ -136,12 +140,12 @@ def test_b3_reflect_and_no_rereflect():
     snap2 = base_snapshot()
     snap2["player"]["defenses"]["reflect"] = {"value": 30, "pct": True, "active": True}
     sub = DamageCtx(raw_damage=20, attack_type="basic", attacker="enemy", target="player",
-                    snapshot=snap2, variables={"is_reflect_damage": True, "rng": random.Random(1)})
+                    snapshot=snap2, variables={"is_reflect_damage": True, "rng": seeded_rng()})
     r2 = pipe.damage_pipeline(sub, EffectRuntime())
     assert not [e for e in r2.side_effects if e["type"] == "reflect"]
 
 
-def test_b4_absorb_record_and_heal_at_turn_end():
+def test_b4_absorb_record_and_heal_at_turn_end(ctx):
     snap = base_snapshot()
     snap["enemy"]["defenses"]["absorb"] = {"value": 50, "pct": True, "record": 0, "active": True}
     snap["enemy"]["defenses"]["shield"] = {"value": 40, "remaining": 40, "turns": 2, "max": 40}
@@ -152,7 +156,7 @@ def test_b4_absorb_record_and_heal_at_turn_end():
     assert len(heal) == 1 and heal[0]["heal"] == 50 and snap["enemy"]["hp"] == 990
 
 
-def test_b5_fatal_immune_full_exemption():
+def test_b5_fatal_immune_full_exemption(ctx):
     snap = base_snapshot(enemy_hp=500)
     snap["enemy"]["defenses"]["fatal_immune"] = {"count": 1, "max": 1}
     rt = EffectRuntime()
@@ -161,7 +165,7 @@ def test_b5_fatal_immune_full_exemption():
     assert rt.trigger_counts("enemy", "fatal_immune")[1] == 1
 
 
-def test_b6_guts_locks_hp_1():
+def test_b6_guts_locks_hp_1(ctx):
     snap = base_snapshot(enemy_hp=100)
     snap["enemy"]["defenses"]["guts"] = {"count": 1, "max": 1}
     r = pipe.damage_pipeline(ctx(snap, 999), EffectRuntime())
@@ -169,14 +173,14 @@ def test_b6_guts_locks_hp_1():
     assert snap["enemy"]["defenses"]["guts"]["count"] == 0
 
 
-def test_b7_death_check():
+def test_b7_death_check(ctx):
     snap = base_snapshot(enemy_hp=40)
     r = pipe.damage_pipeline(ctx(snap, 50), EffectRuntime())
     assert r.target_hp == 0
     assert any(e["type"] == "death" for e in r.side_effects)
 
 
-def test_b8_fatal_immune_before_guts():
+def test_b8_fatal_immune_before_guts(ctx):
     snap = base_snapshot(enemy_hp=100)
     snap["enemy"]["defenses"]["fatal_immune"] = {"count": 1, "max": 1}
     snap["enemy"]["defenses"]["guts"] = {"count": 1, "max": 1}
@@ -257,7 +261,7 @@ def test_c10_hit_rate_and_resist():
 # ---------------- D 组 · 免疫矩阵（细化_1b §5 D-1/D-2/D-3/D-5） ----------------
 
 
-def test_d1_status_immune_blocks_debuff_not_damage():
+def test_d1_status_immune_blocks_debuff_not_damage(ctx):
     rt = eff_rt(barrier=sdef("barrier", "魔法屏障", immune_vs="status", cat="strengthen"),
                 curse=sdef("curse", "恶咒", cat="weak"))
     rt.apply_status("barrier", "enemy", source="a", attacker="player", force=True)
@@ -279,7 +283,7 @@ def test_d2_shield_does_not_block_debuff():
     assert rt.find_status("enemy", "curse2") is not None  # 护盾只挡伤害不挡 debuff（I8）
 
 
-def test_d3_armor_blocks_interrupt():
+def test_d3_armor_blocks_interrupt(ctx):
     snap = base_snapshot()
     snap["enemy"]["defenses"]["immune"] = {"status": False, "damage": False, "interrupt": True, "all": False, "block_debuff": True}
     res = execute_action({"type": "interrupt", "target": "enemy"}, ctx(snap, 0), EffectRuntime())
@@ -313,7 +317,7 @@ def test_i7_fatal_guard_limits():
 # ---------------- L0 动作执行器（细化_1b §3 / 细化_1d §4） ----------------
 
 
-def test_l0_mark_add_to_cap():
+def test_l0_mark_add_to_cap(ctx):
     rt = eff_rt(fire_mark=mdef("fire_mark", polarity="positive", max_stack=3))
     snap = base_snapshot()
     for _ in range(4):
@@ -322,7 +326,7 @@ def test_l0_mark_add_to_cap():
     assert len(marks) == 1 and marks[0]["count"] == 3  # 印记定稿 §4.1：到顶不再涨
 
 
-def test_l0_mark_remove_saturation():
+def test_l0_mark_remove_saturation(ctx):
     rt = EffectRuntime()
     rt.marks_state = {"player": [], "enemy": [
         {"mark_id": "curse_mark", "name": "诅咒印", "count": 2, "applier": "enemy", "polarity": "negative"},
@@ -335,13 +339,13 @@ def test_l0_mark_remove_saturation():
     assert "fire_mark" not in [m["mark_id"] for m in seen] and len(seen) == 1  # 饱和减法（D-03）
 
 
-def test_l0_heal_caps_at_max():
+def test_l0_heal_caps_at_max(ctx):
     snap = base_snapshot(enemy_hp=0)
     execute_action({"type": "heal", "target": "enemy", "value": 5000}, ctx(snap, 0), EffectRuntime())
     assert snap["enemy"]["hp"] == 1000  # 回复封顶 max_hp
 
 
-def test_l0_proc_per_turn_limit():
+def test_l0_proc_per_turn_limit(ctx):
     rtp = EffectRuntime()
     snap = base_snapshot()
     proc = {"id": "p1", "type": "proc", "trigger": "on_attack", "chance": {"mode": "-1", "value": -1},
@@ -353,7 +357,7 @@ def test_l0_proc_per_turn_limit():
     assert okc == 10  # 每回合上限 10（E-8）
 
 
-def test_l0_interrupt_clears_combo():
+def test_l0_interrupt_clears_combo(ctx):
     snap = base_snapshot()
     snap["combo_state"] = {"enemy": {"count": 3}}
     res = execute_action({"type": "interrupt", "target": "enemy"}, ctx(snap, 0), EffectRuntime())

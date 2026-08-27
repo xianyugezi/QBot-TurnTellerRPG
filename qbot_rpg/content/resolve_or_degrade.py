@@ -52,7 +52,12 @@ def resolve_or_degrade(
         if callable(resolve):
             defn = resolve(id, kind)
         elif isinstance(registry, Mapping):
-            defn = (registry.get(kind) or {}).get(id)  # type: ignore[union-attr]
+            table = registry.get(kind)
+            # F7 修复（M6 批3A 审查）：kind 值非 Mapping（畸形注册表）→ 按契约降级
+            # (None, True) 不抛 AttributeError
+            if not isinstance(table, Mapping):
+                return None, True
+            defn = table.get(id)
         else:
             return None, True
     if defn is not None:

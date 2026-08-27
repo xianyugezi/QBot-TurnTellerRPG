@@ -123,6 +123,24 @@ async def test_backup_snapshot_activated(legal_pack_dir: Path):
     assert watcher.generation >= 1
 
 
+def test_wir_12_caplog_red_yellow_counts(caplog, badref_pack_dir: Path):
+    """WIR-12 / F4 验收③：启动路径红拦 → caplog 断言「error(s)= M warning(s)=」红黄计数 + 模块明细。
+
+    _log_report_counts（WIR-11 统一出口）输出 `红 N / 黄 M（error(s)=N warning(s)=M）`。
+    F5 补测（M6 批3A 审查）：黄提示/红拦路径计数日志可被断言消费。"""
+    import asyncio
+
+    from qbot_rpg.content.loader import PackLoadError
+
+    watcher = HotReloadWatcher(badref_pack_dir)
+    with caplog.at_level("WARNING", logger="qbot_rpg.content.hot_reload"):
+        with pytest.raises(PackLoadError):
+            asyncio.run(watcher.start())
+    text = caplog.text
+    assert "error(s)=" in text and "warning(s)=" in text  # 统一计数段（F4 口径）
+    assert "红" in text and "黄" in text
+
+
 # ---------------------------------------------------------------------------
 # WIR-07 /重载 真实后端（GmBackend.reload_content = watcher.reload 同一管线）
 # ---------------------------------------------------------------------------

@@ -484,8 +484,13 @@ class GmBackend:
             # 手动 /重载 无变更 → 视为成功提示（TPL-18：内容包无变更，无需重载）
             if result.no_change:
                 return {"ok": True, "summary": TPL_18_NO_CHANGE, "failures": []}
-            # 失败回退 → TPL-16 渲染串（含首个红拦人话 + 正确用法 + 下一步）
-            return {"ok": False, "message": render_reload_result(result)}
+            # 失败回退 → TPL-16 渲染串（含首个红拦人话 + 正确用法 + 下一步）。
+            # F2 修复（M6 批3A 审查）：透传连续失败次数，TPL-17 的 N 不再恒为 1。
+            msg = render_reload_result(
+                result,
+                consecutive_failures=getattr(watcher, "consecutive_failures", None),
+            )
+            return {"ok": False, "message": msg}
         return {"ok": True, "summary": reload_success_summary(result), "failures": []}
 
     def backup_content(self, pack_name: Any = None, ctx: Any = None) -> dict:
@@ -519,10 +524,15 @@ def _run_watcher_reload(watcher: HotReloadWatcher) -> Optional[ReloadResult]:
     """
     try:
         return asyncio.run(watcher.reload(watcher.pack_id))
-    except RuntimeError:
-        # 已在事件循环内（asyncio.run 不可嵌套）：M43① 铁律禁线程计时适配。
-        # 返回 None → 上层转「待异步装配」提示（批次7 装配改 await 直调，
-        # M6 批3 WIR-07 登记）；保证本函数返回值类型恒为 ReloadResult|None。
+    except RuntimeError as exc:
+        # F1 修复（M6 批3A 审查）：只吞「事件循环冲突」类 RuntimeError（asyncio.run 在
+        # 已运行循环内 / 跨循环锁绑定），返回 None 转待异步装配提示；其余 RuntimeError
+        # 是真实缺陷（坏包/锁问题），re-raise 暴露不静默吞。
+        if not any(m in str(exc) for m in (
+            "cannot be called from a running event loop",
+            "bound to a different event loop",
+        )):
+            raise
         return None
 
 

@@ -187,9 +187,8 @@ class HotReloadWatcher:
             _log_report_counts(self._pack_id, result.errors, result.warnings, prefix="启动装载红拦")
             raise PackLoadError(ValidationReport(errors=result.errors, warnings=result.warnings))
         if result.warnings:
-            # WIR-11：黄提示计数在启动路径也必须落日志（现状仅失败路径记错误数）
-            _logger.warning("启动装载 %s：红 0 / 黄 %d（warning(s)=%d）",
-                            self._pack_id, len(result.warnings), len(result.warnings))
+            # WIR-11：黄提示计数在启动路径也必须落日志（F4 统一口径 = _log_report_counts）
+            _log_report_counts(self._pack_id, result.errors, result.warnings, prefix="启动装载")
         return result
 
     async def reload(self, pack_id: Optional[str] = None) -> ReloadResult:
@@ -330,11 +329,8 @@ class HotReloadWatcher:
             report_errors = exc.errors
             report_warnings = exc.report.warnings
             note = f"load blocked by {len(report_errors)} red-block error(s)"
-            # WIR-11：失败路径记红/黄计数（含黄提示）；规则 ⑪ 报错信息落日志
-            _logger.warning("hot_reload %s 加载被红拦: 红 %d / 黄 %d（%s）",
-                            self._pack_id, len(report_errors), len(report_warnings), note)
-            for e in report_errors[:3]:
-                _logger.debug("  reload red-block %s/%s: %s", e.module, e.field, dict(e.detail))
+            # WIR-11：失败路径记红/黄计数（F4 统一口径 = _log_report_counts，含逐模块明细）
+            _log_report_counts(self._pack_id, report_errors, report_warnings, prefix="热重载红拦")
         except Exception as exc:  # IO/意外异常 → 按校验失败处理（SNAP-2）
             report_errors = (
                 PackError("pack", "pack", "R-5",
@@ -398,6 +394,8 @@ class HotReloadWatcher:
         self._snapshots.append(self._registry.snapshot())  # N=2 档滚动（上一次校验通过快照保留）
         self._fail_count = 0
         self._paused = False  # 文件恢复合法 → 自动恢复轮询（BLK-5 恢复条件）
+        # F3 修复（M6 批3A 审查）：changed 为空（手动 /重载 缓存命中无实际变更）→
+        # no_change=True → 上层走 TPL-18「内容包无变更」，不误报「0 个模块变更生效」。
         result = ReloadResult(
             pack_id=self._pack_id,
             ok=True,
@@ -407,6 +405,7 @@ class HotReloadWatcher:
             restored=False,
             paused=False,
             generation=self._generation,
+            no_change=(not changed),
             note=f"reloaded {len(changed)} changed module(s) [source={source}]",
         )
         self._last_result = result

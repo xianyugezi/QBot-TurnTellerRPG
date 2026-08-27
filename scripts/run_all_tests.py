@@ -90,6 +90,33 @@ COV_THRESHOLD = 80.0
 COV_ARCHIVE = REPO.parent / "docs" / "verify" / "coverage_latest.txt"
 
 
+def _aggregate_cov(json_data: dict) -> tuple[bool, dict[str, dict[str, float | int]]]:
+    """纯聚合（D7 COV-03/04；批7A 审查 P1-1 修复：抽纯函数供 TC-COV-04 假数据双向验证）。
+
+    输入 coverage json 顶层 dict（files: {路径: {summary: {num_statements, covered_lines}}}），
+    按 COV_DIRS 逐目录聚合行覆盖（message_format/ 子包随 core/ 前缀归入，D7 §1.4）；
+    返回 (全达标?, {目录: {statements, missing, percent}})。零语句目录视为不达标（测量
+    异常不静默放行）。
+    """
+    agg: dict[str, list[int]] = {d: [0, 0] for d in COV_DIRS}  # [statements, covered]
+    for fpath, finfo in json_data.get("files", {}).items():
+        for d in COV_DIRS:
+            if fpath.startswith(d + "/"):
+                s = finfo.get("summary", {})
+                agg[d][0] += s.get("num_statements", 0)
+                agg[d][1] += s.get("covered_lines", 0)
+                break
+    out: dict[str, dict[str, float | int]] = {}
+    ok = True
+    for d in COV_DIRS:
+        st, cv = agg[d]
+        pct = (cv / st * 100.0) if st else 0.0
+        out[d] = {"statements": st, "missing": st - cv, "percent": pct}
+        if st == 0 or pct < COV_THRESHOLD:  # 目录零语句视为不达标（测量异常，不静默放行）
+            ok = False
+    return ok, out
+
+
 def _coverage_measure() -> tuple[bool, dict[str, dict[str, float | int]]]:
     """真实核算（D7 COV-03/04，M6 恢复）：coverage run 三目录 --source + pytest 全量 →
     coverage report json → 按目录映射表逐目录聚合行覆盖。
@@ -119,24 +146,13 @@ def _coverage_measure() -> tuple[bool, dict[str, dict[str, float | int]]]:
         return False, {}
     try:
         data = json.loads(Path(tmp_json).read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, KeyError, OSError) as exc:
+        # P2-2 修复（批7A 审查）：报表解析异常 → 记诊断并归「测量失败」归档分支（不裸崩、不跳过归档）
+        print(f"  [失败] coverage 报表解析失败（{exc}），门禁不放行")
+        return False, {}
     finally:
         Path(tmp_json).unlink(missing_ok=True)
-    agg: dict[str, list[int]] = {d: [0, 0] for d in COV_DIRS}  # [statements, covered]
-    for fpath, finfo in data["files"].items():
-        for d in COV_DIRS:
-            if fpath.startswith(d + "/"):  # message_format/ 子包随 core/ 前缀自动归入（D7 §1.4）
-                s = finfo["summary"]
-                agg[d][0] += s["num_statements"]
-                agg[d][1] += s["covered_lines"]
-                break
-    out: dict[str, dict[str, float | int]] = {}
-    ok = True
-    for d in COV_DIRS:
-        st, cv = agg[d]
-        pct = (cv / st * 100.0) if st else 0.0
-        out[d] = {"statements": st, "missing": st - cv, "percent": pct}
-        if st == 0 or pct < COV_THRESHOLD:  # 目录零语句视为不达标（测量异常，不静默放行）
-            ok = False
+    ok, out = _aggregate_cov(data)
     return ok, out
 
 
@@ -149,6 +165,8 @@ def _write_coverage_archive(ok: bool, cov: dict[str, dict[str, float | int]]) ->
         f"# 生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
         f"# 测量命令：coverage run --source={COV_SOURCES} -m pytest <tests 全量>（D7 COV-03）",
         "# 口径：qbot_rpg/core + engine + content 各自 ≥80%，禁止合计稀释（D7 COV-02；总纲 ADR-04）",
+        "# P1-3 登记（批7A 审查）：统计口径 = 已导入文件行覆盖（coverage 标准语义——未导入的",
+        "# 源文件不入 statements，新增零测试模块不拉低百分比；文件全集对账归 D8 verify_m6）",
         "# 写入者：scripts/run_all_tests.py 覆盖率段（D7 COV-05；D8 verify_m6 断言对象）",
         "",
         "| 目录 | statements | missing | 行覆盖 % | 门禁（≥80%） |",
@@ -201,7 +219,14 @@ def _lint() -> bool:
     for tool, args in (("ruff", ["check", "."]), ("mypy", ["."])):
         exe = str(PY.parent / tool)
         print(f"  [运行] {tool} ...")
-        r = subprocess.run([exe, *args], cwd=str(REPO.parent), capture_output=True, text=True)
+        try:
+            r = subprocess.run([exe, *args], cwd=str(REPO.parent), capture_output=True, text=True)
+        except FileNotFoundError:
+            # P2-3 修复（批7A 审查）：工具未安装 → 打印安装指引 + 门禁失败（不裸崩 traceback）
+            print(f"    → 失败：{tool} 未安装（pytest/quality 依赖，见 requirements.txt dev 段；"
+                  f"安装：.venv/bin/pip install {tool}）")
+            ok = False
+            continue
         tail = "\n".join((r.stdout + r.stderr).splitlines()[-2:]).strip()
         print(f"    → {'通过' if r.returncode == 0 else '失败'}（{tail}）")
         ok = ok and r.returncode == 0

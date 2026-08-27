@@ -276,3 +276,4 @@
 - `ruff check .` → All checks passed！
 - `mypy .` → Success: no issues found in 231 source files
 - 阶段0 静态前置挂 run_all_tests.py（D7 LNT-04），`--skip-lint` 为逃生口（5d §3.2 L133）。
+- **技术备案（2026-08-28 批7A 审查 P2-4）**：mypy 未设 `python_version`——默认以运行解释器（.venv 3.11）为分析目标，与 ruff `target-version="py39"` 名义语法下限不一致；存量代码未验证 3.9 语法兼容（大量 3.10+ 标注可能大量新增报错 → 门禁突变风险），本批登记为**已知口径差距**，不追平 python_version（避免门禁突变）；追平时机 = 覆盖率/依赖门禁稳定后由后续里程碑决策（D7 LNT-02 同口径）。

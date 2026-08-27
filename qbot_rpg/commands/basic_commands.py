@@ -97,6 +97,7 @@ from .sender import format_tpl12
 __all__ = [
     # 指令名 / 子指令词
     "VIEW_CMD", "BAG_CMD", "BAG_FILTER_CMD", "EQUIP_CMD", "SKILL_CMD", "HELP_CMD",
+    "VIEW_DETAIL_CMD", "cmd_view_detail",
     "SUB_WEAR", "SUB_REMOVE",
     # 渲染常量
     "TPL_REGISTER_GATE", "TPL_EMPTY_BAG", "TPL_NO_SLOT",
@@ -116,6 +117,7 @@ __all__ = [
 # ---------------------------------------------------------------------------
 
 VIEW_CMD = "角色"
+VIEW_DETAIL_CMD = "角色详细"  # 2026-08-27 用户拍板：/角色 简洁版 + /角色详细 三层明细
 BAG_CMD = "背包"
 EQUIP_CMD = "装备"
 SKILL_CMD = "技能"
@@ -382,9 +384,16 @@ def _stat_order(ctx: Mapping[str, Any], attrs: PlayerAttributes) -> List[str]:
 
 
 def attr_line(idx: int, attr_id: str, stat_name: str, final: int,
-              attrs: PlayerAttributes, current: Optional[int] = None) -> str:
-    """属性行（三层结构）：`1. 【力量】26（白值 15 ｜ 加成 +5·+10% ｜ 临时 +3·+20%）`；
-    resource 型（current 非空）→ `当前/上限`。"""
+              attrs: PlayerAttributes, current: Optional[int] = None,
+              *, detail: bool = False) -> str:
+    """属性行：detail=False（/角色 简洁版）→ `1. 【力量】29` / resource `1. 【生命】30/100`；
+    detail=True（/角色详细 完整版）→ `1. 【力量】29（白值 15 ｜ 加成 +5·+10% ｜ 临时 +3·+20%）`。
+
+    2026-08-27 用户拍板：/角色 默认不显示白值/加成/临时（不然有点花），/角色详细 才显示三层明细。"""
+    if not detail:
+        if current is not None:
+            return f"{idx}. 【{stat_name}】{_fmt_num(current)}/{final}"
+        return f"{idx}. 【{stat_name}】{final}"
     base = float(attrs.base.get(attr_id, 0.0))
     flat = float(attrs.flat_bonus().get(attr_id, 0.0))
     pct = float(attrs.pct_bonus().get(attr_id, 0.0))
@@ -397,8 +406,10 @@ def attr_line(idx: int, attr_id: str, stat_name: str, final: int,
     return f"{idx}. 【{stat_name}】{final}（白值 {_fmt_num(base)} ｜ 加成 {bonus} ｜ 临时 {temp}）"
 
 
-def _render_attr_page(ctx: Mapping[str, Any], page: int) -> str:
-    """/角色 正文：LV 行固定头部 + 属性三层行 5 条/页 + TPL-08 + 裁决② 夹取。"""
+def _render_attr_page(ctx: Mapping[str, Any], page: int, *, detail: bool = False) -> str:
+    """/角色 正文：LV 行固定头部 + 属性行 5 条/页 + CakeGame 式尾段 + 裁决② 夹取。
+
+    detail=False（/角色）→ 简洁属性行；detail=True（/角色详细）→ 三层明细行。"""
     attrs = _to_attributes(ctx)
     f = _player_fields(ctx)
     final = calc_all_final_attributes(
@@ -428,7 +439,7 @@ def _render_attr_page(ctx: Mapping[str, Any], page: int) -> str:
     lines: List[str] = [view_header(ctx)]
     for i, (attr_id, cur) in enumerate(slice_items):
         lines.append(attr_line(start + i + 1, attr_id, _stat_name(ctx, attr_id),
-                               final[attr_id], attrs, current=cur))
+                               final[attr_id], attrs, current=cur, detail=detail))
     if items:
         lines.append(_cake_tail(res.page, res.total_pages, tip=_VIEW_TAIL_TIP, clamped=res.clamped))
     return "\n".join(lines)
@@ -459,6 +470,25 @@ def cmd_view(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     if page is None:
         return format_tpl12(_fragment(parsed))
     return _render_attr_page(ctx, page)
+
+
+def cmd_view_detail(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """/角色详细 [页码]：完整属性面板（三层明细：白值/加成/临时，2026-08-27 用户拍板
+    /角色 简洁、/角色详细 才显示三层；5 条/页 + CakeGame 式尾段 + 裁决② 夹取）。"""
+    g = _gate(ctx)
+    if g is not None:
+        return g
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    if getattr(parsed, "fixed_subword", None):
+        return format_tpl12(_fragment(parsed))
+    args = list(getattr(parsed, "args", None) or [])
+    if len(args) > 1:
+        return format_tpl12(_fragment(parsed))
+    page = parse_page_arg(args[0] if args else None)
+    if page is None:
+        return format_tpl12(_fragment(parsed))
+    return _render_attr_page(ctx, page, detail=True)
 
 
 # ---------------------------------------------------------------------------
@@ -1347,6 +1377,7 @@ def register_basic_commands(router: Any, *, make_context: Optional[Callable[[Any
         return _h
 
     router.register(CommandSpec(VIEW_CMD, handler=_wrap(cmd_view)))
+    router.register(CommandSpec(VIEW_DETAIL_CMD, handler=_wrap(cmd_view_detail)))
     router.register(CommandSpec(BAG_CMD, handler=_wrap(cmd_bag)))
     router.register(CommandSpec(BAG_FILTER_CMD, handler=_wrap(cmd_bag_filter)))
     router.register(CommandSpec(EQUIP_CMD, handler=_wrap(cmd_equip)))

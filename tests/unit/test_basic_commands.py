@@ -49,7 +49,7 @@ from qbot_rpg.commands.basic_commands import (
     cmd_equip,
     cmd_help,
     cmd_skill,
-    cmd_view,
+    cmd_view, cmd_view_detail,
     equip_line,
     group_page_line,
     register_basic_commands,
@@ -190,36 +190,45 @@ def parse(raw: str) -> ParsedCommand:
 # ---------------------------------------------------------------------------
 
 def test_view_noarg_page1():
-    """/角色 → LV 行固定头部 + 属性三层结构前 5 条（白值/加成/临时）+ TPL-08 页脚。"""
+    """/角色 → LV 行固定头部 + 简洁属性前 5 条（不显示白值/加成/临时三层，2026-08-27 用户拍板）。"""
     out = cmd_view(parse("/角色"), make_ctx())
     lines = out.splitlines()
     assert lines[0] == "【角色】Lv3.阿伟（战士） ｜ 经验 320/1000"
     # 资源型：当前/上限
-    assert "1. 【生命】30/100（白值 100 ｜ 加成 0 ｜ 临时 0）" in out
-    assert "2. 【魔力】8/30（白值 30 ｜ 加成 0 ｜ 临时 0）" in out
-    # 三层结构：力量 白值15 + 加成 flat5·pct10% + 临时 flat3·pct20% → 15+5=20 ×1.1=22 ×1.2=26.4+3=29.4 → floor 29
-    assert "3. 【力量】29（白值 15 ｜ 加成 +5·+10% ｜ 临时 +3·+20%）" in out
-    assert "4. 【智力】15（白值 15 ｜ 加成 0 ｜ 临时 0）" in out
-    assert "5. 【体质】10（白值 10 ｜ 加成 0 ｜ 临时 0）" in out
+    assert "1. 【生命】30/100" in out
+    assert "2. 【魔力】8/30" in out
+    # 简洁版：只显最终值，无三层标注
+    assert "3. 【力量】29" in out
+    assert "4. 【智力】15" in out
+    assert "5. 【体质】10" in out
+    assert "白值" not in out and "加成" not in out and "临时" not in out   # 简洁版不显示三层
     assert "当前页：1/2" in out
     # 第 2 页条目不在页 1
     assert "幸运" not in out
 
 
+def test_view_detail_three_layers():
+    """/角色详细 → 完整三层明细（白值/加成/临时，2026-08-27 用户拍板 /角色详细 才显示）。"""
+    out = cmd_view_detail(parse("/角色详细"), make_ctx())
+    assert "3. 【力量】29（白值 15 ｜ 加成 +5·+10% ｜ 临时 +3·+20%）" in out
+    assert "1. 【生命】30/100（白值 100 ｜ 加成 0 ｜ 临时 0）" in out
+    assert "当前页：1/2" in out
+
+
 def test_view_page2():
     """/角色 2 → 第 2 页（精神/专注/敏捷/幸运）+ 页脚。"""
     out = cmd_view(parse("/角色 2"), make_ctx())
-    assert "6. 【精神】10（白值 10 ｜ 加成 0 ｜ 临时 0）" in out
-    assert "7. 【专注】10（白值 10 ｜ 加成 0 ｜ 临时 0）" in out
-    assert "8. 【敏捷】10（白值 10 ｜ 加成 0 ｜ 临时 0）" in out
-    assert "9. 【幸运】10（白值 10 ｜ 加成 0 ｜ 临时 0）" in out
+    assert "6. 【精神】10" in out
+    assert "7. 【专注】10" in out
+    assert "8. 【敏捷】10" in out
+    assert "9. 【幸运】10" in out
     assert "当前页：2/2" in out
 
 
 def test_view_clamp_last_page():
     """裁决②：/角色 9 超总页数 → 夹取最后一页 + （已到最后一页）。"""
     out = cmd_view(parse("/角色 9"), make_ctx())
-    assert "9. 【幸运】10（白值 10 ｜ 加成 0 ｜ 临时 0）" in out
+    assert "9. 【幸运】10" in out
     assert "（已到最后一页）" in out
     assert "当前页：2/2" in out
 
@@ -245,8 +254,10 @@ def test_view_max_level_header():
 def test_attr_line_pure():
     """attr_line 纯函数：三层结构行（resource 当前/上限 / combat 单值）。"""
     attrs = bc._to_attributes(make_ctx())
-    assert attr_line(1, "str", "力量", 29, attrs) == "1. 【力量】29（白值 15 ｜ 加成 +5·+10% ｜ 临时 +3·+20%）"
-    assert attr_line(1, "hp", "生命", 100, attrs, current=30) == "1. 【生命】30/100（白值 100 ｜ 加成 0 ｜ 临时 0）"
+    assert attr_line(1, "str", "力量", 29, attrs) == "1. 【力量】29"                       # 默认简洁版
+    assert attr_line(1, "hp", "生命", 100, attrs, current=30) == "1. 【生命】30/100"
+    assert attr_line(1, "str", "力量", 29, attrs, detail=True) == "1. 【力量】29（白值 15 ｜ 加成 +5·+10% ｜ 临时 +3·+20%）"
+    assert attr_line(1, "hp", "生命", 100, attrs, current=30, detail=True) == "1. 【生命】30/100（白值 100 ｜ 加成 0 ｜ 临时 0）"
 
 
 # ---------------------------------------------------------------------------

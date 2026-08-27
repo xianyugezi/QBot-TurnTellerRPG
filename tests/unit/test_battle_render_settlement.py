@@ -120,10 +120,11 @@ def test_tc16_kill_line_right_after_damage_line() -> None:
     assert "✅ 战斗胜利！" not in text            # 结算已移结束消息（P1-1）
     end = render_battle_end(
         SimpleNamespace(), SimpleNamespace(name="史莱姆", turn=1), "win",
-        status="win", enemy_name="史莱姆", exp=42, gold=25, drops=[("史莱姆凝胶", 2)],
+        status="win", enemy_name="史莱姆", exp=42, gold=25, drops=[("史莱姆凝胶", 2)], final_damage=25,
     )
-    assert "✅ 战斗胜利！" in end                 # BREP-17 结束消息同一消息
-    assert "✅ 获得 经验 42、金币 25、史莱姆凝胶×2" in end   # BREP-20 掉落
+    assert "您对史莱姆造成了" in end and "史莱姆已死亡。" in end   # 叙事句
+    assert "获得经验：42" in end and "获得金币：25" in end              # 分行
+    assert "1.史莱姆凝胶×2" in end                                       # 战利品列表
 
 
 # ---------------------------------------------------------------------------
@@ -165,13 +166,13 @@ def test_tc18_victory_full_message_with_drops_once() -> None:
                    target_max_hp=25)
     text = render_battle_end(
         SimpleNamespace(), SimpleNamespace(name="史莱姆", turn=1), "win",
-        status="win", enemy_name="史莱姆", exp=42, gold=25, drops=[("史莱姆凝胶", 2)],
+        status="win", enemy_name="史莱姆", exp=42, gold=25, drops=[("史莱姆凝胶", 2)], final_damage=25,
     )
-    assert "✅ 战斗胜利！" in text
-    assert "战斗结束：胜利" in text                          # BREP-24 同消息（TC-18 语义）
-    assert "✅ 获得 经验 42、金币 25、史莱姆凝胶×2" in text
-    assert text.count("✅ 获得") == 1
-    assert text.count("史莱姆凝胶×2") == 1        # 掉落只在结束消息输出一次
+    assert "您对史莱姆造成了" in text and "史莱姆已死亡。" in text   # 叙事句
+    assert "获得经验：42" in text and "获得金币：25" in text            # 分行
+    assert "1.史莱姆凝胶×2" in text                                      # 战利品列表
+    assert "战斗结束：" not in text                                      # win 无汇总行
+    assert text.count("史莱姆凝胶×2") == 1        # 掉落只在结束消息输出一次（军规5）
 
 
 def test_reward_line_exact_and_multi_drop() -> None:
@@ -311,11 +312,11 @@ def test_tc23_boss_early_end_subsequent_segments_dropped() -> None:
     assert "✅ 战斗胜利！" not in text                # 结算已移结束消息（P1-1）
     end = render_battle_end(
         SimpleNamespace(), SimpleNamespace(name="史莱姆王", turn=1), "win",
-        status="win", enemy_name="史莱姆王", exp=120, gold=60, drops=[("史莱姆王冠", 1)],
+        status="win", enemy_name="史莱姆王", exp=120, gold=60, drops=[("史莱姆王冠", 1)], final_damage=13,
     )
-    assert "✅ 战斗胜利！" in end
-    assert "✅ 获得 经验 120、金币 60、史莱姆王冠×1" in end
-    assert "战斗结束：胜利" in end                    # BREP-24 同消息（TC-18 语义）
+    assert "您对史莱姆王造成了" in end and "史莱姆王已死亡。" in end   # 叙事句
+    assert "获得经验：120" in end and "获得金币：60" in end              # 分行
+    assert "1.史莱姆王冠×1" in end                                       # 战利品列表
 
 
 def test_tc23_derived_cap_note_on_segment_line() -> None:
@@ -358,11 +359,11 @@ def test_settlement_rendered_once_only_when_ended() -> None:
     assert "获得" not in text
     text = render_battle_end(
         SimpleNamespace(), SimpleNamespace(name="史莱姆", turn=1), "win",
-        status="win", enemy_name="史莱姆", exp=42, gold=25, drops=[("史莱姆凝胶", 2)],
+        status="win", enemy_name="史莱姆", exp=42, gold=25, drops=[("史莱姆凝胶", 2)], final_damage=25,
     )
-    assert text.count("✅ 战斗胜利！") == 1
-    assert text.count("✅ 获得") == 1
-    assert text.count("史莱姆凝胶×2") == 1
+    assert "您对史莱姆造成了" in text                    # 叙事句
+    assert "获得经验：42" in text and "获得金币：25" in text   # 分行
+    assert "1.史莱姆凝胶×2" in text                            # 战利品列表恰一次
 
 
 def test_settlement_returns_none_when_no_ended() -> None:

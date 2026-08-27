@@ -583,19 +583,21 @@ class BattlePipeline:
     def send_end(self, player: Any, enemy: Any, winner: str, *,
                  summary: Any = None, to: Any = None,
                  status: Optional[str] = None, exp: int = 0, gold: int = 0,
-                 drops: Any = None, enemy_name: Optional[str] = None) -> List[str]:
-        """战斗结束独立 1 条（BREP-17~20 结算 + BREP-24 汇总 + 可选 BREP-25 明细；
-        TC-18/TC-25，铁律 11）。
+                 drops: Any = None, enemy_name: Optional[str] = None,
+                 final_damage: int = 0) -> List[str]:
+        """战斗结束独立 1 条（用户 2026-08-27 拍板结算模板 + BREP-24/25；TC-18/25，铁律 11）。
 
-        **M5 裁决（P1-1 方案 A）**：结束消息 = 胜负横幅 + 经验掉落（BREP-17~20，
-        军规5 只输出一次）+ 汇总行（BREP-24）+ 木桩明细（BREP-25）——满足 5e
-        TC-18「同一消息含 `✅ 战斗胜利！` + 汇总行 + 掉落」；当轮消息只出行动+击杀。
-        status 非 None 才渲染结算块（status/exp/gold/drops 由接线层注入）。
+        **M5 裁决（用户拍板）**：win 结束消息 = 用户结算模板（叙事句回顾最后一击
+        `您对{怪物}造成了{伤害}点伤害！{怪物}已死亡。` + 获得经验/金币分行 + 战利品
+        列表），不含 `✅ 战斗胜利！` 横幅与 BREP-24 汇总行；军规5 掉落只输出一次；
+        当轮消息只出行动+击杀。lose/draw 保留 BREP-16/18/19 + BREP-24 汇总行。
+        final_damage（最后行动伤害，供叙事句）由 dispatch_round 从 report 取末注入。
         """
         body = render_battle_end(
             _prefix_free_ns(player), _enemy_ns(enemy), winner, summary=summary,
             status=status, exp=exp, gold=gold, drops=drops,
             enemy_name=enemy_name or (getattr(enemy, "name", "") if enemy else None),
+            final_damage=final_damage,
         )
         return self.send(body, to=to)
 
@@ -688,6 +690,12 @@ def dispatch_round(
 
     if report.ended:
         winner = report.status or "draw"
+        # 叙事句伤害 = 本轮最后一个玩家行动 outcome 的 final_damage（用户结算模板回顾最后一击）
+        last_pd = 0
+        for _oc in reversed(tuple(getattr(report, "outcomes", ()) or ())):
+            if str(getattr(_oc, "actor", "") or "") == "player":
+                last_pd = int(getattr(_oc, "final_damage", 0) or 0)
+                break
         delivered.extend(
             pipeline.send_end(
                 SimpleNamespace(),
@@ -698,6 +706,8 @@ def dispatch_round(
                 exp=reward["exp"],
                 gold=reward["gold"],
                 drops=reward["drops"],
+                final_damage=last_pd,
+                enemy_name=e_name,          # _prefix_free_ns 剥离 dict name，显式注入
             )
         )
     return delivered

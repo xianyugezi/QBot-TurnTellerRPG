@@ -249,10 +249,11 @@ def test_battle_end_flow_summary_and_drops() -> None:
     assert len(sender.calls) == 2                     # 当轮 1 条 + 结束 1 条（≤2 条，铁律 2）
     round_msg, end_msg = sender.calls
     assert "✅ 你击败了史莱姆！" in round_msg          # BREP-15 击杀紧跟伤害行
-    assert "✅ 战斗胜利！" not in round_msg            # 结算已移结束消息（P1-1）
-    assert "✅ 战斗胜利！" in end_msg                  # BREP-17（结束消息同一消息含结算）
-    assert "✅ 获得 经验 100、金币 50、史莱姆粘液×2" in end_msg   # BREP-20 掉落（仅此一次）
-    assert "战斗结束：胜利｜回合数 1｜输入 /战斗记录 查看明细" in end_msg   # BREP-24 汇总
+    assert "✅ 战斗胜利！" not in round_msg
+    assert "您对史莱姆造成了" in end_msg and "史莱姆已死亡。" in end_msg   # 叙事句（用户结算模板）
+    assert "获得经验：100" in end_msg and "获得金币：50" in end_msg        # 经验/金币分行
+    assert "1.史莱姆粘液×2" in end_msg                                     # 战利品列表
+    assert "战斗结束：" not in end_msg               # win 无汇总行（用户模板，2026-08-27）
     assert end_msg.split("\n")[0] == PREFIX
     _assert_no_banned_emoji(round_msg)
     _assert_no_banned_emoji(end_msg)

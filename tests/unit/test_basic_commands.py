@@ -261,7 +261,7 @@ def test_bag_page1_rows_and_footer():
     assert "3.[铁矿]×20" in out                               # ×数量（icon 剥离，方括号）
     assert "4.[任务信物]×1（绑定）" in out                    # 绑定标签
     assert "5.[铁剑]×1（精良）" in out                        # 品质（非 normal 标注）
-    assert "当前页：1/2(共6条)" in out                        # 页数放尾部（用户模板）
+    assert "当前页：1/2(全部)" in out                         # 页数放尾部+类型词（用户模板）
     assert "Tip:发送'使用+物品名'即可使用物品" in out
 
 
@@ -269,7 +269,7 @@ def test_bag_page2():
     """/背包 2 → 第 2 页（最早获得的疗伤药 ×10）。"""
     out = cmd_bag(parse("/背包 2"), make_ctx())
     assert "6.[疗伤药]×10" in out
-    assert "当前页：2/2(共6条)" in out
+    assert "当前页：2/2(全部)" in out
 
 
 def test_bag_clamp_last_page():
@@ -294,7 +294,7 @@ def test_bag_empty():
 def test_bag_single_page_no_footer():
     """/背包 ≤5 条 → 单页无页脚（3d D-02）。"""
     out = cmd_bag(parse("/背包"), make_ctx(inventory=_INVENTORY[:3]))
-    assert "当前页：1/1(共3条)" in out                    # 单页也显示当前页（用户模板）
+    assert "当前页：1/1(全部)" in out                     # 单页也显示当前页+类型词（用户模板）
     # acquired_at 倒序：09:40 信物 → 09:35 铁剑 → 09:30 疗伤药
     assert out.splitlines()[-1] == "Tip:发送'使用+物品名'即可使用物品"
 
@@ -674,7 +674,7 @@ def test_footer_tpl08_exact():
     （当前页放尾部 + Tip，2026-08-27 用户拍板，不用 TPL-08 页脚）。"""
     ctx = make_ctx()
     assert "— 第 1/2 页 · 共 9 条 · 输入 /角色 页码 翻页 —" in cmd_view(parse("/角色"), ctx)
-    assert "当前页：1/2(共6条)" in cmd_bag(parse("/背包"), ctx)      # /背包 自定义模板
+    assert "当前页：1/2(全部)" in cmd_bag(parse("/背包"), ctx)       # /背包 自定义模板
     assert "Tip:发送'使用+物品名'即可使用物品" in cmd_bag(parse("/背包"), ctx)
     assert "— 第 1/2 页 · 共 6 条 · 输入 /装备 页码 翻页 —" in cmd_equip(parse("/装备"), ctx)
     assert "— 第 1/2 页 · 共 6 条 · 输入 /技能 页码 翻页 —" in cmd_skill(parse("/技能"), ctx)

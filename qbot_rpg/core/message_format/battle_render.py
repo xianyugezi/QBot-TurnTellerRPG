@@ -169,22 +169,24 @@ def render_battle_end(
     gold: int = 0,
     drops: Any = None,
     enemy_name: Optional[str] = None,
+    final_damage: int = 0,
 ) -> str:
     """BREP-17~20 结算 + BREP-24/25 汇总明细（5e §6.2/§6.3 / TC-18/25~27，铁律 11）。
 
-    **M5 裁决（2026-08-27 P1-1 方案 A）**：结束消息 = 胜负横幅（BREP-17/18/19）
-    + 经验掉落（BREP-20）+ 汇总行（BREP-24）+ 木桩明细（BREP-25）——满足 5e
-    TC-18「同一消息含 `✅ 战斗胜利！` + 汇总行 + 掉落」；当轮消息只出行动+击杀
-    （BREP-15），结算统一在结束消息一次性输出（军规5，结算不重复）。
+    **M5 裁决（2026-08-27 用户拍板结算模板）**：
+      - win：结束消息 = **用户结算模板**（叙事句 `您对{怪物}造成了{伤害}点伤害！{怪物}
+        已死亡。` + `获得经验：{exp}` + `获得金币：{gold}` + `获得的战利品如下→` +
+        逐行 `{序号}.{名称}×{数量}`），**不含** `✅ 战斗胜利！` 横幅与 BREP-24 汇总行
+        （用户模板为主，2026-08-27）；当轮消息只出行动+击杀（BREP-15），结算统一在
+        结束消息一次性输出（军规5，结算不重复）。
+      - lose/draw：保留 BREP-16/18/19 + BREP-24 汇总行（用户未给失败模板，维持现状）。
 
     BREP-24 汇总行：`战斗结束：{胜负结果}｜回合数 {N}｜输入 /战斗记录 查看明细`
-    （胜负结果 = 胜利/失败/平局，winner 接受引擎 status win/lose/draw 或中文）；
-    回合数 N 依次取 enemy/player/summary 的 turns|turn（接线层注入，缺省 0）。
+    （lose/draw 输出；回合数 N 依次取 enemy/player/summary 的 turns|turn）。
+    status 非 None 时渲染结算块（final_damage 供 win 叙事句）；summary 非 None 时
+    追加 BREP-25 木桩明细块（≤16 行折叠 TPL-09）。
 
-    status 非 None 时渲染结算块（胜负横幅 + 掉落，仅 win 结算掉落——TC-20 失败
-    无掉落）；summary 非 None 时追加 BREP-25 木桩明细块（≤16 行折叠 TPL-09）。
-
-    返回：单条消息字符串（首行前缀 + 结算 + 汇总 [+ 明细块]）。
+    返回：单条消息字符串（首行前缀 + 结算 [+ 汇总] [+ 明细块]）。
     """
     lines: List[str] = []
     prefix = _render_prefix_line(player)               # 前缀首行（TC-25）
@@ -195,12 +197,15 @@ def render_battle_end(
             ended=True, status=status,
             exp=exp, gold=gold, drops=drops or (),
             enemy_name=enemy_name or (getattr(enemy, "name", "") if enemy else "") or "敌人",
+            final_damage=final_damage,
         ))
         if settle:
-            lines.extend(settle.split("\n"))           # BREP-16~20 结算块（军规5 一次性）
-    label = _winner_label(winner)                      # 胜利/失败/平局
-    turns = _battle_turns(player, enemy, summary)      # 回合数 N
-    lines.append(f"战斗结束：{label}｜回合数 {turns}｜输入 /战斗记录 查看明细")  # BREP-24
+            lines.extend(settle.split("\n"))           # 结算块（用户模板 / BREP-16~19）
+    # 用户模板：win 无 BREP-24 汇总行（战利品列表为主）；lose/draw 保留汇总反馈
+    if status != "win":
+        label = _winner_label(winner)                  # 胜利/失败/平局
+        turns = _battle_turns(player, enemy, summary)  # 回合数 N
+        lines.append(f"战斗结束：{label}｜回合数 {turns}｜输入 /战斗记录 查看明细")  # BREP-24
     if summary is not None:
         block = _render_summary_block(summary, overhead=len(lines))
         if block:
@@ -787,19 +792,23 @@ def _render_reward_line(exp: int, gold: int, drops: Any = None) -> str:
 
 
 def _render_settlement(round_result: Any) -> Optional[str]:
-    """结算行集（M5-06 BREP-16~20；当轮事件末尾结算一次，军规5 / 5e §4）。
+    """结算行集（用户 2026-08-27 拍板模板；M5-06 BREP-16~20 按用户模板落地）。
 
-    round_result.ended 时由 render_battle_round 调用一次，按引擎终态 status
-    （win/lose/draw/escape，battle.py STATUS_*）分发胜负横幅 + 经验掉落：
-      - win  → BREP-17 `✅ 战斗胜利！` + BREP-20 经验掉落（仅此一次）；
+    round_result.ended 时由 render_battle_end 调用一次，按引擎终态 status
+    （win/lose/draw/escape，battle.py STATUS_*）分发：
+      - win  → **用户结算模板**（2026-08-27 拍板）：
+        `您对{怪物}造成了{伤害}点伤害！{怪物}已死亡。`（叙事句，回顾最后一击，
+        final_damage 由接线层注入，缺省 `您击败了{怪物}！`）
+        `获得经验：{exp}` / `获得金币：{gold}` / `获得的战利品如下→`
+        + `{序号}.{名称}×{数量}` 逐行（掉落列表，军规5 只输出一次）；
       - lose → BREP-16 `❌ 你倒下了…` + BREP-18 `❌ 战斗失败：你被{怪物}击败了`
         （玩家死亡 → 失败标记，5e §4.1/§4.2；lose 即玩家死，数值层 L50-51）；
       - draw → BREP-19 `双方同归于尽，战斗以平局结束`（默认 draw；可配
         mutual_kill_result=player_loss 时引擎已落 lose → 走 BREP-18，本层只读
         status 不重复判定，5e §4.2）；
       - escape → 无横幅（不臆造胜负文案）。
-    掉落数据（exp/gold/drops）由接线层注入，缺省省略该行；胜利/掉落不输出时
-    返回 None（调用方省略结算块）。
+    掉落数据（exp/gold/drops/final_damage）由接线层注入，缺省省略该行；胜利/掉落
+    不输出时返回 None（调用方省略结算块）。
     """
     if not bool(getattr(round_result, "ended", False)):
         return None
@@ -807,25 +816,29 @@ def _render_settlement(round_result: Any) -> Optional[str]:
     enemy_name = str(getattr(round_result, "enemy_name", "") or "敌人")
     lines: List[str] = []
     if status == "win":
-        lines.append("✅ 战斗胜利！")                                # BREP-17
+        # 用户结算模板（2026-08-27 拍板）：叙事句 + 经验/金币分行 + 战利品列表
+        dmg = int(getattr(round_result, "final_damage", 0) or 0)
+        if dmg > 0:
+            lines.append(f"您对{enemy_name}造成了{dmg}点伤害！{enemy_name}已死亡。")
+        else:
+            lines.append(f"您击败了{enemy_name}！")
+        lines.append(f"获得经验：{int(getattr(round_result, 'exp', 0) or 0)}")
+        lines.append(f"获得金币：{int(getattr(round_result, 'gold', 0) or 0)}")
+        drops = getattr(round_result, "drops", None)
+        if drops:
+            lines.append("获得的战利品如下→")
+            for i, d in enumerate(drops, start=1):
+                if isinstance(d, Mapping):
+                    name = str(d.get("name", "") or d.get("素材", "") or "素材")
+                    count = int(d.get("count", d.get("n", 0)))
+                else:
+                    name, count = str(d[0]), int(d[1])
+                lines.append(f"{i}.{name}×{count}")
     elif status == "lose":
         lines.append("❌ 你倒下了…")                                 # BREP-16
         lines.append(f"❌ 战斗失败：你被{enemy_name}击败了")          # BREP-18
     elif status == "draw":
         lines.append("双方同归于尽，战斗以平局结束")                  # BREP-19
-    # 经验/掉落只在战斗结束消息输出一次（军规5）；仅胜利结算掉落（TC-20 失败无掉落）
-    if status == "win" and (
-        hasattr(round_result, "exp")
-        or hasattr(round_result, "gold")
-        or hasattr(round_result, "drops")
-    ):
-        reward = _render_reward_line(
-            int(getattr(round_result, "exp", 0)),
-            int(getattr(round_result, "gold", 0)),
-            getattr(round_result, "drops", None),
-        )
-        if reward:
-            lines.append(reward)                                     # BREP-20
     if not lines:
         return None
     return "\n".join(lines)

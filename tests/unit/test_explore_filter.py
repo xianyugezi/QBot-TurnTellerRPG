@@ -79,10 +79,10 @@ def test_filter_many_pages():
     out1 = cmd_bag_filter(parse("/背包筛选装备"), ctx)
     assert "1.[剑0]×1（精良）" in out1 and "5.[剑4]×1（精良）" in out1
     assert "6.[剑5]×1" not in out1
-    assert "当前页：1/2(共7条)" in out1
+    assert "当前页：1/2(装备)" in out1
     out2 = cmd_bag_filter(parse("/背包筛选装备 2"), ctx)
     assert "6.[剑5]×1（精良）" in out2 and "7.[剑6]×1（精良）" in out2
-    assert "当前页：2/2(共7条)" in out2
+    assert "当前页：2/2(装备)" in out2
 
 
 def test_filter_category_consumable():

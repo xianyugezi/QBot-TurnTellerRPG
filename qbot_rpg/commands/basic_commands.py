@@ -573,11 +573,14 @@ _BAG_TAIL_TIP = "Tip:发送'使用+物品名'即可使用物品"
 
 
 def _bag_tail_lines(page: int, total_pages: int, total: int, clamped: bool,
-                    ctx: Mapping[str, Any]) -> List[str]:
-    """/背包 尾段：货币行 + `当前页：{page}/{total_pages}(共{total}条)` + 夹取提示 + Tip。"""
+                    ctx: Mapping[str, Any], category_word: str = "全部") -> List[str]:
+    """/背包 尾段：货币行 + `当前页：{page}/{total_pages}({类型词})` + 夹取提示 + Tip。
+
+    （类型词 = 当前筛选的物品类型，用户 2026-08-27 拍板：/背包 → 全部，/背包筛选
+    装备 → 装备、/背包筛选药剂 → 药剂 等；原「共 N 条」改显示筛选类型。）"""
     lines: List[str] = []
     lines.extend(_currency_lines(ctx))
-    lines.append(f"当前页：{page}/{total_pages}(共{total}条)")
+    lines.append(f"当前页：{page}/{total_pages}({category_word})")
     if clamped:
         lines.append("（已到最后一页）")
     lines.append(_BAG_TAIL_TIP)
@@ -629,19 +632,36 @@ def cmd_bag(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 
 BAG_FILTER_CMD = "背包筛选"
 
-# 物品大类判定（items.json type 键 → 大类）：装备=部位键、consumable=消耗品、
-# material=材料、quest=任务、其余 → 其他
+# 物品大类判定（items.json type 键 → 大类键；用户 2026-08-27 拍板类型词体系：
+# 装备/药剂/货币袋/材料/技能书/任务/其他）
 _EQUIP_SLOT_KEYS = frozenset({
     "weapon", "armor_head", "armor_body", "armor_hand", "armor_leg", "armor_foot",
 })
 _CATEGORY_BY_TYPE = {
-    **{k: "装备" for k in _EQUIP_SLOT_KEYS},
-    "consumable": "消耗品",
-    "material": "材料",
-    "quest": "任务",
+    **{k: "equip" for k in _EQUIP_SLOT_KEYS},
+    "consumable": "consumable", "potion": "consumable", "medicine": "consumable",
+    "material": "material", "ore": "material", "herb": "material",
+    "quest": "quest",
+    "currency": "currency", "coin": "currency", "bag": "currency",
+    "skill_book": "skill_book", "scroll": "skill_book",
+}
+# 大类键 → 展示中文（当前页类型词；consumable 用户词「药剂」）
+_CATEGORY_CN = {
+    "equip": "装备", "consumable": "药剂", "material": "材料", "quest": "任务",
+    "currency": "货币袋", "skill_book": "技能书", "other": "其他",
+}
+# 中文类型词 → 大类键（筛选匹配 + 校验；含别名：消耗品/药水 = 药剂类）
+_TYPE_WORD_ALIASES = {
+    "装备": "equip", "武器": "equip",
+    "消耗品": "consumable", "药剂": "consumable", "药水": "consumable",
+    "材料": "material", "素材": "material",
+    "任务": "quest",
+    "货币袋": "currency", "货币": "currency", "钱袋": "currency",
+    "技能书": "skill_book",
+    "其他": "other",
 }
 # 物品类型词表（语料兜底：未知大类词 → 不匹配，展示原分类）
-_CATEGORY_WORDS = frozenset(_CATEGORY_BY_TYPE.values()) | {"其他"}
+_CATEGORY_WORDS = frozenset(_TYPE_WORD_ALIASES) | frozenset(_CATEGORY_CN.values())
 
 
 def _item_def(ctx: Mapping[str, Any], item_id: str) -> Optional[Mapping[str, Any]]:
@@ -673,8 +693,13 @@ def _row_type_key(row: Any, ctx: Mapping[str, Any], f: Mapping[str, Any]) -> str
 
 
 def _item_category(type_key: str) -> str:
-    """子类键 → 大类中文（框架 §7.4 物品类型）。"""
-    return _CATEGORY_BY_TYPE.get(type_key, "其他")
+    """子类键 → 大类键（框架 §7.4 物品类型；未知 → other）。"""
+    return _CATEGORY_BY_TYPE.get(type_key, "other")
+
+
+def _category_key(word: str) -> str:
+    """中文类型词 → 大类键（别名归一：消耗品/药水/药剂 均 → consumable；非中文原样）。"""
+    return _TYPE_WORD_ALIASES.get(word, word)
 
 
 def _quality_key(word: str) -> Optional[str]:
@@ -740,7 +765,7 @@ def _filter_inventory_rows(rows: Sequence[Any], ctx: Mapping[str, Any],
     for r in rows:
         f = _row_fields(r, ctx)
         type_key = _row_type_key(r, ctx, f)
-        if cat_word and _item_category(type_key) != cat_word:
+        if cat_word and _category_key(cat_word) != _item_category(type_key):
             continue
         if sub_word and not _subtype_match(sub_word, type_key):
             continue
@@ -753,8 +778,8 @@ def _filter_inventory_rows(rows: Sequence[Any], ctx: Mapping[str, Any],
 
 
 def _render_rows_page(ctx: Mapping[str, Any], rows: Sequence[Any], cmd: str,
-                      page: int) -> str:
-    """通用列表分页渲染（5 条/页 + 用户 /背包 尾段：货币/当前页/Tip + 裁决② 夹取；空 → TPL_EMPTY_BAG）。"""
+                      page: int, category_word: str = "全部") -> str:
+    """通用列表分页渲染（5 条/页 + 用户 /背包 尾段：货币/当前页(类型词)/Tip + 裁决② 夹取；空 → TPL_EMPTY_BAG）。"""
     if not rows:
         return TPL_EMPTY_BAG
     res = resolve_page(page, len(rows), DEFAULT_PAGE_SIZE)
@@ -766,7 +791,8 @@ def _render_rows_page(ctx: Mapping[str, Any], rows: Sequence[Any], cmd: str,
     start = (res.page - 1) * DEFAULT_PAGE_SIZE
     slice_rows = rows[start:start + DEFAULT_PAGE_SIZE]
     lines: List[str] = [bag_line(start + i + 1, r, ctx) for i, r in enumerate(slice_rows)]
-    lines.extend(_bag_tail_lines(res.page, res.total_pages, res.total, res.clamped, ctx))
+    lines.extend(_bag_tail_lines(res.page, res.total_pages, res.total, res.clamped, ctx,
+                                 category_word=category_word))
     return "\n".join(lines)
 
 
@@ -792,11 +818,11 @@ def cmd_bag_filter(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     cat_word, sub_word, qual_word, page = _parse_filter_args(args)
     if not cat_word:
         # 缺物品类型词 → 提示用法（值域/用法问题，非 TPL-12 指令错误；对齐 4f 提示风）
-        return "❌ 背包筛选：输入物品类型（装备/消耗品/材料/任务/其他），如「背包筛选装备」"
+        return "❌ 背包筛选：输入物品类型（装备/药剂/货币袋/材料/技能书/任务），如「背包筛选装备」"
     if cat_word not in _CATEGORY_WORDS:
-        return f"❌ 没有「{cat_word}」这个物品类型（装备/消耗品/材料/任务/其他）"
+        return f"❌ 没有「{cat_word}」这个物品类型（装备/药剂/货币袋/材料/技能书/任务）"
     rows = _filter_inventory_rows(_inventory_rows(ctx), ctx, cat_word, sub_word, qual_word)
-    return _render_rows_page(ctx, rows, BAG_FILTER_CMD, page)
+    return _render_rows_page(ctx, rows, BAG_FILTER_CMD, page, category_word=cat_word)
 
 
 # ---------------------------------------------------------------------------

@@ -18,7 +18,7 @@ import json
 from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Deque, Dict, List, Mapping, Optional, Tuple
+from typing import Awaitable, Callable, Deque, Dict, List, Mapping, Optional, Tuple
 
 from qbot_rpg.content.field_meta import default_field_meta_table
 from qbot_rpg.content.loader import PackLoadError, build_pack, file_signature
@@ -38,6 +38,56 @@ DEFAULT_POLL_INTERVAL_S = 3.0  # 细化_3e2 D-01：默认 3 秒（可配）
 DEFAULT_MAX_CONSECUTIVE_FAILURES = 3  # 细化_3e2 D-04/BLK-5：防空转阈值
 
 
+def _log_report_counts(
+    pack_id: str,
+    errors: Tuple[PackError, ...],
+    warnings: Tuple[PackWarning, ...],
+    *,
+    prefix: str = "热重载",
+) -> None:
+    """红/黄计数日志（WIR-11 / F4 验收③ 可观测出口）。
+
+    启动路径红拦阻断记「红 N / 黄 M」计数 + 逐模块明细（模块名可定位）；
+    黄提示计数在成功/失败路径都必须落日志（现状仅失败路径记错误数）。
+    """
+    _logger.warning(
+        "%s %s：红 %d / 黄 %d（error(s)=%d warning(s)=%d）",
+        prefix, pack_id, len(errors), len(warnings), len(errors), len(warnings),
+    )
+    grouped: Dict[str, Tuple[int, int]] = {}
+    for e in errors:
+        grouped.setdefault(e.module, (0, 0))
+        grouped[e.module] = (grouped[e.module][0] + 1, grouped[e.module][1])
+    for w in warnings:
+        grouped.setdefault(w.module, (0, 0))
+        grouped[w.module] = (grouped[w.module][0], grouped[w.module][1] + 1)
+    for module, (n_err, n_warn) in sorted(grouped.items()):
+        if n_err or n_warn:
+            _logger.debug("  模块 %s：红 %d / 黄 %d", module, n_err, n_warn)
+
+
+def schedule_polling(
+    watcher: "HotReloadWatcher",
+    interval_s: float = DEFAULT_POLL_INTERVAL_S,
+) -> Callable[[], Awaitable["ReloadResult"]]:
+    """轮询调度包装（WIR-04 / C-3）：返回可测 async 闭包，供壳层 apscheduler 定时驱动。
+
+    零 apscheduler import（调度注册归批次6/7，nonebot_plugin_apscheduler）：
+        scheduler.add_job(schedule_polling(watcher, interval_s), "interval", seconds=interval_s)
+    每次调用 = watcher.poll_once() 单次「检测→有变更才重载」；无变更返回 no change 结果不重载。
+    interval_s 作为包装契约可配参数暴露（实际节拍由调度器决定），并存于闭包供可测断言。
+
+    【工程补白】本函数是批次6/7 apscheduler 注册的「poll 调度包装契约」落点；
+    本批零 apscheduler import，NoneBot 侧注册归批次6/7（细化_3e §4.1 / 规则 L110）。
+    """
+    async def _poll() -> "ReloadResult":
+        return await watcher.poll_once()
+
+    _poll.interval_s = float(interval_s)  # type: ignore[attr-defined]  # 可测闭包暴露间隔
+    _poll.watcher = watcher  # type: ignore[attr-defined]
+    return _poll
+
+
 @dataclass(frozen=True)
 class ReloadResult:
     """单次热重载结果（结构化；人话提示由 commands 层按 errors/warnings 翻译，D-06）。"""
@@ -51,10 +101,20 @@ class ReloadResult:
     paused: bool  # 连续失败达到阈值 → 自动轮询暂停
     generation: int  # 当前 registry 世代号（自检 B 补给）
     note: str = ""  # 技术性说明（非用户文案；日志/调试用）
+    no_change: bool = False  # 轮询无新事件（WIR-04/TCP-03：no change 不重载；TPL-18 触发）
 
     @property
     def ok_and_clean(self) -> bool:
         return self.ok and not self.warnings
+
+    # 红/黄计数接入（WIR-11：ReloadResult 从校验报告带出计数，供翻译/日志复用）
+    @property
+    def count_errors(self) -> int:
+        return len(self.errors)
+
+    @property
+    def count_warnings(self) -> int:
+        return len(self.warnings)
 
 
 class HotReloadWatcher:
@@ -114,11 +174,22 @@ class HotReloadWatcher:
 
     # ------------------------------------------------------------------ 生命周期
     async def start(self) -> ReloadResult:
-        """首次装载（启动路径）：走完整五段管线；失败即抛 PackLoadError（启动必须可运行）。"""
+        """首次装载（启动路径）：走完整五段管线；失败即抛 PackLoadError（启动必须可运行）。
+
+        WIR-03 / ADR-D3-01：首轮装载失败 = 启动失败——抛 PackLoadError 前记
+        「红 N / 黄 M」计数 + 逐模块明细日志（WIR-11/12，F4 验收③ 可观测）；
+        装配层捕获后拒绝提供服务，不对外暴露带病空 registry。
+        """
         async with self._lock:
             result = await asyncio.to_thread(self._reload_sync, "start")
         if not result.ok:
+            # WIR-11：启动路径红拦阻断 → 红/黄计数 + 逐模块明细（F4 验收③）
+            _log_report_counts(self._pack_id, result.errors, result.warnings, prefix="启动装载红拦")
             raise PackLoadError(ValidationReport(errors=result.errors, warnings=result.warnings))
+        if result.warnings:
+            # WIR-11：黄提示计数在启动路径也必须落日志（现状仅失败路径记错误数）
+            _logger.warning("启动装载 %s：红 0 / 黄 %d（warning(s)=%d）",
+                            self._pack_id, len(result.warnings), len(result.warnings))
         return result
 
     async def reload(self, pack_id: Optional[str] = None) -> ReloadResult:
@@ -184,13 +255,12 @@ class HotReloadWatcher:
             )
         events = await asyncio.to_thread(self._detect_changes)
         if not events:
-            prev = self._last_result
-            if prev is not None:
-                return prev
+            # WIR-04 / TCP-03：无新事件 → 返回 no_change 结果（no_change=True，供
+            # TPL-18「内容包无变更」翻译判定；不重载、不覆盖 _last_result）。
             return ReloadResult(
                 pack_id=self._pack_id, ok=True, changed_modules=(), warnings=(), errors=(),
                 restored=False, paused=self._paused, generation=self._generation,
-                note="no change",
+                note="no change", no_change=True,
             )
         async with self._lock:
             return await asyncio.to_thread(self._reload_sync, "poll", tuple(events))
@@ -260,8 +330,9 @@ class HotReloadWatcher:
             report_errors = exc.errors
             report_warnings = exc.report.warnings
             note = f"load blocked by {len(report_errors)} red-block error(s)"
-            # 规则 ⑪：报错信息落日志（含首个错误详情）
-            _logger.warning("hot_reload %s 加载被红拦: %s", self._pack_id, note)
+            # WIR-11：失败路径记红/黄计数（含黄提示）；规则 ⑪ 报错信息落日志
+            _logger.warning("hot_reload %s 加载被红拦: 红 %d / 黄 %d（%s）",
+                            self._pack_id, len(report_errors), len(report_warnings), note)
             for e in report_errors[:3]:
                 _logger.debug("  reload red-block %s/%s: %s", e.module, e.field, dict(e.detail))
         except Exception as exc:  # IO/意外异常 → 按校验失败处理（SNAP-2）
@@ -341,9 +412,20 @@ class HotReloadWatcher:
         self._last_result = result
         return result
 
-    def _backup_snapshot(self) -> Optional[RegistrySnapshot]:
-        """当前有效 registry 快照（对外供旧局旧配置结算引用，细化_3e2 OLD-1/OLD-2）。"""
+    def backup_snapshot(self) -> RegistrySnapshot:
+        """当前有效 registry 快照（RSM-05：激活 _backup_snapshot 死代码 → 公开接口）。
+
+        对外供旧局旧配置结算引用（细化_3e2 OLD-1/OLD-2）；续战世代重绑定取档
+        经本接口 + _snapshots（N=2 滚动）双口。与 _snapshots 区别：本接口返回
+        「当前有效档」（= 最近一次校验通过快照），_snapshots 另含上一份（回退用）。
+        """
         return self._registry.snapshot()
 
 
-__all__ = ["HotReloadWatcher", "ReloadResult", "DEFAULT_POLL_INTERVAL_S", "DEFAULT_MAX_CONSECUTIVE_FAILURES"]
+__all__ = [
+    "HotReloadWatcher",
+    "ReloadResult",
+    "schedule_polling",
+    "DEFAULT_POLL_INTERVAL_S",
+    "DEFAULT_MAX_CONSECUTIVE_FAILURES",
+]

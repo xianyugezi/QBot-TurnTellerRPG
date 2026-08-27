@@ -20,7 +20,7 @@ import copy
 import hashlib
 import json
 from pathlib import Path
-from typing import Dict, List, Mapping, Optional, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 from qbot_rpg.content.field_meta import default_field_meta_table
 from qbot_rpg.data.logging_utils import get_logger
@@ -170,6 +170,37 @@ _KIND_FOR_MODULE: Mapping[str, str] = {
     "quest": "quest",
     "checkin": "checkin",
 }
+
+
+def check_register_table_consistency(
+    meta: Optional[FieldMetaTable] = None,
+) -> List[str]:
+    """登记表对照（WIR-13 / F4 验收⑤）：`FIXED_REGISTER_ORDER ∪ _KIND_FOR_MODULE ⊆ field_meta 模块表`。
+
+    返回「在 loader 侧登记、却不在 field_meta 模块表」的模块名列表（空 = 通过）；
+    **新增模块未接校验器被 CI 拦截**（validator._check_module 对未登记模块默认放行，
+    缺失此对照会静默漏检）。单向子集断言（loader ⊆ field_meta；settings/manifest
+    为常驻/入口模块不强制反向，见 D3 WIR-13）。
+    """
+    table = meta if meta is not None else default_field_meta_table()
+    registered = set(FIXED_REGISTER_ORDER) | set(_KIND_FOR_MODULE.keys())
+    available = set(table.modules.keys())
+    return sorted(registered - available)
+
+
+def check_manifest_modules_registered(
+    manifest_modules: Optional[Any],
+    meta: Optional[FieldMetaTable] = None,
+) -> List[str]:
+    """manifest 声明模块 ⊆ field_meta 模块表（WIR-13 对照第二部分）。
+
+    返回声明了但 field_meta 未登记校验器的模块名列表（空 = 通过）；防「声明模块
+    无校验器 → 整包绕过校验」静默漏检。settings 常驻模块豁免（D3 WIR-13 备注）。
+    """
+    table = meta if meta is not None else default_field_meta_table()
+    declared = [m for m in (manifest_modules or ()) if isinstance(m, str)]
+    available = set(table.modules.keys())
+    return sorted(set(declared) - available)
 
 
 # -------------------------------------------------------------------------------------

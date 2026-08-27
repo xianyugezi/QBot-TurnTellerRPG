@@ -90,12 +90,14 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import hmac
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Callable, FrozenSet, List, Mapping, MutableMapping, Optional
 
+from qbot_rpg.content.hot_reload import HotReloadWatcher, ReloadResult
 from qbot_rpg.core.message_format.list_render import (
     DEFAULT_PAGE_SIZE,
     LAST_PAGE_HINT,
@@ -106,6 +108,12 @@ from qbot_rpg.core.message_format.list_render import (
 # 同包兄弟模块：相对导入（G0 架构门禁 test_commands_web_not_depended 不产生
 # `qbot_rpg.commands` 前缀反向依赖边；同层兄弟引用架构合规，与 sender.py 同口径）。
 from .parsers import parse_int
+from .reload_result import (
+    TPL_15_HEAD,
+    TPL_18_NO_CHANGE,
+    render_reload_result,
+    reload_success_summary,
+)
 from .router import (
     PERM_GM,
     PERM_OWNER,
@@ -130,6 +138,8 @@ __all__ = [
     # 指令处理器
     "cmd_gm_reload", "cmd_gm_ban", "cmd_gm_log", "cmd_gm_edit", "cmd_gm_settings",
     "handle_gm_command",
+    # GM 后端引擎（WIR-07/08：/重载 真实后端 + /备份 /恢复 已声明未接线）
+    "GmBackend", "backup_content", "restore_content",
     # 渲染
     "LOG_PAGE_SIZE", "LOG_DEFAULT_SHOW", "LOG_MAX_ENTRIES", "BAN_DEFAULT_DURATION",
     "render_log_line", "render_log_page",
@@ -422,6 +432,101 @@ def record_audit(ctx: MutableMapping[str, Any], record: dict) -> None:
 
 
 # ---------------------------------------------------------------------------
+# GM 后端引擎（WIR-06/07/08 · 5b G1 真实后端）：/重载 接线 = watcher.reload 同一条管线
+# ---------------------------------------------------------------------------
+
+class GmBackend:
+    """GM 后端引擎（WIR-07 / 5b G1）：/重载 真实后端接线。
+
+    零 NoneBot；权限分级经 commands 层 check_gm_permission 判定（本类不重复判权，
+    WIR-06 权限矩阵：机主=全部，GM=重载/备份/恢复，无权限静默无视由命令层保证）。
+    单包框架（细化_3e2 TRG-6「插件只能启用一个数据包」）——本类持有一个
+    HotReloadWatcher；reload_content(pack_name, ctx) = watcher.reload(pack_id)
+    （同一条管线，TRG-1 手动与自动共用；无 3 秒等待）。
+
+    WIR-08 / 【细化定型】：/备份 /恢复 真实后端 = 「已声明未接线」——权限矩阵同
+    /重载（机主全部 + GM），实现归 GM 后端批次（5b/M12 编辑器工具，SNAP-6 备份
+    恢复事务化），M6 不实装；本类提供 backup_content/restore_content 契约声明
+    （调用抛 【待接线】 防御错误）。
+    """
+
+    def __init__(self, watcher: Optional[HotReloadWatcher] = None) -> None:
+        self._watcher = watcher
+
+    @property
+    def watcher(self) -> Optional[HotReloadWatcher]:
+        return self._watcher
+
+    def reload_content(self, pack_name: Any, ctx: Any = None) -> dict:
+        """/重载 真实后端（WIR-07 / 5b G1 消费接口 {ok, summary, failures}）。
+
+        - 包不存在/未启用 → {ok: False, message: 人话}；
+        - 成功 → {ok: True, summary: TPL-15 尾部（N 个模块变更生效）, failures: []}
+          （cmd_gm_reload 用 TPL_15_HEAD 拼接成完整 TPL-15）；
+        - 坏配置拒绝（回退旧档）→ {ok: False, message: TPL-16 渲染串}。
+        """
+        pack = str(pack_name or "")
+        watcher = self._watcher
+        if watcher is None:
+            return {"ok": False, "message": "内容包未启用（热重载尚未装配）"}
+        if watcher.pack_id != pack:
+            return {
+                "ok": False,
+                "message": f"内容包『{pack}』不存在或未启用（当前启用：{watcher.pack_id}）",
+            }
+        result = _run_watcher_reload(watcher)
+        if result is None:
+            return {
+                "ok": False,
+                "message": "热重载需在异步装配上下文执行（批次7 接线：await watcher.reload）",
+            }
+        if not result.ok:
+            # 手动 /重载 无变更 → 视为成功提示（TPL-18：内容包无变更，无需重载）
+            if result.no_change:
+                return {"ok": True, "summary": TPL_18_NO_CHANGE, "failures": []}
+            # 失败回退 → TPL-16 渲染串（含首个红拦人话 + 正确用法 + 下一步）
+            return {"ok": False, "message": render_reload_result(result)}
+        return {"ok": True, "summary": reload_success_summary(result), "failures": []}
+
+    def backup_content(self, pack_name: Any = None, ctx: Any = None) -> dict:
+        """/备份 真实后端（WIR-08 契约声明 · 【细化定型】已声明未接线）。
+
+        权限矩阵 = 机主全部 + GM（同 WIR-06）；M6 不实装（归 GM 后端批次，
+        5b/M12 编辑器工具：SNAP-6 备份恢复事务化）。调用抛【待接线】防御错误。
+        """
+        raise NotImplementedError(
+            "【待接线】/备份 真实后端（WIR-08 已声明未接线；SNAP-6 备份恢复事务化归 GM 后端批次）"
+        )
+
+    def restore_content(self, pack_name: Any = None, ctx: Any = None) -> dict:
+        """/恢复 真实后端（WIR-08 契约声明 · 【细化定型】已声明未接线）。
+
+        权限矩阵 = 机主全部 + GM（同 WIR-06）；M6 不实装（归 GM 后端批次，
+        5b/M12 编辑器工具：SNAP-6 备份恢复事务化）。调用抛【待接线】防御错误。
+        """
+        raise NotImplementedError(
+            "【待接线】/恢复 真实后端（WIR-08 已声明未接线；SNAP-6 备份恢复事务化归 GM 后端批次）"
+        )
+
+
+def _run_watcher_reload(watcher: HotReloadWatcher) -> Optional[ReloadResult]:
+    """同步执行 watcher.reload（GmBackend.reload_content 内部；ReloadResult|None）。
+
+    【工程补白】本批 GmBackend 为同步契约（cmd_gm_reload 同步处理器）：无运行中
+    事件循环 → asyncio.run 直跑；已在事件循环内（批次7 异步装配 naive 直调）→ 返回
+    待异步装配提示（防 asyncio.run 嵌套，M43① 零定时器铁律禁线程计时）。批次7
+    正式装配改 `await watcher.reload(...)`（异步 on_command 上下文）。
+    """
+    try:
+        return asyncio.run(watcher.reload(watcher.pack_id))
+    except RuntimeError:
+        # 已在事件循环内（asyncio.run 不可嵌套）：M43① 铁律禁线程计时适配。
+        # 返回 None → 上层转「待异步装配」提示（批次7 装配改 await 直调，
+        # M6 批3 WIR-07 登记）；保证本函数返回值类型恒为 ReloadResult|None。
+        return None
+
+
+# ---------------------------------------------------------------------------
 # 工具（纯函数）
 # ---------------------------------------------------------------------------
 
@@ -526,7 +631,9 @@ def _record_and_return(ctx: MutableMapping[str, Any], *, command: str,
 def cmd_gm_reload(parsed: Any, ctx: MutableMapping[str, Any],
                   perm: GmPermResult) -> GmResult:
     """/重载 <内容包>（5b G1，权限 GM）：热重载结果摘要 + 失败项清单。
-    缺参/超参/包不存在 → TPL-12 + 审计 failed；成功 → 静默（摘要入 audit.detail）。"""
+    缺参/超参/包不存在 → TPL-12 + 审计 failed；成功 → 静默（摘要入 audit.detail，
+    detail 走 TPL-15/16 翻译——WIR-07/09：成功拼接 TPL-15 头部 + 后端 summary 尾部，
+    失败用后端 TPL-16 渲染串）。"""
     args = list(getattr(parsed, "args", None) or [])
     if not args:
         return _record_and_return(ctx, command=GM_CMD_RELOAD, result="failed",
@@ -537,11 +644,13 @@ def cmd_gm_reload(parsed: Any, ctx: MutableMapping[str, Any],
     pack = str(args[0])
     res = _backend(ctx).reload_content(pack, ctx)
     if not res or not res.get("ok"):
+        # 失败（包不存在/坏配置回退）→ 后端 TPL-16 渲染串入 detail
         reason = str((res or {}).get("message") or "重载失败")
         return _record_and_return(ctx, command=GM_CMD_RELOAD, result="failed",
                                   detail=reason, parsed=parsed, params=pack, ref=pack)
     failures = res.get("failures") or []
-    detail = f"✅ 已重载【{pack}】：{res.get('summary') or ''}"
+    # 成功 detail = TPL-15 头部 + 后端 summary 尾部（N 个模块变更生效）= 完整 TPL-15
+    detail = f"{TPL_15_HEAD.format(pack=pack)}{res.get('summary') or ''}"
     if failures:
         detail += f"；失败 {len(failures)} 项：{'、'.join(str(f) for f in failures[:3])}"
     return _record_and_return(ctx, command=GM_CMD_RELOAD, result="success",

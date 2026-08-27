@@ -179,13 +179,19 @@ def _make_resolver(
 
     细化_1b §1：配置家族唯一数据源 = effects/statuses/marks 三表；registry 为
     pack.registry（Registry.resolve(id, kind)）；defs 为 {id: Def} 映射（批1 直连测试）。
+
+    WIR-14（统一降级入口复用）：registry 带 resolve 时经 content.resolve_or_degrade
+    解析——旧局引用已删配置 → (None, True) → 本解析器返回 None（运行期按
+    「无效果」降级不抛异常，3e2 OLD-4 / 规则 L177）。
     """
     if registry is not None:
         if callable(registry):
             return registry
         resolve = getattr(registry, "resolve", None)
         if callable(resolve):
-            return lambda id_, kind: resolve(id_, kind)
+            # 延迟导入防循环（core → content 单向往返回用）
+            from qbot_rpg.content.resolve_or_degrade import resolve_or_degrade
+            return lambda id_, kind: resolve_or_degrade(registry, id_, kind)[0]
     if defs is not None:
         return lambda id_, _kind: defs.get(id_)
     return lambda _id_, _kind: None

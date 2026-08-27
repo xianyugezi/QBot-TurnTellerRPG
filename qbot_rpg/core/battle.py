@@ -887,6 +887,13 @@ class BattleEngine:
             "battle_type": battle_type,
             "status": STATUS_ACTIVE,
             "rule_version": str(self._config.get("rule_version", "battle_v1.1.1")),
+            # P0-1 续战旧配置修复（M6 D3 RSM-02 / F-RSM-01）：世代绑定键——start 写当前
+            # registry 世代；中断/回合边界快照经 to_snapshot 深拷贝自动沿用；旧快照缺该
+            # 字段 → 续战入口兼容读取默认 0（走 RSM-04 降级）。
+            "registry_generation": (
+                int(getattr(self._registry, "generation", 0))
+                if self._registry is not None else 0
+            ),
             "turn": 0,
             "round_phase": PHASE_TURN_START,
             "player": _combatant(dict(player)),
@@ -1769,6 +1776,7 @@ class BattleEngine:
         cls,
         data: Mapping[str, Any],
         pipeline: Optional[DamagePipeline] = None,
+        registry: Any = None,          # RSM-03：世代重绑定注入（P0-1 续战旧配置修复，M6 D3）
         defs: Optional[Mapping[str, Any]] = None,
         config: Optional[Mapping[str, Any]] = None,
         enemy_ai: Any = None,
@@ -1783,9 +1791,17 @@ class BattleEngine:
         随机种子随 formula_state.random_seed 恢复 → 续玩随机序列一致（4a TC-17）。
         M2-C1（contract §六）：ai_state 随快照原样还原（MonsterAI 写入内容不丢）；
         enemy_ai/enemy_def 透传构造（MonsterAI 无状态=配置，需随还原引擎重建）。
+
+        registry（M6 D3 RSM-03）：内容包配置源注入——续战世代重绑定（RSM-04）按快照
+        registry_generation 从 watcher 取档重建 Registry 后传入，引擎按旧 registry
+        解析 effects/statuses/marks（旧局旧配置，杜绝旧 combatant 数值 + 新解析混跑的
+        半套配置）；__init__ 已有 registry 参数（L297/L331），本方法透传；缺省 None 走
+        默认 defs/pipeline 解析（旧快照无世代 → RSM-04 降级）。_make_battle_resolver
+        已支持 registry 优先解析（L269-281）。
         """
-        eng = cls(pipeline=pipeline, defs=defs, config=config, enemy_ai=enemy_ai,
-                  enemy_def=enemy_def, ai_action_lib=ai_action_lib, ai_rng=ai_rng)
+        eng = cls(pipeline=pipeline, registry=registry, defs=defs, config=config,
+                  enemy_ai=enemy_ai, enemy_def=enemy_def, ai_action_lib=ai_action_lib,
+                  ai_rng=ai_rng)
         eng._snap = copy.deepcopy(dict(data))
         eng._rng_seed = int((data.get("formula_state") or {}).get("random_seed", 0) or 0)
         eng._rng = random.Random(eng._rng_seed)
@@ -1820,9 +1836,13 @@ class BattleEngine:
 
     def resume(self, data: Mapping[str, Any]) -> "BattleEngine":
         """旧名兼容：快照续战（M1 占位签名升级，细化_1g3 §2.3）。
-        M2-C1：沿用当前 enemy_ai（MonsterAI 无状态，随还原引擎重建同配置实例）。"""
-        return self.__class__.from_snapshot(data, pipeline=self._pipeline, defs=self._defs,
-                                            config=self._config, enemy_ai=self._enemy_ai)
+        M2-C1：沿用当前 enemy_ai（MonsterAI 无状态，随还原引擎重建同配置实例）。
+        M6 D3 RSM-03：registry 透传（self._registry 注入续战引擎——世代重绑定后按旧
+        registry 解析，旧局旧配置）。"""
+        return self.__class__.from_snapshot(
+            data, pipeline=self._pipeline, registry=self._registry, defs=self._defs,
+            config=self._config, enemy_ai=self._enemy_ai,
+        )
 
     # ------------------------- 服务查询 -------------------------
 

@@ -84,6 +84,30 @@ class ValidationReport:
     def ok(self) -> bool:
         return not self.errors  # 红拦为空才可挂载（细化_3e §5.1 / D-02）
 
+    # ---- 红/黄计数可观测出口（WIR-11 / F4 验收③：校验结果可观测，日志记红/黄计数与模块名）----
+    @property
+    def count_errors(self) -> int:
+        """红拦条数（= len(errors)）。"""
+        return len(self.errors)
+
+    @property
+    def count_warnings(self) -> int:
+        """黄提示条数（= len(warnings)）。"""
+        return len(self.warnings)
+
+    def group_by_module(self) -> Mapping[str, Tuple[int, int]]:
+        """按模块聚合计数：module -> (errors, warnings)（WIR-11 逐模块明细接口）。
+
+        返回模块名 → (红拦数, 黄提示数) 映射；无条目模块不出现。供启动路径
+        红黄计数日志 / 编辑器红显 / F4 验收③ 消费。
+        """
+        grouped: Dict[str, List[int]] = {}
+        for e in self.errors:
+            grouped.setdefault(e.module, [0, 0])[0] += 1
+        for w in self.warnings:
+            grouped.setdefault(w.module, [0, 0])[1] += 1
+        return {m: (c[0], c[1]) for m, c in sorted(grouped.items())}
+
 
 # =====================================================================================
 # 字段元数据表（细化_3e §5.3：校验唯一数据源；缺失字段按"未知字段"默认放行）

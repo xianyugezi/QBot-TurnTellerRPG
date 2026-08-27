@@ -153,11 +153,13 @@ async def test_tc_flt_14_concurrent_buy_currency_deduct_once(repo):
     """
     await repo.save_player(make_player("u1", coins=1000))  # 余额充足（D5 TC-FLT-14 前置）
     world = make_world_ctx()
-    r1, r2 = await asyncio.gather(
-        _buy_in_tx(repo, "u1", "m1", target="疗伤药", qty=1, world_ctx=world),
-        _buy_in_tx(repo, "u1", "m2", target="疗伤药", qty=1, world_ctx=world),
-    )
     try:
+        # P2-1 修复（M6 批5B dsh 审查）：gather 移入 try——协程意外抛异常时 finally
+        # 恢复路径仍执行（原 gather 在 try 外，异常绕过 close）
+        r1, r2 = await asyncio.gather(
+            _buy_in_tx(repo, "u1", "m1", target="疗伤药", qty=1, world_ctx=world),
+            _buy_in_tx(repo, "u1", "m2", target="疗伤药", qty=1, world_ctx=world),
+        )
         oks = [r for r in (r1, r2) if r.get("ok")]
         fails = [r for r in (r1, r2) if not r.get("ok")]
         assert len(oks) == 1 and len(fails) == 1          # 恰一路成功（另一路被拦）

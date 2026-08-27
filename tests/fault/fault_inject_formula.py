@@ -59,6 +59,10 @@ def test_flt12_dead_loop_fallback_zero(ctx: EvaluatorCtx) -> None:
     assert value == 0.0, f"死循环公式必须兜底 0.0（got {value}）"
     assert len(warnings) >= 1, "死循环必须产生 warning"
     assert any(w.startswith("eval_failed:") for w in warnings), f"warnings 应含 eval_failed: {warnings}"
+    # P2-2 修复（M6 批5B dsh 审查）：锁定 watchdog 真实中断——排除 node 缺失的
+    # runner_unavailable 假绿（node 环境缺失时该用例应显式失败而非静默通过）
+    assert not any("runner_unavailable" in w for w in warnings), \
+        f"node 运行器不可用（环境问题）：{warnings}"
     # 进程不崩：evaluate() 正常返回 0.0（10ms 超时 watchdog 中断，F-3）
     assert evaluate(expr, ctx) == 0.0
 
@@ -171,3 +175,17 @@ def test_flt13_battle_continues_after_failed_condition() -> None:
     by_skill = {d.to_skill: d for d in pending}
     assert "b" in by_skill and by_skill["b"].ok is False, "未注册字段条件步必须不可用"
     assert "条件不满足" in by_skill["b"].reason, "应标注原因（1c2 TC-04 置灰）"
+
+
+def test_flt12_result_type_fallback_zero(ctx: EvaluatorCtx) -> None:
+    """P2-4 补测（M6 批5B dsh 审查 / FLT-23 描述面补角）：结果类型非法 → 兜底 0 + result_type 警告。
+
+    三要素注释：
+      注入点 = 公式 `1/0`（Python 快路径 ZeroDivisionError → 降级 Node → JS 均值 Infinity
+        → result_type:non_finite 分支，formula_engine L886-898）；
+      断言对象 = evaluate_detail 返回 0.0 + warnings 含 result_type: 前缀（进程不崩）；
+      恢复路径 = 纯函数无副作用（D5 §五）。"""
+    value, warnings = evaluate_detail("1/0", ctx)
+    assert value == 0.0, f"结果类型非法必须兜底 0.0（got {value}）"
+    assert any("result_type" in w for w in warnings), f"warnings 应含 result_type 标记: {warnings}"
+    assert evaluate("1/0", ctx) == 0.0

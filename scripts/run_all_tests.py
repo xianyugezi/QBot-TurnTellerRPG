@@ -50,6 +50,16 @@ LAYER_PATHS = {
     "contract": ["tests/contract"],
     # L4 e2e 层（SMK-17 接入点）：D8 接入 m6 时纳入 tests/unit/test_e2e_m6_smoke.py
     "e2e": ["tests/contract/test_e2e_smoke.py", "tests/contract/test_3f_patch.py"],
+    # 故障注入层（D5 FLT-35~38 / P1-1 接线，M6 批5B dsh 审查修复）：
+    # 独立子进程跑 tests/fault（fault_inject_*.py 不匹配 test_*.py 且子进程不展开 glob → 显式列文件）
+    "fault": [
+        "tests/fault/fault_inject_crash.py",
+        "tests/fault/fault_inject_save.py",
+        "tests/fault/fault_inject_reload.py",
+        "tests/fault/fault_inject_formula.py",
+        "tests/fault/fault_inject_doublepay.py",
+        "tests/fault/fault_inject_netdrop.py",
+    ],
 }
 
 
@@ -89,8 +99,13 @@ def main() -> int:
         print(f"运行 {only} 层 ...")
         fail = _pytest(LAYER_PATHS[only], report=True) != 0
     else:
+        if only:
+            # P1-1 修复（M6 批5B dsh 审查 / D5 FLT-38）：未知层名显式报错退出非 0，
+            # 禁止静默落入全量分支（FLT-37 禁止的静默退化）
+            print(f"[错误] 未知层名 {only}（可用：{sorted(MILESTONES)} / {sorted(LAYER_PATHS)}）")
+            return 2
         # 全量：L1~L4 + 已实现里程碑 verify（M0~M5）+ 覆盖率提示
-        print("\n[阶段 1] 金字塔单测（L1 unit / L3 contract / L4 e2e）")
+        print("\n[阶段 1] 金字塔单测（L1 unit / L3 contract / L4 e2e / fault）")
         for name, paths in LAYER_PATHS.items():
             if _pytest(paths) != 0:
                 fail = True

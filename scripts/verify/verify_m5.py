@@ -8,7 +8,7 @@
 - COVERAGE 每条 = 契约 TC 矩阵某用例，承载位置「pytest:<测试文件>::<用例>」逐条核对
   tests/unit 真实落盘用例名（函数级核验：文件落盘 + 函数名存在于对应文件 def 列表，防虚假承载）；
   未覆盖项标 DELAYED 注明理由（诚实化：没实现的不谎报）。
-- DELAYED 项（13 条，见 t_coverage_self_consistent 输出）：
+- DELAYED 项（2 条，见 t_coverage_self_consistent 输出；2026-08-27 M6 批1 已翻转 11 条：/注册 /状态 /快捷 实装转 pytest 承载）：
     * 3d TC-16/TC-17（锻造成功/失败 TPL-10/11）：锻造系统未实装（M6 生活生产批次），
       模板无消费方；✅/❌ 功能性标记口径已由 TC-18 emoji 纪律承载。
     * 4f TC-01~04/06（/注册 首次/缺省职业/重名/幂等/名字长度）：/注册 指令未实装
@@ -154,25 +154,25 @@ COVERAGE: dict = {
         "pytest:test_battle_render_startend.py::test_tc27_normal_battle_no_detail_by_default + test_battle_render_startend.py::test_tc27_end_with_summary_appends_detail_block",
     # ── 4f 基础指令（28：TC-01~28）──────────────────────────────────────────
     "4f TC-01 首次注册成功（前缀首行 + 注册成功 + 引导行）":
-        "DELAYED：/注册 指令未实装（M4/M5 仅落注册门槛 TPL_REGISTER_GATE 拦截文案；首次注册流程依赖角色存档/职业推荐链，归属后续批次）",
+        "pytest:test_register_commands.py::test_tc_reg_01_first_register_success + test_register_commands.py::test_tc_reg_01_after_status_queryable",
     "4f TC-02 缺省职业兜底（B7 推荐职业）":
-        "DELAYED：/注册 未实装（同 TC-01，职业推荐链无消费方）",
+        "pytest:test_register_commands.py::test_tc_reg_02_default_job_fallback + test_register_commands.py::test_tc_reg_02_no_default_job_takes_first_recommended + test_register_commands.py::test_tc_reg_02_no_recommended_takes_first_job",
     "4f TC-03 重名拦截（不建号不回滚）":
-        "DELAYED：/注册 未实装（同 TC-01）",
+        "pytest:test_register_commands.py::test_tc_reg_03_duplicate_name_blocked",
     "4f TC-04 已注册幂等（不覆盖原档）":
-        "DELAYED：/注册 未实装（同 TC-01）",
+        "pytest:test_register_commands.py::test_tc_reg_04_already_registered_idempotent",
     "4f TC-05 未注册拦截（/注册 引导 + 帮助 注册引导版 B6 豁免）":
         "pytest:test_basic_commands.py::test_register_gate_rul08 + test_basic_commands.py::test_help_unregistered_guide",
     "4f TC-06 名字长度 20 字上限 / 保留字符引导换名":
-        "DELAYED：/注册 未实装；保留字符提示机制已由 M4 2.1-03（test_reserved_char_hint_*）承载，注册场景黄提示无专项用例",
+        "pytest:test_register_commands.py::test_tc_reg_05_name_too_long + test_register_commands.py::test_tc_reg_05_reserved_char_hint + test_register_commands.py::test_tc_reg_05_control_chars_filtered",
     "4f TC-07 战斗外总览面板（/状态 前缀行/等级经验行/位置行/效果区）":
-        "DELAYED：/状态 指令未实装——B4 裁决「面板五区」由装配层后续批次承接；本 M5 实现 /角色 属性三层面板（TC-25~28）",
+        "pytest:test_status_commands.py::test_tc_stt_01_overview_panel",
     "4f TC-08 前缀格式可配跟随 + 正文等级行显式存在":
         "pytest:test_message_prefix_wiring.py::test_extra_placeholders_group_and_job + test_basic_commands.py::test_view_noarg_page1",
     "4f TC-09 效果区显示（中毒 + 5 个以上折叠「还有 N 个状态」）":
-        "DELAYED：效果区渲染未实装（/状态 面板五区中效果区归属后续批次；panel_render 无效果区消费测试）",
+        "pytest:test_status_commands.py::test_tc_stt_02_effect_zone + test_status_commands.py::test_stt_effect_zone_multi_and_overrun",
     "4f TC-10 战斗内 /状态（面板四区 + 【目标】行）":
-        "DELAYED：/状态 未实装 + 战斗内目标行未实装（同 TC-07）",
+        "pytest:test_status_commands.py::test_tc_stt_03_battle_target_line",
     "4f TC-11 /背包 默认第一页 5 条（行格式 + CakeGame 式尾段「当前页+Tip」）":
         "pytest:test_basic_commands.py::test_bag_page1_rows_and_footer + test_basic_commands.py::test_bag_page2",
     "4f TC-12 /背包 2 与 背包2 两种翻页语法等价":
@@ -186,7 +186,7 @@ COVERAGE: dict = {
     "4f TC-16 /帮助 组页分页（5 条/页 + CakeGame 式尾段「当前页+Tip」）":
         "pytest:test_basic_commands.py::test_help_group_page + test_basic_commands.py::test_help_group_page2 + test_basic_commands.py::test_help_group_single_page_no_footer",
     "4f TC-17 别名显示替换（帮助目录仅显示 炼丹 不显示 炼金）":
-        "DELAYED：cmd_help 未消费别名表（组目录别名替换无专项用例）；指令别名机制已由 M4 2.1-05 承载，组目录别名待批次",
+        "pytest:test_shortcut_commands.py::test_tc_shc_03_help_alias_display",
     "4f TC-18 GM 保密（普通玩家无 GM 组 / GM 目录含第 6 组共 2 页）":
         "pytest:test_basic_commands.py::test_help_directory_gm_two_pages",
     "4f TC-19 快捷绑定+触发（走完整管线：回合/反击/一条消息合并照常）【机制级承载：绑定校验（router）+ 路由展开；/快捷绑定 指令 handler 未注册 CommandSpec，注册随批次7 装配】":
@@ -196,9 +196,9 @@ COVERAGE: dict = {
     "4f TC-21 上限 20（配置 0=不限）":
         "pytest:test_router.py::test_tc30_shortcut_limit_e03",
     "4f TC-22 覆盖重绑 / 解绑边界":
-        "DELAYED：快捷覆盖重绑与 /快捷解绑 无专项用例（help 目录登记「快捷解绑」指令名但 handler 未注册）；M4 承载绑定/冲突/上限，解绑路径待批次",
+        "pytest:test_shortcut_commands.py::test_tc_shc_01_unbind_ok + test_shortcut_commands.py::test_tc_shc_01_unbind_missing",
     "4f TC-23 快捷列表与持久化（重启后表仍在）":
-        "DELAYED：/快捷列表 无 handler（parse 层仅保留字词），持久化用例未落盘",
+        "pytest:test_shortcut_commands.py::test_tc_shc_02_list + test_shortcut_commands.py::test_tc_shc_02_list_empty + test_shortcut_commands.py::test_shc_list_persist_in_ctx",
     "4f TC-24 前缀联动与防误触（已绑 1 执行 / 随机文本忽略）":
         "pytest:test_router.py::test_shortcut_before_alias_before_whitelist_priority + test_router.py::test_ignore_non_command_message_w06 + test_parsers.py::test_random_text_ignored",
     "4f TC-25 /角色 三层明细面板（LV 行固定头部 + 属性三层行 5 条/页 + CakeGame 式尾段）":
@@ -387,7 +387,7 @@ def t_key_functions() -> None:
 
 
 # ==============================================================================
-# 核心断言 ③：COVERAGE 自洽（81 条覆盖点 = 68 已承载 + 13 DELAYED）
+# 核心断言 ③：COVERAGE 自洽（81 条覆盖点；M6 批1 后 = 79 已承载 + 2 DELAYED 锻造）
 # ==============================================================================
 _SECTION_COUNTS = {
     "3d": 26,  # 消息模板 TC-01~26

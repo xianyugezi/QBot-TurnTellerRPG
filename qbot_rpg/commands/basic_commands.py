@@ -33,9 +33,13 @@ Router 接到 core 层——指令解析（parsers.parse_command 已 token 化 �
 功能性标记；icon 字段渲染剥离 emoji（M5 裁决，m4 §2.2 豁免已作废，登记表为准）。本模块只做「装配接线 + 渲染」，状态变更全部委托引擎。
 
 --------------------------------------------------------------------------------
-消费接口（core/equipment.py · M1 骨架占位 · 本层按以下契约签名消费，注入优先）：
-  equip_wear(index: int, ctx) -> dict   {ok, message}    装备背包第 index 件（切换）
-  equip_remove(slot_id: str, ctx) -> dict  {ok, message} 卸下槽位装备
+消费接口（core/equipment.py · M6 批次1·路A 已实装 · EQP-12 适配层，注入优先）：
+  EquipmentEngineAdapter（本文件）实现 equip_wear(index: int, ctx) -> dict {ok, message}
+  / equip_remove(slot_id: str, ctx) -> dict {ok, message}：包装真实
+  core.equipment.EquipmentEngine.equip/unequip，从 ctx["player"]（可变 dict）解析背包
+  ItemInstance 并就地更新玩家状态，组装中文消息（EQP-E1~E5 边界文案）。
+  ctx["equip_engine"] 注入优先（装配层注入适配器 / 测试注入替身）；
+  未注入 → _equip_engine 懒加载构造 EquipmentEngineAdapter（EQP-12 兜底）。
   （装备栏渲染由本层纯函数从 ctx["equipment"] 直读，不依赖引擎）
 
 --------------------------------------------------------------------------------
@@ -71,6 +75,12 @@ Router 接到 core 层——指令解析（parsers.parse_command 已 token 化 �
   9) 本模块的玩家上下文工厂 make_context（NoneBot 事件 + 存储 → ctx dict）由装配层注入
      （register_basic_commands 的 make_context 参数），**批次7 装配待接线**；注入前本层可纯
      函数单测（直接构造 ctx + 注入真实/替身装备引擎）。
+  10) **/装备 换真实引擎（EQP-12 / D1 P1-5 ③）**：EquipmentEngineAdapter 包装真实
+     core.equipment.EquipmentEngine（M6 路A 已实装），保持 equip_wear/equip_remove 消费接口
+     签名（不破坏既有 FakeEquipEngine 注入测试）；未注入时懒加载兜底（_equip_engine）。
+  11) **/帮助 别名显示替换（SHC-04 / 4f RUL-24 / TC-17）**：目录行与组页指令名按
+     settings.command_aliases 显示层替换（keep_original:false → 仅显别名；true → 双名并显）；
+     解析/触发走 router/parsers 别名机制（既有），本层只做显示层替换。
 """
 
 from __future__ import annotations
@@ -78,6 +88,7 @@ from __future__ import annotations
 import importlib
 from typing import Any, Callable, List, Mapping, MutableMapping, Optional, Sequence, Tuple
 
+from qbot_rpg.core.equipment import EquipmentEngine
 from qbot_rpg.core.message_format import strip_icon_emoji
 from qbot_rpg.core.message_format.list_render import (
     DEFAULT_PAGE_SIZE,
@@ -86,7 +97,8 @@ from qbot_rpg.core.message_format.list_render import (
     resolve_page,
 )
 from qbot_rpg.core.player_attributes import calc_all_final_attributes
-from qbot_rpg.data.player import PlayerAttributes
+from qbot_rpg.data.item import ItemInstance
+from qbot_rpg.data.player import EquipmentSlot, PlayerAttributes
 
 # 同包兄弟模块：相对导入（G0 架构门禁 test_commands_web_not_depended 不产生
 # `qbot_rpg.commands` 前缀反向依赖边；同层兄弟引用架构合规，与 sender.py 同口径）。
@@ -108,6 +120,7 @@ __all__ = [
     # 渲染 / 工具
     "attr_line", "bag_line", "equip_line", "skill_line", "group_page_line",
     "resolve_equip_slot", "parse_page_arg", "view_header", "skill_rows",
+    "EquipmentEngineAdapter",
     # 装配
     "register_basic_commands",
 ]
@@ -982,15 +995,117 @@ def resolve_equip_slot(ctx: Mapping[str, Any], arg: object) -> Optional[str]:
     return None
 
 
+class EquipmentEngineAdapter:
+    """真实 EquipmentEngine 适配层（EQP-12 / D1 P1-5 ③：/装备 命令换真实引擎）。
+
+    实现本模块文件头声明的消费接口 equip_wear(index, ctx) / equip_remove(slot_id, ctx)
+    -> {ok, message}（对齐 FakeEquipEngine 替身签名，不破坏既有测试注入路径）：
+      - 从 ctx 解析玩家（ctx["player"] 可变 dict）与背包（player["inventory"] 元素
+        ItemInstance，含 item_id/type(slot)/name/stats_bonus 等）；
+      - 调用 core.equipment.EquipmentEngine.equip(player, item, slot) / unequip(player, slot)；
+      - 就地更新 ctx["player"]（引擎直接改 equipment/inventory/attributes）；
+      - 组装中文消息（✅/❌ + 人话，对齐 EQP-E1~E5 边界文案：这个位置穿不上/互斥冲突/
+        该槽位没有装备/战斗中不可更换装备（战前换装））。
+    装配层注入 ctx["equip_engine"] = 适配器；本类亦为懒加载兜底（_equip_engine）。
+
+    【工程补白】
+      1) equip_wear 的目标槽位取 ItemInstance.slot（可装备槽位类型，data/item.py L34；
+         与 EquipmentEngine EQP-02 部位匹配口径一致）。
+      2) 失败消息以引擎 message 透传（引擎已按 EQP-E1~E5 合成人话），reason 兜底防漏。
+      3) 玩家状态缺失（未注册/未建档）→ 明确提示先 /注册。
+    """
+
+    def __init__(
+        self,
+        slots: Optional[Any] = None,
+        mutual_exclusions: Optional[Sequence[Sequence[str]]] = None,
+        engine: Optional[EquipmentEngine] = None,
+    ) -> None:
+        """构造适配器（引擎可注入覆盖；否则以 slots 配置构造真实 EquipmentEngine）。"""
+        self._engine = engine if engine is not None else EquipmentEngine(
+            slots=slots, mutual_exclusions=mutual_exclusions,
+        )
+
+    @staticmethod
+    def _player(ctx: Mapping[str, Any]) -> Optional[MutableMapping[str, Any]]:
+        p = ctx.get("player")
+        return p if isinstance(p, MutableMapping) else None
+
+    def equip_wear(self, index: int, ctx: MutableMapping[str, Any]) -> dict:
+        """装备背包第 index 件（1 起）；返回 {ok, message, ...}。"""
+        player = self._player(ctx)
+        if player is None:
+            return {"ok": False, "message": "❌ 玩家状态缺失（请先 /注册 创建角色）"}
+        inv = player.get("inventory")
+        if not isinstance(inv, (list, tuple)) or not (1 <= index <= len(inv)):
+            return {"ok": False, "message": "❌ 背包里没有这件物品"}
+        item = inv[index - 1]
+        if not isinstance(item, ItemInstance):
+            return {"ok": False, "message": "❌ 这件物品不能装备"}
+        if not item.slot:
+            return {"ok": False, "message": "❌ 这件物品不能装备（未登记装备槽位）"}
+        res = self._engine.equip(player, item, item.slot)
+        if res.get("ok"):
+            msg = f"✅ 已装备：{item.name}"
+            if res.get("replaced"):
+                msg += "（已替换原装备并回包）"
+            return {"ok": True, "message": msg, "slot": item.slot, **res}
+        return {"ok": False, "message": self._fail_message(res, "装备失败")}
+
+    def equip_remove(self, slot_id: str, ctx: MutableMapping[str, Any]) -> dict:
+        """卸下槽位装备；返回 {ok, message, ...}。"""
+        player = self._player(ctx)
+        if player is None:
+            return {"ok": False, "message": "❌ 玩家状态缺失（请先 /注册 创建角色）"}
+        old = None
+        equipment = player.get("equipment")
+        if isinstance(equipment, Mapping):
+            old = equipment.get(slot_id)
+        res = self._engine.unequip(player, slot_id)
+        if res.get("ok"):
+            old_name = ""
+            if old is not None:
+                old_name = str(getattr(old, "name", "") or "")
+                if not old_name and isinstance(old, Mapping):
+                    old_name = str(old.get("name") or "")
+            item_id = str(res.get("item_id") or "")
+            return {"ok": True, "message": f"✅ 已卸下：{old_name or item_id}", **res}
+        return {"ok": False, "message": self._fail_message(res, "卸下失败")}
+
+    @staticmethod
+    def _fail_message(res: Mapping[str, Any], fallback: str) -> str:
+        """引擎拒绝 → ❌ 文案（message 透传；缺省按 reason 兜底人话）。"""
+        msg = res.get("message")
+        if msg:
+            return f"❌ {msg}"
+        reason = str(res.get("reason") or "")
+        reason_cn = {
+            "slot_mismatch": "这个位置穿不上",
+            "mutual_exclusion": "装备冲突：与已穿装备互斥，无法同时穿戴",
+            "empty_slot": "该槽位没有装备",
+            "in_battle": "战斗中不可更换装备（战前换装）",
+            "item_not_found": "背包里没有这件物品",
+            "unknown_slot": "没有这个装备槽位",
+            "max_reached": "该槽位已达可装备数量上限",
+        }
+        return f"❌ {reason_cn.get(reason, fallback)}"
+
+
 def _equip_engine(ctx: Mapping[str, Any]) -> Any:
-    """装备引擎解析（注入优先 → 懒加载 core.equipment；均不可得 → 【待接线】RuntimeError，
-    与 checkin_commands 同模式，工程补白 9）。"""
+    """装备引擎解析（注入优先 → 懒加载真实 EquipmentEngine 适配层（EQP-12）；均不可得 →
+    【待接线】RuntimeError，与 checkin_commands 同模式，工程补白 9）。
+
+    - ctx["equip_engine"] 注入优先（装配层/测试注入适配器或替身，equip_wear/equip_remove 消费接口）；
+    - 未注入 → importlib 守卫导入 qbot_rpg.core.equipment（路A 已实装）后构造
+      EquipmentEngineAdapter（slots 配置取自 ctx["slots"]）——懒加载路径。
+    """
     eng = ctx.get("equip_engine")
     if eng is not None:
         return eng
     try:
-        return importlib.import_module("qbot_rpg.core.equipment")
-    except Exception as exc:  # ModuleNotFoundError / ImportError
+        importlib.import_module("qbot_rpg.core.equipment")
+        return EquipmentEngineAdapter(slots=ctx.get("slots"))
+    except Exception as exc:  # ModuleNotFoundError / ImportError / 构造失败
         raise RuntimeError(
             "【待接线】core/equipment.py（M1 骨架）装备引擎不可用；"
             "装配时注入 ctx['equip_engine']（equip_wear/equip_remove 消费接口）"
@@ -1251,6 +1366,35 @@ def cmd_skill(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 # /帮助：分组目录（5 组单页 / GM 6 组 2 页）+ 组页指令列表（5 条/页）+ 注册引导版（B6）
 # ---------------------------------------------------------------------------
 
+def _command_alias_display(ctx: Mapping[str, Any], name: str) -> str:
+    """指令显示名别名替换（SHC-04 / 4f RUL-24 / 规范 6.7 L213-215）：
+
+    消费 settings.command_aliases（形态对齐 parsers._normalize_aliases）：
+      - {"锻造": "炼器"}（缺省 keep_original:true）→ 双名并显 `锻造/炼器`；
+      - {"炼金": {"alias": "炼丹", "keep_original": false}} → 仅显别名 `炼丹`；
+      - 无别名配置/原指令不在表 → 原指令名。
+    """
+    settings = ctx.get("settings")
+    if not isinstance(settings, Mapping):
+        return name
+    aliases = settings.get("command_aliases")
+    if not isinstance(aliases, Mapping):
+        return name
+    entry = aliases.get(name)
+    if entry is None:
+        return name
+    if isinstance(entry, str):
+        return f"{name}/{entry}"
+    if isinstance(entry, Mapping):
+        alias = entry.get("alias")
+        if not alias:
+            return name
+        if entry.get("keep_original", True):
+            return f"{name}/{alias}"
+        return str(alias)
+    return name
+
+
 def _help_groups(ctx: Mapping[str, Any]) -> Tuple[Tuple[str, Tuple[Tuple[str, str], ...]], ...]:
     """分组目录：普通玩家 5 组；GM 追加第 6 组（B8/RUL-25，GM 判定 ctx["is_gm"]）。"""
     groups = list(HELP_GROUPS)
@@ -1259,10 +1403,10 @@ def _help_groups(ctx: Mapping[str, Any]) -> Tuple[Tuple[str, Tuple[Tuple[str, st
     return tuple(groups)
 
 
-def _group_summary(group: Tuple[str, Tuple[Tuple[str, str], ...]]) -> str:
-    """目录行（4f RUL-22）：`冒险 —— 角色/背包/装备/位置/进入…（/帮助 冒险）`。"""
+def _group_summary(ctx: Mapping[str, Any], group: Tuple[str, Tuple[Tuple[str, str], ...]]) -> str:
+    """目录行（4f RUL-22 + SHC-04/RUL-24 别名显示）：`冒险 —— 角色/背包/装备/位置/进入…（/帮助 冒险）`。"""
     name, cmds = group
-    names = [c[0] for c in cmds]
+    names = [_command_alias_display(ctx, c[0]) for c in cmds]
     shown = "/".join(names[:5])
     if len(names) > 5:
         shown += "…"
@@ -1282,7 +1426,7 @@ def _render_help_directory(ctx: Mapping[str, Any], page: int) -> str:
     slice_groups = groups[start:start + DEFAULT_PAGE_SIZE]
     lines: List[str] = [_DIRECTORY_TITLE]
     for i, g in enumerate(slice_groups):
-        lines.append(_group_summary(g))
+        lines.append(_group_summary(ctx, g))
     if groups:
         lines.append(_cake_tail(res.page, res.total_pages, tip=_HELP_TAIL_TIP, clamped=res.clamped))
     return "\n".join(lines)
@@ -1310,7 +1454,9 @@ def _render_help_group(ctx: Mapping[str, Any], group_name: str, page: int) -> st
     slice_cmds = cmds[start:start + DEFAULT_PAGE_SIZE]
     lines: List[str] = [f"【{group_name}】"]
     for i, c in enumerate(slice_cmds):
-        lines.append(group_page_line(start + i + 1, c))
+        # SHC-04/RUL-24：指令名按 settings.command_aliases 显示层替换（TC-17）
+        display = _command_alias_display(ctx, c[0])
+        lines.append(group_page_line(start + i + 1, (display, c[1])))
     if cmds:
         lines.append(_cake_tail(res.page, res.total_pages, tip=_HELP_TAIL_TIP, clamped=res.clamped))
     return "\n".join(lines)

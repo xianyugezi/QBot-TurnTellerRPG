@@ -70,7 +70,8 @@ LAYER_PATHS = {
 
 
 def _pytest(paths: list[str], *, report: bool = False) -> int:
-    # 不用 -q：该环境捕获下 -q 会吞掉 "N passed" 汇总行
+    # 汇总行保证：-rN 输出 "N passed" 行（P2-6 修订：-q 由 pytest.ini addopts 全局注入，
+    # 不吞 summary 行；本函数不重复加 -q）
     cmd = [str(PY), "-m", "pytest", "-rN", "--disable-warnings", *paths]
     # cwd 必须为仓库根（REPO=scripts/，LAYER_PATHS 是相对仓库根的路径）
     r = subprocess.run(cmd, cwd=str(REPO.parent), capture_output=True, text=True)
@@ -235,7 +236,7 @@ def _lint() -> bool:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="QBot-TurnTellerRPG 一键回归")
-    ap.add_argument("--only", default="", help="过滤：m0~m6 / unit / contract / e2e / datapack / fault")
+    ap.add_argument("--only", default="", help="过滤：m0~m6 / unit / contract / e2e / fault")
     ap.add_argument("--fast", action="store_true", help="冒烟模式（抽查收缩）")
     ap.add_argument("--skip-lint", action="store_true", help="跳过阶段0 静态门禁（ruff/mypy，5d L133 逃生口）")
     args = ap.parse_args()

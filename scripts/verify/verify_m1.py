@@ -246,7 +246,7 @@ def main() -> int:
     for name, fn in checks:
         check(name, fn)
 
-    print("\n== 子进程全量 pytest（G2 含 4.4 三型 + 存档往返的载体）==")
+    print("\n== 子进程全量 pytest（M1 含 4.4 三型 + 存档往返的载体）==")
     proc = subprocess.run(
         [sys.executable, "-m", "pytest", "-q", "--tb=short", "-rN", "--disable-warnings"],
         cwd=str(REPO), capture_output=True, text=True, timeout=600,
@@ -265,7 +265,7 @@ def main() -> int:
         for name, err in _FAIL:
             print(f"  FAIL {name}: {err}")
         return 1
-    print("G2 门禁：verify_m1 全绿 ✔")
+    print("M1 门禁：verify_m1 全绿 ✔（D8 VG-20：统一「M<N> 门禁」输出）")
     return 0
 
 

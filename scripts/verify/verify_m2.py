@@ -313,9 +313,9 @@ def main() -> int:
     if n_fail or not pytest_ok:
         for name, err in _FAIL:
             print(f"  FAIL {name}: {err}")
-        print("G3 门禁：verify_m2 未通过 ✘（失败回溯：细化_1e/1f #TC-NN + 断言原文见上）")
+        print("M2 门禁：verify_m2 未通过 ✘（失败回溯：细化_1e/1f #TC-NN + 断言原文见上；D8 VG-20 统一「M<N> 门禁」输出）")
         return 1
-    print("G3 门禁：verify_m2 全绿 ✔（34 TC 中 29 已承载 + 5 DELAYED；并行路落盘后自动纳入）")
+    print("M2 门禁：verify_m2 全绿 ✔（34 TC 中 29 已承载 + 5 DELAYED；并行路落盘后自动纳入；D8 VG-20）")
     return 0
 
 

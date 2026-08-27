@@ -14,6 +14,16 @@
 
 ### Added
 
+- **M0-M5 归档欠账回填说明**（D8 ACC-03）：M0-M5 历史 verify（verify_m0~m5）全部只 print
+  到 stdout、无文件写出——欠账原因 = G1「verify 输出留档于仓库 docs/」自 G1 成文起未落地
+  （【批3A】P0-2/P1-5）。处置：M0-M5 不补历史报告文件，仅登记；**自 M6 起 verify_m6 按
+  ACC-02 统一归档 docs/verify/**（验收单 m6_checklist.md / 归档报告 m6/verify_m6_<日期>.md /
+  冒烟留档 m6_smoke.md / 覆盖率报表 coverage_latest.txt，写入者 = verify_m6.py）。
+- **M6（进行中，2026-08-28 批8 收官）**：verify_m6 两段式门禁 + M6 唯一验收口径——段一 8 项
+  验收单（D8 VG-01~09：热重载回退/冒烟闭环/故障注入六类/覆盖率≥80%/ruff-mypy-pytest/
+  内容包 validator 全绿/里程碑验收单/CHANGELOG+归档）+ 段二 M2-M5 DELAYED 承接收口
+  （DLY-01~10：到期扫描 + verify_m4 批次7-01 翻转 + 六组裁决转 pytest/残留登记）+
+  ACC-01 验收单 + ACC-02 归档契约（本条目随 D7 CHG-03 预留条目收口）。
 - **M6（进行中，2026-08-28 批7 落地）**：质量门禁载体落地——覆盖率实算+阈值断言（COV）/ ruff-mypy
   工具链（LNT）/ CHANGELOG 建档回填（CHG，本文件）/ CI 流水线（CI）/ PR 评审模板（RVW），
   待本批次与 verify_m6（D8）收口（D7 CHG-03 预留条目）。

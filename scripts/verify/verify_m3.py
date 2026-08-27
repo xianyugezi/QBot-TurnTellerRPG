@@ -365,9 +365,9 @@ def main() -> int:
     if n_fail or not pytest_ok:
         for name, err in _FAIL:
             print(f"  FAIL {name}: {err}")
-        print("G3 门禁：verify_m3 未通过 ✘（失败回溯：m3_shared_contract §7 #TC-NN + 断言原文见上）")
+        print("M3 门禁：verify_m3 未通过 ✘（失败回溯：m3_shared_contract §7 #TC-NN + 断言原文见上；D8 VG-20 统一「M<N> 门禁」输出）")
         return 1
-    print(f"G3 门禁：verify_m3 全绿 ✔（81 TC 中 {carried} 已承载 + {len(delayed)} DELAYED；"
+    print(f"M3 门禁：verify_m3 全绿 ✔（81 TC 中 {carried} 已承载 + {len(delayed)} DELAYED；"
           f"补充引擎：worldtime 必测场景 L296 + M43 回归已纳入）")
     return 0
 

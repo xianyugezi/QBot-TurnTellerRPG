@@ -33,6 +33,7 @@ formula.json 已全段落位（F-FIX-01~27，路A），段缺省回退 dataclass
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from random import Random
 from typing import Any, Callable, Mapping, NamedTuple, Optional, Tuple, TypeVar
@@ -64,7 +65,11 @@ from qbot_rpg.core.damage import (
 )
 
 # D6 PRP-2 / TC-PRP-01：每条不变量随机组数 1000（【规则】L309「随机 1000 组属性」）。
-N_GROUPS = 1000
+# --fast 冒烟抽样钩子（D8 VG-14 / 细化_5d §3.1 L125「1000 组随机收抽样 100 组」）：全量模式 1000 组
+# （PRP-2 不抽样缩水），run_all_tests.py --fast 注入 QBT_FAST=1 时收抽样 100 组（TC-5d-18）；
+# 抽样仍走固定 seed 派生（D6 PRP-8：同 seed 抽样逐位一致，可复现）。TC-PRP-01 静态核对
+# 「每函数随机组 ≥1000」以默认值 1000 为准，冒烟收缩不改变全量口径。
+N_GROUPS = 100 if os.environ.get("QBT_FAST") == "1" else 1000
 # 收集循环护栏（拒收抽样上限）：命中率最低 10%（hit.cap_min），最坏情形 ~10000 次；
 # 50000 留足余量防公式参数回归导致死循环。确定性由固定 seed 保证。
 MAX_ITER = 50000
@@ -435,12 +440,13 @@ def test_prp8_deterministic_regression(
 
     依据：【规则】L331；D6 PRP-8（固定种子无抖动，对齐 run_all_tests --fast 抽样
     仍可复现）。经 §2.5 派生种子形 seeded_rng(offset=N) 取两个状态相同的新实例，
-    跑同一性质管线 1000 组（P2-5 修复：TC-PRP-01「每函数 ≥1000」口径对齐），
+    跑同一性质管线 N_GROUPS 组（P2-5 修复：TC-PRP-01「每函数 ≥1000」口径对齐；N_GROUPS
+    全量 1000 / --fast 冒烟收抽样 100，D8 VG-14），
     断言 (通道/档位/倍率/P/总伤害) 元组逐位一致。
     """
-    sig_a = _property_signature(seeded_rng(offset=8), formula_params, count=1000)
-    sig_b = _property_signature(seeded_rng(offset=8), formula_params, count=1000)
-    assert len(sig_a) == len(sig_b) == 1000
+    sig_a = _property_signature(seeded_rng(offset=8), formula_params, count=N_GROUPS)
+    sig_b = _property_signature(seeded_rng(offset=8), formula_params, count=N_GROUPS)
+    assert len(sig_a) == len(sig_b) == N_GROUPS
     assert sig_a == sig_b, "同 seed 两次运行输出不一致（确定性回归失败）"
 
 def _property_signature(

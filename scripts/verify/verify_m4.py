@@ -13,8 +13,9 @@
     * 声明的 pytest 测试文件必须落盘（可核验性）；
     * 声明的 测试函数名 必须存在于对应文件 def 列表（比 verify_m3 更严：函数级核验，
       防止「文件在但用例名对不上」的虚假承载）。
-- DELAYED 项（1 条）：批次7-01 端到端冒烟 —— 依赖批次7·路H1 的 test_e2e_m4_smoke.py
-  （并行路 H1 未落盘；落盘后由 PYTEST_FILES 自动纳入，本项即可转 pytest: 承载）。
+- DELAYED 项（0 条）：批次7-01 端到端冒烟已翻转（D8 DLY-08 立即翻转）——test_e2e_m4_smoke.py
+  已落盘（pytest 固化，包装 scripts/e2e_m4_smoke.py）且已入 PYTEST_FILES；原 DELAYED 声明
+  失真，由 verify_m6 段二到期扫描复核收口（TC-DLY-01）。
 - 机制：脚本内核心断言（① 关键模块可导入 ② M4 关键函数存在 ③ COVERAGE 自洽 83 条计数）
   + 子进程跑 M4 相关 pytest 测试文件（PYTEST_FILES 全绿；缺失文件黄提示不判失败）。
 
@@ -132,7 +133,7 @@ COVERAGE: dict = {
     "3.4-06 checkin_do（幂等防重/版本 tx/失败跳过不中断表结算）": "pytest:test_checkin.py::test_same_day_repeat_idempotent_no_regrant + test_checkin.py::test_version_idempotent_tx_replay + test_checkin.py::test_reward_failure_skip_does_not_abort_table + test_checkin.py::test_checkin_state_query_pure_read + test_checkin.py::test_item_reward_via_add_item_hook + test_checkin.py::test_constants_exposed + test_checkin.py::test_day_index_of_helpers",
     "3.4-07 /签到 指令接线（今日/状态/补签 + 页码夹取 + TPL-12）": "pytest:test_checkin_commands.py::test_checkin_noarg_today_page1 + test_checkin_commands.py::test_checkin_today_page2 + test_checkin_commands.py::test_checkin_clamp_last_page + test_checkin_commands.py::test_checkin_invalid_input_tpl12 + test_checkin_commands.py::test_checkin_idempotent_still_shows_progress + test_checkin_commands.py::test_checkin_status_page1 + test_checkin_commands.py::test_checkin_makeup_by_table_id + test_checkin_commands.py::test_checkin_makeup_by_table_name + test_checkin_commands.py::test_checkin_makeup_default_main_loop + test_checkin_commands.py::test_checkin_makeup_compact + test_checkin_commands.py::test_parse_command_integration + test_checkin_commands.py::test_register_checkin_commands",
     # ── 批次7 集成（contract §4 批次7 / §5 端到端冒烟）──
-    "批次7-01 端到端冒烟（NPC 对话→商店购买→任务接取/交付→签到 全链路）": "DELAYED：依赖批次7·路H1（test_e2e_m4_smoke.py 并行实现未落盘）——H1 落盘后本项转 pytest: 承载且 PYTEST_FILES 自动纳入子进程门禁；组件级全链路已由 3.1-3.4 各指令接线用例承载",
+    "批次7-01 端到端冒烟（NPC 对话→商店购买→任务接取/交付→签到 全链路）": "pytest:test_e2e_m4_smoke.py::test_smoke_subprocess_exit0_and_green_line + test_e2e_m4_smoke.py::test_run_smoke_green_and_deterministic + test_e2e_m4_smoke.py::test_path_assertion_counts + test_e2e_m4_smoke.py::test_smoke_core_run_green",
 }
 
 # 子进程 pytest 目标文件：实际落盘 M4 相关测试（全绿要求；缺失文件黄提示跳过不判失败）
@@ -164,7 +165,7 @@ PYTEST_FILES: list = [
     "tests/unit/test_checkin_models.py",      # 3.4 CheckinDef/validate_checkins/三键
     "tests/unit/test_checkin.py",             # 3.4 checkin_do/makeup/里程碑
     "tests/unit/test_checkin_commands.py",    # 3.4 /签到 今日/状态/补签
-    # ── 批次7 端到端冒烟（路H1 并行实现；未落盘 → 黄提示跳过不判失败）──
+    # ── 批次7 端到端冒烟（DLY-08 已翻转；缺失 → 黄提示,verify_m6 复核按失败）──
     "tests/unit/test_e2e_m4_smoke.py",        # 批次7-01 全链路冒烟（契约 §4 批次7 / §5）
 ]
 
@@ -370,13 +371,13 @@ def t_key_functions() -> None:
 
 
 # ==============================================================================
-# 核心断言 ③：COVERAGE 自洽（83 条覆盖点 = 82 已承载 + 1 DELAYED）
+# 核心断言 ③：COVERAGE 自洽（83 条覆盖点 = 83 已承载 + 0 DELAYED；批次7-01 已翻转，D8 DLY-08）
 # ==============================================================================
 _SECTION_COUNTS = {
     "A1": 7, "A2": 11, "A3": 6,        # §1 公共基础
     "2.1": 9, "2.2": 5, "2.3": 6, "2.4": 5,  # §2 指令解析层
     "3.1": 10, "3.2": 9, "3.3": 7, "3.4": 7,  # §3 交互系统
-    "批次7": 1,                        # §4 批次7 集成（DELAYED 端到端冒烟）
+    "批次7": 1,                        # §4 批次7 集成（端到端冒烟，DLY-08 已翻转）
 }
 
 
@@ -405,7 +406,7 @@ def t_coverage_self_consistent() -> None:
             assert m, f"承载引用格式非法：{chunk[:80]}"
             fname, fn = m.group(1), m.group(2)
             path = unit_dir / fname
-            assert path.exists(), f"COVERAGE 声明引用未落盘测试文件：{fname}"
+            assert path.exists(), f"COVERAGE 声明引用缺失测试文件：{fname}"
             if fname not in fn_cache:
                 src = path.read_text(encoding="utf-8")
                 fn_cache[fname] = set(re.findall(r"^\s*def (test_[A-Za-z0-9_]+)\s*\(", src, re.M))
@@ -444,7 +445,7 @@ def main() -> int:
     existing = [f for f in PYTEST_FILES if (REPO / f).exists()]
     missing = [f for f in PYTEST_FILES if not (REPO / f).exists()]
     for f in missing:
-        _yellow(f"{f} 缺失（批次7·路H1 并行实现未落盘）→ 跳过；对应组件级覆盖已由拆分测试文件落盘生效")
+        _yellow(f"{f} 缺失（DLY-09 起 missing 按失败由 verify_m6 复核）→ 跳过；对应组件级覆盖已由拆分测试文件落盘生效")
     pytest_ok = False
     if existing:
         proc = subprocess.run(
@@ -473,7 +474,7 @@ def main() -> int:
     if n_fail or not pytest_ok:
         for name, err in _FAIL:
             print(f"  FAIL {name}: {err}")
-        print("G5 门禁：M4 门禁 verify_m4 未通过 ✘（失败回溯：m4_shared_contract §5 + 断言原文见上）")
+        print("M4 门禁：verify_m4 未通过 ✘（失败回溯：m4_shared_contract §5 + 断言原文见上；D8 VG-20 统一「M<N> 门禁」输出）")
         return 1
     print(f"M4 门禁：verify_m4 全绿 ✔（83 覆盖点中 {carried} 已承载 + {len(delayed)} DELAYED；"
           f"子进程 pytest {len(existing)} 文件全绿{'，' + str(len(missing)) + ' 文件缺失黄提示' if missing else ''}）")

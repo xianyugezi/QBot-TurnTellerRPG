@@ -1,5 +1,5 @@
 # 覆盖率报表（QBot-TurnTellerRPG · 行覆盖，三目录各自 ≥80% 门禁）
-# 生成时间：2026-08-28 02:54:31
+# 生成时间：2026-08-28 03:52:59
 # 测量命令：coverage run --source=qbot_rpg/core,qbot_rpg/engine,qbot_rpg/content -m pytest <tests 全量>（D7 COV-03）
 # 口径：qbot_rpg/core + engine + content 各自 ≥80%，禁止合计稀释（D7 COV-02；总纲 ADR-04）
 # P1-3 登记（批7A 审查）：统计口径 = 已导入文件行覆盖（coverage 标准语义——未导入的

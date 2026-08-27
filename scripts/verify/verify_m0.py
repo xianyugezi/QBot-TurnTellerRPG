@@ -280,7 +280,7 @@ def main() -> int:
     # 精确 TC 条数映射随 TC-5d-08 细化文档扫描在 M1 补（本脚本声明条数仅展示）。
     # M6 批7·路A：覆盖率真实核算并入通过判定（D7 COV-06——「未核算不标通过」与 exit 语义对齐）
     if cov_ok and total_f == 0 and total_p >= MIN_PASS_COUNT and not all_failed:
-        print("M0 门禁：通过（G1 全绿）")
+        print("M0 门禁：通过（D8 VG-20：verify 输出统一「M<N> 门禁」，G 编号保留文档内部语义不再输出）")
         return 0
     print(f"M0 门禁：不通过（需 ≥{MIN_PASS_COUNT} 条通过且 0 失败且覆盖率三目录各自 ≥80%；"
           f"当前 {total_p} passed / {total_f} failed）")

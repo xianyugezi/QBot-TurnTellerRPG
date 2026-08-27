@@ -659,7 +659,7 @@ def main() -> int:
     if n_fail or not pytest_ok:
         for name, err in _FAIL:
             print(f"  FAIL {name}: {err}")
-        print("G5 门禁：M5 门禁 verify_m5 未通过 ✘（失败回溯：m5_shared_contract §六 + 断言原文见上）")
+        print("M5 门禁：verify_m5 未通过 ✘（失败回溯：m5_shared_contract §六 + 断言原文见上；D8 VG-20 统一「M<N> 门禁」输出）")
         return 1
     print(f"M5 门禁：verify_m5 全绿 ✔（81 覆盖点中 {carried} 已承载 + {len(delayed)} DELAYED；"
           f"子进程 pytest {len(existing)} 文件全绿{'，' + str(len(missing)) + ' 文件缺失黄提示' if missing else ''}）")

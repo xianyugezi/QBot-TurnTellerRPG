@@ -5,10 +5,10 @@
 四门禁（M0~M3）+ M4 门禁 + 全量回归；端到端冒烟入 L4 e2e 层）。
 
 模式：
-  无参           全量回归（M0~M5 已实现门禁；M6 标记未实现，进阶段后接入）
-  --only m0      只跑 verify_m0.py（里程碑过滤）
+  无参           全量回归（M0~M6 门禁，阶段2 严格依赖序 m0→m6，D8 VG-13）
+  --only m0      只跑 verify_m0.py（里程碑过滤；脚本缺失按 D8 VG-11 不假绿 return 1）
   --only unit    只跑 unit 单测
-  --fast         冒烟模式（跳过抽查/抽样收缩）
+  --fast         冒烟模式（性质用例抽样 1000→100 组 + 跳过覆盖率实算，D8 VG-14）
   --skip-lint    跳过阶段0 静态门禁（ruff/mypy）——逃生口（5d §3.2 L133 / D7 LNT-04）
 退出码 0 = 全绿；阶段0 静态门禁失败仅置 fail（exit≠0），后续阶段继续执行
 收集全部失败（5d §3.2 L144 短路原则 / D7 决策记录 D7-D2）。
@@ -24,6 +24,7 @@ verify_m5 于 M5-12 接入后仍保留该测试）。允许集合见 docs/全局
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -36,8 +37,10 @@ VERIFY_M2 = REPO / "verify" / "verify_m2.py"
 VERIFY_M3 = REPO / "verify" / "verify_m3.py"
 VERIFY_M4 = REPO / "verify" / "verify_m4.py"
 VERIFY_M5 = REPO / "verify" / "verify_m5.py"
+VERIFY_M6 = REPO / "verify" / "verify_m6.py"
 
-# 里程碑 → verify 脚本（M6 尚未实现，置 None 标记）
+# 里程碑 → verify 脚本（D8 细化_M6_verify门禁与承接：VG-12 MILESTONES["m6"] 置位）。
+# 阶段2 全量按字典插入序执行 = 严格里程碑依赖序 m0→m1→…→m6（VG-13：不可乱序、不可跳过）。
 MILESTONES: dict[str, Path | None] = {
     "m0": VERIFY_M0,
     "m1": VERIFY_M1,
@@ -45,16 +48,15 @@ MILESTONES: dict[str, Path | None] = {
     "m3": VERIFY_M3,  # M3 地图副本时间（2a 系）
     "m4": VERIFY_M4,  # M4 指令系统（2b/4f/3c/3d，m4_shared_contract §5）
     "m5": VERIFY_M5,  # M5 消息模板与渲染层（3d/5e/4f，m5_shared_contract §六，verify_m5）
-    # M6 数据框架（5a/5b/4c/4d/4e/6 系）：D4《细化_M6_内容包冒烟》§四 SMK-17 接入声明——
-    # 本批（M6 批4·路B）只声明接入点：pytest 包装 tests/unit/test_e2e_m6_smoke.py 随 L4 e2e 层执行
-    # （LAYER_PATHS["e2e"] L47 由 D8 接入 m6 时纳入）；verify_m6 段一「冒烟闭环」承接（VM6-1 项2）。
-    # MILESTONES["m6"] 置位归 D8，本批保持 None。
-    "m6": None,  # M6 数据框架（5a/5b/4c/4d/4e/6 系）——置位归 D8（SMK-17）
+    # M6 接线闭环（verify_m6 两段式门禁，见 细化_M6_verify门禁与承接 D8）——VG-12 置位 / VG-17 注释同步；
+    # 四源统一「接线闭环」口径：run_all_tests L42 注释 / 启动手册 L42 / 细化_5d L95 / 规划 L3481（VG-16，总纲 SYN-1/SCP-1）
+    "m6": VERIFY_M6,
 }
 LAYER_PATHS = {
     "unit": ["tests/unit"],
     "contract": ["tests/contract"],
-    # L4 e2e 层（SMK-17 接入点）：D8 接入 m6 时纳入 tests/unit/test_e2e_m6_smoke.py
+    # L4 e2e 层：冒烟/补丁契约层载体；tests/unit/test_e2e_m6_smoke.py（D4 SMK-17 接入点）位于
+    # unit 目录随 L1 层收集（D8 接入 m6 后由 verify_m6 段一② 子进程段承接冒烟闭环断言）
     "e2e": ["tests/contract/test_e2e_smoke.py", "tests/contract/test_3f_patch.py"],
     # 故障注入层（D5 FLT-35~38 / P1-1 接线，M6 批5B dsh 审查修复）：
     # 独立子进程跑 tests/fault（fault_inject_*.py 不匹配 test_*.py 且子进程不展开 glob → 显式列文件）
@@ -236,23 +238,35 @@ def _lint() -> bool:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="QBot-TurnTellerRPG 一键回归")
-    ap.add_argument("--only", default="", help="过滤：m0~m6 / unit / contract / e2e / fault")
-    ap.add_argument("--fast", action="store_true", help="冒烟模式（抽查收缩）")
+    ap.add_argument("--only", default="",
+                    help="过滤：m0~m6 / unit / contract / e2e / fault（m6 脚本未落盘时按 D8 VG-11 不假绿 return 1）")
+    ap.add_argument("--fast", action="store_true",
+                    help="冒烟模式（性质用例抽样 1000→100 组，QBT_FAST=1；跳过覆盖率实算；D8 VG-14）")
     ap.add_argument("--skip-lint", action="store_true", help="跳过阶段0 静态门禁（ruff/mypy，5d L133 逃生口）")
     args = ap.parse_args()
 
     print("=" * 62)
     print("QBot-TurnTellerRPG 一键回归（细化_5d §3）")
     print("=" * 62)
+    if args.fast:
+        # D8 VG-14：--fast 真正进入分支逻辑（废弃「定义后全程未引用」）——冒烟模式（5d §3.1 L125 /
+        # TC-5d-18「输出标注冒烟模式」）：① QBT_FAST=1 注入全部子进程（pytest/verify_m0~m6 继承）→
+        # 性质用例抽样 1000→100 组（tests/unit/test_formula_property.py 钩子，同 seed 仍可复现，PRP-8）；
+        # ② 阶段3 覆盖率实算跳过（覆盖率抽样核算）。输出标注「冒烟模式」。
+        os.environ["QBT_FAST"] = "1"
+        print("冒烟模式（--fast）：性质用例抽样 1000→100 组（QBT_FAST=1），跳过覆盖率实算（D8 VG-14）")
 
     fail = False
     only = args.only.lower() if args.only else ""
 
     if only in MILESTONES:
         script = MILESTONES[only]
-        if script is None:
-            print(f"[未实现] {only} 里程碑 verify 脚本尚未实现（后续里程碑接入）")
-            return 0
+        if script is None or not script.exists():
+            # D8 VG-11 不假绿铁律：verify 脚本未接入（None 或文件缺失）→ 显式失败，禁 return 0 假绿
+            # （废弃历史行为：--only m6 未实现仍返回 0；TC-VG-11 预期 exit≠0 + 提示「M6 未接入 → 门禁不完整」）
+            label = script.name if script else "verify 脚本"
+            print(f"[未接入] {only.upper()} 未接入 → 门禁不完整（{label} 缺失）——不假绿铁律（D8 VG-11）")
+            return 1
         print(f"运行 {script.name} ...")
         r = subprocess.run([str(PY), str(script)], cwd=str(REPO))
         fail = r.returncode != 0
@@ -265,9 +279,11 @@ def main() -> int:
             # 禁止静默落入全量分支（FLT-37 禁止的静默退化）
             print(f"[错误] 未知层名 {only}（可用：{sorted(MILESTONES)} / {sorted(LAYER_PATHS)}）")
             return 2
-        # 全量：阶段0 静态前置 → L1~L4 + 已实现里程碑 verify（M0~M5）+ 覆盖率提示
+        # 全量（5d §3.2 L130-146 流程对齐，D8 VG-15）：阶段0 ruff/mypy 快速门（L133）→ 阶段1
+        # L1~L4 金字塔 + 故障注入（L137）→ 阶段2 verify_m0~m6 严格依赖序（L139）→ 阶段3 覆盖率
+        # 核算（L140）→ 汇总（L141）；任一失败按短路原则收集全部失败但退出码非 0（L144）。
         # 阶段0（D7 LNT-04）：ruff/mypy 快速门，失败仅置 fail、不中途中止（D7-D2 收集全部失败）
-        print("\n[阶段 0] 静态前置（ruff/mypy 快速门，D7 LNT-04）")
+        print("\n[阶段 0] 静态前置（ruff/mypy 快速门，D7 LNT-04 / 5d §3.2 L133）")
         if args.skip_lint:
             print("  [跳过] --skip-lint 已指定，跳过 ruff/mypy 静态门禁（5d §3.2 L133 逃生口）")
         elif not _lint():
@@ -280,17 +296,26 @@ def main() -> int:
                 fail = True
         # M5-11：emoji 静态检查由 tests/unit/test_emoji_discipline.py 承担（见模块 docstring）
         print("  [静态检查] emoji 扫描由 tests/unit/test_emoji_discipline.py 承担（M5-11 登记表配套，docs/全局图标登记表.md）")
-        print("\n[阶段 2] 里程碑 verify")
-        for key, script in MILESTONES.items():
-            if script is None:
-                print(f"  [未实现] {key}（后续接入）")
+        print("\n[阶段 2] 里程碑 verify（严格依赖序 m0→m6，D8 VG-13 / 5d §3.2 L139）")
+        for key, script in MILESTONES.items():  # 字典插入序 = m0→m1→…→m6：不可乱序、不可跳过
+            if script is None or not script.exists():
+                # D8 VG-11 不假绿铁律：门禁未接入（None 或文件缺失）→ 显式置 fail + 打印提示 + 退出码非 0，
+                # 废弃历史「全量遇 m6=None → continue 静默跳过」假绿行为
+                label = script.name if script else "verify 脚本"
+                print(f"  [未接入] {key.upper()} 未接入 → 门禁不完整（{label} 缺失）——置 fail，退出码非 0"
+                      "（D8 VG-11 不假绿铁律）")
+                fail = True
                 continue
             print(f"  [运行] {key} → {script.name}")
             r = subprocess.run([str(PY), str(script)], cwd=str(REPO.parent))
             fail = fail or (r.returncode != 0)
-        # 阶段3 覆盖率真实核算（M6 批7·路A，D7 COV-03/04/05）：coverage 依赖实算三目录各自 ≥80%，
-        # 任一 <80% → exit≠0（COV-04 阈值断言，门禁不放行）；报表归档 docs/verify/coverage_latest.txt（COV-05）
-        if not _coverage_gate():
+        # 阶段3 覆盖率真实核算（D7 COV-03/04/05）：coverage 依赖实算三目录各自 ≥80%，
+        # 任一 <80% → exit≠0（COV-04 阈值断言，门禁不放行）；报表归档 docs/verify/coverage_latest.txt（COV-05）。
+        # --fast 冒烟模式跳过覆盖率实算（D8 VG-14 覆盖率抽样核算跳过）；全量模式才真实核算。
+        if args.fast:
+            print("\n[阶段 3] 覆盖率核算 [跳过] 冒烟模式（--fast）：覆盖率抽样核算跳过（D8 VG-14）；"
+                  "全量模式才真实核算并归档 docs/verify/coverage_latest.txt")
+        elif not _coverage_gate():
             fail = True
 
     print("\n" + "=" * 62)

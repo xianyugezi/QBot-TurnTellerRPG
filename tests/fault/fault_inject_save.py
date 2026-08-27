@@ -37,7 +37,7 @@ from qbot_rpg.storage.connection import Database, StorageError
 from qbot_rpg.storage.pending import ACTION_PLAYER_UPSERT, PendingQueue, SAVE_FAILURE_MESSAGE
 from qbot_rpg.storage.repository import Repository
 
-from conftest import make_player
+from conftest import make_player  # type: ignore[import-not-found]
 
 REPO_ROOT: Path = Path(__file__).resolve().parents[2]
 
@@ -84,7 +84,7 @@ async def test_flt_07_write_failure_human_message_and_pending(save_env, monkeypa
     # 预置另一玩家确认写路径可用（仅本次 COMMIT 注入失败，对照隔离）
     await repo.save_player(make_player("20002"))
 
-    async def boom_commit(conn) -> None:  # type: ignore[no-untyped-def]
+    async def boom_commit(conn) -> None:
         raise OSError(28, "No space left on device")
 
     monkeypatch.setattr(save_env.db, "_commit", boom_commit)
@@ -133,7 +133,7 @@ async def test_flt_08_replay_after_disk_recovery_consistent(save_env, monkeypatc
     repo: Repository = save_env.repo
     player = make_player("10001")
 
-    async def boom_commit(conn) -> None:  # type: ignore[no-untyped-def]
+    async def boom_commit(conn) -> None:
         raise OSError(28, "No space left on device")
 
     monkeypatch.setattr(save_env.db, "_commit", boom_commit)

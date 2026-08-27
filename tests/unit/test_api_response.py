@@ -5,7 +5,7 @@ from qbot_rpg.data.api_response import CODE_ERROR, CODE_OK, ApiResponse
 
 
 def test_ok_default() -> None:
-    r = ApiResponse.ok()
+    r = ApiResponse.ok()  # type: ignore[var-annotated]
     assert r.code == CODE_OK == 0
     assert r.msg == "success"
     assert r.data == {}
@@ -20,7 +20,7 @@ def test_ok_with_data() -> None:
 
 
 def test_error() -> None:
-    r = ApiResponse.error(code=2, msg="玩家不存在")
+    r = ApiResponse.error(code=2, msg="玩家不存在")  # type: ignore[var-annotated]
     assert r.code == 2
     assert r.msg == "玩家不存在"
     assert r.data == {}

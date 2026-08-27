@@ -96,7 +96,7 @@ class InventoryEngine:
             lst = list(raw)
             player["inventory"] = lst
             return lst
-        lst: List[ItemInstance] = []
+        lst: List[ItemInstance] = []  # type: ignore[no-redef]
         player["inventory"] = lst
         return lst
 

@@ -356,7 +356,7 @@ def test_duck_typing_list_report():
 
 def test_validate_weather_none_safe():
     rep = _Report()
-    validate_weather(None, None, rep)  # type: ignore[arg-type]
+    validate_weather(None, None, rep)
     assert not rep.errors and not rep.warnings
 
 

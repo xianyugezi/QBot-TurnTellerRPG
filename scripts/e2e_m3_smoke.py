@@ -538,10 +538,10 @@ def boss_path(smoke: Smoke, wt: WorldTime, now: int, pack: dict) -> dict:
     fc = drops.get("first_clear")
     smoke.check(isinstance(fc, Mapping) and bool(fc.get("items")),
                 "BOSS 版：drops.first_clear 首通奖励配置存在")
-    smoke.check(bool(fc.get("title")), "BOSS 版：首通称号配置存在（熔岩征服者）")
+    smoke.check(bool(fc.get("title")), "BOSS 版：首通称号配置存在（熔岩征服者）")  # type: ignore[union-attr]
     trace.append({"step": "BOSS 版·通关奖励摘要",
                   "summary": f"normal×{len(drops.get('normal', []))} + boss×{len(drops.get('boss', []))}"
-                             f" + first_clear(title={fc.get('title')})"})
+                             f" + first_clear(title={fc.get('title')})"})  # type: ignore[union-attr]
 
     # ---- 离开重置（M15 exit_dungeon_reset 装配：非战斗离开重置 / 战斗中拒绝）----
     leave_reset = exit_dungeon_reset(session, player_ctx={"map_id": target})

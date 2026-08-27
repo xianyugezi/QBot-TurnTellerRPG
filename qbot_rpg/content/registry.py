@@ -81,7 +81,7 @@ class Registry:
     # ---- 读路径（无锁：内存引用读取，原子替换保证一致性，细化_3e §4.6）----
     def resolve(self, id: str, kind: str) -> AnyDef:
         """引用查表（红拦 R-4 用，O(1) 字典）。kind 见 data/types.RegistryKind。"""
-        return self._tables.get(kind, {}).get(id)  # type: ignore[misc]
+        return self._tables.get(kind, {}).get(id)
 
     def resolve_name(self, id: str) -> Optional[str]:
         """ID → 显示名（旧局旧配置：对局快照冗余存储名称，重载后展示仍用旧名，L177/L186）。"""

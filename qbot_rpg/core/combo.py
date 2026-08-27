@@ -702,11 +702,11 @@ class ComboEngine:
             self._resolver = resolver
         elif registry is not None:
             if callable(registry):
-                self._resolver = registry  # type: ignore[assignment]
+                self._resolver = registry
             else:
                 resolve = getattr(registry, "resolve", None)
                 if callable(resolve):
-                    self._resolver = lambda id_, kind: resolve(id_, kind)  # type: ignore[misc]
+                    self._resolver = lambda id_, kind: resolve(id_, kind)
                 else:
                     self._resolver = default_resolver(defs)
         else:
@@ -818,7 +818,7 @@ class ComboEngine:
         state = self.state_of(snap, side)
         if not bool(state.chain_id):
             return ()
-        chain = self.chain_by_id(state.chain_id)
+        chain = self.chain_by_id(state.chain_id)  # type: ignore[arg-type]
         if chain is None:
             return ()
         ctx = self.condition_ctx(side, snap)
@@ -1035,7 +1035,7 @@ class ComboEngine:
 
         chain: Optional[ChainConfig] = None
         if bool(state.chain_id):
-            chain = self.chain_by_id(state.chain_id)
+            chain = self.chain_by_id(state.chain_id)  # type: ignore[arg-type]
         if chain is None:
             chains = self.chains_of_skill(skill_id)
             if chains:
@@ -1131,7 +1131,7 @@ class ComboEngine:
         # 链解析：已有活跃链 或 首次使用注册（trigger_skill/参与技能命中）
         chain = None
         if bool(state.chain_id):
-            chain = self.chain_by_id(state.chain_id)
+            chain = self.chain_by_id(state.chain_id)  # type: ignore[arg-type]
         if chain is None:
             chains = self.chains_of_skill(skill_id)
             if chains:

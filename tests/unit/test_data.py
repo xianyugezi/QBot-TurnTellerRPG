@@ -11,7 +11,7 @@ from qbot_rpg.data import (
 )
 from qbot_rpg.storage.repository import Repository
 from qbot_rpg.storage.connection import Database
-from conftest import make_player
+from conftest import make_player  # type: ignore[import-not-found]
 
 
 # U1/U3：核心数据类型 frozen

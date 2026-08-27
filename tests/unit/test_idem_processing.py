@@ -43,7 +43,7 @@ from qbot_rpg.storage.repository import (
 )
 from qbot_rpg.world.battle_boundary import settle_exit_idempotent
 
-from conftest import make_player
+from conftest import make_player  # type: ignore[import-not-found]
 
 
 # ---------------------------------------------------------------------------

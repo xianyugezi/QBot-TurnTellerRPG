@@ -220,43 +220,43 @@ def test_shopdef_accessors_top_level() -> None:
     d = ShopDef.from_entry(_shop_by_id(_legal_shops(), "guild_shop"))
     assert d.id == "guild_shop"
     assert d.name == "冒险者公会商店"
-    assert d.icon == "🏰"
-    assert d.type == "reputation"
-    assert d.currency == "coins"
-    assert d.level_required is None         # guild 未配 level_required（访问器不伪造默认值，兜底在校验/引擎侧）
-    assert d.reputation_required.get("level") == 2
-    assert d.open_condition is None
-    assert isinstance(d.refresh, RefreshDef)
-    assert d.refresh.mode is None          # 未配 refresh → mode None（裁决⑥：不配=永不刷新）
-    assert len(d.items) == 3
-    assert isinstance(d.items[0], ShopItemDef)
-    assert d.pool == ()
-    assert d.price_fluctuation == 0
-    assert d.visible is True
-    assert d.desc is None
+    assert d.icon == "🏰"  # type: ignore[attr-defined]
+    assert d.type == "reputation"  # type: ignore[attr-defined]
+    assert d.currency == "coins"  # type: ignore[attr-defined]
+    assert d.level_required is None # type: ignore[attr-defined]  # guild 未配 level_required（访问器不伪造默认值，兜底在校验/引擎侧）
+    assert d.reputation_required.get("level") == 2  # type: ignore[attr-defined]
+    assert d.open_condition is None  # type: ignore[attr-defined]
+    assert isinstance(d.refresh, RefreshDef)  # type: ignore[attr-defined]
+    assert d.refresh.mode is None # type: ignore[attr-defined]  # 未配 refresh → mode None（裁决⑥：不配=永不刷新）
+    assert len(d.items) == 3  # type: ignore[attr-defined]
+    assert isinstance(d.items[0], ShopItemDef)  # type: ignore[attr-defined]
+    assert d.pool == ()  # type: ignore[attr-defined]
+    assert d.price_fluctuation == 0  # type: ignore[attr-defined]
+    assert d.visible is True  # type: ignore[attr-defined]
+    assert d.desc is None  # type: ignore[attr-defined]
 
     bm = ShopDef.from_entry(_shop_by_id(_legal_shops(), "black_market"))
-    assert bm.type == "blackmarket"
-    assert bm.price_fluctuation == 20
-    assert bm.open_condition.get("var") == "is_night"
-    assert len(bm.pool) == 3
-    assert bm.listing_count == 3
-    assert bm.blackmarket_listing_n == 3
-    assert bm.refresh.mode == "daily"
-    assert bm.refresh.hour == 20
-    assert bm.items == ()
+    assert bm.type == "blackmarket"  # type: ignore[attr-defined]
+    assert bm.price_fluctuation == 20  # type: ignore[attr-defined]
+    assert bm.open_condition.get("var") == "is_night"  # type: ignore[attr-defined]
+    assert len(bm.pool) == 3  # type: ignore[attr-defined]
+    assert bm.listing_count == 3  # type: ignore[attr-defined]
+    assert bm.blackmarket_listing_n == 3  # type: ignore[attr-defined]
+    assert bm.refresh.mode == "daily"  # type: ignore[attr-defined]
+    assert bm.refresh.hour == 20  # type: ignore[attr-defined]
+    assert bm.items == ()  # type: ignore[attr-defined]
 
 
 def test_shopdef_refresh_subobject() -> None:
     """RefreshDef 四模式访问器（daily/weekly/once/none × hour/weekday/start/end）。"""
     d = ShopDef.from_entry(_shop_by_id(_legal_shops(), "festival_shop"))
-    assert d.refresh.mode == "once"
-    assert d.refresh.start == "2026-09-01 00:00"
-    assert d.refresh.end == "2026-09-07 23:59"
+    assert d.refresh.mode == "once"  # type: ignore[attr-defined]
+    assert d.refresh.start == "2026-09-01 00:00"  # type: ignore[attr-defined]
+    assert d.refresh.end == "2026-09-07 23:59"  # type: ignore[attr-defined]
     d2 = ShopDef.from_entry(_shop_by_id(_legal_shops(), "blacksmith_shop"))
-    assert d2.refresh.mode == "daily"
-    assert d2.refresh.hour == 5
-    assert d2.refresh.weekday is None
+    assert d2.refresh.mode == "daily"  # type: ignore[attr-defined]
+    assert d2.refresh.hour == 5  # type: ignore[attr-defined]
+    assert d2.refresh.weekday is None  # type: ignore[attr-defined]
 
 
 def test_shopitemdef_accessors_12_fields() -> None:
@@ -264,7 +264,7 @@ def test_shopitemdef_accessors_12_fields() -> None:
     reputation_required/min_level/discount/sold_out_once）。"""
     shops = _legal_shops()
     grocery = ShopDef.from_entry(_shop_by_id(shops, "grocery_shop"))
-    hi = grocery.items[1]
+    hi = grocery.items[1]  # type: ignore[attr-defined]
     assert hi.item == "hi_potion"
     assert hi.price == 120
     assert hi.currency is None            # 缺省=商店 currency
@@ -277,28 +277,28 @@ def test_shopitemdef_accessors_12_fields() -> None:
     assert hi.discount is None
     assert hi.sold_out_once is False
 
-    potion = grocery.items[0]
+    potion = grocery.items[0]  # type: ignore[attr-defined]
     assert potion.stock == 0              # stock 0=无限（TC-08）
     assert potion.sold_out_once is False
     assert potion.price == 50
 
     blacksmith = ShopDef.from_entry(_shop_by_id(shops, "blacksmith_shop"))
-    mithril = blacksmith.items[2]
+    mithril = blacksmith.items[2]  # type: ignore[attr-defined]
     assert mithril.stock == 10
     assert mithril.refresh.mode == "weekly"
     assert mithril.refresh.weekday == 1
-    lucky = blacksmith.items[3]
+    lucky = blacksmith.items[3]  # type: ignore[attr-defined]
     assert lucky.price == {"coins": 50, "gems": 5}   # 混合支付（TC-19）
 
     guild = ShopDef.from_entry(_shop_by_id(shops, "guild_shop"))
-    assert guild.items[0].reputation_required.get("level") == 2
-    assert guild.items[2].currency == "gems"
-    assert guild.items[2].stock == 50
+    assert guild.items[0].reputation_required.get("level") == 2  # type: ignore[attr-defined]
+    assert guild.items[2].currency == "gems"  # type: ignore[attr-defined]
+    assert guild.items[2].stock == 50  # type: ignore[attr-defined]
 
     festival = ShopDef.from_entry(_shop_by_id(shops, "festival_shop"))
-    assert festival.items[1].sold_out_once is True   # 一次性售罄（TC-11）
+    assert festival.items[1].sold_out_once is True # type: ignore[attr-defined]  # 一次性售罄（TC-11）
 
-    stamina = grocery.items[4]
+    stamina = grocery.items[4]  # type: ignore[attr-defined]
     assert stamina.min_level == 5
 
 
@@ -341,14 +341,14 @@ def test_shopitemdef_legacy_and_sides() -> None:
 def test_shopdef_defaults() -> None:
     """缺省兜底：type 缺省 normal、visible 缺省 true、refresh 缺省 none、listing_count 缺省。"""
     d = ShopDef.from_entry({"id": "x", "name": "路人小店", "items": [{"item": "potion"}]})
-    assert d.type is None                       # raw 未写 type（默认 normal 为校验侧兜底）
-    assert d.visible is True
-    assert d.refresh.mode is None               # 裁决⑥
-    assert d.items[0].item == "potion"
-    assert d.pool == ()
-    assert d.price_fluctuation is None
-    assert d.listing_count is None
-    assert d.blackmarket_listing_n == len(d.items) == 1   # 缺省 N=len(items)（L216 字面口径）
+    assert d.type is None # type: ignore[attr-defined]  # raw 未写 type（默认 normal 为校验侧兜底）
+    assert d.visible is True  # type: ignore[attr-defined]
+    assert d.refresh.mode is None # type: ignore[attr-defined]  # 裁决⑥
+    assert d.items[0].item == "potion"  # type: ignore[attr-defined]
+    assert d.pool == ()  # type: ignore[attr-defined]
+    assert d.price_fluctuation is None  # type: ignore[attr-defined]
+    assert d.listing_count is None  # type: ignore[attr-defined]
+    assert d.blackmarket_listing_n == len(d.items) == 1 # type: ignore[attr-defined]  # 缺省 N=len(items)（L216 字面口径）
 
 
 # ---------------------------------------------------------------------------
@@ -801,25 +801,25 @@ def test_blackmarket_listing_n_resolution() -> None:
     （listing_count>0 → 该值；items 非空 → len(items)；否则 → len(pool)，对齐定稿 L216/L507 正典）。"""
     bm = _shop_by_id(_legal_shops(), "black_market")
     d = ShopDef.from_entry(bm)
-    assert d.blackmarket_listing_n == 3   # listing_count=3
+    assert d.blackmarket_listing_n == 3 # type: ignore[attr-defined]  # listing_count=3
     bm2 = copy.deepcopy(bm)
     bm2.pop(BLACKMARKET_LISTING_FIELD)
     bm2["items"] = [{"item": "stardust", "price": 800}]
     d2 = ShopDef.from_entry(bm2)
-    assert d2.blackmarket_listing_n == 1  # 回退 len(items)
+    assert d2.blackmarket_listing_n == 1 # type: ignore[attr-defined]  # 回退 len(items)
     # 正典形态：items=[] 无 listing_count → 回退 len(pool)（定稿 L507，不再判 0）
     bm3 = copy.deepcopy(bm)
     bm3.pop(BLACKMARKET_LISTING_FIELD)
     bm3["items"] = []
     d3 = ShopDef.from_entry(bm3)
-    assert d3.blackmarket_listing_n == len(bm3["pool"]) == 3  # 回退 len(pool)
+    assert d3.blackmarket_listing_n == len(bm3["pool"]) == 3 # type: ignore[attr-defined]  # 回退 len(pool)
     # items 与 pool 皆空 → 0（黄提示侧）
     bm4 = copy.deepcopy(bm)
     bm4.pop(BLACKMARKET_LISTING_FIELD)
     bm4["items"] = []
     bm4["pool"] = []
     d4 = ShopDef.from_entry(bm4)
-    assert d4.blackmarket_listing_n == 0
+    assert d4.blackmarket_listing_n == 0  # type: ignore[attr-defined]
 
 
 # ---------------------------------------------------------------------------

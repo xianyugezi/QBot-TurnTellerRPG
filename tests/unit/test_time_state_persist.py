@@ -46,7 +46,7 @@ def test_load_store_none_returns_full_default():
 
 def test_load_non_dict_store_returns_full_default():
     for bad in ("str", 42, [], 3.14):
-        assert load_time_state(bad) == _default()  # type: ignore[arg-type]
+        assert load_time_state(bad) == _default()
 
 
 def test_load_missing_time_state_returns_full_default():
@@ -123,7 +123,7 @@ def test_save_drops_unknown_keys_and_normalizes():
 
 
 def test_save_non_dict_store_creates_new():
-    assert save_time_state(None, {"season_idx": 1}) == {  # type: ignore[arg-type]
+    assert save_time_state(None, {"season_idx": 1}) == {
         "time_state": {"season_idx": 1, "period_idx": 0, "weather_tick": 0, "map_weather_seen": {}},
     }
 
@@ -170,7 +170,7 @@ def test_mark_seen_grows_existing_loaded_state():
 
 
 def test_mark_seen_handles_non_dict_state_defensively():
-    out = mark_map_seen(None, "map_a")  # type: ignore[arg-type]
+    out = mark_map_seen(None, "map_a")
     assert out["map_weather_seen"] == {"map_a": True}
     assert out["season_idx"] == 0
 

@@ -110,7 +110,7 @@ class Transaction:
         self._check()
         cur = await self._conn.execute(sql, params)
         try:
-            return await cur.fetchall()
+            return await cur.fetchall()  # type: ignore[return-value]
         finally:
             await cur.close()
 
@@ -233,7 +233,7 @@ class Database:
         cur = await conn.execute("PRAGMA integrity_check")
         try:
             row = await cur.fetchone()
-            return bool(row) and str(row[0]) == "ok"
+            return bool(row) and str(row[0]) == "ok"  # type: ignore[index]
         finally:
             await cur.close()
 
@@ -277,7 +277,7 @@ class Database:
                 rows = await cur.fetchall()
             finally:
                 await cur.close()
-            return rows
+            return rows  # type: ignore[return-value]
 
     async def fetchone_read(self, sql: str, params: Sequence[Any] = ()) -> Optional[Row]:
         rows = await self._fetch_on_read(sql, params)
@@ -309,7 +309,7 @@ class Database:
         async with self._write_lock:
             cur = await conn.execute(sql, params)
             try:
-                return await cur.fetchall()
+                return await cur.fetchall()  # type: ignore[return-value]
             finally:
                 await cur.close()
 

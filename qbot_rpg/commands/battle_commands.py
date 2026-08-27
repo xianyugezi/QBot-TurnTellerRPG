@@ -436,12 +436,12 @@ def _build_segments(snap: Mapping[str, Any], turn: int) -> List[Mapping[str, Any
         segs.append({
             "seg": i + 1,                                   # 收集器 seg（累计段号）
             "action": str(entry.get("action") or ""),
-            "final_damage": int(dmg.get("final", 0) or 0),
+            "final_damage": int(dmg.get("final", 0) or 0),  # type: ignore[union-attr]
             "target_hp": None,                              # 聚合末值由注入侧填充
             "target_max_hp": None,
             "target": str(entry.get("target") or ""),
-            "crit": str(rating.get("crit", "low") or "low"),
-            "blocked": bool(rating.get("blocked", False)),
+            "crit": str(rating.get("crit", "low") or "low"),  # type: ignore[union-attr]
+            "blocked": bool(rating.get("blocked", False)),  # type: ignore[union-attr]
             "derived_capped": False,
         })
     return segs if len(segs) > 1 else []

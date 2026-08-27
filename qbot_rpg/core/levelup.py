@@ -86,7 +86,7 @@ class LevelUpEngine:
         if exp_curve is None:
             return lambda lv: 100 * int(lv)
         if callable(exp_curve):
-            curve: Callable[[int], int] = exp_curve  # type: ignore[assignment]
+            curve: Callable[[int], int] = exp_curve
 
             def _callable_curve(lv: int) -> int:
                 return int(curve(lv))

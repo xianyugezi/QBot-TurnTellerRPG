@@ -262,7 +262,7 @@ def test_three_types_enum() -> None:
     for t in CHECKIN_TYPES:
         entry = {"id": f"c_{t}", "name": t, "type": t}
         if t == "activity":  # 活动表必有时间窗（定稿 L130）
-            entry["period"] = {"start": "2026-09-01 00:00", "end": "2026-09-30 23:59"}
+            entry["period"] = {"start": "2026-09-01 00:00", "end": "2026-09-30 23:59"}  # type: ignore[assignment]
         rep = _check([entry])
         assert not rep.errors, f"type={t} 不应红拦：{rep.errors}"
     rep = _check([{"id": "c_bad", "name": "坏", "type": "weekly"}])

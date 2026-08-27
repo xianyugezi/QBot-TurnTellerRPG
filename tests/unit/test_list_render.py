@@ -130,7 +130,7 @@ def test_page_items_invalid_raises():
     """非法页码（0/负数/非数字）→ 抛 ValueError（壳层应转 TPL-12，本函数不接非法页码）。"""
     for bad in (0, -1, "abc", None):
         with pytest.raises(ValueError):
-            page_items(ITEMS14, bad)  # type: ignore[arg-type]
+            page_items(ITEMS14, bad)
 
 
 # ---------------------------------------------------------------------------

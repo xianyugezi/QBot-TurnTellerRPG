@@ -1,0 +1,97 @@
+# GitHub Actions CI 流水线（细化_M6_质量门禁 D7 §四 CI-01/CI-02 载体本体）
+#
+# 触发：push / pull_request（CI-01）
+# 步骤：① 依赖安装 → ② ruff → ③ mypy → ④ pytest 全量 → ⑤ coverage 阈值（CI-01 五步）
+# 任一 step 失败 → job 失败（GitHub Actions step 失败即 job 失败，CI-01「exit≠0 语义」）
+# 口径一致（CI-02 / D7-D3）：① 建 .venv 复刻本地布局（run_all_tests.py / verify_m0.py
+#   硬编码 .venv/bin/python，CI 同布局后可直接调用全量入口）；④ 直接调用
+#   scripts/run_all_tests.py 全量（阶段1 pytest 层 + 阶段2 verify_m0~m5，阶段0 lint /
+#   阶段3 coverage 由 D7 LNT/COV 批次接入后自动继承）；⑤ coverage 独立段复刻 D7 COV-03/04
+#   （三目录各自 ≥80%，禁合计稀释），阈值 80% 与 COV-04/run_all_tests 同源，不另定义阈值。
+
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  quality-gate:
+    name: 质量门禁（ruff + mypy + pytest 全量 + coverage 阈值）
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # ① 依赖安装（CI-01 步骤①）：建 .venv 与本地开发布局同构（run_all_tests/verify 脚本
+      #    均按 .venv/bin/python 定位解释器），再装 requirements.txt（锁定源）+ dev 组
+      #    （pyproject [project.optional-dependencies].dev；ruff/mypy/coverage 由 D7
+      #    LNT-03/COV-01 批次入依赖后此处自动覆盖）
+      - name: ① 依赖安装（venv + requirements.txt + -e .[dev]）
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/pip install -r requirements.txt
+          .venv/bin/pip install -e ".[dev]"
+
+      # ② ruff 静态检查（CI-01 步骤②）：命令与 D7 LNT-04 run_all_tests 阶段0 一致（ruff check .）
+      #    存量问题走 LNT-05/06 一次性基线豁免（docs/verify/lint_baseline.md + pyproject
+      #    per-file-ignores），清单外新增必拦
+      - name: ② ruff 静态检查
+        run: .venv/bin/ruff check .
+
+      # ③ mypy 类型检查（CI-01 步骤③）：命令与 D7 LNT-04 run_all_tests 阶段0 一致（mypy .），
+      #    定档 non-strict（LNT-02 / D7-D1）
+      - name: ③ mypy 类型检查
+        run: .venv/bin/mypy .
+
+      # ④ pytest 全量（CI-01 步骤④）：直接调用 run_all_tests.py 全量入口（CI-02 首选形态，
+      #    与本地同一命令同一阈值）——阶段1 pytest 层（unit/contract/e2e/fault）+ 阶段2
+      #    verify_m0~m5 里程碑门禁；后续 LNT 阶段0 / COV 阶段3 接入后自动继承，无双重口径
+      - name: ④ pytest 全量（run_all_tests.py 全量入口）
+        run: .venv/bin/python scripts/run_all_tests.py
+
+      # ⑤ coverage 阈值（CI-01 步骤⑤ / 独立 coverage 段，D7 COV-04 允许形态）：复刻 COV-03
+      #    测量命令（--source 三目录）+ COV-04 逐目录断言（qbot_rpg/core + engine + content
+      #    各自行覆盖 ≥80%，任一 <80% 或零语句 → exit 1，禁止「合计 ≥80%」稀释语义 COV-02）；
+      #    测试路径与 run_all_tests 全量阶段1 层路径一致（unit/contract + fault 六脚本显式）
+      - name: ⑤ coverage 阈值断言（三目录各自 ≥80%）
+        run: |
+          .venv/bin/coverage run --source=qbot_rpg/core,qbot_rpg/engine,qbot_rpg/content -m pytest tests/unit tests/contract tests/fault/fault_inject_crash.py tests/fault/fault_inject_save.py tests/fault/fault_inject_reload.py tests/fault/fault_inject_formula.py tests/fault/fault_inject_doublepay.py tests/fault/fault_inject_netdrop.py
+          .venv/bin/coverage json -o /tmp/coverage_ci.json
+          .venv/bin/python - <<'PY'
+          import json
+
+          data = json.load(open("/tmp/coverage_ci.json"))
+          TARGETS = ("qbot_rpg/core", "qbot_rpg/engine", "qbot_rpg/content")
+          THRESHOLD = 80.0  # 与 D7 COV-04 / run_all_tests 同源阈值，不另定义
+          agg = {d: [0, 0] for d in TARGETS}  # [statements, covered]
+          for path, info in data["files"].items():
+              for d in TARGETS:
+                  if path.startswith(d + "/"):  # message_format/ 子包随 core/ 前缀归入（D7 §1.4）
+                      s = info["summary"]
+                      agg[d][0] += s["num_statements"]
+                      agg[d][1] += s["covered_lines"]
+                      break
+          failed = False
+          for d in TARGETS:
+              st, cv = agg[d]
+              pct = 100.0 * cv / st if st else 0.0
+              print(f"{d}: {pct:.1f}% ({cv}/{st})")
+              if st == 0 or pct < THRESHOLD:  # 目录零语句视为测量异常，不静默放行
+                  failed = True
+          if failed:
+              raise SystemExit(1)
+          PY
+
+      # 归档（可选，CI-02「CI 产物留档 docs/verify/」；no files → 告警不失败）
+      - name: 归档 docs/verify/
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verify-outputs
+          path: docs/verify/

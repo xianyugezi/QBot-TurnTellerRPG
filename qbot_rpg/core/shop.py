@@ -915,7 +915,7 @@ def _count_item(ctx: Mapping[str, Any], item_id: str) -> int:
     hook = ctx.get("count_item")
     if callable(hook):
         try:
-            return int(hook(item_id))  # type: ignore[arg-type]  # hook 返回 object，运行时 int() 归一
+            return int(hook(item_id))    # hook 返回 object，运行时 int() 归一
         except Exception:
             return 0
     inv = ctx.get("inventory")
@@ -932,11 +932,12 @@ def _browse_row(entry: Mapping, index: int, shop: Mapping, ctx: Mapping[str, Any
     item_id = entry.get("item")
     price = price_for(entry, shop, ctx)
     stock = _entry_stock(entry)
-    remaining = _world_stock(ctx, shop["id"], item_id, stock) if stock > 0 else None
-    sold_out = stock > 0 and (_is_sold_out(ctx, shop["id"], item_id) or remaining <= 0)
+    remaining = _world_stock(ctx, shop["id"], item_id, stock) if stock > 0 else None  # type: ignore[arg-type]
+    sold_out = stock > 0 and (_is_sold_out(ctx, shop["id"], item_id) or remaining <= 0)  # type: ignore[arg-type,operator]
     req = _requirement_state(shop, entry, ctx)
-    pl = personal_limit_state(entry, shop["id"], ctx) if _entry_limit(entry) > 0 else \
-        {"limit": 0, "count": 0, "period": None}
+    # 反斜杠续行行尾无法挂 type: ignore → 改括号化三元式（M6 基线路B，语义不变）
+    pl = (personal_limit_state(entry, shop["id"], ctx) if _entry_limit(entry) > 0 else # type: ignore[arg-type]
+          {"limit": 0, "count": 0, "period": None})
     markers: List[str] = []
     greyed = False
     if stock > 0:
@@ -945,9 +946,9 @@ def _browse_row(entry: Mapping, index: int, shop: Mapping, ctx: Mapping[str, Any
             greyed = True
         else:
             markers.append(f"全服剩 {remaining}")
-    if pl["limit"] > 0:
-        label = {"day": "每日", "week": "每周", "month": "每月"}.get(pl["period"], "每日")
-        if pl["count"] >= pl["limit"]:
+    if pl["limit"] > 0:  # type: ignore[operator]
+        label = {"day": "每日", "week": "每周", "month": "每月"}.get(pl["period"], "每日")  # type: ignore[arg-type]
+        if pl["count"] >= pl["limit"]:  # type: ignore[operator]
             markers.append(f"{label}限购 {pl['limit']}（已满）")
             greyed = True
         else:
@@ -962,7 +963,7 @@ def _browse_row(entry: Mapping, index: int, shop: Mapping, ctx: Mapping[str, Any
     return {
         "index": index,
         "item_id": item_id,
-        "name": _item_name(item_id, ctx),
+        "name": _item_name(item_id, ctx),  # type: ignore[arg-type]
         "price": price,
         "discount": discount,
         "original_unit": _entry_base_price(entry, ctx) or 0,

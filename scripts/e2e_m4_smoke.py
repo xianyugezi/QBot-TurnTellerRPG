@@ -185,15 +185,15 @@ def build_ctx(*, now: Optional[int] = None, **overrides) -> dict:
 
     def _add_item(item_id: object, count: object, bound: bool = True) -> bool:
         key = str(item_id)
-        inv[key] = inv.get(key, 0) + int(count)
+        inv[key] = inv.get(key, 0) + int(count)  # type: ignore[call-overload]
         return True
 
     def _remove_item(item_id: object, count: object) -> bool:
         key = str(item_id)
         cur = inv.get(key, 0)
-        if cur < int(count):
+        if cur < int(count):  # type: ignore[call-overload]
             return False
-        inv[key] = cur - int(count)
+        inv[key] = cur - int(count)  # type: ignore[call-overload]
         return True
 
     def _count_item(item_id: object) -> int:

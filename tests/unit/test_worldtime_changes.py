@@ -117,7 +117,7 @@ def test_missing_cache_is_first_time_full_change():
         {"kind": "weather", "old": None, "new": 233376},
     ]
     assert wt.check_changes({}, {"now": now}) == full
-    assert wt.check_changes(None, {"now": now}) == full  # type: ignore[arg-type]
+    assert wt.check_changes(None, {"now": now}) == full
     # 部分缺键：season 已缓存且吻合 → 只报 period/weather 首次
     assert wt.check_changes({"season_idx": 1}, {"now": now}) == [
         {"kind": "period", "old": None, "new": 1},

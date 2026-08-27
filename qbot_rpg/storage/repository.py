@@ -22,7 +22,8 @@ import datetime
 import json
 import sqlite3
 import os
-from dataclasses import dataclass, field  # noqa: F401（field 供类型注释可读）
+# field 供类型注释可读（当前未直接引用 → F401 豁免：M6 基线清单 LNT-05/06）
+from dataclasses import dataclass, field  # noqa: F401
 from pathlib import Path
 from typing import (
     Any,
@@ -176,7 +177,7 @@ def _item_from_dict(d: Dict[str, Any]) -> ItemInstance:
     """inventory JSON 元素 → ItemInstance；缺省补默认、未知键多忽略（MIG-1）。"""
     stats = d.get("stats_bonus")
     return ItemInstance(
-        item_id=cast(ItemID, str(d.get("item_id") or "")),
+        item_id=cast(ItemID, str(d.get("item_id") or "")),  # type: ignore[redundant-cast]
         name=str(d.get("name") or ""),
         count=int(d.get("count", 1)),
         quality=str(d.get("quality") or "normal"),
@@ -191,7 +192,7 @@ def _item_from_dict(d: Dict[str, Any]) -> ItemInstance:
 def _equip_from_dict(d: Dict[str, Any]) -> EquipmentSlot:
     gems = d.get("gems")
     return EquipmentSlot(
-        item_id=cast(ItemID, str(d.get("item_id") or "")),
+        item_id=cast(ItemID, str(d.get("item_id") or "")),  # type: ignore[redundant-cast]
         name=str(d.get("name") or ""),
         slot_level=int(d.get("slot_level", 0)),
         locked=bool(d.get("locked", False)),
@@ -256,7 +257,7 @@ def row_to_player(row: Any) -> Player:
     job_id = str(persistent.pop(_JOB_ID_KEY, "novice") or "novice")
 
     return Player(
-        qid=cast(PlayerQID, str(col("player_qid") or "")),
+        qid=cast(PlayerQID, str(col("player_qid") or "")),  # type: ignore[redundant-cast]
         name=str(col("nickname") or ""),
         job_id=job_id,
         level=int(col("level") or 1),
@@ -845,7 +846,7 @@ def _payload_to_json(payload: object) -> str:
     if isinstance(payload, (str, bytes)):
         return str(payload)
     if dataclasses.is_dataclass(payload):
-        return _j(dataclasses.asdict(payload))
+        return _j(dataclasses.asdict(payload))  # type: ignore[arg-type]
     return _j(payload)
 
 

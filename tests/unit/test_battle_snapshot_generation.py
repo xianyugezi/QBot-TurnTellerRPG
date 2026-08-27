@@ -67,7 +67,7 @@ def test_rsm_06_snapshot_generation_roundtrip_via_payload():
 
     from qbot_rpg.storage.connection import Database
     from qbot_rpg.storage.repository import Repository, SessionRow
-    from conftest import make_player
+    from conftest import make_player  # type: ignore[import-not-found]
 
     db = Database(":memory:")
     repo = Repository(db)

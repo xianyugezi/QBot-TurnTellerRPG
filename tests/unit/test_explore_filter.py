@@ -225,7 +225,7 @@ def _enter_ctx() -> dict:
     """/进入 move 成功 ctx：玩家位于起始村落 + maps + 怪物名映射。"""
     ctx = make_ctx(
         player={"map_id": "start_village", "name": "阿伟"},
-        maps=[dict(m) for m in _ENTER_MAPS],
+        maps=[dict(m) for m in _ENTER_MAPS],  # type: ignore[call-overload]
         monsters={k: dict(v) for k, v in _ENTER_MONSTERS.items()},
     )
     ctx["map_id"] = "start_village"

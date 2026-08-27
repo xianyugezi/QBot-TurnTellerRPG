@@ -44,7 +44,7 @@ def _outcome(**kw: Any) -> ActionOutcome:
         "battle_ended": False, "status": None,
     }
     defaults.update(kw)
-    return ActionOutcome(**defaults)  # type: ignore[arg-type]
+    return ActionOutcome(**defaults)
 
 
 def _report(*outcomes: Any, **kw: Any) -> TurnReport:
@@ -55,7 +55,7 @@ def _report(*outcomes: Any, **kw: Any) -> TurnReport:
         "log": (), "outcomes": tuple(outcomes),
     }
     defaults.update(kw)
-    return TurnReport(**defaults)  # type: ignore[arg-type]
+    return TurnReport(**defaults)
 
 
 def _enriched(oc: ActionOutcome, **extra: Any) -> SimpleNamespace:

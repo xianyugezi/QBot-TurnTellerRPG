@@ -47,7 +47,7 @@ def make_ctx(**overrides) -> dict:
 def record_adds(ctx) -> list:
     """注入入包 hook 并收集调用记录，返回 [(item_id, count, bound), ...]。"""
     calls = []
-    ctx["add_item"] = lambda item_id, count, bound: (calls.append((item_id, count, bound)) or True)
+    ctx["add_item"] = lambda item_id, count, bound: (calls.append((item_id, count, bound)) or True)  # type: ignore[func-returns-value]
     return calls
 
 

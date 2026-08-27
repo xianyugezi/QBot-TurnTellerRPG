@@ -20,7 +20,7 @@
 try:
     from typing import TypeAlias  # Python >=3.10
 except ImportError:  # Python 3.9 兜底（P2-13 修复：注释承诺的 typing_extensions 兜底落地）
-    from typing_extensions import TypeAlias  # type: ignore[no-redef]
+    from typing_extensions import TypeAlias
 from typing import NewType
 
 # ---------------------------------------------------------------------------

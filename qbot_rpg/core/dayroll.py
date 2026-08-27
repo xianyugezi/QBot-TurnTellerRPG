@@ -272,7 +272,7 @@ def advance_cycles(
     last_key: object,
     cycles: int = 1,
     period: str = "day",
-    cfg: Optional[Mapping] = None,  # noqa: ARG001（签名保留 cfg 与其它周期工具对齐；纯函数）
+    cfg: Optional[Mapping] = None,  # 签名保留 cfg 与其它周期工具对齐；纯函数（ARG001 未启用）
 ) -> str:
     """日期键推进 N 个周期：day=+N 天 / week=+7N 天 / month=自然月进位+夹取天数。
 

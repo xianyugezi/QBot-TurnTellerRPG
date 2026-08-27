@@ -49,7 +49,7 @@ def _outcome(**kw: Any) -> ActionOutcome:
         "battle_ended": False, "status": None,
     }
     defaults.update(kw)
-    return ActionOutcome(**defaults)  # type: ignore[arg-type]
+    return ActionOutcome(**defaults)
 
 
 def _enriched(oc: ActionOutcome, **extra: Any) -> SimpleNamespace:
@@ -67,7 +67,7 @@ def _round(**kw: Any) -> SimpleNamespace:
         "ended": False, "status": None, "log": (), "outcomes": (),
     }
     merged = {**defaults, **{k: v for k, v in kw.items() if k in std}}
-    tr = TurnReport(**merged)  # type: ignore[arg-type]
+    tr = TurnReport(**merged)
     extra = {k: v for k, v in kw.items() if k not in std}
     return SimpleNamespace(**{**tr.__dict__, **extra})
 
@@ -393,4 +393,4 @@ def test_no_banned_emoji_in_settlement_templates() -> None:
         _render_combo_settle_line(3, "派生倍率已达上限 1.5×"),
     ]
     for text in samples:
-        _assert_no_banned_emoji(text)
+        _assert_no_banned_emoji(text)  # type: ignore[arg-type]

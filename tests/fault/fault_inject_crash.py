@@ -39,7 +39,7 @@ from qbot_rpg.storage.connection import Database
 from qbot_rpg.storage.repository import Repository, SessionRow, row_to_player
 from qbot_rpg.world.battle_boundary import settle_exit_idempotent
 
-from conftest import make_player
+from conftest import make_player  # type: ignore[import-not-found]
 
 
 @pytest.fixture

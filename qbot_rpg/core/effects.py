@@ -258,7 +258,7 @@ class EffectRuntime:
 
     def status_instances(self, side: str) -> List[Dict[str, Any]]:
         self.ensure_actor(side)
-        return self.status_state[side]  # type: ignore[return-value]
+        return self.status_state[side]
 
     def find_status(self, side: str, status_id: str) -> Optional[Dict[str, Any]]:
         for inst in self.status_instances(side):
@@ -287,7 +287,7 @@ class EffectRuntime:
 
     def marks(self, side: str) -> List[Dict[str, Any]]:
         self.ensure_actor(side)
-        return self.marks_state[side]  # type: ignore[return-value]
+        return self.marks_state[side]
 
     def marks_manager(self) -> MarksManager:
         """印记状态管理器访问器（细化_1d §2.1/§3）：绑定当前 marks_state 同一 dict
@@ -509,7 +509,7 @@ class EffectRuntime:
         if not force and negative:
             defense = None
             if ctx is not None and isinstance(ctx.snapshot.get(target), dict):
-                defense = ctx.snapshot[target].get("defenses")  # type: ignore[index]
+                defense = ctx.snapshot[target].get("defenses")
             dims = self.immune_dims(target, defense)
             blocks_debuff_all = bool(dims["all"]) and bool(dims.get("block_debuff", True))
             if (dims["all"] and blocks_debuff_all) or dims["status"]:
@@ -1513,9 +1513,9 @@ def execute_action(
 
     if atype == "status_apply":
         status_id = str(action.get("status_id") or action.get("status") or "")
-        res = runtime.apply_status(status_id, target, source=str(action.get("source") or attacker), attacker=attacker, ctx=ctx)
-        side_effects.append({"type": "status_apply", "target": target, "status_id": status_id, "applied": res.applied, "reason": res.reason})
-        return ActionResult(res.applied, side_effects, res.reason)
+        res = runtime.apply_status(status_id, target, source=str(action.get("source") or attacker), attacker=attacker, ctx=ctx)  # type: ignore[assignment]
+        side_effects.append({"type": "status_apply", "target": target, "status_id": status_id, "applied": res.applied, "reason": res.reason})  # type: ignore[attr-defined]
+        return ActionResult(res.applied, side_effects, res.reason)  # type: ignore[attr-defined]
 
     if atype == "dispel":
         # 驱散=清增益（强化/反制/治疗）；净化=清减益（弱体/封锁/伤害）（定稿 §4.4 / 细化_1b E-4）。

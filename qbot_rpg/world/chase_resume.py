@@ -216,18 +216,18 @@ def prepare_resume_battle(
     if not _num(hinted):
         hinted = chase.get("pv_recover")
     if _num(hinted):
-        pv_recover = float(hinted)
+        pv_recover = float(hinted)  # type: ignore[arg-type]
     else:
         zc = chase.get("zone_change")
         if isinstance(zc, Mapping):
             zr = zc.get("pv_recover")
             if _num(zr):
-                pv_recover = float(zr)
+                pv_recover = float(zr)  # type: ignore[arg-type]
     precomputed = cd.get("pv_half_value")
     if not _num(precomputed):
         precomputed = chase.get("pv_half_value")
     if _num(precomputed):
-        pv_half_value = int(precomputed)
+        pv_half_value = int(precomputed)  # type: ignore[arg-type]
     else:
         pv_max: Optional[float] = None
         for k in ("pv_max", "max_pv"):

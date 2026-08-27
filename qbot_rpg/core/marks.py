@@ -188,7 +188,7 @@ class MarksManager:
     def instances(self, side: str) -> List[Dict[str, Any]]:
         """给定侧的印记实例列表（§2.1 双向表；list 元素为 JSON dict）。"""
         self.ensure(side)
-        return self.marks_state[side]  # type: ignore[return-value]
+        return self.marks_state[side]
 
     def definition(self, mark_id: str) -> Optional[Any]:
         """印记定义（经 resolver；None=未注册，热重载删定义后按「无印记」降级，§九）。"""
@@ -458,7 +458,7 @@ class MarksManager:
                   defs: Optional[Mapping[str, Any]] = None) -> "MarksManager":
         return cls.from_snapshot(json.loads(raw), resolver=resolver, defs=defs)
 
-    def __eq__(self, other: object) -> bool:  # type: ignore[override]
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, MarksManager):
             return NotImplemented
         return self.to_json() == other.to_json()

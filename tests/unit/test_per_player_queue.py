@@ -17,6 +17,11 @@
 【工程补白】DB 用 **文件库（WAL，tmp_path）**而非 :memory:：本件套并发读（入队前
 idem_claim）与队列消费者在途写事务同时发生，:memory: 共享缓存库为表级锁（写事务污染
 表 → 读侧 SQLITE_LOCKED 不重试），文件库 WAL 下读者永不阻塞 = 生产等价。
+
+【M6 批7·路A 时序加固】忙等预算 range(5000) → range(50000)：coverage 插桩（D7 COV-03
+测量运行，scripts/run_all_tests.py 阶段3）下事件循环显著变慢，5000 次 sleep(0) 偶发
+在 consumer 调度前耗尽 → 门禁测量假红（实测单文件 3/3 触发）。纯等待预算放宽 10x，
+不改断言语义；无 coverage 时 5000 本就充裕，放宽无副作用。
 """
 
 from __future__ import annotations
@@ -32,7 +37,7 @@ from qbot_rpg.commands.processing import PerPlayerQueue, process_message
 from qbot_rpg.storage.connection import Database
 from qbot_rpg.storage.repository import IdemKey, Repository, row_to_player
 
-from conftest import make_player
+from conftest import make_player  # type: ignore[import-not-found]
 
 
 # ---------------------------------------------------------------------------
@@ -104,7 +109,7 @@ async def test_pool_01_same_player_in_order(repo_factory):
             command="/甲", handler=h_a,
         ))
         # 等 a 入队并进入 handler（阻塞在 b_ready）
-        for _ in range(5000):
+        for _ in range(50000):
             await asyncio.sleep(0)
             if order == ["a"]:
                 break
@@ -154,7 +159,7 @@ async def test_pool_02_different_players_parallel(repo_factory):
             repo, queue, message_id="A1", group_id="g", player_qid="10001",
             command="/一", handler=h_a1,
         ))
-        for _ in range(5000):
+        for _ in range(50000):
             await asyncio.sleep(0)
             if order == ["a1"]:
                 break
@@ -163,7 +168,7 @@ async def test_pool_02_different_players_parallel(repo_factory):
             repo, queue, message_id="A2", group_id="g", player_qid="10001",
             command="/二", handler=h_a2,
         ))
-        for _ in range(5000):
+        for _ in range(50000):
             await asyncio.sleep(0)
             if queue.qsize("10001") == 1:   # A2 已入队（积压在 A1 后）
                 break
@@ -173,7 +178,7 @@ async def test_pool_02_different_players_parallel(repo_factory):
             repo, queue, message_id="B1", group_id="g", player_qid="10002",
             command="/B", handler=h_b,
         ))
-        for _ in range(5000):
+        for _ in range(50000):
             await asyncio.sleep(0)
             if queue.has_consumer("10002"):
                 break
@@ -277,7 +282,7 @@ async def test_pool_queue_window_duplicate_authoritative(repo_factory):
             repo, queue, message_id="dup", group_id="g", player_qid="10001",
             command="/签到", handler=h1,
         ))
-        for _ in range(5000):
+        for _ in range(50000):
             await asyncio.sleep(0)
             if inside == ["h1"]:
                 break

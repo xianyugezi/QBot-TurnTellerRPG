@@ -231,7 +231,7 @@ class MonsterAI:
         返回按 priority 降序（同级随机已由 B2 用本引擎 rng 排序）的触发条目列表。
         """
         return evaluate_conditions_all(
-            self._special_actions, battle_state, rng=self._rng, commit=True
+            self._special_actions, battle_state, rng=self._rng, commit=True  # type: ignore[arg-type]
         )
 
     def roll_chain(self, chain_id: str, battle_state: dict) -> bool:
@@ -682,7 +682,7 @@ class MonsterAI:
                     ">": cur > val, ">=": cur >= val,
                     "==": cur == val}.get(op, False)
         if ctype == "phase_changed":
-            val = cond.get("value")
+            val = cond.get("value")  # type: ignore[assignment]
             if val is None:
                 return False
             ai = battle_state["ai_state"]
@@ -707,7 +707,7 @@ class MonsterAI:
         try:
             lib = self._action_lib
             if callable(lib):
-                res = lib(action_id)  # type: ignore[operator]
+                res = lib(action_id)
             elif isinstance(lib, Mapping):
                 res = lib.get(action_id)
             else:

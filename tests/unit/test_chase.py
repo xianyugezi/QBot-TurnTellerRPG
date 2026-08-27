@@ -170,7 +170,7 @@ class TestChaseTrigger:
         out = chase_trigger({"hp_pct": 25.0}, EMBER_ZONE_CHANGE)
         assert out["triggered"] is True                       # 1 阈值内触发
         assert out["targets"] == EMBER_ZONE_CHANGE["targets"]  # 2 候选区原样返回
-        assert out["target"] in EMBER_ZONE_CHANGE["targets"]   # 3 目标 ∈ 候选
+        assert out["target"] in EMBER_ZONE_CHANGE["targets"] # type: ignore[operator]  # 3 目标 ∈ 候选
         assert isinstance(out["target"], str)                 # 4 目标为图 id 字符串
 
     def test_threshold_boundary_and_miss(self) -> None:
@@ -210,7 +210,7 @@ class TestChaseTrigger:
         out = chase_trigger({"hp_pct": 25.0}, EMBER_ZONE_CHANGE, boss_flow=bf)
         assert out["triggered"] is True                       # 1 注入判定结果生效
         assert bf.calls == 1                                  # 2 判定委派注入实现
-        assert out["target"] in EMBER_ZONE_CHANGE["targets"]  # 3 触发后仍装配候选区
+        assert out["target"] in EMBER_ZONE_CHANGE["targets"] # type: ignore[operator]  # 3 触发后仍装配候选区
         bf2 = StubBossFlow(False)
         assert chase_trigger({"hp_pct": 25.0}, EMBER_ZONE_CHANGE, boss_flow=bf2)["triggered"] is False  # 4 注入拦截
 
@@ -243,13 +243,13 @@ class TestPickChaseTarget:
         a = pick_chase_target(EMBER_ZONE_CHANGE, rng=rng)
         b = pick_chase_target(EMBER_ZONE_CHANGE, rng=rng)
         assert a == b                                          # 1 同 rng 序列同值
-        assert a in EMBER_ZONE_CHANGE["targets"]               # 2 目标 ∈ 候选
+        assert a in EMBER_ZONE_CHANGE["targets"] # type: ignore[operator]  # 2 目标 ∈ 候选
 
     def test_different_rng_different(self) -> None:
         a = pick_chase_target(EMBER_ZONE_CHANGE, rng=ScriptedRng([0.1]))
         b = pick_chase_target(EMBER_ZONE_CHANGE, rng=ScriptedRng([0.9]))
         assert a != b                                          # 1 不同 rng 不同值
-        assert {a, b} <= set(EMBER_ZONE_CHANGE["targets"])     # 2 两目标均 ∈ 候选
+        assert {a, b} <= set(EMBER_ZONE_CHANGE["targets"]) # type: ignore[call-overload]  # 2 两目标均 ∈ 候选
 
     def test_random_index_mapping(self) -> None:
         # rng.random() 索引映射：int(r×n) 覆盖各下标
@@ -260,7 +260,7 @@ class TestPickChaseTarget:
         a = pick_chase_target(EMBER_ZONE_CHANGE)
         b = pick_chase_target(EMBER_ZONE_CHANGE)
         assert a == b                                          # 1 未注入 rng 固定种子同候选集同值
-        assert a in EMBER_ZONE_CHANGE["targets"]               # 2 目标 ∈ 候选
+        assert a in EMBER_ZONE_CHANGE["targets"] # type: ignore[operator]  # 2 目标 ∈ 候选
         c = pick_chase_target(dict(EMBER_ZONE_CHANGE, targets=["zone_x"]))
         assert c == "zone_x"                                   # 3 单候选恒选中
 

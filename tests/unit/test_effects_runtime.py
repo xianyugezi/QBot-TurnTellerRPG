@@ -268,7 +268,7 @@ def test_d1_status_immune_blocks_debuff_not_damage(ctx):
                           ctx=DamageCtx(0, "skill", "player", "enemy", {}, {"rng": AlwaysZero()}))
     assert res.reason == "immune_status"
     snap = base_snapshot()
-    snap["enemy"]["status_state"] = rt.status_state["enemy"]  # type: ignore[assignment]
+    snap["enemy"]["status_state"] = rt.status_state["enemy"]
     snap["enemy"]["defenses"]["immune"] = {"status": True, "damage": False, "interrupt": False, "all": False, "block_debuff": True}
     r = pipe.damage_pipeline(ctx(snap, 50), EffectRuntime())
     assert r.final_damage == 50  # 状态免疫不挡伤害（I1）

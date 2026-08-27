@@ -163,7 +163,7 @@ def test_tc02_stats_missing_template_fill() -> None:
 # ---------------------------------------------------------------------------
 def test_tc03_no_weakness_warning_not_blocking() -> None:
     """TC-03：weakness:{} → 警告「该怪无弱点」（Y-9/R3_no_weakness，不拦截）。"""
-    for bad_weakness in ({}, None):
+    for bad_weakness in ({}, None):  # type: ignore[var-annotated]
         enemy = _base_enemy(weakness=bad_weakness)
         rep = _check([enemy])
         assert not rep.errors

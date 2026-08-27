@@ -13,13 +13,13 @@ from pathlib import Path
 
 import pytest
 
-from conftest import TESTS_DIR
+from conftest import TESTS_DIR  # type: ignore[import-not-found]
 
 REPO_ROOT = TESTS_DIR.parent
 
 # ---- import check_architecture 纯函数（scripts 不在包内，走 sys.path 插入）----
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
-import check_architecture as arch  # noqa: E402
+import check_architecture as arch # type: ignore[import-not-found]  # noqa: E402
 
 
 def test_g0_subprocess_exit0():

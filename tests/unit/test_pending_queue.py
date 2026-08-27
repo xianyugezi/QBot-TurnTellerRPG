@@ -23,7 +23,7 @@ from qbot_rpg.storage.pending import (
 )
 from qbot_rpg.storage.repository import Repository
 
-from conftest import make_player
+from conftest import make_player  # type: ignore[import-not-found]
 
 
 def _entry(qid: str = "10001", payload: dict | None = None, action: str = ACTION_PLAYER_UPSERT) -> PendingEntry:
@@ -88,7 +88,7 @@ async def test_save_player_catches_operational_error(tmp_path):
     repo = Repository(db, pending_dir=str(tmp_path))
     await repo.save_player(make_player("20001"))
 
-    async def boom_commit(conn) -> None:  # type: ignore[no-untyped-def]
+    async def boom_commit(conn) -> None:
         raise sqlite3.OperationalError("database or disk is full")
 
     repo.db._commit = boom_commit  # 注入接缝：实例遮蔽
@@ -110,7 +110,7 @@ async def test_replay_success_clears_and_keeps_new_appends(tmp_path):
     await repo.save_player(make_player("20001"))
     orig_commit = repo.db._commit  # 保存原方法（恢复用，勿置 None——会破坏生产路径）
 
-    async def boom_commit(conn) -> None:  # type: ignore[no-untyped-def]
+    async def boom_commit(conn) -> None:
         raise sqlite3.OperationalError("database or disk is full")
 
     repo.db._commit = boom_commit
@@ -150,7 +150,7 @@ async def test_replay_failure_keeps_replay_file(tmp_path):
                                 row_payload={"player_qid": "10001", "nickname": "X", "level": 1},
                                 created_at="2026-08-27T12:00:00Z"))
     # 注入重放失败：_apply_pending_entry 抛错（模拟主库仍不可写）
-    async def boom_apply(tx, entry):  # type: ignore[no-untyped-def]
+    async def boom_apply(tx, entry):
         raise sqlite3.OperationalError("database or disk is full")
 
     repo._apply_pending_entry = boom_apply  # 实例遮蔽

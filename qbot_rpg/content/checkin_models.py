@@ -478,7 +478,7 @@ def parse_checkins(modules: Mapping[str, object]) -> Tuple[CheckinDef, ...]:
     checkins = modules.get(CHECKIN_MODULE) if isinstance(modules, Mapping) else None
     if not isinstance(checkins, list):
         return ()
-    return tuple(cast(CheckinDef, CheckinDef.from_entry(e)) for e in checkins if isinstance(e, Mapping))
+    return tuple(cast(CheckinDef, CheckinDef.from_entry(e)) for e in checkins if isinstance(e, Mapping))  # type: ignore[redundant-cast]
 
 
 # =====================================================================================
@@ -614,7 +614,7 @@ def _effective_cycle(period: object, eff_type: str) -> int:
     """生效周期天数（校验口径）：显式 cycle_days > 类型默认（loop/activity=7；monthly=31 上限）。"""
     if isinstance(period, Mapping) and isinstance(period.get("cycle_days"), int) \
             and not isinstance(period.get("cycle_days"), bool) and period["cycle_days"] >= 1:
-        return period["cycle_days"]  # type: ignore[return-value]  # 已判 int
+        return period["cycle_days"]    # 已判 int
     if eff_type == "monthly":
         return CHECKIN_MAX_MONTH_DAYS
     return CHECKIN_CYCLE_DAYS_DEFAULT

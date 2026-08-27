@@ -51,7 +51,7 @@ def test_b2_guard_defense_command_halves(seed: int):
     assert g.action_type == "guard" and g.ok
     assert eng.battle_state()["player"]["hp"] == PLAYER["hp"]  # 防御本回合不扣血
     raw_noguard, _ = total_damage(
-        channel_phys(ENEMY["atk"],1.0,1.0,1.3,defense_factor(effective_con(PLAYER["con"],0))),
+        channel_phys(ENEMY["atk"],1.0,1.0,1.3,defense_factor(effective_con(PLAYER["con"],0))),  # type: ignore[arg-type]
         channel_elem(0,0,1.0,1.3,1.0), rng=1.0)
     eng._rng = QueueRNG(SEQ)
     out_en = eng.enemy_act()
@@ -239,7 +239,7 @@ def test_p1_rejected_keeps_act_and_no_turn(seed: int):
     _skill = {"a": {"id": "a", "name": "火球", "tag": "combo", "mp_cost": 100}}
     player = dict(PLAYER); player["mp"] = 0
     eng = BattleEngine(defs={"c1": _chain, **_skill}, config={"combo_enforce_mp": True})
-    eng._rng = QueueRNG([0.5, 0.5, 0.5, 1.0])
+    eng._rng = QueueRNG([0.5, 0.5, 0.5, 1.0])  # type: ignore[assignment]
     eng.start(player, ENEMY, random_seed=seed)
     out = eng.do_action("player", {"type": "skill", "skill_id": "a", "tag": "combo", "mult": 1.0})
     assert out.ok is False, "MP 不足应被拒"

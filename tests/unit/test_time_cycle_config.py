@@ -374,7 +374,7 @@ def test_validate_report_fallback_errors_list():
 
 def test_validate_none_settings_no_crash():
     r = _Reporter()
-    validate_time_cycle(None, r)  # type: ignore[arg-type]
+    validate_time_cycle(None, r)
     assert r.errors == []
 
 
@@ -569,7 +569,7 @@ def test_singleton_enum_warn_list_fallback() -> None:
     """P1-6：warnings 列表形态收集器（无 _warn 方法）同样收黄提示。"""
     from qbot_rpg.content.time_validator import validate_time_cycle
 
-    report = {"warnings": []}
+    report = {"warnings": []}  # type: ignore[var-annotated]
     validate_time_cycle({"time_cycle": {"season": {"enum": ["only"]}}}, report)
     assert len(report["warnings"]) == 1
     assert report["warnings"][0]["kind"] == "Y1"

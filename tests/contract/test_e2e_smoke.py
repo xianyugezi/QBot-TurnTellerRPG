@@ -29,7 +29,7 @@ async def test_badref_pack_blocked(badref_pack_dir):
 
 
 def test_four_pack_readmes():
-    from conftest import REQUIRED_PACKS, PACKS_DIR
+    from conftest import REQUIRED_PACKS, PACKS_DIR  # type: ignore[import-not-found]
     for name in REQUIRED_PACKS:
         readme = PACKS_DIR / name / "README.md"
         assert readme.exists(), f"{name} 缺 README"

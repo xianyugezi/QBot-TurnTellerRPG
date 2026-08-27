@@ -166,7 +166,7 @@ def _hidden_ok(condition: object, conditions: Optional[Callable[[Mapping[str, ob
         return bool(single(cond))
     except TypeError:
         try:
-            double = cast(Callable[[Mapping[str, object], dict], bool], conditions)
+            double = cast(Callable[[Mapping[str, object], dict], bool], conditions)  # type: ignore[redundant-cast]
             return bool(double(cond, ctx))
         except Exception:
             return False

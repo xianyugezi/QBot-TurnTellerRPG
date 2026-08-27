@@ -45,14 +45,70 @@ SEGMENT_CMDS = {
     "e2e": ["tests/contract/test_e2e_smoke.py", "tests/contract/test_3f_patch.py"],
 }
 
+# ---- M6 批7·路A（细化_M6_质量门禁 D7 · COV 组）----
+# COV-02/03：口径 = qbot_rpg/core + engine + content 三目录各自 ≥80% 行覆盖，禁合计稀释
+# （总纲 ADR-04；批6B P1-2；D7 §1.4「合计稀释拦截」）；M0-M5 简版口径登记 = 细化_5d §7.4 决策记录 D5
+COV_SOURCES = "qbot_rpg/core,qbot_rpg/engine,qbot_rpg/content"
+COV_DIRS: tuple[str, ...] = ("qbot_rpg/core", "qbot_rpg/engine", "qbot_rpg/content")
+COV_THRESHOLD = 80.0
+
+
+def _measure_coverage() -> tuple[bool, dict[str, dict[str, float | int]]]:
+    """覆盖率真实核算（D7 COV-06/07，M6 恢复；登记口径 = 细化_5d §7.4 决策记录 D5）。
+
+    M0 三段（unit/contract/e2e，SEGMENT_CMDS）全量跑 coverage run --source=三目录，
+    逐目录聚合行覆盖；任一目录 <80% → (False, ...)，由调用方并入门禁判定（exit 1）。
+    """
+    import json
+    import tempfile
+
+    paths = [p for seg in ("unit", "contract", "e2e") for p in SEGMENT_CMDS[seg]]
+    run_cmd = [str(PY), "-m", "coverage", "run", "--source=" + COV_SOURCES,
+               "-m", "pytest", "-q", "--disable-warnings", *paths]
+    r = subprocess.run(run_cmd, cwd=str(REPO), capture_output=True, text=True)
+    if r.returncode != 0:
+        print("   [失败] coverage 测量运行 pytest 失败（测量运行须全绿），门禁不放行")
+        tail = "\n".join((r.stdout + r.stderr).splitlines()[-3:]).strip()
+        if tail:
+            print(f"       {tail}")
+        return False, {}
+    with tempfile.NamedTemporaryFile("w+", suffix=".json", delete=False) as tf:
+        tmp_json = tf.name
+    rep = subprocess.run([str(PY), "-m", "coverage", "json", "-o", tmp_json],
+                         cwd=str(REPO), capture_output=True, text=True)
+    if rep.returncode != 0:
+        print("   [失败] coverage json 报表导出失败，门禁不放行")
+        return False, {}
+    try:
+        data = json.loads(Path(tmp_json).read_text(encoding="utf-8"))
+    finally:
+        Path(tmp_json).unlink(missing_ok=True)
+    agg: dict[str, list[int]] = {d: [0, 0] for d in COV_DIRS}  # [statements, covered]
+    for fpath, finfo in data["files"].items():
+        for d in COV_DIRS:
+            if fpath.startswith(d + "/"):  # message_format/ 子包随 core/ 前缀自动归入（D7 §1.4）
+                s = finfo["summary"]
+                agg[d][0] += s["num_statements"]
+                agg[d][1] += s["covered_lines"]
+                break
+    out: dict[str, dict[str, float | int]] = {}
+    ok = True
+    for d in COV_DIRS:
+        st, cv = agg[d]
+        pct = (cv / st * 100.0) if st else 0.0
+        out[d] = {"statements": st, "missing": st - cv, "percent": pct}
+        if st == 0 or pct < COV_THRESHOLD:  # 目录零语句视为不达标（测量异常，不静默放行）
+            ok = False
+    return ok, out
+
 
 def _pytest(paths: list[str]) -> tuple[bool, int, int, list[str], str]:
     # 不用 -q：该环境捕获下 -q 会吞掉 "N passed" 汇总行（-rN 强制输出统计）
     cmd = [str(PY), "-m", "pytest", "--tb=short", "-rN", "--disable-warnings", *paths]
     r = subprocess.run(cmd, cwd=str(REPO), capture_output=True, text=True)
     text = r.stdout + r.stderr
-    passed = int(re.search(r"(\d+) passed", text).group(1)) if re.search(r"(\d+) passed", text) else 0
-    failed = int(re.search(r"(\d+) failed", text).group(1)) if re.search(r"(\d+) failed", text) else 0
+    passed = int(re.search(r"(\d+) passed", text).group(1)) if re.search(r"(\d+) passed", text) else 0 # type: ignore[union-attr]
+    failed = int(re.search(r"(\d+) failed", text).group(1)) if re.search(r"(\d+) failed", text) else 0 # type: ignore[union-attr]
     names = re.findall(r"FAILED (\S+::\S+)", text)
     tail = "\n".join(text.splitlines()[-2:]).strip()
     return r.returncode == 0, passed, failed, names, tail
@@ -203,24 +259,31 @@ def main() -> int:
     print(f"   已落地：{F3_LANDED}")
     print(f"   后续覆盖：{F3_DEFERRED}")
 
-    print("\n【5】覆盖率核算（engine/+content/ ≥80% —— 硬门禁，未核算不标通过）")
-    try:
-        import coverage  # noqa: F401
-        print("   coverage 已装：请 `coverage run --source=qbot_rpg/core,qbot_rpg/content"
-              " -m pytest && coverage report` 核算；本脚本暂不执行（P1-2：原「估算口径」"
-              "系无据声明，细化_5d 无降级条款——显式登记为简版，M1 恢复硬门禁）")
-    except ImportError:
-        print("   coverage 未装：覆盖率未核算（简版口径，M1 恢复 ≥80% 硬门禁——"
-              "P1-2 按 5d §7.4 显式标注，不暗示已达标）")
+    print("\n【5】覆盖率核算（qbot_rpg/core + engine + content 各自 ≥80% —— M6 恢复真实核算，D7 COV-06/07）")
+    cov_ok, cov = _measure_coverage()
+    for d in COV_DIRS:
+        c = cov.get(d)
+        if c is None:
+            continue
+        mark = "✅" if c["percent"] >= COV_THRESHOLD else "❌"
+        print(f"   [{mark}] {d}：{c['percent']:.2f}% 行覆盖"
+              f"（statements={c['statements']}，missing={c['missing']}）")
+    if cov_ok:
+        print(f"   覆盖率纳入通过判定：三目录各自 ≥{COV_THRESHOLD:.0f}% ✅"
+              "（D7 COV-06；M0-M5 简版口径登记 = 细化_5d §7.4 决策记录 D5）")
+    else:
+        print("   覆盖率纳入通过判定：三目录任一 <80% → 本脚本 exit 1"
+              "（D7 COV-06，不再「未核算也 exit 0」）")
 
     print("\n" + "=" * 62)
     # P1-1：门禁下限 = 非零通过数 + 无失败（防"删到只剩 1 条用例仍绿"）；
     # 精确 TC 条数映射随 TC-5d-08 细化文档扫描在 M1 补（本脚本声明条数仅展示）。
-    if total_f == 0 and total_p >= MIN_PASS_COUNT and not all_failed:
+    # M6 批7·路A：覆盖率真实核算并入通过判定（D7 COV-06——「未核算不标通过」与 exit 语义对齐）
+    if cov_ok and total_f == 0 and total_p >= MIN_PASS_COUNT and not all_failed:
         print("M0 门禁：通过（G1 全绿）")
         return 0
-    print(f"M0 门禁：不通过（需 ≥{MIN_PASS_COUNT} 条通过且 0 失败；当前 {total_p} passed"
-          f" / {total_f} failed）")
+    print(f"M0 门禁：不通过（需 ≥{MIN_PASS_COUNT} 条通过且 0 失败且覆盖率三目录各自 ≥80%；"
+          f"当前 {total_p} passed / {total_f} failed）")
     return 1
 
 

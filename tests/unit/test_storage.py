@@ -16,7 +16,7 @@ from qbot_rpg.storage.connection import Database
 from qbot_rpg.storage.migrations import migrate_database
 from qbot_rpg.storage.repository import IdemKey, Repository, SessionRow
 
-from conftest import make_player
+from conftest import make_player  # type: ignore[import-not-found]
 
 
 def iso_ago(days: float) -> str:

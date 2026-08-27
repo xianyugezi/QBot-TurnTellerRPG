@@ -210,7 +210,7 @@ def apply_message_prefix(
         and "群名" not in extra_eff
         and "[群名]" in str(cfg["format"])
     ):
-        extra_eff["群名"] = "私聊"
+        extra_eff["群名"] = "私聊"  # type: ignore[index]
 
     res = render_prefix_result(
         level, name, title,

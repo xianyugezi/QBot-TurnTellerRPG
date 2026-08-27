@@ -12,7 +12,7 @@ from qbot_rpg.core.message_format.battle_render import (
     render_battle_start, render_battle_round, render_battle_end,
 )
 
-OUT = []
+OUT = []  # type: ignore[var-annotated]
 def p(name, text):
     OUT.append(f"### {name}")
     OUT.append("```")

@@ -5,7 +5,7 @@ sys.path.insert(0, '/root/QBot-TurnTellerRPG')
 
 from qbot_rpg.commands.parsers import parse_command
 
-OUT = []
+OUT = []  # type: ignore[var-annotated]
 def p(name, text):
     OUT.append(f"### {name}")
     OUT.append("```")

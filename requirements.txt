@@ -9,3 +9,9 @@ aiosqlite==0.22.1
 # ---- 开发/测试 ----
 pytest==9.1.1
 pytest-asyncio==1.4.0
+# M6 批7·路B（细化_M6_质量门禁 D7 LNT-03）：ruff/mypy 锁版本（与 pyproject dev 组宽松范围并存）
+ruff==0.16.5
+mypy==2.3.1
+# M6 批7·路A（D7 细化_M6_质量门禁 COV-01）：覆盖率真实核算依赖，锁版本（对齐规则 8）；
+# 口径 = qbot_rpg/core + engine + content 各自 ≥80% 行覆盖（总纲 ADR-04），见 docs/verify/coverage_latest.txt
+coverage==7.15.4

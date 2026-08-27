@@ -300,11 +300,11 @@ def apply_enemy_difficulty_template(
             continue
         base = _TEMPLATE_BASE_STATS[key]
         if key == "hp":
-            mult = float(tmpl["hp_mult"])
+            mult = float(tmpl["hp_mult"])  # type: ignore[arg-type]
         elif key in _ATK_KEYS:
-            mult = float(tmpl["atk_mult"])
+            mult = float(tmpl["atk_mult"])  # type: ignore[arg-type]
         elif key in _DEF_KEYS:
-            mult = float(tmpl["def_mult"])
+            mult = float(tmpl["def_mult"])  # type: ignore[arg-type]
         else:
             mult = 1.0
         completed[key] = base * mult
@@ -601,7 +601,7 @@ class _Checker:
     def _enemy_is_8seg(entry: Mapping[str, object]) -> bool:
         """八段格式判定：type:"dummy" 或任一八段新字段命中即按八段校验（M0 旧简档=零提示零拦截）。"""
         if entry.get("type") == "dummy":
-            return True  # type:dummy 标记即八段木桩语义
+            return True  # 八段木桩语义：entry["type"]=="dummy" 即命中（M0 旧简档=零提示零拦截）
         return any(k in entry for k in _ENEMY_8SEG_MARKERS)
 
     def _check_enemy_8seg(self, module_name: str, idx: int, entry: Mapping[str, object]) -> None:
@@ -1532,7 +1532,7 @@ class _Checker:
                 self._err(module_name, f"{base}.{fname}", "R-5", rule="required_missing", name=fname)
         # 已知字段 + 未知字段（默认放行；x_ 前缀放行，细化_3e §2.2 Y-8 / §2.3 兜底）
         for key, value in entry_map.items():
-            fmeta = mmeta.fields.get(key)
+            fmeta = mmeta.fields.get(key)  # type: ignore[assignment]
             path = f"{base}.{key}"
             if fmeta is None:
                 continue  # 未知字段默认放行（§2.3）
@@ -1701,7 +1701,7 @@ class _Checker:
             if not isinstance(eid, str):
                 continue
             id_set.add(eid)
-            nxt = entry_map.get(mmeta.chain_field)
+            nxt = entry_map.get(mmeta.chain_field)  # type: ignore[arg-type]
             if isinstance(nxt, list):
                 adj.setdefault(eid, []).extend(x for x in nxt if isinstance(x, str))
         # 环检测（有向）DFS
@@ -1754,7 +1754,7 @@ class _Checker:
             core = slot if isinstance(slot, str) else (self_id if isinstance(self_id, str) else None)
             if core is None:
                 continue
-            excl = entry_map.get(mmeta.mutex_field)
+            excl = entry_map.get(mmeta.mutex_field)  # type: ignore[arg-type]
             if not isinstance(excl, list):
                 continue
             for other in excl:

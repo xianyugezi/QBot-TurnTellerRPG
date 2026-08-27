@@ -1324,10 +1324,10 @@ class BattleEngine:
                 hr = min(p.hit.cap_max / 100.0, hr + p.type_affinity.thrust_hit)
             hit = self._roll() <= hr
 
-            rating: Dict[str, Any] = {
+            rating: Dict[str, Any] = {  # type: ignore[no-redef]
                 "hit": hit, "crit": "low", "blocked": False, "pierce": 0.0, "multi": 1.0,
             }
-            seg_damage: Dict[str, Any] = {"ch_phys": 0, "ch_elem": 0, "final": 0}
+            seg_damage: Dict[str, Any] = {"ch_phys": 0, "ch_elem": 0, "final": 0}  # type: ignore[no-redef]
             if not hit:
                 # miss：伤害 0，仍写 action_record（提示未命中），不触发击杀判定（1g1c §② 命中行）
                 self._record_action(attacker, str(action.get("type", "normal")), target,

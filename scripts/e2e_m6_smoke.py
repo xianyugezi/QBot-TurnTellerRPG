@@ -179,7 +179,7 @@ def step_lock(s: Smoke) -> None:
     """② 锁定：try_acquire_lock 先到先得 + BattleEngine.start 装配（ADR-01 二选一两段式）。"""
     # (a) 纯函数锁断言（D4 SMK-08a）
     att = try_acquire_lock(None, "player_a", FIXED_NOW, "battle-1")
-    s.check(att.acquired is True and att.lock.holder_qid == "player_a",
+    s.check(att.acquired is True and att.lock.holder_qid == "player_a",  # type: ignore[union-attr]
             "锁定·无锁获得且 holder=调用者")
     att2 = try_acquire_lock(att.lock, "player_b", FIXED_NOW + 1, "battle-2")
     s.check(att2.acquired is False, "锁定·有锁拒绝")
@@ -187,7 +187,7 @@ def step_lock(s: Smoke) -> None:
             "锁定·拒绝时暴露现存锁 holder")
     # (b) BattleEngine.start 装配（D4 SMK-08b：state=act/turn=1/combatant 来自 legal 包）
     eng = BattleEngine()
-    eng._rng = _FixedRng()
+    eng._rng = _FixedRng()  # type: ignore[assignment]
     eng.start(dict(SMOKE_PLAYER), _enemy_combatant(), random_seed=SEED)
     s.check(eng.state == "act", "锁定·start 后 state=act")
     bs = eng.battle_state()
@@ -202,7 +202,7 @@ def step_attack(s: Smoke) -> None:
     用 _FixedRng（恒 0.1）保证命中；mult=1.0 伤害约 68.6 < 岩皮鼬 hp=120（不溢出，
     HP 差分 = final_damage 成立；D4 SMK-10 保留 normal 攻击 + 数值/差分/合并三项断言）。"""
     eng = BattleEngine()
-    eng._rng = _FixedRng()
+    eng._rng = _FixedRng()  # type: ignore[assignment]
     eng.start(dict(SMOKE_PLAYER), _enemy_combatant(), random_seed=SEED)
     hp_before = eng.battle_state()["enemy"]["hp"]
     out = eng.do_action("player", {"type": "normal", "mult": 1.0})
@@ -216,7 +216,7 @@ def step_attack(s: Smoke) -> None:
     import unittest.mock as _mock
 
     eng1 = BattleEngine()
-    eng1._rng = _FixedRng()
+    eng1._rng = _FixedRng()  # type: ignore[assignment]
     eng1.start(dict(SMOKE_PLAYER), _enemy_combatant(), random_seed=SEED)
     mock = _mock.Mock()
     mock.send.return_value = []
@@ -230,7 +230,7 @@ def step_attack(s: Smoke) -> None:
 def step_settle(s: Smoke) -> None:
     """④ 结算：敌方 hp≤0 终局 → victory 文案 + 掉落 + 回合数 + 快照 round-trip。"""
     eng = BattleEngine()
-    eng._rng = _FixedRng()
+    eng._rng = _FixedRng()  # type: ignore[assignment]
     eng.start(dict(SMOKE_PLAYER), _enemy_combatant(), random_seed=SEED)
     # 轰到敌方 hp≤0 → 引擎终局结算（eng.finished；完整回合时序 do_action→enemy_act→end_turn）
     for _ in range(50):

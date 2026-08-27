@@ -181,40 +181,40 @@ def test_questdef_accessors_top_level() -> None:
     d = QuestDef.from_entry(entry)
     assert d.id == "q_main_weapon"
     assert d.name == "特制武器"
-    assert d.desc == "锻造试炼"
-    assert d.type == "deliver"
-    assert d.effective_type == "deliver"
-    assert d.main is True
-    assert d.is_main is True
-    assert len(d.conditions) == 1
-    assert d.conditions[0]["var"] == "main_progress"
-    assert d.consume is True
-    assert d.reward == "exp=60,coins=100"
-    assert d.rewards is None
-    assert isinstance(d.board, BoardDef)
-    assert d.board.slot == "weekly"
-    assert isinstance(d.timed, TimedDef)
-    assert d.timed.deadline == "2026-09-01 05:00"
-    assert d.unlock_chain == "q_ore_20"
-    assert d.zone == "rubble_field"
-    assert d.filter == {"quality": "精良"}
-    assert d.bonus["mult"] == 1.5
-    assert isinstance(d.npc, NpcGrantDef)
-    assert d.npc.id == "blacksmith"
-    assert d.npc.priority == 1
-    assert d.daily is False
-    assert d.repeatable == {"decay": 0.5, "cap": 1}
+    assert d.desc == "锻造试炼"  # type: ignore[attr-defined]
+    assert d.type == "deliver"  # type: ignore[attr-defined]
+    assert d.effective_type == "deliver"  # type: ignore[attr-defined]
+    assert d.main is True  # type: ignore[attr-defined]
+    assert d.is_main is True  # type: ignore[attr-defined]
+    assert len(d.conditions) == 1  # type: ignore[attr-defined]
+    assert d.conditions[0]["var"] == "main_progress"  # type: ignore[attr-defined]
+    assert d.consume is True  # type: ignore[attr-defined]
+    assert d.reward == "exp=60,coins=100"  # type: ignore[attr-defined]
+    assert d.rewards is None  # type: ignore[attr-defined]
+    assert isinstance(d.board, BoardDef)  # type: ignore[attr-defined]
+    assert d.board.slot == "weekly"  # type: ignore[attr-defined]
+    assert isinstance(d.timed, TimedDef)  # type: ignore[attr-defined]
+    assert d.timed.deadline == "2026-09-01 05:00"  # type: ignore[attr-defined]
+    assert d.unlock_chain == "q_ore_20"  # type: ignore[attr-defined]
+    assert d.zone == "rubble_field"  # type: ignore[attr-defined]
+    assert d.filter == {"quality": "精良"}  # type: ignore[attr-defined]
+    assert d.bonus["mult"] == 1.5  # type: ignore[attr-defined]
+    assert isinstance(d.npc, NpcGrantDef)  # type: ignore[attr-defined]
+    assert d.npc.id == "blacksmith"  # type: ignore[attr-defined]
+    assert d.npc.priority == 1  # type: ignore[attr-defined]
+    assert d.daily is False  # type: ignore[attr-defined]
+    assert d.repeatable == {"decay": 0.5, "cap": 1}  # type: ignore[attr-defined]
     # 派生
-    assert d.is_repeatable() is True
-    assert d.repeatable_decay() == 0.5
-    assert d.repeatable_cap() == 1
+    assert d.is_repeatable() is True  # type: ignore[attr-defined]
+    assert d.repeatable_decay() == 0.5  # type: ignore[attr-defined]
+    assert d.repeatable_cap() == 1  # type: ignore[attr-defined]
 
 
 def test_questdef_board_accessors() -> None:
     """BoardDef 5 key 访问器 + 生效侧（默认值兜底 D-07）。"""
     entry = _quest_by_id(_legal_quests(), "q_ore_20")
     d = QuestDef.from_entry(entry)
-    b = d.board
+    b = d.board  # type: ignore[attr-defined]
     assert b.slot == "daily"
     assert b.refresh == "daily"
     assert b.limit == 3
@@ -222,14 +222,14 @@ def test_questdef_board_accessors() -> None:
     assert b.daily_limit is None  # 未配 → 生效侧取默认 10
     assert b.effective_accept_limit() == QUEST_ACCEPT_LIMIT_DEFAULT == 5
     assert b.effective_daily_limit() == QUEST_DAILY_LIMIT_DEFAULT == 10
-    assert d.board_accept_limit() == 5
-    assert d.board_daily_limit() == 10
+    assert d.board_accept_limit() == 5  # type: ignore[attr-defined]
+    assert d.board_daily_limit() == 10  # type: ignore[attr-defined]
 
 
 def test_questdef_npc_conditions() -> None:
     """NpcGrantDef.conditions 访问器（统一条件引擎条目）。"""
     entry = _quest_by_id(_legal_quests(), "q_main_weapon")
-    npc = QuestDef.from_entry(entry).npc
+    npc = QuestDef.from_entry(entry).npc  # type: ignore[attr-defined]
     assert len(npc.conditions) == 1
     assert npc.conditions[0]["var"] == "level"
 
@@ -237,25 +237,25 @@ def test_questdef_npc_conditions() -> None:
 def test_questdef_defaults() -> None:
     """缺省兜底（D-07 / TC-01）：最小配置 {id,name,conditions} 绝不报错，访问器缺省值合理。"""
     d = QuestDef.from_entry({"id": "q_min", "name": "最小任务", "conditions": []})
-    assert d.type is None  # raw 未写 type（默认 collect 为 effective_type 兜底）
-    assert d.effective_type == QUEST_TYPE_DEFAULT == "collect"
-    assert d.main is False
-    assert d.consume is False
-    assert d.reward is None
-    assert d.rewards is None
-    assert d.conditions == ()
-    assert isinstance(d.board, BoardDef)
-    assert d.board.slot is None  # 未配 board → 生效槽位兜底 daily
-    assert d.effective_board_slot() == "daily"
-    assert d.timed.deadline is None
-    assert d.unlock_chain is None
-    assert d.zone is None
-    assert d.filter is None
-    assert d.bonus == {}
-    assert d.npc.id is None
-    assert d.daily is False
-    assert d.repeatable is None
-    assert d.is_repeatable() is False
+    assert d.type is None # type: ignore[attr-defined]  # raw 未写 type（默认 collect 为 effective_type 兜底）
+    assert d.effective_type == QUEST_TYPE_DEFAULT == "collect"  # type: ignore[attr-defined]
+    assert d.main is False  # type: ignore[attr-defined]
+    assert d.consume is False  # type: ignore[attr-defined]
+    assert d.reward is None  # type: ignore[attr-defined]
+    assert d.rewards is None  # type: ignore[attr-defined]
+    assert d.conditions == ()  # type: ignore[attr-defined]
+    assert isinstance(d.board, BoardDef)  # type: ignore[attr-defined]
+    assert d.board.slot is None # type: ignore[attr-defined]  # 未配 board → 生效槽位兜底 daily
+    assert d.effective_board_slot() == "daily"  # type: ignore[attr-defined]
+    assert d.timed.deadline is None  # type: ignore[attr-defined]
+    assert d.unlock_chain is None  # type: ignore[attr-defined]
+    assert d.zone is None  # type: ignore[attr-defined]
+    assert d.filter is None  # type: ignore[attr-defined]
+    assert d.bonus == {}  # type: ignore[attr-defined]
+    assert d.npc.id is None  # type: ignore[attr-defined]
+    assert d.daily is False  # type: ignore[attr-defined]
+    assert d.repeatable is None  # type: ignore[attr-defined]
+    assert d.is_repeatable() is False  # type: ignore[attr-defined]
     # 最小配置跑校验器：零红拦（默认兜底绝不报错）
     rep = _check([{"id": "q_min", "name": "最小任务", "conditions": []}])
     assert not rep.errors, f"最小配置不应红拦：{rep.errors}"
@@ -269,8 +269,8 @@ def test_main_field_naming() -> None:
     """main 沿用定稿 L138 命名（P3-1 修正：不是细化收敛而是定稿原文）。"""
     assert QUEST_MAIN_FIELD == "main"
     d = QuestDef.from_entry({"id": "q_m", "name": "主线", "main": True, "conditions": []})
-    assert d.main is True
-    assert d.is_main is True
+    assert d.main is True  # type: ignore[attr-defined]
+    assert d.is_main is True  # type: ignore[attr-defined]
     # 非 bool → 红拦
     rep = _check([{"id": "q_m", "name": "主线", "main": "yes", "conditions": []}])
     assert len(_errs(rep, "quest_main_invalid")) == 1
@@ -283,22 +283,22 @@ def test_daily_p22_shorthand_semantics() -> None:
     """P2-2 收敛：daily = board.slot 简写——daily:true ≡ 每日板；daily:false = 无简写。"""
     base = {"id": "q_d", "name": "每日", "conditions": []}
     d_false = QuestDef.from_entry({**base, "daily": False})
-    assert d_false.daily is False
-    assert d_false.effective_board_slot() == "daily"  # daily:false 与默认板=每日板不冲突
-    assert d_false.is_daily_board is True
+    assert d_false.daily is False  # type: ignore[attr-defined]
+    assert d_false.effective_board_slot() == "daily" # type: ignore[attr-defined]  # daily:false 与默认板=每日板不冲突
+    assert d_false.is_daily_board is True  # type: ignore[attr-defined]
 
     d_true = QuestDef.from_entry({**base, "daily": True})
-    assert d_true.daily is True
-    assert d_true.effective_board_slot() == "daily"
-    assert d_true.is_daily_board is True
+    assert d_true.daily is True  # type: ignore[attr-defined]
+    assert d_true.effective_board_slot() == "daily"  # type: ignore[attr-defined]
+    assert d_true.is_daily_board is True  # type: ignore[attr-defined]
 
     d_weekly = QuestDef.from_entry({**base, "board": {"slot": "weekly"}})
-    assert d_weekly.daily is False
-    assert d_weekly.effective_board_slot() == "weekly"  # 非每日板 = board.slot 显式
-    assert d_weekly.is_daily_board is False
+    assert d_weekly.daily is False  # type: ignore[attr-defined]
+    assert d_weekly.effective_board_slot() == "weekly" # type: ignore[attr-defined]  # 非每日板 = board.slot 显式
+    assert d_weekly.is_daily_board is False  # type: ignore[attr-defined]
 
     d_weekly_daily_true = QuestDef.from_entry({**base, "daily": True, "board": {"slot": "weekly"}})
-    assert d_weekly_daily_true.effective_board_slot() == "weekly"  # board.slot 显式优先
+    assert d_weekly_daily_true.effective_board_slot() == "weekly" # type: ignore[attr-defined]  # board.slot 显式优先
 
 
 def test_daily_p22_conflict_warning() -> None:
@@ -475,7 +475,7 @@ def test_daily_limit_default_and_over() -> None:
     # 未配 board → 默认 10（TC-01 断言）
     q = {"id": "q_dl", "name": "防刷", "conditions": []}
     d = QuestDef.from_entry(q)
-    assert d.board_daily_limit() == 10
+    assert d.board_daily_limit() == 10  # type: ignore[attr-defined]
     rep = _check([q])
     assert not _warns(rep, "quest_daily_limit_over_default")
     # daily_limit:0（0=不限，TC-19）→ 不提示
@@ -499,7 +499,7 @@ def test_accept_limit_default_and_over() -> None:
     assert BOARD_ACCEPT_OVER_WARN == 5
     q = {"id": "q_al", "name": "接取", "conditions": []}
     d = QuestDef.from_entry(q)
-    assert d.board_accept_limit() == 5
+    assert d.board_accept_limit() == 5  # type: ignore[attr-defined]
     rep = _check([q])
     assert not _warns(rep, "quest_accept_limit_over_default")
     # accept_limit:0（0=不限）→ 不提示

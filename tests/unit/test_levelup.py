@@ -54,7 +54,7 @@ def test_tc_lvl_01_zero_exp_boundary():
     assert "proficiency" not in player          # 无 SP 发放落点产生
     # 布尔/非 int 同样幂等拒绝（LVL-02 精神：非法入账一律拒绝）
     assert eng.gain_exp(player, True)["reason"] == "exp_amount_invalid"
-    assert eng.gain_exp(player, "100")["reason"] == "exp_amount_invalid"  # type: ignore[arg-type]
+    assert eng.gain_exp(player, "100")["reason"] == "exp_amount_invalid"
 
 
 # ---------------------------------------------------------------------------

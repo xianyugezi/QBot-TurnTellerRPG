@@ -210,35 +210,35 @@ def test_npcdef_accessors_top_level() -> None:
     d = NPCDef.from_entry(entry)
     assert d.id == "shopkeep_lin"
     assert d.name == "杂货商人·林"
-    assert d.icon == "🧺"
-    assert d.map == "rubble_field"
-    assert d.type == "merchant"
-    assert d.desc == "物美价廉，童叟无欺。"
-    assert d.visible is True
-    assert isinstance(d.dialogues, DialogueDef)
-    assert d.dialogues.greeting == "物美价廉，童叟无欺！"
-    assert len(d.dialogues.options) == 4
-    assert len(d.interactions) == 6
-    assert isinstance(d.interactions[0], InteractionDef)
-    assert d.interactions[0].action == "quest"
-    assert d.interactions[0].text == "接点活儿"
-    assert d.quests[0].quest_id == "q_ore_20"
-    assert isinstance(d.quests[0], QuestRefDef)
-    assert d.shop_refs == ("village_shop",)
-    assert d.intel[0].get("unlock") == 10
-    assert d.intel_refs == ("beetle_lore",)
-    assert d.tutorials[0]["tutorial_id"] == "pv_break_tut"
-    assert d.dealer is None
+    assert d.icon == "🧺"  # type: ignore[attr-defined]
+    assert d.map == "rubble_field"  # type: ignore[attr-defined]
+    assert d.type == "merchant"  # type: ignore[attr-defined]
+    assert d.desc == "物美价廉，童叟无欺。"  # type: ignore[attr-defined]
+    assert d.visible is True  # type: ignore[attr-defined]
+    assert isinstance(d.dialogues, DialogueDef)  # type: ignore[attr-defined]
+    assert d.dialogues.greeting == "物美价廉，童叟无欺！"  # type: ignore[attr-defined]
+    assert len(d.dialogues.options) == 4  # type: ignore[attr-defined]
+    assert len(d.interactions) == 6  # type: ignore[attr-defined]
+    assert isinstance(d.interactions[0], InteractionDef)  # type: ignore[attr-defined]
+    assert d.interactions[0].action == "quest"  # type: ignore[attr-defined]
+    assert d.interactions[0].text == "接点活儿"  # type: ignore[attr-defined]
+    assert d.quests[0].quest_id == "q_ore_20"  # type: ignore[attr-defined]
+    assert isinstance(d.quests[0], QuestRefDef)  # type: ignore[attr-defined]
+    assert d.shop_refs == ("village_shop",)  # type: ignore[attr-defined]
+    assert d.intel[0].get("unlock") == 10  # type: ignore[attr-defined]
+    assert d.intel_refs == ("beetle_lore",)  # type: ignore[attr-defined]
+    assert d.tutorials[0]["tutorial_id"] == "pv_break_tut"  # type: ignore[attr-defined]
+    assert d.dealer is None  # type: ignore[attr-defined]
 
 
 def test_npcdef_accessors_dealer() -> None:
     """NPCDef dealer 子表访问器（strategy + pool 候选牌，2b1 §二）。"""
     entry = _npc_by_id(_legal_npc(), "traveling_dealer")
     d = NPCDef.from_entry(entry)
-    assert d.type == "dealer"
-    assert isinstance(d.dealer, DealerDef)
-    assert d.dealer.strategy == "rotate"
-    cards = d.dealer.pool
+    assert d.type == "dealer"  # type: ignore[attr-defined]
+    assert isinstance(d.dealer, DealerDef)  # type: ignore[attr-defined]
+    assert d.dealer.strategy == "rotate"  # type: ignore[attr-defined]
+    cards = d.dealer.pool  # type: ignore[attr-defined]
     assert [c.id for c in cards] == ["tale_1", "tale_2"]
     assert cards[0].weight == 1
     assert cards[0].once is True
@@ -249,12 +249,12 @@ def test_npcdef_accessors_dealer() -> None:
 def test_npcdef_defaults() -> None:
     """缺省兜底：type 缺省 merchant、visible 缺省 true、dialogues 缺省空 greeting。"""
     d = NPCDef.from_entry({"id": "x", "name": "路人甲", "icon": "🙂"})
-    assert d.type is None  # raw 未写 type（默认 merchant 为校验侧兜底，访问器不伪造）
-    assert d.visible is True
-    assert d.dialogues.greeting is None
-    assert d.interactions == ()
-    assert d.dealer is None
-    assert d.shop_refs == ()
+    assert d.type is None # type: ignore[attr-defined]  # raw 未写 type（默认 merchant 为校验侧兜底，访问器不伪造）
+    assert d.visible is True  # type: ignore[attr-defined]
+    assert d.dialogues.greeting is None  # type: ignore[attr-defined]
+    assert d.interactions == ()  # type: ignore[attr-defined]
+    assert d.dealer is None  # type: ignore[attr-defined]
+    assert d.shop_refs == ()  # type: ignore[attr-defined]
 
 
 # ---------------------------------------------------------------------------

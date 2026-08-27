@@ -459,7 +459,7 @@ def _scan_regex_insurance(expr: str) -> Optional[_ForbiddenHit]:
     for m in _JS_IDENT_RE.finditer(stripped):
         if m.group(0) in FORMULA_BLACKLIST:
             return _ForbiddenHit("formula_ast_blacklist", {"identifier": m.group(0)})
-    m = _NEW_EXPR_RE.search(stripped)
+    m = _NEW_EXPR_RE.search(stripped)  # type: ignore[assignment]
     if m is not None:
         return _ForbiddenHit("formula_new_expression", {"constructor_name": m.group(1)})
     return None
@@ -690,7 +690,7 @@ class _FastEvaluator:
             self._rand = None  # 无种子 → 宿主真随机（Python random），与 Node 无种子语义一致
         round_val = ctx.battle.get("round") if isinstance(ctx.battle, Mapping) else None
         self._round_ok = isinstance(round_val, (int, float)) and not isinstance(round_val, bool)
-        self._round = float(round_val) if self._round_ok else None
+        self._round = float(round_val) if self._round_ok else None  # type: ignore[arg-type]
 
     # ---- 求值 ----
     def eval_node(self, node: "ast.AST") -> object:
@@ -703,47 +703,47 @@ class _FastEvaluator:
             if not (_is_num(left) and _is_num(right)):
                 raise _FastReject
             if op is ast.Add:
-                return left + right
+                return left + right  # type: ignore[operator]
             if op is ast.Sub:
-                return left - right
+                return left - right  # type: ignore[operator]
             if op is ast.Mult:
-                return left * right
+                return left * right  # type: ignore[operator]
             if op is ast.Div:
-                return left / right
+                return left / right  # type: ignore[operator]
             if op is ast.Mod:
-                return _js_mod(left, right)
+                return _js_mod(left, right)  # type: ignore[arg-type]
             raise _FastReject
         if isinstance(node, ast.UnaryOp):
             operand = self.eval_node(node.operand)
-            op = type(node.op)
+            op = type(node.op)  # type: ignore[assignment]
             if op is ast.Not:
                 return not operand
             if not _is_num(operand):
                 raise _FastReject
             if op is ast.UAdd:
-                return +operand
+                return +operand  # type: ignore[operator]
             if op is ast.USub:
-                return -operand
+                return -operand  # type: ignore[operator]
             if op is ast.Invert:  # JS ~x（int 域；float 在 JS 先截断，Python 抛异常→降级）
-                if isinstance(operand, float) or abs(operand) > 0x7FFFFFFF:
+                if isinstance(operand, float) or abs(operand) > 0x7FFFFFFF:  # type: ignore[arg-type]
                     raise _FastReject
-                return ~int(operand)
+                return ~int(operand)  # type: ignore[call-overload]
             raise _FastReject
         if isinstance(node, ast.Compare):
             if len(node.ops) != 1:
                 raise _FastReject  # Python 链式比较 vs JS 左结合 -> 降级
             left = self.eval_node(node.left)
             right = self.eval_node(node.comparators[0])
-            op = type(node.ops[0])
+            op = type(node.ops[0])  # type: ignore[assignment]
             if op in (ast.Eq, ast.NotEq):
                 eq = _js_eq(left, right)
                 return eq if op is ast.Eq else (not eq)
             if _is_num(left) and _is_num(right):
-                return {ast.Lt: left < right, ast.LtE: left <= right,
-                        ast.Gt: left > right, ast.GtE: left >= right}[op]
+                return {ast.Lt: left < right, ast.LtE: left <= right,  # type: ignore[operator]
+                        ast.Gt: left > right, ast.GtE: left >= right}[op]  # type: ignore[index,operator]
             if isinstance(left, str) and isinstance(right, str):
                 return {ast.Lt: left < right, ast.LtE: left <= right,
-                        ast.Gt: left > right, ast.GtE: left >= right}[op]
+                        ast.Gt: left > right, ast.GtE: left >= right}[op]  # type: ignore[index]
             raise _FastReject  # 混合类型序比较 → JS 先行 ToNumber 语义不明 → 降级
         if isinstance(node, ast.IfExp):
             test = self.eval_node(node.test)
@@ -756,7 +756,7 @@ class _FastEvaluator:
         if isinstance(node, ast.Subscript):
             sl = node.slice
             if isinstance(sl, ast.Index):  # py<3.9 兼容
-                sl = sl.value
+                sl = sl.value  # type: ignore[attr-defined]
             assert isinstance(sl, ast.Constant) and isinstance(sl.value, int) and sl.value >= 0
             container = self.eval_node(node.value)
             idx = sl.value
@@ -780,12 +780,12 @@ class _FastEvaluator:
             name = _fast_fullname(node.func)
             args = [self.eval_node(a) for a in node.args]
             if name == "Math.random":
-                return self._rand() if self._rand is not None else random.random()
-            func = _MATH_FUNCS.get(name)
+                return self._rand() if self._rand is not None else random.random()  # type: ignore[operator]
+            func = _MATH_FUNCS.get(name)  # type: ignore[arg-type]
             if func is None or not all(_is_num(a) for a in args):
                 raise _FastReject
             try:
-                return func(*args)
+                return func(*args)  # type: ignore[operator]
             except (ValueError, OverflowError):
                 raise _FastReject  # 例如 math.sqrt(-1)/pow 域外 → JS NaN → Node 兜底 result_type
         raise _FastReject
@@ -827,7 +827,7 @@ class _FastEvaluator:
         if isinstance(node, ast.Subscript):
             sl = node.slice
             if isinstance(sl, ast.Index):
-                sl = sl.value
+                sl = sl.value  # type: ignore[attr-defined]
             if not (isinstance(sl, ast.Constant) and isinstance(sl.value, int)
                     and not isinstance(sl.value, bool) and sl.value >= 0):
                 raise _FastReject
@@ -997,7 +997,7 @@ def evaluate_detail(expr: str, ctx: EvaluatorCtx) -> Tuple[float, Tuple[str, ...
     if ctx.rng_state is not None:
         sandbox["__rng_seed"] = ctx.rng_state
 
-    ok, value, err = _invoke_runner(js_expr, sandbox)
+    ok, value, err = _invoke_runner(js_expr, sandbox)  # type: ignore[assignment]
     if not ok:
         warnings.append(f"eval_failed:{err}")
         return 0.0, tuple(warnings)

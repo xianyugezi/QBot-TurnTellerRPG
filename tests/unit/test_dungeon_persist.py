@@ -423,7 +423,7 @@ class TestSaveLoadSession:
 
     def test_load_invalid_store_rejected(self) -> None:
         """非法 store（非 Mapping / 缺 dungeon_id）→ invalid_store 拒绝。"""
-        for bad in (None, [], {}, {"state": "PEACE_EXPLORE"}):
+        for bad in (None, [], {}, {"state": "PEACE_EXPLORE"}):  # type: ignore[var-annotated]
             r = load_dungeon_session(bad)
             assert r["ok"] is False                              # 1 拒绝
             assert r["reason"] == "invalid_store"                # 2 原因=非法 store

@@ -369,7 +369,7 @@ def _normalize_aliases(
         if isinstance(entry, str):
             alias_name, keep = entry, True
         elif isinstance(entry, dict):
-            alias_name = entry.get("alias")
+            alias_name = entry.get("alias")  # type: ignore[assignment]
             keep = bool(entry.get("keep_original", True))
         else:
             continue

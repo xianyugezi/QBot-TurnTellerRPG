@@ -286,7 +286,7 @@ def test_filter_eligible_rows_subset() -> None:
             _row(enemy="B", weather_weights={"storm": 0}),
             _row(enemy="C")]
     got = filter_eligible_rows(rows, {"season": "autumn", "weather": "storm"})
-    assert [r["enemy"] for r in got] == ["A", "C"]  # B 被天气 0 排除
+    assert [r["enemy"] for r in got] == ["A", "C"] # type: ignore[index]  # B 被天气 0 排除
 
 
 def test_filter_eligible_accepts_spawndef() -> None:
@@ -300,7 +300,7 @@ def test_filter_eligible_accepts_spawndef() -> None:
     }]})
     defs = maps[0].spawn_defs()
     got = filter_eligible_rows(defs, {"season": "summer"})
-    assert len(got) == 1 and got[0].enemy == "Y"
+    assert len(got) == 1 and got[0].enemy == "Y"  # type: ignore[attr-defined]
 
 
 # ---------------------------------------------------------------------------

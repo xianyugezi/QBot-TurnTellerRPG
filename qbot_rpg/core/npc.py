@@ -258,7 +258,7 @@ def _rng_float(rng: object) -> float:
 
         return random.random()
     if hasattr(rng, "random"):
-        return float(rng.random())  # type: ignore[union-attr]
+        return float(rng.random())
     return float(rng())  # type: ignore[operator]  # 普通 callable
 
 
@@ -271,7 +271,7 @@ def _rng_int(rng: object, n: int) -> int:
 
         return random.randrange(n)
     if hasattr(rng, "randrange"):
-        return int(rng.randrange(n))  # type: ignore[union-attr]
+        return int(rng.randrange(n))
     return min(n - 1, int(_rng_float(rng) * n))
 
 
@@ -478,7 +478,7 @@ def _action_shop(entry: Mapping[str, Any], ctx: Mapping[str, Any], **kw: Any) ->
 def _action_heal(entry: Mapping[str, Any], ctx: Mapping[str, Any], **kw: Any) -> dict:
     """AC03 heal：cost{coins} 治疗费（免费=省略）+ heal{hp,mp}（int 或 "N%" 按上限）。"""
     cost = entry.get("cost") if isinstance(entry.get("cost"), Mapping) else {}
-    coins_cost = cost.get("coins", 0)
+    coins_cost = cost.get("coins", 0)  # type: ignore[union-attr]
     if not isinstance(coins_cost, int) or isinstance(coins_cost, bool) or coins_cost < 0:
         coins_cost = 0
     currencies = ctx.get("currencies")
@@ -592,7 +592,7 @@ def _action_teleport(entry: Mapping[str, Any], ctx: Mapping[str, Any], **kw: Any
     if not isinstance(target, str) or not target:
         return _res("teleport", False, reason="no_target", message="没有传送目的地")
     cost = entry.get("cost") if isinstance(entry.get("cost"), Mapping) else {}
-    coins_cost = cost.get("coins", 0)
+    coins_cost = cost.get("coins", 0)  # type: ignore[union-attr]
     if not isinstance(coins_cost, int) or isinstance(coins_cost, bool) or coins_cost < 0:
         coins_cost = 0
     currencies = ctx.get("currencies")
@@ -628,7 +628,7 @@ def _action_intel(entry: Mapping[str, Any], ctx: Mapping[str, Any], **kw: Any) -
         cs = ctx.get("codex_state")
         if isinstance(cs, MutableMapping):
             rid = ref.get("id") if isinstance(ref, Mapping) else ref
-            cs[rid] = True  # type: ignore[index]
+            cs[rid] = True
         if npc_id:
             mark_delivered(ctx, npc_id, k)
         unlocked.append(k)
@@ -703,7 +703,7 @@ def dispatch_action(entry: object, ctx: Mapping[str, Any], rng: object = None,
                     data={"action": action}, message=f"未知动作 {action!r}")
     cond = entry.get("condition")
     if cond is not None and not eval_condition(cond, ctx):
-        return _res(action, False, reason="condition_not_met",
+        return _res(action, False, reason="condition_not_met",  # type: ignore[arg-type]
                     message="需要先满足条件")
     return _HANDLERS[action](entry, ctx, rng=rng, npc_id=npc_id, state=state)
 

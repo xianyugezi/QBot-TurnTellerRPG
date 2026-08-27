@@ -49,7 +49,7 @@ def _def(did: str) -> DungeonDef:
 def _def_raw(did: str) -> dict:
     for d in _load("dungeon"):
         if isinstance(d, Mapping) and d.get("id") == did:
-            return copy.deepcopy(d)
+            return copy.deepcopy(d)  # type: ignore[arg-type]
     raise AssertionError(f"legal/dungeon.json 缺少 {did}")
 
 

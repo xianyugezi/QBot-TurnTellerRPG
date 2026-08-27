@@ -257,17 +257,17 @@ def validate_weather(
 
     # ---- 黄提示（settings 级，不拦截）----
     if tc_ok:
-        season = tc.get("season")
+        season = tc.get("season")  # type: ignore[attr-defined]
         if isinstance(season, Mapping) and season.get("season_days") == 365:
             _warn(report, "settings", "time_cycle.season.season_days", "Y",
                   rule="season_days_full_year", days=365,
                   msg="季节天数=365：每个季节一整年才轮换一次（全季节 1 天轮换）")
-        period = tc.get("period")
+        period = tc.get("period")  # type: ignore[attr-defined]
         if isinstance(period, Mapping) and period.get("period_minutes") == 1440:
             _warn(report, "settings", "time_cycle.period.period_minutes", "Y",
                   rule="period_minutes_full_day", minutes=1440,
                   msg="时段分钟=1440（24 小时）：全天只有 1 个时段轮换")
-        weather = tc.get("weather")
+        weather = tc.get("weather")  # type: ignore[attr-defined]
         if isinstance(weather, Mapping) and isinstance(weather.get("default_pool"), (list, tuple)):
             pool = weather["default_pool"]
             if len(pool) > 12:
@@ -375,7 +375,7 @@ def validate_weather(
 
     # ---- V7 combat.weather_mult.mults 键 ∈ 注册天气集（settings time_cycle.combat 段）----
     if tc_ok:
-        combat = tc.get("combat")
+        combat = tc.get("combat")  # type: ignore[attr-defined]
         if isinstance(combat, Mapping):
             wm = combat.get("weather_mult")
             if wm is not None:
@@ -403,7 +403,7 @@ def validate_weather(
 
     # ---- V8 broadcast.template 占位符 ∈ {type,name,emoji,map}（细化_2a4c TC-17）----
     if tc_ok:
-        broadcast = tc.get("broadcast")
+        broadcast = tc.get("broadcast")  # type: ignore[attr-defined]
         if isinstance(broadcast, Mapping) and "template" in broadcast:
             tpl = broadcast["template"]
             if not isinstance(tpl, str):

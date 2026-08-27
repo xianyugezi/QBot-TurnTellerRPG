@@ -742,7 +742,7 @@ class DialogSession:
 
         # T10 单轮交付回菜单（L86-91 / L98）；商店移交经 shop_refs 上报（裁决 T12/T13 修复）
         self.state = S_MENU
-        out: List[str] = []
+        out: List[str] = []  # type: ignore[no-redef]
         if shop_refs:
             out.append(f"已打开商店：{'、'.join(str(r) for r in shop_refs)}")
         elif is_info:

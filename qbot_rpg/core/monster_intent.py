@@ -284,7 +284,7 @@ def _eval_reveal_mapping(cond: Mapping[str, Any], codex: Mapping[str, Any]) -> b
     if ctype == "revealed":
         if isinstance(codex.get("revealed"), (list, tuple, set)):
             return key in codex["revealed"]
-        return bool(codex.get(key))
+        return bool(codex.get(key))  # type: ignore[arg-type]
     if ctype == "all":
         conditions = cond.get("conditions")
         if isinstance(conditions, (list, tuple)):

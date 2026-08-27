@@ -293,7 +293,7 @@ def test_validate_pool_missing_section_zero_errors():
     validate_weather_pool({}, r)                                # 缺整段
     validate_weather_pool({"time_cycle": {}}, r)                # 缺 weather 段
     validate_weather_pool({"time_cycle": {"weather": {}}}, r)   # 缺 default_pool 字段
-    validate_weather_pool(None, r)  # type: ignore[arg-type]
+    validate_weather_pool(None, r)
     assert r.errors == []
 
 

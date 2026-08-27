@@ -331,7 +331,7 @@ def test_y7_unregistered_stat_key(tmp_path: Path) -> None:
 
     base = default_field_meta_table()
     enemies_meta = base.module("enemies")
-    fields = dict(enemies_meta.fields)
+    fields = dict(enemies_meta.fields)  # type: ignore[union-attr]
     fields["key_ref"] = FieldMeta(type="ref", ref_target="stat")
     meta = FieldMetaTable(
         modules={**base.modules, "enemies": ModuleMeta(
@@ -388,11 +388,11 @@ def test_formula_passthrough_boundaries(tmp_path: Path) -> None:
         {"formula": {"hit": {"k": 1.0}, "crit": {"cap": 95}}},            # 段级参数容器（FIX-1 透传）
     ]
     for f in ok_cases:
-        p = _write_pack(tmp_path, _manifest(["formula"]), f)
+        p = _write_pack(tmp_path, _manifest(["formula"]), f)  # type: ignore[arg-type]
         build_pack(p)  # 不抛
     # 非法类型 → R-1（list / bool / None；P2-2 收紧后 bool 与全库数字语义一致）
     for bad in ({"formula": {"x": [1]}}, {"formula": {"x": True}}, {"formula": {"x": None}}):
-        p = _write_pack(tmp_path, _manifest(["formula"]), bad)
+        p = _write_pack(tmp_path, _manifest(["formula"]), bad)  # type: ignore[arg-type]
         with pytest.raises(PackLoadError) as ei:
             build_pack(p)
         assert any(e.kind == "R-1" for e in ei.value.errors), f"{bad} 应红拦 R-1"
@@ -529,7 +529,7 @@ async def test_hot_reload_success_incremental(tmp_path: Path) -> None:
     assert result.ok, f"重载失败: {result.note}"
     assert result.changed_modules == ("items",), f"应仅 items 重载，实际 {result.changed_modules}"
     assert result.generation == 2
-    assert watcher.registry.resolve("p1", "item").get("price") == 150
+    assert watcher.registry.resolve("p1", "item").get("price") == 150  # type: ignore[attr-defined]
 
 
 async def test_hot_reload_failure_rollback(tmp_path: Path) -> None:

@@ -18,8 +18,8 @@ try:  # M6 才接运行时依赖；缺失时降级为占位（不破坏 M0 单�
     from fastapi import APIRouter, FastAPI  # type: ignore
     _HAS_FASTAPI = True
 except ImportError:  # pragma: no cover
-    FastAPI = None  # type: ignore[assignment,misc]
-    APIRouter = None  # type: ignore[assignment,misc]
+    FastAPI = None
+    APIRouter = None
     _HAS_FASTAPI = False
 
 __all__ = ["create_app", "iter_routes", "FastAPI", "APIRouter"]

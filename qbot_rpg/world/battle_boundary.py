@@ -873,10 +873,10 @@ async def settle_exit_idempotent(
         command=f"settle:{settlement_kind}",
     )
     # ① 入口只读查重（IDEM-3 只查不插；命中 → 已结算，不双结算）
-    if await repository.idem_claim(key):
+    if await repository.idem_claim(key):  # type: ignore[attr-defined]
         return False
     # ② 单事务结算 + 写键（IDEM-4；异常由 tx() ROLLBACK 后向上抛，IDEM-6）
-    async with repository.tx() as tx:
+    async with repository.tx() as tx:  # type: ignore[attr-defined]
         if await tx.idem_exists(key):
             return False
         await tx.delete_session(qid)

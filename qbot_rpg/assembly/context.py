@@ -368,6 +368,20 @@ def _stats_table(registry: Any, settings: Mapping) -> Dict[str, Any]:
                     out[str(e["id"])] = e
             if out:
                 return out
+    # 兜底：registry 装载表（loader 键名规范化 stats→stat 单数；StatDef.raw 提取原始 dict）
+    tbl = getattr(registry, "_tables", None)
+    if isinstance(tbl, Mapping):
+        st = tbl.get("stat") or tbl.get("stats")
+        if isinstance(st, Mapping):
+            out = {}
+            for k, v in st.items():
+                if isinstance(v, Mapping):
+                    out[str(k)] = dict(v)
+                else:
+                    vraw = getattr(v, "raw", None)
+                    out[str(k)] = dict(vraw) if isinstance(vraw, Mapping) else v
+            if out:
+                return out
     return {}
 
 

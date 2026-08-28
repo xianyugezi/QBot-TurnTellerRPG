@@ -1,4 +1,5 @@
 {
+  "default_map": "rubble_field",
   "currencies": [
     {
       "id": "coins",

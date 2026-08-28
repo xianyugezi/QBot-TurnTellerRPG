@@ -171,7 +171,7 @@ async def build_app_deps(
     deps.audit_hmac_key = None  # type: ignore[attr-defined]
     deps.queue_timeout = None  # type: ignore[attr-defined]
 
-    from qbot_rpg_bridge.plugin import set_deps
+    from .plugin import set_deps  # 相对 import：与 NoneBot 加载实例同包，避免双实例 _deps 隔离
 
     set_deps(deps)
     return deps

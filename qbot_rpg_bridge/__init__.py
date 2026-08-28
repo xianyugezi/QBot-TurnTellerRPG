@@ -106,3 +106,25 @@ async def run_bridge(
 
         runner = _default_runner
     return await runner(event_dict, deps)
+
+
+# NoneBot 插件加载即注册（部署接线）：NoneBot 只 import 包 __init__.py，须显式
+# 触发 plugin.py——其模块级 `if HAS_NONEBOT: register_plugin()` 完成 on_message
+# 注册 + on_startup 装配。放文件末尾避免与 plugin.py 顶部 `from . import run_bridge`
+# 循环 import（run_bridge 已定义后触发安全）。**必须相对 import**（.plugin）：NoneBot
+# 加载的是 plugins.qbot_rpg_bridge，绝对 import 会解析到 sys.path 仓库副本 → 双实例、
+# on_message 不注册。无 NoneBot 环境 import 安全（HAS_NONEBOT=False 跳过注册）。
+with open("/tmp/qbot_rpg_bridge_debug.log", "a", encoding="utf-8") as _dbg:  # noqa: PTH123 —— 部署诊断
+    _dbg.write("DEBUG __init__: import plugin 前\n")
+try:
+    from . import plugin as _plugin  # noqa: E402,F401 —— 触发 on_message 注册
+
+    with open("/tmp/qbot_rpg_bridge_debug.log", "a", encoding="utf-8") as _dbg:  # noqa: PTH123
+        _dbg.write("DEBUG __init__: import plugin 完成\n")
+except Exception as _e:  # noqa: BLE001 —— 部署诊断
+    import traceback
+
+    with open("/tmp/qbot_rpg_bridge_debug.log", "a", encoding="utf-8") as _dbg:  # noqa: PTH123
+        _dbg.write(f"DEBUG __init__: import plugin 异常 {type(_e).__name__}: {_e}\n")
+        traceback.print_exc(file=_dbg)
+    raise

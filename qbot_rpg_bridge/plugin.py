@@ -23,7 +23,7 @@ from __future__ import annotations
 
 from typing import Any, Callable, Optional
 
-from qbot_rpg_bridge import run_bridge
+from . import run_bridge  # noqa: E402 —— 相对 import：与 __init__ 同实例（NoneBot 加载 plugins.qbot_rpg_bridge 时不解析到 sys.path 仓库副本）
 
 try:
     from nonebot import on_message  # type: ignore[import-not-found]
@@ -84,7 +84,16 @@ async def _on_message(bot: Any, event: Any) -> None:
     """
     deps = _deps
     if deps is None:
+        from qbot_rpg.data.logging_utils import get_logger  # noqa: PLC0415 —— 部署调试
+
+        get_logger("qbot_rpg_bridge").warning(
+            "[qbot_rpg_bridge] 收到消息但 deps 未装配（on_startup 未成功）: %s",
+            str(getattr(event, "message", ""))[:30])
         return  # 未装配：静默忽略
+    from qbot_rpg.data.logging_utils import get_logger  # noqa: PLC0415
+
+    get_logger("qbot_rpg_bridge").info(
+        "[qbot_rpg_bridge] 收到消息: %s", str(getattr(event, "message", ""))[:30])
     try:
         reply = await run_bridge(event, deps, runner=_runner)
     except Exception:  # noqa: BLE001 —— 桥接顶层兜底（TPL-12 语义，规则 ⑫⑬）
@@ -111,10 +120,13 @@ def register_plugin() -> None:
     assert on_message is not None  # HAS_NONEBOT 保证；类型收窄供静态检查
     assert NB_Bot is not None and NB_Event is not None
     matcher = on_message(priority=_PRIORITY, block=False)
+    from qbot_rpg.data.logging_utils import get_logger  # noqa: PLC0415
+
+    get_logger("qbot_rpg_bridge").info("[qbot_rpg_bridge] on_message 注册: priority=%s block=False", _PRIORITY)
     # NoneBot 依赖注入需真实 Bot/Event 类型标注（Any 无法解析，且注解须在模块级 globals
     # 可解析——故 NB_Bot/NB_Event 模块级 import）——闭包包装供注入，业务体仍走 _on_message
-    async def _wrapped(bot: NB_Bot, event: NB_Event) -> None:  # noqa: ANN001  # pyright: ignore[reportInvalidTypeForm]
-        await _on_message(bot, event)
+    async def _wrapped(bot: NB_Bot, event: NB_Event) -> None:  # noqa: ANN001,E501
+        await _on_message(bot, event)  # noqa: PLC2701
 
     matcher.handle()(_wrapped)
     # 启动装配（部署接线：NoneBot on_startup → build_app_deps → set_deps）
@@ -125,4 +137,15 @@ def register_plugin() -> None:
 
 if HAS_NONEBOT:
     # NoneBot 插件加载即注册（模块级执行；无 nonebot 环境跳过，import 安全）
-    register_plugin()
+    with open("/tmp/qbot_rpg_bridge_debug.log", "a", encoding="utf-8") as _dbg:  # noqa: PTH123
+        _dbg.write("DEBUG plugin.py: register_plugin 执行开始\n")
+    try:
+        register_plugin()
+        with open("/tmp/qbot_rpg_bridge_debug.log", "a", encoding="utf-8") as _dbg:  # noqa: PTH123
+            _dbg.write("DEBUG plugin.py: register_plugin 执行完成\n")
+    except Exception as e:  # noqa: BLE001 —— 部署诊断
+        import traceback
+
+        with open("/tmp/qbot_rpg_bridge_debug.log", "a", encoding="utf-8") as _dbg:  # noqa: PTH123
+            _dbg.write(f"DEBUG plugin.py: register_plugin 异常 {type(e).__name__}: {e}\n")
+            traceback.print_exc(file=_dbg)

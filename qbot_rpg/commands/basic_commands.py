@@ -56,8 +56,9 @@ TPL-12（sender.format_tpl12，文案唯一源 errors.py D-04）。
      prefix_render 与后续批次承接；本路 /角色 聚焦任务口径「LV 行固定头部 + 属性三层结构
      （白值/加成/临时）」，9 项属性 5 条/页 = 2 页 + CakeGame 尾段（当前页 + Tip）+ 裁决② 夹取。resource 型（生命/魔力）
      显示 当前/上限（当前取 ctx["hp"]/ctx["mp"]）；最终值经 3b 管线 calc_all_final_attributes。
-  4) **/装备 整数参数 = 页码**（m4 §2.2 翻页横切 + CakeGame 尾段），切换装备走
-     显式子词「穿 <序号>」（背包序号）/「卸 <槽位>」（槽位名/id/序号，本层 resolve_equip_slot 纯
+  4) **/装备 不加翻页（意见一同步）**：面板一次性展示全部已装备槽位（头部 `【装备】`、
+     槽位行去序号、空槽不显示、Tip「使用 序号」）；切换装备走显式子词
+     「穿 <序号>」（背包序号）/「卸 <槽位>」（槽位名/id/序号，本层 resolve_equip_slot 纯
      解析 → 引擎）；槽位名/序号解析失败 = 值域文案「❌ 没有这个装备槽位」（命令合法，不走 TPL-12，
      对齐 quest「任务不存在」口径）。
   5) **/技能 派生指向**：skill.chain_refs → ctx["skill_chains"] 链定义（steps[].from == 本技能 →
@@ -613,7 +614,7 @@ def _currency_lines(ctx: Mapping[str, Any]) -> List[str]:
 # CakeGame 式尾段 Tip 内容（`Tip:` 之后部分，2026-08-27 用户拍板统一列表尾段；无斜杠指令名）
 _BAG_TAIL_TIP = "发送'使用+物品名'即可使用物品"      # /背包（含货币行 + 类型词）
 _VIEW_TAIL_TIP = "发送'装备'查看当前装备"           # /角色（属性面板下一步）
-_EQUIP_TAIL_TIP = "发送'装备 穿 序号'穿戴装备"      # /装备（穿戴引导）
+_EQUIP_TAIL_TIP = "发送'使用 序号'穿戴装备。"      # /装备（穿戴引导；意见一同步：Tip 改「使用 序号」）
 _SKILL_TAIL_TIP = "发送'帮助 技能'查看技能说明"     # /技能（技能说明引导）
 _HELP_TAIL_TIP = "发送'帮助 组名'翻页查看指令"      # /帮助 目录/组页
 
@@ -950,40 +951,38 @@ def _slot_info(slot: Any) -> Optional[Mapping[str, Any]]:
     }
 
 
-def equip_line(index: int, slot_id: str, slot: Any, ctx: Mapping[str, Any]) -> str:
-    """装备栏行：`1. 武器：铁剑 +3` / `2. 头部：（空）`。"""
+def equip_line(slot_id: str, slot: Any, ctx: Mapping[str, Any]) -> Optional[str]:
+    """装备栏行（意见一同步：去序号）：`武器：铁剑 +3`；空槽（部位没有装备）→ None
+    （空槽不显示，由 _render_equip_page 过滤）。"""
     slot_name = _slot_name(ctx, slot_id)
     info = _slot_info(slot)
     if info is None:
-        return f"{index}. {slot_name}：（空）"
-    line = f"{index}. {slot_name}：{info['name']}"
+        return None
+    line = f"{slot_name}：{info['name']}"
     if info["enhance"]:
         line += f" +{info['enhance']}"
     return line
 
 
-def _render_equip_page(ctx: Mapping[str, Any], page: int) -> str:
-    """/装备 正文：装备栏槽位 5 条/页 + TPL-08 + 裁决② 夹取。"""
+def _render_equip_page(ctx: Mapping[str, Any], page: int = 1) -> str:
+    """/装备 正文（意见一同步：不加翻页）：头部 `【装备】` + 非空槽位一行一个 + Tip。
+
+    空槽（部位没有装备）不显示；一次性展示全部已装备槽位（无页码/夹取尾段，
+    不翻页）；`page` 参数保留仅兼容旧整数参数路径，实际不再分页。
+    """
     order = _slot_order(ctx)
     eq = _equipment_map(ctx)
-    # 槽位视图 = 顺序槽位全集（含空槽）；ctx 内额外槽位追加（内容包自定义部位 EQP-04）
+    # 槽位视图 = 顺序槽位全集；ctx 内额外槽位追加（内容包自定义部位 EQP-04）
     items = list(order)
     for sid in eq:
         if sid not in items:
             items.append(sid)
-    res = resolve_page(page, len(items), DEFAULT_PAGE_SIZE)
-    if res.invalid:
-        raise ValueError(
-            "页码非法（0/负数/非数字）：壳层应经 parse_page_arg 判定并转 TPL-12（3d §2.2/裁决②）"
-        )
-    assert res.page is not None
-    start = (res.page - 1) * DEFAULT_PAGE_SIZE
-    slice_items = items[start:start + DEFAULT_PAGE_SIZE]
-    lines: List[str] = [_base_header(ctx, "装备")]
-    for i, sid in enumerate(slice_items):
-        lines.append(equip_line(start + i + 1, sid, eq.get(sid), ctx))
-    if items:
-        lines.append(_cake_tail(res.page, res.total_pages, tip=_EQUIP_TAIL_TIP, clamped=res.clamped))
+    lines: List[str] = ["【装备】"]
+    for sid in items:
+        ln = equip_line(sid, eq.get(sid), ctx)
+        if ln:
+            lines.append(ln)
+    lines.append(f"Tip:{_EQUIP_TAIL_TIP}")
     return "\n".join(lines)
 
 
@@ -1179,10 +1178,10 @@ def _cmd_equip_remove(ctx: Mapping[str, Any], slot_id: str) -> str:
 
 
 def cmd_equip(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
-    """/装备 [参数] 主入口（4b §三 装备穿戴 + m4 §2.2 页码横切）：
+    """/装备 [参数] 主入口（4b §三 装备穿戴；意见一同步：不加翻页）：
 
-      无参            → 装备栏第 1 页（5 条/页 + TPL-08 + 裁决② 夹取）
-      <整数>          → 装备栏页码翻页（工程补白 4：整数 = 页码）
+      无参 / <整数>    → 装备栏一次性展示全部已装备槽位（头部【装备】；空槽不显示；
+                        整数页码忽略不再翻页）
       穿 <序号>       → 切换穿戴背包第 N 件（引擎）
       卸 <槽位>       → 卸下槽位装备（槽位名/id/序号；解析失败 → 值域文案 TPL_NO_SLOT）
     """

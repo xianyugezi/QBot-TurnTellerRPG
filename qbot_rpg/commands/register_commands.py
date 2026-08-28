@@ -52,8 +52,8 @@ ctx 消费契约（装配层 make_context 注入；未注入字段按缺省兜�
      → 硬拦过滤；超长 emoji 由解析器 token 合法集天然拦截（unknown separator → TPL-12），
      本层无需 emoji 正则；保留字符（空格/`* , = + /`）→ 黄提示不硬拦，成功消息附
      「（提示：名字含保留字符…建议改名）」（REG-02/RUL-02「只建议不限制」）。
-  6) 已注册幂等文案 = RUL-09：`❌ 你已经注册过了，当前角色：{name}（Lv{level} {job}）。
-     想重新开始请联系管理员`（B5 不覆盖原档）。
+  6) 已注册幂等文案 = RUL-09：`❌ 你已经注册过了！当前角色：{name}（Lv{level} {job}）。\n
+     想重新开始请发送注销。`（意见一同步：注销指令已拍板存在，去「待确认」标注；B5 不覆盖原档）。
   7) 重名检查走 ctx["name_exists"] 回调（装配层查角色名注册表）；回调缺省 → 视为唯一
      （纯函数可测；注册表接线归装配层）。
 """
@@ -100,8 +100,9 @@ TPL_NAME_TOO_LONG = "❌ 角色名最多 20 个字"
 TPL_NAME_BAD_CHARS = "❌ 角色名含非法字符，请重新输入（过滤控制字符/超长 emoji）"
 
 # 已注册幂等拒绝（REG-03 / RUL-09；B5：禁止重复建号覆盖原档）
+# 意见一同步：注销指令已拍板存在，文案改为引导「发送注销」（去掉旧「请联系管理员」）
 TPL_ALREADY_REGISTERED = (
-    "❌ 你已经注册过了，当前角色：{name}（Lv{level} {job}）。想重新开始请联系管理员"
+    "❌ 你已经注册过了！当前角色：{name}（Lv{level} {job}）。\n想重新开始请发送注销。"
 )
 
 # 重名红拦换名（REG-03 / RUL-07 / B5）
@@ -336,8 +337,13 @@ def render_register_success(
     if job and job.get("recommended_newbie"):
         job_name += "（推荐新手）"
     lines.append(f"职业：{job_name} ｜ 位置：{location}")
-    lines.append(f"初始属性：生命 {hp}/{hp} ｜ 魔力 {mp}/{mp} ｜ 攻击 {atk} ｜ 防御 {dfn}")
-    lines.append(f"下一步：发 /帮助 查看指令，或 /锁定 {location}怪物开战")
+    # 意见一同步：初始属性每项独立一行（生命/魔力/攻击/防御各一行）；引导行尾加句号
+    lines.append("初始属性：")
+    lines.append(f"生命 {hp}/{hp}")
+    lines.append(f"魔力 {mp}/{mp}")
+    lines.append(f"攻击 {atk}")
+    lines.append(f"防御 {dfn}")
+    lines.append(f"下一步：发 /帮助 查看指令，或 /锁定 {location}怪物开战。")
     if hint:
         lines.append(_RESERVED_HINT.format(hint=hint))
     return "\n".join(lines)

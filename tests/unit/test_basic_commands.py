@@ -334,30 +334,33 @@ def test_bag_line_pure():
 # ---------------------------------------------------------------------------
 
 def test_equip_view_page1():
-    """/装备 → 装备栏第 1 页（武器+五部位；空槽（空））+ TPL-08 页脚。"""
+    """/装备 → 装备栏一次性展示（意见一同步：头部【装备】/槽位行去序号/空槽不显示/不翻页）。"""
     out = cmd_equip(parse("/装备"), make_ctx())
     lines = out.splitlines()
-    assert lines[0] == "【装备】Lv3.阿伟（战士）"
-    assert "1. 武器：铁剑 +3" in out      # 强化等级 +3
-    assert "2. 头部：（空）" in out
-    assert "3. 身体：锁子甲" in out       # 无强化不显示 +0
-    assert "4. 手部：（空）" in out
-    assert "5. 腿部：（空）" in out
-    assert "当前页：1/2" in out
+    assert lines[0] == "【装备】"
+    assert "武器：铁剑 +3" in out      # 强化等级 +3（去序号）
+    assert "身体：锁子甲" in out       # 无强化不显示 +0
+    # 空槽（头部/手部/腿部/脚部）不显示（意见一：部位没有装备就不显示）
+    assert "头部" not in out and "手部" not in out
+    assert "腿部" not in out and "脚部" not in out
+    assert "当前页" not in out         # 不加翻页
+    assert lines[-1] == "Tip:发送'使用 序号'穿戴装备。"
 
 
 def test_equip_view_page2():
-    """/装备 2 → 第 2 页（脚部空槽）。"""
+    """/装备 2（整数参数）→ 不翻页（意见一同步），仍一次性展示全部已装备槽位。"""
     out = cmd_equip(parse("/装备 2"), make_ctx())
-    assert "6. 脚部：（空）" in out
-    assert "当前页：2/2" in out
+    assert "武器：铁剑 +3" in out
+    assert "身体：锁子甲" in out
+    assert "当前页" not in out
 
 
 def test_equip_view_clamp():
-    """裁决②：/装备 9 超总页数 → 夹取最后一页 + （已到最后一页）。"""
+    """/装备 9（整数参数）→ 不翻页不夹取（意见一同步），一次性展示全部已装备槽位。"""
     out = cmd_equip(parse("/装备 9"), make_ctx())
-    assert "6. 脚部：（空）" in out
-    assert "（已到最后一页）" in out
+    assert "武器：铁剑 +3" in out
+    assert "身体：锁子甲" in out
+    assert "（已到最后一页）" not in out
 
 
 @pytest.mark.parametrize("raw", ["/装备 0", "/装备 abc", "/装备 1 2"])
@@ -449,10 +452,10 @@ def test_resolve_equip_slot():
 
 
 def test_equip_line_pure():
-    """equip_line 纯函数：空槽/装备+强化等级。"""
+    """equip_line 纯函数（意见一同步）：去序号；空槽 → None（不显示）。"""
     ctx = make_ctx()
-    assert equip_line(1, "weapon", {"item_id": "sw", "name": "铁剑", "slot_level": 3}, ctx) == "1. 武器：铁剑 +3"
-    assert equip_line(2, "armor_head", None, ctx) == "2. 头部：（空）"
+    assert equip_line("weapon", {"item_id": "sw", "name": "铁剑", "slot_level": 3}, ctx) == "武器：铁剑 +3"
+    assert equip_line("armor_head", None, ctx) is None
 
 
 # ---------------------------------------------------------------------------
@@ -685,13 +688,13 @@ def test_router_parse_integration():
 # ---------------------------------------------------------------------------
 
 def test_footer_tpl08_exact():
-    """/角色 /装备 /技能 /帮助 组页 页脚 TPL-08 逐字（无自造变体）；/背包 走用户自定义模板
-    （当前页放尾部 + Tip，2026-08-27 用户拍板，不用 TPL-08 页脚）。"""
+    """/角色 /技能 /帮助 组页 页脚 TPL-08 逐字（无自造变体）；/背包 走用户自定义模板
+    （当前页放尾部 + Tip，2026-08-27 用户拍板）；/装备 意见一同步不加翻页（只 Tip）。"""
     ctx = make_ctx()
     assert "当前页：1/2" in cmd_view(parse("/角色"), ctx)
     assert "当前页：1/2(全部)" in cmd_bag(parse("/背包"), ctx)       # /背包 自定义模板
     assert "Tip:发送'使用+物品名'即可使用物品" in cmd_bag(parse("/背包"), ctx)
-    assert "当前页：1/2" in cmd_equip(parse("/装备"), ctx)
+    assert "Tip:发送'使用 序号'穿戴装备。" in cmd_equip(parse("/装备"), ctx)   # 意见一：不加翻页
     assert "当前页：1/2" in cmd_skill(parse("/技能"), ctx)
     assert "当前页：1/2" in cmd_help(parse("/帮助 冒险"), ctx)
 

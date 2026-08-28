@@ -375,16 +375,17 @@ def _adventure_data(ctx: Mapping[str, Any], page: int) -> dict:
 # ---------------------------------------------------------------------------
 
 def render_adventure_page(ctx: Mapping[str, Any], page: int) -> str:
-    """冒险日志整页（R-03）：`【冒险日志】第 X 页 / 共 Y 页` + 分组条目 + CakeGame 尾段。
+    """冒险日志整页（R-03，意见一同步：页头去页码）：`【冒险日志】` + 分组条目 + CakeGame 尾段。
 
     入参 ctx: 玩家上下文（event_log/is_gm/settings 等）；page: 目标页码（1..，超页夹取）。
     出参 str（空日志 → 空文案）。核心逻辑: _adventure_data（兄弟路 read_log 优先）→
     按固定组序分组渲染（空组不渲染）→ 裁决② 夹取提示 + 当前页 + Tip 尾段。
+    翻页信息不再放在页头（去「第 X 页 / 共 Y 页」），保留在尾段「当前页：X/Y」。
     """
     data = _adventure_data(ctx, page)
     if not data["total"]:
         return _EMPTY_ADVENTURE
-    lines: List[str] = [f"【冒险日志】第 {data['page']} 页 / 共 {data['pages']} 页"]
+    lines: List[str] = ["【冒险日志】"]
     for tag in data["order"]:
         group = data["entries"].get(tag) or []
         if not group:

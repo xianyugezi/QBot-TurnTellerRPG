@@ -49,24 +49,21 @@ def render_battle_start(
     """BREP-23 战斗开始（5e §6.1 / TC-24）：独立 1 条消息（铁律2 / 3d 承接表）。
 
     `与{怪物}的战斗开始！{怪物} {HP}/{最大HP}` + hint（意图/弱点情报行，如
-    `弱点：火（×1.3）`，hint=None 时省略）。战斗开始是**独立一条消息**（铁律 2），
-    首行仍按玩家回复渲染前缀（TC-24「开始消息同样带前缀首行」，【前缀】L80）：
-    party 承载 level/name/title，缺失时前缀省略（_render_prefix_line 优雅回落）。
+    `弱点：火（×1.3）`，hint=None 时省略）。意见一同步：战斗开始消息**不再渲染
+    前缀行**（去 `Lv35.阿伟` 前缀，只留 与{怪物}的战斗开始！+ 弱点行）；前缀是否
+    注入由接线层 BattlePipeline.send() 决定（send_start 已改 prefix=False 跳过）。
+    party 参数保留仅兼容既有签名，不再用于渲染前缀。
 
     取数：{怪物} 展示名取 enemy.name/enemy_name（缺省「怪物」）；HP/最大HP 取
     enemy.hp / enemy.max_hp（最大缺省回落当前 HP）。hint 由接线层提供（类型/元素
     弱点 ×1.3 / BOSS 阶段机制预告 / BREP-12 意图预告），纯文本禁 emoji（D-01）。
     """
-    lines: List[str] = []
-    prefix = _render_prefix_line(party)                # 前缀首行（TC-24）
-    if prefix:
-        lines.append(prefix)
     name = str(
         getattr(enemy, "name", "") or getattr(enemy, "enemy_name", "") or "怪物"
     )
     hp = int(getattr(enemy, "hp", 0))
     max_hp = int(getattr(enemy, "max_hp", hp))
-    lines.append(f"与{name}的战斗开始！{name} {hp}/{max_hp}")   # BREP-23
+    lines: List[str] = [f"与{name}的战斗开始！{name} {hp}/{max_hp}"]   # BREP-23
     if hint:
         lines.append(str(hint))                        # 意图/弱点情报行（可选）
     return "\n".join(lines)

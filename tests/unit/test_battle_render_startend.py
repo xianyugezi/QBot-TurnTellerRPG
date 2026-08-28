@@ -73,26 +73,24 @@ def _assert_no_banned_emoji(text: str) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_tc24_start_exact_with_prefix_and_hint() -> None:
-    """TC-24：`/攻击 史莱姆` 战斗开始 —— 独立消息逐字断言：
+def test_tc24_start_exact_with_hint() -> None:
+    """TC-24：`/攻击 史莱姆` 战斗开始 —— 独立消息逐字断言（意见一同步：无前缀行）：
     `与史莱姆的战斗开始！史莱姆 25/25`（BREP-23）+ 弱点情报行 `弱点：火（×1.3）`；
-    开始消息同样带前缀首行（铁律2 独立 1 条消息）。"""
+    战斗开始消息不再渲染前缀首行（去 `Lv35.阿伟` 前缀）。"""
     text = render_battle_start(
         _party(), _enemy(), hint="弱点：火（×1.3）",
     )
     _assert_no_banned_emoji(text)
     assert text.split("\n") == [
-        "Lv35.阿伟 -斩龙者-",
         "与史莱姆的战斗开始！史莱姆 25/25",
         "弱点：火（×1.3）",
     ]
 
 
 def test_tc24_start_hint_none_omits_hint_line() -> None:
-    """hint=None 时弱点/意图情报行省略：仅 BREP-23 一行（无 hint 行，5e §6.1）。"""
+    """hint=None 时弱点/意图情报行省略：仅 BREP-23 一行（无 hint 行，5e §6.1；无前缀行）。"""
     text = render_battle_start(_party(), _enemy())
     assert text.split("\n") == [
-        "Lv35.阿伟 -斩龙者-",
         "与史莱姆的战斗开始！史莱姆 25/25",
     ]
 

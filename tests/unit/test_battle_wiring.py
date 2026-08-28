@@ -169,7 +169,7 @@ def test_round_prefix_only_first_line(start_battle) -> None:
 
 
 def test_start_one_message_with_hint() -> None:
-    """战斗开始独立 1 条（TC-24）：BREP-23 + 意图/弱点情报行；前缀首行。"""
+    """战斗开始独立 1 条（TC-24）：BREP-23 + 意图/弱点情报行；意见一同步：无前缀行。"""
     sender = RecordingSender()
     pipeline = bc.BattlePipeline(sender, level=LV, name=NAME, title=TITLE, to="g1")
     delivered = pipeline.send_start(SimpleNamespace(), SimpleNamespace(
@@ -177,7 +177,7 @@ def test_start_one_message_with_hint() -> None:
     assert len(delivered) == 1
     assert len(sender.calls) == 1
     lines = sender.calls[0].split("\n")
-    assert lines == [PREFIX, "与史莱姆的战斗开始！史莱姆 25/25", "弱点：火（×1.3）"]
+    assert lines == ["与史莱姆的战斗开始！史莱姆 25/25", "弱点：火（×1.3）"]
     _assert_no_banned_emoji(sender.calls[0])
 
 

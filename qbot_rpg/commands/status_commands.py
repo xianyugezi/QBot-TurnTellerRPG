@@ -226,8 +226,8 @@ def _fmt_exp(v: object) -> str:
 
 
 def level_line(ctx: Mapping[str, Any]) -> str:
-    """② 等级/经验行（RUL-11/STT-02）：`【等级】3 ｜ 经验 320/1000`；
-    满级 → `【等级】45【已满级】`（LVL-11 口径，工程补白 3）。"""
+    """② 等级/经验行（RUL-11/STT-02，意见一同步：等级/经验各占一行，去 `｜`）：
+    `【等级】3`\\n`【经验】20/1000`；满级 → `【等级】45【已满级】`（LVL-11 口径，工程补白 3）。"""
     f = _player_fields(ctx)
     level = f["level"]
     cap = ctx.get("level_cap")
@@ -242,13 +242,13 @@ def level_line(ctx: Mapping[str, Any]) -> str:
     nxt = ctx.get("exp_next")
     exp = _fmt_exp(f["exp"])
     if nxt is not None:
-        return f"【等级】{level} ｜ 经验 {exp}/{nxt}"
-    return f"【等级】{level} ｜ 经验 {exp}"
+        return f"【等级】{level}\n【经验】{exp}/{nxt}"
+    return f"【等级】{level}\n【经验】{exp}"
 
 
 def attr_line(ctx: Mapping[str, Any]) -> str:
-    """③ 属性行（RUL-12/STT-03，最终层数值，全中文，工程补白 2）：
-    `【生命】30/30 ｜ 【魔力】8/10 ｜ 【攻击】12 ｜ 【防御】9`。"""
+    """③ 属性行（RUL-12/STT-03，最终层数值，全中文，意见一同步：每项独立一行）：
+    `【生命】30/30`\\n`【魔力】8/10`\\n`【攻击】12`\\n`【防御】9`。"""
     final = _final_attrs(ctx)
     f = _player_fields(ctx)
     hp_max = int(final.get("hp", 0))
@@ -257,7 +257,12 @@ def attr_line(ctx: Mapping[str, Any]) -> str:
     dfn = int(final.get("con", 0))
     hp_cur = int(f["hp"]) if f["hp"] is not None else hp_max
     mp_cur = int(f["mp"]) if f["mp"] is not None else mp_max
-    return f"【生命】{hp_cur}/{hp_max} ｜ 【魔力】{mp_cur}/{mp_max} ｜ 【攻击】{atk} ｜ 【防御】{dfn}"
+    return "\n".join([
+        f"【生命】{hp_cur}/{hp_max}",
+        f"【魔力】{mp_cur}/{mp_max}",
+        f"【攻击】{atk}",
+        f"【防御】{dfn}",
+    ])
 
 
 def location_line(ctx: Mapping[str, Any]) -> str:

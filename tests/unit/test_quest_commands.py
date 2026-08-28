@@ -116,8 +116,8 @@ def test_quest_noarg_board_page1():
     assert "5. 打造武器  进度 1/1" in out
     # 5 条/页（m4 §2.2）：第 1 页 5 条 + TPL-08 页脚
     assert "当前页：1/2" in out
-    # 操作指引行（2b4 §5.2 语义，收敛为 /任务 接取 <序号>）
-    assert "Tip:发送'任务 接取 序号'即可领取任务" in out
+    # 操作指引行（2b4 §5.2 语义，意见一同步：Tip 改「领取任务 序号」）
+    assert "Tip:发送'领取任务 序号'即可领取任务" in out
 
 
 def test_quest_board_npc_section_page2():

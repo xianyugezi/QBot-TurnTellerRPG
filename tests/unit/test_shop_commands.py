@@ -124,7 +124,7 @@ def test_shop_noarg_browses_current_default_shop():
     out = cmd_shop(parse("/商店"), make_ctx())
     assert out.startswith("杂货铺 [普通商店] 新手村杂货铺")
     assert "1. 药水 ｜ 商品单价：50(金币)" in out
-    assert "5. 金珠 ｜ 商品单价：80000(金币) ｜ 原价 100000(金币) [折扣 -20%]" in out
+    assert "5. 金珠 ｜ 商品单价：80000(金币) [折扣 -20%]" in out   # 意见一同步：折扣不显示原价
     # 5 条/页（m4 §2.2）：第 1 页 5 条 + TPL-08 页脚
     assert "当前页：1/2" in out
     # 条目间分隔线（2b3 TC-05）

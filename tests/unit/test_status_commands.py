@@ -69,15 +69,20 @@ def parse(raw: str) -> ParsedCommand:
 # ---------------------------------------------------------------------------
 
 def test_tc_stt_01_overview_panel():
-    """TC-STT-01：/状态 → 前缀行 + 等级/经验行 + 属性行 + 位置行 + 效果区（无效果 【效果】无）。"""
+    """TC-STT-01：/状态 → 前缀行 + 等级/经验行 + 属性行 + 位置行 + 效果区（无效果 【效果】无）。
+    意见一同步：等级/经验各占一行、属性每项独立一行（去 ｜）。"""
     out = cmd_status(parse("/状态"), make_ctx())
     lines = out.splitlines()
     assert lines[0] == "Lv3.阿伟 -斩龙者-"                      # ① 前缀行
-    assert lines[1] == "【等级】3 ｜ 经验 320/1000"              # ② 等级/经验行
-    assert lines[2] == "【生命】21/100 ｜ 【魔力】8/30 ｜ 【攻击】15 ｜ 【防御】10"  # ③ 属性行
-    assert lines[3] == "【位置】新手村 · 中央广场"               # ④ 位置行
-    assert lines[4] == "【效果】无"                              # ⑤ 效果区
-    assert len(lines) == 5                                       # 战斗外无目标行
+    assert lines[1] == "【等级】3"                               # ② 等级行（独立一行）
+    assert lines[2] == "【经验】320/1000"                        # ② 经验行（独立一行）
+    assert lines[3] == "【生命】21/100"                          # ③ 属性行（每项独立一行）
+    assert lines[4] == "【魔力】8/30"
+    assert lines[5] == "【攻击】15"
+    assert lines[6] == "【防御】10"
+    assert lines[7] == "【位置】新手村 · 中央广场"               # ④ 位置行
+    assert lines[8] == "【效果】无"                              # ⑤ 效果区
+    assert len(lines) == 9                                       # 战斗外无目标行
 
 
 def test_stt_prefix_no_title_dashes():
@@ -101,9 +106,9 @@ def test_stt_level_max_exp_next_zero():
 
 
 def test_stt_level_exp_no_next():
-    """exp_next 缺省 → 仅显当前经验。"""
+    """exp_next 缺省 → 仅显当前经验（独立一行，意见一同步）。"""
     ctx = make_ctx(exp_next=None)
-    assert level_line(ctx) == "【等级】3 ｜ 经验 320"
+    assert level_line(ctx) == "【等级】3\n【经验】320"
 
 
 def test_stt_attr_line_final_via_pipeline():
@@ -121,17 +126,17 @@ def test_stt_attr_line_final_via_pipeline():
 
 
 def test_stt_attr_final_direct_consumed():
-    """属性行直接消费 ctx["attr_final"]（装配层已跑 calc_all_final_attributes）。"""
+    """属性行直接消费 ctx["attr_final"]（装配层已跑 calc_all_final_attributes；每项独立一行）。"""
     ctx = make_ctx(attr_final={"hp": 100, "mp": 30, "str": 18, "con": 12})
-    assert attr_line(ctx) == "【生命】21/100 ｜ 【魔力】8/30 ｜ 【攻击】18 ｜ 【防御】12"
+    assert attr_line(ctx) == "【生命】21/100\n【魔力】8/30\n【攻击】18\n【防御】12"
 
 
 def test_stt_attr_final_via_resolver():
-    """resolve_attr_final 兜底（ctx["attributes"]/attr_final 均缺省时）。"""
+    """resolve_attr_final 兜底（ctx["attributes"]/attr_final 均缺省时；每项独立一行）。"""
     ctx = make_ctx(attributes=None)
     ctx.pop("attr_final", None)
     ctx["resolve_attr_final"] = lambda: {"hp": 100, "mp": 30, "str": 20, "con": 9}
-    assert attr_line(ctx) == "【生命】21/100 ｜ 【魔力】8/30 ｜ 【攻击】20 ｜ 【防御】9"
+    assert attr_line(ctx) == "【生命】21/100\n【魔力】8/30\n【攻击】20\n【防御】9"
 
 
 def test_stt_location_default():
@@ -183,10 +188,10 @@ def test_tc_stt_03_battle_target_line():
     out = cmd_status(parse("/状态"), ctx)
     lines = out.splitlines()
     assert "【目标】史莱姆 18/30（第 3 回合）" in out
-    # 目标行位于位置行之后、效果区之前（TPL-4F-03 行序）
-    assert lines[3] == "【位置】新手村 · 中央广场"
-    assert lines[4] == "【目标】史莱姆 18/30（第 3 回合）"
-    assert lines[5] == "【效果】无"
+    # 目标行位于位置行之后、效果区之前（TPL-4F-03 行序；意见一后行号前移）
+    assert lines[7] == "【位置】新手村 · 中央广场"
+    assert lines[8] == "【目标】史莱姆 18/30（第 3 回合）"
+    assert lines[9] == "【效果】无"
     # 战斗指令并行不互斥：/状态 照常渲染（非战斗指令不受限，框架 L248）
     assert target_line(ctx) == "【目标】史莱姆 18/30（第 3 回合）"
 

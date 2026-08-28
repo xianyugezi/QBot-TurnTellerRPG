@@ -223,25 +223,28 @@ def test_group_internal_desc_order() -> None:
 
 
 def test_adventure_five_per_page_and_header() -> None:
-    """R-03：每页 5 条 + 表头 `【冒险日志】第 X 页 / 共 Y 页`。"""
+    """R-03：每页 5 条 + 表头 `【冒险日志】`（意见一同步：页头去「第 X 页 / 共 Y 页」页码）。"""
     entries = [_ev("first_kill", f"2026-08-{d:02d}", name=f"怪{d}") for d in range(1, 14)]
     ctx = _ctx(event_log=entries)
     out = cmd_log(_pc(), ctx)
-    assert "【冒险日志】第 1 页 / 共 3 页" in out
+    assert "【冒险日志】" in out
+    assert "第 1 页 / 共 3 页" not in out.splitlines()[0]   # 页码不在页头（保留在尾段当前页）
     log_lines = [ln for ln in out.splitlines() if ln.startswith("[日志]")]
     assert len(log_lines) == 5
 
 
 def test_adventure_clamp_last_page() -> None:
-    """TC-03 + 裁决②：13 条 → 3 页；/日志 3 为最末页（无夹取），/日志 9 夹取最末页+提示。"""
+    """TC-03 + 裁决②：13 条 → 3 页；/日志 3 为最末页（无夹取），/日志 9 夹取最末页+提示。
+    意见一同步：页头去页码，翻页信息保留在尾段「当前页：X/Y」。"""
     entries = [_ev("first_kill", f"2026-08-{d:02d}", name=f"怪{d}") for d in range(1, 14)]
     ctx = _ctx(event_log=entries)
     out = cmd_log(_pc("3"), ctx)
-    assert "【冒险日志】第 3 页 / 共 3 页" in out
+    assert "【冒险日志】" in out
+    assert "第 3 页 / 共 3 页" not in out                    # 页头无页码
     assert "怪13" not in out                     # 最末页 = 最新段（怪11..怪13 在第 1 页）?
     assert "（已到最后一页）" not in out           # 合法最末页不夹取
     out9 = cmd_log(_pc("9"), ctx)
-    assert "【冒险日志】第 3 页 / 共 3 页" in out9
+    assert "【冒险日志】" in out9
     assert "（已到最后一页）" in out9             # 越界 → 夹取 + 提示（裁决②）
     assert "当前页：3/3" in out9
 
@@ -279,7 +282,8 @@ def test_adventure_local_fallback(monkeypatch) -> None:
     entries = [_ev("first_kill", f"2026-08-{d:02d}", name=f"怪{d}") for d in range(1, 14)]
     ctx = _ctx(event_log=entries)
     out = cmd_log(_pc("9"), ctx)
-    assert "【冒险日志】第 3 页 / 共 3 页" in out
+    assert "【冒险日志】" in out
+    assert "第 3 页 / 共 3 页" not in out       # 意见一同步：页头去页码
     assert "（已到最后一页）" in out
     out2 = cmd_log(_pc(), _ctx(event_log=[_ev("hidden_find", "2026-08-28",
                                               weather="雨夜", name="蚀月之狼",

@@ -114,7 +114,8 @@ _EMPTY_SHOP = "（这家店空空的）"
 _LIST_TITLE = "可用商店一览"
 
 # CakeGame 式尾段 Tip 内容（`Tip:` 之后部分，2026-08-27 用户拍板统一列表尾段；无斜杠指令名）
-_BROWSE_TAIL_TIP = "发送'购买 物品名'即可购买物品"   # /商店 商品列表
+# 意见一同步：/商店 Tip 改「购买 序号」（按序号购买）
+_BROWSE_TAIL_TIP = "发送'购买 序号'即可购买物品。"   # /商店 商品列表
 _LIST_TAIL_TIP = "发送'商店 <名称>'即可进入商店"     # /商店 列表 一览
 
 
@@ -254,19 +255,13 @@ def _browse_header(shop: Mapping[str, Any]) -> str:
 
 
 def _browse_row_text(row: Mapping[str, Any], ctx: Mapping[str, Any]) -> str:
-    """商品行（2b3 TC-05/07）：`序号.物品名 ｜ 商品单价：价格(货币名) 标记`；折扣附原价划线。"""
+    """商品行（2b3 TC-05/07，意见一同步：折扣商品不显示原价）：
+    `序号.物品名 ｜ 商品单价：价格(货币名) 标记`（折扣只附 `[折扣 -X%]`）。"""
     idx = row.get("index", "?")
     name = row.get("name", "?")
     parts: List[str] = [f"{idx}. {name}", f"商品单价：{_price_text(row.get('price'), ctx)}"]
-    discount = row.get("discount") or 0
-    orig = row.get("original_unit") or 0
-    if discount and orig:
-        cur = ""
-        price = row.get("price")
-        if isinstance(price, Mapping):
-            cur = _currency_name(ctx, price.get("currency", ""))
-        parts.append(f"原价 {orig}({cur})")
     line = " ｜ ".join(parts)
+    discount = row.get("discount") or 0
     markers = list(row.get("markers", []) or [])
     if discount:
         markers.append(f"[折扣 -{discount}%]")

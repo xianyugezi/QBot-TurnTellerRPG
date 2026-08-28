@@ -80,8 +80,9 @@ def test_tc_reg_01_first_register_success():
     assert lines[0] == "Lv1.阿伟 - -"                                  # 前缀首行
     assert "✅ 注册成功！欢迎来到「艾泽拉」世界" in out
     assert "职业：战士（推荐新手） ｜ 位置：新手村" in out              # 推荐角标降级纯文本
-    assert "初始属性：生命 100/100 ｜ 魔力 30/30 ｜ 攻击 12 ｜ 防御 10" in out
-    assert "下一步：发 /帮助 查看指令，或 /锁定 新手村怪物开战" in out
+    # 意见一同步：初始属性每项独立一行（生命/魔力/攻击/防御各一行）
+    assert "初始属性：\n生命 100/100\n魔力 30/30\n攻击 12\n防御 10" in out
+    assert "下一步：发 /帮助 查看指令，或 /锁定 新手村怪物开战。" in out
     # 建号状态写 ctx（REG-04/05）
     assert ctx["registered"] is True
     p = ctx["player"]
@@ -187,7 +188,7 @@ def test_tc_reg_03_duplicate_name_blocked():
 # ---------------------------------------------------------------------------
 
 def test_tc_reg_04_already_registered_idempotent():
-    """TC-REG-04：已注册再 /注册 → `❌ 你已经注册过了，当前角色：…`；不覆盖原档。"""
+    """TC-REG-04：已注册再 /注册 → `❌ 你已经注册过了！当前角色：…`；不覆盖原档。"""
     ctx = make_ctx(registered=True,
                    player={"name": "小李", "level": 5, "job_id": "mage"},
                    job_name="法师")

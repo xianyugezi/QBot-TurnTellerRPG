@@ -532,24 +532,28 @@ class BattlePipeline:
 
     # -- 发送基元 ------------------------------------------------------------
 
-    def send(self, text: str, *, to: Any = None) -> List[str]:
+    def send(self, text: str, *, to: Any = None, prefix: bool = True) -> List[str]:
         """单条发送：前缀首行装配（M5-01）+ Sender 统一出口（无裸 send，铁律 7）。
 
+        prefix=False 时跳过前缀装配（意见一同步：战斗开始消息不渲染前缀行）。
         截断黄提示（PrefixWiringResult.hint，TC-13）作为归属发起群的独立短消息
         追加发送（不阻断正文；前缀截断为边界情形，单次操作仍 ≤2 条，铁律 2）。
 
         :return: 实际发送的段列表（顺序不颠倒）。
         """
         target = to if to is not None else self._to
-        res = apply_battle_prefix(
-            text,
-            level=self._level,
-            name=self._name,
-            title=self._title,
-            channel=self._channel,
-            prefix_settings=self._prefix_settings,
-            extra=self._extra,
-        )
+        if prefix:
+            res = apply_battle_prefix(
+                text,
+                level=self._level,
+                name=self._name,
+                title=self._title,
+                channel=self._channel,
+                prefix_settings=self._prefix_settings,
+                extra=self._extra,
+            )
+        else:
+            res = PrefixWiringResult(text=text)
         delivered: List[str] = []
         if res.text:
             delivered.extend(self._sender.send(res.text, to=target))
@@ -563,11 +567,12 @@ class BattlePipeline:
                    to: Any = None) -> List[str]:
         """战斗开始独立 1 条（BREP-23 + 意图/弱点情报行 hint；TC-24）。
 
-        前缀由 send() 统一装配（铁律 1）；player 仅作占位（render_battle_start 的
-        内嵌前缀被剥离，防双前缀，工程补白 4）。
+        意见一同步：战斗开始消息不渲染前缀行（prefix=False，send() 跳过前缀装配，
+        与 render_battle_start 去前缀行一致）。player 仅作占位（render_battle_start
+        不再消费玩家信息渲染前缀）。
         """
         body = render_battle_start(_prefix_free_ns(player), _enemy_ns(enemy), hint=hint)
-        return self.send(body, to=to)
+        return self.send(body, to=to, prefix=False)
 
     def send_round(self, report: Any, *, to: Any = None) -> List[str]:
         """一轮独立 1 条（玩家行动+怪物反击合并，render_battle_round；军规3/铁律 9）。

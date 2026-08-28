@@ -1,0 +1,821 @@
+[
+  {
+    "id": "gust_wolf",
+    "name": "疾风狼",
+    "tier": "normal",
+    "area": "幽光林地",
+    "desc": "迅捷的风之狼，成群出没于月华林地，是清理狼患委托的目标。",
+    "stats": {
+      "hp": 70,
+      "mp": 15,
+      "str": 11,
+      "int": 6,
+      "con": 9,
+      "spr": 6,
+      "foc": 8,
+      "agi": 14,
+      "luk": 6
+    },
+    "weakness": {
+      "types": [
+        "魔"
+      ],
+      "elements": {}
+    },
+    "pv": 10,
+    "pv_recover": "battle_end",
+    "resistance": {
+      "stun": 20
+    },
+    "actions": [
+      {
+        "action": "claw_swipe",
+        "probability": 1,
+        "weight": 50
+      },
+      {
+        "action": "tail_sweep",
+        "probability": 1,
+        "weight": 30
+      }
+    ],
+    "drops": {
+      "battle": [
+        {
+          "item": "potion",
+          "chance": 50,
+          "count": [
+            1,
+            2
+          ]
+        }
+      ],
+      "special": [],
+      "death": [
+        {
+          "item": "potion",
+          "chance": 100,
+          "count": 1
+        }
+      ]
+    },
+    "lore": [
+      {
+        "unlock": 10,
+        "desc": "疾风狼弱魔法攻击。"
+      },
+      {
+        "unlock": 50,
+        "desc": "战斗中有概率掉落疗伤药水。"
+      },
+      {
+        "unlock": 100,
+        "desc": "击杀疾风狼计入清理狼患委托的进度。"
+      }
+    ]
+  },
+  {
+    "id": "thorn_vine",
+    "name": "毒刺藤蔓",
+    "tier": "normal",
+    "area": "幽光林地",
+    "desc": "缠绕溪边的剧毒藤蔓，攻击附带中毒，是月光草的重要来源。",
+    "stats": {
+      "hp": 100,
+      "mp": 20,
+      "str": 10,
+      "int": 8,
+      "con": 10,
+      "spr": 8,
+      "foc": 8,
+      "agi": 6,
+      "luk": 5
+    },
+    "weakness": {
+      "types": [],
+      "elements": {
+        "fire": 1.3
+      }
+    },
+    "pv": 10,
+    "pv_recover": "battle_end",
+    "resistance": {
+      "immune": [
+        "poison"
+      ]
+    },
+    "actions": [
+      {
+        "action": "poison_sting",
+        "probability": 1,
+        "weight": 50
+      },
+      {
+        "action": "claw_swipe",
+        "probability": 1,
+        "weight": 30
+      }
+    ],
+    "drops": {
+      "battle": [
+        {
+          "item": "moon_grass",
+          "chance": 40,
+          "count": 1
+        }
+      ],
+      "special": [],
+      "death": [
+        {
+          "item": "antidote",
+          "chance": 30,
+          "count": 1
+        }
+      ]
+    },
+    "lore": [
+      {
+        "unlock": 10,
+        "desc": "毒刺藤蔓弱火系，免疫中毒。"
+      },
+      {
+        "unlock": 50,
+        "desc": "攻击会附带中毒，记得携带解毒草。"
+      },
+      {
+        "unlock": 100,
+        "desc": "战斗中有概率掉落月光草。"
+      }
+    ]
+  },
+  {
+    "id": "cave_bat",
+    "name": "洞穴蝙蝠",
+    "tier": "normal",
+    "area": "废弃矿坑",
+    "desc": "栖居矿坑顶部的蝙蝠群，速度快但脆弱，偶尔衔出星铁矿石。",
+    "stats": {
+      "hp": 55,
+      "mp": 10,
+      "str": 9,
+      "int": 5,
+      "con": 8,
+      "spr": 6,
+      "foc": 6,
+      "agi": 16,
+      "luk": 5
+    },
+    "weakness": {
+      "types": [
+        "突"
+      ],
+      "elements": {}
+    },
+    "pv": 10,
+    "pv_recover": "battle_end",
+    "resistance": {
+      "stun": 20
+    },
+    "actions": [
+      {
+        "action": "claw_swipe",
+        "probability": 1,
+        "weight": 50
+      },
+      {
+        "action": "tail_sweep",
+        "probability": 1,
+        "weight": 30
+      }
+    ],
+    "drops": {
+      "battle": [],
+      "special": [],
+      "death": [
+        {
+          "item": "star_iron",
+          "chance": 25,
+          "count": 1
+        }
+      ]
+    },
+    "lore": [
+      {
+        "unlock": 10,
+        "desc": "洞穴蝙蝠弱突刺攻击。"
+      },
+      {
+        "unlock": 50,
+        "desc": "击杀后有小概率掉落星铁矿石。"
+      },
+      {
+        "unlock": 100,
+        "desc": "星铁矿石是矿工委托的交付物。"
+      }
+    ]
+  },
+  {
+    "id": "rock_ogre",
+    "name": "岩石巨魔",
+    "tier": "elite",
+    "area": "迷雾山隘",
+    "desc": "盘踞山隘的岩石巨魔，皮糙肉厚，随身携带着山隘的钥匙。",
+    "stats": {
+      "hp": 350,
+      "mp": 40,
+      "str": 20,
+      "int": 8,
+      "con": 20,
+      "spr": 10,
+      "foc": 12,
+      "agi": 8,
+      "luk": 6
+    },
+    "weakness": {
+      "types": [
+        "突"
+      ],
+      "elements": {
+        "void": 1.3
+      }
+    },
+    "pv": 75,
+    "pv_recover": "battle_end",
+    "resistance": {
+      "stun": 20,
+      "immune": [
+        "poison"
+      ]
+    },
+    "actions": [
+      {
+        "action": "rock_bash",
+        "probability": 1,
+        "weight": 50
+      },
+      {
+        "action": "tail_sweep",
+        "probability": 1,
+        "weight": 30
+      },
+      {
+        "action": "hard_body",
+        "weight": 100,
+        "condition": "pv_broken"
+      }
+    ],
+    "special_actions": [
+      {
+        "id": "ogre_curse",
+        "action": "wraith_scream",
+        "trigger": {
+          "type": "hp_below",
+          "value": 50,
+          "timing": "current_turn"
+        },
+        "once": true,
+        "priority": 5
+      }
+    ],
+    "drops": {
+      "battle": [],
+      "special": [],
+      "death": [
+        {
+          "item": "ogre_key",
+          "chance": 100,
+          "count": 1
+        },
+        {
+          "item": "star_iron",
+          "chance": 60,
+          "count": [
+            1,
+            2
+          ]
+        }
+      ]
+    },
+    "lore": [
+      {
+        "unlock": 10,
+        "desc": "岩石巨魔弱突刺与虚空。"
+      },
+      {
+        "unlock": 50,
+        "desc": "破防后巨魔会硬化提升防御。"
+      },
+      {
+        "unlock": 100,
+        "desc": "死亡必掉巨魔钥匙，可解锁村庄捷径。"
+      }
+    ]
+  },
+  {
+    "id": "moon_panther",
+    "name": "月影豹",
+    "tier": "elite",
+    "area": "秘语树谷",
+    "desc": "栖身隐秘树谷的月影之豹，以迅影突袭闻名，不惧眩晕。",
+    "stats": {
+      "hp": 280,
+      "mp": 50,
+      "str": 16,
+      "int": 12,
+      "con": 14,
+      "spr": 12,
+      "foc": 14,
+      "agi": 20,
+      "luk": 8
+    },
+    "weakness": {
+      "types": [
+        "魔"
+      ],
+      "elements": {}
+    },
+    "pv": 75,
+    "pv_recover": "battle_end",
+    "resistance": {
+      "stun": 100
+    },
+    "actions": [
+      {
+        "action": "thunder_dash",
+        "probability": 1,
+        "weight": 50
+      },
+      {
+        "action": "claw_swipe",
+        "probability": 1,
+        "weight": 30
+      },
+      {
+        "action": "tail_sweep",
+        "probability": 1,
+        "weight": 20
+      }
+    ],
+    "drops": {
+      "battle": [],
+      "special": [],
+      "death": [
+        {
+          "item": "ghost_moss",
+          "chance": 70,
+          "count": 1
+        }
+      ]
+    },
+    "lore": [
+      {
+        "unlock": 10,
+        "desc": "月影豹弱魔法攻击，免疫眩晕。"
+      },
+      {
+        "unlock": 50,
+        "desc": "迅影突袭伤害极高且先手，注意防御节奏。"
+      },
+      {
+        "unlock": 100,
+        "desc": "死亡大概率掉落幽灵苔。"
+      }
+    ]
+  },
+  {
+    "id": "lake_leech",
+    "name": "湖水蛭",
+    "tier": "elite",
+    "area": "静谧湖泊",
+    "desc": "潜伏雾气湖畔的巨型水蛭，吸食一切靠近的生命，可选精英。",
+    "stats": {
+      "hp": 240,
+      "mp": 30,
+      "str": 14,
+      "int": 10,
+      "con": 16,
+      "spr": 10,
+      "foc": 10,
+      "agi": 10,
+      "luk": 6
+    },
+    "weakness": {
+      "types": [
+        "魔"
+      ],
+      "elements": {
+        "fire": 1.3
+      }
+    },
+    "pv": 75,
+    "pv_recover": "battle_end",
+    "resistance": {
+      "stun": 30
+    },
+    "actions": [
+      {
+        "action": "poison_sting",
+        "probability": 1,
+        "weight": 40
+      },
+      {
+        "action": "tail_sweep",
+        "probability": 1,
+        "weight": 30
+      }
+    ],
+    "drops": {
+      "battle": [],
+      "special": [],
+      "death": [
+        {
+          "item": "mana_potion",
+          "chance": 50,
+          "count": 1
+        }
+      ]
+    },
+    "lore": [
+      {
+        "unlock": 10,
+        "desc": "湖水蛭弱火系与魔法攻击。"
+      },
+      {
+        "unlock": 50,
+        "desc": "攻击附带中毒，副本探险前备好解毒草。"
+      },
+      {
+        "unlock": 100,
+        "desc": "击杀后可能掉落魔力药水。"
+      }
+    ]
+  },
+  {
+    "id": "ash_wraith",
+    "name": "灰烬怨灵",
+    "tier": "boss",
+    "area": "熔火洞窟",
+    "desc": "盘踞熔火洞窟的怨灵，火球与灰烬是它的武器；半血进入狂暴，低血召唤余烬并引爆火印。",
+    "stats": {
+      "hp": 1200,
+      "mp": 200,
+      "str": 34,
+      "int": 50,
+      "con": 24,
+      "spr": 28,
+      "foc": 22,
+      "agi": 18,
+      "luk": 8
+    },
+    "weakness": {
+      "types": [],
+      "elements": {
+        "water": 1.3,
+        "void": 1.3
+      }
+    },
+    "pv": 300,
+    "pv_recover": "battle_end",
+    "zone_change": {
+      "enabled": true,
+      "hp_threshold": 0.5,
+      "targets": [
+        "molten_cavern"
+      ],
+      "timing": "after_action"
+    },
+    "resistance": {
+      "stun": 20,
+      "immune": [
+        "poison",
+        "burn"
+      ]
+    },
+    "actions": [
+      {
+        "action": "claw_swipe",
+        "probability": 1,
+        "weight": 20
+      },
+      {
+        "action": "tail_sweep",
+        "probability": 1,
+        "weight": 20
+      },
+      {
+        "action": "fireball",
+        "probability": 1,
+        "weight": 35
+      },
+      {
+        "action": "wraith_scream",
+        "probability": 1,
+        "weight": 40
+      },
+      {
+        "action": "ember_ignite",
+        "probability": 1,
+        "weight": 15
+      },
+      {
+        "action": "hard_body",
+        "weight": 100,
+        "condition": "pv_broken"
+      }
+    ],
+    "special_actions": [
+      {
+        "id": "wraith_opener",
+        "action": "fireball",
+        "trigger": {
+          "type": "battle_start",
+          "timing": "first_turn"
+        },
+        "once": true,
+        "priority": 30
+      },
+      {
+        "id": "wraith_enrage",
+        "action": "ash_burst",
+        "trigger": {
+          "type": "hp_below",
+          "value": 50,
+          "timing": "current_turn"
+        },
+        "once": true,
+        "priority": 20,
+        "trigger_cooldown": 5,
+        "post_state": {
+          "state": "berserk",
+          "turns": 3
+        }
+      },
+      {
+        "id": "wraith_summon",
+        "action": "summon_ember",
+        "trigger": {
+          "type": "hp_below",
+          "value": 30,
+          "timing": "current_turn"
+        },
+        "once": true,
+        "priority": 15
+      },
+      {
+        "id": "wraith_combo_entry",
+        "action": "tail_sweep",
+        "trigger": {
+          "type": "after_action",
+          "action": "fireball",
+          "chance": 60,
+          "timing": "next_turn"
+        },
+        "priority": 10,
+        "chain_ref": "wraith_ash_combo"
+      }
+    ],
+    "chains": [
+      {
+        "id": "wraith_ash_combo",
+        "actions": [
+          {
+            "action": "claw_swipe",
+            "chance": 0.8,
+            "role": "chain"
+          },
+          {
+            "action": "tail_sweep",
+            "chance": 0.6,
+            "role": "chain"
+          },
+          {
+            "action": "ash_burst",
+            "chance": 1.0,
+            "role": "finisher",
+            "armor": true
+          }
+        ]
+      }
+    ],
+    "drops": {
+      "battle": [
+        {
+          "item": "hi_potion",
+          "chance": 40,
+          "count": [
+            1,
+            2
+          ]
+        }
+      ],
+      "special": [],
+      "death": [
+        {
+          "item": "ash_core",
+          "chance": 100,
+          "count": 1
+        }
+      ]
+    },
+    "lore": [
+      {
+        "unlock": 20,
+        "desc": "灰烬怨灵弱水与虚空，免疫中毒与灼烧。"
+      },
+      {
+        "unlock": 60,
+        "desc": "半血后进入狂暴，低血会召唤灰烬余烬。"
+      },
+      {
+        "unlock": 100,
+        "desc": "死亡必掉灰烬核心，是讨伐任务的凭证。"
+      }
+    ]
+  },
+  {
+    "id": "mirror_guardian",
+    "name": "镜影守卫",
+    "tier": "boss",
+    "area": "迷雾遗迹·讨伐",
+    "desc": "镇守迷雾遗迹的镜之守卫，周期性开启护盾并反弹伤害，低血进入破碎阶段。",
+    "stats": {
+      "hp": 1400,
+      "mp": 150,
+      "str": 28,
+      "int": 40,
+      "con": 30,
+      "spr": 26,
+      "foc": 20,
+      "agi": 16,
+      "luk": 8
+    },
+    "weakness": {
+      "types": [
+        "突"
+      ],
+      "elements": {
+        "void": 1.3
+      }
+    },
+    "pv": 300,
+    "pv_recover": "battle_end",
+    "zone_change": {
+      "enabled": true,
+      "hp_threshold": 0.4,
+      "targets": [
+        "whisper_lake"
+      ],
+      "timing": "after_action"
+    },
+    "resistance": {
+      "stun": 20,
+      "immune": [
+        "poison"
+      ]
+    },
+    "actions": [
+      {
+        "action": "claw_swipe",
+        "probability": 1,
+        "weight": 30
+      },
+      {
+        "action": "tail_sweep",
+        "probability": 1,
+        "weight": 25
+      },
+      {
+        "action": "shield_ritual",
+        "weight": 40,
+        "hungry": 4
+      },
+      {
+        "action": "regenerate",
+        "weight": 50,
+        "hungry": 5
+      },
+      {
+        "action": "mirror_shatter",
+        "probability": 1,
+        "weight": 20
+      },
+      {
+        "action": "hard_body",
+        "weight": 100,
+        "condition": "pv_broken"
+      }
+    ],
+    "special_actions": [
+      {
+        "id": "guardian_shield_cycle",
+        "action": "shield_ritual",
+        "trigger": {
+          "type": "turn_count",
+          "value": 3,
+          "timing": "current_turn"
+        },
+        "priority": 20
+      },
+      {
+        "id": "guardian_summon",
+        "action": "summon_ember",
+        "trigger": {
+          "type": "hp_below",
+          "value": 40,
+          "timing": "current_turn"
+        },
+        "once": true,
+        "priority": 15
+      },
+      {
+        "id": "guardian_shatter",
+        "action": "mirror_shatter",
+        "trigger": {
+          "type": "hp_below",
+          "value": 40,
+          "timing": "current_turn"
+        },
+        "once": true,
+        "priority": 18,
+        "post_state": {
+          "state": "shattered",
+          "turns": 2
+        }
+      }
+    ],
+    "chains": [
+      {
+        "id": "mirror_shatter_combo",
+        "actions": [
+          {
+            "action": "claw_swipe",
+            "chance": 0.7,
+            "role": "chain"
+          },
+          {
+            "action": "mirror_shatter",
+            "chance": 1.0,
+            "role": "finisher",
+            "armor": true
+          }
+        ]
+      }
+    ],
+    "drops": {
+      "battle": [],
+      "special": [],
+      "death": [
+        {
+          "item": "mana_potion",
+          "chance": 50,
+          "count": 1
+        }
+      ]
+    },
+    "lore": [
+      {
+        "unlock": 20,
+        "desc": "镜影守卫弱突刺与虚空，免疫中毒。"
+      },
+      {
+        "unlock": 60,
+        "desc": "每 3 回合开启护盾，护盾期间攻击会被反弹。"
+      },
+      {
+        "unlock": 100,
+        "desc": "低血进入破碎阶段，镜影盾由讨伐副本掉落。"
+      }
+    ]
+  },
+  {
+    "id": "training_dummy",
+    "name": "练兵木桩",
+    "tier": "training",
+    "type": "dummy",
+    "desc": "训练场木桩：HP 极大不可击破，用于伤害测量。",
+    "stats": {
+      "hp": 50000,
+      "mp": 10,
+      "str": 10,
+      "int": 10,
+      "con": 10,
+      "spr": 10,
+      "foc": 10,
+      "agi": 10,
+      "luk": 10
+    },
+    "def_base": 200,
+    "elem_res": {
+      "earth": 0.5,
+      "fire": -0.2
+    },
+    "weakness": {
+      "types": [
+        "斩"
+      ],
+      "elements": {
+        "fire": 1.3
+      }
+    }
+  }
+]

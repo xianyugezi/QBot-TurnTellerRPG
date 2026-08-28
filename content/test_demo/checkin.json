@@ -1,0 +1,83 @@
+[
+  {
+    "id": "checkin_demo",
+    "name": "每日签到",
+    "type": "loop",
+    "desc": "常驻循环签到，7 天一轮。",
+    "period": {
+      "cycle_days": 7,
+      "reset_on_break": true
+    },
+    "rewards": {
+      "daily": [
+        {
+          "day": 1,
+          "items": [
+            {
+              "id": "potion",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "day": 2,
+          "coins": 50
+        },
+        {
+          "day": 3,
+          "items": [
+            {
+              "id": "potion",
+              "count": 1
+            }
+          ],
+          "exp": 20
+        },
+        {
+          "day": 4,
+          "coins": 80
+        },
+        {
+          "day": 5,
+          "items": [
+            {
+              "id": "antidote",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "day": 6,
+          "coins": 100
+        },
+        {
+          "day": 7,
+          "coins": 150,
+          "items": [
+            {
+              "id": "star_iron",
+              "count": 1
+            }
+          ]
+        }
+      ],
+      "streak": [
+        {
+          "days": 7,
+          "items": [
+            {
+              "id": "antidote",
+              "count": 1
+            }
+          ]
+        }
+      ],
+      "monthly_total": [
+        {
+          "days": 30,
+          "coins": 500
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,44 @@
+[
+  {
+    "id": "fire_mark",
+    "name": "火印",
+    "icon": "火",
+    "type": "mark",
+    "max_stack": 3,
+    "appliable_to": [
+      "self",
+      "enemy"
+    ],
+    "polarity": "positive",
+    "element": "fire",
+    "duration": "battle",
+    "desc": "灰烬怨灵叠满 3 层引爆的高额灼烧印记"
+  },
+  {
+    "id": "mirror_mark",
+    "name": "镜印",
+    "icon": "镜",
+    "type": "mark",
+    "max_stack": 5,
+    "appliable_to": [
+      "enemy"
+    ],
+    "polarity": "negative",
+    "element": "void",
+    "duration": "turns:3",
+    "desc": "镜影守卫的反弹印记，玩家身上越多反弹越强"
+  },
+  {
+    "id": "curse_mark",
+    "name": "诅咒印",
+    "icon": "血",
+    "type": "mark",
+    "max_stack": 5,
+    "appliable_to": [
+      "enemy"
+    ],
+    "polarity": "negative",
+    "duration": "turns:3",
+    "desc": "岩石巨魔施加的诅咒印记（可选机制）"
+  }
+]

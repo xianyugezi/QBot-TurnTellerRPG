@@ -124,7 +124,7 @@ def test_smk12_verify_m0_missing_mod_real_assertion() -> None:
 def test_pck01_five_tiers_dirs_exist() -> None:
     """细化_M6 D4#TC-PCK-01 / PCK-01/02：content/ 五档目录齐全（F-08 命名）。"""
     dirs = sorted(d.name for d in CONTENT_DIR.iterdir() if d.is_dir())
-    assert set(dirs) == set(FIVE_TIERS), f"content/ 应恰为五档：{dirs}"
+    assert set(FIVE_TIERS) <= set(dirs), f"content/ 五档演示包须齐全：{dirs}"
 
 
 def test_pck07_four_packs_separated(packs_dir: Path) -> None:

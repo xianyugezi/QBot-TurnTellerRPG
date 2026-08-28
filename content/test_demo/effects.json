@@ -1,0 +1,42 @@
+[
+  {
+    "id": "heal_small",
+    "name": "小回复",
+    "type": "heal",
+    "power": 50
+  },
+  {
+    "id": "heal_mp",
+    "name": "魔力回复",
+    "type": "heal",
+    "power": 30,
+    "stat": "mp"
+  },
+  {
+    "id": "cure_poison",
+    "name": "净化",
+    "type": "dispel",
+    "apply_status": "poison"
+  },
+  {
+    "id": "burn_dot",
+    "name": "灼烧",
+    "type": "dot",
+    "power": 12,
+    "duration": 3
+  },
+  {
+    "id": "poison_dot",
+    "name": "剧毒",
+    "type": "dot",
+    "power": 6,
+    "duration": 3
+  },
+  {
+    "id": "stone_shield_eff",
+    "name": "岩肤护盾",
+    "type": "shield",
+    "power": 30,
+    "duration": 3
+  }
+]

@@ -278,6 +278,46 @@ def _coerce_rules(rules: Any) -> list:
     return out
 
 
+def _quest_active_init(ps: Any) -> Any:
+    """quest_active 键强制 dict（quest 引擎期望 Mapping；旧存档 list 格式归一）。
+
+    入参 ps: persistent_state。出参 dict（挂回 ps）。核心逻辑: 已有 dict 直返；
+    list/缺省 → 归一 dict 挂回（2026-08-29 修复 quest_active 用 [] 导致引擎
+    _active_node 判定失败新建独立对象 → 接取不落档）。
+    """
+    raw = ps.get("quest_active")
+    if isinstance(raw, MutableMapping):
+        return raw
+    if isinstance(raw, (list, tuple)):
+        # 旧存档 list 格式 → dict（元素转键，不丢数据）
+        converted = {str(x): {"name": str(x)} for x in raw if isinstance(x, str)}
+        ps["quest_active"] = converted
+        return converted
+    node: MutableMapping[str, Any] = {}
+    ps["quest_active"] = node
+    return node
+
+
+def _ps_init(ps: Any, key: str, empty: Any) -> Any:
+    """persistent_state 键惰性挂回（引擎写 ctx 对应键 → ps 持久化落档）。
+
+    入参 ps: 玩家 persistent_state（dict）；key: 键名；empty: 缺省空值（list/dict）。
+    出参 该键当前值（缺省时挂回 ps 并返回）。核心逻辑: ps 缺 key → 挂回可变副本并
+    返回（引擎写入它即落档）；已有 → 直返。修复 2026-08-29 部署实测 quest_active
+    首接取丢失（ps 缺省时 ctx 拿到独立空对象不挂回 → 落档丢）。
+    """
+    if key in ps:
+        return ps[key]
+    if isinstance(empty, Mapping):
+        node: Any = dict(empty)
+    elif isinstance(empty, (list, tuple)):
+        node = list(empty)
+    else:
+        node = empty
+    ps[key] = node
+    return node
+
+
 def _coerce_heard(raw: object) -> set:
     """已听集合归一：persistent_state 任意形态（list/tuple/set）→ set（dialog 消费集合语义）。"""
     if isinstance(raw, (list, tuple, set)):
@@ -808,19 +848,19 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
             "worn_refs": _worn_refs(player.equipment),
             "active_effects": dict(ae_raw) if isinstance(ae_raw, Mapping) else {},
             "effects": _render_effects(ps.get("active_effects"), deps.registry),
-            "quest_active": ps.get("quest_active") or [],
-            "quest_completed": ps.get("quest_completed") or [],
-            "quest_daily": ps.get("quest_daily") or {},
+            "quest_active": _quest_active_init(ps),
+            "quest_completed": _ps_init(ps, "quest_completed", []),
+            "quest_daily": _ps_init(ps, "quest_daily", {}),
             "longline_counters": dict(player.longline_counters)
                 if isinstance(player.longline_counters, Mapping) else {},
-            "event_counts": ps.get("event_counts") or {},
+            "event_counts": _ps_init(ps, "event_counts", {}),
             "currencies": dict(player.currencies)
                 if isinstance(player.currencies, Mapping) else {},
-            "personal_buys": ps.get("personal_buys") or {},
-            "checkin_state": ps.get("checkin") or {},
-            "shortcuts": ps.get("shortcuts") or {},
+            "personal_buys": _ps_init(ps, "personal_buys", {}),
+            "checkin_state": _ps_init(ps, "checkin", {}),
+            "shortcuts": _ps_init(ps, "shortcuts", {}),
             "shortcut_max": int(settings.get("shortcut_max", 20) or 20),
-            "npc_delivered": ps.get("npc_delivered") or {},
+            "npc_delivered": _ps_init(ps, "npc_delivered", {}),
             "heard": _coerce_heard(ps.get("npc_heard")),
             "codex_state": player.codex_state
                 if isinstance(player.codex_state, MutableMapping) else {},
@@ -882,6 +922,15 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
     ctx["gm_commands"] = _gm_commands()
     ctx["items"] = _table_from_registry(deps.registry, "item")
     ctx["effect_table"] = _table_from_registry(deps.registry, "effect")
+    # quest 表（装配缺口修复：quest 引擎读 ctx["quests"]/quest_ids，注入 raw dict
+    # 保证 resolve_quest Mapping.get 契约；2026-08-29 部署实测 test_demo 任务板空）
+    _quests = _table_from_registry(deps.registry, "quest")
+    ctx["quests"] = {
+        str(k): (dict(v.raw) if isinstance(getattr(v, "raw", None), dict) else v)
+        for k, v in _quests.items()
+        if isinstance(k, str)
+    }
+    ctx["quest_ids"] = list(ctx["quests"].keys())
     ctx["shops"] = _table_from_registry(deps.registry, "shop")
     ctx["resolve_item"] = getattr(deps.registry, "resolve", None)
     ctx["resolve_shop"] = getattr(deps.registry, "resolve", None)

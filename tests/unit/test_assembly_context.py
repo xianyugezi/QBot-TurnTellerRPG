@@ -351,7 +351,7 @@ async def test_bad_conditional_rules_no_crash() -> None:
 async def test_state_fields_from_persistent() -> None:
     """quest/checkin/event_counts/longline/shortcuts/npc/听过的键从 persistent_state 装载。"""
     ctx = await make_context(_event(), _deps(_player()))
-    assert ctx["quest_active"] == ["q1"]
+    assert ctx["quest_active"] == {"q1": {"name": "q1"}}  # list 旧格式归一 dict
     assert ctx["quest_completed"] == ["q0"]
     assert ctx["quest_daily"]["completed"] == 1
     assert ctx["event_counts"] == {"battle:slime": 5}

@@ -1,0 +1,35 @@
+{
+  "default_map": "start_village",
+  "world_name": "测试世界",
+  "currencies": [
+    {
+      "id": "coins",
+      "name": "金币",
+      "icon": "金",
+      "cap": 999999
+    },
+    {
+      "id": "diamond",
+      "name": "钻石",
+      "icon": "钻",
+      "cap": 999999
+    }
+  ],
+  "death_penalty": {
+    "weak_duration_sec": 60,
+    "drop_currency": [
+      {
+        "currency": "coins",
+        "ratio": 0.5
+      }
+    ],
+    "drop_exp": {
+      "enabled": true,
+      "percent": 10
+    },
+    "drop_items": {
+      "enabled": false,
+      "count": 1
+    }
+  }
+}

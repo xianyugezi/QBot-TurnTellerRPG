@@ -1,0 +1,212 @@
+[
+  {
+    "id": "start_village",
+    "name": "晨风村",
+    "desc": "山脚下的小村，冒险者的起点。东侧石桥被迷雾笼罩，传闻要完成委托才能通行。",
+    "monsters": [],
+    "exits": {
+      "up": {
+        "to": "gloom_forest",
+        "mode": "bidirectional"
+      },
+      "down": {
+        "to": "abandoned_mine",
+        "mode": "one_way"
+      },
+      "right": {
+        "to": "misty_pass",
+        "mode": "hidden",
+        "condition": {
+          "var": "quest_completed",
+          "op": "eq",
+          "param": "q_open_shortcut"
+        }
+      }
+    },
+    "mechanics": []
+  },
+  {
+    "id": "gloom_forest",
+    "name": "幽光林地",
+    "desc": "月华洒落的林地，疾风狼与毒刺藤蔓出没，月光草沿溪而生。",
+    "monsters": [
+      {
+        "enemy": "gust_wolf",
+        "count": 3,
+        "respawn_minutes": 10
+      },
+      {
+        "enemy": "thorn_vine",
+        "count": 2,
+        "respawn_minutes": 15
+      },
+      {
+        "enemy": "training_dummy",
+        "count": 1,
+        "respawn_minutes": 5
+      }
+    ],
+    "exits": {
+      "down": {
+        "to": "start_village",
+        "mode": "bidirectional"
+      },
+      "left": {
+        "to": "whisper_lake",
+        "mode": "bidirectional"
+      },
+      "right": {
+        "to": "misty_pass",
+        "mode": "bidirectional"
+      }
+    },
+    "gather_points": [
+      {
+        "id": "gp_moon_grass",
+        "item": "moon_grass",
+        "rate": 0.4,
+        "rarity": "normal"
+      }
+    ],
+    "mechanics": []
+  },
+  {
+    "id": "whisper_lake",
+    "name": "静谧湖泊",
+    "desc": "雾气缭绕的湖畔，湖心立着两扇石门：迷雾遗迹的入口。",
+    "monsters": [
+      {
+        "enemy": "lake_leech",
+        "count": 1,
+        "respawn_minutes": 30
+      }
+    ],
+    "exits": {
+      "up": {
+        "to": "gloom_forest",
+        "mode": "bidirectional"
+      }
+    },
+    "dungeon_entrances": [
+      {
+        "dungeon": "mist_dungeon_explore",
+        "name": "迷雾遗迹·探索"
+      },
+      {
+        "dungeon": "mist_dungeon_boss",
+        "name": "迷雾遗迹·讨伐"
+      }
+    ],
+    "mechanics": []
+  },
+  {
+    "id": "misty_pass",
+    "name": "迷雾山隘",
+    "desc": "常年浓雾的山隘，岩石巨魔在此打劫，落石陷阱暗藏雾中。",
+    "monsters": [
+      {
+        "enemy": "rock_ogre",
+        "count": 1,
+        "respawn_minutes": 30
+      }
+    ],
+    "exits": {
+      "left": {
+        "to": "gloom_forest",
+        "mode": "bidirectional"
+      },
+      "right": {
+        "to": "molten_cavern",
+        "mode": "bidirectional"
+      }
+    },
+    "mechanics": [
+      {
+        "id": "trap_fogfall",
+        "desc": "每隔数回合落石。",
+        "on_step": {
+          "type": "trap",
+          "damage": 15
+        }
+      }
+    ]
+  },
+  {
+    "id": "molten_cavern",
+    "name": "熔火洞窟入口",
+    "desc": "通往地心熔火深处的洞口，灰烬怨灵镇守。",
+    "monsters": [
+      {
+        "enemy": "ash_wraith",
+        "count": 1,
+        "respawn_minutes": 60
+      }
+    ],
+    "exits": {
+      "left": {
+        "to": "misty_pass",
+        "mode": "bidirectional"
+      }
+    },
+    "gate_guard": "ash_wraith",
+    "mechanics": []
+  },
+  {
+    "id": "abandoned_mine",
+    "name": "废弃矿坑",
+    "desc": "塌方废弃的矿坑，蝙蝠成群，矿脉仍闪烁着星铁光泽。",
+    "monsters": [
+      {
+        "enemy": "cave_bat",
+        "count": 3,
+        "respawn_minutes": 10
+      }
+    ],
+    "exits": {
+      "up": {
+        "to": "start_village",
+        "mode": "one_way"
+      },
+      "right": {
+        "to": "hidden_grove",
+        "mode": "bidirectional"
+      }
+    },
+    "gather_points": [
+      {
+        "id": "gp_star_iron",
+        "item": "star_iron",
+        "rate": 0.35,
+        "rarity": "rare"
+      }
+    ],
+    "mechanics": []
+  },
+  {
+    "id": "hidden_grove",
+    "name": "秘语树谷",
+    "desc": "只有穿过废弃矿坑才能抵达的隐秘树谷，月影豹栖身于此。",
+    "monsters": [
+      {
+        "enemy": "moon_panther",
+        "count": 1,
+        "respawn_minutes": 30
+      }
+    ],
+    "exits": {
+      "left": {
+        "to": "abandoned_mine",
+        "mode": "bidirectional"
+      }
+    },
+    "gather_points": [
+      {
+        "id": "gp_ghost_moss",
+        "item": "ghost_moss",
+        "rate": 0.3,
+        "rarity": "rare"
+      }
+    ],
+    "mechanics": []
+  }
+]

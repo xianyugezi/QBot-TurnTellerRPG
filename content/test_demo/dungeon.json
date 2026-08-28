@@ -1,0 +1,78 @@
+[
+  {
+    "id": "mist_dungeon_explore",
+    "name": "迷雾遗迹·探索",
+    "type": "explore",
+    "entry_item": null,
+    "entry_limit": 0,
+    "maps": [
+      "start_village",
+      "gloom_forest",
+      "misty_pass",
+      "molten_cavern"
+    ],
+    "subquests": [],
+    "safe_zone": "start_village",
+    "drops": {
+      "normal": [
+        {
+          "item": "mana_potion",
+          "chance": 0.5
+        }
+      ],
+      "first_clear": {
+        "items": [
+          {
+            "item": "mana_potion",
+            "count": 1
+          }
+        ],
+        "title": null,
+        "codex": []
+      }
+    }
+  },
+  {
+    "id": "mist_dungeon_boss",
+    "name": "迷雾遗迹·讨伐",
+    "type": "boss",
+    "entry_item": "potion",
+    "entry_limit": 3,
+    "maps": [
+      "start_village",
+      "gloom_forest",
+      "misty_pass",
+      "molten_cavern"
+    ],
+    "boss_room": "whisper_lake",
+    "boss": "mirror_guardian",
+    "subquests": [],
+    "safe_zone": "start_village",
+    "drops": {
+      "normal": [
+        {
+          "item": "mana_potion",
+          "chance": 0.5
+        }
+      ],
+      "boss": [
+        {
+          "item": "mirror_shield",
+          "chance": 1.0
+        }
+      ],
+      "first_clear": {
+        "items": [
+          {
+            "item": "mirror_shield",
+            "count": 1
+          }
+        ],
+        "title": "遗迹征服者",
+        "codex": [
+          "monster:mirror_guardian"
+        ]
+      }
+    }
+  }
+]

@@ -1,0 +1,111 @@
+[
+  {
+    "id": "potion",
+    "name": "疗伤药水",
+    "type": "consumable",
+    "price": 100,
+    "effects": [
+      "heal_small"
+    ],
+    "usable": true
+  },
+  {
+    "id": "mana_potion",
+    "name": "魔力药水",
+    "type": "consumable",
+    "price": 80,
+    "effects": [
+      "heal_mp"
+    ],
+    "usable": true
+  },
+  {
+    "id": "antidote",
+    "name": "解毒草",
+    "type": "consumable",
+    "price": 60,
+    "effects": [
+      "cure_poison"
+    ],
+    "usable": true
+  },
+  {
+    "id": "hi_potion",
+    "name": "高级药水",
+    "type": "consumable",
+    "price": 220,
+    "effects": [
+      "heal_small"
+    ],
+    "usable": true
+  },
+  {
+    "id": "moon_grass",
+    "name": "月光草",
+    "type": "material",
+    "price": 40
+  },
+  {
+    "id": "star_iron",
+    "name": "星铁矿石",
+    "type": "material",
+    "price": 60
+  },
+  {
+    "id": "ash_core",
+    "name": "灰烬核心",
+    "type": "material",
+    "price": 300
+  },
+  {
+    "id": "ogre_key",
+    "name": "巨魔钥匙",
+    "type": "material",
+    "price": 0
+  },
+  {
+    "id": "ghost_moss",
+    "name": "幽灵苔",
+    "type": "material",
+    "price": 100
+  },
+  {
+    "id": "hunter_blade",
+    "name": "猎手短剑",
+    "type": "weapon",
+    "price": 200,
+    "atk": 5,
+    "slot": "weapon",
+    "excludes": []
+  },
+  {
+    "id": "leaf_vest",
+    "name": "叶纹护甲",
+    "type": "armor",
+    "price": 0,
+    "def": 3,
+    "slot": "body",
+    "excludes": []
+  },
+  {
+    "id": "ember_brand",
+    "name": "余烬战刃",
+    "type": "weapon",
+    "price": 0,
+    "atk": 10,
+    "slot": "weapon",
+    "excludes": [],
+    "effects": [
+      "burn_dot"
+    ]
+  },
+  {
+    "id": "mirror_shield",
+    "name": "镜影盾",
+    "type": "shield",
+    "price": 0,
+    "def": 5,
+    "slot": "shield",
+    "excludes": []
+  }
+]

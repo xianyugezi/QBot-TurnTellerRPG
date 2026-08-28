@@ -1,0 +1,269 @@
+[
+  {
+    "id": "elder_huai",
+    "name": "村长·老槐",
+    "icon": "村",
+    "map": "start_village",
+    "type": "quest_giver",
+    "desc": "晨风村的村长，手里握着村子的委托簿。",
+    "visible": true,
+    "dialogues": {
+      "greeting": "又见面了，冒险者。村子的委托都记在这本簿子上。",
+      "options": [
+        {
+          "text": "查看主线委托",
+          "action": "quest",
+          "quests": [
+            { "quest_id": "q_start" },
+            { "quest_id": "q_gather" },
+            { "quest_id": "q_clear_wolves" },
+            { "quest_id": "q_open_shortcut" },
+            { "quest_id": "q_antidote" },
+            { "quest_id": "q_wraith" },
+            { "quest_id": "q_dungeon" }
+          ]
+        },
+        {
+          "text": "关于东边的迷雾",
+          "action": "reply"
+        },
+        {
+          "text": "离开"
+        }
+      ]
+    },
+    "interactions": [
+      {
+        "action": "quest",
+        "text": "查看主线委托",
+        "quests": [
+          { "quest_id": "q_start" },
+          { "quest_id": "q_gather" },
+          { "quest_id": "q_clear_wolves" },
+          { "quest_id": "q_open_shortcut" },
+          { "quest_id": "q_antidote" },
+          { "quest_id": "q_wraith" },
+          { "quest_id": "q_dungeon" }
+        ]
+      },
+      {
+        "action": "reply",
+        "text": "东侧石桥被迷雾笼罩，传闻要完成委托才能通行。"
+      }
+    ],
+    "quests": [
+      { "quest_id": "q_start" },
+      { "quest_id": "q_gather" },
+      { "quest_id": "q_clear_wolves" },
+      { "quest_id": "q_open_shortcut" },
+      { "quest_id": "q_antidote" },
+      { "quest_id": "q_wraith" },
+      { "quest_id": "q_dungeon" }
+    ]
+  },
+  {
+    "id": "flower_ma",
+    "name": "杂货商·阿花",
+    "icon": "花",
+    "map": "start_village",
+    "type": "merchant",
+    "desc": "晨风村的杂货商，兼营治疗、修理与每日补给。",
+    "visible": true,
+    "dialogues": {
+      "greeting": "欢迎光临晨风杂货铺。",
+      "options": [
+        {
+          "text": "看看货架",
+          "action": "shop",
+          "shop_refs": [ "village_shop" ]
+        },
+        {
+          "text": "关于这里的草药",
+          "action": "reply"
+        },
+        {
+          "text": "离开"
+        }
+      ]
+    },
+    "interactions": [
+      {
+        "action": "shop",
+        "text": "看看货架",
+        "shop_refs": [ "village_shop" ]
+      },
+      {
+        "action": "repair",
+        "text": "修理装备",
+        "cost": { "coins": 20 }
+      },
+      {
+        "action": "heal",
+        "text": "帮忙治疗",
+        "cost": { "coins": 30 },
+        "heal": { "hp": "100%", "mp": "100%" }
+      },
+      {
+        "action": "give_item",
+        "text": "领取每日补给",
+        "items": [ { "id": "potion", "count": 1 } ],
+        "repeat": "daily"
+      },
+      {
+        "action": "reply",
+        "text": "草药都是进山采的，毒刺藤蔓可不好惹。"
+      }
+    ],
+    "shop_refs": [ "village_shop" ]
+  },
+  {
+    "id": "ranger_lu",
+    "name": "猎手·陆",
+    "icon": "弓",
+    "map": "start_village",
+    "type": "quest_giver",
+    "desc": "村里的老猎手，管着林间与秘地的讨伐委托。",
+    "visible": true,
+    "dialogues": {
+      "greeting": "林子里的事，找我就对了。",
+      "options": [
+        {
+          "text": "查看讨伐委托",
+          "action": "quest",
+          "quests": [
+            { "quest_id": "q_repel_vine" },
+            { "quest_id": "q_hunt_panther" }
+          ]
+        },
+        {
+          "text": "离开"
+        }
+      ]
+    },
+    "interactions": [
+      {
+        "action": "quest",
+        "text": "查看讨伐委托",
+        "quests": [
+          { "quest_id": "q_repel_vine" },
+          { "quest_id": "q_hunt_panther" }
+        ]
+      },
+      {
+        "action": "buff",
+        "text": "领战斗祝福",
+        "effects": [ "berserk" ],
+        "turns": 2,
+        "condition": { "var": "kill_count", "op": "ge", "value": 1, "param": "gust_wolf" }
+      },
+      {
+        "action": "reply",
+        "text": "疾风狼成群出没，带够药水再进林子。"
+      }
+    ],
+    "quests": [
+      { "quest_id": "q_repel_vine" },
+      { "quest_id": "q_hunt_panther" }
+    ]
+  },
+  {
+    "id": "miner_gong",
+    "name": "老矿工·龚",
+    "icon": "镐",
+    "map": "abandoned_mine",
+    "type": "quest_giver",
+    "desc": "废弃矿坑里的老矿工，守着星铁矿脉和补给站。",
+    "visible": true,
+    "dialogues": {
+      "greeting": "矿坑塌方后，来这儿的人不多了。",
+      "options": [
+        {
+          "text": "看看委托",
+          "action": "quest",
+          "quests": [ { "quest_id": "q_miner_ore" } ]
+        },
+        {
+          "text": "打听矿坑的事",
+          "action": "reply"
+        },
+        {
+          "text": "离开"
+        }
+      ]
+    },
+    "interactions": [
+      {
+        "action": "quest",
+        "text": "看看委托",
+        "quests": [ { "quest_id": "q_miner_ore" } ]
+      },
+      {
+        "action": "shop",
+        "text": "矿工补给站",
+        "shop_refs": [ "mine_supply" ]
+      },
+      {
+        "action": "intel",
+        "text": "洞穴蝙蝠的情报",
+        "intel_refs": [ "cave_bat" ]
+      },
+      {
+        "action": "give_item",
+        "text": "领取每日干粮",
+        "items": [ { "id": "potion", "count": 1 } ],
+        "repeat": "daily"
+      },
+      {
+        "action": "teleport",
+        "text": "传送回晨风村",
+        "map": "start_village",
+        "cost": { "coins": 20 }
+      }
+    ],
+    "shop_refs": [ "mine_supply" ]
+  },
+  {
+    "id": "guide_xiao",
+    "name": "引路员·小晓",
+    "icon": "灯",
+    "map": "start_village",
+    "type": "tutor",
+    "desc": "村口的引路员，负责给新来的冒险者讲些生存门道。",
+    "visible": true,
+    "dialogues": {
+      "greeting": "第一次出村吗？我先教你几件事。",
+      "options": [
+        {
+          "text": "新手教学",
+          "action": "tutorial",
+          "tutorials": [ "tut_entry", "tut_dungeon" ]
+        },
+        {
+          "text": "听情报",
+          "action": "intel",
+          "intel_refs": [ "gust_wolf" ]
+        },
+        {
+          "text": "离开"
+        }
+      ]
+    },
+    "interactions": [
+      {
+        "action": "tutorial",
+        "text": "新手入门",
+        "tutorials": [ "tut_entry", "tut_dungeon" ]
+      },
+      {
+        "action": "intel",
+        "text": "疾风狼的情报",
+        "intel_refs": [ "gust_wolf" ]
+      },
+      {
+        "action": "reply",
+        "text": "想变强，先从采月光草和打疾风狼开始。"
+      }
+    ],
+    "intel_refs": [ "gust_wolf" ]
+  }
+]

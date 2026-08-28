@@ -1,0 +1,306 @@
+[
+  {
+    "id": "q_start",
+    "name": "初入晨风",
+    "type": "collect",
+    "desc": "晨风村村长·老槐托你备好一份疗伤药水，作为踏出新手村的凭证。签到或从杂货铺可取得药水。",
+    "zone": "start_village",
+    "main": true,
+    "consume": false,
+    "repeatable": false,
+    "conditions": [
+      {
+        "var": "item_count",
+        "op": "ge",
+        "value": 1,
+        "param": "potion"
+      }
+    ],
+    "reward": [
+      {
+        "coins": 100
+      },
+      {
+        "item": "hunter_blade",
+        "count": 1
+      }
+    ],
+    "npc": {
+      "id": "elder_huai"
+    }
+  },
+  {
+    "id": "q_gather",
+    "name": "月光草采集",
+    "type": "collect",
+    "desc": "幽光林地的毒刺藤蔓边生着月光草，采集 3 株交给村长。",
+    "zone": "gloom_forest",
+    "main": true,
+    "consume": true,
+    "repeatable": false,
+    "unlock_chain": "q_start",
+    "conditions": [
+      {
+        "var": "item_count",
+        "op": "ge",
+        "value": 3,
+        "param": "moon_grass"
+      }
+    ],
+    "reward": [
+      {
+        "item": "leaf_vest",
+        "count": 1
+      },
+      {
+        "coins": 50
+      }
+    ],
+    "npc": {
+      "id": "elder_huai"
+    }
+  },
+  {
+    "id": "q_clear_wolves",
+    "name": "清理狼患",
+    "type": "kill",
+    "desc": "幽光林地的疾风狼成群结队，清剿 5 只再回来复命。",
+    "zone": "gloom_forest",
+    "main": true,
+    "consume": false,
+    "repeatable": false,
+    "unlock_chain": "q_gather",
+    "conditions": [
+      {
+        "var": "kill_count",
+        "op": "ge",
+        "value": 5,
+        "param": "gust_wolf"
+      }
+    ],
+    "reward": [
+      {
+        "coins": 150
+      },
+      {
+        "exp": 80
+      }
+    ],
+    "npc": {
+      "id": "elder_huai"
+    }
+  },
+  {
+    "id": "q_open_shortcut",
+    "name": "夺取山隘钥匙",
+    "type": "collect",
+    "desc": "迷雾山隘的岩石巨魔守着通往熔火之地的钥匙。取得巨魔钥匙，就能为村子打开东侧石桥的捷径。",
+    "zone": "misty_pass",
+    "main": true,
+    "consume": false,
+    "repeatable": false,
+    "unlock_chain": "q_clear_wolves",
+    "conditions": [
+      {
+        "var": "item_count",
+        "op": "ge",
+        "value": 1,
+        "param": "ogre_key"
+      }
+    ],
+    "reward": [
+      {
+        "coins": 100
+      },
+      {
+        "exp": 60
+      }
+    ],
+    "npc": {
+      "id": "elder_huai"
+    }
+  },
+  {
+    "id": "q_antidote",
+    "name": "解毒草预备",
+    "type": "collect",
+    "desc": "进熔火之地前，先备好一份解毒草以策万全。杂货铺可购，藤蔓也会掉落。",
+    "zone": "start_village",
+    "main": true,
+    "consume": false,
+    "repeatable": false,
+    "unlock_chain": "q_open_shortcut",
+    "conditions": [
+      {
+        "var": "item_count",
+        "op": "ge",
+        "value": 1,
+        "param": "antidote"
+      }
+    ],
+    "reward": [
+      {
+        "coins": 50
+      },
+      {
+        "exp": 40
+      }
+    ],
+    "npc": {
+      "id": "elder_huai"
+    }
+  },
+  {
+    "id": "q_wraith",
+    "name": "讨伐灰烬怨灵",
+    "type": "kill",
+    "desc": "熔火洞窟的灰烬怨灵堵住了前往遗迹的必经之路。讨伐它，取回余烬战刃与灰烬核心作为凭证。",
+    "zone": "molten_cavern",
+    "main": true,
+    "consume": false,
+    "repeatable": false,
+    "unlock_chain": "q_antidote",
+    "conditions": [
+      {
+        "var": "kill_count",
+        "op": "ge",
+        "value": 1,
+        "param": "ash_wraith"
+      }
+    ],
+    "reward": [
+      {
+        "item": "ember_brand",
+        "count": 1
+      },
+      {
+        "item": "ash_core",
+        "count": 1
+      }
+    ],
+    "npc": {
+      "id": "elder_huai"
+    }
+  },
+  {
+    "id": "q_dungeon",
+    "name": "通关迷雾遗迹",
+    "type": "dungeon",
+    "desc": "从静谧湖泊进入迷雾遗迹·讨伐，击败镜影守卫，带回镜影盾。",
+    "zone": "whisper_lake",
+    "main": true,
+    "consume": false,
+    "repeatable": false,
+    "unlock_chain": "q_wraith",
+    "conditions": [
+      {
+        "var": "dungeon_clear",
+        "op": "ge",
+        "value": 1,
+        "param": "mist_dungeon_boss"
+      }
+    ],
+    "reward": [
+      {
+        "item": "mirror_shield",
+        "count": 1
+      },
+      {
+        "coins": 300
+      }
+    ],
+    "npc": {
+      "id": "elder_huai"
+    }
+  },
+  {
+    "id": "q_miner_ore",
+    "name": "星铁委托",
+    "type": "collect",
+    "desc": "废弃矿坑的老矿工·龚想收 3 块星铁矿石，洞穴蝙蝠身上偶尔会掉。",
+    "zone": "abandoned_mine",
+    "main": false,
+    "consume": true,
+    "repeatable": false,
+    "conditions": [
+      {
+        "var": "item_count",
+        "op": "ge",
+        "value": 3,
+        "param": "star_iron"
+      }
+    ],
+    "reward": [
+      {
+        "coins": 120
+      },
+      {
+        "item": "potion",
+        "count": 2
+      }
+    ],
+    "npc": {
+      "id": "miner_gong"
+    }
+  },
+  {
+    "id": "q_repel_vine",
+    "name": "清理藤蔓",
+    "type": "kill",
+    "desc": "幽光林地的毒刺藤蔓蔓延得太快了，猎手·陆悬赏清剿 3 株。",
+    "zone": "gloom_forest",
+    "main": false,
+    "consume": false,
+    "repeatable": false,
+    "conditions": [
+      {
+        "var": "kill_count",
+        "op": "ge",
+        "value": 3,
+        "param": "thorn_vine"
+      }
+    ],
+    "reward": [
+      {
+        "item": "antidote",
+        "count": 2
+      },
+      {
+        "coins": 80
+      }
+    ],
+    "npc": {
+      "id": "ranger_lu"
+    }
+  },
+  {
+    "id": "q_hunt_panther",
+    "name": "猎影豹",
+    "type": "kill",
+    "desc": "秘语树谷的月影豹常在夜里出没，猎手·陆悬赏击杀 1 只取幽灵苔。",
+    "zone": "hidden_grove",
+    "main": false,
+    "consume": false,
+    "repeatable": false,
+    "conditions": [
+      {
+        "var": "kill_count",
+        "op": "ge",
+        "value": 1,
+        "param": "moon_panther"
+      }
+    ],
+    "reward": [
+      {
+        "item": "ghost_moss",
+        "count": 2
+      },
+      {
+        "coins": 150
+      }
+    ],
+    "npc": {
+      "id": "ranger_lu"
+    }
+  }
+]

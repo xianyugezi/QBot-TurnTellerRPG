@@ -1,0 +1,256 @@
+[
+  {
+    "id": "claw_swipe",
+    "name": "爪击",
+    "kind": "basic",
+    "power": 1.0,
+    "attack_type": "斩",
+    "element": "earth",
+    "effects": [],
+    "weight": 50,
+    "probability": 0.5,
+    "intent": "伤害",
+    "cooldown": 0,
+    "hungry": 0,
+    "tags": [
+      "物理",
+      "近战"
+    ]
+  },
+  {
+    "id": "tail_sweep",
+    "name": "尾扫",
+    "kind": "active",
+    "power": 0.8,
+    "attack_type": "打",
+    "element": "wind",
+    "effects": [],
+    "weight": 30,
+    "probability": 0.5,
+    "intent": "伤害",
+    "cooldown": 1,
+    "hungry": 0,
+    "tags": [
+      "物理",
+      "范围"
+    ]
+  },
+  {
+    "id": "poison_sting",
+    "name": "毒刺",
+    "kind": "active",
+    "power": 0.8,
+    "attack_type": "突",
+    "element": "earth",
+    "effects": [],
+    "apply_status": "poison",
+    "weight": 40,
+    "probability": 0.5,
+    "intent": "伤害",
+    "cooldown": 1,
+    "hungry": 0,
+    "tags": [
+      "物理",
+      "中毒"
+    ]
+  },
+  {
+    "id": "rock_bash",
+    "name": "巨石锤击",
+    "kind": "active",
+    "power": 1.5,
+    "attack_type": "打",
+    "element": "earth",
+    "effects": [],
+    "weight": 50,
+    "probability": 0.5,
+    "intent": "伤害",
+    "cooldown": 2,
+    "hungry": 0,
+    "charge_turns": 1,
+    "charge_armor": true,
+    "tags": [
+      "物理",
+      "蓄力"
+    ]
+  },
+  {
+    "id": "thunder_dash",
+    "name": "迅影突袭",
+    "kind": "active",
+    "power": 1.5,
+    "attack_type": "斩",
+    "element": "wind",
+    "effects": [],
+    "weight": 40,
+    "probability": 0.5,
+    "intent": "伤害",
+    "cooldown": 2,
+    "hungry": 0,
+    "tags": [
+      "物理",
+      "先手"
+    ]
+  },
+  {
+    "id": "fireball",
+    "name": "火球",
+    "kind": "active",
+    "power": 1.8,
+    "attack_type": "魔",
+    "element": "fire",
+    "effects": [],
+    "apply_status": "burn",
+    "apply_mark": "fire_mark",
+    "weight": 35,
+    "probability": 0.5,
+    "intent": "伤害",
+    "cooldown": 1,
+    "hungry": 0,
+    "tags": [
+      "元素",
+      "远程"
+    ]
+  },
+  {
+    "id": "ash_burst",
+    "name": "灰烬爆发",
+    "kind": "active",
+    "power": 2.0,
+    "attack_type": "魔",
+    "element": "fire",
+    "effects": [],
+    "apply_status": "burn",
+    "apply_mark": "fire_mark",
+    "weight": 25,
+    "probability": 0.5,
+    "intent": "伤害",
+    "cooldown": 2,
+    "hungry": 0,
+    "tags": [
+      "元素",
+      "范围"
+    ]
+  },
+  {
+    "id": "summon_ember",
+    "name": "召唤余烬",
+    "kind": "active",
+    "power": 0.0,
+    "attack_type": "魔",
+    "element": "fire",
+    "effects": [],
+    "weight": 0,
+    "intent": "buff",
+    "cooldown": 3,
+    "hungry": 0,
+    "tags": [
+      "召唤"
+    ]
+  },
+  {
+    "id": "ember_ignite",
+    "name": "火印引爆",
+    "kind": "active",
+    "power": 2.5,
+    "attack_type": "魔",
+    "element": "fire",
+    "effects": [],
+    "weight": 15,
+    "probability": 0.5,
+    "intent": "伤害",
+    "cooldown": 3,
+    "hungry": 0,
+    "tags": [
+      "元素",
+      "引爆"
+    ]
+  },
+  {
+    "id": "shield_ritual",
+    "name": "护盾仪式",
+    "kind": "active",
+    "power": 0.0,
+    "attack_type": "魔",
+    "element": "crystal",
+    "effects": [],
+    "apply_status": "stone_shield",
+    "weight": 40,
+    "intent": "buff",
+    "cooldown": 3,
+    "hungry": 4,
+    "tags": [
+      "防御",
+      "护盾"
+    ]
+  },
+  {
+    "id": "mirror_shatter",
+    "name": "镜碎",
+    "kind": "active",
+    "power": 2.2,
+    "attack_type": "魔",
+    "element": "void",
+    "effects": [],
+    "weight": 20,
+    "probability": 0.5,
+    "intent": "伤害",
+    "cooldown": 4,
+    "hungry": 0,
+    "tags": [
+      "元素",
+      "范围"
+    ]
+  },
+  {
+    "id": "wraith_scream",
+    "name": "怨灵尖啸",
+    "kind": "active",
+    "power": 0.0,
+    "attack_type": "魔",
+    "element": "wind",
+    "effects": [],
+    "weight": 60,
+    "probability": 0.5,
+    "intent": "debuff",
+    "cooldown": 3,
+    "hungry": 0,
+    "tags": [
+      "威压"
+    ]
+  },
+  {
+    "id": "regenerate",
+    "name": "再生",
+    "kind": "active",
+    "power": 0.0,
+    "attack_type": "魔",
+    "element": "crystal",
+    "effects": [],
+    "apply_status": "regen",
+    "weight": 50,
+    "intent": "buff",
+    "cooldown": 3,
+    "hungry": 5,
+    "tags": [
+      "恢复"
+    ]
+  },
+  {
+    "id": "hard_body",
+    "name": "硬化",
+    "kind": "active",
+    "power": 0.0,
+    "attack_type": "魔",
+    "element": "crystal",
+    "effects": [],
+    "apply_status": "berserk",
+    "weight": 100,
+    "intent": "buff",
+    "cooldown": 0,
+    "hungry": 4,
+    "tags": [
+      "防御"
+    ]
+  }
+]

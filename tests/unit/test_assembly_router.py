@@ -47,6 +47,8 @@ ALL_REGISTERED = {
     "进入", "休息",
     # dialog（N-01，BCH-03）
     "对话",
+    # log（F-03/F-04，BCH-05；is_gm=True）
+    "日志",
 }
 
 # 关键指令（TCA-02/03 冒烟锚点：状态/背包/任务/商店 handler 可调）
@@ -190,8 +192,8 @@ def parse(raw: str):
 # ---------------------------------------------------------------------------
 # TCA-02：全指令组注册 + 无冲突
 # ---------------------------------------------------------------------------
-def test_build_router_registers_all_ten_groups() -> None:
-    """TCA-02：真实 AssemblyDeps + 各指令组 → build_router → 10 组 23 指令全注册。"""
+def test_build_router_registers_all_eleven_groups() -> None:
+    """TCA-02：真实 AssemblyDeps + 各指令组 → build_router → 11 组 24 指令全注册。"""
     router = build_router(_deps(make_context=_stub_ctx))
     assert set(router.names()) == ALL_REGISTERED
     # 无冲突：Router.register 重名 ValueError 兜底 → 能构造即无重复
@@ -280,8 +282,8 @@ def test_build_router_gm_commands_loaded() -> None:
     router = build_router(_deps(make_context=_stub_ctx))
     assert router.gm_commands_set == set(GM_COMMANDS)
     assert {"重载", "封禁", "日志", "编辑", "设置"} <= router.gm_commands_set
-    # 不遮蔽 Router.gm_commands() 方法（9 组均非 GM 指令 → 空列表）
-    assert router.gm_commands() == []
+    # 不遮蔽 Router.gm_commands() 方法（「日志」由 log_commands 以 is_gm=True 注册，ADR-09；gm_commands 组归 M12）
+    assert router.gm_commands() == ["日志"]
 
 
 def test_build_router_shortcuts_carried_from_deps() -> None:

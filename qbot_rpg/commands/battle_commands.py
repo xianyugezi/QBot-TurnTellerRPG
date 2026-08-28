@@ -690,12 +690,19 @@ def dispatch_round(
 
     if report.ended:
         winner = report.status or "draw"
-        # M7 N-03：怪物击杀事件（RN-10 三表 flat；battle 引擎无 ctx，接线落指令层结算点）
+        # M7 N-03 + 3f R-02：怪物击杀接线（battle 引擎无 ctx，落指令层结算点）
+        #   - N-03 预置 [事件:怪物击杀] flat（条件引擎读取源；tag=event 不混入 R-02 六类分组）
+        #   - 3f R-02 first_kill 首杀（[事件:首杀] nested 按怪物，首见 first_seen=true）
         if winner == "win":
             try:
+                from qbot_rpg.core.adventure_log import log_first_kill
                 from qbot_rpg.core.event_bus import bump_event
                 bump_event(cast(MutableMapping, ctx), "[事件:怪物击杀]",
-                           instance={"tag": "first_kill"})
+                           instance={"tag": "event"})
+                log_first_kill(
+                    cast(MutableMapping, ctx), e_name,
+                    monster_id=str(e.get("id") or e.get("monster_id") or e_name),
+                )
             except Exception:
                 pass
         # 叙事句伤害 = 本轮最后一个玩家行动 outcome 的 final_damage（用户结算模板回顾最后一击）

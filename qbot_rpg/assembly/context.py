@@ -387,6 +387,24 @@ def _restore_dialog_session(raw: Any) -> Any:
         return None
 
 
+def _dialog_snapshot_or_cleared(ps: Mapping) -> Any:
+    """RN-11（N-04）：读取前对 persistent_state 的 dialog_session 做 30 天惰性清理。
+
+    入参 ps: 玩家 persistent_state（Mapping；可写时就地清除过期快照）。出参 Any:
+    清理后的 dialog_session 原值（过期已清除 → None）。核心逻辑: 惰性 import
+    core.adventure_log.cleanup_dialog_snapshot；过期 → 就地清除 + 返回 None；
+    read-only/无快照/解析失败 → 原样返回（不误删）。与已交付标记
+    npc_heard/npc_delivered（常驻不回收）分离。
+    """
+    try:
+        from qbot_rpg.core.adventure_log import cleanup_dialog_snapshot
+
+        cleanup_dialog_snapshot({"persistent_state": ps})
+    except Exception:
+        pass
+    return ps.get("dialog_session")
+
+
 def _get_map(game_world: Any, location: Optional[str]) -> Any:
     """map_def：game_world.get_map(location) 兜底读（兄弟路未实装 → None）。
 
@@ -779,7 +797,9 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
                 if isinstance(player.codex_state, MutableMapping) else {},
             "event_log": _coerce_event_log(ps.get("event_log")),
             "dialog_active": bool(ps.get("dialog_active", False)),
-            "dialog_session": _restore_dialog_session(ps.get("dialog_session")),
+            # RN-11（N-04）：dialog_session 30 天惰性清理（读取/启动时；last_active_at
+            # 超 30 天 → 清除恢复上下文，见 _dialog_snapshot_or_cleared）
+            "dialog_session": _restore_dialog_session(_dialog_snapshot_or_cleared(ps)),
         })
     else:
         ctx.update({

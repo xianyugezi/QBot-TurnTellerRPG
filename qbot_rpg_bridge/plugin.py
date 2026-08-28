@@ -27,10 +27,13 @@ from qbot_rpg_bridge import run_bridge
 
 try:
     from nonebot import on_message  # type: ignore[import-not-found]
+    from nonebot.adapters import Bot as NB_Bot, Event as NB_Event  # type: ignore[import-not-found]
 
     HAS_NONEBOT = True
 except ImportError:  # pragma: no cover —— 无 NoneBot 环境（CLI/测试/冒烟）
     on_message = None
+    NB_Bot = None
+    NB_Event = None
     HAS_NONEBOT = False
 
 # on_message 处理器优先级（block=False 不阻塞其它处理器；run_command 内路由裁决）
@@ -106,8 +109,14 @@ def register_plugin() -> None:
             "无 NoneBot 环境请走 qbot_rpg.assembly.runner.run_command 纯函数驱动"
         )
     assert on_message is not None  # HAS_NONEBOT 保证；类型收窄供静态检查
+    assert NB_Bot is not None and NB_Event is not None
     matcher = on_message(priority=_PRIORITY, block=False)
-    matcher.handle()(_on_message)
+    # NoneBot 依赖注入需真实 Bot/Event 类型标注（Any 无法解析，且注解须在模块级 globals
+    # 可解析——故 NB_Bot/NB_Event 模块级 import）——闭包包装供注入，业务体仍走 _on_message
+    async def _wrapped(bot: NB_Bot, event: NB_Event) -> None:  # noqa: ANN001  # pyright: ignore[reportInvalidTypeForm]
+        await _on_message(bot, event)
+
+    matcher.handle()(_wrapped)
     # 启动装配（部署接线：NoneBot on_startup → build_app_deps → set_deps）
     from qbot_rpg_bridge.assemble import register_startup
 

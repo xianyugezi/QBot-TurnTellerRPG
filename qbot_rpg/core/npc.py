@@ -34,14 +34,14 @@
   8) repair 当前降级（S4 裁决/AC06/L139）：依赖装备耐久系统框架未实现 → 恒"不可用+友好提示"，配置不拦截。
   9) give_item once/daily 需 npc_id 才能记账；无 npc_id 时不记一次性（每次照发）——由调用方保证传入。
   10) 菜单「已听」置灰展示：调用方按 is_delivered(ctx, npc_id, "intel:<ref_id>") 逐条目判定（O01/O07）。
-  11) 【工程补白 · 隐藏任务接缝 · N-02 RN-08 / 3f F-09 D-05】发任务条件全与 gate：
-     available_quests / _action_quest 当前仅消费**候选条目自带 condition**（AC01 逐卡
-     条件，已全与），**未消费 quest 定义侧的 quest.npc.conditions**（发任务条件——
-     图鉴/事件/物品/时段组合全与；求值能力 quest.py _npc_condition_hit / quest_available
-     已具备，仅未在发牌/发任务路径接线）。缺口登记工程补白：**3f 批次 BCH-07 实现**——
-     NPC 发任务前置求值 quest.npc.conditions，满足才主动发；不满足 → 普通对话分支
-     零暗示（D-05 不提示原则）。本批次测试在 quest 引擎层断言全与语义，npc 层以
-     卡片 condition 兜底（见 tests/unit/test_assembly_wiring.py）。
+  11) 【工程补白 · 隐藏任务接缝 · N-02 RN-08 / 3f F-09 D-05】发任务条件全与 gate
+     （BCH-07 已实现）：available_quests 在发任务候选过滤处前置求值 quest 定义侧的
+     quest.npc.conditions（发任务条件——图鉴/事件/物品/时段组合，数组全与 AND，经
+     quest.resolve_quest 解析定义 + condition_engine.eval_condition 求值，见
+     _quest_npc_conditions）；满足才把任务列入可发候选；不满足 → 不列入（普通对话
+     分支零暗示，D-05 不提示原则）。与候选条目自带 condition（AC01 逐卡条件，已全与）
+     双条件并存、逐条全过才发（全与语义叠加）；求值失败默认不满足（D-03 安全降级）。
+     无 quest 定义 / 无 npc 节点 / 无 conditions → 无门槛（普通任务不受影响）。
 
 铁律：零 NoneBot import；纯函数（ctx dict 进出，就地改写可变子结构）；rng 注入确定性；
 同刻同参必同值（不依赖全局状态）；工程补白显式标注。
@@ -52,6 +52,7 @@ from __future__ import annotations
 from typing import Any, Mapping, MutableMapping, Optional
 
 from qbot_rpg.core.dayroll import today_of
+from qbot_rpg.core.quest import resolve_quest
 from qbot_rpg.core.reward import dispatch_reward
 from qbot_rpg.engine.condition_engine import eval_condition
 
@@ -177,11 +178,36 @@ def _in_quest_daily(ctx: Mapping[str, Any], qid: str) -> bool:
     return False
 
 
+def _quest_npc_conditions(qid: str, ctx: Mapping[str, Any]) -> object:
+    """quest 定义侧发任务条件 quest.npc.conditions（RN-08 / 3f D-05）。
+
+    经 quest.resolve_quest 解析 quest 定义，取 quest.npc.conditions（发任务条件——
+    图鉴/事件/物品/时段组合，数组全与 AND）；无定义 / 无 npc 节点 / 无 conditions →
+    None（无发任务门槛，普通任务不受影响）。resolve_quest 不可用/抛异常 → None 兜底。
+    """
+    if not isinstance(qid, str) or not qid:
+        return None
+    try:
+        quest_def = resolve_quest(ctx, qid)
+    except Exception:
+        return None
+    if not isinstance(quest_def, Mapping):
+        return None
+    npc = quest_def.get("npc")
+    if not isinstance(npc, Mapping):
+        return None
+    conds = npc.get("conditions")
+    return conds if conds is not None else None
+
+
 def available_quests(deliver: Mapping[str, Any], ctx: Mapping[str, Any]) -> list:
-    """候选任务可用列表（SM06 去重 + 条件过滤，顺序即优先级）。
+    """候选任务可用列表（SM06 去重 + 条件过滤 + 发任务条件 gate，顺序即优先级）。
 
     规则：① quest_active（活跃）/ quest_daily（今日已发）/ quest_completed（已完成）三表命中 → 不重发；
-          ② 候选条目自带 condition（AC01）不满足 → 剔除；③ 其余按候选数组顺序返回（首条即最高优先级）。
+          ② 候选条目自带 condition（AC01）不满足 → 剔除；
+          ③ quest 定义侧 quest.npc.conditions（发任务条件，RN-08 / 3f D-05）不满足 → 剔除
+            （数组全与 AND，满足才主动发；不满足 → 普通对话分支零暗示）；
+          ④ 其余按候选数组顺序返回（首条即最高优先级）。
     """
     out: list = []
     quests = deliver.get("quests")
@@ -202,6 +228,11 @@ def available_quests(deliver: Mapping[str, Any], ctx: Mapping[str, Any]) -> list
             continue
         cond = q.get("condition")
         if cond is not None and not eval_condition(cond, ctx):
+            continue
+        # 3f D-05 隐藏任务发任务条件 gate（RN-08）：quest.npc.conditions 数组全与，
+        # 满足才列入可发候选；不满足 → 剔除（普通对话分支零暗示，D-05 不提示原则）
+        npc_conds = _quest_npc_conditions(qid, ctx)
+        if npc_conds is not None and not eval_condition(npc_conds, ctx):
             continue
         out.append(q)
     return out

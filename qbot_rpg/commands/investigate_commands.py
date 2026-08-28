@@ -10,7 +10,8 @@
   - R-09（§2.3 特定时段蹲点）：/调查 目标为隐藏要素所在地图/代号，当前时刻满足限定
     窗口（[季节]+[时段]+[天气] 组合）且其余条件满足 → 隐藏 BOSS 现身；窗口外 → 泛化
     文本零暗示；蹲点成功输出：环境演出文本（狼嗥）→ 图鉴传闻引用 → 发现卡片 → 进入
-    BOSS 战信号（BOSS 战接线归 BCH-07，本批只出信号文本）。
+    BOSS 战信号（F-08 R-12 接线归 BCH-07 本批：ctx 有 battle 发起能力时接进真实 BOSS
+    战，无则保持信号文本）。
   - R-11（§2.5 频控与冷却，D-04）：一次 /调查 最多输出 1 条演出/揭示；daily 配额
     （揭示类命中每日上限 3 次，可配；泛化文本不计配额，超限 → 泛化文本）；去重——
     已 one_shot 的只回简短确认（无彩蛋正文、无揭示卡片）。
@@ -45,6 +46,12 @@
   6) 环境值语言透传：season/period/weather 直接 str() 渲染（对齐 event_bus._snapshot_of
      透传口径）；窗口匹配用同一 ctx 值比对（测试/装配以英文枚举值注入，对齐 2a1b
      SEASONS_ENUM / PERIODS_ENUM 与条件引擎取值通道）。
+  7) hunt → BOSS 战接线（3f R-12 / F-08，BCH-07 本批）：hunt 信号出现时经
+     launch_hunt_battle 接进真实 BOSS 战发起——ctx["start_battle"] hook 优先（装配层
+     注入，start_battle(ctx, boss_ref) -> dict），ctx["battle_engine"] 次之（callable
+     或带 start_battle/launch/start 方法的发起接口，同签名 (ctx, boss_ref) -> dict）；
+     无发起能力/发起失败 → 保持既有信号文本（最小侵入，未装配战斗时不改变行为）。
+     boss_ref 取 result.boss_ref，兜底 boss/enemy/title（兼容本地兜底引擎无 boss_ref 形态）。
 
 铁律：零 NoneBot import；纯函数确定性（rng/now/today 由 ctx 注入）；每函数 docstring；
 无装饰 emoji（3d §四：仅 ✅/❌ 功能性标记 + 排版符号；⛩️ 等装饰性 emoji 禁用）。
@@ -70,6 +77,7 @@ __all__ = [
     "cmd_investigate",
     "investigate_map_local",
     "render_investigate_result",
+    "launch_hunt_battle",
     "register_investigate_commands",
 ]
 
@@ -112,9 +120,10 @@ _EGGSHELL_DONE_TEXT = "这里你已经仔细查看过了。"
 _HUNT_DONE_TEXT = "这一带你已经确认过了，没有新的发现。"
 _HIDDEN_MAP_DONE_TEXT = "这条路径你已经知晓，无需再探。"
 
-# 蹲点默认演出/信号文本（R-09 / 3f L101-106；BOSS 战接线归 BCH-07，本批只出信号文本）
+# 蹲点默认演出/信号文本（R-09 / 3f L101-106；信号默认文本 BCH-07 更新——BOSS 战接线
+# 已交付，移除「接线归后续批次」占位；hunt 实际发起见 launch_hunt_battle 工程补白 7）
 _DEFAULT_HUNT_INTRO = "你屏息凝神，远处传来低沉的狼嗥，与平时的风声不同……"
-_DEFAULT_HUNT_SIGNAL = "巨大的黑影在雾气中若隐若现——战斗即将开始（BOSS 战接线归后续批次）。"
+_DEFAULT_HUNT_SIGNAL = "巨大的黑影在雾气中若隐若现——战斗即将开始！"
 
 # 隐藏地图入口揭示默认介绍（F-07 无 intro/desc 时兜底）
 _DEFAULT_HIDDEN_MAP_TEXT = "你拨开藤蔓，一条从未见过的路径显现在眼前。"
@@ -862,6 +871,77 @@ def render_investigate_result(result: Mapping[str, Any], ctx: Mapping[str, Any])
 
 
 # ---------------------------------------------------------------------------
+# hunt → BOSS 战接线（3f R-12 / F-08，BCH-07；工程补白 7）
+# ---------------------------------------------------------------------------
+
+def launch_hunt_battle(ctx: Mapping[str, Any], result: Mapping[str, Any]) -> Optional[dict]:
+    """hunt 信号 → 真实 BOSS 战发起（3f R-12 / F-08；RN-12 接线 BCH-07）。
+
+    入参 ctx: 玩家上下文（战斗发起能力）；result: 调查引擎结果 dict（kind=hunt +
+    boss_ref）。出参: 发起成功 → {started: True, boss_ref, battle?, message?}；
+    非 hunt / 无 boss_ref / 无发起能力 / 发起失败 → None（调用方保持信号文本）。
+
+    核心逻辑: 仅 kind=hunt 且 ctx 有战斗发起能力时发起——ctx["start_battle"] hook
+    优先（装配层注入，start_battle(ctx, boss_ref) -> dict）；ctx["battle_engine"]
+    次之（callable 或带 start_battle/launch/start 方法的发起接口，同签名
+    (ctx, boss_ref) -> dict）。发起返回 ok=False / started=False → 视为失败 → None。
+    任何异常 → None（回退信号文本，不崩，对齐 D-03 fail-safe 纪律）。
+    """
+    if not isinstance(ctx, Mapping) or not isinstance(result, Mapping):
+        return None
+    if str(result.get("kind") or "") != KIND_HUNT:
+        return None
+    boss_ref = (result.get("boss_ref") or result.get("boss")
+                or result.get("enemy") or result.get("title"))
+    if not boss_ref:
+        return None
+    launcher = ctx.get("start_battle")
+    if not callable(launcher):
+        engine = ctx.get("battle_engine")
+        if engine is not None and not callable(engine):
+            for m in ("start_battle", "launch", "start"):
+                if callable(getattr(engine, m, None)):
+                    launcher = getattr(engine, m)
+                    break
+        elif callable(engine):
+            launcher = engine
+    if not callable(launcher):
+        return None
+    try:
+        out = launcher(ctx, boss_ref)
+    except Exception:
+        return None
+    if not isinstance(out, Mapping):
+        return None
+    if out.get("ok") is False or out.get("started") is False:
+        return None
+    return {
+        "started": True,
+        "boss_ref": str(boss_ref),
+        "battle": out.get("battle"),
+        "message": out.get("message"),
+    }
+
+
+def _render_investigate_result_with_battle(result: Mapping[str, Any],
+                                           ctx: Mapping[str, Any]) -> str:
+    """调查结果 → 回复文本；hunt 且战斗发起能力存在 → 接真实 BOSS 战（F-08 / R-12）。
+
+    先按既有渲染（render_investigate_result）出蹲点演出/卡片/信号文本；再对 hunt 结果
+    尝试 launch_hunt_battle——发起成功且 hook 给出发起消息 → 追加发起消息收尾；未发起
+    （无能力/失败/非 hunt）→ 保持既有信号文本（最小侵入，未装配战斗时行为不变）。
+    """
+    text = render_investigate_result(result, ctx)
+    launch = launch_hunt_battle(ctx, result)
+    if launch is None:
+        return text
+    msg = launch.get("message")
+    if isinstance(msg, str) and msg:
+        return f"{text}\n{msg}"
+    return text
+
+
+# ---------------------------------------------------------------------------
 # 指令壳入口
 # ---------------------------------------------------------------------------
 
@@ -888,7 +968,7 @@ def cmd_investigate(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     result = _engine_investigate(ctx, map_def, target)
     if not isinstance(result, Mapping) or not result.get("kind"):
         result = _ambient_result(ctx, _map_raw(map_def))
-    return render_investigate_result(result, ctx)
+    return _render_investigate_result_with_battle(result, ctx)
 
 
 # ---------------------------------------------------------------------------

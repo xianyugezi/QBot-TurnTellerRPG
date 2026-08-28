@@ -345,3 +345,34 @@ async def test_migrate_chain_incomplete_returns_failed(monkeypatch):
 async def _noop_step(tx, db, now=None):
     """迁移步占位：no-op，供链完整性/备份失败测试用。"""
     return None
+
+
+# ---------------------------------------------------------------------------
+# 注销删档（2026-08-28 /注销 指令 · delete_player）
+# ---------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_delete_player_true():
+    """delete_player：已建档 → True（删除），读路径返回 None。"""
+    db = Database(":memory:")
+    repo = Repository(db)
+    try:
+        await repo.save_player(make_player("10002"))
+        async with repo.tx() as tx:
+            deleted = await tx.delete_player("10002")
+        assert deleted is True
+        assert await repo.load_player("10002") is None
+    finally:
+        await repo.close()
+
+
+@pytest.mark.asyncio
+async def test_delete_player_false_when_absent():
+    """delete_player：未建档（重复注销）→ False（区分真角色 vs 无角色）。"""
+    db = Database(":memory:")
+    repo = Repository(db)
+    try:
+        async with repo.tx() as tx:
+            deleted = await tx.delete_player("99999")
+        assert deleted is False
+    finally:
+        await repo.close()

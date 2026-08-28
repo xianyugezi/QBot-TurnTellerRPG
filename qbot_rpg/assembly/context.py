@@ -881,6 +881,7 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
     # -- ⑤ 注册表/入包 hook（RA-03 之外、各指令壳显式要求） ----------------------
     ctx["gm_commands"] = _gm_commands()
     ctx["items"] = _table_from_registry(deps.registry, "item")
+    ctx["effect_table"] = _table_from_registry(deps.registry, "effect")
     ctx["shops"] = _table_from_registry(deps.registry, "shop")
     ctx["resolve_item"] = getattr(deps.registry, "resolve", None)
     ctx["resolve_shop"] = getattr(deps.registry, "resolve", None)

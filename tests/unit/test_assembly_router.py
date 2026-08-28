@@ -31,6 +31,8 @@ ALL_REGISTERED = {
     "角色", "角色详细", "背包", "背包筛选", "装备", "技能", "帮助",
     # register
     "注册",
+    # unregister（2026-08-28 新增）
+    "注销",
     # status
     "状态",
     # shortcut
@@ -39,6 +41,8 @@ ALL_REGISTERED = {
     "任务",
     # shop
     "商店", "购买", "出售",
+    # use（2026-08-28 接线）
+    "使用",
     # checkin
     "签到",
     # battle
@@ -315,7 +319,7 @@ def test_check_consistency_whitelist_unregistered_is_expected_m7() -> None:
     result = check_consistency(router)
     unreg = set(result["whitelist_not_registered"])
     # 已知 M7 未注册（信息性）——锚点抽样防未来漂移（对话已注册 N-01，非白名单缺注册）
-    assert {"重载", "地图", "使用", "炼金", "快捷绑定"} <= unreg
+    assert {"重载", "地图", "炼金", "快捷绑定"} <= unreg
     assert not (unreg & set(ALL_REGISTERED))  # 已注册指令绝不落入白名单缺注册
 
 

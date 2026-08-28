@@ -51,6 +51,8 @@ from qbot_rpg.commands import (
     shop_commands,
     shortcut_commands,
     status_commands,
+    unregister_commands,
+    use_commands,
 )
 from qbot_rpg.commands.parsers import DEFAULT_WHITELIST
 from qbot_rpg.commands.router import AliasTable, Router
@@ -72,10 +74,12 @@ DEFAULT_COMMAND_MODE = "global_shortcut"
 REGISTER_GROUPS: tuple = (
     basic_commands.register_basic_commands,        # /角色 /背包 /装备 /技能 /帮助
     register_commands.register_register_commands,  # /注册
+    unregister_commands.register_unregister_commands,  # /注销（2026-08-28 新增）
     status_commands.register_status_commands,      # /状态
     shortcut_commands.register_shortcut_commands,  # /快捷解绑 /快捷列表
     quest_commands.register_quest_commands,        # /任务
     shop_commands.register_shop_commands,          # /商店 /购买 /出售
+    use_commands.register_use_commands,            # /使用（2026-08-28 接线：穿戴+道具）
     checkin_commands.register_checkin_commands,    # /签到
     battle_commands.register_battle_commands,      # /攻击 /防御 /逃跑 /道具
     explore_commands.register_explore_commands,    # /进入 /休息

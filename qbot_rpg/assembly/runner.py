@@ -387,6 +387,18 @@ def _make_handler(spec: Any, parsed: ParsedCommand, ctx: MutableMapping[str, Any
 
     async def _plain_handler(tx: Any) -> Dict[str, Any]:  # noqa: ARG001 —— tx 由 processing 注入
         out = await _invoke_handler(getattr(spec, "handler", None), parsed, ctx=ctx)
+        # 注销删档分支（2026-08-28 用户拍板 /注销）：指令壳成功时置
+        # ctx["unregister_player"]=True + ctx["player"]=None，此处同事务删档。
+        # 必须在 upsert 之前（否则删档后被重新写入）。未删到（并发竞态/行已无）
+        # → 重复注销模板（「你没有可注销的角色」）。
+        if ctx.get("unregister_player"):
+            qid = str(ctx.get("qq_id") or ctx.get("user_id") or "")
+            if qid:
+                deleted = await tx.delete_player(qid)
+                out = _normalize_plain(out)
+                if not deleted:
+                    out = {**out, "message": "❌ 你没有可注销的角色"}
+            return out
         # 业务写落档（装配层 REG-06 ③ / A-03 接线）：ctx["player"] 变更 → 同事务 upsert。
         # 已注册玩家每次指令全量写回（RW-3 单事务 upsert，幂等安全）；新注册 dict → 转换。
         p = ctx.get("player")

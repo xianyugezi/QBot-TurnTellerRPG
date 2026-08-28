@@ -904,6 +904,21 @@ class RepoTransaction:
     async def delete_session(self, qid: str) -> None:
         await self.execute("DELETE FROM sessions WHERE player_qid = ?", (qid,))
 
+    async def delete_player(self, qid: str) -> bool:
+        """删档（注销）：删除 players 行，返回是否实际删除（该 qid 曾有角色）。
+
+        入参 qid: 玩家数据键（QQ 号）。出参 bool：True = 有行被删（本事务内先 SELECT 1
+        判定，防 0 行删除的「重复注销」场景误报成功）。核心逻辑: 事务内先查存在再 DELETE，
+        并同步失效读缓存（含事务提交后统一失效 dirty_qids），保证删档后读路径不返回旧快照。
+        """
+        row = await self.fetchone(
+            "SELECT 1 FROM players WHERE player_qid = ?", (qid,)
+        )
+        await self.execute("DELETE FROM players WHERE player_qid = ?", (qid,))
+        self._repo.invalidate_player(qid)
+        self.dirty_qids.add(qid)
+        return row is not None
+
     async def write_idem_key(self, key: IdemKey) -> None:
         """幂等键插入（IDEM-2：与业务写同事务提交，消除崩溃窗口）。"""
         await self.execute(

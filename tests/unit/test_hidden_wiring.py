@@ -198,7 +198,7 @@ def test_launch_hunt_battle_start_battle_hook_priority() -> None:
     """start_battle hook 优先于 battle_engine（装配层注入形态）。"""
     calls: list = []
     ctx: MutableMapping[str, Any] = {
-        "start_battle": lambda c, ref: (calls.append((c, ref)) or {"ok": True}),
+        "start_battle": lambda c, ref: (calls.append((c, ref)) or {"ok": True}),  # type: ignore[func-returns-value]
         "battle_engine": lambda c, ref: {"ok": False},  # 不应被调用
     }
     launch = launch_hunt_battle(ctx, _hunt_result())
@@ -273,7 +273,7 @@ def test_cmd_investigate_hunt_with_battle_engine_launches() -> None:
     """/调查 蹲点命中 + battle_engine 注入 → 发起 BOSS 战（回复含发起消息 + 记录 boss_ref）。"""
     calls: list = []
     ctx = _hunt_ctx(battle_engine=lambda c, ref: (
-        calls.append((c, ref)) or {"ok": True, "message": "蚀月之狼已现身，战斗开始！"}))
+        calls.append((c, ref)) or {"ok": True, "message": "蚀月之狼已现身，战斗开始！"}))  # type: ignore[func-returns-value]
     reply = cmd_investigate(parse_command("/调查"), ctx)
     assert "蚀月之狼已现身，战斗开始！" in reply
     assert calls == [(ctx, "moon_wolf")]

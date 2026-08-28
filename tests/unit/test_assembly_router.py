@@ -110,7 +110,7 @@ class FakeRepo:
 
     async def load_player(self, qid: str):
         p = self._player
-        if p is not None and p.qid == str(qid):
+        if p is not None and p.qid == str(qid):  # type: ignore[attr-defined]
             return p
         return None
 
@@ -235,7 +235,7 @@ def test_build_router_injected_make_context_is_used() -> None:
         return {"registered": True, "player": _player()}
 
     router = build_router(_deps(make_context=record_make_context))
-    out = router.get("状态").handler(parse("/状态"))
+    out = router.get("状态").handler(parse("/状态"))  # type: ignore[misc,union-attr]
     assert isinstance(out, str)
     assert calls and getattr(calls[0], "command", None) == "状态"
 
@@ -268,8 +268,8 @@ def test_build_router_aliases_loaded_from_settings() -> None:
         settings=_settings(command_aliases={"炼金": {"alias": "炼丹", "keep_original": False}}),
     )
     router = build_router(deps)
-    assert isinstance(router.aliases, AliasTable)
-    entry = router.aliases.alias_for("炼丹")
+    assert isinstance(router.aliases, AliasTable)  # type: ignore[attr-defined]
+    entry = router.aliases.alias_for("炼丹")  # type: ignore[attr-defined]
     assert entry is not None and entry.command == "炼金"
     assert entry.keep_original is False
 
@@ -277,16 +277,16 @@ def test_build_router_aliases_loaded_from_settings() -> None:
 def test_build_router_aliases_default_empty() -> None:
     """RA-07 别名缺省：settings 无 command_aliases → 空 AliasTable（不抛错）。"""
     router = build_router(_deps(make_context=_stub_ctx))
-    assert isinstance(router.aliases, AliasTable)
-    assert not router.aliases
+    assert isinstance(router.aliases, AliasTable)  # type: ignore[attr-defined]
+    assert not router.aliases  # type: ignore[attr-defined]
 
 
 def test_build_router_gm_commands_loaded() -> None:
     """RA-07 GM 权限：GM_COMMANDS 装载为 gm_commands_set（快捷绑定校验注入快照）。"""
     router = build_router(_deps(make_context=_stub_ctx))
-    assert router.gm_commands_set == set(GM_COMMANDS)
-    assert {"重载", "封禁", "日志", "编辑", "设置"} <= router.gm_commands_set
-    # 不遮蔽 Router.gm_commands() 方法（「日志」由 log_commands 以 is_gm=True 注册，ADR-09；gm_commands 组归 M12）
+    assert router.gm_commands_set == set(GM_COMMANDS)  # type: ignore[attr-defined]
+    assert {"重载", "封禁", "日志", "编辑", "设置"} <= router.gm_commands_set  # type: ignore[attr-defined]
+    # 不遮蔽 Router.gm_commands()（「日志」log_commands 以 is_gm=True 注册，ADR-09；gm 组归 M12）
     assert router.gm_commands() == ["日志"]
 
 
@@ -294,7 +294,7 @@ def test_build_router_shortcuts_carried_from_deps() -> None:
     """RA-07 快捷表：deps.shortcuts 映射挂载为 router.shortcuts（无 ctx 路由缺省）。"""
     deps = _deps(make_context=_stub_ctx, shortcuts={"/药水": "使用 药水"})
     router = build_router(deps)
-    assert router.shortcuts == {"/药水": "使用 药水"}
+    assert router.shortcuts == {"/药水": "使用 药水"}  # type: ignore[attr-defined]
 
 
 # ---------------------------------------------------------------------------
@@ -343,7 +343,7 @@ def test_default_adapter_bridges_real_async_make_context() -> None:
     """默认适配器：无注入时桥接真实 async make_context（asyncio.run）→ 状态面板。"""
     deps = _deps(_player(), default_qid="10001", default_group_id="123456")
     router = build_router(deps)  # 未注入 make_context → 默认适配器
-    out = router.get("状态").handler(parse("/状态"))
+    out = router.get("状态").handler(parse("/状态"))  # type: ignore[misc,union-attr]
     assert isinstance(out, str)
     assert "阿伟" in out  # 已注册玩家 ctx（真实 make_context 全字段）渲染
 
@@ -352,7 +352,7 @@ def test_default_adapter_unregistered_player_prompt() -> None:
     """默认适配器：无 qid（未注册）→ registered=False ctx → 注册门槛人话提示。"""
     deps = _deps(player=None)  # FakeRepo(None) → load_player 返回 None
     router = build_router(deps)
-    out = router.get("注册").handler(parse("/注册"))
+    out = router.get("注册").handler(parse("/注册"))  # type: ignore[misc,union-attr]
     assert isinstance(out, str) and out
 
 

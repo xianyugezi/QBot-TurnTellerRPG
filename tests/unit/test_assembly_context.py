@@ -83,7 +83,7 @@ def _player(qid: str = "10001", **over: object) -> Player:
         codex_state={},
     )
     base.update(over)
-    return Player(**base)  # type: ignore[arg-type]
+    return Player(**base)
 
 
 class FakeRepo:
@@ -377,11 +377,11 @@ async def test_effects_rendered() -> None:
 async def test_dialog_session_restore() -> None:
     """persistent_state["dialog_session"] Mapping → DialogSession；非法形态 → None。"""
     p = _player()
-    p.persistent_state["dialog_session"] = {"state": "menu", "npc_id": "npc1"}  # type: ignore[index]
+    p.persistent_state["dialog_session"] = {"state": "menu", "npc_id": "npc1"}
     ctx = await make_context(_event(), _deps(p))
     assert ctx["dialog_session"] is not None
     p2 = _player()
-    p2.persistent_state["dialog_session"] = "bogus"  # type: ignore[index]
+    p2.persistent_state["dialog_session"] = "bogus"
     ctx2 = await make_context(_event(), _deps(p2))
     assert ctx2["dialog_session"] is None
 

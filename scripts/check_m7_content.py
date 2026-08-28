@@ -45,7 +45,6 @@ from qbot_rpg.core.adventure_log import (  # noqa: E402
 )
 from qbot_rpg.engine.condition_engine import (  # noqa: E402
     EVENT_PRESETS,
-    VAR_ALIASES,
     normalize_var,
 )
 
@@ -199,7 +198,8 @@ def _iter_condition_exprs(obj: object) -> Iterator[Mapping[str, Any]]:
         if "var" in obj:
             yield obj
             return
-        if isinstance(obj.get("type"), str) and obj.get("type") == "event" and isinstance(obj.get("event"), str):
+        if (isinstance(obj.get("type"), str) and obj.get("type") == "event"
+                and isinstance(obj.get("event"), str)):
             yield obj
             return
         for v in obj.values():
@@ -216,7 +216,8 @@ def _condition_vars_of(cond: object) -> List[str]:
         var = expr.get("var")
         if isinstance(var, str) and var:
             out.append(var)
-        elif isinstance(expr.get("type"), str) and expr.get("type") == "event" and isinstance(expr.get("event"), str):
+        elif (isinstance(expr.get("type"), str) and expr.get("type") == "event"
+              and isinstance(expr.get("event"), str)):
             out.append("[事件:" + str(expr["event"]) + "]")
     return out
 
@@ -275,7 +276,8 @@ def _hidden_reveals(map_raw: Mapping[str, Any]) -> List[Mapping[str, Any]]:
         for entry in ex.values():
             if not isinstance(entry, Mapping):
                 continue
-            if entry.get("mode") == "hidden" and isinstance(entry.get("to"), str) and entry.get("to"):
+            if (entry.get("mode") == "hidden" and isinstance(entry.get("to"), str)
+                    and entry.get("to")):
                 out.append({"map_ref": entry.get("to"), "lore_condition": entry.get("condition"),
                             "hidden_find_id": None})
     return out
@@ -322,7 +324,8 @@ def _check_map_window_rows(issues, index, map_id, raw) -> None:
         if enemy_s is not None and enemy_s not in index["enemy_ids"]:
             issues.append({
                 "level": "RED", "kind": "hidden_boss",
-                "msg": f"map={map_id} 引用敌人 {enemy_s} 在 enemies.json registry 无法解析 → 不可达",
+                "msg": (f"map={map_id} 引用敌人 {enemy_s} "
+                        f"在 enemies.json registry 无法解析 → 不可达"),
             })
         _register_hidden_find(index, row.get("hidden_find_id"))
 
@@ -400,7 +403,8 @@ def check_condition_whitelist(index: Mapping[str, Any]) -> List[Mapping[str, Any
                 if not _var_registered(var):
                     issues.append({
                         "level": "YELLOW", "kind": "condition_key",
-                        "msg": f"{fname}: 未注册条件键 {var!r}（白名单 var 键空间外，条件恒不满足）",
+                        "msg": (f"{fname}: 未注册条件键 {var!r} "
+                                f"（白名单 var 键空间外，条件恒不满足）"),
                     })
                     continue
                 name, target = _event_name_of(var)
@@ -418,7 +422,8 @@ def check_condition_whitelist(index: Mapping[str, Any]) -> List[Mapping[str, Any
                 if not _event_registered(index, name, expr.get("target")):
                     issues.append({
                         "level": "YELLOW", "kind": "condition_key",
-                        "msg": f"{fname}: 事件 {name} 未在事件注册表登记（旧 event 原语，建议迁移四键）",
+                        "msg": (f"{fname}: 事件 {name} 未在事件注册表登记 "
+                                f"（旧 event 原语，建议迁移四键）"),
                     })
     return issues
 

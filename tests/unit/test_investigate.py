@@ -17,7 +17,6 @@ from qbot_rpg.core.event_bus import EVENT_LOG_KEY
 from qbot_rpg.core.investigate import (
     DEFAULT_CONFIRM_TEXT,
     DEFAULT_DAILY_QUOTA,
-    DEFAULT_GENERIC_TEXT,
     QUOTA_KEY,
     REVEALED_KEY,
     investigate_map,

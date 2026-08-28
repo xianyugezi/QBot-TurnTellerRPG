@@ -61,13 +61,13 @@ def test_register_codex_commands_no_make_context_registers() -> None:
     spec = router.get(CODEX_CMD)
     assert isinstance(spec, CommandSpec)
     with pytest.raises(RuntimeError):
-        spec.handler(_parsed("/图鉴"))
+        spec.handler(_parsed("/图鉴"))  # type: ignore[misc]
 
 
 def test_register_codex_commands_with_make_context() -> None:
     """注入 make_context → handler 可调。"""
     router = Router()
-    register_codex_commands(router, make_context=lambda parsed: _ctx())
+    register_codex_commands(router, make_context=lambda parsed: _ctx())  # type: ignore[arg-type,return-value]
     assert isinstance(router.get(CODEX_CMD), CommandSpec)
 
 

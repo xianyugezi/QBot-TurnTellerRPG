@@ -347,7 +347,7 @@ def test_cleanup_non_mapping_snapshot_kept() -> None:
     ctx = {"persistent_state": {DIALOG_SNAPSHOT_KEY: None}, "settings": {}}
     now = datetime(2026, 8, 28, tzinfo=timezone.utc)
     assert cleanup_dialog_snapshot(ctx, now=now) is False
-    ctx2 = {"persistent_state": {}, "settings": {}}
+    ctx2 = {"persistent_state": {}, "settings": {}}  # type: ignore[var-annotated]
     assert cleanup_dialog_snapshot(ctx2, now=now) is False
 
 

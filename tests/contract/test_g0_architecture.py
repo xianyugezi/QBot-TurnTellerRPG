@@ -99,5 +99,5 @@ def test_commands_web_not_depended():
         if src == dst:
             continue  # 同层内部模块互引合法（§1.4 矩阵只约束跨层方向）
         if src == "assembly":
-            continue  # M7 装配层：顶层接线 commands 指令组，方向豁免（与 scripts/check_architecture.py 同口径，ADR-03）
+            continue  # 装配层接线 commands 豁免（与 check_architecture.py 同口径）
         assert dst not in ("commands", "web"), f"{src} -> {dst} 反向依赖外部壳层"

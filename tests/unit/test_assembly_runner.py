@@ -72,7 +72,7 @@ def make_player(qid: str = "10001", **over: object) -> Player:
         codex_state={},
     )
     base.update(over)
-    return Player(**base)  # type: ignore[arg-type]
+    return Player(**base)
 
 
 class FakeTx:
@@ -118,7 +118,7 @@ class FakeRepo:
     async def tx(self):
         yield FakeTx(self)
 
-    async def cleanup_idem_keys(self, retention_days: float = 7.0, *, now: str = None):  # noqa: ANN001
+    async def cleanup_idem_keys(self, retention_days: float = 7.0, *, now: "str | None" = None):  # noqa: ANN001
         self.cleanup_calls += 1
         return 0
 
@@ -194,7 +194,7 @@ async def build_env(player: object = None, **over: object) -> dict:
     make_context 双份等价（同一玩家读档）。
     """
     repo = FakeRepo(player)
-    queue = PerPlayerQueue(repo)
+    queue = PerPlayerQueue(repo)  # type: ignore[arg-type]
     router = Router()
     sender = Sender()
     event = make_event(**{k: v for k, v in over.items() if k in (
@@ -203,9 +203,9 @@ async def build_env(player: object = None, **over: object) -> dict:
     deps = AssemblyDeps(repo=repo, game_world=StubGameWorld(),
                         registry=make_registry(), settings=make_settings(),
                         session_mgr=SessionMgrNone())
-    deps.router = router
+    deps.router = router  # type: ignore[attr-defined]
     deps.queue = queue
-    deps.sender = sender
+    deps.sender = sender  # type: ignore[attr-defined]
     # status 指令组的 make_context（register 契约：ParsedCommand → ctx dict，同步形态）
     ctx = await make_context(event, deps)
     register_status_commands(router, make_context=lambda parsed: ctx)
@@ -254,7 +254,7 @@ async def test_per_player_queue_fifo_order() -> None:
     order: list = []
     for i, name in enumerate(("测试甲", "测试乙", "测试丙")):
         env["router"].register(CommandSpec(
-            name, handler=lambda parsed, n=name, i=i: (order.append(i), f"{n}完成")[1]))
+            name, handler=lambda parsed, n=name, i=i: (order.append(i), f"{n}完成")[1]))  # type: ignore[func-returns-value]
 
     async def one(msg: str, mid: str) -> str:
         return await run_command(make_event(message=msg, message_id=mid), env["deps"])
@@ -385,7 +385,7 @@ async def test_queue_timeout_drop_with_idem_fallback() -> None:
         player_qid="10001",
         idem_key=IdemKey(message_id="m-slow", group_id="123456", player_qid="10001",
                          command="状态"),
-        handler=lambda tx: asyncio.sleep(10),
+        handler=lambda tx: asyncio.sleep(10),  # type: ignore[arg-type,return-value]
     ))
     # 第二条指令排队等消费者 → wait_for 超时 → 丢弃等待，返回超时文案
     reply = await run_command(make_event(message="状态", message_id="m-fast"), env["deps"])

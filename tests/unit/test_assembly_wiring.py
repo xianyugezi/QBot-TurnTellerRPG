@@ -87,7 +87,7 @@ def _player(qid: str = "10001", **over: object) -> Player:
         codex_state={},
     )
     base.update(over)
-    return Player(**base)  # type: ignore[arg-type]
+    return Player(**base)
 
 
 class FakeRepo:
@@ -247,18 +247,18 @@ def test_fallback_bump_event_three_tables_readable_form() -> None:
     """
     from qbot_rpg.assembly.context import _fallback_bump_event
 
-    ctx = {"event_counts": {}, "longline_counters": {}, "event_log": [], "settings": {}}
+    ctx = {"event_counts": {}, "longline_counters": {}, "event_log": [], "settings": {}}  # type: ignore[var-annotated]
     _fallback_bump_event(ctx, "[事件:NPC对话:blacksmith_zhou]")
     _fallback_bump_event(ctx, "[事件:副本通关]")
     # ① longline_counters：原始事件键（冒险日志累计口径）
-    assert ctx["longline_counters"]["[事件:NPC对话:blacksmith_zhou]"] == 1
-    assert ctx["longline_counters"]["[事件:副本通关]"] == 1
+    assert ctx["longline_counters"]["[事件:NPC对话:blacksmith_zhou]"] == 1  # type: ignore[index]
+    assert ctx["longline_counters"]["[事件:副本通关]"] == 1  # type: ignore[index]
     # ② event_counts：条件引擎可读形态
-    assert ctx["event_counts"]["[事件:NPC对话]:blacksmith_zhou"] == 1
-    assert ctx["event_counts"]["[事件:副本通关]"] == 1
+    assert ctx["event_counts"]["[事件:NPC对话]:blacksmith_zhou"] == 1  # type: ignore[index]
+    assert ctx["event_counts"]["[事件:副本通关]"] == 1  # type: ignore[index]
     # ③ event_log：环形实例日志（最小 {"key","ts"} 形态）
     assert len(ctx["event_log"]) == 2
-    assert ctx["event_log"][0]["key"] == "[事件:NPC对话:blacksmith_zhou]"
+    assert ctx["event_log"][0]["key"] == "[事件:NPC对话:blacksmith_zhou]"  # type: ignore[index]
     # ④ [事件:*] 条件回读
     assert eval_condition({"var": "[事件:NPC对话:blacksmith_zhou]", "op": "ge", "value": 1}, ctx)
     assert eval_condition({"var": "[事件:副本通关]", "op": "ge", "value": 1}, ctx)
@@ -312,7 +312,8 @@ async def test_bump_event_hook_consumed_by_dialog_commands() -> None:
 
 def test_event_key_parts_split() -> None:
     """事件键切分（对齐 condition_engine._parse_event_var）：内嵌目标 / 无参 / 非事件。"""
-    assert _event_key_parts("[事件:NPC对话:blacksmith_zhou]") == ("[事件:NPC对话]", "blacksmith_zhou")
+    assert _event_key_parts("[事件:NPC对话:blacksmith_zhou]") == \
+        ("[事件:NPC对话]", "blacksmith_zhou")
     assert _event_key_parts("[事件:副本通关]") == ("[事件:副本通关]", None)
     assert _event_key_parts("foo") == ("foo", None)
 

@@ -1,4 +1,4 @@
-"""M7 环境 lore 定向测试（tests/unit/test_environment_lore.py · BCH-09 3f F-15/F-16 · R-22~R-24 · E-06）。
+"""M7 环境 lore 定向测试（tests/unit/test_environment_lore.py · BCH-09 · F-15/F-16 · R-22~R-24）。
 
 覆盖：
   - ambient_context 环境泛暗示（R-23 / F-15）：地图 lore.ambient[] 窗口匹配 / 零暗示
@@ -14,14 +14,12 @@
 
 from __future__ import annotations
 
-import sys
 from typing import Any, Mapping, MutableMapping
 
 from qbot_rpg.commands.codex_commands import cmd_codex
 from qbot_rpg.commands.parsers import parse_command
 from qbot_rpg.core.codex import mark_seen, unlock_lore
 from qbot_rpg.core.environment_lore import (
-    DEFAULT_AMBIENT_TEXT,
     RUMOR_PREFIX,
     ambient_context,
     lore_hint,

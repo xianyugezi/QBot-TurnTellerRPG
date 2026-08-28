@@ -15,8 +15,8 @@ import tempfile
 
 _CHECK = pathlib.Path(__file__).resolve().parents[2] / "scripts" / "check_m7_content.py"
 _spec = importlib.util.spec_from_file_location("check_m7_content_mod", _CHECK)
-_mod = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_mod)  # noqa: E402  (module-level sys.path 引导，qbot_rpg 已可 import)
+_mod = importlib.util.module_from_spec(_spec)  # type: ignore[arg-type]
+_spec.loader.exec_module(_mod)  # type: ignore[union-attr]  # noqa: E402  (module-level sys.path 引导，qbot_rpg 已可 import)
 
 
 # -------------------------------------------------------------------------------------

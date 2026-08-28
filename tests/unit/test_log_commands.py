@@ -389,9 +389,9 @@ def test_sys_log_default_show_and_page_size() -> None:
     assert "[25:00:00]" in out and "[01:00:00]" not in out   # 最近 20 条（p6..p25）
     out2 = _pc("2")
     out2.kv = [{"key": "条数", "value": "50"}]       # 条数=N 走 kv（对齐 gm_commands 5b G8）
-    out2 = cmd_log(out2, ctx)
-    assert "【系统日志】第 2 页 / 共 2 页" in out2     # 25 条 → 20/5 两页
-    assert "[01:00:00]" in out2                      # 第 2 页含最旧 p1
+    out2 = cmd_log(out2, ctx)  # type: ignore[assignment]
+    assert "【系统日志】第 2 页 / 共 2 页" in out2  # type: ignore[operator]  # 25 条 → 20/5 两页
+    assert "[01:00:00]" in out2  # type: ignore[operator]  # 第 2 页含最旧 p1
 
 
 def test_sys_log_settings_override() -> None:

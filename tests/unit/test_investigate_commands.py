@@ -98,7 +98,7 @@ def test_register_investigate_commands_no_make_context_registers() -> None:
     spec = router.get(INVESTIGATE_CMD)
     assert spec is not None
     with pytest.raises(RuntimeError):
-        spec.handler(_parsed("/调查"))
+        spec.handler(_parsed("/调查"))  # type: ignore[misc]
 
 
 def test_register_investigate_commands_with_make_context() -> None:

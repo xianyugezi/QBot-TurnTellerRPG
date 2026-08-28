@@ -26,11 +26,11 @@ from typing import Any, Callable, Optional
 from qbot_rpg_bridge import run_bridge
 
 try:
-    from nonebot import on_message
+    from nonebot import on_message  # type: ignore[import-not-found]
 
     HAS_NONEBOT = True
 except ImportError:  # pragma: no cover —— 无 NoneBot 环境（CLI/测试/冒烟）
-    on_message = None  # type: ignore[assignment]
+    on_message = None
     HAS_NONEBOT = False
 
 # on_message 处理器优先级（block=False 不阻塞其它处理器；run_command 内路由裁决）

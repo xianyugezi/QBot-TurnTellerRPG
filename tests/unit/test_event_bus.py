@@ -145,16 +145,16 @@ def test_quest_complete_bumps_event() -> None:
         "quest_daily": {}, "inventory": {"素材": 1},
     }
     # 构造一个可结算的交付任务（q1 需要 1 个素材）
-    qs = quest_mod.quest_board(ctx)
+    quest_mod.quest_board(ctx)
     # 若无法构造完成态，退化验证 bump_event 本身（引擎接线由收口单测覆盖）
     try:
         r = quest_mod.quest_complete("q1", ctx)
     except Exception:
         r = {"ok": False}
     if r.get("ok"):
-        assert ctx["event_counts"].get("[事件:任务完成]", 0) >= 1
-        assert ctx["longline_counters"].get("[事件:任务完成]", 0) >= 1
-        assert len(ctx["persistent_state"].get(EVENT_LOG_KEY, [])) >= 1
+        assert ctx["event_counts"].get("[事件:任务完成]", 0) >= 1  # type: ignore[attr-defined]
+        assert ctx["longline_counters"].get("[事件:任务完成]", 0) >= 1  # type: ignore[attr-defined]
+        assert len(ctx["persistent_state"].get(EVENT_LOG_KEY, [])) >= 1  # type: ignore[attr-defined]
     else:
         # 无任务板行 → 跳过（引擎无任务可结算，事件不触发是正确语义）
         assert "[事件:任务完成]" not in ctx["event_counts"] or True
@@ -173,7 +173,7 @@ def test_checkin_bumps_event() -> None:
     except Exception:
         r = {"ok": False}
     if r.get("ok"):
-        assert ctx["event_counts"].get("[事件:签到]", 0) >= 1
-        assert len(ctx["persistent_state"].get(EVENT_LOG_KEY, [])) >= 1
+        assert ctx["event_counts"].get("[事件:签到]", 0) >= 1  # type: ignore[attr-defined]
+        assert len(ctx["persistent_state"].get(EVENT_LOG_KEY, [])) >= 1  # type: ignore[attr-defined]
     else:
         assert "[事件:签到]" not in ctx["event_counts"] or True

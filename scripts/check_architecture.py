@@ -39,6 +39,8 @@ ALLOWED_DEP: Dict[str, Set[str]] = {
     "content": {"data"},
     "engine": {"data"},  # M3 时间/天气引擎（纯逻辑层；仅允许依赖 data）
     "data": set(),
+    # M7 装配层（顶层）：组装 commands 指令组 + 全业务层接线，方向放行（见 TC-03 slayer 豁免）
+    "assembly": {"commands", "core", "world", "storage", "content", "data", "engine"},
     "root": set(),  # qbot_rpg/__init__.py 包元信息；不参与方向约束（M0 无业务 import）
 }
 # TC-04 五类（细化_3a §3.2 / D-03）
@@ -298,6 +300,8 @@ def check_tc03(root: str, files: List[str]) -> None:
             tlayer = layer_of(tgt)
             if tlayer == slayer:
                 continue  # 同层内部模块互引合法（§1.4 矩阵只约束跨层方向）
+            if slayer == "assembly":
+                continue  # M7 装配层：顶层接线 commands 指令组 + 全业务层，方向豁免（ADR-03）
             if tlayer in ("commands", "web"):
                 layer_violations.append(
                     f"{os.path.relpath(src)} → {os.path.relpath(tgt)}："

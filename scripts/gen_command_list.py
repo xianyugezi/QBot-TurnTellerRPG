@@ -19,8 +19,10 @@ unreg = sorted(DEFAULT_WHITELIST - set(reg))
 print(json.dumps({"reg": reg, "unreg": unreg,
   "prefix": sorted(DEFAULT_PREFIX_REQUIRED), "gm": sorted(GM_COMMANDS)}))
 '''
-out = subprocess.run([".venv/bin/python", "-c", code], cwd=str(Path(__file__).resolve().parent.parent),
-                     capture_output=True, text=True).stdout.strip().splitlines()[-1]
+out = subprocess.run(
+    [".venv/bin/python", "-c", code],
+    cwd=str(Path(__file__).resolve().parent.parent),
+    capture_output=True, text=True).stdout.strip().splitlines()[-1]
 d = json.loads(out)
 
 # 来源标注：指令 → (归属系统, 设计来源, 备注)
@@ -54,7 +56,8 @@ SRC = {
     "图鉴": ("图鉴", "3f F-11/12 /图鉴", "M7 接线"),
     # 未注册（白名单有）
     "使用": ("道具使用", "定稿 L1263：/使用 经验药水*10", "⚠ 白名单有但未注册（未接线）"),
-    "锁定怪物": ("战斗", "定稿 L1279：/锁定 <序号> 锁定目标进入战斗", "⚠ 白名单有但未注册（未接线）"),
+    "锁定怪物": ("战斗", "定稿 L1279：/锁定 <序号> 锁定目标进入战斗",
+                 "⚠ 白名单有但未注册（未接线）"),
     "快捷绑定": ("快捷", "4f 快捷绑定", "⚠ 白名单有但未注册（未接线？）"),
     "地图": ("地图", "? 需核对", "⚠ 白名单有但未注册（来源待核对）"),
     "怪物": ("怪物", "? 需核对", "⚠ 白名单有但未注册（来源待核对）"),
@@ -82,7 +85,7 @@ def row(name, status):
 lines = [
     "# 指令清单（部署检查用 · 全量核对）",
     "",
-    f"> 生成：2026-08-28 部署全面检查；来源：Router 注册表 + parsers.DEFAULT_WHITELIST",
+    "> 生成：2026-08-28 部署全面检查；来源：Router 注册表 + parsers.DEFAULT_WHITELIST",
     "",
     "## 一、当前已注册指令（%d 个，玩家可发）" % len(d["reg"]),
     "",
@@ -112,7 +115,8 @@ lines += [
     "",
     "## 五、待用户核对项",
     "",
-    "1. **防御/逃跑/道具**：三个玩家战斗指令已按用户拍板移除（定稿 L92/L111/L1364~66 同步删除）；战斗仅剩 /攻击（技能合并）。",
+    "1. **防御/逃跑/道具**：三个玩家战斗指令已按用户拍板移除"
+    "（定稿 L92/L111/L1364~66 同步删除）；战斗仅剩 /攻击（技能合并）。",
     "2. **使用 / 锁定怪物**：定稿 L1263 / L1279 有，白名单注册了、指令壳未接线——需决定补接或移除。",
     "3. **快捷绑定**：4f 快捷绑定，白名单有但未注册（快捷组只注册解绑/列表）——需核对。",
     "4. **地图 / 怪物**：白名单来源待核对。",

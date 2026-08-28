@@ -53,6 +53,8 @@ def cmd_unregister(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     name = ""
     if isinstance(player, MutableMapping):
         name = str(player.get("name") or "")
+    else:
+        name = str(getattr(player, "name", "") or "")
     fs = getattr(parsed, "fixed_subword", None)
     args = list(getattr(parsed, "args", None) or [])
     confirmed = (fs == CONFIRM_SUBWORD) or (CONFIRM_SUBWORD in args)

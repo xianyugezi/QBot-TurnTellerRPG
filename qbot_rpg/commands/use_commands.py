@@ -15,6 +15,7 @@ from typing import Any, Callable, MutableMapping, Optional
 
 from .basic_commands import TPL_REGISTER_GATE, _equip_engine
 from .router import CommandSpec
+from qbot_rpg.data.player import Player
 
 USE_CMD = "使用"
 
@@ -47,6 +48,24 @@ def _inventory_engine(ctx: MutableMapping[str, Any]) -> Any:
         return eng
     mod = importlib.import_module("qbot_rpg.core.inventory")
     return mod.InventoryEngine()
+
+
+def _resolve_player(ctx: MutableMapping[str, Any]) -> Optional[MutableMapping[str, Any]]:
+    """玩家状态解析（兼容装配层 Player dataclass + 指令层 dict）。
+
+    入参 ctx: 玩家上下文。出参 MutableMapping 或 None。核心逻辑: dict 直返；
+    Player dataclass → asdict 转可变 dict 并写回 ctx（引擎就地修改 + 落档 dict 兼容）。
+    """
+    p = ctx.get("player")
+    if isinstance(p, MutableMapping):
+        return p
+    if isinstance(p, Player):
+        import dataclasses  # noqa: PLC0415
+
+        d = dataclasses.asdict(p)
+        ctx["player"] = d
+        return d
+    return None
 
 
 def _sorted_rows(player: MutableMapping[str, Any], ctx: MutableMapping[str, Any]) -> list:
@@ -142,8 +161,8 @@ def cmd_use(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         return TPL_REGISTER_GATE
     if ctx.get("battle_session"):
         return TPL_IN_BATTLE
-    player = ctx.get("player")
-    if not isinstance(player, MutableMapping):
+    player = _resolve_player(ctx)  # 兼容 Player dataclass + dict（写回 ctx）
+    if player is None:
         return TPL_REGISTER_GATE
     args = list(getattr(parsed, "args", None) or [])
     if not args:

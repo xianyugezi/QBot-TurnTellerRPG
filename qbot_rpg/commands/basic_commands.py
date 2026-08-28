@@ -99,7 +99,7 @@ from qbot_rpg.core.message_format.list_render import (
 from qbot_rpg.core.player_attributes import calc_all_final_attributes
 from qbot_rpg.data.item import ItemInstance
 from qbot_rpg.data.logging_utils import get_logger
-from qbot_rpg.data.player import EquipmentSlot, PlayerAttributes
+from qbot_rpg.data.player import EquipmentSlot, Player, PlayerAttributes
 
 # 同包兄弟模块：相对导入（G0 架构门禁 test_commands_web_not_depended 不产生
 # `qbot_rpg.commands` 前缀反向依赖边；同层兄弟引用架构合规，与 sender.py 同口径）。
@@ -1038,7 +1038,18 @@ class EquipmentEngineAdapter:
     @staticmethod
     def _player(ctx: Mapping[str, Any]) -> Optional[MutableMapping[str, Any]]:
         p = ctx.get("player")
-        return p if isinstance(p, MutableMapping) else None
+        if isinstance(p, MutableMapping):
+            return p
+        # 装配层 make_context 注入 Player dataclass（2026-08-28 部署实测）——
+        # asdict 转可变 dict 并写回 ctx（引擎就地修改 + 落档 dict 转换兼容）。
+        if isinstance(p, Player):
+            import dataclasses  # noqa: PLC0415
+
+            d = dataclasses.asdict(p)
+            if isinstance(ctx, MutableMapping):
+                ctx["player"] = d
+            return d
+        return None
 
     @staticmethod
     def _sorted_inventory(player: MutableMapping[str, Any]) -> list:

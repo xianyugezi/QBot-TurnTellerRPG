@@ -51,6 +51,8 @@ ALL_REGISTERED = {
     "日志",
     # investigate（F-05/F-06，BCH-06）
     "调查",
+    # codex（F-11/F-12，BCH-08）
+    "图鉴",
 }
 
 # 关键指令（TCA-02/03 冒烟锚点：状态/背包/任务/商店 handler 可调）
@@ -194,8 +196,8 @@ def parse(raw: str):
 # ---------------------------------------------------------------------------
 # TCA-02：全指令组注册 + 无冲突
 # ---------------------------------------------------------------------------
-def test_build_router_registers_all_twelve_groups() -> None:
-    """TCA-02：真实 AssemblyDeps + 各指令组 → build_router → 12 组 25 指令全注册。"""
+def test_build_router_registers_all_thirteen_groups() -> None:
+    """TCA-02：真实 AssemblyDeps + 各指令组 → build_router → 13 组 26 指令全注册。"""
     router = build_router(_deps(make_context=_stub_ctx))
     assert set(router.names()) == ALL_REGISTERED
     # 无冲突：Router.register 重名 ValueError 兜底 → 能构造即无重复

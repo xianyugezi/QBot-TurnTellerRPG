@@ -70,7 +70,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from types import SimpleNamespace
-from typing import Any, Callable, List, Mapping, MutableMapping, Optional, Sequence, Tuple
+from typing import Any, Callable, List, Mapping, MutableMapping, Optional, Sequence, Tuple, cast
 
 # 同包兄弟模块：相对导入（G0 架构门禁 test_commands_web_not_depended 不产生
 # `qbot_rpg.commands` 前缀反向依赖边；同层兄弟引用架构合规，与 sender.py 同口径）。
@@ -690,6 +690,14 @@ def dispatch_round(
 
     if report.ended:
         winner = report.status or "draw"
+        # M7 N-03：怪物击杀事件（RN-10 三表 flat；battle 引擎无 ctx，接线落指令层结算点）
+        if winner == "win":
+            try:
+                from qbot_rpg.core.event_bus import bump_event
+                bump_event(cast(MutableMapping, ctx), "[事件:怪物击杀]",
+                           instance={"tag": "first_kill"})
+            except Exception:
+                pass
         # 叙事句伤害 = 本轮最后一个玩家行动 outcome 的 final_damage（用户结算模板回顾最后一击）
         last_pd = 0
         for _oc in reversed(tuple(getattr(report, "outcomes", ()) or ())):

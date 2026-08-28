@@ -250,8 +250,8 @@ def _mark_heard(ctx: MutableMapping[str, Any], keys: Any) -> None:
 
 
 def _bump_events(ctx: MutableMapping[str, Any], events: Any) -> None:
-    """事件写入（RN-10 双表）：优先 ctx["bump_event"] hook（装配层统一函数），
-    缺省双表直写 event_counts + longline_counters（同键 +1，只增不减）。"""
+    """事件写入（RN-10 三表）：优先 ctx["bump_event"] hook（装配层统一函数），
+    缺省调 event_bus.bump_event（event_counts + longline_counters + event_log 环形）。"""
     for key in events or ():
         if not key:
             continue
@@ -262,10 +262,11 @@ def _bump_events(ctx: MutableMapping[str, Any], events: Any) -> None:
                 continue
             except Exception:
                 pass
-        for table in ("event_counts", "longline_counters"):
-            node = ctx.get(table)
-            if isinstance(node, MutableMapping):
-                node[str(key)] = int(node.get(str(key), 0) or 0) + 1
+        try:
+            from qbot_rpg.core.event_bus import bump_event
+            bump_event(ctx, str(key))
+        except Exception:
+            pass
 
 
 def _apply_shop_refs(ctx: MutableMapping[str, Any], refs: Any) -> None:

@@ -871,6 +871,12 @@ def checkin_do(ctx: MutableMapping[str, Any]) -> dict:
         results.append(_settle_table(table, today, ctx))
     checkin_condition_ctx(ctx)          # 刷新三键投影（结算后键值已更新，TC-32）
     _mark_idempotent(ctx)
+    # M7 N-03：签到事件写入（RN-10 三表；补签 makeup 不触发，契约裁决⑦）
+    try:
+        from qbot_rpg.core.event_bus import bump_event
+        bump_event(ctx, "[事件:签到]", instance={"tag": "milestone"})
+    except Exception:
+        pass
     return {"ok": True, "today": today, "tables": results,
             "message": "\n".join(_summary_lines(results, today))}
 

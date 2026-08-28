@@ -917,6 +917,12 @@ def quest_complete(quest_id: str, ctx: MutableMapping[str, Any]) -> dict:
         return {"ok": False, "reason": exc.reason, "message": "❌ 结算失败，已回滚"}
 
     _mark_idempotent(ctx)
+    # M7 N-03：任务完成事件写入（RN-10 三表：条件引擎 event_counts + 冒险日志 longline + 实例日志）
+    try:
+        from qbot_rpg.core.event_bus import bump_event
+        bump_event(ctx, "[事件:任务完成]", instance={"tag": "story_node"})
+    except Exception:
+        pass
 
     completed_today = _to_int(daily.get("completed"))
     mp = 0

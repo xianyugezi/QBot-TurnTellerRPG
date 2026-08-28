@@ -35,6 +35,12 @@
   7) inventory 双形态：ctx["inventory"] = {item_id: count} 计数映射（任务/条件引擎
      消费，RA-03 / quest.py L35 / shop_tx._inventory_from_player 同口径）；
      ctx["inventory_items"] = list[ItemInstance] 展示列表（basic/equip 消费）。
+  8) N-03/RN-10 装配级事件 hook（N-02 挂载收口 · BCH-04）：ctx["bump_event"] 惰性
+     import qbot_rpg.core.event_bus.bump_event（兄弟路 BCH-04 路A 交付中，未落盘 →
+     本地安全兜底 _fallback_bump_event，同写 longline_counters + event_counts +
+     event_log 三表，ADR-05）；另注入 ctx["codex_state"]（player.codex_state，NPC
+     intel 图鉴点亮 O07/1e 口径，npc._action_intel 消费）与 ctx["event_log"]
+     （persistent_state["event_log"] 环形数组，3f E-01 模型 BCH-07 扩展实例形态）。
 
 零 NoneBot import（架构铁律，G0 门禁）；仅依赖 core/world/storage/content/data/commands。
 """
@@ -416,6 +422,112 @@ def _npcs(game_world: Any, location: Optional[str]) -> List[Any]:
     return list(r) if isinstance(r, (list, tuple)) else []
 
 
+def _event_key_parts(key: str) -> tuple:
+    """事件键 → (name, param)：`[事件:NPC对话:张三]` → ("[事件:NPC对话]", "张三")。
+
+    规则: 前缀 `[事件:` 且尾缀 `]` → 剥离外壳后按最后一个 ':' 切分（对齐
+    condition_engine._parse_event_var 的 name:target 口径）；无内嵌目标/非事件键 →
+    (key, None)。出参 tuple[str, Optional[str]]，纯函数确定性。
+    """
+    if key.startswith("[事件:") and key.endswith("]"):
+        inner = key[len("[事件:"):-1]
+        if ":" in inner:
+            name, _, target = inner.rpartition(":")
+            return "[事件:" + name + "]", target
+    return key, None
+
+
+def _fallback_bump_event(ctx: MutableMapping[str, Any], key: str,
+                         *, instance: Any = None) -> None:
+    """bump_event 安全缺省实现（RN-10 · ADR-05 三表；兄弟路 event_bus 落盘前兜底）。
+
+    入参 ctx: 可变 ctx（就地读写）；key: 事件键；instance: 事件实例（缺省自动构造
+    {"key", "ts"}）。出参 None。核心逻辑:
+      - longline_counters[原始事件键] +1（冒险日志累计口径，RN-09 全键）；
+      - event_counts 写**条件引擎可读形态**（condition_engine._read_counter 扁平口径：
+        无参 → name 标量 +1；带内嵌目标 → "name:param" 复合键 +1）——否则 [事件:*]
+        条件读不到计数（dsh 审查 P1-3 口径）；
+      - event_log 环形追加（settings.event_log_cap 缺省 300，超限弹首条；event_log
+        缺省/非 list → 仅双表，不抛错）。
+
+    确定性：纯函数原地改写 ctx；instance 缺省由 ctx["now"] 派生（注入可复现）。
+    【工程补白】event_log 实例最小形态 {"key","ts"}；3f E-01 模型（snapshot/first_seen/
+    ts）由 BCH-07 批次扩展，本兜底保持稳定最小契约。
+    """
+    if not isinstance(ctx, MutableMapping) or not key:
+        return
+    key = str(key)
+    node = ctx.get("longline_counters")
+    if isinstance(node, MutableMapping):
+        node[key] = int(node.get(key, 0) or 0) + 1
+    name, param = _event_key_parts(key)
+    node = ctx.get("event_counts")
+    if isinstance(node, MutableMapping):
+        if param is None:
+            node[name] = int(node.get(name, 0) or 0) + 1
+        else:
+            compound = f"{name}:{param}"
+            node[compound] = int(node.get(compound, 0) or 0) + 1
+    if instance is None:
+        instance = {"key": key, "ts": ctx.get("now")}
+    log = ctx.get("event_log")
+    if isinstance(log, list):
+        cap = 300
+        settings = ctx.get("settings")
+        if isinstance(settings, Mapping):
+            cap = int(settings.get("event_log_cap", 300) or 300)
+        if cap > 0 and len(log) >= cap:
+            log.pop(0)
+        log.append(instance)
+    elif isinstance(log, MutableMapping):  # 映射形态兜底（{key: instance}）
+        log[key] = instance
+
+
+def _resolve_bump_event() -> Callable[..., Any]:
+    """装配级 bump_event hook：惰性 import core.event_bus.bump_event（兄弟路 BCH-04 路A）。
+
+    未落盘（ImportError/AttributeError 等）→ 返回 _fallback_bump_event（RN-10 三表安全
+    兜底，不抛错不阻塞装配）。出参 Callable，签名 (ctx, key, *, instance=None)——与
+    dialog_commands._bump_events 的 hook(ctx, key) 调用形态兼容。
+    """
+    try:
+        from qbot_rpg.core.event_bus import bump_event
+
+        if callable(bump_event):
+            return bump_event
+    except Exception:
+        pass
+    return _fallback_bump_event
+
+
+def _coerce_event_log(raw: object) -> list:
+    """event_log 归一：persistent_state["event_log"]（JSON 数组）→ 可写 list（缺省 []）。
+
+    入参 raw: 任意形态（list 直通复用；tuple/set 转 list；None/其它 → []）。
+    出参 list。核心逻辑: 仅 list 原样返回（装配提交写回同容器），其余安全空值。
+    """
+    if isinstance(raw, list):
+        return raw
+    if isinstance(raw, (tuple, set, frozenset)):
+        return list(raw)
+    return []
+
+
+def _npc_interactions_of(npcs: Any, npc_id: object) -> list:
+    """装配级 npc_interactions hook 纯函数：按 id 从 npcs 取 interactions（RN-05，缺省 []）。
+
+    入参 npcs: 当前地图 NPC 列表（ctx["npcs"]）；npc_id: NPC id。出参 List[Mapping]。
+    核心逻辑: 逐 NPC 匹配 id（字符串化比较）→ 返回其 interactions[]（仅保留 Mapping 条目，
+    对齐 dialog._npc_interactions 的 hook 契约）；未命中 → []。纯函数确定性，不抛错。
+    """
+    if not npc_id:
+        return []
+    for n in npcs or ():
+        if isinstance(n, Mapping) and str(n.get("id")) == str(npc_id):
+            return [o for o in (n.get("interactions") or ()) if isinstance(o, Mapping)]
+    return []
+
+
 def _battle_session(session_mgr: Any, qid: str) -> Any:
     """battle_session：session_mgr.get_active(qid) 兜底读（缺省 None）。
 
@@ -663,6 +775,9 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
             "shortcut_max": int(settings.get("shortcut_max", 20) or 20),
             "npc_delivered": ps.get("npc_delivered") or {},
             "heard": _coerce_heard(ps.get("npc_heard")),
+            "codex_state": player.codex_state
+                if isinstance(player.codex_state, MutableMapping) else {},
+            "event_log": _coerce_event_log(ps.get("event_log")),
             "dialog_active": bool(ps.get("dialog_active", False)),
             "dialog_session": _restore_dialog_session(ps.get("dialog_session")),
         })
@@ -685,6 +800,7 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
             "checkin_state": {}, "shortcuts": {},
             "shortcut_max": int(settings.get("shortcut_max", 20) or 20),
             "npc_delivered": {}, "heard": set(),
+            "codex_state": {}, "event_log": [],
             "dialog_active": False, "dialog_session": None,
         })
 
@@ -693,7 +809,9 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
     ctx["map_def"] = _get_map(deps.game_world, ctx.get("location"))
     ctx["monster_pool"] = _monster_pool(deps.game_world, ctx.get("location"))
     ctx["npcs"] = _npcs(deps.game_world, ctx.get("location"))
-    ctx["npc_interactions"] = lambda npc_id: []  # 对话 interactions hook（world 接线替换）
+    # npc_interactions hook（RN-05）：按 id 从 ctx["npcs"] 解析 interactions（N-02 收口，
+    # dialog 引擎 _npc_interactions 优先消费本 hook；缺省 [] → 菜单仅「离开」）
+    ctx["npc_interactions"] = lambda npc_id: _npc_interactions_of(ctx["npcs"], npc_id)
     ctx["world_stock"] = {}      # {shop_id: {item_id: int}}（A-05 world 装配注入快照）
     ctx["world_sold_out"] = {}   # {shop_id: {item_id: True}}（同上）
     ctx["last_refresh"] = {}     # {shop_id: "YYYY-MM-DD"}（同上）
@@ -715,6 +833,9 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
     ctx["shops"] = _table_from_registry(deps.registry, "shop")
     ctx["resolve_item"] = getattr(deps.registry, "resolve", None)
     ctx["resolve_shop"] = getattr(deps.registry, "resolve", None)
+    # bump_event：N-03 RN-10 装配级统一事件 hook（dialog_commands._bump_events 优先消费；
+    # 兄弟路 event_bus 未落盘 → 本地三表安全兜底，见 _resolve_bump_event）
+    ctx["bump_event"] = _resolve_bump_event()
     ctx.update(_inventory_hooks(ctx))
     # resolve_attr_final：status_commands 兜底取最终层（复用已算 attr_final）
     ctx["resolve_attr_final"] = lambda: ctx.get("attr_final") or {}

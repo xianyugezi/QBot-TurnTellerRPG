@@ -34,6 +34,14 @@
   8) repair 当前降级（S4 裁决/AC06/L139）：依赖装备耐久系统框架未实现 → 恒"不可用+友好提示"，配置不拦截。
   9) give_item once/daily 需 npc_id 才能记账；无 npc_id 时不记一次性（每次照发）——由调用方保证传入。
   10) 菜单「已听」置灰展示：调用方按 is_delivered(ctx, npc_id, "intel:<ref_id>") 逐条目判定（O01/O07）。
+  11) 【工程补白 · 隐藏任务接缝 · N-02 RN-08 / 3f F-09 D-05】发任务条件全与 gate：
+     available_quests / _action_quest 当前仅消费**候选条目自带 condition**（AC01 逐卡
+     条件，已全与），**未消费 quest 定义侧的 quest.npc.conditions**（发任务条件——
+     图鉴/事件/物品/时段组合全与；求值能力 quest.py _npc_condition_hit / quest_available
+     已具备，仅未在发牌/发任务路径接线）。缺口登记工程补白：**3f 批次 BCH-07 实现**——
+     NPC 发任务前置求值 quest.npc.conditions，满足才主动发；不满足 → 普通对话分支
+     零暗示（D-05 不提示原则）。本批次测试在 quest 引擎层断言全与语义，npc 层以
+     卡片 condition 兜底（见 tests/unit/test_assembly_wiring.py）。
 
 铁律：零 NoneBot import；纯函数（ctx dict 进出，就地改写可变子结构）；rng 注入确定性；
 同刻同参必同值（不依赖全局状态）；工程补白显式标注。

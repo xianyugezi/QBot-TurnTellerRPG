@@ -14,6 +14,9 @@
   1) 完成度展示用 round()（4d COD-08 展示取整口径）；条件求值用未取整（引擎侧 ctx["codex"]）。
   2) 无 registry（裸 ctx）→ 总览 pct 全 0，不崩（fail-safe）。
   3) 分册名接受「怪物/武器/物品」及别名「monster/weapon/item」。
+  4) 「传闻」标记（BCH-09/F-16 消费接线）：分册条目行尾当 lore_unlocked 时追加
+     「（传闻）」——codex_view 已暴露该字段（环境_lore 定向解锁写 codex_state），
+     本行改动为最小侵入渲染消费；未解锁零标记（R-25 不泄露）。
 """
 
 from __future__ import annotations
@@ -73,7 +76,8 @@ def _category_page(
         for e in entries:
             mark = "✅" if e.get("seen") else "　"
             kill = "（已击杀）" if e.get("killed") else ""
-            lines.append(f"{mark} {e.get('name', '???')}{kill}")
+            rumor = "（传闻）" if e.get("lore_unlocked") else ""
+            lines.append(f"{mark} {e.get('name', '???')}{kill}{rumor}")
     total = int(view.get("total", 0))
     pages = int(view.get("pages", 1))
     cur = int(view.get("page", 1))

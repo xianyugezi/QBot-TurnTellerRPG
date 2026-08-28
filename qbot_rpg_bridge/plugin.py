@@ -122,7 +122,8 @@ def register_plugin() -> None:
     matcher = on_message(priority=_PRIORITY, block=False)
     from qbot_rpg.data.logging_utils import get_logger  # noqa: PLC0415
 
-    get_logger("qbot_rpg_bridge").info("[qbot_rpg_bridge] on_message 注册: priority=%s block=False", _PRIORITY)
+    get_logger("qbot_rpg_bridge").info(
+        "[qbot_rpg_bridge] on_message 注册: priority=%s block=False", _PRIORITY)
     # NoneBot 依赖注入需真实 Bot/Event 类型标注（Any 无法解析，且注解须在模块级 globals
     # 可解析——故 NB_Bot/NB_Event 模块级 import）——闭包包装供注入，业务体仍走 _on_message
     async def _wrapped(bot: NB_Bot, event: NB_Event) -> None:  # noqa: ANN001,E501

@@ -158,7 +158,7 @@ class TestKeyValue:
     """铁律 3 键值 = `=`（值可再含 `*` 数量）。"""
 
     def test_kv_with_inner_quantity(self):  # TC-10
-        p = parse_command("/雇工 助手名 代采=矿石*5,代调=药剂*2")
+        p = parse_command("/代工 助手名 代采=矿石*5,代调=药剂*2")
         assert p.args == ["助手名"]
         assert p.kv == [
             {"key": "代采", "value": "矿石", "qty": 5},
@@ -170,7 +170,7 @@ class TestKeyValue:
         assert p.kv == [{"key": "触媒", "value": "爆裂壶", "qty": None}]
 
     def test_kv_list_multiple(self):
-        p = parse_command("/雇工 助手名 代采=矿石*5 代调=药剂*2")
+        p = parse_command("/代工 助手名 代采=矿石*5 代调=药剂*2")
         assert p.args == ["助手名"]
         assert len(p.kv) == 2
 
@@ -184,7 +184,7 @@ class TestPositionalLimit:
         assert p.fixed_subword == "预览"
 
     def test_third_kv_param_ok(self):
-        p = parse_command("/雇工 助手名 代采=矿石*5")
+        p = parse_command("/代工 助手名 代采=矿石*5")
         assert p.error is None
         assert p.args == ["助手名"]
         assert len(p.kv) == 1

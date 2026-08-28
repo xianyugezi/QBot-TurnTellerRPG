@@ -153,29 +153,18 @@ __all__ = [
 # L160 长清单（指令分隔符统一规范 L160：绑定目标为 GM 指令（重载/封禁/日志/编辑/设置）→ 拒绝）
 # ---------------------------------------------------------------------------
 
-GM_CMD_RELOAD = "重载"      # G1
-GM_CMD_BAN = "封禁"         # G10
-GM_CMD_LOG = "日志"         # G8
-GM_CMD_EDIT = "编辑"        # G13
-GM_CMD_SETTINGS = "设置"    # G14
-
-# GM 指令清单（m4 §2.3：以分隔符规范 L160 长清单为准）
-GM_COMMANDS: FrozenSet[str] = frozenset({
-    GM_CMD_RELOAD, GM_CMD_BAN, GM_CMD_LOG, GM_CMD_EDIT, GM_CMD_SETTINGS,
-})
-
-# 5b §2.1 G 序号（本批 L160 清单内指令；审计展示 /日志 行前缀用）
-GM_COMMAND_INDEX: Mapping[str, str] = {
-    GM_CMD_RELOAD: "G1",
-    GM_CMD_BAN: "G10",
-    GM_CMD_LOG: "G8",
-    GM_CMD_EDIT: "G13",
-    GM_CMD_SETTINGS: "G14",
-}
-
-# GM 强制 / 前缀指令集（L128 / W07；parsers.DEFAULT_PREFIX_REQUIRED 已含 5 条，
-# 本常量供装配/校验器对照，保证单一事实源）
-GM_PREFIX_REQUIRED: FrozenSet[str] = GM_COMMANDS
+# GM 指令常量（单一事实源下沉 data/gm_constants.py，M7 BCH-01 收口：
+# assembly 层需注入 GM_COMMANDS 但不可依赖 commands 层，R3/D-05）
+from qbot_rpg.data.gm_constants import (
+    GM_CMD_RELOAD,
+    GM_CMD_BAN,
+    GM_CMD_LOG,
+    GM_CMD_EDIT,
+    GM_CMD_SETTINGS,
+    GM_COMMANDS,
+    GM_COMMAND_INDEX,
+    GM_PREFIX_REQUIRED,
+)
 
 # ---------------------------------------------------------------------------
 # 权限三级（父任务命名 admin/manager/player = 5b 机主/GM/普通玩家 = router 常量，工程补白 6）

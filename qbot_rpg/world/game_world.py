@@ -23,6 +23,7 @@ from __future__ import annotations
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple, cast
 
 from qbot_rpg.content.map_models import MapDef, parse_maps
+from qbot_rpg.data import WorldState
 from qbot_rpg.world.spawn_weather import _enemy_of, filter_eligible_rows
 
 __all__ = ["GameWorld", "WorldNotFoundError"]
@@ -73,6 +74,40 @@ def _index_maps(maps: Any) -> Dict[str, MapDef]:
     return {}
 
 
+def _npc_to_dict(defn: Any) -> dict:
+    """Def（含 raw 镜像）→ 完整 npc dict（顶层 15 字段；缺省兜底，纯函数确定性）。
+
+    字段（2b1 F01-F15）：id/name/icon/map/type/desc/visible/dialogues/interactions/
+    quests/shop_refs/intel/intel_refs/tutorials/dealer。原始值来自已校验 JSON
+    （可序列化）；visible 仅按 bool 归一直观（非法值 → 缺省 True）。
+    """
+    raw = defn.raw if isinstance(getattr(defn, "raw", None), Mapping) else {}
+
+    def _get(key: str, default: object = None) -> object:
+        v = raw.get(key)
+        return v if v is not None else default
+
+    vis = raw.get("visible")
+    visible = vis if isinstance(vis, bool) else True
+    return {
+        "id": str(defn.id or ""),
+        "name": str(defn.name or ""),
+        "icon": _get("icon"),
+        "map": _get("map"),
+        "type": _get("type", "merchant"),
+        "desc": _get("desc"),
+        "visible": visible,
+        "dialogues": _get("dialogues", {}),
+        "interactions": _get("interactions", []),
+        "quests": _get("quests", []),
+        "shop_refs": _get("shop_refs", []),
+        "intel": _get("intel", []),
+        "intel_refs": _get("intel_refs", []),
+        "tutorials": _get("tutorials", []),
+        "dealer": _get("dealer"),
+    }
+
+
 class GameWorld:
     """全局世界状态（地图/怪物池/野图 BOSS/全体限购；key=全局）。M3 实装。
 
@@ -85,6 +120,7 @@ class GameWorld:
         maps: Any = None,
         spawn_manager: Any = None,
         ctx_provider: Any = None,
+        npc_registry: Any = None,
     ) -> None:
         """依赖注入（M4/M6 接线前由调用方注入，零硬编码绝对路径）：
 
@@ -94,11 +130,15 @@ class GameWorld:
           出没过滤 + alive_monsters(map_id) 在场面查询；未注入 → monster_pool 返回空。
         - ctx_provider: callable(map_id) -> {"season","period","weather","now"} 出没上下文
           （M38 天气按图取值 / M32 季节时段，收口时接 engine/worldtime）。
+        - npc_registry: content/registry.py Registry（鸭子类型，resolve(id,"npc") → Def）；
+          get_npcs 解析挂点 NPC 用；未注入 → get_npcs 返回空（M7 A-05 RA-13 接线）。
         """
         self._initialized = False
         self._maps: Dict[str, MapDef] = _index_maps(maps)
         self._spawn_manager: Any = spawn_manager
         self._ctx_provider: Any = ctx_provider
+        self._npc_registry: Any = npc_registry
+        self._world_state: Any = None
 
     # -- 内部工具 ------------------------------------------------------------
     def _map(self, map_id: str) -> Optional[MapDef]:
@@ -176,6 +216,39 @@ class GameWorld:
             return None
         return m.gate_guard
 
+    def get_npcs(self, map_id: str) -> List[dict]:
+        """该图可见 NPC 完整 dict 列表（M7 A-05 RA-13 · N-02 RN-05）。
+
+        流程：读该图 npcs 挂点（maps.json npcs = npc id 列表）→ npc registry（注入
+        npc_registry，resolve(id,"npc")）解析为完整 dict（顶层 15 字段，含
+        visible/dealer/interactions/dialogues，见 _npc_to_dict）→ visible=false 过滤。
+
+        未知地图 / 无挂点（npcs 缺失或非 list）/ 未注入 registry / 引用缺失 →
+        []（约定空值，不抛异常）。纯函数确定性：仅读注入内存（maps + npc_registry），
+        零 IO；输出仅由输入决定（同输入同输出）。
+        """
+        m = self._map(map_id)
+        if m is None:
+            return []
+        ids = m.raw.get("npcs")
+        if not isinstance(ids, list):
+            return []
+        reg = self._npc_registry
+        if reg is None or not callable(getattr(reg, "resolve", None)):
+            return []
+        out: List[dict] = []
+        for nid in ids:
+            if not isinstance(nid, str) or not nid:
+                continue
+            ndef = reg.resolve(nid, "npc")
+            if ndef is None:
+                continue  # 引用缺失 → 跳过（loader 双向校验已红拦，此处防御兜底）
+            d = _npc_to_dict(ndef)
+            if not d.get("visible", True):
+                continue
+            out.append(d)
+        return out
+
     def is_boss_alive(self, map_id: str) -> bool:
         raise NotImplementedError(_NOT_IMPL_MSG)
 
@@ -186,12 +259,25 @@ class GameWorld:
     def try_consume_world_stock(self, key: str, count: int) -> bool:
         raise NotImplementedError(_NOT_IMPL_MSG)
 
-    # -- 世界状态持久化（经 storage/repository 注入，M3） --------------------
+    # -- 世界状态持久化（经 storage/repository 注入，M3；M7 A-05 RA-13 接线） ------
     def load(self, world_state: Any) -> None:
-        raise NotImplementedError(_NOT_IMPL_MSG)
+        """装载世界状态（world_state 表 → 内存；M7 A-05 RA-13）。
+
+        world_state 为 data.WorldState（frozen dataclass）或 None；本层持引用供
+        to_world_state 回读（字段语义与写回归 storage/repository CAS，本层零复制
+        零 IO）。未注入（None）→ 空缺省 WorldState；装配冒烟可继续。
+        """
+        self._world_state = world_state if world_state is not None else WorldState()
+        self._initialized = True
 
     def to_world_state(self) -> Any:
-        raise NotImplementedError(_NOT_IMPL_MSG)
+        """导出世界状态（内存 → world_state 表可写形态；M7 A-05 RA-13）。
+
+        返回最近 load 的 WorldState（未经 load → 空缺省 WorldState）；装配层经
+        repo.save_world_state(ws, expected_versions) 写回 world_state 表（CAS，4a TX-3）。
+        """
+        ws = self._world_state
+        return ws if ws is not None else WorldState()
 
     def list_stores(self) -> List[Any]:
         """运营商店铺目录（细化_5a 编辑器/运营页只读，M-y 实装；预留签名）。"""

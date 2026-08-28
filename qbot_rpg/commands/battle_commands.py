@@ -91,10 +91,9 @@ from qbot_rpg.core.message_format.battle_render import (
 
 __all__ = [
     # 指令名
-    "ATTACK_CMD", "DEFEND_CMD", "FLEE_CMD", "ITEM_CMD",
+    "ATTACK_CMD",
     # 业务文案
-    "TPL_NO_BATTLE", "TPL_NO_SKILL", "TPL_NO_ITEM_ARG", "TPL_NO_ITEM",
-    "TPL_FLEE_OK", "TPL_FLEE_FAILED",
+    "TPL_NO_BATTLE", "TPL_NO_SKILL",
     # 回合数据增强
     "EnrichedTurnReport", "enrich_round_report",
     # 前缀装配 / 发送管线
@@ -102,7 +101,7 @@ __all__ = [
     # 一轮派发（合并策略落地）
     "dispatch_round",
     # 指令处理器（parsed + ctx → {"ok","sent","message"}）
-    "cmd_battle_attack", "cmd_battle_defend", "cmd_battle_flee", "cmd_battle_item",
+    "cmd_battle_attack",
     # 装配
     "register_battle_commands",
 ]
@@ -112,9 +111,6 @@ __all__ = [
 # ---------------------------------------------------------------------------
 
 ATTACK_CMD = "攻击"
-DEFEND_CMD = "防御"
-FLEE_CMD = "逃跑"
-ITEM_CMD = "道具"
 
 # 未进入战斗（铁律 2 单次操作 ≤1-2 条；战斗外指令不受影响，工程补白 5）
 TPL_NO_BATTLE = "❌ 当前没有进行中的战斗"
@@ -822,28 +818,7 @@ def cmd_battle_attack(parsed: Any, ctx: MutableMapping[str, Any]) -> dict:
     action, err = _attack_action(parsed, ctx)
     if err is not None:
         return _fail(ctx, err)
-    assert action is not None  # err=None → 行动已就绪（类型收窄，防御）
-    return _run_battle_action(ctx, action)
-
-
-def cmd_battle_defend(parsed: Any, ctx: MutableMapping[str, Any]) -> dict:
-    """/防御：防御一回合（BREP-05 进入防御 + 怪物反击合并 1 条；×0.5 减伤由引擎）。"""
-    return _run_battle_action(ctx, {"type": "guard"})
-
-
-def cmd_battle_flee(parsed: Any, ctx: MutableMapping[str, Any]) -> dict:
-    """/逃跑：逃离战斗（逃跑结果 1 条 + 结束汇总 1 条，单次操作 ≤2 条；军规5 结算一次）。"""
-    return _run_battle_action(ctx, {"type": "flee"})
-
-
-def cmd_battle_item(parsed: Any, ctx: MutableMapping[str, Any]) -> dict:
-    """/道具 <物品>：使用战斗道具（道具使用行 + 怪物反击合并 1 条；工程补白 2）。"""
-    if getattr(parsed, "error", False):
-        return _fail(ctx, format_tpl12(_fragment(parsed)))
-    action, err = _item_action(parsed, ctx)
-    if err is not None:
-        return _fail(ctx, err)
-    assert action is not None  # err=None → 行动已就绪（类型收窄，防御）
+    assert action is not None  # err=None → 行动已就绪（类型收窄）
     return _run_battle_action(ctx, action)
 
 
@@ -872,7 +847,4 @@ def register_battle_commands(router: Any, *, make_context: Optional[Callable[[An
         return handler
 
     router.register(CommandSpec(ATTACK_CMD, handler=_wrap(cmd_battle_attack)))
-    router.register(CommandSpec(DEFEND_CMD, handler=_wrap(cmd_battle_defend)))
-    router.register(CommandSpec(FLEE_CMD, handler=_wrap(cmd_battle_flee)))
-    router.register(CommandSpec(ITEM_CMD, handler=_wrap(cmd_battle_item)))
     return router

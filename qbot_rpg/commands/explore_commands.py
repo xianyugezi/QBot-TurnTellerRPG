@@ -287,6 +287,9 @@ def register_explore_commands(router: Any, *,
 
     def _wrap(handler: Callable[..., str]) -> Callable[..., str]:
         def _h(parsed: Any, *a: Any, **k: Any) -> str:
+            injected = k.get("ctx") if isinstance(k, dict) else None
+            if isinstance(injected, MutableMapping):
+                return handler(parsed, injected)
             return handler(parsed, _ctx(parsed))
         return _h
 

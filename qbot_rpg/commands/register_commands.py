@@ -419,8 +419,22 @@ def cmd_register(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     if getattr(parsed, "fixed_subword", None):
         return format_tpl12(_fragment(parsed))
     args = list(getattr(parsed, "args", None) or [])
-    if len(args) < 1 or len(args) > 2:
-        return format_tpl12(_fragment(parsed))
+    usage = "/注册 <角色名> [职业]"
+    if len(args) > 2:
+        # 超参 → 正确格式引导（3d §5.1「原因 + 正确用法 + 下一步」句式；TPL-12 同款错误头）
+        return (f"❌ 指令不正确：/注册 最多 2 个参数。"
+                f"正确格式：{usage}")
+    if len(args) == 0:
+        # 无参 → QQ 号兜底（用户拍板 2026-08-28：不带角色名直接用 QQ 号作玩家名，零输入开玩）
+        auto_name = str(ctx.get("qq_id") or "").strip()
+        if not auto_name:
+            return (f"❌ 指令不正确：/注册 需要角色名。"
+                    f"正确格式：{usage}（或直接发 /注册，将用你的 QQ 号作为名字）")
+        name = auto_name
+        used_auto_name = True
+    else:
+        name = str(args[0])
+        used_auto_name = False
 
     # REG-03 已注册幂等拒绝（RUL-09；不覆盖原档）——先于名字校验（幂等提示优先于名字校验）
     if ctx.get("registered", True) is True:
@@ -429,8 +443,6 @@ def cmd_register(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
             level=_current_player_level(ctx),
             job=_current_job_name(ctx),
         )
-
-    name = str(args[0])
 
     # REG-02 名字硬性校验（长度/控制字符）
     err = _name_error(name)
@@ -460,6 +472,10 @@ def cmd_register(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 
     # REG-02 ③ 保留字符黄提示（不硬拦，成功消息附引导换名）
     hint = reserved_char_hint(name) if name else None
+    # 无参注册 → 已用 QQ 号兜底（用户拍板 2026-08-28），成功消息附提示
+    if used_auto_name:
+        auto_hint = f"已自动用你的 QQ 号「{name}」作为名字"
+        hint = f"{hint} {auto_hint}".strip() if hint else auto_hint
 
     # REG-04/05 建号：构造初始 Player 写 ctx + 置注册态（落档归装配层）
     player = build_initial_player(ctx, name, job_id)
@@ -493,6 +509,9 @@ def register_register_commands(
         return make_context(parsed)
 
     def _register(parsed: Any, *a: Any, **k: Any) -> str:
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_register(parsed, injected)
         return cmd_register(parsed, _ctx(parsed))
 
     router.register(CommandSpec(REGISTER_CMD, handler=_register))

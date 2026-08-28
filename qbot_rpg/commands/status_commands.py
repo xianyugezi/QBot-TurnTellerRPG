@@ -403,6 +403,9 @@ def register_status_commands(
         return make_context(parsed)
 
     def _status(parsed: Any, *a: Any, **k: Any) -> str:
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_status(parsed, injected)
         return cmd_status(parsed, _ctx(parsed))
 
     router.register(CommandSpec(STATUS_CMD, handler=_status))

@@ -107,10 +107,12 @@ def test_register_registers_log_command() -> None:
     assert isinstance(spec, CommandSpec)
     assert spec.name == "日志"
     assert spec.whitelisted is True
-    assert spec.is_gm is True          # ADR-09：GM 强制 / 前缀 + 快捷禁绑 + E02 二次检查
+    # ADR-09 实现修正：/日志 非 GM 指令——玩家可用冒险日志，GM 看系统日志（handler 内按
+    # ctx["is_gm"] 分支）；/ 前缀由 DEFAULT_PREFIX_REQUIRED 保证（不含于 gm_commands）
+    assert spec.is_gm is False
     assert spec.handler is not None
     assert LOG_CMD in router.whitelist_names()
-    assert LOG_CMD in router.gm_commands()
+    assert LOG_CMD not in router.gm_commands()
 
 
 def test_register_without_make_context_raises() -> None:

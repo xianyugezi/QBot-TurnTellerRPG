@@ -465,12 +465,21 @@ def register_shop_commands(router: Any, *, make_context: Optional[Callable[[Any]
         return make_context(parsed)
 
     def _shop(parsed: Any, *a: Any, **k: Any) -> str:
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_shop(parsed, injected)
         return cmd_shop(parsed, _ctx(parsed))
 
     def _buy(parsed: Any, *a: Any, **k: Any) -> str:
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_buy(parsed, injected)
         return cmd_buy(parsed, _ctx(parsed))
 
     def _sell(parsed: Any, *a: Any, **k: Any) -> str:
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_sell(parsed, injected)
         return cmd_sell(parsed, _ctx(parsed))
 
     router.register(CommandSpec(SHOP_CMD, handler=_shop))

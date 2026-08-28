@@ -127,7 +127,11 @@ def _dungeons_index(dungeons: object, player_ctx: Optional[dict]) -> Dict[str, s
 
 
 def _current_map_id(player_ctx: Mapping[str, Any]) -> Optional[str]:
-    """当前地图 ID：ctx["map_id"]（会话上下文）→ 兜底 ctx["player"]["map_id"]。"""
+    """当前地图 ID：ctx["map_id"]（会话上下文）→ 兜底 ctx["player"]["map_id"]。
+
+    M7 部署接线：位置存储于 persistent_state["location"] / ctx["location"]，
+    movement 侧统一兜底读取（R14 通道行走消费当前图）。
+    """
     cur = player_ctx.get("map_id")
     if isinstance(cur, str) and cur:
         return cur
@@ -136,6 +140,14 @@ def _current_map_id(player_ctx: Mapping[str, Any]) -> Optional[str]:
         pcur = player.get("map_id")
         if isinstance(pcur, str) and pcur:
             return pcur
+    loc = player_ctx.get("location")
+    if isinstance(loc, str) and loc:
+        return loc
+    ps = player_ctx.get("persistent_state")
+    if isinstance(ps, Mapping):
+        ploc = ps.get("location")
+        if isinstance(ploc, str) and ploc:
+            return ploc
     return None
 
 

@@ -454,6 +454,9 @@ def register_quest_commands(router: Any, *, make_context: Optional[Callable[[Any
         return make_context(parsed)
 
     def _quest(parsed: Any, *a: Any, **k: Any) -> str:
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_quest(parsed, injected)
         return cmd_quest(parsed, _ctx(parsed))
 
     router.register(CommandSpec(QUEST_CMD, handler=_quest))

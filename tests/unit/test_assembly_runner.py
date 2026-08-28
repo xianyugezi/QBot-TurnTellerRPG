@@ -87,6 +87,10 @@ class FakeTx:
     async def write_idem_key(self, key: Any) -> None:
         self._repo.put(key)
 
+    async def upsert_player(self, player: Any) -> None:
+        """业务写落档契约（A-03 REG-06 ③ / RW-3）：FakeRepo 内存态更新存档。"""
+        self._repo._player = player
+
 
 class FakeRepo:
     """鸭子类型 Repository：load_player + idem_claim + tx + cleanup_idem_keys。

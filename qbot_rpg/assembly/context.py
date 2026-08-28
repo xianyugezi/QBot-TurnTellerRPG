@@ -578,6 +578,21 @@ def _rng(rng_factory: Any, qid: str) -> random.Random:
     return r if isinstance(r, random.Random) else random.Random(str(qid))
 
 
+def _as_utc8_timestamp(now: Any) -> Optional[int]:
+    """now 归一为绝对秒级时间戳（对齐 checkin/dayroll 引擎契约 _now(ctx) 期望 int）。
+
+    入参 now: datetime（_default_dayroll 返回 UTC+8 datetime）或 int/float（已时间戳）。
+    出参 int|None：datetime → int(now.timestamp())（绝对 epoch 秒）；数值 → int()；
+    其它 → None（缺省兜底）。
+    核心逻辑: 类型分派；bool 除外（True 会被 int() 当 1，防误判）。
+    """
+    if isinstance(now, datetime):
+        return int(now.timestamp())
+    if isinstance(now, (int, float)) and not isinstance(now, bool):
+        return int(now)
+    return None
+
+
 def _now_today(dayroll: Any) -> tuple:
     """now/today：deps.dayroll() → (datetime, str 日期键)；缺省 (None, "")。
 
@@ -843,7 +858,9 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
     ctx["turn"] = _bs_field(battle_session, "turn")
 
     ctx["rng"] = _rng(deps.rng_factory, qid)
-    ctx["now"], ctx["today"] = _now_today(deps.dayroll)
+    _now, _today = _now_today(deps.dayroll)
+    ctx["now"] = _as_utc8_timestamp(_now)
+    ctx["today"] = _today
     ctx["season"], ctx["period"] = _season_period(deps.time_query)
     ctx["weather"] = _weather(deps.weather_query)
 

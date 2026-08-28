@@ -42,7 +42,7 @@ ALL_REGISTERED = {
     # checkin
     "签到",
     # battle
-    "攻击", "防御", "逃跑", "道具",
+    "攻击",
     # explore
     "进入", "休息",
     # dialog（N-01，BCH-03）
@@ -286,8 +286,8 @@ def test_build_router_gm_commands_loaded() -> None:
     router = build_router(_deps(make_context=_stub_ctx))
     assert router.gm_commands_set == set(GM_COMMANDS)  # type: ignore[attr-defined]
     assert {"重载", "封禁", "日志", "编辑", "设置"} <= router.gm_commands_set  # type: ignore[attr-defined]
-    # 不遮蔽 Router.gm_commands()（「日志」log_commands 以 is_gm=True 注册，ADR-09；gm 组归 M12）
-    assert router.gm_commands() == ["日志"]
+    # 不遮蔽 gm_commands()（/日志 玩家可用冒险日志，handler 按 ctx["is_gm"] 分支；ADR-09 修正）
+    assert router.gm_commands() == []
 
 
 def test_build_router_shortcuts_carried_from_deps() -> None:

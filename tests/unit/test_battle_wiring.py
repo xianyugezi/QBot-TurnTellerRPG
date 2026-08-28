@@ -14,7 +14,7 @@
   - 前缀只加首行（M5-01 apply_message_prefix）
   - 无裸 send（所有战斗消息经统一出口；mock Sender.send 调用次数 = 合并消息数）
   - 战斗外指令不受影响（未进入战斗 → 1 条干净报错；非战斗指令路由/返回不受干扰）
-  - /防御 /逃跑 /道具 管线 + 注册装配 + emoji 纪律
+  - /攻击 管线 + 注册装配 + emoji 纪律（防御/逃跑/道具 指令已按用户拍板移除）
 
 集成口径：驱动真实引擎 BattleEngine + 真实 Sender（注入记录回调），构造战斗 ctx
 （M5-08 ctx 契约），断言消息合并/前缀/发送条数全链路。
@@ -168,36 +168,6 @@ def test_round_prefix_only_first_line(start_battle) -> None:
         assert f"{NAME}" not in rest or rest.startswith("你 ")  # 正文行不重复前缀
 
 
-def test_defend_round_one_message(start_battle) -> None:
-    """/防御 一轮 1 条：BREP-05 进入防御 + 怪物反击合并（×0.5 减伤由引擎）。"""
-    sender = RecordingSender()
-    eng = start_battle()
-    res = bc.cmd_battle_defend(parse_command("/防御"), make_ctx(sender, engine=eng))
-    assert res["ok"] is True
-    assert len(sender.calls) == 1
-    text = sender.calls[0]
-    assert "✅ 你进入防御姿态" in text             # BREP-05
-    assert "史莱姆" in text                         # 反击段合并
-    assert text.split("\n")[0] == PREFIX
-
-
-def test_item_round_one_message(start_battle) -> None:
-    """/道具 <物品> 一轮 1 条：道具使用行 + 怪物反击合并（工程补白 2，无 BREP 模板）。"""
-    sender = RecordingSender()
-    eng = start_battle()
-    res = bc.cmd_battle_item(parse_command("/道具 治疗药水"), make_ctx(sender, engine=eng))
-    assert res["ok"] is True
-    assert len(sender.calls) == 1
-    text = sender.calls[0]
-    assert "✅ 你使用了治疗药水" in text
-    assert "史莱姆" in text
-    assert text.split("\n")[0] == PREFIX
-
-
-# ---------------------------------------------------------------------------
-# 战斗开始 1 条 / 战斗结束 1 条（含汇总+掉落）
-# ---------------------------------------------------------------------------
-
 def test_start_one_message_with_hint() -> None:
     """战斗开始独立 1 条（TC-24）：BREP-23 + 意图/弱点情报行；前缀首行。"""
     sender = RecordingSender()
@@ -267,31 +237,6 @@ def test_battle_end_flow_summary_and_drops(start_battle) -> None:
 # 逃跑 / 战斗外 / 前缀开关
 # ---------------------------------------------------------------------------
 
-def test_flee_two_messages(start_battle) -> None:
-    """/逃跑：逃跑结果 1 条 + 结束汇总 1 条（单次操作 ≤2 条；军规5 结算一次）。
-    敌方 agi=0 → 敏捷比恒 1.0 必成功（数值层 L185 敏捷 = agi/(agi+敌agi)）。"""
-    sender = RecordingSender()
-    eng = start_battle(enemy=dict(ENEMY, agi=0))
-    res = bc.cmd_battle_flee(parse_command("/逃跑"), make_ctx(sender, engine=eng))
-    assert res["ok"] is True
-    assert len(sender.calls) == 2
-    assert "✅ 逃跑成功，脱离战斗" in sender.calls[0]
-    assert "战斗结束：逃跑｜回合数 1｜输入 /战斗记录 查看明细" in sender.calls[1]
-
-
-def test_flee_failed_one_message_merged(start_battle) -> None:
-    """/逃跑 失败：1 条合并（逃跑结果 + 怪物反击，铁律 2/军规3），战斗未结束。
-    敌方高敏 → 敏捷比 < 1（数值层 L185 敏捷 = agi/(agi+敌agi)）。"""
-    sender = RecordingSender()
-    eng = start_battle(enemy=dict(ENEMY, agi=500))
-    res = bc.cmd_battle_flee(parse_command("/逃跑"), make_ctx(sender, engine=eng))
-    assert res["ok"] is True
-    assert len(sender.calls) == 1
-    assert "❌ 逃跑失败，战斗继续" in sender.calls[0]
-    assert "史莱姆" in sender.calls[0]                    # 怪物反击合并进同一条
-    assert sender.calls[0].split("\n")[0] == PREFIX
-
-
 def test_no_battle_clean_error_not_affect_others() -> None:
     """战斗外指令不受影响：未进入战斗（engine=None）→ 1 条干净报错（铁律 2 单次 ≤1-2 条），
     不触碰引擎/其他指令；同一 Sender 只收到这 1 条。"""
@@ -323,11 +268,11 @@ def test_prefix_disabled_no_prefix(start_battle) -> None:
     assert sender.calls[0].split("\n")[0].startswith("✅ 你攻击")   # 无前缀首行
 
 
-def test_register_battle_commands_routes_four() -> None:
-    """register_battle_commands：/攻击 /防御 /逃跑 /道具 四条注册进 Router 且可路由命中。"""
+def test_register_battle_commands_routes_attack() -> None:
+    """register_battle_commands：/攻击 注册进 Router 且可路由命中（防御/逃跑/道具 已按用户拍板移除）。"""
     router = Router()
     bc.register_battle_commands(router, make_context=lambda parsed: {"sender": RecordingSender()})
-    for cmd in ("攻击", "防御", "逃跑", "道具"):
+    for cmd in ("攻击",):
         assert router.has(cmd)
         r = route_message(f"/{cmd}", {"registry": router, "shortcuts": {}, "aliases": None,
                                       "dialog_active": False, "battle_active": True,

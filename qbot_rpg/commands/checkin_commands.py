@@ -491,6 +491,9 @@ def register_checkin_commands(router: Any, *, make_context: Optional[Callable[[A
         return make_context(parsed)
 
     def _checkin(parsed: Any, *a: Any, **k: Any) -> str:
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_checkin(parsed, injected)
         return cmd_checkin(parsed, _ctx(parsed))
 
     router.register(CommandSpec(CHECKIN_CMD, handler=_checkin))

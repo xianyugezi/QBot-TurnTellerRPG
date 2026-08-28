@@ -93,11 +93,12 @@ async def _on_message(bot: Any, event: Any) -> None:
 
 
 def register_plugin() -> None:
-    """NoneBot on_message 注册（NoneBot 插件加载时调用；无 nonebot 环境 → 报错）。
+    """NoneBot on_message 注册 + 启动装配（NoneBot 插件加载时调用；无 nonebot 环境 → 报错）。
 
     核心逻辑: HAS_NONEBOT 时 on_message(priority=10, block=False) 建 matcher 并以
-    matcher.handle()(_on_message) 挂处理器；无 nonebot 环境抛 RuntimeError 提示
-    （防静默失效——RA-11「无 NoneBot 环境走纯函数驱动」须显式声明）。
+    matcher.handle()(_on_message) 挂处理器 + register_startup() 挂 on_startup 装配
+    （build_app_deps → set_deps，部署接线 assemble.py）；无 nonebot 环境抛
+    RuntimeError 提示（防静默失效——RA-11「无 NoneBot 环境走纯函数驱动」须显式声明）。
     """
     if not HAS_NONEBOT:
         raise RuntimeError(
@@ -107,6 +108,10 @@ def register_plugin() -> None:
     assert on_message is not None  # HAS_NONEBOT 保证；类型收窄供静态检查
     matcher = on_message(priority=_PRIORITY, block=False)
     matcher.handle()(_on_message)
+    # 启动装配（部署接线：NoneBot on_startup → build_app_deps → set_deps）
+    from qbot_rpg_bridge.assemble import register_startup
+
+    register_startup()
 
 
 if HAS_NONEBOT:

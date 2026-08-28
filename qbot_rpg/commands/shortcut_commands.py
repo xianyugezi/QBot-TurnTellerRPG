@@ -234,9 +234,15 @@ def register_shortcut_commands(
         return make_context(parsed)
 
     def _unbind(parsed: Any, *a: Any, **k: Any) -> str:
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_shortcut_unbind(parsed, injected)
         return cmd_shortcut_unbind(parsed, _ctx(parsed))
 
     def _list(parsed: Any, *a: Any, **k: Any) -> str:
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_shortcut_list(parsed, injected)
         return cmd_shortcut_list(parsed, _ctx(parsed))
 
     router.register(CommandSpec(SHORTCUT_UNBIND_CMD, handler=_unbind))

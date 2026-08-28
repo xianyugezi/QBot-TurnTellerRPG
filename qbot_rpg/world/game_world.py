@@ -179,10 +179,16 @@ class GameWorld:
 
     # -- 地图 -------------------------------------------------------------
     def get_map(self, map_id: str) -> Any:
-        raise NotImplementedError(_NOT_IMPL_MSG)
+        """按 ID 取地图定义（部署接线：M7 收口落地，替代预留 NotImplemented）。
+
+        入参 map_id: 地图 ID。出参 MapDef 或 None（未知/非法 → None，壳层翻译）。
+        核心逻辑: 委托内部 _map（_maps 归一索引查表，零 IO 纯查询）。
+        """
+        return self._map(map_id)
 
     def list_maps(self) -> List[Any]:
-        raise NotImplementedError(_NOT_IMPL_MSG)
+        """全部地图定义列表（M7 收口落地）。"""
+        return list(self._maps.values())
 
     def move_to_map(self, player: Any, map_id: str) -> Any:
         raise NotImplementedError(_NOT_IMPL_MSG)

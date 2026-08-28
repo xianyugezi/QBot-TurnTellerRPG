@@ -407,7 +407,9 @@ async def test_deterministic_rng_now_env_injected() -> None:
     deps.weather_query = lambda: "晴"
     ctx = await make_context(_event(), deps)
     assert ctx["rng"] is rng
-    assert ctx["now"].strftime("%Y-%m-%d") == "2026-08-28"
+    # ctx["now"] 归一为绝对秒级时间戳（对齐 checkin/dayroll 引擎契约 int），today 保持日期键
+    assert ctx["now"] == int(datetime(2026, 8, 28, 12, 0,
+                                      tzinfo=timezone(timedelta(hours=8))).timestamp())
     assert ctx["today"] == "2026-08-28"
     assert ctx["season"] == "夏" and ctx["period"] == "昼"
     assert ctx["weather"] == "晴"

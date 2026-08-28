@@ -499,9 +499,9 @@ class TestBattleRuling:
 
     def test_battle_session_active_defensive(self):
         # 防御性：即使误传 session_active=True，战斗中也不送会话（裁决①）
-        p = parse_command("2", in_battle=True, session_active=True, shortcuts={"2": "防御"})
+        p = parse_command("2", in_battle=True, session_active=True, shortcuts={"2": "攻击"})
         assert p.mode == MODE_SHORTCUT
-        assert p.command == "防御"
+        assert p.command == "攻击"
 
 
 class TestFixedSubword:

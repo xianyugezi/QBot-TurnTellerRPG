@@ -995,8 +995,6 @@ def register_investigate_commands(
         return make_context(parsed)
 
     def _investigate(parsed: Any, *a: Any, **k: Any) -> str:
-        if make_context is not None:
-            return cmd_investigate(parsed, _ctx(parsed))
         injected = k.get("ctx") if isinstance(k, dict) else None
         if isinstance(injected, MutableMapping):
             return cmd_investigate(parsed, injected)

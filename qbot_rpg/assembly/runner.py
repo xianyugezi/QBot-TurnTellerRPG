@@ -73,6 +73,7 @@ from qbot_rpg.commands.router import (
 )
 from qbot_rpg.commands.sender import Sender, format_tpl12
 from qbot_rpg.data.logging_utils import get_logger
+from qbot_rpg.data.player import Player, PlayerAttributes
 
 __all__ = [
     "DEFAULT_QUEUE_TIMEOUT",
@@ -332,6 +333,37 @@ def _dispatch_gm_result(result: GmResult, ctx: MutableMapping[str, Any]) -> Dict
     return {"ok": bool(result.ok), "send": True, "message": result.message or ""}
 
 
+def _player_from_dict(d: Mapping[str, Any], qid: str) -> Player:
+    """业务写落档转换（A-03 REG-06 ③）：注册建号 dict → Player dataclass。
+
+    入参 d: build_initial_player 产出的可变 dict（字段对齐 Player 语义）；
+    qid: 玩家数据键（QQ 号）。出参 Player（tx.upsert_player 消费，data dataclass 禁裸 dict）。
+    核心逻辑: 字段映射 + 缺省兜底（inventory/equipment/attributes 等按 Player 默认）。
+    """
+    attrs = d.get("attributes")
+    attributes = attrs if isinstance(attrs, PlayerAttributes) else PlayerAttributes()
+    return Player(
+        qid=qid,
+        name=str(d.get("name") or ""),
+        job_id=str(d.get("job_id") or "novice"),
+        level=int(d.get("level") or 1),
+        exp=int(d.get("exp") or 0),
+        hp=int(d.get("hp") or 1),
+        mp=int(d.get("mp") or 1),
+        currencies=dict(d.get("currencies") or {}),
+        inventory=tuple(d.get("inventory") or ()),
+        equipment=dict(d.get("equipment") or {}),
+        attributes=attributes,
+        achievement_state=tuple(d.get("achievement_state") or ()),
+        title_state=dict(d.get("title_state") or {}),
+        persistent_state=dict(d.get("persistent_state") or {}),
+        longline_counters=dict(d.get("longline_counters") or {}),
+        reputation_state=dict(d.get("reputation_state") or {}),
+        codex_state=dict(d.get("codex_state") or {}),
+        schema_version=int(d.get("schema_version") or 4),
+    )
+
+
 def _make_handler(spec: Any, parsed: ParsedCommand, ctx: MutableMapping[str, Any]):
     """构造 processing Handler 闭包（捕获 ParsedCommand + ctx；事务内由消费者调用）。
 
@@ -355,6 +387,15 @@ def _make_handler(spec: Any, parsed: ParsedCommand, ctx: MutableMapping[str, Any
 
     async def _plain_handler(tx: Any) -> Dict[str, Any]:  # noqa: ARG001 —— tx 由 processing 注入
         out = await _invoke_handler(getattr(spec, "handler", None), parsed, ctx=ctx)
+        # 业务写落档（装配层 REG-06 ③ / A-03 接线）：ctx["player"] 变更 → 同事务 upsert。
+        # 已注册玩家每次指令全量写回（RW-3 单事务 upsert，幂等安全）；新注册 dict → 转换。
+        p = ctx.get("player")
+        if isinstance(p, Player):
+            await tx.upsert_player(p)
+        elif isinstance(p, dict):
+            qid = str(ctx.get("qq_id") or ctx.get("user_id") or "")
+            if qid:
+                await tx.upsert_player(_player_from_dict(p, qid))
         return _normalize_plain(out)
 
     return _plain_handler

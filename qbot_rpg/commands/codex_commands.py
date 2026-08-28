@@ -126,8 +126,6 @@ def register_codex_commands(
         return make_context(parsed)
 
     def _codex(parsed: Any, *a: Any, **k: Any) -> str:
-        if make_context is not None:
-            return cmd_codex(parsed, _ctx(parsed))
         injected = k.get("ctx") if isinstance(k, dict) else None
         if isinstance(injected, MutableMapping):
             return cmd_codex(parsed, injected)

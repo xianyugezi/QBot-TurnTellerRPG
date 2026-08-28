@@ -653,5 +653,5 @@ def register_log_commands(
             return cmd_log(parsed, injected)
         return cmd_log(parsed, _ctx(parsed))
 
-    router.register(CommandSpec(LOG_CMD, is_gm=True, handler=_log))
+    router.register(CommandSpec(LOG_CMD, handler=_log))
     return router

@@ -45,6 +45,8 @@ ALL_REGISTERED = {
     "攻击", "防御", "逃跑", "道具",
     # explore
     "进入", "休息",
+    # dialog（N-01，BCH-03）
+    "对话",
 }
 
 # 关键指令（TCA-02/03 冒烟锚点：状态/背包/任务/商店 handler 可调）
@@ -188,8 +190,8 @@ def parse(raw: str):
 # ---------------------------------------------------------------------------
 # TCA-02：全指令组注册 + 无冲突
 # ---------------------------------------------------------------------------
-def test_build_router_registers_all_nine_groups() -> None:
-    """TCA-02：真实 AssemblyDeps + 各指令组 → build_router → 9 组 22 指令全注册。"""
+def test_build_router_registers_all_ten_groups() -> None:
+    """TCA-02：真实 AssemblyDeps + 各指令组 → build_router → 10 组 23 指令全注册。"""
     router = build_router(_deps(make_context=_stub_ctx))
     assert set(router.names()) == ALL_REGISTERED
     # 无冲突：Router.register 重名 ValueError 兜底 → 能构造即无重复
@@ -306,8 +308,8 @@ def test_check_consistency_whitelist_unregistered_is_expected_m7() -> None:
     router = build_router(_deps(make_context=_stub_ctx))
     result = check_consistency(router)
     unreg = set(result["whitelist_not_registered"])
-    # 已知 M7 未注册（信息性）——锚点抽样防未来漂移
-    assert {"重载", "地图", "对话", "使用", "炼金", "快捷绑定"} <= unreg
+    # 已知 M7 未注册（信息性）——锚点抽样防未来漂移（对话已注册 N-01，非白名单缺注册）
+    assert {"重载", "地图", "使用", "炼金", "快捷绑定"} <= unreg
     assert not (unreg & set(ALL_REGISTERED))  # 已注册指令绝不落入白名单缺注册
 
 

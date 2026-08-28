@@ -41,6 +41,7 @@ from qbot_rpg.commands import (
     basic_commands,
     battle_commands,
     checkin_commands,
+    dialog_commands,
     explore_commands,
     quest_commands,
     register_commands,
@@ -75,6 +76,7 @@ REGISTER_GROUPS: tuple = (
     checkin_commands.register_checkin_commands,    # /签到
     battle_commands.register_battle_commands,      # /攻击 /防御 /逃跑 /道具
     explore_commands.register_explore_commands,    # /进入 /休息
+    dialog_commands.register_dialog_commands,      # /对话（N-01，BCH-03）
 )
 
 

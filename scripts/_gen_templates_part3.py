@@ -48,15 +48,13 @@ except Exception as e:
 # --- 战斗外响应 ---
 try:
     from tests.unit.test_battle_wiring import RecordingSender
-    from qbot_rpg.commands.battle_commands import cmd_battle_attack, cmd_battle_defend, cmd_battle_flee
+    from qbot_rpg.commands.battle_commands import cmd_battle_attack
     from tests.unit.test_basic_commands import make_ctx as mk_basic
     ctx = mk_basic()
     ctx["sender"] = RecordingSender()   # M5-08 装配注入
     def _msg(r):
         return r["message"] if isinstance(r, dict) and r.get("message") else str(r)
     p("/攻击 无战斗", _msg(cmd_battle_attack(parse_command("/攻击 史莱姆"), ctx)))
-    p("/防御 无战斗", _msg(cmd_battle_defend(parse_command("/防御"), ctx)))
-    p("/逃跑 无战斗", _msg(cmd_battle_flee(parse_command("/逃跑"), ctx)))
 except Exception as e:
     p("战斗外响应", f"(构造失败: {e})")
 

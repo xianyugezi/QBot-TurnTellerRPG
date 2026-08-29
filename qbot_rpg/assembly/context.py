@@ -47,6 +47,7 @@
 
 from __future__ import annotations
 
+import inspect
 import random
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -600,15 +601,21 @@ def _npc_interactions_of(npcs: Any, npc_id: object) -> list:
     return []
 
 
-def _battle_session(session_mgr: Any, qid: str) -> Any:
+async def _battle_session(session_mgr: Any, qid: str) -> Any:
     """battle_session：session_mgr.get_active(qid) 兜底读（缺省 None）。
 
-    入参 session_mgr: SessionManager；qid: str。出参 会话快照对象/dict 或 None。
+    入参 session_mgr: SessionManager（get_active 现 async，M8 实装）；qid: str。
+    出参 会话视图对象（SessionView）/dict 或 None。
+    核心逻辑: get_active 结果 await（兼容同步伪实现：isawaitable 判定，旧测试
+    fake 返回 None/抛 NotImplementedError 时 _safe_call 兜底不抛）。
     """
     if session_mgr is None:
         return None
     fn = getattr(session_mgr, "get_active", None)
-    return _safe_call(fn, qid, default=None)
+    out = _safe_call(fn, qid, default=None)
+    if inspect.isawaitable(out):
+        return await out
+    return out
 
 
 def _bs_field(bs: Any, key: str) -> Any:
@@ -906,7 +913,7 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
     ctx["last_refresh"] = {}     # {shop_id: "YYYY-MM-DD"}（同上）
     ctx["blackmarket_goods"] = {}  # {shop_id: [goods...]}（同上）
 
-    battle_session = _battle_session(deps.session_mgr, qid)
+    battle_session = await _battle_session(deps.session_mgr, qid)
     ctx["battle_session"] = battle_session
     ctx["target"] = _bs_field(battle_session, "target")
     ctx["turn"] = _bs_field(battle_session, "turn")

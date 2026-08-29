@@ -58,7 +58,7 @@ async def bootstrap(deps: Mapping[str, Any]) -> AssembledApp:
     return AssembledApp(
         game_world=world,
         registry=registry,
-        session_mgr=SessionManager(),
+        session_mgr=SessionManager(deps["repo"]),
         repo=deps["repo"],
         queue=deps.get("queue"),
         router=None,

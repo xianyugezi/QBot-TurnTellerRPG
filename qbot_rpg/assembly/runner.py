@@ -115,11 +115,12 @@ async def _load_player_for_routing(deps: Any, qid: str) -> Any:
         return None
 
 
-def _battle_active(deps: Any, qid: str) -> bool:
+async def _battle_active(deps: Any, qid: str) -> bool:
     """战斗会话激活判定（RoutingContext.battle_active；裁决①：战斗中裸数字=快捷）。
 
     入参 deps: AssemblyDeps；qid: str。出参 bool。核心逻辑: session_mgr.get_active(qid)
-    非 None → True；缺失/异常 → False（不抛异常）。
+    （现 async，M8 实装）非 None → True；缺失/异常 → False（不抛异常）。兼容同步伪
+    实现（旧测试 fake get_active 返回 None/抛异常 → isawaitable 判定兜底 False）。
     """
     mgr = getattr(deps, "session_mgr", None)
     if mgr is None:
@@ -128,12 +129,17 @@ def _battle_active(deps: Any, qid: str) -> bool:
     if not callable(fn):
         return False
     try:
-        return fn(qid) is not None
+        out = fn(qid)
     except Exception:
         return False
+    if inspect.isawaitable(out):
+        out = await out
+    return out is not None
 
 
-def _routing_context(deps: Any, router: Router, event: Mapping, player: Any) -> RoutingContext:
+async def _routing_context(
+    deps: Any, router: Router, event: Mapping, player: Any,
+) -> RoutingContext:
     """构造路由上下文（RA-08 ①：registry/shortcuts/aliases/dialog_active/battle_active）。
 
     入参 deps: AssemblyDeps；router: Router（registry 源）；event: 事件映射；player:
@@ -141,6 +147,7 @@ def _routing_context(deps: Any, router: Router, event: Mapping, player: Any) -> 
     核心逻辑: 玩家 persistent_state 装载 shortcuts/dialog_active（缺省空/False）；
     别名取 settings.command_aliases；前缀模式取 settings.command_mode/require_at/
     at_text（缺省 global_shortcut/False/@机器人）。全部缺省兜底，不抛异常。
+    battle_active 经 await _battle_active（get_active 现 async，M8 实装）。
     """
     settings = getattr(deps, "settings", None)
     settings = settings if isinstance(settings, Mapping) else {}
@@ -155,7 +162,7 @@ def _routing_context(deps: Any, router: Router, event: Mapping, player: Any) -> 
         "shortcuts": ps.get("shortcuts") or {},
         "aliases": settings.get("command_aliases"),
         "dialog_active": bool(ps.get("dialog_active", False)),
-        "battle_active": _battle_active(deps, qid),
+        "battle_active": await _battle_active(deps, qid),
         "command_mode": settings.get("command_mode") or "global_shortcut",
         "require_at": bool(settings.get("require_at", False)),
         "at_text": settings.get("at_text") or "@机器人",
@@ -530,7 +537,7 @@ async def _run_command_inner(event: Mapping, deps: Any, raw: str) -> str:
 
     # -- ① 路由（快捷→别名→白名单→忽略；对话会话路由 dialog_active）------------
     player = await _load_player_for_routing(deps, qid)
-    route = route_and_expand(raw, _routing_context(deps, router, event, player))
+    route = route_and_expand(raw, await _routing_context(deps, router, event, player))
 
     if route.ignored:
         return ""

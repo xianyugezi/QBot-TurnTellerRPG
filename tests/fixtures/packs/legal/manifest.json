@@ -18,6 +18,11 @@
     "npc",
     "shop",
     "quest",
-    "checkin"
+    "checkin",
+    "settings",
+    "traits",
+    "recipe",
+    "proficiency",
+    "slots"
   ]
 }

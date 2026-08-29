@@ -1,0 +1,273 @@
+[
+  {
+    "id": "rcp_slash_bomb",
+    "name": "斩击弹配方",
+    "kind": "craft",
+    "level": 5,
+    "synth_allowed": true,
+    "master_only": false,
+    "materials": [
+      {
+        "id": "alch_iron_dust",
+        "count": 1
+      },
+      {
+        "id": "potion",
+        "count": 1
+      }
+    ],
+    "output": {
+      "item": "slash_bomb",
+      "count": 1
+    },
+    "cost": {
+      "coins": 150,
+      "gem": 0
+    },
+    "slots": 5,
+    "traits_inherit": 2,
+    "pp_budget": 5,
+    "catalyst": [
+      "catalyst_essence"
+    ],
+    "element_req": {
+      "wind": [
+        {
+          "threshold": 3,
+          "effect": "power_slash"
+        }
+      ]
+    },
+    "evolve_to": {
+      "id": "rcp_slash_bomb_plus",
+      "condition": {
+        "count": 5,
+        "source": "炼金产出"
+      }
+    }
+  },
+  {
+    "id": "rcp_slash_bomb_plus",
+    "name": "斩击弹·改配方",
+    "kind": "craft",
+    "level": 9,
+    "synth_allowed": true,
+    "master_only": false,
+    "materials": [
+      {
+        "id": "alch_gold_essence",
+        "count": 1
+      },
+      {
+        "id": "hi_potion",
+        "count": 1
+      }
+    ],
+    "output": {
+      "item": "slash_bomb_plus",
+      "count": 1
+    },
+    "cost": {
+      "coins": 250,
+      "gem": 0
+    },
+    "slots": 5,
+    "traits_inherit": 3,
+    "pp_budget": 6,
+    "catalyst": [
+      "catalyst_essence"
+    ]
+  },
+  {
+    "id": "rcp_deep_blade",
+    "name": "秘刃淬炼",
+    "kind": "craft",
+    "level": 40,
+    "synth_allowed": false,
+    "master_only": true,
+    "materials": [
+      {
+        "id": "alch_gold_essence",
+        "count": 1
+      },
+      {
+        "id": "alch_iron_dust",
+        "count": 2
+      }
+    ],
+    "output": {
+      "item": "slash_bomb_master",
+      "count": 1
+    },
+    "cost": {
+      "coins": 600,
+      "gem": 0
+    },
+    "slots": 6,
+    "traits_inherit": 1,
+    "pp_budget": 8,
+    "element_req": {
+      "earth": [
+        {
+          "threshold": 4,
+          "effect": "heal_small"
+        }
+      ]
+    }
+  },
+  {
+    "id": "rcp_combine_3to1",
+    "name": "三合一·铁尘凝粹",
+    "kind": "combine",
+    "level": 10,
+    "synth_allowed": true,
+    "master_only": false,
+    "materials": [
+      {
+        "id": "alch_iron_dust",
+        "count": 3
+      }
+    ],
+    "output": {
+      "item": "alch_gold_essence",
+      "count": 1
+    },
+    "cost": {
+      "coins": 0,
+      "gem": 0
+    },
+    "slots": 3,
+    "traits_inherit": 1
+  },
+  {
+    "id": "rcp_upgrade_jewel1",
+    "name": "斩击珠升阶·精良",
+    "kind": "upgrade",
+    "level": 1,
+    "synth_allowed": true,
+    "master_only": false,
+    "inputs": [
+      {
+        "item": "jewel_slash_common",
+        "count": 3
+      }
+    ],
+    "output": {
+      "item": "jewel_slash_uncommon",
+      "count": 1
+    },
+    "cost": {
+      "coins": 0,
+      "gem": 10
+    },
+    "traits_inherit": 1
+  },
+  {
+    "id": "rcp_upgrade_jewel2",
+    "name": "斩击珠升阶·史诗",
+    "kind": "upgrade",
+    "level": 30,
+    "synth_allowed": true,
+    "master_only": false,
+    "inputs": [
+      {
+        "item": "jewel_slash_uncommon",
+        "count": 3
+      }
+    ],
+    "output": {
+      "item": "jewel_slash_rare",
+      "count": 1
+    },
+    "cost": {
+      "coins": 0,
+      "gem": 10
+    },
+    "traits_inherit": 1
+  },
+  {
+    "id": "rcp_upgrade_final",
+    "name": "灭世斩击弹合成",
+    "kind": "upgrade",
+    "level": 60,
+    "synth_allowed": true,
+    "master_only": true,
+    "inputs": [
+      {
+        "item": "slash_bomb_plus",
+        "count": 2
+      },
+      {
+        "item": "alch_gold_essence",
+        "count": 1
+      }
+    ],
+    "output": {
+      "item": "great_bomb",
+      "count": 1
+    },
+    "cost": {
+      "coins": 0,
+      "gem": 10
+    },
+    "traits_inherit": 2
+  },
+  {
+    "id": "rcp_upgrade_formula_merge",
+    "name": "配方合成·斩击奥义",
+    "kind": "upgrade",
+    "level": 35,
+    "synth_allowed": true,
+    "master_only": false,
+    "combine_from": [
+      "rcp_slash_bomb",
+      "rcp_slash_bomb_plus"
+    ],
+    "inputs": [
+      {
+        "item": "alch_gold_essence",
+        "count": 1
+      },
+      {
+        "item": "alch_iron_dust",
+        "count": 2
+      }
+    ],
+    "output": {
+      "item": "slash_bomb_master",
+      "count": 1
+    },
+    "cost": {
+      "coins": 0,
+      "gem": 5
+    },
+    "traits_inherit": 2
+  },
+  {
+    "id": "rcp_upgrade_trait_merge",
+    "name": "特性合成·斩击奥义",
+    "kind": "upgrade",
+    "level": 60,
+    "synth_allowed": true,
+    "master_only": true,
+    "inputs": [
+      {
+        "item": "alch_iron_dust",
+        "count": 1
+      },
+      {
+        "item": "alch_gold_essence",
+        "count": 1
+      }
+    ],
+    "output": {
+      "item": "slash_bomb_master",
+      "count": 1
+    },
+    "cost": {
+      "coins": 0,
+      "gem": 20
+    },
+    "traits_inherit": 2
+  }
+]

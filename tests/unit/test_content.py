@@ -47,7 +47,9 @@ def test_legal_pack_full_green(legal_pack_dir: Path) -> None:
     assert pack.report.ok, f"合法包不应有红拦：{pack.report.errors}"
     assert not pack.report.warnings, f"合法包应为零黄提示：{pack.report.warnings}"
     assert pack.registry.generation == 1
-    assert set(pack.registry.all_ids("item")) == {"potion", "hi_potion"}
+    assert set(pack.registry.all_ids("item")) >= {"potion", "hi_potion"}
+    # 【M8 收口调整 2026-08-29】legal 增补 M8 炼金专项物品（装饰珠/触媒/炼金材料/成品）
+    # 覆盖新校验器引用 → 基线物品集断言改为超集方向（legal 仍含原基线物品）
     assert set(pack.registry.all_ids("effect")) == {"heal_small", "power_slash", "rage_up"}
     # M2 A3（细化_1e）：legal enemies 重建为八段合法怪（普通/精英/BOSS/木桩各一），action 模块已声明
     assert set(pack.registry.all_ids("enemy")) == {

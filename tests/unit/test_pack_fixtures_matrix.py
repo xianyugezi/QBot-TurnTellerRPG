@@ -208,11 +208,18 @@ def test_pck05_registry_growth_across_tiers() -> None:
 
 
 def test_pck11_demo_full_mirrors_legal(legal_pack_dir: Path) -> None:
-    """细化_M6 D4 PCK-11：五档包以 legal 为共同基线——demo_full 怪物集 = legal 怪物集。"""
+    """细化_M6 D4 PCK-11：五档包以 legal 为共同基线——demo_full 怪物集 = legal 怪物集；
+    物品集 demo_full ⊆ legal。
+
+    【M8 收口调整 2026-08-29】legal 是校验器红拦零命中基线包，M8 数据层新增了炼金专项物品
+    （装饰珠/触媒/炼金材料/炼金成品，覆盖 recipe/traits/slots 引用），而五档包（demo_*）是
+    战斗向内容档、不含炼金层数据——严格相等不再成立，改为 demo_full ⊆ legal
+    （legal 仍为共同基线超集，demo_full 全部物品在 legal 中可寻）。
+    """
     legal, _ = build_pack(legal_pack_dir)
     full, _ = build_pack(CONTENT_DIR / "demo_full")
     assert set(full.registry.all_ids("enemy")) == set(legal.registry.all_ids("enemy"))
-    assert set(full.registry.all_ids("item")) == set(legal.registry.all_ids("item"))
+    assert set(full.registry.all_ids("item")) <= set(legal.registry.all_ids("item"))
 
 
 # ---------------------------------------------------------------------------

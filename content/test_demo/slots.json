@@ -1,0 +1,46 @@
+[
+  {
+    "equip_id": "hunter_blade",
+    "slots": [
+      {
+        "slot_level": 1
+      },
+      {
+        "slot_level": 2
+      }
+    ]
+  },
+  {
+    "equip_id": "leaf_vest",
+    "slots": [
+      {
+        "slot_level": 1
+      }
+    ]
+  },
+  {
+    "equip_id": "ember_brand",
+    "slots": [
+      {
+        "slot_level": 3
+      },
+      {
+        "slot_level": 3
+      }
+    ]
+  },
+  {
+    "equip_id": "mirror_shield",
+    "slots": [
+      {
+        "slot_level": 2
+      },
+      {
+        "slot_level": 2
+      },
+      {
+        "slot_level": 3
+      }
+    ]
+  }
+]

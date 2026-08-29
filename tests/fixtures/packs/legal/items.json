@@ -1,4 +1,168 @@
 [
   { "id": "potion", "name": "药水", "type": "consumable", "price": 100, "effects": ["heal_small"], "usable": true },
-  { "id": "hi_potion", "name": "高级药水", "type": "consumable", "price": 220, "effects": ["heal_small", "power_slash"], "usable": true }
+  { "id": "hi_potion", "name": "高级药水", "type": "consumable", "price": 220, "effects": ["heal_small", "power_slash"], "usable": true },
+  {
+    "id": "jewel_slash_common",
+    "name": "斩击珠·普通",
+    "type": "装饰珠",
+    "price": 120,
+    "quality": "common",
+    "base_effects": {
+      "atk": 3
+    },
+    "elements": {
+      "wind": 2
+    },
+    "traits": [
+      "trait_slash_boost"
+    ]
+  },
+  {
+    "id": "jewel_slash_uncommon",
+    "name": "斩击珠·精良",
+    "type": "装饰珠",
+    "price": 260,
+    "quality": "uncommon",
+    "base_effects": {
+      "atk": 5
+    },
+    "elements": {
+      "wind": 4
+    },
+    "traits": [
+      "trait_slash_15"
+    ]
+  },
+  {
+    "id": "jewel_slash_rare",
+    "name": "斩击珠·史诗",
+    "type": "装饰珠",
+    "price": 600,
+    "quality": "rare",
+    "base_effects": {
+      "atk": 8
+    },
+    "elements": {
+      "wind": 6
+    },
+    "traits": [
+      "trait_slash_25"
+    ]
+  },
+  {
+    "id": "jewel_guard_common",
+    "name": "守护珠·普通",
+    "type": "装饰珠",
+    "price": 120,
+    "quality": "common",
+    "base_effects": {
+      "def": 2
+    },
+    "elements": {
+      "earth": 2
+    },
+    "traits": [
+      "trait_iron_guard"
+    ]
+  },
+  {
+    "id": "catalyst_essence",
+    "name": "精华触媒",
+    "type": "触媒",
+    "price": 400
+  },
+  {
+    "id": "alch_iron_dust",
+    "name": "铁尘",
+    "type": "material",
+    "price": 80,
+    "rarity": "普通",
+    "elements": {
+      "earth": 3
+    },
+    "traits": [
+      "trait_slash_boost"
+    ]
+  },
+  {
+    "id": "alch_gold_essence",
+    "name": "金色精华",
+    "type": "material",
+    "price": 500,
+    "rarity": "金色",
+    "elements": {
+      "wind": 5
+    },
+    "traits": [
+      "trait_slash_15"
+    ]
+  },
+  {
+    "id": "slash_bomb",
+    "name": "斩击弹",
+    "type": "consumable",
+    "price": 200,
+    "quality": "common",
+    "elements": {
+      "wind": 2
+    },
+    "traits": [
+      "trait_slash_boost"
+    ],
+    "effects": [
+      "power_slash"
+    ],
+    "usable": true
+  },
+  {
+    "id": "slash_bomb_plus",
+    "name": "斩击弹·改",
+    "type": "consumable",
+    "price": 400,
+    "quality": "uncommon",
+    "elements": {
+      "wind": 4
+    },
+    "traits": [
+      "trait_slash_15"
+    ],
+    "effects": [
+      "power_slash"
+    ],
+    "usable": true
+  },
+  {
+    "id": "slash_bomb_master",
+    "name": "斩击弹·极",
+    "type": "consumable",
+    "price": 700,
+    "quality": "rare",
+    "elements": {
+      "wind": 6
+    },
+    "traits": [
+      "trait_slash_25"
+    ],
+    "effects": [
+      "power_slash"
+    ],
+    "usable": true
+  },
+  {
+    "id": "great_bomb",
+    "name": "灭世斩击弹",
+    "type": "consumable",
+    "price": 1200,
+    "quality": "legendary",
+    "elements": {
+      "wind": 10
+    },
+    "traits": [
+      "trait_slash_25"
+    ],
+    "effects": [
+      "power_slash"
+    ],
+    "usable": true
+  }
 ]

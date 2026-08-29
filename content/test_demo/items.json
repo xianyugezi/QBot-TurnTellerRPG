@@ -107,5 +107,199 @@
     "def": 5,
     "slot": "shield",
     "excludes": []
+  },
+  {
+    "id": "jewel_burn_common",
+    "name": "灼烧珠·普通",
+    "type": "装饰珠",
+    "price": 120,
+    "quality": "common",
+    "base_effects": {
+      "atk": 2
+    },
+    "elements": {
+      "fire": 3
+    },
+    "traits": [
+      "trait_burn_boost"
+    ]
+  },
+  {
+    "id": "jewel_burn_uncommon",
+    "name": "灼烧珠·精良",
+    "type": "装饰珠",
+    "price": 260,
+    "quality": "uncommon",
+    "base_effects": {
+      "atk": 4
+    },
+    "elements": {
+      "fire": 5
+    },
+    "traits": [
+      "trait_fire_15"
+    ]
+  },
+  {
+    "id": "jewel_burn_rare",
+    "name": "灼烧珠·史诗",
+    "type": "装饰珠",
+    "price": 600,
+    "quality": "rare",
+    "base_effects": {
+      "atk": 6
+    },
+    "elements": {
+      "fire": 8
+    },
+    "traits": [
+      "trait_fire_25"
+    ]
+  },
+  {
+    "id": "jewel_guard_common",
+    "name": "守护珠·普通",
+    "type": "装饰珠",
+    "price": 120,
+    "quality": "common",
+    "base_effects": {
+      "def": 2
+    },
+    "elements": {
+      "earth": 3
+    },
+    "traits": [
+      "trait_stone_guard"
+    ]
+  },
+  {
+    "id": "jewel_void_rare",
+    "name": "虚无珠·史诗",
+    "type": "装饰珠",
+    "price": 600,
+    "quality": "rare",
+    "base_effects": {
+      "atk": 5,
+      "def": 3
+    },
+    "elements": {
+      "void": 6
+    },
+    "traits": [
+      "trait_cleanse"
+    ]
+  },
+  {
+    "id": "catalyst_fire_essence",
+    "name": "火之精华触媒",
+    "type": "触媒",
+    "price": 500
+  },
+  {
+    "id": "alch_ember_crystal",
+    "name": "火晶石",
+    "type": "material",
+    "price": 150,
+    "rarity": "普通",
+    "elements": {
+      "fire": 4
+    },
+    "traits": [
+      "trait_burn_boost"
+    ]
+  },
+  {
+    "id": "alch_frost_crystal",
+    "name": "冰晶石",
+    "type": "material",
+    "price": 150,
+    "rarity": "普通",
+    "elements": {
+      "water": 4
+    },
+    "traits": [
+      "trait_mp_flow"
+    ]
+  },
+  {
+    "id": "alch_fire_essence",
+    "name": "火之精华",
+    "type": "material",
+    "price": 400,
+    "rarity": "金色",
+    "elements": {
+      "fire": 6
+    },
+    "traits": [
+      "trait_fire_15"
+    ]
+  },
+  {
+    "id": "flame_bomb",
+    "name": "火焰弹",
+    "type": "consumable",
+    "price": 300,
+    "quality": "common",
+    "elements": {
+      "fire": 2
+    },
+    "traits": [
+      "trait_burn_boost"
+    ],
+    "effects": [
+      "burn_dot"
+    ],
+    "usable": true
+  },
+  {
+    "id": "flame_bomb_plus",
+    "name": "烈焰弹·改",
+    "type": "consumable",
+    "price": 520,
+    "quality": "uncommon",
+    "elements": {
+      "fire": 4
+    },
+    "traits": [
+      "trait_fire_15"
+    ],
+    "effects": [
+      "burn_dot"
+    ],
+    "usable": true
+  },
+  {
+    "id": "doomsday_bomb",
+    "name": "灭世爆弹",
+    "type": "consumable",
+    "price": 1200,
+    "quality": "legendary",
+    "elements": {
+      "fire": 10
+    },
+    "traits": [
+      "trait_fire_25"
+    ],
+    "effects": [
+      "burn_dot"
+    ],
+    "usable": true
+  },
+  {
+    "id": "flame_bomb_master",
+    "name": "炼狱爆弹·极",
+    "type": "consumable",
+    "price": 800,
+    "quality": "rare",
+    "elements": {
+      "fire": 8
+    },
+    "traits": [
+      "trait_fire_25"
+    ],
+    "effects": [
+      "burn_dot"
+    ],
+    "usable": true
   }
 ]

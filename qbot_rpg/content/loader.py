@@ -156,6 +156,11 @@ _KIND_FOR_MODULE: Mapping[str, str] = {
     "items": "item",
     "equipment": "equipment",
     "traits": "trait",
+    # M8 炼金（m8_contract_数据与校验 §六 6.1）：recipe/proficiency/slots 登记注册表 kind
+    # （DEF_CLASSES 无专属 Def 类 → 缺省 BaseDef 回退，同 shop/quest/checkin 口径）
+    "recipe": "recipe",
+    "proficiency": "proficiency",
+    "slots": "slots",
     "enemies": "enemy",
     "maps": "map",
     "dungeon": "dungeon",  # M3 副本（m3_shared_contract §4）；DEF_CLASSES 缺省 BaseDef 回退

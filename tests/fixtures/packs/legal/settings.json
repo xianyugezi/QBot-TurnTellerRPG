@@ -1,6 +1,5 @@
 {
-  "default_map": "start_village",
-  "world_name": "测试世界",
+  "default_map": "rubble_field",
   "currencies": [
     {
       "id": "coins",

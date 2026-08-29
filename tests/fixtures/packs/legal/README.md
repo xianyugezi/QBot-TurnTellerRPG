@@ -37,6 +37,27 @@
   - `checkin.json`（m4_shared_contract §3.4 + 细化_2b5 validate_checkins）：三表 loop/monthly/activity，
     loop 配 cycle_days=7（无默认补全黄）、streak.days≤cycle（无 TC-06 黄）、activity period.start/end
     必填齐全、无 [签到:*] 条件键（无跨模块引用黄）→ 零红拦零黄
+  - `settings.json`（M8 批0C 新增）：currencies 三币（coins/diamond/gem）+ death_penalty +
+    alchemy 段（照 m8_contract_数据与校验 §五 全字段默认值：mode=full / quality_tiers / quality_coef /
+    chain_map / pp_cost / pp_refresh / energy_enabled=false / energy_max 7 档 / energy_regen_sec /
+    energy_regen_sec_safe / decompose_rate 6 档 / catalyst_unlock_tier=expert / catalyst_consume /
+    gem{分解,复制,成品合成,配方合成,特性合成,珠升阶,复制额外,decompose_formula} / gem_diminish /
+    synth_exp / sp_per_level / sp_panel 4 项 / 战斗道具 / 战斗即时调合 / max_qty=2147483647 /
+    job_tier_map）→ 引用全部指向本包真实 ID，ALC-01~24 全绿
+  - `traits.json`（M8 批0C 新增）：6 条特性（斩击强化/回复强化/狂暴强化/铁壁庇护等），rarity 覆盖
+    normal/super，group 互斥组 slash_boost（3 成员）、rage_boost，repeatable 有 true 有 false，
+    source 覆盖 素材/成品/金色素材，effects 引用本包 effects 家族（heal_small/power_slash/rage_up）→ TRT-01~09 全绿
+  - `recipe.json`（M8 批0C 新增）：9 条配方 —— craft 3（含 master_only 深度配方 rcp_deep_blade，
+    synth_allowed=false；rcp_slash_bomb 带 element_req/evolve_to/catalyst）、combine 1（3:1 素材合成）、
+    upgrade 5（珠升阶×2 gem10 / 成品合成 gem10 / 配方合成 combine_from gem5 / 特性合成 gem20）→
+    REC-01~16 全绿（进化线无环）
+  - `proficiency.json`（M8 批0C 新增）：id=alchemy，tier_names 7 级、job_rank_levels 7 阈值、exp_sources、
+    sp_per_level=1、sp_panel 4 项、energy{enabled:false}、job_tier_map、titles（contest/achievement，无手写 king）→
+    PRF-01~10 全绿
+  - `slots.json`（M8 批0C 新增）：iron_sword（槽级 1/2/3）+ iron_shield（槽级 1/2），equip_id 引用本包
+    equipment.json 真实 ID
+- M8 扩展后 items.json 追加：装饰珠 4（quality common/uncommon/rare）、触媒 1、炼金材料 2、炼金成品 4
+  （quality common→legendary），全部引用本包 traits.json 真实 ID；原 potion/hi_potion 未改动。
 - 断言见 tests/unit/test_content.py::test_legal_pack_full_green（细化_3e#TC-30 / 3a#TC-09/22）
   与 tests/unit/test_enemies_schema.py（细化_1e §⑥ TC-01~14）
   与 tests/unit/test_content.py::test_legal_pack_m4_interaction_modules（M4 批次6 集成断言）。

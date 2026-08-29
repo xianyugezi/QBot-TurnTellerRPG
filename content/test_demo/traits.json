@@ -1,0 +1,86 @@
+[
+  {
+    "id": "trait_burn_boost",
+    "name": "灼烧强化",
+    "rarity": "normal",
+    "effects": [
+      "burn_dot"
+    ],
+    "group": "fire_boost",
+    "repeatable": false,
+    "source": "素材"
+  },
+  {
+    "id": "trait_fire_15",
+    "name": "灼烧强化·精",
+    "rarity": "super",
+    "effects": [
+      "burn_dot"
+    ],
+    "group": "fire_boost",
+    "repeatable": false,
+    "source": "金色素材"
+  },
+  {
+    "id": "trait_fire_25",
+    "name": "灼烧强化·大师",
+    "rarity": "super",
+    "effects": [
+      "burn_dot"
+    ],
+    "group": "fire_boost",
+    "repeatable": false,
+    "source": "金色素材"
+  },
+  {
+    "id": "trait_poison_boost",
+    "name": "剧毒强化",
+    "rarity": "normal",
+    "effects": [
+      "poison_dot"
+    ],
+    "group": "venom_boost",
+    "repeatable": false,
+    "source": "素材"
+  },
+  {
+    "id": "trait_heal_boost",
+    "name": "回复强化",
+    "rarity": "normal",
+    "effects": [
+      "heal_small"
+    ],
+    "repeatable": true,
+    "source": "成品"
+  },
+  {
+    "id": "trait_mp_flow",
+    "name": "魔力流转",
+    "rarity": "normal",
+    "effects": [
+      "heal_mp"
+    ],
+    "repeatable": true,
+    "source": "成品"
+  },
+  {
+    "id": "trait_stone_guard",
+    "name": "岩肤庇护",
+    "rarity": "super",
+    "effects": [
+      "stone_shield_eff"
+    ],
+    "repeatable": false,
+    "source": "金色素材"
+  },
+  {
+    "id": "trait_cleanse",
+    "name": "净化之息",
+    "rarity": "super",
+    "effects": [
+      "cure_poison"
+    ],
+    "repeatable": false,
+    "source": "金色素材"
+  }
+]

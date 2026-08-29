@@ -1,0 +1,27 @@
+[
+  {
+    "equip_id": "iron_sword",
+    "slots": [
+      {
+        "slot_level": 1
+      },
+      {
+        "slot_level": 2
+      },
+      {
+        "slot_level": 3
+      }
+    ]
+  },
+  {
+    "equip_id": "iron_shield",
+    "slots": [
+      {
+        "slot_level": 1
+      },
+      {
+        "slot_level": 2
+      }
+    ]
+  }
+]

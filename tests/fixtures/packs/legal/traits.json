@@ -1,0 +1,66 @@
+[
+  {
+    "id": "trait_slash_boost",
+    "name": "斩击强化",
+    "rarity": "normal",
+    "effects": [
+      "power_slash"
+    ],
+    "group": "slash_boost",
+    "repeatable": false,
+    "source": "素材"
+  },
+  {
+    "id": "trait_slash_15",
+    "name": "斩击强化·精",
+    "rarity": "super",
+    "effects": [
+      "power_slash"
+    ],
+    "group": "slash_boost",
+    "repeatable": false,
+    "source": "金色素材"
+  },
+  {
+    "id": "trait_slash_25",
+    "name": "斩击强化·大师",
+    "rarity": "super",
+    "effects": [
+      "power_slash"
+    ],
+    "group": "slash_boost",
+    "repeatable": false,
+    "source": "金色素材"
+  },
+  {
+    "id": "trait_heal_boost",
+    "name": "回复强化",
+    "rarity": "normal",
+    "effects": [
+      "heal_small"
+    ],
+    "repeatable": true,
+    "source": "成品"
+  },
+  {
+    "id": "trait_rage_boost",
+    "name": "狂暴强化",
+    "rarity": "normal",
+    "effects": [
+      "rage_up"
+    ],
+    "group": "rage_boost",
+    "repeatable": false,
+    "source": "素材"
+  },
+  {
+    "id": "trait_iron_guard",
+    "name": "铁壁庇护",
+    "rarity": "super",
+    "effects": [
+      "heal_small"
+    ],
+    "repeatable": false,
+    "source": "金色素材"
+  }
+]

@@ -1,0 +1,317 @@
+[
+  {
+    "id": "rcp_fire_crystal",
+    "name": "火晶石炼制",
+    "kind": "craft",
+    "level": 3,
+    "synth_allowed": true,
+    "master_only": false,
+    "materials": [
+      {
+        "id": "moon_grass",
+        "count": 2
+      },
+      {
+        "id": "star_iron",
+        "count": 1
+      }
+    ],
+    "output": {
+      "item": "alch_ember_crystal",
+      "count": 1
+    },
+    "cost": {
+      "coins": 120,
+      "gem": 0
+    },
+    "slots": 4,
+    "traits_inherit": 1
+  },
+  {
+    "id": "rcp_combine_3to1",
+    "name": "三合一·月光凝粹",
+    "kind": "combine",
+    "level": 10,
+    "synth_allowed": true,
+    "master_only": false,
+    "materials": [
+      {
+        "id": "moon_grass",
+        "count": 3
+      }
+    ],
+    "output": {
+      "item": "ghost_moss",
+      "count": 1
+    },
+    "cost": {
+      "coins": 0,
+      "gem": 0
+    },
+    "slots": 3,
+    "traits_inherit": 1
+  },
+  {
+    "id": "rcp_flame_bomb",
+    "name": "火焰弹配方",
+    "kind": "craft",
+    "level": 5,
+    "synth_allowed": true,
+    "master_only": false,
+    "materials": [
+      {
+        "id": "alch_ember_crystal",
+        "count": 1
+      },
+      {
+        "id": "moon_grass",
+        "count": 2
+      }
+    ],
+    "output": {
+      "item": "flame_bomb",
+      "count": 1
+    },
+    "cost": {
+      "coins": 200,
+      "gem": 0
+    },
+    "slots": 5,
+    "traits_inherit": 2,
+    "pp_budget": 5,
+    "catalyst": [
+      "catalyst_fire_essence"
+    ],
+    "element_req": {
+      "fire": [
+        {
+          "threshold": 4,
+          "effect": "burn_dot"
+        }
+      ]
+    },
+    "evolve_to": {
+      "id": "rcp_flame_bomb_plus",
+      "condition": {
+        "count": 5,
+        "source": "炼金产出"
+      }
+    }
+  },
+  {
+    "id": "rcp_flame_bomb_plus",
+    "name": "烈焰弹·改配方",
+    "kind": "craft",
+    "level": 8,
+    "synth_allowed": true,
+    "master_only": false,
+    "materials": [
+      {
+        "id": "alch_fire_essence",
+        "count": 1
+      },
+      {
+        "id": "ash_core",
+        "count": 1
+      }
+    ],
+    "output": {
+      "item": "flame_bomb_plus",
+      "count": 1
+    },
+    "cost": {
+      "coins": 350,
+      "gem": 0
+    },
+    "slots": 5,
+    "traits_inherit": 3,
+    "pp_budget": 6,
+    "catalyst": [
+      "catalyst_fire_essence"
+    ],
+    "element_req": {
+      "fire": [
+        {
+          "threshold": 6,
+          "effect": "burn_dot"
+        }
+      ]
+    }
+  },
+  {
+    "id": "rcp_deep_star",
+    "name": "星辉淬炼",
+    "kind": "craft",
+    "level": 40,
+    "synth_allowed": false,
+    "master_only": true,
+    "materials": [
+      {
+        "id": "star_iron",
+        "count": 3
+      },
+      {
+        "id": "ghost_moss",
+        "count": 2
+      },
+      {
+        "id": "ash_core",
+        "count": 1
+      }
+    ],
+    "output": {
+      "item": "alch_fire_essence",
+      "count": 1
+    },
+    "cost": {
+      "coins": 800,
+      "gem": 0
+    },
+    "slots": 6,
+    "traits_inherit": 1,
+    "pp_budget": 8,
+    "element_req": {
+      "void": [
+        {
+          "threshold": 5,
+          "effect": "stone_shield_eff"
+        }
+      ]
+    }
+  },
+  {
+    "id": "rcp_upgrade_jewel_burn1",
+    "name": "灼烧珠升阶·精良",
+    "kind": "upgrade",
+    "level": 1,
+    "synth_allowed": true,
+    "master_only": false,
+    "inputs": [
+      {
+        "item": "jewel_burn_common",
+        "count": 3
+      }
+    ],
+    "output": {
+      "item": "jewel_burn_uncommon",
+      "count": 1
+    },
+    "cost": {
+      "coins": 0,
+      "gem": 10
+    },
+    "traits_inherit": 1
+  },
+  {
+    "id": "rcp_upgrade_jewel_burn2",
+    "name": "灼烧珠升阶·史诗",
+    "kind": "upgrade",
+    "level": 30,
+    "synth_allowed": true,
+    "master_only": false,
+    "inputs": [
+      {
+        "item": "jewel_burn_uncommon",
+        "count": 3
+      }
+    ],
+    "output": {
+      "item": "jewel_burn_rare",
+      "count": 1
+    },
+    "cost": {
+      "coins": 0,
+      "gem": 10
+    },
+    "traits_inherit": 1
+  },
+  {
+    "id": "rcp_upgrade_final_bomb",
+    "name": "灭世爆弹合成",
+    "kind": "upgrade",
+    "level": 60,
+    "synth_allowed": true,
+    "master_only": true,
+    "inputs": [
+      {
+        "item": "flame_bomb_plus",
+        "count": 2
+      },
+      {
+        "item": "ash_core",
+        "count": 1
+      }
+    ],
+    "output": {
+      "item": "doomsday_bomb",
+      "count": 1
+    },
+    "cost": {
+      "coins": 0,
+      "gem": 10
+    },
+    "traits_inherit": 2
+  },
+  {
+    "id": "rcp_upgrade_formula_merge",
+    "name": "配方合成·焰之奥义",
+    "kind": "upgrade",
+    "level": 35,
+    "synth_allowed": true,
+    "master_only": false,
+    "combine_from": [
+      "rcp_flame_bomb",
+      "rcp_flame_bomb_plus"
+    ],
+    "inputs": [
+      {
+        "item": "alch_fire_essence",
+        "count": 1
+      },
+      {
+        "item": "alch_ember_crystal",
+        "count": 2
+      }
+    ],
+    "output": {
+      "item": "flame_bomb_master",
+      "count": 1
+    },
+    "cost": {
+      "coins": 0,
+      "gem": 5
+    },
+    "traits_inherit": 2
+  },
+  {
+    "id": "rcp_upgrade_trait_merge",
+    "name": "特性合成·灼烧奥义",
+    "kind": "upgrade",
+    "level": 60,
+    "synth_allowed": true,
+    "master_only": true,
+    "inputs": [
+      {
+        "item": "alch_ember_crystal",
+        "count": 1
+      },
+      {
+        "item": "alch_fire_essence",
+        "count": 1
+      },
+      {
+        "item": "ash_core",
+        "count": 1
+      }
+    ],
+    "output": {
+      "item": "flame_bomb_master",
+      "count": 1
+    },
+    "cost": {
+      "coins": 0,
+      "gem": 20
+    },
+    "traits_inherit": 2
+  }
+]

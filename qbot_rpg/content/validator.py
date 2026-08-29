@@ -540,6 +540,21 @@ class _Checker:
         if module_name == "checkin":
             from qbot_rpg.content.checkin_models import validate_checkins
             validate_checkins(self._modules, self)
+        # M8 炼金（m8_contract_数据与校验 §六）：recipe/traits/proficiency/slots 专项
+        # （鸭子类型模式 validate_xxx(modules, report)，同 npc/shop/quest/checkin 口径；
+        #  slots 定义来自 alchemy_settings）
+        if module_name == "recipe":
+            from qbot_rpg.content.alchemy_models import validate_recipes
+            validate_recipes(self._modules, self)
+        if module_name == "traits":
+            from qbot_rpg.content.alchemy_models import validate_traits
+            validate_traits(self._modules, self)
+        if module_name == "proficiency":
+            from qbot_rpg.content.alchemy_models import validate_proficiency
+            validate_proficiency(self._modules, self)
+        if module_name == "slots":
+            from qbot_rpg.content.alchemy_settings import validate_slots
+            validate_slots(self._modules, self)
         # 逐条目校验
         for idx, entry in self._iter_entries(module_name, data, mmeta):
             self._check_entry(module_name, idx, entry, mmeta)
@@ -558,6 +573,10 @@ class _Checker:
         # 超时类键不识别（load 警告+忽略）。泛型字段校验已在上方逐条目循环跑（R-1~R-5）。
         if module_name == "settings":
             self._check_settings_1g4(module_name, data)
+            # M8 settings.alchemy 段校验（m8_contract_数据与校验 §六 ALC-01~24 + §五）
+            # 鸭子类型纯函数；段缺失/空段默认值兜底（alchemy_settings P-6）
+            from qbot_rpg.content.alchemy_settings import check_settings_alchemy
+            check_settings_alchemy(data if isinstance(data, Mapping) else {}, self)
             # M5-02 message_prefix 段校验（【前缀】§九 L112-121 + 细化_3d 附·校验器行 L358 /
             # m5_shared_contract §1.4）：红拦 MP-1（enabled 非布尔 / format 非字符串 /
             # prefix_max_len 负数 / 段结构错误）+ 黄提示 MP-2（未知占位符 / format 空补全 /

@@ -47,6 +47,10 @@ NAMESPACES: Dict[str, Tuple[str, ...]] = {
     "shop_lib": ("shop",),
     "quest_lib": ("quest",),
     "checkin_lib": ("checkin",),
+    # M8 炼金（m8_contract_数据与校验 §一/§三）：recipe/proficiency 独立注册表
+    # （slots 无 id 收集不登记 namespace；equip_id 引用 item 走 item_lib）
+    "recipe_lib": ("recipe",),
+    "proficiency_lib": ("proficiency",),
 }
 
 # -------------------------------------------------------------------------------------
@@ -207,6 +211,200 @@ SETTINGS_FIELDS: Dict[str, FieldMeta] = {
     "currencies": FieldMeta(type="list", element=FieldMeta(type="obj", children=CURRENCY_ENTRY_CHILDREN)),
     "death_penalty": FieldMeta(type="obj", children=DEATH_PENALTY_CHILDREN),
 }
+
+# =============================================================================
+# M8 炼金字段扩展（m8_contract_数据与校验 §四/§五）：items 扩展 / slots 模块 / settings.alchemy 段。
+# 定义归属本文件（schema 之家），alchemy_settings 专项校验器单向 import 本表——
+# 防 field_meta↔alchemy_settings 循环依赖（G0 TC-03 静态 import 图铁律，函数级 import 亦成环）。
+# 收口裁决 2026-08-29：0B 路产出的字段定义迁移至此统一持有。
+# =============================================================================
+# 品质档键集（B1 拍板②：只允许 common/uncommon/rare/legendary；中文 普通/精良/史诗/传说）
+QUALITY_KEYS: Tuple[str, ...] = ("common", "uncommon", "rare", "legendary")
+QUALITY_KEYS_CN: Tuple[str, ...] = ("普通", "精良", "史诗", "传说")
+
+# 职业等级枚举（7 档称号；settings 段多处引用，ALC-11/ALC-24/energy_max/decompose_rate）
+JOB_TIER_NAMES: Tuple[str, ...] = ("见习", "正式", "精通", "专家", "大师", "宗师", "王")
+
+# ALC-11 catalyst_unlock_tier 枚举 = 职业等级 7 档 ∪ 默认值 "expert"（=专家 的英文别名）。
+# 【工程补白 P-9】契约 §五 默认列写 "expert"、枚举列写中文 7 档（R-07）——同一档，并入 "expert"。
+CATALYST_UNLOCK_TIER_ENUM: Tuple[str, ...] = JOB_TIER_NAMES + ("expert",)
+
+# 分解回收率档位（ALC-10：6 档、表自正式起、无见习——见习无分解 DEC-01/05）
+DECOMPOSE_TIER_NAMES: Tuple[str, ...] = ("正式", "精通", "专家", "大师", "宗师", "王")
+
+# ALC-01 mode 枚举（定稿 L410 / EDGE-04）
+MODE_VALUES: Tuple[str, ...] = ("full", "simple", "off")
+
+# ALC-06 pp_refresh 枚举（定稿 L415 / INH-09：仅 "会话重置"）
+PP_REFRESH_ENUM: Tuple[str, ...] = ("会话重置",)
+
+# ALC-22 宝石产出公式枚举（拍板①：默认平铺 flat；rate=⌊基础值×回收率⌋）
+DECOMPOSE_FORMULA_ENUM: Tuple[str, ...] = ("flat", "rate")
+
+# ALC-02 合法档位数：3/5/7 可配；4 = B1 固定键集默认档【工程补白 P-2】；0=不限制走兜底
+QUALITY_TIER_COUNTS: Tuple[int, ...] = (3, 4, 5, 7)
+
+# ALC-16 珠同名递减默认表（定稿 L420 / BEL-10；空/0=无递减）
+DEFAULT_GEM_DIMINISH: Tuple[Tuple[int, float], ...] = ((2, 0.5), (3, 0.25))
+
+# ALC-21 数量上限默认（int32 max，拍板⑤）
+MAX_QTY_DEFAULT: int = 2147483647
+
+# ALC-20/20' 战斗即时调合默认（定稿 L425）
+BATTLE_ALCHEMY_DEFAULT: Dict[str, object] = {"auto_use": True, "per_battle_limit": 1}
+
+# 8 元素注册表（地水火风雷晶月无；items.elements / REC-05 element_req 引用，定稿 L387）
+ALCHEMY_ELEMENTS: Tuple[str, ...] = ("地", "水", "火", "风", "雷", "晶", "月", "无")
+
+# gem.* 中文键（ALC-14/ALC-23/ALC-15，键名照契约原样含点号）
+GEM_DECOMPOSE_KEY = "gem.分解"          # ALC-13（拍板②键集）
+GEM_DUPLICATE_KEY = "gem.复制"          # ALC-14（复制费基准率，可浮点，拍板④）
+GEM_COST_INT_KEYS: Tuple[str, ...] = ("gem.成品合成", "gem.配方合成", "gem.特性合成", "gem.珠升阶")
+GEM_EXTRA_KEY = "gem.复制额外"           # ALC-23（复制额外消耗，拍板④）
+GEM_EXTRA_ALIAS = "copy_extra_cost"      # ALC-23 别名【工程补白 P-7】
+GEM_SECRET_KEY = "gem.秘钥"              # ALC-15（已砍，遗留键 → W 提示）
+GEM_DECOMPOSE_FORMULA_KEY = "gem.decompose_formula"  # ALC-22【工程补白键，拍板①】
+
+# 中文段键（ALC-19/ALC-20）
+BATTLE_ITEM_KEY = "战斗道具"
+BATTLE_ALCHEMY_KEY = "战斗即时调合"
+
+# items.rarity 键名 3 档（契约 §4.1 中文 普通/稀有/金色）
+ITEM_RARITY_KEYS: Tuple[str, ...] = ("普通", "稀有", "金色")
+
+# items.json 炼金扩展字段（契约 §四 4.1）
+ITEMS_ALCHEMY_FIELDS: Dict[str, FieldMeta] = {
+    # type 补 装饰珠 值（另 触媒 type=触媒 供 catalyst 过滤下拉）；seed 可种植标记（定稿 L381/L492）
+    # —— 既有 items_fields 的 type 为 str 不设枚举（防误拦既有内容包），此处同口径
+    "type": FieldMeta(type="str"),
+    # quality 珠等级=品质档（拍板②：common/uncommon/rare/legendary ↔ 普通/精良/史诗/传说，L257/L380）
+    "quality": FieldMeta(type="enum", enum=QUALITY_KEYS, default="common"),
+    # elements 元素属性值（8 元素 地水火风雷晶月无，投料累计判定 element_req，L380/L152）
+    "elements": FieldMeta(type="obj", children={
+        el: FieldMeta(type="number", range_min=0) for el in ALCHEMY_ELEMENTS
+    }),
+    # traits 继承特性 ID 集（炼金珠/成品独有；标准版恒空 TSC-03，L380/L117）。
+    # —— 只用 str 结构校验，不设 ref_target：既有 M2 内容包 items.traits 为旧语义
+    #    （未知字段放行），登记 ref 会引发泛型 R-4 强校验存量 → 大量误拦；
+    #    深引用存在性校验归批7 装饰珠/镶嵌引擎运行时（收口裁决 2026-08-29）。
+    "traits": FieldMeta(type="list", element=FieldMeta(type="str")),
+    # awaken 觉醒标记（✨素材投料，宗师；并入 traits 效果表，L380/L204）
+    "awaken": FieldMeta(type="bool", default=False),
+    # rarity 普通/稀有/金色（素材用；3 档默认，契约 §4.1 中文）
+    "rarity": FieldMeta(type="enum", enum=ITEM_RARITY_KEYS),
+    # base_effects 珠基础效果，固定数值（标准珠=只有这个；炼金珠 base_effects+traits 两套词条，L265/L381）
+    "base_effects": FieldMeta(type="obj"),
+    # seed 可种植标记（/种植 种子，批10A，L381/L392）
+    "seed": FieldMeta(type="bool", default=False),
+}
+
+# slots.json 模块字段（契约 §四 4.2）
+# 【工程补白 P-4】slots = M8 新增注册模块，与 EQP-04 部位定义形态（core/equipment.py L134
+# {slots:{id:def}}）是不同数据空间：slots.json 条目形态 = {equip_id, slots:[{slot_level}]}
+# （定稿 L258/L260：1=只装普通 / 2=精良及以下 / 3=全部含传说；槽位数 1-3【工程补白 SOCK-01】）。
+SLOTS_FIELD_DEFS: Dict[str, FieldMeta] = {
+    # equip_id 引用 items 或 equipment（共享 item_lib；泛型 ref 只能单一 kind →
+    # 用 str + validate_slots 跨 items∪equipment 表查，防 equipment 引用误拦）
+    # 【收口裁决 2026-08-29】
+    "equip_id": FieldMeta(type="str", required=True),
+    "slots": FieldMeta(type="list", element=FieldMeta(type="obj", children={
+        "slot_level": FieldMeta(type="int", range_min=1, range_max=3),
+    })),
+}
+
+
+def slots_module_meta() -> ModuleMeta:
+    """slots 模块 ModuleMeta（entry_type=list；equip_id 引用 items∪equipment）。
+
+    注：namespace 缺省（模块内唯一）；equip_id 全局唯一由 validate_slots 专项保证。
+    """
+    return ModuleMeta(entry_type="list", fields=SLOTS_FIELD_DEFS, kind="slots")
+
+
+# settings.alchemy 段 FieldMeta（契约 §五 全字段表）
+ALCHEMY_SETTINGS_FIELD_DEFS: Dict[str, FieldMeta] = {
+    # ALC-01（L410）
+    "mode": FieldMeta(type="enum", enum=MODE_VALUES, default="full"),
+    # ALC-02（L411/QLT-02/03/05）值形态 [lo,hi] 或 {min,max}【工程补白 P-1】
+    "quality_tiers": FieldMeta(type="obj"),
+    # ALC-03（L412/QLT-04）
+    "quality_coef": FieldMeta(type="obj"),
+    # ALC-04（L413/QLT-13）
+    "chain_map": FieldMeta(type="obj"),
+    # ALC-05（L414/TSC-14）
+    "pp_cost": FieldMeta(type="obj", children={
+        "normal": FieldMeta(type="int", range_min=1),
+        "super": FieldMeta(type="int", range_min=1),
+    }),
+    # ALC-06（L415/INH-09）
+    "pp_refresh": FieldMeta(type="str", default="会话重置"),
+    # ALC-07（R-08/L416 注）
+    "energy_enabled": FieldMeta(type="bool", default=False),
+    # ALC-08（L416）
+    "energy_max": FieldMeta(type="obj"),
+    # ALC-09（L417/LVL-09）
+    "energy_regen_sec": FieldMeta(type="int", range_min=0, default=1800),
+    "energy_regen_sec_safe": FieldMeta(type="int", range_min=0, default=900),  # 【工程补白键】
+    # ALC-10（L418/DEC-02/05）
+    "decompose_rate": FieldMeta(type="obj"),
+    # ALC-11（R-07；默认 expert = 专家 英文别名【工程补白 P-9】）
+    "catalyst_unlock_tier": FieldMeta(
+        type="enum", enum=CATALYST_UNLOCK_TIER_ENUM, default="expert",
+    ),
+    # ALC-12（批5B）
+    "catalyst_consume": FieldMeta(type="bool", default=True),
+    # ALC-13（L419/拍板②）
+    GEM_DECOMPOSE_KEY: FieldMeta(type="obj"),
+    # ALC-14（L419/拍板④；复制可浮点）
+    GEM_DUPLICATE_KEY: FieldMeta(type="number", range_min=0, default=0.2),
+    "gem.成品合成": FieldMeta(type="int", range_min=0, default=10),
+    "gem.配方合成": FieldMeta(type="int", range_min=0, default=5),
+    "gem.特性合成": FieldMeta(type="int", range_min=0, default=20),
+    "gem.珠升阶": FieldMeta(type="int", range_min=0, default=10),
+    # ALC-23（拍板④/DUP-03）双键名【工程补白 P-7】
+    GEM_EXTRA_KEY: FieldMeta(type="int", range_min=0, default=0),
+    GEM_EXTRA_ALIAS: FieldMeta(type="int", range_min=0, default=0),
+    # ALC-22（拍板①/DEC-04）【工程补白键】
+    GEM_DECOMPOSE_FORMULA_KEY: FieldMeta(type="enum", enum=DECOMPOSE_FORMULA_ENUM, default="flat"),
+    # ALC-16（L420/BEL-10）
+    "gem_diminish": FieldMeta(type="list", element=FieldMeta(type="obj", children={
+        "n": FieldMeta(type="int", range_min=2),
+        "mult": FieldMeta(type="number", range_min=0.0, range_max=1.0),
+    })),
+    # ALC-17（L421/EXP-03）
+    "synth_exp": FieldMeta(type="str", default="配方等级×1"),
+    # ALC-18（L422-423/SP-01/03）
+    "sp_per_level": FieldMeta(type="int", range_min=0, default=1),
+    "sp_panel": FieldMeta(type="list", element=FieldMeta(type="obj", children={
+        "id": FieldMeta(type="str"),
+        "name": FieldMeta(type="str"),
+        "cost": FieldMeta(type="int", range_min=1),
+        "repeatable": FieldMeta(type="bool"),
+        "max_repeat": FieldMeta(type="int", range_min=1),
+        "desc": FieldMeta(type="str"),
+    })),
+    # ALC-19（L424/BEL-11）
+    BATTLE_ITEM_KEY: FieldMeta(type="obj", children={
+        "强度公式": FieldMeta(type="str"),
+        "珠触发上限": FieldMeta(type="int", range_min=1),
+    }),
+    # ALC-20 / ALC-20'（L425）
+    BATTLE_ALCHEMY_KEY: FieldMeta(type="obj", children={
+        "auto_use": FieldMeta(type="bool", default=True),
+        "per_battle_limit": FieldMeta(type="int", range_min=1, default=1),
+    }),
+    # ALC-21（拍板⑤）
+    "max_qty": FieldMeta(type="int", range_min=1, default=MAX_QTY_DEFAULT),
+    # ALC-24（L34/LVL-06）
+    "job_tier_map": FieldMeta(type="obj"),
+}
+
+
+def alchemy_settings_meta() -> FieldMeta:
+    """settings.alchemy 段 FieldMeta（type=obj + 全字段 children；合并进 SETTINGS_FIELDS）。"""
+    return FieldMeta(type="obj", children=ALCHEMY_SETTINGS_FIELD_DEFS)
+
+
 # 默认模板货币键空间（F-02 引用存在性兜底：settings 未配 currencies 时按此默认，3h §5.1）
 DEFAULT_CURRENCY_IDS: Tuple[str, ...] = ("coins", "diamond")
 
@@ -329,6 +527,12 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "effects": F_EFFECTS,
         "require_status": FieldMeta(type="ref", ref_target="status"),
         "apply_status": FieldMeta(type="ref", ref_target="status"),
+        # M8 炼金特性（m8_contract_数据与校验 §二 TSC-04~10）：增量扩展 4 键
+        # （保留既有 8 键兼容旧内容包；深结构校验由 alchemy_models.validate_traits 专项全权）
+        "rarity": FieldMeta(type="enum", enum=("normal", "super")),  # super=超特性（金色）
+        "group": FieldMeta(type="str"),                              # 互斥组（组内最多 1 项）
+        "repeatable": FieldMeta(type="bool"),                        # 是否可重复继承
+        "source": FieldMeta(type="enum", enum=("素材", "成品", "金色素材")),  # 可继承池分类
     }
     enemies_fields: Dict[str, FieldMeta] = {
         # ---- 八段：基础（细化_1e F01-F06 / m2_shared_contract 第一节）----
@@ -403,6 +607,77 @@ def _module_table() -> Dict[str, ModuleMeta]:
         ),
     }
 
+    # M8 炼金（m8_contract_数据与校验 §一/§三/§四 4.2）：recipe/proficiency/slots 模块
+    # + items 扩展字段 + settings.alchemy 段。recipe/proficiency 字段宽松登记防泛型误拦
+    # （深结构校验由 alchemy_models 专项全权）；items/slots/settings.alchemy 定义来自
+    # alchemy_settings 模块（0B 路产出，收口接线）——延迟导入防 field_meta↔alchemy_settings 循环依赖。
+    recipe_fields: Dict[str, FieldMeta] = {
+        "id": F_ID, "name": F_NAME,
+        # kind 三类：craft 合成标准版 / combine 素材合成 / upgrade N 入→1 出（定稿 L354/L370）
+        "kind": FieldMeta(type="enum", enum=("craft", "combine", "upgrade")),
+        "level": FieldMeta(type="int", range_min=1, range_max=99),   # L354 准入判定
+        "synth_allowed": FieldMeta(type="bool"),                     # L354/L505 深度绕过提示
+        "master_only": FieldMeta(type="bool"),                       # L357 大师独占
+        # materials（craft/combine）与 inputs/output（upgrade）互斥，双 schema 由专项 REC-11 判定
+        "materials": FieldMeta(type="list", element=FieldMeta(type="obj", children={
+            "id": FieldMeta(type="str"), "count": FieldMeta(type="int", range_min=1),
+        })),
+        "inputs": FieldMeta(type="list", element=FieldMeta(type="obj", children={
+            "item": FieldMeta(type="str"), "count": FieldMeta(type="int", range_min=1),
+        })),
+        "output": FieldMeta(type="obj", children={
+            "item": FieldMeta(type="str"), "count": FieldMeta(type="int", range_min=1),
+        }),
+        "cost": FieldMeta(type="obj", children={
+            "coins": FieldMeta(type="int", range_min=0),
+            "gem": FieldMeta(type="int", range_min=0),
+        }),  # L355（复制费基准=cost.coins，拍板④）
+        "slots": FieldMeta(type="int", range_min=2, range_max=10),   # L355
+        "element_req": FieldMeta(type="obj"),                        # L355/L152（元素键由专项 REC-05）
+        "effects": FieldMeta(type="list", element=FieldMeta(type="str")),  # 双形态解析归专项 REC-06
+        "traits_inherit": FieldMeta(type="int", range_min=1, range_max=3),  # L356
+        "catalyst": FieldMeta(type="list", element=FieldMeta(type="str")),  # L356/L492
+        "combine_from": FieldMeta(type="list", element=FieldMeta(type="str")),  # L357/L390
+        "evolve_to": FieldMeta(type="obj", children={
+            "id": FieldMeta(type="str"),
+            "condition": FieldMeta(type="obj", children={
+                "count": FieldMeta(type="int", range_min=1),
+                "source": FieldMeta(type="str"),
+            }),
+        }),  # L357/L200 进化线
+        "pp_budget": FieldMeta(type="int", range_min=0),             # 【工程补白】L135/INH-09
+    }
+    proficiency_fields: Dict[str, FieldMeta] = {
+        "id": F_ID,
+        "tier_names": FieldMeta(type="list", element=FieldMeta(type="str")),  # 细化_2c5a §5.2
+        "job_rank_levels": FieldMeta(type="list", element=FieldMeta(type="int", range_min=0)),
+        "exp_sources": FieldMeta(type="obj"),
+        "sp_per_level": FieldMeta(type="int", range_min=0),
+        "sp_panel": FieldMeta(type="list", element=FieldMeta(type="obj", children={
+            "id": FieldMeta(type="str"), "name": FieldMeta(type="str"),
+            "cost": FieldMeta(type="int", range_min=1),
+            "repeatable": FieldMeta(type="bool"),
+            "max_repeat": FieldMeta(type="int", range_min=1),
+            "desc": FieldMeta(type="str"),
+        })),
+        "energy": FieldMeta(type="obj", children={
+            "enabled": FieldMeta(type="bool"),
+            "max_by_tier": FieldMeta(type="list", element=FieldMeta(type="int", range_min=0)),
+            "regen_sec": FieldMeta(type="int", range_min=0),
+        }),
+        "job_tier_map": FieldMeta(type="obj"),
+        "titles": FieldMeta(type="list", element=FieldMeta(type="obj", children={
+            "id": FieldMeta(type="str"), "name": FieldMeta(type="str"),
+            "icon": FieldMeta(type="str"), "source": FieldMeta(type="str"),
+            "desc": FieldMeta(type="str"),
+        })),
+    }
+    # M8 炼金（m8_contract_数据与校验 §四/§五）：items 扩展 + settings.alchemy 段 + slots 模块
+    # 字段定义在本文件头部（schema 之家单向持有，alchemy_settings 专项 import 本表——
+    # 防 field_meta↔alchemy_settings 循环依赖，G0 TC-03）
+    items_fields.update(ITEMS_ALCHEMY_FIELDS)
+    SETTINGS_FIELDS["alchemy"] = alchemy_settings_meta()
+
     return {
         "manifest": ModuleMeta(entry_type="object", fields=manifest_fields),
         "effects": ModuleMeta(entry_type="list", fields=effects_fields, kind="effect", namespace="effect_family"),
@@ -416,6 +691,12 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "equipment": ModuleMeta(entry_type="list", fields=equipment_fields, kind="equipment",
                                 namespace="item_lib", mutex_field="excludes"),
         "traits": ModuleMeta(entry_type="list", fields=traits_fields, kind="trait", namespace="trait_lib"),
+        # M8 炼金（m8_contract_数据与校验 §一/§三/§四 4.2）：recipe/proficiency 新增登记四件套；
+        # slots 由 alchemy_settings.slots_module_meta() 提供（kind=slots，与 loader 注册表同名）
+        "recipe": ModuleMeta(entry_type="list", fields=recipe_fields, kind="recipe", namespace="recipe_lib"),
+        "proficiency": ModuleMeta(entry_type="list", fields=proficiency_fields,
+                                  kind="proficiency", namespace="proficiency_lib"),
+        "slots": slots_module_meta(),
         "enemies": ModuleMeta(entry_type="list", fields=enemies_fields, kind="enemy", namespace="enemy_lib"),
         "maps": ModuleMeta(entry_type="list", fields=maps_fields, kind="map", namespace="map_lib"),
         # M3 副本（m3_shared_contract §4）：新结构由 dungeon_models.validate_dungeons 专项全权，

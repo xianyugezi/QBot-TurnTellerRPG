@@ -1,0 +1,122 @@
+[
+  {
+    "id": "alchemy",
+    "tier_names": [
+      "见习",
+      "正式",
+      "精通",
+      "专家",
+      "大师",
+      "宗师",
+      "王"
+    ],
+    "job_rank_levels": [
+      0,
+      100,
+      300,
+      700,
+      1500,
+      3000,
+      6000
+    ],
+    "exp_sources": {
+      "craft": 1.0,
+      "gather": 1.0,
+      "combat": 1.0
+    },
+    "sp_per_level": 1,
+    "sp_panel": [
+      {
+        "id": "quality_cap_10",
+        "name": "品质上限+10",
+        "cost": 1,
+        "repeatable": true,
+        "max_repeat": 5,
+        "desc": "成品品质上限提升 10"
+      },
+      {
+        "id": "input_times_1",
+        "name": "投入次数+1",
+        "cost": 1,
+        "repeatable": true,
+        "max_repeat": 3,
+        "desc": "调合投入次数+1"
+      },
+      {
+        "id": "gather_qty_1",
+        "name": "采集量+1",
+        "cost": 1,
+        "repeatable": false,
+        "max_repeat": 1,
+        "desc": "每次采集产出+1"
+      },
+      {
+        "id": "chain_cap_1",
+        "name": "连锁上限+1",
+        "cost": 1,
+        "repeatable": false,
+        "max_repeat": 1,
+        "desc": "连锁段数上限+1"
+      }
+    ],
+    "energy": {
+      "enabled": false,
+      "max_by_tier": [
+        5,
+        8,
+        10,
+        12,
+        15,
+        18,
+        20
+      ],
+      "regen_sec": 1800
+    },
+    "job_tier_map": {
+      "见习": [
+        1,
+        5
+      ],
+      "正式": [
+        6,
+        15
+      ],
+      "精通": [
+        16,
+        25
+      ],
+      "专家": [
+        26,
+        35
+      ],
+      "大师": [
+        36,
+        45
+      ],
+      "宗师": [
+        46,
+        60
+      ],
+      "王": [
+        61,
+        99
+      ]
+    },
+    "titles": [
+      {
+        "id": "contest_champion",
+        "name": "炼金竞赛冠军",
+        "icon": "冠",
+        "source": "contest",
+        "desc": "在炼金竞赛中夺得冠军"
+      },
+      {
+        "id": "achievement_100_craft",
+        "name": "百炼成钢",
+        "icon": "炼",
+        "source": "achievement",
+        "desc": "累计炼成 100 件炼金产物"
+      }
+    ]
+  }
+]

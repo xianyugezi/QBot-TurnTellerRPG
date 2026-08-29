@@ -702,20 +702,53 @@ def _gm_commands() -> set:
         return set()
 
 
+def _gem_wallet_of(settings: Any) -> Any:
+    """宝石货币引擎（GemWallet，惰性 import 防环；M8 批12 收口装配注入）。"""
+    from qbot_rpg.core.gem_wallet import GemWallet  # noqa: PLC0415
+    try:
+        return GemWallet(settings=settings if isinstance(settings, Mapping) else None)
+    except Exception:  # noqa: BLE001 —— 构造失败兜底 None，指令壳自兜底
+        return None
+
+
+def _prof_engine_of_ctx(settings: Any) -> Any:
+    """职业熟练度引擎（ProficiencyEngine，惰性 import 防环；M8 批12 收口装配注入）。"""
+    from qbot_rpg.core.proficiency import ProficiencyEngine  # noqa: PLC0415
+    try:
+        return ProficiencyEngine(settings=settings if isinstance(settings, Mapping) else None)
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def _inventory_hooks(ctx: MutableMapping[str, Any]) -> dict:
     """背包入包/扣物/计数 hook（add_item/remove_item/count_item，reward.py/shop.py 契约）。
 
-    入参 ctx: 可变 ctx（就地读写 ctx["inventory"] 计数映射）。
+    入参 ctx: 可变 ctx（就地读写 ctx["inventory"] 计数映射 + ctx["inventory_instances"]）。
     出参 Dict[str, Callable] 三个 hook。核心逻辑: 闭包操作 ctx 内 {item_id: count}
     映射——add_item(item_id, count, bound)->bool 累加；remove_item(item_id, count)->bool
     校验够数扣减（0 移除）；count_item(item_id)->int 读取。
+
+    M8 批12 验收收口（落档缺口修复）：① add/remove 就地改背包时置 ctx["_m8_dirty_inventory"]=True
+    （runner 落档前据此合并回 ctx["player"]）；② add_item 支持 quality/traits 关键字
+    （SettleEngine._produce / 炼金产出实例）→ 追加到 ctx["inventory_instances"]（带品质/特性
+    实例通道，Player.inventory 保留实例属性，落档 merge 并入）。
     """
     raw_inv = ctx.get("inventory")
     inv: Dict[str, int] = raw_inv if isinstance(raw_inv, dict) else {}
     ctx["inventory"] = inv
+    insts_raw = ctx.get("inventory_instances")
+    if isinstance(insts_raw, list):
+        insts: Any = insts_raw
+    else:
+        insts = []
+        ctx["inventory_instances"] = insts
 
-    def add_item(item_id: str, count: int = 1, bound: bool = False) -> bool:
-        """入包：计数映射累加 count；非法 count → False。"""
+    def _mark() -> None:
+        ctx["_m8_dirty_inventory"] = True
+
+    def add_item(item_id: str, count: int = 1, bound: bool = False,
+                 **kw: Any) -> bool:
+        """入包：计数映射累加 count；带 quality/traits → 实例通道；非法 count → False。"""
         try:
             c = int(count)
         except (TypeError, ValueError):
@@ -724,6 +757,16 @@ def _inventory_hooks(ctx: MutableMapping[str, Any]) -> dict:
             return False
         key = str(item_id)
         inv[key] = inv.get(key, 0) + c
+        # M8 炼金产出实例（quality/traits 关键字）→ 追加实例通道（保留品质/特性落档）
+        if kw and (kw.get("quality") is not None or kw.get("traits")):
+            insts.append({
+                "item_id": key,
+                "count": c,
+                "quality": kw.get("quality") or "normal",
+                "bound": bool(bound),
+                "traits": tuple(kw.get("traits") or ()),
+            })
+        _mark()
         return True
 
     def remove_item(item_id: str, count: int = 1) -> bool:
@@ -742,6 +785,7 @@ def _inventory_hooks(ctx: MutableMapping[str, Any]) -> dict:
             inv.pop(key, None)
         else:
             inv[key] = cur - c
+        _mark()
         return True
 
     def count_item(item_id: str) -> int:
@@ -827,8 +871,10 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
         "battle_snapshot": None,          # 战斗接线注入位（即时调合 battle_alchemy_used）
         "battle_alchemy_engine": None,    # 战斗接线注入位（BattleAlchemyEngine）
         "upgrade_unlocks": {},            # 玩家级解锁表（配方合成/进化持久化，装配层回填）
-        "wallet": None,                   # GemWallet 注入位（分解/宝石入账；指令壳自兜底）
-        "prof_engine": None,              # ProficiencyEngine 注入位（tier/SP；指令壳自兜底）
+        # M8 批12 验收收口：wallet/prof_engine 实际构造注入（惰性 import 防环，
+        # cmd_decompose/cmd_skill_panel 等真实引擎消费；settings 单源注入）
+        "wallet": _gem_wallet_of(settings),
+        "prof_engine": _prof_engine_of_ctx(settings),
         "resolve_player_name": None,      # /协力 玩家名 hook 注入位
         "same_group": None,               # /协力 同群校验注入位
     }
@@ -874,8 +920,11 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
             "longline_counters": dict(player.longline_counters)
                 if isinstance(player.longline_counters, Mapping) else {},
             "event_counts": _ps_init(ps, "event_counts", {}),
-            "currencies": dict(player.currencies)
-                if isinstance(player.currencies, Mapping) else {},
+            # M8 批12 验收收口裁决（落档缺口修复）：ctx["currencies"] 直接引用
+            # player.currencies（frozen dataclass 可变子结构，就地改 = 改 player → 落档保留）。
+            # 原 dict() 拷贝导致 M8/reward 宝石金币入账只改副本、Player 实例落档路径不回写丢失。
+            "currencies": player.currencies
+                if isinstance(player.currencies, MutableMapping) else {},
             "personal_buys": _ps_init(ps, "personal_buys", {}),
             "checkin_state": _ps_init(ps, "checkin", {}),
             "shortcuts": _ps_init(ps, "shortcuts", {}),

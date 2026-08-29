@@ -410,6 +410,33 @@ def _make_handler(spec: Any, parsed: ParsedCommand, ctx: MutableMapping[str, Any
         # 已注册玩家每次指令全量写回（RW-3 单事务 upsert，幂等安全）；新注册 dict → 转换。
         p = ctx.get("player")
         if isinstance(p, Player):
+            # M8 批12 验收收口（落档缺口修复）：背包 dirty（_inventory_hooks 标记）→
+            # 计数映射 merge 回 player.inventory + inventory_instances（炼金带品质/特性
+            # 产出实例）并入。currencies 已由 make_context 引用 player.currencies 就地保留。
+            if ctx.get("_m8_dirty_inventory"):
+                from dataclasses import replace as _dcreplace  # noqa: PLC0415
+                from qbot_rpg.commands.shop_tx import _ctx_inventory_to_player  # noqa: PLC0415
+                from qbot_rpg.data.item import ItemInstance  # noqa: PLC0415
+
+                new_inv = _ctx_inventory_to_player(ctx.get("inventory"), p.inventory,
+                                                   ctx.get("items"))
+                insts = ctx.get("inventory_instances")
+                if isinstance(insts, list):
+                    for it in insts:
+                        if not isinstance(it, Mapping):
+                            continue
+                        try:
+                            new_inv = new_inv + (ItemInstance(
+                                item_id=str(it.get("item_id") or ""),
+                                name=str(it.get("name") or ""),
+                                count=int(it.get("count") or 1),
+                                quality=str(it.get("quality") or "normal"),
+                                bound=bool(it.get("bound", False)),
+                                traits=tuple(it.get("traits") or ()),
+                            ),)
+                        except (TypeError, ValueError):
+                            continue
+                p = _dcreplace(p, inventory=new_inv)
             await tx.upsert_player(p)
         elif isinstance(p, dict):
             qid = str(ctx.get("qq_id") or ctx.get("user_id") or "")

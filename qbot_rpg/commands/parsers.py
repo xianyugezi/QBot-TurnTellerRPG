@@ -154,7 +154,11 @@ DEFAULT_FREE_ARG_COMMANDS = frozenset({"背包筛选"})
 DEFAULT_GM_COMMANDS = frozenset({"重载", "封禁", "日志", "编辑", "设置"})
 
 # 旧空格数量格式兼容回退适用指令（规范 L238-239；调用方可覆盖）
-DEFAULT_QUANTITY_COMMANDS = frozenset({"使用", "购买", "合成", "投料", "出售", "炼金", "调合"})
+# M8 批13 审查收口（P2-5）：加「复制」——契约 §3.3 要求 /复制 兼容 `空格 数量` 旧式
+# （`/复制 魔力药水 5`），`*` 批量语法不依赖本集合（parsers L532-548 全指令生效）。
+DEFAULT_QUANTITY_COMMANDS = frozenset(
+    {"使用", "购买", "合成", "投料", "出售", "炼金", "调合", "复制"}
+)
 
 # 禁止 `*` 数量的指令（规范 L34：/强化 禁止 *，批量=连点爆装风险；+N 是等级标记）
 DEFAULT_NO_QUANTITY_COMMANDS = frozenset({"强化"})

@@ -1807,8 +1807,12 @@ async def cmd_unmount(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         si = int(slot_text)
     except (TypeError, ValueError):
         return f"❌ 槽位无效：{slot_text}"
-    # 用户侧槽位 1 起（SOCK-03 工程补白：/拆珠 长剑 1 = 首槽），转引擎 0 起
-    engine_si = si - 1 if si >= 1 else si
+    # M8 批13 审查收口（P2-6 槽位 0/负值透传引擎）：用户侧槽位 1 起（SOCK-03 工程补白），
+    # 0 或负值无意义（0 会被当引擎首槽、负值越界访问）→ 明确拒绝
+    if si < 1:
+        return "❌ 槽位从 1 开始"
+    # 转引擎 0 起
+    engine_si = si - 1
     js = JewelSystem(settings=_settings_of(ctx))
     player = _qid_of(ctx) or "player"
     res = js.unmount(ctx, equip_id, engine_si, player)
@@ -2520,6 +2524,12 @@ async def cmd_challenge(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     recipe = _find_recipe(ctx, target)
     if recipe is None:
         return f"❌ 配方不存在：{target}"
+    # M8 批13 审查收口（P2-2 挑战配方一致性二义）：/挑战 目标配方须与当前深度会话
+    # 配方一致——否则会话 snap["recipe_id"]（深会话原配方）与 challenge_recipe_id
+    # 两 id 并存，/确认 挑战结算口径二义（GU-48 挑战从深度会话发起，语义即同配方）。
+    deep_recipe_id = str(snap.get("recipe_id") or "")
+    if deep_recipe_id and str(recipe.get("id") or "") != deep_recipe_id:
+        return "❌ 挑战配方与当前深度调合配方不一致"
     # GU-49 材料按 配方×2 全量（原子全拒+差异，零副作用；扣减后记 material_paid）
     need = _challenge_materials_2x(recipe)
     if not need:
@@ -2802,21 +2812,25 @@ async def cmd_instant(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     if recipe is None:
         return f"❌ 配方不存在：{target}"
 
-    # GU-52 能量 ≥1 格（energy_enabled=true 时 consume_energy，不足拒；R-08 关闭直通不扣）
-    if _energy_enabled(settings):
-        econs = engine.consume_energy(player, ctx)
-        if not econs.get("ok"):
-            return str(econs.get("message") or "能量不足")
-
-    # GU-53 素材全量校验（carry_ok：不足全拒+差异，不部分执行）
+    # GU-53 素材全量校验（carry_ok：不足全拒+差异，不部分执行）——前置到能量消耗之前
+    # （M8 批13 审查收口 P1-1：原能量先扣后校验，素材不足/限次拒绝时能量已扣=失败路径
+    # 非零副作用，违反 ATO-01「全量原子校验/任一步失败零副作用」）
     carry = engine.carry_ok(ctx, recipe)
     if not carry.get("ok"):
         return _instant_carry_error(carry, ctx)
 
-    # GU-54 限次（battle_alchemy_used < per_battle_limit；中断恢复不清零 BA-02）
+    # GU-54 限次（battle_alchemy_used < per_battle_limit；中断恢复不清零 BA-02）——
+    # 纯读快照，前置到消耗前更安全
     used = _battle_alchemy_used_of(snap)
     if used >= _instant_per_battle_limit(settings):
         return "本场战斗已使用过即时调合（限 1 次/场）"
+
+    # GU-52 能量 ≥1 格（energy_enabled=true 时 consume_energy，不足拒；R-08 关闭直通不扣）
+    # ——放在所有只读校验之后、实际执行之前（消耗收尾）
+    if _energy_enabled(settings):
+        econs = engine.consume_energy(player, ctx)
+        if not econs.get("ok"):
+            return str(econs.get("message") or "能量不足")
 
     # 一步出结果（BA-07/08）：auto_use 默认 true → use_fn 当场结算；false/无 use_fn → 入包
     auto_use = _instant_auto_use(settings)

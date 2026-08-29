@@ -33,6 +33,11 @@ qbot_rpg/commands/alchemy_commands.py）——本批只注册 /合成。
   炼金产出计数落点 = player 长线计数 produce_counts（/确认 炼金结算递增，/合成 不计数 CASC-05）；
   首次深度解锁公告标记 = player.flags.deep_unlock_announced（工程补白）。批10 /种植 /收获 /
   雇工 /收取——本模块作为这些指令壳的统一落点文件，后续批次追加 cmd_xxx + register 项即可。
+  **批9 本批追加**：/即时调合（INSTANT_CMD，cmd_instant——战斗内一步出结果子流程，守卫
+  GU-50~54 战斗中/大师/能量/素材/限次，消费兄弟路 core/alchemy_battle.py BattleAlchemyEngine
+  鸭子（ctx["battle_alchemy_engine"]，不 import），battle_alchemy_used 写回 ctx["battle_snapshot"]
+  顶层键，use_fn 走 ctx["use_battle_item"]，依据 docs/m8_contract_指令契约.md §16 + 战斗资源 §三
+  BA-01~11，工程补白见 cmd_instant）。
 
 依据：
   - docs/m8_contract_指令契约.md §1 /合成（P-01 参数解析 / GU-01~04 /
@@ -112,6 +117,7 @@ __all__ = [
     "REGISTER_CMD", "COPY_CMD",
     "DEEP_CMD", "EVOLVE_CMD", "CORE_CMD", "BUFF_CMD",
     "CHALLENGE_CMD", "CODEX_CMD", "SKILL_PANEL_CMD", "TUTORIAL_CMD",
+    "INSTANT_CMD",
     # 固定子词常量
     "AUTO_SUBWORD", "FEED_APPEND_SUBWORD", "CATALYST_KV_KEY",
     "SP_UNLOCK_KV_KEY",
@@ -124,6 +130,7 @@ __all__ = [
     "cmd_register", "cmd_copy",
     "cmd_deep", "cmd_evolve", "cmd_core", "cmd_buff",
     "cmd_challenge", "cmd_codex", "cmd_skill_panel", "cmd_tutorial",
+    "cmd_instant",
     # 装配
     "register_alchemy_commands",
 ]
@@ -162,6 +169,7 @@ CHALLENGE_CMD = "挑战"         # GU-47~49/F-16/M-16：宗师+深度会话中�
 CODEX_CMD = "图鉴"            # GU-58/F-19/M-19：无门槛查看态，图鉴成长→王称号（TTL-01）
 SKILL_PANEL_CMD = "技能面板"    # GU-58/F-19/M-19：无门槛查看态，SP 自选解锁（SP-02~05）
 TUTORIAL_CMD = "教学"         # GU-64/F-23/M-23：无门槛，教学目录/机制名/升大师 6 预览
+INSTANT_CMD = "即时调合"      # GU-50~54/F-17/M-17：战斗内一步出结果（批9 路9B，限 1 次/场）
 
 # 固定子词（对齐 parsers.py FIXED_SUBWORDS：自动/追加 已在常量内，壳层显式引用防字面量漂移）
 AUTO_SUBWORD = "自动"
@@ -2581,6 +2589,188 @@ async def cmd_tutorial(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 
 
 # ---------------------------------------------------------------------------
+# /即时调合（批9 路9B · 战斗内一步出结果，docs/m8_contract_指令契约.md §16 GU-50~54/F-17/M-17
+#   + docs/m8_contract_战斗资源.md §三 BA-01~11；引擎 = 兄弟路 core/alchemy_battle.py
+#   BattleAlchemyEngine 鸭子，本壳只鸭子消费不 import）
+# ---------------------------------------------------------------------------
+
+def _instant_config(settings: Any) -> Mapping[str, Any]:
+    """settings.alchemy.战斗即时调合 段（L425：{auto_use:true, per_battle_limit:1}；缺段兜底）。"""
+    alch = settings.get("alchemy") if isinstance(settings, Mapping) else None
+    cfg = alch.get("战斗即时调合") if isinstance(alch, Mapping) else None
+    return cfg if isinstance(cfg, Mapping) else {}
+
+
+def _instant_per_battle_limit(settings: Any) -> int:
+    """战斗即时调合.per_battle_limit（GU-54/BA-02/ALC-20′：默认 1，正整数 ≥1 可配）。"""
+    raw = _instant_config(settings).get("per_battle_limit", 1)
+    try:
+        v = int(raw)
+    except (TypeError, ValueError):
+        v = 1
+    return v if v >= 1 else 1
+
+
+def _instant_auto_use(settings: Any) -> bool:
+    """战斗即时调合.auto_use（BA-07/ALC-20：默认 true=当场自动使用）。"""
+    raw = _instant_config(settings).get("auto_use", True)
+    return bool(raw) if isinstance(raw, bool) else True
+
+
+def _instant_engine(ctx: Mapping[str, Any]) -> Any:
+    """战斗即时调合引擎（ctx[\"battle_alchemy_engine\"]，BattleAlchemyEngine 鸭子）。
+
+    【工程补白】兄弟路 core/alchemy_battle.py 接口契约（duck）：instant_eligible/carry_ok/
+    resolve/intensity/cooldown_of/consume_energy——本壳只消费不 import；键名
+    battle_alchemy_engine 为壳层最小必要推导（对齐 session_mgr 注入模式）。
+    """
+    engine = ctx.get("battle_alchemy_engine")
+    if engine is None:
+        raise RuntimeError(
+            "alchemy_commands.cmd_instant 需要 ctx['battle_alchemy_engine']"
+            "（BattleAlchemyEngine 鸭子，批11 装配注入）"
+        )
+    return engine
+
+
+def _battle_snapshot_of(ctx: Mapping[str, Any]) -> MutableMapping[str, Any]:
+    """战斗快照 dict（ctx[\"battle_snapshot\"] 鸭子，battle_alchemy_used 顶层键读写）。
+
+    【工程补白】战斗快照即过程态（BA-01）；battle_alchemy_used 顶层键由主 agent 在
+    core/battle.py to_snapshot() 收口时加（BA-02），本壳只对注入 dict 做键读写。
+    """
+    snap = ctx.get("battle_snapshot")
+    if not isinstance(snap, MutableMapping):
+        raise RuntimeError(
+            "alchemy_commands.cmd_instant 需要 ctx['battle_snapshot']"
+            "（战斗快照 dict，批11 装配注入）"
+        )
+    return snap
+
+
+def _battle_alchemy_used_of(snap: Mapping[str, Any]) -> int:
+    """battle_alchemy_used 读取（战斗快照顶层键；中断恢复不清零 BA-02，缺省 0）。"""
+    try:
+        return max(0, int(snap.get("battle_alchemy_used", 0) or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _instant_carry_error(carry: Mapping[str, Any], ctx: Mapping[str, Any]) -> str:
+    """GU-53 素材不足全拒差异（engine.carry_ok 返回 shortfall → 差异提示，ATO-01 全拒）。"""
+    msg = carry.get("message")
+    if isinstance(msg, str) and msg:
+        return msg
+    diff = _shortfall_text(ctx, carry.get("shortfall"))
+    return f"❌ 材料不足：{diff}" if diff else "❌ 材料不足"
+
+
+def _instant_render(res: Mapping[str, Any], recipe: Mapping[str, Any], ctx: Mapping[str, Any],
+                    auto_use: bool) -> str:
+    """M-17 战斗一行渲染（BA-09：``{产出名}！造成 {伤害} 伤害``，M5 无 emoji 纯文本）。
+
+    优先引擎已渲染 message（BA-09 数据源 ActionOutcome）；缺省拼产出名+最终伤害。
+    auto_use=false 入包 → 包行（BA-07：本场战斗内不可再使用该产出）。
+    """
+    msg = res.get("message")
+    if isinstance(msg, str) and msg:
+        return msg
+    output = recipe.get("output")
+    out_id = output.get("item") if isinstance(output, Mapping) else None
+    name = res.get("item_name") or (_item_name(ctx, out_id) if out_id else "产物")
+    if not auto_use:
+        return f"✅ 已入包：{name}×1（本场战斗内不可再使用）"
+    damage = res.get("final_damage")
+    if damage is None:
+        damage = res.get("damage")
+    if damage is None:
+        damage = res.get("raw_damage")
+    if damage is not None:
+        return f"{name}！造成 {damage} 伤害"
+    return f"✅ 已使用 {name}"
+
+
+async def cmd_instant(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """`/即时调合 <配方>`（P-17/SEP-17，GU-50~54/F-17/M-17，TC-24/25，批9 路9B）。
+
+    战斗内子流程（写死 MUT-03/BA-01）：**一步出结果**——不产生独立调合会话、不进 §4.6 状态机、
+    战斗不挂起、不申请会话槽、不触发单玩家 1 会话互斥判定（BA-04 豁免互斥）；借用战斗会话
+    上下文（战斗快照即过程态），无 投料/继承/确认 链。
+
+    守卫链（合同顺序 GU-50→51→52→53→54）：
+      - GU-50 战斗中（ctx.in_battle，非战斗 → 「即时调合仅限战斗中」）；
+      - GU-51 炼金职业 ≥ 大师（proficiency.alchemy level ≥ 4，L425）；
+      - GU-52 能量 ≥1 格（energy_enabled=true 时 engine.consume_energy，不足拒；R-08 关闭直通）；
+      - GU-53 素材全量校验（engine.carry_ok，不足全拒+差异）；
+      - GU-54 限次（battle_alchemy_used < per_battle_limit，默认 1；超限 → 「本场战斗已使用过
+        即时调合（限 1 次/场）」；中断恢复不清零 BA-02）。
+
+    一步出结果（F-17/BA-07/08）：auto_use 默认 true（settings 战斗即时调合.auto_use）→
+    注入 use_fn（ctx[\"use_battle_item\"]）走战斗道具行动入口当场结算；false → 入包本场不可再用；
+    use_fn 缺失 → auto_use 回退入包（【工程补白】）。吃冷却（engine.cooldown_of，炸弹 3 回合）
+    传 resolve。渲染 M-17 一行 → 记 battle_alchemy_used+1（写回注入战斗快照 dict 顶层键）。
+
+    入参：parsed（ParsedCommand）、ctx（in_battle/battle_snapshot/battle_alchemy_engine/
+    use_battle_item/settings/player/recipe 等）。出参：回复正文 str；失败透传。
+    """
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    if not parsed.args:
+        return format_tpl12(f"/{INSTANT_CMD}")
+    target = _target_of(parsed)
+    player = _player_of(ctx)
+    settings = _settings_of(ctx)
+    engine = _instant_engine(ctx)
+    snap = _battle_snapshot_of(ctx)
+
+    # GU-50 战斗中（战斗会话上下文内执行；非战斗拒绝）
+    if not ctx.get("in_battle"):
+        return "即时调合仅限战斗中"
+
+    # GU-51 炼金职业 ≥ 大师（proficiency.alchemy level ≥ 4；对齐 _MASTER_TIER_INDEX）
+    if _prof_level(player) < _MASTER_TIER_INDEX:
+        return "❌ 等级不足"
+
+    recipe = _find_recipe(ctx, target)
+    if recipe is None:
+        return f"❌ 配方不存在：{target}"
+
+    # GU-52 能量 ≥1 格（energy_enabled=true 时 consume_energy，不足拒；R-08 关闭直通不扣）
+    if _energy_enabled(settings):
+        econs = engine.consume_energy(player, ctx)
+        if not econs.get("ok"):
+            return str(econs.get("message") or "能量不足")
+
+    # GU-53 素材全量校验（carry_ok：不足全拒+差异，不部分执行）
+    carry = engine.carry_ok(ctx, recipe)
+    if not carry.get("ok"):
+        return _instant_carry_error(carry, ctx)
+
+    # GU-54 限次（battle_alchemy_used < per_battle_limit；中断恢复不清零 BA-02）
+    used = _battle_alchemy_used_of(snap)
+    if used >= _instant_per_battle_limit(settings):
+        return "本场战斗已使用过即时调合（限 1 次/场）"
+
+    # 一步出结果（BA-07/08）：auto_use 默认 true → use_fn 当场结算；false/无 use_fn → 入包
+    auto_use = _instant_auto_use(settings)
+    use_fn = ctx.get("use_battle_item")
+    if auto_use and use_fn is None:
+        auto_use = False  # 【工程补白】无战斗道具行动入口 → 回退入包
+    cooldown = engine.cooldown_of(recipe)  # 吃冷却（BA-06：炸弹 3 回合）
+    res = engine.resolve(
+        ctx, recipe,
+        battle_alchemy_used=used, auto_use=auto_use,
+        cooldown=cooldown, use_fn=use_fn,
+    )
+    if not res.get("ok"):
+        return str(res.get("message") or "❌ 即时调合失败")  # 失败透传
+    # 记 battle_alchemy_used+1（写回注入战斗快照顶层键，BA-02）
+    snap["battle_alchemy_used"] = used + 1
+    # 渲染 M-17 战斗一行（M5 无 emoji 纯文本）
+    return _instant_render(res, recipe, ctx, auto_use)
+
+
+# ---------------------------------------------------------------------------
 # 装配（Router 注册；make_context 由装配层注入，批11 路11A 待接线）
 # ---------------------------------------------------------------------------
 
@@ -2591,6 +2781,7 @@ def register_alchemy_commands(
 ) -> Any:
     """把 `/合成` `/炼金` `/投料` `/继承` `/继承超` `/确认` `/放弃` `/调合续` `/分解`
     `/镶嵌` `/拆珠` `/珠升阶` `/成品合成` `/配方合成` `/特性合成` `/登记` `/复制`
+    `/深度炼金` `/进化` `/镶核心` `/加成` `/挑战` `/图鉴` `/技能面板` `/教学` `/即时调合`
     注册进 Router（CommandSpec.handler 消费 ParsedCommand）。
 
     handler 支持 k.get("ctx") 注入（装配层 _invoke_handler 以 ctx=ctx 注入，assembly/runner.py
@@ -2759,6 +2950,12 @@ def register_alchemy_commands(
             return cmd_tutorial(parsed, injected)
         return cmd_tutorial(parsed, _ctx(parsed))
 
+    def _instant(parsed: Any, *a: Any, **k: Any):
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_instant(parsed, injected)
+        return cmd_instant(parsed, _ctx(parsed))
+
     router.register(CommandSpec(SYNTH_CMD, handler=_synth))
     router.register(CommandSpec(ALCHEMY_CMD, handler=_alchemy))
     router.register(CommandSpec(FEED_CMD, handler=_feed))
@@ -2784,4 +2981,5 @@ def register_alchemy_commands(
     router.register(CommandSpec(CODEX_CMD, handler=_codex))
     router.register(CommandSpec(SKILL_PANEL_CMD, handler=_skill_panel))
     router.register(CommandSpec(TUTORIAL_CMD, handler=_tutorial))
+    router.register(CommandSpec(INSTANT_CMD, handler=_instant))
     return router

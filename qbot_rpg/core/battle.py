@@ -917,6 +917,9 @@ class BattleEngine:
             # M2 审查 P2-3：lost_pending 预留（1g4 F-08 丢失挂起子态；M4 丢失判定写入，
             # to_snapshot 深拷贝自动携带——快照结构稳定，M4 读路径键存在）
             "lost_pending": None,
+            # M8 批9 收口（BA-02/IF-B03）：战斗即时调合计数落战斗快照顶层键，
+            # 中断恢复不清零、战斗结束由 start 重建清零——对齐 potion_use_counts 口径。
+            "battle_alchemy_used": 0,
             "stats_collector": {"per_action": []},
             "formula_state": {"random_seed": self._rng_seed},
             "timestamps": {"created_at": now, "updated_at": now, "snapshot_at": None},
@@ -1774,6 +1777,17 @@ class BattleEngine:
     def snapshot(self) -> Dict[str, Any]:
         """旧名兼容：to_snapshot() 别名（M1 占位签名升级，细化_1g3）。"""
         return self.to_snapshot()
+
+    def record_alchemy_used(self, n: int = 1) -> int:
+        """M8 批9（BA-02/IF-B03）：战斗即时调合次数累计（落 _snap.battle_alchemy_used）。
+
+        由战斗接线方在 /即时调合 结算后调用（中断恢复沿用快照值不清零；
+        新战斗 start 重建 _snap 自然清零）。返回累计值。
+        """
+        cur = self._snap.get("battle_alchemy_used") or 0
+        cur = int(cur) + int(n)
+        self._snap["battle_alchemy_used"] = cur
+        return cur
 
     def interrupt_snapshot(self) -> Dict[str, Any]:
         """中断信号落快照：等待回合边界（1g3 §2.2 落盘时序①/②），回合内抛错。"""

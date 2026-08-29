@@ -258,15 +258,28 @@ class SettleEngine:
         """快照继承特性读取（Q-S9 鸭子类型读 snap["traits"]）。
 
         list/tuple → 归一 str 列表；dict（{ids|traits: [...]}）防御兼容；缺失/非法 → []。
+        M8 批13 审查收口（P1-2 结算丢超特性/负面）：合并 gold_slot（超特性独占位）与
+        negatives（负面）——继承路径把它们写入快照独立字段，结算产出须随 traits 一起
+        落实例（INH-08/INH-12），否则 /确认 成品丢失超特性/负面。
         """
+        out: List[str] = []
         raw = snap.get("traits")
         if isinstance(raw, (list, tuple)):
-            return [str(t) for t in raw if t]
-        if isinstance(raw, Mapping):
+            out.extend(str(t) for t in raw if t)
+        elif isinstance(raw, Mapping):
             ids = raw.get("ids") or raw.get("traits") or []
             if isinstance(ids, (list, tuple)):
-                return [str(t) for t in ids if t]
-        return []
+                out.extend(str(t) for t in ids if t)
+        gs = snap.get("gold_slot")
+        if isinstance(gs, str) and gs and gs not in out:
+            out.append(gs)
+        neg = snap.get("negatives")
+        if isinstance(neg, (list, tuple)):
+            for n in neg:
+                ns = str(n)
+                if ns and ns not in out:
+                    out.append(ns)
+        return out
 
     # ------------------------------------------------------------------
     # ctx hook 调用（对齐 reward.py 模式；Q-S8）
@@ -507,7 +520,14 @@ class SettleEngine:
         coef = self._quality.coef_for(tier)
         tier_label = self._quality.tier_label(tier)
 
-        # ⑥ 触媒消耗（CAT-04：catalyst_consume=true 扣 1 个，同事务；false 不扣仅方向修饰）
+        # ⑥ 扣材料（Q-S8：按 item_id 去重汇总，verify 已保证足量）
+        if not self._consume_materials(ctx, snap):
+            return {"ok": False, "reason": "materials_remove_failed", "message": "材料扣除失败"}
+
+        # ⑦ 触媒消耗（CAT-04：catalyst_consume=true 扣 1 个，同事务；false 不扣仅方向修饰）
+        # M8 批13 审查收口（P1-5 结算中途失败无进程内回滚）：触媒扣减移到扣材料之后、
+        # 产出入包之前——先易失败后不易失败（材料已验足量最易成功，触媒次之，
+        # 产出入包（add_item）最不易失败；且壳层 repo.tx() 兜底整体回滚）。
         catalyst_id = self._catalyst_id(snap, ctx)
         catalyst_consumed = False
         if catalyst_id and self._catalyst_consume():
@@ -526,16 +546,12 @@ class SettleEngine:
                 }
             catalyst_consumed = True
 
-        # 扣材料（Q-S8：按 item_id 去重汇总，verify 已保证足量）
-        if not self._consume_materials(ctx, snap):
-            return {"ok": False, "reason": "materials_remove_failed", "message": "材料扣除失败"}
-
-        # ⑦ 产出入包（成品 add_item，quality=tier 键 + traits 从快照写入 ItemInstance）
+        # ⑧ 产出入包（成品 add_item，quality=tier 键 + traits 从快照写入 ItemInstance）
         produced = self._produce(ctx, recipe, snap, tier, coef)
         if produced is None:
             return {"ok": False, "reason": "add_item_failed", "message": "成品入包失败"}
 
-        # ⑧ 熟练经验=配方等级×1（CASC-01/EXP-03，source='craft'）
+        # ⑨ 熟练经验=配方等级×1（CASC-01/EXP-03，source='craft'）
         exp_gained = self._gain_exp(ctx, recipe)
 
         name = produced["name"]

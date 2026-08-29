@@ -577,7 +577,17 @@ class TraitInherit:
         """
         snap2 = dict(snap) if isinstance(snap, Mapping) else {}
         raw: Mapping[str, Any] = snap if isinstance(snap, Mapping) else snap2
-        snap2["traits"] = [str(t) for t in (traits or [])]
+        # M8 批13 审查收口（P1-1 二次 /继承 丢前选）：select_traits 返回增量
+        # （本次 selected_ids），此处须与快照旧选合并去重，不能整体替换——
+        # 否则用户分多次 /继承 时先前所选特性被覆盖丢失（INH-08 所选特性集随结算写入）。
+        prev_traits = raw.get("traits")
+        prev_list = [str(t) for t in prev_traits] if isinstance(prev_traits, (list, tuple)) else []
+        new_list = [str(t) for t in (traits or [])]
+        merged = list(prev_list)
+        for t in new_list:
+            if t and t not in merged:
+                merged.append(t)
+        snap2["traits"] = merged
         if super_trait is not None and str(super_trait):
             if self._gold_slot_exclusive():
                 snap2["gold_slot"] = str(super_trait)
@@ -589,7 +599,17 @@ class TraitInherit:
         else:
             snap2["gold_slot"] = raw.get("gold_slot")
         if negatives is not None:
-            snap2["negatives"] = [str(n) for n in negatives]
+            # 负面合并（T-4 负面占普通位累计）：与旧 negatives 去重合并
+            prev_neg = raw.get("negatives")
+            prev_neg_list = (
+                [str(n) for n in prev_neg] if isinstance(prev_neg, (list, tuple)) else []
+            )
+            new_neg = [str(n) for n in negatives]
+            merged_neg = list(prev_neg_list)
+            for n in new_neg:
+                if n and n not in merged_neg:
+                    merged_neg.append(n)
+            snap2["negatives"] = merged_neg
         else:
             snap2["negatives"] = list(raw.get("negatives") or [])
         pp = dict(snap2.get("pp") or {})
@@ -641,7 +661,10 @@ class TraitInherit:
             if isinstance(t, str) and t:
                 ids.append(t)
         raw: Mapping[str, Any] = snap if isinstance(snap, Mapping) else {}
-        for t in list(raw.get("traits") or []) + list(raw.get("negatives") or []):
+        # M8 批13 审查收口（P1-3 负面口径不一致）：仅聚合 traits + gold_slot，
+        # 排除 negatives——select_traits T-4 声明「负面不参与 group/repeatable」，
+        # 结算复核若计入会误拒合法 build（INH-10/11 两函数行为统一）。
+        for t in list(raw.get("traits") or []):
             if isinstance(t, str) and t:
                 ids.append(t)
         gs = raw.get("gold_slot")

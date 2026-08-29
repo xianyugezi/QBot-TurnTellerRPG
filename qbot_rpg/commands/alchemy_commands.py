@@ -841,7 +841,7 @@ async def cmd_alchemy(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     # 自动子词分支（AUTO-01/02/03）：配平 → 入链 → 开会话；配平失败全拒、零消耗
     if auto:
         snap0 = core.new_snapshot(recipe, catalyst=catalyst, job_tier=tier_index)
-        bal = auto_engine.balance(ctx, recipe)
+        bal = auto_engine.balance(ctx, recipe, job_tier_index=tier_index)
         if not bal.get("ok"):
             return _auto_diff_message(bal, ctx)
         plan = bal.get("plan") or []
@@ -1528,6 +1528,33 @@ async def cmd_decompose(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         res = await res
     if not res.get("ok"):
         return str(res.get("message") or "❌ 分解失败")          # GU-32 标准版拒/回收减半透传
+    # M8 批13 审查收口（P0-2 /分解 零落账）：wallet.decompose 为纯计算（GW-12），
+    # 壳层补落账三步——扣道具 → 返材料 → 宝石入账（否则道具不消失、材料/宝石不入账，
+    # 用户被成功文案误导；TC-18 落账+两段式要求）。
+    qid_item = str(res.get("item_id") or "")
+    rm = ctx.get("remove_item")
+    if callable(rm) and qid_item:
+        if not rm(qid_item, int(res.get("count") or 1)):
+            return "❌ 分解失败：道具扣减异常"
+    am = ctx.get("add_item")
+    if callable(am):
+        for _iid, _name, _cnt in (res.get("materials") or []):
+            try:
+                am(str(_iid), int(_cnt))
+            except (TypeError, ValueError):
+                continue
+    gem = 0
+    try:
+        gem = int(res.get("gem") or 0)
+    except (TypeError, ValueError):
+        gem = 0
+    if gem > 0:
+        grant = getattr(wallet, "grant_gem", None)
+        if callable(grant):
+            try:
+                grant(ctx, gem)
+            except Exception:  # noqa: BLE001 —— 宝石入账失败不影响材料返还展示
+                pass
     rate: Optional[float] = None
     raw_rate: Any = res.get("rate")
     if raw_rate is not None:
@@ -1909,15 +1936,22 @@ async def cmd_trait_merge(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 
 
 async def cmd_register(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
-    """`/登记 <道具>`（DUP-02/06，无职业门槛）：道具名 → id → AlchemyRegister.register 透传
+    """`/登记 <道具>`（DUP-02/06，GU-34 大师门槛——M8 批13 审查收口 P1-1 补门槛）：
+    道具名 → id → AlchemyRegister.register 透传
     （标准版校验 TC-09/成本快照冻结 AR-1/登记表落 ctx["registered"] 由引擎承载）。
 
-    入参：parsed、ctx（items/recipe/registered）。出参：回复正文 str。
+    入参：parsed、ctx（items/recipe/registered/proficiency）。出参：回复正文 str。
     """
     if parsed.error:
         return format_tpl12(_fragment(parsed))
     if not parsed.args:
         return format_tpl12(f"/{REGISTER_CMD}")
+    # GU-34 炼金职业 ≥ 大师（指令契约 L42/L159：/登记 /复制 共用大师门槛）
+    prof_engine = ProficiencyEngine(settings=_settings_of(ctx))
+    player = _player_of(ctx)
+    tier_index = prof_engine.tier_index_for_level(ALCHEMY_JOB_ID, _prof_level(player))
+    if tier_index < _MASTER_TIER_INDEX:
+        return "❌ 等级不足：登记复制需炼金大师（SP 面板可解锁）"
     target = _target_of(parsed)
     item_id = _resolve_item_id(ctx, target)
     if item_id is None:

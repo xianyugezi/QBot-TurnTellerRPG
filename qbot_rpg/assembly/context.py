@@ -852,6 +852,10 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
         "to": event.get("to"),
         "qq_id": qid or None,
         "is_gm": bool(event.get("is_gm", False)),
+        # M8 批13 审查收口（P0-2 终态结算注入断裂）：message_id 透传——
+        # /确认 /放弃 的 SettleEngine gate `if message_id:` 依赖它走 settle_alchemy
+        # （delete_session+write_idem_key 同事务）；缺失则终态不删会话不落幂等键。
+        "message_id": str(event.get("message_id") or ""),
         # 引擎注入位（A-02 / 战斗接线注入；缺省 None → 指令壳自兜底/【待接线】）
         "quest_engine": None,
         "shop_engine": None,
@@ -938,6 +942,13 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
             # RN-11（N-04）：dialog_session 30 天惰性清理（读取/启动时；last_active_at
             # 超 30 天 → 清除恢复上下文，见 _dialog_snapshot_or_cleared）
             "dialog_session": _restore_dialog_session(_dialog_snapshot_or_cleared(ps)),
+            # M8 批13 审查收口（P0-1 地块/代工不落档 + P1-4 proficiency 未注入）：
+            # _ps_init 挂回 persistent_state 可变引用——引擎写 ctx[farm_plots/helpers/
+            # proficiency] 即落档（对齐 currencies 就地引用方案；Player frozen dataclass
+            # 无这些字段，引擎经 _player_of 回退 ctx 写入本键）。
+            "farm_plots": _ps_init(ps, "farm_plots", {}),
+            "helpers": _ps_init(ps, "helpers", {}),
+            "proficiency": _ps_init(ps, "proficiency", {}),
             # M8 炼金（批11-2 收口）：背包 hooks（_inventory_hooks 就地操作
             # ctx["inventory"] 计数映射，reward/shop 同款契约）+ 玩家级解锁表回填
             # （配方合成/进化持久化，换包同 ID 保留 DUP-06）
@@ -984,6 +995,14 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
     ctx["battle_session"] = battle_session
     ctx["target"] = _bs_field(battle_session, "target")
     ctx["turn"] = _bs_field(battle_session, "turn")
+    # M8 批13 审查收口（P1-3 战斗拦截模板生产不可达）：in_battle 注入——
+    # /投料 /继承 /确认 /放弃 的 GU-10 战斗拦截依赖 ctx["in_battle"]；缺则
+    # 战斗中发调合指令走错误模板（会话互斥仍兜底，但契约消息不可达）。
+    ctx["in_battle"] = bool(
+        battle_session is not None
+        and isinstance(getattr(battle_session, "session_type", None), str)
+        and "battle" in str(getattr(battle_session, "session_type", ""))
+    )
 
     ctx["rng"] = _rng(deps.rng_factory, qid)
     _now, _today = _now_today(deps.dayroll)

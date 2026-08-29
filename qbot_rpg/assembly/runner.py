@@ -418,9 +418,21 @@ def _make_handler(spec: Any, parsed: ParsedCommand, ctx: MutableMapping[str, Any
                 from qbot_rpg.commands.shop_tx import _ctx_inventory_to_player  # noqa: PLC0415
                 from qbot_rpg.data.item import ItemInstance  # noqa: PLC0415
 
-                new_inv = _ctx_inventory_to_player(ctx.get("inventory"), p.inventory,
-                                                   ctx.get("items"))
+                # M8 批13 审查收口（P1-5 实例双计→数量×2）：实例通道的 item_id 从
+                # count map merge 剔除（实例携带真实品质/特性数量），避免先 merge 计数
+                # 再 append 实例造成同物两份。
                 insts = ctx.get("inventory_instances")
+                inst_ids: set = set()
+                if isinstance(insts, list):
+                    for it in insts:
+                        if isinstance(it, Mapping):
+                            iid = str(it.get("item_id") or "")
+                            if iid:
+                                inst_ids.add(iid)
+                inv_ctx = ctx.get("inventory")
+                if inst_ids and isinstance(inv_ctx, Mapping):
+                    inv_ctx = {k: v for k, v in inv_ctx.items() if k not in inst_ids}
+                new_inv = _ctx_inventory_to_player(inv_ctx, p.inventory, ctx.get("items"))
                 if isinstance(insts, list):
                     for it in insts:
                         if not isinstance(it, Mapping):

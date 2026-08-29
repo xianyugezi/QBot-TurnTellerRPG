@@ -93,7 +93,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Mapping, MutableMapping, Optional
+from typing import Any, Dict, List, Mapping, MutableMapping, Optional, cast
 
 from qbot_rpg.core.alchemy_core import (
     ALCHEMY_JOB_ID,
@@ -564,8 +564,21 @@ class DeepEngine:
         remove_item = ctx.get("remove_item")
         if not callable(remove_item):
             return {"ok": False, "reason": "remove_item_hook_missing", "message": "缺少扣料 hook"}
+        # M8 批13 审查收口（P1-2 无快照回滚）：扣料循环任一失败须回滚已扣项 +
+        # 宝石/金币（ATO-01 严禁部分执行），对齐 register/battle 引擎内原子回滚。
+        import copy  # noqa: PLC0415
+        snap_ctx: Dict[str, Any] = {
+            k: copy.deepcopy(ctx.get(k)) for k in ("currencies", "inventory")
+            if k in ctx
+        }
         for m in need:
             if not _hook_ok(remove_item(m["item"], m["count"])):
+                _mut = cast(MutableMapping, ctx)
+                for _k, _v in snap_ctx.items():
+                    if _v is None:
+                        _mut.pop(_k, None)
+                    else:
+                        _mut[_k] = _v
                 return {"ok": False, "reason": "materials_remove_failed", "message": "材料扣除失败"}
         if gem_cost > 0 and cur is not None:
             cur["gem"] = max(0, _clamp_int(cur.get("gem", 0), 0, lo=0) - gem_cost)

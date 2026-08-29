@@ -192,11 +192,14 @@ class AutoFeed:
     # 自动配平（AUTO-02/03，工程补白 A-1/A-2/A-3）
     # ------------------------------------------------------------------
     def _plan_element_combo(
-        self, ctx: Mapping[str, Any], element_req: List[Tuple[str, int]]
+        self, ctx: Mapping[str, Any], element_req: List[Tuple[str, int]],
+        *, job_tier_index: Optional[int] = None
     ) -> Tuple[List[Tuple[str, int]], bool]:
         """element_req 达标组合贪心（A-1）：按元素缺口选材料。
 
-        入参：ctx（背包/注册表）；element_req 归一后的 [(元素, 需求值)...]。
+        入参：ctx（背包/注册表）；element_req 归一后的 [(元素, 需求值)...]；
+             job_tier_index（M8 批13 审查收口 P1-A：非专家 <3 时候选仅限 type=material，
+             排除成品/装备——否则配平结果被 apply_feed expert_required 拒，UX 断裂）。
         出参：(plan, ok)；ok=True 表示全部元素缺口已归零（达标）。
         核心：候选 = 持有 >0 且带 elements 贡献的物品；贪心「缺口最大元素优先、同贡献按
               item_id 升序」，每次取 min(剩余持有, 补齐缺口所需)；计划数量 ≤ 持有（A-2 封顶）。
@@ -211,12 +214,18 @@ class AutoFeed:
             raw_ids = ctx.get("item_ids")
             if isinstance(raw_ids, (list, tuple)):
                 ids = [k for k in raw_ids if isinstance(k, str)]
+        # M8 批13 审查收口（P1-A）：专家门槛=档位索引 3（settings 职业等级口径 0-6，
+        # 对齐 ProficiencyEngine tier 索引；无需查配置——专家固定第 4 档，定稿 2c4a CASC-07）
+        non_expert = job_tier_index is not None and int(job_tier_index) < 3
         for item_id in ids:
             held = self._count_item(ctx, item_id)
             if held <= 0:
                 continue
             item = self._resolve_item(ctx, item_id)
             if not isinstance(item, Mapping):
+                continue
+            # P1-A：非专家候选仅限材料（type=material）——成品/装备带 elements 也排除
+            if non_expert and str(item.get("type") or "material") != "material":
                 continue
             elems = item.get("elements")
             if not isinstance(elems, Mapping):
@@ -299,13 +308,17 @@ class AutoFeed:
                 parts.append(f"缺 {name}×{need}")
         return " + ".join(parts)
 
-    def balance(self, ctx: Mapping[str, Any], recipe_def: Any) -> dict:
+    def balance(self, ctx: Mapping[str, Any], recipe_def: Any,
+                *, job_tier_index: Optional[int] = None) -> dict:
         """一键投料自动配平（AUTO-02/03）——纯逻辑，不扣背包（扣减由指令壳结算层执行）。
 
         入参：
           - ctx：玩家上下文（count_item / inventory / items / resolve_item / settings）。
           - recipe_def：配方定义 dict（materials [{id,count}...] / element_req
             {元素: [{threshold, effect}]}）。
+          - job_tier_index：职业档位索引（M8 批13 审查收口 P1-A：非专家（<3）时配平
+            候选仅限 type=material，排除成品/装备——否则一键投料配出成品随后被
+            apply_feed「expert_required」拒绝，UX 断裂）。
         出参：
           - 成功：{ok:True, plan:[(item_id, count)...], mode:"element_req"|"materials",
             shortfall:[]}——plan 数量按持有封顶（A-2）。
@@ -314,6 +327,7 @@ class AutoFeed:
           - recipe 非法：{ok:False, reason:"invalid_recipe", shortfall:[]}。
         核心：① 优先 element_req 达标组合（贪心按元素缺口选材料，A-1）；达标 → 返回。
               ② 否则回落配方基础材料逐项校验（A-2）；任一不足 → 全拒原子拒绝（AUTO-03）。
+              ③ 专家门槛：job_tier_index 非 None 且 < expert（3）时候选过滤 type=material。
         """
         if not isinstance(recipe_def, Mapping):
             return {"ok": False, "reason": "invalid_recipe", "shortfall": []}
@@ -322,11 +336,11 @@ class AutoFeed:
 
         # ① AUTO-02 优先：element_req 达标组合
         if element_req:
-            plan, ok = self._plan_element_combo(ctx, element_req)
+            plan, ok = self._plan_element_combo(ctx, element_req, job_tier_index=job_tier_index)
             if ok and plan:
                 return {"ok": True, "plan": plan, "mode": "element_req", "shortfall": []}
 
-        # ② AUTO-02 其次：配方基础材料
+        # ② AUTO-02 其次：配方基础材料（材料本身 type=material，天然过专家门槛）
         plan, shortfall = self._plan_base_materials(ctx, materials)
         if shortfall:
             return {

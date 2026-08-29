@@ -12,11 +12,14 @@ qbot_rpg/commands/alchemy_commands.py）——本批只注册 /合成。
   （sender.format_tpl12，errors.py 唯一文案源）、
   register_alchemy_commands 装配入口（仿 shop_commands.register_shop_commands 壳模式）。
 
-本批范围（批2 + **批4B 追加** + **批5 追加**）：/合成（SYNTH_CMD）+ **/炼金（ALCHEMY_CMD：
-  开会话/自动子词/批量 *N）+ /投料（FEED_CMD：链式投料/追加子词）** + **/继承（INHERIT_CMD）
-  /继承超（INHERIT_SUPER_CMD：特性继承，委托 core/trait_inherit.py）**；其余炼金指令
-  （/深度炼金 /进化 /分解 /复制 /图鉴 /技能面板 /种植 /收获 /雇工 /教学 等）由后续批次填充
-  （批6 /分解 /确认、批7 /成品合成 /配方合成 /特性合成 /镶嵌 /拆珠 /登记 /复制、批8 /深度炼金
+本批范围（批2 + **批4B 追加** + **批5 追加** + **批6 追加**）：/合成（SYNTH_CMD）+ **/炼金
+  （ALCHEMY_CMD：开会话/自动子词/批量 *N）+ /投料（FEED_CMD：链式投料/追加子词）** +
+  **/继承（INHERIT_CMD）/继承超（INHERIT_SUPER_CMD：特性继承，委托 core/trait_inherit.py）** +
+  **/确认（CONFIRM_CMD）/放弃（ABANDON_CMD）/调合续（RESUME_CMD）/分解（DECOMPOSE_CMD）：
+  终态指令壳（批6 路A——品质结算委托 core/alchemy_settle.py SettleEngine、恢复挂起渲染面板、
+  分解委托兄弟路 gem_wallet 鸭子类型消费 ctx[\"wallet\"]）**；其余炼金指令
+  （/深度炼金 /进化 /复制 /图鉴 /技能面板 /种植 /收获 /雇工 /教学 等）由后续批次填充
+  （批7 /成品合成 /配方合成 /特性合成 /镶嵌 /拆珠 /登记 /复制、批8 /深度炼金
   /进化 /镶核心 /加成 /挑战 /图鉴 /技能面板 /教学、批10 /种植 /收获 /雇工 /收取）——本模块作为
   这些指令壳的统一落点文件，后续批次追加 cmd_xxx + register 项即可。
 
@@ -50,6 +53,7 @@ qbot_rpg/commands/alchemy_commands.py）——本批只注册 /合成。
 
 from __future__ import annotations
 
+import inspect
 from typing import Any, Callable, Mapping, MutableMapping, Optional
 
 from qbot_rpg.core.alchemy_auto import DEFAULT_MAX_QTY, AutoFeed
@@ -60,13 +64,16 @@ from qbot_rpg.core.alchemy_core import (
     AlchemyCore,
 )
 from qbot_rpg.core.alchemy_session import (
+    SUSPENDED,
     TEMPLATE_ALREADY_ACTIVE,
+    TEMPLATE_ALREADY_ACTIVE_ALCHEMY,
     TEMPLATE_IN_PROGRESS,
     TEMPLATE_MESSAGES,
     TEMPLATE_NO_SESSION,
     is_alchemy_session,
     is_conflict,
 )
+from qbot_rpg.core.alchemy_settle import SettleEngine
 from qbot_rpg.core.energy_bar import EnergyBar
 from qbot_rpg.core.proficiency import ProficiencyEngine
 from qbot_rpg.core.quality import QualitySystem
@@ -82,11 +89,13 @@ __all__ = [
     # 指令名常量
     "SYNTH_CMD", "ALCHEMY_CMD", "FEED_CMD",
     "INHERIT_CMD", "INHERIT_SUPER_CMD",
+    "CONFIRM_CMD", "ABANDON_CMD", "RESUME_CMD", "DECOMPOSE_CMD",
     # 固定子词常量
     "AUTO_SUBWORD", "FEED_APPEND_SUBWORD", "CATALYST_KV_KEY",
     # 指令处理器（纯函数/异步：parsed + ctx → 回复正文）
     "cmd_synthesis", "cmd_alchemy", "cmd_feed",
     "cmd_inherit", "cmd_inherit_super",
+    "cmd_confirm", "cmd_abandon", "cmd_resume", "cmd_decompose",
     # 装配
     "register_alchemy_commands",
 ]
@@ -100,6 +109,12 @@ ALCHEMY_CMD = "炼金"
 FEED_CMD = "投料"
 INHERIT_CMD = "继承"
 INHERIT_SUPER_CMD = "继承超"
+# 会话终态指令（P-05/SEP-05：均无参数，独立指令名注册；固定子词表已含 确认/放弃/续，
+# 白名单补齐归批11 路11A 装配 IF-34）
+CONFIRM_CMD = "确认"      # F-05 品质结算终态（GU-17~19）
+ABANDON_CMD = "放弃"      # F-05 会话退出终态（GU-17）
+RESUME_CMD = "调合续"     # 挂起(战斗) 恢复（GU-18）
+DECOMPOSE_CMD = "分解"    # 分解回炉（GU-32/33，P-10）
 
 # 固定子词（对齐 parsers.py FIXED_SUBWORDS：自动/追加 已在常量内，壳层显式引用防字面量漂移）
 AUTO_SUBWORD = "自动"
@@ -1116,6 +1131,286 @@ async def cmd_inherit_super(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 
 
 # ---------------------------------------------------------------------------
+# 会话终态指令壳（批6 路A：/确认 /放弃 /调合续 /分解）
+# ---------------------------------------------------------------------------
+
+def _is_suspended(view: Any) -> bool:
+    """挂起(战斗) 判定（§7.1 行6/7）。
+
+    【工程补白 S-1】挂起会话 payload 携带 `state="suspended"` 标记（批3 路3B 战斗打断
+    `suspend` 写入会话行时记录；本壳只读判定，缺省无标记视为会话中非挂起）。
+    入参：view（SessionView/dict，鸭子类型）。出参：True=挂起(战斗)。
+    """
+    payload = _view_payload(view)
+    if isinstance(payload, Mapping):
+        try:
+            return str(payload.get("state") or "") == SUSPENDED
+        except Exception:
+            return False
+    return False
+
+
+def _placement_conflict_text(res: Mapping[str, Any]) -> str:
+    """结算复核失败渲染（INH-10/11，TC-18/19）：防会话内绕校验。
+
+    入参：res（TraitInherit.check_placement_conflict 输出 {ok, message, conflicts}）。
+    出参：拒绝正文（透传 message 兜底）。
+    """
+    return str(res.get("message") or "❌ 结算校验：互斥组/repeatable 冲突")
+
+
+def _confirm_error(res: Mapping[str, Any], ctx: Mapping[str, Any]) -> str:
+    """/确认 失败透传（ATO-04 已结算 / GU-19 材料不足差异 / GU-17 无会话 / 其余原样）。
+
+    入参：res（SettleEngine.confirm 输出）、ctx（材料名解析）。出参：拒绝正文 str。
+    """
+    reason = res.get("reason")
+    msg = res.get("message")
+    if reason == "already_settled":
+        return str(msg or "已结算")                     # ATO-04/M-05 重复确认幂等
+    if reason == "no_snapshot":
+        return TEMPLATE_MESSAGES[TEMPLATE_NO_SESSION]   # GU-17
+    if reason in ("materials_insufficient", "materials_shortfall"):
+        diff = _shortfall_text(ctx, res.get("shortfall"))
+        return f"材料不足：{diff}" if diff else "材料不足，无法确认"  # GU-19 全量复核差异
+    return str(msg or "❌ 确认失败")
+
+
+def _render_decompose(
+    res: Mapping[str, Any], ctx: Mapping[str, Any], *, rate: Optional[float] = None
+) -> str:
+    """两段式消息渲染（M-10 / GEM-15：材料回收段 + 宝石段，纯文本无装饰 emoji）：
+
+    `✅ 火晶石×2 月光草×1 + 宝石×3（回收 60%）`——宝石 = 平铺基础值不乘回收率（拍板①，
+    普通1/精良3/史诗8/传说20，可配 gem.分解）。rate 为回收率小数（None → 不显示）。
+    入参：res（gem_wallet.decompose 成功输出 {materials, gem, ...}）、ctx（物品名解析）、
+      rate（decompose_rate，可选）。出参：成功正文 str。
+    """
+    parts: list = []
+    for m in res.get("materials") or []:
+        if not isinstance(m, Mapping):
+            continue
+        raw_id = m.get("item_id") or m.get("item") or m.get("id")
+        name = m.get("name") or _item_name(ctx, raw_id) or "?"
+        try:
+            cnt = max(1, int(m.get("count", 1)))
+        except (TypeError, ValueError):
+            cnt = 1
+        parts.append(f"{name}×{cnt}")
+    body = "✅ " + " ".join(parts) if parts else "✅ 分解成功"
+    gem = 0
+    try:
+        gem = max(0, int(res.get("gem", 0)))
+    except (TypeError, ValueError):
+        gem = 0
+    if gem > 0:
+        body += f" + 宝石×{gem}"
+    if rate is not None:
+        body += f"（回收 {int(round(rate * 100))}%）"
+    return body
+
+
+async def cmd_confirm(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """`/确认`（P-05/SEP-05 无参数，独立指令名注册）：F-05 品质结算终态（批6 路6A）。
+
+    守卫链：
+      - GU-10/MUT-04 战斗拦截（先于会话查询，战斗会话占用槽位）；
+      - GU-17 调合会话中（无会话/非调合类 → 「当前没有调合会话，先 /炼金 <配方> 开始」）；
+      - GU-19 全量复核由 SettleEngine.confirm 承载（verify_snapshot：材料链+触媒在包，
+        不足全拒+差异，防过期快照）。
+    流程：取会话快照 →（INH-10/11 结算复核）TraitInherit.check_placement_conflict →
+      SettleEngine.confirm(ctx, snap, qid, job_tier_index, message_id, session_view=view)
+      → 透传 message（成功 M-05「确认成功：火焰弹（品质 72·史诗）」/ 已结算幂等 ATO-04）。
+      终态幂等 gate 在引擎内（settle_alchemy command="settle:confirm"，§10 铁律 3；
+      message_id 缺失时引擎不落幂等键，保守——批11 装配注入）。
+    入参：parsed（ParsedCommand）、ctx（session_mgr/items/recipe/traits/settings +
+      count_item/remove_item/add_item hook，SettleEngine 就地改写背包）。
+    出参：回复正文 str。
+    """
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    session_mgr = ctx.get("session_mgr")
+    if session_mgr is None:
+        raise RuntimeError(
+            "alchemy_commands.cmd_confirm 需要 ctx['session_mgr']"
+            "（SessionManager 或 async fake，批11 装配注入）"
+        )
+    qid = _qid_of(ctx) or ""  # 装配层注入恒非空；缺省空串保守（settle 幂等键要素缺失不落键）
+    # GU-10/MUT-04 战斗拦截（先于会话查询，战斗会话占用槽位）
+    if ctx.get("in_battle"):
+        return "战斗中使用 /即时调合 <配方>（不进入调合会话）"
+    # GU-17 会话中（无会话 / 非调合类会话 → 无会话模板）
+    view = await session_mgr.get_active(qid)
+    if view is None or not is_alchemy_session(view):
+        return TEMPLATE_MESSAGES[TEMPLATE_NO_SESSION]
+    snap = _view_payload(view)
+    settings = _settings_of(ctx)
+    prof_engine = ProficiencyEngine(settings=settings)
+    player = _player_of(ctx)
+    tier_index = prof_engine.tier_index_for_level(ALCHEMY_JOB_ID, _prof_level(player))
+    # INH-10/11 结算复核（TraitInherit.check_placement_conflict：group/repeatable，
+    # 防会话内绕校验；traits 聚合在复核内部完成）
+    trait_engine = TraitInherit(prof=prof_engine, settings=settings)
+    placement = trait_engine.check_placement_conflict(snap, [], ctx)
+    if not placement.get("ok"):
+        return _placement_conflict_text(placement)
+    engine = SettleEngine(prof=prof_engine, settings=settings)
+    res = await engine.confirm(
+        ctx, snap, qid=qid, job_tier_index=tier_index,
+        message_id=ctx.get("message_id") or None, session_view=view,
+    )
+    if not res.get("ok"):
+        return _confirm_error(res, ctx)
+    return str(res.get("message") or "❌ 确认失败")
+
+
+async def cmd_abandon(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """`/放弃`（P-05/SEP-05 无参数）：F-05 会话退出终态（批6 路6A）。
+
+    守卫 GU-17 调合会话中（无会话/非调合类 → 无会话模板）+ GU-10/MUT-04 战斗拦截。
+    流程：SettleEngine.abandon(ctx, snap, qid, message_id, session_view=view)——材料
+      不结算（F-05：不扣料不产入），终态结算 settle_alchemy command="settle:abandon"
+      （§10 铁律 3；message_id 缺失时引擎不落幂等键，保守）。
+    入参：parsed、ctx（session_mgr + remove_item/add_item hook 语义兼容）。
+    出参：回复正文 str（成功「已放弃」；重复放弃「已放弃」幂等透传）。
+    """
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    session_mgr = ctx.get("session_mgr")
+    if session_mgr is None:
+        raise RuntimeError(
+            "alchemy_commands.cmd_abandon 需要 ctx['session_mgr']"
+            "（SessionManager 或 async fake，批11 装配注入）"
+        )
+    qid = _qid_of(ctx) or ""  # 装配层注入恒非空；缺省空串保守（settle 幂等键要素缺失不落键）
+    if ctx.get("in_battle"):
+        return "战斗中使用 /即时调合 <配方>（不进入调合会话）"
+    view = await session_mgr.get_active(qid)
+    if view is None or not is_alchemy_session(view):
+        return TEMPLATE_MESSAGES[TEMPLATE_NO_SESSION]
+    snap = _view_payload(view)
+    settings = _settings_of(ctx)
+    prof_engine = ProficiencyEngine(settings=settings)
+    engine = SettleEngine(prof=prof_engine, settings=settings)
+    res = await engine.abandon(
+        ctx, snap, qid=qid,
+        message_id=ctx.get("message_id") or None, session_view=view,
+    )
+    return str(res.get("message") or "❌ 放弃失败")
+
+
+async def cmd_resume(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """`/调合续`（P-05/SEP-05 无参数）：挂起(战斗) 会话恢复（批6 路6A，GU-18）。
+
+    守卫（§7.1 行7/8 + MUT-05）：
+      - 无挂起（无会话）→ 「当前没有调合会话，先 /炼金 <配方> 开始」；
+      - 已有活跃会话（非调合类占用槽位 或 未挂起的调合会话）→
+        「已有一个调合会话进行中」（定稿 L177）；
+      - 挂起(战斗) 调合会话 → 恢复渲染面板（行7：特性选择与 PP 状态不丢，快照原样渲染）。
+    入参：parsed、ctx（session_mgr/items/recipe/settings）。出参：回复正文 str。
+    """
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    session_mgr = ctx.get("session_mgr")
+    if session_mgr is None:
+        raise RuntimeError(
+            "alchemy_commands.cmd_resume 需要 ctx['session_mgr']"
+            "（SessionManager 或 async fake，批11 装配注入）"
+        )
+    qid = _qid_of(ctx)
+    view = await session_mgr.get_active(qid)
+    if view is None:
+        return TEMPLATE_MESSAGES[TEMPLATE_NO_SESSION]            # 无挂起（行2）
+    if not is_alchemy_session(view) or not _is_suspended(view):
+        return TEMPLATE_MESSAGES[TEMPLATE_ALREADY_ACTIVE_ALCHEMY]  # 已有活跃（行8/L177）
+    snap = _view_payload(view)
+    if not snap:
+        return TEMPLATE_MESSAGES[TEMPLATE_NO_SESSION]
+    settings = _settings_of(ctx)
+    prof_engine = ProficiencyEngine(settings=settings)
+    player = _player_of(ctx)
+    tier_index = prof_engine.tier_index_for_level(ALCHEMY_JOB_ID, _prof_level(player))
+    core = AlchemyCore(prof=prof_engine, settings=settings)
+    return _render_panel(core, snap, ctx, tier_index)
+
+
+def _star_qty(parsed: Any) -> Optional[int]:
+    """壳层防御 `*N` 数量解析（P-10 单件分解 + 任务书扩展 `/分解 <物品>*<数量>`）。
+
+    parsers 未把 分解 登记进 quantity_commands（DEFAULT_QUANTITY_COMMANDS，批11 装配补），
+    故 parsed.qty 恒 None——此处按 _target_of 同口径剥离 `*N` 兜底解析（对齐 P-03/SEP-03
+    数量语义：`*` 数量，缺失/非法 → None）。
+    入参：parsed（ParsedCommand）。出参：N≥1 或 None。
+    """
+    if not getattr(parsed, "args", None):
+        return None
+    raw = str(parsed.args[0])
+    if "*" not in raw:
+        return None
+    _, _, cnt = raw.partition("*")
+    try:
+        n = int(cnt)
+    except (TypeError, ValueError):
+        return None
+    return max(1, n)
+
+
+async def cmd_decompose(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """`/分解 <道具>*<数量>`（P-10/SEP-10，GU-32/33，批6 路6A）。
+
+    守卫：
+      - GU-33 道具在注册表且为分解对象（道具名不存在 → 「❌ 道具不存在：xxx」）；
+      - GU-32 仅炼金/深度产出可分解、标准版默认不可分解或回收减半（GEM-13/14）——
+        由兄弟路 B gem_wallet.decompose 承载（本壳鸭子类型消费 ctx["wallet"]，勿 import
+        勿探查；接口契约见批6 任务书：decompose/decompose_rate/gem_base_value/grant_gem）。
+    流程：钱包 decompose 原子扣道具 + 返材料（×回收率向下取整）+ 宝石入账（平铺基础值
+      不乘回收率，拍板①）→ 两段式消息渲染（M-10）。
+    入参：parsed、ctx（items/recipe/settings + wallet 注入点，批6B 装配）。
+    出参：回复正文 str。
+    """
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    if not parsed.args:
+        return format_tpl12(f"/{DECOMPOSE_CMD}")
+    target = _target_of(parsed)
+    qty = parsed.qty if parsed.qty is not None else _star_qty(parsed)
+    qty = max(1, qty if qty is not None else 1)
+    item_def = _find_item(ctx, target)
+    if item_def is None:
+        return f"❌ 道具不存在：{target}"                        # GU-33 分解对象缺失
+    wallet = ctx.get("wallet")
+    if wallet is None:
+        raise RuntimeError(
+            "alchemy_commands.cmd_decompose 需要 ctx['wallet']"
+            "（宝石货币引擎 GemWallet 或 fake，实现 decompose/decompose_rate 接口契约）"
+        )
+    settings = _settings_of(ctx)
+    prof_engine = ProficiencyEngine(settings=settings)
+    player = _player_of(ctx)
+    tier_index = prof_engine.tier_index_for_level(ALCHEMY_JOB_ID, _prof_level(player))
+    res = wallet.decompose(ctx, item_def, count=qty, job_tier_index=tier_index)
+    if inspect.isawaitable(res):  # 鸭子类型：兄弟路引擎 async 防御（同步引擎亦兼容）
+        res = await res
+    if not res.get("ok"):
+        return str(res.get("message") or "❌ 分解失败")          # GU-32 标准版拒/回收减半透传
+    rate: Optional[float] = None
+    raw_rate: Any = res.get("rate")
+    if raw_rate is not None:
+        try:
+            rate = float(raw_rate)
+        except (TypeError, ValueError):
+            rate = None
+    if rate is None:
+        dr = getattr(wallet, "decompose_rate", None)
+        if callable(dr):
+            try:
+                rate = float(dr(tier_index))                    # 兜底读回收率（可配档位）
+            except Exception:
+                rate = None
+    return _render_decompose(res, ctx, rate=rate)
+
+
+# ---------------------------------------------------------------------------
 # 装配（Router 注册；make_context 由装配层注入，批11 路11A 待接线）
 # ---------------------------------------------------------------------------
 
@@ -1124,10 +1419,12 @@ def register_alchemy_commands(
     *,
     make_context: Optional[Callable[[Any], dict]] = None,
 ) -> Any:
-    """把 `/合成` `/炼金` `/投料` 注册进 Router（CommandSpec.handler 消费 ParsedCommand）。
+    """把 `/合成` `/炼金` `/投料` `/继承` `/继承超` `/确认` `/放弃` `/调合续` `/分解`
+    注册进 Router（CommandSpec.handler 消费 ParsedCommand）。
 
     handler 支持 k.get("ctx") 注入（装配层 _invoke_handler 以 ctx=ctx 注入，assembly/runner.py
-    L281-302）；`炼金`/`投料` 为 async 处理器，runner 对 isawaitable 结果自动 await。
+    L281-302）；全部炼金指令（含本批 4 条终态指令）为 async 处理器，runner 对 isawaitable
+    结果自动 await。
 
     :param make_context: ParsedCommand → 玩家 ctx dict（含 player/session_mgr/items/recipe/
         settings/currencies/proficiency 等，见 core/alchemy_core.py 工程补白）。None 时 handler
@@ -1171,9 +1468,37 @@ def register_alchemy_commands(
             return cmd_inherit_super(parsed, injected)
         return cmd_inherit_super(parsed, _ctx(parsed))
 
+    def _confirm(parsed: Any, *a: Any, **k: Any):
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_confirm(parsed, injected)
+        return cmd_confirm(parsed, _ctx(parsed))
+
+    def _abandon(parsed: Any, *a: Any, **k: Any):
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_abandon(parsed, injected)
+        return cmd_abandon(parsed, _ctx(parsed))
+
+    def _resume(parsed: Any, *a: Any, **k: Any):
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_resume(parsed, injected)
+        return cmd_resume(parsed, _ctx(parsed))
+
+    def _decompose(parsed: Any, *a: Any, **k: Any):
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_decompose(parsed, injected)
+        return cmd_decompose(parsed, _ctx(parsed))
+
     router.register(CommandSpec(SYNTH_CMD, handler=_synth))
     router.register(CommandSpec(ALCHEMY_CMD, handler=_alchemy))
     router.register(CommandSpec(FEED_CMD, handler=_feed))
     router.register(CommandSpec(INHERIT_CMD, handler=_inherit))
     router.register(CommandSpec(INHERIT_SUPER_CMD, handler=_inherit_super))
+    router.register(CommandSpec(CONFIRM_CMD, handler=_confirm))
+    router.register(CommandSpec(ABANDON_CMD, handler=_abandon))
+    router.register(CommandSpec(RESUME_CMD, handler=_resume))
+    router.register(CommandSpec(DECOMPOSE_CMD, handler=_decompose))
     return router

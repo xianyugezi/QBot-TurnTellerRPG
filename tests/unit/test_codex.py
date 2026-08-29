@@ -109,8 +109,9 @@ def test_progress_single_and_global() -> None:
     assert abs(p["pct"] - 100 / 3) < 0.001
     mark_seen(ctx, "item", "potion", "药水")            # item 1/2
     gp = codex_progress(ctx)
-    # 单册 pct: monster=33.33, weapon=0, item=50 → 均值 ≈ 27.78
-    assert abs(gp["pct"] - (100 / 3 + 0 + 50) / 3) < 0.01
+    # 单册 pct: monster=33.33, weapon=0, item=50, alchemy=0 → 均值 ≈ 20.83
+    # （M8 批11-2 收口：/图鉴 合并 alchemy 分册入总览，3 册均值 → 4 册均值）
+    assert abs(gp["pct"] - (100 / 3 + 0 + 50 + 0) / 4) < 0.01
 
 
 def test_progress_empty_registry() -> None:
@@ -125,7 +126,8 @@ def test_codex_projection_updated() -> None:
     ctx = _ctx()
     assert ctx.get("codex", 0.0) == 0.0
     mark_seen(ctx, "monster", "rock_weasel", "岩鼬")
-    assert abs(float(ctx["codex"]) - (100 / 3 + 0 + 0) / 3) < 0.01
+    # 4 册均值（M8 批11-2 收口：alchemy 分册入总览，pct=0）
+    assert abs(float(ctx["codex"]) - (100 / 3 + 0 + 0 + 0) / 4) < 0.01
 
 
 # ---------------------------------------------------------------------------

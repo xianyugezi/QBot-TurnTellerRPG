@@ -28,12 +28,12 @@ from typing import Any, Dict, Optional
 from qbot_rpg.commands.alchemy_commands import (
     cmd_buff,
     cmd_challenge,
-    cmd_codex,
     cmd_core,
     cmd_deep,
     cmd_evolve,
     cmd_skill_panel,
     cmd_tutorial,
+    render_alchemy_codex,
 )
 from qbot_rpg.commands.parsers import DEFAULT_WHITELIST, parse_command
 
@@ -272,7 +272,7 @@ async def test_challenge_ok_with_double_materials() -> None:
 async def test_codex_progress_and_king() -> None:
     """F-19/TTL-01：图鉴进度显示；全亮 → 炼金王称号。"""
     ctx = make_ctx(_player(level=5, codex_lit=2))
-    out = await cmd_codex(_pc("/图鉴"), ctx)
+    out = render_alchemy_codex(ctx)
     assert "炼金图鉴" in out
 
 
@@ -286,7 +286,7 @@ async def test_codex_all_lit_grant_king() -> None:
         "core_fire": {"seen": True}, "boost_stone": {"seen": True},
     }}
     ctx = make_ctx(player)
-    out = await cmd_codex(_pc("/图鉴"), ctx)
+    out = render_alchemy_codex(ctx)
     assert "炼金王" in out or "称号" in out
 
 

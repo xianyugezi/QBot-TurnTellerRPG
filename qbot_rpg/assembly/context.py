@@ -818,6 +818,19 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
         "battle_hint": None,
         "battle_status_changes": [],
         "current_shop_ref": [],
+        # M8 炼金（批11-2 收口接线：注册表表视图 + 会话/战斗/引擎注入位；指令壳自兜底）
+        "registry": deps.registry,
+        "session_mgr": deps.session_mgr,
+        "items": _table_from_registry(deps.registry, "item"),
+        "recipe": _table_from_registry(deps.registry, "recipe"),
+        "traits": _table_from_registry(deps.registry, "trait"),
+        "battle_snapshot": None,          # 战斗接线注入位（即时调合 battle_alchemy_used）
+        "battle_alchemy_engine": None,    # 战斗接线注入位（BattleAlchemyEngine）
+        "upgrade_unlocks": {},            # 玩家级解锁表（配方合成/进化持久化，装配层回填）
+        "wallet": None,                   # GemWallet 注入位（分解/宝石入账；指令壳自兜底）
+        "prof_engine": None,              # ProficiencyEngine 注入位（tier/SP；指令壳自兜底）
+        "resolve_player_name": None,      # /协力 玩家名 hook 注入位
+        "same_group": None,               # /协力 同群校验注入位
     }
 
     # -- ③ 玩家相关字段（registered=False → 标量 None + 集合安全空值） ----------
@@ -876,6 +889,11 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
             # RN-11（N-04）：dialog_session 30 天惰性清理（读取/启动时；last_active_at
             # 超 30 天 → 清除恢复上下文，见 _dialog_snapshot_or_cleared）
             "dialog_session": _restore_dialog_session(_dialog_snapshot_or_cleared(ps)),
+            # M8 炼金（批11-2 收口）：背包 hooks（_inventory_hooks 就地操作
+            # ctx["inventory"] 计数映射，reward/shop 同款契约）+ 玩家级解锁表回填
+            # （配方合成/进化持久化，换包同 ID 保留 DUP-06）
+            **_inventory_hooks(ctx),
+            "upgrade_unlocks": _ps_init(ps, "upgrade_unlocks", {}),
         })
     else:
         ctx.update({

@@ -43,15 +43,20 @@ CATEGORIES: Mapping[str, Tuple[str, ...]] = {
     "monster": ("enemy",),
     "weapon": ("equipment",),
     "item": ("item",),
+    # M8 收口裁决·/图鉴 双注册合并（批11-2）：炼金分册并入 codex 分册体系——
+    # 分册页渲染由 codex_commands 对 alchemy 特判调 alchemy_commands.render_alchemy_codex
+    # （F-19 炼金图鉴：点亮进度/成长奖励/王称号 TTL-01）；这里登记 kinds 供总览计数。
+    "alchemy": ("recipe", "item"),
 }
 
-# 展示组序（3f R-17：怪物→武器→物品）
-CATEGORY_ORDER: Tuple[str, ...] = ("monster", "weapon", "item")
+# 展示组序（3f R-17：怪物→武器→物品；M8 收口裁决加炼金分册于末尾）
+CATEGORY_ORDER: Tuple[str, ...] = ("monster", "weapon", "item", "alchemy")
 
 _CATEGORY_LABELS: Mapping[str, str] = {
     "monster": "怪物图鉴",
     "weapon": "武器图鉴",
     "item": "物品图鉴",
+    "alchemy": "炼金图鉴",
 }
 
 # ??? 占位（未收集不泄露名称，R-19）

@@ -149,7 +149,7 @@ __all__ = [
     "cmd_product_merge", "cmd_formula_merge", "cmd_trait_merge",
     "cmd_register", "cmd_copy",
     "cmd_deep", "cmd_evolve", "cmd_core", "cmd_buff",
-    "cmd_challenge", "cmd_codex", "cmd_skill_panel", "cmd_tutorial",
+    "cmd_challenge", "render_alchemy_codex", "cmd_skill_panel", "cmd_tutorial",
     "cmd_instant", "cmd_assist",
     "cmd_plant", "cmd_harvest", "cmd_helper", "cmd_collect",
     # 装配
@@ -2515,17 +2515,19 @@ async def cmd_challenge(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     return _render_challenge_panel(ctx, snap2, check)
 
 
-async def cmd_codex(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
-    """`/图鉴`（P-19/SEP-19 无参数查看态，GU-58/F-19/M-19/TTL-01/TC-27）。
+def render_alchemy_codex(ctx: MutableMapping[str, Any]) -> str:
+    """炼金图鉴渲染（F-19/M-19/TTL-01/TC-27，M8 收口裁决 2026-08-29）。
+
+    【收口裁决·/图鉴 双注册合并】/图鉴 指令由 codex_commands（M7 BCH-08 分册体系）注册，
+    alchemy_commands 不再注册「图鉴」；本函数为炼金分册渲染器，由 codex_commands 在
+    /图鉴 炼金 分支调用（单向 import，防双注册 ValueError）。
 
     无门槛（只读+成长奖励幂等领取）：AlchemyMeta.codex_summary（进度 lit/total/all_lit）+
       codex_reward（点亮 N 格 → 经验/新配方，L210，idempotent）→ king_eligible（全亮 → 炼金王
-      称号，TTL-01）渲染；M5 无 emoji 渲染纯文本（📚 弃用）：
+      称号，TTL-01）渲染；M5 无 emoji 渲染纯文本：
       `炼金图鉴：已点亮 23/40（点亮 40 → 炼金王称号）`。
-    入参：parsed、ctx（codex_state/registry/prof_engine）。出参：回复正文 str。
+    入参：ctx（codex_state/registry/prof_engine）。出参：回复正文 str。
     """
-    if parsed.error:
-        return format_tpl12(_fragment(parsed))
     settings = _settings_of(ctx)
     meta = AlchemyMeta(prof=_prof_engine_of(ctx), settings=settings)
     summary = meta.codex_summary(ctx)   # category 默认 alchemy 炼金图鉴（F-19）
@@ -3335,11 +3337,9 @@ def register_alchemy_commands(
             return cmd_challenge(parsed, injected)
         return cmd_challenge(parsed, _ctx(parsed))
 
-    def _codex(parsed: Any, *a: Any, **k: Any):
-        injected = k.get("ctx") if isinstance(k, dict) else None
-        if isinstance(injected, MutableMapping):
-            return cmd_codex(parsed, injected)
-        return cmd_codex(parsed, _ctx(parsed))
+    # 【收口裁决·/图鉴 双注册合并】/图鉴 由 codex_commands 注册（分册体系），
+    # 本模块不注册 CODEX_CMD（render_alchemy_codex 供 codex_commands 炼金分册调用）。
+    # （原 _codex 闭包已移除）
 
     def _skill_panel(parsed: Any, *a: Any, **k: Any):
         injected = k.get("ctx") if isinstance(k, dict) else None
@@ -3411,7 +3411,7 @@ def register_alchemy_commands(
     router.register(CommandSpec(CORE_CMD, handler=_core))
     router.register(CommandSpec(BUFF_CMD, handler=_buff))
     router.register(CommandSpec(CHALLENGE_CMD, handler=_challenge))
-    router.register(CommandSpec(CODEX_CMD, handler=_codex))
+    # 【收口裁决】/图鉴 由 codex_commands 注册，此处不注册 CODEX_CMD（防双注册 ValueError）
     router.register(CommandSpec(SKILL_PANEL_CMD, handler=_skill_panel))
     router.register(CommandSpec(TUTORIAL_CMD, handler=_tutorial))
     router.register(CommandSpec(INSTANT_CMD, handler=_instant))

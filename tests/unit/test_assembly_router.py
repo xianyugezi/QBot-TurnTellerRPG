@@ -57,6 +57,12 @@ ALL_REGISTERED = {
     "调查",
     # codex（F-11/F-12，BCH-08）
     "图鉴",
+    # M8 炼金（批11-2 收口接线：30+ 指令；/图鉴 已并入 codex 不重复注册）
+    "合成", "炼金", "投料", "继承", "继承超", "确认", "放弃", "调合续",
+    "深度炼金", "进化", "镶核心", "加成",
+    "成品合成", "配方合成", "特性合成", "珠升阶",
+    "分解", "登记", "复制", "挑战", "即时调合",
+    "镶嵌", "拆珠", "教学", "协力", "种植", "收获", "代工", "收取", "技能面板",
 }
 
 # 关键指令（TCA-02/03 冒烟锚点：状态/背包/任务/商店 handler 可调）
@@ -318,8 +324,9 @@ def test_check_consistency_whitelist_unregistered_is_expected_m7() -> None:
     router = build_router(_deps(make_context=_stub_ctx))
     result = check_consistency(router)
     unreg = set(result["whitelist_not_registered"])
-    # 已知 M7 未注册（信息性）——锚点抽样防未来漂移（对话已注册 N-01，非白名单缺注册）
-    assert {"重载", "地图", "炼金", "快捷绑定"} <= unreg
+    # 已知 M7 未注册（信息性）——锚点抽样防未来漂移；「炼金」M8 已注册移出预期
+    # （M8 批11-2 收口：炼金 30+ 指令全部注册 + 白名单覆盖）
+    assert {"重载", "地图", "快捷绑定"} <= unreg
     assert not (unreg & set(ALL_REGISTERED))  # 已注册指令绝不落入白名单缺注册
 
 

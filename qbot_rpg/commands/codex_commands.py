@@ -34,6 +34,8 @@ _CAT_ALIASES: Mapping[str, str] = {
     "怪物": "monster", "怪物图鉴": "monster", "monster": "monster",
     "武器": "weapon", "武器图鉴": "weapon", "weapon": "weapon",
     "物品": "item", "物品图鉴": "item", "item": "item",
+    # M8 收口裁决·/图鉴 双注册合并（批11-2）：炼金分册 → alchemy（特判渲染）
+    "炼金": "alchemy", "炼金图鉴": "alchemy", "alchemy": "alchemy",
 }
 
 _PAGE_SIZE = 5
@@ -100,6 +102,10 @@ def cmd_codex(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     cat = _CAT_ALIASES.get(str(args[0]).strip())
     if cat is None:
         return _overview(ctx)
+    # M8 收口裁决·/图鉴 双注册合并：炼金分册走炼金图鉴渲染（F-19 进度/成长奖励/王称号）
+    if cat == "alchemy":
+        from qbot_rpg.commands.alchemy_commands import render_alchemy_codex  # 单向 import 防环
+        return render_alchemy_codex(ctx)
     page = 1
     if len(args) > 1:
         try:

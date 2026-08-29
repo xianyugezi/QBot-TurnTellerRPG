@@ -38,6 +38,7 @@ import asyncio
 from typing import Any, Callable, Dict, List, Mapping, cast
 
 from qbot_rpg.commands import (
+    alchemy_commands,
     basic_commands,
     battle_commands,
     checkin_commands,
@@ -86,7 +87,8 @@ REGISTER_GROUPS: tuple = (
     dialog_commands.register_dialog_commands,      # /对话（N-01，BCH-03）
     log_commands.register_log_commands,            # /日志（F-03/F-04，BCH-05，ADR-09）
     investigate_commands.register_investigate_commands,  # /调查（F-05/F-06，BCH-06）
-    codex_commands.register_codex_commands,        # /图鉴（F-11/F-12，BCH-08）
+    codex_commands.register_codex_commands,        # /图鉴（BCH-08；M8 收口：含炼金分册）
+    alchemy_commands.register_alchemy_commands,    # M8 炼金 30+ 指令（/图鉴 并入 codex）
 )
 
 

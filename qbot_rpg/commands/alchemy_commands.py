@@ -24,8 +24,15 @@ qbot_rpg/commands/alchemy_commands.py）——本批只注册 /合成。
   （COPY_CMD，复用 core/alchemy_register.py AlchemyRegister）——委托 JewelSystem/UpgradeEngine/
   AlchemyRegister 三引擎，规则依据 docs/细化/细化_2c4c_珠与合成指令.md（BEL/DUP/CMB/SOCK 族）；
   其余炼金指令（/深度炼金 /进化 /图鉴 /技能面板 /种植 /收获 /雇工 /教学 等）由后续批次填充
-  （批8 /深度炼金 /进化 /镶核心 /加成 /挑战 /图鉴 /技能面板 /教学、批10 /种植 /收获 /雇工 /收取）——
-  本模块作为这些指令壳的统一落点文件，后续批次追加 cmd_xxx + register 项即可。
+  （**批8-2 本批追加**：/深度炼金 /进化 /镶核心 /加成 /挑战 /图鉴 /技能面板 /教学——单路独占
+  本文件，深度炼金指令壳消费 core/alchemy_deep.py DeepEngine + core/alchemy_meta.py
+  AlchemyMeta，规则依据 docs/m8_contract_指令契约.md §6/7/8/15/18/22（GU-20~28/47~49/58/64）；
+  /挑战 复用 challenge_alchemy 会话类型（深度同型子态，快照加 challenge 标记，工程补白），
+  /确认 在 cmd_confirm 内接 challenge_check/challenge_settle（F-16 苛刻条件结算）；
+  /图鉴 /技能面板 /教学 无门槛查看态，/技能面板 支持 `解锁=<面板项>` 键值解锁（工程补白）；
+  炼金产出计数落点 = player 长线计数 produce_counts（/确认 炼金结算递增，/合成 不计数 CASC-05）；
+  首次深度解锁公告标记 = player.flags.deep_unlock_announced（工程补白）。批10 /种植 /收获 /
+  雇工 /收取——本模块作为这些指令壳的统一落点文件，后续批次追加 cmd_xxx + register 项即可。
 
 依据：
   - docs/m8_contract_指令契约.md §1 /合成（P-01 参数解析 / GU-01~04 /
@@ -67,7 +74,10 @@ from qbot_rpg.core.alchemy_core import (
     EXPERT_TIER_INDEX,
     AlchemyCore,
 )
+from qbot_rpg.core.alchemy_deep import DeepEngine
+from qbot_rpg.core.alchemy_meta import AlchemyMeta
 from qbot_rpg.core.alchemy_session import (
+    CHALLENGE_SESSION,
     SUSPENDED,
     TEMPLATE_ALREADY_ACTIVE,
     TEMPLATE_ALREADY_ACTIVE_ALCHEMY,
@@ -100,8 +110,11 @@ __all__ = [
     "MOUNT_CMD", "UNMOUNT_CMD", "JEWEL_UP_CMD",
     "PRODUCT_MERGE_CMD", "FORMULA_MERGE_CMD", "TRAIT_MERGE_CMD",
     "REGISTER_CMD", "COPY_CMD",
+    "DEEP_CMD", "EVOLVE_CMD", "CORE_CMD", "BUFF_CMD",
+    "CHALLENGE_CMD", "CODEX_CMD", "SKILL_PANEL_CMD", "TUTORIAL_CMD",
     # 固定子词常量
     "AUTO_SUBWORD", "FEED_APPEND_SUBWORD", "CATALYST_KV_KEY",
+    "SP_UNLOCK_KV_KEY",
     # 指令处理器（纯函数/异步：parsed + ctx → 回复正文）
     "cmd_synthesis", "cmd_alchemy", "cmd_feed",
     "cmd_inherit", "cmd_inherit_super",
@@ -109,6 +122,8 @@ __all__ = [
     "cmd_mount", "cmd_unmount", "cmd_jewel_up",
     "cmd_product_merge", "cmd_formula_merge", "cmd_trait_merge",
     "cmd_register", "cmd_copy",
+    "cmd_deep", "cmd_evolve", "cmd_core", "cmd_buff",
+    "cmd_challenge", "cmd_codex", "cmd_skill_panel", "cmd_tutorial",
     # 装配
     "register_alchemy_commands",
 ]
@@ -138,11 +153,23 @@ TRAIT_MERGE_CMD = "特性合成"    # 两同系特性+宝石20+材料 → 更高
 REGISTER_CMD = "登记"          # 登记模板持久化（DUP-02/06，无职业门槛）
 COPY_CMD = "复制"             # 量产标准版（DUP-01~05，大师）
 
+# 深度炼金指令（批8-2，docs/m8_contract_指令契约.md §6/7/8/15/18/22）
+DEEP_CMD = "深度炼金"          # GU-20~22/F-06/M-06：大师解锁深度会话（challenge_alchemy 类型）
+EVOLVE_CMD = "进化"           # GU-23~25/F-07/M-07：宗师+炼金产出 N 次 → 永久解锁（ATO-05）
+CORE_CMD = "镶核心"           # GU-26~27/F-08/M-08：深度会话中+大师，核心适配/可换（COR-01~03）
+BUFF_CMD = "加成"             # GU-28/F-08/M-08：深度会话中+宗师，加成限 1 次/调合（QLT-09）
+CHALLENGE_CMD = "挑战"         # GU-47~49/F-16/M-16：宗师+深度会话中，材料×2 挑战苛刻条件
+CODEX_CMD = "图鉴"            # GU-58/F-19/M-19：无门槛查看态，图鉴成长→王称号（TTL-01）
+SKILL_PANEL_CMD = "技能面板"    # GU-58/F-19/M-19：无门槛查看态，SP 自选解锁（SP-02~05）
+TUTORIAL_CMD = "教学"         # GU-64/F-23/M-23：无门槛，教学目录/机制名/升大师 6 预览
+
 # 固定子词（对齐 parsers.py FIXED_SUBWORDS：自动/追加 已在常量内，壳层显式引用防字面量漂移）
 AUTO_SUBWORD = "自动"
 FEED_APPEND_SUBWORD = "追加"
 # 触媒键值键（/炼金 <配方> 触媒=<触媒名>，P-02/SEP-02，`=` 键值修饰）
 CATALYST_KV_KEY = "触媒"
+# 技能面板解锁键值键（/技能面板 解锁=<面板项>，工程补白：SP-04/05 自选解锁子词）
+SP_UNLOCK_KV_KEY = "解锁"
 
 # 7 级称号默认名（R-07 触媒解锁档位归一兜底，对齐 alchemy_core.DEFAULT_TIER_NAMES）
 _DEFAULT_TIER_NAMES: tuple = ("见习", "正式", "精通", "专家", "大师", "宗师", "王")
@@ -1282,14 +1309,55 @@ async def cmd_confirm(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     placement = trait_engine.check_placement_conflict(snap, [], ctx)
     if not placement.get("ok"):
         return _placement_conflict_text(placement)
+    # 挑战结算（F-16/GU-47~49/ATO-06/TC-23：快照含 challenge 标记 → /确认 接
+    # challenge_check/challenge_settle——达标上限+10；未达标降级+退 50% 材料只退一次；
+    # 结算结果快照继续走 F-05 正常品质结算）
+    challenge_text: Optional[str] = None
+    if bool(snap.get("challenge")):
+        deep = DeepEngine(settings=settings)
+        core = AlchemyCore(prof=prof_engine, settings=settings)
+        segments, hits = _challenge_metrics(core, snap, ctx)
+        check = deep.challenge_check(
+            player, snap, chain_segments=segments, element_hits=hits
+        )
+        settle = deep.challenge_settle(
+            player, ctx, snap, met=bool(check.get("met")),
+            material_paid=snap.get("material_paid"),
+        )
+        if not settle.get("ok"):
+            return str(settle.get("message") or "❌ 挑战结算失败")
+        if check.get("met"):
+            challenge_text = str(settle.get("message") or "挑战成功！品质上限 +10")
+        else:
+            # M-16：失败模板带苛刻条件实况（连锁 X/5）
+            challenge_text = (
+                f"❌ 挑战失败：条件未达标（连锁 {check.get('chain_segments', 0)}/"
+                f"{check.get('need_chain', 5)}），品质降级，退还 50% 材料"
+            )
+        snap = settle["snap"]  # 挑战结果快照（quality_cap_bonus/challenge_cap 或降级+退料）
     engine = SettleEngine(prof=prof_engine, settings=settings)
     res = await engine.confirm(
         ctx, snap, qid=qid, job_tier_index=tier_index,
         message_id=ctx.get("message_id") or None, session_view=view,
     )
+    # 炼金产出计数落点（GU-24/CASC-05 工程补白：/确认 炼金结算成功后长线计数 +1；
+    # /合成 天然不写——合成壳不经过本函数，合成不计口径天然成立）
+    if res.get("ok") and not res.get("idempotent"):
+        rid = snap.get("recipe_id")
+        if isinstance(rid, str) and rid:
+            pc = player.get("produce_counts")
+            if not isinstance(pc, MutableMapping):
+                pc = {}
+                player["produce_counts"] = pc
+            try:
+                pc[rid] = max(0, int(pc.get(rid, 0))) + 1
+            except (TypeError, ValueError):
+                pc[rid] = 1
     if not res.get("ok"):
-        return _confirm_error(res, ctx)
-    return str(res.get("message") or "❌ 确认失败")
+        err = _confirm_error(res, ctx)
+        return f"{challenge_text}\n{err}" if challenge_text else err
+    body = str(res.get("message") or "❌ 确认失败")
+    return f"{challenge_text}\n{body}" if challenge_text else body
 
 
 async def cmd_abandon(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
@@ -1847,6 +1915,672 @@ async def cmd_copy(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 
 
 # ---------------------------------------------------------------------------
+# 深度炼金指令壳（批8-2：/深度炼金 /进化 /镶核心 /加成 /挑战 /图鉴 /技能面板 /教学）
+# ---------------------------------------------------------------------------
+# 规则依据：docs/m8_contract_指令契约.md §6（GU-20~22/F-06/M-06/TC-14）、§7（GU-23~25/F-07/
+# M-07/CASC-05/ATO-05/TC-15）、§8（GU-26~28/F-08/M-08/COR-01~03/QLT-09/TC-16）、§15
+# （GU-47~49/F-16/M-16/ATO-06/TC-23）、§18（GU-58/F-19/M-19/TTL-01/TC-27）、§22（GU-64/F-23/
+# M-23/TC-31）。业务结算全部委托 core/alchemy_deep.py DeepEngine + core/alchemy_meta.py
+# AlchemyMeta + core/alchemy_core.py AlchemyCore——本壳只做「装配接线 + 守卫 + 解析 + 透传」。
+
+def _prof_engine_of(ctx: Mapping[str, Any]) -> ProficiencyEngine:
+    """职业熟练度引擎（SP 面板/王称号需 proficiency 条目；工程补白：ctx[\"prof_engine\"] 预注入
+    优先，ctx[\"proficiency_entries\"] 条目列表次之，缺省 settings 兜底——对齐 cmd_alchemy
+    `ProficiencyEngine(settings=settings)` 构造口径，装配层批11 可注入 entries 放开 SP 面板）。"""
+    pe = ctx.get("prof_engine")
+    if isinstance(pe, ProficiencyEngine):
+        return pe
+    entries = ctx.get("proficiency_entries")
+    if isinstance(entries, (list, tuple)):
+        return ProficiencyEngine(entries=entries, settings=_settings_of(ctx))
+    return ProficiencyEngine(settings=_settings_of(ctx))
+
+
+def _produce_counts(player: Mapping[str, Any]) -> MutableMapping[str, Any]:
+    """炼金产出计数（GU-24/CASC-05：合成不计，只计炼金会话结算；工程补白：长线计数落
+    player.produce_counts {recipe_id: int}，/确认 结算递增，/合成 天然不写）。"""
+    if isinstance(player, Mapping):
+        pc = player.get("produce_counts")
+        if isinstance(pc, MutableMapping):
+            return pc
+    return {}
+
+
+def _challenge_materials_2x(recipe: Mapping[str, Any]) -> list:
+    """挑战材料清单（GU-49 材料按 配方×2：materials 每项 count×2，归一 [{item, count}]）。"""
+    need: list = []
+    raw = recipe.get("materials")
+    if not isinstance(raw, (list, tuple)):
+        return need
+    for m in raw:
+        if not isinstance(m, Mapping):
+            continue
+        iid = m.get("item") or m.get("id")
+        if not isinstance(iid, str) or not iid:
+            continue
+        try:
+            cnt = max(1, int(m.get("count", 1)))
+        except (TypeError, ValueError):
+            cnt = 1
+        need.append({"item": iid, "count": cnt * 2})
+    return need
+
+
+def _mark_deep_announced(player: MutableMapping[str, Any]) -> bool:
+    """首次深度解锁公告标记（F-06「首次：解锁公告+逐条教学一句话示例」；工程补白：落
+    player.flags.deep_unlock_announced，幂等——仅首次 True，之后 False 不再公告）。"""
+    flags = player.get("flags")
+    if not isinstance(flags, MutableMapping):
+        flags = {}
+        player["flags"] = flags
+    if flags.get("deep_unlock_announced"):
+        return False
+    flags["deep_unlock_announced"] = True
+    return True
+
+
+def _kv_value(parsed: Any, key: str) -> Optional[str]:
+    """键值取值（`=` 键值修饰，对齐 _catalyst_kv 口径）：parsed.kv 优先，
+    args 内 `key=` 前缀兜底。"""
+    for item in getattr(parsed, "kv", None) or []:
+        if isinstance(item, Mapping) and item.get("key") == key:
+            v = item.get("value")
+            if v:
+                return str(v)
+    for a in getattr(parsed, "args", None) or []:
+        s = str(a)
+        if s.startswith(f"{key}="):
+            return s.split("=", 1)[1]
+    return None
+
+
+def _recipe_name(ctx: Mapping[str, Any], recipe_id: Any) -> str:
+    """配方中文名（recipe.name 优先，缺省原 id）。"""
+    rdef = _find_recipe(ctx, recipe_id)
+    if rdef is not None:
+        name = rdef.get("name")
+        if isinstance(name, str) and name:
+            return name
+    return str(recipe_id)
+
+
+def _is_deep_snap(snap: Any) -> bool:
+    """深度会话快照判定（F-06/MUT-07：session_type==challenge_alchemy 或带 core_slot 键；
+    对齐 DeepEngine._is_deep_snap 口径，避免跨模块私有访问）。"""
+    return isinstance(snap, Mapping) and (
+        snap.get("session_type") == CHALLENGE_SESSION or "core_slot" in snap
+    )
+
+
+def _challenge_metrics(core: AlchemyCore, snap: Mapping[str, Any],
+                       ctx: Mapping[str, Any]) -> tuple:
+    """挑战苛刻条件实况（F-16/L214）：(连锁段数, 刻度达标数)。
+
+    - 连锁段数 = 快照 chain.segments（compute_chain 已落快照，FEED-06 同源）；
+    - 刻度达标数 = check_element_req(element_scores) 中 met=True 的元素数（命中 recipe
+      element_req 阈值，FEED-07）。
+    """
+    chain = snap.get("chain")
+    segments = 0
+    if isinstance(chain, Mapping):
+        try:
+            segments = max(0, int(chain.get("segments", 0)))
+        except (TypeError, ValueError):
+            segments = 0
+    scores = snap.get("element_scores")
+    scores = scores if isinstance(scores, Mapping) else {}
+    recipe = _find_recipe(ctx, snap.get("recipe_id"))
+    hits = 0
+    if recipe is not None:
+        status = core.check_element_req(recipe, scores)
+        for st in status.values():
+            if st.get("met"):
+                hits += 1
+    return segments, hits
+
+
+def _challenge_condition_text(check: Mapping[str, Any]) -> str:
+    """苛刻条件文案（F-16：连锁 ≥5 且/或 刻度 ≥2，可配且/或）。"""
+    try:
+        need_chain = max(0, int(check.get("need_chain", 5)))
+    except (TypeError, ValueError):
+        need_chain = 5
+    try:
+        need_elem = max(0, int(check.get("need_element", 2)))
+    except (TypeError, ValueError):
+        need_elem = 2
+    op = "且" if check.get("operator") == "and" else "或"
+    return f"连锁 ≥{need_chain} {op} 刻度 ≥{need_elem}"
+
+
+def _evolve_error(res: Mapping[str, Any], ctx: Mapping[str, Any]) -> str:
+    """/进化 失败透传（M-07：等级不足/条件不满足/材料不足差异/宝石不足；已解锁 ATO-05）。"""
+    reason = res.get("reason")
+    msg = res.get("message")
+    if reason == "materials_insufficient":
+        diff = _shortfall_text(ctx, res.get("shortfall"))
+        return f"材料不足：{diff}" if diff else "材料不足"
+    return str(msg or "❌ 进化失败")
+
+
+def _render_deep_panel(core: AlchemyCore, snap: Mapping[str, Any],
+                       ctx: Mapping[str, Any], job_tier_index: int) -> str:
+    """深度会话面板（F-06/M-06：6 槽/核心槽/3 普通+1 金/刻度/进化线；**纯文本降级**——emoji
+    纪律同 _render_panel，M-06 深度面板模板结构）：
+    `炼狱爆弹·深度（配方Lv40）深度调合：材料：火晶石×2(火8)`
+    `属性刻度：火≥5 显现"burn" | 槽位 0/6 | 核心槽：空 | 特性位 0/3 普通+1金 | PP 0/5`
+    `进化线：炼金产出 0/5 → /进化 解锁 烈焰弹·改配方`
+    """
+    panel = core.assemble_panel(snap, ctx, job_tier_index=job_tier_index)
+    recipe = _find_recipe(ctx, snap.get("recipe_id"))
+    recipe_name = str(panel.get("recipe_name") or snap.get("recipe_id") or "")
+    level = recipe.get("level", "?") if recipe else "?"
+    chain = snap.get("materials") or []
+    if chain:
+        mats = " ".join(_material_entry_text(r, ctx) for r in chain if isinstance(r, Mapping))
+        if not mats:
+            mats = "（无）"
+    else:
+        mats = _recipe_material_text(core, recipe, ctx) if recipe else "（无）"
+    scales = _render_scales(recipe)
+    try:
+        slots = max(2, int(snap.get("slots", 6)))
+    except (TypeError, ValueError):
+        slots = 6
+    units = sum(max(1, int(r.get("count", 1))) for r in chain if isinstance(r, Mapping))
+    core_slot = snap.get("core_slot")
+    core_text = "空"
+    if isinstance(core_slot, Mapping):
+        core_text = str(core_slot.get("name") or core_slot.get("core_id") or "已镶")
+    try:
+        traits_max = max(1, int(snap.get("traits_inherit", 3)))
+    except (TypeError, ValueError):
+        traits_max = 3
+    gold = " + 第 4 位金色" if snap.get("gold_slot_exclusive") else ""
+    pp = panel.get("pp") or {}
+    lines = [
+        f"{recipe_name}（配方Lv{level}）深度调合：材料：{mats}",
+        f"属性刻度：{scales} | 槽位 {units}/{slots} | 核心槽：{core_text} | "
+        f"特性位 0/{traits_max} 普通{gold} | PP {pp.get('used', 0)}/{pp.get('budget', 0)}",
+    ]
+    evolve = snap.get("evolve_line")
+    if isinstance(evolve, Mapping):
+        target = evolve.get("target_id")
+        try:
+            need = max(1, int(evolve.get("count", 1)))
+        except (TypeError, ValueError):
+            need = 1
+        source = str(evolve.get("source") or "炼金产出")
+        done = 0
+        pc = _produce_counts(_player_of(ctx))
+        rid = snap.get("recipe_id")
+        if isinstance(rid, str):
+            try:
+                done = max(0, int(pc.get(rid, 0)))
+            except (TypeError, ValueError):
+                done = 0
+        tname = _recipe_name(ctx, target) if isinstance(target, str) else "高阶配方"
+        lines.append(f"进化线：{source} {done}/{need} → /进化 解锁 {tname}")
+    return "\n".join(lines)
+
+
+def _render_challenge_panel(ctx: Mapping[str, Any], snap: Mapping[str, Any],
+                            check: Mapping[str, Any]) -> str:
+    """挑战会话面板（F-16/M-16：材料×2 + 苛刻条件 + 实况 + 结算规则；纯文本无装饰 emoji）。"""
+    rid = snap.get("challenge_recipe_id") or snap.get("recipe_id")
+    name = _recipe_name(ctx, rid)
+    cond = _challenge_condition_text(check)
+    try:
+        chain = max(0, int(check.get("chain_segments", 0)))
+    except (TypeError, ValueError):
+        chain = 0
+    try:
+        elems = max(0, int(check.get("element_hits", 0)))
+    except (TypeError, ValueError):
+        elems = 0
+    try:
+        need_chain = max(0, int(check.get("need_chain", 5)))
+    except (TypeError, ValueError):
+        need_chain = 5
+    try:
+        need_elem = max(0, int(check.get("need_element", 2)))
+    except (TypeError, ValueError):
+        need_elem = 2
+    paid_parts = []
+    for m in snap.get("material_paid") or []:
+        if not isinstance(m, Mapping):
+            continue
+        iid = m.get("item") or m.get("id")
+        if not isinstance(iid, str):
+            continue
+        try:
+            cnt = max(1, int(m.get("count", 1)))
+        except (TypeError, ValueError):
+            cnt = 1
+        paid_parts.append(f"{_item_name(ctx, iid)}×{cnt}")
+    paid_text = " ".join(paid_parts) if paid_parts else "（无）"
+    return (
+        f"{name} 挑战会话已开启（材料×2 已付：{paid_text}）\n"
+        f"苛刻条件：{cond}\n"
+        f"当前：连锁 {chain}/{need_chain}，刻度 {elems}/{need_elem} ｜ "
+        f"/确认 时判定，达标 → 品质上限+10；未达标 → 品质降级+退 50% 材料"
+    )
+
+
+def _render_sp_panel(view: Mapping[str, Any]) -> str:
+    """技能面板渲染（F-19/M-19；**纯文本降级**——✨ 弃用）：
+    `SP 3 点可用：品质上限+10（已 2 次）/投入次数+1/解锁复制`。"""
+    try:
+        sp = max(0, int(view.get("sp_available", 0)))
+    except (TypeError, ValueError):
+        sp = 0
+    parts: list = []
+    for it in view.get("items") or []:
+        if not isinstance(it, Mapping):
+            continue
+        name = it.get("name") or it.get("id") or "?"
+        try:
+            n = max(0, int(it.get("unlocked_count", 0)))
+        except (TypeError, ValueError):
+            n = 0
+        parts.append(f"{name}（已 {n} 次）" if n > 0 else str(name))
+    return f"SP {sp} 点可用：{'/'.join(parts)}" if parts else f"SP {sp} 点可用"
+
+
+def _sp_unlock_error(res: Mapping[str, Any]) -> str:
+    """/技能面板 解锁失败透传（SP-05：SP 不足/不可重复/上限/项不存在/引擎不可用）。"""
+    reason = res.get("reason")
+    if reason == "sp_insufficient":
+        return "❌ SP 不足"
+    if reason == "not_repeatable":
+        return "❌ 该技能面板项不可重复解锁"
+    if reason == "max_repeat_reached":
+        return "❌ 已达该技能面板项解锁上限"
+    if reason == "panel_not_found":
+        return "❌ 技能面板项不存在"
+    if reason == "engine_unavailable":
+        return "❌ 技能面板暂不可用"
+    return "❌ 解锁失败"
+
+
+def _sp_panel_id(meta: AlchemyMeta, player: Mapping[str, Any], value: Any) -> Optional[str]:
+    """面板项 name/id → 面板项 id（/技能面板 解锁=<面板项> 工程补白：名称或 id 均可命中）。"""
+    v = str(value or "").strip()
+    if not v:
+        return None
+    view = meta.skill_panel_view(player, ALCHEMY_JOB_ID)
+    for it in view.get("items") or []:
+        if it.get("id") == v or it.get("name") == v:
+            return it.get("id")
+    return None
+
+
+def _render_announcement(meta: AlchemyMeta, tier_index: int) -> str:
+    """升大师公告（F-06/L482：6 深度机制一句话预览；纯文本无装饰 emoji）。"""
+    ann = meta.master_announcement(tier_index)
+    if not ann.get("ok"):
+        return ""
+    parts: list = []
+    for m in ann.get("mechanisms") or []:
+        name = m.get("name") if isinstance(m, Mapping) else None
+        preview = m.get("preview") if isinstance(m, Mapping) else None
+        parts.append(f"{name}：{preview}")
+    return " | ".join(parts)
+
+
+async def cmd_deep(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """`/深度炼金 <配方>`（P-06/SEP-06，GU-20~22/F-06/M-06，TC-14）。
+
+    守卫链：
+      - GU-20 炼金职业 ≥ 大师（DeepEngine.deep_eligible → 精通拒「深度未解锁」；非深度配方拒）；
+      - GU-21 能量 ≥1 格（energy_enabled=true 时，ENG-04/R-08；关闭直通）；
+      - GU-22 深度会话互斥（MUT-02/MUT-07：单玩家 1 调合会话全局互斥，challenge_alchemy 与
+        alchemy 分型但同受互斥）。
+    流程：DeepEngine.deep_snapshot（6 槽/核心槽/3 普通+1 金/刻度/进化线）→
+      session_mgr.acquire(challenge_alchemy, payload=snap) → 扣能量 1 格（§7.1 行1 顺序）→
+      深度面板渲染 + 首次解锁公告（master_announcement 6 机制预览，player.flags 幂等标记）。
+    入参：parsed、ctx（session_mgr/items/recipe/settings/prof_engine 等，session_mgr 为 async
+      SessionManager 或 fake）。出参：回复正文 str。
+    """
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    if not parsed.args:
+        return format_tpl12(f"/{DEEP_CMD}")
+    target = _target_of(parsed)
+    player = _player_of(ctx)
+    settings = _settings_of(ctx)
+    prof_engine = ProficiencyEngine(settings=settings)
+    tier_index = prof_engine.tier_index_for_level(ALCHEMY_JOB_ID, _prof_level(player))
+    deep = DeepEngine(settings=settings)
+    energy = EnergyBar(settings=settings)
+    recipe = _find_recipe(ctx, target)
+    if recipe is None:
+        return f"❌ 配方不存在：{target}"
+    # GU-20 大师（deep_eligible：master_only 校验 + 档位 ≥ 大师 4；精通拒「深度未解锁」）
+    eligible = deep.deep_eligible(player, ALCHEMY_JOB_ID, recipe)
+    if not eligible.get("ok"):
+        return str(eligible.get("message") or "深度未解锁")
+    # GU-21 能量可查（read 不扣；energy_enabled=false 直通，R-08）
+    if _energy_enabled(settings) and energy.current_of(player) < 1:
+        return _energy_message(energy, player)
+    # GU-22 会话互斥（MUT-02 全局互斥；同 cmd_alchemy 口径）
+    session_mgr = ctx.get("session_mgr")
+    if session_mgr is None:
+        raise RuntimeError(
+            "alchemy_commands.cmd_deep 需要 ctx['session_mgr']"
+            "（SessionManager 或 async fake，批11 装配注入）"
+        )
+    qid = _qid_of(ctx)
+    active = await session_mgr.get_active(qid)
+    if active is not None:
+        if is_alchemy_session(active):
+            return TEMPLATE_MESSAGES[TEMPLATE_IN_PROGRESS]
+        return TEMPLATE_MESSAGES[TEMPLATE_ALREADY_ACTIVE]
+    # DeepEngine.deep_snapshot（F-06：6 槽/核心槽/3 普通+1 金/刻度/进化线；MUT-07 分型）
+    snap = deep.deep_snapshot(recipe, job_tier_index=tier_index)
+    if not isinstance(snap, Mapping) or snap.get("ok") is False:
+        msg = snap.get("message") if isinstance(snap, Mapping) else None
+        return str(msg or "❌ 深度会话开启失败")
+    # 开会话（F-06/§7.1 行1：acquire 成功 → 扣能量 → 面板渲染）
+    try:
+        await session_mgr.acquire(qid, CHALLENGE_SESSION, payload=snap)
+    except Exception as exc:  # SessionConflictError 鸭子判定（MUT-02 全局互斥）
+        if is_conflict(exc):
+            return TEMPLATE_MESSAGES[TEMPLATE_ALREADY_ACTIVE]
+        raise
+    econs = energy.consume(player, 1)
+    if not econs.get("ok"):
+        if hasattr(session_mgr, "release"):
+            await session_mgr.release(qid)
+        return str(econs.get("message") or "能量不足")
+    # 首次解锁公告+教学（F-06：解锁公告 + 逐条教学一句话示例；player.flags 幂等）
+    lines: list = []
+    if _mark_deep_announced(player):
+        meta = AlchemyMeta(prof=_prof_engine_of(ctx), settings=settings)
+        ann = _render_announcement(meta, tier_index)
+        if ann:
+            lines.append(f"【深度炼金·解锁公告】{ann}")
+    core = AlchemyCore(prof=prof_engine, settings=settings)
+    lines.append(_render_deep_panel(core, snap, ctx, tier_index))
+    return "\n".join(lines)
+
+
+async def cmd_evolve(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """`/进化 <配方>`（P-07/SEP-07，GU-23~25/F-07/M-07/CASC-05/ATO-05，TC-15）。
+
+    守卫链：GU-23 宗师 + GU-24 炼金产出 N 次（合成不计，produce_counts 长线计数）→ GU-25
+      材料+宝石全量——全部委托 DeepEngine.evolve_unlock（F-07 永久解锁 + 「✅ 继承 2 额外槽
+      （6 槽）」；重复 → 已解锁幂等 ATO-05）。
+    入参：parsed、ctx（proficiency/items/recipe/upgrade_unlocks/currencies + hook）。
+    出参：回复正文 str。
+    """
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    if not parsed.args:
+        return format_tpl12(f"/{EVOLVE_CMD}")
+    target = _target_of(parsed)
+    player = _player_of(ctx)
+    recipe = _find_recipe(ctx, target)
+    if recipe is None:
+        return f"❌ 配方不存在：{target}"
+    # 解锁表兜底（D-8：ctx.upgrade_unlocks 与 /配方合成 共用，装配层保证；缺省自建防引擎拒）
+    if not isinstance(ctx.get("upgrade_unlocks"), MutableMapping):
+        ctx["upgrade_unlocks"] = {}
+    counts = _produce_counts(player)
+    deep = DeepEngine(settings=_settings_of(ctx))
+    res = deep.evolve_unlock(player, ctx, recipe, counts)
+    if not res.get("ok"):
+        return _evolve_error(res, ctx)
+    return str(res.get("message") or "❌ 进化失败")
+
+
+async def cmd_core(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """`/镶核心 <核心>`（P-08/SEP-08，GU-26~27/F-08/M-08/COR-01~03/TC-16）。
+
+    守卫链：GU-26 深度会话中（无/非深度 → 无会话模板）→ GU-27 大师 + 核心物品且与配方适配
+      （不匹配 → 「核心不匹配」；可换 COR-02）——委托 DeepEngine.mount_core；成功后 suspend
+      持久化新快照（核心槽/品质上限），透传「✅ 品质上限+20、火适配」。
+    入参：parsed、ctx（session_mgr/items/recipe + hook）。出参：回复正文 str。
+    """
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    if not parsed.args:
+        return format_tpl12(f"/{CORE_CMD}")
+    target = _target_of(parsed)
+    session_mgr = ctx.get("session_mgr")
+    if session_mgr is None:
+        raise RuntimeError(
+            "alchemy_commands.cmd_core 需要 ctx['session_mgr']"
+            "（SessionManager 或 async fake，批11 装配注入）"
+        )
+    qid = _qid_of(ctx)
+    # GU-26 深度会话中（违反 → 无会话模板）
+    view = await session_mgr.get_active(qid)
+    if view is None or not is_alchemy_session(view):
+        return TEMPLATE_MESSAGES[TEMPLATE_NO_SESSION]
+    snap = _view_payload(view)
+    if not _is_deep_snap(snap):
+        return TEMPLATE_MESSAGES[TEMPLATE_NO_SESSION]
+    core_item_def = _find_item(ctx, target)
+    deep = DeepEngine(settings=_settings_of(ctx))
+    res = deep.mount_core(_player_of(ctx), snap, core_item_def, ctx)
+    if not res.get("ok"):
+        return str(res.get("message") or "核心不匹配")   # GU-27/M-08 失败统一「核心不匹配」
+    await session_mgr.suspend(qid, res["snap"])
+    return str(res.get("message") or "❌ 镶核心失败")
+
+
+async def cmd_buff(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """`/加成 <道具>`（P-08/SEP-08，GU-26/28/F-08/M-08/QLT-09/TC-16）。
+
+    守卫链：GU-26 深度会话中 → GU-28 宗师 + 加成道具（限 1 次/调合）——委托
+      DeepEngine.buff（第 2 次 → 「限 1 次」拒绝）；成功后 suspend 持久化（buff_used/buff_bonus/
+      buff_element），透传「✅ 品质+30」/「✅ 品质+30、火属性」。
+    入参：parsed、ctx（session_mgr/items + hook）。出参：回复正文 str。
+    """
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    if not parsed.args:
+        return format_tpl12(f"/{BUFF_CMD}")
+    target = _target_of(parsed)
+    session_mgr = ctx.get("session_mgr")
+    if session_mgr is None:
+        raise RuntimeError(
+            "alchemy_commands.cmd_buff 需要 ctx['session_mgr']"
+            "（SessionManager 或 async fake，批11 装配注入）"
+        )
+    qid = _qid_of(ctx)
+    # GU-26 深度会话中（违反 → 无会话模板）
+    view = await session_mgr.get_active(qid)
+    if view is None or not is_alchemy_session(view):
+        return TEMPLATE_MESSAGES[TEMPLATE_NO_SESSION]
+    snap = _view_payload(view)
+    if not _is_deep_snap(snap):
+        return TEMPLATE_MESSAGES[TEMPLATE_NO_SESSION]
+    buff_item_def = _find_item(ctx, target)
+    deep = DeepEngine(settings=_settings_of(ctx))
+    res = deep.buff(_player_of(ctx), snap, buff_item_def, ctx)
+    if not res.get("ok"):
+        return str(res.get("message") or "加成失败")     # GU-28 限 1 次 / 等级不足 / 非加成道具
+    await session_mgr.suspend(qid, res["snap"])
+    return str(res.get("message") or "❌ 加成失败")
+
+
+async def cmd_challenge(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """`/挑战 <配方>`（P-16/SEP-16，GU-47~49/F-16/M-16/ATO-06/TC-23）。
+
+    守卫链：
+      - GU-47 炼金职业 ≥ 宗师；
+      - GU-48 深度炼金会话中（无/非深度 → 无会话模板）；挑战会话内不可再开挑战（snap.challenge
+        已置位 → 拒绝）；
+      - GU-49 材料按 配方×2 全量校验（原子全拒+差异），扣减后记 material_paid 落快照。
+    流程：开启挑战会话（工程补白：复用 challenge_alchemy 会话类型——深度同型，快照加
+      challenge 标记 + material_paid，suspend 持久化；/确认 时由 cmd_confirm 接
+      challenge_check/challenge_settle）→ 挑战面板（苛刻条件+实况+材料×2）。
+    入参：parsed、ctx（session_mgr/items/recipe + hook）。出参：回复正文 str。
+    """
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    if not parsed.args:
+        return format_tpl12(f"/{CHALLENGE_CMD}")
+    target = _target_of(parsed)
+    player = _player_of(ctx)
+    # GU-47 宗师（L86/TC-23）
+    if _prof_level(player) < _GRANDMASTER_TIER_INDEX:
+        return "❌ 等级不足"
+    session_mgr = ctx.get("session_mgr")
+    if session_mgr is None:
+        raise RuntimeError(
+            "alchemy_commands.cmd_challenge 需要 ctx['session_mgr']"
+            "（SessionManager 或 async fake，批11 装配注入）"
+        )
+    qid = _qid_of(ctx)
+    # GU-48 深度会话中（无/非深度 → 无会话模板；挑战会话从深度会话发起，F-16）
+    view = await session_mgr.get_active(qid)
+    if view is None or not is_alchemy_session(view):
+        return TEMPLATE_MESSAGES[TEMPLATE_NO_SESSION]
+    snap = _view_payload(view)
+    if not _is_deep_snap(snap):
+        return TEMPLATE_MESSAGES[TEMPLATE_NO_SESSION]
+    if bool(snap.get("challenge")):
+        return "❌ 挑战会话内不可再开挑战"   # GU-48：挑战会话内不可再开
+    recipe = _find_recipe(ctx, target)
+    if recipe is None:
+        return f"❌ 配方不存在：{target}"
+    # GU-49 材料按 配方×2 全量（原子全拒+差异，零副作用；扣减后记 material_paid）
+    need = _challenge_materials_2x(recipe)
+    if not need:
+        return "❌ 配方无材料可挑战"
+    shortfall: list = []
+    for m in need:
+        have = _count_item(ctx, m["item"])
+        if have < m["count"]:
+            shortfall.append({"item": m["item"], "count": m["count"], "have": have})
+    if shortfall:
+        diff = _shortfall_text(ctx, shortfall)
+        return f"❌ 材料不足：{diff}" if diff else "❌ 材料不足"
+    for m in need:
+        _remove_item(ctx, m["item"], m["count"])
+    # 开启挑战会话（工程补白：复用 challenge_alchemy 子态，快照加 challenge 标记 + material_paid）
+    snap2 = dict(snap)
+    snap2["challenge"] = True
+    snap2["challenge_recipe_id"] = str(recipe.get("id") or snap.get("recipe_id") or "")
+    snap2["material_paid"] = [dict(m) for m in need]
+    await session_mgr.suspend(qid, snap2)
+    settings = _settings_of(ctx)
+    prof_engine = ProficiencyEngine(settings=settings)
+    core = AlchemyCore(prof=prof_engine, settings=settings)
+    segments, hits = _challenge_metrics(core, snap2, ctx)
+    deep = DeepEngine(settings=settings)
+    check = deep.challenge_check(player, snap2, chain_segments=segments, element_hits=hits)
+    return _render_challenge_panel(ctx, snap2, check)
+
+
+async def cmd_codex(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """`/图鉴`（P-19/SEP-19 无参数查看态，GU-58/F-19/M-19/TTL-01/TC-27）。
+
+    无门槛（只读+成长奖励幂等领取）：AlchemyMeta.codex_summary（进度 lit/total/all_lit）+
+      codex_reward（点亮 N 格 → 经验/新配方，L210，idempotent）→ king_eligible（全亮 → 炼金王
+      称号，TTL-01）渲染；M5 无 emoji 渲染纯文本（📚 弃用）：
+      `炼金图鉴：已点亮 23/40（点亮 40 → 炼金王称号）`。
+    入参：parsed、ctx（codex_state/registry/prof_engine）。出参：回复正文 str。
+    """
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    settings = _settings_of(ctx)
+    meta = AlchemyMeta(prof=_prof_engine_of(ctx), settings=settings)
+    summary = meta.codex_summary(ctx)   # category 默认 alchemy 炼金图鉴（F-19）
+    if not summary.get("ok"):
+        return f"❌ 图鉴不可用（{summary.get('reason', 'unknown_category')}）"
+    lit = int(summary.get("lit", 0))
+    total = int(summary.get("total", 0))
+    lines = [f"炼金图鉴：已点亮 {lit}/{total}"]
+    if total > 0:
+        lines[0] += f"（点亮 {total} → 炼金王称号）"
+    # 成长奖励（F-19/L210：点亮 N 格 → 经验/新配方；幂等只领一次）
+    reward = meta.codex_reward(ctx)
+    if reward.get("granted"):
+        r = reward.get("reward") or {}
+        try:
+            exp = max(0, int(r.get("exp", 0)))
+        except (TypeError, ValueError):
+            exp = 0
+        recipes = [x for x in (r.get("recipes") or []) if x]
+        line = f"成长奖励：经验 +{exp}" if exp else "成长奖励："
+        if recipes:
+            line += "，新配方：" + "、".join(_recipe_name(ctx, rid) for rid in recipes)
+        lines.append(line)
+    # 王称号条件（TTL-01：图鉴全亮 → 授予；与等级解耦，prof 未注入静默跳过）
+    king = meta.king_eligible(_player_of(ctx), ctx, job_id=ALCHEMY_JOB_ID)
+    if king.get("ok") and king.get("granted"):
+        lines.append("✅ 已获得「炼金王」称号（图鉴全点亮）")
+    return "\n".join(lines)
+
+
+async def cmd_skill_panel(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """`/技能面板 [解锁=<面板项>]`（P-19/SEP-19 查看态 + 工程补白解锁子词，GU-58/F-19/M-19/
+    SP-02~05/TC-27）。
+
+    无门槛：AlchemyMeta.skill_panel_view 渲染「SP 3 点可用：品质上限+10（已 2 次）/…」；
+    可选 `解锁=<面板项>`（工程补白：SP-04/05 自选解锁子词 → skill_panel_unlock，SP 不足拒绝）。
+    入参：parsed、ctx（prof_engine）。出参：回复正文 str。
+    """
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    settings = _settings_of(ctx)
+    meta = AlchemyMeta(prof=_prof_engine_of(ctx), settings=settings)
+    player = _player_of(ctx)
+    unlock_value = _kv_value(parsed, SP_UNLOCK_KV_KEY)
+    if unlock_value is not None:
+        panel_id = _sp_panel_id(meta, player, unlock_value)
+        if panel_id is None:
+            return f"❌ 技能面板项不存在：{unlock_value}"
+        res = meta.skill_panel_unlock(player, ALCHEMY_JOB_ID, panel_id)
+        if not res.get("ok"):
+            return _sp_unlock_error(res)
+        view = meta.skill_panel_view(player, ALCHEMY_JOB_ID)
+        return f"{res.get('message')}\n{_render_sp_panel(view)}"
+    view = meta.skill_panel_view(player, ALCHEMY_JOB_ID)
+    if not view.get("ok"):
+        return f"❌ 技能面板不可用（{view.get('reason', 'engine_unavailable')}）"
+    return _render_sp_panel(view)
+
+
+async def cmd_tutorial(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """`/教学 [机制名]`（P-23/SEP-23，GU-64/F-23/M-23/TC-31）。
+
+    无门槛：无参=教学目录（tutorial_catalog）；带参=tutorial_show（未知名 → 回目录）；升大师
+      （tier ≥ 大师 4）时目录头部附加 master_announcement 6 深度机制一句话预览（L482/F-23）。
+    入参：parsed、ctx（prof_engine/settings）。出参：回复正文 str。
+    """
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    settings = _settings_of(ctx)
+    meta = AlchemyMeta(prof=_prof_engine_of(ctx), settings=settings)
+    args = list(getattr(parsed, "args", None) or [])
+    if not args:
+        player = _player_of(ctx)
+        prof_engine = ProficiencyEngine(settings=settings)
+        tier_index = prof_engine.tier_index_for_level(ALCHEMY_JOB_ID, _prof_level(player))
+        ann = _render_announcement(meta, tier_index)
+        lines: list = []
+        if ann:
+            lines.append(f"【升大师·深度炼金 6 机制预览】{ann}")
+        lines.append("教学目录：")
+        for c in meta.tutorial_catalog():
+            lines.append(f"- {c['name']}：{c['example']}")
+        return "\n".join(lines)
+    name = str(args[0]).strip()
+    res = meta.tutorial_show(name)
+    if res.get("ok"):
+        return f"教学·{res['name']}：{res.get('text') or res.get('example') or ''}"
+    lines = [f"未找到机制「{name}」，教学目录："]
+    for c in meta.tutorial_catalog():
+        lines.append(f"- {c['name']}：{c['example']}")
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
 # 装配（Router 注册；make_context 由装配层注入，批11 路11A 待接线）
 # ---------------------------------------------------------------------------
 
@@ -1977,6 +2711,54 @@ def register_alchemy_commands(
             return cmd_copy(parsed, injected)
         return cmd_copy(parsed, _ctx(parsed))
 
+    def _deep(parsed: Any, *a: Any, **k: Any):
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_deep(parsed, injected)
+        return cmd_deep(parsed, _ctx(parsed))
+
+    def _evolve(parsed: Any, *a: Any, **k: Any):
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_evolve(parsed, injected)
+        return cmd_evolve(parsed, _ctx(parsed))
+
+    def _core(parsed: Any, *a: Any, **k: Any):
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_core(parsed, injected)
+        return cmd_core(parsed, _ctx(parsed))
+
+    def _buff(parsed: Any, *a: Any, **k: Any):
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_buff(parsed, injected)
+        return cmd_buff(parsed, _ctx(parsed))
+
+    def _challenge(parsed: Any, *a: Any, **k: Any):
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_challenge(parsed, injected)
+        return cmd_challenge(parsed, _ctx(parsed))
+
+    def _codex(parsed: Any, *a: Any, **k: Any):
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_codex(parsed, injected)
+        return cmd_codex(parsed, _ctx(parsed))
+
+    def _skill_panel(parsed: Any, *a: Any, **k: Any):
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_skill_panel(parsed, injected)
+        return cmd_skill_panel(parsed, _ctx(parsed))
+
+    def _tutorial(parsed: Any, *a: Any, **k: Any):
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_tutorial(parsed, injected)
+        return cmd_tutorial(parsed, _ctx(parsed))
+
     router.register(CommandSpec(SYNTH_CMD, handler=_synth))
     router.register(CommandSpec(ALCHEMY_CMD, handler=_alchemy))
     router.register(CommandSpec(FEED_CMD, handler=_feed))
@@ -1994,4 +2776,12 @@ def register_alchemy_commands(
     router.register(CommandSpec(TRAIT_MERGE_CMD, handler=_trait_merge))
     router.register(CommandSpec(REGISTER_CMD, handler=_register))
     router.register(CommandSpec(COPY_CMD, handler=_copy))
+    router.register(CommandSpec(DEEP_CMD, handler=_deep))
+    router.register(CommandSpec(EVOLVE_CMD, handler=_evolve))
+    router.register(CommandSpec(CORE_CMD, handler=_core))
+    router.register(CommandSpec(BUFF_CMD, handler=_buff))
+    router.register(CommandSpec(CHALLENGE_CMD, handler=_challenge))
+    router.register(CommandSpec(CODEX_CMD, handler=_codex))
+    router.register(CommandSpec(SKILL_PANEL_CMD, handler=_skill_panel))
+    router.register(CommandSpec(TUTORIAL_CMD, handler=_tutorial))
     return router

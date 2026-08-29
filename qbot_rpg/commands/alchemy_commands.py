@@ -17,11 +17,15 @@ qbot_rpg/commands/alchemy_commands.py）——本批只注册 /合成。
   **/继承（INHERIT_CMD）/继承超（INHERIT_SUPER_CMD：特性继承，委托 core/trait_inherit.py）** +
   **/确认（CONFIRM_CMD）/放弃（ABANDON_CMD）/调合续（RESUME_CMD）/分解（DECOMPOSE_CMD）：
   终态指令壳（批6 路A——品质结算委托 core/alchemy_settle.py SettleEngine、恢复挂起渲染面板、
-  分解委托兄弟路 gem_wallet 鸭子类型消费 ctx[\"wallet\"]）**；其余炼金指令
-  （/深度炼金 /进化 /复制 /图鉴 /技能面板 /种植 /收获 /雇工 /教学 等）由后续批次填充
-  （批7 /成品合成 /配方合成 /特性合成 /镶嵌 /拆珠 /登记 /复制、批8 /深度炼金
-  /进化 /镶核心 /加成 /挑战 /图鉴 /技能面板 /教学、批10 /种植 /收获 /雇工 /收取）——本模块作为
-  这些指令壳的统一落点文件，后续批次追加 cmd_xxx + register 项即可。
+  分解委托兄弟路 gem_wallet 鸭子类型消费 ctx["wallet"]）** + **批7-2 追加（珠与合成指令壳）**：
+  /镶嵌（MOUNT_CMD）/拆珠（UNMOUNT_CMD）/珠升阶（JEWEL_UP_CMD，复用 core/upgrade.py
+  UpgradeEngine）/成品合成（PRODUCT_MERGE_CMD）/配方合成（FORMULA_MERGE_CMD）/特性合成
+  （TRAIT_MERGE_CMD，三类合成均为 kind=upgrade 配置实例消费）/登记（REGISTER_CMD）/复制
+  （COPY_CMD，复用 core/alchemy_register.py AlchemyRegister）——委托 JewelSystem/UpgradeEngine/
+  AlchemyRegister 三引擎，规则依据 docs/细化/细化_2c4c_珠与合成指令.md（BEL/DUP/CMB/SOCK 族）；
+  其余炼金指令（/深度炼金 /进化 /图鉴 /技能面板 /种植 /收获 /雇工 /教学 等）由后续批次填充
+  （批8 /深度炼金 /进化 /镶核心 /加成 /挑战 /图鉴 /技能面板 /教学、批10 /种植 /收获 /雇工 /收取）——
+  本模块作为这些指令壳的统一落点文件，后续批次追加 cmd_xxx + register 项即可。
 
 依据：
   - docs/m8_contract_指令契约.md §1 /合成（P-01 参数解析 / GU-01~04 /
@@ -76,9 +80,12 @@ from qbot_rpg.core.alchemy_session import (
 from qbot_rpg.core.alchemy_settle import SettleEngine
 from qbot_rpg.core.energy_bar import EnergyBar
 from qbot_rpg.core.proficiency import ProficiencyEngine
+from qbot_rpg.core.alchemy_register import AlchemyRegister
+from qbot_rpg.core.jewel import JEWEL_TYPE, JewelSystem
 from qbot_rpg.core.quality import QualitySystem
 from qbot_rpg.core.synthesis import SynthesisEngine
 from qbot_rpg.core.trait_inherit import TraitInherit
+from qbot_rpg.core.upgrade import UpgradeEngine
 
 # 同包兄弟模块：相对导入（G0 架构门禁 test_commands_web_not_depended 不产生
 # `qbot_rpg.commands` 前缀反向依赖边；同层兄弟引用架构合规，与 shop_commands.py 同口径）。
@@ -90,12 +97,18 @@ __all__ = [
     "SYNTH_CMD", "ALCHEMY_CMD", "FEED_CMD",
     "INHERIT_CMD", "INHERIT_SUPER_CMD",
     "CONFIRM_CMD", "ABANDON_CMD", "RESUME_CMD", "DECOMPOSE_CMD",
+    "MOUNT_CMD", "UNMOUNT_CMD", "JEWEL_UP_CMD",
+    "PRODUCT_MERGE_CMD", "FORMULA_MERGE_CMD", "TRAIT_MERGE_CMD",
+    "REGISTER_CMD", "COPY_CMD",
     # 固定子词常量
     "AUTO_SUBWORD", "FEED_APPEND_SUBWORD", "CATALYST_KV_KEY",
     # 指令处理器（纯函数/异步：parsed + ctx → 回复正文）
     "cmd_synthesis", "cmd_alchemy", "cmd_feed",
     "cmd_inherit", "cmd_inherit_super",
     "cmd_confirm", "cmd_abandon", "cmd_resume", "cmd_decompose",
+    "cmd_mount", "cmd_unmount", "cmd_jewel_up",
+    "cmd_product_merge", "cmd_formula_merge", "cmd_trait_merge",
+    "cmd_register", "cmd_copy",
     # 装配
     "register_alchemy_commands",
 ]
@@ -115,6 +128,15 @@ CONFIRM_CMD = "确认"      # F-05 品质结算终态（GU-17~19）
 ABANDON_CMD = "放弃"      # F-05 会话退出终态（GU-17）
 RESUME_CMD = "调合续"     # 挂起(战斗) 恢复（GU-18）
 DECOMPOSE_CMD = "分解"    # 分解回炉（GU-32/33，P-10）
+# 珠与合成指令（批7-2，细化_2c4c：SOCK-02/03、BEL-12、CMB-02~04、DUP-02~06）
+MOUNT_CMD = "镶嵌"             # 珠+装备 → 槽级≥珠档（SOCK-02，通用无职业门槛）
+UNMOUNT_CMD = "拆珠"           # 装备+槽位 → 无损拆珠（SOCK-03）
+JEWEL_UP_CMD = "珠升阶"        # 3×同档同 ID+宝石10 → +1 阶（BEL-12，无职业硬门槛 拍板③）
+PRODUCT_MERGE_CMD = "成品合成"  # 两成品+材料+宝石10 → 更强成品（CMB-02，宗师）
+FORMULA_MERGE_CMD = "配方合成"  # 两已学配方+宝石5 → 新配方解锁（CMB-03，专家）
+TRAIT_MERGE_CMD = "特性合成"    # 两同系特性+宝石20+材料 → 更高位特性（CMB-04，宗师）
+REGISTER_CMD = "登记"          # 登记模板持久化（DUP-02/06，无职业门槛）
+COPY_CMD = "复制"             # 量产标准版（DUP-01~05，大师）
 
 # 固定子词（对齐 parsers.py FIXED_SUBWORDS：自动/追加 已在常量内，壳层显式引用防字面量漂移）
 AUTO_SUBWORD = "自动"
@@ -129,6 +151,12 @@ _TIER_ALIAS_INDEX: Mapping[str, int] = {
     "apprentice": 0, "formal": 1, "proficient": 2, "expert": 3,
     "master": 4, "grandmaster": 5, "king": 6,
 }
+
+# 合成/复制档位门槛（对齐 proficiency.alchemy.level=档位索引 0~6，直接数值比较——
+# 细化_2c4c §九 指令门槛：/成品合成·/特性合成=宗师 /配方合成=专家 /复制=大师）
+_GRANDMASTER_TIER_INDEX: int = 5   # 宗师：成品合成/特性合成（CMB-02/04，L203/L215）
+_MASTER_TIER_INDEX: int = 4        # 大师：复制（DUP-01，L208）
+# 专家 = EXPERT_TIER_INDEX(3)：配方合成（CMB-03，L209）——复用 alchemy_core 常量
 
 
 # ---------------------------------------------------------------------------
@@ -1411,6 +1439,414 @@ async def cmd_decompose(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 
 
 # ---------------------------------------------------------------------------
+# 珠与合成指令壳（批7-2：/镶嵌 /拆珠 /珠升阶 /成品合成 /配方合成 /特性合成 /登记 /复制）
+# ---------------------------------------------------------------------------
+# 规则依据：docs/细化/细化_2c4c_珠与合成指令.md（BEL-12~14 珠升阶 / DUP-01~06 复制 /
+# CMB-01~07 三类合成 / SOCK-01~05 镶嵌拆珠）。全部业务结算委托 core/jewel.py JewelSystem、
+# core/upgrade.py UpgradeEngine、core/alchemy_register.py AlchemyRegister——本壳只做
+# 「装配接线 + 名称解析 + 档位门槛 + 组合/升阶实例解析 + 透传」（对齐 cmd_synthesis 壳铁律）。
+
+def _alchemy_cfg_of(ctx: Mapping[str, Any]) -> Mapping[str, Any]:
+    """settings.alchemy 段（UpgradeEngine 构造器期望段——gem 费率扁平键直接读 _gem_cost，
+    对齐 core/upgrade.py 构造契约；缺省 {} 引擎默认值兜底）。"""
+    settings = _settings_of(ctx)
+    alchemy = settings.get("alchemy") if isinstance(settings, Mapping) else None
+    return alchemy if isinstance(alchemy, Mapping) else {}
+
+
+def _iter_recipe_entries(ctx: Mapping[str, Any]) -> list:
+    """recipe 注册表条目迭代（dict id→def / list 两种形态归一，防御）。"""
+    reg = ctx.get("recipe")
+    if isinstance(reg, Mapping):
+        return [dict(v) for v in reg.values() if isinstance(v, Mapping)]
+    if isinstance(reg, (list, tuple)):
+        return [dict(e) for e in reg if isinstance(e, Mapping)]
+    return []
+
+
+def _upgrade_recipes_by_subtype(ctx: Mapping[str, Any], subtype: str) -> list:
+    """recipe 注册表扫描 kind=upgrade 且子类型==subtype 的条目（resolve_upgrade_recipe 解析）。
+
+    【工程补白 · 升级实例解析】定稿未定义「珠升阶/成品/配方/特性合成实例如何定位」，本壳按最小
+    必要推导：升级实例 = recipe.json kind=upgrade 条目（CMB-01），子类型经
+    UpgradeEngine.resolve_upgrade_recipe 结构推断（U-S1）；按 subtype 过滤后由各指令按
+    输入/combine_from 匹配。出参：[(resolved_cfg, raw_entry), ...]。
+    """
+    eng = UpgradeEngine(settings=_alchemy_cfg_of(ctx))
+    out: list = []
+    for entry in _iter_recipe_entries(ctx):
+        cfg = eng.resolve_upgrade_recipe(entry)
+        if cfg is not None and cfg["subtype"] == subtype:
+            out.append((cfg, entry))
+    return out
+
+
+def _find_jewel_up_recipe(ctx: Mapping[str, Any], jewel_id: str) -> Optional[dict]:
+    """珠升阶实例解析（BEL-12 工程补白：珠名 → 升阶配方——subtype=jewel_upgrade 且
+    输入条目 item==jewel_id（3×同档同 ID，U-J2）；查无 → None）。"""
+    for cfg, entry in _upgrade_recipes_by_subtype(ctx, "jewel_upgrade"):
+        inputs = cfg.get("inputs") or []
+        if inputs and inputs[0].get("item") == jewel_id:
+            return entry
+    return None
+
+
+def _find_product_merge_recipe(ctx: Mapping[str, Any], a: str, b: str) -> Optional[dict]:
+    """成品合成实例解析（CMB-05 工程补白：两成品 → 组合表匹配——subtype=product_merge 且
+    输入物品集合 ⊇ {a, b}；查无 → None）。"""
+    for cfg, entry in _upgrade_recipes_by_subtype(ctx, "product_merge"):
+        items = {e.get("item") for e in (cfg.get("inputs") or [])}
+        if a in items and b in items:
+            return entry
+    return None
+
+
+def _find_formula_merge_recipe(ctx: Mapping[str, Any], a: str, b: str) -> Optional[dict]:
+    """配方合成实例解析（CMB-03：subtype=formula_merge 且 combine_from 两配方集合 == {a, b}）。"""
+    for cfg, entry in _upgrade_recipes_by_subtype(ctx, "formula_merge"):
+        cf = set(cfg.get("combine_from") or [])
+        if cf == {a, b}:
+            return entry
+    return None
+
+
+def _find_trait_merge_recipe(ctx: Mapping[str, Any]) -> Optional[dict]:
+    """特性合成实例解析（CMB-04：subtype=trait_merge 首个实例——两特性经 input_ids 传入执行器）。"""
+    for _cfg, entry in _upgrade_recipes_by_subtype(ctx, "trait_merge"):
+        return entry
+    return None
+
+
+def _upgrade_combos(ctx: Mapping[str, Any]) -> dict:
+    """组合表归一（工程补白 U-C1：配方注册表自推导 formula_merge combine_from→output，
+    内容包 ctx["combos"] 显式映射覆盖——供 UpgradeEngine 构造器组合表注入；两源合一）。"""
+    combos: dict = {}
+    explicit = ctx.get("combos")
+    if isinstance(explicit, Mapping):
+        combos.update(dict(explicit))
+    for cfg, _entry in _upgrade_recipes_by_subtype(ctx, "formula_merge"):
+        cf = cfg.get("combine_from") or []
+        out = cfg.get("output")
+        if len(cf) == 2 and isinstance(out, Mapping) and out.get("item"):
+            pair = frozenset((cf[0], cf[1]))
+            combos.setdefault(pair, {"output": out["item"]})
+    return combos
+
+
+def _resolve_item_id(ctx: Mapping[str, Any], name: str) -> Optional[str]:
+    """物品名/ID → 物品 id（items 注册表/解析器/name 扫描；查无 → None）。"""
+    idef = _find_item(ctx, name)
+    if idef is None:
+        return None
+    return str(idef.get("id") or name)
+
+
+def _resolve_jewel_id(ctx: Mapping[str, Any], name: str) -> Optional[str]:
+    """珠名/ID → 装饰珠 id（BEL-05：items type=「装饰珠」；非珠 → None）。"""
+    idef = _find_item(ctx, name)
+    if idef is None or idef.get("type") != JEWEL_TYPE:
+        return None
+    return str(idef.get("id") or name)
+
+
+def _resolve_equip_id(ctx: Mapping[str, Any], name: str) -> Optional[str]:
+    """装备名/ID → 装备 id（items 注册表/解析器/name 扫描；查无 → None）。"""
+    return _resolve_item_id(ctx, name)
+
+
+def _resolve_trait_id(ctx: Mapping[str, Any], name: str) -> Optional[str]:
+    """特性名/ID → 特性 id（traits 注册表/解析器/name 扫描；查无 → None）。"""
+    tdef = _find_trait(ctx, name)
+    if tdef is None:
+        return None
+    return str(tdef.get("id") or name)
+
+
+def _resolve_recipe_id(ctx: Mapping[str, Any], name: str) -> Optional[str]:
+    """配方名/ID → 配方 id（recipe 注册表/解析器/name 扫描；查无 → None）。"""
+    rdef = _find_recipe(ctx, name)
+    if rdef is None:
+        return None
+    return str(rdef.get("id") or name)
+
+
+def _copy_qty(parsed: Any) -> int:
+    """`/复制 <道具>*<数量>` 数量解析（DUP-05/P-11）：parsed.qty 优先（`*` 数量已结构化）；
+    解析器未登记 复制 到 quantity_commands 时回落 args[0] 内 `*N` 兜底（对齐 _star_qty 口径）；
+    均无 → 1。"""
+    qty = getattr(parsed, "qty", None)
+    try:
+        q = int(qty) if qty is not None else None
+    except (TypeError, ValueError):
+        q = None
+    if q is not None and q >= 1:
+        return q
+    args = getattr(parsed, "args", None) or []
+    if args:
+        raw = str(args[0])
+        if "*" in raw:
+            _, _, cnt = raw.partition("*")
+            try:
+                n = int(cnt)
+            except (TypeError, ValueError):
+                n = None
+            if n is not None and n >= 1:
+                return n
+    return 1
+
+
+def _mount_auto_slot(
+    js: JewelSystem,
+    ctx: MutableMapping[str, Any],
+    jewel_id: str,
+    equip_id: str,
+    player: Any,
+) -> dict:
+    """自动选槽镶嵌（SOCK-02 工程补白：/镶嵌 不传槽位 → 首个可嵌空槽（槽级≥珠档），
+    全部空槽不足 → 透传首个拒绝；无插槽登记/桶缺失 → 委托引擎报 equip_not_found）。
+
+    入参：js（JewelSystem 实例）、ctx（slot_defs/equipment，J-1/J-2）、jewel_id/equip_id、
+      player（绑定角色标识）。出参：JewelSystem.mount 同形态 dict。
+    """
+    slots_reg = ctx.get("slot_defs")
+    slot_defs = slots_reg.get(equip_id) if isinstance(slots_reg, Mapping) else None
+    eq = ctx.get("equipment")
+    entry = eq.get(equip_id) if isinstance(eq, Mapping) else None
+    bucket = entry.get("jewels") if isinstance(entry, Mapping) else None
+    if not isinstance(slot_defs, list) or not isinstance(bucket, MutableMapping):
+        # 无珠插槽登记/桶缺失 → 引擎报 equip_not_found（SOCK-01/J-1/J-2）
+        return js.mount(ctx, jewel_id, equip_id, 0, player)
+    empty = [si for si in range(len(slot_defs)) if si not in bucket]
+    if not empty:
+        return {"ok": False, "message": "❌ 装备珠槽已满，需先 /拆珠（SOCK-03 无损拆珠）"}
+    first_err: Optional[dict] = None
+    for si in empty:
+        res = js.mount(ctx, jewel_id, equip_id, si, player)
+        if res.get("ok"):
+            return res
+        if first_err is None:
+            first_err = res
+    return first_err if first_err is not None else {"ok": False, "message": "❌ 镶嵌失败"}
+
+
+async def cmd_mount(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """`/镶嵌 <珠> <装备>`（SOCK-02/04，通用无职业门槛）：珠名/装备名 → id → 自动选首个可嵌
+    空槽（槽级≥珠档）→ JewelSystem.mount 透传（战斗中拒绝 SOCK-05/BEL-09 由引擎承载）。
+
+    入参：parsed、ctx（items/slot_defs/equipment/count_item/remove_item hook + in_battle）。
+    出参：回复正文 str（成功/拒绝文案透传）。
+    """
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    if not parsed.args or len(parsed.args) < 2:
+        return format_tpl12(f"/{MOUNT_CMD}")
+    jewel_name = str(parsed.args[0])
+    equip_name = str(parsed.args[1])
+    jewel_id = _resolve_jewel_id(ctx, jewel_name)
+    if jewel_id is None:
+        return f"❌ 装饰珠不存在：{jewel_name}"   # BEL-05：type=装饰珠
+    equip_id = _resolve_equip_id(ctx, equip_name)
+    if equip_id is None:
+        return f"❌ 装备不存在：{equip_name}"
+    js = JewelSystem(settings=_settings_of(ctx))
+    player = _qid_of(ctx) or "player"
+    res = _mount_auto_slot(js, ctx, jewel_id, equip_id, player)
+    return str(res.get("message") or "❌ 镶嵌失败")
+
+
+async def cmd_unmount(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """`/拆珠 <装备> <槽位>`（SOCK-03，通用无职业门槛）：装备名 → id、槽位 1 起（对齐挂载消息
+    「槽位{si+1}」）→ JewelSystem.unmount 透传（珠无损返还/战斗中拒绝由引擎承载）。
+
+    入参：parsed、ctx（items/equipment/add_item hook + in_battle）。出参：回复正文 str。
+    """
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    if not parsed.args or len(parsed.args) < 2:
+        return format_tpl12(f"/{UNMOUNT_CMD}")
+    equip_name = str(parsed.args[0])
+    slot_text = str(parsed.args[1])
+    equip_id = _resolve_equip_id(ctx, equip_name)
+    if equip_id is None:
+        return f"❌ 装备不存在：{equip_name}"
+    try:
+        si = int(slot_text)
+    except (TypeError, ValueError):
+        return f"❌ 槽位无效：{slot_text}"
+    # 用户侧槽位 1 起（SOCK-03 工程补白：/拆珠 长剑 1 = 首槽），转引擎 0 起
+    engine_si = si - 1 if si >= 1 else si
+    js = JewelSystem(settings=_settings_of(ctx))
+    player = _qid_of(ctx) or "player"
+    res = js.unmount(ctx, equip_id, engine_si, player)
+    return str(res.get("message") or "❌ 拆珠失败")
+
+
+async def cmd_jewel_up(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """`/珠升阶 <珠>`（BEL-12/13/14，**无职业硬门槛** 拍板③/TC-06）：珠名 → id → 升阶实例
+    （subtype=jewel_upgrade 且输入=该珠 3×）→ UpgradeEngine.execute 透传（3×同档同 ID+宝石10→
+    +1 阶、禁跳级 BEL-13、宝石不足全拒由引擎承载）。
+
+    入参：parsed、ctx（items/recipe/currencies/count_item/remove_item/add_item hook）。
+    出参：回复正文 str。
+    """
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    if not parsed.args:
+        return format_tpl12(f"/{JEWEL_UP_CMD}")
+    target = _target_of(parsed)
+    jewel_id = _resolve_jewel_id(ctx, target)
+    if jewel_id is None:
+        return f"❌ 装饰珠不存在：{target}"
+    recipe = _find_jewel_up_recipe(ctx, jewel_id)
+    if recipe is None:
+        # 链终点（3×传说无可再升，BEL-13）与未配置升阶 统一提示
+        return f"❌ 未找到 {target} 的珠升阶配方（BEL-12：3×同档同 ID+宝石10，禁跳级）"
+    engine = UpgradeEngine(settings=_alchemy_cfg_of(ctx), combos=_upgrade_combos(ctx))
+    res = engine.execute(ctx, recipe)
+    return str(res.get("message") or "❌ 珠升阶失败")
+
+
+async def cmd_product_merge(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """`/成品合成 <物品A> <物品B>`（CMB-02/05，两个空格位置参数 CMB-07）：宗师门槛 →
+    两成品名 → id → 成品合成实例（subtype=product_merge 且输入物品集合 ⊇ {A,B}）→
+    UpgradeEngine.execute 透传（两成品+材料+宝石10→更强成品，原子提交 F-09）。
+
+    入参：parsed、ctx（proficiency/items/recipe/currencies + hook）。出参：回复正文 str。
+    """
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    if not parsed.args or len(parsed.args) < 2:
+        return format_tpl12(f"/{PRODUCT_MERGE_CMD}")
+    a_name = str(parsed.args[0])
+    b_name = str(parsed.args[1])
+    if _prof_level(_player_of(ctx)) < _GRANDMASTER_TIER_INDEX:
+        return "❌ 等级不足"   # CMB-02 宗师（L203/L328，TC-13）
+    a_id = _resolve_item_id(ctx, a_name)
+    if a_id is None:
+        return f"❌ 物品不存在：{a_name}"
+    b_id = _resolve_item_id(ctx, b_name)
+    if b_id is None:
+        return f"❌ 物品不存在：{b_name}"
+    recipe = _find_product_merge_recipe(ctx, a_id, b_id)
+    if recipe is None:
+        return f"❌ 「{a_name}」+「{b_name}」没有已知组合"   # CMB-05（L390 组合表匹配）
+    engine = UpgradeEngine(settings=_alchemy_cfg_of(ctx), combos=_upgrade_combos(ctx))
+    res = engine.execute(ctx, recipe)
+    return str(res.get("message") or "❌ 成品合成失败")
+
+
+async def cmd_formula_merge(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """`/配方合成 <配方A> <配方B>`（CMB-03/05，两个空格位置参数 CMB-07）：专家门槛 → 两配方名
+    → id → 两配方已学检查（GU-38/TC-15，ctx upgrade_unlocks 玩家级解锁表 U-F3）→ 配方合成实例
+    （subtype=formula_merge 且 combine_from=={A,B}）→ UpgradeEngine.execute 透传（宝石5→组合表
+    解锁新配方；已解锁幂等 ATO-05「已解锁，无需重复合成」透传）。
+
+    入参：parsed、ctx（proficiency/recipe/upgrade_unlocks/currencies + hook）。
+    出参：回复正文 str。
+    """
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    if not parsed.args or len(parsed.args) < 2:
+        return format_tpl12(f"/{FORMULA_MERGE_CMD}")
+    a_name = str(parsed.args[0])
+    b_name = str(parsed.args[1])
+    if _prof_level(_player_of(ctx)) < EXPERT_TIER_INDEX:
+        return "❌ 等级不足"   # CMB-03 专家（L209，四类合成门槛最低，TC-16）
+    a_id = _resolve_recipe_id(ctx, a_name)
+    if a_id is None:
+        return f"❌ 配方不存在：{a_name}"
+    b_id = _resolve_recipe_id(ctx, b_name)
+    if b_id is None:
+        return f"❌ 配方不存在：{b_name}"
+    unlocks = ctx.get("upgrade_unlocks")
+    table = unlocks if isinstance(unlocks, MutableMapping) else {}
+    missing = [x for x in (a_id, b_id) if x not in table]
+    if missing:
+        return f"❌ 配方未全部习得：{'、'.join(missing)}"   # GU-38/TC-15
+    recipe = _find_formula_merge_recipe(ctx, a_id, b_id)
+    if recipe is None:
+        return f"❌ 「{a_name}」+「{b_name}」没有已知组合"   # GU-39 组合表（L390）
+    engine = UpgradeEngine(settings=_alchemy_cfg_of(ctx), combos=_upgrade_combos(ctx))
+    res = engine.execute(ctx, recipe)
+    return str(res.get("message") or "❌ 配方合成失败")
+
+
+async def cmd_trait_merge(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """`/特性合成 <特性A> <特性B>`（CMB-04/05，两个空格位置参数 CMB-07）：宗师门槛 → 两特性名
+    → id → 特性合成实例（subtype=trait_merge 首个）→ UpgradeEngine.execute(input_ids=[A,B])
+    透传（两同系特性+宝石20+材料→更高位特性；非同系拒绝 GU-42/TC-18、宝石不足全拒由引擎承载；
+    特性名内数值 `+` 为数值标记 CMB-07/L19 保留）。
+
+    入参：parsed、ctx（proficiency/traits/recipe/currencies + hook）。出参：回复正文 str。
+    """
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    if not parsed.args or len(parsed.args) < 2:
+        return format_tpl12(f"/{TRAIT_MERGE_CMD}")
+    a_name = str(parsed.args[0])
+    b_name = str(parsed.args[1])
+    if _prof_level(_player_of(ctx)) < _GRANDMASTER_TIER_INDEX:
+        return "❌ 等级不足"   # CMB-04 宗师（L215/L332，TC-19）
+    a_id = _resolve_trait_id(ctx, a_name)
+    if a_id is None:
+        return f"❌ 特性不存在：{a_name}"
+    b_id = _resolve_trait_id(ctx, b_name)
+    if b_id is None:
+        return f"❌ 特性不存在：{b_name}"
+    recipe = _find_trait_merge_recipe(ctx)
+    if recipe is None:
+        return "❌ 未配置特性合成配方"   # CMB-01：kind=upgrade 配置实例缺失
+    engine = UpgradeEngine(settings=_alchemy_cfg_of(ctx), combos=_upgrade_combos(ctx))
+    res = engine.execute(ctx, recipe, input_ids=[a_id, b_id])
+    return str(res.get("message") or "❌ 特性合成失败")
+
+
+async def cmd_register(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """`/登记 <道具>`（DUP-02/06，无职业门槛）：道具名 → id → AlchemyRegister.register 透传
+    （标准版校验 TC-09/成本快照冻结 AR-1/登记表落 ctx["registered"] 由引擎承载）。
+
+    入参：parsed、ctx（items/recipe/registered）。出参：回复正文 str。
+    """
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    if not parsed.args:
+        return format_tpl12(f"/{REGISTER_CMD}")
+    target = _target_of(parsed)
+    item_id = _resolve_item_id(ctx, target)
+    if item_id is None:
+        return f"❌ 道具不存在：{target}"
+    reg_engine = AlchemyRegister(settings=_settings_of(ctx))
+    res = reg_engine.register(ctx, item_id)
+    return str(res.get("message") or "❌ 登记失败")
+
+
+async def cmd_copy(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """`/复制 <道具>*<数量>`（DUP-01~05，P-11）：大师门槛（DUP-01/L208）→ 道具名 → id → qty
+    解析（parsed.qty 优先，`*N` 兜底）→ AlchemyRegister.copy 透传（未登记复制 TC-07/标准版
+    量产 TC-08/原子校验全拒差异 TC-10/数量超限提示不拦 TC-11 由引擎承载）。
+
+    入参：parsed、ctx（proficiency/items/recipe/registered/currencies/inventory + hook）。
+    出参：回复正文 str。
+    """
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    if not parsed.args:
+        return format_tpl12(f"/{COPY_CMD}")
+    target = _target_of(parsed)
+    if not target:
+        return format_tpl12(f"/{COPY_CMD}")
+    if _prof_level(_player_of(ctx)) < _MASTER_TIER_INDEX:
+        return "❌ 等级不足"   # DUP-01 大师（L208/L85，TC-07 前置）
+    item_id = _resolve_item_id(ctx, target)
+    if item_id is None:
+        return f"❌ 道具不存在：{target}"
+    qty = _copy_qty(parsed)
+    reg_engine = AlchemyRegister(settings=_settings_of(ctx))
+    res = reg_engine.copy(ctx, item_id, count=qty)
+    return str(res.get("message") or "❌ 复制失败")
+
+
+# ---------------------------------------------------------------------------
 # 装配（Router 注册；make_context 由装配层注入，批11 路11A 待接线）
 # ---------------------------------------------------------------------------
 
@@ -1420,6 +1856,7 @@ def register_alchemy_commands(
     make_context: Optional[Callable[[Any], dict]] = None,
 ) -> Any:
     """把 `/合成` `/炼金` `/投料` `/继承` `/继承超` `/确认` `/放弃` `/调合续` `/分解`
+    `/镶嵌` `/拆珠` `/珠升阶` `/成品合成` `/配方合成` `/特性合成` `/登记` `/复制`
     注册进 Router（CommandSpec.handler 消费 ParsedCommand）。
 
     handler 支持 k.get("ctx") 注入（装配层 _invoke_handler 以 ctx=ctx 注入，assembly/runner.py
@@ -1492,6 +1929,54 @@ def register_alchemy_commands(
             return cmd_decompose(parsed, injected)
         return cmd_decompose(parsed, _ctx(parsed))
 
+    def _mount(parsed: Any, *a: Any, **k: Any):
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_mount(parsed, injected)
+        return cmd_mount(parsed, _ctx(parsed))
+
+    def _unmount(parsed: Any, *a: Any, **k: Any):
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_unmount(parsed, injected)
+        return cmd_unmount(parsed, _ctx(parsed))
+
+    def _jewel_up(parsed: Any, *a: Any, **k: Any):
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_jewel_up(parsed, injected)
+        return cmd_jewel_up(parsed, _ctx(parsed))
+
+    def _product_merge(parsed: Any, *a: Any, **k: Any):
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_product_merge(parsed, injected)
+        return cmd_product_merge(parsed, _ctx(parsed))
+
+    def _formula_merge(parsed: Any, *a: Any, **k: Any):
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_formula_merge(parsed, injected)
+        return cmd_formula_merge(parsed, _ctx(parsed))
+
+    def _trait_merge(parsed: Any, *a: Any, **k: Any):
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_trait_merge(parsed, injected)
+        return cmd_trait_merge(parsed, _ctx(parsed))
+
+    def _register(parsed: Any, *a: Any, **k: Any):
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_register(parsed, injected)
+        return cmd_register(parsed, _ctx(parsed))
+
+    def _copy(parsed: Any, *a: Any, **k: Any):
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_copy(parsed, injected)
+        return cmd_copy(parsed, _ctx(parsed))
+
     router.register(CommandSpec(SYNTH_CMD, handler=_synth))
     router.register(CommandSpec(ALCHEMY_CMD, handler=_alchemy))
     router.register(CommandSpec(FEED_CMD, handler=_feed))
@@ -1501,4 +1986,12 @@ def register_alchemy_commands(
     router.register(CommandSpec(ABANDON_CMD, handler=_abandon))
     router.register(CommandSpec(RESUME_CMD, handler=_resume))
     router.register(CommandSpec(DECOMPOSE_CMD, handler=_decompose))
+    router.register(CommandSpec(MOUNT_CMD, handler=_mount))
+    router.register(CommandSpec(UNMOUNT_CMD, handler=_unmount))
+    router.register(CommandSpec(JEWEL_UP_CMD, handler=_jewel_up))
+    router.register(CommandSpec(PRODUCT_MERGE_CMD, handler=_product_merge))
+    router.register(CommandSpec(FORMULA_MERGE_CMD, handler=_formula_merge))
+    router.register(CommandSpec(TRAIT_MERGE_CMD, handler=_trait_merge))
+    router.register(CommandSpec(REGISTER_CMD, handler=_register))
+    router.register(CommandSpec(COPY_CMD, handler=_copy))
     return router

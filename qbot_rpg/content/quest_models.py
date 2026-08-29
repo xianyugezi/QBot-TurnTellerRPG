@@ -78,7 +78,7 @@ BOARD_LIMIT_OVER_WARN: int = 10  # 每日完成上限超默认阈值（>10 → �
 BOARD_ACCEPT_OVER_WARN: int = 5  # 同时接取上限超默认阈值（>5 → 黄提示）
 
 # reward 统一条目（2b4 §三：物品/货币键值/组合数组；D-05 内联串=糖；rewards 别名 D-01）
-REWARD_SCALAR_KEYS: Tuple[str, ...] = ("coins", "gem", "exp", "rep")  # 货币/数值键值条目键
+REWARD_SCALAR_KEYS: Tuple[str, ...] = ("coins", "gem", "exp", "rep", "prof")  # 货币/数值/熟练度键值条目键
 REWARD_ITEM_KEYS: Tuple[str, ...] = ("item", "id")  # 物品条目键（item 主键，id ≡ item，L126）
 REWARD_COUNT_KEY: str = "count"  # 物品数量键
 REWARD_BOUND_KEY: str = "bound"  # 物品绑定标记（reward.py 扩展字段，结构校验放行）
@@ -741,6 +741,25 @@ def _check_reward_entry(report: object, entry: Mapping[str, object], base: str,
              node_id=node_id, keys=sorted(unknown),
              msg="标量条目多余键 %s（合法：%s 单键）" % (sorted(unknown), key))
     value = entry[key]
+    # M8 批14：prof 熟练度奖励 = {job, exp} 对象（非标量整数）——特殊校验后返回
+    if key == "prof":
+        if not isinstance(value, Mapping):
+            _err(report, f"{base}.prof", "R-1", rule="quest_reward_prof_invalid",
+                 node_id=node_id, value=value, msg="prof 奖励需对象 {job, exp}")
+            return
+        job = value.get("job") or value.get("id")
+        exp = value.get("exp")
+        if not isinstance(job, str) or not job:
+            _err(report, f"{base}.prof.job", "R-1", rule="quest_reward_prof_job_invalid",
+                 node_id=node_id, value=job, msg="prof.job 需非空字符串（生活职业 id）")
+        if not isinstance(exp, int) or isinstance(exp, bool) or exp < 0:
+            _err(report, f"{base}.prof.exp", "R-2", rule="quest_reward_prof_exp_invalid",
+                 node_id=node_id, value=exp, msg="prof.exp 需 ≥0 整数（熟练经验）")
+        unknown = set(value.keys()) - {"job", "id", "exp"}
+        if unknown:
+            _err(report, f"{base}.prof", "R-5", rule="quest_reward_prof_unknown_key",
+                 node_id=node_id, keys=sorted(unknown), msg="prof 对象多余键 %s（合法：job/exp）" % sorted(unknown))
+        return
     if not isinstance(value, int) or isinstance(value, bool) or value < 0:
         _err(report, f"{base}.{key}", "R-2", rule="quest_reward_value_invalid",
              node_id=node_id, key=key, value=value,

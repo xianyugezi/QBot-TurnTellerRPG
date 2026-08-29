@@ -1,61 +1,95 @@
 [
-  {
-    "id": "village_shop",
-    "name": "晨风杂货铺",
-    "icon": "店",
-    "type": "normal",
-    "currency": "coins",
-    "desc": "晨风村的杂货铺，药水与装备一应俱全。",
-    "visible": true,
-    "items": [
-      {
-        "item": "potion",
-        "price": 100,
-        "stock": 10,
-        "limit": 5,
-        "period": "day"
-      },
-      {
-        "item": "mana_potion",
-        "price": 80,
-        "stock": 10
-      },
-      {
-        "item": "antidote",
-        "price": 60,
-        "stock": 10
-      },
-      {
-        "item": "hunter_blade",
-        "price": 200,
-        "stock": 3
-      }
-    ]
-  },
-  {
-    "id": "mine_supply",
-    "name": "矿工补给站",
-    "icon": "包",
-    "type": "normal",
-    "currency": "coins",
-    "desc": "废弃矿坑的补给站，兼收星铁矿石。",
-    "visible": true,
-    "items": [
-      {
-        "item": "potion",
-        "price": 100,
-        "stock": 20
-      },
-      {
-        "item": "mana_potion",
-        "price": 80,
-        "stock": 10
-      },
-      {
-        "item": "star_iron",
-        "price": 60,
-        "stock": 20
-      }
-    ]
-  }
+ {
+  "id": "village_shop",
+  "name": "晨风杂货铺",
+  "icon": "店",
+  "type": "normal",
+  "currency": "coins",
+  "desc": "晨风村的杂货铺，药水与装备一应俱全。",
+  "visible": true,
+  "items": [
+   {
+    "item": "potion",
+    "price": 100,
+    "stock": 10,
+    "limit": 5,
+    "period": "day"
+   },
+   {
+    "item": "mana_potion",
+    "price": 80,
+    "stock": 10
+   },
+   {
+    "item": "antidote",
+    "price": 60,
+    "stock": 10
+   },
+   {
+    "item": "hunter_blade",
+    "price": 200,
+    "stock": 3
+   },
+   {
+    "item": "alch_ember_crystal",
+    "price": 150,
+    "stock": 20
+   },
+   {
+    "item": "alch_frost_crystal",
+    "price": 150,
+    "stock": 20
+   },
+   {
+    "item": "alch_seed_ember",
+    "price": 50,
+    "stock": 20,
+    "limit": 3,
+    "period": "day"
+   },
+   {
+    "item": "alch_seed_frost",
+    "price": 50,
+    "stock": 20,
+    "limit": 3,
+    "period": "day"
+   },
+   {
+    "item": "moon_grass",
+    "price": 60,
+    "stock": 30
+   },
+   {
+    "item": "star_iron",
+    "price": 80,
+    "stock": 30
+   }
+  ]
+ },
+ {
+  "id": "mine_supply",
+  "name": "矿工补给站",
+  "icon": "包",
+  "type": "normal",
+  "currency": "coins",
+  "desc": "废弃矿坑的补给站，兼收星铁矿石。",
+  "visible": true,
+  "items": [
+   {
+    "item": "potion",
+    "price": 100,
+    "stock": 20
+   },
+   {
+    "item": "mana_potion",
+    "price": 80,
+    "stock": 10
+   },
+   {
+    "item": "star_iron",
+    "price": 60,
+    "stock": 20
+   }
+  ]
+ }
 ]

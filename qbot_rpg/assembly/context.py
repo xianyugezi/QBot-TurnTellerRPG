@@ -319,6 +319,30 @@ def _ps_init(ps: Any, key: str, empty: Any) -> Any:
     return node
 
 
+def _prof_level_map(raw: Any) -> Dict[str, int]:
+    """职业等级映射 {job_id: level}（M8 批14 测试探针：quest 引擎 var=prof_level 条件消费）。
+
+    入参 raw: persistent_state.proficiency（dict {job_id: {level, ...}} 或 {job_id: level}）。
+    出参 {job_id: level int}——兼容两形态；缺失/非法 → 空 dict（引导任务不提前解锁）。
+    """
+    out: Dict[str, int] = {}
+    if not isinstance(raw, Mapping):
+        return out
+    for job_id, node in raw.items():
+        if isinstance(node, Mapping):
+            try:
+                lv = int(node.get("level", 0) or 0)
+            except (TypeError, ValueError):
+                lv = 0
+            out[str(job_id)] = max(0, lv)
+        else:
+            try:
+                out[str(job_id)] = max(0, int(node or 0))
+            except (TypeError, ValueError):
+                continue
+    return out
+
+
 def _coerce_heard(raw: object) -> set:
     """已听集合归一：persistent_state 任意形态（list/tuple/set）→ set（dialog 消费集合语义）。"""
     if isinstance(raw, (list, tuple, set)):
@@ -372,6 +396,12 @@ def _table_from_registry(registry: Any, kind: str) -> Dict[str, Any]:
 
     入参 registry: content Registry；kind: str（"item"/"shop"/...）。
     出参 Dict[str, Any]。核心逻辑: all_ids(kind) → resolve(id, kind) 建映射。
+
+    M8 批14 部署实测（repro_m8probe）根治：resolve 返回 **Def 对象**（非 dict，含 .raw
+    dict），此前直接透传 → 指令层 `_find_def/_find_item` 的 `isinstance(val, Mapping)` +
+    `.get()` 契约全断 → 配方/材料/商店名解析失败（实测 /合成 配方不存在 /购买 没有这个
+    商品 /商店 名称解析拒）。统一 Def → raw dict 转换（映射值恒为 dict，消费方 Mapping.get
+    契约成立），一并覆盖 items/recipe/traits/effect/quest/shop 表。
     """
     out: Dict[str, Any] = {}
     all_ids = getattr(registry, "all_ids", None)
@@ -382,7 +412,14 @@ def _table_from_registry(registry: Any, kind: str) -> Dict[str, Any]:
         for iid in all_ids(kind):
             d = resolve(iid, kind)
             if d is not None:
-                out[str(iid)] = d
+                if isinstance(d, Mapping):
+                    out[str(iid)] = d
+                else:
+                    raw = getattr(d, "raw", None)
+                    if isinstance(raw, dict):
+                        out[str(iid)] = raw
+                    else:
+                        out[str(iid)] = d  # 无 raw 的兜底原样（消费方按属性鸭子）
     except Exception:
         return out
     return out
@@ -851,6 +888,8 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
         "per_channel": event.get("per_channel"),
         "to": event.get("to"),
         "qq_id": qid or None,
+        "qid": qid or None,  # M8 批14 部署实测：_qid_of 取 ctx["qid"]（会话主键 MUT-02），
+        # 仅 qq_id 时 _qid_of 读不到 → session.player_qid=None → /投料 按 qid 查无会话；补键对齐
         "is_gm": bool(event.get("is_gm", False)),
         # M8 批13 审查收口（P0-2 终态结算注入断裂）：message_id 透传——
         # /确认 /放弃 的 SettleEngine gate `if message_id:` 依赖它走 settle_alchemy
@@ -949,6 +988,10 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
             "farm_plots": _ps_init(ps, "farm_plots", {}),
             "helpers": _ps_init(ps, "helpers", {}),
             "proficiency": _ps_init(ps, "proficiency", {}),
+            # M8 批14 测试探针（炼金引导任务）：ctx["prof_level"] 职业等级映射
+            # {job_id: level}——quest 引擎 var=prof_level 条件（param=job_id）消费；
+            # 未注册/无建档 → {} 空（条件不满足，引导任务不提前解锁）。
+            "prof_level": _prof_level_map(ps.get("proficiency")),
             # M8 炼金（批11-2 收口）：背包 hooks（_inventory_hooks 就地操作
             # ctx["inventory"] 计数映射，reward/shop 同款契约）+ 玩家级解锁表回填
             # （配方合成/进化持久化，换包同 ID 保留 DUP-06）
@@ -1024,9 +1067,30 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
         if isinstance(k, str)
     }
     ctx["quest_ids"] = list(ctx["quests"].keys())
-    ctx["shops"] = _table_from_registry(deps.registry, "shop")
-    ctx["resolve_item"] = getattr(deps.registry, "resolve", None)
-    ctx["resolve_shop"] = getattr(deps.registry, "resolve", None)
+    # M8 批14 部署实测（repro_m8probe）：/商店 <名称> 解析失败——ctx["shops"] 未做
+    # Def→raw dict 转换（对比 quest 表 L1049 已修），resolve_shop 的 `isinstance(hit, Mapping)`
+    # 判定 False → 名称/全表匹配全拒。对齐 quest 修复：raw dict 保证 Mapping.get 契约。
+    _shops = _table_from_registry(deps.registry, "shop")
+    ctx["shops"] = {
+        str(k): (dict(v.raw) if isinstance(getattr(v, "raw", None), dict) else v)
+        for k, v in _shops.items()
+        if isinstance(k, str)
+    }
+    # M8 批14 部署实测收口（/投料 /合成 名解析失败）：registry.resolve 签名 (key, kind)，
+    # 指令层 _find_def 单参调用 resolver(key) → TypeError 被 except 吞 → name 扫描永不执行。
+    # 注入单参包装绑定 kind（对齐指令壳 resolver 契约）；_find_def 异常也落 name 扫描兜底。
+    def _kind_resolver(kind: str):
+        def _res(key: Any) -> Any:
+            try:
+                return deps.registry.resolve(key, kind)
+            except Exception:
+                return None
+        return _res
+
+    ctx["resolve_item"] = _kind_resolver("item")
+    ctx["resolve_shop"] = _kind_resolver("shop")
+    ctx["resolve_recipe"] = _kind_resolver("recipe")
+    ctx["resolve_trait"] = _kind_resolver("trait")
     # bump_event：N-03 RN-10 装配级统一事件 hook（dialog_commands._bump_events 优先消费；
     # 兄弟路 event_bus 未落盘 → 本地三表安全兜底，见 _resolve_bump_event）
     ctx["bump_event"] = _resolve_bump_event()

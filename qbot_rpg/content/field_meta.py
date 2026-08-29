@@ -295,7 +295,10 @@ ITEMS_ALCHEMY_FIELDS: Dict[str, FieldMeta] = {
     # base_effects 珠基础效果，固定数值（标准珠=只有这个；炼金珠 base_effects+traits 两套词条，L265/L381）
     "base_effects": FieldMeta(type="obj"),
     # seed 可种植标记（/种植 种子，批10A，L381/L392）
-    "seed": FieldMeta(type="bool", default=False),
+    # M8 批14 收口：软标注（soft_label=永不红拦）——引擎 HarvesterEngine._seed_info
+    # 支持两形态（true 简单形态 / {output,quality_floor,traits,...} 收获表形态 L392），
+    # 校验器不重复硬拦（「只建议不限制」哲学；非法形态引擎返回 None 安全拒绝）。
+    "seed": FieldMeta(type="bool", default=False, soft_label=True),
 }
 
 # slots.json 模块字段（契约 §四 4.2）

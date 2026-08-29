@@ -269,12 +269,50 @@ def _dispatch_one(entry: Mapping[str, Any], ctx: Mapping[str, Any]) -> Optional[
     if "rep" in entry:  # rep 允许可选 board/param 扩展键
         return _grant_scalar("rep", entry["rep"], entry, ctx)
 
+    if "prof" in entry:  # M8 批14 测试探针：熟练度奖励 {prof:{job, exp}} → 任务引导解锁炼金
+        return _grant_prof(entry, ctx)
+
     if len(entry) == 1:
         key = next(iter(entry))
         if key in _SCALAR_KEYS:
             return _grant_scalar(key, entry[key], entry, ctx)
 
     return {"ok": False, "skip": {"type": "invalid", "reason": "invalid_entry", "entry": dict(entry)}}
+
+
+def _grant_prof(entry: Mapping[str, Any], ctx: Mapping[str, Any]) -> Optional[dict]:
+    """熟练度奖励（M8 批14：任务奖励炼金熟练度，玩家完成引导任务解锁炼金玩法）。
+
+    条目形态：{"prof": {"job": "alchemy", "exp": 150}}——exp 为熟练经验
+    （ProficiencyEngine.gain_prof_exp 入账 → 升级 → SP 发放，source=quest 默认倍率）。
+    ctx 消费：prof_engine（ProficiencyEngine 实例）+ proficiency（persistent_state 引用，
+    批13 注入——引擎就地改写即落档）。失败=skip，不抛错。
+    """
+    prof_spec = entry.get("prof")
+    if not isinstance(prof_spec, Mapping):
+        return {"ok": False, "skip": {"type": "prof", "reason": "invalid_prof",
+                                      "entry": dict(entry)}}
+    job = prof_spec.get("job") or prof_spec.get("id")
+    amount = prof_spec.get("exp")
+    if not isinstance(job, str) or not job:
+        return {"ok": False, "skip": {"type": "prof", "reason": "missing_job"}}
+    if not _valid_amount(amount):
+        return {"ok": False, "skip": {"type": "prof", "reason": "invalid_amount"}}
+    pe = ctx.get("prof_engine")
+    if not callable(getattr(pe, "gain_prof_exp", None)):
+        return {"ok": False, "skip": {"type": "prof", "reason": "missing_prof_engine"}}
+    prof_bucket = ctx.get("proficiency")
+    if not isinstance(prof_bucket, MutableMapping):
+        return {"ok": False, "skip": {"type": "prof", "reason": "missing_proficiency"}}
+    # 包装 player 引用（gain_prof_exp 就地改写 player["proficiency"][job]；
+    # 传引用 → 落档 persistent_state.proficiency 直接更新，与 ctx["player"] dataclass 解耦）
+    player_wrap = {"proficiency": prof_bucket}
+    r = pe.gain_prof_exp(player_wrap, job, amount, source="quest")  # type: ignore[union-attr]
+    if not r.get("ok"):
+        return {"ok": False, "skip": {"type": "prof", "reason": "grant_failed",
+                                      "detail": r.get("reason")}}
+    return {"ok": True, "grant": {"type": "prof", "job": job, "amount": amount,
+                                  "level": r.get("level"), "level_ups": r.get("level_ups")}}
 
 
 def _iter_entries(entries: Any):

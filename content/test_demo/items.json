@@ -1,305 +1,337 @@
 [
-  {
-    "id": "potion",
-    "name": "疗伤药水",
-    "type": "consumable",
-    "price": 100,
-    "effects": [
-      "heal_small"
-    ],
-    "usable": true
+ {
+  "id": "potion",
+  "name": "疗伤药水",
+  "type": "consumable",
+  "price": 100,
+  "effects": [
+   "heal_small"
+  ],
+  "usable": true
+ },
+ {
+  "id": "mana_potion",
+  "name": "魔力药水",
+  "type": "consumable",
+  "price": 80,
+  "effects": [
+   "heal_mp"
+  ],
+  "usable": true
+ },
+ {
+  "id": "antidote",
+  "name": "解毒草",
+  "type": "consumable",
+  "price": 60,
+  "effects": [
+   "cure_poison"
+  ],
+  "usable": true
+ },
+ {
+  "id": "hi_potion",
+  "name": "高级药水",
+  "type": "consumable",
+  "price": 220,
+  "effects": [
+   "heal_small"
+  ],
+  "usable": true
+ },
+ {
+  "id": "moon_grass",
+  "name": "月光草",
+  "type": "material",
+  "price": 40
+ },
+ {
+  "id": "star_iron",
+  "name": "星铁矿石",
+  "type": "material",
+  "price": 60
+ },
+ {
+  "id": "ash_core",
+  "name": "灰烬核心",
+  "type": "material",
+  "price": 300
+ },
+ {
+  "id": "ogre_key",
+  "name": "巨魔钥匙",
+  "type": "material",
+  "price": 0
+ },
+ {
+  "id": "ghost_moss",
+  "name": "幽灵苔",
+  "type": "material",
+  "price": 100
+ },
+ {
+  "id": "hunter_blade",
+  "name": "猎手短剑",
+  "type": "weapon",
+  "price": 200,
+  "atk": 5,
+  "slot": "weapon",
+  "excludes": []
+ },
+ {
+  "id": "leaf_vest",
+  "name": "叶纹护甲",
+  "type": "armor",
+  "price": 0,
+  "def": 3,
+  "slot": "body",
+  "excludes": []
+ },
+ {
+  "id": "ember_brand",
+  "name": "余烬战刃",
+  "type": "weapon",
+  "price": 0,
+  "atk": 10,
+  "slot": "weapon",
+  "excludes": [],
+  "effects": [
+   "burn_dot"
+  ]
+ },
+ {
+  "id": "mirror_shield",
+  "name": "镜影盾",
+  "type": "shield",
+  "price": 0,
+  "def": 5,
+  "slot": "shield",
+  "excludes": []
+ },
+ {
+  "id": "jewel_burn_common",
+  "name": "灼烧珠·普通",
+  "type": "装饰珠",
+  "price": 120,
+  "quality": "common",
+  "base_effects": {
+   "atk": 2
   },
-  {
-    "id": "mana_potion",
-    "name": "魔力药水",
-    "type": "consumable",
-    "price": 80,
-    "effects": [
-      "heal_mp"
-    ],
-    "usable": true
+  "elements": {
+   "fire": 3
   },
-  {
-    "id": "antidote",
-    "name": "解毒草",
-    "type": "consumable",
-    "price": 60,
-    "effects": [
-      "cure_poison"
-    ],
-    "usable": true
+  "traits": [
+   "trait_burn_boost"
+  ]
+ },
+ {
+  "id": "jewel_burn_uncommon",
+  "name": "灼烧珠·精良",
+  "type": "装饰珠",
+  "price": 260,
+  "quality": "uncommon",
+  "base_effects": {
+   "atk": 4
   },
-  {
-    "id": "hi_potion",
-    "name": "高级药水",
-    "type": "consumable",
-    "price": 220,
-    "effects": [
-      "heal_small"
-    ],
-    "usable": true
+  "elements": {
+   "fire": 5
   },
-  {
-    "id": "moon_grass",
-    "name": "月光草",
-    "type": "material",
-    "price": 40
+  "traits": [
+   "trait_fire_15"
+  ]
+ },
+ {
+  "id": "jewel_burn_rare",
+  "name": "灼烧珠·史诗",
+  "type": "装饰珠",
+  "price": 600,
+  "quality": "rare",
+  "base_effects": {
+   "atk": 6
   },
-  {
-    "id": "star_iron",
-    "name": "星铁矿石",
-    "type": "material",
-    "price": 60
+  "elements": {
+   "fire": 8
   },
-  {
-    "id": "ash_core",
-    "name": "灰烬核心",
-    "type": "material",
-    "price": 300
+  "traits": [
+   "trait_fire_25"
+  ]
+ },
+ {
+  "id": "jewel_guard_common",
+  "name": "守护珠·普通",
+  "type": "装饰珠",
+  "price": 120,
+  "quality": "common",
+  "base_effects": {
+   "def": 2
   },
-  {
-    "id": "ogre_key",
-    "name": "巨魔钥匙",
-    "type": "material",
-    "price": 0
+  "elements": {
+   "earth": 3
   },
-  {
-    "id": "ghost_moss",
-    "name": "幽灵苔",
-    "type": "material",
-    "price": 100
+  "traits": [
+   "trait_stone_guard"
+  ]
+ },
+ {
+  "id": "jewel_void_rare",
+  "name": "虚无珠·史诗",
+  "type": "装饰珠",
+  "price": 600,
+  "quality": "rare",
+  "base_effects": {
+   "atk": 5,
+   "def": 3
   },
-  {
-    "id": "hunter_blade",
-    "name": "猎手短剑",
-    "type": "weapon",
-    "price": 200,
-    "atk": 5,
-    "slot": "weapon",
-    "excludes": []
+  "elements": {
+   "void": 6
   },
-  {
-    "id": "leaf_vest",
-    "name": "叶纹护甲",
-    "type": "armor",
-    "price": 0,
-    "def": 3,
-    "slot": "body",
-    "excludes": []
+  "traits": [
+   "trait_cleanse"
+  ]
+ },
+ {
+  "id": "catalyst_fire_essence",
+  "name": "火之精华触媒",
+  "type": "触媒",
+  "price": 500
+ },
+ {
+  "id": "alch_ember_crystal",
+  "name": "火晶石",
+  "type": "material",
+  "price": 150,
+  "rarity": "普通",
+  "elements": {
+   "fire": 4
   },
-  {
-    "id": "ember_brand",
-    "name": "余烬战刃",
-    "type": "weapon",
-    "price": 0,
-    "atk": 10,
-    "slot": "weapon",
-    "excludes": [],
-    "effects": [
-      "burn_dot"
-    ]
+  "traits": [
+   "trait_burn_boost"
+  ]
+ },
+ {
+  "id": "alch_frost_crystal",
+  "name": "冰晶石",
+  "type": "material",
+  "price": 150,
+  "rarity": "普通",
+  "elements": {
+   "water": 4
   },
-  {
-    "id": "mirror_shield",
-    "name": "镜影盾",
-    "type": "shield",
-    "price": 0,
-    "def": 5,
-    "slot": "shield",
-    "excludes": []
+  "traits": [
+   "trait_mp_flow"
+  ]
+ },
+ {
+  "id": "alch_fire_essence",
+  "name": "火之精华",
+  "type": "material",
+  "price": 400,
+  "rarity": "金色",
+  "elements": {
+   "fire": 6
   },
-  {
-    "id": "jewel_burn_common",
-    "name": "灼烧珠·普通",
-    "type": "装饰珠",
-    "price": 120,
-    "quality": "common",
-    "base_effects": {
-      "atk": 2
-    },
-    "elements": {
-      "fire": 3
-    },
-    "traits": [
-      "trait_burn_boost"
-    ]
+  "traits": [
+   "trait_fire_15"
+  ]
+ },
+ {
+  "id": "flame_bomb",
+  "name": "火焰弹",
+  "type": "consumable",
+  "price": 300,
+  "quality": "common",
+  "elements": {
+   "fire": 2
   },
-  {
-    "id": "jewel_burn_uncommon",
-    "name": "灼烧珠·精良",
-    "type": "装饰珠",
-    "price": 260,
-    "quality": "uncommon",
-    "base_effects": {
-      "atk": 4
-    },
-    "elements": {
-      "fire": 5
-    },
-    "traits": [
-      "trait_fire_15"
-    ]
+  "traits": [
+   "trait_burn_boost"
+  ],
+  "effects": [
+   "burn_dot"
+  ],
+  "usable": true
+ },
+ {
+  "id": "flame_bomb_plus",
+  "name": "烈焰弹·改",
+  "type": "consumable",
+  "price": 520,
+  "quality": "uncommon",
+  "elements": {
+   "fire": 4
   },
-  {
-    "id": "jewel_burn_rare",
-    "name": "灼烧珠·史诗",
-    "type": "装饰珠",
-    "price": 600,
-    "quality": "rare",
-    "base_effects": {
-      "atk": 6
-    },
-    "elements": {
-      "fire": 8
-    },
-    "traits": [
-      "trait_fire_25"
-    ]
+  "traits": [
+   "trait_fire_15"
+  ],
+  "effects": [
+   "burn_dot"
+  ],
+  "usable": true
+ },
+ {
+  "id": "doomsday_bomb",
+  "name": "灭世爆弹",
+  "type": "consumable",
+  "price": 1200,
+  "quality": "legendary",
+  "elements": {
+   "fire": 10
   },
-  {
-    "id": "jewel_guard_common",
-    "name": "守护珠·普通",
-    "type": "装饰珠",
-    "price": 120,
-    "quality": "common",
-    "base_effects": {
-      "def": 2
-    },
-    "elements": {
-      "earth": 3
-    },
-    "traits": [
-      "trait_stone_guard"
-    ]
+  "traits": [
+   "trait_fire_25"
+  ],
+  "effects": [
+   "burn_dot"
+  ],
+  "usable": true
+ },
+ {
+  "id": "flame_bomb_master",
+  "name": "炼狱爆弹·极",
+  "type": "consumable",
+  "price": 800,
+  "quality": "rare",
+  "elements": {
+   "fire": 8
   },
-  {
-    "id": "jewel_void_rare",
-    "name": "虚无珠·史诗",
-    "type": "装饰珠",
-    "price": 600,
-    "quality": "rare",
-    "base_effects": {
-      "atk": 5,
-      "def": 3
-    },
-    "elements": {
-      "void": 6
-    },
-    "traits": [
-      "trait_cleanse"
-    ]
-  },
-  {
-    "id": "catalyst_fire_essence",
-    "name": "火之精华触媒",
-    "type": "触媒",
-    "price": 500
-  },
-  {
-    "id": "alch_ember_crystal",
-    "name": "火晶石",
-    "type": "material",
-    "price": 150,
-    "rarity": "普通",
-    "elements": {
-      "fire": 4
-    },
-    "traits": [
-      "trait_burn_boost"
-    ]
-  },
-  {
-    "id": "alch_frost_crystal",
-    "name": "冰晶石",
-    "type": "material",
-    "price": 150,
-    "rarity": "普通",
-    "elements": {
-      "water": 4
-    },
-    "traits": [
-      "trait_mp_flow"
-    ]
-  },
-  {
-    "id": "alch_fire_essence",
-    "name": "火之精华",
-    "type": "material",
-    "price": 400,
-    "rarity": "金色",
-    "elements": {
-      "fire": 6
-    },
-    "traits": [
-      "trait_fire_15"
-    ]
-  },
-  {
-    "id": "flame_bomb",
-    "name": "火焰弹",
-    "type": "consumable",
-    "price": 300,
-    "quality": "common",
-    "elements": {
-      "fire": 2
-    },
-    "traits": [
-      "trait_burn_boost"
-    ],
-    "effects": [
-      "burn_dot"
-    ],
-    "usable": true
-  },
-  {
-    "id": "flame_bomb_plus",
-    "name": "烈焰弹·改",
-    "type": "consumable",
-    "price": 520,
-    "quality": "uncommon",
-    "elements": {
-      "fire": 4
-    },
-    "traits": [
-      "trait_fire_15"
-    ],
-    "effects": [
-      "burn_dot"
-    ],
-    "usable": true
-  },
-  {
-    "id": "doomsday_bomb",
-    "name": "灭世爆弹",
-    "type": "consumable",
-    "price": 1200,
-    "quality": "legendary",
-    "elements": {
-      "fire": 10
-    },
-    "traits": [
-      "trait_fire_25"
-    ],
-    "effects": [
-      "burn_dot"
-    ],
-    "usable": true
-  },
-  {
-    "id": "flame_bomb_master",
-    "name": "炼狱爆弹·极",
-    "type": "consumable",
-    "price": 800,
-    "quality": "rare",
-    "elements": {
-      "fire": 8
-    },
-    "traits": [
-      "trait_fire_25"
-    ],
-    "effects": [
-      "burn_dot"
-    ],
-    "usable": true
+  "traits": [
+   "trait_fire_25"
+  ],
+  "effects": [
+   "burn_dot"
+  ],
+  "usable": true
+ },
+ {
+  "id": "alch_seed_ember",
+  "name": "火晶种子",
+  "type": "seed",
+  "price": 50,
+  "rarity": "普通",
+  "desc": "种下 4 小时后可收获火晶石（温室复制需炼金大师）。",
+  "seed": {
+   "output": "alch_ember_crystal",
+   "quality_floor": 40,
+   "traits": [
+    "trait_burn_boost"
+   ],
+   "count": 2
   }
+ },
+ {
+  "id": "alch_seed_frost",
+  "name": "冰晶种子",
+  "type": "seed",
+  "price": 50,
+  "rarity": "普通",
+  "desc": "种下 4 小时后可收获冰晶石（温室复制需炼金大师）。",
+  "seed": {
+   "output": "alch_frost_crystal",
+   "quality_floor": 40,
+   "traits": [
+    "trait_mp_flow"
+   ],
+   "count": 2
+  }
+ }
 ]

@@ -154,6 +154,7 @@ class Database:
         self._create_lock: asyncio.Lock = asyncio.Lock()   # 首次建表防并发竞态
         self._schema_ready: bool = False                   # 7 表 + 索引已就位
         self._tx_owner: Optional[asyncio.Task] = None
+        self._active_tx: Optional[Transaction] = None      # 最外层活跃事务句柄（可重入复用，批14）
 
         self._read_idle: List[aiosqlite.Connection] = []
         self._read_active: int = 0
@@ -333,10 +334,16 @@ class Database:
         conn = await self._writer()
         task = asyncio.current_task()
         if self._tx_owner is task and task is not None:
-            # 仅拒绝「同一任务内嵌套 tx」（asyncio.Lock 不可重入，放行会卡死）。
-            # 不同任务并发事务由 _write_lock 排队（4a TX-4/TC-18 单写队列串行化），
-            # 不得误判为嵌套拒之门外。
-            raise StorageTransactionNestingError("检测到同任务嵌套 tx（F3 单指令单事务）")
+            # 同任务嵌套 tx：复用最外层活跃事务句柄（M8 批14 部署收口——processing F3
+            # 单指令单事务包裹 handler，session_mgr.acquire/suspend/settle_alchemy 写操作
+            # 内部各自 `async with repo.tx()`，若拒绝嵌套则炼金指令壳在 F3 内全炸
+            # StorageTransactionNestingError；此处放行并复用同一 tx，COMMIT/ROLLBACK
+            # 归最外层（F3 语义不破坏），内层不重复 BEGIN）。不同任务并发事务仍由
+            # _write_lock 排队（4a TX-4/TC-18 单写队列串行化），不受影响。
+            if self._active_tx is None:  # 异常态：owner 标记但无句柄（理论不可达，防御）
+                raise StorageTransactionNestingError("检测到同任务嵌套 tx（F3 单指令单事务）")
+            yield self._active_tx
+            return
         async with self._write_lock:
             prev_owner = self._tx_owner
             self._tx_owner = task
@@ -346,6 +353,8 @@ class Database:
                 self._tx_owner = prev_owner
                 raise
             tr = Transaction(self, conn)
+            prev_active = self._active_tx
+            self._active_tx = tr
             try:
                 yield tr
             except BaseException:
@@ -354,6 +363,7 @@ class Database:
                     await conn.execute("ROLLBACK")
                 tr._finalize()
                 self._tx_owner = prev_owner
+                self._active_tx = prev_active
                 raise
             else:
                 try:
@@ -363,9 +373,11 @@ class Database:
                         await conn.execute("ROLLBACK")
                     tr._finalize()
                     self._tx_owner = prev_owner
+                    self._active_tx = prev_active
                     raise
                 tr._finalize()
                 self._tx_owner = prev_owner
+                self._active_tx = prev_active
 
     async def _commit(self, conn: aiosqlite.Connection) -> None:
         """事务 COMMIT 原语（D5 FLT-11 写路径注入接缝）。

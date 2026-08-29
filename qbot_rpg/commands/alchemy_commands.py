@@ -23,7 +23,7 @@ qbot_rpg/commands/alchemy_commands.py）——本批只注册 /合成。
   （TRAIT_MERGE_CMD，三类合成均为 kind=upgrade 配置实例消费）/登记（REGISTER_CMD）/复制
   （COPY_CMD，复用 core/alchemy_register.py AlchemyRegister）——委托 JewelSystem/UpgradeEngine/
   AlchemyRegister 三引擎，规则依据 docs/细化/细化_2c4c_珠与合成指令.md（BEL/DUP/CMB/SOCK 族）；
-  其余炼金指令（/深度炼金 /进化 /图鉴 /技能面板 /种植 /收获 /雇工 /教学 等）由后续批次填充
+  其余炼金指令（/深度炼金 /进化 /图鉴 /技能面板 /种植 /收获 /代工 /教学 等）由后续批次填充
   （**批8-2 本批追加**：/深度炼金 /进化 /镶核心 /加成 /挑战 /图鉴 /技能面板 /教学——单路独占
   本文件，深度炼金指令壳消费 core/alchemy_deep.py DeepEngine + core/alchemy_meta.py
   AlchemyMeta，规则依据 docs/m8_contract_指令契约.md §6/7/8/15/18/22（GU-20~28/47~49/58/64）；
@@ -32,7 +32,15 @@ qbot_rpg/commands/alchemy_commands.py）——本批只注册 /合成。
   /图鉴 /技能面板 /教学 无门槛查看态，/技能面板 支持 `解锁=<面板项>` 键值解锁（工程补白）；
   炼金产出计数落点 = player 长线计数 produce_counts（/确认 炼金结算递增，/合成 不计数 CASC-05）；
   首次深度解锁公告标记 = player.flags.deep_unlock_announced（工程补白）。批10 /种植 /收获 /
-  雇工 /收取——本模块作为这些指令壳的统一落点文件，后续批次追加 cmd_xxx + register 项即可。
+  代工 /收取——本模块作为这些指令壳的统一落点文件，后续批次追加 cmd_xxx + register 项即可。
+  **批10-2 本批追加**：/种植（PLANT_CMD，cmd_plant）/收获（HARVEST_CMD，cmd_harvest）/
+  代工（HELPER_CMD，cmd_helper）/收取（COLLECT_CMD，cmd_collect）——资源循环指令壳，
+  GU-60 正式解锁种植收获、GU-62 精通解锁代工（2026-08-28 用户拍板指令名改用「代工」，
+  本文件指令名/渲染/注释一律「代工」）、GU-63 能源道具消耗（assign 内校验壳层透传）、
+  F-21/F-22 流程；消费 core/alchemy_harvest.py HarvestEngine + core/alchemy_helper.py
+  HelperEngine（parse_task_spec 键值列表解析），now 由壳层注入（time.time 兜底，
+  ctx[\"now\"] 注入优先），规则依据 docs/m8_contract_指令契约.md §20/21 + 细化_2c5c
+  （FARM-01~10/ASST-01~09）+ 细化_2c4d 指令表 TC-29/30。
   **批9 本批追加**：/即时调合（INSTANT_CMD，cmd_instant——战斗内一步出结果子流程，守卫
   GU-50~54 战斗中/大师/能量/素材/限次，消费兄弟路 core/alchemy_battle.py BattleAlchemyEngine
   鸭子（ctx["battle_alchemy_engine"]，不 import），battle_alchemy_used 写回 ctx["battle_snapshot"]
@@ -70,6 +78,7 @@ qbot_rpg/commands/alchemy_commands.py）——本批只注册 /合成。
 from __future__ import annotations
 
 import inspect
+import time
 from typing import Any, Callable, Mapping, MutableMapping, Optional
 
 from qbot_rpg.core.alchemy_auto import DEFAULT_MAX_QTY, AutoFeed
@@ -77,9 +86,12 @@ from qbot_rpg.core.alchemy_core import (
     ALCHEMY_JOB_ID,
     ELEMENT_NAMES_CN,
     EXPERT_TIER_INDEX,
+    PROFICIENT_TIER_INDEX,
     AlchemyCore,
 )
 from qbot_rpg.core.alchemy_deep import DeepEngine
+from qbot_rpg.core.alchemy_harvest import FORMAL_TIER_INDEX, HarvestEngine
+from qbot_rpg.core.alchemy_helper import HelperEngine, parse_task_spec
 from qbot_rpg.core.alchemy_meta import AlchemyMeta
 from qbot_rpg.core.alchemy_session import (
     CHALLENGE_SESSION,
@@ -118,6 +130,7 @@ __all__ = [
     "DEEP_CMD", "EVOLVE_CMD", "CORE_CMD", "BUFF_CMD",
     "CHALLENGE_CMD", "CODEX_CMD", "SKILL_PANEL_CMD", "TUTORIAL_CMD",
     "INSTANT_CMD",
+    "PLANT_CMD", "HARVEST_CMD", "HELPER_CMD", "COLLECT_CMD",
     # 固定子词常量
     "AUTO_SUBWORD", "FEED_APPEND_SUBWORD", "CATALYST_KV_KEY",
     "SP_UNLOCK_KV_KEY",
@@ -131,6 +144,7 @@ __all__ = [
     "cmd_deep", "cmd_evolve", "cmd_core", "cmd_buff",
     "cmd_challenge", "cmd_codex", "cmd_skill_panel", "cmd_tutorial",
     "cmd_instant",
+    "cmd_plant", "cmd_harvest", "cmd_helper", "cmd_collect",
     # 装配
     "register_alchemy_commands",
 ]
@@ -170,6 +184,13 @@ CODEX_CMD = "图鉴"            # GU-58/F-19/M-19：无门槛查看态，图鉴�
 SKILL_PANEL_CMD = "技能面板"    # GU-58/F-19/M-19：无门槛查看态，SP 自选解锁（SP-02~05）
 TUTORIAL_CMD = "教学"         # GU-64/F-23/M-23：无门槛，教学目录/机制名/升大师 6 预览
 INSTANT_CMD = "即时调合"      # GU-50~54/F-17/M-17：战斗内一步出结果（批9 路9B，限 1 次/场）
+
+# 资源循环指令（批10-2，docs/m8_contract_指令契约.md §20/21 + 细化_2c5c FARM/ASST 族）
+PLANT_CMD = "种植"            # GU-60/61/F-21/M-21：正式解锁，种→等（默认 4h）→收（TC-29）
+HARVEST_CMD = "收获"          # GU-60/F-21/M-21：无参收全部成熟地块，品质≥种子+继承特性
+HELPER_CMD = "代工"           # GU-62/63/F-22/M-22：精通解锁，键值列表设定持续代采/代调
+                              #   （2026-08-28 用户拍板指令名改用「代工」，勿出现旧称）
+COLLECT_CMD = "收取"          # F-22/ASST-06/M-22：后台产出队列入包+清空（TC-30）
 
 # 固定子词（对齐 parsers.py FIXED_SUBWORDS：自动/追加 已在常量内，壳层显式引用防字面量漂移）
 AUTO_SUBWORD = "自动"
@@ -2771,6 +2792,195 @@ async def cmd_instant(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 
 
 # ---------------------------------------------------------------------------
+# 资源循环指令（批10-2 · /种植 /收获 /代工 /收取——单路独占本文件追加；守卫→引擎→透传，
+#   风格对齐 cmd_instant；消费 core/alchemy_harvest.py HarvestEngine + core/alchemy_helper.py
+#   HelperEngine（parse_task_spec 键值列表解析），
+#   规则依据 docs/m8_contract_指令契约.md §20/21 + 细化_2c5c FARM-01~10/ASST-01~09）
+# ---------------------------------------------------------------------------
+
+def _clock_of(ctx: Mapping[str, Any]) -> int:
+    """时钟注入（【工程补白】now 由壳层注入：ctx[\"now\"] 优先，缺省 time.time() 兜底）。
+
+    种植/收获引擎的 now 参数与代工引擎的 ctx[\"now\"]（B-8）共用同一时钟源——壳层在此
+    统一收敛，保证同刻同参必同值（确定性可测）。
+    """
+    now = ctx.get("now")
+    if isinstance(now, (int, float)) and not isinstance(now, bool):
+        return int(now)
+    return int(time.time())
+
+
+def _helper_spec(parsed: Any) -> str:
+    """代工键值列表 → parse_task_spec 原文串（P-22/SEP-22；【工程补白】最小必要推导）。
+
+    解析器已把 `代采=矿石*5,代调=药剂*2` 结构化为 parsed.kv（key/value/qty），本函数按
+    `键=值*数量` 反向还原成规范 L49 原例串，交模块级 parse_task_spec 统一消费（避免壳层
+    重复实现 / 与引擎口径漂移）。缺 kv → 空串（引擎 no_task 兜底）。
+    """
+    kv = getattr(parsed, "kv", None) or []
+    parts: list = []
+    for item in kv:
+        if not isinstance(item, Mapping):
+            continue
+        key = item.get("key")
+        value = item.get("value")
+        if not key or not value:
+            continue
+        qty = item.get("qty")
+        if qty is not None:
+            parts.append(f"{key}={value}*{qty}")
+        else:
+            parts.append(f"{key}={value}")
+    if parts:
+        return ",".join(str(p) for p in parts)
+    # 兜底：args[1] 原文（解析器未结构化场景）
+    args = list(getattr(parsed, "args", None) or [])
+    if len(args) >= 2:
+        return str(args[1])
+    return ""
+
+
+def _seed_id_of(ctx: Mapping[str, Any], key: str) -> str:
+    """种子名/种子 id → 种子 id（对齐 HelperEngine._resolve_item_id 口径，B-10）。
+
+    HarvestEngine._resolve_item 只做注册表精确键查找（id），玩家输入 `/种植 番茄种子`
+    按名直输 → 壳层在此把名称反查为 id（items 注册表 name 精确命中 → resolve_item 钩子
+    → 原值兜底），保证引擎种子解析可达。
+    """
+    if not isinstance(key, str) or not key:
+        return key
+    items = ctx.get("items")
+    if isinstance(items, Mapping):
+        if key in items:
+            return key
+        for iid, it in items.items():
+            if isinstance(it, Mapping) and it.get("name") == key:
+                return iid
+    resolver = ctx.get("resolve_item")
+    if callable(resolver):
+        try:
+            hit = resolver(key)
+        except Exception:
+            hit = None
+        if isinstance(hit, Mapping):
+            hid = hit.get("id")
+            if isinstance(hid, str) and hid:
+                return hid
+    return key
+
+
+async def cmd_plant(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """`/种植 <种子>`（P-21/SEP-21，GU-60/61/F-21/M-21，TC-29）。
+
+    守卫链：parsed.error/缺参 TPL-12 → GU-60 炼金职业 ≥ 正式（❌ 拒绝）→ 种子名→id 解析
+    （_seed_id_of）→ HarvestEngine.plant（GU-61 种子存在+seed 标记 / 空闲地块由引擎内校验；
+    now 由壳层注入 _clock_of）。成功/失败均透传引擎 message（M-21 纯文本零 emoji：
+    「已种植〈种子〉，4 小时后可收获」）。
+
+    入参：parsed、ctx（player/proficiency/settings/items/inventory/now）。
+    出参：回复正文 str。
+    """
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    if not parsed.args:
+        return format_tpl12(f"/{PLANT_CMD}")
+    seed = _seed_id_of(ctx, _target_of(parsed))
+    player = _player_of(ctx)
+    # GU-60 炼金职业 ≥ 正式（种植解锁，熟练度 L56）
+    if _prof_level(player) < FORMAL_TIER_INDEX:
+        return "❌ 等级不足：炼金职业需达到 正式（种植解锁）"
+    engine = HarvestEngine(settings=_settings_of(ctx))
+    res = engine.plant(player, ctx, seed, now=_clock_of(ctx))
+    if not res.get("ok"):
+        return str(res.get("message") or "❌ 种植失败")
+    return str(res.get("message") or "✅ 已种植")
+
+
+async def cmd_harvest(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """`/收获`（P-21/SEP-21，GU-60/F-21/M-21，TC-29）。
+
+    无参收全部成熟地块（F-21）。守卫：parsed.error TPL-12 → GU-60 ≥ 正式 → HarvestEngine.
+    harvest（now 由壳层注入）。透传引擎 message（M-21 纯文本：「收获〈材料〉×N（品质 精良·
+    继承特性：…）」，多地块折叠单条 RATE-05）。
+
+    入参：parsed、ctx（player/proficiency/settings/items/traits/inventory/now）。
+    出参：回复正文 str。
+    """
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    player = _player_of(ctx)
+    # GU-60 炼金职业 ≥ 正式（收获解锁，熟练度 L56）
+    if _prof_level(player) < FORMAL_TIER_INDEX:
+        return "❌ 等级不足：炼金职业需达到 正式（收获解锁）"
+    engine = HarvestEngine(settings=_settings_of(ctx))
+    res = engine.harvest(player, ctx, now=_clock_of(ctx))
+    if not res.get("ok"):
+        return str(res.get("message") or "❌ 收获失败")
+    return str(res.get("message") or "✅ 已收获")
+
+
+async def cmd_helper(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """`/代工 <助手> [代采=材料*数量,代调=配方*数量]`（P-22/SEP-22，GU-62/63/F-22/M-22，
+    TC-30）。
+
+    守卫链：parsed.error/缺参 TPL-12 → GU-62 炼金职业 ≥ 精通（❌ 拒绝）→ 键值列表解析
+    （parse_task_spec 消费，解析器 kv 还原规范 L49 原例串）→ HelperEngine.assign（GU-63
+    能源道具校验 assign 内完成，壳层透传「缺少能源道具：…」；F-22 状态存档）。成功透传
+    引擎 message（M-22 纯文本：「小助手 开始代采 矿石*5，代调 药剂*2（消耗 糖果×1）」）。
+
+    入参：parsed、ctx（player/proficiency/settings/recipe/items/inventory/now）。
+    出参：回复正文 str。
+    """
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    if not parsed.args:
+        return format_tpl12(f"/{HELPER_CMD}")
+    assistant = str(parsed.args[0]).strip()
+    player = _player_of(ctx)
+    # GU-62 炼金职业 ≥ 精通（代工助手解锁，熟练度 L57）
+    if _prof_level(player) < PROFICIENT_TIER_INDEX:
+        return "❌ 等级不足：代工助手需炼金职业 ≥ 精通"
+    # 键值列表解析（P-22/SEP-22：parse_task_spec 模块级函数消费，见 _helper_spec）
+    spec = _helper_spec(parsed)
+    gather: Any = None
+    craft: Any = None
+    if spec:
+        parsed_spec = parse_task_spec(spec)
+        if not parsed_spec.get("ok"):
+            return str(parsed_spec.get("message") or "❌ 任务格式非法")
+        gather = parsed_spec.get("gather")
+        craft = parsed_spec.get("craft")
+    engine = HelperEngine(settings=_settings_of(ctx))
+    # 时钟注入（B-8：assign 读 ctx[\"now\"]；壳层统一收敛，缺省 time.time() 兜底）
+    ctx.setdefault("now", _clock_of(ctx))
+    res = engine.assign(player, ctx, assistant, gather=gather, craft=craft)
+    if not res.get("ok"):
+        return str(res.get("message") or "❌ 代工设定失败")
+    return str(res.get("message") or "✅ 已设定代工")
+
+
+async def cmd_collect(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """`/收取`（P-22 附 / F-22/ASST-06/M-22，TC-30）。
+
+    无参：汇总全部助手产出队列 → HelperEngine.collect 入包+清空（B-10 失败项留队列）。
+    空队列提示透传（「当前没有待收取的代工产出」）。无职业门槛（F-22 流程不设守卫）。
+
+    入参：parsed、ctx（player/helpers/inventory/now）。
+    出参：回复正文 str。
+    """
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    player = _player_of(ctx)
+    engine = HelperEngine(settings=_settings_of(ctx))
+    # 时钟注入（B-8：collect 读 ctx[\"now\"] 记 last_collect_at）
+    ctx.setdefault("now", _clock_of(ctx))
+    res = engine.collect(player, ctx)
+    if not res.get("ok"):
+        return str(res.get("message") or "❌ 没有待收取的代工产出")
+    return str(res.get("message") or "✅ 已收取")
+
+
+# ---------------------------------------------------------------------------
 # 装配（Router 注册；make_context 由装配层注入，批11 路11A 待接线）
 # ---------------------------------------------------------------------------
 
@@ -2782,6 +2992,7 @@ def register_alchemy_commands(
     """把 `/合成` `/炼金` `/投料` `/继承` `/继承超` `/确认` `/放弃` `/调合续` `/分解`
     `/镶嵌` `/拆珠` `/珠升阶` `/成品合成` `/配方合成` `/特性合成` `/登记` `/复制`
     `/深度炼金` `/进化` `/镶核心` `/加成` `/挑战` `/图鉴` `/技能面板` `/教学` `/即时调合`
+    `/种植` `/收获` `/代工` `/收取`
     注册进 Router（CommandSpec.handler 消费 ParsedCommand）。
 
     handler 支持 k.get("ctx") 注入（装配层 _invoke_handler 以 ctx=ctx 注入，assembly/runner.py
@@ -2956,6 +3167,30 @@ def register_alchemy_commands(
             return cmd_instant(parsed, injected)
         return cmd_instant(parsed, _ctx(parsed))
 
+    def _plant(parsed: Any, *a: Any, **k: Any):
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_plant(parsed, injected)
+        return cmd_plant(parsed, _ctx(parsed))
+
+    def _harvest(parsed: Any, *a: Any, **k: Any):
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_harvest(parsed, injected)
+        return cmd_harvest(parsed, _ctx(parsed))
+
+    def _helper(parsed: Any, *a: Any, **k: Any):
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_helper(parsed, injected)
+        return cmd_helper(parsed, _ctx(parsed))
+
+    def _collect(parsed: Any, *a: Any, **k: Any):
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_collect(parsed, injected)
+        return cmd_collect(parsed, _ctx(parsed))
+
     router.register(CommandSpec(SYNTH_CMD, handler=_synth))
     router.register(CommandSpec(ALCHEMY_CMD, handler=_alchemy))
     router.register(CommandSpec(FEED_CMD, handler=_feed))
@@ -2982,4 +3217,8 @@ def register_alchemy_commands(
     router.register(CommandSpec(SKILL_PANEL_CMD, handler=_skill_panel))
     router.register(CommandSpec(TUTORIAL_CMD, handler=_tutorial))
     router.register(CommandSpec(INSTANT_CMD, handler=_instant))
+    router.register(CommandSpec(PLANT_CMD, handler=_plant))
+    router.register(CommandSpec(HARVEST_CMD, handler=_harvest))
+    router.register(CommandSpec(HELPER_CMD, handler=_helper))
+    router.register(CommandSpec(COLLECT_CMD, handler=_collect))
     return router

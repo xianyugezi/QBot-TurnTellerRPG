@@ -46,6 +46,12 @@ qbot_rpg/commands/alchemy_commands.py）——本批只注册 /合成。
   鸭子（ctx["battle_alchemy_engine"]，不 import），battle_alchemy_used 写回 ctx["battle_snapshot"]
   顶层键，use_fn 走 ctx["use_battle_item"]，依据 docs/m8_contract_指令契约.md §16 + 战斗资源 §三
   BA-01~11，工程补白见 cmd_instant）。
+  **批11-1 本批追加**：/协力（ASSIST_CMD，cmd_assist——大师+会话中+同群 → 随机加成：守卫
+  GU-44 大师 / GU-45 调合会话中 / GU-46 同群校验（ctx["same_group"] 无群信息保守放行），
+  F-15 消耗本轮投料材料（快照材料链，空则配方材料兜底【工程补白】）+ 随机加成（随机数种子用
+  会话 version 可复现【工程补白】），写会话快照 assist_bonus 字段（后续结算叠加），M-15
+  渲染（纯文本零 emoji）；规则依据 docs/m8_contract_指令契约.md §14（P-15/GU-44~46/F-15/M-15）
+  + 细化_2c4d §15 + TC-22，工程补白见 cmd_assist）。
 
 依据：
   - docs/m8_contract_指令契约.md §1 /合成（P-01 参数解析 / GU-01~04 /
@@ -78,6 +84,7 @@ qbot_rpg/commands/alchemy_commands.py）——本批只注册 /合成。
 from __future__ import annotations
 
 import inspect
+import random
 import time
 from typing import Any, Callable, Mapping, MutableMapping, Optional
 
@@ -129,7 +136,7 @@ __all__ = [
     "REGISTER_CMD", "COPY_CMD",
     "DEEP_CMD", "EVOLVE_CMD", "CORE_CMD", "BUFF_CMD",
     "CHALLENGE_CMD", "CODEX_CMD", "SKILL_PANEL_CMD", "TUTORIAL_CMD",
-    "INSTANT_CMD",
+    "INSTANT_CMD", "ASSIST_CMD",
     "PLANT_CMD", "HARVEST_CMD", "HELPER_CMD", "COLLECT_CMD",
     # 固定子词常量
     "AUTO_SUBWORD", "FEED_APPEND_SUBWORD", "CATALYST_KV_KEY",
@@ -143,7 +150,7 @@ __all__ = [
     "cmd_register", "cmd_copy",
     "cmd_deep", "cmd_evolve", "cmd_core", "cmd_buff",
     "cmd_challenge", "cmd_codex", "cmd_skill_panel", "cmd_tutorial",
-    "cmd_instant",
+    "cmd_instant", "cmd_assist",
     "cmd_plant", "cmd_harvest", "cmd_helper", "cmd_collect",
     # 装配
     "register_alchemy_commands",
@@ -184,6 +191,9 @@ CODEX_CMD = "图鉴"            # GU-58/F-19/M-19：无门槛查看态，图鉴�
 SKILL_PANEL_CMD = "技能面板"    # GU-58/F-19/M-19：无门槛查看态，SP 自选解锁（SP-02~05）
 TUTORIAL_CMD = "教学"         # GU-64/F-23/M-23：无门槛，教学目录/机制名/升大师 6 预览
 INSTANT_CMD = "即时调合"      # GU-50~54/F-17/M-17：战斗内一步出结果（批9 路9B，限 1 次/场）
+
+# 协力调和指令（批11-1，docs/m8_contract_指令契约.md §14 + 细化_2c4d §15）
+ASSIST_CMD = "协力"           # GU-44~46/F-15/M-15/TC-22：大师+会话中+同群 → 随机加成
 
 # 资源循环指令（批10-2，docs/m8_contract_指令契约.md §20/21 + 细化_2c5c FARM/ASST 族）
 PLANT_CMD = "种植"            # GU-60/61/F-21/M-21：正式解锁，种→等（默认 4h）→收（TC-29）
@@ -2980,6 +2990,188 @@ async def cmd_collect(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     return str(res.get("message") or "✅ 已收取")
 
 
+async def cmd_assist(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """`/协力 <@玩家>`（P-15/SEP-15，GU-44~46/F-15/M-15/TC-22）。
+
+    守卫链：
+      - GU-44 炼金职业 ≥ 大师（L85/L213）；
+      - GU-45 调合会话中（L334；无/非调合会话 → 无会话模板 L175）；
+      - GU-46 同群校验（L213 同群好友——ctx["same_group"] 由消息层/装配层提供；无群信息
+        （键缺失/None）保守放行【工程补白】）。
+    流程（F-15）：消耗本轮投料材料（快照材料链，空则配方材料兜底【工程补白】；原子全量
+      校验 ATO-01 口径全拒+差异零副作用）→ 随机加成（社交向无额外硬性门槛；随机数种子 =
+      会话 version 可复现【工程补白】）→ 写会话快照 assist_bonus 字段（F-15 加持当前会话
+      后续结算；/确认 结算叠加落点见报告给批11-2）→ suspend 持久化（version 递增）。
+    渲染（M-15 纯文本降级，装饰性 emoji 禁用——对齐 cmd_plant M-21 口径）：
+      「协力调和：〈玩家名〉加入，获得随机加成：〈加成描述〉」。
+    入参：parsed（ParsedCommand，args[0]=被邀请玩家纯 QQ 号，@ 已由消息层剥离）、
+      ctx（session_mgr/proficiency/items/recipe/inventory + resolve_player_name/same_group hook）。
+    出参：回复正文 str。
+    """
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    if not parsed.args:
+        return format_tpl12(f"/{ASSIST_CMD}")
+    target = str(parsed.args[0]).strip()
+    if not target:
+        return format_tpl12(f"/{ASSIST_CMD}")
+    player = _player_of(ctx)
+    # GU-44 大师（L85/L213：炼金职业 ≥ 大师）
+    if _prof_level(player) < _MASTER_TIER_INDEX:
+        return "❌ 等级不足"
+    session_mgr = ctx.get("session_mgr")
+    if session_mgr is None:
+        raise RuntimeError(
+            "alchemy_commands.cmd_assist 需要 ctx['session_mgr']"
+            "（SessionManager 或 async fake，批11 装配注入）"
+        )
+    qid = _qid_of(ctx)
+    # GU-45 调合会话中（L334；无/非调合会话 → 无会话模板 L175）
+    view = await session_mgr.get_active(qid)
+    if view is None or not is_alchemy_session(view):
+        return TEMPLATE_MESSAGES[TEMPLATE_NO_SESSION]
+    snap = _view_payload(view)
+    # GU-46 同群校验（L213 同群好友；社交关系判定由消息层/装配层提供 ctx["same_group"]——
+    # 无群信息保守放行【工程补白】）
+    same_group = ctx.get("same_group")
+    if same_group is not None and not same_group:
+        return "❌ 对方不在当前群内"  # GU-46 非同群拒绝
+    # F-15 消耗本轮投料材料（快照材料链；原子全量校验 ATO-01 口径：全拒+差异零副作用）
+    need = _assist_materials(snap, ctx)
+    if need:
+        diff = _assist_materials_diff(ctx, need)
+        if diff:
+            return f"❌ 材料不足：缺 {diff}"
+        for m in need:
+            _remove_item(ctx, m["item"], m["count"])
+    # 随机加成（社交向，无额外硬性门槛；seed = 会话 version 可复现【工程补白】）
+    version = AlchemyCore.snapshot_version(snap)
+    bonus = _assist_bonus(_assist_seed(version, target))
+    # 写快照 assist_bonus 字段（F-15 加持当前会话后续结算；/确认 结算叠加落点见报告）
+    new_snap = dict(snap)
+    new_snap["assist_bonus"] = {
+        "desc": bonus["desc"],
+        "fields": dict(bonus["fields"]),
+        "target": target,
+        "version": version,
+    }
+    new_snap["version"] = version + 1
+    await session_mgr.suspend(qid, new_snap)
+    # M-15（纯文本降级：装饰性 emoji 禁用，仅 ✅/❌ 功能性标记）
+    name = _assist_player_name(ctx, target)
+    return f"协力调和：{name}加入，获得随机加成：{bonus['desc']}"
+
+
+# ---------------------------------------------------------------------------
+# /协力 工具（F-15：材料链/随机加成/玩家名；确定性纯函数）
+# ---------------------------------------------------------------------------
+
+# 随机加成池（F-15 社交向、无额外硬性门槛：品质/刻度/连锁/投入次数 轻量增益）
+_ASSIST_BONUS_POOL: tuple = (
+    ("品质上限+10", {"quality_cap_bonus": 10}),
+    ("属性刻度+5", {"element_bonus": 5}),
+    ("连锁效果+1 级", {"chain_effect_bonus": 1}),
+    ("投入次数+1", {"feed_budget_bonus": 1}),
+)
+
+
+def _assist_seed(version: int, target: str) -> int:
+    """协力随机加成种子（F-15：会话 version + 目标 QQ 号 → 可复现【工程补白】）。
+
+    确定性哈希（避开内置 hash() 受 PYTHONHASHSEED 影响）：目标字符加权累加盐，
+    与 version 组合成 31 位种子——同 version+同目标 → 同加成（测试可复现）。
+    入参：version=会话快照版本；target=被邀请玩家 QQ 号。出参：int 种子。
+    """
+    salt = 0
+    for ch in str(target):
+        salt = (salt * 31 + ord(ch)) % 2147483647
+    return (int(version) * 1000003 + salt) % 2147483647
+
+
+def _assist_bonus(seed: int) -> dict:
+    """随机加成（F-15 社交向无额外硬性门槛；random.Random(seed) 可复现）。
+
+    入参：seed=确定性种子。出参：{"desc": 加成描述, "fields": {…数值字段}}——desc 供
+    M-15 渲染，fields 供后续结算叠加（assist_bonus 落快照）。
+    """
+    rng = random.Random(seed)
+    desc, fields = _ASSIST_BONUS_POOL[rng.randrange(len(_ASSIST_BONUS_POOL))]
+    return {"desc": desc, "fields": dict(fields)}
+
+
+def _assist_player_name(ctx: Mapping[str, Any], target: str) -> str:
+    """被邀请玩家名渲染（M-15）。
+
+    ctx["resolve_player_name"](qid)->name hook 优先（装配层/批11-2 注入）；缺失 → 回退
+    QQ 号渲染（【工程补白】装配层未注入玩家名解析，回退 QQ 号）。
+    入参：ctx、target=QQ 号。出参：玩家名 str。
+    """
+    fn = ctx.get("resolve_player_name")
+    if callable(fn):
+        try:
+            name = fn(target)
+            if isinstance(name, str) and name:
+                return name
+        except Exception:
+            pass
+    return target
+
+
+def _assist_materials(snap: Mapping[str, Any], ctx: Mapping[str, Any]) -> list:
+    """F-15 本轮投料材料清单（快照材料链 materials [{item, count}, …]）。
+
+    快照材料链为空（未投料直接协力）→ 回退配方 materials 兜底【工程补白】。
+    入参：snap=会话快照、ctx（recipe 注册表）。出参：[{item, count}, …]（可空）。
+    """
+    chain = snap.get("materials")
+    if isinstance(chain, (list, tuple)) and chain:
+        out: list = []
+        for rec in chain:
+            if not isinstance(rec, Mapping):
+                continue
+            item = rec.get("item")
+            if not item:
+                continue
+            try:
+                cnt = max(1, int(rec.get("count", 1)))
+            except (TypeError, ValueError):
+                cnt = 1
+            out.append({"item": str(item), "count": cnt})
+        if out:
+            return out
+    recipe = _find_recipe(ctx, snap.get("recipe_id"))
+    mats = recipe.get("materials") if recipe is not None else None
+    if isinstance(mats, (list, tuple)):
+        out = []
+        for rec in mats:
+            if not isinstance(rec, Mapping):
+                continue
+            item = rec.get("id") or rec.get("item")
+            if not item:
+                continue
+            try:
+                cnt = max(1, int(rec.get("count", 1)))
+            except (TypeError, ValueError):
+                cnt = 1
+            out.append({"item": str(item), "count": cnt})
+        return out
+    return []
+
+
+def _assist_materials_diff(ctx: Mapping[str, Any], need: list) -> str:
+    """F-15 材料差异文本（ATO-01 原子口径：全量校验逐项缺料提示）。
+
+    入参：ctx（背包/count_item hook）、need=[{item, count}, …]。出参：差异串（缺料
+    「物品名×N、…」；全满足 → 空串）。
+    """
+    parts: list = []
+    for m in need:
+        have = _count_item(ctx, m["item"])
+        if have < m["count"]:
+            parts.append(f"{_item_name(ctx, m['item'])}×{m['count'] - have}")
+    return "、".join(parts)
+
+
 # ---------------------------------------------------------------------------
 # 装配（Router 注册；make_context 由装配层注入，批11 路11A 待接线）
 # ---------------------------------------------------------------------------
@@ -2992,7 +3184,7 @@ def register_alchemy_commands(
     """把 `/合成` `/炼金` `/投料` `/继承` `/继承超` `/确认` `/放弃` `/调合续` `/分解`
     `/镶嵌` `/拆珠` `/珠升阶` `/成品合成` `/配方合成` `/特性合成` `/登记` `/复制`
     `/深度炼金` `/进化` `/镶核心` `/加成` `/挑战` `/图鉴` `/技能面板` `/教学` `/即时调合`
-    `/种植` `/收获` `/代工` `/收取`
+    `/种植` `/收获` `/代工` `/收取` `/协力`
     注册进 Router（CommandSpec.handler 消费 ParsedCommand）。
 
     handler 支持 k.get("ctx") 注入（装配层 _invoke_handler 以 ctx=ctx 注入，assembly/runner.py
@@ -3167,6 +3359,12 @@ def register_alchemy_commands(
             return cmd_instant(parsed, injected)
         return cmd_instant(parsed, _ctx(parsed))
 
+    def _assist(parsed: Any, *a: Any, **k: Any):
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_assist(parsed, injected)
+        return cmd_assist(parsed, _ctx(parsed))
+
     def _plant(parsed: Any, *a: Any, **k: Any):
         injected = k.get("ctx") if isinstance(k, dict) else None
         if isinstance(injected, MutableMapping):
@@ -3217,6 +3415,7 @@ def register_alchemy_commands(
     router.register(CommandSpec(SKILL_PANEL_CMD, handler=_skill_panel))
     router.register(CommandSpec(TUTORIAL_CMD, handler=_tutorial))
     router.register(CommandSpec(INSTANT_CMD, handler=_instant))
+    router.register(CommandSpec(ASSIST_CMD, handler=_assist))
     router.register(CommandSpec(PLANT_CMD, handler=_plant))
     router.register(CommandSpec(HARVEST_CMD, handler=_harvest))
     router.register(CommandSpec(HELPER_CMD, handler=_helper))

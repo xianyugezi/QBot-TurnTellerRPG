@@ -12,13 +12,13 @@ qbot_rpg/commands/alchemy_commands.py）——本批只注册 /合成。
   （sender.format_tpl12，errors.py 唯一文案源）、
   register_alchemy_commands 装配入口（仿 shop_commands.register_shop_commands 壳模式）。
 
-本批范围（批2 + **批4B 追加**）：/合成（SYNTH_CMD）+ **/炼金（ALCHEMY_CMD：开会话/自动子词/
- 批量 *N）+ /投料（FEED_CMD：链式投料/追加子词）**；其余炼金指令（/继承 /深度炼金 /进化 /分解
-  /复制 /图鉴 /技能面板 /种植 /收获 /雇工 /教学 等）由后续批次填充
-  （批5 /继承、
-  批6 /分解 /确认、批7 /成品合成 /配方合成 /特性合成 /镶嵌 /拆珠 /登记 /复制、批8 /深度炼金 /进化 /
-  镶核心 /加成 /挑战 /图鉴 /技能面板 /教学、批10 /种植 /收获 /雇工 /收取）——本模块作为这些指令壳的
-  统一落点文件，后续批次追加 cmd_xxx + register 项即可。
+本批范围（批2 + **批4B 追加** + **批5 追加**）：/合成（SYNTH_CMD）+ **/炼金（ALCHEMY_CMD：
+  开会话/自动子词/批量 *N）+ /投料（FEED_CMD：链式投料/追加子词）** + **/继承（INHERIT_CMD）
+  /继承超（INHERIT_SUPER_CMD：特性继承，委托 core/trait_inherit.py）**；其余炼金指令
+  （/深度炼金 /进化 /分解 /复制 /图鉴 /技能面板 /种植 /收获 /雇工 /教学 等）由后续批次填充
+  （批6 /分解 /确认、批7 /成品合成 /配方合成 /特性合成 /镶嵌 /拆珠 /登记 /复制、批8 /深度炼金
+  /进化 /镶核心 /加成 /挑战 /图鉴 /技能面板 /教学、批10 /种植 /收获 /雇工 /收取）——本模块作为
+  这些指令壳的统一落点文件，后续批次追加 cmd_xxx + register 项即可。
 
 依据：
   - docs/m8_contract_指令契约.md §1 /合成（P-01 参数解析 / GU-01~04 /
@@ -71,6 +71,7 @@ from qbot_rpg.core.energy_bar import EnergyBar
 from qbot_rpg.core.proficiency import ProficiencyEngine
 from qbot_rpg.core.quality import QualitySystem
 from qbot_rpg.core.synthesis import SynthesisEngine
+from qbot_rpg.core.trait_inherit import TraitInherit
 
 # 同包兄弟模块：相对导入（G0 架构门禁 test_commands_web_not_depended 不产生
 # `qbot_rpg.commands` 前缀反向依赖边；同层兄弟引用架构合规，与 shop_commands.py 同口径）。
@@ -80,10 +81,12 @@ from .sender import format_tpl12
 __all__ = [
     # 指令名常量
     "SYNTH_CMD", "ALCHEMY_CMD", "FEED_CMD",
+    "INHERIT_CMD", "INHERIT_SUPER_CMD",
     # 固定子词常量
     "AUTO_SUBWORD", "FEED_APPEND_SUBWORD", "CATALYST_KV_KEY",
     # 指令处理器（纯函数/异步：parsed + ctx → 回复正文）
     "cmd_synthesis", "cmd_alchemy", "cmd_feed",
+    "cmd_inherit", "cmd_inherit_super",
     # 装配
     "register_alchemy_commands",
 ]
@@ -95,6 +98,8 @@ __all__ = [
 SYNTH_CMD = "合成"
 ALCHEMY_CMD = "炼金"
 FEED_CMD = "投料"
+INHERIT_CMD = "继承"
+INHERIT_SUPER_CMD = "继承超"
 
 # 固定子词（对齐 parsers.py FIXED_SUBWORDS：自动/追加 已在常量内，壳层显式引用防字面量漂移）
 AUTO_SUBWORD = "自动"
@@ -949,6 +954,167 @@ def _feed_tokens(parsed: Any) -> list:
     return out
 
 
+def _find_trait(ctx: Mapping[str, Any], key: Any) -> Optional[dict]:
+    """特性 def（traits 注册表 / resolve_trait / name 扫描，对齐 AlchemyCore._find_trait）。"""
+    return _find_def(ctx, "traits", "resolve_trait", key)
+
+
+def _trait_name(ctx: Mapping[str, Any], trait_id: Any) -> str:
+    """特性展示名（traits.name 优先，缺省原 id；STO-07 特性显示）。"""
+    tdef = _find_trait(ctx, trait_id)
+    if tdef is not None:
+        name = tdef.get("name")
+        if isinstance(name, str) and name:
+            return name
+    return str(trait_id)
+
+
+def _inherit_tokens(parsed: Any) -> list:
+    """/继承 /继承超 特性名 token 列表（P-04/SEP-04：`,` 分隔列表；parsed.targets 优先，
+    回落 args 逗号拆分，对齐 _feed_tokens 口径）。"""
+    targets = [str(t) for t in (getattr(parsed, "targets", None) or []) if str(t).strip()]
+    if targets:
+        return targets
+    out: list = []
+    for a in getattr(parsed, "args", None) or []:
+        out.extend(x for x in str(a).split(",") if x.strip())
+    return out
+
+
+def _inherit_error(res: Mapping[str, Any]) -> str:
+    """/继承 /继承超 失败透传（GU-14 PP 不足 / GU-15 继承超 N 项 / GU-16 互斥组名 +
+    INH-01 候选清单 / INH-14 无继承位 / TSC-11 超特性宗师）。"""
+    reason = res.get("reason")
+    msg = res.get("message")
+    if reason == "no_inherit_slot":
+        return "❌ 见习无继承位"                     # INH-14/L344
+    if reason == "no_snapshot":
+        return TEMPLATE_MESSAGES[TEMPLATE_NO_SESSION]
+    if reason == "pp_insufficient":
+        return "❌ PP 不足"                          # INH-09/L344
+    if reason == "slot_overflow":
+        limit = res.get("limit")
+        return f"❌ 继承超 {limit} 项"               # INH-06/L344
+    if reason == "group_conflict":
+        g = res.get("group")
+        return f"❌ 互斥组内最多 1 项：{g}"          # INH-10
+    if reason == "not_repeatable":
+        return "❌ 该特性不可重复继承"               # INH-11
+    if reason == "gold_slot_occupied":
+        return "❌ 第 4 位金色已占用"                # TSC-12
+    return f"❌ {msg or '继承失败'}"                 # 候选清单/宗师门槛/特性不存在 等
+
+
+def _render_inherit_success(ctx: Mapping[str, Any], snap: Mapping[str, Any],
+                            res: Mapping[str, Any]) -> str:
+    """M-04 成功 → 面板特性位更新（`3 普通 + 第 4 位金色`），**纯文本降级**（emoji 纪律）：
+    `已继承：灼烧强化 回复强化 ｜ 特性位 2 普通 + 第 4 位金色（灼烧强化·精） ｜ PP 3/5`。"""
+    parts: list = []
+    names = [_trait_name(ctx, t) for t in (res.get("traits") or [])]
+    if names:
+        parts.append("已继承：" + " ".join(names))
+    negs = [_trait_name(ctx, n) for n in (res.get("negatives") or [])]
+    if negs:
+        parts.append("负面特性：" + " ".join(negs))
+    normal_used = len(snap.get("traits") or [])
+    gold = snap.get("gold_slot")
+    slot_text = f"特性位 {normal_used} 普通"
+    if isinstance(gold, str) and gold:
+        slot_text += f" + 第 4 位金色（{_trait_name(ctx, gold)}）"
+    parts.append(slot_text)
+    pp = snap.get("pp") or {}
+    parts.append(f"PP {pp.get('used', 0)}/{pp.get('budget', 0)}")
+    return " ｜ ".join(parts)
+
+
+async def _run_inherit(ctx: MutableMapping[str, Any], tokens: list,
+                       *, super_trait: Optional[str] = None) -> str:
+    """/继承 /继承超 共用执行（GU-13 会话中 → select_traits 全校验 → apply → suspend → M-04）。"""
+    settings = _settings_of(ctx)
+    prof_engine = ProficiencyEngine(settings=settings)
+    engine = TraitInherit(prof=prof_engine, settings=settings)
+    session_mgr = ctx.get("session_mgr")
+    if session_mgr is None:
+        raise RuntimeError(
+            "alchemy_commands.cmd_inherit 需要 ctx['session_mgr']"
+            "（SessionManager 或 async fake，批11 装配注入）"
+        )
+    qid = _qid_of(ctx)
+    # GU-10 战斗拦截（MUT-04：先于会话查询，战斗会话占用槽位）
+    if ctx.get("in_battle"):
+        return "战斗中使用 /即时调合 <配方>（不进入调合会话）"
+    # GU-13 会话中（无会话 / 非调合类会话 → 无会话模板，同 GU-09）
+    view = await session_mgr.get_active(qid)
+    if view is None or not is_alchemy_session(view):
+        return TEMPLATE_MESSAGES[TEMPLATE_NO_SESSION]
+    snap = _view_payload(view)
+    player = _player_of(ctx)
+    tier_index = prof_engine.tier_index_for_level(ALCHEMY_JOB_ID, _prof_level(player))
+    # T-1 位上限与配方声明位取小（recipe.traits_inherit 1-3；engine.inherit_slots 等级+SP）
+    recipe = _find_recipe(ctx, snap.get("recipe_id"))
+    slot_cap: Optional[int] = None
+    if recipe is not None:
+        try:
+            rcap = max(1, int(recipe.get("traits_inherit", 1) or 1))
+        except (TypeError, ValueError):
+            rcap = 1
+        slot_cap = min(engine.inherit_slots(player, tier_index), rcap)
+    # F-04 核心：候选清单 → PP → 位 → 互斥 → repeatable → 负面 → 超特性宗师
+    res = engine.select_traits(player, snap, tokens, super_trait=super_trait,
+                               job_tier_index=tier_index, ctx=ctx, slot_cap=slot_cap)
+    if not res.get("ok"):
+        return _inherit_error(res)
+    new_snap = engine.apply_to_snapshot(
+        snap, res["traits"], super_trait=res.get("gold_slot"),
+        negatives=res.get("negatives") or [], pp_used=res.get("pp_used"),
+    )
+    await session_mgr.suspend(qid, new_snap)
+    return _render_inherit_success(ctx, new_snap, res)
+
+
+async def cmd_inherit(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """`/继承 <特性1>,<特性2>,…`（P-04/SEP-04，F-04，批5 路5A）。
+
+    守卫链 GU-13~16（会话中 / PP / 位余量 / group+repeatable）+ INH-01 候选清单 +
+    INH-14 等级化位 + INH-12 负面 + TSC-11 超特性宗师——全部委托
+    TraitInherit.select_traits；成功后 apply_to_snapshot → suspend 持久化 → M-04 渲染。
+    入参：parsed（ParsedCommand）、ctx（session_mgr/items/traits/recipe/settings 等，
+    session_mgr 为 async SessionManager 或 fake）。出参：回复正文 str。
+    """
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    if not parsed.args:
+        return format_tpl12(f"/{INHERIT_CMD}")
+    tokens = _inherit_tokens(parsed)
+    if not tokens:
+        return format_tpl12(f"/{INHERIT_CMD}")
+    return await _run_inherit(ctx, tokens)
+
+
+async def cmd_inherit_super(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """`/继承超 <金色特性>`（独立指令名，非子词，P-04：位置参数 1 = 单一金色特性）。
+
+    F-04/TSC-11~14：超特性继承需宗师、第 4 位独占 gold_slot_exclusive、PP2、金色素材池。
+    委托 TraitInherit.select_traits(super_trait=...) → apply → suspend → M-04 渲染。
+    入参：parsed、ctx。出参：回复正文 str。
+    """
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    if not parsed.args:
+        return format_tpl12(f"/{INHERIT_SUPER_CMD}")
+    tokens = _inherit_tokens(parsed)
+    # 【防御 · 收口裁决 2026-08-29】parse_command 白名单未含「继承超」独立指令时（批11A
+    #  装配项 IF-34），/继承超 X 会被解析成 command=继承 + args=["超","X"]——
+    #  剥离误并入的「超」固定子词，保证独立指令语义（装配前后均可用）。
+    if tokens and tokens[0] == "超":
+        tokens = tokens[1:]
+    if not tokens:
+        return format_tpl12(f"/{INHERIT_SUPER_CMD}")
+    if len(tokens) > 1:
+        return "❌ /继承超 仅支持 1 个金色特性"  # P-04：位置参数 1 = 单一金色特性
+    return await _run_inherit(ctx, [], super_trait=tokens[0])
+
+
 # ---------------------------------------------------------------------------
 # 装配（Router 注册；make_context 由装配层注入，批11 路11A 待接线）
 # ---------------------------------------------------------------------------
@@ -993,7 +1159,21 @@ def register_alchemy_commands(
             return cmd_feed(parsed, injected)
         return cmd_feed(parsed, _ctx(parsed))
 
+    def _inherit(parsed: Any, *a: Any, **k: Any):
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_inherit(parsed, injected)
+        return cmd_inherit(parsed, _ctx(parsed))
+
+    def _inherit_super(parsed: Any, *a: Any, **k: Any):
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_inherit_super(parsed, injected)
+        return cmd_inherit_super(parsed, _ctx(parsed))
+
     router.register(CommandSpec(SYNTH_CMD, handler=_synth))
     router.register(CommandSpec(ALCHEMY_CMD, handler=_alchemy))
     router.register(CommandSpec(FEED_CMD, handler=_feed))
+    router.register(CommandSpec(INHERIT_CMD, handler=_inherit))
+    router.register(CommandSpec(INHERIT_SUPER_CMD, handler=_inherit_super))
     return router

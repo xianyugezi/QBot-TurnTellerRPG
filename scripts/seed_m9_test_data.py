@@ -54,8 +54,9 @@ async def main(qid: str) -> None:
     coins_have = p.currencies.get("coins", 0)
     new_currencies = dict(p.currencies)
     new_currencies["coins"] = coins_have + 50000
-    # 保留旧 gold 键兜底（若其它模块用 gold 不冲突）
-    new_currencies.setdefault("gold", 0)
+    # 权威货币键 = coins（BATCH-05）；剔除旧 gold 键——装配层只认 coins，gold 残留
+    # 会在背包/货币显示多出一行「gold：0」（实机 /背包 部署反馈，2026-08-30）
+    new_currencies.pop("gold", None)
 
     # 2) 素材：9 种 × 30（保留已有物品，追加不覆盖；同名素材合并计数）
     have = {inst.item_id: inst for inst in p.inventory}
@@ -74,6 +75,11 @@ async def main(qid: str) -> None:
     forge_node.update({"level": 7, "exp": 0, "sp_earned": 500, "sp_used": 0,
                        "unlocks": {sid: 1 for sid in FORGE_SP_IDS}})
     prof["forge"] = forge_node
+    # 炼金职业（M9 实机反馈修复 2026-08-30：/合成 是炼金指令，读 proficiency.alchemy——
+    # 只设 forge 会报「等级不足：forge 7 不足需 3」（种子缺口，非代码 bug））
+    alch_node = dict(prof.get("alchemy") or {})
+    alch_node.update({"level": 7, "exp": 0, "sp_earned": 300, "sp_used": 0, "unlocks": {}})
+    prof["alchemy"] = alch_node
     ps["proficiency"] = prof
 
     p2 = Player(

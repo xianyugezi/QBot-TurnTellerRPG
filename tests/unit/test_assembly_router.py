@@ -48,7 +48,7 @@ ALL_REGISTERED = {
     # battle
     "攻击",
     # explore
-    "进入", "休息",
+    "进入", "休息", "位置",
     # dialog（N-01，BCH-03）
     "对话",
     # log（F-03/F-04，BCH-05；is_gm=True）

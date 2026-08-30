@@ -340,6 +340,30 @@ def _dispatch_gm_result(result: GmResult, ctx: MutableMapping[str, Any]) -> Dict
     return {"ok": bool(result.ok), "send": True, "message": result.message or ""}
 
 
+def _coerce_inventory_items(raw: Any) -> list:
+    """inventory 归一为 ItemInstance 列表（Player dataclass 契约，player_to_row asdict 消费）。
+
+    use_commands._resolve_player 等指令层会 asdict Player→可变 dict 写回 ctx["player"]
+    （inventory 变 list[dict]），runner 落档 _player_from_dict 重建 Player 时必须把
+    dict 还原回 ItemInstance，否则 player_to_row 对 dict 调 dataclasses.asdict 抛
+    「asdict() should be called on dataclass instances」（实机 /使用 部署反馈，2026-08-30）。
+    """
+    if not raw:
+        return []
+    from qbot_rpg.storage.repository import _item_from_dict  # noqa: PLC0415
+
+    out: list = []
+    for it in raw:
+        if isinstance(it, dict):
+            try:
+                out.append(_item_from_dict(it))
+            except Exception:  # noqa: BLE001 —— 单条还原失败降级为跳过（不整批炸）
+                continue
+        else:
+            out.append(it)
+    return out
+
+
 def _player_from_dict(d: Mapping[str, Any], qid: str) -> Player:
     """业务写落档转换（A-03 REG-06 ③）：注册建号 dict → Player dataclass。
 
@@ -358,7 +382,7 @@ def _player_from_dict(d: Mapping[str, Any], qid: str) -> Player:
         hp=int(d.get("hp") or 1),
         mp=int(d.get("mp") or 1),
         currencies=dict(d.get("currencies") or {}),
-        inventory=tuple(d.get("inventory") or ()),
+        inventory=tuple(_coerce_inventory_items(d.get("inventory"))),
         equipment=dict(d.get("equipment") or {}),
         attributes=attributes,
         achievement_state=tuple(d.get("achievement_state") or ()),

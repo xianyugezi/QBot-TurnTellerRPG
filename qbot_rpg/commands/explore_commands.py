@@ -26,6 +26,7 @@ from .sender import format_tpl12
 # 指令名（对齐 parsers 白名单：进入/休息 已在 DEFAULT_WHITELIST）
 ENTER_CMD = "进入"
 REST_CMD = "休息"
+POSITION_CMD = "位置"  # M9 实机反馈修复（2026-08-30）：帮助/Tip 引导「位置」但从未实现 → 静默空回
 
 # RUL-08 注册门槛（对齐 basic_commands：未注册玩家使用游玩指令 → 统一拦截）
 TPL_REGISTER_GATE = "❌ 请先 /注册 创建角色（/注册 名字 职业）"
@@ -220,6 +221,35 @@ def _player_ctx(ctx: Mapping[str, Any]) -> Mapping[str, Any]:
     return player if isinstance(player, Mapping) else ctx
 
 
+def cmd_position(parsed: Any, ctx: Mapping[str, Any]) -> str:
+    """/位置 查询当前地点（M9 实机反馈修复 2026-08-30：帮助/Tip 引导但从未实现 → 静默空回）。
+
+    复用 _render_enter 渲染：以当前 location 构造 move 结果（name/desc/lore/to=当前
+    地图），输出地图介绍 + 活动怪物 + 通道（上/下/左/右）+ Tip。未进图/未知 → 引导 /进入。
+    """
+    g = _gate(ctx)
+    if g is not None:
+        return g
+    loc = ctx.get("location")
+    index = _maps_index_for(ctx)
+    entry = index.get(str(loc)) if loc else None
+    if entry is None:
+        return f"❌ 当前位置未知：{loc or '无'}（/进入 探索地图）"
+    if isinstance(entry, Mapping):
+        name = entry.get("name") or str(loc)
+        desc = entry.get("desc") or entry.get("description") or ""
+        lore = entry.get("lore") or ""
+    else:
+        name = getattr(entry, "name", None) or str(loc)
+        desc = getattr(entry, "desc", None) or ""
+        lore = getattr(entry, "lore", None) or ""
+    result = {
+        "ok": True, "type": "move",
+        "name": name, "desc": desc, "lore": lore, "to": loc,
+    }
+    return _render_enter(result, ctx)
+
+
 def cmd_enter(parsed: Any, ctx: Mapping[str, Any]) -> str:
     """/进入 <方向|序号|名称>：通道行走 / 副本入口 → 1 条结果消息。"""
     g = _gate(ctx)
@@ -295,4 +325,5 @@ def register_explore_commands(router: Any, *,
 
     router.register(CommandSpec(ENTER_CMD, handler=_wrap(cmd_enter)))
     router.register(CommandSpec(REST_CMD, handler=_wrap(cmd_rest)))
+    router.register(CommandSpec(POSITION_CMD, handler=_wrap(cmd_position)))
     return router

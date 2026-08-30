@@ -1121,6 +1121,23 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
     # M8 批14 部署实测收口（/投料 /合成 名解析失败）：registry.resolve 签名 (key, kind)，
     # 指令层 _find_def 单参调用 resolver(key) → TypeError 被 except 吞 → name 扫描永不执行。
     # 注入单参包装绑定 kind（对齐指令壳 resolver 契约）；_find_def 异常也落 name 扫描兜底。
+    # M9 实机反馈收口（2026-08-30）：/进入 /位置 空回——ctx["maps"] 从未注入（装配层
+    # 只注了 items/quest/shop 表，探索模块读 ctx["maps"] 得 None → 地图索引空 → 入口/
+    # 通道/当前位置全失效）。补 maps/dungeons/enemies 三表（对齐 quests 的 raw dict 契约；
+    # map kind=map / dungeon kind=dungeon / enemy kind=enemy，见 loader._KIND_FOR_MODULE）。
+    for _kind, _key in (("map", "maps"), ("dungeon", "dungeons"), ("enemy", "enemies")):
+        _tab = _table_from_registry(deps.registry, _kind)
+        _mapped = {
+            str(k): (dict(v.raw) if isinstance(getattr(v, "raw", None), dict) else v)
+            for k, v in _tab.items()
+            if isinstance(k, str)
+        }
+        if _kind == "map":
+            # maps 索引需 list 形态（movement._maps_index 认 modules 容器/条目列表，
+            # 不认 {id: raw} dict；dict 形态实测 _maps_index 返回空表 → /进入 /位置 全失效）
+            ctx[_key] = list(_mapped.values())
+        else:
+            ctx[_key] = _mapped
     def _kind_resolver(kind: str):
         def _res(key: Any) -> Any:
             try:

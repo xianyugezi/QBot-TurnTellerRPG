@@ -512,12 +512,25 @@ def cmd_view_detail(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 def _inventory_rows(ctx: Mapping[str, Any]) -> list:
     """背包行归一（ctx["inventory"] 优先 → ctx["player"].inventory 兜底）；按 acquired_at 倒序
     （INV-07/RUL-17），无时间字段保持存储序（稳定排序，工程补白 8）。"""
-    inv = ctx.get("inventory")
+    # M8 批12 装配层 inventory 双形态（context.py L976/L1053）：ctx["inventory"] =
+    # {item_id: count} 计数映射（任务/条件引擎消费），ctx["inventory_items"] =
+    # list[ItemInstance] 展示列表。本函数是展示入口 → 必须优先读 inventory_items，
+    # 否则把计数映射的 key 当行 → 物品名全 [?]（实机部署反馈「神必bug」，2026-08-30）。
+    inv = ctx.get("inventory_items")
+    if inv is None:
+        inv = ctx.get("inventory")
     if inv is None:
         player = ctx.get("player")
         if player is not None:
             inv = getattr(player, "inventory", None)
-    rows = list(inv) if inv else []
+    if isinstance(inv, Mapping):
+        rows = []
+        for _item_id, _count in inv.items():
+            if _count <= 0:
+                continue
+            rows.append({"item_id": _item_id, "count": _count})
+    else:
+        rows = list(inv) if inv else []
 
     def _key(r: Any) -> str:
         if isinstance(r, Mapping):

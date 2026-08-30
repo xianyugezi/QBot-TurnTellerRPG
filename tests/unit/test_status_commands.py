@@ -144,6 +144,24 @@ def test_stt_location_default():
     assert location_line(make_ctx(location=None)) == "【位置】未知"
 
 
+def test_stt_location_shows_chinese_name():
+    """P2-2（QA 黑盒·文案）：/状态 【位置】显示地图中文名（maps index 查 name），
+    非原始 id——`【位置】start_village` → `【位置】晨风村`。"""
+    maps = [
+        {"id": "start_village", "name": "晨风村", "desc": "宁静小村", "exits": {}},
+        {"id": "forest_edge", "name": "林间边缘", "desc": "树影幢幢", "exits": {}},
+    ]
+    ctx = make_ctx(location="start_village", maps=maps)
+    assert location_line(ctx) == "【位置】晨风村"
+    # /状态 完整链路同样渲染中文名
+    out = cmd_status(parse("/状态"), ctx)
+    assert "【位置】晨风村" in out
+    assert "【位置】start_village" not in out
+    # 未知 id / maps 未注入 → 原样兜底（不崩溃）
+    assert location_line(make_ctx(location="ghost_map", maps=maps)) == "【位置】ghost_map"
+    assert location_line(make_ctx(location="start_village")) == "【位置】start_village"
+
+
 # ---------------------------------------------------------------------------
 # TC-STT-02 效果区显示（承接 4f TC-09 / RUL-13）
 # ---------------------------------------------------------------------------

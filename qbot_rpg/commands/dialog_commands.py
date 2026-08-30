@@ -180,6 +180,18 @@ def _args_string(parsed: Any) -> str:
     return " ".join(str(a) for a in args)
 
 
+def _gate(ctx: Mapping[str, Any]) -> Optional[str]:
+    """RUL-08 注册门槛（2026-08-31 QA 修复：/对话 此前缺门槛）。
+
+    本地导入避免跨包循环；ctx["registered"] is False → 拦截文案；缺省视为已注册。
+    """
+    if ctx.get("registered", True) is False:
+        from .basic_commands import TPL_REGISTER_GATE  # noqa: PLC0415
+
+        return TPL_REGISTER_GATE
+    return None
+
+
 def _npc_by_id(ctx: Mapping[str, Any], npc_id: Optional[str]) -> Optional[Mapping[str, Any]]:
     """按 id 在 ctx["npcs"] 中取 NPC dict（未命中 → None）。"""
     if not npc_id:
@@ -485,6 +497,9 @@ def cmd_dialog(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     """
     if not isinstance(ctx, MutableMapping):
         return ""
+    gate = _gate(ctx)
+    if gate is not None:
+        return gate
     session = _session(ctx)
     resume = _resume_brief(ctx, session)
     npcs = ctx.get("npcs") or []

@@ -733,6 +733,18 @@ def dispatch_round(
 # 战斗指令处理器（parsed + ctx → {"ok","sent","message"}）
 # ---------------------------------------------------------------------------
 
+def _gate(ctx: Mapping[str, Any]) -> Optional[str]:
+    """RUL-08 注册门槛（2026-08-31 QA 修复：/攻击 此前缺门槛，未注册玩家可进入战斗）。
+
+    本地导入避免跨包循环；ctx["registered"] is False → 拦截文案；缺省视为已注册。
+    """
+    if ctx.get("registered", True) is False:
+        from .basic_commands import TPL_REGISTER_GATE  # noqa: PLC0415
+
+        return TPL_REGISTER_GATE
+    return None
+
+
 def _fail(ctx: Mapping[str, Any], text: str) -> dict:
     """错误文案经管线发送（统一出口，无裸 send）。统一返回格式 {ok, sent, message}。"""
     sent = BattlePipeline.from_ctx(ctx).send(text)
@@ -782,8 +794,42 @@ def _attack_action(parsed: Any, ctx: Mapping[str, Any]) -> Tuple[Optional[dict],
         return None, format_tpl12(_fragment(parsed))
     sid = _resolve_skill(ctx, str(args[0]))
     if sid is None:
+        # 2026-08-31 QA P2-3：参数为当前地图怪物名（如「攻击 疾风狼」）→ 未开战时
+        # 给出明确引导而非「没有这个技能」（开战链路未接线，后续里程碑）。
+        if ctx.get("battle_engine") is None and _is_current_map_monster(ctx, str(args[0])):
+            return None, (
+                "❌ 当前没有进行中的战斗。开战功能尚未实装；进入战斗后使用 "
+                "/攻击 <技能序号或名称> 发动技能。"
+            )
         return None, TPL_NO_SKILL
     return {"type": "skill", "skill_id": sid}, None
+
+
+def _is_current_map_monster(ctx: Mapping[str, Any], text: str) -> bool:
+    """参数是否为当前地图怪物名（ctx["maps"]+ctx["location"]+ctx["enemies"] 解析）。
+
+    纯函数、无副作用；任何环节缺失 → False（不误伤技能名解析）。
+    """
+    maps = ctx.get("maps")
+    location = ctx.get("location")
+    enemies = ctx.get("enemies")
+    if not isinstance(maps, (list, tuple)) or not location or not isinstance(enemies, Mapping):
+        return False
+    cur = next((m for m in maps if str(m.get("id")) == str(location)), None) if isinstance(
+        maps[0], Mapping
+    ) else None
+    if not isinstance(cur, Mapping):
+        return False
+    rows = cur.get("monsters")
+    if not isinstance(rows, (list, tuple)):
+        return False
+    for row in rows:
+        eid = row.get("enemy") if isinstance(row, Mapping) else None
+        entry = enemies.get(str(eid)) if eid else None
+        name = entry.get("name") if isinstance(entry, Mapping) else None
+        if str(eid) == text or str(name) == text:
+            return True
+    return False
 
 
 def _resolve_item(ctx: Mapping[str, Any], text: str) -> Optional[Tuple[str, Mapping[str, Any]]]:
@@ -820,6 +866,9 @@ def cmd_battle_attack(parsed: Any, ctx: MutableMapping[str, Any]) -> dict:
     结束追加战斗结束汇总 1 条，单次操作 ≤2 条）。"""
     if getattr(parsed, "error", False):
         return _fail(ctx, format_tpl12(_fragment(parsed)))
+    gate = _gate(ctx)
+    if gate is not None:
+        return _fail(ctx, gate)
     action, err = _attack_action(parsed, ctx)
     if err is not None:
         return _fail(ctx, err)

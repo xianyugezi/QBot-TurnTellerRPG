@@ -251,6 +251,11 @@ def parse_dialog_command(args: object, npcs: Sequence[Mapping[str, Any]]) -> dic
     for n in visible:
         if str(n.get("name")) == t:
             return {"mode": "name", "value": t}
+    # 2026-08-31 QA P2-8：部分名/前缀匹配（「村长」→「村长·老槐」）——唯一命中才采用，
+    # 多命中保持原样（由状态机提示不建会话）。
+    _pref = [n for n in visible if str(n.get("name")).startswith(t) and len(t) >= 2]
+    if len(_pref) == 1:
+        return {"mode": "name", "value": str(_pref[0].get("name"))}
     if t.isdigit():
         return {"mode": "index", "value": int(t)}
     return {"mode": "name", "value": t}

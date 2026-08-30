@@ -155,6 +155,18 @@ def _fragment(parsed: Any) -> str:
     return "/" + str(getattr(parsed, "command", "") or "")
 
 
+def _gate(ctx: Mapping[str, Any]) -> Optional[str]:
+    """RUL-08 注册门槛（2026-08-31 QA 修复：/日志 此前缺门槛，未注册玩家可直接看日志）。
+
+    本地导入避免跨包循环；ctx["registered"] is False → 拦截文案；缺省视为已注册。
+    """
+    if ctx.get("registered", True) is False:
+        from .basic_commands import TPL_REGISTER_GATE  # noqa: PLC0415
+
+        return TPL_REGISTER_GATE
+    return None
+
+
 def _parse_page_arg(text: Optional[str]) -> Optional[int]:
     """页码参数归一：None → 1；整数 ≥1 → 原值；0/负数/非数字 → None（壳层转 TPL-12，裁决②）。"""
     if text is None:
@@ -596,6 +608,9 @@ def cmd_log(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     """
     if getattr(parsed, "error", None):
         return format_tpl12(_fragment(parsed))
+    gate = _gate(ctx)
+    if gate is not None:
+        return gate
     args = list(getattr(parsed, "args", None) or [])
     first = str(args[0]) if args else ""
     if first in GM_VIEW_WORDS:

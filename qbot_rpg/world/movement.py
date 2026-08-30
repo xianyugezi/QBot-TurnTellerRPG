@@ -34,7 +34,7 @@ conditions callable 注入（未注入/求值失败 = 不可走，fail-safe，2a
 """
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union, cast
+from typing import Any, Callable, Dict, List, Mapping, MutableMapping, Optional, Tuple, Union, cast
 
 from qbot_rpg.content.map_models import MapDef, parse_maps
 from qbot_rpg.data.world_time_persist import mark_map_seen
@@ -148,6 +148,34 @@ def _current_map_id(player_ctx: Mapping[str, Any]) -> Optional[str]:
         ploc = ps.get("location")
         if isinstance(ploc, str) and ploc:
             return ploc
+    return None
+
+
+def _persistent_state_of(player_ctx: Mapping[str, Any]) -> Optional[MutableMapping[str, Any]]:
+    """persistent_state 可变容器定位（对齐 investigate_commands._persistent_state_of）。
+
+    读序：ctx["persistent_state"] → ctx["player"]["persistent_state"]（dict 形态）→
+    ctx["player"].persistent_state（Player dataclass 属性）→ ctx 自身（裸 ctx 兜底）。
+
+    Player 是 frozen dataclass 且无 map_id 字段——位置落点在 persistent_state["location"]
+    （可变 dict 子结构，就地改 = 改 player → 落档保留，对齐 currencies/title_state 挂回方案）。
+    """
+    if not isinstance(player_ctx, Mapping):
+        return None
+    ps = player_ctx.get("persistent_state")
+    if isinstance(ps, MutableMapping):
+        return ps
+    player = player_ctx.get("player")
+    if isinstance(player, Mapping):
+        ps2 = player.get("persistent_state")
+        if isinstance(ps2, MutableMapping):
+            return ps2
+    # Player dataclass（frozen）：persistent_state 为可变 dict 属性，就地改可落档
+    ps3 = getattr(player, "persistent_state", None)
+    if isinstance(ps3, MutableMapping):
+        return ps3
+    if isinstance(player_ctx, MutableMapping):
+        return player_ctx
     return None
 
 
@@ -335,9 +363,17 @@ def move_to_map(player_ctx: dict, map_id: str, maps: Optional[object] = None) ->
         on_leave(old_map, player_ctx)  # 【工程补白】R22 离开钩子：时段边界怪物移除/补刷 → 批次 4
 
     player = player_ctx.get("player")
-    if isinstance(player, dict):
-        player["map_id"] = target  # 玩家位置原地改（契约语义）
-    player_ctx["map_id"] = target  # 同步会话上下文当前图
+    # P1-5 修复（QA 黑盒·位置不持久）：Player 是 frozen dataclass 且无 map_id 字段，
+    # 位置真落点位 = persistent_state["location"]（可变 dict 子结构，就地改可落档）。
+    # 旧契约写 player["map_id"] 是死键（Player 无此字段），且 cmd_enter 传 dict(player)
+    # 副本时写副本直接丢写回——统一改走 _persistent_state_of 定位的真实 ps。
+    ps = _persistent_state_of(player_ctx)
+    if ps is not None:
+        ps["location"] = target  # 玩家位置持久落点（重启后仍保持）
+    if isinstance(player, MutableMapping):
+        player["map_id"] = target  # dict 形态（旧测试/纯 dict ctx）兼容：原地改
+    player_ctx["map_id"] = target  # 同步会话上下文当前图（_current_map_id 兜底读序第 1 位）
+    player_ctx["location"] = target  # 同步会话上下文位置（/位置 渲染读 ctx["location"]）
 
     ts = player_ctx.get("time_state")
     # mark_map_seen 签名收 dict，但防御性接受 None（非 dict 按默认规整）——此处显式 cast

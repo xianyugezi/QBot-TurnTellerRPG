@@ -271,3 +271,43 @@ def test_enter_move_no_emoji():
     out = cmd_enter(parse("/进入 上"), _enter_ctx())
     out_allowed = out.replace("✅", "").replace("❌", "")
     assert not re.search(r"[\U0001F000-\U0001FAFF]|[\U00002600-\U000027BF]", out_allowed)
+
+
+# ---------------------------------------------------------------------------
+# P1-5（QA 黑盒·位置不持久）：/进入 移动后位置写回 persistent_state["location"]
+# ---------------------------------------------------------------------------
+
+def _prod_like_ctx() -> tuple:
+    """生产形态 ctx：ctx["player"] = Player frozen dataclass（无 map_id 字段），
+    位置存 persistent_state["location"]；ctx["location"] 由装配层从 ps 注入。"""
+    from qbot_rpg.data.player import Player
+
+    ps: dict = {"location": "start_village"}
+    player = Player(qid="2750511376", name="阿伟", persistent_state=ps)
+    ctx = make_ctx(
+        player=player,
+        maps=[dict(m) for m in _ENTER_MAPS],  # type: ignore[call-overload]
+        monsters={k: dict(v) for k, v in _ENTER_MONSTERS.items()},
+        location="start_village",
+    )
+    return ctx, player, ps
+
+
+def test_enter_move_persists_location_to_ps():
+    """P1-5（黑盒回归）：/进入 上 移动后位置写回真实 persistent_state["location"]。
+
+    旧行为：cmd_enter 传 dict(player) 一次性副本 → 位置写在副本上丢写回 → 落档丢位置。
+    """
+    ctx, player, ps = _prod_like_ctx()
+    out = cmd_enter(parse("/进入 上"), ctx)
+    assert out.startswith("✅ 你来到了「林间边缘」")
+    assert ps["location"] == "forest_edge"                     # 真落档位更新（重启仍保持）
+    assert player.persistent_state["location"] == "forest_edge"
+
+
+def test_enter_number_persists_location_to_ps():
+    """P1-5（批1 进入N 世界地图序号）：数字传送同样写回 persistent_state["location"]。"""
+    ctx, player, ps = _prod_like_ctx()
+    out = cmd_enter(parse("/进入 2"), ctx)
+    assert "林间边缘" in out
+    assert ps["location"] == "forest_edge"

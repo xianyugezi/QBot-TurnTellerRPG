@@ -66,6 +66,7 @@ from qbot_rpg.core.shop import (
 
 # 同包兄弟模块：相对导入（G0 架构门禁 test_commands_web_not_depended 不产生
 # `qbot_rpg.commands` 前缀反向依赖边；同层兄弟引用架构合规，与 sender.py 同口径）。
+from .basic_commands import TPL_REGISTER_GATE
 from .parsers import parse_int
 from .router import CommandSpec
 from .sender import format_tpl12
@@ -74,7 +75,7 @@ __all__ = [
     # 指令名常量
     "SHOP_CMD", "BUY_CMD", "SELL_CMD", "LIST_KEYWORD",
     # 商店类型徽标 / 业务模板常量
-    "TYPE_BADGES", "TPL_NO_SHOP",
+    "TYPE_BADGES", "TPL_NO_SHOP", "TPL_REGISTER_GATE",
     # 指令处理器（纯函数：parsed + ctx → 回复正文）
     "cmd_shop", "cmd_shop_list", "cmd_shop_browse", "cmd_buy", "cmd_sell",
     # 渲染
@@ -131,6 +132,16 @@ def format_number(n: object) -> str:
         return f"{int(n):,}"
     except (TypeError, ValueError):
         return str(n)
+
+
+def _gate(ctx: Mapping[str, Any]) -> Optional[str]:
+    """RUL-08 注册门槛：ctx["registered"] is False → 拦截文案；缺省视为已注册。
+
+    2026-08-31 QA 修复：/商店 /购买 /出售 此前缺门槛，未注册玩家可直接浏览/交易。
+    """
+    if ctx.get("registered", True) is False:
+        return TPL_REGISTER_GATE
+    return None
 
 
 def _currency_name(ctx: Mapping[str, Any], key: object) -> str:
@@ -342,7 +353,7 @@ def cmd_shop_list(parsed: Any, ctx: MutableMapping[str, Any], page: object) -> s
 
 
 def cmd_shop(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
-    """/商店 [参数] 主入口：
+    """.../商店 [参数] 主入口：
 
       无参        → 当前商店（地图级）商品列表第 1 页；无则全局默认 normal 兜底（D-06/TC-01）
       列表 [页码] → 可用商店一览（5 条/页 + CakeGame 式尾段 + 裁决② 夹取）
@@ -351,6 +362,9 @@ def cmd_shop(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     """
     if parsed.error:
         return format_tpl12(_fragment(parsed))
+    gate = _gate(ctx)
+    if gate is not None:
+        return gate
     args = list(getattr(parsed, "args", None) or [])
     if not args:
         return cmd_shop_browse(parsed, ctx, resolve_shop_arg(None, ctx), 1)
@@ -419,6 +433,9 @@ def cmd_buy(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     结果 `message` 透传（含余额不足差额提示、数量上限提示不拦截）。缺参/解析错误 → TPL-12。"""
     if parsed.error:
         return format_tpl12(_fragment(parsed))
+    gate = _gate(ctx)
+    if gate is not None:
+        return gate
     if not parsed.args:
         return format_tpl12(f"/{BUY_CMD}")
     target = _target_of(parsed)
@@ -432,6 +449,9 @@ def cmd_sell(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     """/出售 <物品>*<数量>：立刻到账（引擎）；绑定/任务关键/数量不足拦截消息透传。缺参 → TPL-12。"""
     if parsed.error:
         return format_tpl12(_fragment(parsed))
+    gate = _gate(ctx)
+    if gate is not None:
+        return gate
     if not parsed.args:
         return format_tpl12(f"/{SELL_CMD}")
     target = _target_of(parsed)

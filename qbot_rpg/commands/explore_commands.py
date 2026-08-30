@@ -282,12 +282,27 @@ def cmd_enter(parsed: Any, ctx: Mapping[str, Any]) -> str:
         return "❌ /进入：输入方向（上/下/左/右）或副本入口（序号/名称）"
     arg = str(args[0])
     try:
-        from qbot_rpg.world.movement import enter_context_route  # noqa: PLC0415
+        from qbot_rpg.world.movement import enter_context_route, _persistent_state_of  # noqa: PLC0415
     except ImportError:
         return "❌ 进入功能未接线（引擎未加载）"
     player = _player_ctx(ctx)
+    # P1-5 修复（QA 黑盒·位置不持久）：不传一次性 dict(player) 副本——位置写在副本上
+    # 直接丢写回（落档丢位置）。改为构造引擎上下文：persistent_state 挂真实引用
+    # （Player frozen dataclass 可变子结构，move_to_map 就地改 ps["location"] 即落档），
+    # 会话位置键同步（_current_map_id 读序：map_id → location → ps.location）。
+    pctx = dict(player)
+    pctx["persistent_state"] = _persistent_state_of(ctx) or {}
+    # 会话位置键：ctx 显式键优先（生产注入 location）；缺省保留 dict(player) 原有 map_id
+    for _k in ("map_id", "location"):
+        _v = ctx.get(_k)
+        if _v is not None:
+            pctx[_k] = _v
+    pctx["maps"] = ctx.get("maps")
+    pctx["dungeons"] = ctx.get("dungeons")
+    pctx["time_state"] = ctx.get("time_state")
+    pctx["move_hooks"] = ctx.get("move_hooks")
     result = enter_context_route(
-        dict(player), arg,
+        pctx, arg,
         maps=ctx.get("maps"), dungeons=ctx.get("dungeons"),
     )
     if not isinstance(result, Mapping):
@@ -306,7 +321,8 @@ def cmd_enter(parsed: Any, ctx: Mapping[str, Any]) -> str:
             target = ordered[map_idx - 1]
             try:
                 from qbot_rpg.world.movement import move_to_map  # noqa: PLC0415
-                moved = move_to_map(dict(player), target, maps=ctx.get("maps"))
+                # P1-5 修复：同方向行走——复用共享 persistent_state 的 pctx（非 dict(player) 副本）
+                moved = move_to_map(pctx, target, maps=ctx.get("maps"))
                 if moved.get("ok"):
                     result = {"ok": True, "to": target,
                               "name": moved.get("name"),

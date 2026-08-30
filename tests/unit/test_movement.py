@@ -273,6 +273,85 @@ def test_move_to_map_unknown_target_graceful():
     assert "zzz" in ctx["time_state"]["map_weather_seen"]
 
 
+def test_move_to_map_persists_location_to_ps_dict():
+    """P1-5（QA 黑盒·位置不持久）：move_to_map 写 persistent_state["location"]（dict 形态玩家）。
+
+    Player 无 map_id 字段，位置真落点位 = persistent_state["location"]——移动后重启仍保持。
+    """
+    ps: dict = {"location": "a_plains"}
+    ctx = {
+        "map_id": "a_plains",
+        "location": "a_plains",
+        "player": {"map_id": "a_plains", "name": "阿伟", "persistent_state": ps},
+        "time_state": {"season_idx": 0, "period_idx": 0, "weather_tick": 0,
+                       "map_weather_seen": {}},
+    }
+    r = move_to_map(ctx, "b_forest", maps=_MAPS)
+    assert r["ok"] is True
+    assert ps["location"] == "b_forest"               # 真落档位更新（重启后仍保持）
+    assert ctx["location"] == "b_forest"              # 会话键同步
+    assert ctx["player"]["map_id"] == "b_forest"      # 兼容旧键（dict 形态原地改）
+
+
+def test_move_to_map_persists_location_to_ps_top_key():
+    """P1-5：persistent_state 挂在 ctx 顶层键（生产装配形态：ctx["persistent_state"]）→ 落档。"""
+    from qbot_rpg.data.player import Player
+
+    ps: dict = {"location": "a_plains"}
+    player = Player(qid="10001", name="阿伟", persistent_state=ps)
+    ctx = {"player": player, "persistent_state": ps, "location": "a_plains",
+           "time_state": {"season_idx": 0, "period_idx": 0, "weather_tick": 0,
+                          "map_weather_seen": {}}}
+    move_to_map(ctx, "b_forest", maps=_MAPS)
+    assert ps["location"] == "b_forest"               # Player 可变子结构就地改 → 落档
+    assert player.persistent_state["location"] == "b_forest"
+
+
+def test_move_to_map_persists_dataclass_player_attribute():
+    """P1-5：Player dataclass（frozen，无 map_id）形态——ctx 仅含 player，位置落属性 ps。"""
+    from qbot_rpg.data.player import Player
+
+    ps: dict = {"location": "a_plains"}
+    player = Player(qid="10001", name="阿伟", persistent_state=ps)
+    ctx = {"player": player, "location": "a_plains",
+           "time_state": {"season_idx": 0, "period_idx": 0, "weather_tick": 0,
+                          "map_weather_seen": {}}}
+    r = move_to_map(ctx, "b_forest", maps=_MAPS)
+    assert r["ok"] is True
+    assert player.persistent_state["location"] == "b_forest"   # dataclass 可变子结构就地改
+    assert ctx["location"] == "b_forest"
+
+
+def test_resolve_move_persists_location_dataclass_player():
+    """P1-5 端到端（world 层）：/进入 上 移动后位置落 Player.persistent_state["location"]，
+    会话键同步——后续 /位置（ctx["location"]）读新图，重启（ps）仍新图。"""
+    from qbot_rpg.data.player import Player
+
+    ps: dict = {"location": "a_plains"}
+    player = Player(qid="10001", name="阿伟", persistent_state=ps)
+    ctx = {"player": player, "location": "a_plains", "maps": _MAPS,
+           "time_state": {"season_idx": 0, "period_idx": 0, "weather_tick": 0,
+                          "map_weather_seen": {}}}
+    r = resolve_move(ctx, "上", maps=_MAPS)
+    assert r["ok"] is True and r["to"] == "b_forest"
+    assert player.persistent_state["location"] == "b_forest"   # 落档（重启仍保持）
+    assert ctx["location"] == "b_forest"                        # 会话同步（/位置 立即可见）
+
+
+def test_enter_context_route_persists_location_dataclass_player():
+    """P1-5 端到端（world 层）：enter_context_route 方向行走同样持久化位置。"""
+    from qbot_rpg.data.player import Player
+
+    ps: dict = {"location": "a_plains"}
+    player = Player(qid="10001", name="阿伟", persistent_state=ps)
+    ctx = {"player": player, "location": "a_plains", "maps": _MAPS,
+           "time_state": {"season_idx": 0, "period_idx": 0, "weather_tick": 0,
+                          "map_weather_seen": {}}}
+    r = enter_context_route(ctx, "上", maps=_MAPS)
+    assert r["ok"] is True and r["to"] == "b_forest"
+    assert player.persistent_state["location"] == "b_forest"
+
+
 # -------------------------------------------------------------------------------------
 # enter_context_route：/进入 路由（方向 → 通道行走；入口名/序号 → 进副本信号）
 # -------------------------------------------------------------------------------------

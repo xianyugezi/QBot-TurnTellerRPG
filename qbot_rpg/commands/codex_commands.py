@@ -47,6 +47,18 @@ def _render_progress(label: str, p: Mapping[str, Any]) -> str:
     return f"{label}：{pct}%（{p.get('seen', 0)}/{p.get('total', 0)}）"
 
 
+def _gate(ctx: Mapping[str, Any]) -> Optional[str]:
+    """RUL-08 注册门槛（2026-08-31 QA 修复：/图鉴 此前缺门槛）。
+
+    本地导入避免跨包循环；ctx["registered"] is False → 拦截文案；缺省视为已注册。
+    """
+    if ctx.get("registered", True) is False:
+        from .basic_commands import TPL_REGISTER_GATE  # noqa: PLC0415
+
+        return TPL_REGISTER_GATE
+    return None
+
+
 def _overview(ctx: MutableMapping[str, Any]) -> str:
     """总览：三分册各自完成度 + 总完成度（未收集条目仅计数不展示名称）。"""
     from qbot_rpg.core.codex import CATEGORY_ORDER, _CATEGORY_LABELS, codex_progress
@@ -96,6 +108,9 @@ def cmd_codex(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     出参 str: 渲染回复（统一返回字符串）。
     核心逻辑: 首参命中分册别名 → 分册分页；否则总览；页码非法夹取。
     """
+    gate = _gate(ctx)
+    if gate is not None:
+        return gate
     args = list(getattr(parsed, "args", None) or ())
     if not args:
         return _overview(ctx)

@@ -102,6 +102,7 @@ from qbot_rpg.core.message_format.list_render import (
 
 # 同包兄弟模块：相对导入（G0 架构门禁 test_commands_web_not_depended 不产生
 # `qbot_rpg.commands` 前缀反向依赖边；同层兄弟引用架构合规，与 sender.py 同口径）。
+from .basic_commands import TPL_REGISTER_GATE
 from .parsers import parse_int
 from .router import CommandSpec
 from .sender import format_tpl12
@@ -110,7 +111,7 @@ __all__ = [
     # 指令名 / 子指令词
     "CHECKIN_CMD", "SUB_STATUS", "SUB_MAKEUP", "SUBWORDS",
     # 渲染常量
-    "TPL_NO_CHECKIN", "TPL_NO_TABLE",
+    "TPL_REGISTER_GATE", "TPL_NO_CHECKIN", "TPL_NO_TABLE",
     # 指令处理器（纯函数：parsed + ctx → 回复正文）
     "cmd_checkin", "cmd_checkin_today", "cmd_checkin_status", "cmd_checkin_makeup",
     # 渲染 / 工具
@@ -155,6 +156,16 @@ def _fragment(parsed: Any) -> str:
     args = getattr(parsed, "args", None) or []
     tail = (" " + " ".join(str(a) for a in args)) if args else ""
     return f"/{cmd}{tail}"
+
+
+def _gate(ctx: Mapping[str, Any]) -> Optional[str]:
+    """RUL-08 注册门槛：ctx[\"registered\"] is False → 拦截文案（缺省视为已注册，对齐 basic）。
+
+    2026-08-31 QA 修复：此前 /签到 缺注册门槛，未注册玩家可直接签到（疑似无主发奖）。
+    """
+    if ctx.get("registered", True) is False:
+        return TPL_REGISTER_GATE
+    return None
 
 
 def _grant_label(g: Mapping[str, Any]) -> str:
@@ -431,6 +442,9 @@ def cmd_checkin(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
       状态 [页码]     → 连签/月累计/今日已签（可翻页，工程补白 5）
       补签 [<表名>]   → 补签（表名缺省 = 主表 loop，工程补白 4；裁决⑦ 只计不补发提示透传）
     """
+    g = _gate(ctx)
+    if g is not None:
+        return g
     if parsed.error:
         return format_tpl12(_fragment(parsed))
     args = list(getattr(parsed, "args", None) or [])

@@ -128,6 +128,16 @@ def test_parse_dialog_name_priority_over_digit():
     assert parse_dialog_command("铁匠·老周", MAP_NPCS) == {"mode": "name", "value": "铁匠·老周"}
 
 
+def test_parse_dialog_prefix_unique_match():
+    # 2026-08-31 QA P2-8：部分名/前缀唯一命中 → 解析为全名（「铁匠」→「铁匠·老周」）
+    assert parse_dialog_command("铁匠", MAP_NPCS) == {"mode": "name", "value": "铁匠·老周"}
+
+
+def test_parse_dialog_prefix_multiple_no_match():
+    # 前缀多命中不解析（保持 raw，状态机提示）
+    assert parse_dialog_command("老", MAP_NPCS) == {"mode": "name", "value": "老"}
+
+
 def test_parse_dialog_index_fallback():
     assert parse_dialog_command("1", MAP_NPCS) == {"mode": "index", "value": 1}
     assert parse_dialog_command("9", MAP_NPCS) == {"mode": "index", "value": 9}

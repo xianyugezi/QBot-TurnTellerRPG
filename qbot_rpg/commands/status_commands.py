@@ -265,10 +265,30 @@ def attr_line(ctx: Mapping[str, Any]) -> str:
     ])
 
 
+def _map_name_for(ctx: Mapping[str, Any], loc: str) -> str:
+    """位置 id → 地图中文名（P2-2 修复：/状态 【位置】显示中文名而非原始 id）。
+
+    用 maps 索引查 name（对齐 explore_commands._maps_index_for 口径：ctx["maps"] 的
+    list/容器/MapDef 归一；未知/未注入 → 原样返回 id 兜底，零失败）。
+    """
+    try:
+        from qbot_rpg.world.movement import _maps_index  # noqa: PLC0415
+    except ImportError:
+        return loc
+    index = _maps_index(ctx.get("maps"))
+    entry = index.get(loc) if isinstance(index, Mapping) else None
+    if entry is None:
+        return loc
+    nm = entry.get("name") if isinstance(entry, Mapping) else getattr(entry, "name", None)
+    return nm if isinstance(nm, str) and nm else loc
+
+
 def location_line(ctx: Mapping[str, Any]) -> str:
-    """④ 位置行（RUL-14）：`【位置】新手村 · 中央广场`；缺省 → `【位置】未知`。"""
+    """④ 位置行（RUL-14）：`【位置】晨风村`（P2-2：id → 中文名）；缺省 → `【位置】未知`。"""
     loc = ctx.get("location")
-    return f"【位置】{loc}" if loc else "【位置】未知"
+    if not loc:
+        return "【位置】未知"
+    return f"【位置】{_map_name_for(ctx, str(loc))}"
 
 
 def _effect_text(e: Mapping[str, Any]) -> Optional[str]:

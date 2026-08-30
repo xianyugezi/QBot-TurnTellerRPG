@@ -3,6 +3,7 @@
     "id": "start_village",
     "name": "晨风村",
     "desc": "山脚下的小村，冒险者的起点。东侧石桥被迷雾笼罩，传闻要完成委托才能通行。",
+    "npcs": ["elder_huai", "flower_ma", "ranger_lu", "guide_xiao"],
     "monsters": [],
     "exits": {
       "up": {
@@ -155,6 +156,7 @@
     "id": "abandoned_mine",
     "name": "废弃矿坑",
     "desc": "塌方废弃的矿坑，蝙蝠成群，矿脉仍闪烁着星铁光泽。",
+    "npcs": ["miner_gong"],
     "monsters": [
       {
         "enemy": "cave_bat",

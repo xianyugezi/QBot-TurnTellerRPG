@@ -118,5 +118,118 @@
         "desc": "累计炼成 100 件炼金产物"
       }
     ]
+  },
+  {
+    "id": "forge",
+    "tier_names": [
+      "见习",
+      "正式",
+      "精通",
+      "专家",
+      "大师",
+      "宗师",
+      "王"
+    ],
+    "job_rank_levels": [
+      0,
+      100,
+      300,
+      700,
+      1500,
+      3000,
+      6000
+    ],
+    "exp_sources": {
+      "craft": 1.0,
+      "gather": 1.0,
+      "combat": 1.0
+    },
+    "sp_per_level": 1,
+    "sp_panel": [
+      {
+        "id": "unlock_branch_tree",
+        "name": "分支树视野",
+        "cost": 1,
+        "repeatable": false,
+        "max_repeat": 1,
+        "desc": "解锁分支树视野：/图纸 显示全量分支、/锻造树 不折叠"
+      },
+      {
+        "id": "unlock_combine_3to1",
+        "name": "3:1 合成",
+        "cost": 1,
+        "repeatable": false,
+        "max_repeat": 1,
+        "desc": "解锁 3 普通素材→1 稀有素材 合成（combine 升档入口）"
+      },
+      {
+        "id": "unlock_slot_tool",
+        "name": "开孔",
+        "cost": 1,
+        "repeatable": false,
+        "max_repeat": 1,
+        "desc": "解锁开孔：开孔道具可用、锻造可产出开孔道具"
+      },
+      {
+        "id": "unlock_sets",
+        "name": "套装",
+        "cost": 1,
+        "repeatable": false,
+        "max_repeat": 1,
+        "desc": "解锁套装：/套装 可用、套装技能生效"
+      },
+      {
+        "id": "unlock_augment",
+        "name": "客制",
+        "cost": 1,
+        "repeatable": false,
+        "max_repeat": 1,
+        "desc": "解锁客制：/客制 可用（仍需宗师+最终强化武器）"
+      }
+    ],
+    "energy": {
+      "enabled": false,
+      "max_by_tier": [
+        5,
+        8,
+        10,
+        12,
+        15,
+        18,
+        20
+      ],
+      "regen_sec": 1800
+    },
+    "job_tier_map": {
+      "见习": [
+        1,
+        5
+      ],
+      "正式": [
+        6,
+        10
+      ],
+      "精通": [
+        11,
+        20
+      ],
+      "专家": [
+        21,
+        30
+      ],
+      "大师": [
+        31,
+        40
+      ],
+      "宗师": [
+        41,
+        50
+      ],
+      "王": [
+        51,
+        99
+      ]
+    },
+    "titles": []
   }
 ]

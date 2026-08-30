@@ -40,10 +40,11 @@ def test_m8_test_demo_pack_loads_green() -> None:
     pack, _ = _build("content/test_demo")
     assert pack.report.ok, f"test_demo 不应红拦：{pack.report.errors}"
     assert pack.report.count_errors == 0
-    # 数据表非空 + 条目数对齐 0C fixtures（recipe 10 / traits 8 / proficiency 1 / slots 4）
+    # 数据表非空 + 条目数对齐 0C fixtures（recipe 10 / traits 8 / proficiency 2 / slots 4）
     # recipe/trait/proficiency 有 id 字段 → registry 表计数；slots 条目用 equip_id（无 id 字段，
     # 不注册进 registry 表，运行期从 pack.modules 解析——同 shop/quest modules_raw 口径）
-    for kind, expect in (("recipe", 10), ("trait", 8), ("proficiency", 1)):
+    # proficiency=2：alchemy + forge（M9 批3 增加铸造职业实例）
+    for kind, expect in (("recipe", 10), ("trait", 8), ("proficiency", 2)):
         ids = pack.registry.all_ids(kind)
         assert len(ids) == expect, f"kind={kind} 期望 {expect} 条，实得 {len(ids)}"
     assert len(_slots_raw(pack)) == 4, f"slots 期望 4 条，实得 {len(_slots_raw(pack))}"

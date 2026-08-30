@@ -607,7 +607,8 @@ def test_real_proficiency_json_compat() -> None:
     energy enabled=false / job_tier_map / titles），并跑通入账/解锁核心路径。"""
     path = Path(__file__).resolve().parents[2] / "content" / "test_demo" / "proficiency.json"
     data = json.loads(path.read_text(encoding="utf-8"))
-    assert isinstance(data, list) and len(data) == 1
+    # M9 批3 路3B：proficiency.json 现含 alchemy + forge 两职业实例（forge 由 M9 批3 增加）
+    assert isinstance(data, list) and len(data) == 2
     eng = _engine(data, _DEFAULT_SETTINGS)
 
     entry = data[0]

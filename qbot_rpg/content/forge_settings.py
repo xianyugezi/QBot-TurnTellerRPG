@@ -57,7 +57,7 @@ DEFAULT_DECOMPOSE_RATE: Dict[str, float] = {
     "王": 0.65,
 }
 
-# settings.forge 段默认值（共享契约 §三 ForgeSettings：S-01~05 + 2c2d 补白键）
+# settings.forge 段默认值（共享契约 §三 ForgeSettings：S-01~05 + 2c2d 补白键 + P1-1 裁决可配档位）
 FORGE_SETTINGS_DEFAULTS: Dict[str, object] = {
     "forge_fee": "节点等级×10",          # S-01（str|int）
     "synth_ratio_3to1": True,           # S-02（P1 3:1 合成开关）
@@ -66,6 +66,8 @@ FORGE_SETTINGS_DEFAULTS: Dict[str, object] = {
     "exp_per_forge": "节点等级×2",       # S-05（str|int）
     "sets_enabled": True,               # 2c2d 补白键（P1 套装开关）
     "augments_enabled": True,           # 2c2d 补白键（P2 客制开关）
+    "set_piece_counts": [2, 3, 5],  # P1-1 裁决：套装档位集合可配（默认 2/3/5）
+    "set_tier_exact": True,         # P1-1 裁决：达到档位才激活；false=未达也可激活低档
 }
 
 # settings.forge 段可解析键（read_forge_settings 遍历顺序，照共享契约 §八 settings.json 形态）
@@ -77,6 +79,8 @@ FORGE_SETTINGS_KEYS: tuple = (
     "exp_per_forge",
     "sets_enabled",
     "augments_enabled",
+    "set_piece_counts",
+    "set_tier_exact",
 )
 
 # 素材档位两档（细化_2c2c TIER-03a：normal/rare；与装备品质四档 TIER-03b 不混用）
@@ -118,6 +122,10 @@ FORGE_SETTINGS_FIELD_DEFS: Dict[str, FieldMeta] = {
     # 2c2d 补白键：P1 套装开关 / P2 客制开关（共享契约 §三 sets_enabled/augments_enabled）
     "sets_enabled": FieldMeta(type="bool", default=True),
     "augments_enabled": FieldMeta(type="bool", default=True),
+    # P1-1 裁决（2026-08-30）：套装技能档位集合可配（默认 [2,3,5]；可配 [1,4]/[7,8]/[3,6,9,12]）
+    "set_piece_counts": FieldMeta(type="list", element=FieldMeta(type="int")),
+    # P1-1 裁决：激活语义（true=达到档位才激活；false=未达到也能激活低档）
+    "set_tier_exact": FieldMeta(type="bool", default=True),
 }
 
 
@@ -192,6 +200,17 @@ def read_forge_settings(settings_raw: object) -> Dict[str, object]:
     v = forge.get("exp_per_forge")
     if _nonempty_str(v) or _is_nonneg_int(v):
         out["exp_per_forge"] = v
+
+    # ---- P1-1 裁决（2026-08-30）：set_piece_counts 档位集合可配（正整数列表）----
+    spc = forge.get("set_piece_counts")
+    if isinstance(spc, (list, tuple)) and spc:
+        cleaned = [x for x in spc if isinstance(x, int) and not isinstance(x, bool) and x >= 1]
+        if cleaned:
+            out["set_piece_counts"] = sorted(set(cleaned))
+
+    # ---- P1-1 裁决：set_tier_exact 激活语义（仅 bool 生效）----
+    if isinstance(forge.get("set_tier_exact"), bool):
+        out["set_tier_exact"] = forge["set_tier_exact"]
 
     return out
 

@@ -511,6 +511,25 @@ class ForgeSettings:
         v = self._val("augments_enabled")
         return v if isinstance(v, bool) else True  # 2c2d 补白键默认 true
 
+    @property
+    def set_piece_counts(self) -> Tuple[int, ...]:
+        """套装技能档位集合（P1-1 裁决 2026-08-30 配置化）：settings.forge.set_piece_counts
+        正整数列表，去重升序；缺省/非合法 → 默认 (2, 3, 5)。"""
+        v = self._val("set_piece_counts")
+        if isinstance(v, (list, tuple)):
+            cleaned = tuple(sorted({x for x in v
+                                    if isinstance(x, int) and not isinstance(x, bool) and x >= 1}))
+            if cleaned:
+                return cleaned
+        return (2, 3, 5)
+
+    @property
+    def set_tier_exact(self) -> bool:
+        """套装激活语义（P1-1 裁决配置化）：true=达到档位件数才激活该档效果；
+        false=未达到档位也能激活低档效果（回落语义）。缺省 true。"""
+        v = self._val("set_tier_exact")
+        return v if isinstance(v, bool) else True
+
 
 # =====================================================================================
 # 收集器鸭子类型（三形态：report.error/warning 方法 → report._err/_warn 方法 →
@@ -1386,7 +1405,9 @@ def _check_sets(
                 if isinstance(sid, str) and sid and variant in SET_VARIANTS:
                     family[sid][variant].append(p)
 
-        # V3：技能档位 2/3/5 连续 + level ∈ {1,2,3}
+        # V3：技能档位 ∈ 配置集合 + level ∈ {1,2,3}（P1-1 裁决 2026-08-30：
+        #   档位集合可配 set_piece_counts，缺省 {2,3,5}；缺档/跳档降黄提示不拦）
+        allowed_pc: Tuple[int, ...] = settings.set_piece_counts
         skills = s.get("skills")
         if not isinstance(skills, list) or not skills:
             _err(report, f"{base}.skills", "2c2d-V3", rule="set_skills_required",
@@ -1403,11 +1424,11 @@ def _check_sets(
                 pc = k.get("piece_count")
                 skill = k.get("skill")
                 lv = k.get("level")
-                if not isinstance(pc, int) or isinstance(pc, bool) or pc not in SET_PIECE_COUNTS:
+                if not isinstance(pc, int) or isinstance(pc, bool) or pc not in allowed_pc:
                     _err(report, f"{kbase}.piece_count", "2c2d-V3",
                          rule="set_skill_piece_count_invalid", piece_count=pc,
-                         allowed=list(SET_PIECE_COUNTS),
-                         msg="piece_count %r 不认识（{2,3,5}，V3）" % (pc,))
+                         allowed=list(allowed_pc),
+                         msg="piece_count %r 不在配置档位集合 %s（V3）" % (pc, list(allowed_pc)))
                 if not isinstance(skill, str) or not skill:
                     _err(report, f"{kbase}.skill", "2c2d-V3", rule="set_skill_id_required",
                          msg="skill 必填（6a 技能库 id，V3）")
@@ -1418,26 +1439,24 @@ def _check_sets(
                          msg="level ∈ {1,2,3}（默认封顶，V3 硬；超封顶 W4 黄）")
                 if isinstance(skill, str) and isinstance(pc, int) and not isinstance(pc, bool):
                     by_skill.setdefault(skill, set()).add(pc)
-            # 同一 skill 档位连续（从 2 起无跳档；【补白 8】）
+            # 同一 skill 档位：在配置集合内缺中间档（如配置 {2,3,5} 写 [2,5] 缺 3）
+            # → 黄提示不拦（P1-1 裁决：档位集合可配后作者自选档位组合——只建议）
             for skill, pcs in by_skill.items():
                 if not pcs:
                     continue
-                if 2 not in pcs:
-                    _err(report, f"{base}.skills", "2c2d-V3",
-                         rule="set_skill_missing_start", skill=skill, pieces=sorted(pcs),
-                         msg="skill %r 档位须从 2 起连续（缺 2，V3）" % skill)
-                    continue
-                need: Optional[int] = 2
-                ordered = [p for p in SET_PIECE_COUNTS if p in pcs]
-                for pc in ordered:
-                    if pc == need:
-                        need = SET_PIECE_COUNTS[SET_PIECE_COUNTS.index(pc) + 1] \
-                            if SET_PIECE_COUNTS.index(pc) + 1 < len(SET_PIECE_COUNTS) else None
-                    else:
-                        _err(report, f"{base}.skills", "2c2d-V3",
-                             rule="set_skill_gap", skill=skill, pieces=sorted(pcs),
-                             msg="skill %r 档位 %s 跳档（须 2/3/5 连续，V3）"
-                                 % (skill, sorted(pcs)))
+                ordered = sorted(pcs)
+                if list(pcs) != ordered:
+                    _warn(report, f"{base}.skills", "2c2d-V3",
+                          rule="set_skill_order_warn", skill=skill, pieces=sorted(pcs),
+                          msg="skill %r 档位未按升序（建议递增，仅提示）" % skill)
+                # 缺中间档判定：配置集合中存在 between(相邻档位) 的档位未写
+                for a, b in zip(ordered, ordered[1:]):
+                    between = [x for x in allowed_pc if a < x < b]
+                    if between:
+                        _warn(report, f"{base}.skills", "2c2d-V3",
+                              rule="set_skill_gap_warn", skill=skill, pieces=sorted(pcs),
+                              msg="skill %r 档位 %s 缺中间档（配置集合可含跳档，仅提示）"
+                                  % (skill, sorted(pcs)))
                         break
             # W4 黄：level 超默认封顶 3
             for ki, k in enumerate(skills):

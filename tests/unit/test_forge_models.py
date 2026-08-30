@@ -774,15 +774,37 @@ def test_2c2d_v3_set_skill_piece_count() -> None:
         "piece_count 非法应 V3 红拦"
 
 
-def test_2c2d_v3_set_skill_gap() -> None:
-    """2c2d V3：同一 skill 档位跳档（2,5 缺 3）→ 硬错。"""
+def test_2c2d_v3_set_skill_gap_warn() -> None:
+    """2c2d V3（P1-1 裁决 2026-08-30）：同一 skill 档位跳档（2,5 缺 3）→ 黄提示不拦
+    （档位集合可配后作者自选档位组合——只建议不限制）。"""
     m = _legal_modules()
     m["forge"]["sets"][0]["skills"] = [
         {"piece_count": 2, "skill": "dragon_guard", "level": 1},
         {"piece_count": 5, "skill": "dragon_guard", "level": 3},  # 缺 3
     ]
     report = _run(m)
-    assert "set_skill_gap" in _rules(report, "errors"), "档位跳档应 V3 红拦"
+    assert "set_skill_gap_warn" in _rules(report, "warnings"), "档位缺中间档应黄提示"
+    assert "set_skill_gap" not in _rules(report, "errors"), "缺档不再硬拦（P1-1 裁决）"
+
+
+def test_2c2d_v3_set_skill_piece_count_config() -> None:
+    """2c2d V3（P1-1 裁决配置化）：piece_count 不在配置档位集合 → 硬拦；配置集合可改。"""
+    # 默认 {2,3,5}：piece_count=4 硬拦
+    m = _legal_modules()
+    m["forge"]["sets"][0]["skills"][0]["piece_count"] = 4
+    report = _run(m)
+    assert "set_skill_piece_count_invalid" in _rules(report, "errors"), \
+        "piece_count 不在配置集合应硬拦"
+    # 配置改为 [1,4]：piece_count=4 合法，=2 反硬拦
+    m2 = _legal_modules()
+    m2["forge"]["sets"][0]["skills"] = [
+        {"piece_count": 1, "skill": "dragon_guard", "level": 1},
+        {"piece_count": 4, "skill": "dragon_guard", "level": 2},
+    ]
+    m2["forge"]["settings"]["set_piece_counts"] = [1, 4]
+    report2 = _run(m2)
+    assert report2.errors == [], f"配置集合 [1,4] 下档位 1/4 应合法，got {report2.errors}"
+    assert "set_skill_piece_count_invalid" not in _rules(report2, "errors")
 
 
 def test_2c2d_v3_set_skill_level_invalid() -> None:

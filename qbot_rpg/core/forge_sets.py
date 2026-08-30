@@ -261,14 +261,34 @@ def _resolved_modules(
     return new_modules
 
 
+def _configured_piece_counts(modules: Mapping[str, object]) -> Tuple[int, ...]:
+    """配置档位集合（P1-1 裁决 2026-08-30 配置化）：读 settings.forge.set_piece_counts
+    正整数列表去重升序；缺省/非合法 → SET_PIECE_COUNTS 默认 (2, 3, 5)。"""
+    settings_v = modules.get("settings")
+    if isinstance(settings_v, Mapping):
+        forge_v = settings_v.get("forge")
+        if isinstance(forge_v, Mapping):
+            spc = forge_v.get("set_piece_counts")
+            if isinstance(spc, (list, tuple)):
+                cleaned = tuple(sorted({
+                    x for x in spc
+                    if isinstance(x, int) and not isinstance(x, bool) and x >= 1
+                }))
+                if cleaned:
+                    return cleaned
+    return SET_PIECE_COUNTS
+
+
 def _check_structure_v(
     modules: Mapping[str, object], sets: Sequence[ForgeSet]
 ) -> List[Dict[str, object]]:
     """本路纯结构 V1~V3 兜底（F-2：无树时批0 短路，本路保证 sets 可独立验）。
 
     V1 集合查重 (family_id,variant) / V2 件数范围（pieces 1~5，每件非空 str）/
-    V3 技能引用存在（skills≥1、skill 非空、piece_count∈{2,3,5}、level∈{1,2,3}）。
+    V3 技能引用存在（skills≥1、skill 非空、piece_count∈配置档位集合（缺省 {2,3,5}）、
+    level∈{1,2,3}）。档位集合读 settings.forge.set_piece_counts（P1-1 裁决配置化）。
     """
+    allowed_pc: Tuple[int, ...] = _configured_piece_counts(modules)
     errors: List[Dict[str, object]] = []
     seen_combo: set = set()
     for si, s in enumerate(sets):
@@ -315,11 +335,12 @@ def _check_structure_v(
                     "msg": "skill 必填（6a 技能库 id，V3）",
                     "detail": {}, "source": "route7a",
                 })
-            if sk.piece_count not in SET_PIECE_COUNTS:
+            if sk.piece_count not in allowed_pc:
                 errors.append({
                     "level": "V3", "rule": "set_skill_piece_count_invalid",
                     "field": "%s.piece_count" % kbase,
-                    "msg": "piece_count %r 不认识（{2,3,5}，V3）" % (sk.piece_count,),
+                    "msg": ("piece_count %r 不在配置档位集合 %s（V3）"
+                            % (sk.piece_count, list(allowed_pc))),
                     "detail": {"piece_count": sk.piece_count}, "source": "route7a",
                 })
             if not isinstance(sk.level, int) or sk.level < 1 or sk.level > SET_LEVEL_MAX:

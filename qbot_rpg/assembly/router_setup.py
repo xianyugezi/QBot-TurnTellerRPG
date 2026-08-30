@@ -57,7 +57,7 @@ from qbot_rpg.commands import (
     use_commands,
 )
 from qbot_rpg.commands.parsers import DEFAULT_WHITELIST
-from qbot_rpg.commands.router import AliasTable, Router
+from qbot_rpg.commands.router import AliasTable, CommandSpec, Router
 from qbot_rpg.data.gm_constants import GM_COMMANDS
 
 __all__ = [
@@ -93,6 +93,13 @@ REGISTER_GROUPS: tuple = (
     forge_commands.register_forge_commands,        # M9 锻造 六指令（P0-1 收口 2026-08-30：
     #   /锻造 /确认 /图纸 /锻造树 /套装 /客制；/确认 状态分派器 replace 接管炼金同名）
 )
+
+
+def _stub_unimplemented(hint: str) -> Callable[..., str]:
+    """未实装指令 stub handler（固定提示；CommandSpec.handler 契约 (parsed, *a, **k)）。"""
+    def _h(parsed: Any, *a: Any, **k: Any) -> str:
+        return hint
+    return _h
 
 
 # ---------------------------------------------------------------------------
@@ -189,6 +196,25 @@ def build_router(deps: Any) -> Router:
     ctx_factory = _resolve_make_context(deps)
     for reg in REGISTER_GROUPS:
         reg(router, make_context=ctx_factory)
+
+    # 【2026-08-30 实机反馈】白名单/帮助引导过但尚未实现的指令 → 明确「尚未实装」提示，
+    # 不再静默空回（玩家发「锁定1/怪物/采集/强化/调合/职业/转职」收到空串=像 bug）。
+    # 逐个注册 stub（handler 返回固定提示；占位待对应里程碑实现后移除）。
+    _UNIMPLEMENTED_HINTS: Dict[str, str] = {
+        "锁定": "❌ 战斗锁定尚未实装（后续里程碑；当前用 /攻击 进入战斗）",
+        "锁定怪物": "❌ 战斗锁定尚未实装（后续里程碑；当前用 /攻击 进入战斗）",
+        "怪物": "❌ 怪物列表尚未实装（后续里程碑）",
+        "采集": "❌ 采集尚未实装（后续里程碑）",
+        "强化": "❌ 装备强化尚未实装（后续里程碑）",
+        "调合": "❌ 调合尚未实装（后续里程碑）",
+        "职业": "❌ 职业面板尚未实装（后续里程碑；/技能 查看技能）",
+        "职业列表": "❌ 职业列表尚未实装（后续里程碑）",
+        "转职": "❌ 转职尚未实装（后续里程碑）",
+    }
+    for _name, _hint in _UNIMPLEMENTED_HINTS.items():
+        if _name not in set(router.names()):
+            router.register(CommandSpec(_name, whitelisted=True,
+                                        handler=_stub_unimplemented(_hint)))
 
     # RA-07 配置装载（鸭式挂载，见模块工程补白 2；setattr 规避 Router 无属性槽的
     # 静态检查告警——Router 为 M4 交付类，本层只挂不改）

@@ -848,6 +848,13 @@ def register_battle_commands(router: Any, *, make_context: Optional[Callable[[An
 
     def _wrap(fn: Callable[..., dict]) -> Callable[..., dict]:
         def handler(parsed: Any, *a: Any, **k: Any) -> dict:
+            # 优先复用 runner 已构建 ctx（A-03 注入 k["ctx"]；含 sender/player/battle_engine
+            # 等完整上下文）——否则回退 _ctx(parsed)（smoke/测试路径，批次7 待接线兜底）。
+            # 【2026-08-30 实机修复】此前恒调 _ctx(parsed) → 运行中事件循环内同步调
+            # async make_context 报【待接线】；对齐 basic_commands._wrap 注入优先。
+            injected = k.get("ctx") if isinstance(k, dict) else None
+            if isinstance(injected, MutableMapping):
+                return fn(parsed, injected)
             return fn(parsed, _ctx(parsed))
         return handler
 

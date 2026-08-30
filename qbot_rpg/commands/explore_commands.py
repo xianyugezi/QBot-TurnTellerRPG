@@ -27,6 +27,7 @@ from .sender import format_tpl12
 ENTER_CMD = "进入"
 REST_CMD = "休息"
 POSITION_CMD = "位置"  # M9 实机反馈修复（2026-08-30）：帮助/Tip 引导「位置」但从未实现 → 静默空回
+MAP_CMD = "地图"  # 实机反馈修复（2026-08-30）：白名单引导「地图」但从未实现 → 静默空回
 
 # RUL-08 注册门槛（对齐 basic_commands：未注册玩家使用游玩指令 → 统一拦截）
 TPL_REGISTER_GATE = "❌ 请先 /注册 创建角色（/注册 名字 职业）"
@@ -221,6 +222,25 @@ def _player_ctx(ctx: Mapping[str, Any]) -> Mapping[str, Any]:
     return player if isinstance(player, Mapping) else ctx
 
 
+def cmd_map(parsed: Any, ctx: Mapping[str, Any]) -> str:
+    """/地图 非隐藏地图列表（定稿 L1273：序号=进入参数；2026-08-30 实机反馈：
+    白名单引导但从未实现 → 静默空回）。复用 maps index 渲染地图+通道。"""
+    g = _gate(ctx)
+    if g is not None:
+        return g
+    index = _maps_index_for(ctx)
+    if not index:
+        return "❌ 当前没有可探索的地图（/进入 尝试）"
+    lines = ["【地图】"]
+    for mid in list(index.keys()):
+        entry = index[mid]
+        if not entry:
+            continue
+        name = entry.get("name") if isinstance(entry, Mapping) else getattr(entry, "name", None) or mid
+        lines.append(f"{mid}：{name}")
+    return "\n".join(lines) + "\nTip:发送'进入 <地图id>'前往"
+
+
 def cmd_position(parsed: Any, ctx: Mapping[str, Any]) -> str:
     """/位置 查询当前地点（M9 实机反馈修复 2026-08-30：帮助/Tip 引导但从未实现 → 静默空回）。
 
@@ -326,4 +346,5 @@ def register_explore_commands(router: Any, *,
     router.register(CommandSpec(ENTER_CMD, handler=_wrap(cmd_enter)))
     router.register(CommandSpec(REST_CMD, handler=_wrap(cmd_rest)))
     router.register(CommandSpec(POSITION_CMD, handler=_wrap(cmd_position)))
+    router.register(CommandSpec(MAP_CMD, handler=_wrap(cmd_map)))
     return router

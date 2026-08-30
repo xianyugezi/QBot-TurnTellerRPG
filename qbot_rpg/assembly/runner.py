@@ -498,6 +498,11 @@ def _make_sender(deps: Any, ctx: Mapping[str, Any]):
     前缀渲染（M5 7 字段）→ prefixed.text 非空 → sender.send（CQ 转义/分片/重试）。
     """
     sender_obj = getattr(deps, "sender", None) or Sender()
+    # M5-08 战斗 ctx 契约：ctx["sender"] = Sender 统一出口（battle_commands._sender_of
+    # 消费；批次7 待接线遗留 → 实机修复 2026-08-30：装配时注入 Sender 实例）。
+    # ctx 为 MutableMapping（run_command 构建）→ 就地挂 sender；不可变映射跳过。
+    if isinstance(ctx, MutableMapping):
+        ctx["sender"] = sender_obj
     state: Dict[str, Any] = {"sent": None}
     channel = str(ctx.get("channel") or CHANNEL_GROUP)
 

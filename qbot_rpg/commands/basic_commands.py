@@ -136,6 +136,7 @@ VIEW_DETAIL_CMD = "角色详细"  # 2026-08-27 用户拍板：/角色 简洁版 
 BAG_CMD = "背包"
 EQUIP_CMD = "装备"
 SKILL_CMD = "技能"
+MY_SKILL_CMD = "我的技能"  # 2026-08-30 实机反馈：玩家用「我的技能」→ 映射 技能（别名）
 HELP_CMD = "帮助"
 
 # 装备子指令词（非解析器固定子词，经 args 位置参数识别；对齐 checkin「状态/补签」模式）
@@ -1589,5 +1590,6 @@ def register_basic_commands(router: Any, *, make_context: Optional[Callable[[Any
     router.register(CommandSpec(BAG_FILTER_CMD, handler=_wrap(cmd_bag_filter)))
     router.register(CommandSpec(EQUIP_CMD, handler=_wrap(cmd_equip)))
     router.register(CommandSpec(SKILL_CMD, handler=_wrap(cmd_skill)))
+    router.register(CommandSpec(MY_SKILL_CMD, handler=_wrap(cmd_skill)))  # 我的技能 → 技能
     router.register(CommandSpec(HELP_CMD, handler=_wrap(cmd_help)))
     return router

@@ -28,7 +28,7 @@ from qbot_rpg.data.gm_constants import GM_COMMANDS
 # 9 组 22 指令（RA-06 M7 落地时点；gm 归 M12）——确定性注册清单断言锚点
 ALL_REGISTERED = {
     # basic
-    "角色", "角色详细", "背包", "背包筛选", "装备", "技能", "帮助",
+    "角色", "角色详细", "背包", "背包筛选", "装备", "技能", "我的技能", "帮助",
     # register
     "注册",
     # unregister（2026-08-28 新增）
@@ -48,7 +48,7 @@ ALL_REGISTERED = {
     # battle
     "攻击",
     # explore
-    "进入", "休息", "位置",
+    "进入", "休息", "位置", "地图",
     # dialog（N-01，BCH-03）
     "对话",
     # log（F-03/F-04，BCH-05；is_gm=True）
@@ -66,6 +66,8 @@ ALL_REGISTERED = {
     # M9 锻造（批C 审查 P0-1 收口 2026-08-30：六指令注册；/确认 状态分派器
     # replace 接管炼金同名，故 /确认 仍在此集合单份）
     "锻造", "图纸", "锻造树", "套装", "客制",
+    # 2026-08-30 实机反馈 stub（白名单引导但未实装指令 → 明确提示，防静默空回）
+    "锁定", "锁定怪物", "怪物", "采集", "强化", "调合", "职业", "职业列表", "转职",
 }
 
 # 关键指令（TCA-02/03 冒烟锚点：状态/背包/任务/商店 handler 可调）
@@ -329,7 +331,7 @@ def test_check_consistency_whitelist_unregistered_is_expected_m7() -> None:
     unreg = set(result["whitelist_not_registered"])
     # 已知 M7 未注册（信息性）——锚点抽样防未来漂移；「炼金」M8 已注册移出预期
     # （M8 批11-2 收口：炼金 30+ 指令全部注册 + 白名单覆盖）
-    assert {"重载", "地图", "快捷绑定"} <= unreg
+    assert {"重载", "快捷绑定", "封禁"} <= unreg
     assert not (unreg & set(ALL_REGISTERED))  # 已注册指令绝不落入白名单缺注册
 
 

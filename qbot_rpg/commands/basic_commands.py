@@ -334,18 +334,18 @@ def _base_header(ctx: Mapping[str, Any], label: str) -> str:
 
 
 def view_header(ctx: Mapping[str, Any]) -> str:
-    """LV 行固定头部（4f RUL-11 + 任务口径）：`【角色】Lv3.阿伟（战士） ｜ 经验 320/1000`。"""
+    """LV 行固定头部（4f RUL-11 + 任务口径；2026-08-31 模板优化：垂直两行——
+    `【角色】Lv3.阿伟（战士）` + 独立经验行 `经验 320/1000`，防手机端一行超长折行）。"""
     head = _base_header(ctx, "角色")
     f = _player_fields(ctx)
     max_lv = ctx.get("max_level")
     if max_lv is not None and f["level"] >= int(max_lv):
-        head += " ｜ 【已满级】"
-    elif f["exp"] is not None:
+        return f"{head}\n【已满级】"
+    if f["exp"] is not None:
         nxt = ctx.get("exp_next")
         if nxt is not None:
-            head += f" ｜ 经验 {_fmt_num(f['exp'])}/{_fmt_num(nxt)}"
-        else:
-            head += f" ｜ 经验 {_fmt_num(f['exp'])}"
+            return f"{head}\n经验 {_fmt_num(f['exp'])}/{_fmt_num(nxt)}"
+        return f"{head}\n经验 {_fmt_num(f['exp'])}"
     return head
 
 
@@ -1401,7 +1401,7 @@ def _render_skill_page(ctx: Mapping[str, Any], page: int) -> str:
     slice_ids = sids[start:start + DEFAULT_PAGE_SIZE]
     f = _player_fields(ctx)
     job = str(ctx.get("job_name") or _job_name(ctx, f["job_id"]) or "?")
-    lines: List[str] = [f"【技能】Lv{f['level']}.{f['name']}（{job}）｜ 技能 {len(sids)} 项"]
+    lines: List[str] = [f"【技能】Lv{f['level']}.{f['name']}（{job}）", f"技能 {len(sids)} 项"]
     for i, sid in enumerate(slice_ids):
         lines.append(skill_line(start + i + 1, sid, ctx))
     if sids:

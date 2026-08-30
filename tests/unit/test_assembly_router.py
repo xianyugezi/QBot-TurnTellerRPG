@@ -380,7 +380,8 @@ def test_default_adapter_bridges_real_async_make_context() -> None:
     router = build_router(deps)  # 未注入 make_context → 默认适配器
     out = router.get("状态").handler(parse("/状态"))  # type: ignore[misc,union-attr]
     assert isinstance(out, str)
-    assert "阿伟" in out  # 已注册玩家 ctx（真实 make_context 全字段）渲染
+    assert "【等级】35" in out  # 已注册玩家 ctx（真实 make_context 全字段）渲染
+    # 2026-08-31 模板优化：状态面板不再自带前缀（runner 统一注入）→ 不再断言玩家名
 
 
 def test_default_adapter_unregistered_player_prompt() -> None:

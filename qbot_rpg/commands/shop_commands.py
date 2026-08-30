@@ -253,32 +253,34 @@ def _paginate(items: list, page: object,
 
 
 def _browse_header(shop: Mapping[str, Any]) -> str:
-    """商品列表头：`{icon}{name} {类型徽标} {desc}`（表头不计入 5 条上限，3d §2.1）。"""
-    parts: List[str] = []
-    name = f"{strip_icon_emoji(shop.get('icon', ''))}{shop.get('name', '')}"
-    parts.append(name or "商店")
+    """商品列表头（2026-08-31 模板优化：垂直两行——`{name} {类型徽标}` + `{desc}`；
+    icon 字段渲染剥离（M5 裁决，防「店」等数据符号泄漏进店名）；表头不计入 5 条上限）。"""
+    name = shop.get("name", "") or "商店"
+    parts: List[str] = [str(name)]
     t = shop.get("type", "normal")
     if t in TYPE_BADGES:
         parts.append(TYPE_BADGES[t])
+    line1 = " ".join(parts)
     if shop.get("desc"):
-        parts.append(str(shop["desc"]))
-    return " ".join(parts)
+        return f"{line1}\n{shop['desc']}"
+    return line1
 
 
 def _browse_row_text(row: Mapping[str, Any], ctx: Mapping[str, Any]) -> str:
-    """商品行（2b3 TC-05/07，意见一同步：折扣商品不显示原价）：
-    `序号.物品名 ｜ 商品单价：价格(货币名) 标记`（折扣只附 `[折扣 -X%]`）。"""
+    """商品行（2b3 TC-05/07，意见一同步：折扣商品不显示原价；2026-08-31 模板优化：
+    垂直堆叠两行——`序号.名称` 换行 `单价：价格`；库存/限购/门槛标记并到第二行尾；
+    折扣附 `[折扣 -X%]`。每行 ≤20 字防手机端折行）。"""
     idx = row.get("index", "?")
     name = row.get("name", "?")
-    parts: List[str] = [f"{idx}. {name}", f"商品单价：{_price_text(row.get('price'), ctx)}"]
-    line = " ｜ ".join(parts)
+    line1 = f"{idx}. {name}"
+    line2 = f"　单价：{_price_text(row.get('price'), ctx)}"
     discount = row.get("discount") or 0
     markers = list(row.get("markers", []) or [])
     if discount:
         markers.append(f"[折扣 -{discount}%]")
     if markers:
-        line += " " + " ".join(str(m) for m in markers)
-    return line
+        line2 += " " + " ".join(str(m) for m in markers)
+    return f"{line1}\n{line2}"
 
 
 def render_shop_items(shop: Mapping[str, Any], rows: list, page: object,
@@ -289,7 +291,7 @@ def render_shop_items(shop: Mapping[str, Any], rows: list, page: object,
     sl, pg, pgs, total, clamped = _paginate(rows, page, per_page)
     if not sl:
         return f"{_browse_header(shop)}\n{_EMPTY_SHOP}"
-    body = f"\n{_ROW_SEPARATOR}\n".join(_browse_row_text(r, ctx) for r in sl)
+    body = "\n\n".join(_browse_row_text(r, ctx) for r in sl)
     out: List[str] = [_browse_header(shop), body]
     tail = render_cake_tail(pg, pgs, tip=_BROWSE_TAIL_TIP)
     if clamped:

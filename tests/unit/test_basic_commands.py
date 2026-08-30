@@ -193,7 +193,8 @@ def test_view_noarg_page1():
     """/角色 → LV 行固定头部 + 简洁属性前 5 条（不显示白值/加成/临时三层，2026-08-27 用户拍板）。"""
     out = cmd_view(parse("/角色"), make_ctx())
     lines = out.splitlines()
-    assert lines[0] == "【角色】Lv3.阿伟（战士） ｜ 经验 320/1000"
+    assert lines[0] == "【角色】Lv3.阿伟（战士）"
+    assert lines[1] == "经验 320/1000"
     # 资源型：当前/上限
     assert "【生命】30/100" in out
     assert "【魔力】8/30" in out
@@ -248,7 +249,7 @@ def test_view_noarg_equiv_page1():
 def test_view_max_level_header():
     """/角色 满级头：Lv≥max_level → 【已满级】。"""
     out = cmd_view(parse("/角色"), make_ctx(level=45, max_level=45, exp=99999))
-    assert "【角色】Lv45.阿伟（战士） ｜ 【已满级】" in out.splitlines()[0]
+    assert "【角色】Lv45.阿伟（战士）\n【已满级】" in out
 
 
 def test_attr_line_pure():
@@ -475,7 +476,8 @@ def test_skill_page1():
     """/技能 → LV 行固定头部 + 技能行（类型/MP/描述/派生指向）+ 5 条/页 + TPL-08。"""
     out = cmd_skill(parse("/技能"), make_ctx())
     lines = out.splitlines()
-    assert lines[0] == "【技能】Lv3.阿伟（战士）｜ 技能 6 项"
+    assert lines[0] == "【技能】Lv3.阿伟（战士）"
+    assert lines[1] == "技能 6 项"
     assert "1. 攻击（普攻） ｜ 对目标发起普通攻击" in out            # basic 固定第 1 位；MP 0 不显示
     assert "2. 火球术（主动） 12 MP ｜ 对目标造成火焰伤害 ｜ 可派生成：陨星落" in out
     assert "3. 重击（主动） 8 MP ｜ 重击地面目标 ｜ 可派生成：陨星落" in out
@@ -526,7 +528,7 @@ def test_skill_invalid_tpl12(raw):
 def test_skill_empty():
     """/技能 无技能 → 仅 LV 行固定头部（技能 0 项），无页脚。"""
     out = cmd_skill(parse("/技能"), make_ctx(skills={}))
-    assert out == "【技能】Lv3.阿伟（战士）｜ 技能 0 项"
+    assert out == "【技能】Lv3.阿伟（战士）\n技能 0 项"
 
 
 # ---------------------------------------------------------------------------

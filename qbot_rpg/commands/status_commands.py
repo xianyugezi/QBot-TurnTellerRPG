@@ -392,7 +392,6 @@ def cmd_status(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         return format_tpl12(_fragment(parsed))
 
     lines: List[str] = [
-        prefix_line(ctx),
         level_line(ctx),
         attr_line(ctx),
         location_line(ctx),

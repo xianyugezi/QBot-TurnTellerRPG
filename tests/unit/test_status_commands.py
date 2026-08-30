@@ -69,20 +69,20 @@ def parse(raw: str) -> ParsedCommand:
 # ---------------------------------------------------------------------------
 
 def test_tc_stt_01_overview_panel():
-    """TC-STT-01：/状态 → 前缀行 + 等级/经验行 + 属性行 + 位置行 + 效果区（无效果 【效果】无）。
+    """/状态 → 等级/经验行 + 属性行 + 位置行 + 效果区（无效果 【效果】无）。
+    2026-08-31 模板优化：前缀由 runner 统一注入（remove status 自带 prefix_line → 防双前缀）。
     意见一同步：等级/经验各占一行、属性每项独立一行（去 ｜）。"""
     out = cmd_status(parse("/状态"), make_ctx())
     lines = out.splitlines()
-    assert lines[0] == "Lv3.阿伟 -斩龙者-"                      # ① 前缀行
-    assert lines[1] == "【等级】3"                               # ② 等级行（独立一行）
-    assert lines[2] == "【经验】320/1000"                        # ② 经验行（独立一行）
-    assert lines[3] == "【生命】21/100"                          # ③ 属性行（每项独立一行）
-    assert lines[4] == "【魔力】8/30"
-    assert lines[5] == "【攻击】15"
-    assert lines[6] == "【防御】10"
-    assert lines[7] == "【位置】新手村 · 中央广场"               # ④ 位置行
-    assert lines[8] == "【效果】无"                              # ⑤ 效果区
-    assert len(lines) == 9                                       # 战斗外无目标行
+    assert lines[0] == "【等级】3"                               # ① 等级行（独立一行）
+    assert lines[1] == "【经验】320/1000"                        # ② 经验行（独立一行）
+    assert lines[2] == "【生命】21/100"                          # ③ 属性行（每项独立一行）
+    assert lines[3] == "【魔力】8/30"
+    assert lines[4] == "【攻击】15"
+    assert lines[5] == "【防御】10"
+    assert lines[6] == "【位置】新手村 · 中央广场"               # ④ 位置行
+    assert lines[7] == "【效果】无"                              # ⑤ 效果区
+    assert len(lines) == 8                                       # 战斗外无目标行、无前缀行
 
 
 def test_stt_prefix_no_title_dashes():
@@ -206,10 +206,10 @@ def test_tc_stt_03_battle_target_line():
     out = cmd_status(parse("/状态"), ctx)
     lines = out.splitlines()
     assert "【目标】史莱姆 18/30（第 3 回合）" in out
-    # 目标行位于位置行之后、效果区之前（TPL-4F-03 行序；意见一后行号前移）
-    assert lines[7] == "【位置】新手村 · 中央广场"
-    assert lines[8] == "【目标】史莱姆 18/30（第 3 回合）"
-    assert lines[9] == "【效果】无"
+    # 目标行位于位置行之后、效果区之前（TPL-4F-03 行序；2026-08-31 去前缀后前移）
+    assert lines[6] == "【位置】新手村 · 中央广场"
+    assert lines[7] == "【目标】史莱姆 18/30（第 3 回合）"
+    assert lines[8] == "【效果】无"
     # 战斗指令并行不互斥：/状态 照常渲染（非战斗指令不受限，框架 L248）
     assert target_line(ctx) == "【目标】史莱姆 18/30（第 3 回合）"
 
@@ -296,7 +296,7 @@ def test_router_parse_integration():
     router = Router()
     register_status_commands(router, make_context=lambda p: make_ctx())
     out = router.get(STATUS_CMD).handler(parse("/状态"))
-    assert out.startswith("Lv3.阿伟 -斩龙者-")
+    assert out.startswith("【等级】3")
     assert "【效果】无" in out
 
 

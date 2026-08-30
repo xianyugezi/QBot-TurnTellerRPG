@@ -168,6 +168,35 @@ def _channel_lines(index: Mapping[str, Any], target: Any) -> List[str]:
     return lines
 
 
+def _wrap_desc(desc: str, limit: int = 24) -> List[str]:
+    """地图介绍按标点折行（2026-08-31 模板优化：防手机端单行超长折行错位）。
+
+    以 、，。！？；; 为断点分段；每段 ≤limit 字；超长段硬切（保留完整语义的近似）。
+    """
+    text = str(desc)
+    if not text:
+        return []
+    segs: List[str] = []
+    buf = ""
+    for ch in text:
+        buf += ch
+        if ch in "、，。！？；;":
+            segs.append(buf)
+            buf = ""
+    if buf:
+        segs.append(buf)
+    out: List[str] = []
+    for s in segs:
+        s = s.strip()
+        if not s:
+            continue
+        while len(s) > limit:
+            out.append(s[:limit])
+            s = s[limit:]
+        out.append(s)
+    return out
+
+
 def _render_enter(result: Mapping[str, Any],
                   ctx: Optional[Mapping[str, Any]] = None) -> str:
     """/进入 结果 → 1 条消息文本（move / dungeon / 失败）。
@@ -187,7 +216,12 @@ def _render_enter(result: Mapping[str, Any],
     lines = [f"✅ 你来到了「{name}」"]
     desc = result.get("desc") or ""
     if desc:
-        lines.append(f"地图介绍：{desc}")
+        wrapped = _wrap_desc(desc)
+        if len(wrapped) > 1:
+            lines.append("地图介绍：")
+            lines.extend(f"　{s}" for s in wrapped)
+        else:
+            lines.append(f"地图介绍：{desc}")
     lore = result.get("lore") or ""
     if lore:
         lines.append(str(lore))

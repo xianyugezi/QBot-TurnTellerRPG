@@ -70,7 +70,7 @@ ALL_REGISTERED = {
     "打造", "铸造",
     # 2026-08-30 实机反馈 stub（白名单引导但未实装指令 → 明确提示，防静默空回）
     "锁定", "锁定怪物", "怪物", "采集", "强化", "调合", "职业", "职业列表", "转职",
-    "防御", "道具", "逃跑", "快捷绑定",
+    "快捷绑定",
 }
 
 # 关键指令（TCA-02/03 冒烟锚点：状态/背包/任务/商店 handler 可调）
@@ -353,6 +353,22 @@ def test_check_consistency_deterministic_sorted() -> None:
     first = check_consistency(router)
     second = check_consistency(router)
     assert first == second
+
+
+def test_removed_combat_commands_never_registered() -> None:
+    """【2026-08-31 用户拍板·永久守卫】防御/道具/逃跑 三个战斗指令已定稿删除
+    （引擎机制保留只删入口）——绝不允许以任何形式（白名单/注册/stub/帮助）再出现。
+    若有回归把这三个词拉回指令体系，此测试立即红。"""
+    from qbot_rpg.commands.basic_commands import HELP_GROUPS
+    from qbot_rpg.commands.parsers import DEFAULT_WHITELIST
+
+    router = build_router(_deps(make_context=_stub_ctx))
+    for word in ("防御", "道具", "逃跑"):
+        assert word not in DEFAULT_WHITELIST, f"{word} 被加回白名单（违反拍板）"
+        assert word not in set(router.names()), f"{word} 被重新注册（违反拍板）"
+        for _g, items in HELP_GROUPS:
+            for _cmd, _desc in items:
+                assert _cmd != word, f"{word} 被加回帮助菜单（违反拍板）"
 
 
 # ---------------------------------------------------------------------------

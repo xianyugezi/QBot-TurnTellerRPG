@@ -538,7 +538,8 @@ def test_help_directory_normal():
     out = cmd_help(parse("/帮助"), make_ctx())
     assert "【指令总览】输入 /帮助 组名 查看该组指令" in out
     assert "冒险 —— 角色/背包/装备/位置/进入…（/帮助 冒险）" in out
-    assert "战斗 —— 攻击/防御/道具/逃跑/技能（/帮助 战斗）" in out
+    assert "战斗 —— 攻击/技能（/帮助 战斗）" in out
+    assert "防御" not in out and "道具" not in out and "逃跑" not in out  # 2026-08-31 拍板：三战斗指令永删
     assert "快捷 —— 快捷绑定/快捷解绑/快捷列表（/帮助 快捷）" in out
     assert "GM" not in out                 # RUL-25 普通玩家不渲染 GM 组
     assert "输入 /帮助 页码 翻页" not in out  # 5 组单页无页脚
@@ -572,10 +573,11 @@ def test_help_group_page2():
 
 
 def test_help_group_single_page_no_footer():
-    """/帮助 战斗（5 条组）→ 单页无页脚。"""
+    """/帮助 战斗（2 条组）→ 单页无页脚。2026-08-31 拍板：防御/道具/逃跑 已删，战斗组仅 攻击/技能。"""
     out = cmd_help(parse("/帮助 战斗"), make_ctx())
     assert "1. 攻击 —— 选择技能攻击目标" in out
-    assert "5. 技能 —— 查看技能列表" in out
+    assert "2. 技能 —— 查看技能列表" in out
+    assert "防御" not in out and "道具" not in out and "逃跑" not in out
     assert "输入 /帮助 战斗 页码 翻页" not in out
 
 

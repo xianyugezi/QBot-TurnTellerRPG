@@ -27,16 +27,35 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any, Callable, Optional
 
 __all__ = [
     "CHANNEL_DEFAULT",
     "build_event",
     "run_bridge",
+    "strip_at_mentions",
 ]
 
 # 平台缺省通道（对齐 prefix_wiring.CHANNEL_GROUP = "group"，前缀注入/发送出口消费）
 CHANNEL_DEFAULT = "group"
+
+# 开头 @提及 段（QQ 场景：@机器人+指令 的前导 @ 标记；支持多个连续 @ 与全角空格分隔）
+_AT_MENTION_RE = re.compile(r"^(?:\s*@[^\s@]+[\s\u3000]*)+")
+
+
+def strip_at_mentions(text: str) -> str:
+    """剥离消息开头的 @提及 段（P2-17 QA：@机器人+指令 被静默忽略）。
+
+    入参 text: 纯文本消息（build_event 已归一）。
+    出参 str: 剥离开头一个或多个「@QQ号/@昵称」段后的剩余文本（保持后续原文，
+      仅去前导空白）。非 @ 开头消息原样返回；纯 @提及（无指令）→ 空串（路由忽略）。
+    核心逻辑: 正则 ^(?:空格*@非空白+空白*)+ 匹配开头连续 @ 段并剥离；确定性纯函数。
+    """
+    m = _AT_MENTION_RE.match(text)
+    if not m:
+        return text
+    return text[m.end():].lstrip()
 
 
 def _msg_to_str(message: Any) -> str:
@@ -69,12 +88,14 @@ def build_event(event: Any) -> dict:
     出参 dict：{group_id, user_id, message, channel, message_id, group_name}——
       标量字段强制 str（幂等键/路由消费口径），message 经 _msg_to_str 归一纯文本，
       channel 缺省 CHANNEL_DEFAULT("group")，group_name 缺省 None。
-    核心逻辑: getattr 逐字段提取 + 归一；缺失字段安全空值，不抛异常（确定性）。
+    核心逻辑: getattr 逐字段提取 + 归一；缺失字段安全空值，不抛异常（确定性）；
+    message 经 _msg_to_str 归一纯文本后再剥离开头 @提及（P2-17 QA：@机器人+指令
+    被静默忽略 → 剥离 @ 段后正常路由）。
     """
     return {
         "group_id": str(getattr(event, "group_id", "") or ""),
         "user_id": str(getattr(event, "user_id", "") or ""),
-        "message": _msg_to_str(getattr(event, "message", "")),
+        "message": strip_at_mentions(_msg_to_str(getattr(event, "message", ""))),
         "channel": str(getattr(event, "channel", None) or CHANNEL_DEFAULT),
         "message_id": str(getattr(event, "message_id", "") or ""),
         "group_name": getattr(event, "group_name", None),

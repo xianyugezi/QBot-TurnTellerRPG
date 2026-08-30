@@ -81,6 +81,7 @@ __all__ = [
 # ---------------------------------------------------------------------------
 
 STATUS_CMD = "状态"
+MY_STATUS_CMD = "我的状态"  # 2026-08-31 QA P1-3：玩家口语变体「我的状态」→ 映射 /状态
 
 # 效果区最多展示数量（STT-03 / RUL-13：默认前 5 个 + 还有 N 个状态）
 EFFECTS_SHOWN = 5
@@ -434,4 +435,5 @@ def register_status_commands(
         return cmd_status(parsed, _ctx(parsed))
 
     router.register(CommandSpec(STATUS_CMD, handler=_status))
+    router.register(CommandSpec(MY_STATUS_CMD, handler=_status))  # 我的状态 → 状态
     return router

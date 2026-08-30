@@ -88,18 +88,61 @@ def _registry_of(ctx: Mapping[str, Any]):
     return reg if hasattr(reg, "all_ids") else None
 
 
-def _total_of(ctx: Mapping[str, Any], category: str) -> int:
-    """分册可收集总数（registry all_ids 与 CATEGORIES kinds 并集）。"""
+def _item_def_type(reg, iid: str) -> object:
+    """条目 type（items 表 Def.raw.get / Mapping.get，查无 → None）。"""
+    resolve = getattr(reg, "resolve", None)
+    if not callable(resolve):
+        return None
+    try:
+        d = resolve(iid, "item")
+    except Exception:
+        return None
+    if isinstance(d, Mapping):
+        return d.get("type")
+    raw = getattr(d, "raw", None)
+    if isinstance(raw, Mapping):
+        return raw.get("type")
+    get = getattr(d, "get", None)
+    if callable(get):
+        try:
+            return get("type")
+        except Exception:
+            return None
+    return None
+
+
+def _category_ids(ctx: Mapping[str, Any], category: str) -> list:
+    """分册可收集条目 id 全量（registry 派生；weapon 分册补 items type=weapon）。
+
+    补白 1 修正（QA P2-9）：内容包把武器配置在 items.json（type=weapon）而
+    equipment.json 可为空（test_demo 即此）——weapon 分册分母须含 items
+    type=weapon 的条目，否则分母恒 0、已见 9 条却显示 0%（9/0）。
+    """
     reg = _registry_of(ctx)
     if reg is None:
-        return 0
-    total = 0
+        return []
+    ids: list = []
     for kind in CATEGORIES.get(category, ()):
         try:
-            total += len(tuple(reg.all_ids(kind)))
+            ids.extend(str(x) for x in reg.all_ids(kind))
         except Exception:
             continue
-    return total
+    if category == "weapon":
+        try:
+            for iid in reg.all_ids("item"):
+                sid = str(iid)
+                if sid in ids:
+                    continue
+                if _item_def_type(reg, iid) == "weapon":
+                    ids.append(sid)
+        except Exception:
+            pass
+    return list(dict.fromkeys(ids))
+
+
+def _total_of(ctx: Mapping[str, Any], category: str) -> int:
+    """分册可收集总数（_category_ids 长度；补白 3：无 registry → 0 fail-safe）。"""
+    return len(_category_ids(ctx, category))
 
 
 def _refresh_projection(ctx: MutableMapping[str, Any]) -> None:
@@ -253,14 +296,9 @@ def codex_view(
     for rid, raw in cat.items():
         if isinstance(raw, Mapping) and raw.get("seen"):
             seen_map[str(rid)] = raw
-    # 全量可收集条目（registry all_ids）+ 旧局存档中不在 registry 的已见条目
-    reg_ids: list = []
-    if reg is not None:
-        for kind in CATEGORIES.get(category, ()):
-            try:
-                reg_ids.extend(str(x) for x in reg.all_ids(kind))
-            except Exception:
-                continue
+    # 全量可收集条目（registry 派生；weapon 分册含 items type=weapon，补白 1 修正）
+    # + 旧局存档中不在 registry 的已见条目
+    reg_ids = _category_ids(ctx, category)
     all_ids = list(dict.fromkeys([*reg_ids, *seen_map.keys()]))
     entries: list = []
     for rid in all_ids:

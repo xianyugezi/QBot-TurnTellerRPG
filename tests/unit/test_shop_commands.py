@@ -324,6 +324,45 @@ def test_buy_missing_target_tpl12():
     assert cmd_buy(parse("/购买"), make_ctx()) == "❌ 指令不正确：/购买。输入 /帮助 查看可用指令。"
 
 
+def test_buy_shortname_prefix_match():
+    """QA P2-10：/购买 简写（名称前缀）唯一命中——「疗伤药」买「疗伤药水」。"""
+    items = {
+        "heal_potion": {"id": "heal_potion", "name": "疗伤药水", "price": 100},
+        "iron_sword": {"id": "iron_sword", "name": "铁剑", "price": 500, "bound": True},
+    }
+    shops = {
+        "pharmacy": {"id": "pharmacy", "name": "药铺", "type": "normal", "icon": "",
+                     "currency": "coins", "refresh": {"mode": "none"},
+                     "items": [
+                         {"item": "heal_potion", "price": 100},
+                         {"item": "iron_sword", "price": 500},
+                     ]},
+    }
+    ctx = make_ctx(items=items, shops=shops, current_shop_ref="pharmacy")
+    out = cmd_buy(parse("/购买 疗伤药"), ctx)
+    assert out == "✅ 购买成功：疗伤药水×1（-100 金币），剩余 900 金币"
+
+
+def test_buy_shortname_ambiguous_message():
+    """QA P2-10：/购买 简写多命中 → 歧义提示（含候选商品名）。"""
+    items = {
+        "heal_potion": {"id": "heal_potion", "name": "疗伤药水", "price": 100},
+        "heal_jelly": {"id": "heal_jelly", "name": "疗伤药剂", "price": 100},
+    }
+    shops = {
+        "pharmacy": {"id": "pharmacy", "name": "药铺", "type": "normal", "icon": "",
+                     "currency": "coins", "refresh": {"mode": "none"},
+                     "items": [
+                         {"item": "heal_potion", "price": 100},
+                         {"item": "heal_jelly", "price": 100},
+                     ]},
+    }
+    ctx = make_ctx(items=items, shops=shops, current_shop_ref="pharmacy")
+    out = cmd_buy(parse("/购买 疗伤药"), ctx)
+    assert out.startswith("❌ 商品名有歧义")
+    assert "疗伤药水" in out and "疗伤药剂" in out
+
+
 # ---------------------------------------------------------------------------
 # /出售（立刻到账 + 拦截）
 # ---------------------------------------------------------------------------

@@ -91,6 +91,7 @@ from .sender import format_tpl12
 __all__ = [
     # 指令名 / 子指令词
     "QUEST_CMD", "SUB_ACCEPT", "SUB_DELIVER", "SUB_INFO", "SUB_ABANDON", "SUBWORDS",
+    "SUB_ACCEPT_ALIASES",
     # 渲染常量
     "TPL_NO_BOARD", "TPL_NO_QUEST", "BOARD_PAGE_SIZE",
     # 指令处理器（纯函数：parsed + ctx → 回复正文）
@@ -115,6 +116,13 @@ SUB_INFO = "信息"
 SUB_ABANDON = "放弃"
 SUBWORDS: tuple = (SUB_ACCEPT, SUB_DELIVER, SUB_INFO, SUB_ABANDON)
 
+# P2-12 QA 修复：任务板 Tip「领取任务 序号」与实际子词「接取」不一致（QA 黑盒：按 Tip
+# 发「任务 领取 1」被拒）→ 补「领取」为「接取」的等价子词（Tip 保持口语化「领取」不变，
+# 玩家发「领取」/「领取N」同样可接取；对齐仓库别名先例 MY_SKILL_CMD「我的技能」）。
+SUB_ACCEPT_ALIASES: tuple = ("领取",)
+# 子词识别全集 = 规范子词 + 接取别名（空格/紧凑形式双认，_SUB_SEQ_RE 同源）
+_ALL_SUBWORDS: tuple = SUBWORDS + SUB_ACCEPT_ALIASES
+
 # 任务板分页每页上限（m4 §2.2 横切；引擎 sections 全量返回后由本层重分页，工程补白 2）
 BOARD_PAGE_SIZE: int = DEFAULT_PAGE_SIZE  # 5 条/页
 
@@ -131,9 +139,9 @@ TPL_NO_QUEST = "❌ 任务不存在"
 # 空板文案（无任何任务行；纯文本无 emoji）
 _EMPTY_BOARD = "（任务板空空如也）"
 
-# 紧凑「子词+序号」形态：接取3 / 放弃2 / 交付5（分隔符 `*` 连数量、`+` 等级均不适用序号）
+# 紧凑「子词+序号」形态：接取3 / 放弃2 / 交付5 / 领取3（分隔符 `*` 连数量、`+` 等级均不适用序号）
 # 注：rf 字符串内 `\d` 为原样正则（勿写 `\\d`，rf 下会变成字面反斜杠+d）
-_SUB_SEQ_RE = re.compile(rf"^({'|'.join(SUBWORDS)})(\d+)$")
+_SUB_SEQ_RE = re.compile(rf"^({'|'.join(_ALL_SUBWORDS)})(\d+)$")
 
 # 展示用 var/op 互译（纯渲染，判定权威在引擎 condition_engine；未知键原样显示）
 _VAR_DISPLAY: Mapping[str, str] = {
@@ -240,11 +248,19 @@ def info_text(res: Mapping[str, Any], seq: object) -> str:
     return "\n".join(lines)
 
 
+def _canonical_sub(sub: object) -> str:
+    """子词归一（P2-12 QA）：别名「领取」→ 规范词「接取」（SUB_ACCEPT）；其余原样。"""
+    if sub in SUB_ACCEPT_ALIASES:
+        return SUB_ACCEPT
+    return str(sub) if sub is not None else ""
+
+
 def sub_and_seq(parsed: Any) -> tuple:
-    """提取子指令词 + 序号原文。
+    """提取子指令词 + 序号原文（别名归一：领取 → 接取）。
 
     返回 (sub, seq_text)：
       - `/任务 接取 3` / `/任务接取 3`        → ("接取", "3")
+      - `/任务 领取 3` / `/任务领取 3`        → ("接取", "3")   # P2-12 别名「领取」
       - `/任务 接取3` / `任务放弃2`（紧凑）     → ("接取", "3") / ("放弃", "2")
       - `/任务 放弃 2`（放弃 为解析器固定子词，入 fixed_subword）→ ("放弃", "2")
       - 非子指令（页码 / 其它）→ (None, None)
@@ -252,17 +268,17 @@ def sub_and_seq(parsed: Any) -> tuple:
     args = list(getattr(parsed, "args", None) or [])
     fixed = getattr(parsed, "fixed_subword", None)
     # 固定子词优先（放弃/查看 等，3c P09）：子词在 fixed_subword，序号取 args[0]
-    if fixed in SUBWORDS:
-        return fixed, (args[0] if args else None)
+    if fixed in _ALL_SUBWORDS:
+        return _canonical_sub(fixed), (args[0] if args else None)
     if not args:
         return None, None
     first = str(args[0])
-    if first in SUBWORDS:
-        return first, (args[1] if len(args) > 1 else None)
+    if first in _ALL_SUBWORDS:
+        return _canonical_sub(first), (args[1] if len(args) > 1 else None)
     # 紧凑「子词+序号」（任务放弃2 → args=["放弃2"]）
     m = _SUB_SEQ_RE.match(first)
     if m:
-        return m.group(1), m.group(2)
+        return _canonical_sub(m.group(1)), m.group(2)
     return None, None
 
 

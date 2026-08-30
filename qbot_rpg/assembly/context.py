@@ -1118,6 +1118,17 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
         for k, v in _shops.items()
         if isinstance(k, str)
     }
+    # 签到表（QA 批2 P2-6/P2-7 根因修复 2026-08-31）：ctx["checkin_tables"] 从未注入——checkin 引擎
+    # _all_checkin_tables 读 ctx["checkin_tables"] 得 None → 零生效表 → /签到 结算不落表、
+    # /签到 状态 只回「✅ 签到状态」空面板、同日重复 /签到 走不到幂等分支（P2-7）。对齐 quest/shop
+    # 同款注入：registry kind="checkin"（loader _KIND_FOR_MODULE 已登记），Def→raw dict 保证
+    # core/checkin resolve_checkin_table/_all_checkin_tables 的 Mapping.get 契约。
+    _checkins = _table_from_registry(deps.registry, "checkin")
+    ctx["checkin_tables"] = {
+        str(k): (dict(v.raw) if isinstance(getattr(v, "raw", None), dict) else v)
+        for k, v in _checkins.items()
+        if isinstance(k, str)
+    }
     # M8 批14 部署实测收口（/投料 /合成 名解析失败）：registry.resolve 签名 (key, kind)，
     # 指令层 _find_def 单参调用 resolver(key) → TypeError 被 except 吞 → name 扫描永不执行。
     # 注入单参包装绑定 kind（对齐指令壳 resolver 契约）；_find_def 异常也落 name 扫描兜底。

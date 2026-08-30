@@ -28,7 +28,7 @@ from qbot_rpg.data.gm_constants import GM_COMMANDS
 # 9 组 22 指令（RA-06 M7 落地时点；gm 归 M12）——确定性注册清单断言锚点
 ALL_REGISTERED = {
     # basic
-    "角色", "角色详细", "背包", "背包筛选", "装备", "技能", "我的技能", "帮助",
+    "角色", "角色详细", "背包", "背包筛选", "装备", "技能", "我的技能", "我的状态", "帮助",
     # register
     "注册",
     # unregister（2026-08-28 新增）

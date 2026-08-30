@@ -462,6 +462,55 @@ def test_buy_no_item_and_not_open():
     assert shop_buy("grocery", "不存在物品", 1, make_ctx())["reason"] == "no_item"
 
 
+def test_buy_shortname_prefix_unique_match():
+    """QA P2-10：名称前缀/简写唯一命中——「疗伤药」匹配「疗伤药水」可购买。"""
+    items = {
+        "potion": {"id": "potion", "name": "疗伤药水", "price": 100},
+        "iron_sword": {"id": "iron_sword", "name": "铁剑", "price": 500},
+    }
+    shops = {
+        "pharmacy": {"id": "pharmacy", "name": "药铺", "type": "normal",
+                     "currency": "coins", "items": [
+                         {"item": "potion", "price": 100},
+                         {"item": "iron_sword", "price": 500},
+                     ]},
+    }
+    ctx = make_ctx(items=items, shops=shops)
+    b = shop_buy("pharmacy", "疗伤药", 1, ctx)
+    assert b["ok"] is True and b["bought"]["name"] == "疗伤药水"
+    assert ctx["inventory"]["potion"] == 1
+    # 精确名称仍优先（不因前缀误命中）
+    b2 = shop_buy("pharmacy", "铁剑", 1, ctx)
+    assert b2["ok"] is True and b2["bought"]["name"] == "铁剑"
+
+
+def test_buy_shortname_ambiguous():
+    """QA P2-10：前缀/简写多命中 → 歧义提示，不误买（不静默买第一个）。"""
+    items = {
+        "potion": {"id": "potion", "name": "疗伤药水", "price": 100},
+        "potion2": {"id": "potion2", "name": "疗伤药剂", "price": 100},
+    }
+    shops = {
+        "pharmacy": {"id": "pharmacy", "name": "药铺", "type": "normal",
+                     "currency": "coins", "items": [
+                         {"item": "potion", "price": 100},
+                         {"item": "potion2", "price": 100},
+                     ]},
+    }
+    ctx = make_ctx(items=items, shops=shops)
+    b = shop_buy("pharmacy", "疗伤药", 1, ctx)
+    assert b["ok"] is False and b["reason"] == "ambiguous"
+    assert "歧义" in b["message"] and "疗伤药水" in b["message"] and "疗伤药剂" in b["message"]
+    assert ctx["inventory"].get("potion", 0) == 0  # 未入包（不误买）
+    assert ctx["inventory"].get("potion2", 0) == 0
+
+
+def test_buy_shortname_no_match_still_no_item():
+    """QA P2-10：前缀无命中 → 仍「没有这个商品」（简写不匹配不误放行）。"""
+    b = shop_buy("grocery", "药水水水", 1, make_ctx())
+    assert b["ok"] is False and b["reason"] == "no_item"
+
+
 def test_tc38_buy_reputation_requirement():
     """TC-38：条目声望门槛不足 → 「❌ 声望不足：需要 信赖（当前 陌生）」。"""
     ctx = make_ctx(reputation=1)

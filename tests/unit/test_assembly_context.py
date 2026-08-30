@@ -31,7 +31,7 @@ RA03_FIELDS = (
     "longline_counters", "event_counts",
     "shop_engine", "current_shop_ref", "currencies",
     "world_stock", "world_sold_out",
-    "checkin_engine", "checkin_state",
+    "checkin_engine", "checkin_state", "checkin_tables",
     "shortcuts", "shortcut_max", "gm_commands",
     "npc_delivered", "heard", "npcs", "npc_interactions",
     "dialog_active", "dialog_session",
@@ -145,6 +145,9 @@ def _registry() -> Registry:
             "item": {"potion": SimpleNamespace(name="药水"),
                      "iron_sword": SimpleNamespace(name="铁剑")},
             "shop": {"shop1": SimpleNamespace(name="杂货店")},
+            "checkin": {"checkin_demo": SimpleNamespace(
+                raw={"id": "checkin_demo", "name": "每日签到", "type": "loop",
+                     "rewards": {"daily": [{"day": 1, "coins": 50}]}})},
         },
         names={"warrior": "战士", "poison": "中毒",
                "potion": "药水", "iron_sword": "铁剑", "shop1": "杂货店"},
@@ -487,11 +490,15 @@ async def test_event_fields_passthrough() -> None:
 
 
 async def test_registry_tables_injected() -> None:
-    """items/shops 注册表 + resolve_* + stats 模板注入。"""
+    """items/shops/checkin 注册表 + resolve_* + stats 模板注入。"""
     ctx = await make_context(_event(), _deps(_player()))
     assert ctx["items"]["potion"] is not None
     assert ctx["items"]["iron_sword"] is not None
     assert ctx["shops"]["shop1"] is not None
+    # 签到表注入（QA 批2 P2-6/P2-7 根因修复 2026-08-31）：checkin 引擎读 ctx["checkin_tables"]
+    # 零表 → /签到 状态空面板 + 同日重复 /签到 不幂等；注入后 Mapping.get 契约成立。
+    assert ctx["checkin_tables"]["checkin_demo"]["type"] == "loop"
+    assert ctx["checkin_tables"]["checkin_demo"]["rewards"]["daily"][0]["coins"] == 50
     assert callable(ctx["resolve_item"]) and callable(ctx["resolve_shop"])
     assert ctx["stats"]["hp"]["base"] == 100
     assert callable(ctx["npc_interactions"])

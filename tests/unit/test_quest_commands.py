@@ -184,6 +184,23 @@ def test_quest_accept_compact_forms():
     assert cmd_quest(parse("/任务接取 4"), make_ctx()) == "✅ 已接取：清剿熔岩甲虫（同时进行 1/5）"
 
 
+def test_quest_accept_alias_lingqu():
+    """P2-12 QA：Tip 引导「领取任务 序号」→ 别名「领取」等价「接取」（空格/紧凑双认）。"""
+    assert cmd_quest(parse("/任务 领取 3"), make_ctx()) == "✅ 已接取：收集铁矿（同时进行 1/5）"
+    assert cmd_quest(parse("/任务 领取3"), make_ctx()) == "✅ 已接取：收集铁矿（同时进行 1/5）"
+    assert cmd_quest(parse("/任务领取 4"), make_ctx()) == "✅ 已接取：清剿熔岩甲虫（同时进行 1/5）"
+
+
+def test_quest_board_tip_matches_accept_alias():
+    """P2-12 QA：任务板 Tip「领取任务 序号」与可用子词一致（「领取」已注册为「接取」等价子词）。"""
+    tip = qc._BOARD_TAIL_TIP
+    assert "领取任务" in tip and "接取" not in tip  # 口语化引导词保留
+    assert qc.SUB_ACCEPT_ALIASES == ("领取",)
+    # Tip 引导的形式能直接路由成功
+    out = cmd_quest(parse("/任务 领取 3"), make_ctx())
+    assert out == "✅ 已接取：收集铁矿（同时进行 1/5）"
+
+
 def test_quest_accept_marked_in_board():
     """TC-25：接取后 /任务 列表该序号变 *（已接取标记，不参与可接序号计数）。"""
     ctx = make_ctx()

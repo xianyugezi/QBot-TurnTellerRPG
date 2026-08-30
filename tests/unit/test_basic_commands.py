@@ -363,11 +363,20 @@ def test_equip_view_clamp():
     assert "（已到最后一页）" not in out
 
 
-@pytest.mark.parametrize("raw", ["/装备 0", "/装备 abc", "/装备 1 2"])
+@pytest.mark.parametrize("raw", ["/装备 0", "/装备 -1", "/装备 1 2"])
 def test_equip_invalid_page_tpl12(raw):
-    """裁决②：0/负数/非数字/超参 → TPL-12。"""
+    """裁决②：0/负数（页码非法）/超参 → TPL-12。"""
     out = cmd_equip(parse(raw), make_ctx())
     assert out.startswith("❌ 指令不正确：")
+
+
+@pytest.mark.parametrize("raw", ["/装备 abc", "/装备 铁剑"])
+def test_equip_name_form_friendly_hint(raw):
+    """P2-11 QA：名称形式（非数字非子词，如 铁剑/abc）→ 友好提示引导 /装备 穿 <序号>
+    （命令合法，不走 TPL-12 泛化拒绝）。"""
+    out = cmd_equip(parse(raw), make_ctx())
+    assert out == bc.TPL_EQUIP_NAME_HINT
+    assert "/装备 穿 <序号>" in out
 
 
 def test_equip_wear():
@@ -377,10 +386,10 @@ def test_equip_wear():
 
 
 def test_equip_wear_compact():
-    """/装备穿3（紧凑）→ 解析器 args[0]="穿3" → 走 TPL-12（紧凑子词+序号需空格）。"""
-    # 注：解析器紧凑形态为「装备穿3」→ args=["穿3"]，本层不识别 → TPL-12（显式子词规范）
+    """/装备穿3（紧凑）→ 解析器 args[0]="穿3" → 非数字名称形态 → 友好提示引导 /装备 穿 <序号>
+    （P2-11 QA：紧凑子词+序号需空格，给友好提示而非 TPL-12 泛化拒绝）。"""
     out = cmd_equip(parse("/装备穿3"), make_ctx())
-    assert out.startswith("❌ 指令不正确：")
+    assert out == bc.TPL_EQUIP_NAME_HINT
 
 
 @pytest.mark.parametrize("raw", ["/装备 穿", "/装备 穿 abc", "/装备 穿 0"])

@@ -708,25 +708,60 @@ def shop_goods(shop: Mapping, ctx: Mapping[str, Any]) -> list:
     return list(shop.get("items", []) or [])
 
 
-def resolve_goods_ref(goods: list, ref: object, ctx: Mapping[str, Any]) -> Optional[Mapping]:
-    """货架内商品解析（2b3 §2.1 名称优先 → item id → 列表序号）：查无 → None。"""
+def _name_matches(goods: list, s: str, ctx: Mapping[str, Any]) -> tuple:
+    """货架内按商品名匹配：精确命中列表 + 前缀命中列表（简写容错，QA P2-10）。"""
+    exact: list = []
+    prefix: list = []
+    for e in goods:
+        item = _resolve_item(e.get("item"), ctx)
+        name = item.get("name") if item is not None else None
+        if not isinstance(name, str):
+            continue
+        if name == s:
+            exact.append(e)
+        elif name.startswith(s):
+            prefix.append(e)
+    return exact, prefix
+
+
+def _resolve_goods_detailed(goods: list, ref: object, ctx: Mapping[str, Any]) -> tuple:
+    """货架内商品解析（名称精确 → item id → 前缀/简写唯一命中 → 列表序号）。
+
+    返回 (entry, ambiguous)：entry=唯一命中条目或 None；ambiguous 非空 =
+    前缀/简写多命中（无精确/id 命中时的歧义条目列表，供调用方提示）。
+    """
     if isinstance(ref, int) and not isinstance(ref, bool):
-        return goods[ref - 1] if 1 <= ref <= len(goods) else None
+        return (goods[ref - 1] if 1 <= ref <= len(goods) else None), []
     if isinstance(ref, str):
         s = ref.strip()
         if not s:
-            return None
+            return None, []
         for e in goods:
             item = _resolve_item(e.get("item"), ctx)
             if item is not None and item.get("name") == s:
-                return e
+                return e, []
         for e in goods:
             if e.get("item") == s:
-                return e
+                return e, []
+        _exact, prefix = _name_matches(goods, s, ctx)
+        if len(prefix) == 1:
+            return prefix[0], []
+        if len(prefix) > 1:
+            return None, prefix
         if s.isdigit():
             i = int(s)
-            return goods[i - 1] if 1 <= i <= len(goods) else None
-    return None
+            return (goods[i - 1] if 1 <= i <= len(goods) else None), []
+    return None, []
+
+
+def resolve_goods_ref(goods: list, ref: object, ctx: Mapping[str, Any]) -> Optional[Mapping]:
+    """货架内商品解析（2b3 §2.1 名称优先 → item id → 前缀/简写唯一命中 → 列表序号）：查无 → None。
+
+    QA P2-10 修复：新增名称前缀/简写容错——唯一命中才采用；多命中返回 None
+    （歧义条目经 _resolve_goods_detailed 暴露，由调用方提示）。
+    """
+    entry, _ambiguous = _resolve_goods_detailed(goods, ref, ctx)
+    return entry
 
 
 def price_for(entry: Mapping, shop: Mapping, ctx: Mapping[str, Any]) -> dict:
@@ -1040,7 +1075,11 @@ def shop_buy(shop_id: str, ref: object, count: object, ctx: MutableMapping[str, 
         return {"ok": False, "reason": gate["reason"], "message": gate["message"]}
     shop_lazy_refresh(shop_id, ctx)
     goods = shop_goods(shop, ctx)
-    entry = resolve_goods_ref(goods, ref, ctx)
+    entry, ambiguous = _resolve_goods_detailed(goods, ref, ctx)
+    if entry is None and ambiguous:
+        names = "、".join(str(_item_name(e.get("item"), ctx)) for e in ambiguous)
+        return {"ok": False, "reason": "ambiguous",
+                "message": f"❌ 商品名有歧义（{names}），请用完整名称或序号"}
     if entry is None:
         return {"ok": False, "reason": "no_item", "message": "❌ 没有这个商品"}
 

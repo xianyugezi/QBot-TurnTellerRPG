@@ -114,6 +114,68 @@ def test_progress_single_and_global() -> None:
     assert abs(gp["pct"] - (100 / 3 + 0 + 50 + 0) / 4) < 0.01
 
 
+class _WeaponFakeRegistry:
+    """registry 替身（all_ids + resolve 返回带 type 的 items 定义）。
+
+    QA P2-9 修复验证：内容包把武器配置在 items.json（type=weapon）而
+    equipment.json 可为空——weapon 分册分母应含 items type=weapon 条目。
+    """
+
+    def __init__(self, tables: Mapping[str, tuple],
+                 item_types: Mapping[str, str] | None = None) -> None:
+        self._tables = tables
+        self._item_types: Mapping[str, str] = item_types or {}
+
+    def all_ids(self, kind: str) -> tuple:
+        return self._tables.get(kind, ())
+
+    def resolve_name(self, rid: str):
+        return rid.upper()
+
+    def resolve(self, rid: str, kind: str):
+        # items 表条目 → {id, name, type}
+        if kind == "item":
+            return {"id": rid, "name": rid,
+                    "type": self._item_types.get(rid, "material")}
+        return None
+
+
+def test_weapon_progress_total_from_items_type_weapon() -> None:
+    """QA P2-9：weapon 分册分母 = equipment 表 ∪ items type=weapon（equipment 空时非 0）。"""
+    reg = _WeaponFakeRegistry(
+        {"equipment": (), "item": ("potion", "iron_sword", "flame_sword", "leaf_vest")},
+        {"iron_sword": "weapon", "flame_sword": "weapon", "leaf_vest": "armor"},
+    )
+    ctx = dict(_ctx())
+    ctx["registry"] = reg
+    p = codex_progress(ctx, "weapon")
+    assert p["total"] == 2  # 仅 type=weapon 计入（armor/药水不计）
+    mark_seen(ctx, "weapon", "iron_sword", "铁剑")
+    p2 = codex_progress(ctx, "weapon")
+    assert p2["seen"] == 1 and p2["total"] == 2
+    # 旧行为（仅 equipment 表）不回归：equipment 表非空时仍计数
+    reg2 = _WeaponFakeRegistry({"equipment": ("iron_sword", "steel_blade"), "item": ("potion",)})
+    ctx2 = dict(_ctx())
+    ctx2["registry"] = reg2
+    assert codex_progress(ctx2, "weapon")["total"] == 2
+
+
+def test_weapon_codex_view_lists_type_weapon_items() -> None:
+    """QA P2-9：weapon 分册页展示 items type=weapon 条目（未收集显示 ???）。"""
+    reg = _WeaponFakeRegistry(
+        {"equipment": (), "item": ("iron_sword", "flame_sword")},
+        {"iron_sword": "weapon", "flame_sword": "weapon"},
+    )
+    ctx = dict(_ctx())
+    ctx["registry"] = reg
+    mark_seen(ctx, "weapon", "iron_sword", "铁剑")
+    view = codex_view(ctx, "weapon")
+    names = {e["name"] for e in view["entries"]}
+    assert view["total"] == 2
+    assert "铁剑" in names and "???" in names  # flame_sword 未收集 → ???
+
+
+
 def test_progress_empty_registry() -> None:
     """无 registry → total=0 pct=0（fail-safe）。"""
     ctx = _ctx()

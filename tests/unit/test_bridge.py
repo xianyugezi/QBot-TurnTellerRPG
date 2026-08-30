@@ -129,6 +129,36 @@ def test_build_event_plaintext_strips_cq():
     assert build_event(ev)["message"] == "攻击"
 
 
+def test_build_event_strips_leading_at_mention():
+    """P2-17 QA：@机器人+指令 → 剥离开头 @提及 段后正常路由（@QQ号 形式）。"""
+    ev = make_event(message="@2750511376 攻击")
+    assert build_event(ev)["message"] == "攻击"
+
+
+def test_build_event_strips_leading_at_nickname():
+    """P2-17 QA：@昵称+指令 → 剥离开头 @提及（昵称形式，非纯数字 QQ）。"""
+    ev = make_event(message="@阿伟 任务")
+    assert build_event(ev)["message"] == "任务"
+
+
+def test_build_event_strips_multiple_at_mentions():
+    """P2-17 QA：多个连续 @ 提及 + 指令 → 全部剥离，仅留指令。"""
+    ev = make_event(message="@2750511376 @机器人 攻击")
+    assert build_event(ev)["message"] == "攻击"
+
+
+def test_build_event_at_not_leading_kept():
+    """@ 不在开头（正文中）→ 不剥离（只清前导提及，避免误伤普通文本）。"""
+    ev = make_event(message="帮打@2750511376 快")
+    assert build_event(ev)["message"] == "帮打@2750511376 快"
+
+
+def test_build_event_pure_at_mention_empty():
+    """P2-17 QA：纯 @提及（无指令）→ 空串（路由忽略，不误响应）。"""
+    ev = make_event(message="@2750511376")
+    assert build_event(ev)["message"] == ""
+
+
 def test_build_event_str_fallback():
     """无 get_plaintext 的 message → str() 兜底归一。"""
     ev = make_event(message="背包")

@@ -26,6 +26,7 @@ from typing import Any
 
 from qbot_rpg.assembly.context import AssemblyDeps, make_context
 from qbot_rpg.assembly.runner import TIMEOUT_MESSAGE, run_command, schedule_cleanup
+from qbot_rpg.commands.checkin_commands import register_checkin_commands
 from qbot_rpg.commands.gm_commands import GmResult
 from qbot_rpg.commands.processing import PerPlayerQueue
 from qbot_rpg.commands.router import CommandSpec, Router
@@ -155,6 +156,10 @@ def make_registry() -> Registry:
             "item": {"potion": SimpleNamespace(name="药水"),
                      "iron_sword": SimpleNamespace(name="铁剑")},
             "shop": {"shop1": SimpleNamespace(name="杂货店")},
+            "checkin": {"checkin_demo": SimpleNamespace(
+                raw={"id": "checkin_demo", "name": "每日签到", "type": "loop",
+                     "period": {"cycle_days": 7, "reset_on_break": True},
+                     "rewards": {"daily": [{"day": 1, "coins": 50}]}})},
         },
         names={"warrior": "战士", "poison": "中毒",
                "potion": "药水", "iron_sword": "铁剑", "shop1": "杂货店"},
@@ -247,6 +252,46 @@ async def test_end_to_end_idempotent_replay() -> None:
     assert r2 == "该指令已处理，请勿重复发送"
     # 发送出口只发了一次（幂等重放 send=False，IDEM-5 业务零执行零发送）
     assert len(env["sender"].delivered) == 1
+
+
+# =============================================================================
+# QA 批2 P2-6/P2-7：/签到 状态面板 + 同日重复幂等（装配层 checkin_tables 注入回归）
+# =============================================================================
+async def test_checkin_status_panel_and_idempotent() -> None:
+    """QA 批2 修复回归（2026-08-31）：装配层注入 ctx[\"checkin_tables\"] 后——
+
+    ① /签到 状态 显示面板（连签/本月累计/今日已签），不再只回「✅ 签到状态」空面板（P2-6）；
+    ② 同日重复 /签到 → 幂等文案「今天已签到（重复指令，未重复发放）」且不重复发奖（P2-7）。
+    """
+    env = await build_env(make_player())
+    # runner 内部 make_context 注入 ctx（含 checkin_tables，QA 批2 P2-6/P2-7 修复回归）
+    register_checkin_commands(env["router"])
+
+    # ① 状态面板（签到前：今日已签=否，连签/本月累计可见）
+    s0 = await run_command(make_event(message="/签到 状态", message_id="m-cs0"), env["deps"])
+    assert "✅ 签到状态" in s0, s0
+    assert "━━ 每日签到（常驻循环） ━━" in s0, f"状态面板缺表段头: {s0}"
+    assert "连签天数：0 天" in s0, f"状态面板缺连签天数: {s0}"
+    assert "本月累计：0 天" in s0, f"状态面板缺本月累计: {s0}"
+    assert "今日已签：否" in s0, f"状态面板今日已签应是否: {s0}"
+
+    # ② 首次 /签到 → 发奖 + 进度
+    r1 = await run_command(make_event(message="/签到", message_id="m-c1"), env["deps"])
+    assert "✅ 今日签到完成" in r1, r1
+    assert "今日奖励：50 coins" in r1, f"首次签到应发奖: {r1}"
+    assert "连签天数：1 天" in r1, f"首次签到应推进连签: {r1}"
+
+    # ③ 同日重复 /签到 → 幂等文案 + 不重复发奖（仍附进度）
+    r2 = await run_command(make_event(message="/签到", message_id="m-c2"), env["deps"])
+    assert "今天已签到（重复指令，未重复发放）" in r2, f"重复签到缺幂等文案: {r2}"
+    assert "今日奖励：" not in r2, f"重复签到不应再发奖: {r2}"
+    assert "今天已签到（不重复发奖）" in r2, f"重复签到缺各表幂等行: {r2}"
+    assert "连签天数：1 天" in r2, f"重复签到应仍附进度: {r2}"
+
+    # ④ 签到后状态面板 → 今日已签=是
+    s1 = await run_command(make_event(message="/签到 状态", message_id="m-cs1"), env["deps"])
+    assert "今日已签：是" in s1, f"签到后今日已签应为是: {s1}"
+    assert "连签天数：1 天" in s1, f"签到后状态面板连签: {s1}"
 
 
 # =============================================================================

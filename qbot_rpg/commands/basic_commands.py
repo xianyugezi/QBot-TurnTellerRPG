@@ -114,7 +114,7 @@ __all__ = [
     "VIEW_DETAIL_CMD", "cmd_view_detail",
     "SUB_WEAR", "SUB_REMOVE",
     # 渲染常量
-    "TPL_REGISTER_GATE", "TPL_EMPTY_BAG", "TPL_NO_SLOT",
+    "TPL_REGISTER_GATE", "TPL_EMPTY_BAG", "TPL_NO_SLOT", "TPL_EQUIP_NAME_HINT",
     "QUALITY_LABELS", "TYPE_LABELS", "DEFAULT_SLOT_NAMES",
     "HELP_GROUPS", "GM_HELP_GROUP", "GROUP_ORDER",
     # 指令处理器（纯函数：parsed + ctx → 回复正文）
@@ -151,6 +151,10 @@ TPL_EMPTY_BAG = "❌ 背包空空如也"
 
 # /装备 槽位解析失败（值域问题，命令合法，不走 TPL-12；工程补白 4）
 TPL_NO_SLOT = "❌ 没有这个装备槽位"
+
+# /装备 名称形式（如 /装备 铁剑）→ 友好提示引导序号用法（P2-11 QA：名称被泛化
+# 拒绝回「❌ 指令不正确」，应提示 /装备 <序号>；命令合法，不走 TPL-12，对齐 TPL_NO_SLOT）
+TPL_EQUIP_NAME_HINT = "❌ 装备指令：请用 /装备 穿 <序号> 穿戴（序号见 /背包），如 /装备 穿 3"
 
 # 品质四档（4b GRD-x 唯一注册表；RUL-19：仅非 normal 档标注）
 QUALITY_LABELS: Mapping[str, str] = {
@@ -1226,7 +1230,11 @@ def cmd_equip(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         if sid is None:
             return TPL_NO_SLOT
         return _cmd_equip_remove(ctx, sid)
-    # 整数 = 页码
+    # 名称形式（非数字非子词，如 /装备 铁剑）→ 友好提示引导序号（P2-11 QA；命令合法，
+    # 不走 TPL-12，对齐 TPL_NO_SLOT 值域文案口径）
+    if parse_int(first) is None:
+        return TPL_EQUIP_NAME_HINT
+    # 整数 = 页码（0/负数 → parse_page_arg None → TPL-12，保留裁决②）
     page = parse_page_arg(first)
     if page is None:
         return format_tpl12(_fragment(parsed))

@@ -232,13 +232,13 @@ def cmd_map(parsed: Any, ctx: Mapping[str, Any]) -> str:
     if not index:
         return "❌ 当前没有可探索的地图（/进入 尝试）"
     lines = ["【地图】"]
-    for mid in list(index.keys()):
+    for idx, mid in enumerate(list(index.keys()), start=1):
         entry = index[mid]
         if not entry:
             continue
         name = entry.get("name") if isinstance(entry, Mapping) else getattr(entry, "name", None) or mid
-        lines.append(f"{mid}：{name}")
-    return "\n".join(lines) + "\nTip:发送'进入 <地图id>'前往"
+        lines.append(f"{idx}. {name}")
+    return "\n".join(lines) + "\nTip:发送'进入 <序号>'前往"
 
 
 def cmd_position(parsed: Any, ctx: Mapping[str, Any]) -> str:
@@ -292,6 +292,27 @@ def cmd_enter(parsed: Any, ctx: Mapping[str, Any]) -> str:
     )
     if not isinstance(result, Mapping):
         return "❌ 进入失败（引擎返回异常）"
+    # 2026-08-31 实机反馈：/地图 按序号展示后，「进入 N」应支持世界地图序号传送。
+    # 副本入口序号不命中（无入口/序号无效）且参数为纯数字时 → 按 _maps_index 序号
+    # 取地图传送（对齐 cmd_map 的 enumerate 序号；地图传送走 move_to_map 钩子）。
+    if not result.get("ok") and arg.isascii() and arg.isdigit():
+        index = _maps_index_for(ctx)
+        ordered = [m for m in list(index.keys()) if index.get(m)]
+        try:
+            map_idx = int(arg)
+        except ValueError:
+            map_idx = -1
+        if 1 <= map_idx <= len(ordered):
+            target = ordered[map_idx - 1]
+            try:
+                from qbot_rpg.world.movement import move_to_map  # noqa: PLC0415
+                moved = move_to_map(dict(player), target, maps=ctx.get("maps"))
+                if moved.get("ok"):
+                    result = {"ok": True, "to": target,
+                              "name": moved.get("name"),
+                              "desc": moved.get("desc"), "lore": moved.get("lore")}
+            except ImportError:
+                pass
     return _render_enter(result, ctx)
 
 

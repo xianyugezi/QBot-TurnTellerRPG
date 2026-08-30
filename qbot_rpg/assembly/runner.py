@@ -183,9 +183,22 @@ def _parsed_from_route(route: RouteResult, raw: str) -> ParsedCommand:
     text = route.text or raw
     args_text = route.args_text or ""
     args = [a for a in str(args_text).split()] if args_text else []
+    # 2026-08-31 实机修复（deleg_7938a687 定位）：紧凑无空格形「锻造铁剑」route.text=整串
+    # → text.split() 切成 ['锻造铁剑'] 而非 ['锻造','铁剑']，handler 取 tokens[1:] 得空 → TPL-12。
+    # 紧凑形 + 有参时，tokens 按 command+args 重切（args 已由 args_text 正确分列），
+    # 与 parse_command 双认语义对齐；空格形（锻造 铁剑）不受影响。
+    _tokens_raw = list(text.split()) or [text]
+    if (
+        route.compact
+        and args
+        and len(_tokens_raw) == 1
+        and _tokens_raw[0] == text
+        and route.command
+    ):
+        _tokens_raw = [route.command] + args
     return ParsedCommand(
         raw=route.raw or raw,
-        tokens=list(text.split()) or [text],
+        tokens=_tokens_raw,
         command=route.command,
         args=args,
         mode=route.mode,

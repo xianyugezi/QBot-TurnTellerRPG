@@ -1519,7 +1519,15 @@ def cmd_blueprint(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     raw_tokens = list(getattr(parsed, "tokens", None) or [])
     body = raw_tokens[1:] if raw_tokens else args
     if not body:
-        return format_tpl12(_fragment(parsed))
+        # 2026-08-31 实机修复（deleg_7938a687 定位）：无参 /图纸 应显示首树主链而非 TPL-12
+        eng = _engine(ctx)
+        trees = eng.load_trees()
+        if not trees:
+            return "❌ 锻造系统未启用（内容包 forge.json 未注册）"
+        roots = trees[0].roots
+        if not roots:
+            return "❌ 当前锻造树没有根节点（内容包 forge.json 异常）"
+        return _render_blueprint(ctx, roots[0])
     if len(body) > 1:
         return "参数错误：节点名不含空格"
     fragment = body[0]
@@ -1898,6 +1906,10 @@ def register_forge_commands(
     #   L236/L237——「套装」「客制」独立指令名已进 parsers.DEFAULT_WHITELIST，
     #   否则 S5 前缀匹配静默不响应）——六指令全部注册（路由收口）
     router.register(CommandSpec(FORGE_CMD, handler=_forge))
+    # 2026-08-31 实机反馈：口语同义词「打造 X」「铸造 X」应等价于「锻造 X」（玩家
+    # 实测静默无回）→ 注册两别名 CommandSpec 转发 _forge（同六指令收口风格）。
+    for _alias in ("打造", "铸造"):
+        router.register(CommandSpec(_alias, handler=_forge))
     # 【P1-2 裁决 2026-08-30】/确认 统一状态分派器：replace=True 覆盖炼金同名注册
     # （炼金 register_alchemy_commands 已注册 CONFIRM_CMD；forge 后注册接管——
     #  预览窗活跃→锻造确认，否则→炼金确认，见 _confirm）

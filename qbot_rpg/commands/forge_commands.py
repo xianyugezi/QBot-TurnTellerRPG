@@ -16,6 +16,15 @@
       —— 批5 路5A 扩展作者：Hermes 子agent-5A（/图纸 主链+分支+持有进度渲染 cmd_blueprint +
          /图纸 CommandSpec 注册；消费 5B forge_node_suffix/forge_progress_segment，
          标注文案不重复实现——红名/失效文案由 5B 统一提供）
+      —— 批7 路7C 扩展作者：Hermes 子agent-7C（/套装 cmd_sets + /客制 cmd_augments
+         查询指令骨架 + 六指令路由收口：/锻造 /确认 /图纸 /锻造树 /套装 /客制 全部注册
+         + 白名单登记；追加不改写批4/批5 内容）
+         —— 依据：细化_2c2d §一（forge_sets：SET-01~08 + ACT-01~06 + /套装 指令 §1.5，
+            SP-F4 unlock_sets 未解锁 → /套装 拒绝）/ §二（forge_augments：AUG-01~12 +
+            /客制 指令 §2.4 + GU-A1 SP-F5 unlock_augment 未解锁 → /客制 拒绝）
+         —— P1 预留边界声明：本路只做查询展示骨架（/套装 列出可组成套装、/客制 列出
+            可用客制项），不执行套装技能激活（ACT-05 动态重算归后续）/ 不执行客制
+            应用（AUG-F1~F4 原子执行归 M12 编辑器或后续批次）。
 
 【批内协作状态】路4A（原子流程引擎：守卫 GU-01~06 + 成功/失败模板）与路4B 同批并行。
 本工作区收口时 forge_commands.py 尚未落盘（批4 拆 4A+4B 子批并行，4A 未先提交），
@@ -144,6 +153,7 @@ from typing import Any, Callable, Dict, List, Mapping, MutableMapping, Optional,
 
 from qbot_rpg.core.alchemy_core import ELEMENT_NAMES_CN
 from qbot_rpg.core.codex import mark_seen
+from qbot_rpg.core.forge_augments import parse_augments
 from qbot_rpg.core.forge_cascade import is_redflagged
 from qbot_rpg.core.forge_job import (
     _tier_name,
@@ -152,6 +162,7 @@ from qbot_rpg.core.forge_job import (
     level_gate_met,
 )
 from qbot_rpg.core.forge_progress import material_holdings, progress_line, shortfall
+from qbot_rpg.core.forge_sets import parse_sets, set_lookup
 from qbot_rpg.core.forge_sp import sp_locked
 from qbot_rpg.core.forge_tree import ForgeTreeEngine
 from qbot_rpg.core.message_format.list_render import (
@@ -201,6 +212,17 @@ __all__ = [
     "TREE_PAGE_SIZE",
     "TREE_EMPTY_PAGE",
     "TREE_TAIL_TIP",
+    # /套装 /客制（批7 路7C：查询指令骨架 cmd_sets / cmd_augments + 六指令路由收口）
+    "SETS_CMD",
+    "AUGMENTS_CMD",
+    "SETS_UNLOCK_ID",
+    "AUGMENT_UNLOCK_ID",
+    "SETS_LOCKED_MSG",
+    "AUGMENTS_LOCKED_MSG",
+    "SETS_EMPTY",
+    "AUGMENTS_EMPTY",
+    "cmd_sets",
+    "cmd_augments",
     # 装配
     "register_forge_commands",
 ]
@@ -234,6 +256,20 @@ TREE_EMPTY_PAGE: str = "该页暂无锻造装备（/锻造树 共 {total_pages} 
 # /锻造树 Tip 尾行（列表模板统一 CakeGame 式「当前页 + Tip」，2026-08-27 用户拍板；
 #   引导锻造入口，对齐 /背包 _BAG_TAIL_TIP 口径）
 TREE_TAIL_TIP: str = "发送'/锻造 装备名'即可锻造"
+
+# /套装（批7 路7C：查询指令骨架，细化_2c2d §1.5 / 定稿 L236「/套装 <套装名>（P1，无门槛）」）
+SETS_CMD: str = "套装"
+# /客制（批7 路7C：查询指令骨架，细化_2c2d §2.4 / 定稿 L237「/客制 <武器>（P2）」）
+AUGMENTS_CMD: str = "客制"
+# SP-F4 / SP-F5 面板项 id（细化_2c2d §3.2：unlock_sets / unlock_augment，forge_sp 权威）
+SETS_UNLOCK_ID: str = "unlock_sets"
+AUGMENT_UNLOCK_ID: str = "unlock_augment"
+# SP-F4/F5 未解锁拒绝文案（2c2b §4.3：未解锁 → 对应指令直接拒绝）
+SETS_LOCKED_MSG: str = "未解锁 套装（消耗 1 SP 在 技能面板 解锁）"
+AUGMENTS_LOCKED_MSG: str = "未解锁 客制（消耗 1 SP 在 技能面板 解锁）"
+# 空态（P1 查询骨架：无套装数据 / 无可用客制项）
+SETS_EMPTY: str = "当前没有可组成的套装（内容包 forge.json 未配置 sets 段）"
+AUGMENTS_EMPTY: str = "当前没有可用的客制项（内容包 forge.json 未配置 augments 段）"
 
 # 品质四档中文（F-5：normal→普通 / fine→精良 / epic→史诗 / legendary→传说）
 _RARITY_CN: Mapping[str, str] = {
@@ -1575,6 +1611,154 @@ def cmd_forge_tree(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 
 
 # ---------------------------------------------------------------------------
+# 批7 路7C：/套装 /客制 查询指令骨架（cmd_sets / cmd_augments；P1 预留边界）
+#   依据：细化_2c2d §一（/套装 指令 §1.5：无门槛 P1；SP-F4 unlock_sets 未解锁 →
+#         /套装 拒绝）/ §二（/客制 指令 §2.4：SP-F5 unlock_augment 未解锁 → /客制
+#         拒绝 GU-A1）+ §3.2（SP-F4/SP-F5 面板项）+ 定稿 L236/L237。
+#   —— P1 预留边界声明：本路只做查询展示骨架，不执行套装技能激活（ACT-05 动态重算
+#       归后续）/ 不执行客制应用（AUG-F1~F4 原子执行归 M12 编辑器或后续批次）。
+#   —— 消费 sibling 7A/7B（forge_sets.parse_sets/set_lookup + forge_augments.parse_augments
+#       只读委托不重写）；SP 解锁判定消费 forge_sp.sp_locked（只读）。
+#   —— /套装 渲染：`N. 套装名（2/3 件）：铁剑Ⅰ + 炎剑Ⅱ + 炎剑Ⅲ`；ready 套（族级件数
+#       ≥2，ACT-02 最低激活档）标记 ✅；无套装数据 → 空态 SETS_EMPTY。
+#   —— /客制 渲染：`N. 客制名（类型/效果摘要）`；disabled/trace 项不出面板（AUG-11/12）；
+#       无可用项 → 空态 AUGMENTS_EMPTY。仅查询展示不执行（P1 预留）。
+# ---------------------------------------------------------------------------
+
+def cmd_sets(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """/套装 查询（批7 路7C：P1 查询骨架，细化_2c2d §1.5 / 定稿 L236）。
+
+    流程：
+      ① SP-F4（unlock_sets）未解锁 → 拒绝 SETS_LOCKED_MSG（2c2b §4.3：未解锁 →
+         /套装 直接拒绝）；
+      ② 引擎加载（load_trees 空 → `❌ 锻造系统未启用（内容包 forge.json 未注册）`）；
+      ③ 解析 sets 段（forge_sets.parse_sets，无 sets 数据 → 空态 SETS_EMPTY）；
+      ④ 玩家可组成套装查询（forge_sets.set_lookup：只查已有装配件可组成哪几套，
+         不激活）→ 逐套渲染 `N. 套装名（pieces_have/pieces_total 件）：件名...`；
+         ready 套（族级件数 ≥2，ACT-02）行首标记 ✅；
+      ⑤ 参数忽略（P1 骨架：无参全量；带参也返回全量——单套明细/匹配归后续）。
+
+    无铸造等级门槛（§1.5「无」）；纯读渲染不覆盖既有确认窗；不执行套装激活（P1 预留）。
+    """
+    player = _player_of(ctx)
+    if sp_locked(player, SETS_UNLOCK_ID):
+        return SETS_LOCKED_MSG
+
+    eng = _engine(ctx)
+    if not eng.load_trees():
+        return "❌ 锻造系统未启用（内容包 forge.json 未注册）"
+
+    sets = parse_sets({"forge": _forge_raw(ctx)})
+    if not sets:
+        return SETS_EMPTY
+
+    rows = set_lookup(player, sets)
+    if not rows:
+        return SETS_EMPTY
+
+    lines: List[str] = []
+    for i, row in enumerate(rows, 1):
+        name = row.get("name") or row.get("set_id") or ""
+        pieces_have = _as_count(row.get("pieces_have"))
+        pieces_total = _as_count(row.get("pieces_total"))
+        ready = bool(row.get("ready"))
+        seg = f"{name}（{pieces_have}/{pieces_total} 件）"
+        if ready:
+            seg = "✅ " + seg
+        # 件名：本记录 pieces（ForgeSet.pieces 节点 id → 节点名，对齐 _node_display_name 口径）
+        piece_names = _set_row_piece_names(eng, row.get("set_id"), row.get("variant"), sets)
+        # 行格式 `N. 套装名（2/3 件）：铁剑Ⅰ + 炎剑Ⅱ + 炎剑Ⅲ`（2c2d §1.5 面板行）
+        value = "：".join([seg, " + ".join(piece_names)]) if piece_names else seg
+        lines.append(f"{i}. {value}")
+    return "\n".join(lines)
+
+
+def _as_count(value: object) -> int:
+    """安全转非负 int（件数展示；非 int/负数 → 0，确定性）。"""
+    if isinstance(value, int) and not isinstance(value, bool):
+        return max(0, value)
+    if isinstance(value, float) and not isinstance(value, bool):
+        return max(0, int(value))
+    return 0
+
+
+def _set_row_piece_names(
+    eng: ForgeTreeEngine,
+    set_id: object,
+    variant: object,
+    sets: object,
+) -> List[str]:
+    """套装行件名（本记录 pieces 节点 id → 节点名；无匹配记录 → 空列表）。
+
+    消费 forge_sets.parse_sets 输出的 ForgeSet（含 pieces 节点 id）；逐 id 用
+    ForgeTreeEngine.node(id).name 解析显示名（对齐 _node_display_name 口径：name
+    缺省回退节点 id；节点 id 本身也可作回退）。纯函数确定性，不改写入参。
+    """
+    out: List[str] = []
+    if not isinstance(sets, (list, tuple)):
+        return out
+    for s in sets:
+        sid = getattr(s, "id", None)
+        svar = getattr(s, "variant", None)
+        if sid != set_id or svar != variant:
+            continue
+        pieces = getattr(s, "pieces", None)
+        if not isinstance(pieces, (list, tuple)):
+            continue
+        for pid in pieces:
+            if not isinstance(pid, str) or not pid:
+                continue
+            node = eng.node(pid)
+            nm = getattr(node, "name", None)
+            if not isinstance(nm, str) or not nm:
+                nm = pid
+            out.append(nm)
+        break
+    return out
+
+
+def cmd_augments(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """/客制 查询（批7 路7C：P1 查询骨架，细化_2c2d §2.4 / 定稿 L237）。
+
+    流程：
+      ① SP-F5（unlock_augment）未解锁 → 拒绝 AUGMENTS_LOCKED_MSG（GU-A1：未解锁 →
+         /客制 直接拒绝）；
+      ② 引擎加载（load_trees 空 → `❌ 锻造系统未启用（内容包 forge.json 未注册）`）；
+      ③ 解析客制项（forge_augments.parse_augments，缺段/空段 → 空态 AUGMENTS_EMPTY）；
+      ④ disabled/trace 项过滤（AUG-11/12：不出 /客制 面板）→ 逐项渲染
+         `N. 客制名（kind 中文：effect 摘要）`；无可用项 → 空态；
+      ⑤ 参数忽略（P1 骨架：无参全量；带参也返回全量——单武器面板/执行归 M12）。
+
+    仅查询展示，不执行客制（P1 预留边界：AUG-F1~F4 原子执行归 M12）；纯读不改写。
+    """
+    player = _player_of(ctx)
+    if sp_locked(player, AUGMENT_UNLOCK_ID):
+        return AUGMENTS_LOCKED_MSG
+
+    eng = _engine(ctx)
+    if not eng.load_trees():
+        return "❌ 锻造系统未启用（内容包 forge.json 未注册）"
+
+    rows = parse_augments({"forge": _forge_raw(ctx)})
+    visible = [r for r in rows if not r.disabled and not r.trace]
+    if not visible:
+        return AUGMENTS_EMPTY
+
+    lines: List[str] = []
+    for i, r in enumerate(visible, 1):
+        name = r.name or (r.id or "")
+        kind_cn = _AUGMENT_KIND_CN.get(r.aug_kind or "", r.aug_kind or "客制")
+        effect = r.effect or ""
+        seg = f"{name}（{kind_cn}：{effect}）"
+        lines.append(render_item_line(i, seg))
+    return "\n".join(lines)
+
+
+# 客制 kind 中文映射（AUG-03 归口渠道：numeric=数值层 / slot=统一开孔渠道）
+_AUGMENT_KIND_CN: Mapping[str, str] = {"numeric": "数值", "slot": "孔位"}
+
+
+# ---------------------------------------------------------------------------
 # 装配（Router 注册；make_context 由装配层注入，对齐 shop/alchemy 壳模式）
 # ---------------------------------------------------------------------------
 
@@ -1583,7 +1767,8 @@ def register_forge_commands(
     *,
     make_context: Optional[Callable[[Any], dict]] = None,
 ) -> Any:
-    """把 /锻造 /确认 /图纸 /锻造树 注册进 Router（CommandSpec.handler 消费 ParsedCommand）。
+    """把 /锻造 /确认 /图纸 /锻造树 /套装 /客制 注册进 Router（CommandSpec.handler
+    消费 ParsedCommand）——六指令路由收口（批5 路5C 四指令 + 批7 路7C 二查询）。
 
     :param make_context: ParsedCommand → 玩家 ctx dict（含 forge/items/settings/player/
         inventory/qid/now 等，见 _forge_atomic ctx 契约）。None 时 handler 调用抛
@@ -1621,12 +1806,29 @@ def register_forge_commands(
             return cmd_forge_tree(parsed, injected)
         return cmd_forge_tree(parsed, _ctx(parsed))
 
+    def _sets(parsed: Any, *a: Any, **k: Any) -> str:
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_sets(parsed, injected)
+        return cmd_sets(parsed, _ctx(parsed))
+
+    def _augments(parsed: Any, *a: Any, **k: Any) -> str:
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_augments(parsed, injected)
+        return cmd_augments(parsed, _ctx(parsed))
+
     # /锻造（白名单已含「锻造」）；/确认（白名单已含「确认」，2c2b §5.3 登记指令）
     # /图纸（批5 路5A：CommandSpec whitelisted=True 白名单标记；2c2b §5.3 登记指令）
     # /锻造树（批5 路5C：CommandSpec whitelisted=True 白名单标记；2c2b §5.3 登记指令，
-    #   L234「查看当前可锻装备树（分页）」）——四指令全部注册（路由收口）
+    #   L234「查看当前可锻装备树（分页）」）
+    # /套装 /客制（批7 路7C：CommandSpec whitelisted=True 白名单标记；2c2d §5.3 登记指令
+    #   L236/L237——「套装」「客制」独立指令名已进 parsers.DEFAULT_WHITELIST，
+    #   否则 S5 前缀匹配静默不响应）——六指令全部注册（路由收口）
     router.register(CommandSpec(FORGE_CMD, handler=_forge))
     router.register(CommandSpec(CONFIRM_CMD, handler=_confirm))
     router.register(CommandSpec(BLUEPRINT_CMD, handler=_blueprint))
     router.register(CommandSpec(TREE_CMD, handler=_tree))
+    router.register(CommandSpec(SETS_CMD, handler=_sets))
+    router.register(CommandSpec(AUGMENTS_CMD, handler=_augments))
     return router

@@ -45,6 +45,10 @@ import pathlib
 from typing import Any, Dict, Mapping, Optional
 
 from qbot_rpg.commands.forge_commands import (
+    AUGMENTS_CMD,
+    AUGMENTS_EMPTY,
+    AUGMENTS_LOCKED_MSG,
+    AUGMENT_UNLOCK_ID,
     BLUEPRINT_CMD,
     CONFIRM_CMD,
     ERR_P_AMBIGUOUS,
@@ -57,13 +61,19 @@ from qbot_rpg.commands.forge_commands import (
     FORGE_DONE_MARK,
     FORGE_REDFLAG_SUFFIX,
     PREVIEW_WINDOW_KEY,
+    SETS_CMD,
+    SETS_EMPTY,
+    SETS_LOCKED_MSG,
+    SETS_UNLOCK_ID,
     TREE_CMD,
     TREE_EMPTY_PAGE,
     TREE_PAGE_SIZE,
     TREE_TAIL_TIP,
+    cmd_augments,
     cmd_confirm,
     cmd_forge,
     cmd_forge_tree,
+    cmd_sets,
     forge_forged_prefix_names,
     forge_node_suffix,
     forge_progress_segment,
@@ -984,3 +994,140 @@ def test_5c_tree_parsed_by_parser() -> None:
     p = _parsed("/锻造树 2")
     assert p.command == TREE_CMD
     assert "2" in (getattr(p, "args", None) or []) or "2" in (getattr(p, "tokens", None) or [])
+
+
+# ---------------------------------------------------------------------------
+# 批7 路7C：/套装 /客制 查询指令骨架（SP-F4/F5 未解锁拒绝 / 已解锁查询 / 空态 /
+#           六指令注册 + 白名单）
+#   依据：细化_2c2d §1.5（/套装 P1 无门槛）/ §2.4（/客制 P2）/ §3.2（SP-F4/F5）+
+#         2c2b §4.3（未解锁 → 指令直接拒绝）。
+# ---------------------------------------------------------------------------
+
+def _player_with_unlocks(*panels: str) -> Dict[str, Any]:
+    """构造已解锁指定 SP 面板项的玩家（unlock_sets / unlock_augment）。"""
+    p = _player(forged=[], forge_level=1)
+    p["proficiency"]["forge"]["unlocks"] = {pid: 1 for pid in panels}
+    return p
+
+
+def test_7c_sets_locked_rejected() -> None:
+    """7C：/套装 SP-F4（unlock_sets）未解锁 → 拒绝 SETS_LOCKED_MSG。"""
+    player = _player(forged=[], forge_level=1)  # 无 unlock_sets
+    ctx = _make_ctx({}, player)
+    out = cmd_sets(_parsed("/套装"), ctx)
+    assert out == SETS_LOCKED_MSG
+    assert "未解锁 套装" in out and "技能面板" in out
+
+
+def test_7c_sets_unlocked_query_list() -> None:
+    """7C：/套装 已解锁（SP-F4）→ 列出可组成套装（件名 + ready ✅）。"""
+    forge = dict(_forge_raw())
+    forge["sets"] = [{
+        "id": "set_test_sword",
+        "name": "试炼铁剑套装",
+        "variant": "alpha",
+        "pieces": [N_IRON, N_IRON_1],
+        "skills": [{"piece_count": 2, "skill": "test_guard", "level": 1}],
+        "enabled": True,
+    }]
+    player = _player_with_unlocks(SETS_UNLOCK_ID)
+    player["equipped"] = [N_IRON, N_IRON_1]  # 2/2 件 → ready（ACT-02 ≥2）
+    ctx = _make_ctx({}, player)
+    ctx["forge"] = forge
+    out = cmd_sets(_parsed("/套装"), ctx)
+    assert "试炼铁剑套装" in out
+    assert "（2/2 件）" in out
+    assert "铁剑 + 铁剑Ⅰ" in out
+    assert "✅" in out
+
+
+def test_7c_sets_empty_state() -> None:
+    """7C：/套装 已解锁但内容包无 sets 数据 → 空态 SETS_EMPTY（test_demo sets=[]）。"""
+    player = _player_with_unlocks(SETS_UNLOCK_ID)
+    ctx = _make_ctx({}, player)
+    out = cmd_sets(_parsed("/套装"), ctx)
+    assert out == SETS_EMPTY
+
+
+def test_7c_sets_unregistered_system() -> None:
+    """7C：/套装 forge.json 未注册（无树）→ `❌ 锻造系统未启用`。"""
+    player = _player_with_unlocks(SETS_UNLOCK_ID)
+    ctx = _make_ctx({}, player)
+    ctx["forge"] = {"trees": []}
+    out = cmd_sets(_parsed("/套装"), ctx)
+    assert "❌ 锻造系统未启用" in out
+
+
+def test_7c_augments_locked_rejected() -> None:
+    """7C：/客制 SP-F5（unlock_augment）未解锁 → 拒绝 AUGMENTS_LOCKED_MSG（GU-A1）。"""
+    player = _player(forged=[], forge_level=1)  # 无 unlock_augment
+    ctx = _make_ctx({}, player)
+    out = cmd_augments(_parsed("/客制"), ctx)
+    assert out == AUGMENTS_LOCKED_MSG
+    assert "未解锁 客制" in out and "技能面板" in out
+
+
+def test_7c_augments_unlocked_query_list() -> None:
+    """7C：/客制 已解锁（SP-F5）→ 列出可用客制项（test_demo 4 项）。"""
+    player = _player_with_unlocks(AUGMENT_UNLOCK_ID)
+    ctx = _make_ctx({}, player)
+    out = cmd_augments(_parsed("/客制"), ctx)
+    assert "1. 攻击强化（数值：最终武器攻击力 +8）" in out
+    assert "2. 会心强化" in out
+    assert "3. 防御强化" in out
+    assert "4. 开孔（孔位：追加 1 级孔位）" in out
+    assert "回复" not in out  # 追溯行不出面板（test_demo 无；防御断言）
+
+
+def test_7c_augments_disabled_and_trace_filtered() -> None:
+    """7C：/客制 disabled/trace 项不出面板（AUG-11/12）。"""
+    forge = dict(_forge_raw())
+    aug_raw = forge.get("augments")
+    seg = dict(aug_raw) if isinstance(aug_raw, Mapping) else {}
+    seg["augments"] = [
+        {"id": "aug_a", "name": "可用项", "kind": "numeric", "effect": "atk+1"},
+        {"id": "aug_b", "name": "禁用项", "kind": "numeric", "effect": "atk+2", "disabled": True},
+        {"id": "aug_c", "name": "追溯项", "kind": "numeric", "effect": "atk+3", "trace": True},
+    ]
+    forge["augments"] = seg
+    player = _player_with_unlocks(AUGMENT_UNLOCK_ID)
+    ctx = _make_ctx({}, player)
+    ctx["forge"] = forge
+    out = cmd_augments(_parsed("/客制"), ctx)
+    assert "可用项" in out
+    assert "禁用项" not in out
+    assert "追溯项" not in out
+
+
+def test_7c_augments_empty_state() -> None:
+    """7C：/客制 已解锁但 augments 段为空 → 空态 AUGMENTS_EMPTY。"""
+    forge = dict(_forge_raw())
+    forge["augments"] = {"augments": [], "limit_by_rarity": []}
+    player = _player_with_unlocks(AUGMENT_UNLOCK_ID)
+    ctx = _make_ctx({}, player)
+    ctx["forge"] = forge
+    out = cmd_augments(_parsed("/客制"), ctx)
+    assert out == AUGMENTS_EMPTY
+
+
+def test_7c_six_commands_registered() -> None:
+    """7C：六指令路由收口——/锻造 /确认 /图纸 /锻造树 /套装 /客制 全部注册（白名单标记）。"""
+    router = Router()
+    register_forge_commands(router, make_context=lambda p: {})
+    for cmd in (FORGE_CMD, CONFIRM_CMD, BLUEPRINT_CMD, TREE_CMD, SETS_CMD, AUGMENTS_CMD):
+        assert router.has(cmd), cmd
+        spec = router.get(cmd)
+        assert spec is not None and spec.whitelisted, cmd
+        assert callable(spec.handler), cmd
+    # 白名单登记（S5 前缀匹配触发必需，P-05 同款裁决；/套装 /客制 独立指令名）
+    assert SETS_CMD in DEFAULT_WHITELIST
+    assert AUGMENTS_CMD in DEFAULT_WHITELIST
+
+
+def test_7c_sets_augments_parsed_by_parser() -> None:
+    """7C：/套装 /客制 经 parse_command 真实解析（白名单含 套装/客制）。"""
+    p = _parsed("/套装")
+    assert p.command == SETS_CMD
+    p2 = _parsed("/客制")
+    assert p2.command == AUGMENTS_CMD
+

@@ -990,6 +990,13 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
             # 原 dict() 拷贝导致 M8/reward 宝石金币入账只改副本、Player 实例落档路径不回写丢失。
             "currencies": player.currencies
                 if isinstance(player.currencies, MutableMapping) else {},
+            # M9 锻造·实机部署收口（2026-08-30）：ctx["title_state"] 就地引用
+            # player.title_state（同 currencies 模式）。铸造王授予经
+            # grant_king_title 写 player["title_state"]——生产 ctx["player"] 是 Player
+            # dataclass，_player_of 回退 ctx 时若 ctx 无 title_state 键 → 授予写到临时
+            # 键落档丢失（实机：全链锻造后 title_state.owned 仍空）。挂回后授予即落档。
+            "title_state": player.title_state
+                if isinstance(player.title_state, MutableMapping) else {},
             "personal_buys": _ps_init(ps, "personal_buys", {}),
             "checkin_state": _ps_init(ps, "checkin", {}),
             "shortcuts": _ps_init(ps, "shortcuts", {}),
@@ -1015,6 +1022,14 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
             # 预览后 /确认 恒「无可确认」；改为 _ps_init 挂回 ps（引擎写 ctx 键即落档），
             # 预览/确认 跨指令共享同一窗源（F-3 预留口径，装配层补接线）。
             "forge_preview": _ps_init(ps, "forge_preview", {}),
+            # M9 锻造·实机部署收口（2026-08-30）：已锻造集合落档挂回 persistent_state。
+            # 部署实测：/锻造 成功扣素材扣金币均落档，但 forge_commands 写
+            # player["forged"] 顶层键——生产 ctx["player"] 是 Player dataclass 非
+            # MutableMapping，_player_of 回退返回 ctx 自身 → 写入 ctx["forged"]（每指令
+            # 重建的临时键）→ 落档丢失 → 前置判定「需先锻造」恒拦。挂回 ps 后引擎写
+            # ctx["forged"] 即落档（forge_tree._forged_set 读 player["forged"] 兼容，
+            # 因 ctx 即 player 兜底；ps 键名 forge_forged 防与其它系统 forged 冲突）。
+            "forged": _ps_init(ps, "forge_forged", []),
             # M8 批14 测试探针（炼金引导任务）：ctx["prof_level"] 职业等级映射
             # {job_id: level}——quest 引擎 var=prof_level 条件（param=job_id）消费；
             # 未注册/无建档 → {} 空（条件不满足，引导任务不提前解锁）。

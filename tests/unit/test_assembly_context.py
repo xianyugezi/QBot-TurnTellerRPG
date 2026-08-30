@@ -316,6 +316,22 @@ async def test_forge_preview_persists_across_commands() -> None:
         "确认窗应跨指令持久化（挂 persistent_state）"
 
 
+async def test_forge_forged_persists_across_commands() -> None:
+    """M9 实机部署收口（2026-08-30）：已锻造集合挂 persistent_state——
+    forge_commands 写 ctx["forged"]（Player dataclass 非 MutableMapping 时 _player_of
+    回退 ctx）→ 跨指令重建 ctx 后仍可读，前置判定「需先锻造」才不恒拦。"""
+    player = _player()
+    deps = _deps(player)
+    ctx1 = await make_context(_event(), deps)
+    assert isinstance(ctx1["forged"], list)
+    ctx1["forged"].append("node_iron_sword")
+    # 第二次指令（全新 ctx）→ forged 仍在（挂 ps 落档保留）
+    ctx2 = await make_context(_event(), deps)
+    assert isinstance(ctx2["forged"], list)
+    assert "node_iron_sword" in ctx2["forged"], \
+        "已锻造集合应跨指令持久化（挂 persistent_state）"
+
+
 # ---------------------------------------------------------------------------
 # 双形态背包 + 入包 hook
 # ---------------------------------------------------------------------------

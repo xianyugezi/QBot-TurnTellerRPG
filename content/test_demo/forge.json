@@ -1,0 +1,358 @@
+{
+  "schema_version": "1.0",
+  "trees": [
+    {
+      "id": "tree_weapon",
+      "name": "武器树",
+      "type": "weapon",
+      "roots": [
+        "node_iron_sword"
+      ],
+      "nodes": [
+        {
+          "id": "node_iron_sword",
+          "name": "铁剑",
+          "item": "iron_sword",
+          "type": "weapon",
+          "level": 1,
+          "parent": null,
+          "branch": [],
+          "stats": {
+            "atk": 12
+          },
+          "slots": [],
+          "materials": [
+            {
+              "item": "ore",
+              "count": 3
+            }
+          ],
+          "rarity": "normal",
+          "final": false
+        },
+        {
+          "id": "node_iron_sword_1",
+          "name": "铁剑Ⅰ",
+          "item": "iron_sword_1",
+          "type": "weapon",
+          "level": 2,
+          "parent": "node_iron_sword",
+          "branch": [],
+          "stats": {
+            "atk": 18
+          },
+          "slots": [],
+          "materials": [
+            {
+              "item": "ore",
+              "count": 5
+            }
+          ],
+          "rarity": "fine",
+          "final": false
+        },
+        {
+          "id": "node_iron_sword_2",
+          "name": "铁剑Ⅱ",
+          "item": "iron_sword_2",
+          "type": "weapon",
+          "level": 3,
+          "parent": "node_iron_sword_1",
+          "branch": [],
+          "stats": {
+            "atk": 24
+          },
+          "slots": [
+            {
+              "level": 1
+            }
+          ],
+          "materials": [
+            {
+              "item": "ore",
+              "count": 8
+            },
+            {
+              "item": "star_iron",
+              "count": 2
+            }
+          ],
+          "rarity": "fine",
+          "final": false
+        },
+        {
+          "id": "node_flame_sword",
+          "name": "炎剑",
+          "item": "flame_sword",
+          "type": "weapon",
+          "level": 4,
+          "parent": "node_iron_sword_2",
+          "branch": [],
+          "stats": {
+            "atk": 32,
+            "element": "fire",
+            "element_value": 5
+          },
+          "slots": [],
+          "materials": [
+            {
+              "item": "ore",
+              "count": 5
+            },
+            {
+              "item": "fire_dragon_scale",
+              "count": 3
+            }
+          ],
+          "rarity": "fine",
+          "final": false
+        },
+        {
+          "id": "node_flame_sword_2",
+          "name": "炎剑Ⅱ",
+          "item": "flame_sword_2",
+          "type": "weapon",
+          "level": 5,
+          "parent": "node_flame_sword",
+          "branch": [
+            "node_ice_sword",
+            "node_lightning_sword"
+          ],
+          "stats": {
+            "atk": 40,
+            "element": "fire",
+            "element_value": 8
+          },
+          "slots": [
+            {
+              "level": 1
+            },
+            {
+              "level": 2
+            }
+          ],
+          "materials": [
+            {
+              "item": "fire_dragon_scale",
+              "count": 5
+            },
+            {
+              "item": "alch_ember_crystal",
+              "count": 2
+            }
+          ],
+          "rarity": "epic",
+          "final": false
+        },
+        {
+          "id": "node_flame_sword_3",
+          "name": "炎剑Ⅲ",
+          "item": "flame_sword_3",
+          "type": "weapon",
+          "level": 6,
+          "parent": "node_flame_sword_2",
+          "branch": [],
+          "stats": {
+            "atk": 50,
+            "element": "fire",
+            "element_value": 10
+          },
+          "slots": [],
+          "materials": [
+            {
+              "item": "fire_dragon_scale",
+              "count": 8
+            },
+            {
+              "item": "alch_fire_essence",
+              "count": 1
+            }
+          ],
+          "rarity": "epic",
+          "final": false
+        },
+        {
+          "id": "node_flame_king_sword",
+          "name": "■炎王剑",
+          "item": "flame_king_sword",
+          "type": "weapon",
+          "level": 7,
+          "parent": "node_flame_sword_3",
+          "branch": [],
+          "stats": {
+            "atk": 70,
+            "element": "fire",
+            "element_value": 15
+          },
+          "slots": [
+            {
+              "level": 3
+            }
+          ],
+          "materials": [
+            {
+              "item": "fire_dragon_scale",
+              "count": 10
+            },
+            {
+              "item": "ash_core",
+              "count": 2
+            }
+          ],
+          "cost": {
+            "coins": 500
+          },
+          "rarity": "legendary",
+          "final": true,
+          "augmentable": true
+        },
+        {
+          "id": "node_ice_sword",
+          "name": "冰剑",
+          "item": "ice_sword",
+          "type": "weapon",
+          "level": 5,
+          "parent": "node_flame_sword_2",
+          "branch": [],
+          "stats": {
+            "atk": 36,
+            "element": "water",
+            "element_value": 8
+          },
+          "slots": [],
+          "materials": [
+            {
+              "item": "ice_crystal_ore",
+              "count": 6
+            },
+            {
+              "item": "alch_frost_crystal",
+              "count": 2
+            }
+          ],
+          "rarity": "fine",
+          "final": true
+        },
+        {
+          "id": "node_lightning_sword",
+          "name": "雷剑",
+          "item": "lightning_sword",
+          "type": "weapon",
+          "level": 5,
+          "parent": "node_flame_sword_2",
+          "branch": [],
+          "stats": {
+            "atk": 38,
+            "element": "thunder",
+            "element_value": 8
+          },
+          "slots": [],
+          "materials": [
+            {
+              "item": "thunder_beast_fang",
+              "count": 4
+            },
+            {
+              "item": "star_iron",
+              "count": 2
+            }
+          ],
+          "rarity": "fine",
+          "final": true
+        }
+      ]
+    }
+  ],
+  "sets": [],
+  "augments": {
+    "augments": [
+      {
+        "id": "aug_atk",
+        "name": "攻击强化",
+        "kind": "numeric",
+        "effect": "最终武器攻击力 +8",
+        "stat_key": "atk",
+        "value": {
+          "flat": 8
+        },
+        "cost": [
+          {
+            "item": "fire_dragon_scale",
+            "count": 2
+          }
+        ]
+      },
+      {
+        "id": "aug_crit",
+        "name": "会心强化",
+        "kind": "numeric",
+        "effect": "最终武器会心率 +5%",
+        "stat_key": "crit",
+        "value": {
+          "pct": 0.05
+        },
+        "cost": [
+          {
+            "item": "thunder_beast_fang",
+            "count": 2
+          }
+        ]
+      },
+      {
+        "id": "aug_def",
+        "name": "防御强化",
+        "kind": "numeric",
+        "effect": "最终武器防御 +6",
+        "stat_key": "def",
+        "value": {
+          "flat": 6
+        },
+        "cost": [
+          {
+            "item": "ash_core",
+            "count": 2
+          }
+        ]
+      },
+      {
+        "id": "aug_slot",
+        "name": "开孔",
+        "kind": "slot",
+        "effect": "追加 1 级孔位",
+        "slot_level": 1,
+        "cost": [
+          {
+            "item": "fire_dragon_scale",
+            "count": 3
+          }
+        ]
+      }
+    ],
+    "limit_by_rarity": [
+      {
+        "quality": "epic",
+        "times": 3
+      },
+      {
+        "quality": "legendary",
+        "times": 2
+      },
+      {
+        "quality": "legendary",
+        "times": 1,
+        "final_only": true
+      }
+    ]
+  },
+  "settings": {
+    "forge_fee": "节点等级×10",
+    "synth_ratio_3to1": true,
+    "straight_forge": true,
+    "decompose_rate": {
+      "正式": 0.4
+    },
+    "exp_per_forge": "节点等级×2",
+    "sets_enabled": true,
+    "augments_enabled": true
+  }
+}

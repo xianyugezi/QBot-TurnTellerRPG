@@ -555,6 +555,11 @@ class _Checker:
         if module_name == "slots":
             from qbot_rpg.content.alchemy_settings import validate_slots
             validate_slots(self._modules, self)
+        # M9 锻造（m9_shared_contract §六）：forge 专项校验 V1-V15 硬 + V16/W1-W6 黄 +
+        # 2c2d V1-V8 硬/W1-W4 黄（同 npc/shop/quest/checkin 鸭子类型 validate_xxx 口径）
+        if module_name == "forge":
+            from qbot_rpg.content.forge_models import validate_forge
+            validate_forge(self._modules, self)
         # 逐条目校验
         for idx, entry in self._iter_entries(module_name, data, mmeta):
             self._check_entry(module_name, idx, entry, mmeta)

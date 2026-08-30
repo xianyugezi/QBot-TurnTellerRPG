@@ -43,31 +43,41 @@
   "id": "moon_grass",
   "name": "月光草",
   "type": "material",
-  "price": 40
+  "price": 40,
+  "material_tier": "normal",
+  "source": "采集/商店"
  },
  {
   "id": "star_iron",
   "name": "星铁矿石",
   "type": "material",
-  "price": 60
+  "price": 60,
+  "material_tier": "normal",
+  "source": "挖掘点/商店"
  },
  {
   "id": "ash_core",
   "name": "灰烬核心",
   "type": "material",
-  "price": 300
+  "price": 300,
+  "material_tier": "rare",
+  "source": "灰烬魔掉落/商店"
  },
  {
   "id": "ogre_key",
   "name": "巨魔钥匙",
   "type": "material",
-  "price": 0
+  "price": 0,
+  "material_tier": "normal",
+  "source": "巨魔掉落"
  },
  {
   "id": "ghost_moss",
   "name": "幽灵苔",
   "type": "material",
-  "price": 100
+  "price": 100,
+  "material_tier": "normal",
+  "source": "采集/商店"
  },
  {
   "id": "hunter_blade",
@@ -200,6 +210,8 @@
   "name": "火晶石",
   "type": "material",
   "price": 150,
+  "material_tier": "normal",
+  "source": "采集/商店",
   "rarity": "普通",
   "elements": {
    "fire": 4
@@ -213,6 +225,8 @@
   "name": "冰晶石",
   "type": "material",
   "price": 150,
+  "material_tier": "normal",
+  "source": "采集/商店",
   "rarity": "普通",
   "elements": {
    "water": 4
@@ -226,6 +240,8 @@
   "name": "火之精华",
   "type": "material",
   "price": 400,
+  "material_tier": "rare",
+  "source": "火元素采集/商店",
   "rarity": "金色",
   "elements": {
    "fire": 6
@@ -332,6 +348,137 @@
     "trait_mp_flow"
    ],
    "count": 2
+  }
+ },
+ {
+  "id": "ore",
+  "name": "矿石",
+  "type": "material",
+  "price": 20,
+  "material_tier": "normal",
+  "source": "挖掘点/商店"
+ },
+ {
+  "id": "fire_dragon_scale",
+  "name": "火龙鳞",
+  "type": "material",
+  "price": 500,
+  "material_tier": "rare",
+  "source": "火龙掉落/商店"
+ },
+ {
+  "id": "ice_crystal_ore",
+  "name": "冰晶矿",
+  "type": "material",
+  "price": 120,
+  "material_tier": "normal",
+  "source": "采集 冰晶/商店"
+ },
+ {
+  "id": "thunder_beast_fang",
+  "name": "雷兽牙",
+  "type": "material",
+  "price": 450,
+  "material_tier": "rare",
+  "source": "雷兽掉落"
+ },
+ {
+  "id": "iron_sword",
+  "name": "铁剑",
+  "type": "weapon",
+  "price": 150,
+  "atk": 12,
+  "slot": "weapon",
+  "excludes": []
+ },
+ {
+  "id": "iron_sword_1",
+  "name": "铁剑Ⅰ",
+  "type": "weapon",
+  "price": 300,
+  "atk": 18,
+  "slot": "weapon",
+  "excludes": []
+ },
+ {
+  "id": "iron_sword_2",
+  "name": "铁剑Ⅱ",
+  "type": "weapon",
+  "price": 500,
+  "atk": 24,
+  "slot": "weapon",
+  "excludes": []
+ },
+ {
+  "id": "flame_sword",
+  "name": "炎剑",
+  "type": "weapon",
+  "price": 800,
+  "atk": 32,
+  "slot": "weapon",
+  "excludes": [],
+  "elements": {
+   "fire": 5
+  }
+ },
+ {
+  "id": "flame_sword_2",
+  "name": "炎剑Ⅱ",
+  "type": "weapon",
+  "price": 1100,
+  "atk": 40,
+  "slot": "weapon",
+  "excludes": [],
+  "elements": {
+   "fire": 8
+  }
+ },
+ {
+  "id": "flame_sword_3",
+  "name": "炎剑Ⅲ",
+  "type": "weapon",
+  "price": 1500,
+  "atk": 50,
+  "slot": "weapon",
+  "excludes": [],
+  "elements": {
+   "fire": 10
+  }
+ },
+ {
+  "id": "flame_king_sword",
+  "name": "炎王剑",
+  "type": "weapon",
+  "price": 3000,
+  "atk": 70,
+  "slot": "weapon",
+  "excludes": [],
+  "elements": {
+   "fire": 15
+  }
+ },
+ {
+  "id": "ice_sword",
+  "name": "冰剑",
+  "type": "weapon",
+  "price": 950,
+  "atk": 36,
+  "slot": "weapon",
+  "excludes": [],
+  "elements": {
+   "water": 8
+  }
+ },
+ {
+  "id": "lightning_sword",
+  "name": "雷剑",
+  "type": "weapon",
+  "price": 980,
+  "atk": 38,
+  "slot": "weapon",
+  "excludes": [],
+  "elements": {
+   "thunder": 8
   }
  }
 ]

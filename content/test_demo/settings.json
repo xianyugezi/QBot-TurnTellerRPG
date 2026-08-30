@@ -197,5 +197,16 @@
     "gem.珠升阶": 10,
     "gem.复制额外": 0,
     "gem.decompose_formula": "flat"
+  },
+  "forge": {
+    "forge_fee": "节点等级×10",
+    "synth_ratio_3to1": true,
+    "straight_forge": true,
+    "decompose_rate": {
+      "正式": 0.4
+    },
+    "exp_per_forge": "节点等级×2",
+    "sets_enabled": true,
+    "augments_enabled": true
   }
 }

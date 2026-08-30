@@ -283,7 +283,7 @@ def build_comb_synth_map(recipe: object) -> Dict[str, str]:
             if isinstance(m, Mapping):
                 mid = m.get("id") or m.get("item")
                 if isinstance(mid, str) and mid:
-                    out.setdefault(mid, oid)
+                    out[mid] = oid
     return out
 
 
@@ -351,11 +351,16 @@ def _tier_of(
 ) -> str:
     """素材档位判定（F-2 / TIER-03a / M-03 双源仲裁）：行覆写 > items 元数据。
 
-    行覆写含 rare → rare（M-03 行覆写优先）；否则 items material_tier=rare → rare；
-    其余（含缺省）→ normal（TIER-03a 缺省 normal）。
+    行覆写（normal/rare 任一枚举合法即生效，与 forge_material.material_tier_of
+    语义一致）优先；否则 items material_tier=rare → rare；其余（含缺省）→ normal。
     """
-    if TIER_RARE in row_tiers:
+    # 行覆写（normal/rare 任一枚举合法即生效，与 forge_material.material_tier_of
+    # 语义一致）；多行聚合时任一行 rare 保守判 rare（死锁途径分级取严）
+    explicit = [t for t in row_tiers if t == TIER_RARE or t == TIER_NORMAL]
+    if TIER_RARE in explicit:
         return TIER_RARE
+    if explicit:
+        return explicit[0]  # 仅 normal 显式覆写 → normal（压过 items rare）
     entry = items_map.get(item_id)
     if isinstance(entry, Mapping):
         mt = entry.get(_MATERIAL_TIER_KEY)

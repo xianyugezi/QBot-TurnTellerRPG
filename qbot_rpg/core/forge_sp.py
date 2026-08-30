@@ -141,11 +141,23 @@ def _forge_entry() -> Dict[str, Any]:
 
 
 def _engine() -> ProficiencyEngine:
-    """SP 引擎构造：注入 forge sp_panel 本地兜底定义（纯函数，每次新建无共享状态）。
+    """SP 引擎：优先复用 forge_job 装配层单一引擎（proficiency.json 内容配置——
+    内容包可配 sp_panel cost/repeatable 生效，2c5a SP-05 / 2c2d §3.2）；
+    装配层未注入 forge sp_panel 时，回退本地 FORGE_SP_PANEL 静态定义
+    （cost=1/repeatable=False/max_repeat=1，确定性兜底）。
 
-    ProficiencyEngine 构造为纯函数（entries 注入 + 缺省兜底），同刻同参必同值；
-    sp_available/unlock_count 不依赖 sp_panel，sp_unlock 依赖其查到 SP-F1~F5 定义。
+    【P2-2 修复 2026-08-30 批B 审查】：原实现每次新建 ProficiencyEngine([_forge_entry()])
+    恒用静态 FORGE_SP_PANEL，装配层注入的真实 proficiency.json sp_panel（内容包可配
+    cost）被架空——现改为优先读 forge_job 共享引擎（configure_proficiency 注入），
+    仅当其未含 forge sp_panel 时才用本地兜底。
     """
+    try:
+        from qbot_rpg.core.forge_job import _engine as _job_engine
+        shared = _job_engine()
+        if shared.sp_panel_defs(FORGE_JOB_ID):
+            return shared
+    except Exception:
+        pass
     return ProficiencyEngine(entries=[_forge_entry()])
 
 

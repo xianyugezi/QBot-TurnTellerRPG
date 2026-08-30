@@ -5,13 +5,20 @@
 四门禁（M0~M3）+ M4 门禁 + 全量回归；端到端冒烟入 L4 e2e 层）。
 
 模式：
-  无参           全量回归（M0~M6 门禁，阶段2 严格依赖序 m0→m6，D8 VG-13）
+  无参           全量回归（M0~M6 门禁 + M9 锻造门禁，阶段2 严格依赖序 m0→m6→M9 段，D8 VG-13）
   --only m0      只跑 verify_m0.py（里程碑过滤；脚本缺失按 D8 VG-11 不假绿 return 1）
+  --only m9      只跑 M9 锻造门禁（阶段0 静态门禁 + verify_m9_b2~b7 + verify_m9_smoke，
+                 依赖序 b2→b3→b4→b5→b7→smoke；脚本缺失按 VG-11 不假绿 return 1）
   --only unit    只跑 unit 单测
   --fast         冒烟模式（性质用例抽样 1000→100 组 + 跳过覆盖率实算，D8 VG-14）
   --skip-lint    跳过阶段0 静态门禁（ruff/mypy）——逃生口（5d §3.2 L133 / D7 LNT-04）
 退出码 0 = 全绿；阶段0 静态门禁失败仅置 fail（exit≠0），后续阶段继续执行
 收集全部失败（5d §3.2 L144 短路原则 / D7 决策记录 D7-D2）。
+
+M9 锻造门禁（docs/m9_batch_plan.md 批8 路8B 注册 + 细化_5d 测试体系总纲 §2.1 验收门禁）：
+verify_m9_b2~b7 分批门禁 + verify_m9_smoke 全链路冒烟，依赖序 b2→b3→b4→b5→b7→smoke
+（与实现批次顺序一致：批6 联动闭环 = verify_m9_smoke 自身，故无独立 b6 条目——smoke 即
+批6 门禁）。每脚本独立子进程真实可跑、幂等；未落盘按 VG-11 不假绿（置 fail，退出码非 0）。
 
 覆盖率门禁（M6 批7·路A，细化_M6_质量门禁 D7 COV 组）：阶段3 真实核算
 qbot_rpg/core + engine + content 三目录**各自** ≥80% 行覆盖（coverage 依赖实算，
@@ -38,6 +45,15 @@ VERIFY_M3 = REPO / "verify" / "verify_m3.py"
 VERIFY_M4 = REPO / "verify" / "verify_m4.py"
 VERIFY_M5 = REPO / "verify" / "verify_m5.py"
 VERIFY_M6 = REPO / "verify" / "verify_m6.py"
+# M9 锻造门禁（docs/m9_batch_plan.md 批8 路8B 注册 + 细化_5d 测试体系总纲 §2.1 验收门禁）：
+# 分批门禁 verify_m9_b2~b7 + 全链路冒烟 verify_m9_smoke。依赖序 b2→b3→b4→b5→b7→smoke
+# （与实现批次顺序一致：批6 联动闭环 = verify_m9_smoke 自身，故无独立 b6 条目）。
+VERIFY_M9_B2 = REPO / "verify" / "verify_m9_b2.py"
+VERIFY_M9_B3 = REPO / "verify" / "verify_m9_b3.py"
+VERIFY_M9_B4 = REPO / "verify" / "verify_m9_b4.py"
+VERIFY_M9_B5 = REPO / "verify" / "verify_m9_b5.py"
+VERIFY_M9_B7 = REPO / "verify" / "verify_m9_b7.py"
+VERIFY_M9_SMOKE = REPO / "verify" / "verify_m9_smoke.py"
 
 # 里程碑 → verify 脚本（D8 细化_M6_verify门禁与承接：VG-12 MILESTONES["m6"] 置位）。
 # 阶段2 全量按字典插入序执行 = 严格里程碑依赖序 m0→m1→…→m6（VG-13：不可乱序、不可跳过）。
@@ -51,6 +67,17 @@ MILESTONES: dict[str, Path | None] = {
     # M6 接线闭环（verify_m6 两段式门禁，见 细化_M6_verify门禁与承接 D8）——VG-12 置位 / VG-17 注释同步；
     # 四源统一「接线闭环」口径：run_all_tests L42 注释 / 启动手册 L42 / 细化_5d L95 / 规划 L3481（VG-16，总纲 SYN-1/SCP-1）
     "m6": VERIFY_M6,
+}
+# M9 锻造门禁依赖序（docs/m9_batch_plan.md 批8 路8B + 细化_5d 测试体系总纲 §2.1）。
+# 字典插入序 = 执行序 b2→b3→b4→b5→b7→smoke（与实现批次顺序一致；批6 联动闭环 =
+# verify_m9_smoke 全链路冒烟，故无独立 b6 条目——smoke 即批6 门禁，VG-13 对齐 m0~m6）。
+M9_SCRIPTS: dict[str, Path | None] = {
+    "m9_b2": VERIFY_M9_B2,        # 批2 素材经济（素材两档/即进度/死锁扫描）
+    "m9_b3": VERIFY_M9_B3,        # 批3 铸造职业层（7级门槛/SP面板/铸造王）
+    "m9_b4": VERIFY_M9_B4,        # 批4 /锻造 核心指令（原子流程/双流/参数解析/批量）
+    "m9_b5": VERIFY_M9_B5,        # 批5 读侧指令（/图纸 /锻造树/路由）
+    "m9_b7": VERIFY_M9_B7,        # 批7 P1/P2 结构预留（套装/客制/查询骨架）
+    "m9_smoke": VERIFY_M9_SMOKE,  # 批6 全链路冒烟（合成→锻造→图纸→双流→铸造王）
 }
 LAYER_PATHS = {
     "unit": ["tests/unit"],
@@ -236,10 +263,38 @@ def _lint() -> bool:
     return ok
 
 
+def _run_m9_gates() -> bool:
+    """M9 锻造门禁段（docs/m9_batch_plan.md 批8 路8B + 细化_5d §2.1 验收门禁）。
+
+    按 M9_SCRIPTS 字典插入序执行 = 严格依赖序 b2→b3→b4→b5→b7→smoke（VG-13 对齐
+    m0~m6：不可乱序、不可跳过）。每脚本独立子进程（真实可跑、幂等）；脚本未接入
+    （None 或文件缺失）按 D8 VG-11 不假绿铁律显式置 fail（continue 不中断收集全部
+    失败）。段末打印 M9 结果汇总（各脚本 OK/FAIL 清单 + 总退出码）。返回全绿?
+    """
+    results: list[tuple[str, str, bool]] = []
+    for key, script in M9_SCRIPTS.items():
+        if script is None or not script.exists():
+            label = script.name if script else "verify 脚本"
+            print(f"  [未接入] {key.upper()} 未接入 → 门禁不完整（{label} 缺失）——"
+                  "不假绿铁律（D8 VG-11）")
+            results.append((key, label, False))
+            continue
+        print(f"  [运行] {key} → {script.name}")
+        r = subprocess.run([str(PY), str(script)], cwd=str(REPO.parent))
+        results.append((key, script.name, r.returncode == 0))
+    ok_all = all(ok for _, _, ok in results)
+    print("\n  ── M9 段结果汇总 ──")
+    for key, name, ok in results:
+        print(f"    {'✅' if ok else '❌'} {key}（{name}）")
+    print(f"  M9 段总退出码：{0 if ok_all else 1}（{'全绿' if ok_all else '存在失败/未接入'}）")
+    return ok_all
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="QBot-TurnTellerRPG 一键回归")
     ap.add_argument("--only", default="",
-                    help="过滤：m0~m6 / unit / contract / e2e / fault（m6 脚本未落盘时按 D8 VG-11 不假绿 return 1）")
+                    help="过滤：m0~m6 / m9（M9 分批门禁+冒烟，依赖序 b2→b3→b4→b5→b7→smoke）/ "
+                         "unit / contract / e2e / fault（脚本未落盘时按 D8 VG-11 不假绿 return 1）")
     ap.add_argument("--fast", action="store_true",
                     help="冒烟模式（性质用例抽样 1000→100 组，QBT_FAST=1；跳过覆盖率实算；D8 VG-14）")
     ap.add_argument("--skip-lint", action="store_true", help="跳过阶段0 静态门禁（ruff/mypy，5d L133 逃生口）")
@@ -270,6 +325,19 @@ def main() -> int:
         print(f"运行 {script.name} ...")
         r = subprocess.run([str(PY), str(script)], cwd=str(REPO))
         fail = r.returncode != 0
+    elif only == "m9":
+        # M9 锻造门禁专用（docs/m9_batch_plan.md 批8 路8B）：阶段0 静态门禁 + M9 段
+        # 严格依赖序 b2→b3→b4→b5→b7→smoke。脚本未落盘按 VG-11 不假绿 → 退出码非 0。
+        print("\n[阶段 0] 静态前置（ruff/mypy 快速门，D7 LNT-04 / 5d §3.2 L133）")
+        if args.skip_lint:
+            print("  [跳过] --skip-lint 已指定，跳过 ruff/mypy 静态门禁（5d §3.2 L133 逃生口）")
+        elif not _lint():
+            fail = True
+            print("  [失败] 静态门禁未通过——存量基线豁免已生效（docs/verify/lint_baseline.md），"
+                  "清单外新增问题必拦")
+        print("\n[阶段 2] M9 门禁（严格依赖序 b2→b3→b4→b5→b7→smoke，m9_batch_plan 批8 路8B）")
+        if not _run_m9_gates():
+            fail = True
     elif only in LAYER_PATHS:
         print(f"运行 {only} 层 ...")
         fail = _pytest(LAYER_PATHS[only], report=True) != 0
@@ -277,7 +345,7 @@ def main() -> int:
         if only:
             # P1-1 修复（M6 批5B dsh 审查 / D5 FLT-38）：未知层名显式报错退出非 0，
             # 禁止静默落入全量分支（FLT-37 禁止的静默退化）
-            print(f"[错误] 未知层名 {only}（可用：{sorted(MILESTONES)} / {sorted(LAYER_PATHS)}）")
+            print(f"[错误] 未知层名 {only}（可用：{sorted(MILESTONES) + ['m9']} / {sorted(LAYER_PATHS)}）")
             return 2
         # 全量（5d §3.2 L130-146 流程对齐，D8 VG-15）：阶段0 ruff/mypy 快速门（L133）→ 阶段1
         # L1~L4 金字塔 + 故障注入（L137）→ 阶段2 verify_m0~m6 严格依赖序（L139）→ 阶段3 覆盖率
@@ -309,6 +377,12 @@ def main() -> int:
             print(f"  [运行] {key} → {script.name}")
             r = subprocess.run([str(PY), str(script)], cwd=str(REPO.parent))
             fail = fail or (r.returncode != 0)
+        # M9 锻造门禁段（docs/m9_batch_plan.md 批8 路8B + 细化_5d §2.1）：依赖序
+        # b2→b3→b4→b5→b7→smoke（批6 联动闭环 = smoke 自身，无独立 b6）；脚本未落盘
+        # 按 VG-11 不假绿 → 置 fail，收集全部失败（5d §3.2 L144 短路原则）
+        print("  [M9 段] 分批门禁 + 全链路冒烟（依赖序 b2→b3→b4→b5→b7→smoke，m9_batch_plan 批8 路8B）")
+        if not _run_m9_gates():
+            fail = True
         # 阶段3 覆盖率真实核算（D7 COV-03/04/05）：coverage 依赖实算三目录各自 ≥80%，
         # 任一 <80% → exit≠0（COV-04 阈值断言，门禁不放行）；报表归档 docs/verify/coverage_latest.txt（COV-05）。
         # --fast 冒烟模式跳过覆盖率实算（D8 VG-14 覆盖率抽样核算跳过）；全量模式才真实核算。

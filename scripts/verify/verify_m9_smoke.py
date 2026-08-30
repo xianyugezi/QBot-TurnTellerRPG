@@ -5,7 +5,9 @@
   - docs/m9_启动包.md §五（验收门禁 3：verify_m9_smoke 全链路——
     合成素材→锻造→图纸→双流→铸造王；§五 4：emoji 门禁仅 ✅/❌）
   - docs/m9_batch_plan.md 批8（验收门禁：verify_m9_XX 各批门禁脚本 +
-    verify_m9_smoke 收口；批6 路6B：全链路冒烟）
+    verify_m9_smoke 收口；批6 路6B：全链路冒烟）——文件头标注「依据：批8 + 细化_5d 测试体系总纲」
+  - docs/细化/细化_5d_测试体系总纲.md §2.1/§3.2（里程碑 verify 门禁严格依赖序 VG-13 /
+    未接入不假绿 VG-11；本脚本为 M9 收口门禁，依赖序末位）
   - docs/m9_shared_contract.md / docs/细化/细化_2c2b_锻造流程契约.md（守卫/双流/图纸契约）
 
 本脚本对齐 scripts/verify/ 既有门禁模式（verify_m7 等：真实 content/test_demo 数据

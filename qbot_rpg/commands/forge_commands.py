@@ -1,8 +1,12 @@
-"""M9 锻造·批4·路4A+路4B：/锻造 原子流程 + 直锻/预览双流 + /确认 一次性窗口。
+"""M9 锻造·批4·路4A+路4B+路4C：/锻造 原子流程 + 直锻/预览双流 + /确认 一次性窗口
+      + 参数解析完整词法（P-01~06 + 批量 *N 消费）。
+      （批4 路4D 扩展：装备实例快照入档 forge_instances + 图鉴 item 分册点亮）
 
 文件名：qbot_rpg/commands/forge_commands.py
 创建时间：2026-08-30
 作者：Hermes 子agent-4B（M9 锻造实现组批4·路4B：直锻/预览双流 + /确认 一次性窗口）
+      —— 批4 路4D 扩展作者：Hermes 子agent-4D（实例快照入档 + 图鉴 item 分册点亮，追加不改写）
+      —— 批4 路4C 扩展作者：Hermes 子agent-4C（参数解析完整词法 P-01~06 + 批量 *N 消费，追加不改写）
 
 【批内协作状态】路4A（原子流程引擎：守卫 GU-01~06 + 成功/失败模板）与路4B 同批并行。
 本工作区收口时 forge_commands.py 尚未落盘（批4 拆 4A+4B 子批并行，4A 未先提交），
@@ -32,14 +36,32 @@
   ⑤ 路4A 原子流程（_forge_atomic）：守卫 GU-01~06 顺序链（系统注册/参数/节点存在可锻/
      前置已锻/素材足够/等级足够）+ 成功路径（扣素材/扣金币/实例化入包/发经验原子写）+
      失败零副作用（2c2b §1.1~1.3）。
+  ⑥ 实例快照入档 + 图鉴 item 分册点亮（批4 路4D 扩展，追加不改写批4-1 内容）：
+     - 成功路径除 player["forge_last"]（最近一次快照）外，追加 player["forge_instances"]
+       全量实例快照列表——每件 {node_id, item_id, name, ts(回合/事件计数，ctx 时钟),
+       stats(合并后快照), slots, quality, rarity}，含 node_id/item_id 双向溯源
+       （forge 节点 → items 装备条目互查），供后续 /装备 /背包 读取
+       （2c2b §1.2 步骤 4「实例化并快照：属性快照入玩家存档」/ AR-5 / 接口摸底缺口2）；
+     - forge_last 与 forge_instances 一致性：forge_last = 最新快照的独立拷贝
+       （只读安全：外部读写互不污染）；
+     - 首次锻造同刻点亮图鉴 weapon + item 分册（mark_seen ref = items 装备条目 id
+       node.item，非 forge 节点 id node_*；素材类也进物品册，装备类经 weapon 册）。
 
 依据（文件头标注）：
   - docs/细化/细化_2c2b_锻造流程契约.md §三（3.1 双流开关语义 / 3.2 预览卡片 / 3.3 确认窗
     与会话边界 / 3.4 双流差异对照）+ §1.1（守卫 GU-01~06）/ §1.2（成功路径）/ §1.3（失败模板）
-    + §六 C（验收 TC-09~14）。
+    + §六 C（验收 TC-09~14）。—— §1.2 步骤 4「实例化并快照：属性快照入玩家存档」/
+      步骤 5「图鉴点亮」为批4 路4D 扩展点。
+  - docs/细化/细化_2c2b_锻造流程契约.md §五 5.1（P-01~06 词法）/ §5.2（匹配算法：精确→
+    唯一前缀→歧义列表）——批4 路4C 参数词法扩展点（parse_forge_target 独立词法函数 +
+    批量 *N 消费进 forge_atomic；歧义/未知仍走引擎 resolve_node，词法层只喂 key）。
   - 定稿（锻造系统设计定稿 v1.0.1）§3.1 L74-79（直锻）/ §3.3 L89-97（预览+/确认）/
     §2.1 #7 L57（双流）/ settings straight_forge L355 / 零会话 L239（不使用框架 3.18）。
   - docs/m9_shared_contract.md §三（S-03 straight_forge 缺省 true）/ §二（ForgeNode 字段）。
+  - docs/m9_接口摸底.md §二（缺口2：装备实例快照管线——/锻造 完成时「items 基础 + 节点
+    改造」合并实例化 → 属性快照入玩家存档；批4 路4D 落档结构）。
+  - AR-5 快照缺省键（2c2a §1.3 / forge_tree.F-5）：stats/slots/rarity/final/augmentable/
+    monster_source 齐备——批4 路4D 快照取自合并产物 inst（forge_tree.merge_forge_instance）。
 
 【工程补白 · 显式标注】（契约/细化未显式定义处的实现口径，标 F-x）：
   F-1  预览卡片渲染：2c2b §3.2 卡片示意含 📖 图标（定稿 L92），本仓 emoji 纪律
@@ -70,6 +92,21 @@
        line_endpoint（■终结名）；无主线 child → 略去。
   F-8  确认窗超时边界：carry_sec=0 表示不限（永不因超时作废，仅 /确认 时重跑守卫）。
        超时判定在 cmd_confirm 内用 ctx now 比较（now - ts > carry_sec），不 sleep。
+  F-9  实例快照落档（批4 路4D）：player["forge_instances"] 为 list（锻造序，可回溯），
+       每件 = _forge_snapshot 输出（node_id/item_id/name/ts/stats/slots/quality/rarity，
+       stats/slots 为深拷贝）；player["forge_last"] = 最新快照独立拷贝（只读安全）。
+       quality 缺省映射 inst.rarity（AR-3 品质仲裁产物；items 基础无 quality 键时）。
+       后续 /装备 /背包 读取本结构即保证数据落档可查（本路不写读指令）。
+  F-10 图鉴 item 分册点亮（批4 路4D）：首次锻造同刻 mark_seen(ctx,"weapon",item_ref,name)
+       与 mark_seen(ctx,"item",item_ref,name)——weapon 册 total 来自 registry equipment
+       表（codex._total_of），ref 必须与 items 装备条目 id（node.item）对齐，非 forge
+       节点 id（node_*）；item 分册同 ref 进物品册（素材类经其素材产生处点亮，装备类
+       经 weapon 册+item 册双登记）。图鉴回写失败不阻断锻造结算（辅助钩子）。
+  F-11 罗马数字等价（批4 路4C）：任务派工单明令 P-03 采用「罗马数字统一映射
+       （Ⅰ=1…Ⅹ=10）」，保证「炎剑Ⅱ」与「炎剑2」等价命中——与细化 2c2b §5.1 P-03 原文
+       （「Ⅱ≠2 除非配置别名」）口径不同；本实现按派工单裁决执行（歧义/未知判定不变），
+       在 parse_forge_target 层做 Ⅰ-Ⅹ↔1-10 双向归一后喂 resolve_node（引擎不改动），
+       节点名按 2c2a N-02 原样登记（不写回改写）。文件头依据标注含此裁决。
 
 铁律：零 NoneBot import（3a R1）；纯函数确定性（同刻同参必同值）；不写定时器/睡眠调用
       （确认窗超时用 ctx now 比较，不 sleep）；渲染输出无 emoji（仅 ✅/❌ + 排版符号
@@ -77,8 +114,9 @@
 """
 from __future__ import annotations
 
+import re
 import time
-from typing import Any, Callable, Dict, List, Mapping, MutableMapping, Optional
+from typing import Any, Callable, Dict, List, Mapping, MutableMapping, Optional, Tuple
 
 from qbot_rpg.core.alchemy_core import ELEMENT_NAMES_CN
 from qbot_rpg.core.codex import mark_seen
@@ -104,6 +142,14 @@ __all__ = [
     # 窗口常量
     "DEFAULT_CARRY_SEC",
     "PREVIEW_WINDOW_KEY",
+    # 参数词法（批4 路4C：P-01~06 + 解析错误分类模板）
+    "parse_forge_target",
+    "ERR_P_EMPTY",
+    "ERR_P_SPACE",
+    "ERR_P_CHARSET",
+    "ERR_P_UNKNOWN",
+    "ERR_P_AMBIGUOUS",
+    "ERR_P_QTY",
     # 指令处理器（纯函数：parsed + ctx → 回复正文）
     "cmd_forge",
     "cmd_confirm",
@@ -137,6 +183,38 @@ _RARITY_CN: Mapping[str, str] = {
 }
 # 部位中文（对齐 basic_commands._SLOT_NAME 口径：weapon→武器）
 _SLOT_CN: Mapping[str, str] = {"weapon": "武器"}
+
+# ---------------------------------------------------------------------------
+# 参数词法常量（批4 路4C：P-01~06，细化 2c2b §五 5.1）
+# ---------------------------------------------------------------------------
+
+# 解析错误分类模板（P_EMPTY/P_SPACE/P_CHARSET/P_UNKNOWN/P_AMBIGUOUS/P_QTY）
+ERR_P_EMPTY: str = "P_EMPTY"        # 空参数（无目标）
+ERR_P_SPACE: str = "P_SPACE"        # 节点名含空格（P-01）
+ERR_P_CHARSET: str = "P_CHARSET"    # 非法字符（P-02 允许字符集外）
+ERR_P_UNKNOWN: str = "P_UNKNOWN"    # 未找到节点（GU-03 not_found）
+ERR_P_AMBIGUOUS: str = "P_AMBIGUOUS"  # 歧义（候选多个，§5.2 ③）
+ERR_P_QTY: str = "P_QTY"            # 数量非正整数（P-05 `*` 后须 ≥1）
+
+# P-02 允许字符集（节点名/材料名）：中文 / 大小写英文 / 数字 / 间隔号· / 罗马数字Ⅰ-Ⅹ /
+# 方头括号【】 / 短横-（细化 2c2b §5.1 P-02 允许集）；另加 ■（P-04 最终强化标记，输入可省可带）。
+# 罗马数字 Ⅰ-Ⅹ = U+2160~U+2169（\w 族 Nl，解析器 token 亦放行）。
+_ALLOWED_NAME_RE = re.compile(r"^[\u4e00-\u9fffA-Za-z0-9·\u2160-\u2169【】\-■]+$")
+
+# P-03 罗马数字统一映射（Ⅰ=1…Ⅹ=10，任务派工单裁决；F-11）：罗马字符 → 阿拉伯数字串
+_ROMAN_TO_DIGIT: Mapping[str, str] = {
+    "Ⅰ": "1", "Ⅱ": "2", "Ⅲ": "3", "Ⅳ": "4", "Ⅴ": "5",
+    "Ⅵ": "6", "Ⅶ": "7", "Ⅷ": "8", "Ⅸ": "9", "Ⅹ": "10",
+}
+# 数字串 → 罗马字符（单值逆映射；仅用于 1-10 内的数字段，超范围保留原文）
+_DIGIT_TO_ROMAN: Mapping[int, str] = {
+    1: "Ⅰ", 2: "Ⅱ", 3: "Ⅲ", 4: "Ⅳ", 5: "Ⅴ",
+    6: "Ⅵ", 7: "Ⅶ", 8: "Ⅷ", 9: "Ⅸ", 10: "Ⅹ",
+}
+# 引号剥离（P-06 多词节点名可带引号整体作单参）：半角双引号 / 单引号 / 「」 / 『』
+_QUOTE_PAIRS: Tuple[Tuple[str, str], ...] = (
+    ("\"", "\""), ("'", "'"), ("「", "」"), ("『", "』"),
+)
 
 
 # ---------------------------------------------------------------------------
@@ -369,17 +447,175 @@ def _continue_text(ctx: Mapping[str, Any], node_id: str) -> Optional[str]:
 
 
 # ---------------------------------------------------------------------------
+# 批4 路4C：参数解析完整词法（P-01~06，细化 2c2b §五 5.1）
+# ---------------------------------------------------------------------------
+
+def _strip_quotes(fragment: str) -> str:
+    """P-06 引号剥离：多词节点名可整体带引号作单参数（`"炎王剑"` = `炎王剑`）。
+
+    成对半角双引号 / 单引号 / 「」 / 『』 包裹 → 剥壳取内；非成对 → 原样返回
+    （非法字符由 P-02 字符集校验拒绝）。纯函数确定性。
+    """
+    for left, right in _QUOTE_PAIRS:
+        if fragment.startswith(left) and fragment.endswith(right) and len(fragment) >= 2:
+            return fragment[1:-1]
+    return fragment
+
+
+def _roman_normalize(value: str) -> str:
+    """P-03 罗马数字 → 阿拉伯数字（Ⅰ=1…Ⅹ=10，F-11）：`炎剑Ⅱ` → `炎剑2`。
+
+    逐字符映射（Ⅹ→"10"）；非罗马字符原样保留。纯函数确定性。
+    """
+    return "".join(_ROMAN_TO_DIGIT.get(ch, ch) for ch in value)
+
+
+def _digit_to_roman(value: str) -> str:
+    """P-03 阿拉伯数字 → 罗马数字（1-10 段内）：`炎剑2` → `炎剑Ⅱ`（F-11 逆映射）。
+
+    连续数字段整体换算（1-10 → Ⅰ-Ⅹ；超范围段保留原文），非数字字符原样保留。
+    """
+    def _rep(m: "re.Match[str]") -> str:
+        n = int(m.group(0))
+        return _DIGIT_TO_ROMAN.get(n, m.group(0))
+    return re.sub(r"\d+", _rep, value)
+
+
+def _resolve_with_roman(eng: ForgeTreeEngine, key: str) -> Tuple[str, dict]:
+    """resolve_node + P-03 罗马等价兜底：依次喂 原key → 罗马归一 → 数字转罗马。
+
+    返回 (命中用 key, resolve 结果)：命中时 key 为实际喂入且成功的变体（forge_atomic
+    复用该 key 二次 resolve 恒一致）；全部未命中时合并歧义候选（文件序去重）或返回
+    首个结果（not_found）。resolve_node 引擎不改动（只喂 key 过去，任务要求）。
+    """
+    variants: List[str] = [key]
+    nk = _roman_normalize(key)
+    if nk != key and nk not in variants:
+        variants.append(nk)
+    dk = _digit_to_roman(key)
+    if dk != key and dk not in variants:
+        variants.append(dk)
+
+    results: List[dict] = []
+    for k in variants:
+        res = eng.resolve_node(k)
+        if res.get("ok"):
+            return k, res
+        results.append(res)
+
+    # 全部未命中：合并歧义候选（去重保序）或返回首个 not_found
+    merged: List[str] = []
+    for r in results:
+        if r.get("match") == "ambiguous":
+            for nid in (r.get("candidates") or []):
+                if nid not in merged:
+                    merged.append(nid)
+    if merged:
+        return key, {"ok": False, "match": "ambiguous", "node_id": None, "node": None,
+                     "candidates": merged}
+    return key, results[0]
+
+
+def _ambiguous_message(eng: ForgeTreeEngine, candidates: List[str]) -> str:
+    """歧义候选渲染（§5.2 ③：候选名（LvN）+ /锻造树 指引）。"""
+    lines = []
+    for nid in candidates:
+        nd = eng.node(nid)
+        nm = nd.name if nd is not None else nid
+        lv = nd.level if nd is not None else 0
+        lines.append(f"{nm}（Lv{lv}）")
+    return "候选多个节点：" + " | ".join(lines) + " → /锻造树 查看可锻装备"
+
+
+def parse_forge_target(fragment: str, eng: Optional[ForgeTreeEngine] = None) -> dict:
+    """/锻造 目标参数词法（批4 路4C：P-01~06 全流程，细化 2c2b §五 5.1）。
+
+    入参：
+      - fragment：单参原文（节点名 + 可选 `*N` 数量；可带引号/前导 + /前导 ■）。
+      - eng：ForgeTreeEngine（可选）。提供时做 P_UNKNOWN/P_AMBIGUOUS 判定（喂 key 给
+        resolve_node，引擎独立不改动）；None 时只做纯词法（P_EMPTY/P_SPACE/P_CHARSET/
+        P_QTY），ok 即返回，供无引擎场景复用。
+
+    出参（解析错误分类模板，任务要求）：
+      - ok：True 解析通过 / False 词法或匹配失败。
+      - key：归一后的节点名（P-04 ■ 保留给 resolve_node 剥、P-03 罗马等价命中变体）。
+      - qty：批量数量（P-05 `*N`；缺省 1）。
+      - error_code：失败分类 P_EMPTY/P_SPACE/P_CHARSET/P_QTY/P_UNKNOWN/P_AMBIGUOUS。
+      - message：可渲染错误文案（ok=False 时）。
+      - candidates：歧义候选节点 id 列表（P_AMBIGUOUS 时）。
+
+    词法顺序（P-01~06）：空参 → 空格 → 数量 `*N` → 字符集 → 匹配。纯函数确定性。
+    """
+    frag = _strip_quotes((fragment or "").strip())
+    if frag.startswith("+"):  # 紧凑 `+` 连接符收敛（对齐 _target_of）
+        frag = frag[1:].strip()
+
+    # P_EMPTY：空参数（无目标）→ TPL-12 兜底由调用方处理，此处给分类
+    if not frag:
+        return {"ok": False, "key": "", "qty": 1, "error_code": ERR_P_EMPTY,
+                "message": "参数错误：缺少锻造目标（示例：/锻造 铁剑 或 /锻造 炎剑Ⅱ*3）",
+                "candidates": []}
+
+    # P-01 节点名禁空格（含 tab/全角空格等空白字符）
+    if any(ch.isspace() for ch in frag):
+        return {"ok": False, "key": frag, "qty": 1, "error_code": ERR_P_SPACE,
+                "message": "参数错误：节点名不含空格", "candidates": []}
+
+    # P-05 数量 `*N`：`*` 后须正整数（≥1）；`预览 *N` 顺序兼容由 cmd_forge 剥离预览后进入
+    qty: int = 1
+    name = frag
+    if "*" in frag:
+        name, _, right = frag.partition("*")
+        if not right.isdigit() or int(right) < 1:
+            return {"ok": False, "key": name, "qty": 1, "error_code": ERR_P_QTY,
+                    "message": "参数错误：数量须为正整数（示例：/锻造 炎剑Ⅱ*3）",
+                    "candidates": []}
+        qty = int(right)
+
+    # P-02 允许字符集（中文/字母/数字/·/Ⅰ-Ⅹ/【】/-/■；非法字符 → 明确拒绝）
+    if not name or not _ALLOWED_NAME_RE.match(name):
+        return {"ok": False, "key": name, "qty": 1, "error_code": ERR_P_CHARSET,
+                "message": "参数错误：节点名含非法字符"
+                           "（仅允许 中文/字母/数字/·/Ⅰ-Ⅹ/【】/-/■）",
+                "candidates": []}
+
+    # P-06 多词节点名（连续无空格）整体作为单参数：name 已为整串；词法到此通过
+    if eng is None:
+        return {"ok": True, "key": name, "qty": qty, "error_code": None,
+                "message": None, "candidates": []}
+
+    # 匹配（喂 key 给 resolve_node；P-03 罗马等价 + P-04 ■ 省略由引擎 match_name 剥）
+    hit_key, res = _resolve_with_roman(eng, name)
+    if res.get("ok"):
+        return {"ok": True, "key": hit_key, "qty": qty, "error_code": None,
+                "message": None, "candidates": []}
+    if res.get("match") == "ambiguous":
+        cands = list(res.get("candidates") or [])
+        return {"ok": False, "key": hit_key, "qty": qty, "error_code": ERR_P_AMBIGUOUS,
+                "message": _ambiguous_message(eng, cands), "candidates": cands}
+    return {"ok": False, "key": hit_key, "qty": qty, "error_code": ERR_P_UNKNOWN,
+            "message": f"未找到「{name}」→ /锻造树 查看可锻装备", "candidates": []}
+
+
+# ---------------------------------------------------------------------------
 # 路4A 原子流程（守卫 GU-01~06 + 成功/失败模板；确认窗复用）
 # ---------------------------------------------------------------------------
 
-def forge_atomic(ctx: MutableMapping[str, Any], key: object, *, preview: bool = False) -> str:
-    """/锻造 原子流程（路4A 承载；路4B 直锻/预览/确认 复用同一执行路径）。
+def forge_atomic(ctx: MutableMapping[str, Any], key: object, *, preview: bool = False,
+                 qty: int = 1) -> str:
+    """/锻造 原子流程（路4A 承载；路4B 直锻/预览/确认 复用同一执行路径；
+    批4 路4C 扩展批量 *N：qty>1 循环重跑守卫+原子，N 次成功 N 次结算）。
 
     入参：
       - ctx：玩家表示（MutableMapping；forge/items/settings/inventory/player + hooks）。
       - key：节点名/id（2c2b §5.2 匹配：精确→唯一前缀→歧义列表）。
       - preview：True = 预览流（渲染卡片 + 登记确认窗，不扣任何资源，TC-10/11）；
                  False = 执行流（守卫全过即原子扣素材/扣金币/产装/发经验，TC-09/12）。
+                 qty 与预览组合时预览仍单次（预览 0 副作用，qty 不生效）。
+      - qty：批量数量（P-05 `*N`；缺省 1）。qty>1 → 执行流按 N 次循环，每次重跑
+             守卫 GU-03~06 + 原子结算（素材按件扣、实例按件入包、经验按件计，§1.2
+             多件语义）；中途失败 → 中断并报「第 N 次失败，已成功 M 次」（已成功
+             结算不回滚；§1.2 多件逐件原子）。qty 非正整数钳 1。
     出参：回复正文 str。
 
     守卫链（2c2b §1.1 GU-01~06，顺序固定）：
@@ -395,6 +631,43 @@ def forge_atomic(ctx: MutableMapping[str, Any], key: object, *, preview: bool = 
         return "❌ 锻造系统未启用（内容包 forge.json 未注册）"
 
     # GU-02 参数可解析（P-01：节点名禁空格；含空格 → 参数错误，不匹配任何节点）
+    #   由 _forge_once 承载（批量逐件与单件同口径重跑）；此处先做一次快筛兜底
+    if not isinstance(key, str) or not key.strip():
+        return format_tpl12(_fragment_fallback(key))
+    if any(ch.isspace() for ch in key):
+        return "参数错误：节点名不含空格"
+
+    if preview:
+        # 预览流：单次卡片 + 登记一次性待确认窗（qty 不生效，预览 0 副作用）
+        return _forge_once(ctx, key, preview=True)
+
+    n = qty if isinstance(qty, int) and not isinstance(qty, bool) and qty >= 1 else 1
+    if n == 1:
+        return _forge_once(ctx, key, preview=False)
+
+    # 批量 *N（P-05 / §1.2 多件）：逐件重跑守卫 + 原子结算，N 次成功 N 次结算
+    successes = 0
+    last_success = ""
+    for i in range(1, n + 1):
+        out = _forge_once(ctx, key, preview=False)
+        if not out.startswith("✅"):
+            return f"第 {i} 次失败，已成功 {successes} 次\n{out}"
+        successes += 1
+        last_success = out
+    # 全部成功：汇总行（`✅ <名> 锻造完成！×N` + 属性行，属性取自末次成功）
+    head, _, tail = last_success.partition("\n")
+    return f"{head} ×{n}\n{tail}"
+
+
+def _forge_once(ctx: MutableMapping[str, Any], key: object, *, preview: bool) -> str:
+    """单次锻造（路4A 守卫 GU-02~06 + 成功/失败模板；供批量 *N 逐件重跑）。
+
+    每次调用独立执行守卫链（素材逐件耗尽后重跑 GU-05 拦截）与 §1.2 原子结算；
+    失败零副作用。预览路径渲染卡片 + 登记确认窗（0 资源副作用）。
+    """
+    eng = _engine(ctx)
+
+    # GU-02 参数可解析（P-01：节点名禁空格；含空格 → 参数错误，不匹配任何节点）
     if not isinstance(key, str) or not key.strip():
         return format_tpl12(_fragment_fallback(key))
     if any(ch.isspace() for ch in key):
@@ -406,13 +679,7 @@ def forge_atomic(ctx: MutableMapping[str, Any], key: object, *, preview: bool = 
         match = res.get("match")
         if match == "ambiguous":
             cands = res.get("candidates") or []
-            lines = []
-            for nid in cands:
-                nd = eng.node(nid)
-                nm = nd.name if nd is not None else nid
-                lv = nd.level if nd is not None else 0
-                lines.append(f"{nm}（Lv{lv}）")
-            return "候选多个节点：" + " | ".join(lines) + " → /锻造树 查看可锻装备"
+            return _ambiguous_message(eng, list(cands))
         return f"未找到「{key}」→ /锻造树 查看可锻装备"
     node = res.get("node")
     node_id = res.get("node_id")
@@ -471,7 +738,7 @@ def forge_atomic(ctx: MutableMapping[str, Any], key: object, *, preview: bool = 
             return "已有待确认的锻造预览，请先 /确认 或等待超时\n" + card
         return card
 
-    # 执行流（直锻 / 确认复用）：成功路径 §1.2 原子写（扣素材/扣金币/产装/发经验）
+    # 执行流（直锻 / 确认 / 批量 复用）：成功路径 §1.2 原子写（扣素材/扣金币/产装/发经验）
     return _execute(ctx, player, node, node_id)
 
 
@@ -603,7 +870,10 @@ def _execute(
             if cost > 0 and isinstance(currencies, MutableMapping):
                 currencies["coins"] = coins_have
             return "❌ 装备入包失败，本次锻造未执行（零副作用）"
-        player["forge_last"] = inst  # 属性快照入存档（AR-5）
+        # 实例快照入档（批4 路4D：AR-5 + 接口摸底缺口2——forge_instances 全量快照
+        #   （node_id/item_id 双向溯源 + ts 回合/事件计数）+ forge_last 指向最新）
+        snap = _forge_snapshot(ctx, node, node_id, item_ref, inst)
+        _append_instance(player, snap)
 
     # 标记已锻造（forge_guard F-1：player["forged"] 追加节点 id；set/frozenset → 转 list）
     forged = player.get("forged")
@@ -621,10 +891,13 @@ def _execute(
     # 首次锻造图鉴点亮（2c2b §1.2 步骤 5：mark_seen weapon 分册，ref=装备 item id，名=节点名）
     #   图鉴 weapon 册 total 来自 registry equipment 表（codex._total_of），ref 必须与
     #   items 装备条目 id 对齐（node.item），不能用 forge 节点 id（node_* 非装备条目 id）。
+    #   （批4 路4D 追加）同刻点亮 items 分册（mark_seen "item" 同 ref）——素材类也进
+    #   物品册，装备类经 weapon 册 + item 册双登记（2c2b §1.2 步骤 5 / F-10）。
     try:
         item_ref = getattr(node, "item", None) or node_id
         node_name = getattr(node, "name", None) or node_id
         mark_seen(ctx, "weapon", item_ref, node_name)
+        mark_seen(ctx, "item", item_ref, node_name)
     except Exception:
         pass  # 图鉴回写失败不阻断锻造结算（图鉴为辅助钩子）
 
@@ -666,6 +939,82 @@ def _resolve_items_def(ctx: Mapping[str, Any], item_id: str) -> Mapping[str, obj
     return {}
 
 
+# ---------------------------------------------------------------------------
+# 批4 路4D：实例快照入档（AR-5 / 接口摸底缺口2）+ 图鉴 item 分册点亮
+# ---------------------------------------------------------------------------
+
+def _forge_snapshot(
+    ctx: Mapping[str, Any],
+    node: Any,
+    node_id: str,
+    item_id: str,
+    inst: Mapping[str, object],
+) -> Dict[str, object]:
+    """锻造实例快照（批4 路4D / AR-5 / 接口摸底缺口2：属性快照入玩家存档）。
+
+    入参：ctx（时钟 ts 取 _now）、node（ForgeNode，取显示名）、node_id（forge 节点 id）、
+      item_id（items 装备条目 id）、inst（merge_forge_instance 合并产物，AR-1~5 齐备）。
+    出参：快照 dict——{node_id, item_id, name, ts, stats, slots, quality, rarity}：
+      - node_id / item_id：双向溯源（forge 节点 ↔ items 装备条目互查，铁律9）；
+      - name：装备显示名（node.name → inst.name → node_id 兜底）；
+      - ts：回合/事件计数（ctx 时钟，_now 注入优先，零定时器）；
+      - stats / slots：合并后快照（深拷贝，不引用 inst 内部可变对象）；
+      - quality：inst.quality 优先，缺省映射 inst.rarity（AR-3 品质仲裁产物）；
+      - rarity：inst.rarity（档位，可为 None）。
+    纯函数（确定性）；不改写入参。
+    """
+    stats = inst.get("stats")
+    slots = inst.get("slots")
+    rarity = inst.get("rarity")
+    quality = inst.get("quality")
+    if quality is None:
+        quality = rarity
+    node_name = getattr(node, "name", None) or node_id
+    if not isinstance(node_name, str) or not node_name:
+        inst_name = inst.get("name")
+        node_name = str(inst_name) if isinstance(inst_name, str) and inst_name else node_id
+    return {
+        "node_id": node_id,
+        "item_id": item_id,
+        "name": node_name,
+        "ts": _now(ctx),
+        "stats": dict(stats) if isinstance(stats, Mapping) else {},
+        "slots": list(slots) if isinstance(slots, (list, tuple)) else [],
+        "quality": quality,
+        "rarity": rarity,
+    }
+
+
+def _append_instance(
+    player: MutableMapping[str, Any],
+    snap: Mapping[str, object],
+) -> None:
+    """实例快照入档（批4 路4D：player["forge_instances"] 全量 + forge_last 指向最新）。
+
+    forge_instances：list（锻造序，可回溯全量）；每件为 _forge_snapshot 输出
+      （含 node_id/item_id 双向溯源），供后续 /装备 /背包 读取。
+    forge_last：最新快照的独立拷贝（只读安全——外部读侧改动 forge_last 引用
+      不污染实例列表条目，反之亦然；stats/slots 亦独立拷贝）。
+    """
+    instances = player.get("forge_instances")
+    if not isinstance(instances, list):
+        instances = []
+        player["forge_instances"] = instances
+    instances.append(dict(snap))
+    stats = snap.get("stats")
+    slots = snap.get("slots")
+    player["forge_last"] = {
+        "node_id": snap.get("node_id"),
+        "item_id": snap.get("item_id"),
+        "name": snap.get("name"),
+        "ts": snap.get("ts"),
+        "stats": dict(stats) if isinstance(stats, Mapping) else {},
+        "slots": list(slots) if isinstance(slots, (list, tuple)) else [],
+        "quality": snap.get("quality"),
+        "rarity": snap.get("rarity"),
+    }
+
+
 def _success_line(ctx: Mapping[str, Any], node: Any) -> str:
     """成功行（2c2b §1.2 / 定稿 L78：`✅ <节点名> 锻造完成！` + 属性行）。
 
@@ -697,37 +1046,54 @@ def _success_line(ctx: Mapping[str, Any], node: Any) -> str:
 # ---------------------------------------------------------------------------
 
 def cmd_forge(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
-    """/锻造 主入口（路4A 原子流程 + 路4B 双流路由）。
+    """/锻造 主入口（路4A 原子流程 + 路4B 双流路由 + 批4 路4C 参数词法 P-01~06）。
+
+    参数提取（批4 路4C）：用 parsed.tokens[1:]（跳过指令名）而非 args——解析器对含
+    ■/非法字符的 token 设 error 并丢出 args，但保留在 tokens（探针实证）→ 词法层
+    （parse_forge_target）能拿到完整原文做 P-02 字符集 / P-04 ■ 判定；多词（含空格）
+    → P-01 参数错误；剥离「预览」子词后单参 → parse_forge_target 全流程（P-01~06）。
 
     双流路由（2c2b §3.1 / TC-09~13）：
-      - 显式「预览」参数（parsed.fixed_subword=预览 或 args 含 预览）→ 预览流 2 步；
+      - 显式「预览」参数（parsed.fixed_subword=预览 或 token 含 预览）→ 预览流 2 步；
       - 无「预览」参数 且 straight_forge=true（缺省）→ 直锻 1 步（原子成功）；
       - 无「预览」参数 且 straight_forge=false（深度模式）→ 强制预览流（前台无直锻入口）。
+      批量 *N（P-05）：qty>1 随双流路由进 forge_atomic（直锻批量 N 次；预览批量单次）。
 
     GU-01 系统注册 / GU-02 参数解析（名禁空格）由 forge_atomic 承载；无节点参数 →
     TPL-12（对齐 shop cmd_buy 缺参模板）。
     """
-    if parsed.error:
-        return format_tpl12(_fragment(parsed))
     args = list(getattr(parsed, "args", None) or [])
-    if not args:
+    raw_tokens = list(getattr(parsed, "tokens", None) or [])
+    # 目标词法输入：tokens 跳过指令名（含解析器 error 仍保留的 ■/非法字符 token）；
+    # 无 tokens 兜底用 args（直测 parse_command 均带 tokens；防御形态）
+    body = raw_tokens[1:] if raw_tokens else args
+    if not body and not args:
         return format_tpl12(_fragment(parsed))
-    # 显式「预览」子词：fixed_subword 或 args 中的「预览」标记（P-05 顺序兼容 `预览 *N`）
+    # 显式「预览」子词：fixed_subword 或 token/args 中的「预览」标记（P-05 顺序兼容 `预览 *N`）
     fixed = getattr(parsed, "fixed_subword", None)
-    has_preview = fixed == PREVIEW_SUBWORD or PREVIEW_SUBWORD in args
-    node_args = [a for a in args if a != PREVIEW_SUBWORD]
-    # P-01 节点名禁空格：多参数拆分（`/锻造 炎剑 Ⅱ` → args=[炎剑, Ⅱ]）→ 参数错误
+    has_preview = fixed == PREVIEW_SUBWORD or PREVIEW_SUBWORD in body or PREVIEW_SUBWORD in args
+    node_args = [t for t in body if t != PREVIEW_SUBWORD]
+    # P-01 节点名禁空格：多参数拆分（`/锻造 炎剑 Ⅱ` → 两 token）→ 参数错误
     # （定稿 L232 语法约束，不匹配任何节点、不产生锻造）
     if len(node_args) > 1:
         return "参数错误：节点名不含空格"
-    key = _target_of(parsed) if node_args else ""
-    if not key or any(ch.isspace() for ch in key):
-        return format_tpl12(_fragment(parsed)) if not key else "参数错误：节点名不含空格"
+    if not node_args:
+        return format_tpl12(_fragment(parsed))
+    fragment = node_args[0]
+
+    # 参数词法 P-01~06（parse_forge_target 独立词法函数；P_UNKNOWN/P_AMBIGUOUS 含歧义候选）
+    res = parse_forge_target(fragment, eng=_engine(ctx))
+    if not res.get("ok"):
+        return res.get("message") or format_tpl12(_fragment(parsed))
+    key = res.get("key") or ""
+    qty = int(res.get("qty") or 1)
+    if not key:
+        return format_tpl12(_fragment(parsed))
 
     # 双流路由：预览参数不依赖开关（3.1 双流并存）；straight_forge=false → 强制预览
     if not has_preview and _straight_forge(ctx):
-        return forge_atomic(ctx, key, preview=False)  # 直锻 1 步（TC-09）
-    return forge_atomic(ctx, key, preview=True)  # 预览流（TC-10/13）
+        return forge_atomic(ctx, key, preview=False, qty=qty)  # 直锻 1 步 / 批量 N 次（TC-09）
+    return forge_atomic(ctx, key, preview=True, qty=qty)  # 预览流（TC-10/13）
 
 
 def cmd_confirm(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
@@ -774,9 +1140,12 @@ def _join_node_args(args: List[str]) -> str:
 
 
 def _target_of(parsed: Any) -> str:
-    """节点名剥离（解析器契约 + 紧凑 `+` 连接符收敛 + `*N` 剥离，对齐 alchemy _target_of）。
+    """节点名剥离（兼容保留：批4 路4C 后 cmd_forge 改走 parse_forge_target，本函数不再被调用）。
 
-    `/锻造 炎剑Ⅱ*2` → args=["炎剑Ⅱ*2"], qty=2 → 目标 "炎剑Ⅱ"（P-05 数量）。"""
+    语义（对齐 alchemy _target_of）：解析器契约 + 紧凑 `+` 连接符收敛 + `*N` 剥离——
+    `/锻造 炎剑Ⅱ*2` → args=["炎剑Ⅱ*2"] → 目标 "炎剑Ⅱ"（P-05 数量）。保留供外部兼容，
+    不消费 qty（qty 消费归 parse_forge_target → forge_atomic 批量）。
+    """
     args = list(getattr(parsed, "args", None) or [])
     if not args:
         return ""

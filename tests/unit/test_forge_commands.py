@@ -1,9 +1,11 @@
 """M9 锻造·批4·路4B：/锻造 直锻/预览双流 + /确认 一次性窗口 指令壳单测。
+      （批4 路4D 扩展：实例快照入档 forge_instances + 图鉴 item 分册点亮）
 
 文件：tests/unit/test_forge_commands.py
 创建：2026-08-30
 作者：Hermes 子agent-4B（M9 锻造实现组批4·路4B：并发同仓，仅新建本文件 +
   追加 qbot_rpg/commands/forge_commands.py；不改动核心引擎文件）
+      —— 批4 路4D 扩展作者：Hermes 子agent-4D（实例快照入档 + 图鉴 item 分册点亮，追加不改写）
 
 功能：直测 cmd_forge / cmd_confirm 指令壳（真实引擎 ForgeTreeEngine/forge_progress/
   forge_job 消费 + 真实 content/test_demo 数据）：
@@ -16,13 +18,18 @@
   - 3.3 边界：同一玩家仅 1 个待确认窗（新预览不覆盖）；carry_sec=0 不限时；
     确认失败（素材不足）零副作用；/图纸 不覆盖既有窗（注册断言）。
   - 装配：register_forge_commands 注册 /锻造 /确认（CommandSpec 白名单标记）。
+  - 批4 路4D 追加：forge_instances 实例快照入档（全字段 + node_id/item_id 双向溯源
+    + ts）+ forge_last 与 instances 一致性 + mark_seen item 分册点亮
+    （依据 2c2b §1.2 步骤 4/5 + AR-5 + 接口摸底缺口2）。
 
 覆盖规则（对齐 2c2b §六 C TC-09~14 + §3.3 边界）：
   直锻路径守卫 GU-01~06 全过 → 扣素材/扣金币/产装/发经验原子成功；
   预览不扣资源；确认窗单键（qid）；超时作废；无预览确认拒绝。
 
 依据：docs/细化/细化_2c2b_锻造流程契约.md §三（3.1~3.4）+ §六 C（TC-09~14）+
-  定稿 §3.3（预览流 L89-97）/ §2.1 #7（L57）/ L239（零会话）。
+  定稿 §3.3（预览流 L89-97）/ §2.1 #7（L57）/ L239（零会话）；
+  批4 路4D：§1.2 步骤 4（实例化并快照入存档）/ 步骤 5（图鉴点亮）+ AR-5（快照缺省键）+
+  docs/m9_接口摸底.md §二（缺口2：装备实例快照管线）。
 测试风格对齐 tests/unit/test_forge_progress.py（真实 test_demo 数据 +
   ForgeTreeEngine 构造）+ tests/unit/test_confirm_commands.py（parse_command 直调 +
   全字段 ctx + 指令壳 handler 直测）。
@@ -35,15 +42,23 @@ from typing import Any, Dict, Mapping, Optional
 
 from qbot_rpg.commands.forge_commands import (
     CONFIRM_CMD,
+    ERR_P_AMBIGUOUS,
+    ERR_P_CHARSET,
+    ERR_P_EMPTY,
+    ERR_P_QTY,
+    ERR_P_SPACE,
+    ERR_P_UNKNOWN,
     FORGE_CMD,
     PREVIEW_WINDOW_KEY,
     cmd_confirm,
     cmd_forge,
+    parse_forge_target,
     register_forge_commands,
 )
 from qbot_rpg.commands.parsers import DEFAULT_WHITELIST, parse_command
 from qbot_rpg.commands.router import Router
 from qbot_rpg.core.forge_job import configure_proficiency
+from qbot_rpg.core.forge_tree import ForgeTreeEngine
 
 # 真实 test_demo 数据路径
 _REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
@@ -462,3 +477,283 @@ def test_register_forge_make_context_injection() -> None:
     # ctx 注入形态直接可用
     out = handler(_parsed("/锻造 铁剑"), ctx=ctx)
     assert "✅ 铁剑 锻造完成！" in out
+
+
+# ---------------------------------------------------------------------------
+# 批4 路4D：实例快照入档（forge_instances 全字段 + node_id/item_id 双向溯源 + ts）
+#   + forge_last 一致性 + mark_seen item 分册点亮
+#   依据：2c2b §1.2 步骤 4（实例化并快照入存档）/ 步骤 5（图鉴点亮）+ AR-5 + 接口摸底缺口2
+# ---------------------------------------------------------------------------
+
+def test_4d_forge_instances_snapshot_full_fields() -> None:
+    """路4D：直锻成功 → player["forge_instances"] 落档全字段快照。
+
+    断言（铁剑，真实 test_demo 数据）：
+      - node_id=node_iron_sword / item_id=iron_sword（双向溯源）；
+      - name=铁剑；ts=ctx now（1000.0，回合/事件计数）；
+      - stats={atk:12}（合并后快照）；slots=[]；
+      - quality=rarity=normal（AR-3 品质仲裁：节点 rarity 覆盖）。
+    结构供后续 /装备 /背包 读取（本路不写读指令，仅保证落档结构）。
+    """
+    configure_proficiency(_load_json(_PROF_JSON), _settings_raw())  # type: ignore[arg-type]
+    player = _player(forged=[], forge_level=1)
+    ctx = _make_ctx({"ore": 3}, player, now=1000.0)
+    out = cmd_forge(_parsed("/锻造 铁剑"), ctx)
+    assert "✅ 铁剑 锻造完成！" in out
+    insts = player.get("forge_instances")
+    assert isinstance(insts, list) and len(insts) == 1
+    snap = insts[0]
+    assert snap["node_id"] == N_IRON
+    assert snap["item_id"] == "iron_sword"
+    assert snap["name"] == "铁剑"
+    assert snap["ts"] == 1000.0
+    assert snap["stats"] == {"atk": 12}
+    assert snap["slots"] == []
+    assert snap["quality"] == "normal"
+    assert snap["rarity"] == "normal"
+
+
+def test_4d_forge_instances_bidirectional_trace() -> None:
+    """路4D：双向溯源——快照同含 node_id + item_id（forge 节点 ↔ items 装备条目互查）。
+
+    断言（炎剑Ⅱ：带孔 + epic）：
+      - node_id=node_flame_sword_2 / item_id=flame_sword_2（forge 节点 → items 条目可查）；
+      - stats={atk:40, element:fire, element_value:8}（合并后快照）；
+      - slots=[{level:1},{level:2}]（AR-1 slots 覆盖，孔位快照入档）；
+      - quality=rarity=epic（节点 rarity 覆盖 items 基础）。
+    """
+    configure_proficiency(_load_json(_PROF_JSON), _settings_raw())  # type: ignore[arg-type]
+    full_chain = [N_IRON, N_IRON_1, N_IRON_2, N_FLAME]
+    player = _player(forged=full_chain, forge_level=5)
+    ctx = _make_ctx({"fire_dragon_scale": 5, "alch_ember_crystal": 2}, player, now=2000.0)
+    cmd_forge(_parsed("/锻造 炎剑Ⅱ"), ctx)
+    insts = player.get("forge_instances")
+    assert isinstance(insts, list) and len(insts) == 1
+    snap = insts[0]
+    assert snap["node_id"] == N_FLAME_2
+    assert snap["item_id"] == "flame_sword_2"
+    assert snap["name"] == "炎剑Ⅱ"
+    assert snap["ts"] == 2000.0
+    assert snap["stats"] == {"atk": 40, "element": "fire", "element_value": 8}
+    assert snap["slots"] == [{"level": 1}, {"level": 2}]
+    assert snap["quality"] == "epic"
+    assert snap["rarity"] == "epic"
+
+
+def test_4d_forge_last_points_to_latest_instance() -> None:
+    """路4D：forge_last 与 forge_instances 一致性——指向最新件（独立拷贝，只读安全）。
+
+    连续两次锻造（铁剑 → 铁剑Ⅰ）：
+      - forge_instances 按锻造序 2 件；forge_last 与最新件（铁剑Ⅰ）字段一致；
+      - forge_last 为独立对象（is not 最新件）：外部读侧改动 forge_last 引用
+        不污染实例列表条目，改动实例列表最新件也不污染 forge_last。
+    """
+    configure_proficiency(_load_json(_PROF_JSON), _settings_raw())  # type: ignore[arg-type]
+    player = _player(forged=[], forge_level=2)
+    ctx = _make_ctx({"ore": 8}, player, now=1000.0)
+    cmd_forge(_parsed("/锻造 铁剑"), ctx)
+    ctx["now"] = 1001.0
+    cmd_forge(_parsed("/锻造 铁剑Ⅰ"), ctx)
+    insts = player.get("forge_instances")
+    assert isinstance(insts, list) and len(insts) == 2
+    latest = insts[-1]
+    fl = player.get("forge_last")
+    assert isinstance(fl, dict)
+    assert fl["node_id"] == latest["node_id"] == N_IRON_1
+    assert fl["item_id"] == latest["item_id"] == "iron_sword_1"
+    assert fl["name"] == latest["name"] == "铁剑Ⅰ"
+    assert fl["ts"] == latest["ts"] == 1001.0
+    assert fl["stats"] == latest["stats"] == {"atk": 18}
+    # 只读安全：独立对象，双向改动互不污染
+    assert fl is not latest
+    fl["stats"]["atk"] = 999
+    assert latest["stats"]["atk"] == 18
+    latest["stats"]["atk"] = 777
+    assert fl["stats"]["atk"] == 999
+    # 首件仍在列表（全量快照可回溯）
+    assert insts[0]["node_id"] == N_IRON
+    assert insts[0]["item_id"] == "iron_sword"
+    assert insts[0]["ts"] == 1000.0
+
+
+def test_4d_mark_seen_lights_weapon_and_item_tomes() -> None:
+    """路4D：首次锻造同刻点亮图鉴 weapon + item 分册（ref=items 装备 id 非 node_id）。
+
+    断言（铁剑直锻）：
+      - codex_state["weapon"]["iron_sword"].seen=True（weapon 分册）；
+      - codex_state["item"]["iron_sword"].seen=True（item 分册同刻点亮，F-10）；
+      - ref 为装备条目 id（iron_sword）非 forge 节点 id（node_iron_sword 未点亮）。
+    """
+    configure_proficiency(_load_json(_PROF_JSON), _settings_raw())  # type: ignore[arg-type]
+    player = _player(forged=[], forge_level=1)
+    ctx = _make_ctx({"ore": 3}, player)
+    cmd_forge(_parsed("/锻造 铁剑"), ctx)
+    state = ctx.get("codex_state")
+    assert isinstance(state, dict)
+    weapon = (state.get("weapon") or {}).get("iron_sword")
+    item = (state.get("item") or {}).get("iron_sword")
+    assert isinstance(weapon, dict) and weapon.get("seen") is True
+    assert isinstance(item, dict) and item.get("seen") is True
+    # ref 非节点 id：node_iron_sword 未点亮（weapon/item 均不登记节点 id）
+    assert not (state.get("weapon") or {}).get(N_IRON)
+    assert not (state.get("item") or {}).get(N_IRON)
+
+
+# ---------------------------------------------------------------------------
+# 批4 路4C：参数解析完整词法（P-01~06 + 批量 *N 消费）
+#   依据：细化 2c2b §五 5.1（P-01 禁空格 / P-02 字符集 / P-03 罗马 / P-04 ■ /
+#         P-05 数量 / P-06 多词单参）+ 派工单（罗马统一映射 Ⅰ=1…Ⅹ=10，F-11）
+#   parse_forge_target 独立词法函数；批量经 forge_atomic qty 逐件原子结算。
+# ---------------------------------------------------------------------------
+
+def _forge_engine() -> ForgeTreeEngine:
+    """真实 test_demo 数据引擎（供 parse_forge_target P_UNKNOWN/P_AMBIGUOUS 判定）。"""
+    return ForgeTreeEngine(
+        forge=_forge_raw(),
+        items=_items_raw(),
+        settings=_settings_raw(),
+    )
+
+
+def test_p01_space_rejected() -> None:
+    """P-01：节点名含空格 → P_SPACE（`参数错误：节点名不含空格`）。"""
+    r = parse_forge_target("炎剑 Ⅱ", _forge_engine())
+    assert r["ok"] is False
+    assert r["error_code"] == ERR_P_SPACE
+    assert "节点名不含空格" in r["message"]
+    # 词法层纯校验（无引擎）同样拒绝
+    r2 = parse_forge_target("炎剑\tⅡ")
+    assert r2["ok"] is False and r2["error_code"] == ERR_P_SPACE
+
+
+def test_p02_charset_rejected() -> None:
+    """P-02：允许字符集外字符（! % @ ）→ P_CHARSET，明确拒绝。"""
+    for bad in ("炎剑!", "炎剑%", "炎剑@", "炎剑/x", "炎剑()"):
+        r = parse_forge_target(bad, _forge_engine())
+        assert r["ok"] is False, bad
+        assert r["error_code"] == ERR_P_CHARSET, bad
+        assert "非法字符" in r["message"], bad
+    # 允许集内字符通过词法（匹配留待 resolve）
+    r = parse_forge_target("铁剑Ⅰ·改-甲", _forge_engine())
+    assert r["ok"] is True or r["error_code"] == ERR_P_UNKNOWN  # 词法通过（可未知）
+
+
+def test_p03_roman_equivalence() -> None:
+    """P-03：罗马数字统一映射（F-11）——`炎剑2` 等价命中节点 `炎剑Ⅱ`。"""
+    eng = _forge_engine()
+    r = parse_forge_target("炎剑Ⅱ", eng)
+    assert r["ok"] is True and r["key"] == "炎剑Ⅱ"
+    r2 = parse_forge_target("炎剑2", eng)
+    assert r2["ok"] is True
+    assert r2["key"] == "炎剑Ⅱ"  # 数字 → 罗马命中变体（forge_atomic 二次 resolve 恒一致）
+    assert r2["qty"] == 1
+    # 预览出口：/锻造 炎剑2 预览 → 炎剑Ⅱ 卡片（cmd_forge 全链路）
+    configure_proficiency(_load_json(_PROF_JSON), _settings_raw())  # type: ignore[arg-type]
+    full_chain = [N_IRON, N_IRON_1, N_IRON_2, N_FLAME]
+    player = _player(forged=full_chain, forge_level=5)
+    ctx = _make_ctx({"fire_dragon_scale": 5, "alch_ember_crystal": 2}, player)
+    out = cmd_forge(_parsed("/锻造 炎剑2 预览"), ctx)
+    assert out.split("\n")[0] == "炎剑Ⅱ（火属性+8）"
+
+
+def test_p04_black_square_optional() -> None:
+    """P-04：■ 前缀可省可带——`炎王剑` 与 `■炎王剑` 均精确命中 ■炎王剑 节点。"""
+    eng = _forge_engine()
+    r = parse_forge_target("炎王剑", eng)
+    assert r["ok"] is True and r["key"] == "炎王剑"
+    r2 = parse_forge_target("■炎王剑", eng)
+    assert r2["ok"] is True and r2["key"] == "■炎王剑"
+    # cmd_forge 出口：含 ■ 的 token 解析器会设 error 但 tokens 保留 → 词法层命中
+    #   （解析成功即进入守卫链：空玩家缺前置 → GU-04 拒绝，且绝无 未找到/非法字符）
+    ctx = _make_ctx({}, _player())
+    out = cmd_forge(_parsed("/锻造 ■炎王剑 预览"), ctx)
+    assert "未找到" not in out and "非法字符" not in out
+    assert "需先锻造" in out  # 已解析命中 ■炎王剑 → 走守卫（缺前置）
+
+
+def test_p05_qty_parsing() -> None:
+    """P-05：`*N` 数量（≥1 正整数）；0/非数字 → P_QTY。"""
+    eng = _forge_engine()
+    r = parse_forge_target("炎剑Ⅱ*3", eng)
+    assert r["ok"] is True and r["qty"] == 3 and r["key"] == "炎剑Ⅱ"
+    r1 = parse_forge_target("铁剑*1", eng)
+    assert r1["ok"] is True and r1["qty"] == 1
+    for bad in ("炎剑Ⅱ*0", "炎剑Ⅱ*abc", "炎剑Ⅱ*"):
+        r2 = parse_forge_target(bad, eng)
+        assert r2["ok"] is False and r2["error_code"] == ERR_P_QTY, bad
+
+
+def test_p06_multiword_single_argument() -> None:
+    """P-06：多词节点名（连续无空格）整体单参；带引号整体单参等价。"""
+    eng = _forge_engine()
+    r = parse_forge_target("炎王剑", eng)
+    assert r["ok"] is True and r["key"] == "炎王剑"
+    r2 = parse_forge_target('"炎王剑"', eng)
+    assert r2["ok"] is True and r2["key"] == "炎王剑"  # 引号剥壳后同参
+    r3 = parse_forge_target("「炎王剑」", eng)
+    assert r3["ok"] is True and r3["key"] == "炎王剑"
+
+
+def test_p_unknown_error() -> None:
+    """P_UNKNOWN：未找到节点 → 未找到 + /锻造树 指引。"""
+    r = parse_forge_target("不存在之剑", _forge_engine())
+    assert r["ok"] is False
+    assert r["error_code"] == ERR_P_UNKNOWN
+    assert "未找到" in r["message"] and "/锻造树" in r["message"]
+    assert r["candidates"] == []
+
+
+def test_p_ambiguous_candidates_listed() -> None:
+    """P_AMBIGUOUS：歧义 → 候选列表（含每候选名 + Lv），不默选。"""
+    r = parse_forge_target("炎", _forge_engine())
+    assert r["ok"] is False
+    assert r["error_code"] == ERR_P_AMBIGUOUS
+    cands = r["candidates"]
+    assert len(cands) == 4  # 炎剑/炎剑Ⅱ/炎剑Ⅲ/■炎王剑（前缀均以「炎」开头）
+    assert N_FLAME in cands and N_FLAME_2 in cands and N_FLAME_3 in cands and N_KING in cands
+    assert "候选多个节点" in r["message"] and "/锻造树" in r["message"]
+    # cmd_forge 出口：歧义候选列表渲染
+    ctx = _make_ctx({}, _player())
+    out = cmd_forge(_parsed("/锻造 炎"), ctx)
+    assert "候选多个节点" in out and "炎剑（Lv4）" in out and "→ /锻造树" in out
+
+
+def test_parse_forge_target_lexer_only_no_engine() -> None:
+    """parse_forge_target 无引擎：纯词法（P_EMPTY/P_SPACE/P_CHARSET/P_QTY），ok 即返。"""
+    r = parse_forge_target("炎剑Ⅱ*3")
+    assert r["ok"] is True and r["key"] == "炎剑Ⅱ" and r["qty"] == 3
+    r2 = parse_forge_target("")
+    assert r2["ok"] is False and r2["error_code"] == ERR_P_EMPTY
+    r3 = parse_forge_target("炎剑 Ⅱ")
+    assert r3["ok"] is False and r3["error_code"] == ERR_P_SPACE
+
+
+def test_batch_three_success() -> None:
+    """P-05 批量 *3：N 次成功 N 次结算（素材扣 3 份、产装 3 件、经验按件计）。"""
+    configure_proficiency(_load_json(_PROF_JSON), _settings_raw())  # type: ignore[arg-type]
+    player = _player(forged=[], forge_level=1)
+    ctx = _make_ctx({"ore": 9}, player)  # 铁剑每件矿石×3，*3 需 9
+    out = cmd_forge(_parsed("/锻造 铁剑*3"), ctx)
+    assert "✅ 铁剑 锻造完成！ ×3" in out
+    assert ctx["inventory"]["ore"] == 0
+    assert ctx["inventory"].get("iron_sword", 0) == 3
+    assert player["currencies"]["coins"] == 9999 - 30  # lv1×10 ×3
+    assert player["proficiency"]["forge"]["exp"] == 6  # 节点等级×2 ×3
+    assert N_IRON in player["forged"]
+    assert len(player.get("forge_instances", [])) == 3  # 逐件快照入档
+
+
+def test_batch_mid_failure_interrupts() -> None:
+    """批量第 2 次失败中断：`第 2 次失败，已成功 1 次`；已成功结算不回滚。"""
+    configure_proficiency(_load_json(_PROF_JSON), _settings_raw())  # type: ignore[arg-type]
+    player = _player(forged=[], forge_level=1)
+    ctx = _make_ctx({"ore": 4}, player)  # 只够 1 件（需 3），第 2 件缺 2
+    out = cmd_forge(_parsed("/锻造 铁剑*3"), ctx)
+    assert "第 2 次失败，已成功 1 次" in out
+    assert "素材不足" in out
+    assert ctx["inventory"]["ore"] == 1  # 4 - 3 = 1（第 2 件未扣，失败零副作用）
+    assert ctx["inventory"].get("iron_sword", 0) == 1
+    assert player["proficiency"]["forge"]["exp"] == 2  # 仅第 1 件结算
+    assert len(player.get("forge_instances", [])) == 1
+    # 未锻造该件（失败零副作用）
+    assert N_IRON in player["forged"]  # 第 1 件成功已标记

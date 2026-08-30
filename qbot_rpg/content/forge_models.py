@@ -239,7 +239,8 @@ class ForgeNode(BaseDef):
         return self._entries("materials")
 
     def material_defs(self) -> Tuple["MaterialReq", ...]:
-        return tuple(MaterialReq.from_entry(e) for e in self.materials)
+        return tuple(MaterialReq.from_entry(e, index=i)
+                     for i, e in enumerate(self.materials))
 
     @property
     def cost(self) -> Mapping[str, object]:

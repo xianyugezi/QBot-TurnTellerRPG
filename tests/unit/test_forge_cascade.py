@@ -426,3 +426,40 @@ def test_delete_unknown_node_noop() -> None:
     res = delete_forge_nodes(orig, ["ghost_node"], reconnect="promote")
     assert res["deleted"] == []
     assert res["forge"] == orig
+
+
+def test_tc26a_delete_ancestor_and_descendant_promote() -> None:
+    """P1-2 回归：同批删祖先+后代（铁剑Ⅱ+炎剑）promote → 后代子（炎剑Ⅱ）上溯重连
+    到首个存活祖先（铁剑Ⅰ），链不断；复查零悬空。"""
+    orig = _forge()
+    # 删 node_iron_sword_2（祖先） + node_flame_sword（其子，同批）
+    res = delete_forge_nodes(
+        orig, ["node_iron_sword_2", "node_flame_sword"], reconnect="promote")
+    nf = _forge_of(res)
+    # 铁剑Ⅰ 存活（未删），炎剑Ⅱ 应重连到 铁剑Ⅰ（上溯跳过已删的 铁剑Ⅱ/炎剑）
+    assert "node_iron_sword_1" in _node_ids(nf), "铁剑Ⅰ 应保留"
+    assert "node_iron_sword_2" not in _node_ids(nf), "铁剑Ⅱ 应已删"
+    assert "node_flame_sword" not in _node_ids(nf), "炎剑 应已删"
+    assert _node(nf, "node_flame_sword_2").get("parent") == "node_iron_sword_1", \
+        "炎剑Ⅱ 应上溯重连到首个存活祖先 铁剑Ⅰ（链不断）"
+    # 复查零悬空
+    rep = cascade_recheck(nf, _modules(orig))
+    assert rep["ok"] is True, f"同批删祖先+后代复查应通过，got errors={rep['errors']}"
+
+
+def test_tc25a_redflag_clears_branch_recheck() -> None:
+    """P1-3 回归：带 branch 中间节点（炎剑Ⅱ）红名 → 清空自身 branch →
+    V15 red_name_branch_not_cleared 不再残留（branch 维度清干净；parent 残留
+    red_name_referenced 仍按中间节点负例语义红拦，不在此断言范围）。"""
+    orig = _forge()
+    res = delete_items_effect(orig, ["flame_sword_2"], mode="redflag")
+    nf = _forge_of(res)
+    # 炎剑Ⅱ 红名且 branch 已清空
+    assert "node_flame_sword_2" in _strs(res["redflagged"])
+    assert is_redflagged(_node(nf, "node_flame_sword_2"))
+    assert _node(nf, "node_flame_sword_2").get("branch") == [], \
+        "红名节点自身 branch 应清空（V15 red_name_branch_not_cleared 不拦）"
+    # V15 复查：branch 残留 red_name_branch_not_cleared 应消失
+    rep = cascade_recheck(nf, _modules(orig, ["flame_sword_2"]))
+    assert "red_name_branch_not_cleared" not in _rules(rep["errors"]), \
+        f"branch 应已清空，got errors={rep['errors']}"

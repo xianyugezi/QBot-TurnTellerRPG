@@ -251,11 +251,14 @@ def delete_items_effect(
 
     if mode == "redflag":
         # ① 被引节点及其整棵子树保留但标红（补白2）
+        #    同时清空红名节点自身 branch（V15 red_name_branch_not_cleared 要求
+        #    红名后无残留 branch 引用；带 branch 中间节点红名后复查须通过）
         for n in _all_nodes(new_forge):
             rid = n.get("id")
             if isinstance(rid, str) and rid in subtree:
                 mm = n if isinstance(n, MutableMapping) else dict(n)
                 mm[REDFLAG_MARK] = True
+                mm["branch"] = []
         return {
             "forge": new_forge,
             "deleted": deleted,
@@ -331,12 +334,19 @@ def delete_forge_nodes(
     reconnected: List[str] = []
 
     if reconnect == "promote":
-        # ① 子节点上提重连：直接子节点 parent 指向被删节点的父（原父的父），链不断。
-        #    被删根节点（parent=None）的直接子上提为根（加入 tree.roots）。
+        # ① 子节点上提重连：直接子节点 parent 指向「首个不在删除集的存活祖先」
+        #    （原父的父；若原父也在删除集则继续上溯，避免指向已删中间节点——
+        #    同批删祖先+后代时链不断）。被删根节点（parent=None）的直接子上提为根。
+        present_set = set(present)
         for nid in present:
             node = by_id[nid]
-            gp = node.get("parent")  # 原父的父（被删节点的父）
+            gp = node.get("parent")  # 原父
             grand: Optional[str] = gp if isinstance(gp, str) and gp else None
+            # 上溯到首个不在 present 的存活祖先（或 None）
+            while grand is not None and grand in present_set:
+                anc = by_id.get(grand)
+                ap = anc.get("parent") if anc is not None else None
+                grand = ap if isinstance(ap, str) and ap else None
             for c in children.get(nid, []):
                 cnode = by_id[c]
                 # 只处理仍在树中的直接子（子树中更深的后代 parent 不变，链不断）
@@ -345,12 +355,10 @@ def delete_forge_nodes(
                     # 被删根节点：直接子上提为新根 → 加入对应 tree.roots
                     _add_root(new_forge, c)
                 reconnected.append(c)
-            # 被删节点的 branch 指向（转线目标）在重连场景下随子节点继承；若
-            # branch 目标非直接子（更深后代）仍可达，无需清理；直接子已上提。
         # 清理对已删节点的全部引用（branch/roots），防 V5/V15 悬空
-        _clean_refs(new_forge, set(present))
+        _clean_refs(new_forge, present_set)
         # 移除被删节点自身（子树其余节点保留并重连）
-        _remove_nodes(new_forge, set(present))
+        _remove_nodes(new_forge, present_set)
     else:
         # ② 整支移除：被删节点 + 全部后代移除，引用清理
         _clean_refs(new_forge, affected_set)

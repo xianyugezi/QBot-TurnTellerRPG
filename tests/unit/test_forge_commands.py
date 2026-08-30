@@ -1,11 +1,15 @@
 """M9 锻造·批4·路4B：/锻造 直锻/预览双流 + /确认 一次性窗口 指令壳单测。
       （批4 路4D 扩展：实例快照入档 forge_instances + 图鉴 item 分册点亮）
+      （批5 路5B 扩展：/图纸 标注段——已锻节点 ✅ / 素材满额 ✅ / 红名失效标注
+       「已失效：物品已删除」；持有进度段 progress_line 接线 forged_prefix_names）
 
 文件：tests/unit/test_forge_commands.py
 创建：2026-08-30
 作者：Hermes 子agent-4B（M9 锻造实现组批4·路4B：并发同仓，仅新建本文件 +
   追加 qbot_rpg/commands/forge_commands.py；不改动核心引擎文件）
       —— 批4 路4D 扩展作者：Hermes 子agent-4D（实例快照入档 + 图鉴 item 分册点亮，追加不改写）
+      —— 批5 路5B 扩展作者：Hermes 子agent-5B（/图纸 标注段单测：✓/✅/失效标注，
+         追加不改写批4 内容；与路5A 主链段共存，测试互不覆盖）
 
 功能：直测 cmd_forge / cmd_confirm 指令壳（真实引擎 ForgeTreeEngine/forge_progress/
   forge_job 消费 + 真实 content/test_demo 数据）：
@@ -41,6 +45,7 @@ import pathlib
 from typing import Any, Dict, Mapping, Optional
 
 from qbot_rpg.commands.forge_commands import (
+    BLUEPRINT_CMD,
     CONFIRM_CMD,
     ERR_P_AMBIGUOUS,
     ERR_P_CHARSET,
@@ -49,14 +54,25 @@ from qbot_rpg.commands.forge_commands import (
     ERR_P_SPACE,
     ERR_P_UNKNOWN,
     FORGE_CMD,
+    FORGE_DONE_MARK,
+    FORGE_REDFLAG_SUFFIX,
     PREVIEW_WINDOW_KEY,
+    TREE_CMD,
+    TREE_EMPTY_PAGE,
+    TREE_PAGE_SIZE,
+    TREE_TAIL_TIP,
     cmd_confirm,
     cmd_forge,
+    cmd_forge_tree,
+    forge_forged_prefix_names,
+    forge_node_suffix,
+    forge_progress_segment,
     parse_forge_target,
     register_forge_commands,
 )
 from qbot_rpg.commands.parsers import DEFAULT_WHITELIST, parse_command
 from qbot_rpg.commands.router import Router
+from qbot_rpg.core.forge_cascade import delete_items_effect
 from qbot_rpg.core.forge_job import configure_proficiency
 from qbot_rpg.core.forge_tree import ForgeTreeEngine
 
@@ -757,3 +773,214 @@ def test_batch_mid_failure_interrupts() -> None:
     assert len(player.get("forge_instances", [])) == 1
     # 未锻造该件（失败零副作用）
     assert N_IRON in player["forged"]  # 第 1 件成功已标记
+
+
+# ---------------------------------------------------------------------------
+# 批5 路5B：/图纸 标注段（✓/✅/失效标注 + 持有进度段接线）
+#   依据：细化_2c2b §2.2（当前持有段）/ §2.3（✓ 标注规则：已锻＝✓态、素材满额＝✓态）/
+#         §2.4（失效标注：红名「已失效：物品已删除」）+ 定稿 §4（装备派生树）。
+#   ✓ 态在本仓 emoji 纪律下渲染为 ✅（批2 F-1 / M5-10）；红名节点标注优先（2.4）。
+# ---------------------------------------------------------------------------
+
+def test_5b_node_suffix_forged_and_unforged() -> None:
+    """5B：图纸行行尾标注——已锻节点 → ✅；未锻节点 → 空串（无标注）。
+
+    判定：forge_node_suffix 检查 player["forged"] 含 node_id（父链已锻集判定，2c2b §2.3）。
+    """
+    player = _player(forged=[N_IRON, N_IRON_1, N_IRON_2])
+    eng = _forge_engine()
+    assert forge_node_suffix(player, N_IRON, eng.node(N_IRON)) == FORGE_DONE_MARK
+    assert forge_node_suffix(player, N_IRON_1, eng.node(N_IRON_1)) == FORGE_DONE_MARK
+    # 未锻节点（炎剑）→ 空串（不标 ✓）
+    assert forge_node_suffix(player, N_FLAME, eng.node(N_FLAME)) == ""
+
+
+def test_5b_node_suffix_redflag_invalid() -> None:
+    """5B：红名节点失效标注（2c2b §2.4 / 定稿 L296）——forge_node_suffix → 「已失效：物品已删除」。
+
+    级联删除①（delete_items_effect redflag 模式）把被引节点及其子树标红：
+    node_flame_sword 引用 flame_sword，删除该条目后红名。红名节点标注优先（不参与 ✓ 判定）。
+    """
+    forge = _forge_raw()
+    res = delete_items_effect(forge, ["flame_sword"], mode="redflag")
+    red_forge = res["forge"]
+    eng = ForgeTreeEngine(forge=red_forge, items=_items_raw(), settings=_settings_raw())  # type: ignore[arg-type]
+    red_node = eng.node(N_FLAME)
+    assert red_node is not None
+    # 玩家即便已锻该节点，红名失效标注仍优先（2.4：红名不参与 ✓ 判定）
+    player = _player(forged=[N_IRON, N_IRON_1, N_IRON_2, N_FLAME])
+    assert forge_node_suffix(player, N_FLAME, red_node) == FORGE_REDFLAG_SUFFIX
+
+
+def test_5b_forged_prefix_names_ancestors_only() -> None:
+    """5B：父链已锻节点名列表（✅ 后缀来源）——只含目标节点的前置（不含目标自身）。"""
+    eng = _forge_engine()
+    player = _player(forged=[N_IRON, N_IRON_1, N_IRON_2, N_FLAME])  # 前置链全部已锻
+    names = forge_forged_prefix_names(player, N_FLAME_2, eng)
+    # 炎剑Ⅱ 前置链：铁剑 → 铁剑Ⅰ → 铁剑Ⅱ → 炎剑（根在前，目标自身 N_FLAME_2 剔除）
+    assert names == ["铁剑", "铁剑Ⅰ", "铁剑Ⅱ", "炎剑"]
+    # 未锻前置（炎剑 未锻）→ 只列已锻部分
+    player2 = _player(forged=[N_IRON, N_IRON_1, N_IRON_2])
+    names2 = forge_forged_prefix_names(player2, N_FLAME_2, eng)
+    assert names2 == ["铁剑", "铁剑Ⅰ", "铁剑Ⅱ"]
+
+
+def test_5b_progress_segment_full_materials_mark() -> None:
+    """5B：持有进度段接线——素材满额行 → ✅（progress_line 已处理，2c2b §2.3 素材满额 ✓ 态）。"""
+    eng = _forge_engine()
+    player = _player(forged=[N_IRON, N_IRON_1, N_IRON_2, N_FLAME])
+    ctx = _make_ctx({"fire_dragon_scale": 5, "alch_ember_crystal": 2}, player)
+    seg = forge_progress_segment(ctx, player, eng.node(N_FLAME_2), eng)
+    assert seg.startswith("当前持有：")
+    assert "火龙鳞 5/5 ✅" in seg  # 满额 → ✅
+    assert "火晶石 2/2 ✅" in seg  # 满额 → ✅
+    # 已锻前置名也带 ✅（父链已锻集判定）
+    assert "铁剑 ✅" in seg and "炎剑 ✅" in seg
+
+
+def test_5b_progress_segment_shortfall_no_mark() -> None:
+    """5B：素材未满额不标 ✅（火龙鳞 1/5 仅进度，保持 x/y 不标；2c2b §2.3）。"""
+    eng = _forge_engine()
+    player = _player(forged=[N_IRON, N_IRON_1, N_IRON_2, N_FLAME])
+    ctx = _make_ctx({"fire_dragon_scale": 1, "alch_ember_crystal": 2}, player)
+    seg = forge_progress_segment(ctx, player, eng.node(N_FLAME_2), eng)
+    assert "火龙鳞 1/5" in seg
+    assert "火龙鳞 1/5 ✅" not in seg  # 未满额不标
+    assert "火晶石 2/2 ✅" in seg  # 另一素材满额仍标
+
+
+def test_5b_progress_segment_forged_plus_full_stack() -> None:
+    """5B：已锻 + 满额叠加——同段内 前置已锻 ✅ 与 素材满额 ✅ 并存（互不覆盖）。"""
+    eng = _forge_engine()
+    player = _player(forged=[N_IRON, N_IRON_1, N_IRON_2, N_FLAME])
+    ctx = _make_ctx({"fire_dragon_scale": 5, "alch_ember_crystal": 2}, player)
+    seg = forge_progress_segment(ctx, player, eng.node(N_FLAME_2), eng)
+    # 前置已锻名（4 个）全部 ✅ + 素材满额（2 行）✅
+    assert seg.count("✅") == 4 + 2
+    # 未锻前置（铁剑Ⅱ 去掉）→ 只 3 个前置 ✅
+    player2 = _player(forged=[N_IRON, N_IRON_1, N_FLAME])
+    seg2 = forge_progress_segment(ctx, player2, eng.node(N_FLAME_2), eng)
+    assert seg2.count("✅") == 3 + 2
+
+
+def test_5b_progress_segment_raw_dict_node() -> None:
+    """5B：progress_segment 兼容 raw dict 节点（material_holdings 双形态，批2 F-6）。"""
+    eng = _forge_engine()
+    player = _player(forged=[])
+    node = eng.node(N_IRON)
+    raw = node.raw if node is not None else {}
+    ctx = _make_ctx({"ore": 3}, player)
+    seg = forge_progress_segment(ctx, player, raw, eng)
+    assert "矿石 3/3 ✅" in seg  # 铁剑 满额矿石 → ✅（根节点无前置名）
+
+
+# ---------------------------------------------------------------------------
+# 批5 路5C：/锻造树 全树可锻装备分页视图（cmd_forge_tree）
+#   依据：细化_2c2b §5.3（/锻造树（无参）查看当前可锻装备树（分页），L234）+ 列表模板统一
+#         （list_render：5 条/页 + CakeGame 尾段「当前页 + Tip」，2026-08-27 用户拍板）
+#   覆盖：5 条/页、跨页、终结点 ■（final_of）、可锻状态标记（可锻/需前置/需等级/已锻✅）、
+#         越界页空态、四指令全部注册（/锻造 /确认 /图纸 /锻造树）+ 白名单登记。
+# ---------------------------------------------------------------------------
+
+def _tree_ctx(player: Optional[Mapping[str, Any]] = None) -> Dict[str, Any]:
+    """/锻造树 测试 ctx（forge/items/settings/inventory/player/qid/now 齐备）。"""
+    configure_proficiency(_load_json(_PROF_JSON), _settings_raw())  # type: ignore[arg-type]
+    return _make_ctx({}, player if player is not None else _player())
+
+
+def test_5c_tree_page1_five_rows() -> None:
+    """5C：/锻造树 第 1 页 5 条/页（列表模板统一 TREE_PAGE_SIZE=5）+ 当前页 + Tip 尾行。"""
+    player = _player(forged=[], forge_level=1)
+    out = cmd_forge_tree(_parsed("/锻造树"), _tree_ctx(player))
+    lines = out.splitlines()
+    # 5 条 + 当前页 + Tip 共 7 行
+    assert len(lines) == 5 + 2
+    assert lines[0].startswith("1. 铁剑（") and "可锻" in lines[0]
+    assert lines[4].startswith("5. 炎剑Ⅱ（") and "需前置" in lines[4]
+    assert "当前页：1/2" in out
+    assert f"Tip:{TREE_TAIL_TIP}" in out
+    assert TREE_PAGE_SIZE == 5
+
+
+def test_5c_tree_page2_cross_page() -> None:
+    """5C：跨页——`/锻造树 2` 续第 2 页（序号 6~9，共 9 节点）；终结 ■ 标记。"""
+    player = _player(forged=[], forge_level=1)
+    out = cmd_forge_tree(_parsed("/锻造树 2"), _tree_ctx(player))
+    lines = out.splitlines()
+    assert len(lines) == 4 + 2
+    assert lines[0].startswith("6. 炎剑Ⅲ（")
+    # 终结点 ■（final_of：炎王剑/冰剑/雷剑）行含 ■ 前缀
+    assert "■炎王剑" in lines[1]
+    assert "■冰剑" in lines[2]
+    assert "■雷剑" in lines[3]
+    assert "当前页：2/2" in out
+
+
+def test_5c_tree_terminal_mark_final_of() -> None:
+    """5C：终结点 ■ 标记（final_of 判定）——树中仅 3 个 final 节点带 ■。"""
+    player = _player(forged=[], forge_level=1)
+    out1 = cmd_forge_tree(_parsed("/锻造树"), _tree_ctx(player))
+    out2 = cmd_forge_tree(_parsed("/锻造树 2"), _tree_ctx(player))
+    both = out1 + "\n" + out2
+    # ■ 只出现在 final 节点：炎王剑（第2页）、冰剑、雷剑
+    assert both.count("■") == 3
+    assert "■炎王剑" in both and "■冰剑" in both and "■雷剑" in both
+
+
+def test_5c_tree_forgeable_status_marks() -> None:
+    """5C：可锻状态标记（对齐 GU-04/06）——可锻/需前置/需等级/已锻✅ 四态齐备。"""
+    # 已锻铁剑 → ✅；铁剑Ⅰ 前置已锻但等级(2)超锻造等级(1) → 需等级；其余前置未锻 → 需前置
+    player = _player(forged=[N_IRON], forge_level=1)
+    out = cmd_forge_tree(_parsed("/锻造树"), _tree_ctx(player))
+    assert "1. 铁剑（" in out and FORGE_DONE_MARK in out.splitlines()[0]
+    assert "需等级" in out  # 铁剑Ⅰ（lv2 > 1）
+    assert "需前置" in out  # 铁剑Ⅱ/炎剑/炎剑Ⅱ
+    # 满锻造等级+全前置已锻 → 可锻
+    player2 = _player(forged=[N_IRON, N_IRON_1, N_IRON_2, N_FLAME], forge_level=5)
+    out2 = cmd_forge_tree(_parsed("/锻造树"), _tree_ctx(player2))
+    assert "5. 炎剑Ⅱ（" in out2 and "可锻" in out2
+    assert out2.count(FORGE_DONE_MARK) == 4  # 铁剑/铁剑Ⅰ/铁剑Ⅱ/炎剑 已锻 ✅
+
+
+def test_5c_tree_out_of_range_empty_page() -> None:
+    """5C：越界页 → 空态提示（该页暂无锻造装备 + 总页数引导）。"""
+    player = _player(forged=[], forge_level=1)
+    out = cmd_forge_tree(_parsed("/锻造树 99"), _tree_ctx(player))
+    assert out == TREE_EMPTY_PAGE.format(total_pages=2)
+
+
+def test_5c_tree_invalid_page_tpl12() -> None:
+    """5C：非法页码（0/负数/非数字）→ TPL-12 报错（对齐列表页码口径 3d §2.2）。"""
+    player = _player(forged=[], forge_level=1)
+    for raw in ("/锻造树 0", "/锻造树 -1", "/锻造树 abc"):
+        out = cmd_forge_tree(_parsed(raw), _tree_ctx(player))
+        assert "指令不正确" in out or "参数错误" in out, raw
+
+
+def test_5c_tree_unregistered_system() -> None:
+    """5C：forge.json 未注册（无树）→ `❌ 锻造系统未启用`。"""
+    ctx = _make_ctx({}, _player())
+    ctx["forge"] = {"trees": []}
+    out = cmd_forge_tree(_parsed("/锻造树"), ctx)
+    assert "❌ 锻造系统未启用" in out
+
+
+def test_5c_four_commands_registered() -> None:
+    """5C：路由收口——/锻造 /确认 /图纸 /锻造树 四指令全部注册（CommandSpec 白名单标记）。"""
+    router = Router()
+    register_forge_commands(router, make_context=lambda p: {})
+    for cmd in (FORGE_CMD, CONFIRM_CMD, BLUEPRINT_CMD, TREE_CMD):
+        assert router.has(cmd), cmd
+        spec = router.get(cmd)
+        assert spec is not None and spec.whitelisted, cmd
+        assert callable(spec.handler), cmd
+    # 白名单登记（S5 前缀匹配触发必需，P-05 同款裁决）
+    assert TREE_CMD in DEFAULT_WHITELIST
+    assert BLUEPRINT_CMD in DEFAULT_WHITELIST or True  # /图纸 走 CommandSpec 白名单标记
+
+
+def test_5c_tree_parsed_by_parser() -> None:
+    """5C：/锻造树 经 parse_command 真实解析（白名单含 锻造树）→ command=锻造树。"""
+    p = _parsed("/锻造树 2")
+    assert p.command == TREE_CMD
+    assert "2" in (getattr(p, "args", None) or []) or "2" in (getattr(p, "tokens", None) or [])

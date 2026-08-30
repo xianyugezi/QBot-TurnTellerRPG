@@ -279,6 +279,44 @@ async def test_session_mgr_notimpl_no_raise() -> None:
 
 
 # ---------------------------------------------------------------------------
+# M9 锻造（批C 审查 P0-1/P0-2 收口 2026-08-30：装配层接线固化）
+# ---------------------------------------------------------------------------
+async def test_forge_module_injected() -> None:
+    """P0-1：make_context 注入 ctx["forge"]（forge.json 顶层 raw dict；registry
+    modules_raw 有 forge → 四段齐；无 → {} 缺省兜底 GU-01 系统未启用）。"""
+    # 无 forge 模块 → {} 兜底（不抛，GU-01）
+    deps = _deps(_player())
+    ctx = await make_context(_event(), deps)
+    assert isinstance(ctx["forge"], dict) and ctx["forge"] == {}
+    # 有 forge 模块（registry.modules_raw 注入）→ 四段齐
+    reg = _registry()
+    forge_raw = {"schema_version": "1.0", "trees": [], "sets": [],
+                 "augments": [], "settings": {}}
+    deps2 = _deps(_player())
+    deps2.registry = Registry(pack_id="t", generation=1, tables=reg._tables,
+                              names=reg._names, modules_raw={"forge": forge_raw})
+    ctx2 = await make_context(_event(), deps2)
+    assert ctx2["forge"] == forge_raw
+    assert set(ctx2["forge"].keys()) >= {"trees", "sets", "augments", "settings"}
+
+
+async def test_forge_preview_persists_across_commands() -> None:
+    """P0-2：确认窗挂 player.persistent_state——预览登记后 /确认 跨指令可读
+    （生产每次指令重建 ctx，窗存 ctx 内存键会丢；挂 ps 即落档保留）。"""
+    player = _player()
+    deps = _deps(player)
+    # 第一次指令（预览登记）
+    ctx1 = await make_context(_event(), deps)
+    assert isinstance(ctx1["forge_preview"], dict)
+    ctx1["forge_preview"]["10001"] = {"node_id": "node_iron_sword", "ts": 1.0}
+    # 第二次指令（全新 ctx，重建）→ 窗仍在（persistent_state 承载）
+    ctx2 = await make_context(_event(), deps)
+    assert isinstance(ctx2["forge_preview"], dict)
+    assert ctx2["forge_preview"].get("10001", {}).get("node_id") == "node_iron_sword", \
+        "确认窗应跨指令持久化（挂 persistent_state）"
+
+
+# ---------------------------------------------------------------------------
 # 双形态背包 + 入包 hook
 # ---------------------------------------------------------------------------
 async def test_inventory_dual_form() -> None:

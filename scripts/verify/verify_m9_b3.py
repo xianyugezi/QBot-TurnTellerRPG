@@ -317,17 +317,18 @@ def t_forge_king() -> None:
     res0 = grant_forge_king(player0, ctx0)
     assert res0["ok"] is False and res0["reason"] == "codex_incomplete", res0
 
-    # c2 全链锻造（点亮全图鉴）→ eligible True → 授予
+    # c2 全链锻造（点亮全图鉴）→ 自动授予（批C 审查 P1-1 接线 2026-08-30：
+    # _forge_full_chain 走 cmd_forge→_execute，成功路径已挂 grant_forge_king——
+    # 点亮最后一节点即即时授予，故链锻造完成后 title 已落账；手动 grant 幂等 False）
     player1 = make_player(forge_level=7)
     _forge_full_chain(player1)
     ctx1 = ctx_with({}, player1)
     elig1 = king_eligible(player1, ctx1)
     assert elig1["eligible"] is True, elig1
     assert elig1["lit_count"] == elig1["total"] == 9, elig1
-    res1 = grant_forge_king(player1, ctx1)
-    assert res1["ok"] is True and res1["granted"] is True, res1
-    assert KING_TITLE_ID in {str(x) for x in player1.get("title_state", {}).get("owned", [])}
-    # 幂等：已拥有 → granted False
+    assert KING_TITLE_ID in {str(x) for x in player1.get("title_state", {}).get("owned", [])}, \
+        "铸造王称号应自动落账（P1-1 接线验收）"
+    # 幂等：已拥有 → granted False（自动授予后手动 grant 不重复授）
     res1b = grant_forge_king(player1, ctx1)
     assert res1b["ok"] is True and res1b["granted"] is False, res1b
 

@@ -425,6 +425,22 @@ def _table_from_registry(registry: Any, kind: str) -> Dict[str, Any]:
     return out
 
 
+def _forge_module_raw(registry: Any) -> Mapping[str, object]:
+    """forge.json 顶层 raw dict（M9 P0-1 收口 2026-08-30）。
+
+    入参 registry: content Registry。出参 forge 模块原始解析结果（Mapping，含
+    trees/sets/augments/settings 四段）；无 registry / 无 forge 模块 → {}（GU-01
+    锻造系统未启用兜底）。核心逻辑: registry.modules_raw["forge"]（Registry 新增
+    public 访问器，对齐 _stats_table 从 modules_raw 取模块的模式）。
+    """
+    raw = getattr(registry, "modules_raw", None)
+    if isinstance(raw, Mapping):
+        v = raw.get("forge")
+        if isinstance(v, Mapping):
+            return v
+    return {}
+
+
 def _stats_table(registry: Any, settings: Mapping) -> Dict[str, Any]:
     """初始属性模板（stats，/注册 build_initial_player 消费）。
 
@@ -911,6 +927,12 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
         "items": _table_from_registry(deps.registry, "item"),
         "recipe": _table_from_registry(deps.registry, "recipe"),
         "traits": _table_from_registry(deps.registry, "trait"),
+        # M9 锻造（批C 审查 P0-1 收口 2026-08-30）：ctx["forge"] 注入 forge.json 顶层
+        # raw dict（含 trees/sets/augments/settings 四段）——forge 指令壳 _forge_raw
+        # 消费；forge 非条目表（顶层 obj），不能走 _table_from_registry（Def→dict
+        # 表注入坑见 m9_接口摸底 §八-2），从 registry.modules_raw 直接取模块原始解析
+        # 结果（Registry 新增 modules_raw public 访问器）。
+        "forge": _forge_module_raw(deps.registry),
         "battle_snapshot": None,          # 战斗接线注入位（即时调合 battle_alchemy_used）
         "battle_alchemy_engine": None,    # 战斗接线注入位（BattleAlchemyEngine）
         "upgrade_unlocks": {},            # 玩家级解锁表（配方合成/进化持久化，装配层回填）
@@ -988,6 +1010,11 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
             "farm_plots": _ps_init(ps, "farm_plots", {}),
             "helpers": _ps_init(ps, "helpers", {}),
             "proficiency": _ps_init(ps, "proficiency", {}),
+            # M9 锻造（批C 审查 P0-2 收口 2026-08-30）：确认窗挂 player.persistent_state
+            # ——生产每次指令 make_context 重建 ctx，窗存 ctx 内存键会随本次指令丢弃，
+            # 预览后 /确认 恒「无可确认」；改为 _ps_init 挂回 ps（引擎写 ctx 键即落档），
+            # 预览/确认 跨指令共享同一窗源（F-3 预留口径，装配层补接线）。
+            "forge_preview": _ps_init(ps, "forge_preview", {}),
             # M8 批14 测试探针（炼金引导任务）：ctx["prof_level"] 职业等级映射
             # {job_id: level}——quest 引擎 var=prof_level 条件（param=job_id）消费；
             # 未注册/无建档 → {} 空（条件不满足，引导任务不提前解锁）。

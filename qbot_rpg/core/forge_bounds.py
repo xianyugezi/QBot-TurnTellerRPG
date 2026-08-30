@@ -629,11 +629,16 @@ def forge_fee_check(settings: object) -> Dict[str, Any]:
     """费用结算确定性校验（定稿 §12.4 forge_fee: 节点等级×10；细化_2c2b §1.2 原子扣减/
     §1.3 失败零副作用）。
 
+    【P2-3 语义统一 2026-08-30】forge_fee 双形态：
+      - int（如 100）→ 固定金币/件（与 commands._resolve_cost 一致）；
+      - str 公式「节点等级×N」（如 "节点等级×10"）→ 每级系数 N × 节点等级。
+    本函数仅判确定性（非负 / 无随机 token），固定/系数结算在指令层 _resolve_cost 落地。
+
     入参：settings：forge 段或完整 settings dict（B-1 归一；读 forge_fee）。
 
     出参 dict：
       - ok：公式确定性可解析（节点等级×N，N 为固定非负整数，无随机/浮动）即 True。
-      - base_fee_per_level：每级金币系数 N（供冒烟断言：test_demo=10）。
+      - base_fee_per_level：str 公式每级系数 / int 固定值（test_demo=10）。
       - formula：公式文本（如 "节点等级×10"）。
       - fee_kind：int / formula / default（来源形态）。
       - deterministic：True（节点等级×N 无浮动，锻造 100% 确定性费用）。
@@ -649,6 +654,9 @@ def forge_fee_check(settings: object) -> Dict[str, Any]:
     base: Optional[int] = None
     kind = "default"
 
+    # 【P2-3 收口 2026-08-30 批C 审查】forge_fee int 语义统一 = 固定金币/件（与指令层
+    # _resolve_cost 现行口径一致）；str 公式「节点等级×N」= 每级系数。边界校验层仅
+    # 判确定性（非负/无随机），固定/系数语义在 docstring + 契约补白标注，不重复断言。
     if isinstance(raw, int) and not isinstance(raw, bool):
         base = raw
         kind = "int"

@@ -103,6 +103,11 @@ class Registry:
         return self._schema_version
 
     @property
+    def modules_raw(self) -> Mapping[str, object]:
+        """各模块原始解析数据（只读视图；顶层 obj 模块如 forge 由装配层经此取 raw）。"""
+        return self._modules_raw
+
+    @property
     def manifest(self) -> Optional[Manifest]:
         return self._manifest
 

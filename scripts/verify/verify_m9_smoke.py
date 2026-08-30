@@ -54,6 +54,12 @@ from qbot_rpg.commands.forge_commands import (  # noqa: E402
 from qbot_rpg.commands.parsers import DEFAULT_WHITELIST, parse_command  # noqa: E402
 from qbot_rpg.commands.router import Router  # noqa: E402
 from qbot_rpg.content.loader import build_pack  # noqa: E402
+from qbot_rpg.core.forge_bounds import (  # noqa: E402
+    alchemy_interface,
+    determinism_check,
+    forge_fee_check,
+    slotted_source_check,
+)
 from qbot_rpg.core.forge_job import configure_proficiency  # noqa: E402
 from qbot_rpg.core.forge_king import grant_forge_king, king_eligible  # noqa: E402
 from qbot_rpg.core.forge_material import (  # noqa: E402
@@ -482,7 +488,9 @@ def t_forge_king() -> None:
     res = grant_forge_king(player, ctx)
     assert res["ok"] is False and res["reason"] == "codex_incomplete", res
 
-    # h2 全亮 → eligible True → 授予
+    # h2 全亮 → 自动授予（批C 审查 P1-1 接线 2026-08-30：_forge_full_chain 走
+    # cmd_forge→_execute，成功路径已挂 grant_forge_king——点亮最后一节点即即时授予，
+    # 故链锻造完成后 title 应已落账；手动 grant 幂等 granted=False）
     player = make_player(modules, forge_level=7)
     ctx = build_context()
     ctx["player"] = player
@@ -490,10 +498,12 @@ def t_forge_king() -> None:
     elig = king_eligible(player, ctx)
     assert elig["eligible"] is True, elig
     assert elig["lit_count"] == elig["total"] == 9, elig
-    res = grant_forge_king(player, ctx)
-    assert res["ok"] is True and res["granted"] is True, res
+    # 自动授予已生效（接线验收：无需手动 grant 已获称号）
     owned = player.get("title_state", {}).get("owned", [])
-    assert "forge" in {str(x) for x in owned}, f"铸造王称号未落账：{owned}"
+    assert "forge" in {str(x) for x in owned}, f"铸造王称号未自动落账：{owned}"
+    # 手动 grant 幂等（已拥有 → granted=False，不重复授予）
+    res = grant_forge_king(player, ctx)
+    assert res["ok"] is True and res["granted"] is False, res
 
 
 def t_batch_forge() -> None:
@@ -543,6 +553,29 @@ def t_registration() -> None:
         assert p is not None and p.command, f"{raw} 未解析"
 
 
+def t_forge_bounds() -> None:
+    """j. 边界铁律接口契约（批C 审查 P2-1 收口 2026-08-30：四函数此前仅单测消费，
+    无冒烟兜底——内容包变更时确定性/带孔唯一来源/费用公式须有门禁断言）。"""
+    modules = _load_modules()
+    settings = modules.get("settings") if isinstance(modules, Mapping) else None
+    # determinism_check：确定性零违规（硬违规 violations 空；W 级文案不拦截）
+    det = determinism_check(modules, settings)
+    assert det.get("ok") is True, f"确定性校验应 ok，got {det.get('violations')}"
+    assert int(det.get("scanned_nodes") or 0) >= 1
+    # slotted_source_check：带孔装备仅由 forge 节点产出（三途径零产出）
+    slot = slotted_source_check(settings, modules)
+    assert slot.get("ok") is True, f"带孔唯一来源应 ok，got {slot.get('violations')}"
+    # forge_fee_check：费用公式确定性（test_demo=节点等级×10，每级 10）
+    fee = forge_fee_check(settings)
+    assert fee.get("ok") is True, f"费用公式应确定性，got {fee}"
+    assert fee.get("base_fee_per_level") == 10, f"test_demo 每级费用应 10，got {fee}"
+    assert fee.get("gold_insufficient_reject") is True
+    # alchemy_interface：三契约点核对（test_demo 雷键 thunder vs 炼金 lightning
+    # 口径漂移如实上报 misaligned——契约点 ok 状态随数据，不强制 True）
+    ai = alchemy_interface(modules)
+    assert isinstance(ai, Mapping) and "ok" in ai, f"alchemy_interface 结构，got {ai}"
+
+
 def main() -> int:
     out("=" * 60)
     out("M9 全链路冒烟门禁 verify_m9_smoke（依据 m9_启动包 §五 + m9_batch_plan 批8）")
@@ -569,6 +602,8 @@ def main() -> int:
     check("h. 铸造王（未全亮拒绝/全亮授予）", t_forge_king)
     # i. 批量 *N
     check("i. 批量 *N（炎剑Ⅱ*2 两次结算/素材不足中断）", t_batch_forge)
+    # j. 边界铁律接口契约（P2-1 收口）
+    check("j. 边界铁律（确定性/带孔唯一来源/费用公式）", t_forge_bounds)
     # 装配注册
     check("装配: register_forge_commands 四指令注册+白名单", t_registration)
 

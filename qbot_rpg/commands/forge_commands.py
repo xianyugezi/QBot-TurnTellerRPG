@@ -155,6 +155,7 @@ from qbot_rpg.core.alchemy_core import ELEMENT_NAMES_CN
 from qbot_rpg.core.codex import mark_seen
 from qbot_rpg.core.forge_augments import parse_augments
 from qbot_rpg.core.forge_cascade import is_redflagged
+from qbot_rpg.core.forge_king import forge_king_eligible_check, grant_forge_king
 from qbot_rpg.core.forge_job import (
     _tier_name,
     exp_to_next,
@@ -581,6 +582,10 @@ def _digit_to_roman(value: str) -> str:
 def _resolve_with_roman(eng: ForgeTreeEngine, key: str) -> Tuple[str, dict]:
     """resolve_node + P-03 罗马等价兜底：依次喂 原key → 罗马归一 → 数字转罗马。
 
+    【P1-3 裁决 2026-08-30】变体兜底收紧：罗马归一/数字转罗马的变体**仅接受精确命中**
+    （match == "exact"）——变体靠前缀/歧义命中一律不接受（防止自定义内容包场景下
+    「输错名 → 变体前缀兜底静默命中另一个树同名武器」错锻；原 key 保持全态命中）。
+
     返回 (命中用 key, resolve 结果)：命中时 key 为实际喂入且成功的变体（forge_atomic
     复用该 key 二次 resolve 恒一致）；全部未命中时合并歧义候选（文件序去重）或返回
     首个结果（not_found）。resolve_node 引擎不改动（只喂 key 过去，任务要求）。
@@ -597,7 +602,9 @@ def _resolve_with_roman(eng: ForgeTreeEngine, key: str) -> Tuple[str, dict]:
     for k in variants:
         res = eng.resolve_node(k)
         if res.get("ok"):
-            return k, res
+            # 原 key 全态命中；变体（罗马等价）仅精确命中接受（P1-3 裁决收紧）
+            if k == key or res.get("match") == "exact":
+                return k, res
         results.append(res)
 
     # 全部未命中：合并歧义候选（去重保序）或返回首个 not_found
@@ -743,6 +750,9 @@ def forge_atomic(ctx: MutableMapping[str, Any], key: object, *, preview: bool = 
         return _forge_once(ctx, key, preview=False)
 
     # 批量 *N（P-05 / §1.2 多件）：逐件重跑守卫 + 原子结算，N 次成功 N 次结算
+    # 【P2-4 收口 2026-08-30 批C 审查】批量语义 = 逐件原子（每件守卫+结算独立，失败
+    # 仅中断后续件、已成功件保留），非整批原子——对齐 §1.2「按数量循环执行上述原子
+    # 流程」，测试 test_4c_batch_mid_failure 已固化「第 1 件成功保留」行为。
     successes = 0
     last_success = ""
     for i in range(1, n + 1):
@@ -826,6 +836,13 @@ def _forge_once(ctx: MutableMapping[str, Any], key: object, *, preview: bool) ->
         missing = int(exp_to_next(player).get("missing", 0))
         return f"需要 {need_rank} 级，当前 {cur_rank}（还差 {missing} 熟练）"
 
+    # GU-07 铸造王专属节点守卫（2c2d N-16 / KF-02①：king_only 节点须已获「铸造王」；
+    #   批C 审查 P1-1 接线 2026-08-30——forge_king 六函数此前仅测试/verify 直调，生产
+    #   /锻造 零消费，图鉴全亮不授予 + king_only 无守卫）
+    king_check = forge_king_eligible_check(player, ctx, node)
+    if not king_check.get("ok"):
+        return f"❌ {king_check.get('message') or '未获铸造王'}"
+
     # ---- 守卫全过 ----
     if preview:
         # 预览流：渲染卡片 + 登记一次性待确认窗（不覆盖既有窗，3.3）；0 资源副作用
@@ -906,6 +923,25 @@ def _window_expired(ctx: Mapping[str, Any], window: Mapping[str, object]) -> boo
     return (_now(ctx) - float(ts)) > carry
 
 
+def _forge_preview_active(ctx: Mapping[str, Any]) -> bool:
+    """玩家是否有活跃锻造预览窗（P1-2 统一 /确认 状态分派判定，2026-08-30）。
+
+    入参 ctx: 玩家 ctx（含 qid/player + PREVIEW_WINDOW_KEY 共享窗源，装配层注入
+    persistent_state 承载）。出参 bool：qid 有未过期预览窗 → True。
+    qid 缺失 / 无窗 / 窗已超时 → False（保守，交给炼金确认兜底）。
+    """
+    qid = _qid_of(ctx)
+    if qid is None:
+        return False
+    window = ctx.get(PREVIEW_WINDOW_KEY)
+    if not isinstance(window, MutableMapping):
+        return False
+    entry = window.get(qid)
+    if not isinstance(entry, Mapping):
+        return False
+    return not _window_expired(ctx, entry)
+
+
 def _execute(
     ctx: MutableMapping[str, Any],
     player: MutableMapping[str, Any],
@@ -981,9 +1017,28 @@ def _execute(
         forged.append(node_id)
 
     # 熟练经验入账（EXP-01 craft 来源；节点等级×2 可配）
+    # 【P2-2 收口 2026-08-30 批C 审查】：原实现忽略返回值——成功路径扣素材/扣金币/
+    # 入包后若 gain_forge_exp 返回 ok:False（计价配置异常等低概率），经验未发但资源
+    # 已扣 → 违反 §1.2 原子写/失败零副作用。现捕获返回值，失败回滚素材+金币+已入包
+    # 物品+forged 标记（回滚后该节点不产装不计数，玩家可重锻）。
     node_lv = node.level if hasattr(node, "level") else 1
-    gain_forge_exp(player, node_lv if isinstance(node_lv, int) else 1,
-                   settings=_settings_of(ctx))
+    exp_res = gain_forge_exp(player, node_lv if isinstance(node_lv, int) else 1,
+                             settings=_settings_of(ctx))
+    if not exp_res.get("ok"):
+        # 回滚入包物品（若已入包）
+        if isinstance(item_ref, str) and item_ref:
+            _remove_item(ctx, item_ref, 1)
+        # 回滚金币
+        if cost > 0 and isinstance(currencies, MutableMapping):
+            currencies["coins"] = coins_have
+        # 回滚素材
+        for done in deducted:
+            _add_item(ctx, done, int(holdings[done]["need"]), bound=False)
+        # 回滚 forged 标记
+        forged_after = player.get("forged")
+        if isinstance(forged_after, list) and node_id in forged_after:
+            forged_after.remove(node_id)
+        return "❌ 熟练入账失败，本次锻造已回滚（零副作用）"
 
     # 首次锻造图鉴点亮（2c2b §1.2 步骤 5：mark_seen weapon 分册，ref=装备 item id，名=节点名）
     #   图鉴 weapon 册 total 来自 registry equipment 表（codex._total_of），ref 必须与
@@ -997,6 +1052,14 @@ def _execute(
         mark_seen(ctx, "item", item_ref, node_name)
     except Exception:
         pass  # 图鉴回写失败不阻断锻造结算（图鉴为辅助钩子）
+
+    # 铸造王即时结算（2c2d KF-01 / TC-28：点亮最后一节点时授予；批C 审查 P1-1 接线
+    # 2026-08-30——此前 forge_king 生产零消费，图鉴全亮不授予；授予失败（未全亮/
+    # 已拥有/异常）不阻断锻造结算，仅记录返回值供测试断言）
+    try:
+        grant_forge_king(player, ctx)
+    except Exception:
+        pass
 
     return _success_line(ctx, node)
 
@@ -1788,11 +1851,20 @@ def register_forge_commands(
             return cmd_forge(parsed, injected)
         return cmd_forge(parsed, _ctx(parsed))
 
-    def _confirm(parsed: Any, *a: Any, **k: Any) -> str:
+    def _confirm(parsed: Any, *a: Any, **k: Any) -> Any:
         injected = k.get("ctx") if isinstance(k, dict) else None
+        ctx: MutableMapping[str, Any]
         if isinstance(injected, MutableMapping):
-            return cmd_confirm(parsed, injected)
-        return cmd_confirm(parsed, _ctx(parsed))
+            ctx = injected
+        else:
+            ctx = _ctx(parsed)
+        # 【P1-2 裁决 2026-08-30 /确认 统一状态分派】：锻造预览窗活跃 → 锻造确认；
+        # 否则（无锻造状态）→ 炼金确认（炼金无会话时由 alchemy 自兜底「无调合会话」）。
+        # 强化/分解等后续系统可在此追加状态分支（用户拍板：炼金/锻造/强化/分解各归各）。
+        if _forge_preview_active(ctx):
+            return cmd_confirm(parsed, ctx)
+        from qbot_rpg.commands.alchemy_commands import cmd_confirm as _alchemy_confirm
+        return _alchemy_confirm(parsed, ctx)
 
     def _blueprint(parsed: Any, *a: Any, **k: Any) -> str:
         injected = k.get("ctx") if isinstance(k, dict) else None
@@ -1826,7 +1898,10 @@ def register_forge_commands(
     #   L236/L237——「套装」「客制」独立指令名已进 parsers.DEFAULT_WHITELIST，
     #   否则 S5 前缀匹配静默不响应）——六指令全部注册（路由收口）
     router.register(CommandSpec(FORGE_CMD, handler=_forge))
-    router.register(CommandSpec(CONFIRM_CMD, handler=_confirm))
+    # 【P1-2 裁决 2026-08-30】/确认 统一状态分派器：replace=True 覆盖炼金同名注册
+    # （炼金 register_alchemy_commands 已注册 CONFIRM_CMD；forge 后注册接管——
+    #  预览窗活跃→锻造确认，否则→炼金确认，见 _confirm）
+    router.register(CommandSpec(CONFIRM_CMD, handler=_confirm), replace=True)
     router.register(CommandSpec(BLUEPRINT_CMD, handler=_blueprint))
     router.register(CommandSpec(TREE_CMD, handler=_tree))
     router.register(CommandSpec(SETS_CMD, handler=_sets))

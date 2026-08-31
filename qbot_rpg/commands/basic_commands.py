@@ -336,7 +336,10 @@ def _job_name(ctx: Mapping[str, Any], job_id: str) -> Optional[str]:
 def _base_header(ctx: Mapping[str, Any], label: str) -> str:
     """LV 行固定头部基座：`【{label}】Lv3.阿伟（战士）`。"""
     f = _player_fields(ctx)
-    job = str(ctx.get("job_name") or _job_name(ctx, f["job_id"]) or "?")
+    job = str(ctx.get("job_name") or _job_name(ctx, f["job_id"]) or "")
+    # 2026-08-31：内容包无 jobs 表时 job_name 为空 → 默认职业兜底「新手」防显示（?）
+    if not job and f["job_id"] == "novice":
+        job = "新手"
     return f"【{label}】Lv{f['level']}.{f['name']}（{job}）"
 
 

@@ -313,5 +313,137 @@
       "gem": 20
     },
     "traits_inherit": 2
+  },
+  {
+    "id": "rcp_bait_worm",
+    "name": "蚯蚓饵配方",
+    "kind": "craft",
+    "level": 3,
+    "synth_allowed": true,
+    "master_only": false,
+    "materials": [
+      {
+        "id": "moon_grass",
+        "count": 2
+      }
+    ],
+    "output": {
+      "item": "饵_蚯蚓",
+      "count": 1
+    },
+    "cost": {
+      "coins": 30,
+      "gem": 0
+    },
+    "slots": 3,
+    "traits_inherit": 1
+  },
+  {
+    "id": "rcp_bait_dough",
+    "name": "面团饵配方",
+    "kind": "craft",
+    "level": 2,
+    "synth_allowed": true,
+    "master_only": false,
+    "materials": [
+      {
+        "id": "star_iron",
+        "count": 1
+      }
+    ],
+    "output": {
+      "item": "饵_面团",
+      "count": 1
+    },
+    "cost": {
+      "coins": 20,
+      "gem": 0
+    },
+    "slots": 3,
+    "traits_inherit": 1
+  },
+  {
+    "id": "rcp_bait_smallfish",
+    "name": "小鱼饵配方",
+    "kind": "craft",
+    "level": 6,
+    "synth_allowed": true,
+    "master_only": false,
+    "materials": [
+      {
+        "id": "ghost_moss",
+        "count": 2
+      },
+      {
+        "id": "ore",
+        "count": 1
+      }
+    ],
+    "output": {
+      "item": "饵_小鱼",
+      "count": 1
+    },
+    "cost": {
+      "coins": 60,
+      "gem": 0
+    },
+    "slots": 3,
+    "traits_inherit": 1
+  },
+  {
+    "id": "rcp_bait_goldbug",
+    "name": "黄金虫饵配方",
+    "kind": "craft",
+    "level": 12,
+    "synth_allowed": true,
+    "master_only": false,
+    "materials": [
+      {
+        "id": "ash_core",
+        "count": 1
+      },
+      {
+        "id": "moon_grass",
+        "count": 2
+      }
+    ],
+    "output": {
+      "item": "饵_黄金虫",
+      "count": 1
+    },
+    "cost": {
+      "coins": 120,
+      "gem": 0
+    },
+    "slots": 4,
+    "traits_inherit": 1
+  },
+  {
+    "id": "rcp_bait_dragonspit",
+    "name": "龙涎饵配方",
+    "kind": "craft",
+    "level": 18,
+    "synth_allowed": true,
+    "master_only": false,
+    "materials": [
+      {
+        "id": "fire_dragon_scale",
+        "count": 1
+      },
+      {
+        "id": "ghost_moss",
+        "count": 3
+      }
+    ],
+    "output": {
+      "item": "饵_龙涎",
+      "count": 1
+    },
+    "cost": {
+      "coins": 200,
+      "gem": 0
+    },
+    "slots": 4,
+    "traits_inherit": 1
   }
 ]

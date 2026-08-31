@@ -480,5 +480,45 @@
   "elements": {
    "thunder": 8
   }
+ },
+ {
+  "id": "饵_蚯蚓",
+  "name": "蚯蚓饵",
+  "type": "consumable",
+  "price": 30,
+  "source": "炼金产出",
+  "desc": "最基础的通用鱼饵，抛竿时消耗 1 个。"
+ },
+ {
+  "id": "饵_面团",
+  "name": "面团饵",
+  "type": "consumable",
+  "price": 25,
+  "source": "炼金产出",
+  "desc": "通用鱼饵，抛竿时消耗 1 个。"
+ },
+ {
+  "id": "饵_小鱼",
+  "name": "小鱼饵",
+  "type": "consumable",
+  "price": 60,
+  "source": "炼金产出",
+  "desc": "通用鱼饵，抛竿时消耗 1 个。"
+ },
+ {
+  "id": "饵_黄金虫",
+  "name": "黄金虫饵",
+  "type": "consumable",
+  "price": 120,
+  "source": "炼金产出",
+  "desc": "高级通用鱼饵，抛竿时消耗 1 个。"
+ },
+ {
+  "id": "饵_龙涎",
+  "name": "龙涎饵",
+  "type": "consumable",
+  "price": 200,
+  "source": "炼金产出",
+  "desc": "顶级通用鱼饵，抛竿时消耗 1 个。"
  }
 ]

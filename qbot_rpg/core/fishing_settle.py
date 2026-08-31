@@ -90,6 +90,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Mapping, MutableMapping, MutableSet, Optional, cast
 
 from qbot_rpg.content.fishing_models import FishDef
+from qbot_rpg.core.fishing_codex import fish_codex_update  # 批4 路4A 正式入册（收口替换本地薄实现）
 from qbot_rpg.core.fishing_crown import crown_of, gen_size_weight
 from qbot_rpg.core.fishing_settings import fishing_cfg
 
@@ -275,140 +276,12 @@ def _prof_exp_amount(cfg: Mapping[str, object]) -> int:
 
 
 # =====================================================================================
-# 图鉴点亮（本地薄实现，防 mark_seen 覆盖；路4A 落盘后收口替换，S-3/S-4）
+# 图鉴点亮（批4 路4A 正式版 fishing_codex.fish_codex_update，签名不变 (ctx, species_id,
+# catch)——收口替换本地薄实现；防 mark_seen 覆盖由正式版承载）
 # =====================================================================================
-def _mark_fish_seen(ctx: MutableMapping[str, Any], species_id: str, name: str) -> bool:
-    """首获点亮（S-4：内置最小 mark_seen 等价，不 import codex 防未知分册拒绝）。
+# 正式版导出：fish_codex_update / fish_meta / render_fish_entry_line / CODEX_CATEGORY_FISH
+# / CROWN_PRIORITY / KING_VICTORY_COUNT_KEY（见 qbot_rpg/core/fishing_codex.py）
 
-    codex_state["fish"][species_id] 条目写 name/seen=true（killed/lore_unlocked
-    保留存量，不整条目覆盖——防 mark_seen 覆盖陷阱）；首获时尝试冒险日志与事件
-    （log_codex_new / bump_event，缺省模块异常静默跳过，对齐 codex.mark_seen 容错）。
-    返回 first_seen（本次是否首获）。
-    """
-    cat = _codex_state_of(ctx)
-    fish = cat.get(CODEX_CATEGORY_FISH)
-    if not isinstance(fish, MutableMapping):
-        fish = {}
-        cat[CODEX_CATEGORY_FISH] = fish
-    existing = fish.get(species_id)
-    entry = existing if isinstance(existing, MutableMapping) else {}
-    first_seen = not bool(entry.get("seen"))
-    entry["name"] = str(name or species_id)
-    entry["seen"] = True
-    fish[species_id] = entry
-    if first_seen:
-        try:
-            from qbot_rpg.core.adventure_log import log_codex_new
-
-            log_codex_new(ctx, species_id)
-        except Exception:
-            pass
-        try:
-            from qbot_rpg.core.event_bus import bump_event
-
-            bump_event(ctx, "[事件:图鉴新增]", instance={"tag": "codex_new", "target": species_id})
-        except Exception:
-            pass
-    return first_seen
-
-
-def fish_codex_update(
-    ctx: MutableMapping[str, Any],
-    species_id: str,
-    catch: Mapping[str, object],
-) -> dict:
-    """图鉴点亮入册（T10 ③ / 2c1a §4.2：七键更新 + 首获点亮，防 mark_seen 覆盖）。
-
-    入参：
-      ctx        —— 结算上下文（codex_state 就地改写即落档，_ps_init 形态）。
-      species_id —— 鱼种 id（快照 target_species_id）。
-      catch      —— 本次捕获记录 {size, weight, crown}（size/weight 数值，crown
-                     六档键之一）；crown 缺失 → "normal" 保守处理。
-    更新规则（2c1a §4.2）：
-      - caught_count += 1（G-01，每次捕获 +1）
-      - best_crown：优先级链 big_gold > gold > big_silver > silver > normal 取最大
-        （逆金冠不入链，G-02）；首获无存量 → 当前 crown（非逆金冠时）。
-      - best_size / best_weight：与存量极值取 max（G-03/G-04）
-      - min_size / min_weight：与存量极值取 min（G-05/G-06，∞语义首获直落）
-      - reverse_crown_count：逆金冠出鱼 +1（G-07）
-      - 首获：条目不存在 → 建默认七键条目 + 点亮（seen=true，2c1a §4.2 L206）
-    出参：{ok, first_seen, species_id, caught_count, best_crown,
-      reverse_crown_count}；条目写入 codex_state["fish"][species_id]（就地）。
-    路4A 落盘后由主 agent 收口替换为路4A 同名专用入册函数（签名不变，S-3）。
-    """
-    if not isinstance(species_id, str) or not species_id.strip():
-        return {"ok": False, "reason": "empty_species_id", "first_seen": False}
-    if not isinstance(catch, Mapping):
-        return {"ok": False, "reason": "invalid_catch", "first_seen": False}
-
-    cat = _codex_state_of(ctx)
-    fish = cat.get(CODEX_CATEGORY_FISH)
-    if not isinstance(fish, MutableMapping):
-        fish = {}
-        cat[CODEX_CATEGORY_FISH] = fish
-
-    size = catch.get("size")
-    weight = catch.get("weight")
-    crown = catch.get("crown")
-    if not isinstance(size, (int, float)) or isinstance(size, bool):
-        size = 0.0
-    if not isinstance(weight, (int, float)) or isinstance(weight, bool):
-        weight = 0.0
-    if not isinstance(crown, str) or crown not in CROWN_PRIORITY + ("reverse",):
-        crown = "normal"
-
-    existing = fish.get(species_id)
-    entry = dict(existing) if isinstance(existing, Mapping) else {}
-    first_seen = not bool(entry.get("seen"))
-
-    caught = int(entry.get("caught_count", 0) or 0) + 1
-    best_crown = str(entry.get("best_crown") or "")
-    if crown in CROWN_PRIORITY and (
-        best_crown not in CROWN_PRIORITY
-        or CROWN_PRIORITY.index(crown) < CROWN_PRIORITY.index(best_crown)
-    ):
-        best_crown = crown
-    elif crown == "reverse" and best_crown not in CROWN_PRIORITY:
-        # 首获即逆金冠：best_crown 无链上值 → 留空（逆金冠不入链，2c1a §4.2）
-        best_crown = best_crown
-
-    best_size = max(float(entry.get("best_size", 0.0) or 0.0), float(size))
-    best_weight = max(float(entry.get("best_weight", 0.0) or 0.0), float(weight))
-    # min 极值：∞语义——无存量（首获）直落当前值，否则取 min
-    if first_seen or "min_size" not in entry:
-        min_size = float(size)
-        min_weight = float(weight)
-    else:
-        min_size = min(float(entry.get("min_size", 0.0) or 0.0), float(size))
-        min_weight = min(float(entry.get("min_weight", 0.0) or 0.0), float(weight))
-    reverse_count = int(entry.get("reverse_crown_count", 0) or 0) + (1 if crown == "reverse" else 0)
-
-    # 防 mark_seen 覆盖：保留存量展示键（killed/lore_unlocked），整条目重建
-    entry.update(
-        {
-            "caught_count": caught,
-            "best_crown": best_crown,
-            "best_size": best_size,
-            "best_weight": best_weight,
-            "min_size": min_size,
-            "min_weight": min_weight,
-            "reverse_crown_count": reverse_count,
-        }
-    )
-    fish[species_id] = entry
-
-    # 首获点亮（mark_seen 等价，S-4）；已见则跳过（不重复日志/事件）
-    if first_seen:
-        _mark_fish_seen(ctx, species_id, str(entry.get("name") or species_id))
-
-    return {
-        "ok": True,
-        "first_seen": first_seen,
-        "species_id": species_id,
-        "caught_count": caught,
-        "best_crown": best_crown,
-        "reverse_crown_count": reverse_count,
-    }
 
 
 # =====================================================================================

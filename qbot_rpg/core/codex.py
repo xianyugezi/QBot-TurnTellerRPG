@@ -47,16 +47,25 @@ CATEGORIES: Mapping[str, Tuple[str, ...]] = {
     # 分册页渲染由 codex_commands 对 alchemy 特判调 alchemy_commands.render_alchemy_codex
     # （F-19 炼金图鉴：点亮进度/成长奖励/王称号 TTL-01）；这里登记 kinds 供总览计数。
     "alchemy": ("recipe", "item"),
+    # M10 钓鱼批4·路4A（T13）：鱼册分册——fishing.json 顶层 obj 非条目表，registry
+    # 不索引 fish kind（摸底 §三），_category_ids 对 fish 返回空 → 鱼册不进通用
+    # codex_view 分页，展示走特判渲染（codex_commands 对 fish 特判调
+    # fishing_codex_commands.render_fish_codex）；这里登记 kinds 仅供总览计数
+    # （无 registry 分母 → 0 fail-safe）。
+    "fish": ("fish",),
 }
 
-# 展示组序（3f R-17：怪物→武器→物品；M8 收口裁决加炼金分册于末尾）
-CATEGORY_ORDER: Tuple[str, ...] = ("monster", "weapon", "item", "alchemy")
+# 展示组序（3f R-17：怪物→武器→物品；M8 收口裁决加炼金分册于末尾；
+# M10 批4·路4A 加鱼册于末尾——鱼册无 registry 分母，总览计数恒 0 fail-safe）
+CATEGORY_ORDER: Tuple[str, ...] = ("monster", "weapon", "item", "alchemy", "fish")
 
 _CATEGORY_LABELS: Mapping[str, str] = {
     "monster": "怪物图鉴",
     "weapon": "武器图鉴",
     "item": "物品图鉴",
     "alchemy": "炼金图鉴",
+    # M10 批4·路4A（T13）：鱼册中文标签（_CATEGORY_LABELS["fish"]="鱼图鉴"）
+    "fish": "鱼图鉴",
 }
 
 # ??? 占位（未收集不泄露名称，R-19）
@@ -137,6 +146,9 @@ def _category_ids(ctx: Mapping[str, Any], category: str) -> list:
                     ids.append(sid)
         except Exception:
             pass
+    # M10 批4·路4A（T13）：fish 分册——fishing.json 顶层 obj 非条目表，registry
+    # 不索引 fish kind（摸底 §三）→ ids 恒空（total=0 分母 fail-safe）；鱼册展示
+    # 走特判渲染（render_fish_codex），不进通用 codex_view 分页
     return list(dict.fromkeys(ids))
 
 

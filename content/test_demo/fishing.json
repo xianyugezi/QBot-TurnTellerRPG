@@ -22,5 +22,15 @@
       "king": null
     }
   ],
-  "king": []
+  "king": [
+    {
+      "id": "king_carp",
+      "species_id": "silver_carp",
+      "enemy_id": "lake_leech",
+      "hint": "金闪",
+      "window_daily": 2,
+      "chance": 0.3,
+      "enabled": true
+    }
+  ]
 }

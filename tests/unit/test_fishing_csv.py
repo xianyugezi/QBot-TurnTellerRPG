@@ -288,4 +288,8 @@ def test_demo_fishing_json_top_structure() -> None:
     data = _load_demo_fishing()
     assert data["schema_version"] == "1.0"
     assert isinstance(data["species"], list) and len(data["species"]) >= 1
-    assert data["king"] == []
+    # M10 批4 路4B：king 表已有 1 条鱼王（king_carp → lake_leech）
+    assert isinstance(data["king"], list)
+    assert len(data["king"]) >= 1
+    assert data["king"][0]["species_id"] == "silver_carp"
+    assert data["king"][0]["enemy_id"] == "lake_leech"

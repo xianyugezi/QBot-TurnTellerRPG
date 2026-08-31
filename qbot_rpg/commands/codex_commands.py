@@ -37,6 +37,8 @@ _CAT_ALIASES: Mapping[str, str] = {
     "物品": "item", "物品图鉴": "item", "item": "item",
     # M8 收口裁决·/图鉴 双注册合并（批11-2）：炼金分册 → alchemy（特判渲染）
     "炼金": "alchemy", "炼金图鉴": "alchemy", "alchemy": "alchemy",
+    # M10 批4·路4A（T14）：鱼册 → fish（特判渲染 render_fish_codex）
+    "鱼": "fish", "鱼图鉴": "fish", "fish": "fish",
 }
 
 _PAGE_SIZE = 5
@@ -137,6 +139,10 @@ def cmd_codex(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     if cat == "alchemy":
         from qbot_rpg.commands.alchemy_commands import render_alchemy_codex  # 单向 import 防环
         return render_alchemy_codex(ctx)
+    # M10 批4·路4A（T14）：鱼册走鱼图鉴特判渲染（冠级标注，不写判定公式 R-06）
+    if cat == "fish":
+        from qbot_rpg.commands.fishing_codex_commands import render_fish_codex  # 单向 import 防环
+        return render_fish_codex(ctx)
     page = 1
     if len(args) > 1:
         try:

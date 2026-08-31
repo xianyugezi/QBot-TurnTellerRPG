@@ -344,19 +344,25 @@ def _base_header(ctx: Mapping[str, Any], label: str) -> str:
 
 
 def view_header(ctx: Mapping[str, Any]) -> str:
-    """角色面板头部（2026-08-31 用户拍板：`【角色】阿伟`——只显示名字，
-    等级在首行前缀带出、职业不在面板头部显示；第二行经验/已满级）。"""
+    """角色面板头部（2026-08-31 用户拍板：`【角色】阿伟` 只显示名字，下面分列
+    `【等级】1` `【职业】法师` `【经验】0/100`；满级时经验行替为 `【已满级】`）。"""
     f = _player_fields(ctx)
-    head = f"【角色】{f['name']}"
+    lines: List[str] = [f"【角色】{f['name']}", f"【等级】{f['level']}"]
+    job = str(ctx.get("job_name") or _job_name(ctx, f["job_id"]) or "")
+    if not job and f["job_id"] == "novice":
+        job = "新手"
+    if job:
+        lines.append(f"【职业】{job}")
     max_lv = ctx.get("max_level")
     if max_lv is not None and f["level"] >= int(max_lv):
-        return f"{head}\n【已满级】"
-    if f["exp"] is not None:
+        lines.append("【已满级】")
+    elif f["exp"] is not None:
         nxt = ctx.get("exp_next")
         if nxt is not None:
-            return f"{head}\n经验 {_fmt_num(f['exp'])}/{_fmt_num(nxt)}"
-        return f"{head}\n经验 {_fmt_num(f['exp'])}"
-    return head
+            lines.append(f"【经验】{_fmt_num(f['exp'])}/{_fmt_num(nxt)}")
+        else:
+            lines.append(f"【经验】{_fmt_num(f['exp'])}")
+    return "\n".join(lines)
 
 
 def _to_attributes(ctx: Mapping[str, Any]) -> PlayerAttributes:

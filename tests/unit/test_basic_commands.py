@@ -195,7 +195,9 @@ def test_view_noarg_page1():
     out = cmd_view(parse("/角色"), make_ctx())
     lines = out.splitlines()
     assert lines[0] == "【角色】阿伟"
-    assert lines[1] == "经验 320/1000"
+    assert lines[1] == "【等级】3"
+    assert lines[2] == "【职业】战士"
+    assert lines[3] == "【经验】320/1000"
     # 资源型：当前/上限
     assert "【生命】30/100" in out
     assert "【魔力】8/30" in out
@@ -252,7 +254,7 @@ def test_view_noarg_equiv_page1():
 def test_view_max_level_header():
     """/角色 满级头：Lv≥max_level → 【已满级】。"""
     out = cmd_view(parse("/角色"), make_ctx(level=45, max_level=45, exp=99999))
-    assert "【角色】阿伟\n【已满级】" in out
+    assert "【角色】阿伟\n【等级】45\n【职业】战士\n【已满级】" in out
 
 
 def test_attr_line_pure():

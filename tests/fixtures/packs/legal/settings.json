@@ -196,5 +196,41 @@
     "gem.珠升阶": 10,
     "gem.复制额外": 0,
     "gem.decompose_formula": "flat"
+  },
+  "fishing": {
+    "mode": "full",
+    "bait_ids": [
+      "饵_蚯蚓",
+      "饵_面团",
+      "饵_小鱼",
+      "饵_黄金虫",
+      "饵_龙涎"
+    ],
+    "bait_bonus": {
+      "rare": 8,
+      "gold": 2
+    },
+    "rod_full_bonus": {
+      "rare": 4,
+      "gold": 2
+    },
+    "crown_thresholds": {
+      "reverse": 5,
+      "silver": 85,
+      "gold": 95
+    },
+    "wait_sec": {
+      "min": 300,
+      "max": 900
+    },
+    "daily_limit": 20,
+    "energy": {
+      "enabled": false
+    },
+    "king_event": {
+      "enabled": true,
+      "window_daily": 2,
+      "chance": 0.3
+    }
   }
 }

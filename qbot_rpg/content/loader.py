@@ -164,6 +164,9 @@ _KIND_FOR_MODULE: Mapping[str, str] = {
     # M9 锻造（m9_shared_contract）：forge.json 顶层 obj——DEF_CLASSES 无专属 Def →
     # 缺省 BaseDef 回退；运行期 Def 解析由 forge 指令壳经 parse_* 读 modules_raw
     "forge": "forge",
+    # M10 钓鱼（m10_shared_contract）：fishing.json 顶层 obj——DEF_CLASSES 无专属 Def →
+    # 缺省 BaseDef 回退；运行期 Def 解析由 fishing 引擎经 modules_raw 读（接口摸底 §八-1）
+    "fishing": "fish",
     "enemies": "enemy",
     "maps": "map",
     "dungeon": "dungeon",  # M3 副本（m3_shared_contract §4）；DEF_CLASSES 缺省 BaseDef 回退

@@ -34,6 +34,10 @@ from qbot_rpg.content.models import FieldMeta, FieldMetaTable, ModuleMeta
 # import，无循环依赖）；字段定义自包含持有，本表单向 import（防 G0 反向依赖）。
 from qbot_rpg.content.forge_models import forge_module_meta
 from qbot_rpg.content.forge_settings import ITEMS_FORGE_FIELDS, forge_settings_meta
+# M10 钓鱼（m10_shared_contract）：fishing 模块 ModuleMeta + settings.fishing 段。
+# fishing_models 仅依赖 content.models（零 field_meta import，无循环依赖）；
+# fishing_settings_meta 自包含持有（防 field_meta↔fishing 循环依赖）。
+from qbot_rpg.content.fishing_models import fishing_module_meta, fishing_settings_meta
 
 # -------------------------------------------------------------------------------------
 # 命名空间（ID 跨模块唯一，细化_3a §4.2 line 254：效果注册表三表统一 / 行动注册表 / 派生链注册表）
@@ -688,6 +692,9 @@ def _module_table() -> Dict[str, ModuleMeta]:
     # M9 锻造（m9_shared_contract §八）：items 材料类 material_tier/source + settings.forge 段
     items_fields.update(ITEMS_FORGE_FIELDS)
     SETTINGS_FIELDS["forge"] = forge_settings_meta()
+    # M10 钓鱼（m10_shared_contract §一）：settings.fishing 段（fishing_settings_meta
+    # 自包含持有，防 field_meta↔fishing 循环依赖）
+    SETTINGS_FIELDS["fishing"] = fishing_settings_meta()
 
     return {
         "manifest": ModuleMeta(entry_type="object", fields=manifest_fields),
@@ -712,6 +719,10 @@ def _module_table() -> Dict[str, ModuleMeta]:
         # 由 forge_module_meta() 提供（entry_type=object）；深结构校验由
         # validate_forge 专项全权（V1-V15/W + 2c2d V1-V8/W1-W4），泛型只做顶层形态
         "forge": forge_module_meta(),
+        # M10 钓鱼（m10_shared_contract §三）：fishing.json 顶层 obj——模块级 ModuleMeta
+        # 由 fishing_module_meta() 提供（entry_type=object）；深结构校验由
+        # validate_fishing 专项全权（V1-V6/W1），泛型只做顶层形态（对齐 forge/dungeon）
+        "fishing": fishing_module_meta(),
         "enemies": ModuleMeta(entry_type="list", fields=enemies_fields, kind="enemy", namespace="enemy_lib"),
         "maps": ModuleMeta(entry_type="list", fields=maps_fields, kind="map", namespace="map_lib"),
         # M3 副本（m3_shared_contract §4）：新结构由 dungeon_models.validate_dungeons 专项全权，

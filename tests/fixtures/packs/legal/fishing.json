@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0",
+  "species": [
+    {
+      "id": "silver_carp",
+      "name": "银鳞鲤",
+      "rarity": "normal",
+      "size_min": 10.0,
+      "size_max": 60.0,
+      "weight_min": 0.3,
+      "weight_max": 5.0,
+      "seasons": ["spring", "summer", "autumn"],
+      "periods": ["dawn", "noon", "dusk"],
+      "hours": ["00:00-24:00"],
+      "spots": ["gp_moon_grass"],
+      "preferred_bait": ["饵_蚯蚓"],
+      "codex_text": {
+        "desc": "鳞片泛银光的鲤，黄昏时最活跃。",
+        "unit": "cm-kg",
+        "best_mask": "{name} · 最大 {best_size}cm/{best_weight}kg · {best_crown} · 逆金冠×{reverse_crown_count}"
+      },
+      "king": null
+    }
+  ],
+  "king": []
+}

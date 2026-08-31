@@ -57,6 +57,7 @@ from qbot_rpg.data.player import PlayerAttributes
 # 同包兄弟模块：相对导入（G0 架构门禁不产生 `qbot_rpg.commands` 前缀反向依赖边；
 # 同层兄弟引用架构合规，与 sender.py 同口径）。
 from .basic_commands import TPL_REGISTER_GATE
+from .basic_commands import _stat_name, _stat_order  # 属性全量渲染 helper（对齐 /角色 口径）
 from .router import CommandSpec
 from .sender import format_tpl12
 
@@ -248,22 +249,32 @@ def level_line(ctx: Mapping[str, Any]) -> str:
 
 
 def attr_line(ctx: Mapping[str, Any]) -> str:
-    """③ 属性行（RUL-12/STT-03，最终层数值，全中文，意见一同步：每项独立一行）：
-    `【生命】30/30`\\n`【魔力】8/10`\\n`【攻击】12`\\n`【防御】9`。"""
+    """③ 属性行（RUL-12/STT-03，最终层数值，全中文，意见一同步：每项独立一行）。
+    2026-08-31 修复：此前硬编码仅渲染 生命/魔力/攻击/防御 四值（漏掉 stats.json 其余
+    属性），改为遍历 stats.json 全部属性（对齐 /角色 _stat_order 口径），每项一行；
+    resource 型（hp/mp）显示 `当前/上限`。"""
     final = _final_attrs(ctx)
     f = _player_fields(ctx)
-    hp_max = int(final.get("hp", 0))
-    mp_max = int(final.get("mp", 0))
-    atk = int(final.get("str", 0))
-    dfn = int(final.get("con", 0))
-    hp_cur = int(f["hp"]) if f["hp"] is not None else hp_max
-    mp_cur = int(f["mp"]) if f["mp"] is not None else mp_max
-    return "\n".join([
-        f"【生命】{hp_cur}/{hp_max}",
-        f"【魔力】{mp_cur}/{mp_max}",
-        f"【攻击】{atk}",
-        f"【防御】{dfn}",
-    ])
+    attrs = _to_attributes(ctx)
+    order = _stat_order(ctx, attrs)
+    lines: List[str] = []
+    for attr_id in order:
+        if attr_id not in final:
+            continue
+        # 状态面板显示名：str→攻击、con→防御（保留原四值语义），其余用 stats.json 中文名
+        if attr_id == "str":
+            name = "攻击"
+        elif attr_id == "con":
+            name = "防御"
+        else:
+            name = _stat_name(ctx, attr_id)
+        if attr_id in ("hp", "mp"):
+            cur = f.get(attr_id)
+            cur_i = int(cur) if cur is not None else int(final[attr_id])
+            lines.append(f"【{name}】{cur_i}/{int(final[attr_id])}")
+        else:
+            lines.append(f"【{name}】{int(final[attr_id])}")
+    return "\n".join(lines) if lines else "【属性】无"
 
 
 def _map_name_for(ctx: Mapping[str, Any], loc: str) -> str:

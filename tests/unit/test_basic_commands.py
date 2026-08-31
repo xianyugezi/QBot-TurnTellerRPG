@@ -190,7 +190,8 @@ def parse(raw: str) -> ParsedCommand:
 # ---------------------------------------------------------------------------
 
 def test_view_noarg_page1():
-    """/角色 → LV 行固定头部 + 简洁属性前 5 条（不显示白值/加成/临时三层，2026-08-27 用户拍板）。"""
+    """/角色 → LV 行固定头部 + 全部属性（2026-08-31 用户反馈：属性面板不再分页，
+    一次全量展示——此前 5 条/页分页造成「属性缺很多」观感）。"""
     out = cmd_view(parse("/角色"), make_ctx())
     lines = out.splitlines()
     assert lines[0] == "【角色】Lv3.阿伟（战士）"
@@ -198,14 +199,16 @@ def test_view_noarg_page1():
     # 资源型：当前/上限
     assert "【生命】30/100" in out
     assert "【魔力】8/30" in out
-    # 简洁版：只显最终值，无三层标注
+    # 简洁版：只显最终值，无三层标注；全量九属性一次展示
     assert "【力量】29" in out
     assert "【智力】15" in out
     assert "【体质】10" in out
+    assert "【精神】10" in out
+    assert "【专注】10" in out
+    assert "【敏捷】10" in out
+    assert "【幸运】10" in out
     assert "白值" not in out and "加成" not in out and "临时" not in out   # 简洁版不显示三层
-    assert "当前页：1/2" in out
-    # 第 2 页条目不在页 1
-    assert "幸运" not in out
+    assert "当前页" not in out  # 全量展示，无分页尾段
 
 
 def test_view_detail_three_layers():
@@ -213,25 +216,25 @@ def test_view_detail_three_layers():
     out = cmd_view_detail(parse("/角色详细"), make_ctx())
     assert "【力量】29（白值 15 ｜ 加成 +5·+10% ｜ 临时 +3·+20%）" in out
     assert "【生命】30/100（白值 100 ｜ 加成 0 ｜ 临时 0）" in out
-    assert "当前页：1/2" in out
+    assert "当前页" not in out  # 全量展示，无分页尾段
 
 
 def test_view_page2():
-    """/角色 2 → 第 2 页（精神/专注/敏捷/幸运）+ 页脚。"""
+    """/角色 2 → 2026-08-31 起属性面板不分页，页码参数不再生效，仍全量显示全部属性。"""
     out = cmd_view(parse("/角色 2"), make_ctx())
     assert "【精神】10" in out
     assert "【专注】10" in out
     assert "【敏捷】10" in out
     assert "【幸运】10" in out
-    assert "当前页：2/2" in out
+    assert "【力量】29" in out
+    assert "当前页" not in out
 
 
 def test_view_clamp_last_page():
-    """裁决②：/角色 9 超总页数 → 夹取最后一页 + （已到最后一页）。"""
+    """/角色 9 → 2026-08-31 起属性面板不分页，页码参数不再生效，仍全量显示全部属性。"""
     out = cmd_view(parse("/角色 9"), make_ctx())
     assert "【幸运】10" in out
-    assert "（已到最后一页）" in out
-    assert "当前页：2/2" in out
+    assert "当前页" not in out
 
 
 @pytest.mark.parametrize("raw", ["/角色 0", "/角色 -1", "/角色 abc", "/角色 1 2"])
@@ -701,10 +704,12 @@ def test_router_parse_integration():
 # ---------------------------------------------------------------------------
 
 def test_footer_tpl08_exact():
-    """/角色 /技能 /帮助 组页 页脚 TPL-08 逐字（无自造变体）；/背包 走用户自定义模板
-    （当前页放尾部 + Tip，2026-08-27 用户拍板）；/装备 意见一同步不加翻页（只 Tip）。"""
+    """/技能 /帮助 组页 页脚 TPL-08 逐字（无自造变体）；/背包 走用户自定义模板
+    （当前页放尾部 + Tip，2026-08-27 用户拍板）；/装备 意见一同步不加翻页（只 Tip）；
+    /角色 2026-08-31 起属性面板不分页（全量展示，无页脚）。"""
     ctx = make_ctx()
-    assert "当前页：1/2" in cmd_view(parse("/角色"), ctx)
+    assert "【幸运】10" in cmd_view(parse("/角色"), ctx)             # 全量属性，无分页
+    assert "当前页" not in cmd_view(parse("/角色"), ctx)
     assert "当前页：1/2(全部)" in cmd_bag(parse("/背包"), ctx)       # /背包 自定义模板
     assert "Tip:发送'使用+物品名'即可使用物品" in cmd_bag(parse("/背包"), ctx)
     assert "Tip:发送'使用 序号'穿戴装备。" in cmd_equip(parse("/装备"), ctx)   # 意见一：不加翻页

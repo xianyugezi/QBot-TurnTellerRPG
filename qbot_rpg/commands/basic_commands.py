@@ -425,7 +425,8 @@ def attr_line(attr_id: str, stat_name: str, final: int,
 
 
 def _render_attr_page(ctx: Mapping[str, Any], page: int, *, detail: bool = False) -> str:
-    """/角色 正文：LV 行固定头部 + 属性行 5 条/页 + CakeGame 式尾段 + 裁决② 夹取。
+    """/角色 正文：LV 行固定头部 + 全部属性行（2026-08-31 用户反馈：属性面板不再
+    5 条/页分页——玩家属性是固定集合，分页导致「属性缺很多」观感，改为一次全量展示）。
 
     detail=False（/角色）→ 简洁属性行；detail=True（/角色详细）→ 三层明细行。"""
     attrs = _to_attributes(ctx)
@@ -446,20 +447,10 @@ def _render_attr_page(ctx: Mapping[str, Any], page: int, *, detail: bool = False
             cur = f.get(attr_id)
             current = int(cur) if cur is not None else None
         items.append((attr_id, current))
-    res = resolve_page(page, len(items), DEFAULT_PAGE_SIZE)
-    if res.invalid:
-        raise ValueError(
-            "页码非法（0/负数/非数字）：壳层应经 parse_page_arg 判定并转 TPL-12（3d §2.2/裁决②）"
-        )
-    assert res.page is not None
-    start = (res.page - 1) * DEFAULT_PAGE_SIZE
-    slice_items = items[start:start + DEFAULT_PAGE_SIZE]
     lines: List[str] = [view_header(ctx)]
-    for i, (attr_id, cur) in enumerate(slice_items):
+    for attr_id, cur in items:
         lines.append(attr_line(attr_id, _stat_name(ctx, attr_id),
                                final[attr_id], attrs, current=cur, detail=detail))
-    if items:
-        lines.append(_cake_tail(res.page, res.total_pages, tip=_VIEW_TAIL_TIP, clamped=res.clamped))
     return "\n".join(lines)
 
 

@@ -345,8 +345,8 @@ def _today_message(res: Mapping[str, Any]) -> str:
 
 
 def render_summary(res: Mapping[str, Any], page: object, *,
-                   per_page: int = DEFAULT_PAGE_SIZE) -> str:
-    """结算/状态正文渲染（工程补白 2/3/5）：
+                   per_page: int = DEFAULT_PAGE_SIZE, ctx: Optional[Mapping[str, Any]] = None) -> str:
+    """结算/状态正文渲染（工程补白 2/3/5；模板配置化 2026-08-31：ctx 传 list_tail 覆盖尾段）：
 
     - 引擎返回（sections 或 tables 重建）扁平化后按 5 条/页横切（m4 §2.2）；段头「━━ {表名}（{类型}）━━」
       首次出现输出（表头不计条数，3d §2.1）；
@@ -374,7 +374,8 @@ def render_summary(res: Mapping[str, Any], page: object, *,
             lines.append(f"━━ {title} ━━")
             seen.add(title)
         lines.append(row)
-    tail = render_cake_tail(pg.page, pg.total_pages, tip=_TAIL_TIP)
+    tail = render_cake_tail(pg.page, pg.total_pages, tip=_TAIL_TIP,
+                            templates=ctx.get("templates") if isinstance(ctx, Mapping) else None)
     if pg.clamped:
         tail = tail.replace("\n", f"\n{LAST_PAGE_HINT}\n", 1)
     lines.append(tail)

@@ -324,8 +324,8 @@ def _flatten_sections(board: Mapping[str, Any]) -> list:
 
 
 def render_board(board: Mapping[str, Any], page: object, *,
-                 per_page: int = BOARD_PAGE_SIZE) -> str:
-    """/任务 任务板列表正文（工程补白 2/3）：
+                 per_page: int = BOARD_PAGE_SIZE, ctx: Optional[Mapping[str, Any]] = None) -> str:
+    """/任务 任务板列表正文（工程补白 2/3；模板配置化 2026-08-31：ctx 传 list_tail 覆盖尾段）：
 
     - 引擎 sections 扁平化后按 5 条/页横切（m4 §2.2）；段头「━━ {引擎标题} ━━」首次出现输出
       （表头不计条数，3d §2.1）；
@@ -352,7 +352,8 @@ def render_board(board: Mapping[str, Any], page: object, *,
             lines.append(f"━━ {title} ━━")
             seen.add(title)
         lines.append(board_line(start + i + 1, row))
-    tail = render_cake_tail(res.page, res.total_pages, tip=_BOARD_TAIL_TIP)
+    tail = render_cake_tail(res.page, res.total_pages, tip=_BOARD_TAIL_TIP,
+                            templates=ctx.get("templates") if isinstance(ctx, Mapping) else None)
     if res.clamped:
         tail = tail.replace("\n", f"\n{LAST_PAGE_HINT}\n", 1)
     lines.append(tail)

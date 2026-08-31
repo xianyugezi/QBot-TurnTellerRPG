@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Any, Callable, List, Optional, Sequence, Tuple
+from typing import Any, Callable, List, Mapping, Optional, Sequence, Tuple
 
 __all__ = [
     "DEFAULT_PAGE_SIZE",
@@ -152,11 +152,14 @@ def render_cake_tail(
     *,
     category_word: Optional[str] = None,
     tip: str = "",
+    templates: Optional[Mapping[str, Any]] = None,
 ) -> str:
     """CakeGame 式列表尾段：``当前页：{page}/{total_pages}[({category_word})]`` + Tip 行。
 
     2026-08-27 用户拍板：基础指令组列表尾段统一 CakeGame 消息模板风格（当前页 + Tip 尾行，
     替代 TPL-08 页脚）；/背包 已按此落地（basic_commands._bag_tail_lines），本函数为通用实现。
+    2026-08-31 模板配置化：templates（ctx["templates"]）传 list_tail 可覆盖整体格式，
+    缺省用内置默认（零配置零破坏）。
 
     - 当前页**恒显示**（含单页 1/1，对齐 /背包 模板）；category_word 为当前页类型词（可选，
       如 /背包筛选 装备 → ``当前页：1/2(装备)``）。
@@ -166,6 +169,8 @@ def render_cake_tail(
     - 夹取提示（LAST_PAGE_HINT）由调用方按裁决② clamped 逻辑处理（本 helper 不含，
       保证「当前页 →（已到最后一页）→ Tip」顺序由壳层编排）。
     """
+    if isinstance(templates, Mapping) and isinstance(templates.get("list_tail"), str):
+        return _safe_format_tail(templates["list_tail"], page, total_pages, category_word, tip)
     line = f"当前页：{page}/{total_pages}"
     if category_word:
         line += f"({category_word})"
@@ -173,6 +178,25 @@ def render_cake_tail(
     if tip:
         parts.append(f"Tip:{tip}")
     return "\n".join(parts)
+
+
+def _safe_format_tail(template: str, page: int, total_pages: int,
+                      category_word: Optional[str], tip: str) -> str:
+    """list_tail 模板占位符替换（缺键保留原文，防内容包写错崩溃）。
+
+    list_tail 默认 `当前页：{page}/{pages}{filter}\nTip:{tip}`；
+    filter 由 category_word 拼装（如 (装备)）；tip 若为空且模板含 {tip} 保留原样。
+    """
+    import re
+
+    data = {"page": page, "pages": total_pages,
+            "filter": f"({category_word})" if category_word else "", "tip": tip}
+
+    def _sub(m: "re.Match[str]") -> str:
+        key = m.group(1)
+        return str(data.get(key, m.group(0)))
+
+    return re.sub(r"\{([a-zA-Z0-9_]+)\}", _sub, template)
 
 
 def _default_item_line(index: int, item: Any) -> str:

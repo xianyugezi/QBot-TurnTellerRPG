@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from typing import Any, Callable, MutableMapping, Optional
 
+from qbot_rpg.core.templates import tpl_of  # 消息模板配置化（2026-08-31 用户拍板）
 from .router import CommandSpec
 
 UNREGISTER_CMD = "注销"
@@ -60,7 +61,7 @@ def cmd_unregister(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     args = list(getattr(parsed, "args", None) or [])
     confirmed = (fs == CONFIRM_SUBWORD) or (CONFIRM_SUBWORD in args)
     if not confirmed:
-        return TPL_UNREG_CONFIRM.format(name=name)
+        return tpl_of(ctx, "unregister_confirm", {"name": name})
     # 置删档标记（装配层 runner._plain_handler 检测后调 tx.delete_player 同事务删档）
     ctx["unregister_player"] = True
     ctx["player"] = None

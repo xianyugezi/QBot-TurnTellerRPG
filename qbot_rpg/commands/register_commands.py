@@ -62,6 +62,7 @@ from __future__ import annotations
 
 from typing import Any, Callable, List, Mapping, MutableMapping, Optional
 
+from qbot_rpg.core.templates import tpl_of  # 消息模板配置化（2026-08-31 用户拍板）
 from qbot_rpg.data.player import PlayerAttributes
 
 # 同包兄弟模块：相对导入（G0 架构门禁 test_commands_web_not_depended 不产生
@@ -448,12 +449,11 @@ def cmd_register(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     # REG-03 已注册幂等拒绝（RUL-09；不覆盖原档）——先于名字校验（幂等提示优先于名字校验）
     if ctx.get("registered", True) is True:
         job_display = _current_job_name(ctx)
-        job_txt = f" {job_display}" if job_display else ""  # 2026-08-31 用户拍板：无职业名（novice）不显示
-        return TPL_ALREADY_REGISTERED.format(
-            name=_current_player_name(ctx),
-            level=_current_player_level(ctx),
-            job=job_txt,
-        )
+        return tpl_of(ctx, "already_registered", {
+            "name": _current_player_name(ctx),
+            "level": _current_player_level(ctx),
+            "job": f" {job_display}" if job_display else "",  # 2026-08-31 无职业名（novice）不显示
+        })
 
     # REG-02 名字硬性校验（长度/控制字符）
     err = _name_error(name)

@@ -91,6 +91,7 @@ from typing import Any, Callable, Dict, List, Mapping, MutableMapping, Optional,
 
 from qbot_rpg.core.equipment import EquipmentEngine
 from qbot_rpg.core.message_format import strip_icon_emoji
+from qbot_rpg.core.templates import tpl_of  # 消息模板配置化（2026-08-31 用户拍板）
 from qbot_rpg.core.message_format.list_render import (
     DEFAULT_PAGE_SIZE,
     LAST_PAGE_HINT,
@@ -344,24 +345,28 @@ def _base_header(ctx: Mapping[str, Any], label: str) -> str:
 
 
 def view_header(ctx: Mapping[str, Any]) -> str:
-    """角色面板头部（2026-08-31 用户拍板：`【角色】阿伟` 只显示名字，下面分列
-    `【等级】1` `【职业】法师` `【经验】0/100`；满级时经验行替为 `【已满级】`）。"""
+    """角色面板头部（2026-08-31 用户拍板 + 模板配置化：模板来自 ctx[templates]
+    role_header/role_level/role_job/role_exp/role_max，内容包可覆盖）。"""
     f = _player_fields(ctx)
-    lines: List[str] = [f"【角色】{f['name']}", f"【等级】{f['level']}"]
+    lines: List[str] = [
+        tpl_of(ctx, "role_header", {"name": f["name"]}),
+        tpl_of(ctx, "role_level", {"level": f["level"]}),
+    ]
     job = str(ctx.get("job_name") or _job_name(ctx, f["job_id"]) or "")
     if not job and f["job_id"] == "novice":
         job = "新手"
     if job:
-        lines.append(f"【职业】{job}")
+        lines.append(tpl_of(ctx, "role_job", {"job": job}))
     max_lv = ctx.get("max_level")
     if max_lv is not None and f["level"] >= int(max_lv):
-        lines.append("【已满级】")
+        lines.append(tpl_of(ctx, "role_max", {}))
     elif f["exp"] is not None:
         nxt = ctx.get("exp_next")
         if nxt is not None:
-            lines.append(f"【经验】{_fmt_num(f['exp'])}/{_fmt_num(nxt)}")
+            lines.append(tpl_of(ctx, "role_exp",
+                                {"exp": _fmt_num(f["exp"]), "exp_next": _fmt_num(nxt)}))
         else:
-            lines.append(f"【经验】{_fmt_num(f['exp'])}")
+            lines.append(tpl_of(ctx, "role_exp_only", {"exp": _fmt_num(f["exp"])}))
     return "\n".join(lines)
 
 
@@ -420,14 +425,17 @@ def _stat_order(ctx: Mapping[str, Any], attrs: PlayerAttributes) -> List[str]:
 
 def attr_line(attr_id: str, stat_name: str, final: int,
               attrs: PlayerAttributes, current: Optional[int] = None,
-              *, detail: bool = False) -> str:
-    """属性行（无序号，2026-08-27 用户拍板 /角色 面板属性前不加序号）：
+              *, detail: bool = False, ctx: Any = None) -> str:
+    """属性行（无序号，2026-08-27 用户拍板 /角色 面板属性前不加序号；模板配置化
+    2026-08-31：行格式来自 ctx[templates] role_attr*，内容包可覆盖，ctx=None 用默认）：
     detail=False（/角色 简洁版）→ `【力量】29` / resource `【生命】30/100`；
     detail=True（/角色详细 完整版）→ `【力量】29（白值 15 ｜ 加成 +5·+10% ｜ 临时 +3·+20%）`。"""
     if not detail:
         if current is not None:
-            return f"【{stat_name}】{_fmt_num(current)}/{final}"
-        return f"【{stat_name}】{final}"
+            return tpl_of(ctx, "role_attr_resource",
+                          {"attr_name": stat_name, "cur": _fmt_num(current),
+                           "max": final})
+        return tpl_of(ctx, "role_attr", {"attr_name": stat_name, "value": final})
     base = float(attrs.base.get(attr_id, 0.0))
     flat = float(attrs.flat_bonus().get(attr_id, 0.0))
     pct = float(attrs.pct_bonus().get(attr_id, 0.0))
@@ -436,8 +444,12 @@ def attr_line(attr_id: str, stat_name: str, final: int,
     bonus = _fmt_bonus(flat, pct)
     temp = _fmt_bonus(tflat, tpct)
     if current is not None:
-        return f"【{stat_name}】{_fmt_num(current)}/{final}（白值 {_fmt_num(base)} ｜ 加成 {bonus} ｜ 临时 {temp}）"
-    return f"【{stat_name}】{final}（白值 {_fmt_num(base)} ｜ 加成 {bonus} ｜ 临时 {temp}）"
+        return tpl_of(ctx, "role_attr_detail_resource",
+                      {"attr_name": stat_name, "cur": _fmt_num(current), "max": final,
+                       "base": _fmt_num(base), "bonus": bonus, "temp": temp})
+    return tpl_of(ctx, "role_attr_detail",
+                  {"attr_name": stat_name, "value": final,
+                   "base": _fmt_num(base), "bonus": bonus, "temp": temp})
 
 
 def _render_attr_page(ctx: Mapping[str, Any], page: int, *, detail: bool = False) -> str:
@@ -605,7 +617,7 @@ def bag_line(index: int, row: Any, ctx: Mapping[str, Any]) -> str:
     符号（输入侧一律 `*`，铁律 1）。
     """
     f = _row_fields(row, ctx)
-    line = f"{index}.[{f['name']}]×{f['count']}"
+    line = tpl_of(ctx, "bag_row", {"idx": index, "name": f["name"], "count": f["count"]})
     q = QUALITY_LABELS.get(f["quality"])
     if q:
         line += f"（{q}）"
@@ -644,13 +656,15 @@ _HELP_TAIL_TIP = "发送'帮助 组名'翻页查看指令"      # /帮助 目录
 
 
 def _cake_tail(page: int, total_pages: int, *, category_word: Optional[str] = None,
-               tip: str = "", clamped: bool = False) -> str:
-    """CakeGame 式尾段（当前页 + 可选夹取提示 + Tip 尾行）。
+               tip: str = "", clamped: bool = False, templates: Optional[Mapping[str, Any]] = None) -> str:
+    """CakeGame 式尾段（当前页 + 可选夹取提示 + Tip 尾行；模板配置化 2026-08-31：
+    templates=ctx["templates"] 传 list_tail 可覆盖整体格式，缺省用内置默认）。
 
     夹取提示（裁决② LAST_PAGE_HINT）由本层按各指令 clamped 逻辑插入「当前页」与「Tip」之间，
     对齐 /背包 尾段顺序：`当前页：X/Y` → `（已到最后一页）` → `Tip:...`。
     """
-    tail = render_cake_tail(page, total_pages, category_word=category_word, tip=tip)
+    tail = render_cake_tail(page, total_pages, category_word=category_word, tip=tip,
+                            templates=templates)
     if clamped:
         tail = tail.replace("\n", f"\n{LAST_PAGE_HINT}\n", 1)
     return tail
@@ -664,7 +678,8 @@ def _bag_tail_lines(page: int, total_pages: int, total: int, clamped: bool,
     装备 → 装备、/背包筛选药剂 → 药剂 等；原「共 N 条」改显示筛选类型。）"""
     lines: List[str] = list(_currency_lines(ctx))
     lines.append(_cake_tail(page, total_pages, category_word=category_word,
-                            tip=_BAG_TAIL_TIP, clamped=clamped))
+                            tip=_BAG_TAIL_TIP, clamped=clamped,
+                            templates=ctx.get("templates")))
     return lines
 
 
@@ -1412,7 +1427,8 @@ def _render_skill_page(ctx: Mapping[str, Any], page: int) -> str:
     for i, sid in enumerate(slice_ids):
         lines.append(skill_line(start + i + 1, sid, ctx))
     if sids:
-        lines.append(_cake_tail(res.page, res.total_pages, tip=_SKILL_TAIL_TIP, clamped=res.clamped))
+        lines.append(_cake_tail(res.page, res.total_pages, tip=_SKILL_TAIL_TIP, clamped=res.clamped,
+                                templates=ctx.get("templates")))
     return "\n".join(lines)
 
 
@@ -1491,7 +1507,7 @@ def _group_summary(ctx: Mapping[str, Any], group: Tuple[str, Tuple[Tuple[str, st
     shown = "/".join(names[:5])
     if len(names) > 5:
         shown += "…"
-    return f"{name} — {shown}"
+    return tpl_of(ctx, "help_directory_row", {"group": name, "cmds": shown})
 
 
 def _render_help_directory(ctx: Mapping[str, Any], page: int) -> str:
@@ -1505,17 +1521,18 @@ def _render_help_directory(ctx: Mapping[str, Any], page: int) -> str:
     assert res.page is not None
     start = (res.page - 1) * DEFAULT_PAGE_SIZE
     slice_groups = groups[start:start + DEFAULT_PAGE_SIZE]
-    lines: List[str] = [_DIRECTORY_TITLE]
+    lines: List[str] = [tpl_of(ctx, "help_directory_title", {})]
     for i, g in enumerate(slice_groups):
         lines.append(_group_summary(ctx, g))
     if groups:
-        lines.append(_cake_tail(res.page, res.total_pages, tip=_HELP_TAIL_TIP, clamped=res.clamped))
+        lines.append(_cake_tail(res.page, res.total_pages, tip=_HELP_TAIL_TIP, clamped=res.clamped,
+                                templates=ctx.get("templates")))
     return "\n".join(lines)
 
 
-def group_page_line(index: int, cmd: Tuple[str, str]) -> str:
-    """组页指令行（4f RUL-23）：`/状态 —— 查看角色状态与身上效果`。"""
-    return f"{index}. {cmd[0]} —— {cmd[1]}"
+def group_page_line(index: int, cmd: Tuple[str, str], ctx: Optional[Mapping[str, Any]] = None) -> str:
+    """组页指令行（4f RUL-23；模板配置化 2026-08-31：help_group_row）：`1. 状态 —— 查看角色状态`。"""
+    return tpl_of(ctx, "help_group_row", {"idx": index, "cmd": cmd[0], "desc": cmd[1]})
 
 
 def _render_help_group(ctx: Mapping[str, Any], group_name: str, page: int) -> str:
@@ -1537,9 +1554,10 @@ def _render_help_group(ctx: Mapping[str, Any], group_name: str, page: int) -> st
     for i, c in enumerate(slice_cmds):
         # SHC-04/RUL-24：指令名按 settings.command_aliases 显示层替换（TC-17）
         display = _command_alias_display(ctx, c[0])
-        lines.append(group_page_line(start + i + 1, (display, c[1])))
+        lines.append(group_page_line(start + i + 1, (display, c[1]), ctx))
     if cmds:
-        lines.append(_cake_tail(res.page, res.total_pages, tip=_HELP_TAIL_TIP, clamped=res.clamped))
+        lines.append(_cake_tail(res.page, res.total_pages, tip=_HELP_TAIL_TIP, clamped=res.clamped,
+                                templates=ctx.get("templates")))
     return "\n".join(lines)
 
 

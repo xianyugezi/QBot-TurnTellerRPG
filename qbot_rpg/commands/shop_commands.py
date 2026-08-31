@@ -50,6 +50,7 @@ import math
 from typing import Any, Callable, List, Mapping, MutableMapping, Optional
 
 from qbot_rpg.core.message_format import strip_icon_emoji
+from qbot_rpg.core.templates import tpl_of  # 消息模板配置化（2026-08-31 用户拍板）
 from qbot_rpg.core.message_format.list_render import (
     DEFAULT_PAGE_SIZE,
     LAST_PAGE_HINT,
@@ -252,9 +253,9 @@ def _paginate(items: list, page: object,
     return sl, res.page, res.total_pages, res.total, res.clamped
 
 
-def _browse_header(shop: Mapping[str, Any]) -> str:
-    """商品列表头（2026-08-31 用户拍板：介绍换行——第一行 `{icon}{name} {类型徽标}`，
-    介绍单独另起一行；表头不计入 5 条上限，3d §2.1）。"""
+def _browse_header(shop: Mapping[str, Any], ctx: Optional[Mapping[str, Any]] = None) -> str:
+    """商品列表头（模板配置化 2026-08-31：shop_header，内容包可覆盖）：
+    第一行 `{name} {类型徽标}`，介绍单独另起一行（用户拍板）；表头不计入 5 条上限。"""
     parts: List[str] = []
     name = f"{strip_icon_emoji(shop.get('icon', ''))}{shop.get('name', '')}"
     parts.append(name or "商店")
@@ -262,25 +263,21 @@ def _browse_header(shop: Mapping[str, Any]) -> str:
     if t in TYPE_BADGES:
         parts.append(TYPE_BADGES[t])
     line1 = " ".join(parts)
-    if shop.get("desc"):
-        return f"{line1}\n{shop['desc']}"
-    return line1
-
+    return tpl_of(ctx, "shop_header",
+                  {"name": line1, "badge": "", "desc": str(shop.get("desc") or "")})
 
 def _browse_row_text(row: Mapping[str, Any], ctx: Mapping[str, Any]) -> str:
-    """商品行（2b3 TC-05/07，意见一同步：折扣商品不显示原价）：
+    """商品行（模板配置化 2026-08-31：shop_row，内容包可覆盖）：
     `序号.物品名 ｜ 商品单价：价格(货币名) 标记`（折扣只附 `[折扣 -X%]`）。"""
     idx = row.get("index", "?")
     name = row.get("name", "?")
-    parts: List[str] = [f"{idx}. {name}", f"商品单价：{_price_text(row.get('price'), ctx)}"]
-    line = " ｜ ".join(parts)
+    price = _price_text(row.get("price"), ctx)
     discount = row.get("discount") or 0
     markers = list(row.get("markers", []) or [])
     if discount:
         markers.append(f"[折扣 -{discount}%]")
-    if markers:
-        line += " " + " ".join(str(m) for m in markers)
-    return line
+    marker_txt = " " + " ".join(str(m) for m in markers) if markers else ""
+    return tpl_of(ctx, "shop_row", {"idx": idx, "name": name, "price": price, "markers": marker_txt})
 
 
 def render_shop_items(shop: Mapping[str, Any], rows: list, page: object,
@@ -290,9 +287,9 @@ def render_shop_items(shop: Mapping[str, Any], rows: list, page: object,
     裁决② 夹取 → （已到最后一页）插在 Tip 前。"""
     sl, pg, pgs, total, clamped = _paginate(rows, page, per_page)
     if not sl:
-        return f"{_browse_header(shop)}\n{_EMPTY_SHOP}"
+        return f"{_browse_header(shop, ctx)}\n{_EMPTY_SHOP}"
     body = f"\n{_ROW_SEPARATOR}\n".join(_browse_row_text(r, ctx) for r in sl)
-    out: List[str] = [_browse_header(shop), body]
+    out: List[str] = [_browse_header(shop, ctx), body]
     tail = render_cake_tail(pg, pgs, tip=_BROWSE_TAIL_TIP)
     if clamped:
         tail = tail.replace("\n", f"\n{LAST_PAGE_HINT}\n", 1)

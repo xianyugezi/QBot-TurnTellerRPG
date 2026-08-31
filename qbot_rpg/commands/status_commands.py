@@ -52,6 +52,7 @@ from __future__ import annotations
 from typing import Any, Callable, List, Mapping, MutableMapping, Optional
 
 from qbot_rpg.core.player_attributes import calc_all_final_attributes
+from qbot_rpg.core.templates import tpl_of  # 消息模板配置化（2026-08-31 用户拍板）
 from qbot_rpg.data.player import PlayerAttributes
 
 # 同包兄弟模块：相对导入（G0 架构门禁不产生 `qbot_rpg.commands` 前缀反向依赖边；
@@ -228,7 +229,8 @@ def _fmt_exp(v: object) -> str:
 
 
 def level_line(ctx: Mapping[str, Any]) -> str:
-    """② 等级/经验行（RUL-11/STT-02，意见一同步：等级/经验各占一行，去 `｜`）：
+    """② 等级/经验行（RUL-11/STT-02，意见一同步：等级/经验各占一行，去 `｜`；
+    模板配置化 2026-08-31：来自 ctx[templates] status_level/status_exp）：
     `【等级】3`\\n`【经验】20/1000`；满级 → `【等级】45【已满级】`（LVL-11 口径，工程补白 3）。"""
     f = _player_fields(ctx)
     level = f["level"]
@@ -236,16 +238,17 @@ def level_line(ctx: Mapping[str, Any]) -> str:
     if cap is not None:
         try:
             if level >= int(cap):
-                return f"【等级】{level}【已满级】"
+                return tpl_of(ctx, "status_level", {"level": level}) + tpl_of(ctx, "status_max_hint", {})
         except (TypeError, ValueError):
             pass
     if ctx.get("exp_next") == 0:
-        return f"【等级】{level}【已满级】"
+        return tpl_of(ctx, "status_level", {"level": level}) + tpl_of(ctx, "status_max_hint", {})
     nxt = ctx.get("exp_next")
     exp = _fmt_exp(f["exp"])
+    lv = tpl_of(ctx, "status_level", {"level": level})
     if nxt is not None:
-        return f"【等级】{level}\n【经验】{exp}/{nxt}"
-    return f"【等级】{level}\n【经验】{exp}"
+        return f"{lv}\n" + tpl_of(ctx, "status_exp", {"exp": exp, "exp_next": nxt})
+    return f"{lv}\n" + tpl_of(ctx, "status_exp_only", {"exp": exp})
 
 
 def attr_line(ctx: Mapping[str, Any]) -> str:
@@ -271,10 +274,12 @@ def attr_line(ctx: Mapping[str, Any]) -> str:
         if attr_id in ("hp", "mp"):
             cur = f.get(attr_id)
             cur_i = int(cur) if cur is not None else int(final[attr_id])
-            lines.append(f"【{name}】{cur_i}/{int(final[attr_id])}")
+            lines.append(tpl_of(ctx, "status_attr_resource",
+                                {"attr_name": name, "cur": cur_i, "max": int(final[attr_id])}))
         else:
-            lines.append(f"【{name}】{int(final[attr_id])}")
-    return "\n".join(lines) if lines else "【属性】无"
+            lines.append(tpl_of(ctx, "status_attr",
+                                {"attr_name": name, "value": int(final[attr_id])}))
+    return "\n".join(lines) if lines else tpl_of(ctx, "status_no_attr", {})
 
 
 def _map_name_for(ctx: Mapping[str, Any], loc: str) -> str:
@@ -296,11 +301,12 @@ def _map_name_for(ctx: Mapping[str, Any], loc: str) -> str:
 
 
 def location_line(ctx: Mapping[str, Any]) -> str:
-    """④ 位置行（RUL-14）：`【位置】晨风村`（P2-2：id → 中文名）；缺省 → `【位置】未知`。"""
+    """④ 位置行（RUL-14；模板配置化 2026-08-31）：`【位置】晨风村`（P2-2：id → 中文名）；
+    缺省 → `【位置】未知`。"""
     loc = ctx.get("location")
     if not loc:
-        return "【位置】未知"
-    return f"【位置】{_map_name_for(ctx, str(loc))}"
+        return tpl_of(ctx, "status_location", {"location": "未知"})
+    return tpl_of(ctx, "status_location", {"location": _map_name_for(ctx, str(loc))})
 
 
 def _effect_text(e: Mapping[str, Any]) -> Optional[str]:
@@ -323,11 +329,11 @@ def _effect_text(e: Mapping[str, Any]) -> Optional[str]:
 
 
 def effects_line(ctx: Mapping[str, Any]) -> str:
-    """⑤ 效果区（RUL-13/STT-03）：`【效果】中毒 2/3（来源：剧毒史莱姆）`；
+    """⑤ 效果区（RUL-13/STT-03；模板配置化 2026-08-31）：`【效果】中毒 2/3（来源：剧毒史莱姆）`；
     无效果 → `【效果】无`；>5 个 → 前 5 个 + `还有 N 个状态`。"""
     effects = ctx.get("effects")
     if not effects:
-        return "【效果】无"
+        return tpl_of(ctx, "status_effects", {"effects": "无"})
     parts: List[str] = []
     for e in effects[:EFFECTS_SHOWN]:
         seg = _effect_text(e)
@@ -336,8 +342,8 @@ def effects_line(ctx: Mapping[str, Any]) -> str:
     if len(effects) > EFFECTS_SHOWN:
         parts.append(f"还有 {len(effects) - EFFECTS_SHOWN} 个状态")
     if not parts:
-        return "【效果】无"
-    return "【效果】" + " ｜ ".join(parts)
+        return tpl_of(ctx, "status_effects", {"effects": "无"})
+    return tpl_of(ctx, "status_effects", {"effects": " ｜ ".join(parts)})
 
 
 def imprints_line(ctx: Mapping[str, Any]) -> Optional[str]:
@@ -360,7 +366,7 @@ def imprints_line(ctx: Mapping[str, Any]) -> Optional[str]:
         segs.append(seg)
     if not segs:
         return None
-    return "【印记】" + " ｜ ".join(segs)
+    return tpl_of(ctx, "status_imprints", {"imprints": " ｜ ".join(segs)})
 
 
 def target_line(ctx: Mapping[str, Any]) -> Optional[str]:
@@ -376,7 +382,7 @@ def target_line(ctx: Mapping[str, Any]) -> Optional[str]:
     turn = t.get("turn")
     if hp is None or mx is None or turn is None:
         return None
-    return f"【目标】{name} {hp}/{mx}（第 {turn} 回合）"
+    return tpl_of(ctx, "status_target", {"name": name, "hp_cur": hp, "hp_max": mx, "round": turn})
 
 
 # ---------------------------------------------------------------------------

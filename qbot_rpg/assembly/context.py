@@ -442,6 +442,20 @@ def _forge_module_raw(registry: Any) -> Mapping[str, object]:
     return {}
 
 
+def _templates_table(registry: Any) -> Dict[str, Any]:
+    """消息模板（2026-08-31 用户拍板：模板配置化，内容包 templates.json 可覆盖默认）。
+
+    入参 registry: Registry。出参 Dict[key, str]（已合并默认 + 内容包覆盖）。
+    核心逻辑: registry.modules_raw["templates"] 覆盖 core.templates.DEFAULT_TEMPLATES；
+    内容包未声明 templates 模块 → 纯默认（零配置零破坏）。
+    """
+    from qbot_rpg.core.templates import resolve_templates
+
+    raw = getattr(registry, "modules_raw", None)
+    overrides = raw.get("templates") if isinstance(raw, Mapping) else None
+    return resolve_templates(overrides)
+
+
 def _stats_table(registry: Any, settings: Mapping) -> Dict[str, Any]:
     """初始属性模板（stats，/注册 build_initial_player 消费）。
 
@@ -967,6 +981,7 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
             "location": location,
             "title": _current_title(player.title_state),
             "stats": _stats_table(deps.registry, settings),
+            "templates": _templates_table(deps.registry),
             "attributes": attrs,
             "attr_final": _attr_final(attrs, conditional_rules, settings, attr_types),
             "exp_next": _exp_next(settings, player.level),

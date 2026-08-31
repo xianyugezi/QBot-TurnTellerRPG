@@ -208,7 +208,8 @@ def _job_name(registry: Any, job_id: str) -> str:
                 name = job.get("name")
             if name:
                 return str(name)
-    return job_id
+    # 2026-08-31 用户拍板：内容包无 jobs 表时职业名留空（不显示英文 id「novice」）
+    return ""
 
 
 def _def_name(def_obj: Any, fallback: str) -> str:

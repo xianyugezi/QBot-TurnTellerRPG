@@ -193,7 +193,8 @@ def test_tc_reg_04_already_registered_idempotent():
                    player={"name": "小李", "level": 5, "job_id": "mage"},
                    job_name="法师")
     out = cmd_register(parse("/注册 小李 法师"), ctx)
-    assert out == TPL_ALREADY_REGISTERED.format(name="小李", level=5, job="法师")
+    # 2026-08-31 用户拍板：job 段不再自带空格（无职业名时整体省略，如 novice 隐藏）
+    assert out == TPL_ALREADY_REGISTERED.format(name="小李", level=5, job=" 法师")
     assert ctx["player"]["name"] == "小李"                            # 原档未被覆盖
     assert ctx["player"]["level"] == 5
 

@@ -101,8 +101,9 @@ TPL_NAME_BAD_CHARS = "❌ 角色名含非法字符，请重新输入（过滤控
 
 # 已注册幂等拒绝（REG-03 / RUL-09；B5：禁止重复建号覆盖原档）
 # 意见一同步：注销指令已拍板存在，文案改为引导「发送注销」（去掉旧「请联系管理员」）
+# 2026-08-31 用户拍板：job 为空格时省略职业（内容包无 jobs 表不显示英文 id）
 TPL_ALREADY_REGISTERED = (
-    "❌ 你已经注册过了！当前角色：{name}（Lv{level} {job}）。\n想重新开始请发送注销。"
+    "❌ 你已经注册过了！当前角色：{name}（Lv{level}{job}）。\n想重新开始请发送注销。"
 )
 
 # 重名红拦换名（REG-03 / RUL-07 / B5）
@@ -399,6 +400,8 @@ def _current_job_name(ctx: Mapping[str, Any]) -> str:
         d = _job_of_id(ctx, job_id)
         if d is not None:
             return _job_name_of(d)
+        # 2026-08-31 用户拍板：内容包无 jobs 表时职业名留空（不显示英文 id「novice」）
+        return ""
     return "?"
 
 
@@ -444,10 +447,12 @@ def cmd_register(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 
     # REG-03 已注册幂等拒绝（RUL-09；不覆盖原档）——先于名字校验（幂等提示优先于名字校验）
     if ctx.get("registered", True) is True:
+        job_display = _current_job_name(ctx)
+        job_txt = f" {job_display}" if job_display else ""  # 2026-08-31 用户拍板：无职业名（novice）不显示
         return TPL_ALREADY_REGISTERED.format(
             name=_current_player_name(ctx),
             level=_current_player_level(ctx),
-            job=_current_job_name(ctx),
+            job=job_txt,
         )
 
     # REG-02 名字硬性校验（长度/控制字符）

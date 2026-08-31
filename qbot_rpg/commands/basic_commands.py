@@ -87,7 +87,7 @@ TPL-12（sender.format_tpl12，文案唯一源 errors.py D-04）。
 from __future__ import annotations
 
 import importlib
-from typing import Any, Callable, List, Mapping, MutableMapping, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Mapping, MutableMapping, Optional, Sequence, Tuple
 
 from qbot_rpg.core.equipment import EquipmentEngine
 from qbot_rpg.core.message_format import strip_icon_emoji
@@ -198,8 +198,10 @@ _DEFAULT_STAT_ORDER: tuple = ("hp", "mp", "str", "int", "con", "spr", "foc", "ag
 
 # /帮助 分组目录（4f RUL-21 六组顺序：冒险/战斗/成长/制造生活/快捷/GM；组内指令按框架章节顺序）
 HELP_GROUPS: Tuple[Tuple[str, Tuple[Tuple[str, str], ...]], ...] = (
+    # 冒险组完整指令集（组页 /帮助 冒险 全部可见）；目录总览行展示子集见 _DIRECTORY_SHOW
     ("冒险", (("角色", "查看角色属性面板"), ("背包", "查看背包物品"), ("装备", "查看/切换装备"),
-              ("位置", "查看当前地点"), ("进入", "进入地图"), ("休息", "休息恢复"))),
+              ("位置", "查看当前地点"), ("进入", "进入地图"), ("休息", "休息恢复"),
+              ("任务", "查看任务板"))),
     ("战斗", (("攻击", "选择技能攻击目标"), ("技能", "查看技能列表"))),
     ("成长", (("使用", "使用物品/穿戴装备"), ("强化", "强化装备"), ("转职", "转职职业"))),
     ("制造生活", (("合成", "合成物品"), ("炼金", "炼金制作"), ("锻造", "锻造装备"),
@@ -207,6 +209,11 @@ HELP_GROUPS: Tuple[Tuple[str, Tuple[Tuple[str, str], ...]], ...] = (
     ("快捷", (("快捷绑定", "绑定快捷指令"), ("快捷解绑", "解绑快捷指令"),
               ("快捷列表", "查看快捷列表"))),
 )
+
+# 2026-08-31 用户拍板：目录总览行展示子集（仅影响总览，/帮助 <组名> 组页仍显示完整组）
+_DIRECTORY_SHOW: Dict[str, Tuple[str, ...]] = {
+    "冒险": ("角色", "背包", "位置", "任务"),
+}
 
 # GM 组（RUL-25：无 GM 权限不渲染、不提示存在；GM 可见）
 GM_HELP_GROUP: Tuple[str, Tuple[Tuple[str, str], ...]] = (
@@ -226,8 +233,8 @@ _REGISTER_GUIDE: str = "\n".join([
     "装备/技能 等更多指令注册后可用，发 /帮助 查看完整列表",
 ])
 
-# 目录头（4f TPL-4F-06）
-_DIRECTORY_TITLE = "【指令总览】输入 /帮助 组名 查看该组指令"
+# 目录头（4f TPL-4F-06；2026-08-31 用户拍板：标题只留【指令总览】，翻页提示由尾段 Tip 承担）
+_DIRECTORY_TITLE = "【指令总览】"
 
 
 # ---------------------------------------------------------------------------
@@ -1461,13 +1468,21 @@ def _help_groups(ctx: Mapping[str, Any]) -> Tuple[Tuple[str, Tuple[Tuple[str, st
 
 
 def _group_summary(ctx: Mapping[str, Any], group: Tuple[str, Tuple[Tuple[str, str], ...]]) -> str:
-    """目录行（4f RUL-22 + SHC-04/RUL-24 别名显示）：`冒险 —— 角色/背包/装备/位置/进入…（/帮助 冒险）`。"""
+    """目录行（2026-08-31 用户拍板：`冒险 — 角色/背包/位置/任务`，单横线、去 `/帮助 组名` 后缀）。
+
+    展示子集 _DIRECTORY_SHOW 优先（仅影响总览行，组页 /帮助 <组名> 仍显示完整指令集）；
+    无子集 → 取组内前 5 条 + …。
+    """
     name, cmds = group
-    names = [_command_alias_display(ctx, c[0]) for c in cmds]
+    show = _DIRECTORY_SHOW.get(name)
+    if show:
+        names = list(show)
+    else:
+        names = [_command_alias_display(ctx, c[0]) for c in cmds]
     shown = "/".join(names[:5])
     if len(names) > 5:
         shown += "…"
-    return f"{name} —— {shown}（/帮助 {name}）"
+    return f"{name} — {shown}"
 
 
 def _render_help_directory(ctx: Mapping[str, Any], page: int) -> str:

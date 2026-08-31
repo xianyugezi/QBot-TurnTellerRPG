@@ -541,11 +541,11 @@ def test_skill_empty():
 def test_help_directory_normal():
     """/帮助 → 普通玩家 5 组目录单页（无 GM 组、无页脚）。"""
     out = cmd_help(parse("/帮助"), make_ctx())
-    assert "【指令总览】输入 /帮助 组名 查看该组指令" in out
-    assert "冒险 —— 角色/背包/装备/位置/进入…（/帮助 冒险）" in out
-    assert "战斗 —— 攻击/技能（/帮助 战斗）" in out
+    assert "【指令总览】" in out
+    assert "冒险 — 角色/背包/位置/任务" in out
+    assert "战斗 — 攻击/技能" in out
     assert "防御" not in out and "道具" not in out and "逃跑" not in out  # 2026-08-31 拍板：三战斗指令永删
-    assert "快捷 —— 快捷绑定/快捷解绑/快捷列表（/帮助 快捷）" in out
+    assert "快捷 — 快捷绑定/快捷解绑/快捷列表" in out
     assert "GM" not in out                 # RUL-25 普通玩家不渲染 GM 组
     assert "输入 /帮助 页码 翻页" not in out  # 5 组单页无页脚
 
@@ -555,9 +555,9 @@ def test_help_directory_gm_two_pages():
     out = cmd_help(parse("/帮助"), make_ctx(is_gm=True))
     # 工程补白 2：目录页脚归一为 TPL-08（m4 §2.2 固定页脚，4f「共 N 组」表述不采用）
     assert "当前页：1/2" in out
-    assert "GM —— 重载/封禁/日志/编辑/设置（/帮助 GM）" not in out  # GM 组在页 2
+    assert "GM — 重载/封禁/日志/编辑/设置" not in out  # GM 组在页 2
     out2 = cmd_help(parse("/帮助 2"), make_ctx(is_gm=True))
-    assert "GM —— 重载/封禁/日志/编辑/设置（/帮助 GM）" in out2
+    assert "GM — 重载/封禁/日志/编辑/设置" in out2
     assert "当前页：2/2" in out2
 
 
@@ -602,7 +602,7 @@ def test_help_invalid_page_tpl12(raw):
 def test_help_directory_clamp_normal():
     """裁决②：/帮助 2（普通玩家目录 1 页）→ 夹取最后一页 + （已到最后一页）。"""
     out = cmd_help(parse("/帮助 2"), make_ctx())
-    assert "冒险 —— 角色/背包/装备/位置/进入…（/帮助 冒险）" in out
+    assert "冒险 — 角色/背包/位置/任务" in out
     assert "（已到最后一页）" in out
 
 

@@ -1,29 +1,14 @@
 """
-模板注册表（2026-08-31 用户拍板：消息模板配置化，不写死代码）。
+模板分区：基础默认模板表（2026-08-31 模板配置化包拆分）。
 
-设计：
-- 每类面板/消息 = 一段模板字典（lines: 行模板 / tail: 尾段模板 / title: 标题模板）
-- 占位符白名单：每类暴露哪些占位符由 DEFAULT_PLACEHOLDERS 登记；用户只能在白名单内
-  调位置/换行/加字，超出白名单的占位符渲染时原样保留（不替换，提示缺失）
-- 内容包覆盖：content/templates.json 覆盖 DEFAULT_TEMPLATES 同 key（深合并），
-  未写 key 用框架内置默认 → 零配置零破坏
-- 占位符语法 {name} / {attr_name}；渲染 = str.format_map(白名单 dict)，缺键不抛异常
-  （_safe_format：缺失占位符保留原文，避免内容包写错导致面板崩溃）
-
-铁律：纯函数、零 NoneBot import、不硬编码路径。模板字符串全部集中在本模块默认表 +
-内容包 templates.json；渲染器不再内嵌面板格式字符串（只保留逻辑与占位符组装）。
+本文件 = 已迁移核心 8 类的默认模板 + 占位符白名单（注册/状态/角色/帮助/背包/商店/列表尾段）。
+其他模块分区见 use_tpl.py / shortcut_tpl.py / log_tpl.py / codex_tpl.py / dialog_tpl.py /
+explore_tpl.py / quest_tpl.py / checkin_tpl.py / battle_tpl.py / forge_tpl.py / alchemy_tpl.py /
+basic_rem_tpl.py / register_rem_tpl.py（内容包 templates.json 覆盖同 key）。
 """
 from __future__ import annotations
 
-import re
-from typing import Any, Dict, Mapping, Optional
-
-__all__ = [
-    "DEFAULT_TEMPLATES",
-    "PLACEHOLDER_WHITELIST",
-    "resolve_templates",
-    "render_template",
-]
+from typing import Any, Dict
 
 # ---------------------------------------------------------------------------
 # 默认模板（框架内置；内容包 templates.json 可覆盖同 key）
@@ -52,7 +37,7 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     "status_effects": "【效果】{effects}",
     "status_imprints": "【印记】{imprints}",
 
-    # —— 角色面板（basic_commands view_header）——
+    # —— 角色面板（basic_commands view_header / attr_line）——
     "role_header": "【角色】{name}",
     "role_level": "【等级】{level}",
     "role_job": "【职业】{job}",
@@ -124,58 +109,9 @@ PLACEHOLDER_WHITELIST: Dict[str, set] = {
     "bag_empty": set(),
     "bag_row": {"idx", "name", "count"},
     "bag_tail": set(),
-    "shop_header": {"icon", "name", "badge", "desc"},
+    "shop_header": {"name", "badge", "desc"},
     "shop_row": {"idx", "name", "price", "markers"},
     "shop_empty": set(),
     "shop_tail": {"idx"},
     "list_tail": {"page", "pages", "filter", "tip"},
 }
-
-_PLACEHOLDER_RE = re.compile(r"\{([a-zA-Z0-9_]+)\}")
-
-
-def _safe_format(template: str, data: Mapping[str, Any]) -> str:
-    """占位符替换（缺键保留原文，不抛异常）。"""
-    allowed = set(data)
-
-    def _sub(m: "re.Match[str]") -> str:
-        key = m.group(1)
-        if key in allowed:
-            return str(data[key])
-        return m.group(0)
-
-    return _PLACEHOLDER_RE.sub(_sub, template)
-
-
-def resolve_templates(content_overrides: Any = None) -> Dict[str, Any]:
-    """内容包 templates.json 覆盖默认模板（深合并，未写 key 用默认）。
-
-    content_overrides: Registry templates_raw / dict / None。仅接受 dict 且仅合并
-    白名单内 key（未知 key 忽略，防内容包拼错引入渲染异常）。
-    """
-    merged = dict(DEFAULT_TEMPLATES)
-    if isinstance(content_overrides, Mapping):
-        for key, val in content_overrides.items():
-            if key in merged and isinstance(val, str):
-                merged[key] = val
-    return merged
-
-
-def render_template(templates: Mapping[str, Any], key: str,
-                    data: Mapping[str, Any]) -> str:
-    """按 key 渲染模板（缺失 key/模板 → 原样 data 兜底空串不崩）。"""
-    tpl = templates.get(key)
-    if not isinstance(tpl, str):
-        return ""
-    return _safe_format(tpl, data)
-
-
-def tpl_of(ctx: Any, key: str, data: Optional[Mapping[str, Any]] = None) -> str:
-    """渲染器统一入口：从 ctx 读模板（无 ctx/无 templates → 内置默认）。
-
-    data: {占位符: 值}。用法：tpl_of(ctx, "role_header", {"name": "阿伟"})。
-    """
-    tpls = ctx.get("templates") if isinstance(ctx, Mapping) else None
-    if not isinstance(tpls, Mapping):
-        tpls = DEFAULT_TEMPLATES
-    return render_template(tpls, key, data or {})

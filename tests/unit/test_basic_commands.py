@@ -194,7 +194,7 @@ def test_view_noarg_page1():
     一次全量展示——此前 5 条/页分页造成「属性缺很多」观感）。"""
     out = cmd_view(parse("/角色"), make_ctx())
     lines = out.splitlines()
-    assert lines[0] == "【角色】Lv3.阿伟（战士）"
+    assert lines[0] == "【角色】阿伟"
     assert lines[1] == "经验 320/1000"
     # 资源型：当前/上限
     assert "【生命】30/100" in out
@@ -252,7 +252,7 @@ def test_view_noarg_equiv_page1():
 def test_view_max_level_header():
     """/角色 满级头：Lv≥max_level → 【已满级】。"""
     out = cmd_view(parse("/角色"), make_ctx(level=45, max_level=45, exp=99999))
-    assert "【角色】Lv45.阿伟（战士）\n【已满级】" in out
+    assert "【角色】阿伟\n【已满级】" in out
 
 
 def test_attr_line_pure():
@@ -696,7 +696,7 @@ def test_router_parse_integration():
     router = Router()
     register_basic_commands(router, make_context=lambda p: make_ctx())
     out = router.get(VIEW_CMD).handler(parse("/角色"))
-    assert out.startswith("【角色】Lv3.阿伟（战士）")
+    assert out.startswith("【角色】阿伟")
 
 
 # ---------------------------------------------------------------------------

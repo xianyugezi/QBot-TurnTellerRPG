@@ -344,10 +344,10 @@ def _base_header(ctx: Mapping[str, Any], label: str) -> str:
 
 
 def view_header(ctx: Mapping[str, Any]) -> str:
-    """LV 行固定头部（4f RUL-11 + 任务口径；2026-08-31 模板优化：垂直两行——
-    `【角色】Lv3.阿伟（战士）` + 独立经验行 `经验 320/1000`，防手机端一行超长折行）。"""
-    head = _base_header(ctx, "角色")
+    """角色面板头部（2026-08-31 用户拍板：`【角色】阿伟`——只显示名字，
+    等级在首行前缀带出、职业不在面板头部显示；第二行经验/已满级）。"""
     f = _player_fields(ctx)
+    head = f"【角色】{f['name']}"
     max_lv = ctx.get("max_level")
     if max_lv is not None and f["level"] >= int(max_lv):
         return f"{head}\n【已满级】"

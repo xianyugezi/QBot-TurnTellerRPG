@@ -350,11 +350,16 @@ class FishingEngine:
     # ---- species 池与钓点集 ----
     def _species_pool(self, ctx: Mapping[str, Any]) -> List[FishDef]:
         """species 池：构造器 species 优先 → ctx["fish_table"]（Def→raw dict）→
-        ctx["fishing"]["species"]（raw list）。无可解析 → []（宽松不炸）。"""
+        ctx["fishing"]["species"]（raw list）。无可解析 → []（宽松不炸）。
+
+        工程补白 S-9（批6 路6B 收口）：fish_table 为空 Mapping 时不得提前返回空
+        （装配注入 fishing 键后，空 fish_table + 有 fishing.species 必须能读）——
+        空表回落第三分支。
+        """
         if self._species is not None:
             return list(self._species)
         ft = ctx.get("fish_table")
-        if isinstance(ft, Mapping):
+        if isinstance(ft, Mapping) and ft:
             out: List[FishDef] = []
             for entry in ft.values():
                 if isinstance(entry, Mapping):

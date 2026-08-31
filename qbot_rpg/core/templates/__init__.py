@@ -38,6 +38,8 @@ from qbot_rpg.core.templates.explore_tpl import DEFAULT_TEMPLATES as _EXPLORE
 from qbot_rpg.core.templates.explore_tpl import PLACEHOLDER_WHITELIST as _EXPLORE_WH
 from qbot_rpg.core.templates.forge_tpl import DEFAULT_TEMPLATES as _FORGE
 from qbot_rpg.core.templates.forge_tpl import PLACEHOLDER_WHITELIST as _FORGE_WH
+from qbot_rpg.core.templates.fishing_tpl import DEFAULT_TEMPLATES as _FISHING
+from qbot_rpg.core.templates.fishing_tpl import PLACEHOLDER_WHITELIST as _FISHING_WH
 from qbot_rpg.core.templates.investigate_tpl import DEFAULT_TEMPLATES as _INVESTIGATE
 from qbot_rpg.core.templates.investigate_tpl import PLACEHOLDER_WHITELIST as _INVESTIGATE_WH
 from qbot_rpg.core.templates.log_tpl import DEFAULT_TEMPLATES as _LOG
@@ -63,12 +65,12 @@ __all__ = [
 _ALL_TABLES: list = [
     _BASE_TEMPLATES, _USE, _SHORTCUT, _LOG, _CODEX, _DIALOG, _EXPLORE,
     _QUEST, _CHECKIN, _INVESTIGATE, _BATTLE, _FORGE, _ALCHEMY,
-    _BASIC_REM, _REG_REM,
+    _BASIC_REM, _REG_REM, _FISHING,
 ]
 _ALL_WHITELISTS: list = [
     _BASE_WHITELIST, _USE_WH, _SHORTCUT_WH, _LOG_WH, _CODEX_WH, _DIALOG_WH,
     _EXPLORE_WH, _QUEST_WH, _CHECKIN_WH, _INVESTIGATE_WH, _BATTLE_WH,
-    _FORGE_WH, _ALCHEMY_WH, _BASIC_REM_WH, _REG_REM_WH,
+    _FORGE_WH, _ALCHEMY_WH, _BASIC_REM_WH, _REG_REM_WH, _FISHING_WH,
 ]
 
 DEFAULT_TEMPLATES: Dict[str, Any] = {}

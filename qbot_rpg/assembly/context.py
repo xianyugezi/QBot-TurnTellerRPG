@@ -442,6 +442,82 @@ def _forge_module_raw(registry: Any) -> Mapping[str, object]:
     return {}
 
 
+def _fish_module_raw(registry: Any) -> Mapping[str, object]:
+    """fishing.json 顶层 raw dict（M10 批6 路6B 收口 2026-09-01）。
+
+    入参 registry: content Registry。出参 fishing 模块原始解析结果（Mapping，含
+    species/king 两段）；无 registry / 无 fishing 模块 → {}（钓鱼系统未启用兜底）。
+    对齐 _forge_module_raw：fishing 顶层 obj 非条目表，不走 _table_from_registry。
+    """
+    raw = getattr(registry, "modules_raw", None)
+    if isinstance(raw, Mapping):
+        v = raw.get("fishing")
+        if isinstance(v, Mapping):
+            return v
+    return {}
+
+
+def _consume_bait_hook(ctx: MutableMapping[str, Any]):
+    """鱼饵消耗薄委托（M10 批6：fishing_bait.consume_bait(ctx, qid) 包装）。
+
+    惰性 import 防环；缺模块/异常 → 返回 {"ok": False, "reason": "bait_unavailable"}
+    不炸装配（对齐引擎容错惯例）。fishing_bait.consume_bait 走 ctx 内
+    inventory/count_item/remove_item hooks（_inventory_hooks 已注入）。
+    """
+
+    def _hook(qid: object) -> dict:
+        try:
+            from qbot_rpg.core.fishing_bait import consume_bait
+
+            return consume_bait(ctx, qid)
+        except Exception:
+            return {"ok": False, "reason": "bait_unavailable"}
+
+    return _hook
+
+
+def _mode_of_hook(ctx: Mapping[str, Any]):
+    """mode 三态薄委托（M10 批6：fishing_mode.mode_of(ctx)）。"""
+
+    def _hook() -> str:
+        try:
+            from qbot_rpg.core.fishing_mode import mode_of
+
+            return mode_of(ctx)
+        except Exception:
+            return "full"
+
+    return _hook
+
+
+def _king_event_hook(ctx: MutableMapping[str, Any]):
+    """鱼王触发判定薄委托（M10 批6：fishing_king.king_event_available）。"""
+
+    def _hook(species_id: str, rng: Any = None) -> dict:
+        try:
+            from qbot_rpg.core.fishing_king import king_event_available
+
+            return king_event_available(ctx, species_id, rng)
+        except Exception:
+            return {"ok": False, "reason": "king_unavailable", "triggered": False}
+
+    return _hook
+
+
+def _king_victory_record_hook(ctx: MutableMapping[str, Any]):
+    """鱼王胜利计次薄委托（M10 批6：fishing_king.king_victory_record）。"""
+
+    def _hook() -> dict:
+        try:
+            from qbot_rpg.core.fishing_king import king_victory_record
+
+            return king_victory_record(ctx)
+        except Exception:
+            return {"ok": False, "king_victory_count": 0}
+
+    return _hook
+
+
 def _templates_table(registry: Any) -> Dict[str, Any]:
     """消息模板（2026-08-31 用户拍板：模板配置化，内容包 templates.json 可覆盖默认）。
 
@@ -948,6 +1024,10 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
         # 表注入坑见 m9_接口摸底 §八-2），从 registry.modules_raw 直接取模块原始解析
         # 结果（Registry 新增 modules_raw public 访问器）。
         "forge": _forge_module_raw(deps.registry),
+        # M10 钓鱼（批6 路6B 收口 2026-09-01）：ctx["fishing"] 注入 fishing.json 顶层
+        # raw dict（含 species/king 两段）——钓鱼指令壳/引擎 _species_pool 消费；
+        # fishing 顶层 obj 非条目表，不走 _table_from_registry（对齐 forge 先例）。
+        "fishing": _fish_module_raw(deps.registry),
         "battle_snapshot": None,          # 战斗接线注入位（即时调合 battle_alchemy_used）
         "battle_alchemy_engine": None,    # 战斗接线注入位（BattleAlchemyEngine）
         "upgrade_unlocks": {},            # 玩家级解锁表（配方合成/进化持久化，装配层回填）
@@ -1046,6 +1126,14 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
             # ctx["forged"] 即落档（forge_tree._forged_set 读 player["forged"] 兼容，
             # 因 ctx 即 player 兜底；ps 键名 forge_forged 防与其它系统 forged 冲突）。
             "forged": _ps_init(ps, "forge_forged", []),
+            # M10 钓鱼（批6 路6B 收口 2026-09-01）：懒计算状态/饵消耗/模式/鱼王委托
+            # ——fish_state 挂 ps 落档（对齐 forge_preview）；consume_bait/mode/
+            # king_event/king_victory_record 薄委托（惰性 import 防环，缺省不炸）。
+            "fish_state": _ps_init(ps, "fish_state", {}),
+            "consume_bait": _consume_bait_hook(ctx),
+            "mode": _mode_of_hook(ctx),
+            "king_event": _king_event_hook(ctx),
+            "king_victory_record": _king_victory_record_hook(ctx),
             # M8 批14 测试探针（炼金引导任务）：ctx["prof_level"] 职业等级映射
             # {job_id: level}——quest 引擎 var=prof_level 条件（param=job_id）消费；
             # 未注册/无建档 → {} 空（条件不满足，引导任务不提前解锁）。

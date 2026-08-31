@@ -43,15 +43,16 @@ def test_m8_test_demo_pack_loads_green() -> None:
     # 数据表非空 + 条目数对齐 0C fixtures（recipe 15 / traits 8 / proficiency 2 / slots 4）
     # recipe/trait/proficiency 有 id 字段 → registry 表计数；slots 条目用 equip_id（无 id 字段，
     # 不注册进 registry 表，运行期从 pack.modules 解析——同 shop/quest modules_raw 口径）
-    # proficiency=2：alchemy + forge（M9 批3 增加铸造职业实例）
+    # proficiency=3：alchemy + forge + fishing（M9 批3 铸造 + M10 批5 钓鱼实例）
     # recipe 10→15：M10 批1 路1A 新增 5 条鱼饵配方（rcp_bait_*，T04 鱼饵体系）
-    for kind, expect in (("recipe", 15), ("trait", 8), ("proficiency", 2)):
+    for kind, expect in (("recipe", 15), ("trait", 8), ("proficiency", 3)):
         ids = pack.registry.all_ids(kind)
         assert len(ids) == expect, f"kind={kind} 期望 {expect} 条，实得 {len(ids)}"
     assert len(_slots_raw(pack)) == 4, f"slots 期望 4 条，实得 {len(_slots_raw(pack))}"
     assert pack.registry.resolve("rcp_flame_bomb", "recipe") is not None
     assert pack.registry.resolve("trait_burn_boost", "trait") is not None
     assert pack.registry.resolve("alchemy", "proficiency") is not None
+    assert pack.registry.resolve("fishing", "proficiency") is not None  # M10 批5 路5A
     assert any(s.get("equip_id") == "hunter_blade" for s in _slots_raw(pack))
 
 

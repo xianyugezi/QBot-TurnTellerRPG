@@ -65,6 +65,14 @@
   B-7  GU-04 / TR-07：引擎层实现「同玩家仅一局」（活动会话 S2/S3 中发起新钓局 →
        拒绝 GU-04）与「决策窗超时 → TR-07 SL 跑鱼回 S0」；细化 TR-07 的「换区/新钓局
        被动脱钩」路径归批2 指令壳接线（引擎无地图/指令语义）。
+  M-1  simple 出鱼结算链路补齐（批5 路5B）：批1 simple 分支只返回
+       settle_pending=True 骨架（无 last 快照、无目标鱼种）——结算（批3
+       settle_catch）消费 reel_in 写入的 fish_state["last"] 快照，simple 不经过
+       reel_in，直接调 settle_catch 会 reason=missing_snapshot 拒绝。本路补齐：
+       simple 分支落 fish_state["last"] 快照 + 选定目标鱼种（同 bite_check B-2
+       口径，spot 候选池 rng 选一、无候选回落全池），指令壳可直结 settle_catch
+       （保留鱼种/图鉴/冠级/饵/熟练，细化 §2.4）。返回仍无 wait_sec/cast_at 键
+       （无等待期语义），指令壳 cast_fishing 对 wait_sec 0 兜底已就位（批2 路2B）。
 
 铁律：零 NoneBot import；纯函数确定性零 IO；零定时器/零睡眠（时间戳懒判，无实时
       倒计时）；rng 必须注入（ctx["rng"] 或构造器 rng，禁止裸 random 破坏确定性）；
@@ -477,7 +485,8 @@ class FishingEngine:
     # =================================================================================
     def start_fishing(self, ctx: MutableMapping[str, Any], spot_id: object) -> dict:
         """TR-01/TR-02（S0→S1→S2 连续迁移，B-1 落档 S2）：守卫四连 + 扣饵 + 日计数+1
-        + 注册懒计时期；simple 短接（S0→S1→ST 直接出鱼骨架，批3 结算接线）。
+        + 注册懒计时期；simple 短接（S0→S1→ST 直接出鱼，M-1 落 last 快照 + 目标选定，
+        指令壳可直结 settle_catch）。
 
         守卫序（细化 §2.3）：GU-01(mode 非 off) → GU-02(日计数<daily_limit) →
         GU-03(spot 合法) → GU-04(无进行中钓局)。返回 {ok, message, state, ...}。
@@ -521,13 +530,31 @@ class FishingEngine:
 
         if mode == "simple":
             # simple 短接：S0→S1→ST 直接出鱼（无 S2/S3 实例，无等待/鱼讯/鱼王，TC-09/14）。
-            # 出鱼结算批3 接线——本路返回骨架 settle_pending=True。
+            # 【工程补白 M-1】批1 骨架只返回 settle_pending=True 无快照——出鱼结算
+            # （批3 settle_catch）消费 reel_in 写入的 fish_state["last"] 快照，simple
+            # 不经过 reel_in；本路补齐：落 last 快照 + 选定目标鱼种（同 bite_check
+            # B-2 口径：spot 候选池 rng 选一，无候选回落全池），指令壳可直结
+            # settle_catch（保留鱼种/图鉴/冠级/饵/熟练，细化 §2.4）。
             fs["spot_id"] = str(spot_id)
             fs["bait_used"] = bait_used
+            target = self._pick_target(ctx, str(spot_id), self._resolve_rng(ctx))
+            fs["target_species_id"] = target.id if target is not None else None
+            fs["target_rarity"] = (
+                target.rarity if target is not None and isinstance(target.rarity, str)
+                else "normal"
+            )
+            fs["last"] = {
+                "choice": "auto", "kind": KIND_NIBBLE, "golden": False,
+                "target_species_id": fs.get("target_species_id"),
+                "target_rarity": fs.get("target_rarity"),
+                "spot_id": str(spot_id), "bite_ts": now, "reel_ts": now,
+            }
             fs["state"] = STATE_REELED
             return {
                 "ok": True, "state": STATE_REELED, "mode": "simple", "direct": True,
                 "settle_pending": True, "bait_used": bait_used,
+                "target_species_id": fs.get("target_species_id"),
+                "target_rarity": fs.get("target_rarity"),
                 "message": MSG_SIMPLE_DIRECT,
             }
 

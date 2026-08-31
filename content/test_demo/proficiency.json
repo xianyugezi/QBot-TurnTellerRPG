@@ -231,5 +231,102 @@
       ]
     },
     "titles": []
+  },
+  {
+    "id": "fishing",
+    "tier_names": [
+      "见习",
+      "正式",
+      "精通",
+      "专家",
+      "大师",
+      "宗师",
+      "王"
+    ],
+    "job_rank_levels": [
+      0,
+      100,
+      300,
+      700,
+      1500,
+      3000,
+      6000
+    ],
+    "exp_sources": {
+      "craft": 1.0,
+      "gather": 1.0,
+      "combat": 1.0
+    },
+    "sp_per_level": 1,
+    "sp_panel": [
+      {
+        "id": "unlock_wait_shorten",
+        "name": "抛竿等待缩短",
+        "cost": 1,
+        "repeatable": true,
+        "max_repeat": 3,
+        "desc": "鱼讯等待时间小幅缩短"
+      },
+      {
+        "id": "unlock_bait_efficiency",
+        "name": "饵效率+1",
+        "cost": 1,
+        "repeatable": true,
+        "max_repeat": 3,
+        "desc": "对口饵触发率提升"
+      },
+      {
+        "id": "unlock_catch_bonus",
+        "name": "鱼获量+1",
+        "cost": 1,
+        "repeatable": false,
+        "max_repeat": 1,
+        "desc": "每次出鱼额外获得 1 条"
+      }
+    ],
+    "energy": {
+      "enabled": false,
+      "max_by_tier": [
+        5,
+        8,
+        10,
+        12,
+        15,
+        18,
+        20
+      ],
+      "regen_sec": 1800
+    },
+    "job_tier_map": {
+      "见习": [
+        1,
+        5
+      ],
+      "正式": [
+        6,
+        10
+      ],
+      "精通": [
+        11,
+        20
+      ],
+      "专家": [
+        21,
+        30
+      ],
+      "大师": [
+        31,
+        40
+      ],
+      "宗师": [
+        41,
+        50
+      ],
+      "王": [
+        51,
+        99
+      ]
+    },
+    "titles": []
   }
 ]

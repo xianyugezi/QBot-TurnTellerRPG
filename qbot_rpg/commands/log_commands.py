@@ -63,6 +63,8 @@ from qbot_rpg.core.message_format.list_render import (
     render_cake_tail,
     resolve_page,
 )
+from qbot_rpg.core.templates import tpl_of  # 消息模板配置化（2026-08-31 用户拍板）
+from qbot_rpg.core.templates.log_tpl import DEFAULT_TEMPLATES as _LOG_TPL_DEFAULT
 
 __all__ = [
     "LOG_CMD",
@@ -127,18 +129,12 @@ SYS_LOG_DEFAULT_SHOW: int = 20
 SYS_LOG_PAGE_SIZE: int = 20
 SYS_LOG_MAX_ENTRIES: int = 50
 
-# 3c 权限拒绝模板（工程补白 2：无 GM 权限执行 GM 视图，不泄露系统日志内容）
-PERMISSION_DENIED: str = "❌ 没有 GM 权限，无法查看系统日志。"
+# 3c 权限拒绝模板（工程补白 2：无 GM 权限执行 GM 视图，不泄露系统日志内容）。
+# 模板唯一源 log_tpl.log_permission_denied；本常量 = 默认模板值（兼容导出，供测试/装配引用）。
+PERMISSION_DENIED: str = _LOG_TPL_DEFAULT["log_permission_denied"]
 
-# 空文案（纯文本零装饰 emoji）
-_EMPTY_ADVENTURE: str = "（暂无冒险日志）"
-_EMPTY_BIO: str = "（暂无传记）"
-_EMPTY_SYS: str = "（暂无系统日志）"
-
-# CakeGame 式尾段 Tip（2026-08-27 用户拍板：列表尾段统一当前页 + Tip）
-_ADV_TAIL_TIP: str = "发送'日志 传记'回溯冒险规律"
-_BIO_TAIL_TIP: str = "发送'日志 传记 N'翻看更早的段落"
-_SYS_TAIL_TIP: str = "发送'日志 条数=50'扩大查看窗口"
+# 空文案 / 尾段 Tip / 六类条目文本等消息模板全部配置化（log_tpl 分区），渲染处一律 tpl_of，
+# 不再在本模块硬编码（2026-08-31 用户拍板：消息模板配置化，不写死代码）。
 
 # 环境快照缺失占位（3f R-05：缺失 → "--"，不阻塞）
 _MISSING = "--"
@@ -232,8 +228,12 @@ def _count_key_name(entry: Mapping[str, Any]) -> str:
     return ck.strip("[]")
 
 
-def _entry_text(entry: Mapping[str, Any]) -> str:
-    """六类条目文本（R-02 表逐类模板渲染，D-01 不落自由文本；参数缺省 count_key 尾段兜底）。"""
+def _entry_text(entry: Mapping[str, Any], ctx: Mapping[str, Any]) -> str:
+    """六类条目文本（R-02 表逐类模板渲染，D-01 不落自由文本；参数缺省 count_key 尾段兜底）。
+
+    模板配置化（2026-08-31）：逐类文案来自 log_tpl 分区（log_entry_* / *_none 无值兜底变体），
+    渲染处 tpl_of(ctx, key, {...})；本函数只做 有值/无值 分支判定（机械性逻辑）。
+    """
     tag = _entry_tag(entry)
     params = _params_of(entry)
     name = str(
@@ -243,31 +243,48 @@ def _entry_text(entry: Mapping[str, Any]) -> str:
     if not name:
         name = _count_key_name(entry)
     if tag == "first_kill":
-        return f"首次击败 {name}" if name else "首次击败 未知目标"
+        if name:
+            return tpl_of(ctx, "log_entry_first_kill", {"name": name})
+        return tpl_of(ctx, "log_entry_first_kill_none")
     if tag == "first_crown":
-        return f"首次钓获金冠 {name}" if name else "首次钓获金冠"
+        if name:
+            return tpl_of(ctx, "log_entry_first_crown", {"name": name})
+        return tpl_of(ctx, "log_entry_first_crown_none")
     if tag == "story_node":
-        return f"剧情节点：{name}" if name else "剧情节点推进"
+        if name:
+            return tpl_of(ctx, "log_entry_story_node", {"name": name})
+        return tpl_of(ctx, "log_entry_story_node_none")
     if tag == "hidden_find":
-        return f"首次发现隐藏要素『{name}』" if name else "首次发现隐藏要素"
+        if name:
+            return tpl_of(ctx, "log_entry_hidden_find", {"name": name})
+        return tpl_of(ctx, "log_entry_hidden_find_none")
     if tag == "milestone":
         pct = params.get("pct")
         if pct is not None:
-            return f"图鉴完成度达到 {pct}%"
-        return "图鉴里程碑达成"
+            return tpl_of(ctx, "log_entry_milestone", {"pct": pct})
+        return tpl_of(ctx, "log_entry_milestone_none")
     if tag == "codex_new":
-        return f"图鉴新增：{name}" if name else "图鉴新增"
+        if name:
+            return tpl_of(ctx, "log_entry_codex_new", {"name": name})
+        return tpl_of(ctx, "log_entry_codex_new_none")
     # 非六类（防御路径，正常不进冒险日志分组）
-    return str(entry.get("event_id") or entry.get("count_key") or "冒险记录")
+    fallback_id = entry.get("event_id") or entry.get("count_key")
+    if fallback_id:
+        return str(fallback_id)
+    return tpl_of(ctx, "log_entry_fallback")
 
 
-def _render_adventure_line(entry: Mapping[str, Any]) -> str:
-    """冒险日志条目行（对齐 3f L137 样例）：`[日志] {HH:MM} {天气} · {文本}` + 首见标记。"""
+def _render_adventure_line(entry: Mapping[str, Any], ctx: Mapping[str, Any]) -> str:
+    """冒险日志条目行（对齐 3f L137 样例）：`[日志] {HH:MM} {天气} · {文本}` + 首见标记。
+
+    模板配置化（2026-08-31）：行格式 = log_adventure_line、首见标记 = log_first_seen_mark。
+    """
     _, time = _split_ts(entry.get("ts"))
     weather = _entry_weather(entry)
-    line = f"[日志] {time} {weather} · {_entry_text(entry)}"
+    line = tpl_of(ctx, "log_adventure_line",
+                  {"time": time, "weather": weather, "text": _entry_text(entry, ctx)})
     if bool(entry.get("first_seen")):
-        line += "【首见】"
+        line += tpl_of(ctx, "log_first_seen_mark")
     return line
 
 
@@ -396,16 +413,18 @@ def render_adventure_page(ctx: Mapping[str, Any], page: int) -> str:
     """
     data = _adventure_data(ctx, page)
     if not data["total"]:
-        return _EMPTY_ADVENTURE
-    lines: List[str] = ["【冒险日志】"]
+        return tpl_of(ctx, "log_adventure_empty")
+    lines: List[str] = [tpl_of(ctx, "log_adventure_header")]
     for tag in data["order"]:
         group = data["entries"].get(tag) or []
         if not group:
             continue
-        lines.append(f"■ {EVENT_GROUP_NAMES.get(tag, tag)}")
+        lines.append(tpl_of(ctx, "log_group_header",
+                            {"name": EVENT_GROUP_NAMES.get(tag, tag)}))
         for e in group:
-            lines.append(_render_adventure_line(e))
-    lines.append(_cake_tail(data["page"], data["pages"], _ADV_TAIL_TIP, data["clamped"]))
+            lines.append(_render_adventure_line(e, ctx))
+    lines.append(_cake_tail(data["page"], data["pages"],
+                            tpl_of(ctx, "log_adv_tail_tip"), data["clamped"]))
     return "\n".join(lines)
 
 
@@ -455,7 +474,7 @@ def render_bio_page(ctx: Mapping[str, Any], page: int) -> str:
     """
     segments = _bio_segments(ctx)
     if not segments:
-        return _EMPTY_BIO
+        return tpl_of(ctx, "log_bio_empty")
     res = resolve_page(page, len(segments), 1)
     if res.invalid:
         raise ValueError(
@@ -467,10 +486,14 @@ def render_bio_page(ctx: Mapping[str, Any], page: int) -> str:
     weather = "、".join(
         f"{w}×{c}" for w, c in sorted(seg["weather_counts"].items())
     ) or _MISSING
-    lines: List[str] = [f"【传记】第 {res.page} 段 / 共 {len(segments)} 段"]
-    lines.append(f"■ {seg['day']} · {group_name}")
-    lines.append(f"[传记] {group_name} {seg['count']} 条 · {weather}")
-    lines.append(_cake_tail(res.page, res.total_pages, _BIO_TAIL_TIP, res.clamped))
+    lines: List[str] = [
+        tpl_of(ctx, "log_bio_header", {"page": res.page, "total": len(segments)})
+    ]
+    lines.append(tpl_of(ctx, "log_bio_day", {"day": seg["day"], "group": group_name}))
+    lines.append(tpl_of(ctx, "log_bio_stats",
+                        {"group": group_name, "count": seg["count"], "weather": weather}))
+    lines.append(_cake_tail(res.page, res.total_pages,
+                            tpl_of(ctx, "log_bio_tail_tip"), res.clamped))
     return "\n".join(lines)
 
 
@@ -524,8 +547,13 @@ def _sys_window(ctx: Mapping[str, Any], count: int) -> list:
     return list(reversed(window))[: max(0, int(count))]
 
 
-def _render_sys_line(record: Mapping[str, Any]) -> str:
-    """单条系统日志事件行（D-03 复用 gm_commands.render_log_line，惰性 import；兜底本地格式）。"""
+def _render_sys_line(record: Mapping[str, Any], ctx: Mapping[str, Any]) -> str:
+    """单条系统日志事件行（D-03 复用 gm_commands.render_log_line，惰性 import；兜底本地格式）。
+
+    模板配置化（2026-08-31）：本地兜底行格式 = log_sys_line
+    （`[{ts}] /{cmd}{params} {result} by {qq}`，params 含前导空格拼接）；
+    gm_commands.render_log_line 不可用/异常时走此兜底。
+    """
     try:
         from qbot_rpg.commands.gm_commands import render_log_line
 
@@ -538,10 +566,10 @@ def _render_sys_line(record: Mapping[str, Any]) -> str:
         params = str(record.get("params") or "").strip()
         result = str(record.get("result") or "?")
         qq = str(record.get("qq") or "?")
-        line = f"[{ts}] /{cmd}"
-        if params:
-            line += f" {params}"
-        return f"{line} {result} by {qq}"
+        params_disp = f" {params}" if params else ""
+        return tpl_of(ctx, "log_sys_line",
+                      {"ts": ts, "cmd": cmd, "params": params_disp,
+                       "result": result, "qq": qq})
 
 
 def render_system_log_page(ctx: Mapping[str, Any], page: int, count: Optional[int] = None) -> str:
@@ -555,7 +583,7 @@ def render_system_log_page(ctx: Mapping[str, Any], page: int, count: Optional[in
     show = int(count) if count is not None and int(count) > 0 else _sys_default_show(ctx)
     events = _sys_window(ctx, min(show, _sys_max_entries(ctx)))
     if not events:
-        return _EMPTY_SYS
+        return tpl_of(ctx, "log_sys_empty")
     per_page = _sys_page_size(ctx)
     res = resolve_page(page, len(events), per_page)
     if res.invalid:
@@ -565,10 +593,13 @@ def render_system_log_page(ctx: Mapping[str, Any], page: int, count: Optional[in
     assert res.page is not None
     start = (res.page - 1) * per_page
     slice_events = events[start:start + per_page]
-    lines: List[str] = [f"【系统日志】第 {res.page} 页 / 共 {res.total_pages} 页"]
+    lines: List[str] = [
+        tpl_of(ctx, "log_sys_header", {"page": res.page, "pages": res.total_pages})
+    ]
     for rec in slice_events:
-        lines.append(_render_sys_line(rec))
-    lines.append(_cake_tail(res.page, res.total_pages, _SYS_TAIL_TIP, res.clamped))
+        lines.append(_render_sys_line(rec, ctx))
+    lines.append(_cake_tail(res.page, res.total_pages,
+                            tpl_of(ctx, "log_sys_tail_tip"), res.clamped))
     return "\n".join(lines)
 
 
@@ -615,7 +646,7 @@ def cmd_log(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     first = str(args[0]) if args else ""
     if first in GM_VIEW_WORDS:
         if not bool(ctx.get("is_gm", False)):
-            return PERMISSION_DENIED
+            return tpl_of(ctx, "log_permission_denied")
         return _cmd_sys_log(parsed, ctx, args[1:])
     if bool(ctx.get("is_gm", False)):
         # 3f R-01：GM 执行 /日志 走系统日志视图

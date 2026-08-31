@@ -2,6 +2,9 @@
 
 承接 use_commands.py：注册门槛/战斗内拒绝/缺参/无物品/装备穿戴/消耗回血/不可使用。
 风格照 test_register_commands.py（make_ctx + parse_command + BANNED_EMOJI 扫描）。
+
+2026-08-31 模板配置化：文案断言改用 use_tpl 默认模板 key（不再依赖 use_commands 的
+TPL_* 常量）；新增内容包覆盖 + 白名单外占位符原样保留测试。
 """
 from __future__ import annotations
 
@@ -10,17 +13,15 @@ from typing import Any
 
 from qbot_rpg.commands.parsers import parse_command, ParsedCommand
 from qbot_rpg.commands.router import Router
-from qbot_rpg.commands.use_commands import (
-    TPL_BOUND,
-    TPL_CANNOT_USE,
-    TPL_IN_BATTLE,
-    TPL_NO_ARG,
-    TPL_NO_ITEM,
-    cmd_use,
-    register_use_commands,
-)
+from qbot_rpg.commands.use_commands import cmd_use, register_use_commands
+from qbot_rpg.core.templates.use_tpl import DEFAULT_TEMPLATES as USE_TPL
 
 BANNED_EMOJI = set("🔥🟢💥⚔️🛡️✨⭐🌟🎉🎊💎🏆❤️💖⚠️🚫📜🗡️🛒🧪⏰📅➡️🔹🔸▸")
+
+# 本模块全部 use_* 模板 key（文案唯一源 use_tpl.py；渲染走 tpl_of）
+USE_TPL_KEYS = (
+    "use_in_battle", "use_no_arg", "use_no_item", "use_cannot_use", "use_bound", "use_ok",
+)
 
 
 def _fake_item(item_id: str, name: str, slot: str = "") -> Any:
@@ -79,22 +80,22 @@ def test_use_not_registered_gate() -> None:
 
 
 def test_use_in_battle_rejected() -> None:
-    """战斗中 → TPL_IN_BATTLE。"""
+    """战斗中 → use_in_battle。"""
     ctx = make_ctx(battle_session={"monster_id": "x"})
-    assert cmd_use(parse("/使用 1"), ctx) == TPL_IN_BATTLE
+    assert cmd_use(parse("/使用 1"), ctx) == USE_TPL["use_in_battle"]
 
 
 def test_use_no_arg() -> None:
-    """缺参 → TPL_NO_ARG。"""
+    """缺参 → use_no_arg。"""
     ctx = make_ctx()
-    assert cmd_use(parse("/使用"), ctx) == TPL_NO_ARG
+    assert cmd_use(parse("/使用"), ctx) == USE_TPL["use_no_arg"]
 
 
 def test_use_no_item() -> None:
-    """序号越界/名称未命中 → TPL_NO_ITEM。"""
+    """序号越界/名称未命中 → use_no_item。"""
     ctx = make_ctx()
-    assert cmd_use(parse("/使用 99"), ctx) == TPL_NO_ITEM
-    assert cmd_use(parse("/使用 不存在的物品"), ctx) == TPL_NO_ITEM
+    assert cmd_use(parse("/使用 99"), ctx) == USE_TPL["use_no_item"]
+    assert cmd_use(parse("/使用 不存在的物品"), ctx) == USE_TPL["use_no_item"]
 
 
 def test_use_wear_equipment() -> None:
@@ -123,29 +124,29 @@ def test_use_consumable_heal_cap() -> None:
 
 
 def test_use_not_consumable() -> None:
-    """非装备非消耗（材料）→ TPL_CANNOT_USE。"""
+    """非装备非消耗（材料）→ use_cannot_use。"""
     ctx = make_ctx()
     ctx["equip_engine"] = SimpleNamespace(
         _sorted_inventory=lambda p: [_fake_item("quest_token", "任务信物")],
         equip_wear=lambda idx, ctx: {"ok": False, "message": "❌ 这件物品不能装备"},
     )
-    assert cmd_use(parse("/使用 1"), ctx) == TPL_CANNOT_USE
+    assert cmd_use(parse("/使用 1"), ctx) == USE_TPL["use_cannot_use"]
 
 
 def test_use_bound_item() -> None:
-    """绑定拒移（remove_item reason=bound）→ TPL_BOUND。"""
+    """绑定拒移（remove_item reason=bound）→ use_bound。"""
     ctx = make_ctx()
     ctx["inventory_engine"] = SimpleNamespace(
         remove_item=lambda p, item_id, count=1: {"ok": False, "reason": "bound"},
     )
-    assert cmd_use(parse("/使用 2"), ctx) == TPL_BOUND
+    assert cmd_use(parse("/使用 2"), ctx) == USE_TPL["use_bound"]
 
 
 def test_use_no_decorative_emoji() -> None:
     """模板零装饰 emoji。"""
-    for tpl in (TPL_IN_BATTLE, TPL_NO_ARG, TPL_NO_ITEM, TPL_CANNOT_USE, TPL_BOUND):
-        for ch in tpl:
-            assert ch not in BANNED_EMOJI, f"命中禁用装饰 emoji：{ch} in {tpl!r}"
+    for key in USE_TPL_KEYS:
+        for ch in USE_TPL[key]:
+            assert ch not in BANNED_EMOJI, f"命中禁用装饰 emoji：{ch} in {key!r}"
 
 
 def test_register_use_commands_routes() -> None:
@@ -158,3 +159,20 @@ def test_register_use_commands_routes() -> None:
     handler = spec.handler
     assert handler is not None
     assert handler(parse("/使用 1")) == "✅ 已装备：铁剑"
+
+
+def test_use_custom_templates_override() -> None:
+    """内容包覆盖：ctx.templates 注入自定义 use_ok → 渲染用自定义模板（含占位符）。"""
+    ctx = make_ctx()
+    ctx["templates"] = {"use_ok": "自定义✅使用{name}回血{heal_total}"}
+    out = cmd_use(parse("/使用 2"), ctx)
+    assert out == "自定义✅使用疗伤药回血50"
+    assert ctx["player"]["hp"] == 80  # 覆盖只影响文案，逻辑照常
+
+
+def test_use_template_unknown_placeholder_kept() -> None:
+    """白名单外占位符：templates 含未登记占位符 → 渲染原样保留不崩。"""
+    ctx = make_ctx()
+    ctx["templates"] = {"use_ok": "✅ 使用成功：{name}（生命 +{heal_total}）{hint}"}
+    out = cmd_use(parse("/使用 2"), ctx)
+    assert out == "✅ 使用成功：疗伤药（生命 +50）{hint}"

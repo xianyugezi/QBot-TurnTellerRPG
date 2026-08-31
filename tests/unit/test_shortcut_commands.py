@@ -19,11 +19,11 @@ from qbot_rpg.commands.shortcut_commands import (
     DEFAULT_SHORTCUT_MAX,
     SHORTCUT_LIST_CMD,
     SHORTCUT_UNBIND_CMD,
-    TPL_SHORTCUT_EMPTY,
     cmd_shortcut_list,
     cmd_shortcut_unbind,
     register_shortcut_commands,
 )
+from qbot_rpg.core.templates.shortcut_tpl import DEFAULT_TEMPLATES as SHORTCUT_TPL
 
 # 3d §4.2 装饰性 emoji 禁用清单（渲染输出扫描锚点）
 BANNED_EMOJI = set("🔥🟢💥⚔️🛡️✨⭐🌟🎉🎊💎🏆❤️💖⚠️🚫📜🗡️🛒🧪⏰📅➡️🔹🔸▸")
@@ -93,9 +93,9 @@ def test_tc_shc_02_list():
 
 
 def test_tc_shc_02_list_empty():
-    """TC-SHC-02：空表 → ❌ 还没有快捷绑定，试试 /快捷绑定 1 攻击。"""
+    """TC-SHC-02：空表 → ❌ 还没有快捷绑定，试试 /快捷绑定 1 攻击（shortcut_empty 模板）。"""
     ctx = make_ctx(shortcuts={})
-    assert cmd_shortcut_list(parse("/快捷列表"), ctx) == TPL_SHORTCUT_EMPTY
+    assert cmd_shortcut_list(parse("/快捷列表"), ctx) == SHORTCUT_TPL["shortcut_empty"]
 
 
 def test_shc_list_persist_in_ctx():
@@ -213,3 +213,33 @@ def test_regress_p2_4_shortcut_max_zero_unlimited():
     ctx = make_ctx(shortcut_max=0)
     out = cmd_shortcut_list(parse("/快捷列表"), ctx)
     assert "【快捷（2/不限）】" in out
+
+
+# ---------------------------------------------------------------------------
+# 模板配置化（2026-08-31 用户拍板：消息模板不写死代码，走 shortcut_tpl 分区）
+# ---------------------------------------------------------------------------
+
+def test_shortcut_custom_templates_override():
+    """覆盖：ctx[\"templates\"] 注入自定义模板 → 渲染用自定义（解绑成功/空表/列表行）。"""
+    ctx = make_ctx(templates={
+        "shortcut_unbind_ok": "✅ 已解绑自定义：{name}",
+        "shortcut_list_row": "▶ {name} ← {command}",
+    })
+    # 解绑成功 → 自定义模板
+    out = cmd_shortcut_unbind(parse("/快捷解绑 1"), ctx)
+    assert out == "✅ 已解绑自定义：1"
+    # 列表行 → 自定义模板
+    out2 = cmd_shortcut_list(parse("/快捷列表"), ctx)
+    assert "▶ 火球 ← 攻击3" in out2
+    # 空表 → 自定义模板
+    ctx2 = make_ctx(shortcuts={}, templates={"shortcut_empty": "暂无快捷，快去绑定吧"})
+    assert cmd_shortcut_list(parse("/快捷列表"), ctx2) == "暂无快捷，快去绑定吧"
+
+
+def test_shortcut_template_unknown_placeholder_kept():
+    """白名单外占位符：模板含未登记占位符 → 渲染原样保留（不替换、不崩）。"""
+    ctx = make_ctx(templates={
+        "shortcut_unbind_missing": "❌ 没有绑定『{name}』{hint}",
+    })
+    out = cmd_shortcut_unbind(parse("/快捷解绑 不存在"), ctx)
+    assert out == "❌ 没有绑定『不存在』{hint}"

@@ -469,3 +469,63 @@ def test_deterministic_same_input_same_output() -> None:
     assert cmd_log(_pc(BIO_SUBWORD), ctx) == cmd_log(_pc(BIO_SUBWORD), ctx)
     ctx_gm = _ctx(is_gm=True, audit_log=[_audit("2026-08-28T10:00:00", "重载", "pack_a")])
     assert cmd_log(_pc(), ctx_gm) == cmd_log(_pc(), ctx_gm)
+
+
+# ---------------------------------------------------------------------------
+# 2026-08-31 模板配置化：ctx["templates"] 自定义覆盖 + 占位符白名单
+# ---------------------------------------------------------------------------
+
+def test_log_custom_templates_override() -> None:
+    """模板配置化：ctx["templates"] 注入自定义 log_* → 渲染用自定义（含占位符替换）。"""
+    from qbot_rpg.core.templates import resolve_templates
+    ctx = _ctx(event_log=[_ev("first_kill", "2026-08-28", name="蚀月之狼")],
+               templates=resolve_templates({
+                   "log_adventure_header": "【自定义冒险】",
+                   "log_group_header": "★{name}",
+                   "log_entry_first_kill": "首杀:{name}",
+               }))
+    out = cmd_log(_pc(), ctx)
+    assert "【自定义冒险】" in out
+    assert "★首杀" in out
+    assert "首杀:蚀月之狼" in out
+
+
+def test_log_custom_template_unknown_placeholder_kept() -> None:
+    """白名单外占位符：templates 含未登记占位符 → 渲染原样保留不崩。"""
+    from qbot_rpg.core.templates import resolve_templates
+    ctx = _ctx(event_log=[_ev("milestone", "2026-08-28", pct=50)],
+               templates=resolve_templates({
+                   "log_entry_milestone": "完成度 {pct}% ・ 段数 {segments}",
+               }))
+    out = cmd_log(_pc(), ctx)
+    assert "完成度 50% ・ 段数 {segments}" in out
+
+
+def test_log_tpl_whitelist_registered() -> None:
+    """占位符白名单：log_tpl.PLACEHOLDER_WHITELIST 与模板占位符一一对应。"""
+    from qbot_rpg.core.templates.log_tpl import (
+        DEFAULT_TEMPLATES,
+        PLACEHOLDER_WHITELIST,
+    )
+    assert PLACEHOLDER_WHITELIST["log_adventure_line"] == {"time", "weather", "text"}
+    assert PLACEHOLDER_WHITELIST["log_group_header"] == {"name"}
+    assert PLACEHOLDER_WHITELIST["log_entry_milestone"] == {"pct"}
+    assert PLACEHOLDER_WHITELIST["log_bio_header"] == {"page", "total"}
+    assert PLACEHOLDER_WHITELIST["log_sys_header"] == {"page", "pages"}
+    # 无占位符模板：白名单空集
+    assert PLACEHOLDER_WHITELIST["log_adventure_header"] == set()
+    assert PLACEHOLDER_WHITELIST["log_permission_denied"] == set()
+    # 白名单登记齐全（每 key 都有登记；默认模板每 key 都有条目）
+    assert set(DEFAULT_TEMPLATES) == set(PLACEHOLDER_WHITELIST)
+
+
+def test_log_permission_denied_uses_template() -> None:
+    """权限拒绝文案走模板：ctx["templates"] 覆盖 log_permission_denied → 自定义拒绝文案。"""
+    from qbot_rpg.core.templates import resolve_templates
+    ctx = _ctx(audit_log=[_audit("2026-08-28T12:00:00", "封禁", "20002")],
+               templates=resolve_templates({
+                   "log_permission_denied": "❌ 需要 GM 权限才能查看。",
+               }))
+    out = cmd_log(_pc("系统"), ctx)
+    assert out == "❌ 需要 GM 权限才能查看。"
+    assert "封禁" not in out             # 不泄露系统日志内容

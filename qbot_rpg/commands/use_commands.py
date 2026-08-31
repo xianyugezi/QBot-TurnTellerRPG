@@ -15,20 +15,13 @@ from typing import Any, Callable, MutableMapping, Optional
 
 from .basic_commands import TPL_REGISTER_GATE, _equip_engine
 from .router import CommandSpec
+from qbot_rpg.core.templates import tpl_of  # 消息模板配置化（2026-08-31 用户拍板）
 from qbot_rpg.data.player import Player
 
 USE_CMD = "使用"
 
-# 模板（D-04 文案唯一源本模块；仅 ✅/❌ +「」排版符）
-TPL_IN_BATTLE = "❌ 战斗中不能使用物品"
-TPL_NO_ARG = "❌ /使用：需要物品序号或名称（/使用 1 或 /使用 疗伤药）"
-TPL_NO_ITEM = "❌ 背包里没有这个物品"
-TPL_CANNOT_USE = "❌ 这个物品不能直接使用"
-TPL_BOUND = "❌ 这个物品已绑定，无法使用"
-
 __all__ = [
     "USE_CMD",
-    "TPL_IN_BATTLE", "TPL_NO_ARG", "TPL_NO_ITEM", "TPL_CANNOT_USE", "TPL_BOUND",
     "cmd_use", "register_use_commands",
 ]
 
@@ -112,7 +105,8 @@ def _use_consumable(
 ) -> str:
     """消耗类使用：heal 效果 → 扣减 + 回血（先 remove_item 成功再回血）。
 
-    入参 ctx/player/inst/item_def。出参 str——成功/失败模板。
+    入参 ctx/player/inst/item_def。出参 str——成功/失败模板（use_cannot_use/use_bound/
+    use_no_item/use_ok，tpl_of 渲染）。
     核心逻辑: effects 表聚合 heal power → InventoryEngine.remove_item(1)（失败透传
     not_enough/bound）→ calc_all_final_attributes 取 max_hp → player["hp"]=min 回血。
     """
@@ -126,14 +120,14 @@ def _use_consumable(
             except (TypeError, ValueError):  # noqa: PERF203 —— 单条坏效果跳过
                 continue
     if heal_total <= 0:
-        return TPL_CANNOT_USE
+        return tpl_of(ctx, "use_cannot_use")
     inv = _inventory_engine(ctx)
     res = inv.remove_item(player, str(getattr(inst, "item_id", "") or ""), 1)
     if not res.get("ok"):
         reason = str(res.get("reason") or "")
         if reason == "bound":
-            return TPL_BOUND
-        return TPL_NO_ITEM
+            return tpl_of(ctx, "use_bound")
+        return tpl_of(ctx, "use_no_item")
     attrs = player.get("attributes")
     max_hp = 100
     if attrs is not None:
@@ -145,45 +139,48 @@ def _use_consumable(
             max_hp = 100
     cur = int(player.get("hp") or 0)
     player["hp"] = min(max_hp, cur + heal_total)
-    return f"✅ 使用成功：{getattr(inst, 'name', '')}（生命 +{heal_total}）"
+    return tpl_of(ctx, "use_ok", {
+        "name": str(getattr(inst, "name", "") or ""),
+        "heal_total": heal_total,
+    })
 
 
 def cmd_use(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     """/使用 指令壳：序号/名称 → 装备穿戴或消耗使用（统一承载）。
 
     入参 parsed: ParsedCommand（args 消费）；ctx: 玩家上下文。出参 str——回复正文。
-    核心逻辑: 未注册 → TPL_REGISTER_GATE；战斗中 → TPL_IN_BATTLE；缺参 →
-    TPL_NO_ARG；解析目标（_resolve_row）→ 装备类（ItemInstance.slot 或 item_def.slot）
+    核心逻辑: 未注册 → TPL_REGISTER_GATE；战斗中 → use_in_battle；缺参 → use_no_arg；
+    解析目标（_resolve_row）→ 装备类（ItemInstance.slot 或 item_def.slot）
     → _equip_engine.equip_wear（序号）→ 消耗类（usable/type=consumable）→ _use_consumable
-    → 其他 → TPL_CANNOT_USE。
+    → 其他 → use_cannot_use（均 tpl_of 渲染，内容包可覆盖）。
     """
     if not bool(ctx.get("registered")):
         return TPL_REGISTER_GATE
     if ctx.get("battle_session"):
-        return TPL_IN_BATTLE
+        return tpl_of(ctx, "use_in_battle")
     player = _resolve_player(ctx)  # 兼容 Player dataclass + dict（写回 ctx）
     if player is None:
         return TPL_REGISTER_GATE
     args = list(getattr(parsed, "args", None) or [])
     if not args:
-        return TPL_NO_ARG
+        return tpl_of(ctx, "use_no_arg")
     target = str(args[0])
     inst, index = _resolve_row(player, target, ctx)
     if inst is None:
-        return TPL_NO_ITEM
+        return tpl_of(ctx, "use_no_item")
     item_id = str(getattr(inst, "item_id", "") or "")
     item_def = _def_dict((ctx.get("items") or {}).get(item_id))
     slot = getattr(inst, "slot", None) or item_def.get("slot")
     if slot:
         if index is None:
-            return TPL_NO_ITEM
+            return tpl_of(ctx, "use_no_item")
         adapter = _equip_engine(ctx)
         res = adapter.equip_wear(index, ctx)
-        return str(res.get("message") or TPL_CANNOT_USE)
+        return str(res.get("message") or tpl_of(ctx, "use_cannot_use"))
     usable = bool(item_def.get("usable"))
     if usable or str(item_def.get("type") or "") == "consumable":
         return _use_consumable(ctx, player, inst, item_def)
-    return TPL_CANNOT_USE
+    return tpl_of(ctx, "use_cannot_use")
 
 
 def register_use_commands(

@@ -24,6 +24,7 @@ from __future__ import annotations
 from typing import Any, Callable, Mapping, MutableMapping, Optional
 
 from qbot_rpg.commands.router import CommandSpec
+from qbot_rpg.core.templates import tpl_of  # 消息模板配置化（2026-08-31 用户拍板）
 
 __all__ = ["CODEX_CMD", "cmd_codex", "register_codex_commands"]
 
@@ -41,10 +42,12 @@ _CAT_ALIASES: Mapping[str, str] = {
 _PAGE_SIZE = 5
 
 
-def _render_progress(label: str, p: Mapping[str, Any]) -> str:
-    """分册进度行：{label} 完成度 {pct}%（已见/总数）。"""
+def _render_progress(label: str, p: Mapping[str, Any], ctx: Mapping[str, Any]) -> str:
+    """分册进度行：{label} 完成度 {pct}%（已见/总数）。模板配置化 → codex_progress_line。"""
     pct = round(float(p.get("pct", 0.0)))
-    return f"{label}：{pct}%（{p.get('seen', 0)}/{p.get('total', 0)}）"
+    return tpl_of(ctx, "codex_progress_line",
+                  {"label": label, "pct": pct,
+                   "seen": p.get("seen", 0), "total": p.get("total", 0)})
 
 
 def _gate(ctx: Mapping[str, Any]) -> Optional[str]:
@@ -60,44 +63,57 @@ def _gate(ctx: Mapping[str, Any]) -> Optional[str]:
 
 
 def _overview(ctx: MutableMapping[str, Any]) -> str:
-    """总览：三分册各自完成度 + 总完成度（未收集条目仅计数不展示名称）。"""
+    """总览：三分册各自完成度 + 总完成度（未收集条目仅计数不展示名称）。
+
+    模板配置化（2026-08-31）：页头/分册行/总行/提示行全部来自 codex_tpl（codex_overview_* /
+    codex_progress_line / codex_total_progress），渲染处 tpl_of。
+    """
     from qbot_rpg.core.codex import CATEGORY_ORDER, _CATEGORY_LABELS, codex_progress
-    lines = ["【图鉴总览】"]
+    lines = [tpl_of(ctx, "codex_overview_header")]
     for cat in CATEGORY_ORDER:
         p = codex_progress(ctx, cat)
-        lines.append(_render_progress(_CATEGORY_LABELS.get(cat, cat), p))
+        lines.append(_render_progress(_CATEGORY_LABELS.get(cat, cat), p, ctx))
     gp = codex_progress(ctx)
-    lines.append(f"总完成度：{round(float(gp.get('pct', 0.0)))}%"
-                 f"（{gp.get('seen', 0)}/{gp.get('total', 0)}）")
-    lines.append("提示：分册页 /图鉴 怪物 2（每页 5 条）")
+    lines.append(tpl_of(ctx, "codex_total_progress", {
+        "pct": round(float(gp.get("pct", 0.0))),
+        "seen": gp.get("seen", 0), "total": gp.get("total", 0)}))
+    lines.append(tpl_of(ctx, "codex_overview_hint"))
     return "\n".join(lines)
 
 
 def _category_page(
     ctx: MutableMapping[str, Any], cat: str, page: int
 ) -> str:
-    """分册分页展示（5 条/页，未收集「???」不泄露名称）。"""
+    """分册分页展示（5 条/页，未收集「???」不泄露名称）。
+
+    模板配置化（2026-08-31）：分册头/空态/条目行/已击杀/传闻/???/尾段 Tip 全部来自 codex_tpl
+    （codex_category_* / codex_entry_line / codex_killed_mark / codex_rumor_mark /
+    codex_unknown_name / codex_tail_tip），渲染处 tpl_of。
+    """
     from qbot_rpg.core.codex import codex_view
     from qbot_rpg.core.message_format.list_render import render_cake_tail
     view = codex_view(ctx, cat, page)
     if not view.get("ok"):
-        return "❌ 未知图鉴分册。"
+        return tpl_of(ctx, "codex_unknown_category")
     entries = view.get("entries", [])
-    lines = [f"【{view.get('label', cat)}】"]
+    lines = [tpl_of(ctx, "codex_category_header", {"label": view.get("label", cat)})]
     if not entries:
-        lines.append("（还没有收集记录）")
+        lines.append(tpl_of(ctx, "codex_category_empty"))
     else:
         for e in entries:
             mark = "✅" if e.get("seen") else "　"
-            kill = "（已击杀）" if e.get("killed") else ""
-            rumor = "（传闻）" if e.get("lore_unlocked") else ""
-            lines.append(f"{mark} {e.get('name', '???')}{kill}{rumor}")
+            kill = tpl_of(ctx, "codex_killed_mark") if e.get("killed") else ""
+            rumor = tpl_of(ctx, "codex_rumor_mark") if e.get("lore_unlocked") else ""
+            name = str(e.get("name") or tpl_of(ctx, "codex_unknown_name"))
+            lines.append(tpl_of(ctx, "codex_entry_line",
+                                {"mark": mark, "name": name, "kill": kill,
+                                 "rumor": rumor}))
     total = int(view.get("total", 0))
     pages = int(view.get("pages", 1))
     cur = int(view.get("page", 1))
     lines.append(render_cake_tail(
         cur, pages, category_word=cat,
-        tip=f"共 {total} 条记录"))
+        tip=tpl_of(ctx, "codex_tail_tip", {"total": total})))
     return "\n".join(lines)
 
 

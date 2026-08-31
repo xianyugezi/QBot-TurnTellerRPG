@@ -123,3 +123,57 @@ def test_codex_no_emoji() -> None:
         emoji = [e for e in re.findall(r"[\U0001F300-\U0001FAFF\u2600-\u27BF]", reply)
                  if e not in ("✅", "❌")]  # 功能性标记豁免
         assert not emoji, f"{raw} 渲染含 emoji: {emoji}"
+
+
+# ---------------------------------------------------------------------------
+# 2026-08-31 模板配置化：ctx["templates"] 自定义覆盖 + 占位符白名单
+# ---------------------------------------------------------------------------
+
+def test_codex_custom_templates_override() -> None:
+    """模板配置化：ctx["templates"] 注入自定义 codex_* → 渲染用自定义（含占位符替换）。"""
+    from qbot_rpg.core.templates import resolve_templates
+    ctx = _ctx()
+    mark_seen(ctx, "monster", "rock_weasel", "岩鼬")
+    ctx["templates"] = resolve_templates({
+        "codex_overview_header": "【自定义图鉴总览】",
+        "codex_category_header": "【册·{label}】",
+        "codex_entry_line": "{mark}|{name}{kill}",
+        "codex_killed_mark": "[已击杀]",
+        "codex_tail_tip": "共 {total} 项",
+    })
+    reply = cmd_codex(_parsed("/图鉴 怪物"), ctx)
+    assert "【册·怪物图鉴】" in reply
+    assert "|岩鼬" in reply
+    assert "共 2 项" in reply
+    overview = cmd_codex(_parsed("/图鉴"), ctx)
+    assert "【自定义图鉴总览】" in overview
+
+
+def test_codex_custom_template_unknown_placeholder_kept() -> None:
+    """白名单外占位符：templates 含未登记占位符 → 渲染原样保留不崩。"""
+    from qbot_rpg.core.templates import resolve_templates
+    ctx = _ctx()
+    ctx["templates"] = resolve_templates({
+        "codex_progress_line": "{label}：{pct}%（{seen}/{total}）{bonus}",
+        "codex_overview_hint": "提示：/图鉴 怪物 2",
+    })
+    reply = cmd_codex(_parsed("/图鉴"), ctx)
+    assert "怪物图鉴：0%（0/2）{bonus}" in reply
+
+
+def test_codex_tpl_whitelist_registered() -> None:
+    """占位符白名单：codex_tpl.PLACEHOLDER_WHITELIST 与模板占位符一一对应。"""
+    from qbot_rpg.core.templates.codex_tpl import (
+        DEFAULT_TEMPLATES,
+        PLACEHOLDER_WHITELIST,
+    )
+    assert PLACEHOLDER_WHITELIST["codex_progress_line"] == {"label", "pct", "seen", "total"}
+    assert PLACEHOLDER_WHITELIST["codex_total_progress"] == {"pct", "seen", "total"}
+    assert PLACEHOLDER_WHITELIST["codex_category_header"] == {"label"}
+    assert PLACEHOLDER_WHITELIST["codex_entry_line"] == {"mark", "name", "kill", "rumor"}
+    assert PLACEHOLDER_WHITELIST["codex_tail_tip"] == {"total"}
+    # 无占位符模板：白名单空集
+    assert PLACEHOLDER_WHITELIST["codex_overview_header"] == set()
+    assert PLACEHOLDER_WHITELIST["codex_unknown_category"] == set()
+    # 白名单登记齐全（每 key 都有登记；默认模板每 key 都有条目）
+    assert set(DEFAULT_TEMPLATES) == set(PLACEHOLDER_WHITELIST)

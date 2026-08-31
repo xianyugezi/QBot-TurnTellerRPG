@@ -46,6 +46,7 @@ from qbot_rpg.core.message_format.list_render import (
     render_cake_tail,
     resolve_page,
 )
+from qbot_rpg.core.templates import tpl_of  # 消息模板配置化（2026-08-31 用户拍板）
 
 # 同包兄弟模块：相对导入（G0 架构门禁不产生 `qbot_rpg.commands` 前缀反向依赖边；
 # 同层兄弟引用架构合规，与 sender.py 同口径）。
@@ -58,8 +59,6 @@ __all__ = [
     "SHORTCUT_UNBIND_CMD",
     "SHORTCUT_LIST_CMD",
     "DEFAULT_SHORTCUT_MAX",
-    # 文案常量
-    "TPL_SHORTCUT_EMPTY",
     # 指令处理器（纯函数：parsed + ctx → 回复正文）
     "cmd_shortcut_unbind",
     "cmd_shortcut_list",
@@ -76,12 +75,6 @@ SHORTCUT_LIST_CMD = "快捷列表"
 
 # 快捷上限（RUL-26 / 规范 L172：默认 20 条，settings 可配 0=不限；列表头部分母）
 DEFAULT_SHORTCUT_MAX = 20
-
-# 空表引导文案（SHC-02 / TPL-4F-11）
-TPL_SHORTCUT_EMPTY = "❌ 还没有快捷绑定，试试 /快捷绑定 1 攻击"
-
-# 列表尾段 Tip（工程补白 3；发送'...'即可... 由 tip 自行拼装）
-_LIST_TAIL_TIP = "发送'快捷绑定 名字 指令'即可绑定快捷"
 
 
 # ---------------------------------------------------------------------------
@@ -157,9 +150,9 @@ def cmd_shortcut_unbind(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     name = str(args[0])
     shortcuts = _shortcuts(ctx)
     if name not in shortcuts:
-        return f"❌ 没有绑定『{name}』"
+        return tpl_of(ctx, "shortcut_unbind_missing", {"name": name})
     del shortcuts[name]
-    return f"✅ 已解绑『{name}』"
+    return tpl_of(ctx, "shortcut_unbind_ok", {"name": name})
 
 
 def cmd_shortcut_list(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
@@ -190,7 +183,7 @@ def cmd_shortcut_list(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 
     shortcuts = _shortcuts(ctx)
     if not shortcuts:
-        return TPL_SHORTCUT_EMPTY
+        return tpl_of(ctx, "shortcut_empty", {})
 
     items = [(str(k), str(v)) for k, v in shortcuts.items()]
     res = resolve_page(page, len(items), DEFAULT_PAGE_SIZE)
@@ -202,10 +195,13 @@ def cmd_shortcut_list(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 
     cap = _shortcut_max(ctx)
     cap_disp = "不限" if cap is None else str(cap)
-    lines: List[str] = [f"【快捷（{len(items)}/{cap_disp}）】"]
+    lines: List[str] = [tpl_of(ctx, "shortcut_list_header",
+                               {"count": len(items), "cap": cap_disp})]
     for name, cmd in slice_items:
-        lines.append(f"{name} → {cmd}")
-    tail = render_cake_tail(res.page, res.total_pages, tip=_LIST_TAIL_TIP)
+        lines.append(tpl_of(ctx, "shortcut_list_row", {"name": name, "command": cmd}))
+    tail = render_cake_tail(res.page, res.total_pages,
+                            tip=tpl_of(ctx, "shortcut_list_tail_tip", {}),
+                            templates=ctx.get("templates") if isinstance(ctx, Mapping) else None)
     if res.clamped:
         tail = tail.replace("\n", f"\n{LAST_PAGE_HINT}\n", 1)
     lines.append(tail)

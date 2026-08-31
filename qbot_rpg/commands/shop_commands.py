@@ -253,16 +253,18 @@ def _paginate(items: list, page: object,
 
 
 def _browse_header(shop: Mapping[str, Any]) -> str:
-    """商品列表头：`{icon}{name} {类型徽标} {desc}`（表头不计入 5 条上限，3d §2.1）。"""
+    """商品列表头（2026-08-31 用户拍板：介绍换行——第一行 `{icon}{name} {类型徽标}`，
+    介绍单独另起一行；表头不计入 5 条上限，3d §2.1）。"""
     parts: List[str] = []
     name = f"{strip_icon_emoji(shop.get('icon', ''))}{shop.get('name', '')}"
     parts.append(name or "商店")
     t = shop.get("type", "normal")
     if t in TYPE_BADGES:
         parts.append(TYPE_BADGES[t])
+    line1 = " ".join(parts)
     if shop.get("desc"):
-        parts.append(str(shop["desc"]))
-    return " ".join(parts)
+        return f"{line1}\n{shop['desc']}"
+    return line1
 
 
 def _browse_row_text(row: Mapping[str, Any], ctx: Mapping[str, Any]) -> str:

@@ -480,3 +480,67 @@ def test_no_decorative_emoji():
             assert ch not in banned, f"命中禁用装饰 emoji：{ch} in {text!r}"
             assert ch in ("✅", "❌") or not (0x1F000 <= ord(ch) <= 0x1FAFF), \
                 f"命中未登记 emoji：{ch} in {text!r}"
+
+
+# ---------------------------------------------------------------------------
+# 2026-08-31 模板配置化：ctx["templates"] 自定义覆盖 + 占位符白名单
+# ---------------------------------------------------------------------------
+
+def test_quest_custom_templates_override():
+    """覆盖测试：ctx["templates"] 注入自定义 quest_* → 任务板/信息/接取渲染用自定义模板。"""
+    from qbot_rpg.core.templates import resolve_templates
+    ctx = make_ctx(quest_active={"collect_iron": {"name": "收集铁矿"}})
+    ctx["templates"] = resolve_templates({
+        "quest_board_section_header": "【{title}】",
+        "quest_board_line": "{index}. {name}",
+        "quest_info_header": "✅ 任务进度：{name}",
+        "quest_info_met": "✅ 可交付（/任务 交付 {seq}）",
+        "quest_accept_failed": "❌ 接取不了",
+        "quest_no_quest": "❌ 没这个任务",
+    })
+    # 任务板段头覆盖生效（自定义格式）
+    out = cmd_quest(parse("/任务"), ctx)
+    assert "【主线（常驻）】" in out
+    # 信息正文覆盖生效
+    info = cmd_quest(parse("/任务 信息 3"), ctx)
+    assert "✅ 可交付（/任务 交付 3）" in info
+    # 越界序号 → 自定义 quest_no_quest
+    assert cmd_quest(parse("/任务 接取 99"), ctx) == "❌ 没这个任务"
+
+
+def test_quest_tpl_whitelist_registered():
+    """白名单测试：quest_tpl.PLACEHOLDER_WHITELIST 与模板占位符一一对应 + 登记齐全。"""
+    from qbot_rpg.core.templates.quest_tpl import (
+        DEFAULT_TEMPLATES,
+        PLACEHOLDER_WHITELIST,
+    )
+    assert PLACEHOLDER_WHITELIST["quest_board_section_header"] == {"title"}
+    assert PLACEHOLDER_WHITELIST["quest_board_line"] == {"index", "name"}
+    assert PLACEHOLDER_WHITELIST["quest_board_main_prefix"] == {"name"}
+    assert PLACEHOLDER_WHITELIST["quest_board_marked_suffix"] == {"name"}
+    assert PLACEHOLDER_WHITELIST["quest_board_progress"] == {"cur", "target"}
+    assert PLACEHOLDER_WHITELIST["quest_progress_base"] == {"var", "op", "target"}
+    assert PLACEHOLDER_WHITELIST["quest_progress_base_no_target"] == {"var", "op"}
+    assert PLACEHOLDER_WHITELIST["quest_progress_param"] == {"param"}
+    assert PLACEHOLDER_WHITELIST["quest_progress_current"] == {"current"}
+    assert PLACEHOLDER_WHITELIST["quest_info_header"] == {"name"}
+    assert PLACEHOLDER_WHITELIST["quest_info_line"] == {"text", "mark"}
+    assert PLACEHOLDER_WHITELIST["quest_info_met"] == {"seq"}
+    assert PLACEHOLDER_WHITELIST["quest_deliver_skipped"] == {"reason"}
+    # 无占位符模板：白名单空集
+    for key in ("quest_no_board", "quest_no_quest", "quest_empty_board",
+                "quest_info_not_met", "quest_accept_failed", "quest_deliver_failed",
+                "quest_deliver_skipped_plain", "quest_abandon_failed"):
+        assert PLACEHOLDER_WHITELIST[key] == set(), key
+    # 白名单登记齐全（每 key 都有登记；默认模板每 key 都有条目）
+    assert set(DEFAULT_TEMPLATES) == set(PLACEHOLDER_WHITELIST)
+    # 模板占位符 ⊆ 白名单（无漏登占位符）
+    for key, tpl in DEFAULT_TEMPLATES.items():
+        found = {name for name in _scan_placeholders(tpl)}
+        assert found <= PLACEHOLDER_WHITELIST[key], f"{key} 白名单缺 {found - PLACEHOLDER_WHITELIST[key]}"
+
+
+def _scan_placeholders(tpl: str) -> set:
+    """扫描模板字符串里的 {name} 占位符名。"""
+    import re
+    return set(re.findall(r"\{([a-zA-Z0-9_]+)\}", tpl))

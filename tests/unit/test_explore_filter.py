@@ -306,8 +306,80 @@ def test_enter_move_persists_location_to_ps():
 
 
 def test_enter_number_persists_location_to_ps():
-    """P1-5（批1 进入N 世界地图序号）：数字传送同样写回 persistent_state["location"]。"""
+    """/进入 2（批1 世界地图序号）：数字传送同样写回 persistent_state["location"]。"""
     ctx, player, ps = _prod_like_ctx()
     out = cmd_enter(parse("/进入 2"), ctx)
     assert "林间边缘" in out
     assert ps["location"] == "forest_edge"
+
+
+# ---------------------------------------------------------------------------
+# 模板配置化（2026-08-31 用户拍板：消息模板不写死代码 → explore_tpl 分区 + tpl_of）
+# ---------------------------------------------------------------------------
+
+def test_explore_template_custom_override():
+    """覆盖测试：ctx["templates"]（内容包覆盖，resolve_templates 合并）→ 输出用自定义模板。
+
+    未覆盖 key 仍走默认模板（explore_monster_line / explore_channel_row），零破坏。
+    """
+    from qbot_rpg.core.templates import resolve_templates
+
+    ctx = _enter_ctx()
+    ctx["templates"] = resolve_templates({
+        "explore_enter_ok": "✅ 抵达「{name}」",
+        "explore_map_desc": "地图简介：{desc}",
+        "explore_tip": "Tip:发送'位置'看当前位置",
+    })
+    out = cmd_enter(parse("/进入 上"), ctx)
+    assert out.startswith("✅ 抵达「林间边缘」")
+    assert "地图简介：树影幢幢的林缘" in out
+    assert "Tip:发送'位置'看当前位置" in out
+    # 未覆盖 key 用默认 → 活动怪物行 / 通道行 / 怪物名映射不受影响
+    assert "活动怪物：1.岩皮鼬×2 2.石甲蜥×1" in out
+    assert "下：起始村落" in out
+    assert "右：熔岩坑道" in out
+    assert "✅ 你来到了「林间边缘」" not in out
+
+
+def test_explore_template_rest_custom_override():
+    """/休息 覆盖测试：explore_rest_ok / explore_rest_cooldown 自定义 → 输出用自定义。"""
+    from qbot_rpg.core.templates import resolve_templates
+
+    ctx = make_ctx(
+        player={"map_id": "a_zone", "name": "阿伟", "hp": 30, "mp": 20, "max_hp": 100, "max_mp": 50},
+        dungeon_session={"zone": "a_zone", "safe_zone": True, "current_map": "a_zone",
+                         "dungeon_def": {"maps": ["a_zone"]}},
+        rest_cfg={"restore_pct": 0.2},
+        templates=resolve_templates({
+            "explore_rest_ok": "✅ 休整完毕：HP+{hp} MP+{mp}",
+            "explore_rest_cooldown": "（CD-{cr}）",
+        }),
+    )
+    out = cmd_rest(parse("/休息"), ctx)
+    assert out.startswith("✅ 休整完毕：")
+    assert "CD-" in out
+    assert "点 HP" not in out and "冷却缩减" not in out
+
+
+def test_explore_template_unknown_placeholder_preserved():
+    """白名单外占位符（未登记/缺键）→ 渲染原样保留不崩（缺键保留原文）。"""
+    from qbot_rpg.core.templates import resolve_templates
+
+    ctx = _enter_ctx()
+    ctx["templates"] = resolve_templates({
+        "explore_enter_ok": "✅ 你来到了「{name}」{unknown_marker}",
+    })
+    out = cmd_enter(parse("/进入 上"), ctx)
+    # {unknown_marker} 不在渲染数据（且非白名单）→ 原样保留，不抛异常
+    assert out.startswith("✅ 你来到了「林间边缘」{unknown_marker}")
+
+
+def test_explore_register_gate_templated():
+    """RUL-08 门槛走 explore_register_gate 模板：内容包可覆盖门槛文案。"""
+    from qbot_rpg.core.templates import resolve_templates
+
+    ctx = make_ctx(registered=False, templates=resolve_templates({
+        "explore_register_gate": "❌ 尚未创建角色，请先 /注册",
+    }))
+    out = cmd_enter(parse("/进入 上"), ctx)
+    assert out == "❌ 尚未创建角色，请先 /注册"

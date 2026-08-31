@@ -64,6 +64,7 @@ from typing import Any, Callable, List, Mapping, MutableMapping, Optional
 
 from qbot_rpg.commands.router import CommandSpec
 from qbot_rpg.commands.sender import format_tpl12
+from qbot_rpg.core.templates import tpl_of  # 消息模板配置化（2026-08-31 用户拍板）
 
 __all__ = [
     "INVESTIGATE_CMD",
@@ -100,33 +101,33 @@ INVESTIGATE_QUOTA_DEFAULT_DAILY = 3
 # one_shot 去重落点（对齐兄弟路 core/investigate.py REVEALED_KEY：列表）
 INVESTIGATE_REVEALED_PS_KEY = "investigate_revealed"
 
-# RUL-08 注册门槛（对齐 explore_commands / basic_commands）
-TPL_REGISTER_GATE = "❌ 请先 /注册 创建角色（/注册 名字 职业）"
+# RUL-08 注册门槛（对齐 explore_commands / basic_commands；文本 investigate_tpl 分区，渲染 tpl_of）
+_TPL_REGISTER_GATE_KEY = "investigate_register_gate"
 
-# 无当前位置调查兜底（R-07 无 map_def 场景）
-_TPL_NO_MAP = "❌ 无法确定当前位置，无法调查。"
+# 无当前位置调查兜底（R-07 无 map_def 场景；文本 investigate_tpl 分区，渲染 tpl_of）
+_TPL_NO_MAP_KEY = "investigate_no_map"
 
-# 泛化环境文本池（R-22 / R-07 零暗示：绝无「此处有隐藏」类措辞，工程补白 4）
-_AMBIENT_POOL: tuple = (
-    "四下寂静，只有风声掠过旷野。",
-    "你仔细环顾四周，一切如常。",
-    "眼前景象与平日无异，只有惯常的声响。",
-    "雾霭缓缓流动，林间传来零星的鸟鸣。",
-    "风穿过林间，带起一阵沙沙声，别无他物。",
+# 泛化环境文本池 key 序（R-22 / R-07 零暗示：绝无「此处有隐藏」类措辞，工程补白 4）
+_AMBIENT_POOL_KEYS: tuple = (
+    "investigate_ambient_1",
+    "investigate_ambient_2",
+    "investigate_ambient_3",
+    "investigate_ambient_4",
+    "investigate_ambient_5",
 )
 
-# 去重简短确认（R-11 / TC-15：已 one_shot 只回简短确认，无正文无卡片）
-_EGGSHELL_DONE_TEXT = "这里你已经仔细查看过了。"
-_HUNT_DONE_TEXT = "这一带你已经确认过了，没有新的发现。"
-_HIDDEN_MAP_DONE_TEXT = "这条路径你已经知晓，无需再探。"
+# 去重简短确认 key（R-11 / TC-15：已 one_shot 只回简短确认，无正文无卡片）
+_EGGSHELL_DONE_KEY = "investigate_eggshell_done"
+_HUNT_DONE_KEY = "investigate_hunt_done"
+_HIDDEN_MAP_DONE_KEY = "investigate_hidden_map_done"
 
-# 蹲点默认演出/信号文本（R-09 / 3f L101-106；信号默认文本 BCH-07 更新——BOSS 战接线
+# 蹲点默认演出/信号 key（R-09 / 3f L101-106；信号默认文本 BCH-07 更新——BOSS 战接线
 # 已交付，移除「接线归后续批次」占位；hunt 实际发起见 launch_hunt_battle 工程补白 7）
-_DEFAULT_HUNT_INTRO = "你屏息凝神，远处传来低沉的狼嗥，与平时的风声不同……"
-_DEFAULT_HUNT_SIGNAL = "巨大的黑影在雾气中若隐若现——战斗即将开始！"
+_DEFAULT_HUNT_INTRO_KEY = "investigate_hunt_intro"
+_DEFAULT_HUNT_SIGNAL_KEY = "investigate_hunt_signal"
 
-# 隐藏地图入口揭示默认介绍（F-07 无 intro/desc 时兜底）
-_DEFAULT_HIDDEN_MAP_TEXT = "你拨开藤蔓，一条从未见过的路径显现在眼前。"
+# 隐藏地图入口揭示默认介绍 key（F-07 无 intro/desc 时兜底）
+_DEFAULT_HIDDEN_MAP_TEXT_KEY = "investigate_hidden_map_text"
 
 
 # ---------------------------------------------------------------------------
@@ -143,7 +144,7 @@ def _fragment(parsed: Any) -> str:
 def _gate(ctx: Mapping[str, Any]) -> Optional[str]:
     """RUL-08 注册门槛：registered is False → 拦截文案（缺省视为已注册，对齐 basic）。"""
     if ctx.get("registered", True) is False:
-        return TPL_REGISTER_GATE
+        return tpl_of(ctx, _TPL_REGISTER_GATE_KEY)
     return None
 
 
@@ -165,25 +166,28 @@ def _map_raw(map_def: Any) -> Mapping[str, Any]:
 def _env_header(ctx: Mapping[str, Any]) -> str:
     """环境快照头（3f R-05 展示口径）：`（{季节}·{时段}·{天气}）`，缺失 → "--"。
 
-    值透传 ctx season/period/weather（对齐 event_bus._snapshot_of），不做语言映射。
+    值透传 ctx season/period/weather（对齐 event_bus._snapshot_of），不做语言映射；
+    文本 investigate_tpl 分区（investigate_env_header），渲染 tpl_of。
     """
     s = str(ctx.get("season") or "--")
     p = str(ctx.get("period") or "--")
     w = str(ctx.get("weather") or "--")
-    return f"（{s}·{p}·{w}）"
+    return tpl_of(ctx, "investigate_env_header", {"season": s, "period": p, "weather": w})
 
 
 def _ambient_text(ctx: Mapping[str, Any]) -> str:
     """泛化环境文本（R-22 / R-07 零暗示）：环境快照头 + 中性文本池，rng 确定性选择。
 
     rng 注入（ctx["rng"]）→ randrange 选池条（同 rng 同调用序确定性）；未注入/异常 →
-    池首条。快照头与池条零暗示措辞（工程补白 4）。
+    池首条。池条目 = investigate_tpl 分区逐个 key（investigate_ambient_1..5），渲染 tpl_of；
+    快照头与池条零暗示措辞（工程补白 4）。
     """
     rng = ctx.get("rng")
-    line = _AMBIENT_POOL[0]
+    pool = [tpl_of(ctx, k) for k in _AMBIENT_POOL_KEYS]
+    line = pool[0]
     if rng is not None and hasattr(rng, "randrange"):
         try:
-            line = _AMBIENT_POOL[rng.randrange(len(_AMBIENT_POOL))]
+            line = pool[rng.randrange(len(pool))]
         except Exception:
             pass
     header = _env_header(ctx)
@@ -626,7 +630,7 @@ def _hunt_result(ctx: MutableMapping[str, Any], raw: Mapping[str, Any],
     title = str(row.get("name") or row.get("enemy") or "")
     key = _hunt_key(row, map_id)
     if _found(ctx, key):
-        return {"kind": "hunt_done", "text": _HUNT_DONE_TEXT, "title": title}
+        return {"kind": "hunt_done", "text": tpl_of(ctx, _HUNT_DONE_KEY), "title": title}
     if _quota_exceeded(ctx):
         return None
     _quota_tick(ctx)
@@ -634,10 +638,10 @@ def _hunt_result(ctx: MutableMapping[str, Any], raw: Mapping[str, Any],
     _record_hidden_find(ctx, row.get("hidden_find_id") or row.get("enemy") or map_id)
     return {
         "kind": KIND_HUNT,
-        "text": str(row.get("intro") or _DEFAULT_HUNT_INTRO),
+        "text": str(row.get("intro") or tpl_of(ctx, _DEFAULT_HUNT_INTRO_KEY)),
         "lore": str(row.get("codex_ref") or ""),
         "title": title,
-        "signal": str(row.get("signal") or _DEFAULT_HUNT_SIGNAL),
+        "signal": str(row.get("signal") or tpl_of(ctx, _DEFAULT_HUNT_SIGNAL_KEY)),
     }
 
 
@@ -652,14 +656,15 @@ def _hidden_map_result(ctx: MutableMapping[str, Any], raw: Mapping[str, Any],
     title = str(raw.get("name") or map_id)
     key = f"hidden_map:{map_id}"
     if _found(ctx, key):
-        return {"kind": "hidden_map_done", "text": _HIDDEN_MAP_DONE_TEXT, "title": title}
+        done = tpl_of(ctx, _HIDDEN_MAP_DONE_KEY)
+        return {"kind": "hidden_map_done", "text": done, "title": title}
     if _quota_exceeded(ctx):
         return None
     _quota_tick(ctx)
     _mark_found(ctx, key)
     _record_hidden_find(ctx, raw.get("hidden_find_id") or f"hidden_map:{map_id}")
     intro = str(raw.get("intro") or raw.get("reveal") or raw.get("desc")
-                or _DEFAULT_HIDDEN_MAP_TEXT)
+                or tpl_of(ctx, _DEFAULT_HIDDEN_MAP_TEXT_KEY))
     return {"kind": KIND_HIDDEN_MAP, "text": intro, "title": title}
 
 
@@ -685,7 +690,7 @@ def _eggshell_result(ctx: MutableMapping[str, Any], point: Mapping[str, Any],
     title = _point_title(point)
     key = _egg_key(point, map_id)
     if _found(ctx, key):
-        return {"kind": "eggshell_done", "text": _EGGSHELL_DONE_TEXT, "title": title}
+        return {"kind": "eggshell_done", "text": tpl_of(ctx, _EGGSHELL_DONE_KEY), "title": title}
     if _quota_exceeded(ctx):
         return None
     _quota_tick(ctx)
@@ -805,12 +810,12 @@ def _engine_investigate(ctx: MutableMapping[str, Any], map_def: Any,
 # 渲染（kind → str 回复）
 # ---------------------------------------------------------------------------
 
-def _discover_card(title: str, *, label: str = "") -> str:
+def _discover_card(ctx: Mapping[str, Any], title: str, *, label: str = "") -> str:
     """一次性发现卡片（R-15：⛩️ 在 3d §四 emoji 纪律下禁用以排版符号文本替代）：
-    `【发现】{label}{title}` 单行；title 空 → 空串。"""
+    `【发现】{label}{title}` 单行；title 空 → 空串。文本 investigate_tpl 分区，渲染 tpl_of。"""
     if not title:
         return ""
-    return f"【发现】{label}{title}"
+    return tpl_of(ctx, "investigate_discover_card", {"label": label, "title": title})
 
 
 def render_investigate_result(result: Mapping[str, Any], ctx: Mapping[str, Any]) -> str:
@@ -838,18 +843,20 @@ def render_investigate_result(result: Mapping[str, Any], ctx: Mapping[str, Any])
             lines.append(lore)
         elif name:
             # 图鉴传闻引用（R-09 / R-23 L349 格式；引擎未给 lore 时中性合成，不编造细节）
-            lines.append(f"【图鉴-{name}（传说）】传闻中记载了它的出没之谜。")
-        card = _discover_card(name, label="隐藏 BOSS：")
+            lines.append(tpl_of(ctx, "investigate_codex_ref", {"name": name}))
+        card = _discover_card(ctx, name,
+                              label=tpl_of(ctx, "investigate_discover_label_boss"))
         if card:
             lines.append(card)
         signal = result.get("signal")
-        lines.append(str(signal) if isinstance(signal, str) and signal else _DEFAULT_HUNT_SIGNAL)
+        lines.append(str(signal) if isinstance(signal, str) and signal
+                     else tpl_of(ctx, _DEFAULT_HUNT_SIGNAL_KEY))
         return "\n".join(lines)
 
     if kind in ("map_reveal", KIND_HIDDEN_MAP):
         lines = [text] if text else []
-        card = _discover_card(title or _map_name_by_ref(ctx, result.get("map_ref")),
-                              label="隐藏地图：")
+        card = _discover_card(ctx, title or _map_name_by_ref(ctx, result.get("map_ref")),
+                              label=tpl_of(ctx, "investigate_discover_label_map"))
         if card:
             lines.append(card)
         return "\n".join(lines) if lines else _ambient_text(ctx)
@@ -858,14 +865,14 @@ def render_investigate_result(result: Mapping[str, Any], ctx: Mapping[str, Any])
         lines = [text] if text else []
         point = _point_by_id(ctx, result.get("interact_point_id"))
         card_title = title or (_point_title(point) if point is not None else "")
-        card = _discover_card(card_title)
+        card = _discover_card(ctx, card_title)
         if card:
             lines.append(card)
         return "\n".join(lines) if lines else _ambient_text(ctx)
 
     if kind in ("egg_confirm", "map_reveal_confirm", "eggshell_done",
                 "hunt_done", "hidden_map_done"):
-        return text or _EGGSHELL_DONE_TEXT
+        return text or tpl_of(ctx, _EGGSHELL_DONE_KEY)
 
     return text or _ambient_text(ctx)
 
@@ -964,7 +971,7 @@ def cmd_investigate(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     target = str(args[0]) if args else None
     map_def = _resolve_map_def(ctx)
     if map_def is None:
-        return _TPL_NO_MAP
+        return tpl_of(ctx, _TPL_NO_MAP_KEY)
     result = _engine_investigate(ctx, map_def, target)
     if not isinstance(result, Mapping) or not result.get("kind"):
         result = _ambient_result(ctx, _map_raw(map_def))

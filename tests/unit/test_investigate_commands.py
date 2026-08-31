@@ -251,3 +251,59 @@ def test_investigate_engine_dual_path() -> None:
     ctx["codex"] = 60
     reply = cmd_investigate(_parsed("/调查 石像"), ctx)
     assert reply  # 任一引擎路径产出回复即通过
+
+
+# ---------------------------------------------------------------------------
+# 模板配置化（2026-08-31 用户拍板：消息模板配置化，不写死代码）
+# ---------------------------------------------------------------------------
+
+def test_investigate_templates_override_via_ctx(monkeypatch) -> None:
+    """内容包覆盖：ctx['templates'] 覆盖 investigate_tpl 默认模板 → 渲染处 tpl_of 生效。
+
+    本地兜底引擎路径（monkeypatch 阻断兄弟路 core.investigate → import 抛错回落本地）：
+    泛化文本的 env_header + 池首条均走 tpl_of。
+    """
+    import qbot_rpg.commands.investigate_commands as ic
+
+    def _boom(name):
+        raise ImportError(f"no module {name}")
+
+    monkeypatch.setattr(ic.importlib, "import_module", _boom)
+    over = {
+        "investigate_env_header": "[{season}|{period}|{weather}]",
+        "investigate_ambient_1": "自定义中性环境文本。",
+        "investigate_discover_card": "【发现记录】{label}{title}",
+        "investigate_no_map": "❌ 无法定位（自定义）。",
+    }
+    # 无 map_def → investigate_no_map 覆盖生效
+    ctx = _base_ctx(templates=over)
+    ctx["map_def"] = None
+    ctx["location"] = None
+    assert cmd_investigate(_parsed("/调查"), ctx) == "❌ 无法定位（自定义）。"
+    # 普通地图泛化 → env_header + 池首条覆盖生效
+    ctx2 = _base_ctx(templates=over)
+    ctx2["map_def"] = _raw_map({"id": "plains", "name": "青草平原"})
+    reply = cmd_investigate(_parsed("/调查"), ctx2)
+    assert "[秋|午夜|雷雨]" in reply
+    assert "自定义中性环境文本。" in reply
+
+
+def test_investigate_templates_default_when_no_ctx_templates() -> None:
+    """无 ctx['templates'] → tpl_of 回落内置默认（逐字对齐既有输出）。"""
+    ctx = _base_ctx()
+    ctx["map_def"] = None
+    ctx["location"] = None
+    assert cmd_investigate(_parsed("/调查"), ctx) == "❌ 无法确定当前位置，无法调查。"
+
+
+def test_investigate_tpl_placeholder_whitelist_coverage() -> None:
+    """investigate_tpl 白名单：默认模板占位符 ⊆ 白名单（防内容包拼错 key 引入缺键不替换）。"""
+    import re
+    from qbot_rpg.core.templates.investigate_tpl import (
+        DEFAULT_TEMPLATES as _INV_TPL,
+        PLACEHOLDER_WHITELIST as _INV_WH,
+    )
+    pat = re.compile(r"\{([a-zA-Z0-9_]+)\}")
+    for key, tpl in _INV_TPL.items():
+        used = set(pat.findall(str(tpl)))
+        assert used <= _INV_WH.get(key, set()), f"{key}: 占位符 {used} 超出白名单"

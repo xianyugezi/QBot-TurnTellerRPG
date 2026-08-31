@@ -99,6 +99,8 @@ from qbot_rpg.core.message_format.list_render import (
     render_cake_tail,
     resolve_page,
 )
+from qbot_rpg.core.templates import tpl_of  # 消息模板配置化（2026-08-31 用户拍板）
+from qbot_rpg.core.templates.checkin_tpl import DEFAULT_TEMPLATES as _CHECKIN_TPL_DEFAULT
 
 # 同包兄弟模块：相对导入（G0 架构门禁 test_commands_web_not_depended 不产生
 # `qbot_rpg.commands` 前缀反向依赖边；同层兄弟引用架构合规，与 sender.py 同口径）。
@@ -134,11 +136,12 @@ SUBWORDS: tuple = (SUB_STATUS, SUB_MAKEUP)
 # CakeGame 式尾段 Tip 内容（`Tip:` 之后部分，2026-08-27 用户拍板统一列表尾段；无斜杠指令名）
 _TAIL_TIP = "发送'签到 补签'即可补签"   # /签到 结算汇总与状态视图（补签为真实子指令）
 
-# 结算/状态不可用兜底（引擎 ok=False 且无 message 时）
-TPL_NO_CHECKIN = "❌ 签到暂不可用"
+# 结算/状态不可用兜底（引擎 ok=False 且无 message 时；文本唯一源 = checkin_tpl 分区，渲染 tpl_of）
+TPL_NO_CHECKIN: str = _CHECKIN_TPL_DEFAULT["checkin_unavailable"]
 
-# 补签表名非法/不存在（resolve_checkin_table_arg → None；对齐 quest「任务不存在」值域口径，工程补白 7）
-TPL_NO_TABLE = "❌ 没有这个签到表"
+# 补签表名非法/不存在（resolve_checkin_table_arg → None；对齐 quest「任务不存在」值域口径，工程补白 7；
+# 文本唯一源 = checkin_tpl 分区，渲染 tpl_of）
+TPL_NO_TABLE: str = _CHECKIN_TPL_DEFAULT["checkin_no_table"]
 
 # 签到表类型中文标注（镜像 core/checkin._TYPE_CN，段头「{表名}（{类型}）」用；2b5 §2.4 表段头）
 _TYPE_CN: dict = {"loop": "常驻循环", "monthly": "月度签到", "activity": "活动"}
@@ -168,68 +171,82 @@ def _gate(ctx: Mapping[str, Any]) -> Optional[str]:
     return None
 
 
-def _grant_label(g: Mapping[str, Any]) -> str:
-    """grant 记录 → 简短展示标签（镜像 core/checkin._grant_label；「药水×2」「50 coins」「exp20」）。"""
+def _grant_label(ctx: Optional[Mapping[str, Any]], g: Mapping[str, Any]) -> str:
+    """grant 记录 → 简短展示标签（镜像 core/checkin._grant_label；「药水×2」「50 coins」「exp20」）。
+
+    文本模板化（checkin_tpl 分区，渲染 tpl_of）：item/currency/exp/rep 四类各一 key。
+    """
     typ = g.get("type")
     if typ == "item":
-        return f"{g.get('item')}×{g.get('count')}"
+        return tpl_of(ctx, "checkin_grant_item", {"item": g.get("item"), "count": g.get("count")})
     if typ == "currency":
-        return f"{g.get('amount')} {g.get('currency')}"
+        return tpl_of(ctx, "checkin_grant_currency", {"amount": g.get("amount"),
+                                                      "currency": g.get("currency")})
     if typ == "exp":
-        return f"exp{g.get('amount')}"
+        return tpl_of(ctx, "checkin_grant_exp", {"amount": g.get("amount")})
     if typ == "rep":
-        return f"声望{g.get('amount')}"
+        return tpl_of(ctx, "checkin_grant_rep", {"amount": g.get("amount")})
     return str(g)
 
 
-def _progress_line(t: Mapping[str, Any]) -> str:
-    """连签进度行（「连签天数：N 天 ｜ 进度 X/Y」，2b5 §2.4）。"""
-    return f"连签天数：{t.get('streak', 0)} 天 ｜ 进度 {t.get('progress_current', 0)}/{t.get('progress_total', 0)}"
+def _progress_line(ctx: Optional[Mapping[str, Any]], t: Mapping[str, Any]) -> str:
+    """连签进度行（「连签天数：N 天 ｜ 进度 X/Y」，2b5 §2.4；文本 checkin_tpl 分区）。"""
+    return tpl_of(ctx, "checkin_progress_line", {
+        "streak": t.get("streak", 0),
+        "cur": t.get("progress_current", 0),
+        "total": t.get("progress_total", 0),
+    })
 
 
-def _table_rows(t: Mapping[str, Any]) -> List[str]:
+def _table_rows(ctx: Optional[Mapping[str, Any]], t: Mapping[str, Any]) -> List[str]:
     """表结果 → 纯文本流水行（P0-1 真实引擎 tables 重建；2b5 §2.4 口径，无装饰 emoji）。
 
     - 结算结果形态（checkin_do 返回，判别键 granted）：已签 → 幂等行+进度；失败 → 失败文案；
       正常 → 今日奖励 / notes / 连签进度 / 里程碑提示。
     - 状态查询形态（checkin_state 返回，无 granted）：连签 / 本月累计 / 今日已签 / 补签用量。
+
+    文本全部模板化（checkin_tpl 分区，渲染 tpl_of）。
     """
     rows: List[str] = []
     if "granted" in t:
         if t.get("already_signed"):
-            rows.append("今天已签到（不重复发奖）")
-            rows.append(_progress_line(t))
+            rows.append(tpl_of(ctx, "checkin_already_signed_row"))
+            rows.append(_progress_line(ctx, t))
             return rows
         if t.get("failed"):
-            rows.append(str(t.get("message") or "结算失败，已回滚"))
+            rows.append(str(t.get("message") or tpl_of(ctx, "checkin_failed_fallback")))
             return rows
         daily = t.get("daily_granted") or []
-        rows.append("今日奖励：" + ("、".join(_grant_label(g) for g in daily[:4]) if daily else "无"))
+        grants = "、".join(_grant_label(ctx, g) for g in daily[:4]) if daily else tpl_of(ctx, "checkin_daily_none")
+        rows.append(tpl_of(ctx, "checkin_daily_reward", {"grants": grants}))
         for n in t.get("notes") or []:
             rows.append(str(n))
-        rows.append(_progress_line(t))
+        rows.append(_progress_line(ctx, t))
         for h in t.get("streak_hits") or []:
             if not isinstance(h, Mapping):
                 continue
-            labs = "、".join(_grant_label(g) for g in (h.get("granted") or [])[:4])
-            rows.append(f"[连签里程碑达成] {labs}（连签 {h.get('days')} 天）")
+            labs = "、".join(_grant_label(ctx, g) for g in (h.get("granted") or [])[:4])
+            rows.append(tpl_of(ctx, "checkin_streak_hit", {"grants": labs, "days": h.get("days")}))
         for h in t.get("month_hits") or []:
             if not isinstance(h, Mapping):
                 continue
-            labs = "、".join(_grant_label(g) for g in (h.get("granted") or [])[:4])
-            rows.append(f"[月度累计达成] {labs}（本月签满 {h.get('days')} 天）")
+            labs = "、".join(_grant_label(ctx, g) for g in (h.get("granted") or [])[:4])
+            rows.append(tpl_of(ctx, "checkin_month_hit", {"grants": labs, "days": h.get("days")}))
         return rows
     # checkin_state 状态查询形态
-    rows.append(f"连签天数：{t.get('streak', 0)} 天")
-    rows.append(f"本月累计：{t.get('month_days', 0)} 天")
-    rows.append("今日已签：" + ("是" if t.get("today_signed") else "否"))
+    rows.append(tpl_of(ctx, "checkin_state_streak", {"streak": t.get("streak", 0)}))
+    rows.append(tpl_of(ctx, "checkin_state_month", {"month_days": t.get("month_days", 0)}))
+    signed = "是" if t.get("today_signed") else "否"
+    rows.append(tpl_of(ctx, "checkin_state_today_signed", {"signed": signed}))
     limit = t.get("makeup_limit", 0)
     if t.get("makeup_enabled"):
-        rows.append(f"补签：{t.get('makeup_used', 0)}/{limit if limit > 0 else '不限'}")
+        used = t.get("makeup_used", 0)
+        limit_disp = limit if limit > 0 else "不限"
+        rows.append(tpl_of(ctx, "checkin_state_makeup", {"used": used, "limit": limit_disp}))
     return rows
 
 
-def _sections_from_tables(res: Mapping[str, Any]) -> list:
+def _sections_from_tables(res: Mapping[str, Any], ctx: Optional[Mapping[str, Any]] = None) -> list:
     """引擎 tables（checkin_do/checkin_state 返回）→ sections（P0-1 正文重建；生效表跳过 inactive）。"""
     sections: list = []
     for t in res.get("tables") or []:
@@ -241,25 +258,28 @@ def _sections_from_tables(res: Mapping[str, Any]) -> list:
         if not name:
             continue
         typ = str(t.get("type", "loop"))
-        title = f"{name}（{_TYPE_CN.get(typ, typ)}）"
-        rows = _table_rows(t)
+        title = tpl_of(ctx, "checkin_section_title", {"name": name, "type": _TYPE_CN.get(typ, typ)})
+        rows = _table_rows(ctx, t)
         if rows:
             sections.append({"title": title, "rows": rows})
     return sections
 
 
-def _sections_of(res: Mapping[str, Any]) -> list:
+def _sections_of(res: Mapping[str, Any], ctx: Optional[Mapping[str, Any]] = None) -> list:
     """引擎返回 → sections：优先 res["sections"]（旧契约适配器兼容）；否则从 tables 重建（P0-1）。"""
     sections = res.get("sections")
     if isinstance(sections, list):
         return sections
-    return _sections_from_tables(res)
+    return _sections_from_tables(res, ctx)
 
 
-def flatten_sections(res: Mapping[str, Any]) -> list:
-    """引擎返回 → 全量 (段标题, 流水行) 有序对（工程补白 3；支持 sections 直给或 tables 重建）。"""
+def flatten_sections(res: Mapping[str, Any], ctx: Optional[Mapping[str, Any]] = None) -> list:
+    """引擎返回 → 全量 (段标题, 流水行) 有序对（工程补白 3；支持 sections 直给或 tables 重建）。
+
+    ctx 可选（None → 模板用内置默认，兼容既有直接调用）。
+    """
     pairs: list = []
-    for section in _sections_of(res):
+    for section in _sections_of(res, ctx):
         if not isinstance(section, Mapping):
             continue
         title = section.get("title") or ""
@@ -333,15 +353,18 @@ def _engine_of(ctx: Mapping[str, Any]) -> Any:
 # 汇总/状态渲染（sections 扁平化 → 5 条/页 + 段头 + CakeGame 式尾段 + 裁决② 夹取）
 # ---------------------------------------------------------------------------
 
-def _today_message(res: Mapping[str, Any]) -> str:
-    """结算首行（纯文本，D-02 幂等口径）：全部生效表已签 → 幂等文案；否则今日结算完成。"""
+def _today_message(res: Mapping[str, Any], ctx: Optional[Mapping[str, Any]] = None) -> str:
+    """结算首行（纯文本，D-02 幂等口径）：全部生效表已签 → 幂等文案；否则今日结算完成。
+
+    文本模板化（checkin_tpl 分区：checkin_today_idempotent / checkin_today_done）。
+    """
     if res.get("idempotent") or res.get("already_signed"):
-        return "今天已签到（重复指令，未重复发放）"
+        return tpl_of(ctx, "checkin_today_idempotent")
     tables = res.get("tables") or []
     active = [t for t in tables if isinstance(t, Mapping) and t.get("active", True)]
     if active and all(t.get("already_signed") for t in active):
-        return "今天已签到（重复指令，未重复发放）"
-    return "✅ 今日签到完成"
+        return tpl_of(ctx, "checkin_today_idempotent")
+    return tpl_of(ctx, "checkin_today_done")
 
 
 def render_summary(res: Mapping[str, Any], page: object, *,
@@ -355,7 +378,7 @@ def render_summary(res: Mapping[str, Any], page: object, *,
     - CakeGame 式尾段（当前页 + Tip，2026-08-27 用户拍板统一列表尾段）；空流水 → 返回 ""
       （由调用方只输出 message）。
     """
-    pairs = flatten_sections(res)
+    pairs = flatten_sections(res, ctx)
     total = int(res.get("total", len(pairs)))
     pg = resolve_page(page, total, per_page)
     if pg.invalid:
@@ -371,7 +394,7 @@ def render_summary(res: Mapping[str, Any], page: object, *,
     seen: set = set()
     for title, row in slice_pairs:
         if title and title not in seen:
-            lines.append(f"━━ {title} ━━")
+            lines.append(tpl_of(ctx, "checkin_section_header", {"title": title}))
             seen.add(title)
         lines.append(row)
     tail = render_cake_tail(pg.page, pg.total_pages, tip=_TAIL_TIP,
@@ -400,9 +423,10 @@ def cmd_checkin_today(ctx: Mapping[str, Any], page: object) -> str:
     engine = _engine_of(ctx)
     res = engine.checkin_do(ctx)
     if not res or not res.get("ok"):
-        return str(res.get("message") or TPL_NO_CHECKIN) if res else TPL_NO_CHECKIN
-    msg = _today_message(res)
-    body = render_summary(res, page)
+        fallback = tpl_of(ctx, "checkin_unavailable")
+        return str(res.get("message") or fallback) if res else fallback
+    msg = _today_message(res, ctx)
+    body = render_summary(res, page, ctx=ctx)
     return _assemble(msg, body)
 
 
@@ -413,9 +437,10 @@ def cmd_checkin_status(ctx: Mapping[str, Any], page: object) -> str:
     engine = _engine_of(ctx)
     res = engine.checkin_state(ctx)
     if not res or not res.get("ok"):
-        return str(res.get("message") or TPL_NO_CHECKIN) if res else TPL_NO_CHECKIN
-    msg = "✅ 签到状态"
-    body = render_summary(res, page)
+        fallback = tpl_of(ctx, "checkin_unavailable")
+        return str(res.get("message") or fallback) if res else fallback
+    msg = tpl_of(ctx, "checkin_status_header")
+    body = render_summary(res, page, ctx=ctx)
     return _assemble(msg, body)
 
 
@@ -429,9 +454,9 @@ def cmd_checkin_makeup(ctx: Mapping[str, Any], table: Optional[str]) -> str:
     else:
         tid = resolve_checkin_table_arg(ctx, engine, table)
         if tid is None:
-            return TPL_NO_TABLE
+            return tpl_of(ctx, "checkin_no_table")
     res = engine.checkin_makeup(ctx, tid)
-    return str(res.get("message") or "❌ 补签失败")
+    return str(res.get("message") or tpl_of(ctx, "checkin_makeup_failed"))
 
 
 def cmd_checkin(parsed: Any, ctx: MutableMapping[str, Any]) -> str:

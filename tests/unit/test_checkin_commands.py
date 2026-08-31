@@ -464,3 +464,41 @@ def test_no_decorative_emoji():
             assert ch not in banned, f"命中禁用装饰 emoji：{ch} in {text!r}"
             assert ch in ("✅", "❌") or not (0x1F000 <= ord(ch) <= 0x1FAFF), \
                 f"命中未登记 emoji：{ch} in {text!r}"
+
+
+# ---------------------------------------------------------------------------
+# 模板配置化（2026-08-31 用户拍板：消息模板配置化，不写死代码）
+# ---------------------------------------------------------------------------
+
+def test_checkin_templates_override_via_ctx():
+    """内容包覆盖：ctx['templates'] 覆盖 checkin_tpl 默认模板 → 渲染处 tpl_of 生效。"""
+    over = {
+        "checkin_today_done": "✅ 签到完成（自定义）",
+        "checkin_section_header": "══ {title} ══",
+        "checkin_section_title": "{name}｜{type}",
+        "checkin_progress_line": "连签：{streak} 天（进度 {cur}/{total}）",
+    }
+    out = cmd_checkin(parse("/签到"), make_ctx(templates=over))
+    assert out.startswith("✅ 签到完成（自定义）")
+    assert "══ 常驻循环｜常驻循环 ══" in out
+    assert "连签：1 天（进度 1/7）" in out
+
+
+def test_checkin_templates_default_when_no_ctx_templates():
+    """无 ctx['templates'] → tpl_of 回落内置默认（逐字对齐既有输出）。"""
+    out = cmd_checkin(parse("/签到"), make_ctx())
+    assert "━━ 常驻循环（常驻循环） ━━" in out
+    assert "连签天数：1 天 ｜ 进度 1/7" in out
+
+
+def test_checkin_tpl_placeholder_whitelist_coverage():
+    """checkin_tpl 白名单：默认模板占位符 ⊆ 白名单（防内容包拼错 key 引入缺键不替换）。"""
+    import re
+    from qbot_rpg.core.templates.checkin_tpl import (
+        DEFAULT_TEMPLATES as _CHK_TPL,
+        PLACEHOLDER_WHITELIST as _CHK_WH,
+    )
+    pat = re.compile(r"\{([a-zA-Z0-9_]+)\}")
+    for key, tpl in _CHK_TPL.items():
+        used = set(pat.findall(str(tpl)))
+        assert used <= _CHK_WH.get(key, set()), f"{key}: 占位符 {used} 超出白名单"

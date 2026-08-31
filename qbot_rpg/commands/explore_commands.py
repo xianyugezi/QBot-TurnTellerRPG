@@ -22,15 +22,13 @@ from typing import Any, Callable, Dict, List, Mapping, MutableMapping, Optional,
 
 from .router import CommandSpec
 from .sender import format_tpl12
+from qbot_rpg.core.templates import tpl_of  # 消息模板配置化（2026-08-31 用户拍板）
 
 # 指令名（对齐 parsers 白名单：进入/休息 已在 DEFAULT_WHITELIST）
 ENTER_CMD = "进入"
 REST_CMD = "休息"
 POSITION_CMD = "位置"  # M9 实机反馈修复（2026-08-30）：帮助/Tip 引导「位置」但从未实现 → 静默空回
 MAP_CMD = "地图"  # 实机反馈修复（2026-08-30）：白名单引导「地图」但从未实现 → 静默空回
-
-# RUL-08 注册门槛（对齐 basic_commands：未注册玩家使用游玩指令 → 统一拦截）
-TPL_REGISTER_GATE = "❌ 请先 /注册 创建角色（/注册 名字 职业）"
 
 __all__ = [
     "ENTER_CMD", "REST_CMD",
@@ -44,9 +42,12 @@ def _fragment(parsed: Any) -> str:
 
 
 def _gate(ctx: Mapping[str, Any]) -> Optional[str]:
-    """RUL-08 注册门槛：registered is False → 拦截文案（缺省视为已注册，对齐 basic）。"""
+    """RUL-08 注册门槛：registered is False → 拦截文案（缺省视为已注册，对齐 basic）。
+
+    模板 key：explore_register_gate（内容包可覆盖同 key）。
+    """
     if ctx.get("registered", True) is False:
-        return TPL_REGISTER_GATE
+        return tpl_of(ctx, "explore_register_gate")
     return None
 
 
@@ -59,9 +60,6 @@ def _gate(ctx: Mapping[str, Any]) -> Optional[str]:
 # 通道方向 → 中文标签（对齐 movement.DIRECTION_ALIASES：up=上/down=下/left=左/right=右）
 _EXIT_DIR_LABELS: Dict[str, str] = {"up": "上", "down": "下", "left": "左", "right": "右"}
 _EXIT_DIR_ORDER: Tuple[str, ...] = ("up", "down", "left", "right")
-
-# /进入 Tip（对齐 /背包 尾段 Tip 句式：无斜杠）
-_ENTER_TIP = "Tip:发送'位置'即可查询当前位置信息"
 
 # 活动怪物展示上限（铁律 11：单条消息 ≤16 行折叠上限；超 5 只截断折叠）
 _MONSTER_SHOW_LIMIT = 5
@@ -118,7 +116,8 @@ def _monster_line(ctx: Optional[Mapping[str, Any]], target: Any) -> Optional[str
 
     数据源 = maps 目标图 monsters 行（{enemy, count, ...}）；enemy id → 怪物名经
     ctx["monsters"]/ctx["enemies"] 解析，拿不到直接显示 enemy id；>5 只截断折叠（铁律 11）。
-    无怪物 → None（行省略）。
+    无怪物 → None（行省略）。模板 key：explore_monster_row / explore_monster_line /
+    explore_monster_overflow（内容包可覆盖同 key）。
     """
     if target is None:
         return None
@@ -139,15 +138,19 @@ def _monster_line(ctx: Optional[Mapping[str, Any]], target: Any) -> Optional[str
             cnt = int(cnt)
         except (TypeError, ValueError):
             cnt = 1
-        parts.append(f"{i}.{nm}×{cnt}")
-    line = "活动怪物：" + " ".join(parts)
+        parts.append(tpl_of(ctx, "explore_monster_row", {"i": i, "nm": nm, "cnt": cnt}))
+    line = tpl_of(ctx, "explore_monster_line", {"items": " ".join(parts)})
     if len(rows) > _MONSTER_SHOW_LIMIT:
-        line += " …"
+        line += tpl_of(ctx, "explore_monster_overflow")
     return line
 
 
-def _channel_lines(index: Mapping[str, Any], target: Any) -> List[str]:
-    """通道行：`上：{目标地图名}`…（仅渲染已配置方向；缺省方向=死路，行省略）。"""
+def _channel_lines(ctx: Optional[Mapping[str, Any]],
+                   index: Mapping[str, Any], target: Any) -> List[str]:
+    """通道行：`上：{目标地图名}`…（仅渲染已配置方向；缺省方向=死路，行省略）。
+
+    模板 key：explore_channel_row（内容包可覆盖同 key）。
+    """
     lines: List[str] = []
     if target is None:
         return lines
@@ -158,13 +161,19 @@ def _channel_lines(index: Mapping[str, Any], target: Any) -> List[str]:
             ex = exits_map.get(d)
             if not isinstance(ex, Mapping) or not ex.get("to"):
                 continue
-            lines.append(f"{_EXIT_DIR_LABELS.get(d, d)}：{_map_name(index, str(ex.get('to')))}")
+            lines.append(tpl_of(ctx, "explore_channel_row", {
+                "dir": _EXIT_DIR_LABELS.get(d, d),
+                "name": _map_name(index, str(ex.get("to"))),
+            }))
         return lines
     for d in _EXIT_DIR_ORDER:
         ex = target.exit(d)
         if ex is None or not ex.to:
             continue
-        lines.append(f"{_EXIT_DIR_LABELS.get(d, d)}：{_map_name(index, str(ex.to))}")
+        lines.append(tpl_of(ctx, "explore_channel_row", {
+            "dir": _EXIT_DIR_LABELS.get(d, d),
+            "name": _map_name(index, str(ex.to)),
+        }))
     return lines
 
 
@@ -175,19 +184,22 @@ def _render_enter(result: Mapping[str, Any],
     move（通道行走）按 CakeGame 模板 28 风格：✅ 你来到了「name」+ 地图介绍 + 活动怪物
     （序号.名称×数量）+ 通道（上/下/左/右：目标地图名）+ Tip；区域角色（NPC）行省略
     （maps 节点无 npcs 字段——登记 DELAYED，NPC 数据源待 M6 数据框架）。
+    模板 key：explore_enter_fail / explore_enter_dungeon / explore_enter_ok /
+    explore_map_desc / explore_tip（内容包可覆盖同 key）。
     """
     if not result.get("ok"):
-        return f"❌ {result.get('reason') or '无法进入'}"
+        reason = result.get("reason") or tpl_of(ctx, "explore_enter_fail_reason")
+        return tpl_of(ctx, "explore_enter_fail", {"reason": reason})
     kind = result.get("type")
     if kind == "dungeon":
         name = result.get("name") or result.get("dungeon_id") or ""
-        return f"✅ 你进入了「{name}」（副本）"
+        return tpl_of(ctx, "explore_enter_dungeon", {"name": name})
     # move：通道行走 → 新地图信息（CakeGame 模板 28 风格丰富）
     name = result.get("name") or ""
-    lines = [f"✅ 你来到了「{name}」"]
+    lines = [tpl_of(ctx, "explore_enter_ok", {"name": name})]
     desc = result.get("desc") or ""
     if desc:
-        lines.append(f"地图介绍：{desc}")
+        lines.append(tpl_of(ctx, "explore_map_desc", {"desc": desc}))
     lore = result.get("lore") or ""
     if lore:
         lines.append(str(lore))
@@ -197,22 +209,26 @@ def _render_enter(result: Mapping[str, Any],
     if mline:
         lines.append(mline)
     # 区域角色（NPC）行省略：maps 节点无 npcs 字段（登记 DELAYED，NPC 数据源待 M6 数据框架）
-    lines.extend(_channel_lines(index, target))
-    lines.append(_ENTER_TIP)
+    lines.extend(_channel_lines(ctx, index, target))
+    lines.append(tpl_of(ctx, "explore_tip"))
     return "\n".join(lines)
 
 
-def _render_rest(result: Mapping[str, Any]) -> str:
-    """/休息 结果 → 1 条消息文本（成功 / 拒绝）。"""
+def _render_rest(result: Mapping[str, Any], ctx: Optional[Mapping[str, Any]] = None) -> str:
+    """/休息 结果 → 1 条消息文本（成功 / 拒绝）。
+
+    模板 key：explore_rest_fail / explore_rest_ok / explore_rest_cooldown（内容包可覆盖）。
+    """
     if not result.get("rested"):
-        msg = result.get("message") or result.get("reason") or "无法休息"
-        return f"❌ {msg}"
+        msg = result.get("message") or result.get("reason") \
+            or tpl_of(ctx, "explore_rest_fail_reason")
+        return tpl_of(ctx, "explore_rest_fail", {"reason": msg})
     hp = int(result.get("hp_restored", 0) or 0)
     mp = int(result.get("mp_restored", 0) or 0)
     cr = int(result.get("cooldown_reduction", 0) or 0)
-    line = f"✅ 你休息了一会，回复 {hp} 点 HP、{mp} 点 MP"
+    line = tpl_of(ctx, "explore_rest_ok", {"hp": hp, "mp": mp})
     if cr:
-        line += f"（冷却缩减 {cr}）"
+        line += tpl_of(ctx, "explore_rest_cooldown", {"cr": cr})
     return line
 
 
@@ -230,15 +246,15 @@ def cmd_map(parsed: Any, ctx: Mapping[str, Any]) -> str:
         return g
     index = _maps_index_for(ctx)
     if not index:
-        return "❌ 当前没有可探索的地图（/进入 尝试）"
-    lines = ["【地图】"]
+        return tpl_of(ctx, "explore_map_empty")
+    lines = [tpl_of(ctx, "explore_map_title")]
     for idx, mid in enumerate(list(index.keys()), start=1):
         entry = index[mid]
         if not entry:
             continue
         name = entry.get("name") if isinstance(entry, Mapping) else getattr(entry, "name", None) or mid
-        lines.append(f"{idx}. {name}")
-    return "\n".join(lines) + "\nTip:发送'进入 <序号>'前往"
+        lines.append(tpl_of(ctx, "explore_map_row", {"idx": idx, "name": name}))
+    return "\n".join(lines) + "\n" + tpl_of(ctx, "explore_map_tail")
 
 
 def cmd_position(parsed: Any, ctx: Mapping[str, Any]) -> str:
@@ -254,7 +270,8 @@ def cmd_position(parsed: Any, ctx: Mapping[str, Any]) -> str:
     index = _maps_index_for(ctx)
     entry = index.get(str(loc)) if loc else None
     if entry is None:
-        return f"❌ 当前位置未知：{loc or '无'}（/进入 探索地图）"
+        loc_text = str(loc) if loc else tpl_of(ctx, "explore_position_unknown_none")
+        return tpl_of(ctx, "explore_position_unknown", {"loc": loc_text})
     if isinstance(entry, Mapping):
         name = entry.get("name") or str(loc)
         desc = entry.get("desc") or entry.get("description") or ""
@@ -279,12 +296,12 @@ def cmd_enter(parsed: Any, ctx: Mapping[str, Any]) -> str:
         return format_tpl12(_fragment(parsed))
     args = list(getattr(parsed, "args", None) or [])
     if not args:
-        return "❌ /进入：输入方向（上/下/左/右）或副本入口（序号/名称）"
+        return tpl_of(ctx, "explore_enter_noarg")
     arg = str(args[0])
     try:
         from qbot_rpg.world.movement import enter_context_route, _persistent_state_of  # noqa: PLC0415
     except ImportError:
-        return "❌ 进入功能未接线（引擎未加载）"
+        return tpl_of(ctx, "explore_enter_not_wired")
     player = _player_ctx(ctx)
     # P1-5 修复（QA 黑盒·位置不持久）：不传一次性 dict(player) 副本——位置写在副本上
     # 直接丢写回（落档丢位置）。改为构造引擎上下文：persistent_state 挂真实引用
@@ -306,7 +323,7 @@ def cmd_enter(parsed: Any, ctx: Mapping[str, Any]) -> str:
         maps=ctx.get("maps"), dungeons=ctx.get("dungeons"),
     )
     if not isinstance(result, Mapping):
-        return "❌ 进入失败（引擎返回异常）"
+        return tpl_of(ctx, "explore_enter_engine_error")
     # 2026-08-31 实机反馈：/地图 按序号展示后，「进入 N」应支持世界地图序号传送。
     # 副本入口序号不命中（无入口/序号无效）且参数为纯数字时 → 按 _maps_index 序号
     # 取地图传送（对齐 cmd_map 的 enumerate 序号；地图传送走 move_to_map 钩子）。
@@ -341,19 +358,19 @@ def cmd_rest(parsed: Any, ctx: Mapping[str, Any]) -> str:
         return format_tpl12(_fragment(parsed))
     args = list(getattr(parsed, "args", None) or [])
     if len(args) > 1:
-        return "❌ 指令不正确：/休息 不需要参数。输入 /帮助 查看可用指令。"
+        return tpl_of(ctx, "explore_rest_extra_arg")
     try:
         from qbot_rpg.world.rest import rest_in_dungeon  # noqa: PLC0415
     except ImportError:
-        return "❌ 休息功能未接线（引擎未加载）"
+        return tpl_of(ctx, "explore_rest_not_wired")
     session = ctx.get("dungeon_session")
     result = rest_in_dungeon(
         session, _player_ctx(ctx),
         cfg=ctx.get("rest_cfg"),
     )
     if not isinstance(result, Mapping):
-        return "❌ 休息失败（引擎返回异常）"
-    return _render_rest(result)
+        return tpl_of(ctx, "explore_rest_engine_error")
+    return _render_rest(result, ctx)
 
 
 def register_explore_commands(router: Any, *,

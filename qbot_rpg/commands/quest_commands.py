@@ -81,6 +81,7 @@ from qbot_rpg.core.message_format.list_render import (
     render_cake_tail,
     resolve_page,
 )
+from qbot_rpg.core.templates import tpl_of  # 消息模板配置化（2026-08-31 用户拍板）
 
 # 同包兄弟模块：相对导入（G0 架构门禁 test_commands_web_not_depended 不产生
 # `qbot_rpg.commands` 前缀反向依赖边；同层兄弟引用架构合规，与 sender.py 同口径）。
@@ -93,7 +94,7 @@ __all__ = [
     "QUEST_CMD", "SUB_ACCEPT", "SUB_DELIVER", "SUB_INFO", "SUB_ABANDON", "SUBWORDS",
     "SUB_ACCEPT_ALIASES",
     # 渲染常量
-    "TPL_NO_BOARD", "TPL_NO_QUEST", "BOARD_PAGE_SIZE",
+    "BOARD_PAGE_SIZE",
     # 指令处理器（纯函数：parsed + ctx → 回复正文）
     "cmd_quest", "cmd_quest_board", "cmd_quest_accept",
     "cmd_quest_deliver", "cmd_quest_info", "cmd_quest_abandon",
@@ -130,14 +131,9 @@ BOARD_PAGE_SIZE: int = DEFAULT_PAGE_SIZE  # 5 条/页
 # 意见一同步：Tip 改「领取任务 序号」（替代「任务 接取 序号」）
 _BOARD_TAIL_TIP = "发送'领取任务 序号'即可领取任务"    # /任务 任务板
 
-# 任务板不可用兜底（引擎 ok=False 且无 message 时）
-TPL_NO_BOARD = "❌ 任务板暂不可用"
-
-# 展示序号越界/非法（resolve_board_index → None；对齐引擎 no_quest 口径，工程补白 6）
-TPL_NO_QUEST = "❌ 任务不存在"
-
-# 空板文案（无任何任务行；纯文本无 emoji）
-_EMPTY_BOARD = "（任务板空空如也）"
+# 任务板不可用兜底（引擎 ok=False 且无 message 时）→ quest_no_board（quest_tpl 分区）
+# 展示序号越界/非法（resolve_board_index → None）→ quest_no_quest（quest_tpl 分区）
+# 空板文案 → quest_empty_board（quest_tpl 分区）
 
 # 紧凑「子词+序号」形态：接取3 / 放弃2 / 交付5 / 领取3（分隔符 `*` 连数量、`+` 等级均不适用序号）
 # 注：rf 字符串内 `\d` 为原样正则（勿写 `\\d`，rf 下会变成字面反斜杠+d）
@@ -194,33 +190,42 @@ def _display_op(op: object) -> str:
     return _OP_DISPLAY.get(key, key)
 
 
-def progress_text(cond: Mapping[str, Any]) -> str:
-    """单条三原语条件进度串：`背包数量 ≥ 20（当前 12）`。"""
+def progress_text(cond: Mapping[str, Any], ctx: Optional[Mapping[str, Any]] = None) -> str:
+    """单条三原语条件进度串：`背包数量 ≥ 20（当前 12）`。
+
+    模板配置化（2026-08-31）：quest_progress_base / quest_progress_base_no_target /
+    quest_progress_param / quest_progress_current（quest_tpl 分区）。
+    """
     var = _display_var(cond.get("var"))
     op = _display_op(cond.get("op"))
     param = cond.get("param")
     target = cond.get("target")
     current = cond.get("current")
-    base = f"{var} {op} {target}" if target is not None else f"{var} {op}"
+    if target is not None:
+        base = tpl_of(ctx, "quest_progress_base", {"var": var, "op": op, "target": target})
+    else:
+        base = tpl_of(ctx, "quest_progress_base_no_target", {"var": var, "op": op})
     if param is not None:
-        base += f"（{param}）"
+        base += tpl_of(ctx, "quest_progress_param", {"param": param})
     if current is not None:
-        base += f"，当前 {current}"
+        base += tpl_of(ctx, "quest_progress_current", {"current": current})
     return base
 
 
-def board_line(index: int, row: Mapping[str, Any]) -> str:
+def board_line(index: int, row: Mapping[str, Any], ctx: Optional[Mapping[str, Any]] = None) -> str:
     """任务板条目行（2b4 §5.2 / TC-24/25）：`N. [主线]名称*  进度 12/20`。
 
     - 主线 → 名称前缀 `[主线]`；marked（active 且非主线）→ 后缀 `*`（TC-25，引擎已算）；
     - 进度 = 首条三原语条件 current/target（引擎 row.progress 列表）。
+    - 模板配置化（2026-08-31）：quest_board_line / quest_board_main_prefix /
+      quest_board_marked_suffix / quest_board_progress（quest_tpl 分区）。
     """
     name = str(row.get("name") or "?")
     if row.get("main"):
-        name = f"[主线] {name}"
+        name = tpl_of(ctx, "quest_board_main_prefix", {"name": name})
     if row.get("marked"):
-        name = f"{name}*"
-    line = f"{index}. {name}"
+        name = tpl_of(ctx, "quest_board_marked_suffix", {"name": name})
+    line = tpl_of(ctx, "quest_board_line", {"index": index, "name": name})
     prog = row.get("progress")
     if isinstance(prog, list) and prog:
         c = prog[0]
@@ -228,23 +233,27 @@ def board_line(index: int, row: Mapping[str, Any]) -> str:
             cur = c.get("current")
             target = c.get("target")
             if cur is not None and target is not None:
-                line += f"  进度 {cur}/{target}"
+                line += tpl_of(ctx, "quest_board_progress", {"cur": cur, "target": target})
     return line
 
 
-def info_text(res: Mapping[str, Any], seq: object) -> str:
-    """/任务 信息 N 正文（2b4 §5.1：三原语进度逐条显示 + 交付判定；工程补白 7）。"""
+def info_text(res: Mapping[str, Any], seq: object, ctx: Optional[Mapping[str, Any]] = None) -> str:
+    """/任务 信息 N 正文（2b4 §5.1：三原语进度逐条显示 + 交付判定；工程补白 7）。
+
+    模板配置化（2026-08-31）：quest_info_header / quest_info_line / quest_info_met /
+    quest_info_not_met（quest_tpl 分区）。
+    """
     name = res.get("name") or "?"
-    lines: List[str] = [f"✅ 任务进度：{name}"]
+    lines: List[str] = [tpl_of(ctx, "quest_info_header", {"name": name})]
     for c in res.get("conditions") or []:
         if not isinstance(c, Mapping):
             continue
         mark = "✅" if c.get("met") else "❌"
-        lines.append(f"- {progress_text(c)} {mark}")
+        lines.append(tpl_of(ctx, "quest_info_line", {"text": progress_text(c, ctx), "mark": mark}))
     if res.get("met"):
-        lines.append(f"✅ 条件已满足，可交付（/任务 交付 {seq}）")
+        lines.append(tpl_of(ctx, "quest_info_met", {"seq": seq}))
     else:
-        lines.append("❌ 条件未达成，继续努力")
+        lines.append(tpl_of(ctx, "quest_info_not_met"))
     return "\n".join(lines)
 
 
@@ -342,16 +351,16 @@ def render_board(board: Mapping[str, Any], page: object, *,
         )
     assert res.page is not None  # 非法已拦截，夹取后恒有页码
     if not pairs:
-        return _EMPTY_BOARD
+        return tpl_of(ctx, "quest_empty_board")
     start = (res.page - 1) * per_page
     slice_pairs = pairs[start:start + per_page]
     lines: List[str] = []
     seen: set = set()
     for i, (title, row) in enumerate(slice_pairs):
         if title and title not in seen:
-            lines.append(f"━━ {title} ━━")
+            lines.append(tpl_of(ctx, "quest_board_section_header", {"title": title}))
             seen.add(title)
-        lines.append(board_line(start + i + 1, row))
+        lines.append(board_line(start + i + 1, row, ctx))
     tail = render_cake_tail(res.page, res.total_pages, tip=_BOARD_TAIL_TIP,
                             templates=ctx.get("templates") if isinstance(ctx, Mapping) else None)
     if res.clamped:
@@ -377,8 +386,9 @@ def cmd_quest_board(ctx: Mapping[str, Any], page: object) -> str:
     engine = _engine_of(ctx)
     board = engine.quest_board(ctx)
     if not board or not board.get("ok"):
-        return str(board.get("message") or TPL_NO_BOARD) if board else TPL_NO_BOARD
-    return render_board(board, page)
+        no_board = tpl_of(ctx, "quest_no_board")
+        return str(board.get("message") or no_board) if board else no_board
+    return render_board(board, page, ctx=ctx)
 
 
 def cmd_quest_accept(ctx: Mapping[str, Any], seq: int) -> str:
@@ -386,9 +396,9 @@ def cmd_quest_accept(ctx: Mapping[str, Any], seq: int) -> str:
     engine = _engine_of(ctx)
     qid = _seq_to_quest_id(ctx, engine, seq)
     if qid is None:
-        return TPL_NO_QUEST
+        return tpl_of(ctx, "quest_no_quest")
     res = engine.quest_accept(qid, ctx)
-    return str(res.get("message") or "❌ 接取失败")
+    return str(res.get("message") or tpl_of(ctx, "quest_accept_failed"))
 
 
 def cmd_quest_deliver(ctx: Mapping[str, Any], seq: int) -> str:
@@ -397,14 +407,14 @@ def cmd_quest_deliver(ctx: Mapping[str, Any], seq: int) -> str:
     engine = _engine_of(ctx)
     qid = _seq_to_quest_id(ctx, engine, seq)
     if qid is None:
-        return TPL_NO_QUEST
+        return tpl_of(ctx, "quest_no_quest")
     res = engine.quest_complete(qid, ctx)
-    parts: List[str] = [str(res.get("message") or "❌ 交付失败")]
+    parts: List[str] = [str(res.get("message") or tpl_of(ctx, "quest_deliver_failed"))]
     for s in res.get("skipped") or []:
         if isinstance(s, Mapping) and s.get("reason"):
-            parts.append(f"（跳过：{s['reason']}）")
+            parts.append(tpl_of(ctx, "quest_deliver_skipped", {"reason": s["reason"]}))
         else:
-            parts.append("（跳过）")
+            parts.append(tpl_of(ctx, "quest_deliver_skipped_plain"))
     return "\n".join(parts)
 
 
@@ -413,11 +423,12 @@ def cmd_quest_info(ctx: Mapping[str, Any], seq: int) -> str:
     engine = _engine_of(ctx)
     qid = _seq_to_quest_id(ctx, engine, seq)
     if qid is None:
-        return TPL_NO_QUEST
+        return tpl_of(ctx, "quest_no_quest")
     res = engine.quest_progress(qid, ctx)
     if not res or not res.get("ok"):
-        return str(res.get("message") or TPL_NO_QUEST) if res else TPL_NO_QUEST
-    return info_text(res, seq)
+        no_quest = tpl_of(ctx, "quest_no_quest")
+        return str(res.get("message") or no_quest) if res else no_quest
+    return info_text(res, seq, ctx)
 
 
 def cmd_quest_abandon(ctx: Mapping[str, Any], seq: int) -> str:
@@ -425,9 +436,9 @@ def cmd_quest_abandon(ctx: Mapping[str, Any], seq: int) -> str:
     engine = _engine_of(ctx)
     qid = _seq_to_quest_id(ctx, engine, seq)
     if qid is None:
-        return TPL_NO_QUEST
+        return tpl_of(ctx, "quest_no_quest")
     res = engine.quest_abandon(qid, ctx)
-    return str(res.get("message") or "❌ 放弃失败")
+    return str(res.get("message") or tpl_of(ctx, "quest_abandon_failed"))
 
 
 def cmd_quest(parsed: Any, ctx: MutableMapping[str, Any]) -> str:

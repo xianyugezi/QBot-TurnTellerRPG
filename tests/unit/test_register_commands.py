@@ -329,3 +329,67 @@ def test_regress_p1_1_fixed_subword_name_not_swallowed():
     # 无 job 参数同样拒绝
     out2 = cmd_register(parse("/注册 自动"), make_ctx())
     assert out2.startswith("❌ 指令不正确：/注册 自动")
+
+
+# ---------------------------------------------------------------------------
+# 模板配置化（2026-08-31 用户拍板：消息模板配置化，不写死代码）· register_rem 分区
+# ---------------------------------------------------------------------------
+
+def test_register_rem_tpl_override_via_ctx():
+    """内容包覆盖：ctx['templates'] 覆盖 register_rem_tpl 默认 → 渲染处 tpl_of 生效。
+
+    - 注册成功回显逐行可覆盖（register_success_welcome / register_success_hp）
+    - 名字校验错误可覆盖（register_name_too_long）
+    - 职业推荐角标可覆盖（register_success_recommended）
+    """
+    from qbot_rpg.core.templates import resolve_templates
+
+    over = {
+        "register_success_welcome": "✅ 自定义欢迎「{world}」！",
+        "register_success_hp": "【HP】{hp}",
+        "register_name_too_long": "❌ 名字太长啦（自定义）",
+        "register_success_recommended": "（自定义推荐）",
+    }
+    # 内容包口径：resolve_templates 在默认表上深覆盖（tpl_of 读 ctx["templates"] 全表）
+    ctx = make_ctx(templates=resolve_templates(over))
+    out = cmd_register(parse("/注册 阿伟 战士"), ctx)
+    assert "✅ 自定义欢迎「艾泽拉」！" in out
+    assert "【HP】100" in out
+    # 职业推荐角标覆盖（warrior recommended_newbie=True）
+    assert "职业：战士（自定义推荐） ｜ 位置：新手村" in out
+
+    ctx2 = make_ctx(templates=resolve_templates({"register_name_too_long": "❌ 名字太长啦（自定义）"}))
+    name21 = "一二三四五六七八九十一二三四五六七八九十" + "一"
+    out2 = cmd_register(parse(f"/注册 {name21} 战士"), ctx2)
+    assert out2 == "❌ 名字太长啦（自定义）"
+
+
+def test_register_rem_tpl_default_when_no_ctx_templates():
+    """无 ctx['templates'] → tpl_of 回落内置默认（逐字对齐既有输出）。"""
+    out = cmd_register(parse("/注册 阿伟 战士"), make_ctx())
+    assert out == (
+        "Lv1.阿伟 - -\n"
+        "✅ 注册成功！欢迎来到「艾泽拉」世界\n"
+        "职业：战士（推荐新手） ｜ 位置：新手村\n"
+        "初始属性：\n"
+        "生命 100/100\n"
+        "魔力 30/30\n"
+        "攻击 12\n"
+        "防御 10\n"
+        "下一步：发 /帮助 查看指令，或 /锁定 新手村怪物开战。"
+    )
+
+
+def test_register_rem_tpl_placeholder_whitelist_coverage():
+    """register_rem_tpl 白名单：默认模板占位符 ⊆ 白名单（防内容包拼错 key 引入缺键不替换）。"""
+    import re
+
+    from qbot_rpg.core.templates.register_rem_tpl import (
+        DEFAULT_TEMPLATES as _RR_TPL,
+        PLACEHOLDER_WHITELIST as _RR_WH,
+    )
+    pat = re.compile(r"\{([a-zA-Z0-9_]+)\}")
+    for key, tpl in _RR_TPL.items():
+        used = set(pat.findall(str(tpl)))
+        assert used <= _RR_WH.get(key, set()), f"{key}: 占位符 {used} 超出白名单"
+    assert set(_RR_TPL) == set(_RR_WH), "key 表与白名单一一对应"

@@ -88,12 +88,16 @@ from qbot_rpg.core.message_format.battle_render import (
     render_battle_round,
     render_battle_start,
 )
+from qbot_rpg.core.templates import tpl_of  # 消息模板配置化（2026-08-31 用户拍板）
+from qbot_rpg.core.templates.battle_tpl import DEFAULT_TEMPLATES as _BATTLE_TPL  # 兼容导出默认文案
 
 __all__ = [
     # 指令名
     "ATTACK_CMD",
-    # 业务文案
+    # 业务文案 key 常量
     "TPL_NO_BATTLE", "TPL_NO_SKILL",
+    "TPL_NO_ITEM_ARG", "TPL_NO_ITEM",
+    "TPL_FLEE_OK", "TPL_FLEE_FAILED",
     # 回合数据增强
     "EnrichedTurnReport", "enrich_round_report",
     # 前缀装配 / 发送管线
@@ -107,24 +111,42 @@ __all__ = [
 ]
 
 # ---------------------------------------------------------------------------
-# 常量：指令名 / 业务文案
+# 常量：指令名 / 业务文案 key（模板 battle_tpl 分区，渲染统一 tpl_of）
 # ---------------------------------------------------------------------------
 
 ATTACK_CMD = "攻击"
 
 # 未进入战斗（铁律 2 单次操作 ≤1-2 条；战斗外指令不受影响，工程补白 5）
-TPL_NO_BATTLE = "❌ 当前没有进行中的战斗"
+_TPL_NO_BATTLE_KEY = "battle_no_battle"
 
 # /攻击 技能解析失败（值域问题，命令合法，不走 TPL-12；对齐 quest「任务不存在」口径）
-TPL_NO_SKILL = "❌ 没有这个技能"
+_TPL_NO_SKILL_KEY = "battle_no_skill"
 
 # /道具 缺物品 / 物品不存在（值域问题，不走 TPL-12）
-TPL_NO_ITEM_ARG = "❌ 请指定要使用的道具（/道具 药水）"
-TPL_NO_ITEM = "❌ 没有这个道具"
+_TPL_NO_ITEM_ARG_KEY = "battle_no_item_arg"
+_TPL_NO_ITEM_KEY = "battle_no_item"
 
 # 逃跑结果（无 BREP 模板，本层合成；工程补白 2）
-TPL_FLEE_OK = "✅ 逃跑成功，脱离战斗"
-TPL_FLEE_FAILED = "❌ 逃跑失败，战斗继续"
+_TPL_FLEE_OK_KEY = "battle_flee_ok"
+_TPL_FLEE_FAILED_KEY = "battle_flee_failed"
+
+# 道具使用行（P2-4 补白合成文案）
+_TPL_ITEM_USED_KEY = "battle_item_used"
+
+# 参数为当前地图怪物名 → 开战引导（P2-3）
+_TPL_NO_BATTLE_MAP_MONSTER_KEY = "battle_no_battle_map_monster"
+
+# 指令返回 message 元数据（非发送正文；逐字迁移 battle_tpl 分区）
+_TPL_RESULT_END_KEY = "battle_result_end"
+_TPL_RESULT_ROUND_KEY = "battle_result_round"
+
+# 向后兼容导出（= battle_tpl 默认文案；渲染一律 tpl_of(ctx, _KEY)，内容包可覆盖）
+TPL_NO_BATTLE = _BATTLE_TPL[_TPL_NO_BATTLE_KEY]
+TPL_NO_SKILL = _BATTLE_TPL[_TPL_NO_SKILL_KEY]
+TPL_NO_ITEM_ARG = _BATTLE_TPL[_TPL_NO_ITEM_ARG_KEY]
+TPL_NO_ITEM = _BATTLE_TPL[_TPL_NO_ITEM_KEY]
+TPL_FLEE_OK = _BATTLE_TPL[_TPL_FLEE_OK_KEY]
+TPL_FLEE_FAILED = _BATTLE_TPL[_TPL_FLEE_FAILED_KEY]
 
 
 # ---------------------------------------------------------------------------
@@ -492,6 +514,7 @@ class BattlePipeline:
     :param channel: 消息来源渠道（group/private）
     :param prefix_settings: message_prefix 段配置（None=框架默认）
     :param extra: 前缀额外占位符（{"群名":…, "职业":…}，IF01b）
+    :param ctx: 战斗 ctx（tpl_of 模板解析；None/无 templates → 默认模板）
     """
 
     def __init__(
@@ -505,6 +528,7 @@ class BattlePipeline:
         channel: str = CHANNEL_GROUP,
         prefix_settings: Optional[Mapping[str, object]] = None,
         extra: Optional[Mapping[str, object]] = None,
+        ctx: Any = None,
     ) -> None:
         self._sender = sender
         self._to = to
@@ -514,6 +538,7 @@ class BattlePipeline:
         self._channel = str(channel or CHANNEL_GROUP)
         self._prefix_settings = prefix_settings
         self._extra = extra
+        self._ctx = ctx
 
     @classmethod
     def from_ctx(cls, ctx: Mapping[str, Any]) -> "BattlePipeline":
@@ -528,6 +553,7 @@ class BattlePipeline:
             channel=ctx.get("channel") or CHANNEL_GROUP,
             prefix_settings=ctx.get("prefix_settings"),
             extra=ctx.get("prefix_extra"),
+            ctx=ctx,
         )
 
     # -- 发送基元 ------------------------------------------------------------
@@ -571,7 +597,8 @@ class BattlePipeline:
         与 render_battle_start 去前缀行一致）。player 仅作占位（render_battle_start
         不再消费玩家信息渲染前缀）。
         """
-        body = render_battle_start(_prefix_free_ns(player), _enemy_ns(enemy), hint=hint)
+        body = render_battle_start(_prefix_free_ns(player), _enemy_ns(enemy),
+                                   hint=hint, ctx=self._ctx)
         return self.send(body, to=to, prefix=False)
 
     def send_round(self, report: Any, *, to: Any = None) -> List[str]:
@@ -579,7 +606,7 @@ class BattlePipeline:
 
         输入为 EnrichedTurnReport（enrich_round_report 产出，承载接线层字段）。
         """
-        return self.send(render_battle_round(report), to=to)
+        return self.send(render_battle_round(report, ctx=self._ctx), to=to)
 
     def send_end(self, player: Any, enemy: Any, winner: str, *,
                  summary: Any = None, to: Any = None,
@@ -598,14 +625,14 @@ class BattlePipeline:
             _prefix_free_ns(player), _enemy_ns(enemy), winner, summary=summary,
             status=status, exp=exp, gold=gold, drops=drops,
             enemy_name=enemy_name or (getattr(enemy, "name", "") if enemy else None),
-            final_damage=final_damage,
+            final_damage=final_damage, ctx=self._ctx,
         )
         return self.send(body, to=to)
 
     def send_flee(self, *, ok: bool, to: Any = None) -> List[str]:
         """逃跑结果 1 条（无 BREP 模板，本层合成；工程补白 2）。"""
-        text = TPL_FLEE_OK if ok else TPL_FLEE_FAILED
-        return self.send(text, to=to)
+        key = _TPL_FLEE_OK_KEY if ok else _TPL_FLEE_FAILED_KEY
+        return self.send(tpl_of(self._ctx, key), to=to)
 
 
 # ---------------------------------------------------------------------------
@@ -620,9 +647,10 @@ def _send_item_round(
     """道具回合（无 BREP 行动模板，本层合成；工程补白 2）：
 
     道具使用行 + 怪物反击（复用 render_battle_round 渲染敌段）合并 1 条。
+    道具使用行模板 battle_item_used（battle_tpl 分区，内容包可覆盖）。
     """
-    body = f"✅ 你使用了{item_name}"
-    counter = render_battle_round(_without_player_outcomes(report))
+    body = tpl_of(pipeline._ctx, _TPL_ITEM_USED_KEY, {"item_name": item_name})
+    counter = render_battle_round(_without_player_outcomes(report), ctx=pipeline._ctx)
     if counter:
         body = f"{body}\n{counter}"
     return pipeline.send(body)
@@ -678,8 +706,8 @@ def dispatch_round(
             delivered.extend(pipeline.send_flee(ok=True))          # 逃跑成功：战斗结束，1 条
         else:
             # 逃跑失败：战斗继续 → 逃跑结果 + 怪物反击合并 1 条（铁律 2/军规3）
-            body = TPL_FLEE_FAILED
-            counter = render_battle_round(_without_player_outcomes(enriched))
+            body = tpl_of(ctx, _TPL_FLEE_FAILED_KEY)
+            counter = render_battle_round(_without_player_outcomes(enriched), ctx=ctx)
             if counter:
                 body = f"{body}\n{counter}"
             delivered.extend(pipeline.send(body))
@@ -760,11 +788,14 @@ def _run_battle_action(ctx: Mapping[str, Any], action: Mapping[str, Any]) -> dic
     engine = ctx.get("battle_engine")
     pipeline = BattlePipeline.from_ctx(ctx)
     if engine is None:
-        sent = pipeline.send(TPL_NO_BATTLE)
-        return {"ok": False, "sent": sent, "message": TPL_NO_BATTLE}
+        sent = pipeline.send(tpl_of(ctx, _TPL_NO_BATTLE_KEY))
+        return {"ok": False, "sent": sent, "message": tpl_of(ctx, _TPL_NO_BATTLE_KEY)}
     report = engine.player_act(action)
     sent = dispatch_round(engine, report, pipeline, ctx, player_action=action)
-    message = f"战斗结束（{report.status}）" if report.ended else f"第 {report.turn} 回合结算"
+    if report.ended:
+        message = tpl_of(ctx, _TPL_RESULT_END_KEY, {"status": report.status})
+    else:
+        message = tpl_of(ctx, _TPL_RESULT_ROUND_KEY, {"turn": report.turn})
     return {"ok": True, "sent": sent, "message": message}
 
 
@@ -797,11 +828,8 @@ def _attack_action(parsed: Any, ctx: Mapping[str, Any]) -> Tuple[Optional[dict],
         # 2026-08-31 QA P2-3：参数为当前地图怪物名（如「攻击 疾风狼」）→ 未开战时
         # 给出明确引导而非「没有这个技能」（开战链路未接线，后续里程碑）。
         if ctx.get("battle_engine") is None and _is_current_map_monster(ctx, str(args[0])):
-            return None, (
-                "❌ 当前没有进行中的战斗。开战功能尚未实装；进入战斗后使用 "
-                "/攻击 <技能序号或名称> 发动技能。"
-            )
-        return None, TPL_NO_SKILL
+            return None, tpl_of(ctx, _TPL_NO_BATTLE_MAP_MONSTER_KEY)
+        return None, tpl_of(ctx, _TPL_NO_SKILL_KEY)
     return {"type": "skill", "skill_id": sid}, None
 
 
@@ -849,12 +877,12 @@ def _item_action(parsed: Any, ctx: Mapping[str, Any]) -> Tuple[Optional[dict], O
     battle_actions/actions 字段构造 L0 动作（引擎 _resolve_item_action 消费）。"""
     args = list(getattr(parsed, "args", None) or [])
     if not args:
-        return None, TPL_NO_ITEM_ARG
+        return None, tpl_of(ctx, _TPL_NO_ITEM_ARG_KEY)
     if len(args) > 1:
         return None, format_tpl12(_fragment(parsed))
     resolved = _resolve_item(ctx, str(args[0]))
     if resolved is None:
-        return None, TPL_NO_ITEM
+        return None, tpl_of(ctx, _TPL_NO_ITEM_KEY)
     item_id, item_def = resolved
     actions = list(item_def.get("battle_actions") or item_def.get("actions") or [])
     item_name = str(item_def.get("name") or item_id)

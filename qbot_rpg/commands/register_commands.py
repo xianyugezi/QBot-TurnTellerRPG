@@ -113,9 +113,6 @@ TPL_DUP_NAME = "❌ 已经有一个叫『{name}』的角色了，换个名字吧
 # 职业不存在（RUL-03：精确匹配 jobs 显示名；推荐角标源 L591）
 TPL_JOB_NOT_FOUND = "❌ 没有『{job}』这个职业，可用：{list}"
 
-# 保留字符黄提示尾缀（RUL-02 ③「只建议不限制」；成功消息附引导换名）
-_RESERVED_HINT = "（提示：{hint}）"
-
 # 初始属性兜底（stats.json base 缺失时；【框架】L608-611：hp 100 / mp 30 / 战斗 10~15）
 _BASE_FALLBACK: Mapping[str, float] = {"hp": 100.0, "mp": 30.0}
 
@@ -140,16 +137,17 @@ def _fragment(parsed: Any) -> str:
     return f"/{cmd}{tail}"
 
 
-def _name_error(name: str) -> Optional[str]:
+def _name_error(ctx: Mapping[str, Any], name: str) -> Optional[str]:
     """角色名硬性校验错误（REG-02 ①②）：长度超限 / 含控制字符 → 错误文案；合法 → None。
 
     保留字符（REG-02 ③）为黄提示不硬拦，不走本函数（见 cmd_register 尾缀逻辑）。
+    文案模板化：register_name_too_long / register_name_bad_chars（register_rem_tpl 分区）。
     """
     if len(name) > MAX_NAME_LEN:
-        return TPL_NAME_TOO_LONG
+        return tpl_of(ctx, "register_name_too_long")
     for ch in name:
         if ord(ch) < 0x20 or ord(ch) == 0x7F:
-            return TPL_NAME_BAD_CHARS
+            return tpl_of(ctx, "register_name_bad_chars")
     return None
 
 
@@ -234,7 +232,7 @@ def _available_jobs(ctx: Mapping[str, Any]) -> List[str]:
             continue
         name = str(d.get("name") or jid)
         if d.get("recommended_newbie"):
-            name += "（推荐）"
+            name += tpl_of(ctx, "register_job_recommended")
         out.append(name)
     return out
 
@@ -331,23 +329,24 @@ def render_register_success(
     mp = int(base.get("mp", 30))
     atk = int(base.get("str", 10))
     dfn = int(base.get("con", 10))
+    # 2026-08-31 模板配置化：逐行 tpl_of（register_success_* 分区，内容包可覆盖）
     lines: List[str] = [
-        f"Lv1.{name} - -",
-        f"✅ 注册成功！欢迎来到「{_world_name(ctx)}」世界",
+        tpl_of(ctx, "register_success_prefix", {"name": name}),
+        tpl_of(ctx, "register_success_welcome", {"world": _world_name(ctx)}),
     ]
     job_name = _job_name_of(job)
     if job and job.get("recommended_newbie"):
-        job_name += "（推荐新手）"
-    lines.append(f"职业：{job_name} ｜ 位置：{location}")
+        job_name += tpl_of(ctx, "register_success_recommended")
+    lines.append(tpl_of(ctx, "register_success_job_loc", {"job": job_name, "location": location}))
     # 意见一同步：初始属性每项独立一行（生命/魔力/攻击/防御各一行）；引导行尾加句号
-    lines.append("初始属性：")
-    lines.append(f"生命 {hp}/{hp}")
-    lines.append(f"魔力 {mp}/{mp}")
-    lines.append(f"攻击 {atk}")
-    lines.append(f"防御 {dfn}")
-    lines.append(f"下一步：发 /帮助 查看指令，或 /锁定 {location}怪物开战。")
+    lines.append(tpl_of(ctx, "register_success_attr_title", {}))
+    lines.append(tpl_of(ctx, "register_success_hp", {"hp": hp}))
+    lines.append(tpl_of(ctx, "register_success_mp", {"mp": mp}))
+    lines.append(tpl_of(ctx, "register_success_atk", {"atk": atk}))
+    lines.append(tpl_of(ctx, "register_success_dfn", {"dfn": dfn}))
+    lines.append(tpl_of(ctx, "register_success_next", {"location": location}))
     if hint:
-        lines.append(_RESERVED_HINT.format(hint=hint))
+        lines.append(tpl_of(ctx, "register_reserved_hint", {"hint": hint}))
     return "\n".join(lines)
 
 
@@ -432,14 +431,12 @@ def cmd_register(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     usage = "/注册 <角色名> [职业]"
     if len(args) > 2:
         # 超参 → 正确格式引导（3d §5.1「原因 + 正确用法 + 下一步」句式；TPL-12 同款错误头）
-        return (f"❌ 指令不正确：/注册 最多 2 个参数。"
-                f"正确格式：{usage}")
+        return tpl_of(ctx, "register_args_too_many", {"usage": usage})
     if len(args) == 0:
         # 无参 → QQ 号兜底（用户拍板 2026-08-28：不带角色名直接用 QQ 号作玩家名，零输入开玩）
         auto_name = str(ctx.get("qq_id") or "").strip()
         if not auto_name:
-            return (f"❌ 指令不正确：/注册 需要角色名。"
-                    f"正确格式：{usage}（或直接发 /注册，将用你的 QQ 号作为名字）")
+            return tpl_of(ctx, "register_args_missing", {"usage": usage})
         name = auto_name
         used_auto_name = True
     else:
@@ -456,7 +453,7 @@ def cmd_register(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         })
 
     # REG-02 名字硬性校验（长度/控制字符）
-    err = _name_error(name)
+    err = _name_error(ctx, name)
     if err is not None:
         return err
 
@@ -465,7 +462,7 @@ def cmd_register(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         job = resolve_job(ctx, args[1])
         if job is None:
             avail = " ".join(_available_jobs(ctx)) or "?"
-            return TPL_JOB_NOT_FOUND.format(job=str(args[1]), list=avail)
+            return tpl_of(ctx, "register_job_not_found", {"job": str(args[1]), "list": avail})
     else:
         job = default_job(ctx)
         if job is None:
@@ -477,7 +474,7 @@ def cmd_register(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     if callable(exists):
         try:
             if exists(name):
-                return TPL_DUP_NAME.format(name=name)
+                return tpl_of(ctx, "register_dup_name", {"name": name})
         except Exception:
             pass  # 回调异常不阻断注册（唯一性判定缺省放行，工程补白 7）
 
@@ -485,7 +482,7 @@ def cmd_register(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     hint = reserved_char_hint(name) if name else None
     # 无参注册 → 已用 QQ 号兜底（用户拍板 2026-08-28），成功消息附提示
     if used_auto_name:
-        auto_hint = f"已自动用你的 QQ 号「{name}」作为名字"
+        auto_hint = tpl_of(ctx, "register_auto_name", {"name": name})
         hint = f"{hint} {auto_hint}".strip() if hint else auto_hint
 
     # REG-04/05 建号：构造初始 Player 写 ctx + 置注册态（落档归装配层）

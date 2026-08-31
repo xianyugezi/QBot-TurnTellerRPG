@@ -144,17 +144,18 @@ HELP_CMD = "帮助"
 SUB_WEAR = "穿"
 SUB_REMOVE = "卸"
 
-# RUL-08 注册门槛（4f §1.4 / TC-05；/帮助 豁免见 B6）
+# RUL-08 注册门槛（4f §1.4 / TC-05；/帮助 豁免见 B6；模板配置化：basic_register_gate 可内容包覆盖）
 TPL_REGISTER_GATE = "❌ 请先 /注册 创建角色（/注册 名字 职业）"
 
-# /背包 空背包（4f §3.4 边界：对齐 L1353 反向兜底）
+# /背包 空背包（4f §3.4 边界：对齐 L1353 反向兜底；模板配置化：basic_empty_bag）
 TPL_EMPTY_BAG = "❌ 背包空空如也"
 
-# /装备 槽位解析失败（值域问题，命令合法，不走 TPL-12；工程补白 4）
+# /装备 槽位解析失败（值域问题，命令合法，不走 TPL-12；工程补白 4；模板配置化：basic_no_slot）
 TPL_NO_SLOT = "❌ 没有这个装备槽位"
 
 # /装备 名称形式（如 /装备 铁剑）→ 友好提示引导序号用法（P2-11 QA：名称被泛化
-# 拒绝回「❌ 指令不正确」，应提示 /装备 <序号>；命令合法，不走 TPL-12，对齐 TPL_NO_SLOT）
+# 拒绝回「❌ 指令不正确」，应提示 /装备 <序号>；命令合法，不走 TPL-12，对齐 TPL_NO_SLOT；
+# 模板配置化：basic_equip_name_hint）
 TPL_EQUIP_NAME_HINT = "❌ 装备指令：请用 /装备 穿 <序号> 穿戴（序号见 /背包），如 /装备 穿 3"
 
 # 品质四档（4b GRD-x 唯一注册表；RUL-19：仅非 normal 档标注）
@@ -287,9 +288,14 @@ def parse_page_arg(text: Optional[str]) -> Optional[int]:
 
 
 def _gate(ctx: Mapping[str, Any]) -> Optional[str]:
-    """RUL-08 注册门槛：ctx["registered"] is False → 拦截文案；缺省视为已注册（工程补白 7）。"""
+    """RUL-08 注册门槛：ctx["registered"] is False → 拦截文案；缺省视为已注册（工程补白 7）。
+
+    模板配置化 2026-08-31：basic_register_gate 可内容包覆盖；TPL_REGISTER_GATE 常量保留
+    供兄弟模块（status/shortcut/use/forge/shop/checkin/quest/codex/battle/log/dialog）
+    复用（其渲染处由各自批次迁移）。
+    """
     if ctx.get("registered", True) is False:
-        return TPL_REGISTER_GATE
+        return tpl_of(ctx, "basic_register_gate")
     return None
 
 
@@ -620,9 +626,9 @@ def bag_line(index: int, row: Any, ctx: Mapping[str, Any]) -> str:
     line = tpl_of(ctx, "bag_row", {"idx": index, "name": f["name"], "count": f["count"]})
     q = QUALITY_LABELS.get(f["quality"])
     if q:
-        line += f"（{q}）"
+        line += tpl_of(ctx, "basic_quality_suffix", {"quality": q})
     if f["bound"]:
-        line += "（绑定）"
+        line += tpl_of(ctx, "basic_bound_suffix")
     return line
 
 
@@ -644,7 +650,9 @@ def _currency_lines(ctx: Mapping[str, Any]) -> List[str]:
     cur = ctx.get("currencies")
     if not isinstance(cur, Mapping) or not cur:
         return []
-    return [f"{_currency_display_name(ctx, str(k))}：{v}" for k, v in cur.items()]
+    return [tpl_of(ctx, "basic_currency_row",
+                   {"name": _currency_display_name(ctx, str(k)), "value": v})
+            for k, v in cur.items()]
 
 
 # CakeGame 式尾段 Tip 内容（`Tip:` 之后部分，2026-08-27 用户拍板统一列表尾段；无斜杠指令名）
@@ -688,7 +696,7 @@ def _render_bag_page(ctx: Mapping[str, Any], page: int) -> str:
     + 当前页 + Tip；裁决② 夹取；空背包 → TPL_EMPTY_BAG。"""
     rows = _inventory_rows(ctx)
     if not rows:
-        return TPL_EMPTY_BAG
+        return tpl_of(ctx, "basic_empty_bag")
     res = resolve_page(page, len(rows), DEFAULT_PAGE_SIZE)
     if res.invalid:
         raise ValueError(
@@ -877,7 +885,7 @@ def _render_rows_page(ctx: Mapping[str, Any], rows: Sequence[Any], cmd: str,
                       page: int, category_word: str = "全部") -> str:
     """通用列表分页渲染（5 条/页 + 用户 /背包 尾段：货币/当前页(类型词)/Tip + 裁决② 夹取；空 → TPL_EMPTY_BAG）。"""
     if not rows:
-        return TPL_EMPTY_BAG
+        return tpl_of(ctx, "basic_empty_bag")
     res = resolve_page(page, len(rows), DEFAULT_PAGE_SIZE)
     if res.invalid:
         raise ValueError(
@@ -913,10 +921,11 @@ def cmd_bag_filter(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
             return format_tpl12(_fragment(parsed))
     cat_word, sub_word, qual_word, page = _parse_filter_args(args)
     if not cat_word:
-        # 缺物品类型词 → 提示用法（值域/用法问题，非 TPL-12 指令错误；对齐 4f 提示风）
-        return "❌ 背包筛选：输入物品类型（装备/药剂/货币袋/材料/技能书/任务），如「背包筛选装备」"
+        # 缺物品类型词 → 提示用法（值域/用法问题，非 TPL-12 指令错误；对齐 4f 提示风；
+        # 模板配置化：basic_filter_hint）
+        return tpl_of(ctx, "basic_filter_hint")
     if cat_word not in _CATEGORY_WORDS:
-        return f"❌ 没有「{cat_word}」这个物品类型（装备/药剂/货币袋/材料/技能书/任务）"
+        return tpl_of(ctx, "basic_filter_unknown", {"word": cat_word})
     rows = _filter_inventory_rows(_inventory_rows(ctx), ctx, cat_word, sub_word, qual_word)
     return _render_rows_page(ctx, rows, BAG_FILTER_CMD, page, category_word=cat_word)
 
@@ -997,9 +1006,9 @@ def equip_line(slot_id: str, slot: Any, ctx: Mapping[str, Any]) -> Optional[str]
     info = _slot_info(slot)
     if info is None:
         return None
-    line = f"{slot_name}：{info['name']}"
+    line = tpl_of(ctx, "basic_equip_line", {"slot": slot_name, "name": info["name"]})
     if info["enhance"]:
-        line += f" +{info['enhance']}"
+        line += tpl_of(ctx, "basic_equip_enh", {"enhance": info["enhance"]})
     return line
 
 
@@ -1016,7 +1025,7 @@ def _render_equip_page(ctx: Mapping[str, Any], page: int = 1) -> str:
     for sid in eq:
         if sid not in items:
             items.append(sid)
-    lines: List[str] = ["【装备】"]
+    lines: List[str] = [tpl_of(ctx, "basic_equip_header")]
     for sid in items:
         ln = equip_line(sid, eq.get(sid), ctx)
         if ln:
@@ -1040,6 +1049,18 @@ def resolve_equip_slot(ctx: Mapping[str, Any], arg: object) -> Optional[str]:
     if n is not None and 1 <= n <= len(order):
         return order[n - 1]
     return None
+
+
+# 引擎拒绝 reason → 模板 key（模板配置化 2026-08-31；basic_equip_reason_* 可内容包覆盖）
+_EQUIP_REASON_KEYS: Mapping[str, str] = {
+    "slot_mismatch": "basic_equip_reason_slot_mismatch",
+    "mutual_exclusion": "basic_equip_reason_mutual_exclusion",
+    "empty_slot": "basic_equip_reason_empty_slot",
+    "in_battle": "basic_equip_reason_in_battle",
+    "item_not_found": "basic_equip_reason_item_not_found",
+    "unknown_slot": "basic_equip_reason_unknown_slot",
+    "max_reached": "basic_equip_reason_max_reached",
+}
 
 
 class EquipmentEngineAdapter:
@@ -1111,31 +1132,35 @@ class EquipmentEngineAdapter:
             return rows
 
     def equip_wear(self, index: int, ctx: MutableMapping[str, Any]) -> dict:
-        """装备背包第 index 件（1 起，按 /背包 展示序=acquired_at 倒序）；返回 {ok, message, ...}。"""
+        """装备背包第 index 件（1 起，按 /背包 展示序=acquired_at 倒序）；返回 {ok, message, ...}。
+
+        模板配置化 2026-08-31：消息走 basic_equip_* 模板（basic_equip_no_player / no_item /
+        not_equippable / no_slot / ok / replaced / fail），内容包可覆盖同 key。
+        """
         player = self._player(ctx)
         if player is None:
-            return {"ok": False, "message": "❌ 玩家状态缺失（请先 /注册 创建角色）"}
+            return {"ok": False, "message": tpl_of(ctx, "basic_equip_no_player")}
         sorted_inv = self._sorted_inventory(player)
         if not (1 <= index <= len(sorted_inv)):
-            return {"ok": False, "message": "❌ 背包里没有这件物品"}
+            return {"ok": False, "message": tpl_of(ctx, "basic_equip_no_item")}
         item = sorted_inv[index - 1]
         if not isinstance(item, ItemInstance):
-            return {"ok": False, "message": "❌ 这件物品不能装备"}
+            return {"ok": False, "message": tpl_of(ctx, "basic_equip_not_equippable")}
         if not item.slot:
-            return {"ok": False, "message": "❌ 这件物品不能装备（未登记装备槽位）"}
+            return {"ok": False, "message": tpl_of(ctx, "basic_equip_no_slot")}
         res = self._engine.equip(player, item, item.slot)
         if res.get("ok"):
-            msg = f"✅ 已装备：{item.name}"
+            msg = tpl_of(ctx, "basic_equip_ok", {"name": item.name})
             if res.get("replaced"):
-                msg += "（已替换原装备并回包）"
+                msg += tpl_of(ctx, "basic_equip_replaced")
             return {"ok": True, "message": msg, "slot": item.slot, **res}
-        return {"ok": False, "message": self._fail_message(res, "装备失败")}
+        return {"ok": False, "message": self._fail_message(ctx, res, "basic_equip_fail_wear")}
 
     def equip_remove(self, slot_id: str, ctx: MutableMapping[str, Any]) -> dict:
         """卸下槽位装备；返回 {ok, message, ...}。"""
         player = self._player(ctx)
         if player is None:
-            return {"ok": False, "message": "❌ 玩家状态缺失（请先 /注册 创建角色）"}
+            return {"ok": False, "message": tpl_of(ctx, "basic_equip_no_player")}
         old = None
         equipment = player.get("equipment")
         if isinstance(equipment, Mapping):
@@ -1148,26 +1173,22 @@ class EquipmentEngineAdapter:
                 if not old_name and isinstance(old, Mapping):
                     old_name = str(old.get("name") or "")
             item_id = str(res.get("item_id") or "")
-            return {"ok": True, "message": f"✅ 已卸下：{old_name or item_id}", **res}
-        return {"ok": False, "message": self._fail_message(res, "卸下失败")}
+            return {"ok": True, "message": tpl_of(ctx, "basic_equip_remove_ok",
+                                                 {"name": old_name or item_id}), **res}
+        return {"ok": False, "message": self._fail_message(ctx, res, "basic_equip_fail_remove")}
 
     @staticmethod
-    def _fail_message(res: Mapping[str, Any], fallback: str) -> str:
-        """引擎拒绝 → ❌ 文案（message 透传；缺省按 reason 兜底人话）。"""
+    def _fail_message(ctx: Mapping[str, Any], res: Mapping[str, Any], fallback_key: str) -> str:
+        """引擎拒绝 → ❌ 文案（message 透传；缺省按 reason 兜底人话，模板配置化 basic_equip_*）。
+
+        fallback_key = 无匹配 reason 时的兜底模板 key（basic_equip_fail_wear / _remove）。
+        """
         msg = res.get("message")
         if msg:
-            return f"❌ {msg}"
+            return tpl_of(ctx, "basic_equip_fail", {"msg": msg})
         reason = str(res.get("reason") or "")
-        reason_cn = {
-            "slot_mismatch": "这个位置穿不上",
-            "mutual_exclusion": "装备冲突：与已穿装备互斥，无法同时穿戴",
-            "empty_slot": "该槽位没有装备",
-            "in_battle": "战斗中不可更换装备（战前换装）",
-            "item_not_found": "背包里没有这件物品",
-            "unknown_slot": "没有这个装备槽位",
-            "max_reached": "该槽位已达可装备数量上限",
-        }
-        return f"❌ {reason_cn.get(reason, fallback)}"
+        key = _EQUIP_REASON_KEYS.get(reason, fallback_key)
+        return tpl_of(ctx, "basic_equip_fail", {"msg": tpl_of(ctx, key, {})})
 
 
 _logger = get_logger("basic_commands.equip")
@@ -1202,7 +1223,7 @@ def _cmd_equip_wear(ctx: Mapping[str, Any], index: int) -> str:
     except Exception as exc:  # P2-3 修复：裸吞异常留日志（防故障不可诊断）
         _logger.exception("equip_wear 异常（index=%s）: %s", index, exc)
         res = {}
-    return str(res.get("message") or "❌ 装备失败")
+    return str(res.get("message") or tpl_of(ctx, "basic_equip_wear_fail"))
 
 
 def _cmd_equip_remove(ctx: Mapping[str, Any], slot_id: str) -> str:
@@ -1213,7 +1234,7 @@ def _cmd_equip_remove(ctx: Mapping[str, Any], slot_id: str) -> str:
     except Exception as exc:  # P2-3 修复：裸吞异常留日志（防故障不可诊断）
         _logger.exception("equip_remove 异常（slot=%s）: %s", slot_id, exc)
         res = {}
-    return str(res.get("message") or "❌ 卸下失败")
+    return str(res.get("message") or tpl_of(ctx, "basic_equip_remove_fail"))
 
 
 def cmd_equip(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
@@ -1249,12 +1270,12 @@ def cmd_equip(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
             return format_tpl12(_fragment(parsed))
         sid = resolve_equip_slot(ctx, slot_arg)
         if sid is None:
-            return TPL_NO_SLOT
+            return tpl_of(ctx, "basic_no_slot")
         return _cmd_equip_remove(ctx, sid)
     # 名称形式（非数字非子词，如 /装备 铁剑）→ 友好提示引导序号（P2-11 QA；命令合法，
-    # 不走 TPL-12，对齐 TPL_NO_SLOT 值域文案口径）
+    # 不走 TPL-12，对齐 TPL_NO_SLOT 值域文案口径；模板配置化：basic_equip_name_hint）
     if parse_int(first) is None:
-        return TPL_EQUIP_NAME_HINT
+        return tpl_of(ctx, "basic_equip_name_hint")
     # 整数 = 页码（0/负数 → parse_page_arg None → TPL-12，保留裁决②）
     page = parse_page_arg(first)
     if page is None:
@@ -1357,18 +1378,20 @@ def _derived_names(ctx: Mapping[str, Any], sid: str, chain_refs: Sequence[Any]) 
 
 def skill_line(index: int, sid: str, ctx: Mapping[str, Any]) -> str:
     """技能行：`{序号}. {名称}（{类型}）{MP} MP ｜ {描述} ｜ 可派生成：XX`（M2 技能卡派生指向）。
-    MP 仅 >0 显示；无描述不输出描述段；无派生链不输出指向（工程补白 5）。"""
+    MP 仅 >0 显示；无描述不输出描述段；无派生链不输出指向（工程补白 5）。模板配置化
+    2026-08-31：basic_skill_row / basic_skill_mp / basic_skill_chain 可内容包覆盖。"""
     defn = _skill_def(ctx, sid)
     name = _skill_name(ctx, sid)
     type_label = TYPE_LABELS.get(str(_skill_field(defn, "type", "active")), "主动")
-    parts: List[str] = [f"{index}. {name}（{type_label}）"]
+    parts: List[str] = [tpl_of(ctx, "basic_skill_row",
+                               {"idx": index, "name": name, "type": type_label})]
     mp = _skill_field(defn, "mp_cost", 0)
     try:
         mp = int(mp)
     except (TypeError, ValueError):
         mp = 0
     if mp > 0:
-        parts[0] += f" {mp} MP"
+        parts[0] += tpl_of(ctx, "basic_skill_mp", {"mp": mp})
     desc = _skill_field(defn, "desc")
     if isinstance(desc, str) and desc:
         parts.append(desc)
@@ -1376,7 +1399,7 @@ def skill_line(index: int, sid: str, ctx: Mapping[str, Any]) -> str:
     if isinstance(chain_refs, (list, tuple)) and chain_refs:
         derived = _derived_names(ctx, sid, chain_refs)
         if derived:
-            parts.append("可派生成：" + "、".join(derived))
+            parts.append(tpl_of(ctx, "basic_skill_chain", {"names": "、".join(derived)}))
     return " ｜ ".join(parts)
 
 
@@ -1423,7 +1446,11 @@ def _render_skill_page(ctx: Mapping[str, Any], page: int) -> str:
     slice_ids = sids[start:start + DEFAULT_PAGE_SIZE]
     f = _player_fields(ctx)
     job = str(ctx.get("job_name") or _job_name(ctx, f["job_id"]) or "?")
-    lines: List[str] = [f"【技能】Lv{f['level']}.{f['name']}（{job}）", f"技能 {len(sids)} 项"]
+    lines: List[str] = [
+        tpl_of(ctx, "basic_skill_header",
+               {"level": f["level"], "name": f["name"], "job": job}),
+        tpl_of(ctx, "basic_skill_count", {"count": len(sids)}),
+    ]
     for i, sid in enumerate(slice_ids):
         lines.append(skill_line(start + i + 1, sid, ctx))
     if sids:
@@ -1550,7 +1577,7 @@ def _render_help_group(ctx: Mapping[str, Any], group_name: str, page: int) -> st
     assert res.page is not None
     start = (res.page - 1) * DEFAULT_PAGE_SIZE
     slice_cmds = cmds[start:start + DEFAULT_PAGE_SIZE]
-    lines: List[str] = [f"【{group_name}】"]
+    lines: List[str] = [tpl_of(ctx, "basic_help_group_header", {"group": group_name})]
     for i, c in enumerate(slice_cmds):
         # SHC-04/RUL-24：指令名按 settings.command_aliases 显示层替换（TC-17）
         display = _command_alias_display(ctx, c[0])
@@ -1571,8 +1598,9 @@ def cmd_help(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     """
     # B6 注册引导版（豁免）——P2-6 修复：未注册判定前置到 parsed.error 之前，
     # 未注册玩家任意 /帮助（含解析错误）均返回引导版（B6「/帮助 豁免注册门槛」）。
+    # 模板配置化：basic_register_guide（内容包可覆盖）。
     if ctx.get("registered", True) is False:
-        return _REGISTER_GUIDE
+        return tpl_of(ctx, "basic_register_guide")
     if parsed.error:
         return format_tpl12(_fragment(parsed))
     if getattr(parsed, "fixed_subword", None):

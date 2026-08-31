@@ -104,21 +104,11 @@ TYPE_BADGES: Mapping[str, str] = {
 }
 
 # 商店不存在（引擎校验链① 口径，no_shop 分支；未开门分支由引擎 gate message 透传）
+# 渲染走 register_rem_tpl 分区 shop_no_shop（2026-08-31 模板配置化；本常量保留为 API/测试锚点）
 TPL_NO_SHOP = "❌ 商店不存在"
 
 # 商店条目行分隔线（2b3 TC-05：条目间 `---------------` 分隔）
 _ROW_SEPARATOR = "---------------"
-
-# 空店文案（定稿 L421 黄提示「这家店空空的」；纯文本无 emoji）
-_EMPTY_SHOP = "（这家店空空的）"
-
-# 列表一览标题行
-_LIST_TITLE = "可用商店一览"
-
-# CakeGame 式尾段 Tip 内容（`Tip:` 之后部分，2026-08-27 用户拍板统一列表尾段；无斜杠指令名）
-# 意见一同步：/商店 Tip 改「购买 序号」（按序号购买）
-_BROWSE_TAIL_TIP = "发送'购买 序号'即可购买物品。"   # /商店 商品列表
-_LIST_TAIL_TIP = "发送'商店 <名称>'即可进入商店"     # /商店 列表 一览
 
 
 # ---------------------------------------------------------------------------
@@ -172,18 +162,24 @@ def _fragment(parsed: Any) -> str:
 
 
 def _price_text(price: object, ctx: Mapping[str, Any]) -> str:
-    """商品单价文本：single → 「100(金币)」；mixed → 「50(金币)+5(宝石)」（2b3 TC-05/TC-19）。"""
+    """商品单价文本：single → 「100(金币)」；mixed → 「50(金币)+5(宝石)」（2b3 TC-05/TC-19）。
+
+    模板化：shop_price_single / shop_price_part（register_rem_tpl 分区，内容包可覆盖）。
+    """
     if not isinstance(price, Mapping):
         return "?"
     kind = price.get("kind")
     if kind == "mixed":
         parts = price.get("parts")
         if isinstance(parts, Mapping):
-            return "+".join(f"{amt}({_currency_name(ctx, k)})" for k, amt in parts.items())
+            return "+".join(
+                tpl_of(ctx, "shop_price_part", {"amount": amt, "currency": _currency_name(ctx, k)})
+                for k, amt in parts.items()
+            )
         return "?"
     unit = price.get("unit")
     cur = _currency_name(ctx, price.get("currency", ""))
-    return f"{unit}({cur})"
+    return tpl_of(ctx, "shop_price_single", {"unit": unit, "currency": cur})
 
 
 # ---------------------------------------------------------------------------
@@ -268,14 +264,14 @@ def _browse_header(shop: Mapping[str, Any], ctx: Optional[Mapping[str, Any]] = N
 
 def _browse_row_text(row: Mapping[str, Any], ctx: Mapping[str, Any]) -> str:
     """商品行（模板配置化 2026-08-31：shop_row，内容包可覆盖）：
-    `序号.物品名 ｜ 商品单价：价格(货币名) 标记`（折扣只附 `[折扣 -X%]`）。"""
+    `序号.物品名 ｜ 商品单价：价格(货币名) 标记`（折扣只附 `[折扣 -X%]`，模板 shop_discount_marker）。"""
     idx = row.get("index", "?")
     name = row.get("name", "?")
     price = _price_text(row.get("price"), ctx)
     discount = row.get("discount") or 0
     markers = list(row.get("markers", []) or [])
     if discount:
-        markers.append(f"[折扣 -{discount}%]")
+        markers.append(tpl_of(ctx, "shop_discount_marker", {"discount": discount}))
     marker_txt = " " + " ".join(str(m) for m in markers) if markers else ""
     return tpl_of(ctx, "shop_row", {"idx": idx, "name": name, "price": price, "markers": marker_txt})
 
@@ -287,20 +283,24 @@ def render_shop_items(shop: Mapping[str, Any], rows: list, page: object,
     裁决② 夹取 → （已到最后一页）插在 Tip 前。"""
     sl, pg, pgs, total, clamped = _paginate(rows, page, per_page)
     if not sl:
-        return f"{_browse_header(shop, ctx)}\n{_EMPTY_SHOP}"
+        return f"{_browse_header(shop, ctx)}\n{tpl_of(ctx, 'shop_browse_empty')}"
     body = f"\n{_ROW_SEPARATOR}\n".join(_browse_row_text(r, ctx) for r in sl)
     out: List[str] = [_browse_header(shop, ctx), body]
-    tail = render_cake_tail(pg, pgs, tip=_BROWSE_TAIL_TIP)
+    tail = render_cake_tail(pg, pgs, tip=tpl_of(ctx, "shop_browse_tail_tip"))
     if clamped:
         tail = tail.replace("\n", f"\n{LAST_PAGE_HINT}\n", 1)
     out.append(tail)
     return "\n".join(out)
 
 
-def _shop_row(index: int, row: Mapping[str, Any]) -> str:
-    """商店一览行（定稿 L42/L367-370）：`序号. {icon}{name} {类型徽标} {desc} {门槛标记}`。"""
+def _shop_row(index: int, row: Mapping[str, Any], ctx: Optional[Mapping[str, Any]] = None) -> str:
+    """商店一览行（定稿 L42/L367-370）：`序号. {icon}{name} {类型徽标} {desc} {门槛标记}`。
+
+    序号前缀模板化：shop_overview_row_prefix（register_rem_tpl 分区，内容包可覆盖）。
+    """
     name = f"{strip_icon_emoji(row.get('icon', ''))}{row.get('name', '')}"
-    parts: List[str] = [f"{index}. {name or '?'}"]
+    parts: List[str] = [tpl_of(ctx, "shop_overview_row_prefix",
+                               {"index": index, "name": name or "?"})]
     t = row.get("type", "normal")
     if t in TYPE_BADGES:
         parts.append(TYPE_BADGES[t])
@@ -314,14 +314,15 @@ def _shop_row(index: int, row: Mapping[str, Any]) -> str:
 
 
 def render_shops_overview(rows: list, page: object, *,
+                          ctx: Optional[Mapping[str, Any]] = None,
                           per_page: int = DEFAULT_PAGE_SIZE) -> str:
-    """/商店 列表：可用商店一览（类型图标/门槛标记，置灰不隐藏）+ 5 条/页 + CakeGame 式尾段
-    （当前页 + Tip）+ 裁决② 夹取。"""
+    """`/商店 列表`：可用商店一览（类型图标/门槛标记，置灰不隐藏）+ 5 条/页 + CakeGame 式尾段
+    （当前页 + Tip）+ 裁决② 夹取。标题/尾段 Tip 模板化：shop_list_title / shop_list_tail_tip。"""
     sl, pg, pgs, total, clamped = _paginate(rows, page, per_page)
-    lines: List[str] = [_LIST_TITLE]
+    lines: List[str] = [tpl_of(ctx, "shop_list_title")]
     start = (pg - 1) * per_page
-    lines.extend(_shop_row(start + i + 1, r) for i, r in enumerate(sl))
-    tail = render_cake_tail(pg, pgs, tip=_LIST_TAIL_TIP)
+    lines.extend(_shop_row(start + i + 1, r, ctx) for i, r in enumerate(sl))
+    tail = render_cake_tail(pg, pgs, tip=tpl_of(ctx, "shop_list_tail_tip"))
     if clamped:
         tail = tail.replace("\n", f"\n{LAST_PAGE_HINT}\n", 1)
     lines.append(tail)
@@ -336,19 +337,19 @@ def cmd_shop_browse(parsed: Any, ctx: MutableMapping[str, Any], shop_id: Optiona
                     page: object) -> str:
     """浏览指定商店商品列表（页夹取 + CakeGame 式尾段；店不存在/未开门 → 引擎消息透传）。"""
     if not shop_id:
-        return TPL_NO_SHOP
+        return tpl_of(ctx, "shop_no_shop")
     rows, meta = _all_browse_rows(shop_id, ctx)
     if meta is None or not meta.get("ok"):
-        return str(meta.get("message") or TPL_NO_SHOP) if meta else TPL_NO_SHOP
+        return str(meta.get("message") or tpl_of(ctx, "shop_no_shop")) if meta else tpl_of(ctx, "shop_no_shop")
     return render_shop_items(meta.get("shop") or {}, rows, page, ctx)
 
 
 def cmd_shop_list(parsed: Any, ctx: MutableMapping[str, Any], page: object) -> str:
-    """/商店 列表：可用商店一览（页码 0/负数/非数字 → TPL-12；超页 → 夹取最后一页）。"""
+    """`/商店 列表`：可用商店一览（页码 0/负数/非数字 → TPL-12；超页 → 夹取最后一页）。"""
     rows, meta = _all_shop_rows(ctx)
     if meta is None or not meta.get("ok"):
-        return TPL_NO_SHOP
-    return render_shops_overview(rows, page)
+        return tpl_of(ctx, "shop_no_shop")
+    return render_shops_overview(rows, page, ctx=ctx)
 
 
 def cmd_shop(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
@@ -386,10 +387,10 @@ def cmd_shop(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
             return format_tpl12(f"/{SHOP_CMD} {first}")
         cur = resolve_shop_arg(None, ctx)
         if cur is None:
-            return TPL_NO_SHOP
+            return tpl_of(ctx, "shop_no_shop")
         rows, meta = _all_browse_rows(cur, ctx)
         if meta is None or not meta.get("ok"):
-            return str(meta.get("message") or TPL_NO_SHOP) if meta else TPL_NO_SHOP
+            return str(meta.get("message") or tpl_of(ctx, "shop_no_shop")) if meta else tpl_of(ctx, "shop_no_shop")
         pages5 = max(1, math.ceil(len(rows) / DEFAULT_PAGE_SIZE))
         if n > pages5:
             sid = resolve_shop_arg(n, ctx)
@@ -441,7 +442,7 @@ def cmd_buy(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     qty = parsed.qty if parsed.qty is not None else 1
     shop_id = resolve_shop_arg(None, ctx)
     res = shop_buy(shop_id, target, qty, ctx)  # type: ignore[arg-type]  # None=无商店→校验链① no_shop
-    return str(res.get("message") or "❌ 购买失败")
+    return str(res.get("message") or tpl_of(ctx, "shop_buy_fail"))
 
 
 def cmd_sell(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
@@ -456,7 +457,7 @@ def cmd_sell(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     target = _target_of(parsed)
     qty = parsed.qty if parsed.qty is not None else 1
     res = shop_sell(target, qty, ctx)
-    return str(res.get("message") or "❌ 出售失败")
+    return str(res.get("message") or tpl_of(ctx, "shop_sell_fail"))
 
 
 # ---------------------------------------------------------------------------

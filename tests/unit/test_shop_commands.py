@@ -487,3 +487,63 @@ def test_render_shop_items_per_page_boundary():
     p2 = render_shop_items({}, rows, 2, ctx)
     assert "6. 物品6" in p2
     assert "当前页：2/2" in p2
+
+
+# ---------------------------------------------------------------------------
+# 模板配置化（2026-08-31 用户拍板：消息模板配置化，不写死代码）· register_rem 分区 shop_*
+# ---------------------------------------------------------------------------
+
+def test_shop_rem_tpl_override_via_ctx():
+    """内容包覆盖：ctx['templates'] 覆盖 register_rem_tpl shop_* 默认 → 渲染处 tpl_of 生效。
+
+    - 无店兜底（shop_no_shop）、空店（shop_browse_empty）、一览标题（shop_list_title）
+    - 商品单价（shop_price_single）、折扣标记（shop_discount_marker）
+    - 一览行序号前缀（shop_overview_row_prefix）
+    """
+    from qbot_rpg.core.templates import resolve_templates
+
+    over = {
+        "shop_no_shop": "❌ 自定义无此商店",
+        "shop_browse_empty": "（自定义空店）",
+        "shop_list_title": "自定义商店一览",
+        "shop_price_single": "{unit}枚{currency}",
+        "shop_discount_marker": "[特惠-{discount}%]",
+        "shop_overview_row_prefix": "【{index}】{name}",
+    }
+    # 内容包口径：resolve_templates 在默认表上深覆盖（tpl_of 读 ctx["templates"] 全表）
+    templates = resolve_templates(over)
+    # 一览标题 + 行前缀覆盖
+    ctx = make_ctx(templates=templates)
+    out = cmd_shop(parse("/商店 列表"), ctx)
+    assert out.startswith("自定义商店一览")
+    assert "【1】杂货铺 [普通商店] 新手村杂货铺" in out
+    # 无当前商店且无默认 normal → no_shop 覆盖
+    ctx2 = make_ctx(shops={}, templates=templates)
+    assert cmd_shop(parse("/商店"), ctx2) == "❌ 自定义无此商店"
+    # 商品单价 + 折扣标记覆盖
+    ctx3 = make_ctx(templates=templates)
+    out3 = cmd_shop(parse("/商店"), ctx3)
+    assert "50枚金币" in out3 and "[特惠-20%]" in out3
+
+
+def test_shop_rem_tpl_default_when_no_ctx_templates():
+    """无 ctx['templates'] → tpl_of 回落内置默认（逐字对齐既有输出）。"""
+    out = cmd_shop(parse("/商店 列表"), make_ctx())
+    assert out.startswith("可用商店一览")
+    assert "1. 杂货铺 [普通商店] 新手村杂货铺" in out
+
+
+def test_shop_rem_tpl_placeholder_whitelist_coverage():
+    """register_rem_tpl shop_* 白名单：默认模板占位符 ⊆ 白名单（防内容包拼错 key 缺键不替换）。"""
+    import re
+
+    from qbot_rpg.core.templates.register_rem_tpl import (
+        DEFAULT_TEMPLATES as _RR_TPL,
+        PLACEHOLDER_WHITELIST as _RR_WH,
+    )
+    pat = re.compile(r"\{([a-zA-Z0-9_]+)\}")
+    shop_keys = {k for k in _RR_TPL if k.startswith("shop_")}
+    assert shop_keys, "register_rem_tpl 应含 shop_* 分区 key"
+    for key in shop_keys:
+        used = set(pat.findall(str(_RR_TPL[key])))
+        assert used <= _RR_WH.get(key, set()), f"{key}: 占位符 {used} 超出白名单"

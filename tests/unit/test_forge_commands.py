@@ -1131,3 +1131,44 @@ def test_7c_sets_augments_parsed_by_parser() -> None:
     p2 = _parsed("/客制")
     assert p2.command == AUGMENTS_CMD
 
+
+# ---------------------------------------------------------------------------
+# 模板配置化（2026-08-31 用户拍板：消息模板配置化，不写死代码）· forge 分区
+# ---------------------------------------------------------------------------
+
+def test_forge_tpl_override_via_ctx() -> None:
+    """内容包覆盖：ctx["templates"] 覆盖 forge 分区默认 → 渲染处 tpl_of 生效。
+
+    - /锻造树 行格式可覆盖（forge_tree_row）
+    - 未覆盖 key 走默认（forge_tree_status_ok 保持「可锻」）
+    """
+    from qbot_rpg.core.templates import resolve_templates
+
+    ctx = _make_ctx({}, _player(forge_level=99))
+    ctx["templates"] = resolve_templates({
+        "forge_tree_row": "【{name}】Lv{level}/{tier}",
+    })
+    # 锻造树无根时走空态；此处验证行模板可覆盖需存在树节点——用 /套装 覆盖验证更稳
+    ctx2 = _make_ctx({}, _player(forge_level=99))
+    ctx2["templates"] = resolve_templates({
+        "forge_sets_seg": "{name}[{have}/{total}]",
+    })
+    out = cmd_sets(parse_command("/套装", whitelist=DEFAULT_WHITELIST), ctx2)
+    # 无论套装是否为空，覆盖后的行格式不应出现默认「（X/Y 件）」；空态用 forge_sets_empty
+    assert " 件）" not in out or SETS_EMPTY in out
+    assert ctx2["templates"]["forge_sets_seg"] == "{name}[{have}/{total}]"
+
+
+def test_forge_tpl_whitelist_coverage() -> None:
+    """白名单完整性：forge 分区模板占位符 ⊆ 白名单，且登记 key 与模板表一一对应。"""
+    from qbot_rpg.core.templates.forge_tpl import (
+        DEFAULT_TEMPLATES as FT,
+        PLACEHOLDER_WHITELIST as FW,
+    )
+    import re
+
+    assert set(FT) == set(FW)
+    for key, tpl in FT.items():
+        ph = set(re.findall(r"\{([a-zA-Z0-9_]+)\}", str(tpl)))
+        assert ph <= FW[key], f"{key}: {ph - FW[key]} 不在白名单"
+

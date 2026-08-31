@@ -171,6 +171,8 @@ from qbot_rpg.core.message_format.list_render import (
     render_cake_tail,
     render_item_line,
 )
+from qbot_rpg.core.templates import tpl_of  # 消息模板配置化（2026-08-31 用户拍板）
+from qbot_rpg.core.templates.forge_tpl import DEFAULT_TEMPLATES as _FORGE_TPL  # 兼容导出默认文案
 
 # 同包兄弟模块：相对导入（G0 架构门禁，与 alchemy_commands/shop_commands 同口径）
 from .parsers import parse_int
@@ -252,11 +254,13 @@ PREVIEW_WINDOW_KEY: str = "forge_preview"
 #   对齐 list_render.DEFAULT_PAGE_SIZE，用户 2026-08-27 拍板列表模板统一）
 TREE_PAGE_SIZE: int = DEFAULT_PAGE_SIZE
 # 越界页空态提示（细化 2c2b §5.3：/锻造树（无参）分页；越界页 → 空态提示，
-#   输出「该页暂无锻造装备」+ 总页数引导，对齐 /背包 空态口径）
-TREE_EMPTY_PAGE: str = "该页暂无锻造装备（/锻造树 共 {total_pages} 页）"
+#   输出「该页暂无锻造装备」+ 总页数引导，对齐 /背包 空态口径；文本唯一源 =
+#   forge_tpl 分区 forge_tree_empty_page，渲染 tpl_of，内容包可覆盖）
+TREE_EMPTY_PAGE: str = _FORGE_TPL["forge_tree_empty_page"]
 # /锻造树 Tip 尾行（列表模板统一 CakeGame 式「当前页 + Tip」，2026-08-27 用户拍板；
-#   引导锻造入口，对齐 /背包 _BAG_TAIL_TIP 口径）
-TREE_TAIL_TIP: str = "发送'/锻造 装备名'即可锻造"
+#   引导锻造入口，对齐 /背包 _BAG_TAIL_TIP 口径；文本唯一源 = forge_tpl 分区
+#   forge_tree_tail_tip，渲染 tpl_of，内容包可覆盖）
+TREE_TAIL_TIP: str = _FORGE_TPL["forge_tree_tail_tip"]
 
 # /套装（批7 路7C：查询指令骨架，细化_2c2d §1.5 / 定稿 L236「/套装 <套装名>（P1，无门槛）」）
 SETS_CMD: str = "套装"
@@ -265,12 +269,14 @@ AUGMENTS_CMD: str = "客制"
 # SP-F4 / SP-F5 面板项 id（细化_2c2d §3.2：unlock_sets / unlock_augment，forge_sp 权威）
 SETS_UNLOCK_ID: str = "unlock_sets"
 AUGMENT_UNLOCK_ID: str = "unlock_augment"
-# SP-F4/F5 未解锁拒绝文案（2c2b §4.3：未解锁 → 对应指令直接拒绝）
-SETS_LOCKED_MSG: str = "未解锁 套装（消耗 1 SP 在 技能面板 解锁）"
-AUGMENTS_LOCKED_MSG: str = "未解锁 客制（消耗 1 SP 在 技能面板 解锁）"
-# 空态（P1 查询骨架：无套装数据 / 无可用客制项）
-SETS_EMPTY: str = "当前没有可组成的套装（内容包 forge.json 未配置 sets 段）"
-AUGMENTS_EMPTY: str = "当前没有可用的客制项（内容包 forge.json 未配置 augments 段）"
+# SP-F4/F5 未解锁拒绝文案（2c2b §4.3：未解锁 → 对应指令直接拒绝；文本唯一源 =
+#   forge_tpl 分区 forge_sets_locked / forge_augments_locked，渲染 tpl_of）
+SETS_LOCKED_MSG: str = _FORGE_TPL["forge_sets_locked"]
+AUGMENTS_LOCKED_MSG: str = _FORGE_TPL["forge_augments_locked"]
+# 空态（P1 查询骨架：无套装数据 / 无可用客制项；文本唯一源 = forge_tpl 分区
+#   forge_sets_empty / forge_augments_empty，渲染 tpl_of）
+SETS_EMPTY: str = _FORGE_TPL["forge_sets_empty"]
+AUGMENTS_EMPTY: str = _FORGE_TPL["forge_augments_empty"]
 
 # 品质四档中文（F-5：normal→普通 / fine→精良 / epic→史诗 / legendary→传说）
 _RARITY_CN: Mapping[str, str] = {
@@ -482,7 +488,8 @@ def _material_text(ctx: Mapping[str, Any], node: Any) -> str:
             parts.append(pnode.name or parent_id)
     holdings = material_holdings(ctx, node)
     for _iid, h in holdings.items():
-        parts.append(f"{h.get('name', _iid)}×{h.get('need', 0)}")
+        parts.append(tpl_of(ctx, "forge_material_item",
+                            {"name": h.get("name", _iid), "need": h.get("need", 0)}))
     return " + ".join(parts)
 
 
@@ -490,25 +497,28 @@ def _req_text(ctx: Mapping[str, Any], node_level: object) -> str:
     """需求档位文本：`需求：铸造 <档位> 级`（F-4：档位名 = forge_job._tier_name(node.level)，
     与 rank_name 同源；level 越界钳末档）。"""
     lv = node_level if isinstance(node_level, int) and not isinstance(node_level, bool) else 1
-    return f"需求：铸造 {_tier_name(lv)} 级"
+    return tpl_of(ctx, "forge_req_line", {"tier": _tier_name(lv)})
 
 
-def _element_summary(stats: Mapping[str, object]) -> str:
+def _element_summary(ctx: Mapping[str, Any], stats: Mapping[str, object]) -> str:
     """属性摘要（F-6）：element → `<元素中文>属性+<element_value>`；无 element → `攻击+N`。"""
     elem = stats.get("element")
     if isinstance(elem, str) and elem:
         ev = stats.get("element_value")
         val = f"+{ev}" if isinstance(ev, (int, float)) and not isinstance(ev, bool) else ""
         cn = ELEMENT_NAMES_CN.get(elem, elem)
-        return f"{cn}属性{val}"
+        return tpl_of(ctx, "forge_element_summary", {"element_cn": cn, "value": val})
     atk = stats.get("atk")
     if isinstance(atk, (int, float)) and not isinstance(atk, bool):
-        return f"攻击+{atk}"
+        return tpl_of(ctx, "forge_atk_summary", {"atk": atk})
     return ""
 
 
-def _slots_text(slots: object) -> Optional[str]:
-    """孔位段（F-7）：`孔位：<Lv> 级槽 ×<n> | ...`；空 slots → None。"""
+def _slots_text(ctx: Mapping[str, Any], slots: object) -> Optional[str]:
+    """孔位段 seg（F-7）：`1 级槽 ×1 | 2 级槽 ×2`（不含「孔位：」前缀）；空 → None。
+
+    前缀由调用方按 forge_slots_line 模板包壳（预览行用）；成功行直接消费 seg。
+    """
     if not isinstance(slots, (list, tuple)):
         return None
     counts: Dict[int, int] = {}
@@ -519,8 +529,10 @@ def _slots_text(slots: object) -> Optional[str]:
                 counts[lv] = counts.get(lv, 0) + 1
     if not counts:
         return None
-    seg = " | ".join(f"{lv} 级槽 ×{counts[lv]}" for lv in sorted(counts))
-    return f"孔位：{seg}"
+    return " | ".join(
+        tpl_of(ctx, "forge_slots_item", {"level": lv, "count": counts[lv]})
+        for lv in sorted(counts)
+    )
 
 
 def _continue_text(ctx: Mapping[str, Any], node_id: str) -> Optional[str]:
@@ -541,7 +553,10 @@ def _continue_text(ctx: Mapping[str, Any], node_id: str) -> Optional[str]:
     if endpoint:
         ep = eng.node(endpoint)
         ep_name = ep.name if ep is not None else endpoint
-    return f"可继续锻造：{child_name} → {ep_name}" if ep_name else f"可继续锻造：{child_name}"
+    if ep_name:
+        return tpl_of(ctx, "forge_continue_endpoint",
+                      {"child": child_name, "endpoint": ep_name})
+    return tpl_of(ctx, "forge_continue", {"child": child_name})
 
 
 # ---------------------------------------------------------------------------
@@ -620,18 +635,20 @@ def _resolve_with_roman(eng: ForgeTreeEngine, key: str) -> Tuple[str, dict]:
     return key, results[0]
 
 
-def _ambiguous_message(eng: ForgeTreeEngine, candidates: List[str]) -> str:
+def _ambiguous_message(ctx: Optional[Mapping[str, Any]], eng: ForgeTreeEngine,
+                       candidates: List[str]) -> str:
     """歧义候选渲染（§5.2 ③：候选名（LvN）+ /锻造树 指引）。"""
     lines = []
     for nid in candidates:
         nd = eng.node(nid)
         nm = nd.name if nd is not None else nid
         lv = nd.level if nd is not None else 0
-        lines.append(f"{nm}（Lv{lv}）")
-    return "候选多个节点：" + " | ".join(lines) + " → /锻造树 查看可锻装备"
+        lines.append(tpl_of(ctx, "forge_ambiguous_item", {"name": nm, "level": lv}))
+    return tpl_of(ctx, "forge_ambiguous", {"candidates": " | ".join(lines)})
 
 
-def parse_forge_target(fragment: str, eng: Optional[ForgeTreeEngine] = None) -> dict:
+def parse_forge_target(fragment: str, eng: Optional[ForgeTreeEngine] = None,
+                       ctx: Optional[Mapping[str, Any]] = None) -> dict:
     """/锻造 目标参数词法（批4 路4C：P-01~06 全流程，细化 2c2b §五 5.1）。
 
     入参：
@@ -639,6 +656,8 @@ def parse_forge_target(fragment: str, eng: Optional[ForgeTreeEngine] = None) -> 
       - eng：ForgeTreeEngine（可选）。提供时做 P_UNKNOWN/P_AMBIGUOUS 判定（喂 key 给
         resolve_node，引擎独立不改动）；None 时只做纯词法（P_EMPTY/P_SPACE/P_CHARSET/
         P_QTY），ok 即返回，供无引擎场景复用。
+      - ctx：玩家上下文（可选；仅用于 tpl_of 渲染错误文案——无 ctx/无 templates →
+        默认模板，测试直调兼容）。
 
     出参（解析错误分类模板，任务要求）：
       - ok：True 解析通过 / False 词法或匹配失败。
@@ -657,13 +676,13 @@ def parse_forge_target(fragment: str, eng: Optional[ForgeTreeEngine] = None) -> 
     # P_EMPTY：空参数（无目标）→ TPL-12 兜底由调用方处理，此处给分类
     if not frag:
         return {"ok": False, "key": "", "qty": 1, "error_code": ERR_P_EMPTY,
-                "message": "参数错误：缺少锻造目标（示例：/锻造 铁剑 或 /锻造 炎剑Ⅱ*3）",
+                "message": tpl_of(ctx, "forge_err_empty"),
                 "candidates": []}
 
     # P-01 节点名禁空格（含 tab/全角空格等空白字符）
     if any(ch.isspace() for ch in frag):
         return {"ok": False, "key": frag, "qty": 1, "error_code": ERR_P_SPACE,
-                "message": "参数错误：节点名不含空格", "candidates": []}
+                "message": tpl_of(ctx, "forge_err_space"), "candidates": []}
 
     # P-05 数量 `*N`：`*` 后须正整数（≥1）；`预览 *N` 顺序兼容由 cmd_forge 剥离预览后进入
     qty: int = 1
@@ -672,15 +691,14 @@ def parse_forge_target(fragment: str, eng: Optional[ForgeTreeEngine] = None) -> 
         name, _, right = frag.partition("*")
         if not right.isdigit() or int(right) < 1:
             return {"ok": False, "key": name, "qty": 1, "error_code": ERR_P_QTY,
-                    "message": "参数错误：数量须为正整数（示例：/锻造 炎剑Ⅱ*3）",
+                    "message": tpl_of(ctx, "forge_err_qty"),
                     "candidates": []}
         qty = int(right)
 
     # P-02 允许字符集（中文/字母/数字/·/Ⅰ-Ⅹ/【】/-/■；非法字符 → 明确拒绝）
     if not name or not _ALLOWED_NAME_RE.match(name):
         return {"ok": False, "key": name, "qty": 1, "error_code": ERR_P_CHARSET,
-                "message": "参数错误：节点名含非法字符"
-                           "（仅允许 中文/字母/数字/·/Ⅰ-Ⅹ/【】/-/■）",
+                "message": tpl_of(ctx, "forge_err_charset"),
                 "candidates": []}
 
     # P-06 多词节点名（连续无空格）整体作为单参数：name 已为整串；词法到此通过
@@ -696,9 +714,9 @@ def parse_forge_target(fragment: str, eng: Optional[ForgeTreeEngine] = None) -> 
     if res.get("match") == "ambiguous":
         cands = list(res.get("candidates") or [])
         return {"ok": False, "key": hit_key, "qty": qty, "error_code": ERR_P_AMBIGUOUS,
-                "message": _ambiguous_message(eng, cands), "candidates": cands}
+                "message": _ambiguous_message(ctx, eng, cands), "candidates": cands}
     return {"ok": False, "key": hit_key, "qty": qty, "error_code": ERR_P_UNKNOWN,
-            "message": f"未找到「{name}」→ /锻造树 查看可锻装备", "candidates": []}
+            "message": tpl_of(ctx, "forge_not_found", {"name": name}), "candidates": []}
 
 
 # ---------------------------------------------------------------------------
@@ -732,14 +750,14 @@ def forge_atomic(ctx: MutableMapping[str, Any], key: object, *, preview: bool = 
     # GU-01 指令存在（forge.json trees 有效注册，2c2b §1.1）
     eng = _engine(ctx)
     if not eng.load_trees():
-        return "❌ 锻造系统未启用（内容包 forge.json 未注册）"
+        return tpl_of(ctx, "forge_system_disabled")
 
     # GU-02 参数可解析（P-01：节点名禁空格；含空格 → 参数错误，不匹配任何节点）
     #   由 _forge_once 承载（批量逐件与单件同口径重跑）；此处先做一次快筛兜底
     if not isinstance(key, str) or not key.strip():
         return format_tpl12(_fragment_fallback(key))
     if any(ch.isspace() for ch in key):
-        return "参数错误：节点名不含空格"
+        return tpl_of(ctx, "forge_err_space")
 
     if preview:
         # 预览流：单次卡片 + 登记一次性待确认窗（qty 不生效，预览 0 副作用）
@@ -757,13 +775,14 @@ def forge_atomic(ctx: MutableMapping[str, Any], key: object, *, preview: bool = 
     last_success = ""
     for i in range(1, n + 1):
         out = _forge_once(ctx, key, preview=False)
-        if not out.startswith("✅"):
-            return f"第 {i} 次失败，已成功 {successes} 次\n{out}"
+        if not out.startswith(FORGE_DONE_MARK):
+            return tpl_of(ctx, "forge_batch_fail",
+                          {"i": i, "successes": successes, "out": out})
         successes += 1
         last_success = out
     # 全部成功：汇总行（`✅ <名> 锻造完成！×N` + 属性行，属性取自末次成功）
     head, _, tail = last_success.partition("\n")
-    return f"{head} ×{n}\n{tail}"
+    return tpl_of(ctx, "forge_batch_success", {"head": head, "n": n, "tail": tail})
 
 
 def _forge_once(ctx: MutableMapping[str, Any], key: object, *, preview: bool) -> str:
@@ -786,17 +805,17 @@ def _forge_once(ctx: MutableMapping[str, Any], key: object, *, preview: bool) ->
         match = res.get("match")
         if match == "ambiguous":
             cands = res.get("candidates") or []
-            return _ambiguous_message(eng, list(cands))
-        return f"未找到「{key}」→ /锻造树 查看可锻装备"
+            return _ambiguous_message(ctx, eng, list(cands))
+        return tpl_of(ctx, "forge_not_found", {"name": key})
     node = res.get("node")
     node_id = res.get("node_id")
     if node is None or not isinstance(node_id, str):
-        return f"未找到「{key}」→ /锻造树 查看可锻装备"
+        return tpl_of(ctx, "forge_not_found", {"name": key})
     player = _player_of(ctx)
 
     # GU-03b 红名失效节点拒绝（级联删除①，2c2a §五 V15 / 定稿 L296「已失效：物品已删除」）
     if is_redflagged(node):
-        return "❌ 已失效：物品已删除"
+        return tpl_of(ctx, "forge_redflag_reject")
 
     # GU-04 前置已锻（沿 parent 链；缺 → 报缺前置 + /图纸 指引，§1.3）
     if not eng.parent_forged(player, node_id):
@@ -809,8 +828,9 @@ def _forge_once(ctx: MutableMapping[str, Any], key: object, *, preview: bool) ->
                 nd = eng.node(nid)
                 first_unforged = nd.name if nd is not None else nid
                 break
-        hint = f"需先锻造：{first_unforged}" if first_unforged else "需先锻造：前置节点"
-        return f"❌ {hint} → /图纸 查看全链"
+        hint = (tpl_of(ctx, "forge_prereq_hint", {"name": first_unforged})
+                if first_unforged else tpl_of(ctx, "forge_prereq_hint_default"))
+        return tpl_of(ctx, "forge_prereq", {"hint": hint})
 
     # GU-05 素材足够（material_holdings + shortfall，§1.3 缺件模板 + 来源提示）
     holdings = material_holdings(ctx, node)
@@ -819,12 +839,12 @@ def _forge_once(ctx: MutableMapping[str, Any], key: object, *, preview: bool) ->
         need = _material_text(ctx, node)
         deficits = []
         for (name, deficit, src) in short["items"]:
-            base = f"{name}×{deficit}"
-            deficits.append(base if not src else f"{base}（来源：{src}）")
-        return (
-            f"❌ 素材不足：需要 {need}；缺：{'、'.join(deficits)}"
-            f" → /图纸 查看全链"
-        )
+            base = tpl_of(ctx, "forge_material_deficit", {"name": name, "deficit": deficit})
+            if src:
+                base = tpl_of(ctx, "forge_material_deficit_source", {"base": base, "src": src})
+            deficits.append(base)
+        return tpl_of(ctx, "forge_material_shortfall",
+                      {"need": need, "deficits": "、".join(deficits)})
 
     # GU-06 等级足够（可锻节点上限=职业等级，§1.3 L240 模板：熟练缺口 = exp_to_next）
     node_level = node.level
@@ -834,14 +854,14 @@ def _forge_once(ctx: MutableMapping[str, Any], key: object, *, preview: bool) ->
         cur_rank = _tier_name(int(gate.get("current", 0)))
         # 还差 N 熟练：熟练缺口来自 §4.1 计价（exp_to_next 缺口，非等级差）
         missing = int(exp_to_next(player).get("missing", 0))
-        return f"需要 {need_rank} 级，当前 {cur_rank}（还差 {missing} 熟练）"
+        return tpl_of(ctx, "forge_level_gate",
+                      {"need_rank": need_rank, "cur_rank": cur_rank, "missing": missing})
 
-    # GU-07 铸造王专属节点守卫（2c2d N-16 / KF-02①：king_only 节点须已获「铸造王」；
-    #   批C 审查 P1-1 接线 2026-08-30——forge_king 六函数此前仅测试/verify 直调，生产
-    #   /锻造 零消费，图鉴全亮不授予 + king_only 无守卫）
+    # GU-07 铸造王专属节点守卫（2c2d N-16 / KF-02①：king_only 节点须已获「铸造王」；）
     king_check = forge_king_eligible_check(player, ctx, node)
     if not king_check.get("ok"):
-        return f"❌ {king_check.get('message') or '未获铸造王'}"
+        msg = king_check.get("message") or tpl_of(ctx, "forge_king_gate_fallback")
+        return tpl_of(ctx, "forge_king_gate", {"message": msg})
 
     # ---- 守卫全过 ----
     if preview:
@@ -849,7 +869,7 @@ def _forge_once(ctx: MutableMapping[str, Any], key: object, *, preview: bool) ->
         window = _register_preview(ctx, node_id)
         card = _render_preview(ctx, node)
         if not window:
-            return "已有待确认的锻造预览，请先 /确认 或等待超时\n" + card
+            return tpl_of(ctx, "forge_preview_occupied", {"card": card})
         return card
 
     # 执行流（直锻 / 确认 / 批量 复用）：成功路径 §1.2 原子写（扣素材/扣金币/产装/发经验）
@@ -869,18 +889,20 @@ def _render_preview(ctx: Mapping[str, Any], node: Any) -> str:
     """
     name = node.name if hasattr(node, "name") and node.name else (node.get("name") or "")
     stats = node.stats if hasattr(node, "stats") else (node.get("stats") or {})
-    title = f"{name}（{_element_summary(stats)}）" if _element_summary(stats) else name
+    summary = _element_summary(ctx, stats)
+    title = tpl_of(ctx, "forge_preview_title", {"name": name, "summary": summary}) \
+        if summary else name
     lines: List[str] = [title]
 
     mats = _material_text(ctx, node)
     req = _req_text(ctx, node.level if hasattr(node, "level") else node.get("level"))
-    lines.append(f"素材：{mats} | {req}")
+    lines.append(tpl_of(ctx, "forge_preview_material_line", {"mats": mats, "req": req}))
 
     tail: List[str] = []
     slots = node.slots if hasattr(node, "slots") else (node.get("slots") or [])
-    slots_seg = _slots_text(slots)
+    slots_seg = _slots_text(ctx, slots)
     if slots_seg:
-        tail.append(slots_seg)
+        tail.append(tpl_of(ctx, "forge_slots_line", {"seg": slots_seg}))
     node_id = node.id if hasattr(node, "id") else node.get("id")
     cont = _continue_text(ctx, node_id) if node_id else None
     if cont:
@@ -965,16 +987,18 @@ def _execute(
             name = str(h.get("name", item_id))
             deficit = int(h.get("need", 0)) - int(h.get("have", 0))
             src = str(h.get("source", ""))
-            base = f"❌ 素材不足：需要 {_material_text(ctx, node)}；缺：{name}×{deficit}"
-            base = base if not src else f"{base}（来源：{src}）"
-            return f"{base} → /图纸 查看全链"
+            base = tpl_of(ctx, "forge_material_deficit", {"name": name, "deficit": deficit})
+            if src:
+                base = tpl_of(ctx, "forge_material_deficit_source", {"base": base, "src": src})
+            return tpl_of(ctx, "forge_material_shortfall",
+                          {"need": _material_text(ctx, node), "deficits": base})
     deducted: List[str] = []
     for item_id, h in holdings.items():
         if not _remove_item(ctx, item_id, int(h.get("need", 0))):
             # 扣减失败 → 回滚已扣项（原子性，失败零副作用）
             for done in deducted:
                 _add_item(ctx, done, int(holdings[done]["need"]), bound=False)
-            return "❌ 素材扣减失败，本次锻造未执行（零副作用）"
+            return tpl_of(ctx, "forge_material_deduct_fail")
         deducted.append(item_id)
 
     # 扣金币（node.cost.coins 显式覆盖 > settings forge_fee=节点等级×10，2c2a N-11）
@@ -987,7 +1011,7 @@ def _execute(
         # 金币不足 → 回滚素材，失败零副作用
         for done in deducted:
             _add_item(ctx, done, int(holdings[done]["need"]), bound=False)
-        return f"❌ 金币不足：需要 {cost}，当前 {coins_have}"
+        return tpl_of(ctx, "forge_coin_short", {"cost": cost, "coins_have": coins_have})
     if cost > 0 and isinstance(currencies, MutableMapping):
         currencies["coins"] = coins_have - cost
 
@@ -1002,7 +1026,7 @@ def _execute(
                 _add_item(ctx, done, int(holdings[done]["need"]), bound=False)
             if cost > 0 and isinstance(currencies, MutableMapping):
                 currencies["coins"] = coins_have
-            return "❌ 装备入包失败，本次锻造未执行（零副作用）"
+            return tpl_of(ctx, "forge_item_add_fail")
         # 实例快照入档（批4 路4D：AR-5 + 接口摸底缺口2——forge_instances 全量快照
         #   （node_id/item_id 双向溯源 + ts 回合/事件计数）+ forge_last 指向最新）
         snap = _forge_snapshot(ctx, node, node_id, item_ref, inst)
@@ -1038,7 +1062,7 @@ def _execute(
         forged_after = player.get("forged")
         if isinstance(forged_after, list) and node_id in forged_after:
             forged_after.remove(node_id)
-        return "❌ 熟练入账失败，本次锻造已回滚（零副作用）"
+        return tpl_of(ctx, "forge_exp_fail")
 
     # 首次锻造图鉴点亮（2c2b §1.2 步骤 5：mark_seen weapon 分册，ref=装备 item id，名=节点名）
     #   图鉴 weapon 册 total 来自 registry equipment 表（codex._total_of），ref 必须与
@@ -1185,20 +1209,21 @@ def _success_line(ctx: Mapping[str, Any], node: Any) -> str:
     stats = node.stats if hasattr(node, "stats") else (node.get("stats") or {})
     node_type = node.node_type if hasattr(node, "node_type") else node.get("type")
     atk = stats.get("atk")
-    atk_text = f"攻击 {atk}" if isinstance(atk, (int, float)) and not isinstance(atk, bool) else ""
+    atk_text = (tpl_of(ctx, "forge_success_atk", {"atk": atk})
+                if isinstance(atk, (int, float)) and not isinstance(atk, bool) else "")
     slot_cn = _SLOT_CN.get(str(node_type or ""), str(node_type or ""))
     slots = node.slots if hasattr(node, "slots") else (node.get("slots") or [])
-    slots_seg = _slots_text(slots)
-    slot_text = slots_seg.replace("孔位：", "") if slots_seg else "无"
+    slots_seg = _slots_text(ctx, slots)
+    slot_text = slots_seg if slots_seg else tpl_of(ctx, "forge_slot_none")
     rarity_raw = node.rarity if hasattr(node, "rarity") else node.get("rarity")
     rarity_cn = _RARITY_CN.get(str(rarity_raw or "normal"), "普通")
     fields = []
     if atk_text:
         fields.append(atk_text)
-    fields.append(f"部位：{slot_cn}")
-    fields.append(f"槽位：{slot_text}")
-    fields.append(f"品质：{rarity_cn}（固定）")
-    return f"✅ {name} 锻造完成！\n" + " | ".join(fields)
+    fields.append(tpl_of(ctx, "forge_success_slot", {"slot": slot_cn}))
+    fields.append(tpl_of(ctx, "forge_success_slot_text", {"slot": slot_text}))
+    fields.append(tpl_of(ctx, "forge_success_quality", {"quality": rarity_cn}))
+    return tpl_of(ctx, "forge_success", {"name": name, "fields": " | ".join(fields)})
 
 
 # ---------------------------------------------------------------------------
@@ -1236,13 +1261,13 @@ def cmd_forge(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     # P-01 节点名禁空格：多参数拆分（`/锻造 炎剑 Ⅱ` → 两 token）→ 参数错误
     # （定稿 L232 语法约束，不匹配任何节点、不产生锻造）
     if len(node_args) > 1:
-        return "参数错误：节点名不含空格"
+        return tpl_of(ctx, "forge_err_space")
     if not node_args:
         return format_tpl12(_fragment(parsed))
     fragment = node_args[0]
 
     # 参数词法 P-01~06（parse_forge_target 独立词法函数；P_UNKNOWN/P_AMBIGUOUS 含歧义候选）
-    res = parse_forge_target(fragment, eng=_engine(ctx))
+    res = parse_forge_target(fragment, eng=_engine(ctx), ctx=ctx)
     if not res.get("ok"):
         return res.get("message") or format_tpl12(_fragment(parsed))
     key = res.get("key") or ""
@@ -1273,21 +1298,21 @@ def cmd_confirm(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         return format_tpl12(_fragment(parsed))
     qid = _qid_of(ctx)
     if qid is None:
-        return "当前无可确认的锻造预览"
+        return tpl_of(ctx, "forge_confirm_none")
     window = ctx.get(PREVIEW_WINDOW_KEY)
     if not isinstance(window, MutableMapping):
-        return "当前无可确认的锻造预览"
+        return tpl_of(ctx, "forge_confirm_none")
     entry = window.get(qid)
     if not isinstance(entry, Mapping):
-        return "当前无可确认的锻造预览"
+        return tpl_of(ctx, "forge_confirm_none")
     if _window_expired(ctx, entry):
         window.pop(qid, None)  # 超时 → 上下文作废（无锻造无扣款无经验，TC-11）
-        return "预览已过期，请重新 /锻造 <节点> 预览"
+        return tpl_of(ctx, "forge_preview_expired")
     node_id = entry.get("node_id")
     window.pop(qid, None)  # 一次性：取走即作废（成功或失败均不再可确认）
 
     if not isinstance(node_id, str) or not node_id:
-        return "当前无可确认的锻造预览"
+        return tpl_of(ctx, "forge_confirm_none")
     return forge_atomic(ctx, node_id, preview=False)  # 复用原子执行（重跑守卫再扣素材发经验）
 
 
@@ -1328,8 +1353,9 @@ def _target_of(parsed: Any) -> str:
 
 # 失效标注文案（2c2b §2.4 / 定稿 L296）：红名节点 /图纸 行尾追加「（已失效：物品已删除）」；
 # 与 /锻造 拒绝文案「❌ 已失效：物品已删除」（批4-1 已落地）同源——本段只做 /图纸 侧行尾
-# 追加，不改写批4 拒绝文案（F-12）。
-FORGE_REDFLAG_SUFFIX: str = "（已失效：物品已删除）"
+# 追加，不改写批4 拒绝文案（F-12）。文本唯一源 = forge_tpl 分区 forge_redflag_suffix，
+# 渲染 tpl_of，内容包可覆盖。
+FORGE_REDFLAG_SUFFIX: str = _FORGE_TPL["forge_redflag_suffix"]
 # ✓ 态标注（批2 F-1 / M5-10 emoji 纪律：✅ 渲染契约 ✓ 态，U+2713 非白名单不可用）
 FORGE_DONE_MARK: str = "✅"
 
@@ -1437,9 +1463,9 @@ def _node_display_name(
         elem = stats.get("element") if isinstance(stats, Mapping) else None
         if isinstance(elem, str) and elem:
             cn = ELEMENT_NAMES_CN.get(elem, elem)
-            name = f"{name}（{cn}）"
+            name = tpl_of(ctx, "forge_terminal_element", {"name": name, "element": cn})
     if node is not None and is_redflagged(node):
-        name = f"{name}{FORGE_REDFLAG_SUFFIX}"
+        name = name + tpl_of(ctx, "forge_redflag_suffix")
     return name
 
 
@@ -1492,11 +1518,11 @@ def _blueprint_branch_lines(
         cnode = eng.node(cid)
         cname = cnode.name if cnode is not None else cid
         mat = _branch_key_material(ctx, cnode) if cnode is not None else ""
-        seg = f"{cname} ← {mat}"
+        seg = tpl_of(ctx, "forge_branch_seg", {"name": cname, "mat": mat})
         if cnode is not None and is_redflagged(cnode):
-            seg += FORGE_REDFLAG_SUFFIX
+            seg += tpl_of(ctx, "forge_redflag_suffix")
         prefix = "└─" if i == len(branch_ids) - 1 else "├─"
-        lines.append(f"{prefix} 分支：{seg}")
+        lines.append(tpl_of(ctx, "forge_branch_line", {"prefix": prefix, "seg": seg}))
     return lines
 
 
@@ -1523,24 +1549,24 @@ def cmd_blueprint(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         eng = _engine(ctx)
         trees = eng.load_trees()
         if not trees:
-            return "❌ 锻造系统未启用（内容包 forge.json 未注册）"
+            return tpl_of(ctx, "forge_system_disabled")
         roots = trees[0].roots
         if not roots:
-            return "❌ 当前锻造树没有根节点（内容包 forge.json 异常）"
+            return tpl_of(ctx, "forge_tree_no_root")
         return _render_blueprint(ctx, roots[0])
     if len(body) > 1:
-        return "参数错误：节点名不含空格"
+        return tpl_of(ctx, "forge_err_space")
     fragment = body[0]
 
     eng = _engine(ctx)
     if not eng.load_trees():
-        return "❌ 锻造系统未启用（内容包 forge.json 未注册）"
+        return tpl_of(ctx, "forge_system_disabled")
 
-    res = parse_forge_target(fragment, eng=eng)
+    res = parse_forge_target(fragment, eng=eng, ctx=ctx)
     if not res.get("ok"):
         # 未知节点 → /图纸 空态（TC-19：未找到「<名>」相关锻造链）；歧义/词法 → 解析 message
         if res.get("error_code") == ERR_P_UNKNOWN:
-            return f"未找到「{fragment}」相关锻造链"
+            return tpl_of(ctx, "forge_blueprint_not_found", {"name": fragment})
         return res.get("message") or format_tpl12(_fragment(parsed))
     key = res.get("key") or ""
     if not key:
@@ -1560,11 +1586,11 @@ def _render_blueprint(ctx: MutableMapping[str, Any], key: str) -> str:
     eng = _engine(ctx)
     res = eng.resolve_node(key)
     if not res.get("ok"):
-        return f"未找到「{key}」相关锻造链"
+        return tpl_of(ctx, "forge_blueprint_not_found", {"name": key})
     node = res.get("node")
     node_id = res.get("node_id")
     if node is None or not isinstance(node_id, str):
-        return f"未找到「{key}」相关锻造链"
+        return tpl_of(ctx, "forge_blueprint_not_found", {"name": key})
     player = _player_of(ctx)
 
     chain = _blueprint_main_chain(eng, node_id)
@@ -1574,7 +1600,7 @@ def _render_blueprint(ctx: MutableMapping[str, Any], key: str) -> str:
     main_line = " → ".join(segs)
 
     target_name = node.name if hasattr(node, "name") and node.name else node_id
-    title = f"{str(target_name).lstrip('■')}派生链："
+    title = tpl_of(ctx, "forge_blueprint_title", {"name": str(target_name).lstrip("■")})
 
     lines: List[str] = [title, main_line]
     lines.extend(_blueprint_branch_lines(ctx, eng, player, chain))
@@ -1618,7 +1644,7 @@ def _tree_row_line(
     level = node.level if node is not None else 1
     if not isinstance(level, int) or isinstance(level, bool) or level <= 0:
         level = 1
-    seg = f"{name}（{level}级/{_tier_name(level)}）"
+    seg = tpl_of(ctx, "forge_tree_row", {"name": name, "level": level, "tier": _tier_name(level)})
     if eng.already_forged(player, nid):
         status = FORGE_DONE_MARK
     elif not eng.parent_forged(player, nid):
@@ -1717,7 +1743,7 @@ def cmd_sets(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 
     eng = _engine(ctx)
     if not eng.load_trees():
-        return "❌ 锻造系统未启用（内容包 forge.json 未注册）"
+        return tpl_of(ctx, "forge_system_disabled")
 
     sets = parse_sets({"forge": _forge_raw(ctx)})
     if not sets:
@@ -1733,14 +1759,15 @@ def cmd_sets(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         pieces_have = _as_count(row.get("pieces_have"))
         pieces_total = _as_count(row.get("pieces_total"))
         ready = bool(row.get("ready"))
-        seg = f"{name}（{pieces_have}/{pieces_total} 件）"
+        seg = tpl_of(ctx, "forge_sets_seg",
+                     {"name": name, "have": pieces_have, "total": pieces_total})
         if ready:
             seg = "✅ " + seg
         # 件名：本记录 pieces（ForgeSet.pieces 节点 id → 节点名，对齐 _node_display_name 口径）
         piece_names = _set_row_piece_names(eng, row.get("set_id"), row.get("variant"), sets)
         # 行格式 `N. 套装名（2/3 件）：铁剑Ⅰ + 炎剑Ⅱ + 炎剑Ⅲ`（2c2d §1.5 面板行）
         value = "：".join([seg, " + ".join(piece_names)]) if piece_names else seg
-        lines.append(f"{i}. {value}")
+        lines.append(tpl_of(ctx, "forge_sets_row", {"index": i, "value": value}))
     return "\n".join(lines)
 
 
@@ -1820,7 +1847,7 @@ def cmd_augments(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         name = r.name or (r.id or "")
         kind_cn = _AUGMENT_KIND_CN.get(r.aug_kind or "", r.aug_kind or "客制")
         effect = r.effect or ""
-        seg = f"{name}（{kind_cn}：{effect}）"
+        seg = tpl_of(ctx, "forge_augments_seg", {"name": name, "kind": kind_cn, "effect": effect})
         lines.append(render_item_line(i, seg))
     return "\n".join(lines)
 

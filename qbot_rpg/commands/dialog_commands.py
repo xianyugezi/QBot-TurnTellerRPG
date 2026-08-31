@@ -62,6 +62,7 @@ from typing import Any, Callable, List, Mapping, MutableMapping, Optional
 
 from qbot_rpg.commands.router import CommandSpec
 from qbot_rpg.core import dialog, npc as npc_mod
+from qbot_rpg.core.templates import tpl_of  # 消息模板配置化（2026-08-31 用户拍板）
 
 __all__ = [
     "DIALOG_CMD",
@@ -399,7 +400,8 @@ def _menu_rerender(ctx: MutableMapping[str, Any], session: Any) -> List[str]:
         interactions, heard=heard, conditions=conditions,
         page=int(getattr(session, "menu_page", 0) or 0),
     )
-    head = f"{session.npc_name}：" if getattr(session, "npc_name", None) else ""
+    head = tpl_of(ctx, "dialog_menu_head", {"npc_name": session.npc_name}) \
+        if getattr(session, "npc_name", None) else ""
     return ([head] if head else []) + menu["lines"]
 
 
@@ -415,8 +417,10 @@ def _dispatch_entry(entry: Mapping[str, Any], ctx: MutableMapping[str, Any],
     try:
         out = npc_mod.dispatch_action(entry, ctx, ctx.get("rng"), npc_id, state)
     except Exception:
-        return {"ok": False, "action": entry.get("action"), "message": "动作执行异常"}
-    return out if isinstance(out, Mapping) else {"ok": False, "message": "动作返回异常"}
+        return {"ok": False, "action": entry.get("action"),
+                "message": tpl_of(ctx, "dialog_dispatch_error")}
+    return out if isinstance(out, Mapping) else {
+        "ok": False, "message": tpl_of(ctx, "dialog_dispatch_bad_return")}
 
 
 def _payload_of(dispatch: Mapping[str, Any], entry: Mapping[str, Any]) -> dict:

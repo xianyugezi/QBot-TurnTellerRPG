@@ -118,6 +118,7 @@ from qbot_rpg.core.alchemy_register import AlchemyRegister
 from qbot_rpg.core.jewel import JEWEL_TYPE, JewelSystem
 from qbot_rpg.core.quality import QualitySystem
 from qbot_rpg.core.synthesis import SynthesisEngine
+from qbot_rpg.core.templates import tpl_of
 from qbot_rpg.core.trait_inherit import TraitInherit
 from qbot_rpg.core.upgrade import UpgradeEngine
 
@@ -503,7 +504,8 @@ def _shortfall_text(ctx: Mapping[str, Any], shortfall: Any) -> str:
                 continue
             need = max(0, count - have)
         if need > 0:
-            parts.append(f"缺 {name}×{need}")
+            parts.append(tpl_of(ctx, "alchemy_shortfall_item",
+                                {"name": name, "need": need}))
     return " + ".join(parts)
 
 
@@ -537,8 +539,10 @@ def _material_entry_text(rec: Mapping[str, Any], ctx: Mapping[str, Any]) -> str:
         except (TypeError, ValueError):
             val = 0
         cn = ELEMENT_NAMES_CN.get(main, main)
-        return f"{name}×{count}({cn}{val})"
-    return f"{name}×{count}"
+        return tpl_of(ctx, "alchemy_material_entry_elem",
+                      {"name": name, "count": count, "cn": cn, "val": val})
+    return tpl_of(ctx, "alchemy_material_entry_plain",
+                  {"name": name, "count": count})
 
 
 def _recipe_material_text(core: AlchemyCore, recipe: Mapping[str, Any],
@@ -553,7 +557,8 @@ def _recipe_material_text(core: AlchemyCore, recipe: Mapping[str, Any],
         cnt = m.get("count", 1) if isinstance(m, Mapping) else 1
         idef = _find_item(ctx, mid) if isinstance(mid, str) else None
         if idef is None:
-            parts.append(f"{mid}×{cnt}")
+            parts.append(tpl_of(ctx, "alchemy_material_entry_plain",
+                                {"name": mid, "count": cnt}))
             continue
         name = idef.get("name") or mid
         elems = idef.get("elements")
@@ -564,17 +569,20 @@ def _recipe_material_text(core: AlchemyCore, recipe: Mapping[str, Any],
             except (TypeError, ValueError):
                 val = 0
             cn = ELEMENT_NAMES_CN.get(main, main)
-            parts.append(f"{name}×{cnt}({cn}{val})")
+            parts.append(tpl_of(ctx, "alchemy_material_entry_elem",
+                                {"name": name, "count": cnt, "cn": cn, "val": val}))
         else:
-            parts.append(f"{name}×{cnt}")
-    return " ".join(parts) if parts else "（无）"
+            parts.append(tpl_of(ctx, "alchemy_material_entry_plain",
+                                {"name": name, "count": cnt}))
+    return " ".join(parts) if parts else tpl_of(ctx, "alchemy_no_materials")
 
 
-def _render_scales(recipe: Optional[Mapping[str, Any]]) -> str:
+def _render_scales(ctx: Mapping[str, Any],
+                   recipe: Optional[Mapping[str, Any]]) -> str:
     """属性刻度渲染（M-02「属性刻度：火≥6 显现\"范围爆炸\"」，取每元素最高阈值档，FEED-07）。"""
     req = recipe.get("element_req") if recipe else None
     if not isinstance(req, Mapping) or not req:
-        return "（无刻度要求）"
+        return tpl_of(ctx, "alchemy_no_scale")
     parts: list = []
     for elem, steps in req.items():
         if not isinstance(steps, (list, tuple)) or not steps:
@@ -591,8 +599,9 @@ def _render_scales(recipe: Optional[Mapping[str, Any]]) -> str:
         if best is None:
             continue
         cn = ELEMENT_NAMES_CN.get(elem, elem)
-        parts.append(f'{cn}≥{best[0]} 显现"{best[1]}"')
-    return " ".join(parts) if parts else "（无刻度要求）"
+        parts.append(tpl_of(ctx, "alchemy_scale_item",
+                            {"cn": cn, "th": best[0], "effect": best[1]}))
+    return " ".join(parts) if parts else tpl_of(ctx, "alchemy_no_scale")
 
 
 def _render_panel(core: AlchemyCore, snap: Mapping[str, Any], ctx: Mapping[str, Any],
@@ -615,17 +624,18 @@ def _render_panel(core: AlchemyCore, snap: Mapping[str, Any], ctx: Mapping[str, 
             mats = "（无）"
     else:
         mats = _recipe_material_text(core, recipe, ctx) if recipe else "（无）"
-    scales = _render_scales(recipe)
+    scales = _render_scales(ctx, recipe)
     traits_max = int(panel.get("traits_inherit", 1) or 1)
     traits_used = 0  # 批5 /继承 落位后计（现快照无继承位字段，开会话恒 0）
     pp = panel.get("pp") or {}
     slots = int(recipe.get("slots", 4) or 4) if recipe else 4
     units = sum(max(1, int(r.get("count", 1))) for r in chain if isinstance(r, Mapping))
-    return (
-        f"{recipe_name}（配方Lv{level}）：材料：{mats}\n"
-        f"属性刻度：{scales} | 特性位 {traits_used}/{traits_max} | "
-        f"PP {pp.get('used', 0)}/{pp.get('budget', 0)} | 投入次数 {units}/{slots}"
-    )
+    return tpl_of(ctx, "alchemy_panel", {
+        "recipe_name": recipe_name, "level": level, "mats": mats,
+        "scales": scales, "traits_used": traits_used, "traits_max": traits_max,
+        "pp_used": pp.get("used", 0), "pp_budget": pp.get("budget", 0),
+        "units": units, "slots": slots,
+    })
 
 
 def _feed_feedback(core: AlchemyCore, snap: Mapping[str, Any],
@@ -650,21 +660,36 @@ def _feed_feedback(core: AlchemyCore, snap: Mapping[str, Any],
         if iv > main_score:
             main_score, main_elem = iv, k
     elem_cn = ELEMENT_NAMES_CN.get(main_elem, main_elem) if main_elem else "无"
-    parts = [f"{elem_cn}+{main_score}", f"连锁 {segments} 段"]
+    parts = [
+        tpl_of(ctx, "alchemy_feed_elem_score",
+               {"elem_cn": elem_cn, "main_score": main_score}),
+        tpl_of(ctx, "alchemy_feed_chain", {"segments": segments}),
+    ]
     pool = snap.get("pool") or {}
     if not isinstance(pool, Mapping):
         pool = {}
-    traits = [f"{name}(PP{pp})" for _tid, name, pp in pool.get("normal") or []]
-    gold = [f"{name}(PP{pp})" for _tid, name, pp in pool.get("gold") or []]
-    awaken = [f"{name}(PP{pp})" for _tid, name, pp in pool.get("awaken") or []]
+    traits = [tpl_of(ctx, "alchemy_feed_trait_item",
+                     {"name": name, "pp": pp})
+              for _tid, name, pp in pool.get("normal") or []]
+    gold = [tpl_of(ctx, "alchemy_feed_trait_item",
+                   {"name": name, "pp": pp})
+            for _tid, name, pp in pool.get("gold") or []]
+    awaken = [tpl_of(ctx, "alchemy_feed_trait_item",
+                     {"name": name, "pp": pp})
+              for _tid, name, pp in pool.get("awaken") or []]
     if gold:
-        traits.append("金色：" + " ".join(gold))
+        traits.append(tpl_of(ctx, "alchemy_feed_trait_gold",
+                             {"items": " ".join(gold)}))
     if awaken:
-        traits.append("觉醒：" + " ".join(awaken))
+        traits.append(tpl_of(ctx, "alchemy_feed_trait_awaken",
+                             {"items": " ".join(awaken)}))
     if traits:
-        parts.append("可继承特性：" + " ".join(traits))
+        parts.append(tpl_of(ctx, "alchemy_feed_traits_header",
+                            {"items": " ".join(traits)}))
     if segments >= 3:
-        parts.append(f"连锁 {segments} 段 → 效果等级 {effect_level}")
+        parts.append(tpl_of(ctx, "alchemy_feed_chain_effect",
+                            {"segments": segments,
+                             "effect_level": effect_level}))
     recipe = _find_recipe(ctx, snap.get("recipe_id"))
     if recipe is not None:
         status = core.check_element_req(recipe, scores)
@@ -674,8 +699,10 @@ def _feed_feedback(core: AlchemyCore, snap: Mapping[str, Any],
                 ths = st.get("thresholds") or []
                 th = ths[-1].get("threshold", 0)
                 parts.append(
-                    f"刻度达标 {cn}+{st.get('score', 0)}"
-                    f"（刻度 {th}·{st.get('met_effect')}）"
+                    tpl_of(ctx, "alchemy_feed_scale_met", {
+                        "cn": cn, "score": st.get("score", 0),
+                        "th": th, "effect": st.get("met_effect"),
+                    })
                 )
     return " | ".join(parts)
 
@@ -685,17 +712,20 @@ def _feed_error(res: Mapping[str, Any], ctx: Mapping[str, Any]) -> str:
     reason = res.get("reason")
     msg = res.get("message")
     if reason == "slots_overflow":
-        return "投料超槽位"
+        return tpl_of(ctx, "alchemy_feed_slots_overflow")
     if reason == "materials_insufficient":
         diff = _shortfall_text(ctx, res.get("shortfall"))
-        return f"材料不足：{diff}" if diff else "材料不足"
+        if diff:
+            return tpl_of(ctx, "alchemy_materials_insufficient_diff",
+                          {"diff": diff})
+        return tpl_of(ctx, "alchemy_materials_insufficient")
     if reason == "expert_required":
-        return "全物入料需专家级"
+        return tpl_of(ctx, "alchemy_feed_expert_required")
     if reason == "item_not_found":
-        return str(msg or "材料不存在")
+        return str(msg or tpl_of(ctx, "alchemy_feed_item_not_found"))
     if reason == "no_snapshot":
         return TEMPLATE_MESSAGES[TEMPLATE_NO_SESSION]
-    return str(msg or "投料失败")
+    return str(msg or tpl_of(ctx, "alchemy_feed_fail"))
 
 
 def _auto_diff_message(bal: Mapping[str, Any], ctx: Mapping[str, Any]) -> str:
@@ -704,7 +734,10 @@ def _auto_diff_message(bal: Mapping[str, Any], ctx: Mapping[str, Any]) -> str:
     if isinstance(msg, str) and msg:
         return msg
     diff = _shortfall_text(ctx, bal.get("shortfall"))
-    return f"材料不足：{diff}" if diff else "❌ 自动配平失败"
+    if diff:
+        return tpl_of(ctx, "alchemy_materials_insufficient_diff",
+                      {"diff": diff})
+    return tpl_of(ctx, "alchemy_auto_balance_fail")
 
 
 def _batch_material_scores(recipe: Mapping[str, Any], ctx: Mapping[str, Any],
@@ -742,7 +775,7 @@ def cmd_synthesis(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     settings = ctx.get("settings")
     engine = SynthesisEngine(settings=settings if isinstance(settings, Mapping) else None)
     res = engine.synthesize(ctx, target, qty)
-    return str(res.get("message") or "❌ 合成失败")
+    return str(res.get("message") or tpl_of(ctx, "alchemy_synth_fail"))
 
 
 async def cmd_alchemy(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
@@ -790,12 +823,12 @@ async def cmd_alchemy(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 
     # GU-05 炼金职业见习+（proficiency.alchemy 节点存在；M8 决策 4 dict 形态）
     if _alchemy_prof_node(player) is None:
-        return "❌ 等级不足"
+        return tpl_of(ctx, "alchemy_level_insufficient")
     tier_index = prof_engine.tier_index_for_level(ALCHEMY_JOB_ID, _prof_level(player))
 
     recipe = _find_recipe(ctx, target)
     if recipe is None:
-        return f"❌ 配方不存在：{target}"
+        return tpl_of(ctx, "alchemy_recipe_not_found", {"target": target})
 
     # 批量分支（P-02/BATCH-01：N≥2 = 单批量一步出结果，无投料/继承/确认链，不开会话）
     if qty >= 2:
@@ -826,10 +859,11 @@ async def cmd_alchemy(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     catalyst_hint: Optional[str] = None
     if catalyst_name:
         if tier_index < _catalyst_unlock_tier_index(settings, prof_engine):
-            return "❌ 等级不足"
+            return tpl_of(ctx, "alchemy_level_insufficient")
         cres = core.catalyst_resolve(catalyst_name, ctx)
         if not cres.get("ok"):
-            return str(cres.get("message") or "触媒无效")  # CAT-05/L344 触媒无效
+            return str(cres.get("message")
+                       or tpl_of(ctx, "alchemy_catalyst_invalid"))
         if cres.get("registered"):
             catalyst = catalyst_name
         else:
@@ -866,7 +900,8 @@ async def cmd_alchemy(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         # 守卫通过后竞态能量不足 → 释放会话防孤儿（ENG-04/08 保底 /合成）
         if hasattr(session_mgr, "release"):
             await session_mgr.release(qid)
-        return str(econs.get("message") or "能量不足")
+        return str(econs.get("message")
+                   or tpl_of(ctx, "alchemy_energy_insufficient"))
     panel = _render_panel(core, snap, ctx, tier_index)
     if catalyst_hint:
         return f"{catalyst_hint}\n{panel}"
@@ -924,7 +959,10 @@ def _cmd_alchemy_batch(
                           "count": coins_need, "have": _coins_of(player)})
     if shortfall:
         diff = _shortfall_text(ctx, shortfall)
-        return f"❌ 材料不足：{diff}" if diff else "❌ 材料不足"
+        if diff:
+            return tpl_of(ctx, "alchemy_materials_insufficient_mark_diff",
+                          {"diff": diff})
+        return tpl_of(ctx, "alchemy_materials_insufficient_mark")
 
     # 原子执行：扣材料 → 扣金币 → 扣能量 N → 平均品质产出 → 熟练经验
     for mid, ci in need_mats:
@@ -938,21 +976,28 @@ def _cmd_alchemy_batch(
     output = recipe.get("output")
     output_id = output.get("item") if isinstance(output, Mapping) else None
     if not isinstance(output_id, str) or not output_id:
-        return "❌ 该配方无法批量调合"
+        return tpl_of(ctx, "alchemy_batch_no_output")
     _add_item(ctx, output_id, qty, quality=bq["tier"])
     level = recipe.get("level")
     if isinstance(level, int) and not isinstance(level, bool) and level > 0:
         prof_engine.gain_prof_exp(player, ALCHEMY_JOB_ID, level * qty, source="craft")
 
-    mats_text = " + ".join(f"{_item_name(ctx, mid)}×{ci * qty}" for mid, ci in need_mats)
-    coin_text = f" + 金币 {coins_need}" if coins_need else ""
-    output_name = _item_name(ctx, output_id)
-    main = (
-        f"✅ {output_name} ×{qty}（批量调合：消耗 {mats_text}{coin_text}）｜"
-        f"平均品质 {bq['score']}·{qs.tier_label(bq['tier'])}"
+    mats_text = " + ".join(
+        tpl_of(ctx, "alchemy_material_entry_plain",
+               {"name": _item_name(ctx, mid), "count": ci * qty})
+        for mid, ci in need_mats
     )
+    coin_text = (tpl_of(ctx, "alchemy_batch_coins", {"coins_need": coins_need})
+                 if coins_need else "")
+    output_name = _item_name(ctx, output_id)
+    main = tpl_of(ctx, "alchemy_batch_output", {
+        "output_name": output_name, "qty": qty,
+        "mats_text": mats_text, "coin_text": coin_text,
+        "score": bq["score"], "tier": qs.tier_label(bq["tier"]),
+    })
     if energy_note:
-        main += f"｜{energy_note}"
+        main += tpl_of(ctx, "alchemy_batch_energy_suffix",
+                       {"note": energy_note})
     if hint:
         main = f"{hint}\n{main}"
     return main
@@ -1017,7 +1062,7 @@ async def cmd_feed(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 
     # GU-10 战斗拦截（MUT-04：先于会话查询，战斗会话占用槽位）
     if ctx.get("in_battle"):
-        return "战斗中使用 /即时调合 <配方>（不进入调合会话）"
+        return tpl_of(ctx, "alchemy_battle_blocked")
 
     # GU-09 会话中（FEED-02/L175：无会话 / 非调合类会话 → 无会话模板）
     view = await session_mgr.get_active(qid)
@@ -1090,28 +1135,32 @@ def _inherit_tokens(parsed: Any) -> list:
     return out
 
 
-def _inherit_error(res: Mapping[str, Any]) -> str:
+def _inherit_error(res: Mapping[str, Any],
+                   ctx: Mapping[str, Any]) -> str:
     """/继承 /继承超 失败透传（GU-14 PP 不足 / GU-15 继承超 N 项 / GU-16 互斥组名 +
     INH-01 候选清单 / INH-14 无继承位 / TSC-11 超特性宗师）。"""
     reason = res.get("reason")
     msg = res.get("message")
     if reason == "no_inherit_slot":
-        return "❌ 见习无继承位"                     # INH-14/L344
+        return tpl_of(ctx, "alchemy_inherit_no_slot")            # INH-14/L344
     if reason == "no_snapshot":
         return TEMPLATE_MESSAGES[TEMPLATE_NO_SESSION]
     if reason == "pp_insufficient":
-        return "❌ PP 不足"                          # INH-09/L344
+        return tpl_of(ctx, "alchemy_inherit_pp")                 # INH-09/L344
     if reason == "slot_overflow":
         limit = res.get("limit")
-        return f"❌ 继承超 {limit} 项"               # INH-06/L344
+        return tpl_of(ctx, "alchemy_inherit_overflow",
+                      {"limit": limit})                          # INH-06/L344
     if reason == "group_conflict":
         g = res.get("group")
-        return f"❌ 互斥组内最多 1 项：{g}"          # INH-10
+        return tpl_of(ctx, "alchemy_inherit_group_conflict",
+                      {"g": g})                                  # INH-10
     if reason == "not_repeatable":
-        return "❌ 该特性不可重复继承"               # INH-11
+        return tpl_of(ctx, "alchemy_inherit_not_repeatable")     # INH-11
     if reason == "gold_slot_occupied":
-        return "❌ 第 4 位金色已占用"                # TSC-12
-    return f"❌ {msg or '继承失败'}"                 # 候选清单/宗师门槛/特性不存在 等
+        return tpl_of(ctx, "alchemy_inherit_gold_occupied")      # TSC-12
+    return tpl_of(ctx, "alchemy_inherit_fail",
+                  {"msg": msg or tpl_of(ctx, "alchemy_inherit_fail_msg")})
 
 
 def _render_inherit_success(ctx: Mapping[str, Any], snap: Mapping[str, Any],
@@ -1121,18 +1170,24 @@ def _render_inherit_success(ctx: Mapping[str, Any], snap: Mapping[str, Any],
     parts: list = []
     names = [_trait_name(ctx, t) for t in (res.get("traits") or [])]
     if names:
-        parts.append("已继承：" + " ".join(names))
+        parts.append(tpl_of(ctx, "alchemy_inherit_done",
+                            {"names": " ".join(names)}))
     negs = [_trait_name(ctx, n) for n in (res.get("negatives") or [])]
     if negs:
-        parts.append("负面特性：" + " ".join(negs))
+        parts.append(tpl_of(ctx, "alchemy_inherit_negatives",
+                            {"names": " ".join(negs)}))
     normal_used = len(snap.get("traits") or [])
     gold = snap.get("gold_slot")
-    slot_text = f"特性位 {normal_used} 普通"
+    slot_text = tpl_of(ctx, "alchemy_inherit_slot_used",
+                       {"normal_used": normal_used})
     if isinstance(gold, str) and gold:
-        slot_text += f" + 第 4 位金色（{_trait_name(ctx, gold)}）"
+        slot_text += tpl_of(ctx, "alchemy_inherit_gold_slot",
+                            {"name": _trait_name(ctx, gold)})
     parts.append(slot_text)
     pp = snap.get("pp") or {}
-    parts.append(f"PP {pp.get('used', 0)}/{pp.get('budget', 0)}")
+    parts.append(tpl_of(ctx, "alchemy_pp_used",
+                        {"used": pp.get("used", 0),
+                         "budget": pp.get("budget", 0)}))
     return " ｜ ".join(parts)
 
 
@@ -1151,7 +1206,7 @@ async def _run_inherit(ctx: MutableMapping[str, Any], tokens: list,
     qid = _qid_of(ctx)
     # GU-10 战斗拦截（MUT-04：先于会话查询，战斗会话占用槽位）
     if ctx.get("in_battle"):
-        return "战斗中使用 /即时调合 <配方>（不进入调合会话）"
+        return tpl_of(ctx, "alchemy_battle_blocked")
     # GU-13 会话中（无会话 / 非调合类会话 → 无会话模板，同 GU-09）
     view = await session_mgr.get_active(qid)
     if view is None or not is_alchemy_session(view):
@@ -1172,7 +1227,7 @@ async def _run_inherit(ctx: MutableMapping[str, Any], tokens: list,
     res = engine.select_traits(player, snap, tokens, super_trait=super_trait,
                                job_tier_index=tier_index, ctx=ctx, slot_cap=slot_cap)
     if not res.get("ok"):
-        return _inherit_error(res)
+        return _inherit_error(res, ctx)
     new_snap = engine.apply_to_snapshot(
         snap, res["traits"], super_trait=res.get("gold_slot"),
         negatives=res.get("negatives") or [], pp_used=res.get("pp_used"),
@@ -1220,7 +1275,7 @@ async def cmd_inherit_super(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     if not tokens:
         return format_tpl12(f"/{INHERIT_SUPER_CMD}")
     if len(tokens) > 1:
-        return "❌ /继承超 仅支持 1 个金色特性"  # P-04：位置参数 1 = 单一金色特性
+        return tpl_of(ctx, "alchemy_inherit_super_single")
     return await _run_inherit(ctx, [], super_trait=tokens[0])
 
 
@@ -1244,13 +1299,16 @@ def _is_suspended(view: Any) -> bool:
     return False
 
 
-def _placement_conflict_text(res: Mapping[str, Any]) -> str:
+def _placement_conflict_text(res: Mapping[str, Any],
+                             ctx: Mapping[str, Any]) -> str:
     """结算复核失败渲染（INH-10/11，TC-18/19）：防会话内绕校验。
 
-    入参：res（TraitInherit.check_placement_conflict 输出 {ok, message, conflicts}）。
+    入参：res（TraitInherit.check_placement_conflict 输出 {ok, message, conflicts}）、
+      ctx（模板表）。
     出参：拒绝正文（透传 message 兜底）。
     """
-    return str(res.get("message") or "❌ 结算校验：互斥组/repeatable 冲突")
+    return str(res.get("message")
+               or tpl_of(ctx, "alchemy_settle_placement_conflict"))
 
 
 def _confirm_error(res: Mapping[str, Any], ctx: Mapping[str, Any]) -> str:
@@ -1261,13 +1319,16 @@ def _confirm_error(res: Mapping[str, Any], ctx: Mapping[str, Any]) -> str:
     reason = res.get("reason")
     msg = res.get("message")
     if reason == "already_settled":
-        return str(msg or "已结算")                     # ATO-04/M-05 重复确认幂等
+        return str(msg or tpl_of(ctx, "alchemy_confirm_already_settled"))
     if reason == "no_snapshot":
         return TEMPLATE_MESSAGES[TEMPLATE_NO_SESSION]   # GU-17
     if reason in ("materials_insufficient", "materials_shortfall"):
         diff = _shortfall_text(ctx, res.get("shortfall"))
-        return f"材料不足：{diff}" if diff else "材料不足，无法确认"  # GU-19 全量复核差异
-    return str(msg or "❌ 确认失败")
+        if diff:
+            return tpl_of(ctx, "alchemy_materials_insufficient_diff",
+                          {"diff": diff})
+        return tpl_of(ctx, "alchemy_confirm_materials_short")  # GU-19 全量复核差异
+    return str(msg or tpl_of(ctx, "alchemy_confirm_fail"))
 
 
 def _render_decompose(
@@ -1290,17 +1351,20 @@ def _render_decompose(
             cnt = max(1, int(m.get("count", 1)))
         except (TypeError, ValueError):
             cnt = 1
-        parts.append(f"{name}×{cnt}")
-    body = "✅ " + " ".join(parts) if parts else "✅ 分解成功"
+        parts.append(tpl_of(ctx, "alchemy_material_entry_plain",
+                            {"name": name, "count": cnt}))
+    body = (tpl_of(ctx, "alchemy_decompose_body", {"items": " ".join(parts)})
+            if parts else tpl_of(ctx, "alchemy_decompose_empty"))
     gem = 0
     try:
         gem = max(0, int(res.get("gem", 0)))
     except (TypeError, ValueError):
         gem = 0
     if gem > 0:
-        body += f" + 宝石×{gem}"
+        body += tpl_of(ctx, "alchemy_decompose_gem", {"gem": gem})
     if rate is not None:
-        body += f"（回收 {int(round(rate * 100))}%）"
+        body += tpl_of(ctx, "alchemy_decompose_rate",
+                       {"pct": int(round(rate * 100))})
     return body
 
 
@@ -1332,7 +1396,7 @@ async def cmd_confirm(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     qid = _qid_of(ctx) or ""  # 装配层注入恒非空；缺省空串保守（settle 幂等键要素缺失不落键）
     # GU-10/MUT-04 战斗拦截（先于会话查询，战斗会话占用槽位）
     if ctx.get("in_battle"):
-        return "战斗中使用 /即时调合 <配方>（不进入调合会话）"
+        return tpl_of(ctx, "alchemy_battle_blocked")
     # GU-17 会话中（无会话 / 非调合类会话 → 无会话模板）
     view = await session_mgr.get_active(qid)
     if view is None or not is_alchemy_session(view):
@@ -1347,7 +1411,7 @@ async def cmd_confirm(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     trait_engine = TraitInherit(prof=prof_engine, settings=settings)
     placement = trait_engine.check_placement_conflict(snap, [], ctx)
     if not placement.get("ok"):
-        return _placement_conflict_text(placement)
+        return _placement_conflict_text(placement, ctx)
     # 挑战结算（F-16/GU-47~49/ATO-06/TC-23：快照含 challenge 标记 → /确认 接
     # challenge_check/challenge_settle——达标上限+10；未达标降级+退 50% 材料只退一次；
     # 结算结果快照继续走 F-05 正常品质结算）
@@ -1364,15 +1428,17 @@ async def cmd_confirm(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
             material_paid=snap.get("material_paid"),
         )
         if not settle.get("ok"):
-            return str(settle.get("message") or "❌ 挑战结算失败")
+            return str(settle.get("message")
+                       or tpl_of(ctx, "alchemy_challenge_settle_fail"))
         if check.get("met"):
-            challenge_text = str(settle.get("message") or "挑战成功！品质上限 +10")
+            challenge_text = str(settle.get("message")
+                                 or tpl_of(ctx, "alchemy_challenge_success"))
         else:
             # M-16：失败模板带苛刻条件实况（连锁 X/5）
-            challenge_text = (
-                f"❌ 挑战失败：条件未达标（连锁 {check.get('chain_segments', 0)}/"
-                f"{check.get('need_chain', 5)}），品质降级，退还 50% 材料"
-            )
+            challenge_text = tpl_of(ctx, "alchemy_challenge_fail", {
+                "segments": check.get("chain_segments", 0),
+                "need_chain": check.get("need_chain", 5),
+            })
         snap = settle["snap"]  # 挑战结果快照（quality_cap_bonus/challenge_cap 或降级+退料）
     engine = SettleEngine(prof=prof_engine, settings=settings)
     res = await engine.confirm(
@@ -1395,7 +1461,7 @@ async def cmd_confirm(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     if not res.get("ok"):
         err = _confirm_error(res, ctx)
         return f"{challenge_text}\n{err}" if challenge_text else err
-    body = str(res.get("message") or "❌ 确认失败")
+    body = str(res.get("message") or tpl_of(ctx, "alchemy_confirm_fail"))
     return f"{challenge_text}\n{body}" if challenge_text else body
 
 
@@ -1419,7 +1485,7 @@ async def cmd_abandon(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         )
     qid = _qid_of(ctx) or ""  # 装配层注入恒非空；缺省空串保守（settle 幂等键要素缺失不落键）
     if ctx.get("in_battle"):
-        return "战斗中使用 /即时调合 <配方>（不进入调合会话）"
+        return tpl_of(ctx, "alchemy_battle_blocked")
     view = await session_mgr.get_active(qid)
     if view is None or not is_alchemy_session(view):
         return TEMPLATE_MESSAGES[TEMPLATE_NO_SESSION]
@@ -1431,7 +1497,7 @@ async def cmd_abandon(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         ctx, snap, qid=qid,
         message_id=ctx.get("message_id") or None, session_view=view,
     )
-    return str(res.get("message") or "❌ 放弃失败")
+    return str(res.get("message") or tpl_of(ctx, "alchemy_abandon_fail"))
 
 
 async def cmd_resume(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
@@ -1512,7 +1578,8 @@ async def cmd_decompose(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     qty = max(1, qty if qty is not None else 1)
     item_def = _find_item(ctx, target)
     if item_def is None:
-        return f"❌ 道具不存在：{target}"                        # GU-33 分解对象缺失
+        return tpl_of(ctx, "alchemy_item_not_found",
+                      {"target": target})                        # GU-33 分解对象缺失
     wallet = ctx.get("wallet")
     if wallet is None:
         raise RuntimeError(
@@ -1527,7 +1594,8 @@ async def cmd_decompose(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     if inspect.isawaitable(res):  # 鸭子类型：兄弟路引擎 async 防御（同步引擎亦兼容）
         res = await res
     if not res.get("ok"):
-        return str(res.get("message") or "❌ 分解失败")          # GU-32 标准版拒/回收减半透传
+        return str(res.get("message")
+                   or tpl_of(ctx, "alchemy_decompose_fail"))     # GU-32 标准版拒/回收减半透传
     # M8 批13 审查收口（P0-2 /分解 零落账）：wallet.decompose 为纯计算（GW-12），
     # 壳层补落账三步——扣道具 → 返材料 → 宝石入账（否则道具不消失、材料/宝石不入账，
     # 用户被成功文案误导；TC-18 落账+两段式要求）。
@@ -1535,7 +1603,7 @@ async def cmd_decompose(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     rm = ctx.get("remove_item")
     if callable(rm) and qid_item:
         if not rm(qid_item, int(res.get("count") or 1)):
-            return "❌ 分解失败：道具扣减异常"
+            return tpl_of(ctx, "alchemy_decompose_remove_fail")
     am = ctx.get("add_item")
     if callable(am):
         for _iid, _name, _cnt in (res.get("materials") or []):
@@ -1752,7 +1820,7 @@ def _mount_auto_slot(
         return js.mount(ctx, jewel_id, equip_id, 0, player)
     empty = [si for si in range(len(slot_defs)) if si not in bucket]
     if not empty:
-        return {"ok": False, "message": "❌ 装备珠槽已满，需先 /拆珠（SOCK-03 无损拆珠）"}
+        return {"ok": False, "message": tpl_of(ctx, "alchemy_mount_slots_full")}
     first_err: Optional[dict] = None
     for si in empty:
         res = js.mount(ctx, jewel_id, equip_id, si, player)
@@ -1760,7 +1828,9 @@ def _mount_auto_slot(
             return res
         if first_err is None:
             first_err = res
-    return first_err if first_err is not None else {"ok": False, "message": "❌ 镶嵌失败"}
+    return first_err if first_err is not None else {
+        "ok": False, "message": tpl_of(ctx, "alchemy_mount_fail")
+    }
 
 
 async def cmd_mount(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
@@ -1778,14 +1848,16 @@ async def cmd_mount(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     equip_name = str(parsed.args[1])
     jewel_id = _resolve_jewel_id(ctx, jewel_name)
     if jewel_id is None:
-        return f"❌ 装饰珠不存在：{jewel_name}"   # BEL-05：type=装饰珠
+        return tpl_of(ctx, "alchemy_jewel_not_found",
+                      {"name": jewel_name})       # BEL-05：type=装饰珠
     equip_id = _resolve_equip_id(ctx, equip_name)
     if equip_id is None:
-        return f"❌ 装备不存在：{equip_name}"
+        return tpl_of(ctx, "alchemy_equip_not_found",
+                      {"name": equip_name})
     js = JewelSystem(settings=_settings_of(ctx))
     player = _qid_of(ctx) or "player"
     res = _mount_auto_slot(js, ctx, jewel_id, equip_id, player)
-    return str(res.get("message") or "❌ 镶嵌失败")
+    return str(res.get("message") or tpl_of(ctx, "alchemy_mount_fail"))
 
 
 async def cmd_unmount(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
@@ -1802,21 +1874,21 @@ async def cmd_unmount(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     slot_text = str(parsed.args[1])
     equip_id = _resolve_equip_id(ctx, equip_name)
     if equip_id is None:
-        return f"❌ 装备不存在：{equip_name}"
+        return tpl_of(ctx, "alchemy_equip_not_found", {"name": equip_name})
     try:
         si = int(slot_text)
     except (TypeError, ValueError):
-        return f"❌ 槽位无效：{slot_text}"
+        return tpl_of(ctx, "alchemy_slot_invalid", {"slot": slot_text})
     # M8 批13 审查收口（P2-6 槽位 0/负值透传引擎）：用户侧槽位 1 起（SOCK-03 工程补白），
     # 0 或负值无意义（0 会被当引擎首槽、负值越界访问）→ 明确拒绝
     if si < 1:
-        return "❌ 槽位从 1 开始"
+        return tpl_of(ctx, "alchemy_slot_from_one")
     # 转引擎 0 起
     engine_si = si - 1
     js = JewelSystem(settings=_settings_of(ctx))
     player = _qid_of(ctx) or "player"
     res = js.unmount(ctx, equip_id, engine_si, player)
-    return str(res.get("message") or "❌ 拆珠失败")
+    return str(res.get("message") or tpl_of(ctx, "alchemy_unmount_fail"))
 
 
 async def cmd_jewel_up(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
@@ -1834,14 +1906,14 @@ async def cmd_jewel_up(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     target = _target_of(parsed)
     jewel_id = _resolve_jewel_id(ctx, target)
     if jewel_id is None:
-        return f"❌ 装饰珠不存在：{target}"
+        return tpl_of(ctx, "alchemy_jewel_not_found", {"name": target})
     recipe = _find_jewel_up_recipe(ctx, jewel_id)
     if recipe is None:
         # 链终点（3×传说无可再升，BEL-13）与未配置升阶 统一提示
-        return f"❌ 未找到 {target} 的珠升阶配方（BEL-12：3×同档同 ID+宝石10，禁跳级）"
+        return tpl_of(ctx, "alchemy_jewel_up_no_recipe", {"name": target})
     engine = UpgradeEngine(settings=_alchemy_cfg_of(ctx), combos=_upgrade_combos(ctx))
     res = engine.execute(ctx, recipe)
-    return str(res.get("message") or "❌ 珠升阶失败")
+    return str(res.get("message") or tpl_of(ctx, "alchemy_jewel_up_fail"))
 
 
 async def cmd_product_merge(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
@@ -1858,19 +1930,20 @@ async def cmd_product_merge(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     a_name = str(parsed.args[0])
     b_name = str(parsed.args[1])
     if _prof_level(_player_of(ctx)) < _GRANDMASTER_TIER_INDEX:
-        return "❌ 等级不足"   # CMB-02 宗师（L203/L328，TC-13）
+        return tpl_of(ctx, "alchemy_level_insufficient")   # CMB-02 宗师（L203/L328，TC-13）
     a_id = _resolve_item_id(ctx, a_name)
     if a_id is None:
-        return f"❌ 物品不存在：{a_name}"
+        return tpl_of(ctx, "alchemy_item_not_found", {"target": a_name})
     b_id = _resolve_item_id(ctx, b_name)
     if b_id is None:
-        return f"❌ 物品不存在：{b_name}"
+        return tpl_of(ctx, "alchemy_item_not_found", {"target": b_name})
     recipe = _find_product_merge_recipe(ctx, a_id, b_id)
     if recipe is None:
-        return f"❌ 「{a_name}」+「{b_name}」没有已知组合"   # CMB-05（L390 组合表匹配）
+        return tpl_of(ctx, "alchemy_merge_no_combos",
+                      {"a": a_name, "b": b_name})          # CMB-05（L390 组合表匹配）
     engine = UpgradeEngine(settings=_alchemy_cfg_of(ctx), combos=_upgrade_combos(ctx))
     res = engine.execute(ctx, recipe)
-    return str(res.get("message") or "❌ 成品合成失败")
+    return str(res.get("message") or tpl_of(ctx, "alchemy_product_merge_fail"))
 
 
 async def cmd_formula_merge(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
@@ -1889,24 +1962,27 @@ async def cmd_formula_merge(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     a_name = str(parsed.args[0])
     b_name = str(parsed.args[1])
     if _prof_level(_player_of(ctx)) < EXPERT_TIER_INDEX:
-        return "❌ 等级不足"   # CMB-03 专家（L209，四类合成门槛最低，TC-16）
+        # CMB-03 专家（L209，四类合成门槛最低，TC-16）
+        return tpl_of(ctx, "alchemy_level_insufficient")
     a_id = _resolve_recipe_id(ctx, a_name)
     if a_id is None:
-        return f"❌ 配方不存在：{a_name}"
+        return tpl_of(ctx, "alchemy_recipe_not_found", {"target": a_name})
     b_id = _resolve_recipe_id(ctx, b_name)
     if b_id is None:
-        return f"❌ 配方不存在：{b_name}"
+        return tpl_of(ctx, "alchemy_recipe_not_found", {"target": b_name})
     unlocks = ctx.get("upgrade_unlocks")
     table = unlocks if isinstance(unlocks, MutableMapping) else {}
     missing = [x for x in (a_id, b_id) if x not in table]
     if missing:
-        return f"❌ 配方未全部习得：{'、'.join(missing)}"   # GU-38/TC-15
+        return tpl_of(ctx, "alchemy_formula_not_learned",
+                      {"names": "、".join(missing)})       # GU-38/TC-15
     recipe = _find_formula_merge_recipe(ctx, a_id, b_id)
     if recipe is None:
-        return f"❌ 「{a_name}」+「{b_name}」没有已知组合"   # GU-39 组合表（L390）
+        return tpl_of(ctx, "alchemy_merge_no_combos",
+                      {"a": a_name, "b": b_name})          # GU-39 组合表（L390）
     engine = UpgradeEngine(settings=_alchemy_cfg_of(ctx), combos=_upgrade_combos(ctx))
     res = engine.execute(ctx, recipe)
-    return str(res.get("message") or "❌ 配方合成失败")
+    return str(res.get("message") or tpl_of(ctx, "alchemy_formula_merge_fail"))
 
 
 async def cmd_trait_merge(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
@@ -1924,19 +2000,19 @@ async def cmd_trait_merge(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     a_name = str(parsed.args[0])
     b_name = str(parsed.args[1])
     if _prof_level(_player_of(ctx)) < _GRANDMASTER_TIER_INDEX:
-        return "❌ 等级不足"   # CMB-04 宗师（L215/L332，TC-19）
+        return tpl_of(ctx, "alchemy_level_insufficient")   # CMB-04 宗师（L215/L332，TC-19）
     a_id = _resolve_trait_id(ctx, a_name)
     if a_id is None:
-        return f"❌ 特性不存在：{a_name}"
+        return tpl_of(ctx, "alchemy_trait_not_found", {"name": a_name})
     b_id = _resolve_trait_id(ctx, b_name)
     if b_id is None:
-        return f"❌ 特性不存在：{b_name}"
+        return tpl_of(ctx, "alchemy_trait_not_found", {"name": b_name})
     recipe = _find_trait_merge_recipe(ctx)
     if recipe is None:
-        return "❌ 未配置特性合成配方"   # CMB-01：kind=upgrade 配置实例缺失
+        return tpl_of(ctx, "alchemy_trait_merge_no_recipe")
     engine = UpgradeEngine(settings=_alchemy_cfg_of(ctx), combos=_upgrade_combos(ctx))
     res = engine.execute(ctx, recipe, input_ids=[a_id, b_id])
-    return str(res.get("message") or "❌ 特性合成失败")
+    return str(res.get("message") or tpl_of(ctx, "alchemy_trait_merge_fail"))
 
 
 async def cmd_register(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
@@ -1955,14 +2031,14 @@ async def cmd_register(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     player = _player_of(ctx)
     tier_index = prof_engine.tier_index_for_level(ALCHEMY_JOB_ID, _prof_level(player))
     if tier_index < _MASTER_TIER_INDEX:
-        return "❌ 等级不足：登记复制需炼金大师（SP 面板可解锁）"
+        return tpl_of(ctx, "alchemy_register_master_required")
     target = _target_of(parsed)
     item_id = _resolve_item_id(ctx, target)
     if item_id is None:
-        return f"❌ 道具不存在：{target}"
+        return tpl_of(ctx, "alchemy_item_not_found", {"target": target})
     reg_engine = AlchemyRegister(settings=_settings_of(ctx))
     res = reg_engine.register(ctx, item_id)
-    return str(res.get("message") or "❌ 登记失败")
+    return str(res.get("message") or tpl_of(ctx, "alchemy_register_fail"))
 
 
 async def cmd_copy(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
@@ -1981,14 +2057,14 @@ async def cmd_copy(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     if not target:
         return format_tpl12(f"/{COPY_CMD}")
     if _prof_level(_player_of(ctx)) < _MASTER_TIER_INDEX:
-        return "❌ 等级不足"   # DUP-01 大师（L208/L85，TC-07 前置）
+        return tpl_of(ctx, "alchemy_level_insufficient")   # DUP-01 大师（L208/L85，TC-07 前置）
     item_id = _resolve_item_id(ctx, target)
     if item_id is None:
-        return f"❌ 道具不存在：{target}"
+        return tpl_of(ctx, "alchemy_item_not_found", {"target": target})
     qty = _copy_qty(parsed)
     reg_engine = AlchemyRegister(settings=_settings_of(ctx))
     res = reg_engine.copy(ctx, item_id, count=qty)
-    return str(res.get("message") or "❌ 复制失败")
+    return str(res.get("message") or tpl_of(ctx, "alchemy_copy_fail"))
 
 
 # ---------------------------------------------------------------------------
@@ -2116,7 +2192,8 @@ def _challenge_metrics(core: AlchemyCore, snap: Mapping[str, Any],
     return segments, hits
 
 
-def _challenge_condition_text(check: Mapping[str, Any]) -> str:
+def _challenge_condition_text(check: Mapping[str, Any],
+                              ctx: Mapping[str, Any]) -> str:
     """苛刻条件文案（F-16：连锁 ≥5 且/或 刻度 ≥2，可配且/或）。"""
     try:
         need_chain = max(0, int(check.get("need_chain", 5)))
@@ -2127,7 +2204,8 @@ def _challenge_condition_text(check: Mapping[str, Any]) -> str:
     except (TypeError, ValueError):
         need_elem = 2
     op = "且" if check.get("operator") == "and" else "或"
-    return f"连锁 ≥{need_chain} {op} 刻度 ≥{need_elem}"
+    return tpl_of(ctx, "alchemy_challenge_condition",
+                  {"need_chain": need_chain, "op": op, "need_elem": need_elem})
 
 
 def _evolve_error(res: Mapping[str, Any], ctx: Mapping[str, Any]) -> str:
@@ -2136,8 +2214,11 @@ def _evolve_error(res: Mapping[str, Any], ctx: Mapping[str, Any]) -> str:
     msg = res.get("message")
     if reason == "materials_insufficient":
         diff = _shortfall_text(ctx, res.get("shortfall"))
-        return f"材料不足：{diff}" if diff else "材料不足"
-    return str(msg or "❌ 进化失败")
+        if diff:
+            return tpl_of(ctx, "alchemy_materials_insufficient_diff",
+                          {"diff": diff})
+        return tpl_of(ctx, "alchemy_materials_insufficient")
+    return str(msg or tpl_of(ctx, "alchemy_evolve_fail"))
 
 
 def _render_deep_panel(core: AlchemyCore, snap: Mapping[str, Any],
@@ -2159,7 +2240,7 @@ def _render_deep_panel(core: AlchemyCore, snap: Mapping[str, Any],
             mats = "（无）"
     else:
         mats = _recipe_material_text(core, recipe, ctx) if recipe else "（无）"
-    scales = _render_scales(recipe)
+    scales = _render_scales(ctx, recipe)
     try:
         slots = max(2, int(snap.get("slots", 6)))
     except (TypeError, ValueError):
@@ -2173,12 +2254,17 @@ def _render_deep_panel(core: AlchemyCore, snap: Mapping[str, Any],
         traits_max = max(1, int(snap.get("traits_inherit", 3)))
     except (TypeError, ValueError):
         traits_max = 3
-    gold = " + 第 4 位金色" if snap.get("gold_slot_exclusive") else ""
+    gold = (tpl_of(ctx, "alchemy_deep_gold_suffix")
+            if snap.get("gold_slot_exclusive") else "")
     pp = panel.get("pp") or {}
     lines = [
-        f"{recipe_name}（配方Lv{level}）深度调合：材料：{mats}",
-        f"属性刻度：{scales} | 槽位 {units}/{slots} | 核心槽：{core_text} | "
-        f"特性位 0/{traits_max} 普通{gold} | PP {pp.get('used', 0)}/{pp.get('budget', 0)}",
+        tpl_of(ctx, "alchemy_deep_panel_header",
+               {"recipe_name": recipe_name, "level": level, "mats": mats}),
+        tpl_of(ctx, "alchemy_deep_panel_meta", {
+            "scales": scales, "units": units, "slots": slots,
+            "core_text": core_text, "traits_max": traits_max, "gold": gold,
+            "pp_used": pp.get("used", 0), "pp_budget": pp.get("budget", 0),
+        }),
     ]
     evolve = snap.get("evolve_line")
     if isinstance(evolve, Mapping):
@@ -2197,7 +2283,9 @@ def _render_deep_panel(core: AlchemyCore, snap: Mapping[str, Any],
             except (TypeError, ValueError):
                 done = 0
         tname = _recipe_name(ctx, target) if isinstance(target, str) else "高阶配方"
-        lines.append(f"进化线：{source} {done}/{need} → /进化 解锁 {tname}")
+        lines.append(tpl_of(ctx, "alchemy_deep_evolve_line",
+                            {"source": source, "done": done, "need": need,
+                             "tname": tname}))
     return "\n".join(lines)
 
 
@@ -2206,7 +2294,7 @@ def _render_challenge_panel(ctx: Mapping[str, Any], snap: Mapping[str, Any],
     """挑战会话面板（F-16/M-16：材料×2 + 苛刻条件 + 实况 + 结算规则；纯文本无装饰 emoji）。"""
     rid = snap.get("challenge_recipe_id") or snap.get("recipe_id")
     name = _recipe_name(ctx, rid)
-    cond = _challenge_condition_text(check)
+    cond = _challenge_condition_text(check, ctx)
     try:
         chain = max(0, int(check.get("chain_segments", 0)))
     except (TypeError, ValueError):
@@ -2234,17 +2322,19 @@ def _render_challenge_panel(ctx: Mapping[str, Any], snap: Mapping[str, Any],
             cnt = max(1, int(m.get("count", 1)))
         except (TypeError, ValueError):
             cnt = 1
-        paid_parts.append(f"{_item_name(ctx, iid)}×{cnt}")
-    paid_text = " ".join(paid_parts) if paid_parts else "（无）"
-    return (
-        f"{name} 挑战会话已开启（材料×2 已付：{paid_text}）\n"
-        f"苛刻条件：{cond}\n"
-        f"当前：连锁 {chain}/{need_chain}，刻度 {elems}/{need_elem} ｜ "
-        f"/确认 时判定，达标 → 品质上限+10；未达标 → 品质降级+退 50% 材料"
-    )
+        paid_parts.append(tpl_of(ctx, "alchemy_material_entry_plain",
+                                 {"name": _item_name(ctx, iid), "count": cnt}))
+    paid_text = (" ".join(paid_parts) if paid_parts
+                 else tpl_of(ctx, "alchemy_no_materials"))
+    return tpl_of(ctx, "alchemy_challenge_panel", {
+        "name": name, "paid_text": paid_text, "cond": cond,
+        "chain": chain, "need_chain": need_chain,
+        "elems": elems, "need_elem": need_elem,
+    })
 
 
-def _render_sp_panel(view: Mapping[str, Any]) -> str:
+def _render_sp_panel(ctx: Mapping[str, Any],
+                     view: Mapping[str, Any]) -> str:
     """技能面板渲染（F-19/M-19；**纯文本降级**——✨ 弃用）：
     `SP 3 点可用：品质上限+10（已 2 次）/投入次数+1/解锁复制`。"""
     try:
@@ -2260,24 +2350,32 @@ def _render_sp_panel(view: Mapping[str, Any]) -> str:
             n = max(0, int(it.get("unlocked_count", 0)))
         except (TypeError, ValueError):
             n = 0
-        parts.append(f"{name}（已 {n} 次）" if n > 0 else str(name))
-    return f"SP {sp} 点可用：{'/'.join(parts)}" if parts else f"SP {sp} 点可用"
+        if n > 0:
+            parts.append(tpl_of(ctx, "alchemy_sp_item_used",
+                                {"name": name, "n": n}))
+        else:
+            parts.append(str(name))
+    if parts:
+        return tpl_of(ctx, "alchemy_sp_panel",
+                      {"sp": sp, "items": "/".join(parts)})
+    return tpl_of(ctx, "alchemy_sp_panel_empty", {"sp": sp})
 
 
-def _sp_unlock_error(res: Mapping[str, Any]) -> str:
+def _sp_unlock_error(res: Mapping[str, Any],
+                     ctx: Mapping[str, Any]) -> str:
     """/技能面板 解锁失败透传（SP-05：SP 不足/不可重复/上限/项不存在/引擎不可用）。"""
     reason = res.get("reason")
     if reason == "sp_insufficient":
-        return "❌ SP 不足"
+        return tpl_of(ctx, "alchemy_sp_insufficient")
     if reason == "not_repeatable":
-        return "❌ 该技能面板项不可重复解锁"
+        return tpl_of(ctx, "alchemy_sp_not_repeatable")
     if reason == "max_repeat_reached":
-        return "❌ 已达该技能面板项解锁上限"
+        return tpl_of(ctx, "alchemy_sp_max_repeat")
     if reason == "panel_not_found":
-        return "❌ 技能面板项不存在"
+        return tpl_of(ctx, "alchemy_sp_not_found")
     if reason == "engine_unavailable":
-        return "❌ 技能面板暂不可用"
-    return "❌ 解锁失败"
+        return tpl_of(ctx, "alchemy_sp_unavailable")
+    return tpl_of(ctx, "alchemy_sp_unlock_fail")
 
 
 def _sp_panel_id(meta: AlchemyMeta, player: Mapping[str, Any], value: Any) -> Optional[str]:
@@ -2292,7 +2390,8 @@ def _sp_panel_id(meta: AlchemyMeta, player: Mapping[str, Any], value: Any) -> Op
     return None
 
 
-def _render_announcement(meta: AlchemyMeta, tier_index: int) -> str:
+def _render_announcement(meta: AlchemyMeta, tier_index: int,
+                         ctx: Mapping[str, Any]) -> str:
     """升大师公告（F-06/L482：6 深度机制一句话预览；纯文本无装饰 emoji）。"""
     ann = meta.master_announcement(tier_index)
     if not ann.get("ok"):
@@ -2301,7 +2400,8 @@ def _render_announcement(meta: AlchemyMeta, tier_index: int) -> str:
     for m in ann.get("mechanisms") or []:
         name = m.get("name") if isinstance(m, Mapping) else None
         preview = m.get("preview") if isinstance(m, Mapping) else None
-        parts.append(f"{name}：{preview}")
+        parts.append(tpl_of(ctx, "alchemy_announce_item",
+                            {"name": name, "preview": preview}))
     return " | ".join(parts)
 
 
@@ -2332,11 +2432,12 @@ async def cmd_deep(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     energy = EnergyBar(settings=settings)
     recipe = _find_recipe(ctx, target)
     if recipe is None:
-        return f"❌ 配方不存在：{target}"
+        return tpl_of(ctx, "alchemy_recipe_not_found", {"target": target})
     # GU-20 大师（deep_eligible：master_only 校验 + 档位 ≥ 大师 4；精通拒「深度未解锁」）
     eligible = deep.deep_eligible(player, ALCHEMY_JOB_ID, recipe)
     if not eligible.get("ok"):
-        return str(eligible.get("message") or "深度未解锁")
+        return str(eligible.get("message")
+                   or tpl_of(ctx, "alchemy_deep_locked"))
     # GU-21 能量可查（read 不扣；energy_enabled=false 直通，R-08）
     if _energy_enabled(settings) and energy.current_of(player) < 1:
         return _energy_message(energy, player)
@@ -2357,7 +2458,7 @@ async def cmd_deep(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     snap = deep.deep_snapshot(recipe, job_tier_index=tier_index)
     if not isinstance(snap, Mapping) or snap.get("ok") is False:
         msg = snap.get("message") if isinstance(snap, Mapping) else None
-        return str(msg or "❌ 深度会话开启失败")
+        return str(msg or tpl_of(ctx, "alchemy_deep_open_fail"))
     # 开会话（F-06/§7.1 行1：acquire 成功 → 扣能量 → 面板渲染）
     try:
         await session_mgr.acquire(qid, CHALLENGE_SESSION, payload=snap)
@@ -2369,14 +2470,15 @@ async def cmd_deep(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     if not econs.get("ok"):
         if hasattr(session_mgr, "release"):
             await session_mgr.release(qid)
-        return str(econs.get("message") or "能量不足")
+        return str(econs.get("message")
+                   or tpl_of(ctx, "alchemy_energy_insufficient"))
     # 首次解锁公告+教学（F-06：解锁公告 + 逐条教学一句话示例；player.flags 幂等）
     lines: list = []
     if _mark_deep_announced(player):
         meta = AlchemyMeta(prof=_prof_engine_of(ctx), settings=settings)
-        ann = _render_announcement(meta, tier_index)
+        ann = _render_announcement(meta, tier_index, ctx)
         if ann:
-            lines.append(f"【深度炼金·解锁公告】{ann}")
+            lines.append(tpl_of(ctx, "alchemy_deep_announce", {"ann": ann}))
     core = AlchemyCore(prof=prof_engine, settings=settings)
     lines.append(_render_deep_panel(core, snap, ctx, tier_index))
     return "\n".join(lines)
@@ -2399,7 +2501,7 @@ async def cmd_evolve(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     player = _player_of(ctx)
     recipe = _find_recipe(ctx, target)
     if recipe is None:
-        return f"❌ 配方不存在：{target}"
+        return tpl_of(ctx, "alchemy_recipe_not_found", {"target": target})
     # 解锁表兜底（D-8：ctx.upgrade_unlocks 与 /配方合成 共用，装配层保证；缺省自建防引擎拒）
     if not isinstance(ctx.get("upgrade_unlocks"), MutableMapping):
         ctx["upgrade_unlocks"] = {}
@@ -2408,7 +2510,7 @@ async def cmd_evolve(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     res = deep.evolve_unlock(player, ctx, recipe, counts)
     if not res.get("ok"):
         return _evolve_error(res, ctx)
-    return str(res.get("message") or "❌ 进化失败")
+    return str(res.get("message") or tpl_of(ctx, "alchemy_evolve_fail"))
 
 
 async def cmd_core(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
@@ -2442,9 +2544,10 @@ async def cmd_core(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     deep = DeepEngine(settings=_settings_of(ctx))
     res = deep.mount_core(_player_of(ctx), snap, core_item_def, ctx)
     if not res.get("ok"):
-        return str(res.get("message") or "核心不匹配")   # GU-27/M-08 失败统一「核心不匹配」
+        return str(res.get("message")
+                   or tpl_of(ctx, "alchemy_core_mismatch"))   # GU-27/M-08 失败统一「核心不匹配」
     await session_mgr.suspend(qid, res["snap"])
-    return str(res.get("message") or "❌ 镶核心失败")
+    return str(res.get("message") or tpl_of(ctx, "alchemy_core_fail"))
 
 
 async def cmd_buff(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
@@ -2478,9 +2581,10 @@ async def cmd_buff(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     deep = DeepEngine(settings=_settings_of(ctx))
     res = deep.buff(_player_of(ctx), snap, buff_item_def, ctx)
     if not res.get("ok"):
-        return str(res.get("message") or "加成失败")     # GU-28 限 1 次 / 等级不足 / 非加成道具
+        return str(res.get("message")
+                   or tpl_of(ctx, "alchemy_buff_fail"))     # GU-28 限 1 次 / 等级不足 / 非加成道具
     await session_mgr.suspend(qid, res["snap"])
-    return str(res.get("message") or "❌ 加成失败")
+    return str(res.get("message") or tpl_of(ctx, "alchemy_buff_fail_mark"))
 
 
 async def cmd_challenge(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
@@ -2504,7 +2608,7 @@ async def cmd_challenge(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     player = _player_of(ctx)
     # GU-47 宗师（L86/TC-23）
     if _prof_level(player) < _GRANDMASTER_TIER_INDEX:
-        return "❌ 等级不足"
+        return tpl_of(ctx, "alchemy_level_insufficient")
     session_mgr = ctx.get("session_mgr")
     if session_mgr is None:
         raise RuntimeError(
@@ -2520,20 +2624,20 @@ async def cmd_challenge(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     if not _is_deep_snap(snap):
         return TEMPLATE_MESSAGES[TEMPLATE_NO_SESSION]
     if bool(snap.get("challenge")):
-        return "❌ 挑战会话内不可再开挑战"   # GU-48：挑战会话内不可再开
+        return tpl_of(ctx, "alchemy_challenge_in_challenge")
     recipe = _find_recipe(ctx, target)
     if recipe is None:
-        return f"❌ 配方不存在：{target}"
+        return tpl_of(ctx, "alchemy_recipe_not_found", {"target": target})
     # M8 批13 审查收口（P2-2 挑战配方一致性二义）：/挑战 目标配方须与当前深度会话
     # 配方一致——否则会话 snap["recipe_id"]（深会话原配方）与 challenge_recipe_id
     # 两 id 并存，/确认 挑战结算口径二义（GU-48 挑战从深度会话发起，语义即同配方）。
     deep_recipe_id = str(snap.get("recipe_id") or "")
     if deep_recipe_id and str(recipe.get("id") or "") != deep_recipe_id:
-        return "❌ 挑战配方与当前深度调合配方不一致"
+        return tpl_of(ctx, "alchemy_challenge_recipe_mismatch")
     # GU-49 材料按 配方×2 全量（原子全拒+差异，零副作用；扣减后记 material_paid）
     need = _challenge_materials_2x(recipe)
     if not need:
-        return "❌ 配方无材料可挑战"
+        return tpl_of(ctx, "alchemy_challenge_no_materials")
     shortfall: list = []
     for m in need:
         have = _count_item(ctx, m["item"])
@@ -2541,7 +2645,10 @@ async def cmd_challenge(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
             shortfall.append({"item": m["item"], "count": m["count"], "have": have})
     if shortfall:
         diff = _shortfall_text(ctx, shortfall)
-        return f"❌ 材料不足：{diff}" if diff else "❌ 材料不足"
+        if diff:
+            return tpl_of(ctx, "alchemy_materials_insufficient_mark_diff",
+                          {"diff": diff})
+        return tpl_of(ctx, "alchemy_materials_insufficient_mark")
     for m in need:
         _remove_item(ctx, m["item"], m["count"])
     # 开启挑战会话（工程补白：复用 challenge_alchemy 子态，快照加 challenge 标记 + material_paid）
@@ -2576,12 +2683,13 @@ def render_alchemy_codex(ctx: MutableMapping[str, Any]) -> str:
     meta = AlchemyMeta(prof=_prof_engine_of(ctx), settings=settings)
     summary = meta.codex_summary(ctx)   # category 默认 alchemy 炼金图鉴（F-19）
     if not summary.get("ok"):
-        return f"❌ 图鉴不可用（{summary.get('reason', 'unknown_category')}）"
+        return tpl_of(ctx, "alchemy_codex_unavailable",
+                      {"reason": summary.get("reason", "unknown_category")})
     lit = int(summary.get("lit", 0))
     total = int(summary.get("total", 0))
-    lines = [f"炼金图鉴：已点亮 {lit}/{total}"]
+    lines = [tpl_of(ctx, "alchemy_codex_line", {"lit": lit, "total": total})]
     if total > 0:
-        lines[0] += f"（点亮 {total} → 炼金王称号）"
+        lines[0] += tpl_of(ctx, "alchemy_codex_king_hint", {"total": total})
     # 成长奖励（F-19/L210：点亮 N 格 → 经验/新配方；幂等只领一次）
     reward = meta.codex_reward(ctx)
     if reward.get("granted"):
@@ -2591,14 +2699,19 @@ def render_alchemy_codex(ctx: MutableMapping[str, Any]) -> str:
         except (TypeError, ValueError):
             exp = 0
         recipes = [x for x in (r.get("recipes") or []) if x]
-        line = f"成长奖励：经验 +{exp}" if exp else "成长奖励："
+        if exp:
+            line = tpl_of(ctx, "alchemy_codex_reward_exp", {"exp": exp})
+        else:
+            line = tpl_of(ctx, "alchemy_codex_reward")
         if recipes:
-            line += "，新配方：" + "、".join(_recipe_name(ctx, rid) for rid in recipes)
+            line += tpl_of(ctx, "alchemy_codex_reward_recipes", {
+                "recipes": "、".join(_recipe_name(ctx, rid) for rid in recipes)
+            })
         lines.append(line)
     # 王称号条件（TTL-01：图鉴全亮 → 授予；与等级解耦，prof 未注入静默跳过）
     king = meta.king_eligible(_player_of(ctx), ctx, job_id=ALCHEMY_JOB_ID)
     if king.get("ok") and king.get("granted"):
-        lines.append("✅ 已获得「炼金王」称号（图鉴全点亮）")
+        lines.append(tpl_of(ctx, "alchemy_codex_king_granted"))
     return "\n".join(lines)
 
 
@@ -2619,16 +2732,18 @@ async def cmd_skill_panel(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     if unlock_value is not None:
         panel_id = _sp_panel_id(meta, player, unlock_value)
         if panel_id is None:
-            return f"❌ 技能面板项不存在：{unlock_value}"
+            return tpl_of(ctx, "alchemy_sp_item_not_found",
+                          {"name": unlock_value})
         res = meta.skill_panel_unlock(player, ALCHEMY_JOB_ID, panel_id)
         if not res.get("ok"):
-            return _sp_unlock_error(res)
+            return _sp_unlock_error(res, ctx)
         view = meta.skill_panel_view(player, ALCHEMY_JOB_ID)
-        return f"{res.get('message')}\n{_render_sp_panel(view)}"
+        return f"{res.get('message')}\n{_render_sp_panel(ctx, view)}"
     view = meta.skill_panel_view(player, ALCHEMY_JOB_ID)
     if not view.get("ok"):
-        return f"❌ 技能面板不可用（{view.get('reason', 'engine_unavailable')}）"
-    return _render_sp_panel(view)
+        return tpl_of(ctx, "alchemy_sp_panel_unavailable",
+                      {"reason": view.get("reason", "engine_unavailable")})
+    return _render_sp_panel(ctx, view)
 
 
 async def cmd_tutorial(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
@@ -2647,21 +2762,27 @@ async def cmd_tutorial(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         player = _player_of(ctx)
         prof_engine = ProficiencyEngine(settings=settings)
         tier_index = prof_engine.tier_index_for_level(ALCHEMY_JOB_ID, _prof_level(player))
-        ann = _render_announcement(meta, tier_index)
+        ann = _render_announcement(meta, tier_index, ctx)
         lines: list = []
         if ann:
-            lines.append(f"【升大师·深度炼金 6 机制预览】{ann}")
-        lines.append("教学目录：")
+            lines.append(tpl_of(ctx, "alchemy_tutorial_master_preview",
+                                {"ann": ann}))
+        lines.append(tpl_of(ctx, "alchemy_tutorial_catalog"))
         for c in meta.tutorial_catalog():
-            lines.append(f"- {c['name']}：{c['example']}")
+            lines.append(tpl_of(ctx, "alchemy_tutorial_catalog_item",
+                                {"name": c["name"], "example": c["example"]}))
         return "\n".join(lines)
     name = str(args[0]).strip()
     res = meta.tutorial_show(name)
     if res.get("ok"):
-        return f"教学·{res['name']}：{res.get('text') or res.get('example') or ''}"
-    lines = [f"未找到机制「{name}」，教学目录："]
+        return tpl_of(ctx, "alchemy_tutorial_show", {
+            "name": res["name"],
+            "text": res.get("text") or res.get("example") or "",
+        })
+    lines = [tpl_of(ctx, "alchemy_tutorial_not_found", {"name": name})]
     for c in meta.tutorial_catalog():
-        lines.append(f"- {c['name']}：{c['example']}")
+        lines.append(tpl_of(ctx, "alchemy_tutorial_catalog_item",
+                            {"name": c["name"], "example": c["example"]}))
     return "\n".join(lines)
 
 
@@ -2739,7 +2860,10 @@ def _instant_carry_error(carry: Mapping[str, Any], ctx: Mapping[str, Any]) -> st
     if isinstance(msg, str) and msg:
         return msg
     diff = _shortfall_text(ctx, carry.get("shortfall"))
-    return f"❌ 材料不足：{diff}" if diff else "❌ 材料不足"
+    if diff:
+        return tpl_of(ctx, "alchemy_materials_insufficient_mark_diff",
+                      {"diff": diff})
+    return tpl_of(ctx, "alchemy_materials_insufficient_mark")
 
 
 def _instant_render(res: Mapping[str, Any], recipe: Mapping[str, Any], ctx: Mapping[str, Any],
@@ -2756,15 +2880,16 @@ def _instant_render(res: Mapping[str, Any], recipe: Mapping[str, Any], ctx: Mapp
     out_id = output.get("item") if isinstance(output, Mapping) else None
     name = res.get("item_name") or (_item_name(ctx, out_id) if out_id else "产物")
     if not auto_use:
-        return f"✅ 已入包：{name}×1（本场战斗内不可再使用）"
+        return tpl_of(ctx, "alchemy_instant_bag", {"name": name})
     damage = res.get("final_damage")
     if damage is None:
         damage = res.get("damage")
     if damage is None:
         damage = res.get("raw_damage")
     if damage is not None:
-        return f"{name}！造成 {damage} 伤害"
-    return f"✅ 已使用 {name}"
+        return tpl_of(ctx, "alchemy_instant_damage",
+                      {"name": name, "damage": damage})
+    return tpl_of(ctx, "alchemy_instant_used", {"name": name})
 
 
 async def cmd_instant(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
@@ -2802,15 +2927,15 @@ async def cmd_instant(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 
     # GU-50 战斗中（战斗会话上下文内执行；非战斗拒绝）
     if not ctx.get("in_battle"):
-        return "即时调合仅限战斗中"
+        return tpl_of(ctx, "alchemy_instant_not_battle")
 
     # GU-51 炼金职业 ≥ 大师（proficiency.alchemy level ≥ 4；对齐 _MASTER_TIER_INDEX）
     if _prof_level(player) < _MASTER_TIER_INDEX:
-        return "❌ 等级不足"
+        return tpl_of(ctx, "alchemy_level_insufficient")
 
     recipe = _find_recipe(ctx, target)
     if recipe is None:
-        return f"❌ 配方不存在：{target}"
+        return tpl_of(ctx, "alchemy_recipe_not_found", {"target": target})
 
     # GU-53 素材全量校验（carry_ok：不足全拒+差异，不部分执行）——前置到能量消耗之前
     # （M8 批13 审查收口 P1-1：原能量先扣后校验，素材不足/限次拒绝时能量已扣=失败路径
@@ -2823,14 +2948,15 @@ async def cmd_instant(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     # 纯读快照，前置到消耗前更安全
     used = _battle_alchemy_used_of(snap)
     if used >= _instant_per_battle_limit(settings):
-        return "本场战斗已使用过即时调合（限 1 次/场）"
+        return tpl_of(ctx, "alchemy_instant_limit")
 
     # GU-52 能量 ≥1 格（energy_enabled=true 时 consume_energy，不足拒；R-08 关闭直通不扣）
     # ——放在所有只读校验之后、实际执行之前（消耗收尾）
     if _energy_enabled(settings):
         econs = engine.consume_energy(player, ctx)
         if not econs.get("ok"):
-            return str(econs.get("message") or "能量不足")
+            return str(econs.get("message")
+                       or tpl_of(ctx, "alchemy_energy_insufficient"))
 
     # 一步出结果（BA-07/08）：auto_use 默认 true → use_fn 当场结算；false/无 use_fn → 入包
     auto_use = _instant_auto_use(settings)
@@ -2844,7 +2970,8 @@ async def cmd_instant(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         cooldown=cooldown, use_fn=use_fn,
     )
     if not res.get("ok"):
-        return str(res.get("message") or "❌ 即时调合失败")  # 失败透传
+        return str(res.get("message")
+                   or tpl_of(ctx, "alchemy_instant_fail"))  # 失败透传
     # 记 battle_alchemy_used+1（写回注入战斗快照顶层键，BA-02）
     snap["battle_alchemy_used"] = used + 1
     # 渲染 M-17 战斗一行（M5 无 emoji 纯文本）
@@ -2948,12 +3075,12 @@ async def cmd_plant(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     player = _player_of(ctx)
     # GU-60 炼金职业 ≥ 正式（种植解锁，熟练度 L56）
     if _prof_level(player) < FORMAL_TIER_INDEX:
-        return "❌ 等级不足：炼金职业需达到 正式（种植解锁）"
+        return tpl_of(ctx, "alchemy_plant_level")
     engine = HarvestEngine(settings=_settings_of(ctx))
     res = engine.plant(player, ctx, seed, now=_clock_of(ctx))
     if not res.get("ok"):
-        return str(res.get("message") or "❌ 种植失败")
-    return str(res.get("message") or "✅ 已种植")
+        return str(res.get("message") or tpl_of(ctx, "alchemy_plant_fail"))
+    return str(res.get("message") or tpl_of(ctx, "alchemy_plant_ok"))
 
 
 async def cmd_harvest(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
@@ -2971,12 +3098,12 @@ async def cmd_harvest(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     player = _player_of(ctx)
     # GU-60 炼金职业 ≥ 正式（收获解锁，熟练度 L56）
     if _prof_level(player) < FORMAL_TIER_INDEX:
-        return "❌ 等级不足：炼金职业需达到 正式（收获解锁）"
+        return tpl_of(ctx, "alchemy_harvest_level")
     engine = HarvestEngine(settings=_settings_of(ctx))
     res = engine.harvest(player, ctx, now=_clock_of(ctx))
     if not res.get("ok"):
-        return str(res.get("message") or "❌ 收获失败")
-    return str(res.get("message") or "✅ 已收获")
+        return str(res.get("message") or tpl_of(ctx, "alchemy_harvest_fail"))
+    return str(res.get("message") or tpl_of(ctx, "alchemy_harvest_ok"))
 
 
 async def cmd_helper(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
@@ -2999,7 +3126,7 @@ async def cmd_helper(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     player = _player_of(ctx)
     # GU-62 炼金职业 ≥ 精通（代工助手解锁，熟练度 L57）
     if _prof_level(player) < PROFICIENT_TIER_INDEX:
-        return "❌ 等级不足：代工助手需炼金职业 ≥ 精通"
+        return tpl_of(ctx, "alchemy_helper_level")
     # 键值列表解析（P-22/SEP-22：parse_task_spec 模块级函数消费，见 _helper_spec）
     spec = _helper_spec(parsed)
     gather: Any = None
@@ -3007,7 +3134,8 @@ async def cmd_helper(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     if spec:
         parsed_spec = parse_task_spec(spec)
         if not parsed_spec.get("ok"):
-            return str(parsed_spec.get("message") or "❌ 任务格式非法")
+            return str(parsed_spec.get("message")
+                       or tpl_of(ctx, "alchemy_helper_task_invalid"))
         gather = parsed_spec.get("gather")
         craft = parsed_spec.get("craft")
     engine = HelperEngine(settings=_settings_of(ctx))
@@ -3015,8 +3143,8 @@ async def cmd_helper(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     ctx.setdefault("now", _clock_of(ctx))
     res = engine.assign(player, ctx, assistant, gather=gather, craft=craft)
     if not res.get("ok"):
-        return str(res.get("message") or "❌ 代工设定失败")
-    return str(res.get("message") or "✅ 已设定代工")
+        return str(res.get("message") or tpl_of(ctx, "alchemy_helper_assign_fail"))
+    return str(res.get("message") or tpl_of(ctx, "alchemy_helper_assign_ok"))
 
 
 async def cmd_collect(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
@@ -3036,8 +3164,8 @@ async def cmd_collect(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     ctx.setdefault("now", _clock_of(ctx))
     res = engine.collect(player, ctx)
     if not res.get("ok"):
-        return str(res.get("message") or "❌ 没有待收取的代工产出")
-    return str(res.get("message") or "✅ 已收取")
+        return str(res.get("message") or tpl_of(ctx, "alchemy_collect_empty"))
+    return str(res.get("message") or tpl_of(ctx, "alchemy_collect_ok"))
 
 
 async def cmd_assist(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
@@ -3068,7 +3196,7 @@ async def cmd_assist(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     player = _player_of(ctx)
     # GU-44 大师（L85/L213：炼金职业 ≥ 大师）
     if _prof_level(player) < _MASTER_TIER_INDEX:
-        return "❌ 等级不足"
+        return tpl_of(ctx, "alchemy_level_insufficient")
     session_mgr = ctx.get("session_mgr")
     if session_mgr is None:
         raise RuntimeError(
@@ -3085,13 +3213,14 @@ async def cmd_assist(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     # 无群信息保守放行【工程补白】）
     same_group = ctx.get("same_group")
     if same_group is not None and not same_group:
-        return "❌ 对方不在当前群内"  # GU-46 非同群拒绝
+        return tpl_of(ctx, "alchemy_assist_not_same_group")  # GU-46 非同群拒绝
     # F-15 消耗本轮投料材料（快照材料链；原子全量校验 ATO-01 口径：全拒+差异零副作用）
     need = _assist_materials(snap, ctx)
     if need:
         diff = _assist_materials_diff(ctx, need)
         if diff:
-            return f"❌ 材料不足：缺 {diff}"
+            return tpl_of(ctx, "alchemy_assist_materials_missing",
+                          {"diff": diff})
         for m in need:
             _remove_item(ctx, m["item"], m["count"])
     # 随机加成（社交向，无额外硬性门槛；seed = 会话 version 可复现【工程补白】）
@@ -3109,7 +3238,8 @@ async def cmd_assist(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     await session_mgr.suspend(qid, new_snap)
     # M-15（纯文本降级：装饰性 emoji 禁用，仅 ✅/❌ 功能性标记）
     name = _assist_player_name(ctx, target)
-    return f"协力调和：{name}加入，获得随机加成：{bonus['desc']}"
+    return tpl_of(ctx, "alchemy_assist_ok",
+                  {"name": name, "desc": bonus["desc"]})
 
 
 # ---------------------------------------------------------------------------
@@ -3218,7 +3348,10 @@ def _assist_materials_diff(ctx: Mapping[str, Any], need: list) -> str:
     for m in need:
         have = _count_item(ctx, m["item"])
         if have < m["count"]:
-            parts.append(f"{_item_name(ctx, m['item'])}×{m['count'] - have}")
+            parts.append(tpl_of(ctx, "alchemy_material_entry_plain", {
+                "name": _item_name(ctx, m["item"]),
+                "count": m["count"] - have,
+            }))
     return "、".join(parts)
 
 

@@ -167,6 +167,42 @@ def _rarity_cn(rarity: object) -> str:
     return _RARITY_CN.get(str(rarity), str(rarity))
 
 
+def _settle_after_reel(ctx: MutableMapping[str, Any], result: Mapping[str, object]) -> str | None:
+    """收杆成功后出鱼结算（P0-1 批8 审查 A5 收口）。
+
+    消费 reel_in 写入的 fs["last"] 快照调 settle_catch（图鉴点亮/奖励/熟练经验）；
+    成功 → 组装出鱼消息返回；结算不可用（快照缺失/异常）→ None（壳层回落骨架文案）。
+    """
+    try:
+        from qbot_rpg.core.fishing_settle import settle_catch
+
+        fs = ctx.get("fish_state")
+        snap = fs.get("last") if isinstance(fs, Mapping) else None
+        if not isinstance(snap, Mapping):
+            return None
+        r = settle_catch(ctx, snap)
+        if not isinstance(r, Mapping) or not r.get("ok"):
+            return None
+        name = str(r.get("name") or r.get("species_id") or "")
+        size = r.get("size")
+        weight = r.get("weight")
+        crown = r.get("crown")
+        first_seen = bool(r.get("first_seen"))
+        reward = r.get("reward")
+        lines = [f"出鱼成功：{name} · {size}cm/{weight}kg · {crown}"]
+        if first_seen:
+            lines.append("（图鉴新记录！）")
+        if isinstance(reward, list) and reward:
+            coins = sum(
+                int(x.get("amount", 0)) for x in reward
+                if isinstance(x, Mapping) and x.get("type") == "currency"
+            )
+            lines.append(f"奖励：金币 +{coins}")
+        return "\n".join(lines)
+    except Exception:
+        return None
+
+
 def _engine_of(ctx: MutableMapping[str, Any]) -> FishingEngine:
     """引擎复用（对齐路2B：ctx["fishing_engine"] 已注入 → 复用；缺省自建）。
 
@@ -239,6 +275,18 @@ def cmd_fish_bite(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
             if isinstance(fs_new, MutableMapping):
                 fs = fs_new
 
+    # P1-2（批8 审查 A5）：金闪/鱼王接线——猛烈鱼讯（violent）到期后调 king_event
+    # hook 判定（full 模式 + king 行存在 + 日窗口 + chance）；命中 → 覆写 fs golden
+    # （金闪标记行 + TR-10 鱼王 BOSS 前置；金闪只可能出现在猛烈鱼讯，TC-13 隔离）
+    if state == STATE_BITE and fs.get("kind") == "violent":
+        king_hook = ctx.get("king_event")
+        if callable(king_hook):
+            target_sid = fs.get("target_species_id")
+            if isinstance(target_sid, str) and target_sid:
+                k = king_hook(target_sid, ctx.get("rng"))
+                if isinstance(k, Mapping) and k.get("ok"):
+                    fs["golden"] = True
+
     spot_id = fs.get("spot_id")
     spot = str(spot_id or "--")
 
@@ -310,13 +358,25 @@ def cmd_fish_reel(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     if choice == "stop":
         return _render(ctx, "fish_reel_stop", _DEF_REEL_STOP, {})
 
+    # 满力/自动：出鱼结算（P0-1 批8 审查 A5——reel_in 成功返回 settle_pending=True，
+    # 指令壳消费 last 快照调 settle_catch：图鉴点亮/奖励/熟练经验/出鱼消息）
+    settle_r = _settle_after_reel(ctx, result)
+    if settle_r is not None:
+        return settle_r
+
+    # 骨架兜底（settle 不可用时）：仍显示收杆成功（不静默失败）
     rarity = "normal"
     kind = "micro"
     if isinstance(result, Mapping):
         roll = result.get("roll") or {}
         if isinstance(roll, Mapping):
             rarity = str(roll.get("rarity") or rarity)
-        kind = str(result.get("kind") or result.get("bite_kind") or kind)
+        # P1-3（A5）：kind 从引擎返回体/快照读（reel_in 成功体无 kind，读 fs["last"]）
+        fs = ctx.get("fish_state")
+        if isinstance(fs, Mapping):
+            last = fs.get("last")
+            if isinstance(last, Mapping):
+                kind = str(last.get("kind") or kind)
     return _render(ctx, "fish_reel_success", _DEF_REEL_RUN, {
         "kind_cn": _kind_cn(kind),
         "rarity_cn": _rarity_cn(rarity),

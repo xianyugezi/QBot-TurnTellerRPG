@@ -408,6 +408,14 @@ def _cast_forward(ctx: MutableMapping[str, Any], spot_arg: str) -> str:
     spot_id = spot_arg if spot_arg.strip() else first_fishable_spot(ctx)
     result = cast_fishing(ctx, spot_id)
     if isinstance(result, Mapping):
+        # P0-1（批8 审查 A5）：simple 直出（settle_pending=True）→ 接结算出鱼
+        # （引擎 M-1 已落 last 快照）；full 走等待流程（消息已含等待语义）
+        if result.get("mode") == "simple" or result.get("settle_pending"):
+            from qbot_rpg.commands.fishing_reel_commands import _settle_after_reel
+
+            settle_msg = _settle_after_reel(ctx, result)
+            if settle_msg is not None:
+                return settle_msg
         msg = result.get("message")
         if isinstance(msg, str) and msg:
             return msg

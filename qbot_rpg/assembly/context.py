@@ -468,13 +468,19 @@ def _consume_bait_hook(ctx: MutableMapping[str, Any]):
     否则 TypeError 被引擎 except 吞 → 生产扣饵永不执行（A3 P0-2 已修）。
     """
 
-    def _hook(_ctx: object, _engine: object = None) -> dict:
+    def _hook(_ctx: object, _engine: object = None) -> object:
         try:
             from qbot_rpg.core.fishing_bait import consume_bait
 
-            return consume_bait(ctx, _ctx)
+            r = consume_bait(ctx, _ctx)
+            # A5 P1-1：引擎期望 Optional[str]（饵 id）——dict 返回值转形态；
+            # 无饵/失败 → None（引擎回落无饵抛竿语义）
+            if isinstance(r, Mapping) and r.get("ok"):
+                used = r.get("used")
+                return str(used) if isinstance(used, str) and used else None
+            return None
         except Exception:
-            return {"ok": False, "reason": "bait_unavailable"}
+            return None
 
     return _hook
 

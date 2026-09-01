@@ -66,8 +66,10 @@ from typing import Any, Dict, List, Mapping, MutableMapping
 
 from qbot_rpg.core.fishing import (
     KIND_LABELS,
+    MSG_SIMPLE_DIRECT,
     STATE_BITE,
     STATE_IDLE,
+    STATE_REELED,
     STATE_WAITING,
     FishingEngine,
     fish_intent_of,
@@ -208,6 +210,16 @@ def cast_fishing(ctx: MutableMapping[str, Any], spot_id: object) -> dict:
     fs = ctx.get("fish_state")
     casts = int(fs.get("casts") or 0) if isinstance(fs, Mapping) else 0
     bait_line = _bait_line(bait_used)
+
+    # P1-4（批8 审查 A5）：simple 直出（无等待/鱼讯流程）——透传引擎消息/state
+    # （MSG_SIMPLE_DIRECT + STATE_REELED），不组装「鱼讯即刻可查」误导文案
+    if got.get("mode") == "simple":
+        return {
+            "ok": True, "state": got.get("state") or STATE_REELED, "spot_id": spot,
+            "wait_sec": 0, "cast_at": got.get("cast_at"), "bait_used": bait_used,
+            "casts": casts, "mode": "simple", "settle_pending": True,
+            "message": got.get("message") or MSG_SIMPLE_DIRECT,
+        }
 
     if wait_sec == 0:
         message = MSG_CAST_IMMEDIATE.format(

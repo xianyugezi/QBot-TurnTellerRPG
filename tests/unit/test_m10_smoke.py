@@ -223,3 +223,25 @@ def test_deterministic_same_seed() -> None:
         results.append((reel_r.get("ok"), settle_r.get("size"), settle_r.get("crown"),
                         ctx["currencies"].get("coins", 0)))
     assert results[0] == results[1]
+
+
+def test_full_chain_via_shell_settles() -> None:
+    """P0-1 回归守卫（批8 审查 A5）：/收杆 满力/自动成功 → 指令壳调 settle_catch
+    结算入账（图鉴点亮 + 金币奖励 + 出鱼消息含 size/weight/crown）。"""
+    from qbot_rpg.commands.fishing_reel_commands import cmd_fish_reel
+    from qbot_rpg.commands.parsers import ParsedCommand
+
+    ctx = _fish_ctx()
+    cast_fishing(ctx, "gp_moon_grass")
+    # 推进 now 到 cast_at（等待到期）
+    if ctx["fish_state"].get("wait_sec", 0) > 0:
+        ctx["now"] = int(ctx["fish_state"]["cast_at"]) + 1
+    eng = ctx["fishing_engine"]
+    eng.bite_check(ctx)
+    # 走指令壳 /收杆 自动 → 应触发结算
+    out = cmd_fish_reel(ParsedCommand("收杆", args=("自动",)), ctx)
+    assert "出鱼成功" in out
+    assert "银鳞鲤" in out
+    assert "cm" in out
+    assert ctx["codex_state"]["fish"]["silver_carp"]["caught_count"] >= 1
+    assert ctx["currencies"].get("coins", 0) >= 20

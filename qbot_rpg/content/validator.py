@@ -560,6 +560,10 @@ class _Checker:
         if module_name == "forge":
             from qbot_rpg.content.forge_models import validate_forge
             validate_forge(self._modules, self)
+        # M11 成就（m11 启动包 §2.1）：achievements 专项校验 ACH-01~13（同鸭子类型口径）
+        if module_name == "achievements":
+            from qbot_rpg.content.achievements_models import validate_achievements
+            validate_achievements(self._modules, self)
         # 逐条目校验
         for idx, entry in self._iter_entries(module_name, data, mmeta):
             self._check_entry(module_name, idx, entry, mmeta)

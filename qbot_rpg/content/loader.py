@@ -167,6 +167,9 @@ _KIND_FOR_MODULE: Mapping[str, str] = {
     # M10 钓鱼（m10_shared_contract）：fishing.json 顶层 obj——DEF_CLASSES 无专属 Def →
     # 缺省 BaseDef 回退；运行期 Def 解析由 fishing 引擎经 modules_raw 读（接口摸底 §八-1）
     "fishing": "fish",
+    # M11 成就（m11 启动包 §2.1）：achievements.json 顶层 list——DEF_CLASSES 无专属 Def →
+    # 缺省 BaseDef 回退；运行期 Def 解析由成就引擎经 modules_raw 读
+    "achievements": "achievement",
     "enemies": "enemy",
     "maps": "map",
     "dungeon": "dungeon",  # M3 副本（m3_shared_contract §4）；DEF_CLASSES 缺省 BaseDef 回退

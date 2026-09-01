@@ -60,6 +60,8 @@ NAMESPACES: Dict[str, Tuple[str, ...]] = {
     # （slots 无 id 收集不登记 namespace；equip_id 引用 item 走 item_lib）
     "recipe_lib": ("recipe",),
     "proficiency_lib": ("proficiency",),
+    # M11 成就（m11 启动包 §2.1）：achievements 独立注册表（顶层 list）
+    "achievement_lib": ("achievements",),
 }
 
 # -------------------------------------------------------------------------------------
@@ -736,6 +738,9 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "shop": ModuleMeta(entry_type="list", fields={}, kind="shop", namespace="shop_lib"),
         "quest": ModuleMeta(entry_type="list", fields={}, kind="quest", namespace="quest_lib"),
         "checkin": ModuleMeta(entry_type="list", fields={}, kind="checkin", namespace="checkin_lib"),
+        # M11 成就（4c §1.5）：顶层 list，fields 空表 + 专项校验器全权（对齐 quest/npc 口径）
+        "achievements": ModuleMeta(entry_type="list", fields={}, kind="achievement",
+                                   namespace="achievement_lib"),
         # 条件加成（细化_3b §3.2；环 + 引用存在性专项校验见 validator._check_conditional）
         "conditional": ModuleMeta(entry_type="object", fields=conditional_fields,
                                   kind="conditional", namespace="cond_lib"),

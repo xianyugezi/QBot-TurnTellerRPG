@@ -1,0 +1,112 @@
+[
+  {
+    "id": "ach_codex_25",
+    "name": "初窥门径",
+    "desc": "图鉴完成度达到 25%",
+    "conditions": [
+      { "var": "codex", "op": "ge", "value": 25 }
+    ],
+    "trigger": "check",
+    "once": true,
+    "reward": [
+      { "coins": 100 }
+    ]
+  },
+  {
+    "id": "ach_codex_50",
+    "name": "图鉴过半",
+    "desc": "图鉴完成度达到 50%",
+    "conditions": [
+      { "var": "codex", "op": "ge", "value": 50 }
+    ],
+    "trigger": "check",
+    "once": true,
+    "reward": [
+      { "coins": 200 }
+    ]
+  },
+  {
+    "id": "ach_codex_75",
+    "name": "资深收藏家",
+    "desc": "图鉴完成度达到 75%",
+    "conditions": [
+      { "var": "codex", "op": "ge", "value": 75 }
+    ],
+    "trigger": "check",
+    "once": true,
+    "reward": [
+      { "coins": 300 }
+    ]
+  },
+  {
+    "id": "ach_codex_90",
+    "name": "收藏大师",
+    "desc": "图鉴完成度达到 90%（全收集还有更深处）",
+    "conditions": [
+      { "var": "codex", "op": "ge", "value": 90 }
+    ],
+    "trigger": "check",
+    "once": true,
+    "reward": [
+      { "coins": 500 }
+    ]
+  },
+  {
+    "id": "ach_codex_100",
+    "name": "收藏家",
+    "desc": "图鉴完成度达到 100%",
+    "conditions": [
+      { "var": "codex", "op": "ge", "value": 100 }
+    ],
+    "trigger": "check",
+    "once": true,
+    "reward": [
+      { "title": "achievement_100_craft" },
+      { "coins": 1000 }
+    ]
+  },
+  {
+    "id": "ach_fish_master",
+    "name": "鱼类大师",
+    "desc": "鱼图鉴分册完成度达到 100%",
+    "conditions": [
+      { "var": "codex", "op": "ge", "value": 100, "param": "fish" }
+    ],
+    "trigger": "check",
+    "once": true,
+    "reward": [
+      { "coins": 800 }
+    ]
+  },
+  {
+    "id": "ach_level_30",
+    "name": "三十而立",
+    "desc": "等级达到 30",
+    "conditions": [
+      { "var": "level", "op": "ge", "value": 30 }
+    ],
+    "trigger": "check",
+    "once": true,
+    "reward": [
+      { "coins": 500 }
+    ]
+  },
+  {
+    "id": "ach_hidden_lantern",
+    "name": "万家灯火",
+    "desc": "完成全部神鱼支线",
+    "conditions": [
+      { "var": "[事件:神鱼支线完成]", "op": "ge", "value": 8 }
+    ],
+    "trigger": "check",
+    "once": true,
+    "hidden": {
+      "mode": "locked",
+      "reveal_text": "灯火即神鱼——万家灯火，皆为神鱼之鳞。",
+      "clue_ref": ["神鱼支线", "鱼王传说"]
+    },
+    "reward": [
+      { "coins": 999 }
+    ]
+  }
+]

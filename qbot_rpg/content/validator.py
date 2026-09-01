@@ -574,6 +574,27 @@ class _Checker:
         if module_name == "skills":
             from qbot_rpg.content.skill_validator import validate_skills
             validate_skills(self._modules, self)
+        # M13 职业库（细化_6b_职业库与变换引擎契约 §五：jobs 专项校验器 V1~V8 全权，
+        # 批5 路5A/5B 落盘 job_validator.py——validate_jobs(modules, report) 鸭子类型口径
+        # 同 npc/shop/quest/checkin；随后继续泛型 _check_entry：jobs_fields 39 键登记表
+        # 驱动泛型字段校验（V5 state_policy 枚举 / V4 duration 枚举基底）+ 未知字段默认
+        # 放行不误伤。5A/5B 未落盘时 try/except ImportError 兜底跳过——专项未接线期间
+        # 泛型登记表仍全量生效（对齐 6b 摸底⑧ 既有缺口语义，不阻塞装配）。
+        # 先例：field_meta jobs 登记注释（L826-827「V1~V8 专项归 job_models.validate_jobs
+        # 全权」）——分派目标以 job_validator.validate_jobs 为准（job_models 为纯数据层）。
+        if module_name == "jobs":
+            try:  # 5A/5B 未落盘时 ImportError 兜底跳过（专项未接线期间泛型登记表仍全量生效）
+                from qbot_rpg.content.job_validator import validate_jobs
+                from qbot_rpg.content.job_validator_v58 import validate_jobs_v58
+            except ImportError:  # pragma: no cover - 5A/5B 未落盘时的装配兜底
+                validate_jobs = None  # type: ignore[assignment]
+                validate_jobs_v58 = None  # type: ignore[assignment]
+            if validate_jobs is not None:
+                validate_jobs(self._modules, self)
+            # M13 6b 批5 收口：V5~V8（技能挂点引用/派生链作用域/死配置/battle+revert 红拦）
+            # 独立文件 job_validator_v58.py（与 5A 分文件防并发覆盖），此处双分派
+            if validate_jobs_v58 is not None:
+                validate_jobs_v58(self._modules, self)
         # 逐条目校验
         for idx, entry in self._iter_entries(module_name, data, mmeta):
             self._check_entry(module_name, idx, entry, mmeta)

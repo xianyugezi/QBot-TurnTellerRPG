@@ -353,11 +353,14 @@ def test_jobs_difficulty_soft_label_never_red_blocks(tmp_path: Path) -> None:
     assert pack.report.ok, f"difficulty 软标注不应红拦：{pack.report.errors}"
 
 
-def test_jobs_battle_revert_dead_config_not_red_blocked_by_generic(tmp_path: Path) -> None:
-    """V4 矛盾（duration=battle + revert=true）深判定归 4B 专项全权——泛型登记表
-    不重复红拦（专项 V4 落盘前该包可加载，属既有 6b 摸底⑧ 缺口范围，非本路回归）。
-    本路保证的泛型兜底：duration/state_policy 枚举外值 → R-1 红拦（见下方两用例）。"""
-    from qbot_rpg.content.loader import build_pack
+def test_jobs_battle_revert_dead_config_red_blocks(tmp_path: Path) -> None:
+    """V4/V8 矛盾（duration=battle + revert=true）→ 专项红拦（ADR D-04）。
+
+    批5 收口后 5A/5B 专项已接线：矛盾由专项 V4（transform 段合法）与 V8
+    （battle+revert 红拦）拦截——该包加载失败（PackLoadError）。泛型登记表
+    不重复红拦（专项全权）；duration 枚举外值仍由泛型 R-1 兜底（见下用例）。
+    """
+    from qbot_rpg.content.loader import PackLoadError, build_pack
 
     pack_dir = _write_pack(tmp_path, {
         "jobs": [{
@@ -371,10 +374,11 @@ def test_jobs_battle_revert_dead_config_not_red_blocked_by_generic(tmp_path: Pat
             },
         }],
     })
-    pack, _ = build_pack(pack_dir)
-    assert pack.report.ok, (
-        f"V4 矛盾深判定未接线前应可加载（专项全权，非泛型责任）：{pack.report.errors}"
-    )
+    try:
+        build_pack(pack_dir)
+    except PackLoadError:
+        return  # 专项红拦（V4/V8 矛盾）→ 预期
+    raise AssertionError("battle+revert 矛盾应被专项红拦（V4/V8，ADR D-04）")
 
 
 def test_jobs_battle_revert_dead_config_red_blocks_via_duration_enum(tmp_path: Path) -> None:

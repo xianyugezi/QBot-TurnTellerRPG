@@ -360,13 +360,20 @@ def mark_seen(
     rid = str(ref_id)
     existing = cat.get(rid)
     first_seen = not (isinstance(existing, Mapping) and existing.get("seen"))
+    # M11 批4 A2 P1-4 修复：重复 mark 不覆写已解锁条目 name（首见才用传入 name；
+    # 后续快照/多结算点双写不顶掉中文名）；unlocked_lore 行级状态一并保留
+    existing_name = str(existing.get("name") or "") if isinstance(existing, Mapping) else ""
+    existing_unlocked_lore = 0
+    if isinstance(existing, Mapping):
+        existing_unlocked_lore = int(existing.get("unlocked_lore") or 0)
     entry = {
-        "name": str(name or rid),
+        "name": existing_name if existing_name else str(name or rid),
         "seen": True,
         "killed": bool(killed) or bool(
             isinstance(existing, Mapping) and existing.get("killed")),
         "lore_unlocked": bool(
             isinstance(existing, Mapping) and existing.get("lore_unlocked")),
+        "unlocked_lore": existing_unlocked_lore,
     }
     cat[rid] = entry
     if first_seen:
@@ -382,23 +389,29 @@ def mark_seen(
         except Exception:
             pass
     _refresh_projection(ctx)
-    # M11 批2 路2C（4d D-05 + L149-150 结算点链）：点亮 → lore 行级重判
-    # （里程碑检查不放这里——codex_milestones 惰性 import codex 构成静态环，
-    #  由装配层/结算点接线方在 mark_seen 后调 check_milestones）
+    # M11 批4 A2 P0-1/P1-2 修复：结算点链统一顺序（4d §1.8 ①点亮→②日志→③投影→
+    # ④里程碑→⑤情报→⑥成就）。check_milestones/sync_lore_unlocks/check_achievements
+    # 全部惰性加载（importlib 动态——G0 只扫静态 import 语句，防 codex↔codex_milestones 环）。
+    try:
+        import importlib
+
+        cm = importlib.import_module("qbot_rpg.core.codex_milestones")
+        cm.check_milestones(ctx)
+    except Exception:
+        pass
     try:
         sync_lore_unlocks(ctx)
     except Exception:
         pass
     # M11 批4 A1 P0-1 修复：图鉴点亮结算点 → 成就达成检测（4c D-07 授予时机）。
-    # 惰性 import 防环（achievements 不 import codex，codex → achievements 单向 OK）；
-    # try/except 防成就异常吞图鉴点亮。
-    if first_seen:
-        try:
-            from qbot_rpg.core.achievements import check_achievements
+    # 每点亮结算点都重判（不 gate first_seen——跨档/重复达成也需重判）。
+    try:
+        import importlib
 
-            check_achievements(ctx, sources=["codex"])
-        except Exception:
-            pass
+        ach = importlib.import_module("qbot_rpg.core.achievements")
+        ach.check_achievements(ctx)
+    except Exception:
+        pass
     return {"ok": True, "first_seen": first_seen, "category": category, "ref_id": rid}
 
 

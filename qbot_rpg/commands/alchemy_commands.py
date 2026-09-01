@@ -978,6 +978,14 @@ def _cmd_alchemy_batch(
     if not isinstance(output_id, str) or not output_id:
         return tpl_of(ctx, "alchemy_batch_no_output")
     _add_item(ctx, output_id, qty, quality=bq["tier"])
+    # M11 批4 A2 P1-1 修复：炼金合成成功 → craft 册点亮（4d D-04 配方产物归 craft；
+    # 对齐 forge L1075 单登记；try/except 防图鉴异常吞合成）
+    try:
+        from qbot_rpg.core.codex import mark_seen
+
+        mark_seen(ctx, "craft", output_id, _item_name(ctx, output_id))
+    except Exception:
+        pass
     level = recipe.get("level")
     if isinstance(level, int) and not isinstance(level, bool) and level > 0:
         prof_engine.gain_prof_exp(player, ALCHEMY_JOB_ID, level * qty, source="craft")

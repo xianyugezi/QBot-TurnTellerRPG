@@ -468,6 +468,7 @@ def dispatch_reward(entries: Any, ctx: Optional[Mapping[str, Any]] = None) -> di
     # 吞奖励（图鉴为辅助钩子）；ctx 需可变（mark_seen 写 codex_state）。
     if granted and isinstance(ctx, MutableMapping):
         try:
+            from qbot_rpg.core.codex import item_craft_relation
             from qbot_rpg.core.codex import mark_seen as _codex_mark_seen
 
             for g in granted:
@@ -477,6 +478,11 @@ def dispatch_reward(entries: Any, ctx: Optional[Mapping[str, Any]] = None) -> di
                 if not isinstance(iid, str) or not iid:
                     continue
                 name = _item_name_of(ctx, iid)
+                # M11 批4 A2 P1-1 修复：制造品归属 craft 册 → 不点亮 item 册
+                # （item 分母已反向减除制造品，点亮悬空条目无意义；craft 点亮由
+                #  炼金/锻造结算点负责）
+                if item_craft_relation(ctx, iid) == "craft":
+                    continue
                 _codex_mark_seen(ctx, "item", iid, name)
         except Exception:
             pass

@@ -183,6 +183,36 @@ def _settle_after_reel(ctx: MutableMapping[str, Any], result: Mapping[str, objec
         r = settle_catch(ctx, snap)
         if not isinstance(r, Mapping) or not r.get("ok"):
             return None
+        # M11 批4 A2 P0-2 修复：鱼王胜利点亮——金闪收杆成功后：
+        # ① king_victory_record 计胜利 ② mark_seen(fish, king_id) 点亮 king 条目
+        # （分母 _fish_ids 用 king[].id，须同键；king_id 按 fs target_species_id
+        #   在 ctx["fishing"]["king"] 行匹配 id 字段）
+        fs_after = ctx.get("fish_state")
+        if isinstance(fs_after, Mapping) and bool(fs_after.get("golden")):
+            try:
+                from qbot_rpg.core.fishing_king import king_victory_record
+
+                king_victory_record(ctx)
+                fishing = ctx.get("fishing")
+                target_sid = str(fs_after.get("target_species_id") or "")
+                king_id = None
+                king_name = ""
+                if isinstance(fishing, Mapping):
+                    kings = fishing.get("king")
+                    if isinstance(kings, list):
+                        for krow in kings:
+                            if not isinstance(krow, Mapping):
+                                continue
+                            if str(krow.get("species_id") or "") == target_sid:
+                                king_id = str(krow.get("id") or "")
+                                king_name = str(krow.get("name") or king_id)
+                                break
+                if king_id:
+                    from qbot_rpg.core.codex import mark_seen
+
+                    mark_seen(ctx, "fish", king_id, king_name)
+            except Exception:
+                pass
         name = str(r.get("name") or r.get("species_id") or "")
         size = r.get("size")
         weight = r.get("weight")

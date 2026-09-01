@@ -560,20 +560,23 @@ def _check_v7_basic_per_job(
         for j in jobs_data:
             if isinstance(j, Mapping) and isinstance(j.get("id"), str):
                 job_ids.add(j["id"])
-    # 全局 basic（无 job_restrict）
+    # 全局 basic（无 job_restrict；排除形态专属 job_form——形态普攻不占常态位）
     global_basics = [
         e for i, e in enumerate(skills)
         if e.get("type") == "basic" and not e.get("job_restrict")
+        and not e.get("job_form")
     ]
     if len(global_basics) > 1:
         _err(report, "skills", "V-7", rule="global_basic_multiple",
              node_id=None, count=len(global_basics),
              msg="无职业限制的 basic 普攻多于 1 条（V-7）")
-    # 每职业可见 basic 计数
+    # 每职业可见 basic 计数（排除形态专属 basic——job_form 限定技能随形态切换）
     per_job: Dict[str, int] = {}
     for e in skills:
         if e.get("type") != "basic":
             continue
+        if e.get("job_form"):
+            continue  # 形态专属普攻不占常态职业普攻位（细化_6b 技能挂点语义）
         jr = e.get("job_restrict")
         if isinstance(jr, list) and jr:
             for jid in jr:

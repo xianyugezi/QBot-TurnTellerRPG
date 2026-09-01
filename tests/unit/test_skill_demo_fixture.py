@@ -94,11 +94,23 @@ def test_field_shape_armor_interrupt_bools() -> None:
 
 
 def test_field_shape_chain_refs_consume_marks_job() -> None:
-    """chain_refs/job_restrict 空列表形态 + job_form null + level 对象/空形态。"""
+    """chain_refs/job_restrict 形态 + job_form null/形态值 + level 对象/空形态。
+
+    M13 批7 收口：test_demo 已含 jobs.json（狂战士+生活职业）与 skill_chains.json，
+    形态技能（fury_slash 等）可带 job_restrict/job_form——本断言放宽为「形态合法」。
+    """
+    from qbot_rpg.content.loader import build_pack  # noqa: PLC0415
+    from pathlib import Path  # noqa: PLC0415
+
+    pack, _ = build_pack(Path("content/test_demo"))
+    job_ids = set(pack.registry.all_ids("job"))
     for s in _skills():
-        assert s["chain_refs"] == [], "test_demo 无 skill_chains 表，chain_refs 必须为空（V-2）"
-        assert s["job_restrict"] == [], "test_demo 无 jobs 表，job_restrict 必须为空（V-5）"
-        assert s["job_form"] is None
+        jr = s["job_restrict"]
+        if jr:
+            assert all(j in job_ids for j in jr), f"{s['id']} job_restrict 引用不存在职业"
+        jf = s["job_form"]
+        if jf is not None:
+            assert isinstance(jf, str) and jf, f"{s['id']} job_form 需非空字符串"
     levels = [s["level"] for s in _skills() if s["level"] is not None]
     assert levels, "应至少 1 条技能带 level 升级对象（F18 形态）"
 

@@ -739,6 +739,36 @@ class BattleEngine:
             return self._settle(STATUS_LOSE, "player_dead", resolve_at="immediate")
         return None
 
+    def _tick_transform_state(self) -> None:
+        """M13 6b（细化_6b §2.2/D-03）：transform 回合 tick（end_turn ⑥ 后）。
+
+        - 形态剩余递减（remaining-1；自然结束 → 还原回常态 + 冷却起算）；
+        - 冷却递减（S5 COOLDOWN 每回合 -1，归 0 回 NORMAL）。
+        纯函数委托 transform_revert；无形态（form=null）→ 无操作。
+        """
+        from qbot_rpg.core.transform_revert import (  # noqa: PLC0415
+            should_revert_natural,
+            tick_cooldown,
+            tick_remaining,
+        )
+
+        ts = self._snap.get("transform_state")
+        if not isinstance(ts, dict):
+            return
+        if ts.get("form"):
+            # 形态持续中：remaining 递减
+            ts.update(tick_remaining(ts))
+            if should_revert_natural(ts):
+                # 自然结束还原：form 清空 + 冷却起算（transform 配置经 job 惰性解析，
+                # 引擎层只做状态机迁移；具体 cooldown 值由装配层注入 job_def 时设置）
+                ts["form"] = None
+                ts["form_name"] = None
+                ts["form_status_id"] = None
+                ts["active_skill_set"] = None
+        else:
+            # 常态/冷却期：冷却递减
+            ts.update(tick_cooldown(ts))
+
     def _settle(
         self,
         status: str,
@@ -767,6 +797,12 @@ class BattleEngine:
             zero_reason = None
         # P1-2（dsh 批3）：marks_state 与连段双轴生命周期一致——战斗结束/逃跑成功清零
         self._snap["marks_state"] = {"player": [], "enemy": []}
+        # M13 6b（细化_6b §4.1 SN-4）：transform_state 战斗结束清零回常态（form=null）
+        self._snap["transform_state"] = {
+            "job_id": "", "form": None, "form_name": None,
+            "remaining": 0, "cooldown_remaining": 0,
+            "form_status_id": None, "active_skill_set": None,
+        }
         self._finished = True
         self._state = {STATUS_WIN: STATE_WIN, STATUS_LOSE: STATE_LOSE,
                        STATUS_ESCAPE: STATE_FLY, STATUS_DRAW: STATE_LOSE}[status]
@@ -930,6 +966,11 @@ class BattleEngine:
             "effect_triggers": {"player": {"per_turn": {}, "per_battle": {}},
                                 "enemy": {"per_turn": {}, "per_battle": {}}},
             "effect_cooldowns": {"player": {}, "enemy": {}},
+            # M13 6b（细化_6b §4.1）：transform_state 7 字段（T1~T7）——形态快照段，
+            # 常态骨架（form=null）；由变换引擎 F1 写入、F3 快照携带、F2 还原/清零。
+            "transform_state": {"job_id": "", "form": None, "form_name": None,
+                                "remaining": 0, "cooldown_remaining": 0,
+                                "form_status_id": None, "active_skill_set": None},
         }
         self._finished = False
         self._death_order = []
@@ -1691,6 +1732,12 @@ class BattleEngine:
         ai = self._snap.get("ai_state")
         if self._enemy_ai is not None and isinstance(ai, dict):
             self._enemy_ai.tick(ai)
+
+        # M13 6b（细化_6b §2.2/D-03）：transform 回合 tick——形态剩余递减 →
+        # 自然结束还原 → 冷却递减（S5 COOLDOWN 每回合 -1）。
+        # 纯函数（transform_revert.tick_remaining/tick_cooldown/should_revert_natural）
+        # 不引入定时器；形态配置经 job_def 惰性解析（无配置 → 常态无操作）。
+        self._tick_transform_state()
 
         # ⑦⑧ 互杀 + 战斗结束判定
         out = self._resolve_battle_end(force=False)

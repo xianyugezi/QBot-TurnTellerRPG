@@ -415,6 +415,10 @@ def skills_fields() -> Dict[str, FieldMeta]:
         "job_restrict": FieldMeta(type="list", element=FieldMeta(type="ref", ref_target="job")),
         "job_form": FieldMeta(type="str", soft_label=True),
         # 职业变换 transform 形态名（V-5 扩展判定）
+        "revert_form": FieldMeta(type="bool", default=False, soft_label=True),
+        # 6b 技能挂点：还原技标记（细化_6b 字段 37，V7 归属校验）
+        "derive_only": FieldMeta(type="bool", default=False, soft_label=True),
+        # 6b 技能挂点：仅派生可用（细化_6b 字段 38，V7 效果引用校验）
         "level": FieldMeta(type="obj", soft_label=True),  # {max, growth}，语义归 3b 存档承接
         # ---- C. 全库补充 2（§1.2-C）----
         "hits": FieldMeta(type="int", range_min=1, default=DEFAULT_HITS),

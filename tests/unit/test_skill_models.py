@@ -333,7 +333,8 @@ def test_action_core_dual_library_defaults_align() -> None:
 
 
 def test_skills_fields_24_keys_exact() -> None:
-    """skills_fields() 恰好 24 键（§1.2：A7 + B11 + C2 + D4），键名与契约一致。"""
+    """skills_fields() 恰好 26 键（§1.2：A7 + B11 + C2 + D4 = 24 契约字段
+    + 6b 技能挂点 2：revert_form/derive_only——细化_6b 字段 37/38，M13 批7 收口登记）。"""
     f = skills_fields()
     assert set(f.keys()) == {
         # A 核心 7
@@ -345,6 +346,8 @@ def test_skills_fields_24_keys_exact() -> None:
         "hits", "trigger_limit",
         # D 细化定型 4
         "desc", "hit_mod", "crit_mod", "block_mode",
+        # 6b 技能挂点 2（细化_6b 字段 37/38）
+        "revert_form", "derive_only",
     }
 
 

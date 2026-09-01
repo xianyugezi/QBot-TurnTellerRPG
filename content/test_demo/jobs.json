@@ -1,0 +1,110 @@
+[
+  {
+    "id": "berserker",
+    "name": "狂战士",
+    "difficulty": "complex",
+    "playstyle": "攒怒气开狂暴，形态爆发吸血",
+    "recommended_newbie": false,
+    "resource_axes": [
+      "mp",
+      "rage"
+    ],
+    "mechanic_tags": [
+      "形态切换",
+      "怒气轴",
+      "打断霸体",
+      "派生"
+    ],
+    "weapon_types": [
+      "slash",
+      "blunt"
+    ],
+    "growth": {
+      "str": 2.2,
+      "con": 1.2,
+      "foc": 1.1,
+      "lck": 0.8,
+      "hp": 1.0,
+      "mp": 1.0
+    },
+    "transform": {
+      "transform_skill": "rage_burst",
+      "transform_to": "berserker_form",
+      "duration": "turns",
+      "turns": 4,
+      "revert": true,
+      "cooldown": 5,
+      "dispel_reverts": true,
+      "state_policy": {
+        "combo": "clear",
+        "marks": "keep",
+        "buff": "keep"
+      },
+      "skill_set": "transform_skills",
+      "equip_restrict": [
+        "重武器"
+      ],
+      "derive_chains": [
+        "chain_rage"
+      ]
+    },
+    "description": "愤怒是力量的源泉。战斗会积攒怒气，怒气满溢时施展狂暴，化身狂战士形态，以更凶猛的姿态撕碎敌人。"
+  },
+  {
+    "id": "alchemy",
+    "name": "炼金术士",
+    "difficulty": "simple",
+    "playstyle": "调和与制造",
+    "recommended_newbie": true,
+    "resource_axes": [
+      "mp"
+    ],
+    "mechanic_tags": [
+      "生活职业"
+    ],
+    "weapon_types": [],
+    "growth": {
+      "hp": 1.0,
+      "mp": 1.2
+    },
+    "description": "炼制药剂与宝石的生活职业。"
+  },
+  {
+    "id": "forge",
+    "name": "铁匠",
+    "difficulty": "simple",
+    "playstyle": "锻造与强化",
+    "recommended_newbie": true,
+    "resource_axes": [
+      "mp"
+    ],
+    "mechanic_tags": [
+      "生活职业"
+    ],
+    "weapon_types": [],
+    "growth": {
+      "hp": 1.2,
+      "mp": 1.0
+    },
+    "description": "锻造武器与防具的生活职业。"
+  },
+  {
+    "id": "fishing",
+    "name": "渔夫",
+    "difficulty": "simple",
+    "playstyle": "垂钓与采集",
+    "recommended_newbie": true,
+    "resource_axes": [
+      "mp"
+    ],
+    "mechanic_tags": [
+      "生活职业"
+    ],
+    "weapon_types": [],
+    "growth": {
+      "hp": 1.1,
+      "mp": 1.0
+    },
+    "description": "垂钓与采集的生活职业。"
+  }
+]

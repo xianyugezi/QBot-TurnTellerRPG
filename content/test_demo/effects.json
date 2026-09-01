@@ -38,5 +38,31 @@
     "type": "shield",
     "power": 30,
     "duration": 3
+  },
+  {
+    "id": "heal_lost_20",
+    "name": "回复20%已损生命",
+    "type": "heal",
+    "power": 20,
+    "stat": "lost_hp"
+  },
+  {
+    "id": "heal_lost_25",
+    "name": "回复25%已损生命",
+    "type": "heal",
+    "power": 25,
+    "stat": "lost_hp"
+  },
+  {
+    "id": "lifesteal_10",
+    "name": "吸血10%",
+    "type": "lifesteal",
+    "power": 10
+  },
+  {
+    "id": "mitigation_10",
+    "name": "减伤10%",
+    "type": "mitigation",
+    "power": 10
   }
 ]

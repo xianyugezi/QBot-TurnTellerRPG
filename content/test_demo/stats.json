@@ -52,5 +52,12 @@
     "type": "combat",
     "base": 10,
     "growth": 1
+  },
+  "rage": {
+    "name": "怒气",
+    "type": "resource",
+    "base": 0,
+    "max": 100,
+    "growth": 0
   }
 }

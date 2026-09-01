@@ -1,0 +1,23 @@
+[
+  {
+    "id": "chain_rage",
+    "name": "狂怒连段",
+    "job_scope": "berserker_form",
+    "trigger_skill": "rage_slash",
+    "max_combo": 3,
+    "max_combo_behavior": "reset",
+    "steps": [
+      {
+        "from": "rage_slash",
+        "to": "fury_spin_finisher",
+        "tag": "combo",
+        "condition": {"count": {"eq": 3}},
+        "priority": 1,
+        "mode": "replace",
+        "armor": true,
+        "consume": 0,
+        "variant_override": {"power": 300}
+      }
+    ]
+  }
+]

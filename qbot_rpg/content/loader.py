@@ -153,6 +153,10 @@ _KIND_FOR_MODULE: Mapping[str, str] = {
     "marks": "mark",
     "skill_chains": "skill_chain",
     "action": "action",
+    # M13 技能库（细化_6a_技能库契约 §1：skills.json 玩家技能库 → 注册表 kind="skill"；
+    # 与 field_meta ModuleMeta(kind="skill") + models.DEF_CLASSES 对齐（路1A SkillDef）；
+    # ctx 注入 skills 表走 kind="skill"（m13_6a摸底 A11：context.py:1279 已预留））
+    "skills": "skill",
     "items": "item",
     "equipment": "equipment",
     "traits": "trait",

@@ -62,6 +62,10 @@ NAMESPACES: Dict[str, Tuple[str, ...]] = {
     "proficiency_lib": ("proficiency",),
     # M11 成就（m11 启动包 §2.1）：achievements 独立注册表（顶层 list）
     "achievement_lib": ("achievements",),
+    # M13 技能库（细化_6a_技能库契约 §1：skills.json 玩家技能库独立注册表；
+    # 与 action 库共用 ActionCore 元数据单点但 ID 各自独立——V-10 跨库重名仅黄提示，
+    # 不并入 action_lib，保持双库 ID 空间独立）
+    "skill_lib": ("skills",),
 }
 
 # -------------------------------------------------------------------------------------
@@ -523,6 +527,45 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "apply_status": FieldMeta(type="ref", ref_target="status"),
         "skill": FieldMeta(type="ref", ref_target="skill_or_any"),
     }
+    skills_fields: Dict[str, FieldMeta] = {
+        # ---- M13 技能库（细化_6a_技能库契约 §1.2：A 共用核心 7 字段 F01-F07）----
+        # 与 action_fields 的 ActionCore 同构、逐约束同源（§2.2）；skills 侧 attack_type
+        # 缺省「按武器」（f4），action 侧按怪物模板——差异在引擎运行期，登记表同构。
+        "id": F_ID, "name": F_NAME,
+        "kind": FieldMeta(type="str"),  # F03 五枚举 damage/heal/status/control/utility（枚举 A2 路）
+        "power": F_POWER,               # F04 倍率（滑条 10-500%；派生链累计 ≤1.5× 黄提示 V-6 属 A2）
+        "attack_type": FieldMeta(type="str"),  # F05 斩/打/突/魔/无（枚举 A2 路；缺省按武器 f4）
+        "element": FieldMeta(type="str"),      # F06 8 元素注册表（V-4 引用检查 A2）
+        "effects": F_EFFECTS,                  # F07 effects.json 唯一源 + overrides + x_ 例外（V-1）
+        # ---- B 玩家侧扩展 11 字段（F08-F18，细化_6a §1.2-B）----
+        "type": FieldMeta(type="str"),   # F08 basic/active/passive/trigger 四类时机（枚举 A2 路）
+        "mp_cost": FieldMeta(type="number", range_min=0, range_max=9999),   # F09 ≥0；basic=0
+        "cooldown": FieldMeta(type="number", range_min=0, range_max=999),   # F10 ≥0 整数；basic=0
+        "tag": FieldMeta(type="str"),    # F11 none/combo/combo_preserve/combo_push/interrupt/armor（枚举 A2）
+        "armor": FieldMeta(type="bool"),         # F12 霸体开关（执行语义快键）
+        "interrupt": FieldMeta(type="bool"),     # F13 打断快键（唯一归口 = 效果系统 L0 interrupt，T19）
+        "chain_refs": FieldMeta(type="list", element=FieldMeta(type="str")),  # F14 派生链引用 skill_chains.json（V-2）
+        "consume_marks": FieldMeta(type="obj"),  # F15 {mark_id: count} 消耗印记（V-3 键存在/上限 A2）
+        "job_restrict": FieldMeta(type="list", element=FieldMeta(type="str")),  # F16 职业限制（V-5）
+        "job_form": FieldMeta(type="str"),       # F17 形态技（引用 transform 形态名，V-5 扩展判定 A2）
+        "level": FieldMeta(type="obj", children={
+            "max": FieldMeta(type="int", range_min=1, range_max=99),
+            "growth": FieldMeta(type="list", element=FieldMeta(type="number")),
+        }),  # F18 升级 {max, growth}；growth 长度 = max 且 growth[0]=1 级基准（A2 判定）
+        # ---- C 全库补充 2 字段（F19-F20，细化_6a §1.2-C）----
+        "hits": FieldMeta(type="int", range_min=1, range_max=99),  # F19 多段次数（1 轮 1 行动，每段独立结算）
+        "trigger_limit": FieldMeta(type="obj", children={
+            "per_round": FieldMeta(type="int", range_min=0, zero_unlimited=True),
+            "per_battle": FieldMeta(type="int", range_min=0, zero_unlimited=True),
+        }),  # F20 触发上限 {per_round, per_battle}；0=不限；技能级 > 库级 defaults > 全局（V-8 引擎强制）
+        # ---- D 细化定型 4 字段（F21-F24，细化_6a §1.2-D）----
+        "desc": FieldMeta(type="str"),   # F21 一句话说明（技能卡/战报/编辑器悬浮）
+        "hit_mod": FieldMeta(type="number", range_min=0.0, range_max=10.0),  # F22 命中率修正（乘数，>0）
+        "crit_mod": FieldMeta(type="number", range_min=0.0, range_max=10.0),  # F23 会心判定修正（乘数，>0）
+        "block_mode": FieldMeta(type="str"),  # F24 auto/normal/ignore（枚举 A2 路；魔攻击无视格挡规则同源）
+        # ---- 兼容旧键（enemies[].skills 引用的技能表旧键）----
+        "skill": FieldMeta(type="ref", ref_target="skill_or_any"),
+    }
     items_fields: Dict[str, FieldMeta] = {
         "id": F_ID, "name": F_NAME, "type": F_TYPE,
         "price": F_PRICE, "atk": F_ATK, "def": F_DEF,
@@ -706,6 +749,10 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "skill_chains": ModuleMeta(entry_type="list", fields=skill_chains_fields, kind="skill_chain",
                                    namespace="chain_lib", chain_field="next"),
         "action": ModuleMeta(entry_type="list", fields=action_fields, kind="action", namespace="action_lib"),
+        # M13 技能库（细化_6a_技能库契约 §1：skills.json 玩家技能库；F01-F24 全字段登记；
+        # kind="skill" 与 loader _KIND_FOR_MODULE + DEF_CLASSES 对齐（路1A SkillDef）；
+        # 命名空间 skill_lib 独立于 action_lib——V-10 跨库重名仅黄提示）
+        "skills": ModuleMeta(entry_type="list", fields=skills_fields, kind="skill", namespace="skill_lib"),
         "formula": ModuleMeta(entry_type="map", fields=formula_fields, kind="formula", namespace="formula_lib"),
         "items": ModuleMeta(entry_type="list", fields=items_fields, kind="item", namespace="item_lib"),
         "equipment": ModuleMeta(entry_type="list", fields=equipment_fields, kind="equipment",

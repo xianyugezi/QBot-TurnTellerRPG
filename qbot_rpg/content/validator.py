@@ -20,6 +20,9 @@
   - m5_shared_contract §1.4 + 细化_3d 附·校验器行 L358 +【前缀】§九 L110-121
     （M5-02 message_prefix 段校验：`_check_message_prefix`，红拦 kind=MP-1 / 黄提示 kind=MP-2；
     3h V9~V12 通用黄提示不覆盖 message_prefix）
+  - 细化_6a_技能库契约 §1/§3（M13 技能库：skills 专项校验器接线——`_check_module`
+    分派 validate_skills（批2 路2A/2B 落盘 qbot_rpg/content/skill_validator.py），
+    专项全权（V-7~V-13）+ 泛型并行；分派位见 _check_module「M13 技能库」分支）
 
 纯函数无副作用：check_pack(modules, meta) -> ValidationReport（D-01：errors/warnings/notes 全量收集，一次给全）。
 零 NoneBot；仅依赖 qbot_rpg.content.models / qbot_rpg.content.field_meta / qbot_rpg.data.types。
@@ -564,6 +567,13 @@ class _Checker:
         if module_name == "achievements":
             from qbot_rpg.content.achievements_models import validate_achievements
             validate_achievements(self._modules, self)
+        # M13 技能库（细化_6a_技能库契约 §3：skills 专项校验器 V-1~V-13 全权，
+        # 批2 路2A/2B 落盘 skill_validator.py——validate_skills(modules, report)
+        # 鸭子类型口径同 npc/shop/quest/checkin；随后继续泛型 _check_entry：
+        # skills_fields 24 键登记表驱动泛型字段校验 + 未知字段默认放行不误伤）
+        if module_name == "skills":
+            from qbot_rpg.content.skill_validator import validate_skills
+            validate_skills(self._modules, self)
         # 逐条目校验
         for idx, entry in self._iter_entries(module_name, data, mmeta):
             self._check_entry(module_name, idx, entry, mmeta)
@@ -1859,4 +1869,6 @@ __all__ = [
     "MESSAGE_PREFIX_FORMAT_MAX_LEN",
     "MESSAGE_PREFIX_PLACEHOLDER_MAX",
     "MESSAGE_PREFIX_MAX_LEN_COMMON",
+    # M13 技能库（细化_6a_技能库契约 §3：skills 专项校验器分派入口，
+    # validate_skills 经 _check_module 延迟导入，不入 __all__——同 forge/achievements 先例）
 ]

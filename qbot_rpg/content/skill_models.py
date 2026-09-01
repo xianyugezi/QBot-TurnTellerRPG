@@ -398,7 +398,8 @@ def skills_fields() -> Dict[str, FieldMeta]:
         "kind": FieldMeta(type="enum", enum=SKILL_KINDS, default=DEFAULT_KIND),
         "power": FieldMeta(type="number", range_min=0, range_max=500, default=DEFAULT_POWER),
         "attack_type": FieldMeta(type="enum", enum=ATTACK_TYPES, default=DEFAULT_ATTACK_TYPE),
-        "element": FieldMeta(type="str"),  # 8 元素注册表引用检查归校验器专项（V-4）
+        "element": FieldMeta(type="str", soft_label=True),
+        # 8 元素注册表引用检查归校验器专项（V-4）
         "effects": FieldMeta(type="list", element=FieldMeta(type="ref", ref_target="effect")),
         # ---- B. 玩家侧扩展 11（§1.2-B）----
         "type": FieldMeta(type="enum", enum=SKILL_TYPES, default=DEFAULT_TYPE),
@@ -412,8 +413,9 @@ def skills_fields() -> Dict[str, FieldMeta]:
         ),
         "consume_marks": FieldMeta(type="obj"),  # {mark_id: count}，V-3 归校验器专项
         "job_restrict": FieldMeta(type="list", element=FieldMeta(type="ref", ref_target="job")),
-        "job_form": FieldMeta(type="str"),  # 职业变换 transform 形态名（V-5 扩展判定）
-        "level": FieldMeta(type="obj"),     # {max, growth}，语义归 3b 存档承接
+        "job_form": FieldMeta(type="str", soft_label=True),
+        # 职业变换 transform 形态名（V-5 扩展判定）
+        "level": FieldMeta(type="obj", soft_label=True),  # {max, growth}，语义归 3b 存档承接
         # ---- C. 全库补充 2（§1.2-C）----
         "hits": FieldMeta(type="int", range_min=1, default=DEFAULT_HITS),
         "trigger_limit": FieldMeta(type="obj"),  # {per_round, per_battle}，0=不限

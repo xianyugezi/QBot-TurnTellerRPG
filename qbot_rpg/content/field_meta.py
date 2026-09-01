@@ -531,12 +531,20 @@ def _module_table() -> Dict[str, ModuleMeta]:
         # ---- M13 技能库（细化_6a_技能库契约 §1.2：A 共用核心 7 字段 F01-F07）----
         # 与 action_fields 的 ActionCore 同构、逐约束同源（§2.2）；skills 侧 attack_type
         # 缺省「按武器」（f4），action 侧按怪物模板——差异在引擎运行期，登记表同构。
+        # 类型宽松口径：枚举（kind/type/tag/attack_type/block_mode）走 A2 专项
+        # （skill_validator.py V-12/V-13），本表仅登记 str 防泛型误拦（对齐 action 口径）；
+        # element/effects 等引用与深结构语义校验由 skills 专项校验器全权（V-1~V-13）。
+        # 注意：F07 effects 条目不登记 element=ref —— 专项校验器 V-1 全权（引用 +
+        # 原子动作双形态），登记为 ref 会被泛型按整条 dict 报 ref_not_str 误拦。
         "id": F_ID, "name": F_NAME,
         "kind": FieldMeta(type="str"),  # F03 五枚举 damage/heal/status/control/utility（枚举 A2 路）
         "power": F_POWER,               # F04 倍率（滑条 10-500%；派生链累计 ≤1.5× 黄提示 V-6 属 A2）
         "attack_type": FieldMeta(type="str"),  # F05 斩/打/突/魔/无（枚举 A2 路；缺省按武器 f4）
-        "element": FieldMeta(type="str"),      # F06 8 元素注册表（V-4 引用检查 A2）
-        "effects": F_EFFECTS,                  # F07 effects.json 唯一源 + overrides + x_ 例外（V-1）
+        "element": FieldMeta(type="str", soft_label=True),  # F06 8 元素注册表（V-4 引用检查 A2）；null=按武器元素合法
+        # F07 effects：条目不登记 element=ref（双形态：引用 {effect,overrides} /
+        # 原子动作 {type,...}，§1.3-f2）——V-1 由 skills 专项校验器全权，登记 ref
+        # 会被泛型按整条 dict 报 ref_not_str 误拦（补白见上方 skills_fields 注释）
+        "effects": FieldMeta(type="list", element=FieldMeta(type="obj")),
         # ---- B 玩家侧扩展 11 字段（F08-F18，细化_6a §1.2-B）----
         "type": FieldMeta(type="str"),   # F08 basic/active/passive/trigger 四类时机（枚举 A2 路）
         "mp_cost": FieldMeta(type="number", range_min=0, range_max=9999),   # F09 ≥0；basic=0
@@ -547,11 +555,11 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "chain_refs": FieldMeta(type="list", element=FieldMeta(type="str")),  # F14 派生链引用 skill_chains.json（V-2）
         "consume_marks": FieldMeta(type="obj"),  # F15 {mark_id: count} 消耗印记（V-3 键存在/上限 A2）
         "job_restrict": FieldMeta(type="list", element=FieldMeta(type="str")),  # F16 职业限制（V-5）
-        "job_form": FieldMeta(type="str"),       # F17 形态技（引用 transform 形态名，V-5 扩展判定 A2）
-        "level": FieldMeta(type="obj", children={
+        "job_form": FieldMeta(type="str", soft_label=True),       # F17 形态技（引用 transform 形态名，V-5 扩展判定 A2）；null=非形态技合法
+        "level": FieldMeta(type="obj", soft_label=True, children={
             "max": FieldMeta(type="int", range_min=1, range_max=99),
             "growth": FieldMeta(type="list", element=FieldMeta(type="number")),
-        }),  # F18 升级 {max, growth}；growth 长度 = max 且 growth[0]=1 级基准（A2 判定）
+        }),  # F18 升级 {max, growth}；growth 长度 = max 且 growth[0]=1 级基准（A2 判定）；null=不升级合法
         # ---- C 全库补充 2 字段（F19-F20，细化_6a §1.2-C）----
         "hits": FieldMeta(type="int", range_min=1, range_max=99),  # F19 多段次数（1 轮 1 行动，每段独立结算）
         "trigger_limit": FieldMeta(type="obj", children={

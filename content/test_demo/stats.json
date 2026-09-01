@@ -55,9 +55,31 @@
   },
   "rage": {
     "name": "怒气",
-    "type": "resource",
+    "type": "rage",
+    "icon": "💢",
     "base": 0,
     "max": 100,
+    "reset": "battle",
+    "display": "status_line",
     "growth": 0
+  },
+  "element_energy": {
+    "name": "元素能量",
+    "type": "element_energy",
+    "icon": "✨",
+    "base": 0,
+    "reset": "battle",
+    "display": "pool_line",
+    "max_per_pool": 3,
+    "pools": [
+      "fire",
+      "water",
+      "wind"
+    ],
+    "pool_icons": {
+      "fire": "🔥",
+      "water": "💧",
+      "wind": "🌪"
+    }
   }
 }

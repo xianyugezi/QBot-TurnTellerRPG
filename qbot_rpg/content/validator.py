@@ -595,6 +595,14 @@ class _Checker:
             # 独立文件 job_validator_v58.py（与 5A 分文件防并发覆盖），此处双分派
             if validate_jobs_v58 is not None:
                 validate_jobs_v58(self._modules, self)
+        # M13 6c（细化_6c §1.5：stats 资源轴注册段专项校验器 V1~V4）
+        if module_name == "stats":
+            try:
+                from qbot_rpg.content.resource_axis_validator import validate_resource_axes
+            except ImportError:  # pragma: no cover - 批8 未落盘时的装配兜底
+                validate_resource_axes = None  # type: ignore[assignment]
+            if validate_resource_axes is not None:
+                validate_resource_axes(self._modules, self)
         # 逐条目校验
         for idx, entry in self._iter_entries(module_name, data, mmeta):
             self._check_entry(module_name, idx, entry, mmeta)

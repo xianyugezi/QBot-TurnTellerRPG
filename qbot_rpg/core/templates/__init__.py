@@ -10,7 +10,7 @@
 
 分区：base.py（核心 8 类）+ use_tpl/shortcut_tpl/log_tpl/codex_tpl/dialog_tpl/explore_tpl/
 quest_tpl/checkin_tpl/investigate_tpl/battle_tpl/forge_tpl/alchemy_tpl/basic_rem_tpl/
-register_rem_tpl（各命令模块剩余模板，子 agent 分区独占，避免并行冲突）。
+register_rem_tpl/pvp_tpl（各命令模块剩余模板，子 agent 分区独占，避免并行冲突）。
 
 铁律：纯函数、零 NoneBot import、不硬编码路径。模板字符串全部集中在各分区默认表 +
 内容包 templates.json；渲染器不再内嵌面板格式字符串（只保留逻辑与占位符组装）。
@@ -46,6 +46,8 @@ from qbot_rpg.core.templates.investigate_tpl import DEFAULT_TEMPLATES as _INVEST
 from qbot_rpg.core.templates.investigate_tpl import PLACEHOLDER_WHITELIST as _INVESTIGATE_WH
 from qbot_rpg.core.templates.log_tpl import DEFAULT_TEMPLATES as _LOG
 from qbot_rpg.core.templates.log_tpl import PLACEHOLDER_WHITELIST as _LOG_WH
+from qbot_rpg.core.templates.pvp_tpl import DEFAULT_TEMPLATES as _PVP
+from qbot_rpg.core.templates.pvp_tpl import PLACEHOLDER_WHITELIST as _PVP_WH
 from qbot_rpg.core.templates.quest_tpl import DEFAULT_TEMPLATES as _QUEST
 from qbot_rpg.core.templates.quest_tpl import PLACEHOLDER_WHITELIST as _QUEST_WH
 from qbot_rpg.core.templates.register_rem_tpl import DEFAULT_TEMPLATES as _REG_REM
@@ -67,13 +69,13 @@ __all__ = [
 _ALL_TABLES: list = [
     _BASE_TEMPLATES, _USE, _SHORTCUT, _LOG, _CODEX, _DIALOG, _EXPLORE,
     _QUEST, _CHECKIN, _INVESTIGATE, _BATTLE, _FORGE, _ALCHEMY,
-    _BASIC_REM, _REG_REM, _FISHING, _ACHIEVEMENT,
+    _BASIC_REM, _REG_REM, _FISHING, _ACHIEVEMENT, _PVP,
 ]
 _ALL_WHITELISTS: list = [
     _BASE_WHITELIST, _USE_WH, _SHORTCUT_WH, _LOG_WH, _CODEX_WH, _DIALOG_WH,
     _EXPLORE_WH, _QUEST_WH, _CHECKIN_WH, _INVESTIGATE_WH, _BATTLE_WH,
     _FORGE_WH, _ALCHEMY_WH, _BASIC_REM_WH, _REG_REM_WH, _FISHING_WH,
-    _ACHIEVEMENT_WH,
+    _ACHIEVEMENT_WH, _PVP_WH,
 ]
 
 DEFAULT_TEMPLATES: Dict[str, Any] = {}

@@ -51,6 +51,7 @@ from qbot_rpg.commands import (
     forge_commands,
     investigate_commands,
     log_commands,
+    pvp_commands,
     quest_commands,
     register_commands,
     shop_commands,
@@ -100,6 +101,8 @@ REGISTER_GROUPS: tuple = (
     fishing_reel_commands.register_fishing_reel_commands,  # /鱼讯 + /收杆 三选一
     # M11 成就（m11 启动包 §2.1）：/成就 /成就信息 /称号 三指令
     achievement_commands.register_achievement_commands,
+    # M11 PVP（m11 启动包 §2.3）：/锁定玩家 /攻击玩家 双指令
+    pvp_commands.register_pvp_commands,
 )
 
 

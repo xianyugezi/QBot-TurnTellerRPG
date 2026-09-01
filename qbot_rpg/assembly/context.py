@@ -244,14 +244,15 @@ def _render_effects(active_effects: Any, registry: Any) -> List[Dict[str, Any]]:
                 d = resolve(str(eid), "effect")
             except Exception:
                 d = None
-        out.append({
-            "name": _def_name(d, str(eid)),
-            "remaining": entry.get("turns"),
-            "duration": None,
-            "source": entry.get("source") or (
-                str(entry["effect"]) if isinstance(entry.get("effect"), (str, int)) else None
-            ),
-        })
+        out.append(
+            {
+                "name": _def_name(d, str(eid)),
+                "remaining": entry.get("turns"),
+                "duration": None,
+                "source": entry.get("source")
+                or (str(entry["effect"]) if isinstance(entry.get("effect"), (str, int)) else None),
+            }
+        )
     return out
 
 
@@ -269,12 +270,14 @@ def _coerce_rules(rules: Any) -> list:
             out.append(r)
         elif isinstance(r, Mapping):
             try:
-                out.append(ConditionalRule(
-                    source=str(r.get("source", "")),
-                    target=str(r.get("target", "")),
-                    per_point=float(r.get("per_point", 0.0)),
-                    rule_id=r.get("rule_id"),
-                ))
+                out.append(
+                    ConditionalRule(
+                        source=str(r.get("source", "")),
+                        target=str(r.get("target", "")),
+                        per_point=float(r.get("per_point", 0.0)),
+                        rule_id=r.get("rule_id"),
+                    )
+                )
             except (TypeError, ValueError):
                 continue
     return out
@@ -318,6 +321,36 @@ def _ps_init(ps: Any, key: str, empty: Any) -> Any:
         node = empty
     ps[key] = node
     return node
+
+
+def _skill_slots_interface(ctx: Mapping[str, Any], ps: Any) -> Dict[str, Any]:
+    """M13 批13 路13B：技能位装配接口 dict（assemble/save/load 绑 persistent_state）。
+
+    - assemble(skills=None)：从 ctx["skills"]（raw dict 表）装配快照（basic 固定
+      第 1 位 + active 排序 + passive/trigger 槽）；
+    - save(snapshot)：装配结果落 ps["skill_slots"]（惰性挂回，引擎写即落档）；
+    - load()：读 ps["skill_slots"]（缺省 {}）。
+    G0：core.skill_slots 惰性导入（零循环依赖）。
+    """
+    def _assemble(skills: Any = None) -> Dict[str, Any]:
+        from qbot_rpg.core.skill_slots import assemble_slots  # noqa: PLC0415
+
+        table = skills if skills is not None else ctx.get("skills")
+        items = list(table.values()) if isinstance(table, Mapping) else \
+            (list(table) if isinstance(table, (list, tuple)) else [])
+        return assemble_slots(items, {"job_id": ctx.get("job_id")})
+
+    def _save(snapshot: Any) -> Dict[str, Any]:
+        node = _ps_init(ps, "skill_slots", {})
+        if isinstance(snapshot, Mapping):
+            node.clear()
+            node.update(snapshot)
+        return node
+
+    def _load() -> Dict[str, Any]:
+        return _ps_init(ps, "skill_slots", {})
+
+    return {"assemble": _assemble, "save": _save, "load": _load}
 
 
 def _prof_level_map(raw: Any) -> Dict[str, int]:
@@ -504,10 +537,7 @@ def _codex_categories_of(ctx: MutableMapping[str, Any]) -> Dict[str, float]:
     try:
         from qbot_rpg.core.codex import CATEGORY_ORDER, codex_progress
 
-        return {
-            cat: float(codex_progress(ctx, cat).get("pct", 0.0))
-            for cat in CATEGORY_ORDER
-        }
+        return {cat: float(codex_progress(ctx, cat).get("pct", 0.0)) for cat in CATEGORY_ORDER}
     except Exception:
         return {}
 
@@ -760,15 +790,14 @@ def _event_key_parts(key: str) -> tuple:
     (key, None)。出参 tuple[str, Optional[str]]，纯函数确定性。
     """
     if key.startswith("[事件:") and key.endswith("]"):
-        inner = key[len("[事件:"):-1]
+        inner = key[len("[事件:") : -1]
         if ":" in inner:
             name, _, target = inner.rpartition(":")
             return "[事件:" + name + "]", target
     return key, None
 
 
-def _fallback_bump_event(ctx: MutableMapping[str, Any], key: str,
-                         *, instance: Any = None) -> None:
+def _fallback_bump_event(ctx: MutableMapping[str, Any], key: str, *, instance: Any = None) -> None:
     """bump_event 安全缺省实现（RN-10 · ADR-05 三表；兄弟路 event_bus 落盘前兜底）。
 
     入参 ctx: 可变 ctx（就地读写）；key: 事件键；instance: 事件实例（缺省自动构造
@@ -962,6 +991,7 @@ def _gm_commands() -> set:
 def _gem_wallet_of(settings: Any) -> Any:
     """宝石货币引擎（GemWallet，惰性 import 防环；M8 批12 收口装配注入）。"""
     from qbot_rpg.core.gem_wallet import GemWallet  # noqa: PLC0415
+
     try:
         return GemWallet(settings=settings if isinstance(settings, Mapping) else None)
     except Exception:  # noqa: BLE001 —— 构造失败兜底 None，指令壳自兜底
@@ -971,6 +1001,7 @@ def _gem_wallet_of(settings: Any) -> Any:
 def _prof_engine_of_ctx(settings: Any) -> Any:
     """职业熟练度引擎（ProficiencyEngine，惰性 import 防环；M8 批12 收口装配注入）。"""
     from qbot_rpg.core.proficiency import ProficiencyEngine  # noqa: PLC0415
+
     try:
         return ProficiencyEngine(settings=settings if isinstance(settings, Mapping) else None)
     except Exception:  # noqa: BLE001
@@ -1003,8 +1034,7 @@ def _inventory_hooks(ctx: MutableMapping[str, Any]) -> dict:
     def _mark() -> None:
         ctx["_m8_dirty_inventory"] = True
 
-    def add_item(item_id: str, count: int = 1, bound: bool = False,
-                 **kw: Any) -> bool:
+    def add_item(item_id: str, count: int = 1, bound: bool = False, **kw: Any) -> bool:
         """入包：计数映射累加 count；带 quality/traits → 实例通道；非法 count → False。"""
         try:
             c = int(count)
@@ -1016,13 +1046,15 @@ def _inventory_hooks(ctx: MutableMapping[str, Any]) -> dict:
         inv[key] = inv.get(key, 0) + c
         # M8 炼金产出实例（quality/traits 关键字）→ 追加实例通道（保留品质/特性落档）
         if kw and (kw.get("quality") is not None or kw.get("traits")):
-            insts.append({
-                "item_id": key,
-                "count": c,
-                "quality": kw.get("quality") or "normal",
-                "bound": bool(bound),
-                "traits": tuple(kw.get("traits") or ()),
-            })
+            insts.append(
+                {
+                    "item_id": key,
+                    "count": c,
+                    "quality": kw.get("quality") or "normal",
+                    "bound": bool(bound),
+                    "traits": tuple(kw.get("traits") or ()),
+                }
+            )
         _mark()
         return True
 
@@ -1141,188 +1173,238 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
         # raw dict（含 species/king 两段）——钓鱼指令壳/引擎 _species_pool 消费；
         # fishing 顶层 obj 非条目表，不走 _table_from_registry（对齐 forge 先例）。
         "fishing": _fish_module_raw(deps.registry),
-        "battle_snapshot": None,          # 战斗接线注入位（即时调合 battle_alchemy_used）
-        "battle_alchemy_engine": None,    # 战斗接线注入位（BattleAlchemyEngine）
-        "upgrade_unlocks": {},            # 玩家级解锁表（配方合成/进化持久化，装配层回填）
+        "battle_snapshot": None,  # 战斗接线注入位（即时调合 battle_alchemy_used）
+        "battle_alchemy_engine": None,  # 战斗接线注入位（BattleAlchemyEngine）
+        "upgrade_unlocks": {},  # 玩家级解锁表（配方合成/进化持久化，装配层回填）
         # M8 批12 验收收口：wallet/prof_engine 实际构造注入（惰性 import 防环，
         # cmd_decompose/cmd_skill_panel 等真实引擎消费；settings 单源注入）
         "wallet": _gem_wallet_of(settings),
         "prof_engine": _prof_engine_of_ctx(settings),
-        "resolve_player_name": None,      # /协力 玩家名 hook 注入位
-        "same_group": None,               # /协力 同群校验注入位
+        "resolve_player_name": None,  # /协力 玩家名 hook 注入位
+        "same_group": None,  # /协力 同群校验注入位
     }
 
     # -- ③ 玩家相关字段（registered=False → 标量 None + 集合安全空值） ----------
     if registered:
         assert player is not None
         ps = player.persistent_state if isinstance(player.persistent_state, Mapping) else {}
-        attrs = player.attributes if isinstance(player.attributes, PlayerAttributes) \
+        attrs = (
+            player.attributes
+            if isinstance(player.attributes, PlayerAttributes)
             else PlayerAttributes()
+        )
         conditional_rules = settings.get("conditional_rules") or ()
         attr_types = settings.get("attr_types")
         location = str(ps.get("location") or settings.get("default_map") or "")
         ae_raw = ps.get("active_effects")
 
-        ctx.update({
-            "name": player.name,
-            "job_id": player.job_id,
-            "level": player.level,
-            "exp": player.exp,
-            "hp": player.hp,
-            "mp": player.mp,
-            "job_name": _job_name(deps.registry, player.job_id),
-            "location": location,
-            "title": _current_title(player.title_state),
-            "stats": _stats_table(deps.registry, settings),
-            "templates": _templates_table(deps.registry),
-            "attributes": attrs,
-            "attr_final": _attr_final(attrs, conditional_rules, settings, attr_types),
-            "exp_next": _exp_next(settings, player.level),
-            "level_cap": int(settings.get("level_cap", 45) or 45),
-            "conditional_rules": conditional_rules,
-            "attr_types": attr_types,
-            "imprints": settings.get("imprints") or {},
-            "inventory": _count_map(player.inventory),
-            "inventory_items": list(player.inventory),
-            "equipment": dict(player.equipment),
-            "worn_refs": _worn_refs(player.equipment),
-            "active_effects": dict(ae_raw) if isinstance(ae_raw, Mapping) else {},
-            "effects": _render_effects(ps.get("active_effects"), deps.registry),
-            "quest_active": _quest_active_init(ps),
-            "quest_completed": _ps_init(ps, "quest_completed", []),
-            "quest_daily": _ps_init(ps, "quest_daily", {}),
-            "longline_counters": dict(player.longline_counters)
-                if isinstance(player.longline_counters, Mapping) else {},
-            "event_counts": _ps_init(ps, "event_counts", {}),
-            # M8 批12 验收收口裁决（落档缺口修复）：ctx["currencies"] 直接引用
-            # player.currencies（frozen dataclass 可变子结构，就地改 = 改 player → 落档保留）。
-            # 原 dict() 拷贝导致 M8/reward 宝石金币入账只改副本、Player 实例落档路径不回写丢失。
-            "currencies": player.currencies
-                if isinstance(player.currencies, MutableMapping) else {},
-            # M9 锻造·实机部署收口（2026-08-30）：ctx["title_state"] 就地引用
-            # player.title_state（同 currencies 模式）。铸造王授予经
-            # grant_king_title 写 player["title_state"]——生产 ctx["player"] 是 Player
-            # dataclass，_player_of 回退 ctx 时若 ctx 无 title_state 键 → 授予写到临时
-            # 键落档丢失（实机：全链锻造后 title_state.owned 仍空）。挂回后授予即落档。
-            "title_state": player.title_state
-                if isinstance(player.title_state, MutableMapping) else {},
-            "personal_buys": _ps_init(ps, "personal_buys", {}),
-            "checkin_state": _ps_init(ps, "checkin", {}),
-            "shortcuts": _ps_init(ps, "shortcuts", {}),
-            "shortcut_max": int(settings.get("shortcut_max", 20) or 20),
-            "npc_delivered": _ps_init(ps, "npc_delivered", {}),
-            "heard": _coerce_heard(ps.get("npc_heard")),
-            "codex_state": player.codex_state
-                if isinstance(player.codex_state, MutableMapping) else {},
-            "event_log": _coerce_event_log(ps.get("event_log")),
-            "dialog_active": bool(ps.get("dialog_active", False)),
-            # RN-11（N-04）：dialog_session 30 天惰性清理（读取/启动时；last_active_at
-            # 超 30 天 → 清除恢复上下文，见 _dialog_snapshot_or_cleared）
-            "dialog_session": _restore_dialog_session(_dialog_snapshot_or_cleared(ps)),
-            # M8 批13 审查收口（P0-1 地块/代工不落档 + P1-4 proficiency 未注入）：
-            # _ps_init 挂回 persistent_state 可变引用——引擎写 ctx[farm_plots/helpers/
-            # proficiency] 即落档（对齐 currencies 就地引用方案；Player frozen dataclass
-            # 无这些字段，引擎经 _player_of 回退 ctx 写入本键）。
-            "farm_plots": _ps_init(ps, "farm_plots", {}),
-            "helpers": _ps_init(ps, "helpers", {}),
-            "proficiency": _ps_init(ps, "proficiency", {}),
-            # M9 锻造（批C 审查 P0-2 收口 2026-08-30）：确认窗挂 player.persistent_state
-            # ——生产每次指令 make_context 重建 ctx，窗存 ctx 内存键会随本次指令丢弃，
-            # 预览后 /确认 恒「无可确认」；改为 _ps_init 挂回 ps（引擎写 ctx 键即落档），
-            # 预览/确认 跨指令共享同一窗源（F-3 预留口径，装配层补接线）。
-            "forge_preview": _ps_init(ps, "forge_preview", {}),
-            # M9 锻造·实机部署收口（2026-08-30）：已锻造集合落档挂回 persistent_state。
-            # 部署实测：/锻造 成功扣素材扣金币均落档，但 forge_commands 写
-            # player["forged"] 顶层键——生产 ctx["player"] 是 Player dataclass 非
-            # MutableMapping，_player_of 回退返回 ctx 自身 → 写入 ctx["forged"]（每指令
-            # 重建的临时键）→ 落档丢失 → 前置判定「需先锻造」恒拦。挂回 ps 后引擎写
-            # ctx["forged"] 即落档（forge_tree._forged_set 读 player["forged"] 兼容，
-            # 因 ctx 即 player 兜底；ps 键名 forge_forged 防与其它系统 forged 冲突）。
-            "forged": _ps_init(ps, "forge_forged", []),
-            # M10 钓鱼（批6 路6B 收口 2026-09-01）：懒计算状态/饵消耗/模式/鱼王委托
-            # ——fish_state 挂 ps 落档（对齐 forge_preview）；consume_bait/mode/
-            # king_event/king_victory_record 薄委托（惰性 import 防环，缺省不炸）。
-            "fish_state": _ps_init(ps, "fish_state", {}),
-            "consume_bait": _consume_bait_hook(ctx),
-            "mode": _mode_of_hook(ctx),
-            "king_event": _king_event_hook(ctx),
-            "king_victory_record": _king_victory_record_hook(ctx),
-            # M11 成就（批1 路1A · G12/G14 收口 2026-09-01）：
-            # achievement_state 挂 ps 落档（unlocked/repeat_count 只增不减 ACH-08，
-            # 引擎写 ctx 键即落档，对齐 fish_state 先例）——三路约定键名
-            # ctx["achievement_state"]（摸底 §五 收口检查单）；成就配置表
-            # ctx["achievements"]（{ID: 配置}，1B loader 登记后经 registry 注入）；
-            # 称号注册表 ctx["titles"]（G14 薄封装 proficiency.json titles 段，
-            # reward 称号型 title 校验消费）；codex 分册投影 ctx["codex_categories"]
-            # （condition_engine codex param 分册读取，裸 ctx 可用）。
-            "achievement_state": _ps_init(ps, "achievement_state",
-                                          {"unlocked": {}, "repeat_count": {}}),
-            "achievements": _module_raw_of(deps.registry, "achievements"),
-            "titles": _titles_table(deps.registry),
-            "codex_categories": _codex_categories_of(ctx),
-            # M8 批14 测试探针（炼金引导任务）：ctx["prof_level"] 职业等级映射
-            # {job_id: level}——quest 引擎 var=prof_level 条件（param=job_id）消费；
-            # 未注册/无建档 → {} 空（条件不满足，引导任务不提前解锁）。
-            "prof_level": _prof_level_map(ps.get("proficiency")),
-            # M11 PVP（批4 A3 P0-1 修复 2026-09-01）：全链路装配注入。
-            #  pvp_target 锁定态挂 ps（对齐 forge_preview 教训：生产每指令重建 ctx，
-            #  不落 ps 则跨指令恒丢）；pvp_daily 防刷计数挂 ps（FR-R1/R2）；
-            #  respawn_hook 击杀惩罚回城薄委托；players 生产侧 async 不可同步调，
-            #  空表兜底（实机部署时由在线层接线）；active_sessions 会话表供偷袭判定。
-            "pvp_target": _ps_init(ps, "pvp_target", ""),
-            "pvp_daily": _ps_init(ps, "pvp_daily", {"rewards": 0, "pairs": {}}),
-            "respawn_hook": _respawn_hook_of(ctx),
-            "players": _players_table_of(ctx),
-            "active_sessions": _active_sessions_of(ctx),
-            # M11 批4 A3 P1-5 修复：技能表注入（/攻击玩家 技能序号解析消费；
-            # 对齐 items 注入 L1131 先例——registry skill 表）
-            "skills": _table_from_registry(deps.registry, "skill"),
-            # M8 炼金（批11-2 收口）：背包 hooks（_inventory_hooks 就地操作
-            # ctx["inventory"] 计数映射，reward/shop 同款契约）+ 玩家级解锁表回填
-            # （配方合成/进化持久化，换包同 ID 保留 DUP-06）
-            **_inventory_hooks(ctx),
-            "upgrade_unlocks": _ps_init(ps, "upgrade_unlocks", {}),
-        })
+        ctx.update(
+            {
+                "name": player.name,
+                "job_id": player.job_id,
+                "level": player.level,
+                "exp": player.exp,
+                "hp": player.hp,
+                "mp": player.mp,
+                "job_name": _job_name(deps.registry, player.job_id),
+                "location": location,
+                "title": _current_title(player.title_state),
+                "stats": _stats_table(deps.registry, settings),
+                "templates": _templates_table(deps.registry),
+                "attributes": attrs,
+                "attr_final": _attr_final(attrs, conditional_rules, settings, attr_types),
+                "exp_next": _exp_next(settings, player.level),
+                "level_cap": int(settings.get("level_cap", 45) or 45),
+                "conditional_rules": conditional_rules,
+                "attr_types": attr_types,
+                "imprints": settings.get("imprints") or {},
+                "inventory": _count_map(player.inventory),
+                "inventory_items": list(player.inventory),
+                "equipment": dict(player.equipment),
+                "worn_refs": _worn_refs(player.equipment),
+                "active_effects": dict(ae_raw) if isinstance(ae_raw, Mapping) else {},
+                "effects": _render_effects(ps.get("active_effects"), deps.registry),
+                "quest_active": _quest_active_init(ps),
+                "quest_completed": _ps_init(ps, "quest_completed", []),
+                "quest_daily": _ps_init(ps, "quest_daily", {}),
+                "longline_counters": dict(player.longline_counters)
+                if isinstance(player.longline_counters, Mapping)
+                else {},
+                "event_counts": _ps_init(ps, "event_counts", {}),
+                # M8 批12 验收收口裁决（落档缺口修复）：ctx["currencies"] 直接引用
+                # player.currencies（frozen dataclass 可变子结构，就地改 = 改 player → 落档保留）。
+                # 原 dict() 拷贝导致 M8/reward 宝石金币入账只改副本、Player 实例落档路径不回写丢失。
+                "currencies": player.currencies
+                if isinstance(player.currencies, MutableMapping)
+                else {},
+                # M9 锻造·实机部署收口（2026-08-30）：ctx["title_state"] 就地引用
+                # player.title_state（同 currencies 模式）。铸造王授予经
+                # grant_king_title 写 player["title_state"]——生产 ctx["player"] 是 Player
+                # dataclass，_player_of 回退 ctx 时若 ctx 无 title_state 键 → 授予写到临时
+                # 键落档丢失（实机：全链锻造后 title_state.owned 仍空）。挂回后授予即落档。
+                "title_state": player.title_state
+                if isinstance(player.title_state, MutableMapping)
+                else {},
+                "personal_buys": _ps_init(ps, "personal_buys", {}),
+                "checkin_state": _ps_init(ps, "checkin", {}),
+                "shortcuts": _ps_init(ps, "shortcuts", {}),
+                "shortcut_max": int(settings.get("shortcut_max", 20) or 20),
+                "npc_delivered": _ps_init(ps, "npc_delivered", {}),
+                "heard": _coerce_heard(ps.get("npc_heard")),
+                "codex_state": player.codex_state
+                if isinstance(player.codex_state, MutableMapping)
+                else {},
+                "event_log": _coerce_event_log(ps.get("event_log")),
+                "dialog_active": bool(ps.get("dialog_active", False)),
+                # RN-11（N-04）：dialog_session 30 天惰性清理（读取/启动时；last_active_at
+                # 超 30 天 → 清除恢复上下文，见 _dialog_snapshot_or_cleared）
+                "dialog_session": _restore_dialog_session(_dialog_snapshot_or_cleared(ps)),
+                # M8 批13 审查收口（P0-1 地块/代工不落档 + P1-4 proficiency 未注入）：
+                # _ps_init 挂回 persistent_state 可变引用——引擎写 ctx[farm_plots/helpers/
+                # proficiency] 即落档（对齐 currencies 就地引用方案；Player frozen dataclass
+                # 无这些字段，引擎经 _player_of 回退 ctx 写入本键）。
+                "farm_plots": _ps_init(ps, "farm_plots", {}),
+                "helpers": _ps_init(ps, "helpers", {}),
+                "proficiency": _ps_init(ps, "proficiency", {}),
+                # M9 锻造（批C 审查 P0-2 收口 2026-08-30）：确认窗挂 player.persistent_state
+                # ——生产每次指令 make_context 重建 ctx，窗存 ctx 内存键会随本次指令丢弃，
+                # 预览后 /确认 恒「无可确认」；改为 _ps_init 挂回 ps（引擎写 ctx 键即落档），
+                # 预览/确认 跨指令共享同一窗源（F-3 预留口径，装配层补接线）。
+                "forge_preview": _ps_init(ps, "forge_preview", {}),
+                # M9 锻造·实机部署收口（2026-08-30）：已锻造集合落档挂回 persistent_state。
+                # 部署实测：/锻造 成功扣素材扣金币均落档，但 forge_commands 写
+                # player["forged"] 顶层键——生产 ctx["player"] 是 Player dataclass 非
+                # MutableMapping，_player_of 回退返回 ctx 自身 → 写入 ctx["forged"]（每指令
+                # 重建的临时键）→ 落档丢失 → 前置判定「需先锻造」恒拦。挂回 ps 后引擎写
+                # ctx["forged"] 即落档（forge_tree._forged_set 读 player["forged"] 兼容，
+                # 因 ctx 即 player 兜底；ps 键名 forge_forged 防与其它系统 forged 冲突）。
+                "forged": _ps_init(ps, "forge_forged", []),
+                # M10 钓鱼（批6 路6B 收口 2026-09-01）：懒计算状态/饵消耗/模式/鱼王委托
+                # ——fish_state 挂 ps 落档（对齐 forge_preview）；consume_bait/mode/
+                # king_event/king_victory_record 薄委托（惰性 import 防环，缺省不炸）。
+                "fish_state": _ps_init(ps, "fish_state", {}),
+                "consume_bait": _consume_bait_hook(ctx),
+                "mode": _mode_of_hook(ctx),
+                "king_event": _king_event_hook(ctx),
+                "king_victory_record": _king_victory_record_hook(ctx),
+                # M11 成就（批1 路1A · G12/G14 收口 2026-09-01）：
+                # achievement_state 挂 ps 落档（unlocked/repeat_count 只增不减 ACH-08，
+                # 引擎写 ctx 键即落档，对齐 fish_state 先例）——三路约定键名
+                # ctx["achievement_state"]（摸底 §五 收口检查单）；成就配置表
+                # ctx["achievements"]（{ID: 配置}，1B loader 登记后经 registry 注入）；
+                # 称号注册表 ctx["titles"]（G14 薄封装 proficiency.json titles 段，
+                # reward 称号型 title 校验消费）；codex 分册投影 ctx["codex_categories"]
+                # （condition_engine codex param 分册读取，裸 ctx 可用）。
+                "achievement_state": _ps_init(
+                    ps, "achievement_state", {"unlocked": {}, "repeat_count": {}}
+                ),
+                "achievements": _module_raw_of(deps.registry, "achievements"),
+                "titles": _titles_table(deps.registry),
+                "codex_categories": _codex_categories_of(ctx),
+                # M8 批14 测试探针（炼金引导任务）：ctx["prof_level"] 职业等级映射
+                # {job_id: level}——quest 引擎 var=prof_level 条件（param=job_id）消费；
+                # 未注册/无建档 → {} 空（条件不满足，引导任务不提前解锁）。
+                "prof_level": _prof_level_map(ps.get("proficiency")),
+                # M11 PVP（批4 A3 P0-1 修复 2026-09-01）：全链路装配注入。
+                #  pvp_target 锁定态挂 ps（对齐 forge_preview 教训：生产每指令重建 ctx，
+                #  不落 ps 则跨指令恒丢）；pvp_daily 防刷计数挂 ps（FR-R1/R2）；
+                #  respawn_hook 击杀惩罚回城薄委托；players 生产侧 async 不可同步调，
+                #  空表兜底（实机部署时由在线层接线）；active_sessions 会话表供偷袭判定。
+                "pvp_target": _ps_init(ps, "pvp_target", ""),
+                "pvp_daily": _ps_init(ps, "pvp_daily", {"rewards": 0, "pairs": {}}),
+                "respawn_hook": _respawn_hook_of(ctx),
+                "players": _players_table_of(ctx),
+                "active_sessions": _active_sessions_of(ctx),
+                # M11 批4 A3 P1-5 修复：技能表注入（/攻击玩家 技能序号解析消费；
+                # 对齐 items 注入 L1131 先例——registry skill 表）
+                # M13 批13 路13A：skills/jobs 已上移注册态无关段（L1326）——
+                # 注册流程（玩家未注册态）消费 ctx["skills"]/ctx["jobs"]，见 L1324 注释。
+                "skills": _table_from_registry(deps.registry, "skill"),
+                # M8 炼金（批11-2 收口）：背包 hooks（_inventory_hooks 就地操作
+                # ctx["inventory"] 计数映射，reward/shop 同款契约）+ 玩家级解锁表回填
+                # （配方合成/进化持久化，换包同 ID 保留 DUP-06）
+                **_inventory_hooks(ctx),
+                "upgrade_unlocks": _ps_init(ps, "upgrade_unlocks", {}),
+                # M13 批13 路13B：技能位装配接口（assemble + save/load 绑 ps）。
+                # ctx["skill_slots"] = 接口 dict：assemble（从 ctx["skills"] 装配）、
+                # save/load（persistent_state["skill_slots"] 惰性挂回 _ps_init）。
+                "skill_slots": _skill_slots_interface(ctx, ps),
+                "skill_slots_state": _ps_init(ps, "skill_slots", {}),
+            }
+        )
     else:
-        ctx.update({
-            "name": None, "job_id": None, "level": None, "exp": None,
-            "hp": None, "mp": None, "job_name": None, "location": None,
-            "title": None, "stats": _stats_table(deps.registry, settings),
-            "attributes": None, "attr_final": {}, "exp_next": None,
-            "level_cap": int(settings.get("level_cap", 45) or 45),
-            "conditional_rules": settings.get("conditional_rules") or (),
-            "attr_types": settings.get("attr_types"),
-            "imprints": settings.get("imprints") or {},
-            "inventory": {}, "inventory_items": [],
-            "equipment": {}, "worn_refs": {},
-            "active_effects": {}, "effects": [],
-            "quest_active": [], "quest_completed": [], "quest_daily": {},
-            "longline_counters": {}, "event_counts": {},
-            "currencies": {}, "personal_buys": {},
-            "checkin_state": {}, "shortcuts": {},
-            "shortcut_max": int(settings.get("shortcut_max", 20) or 20),
-            "npc_delivered": {}, "heard": set(),
-            "codex_state": {}, "event_log": [],
-            "dialog_active": False, "dialog_session": None,
-            # M11 成就（批1 路1A）：未注册玩家安全空值（对齐 codex_state 先例）——
-            # 成就引擎/指令壳对未注册玩家读空表 fail-safe，注册门槛拦截在前
-            "achievement_state": {"unlocked": {}, "repeat_count": {}},
-            "achievements": _module_raw_of(deps.registry, "achievements"),
-            "titles": _titles_table(deps.registry),
-            "codex_categories": {},
-        })
+        ctx.update(
+            {
+                "name": None,
+                "job_id": None,
+                "level": None,
+                "exp": None,
+                "hp": None,
+                "mp": None,
+                "job_name": None,
+                "location": None,
+                "title": None,
+                "stats": _stats_table(deps.registry, settings),
+                "attributes": None,
+                "attr_final": {},
+                "exp_next": None,
+                "level_cap": int(settings.get("level_cap", 45) or 45),
+                "conditional_rules": settings.get("conditional_rules") or (),
+                "attr_types": settings.get("attr_types"),
+                "imprints": settings.get("imprints") or {},
+                "inventory": {},
+                "inventory_items": [],
+                "equipment": {},
+                "worn_refs": {},
+                "active_effects": {},
+                "effects": [],
+                "quest_active": [],
+                "quest_completed": [],
+                "quest_daily": {},
+                "longline_counters": {},
+                "event_counts": {},
+                "currencies": {},
+                "personal_buys": {},
+                "checkin_state": {},
+                "shortcuts": {},
+                "shortcut_max": int(settings.get("shortcut_max", 20) or 20),
+                "npc_delivered": {},
+                "heard": set(),
+                "codex_state": {},
+                "event_log": [],
+                "dialog_active": False,
+                "dialog_session": None,
+                # M11 成就（批1 路1A）：未注册玩家安全空值（对齐 codex_state 先例）——
+                # 成就引擎/指令壳对未注册玩家读空表 fail-safe，注册门槛拦截在前
+                "achievement_state": {"unlocked": {}, "repeat_count": {}},
+                "achievements": _module_raw_of(deps.registry, "achievements"),
+                "titles": _titles_table(deps.registry),
+                "codex_categories": {},
+            }
+        )
 
     # -- ④ 世界/会话/环境/确定性源（与注册态无关） ------------------------------
     ctx["game_world"] = deps.game_world
     ctx["map_def"] = _get_map(deps.game_world, ctx.get("location"))
     ctx["monster_pool"] = _monster_pool(deps.game_world, ctx.get("location"))
     ctx["npcs"] = _npcs(deps.game_world, ctx.get("location"))
+    # M13 批13 路13A：技能/职业表注入（注册态无关，未注册玩家同样可读）。
+    #  - ctx["skills"]：_table_from_registry kind="skill"（原注册态分支 L1279 上移）；
+    #    消费方 battle_commands._resolve_skill（/攻击 <技能>）/ basic_commands.skill_rows
+    #    / pvp_commands._resolve_skill / core.pvp._resolve_skill_action 均读 ctx["skills"]。
+    #  - ctx["jobs"]：_table_from_registry kind="job"（6b 摸底 ⑧ 缺口修复，新注入）；
+    #    消费方 register_commands.resolve_job/default_job（注册默认职业 B7/REG-04）/
+    #    basic_commands._job_name / core.synthesis._job_display_name。
+    # 两者统一 Def → raw dict（_table_from_registry 保证 Mapping.get 契约，对齐
+    # quest/shop/checkin 先例）；无 skills/jobs 模块 → {}（系统未启用兜底）。
+    ctx["skills"] = _table_from_registry(deps.registry, "skill")
+    ctx["jobs"] = _table_from_registry(deps.registry, "job")
     # npc_interactions hook（RN-05）：按 id 从 ctx["npcs"] 解析 interactions（N-02 收口，
     # dialog 引擎 _npc_interactions 优先消费本 hook；缺省 [] → 菜单仅「离开」）
     ctx["npc_interactions"] = lambda npc_id: _npc_interactions_of(ctx["npcs"], npc_id)
-    ctx["world_stock"] = {}      # {shop_id: {item_id: int}}（A-05 world 装配注入快照）
-    ctx["world_sold_out"] = {}   # {shop_id: {item_id: True}}（同上）
-    ctx["last_refresh"] = {}     # {shop_id: "YYYY-MM-DD"}（同上）
+    ctx["world_stock"] = {}  # {shop_id: {item_id: int}}（A-05 world 装配注入快照）
+    ctx["world_sold_out"] = {}  # {shop_id: {item_id: True}}（同上）
+    ctx["last_refresh"] = {}  # {shop_id: "YYYY-MM-DD"}（同上）
     ctx["blackmarket_goods"] = {}  # {shop_id: [goods...]}（同上）
 
     battle_session = await _battle_session(deps.session_mgr, qid)
@@ -1398,12 +1480,14 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
             ctx[_key] = list(_mapped.values())
         else:
             ctx[_key] = _mapped
+
     def _kind_resolver(kind: str):
         def _res(key: Any) -> Any:
             try:
                 return deps.registry.resolve(key, kind)
             except Exception:
                 return None
+
         return _res
 
     ctx["resolve_item"] = _kind_resolver("item")

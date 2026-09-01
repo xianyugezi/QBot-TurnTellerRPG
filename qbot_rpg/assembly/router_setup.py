@@ -59,6 +59,7 @@ from qbot_rpg.commands import (
     status_commands,
     unregister_commands,
     use_commands,
+    job_commands,  # M13 批14 路14A：/转职
 )
 from qbot_rpg.commands.parsers import DEFAULT_WHITELIST
 from qbot_rpg.commands.router import AliasTable, CommandSpec, Router
@@ -80,6 +81,7 @@ DEFAULT_COMMAND_MODE = "global_shortcut"
 REGISTER_GROUPS: tuple = (
     basic_commands.register_basic_commands,        # /角色 /背包 /装备 /技能 /帮助
     register_commands.register_register_commands,  # /注册
+    job_commands.register_job_commands,            # /转职（M13 批14 路14A）
     unregister_commands.register_unregister_commands,  # /注销（2026-08-28 新增）
     status_commands.register_status_commands,      # /状态
     shortcut_commands.register_shortcut_commands,  # /快捷解绑 /快捷列表
@@ -220,7 +222,6 @@ def build_router(deps: Any) -> Router:
         "调合": "❌ 调合尚未实装（后续里程碑）",
         "职业": "❌ 职业面板尚未实装（后续里程碑；/技能 查看技能）",
         "职业列表": "❌ 职业列表尚未实装（后续里程碑）",
-        "转职": "❌ 转职尚未实装（后续里程碑）",
         # 2026-08-31 QA P1-4：帮助页引导的战斗指令 stub（防静默空回）。
         # 【2026-08-31 用户拍板】防御/道具/逃跑 战斗指令已定稿删除（引擎机制保留只删入口），
         # 白名单/帮助/stub 一律不出现这三个词 → 仅保留 快捷绑定 stub。

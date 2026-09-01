@@ -56,6 +56,8 @@ from qbot_rpg.core.templates.shortcut_tpl import DEFAULT_TEMPLATES as _SHORTCUT
 from qbot_rpg.core.templates.shortcut_tpl import PLACEHOLDER_WHITELIST as _SHORTCUT_WH
 from qbot_rpg.core.templates.use_tpl import DEFAULT_TEMPLATES as _USE
 from qbot_rpg.core.templates.use_tpl import PLACEHOLDER_WHITELIST as _USE_WH
+from qbot_rpg.core.templates.job_tpl import DEFAULT_TEMPLATES as _JOB
+from qbot_rpg.core.templates.job_tpl import PLACEHOLDER_WHITELIST as _JOB_WH
 
 __all__ = [
     "DEFAULT_TEMPLATES",
@@ -69,13 +71,13 @@ __all__ = [
 _ALL_TABLES: list = [
     _BASE_TEMPLATES, _USE, _SHORTCUT, _LOG, _CODEX, _DIALOG, _EXPLORE,
     _QUEST, _CHECKIN, _INVESTIGATE, _BATTLE, _FORGE, _ALCHEMY,
-    _BASIC_REM, _REG_REM, _FISHING, _ACHIEVEMENT, _PVP,
+    _BASIC_REM, _REG_REM, _FISHING, _ACHIEVEMENT, _PVP, _JOB,
 ]
 _ALL_WHITELISTS: list = [
     _BASE_WHITELIST, _USE_WH, _SHORTCUT_WH, _LOG_WH, _CODEX_WH, _DIALOG_WH,
     _EXPLORE_WH, _QUEST_WH, _CHECKIN_WH, _INVESTIGATE_WH, _BATTLE_WH,
     _FORGE_WH, _ALCHEMY_WH, _BASIC_REM_WH, _REG_REM_WH, _FISHING_WH,
-    _ACHIEVEMENT_WH, _PVP_WH,
+    _ACHIEVEMENT_WH, _PVP_WH, _JOB_WH,
 ]
 
 DEFAULT_TEMPLATES: Dict[str, Any] = {}

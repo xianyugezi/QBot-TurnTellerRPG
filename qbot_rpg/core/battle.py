@@ -1325,6 +1325,11 @@ class BattleEngine:
         if "effects" not in ca:
             ca["effects"] = list(sd.get("effects") or [])      # D4：skill def effects（标准技能路径也能执行印记/打断等）
         ca.setdefault("mult", float(ca.get("mult", 1.0)))
+        # M13 批14 路14B：技能 def hits 多段展开（blade_dance hits=3 → 3 段伤害）。
+        # 仅显式 hits>1 时展开（缺省 1 段不包 segments，保持既有单段路径零变化）。
+        _hits = int(sd.get("hits", 1) or 1)
+        if _hits > 1 and "segments" not in ca:
+            ca["segments"] = [{"hit": True, "mult": 1.0} for _ in range(_hits)]
 
         def _marks_lookup(kind: str, which: str, rule: Mapping[str, Any], mark_id: Optional[str] = None) -> bool:
             # D1 定稿对照修复：combo 印记条件子句全量转接 MarksManager.evaluate（1d §3.1 唯一正确实现）

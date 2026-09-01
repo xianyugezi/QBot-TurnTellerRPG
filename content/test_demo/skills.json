@@ -19,7 +19,10 @@
     "job_form": null,
     "level": null,
     "hits": 1,
-    "trigger_limit": {"per_round": 10, "per_battle": 99},
+    "trigger_limit": {
+      "per_round": 10,
+      "per_battle": 99
+    },
     "desc": "基础普攻：默认出手，无消耗（契约 §1.4 basic 固定第 1 位）",
     "hit_mod": 1.0,
     "crit_mod": 1.0,
@@ -34,7 +37,12 @@
     "attack_type": "slash",
     "element": "fire",
     "effects": [
-      {"effect": "burn_dot", "overrides": {"power": 50}}
+      {
+        "effect": "burn_dot",
+        "overrides": {
+          "power": 50
+        }
+      }
     ],
     "mp_cost": 10,
     "cooldown": 2,
@@ -47,7 +55,10 @@
     "job_form": null,
     "level": null,
     "hits": 1,
-    "trigger_limit": {"per_round": 10, "per_battle": 99},
+    "trigger_limit": {
+      "per_round": 10,
+      "per_battle": 99
+    },
     "desc": "强力斩击：火焰附魔的斩击，附带灼烧（演示）",
     "hit_mod": 1.0,
     "crit_mod": 1.0,
@@ -62,7 +73,12 @@
     "attack_type": "magic",
     "element": "moon",
     "effects": [
-      {"effect": "heal_small", "overrides": {"power": 100}}
+      {
+        "effect": "heal_small",
+        "overrides": {
+          "power": 100
+        }
+      }
     ],
     "mp_cost": 15,
     "cooldown": 3,
@@ -75,7 +91,10 @@
     "job_form": null,
     "level": null,
     "hits": 1,
-    "trigger_limit": {"per_round": 10, "per_battle": 99},
+    "trigger_limit": {
+      "per_round": 10,
+      "per_battle": 99
+    },
     "desc": "治愈之光：月辉治疗（演示）",
     "hit_mod": 1.0,
     "crit_mod": 1.0,
@@ -99,9 +118,19 @@
     "consume_marks": {},
     "job_restrict": [],
     "job_form": null,
-    "level": {"max": 3, "growth": [1.0, 1.1, 1.2]},
+    "level": {
+      "max": 3,
+      "growth": [
+        1.0,
+        1.1,
+        1.2
+      ]
+    },
     "hits": 3,
-    "trigger_limit": {"per_round": 10, "per_battle": 99},
+    "trigger_limit": {
+      "per_round": 10,
+      "per_battle": 99
+    },
     "desc": "剑舞：三连突刺，可打断敌方行动（多段演示）",
     "hit_mod": 1.2,
     "crit_mod": 1.1,
@@ -116,7 +145,11 @@
     "attack_type": "blunt",
     "element": "earth",
     "effects": [
-      {"type": "pierce", "target": "def", "pct": 30}
+      {
+        "type": "pierce",
+        "target": "def",
+        "pct": 30
+      }
     ],
     "mp_cost": 25,
     "cooldown": 4,
@@ -124,12 +157,17 @@
     "armor": true,
     "interrupt": false,
     "chain_refs": [],
-    "consume_marks": {"fire_mark": 1},
+    "consume_marks": {
+      "fire_mark": 1
+    },
     "job_restrict": [],
     "job_form": null,
     "level": null,
     "hits": 1,
-    "trigger_limit": {"per_round": 10, "per_battle": 99},
+    "trigger_limit": {
+      "per_round": 10,
+      "per_battle": 99
+    },
     "desc": "天陨重击：物理穿透 30%（pierce target=def，契约 §5.2）+ 霸体 + 消耗火印",
     "hit_mod": 0.9,
     "crit_mod": 1.0,
@@ -144,8 +182,17 @@
     "attack_type": "magic",
     "element": "fire",
     "effects": [
-      {"effect": "burn_dot", "overrides": {"power": 40}},
-      {"type": "pierce", "target": "spr", "pct": 30}
+      {
+        "effect": "burn_dot",
+        "overrides": {
+          "power": 40
+        }
+      },
+      {
+        "type": "pierce",
+        "target": "spr",
+        "pct": 30
+      }
     ],
     "mp_cost": 18,
     "cooldown": 2,
@@ -158,7 +205,10 @@
     "job_form": null,
     "level": null,
     "hits": 1,
-    "trigger_limit": {"per_round": 10, "per_battle": 99},
+    "trigger_limit": {
+      "per_round": 10,
+      "per_battle": 99
+    },
     "desc": "火球术：魔法穿透 30%（pierce target=spr，无视精神）+ 灼烧（TC-19 样例）",
     "hit_mod": 1.0,
     "crit_mod": 1.0,
@@ -173,7 +223,9 @@
     "attack_type": "none",
     "element": null,
     "effects": [
-      {"effect": "stone_shield_eff"}
+      {
+        "effect": "stone_shield_eff"
+      }
     ],
     "mp_cost": 0,
     "cooldown": 0,
@@ -186,7 +238,10 @@
     "job_form": null,
     "level": null,
     "hits": 1,
-    "trigger_limit": {"per_round": 10, "per_battle": 99},
+    "trigger_limit": {
+      "per_round": 10,
+      "per_battle": 99
+    },
     "desc": "石肤：被动护盾（装配槽，进入战斗即生效）",
     "hit_mod": 1.0,
     "crit_mod": 1.0,
@@ -201,7 +256,10 @@
     "attack_type": "none",
     "element": null,
     "effects": [
-      {"type": "lifesteal", "pct": 10}
+      {
+        "type": "lifesteal",
+        "pct": 10
+      }
     ],
     "mp_cost": 0,
     "cooldown": 0,
@@ -214,7 +272,10 @@
     "job_form": null,
     "level": null,
     "hits": 1,
-    "trigger_limit": {"per_round": 10, "per_battle": 99},
+    "trigger_limit": {
+      "per_round": 10,
+      "per_battle": 99
+    },
     "desc": "饮血刃：被动吸血 10%（结算修正器 lifesteal）",
     "hit_mod": 1.0,
     "crit_mod": 1.0,
@@ -229,7 +290,12 @@
     "attack_type": "magic",
     "element": "fire",
     "effects": [
-      {"effect": "burn_dot", "overrides": {"power": 30}}
+      {
+        "effect": "burn_dot",
+        "overrides": {
+          "power": 30
+        }
+      }
     ],
     "mp_cost": 0,
     "cooldown": 0,
@@ -237,12 +303,17 @@
     "armor": false,
     "interrupt": false,
     "chain_refs": [],
-    "consume_marks": {"fire_mark": 1},
+    "consume_marks": {
+      "fire_mark": 1
+    },
     "job_restrict": [],
     "job_form": null,
     "level": null,
     "hits": 1,
-    "trigger_limit": {"per_round": 3, "per_battle": 10},
+    "trigger_limit": {
+      "per_round": 3,
+      "per_battle": 10
+    },
     "desc": "烈焰爆发：受击触发，消耗火印（每回合限 3 次）",
     "hit_mod": 1.0,
     "crit_mod": 1.0,
@@ -268,7 +339,10 @@
     "job_form": null,
     "level": null,
     "hits": 1,
-    "trigger_limit": {"per_round": 2, "per_battle": 5},
+    "trigger_limit": {
+      "per_round": 2,
+      "per_battle": 5
+    },
     "desc": "反击：受击触发，附带打断",
     "hit_mod": 1.0,
     "crit_mod": 1.5,
@@ -283,7 +357,12 @@
     "attack_type": "none",
     "element": "void",
     "effects": [
-      {"type": "mark_add", "target": "enemy", "mark": "mirror_mark", "count": 1}
+      {
+        "type": "mark_add",
+        "target": "enemy",
+        "mark": "mirror_mark",
+        "count": 1
+      }
     ],
     "mp_cost": 0,
     "cooldown": 0,
@@ -291,12 +370,17 @@
     "armor": false,
     "interrupt": false,
     "chain_refs": [],
-    "consume_marks": {"curse_mark": 1},
+    "consume_marks": {
+      "curse_mark": 1
+    },
     "job_restrict": [],
     "job_form": null,
     "level": null,
     "hits": 1,
-    "trigger_limit": {"per_round": 1, "per_battle": 3},
+    "trigger_limit": {
+      "per_round": 1,
+      "per_battle": 3
+    },
     "desc": "镜幕：受击触发，消耗诅咒印给敌方附加镜印（原子动作形态）",
     "hit_mod": 1.0,
     "crit_mod": 1.0,
@@ -311,7 +395,12 @@
     "attack_type": "none",
     "element": null,
     "effects": [
-      {"effect": "stone_shield_eff", "overrides": {"power": 20}}
+      {
+        "effect": "stone_shield_eff",
+        "overrides": {
+          "power": 20
+        }
+      }
     ],
     "mp_cost": 0,
     "cooldown": 0,
@@ -324,7 +413,10 @@
     "job_form": null,
     "level": null,
     "hits": 1,
-    "trigger_limit": {"per_round": 1, "per_battle": 1},
+    "trigger_limit": {
+      "per_round": 1,
+      "per_battle": 1
+    },
     "desc": "背水一战：血量低下触发，获得护盾（trigger_limit 收紧样例）",
     "hit_mod": 1.0,
     "crit_mod": 1.0,
@@ -339,7 +431,9 @@
     "attack_type": "slash",
     "element": null,
     "effects": [
-      {"effect": "heal_lost_20"}
+      {
+        "effect": "heal_lost_20"
+      }
     ],
     "mp_cost": 15,
     "cooldown": 0,
@@ -352,11 +446,17 @@
     "job_form": null,
     "level": null,
     "hits": 1,
-    "trigger_limit": {"per_round": 1, "per_battle": 1},
+    "trigger_limit": {
+      "per_round": 1,
+      "per_battle": 1
+    },
     "desc": "狂暴：消耗 100 怒气进入狂战士形态（触发技，效果先结算后变换）",
     "hit_mod": 1.0,
     "crit_mod": 1.0,
-    "block_mode": "auto"
+    "block_mode": "auto",
+    "energy_cost": {
+      "rage": 100
+    }
   },
   {
     "id": "transform_skills",
@@ -378,7 +478,10 @@
     "job_form": null,
     "level": null,
     "hits": 1,
-    "trigger_limit": {"per_round": 10, "per_battle": 99},
+    "trigger_limit": {
+      "per_round": 10,
+      "per_battle": 99
+    },
     "desc": "形态技能组占位条目（transform.skill_set 引用的技能位方案 ID，细化_6b §1.3 #29；同组实际技能 = job_form=berserker_form 的 6 条）",
     "hit_mod": 1.0,
     "crit_mod": 1.0,
@@ -393,7 +496,9 @@
     "attack_type": "slash",
     "element": null,
     "effects": [
-      {"effect": "lifesteal_10"}
+      {
+        "effect": "lifesteal_10"
+      }
     ],
     "mp_cost": 0,
     "cooldown": 0,
@@ -402,15 +507,23 @@
     "interrupt": false,
     "chain_refs": [],
     "consume_marks": {},
-    "job_restrict": ["berserker"],
+    "job_restrict": [
+      "berserker"
+    ],
     "job_form": "berserker_form",
     "level": null,
     "hits": 1,
-    "trigger_limit": {"per_round": 10, "per_battle": 99},
+    "trigger_limit": {
+      "per_round": 10,
+      "per_battle": 99
+    },
     "desc": "狂暴斩：形态普攻（自带吸血 10%）",
     "hit_mod": 1.0,
     "crit_mod": 1.0,
-    "block_mode": "auto"
+    "block_mode": "auto",
+    "energy_gain": {
+      "rage": 15
+    }
   },
   {
     "id": "rage_slash",
@@ -421,24 +534,39 @@
     "attack_type": "slash",
     "element": null,
     "effects": [
-      {"effect": "lifesteal_10", "overrides": {"value": 12}}
+      {
+        "effect": "lifesteal_10",
+        "overrides": {
+          "value": 12
+        }
+      }
     ],
     "mp_cost": 6,
     "cooldown": 0,
     "tag": "combo",
     "armor": false,
     "interrupt": false,
-    "chain_refs": ["chain_rage"],
+    "chain_refs": [
+      "chain_rage"
+    ],
     "consume_marks": {},
-    "job_restrict": ["berserker"],
+    "job_restrict": [
+      "berserker"
+    ],
     "job_form": "berserker_form",
     "level": null,
     "hits": 1,
-    "trigger_limit": {"per_round": 10, "per_battle": 99},
+    "trigger_limit": {
+      "per_round": 10,
+      "per_battle": 99
+    },
     "desc": "怒涛斩：形态主循环（吸血 12%，连段驱动 chain_rage）",
     "hit_mod": 1.0,
     "crit_mod": 1.0,
-    "block_mode": "auto"
+    "block_mode": "auto",
+    "energy_gain": {
+      "rage": 20
+    }
   },
   {
     "id": "quake_smash",
@@ -449,7 +577,9 @@
     "attack_type": "blunt",
     "element": null,
     "effects": [
-      {"type": "interrupt"}
+      {
+        "type": "interrupt"
+      }
     ],
     "mp_cost": 14,
     "cooldown": 2,
@@ -458,11 +588,16 @@
     "interrupt": true,
     "chain_refs": [],
     "consume_marks": {},
-    "job_restrict": ["berserker"],
+    "job_restrict": [
+      "berserker"
+    ],
     "job_form": "berserker_form",
     "level": null,
     "hits": 1,
-    "trigger_limit": {"per_round": 10, "per_battle": 99},
+    "trigger_limit": {
+      "per_round": 10,
+      "per_battle": 99
+    },
     "desc": "裂地击：重击地面打断目标连段（L0 interrupt 原子动作）",
     "hit_mod": 1.0,
     "crit_mod": 1.0,
@@ -484,12 +619,17 @@
     "interrupt": false,
     "chain_refs": [],
     "consume_marks": {},
-    "job_restrict": ["berserker"],
+    "job_restrict": [
+      "berserker"
+    ],
     "job_form": "berserker_form",
     "derive_only": true,
     "level": null,
     "hits": 1,
-    "trigger_limit": {"per_round": 10, "per_battle": 99},
+    "trigger_limit": {
+      "per_round": 10,
+      "per_battle": 99
+    },
     "desc": "大回旋·终：形态连段终点派生大招（300%，霸体，derive_only 不占技能位）",
     "hit_mod": 1.0,
     "crit_mod": 1.0,
@@ -504,8 +644,15 @@
     "attack_type": "none",
     "element": null,
     "effects": [
-      {"effect": "heal_lost_25"},
-      {"effect": "mitigation_10", "overrides": {"turns": 2}}
+      {
+        "effect": "heal_lost_25"
+      },
+      {
+        "effect": "mitigation_10",
+        "overrides": {
+          "turns": 2
+        }
+      }
     ],
     "mp_cost": 0,
     "cooldown": 0,
@@ -514,12 +661,17 @@
     "interrupt": false,
     "chain_refs": [],
     "consume_marks": {},
-    "job_restrict": ["berserker"],
+    "job_restrict": [
+      "berserker"
+    ],
     "job_form": "berserker_form",
     "revert_form": true,
     "level": null,
     "hits": 1,
-    "trigger_limit": {"per_round": 10, "per_battle": 99},
+    "trigger_limit": {
+      "per_round": 10,
+      "per_battle": 99
+    },
     "desc": "平息战意：主动还原形态（revert_form），回复 25%lost + 减伤 10%（2 回合）",
     "hit_mod": 1.0,
     "crit_mod": 1.0,
@@ -534,7 +686,13 @@
     "attack_type": "none",
     "element": null,
     "effects": [
-      {"effect": "heal_mp", "overrides": {"value": 3, "trigger": "on_turn_start"}}
+      {
+        "effect": "heal_mp",
+        "overrides": {
+          "value": 3,
+          "trigger": "on_turn_start"
+        }
+      }
     ],
     "mp_cost": 0,
     "cooldown": 0,
@@ -543,11 +701,16 @@
     "interrupt": false,
     "chain_refs": [],
     "consume_marks": {},
-    "job_restrict": ["berserker"],
+    "job_restrict": [
+      "berserker"
+    ],
     "job_form": "berserker_form",
     "level": null,
     "hits": 1,
-    "trigger_limit": {"per_round": 10, "per_battle": 99},
+    "trigger_limit": {
+      "per_round": 10,
+      "per_battle": 99
+    },
     "desc": "战意沸腾：形态被动，回合开始回复 3 MP",
     "hit_mod": 1.0,
     "crit_mod": 1.0,
@@ -569,15 +732,23 @@
     "interrupt": false,
     "chain_refs": [],
     "consume_marks": {},
-    "job_restrict": ["berserker"],
+    "job_restrict": [
+      "berserker"
+    ],
     "job_form": null,
     "level": null,
     "hits": 1,
-    "trigger_limit": {"per_round": 10, "per_battle": 99},
+    "trigger_limit": {
+      "per_round": 10,
+      "per_battle": 99
+    },
     "desc": "怒意：常态被动，回合开始怒气 +6（proc on_turn_start，energy_gain 随 6c 批8 接线）",
     "hit_mod": 1.0,
     "crit_mod": 1.0,
-    "block_mode": "auto"
+    "block_mode": "auto",
+    "energy_gain": {
+      "rage": 6
+    }
   },
   {
     "id": "blood_rage",
@@ -595,14 +766,22 @@
     "interrupt": false,
     "chain_refs": [],
     "consume_marks": {},
-    "job_restrict": ["berserker"],
+    "job_restrict": [
+      "berserker"
+    ],
     "job_form": null,
     "level": null,
     "hits": 1,
-    "trigger_limit": {"per_round": 2, "per_battle": 10},
+    "trigger_limit": {
+      "per_round": 2,
+      "per_battle": 10
+    },
     "desc": "血怒：受击触发，怒气 +10（每回合上限 2 次，energy_gain 随 6c 批8 接线）",
     "hit_mod": 1.0,
     "crit_mod": 1.0,
-    "block_mode": "auto"
+    "block_mode": "auto",
+    "energy_gain": {
+      "rage": 10
+    }
   }
 ]

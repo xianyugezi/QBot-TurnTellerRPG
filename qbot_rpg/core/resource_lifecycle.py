@@ -541,7 +541,7 @@ class ResourceLifecycle:
                     }
                 else:
                     side_state[axis_id] = self._base_of(axis_id)
-        return side_state
+        return dict(side_state)  # 副本返回：调用方串改不影响段内状态
 
     # ------------------------- 工具 -------------------------
 

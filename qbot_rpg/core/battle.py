@@ -343,6 +343,10 @@ class BattleEngine:
         )
         # M2-C1：怪物 AI 注入（enemy_ai 显式优先；enemy_def 自动构造）
         self._enemy_ai: Any = None
+        # M13 6c（细化_6c §1.4 RS-3/RS-5）：资源轴注册表注入位——装配层传入
+        # stats.json 资源轴注册段（stats["resource_axes"] 形态）供战斗结束 reset
+        # 策略 / 快照恢复按注册表逐轴口径执行；None → 零操作降级（RS-5 精神）。
+        self._resource_registry: Any = None
         if enemy_ai is not None:
             self._enemy_ai = enemy_ai
         elif enemy_def is not None:
@@ -803,6 +807,21 @@ class BattleEngine:
             "remaining": 0, "cooldown_remaining": 0,
             "form_status_id": None, "active_skill_set": None,
         }
+        # M13 6c（细化_6c §1.3 F-R1 终段 / S5 + §1.4 RS-3）：resource_state 战斗结束
+        # reset 策略处理——battle 型清零 / keep 型跨战斗保留（RS-3 存档双落由装配层
+        # 消费）/ battle_start 型战斗内保留。引擎按注册表逐轴口径；无 resource_state
+        # 段或未注册轴 → 零操作降级（RS-5 精神，不抛异常）。
+        try:
+            from qbot_rpg.core.resource_lifecycle import (  # noqa: PLC0415
+                RESET_BATTLE,
+                ResourceLifecycle,
+            )
+
+            ResourceLifecycle(self._resource_registry).battle_end_reset(
+                self._snap, reset_policy=RESET_BATTLE,
+            )
+        except Exception:  # noqa: BLE001 装配层未注入资源注册表 → 零操作降级（RS-5）
+            pass
         self._finished = True
         self._state = {STATUS_WIN: STATE_WIN, STATUS_LOSE: STATE_LOSE,
                        STATUS_ESCAPE: STATE_FLY, STATUS_DRAW: STATE_LOSE}[status]
@@ -971,6 +990,10 @@ class BattleEngine:
             "transform_state": {"job_id": "", "form": None, "form_name": None,
                                 "remaining": 0, "cooldown_remaining": 0,
                                 "form_status_id": None, "active_skill_set": None},
+            # M13 6c（细化_6c §1.4 RS-1~6）：resource_state 快照段（per-side dict，
+            # 数值型单键 / 子池型池级展开 D-04）——start 常态骨架；运行时增减经
+            # ResourceLifecycle 引擎（resource_lifecycle.py）写入，快照随深拷贝携带。
+            "resource_state": {"player": {}, "enemy": {}},
         }
         self._finished = False
         self._death_order = []
@@ -1739,6 +1762,19 @@ class BattleEngine:
         # 不引入定时器；形态配置经 job_def 惰性解析（无配置 → 常态无操作）。
         self._tick_transform_state()
 
+        # M13 6c（细化_6c §1.3 F-R1 tick）：resource_state 回合结束结清——契约
+        # 无每回合自动变化字段 → 现行为=保留（零增减幂等钩子，S4 被控保留天然
+        # 成立）；tick_round_end 幂等钩子供契约扩展每回合变化时挂载。注册表未
+        # 注入 / 无 resource_state 段 → 零操作降级（RS-5 精神，不抛异常）。
+        try:
+            from qbot_rpg.core.resource_lifecycle import (  # noqa: PLC0415
+                ResourceLifecycle,
+            )
+
+            ResourceLifecycle(self._resource_registry).tick_round_end(self._snap)
+        except Exception:  # noqa: BLE001 装配层未注入资源注册表 → 零操作降级
+            pass
+
         # ⑦⑧ 互杀 + 战斗结束判定
         out = self._resolve_battle_end(force=False)
         if out is not None:
@@ -1871,6 +1907,7 @@ class BattleEngine:
         enemy_def: Optional[Mapping[str, Any]] = None,
         ai_action_lib: Any = None,
         ai_rng: Any = None,
+        resource_registry: Any = None,  # M13 6c：资源轴注册表注入（RS-2 恢复按注册表逐轴口径）
     ) -> "BattleEngine":
         """快照还原（1g3 §2.3 恢复时序①-⑤）：还原最近回合边界状态 → T7 回 PREP →
         start_turn 回 ① 继续。
@@ -1890,6 +1927,7 @@ class BattleEngine:
         eng = cls(pipeline=pipeline, registry=registry, defs=defs, config=config,
                   enemy_ai=enemy_ai, enemy_def=enemy_def, ai_action_lib=ai_action_lib,
                   ai_rng=ai_rng)
+        eng._resource_registry = resource_registry  # M13 6c：资源轴注册表透传（RS-2/RS-5）
         eng._snap = copy.deepcopy(dict(data))
         eng._rng_seed = int((data.get("formula_state") or {}).get("random_seed", 0) or 0)
         eng._rng = random.Random(eng._rng_seed)
@@ -1919,6 +1957,35 @@ class BattleEngine:
             # turn_start 边界（回合开始 dot 已结算）：直接到玩家行动选择（1g2 §1.2 ③）
             eng._state = STATE_ACT
             eng._phase = PHASE_PLAYER_ACTION
+        # M13 6c（细化_6c §1.4 RS-2/RS-5）：resource_state 中断恢复还原——按快照
+        # 还原各资源当前值（续战从该值起算）；旧档缺 resource_state 段 → 按字段
+        # 缺失降级（不报错不悬空，RS-5）；battle_start 型轴恢复后重置为 base
+        # （F-R1 首行 + RS-2 合并口径）。注册表未注入 → 零操作降级（RS-5 精神）。
+        try:
+            from qbot_rpg.core.resource_lifecycle import (  # noqa: PLC0415
+                ResourceLifecycle,
+            )
+
+            ResourceLifecycle(eng._resource_registry).restore_resource_state(
+                eng._snap, data,
+            )
+            # RS-5「不悬空」：已删注册轴从 resource_state 段移除（字段缺失降级、
+            # 显示隐藏）；仅当注入注册表时清理——未注入 → 原样保留（降级不破坏）。
+            # RS-4 旧局旧配置：世代重绑定注入旧 registry 时旧轴仍在注册表内，
+            # 不误删；仅当前 registry 已删的轴被清理。
+            if isinstance(eng._resource_registry, Mapping):
+                rs = eng._snap.get("resource_state")
+                if isinstance(rs, dict):
+                    for side in ("player", "enemy"):
+                        side_state = rs.get(side)
+                        if isinstance(side_state, dict):
+                            for k in [
+                                k for k in side_state
+                                if k not in eng._resource_registry
+                            ]:
+                                del side_state[k]
+        except Exception:  # noqa: BLE001 旧档畸形段 / 未注入注册表 → 降级不阻断续战
+            pass
         eng._refresh_defenses()
         return eng
 
@@ -1930,6 +1997,7 @@ class BattleEngine:
         return self.__class__.from_snapshot(
             data, pipeline=self._pipeline, registry=self._registry, defs=self._defs,
             config=self._config, enemy_ai=self._enemy_ai,
+            resource_registry=self._resource_registry,  # M13 6c：资源轴注册表透传（RS-2）
         )
 
     # ------------------------- 服务查询 -------------------------

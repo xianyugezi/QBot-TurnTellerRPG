@@ -419,6 +419,19 @@ def skills_fields() -> Dict[str, FieldMeta]:
         # 6b 技能挂点：还原技标记（细化_6b 字段 37，V7 归属校验）
         "derive_only": FieldMeta(type="bool", default=False, soft_label=True),
         # 6b 技能挂点：仅派生可用（细化_6b 字段 38，V7 效果引用校验）
+        "energy_gain": FieldMeta(type="obj", soft_label=True),
+        # 6c 资源轴增减（细化_6c §1.2 E1，M2）：{axis_id: {key: amount}} 或
+        # {axis_id: amount} 简写（B-9）；键引用/负值/any 互斥归资源轴校验器
+        # （细化_6c V1~V3/V7，resource_axis_validator.py），本表仅登记放行
+        "energy_cost": FieldMeta(type="obj", soft_label=True),
+        # 6c 资源轴消耗（细化_6c §1.2 E2，M2）：{axis_id: {key: amount}}；不足
+        # → 被拒不耗回合（F-R1 施放前段）；键空间归资源轴校验器（V1/V2/V7）
+        "season": FieldMeta(type="str", soft_label=True),
+        # 6c 季节技能组（细化_6c §2.1 SE1）：spring/summer/autumn/winter（缺省
+        # =通用）；枚举校验归资源轴校验器（V9）
+        "combo_table": FieldMeta(type="list", element=FieldMeta(type="obj"), soft_label=True),
+        # 6c 组合表达（细化_6c §3.1 C1-C7）：combo/name/kind/power/element/
+        # hits/effects 行结构；V8 校验归资源轴校验器
         "level": FieldMeta(type="obj", soft_label=True),  # {max, growth}，语义归 3b 存档承接
         # ---- C. 全库补充 2（§1.2-C）----
         "hits": FieldMeta(type="int", range_min=1, default=DEFAULT_HITS),

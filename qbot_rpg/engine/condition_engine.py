@@ -122,7 +122,7 @@ def normalize_op(op: object) -> Optional[str]:
 
 
 # -------------------------------------------------------------------------------------
-# var 键空间注册表（NPC 4.3 九类 + 签到（2026-08-16 登记）+ 扩展；供校验器/编辑器）
+# var 键空间注册表（NPC 4.3 九类 + 签到（2026-08-16 登记）+ 资源轴（6c A7/A9）+ 扩展；供校验器/编辑器）
 # -------------------------------------------------------------------------------------
 VAR_CATEGORIES: dict = {
     "任务类": ("has_quest", "quest_completed", "quest_state"),
@@ -133,6 +133,7 @@ VAR_CATEGORIES: dict = {
     "累计类": ("gain_count", "kill_count"),
     "副本类": ("dungeon_clear",),
     "事件类": ("[事件:<事件名>]",),
+    "资源类": ("resource", "[我方资源:<资源ID>]", "[对方资源:<资源ID>]"),
     "时间类": ("time", "is_day", "is_night", "season", "period", "weather"),
     "关系类": ("affection",),
     "签到类": ("[签到:<表名>.<字段>]",),
@@ -164,6 +165,11 @@ VAR_ALIASES: dict = {
     "[季节:{T}]": ("season", "{T}"),
     "[时段:{T}]": ("period", "{T}"),
     "[天气:{T}]": ("weather", "{T}"),
+    # 资源轴变量（6c A7/A9 + D-04 池级引用）：stats.json 注册即自动可用；
+    # 内嵌目标 = 资源轴 ID（数值型=轴 ID；子池型=池级 axis.pool 或轴 ID
+    # （轴 ID 无池后缀 = 池级展示总量：各池和，D-04））
+    "[我方资源:{T}]": ("resource", "{T}"),
+    "[对方资源:{T}]": ("resource", "{T}"),
     # 签到三键（用户裁决⑧）：缺省表名 = 主表 loop
     "[签到:连续天数]": ("[签到:loop.连续天数]", None),
     "[签到:本月天数]": ("[签到:loop.本月天数]", None),
@@ -228,6 +234,14 @@ def normalize_var(var: object) -> Tuple[Optional[str], Optional[str]]:
             and len(v) > len(prefix) + len(suffix)
         ):
             return k, v[len(prefix): len(v) - len(suffix)]
+    # 资源轴侧前缀路径（6c A7/A9）：[我方资源:rage] / [对方资源:element_energy.fire]
+    # 在 VAR_ALIASES 精确匹配后单独识别——内嵌目标整体（轴 ID / 池级 axis.pool）
+    # 连同侧前缀（我方/对方）整体交给 _resolve_resource 解析（保持 alias 内嵌
+    # 目标与 var=resource 四键条件 param 的取数语义完全一致）
+    if v.startswith("[我方资源:") and v.endswith("]"):
+        return "resource", v[len("[我方资源:"):-1]
+    if v.startswith("[对方资源:") and v.endswith("]"):
+        return "resource", v[len("[对方资源:"):-1]
     if v.startswith("[事件:") and v.endswith("]"):
         return v, None
     if v.startswith("[签到:") and v.endswith("]"):
@@ -595,6 +609,15 @@ def _resolve_var(
         if isinstance(af, Mapping):
             return _num(af.get(param or "global", 0))
         return _num(af)
+    if var == "resource":
+        # 6c A7/A9 资源轴变量求值（M13 批9 路9B）：var=resource 数值比较
+        # （gt/ge/lt/le/eq/ne/between + param=资源轴 ID；含池级引用
+        # [我方资源:element_energy.fire]，D-04）。
+        # 我方=player / 对方=enemy（_RESOURCE_SIDE_MAP）；池级引用形态
+        # axis.pool → 子池型该池当前值；轴 ID 无池后缀 → 数值型单键 /
+        # 子池型各池展示总量（D-04「总量提供展示键」）；未注册键 →
+        # None（fail-safe False，D-03 / V5 黄提示在加载期拦截）。
+        return _resolve_resource(ctx, param)
     if var.startswith("[签到:"):
         return _resolve_checkin(ctx, var)
     if var.startswith("[事件:"):
@@ -625,6 +648,73 @@ def _resolve_checkin(ctx: Mapping[str, Any], var: str) -> object:
     if var in ck:
         return _num(ck[var])  # 扁平复合键
     return 0  # 表在但该字段无值 → 0（未签/未满）
+
+
+# -------------------------------------------------------------------------------------
+# 资源轴变量取值（6c A7/A9 + D-04 池级引用；M13 批9 路9B）
+# -------------------------------------------------------------------------------------
+# 我方=player / 对方=enemy（战斗快照 per-side 惯例；6c §1.4 快照形态
+# resource_state.player / resource_state.enemy【资源轴 L102-108】）
+_RESOURCE_SIDE_MAP: dict = {
+    "我方": "player",
+    "对方": "enemy",
+}
+
+
+def _resolve_resource(ctx: Mapping[str, Any], target: object) -> Optional[float]:
+    """var=resource 取值：ctx["resource_state"] 的 per-side 段读取资源当前值。
+
+    参数：target = 资源引用（param 或 [我方资源:X] 内嵌目标），形态：
+      - 轴 ID（数值型）："rage" → 单键当前值；
+      - 池级引用（子池型，D-04）："element_energy.fire" → 该池当前值；
+      - 轴 ID（子池型，无池后缀）："element_energy" → 各池和（展示总量，
+        D-04「总量提供展示键 [我方资源:element_energy]」）；
+      - 侧前缀（我方/对方）：仅 [我方资源:X] / [对方资源:X] 别名路径携带，
+        经 _RESOURCE_SIDE_MAP 映射为 player/enemy；var=resource 四键条件
+        缺省我方（player）。
+    失败口径（D-03 / V5）：资源上下文缺失 / 轴未注册 / 池名未注册 /
+    数值型轴带池后缀 / 非法引用 → None（求值 False，不抛错）。
+    """
+    if not isinstance(target, str) or not target:
+        return None
+    side = "player"  # var=resource 四键条件缺省我方（player）
+    axis = target
+    if ":" in target:
+        side_prefix, _, axis = target.partition(":")
+        mapped = _RESOURCE_SIDE_MAP.get(side_prefix)
+        if mapped is None:
+            return None  # 未知侧前缀 → fail-safe（防御）
+        side = mapped
+    if not axis:
+        return None
+    rs = ctx.get("resource_state")
+    if not isinstance(rs, Mapping):
+        return None  # 资源上下文整体缺失 → fail-safe（D-03）
+    side_state = rs.get(side)
+    if not isinstance(side_state, Mapping):
+        return None  # 该侧无资源段 → fail-safe
+    axis_id, _, pool = axis.partition(".")
+    if not axis_id:
+        return None
+    if axis_id not in side_state:
+        return None  # 轴未注册/未初始化 → fail-safe（V5 黄提示在加载期拦截）
+    raw = side_state.get(axis_id)
+    if pool:
+        # 池级引用：子池型该池当前值
+        if not isinstance(raw, Mapping):
+            return None  # 数值型轴带池后缀 → fail-safe
+        v = raw.get(pool)
+        return _num(v)
+    if isinstance(raw, Mapping):
+        # 子池型轴 ID（无池后缀）= 各池和（展示总量，D-04）
+        total = 0.0
+        for pool_v in raw.values():
+            pv = _num(pool_v)
+            if pv is None:
+                return None  # 池值非法 → fail-safe（防御）
+            total += pv
+        return total
+    return _num(raw)
 
 
 # -------------------------------------------------------------------------------------
@@ -691,11 +781,23 @@ def _eval_atomic(cond: Mapping[str, Any], ctx: Mapping[str, Any]) -> bool:
         value = 1  # 2b4 §2.2 L147「事件触发次数 ≥ value（默认 1）」
     param = cond.get("param")
     if param is None and embedded is not None:
-        param = embedded  # 中文别名内嵌目标（补白 2）
+        param = embedded  # 中文别名内嵌目标（补白 2）；资源别名内嵌 = 轴 ID/池级引用
     if is_event:
         var, emb = _parse_event_var(var)
         if param is None and emb is not None:
             param = emb  # 事件名内嵌目标（NPC 4.3.2，补白 2）
+    if var == "resource" and embedded is not None:
+        # 资源别名内嵌目标（补白 2 精神：内嵌目标与 param 同义）：
+        # 别名缺省 param → 内嵌目标即轴 ID/池级引用，且须补侧前缀
+        # （[我方资源:X] → "我方:X" / [对方资源:X] → "对方:X"），由
+        # _resolve_resource 按 _RESOURCE_SIDE_MAP 映射 player/enemy；
+        # 显式 param 直写（四键条件）不补前缀、原样交给 _resolve_resource
+        # （无前缀 → 缺省我方 player；带我方:/对方: 前缀 → 按映射）
+        if param == embedded:  # param 缺省被通用别名分支填为内嵌目标（无侧前缀）
+            if cond.get("var", "").startswith("[对方资源:"):
+                param = "对方:" + embedded
+            else:
+                param = "我方:" + embedded
     if value is None and var in _PARAM_OPERAND_VARS and param is not None:
         value = param  # 三键约定：value 缺省时 param 作比较操作数（补白 3a）
     current = _resolve_var(ctx, var, param, value)
@@ -747,12 +849,15 @@ def validate_condition(cond: object, report: object) -> None:
               msg="条件表达式要填对象 {var,op,value,param} 或 any/all/not 组合")
         return
     if "var" in cond:
-        var, _ = normalize_var(cond.get("var"))
+        var, embedded = normalize_var(cond.get("var"))
         if var is None:
             _emit(report, "condition", "condition.var", "CND", rule="var_not_registered",
                   var=cond.get("var"), allowed=sorted(REGISTERED_VARS),
                   msg="条件变量键 %r 未注册" % (cond.get("var"),))
             return
+        param = cond.get("param")
+        if param is None and embedded is not None:
+            param = embedded  # 中文别名内嵌目标（补白 2）；资源别名内嵌 = 轴 ID/池级引用
         if cond.get("op") is not None and normalize_op(cond.get("op")) is None:
             _emit(report, "condition", "condition.op", "CND", rule="op_invalid",
                   op=cond.get("op"),
@@ -768,6 +873,11 @@ def validate_condition(cond: object, report: object) -> None:
                 _emit(report, "condition", "condition.var", "CND", rule="event_not_registered",
                       var=var, presets=list(EVENT_PRESETS),
                       msg="事件 %r 未在事件注册表登记，确认拼写或先登记" % (var,))
+        elif var == "resource" and not isinstance(param, str):
+            _emit(report, "condition", "condition.param", "CND", rule="resource_param_missing",
+                  var=var, param=param,
+                  msg="资源条件 {var:resource,...} 需 param=资源轴 ID（数值型=轴 ID；"
+                      "子池型=池级 axis.pool 或轴 ID=池级展示总量），当前 param 缺失或非字符串")
         return
     if "all" in cond:
         for c in _as_cond_list(cond["all"]):

@@ -143,6 +143,7 @@ MSG_ALREADY_BITE: str = "鱼已咬钩，请选择收杆方式"
 MSG_BITE: str = "鱼讯：{label}"
 MSG_STOP: str = "止损收杆，本局空收"
 MSG_REELED: str = "收杆成功，等待结算"
+MSG_ROLL_FAILED: str = "收杆判定异常，请重试"
 MSG_TIMEOUT_LOST: str = "收杆超时，鱼已跑掉"
 MSG_SIMPLE_DIRECT: str = "已下钩并直接出鱼（simple 模式无等待/鱼讯）"
 MSG_SIMPLE_NO_WAIT: str = "simple 模式无等待/鱼讯流程"
@@ -319,7 +320,10 @@ class FishingEngine:
         """决策窗秒：构造器 carry_sec 优先 → settings.fishing.carry_sec（原始段）→ 90。
         0=不限（细化 §3.4 / B-5）。"""
         if self._carry_sec is not None:
-            return max(0, int(self._carry_sec))
+            # 审查 A1 P2-F-7：构造器路径统一走 _as_int（排除 bool/非整 float），
+            # 与 settings 路径归一一致
+            v = _as_int(self._carry_sec)
+            return max(0, v) if v is not None else DEFAULT_CARRY_SEC
         settings = self._settings_of(ctx)
         fseg = settings.get("fishing")
         if isinstance(fseg, Mapping):
@@ -530,7 +534,7 @@ class FishingEngine:
         # 扣饵（无饵保底不卡死，bait_used=None 仍继续）+ 日计数 +1
         bait_used = self._consume_bait(ctx, cfg)
         fs["today"] = str(today_of(fs.get("today"), now, self._settings_of(ctx))["today"])
-        fs["casts"] = int(fs.get("casts") or 0) + 1
+        fs["casts"] = (_as_int(fs.get("casts")) or 0) + 1
         fs["mode"] = mode
 
         if mode == "simple":
@@ -692,7 +696,13 @@ class FishingEngine:
 
         # full/auto：roll 概率批2 路2C 实现（本路 roll_hook 注入位/骨架，B-6）
         if self._roll_hook is not None:
-            roll_result = self._roll_hook(ctx, fs, choice)
+            try:
+                roll_result = self._roll_hook(ctx, fs, choice)
+            except Exception:
+                # 审查 A1 P1-F-1：钩子失败按失败收杆处理——不落成功快照、不清理
+                # 会话（保持 S3 可重试），对齐同文件 hook 防御惯例（_consume_bait）
+                return {"ok": False, "reason": "roll_failed", "choice": choice,
+                        "state": STATE_BITE, "message": MSG_ROLL_FAILED}
             fs["last"] = {
                 "choice": choice, "kind": str(fs.get("kind") or KIND_NIBBLE),
                 "golden": bool(fs.get("golden", False)),

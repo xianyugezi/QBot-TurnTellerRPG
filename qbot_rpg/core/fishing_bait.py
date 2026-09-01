@@ -128,18 +128,22 @@ def is_preferred_bait(species: object, item_id: object) -> bool:
 def bait_bonus_of(cfg: object) -> Dict[str, int]:
     """读 settings.fishing.bait_bonus（缺省 {rare:8, gold:2}）。
 
-    出参：{rare: int, gold: int}（非负整数；rare/gold 缺省或非法 → 默认值兜底）。
-    本路只读取，不做概率计算（对口饵加成作用于收杆 roll 概率，批2 路2C 消费）。
+    出参：{rare: int, gold: int}（非负整数；逐键兜底——缺键/非法键回退该键
+    默认，全键返回，审查 A2 P1-1）。直传段 dict 时半合法配置（如仅 {rare:5}）
+    不再整体回退吞掉合法键。
+    本路只读取，不做概率计算（对口饵加成作用于收杆 roll 概率，批2 路2C 消费，
+    落点 fishing_roll.pull_odds_of / fishing_reel_commands roll_hook）。
     """
     section = _cfg_fishing(cfg)
     bonus = section.get("bait_bonus")
     out: Dict[str, int] = {}
     if isinstance(bonus, Mapping):
-        for key in ("rare", "gold"):
+        for key, default in _DEFAULT_BAIT_BONUS.items():
             v = bonus.get(key)
-            if isinstance(v, int) and not isinstance(v, bool) and v >= 0:
-                out[key] = v
-    if not out:
+            out[key] = default if not (
+                isinstance(v, int) and not isinstance(v, bool) and v >= 0
+            ) else v
+    else:
         return dict(_DEFAULT_BAIT_BONUS)
     return out
 
@@ -200,6 +204,12 @@ def bait_available(ctx: Mapping[str, Any], qid: object) -> bool:
 
 def consume_bait(ctx: MutableMapping[str, Any], qid: object) -> Dict[str, object]:
     """扣 1 饵（定稿 L96：1 次 = 1 饵）→ {ok, used, had_bait}。
+
+    接线契约（审查 A2 P1-3）：fishing.py _consume_bait（L418-424）优先委托
+    ctx["consume_bait"] hook，调用签名是 (ctx, engine)；装配层把本函数注入
+    ctx["consume_bait"] 时**必须 functools.partial 包装**（partial(consume_bait,
+    ctx=ctx) 或适配 (ctx, engine) 形态），否则 engine 会被当 qid 传入（本路 qid
+    未使用不炸，但语义错位）。「与 fishing.py 内置扣饵同序」仅指内置档序路径。
 
     语义（无饵保底不卡死，定稿 L16 铁律）：
       - 背包持有任一 bait_ids 档内条目 → 按档序取持有第一档扣 1：

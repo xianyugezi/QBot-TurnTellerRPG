@@ -90,7 +90,10 @@ from __future__ import annotations
 from typing import Any, Dict, List, Mapping, MutableMapping, MutableSet, Optional, cast
 
 from qbot_rpg.content.fishing_models import FishDef
-from qbot_rpg.core.fishing_codex import fish_codex_update  # 批4 路4A 正式入册（收口替换本地薄实现）
+from qbot_rpg.core.fishing_codex import (  # 批4 正式入册 + 链常量（A4 P2-7 去重复定义）
+    CROWN_PRIORITY,
+    fish_codex_update,
+)
 from qbot_rpg.core.fishing_crown import crown_of, gen_size_weight
 from qbot_rpg.core.fishing_settings import fishing_cfg
 
@@ -126,10 +129,6 @@ CODEX_FISH_KEYS: tuple = (
     "min_weight",
     "reverse_crown_count",
 )
-
-# best_crown 优先级链（2c1a §4.2：big_gold > gold > big_silver > silver > normal；
-# 逆金冠不入链，单独 reverse_crown_count）
-CROWN_PRIORITY: tuple = ("big_gold", "gold", "big_silver", "silver", "normal")
 
 # 结算消息文案常量（TODO 模板化：批6 fishing_tpl 分区接管，本路返回结构化 dict）
 MSG_SETTLED: str = "出鱼成功：{name} · {size}cm/{weight}kg · {crown}"
@@ -399,7 +398,12 @@ def settle_catch(
     # 后 add；此处若先 add 会导致 reward 幂等闸误判「已结算」跳过入账，金币永不落账）
     tx_id = ctx.get("tx_id")
     ledger = ctx.get("ledger")
-    if tx_id is not None and isinstance(ledger, MutableSet):
+    if tx_id is not None:
+        # 审查 A4 P1-1：tx_id 存在但 ledger 缺失（装配漏注入/测试直调）→ 拒绝，
+        # 宁可失败不可双花（中间态明确拒绝，不静默放行）
+        if not isinstance(ledger, MutableSet):
+            return {"ok": False, "reason": "missing_ledger",
+                    "species_id": species_id, "message": MSG_NO_SNAPSHOT}
         if tx_id in ledger:
             return {"ok": False, "reason": "already_settled",
                     "species_id": species_id, "message": MSG_ALREADY_SETTLED}
@@ -433,22 +437,28 @@ def settle_catch(
     settle_ctx[_SETTLE_REWARD_KEY] = raw_seg.get(_SETTLE_REWARD_KEY)
     settle_ctx["settle_prof_exp"] = raw_seg.get("settle_prof_exp")
 
-    # ③ 图鉴点亮（七键更新 + 首获点亮，防 mark_seen 覆盖）
+    # ③ 图鉴点亮（七键更新 + 首获点亮，防 mark_seen 覆盖）——A4 P1-2：首获写中文名
     catch = {"size": sw["size"], "weight": sw["weight"], "crown": crown}
-    codex_r = fish_codex_update(ctx, species_id, catch)
+    codex_r = fish_codex_update(ctx, species_id, catch, name=_name_of(species))
 
     # ④ 熟练经验（source=gather；amount 配置或常数 10，S-6）——读 settle_ctx（含原始段键）
     prof_r = _grant_prof_exp(ctx, _prof_exp_amount(settle_ctx))
     # ⑤ 奖励（reward 发放器直接复用；默认金币少量，S-5）——纯收藏约束：entries
     #    与 crown 无关（不读取 crown 字段，R-05/TC-25 差分=0）——读 settle_ctx（含原始段键）
+    #    审查 A4 P1-3：只吞 ImportError（装配缺失可明示）；dispatch 自身异常透出 detail
+    #    （reason=dispatch_error + detail=异常类型），不静默吞掉奖励丢失
     reward_r = {}
     try:
         from qbot_rpg.core.reward import dispatch_reward
 
         reward_r = dispatch_reward(_settle_entries(settle_ctx), ctx)
-    except Exception:
+    except ImportError:
         reward_r = {"ok": False, "granted": [],
-                    "skipped": [{"type": "batch", "reason": "dispatch_error"}]}
+                    "skipped": [{"type": "batch", "reason": "dispatch_unavailable"}]}
+    except Exception as exc:  # noqa: BLE001 - 奖励发放兜底，异常透出可观测
+        reward_r = {"ok": False, "granted": [],
+                    "skipped": [{"type": "batch", "reason": "dispatch_error",
+                                "detail": f"{type(exc).__name__}: {exc}"}]}
 
     # ⑥ 组装返回（三要素 size/weight/crown，TC-24）
     name = _name_of(species)

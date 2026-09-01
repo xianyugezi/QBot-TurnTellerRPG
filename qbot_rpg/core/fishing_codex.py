@@ -182,6 +182,8 @@ def fish_codex_update(
     ctx: MutableMapping[str, Any],
     species_id: str,
     catch: Mapping[str, object],
+    *,
+    name: object = None,
 ) -> dict:
     """图鉴点亮入册（T13 / 2c1a §4.2：七键更新 + 首获点亮，防 mark_seen 覆盖）。
 
@@ -190,6 +192,8 @@ def fish_codex_update(
       species_id —— 鱼种 id（快照 target_species_id）。
       catch      —— 本次捕获记录 {size, weight, crown}（size/weight 数值，crown
                      六档键之一）；crown 缺失/非法 → "normal" 保守处理（C-2）。
+      name       —— 首获时写入的展示名（审查 A4 P1-2：应传中文名，缺省回落
+                     species_id——避免 name 键恒等于英文 id 顶掉中文展示）。
     更新规则（2c1a §4.2 / 2c1c R-05，确定性）：
       - caught_count += 1（G-01，每次捕获 +1）
       - best_crown：优先级链 big_gold > gold > big_silver > silver > normal 取最大
@@ -262,9 +266,11 @@ def fish_codex_update(
     )
     fish[species_id] = entry
 
-    # 首获点亮（mark_seen 等价，C-5）；已见则跳过（不重复日志/事件）
+    # 首获点亮（mark_seen 等价，C-5）；已见则跳过（不重复日志/事件）。
+    # A4 P1-2：展示名优先用传入 name（中文名），回落 species_id——避免英文 id 顶中文
     if first_seen:
-        _mark_fish_seen(ctx, species_id, str(entry.get("name") or species_id))
+        display_name = str(name) if name is not None and str(name).strip() else species_id
+        _mark_fish_seen(ctx, species_id, display_name)
 
     # 鱼综述聚合段就位（C-4：king_victory_count 默认 0，批4 路4B 才 +1）
     fish_meta(ctx)

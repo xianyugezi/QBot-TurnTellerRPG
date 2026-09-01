@@ -389,6 +389,16 @@ def mark_seen(
         sync_lore_unlocks(ctx)
     except Exception:
         pass
+    # M11 批4 A1 P0-1 修复：图鉴点亮结算点 → 成就达成检测（4c D-07 授予时机）。
+    # 惰性 import 防环（achievements 不 import codex，codex → achievements 单向 OK）；
+    # try/except 防成就异常吞图鉴点亮。
+    if first_seen:
+        try:
+            from qbot_rpg.core.achievements import check_achievements
+
+            check_achievements(ctx, sources=["codex"])
+        except Exception:
+            pass
     return {"ok": True, "first_seen": first_seen, "category": category, "ref_id": rid}
 
 

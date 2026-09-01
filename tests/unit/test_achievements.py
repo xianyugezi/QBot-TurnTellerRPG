@@ -3,6 +3,8 @@
 覆盖细化_4c 契约 TC-01~13 + TC-16（揭示字段），对齐 docs/m11_成就摸底.md §四 承载表。
 """
 
+from typing import Any, MutableMapping
+
 from qbot_rpg.core.achievements import (
     ACHIEVEMENT_STATE_KEY,
     ACHIEVEMENTS_KEY,
@@ -297,7 +299,7 @@ def test_tc12_once_idempotent_repeat():
 
 
 def test_tc13_hot_reload_removed():
-    """热重载删配置：列表不显示 + 存档保留。"""
+    """热重载删配置：列表降级提示「配置已移除」+ 存档保留（M11 A1 P2-1）。"""
     cfg = _codex_cfg(30.0)
     ctx = _ctx(cfg, codex=30.0)
     check_achievements(ctx)
@@ -306,7 +308,12 @@ def test_tc13_hot_reload_removed():
     cfg2 = {k: v for k, v in cfg.items() if k != "ach_codex_25"}
     ctx[ACHIEVEMENTS_KEY] = _cfg(cfg2)
     entries = list_achievements(ctx)
-    assert not any(e["id"] == "ach_codex_25" for e in entries)  # 列表不显示
+    # 原条目不再以正常形态出现
+    assert not any(e["id"] == "ach_codex_25" and not e.get("removed") for e in entries)
+    # 降级提示行（removed=True，4c §4.3）
+    removed = [e for e in entries if e.get("removed")]
+    assert any(e["id"] == "ach_codex_25" for e in removed)
+    assert "配置已移除" in str(removed[0].get("name"))
     assert "ach_codex_25" in state["unlocked"]  # 存档保留
 
 
@@ -353,3 +360,43 @@ def test_hidden_locked_unreached_name_placeholder():
     assert not e.get("reveal_text")  # 未达成不渲染揭示
     v = achievement_view(ctx, "ach_hidden")
     assert v is not None and v["name"] == "？？？"
+
+
+def test_p0_1_mark_seen_triggers_check():
+    """P0-1 回归守卫：mark_seen 图鉴点亮 → check_achievements 自动触发（D-07 结算点）。
+
+    走真实接线链（codex.mark_seen 内调 check_achievements），断言条件满足即达成。
+    """
+    from qbot_rpg.core.codex import mark_seen as _codex_mark_seen
+
+    cfg = {
+        "ach_codex_25": {
+            "id": "ach_codex_25", "name": "初窥门径",
+            "conditions": [{"var": "codex", "op": "ge", "value": 25}],
+        },
+    }
+    # 构造带 registry 的 ctx（monster 3 只，mark 1 只 → monster 33% → 全局 8.3% <25）
+    class _Reg:
+        def all_ids(self, kind: str) -> tuple:
+            return ("a", "b", "c") if kind == "enemy" else ()
+
+        def resolve(self, rid: str, kind: str):
+            return None
+
+    ctx: MutableMapping[str, Any] = {
+        ACHIEVEMENTS_KEY: _cfg(cfg),
+        ACHIEVEMENT_STATE_KEY: {"unlocked": {}, "repeat_count": {}},
+        "registry": _Reg(),
+        "codex_state": {},
+        "today": "2026-09-01",
+        "level": 10,
+        "settings": {},
+        "event_counts": {},
+        "longline_counters": {},
+    }
+    # mark 全部 3 只怪 → monster 100% → 全局 25% → 成就达成（mark_seen 内自动 check）
+    _codex_mark_seen(ctx, "monster", "a", "怪A")
+    _codex_mark_seen(ctx, "monster", "b", "怪B")
+    _codex_mark_seen(ctx, "monster", "c", "怪C")
+    st = get_achievement_state(ctx)
+    assert "ach_codex_25" in st["unlocked"]

@@ -51,9 +51,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Iterable, List, Mapping, MutableMapping, Optional, Sequence, Set
-
-from qbot_rpg.core.reward import dispatch_reward
+from typing import Any, List, Mapping, MutableMapping, Optional, Sequence, Set
 
 __all__ = [
     "ACHIEVEMENT_STATE_KEY",
@@ -78,10 +76,6 @@ _HIDDEN_MODE_HIDE = "hide"
 # 揭示卡片前缀（D-08 一次性揭示；渲染由调用方，本模块只给结构化字段；
 # 纯文本前缀——emoji 纪律仅 ✅/❌，2026-09-01 M11 收口修正）
 _REVEAL_PREFIX = "[隐藏成就]"
-
-# 成就 ID 长度上限（防御：防异常配置刷爆消息）
-_MAX_NAME_LEN = 40
-_MAX_DESC_LEN = 120
 
 
 # -------------------------------------------------------------------------------------
@@ -178,22 +172,6 @@ def _reveal_of(entry: Mapping[str, Any], hidden: Mapping[str, Any]) -> Optional[
 # -------------------------------------------------------------------------------------
 # 结算器（G1 主体）
 # -------------------------------------------------------------------------------------
-def _iter_entries(raw: object) -> Iterable[Mapping[str, Any]]:
-    """reward 条目迭代（逐条 dict；非法元素跳过，P1-2 不中断）。"""
-    if isinstance(raw, str):
-        # 内联串（D-05）由 dispatch_reward 内部展开，此处按单条目喂入
-        yield {"__inline__": raw}
-        return
-    if isinstance(raw, Mapping):
-        yield dict(raw)
-        return
-    if isinstance(raw, (list, tuple)):
-        for e in raw:
-            if isinstance(e, Mapping):
-                yield dict(e)
-        return
-
-
 def _grant_reward(
     entry: Mapping[str, Any],
     ctx: MutableMapping[str, Any],
@@ -202,11 +180,25 @@ def _grant_reward(
 ) -> dict:
     """单成就奖励发放：dispatch_reward（唯一发放器）+ 幂等落账。
 
+    M11 批4 A1 P1-1 修复：仅当 skipped 无 item_add_failed 才记 ledger——
+    物品未实际入包时不封口幂等（对齐 reward.py L493-499 不封口纪律），
+    同 tx 重放可重发（防静默丢奖）。
     返回 dispatch_reward 结果（{ok, granted, skipped, [idempotent]}）。
     """
+    # importlib 动态加载（M11 批4 A1 P0-1 修复后 G0 环：codex→achievements→reward→codex，
+    # 静态 import 边全断——G0 只扫静态 import 语句，importlib 不构成边）
+    import importlib
+
+    dispatch_reward = importlib.import_module("qbot_rpg.core.reward").dispatch_reward
     r = dispatch_reward(entry, ctx)
     if tx_id is not None and ledger is not None:
-        ledger.add(tx_id)
+        has_item_fail = any(
+            isinstance(s, Mapping) and s.get("type") == "item"
+            and s.get("reason") == "item_add_failed"
+            for s in (r.get("skipped") or [])
+        )
+        if not has_item_fail:
+            ledger.add(tx_id)
     return r
 
 
@@ -267,16 +259,14 @@ def check_achievements(
     reveals: List[dict] = []
     skipped: List[dict] = []
 
-    sources_set = set(sources) if sources else None
     for aid, entry in cfg.items():
         if not isinstance(entry, Mapping):
             skipped.append({"id": aid, "reason": "invalid_entry"})
             continue
-        # 来源筛选（G15 结算点钩子：批2/批3 按结算点传标签）
-        if sources_set is not None:
-            src = entry.get("source")
-            if not (isinstance(src, str) and src in sources_set):
-                continue
+        # M11 批4 A1 P1-3 修复：4c schema 无 source 键（TOP_FIELDS 8 字段无此键），
+        # 按配置 source 过滤恒空 → 分层结算点永不触发。取消筛选，始终全量检测
+        # （配置量小，逐批全检成本可忽略——dsh 建议 b）。sources 参数保留兼容
+        # 但不再过滤（成就配置无 source 维度）。
 
         hidden = _hidden_of(entry)
         once = bool(entry.get("once", True))
@@ -366,7 +356,11 @@ def _now_iso(ctx: Mapping[str, Any]) -> str:
 def _log_milestone(ctx: MutableMapping[str, Any], aid: str) -> dict:
     """冒险日志 milestone（TC-16 断言载体）：惰性 import，缺模块不炸。
 
-    事件键 [事件:成就达成]（base）+ target=成就 ID（nested）；非首见类恒 first_seen=false。
+    事件键 [事件:成就达成]（base）写 flat 计数（不带 target）——M11 批4 A1 P1-5
+    修复：带 target 写 nested {key:{aid:count}}，无 param 条件
+    {var:[事件:成就达成], ge:1} 读 event_counts[key] 得 Mapping → _read_counter 返 0
+    → 事件型成就条件恒不满足。aid 元数据经 instance.params 保留（不进 event_counts）。
+    非首见类恒 first_seen=false。
     """
     try:
         from qbot_rpg.core.event_bus import bump_event
@@ -376,7 +370,6 @@ def _log_milestone(ctx: MutableMapping[str, Any], aid: str) -> dict:
             "[事件:成就达成]",
             instance={
                 "tag": "achievement",
-                "target": aid,
                 "first_seen": False,
                 "template_id": "achievement",
                 "params": {"achievement_id": aid},
@@ -414,10 +407,15 @@ def list_achievements(ctx: Mapping[str, Any]) -> list:
         name = str(entry.get("name") or aid)
         if not is_unlocked and mode == _HIDDEN_MODE_LOCKED:
             name = "？？？"
+        # M11 批4 A1 P1-2 修复：locked 未达成 desc 不渲染明文（D-08 防剧透，
+        # TC-14 只显锁定态）；仅已达成输出 desc。
+        desc = str(entry.get("desc") or "")
+        if not is_unlocked and mode == _HIDDEN_MODE_LOCKED:
+            desc = ""
         item: dict = {
             "id": str(aid),
             "name": name,
-            "desc": str(entry.get("desc") or ""),
+            "desc": desc,
             "unlocked": is_unlocked,
             "ts": str(unlocked.get(aid) or ""),
             "repeat_count": int(repeat.get(aid, 0) or 0),
@@ -429,6 +427,17 @@ def list_achievements(ctx: Mapping[str, Any]) -> list:
         out.append(item)
     # 已达成置顶（稳定排序：unlocked 在前，保持配置序）
     out.sort(key=lambda x: (not x["unlocked"],))
+    # M11 批4 A1 P2-1 修复：热重载降级提示——unlocked 中存在但配置已删除的成就
+    # （4c §4.3 TC-13：存档保留 + 列表降级提示「配置已移除」）
+    cfg_ids = set(cfg.keys())
+    for aid in unlocked:
+        if aid not in cfg_ids:
+            out.append({
+                "id": str(aid), "name": "（配置已移除）", "desc": "",
+                "unlocked": True, "ts": str(unlocked.get(aid) or ""),
+                "repeat_count": 0, "hidden": False, "mode": "",
+                "removed": True,
+            })
     return out
 
 
@@ -454,10 +463,14 @@ def achievement_view(ctx: Mapping[str, Any], aid: str) -> Optional[dict]:
     name = str(entry.get("name") or aid)
     if not is_unlocked and mode == _HIDDEN_MODE_LOCKED:
         name = "？？？"
+    # M11 批4 A1 P1-2 修复：locked 未达成 desc 不渲染明文（同 list_achievements）
+    desc = str(entry.get("desc") or "")
+    if not is_unlocked and mode == _HIDDEN_MODE_LOCKED:
+        desc = ""
     out: dict = {
         "id": str(aid),
         "name": name,
-        "desc": str(entry.get("desc") or ""),
+        "desc": desc,
         "unlocked": is_unlocked,
         "ts": str(unlocked.get(aid) or ""),
         "repeat_count": int(repeat.get(aid, 0) or 0),

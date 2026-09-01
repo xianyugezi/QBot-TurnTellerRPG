@@ -743,6 +743,61 @@ class BattleEngine:
             return self._settle(STATUS_LOSE, "player_dead", resolve_at="immediate")
         return None
 
+    def _apply_skill_energy(
+        self, attacker: str, ca: Mapping[str, Any], sd: Mapping[str, Any], target: str
+    ) -> Optional[ActionOutcome]:
+        """M13 6c 批12：技能 energy_cost 门禁 + energy_gain 结算（resource_axis 委托）。
+
+        - energy_cost：施放前检查（不足 → 被拒不耗回合，返回被拒 ActionOutcome）；
+        - energy_gain：成功路径（调用方继续）后增加封顶——本方法在检查通过时
+          立即结算 gain（同一技能 energy_cost+gain 并存时：先扣后增，契约 K4）。
+        未注入 resource_registry（引擎无注册表）→ 零操作（容错，装配层接线后生效）。
+        """
+        try:
+            from qbot_rpg.core import resource_axis  # noqa: PLC0415
+        except Exception:  # pragma: no cover - 防御兜底
+            return None
+        registry = getattr(self, "_resource_registry", None)
+        if registry is None:
+            return None
+        # energy_cost 门禁（技能 def 段）
+        cost = sd.get("energy_cost")
+        if isinstance(cost, Mapping) and cost:
+            ctx = self._resource_ctx(attacker, target, registry)
+            for axis_id, cost_map in cost.items():
+                if not isinstance(cost_map, Mapping):
+                    continue
+                ok = resource_axis.check_cost(ctx, str(axis_id), dict(cost_map), side=attacker)
+                if not ok.get("ok", True):
+                    seq = self._record_action(
+                        attacker, str(ca.get("type", "skill")), target,
+                        {"hit": False, "crit": "low", "blocked": False, "pierce": 0.0,
+                         "multi": 1.0, "combo_rejected": True, "combo_reason": "energy_insufficient"},
+                        {"ch_phys": 0, "ch_elem": 0, "final": 0}, self._phase)
+                    return ActionOutcome(
+                        False, seq, attacker, str(ca.get("type", "skill")), target,
+                        False, "low", False, 0, 0,
+                        int(self._combat(target).get("hp", 0)), (),
+                        f"能量不足（{axis_id}），技能被拒（不耗回合）")
+                # 扣减
+                resource_axis.pay_cost(ctx, str(axis_id), dict(cost_map), side=attacker)
+        # energy_gain 结算（技能 def 段；成功施放后增加封顶）
+        gain = sd.get("energy_gain")
+        if isinstance(gain, Mapping) and gain:
+            ctx = self._resource_ctx(attacker, target, registry)
+            resource_axis.apply_gain(ctx, dict(gain), side=attacker)
+        return None
+
+    def _resource_ctx(self, attacker: str, target: str, registry: Any) -> Dict[str, Any]:
+        """资源轴引擎 ctx 构造（注册表 + 双方 resource_state 注入）。"""
+        from qbot_rpg.core.resource_axis import RESOURCE_STATE_KEY  # noqa: PLC0415
+
+        state = self._snap.get(RESOURCE_STATE_KEY) or {}
+        return {
+            "stats": registry,
+            RESOURCE_STATE_KEY: state,
+        }
+
     def _tick_transform_state(self) -> None:
         """M13 6b（细化_6b §2.2/D-03）：transform 回合 tick（end_turn ⑥ 后）。
 
@@ -1311,6 +1366,13 @@ class BattleEngine:
             _mp = int(_c.get("mp", 0) or 0)
             if _mp >= _mp_cost:
                 _c["mp"] = _mp - _mp_cost
+
+        # ---- M13 6c 批12 收口：技能 energy_cost 门禁 + energy_gain 结算 ----
+        # 技能 def 的 energy_cost（施放前检查：不足 → 被拒不耗回合，复用 rejected
+        # 语义——返回被拒 outcome 不继续）+ energy_gain（成功结算后增加封顶）。
+        _energy_gate = self._apply_skill_energy(attacker, ca, sd, target)
+        if _energy_gate is not None:
+            return _energy_gate
 
         # ---- P1-3/P1-4（dsh 批3）：技能 effects 消费 + 打断/霸体闭环 ----
         # 1c2 §1.3 字段 24「effects 归口效果系统；interrupt 唯一实现走 effects.json」：

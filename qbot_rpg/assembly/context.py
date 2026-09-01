@@ -597,6 +597,40 @@ def _king_victory_record_hook(ctx: MutableMapping[str, Any]):
     return _hook
 
 
+def _respawn_hook_of(ctx: MutableMapping[str, Any]):
+    """PVP 击杀惩罚回城薄委托（M11 批4 A3 P0-1：kill_penalty=respawn 时消费）。
+
+    回城语义（定稿）：目标被击杀 → 传送回初始地图并恢复。当前薄委托返回 no-op
+    可调用（引擎 callable 判定通过）；实机部署时由世界层接线真实回城。
+    """
+
+    def _hook(qid: str) -> None:
+        # 实机部署位：调用世界层回城/复活逻辑（当前无独立回城引擎，no-op）
+        return None
+
+    return _hook
+
+
+def _players_table_of(ctx: MutableMapping[str, Any]) -> Dict[str, Any]:
+    """PVP 目标玩家表（M11 批4 A3 P0-1）。
+
+    生产 repo.load_player 为 async（不可同步调），装配层无法预载全量玩家——
+    返回空表（引擎 _player_by_qid 兜底 None → 「目标玩家不存在」由实机会话层
+    补充在线玩家接线）。测试/内嵌场景可注入 players 覆盖。
+    """
+    return {}
+
+
+def _active_sessions_of(ctx: MutableMapping[str, Any]) -> Dict[str, Any]:
+    """PVP 偷袭判定会话表（M11 批4 A3 P0-4）。
+
+    session_mgr.get_active 为 async，引擎同步路径不可 await——装配层在异步侧把
+    当前玩家会话快照注入本表（{qid: {session_type: ...}}）；本工厂当前无会话
+    快照源（异步侧未接），返回空表（偷袭判定恒 False，实机部署时接线）。
+    """
+    return {}
+
+
 def _templates_table(registry: Any) -> Dict[str, Any]:
     """消息模板（2026-08-31 用户拍板：模板配置化，内容包 templates.json 可覆盖默认）。
 
@@ -1230,6 +1264,19 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
             # {job_id: level}——quest 引擎 var=prof_level 条件（param=job_id）消费；
             # 未注册/无建档 → {} 空（条件不满足，引导任务不提前解锁）。
             "prof_level": _prof_level_map(ps.get("proficiency")),
+            # M11 PVP（批4 A3 P0-1 修复 2026-09-01）：全链路装配注入。
+            #  pvp_target 锁定态挂 ps（对齐 forge_preview 教训：生产每指令重建 ctx，
+            #  不落 ps 则跨指令恒丢）；pvp_daily 防刷计数挂 ps（FR-R1/R2）；
+            #  respawn_hook 击杀惩罚回城薄委托；players 生产侧 async 不可同步调，
+            #  空表兜底（实机部署时由在线层接线）；active_sessions 会话表供偷袭判定。
+            "pvp_target": _ps_init(ps, "pvp_target", ""),
+            "pvp_daily": _ps_init(ps, "pvp_daily", {"rewards": 0, "pairs": {}}),
+            "respawn_hook": _respawn_hook_of(ctx),
+            "players": _players_table_of(ctx),
+            "active_sessions": _active_sessions_of(ctx),
+            # M11 批4 A3 P1-5 修复：技能表注入（/攻击玩家 技能序号解析消费；
+            # 对齐 items 注入 L1131 先例——registry skill 表）
+            "skills": _table_from_registry(deps.registry, "skill"),
             # M8 炼金（批11-2 收口）：背包 hooks（_inventory_hooks 就地操作
             # ctx["inventory"] 计数映射，reward/shop 同款契约）+ 玩家级解锁表回填
             # （配方合成/进化持久化，换包同 ID 保留 DUP-06）

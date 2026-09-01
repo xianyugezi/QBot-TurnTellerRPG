@@ -168,7 +168,9 @@ def _resolve_skill(ctx: Mapping[str, Any], text: str) -> Optional[str]:
 
 
 def _equip_summary(equipment: Any) -> str:
-    """装备摘要：equipment 映射按槽位逐件 `槽位：物品`；空 → 「无」（F-5）。"""
+    """装备摘要：字符串直通（引擎已渲染 equipment_summary）；映射按槽位逐件；空 → 「无」（F-5）。"""
+    if isinstance(equipment, str) and equipment:
+        return equipment
     if not isinstance(equipment, Mapping):
         return "无"
     parts = []
@@ -262,7 +264,7 @@ def _render_lock_status(ctx: MutableMapping[str, Any], qq: str, result: Mapping[
     if hp is not None and max_hp is not None:
         lines.append(tpl_of(ctx, "pvp_lock_status_hp", {"hp": hp, "max_hp": max_hp}))
     lines.append(tpl_of(ctx, "pvp_lock_status_equip",
-                        {"summary": _equip_summary(target.get("equipment"))}))
+                        {"summary": _equip_summary(target.get("equipment_summary"))}))
     return "\n".join(lines)
 
 
@@ -300,7 +302,14 @@ def cmd_pvp_attack(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 
 
 def _render_attack_result(ctx: MutableMapping[str, Any], result: Mapping[str, Any]) -> str:
-    """攻击结算消息：pvp_attack_ok 行 + 可选伤害行（result 字段缺省整行降级，F-6）。"""
+    """攻击结算消息：pvp_attack_ok 行 + 可选伤害行（result 字段缺省整行降级，F-6）。
+
+    M11 批4 A3 P1-8 修复：引擎返回 {ok, message, result:{name,damage,hp,max_hp,...}}
+    ——嵌套字段在 result["result"] 内（pvp.py pvp_settle 契约），壳层读内层。
+    """
+    inner = result.get("result")
+    if isinstance(inner, Mapping):
+        result = inner
     name = str(result.get("name") or "对方")
     damage = result.get("damage")
     hp = result.get("hp")

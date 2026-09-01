@@ -102,14 +102,14 @@ def test_lock_ok_renders_target_status(monkeypatch) -> None:
                     lock_result={"ok": True, "target": {
                         "name": "小王", "level": 8, "job": "mage",
                         "hp": 60, "max_hp": 80,
-                        "equipment": {"weapon": {"name": "法杖"}}}},
+                        "equipment_summary": "weapon:法杖"}},
                     attack_result={})
     out = cmd_pvp_lock(_P("123456789"), _ctx())
     assert "✅ 已锁定玩家：小王" in out
     assert "【等级】8" in out
     assert "【职业】mage" in out
     assert "【血量】60/80" in out
-    assert "【装备】weapon：法杖" in out
+    assert "【装备】weapon:法杖" in out
 
 
 def test_lock_self_rejected() -> None:

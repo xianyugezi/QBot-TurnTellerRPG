@@ -174,14 +174,15 @@ def test_attack_settle_shape():
 # 防刷（FR-R1 每日上限）
 # ---------------------------------------------------------------------------
 def test_daily_reward_limit():
-    """每日奖励上限 → 只判负零掉落。"""
+    """每日奖励上限 → 奖励封顶但胜负正常结算（M11 A3 P1-2：不伪造防守方胜）。"""
     ctx = _ctx()
     ctx["pvp_target"] = "123456789"
     ctx["pvp_daily"] = {"rewards": 5}
-    # 上限 5 → 达上限直接返回
+    # 上限 5 → reward_blocked 标记（battle=None 无结算 → ended=False winner=None）
     from qbot_rpg.core.pvp import pvp_settle
 
     r = pvp_settle(ctx, None, None, _player())
     assert r["ok"] is True
-    assert "上限" in r["message"]
-    assert r["result"]["winner"] == "defender"
+    assert r["result"]["reward_blocked"] is True
+    # 胜负不被伪造（battle 无状态 → winner 保持 None 而非 defender）
+    assert r["result"]["winner"] is None

@@ -1544,7 +1544,12 @@ class BattleEngine:
         - 执行侧字段合并：action 定义（decide 已把 power→mult）的 attack_type/armor/effects
           归一化到 action_dict 顶层（T24 同构双库：技能=怪物行动=一次出手，复用玩家伤害通道）。
         - 无 AI 注入 / decide 异常返回 None → 调用方落 M1 默认普攻。
+        - M11 批4 A3 P1-3：PVP 战斗（battle_type=="pvp"）防守方无 AI → 一直防御
+          （定稿 L352「防守方不操作则一直防御」；玩家互斗非镜像场景防守方离线/
+          不操作=恒 guard，不自动普攻反击）。
         """
+        if self._snap.get("battle_type") == "pvp":
+            return {"type": "guard", "mult": 1.0}
         if self._enemy_ai is None:
             return None
         try:

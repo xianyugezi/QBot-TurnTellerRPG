@@ -62,7 +62,7 @@ import random
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Mapping, MutableMapping, Optional, Sequence, Tuple
 
 from qbot_rpg.core.damage import (
     DamageFormulaParams,
@@ -234,6 +234,13 @@ class ActionOutcome:
     message: str = ""
     battle_ended: bool = False
     status: Optional[str] = None
+    # M13 批15 路15C：组合技能战斗接线——combo_table 触发/结算审计（F-C1/F-C2）。
+    # 语义：None=常规技能/普攻（未走组合判定）；dict=技能施放时组合判定结果
+    # （{matched, name, kind, power, hits, mp_cost, energy_cost, events}）——
+    # 命中组合行 → row 字段随行（行为随组合变化）；未命中 → matched=[] 且
+    # reason∈{no_combo_match, energy_total_insufficient}（回退常规路径，能量
+    # gain/cost 照常）。战报/展示层可据此渲染「烈焰爆破！」组合名。
+    combo_result: Optional[Dict[str, Any]] = None
 
 
 @dataclass(frozen=True)
@@ -373,11 +380,21 @@ class BattleEngine:
         self._guard_active: Dict[str, bool] = {"player": False, "enemy": False}
         self._turn_acted: Dict[str, bool] = {"player": False, "enemy": False}
         self._effect_ids: Dict[str, List[str]] = {"player": [], "enemy": []}
+        # M13 批15 路15A：transform 还原冷却延迟缓存（D-05：dispel 还原延迟到
+        # 下一回合结束 tick；transform_revert.dispel_triggered 的持久标记写入点
+        # 在 _apply_skill_energy/_resolve_combo_action 之外，故战斗层用瞬态缓存
+        # 承接——同回合内被驱散 → end_turn tick 即还原，不跨战斗快照）
+        self._transform_dispel_pending: Dict[str, bool] = {"player": False, "enemy": False}
+        self._transform_revert_pending: Dict[str, bool] = {"player": False, "enemy": False}
         # 霸体瞬态（1c2 §2.2：行动开始 → 本次结算完成；打断判定依据）
         self._armor_active: Dict[str, bool] = {"player": False, "enemy": False}
         self._death_order: List[str] = []   # 死亡登记顺序（互杀审计，1g1b A2）
         self._current_actor: Optional[str] = None      # 当前行动者（先手击杀判定，TC-11）
         self._qualified_kill_origin: bool = False      # 敌人死因=玩家行动直击（order 基准）
+        # M13 批15 路15A：transform 装配注入位（set_transform_def）与事件审计
+        self._transform_def: Dict[str, Any] = {}
+        self._transform_events: List[Mapping[str, Any]] = []
+        self._job_id: str = ""
 
     # ------------------------- 状态机制 -------------------------
 
@@ -798,6 +815,326 @@ class BattleEngine:
             RESOURCE_STATE_KEY: state,
         }
 
+    # ------------------------- M13 批15 路15A：transform 战斗接线 -------------------------
+
+    def _job_transform_segment(self) -> Dict[str, Any]:
+        """惰性解析当前职业 transform 段（G0：不 import content/job_models）。
+
+        读取优先级（防御性，缺省空段）：
+          1) self._transform_def（装配层显式注入的 transform 段——测试/命令层
+             可经 set_transform_def 注入，优先于一切配置源）；
+          2) self._defs[\\"jobs\\"][job_id][\\"transform\\"]（jobs.json 配置，
+             job_id 取 self._job_id 或 player 侧 job 字段）；
+          3) player 侧 combatant job_transform 字段（命令层挂载形态）。
+        返回空段 → 无 transform 配置（零操作降级）。
+        """
+        if isinstance(self._transform_def, Mapping) and self._transform_def:
+            return dict(self._transform_def)
+        defs = self._defs if isinstance(self._defs, Mapping) else {}
+        jobs = defs.get("jobs")
+        if isinstance(jobs, Mapping):
+            job_id = str(self._job_id or "") or str(self._combat("player").get("job") or "")
+            if job_id:
+                jd = jobs.get(job_id)
+                if isinstance(jd, Mapping):
+                    t = jd.get("transform")
+                    if isinstance(t, Mapping):
+                        return dict(t)
+        pc = self._combat("player")
+        t = pc.get("job_transform")
+        if isinstance(t, Mapping):
+            return dict(t)
+        return {}
+
+    def _transform_ctx(self, attacker: str, ca: Mapping[str, Any], sd: Any) -> Dict[str, Any]:
+        """构造 trigger_transform 战斗 ctx（快照段 + G0 钩子注入）。
+
+        注入项：
+          - transform_state：战斗快照 transform_state 段（引擎轨权威）；
+          - combo_state/marks_state/status_state/combo_events：state_policy
+            读写段（apply_state_policy 直接改快照）；
+          - resolve_hook：触发技效果已在战斗通道结算（TRF-1），此处恒
+            {ok:True} 不重结算（F1-2 时序契约）；
+          - apply_status_hook：形态状态施加（form_status_id 双写 T6）；
+          - rearrange_hook：技能位重排——形态技能组经 ctx[\\"form_skills\\"]
+            注入（技能条目 raw dict），缺省引擎侧 rearrange_slots 装配
+            （SH-1~5；装配层 skill_slots.apply_job_form 委托由 15B 路覆盖）；
+          - resource_check_hook：C2 资源门禁——MP 足够 + energy_cost 已由
+            战斗层上方门禁扣费，此处放行（防双重扣费，TRF-2 不额外耗回合）；
+          - skip_check：C4 被控判定（skip_turn 不触发）。
+        """
+        from qbot_rpg.core.transform import (  # noqa: PLC0415
+            TRANSFORM_STATE_KEY,
+            trigger_transform,
+        )
+        from qbot_rpg.core.transform_revert import REVERT_FORM  # noqa: PLC0415
+
+        tctx: Dict[str, Any] = {
+            TRANSFORM_STATE_KEY: self._snap.get(TRANSFORM_STATE_KEY),
+            "combo_state": self._snap.setdefault("combo_state", {}),
+            "marks_state": self._snap.setdefault("marks_state", {"player": [], "enemy": []}),
+            "status_state": self._snap.setdefault("status_state", {"player": [], "enemy": []}),
+            "combo_events": self._snap.setdefault("combo_events", []),
+            "resolve_hook": (lambda c, t: {"ok": True, "effects": []}),
+            "apply_status_hook": self._transform_apply_status,
+            "resource_check_hook": (lambda c, t: {"ok": True, "reason": ""}),
+            "skip_check": self._transform_skip_check,
+        }
+        fs = self._snap.get("transform_form_skills")
+        if isinstance(fs, list):
+            tctx["form_skills"] = fs
+        return tctx
+
+    def _transform_apply_status(self, ctx: Mapping[str, Any], transform: Mapping[str, Any], form: str) -> Optional[str]:
+        """④a 形态状态施加（D-02 双轨效果侧）：经效果系统 apply_status 真实
+        施加（status_state 写快照），返回 form_status_id（T6 双写登记）。
+
+        形态状态定义（status_id）优先 transform.form_status_id，缺省
+        form_status_id=None（不施加——双轨联动 dispel_reverts 由命令层/
+        装配层在配置时保证）。无 registry/defs 解析 → 不施加（降级 None）。
+        """
+        from qbot_rpg.core.effects import DamageCtx  # noqa: PLC0415
+
+        status_id = transform.get("form_status_id")
+        if not isinstance(status_id, str) or not status_id:
+            return None
+        rt = self._new_runtime()
+        ctx_snap = self._snap
+        dctx = DamageCtx(
+            raw_damage=0, attack_type="transform", attacker="player", target="player",
+            snapshot=ctx_snap, variables=self._base_variables("player", "player"),
+        )
+        res = rt.apply_status(status_id, "player", source="player", attacker="player", ctx=dctx)
+        self._absorb_runtime(rt)
+        return status_id if bool(getattr(res, "applied", False)) else None
+
+    def _transform_skip_check(self, ctx: Mapping[str, Any]) -> bool:
+        """C4 被控判定：玩家 control_state.skip_turn>0 → True（不触发）。"""
+        ctrl = self._combat("player").get("control_state")
+        return bool(isinstance(ctrl, dict) and float(ctrl.get("skip_turn", 0) or 0) > 0)
+
+    def set_transform_def(self, transform: Optional[Mapping[str, Any]]) -> "BattleEngine":
+        """装配注入：transform 段（transform_skill/transform_to/duration/turns/
+        cooldown/state_policy/skill_set/form_status_id…）。None → 清空配置。
+        """
+        self._transform_def = dict(transform) if isinstance(transform, Mapping) else {}
+        return self
+
+    def set_job_id(self, job_id: str) -> "BattleEngine":
+        """装配注入：当前职业 ID（_job_transform_segment 经 defs[jobs] 解析
+        transform 段的 job_id 基准；缺省回退 player 侧 job 字段）。"""
+        self._job_id = str(job_id or "")
+        return self
+
+    def _transform_policy_report(self) -> List[Mapping[str, Any]]:
+        """transform 事件审计（触发/还原事件列表，供战报消息消费）。"""
+        return list(getattr(self, "_transform_events", []) or ())
+
+    def _apply_transform_revert(
+        self,
+        reason: str,
+        *,
+        cooldown: int = 5,
+        side: str = "player",
+    ) -> bool:
+        """F2 还原结算（自然结束/主动 revert_form/被驱散 dispel 三路归一）。
+
+        战斗层封装 transform_revert.revert_transform 的 state_policy 注入
+        通道（combo/marks/buff 真实清快照）。transform 配置缺省 → 冷却按
+        transform.cooldown（缺省 5）起算；无形态（form=null）→ 零操作。
+        返回是否实际还原。
+        """
+        from qbot_rpg.core.transform_revert import (  # noqa: PLC0415
+            REVERT_DISPEL,
+            revert_transform,
+        )
+
+        ts = self._snap.get("transform_state")
+        if not isinstance(ts, dict) or ts.get("form") is None:
+            return False
+        tseg = self._job_transform_segment()
+        if not tseg:
+            tseg = {"cooldown": cooldown}
+        result = revert_transform(
+            {"player": {"persistent_state": {"transform_state": ts}},
+             "battle_state": self._snap},
+            tseg,
+            reason=reason,
+            side=side,
+            combo_clear=self._transform_combo_clear,
+            marks_clear=self._transform_marks_clear,
+            buff_remove=self._transform_buff_remove,
+        )
+        if result.get("ok") and result.get("reverted"):
+            self._snap["transform_state"] = result["state"]
+            # D-05：dispel 还原后清除持久标记（dispel_triggered 消费位，防重复还原）
+            if reason == REVERT_DISPEL:
+                ps = self._snap.get("player")
+                if isinstance(ps, dict):
+                    ps_ps = ps.get("persistent_state")
+                    if isinstance(ps_ps, dict):
+                        ps_ps.pop("transform_pending_dispel", None)
+            events = list(getattr(self, "_transform_events", []) or ())
+            events.append({
+                "type": "transform_reverted",
+                "reason": str(result.get("reason") or reason),
+                "cooldown_remaining": int(result["state"].get("cooldown_remaining", 0)),
+            })
+            self._transform_events = events
+            return True
+        return False
+
+    def _transform_combo_clear(self, side: str, snap: Mapping[str, Any], reason: str) -> None:
+        """combo=clear 注入通道：清连段五字段空态 + combo_events 审计。"""
+        from qbot_rpg.core.transform import apply_state_policy  # noqa: PLC0415
+
+        if not isinstance(snap, dict):
+            snap = self._snap
+        apply_state_policy(snap, {"combo": "clear", "marks": "keep", "buff": "keep"}, side=side, reason=reason)
+
+    def _transform_marks_clear(self, side: str, snap: Mapping[str, Any]) -> None:
+        """marks=clear 注入通道：清印记实例列表。"""
+        ms = snap.get("marks_state")
+        if isinstance(ms, dict):
+            ms[side] = []
+
+    def _transform_buff_remove(self, side: str, snap: Mapping[str, Any], status_id: str) -> None:
+        """buff=clear 注入通道：移除形态状态本体（status_state 条目）。"""
+        ss = snap.get("status_state")
+        if not isinstance(ss, dict):
+            return
+        entries = ss.get(side)
+        if not isinstance(entries, list):
+            return
+        ss[side] = [e for e in entries if not (isinstance(e, dict) and (e.get("id") or e.get("status_id")) == status_id)]
+
+    def _transform_dispel_tick(self, side: str = "player") -> None:
+        """D-05 dispel 延迟结算：驱散命中登记 → 下一回合结束 tick 还原。
+
+        读 transform_revert.dispel_triggered（persistent_state 标记）或
+        战斗内瞬态缓存（_transform_dispel_pending，同回合内被驱散）。
+        """
+        from qbot_rpg.core.transform_revert import (  # noqa: PLC0415
+            REVERT_DISPEL,
+            dispel_triggered,
+        )
+
+        if self._transform_dispel_pending.get(side):
+            self._transform_dispel_pending[side] = False
+            self._apply_transform_revert(REVERT_DISPEL)
+            return
+        ps = self._snap.get("player")
+        if isinstance(ps, dict) and dispel_triggered({"player": ps}, side=side):
+            self._apply_transform_revert(REVERT_DISPEL)
+            # 消费持久标记（防下一回合重复还原；_apply_transform_revert 内
+            # 已在 REVERT_DISPEL 分支清除，此处兜底幂等）
+            ps_ps = ps.get("persistent_state")
+            if isinstance(ps_ps, dict):
+                ps_ps.pop("transform_pending_dispel", None)
+
+    def _resolve_combo_table_gate(
+        self, attacker: str, ca: Mapping[str, Any], sd: Mapping[str, Any], target: str
+    ) -> Optional[ActionOutcome]:
+        """M13 批15 路15C：技能 combo_table 组合门禁 + F-C2 结算。
+
+        - 无 combo_table 段 → None（B-3 常规技能回退）；
+        - gate_combination 命中组合行 → settle_combo 双耗结算（MP+能量按行
+          池分布扣减）+ 行为随组合变化，返回组合结算 ActionOutcome；
+        - 未命中 → 被拒不耗回合（reason=no_combo_match）。
+        审计落 ca 侧 combo_result（战报/测试可观察）。
+        """
+        from qbot_rpg.core.combo_table import gate_combination  # noqa: PLC0415
+        from qbot_rpg.core.combo_settle import settle_combo  # noqa: PLC0415
+
+        rows_exist = bool(sd.get("combo_table"))
+        if not rows_exist:
+            return None
+        registry = getattr(self, "_resource_registry", None)
+        if not isinstance(registry, Mapping) or not registry:
+            # 无资源注册表（引擎未装配资源轴）→ 组合门禁跳过（B-3 常规技能回退）
+            return None
+        axis_id = "element_energy"
+        if registry is not None and isinstance(registry, Mapping):
+            # 找第一个子池型轴作为组合能量轴（缺省 element_energy）
+            for aid, entry in registry.items():
+                if isinstance(entry, Mapping) and entry.get("type") == "element_energy":
+                    axis_id = str(aid)
+                    break
+        ctx = self._resource_ctx(attacker, target, registry or {})
+        gate = gate_combination(ctx, sd, axis_id, side=attacker)
+        if not gate.get("ok"):
+            reason = gate.get("reason", "no_combo_match")
+            seq = self._record_action(
+                attacker, str(ca.get("type", "skill")), target,
+                {"hit": False, "crit": "low", "blocked": False, "pierce": 0.0,
+                 "multi": 1.0, "combo_rejected": True, "combo_reason": reason},
+                {"ch_phys": 0, "ch_elem": 0, "final": 0}, self._phase)
+            return ActionOutcome(
+                False, seq, attacker, str(ca.get("type", "skill")), target,
+                False, "low", False, 0, 0,
+                int(self._combat(target).get("hp", 0)), (),
+                f"组合未达成（{reason}），技能被拒（不耗回合）")
+        row = gate.get("row")
+        if row is None:
+            return None
+        # F-C2 双耗结算（MP + 能量按行池分布；先 check 后 pay）
+        mp_cost = int(sd.get("mp_cost", 0) or 0)
+        r = settle_combo(
+            ctx, row, axis_id=axis_id, side=attacker, mp_cost=mp_cost,
+            mp_check=lambda c, cost: bool(
+                int(self._combat(attacker).get("mp", 0)) >= cost),
+            mp_pay=lambda c, cost: self._combat(attacker).__setitem__(
+                "mp", int(self._combat(attacker).get("mp", 0)) - cost),
+            energy_check=lambda c, aid, cost: bool(
+                self._energy_check_ok(c, aid, cost)),
+            energy_pay=lambda c, aid, cost: self._energy_pay(c, aid, cost),
+        )
+        if not r.get("ok"):
+            reason = r.get("reason", "combo_cost_insufficient")
+            seq = self._record_action(
+                attacker, str(ca.get("type", "skill")), target,
+                {"hit": False, "crit": "low", "blocked": False, "pierce": 0.0,
+                 "multi": 1.0, "combo_rejected": True, "combo_reason": reason},
+                {"ch_phys": 0, "ch_elem": 0, "final": 0}, self._phase)
+            return ActionOutcome(
+                False, seq, attacker, str(ca.get("type", "skill")), target,
+                False, "low", False, 0, 0,
+                int(self._combat(target).get("hp", 0)), (),
+                f"能量不足（{reason}），组合技能被拒（不耗回合）")
+        # 成功：行为随组合变化（kind/power/element/hits/effects 覆写 ca）
+        behavior = r.get("behavior") or {}
+        if isinstance(ca, dict):
+            ca["_combo_settled"] = True  # 防下方常规 MP/energy 重复扣费
+            ca["combo_result"] = {"row": str(getattr(row, "name", "")),
+                                  "energy": r.get("energy_cost")}
+            if behavior.get("kind"):
+                ca["kind"] = behavior["kind"]
+            if behavior.get("power"):
+                ca["power"] = behavior["power"]
+            if behavior.get("element"):
+                ca["element"] = behavior["element"]
+            if behavior.get("hits"):
+                ca["hits"] = behavior["hits"]
+        return None  # 放行常规伤害结算（组合行为已覆写）
+
+    def _energy_check_ok(self, ctx: Mapping[str, Any], axis_id: str, cost: Mapping[str, int]) -> bool:
+        """能量池检查（缺注册表 → True 放行）。"""
+        from qbot_rpg.core.resource_axis import check_cost  # noqa: PLC0415
+
+        try:
+            return bool(check_cost(ctx, axis_id, dict(cost), side="player").get("ok", True))
+        except Exception:  # noqa: BLE001 - 防御兜底
+            return True
+
+    def _energy_pay(self, ctx: Mapping[str, Any], axis_id: str, cost: Mapping[str, int]) -> None:
+        """能量池扣减（缺注册表 → 零操作）。"""
+        from qbot_rpg.core.resource_axis import pay_cost  # noqa: PLC0415
+
+        try:
+            pay_cost(dict(ctx), axis_id, dict(cost), side="player")
+        except Exception:  # noqa: BLE001 - 防御兜底
+            pass
+
     def _tick_transform_state(self) -> None:
         """M13 6b（细化_6b §2.2/D-03）：transform 回合 tick（end_turn ⑥ 后）。
 
@@ -806,6 +1143,9 @@ class BattleEngine:
         纯函数委托 transform_revert；无形态（form=null）→ 无操作。
         """
         from qbot_rpg.core.transform_revert import (  # noqa: PLC0415
+            REVERT_DISPEL,
+            REVERT_FORM,
+            REVERT_NATURAL,
             should_revert_natural,
             tick_cooldown,
             tick_remaining,
@@ -817,16 +1157,165 @@ class BattleEngine:
         if ts.get("form"):
             # 形态持续中：remaining 递减
             ts.update(tick_remaining(ts))
+            # M13 批15 路15A：dispel 延迟还原（D-05）——下一回合结束 tick
+            # 结算；与自然结束同规则（state_policy + 冷却起算，P-3 dispel 不豁免）
+            self._transform_dispel_tick()
+            ts = self._snap.get("transform_state")
+            if not isinstance(ts, dict):
+                return
+            # dispel 还原后同回合冷却递减（P-3 不豁免 + D-03：与自然结束同规则）
+            if ts.get("form") is None and ts.get("cooldown_remaining", 0) > 0:
+                ts.update(tick_cooldown(ts))
+            if not ts.get("form"):
+                return
             if should_revert_natural(ts):
                 # 自然结束还原：form 清空 + 冷却起算（transform 配置经 job 惰性解析，
                 # 引擎层只做状态机迁移；具体 cooldown 值由装配层注入 job_def 时设置）
-                ts["form"] = None
-                ts["form_name"] = None
-                ts["form_status_id"] = None
-                ts["active_skill_set"] = None
+                self._apply_transform_revert(REVERT_NATURAL)
+                ts = self._snap.get("transform_state")
+                if not isinstance(ts, dict):
+                    return
+                # 还原后同回合冷却递减（D-03：冷却随回合 tick 递减）
+                if ts.get("cooldown_remaining", 0) > 0:
+                    ts.update(tick_cooldown(ts))
         else:
             # 常态/冷却期：冷却递减
             ts.update(tick_cooldown(ts))
+
+    # ------------------------- 换季×战斗联动（M13 6c：EFF-2/F-R2/E1/E5） -------------------------
+
+    def _init_season_state(self) -> None:
+        """进战懒加载（EFF-2）：战斗开始初始化换季状态段。
+
+        初始生效季节 = 进战当前世界季节（ctx[\"season_now\"] 注入通道，装配层
+        接 worldtime.season_now；无季节环境 → 回落通用 SEASON_ANY，全技能可用
+        零空窗 P-2/P-10）。season_event_state 幂等段随 start 骨架就位（缺省
+        last_season_idx=-1 → 首次换季必触发 E5 恰一次）。战斗外（无快照）→
+        零操作降级（F-R2 ⑥ / P-7）。
+        """
+        from qbot_rpg.core.battle_season import (  # noqa: PLC0415
+            init_battle_season,
+        )
+
+        snap = self._snap
+        if not isinstance(snap, dict) or not snap:
+            return
+        season = str(snap.get("season_now") or "") or None
+        init_battle_season(snap, season=season)
+        # season_event_state 幂等段进战登记：last_season_idx ← 进战季节索引
+        # （E5 恰一次语义——只有「后续换季 ≠ 进战季节」才触发事件）。
+        try:
+            from qbot_rpg.core import season_events  # noqa: PLC0415
+
+            seg = snap.get(season_events.SEASON_EVENT_STATE_KEY)
+            if not isinstance(seg, dict):
+                seg = {}
+                snap[season_events.SEASON_EVENT_STATE_KEY] = seg
+            seasons = ("spring", "summer", "autumn", "winter")
+            if season in seasons:
+                seg[season_events.LAST_SEASON_IDX_KEY] = seasons.index(season)
+            else:
+                seg[season_events.LAST_SEASON_IDX_KEY] = -1
+        except Exception:  # noqa: BLE001 - 防御兜底
+            pass
+
+    def _season_ctx(self) -> Dict[str, Any]:
+        """换季懒重读数据源 ctx（season_now + season_idx 注入通道，P-1）。"""
+        snap = self._snap
+        if not isinstance(snap, dict):
+            return {}
+        return {"season_now": snap.get("season_now"), "season_idx": snap.get("season_idx")}
+
+    def _check_season_action(self, attacker: str, action: Dict[str, Any]) -> Optional[ActionOutcome]:
+        """技能行动换季校验（EFF-5 唯一入口，skill_season.validate_skill_action）。
+
+        仅拦截 {type: skill} 行动（普攻 normal/防御 guard 全年可用，EFF-3 兜底）；
+        非当季技能 → 被拒不耗回合（复用 rejected 管道语义：状态保持 ACT、
+        连段/能量/怒气不变、可反复尝试）——与 MP 被拒同形态（1c1c TC-DEF-04）。
+        懒重读：当前季节经 ctx season_now 每回合现读（SC-2 引擎零新状态机）。
+        未注入 season_now（无季节环境）→ 判定恒 ok，零空窗。
+        """
+        if str(action.get("type") or "") != "skill":
+            return None
+        skill_id = str(action.get("skill_id") or action.get("id") or "")
+        if not skill_id:
+            return None
+        try:
+            from qbot_rpg.core import skill_season  # noqa: PLC0415
+        except Exception:  # pragma: no cover - 防御兜底
+            return None
+        sd = self.combo_engine().resolve_skill(skill_id) or {}
+        season = skill_season.current_season(self._season_ctx())
+        result = skill_season.validate_skill_action(sd, season)
+        if result.get("ok"):
+            return None
+        # 非当季：被拒不耗回合（rejected 管道语义）
+        self._turn_acted[attacker] = False
+        target = self._opposite(attacker)
+        seq = self._record_action(
+            attacker, "skill", target,
+            {"hit": False, "crit": "low", "blocked": False, "pierce": 0.0,
+             "multi": 1.0, "combo_rejected": True, "combo_reason": "season_mismatch"},
+            {"ch_phys": 0, "ch_elem": 0, "final": 0}, self._phase)
+        return ActionOutcome(
+            False, seq, attacker, "skill", target, False, "low", False,
+            0, 0, int(self._combat(target).get("hp", 0)), (),
+            "此术式与当前时节不合，技能被拒（不耗回合）")
+
+    def _tick_season_boundary(self) -> Dict[str, Any]:
+        """换季结算边界（F-R2 ③）：end_turn ⑥ tick 后调用（⑥⑦ 之间挂点）。
+
+        tick_season_boundary 组合 detect + settle：懒重读当前季节 → 差异则
+        标记待结算 → 立即切换（本回合行动阶段已结束，旧组校验已完成 D-05）。
+        返回切换结果（switched/message_key/on_season_change 信号）。幂等：
+        无差异 → 无操作（SC-3 恰一次）。战斗外/无快照 → 降级无操作（P-7）。
+        """
+        from qbot_rpg.core.battle_season import tick_season_boundary  # noqa: PLC0415
+
+        snap = self._snap
+        if not isinstance(snap, dict) or not snap:
+            return {"switched": False}
+        season = str(snap.get("season_now") or "") or None
+        return tick_season_boundary(snap, season)
+
+    def _fire_season_event(self, switched: Mapping[str, Any]) -> List[Dict[str, Any]]:
+        """on_season_change 换季事件触发（E1/E5：恰一次 + L2 proc 容器）。
+
+        仅在换季结算切换成功（switched=True）且当前季节索引 ≠ 上次已触发索引
+        时触发（season_events.trigger_season_event 幂等基准）；proc 列表经
+        ctx[\"season_procs\"] 注入（内容包装配，缺省空 → 只登记不执行）。
+        L2 proc 走 execute_proc_action 容器（max_triggers 双重封顶，E3）。
+        """
+        if not switched.get("switched"):
+            return []
+        try:
+            from qbot_rpg.core import season_events  # noqa: PLC0415
+        except Exception:  # pragma: no cover - 防御兜底
+            return []
+        snap = self._snap
+        season = str(snap.get("season_now") or "") or None
+        procs = snap.get("season_procs") if isinstance(snap, dict) else None
+        if not isinstance(procs, list):
+            procs = []
+        rt = self._new_runtime()
+        runner = None
+        if isinstance(procs, list) and procs:
+            from qbot_rpg.core.effects import execute_proc_action  # noqa: PLC0415
+
+            def _runner(proc: Mapping[str, Any], runtime: Any) -> Any:
+                ctx = DamageCtx(
+                    raw_damage=0, attack_type="season", attacker="player",
+                    target="enemy", snapshot=snap,
+                    variables=self._base_variables("player", "enemy"),
+                )
+                return execute_proc_action(proc, ctx, runtime)
+
+            runner = _runner
+        result = season_events.trigger_season_event(
+            snap, season, procs=procs, runtime=rt, proc_runner=runner,
+        )
+        self._absorb_runtime(rt)
+        return list(result.get("proc_results") or [])
 
     def _settle(
         self,
@@ -979,6 +1468,9 @@ class BattleEngine:
             raise BattleStateError(f"start 仅允许战前准备态进入（当前 {self._state}，1g1b T1）")
         if config:
             self._config.update(config)
+        # M13 批15 路15A：job_id 冗余缓存（装配层可经 set_job_id 注入；缺省 ""
+        # → _job_transform_segment 回退 player 侧 job 字段）
+        self._job_id = str(getattr(self, "_job_id", "") or "")
         self._rng_seed = random_seed if random_seed is not None else random.SystemRandom().randint(0, 2**31 - 1)
         # 尊重调用方注入的自定义确定性 RNG（测试 QueueRNG 等；内置 Random → 按 seed 重建），
         # 生产构造 _reset_state 已建默认 Random() → isinstance(Random) 走 seed 重建（4a TC-17 同种子可复现）。
@@ -1049,6 +1541,14 @@ class BattleEngine:
             # 数值型单键 / 子池型池级展开 D-04）——start 常态骨架；运行时增减经
             # ResourceLifecycle 引擎（resource_lifecycle.py）写入，快照随深拷贝携带。
             "resource_state": {"player": {}, "enemy": {}},
+            # M13 6c（细化_6c §2.3 机制 M6）：battle_season 换季状态段（P-2：
+            # {season, pending}）——进战懒加载初始生效季节=进战当前世界季节
+            # （EFF-2），由 _init_season_state 在 start 收尾统一写入；无季节环境
+            # （未注入 ctx season_now）→ 回落通用 SEASON_ANY（全技能可用零空窗）。
+            "battle_season": {"season": "general", "pending": False},
+            # M13 6c（细化_6c §2.5 M7）：season_event_state 换季事件幂等段
+            # （E2/E5：last_season_idx 恰一次幂等基准；战斗外/缺段 → 缺省 -1）。
+            "season_event_state": {"last_season_idx": -1},
         }
         self._finished = False
         self._death_order = []
@@ -1059,6 +1559,11 @@ class BattleEngine:
         self._effect_ids.setdefault("player", [])
         self._effect_ids.setdefault("enemy", [])
         self._refresh_defenses()
+        # M13 6c（细化_6c §2.3 EFF-2 进战懒加载）：战斗开始初始化换季状态段——
+        # 初始生效季节 = 进战当前世界季节（注入通道 ctx season_now；无季节环境
+        # → 回落通用 SEASON_ANY，全技能可用零空窗 P-2/P-10）。引擎零 import
+        # worldtime/engine（G0），懒重读数据源经装配层注入 ctx。
+        self._init_season_state()
         self.start_turn()
         return self
 
@@ -1189,6 +1694,12 @@ class BattleEngine:
             return self._flee_actor(attacker)
         if atype == "guard":
             return self._guard_actor(attacker)
+
+        # M13 6c（细化_6c §2.2 EFF-5）：技能行动换季校验——非当季技能被拒
+        # （不耗回合，复用 rejected 管道语义；普攻/防御全年可用 EFF-3 兜底）。
+        _season_gate = self._check_season_action(attacker, dict(action_dict))
+        if _season_gate is not None:
+            return _season_gate
 
         # 控制状态裁决（1g2 §1.2：混乱=行动变随机普攻；skip_turn=跳过行动）
         ctrl = self._combat(attacker).get("control_state")
@@ -1360,13 +1871,26 @@ class BattleEngine:
                 if step_tag:
                     action.setdefault("tag", step_tag)
 
+        # ---- M13 批15 路15C：组合技能战斗接线（细化_6c §三 F-C1/F-C2）----
+        # 技能 def combo_table 段 → 施放时 F-C1 触发判定（gate_combination：
+        # 常规门禁由上方管道承载 → 总量门 → 多重集匹配）。命中组合行 → 锁定
+        # 行为随组合变化（kind/power/element/hits/effects）+ F-C2 双耗结算
+        # （MP+能量按行池分布扣减，CM-2 先匹配后消耗）；未命中 → 回退常规
+        # 技能路径（energy_cost/gain 已在上方照常，被拒不耗回合语义不适用——
+        # 无组合表 = 常规技能 B-3）。审计落 combo_result（战报/测试可观察）。
+        # 注意：组合 gate 在 MP/energy 扣费之前（F-C2 双耗由 settle_combo 完成，
+        # 命中标记 _combo_settled 跳过下方常规扣费防重复；被拒不扣）。
+        _combo = self._resolve_combo_table_gate(attacker, ca, sd, target)
+        if _combo is not None:
+            return _combo
+
         # ---- M13 6a 路3C：技能 MP 消耗扣费（1a §2.2 mp_cost 语义；被拒不扣）----
         # should_reject 已做 MP 门槛检查（enforce_mp 开）；成功施放后实际扣费。
         # mp_cost 优先 action 显式（skill_mp_cost/mp_cost），缺失回退技能 def。
         _mp_cost = int(ca.get(
             "skill_mp_cost", ca.get(
                 "mp_cost", sd.get("mp_cost", 0))) or 0)
-        if _mp_cost > 0:
+        if _mp_cost > 0 and not ca.get("_combo_settled"):
             _c = self._combat(attacker)
             _mp = int(_c.get("mp", 0) or 0)
             if _mp >= _mp_cost:
@@ -1375,9 +1899,56 @@ class BattleEngine:
         # ---- M13 6c 批12 收口：技能 energy_cost 门禁 + energy_gain 结算 ----
         # 技能 def 的 energy_cost（施放前检查：不足 → 被拒不耗回合，复用 rejected
         # 语义——返回被拒 outcome 不继续）+ energy_gain（成功结算后增加封顶）。
-        _energy_gate = self._apply_skill_energy(attacker, ca, sd, target)
-        if _energy_gate is not None:
-            return _energy_gate
+        # 组合已结算（_combo_settled）→ 跳过（settle_combo 已双耗，防重复）。
+        if not ca.get("_combo_settled"):
+            _energy_gate = self._apply_skill_energy(attacker, ca, sd, target)
+            if _energy_gate is not None:
+                return _energy_gate
+
+        # ---- M13 批15 路15A：transform 触发技（transform_skill）战斗接线 ----
+        # 细化_6b §2.1 F1：触发技（如狂暴/rage_burst）成功结算后触发变换——
+        # 形态切换 + 技能位重排 + state_policy（清连段等），不额外耗回合。
+        # 触发条件 C1~C4 经 transform.can_transform 判定（C1 形态激活期互斥 /
+        # C2 资源 / C3 冷却 / C4 被控）；触发技效果本体走上方既有效果通道
+        # （TRF-1 效果先结算），此处仅做变换挂接。job/transform 配置经
+        # self._job_transform_segment() 惰性解析（无配置 → 零操作降级）。
+        # 拒绝路径：不改 transform_state、不耗额外回合（同 combo rejected 语义）。
+        if not ca.get("_derived"):
+            ts = self._snap.get("transform_state")
+            if isinstance(ts, dict) and ts.get("form") is None:
+                tseg = self._job_transform_segment()
+                if tseg and str(tseg.get("transform_skill") or "") == str(ca.get("skill_id") or ""):
+                    from qbot_rpg.core.transform import (  # noqa: PLC0415
+                        TRANSFORM_STATE_KEY,
+                        trigger_transform,
+                    )
+
+                    tctx = self._transform_ctx(attacker, ca, sd)
+                    tr = trigger_transform(tctx, tseg)
+                    if tr.get("ok"):
+                        self._snap["transform_state"] = tr["transform_state"]
+                        # 状态/印记/连段侧真实生效（state_policy 清连段写快照）
+                        self._absorb_runtime(self._new_runtime())
+                        self._transform_events = list(tr.get("side_effects") or ())
+                        ca.setdefault("transform_triggered", True)
+                        ca.setdefault("transform_form", str(tr["transform_state"].get("form") or ""))
+                    else:
+                        # 变换被拒（C1 形态激活互斥 / C3 冷却中 / C2 资源不足 /
+                        # C4 被控）：拒绝不耗回合、不改形态——触发技效果已在上方
+                        # 通道结算，此处登记拒绝事件（战报/测试可观察）
+                        self._transform_events = [
+                            {"type": "transform_rejected", "reason": str(tr.get("reason") or ""),
+                             "guard": str(tr.get("guard") or "")}
+                        ]
+                    # 拒绝（C1~C4/资源不足）→ 变换不触发：不耗回合、不改形态，
+                    # 触发技本身仍按普通技能结算（技能效果已在上方通道结算）
+        # ---- M13 批15 路15A：revert_form 技能主动还原（D-05 即时，不判 remaining）----
+        # 技能带 revert_form=true 且当前形态激活 → 施放即还原（还原钩子经
+        # _apply_transform_revert(REVERT_FORM) 执行 state_policy + 冷却起算）
+        if bool(sd.get("revert_form", False)):
+            from qbot_rpg.core.transform_revert import REVERT_FORM  # noqa: PLC0415
+
+            self._apply_transform_revert(REVERT_FORM)
 
         # ---- P1-3/P1-4（dsh 批3）：技能 effects 消费 + 打断/霸体闭环 ----
         # 1c2 §1.3 字段 24「effects 归口效果系统；interrupt 唯一实现走 effects.json」：
@@ -1842,6 +2413,31 @@ class BattleEngine:
         except Exception:  # noqa: BLE001 装配层未注入资源注册表 → 零操作降级
             pass
 
+        # M13 6c（细化_6c §2.3 F-R2 ③ 结算边界）：换季 tick——回合结束 tick 之后、
+        # 下一回合开始之前（⑥⑦ 之间挂点）。懒重读当前季节 → 差异则待结算 →
+        # 立即切换（本回合行动按旧组校验完毕，D-05）；切换成功 → 附一行换季
+        # 反馈 + on_season_change 事件信号（E1/E5 恰一次，L2 proc 容器执行）。
+        # 纯函数委托 battle_season.tick_season_boundary + season_events，零定时器。
+        # 反馈落快照顶层 season_events 流水（TurnReport.log 供展示层消费）。
+        _switched = self._tick_season_boundary()
+        if _switched.get("switched"):
+            log = list(log) + [
+                {"type": "season_change", "from": _switched.get("from"),
+                 "to": _switched.get("to"),
+                 "message_key": _switched.get("message_key")},
+            ]
+            # 换季反馈落快照流水（续局路径 start_turn 新 report 不带 log——
+            # 快照兜底供展示层/测试读取，F-R2 ⑤ 一行反馈语义不丢）。
+            _se = self._snap.get("season_events")
+            if not isinstance(_se, list):
+                _se = []
+                self._snap["season_events"] = _se
+            _se.append({"type": "season_change", "from": _switched.get("from"),
+                        "to": _switched.get("to"),
+                        "message_key": _switched.get("message_key")})
+            self._absorb_runtime(self._new_runtime())
+            self._fire_season_event(_switched)
+
         # ⑦⑧ 互杀 + 战斗结束判定
         out = self._resolve_battle_end(force=False)
         if out is not None:
@@ -1880,6 +2476,13 @@ class BattleEngine:
         if ores is not None:
             outcomes.append(ores)
         rep = self.end_turn()
+        # M13 6c（F-R2 ⑤）：换季反馈附快照顶层 season_events 流水（恰一次），
+        # TurnReport.log 消费同源（展示层渲染一行换季文案）。
+        if rep.log:
+            _sev = self._snap.setdefault("season_events", [])
+            for _e in rep.log:
+                if _e.get("type") == "season_change" and _e not in _sev:
+                    _sev.append(dict(_e))
         return TurnReport(
             turn=rep.turn,
             phases=(PHASE_PLAYER_ACTION, PHASE_ENEMY_ACTION, PHASE_TURN_END_TICK),

@@ -463,7 +463,12 @@ def sync_lore_unlocks(ctx: MutableMapping[str, Any]) -> dict:
     判据=全局 pct（未取整）≥ unlock（COD-08）；已见条目写 unlocked_lore 行数；
     隐藏要素发现后 lore 全集一次性解锁（unlock 全 100 + 传闻段，4d §5 L356）。
     """
-    pct = codex_progress(ctx).get("pct", 0.0)
+    # 全局完成度：ctx["codex"] 投影优先（装配层算好的 T，测试可注入）；
+    # 缺省 → codex_progress 现算（裸 ctx 兜底）。
+    pct = ctx.get("codex")
+    if not isinstance(pct, (int, float)) or isinstance(pct, bool):
+        pct = codex_progress(ctx).get("pct", 0.0)
+    pct = float(pct)
     st = ctx.get("codex_state")
     if not isinstance(st, Mapping):
         return {"ok": True, "updated": 0}

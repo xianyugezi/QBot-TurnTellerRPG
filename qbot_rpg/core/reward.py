@@ -59,6 +59,8 @@ DEFAULT_CURRENCY_IDS: tuple = ("coins", "diamond")
 _SCALAR_KEYS: tuple = ("coins", "gem", "exp", "rep")
 # 物品条目键：`item` 为主键，`id` 为等价别名（NPC give_item items[]{id,count} / 签到 items[]{id,count}）
 _ITEM_KEYS: tuple = ("item", "id")
+# 称号条目键（M11 4c §3.1 ④）：{title: "称号ID"}——仅成就系统使用，不扩散到任务/签到/NPC/掉落
+_TITLE_KEYS: tuple = ("title",)
 
 # 内联键值串单段语法：key[:=]value，物品支持 item:名称*N 数量后缀
 _PAIR_RE = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*[:=]\s*(.+?)\s*$")
@@ -258,6 +260,42 @@ def _grant_scalar(key: str, value: Any, entry: Mapping[str, Any], ctx: Mapping[s
     return {"ok": False, "skip": {"type": key, "amount": value, "reason": "invalid_entry"}}
 
 
+def _grant_title(entry: Mapping[str, Any], ctx: Mapping[str, Any]) -> Optional[dict]:
+    """称号条目 {title: 称号ID} → 写入 title_state.owned（4c §3.1 ④ / §3.3，仅成就使用）。
+
+    - 校验：ctx[\"titles\"] 注册表（proficiency.json titles 段映射 {id: 条目}）——
+      引用不存在 → skip(title_not_registered)（4c 硬拦口径，条目级黄字跳过）；
+      注册表缺失 → skip(title_registry_missing)（fail-safe，不硬崩）。
+    - 写入：ctx[\"title_state\"][\"owned\"] 可佩戴列表（就地，append 去重；equipped 键
+      不触碰——佩戴由 ProficiencyEngine.equip_title 单独管理）。写入即落档（ctx 注入
+      为就地引用，对齐 context.py title_state 收口 L1098-1104）。
+    - 重复授予（已在 owned）→ 幂等 granted（不重复 append）。
+    """
+    title_id = entry.get("title")
+    if not isinstance(title_id, str) or not title_id.strip():
+        return {"ok": False, "skip": {"type": "title", "title": title_id,
+                                      "reason": "invalid_value"}}
+    tid = title_id.strip()
+    titles = ctx.get("titles")
+    if not isinstance(titles, Mapping):
+        return {"ok": False, "skip": {"type": "title", "title": tid,
+                                      "reason": "title_registry_missing"}}
+    if tid not in titles:
+        return {"ok": False, "skip": {"type": "title", "title": tid,
+                                      "reason": "title_not_registered"}}
+    ts = ctx.get("title_state")
+    if not isinstance(ts, MutableMapping):
+        return {"ok": False, "skip": {"type": "title", "title": tid,
+                                      "reason": "missing_title_state"}}
+    owned = ts.get("owned")
+    if not isinstance(owned, list):
+        owned = []
+        ts["owned"] = owned
+    if tid not in owned:
+        owned.append(tid)
+    return {"ok": True, "grant": {"type": "title", "title": tid, "applied": True}}
+
+
 def _dispatch_one(entry: Mapping[str, Any], ctx: Mapping[str, Any]) -> Optional[dict]:
     """单条目分发。返回 {"ok", "grant"|"skip"} 或 None（不处理）。"""
     if not isinstance(entry, Mapping):
@@ -265,6 +303,9 @@ def _dispatch_one(entry: Mapping[str, Any], ctx: Mapping[str, Any]) -> Optional[
 
     if "item" in entry or "id" in entry:
         return _grant_item(entry, ctx)
+
+    if "title" in entry:  # M11 4c §3.1 ④：称号型（仅成就系统使用，G2）
+        return _grant_title(entry, ctx)
 
     if "rep" in entry:  # rep 允许可选 board/param 扩展键
         return _grant_scalar("rep", entry["rep"], entry, ctx)

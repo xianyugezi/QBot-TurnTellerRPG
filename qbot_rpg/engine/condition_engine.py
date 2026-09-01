@@ -305,6 +305,30 @@ def _num(x: object) -> Optional[float]:
     return None
 
 
+def _num_of(x: object, default: float = 0.0) -> float:
+    """数值化兜底：_num 成功取之，失败取 default（计数器类缺失=0 语义，补白 4）。"""
+    v = _num(x)
+    return v if v is not None else default
+
+
+def _codex_category_pct(ctx: Mapping[str, Any], category: str) -> Optional[float]:
+    """codex 分册完成度（M11 4c §2.2 / 摸底 G3）：param 分册维度读取。
+
+    取值通道（fail-safe，engine 层零 core 依赖——G0 依赖矩阵 engine→data 单向）：
+      ① ctx["codex_categories"]（{分册名: pct} 投影，装配层注入，裸 ctx 可用）→ 直取；
+      ② 皆缺 → None（D-03 求值失败=不满足）。
+    分册名非法（非 str/空）→ None；未知分册 → None（fail-safe）。
+    """
+    if not isinstance(category, str) or not category:
+        return None
+    proj = ctx.get("codex_categories")
+    if isinstance(proj, Mapping):
+        v = proj.get(category)
+        if isinstance(v, (int, float)) and not isinstance(v, bool):
+            return float(v)
+    return None
+
+
 def _eq(a: object, b: object) -> bool:
     """宽松相等：数值与数字串相等；bool 必须同型同值；其余字符串比较。"""
     if a is None:
@@ -529,6 +553,12 @@ def _resolve_var(
             return _num(direct)
         return _read_counter(ctx, "longline_counters", "main_progress", None)
     if var == "codex":
+        if param is not None:
+            # 分册维度（4c §2.2 映射 + 摸底 G3）：{var:codex, param:"monster"} 读分册
+            # 完成度。优先 ctx["codex_state"] 现算（codex_progress(ctx, category)），
+            # 兜底 ctx["codex_categories"]（{分册: pct} 投影，装配层可注入）——
+            # 避免裸 ctx（无 registry）时静默 0；两者皆缺 → fail-safe None（D-03）。
+            return _codex_category_pct(ctx, param)
         return _num(_ctx_get(ctx, "codex"))
     if var == "gain_count":
         if param is None:

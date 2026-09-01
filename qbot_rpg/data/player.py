@@ -11,7 +11,7 @@ frozen=True：玩家快照不可变（U3）；变更经 storage save_player 单�
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from qbot_rpg.data.item import ItemInstance
 from qbot_rpg.data.types import ItemID, PlayerQID
@@ -88,7 +88,12 @@ class Player:
     inventory: Tuple[ItemInstance, ...] = ()                          # 背包实例数组
     equipment: Dict[str, EquipmentSlot] = field(default_factory=dict) # 槽位 → 槽实例
     attributes: PlayerAttributes = field(default_factory=PlayerAttributes)
-    achievement_state: Tuple[str, ...] = ()                           # 已达成成就 ID 列表
+    # M11 批1 路1A（G12）：achievement_state 迁移为持久化段形态——旧版为已达成
+    # ID 元组（Tuple[str,...]）；成就引擎读写 {unlocked, repeat_count} 两子段。
+    # 存档登记先例：字段登记由框架 3.7 持久化语义总表承载（4c §4.1），本 dataclass
+    # 字段保留（旧档兼容读取/迁移），运行期成就状态经 context.py _ps_init 挂回
+    # persistent_state["achievement_state"]（ctx["achievement_state"] 键，写入即落档）。
+    achievement_state: Any = field(default_factory=dict)              # {unlocked:{ID:ISO}, repeat_count:{ID:N}}
     title_state: Dict[str, str] = field(default_factory=dict)         # 当前佩戴称号
     persistent_state: Dict[str, object] = field(default_factory=dict) # 非会话持久（checkin/shop/resource/time/dummy_log）
     longline_counters: Dict[str, int] = field(default_factory=dict)   # 长线计数（只增不减）

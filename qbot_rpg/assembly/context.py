@@ -442,6 +442,76 @@ def _forge_module_raw(registry: Any) -> Mapping[str, object]:
     return {}
 
 
+def _titles_table(registry: Any) -> Dict[str, Any]:
+    """称号注册表（G14 薄封装）：proficiency.json titles 段 → {title_id: 条目}。
+
+    顶层 proficiency 模块 raw 的 "titles" 列表（{id,name,icon,source,desc}）；
+    无 registry / 无 titles 段 → {}（成就称号校验器未启用兜底，reward 称号型
+    分支 title_registry_missing 黄字跳过，不硬崩装配）。
+    """
+    raw = getattr(registry, "modules_raw", None)
+    if not isinstance(raw, Mapping):
+        return {}
+    prof = raw.get("proficiency")
+    if not isinstance(prof, Mapping):
+        return {}
+    titles = prof.get("titles")
+    if not isinstance(titles, list):
+        return {}
+    out: Dict[str, Any] = {}
+    for t in titles:
+        if isinstance(t, Mapping):
+            tid = t.get("id")
+            if isinstance(tid, str) and tid:
+                out[tid] = dict(t)
+    return out
+
+
+def _module_raw_of(registry: Any, module: str) -> Dict[str, Any]:
+    """成就配置表（G12）：registry.modules_raw[module]（list 形态）→ {ID: 配置}。
+
+    achievements.json 为顶层 list（每条成就一个对象）；loader 1B 登记后经
+    modules_raw 可读（顶层 obj 模块 forge/fishing 同通道）。无 registry /
+    无该模块 → {}（成就系统未启用兜底）。
+    """
+    raw = getattr(registry, "modules_raw", None)
+    if not isinstance(raw, Mapping):
+        return {}
+    data = raw.get(module)
+    if isinstance(data, list):
+        out: Dict[str, Any] = {}
+        for e in data:
+            if isinstance(e, Mapping):
+                eid = e.get("id")
+                if isinstance(eid, str) and eid:
+                    out[eid] = dict(e)
+        return out
+    if isinstance(data, Mapping):
+        return {str(k): dict(v) for k, v in data.items() if isinstance(v, Mapping)}
+    return {}
+
+
+def _codex_categories_of(ctx: MutableMapping[str, Any]) -> Dict[str, float]:
+    """codex 分册完成度投影（G3 通道①）：{分册名: pct}（未取整，condition_engine 消费）。
+
+    经 codex_progress 现算（ctx 需 registry + codex_state）；裸 ctx（无 registry）→ {}
+    （分册条件 fail-safe False，不硬崩）。M11 批2 2B 加权落位后仅影响数值来源，
+    接口不变。
+    """
+    reg = ctx.get("registry")
+    if reg is None or not hasattr(reg, "all_ids"):
+        return {}
+    try:
+        from qbot_rpg.core.codex import CATEGORY_ORDER, codex_progress
+
+        return {
+            cat: float(codex_progress(ctx, cat).get("pct", 0.0))
+            for cat in CATEGORY_ORDER
+        }
+    except Exception:
+        return {}
+
+
 def _fish_module_raw(registry: Any) -> Mapping[str, object]:
     """fishing.json 顶层 raw dict（M10 批6 路6B 收口 2026-09-01）。
 
@@ -1143,6 +1213,19 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
             "mode": _mode_of_hook(ctx),
             "king_event": _king_event_hook(ctx),
             "king_victory_record": _king_victory_record_hook(ctx),
+            # M11 成就（批1 路1A · G12/G14 收口 2026-09-01）：
+            # achievement_state 挂 ps 落档（unlocked/repeat_count 只增不减 ACH-08，
+            # 引擎写 ctx 键即落档，对齐 fish_state 先例）——三路约定键名
+            # ctx["achievement_state"]（摸底 §五 收口检查单）；成就配置表
+            # ctx["achievements"]（{ID: 配置}，1B loader 登记后经 registry 注入）；
+            # 称号注册表 ctx["titles"]（G14 薄封装 proficiency.json titles 段，
+            # reward 称号型 title 校验消费）；codex 分册投影 ctx["codex_categories"]
+            # （condition_engine codex param 分册读取，裸 ctx 可用）。
+            "achievement_state": _ps_init(ps, "achievement_state",
+                                          {"unlocked": {}, "repeat_count": {}}),
+            "achievements": _module_raw_of(deps.registry, "achievements"),
+            "titles": _titles_table(deps.registry),
+            "codex_categories": _codex_categories_of(ctx),
             # M8 批14 测试探针（炼金引导任务）：ctx["prof_level"] 职业等级映射
             # {job_id: level}——quest 引擎 var=prof_level 条件（param=job_id）消费；
             # 未注册/无建档 → {} 空（条件不满足，引导任务不提前解锁）。
@@ -1174,6 +1257,12 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
             "npc_delivered": {}, "heard": set(),
             "codex_state": {}, "event_log": [],
             "dialog_active": False, "dialog_session": None,
+            # M11 成就（批1 路1A）：未注册玩家安全空值（对齐 codex_state 先例）——
+            # 成就引擎/指令壳对未注册玩家读空表 fail-safe，注册门槛拦截在前
+            "achievement_state": {"unlocked": {}, "repeat_count": {}},
+            "achievements": _module_raw_of(deps.registry, "achievements"),
+            "titles": _titles_table(deps.registry),
+            "codex_categories": {},
         })
 
     # -- ④ 世界/会话/环境/确定性源（与注册态无关） ------------------------------

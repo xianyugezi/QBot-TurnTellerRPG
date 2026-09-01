@@ -200,13 +200,13 @@ def _write_title(ctx: MutableMapping[str, Any], tier: str) -> bool:
     return True
 
 
-def _read_pct(ctx: Mapping[str, Any]) -> int:
-    """图鉴完成度读取（ctx["codex"] 标量优先，兄弟路 codex_progress 惰性兜底）。
+def _read_pct(ctx: Mapping[str, Any]) -> float:
+    """图鉴完成度读取（ctx["codex"] 标量优先，codex_progress 惰性兜底）。
 
-    入参 ctx: 上下文。出参 int（0-100 夹取；任何缺失/非法 → 0）。
+    入参 ctx: 上下文。出参 float（0-100 夹取；任何缺失/非法 → 0）。
     核心逻辑: ctx["codex"] 数值化（int/float/str 均可）；缺失 → 惰性 import
-    qbot_rpg.core.codex.codex_progress(ctx)（兄弟路未落盘 ImportError 等 →
-    0）；越界夹取 0-100（工程补白 1：只读兜底，不探查兄弟路文件）。
+    codex_progress(ctx) 兜底；越界夹取 0-100。
+    M11 批2 路2B（G-17）：float 精确值不 int 截断——COD-08 里程碑判定用未取整值。
     """
     raw = ctx.get("codex")
     if raw is None:
@@ -222,12 +222,12 @@ def _read_pct(ctx: Mapping[str, Any]) -> int:
         except Exception:
             raw = None
     if raw is None:
-        return 0
+        return 0.0
     try:
-        v = int(float(raw))
+        v = float(raw)
     except (TypeError, ValueError):
-        return 0
-    return max(0, min(100, v))
+        return 0.0
+    return max(0.0, min(100.0, v))
 
 
 def _event_log_of(ctx: Mapping[str, Any]) -> list:

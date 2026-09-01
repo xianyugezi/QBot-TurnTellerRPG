@@ -1236,6 +1236,18 @@ class BattleEngine:
                 if step_tag:
                     action.setdefault("tag", step_tag)
 
+        # ---- M13 6a 路3C：技能 MP 消耗扣费（1a §2.2 mp_cost 语义；被拒不扣）----
+        # should_reject 已做 MP 门槛检查（enforce_mp 开）；成功施放后实际扣费。
+        # mp_cost 优先 action 显式（skill_mp_cost/mp_cost），缺失回退技能 def。
+        _mp_cost = int(ca.get(
+            "skill_mp_cost", ca.get(
+                "mp_cost", sd.get("mp_cost", 0))) or 0)
+        if _mp_cost > 0:
+            _c = self._combat(attacker)
+            _mp = int(_c.get("mp", 0) or 0)
+            if _mp >= _mp_cost:
+                _c["mp"] = _mp - _mp_cost
+
         # ---- P1-3/P1-4（dsh 批3）：技能 effects 消费 + 打断/霸体闭环 ----
         # 1c2 §1.3 字段 24「effects 归口效果系统；interrupt 唯一实现走 effects.json」：
         # 印记施加/消除、打断等 L0 动作经 execute_action 真实进战斗（原仅道具路径可达）。

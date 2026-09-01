@@ -225,12 +225,15 @@ def enrich_round_report(
     drops: Sequence[Any] = (),
     status_changes: Sequence[Any] = (),
     segments: Optional[Sequence[Mapping[str, Any]]] = None,
+    player_action: Optional[Mapping[str, Any]] = None,
+    skill_name: Optional[str] = None,
 ) -> EnrichedTurnReport:
     """TurnReport → EnrichedTurnReport（纯函数，测试/装配可直接消费）。
 
     outcomes 经 _inject_display_outcomes 注入展示字段（怪物展示名/最大 HP——
     ActionOutcome.target 为战斗侧 "enemy"，非展示名，5e §2.1/§3.1 由接线层注入）；
     segments（P1-3）：本轮玩家多段行动段记录，>1 段注入连段段行（BREP-21）。
+    skill_name（M13 6a 路3C）：技能行动的战报技能名，注入玩家 skill outcome。
     """
     outcomes = _inject_display_outcomes(
         getattr(report, "outcomes", ()) or (),
@@ -238,6 +241,8 @@ def enrich_round_report(
         player_max_hp=player_max_hp,
         enemy_max_hp=enemy_max_hp,
         segments=segments,
+        player_action=player_action,
+        skill_name=skill_name,
     )
     return EnrichedTurnReport(
         turn=int(getattr(report, "turn", 0)),
@@ -395,6 +400,8 @@ def _inject_display_outcomes(
     player_max_hp: Optional[int],
     enemy_max_hp: Optional[int],
     segments: Optional[Sequence[Mapping[str, Any]]] = None,
+    player_action: Optional[Mapping[str, Any]] = None,
+    skill_name: Optional[str] = None,
 ) -> Tuple[Any, ...]:
     """ActionOutcome → 渲染用副本（接线层注入展示字段，M5-08；不改引擎不改模板）。
 
@@ -415,6 +422,9 @@ def _inject_display_outcomes(
         if actor == "player":
             overrides: dict = dict(target=enemy_name, target_max_hp=enemy_max_hp,
                                    player_max_hp=player_max_hp)
+            # 技能名注入（M13 6a 路3C）：玩家技能行动 → 战报显示技能名（BREP-07）
+            if str(getattr(oc, "action_type", "") or "") == "skill" and skill_name:
+                overrides["skill_name"] = skill_name
             if segments:
                 final_hp = getattr(oc, "target_hp", None)
                 overrides["segments"] = [
@@ -685,6 +695,15 @@ def dispatch_round(
     e_name = str(e.get("name") or "怪物")
     reward = _battle_rewards(ctx, engine, report)
     segments = _build_segments(snap, int(getattr(report, "turn", 0)))
+    # 技能名注入（M13 6a 路3C）：player_action 含 skill_id → ctx["skills"] 查名
+    skill_name = None
+    if player_action and str(player_action.get("type") or "") == "skill":
+        sid = str(player_action.get("skill_id") or "")
+        skills = ctx.get("skills")
+        if isinstance(skills, Mapping):
+            d = skills.get(sid)
+            if isinstance(d, Mapping):
+                skill_name = str(d.get("name") or "") or None
     enriched = enrich_round_report(
         report,
         enemy_name=e_name,
@@ -695,6 +714,8 @@ def dispatch_round(
         drops=reward["drops"],
         status_changes=ctx.get("battle_status_changes") or (),
         segments=segments,
+        player_action=player_action,
+        skill_name=skill_name,
     )
     player_outcome = _first_player_outcome(report)
     atype = str(getattr(player_outcome, "action_type", "") or "") if player_outcome else ""

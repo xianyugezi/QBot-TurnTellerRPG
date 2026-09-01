@@ -38,6 +38,7 @@ import asyncio
 from typing import Any, Callable, Dict, List, Mapping, cast
 
 from qbot_rpg.commands import (
+    achievement_commands,
     alchemy_commands,
     basic_commands,
     battle_commands,
@@ -97,6 +98,8 @@ REGISTER_GROUPS: tuple = (
     # M10 钓鱼（批8 审查 A3 P0-1 收口 2026-09-01）：/钓鱼 /鱼讯 /收杆 三指令
     fishing_commands.register_fishing_commands,    # /钓鱼 钓点列举+鱼讯参考
     fishing_reel_commands.register_fishing_reel_commands,  # /鱼讯 + /收杆 三选一
+    # M11 成就（m11 启动包 §2.1）：/成就 /成就信息 /称号 三指令
+    achievement_commands.register_achievement_commands,
 )
 
 

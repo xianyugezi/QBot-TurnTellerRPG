@@ -22,6 +22,8 @@ from typing import Any, Dict, Mapping, Optional
 
 from qbot_rpg.core.templates.base import DEFAULT_TEMPLATES as _BASE_TEMPLATES
 from qbot_rpg.core.templates.base import PLACEHOLDER_WHITELIST as _BASE_WHITELIST
+from qbot_rpg.core.templates.achievement_tpl import DEFAULT_TEMPLATES as _ACHIEVEMENT
+from qbot_rpg.core.templates.achievement_tpl import PLACEHOLDER_WHITELIST as _ACHIEVEMENT_WH
 from qbot_rpg.core.templates.alchemy_tpl import DEFAULT_TEMPLATES as _ALCHEMY
 from qbot_rpg.core.templates.alchemy_tpl import PLACEHOLDER_WHITELIST as _ALCHEMY_WH
 from qbot_rpg.core.templates.basic_rem_tpl import DEFAULT_TEMPLATES as _BASIC_REM
@@ -65,12 +67,13 @@ __all__ = [
 _ALL_TABLES: list = [
     _BASE_TEMPLATES, _USE, _SHORTCUT, _LOG, _CODEX, _DIALOG, _EXPLORE,
     _QUEST, _CHECKIN, _INVESTIGATE, _BATTLE, _FORGE, _ALCHEMY,
-    _BASIC_REM, _REG_REM, _FISHING,
+    _BASIC_REM, _REG_REM, _FISHING, _ACHIEVEMENT,
 ]
 _ALL_WHITELISTS: list = [
     _BASE_WHITELIST, _USE_WH, _SHORTCUT_WH, _LOG_WH, _CODEX_WH, _DIALOG_WH,
     _EXPLORE_WH, _QUEST_WH, _CHECKIN_WH, _INVESTIGATE_WH, _BATTLE_WH,
     _FORGE_WH, _ALCHEMY_WH, _BASIC_REM_WH, _REG_REM_WH, _FISHING_WH,
+    _ACHIEVEMENT_WH,
 ]
 
 DEFAULT_TEMPLATES: Dict[str, Any] = {}

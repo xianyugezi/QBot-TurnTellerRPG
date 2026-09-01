@@ -37,7 +37,6 @@ class _FakeRegistry:
 def _reg() -> _FakeRegistry:
     return _FakeRegistry({
         "enemy": ("rock_weasel", "wood_wolf", "moon_wolf"),
-        "equipment": ("iron_sword", "iron_shield", "steel_blade"),
         "item": ("potion", "hi_potion"),
     })
 
@@ -109,22 +108,27 @@ def test_progress_single_and_global() -> None:
     assert abs(p["pct"] - 100 / 3) < 0.001
     mark_seen(ctx, "item", "potion", "药水")            # item 1/2
     gp = codex_progress(ctx)
-    # 单册 pct: monster=33.33, weapon=0, item=50, alchemy=0, fish=0 → 均值 ≈ 16.67
-    # （M8 批11-2 收口：/图鉴 合并 alchemy 分册入总览；M10 批4：fish 分册入总览）
-    assert abs(gp["pct"] - (100 / 3 + 0 + 50 + 0 + 0) / 5) < 0.01
+    # 单册 pct: monster=33.33, fish=0, item=50, craft=0 → 四册等权加权 ≈ 20.83
+    # （M11 批2 路2A/2B：四册收敛 + 加权 T=Σwi·Vi/Σwi）
+    assert abs(gp["pct"] - (100 / 3 + 0 + 50 + 0) / 4) < 0.01
 
 
-class _WeaponFakeRegistry:
-    """registry 替身（all_ids + resolve 返回带 type 的 items 定义）。
+class _CraftFakeRegistry:
+    """registry 替身（all_ids + resolve + modules_raw；craft 数据源）。
 
-    QA P2-9 修复验证：内容包把武器配置在 items.json（type=weapon）而
-    equipment.json 可为空——weapon 分册分母应含 items type=weapon 条目。
+    M11 批2 路2A：craft 册分母 = forge 树节点 item 引用 ∪ 炼金 recipe output.item。
     """
 
     def __init__(self, tables: Mapping[str, tuple],
-                 item_types: Mapping[str, str] | None = None) -> None:
+                 forge_items: list | None = None,
+                 recipe_outputs: Mapping[str, str] | None = None) -> None:
         self._tables = tables
-        self._item_types: Mapping[str, str] = item_types or {}
+        self._forge_items = list(forge_items or [])
+        self._recipe_outputs = dict(recipe_outputs or {})
+        self.modules_raw: dict = {}
+        if self._forge_items:
+            self.modules_raw["forge"] = {"trees": [
+                {"nodes": [{"item": i} for i in self._forge_items]}]}
 
     def all_ids(self, kind: str) -> tuple:
         return self._tables.get(kind, ())
@@ -133,43 +137,44 @@ class _WeaponFakeRegistry:
         return rid.upper()
 
     def resolve(self, rid: str, kind: str):
-        # items 表条目 → {id, name, type}
+        if kind == "recipe":
+            out = self._recipe_outputs.get(rid)
+            return {"id": rid, "output": {"item": out}} if out else None
         if kind == "item":
-            return {"id": rid, "name": rid,
-                    "type": self._item_types.get(rid, "material")}
+            return {"id": rid, "name": rid, "type": "material"}
         return None
 
 
-def test_weapon_progress_total_from_items_type_weapon() -> None:
-    """QA P2-9：weapon 分册分母 = equipment 表 ∪ items type=weapon（equipment 空时非 0）。"""
-    reg = _WeaponFakeRegistry(
-        {"equipment": (), "item": ("potion", "iron_sword", "flame_sword", "leaf_vest")},
-        {"iron_sword": "weapon", "flame_sword": "weapon", "leaf_vest": "armor"},
+def test_craft_progress_total_from_forge_and_recipe() -> None:
+    """4d D-04：craft 册分母 = forge 节点 item 引用 ∪ 炼金 recipe 产物。"""
+    reg = _CraftFakeRegistry(
+        {"item": ("potion", "iron_sword", "flame_sword", "leaf_vest"),
+         "recipe": ("rcp_fire",)},
+        forge_items=["iron_sword", "flame_sword"],
+        recipe_outputs={"rcp_fire": "fire_potion"},
     )
     ctx = dict(_ctx())
     ctx["registry"] = reg
-    p = codex_progress(ctx, "weapon")
-    assert p["total"] == 2  # 仅 type=weapon 计入（armor/药水不计）
-    mark_seen(ctx, "weapon", "iron_sword", "铁剑")
-    p2 = codex_progress(ctx, "weapon")
-    assert p2["seen"] == 1 and p2["total"] == 2
-    # 旧行为（仅 equipment 表）不回归：equipment 表非空时仍计数
-    reg2 = _WeaponFakeRegistry({"equipment": ("iron_sword", "steel_blade"), "item": ("potion",)})
-    ctx2 = dict(_ctx())
-    ctx2["registry"] = reg2
-    assert codex_progress(ctx2, "weapon")["total"] == 2
+    p = codex_progress(ctx, "craft")
+    assert p["total"] == 3  # iron_sword + flame_sword + fire_potion
+    mark_seen(ctx, "craft", "iron_sword", "铁剑")
+    p2 = codex_progress(ctx, "craft")
+    assert p2["seen"] == 1 and p2["total"] == 3
+    # item 册反向减除（铁剑/火伤药/炎剑归 craft，potion/leaf_vest 归 item）
+    p_item = codex_progress(ctx, "item")
+    assert p_item["total"] == 2  # potion + leaf_vest
 
 
-def test_weapon_codex_view_lists_type_weapon_items() -> None:
-    """QA P2-9：weapon 分册页展示 items type=weapon 条目（未收集显示 ???）。"""
-    reg = _WeaponFakeRegistry(
-        {"equipment": (), "item": ("iron_sword", "flame_sword")},
-        {"iron_sword": "weapon", "flame_sword": "weapon"},
+def test_craft_codex_view_lists_craft_items() -> None:
+    """4d D-04：craft 册分页展示 forge/recipe 产物（未收集显示 ???）。"""
+    reg = _CraftFakeRegistry(
+        {"item": ("iron_sword", "flame_sword")},
+        forge_items=["iron_sword", "flame_sword"],
     )
     ctx = dict(_ctx())
     ctx["registry"] = reg
-    mark_seen(ctx, "weapon", "iron_sword", "铁剑")
-    view = codex_view(ctx, "weapon")
+    mark_seen(ctx, "craft", "iron_sword", "铁剑")
+    view = codex_view(ctx, "craft")
     names = {e["name"] for e in view["entries"]}
     assert view["total"] == 2
     assert "铁剑" in names and "???" in names  # flame_sword 未收集 → ???
@@ -188,8 +193,8 @@ def test_codex_projection_updated() -> None:
     ctx = _ctx()
     assert ctx.get("codex", 0.0) == 0.0
     mark_seen(ctx, "monster", "rock_weasel", "岩鼬")
-    # 5 册均值（M8 批11-2 收口：alchemy 分册入总览；M10 批4：fish 分册入总览，pct=0）
-    assert abs(float(ctx["codex"]) - (100 / 3 + 0 + 0 + 0 + 0) / 5) < 0.01
+    # 四册加权（M11 批2 路2B：等权 1:1:1:1，monster=1/3 → T=8.33）
+    assert abs(float(ctx["codex"]) - (100 / 3 + 0 + 0 + 0) / 4) < 0.01
 
 
 # ---------------------------------------------------------------------------
@@ -228,7 +233,11 @@ def test_codex_view_unknown_category() -> None:
 # 契约常量
 # ---------------------------------------------------------------------------
 def test_categories_contract() -> None:
-    """三分册 key 映射（monster→enemy / weapon→equipment / item→item）。"""
+    """四册 key 映射（4d D-01：monster→enemy / fish→fish / item→item / craft→craft）。"""
     assert CATEGORIES["monster"] == ("enemy",)
-    assert CATEGORIES["weapon"] == ("equipment",)
+    assert CATEGORIES["fish"] == ("fish",)
     assert CATEGORIES["item"] == ("item",)
+    assert CATEGORIES["craft"] == ("craft",)
+    # 4d D-01：无 weapon/alchemy 键（收敛）
+    assert "weapon" not in CATEGORIES
+    assert "alchemy" not in CATEGORIES

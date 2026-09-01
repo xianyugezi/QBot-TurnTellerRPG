@@ -1064,16 +1064,15 @@ def _execute(
             forged_after.remove(node_id)
         return tpl_of(ctx, "forge_exp_fail")
 
-    # 首次锻造图鉴点亮（2c2b §1.2 步骤 5：mark_seen weapon 分册，ref=装备 item id，名=节点名）
-    #   图鉴 weapon 册 total 来自 registry equipment 表（codex._total_of），ref 必须与
-    #   items 装备条目 id 对齐（node.item），不能用 forge 节点 id（node_* 非装备条目 id）。
-    #   （批4 路4D 追加）同刻点亮 items 分册（mark_seen "item" 同 ref）——素材类也进
-    #   物品册，装备类经 weapon 册 + item 册双登记（2c2b §1.2 步骤 5 / F-10）。
+    # 首次锻造图鉴点亮（2c2b §1.2 步骤 5 + 4d D-04：锻造产物归 craft 册，M11 批2 路2A）
+    #   craft 册 total 来自 _craft_ids（forge 节点 item 引用 ∪ 炼金 recipe 产物），
+    #   ref 必须与 items 装备条目 id 对齐（node.item），不能用 forge 节点 id
+    #   （node_* 非装备条目 id）。单登记 craft（原 weapon+item 双登记已收敛——4d D-01
+    #   四册无 weapon 册，物品册 = 无制造路径物品，防双计）。
     try:
         item_ref = getattr(node, "item", None) or node_id
         node_name = getattr(node, "name", None) or node_id
-        mark_seen(ctx, "weapon", item_ref, node_name)
-        mark_seen(ctx, "item", item_ref, node_name)
+        mark_seen(ctx, "craft", item_ref, node_name)
     except Exception:
         pass  # 图鉴回写失败不阻断锻造结算（图鉴为辅助钩子）
 

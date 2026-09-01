@@ -602,13 +602,10 @@ def test_4d_forge_last_points_to_latest_instance() -> None:
     assert insts[0]["ts"] == 1000.0
 
 
-def test_4d_mark_seen_lights_weapon_and_item_tomes() -> None:
-    """路4D：首次锻造同刻点亮图鉴 weapon + item 分册（ref=items 装备 id 非 node_id）。
+def test_4d_mark_seen_lights_craft_tome() -> None:
+    """M11 批2 路2A：首次锻造点亮图鉴 craft 分册（ref=items 装备 id 非 node_id）。
 
-    断言（铁剑直锻）：
-      - codex_state["weapon"]["iron_sword"].seen=True（weapon 分册）；
-      - codex_state["item"]["iron_sword"].seen=True（item 分册同刻点亮，F-10）；
-      - ref 为装备条目 id（iron_sword）非 forge 节点 id（node_iron_sword 未点亮）。
+    断言（铁剑直锻）：craft 分册点亮、item 册不重复登记（防双计）、ref 非节点 id。
     """
     configure_proficiency(_load_json(_PROF_JSON), _settings_raw())  # type: ignore[arg-type]
     player = _player(forged=[], forge_level=1)
@@ -616,13 +613,12 @@ def test_4d_mark_seen_lights_weapon_and_item_tomes() -> None:
     cmd_forge(_parsed("/锻造 铁剑"), ctx)
     state = ctx.get("codex_state")
     assert isinstance(state, dict)
-    weapon = (state.get("weapon") or {}).get("iron_sword")
-    item = (state.get("item") or {}).get("iron_sword")
-    assert isinstance(weapon, dict) and weapon.get("seen") is True
-    assert isinstance(item, dict) and item.get("seen") is True
-    # ref 非节点 id：node_iron_sword 未点亮（weapon/item 均不登记节点 id）
-    assert not (state.get("weapon") or {}).get(N_IRON)
-    assert not (state.get("item") or {}).get(N_IRON)
+    craft = (state.get("craft") or {}).get("iron_sword")
+    assert isinstance(craft, dict) and craft.get("seen") is True
+    # 防双计：item 册不登记 forge 产物（4d D-04 归属减除）
+    assert not (state.get("item") or {}).get("iron_sword")
+    # ref 非节点 id：node_iron_sword 未点亮
+    assert not (state.get("craft") or {}).get(N_IRON)
 
 
 # ---------------------------------------------------------------------------

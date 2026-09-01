@@ -324,12 +324,12 @@ def test_lore_view_unlocked_returns_rumor() -> None:
     assert "现身于雾沼" not in res["text"]  # 传闻段仅传闻行
 
 
-def test_lore_view_weapon_category_no_lore() -> None:
-    """无 lore 数据的分册（weapon/item）→ 解锁后正文为空串，不崩。"""
+def test_lore_view_item_category_no_lore() -> None:
+    """无 lore 数据的分册（item）→ 解锁后正文为空串，不崩。"""
     ctx = _ctx()
-    mark_seen(ctx, "weapon", "iron_sword", "铁剑")
-    unlock_lore(ctx, "weapon", "iron_sword")
-    res = lore_view(ctx, "weapon", "iron_sword")
+    mark_seen(ctx, "item", "potion", "药水")
+    unlock_lore(ctx, "item", "potion")
+    res = lore_view(ctx, "item", "potion")
     assert res["unlocked"] is True
     assert res["text"] == ""
 

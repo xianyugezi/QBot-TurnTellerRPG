@@ -172,6 +172,35 @@ def _item_exists(item_id: str, ctx: Mapping[str, Any]) -> tuple:
     return False, "missing"
 
 
+def _item_name_of(ctx: Mapping[str, Any], item_id: str) -> str:
+    """物品显示名（图鉴点亮用）：ctx["items"][id].name / Def.name；兜底 item_id。"""
+    items = ctx.get("items")
+    if isinstance(items, Mapping):
+        entry = items.get(item_id)
+        if isinstance(entry, Mapping):
+            nm = entry.get("name")
+            if isinstance(nm, str) and nm:
+                return nm
+        elif entry is not None:
+            nm = getattr(entry, "name", None)
+            if isinstance(nm, str) and nm:
+                return nm
+    resolver = ctx.get("resolve_item")
+    if callable(resolver):
+        try:
+            d = resolver(item_id)
+            nm = getattr(d, "name", None)
+            if isinstance(nm, str) and nm:
+                return nm
+            if isinstance(d, Mapping):
+                nm = d.get("name")
+                if isinstance(nm, str) and nm:
+                    return nm
+        except Exception:
+            pass
+    return item_id
+
+
 def _grant_item(entry: Mapping[str, Any], ctx: Mapping[str, Any]) -> Optional[dict]:
     """物品条目 {item|id, count, bound} → 入包（默认绑定）。失败=skip 黄字，不抛错。"""
     key = "item" if "item" in entry else "id"
@@ -433,6 +462,31 @@ def dispatch_reward(entries: Any, ctx: Optional[Mapping[str, Any]] = None) -> di
             granted.append(out["grant"])
         else:
             skipped.append(out["skip"])
+
+    # M11 批2 路2C（4d G-9）：item 首获图鉴点亮——granted 中 type=item 逐条
+    # mark_seen(ctx,"item",...)；幂等早退天然防双 mark；try/except 防图鉴异常
+    # 吞奖励（图鉴为辅助钩子）；ctx 需可变（mark_seen 写 codex_state）。
+    if granted and isinstance(ctx, MutableMapping):
+        try:
+            from qbot_rpg.core.codex import mark_seen as _codex_mark_seen
+
+            for g in granted:
+                if not isinstance(g, Mapping) or g.get("type") != "item":
+                    continue
+                iid = g.get("item") or g.get("item_id")
+                if not isinstance(iid, str) or not iid:
+                    continue
+                name = _item_name_of(ctx, iid)
+                _codex_mark_seen(ctx, "item", iid, name)
+        except Exception:
+            pass
+        # M11 批2 路2C（4d D-06）：图鉴点亮结算点 → 里程碑阶梯检查（幂等已授不重授）
+        try:
+            from qbot_rpg.core.codex_milestones import check_milestones
+
+            check_milestones(ctx)
+        except Exception:
+            pass
 
     # 幂等落账：批次完成（含普通 skipped 条目）即记 ledger；ok=False（batch 级失败）不记；
     # item_add_failed（物品未实际入包，P1-1）不记 → 不封口幂等，可重试（防静默丢奖）

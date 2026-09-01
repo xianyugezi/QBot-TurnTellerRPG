@@ -65,10 +65,11 @@ def _gate(ctx: Mapping[str, Any]) -> Optional[str]:
 
 
 def _overview(ctx: MutableMapping[str, Any]) -> str:
-    """总览：三分册各自完成度 + 总完成度（未收集条目仅计数不展示名称）。
+    """总览：四册各自完成度 + 总完成度 + 下一档里程碑提示（未收集条目仅计数不展示名称）。
 
-    模板配置化（2026-08-31）：页头/分册行/总行/提示行全部来自 codex_tpl（codex_overview_* /
-    codex_progress_line / codex_total_progress），渲染处 tpl_of。
+    模板配置化（2026-08-31 + M11 批2 路2C）：页头/分册行/总行/下一档/提示行全部来自
+    codex_tpl（codex_overview_* / codex_progress_line / codex_total_progress /
+    codex_next_tier / codex_tier_maxed），渲染处 tpl_of。
     """
     from qbot_rpg.core.codex import CATEGORY_ORDER, _CATEGORY_LABELS, codex_progress
     lines = [tpl_of(ctx, "codex_overview_header")]
@@ -79,6 +80,19 @@ def _overview(ctx: MutableMapping[str, Any]) -> str:
     lines.append(tpl_of(ctx, "codex_total_progress", {
         "pct": round(float(gp.get("pct", 0.0))),
         "seen": gp.get("seen", 0), "total": gp.get("total", 0)}))
+    # 下一档里程碑提示（4d §3.1 五档 25/50/75/90/100；COD-08 判定用未取整精确值）
+    pct_f = float(gp.get("pct", 0.0))
+    try:
+        from qbot_rpg.core.codex_milestones import MILESTONE_PCTS
+
+        next_tier = next((t for t in MILESTONE_PCTS if pct_f < float(t)), None)
+        if next_tier is None:
+            lines.append(tpl_of(ctx, "codex_tier_maxed"))
+        else:
+            lines.append(tpl_of(ctx, "codex_next_tier", {
+                "tier": int(next_tier), "gap": max(0, round(float(next_tier) - pct_f))}))
+    except Exception:
+        pass
     lines.append(tpl_of(ctx, "codex_overview_hint"))
     return "\n".join(lines)
 

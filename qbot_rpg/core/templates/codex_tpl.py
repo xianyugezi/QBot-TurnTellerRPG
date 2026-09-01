@@ -15,6 +15,8 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     "codex_overview_header": "【图鉴总览】",
     "codex_progress_line": "{label}：{pct}%（{seen}/{total}）",
     "codex_total_progress": "总完成度：{pct}%（{seen}/{total}）",
+    "codex_next_tier": "下一档：{tier}%（还差 {gap}%）",
+    "codex_tier_maxed": "已达最高档（100% 收藏家）",
     "codex_overview_hint": "提示：分册页 /图鉴 怪物 2（每页 5 条）",
 
     # —— 分册分页（3f R-19/R-20；??? 不泄露）——
@@ -32,6 +34,8 @@ PLACEHOLDER_WHITELIST: Dict[str, set] = {
     "codex_overview_header": set(),
     "codex_progress_line": {"label", "pct", "seen", "total"},
     "codex_total_progress": {"pct", "seen", "total"},
+    "codex_next_tier": {"tier", "gap"},
+    "codex_tier_maxed": set(),
     "codex_overview_hint": set(),
     "codex_unknown_category": set(),
     "codex_category_header": {"label"},

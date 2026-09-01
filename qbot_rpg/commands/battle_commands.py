@@ -734,6 +734,23 @@ def dispatch_round(
                 )
             except Exception:
                 pass
+            # M11 批2 路2C（4d G-8）：monster 册首杀点亮——mark_seen(killed=True)；
+            # try/except 防图鉴异常吞战斗结算；不新增 send（图鉴为辅助钩子）
+            try:
+                from qbot_rpg.core.codex import mark_seen as _codex_mark_seen
+
+                mid = str(e.get("id") or e.get("monster_id") or e_name)
+                _codex_mark_seen(cast(MutableMapping, ctx), "monster", mid, e_name,
+                                 killed=True)
+            except Exception:
+                pass
+            # M11 批2 路2C（4d D-06）：图鉴点亮结算点 → 里程碑阶梯检查（幂等已授不重授）
+            try:
+                from qbot_rpg.core.codex_milestones import check_milestones
+
+                check_milestones(cast(MutableMapping, ctx))
+            except Exception:
+                pass
         # 叙事句伤害 = 本轮最后一个玩家行动 outcome 的 final_damage（用户结算模板回顾最后一击）
         last_pd = 0
         for _oc in reversed(tuple(getattr(report, "outcomes", ()) or ())):

@@ -157,6 +157,10 @@ _KIND_FOR_MODULE: Mapping[str, str] = {
     # 与 field_meta ModuleMeta(kind="skill") + models.DEF_CLASSES 对齐（路1A SkillDef）；
     # ctx 注入 skills 表走 kind="skill"（m13_6a摸底 A11：context.py:1279 已预留））
     "skills": "skill",
+    # M13 职业库（细化_6b_职业库与变换引擎契约 §1：jobs.json 职业库 → 注册表 kind="job"；
+    # 与 field_meta ModuleMeta(kind="job") + models.DEF_CLASSES 对齐（批4 路4A/4B JobDef）；
+    # ctx 注入 jobs 表走 kind="job"（m13_6b摸底 ⑧：context.make_context 注入点，批5 接线））
+    "jobs": "job",
     "items": "item",
     "equipment": "equipment",
     "traits": "trait",

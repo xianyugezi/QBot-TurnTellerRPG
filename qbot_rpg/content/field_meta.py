@@ -66,6 +66,9 @@ NAMESPACES: Dict[str, Tuple[str, ...]] = {
     # 与 action 库共用 ActionCore 元数据单点但 ID 各自独立——V-10 跨库重名仅黄提示，
     # 不并入 action_lib，保持双库 ID 空间独立）
     "skill_lib": ("skills",),
+    # M13 职业库（细化_6b_职业库与变换引擎契约 §1：jobs.json 职业注册表独立命名空间；
+    # 职业 ID 为存档引用键 + 快照冗余键（§1.1 字段 1），独立于 skills/action 双库 ID 空间）
+    "job_lib": ("jobs",),
 }
 
 # -------------------------------------------------------------------------------------
@@ -574,6 +577,57 @@ def _module_table() -> Dict[str, ModuleMeta]:
         # ---- 兼容旧键（enemies[].skills 引用的技能表旧键）----
         "skill": FieldMeta(type="ref", ref_target="skill_or_any"),
     }
+    jobs_fields: Dict[str, FieldMeta] = {
+        # ---- M13 职业库（细化_6b_职业库与变换引擎契约 §1.1：顶层 11 字段）----
+        # 与 skills_fields 同源模式：枚举宽松口径（difficulty 软标注不拦截；resource_axes/
+        # mechanic_tags/weapon_types 引用深校验归 4B 专项），本表仅登记字段口径 + 必填。
+        # 注意：transform 段嵌套必填（§1.3 字段 21/22/23/25/26/28/29）登记在子对象 children
+        # 上——泛型 R-5 required_missing 对 obj 子字段生效（validator._check_value obj 分支）；
+        # duration 枚举 turns|battle 与 state_policy 三键枚举 clear|keep 随契约登记，
+        # 枚举外值 → 泛型 R-1 红拦（V4/V5 判定基底，深引用校验 V1~V3/V6~V8 归 4B 专项）。
+        "id": F_ID, "name": F_NAME,           # 1/2 职业唯一 ID + 显示名（禁空格，A2 专项）；name 必填归 4B 专项
+        "difficulty": FieldMeta(type="str", soft_label=True),  # 3 simple|advanced|complex（软标注：只建议不拦截）
+        "playstyle": FieldMeta(type="str"),   # 4 玩法一句话（≤20 字，专项）
+        "recommended_newbie": FieldMeta(type="bool"),  # 5 推荐新手？（注册缺省职业取推荐标记）
+        "resource_axes": FieldMeta(type="list", element=FieldMeta(type="str")),  # 6 stats.json 注册表引用（4B 专项）
+        "mechanic_tags": FieldMeta(type="list", element=FieldMeta(type="str")),  # 7 机制标签（软标注）
+        "weapon_types": FieldMeta(type="list", element=FieldMeta(type="str")),   # 8 可用武器类型（4b 联动）
+        "growth": FieldMeta(type="obj", children={
+            # 12-20 九属性职业成长率（缺省 0；白值增量=白值×growth×职业成长率，3b B2 管线）
+            "str": FieldMeta(type="number", range_min=0, range_max=10),
+            "int": FieldMeta(type="number", range_min=0, range_max=10),
+            "con": FieldMeta(type="number", range_min=0, range_max=10),
+            "spr": FieldMeta(type="number", range_min=0, range_max=10),
+            "foc": FieldMeta(type="number", range_min=0, range_max=10),
+            "agi": FieldMeta(type="number", range_min=0, range_max=10),
+            "lck": FieldMeta(type="number", range_min=0, range_max=10),
+            "hp": FieldMeta(type="number", range_min=0, range_max=10),
+            "mp": FieldMeta(type="number", range_min=0, range_max=10),
+        }),
+        # 10 transform 段（§1.3 字段 21-31；缺省=无形态切换职业）
+        "transform": FieldMeta(type="obj", children={
+            "transform_skill": FieldMeta(type="str", required=True),   # 21 触发技能 ID（V2 归属校验 4B）
+            "transform_to": FieldMeta(type="str", required=True),      # 22 目标形态 ID（V1/V3 4B）
+            "duration": FieldMeta(type="enum", enum=("turns", "battle"), required=True),  # 23 turns|battle
+            "turns": FieldMeta(type="int", range_min=1, range_max=999),  # 24 条件必填（duration=turns，4B）
+            "revert": FieldMeta(type="bool", required=True),          # 25 结束后还原（battle+true → V4 红拦 4B）
+            "cooldown": FieldMeta(type="int", range_min=0, range_max=999, required=True),  # 26 形态冷却
+            "dispel_reverts": FieldMeta(type="bool", default=True),   # 27 被驱散→还原钩子（默认 true）
+            "state_policy": FieldMeta(type="obj", required=True, children={
+                # 32-34 三键 {clear, keep} 二值枚举（§1.4；枚举外值 → 泛型 R-1，V5 判定基底）
+                "combo": FieldMeta(type="enum", enum=("clear", "keep"), default="clear"),
+                "marks": FieldMeta(type="enum", enum=("keep", "clear"), default="keep"),
+                "buff": FieldMeta(type="enum", enum=("keep", "clear"), default="keep"),
+            }),
+            "skill_set": FieldMeta(type="str", required=True),        # 29 形态技能组 ID（V8 4B）
+            "equip_restrict": FieldMeta(type="list", element=FieldMeta(type="str")),  # 30 形态装备限制（可空）
+            "derive_chains": FieldMeta(type="list", element=FieldMeta(type="str")),   # 31 形态专属派生链（V8 4B）
+        }),
+        "description": FieldMeta(type="str"),  # 11 职业介绍文案（3d 注册表渲染）
+    }
+    # 技能/链侧挂点字段（细化_6b §1.5/§1.6）：revert_form（37）与 derive_only（38）为
+    # skills.json 字段、job_scope（39）为 skill_chains.json 字段——随 6a 技能库全量字段
+    # 登记；6a 尚未登记前此处预留（缺口登记于细化_6b 附·未定稿依赖 1/3，由 6a 路收口）
     items_fields: Dict[str, FieldMeta] = {
         "id": F_ID, "name": F_NAME, "type": F_TYPE,
         "price": F_PRICE, "atk": F_ATK, "def": F_DEF,
@@ -761,6 +815,17 @@ def _module_table() -> Dict[str, ModuleMeta]:
         # kind="skill" 与 loader _KIND_FOR_MODULE + DEF_CLASSES 对齐（路1A SkillDef）；
         # 命名空间 skill_lib 独立于 action_lib——V-10 跨库重名仅黄提示）
         "skills": ModuleMeta(entry_type="list", fields=skills_fields, kind="skill", namespace="skill_lib"),
+        # M13 职业库（细化_6b_职业库与变换引擎契约 §1.1~1.4：jobs.json 职业注册表；
+        # kind="job" 与 loader _KIND_FOR_MODULE + DEF_CLASSES 对齐（批4 路4A/4B JobDef）；
+        # 命名空间 job_lib 独立于 skills/action——职业 ID 为存档引用键 + 快照冗余键，
+        # 跨库重名不影响引用解析（V1 校验引职业库 ID 空间）。
+        # 字段口径说明：difficulty 软标注（§1.1 字段 3「软标注：校验器只 warning 不拦截」→
+        # soft_label 永不红拦）；transform 段必填字段（transform_skill/transform_to/duration/
+        # revert/cooldown/state_policy/skill_set）随 §1.3 登记 required；state_policy 三键
+        # 枚举 {clear, keep}（§1.4）随契约登记，枚举外值 → 泛型 R-1 红拦（V5 判定基底）；
+        # growth 九键缺省 0 不设 required（§1.2）。深结构/引用校验（V1~V8 专项）归批4 路4B
+        # job_models.validate_jobs 全权（对齐 skills 专项校验器口径），本表登记字段口径。
+        "jobs": ModuleMeta(entry_type="list", fields=jobs_fields, kind="job", namespace="job_lib"),
         "formula": ModuleMeta(entry_type="map", fields=formula_fields, kind="formula", namespace="formula_lib"),
         "items": ModuleMeta(entry_type="list", fields=items_fields, kind="item", namespace="item_lib"),
         "equipment": ModuleMeta(entry_type="list", fields=equipment_fields, kind="equipment",

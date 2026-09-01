@@ -463,13 +463,16 @@ def _consume_bait_hook(ctx: MutableMapping[str, Any]):
     惰性 import 防环；缺模块/异常 → 返回 {"ok": False, "reason": "bait_unavailable"}
     不炸装配（对齐引擎容错惯例）。fishing_bait.consume_bait 走 ctx 内
     inventory/count_item/remove_item hooks（_inventory_hooks 已注入）。
+    接线契约（批8 审查 A3 P0-2）：fishing.py _consume_bait 调 hook(ctx, engine)
+    传两参——本 hook 收 (ctx, engine) 两参并用闭包 ctx（忽略入参 engine），
+    否则 TypeError 被引擎 except 吞 → 生产扣饵永不执行（A3 P0-2 已修）。
     """
 
-    def _hook(qid: object) -> dict:
+    def _hook(_ctx: object, _engine: object = None) -> dict:
         try:
             from qbot_rpg.core.fishing_bait import consume_bait
 
-            return consume_bait(ctx, qid)
+            return consume_bait(ctx, _ctx)
         except Exception:
             return {"ok": False, "reason": "bait_unavailable"}
 

@@ -61,7 +61,7 @@ def test_bite_waiting() -> None:
 def test_bite_triggered() -> None:
     """S3 已触发 /鱼讯 → 鱼讯类别 + 收杆提醒（TC-22）。"""
     ctx = _ctx(fish_state={"state": STATE_BITE, "spot_id": "gp_moon_grass",
-                           "bite_kind": "tug", "golden": False})
+                           "kind": "tug", "golden": False})
     out = cmd_fish_bite(_parsed("鱼讯"), ctx)
     assert "拉扯" in out
     assert "收杆" in out
@@ -70,7 +70,7 @@ def test_bite_triggered() -> None:
 def test_bite_triggered_golden_line() -> None:
     """S3 金闪 → 金闪标记行（鱼王预告，批4 接线）。"""
     ctx = _ctx(fish_state={"state": STATE_BITE, "spot_id": "gp_moon_grass",
-                           "bite_kind": "violent", "golden": True})
+                           "kind": "violent", "golden": True})
     out = cmd_fish_bite(_parsed("鱼讯"), ctx)
     assert "金闪" in out
 
@@ -87,7 +87,7 @@ def test_bite_off_mode() -> None:
 # ---------------------------------------------------------------------------
 def _reel_ctx(state: str = STATE_BITE, **kw: object) -> dict:
     fs: dict = {"state": state, "spot_id": "gp_moon_grass",
-                "cast_at": 900, "bite_kind": "micro", "golden": False}
+                "cast_at": 900, "kind": "micro", "golden": False}
     fs_extra = kw.pop("fs", None)
     if isinstance(fs_extra, dict):
         fs.update(fs_extra)
@@ -136,7 +136,7 @@ def test_reel_timeout_lost() -> None:
     eng = FishingEngine(settings={}, rng=None)
     # 引擎构造后强制 fish_state 过期：bite_ts 很久前（注意 bite_ts=0 会被 or now 吞）
     ctx = _reel_ctx(fs={"state": STATE_BITE, "spot_id": "gp_moon_grass",
-                        "cast_at": 0, "bite_ts": 1, "bite_kind": "micro"})
+                        "cast_at": 0, "bite_ts": 1, "kind": "micro"})
     ctx["now"] = 100000  # 距 bite_ts=1 已 99999s >> carry_sec 90
     ctx["fishing_engine"] = eng
     out = cmd_fish_reel(_parsed("收杆", "自动"), ctx)

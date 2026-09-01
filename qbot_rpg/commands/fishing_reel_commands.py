@@ -168,22 +168,35 @@ def _rarity_cn(rarity: object) -> str:
 
 
 def _engine_of(ctx: MutableMapping[str, Any]) -> FishingEngine:
-    """引擎复用（对齐路2B：ctx["fishing_engine"] 已注入 → 复用；缺省自建）。"""
+    """引擎复用（对齐路2B：ctx["fishing_engine"] 已注入 → 复用；缺省自建）。
+
+    批8 审查 A3 P1-3：注入引擎可能无 roll_hook（装配层构造点无 hook）——若注入
+    引擎无 hook，本函数兜底包一层（局部 roll_hook 委托 roll_rarity），保证
+    注入/自建两分支行为一致（收杆均可 roll）。
+    """
     eng = ctx.get("fishing_engine")
     if isinstance(eng, FishingEngine):
+        if eng._roll_hook is None:
+            eng._roll_hook = _make_roll_hook(ctx)
         return eng
-
-    def _roll_hook(_ctx: Any, fs: Any, choice: Any) -> dict:
-        r = roll_rarity(choice, _ctx, _ctx, _ctx.get("rng"))
-        return {"ok": True, "rarity": r}
 
     eng = FishingEngine(
         settings=ctx.get("settings"),
         rng=ctx.get("rng"),
-        roll_hook=_roll_hook,
+        roll_hook=_make_roll_hook(ctx),
     )
     ctx["fishing_engine"] = eng
     return eng
+
+
+def _make_roll_hook(ctx: MutableMapping[str, Any]):
+    """roll_hook 工厂：委托 roll_rarity（P2-1：cfg 传 settings 全量、ctx 传玩家上下文）。"""
+
+    def _roll_hook(_ctx: Any, fs: Any, choice: Any) -> dict:
+        r = roll_rarity(choice, _ctx.get("settings"), _ctx, _ctx.get("rng"))
+        return {"ok": True, "rarity": r}
+
+    return _roll_hook
 
 
 # ---------------------------------------------------------------------------
@@ -194,18 +207,38 @@ def cmd_fish_bite(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 
     路由：
       - off 模式 → 拒绝（GU-01，对齐路2A）
-      - S2 等待中 → 钓点/已耗时/等待中
+      - S2 等待中 → 先调引擎 bite_check 懒判到期（批8 审查 A3 P1-1：S2→S3 唯一
+        触发入口——细化 TR-03「/鱼讯 查询时推进」）；到期 → S3 鱼讯；未到期 →
+        钓点/已耗时/等待中
       - S3 已触发 → 鱼讯类别（含金闪标记行）+ 收杆提醒
       - 空闲/无钓局 → 空态「无进行中钓局」不报错
     """
     if _mode_of(ctx) == "off":
         return _render(ctx, "fish_off", "钓鱼功能已关闭", {})
 
+    # P1-4（批8 审查 A3）：simple 模式无 S2/S3 实例——/鱼讯 明确拒绝
+    # （fishing_mode.command_allowed 矩阵：simple 仅 /钓鱼 可达）
+    from qbot_rpg.core.fishing_mode import CMD_BITE, command_allowed
+
+    if not command_allowed(_mode_of(ctx), CMD_BITE):
+        return _render(ctx, "fish_bite_idle", _DEF_BITE_IDLE, {})
+
     fs = ctx.get("fish_state")
     if not isinstance(fs, MutableMapping):
         return _render(ctx, "fish_bite_idle", _DEF_BITE_IDLE, {})
 
+    # P1-1（批8 审查 A3）：懒判到期推进——调引擎 bite_check（纯懒判零定时器），
+    # 到期则 fs 就地升级 S2→S3（写 kind/golden/bite_ts），壳层随后按新状态渲染
     state = fs.get("state")
+    if state == STATE_WAITING:
+        eng = _engine_of(ctx)
+        if eng is not None:
+            bite_r = eng.bite_check(ctx)
+            state = bite_r.get("state") if isinstance(bite_r, Mapping) else state
+            fs_new = ctx.get("fish_state")
+            if isinstance(fs_new, MutableMapping):
+                fs = fs_new
+
     spot_id = fs.get("spot_id")
     spot = str(spot_id or "--")
 
@@ -216,7 +249,8 @@ def cmd_fish_bite(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         })
 
     if state == STATE_BITE:
-        kind = fs.get("bite_kind") or "micro"
+        # P1-2（批8 审查 A3）：引擎落档键是 kind 非 bite_kind（fishing.py L637）
+        kind = fs.get("kind") or "micro"
         golden = bool(fs.get("golden"))
         golden_line = "（金闪！）" if golden else ""
         return _render(ctx, "fish_bite_triggered", _DEF_BITE_TRIGGERED, {
@@ -244,6 +278,12 @@ def cmd_fish_reel(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     """
     if _mode_of(ctx) == "off":
         return _render(ctx, "fish_off", "钓鱼功能已关闭", {})
+
+    # P1-4（批8 审查 A3）：simple 模式无 S2/S3 实例——/收杆 明确拒绝
+    from qbot_rpg.core.fishing_mode import CMD_REEL, command_allowed
+
+    if not command_allowed(_mode_of(ctx), CMD_REEL):
+        return _render(ctx, "fish_bite_idle", _DEF_BITE_IDLE, {})
 
     args = _body_args(parsed)
     raw = args[0] if args else CHOICE_AUTO  # 无参 → 默认自动

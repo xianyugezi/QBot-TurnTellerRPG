@@ -45,6 +45,8 @@ from qbot_rpg.commands import (
     codex_commands,
     dialog_commands,
     explore_commands,
+    fishing_commands,
+    fishing_reel_commands,
     forge_commands,
     investigate_commands,
     log_commands,
@@ -92,6 +94,9 @@ REGISTER_GROUPS: tuple = (
     alchemy_commands.register_alchemy_commands,    # M8 炼金 30+ 指令（/图鉴 并入 codex）
     forge_commands.register_forge_commands,        # M9 锻造 六指令（P0-1 收口 2026-08-30：
     #   /锻造 /确认 /图纸 /锻造树 /套装 /客制；/确认 状态分派器 replace 接管炼金同名）
+    # M10 钓鱼（批8 审查 A3 P0-1 收口 2026-09-01）：/钓鱼 /鱼讯 /收杆 三指令
+    fishing_commands.register_fishing_commands,    # /钓鱼 钓点列举+鱼讯参考
+    fishing_reel_commands.register_fishing_reel_commands,  # /鱼讯 + /收杆 三选一
 )
 
 

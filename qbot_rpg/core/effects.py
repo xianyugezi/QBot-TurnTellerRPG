@@ -46,6 +46,27 @@ from qbot_rpg.core.marks import (
     RemoveMark,
 )
 
+# 效果引用归一 / 效果条件化（功能二《框架_功能二_效果引用归一与条件化_设计.md》§2）：
+# 执行链入口常量，纯配置可写（skill effects 条目 / statuses actions / proc actions 内嵌）。
+# 仅 import 复用 combo.evaluate_condition / combo.ConditionCtx（battle.py / combo.py 零改动）。
+
+# 效果引用条目键（对齐 6a EFFECT_REF_KEY）：
+EFFECT_REF_KEY: str = "effect"        # {effect: id} / {effect: id, overrides: {...}}
+EFFECT_OVERRIDES_KEY: str = "overrides"  # 引用条目覆盖字段（只写要改的字段）
+EFFECT_CONDITION_KEY: str = "condition"  # 效果条目级条件（condition 门控）
+EFFECT_ACTIONS_KEY: str = "actions"      # 效果定义容器（L2/special/模板/proc 子动作）
+
+# 效果定义字段 → 执行 action 字段映射（细化_1b §1.1 + §7.1/§7.2 模板；只映射
+# execute_action 分支实际消费的键。效果定义以 power/duration 表达，L0 动作以
+# value/turns 消费 → 合成时翻译，其余键直通）：
+_EFFECT_DEF_TO_ACTION_MAP: Dict[str, str] = {
+    "power": "value",       # 效果定义 power（定稿滑条 10-500）→ L0 action value
+    "duration": "turns",    # 效果定义 duration（int）→ dot/shield 等 turns
+    "stat": "stat",
+    "target": "target",
+}
+
+
 __all__ = [
     "DamageCtx",
     "PipelineResult",
@@ -1277,6 +1298,243 @@ def tick_after_action(snapshot: Mapping[str, Any], runtime: EffectRuntime, actor
 _DEFAULT_PIPELINE: Optional[DamagePipeline] = None
 
 
+def _mark_count_on(bs: Mapping[str, Any], side: str, mark: Any) -> int:
+    """读快照 marks_state[side] 中指定印记（mark_id 或冗余 name）的层数。
+
+    缺段/缺实例 → 0（防御性；对齐 monster_conditions._mark_count_on 语义——
+    功能一同族实现，直接读 snapshot[\"marks_state\"]，不依赖 MarksManager 注入）。
+    """
+    if not mark:
+        return 0
+    ms = bs.get("marks_state")
+    if not isinstance(ms, Mapping):
+        return 0
+    insts = ms.get(side)
+    if not isinstance(insts, list):
+        return 0
+    want = str(mark)
+    for inst in insts:
+        if not isinstance(inst, Mapping):
+            continue
+        if inst.get("mark_id") == want or inst.get("name") == want:
+            return max(0, int(inst.get("count", 0) or 0))
+    return 0
+
+
+def _match_mark_trigger(sub: Mapping[str, Any], bs: Mapping[str, Any], side: str) -> bool:
+    """印记条件子句统一求值（功能二 marks_lookup 内部语义，对齐 monster_conditions）：
+
+    absent=true → 要求层数==0；否则 min/max 夹取；min/max 均缺省 → 层数≥1（存在）。
+    """
+    count = _mark_count_on(bs, side, sub.get("mark"))
+    if sub.get("absent"):
+        return count == 0
+    lo = sub.get("min")
+    hi = sub.get("max")
+    if lo is None and hi is None:
+        return count >= 1
+    if lo is not None and count < int(lo):
+        return False
+    if hi is not None and count > int(hi):
+        return False
+    return True
+
+
+def _marks_lookup(snapshot: Mapping[str, Any], kind: str, which: str,
+                  rule: Mapping[str, Any], mark_id: Optional[str]) -> bool:
+    """combo.evaluate_condition 的 marks_lookup 注入实现（功能二 §2.2）：
+
+    读 ctx.snapshot[\"marks_state\"]（对齐 monster_conditions._mark_count_on 语义，
+    mark_id/name 均可匹配，absent/min/max 支持）；side = which（self/target 相对
+    侧）→ 直接映射 player/enemy。kind 未知 → False（安全失败，对齐 combo 1c3 TC-13）。
+    """
+    if not isinstance(rule, Mapping) or kind not in (
+        "self_marks", "target_marks", "marks_single",
+        "marks_total", "marks_set", "marks_any",
+    ):
+        return False
+    side = which if which in ("player", "enemy") else ("player" if which == "self" else "enemy")
+    if kind in ("self_marks", "target_marks", "marks_single"):
+        sub = dict(rule)
+        if mark_id:
+            sub["mark"] = mark_id
+        if "mark" in sub or "mark_id" in sub:
+            sub.setdefault("mark", sub.pop("mark_id", None))
+            return _match_mark_trigger(sub, snapshot, side)
+        # 退化 {min|max} → 总层数（combo _eval_marks_sub 总数口径）
+        return _bound_check(sub, _mark_total_on(snapshot, side))
+    if kind == "marks_total":
+        return _bound_check(dict(rule), _mark_total_on(snapshot, side))
+    if kind == "marks_set":
+        names = rule.get("all")
+        names = [names] if isinstance(names, str) else (list(names) if isinstance(names, list) else [])
+        ms = snapshot.get("marks_state")
+        insts = ms.get(side) if isinstance(ms, Mapping) else None
+        insts = [i for i in insts if isinstance(i, Mapping)] if isinstance(insts, list) else []
+        return all(
+            any(
+                (i.get("name") == n or i.get("mark_id") == n)
+                and int(i.get("count", 0) or 0) >= 1
+                for i in insts
+            )
+            for n in names if isinstance(n, str)
+        ) if names else False
+    if kind == "marks_any":
+        ms = snapshot.get("marks_state")
+        insts = ms.get(side) if isinstance(ms, Mapping) else None
+        insts = [i for i in insts if isinstance(i, Mapping)] if isinstance(insts, list) else []
+        distinct = sum(1 for i in insts if int(i.get("count", 0) or 0) > 0)
+        return _bound_check(dict(rule), distinct)
+    return False
+
+
+def _mark_total_on(snapshot: Mapping[str, Any], side: str) -> int:
+    """读快照 marks_state[side] 全部印记层数之和（marks_total 取值）。缺段 → 0。"""
+    ms = snapshot.get("marks_state")
+    if not isinstance(ms, Mapping):
+        return 0
+    insts = ms.get(side)
+    if not isinstance(insts, list):
+        return 0
+    return sum(
+        max(0, int(i.get("count", 0) or 0))
+        for i in insts
+        if isinstance(i, Mapping)
+    )
+
+
+
+def _bound_check(sub: Mapping[str, Any], value: int) -> bool:
+    """{min|max} 边界夹取（含边界，对齐 combo._cond_bound / marks.evaluate）。"""
+    if "min" in sub and value < int(sub["min"]):
+        return False
+    if "max" in sub and value > int(sub["max"]):
+        return False
+    return True
+
+
+def _cond_ctx_for(snapshot: Mapping[str, Any], actor: str, target: str) -> Any:
+    """由 ctx.snapshot 构造 combo.ConditionCtx（功能二 §2.2）：
+
+    self_statuses/target_statuses 从 snapshot[side].status_state 实例收集 status_id；
+    target_hp_pct = target.hp/max_hp*100；round_ = snapshot["turn"]；count=0。
+    """
+    from qbot_rpg.core.combo import ConditionCtx  # lazy：combo 无 core 依赖，防环
+
+    def _ids(side: str) -> frozenset:
+        ss = snapshot.get("status_state")
+        if not isinstance(ss, Mapping):
+            return frozenset()
+        insts = ss.get(side)
+        if not isinstance(insts, list):
+            return frozenset()
+        return frozenset(str(i.get("status_id", "")) for i in insts if isinstance(i, Mapping))
+
+    c = snapshot.get(target)
+    max_hp = int(c.get("max_hp", 0)) if isinstance(c, dict) else 0
+    hp = int(c.get("hp", 0)) if isinstance(c, dict) else 0
+    pct = (hp / max_hp * 100.0) if max_hp > 0 else 100.0
+    return ConditionCtx(
+        count=0,
+        target_hp_pct=round(pct, 6),
+        self_statuses=_ids(actor),
+        target_statuses=_ids(target),
+        round_=int(snapshot.get("turn", 1) or 1),
+    )
+
+
+def _condition_passes(action: Mapping[str, Any], ctx: DamageCtx) -> bool:
+    """效果条目 condition 门控（功能二 §2.2）：
+
+    condition 键求值 = combo.evaluate_condition(condition, ConditionCtx, marks_lookup)；
+    求值失败/未知键 → False（跳过，对齐既有安全失败口径）；无 condition 键 → 恒执行。
+    """
+    cond = action.get(EFFECT_CONDITION_KEY)
+    if not isinstance(cond, Mapping) or not cond:
+        return True
+    from qbot_rpg.core.combo import evaluate_condition  # lazy：防环
+
+    try:
+        return bool(evaluate_condition(
+            cond,
+            _cond_ctx_for(ctx.snapshot, ctx.attacker, ctx.target),
+            lambda kind, which, rule, mark_id: _marks_lookup(ctx.snapshot, kind, which, rule, mark_id),
+        ))
+    except Exception:  # noqa: BLE001 —— 条件求值异常 → 不满足（安全失败）
+        return False
+
+
+def _chain_depth_limit(ctx: DamageCtx, runtime: EffectRuntime, depth: int) -> bool:
+    """引用递归深度上限（功能二 §2.1）：runtime.config.chain_depth，默认 3。"""
+    limit = int(runtime.config.get("chain_depth", 3) or 3)
+    return depth >= limit
+
+
+def _normalize_effect_ref(
+    action: Mapping[str, Any],
+    ctx: DamageCtx,
+    runtime: EffectRuntime,
+    depth: int,
+) -> Tuple[Optional[List[Dict[str, Any]]], bool]:
+    """效果引用归一（功能二 §2.1）：{effect: id, overrides} → 可执行 action 列表。
+
+    返回 (actions | None, skipped)：
+    - 无 effect 键 → (None, False) 原样走既有分支（零行为变化）；
+    - 有 effect 键 → 定义展开：
+      defn 缺失/非 Mapping → (None, True) 安全失败不崩（热重载删效果降级 A-6）；
+      defn 有 actions（L2/special/模板容器）→ 逐个子动作（合成 overrides）返回；
+      defn 无 actions → 定义字段 + overrides 合成单 action 继续 execute_action
+      （映射 _EFFECT_DEF_TO_ACTION_MAP，class=atomic/L0 type 直通）；
+      深度超限 → (None, True) 截断不崩。
+    """
+    eid = action.get(EFFECT_REF_KEY)
+    if eid is None:
+        return None, False
+    try:
+        defn = runtime._resolver(str(eid), "effect")
+    except Exception:  # noqa: BLE001 —— 解析异常 → 安全失败
+        defn = None
+    if defn is None:
+        return None, True
+    raw = defn.raw if hasattr(defn, "raw") else defn
+    if not isinstance(raw, Mapping):
+        return None, True
+    if _chain_depth_limit(ctx, runtime, depth):
+        return None, True
+    overrides = action.get(EFFECT_OVERRIDES_KEY)
+    ov = dict(overrides) if isinstance(overrides, Mapping) else {}
+    # 引用条目上的 target/type 等顶层键（如模板条目 effect+target）并入 overrides 同权
+    for k in (EFFECT_CONDITION_KEY, EFFECT_ACTIONS_KEY):
+        ov.pop(k, None)
+    for k, v in action.items():
+        if k in (EFFECT_REF_KEY, EFFECT_OVERRIDES_KEY, EFFECT_CONDITION_KEY):
+            continue
+        ov.setdefault(k, v)
+    acts = raw.get(EFFECT_ACTIONS_KEY)
+    if isinstance(acts, list):
+        subs: List[Dict[str, Any]] = []
+        for sub in acts:
+            if isinstance(sub, Mapping):
+                merged = dict(sub)
+                merged.update(ov)
+                subs.append(merged)
+        if not subs:
+            return None, True
+        return subs, False
+    base = dict(raw)
+    for k in (EFFECT_REF_KEY, EFFECT_OVERRIDES_KEY, EFFECT_CONDITION_KEY, EFFECT_ACTIONS_KEY):
+        base.pop(k, None)
+    mapped = {target_k: base.pop(src_k, None) for src_k, target_k in _EFFECT_DEF_TO_ACTION_MAP.items()}
+    base.update({k: v for k, v in mapped.items() if v is not None})
+    # overrides 键同过映射表翻译（overrides 按定义字段名写，如 {power:50} → value:50）；
+    # 已用 action 字段名（value/turns 等）→ 映射表无 src → 原样保留
+    ov_mapped: Dict[str, Any] = {}
+    for k, v in ov.items():
+        ov_mapped[_EFFECT_DEF_TO_ACTION_MAP.get(k) or k] = v
+    base.update(ov_mapped)
+    return [base], False
+
+
 def _get_pipeline(ctx: DamageCtx) -> DamagePipeline:
     global _DEFAULT_PIPELINE
     p = ctx.variables.get("pipeline")
@@ -1403,7 +1661,32 @@ def execute_action(
     - 3 结算修正器：lifesteal / pierce / mitigation（挂伤害管线自动生效，本入口亦可直达）；
     - proc 容器：chance/cooldown/actions + 每回合 10 / 每场 99 / 链深 3 上限
       （细化_1b §1.1 字段 10-12 / 定稿 §2.4）。
+
+    功能二（《框架_功能二_效果引用归一与条件化_设计.md》§2）入口扩展：
+    - 效果引用归一：action 带 effect 键 → 查 effects 定义展开为可执行子动作列表，
+      逐个子动作递归归一执行（深度上限 runtime.config.chain_depth，默认 3）；
+      查不到定义 → 安全失败不崩（热重载删效果降级，A-6）；
+    - condition 门控：action 带 condition 键 → combo.evaluate_condition 求值，
+      不满足跳过（不进副作用），无条件恒执行（既有路径零行为变化）。
     """
+    ref_actions, skipped = _normalize_effect_ref(action, ctx, runtime, depth)
+    if skipped:
+        return ActionResult(False, [], "效果引用缺失或链深度超限")
+    if ref_actions is not None:
+        if not _condition_passes(action, ctx):
+            return ActionResult(False, [], "condition 未满足")
+        ref_side_effects: List[Dict[str, Any]] = []
+        for sub in ref_actions:
+            sub = dict(sub)
+            sub.pop(EFFECT_CONDITION_KEY, None)
+            sub_res = execute_action(sub, ctx, runtime, depth=depth + 1)
+            # 子动作失败（引用缺失/深度截断）→ 容器传播失败，不静默吞（防环引用假成功）
+            if not sub_res.ok:
+                return ActionResult(False, ref_side_effects, sub_res.message or "效果链中断")
+            ref_side_effects.extend(sub_res.side_effects)
+        return ActionResult(True, ref_side_effects)
+    if not _condition_passes(action, ctx):
+        return ActionResult(False, [], "condition 未满足")
     atype = str(action.get("type", ""))
     side_effects: List[Dict[str, Any]] = []
     attacker = ctx.attacker
@@ -1627,6 +1910,9 @@ def execute_proc_action(
     - 链深度上限（默认 3，防递归无限）；
     - chance 概率三态 + cooldown 冷却；
     - 触发时按序执行子动作（E-1 追击→偷取可链）。
+
+    功能二：proc 子动作循环同样过效果引用归一（proc 内 {effect: id} 引用生效，
+    补 L-06 族——execute_proc_action 子动作经 execute_action 入口归一）。
     """
     side_effects: List[Dict[str, Any]] = []
     actor = ctx.attacker
@@ -1657,6 +1943,7 @@ def execute_proc_action(
     for sub in proc_action.get("actions") or []:
         if not isinstance(sub, dict):
             continue
+        # 功能二：proc 子动作过 execute_action 入口 → 引用归一 + condition 门控同生效
         res = execute_action(sub, ctx, runtime, depth=depth + 1)
         side_effects.extend(res.side_effects)
     return ActionResult(True, side_effects)

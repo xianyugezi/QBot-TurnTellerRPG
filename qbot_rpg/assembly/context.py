@@ -48,12 +48,15 @@
 from __future__ import annotations
 
 import inspect
+import logging
 import random
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Dict, List, Mapping, MutableMapping, Optional
 
 from qbot_rpg.core.levelup import LevelUpEngine
+
+_LOGGER = logging.getLogger(__name__)
 from qbot_rpg.core.player_attributes import (
     ConditionalRule,
     calc_all_final_attributes,
@@ -1419,6 +1422,32 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
         and isinstance(getattr(battle_session, "session_type", None), str)
         and "battle" in str(getattr(battle_session, "session_type", ""))
     )
+
+    # -- G3（2026-09-02）：战斗引擎恢复 + start_battle hook 注入 --------------
+    # 有活跃 battle session → 从 payload 快照恢复 BattleEngine 注入 ctx["battle_engine"]
+    # （跨指令存活：快照随 session 落档，每指令 make_context 重建引擎）。
+    # from_snapshot 需 registry + raw defs 重注入（绕 registry.resolve Def 坑，
+    # 对齐 scripts/verify_veinborn_smoke.py 装配金标准）。
+    ctx["battle_engine"] = None
+    if ctx["in_battle"] and battle_session is not None:
+        try:
+            from qbot_rpg.commands.battle_launch_commands import _battle_defs  # noqa: PLC0415
+            from qbot_rpg.core.battle import BattleEngine  # noqa: PLC0415
+
+            payload = getattr(battle_session, "payload", None)
+            # 快照 = to_snapshot() 产物（_snap 深拷贝，含 player/enemy/status 等键）
+            if isinstance(payload, Mapping) and (
+                payload.get("player") or payload.get("combatants")
+            ):
+                _all_defs, _chains, _ce = _battle_defs(deps.registry)
+                ctx["battle_engine"] = BattleEngine.from_snapshot(
+                    payload, registry=deps.registry, defs=_all_defs,
+                )
+        except Exception as exc:  # noqa: BLE001 - 恢复失败降级 None（战斗不可续但指令不崩）
+            _LOGGER.warning("battle_engine restore failed: %s", exc)
+            ctx["battle_engine"] = None
+    # start_battle hook（investigate hunt 开战消费；/锁定 走指令注册）
+    ctx["start_battle"] = None
 
     ctx["rng"] = _rng(deps.rng_factory, qid)
     _now, _today = _now_today(deps.dayroll)

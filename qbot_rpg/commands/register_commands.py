@@ -487,6 +487,18 @@ def cmd_register(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 
     # REG-04/05 建号：构造初始 Player 写 ctx + 置注册态（落档归装配层）
     player = build_initial_player(ctx, name, job_id)
+    # G3 补口（2026-09-02）：注册即装配技能位（默认职业 basic/active 落
+    # persistent_state.skill_slots）——否则 /攻击 <技能> 因装配快照空被拒
+    # （M13 批13B 装配落档缺口：转职有装配、注册无）。
+    try:
+        from qbot_rpg.core.skill_slots import assemble_slots, save_slots_to_state  # noqa: PLC0415
+
+        skills_tbl = ctx.get("skills")
+        skill_items = list(skills_tbl.values()) if isinstance(skills_tbl, Mapping) else []
+        _snap = assemble_slots(skill_items, {"job_id": job_id})
+        save_slots_to_state(player, _snap)
+    except Exception:  # pragma: no cover - 装配失败不阻断注册（技能空位可后补）
+        pass
     location = _initial_location(ctx)
     ctx["player"] = player
     ctx["registered"] = True

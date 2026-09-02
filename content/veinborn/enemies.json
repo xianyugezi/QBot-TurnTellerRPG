@@ -1,174 +1,215 @@
 [
- {
-  "id": "gravelcrown",
-  "name": "脊冢兽·砾冕",
-  "tier": "boss",
-  "area": "脉堑猎场",
-  "desc": "驮着半座骨冢行走的食脉巨兽。蚀脉随其呼吸涨落，怒极时宣泄毁灭。破坏部位可削弱其攻势。",
-  "stats": {
-   "hp": 2200,
-   "mp": 100,
-   "str": 26,
-   "con": 22,
-   "spr": 12,
-   "foc": 10,
-   "agi": 8,
-   "luk": 4
-  },
-  "weakness": {
-   "types": [
-    "突"
-   ],
-   "elements": {
-    "wind": 1.3
-   }
-  },
-  "pv": 200,
-  "pv_recover": "battle_end",
-  "phases": [
-   {
-    "threshold": 1.0,
-    "actions": [
-     {
-      "action": "bb_slam",
-      "weight": 30,
-      "probability": 1
-     },
-     {
-      "action": "bb_tail_sweep",
-      "weight": 25,
-      "probability": 1
-     },
-     {
-      "action": "bb_charge",
-      "weight": 20,
-      "probability": 1
-     }
-    ],
-    "enter_action": "bb_slam",
-    "broadcast": "{monster} 昂首踏碎岩脊，进入姿态Ⅰ：试探。"
-   },
-   {
-    "threshold": 0.7,
-    "actions": [
-     {
-      "action": "bb_slam",
-      "weight": 35,
-      "probability": 1
-     },
-     {
-      "action": "bb_tail_sweep",
-      "weight": 30,
-      "probability": 1
-     },
-     {
-      "action": "bb_charge",
-      "weight": 25,
-      "probability": 1
-     }
-    ],
-    "enter_action": "bb_charge",
-    "broadcast": "{monster} 咆哮震落骨屑，进入姿态Ⅱ：暴怒。蚀脉激荡！"
-   },
-   {
-    "threshold": 0.35,
-    "actions": [
-     {
-      "action": "bb_slam",
-      "weight": 30,
-      "probability": 1
-     },
-     {
-      "action": "bb_tail_sweep",
-      "weight": 35,
-      "probability": 1
-     },
-     {
-      "action": "bb_charge",
-      "weight": 35,
-      "probability": 1
-     }
-    ],
-    "enter_action": "bb_rampage",
-    "broadcast": "{monster} 脉核透体而亮，进入姿态Ⅲ：狂澜！"
-   }
-  ],
-  "resistance": {
-   "stun": 30,
-   "immune": [
-    "poison"
-   ]
-  },
-  "actions": [
-   {
-    "action": "bb_slam",
-    "weight": 30,
-    "probability": 1
-   },
-   {
-    "action": "bb_tail_sweep",
-    "weight": 25,
-    "probability": 1
-   },
-   {
-    "action": "bb_charge",
-    "weight": 20,
-    "probability": 1
-   }
-  ],
-  "special_actions": [
-   {
-    "id": "vb_unleash",
-    "action": "bb_rampage",
-    "trigger": {
-     "type": "enemy_mark",
-     "mark": "surge_mark",
-     "min": 6,
-     "timing": "current_turn"
+  {
+    "id": "gravelcrown",
+    "name": "脊冢兽·砾冕",
+    "tier": "boss",
+    "area": "脉堑猎场",
+    "desc": "驮着半座骨冢行走的食脉巨兽。蚀脉随其呼吸涨落，怒极时宣泄毁灭。破坏部位可削弱其攻势。",
+    "stats": {
+      "hp": 2200,
+      "mp": 100,
+      "str": 26,
+      "con": 22,
+      "spr": 12,
+      "foc": 10,
+      "agi": 8,
+      "luk": 4
     },
-    "once": false,
-    "priority": 30,
-    "desc": "困斗满 6：宣泄大招（蚀脉宣泄），宣泄后困斗回落",
-    "trigger_cooldown": 2
-   },
-   {
-    "id": "vb_tail_lost",
-    "action": "bb_tail_sweep",
-    "trigger": {
-     "type": "enemy_mark",
-     "mark": "tail_broken",
-     "absent": true,
-     "timing": "current_turn"
+    "weakness": {
+      "types": [
+        "突"
+      ],
+      "elements": {
+        "wind": 1.3
+      }
     },
-    "once": false,
-    "priority": 5,
-    "desc": "尾锤已破：范围技失效（absent 条件 = 已破印记存在则不触发）"
-   }
-  ],
-  "drops": {
-   "battle": [],
-   "special": [],
-   "death": [
-    {
-     "item": "barrow_core",
-     "chance": 100,
-     "count": 1
-    }
-   ]
+    "pv": 200,
+    "pv_recover": "battle_end",
+    "phases": [
+      {
+        "threshold": 1.0,
+        "actions": [
+          {
+            "action": "bb_slam",
+            "weight": 30,
+            "probability": 1
+          },
+          {
+            "action": "bb_tail_sweep",
+            "weight": 25,
+            "probability": 1
+          },
+          {
+            "action": "bb_charge",
+            "weight": 20,
+            "probability": 1
+          }
+        ],
+        "enter_action": "bb_slam",
+        "broadcast": "{monster} 昂首踏碎岩脊，进入姿态Ⅰ：试探。"
+      },
+      {
+        "threshold": 0.7,
+        "actions": [
+          {
+            "action": "bb_slam",
+            "weight": 35,
+            "probability": 1
+          },
+          {
+            "action": "bb_tail_sweep",
+            "weight": 30,
+            "probability": 1
+          },
+          {
+            "action": "bb_charge",
+            "weight": 25,
+            "probability": 1
+          }
+        ],
+        "enter_action": "bb_charge",
+        "broadcast": "{monster} 咆哮震落骨屑，进入姿态Ⅱ：暴怒。蚀脉激荡！"
+      },
+      {
+        "threshold": 0.35,
+        "actions": [
+          {
+            "action": "bb_slam",
+            "weight": 30,
+            "probability": 1
+          },
+          {
+            "action": "bb_tail_sweep",
+            "weight": 35,
+            "probability": 1
+          },
+          {
+            "action": "bb_charge",
+            "weight": 35,
+            "probability": 1
+          }
+        ],
+        "enter_action": "bb_rampage",
+        "broadcast": "{monster} 脉核透体而亮，进入姿态Ⅲ：狂澜！"
+      }
+    ],
+    "resistance": {
+      "stun": 30,
+      "immune": [
+        "poison"
+      ]
+    },
+    "actions": [
+      {
+        "action": "bb_slam",
+        "weight": 30,
+        "probability": 1
+      },
+      {
+        "action": "bb_tail_sweep",
+        "weight": 25,
+        "probability": 1
+      },
+      {
+        "action": "bb_charge",
+        "weight": 20,
+        "probability": 1
+      }
+    ],
+    "special_actions": [
+      {
+        "id": "vb_unleash",
+        "action": "bb_rampage",
+        "trigger": {
+          "type": "enemy_mark",
+          "mark": "surge_mark",
+          "min": 6,
+          "timing": "current_turn"
+        },
+        "once": false,
+        "priority": 30,
+        "desc": "困斗满 6：宣泄大招（蚀脉宣泄），宣泄后困斗回落",
+        "trigger_cooldown": 2
+      },
+      {
+        "id": "vb_tail_lost",
+        "action": "bb_tail_sweep",
+        "trigger": {
+          "type": "enemy_mark",
+          "mark": "tail_broken",
+          "absent": true,
+          "timing": "current_turn"
+        },
+        "once": false,
+        "priority": 5,
+        "desc": "尾锤已破：范围技失效（absent 条件 = 已破印记存在则不触发）"
+      }
+    ],
+    "drops": {
+      "battle": [],
+      "special": [],
+      "death": [
+        {
+          "item": "barrow_core",
+          "chance": 100,
+          "count": 1
+        }
+      ]
+    },
+    "lore": [
+      {
+        "unlock": 10,
+        "desc": "脊冢兽·砾冕：食脉巨兽，弱突刺与风蚀。"
+      },
+      {
+        "unlock": 50,
+        "desc": "蚀脉怒意积累会引发宣泄，机动牌可疏导其困斗。"
+      },
+      {
+        "unlock": 80,
+        "desc": "破坏脉核令其倒地；破坏尾锤令横扫失效。"
+      }
+    ]
   },
-  "lore": [
-   {
-    "unlock": 10,
-    "desc": "脊冢兽·砾冕：食脉巨兽，弱突刺与风蚀。"
-   },
-   {
-    "unlock": 50,
-    "desc": "蚀脉怒意积累会引发宣泄，机动牌可疏导其困斗。"
-   },
-   {
-    "unlock": 80,
-    "desc": "破坏脉核令其倒地；破坏尾锤令横扫失效。"
-   }
-  ]
- }
+  {
+    "id": "ridge_cub",
+    "name": "脊冢幼兽",
+    "desc": "游荡在脉堑外围的脊冢兽幼崽，皮薄胆怯但会凶猛地扑咬。",
+    "stats": {
+      "hp": 160,
+      "mp": 20,
+      "str": 14,
+      "con": 10,
+      "spr": 6,
+      "foc": 6,
+      "agi": 12,
+      "luk": 6
+    },
+    "rewards": {
+      "exp": 40,
+      "currencies": {
+        "脉晶币": 8
+      }
+    },
+    "drops": {
+      "battle": [],
+      "special": [],
+      "death": [
+        {
+          "item": "vein_shard",
+          "chance": 100,
+          "count": 1
+        }
+      ]
+    },
+    "phases": [],
+    "special_actions": [],
+    "actions": [
+      {
+        "action": "bb_cub_bite",
+        "weight": 100,
+        "probability": 1
+      }
+    ]
+  }
 ]

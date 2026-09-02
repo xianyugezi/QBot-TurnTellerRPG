@@ -5,6 +5,12 @@
     "desc": "群脊荒原的蚀脉猎场，脊冢兽·砾冕在此徘徊。",
     "monsters": [
       {
+        "enemy": "ridge_cub",
+        "name": "脊冢幼兽",
+        "count": 3,
+        "respawn_minutes": 5
+      },
+      {
         "enemy": "gravelcrown",
         "name": "脊冢兽·砾冕",
         "count": 1,

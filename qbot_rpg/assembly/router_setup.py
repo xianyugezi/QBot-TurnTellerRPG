@@ -42,6 +42,7 @@ from qbot_rpg.commands import (
     alchemy_commands,
     basic_commands,
     battle_commands,
+    battle_launch_commands,  # G3 2026-09-02：/锁定 /锁定怪物 PvE 开战
     checkin_commands,
     codex_commands,
     dialog_commands,
@@ -105,6 +106,8 @@ REGISTER_GROUPS: tuple = (
     achievement_commands.register_achievement_commands,
     # M11 PVP（m11 启动包 §2.3）：/锁定玩家 /攻击玩家 双指令
     pvp_commands.register_pvp_commands,
+    # G3（2026-09-02）：/锁定 /锁定怪物 实机 PvE 开战（白名单已登记未接线 → 接线）
+    battle_launch_commands.register_battle_launch_commands,
 )
 
 
@@ -214,8 +217,8 @@ def build_router(deps: Any) -> Router:
     # 不再静默空回（玩家发「锁定1/怪物/采集/强化/调合/职业/转职」收到空串=像 bug）。
     # 逐个注册 stub（handler 返回固定提示；占位待对应里程碑实现后移除）。
     _UNIMPLEMENTED_HINTS: Dict[str, str] = {
-        "锁定": "❌ 战斗锁定尚未实装（后续里程碑；当前用 /攻击 进入战斗）",
-        "锁定怪物": "❌ 战斗锁定尚未实装（后续里程碑；当前用 /攻击 进入战斗）",
+        # G3 2026-09-02：/锁定 /锁定怪物 已接真实开战（battle_launch_commands），
+        # 不再 stub；剩余未实装指令保留占位提示。
         "怪物": "❌ 怪物列表尚未实装（后续里程碑）",
         "采集": "❌ 采集尚未实装（后续里程碑）",
         "强化": "❌ 装备强化尚未实装（后续里程碑）",

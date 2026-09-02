@@ -995,7 +995,37 @@ def cmd_battle_attack(parsed: Any, ctx: MutableMapping[str, Any]) -> dict:
     if err is not None:
         return _fail(ctx, err)
     assert action is not None  # err=None → 行动已就绪（类型收窄）
-    return _run_battle_action(ctx, action)
+    result = _run_battle_action(ctx, action)
+    # G3 续战落档（2026-09-02）：每轮战斗后把引擎新快照写回 session——
+    # suspend 保留会话 + payload 更新（version+1）；战斗结束 → release 清会话。
+    # cmd_battle_attack 保持同步（router _wrap 同步调用）；session 写走
+    # runner 的 async 壳不可达 → 用事件循环 run_coroutine_threadsafe 兜底。
+    engine = ctx.get("battle_engine")
+    sm = ctx.get("session_mgr")
+    if engine is not None and sm is not None and result.get("ok"):
+        try:
+            import asyncio  # noqa: PLC0415
+
+            qid = str(ctx.get("qid") or ctx.get("qq_id") or "")
+            _finished = bool(getattr(engine, "finished", False))
+
+            async def _persist() -> None:
+                if _finished and hasattr(sm, "release"):
+                    await sm.release(qid)
+                elif hasattr(sm, "suspend"):
+                    await sm.suspend(qid, engine.to_snapshot())
+
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                import concurrent.futures  # noqa: PLC0415
+
+                fut = asyncio.run_coroutine_threadsafe(_persist(), loop)
+                fut.result(timeout=5)
+            else:
+                asyncio.run(_persist())
+        except Exception:  # noqa: BLE001 - 落档失败不阻断响应（下指令仍可恢复旧快照）
+            pass
+    return result
 
 
 # ---------------------------------------------------------------------------

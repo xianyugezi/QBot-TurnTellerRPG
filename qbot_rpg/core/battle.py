@@ -689,6 +689,9 @@ class BattleEngine:
         if self._dead(side) and not self._combat(side).get("dead_mark"):
             self._to_state(STATE_DTH, fr"hit/{trigger}")
             self._mark_dead(side, trigger)
+            # 功能三批2：death 事件（effects trigger=death；死亡标记后触发，
+            # 无配置 → [] 零行为变化）
+            self._dispatch_event("death", side)
             self._to_state(STATE_RES, "continue")
             # 后手被先手击杀的怪物不执行反击 attr，A4/A5 由调用方按 BOSS 决定即时结束
             return True
@@ -1338,7 +1341,28 @@ class BattleEngine:
             snap, season, procs=procs, runtime=rt, proc_runner=runner,
         )
         self._absorb_runtime(rt)
+        # 功能三批2：season_change 收编——season_procs（既有装配通道）与 effects
+        # trigger=season_change（新通用事件通道）双轨触发；无配置 → [] 零行为变化
+        self._dispatch_event("season_change", "player")
+        self._dispatch_event("season_change", "enemy")
         return list(result.get("proc_results") or [])
+
+    def _dispatch_event(self, event: str, side: str, **kw: Any) -> List[Dict[str, Any]]:
+        """功能三：统一效果事件分派（通用效果事件分派器 · 批2 接线）。
+
+        在战斗时点 fire 匹配事件的效果/proc/状态 on_xxx 动作（effects 定义 trigger
+        字段 / statuses on_gain/on_lose；未配置 → [] 零行为变化）。registry 注入
+        self._registry（未注入/异常 → 安全失败返回 []，不阻断战斗主流程）。
+        """
+        try:
+            from qbot_rpg.core.event_dispatcher import dispatch_event  # noqa: PLC0415
+
+            return dispatch_event(
+                event, side, self._snap, self._registry,
+                runtime=self._new_runtime(), **kw,
+            )
+        except Exception:  # noqa: BLE001 —— 事件分派异常不阻断战斗（安全失败）
+            return []
 
     def _settle(
         self,
@@ -1366,6 +1390,10 @@ class BattleEngine:
             self._snap["combo_zeroed_at"] = zero_reason
         else:
             zero_reason = None
+        # 功能三批2：battle_end 事件（effects trigger=battle_end；在 marks 清零前
+        # 触发——效果仍可读印记/状态；无配置 → [] 零行为变化）
+        self._dispatch_event("battle_end", "player")
+        self._dispatch_event("battle_end", "enemy")
         # P1-2（dsh 批3）：marks_state 与连段双轴生命周期一致——战斗结束/逃跑成功清零
         self._snap["marks_state"] = {"player": [], "enemy": []}
         # M13 6b（细化_6b §4.1 SN-4）：transform_state 战斗结束清零回常态（form=null）
@@ -1598,6 +1626,10 @@ class BattleEngine:
             _rl.battle_start_init(self._snap, "enemy")
         except Exception:  # noqa: BLE001 - 装配层未注入注册表 → 零操作降级
             pass
+        # 功能三批2：battle_start 事件（双方 effects trigger=battle_start 触发；
+        # 无配置 → [] 零行为变化）
+        self._dispatch_event("battle_start", "player")
+        self._dispatch_event("battle_start", "enemy")
         self.start_turn()
         return self
 
@@ -1622,6 +1654,10 @@ class BattleEngine:
         self._phase = PHASE_TURN_START
         self._guard_active = {"player": False, "enemy": False}
         self._turn_acted = {"player": False, "enemy": False}
+        # 功能三批2：turn_start 事件（effects trigger=turn_start / 状态 on_tick
+        # 收编前保留既有 dot 结算；无配置 → [] 零行为变化）
+        self._dispatch_event("turn_start", "player")
+        self._dispatch_event("turn_start", "enemy")
 
         # ① 回合开始 dot（tick=turn_start）经拦截链扣血
         rt = self._new_runtime()
@@ -1719,6 +1755,9 @@ class BattleEngine:
             self._current_actor = None
 
     def _do_action_inner(self, attacker: str, action_dict: Mapping[str, Any]) -> ActionOutcome:
+        # 功能三批2：action_start 事件（effects trigger=action_start；含普攻/技能/
+        # 道具/防御/逃跑全动作类型——在动作分派前触发；无配置 → [] 零行为变化）
+        self._dispatch_event("action_start", attacker)
         atype = str(action_dict.get("type") or "normal")
         atype = {"attack": "normal", "defense": "guard", "run": "flee"}.get(atype, atype)
         self._phase = PHASE_PLAYER_ACTION if attacker == "player" else PHASE_ENEMY_ACTION
@@ -1764,6 +1803,8 @@ class BattleEngine:
         )
         tick_after_action(self._snap, self._new_runtime(), attacker)
         self._absorb_runtime(self._new_runtime())
+        # 功能三批2：action_end（防御行动收尾）
+        self._dispatch_event("action_end", attacker)
         self._after_actor_action(attacker)
         return ActionOutcome(True, seq, attacker, "guard", target, True, "low", False,
                              0, 0, int(self._combat(target).get("hp", 0)), (), "防御指令（本回合受击 ×0.5）")
@@ -1847,6 +1888,8 @@ class BattleEngine:
             {"ch_phys": 0, "ch_elem": 0, "final": 0}, self._phase,
         )
         tick_after_action(self._snap, rt, attacker)
+        # 功能三批2：action_end（道具行动收尾）
+        self._dispatch_event("action_end", attacker)
         self._after_actor_action(attacker)
         return ActionOutcome(True, seq, attacker, "item", target, True, "low", False,
                              0, 0, int(self._combat(target).get("hp", 0)), tuple(effects),
@@ -2272,6 +2315,8 @@ class BattleEngine:
         # 行动后衰减（D5 携带者每次行动结算后衰减一次，1g2 §1.3#1 / 1b §4.2 H8）
         tick_after_action(self._snap, self._new_runtime(), attacker)
         self._absorb_runtime(self._new_runtime())
+        # 功能三批2：action_end（普攻/技能行动收尾）
+        self._dispatch_event("action_end", attacker)
         self._after_actor_action(attacker)
         return self._action_outcome(attacker, action, target, rating, seg_damage,
                                     all_effects, last_hp)
@@ -2467,6 +2512,10 @@ class BattleEngine:
         rt = self._new_runtime()
         log = tick_turn_end(self._snap, rt)
         self._absorb_runtime(rt)
+        # 功能三批2：turn_end 事件（effects trigger=turn_end；在既有 tick 清单
+        # 之后并行触发，无配置 → [] 零行为变化）
+        self._dispatch_event("turn_end", "player")
+        self._dispatch_event("turn_end", "enemy")
 
         # P0-02 修复：回合结束 tick 内 dot（tick=turn_end）扣血致死 → 死亡判定挂点
         # （1g1c §1.4「死而未结算不得穿透回合边界」/ TC-03）。原实现 tick 后只读

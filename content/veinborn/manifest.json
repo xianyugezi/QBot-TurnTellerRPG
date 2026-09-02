@@ -1,0 +1,27 @@
+{
+  "name": "蚀脉猎师·群脊荒原（精简验证包）",
+  "version": "0.1.0",
+  "schema_version": 1,
+  "author": "veinborn-design",
+  "modules": [
+    "settings",
+    "stats",
+    "formula",
+    "effects",
+    "statuses",
+    "marks",
+    "skill_chains",
+    "items",
+    "equipment",
+    "action",
+    "skills",
+    "jobs",
+    "enemies",
+    "maps",
+    "dungeon",
+    "npc",
+    "shop",
+    "quest",
+    "checkin"
+  ]
+}

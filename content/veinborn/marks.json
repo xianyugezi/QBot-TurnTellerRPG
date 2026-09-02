@@ -1,0 +1,132 @@
+[
+ {
+  "id": "surge_mark",
+  "name": "困斗",
+  "icon": "怒",
+  "type": "mark",
+  "max_stack": 6,
+  "appliable_to": [
+   "enemy"
+  ],
+  "polarity": "negative",
+  "duration": "battle",
+  "desc": "蚀脉怒意积累：敌方每回合自挂1层，玩家机动牌可移除1层；满6层触发宣泄"
+ },
+ {
+  "id": "vulnerable",
+  "name": "破绽",
+  "icon": "破",
+  "type": "mark",
+  "max_stack": 1,
+  "appliable_to": [
+   "enemy"
+  ],
+  "polarity": "negative",
+  "duration": "turns:1",
+  "desc": "官方易伤：该回合怪物下一次受伤翻倍；不可叠加"
+ },
+ {
+  "id": "break_vein_core",
+  "name": "脉核破坏值",
+  "icon": "核",
+  "type": "mark",
+  "max_stack": 120,
+  "appliable_to": [
+   "enemy"
+  ],
+  "polarity": "negative",
+  "duration": "battle",
+  "desc": "打击脉核累积破坏值，满120触发脉核破坏"
+ },
+ {
+  "id": "break_tail_hammer",
+  "name": "尾锤破坏值",
+  "icon": "锤",
+  "type": "mark",
+  "max_stack": 90,
+  "appliable_to": [
+   "enemy"
+  ],
+  "polarity": "negative",
+  "duration": "battle",
+  "desc": "打击尾锤累积破坏值，满90触发尾锤破坏"
+ },
+ {
+  "id": "break_forelimb",
+  "name": "前肢甲破坏值",
+  "icon": "甲",
+  "type": "mark",
+  "max_stack": 80,
+  "appliable_to": [
+   "enemy"
+  ],
+  "polarity": "negative",
+  "duration": "battle",
+  "desc": "打击前肢甲累积破坏值，满80触发前肢甲破坏"
+ },
+ {
+  "id": "break_ridge_plate",
+  "name": "脊板破坏值",
+  "icon": "脊",
+  "type": "mark",
+  "max_stack": 100,
+  "appliable_to": [
+   "enemy"
+  ],
+  "polarity": "negative",
+  "duration": "battle",
+  "desc": "打击脊板累积破坏值，满100触发脊板破坏"
+ },
+ {
+  "id": "core_broken",
+  "name": "脉核已破",
+  "icon": "裂",
+  "type": "mark",
+  "max_stack": 1,
+  "appliable_to": [
+   "enemy"
+  ],
+  "polarity": "negative",
+  "duration": "battle",
+  "desc": "脉核已破坏：倒地窗口（伤害×1.5）"
+ },
+ {
+  "id": "tail_broken",
+  "name": "尾锤已破",
+  "icon": "断",
+  "type": "mark",
+  "max_stack": 1,
+  "appliable_to": [
+   "enemy"
+  ],
+  "polarity": "negative",
+  "duration": "battle",
+  "desc": "尾锤已破坏：范围扫尾技失效"
+ },
+ {
+  "id": "forelimb_broken",
+  "name": "前肢甲已破",
+  "icon": "碎",
+  "type": "mark",
+  "max_stack": 1,
+  "appliable_to": [
+   "enemy"
+  ],
+  "polarity": "negative",
+  "duration": "battle",
+  "desc": "前肢甲已破坏：敌方攻击削弱"
+ },
+ {
+  "id": "ridge_broken",
+  "name": "脊板已破",
+  "icon": "露",
+  "type": "mark",
+  "max_stack": 1,
+  "appliable_to": [
+   "enemy"
+  ],
+  "polarity": "negative",
+  "duration": "battle",
+  "desc": "脊板已破坏：脉核暴露，玩家对其增伤"
+ }
+]

@@ -1,0 +1,28 @@
+[
+  {
+    "id": "inexhaustible_form",
+    "name": "猎势·不竭",
+    "type": "buff",
+    "max_stack": 1,
+    "duration": {
+      "turns": 0,
+      "charges": 0
+    },
+    "decay": "none",
+    "effects": [],
+    "desc": "脊剑士专精翻面恒效形态标记"
+  },
+  {
+    "id": "piercing_eye_form",
+    "name": "猎势·贯瞳",
+    "type": "buff",
+    "max_stack": 1,
+    "duration": {
+      "turns": 0,
+      "charges": 0
+    },
+    "decay": "none",
+    "effects": [],
+    "desc": "脉矢手专精翻面恒效形态标记"
+  }
+]

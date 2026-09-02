@@ -855,9 +855,28 @@ def _resolve_skill(ctx: Mapping[str, Any], text: str) -> Optional[str]:
 
 
 def _attack_action(parsed: Any, ctx: Mapping[str, Any]) -> Tuple[Optional[dict], Optional[str]]:
-    """/攻击 参数 → (action_dict, error|None)：无参 → 普攻；参数 → 技能行动。"""
+    """/攻击 参数 → (action_dict, error|None)：无参 → 当前装配 basic 技能（普攻技能化，
+    2026-09-02 用户拍板：普通攻击即技能，不写死硬编码；无装配/无 basic → 引擎普攻兜底）；
+    参数 → 技能行动。"""
     args = list(getattr(parsed, "args", None) or [])
     if not args:
+        # 普攻技能化：解析当前装配快照的 basic 槽技能（每职业恰 1 个 basic，
+        # 由内容包定义——如脊剑士的「脊斩」即其普攻）；无装配/无 basic → 引擎 normal 兜底
+        try:
+            from qbot_rpg.core.skill_slots_battle import (  # noqa: PLC0415
+                _snapshot_of,
+                slots_from_snapshot,
+            )
+
+            rows = slots_from_snapshot(_snapshot_of(ctx))
+            for r in rows:
+                if r.get("slot") == "basic":
+                    _bsid = str(r.get("skill_id") or "")
+                    if _bsid:
+                        return {"type": "skill", "skill_id": _bsid}, None
+                    break  # basic 占位 skill_id=None → 无普攻技能 → 兜底
+        except Exception:  # pragma: no cover - 防御兜底
+            pass
         return {"type": "normal"}, None
     if len(args) > 1:
         return None, format_tpl12(_fragment(parsed))

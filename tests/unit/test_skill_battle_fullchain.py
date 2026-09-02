@@ -64,8 +64,16 @@ def test_resolve_skill_unknown_none() -> None:
 
 
 def test_attack_action_no_args_normal() -> None:
-    """/攻击 无参 → 普攻。"""
+    """/攻击 无参 → 当前装配 basic 技能（普攻技能化，2026-09-02 用户拍板）。"""
     action, err = _attack_action(_Parsed([]), _ctx())
+    assert err is None
+    assert action == {"type": "skill", "skill_id": "basic_attack"}, \
+        f"无参应解析到装配 basic 技能，got {action}"
+
+
+def test_attack_action_no_args_no_slots_fallback_normal() -> None:
+    """/攻击 无参 + 无装配快照 → 引擎普攻兜底（normal）。"""
+    action, err = _attack_action(_Parsed([]), {"skills": _skills()})
     assert err is None and action == {"type": "normal"}
 
 

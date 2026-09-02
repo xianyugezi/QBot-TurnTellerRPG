@@ -100,6 +100,29 @@ async def _on_message(bot: Any, event: Any) -> None:
         from qbot_rpg.commands.sender import format_tpl12
 
         reply = format_tpl12(str(getattr(event, "message", "") or ""))
+    # G3 战斗正文补发（2026-09-03 实机修复）：BattlePipeline 经 deps.sender
+    # （Sender 实例）发送的战斗正文只进 delivered 收集、未达群——run_command
+    # 返回的 reply 仅是 handler 元数据（「第 N 回合结算」）。此处把 Sender
+    # delivered 中 pipeline 实际发送的正文一并 bot.send（reply 为空/为标题时
+    # 以 delivered 正文为主，避免战斗只有标题行）。
+    try:
+        _sd = getattr(deps, "sender", None)
+        if _sd is not None and hasattr(_sd, "delivered"):
+            _bodies = [str(x) for x in _sd.delivered if str(x or "").strip()]
+            # 清空已取（sender 跨消息共享，防旧消息累积重发）
+            try:
+                _sd._delivered.clear()  # noqa: SLF001 - 桥接层同仓访问
+            except Exception:  # noqa: BLE001
+                pass
+            if _bodies:
+                _joined = "\n".join(_bodies)
+                _reply_txt = str(reply or "")
+                # 正文与 reply 不同（reply 只是标题/元数据）→ 以正文为准发送；
+                # 相同（非战斗指令）→ 不重复发
+                if _joined != _reply_txt:
+                    reply = _joined
+    except Exception:  # noqa: BLE001 - 补发失败不阻断
+        pass
     if reply:
         await bot.send(event, reply)
 

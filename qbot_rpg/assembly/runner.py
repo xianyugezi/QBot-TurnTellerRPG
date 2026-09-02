@@ -511,6 +511,13 @@ def _make_sender(deps: Any, ctx: Mapping[str, Any]):
     前缀渲染（M5 7 字段）→ prefixed.text 非空 → sender.send（CQ 转义/分片/重试）。
     """
     sender_obj = getattr(deps, "sender", None) or Sender()
+    # G3 实机补发（2026-09-03）：sender 实例挂回 deps，供桥接层（plugin._on_message）
+    # 取 delivered 收集的战斗正文（BattlePipeline 经 ctx["sender"] 发送的正文）。
+    try:
+        if getattr(deps, "sender", None) is None:
+            deps.sender = sender_obj  # type: ignore[attr-defined]
+    except Exception:  # noqa: BLE001 - 挂载失败不影响（收集路径仍工作）
+        pass
     # M5-08 战斗 ctx 契约：ctx["sender"] = Sender 统一出口（battle_commands._sender_of
     # 消费；批次7 待接线遗留 → 实机修复 2026-08-30：装配时注入 Sender 实例）。
     # ctx 为 MutableMapping（run_command 构建）→ 就地挂 sender；不可变映射跳过。

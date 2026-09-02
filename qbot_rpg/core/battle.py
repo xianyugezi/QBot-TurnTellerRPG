@@ -2788,6 +2788,13 @@ class BattleEngine:
         snap["_guard_active"] = dict(self._guard_active)
         snap["_death_order"] = list(self._death_order)
         snap["formula_state"] = {"random_seed": self._rng_seed}
+        # G3 续战修复（2026-09-03）：随机数内部状态随快照保存——只存 seed 会让
+        # from_snapshot 后随机序列从头重放（每轮 roll 相同 → 快照恢复战斗恒 miss/
+        # 恒命中）。getstate tuple 可 JSON 序列化（version 2: (ver, state, gauss)）。
+        try:
+            snap["_rng_state"] = list(self._rng.getstate())
+        except Exception:  # pragma: no cover - 防御（rng 异常不阻断快照）
+            snap["_rng_state"] = None
         return snap
 
     def snapshot(self) -> Dict[str, Any]:
@@ -2846,7 +2853,17 @@ class BattleEngine:
         eng._resource_registry = resource_registry  # M13 6c：资源轴注册表透传（RS-2/RS-5）
         eng._snap = copy.deepcopy(dict(data))
         eng._rng_seed = int((data.get("formula_state") or {}).get("random_seed", 0) or 0)
-        eng._rng = random.Random(eng._rng_seed)
+        # G3 续战修复（2026-09-03）：优先恢复 rng 内部状态（防随机序列重放）；
+        # 旧快照无 _rng_state → 回落 seed 重播种（原行为）。
+        _rst = data.get("_rng_state")
+        if isinstance(_rst, (list, tuple)) and _rst:
+            try:
+                eng._rng = random.Random()
+                eng._rng.setstate(tuple(_rst))
+            except Exception:  # pragma: no cover - 畸形 state 回落 seed
+                eng._rng = random.Random(eng._rng_seed)
+        else:
+            eng._rng = random.Random(eng._rng_seed)
         eng._finished = data.get("status") not in (None, STATUS_ACTIVE)
         eng._guard_active = dict(data.get("_guard_active", {"player": False, "enemy": False}))
         eng._death_order = list(data.get("_death_order", []))

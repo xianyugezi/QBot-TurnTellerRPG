@@ -1647,6 +1647,38 @@ def _chance_roll(
     return False
 
 
+def _dispatch_status_event(event: str, status_id: str, side: str,
+                           ctx: DamageCtx, runtime: EffectRuntime) -> List[Dict[str, Any]]:
+    """功能三批3：状态事件接线（status_gain/status_lose）。
+
+    effects 层无 registry（只有 runtime._resolver 查表器）——包 resolver-only
+    registry（resolve 同形，all_ids 空——dispatch 对 status_id 精确查不需要全扫），
+    在 execute_action 的 status_apply 成功 / dispel 移除后触发状态 on_gain/on_lose
+    效果。无 resolver / 异常 → [] 安全失败（不阻断主动作）。
+    """
+    try:
+        resolver = getattr(runtime, "_resolver", None)
+        if not callable(resolver):
+            return []
+        _res = resolver
+
+        class _ResolverRegistry:
+            def resolve(self, id: str, kind: str) -> Any:
+                return _res(id, kind)
+
+            def all_ids(self, kind: str) -> tuple:
+                return ()
+
+        from qbot_rpg.core.event_dispatcher import dispatch_event  # lazy：防环
+
+        return dispatch_event(
+            event, side, ctx.snapshot, _ResolverRegistry(),
+            status_id=status_id, runtime=runtime,
+        )
+    except Exception:  # noqa: BLE001 —— 状态事件异常不阻断主动作（安全失败）
+        return []
+
+
 def execute_action(
     action: Mapping[str, Any],
     ctx: DamageCtx,
@@ -1798,6 +1830,9 @@ def execute_action(
         status_id = str(action.get("status_id") or action.get("status") or "")
         res = runtime.apply_status(status_id, target, source=str(action.get("source") or attacker), attacker=attacker, ctx=ctx)  # type: ignore[assignment]
         side_effects.append({"type": "status_apply", "target": target, "status_id": status_id, "applied": res.applied, "reason": res.reason})  # type: ignore[attr-defined]
+        # 功能三批3：status_gain 事件（状态施加成功后触发 on_gain；snapshot 齐备）
+        if res.applied:  # type: ignore[attr-defined]
+            side_effects.extend(_dispatch_status_event("status_gain", status_id, target, ctx, runtime))
         return ActionResult(res.applied, side_effects, res.reason)  # type: ignore[attr-defined]
 
     if atype == "dispel":
@@ -1807,14 +1842,19 @@ def execute_action(
         flt = [flt] if isinstance(flt, str) else list(flt or [])
         count = int(action.get("count") or 1)
         removed = 0
+        removed_ids = []
         survivors = []
         for inst in runtime.status_instances(target):
             if removed < count and inst.get("category", "") in flt:
                 removed += 1
+                removed_ids.append(str(inst.get("status_id") or ""))
                 continue
             survivors.append(inst)
         runtime.status_state[target] = survivors
         side_effects.append({"type": "dispel", "target": target, "filter": flt, "removed": removed})
+        # 功能三批3：status_lose 事件（驱散移除后触发 on_lose；snapshot 齐备）
+        for sid in removed_ids:
+            side_effects.extend(_dispatch_status_event("status_lose", sid, target, ctx, runtime))
         return ActionResult(True, side_effects, f"驱散 {removed} 个状态")
 
     if atype == "shield":

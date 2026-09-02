@@ -1,9 +1,11 @@
-"""怪物条件行动引擎（M2 怪物体系 · B2 路：13 类触发完整评估器）。
+"""怪物条件行动引擎（M2 怪物体系 · B2 路：15 类触发完整评估器）。
 
-依据：细化_1f_怪物AI状态机.md（② L3 条件行动——13 类触发匹配、priority 降序同级随机、
+依据：细化_1f_怪物AI状态机.md（② L3 条件行动——15 类触发匹配、priority 降序同级随机、
 once/max_triggers/trigger_cooldown 过滤；① 1.2 决策管线总图 L3 行；⑤ 5.2 chain C 模型）
-+ docs/m2_shared_contract.md 第一节（special_actions 条目结构 / trigger 13 类枚举 /
++ docs/m2_shared_contract.md 第一节（special_actions 条目结构 / trigger 15 类枚举 /
 旧别名归一 / timing）+ 第五节（evaluate_conditions 返回约定）+ 第八节铁律。
+印记扩展（enemy_mark/player_mark）2026-09-02 框架级新增：读 battle 印记，schema 见
+_eval_enemy_mark / _eval_player_mark docstring；校验侧见 content/validator.py A06a。
 
 纯规则引擎，零 NoneBot import（铁律 2）。本模块不产出概率数值；after_action 的
 chance(0-100) 在内部折算小数与 rng 比较（铁律 5 口径）。随机一律走注入 rng（铁律 6，
@@ -46,11 +48,15 @@ __all__ = [
 
 _F = TypeVar("_F", bound=Callable[[Mapping, Mapping, Any], bool])
 
-# 13 类触发权威枚举（contract §一 / 细化_1e A06 S3，权威=怪物行动AI定稿 §二）
+# 触发类型权威枚举（contract §一 / 细化_1e A06 S3，权威=怪物行动AI定稿 §二）
+# 15 类 = 定稿 13 类 + 印记扩展 2 类（enemy_mark/player_mark，2026-09-02 框架级新增：
+#   纯配置读 battle 内印记（含玩家施加的敌侧印记），支撑内容包"部位技无破坏印记才可用"
+#   "困斗满才宣泄"等状态响应；schema 见 monster_conditions docstring 附录 B）
 TRIGGER_TYPES: tuple = (
     "hp_below", "pv_broken", "get_up", "battle_start", "after_action",
     "player_status", "player_hp_below", "turn_count", "phase_changed",
     "zone_changed", "ally_dead", "combo_broken", "script",
+    "enemy_mark", "player_mark",
 )
 
 # 旧别名归一（contract §一「旧别名接受（兼容）」；canonical = 权威枚举名，1e A06 S4）
@@ -83,7 +89,7 @@ def register_condition(
       def my_fn(trig, bstate, rng): ...
 
     可注册：x_ 前缀扩展类型、script 类型覆盖、或任意新触发名（未知名经本表兜底）。
-    注册的 handler 优先于内建 13 类（同型覆盖）。
+    注册的 handler 优先于内建（同型覆盖）。
     """
     def _reg(f: _F) -> _F:
         _CUSTOM_HANDLERS[trigger_type] = f
@@ -102,7 +108,7 @@ def evaluate_conditions_all(
     rng: Any = None,
     commit: bool = True,
 ) -> List[Mapping[str, Any]]:
-    """L3 条件行动完整评估（13 类触发 + 过滤 + 排序）。返回匹配条目列表（队首=应执行条目）。
+    """L3 条件行动完整评估（15 类触发 + 过滤 + 排序）。返回匹配条目列表（队首=应执行条目）。
 
     参数：
       special_actions: enemies.json special_actions[]（contract §一条目结构）
@@ -136,7 +142,7 @@ def evaluate_conditions_all(
         # timing：first_turn → 仅第一回合（A08；current/next_turn 不设门）
         if trig.get("timing") == "first_turn" and turn > 1:
             continue
-        # 条件求值（内建 13 类 + 注册表扩展；未注册未知类型 → False）
+        # 条件求值（内建 15 类 + 注册表扩展；未注册未知类型 → False）
         if not _match(ttype, trig, battle_state, ai, rng):
             continue
         matched.append(dict(sa))  # 浅拷贝，防消费方误改 enemy_def 原条目
@@ -156,11 +162,11 @@ def evaluate_conditions_all(
     return matched
 
 
-# ================================================================ 内建 13 类条件求值
+# ================================================================ 内建条件求值
 
 def _match(ttype: str, trig: Mapping[str, Any], bs: Mapping[str, Any],
            ai: Mapping[str, Any], rng: Any) -> bool:
-    """条件求值分发：注册表 handler 优先 → 内建 13 类 → 未注册未知类型 False。"""
+    """条件求值分发：注册表 handler 优先 → 内建 → 未注册未知类型 False。"""
     handler = _CUSTOM_HANDLERS.get(ttype)
     if handler is not None:
         return bool(handler(trig, bs, rng))
@@ -241,6 +247,74 @@ def _eval_player_status(trig, bs, ai, rng) -> bool:
             if e == want:
                 return True
     return False
+
+
+def _mark_count_on(bs: Mapping[str, Any], side: str, mark: Any) -> int:
+    """读 battle_state.marks_state[side] 中指定印记（mark_id 或冗余 name）的层数。
+    缺段/缺实例 → 0（防御性，对齐 MarksManager.count_by_name 口径；battle 五块快照
+    marks_state 为 {player: [实例], enemy: [实例]}，实例含 mark_id/name/count）。"""
+    if not mark:
+        return 0
+    ms = bs.get("marks_state")
+    if not isinstance(ms, Mapping):
+        return 0
+    insts = ms.get(side)
+    if not isinstance(insts, list):
+        return 0
+    want = str(mark)
+    for inst in insts:
+        if not isinstance(inst, Mapping):
+            continue
+        if inst.get("mark_id") == want or inst.get("name") == want:
+            return max(0, int(inst.get("count", 0) or 0))
+    return 0
+
+
+def _eval_enemy_mark(trig, bs, ai, rng) -> bool:
+    """enemy_mark：敌方身上印记（含玩家施加的敌侧印记）条件触发。
+
+    trigger schema（纯配置，值全部来自配置，零硬编码）：
+      {"type":"enemy_mark","mark":"<mark_id|name>"}            存在（层数≥1）
+      {"type":"enemy_mark","mark":"<id>","absent":true}        不存在（层数==0）
+      {"type":"enemy_mark","mark":"<id>","min":6}              层数≥6
+      {"type":"enemy_mark","mark":"<id>","max":2}              层数≤2
+      {"type":"enemy_mark","mark":"<id>","min":2,"max":4}      区间 [2,4]
+    语义：absent=true 优先（返回层数==0）；否则 min/max 夹取（缺省不限）。
+    读取 marks_state["enemy"]（对齐 MarksManager.count_by_name：mark_id 或冗余 name
+    均可匹配，同 (side,mark) 单实例聚合）。缺 marks_state 段 → 层数 0 → absent 成立/
+    存在不成立（安全失败，对齐既有 handler 防御口径）。
+    """
+    return _match_mark_trigger(trig, bs, "enemy")
+
+
+def _eval_player_mark(trig, bs, ai, rng) -> bool:
+    """player_mark：玩家身上印记条件触发（schema 同 enemy_mark，side=player）。
+    读取 marks_state["player"]；支持任一玩家实例命中（marks_state.player 已聚合为
+    单实例列表，直接按 mark 匹配层数即可）。"""
+    return _match_mark_trigger(trig, bs, "player")
+
+
+def _match_mark_trigger(trig: Mapping[str, Any], bs: Mapping[str, Any],
+                        side: str) -> bool:
+    """印记触发统一求值（enemy_mark/player_mark 共用）：
+      absent=true   → 要求层数==0
+      否则（存在判定）→ min/max 夹取；min/max 均缺省 → 层数≥1（存在）
+    mark 缺失/非字符串 → False（防御性；校验器侧红拦 R-5，引擎侧安全失败）。"""
+    mark = trig.get("mark")
+    if not isinstance(mark, str) or not mark:
+        return False
+    count = _mark_count_on(bs, side, mark)
+    if trig.get("absent"):
+        return count == 0
+    lo = trig.get("min")
+    hi = trig.get("max")
+    if lo is None and hi is None:
+        return count >= 1
+    if lo is not None and count < int(lo):
+        return False
+    if hi is not None and count > int(hi):
+        return False
+    return True
 
 
 def _eval_player_hp_below(trig, bs, ai, rng) -> bool:
@@ -339,6 +413,9 @@ _BUILTIN_HANDLERS: Dict[str, Callable] = {
     "ally_dead": _eval_ally_dead,
     "combo_broken": _eval_combo_broken,
     "script": _eval_script,
+    # 印记扩展 2 类（2026-09-02 框架级新增，schema 见上两函数 docstring）
+    "enemy_mark": _eval_enemy_mark,
+    "player_mark": _eval_player_mark,
 }
 
 

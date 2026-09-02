@@ -306,12 +306,14 @@ def test_trigger_script():
 
 
 def test_trigger_types_enum_complete():
-    """TRIGGER_TYPES 权威枚举 = 13 类（contract §一）。"""
-    assert len(TRIGGER_TYPES) == 13
+    """TRIGGER_TYPES 权威枚举 = 15 类（定稿 13 类 + 印记扩展 2 类 enemy_mark/player_mark，
+    2026-09-02 框架级新增；schema 见 monster_conditions _eval_enemy_mark docstring）。"""
+    assert len(TRIGGER_TYPES) == 15
     assert set(TRIGGER_TYPES) == {
         "hp_below", "pv_broken", "get_up", "battle_start", "after_action",
         "player_status", "player_hp_below", "turn_count", "phase_changed",
         "zone_changed", "ally_dead", "combo_broken", "script",
+        "enemy_mark", "player_mark",
     }
 
 
@@ -627,5 +629,123 @@ def test_chain_validation_rules_registry():
     for key in ("R15_chain_ref_missing", "R15_node_chance_required",
                 "R15_node_role_enum", "R15_chain_continuation_lt60", "R15_chain_cycle"):
         assert key in rules, key
+
+
+# ============================================================== 印记触发扩展（enemy_mark/player_mark）
+# 2026-09-02 框架级新增：monster_conditions 读 battle 印记条件触发。
+# marks_state 形态对齐 battle 五块快照：{player: [实例], enemy: [实例]}，实例含
+# mark_id/name/count/polarity/remaining_turns（marks.py §2.1）。
+
+
+def _marks_bs(enemy_marks=None, player_marks=None, **over):
+    """构造带 marks_state 的 battle_state（默认全空）。"""
+    bs = bs_builder()
+    bs["marks_state"] = {
+        "enemy": [dict(m) for m in (enemy_marks or [])],
+        "player": [dict(m) for m in (player_marks or [])],
+    }
+    bs.update(over)
+    return bs
+
+
+def _mark(mark_id, count, name=None):
+    return {"mark_id": mark_id, "name": name or mark_id, "count": count,
+            "polarity": "negative", "remaining_turns": None}
+
+
+def _sa_mark(trigger, action="unleash"):
+    return [{"action": action, "trigger": trigger}]
+
+
+def test_enemy_mark_present():
+    """enemy_mark 存在（缺省=层数≥1）：敌方有指定印记 → 命中。"""
+    bs = _marks_bs(enemy_marks=[_mark("vein_core_broken", 1)])
+    sa = _sa_mark({"type": "enemy_mark", "mark": "vein_core_broken"})
+    assert len(mc.evaluate_conditions_all(sa, bs, ScriptedRng([0.5]))) == 1
+
+
+def test_enemy_mark_absent():
+    """enemy_mark absent=true：敌方无指定印记 → 命中（部位技"无破坏印记才可用"）。"""
+    bs = _marks_bs()  # 敌方无任何印记
+    sa = _sa_mark({"type": "enemy_mark", "mark": "vein_core_broken", "absent": True})
+    assert len(mc.evaluate_conditions_all(sa, bs, ScriptedRng([0.5]))) == 1
+    # 敌方已有印记 → 不命中（部位技被禁用）
+    bs2 = _marks_bs(enemy_marks=[_mark("vein_core_broken", 1)])
+    assert mc.evaluate_conditions_all(sa, bs2, ScriptedRng([0.5])) == []
+
+
+def test_enemy_mark_min_max():
+    """enemy_mark 层数阈值 min/max/区间。"""
+    # min：困斗≥6 才宣泄
+    sa = _sa_mark({"type": "enemy_mark", "mark": "surge", "min": 6})
+    assert mc.evaluate_conditions_all(
+        sa, _marks_bs(enemy_marks=[_mark("surge", 5)]), ScriptedRng([0.5])) == []
+    assert len(mc.evaluate_conditions_all(
+        sa, _marks_bs(enemy_marks=[_mark("surge", 6)]), ScriptedRng([0.5]))) == 1
+    # max
+    sa_max = _sa_mark({"type": "enemy_mark", "mark": "surge", "max": 2})
+    assert len(mc.evaluate_conditions_all(
+        sa_max, _marks_bs(enemy_marks=[_mark("surge", 2)]), ScriptedRng([0.5]))) == 1
+    assert mc.evaluate_conditions_all(
+        sa_max, _marks_bs(enemy_marks=[_mark("surge", 3)]), ScriptedRng([0.5])) == []
+    # 区间
+    sa_rng = _sa_mark({"type": "enemy_mark", "mark": "surge", "min": 2, "max": 4})
+    assert len(mc.evaluate_conditions_all(
+        sa_rng, _marks_bs(enemy_marks=[_mark("surge", 3)]), ScriptedRng([0.5]))) == 1
+    assert mc.evaluate_conditions_all(
+        sa_rng, _marks_bs(enemy_marks=[_mark("surge", 5)]), ScriptedRng([0.5])) == []
+
+
+def test_enemy_mark_by_name():
+    """enemy_mark mark 支持冗余 name 匹配（对齐 MarksManager.count_by_name）。"""
+    bs = _marks_bs(enemy_marks=[_mark("surge", 6, name="困斗")])
+    sa = _sa_mark({"type": "enemy_mark", "mark": "困斗", "min": 6})
+    assert len(mc.evaluate_conditions_all(sa, bs, ScriptedRng([0.5]))) == 1
+
+
+def test_player_mark_present_absent():
+    """player_mark 读玩家侧印记（存在/不存在）。"""
+    sa = _sa_mark({"type": "player_mark", "mark": "threatened"})
+    assert len(mc.evaluate_conditions_all(
+        sa, _marks_bs(player_marks=[_mark("threatened", 1)]), ScriptedRng([0.5]))) == 1
+    assert mc.evaluate_conditions_all(
+        sa, _marks_bs(player_marks=[]), ScriptedRng([0.5])) == []
+    sa_abs = _sa_mark({"type": "player_mark", "mark": "threatened", "absent": True})
+    assert len(mc.evaluate_conditions_all(
+        sa_abs, _marks_bs(player_marks=[]), ScriptedRng([0.5]))) == 1
+
+
+def test_mark_trigger_missing_marks_state_safe():
+    """缺 marks_state 段 → 层数 0（安全失败）：absent 成立、存在不成立。"""
+    sa_present = _sa_mark({"type": "enemy_mark", "mark": "vein_core_broken"})
+    sa_absent = _sa_mark({"type": "enemy_mark", "mark": "vein_core_broken", "absent": True})
+    bs = bs_builder()  # 无 marks_state 键
+    assert mc.evaluate_conditions_all(sa_present, bs, ScriptedRng([0.5])) == []
+    assert len(mc.evaluate_conditions_all(sa_absent, bs, ScriptedRng([0.5]))) == 1
+
+
+def test_mark_trigger_empty_mark_field():
+    """mark 缺失/非字符串 → 不命中（防御性，校验器侧会红拦 R-5）。"""
+    sa = _sa_mark({"type": "enemy_mark"})
+    assert mc.evaluate_conditions_all(sa, _marks_bs(enemy_marks=[_mark("x", 1)]),
+                                      ScriptedRng([0.5])) == []
+    sa2 = _sa_mark({"type": "enemy_mark", "mark": ""})
+    assert mc.evaluate_conditions_all(sa2, _marks_bs(enemy_marks=[_mark("x", 1)]),
+                                      ScriptedRng([0.5])) == []
+
+
+def test_mark_trigger_with_commit_books_once():
+    """印记触发与 once 记账联动：commit=True 队首记账，二次不再触发。"""
+    bs = _marks_bs(enemy_marks=[_mark("vein_core_broken", 1)])
+    sa = _sa_mark({"type": "enemy_mark", "mark": "vein_core_broken"})
+    sa[0]["once"] = True
+    m1 = mc.evaluate_conditions_all(sa, bs, ScriptedRng([0.5]))
+    assert len(m1) == 1
+    # once 已记账 → 再次评估不触发
+    assert mc.evaluate_conditions_all(sa, bs, ScriptedRng([0.5])) == []
+
+
+def test_chain_validation_rules_registry_mutation_guard():
+    rules = chain_validation_rules()
     rules["R15_chain_ref_missing"] = "mutated"
     assert chain_validation_rules()["R15_chain_ref_missing"] != "mutated", "返回拷贝"

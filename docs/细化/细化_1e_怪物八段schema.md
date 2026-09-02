@@ -11,7 +11,7 @@
 |---|---|---|---|---|
 | S1 | 行动概率语义 | ① action.json `probability` 注释"入池开关（0=锚点/1=入池，数值不参与概率计算）"；② §6.2 "weight 归一化：普攻 50/重击 30/蓄力 20，probability=1 入池"；③ §十二 enemies 条目同含 probability+weight | **probability ∈ {0,1} 纯入池开关：默认 0（漏配=锚点，只被链/条件/状态机触发）、1=入池、写其他正值等价 1（AI 定稿 L25/L51）；概率=weight 归一化，仅 probability=1（或等价正值）条目参与随机池；probability=0 只被链/条件/状态机触发** | L138、L145、L281；AI L25、L29、L51 |
 | S2 | 连招载体 | ① action.json 内嵌 `chain`（历史写法）；② "新配置连招一律走 enemies 顶层 `chains` 表" | **顶层 `chains` 为唯一新配置载体（可选字段，见 1.1-F14）；旧 action.json `chain` 保留读兼容，校验器提示迁移** | L137、L269；AI 定稿 L248-266 |
-| S3 | 特殊行动触发类 | ① §7.1 面向示例 5 类；② 权威枚举=怪物行动AI定稿 §二 13 类（hp_below/pv_broken/get_up/battle_start/after_action/player_status/player_hp_below/turn_count/phase_changed/zone_changed/ally_dead/combo_broken/script，x_ 前缀可扩展）；旧枚举为兼容别名（R-01 裁决） | **以 AI 定稿权威 13 类枚举为准**（细化_0 R-01）；§7.1 的 5 类为其语义缩略，映射见 1.4-表 | L156-161 vs L298 |
+| S3 | 特殊行动触发类 | ① §7.1 面向示例 5 类；② 权威枚举=怪物行动AI定稿 §二 13 类 + 印记扩展 2 类（enemy_mark/player_mark，2026-09-02 新增：hp_below/pv_broken/get_up/battle_start/after_action/player_status/player_hp_below/turn_count/phase_changed/zone_changed/ally_dead/combo_broken/script/enemy_mark/player_mark，x_ 前缀可扩展）；旧枚举为兼容别名（R-01 裁决） | **以 AI 定稿权威 13 类 + 印记扩展 2 类为准**（细化_0 R-01 + 2026-09-02 扩展）；§7.1 的 5 类为其语义缩略，映射见 1.4-表 | L156-161 vs L298 |
 | S4 | 触发示例别名 | §七示例 JSON 用 `pv_broken`/`get_up`/`battle_start`（=权威枚举名）；旧稿的 `broken`/`revive`/`enter_phase` 为兼容别名 | **canonical = AI 定稿权威名（pv_broken/get_up/battle_start）；旧名 broken/revive/enter_phase 为兼容别名，校验器接受并提示规范化（细化_0 R-01）** | L178-183 vs AI 定稿 §二 |
 | S5 | 木桩与八段结构 | §一结构示例 `pv:30` 等为普通怪占位；§十五另立 training 特例 | **木桩判定优先：tier:"training" 或 type:"dummy" 任一命中即按木桩特例处理（pv 强制 0 等）**，普通怪八段字段照常 | L15-33 vs L327-394 |
 
@@ -90,7 +90,8 @@
 |---|---|---|---|---|---|
 | A04 | `special_actions[].id` | string | 选填 | 特殊行动唯一标识（AI 定稿样本；链引用目标） | AI L78-89 |
 | A05 | `special_actions[].action` | string | 必填 | 引用 action.json 的行动 ID，引用存在 | L178、L298 |
-| A06 | `special_actions[].trigger.type` | enum | 必填 | **13 类枚举**：`hp_below`/`pv_broken`/`get_up`/`battle_start`/`after_action`/`player_status`/`player_hp_below`/`turn_count`/`phase_changed`/`zone_changed`/`ally_dead`/`combo_broken`/`script`（权威=怪物行动AI定稿 §二）；`x_` 前缀可自定义扩展；旧枚举（phase_below/cooldown_ready/turn_elapsed/chain_complete/broken/revive/tag_trigger/enter_phase/delayed）为兼容别名可写不拦截 | L298 |
+| A06 | `special_actions[].trigger.type` | enum | 必填 | **15 类枚举**：`hp_below`/`pv_broken`/`get_up`/`battle_start`/`after_action`/`player_status`/`player_hp_below`/`turn_count`/`phase_changed`/`zone_changed`/`ally_dead`/`combo_broken`/`script`（权威=怪物行动AI定稿 §二 13 类）+ `enemy_mark`/`player_mark`（印记扩展 2 类，2026-09-02 框架级新增，schema 见 A06a）；`x_` 前缀可自定义扩展；旧枚举（phase_below/cooldown_ready/turn_elapsed/chain_complete/broken/revive/tag_trigger/enter_phase/delayed）为兼容别名可写不拦截 | L298 + 2026-09-02 扩展 |
+| A06a | `trigger.mark` + `trigger.min/max/absent` | string + int/bool | 按类型 | 印记触发（`enemy_mark`/`player_mark`）专属：`mark` 必填 = 印记 id/冗余名；`min`/`max` 层数阈值（非负 int）；`absent` bool（true=要求不存在）；absent 与 min/max 并存 → 黄提示（absent 优先）。示例：`{"type":"enemy_mark","mark":"vein_core_broken","absent":true}`（部位技无破坏印记才可用）、`{"type":"enemy_mark","mark":"surge","min":6}`（困斗满才宣泄）。读 `battle_state.marks_state[enemy|player]`，对齐 MarksManager.count_by_name 语义 | 2026-09-02 扩展 |
 | A07 | `trigger.value` | number | 按类型 | 阈值类必带（`hp_below` 示例 value:30） | L178 |
 | A08 | `trigger.timing` | enum | 按类型 | `current_turn`（当前回合）/ `next_turn`（下一回合）/ `first_turn`（第一回合） | L178-182 |
 | A09 | `trigger.action` + `trigger.chance` | string + number | 按类型 | `after_action` 必带：action=衔接的行动 ID、chance 0-100（示例 80） | L182 |
@@ -207,7 +208,7 @@
 | # | 规则 | 级别 | 来源 |
 |---|---|---|---|
 | R1 | 行动 ID 引用存在（actions[].action ∈ action.json） | 拦截 | L297（校验 1） |
-| R2 | 特殊行动触发条件合法：trigger.type ∈ 权威 13 类枚举（怪物行动AI定稿 §二，`x_` 前缀可扩展自定义）+ action 引用存在；旧枚举经别名归一表接受（黄提示迁移不拦截）| 拦截 | L298（校验 2）+ 细化_0 R-01 |
+| R2 | 特殊行动触发条件合法：trigger.type ∈ 权威 15 类枚举（怪物行动AI定稿 §二 13 类 + 印记扩展 enemy_mark/player_mark 2 类，`x_` 前缀可扩展自定义）+ action 引用存在；印记触发 mark 必填、min/max 非负 int、absent bool（A06a）；旧枚举经别名归一表接受（黄提示迁移不拦截）| 拦截 | L298（校验 2）+ 细化_0 R-01 + 2026-09-02 扩展 |
 | R3 | 弱点允许 0 → 警告"该怪无弱点"；元素 ID ∈ 元素注册表（引用检查） | 警告 / 拦截 | L299（校验 3） |
 | R4 | PV 非负（<0 拦截）；难度档常见区间仅提示"PV 超出该档常见区间，确认？" | 拦截 / 提示 | L300（校验 4） |
 | R5 | 掉落 item 引用存在（条目结构对齐统一 reward 条目 schema，item/count 同键）+ chance 0-100 | 拦截 | L301（校验 5） |
@@ -222,7 +223,7 @@
 | R14 | 木桩数值与一致性：HP/def_base/elem_res 非负；def_base 直读与 stats 体质映射**二选一**（同配提示一致性）；木桩豁免 ≥1 弱点约束 | 拦截 / 提示 | L341、L365 |
 | R15 | chains（若配置）：节点 action 引用存在 + chance 0-1 + role ∈ {chain, finisher}（拦截，AI 定稿 §八）；链不成环（**细化派生**：成环提示不拦截——环形链=有意的循环连招〔AI L178 连招循环概念〕时放行）；旧 action.json 内嵌 chain 读兼容并提示迁移顶层 chains | 拦截 / 提示 | AI L248-266；AI L178；L137、L269 |
 
-编辑器联动（只读引用）：怪物页 9 标签页；勾选木桩后折叠为"属性+木桩"表单（dummy 开关 + 多档防御/元素抗性基准）；特殊行动条件表单=13 类触发下拉+参数；掉落条件下拉=破防/无伤/特定行动 [L305-309]。
+编辑器联动（只读引用）：怪物页 9 标签页；勾选木桩后折叠为"属性+木桩"表单（dummy 开关 + 多档防御/元素抗性基准）；特殊行动条件表单=15 类触发下拉+参数（含印记触发 mark/min/max/absent）；掉落条件下拉=破防/无伤/特定行动 [L305-309]。
 
 ---
 
@@ -239,7 +240,7 @@
 | TC-05 | PV 约束 | ① `pv: -1`；② normal 怪 `pv: 80` | ① 拦截"PV 非负"；② 提示"PV 超出该档常见区间，确认？"（不拦截） |
 | TC-06 | 行动引用缺失 | `actions: [{"action":"clawX",...}]` | 拦截（action.json 无 clawX） |
 | TC-07 | 概率归一化语义 | `{claw,p=1,w=50}`、`{rock_roll,p=1,w=30}`、`{hard_body,p=0,w=100}`；附加 `{swipe,p=2,w=20}`（非 0/1 正值） | 随机池=前两招：概率 50/80、30/80；hard_body 不入池（只被锚点/链触发）；p=2 → 等价 1 入池（AI 定稿 L51，不拦截）；`{x,p=0.5}` 非整数 → 类型/结构按硬拦判 |
-| TC-08 | 触发类型与别名 | ① `type:"hp_above"`；② after_action 缺 chance；③ `type:"broken"`（旧枚举别名）；④ `type:"player_status"`（权威枚举） | ① 拦截（非 13 类）；② 拦截（参数不完整）；③ 通过（旧别名 broken → 归一为权威 pv_broken，R-01）；④ 通过（权威枚举） |
+| TC-08 | 触发类型与别名 | ① `type:"hp_above"`；② after_action 缺 chance；③ `type:"broken"`（旧枚举别名）；④ `type:"player_status"`（权威枚举）；⑤ `type:"enemy_mark"`（印记扩展，带 mark） | ① 拦截（非 15 类）；② 拦截（参数不完整）；③ 通过（旧别名 broken → 归一为权威 pv_broken，R-01）；④ 通过（权威枚举）；⑤ 通过（印记扩展权威枚举） |
 | TC-09 | 掉落扩展域 | ① `chance:150`；② `count:[3,1]`；③ `condition:"random"` | ① 拦截（0-100）；② 拦截（min>max）；③ 拦截（非枚举） |
 | TC-10 | lore 递增 | `unlock:[10,50,40]`；`unlock:0` | 拦截（非递增）；拦截（超出 1-100） |
 | TC-11 | 木桩忽略项 | `tier:"training"` 且配 drops/lore/`pv:30` | 三条黄提示"木桩忽略掉落/图鉴/PV"（不拦截）；运行期 pv 强制 0 |
@@ -254,7 +255,7 @@
 | # | 主题 | 本档口径 | 兄弟文档 / 定稿 | 说明 |
 |---|---|---|---|---|
 | X-01 | 木桩覆盖存储键命名 | `dummy_override`（定稿 L384 原文） | 1g4 HR-04/J-02 用 `dummy_state`（**无定稿依据，系 1g4 自造**） | 【登记】统一以定稿 `dummy_override` 为准；1g4 需改口径（已列入 1g4 复审待办），实现期按 `dummy_override` 落库 |
-| X-02 | 掉落 condition 与特殊行动 trigger.type | **两套独立枚举**：`drop_condition ∈ {pv_broken, no_damage, after_action:<id>}` vs `trigger.type ∈ 13 类`——仅 `pv_broken`/`after_action` 同名**语义不同**（掉落结算条件 vs 触发类型） | 1f §二（13 类触发） | 实现器不得复用 trigger.type 校验器校验 drop_condition；`no_damage` 无触发对应，属掉落专用 |
+| X-02 | 掉落 condition 与特殊行动 trigger.type | **两套独立枚举**：`drop_condition ∈ {pv_broken, no_damage, after_action:<id>}` vs `trigger.type ∈ 15 类`——仅 `pv_broken`/`after_action` 同名**语义不同**（掉落结算条件 vs 触发类型） | 1f §二（15 类触发） | 实现器不得复用 trigger.type 校验器校验 drop_condition；`no_damage` 无触发对应，属掉落专用 |
 | X-03 | 换区 PV 恢复比例键 | `pv_half_ratio`（默认 0.5，取整向下）归口 **AI 定稿 §八 `zone_change.pv_recover`**，不在 enemies 八段内 | AI 定稿 L242/L193；1g4（只管 HP 脱战回血，正交） | 实现器读 AI 定稿配置恢复比例；副本换区 PV 是否恢复未裁（见 1g4 J-01），默认按普通换区处理 |
 | X-04 | chains 环形链 | 链不成环为**细化派生**（AI 定稿 L178 连招循环概念），成环仅提示不拦截 | 1f §五（chain C 模型） | 有意循环连招放行；`chain_ref → chains.id` 引用存在为拦截级 |
 

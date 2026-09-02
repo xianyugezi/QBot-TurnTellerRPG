@@ -337,6 +337,50 @@ def test_tc08e_trigger_param_completeness_bonus() -> None:
     assert _errs(rep, "R11_chance_range"), f"chance=150 应拦截，实际 {rep.errors}"
 
 
+def test_mark_trigger_types_authoritative_passes() -> None:
+    """印记触发权威枚举（enemy_mark/player_mark，2026-09-02 新增）带 mark → 通过。"""
+    for ttype in ("enemy_mark", "player_mark"):
+        rep = _check([_enemy_with_trigger(ttype, mark="vein_core_broken")])
+        assert not rep.errors, f"{ttype} 带 mark 应通过，实际 {rep.errors}"
+        rep = _check([_enemy_with_trigger(ttype, mark="surge", min=6)])
+        assert not rep.errors, f"{ttype} 带 min 应通过，实际 {rep.errors}"
+        rep = _check([_enemy_with_trigger(ttype, mark="surge", max=2)])
+        assert not rep.errors, f"{ttype} 带 max 应通过，实际 {rep.errors}"
+        rep = _check([_enemy_with_trigger(ttype, mark="vein_core_broken", absent=True)])
+        assert not rep.errors, f"{ttype} 带 absent 应通过，实际 {rep.errors}"
+
+
+def test_mark_trigger_mark_required_blocked() -> None:
+    """印记触发缺 mark → 红拦（R11_mark_trigger_mark_required）。"""
+    for ttype in ("enemy_mark", "player_mark"):
+        rep = _check([_enemy_with_trigger(ttype)])
+        assert _errs(rep, "R11_mark_trigger_mark_required"), (
+            f"{ttype} 缺 mark 应拦截，实际 {rep.errors}")
+        rep = _check([_enemy_with_trigger(ttype, mark="")])
+        assert _errs(rep, "R11_mark_trigger_mark_required"), (
+            f"{ttype} mark 空串应拦截，实际 {rep.errors}")
+
+
+def test_mark_trigger_threshold_types_blocked() -> None:
+    """印记触发 min/max 非整数 / 负数 → 红拦（R11_mark_trigger_threshold_*）。"""
+    rep = _check([_enemy_with_trigger("enemy_mark", mark="surge", min="6")])
+    assert _errs(rep, "R11_mark_trigger_threshold_type"), f"min 字符串应拦截，实际 {rep.errors}"
+    rep = _check([_enemy_with_trigger("enemy_mark", mark="surge", max=-1)])
+    assert _errs(rep, "R11_mark_trigger_threshold_negative"), f"max 负数应拦截，实际 {rep.errors}"
+    rep = _check([_enemy_with_trigger("enemy_mark", mark="surge", min=True)])
+    assert _errs(rep, "R11_mark_trigger_threshold_type"), f"min bool 应拦截，实际 {rep.errors}"
+
+
+def test_mark_trigger_absent_type_and_note() -> None:
+    """印记触发 absent 非 bool → 红拦；absent=true 与 min/max 并存 → 黄提示。"""
+    rep = _check([_enemy_with_trigger("enemy_mark", mark="x", absent="yes")])
+    assert _errs(rep, "R11_mark_trigger_absent_type"), f"absent 非 bool 应拦截，实际 {rep.errors}"
+    rep = _check([_enemy_with_trigger("enemy_mark", mark="x", absent=True, min=2)])
+    assert not rep.errors, "absent+min 不应红拦（仅提示）"
+    assert _notes(rep, "R12_mark_trigger_absent_with_threshold"), (
+        "absent+min 并存应黄提示，实际无")
+
+
 # ---------------------------------------------------------------------------
 # TC-09 掉落扩展域（细化_1e §⑥ TC-09 / R5 / R13）
 # ---------------------------------------------------------------------------

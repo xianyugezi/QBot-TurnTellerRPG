@@ -214,11 +214,13 @@ _ENEMY_STAT_KEYS_DEFAULT: Tuple[str, ...] = (
     "hp", "mp", "str", "int", "con", "spr", "foc", "agi", "luk",
 )
 
-# 触发类型权威 13 类（细化_1e 1.4 A06 / S3；权威=怪物行动AI定稿 §二；`x_` 前缀可自定义扩展）
+# 触发类型权威 15 类（细化_1e 1.4 A06 / S3；权威=怪物行动AI定稿 §二 13 类 + 印记扩展
+# 2 类 enemy_mark/player_mark（2026-09-02 框架级新增）；`x_` 前缀可自定义扩展）
 TRIGGER_TYPES: frozenset = frozenset({
     "hp_below", "pv_broken", "get_up", "battle_start", "after_action",
     "player_status", "player_hp_below", "turn_count", "phase_changed",
     "zone_changed", "ally_dead", "combo_broken", "script",
+    "enemy_mark", "player_mark",
 })
 # 旧枚举别名（1e 1.4 A06 兼容别名：可写不拦截；S4 仅三例有权威归一目标 → R12 提示迁移）
 TRIGGER_ALIASES: Mapping[str, str] = {
@@ -234,6 +236,13 @@ TRIGGER_LEGACY: frozenset = frozenset({
 TRIGGER_TIMINGS: Tuple[str, ...] = ("current_turn", "next_turn", "first_turn")
 # 阈值类触发（必带 trigger.value，R11）
 _TRIGGER_VALUE_REQUIRED: frozenset = frozenset({"hp_below", "player_hp_below"})
+# 印记类触发（2026-09-02 框架级新增；必带 trigger.mark = 印记 id/冗余名；可带
+# min/max 层数阈值与 absent 反向；参数名集中在常量，校验/引擎共用同一键名契约）
+MARK_TRIGGER_TYPES: frozenset = frozenset({"enemy_mark", "player_mark"})
+MARK_TRIGGER_MARK_KEY: str = "mark"
+MARK_TRIGGER_MIN_KEY: str = "min"
+MARK_TRIGGER_MAX_KEY: str = "max"
+MARK_TRIGGER_ABSENT_KEY: str = "absent"
 
 # 掉落条件枚举（R13；与 trigger.type 两套独立枚举，X-02；`after_action:<action_id>` 为细化定型）
 DROP_CONDITIONS: Tuple[str, ...] = ("pv_broken", "no_damage")
@@ -1089,6 +1098,37 @@ class _Checker:
         if timing is not None and timing not in TRIGGER_TIMINGS:
             self._err(module_name, f"{spath}.trigger.timing", "R-1", rule="R11_timing_enum",
                       got=str(timing), enum=list(TRIGGER_TIMINGS))
+        # 印记类触发参数（enemy_mark/player_mark，2026-09-02）：mark 必填字符串；
+        # min/max 非负整数；absent bool；absent=true 与 min/max 并存 → 提示（语义歧义）
+        if ttype in MARK_TRIGGER_TYPES:
+            mark = trigger.get(MARK_TRIGGER_MARK_KEY)
+            if not isinstance(mark, str) or not mark:
+                self._err(module_name, f"{spath}.trigger.{MARK_TRIGGER_MARK_KEY}", "R-5",
+                          rule="R11_mark_trigger_mark_required", name=MARK_TRIGGER_MARK_KEY,
+                          trigger_type=ttype)
+            for key in (MARK_TRIGGER_MIN_KEY, MARK_TRIGGER_MAX_KEY):
+                val = trigger.get(key)
+                if val is None:
+                    continue
+                if isinstance(val, bool) or not isinstance(val, int):
+                    self._err(module_name, f"{spath}.trigger.{key}", "R-1",
+                              rule="R11_mark_trigger_threshold_type",
+                              expect="int", got=type(val).__name__, trigger_type=ttype)
+                elif val < 0:
+                    self._err(module_name, f"{spath}.trigger.{key}", "R-2",
+                              rule="R11_mark_trigger_threshold_negative",
+                              value=val, trigger_type=ttype)
+            absent = trigger.get(MARK_TRIGGER_ABSENT_KEY)
+            if absent is not None and not isinstance(absent, bool):
+                self._err(module_name, f"{spath}.trigger.{MARK_TRIGGER_ABSENT_KEY}", "R-1",
+                          rule="R11_mark_trigger_absent_type",
+                          expect="bool", got=type(absent).__name__, trigger_type=ttype)
+            if absent is True and any(k in trigger for k in
+                                     (MARK_TRIGGER_MIN_KEY, MARK_TRIGGER_MAX_KEY)):
+                self._note(module_name, f"{spath}.trigger", "N-4",
+                           rule="R12_mark_trigger_absent_with_threshold",
+                           trigger_type=ttype,
+                           msg="absent=true 与 min/max 并存：absent 优先，min/max 被忽略")
 
     def _check_enemy_chains(self, module_name: str, base: str, entry: Mapping[str, object],
                             dummy: bool) -> None:

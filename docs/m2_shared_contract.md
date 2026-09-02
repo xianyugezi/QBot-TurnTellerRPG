@@ -49,7 +49,7 @@
 - `id`：唯一标识（链引用目标，选填）
 - `action`：引用 action.json 行动 ID（必填）
 - `trigger`：`{type, value?, timing?, action?, chance?}`
-  - type ∈ 13 类：`hp_below/pv_broken/get_up/battle_start/after_action/player_status/player_hp_below/turn_count/phase_changed/zone_changed/ally_dead/combo_broken/script` + `x_` 前缀自定义
+  - type ∈ 15 类：`hp_below/pv_broken/get_up/battle_start/after_action/player_status/player_hp_below/turn_count/phase_changed/zone_changed/ally_dead/combo_broken/script` + `enemy_mark/player_mark`（印记扩展 2 类，2026-09-02 新增）+ `x_` 前缀自定义
   - 旧别名接受（兼容）：broken/revive/enter_phase → 归一 pv_broken/get_up/battle_start，黄提示迁移
   - timing ∈ `current_turn/next_turn/first_turn`；after_action 必带 action+chance(0-100)
 - `once`：bool，一次性触发

@@ -199,7 +199,13 @@ class PerPlayerQueue:
             if item.future is not None and not item.future.done():
                 item.future.set_result(result)
             # 发送出口（IDEM-1：发送仅是崩溃注入点；失败不阻塞队列 POOL-6）
-            if result.get("send", True) and result.get("message") and item.sender is not None:
+            # G3 2026-09-02：post-commit 钩子字段（_battle_persist 等）存在即调
+            # sender（sender 内处理 session 写 + 自行决定消息发送）；否则按
+            # send/message 传统条件。
+            _needs_sender = bool(result.get("_battle_persist")) or (
+                result.get("send", True) and result.get("message")
+            )
+            if _needs_sender and item.sender is not None:
                 try:
                     await item.sender(result)
                 except Exception:

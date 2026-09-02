@@ -521,7 +521,25 @@ def _make_sender(deps: Any, ctx: Mapping[str, Any]):
 
     async def sender(result: Dict[str, Any]) -> None:
         """发送出口闭包：COMMIT 后由 processing 消费者调用（失败不阻塞队列，POOL-6）。"""
+        # G3 战斗续档（2026-09-02）：post-commit 执行 session 写（release/suspend）——
+        # handler 在 process_message 事务内无法再开 tx（嵌套死锁），故由 sender 在
+        # COMMIT 后执行。result["_battle_persist"] = ("release"|"suspend", qid, snapshot)
+        _bp = result.get("_battle_persist")
+        if isinstance(_bp, tuple) and len(_bp) >= 2 and ctx.get("session_mgr") is not None:
+            try:
+                _op, _qid = _bp[0], str(_bp[1])
+                _sm = ctx["session_mgr"]
+                if _op == "release" and hasattr(_sm, "release"):
+                    await _sm.release(_qid)
+                elif _op == "suspend" and hasattr(_sm, "suspend") and len(_bp) >= 3:
+                    await _sm.suspend(_qid, _bp[2])
+            except Exception:  # noqa: BLE001 - 续档失败不阻断发送
+                pass
         text = result.get("message")
+        if result.get("send", True) is False:
+            # send:False（battle：正文已由 BattlePipeline 发送）→ 只做 post-commit
+            # 钩子（session 写），不再发 message（防双发，2026-09-02 实机修复）
+            return
         if not text:
             return
         if ctx.get("registered"):

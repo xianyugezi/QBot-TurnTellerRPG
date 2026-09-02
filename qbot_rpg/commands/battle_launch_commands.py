@@ -221,12 +221,27 @@ async def launch_pve_battle(
     if cur is not None:
         stype = str(getattr(cur, "session_type", "") or (cur.get("session_type") if isinstance(cur, Mapping) else ""))
         if "battle" in stype:
+            # G3 收口（2026-09-02）：战斗结束释放受 handler 内事务限制（无法在
+            # process_message 事务内再开 tx），session 可能残留——若残留会话的
+            # 引擎已 finished（终局快照），先释放再开新战（幂等安全）。
+            try:
+                payload = getattr(cur, "payload", None)
+                if isinstance(payload, Mapping):
+                    _ad, _ch, _ce = _battle_defs(ctx.get("registry"))
+                    old = BattleEngine.from_snapshot(payload, registry=ctx.get("registry"), defs=_ad)
+                    if bool(getattr(old, "finished", False)):
+                        await sm.release(qid)
+                        cur = None
+            except Exception:  # noqa: BLE001 - 恢复失败按未结束处理（保守拦截）
+                pass
+        if cur is not None:
+            if "battle" in stype:
+                return {"ok": False,
+                        "message": _tpl(ctx, _TPL_ALREADY_IN_BATTLE, "❌ 你已经在战斗中了"),
+                        "battle_engine": None}
             return {"ok": False,
-                    "message": _tpl(ctx, _TPL_ALREADY_IN_BATTLE, "❌ 你已经在战斗中了"),
+                    "message": _tpl(ctx, _TPL_HAS_OTHER_SESSION, "❌ 你还有未结束的会话，请先完成"),
                     "battle_engine": None}
-        return {"ok": False,
-                "message": _tpl(ctx, _TPL_HAS_OTHER_SESSION, "❌ 你还有未结束的会话，请先完成"),
-                "battle_engine": None}
 
     # 2. 解析怪物
     loc = str(ctx.get("location") or "")

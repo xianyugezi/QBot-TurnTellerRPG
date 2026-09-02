@@ -334,9 +334,9 @@ class TestModes:
         p2 = parse_command("/重载")
         assert p2.command == "重载"
 
-    def test_dialog_prefix_required(self):  # m4 §2.3 接缝裁决：/对话 不可免前缀直发
+    def test_dialog_prefix_required(self):  # 2026-09-03 用户拍板：全部指令免 / 前缀
         p = parse_command("对话")
-        assert p.mode == MODE_IGNORED
+        assert p.command == "对话"
         p2 = parse_command("/对话")
         assert p2.command == "对话"
 

@@ -1869,7 +1869,14 @@ class BattleEngine:
         ca.setdefault("armor", bool(sd.get("armor", False)))   # D4：skill def armor
         if "effects" not in ca:
             ca["effects"] = list(sd.get("effects") or [])      # D4：skill def effects（标准技能路径也能执行印记/打断等）
+        _action_had_mult = "mult" in ca  # action 原样是否显式 mult（折算判据）
         ca.setdefault("mult", float(ca.get("mult", 1.0)))
+        # M13 批21 dsh A1 P0-2：技能 power(F04) 折算战斗倍率——sd.power/100
+        # （普攻 100 → 1.0×；强力斩击 150 → 1.5×）。仅当 mult 未被 action
+        # 显式给定且当前 = 缺省 1.0 时折算（组合行/链步骤显式 mult 优先）。
+        _sd_power = float(sd.get("power", 0) or 0)
+        if _sd_power > 0 and not _action_had_mult and ca.get("mult", 1.0) == 1.0:
+            ca["mult"] = _sd_power / 100.0
         # M13 批17 路17C：技能冷却接线（14B 缺口②）——技能 def cooldown 字段。
         # 冷却表 _snap["skill_cooldowns"] = {side: {skill_id: remaining}}；
         # 施放成功设 cooldown、end_turn 递减、此处注入 action.cooldown_remaining

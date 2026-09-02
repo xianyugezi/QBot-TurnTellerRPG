@@ -1,0 +1,20 @@
+[
+  {
+    "id": "gravelcrown_hunt",
+    "name": "脉堑猎场",
+    "desc": "群脊荒原的蚀脉猎场，脊冢兽·砾冕在此徘徊。",
+    "monsters": [
+      {
+        "enemy": "gravelcrown",
+        "name": "脊冢兽·砾冕",
+        "count": 1,
+        "respawn_minutes": 30,
+        "hidden_boss": true,
+        "intro": "蚀脉翻涌，脊冢兽·砾冕自骨冢间昂首而起！",
+        "signal": "砾冕的咆哮震彻猎场"
+      }
+    ],
+    "exits": {},
+    "mechanics": []
+  }
+]

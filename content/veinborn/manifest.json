@@ -11,17 +11,11 @@
     "statuses",
     "marks",
     "skill_chains",
-    "items",
-    "equipment",
     "action",
     "skills",
     "jobs",
     "enemies",
     "maps",
-    "dungeon",
-    "npc",
-    "shop",
-    "quest",
-    "checkin"
+    "items"
   ]
 }

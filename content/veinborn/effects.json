@@ -44,5 +44,21 @@
   "name": "小回复",
   "type": "heal",
   "power": 50
+ },
+ {
+  "id": "surge_tick",
+  "name": "困斗蓄能",
+  "class": "special",
+  "type": "mark_add",
+  "trigger": "turn_end",
+  "actions": [
+   {
+    "type": "mark_add",
+    "target": "enemy",
+    "mark": "surge_mark",
+    "count": 1
+   }
+  ],
+  "desc": "每回合结束敌方困斗+1（蚀脉蓄能）"
  }
 ]

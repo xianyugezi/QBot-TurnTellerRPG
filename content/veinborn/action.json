@@ -6,9 +6,6 @@
   "power": 1.0,
   "attack_type": "打",
   "element": "earth",
-  "effects": [
-   "surge_gain"
-  ],
   "weight": 30,
   "probability": 0.6,
   "intent": "伤害",
@@ -17,7 +14,8 @@
   "tags": [
    "物理",
    "困斗+1"
-  ]
+  ],
+  "apply_mark": "surge_mark"
  },
  {
   "id": "bb_tail_sweep",
@@ -26,9 +24,6 @@
   "power": 0.8,
   "attack_type": "打",
   "element": "earth",
-  "effects": [
-   "surge_gain"
-  ],
   "weight": 25,
   "probability": 0.5,
   "intent": "范围",
@@ -37,7 +32,8 @@
   "tags": [
    "范围",
    "困斗+1"
-  ]
+  ],
+  "apply_mark": "surge_mark"
  },
  {
   "id": "bb_charge",
@@ -46,9 +42,6 @@
   "power": 1.6,
   "attack_type": "打",
   "element": "earth",
-  "effects": [
-   "surge_gain2"
-  ],
   "weight": 20,
   "probability": 0.4,
   "intent": "蓄力",
@@ -57,7 +50,8 @@
   "tags": [
    "物理",
    "困斗+2"
-  ]
+  ],
+  "apply_mark": "surge_mark"
  },
  {
   "id": "bb_rampage",
@@ -66,9 +60,6 @@
   "power": 2.2,
   "attack_type": "打",
   "element": "void",
-  "effects": [
-   "surge_vent5"
-  ],
   "weight": 0,
   "probability": 1.0,
   "intent": "宣泄",

@@ -542,7 +542,7 @@
    "ridge_blade"
   ],
   "job_form": null,
-  "derive_only": true,
+  "derive_only": false,
   "level": null,
   "hits": 1,
   "trigger_limit": {
@@ -583,7 +583,7 @@
    "ridge_blade"
   ],
   "job_form": null,
-  "derive_only": true,
+  "derive_only": false,
   "level": null,
   "hits": 1,
   "trigger_limit": {

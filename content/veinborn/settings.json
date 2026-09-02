@@ -1,0 +1,23 @@
+{
+  "default_map": "gravelcrown_hunt",
+  "currencies": [
+    {
+      "id": "coins",
+      "name": "脉晶币",
+      "icon": "晶",
+      "cap": 999999
+    }
+  ],
+  "death_penalty": {
+    "weak_duration_sec": 60,
+    "drop_currency": [],
+    "drop_exp": {
+      "enabled": true,
+      "percent": 10
+    },
+    "drop_items": {
+      "enabled": false,
+      "count": 1
+    }
+  }
+}

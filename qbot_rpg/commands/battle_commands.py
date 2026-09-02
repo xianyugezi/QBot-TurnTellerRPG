@@ -861,12 +861,49 @@ def _attack_action(parsed: Any, ctx: Mapping[str, Any]) -> Tuple[Optional[dict],
         return {"type": "normal"}, None
     if len(args) > 1:
         return None, format_tpl12(_fragment(parsed))
-    sid = _resolve_skill(ctx, str(args[0]))
+    # M13 批16 路16C：序号优先按装配快照行动位（basic+active 顺序）解析，
+    # 未装配技能不进列表（契约 §1.5「按装配快照生成可用技能列表」）；名称/id
+    # 仍走全表 _resolve_skill。
+    sid: Optional[str] = None
+    if str(args[0]).isdigit():
+        try:
+            from qbot_rpg.core.skill_slots_battle import (  # noqa: PLC0415
+                _snapshot_of,
+                slots_from_snapshot,
+            )
+
+            idx = int(str(args[0]))
+            action_rows = [
+                r for r in slots_from_snapshot(_snapshot_of(ctx))
+                if r.get("slot") in ("basic", "active")
+            ]
+            if 1 <= idx <= len(action_rows):
+                _cand = str(action_rows[idx - 1].get("skill_id") or "")
+                sid = _cand or None
+        except Exception:  # pragma: no cover - 防御兜底
+            pass
+        if sid is None:
+            sid = _resolve_skill(ctx, str(args[0]))
+    else:
+        sid = _resolve_skill(ctx, str(args[0]))
     if sid is None:
         # 2026-08-31 QA P2-3：参数为当前地图怪物名（如「攻击 疾风狼」）→ 未开战时
         # 给出明确引导而非「没有这个技能」（开战链路未接线，后续里程碑）。
         if ctx.get("battle_engine") is None and _is_current_map_monster(ctx, str(args[0])):
             return None, tpl_of(ctx, _TPL_NO_BATTLE_MAP_MONSTER_KEY)
+        return None, tpl_of(ctx, _TPL_NO_SKILL_KEY)
+    # M13 批16 路16C：装配过滤——/攻击 <技能名> 只允许装配内技能（契约 §1.5
+    # 「每次进战斗按装配快照生成可用技能列表」；未装配/被动/触发槽技能被拒）。
+    # 判定经 core.skill_slots_battle.is_slot_equipped（行动位 = basic+active；
+    # passive/trigger 槽不占行动位不可直接施放）。无 skill_slots_state 注入
+    # （旧 ctx/未装配）→ False 拒绝（防御性：装配链路缺失时不臆造可用技能）。
+    try:
+        from qbot_rpg.core.skill_slots_battle import is_slot_equipped  # noqa: PLC0415
+
+        equipped = is_slot_equipped(ctx, sid)
+    except Exception:  # pragma: no cover - 防御兜底（模块缺失不崩）
+        equipped = False
+    if not equipped:
         return None, tpl_of(ctx, _TPL_NO_SKILL_KEY)
     return {"type": "skill", "skill_id": sid}, None
 

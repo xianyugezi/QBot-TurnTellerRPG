@@ -30,6 +30,12 @@ def _skills() -> Dict[str, Dict[str, Any]]:
 
 def _ctx(**over: Any) -> Dict[str, Any]:
     c: Dict[str, Any] = {"skills": _skills()}
+    # M13 批16 路16C：装配过滤——无 skill_slots_state 时技能被拒；补装配快照
+    # （全技能装配，basic 第 1 位 + active 排序）。
+    from qbot_rpg.core.skill_slots import assemble_slots  # noqa: PLC0415
+
+    c["skill_slots_state"] = assemble_slots(
+        list(_skills().values()), {"job_id": "warrior"})
     c.update(over)
     return c
 

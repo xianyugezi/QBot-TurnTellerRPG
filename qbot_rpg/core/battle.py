@@ -1564,6 +1564,17 @@ class BattleEngine:
         # → 回落通用 SEASON_ANY，全技能可用零空窗 P-2/P-10）。引擎零 import
         # worldtime/engine（G0），懒重读数据源经装配层注入 ctx。
         self._init_season_state()
+        # M13 6c（细化_6c §1.3 F-R1 首行）：battle_start_init——战斗开始按注册表
+        # 置 base（数值型置 base / 子池型各池置 base，覆盖残留值）。注册表未注入
+        # → 零操作降级（RS-5 精神：resource_state 保持空骨架，读取回落 base）。
+        try:
+            from qbot_rpg.core.resource_lifecycle import ResourceLifecycle  # noqa: PLC0415
+
+            _rl = ResourceLifecycle(self._resource_registry)
+            _rl.battle_start_init(self._snap, "player")
+            _rl.battle_start_init(self._snap, "enemy")
+        except Exception:  # noqa: BLE001 - 装配层未注入注册表 → 零操作降级
+            pass
         self.start_turn()
         return self
 

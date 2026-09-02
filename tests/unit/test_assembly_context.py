@@ -503,3 +503,41 @@ async def test_registry_tables_injected() -> None:
     assert ctx["stats"]["hp"]["base"] == 100
     assert callable(ctx["npc_interactions"])
     assert isinstance(ctx["gm_commands"], set) and len(ctx["gm_commands"]) >= 1
+
+# ---------------------------------------------------------------------------
+# 2026-09-03 装备槽位配置注入（用户拍板：槽位=内容包可配置项）
+# ---------------------------------------------------------------------------
+async def test_slot_defs_injects_slots_and_equip_engine() -> None:
+    """settings.slot_defs → ctx["slots"]（包装形态）+ ctx["equip_engine"] 注入。
+
+    8 槽配置（veinborn：武器/头部/躯干/手部/护腿/鞋子/饰品/脉玉）→ 渲染层
+    _slot_order 取 8 键序 + _slot_name 中文名 + 指令壳 equip_engine 可用新槽。
+    """
+    slot_defs = {
+        "weapon": {"name": "武器", "max": 1},
+        "head": {"name": "头部", "max": 1},
+        "body": {"name": "躯干", "max": 1},
+        "hand": {"name": "手部", "max": 1},
+        "leg": {"name": "护腿", "max": 1},
+        "foot": {"name": "鞋子", "max": 1},
+        "accessory": {"name": "饰品", "max": 1},
+        "pulse_jade": {"name": "脉玉", "max": 1},
+    }
+    ctx = await make_context(_event(), _deps(_player(), settings=_settings(slot_defs=slot_defs)))
+    # 包装形态注入（_slot_order 认 {"slots": {...}} 取键序）
+    assert isinstance(ctx["slots"], dict) and "slots" in ctx["slots"]
+    assert list(ctx["slots"]["slots"].keys()) == [
+        "weapon", "head", "body", "hand", "leg", "foot", "accessory", "pulse_jade",
+    ]
+    assert ctx["slots"]["slots"]["pulse_jade"]["name"] == "脉玉"
+    # equip_engine 注入（EquipmentEngineAdapter，可穿 8 部位）
+    eng = ctx.get("equip_engine")
+    assert eng is not None
+    assert callable(getattr(eng, "equip_wear", None))
+
+
+async def test_slot_defs_absent_keeps_default() -> None:
+    """无 slot_defs 配置 → ctx 无 slots/equip_engine 注入（默认 6 槽行为零变化）。"""
+    ctx = await make_context(_event(), _deps(_player()))
+    assert ctx.get("slots") is None
+    assert ctx.get("equip_engine") is None

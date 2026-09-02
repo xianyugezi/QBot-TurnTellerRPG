@@ -228,6 +228,14 @@ CURRENCY_ENTRY_CHILDREN: Dict[str, FieldMeta] = {
 SETTINGS_FIELDS: Dict[str, FieldMeta] = {
     "currencies": FieldMeta(type="list", element=FieldMeta(type="obj", children=CURRENCY_ENTRY_CHILDREN)),
     "death_penalty": FieldMeta(type="obj", children=DEATH_PENALTY_CHILDREN),
+    # 2026-09-03 用户拍板：装备槽位 = 内容包可配置项（8 槽需求根因——引擎原硬编码
+    # 6 槽）。settings.slots 段形态（对齐 core/equipment.EquipmentEngine slots 注入）：
+    #   {"slots": {"weapon": {"name": "武器", "max": 1, "occupies": []}, ...}}
+    # 装配层 make_context 读它注入 ctx["slots"]（渲染层 _slot_order/_slot_name 消费）
+    # + ctx["equip_engine"]（EquipmentEngineAdapter(slots=...)）；缺省无配置 → 默认 6 槽。
+    # 注意：与 M8 slots.json 模块（装饰珠插槽 {equip_id, slots:[{slot_level}]}）是
+    # 不同数据空间——这里是「装备部位定义」；字段 key 用 slot_defs 避免与既有撞名。
+    "slot_defs": FieldMeta(type="obj", children={}, soft_label=True),
 }
 
 # =============================================================================

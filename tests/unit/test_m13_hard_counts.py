@@ -311,7 +311,7 @@ def test_6b_jobs_fields_ge_34() -> None:
 
 
 def test_6b_jobs_fields_exact_34() -> None:
-    """§1.1/§1.2/§1.3/§1.4 合写登记表恰 34 键（顶层 11 + growth 9 + transform 11 + state_policy 3）。
+    """§1.1~§1.4 合写登记表恰 34 键（顶层 11 + growth 9 + transform 11 + policy 3）。"""
 
     登记形态：顶层 11 平铺 + growth children 9 + transform children 11 +
     state_policy children 3（job_models 的 obj 子字段登记先例，与

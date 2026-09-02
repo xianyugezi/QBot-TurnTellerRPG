@@ -383,7 +383,8 @@ def test_blade_dance_three_segments_in_action_record() -> None:
         assert seg["rating"]["hit"] is True, f"段应命中，got {seg}"
         assert seg["damage"]["final"] > 0, f"每段应有伤害，got {seg['damage']}"
     # MP 只扣一次（1 次施放 1 次消耗）
-    assert eng.battle_state()["player"]["mp"] == 88, f"MP 应只扣 12，got {eng.battle_state()['player']['mp']}"
+    assert eng.battle_state()["player"]["mp"] == 88, \
+        f"MP 应只扣 12，got {eng.battle_state()['player']['mp']}"
 
 
 def test_blade_dance_segments_total_damage() -> None:

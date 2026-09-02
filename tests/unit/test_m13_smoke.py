@@ -100,7 +100,8 @@ def test_battle_skill_cast_damage() -> None:
     eng = _engine()
     out = eng.do_action("player", {"type": "skill", "skill_id": "power_strike"})
     assert out.ok is True, f"技能应成功，got {out.message}"
-    assert eng.battle_state()["player"]["mp"] == 92, f"MP 应扣 8，got {eng.battle_state()['player']['mp']}"
+    assert eng.battle_state()["player"]["mp"] == 92, \
+        f"MP 应扣 8，got {eng.battle_state()['player']['mp']}"
     assert eng.battle_state()["enemy"]["hp"] < 500, "应有伤害"
 
 

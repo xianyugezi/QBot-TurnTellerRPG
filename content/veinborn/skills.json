@@ -47,7 +47,8 @@
   "effects": [
    {
     "type": "mark_remove",
-    "target": "enemy",
+    "marks_on": "enemy",
+    "polarity": "negative",
     "mark": "surge_mark",
     "count": 1
    }
@@ -201,7 +202,8 @@
   "effects": [
    {
     "type": "mark_remove",
-    "target": "enemy",
+    "marks_on": "enemy",
+    "polarity": "negative",
     "mark": "surge_mark",
     "count": 1
    },

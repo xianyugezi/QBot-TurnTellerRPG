@@ -128,7 +128,8 @@
     },
     "once": false,
     "priority": 30,
-    "desc": "困斗满 6：宣泄大招（蚀脉宣泄），宣泄后困斗回落"
+    "desc": "困斗满 6：宣泄大招（蚀脉宣泄），宣泄后困斗回落",
+    "trigger_cooldown": 2
    },
    {
     "id": "vb_tail_lost",

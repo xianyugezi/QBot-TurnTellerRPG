@@ -812,6 +812,76 @@ class BattleEngine:
             resource_axis.apply_gain(ctx, dict(gain), side=attacker)
         return None
 
+    def _apply_consume_marks_gate(
+        self, attacker: str, ca: Mapping[str, Any], sd: Mapping[str, Any], target: str
+    ) -> Optional[ActionOutcome]:
+        """技能 consume_marks 门禁 + 扣除（G2 2026-09-02 接线，细化_1d §4.2）。
+
+        - consume_marks：{mark_id: count} 施放前检查（不足 → 被拒不耗回合，S-01
+          完全免费：不耗 MP/行动/连段保留；AT-17）；成功路径施放后扣除（AT-16）。
+        - 侧判定（契约 P-1）：印记定义 appliable_to 含 self → attacker 侧；
+          仅 enemy → target 侧（test_demo fire_mark / veinborn break_* 先例）。
+        - 无 consume_marks 字段 → 零操作（既有技能零变化）。
+        """
+        consume = sd.get("consume_marks")
+        if not isinstance(consume, Mapping) or not consume:
+            return None
+        try:
+            mm = self.marks_manager()
+            from qbot_rpg.core.marks import RemoveMark  # noqa: PLC0415
+            from qbot_rpg.content.models import MarkDef  # noqa: PLC0415
+
+            def _side_of(mark_id: str) -> str:
+                d = self._resolver(mark_id, "mark")
+                raw = d if isinstance(d, Mapping) else getattr(d, "raw", None)
+                if isinstance(raw, Mapping):
+                    apt = raw.get("appliable_to")
+                    if isinstance(apt, list) and "self" in apt:
+                        return attacker
+                return target
+
+            def _polarity_of(mark_id: str) -> str:
+                d = self._resolver(mark_id, "mark")
+                raw = d if isinstance(d, Mapping) else getattr(d, "raw", None)
+                if isinstance(raw, Mapping):
+                    return str(raw.get("polarity") or "positive")
+                return "positive"
+
+            for mark_id, need in consume.items():
+                if not isinstance(mark_id, str) or not mark_id:
+                    continue
+                need_n = int(need or 0)
+                if need_n <= 0:
+                    continue
+                side = _side_of(mark_id)
+                pol = _polarity_of(mark_id)
+                have = mm.count_by_name(side, mark_id) if hasattr(mm, "count_by_name") else 0
+                if have < need_n:
+                    seq = self._record_action(
+                        attacker, str(ca.get("type", "skill")), target,
+                        {"hit": False, "crit": "low", "blocked": False, "pierce": 0.0,
+                         "multi": 1.0, "combo_rejected": True, "combo_reason": "marks_insufficient"},
+                        {"ch_phys": 0, "ch_elem": 0, "final": 0}, self._phase)
+                    return ActionOutcome(
+                        False, seq, attacker, str(ca.get("type", "skill")), target,
+                        False, "low", False, 0, 0,
+                        int(self._combat(target).get("hp", 0)), (),
+                        f"印记不足（{mark_id}），技能被拒（不耗回合）")
+            # 检查全部通过 → 施放后实际扣除（此处即扣：调用点在 effects 结算前，
+            # 契约 ADR D-01「先于结算」；扣后由 marks_manager 回灌快照）
+            for mark_id, need in consume.items():
+                if not isinstance(mark_id, str) or not mark_id:
+                    continue
+                need_n = int(need or 0)
+                if need_n <= 0:
+                    continue
+                side = _side_of(mark_id)
+                pol = _polarity_of(mark_id)
+                mm.apply_remove(RemoveMark(side=side, polarity=pol, count=need_n, mark=mark_id))
+        except Exception:  # pragma: no cover - 防御兜底不阻断战斗
+            return None
+        return None
+
     def _resource_ctx(self, attacker: str, target: str, registry: Any) -> Dict[str, Any]:
         """资源轴引擎 ctx 构造（注册表 + 双方 resource_state 注入）。"""
         from qbot_rpg.core.resource_axis import RESOURCE_STATE_KEY  # noqa: PLC0415
@@ -2011,6 +2081,24 @@ class BattleEngine:
             _energy_gate = self._apply_skill_energy(attacker, ca, sd, target)
             if _energy_gate is not None:
                 return _energy_gate
+
+        # ---- G2（2026-09-02）：consume_marks 门禁 + 扣除（细化_1d §4.2 / S-01）----
+        # 施放前检查（不足 → 被拒不耗回合，零副作用）；检查通过后即扣。
+        # 顺序：energy 之后、MP 扣费之前（与 energy_cost 同语义，被拒不扣任何消耗）。
+        # 派生路径：ca.skill_id 已同步为派生技（G1），此处按最终 skill_id 解析 def，
+        # 取派生技的 consume_marks（若 action 显式带 consume_marks 则优先）。
+        if not ca.get("_combo_settled"):
+            # 按最终 skill_id 解析 def（派生路径 ca.skill_id 已是派生技 → 取派生技
+            # consume_marks；非派生 = 源技能，解析结果同 sd 零变化）
+            _final_sid = str(ca.get("skill_id") or "")
+            _consume_sd = sd
+            if _final_sid:
+                _cd = self.combo_engine().resolve_skill(_final_sid) or {}
+                if isinstance(_cd, Mapping) and _cd:
+                    _consume_sd = _cd
+            _consume_gate = self._apply_consume_marks_gate(attacker, ca, _consume_sd, target)
+            if _consume_gate is not None:
+                return _consume_gate
 
         # ---- M13 6a 路3C：技能 MP 消耗扣费（1a §2.2 mp_cost 语义；被拒不扣）----
         # should_reject 已做 MP 门槛检查（enforce_mp 开）；成功施放后实际扣费。

@@ -135,9 +135,10 @@ def test_derived_effects_use_derived_def() -> None:
     assert out.ok is True, f"派生施放应成功，got {out}"
     assert _mark_count(eng, "enemy", "core_broken") == 1, \
         f"派生技 core_broken 印记应挂 1，got {_mark_count(eng, 'enemy', 'core_broken')}"
-    # 源印记不再重复 +20（修复前每下派生都重复执行源 effects）
-    assert _mark_count(eng, "enemy", "break_vein_core") == 120, \
-        f"源印记不应再被重复累加，got {_mark_count(eng, 'enemy', 'break_vein_core')}"
+    # G2（consume_marks 接线）生效后：派生技 consume 120 破坏值 → 清零
+    # （G1+G2 协同语义：破技消耗破坏值 + 挂已破印记）
+    assert _mark_count(eng, "enemy", "break_vein_core") == 0, \
+        f"派生技 consume_marks 应扣清破坏值，got {_mark_count(eng, 'enemy', 'break_vein_core')}"
     assert any(e.get("type") == "mark_add" and e.get("mark_id") == "core_broken"
                for e in out.side_effects), "outcome side_effects 应含派生技 mark_add"
 
@@ -180,6 +181,10 @@ def test_unconditional_replace_chain_derives() -> None:
         }],
     })
     hp0 = _enemy_hp(eng)
+    # G2（consume_marks 接线）生效：派生技 consume 120 → 预置破坏值满
+    eng.marks_manager().apply_add(
+        __import__("qbot_rpg.core.marks", fromlist=["AddMark"]).AddMark(
+            side="enemy", mark="break_vein_core", count=120))
     out = eng.do_action("player", {"type": "skill", "skill_id": "rb_core_strike"})
     assert out.ok is True, f"无条件派生应成功，got {out}"
     dmg = hp0 - _enemy_hp(eng)

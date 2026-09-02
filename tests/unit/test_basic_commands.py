@@ -611,7 +611,7 @@ def test_help_directory_clamp_normal():
 def test_help_unregistered_guide():
     """/帮助 未注册 → 注册引导版（B6 豁免；注册/状态/背包 三项，4f B6 裁决原文）。"""
     out = cmd_help(parse("/帮助"), make_ctx(registered=False))
-    assert "【新手引导】发 /注册 名字 职业 创建角色" in out
+    assert "【新手引导】发 注册 名字 职业 创建角色" in out
     assert "注册 —— 创建角色（未注册必需）" in out
     assert "状态 —— 查看角色状态面板" in out
     assert "背包 —— 查看背包物品" in out

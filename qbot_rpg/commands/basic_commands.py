@@ -1414,7 +1414,8 @@ def _job_visible(ctx: Mapping[str, Any], sid: str) -> bool:
 
 def skill_rows(ctx: Mapping[str, Any]) -> List[str]:
     """当前职业可见技能 id 列表（job_restrict 过滤 + type 排序 basic→active→passive→trigger，
-    6a §1.5 普攻固定第 1 位；工程补白 5）。"""
+    6a §1.5 普攻固定第 1 位；工程补白 5）。placeholder:true 技能（如 transform.skill_set
+    引用的技能组占位容器）不显示（2026-09-03：占位条目误入玩家技能列表）。"""
     skills = ctx.get("skills")
     ids: List[str] = []
     if isinstance(skills, Mapping):
@@ -1428,7 +1429,21 @@ def skill_rows(ctx: Mapping[str, Any]) -> List[str]:
         t = str(_skill_field(_skill_def(ctx, sid), "type", "active"))
         return (order_map.get(t, 4), sid)
 
-    visible = [sid for sid in ids if _job_visible(ctx, sid)]
+    def _placeholder(sid: str) -> bool:
+        # 1) 被任意 job transform.skill_set 引用为「技能组容器」的占位技能
+        #    （2026-09-03：mastery_skills 类占位条目误入玩家技能列表）
+        jobs = ctx.get("jobs")
+        if isinstance(jobs, Mapping):
+            for _jd in jobs.values():
+                _jd_raw = _jd if isinstance(_jd, Mapping) else getattr(_jd, "raw", None)
+                if isinstance(_jd_raw, Mapping):
+                    _t = _jd_raw.get("transform")
+                    if isinstance(_t, Mapping) and str(_t.get("skill_set") or "") == sid:
+                        return True
+        return False
+
+    visible = [sid for sid in ids
+               if _job_visible(ctx, sid) and not _placeholder(sid)]
     visible.sort(key=_key)
     return visible
 

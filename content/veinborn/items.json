@@ -1,0 +1,31 @@
+[
+  {
+    "id": "barrow_core",
+    "name": "冢核",
+    "type": "material",
+    "price": 200,
+    "effects": [],
+    "usable": false,
+    "desc": "脊冢兽核心：脉髓结晶，锻造素材"
+  },
+  {
+    "id": "vein_shard",
+    "name": "脉晶碎片",
+    "type": "material",
+    "price": 50,
+    "effects": [],
+    "usable": false,
+    "desc": "蚀脉结晶碎片：通用素材"
+  },
+  {
+    "id": "pulse_potion",
+    "name": "脉火药剂",
+    "type": "consumable",
+    "price": 120,
+    "effects": [
+      "heal_small"
+    ],
+    "usable": true,
+    "desc": "燃脉淬体：战斗中回复生命"
+  }
+]

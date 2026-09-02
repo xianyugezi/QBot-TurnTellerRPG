@@ -1,18 +1,48 @@
 [
-  {
-    "id": "guard_up",
-    "name": "防反架势",
-    "type": "mitigation",
-    "power": 40,
-    "duration": 1,
-    "desc": "格挡减伤：本回所受伤害 -40%"
-  },
-  {
-    "id": "evade_up",
-    "name": "闪反架势",
-    "type": "mitigation",
-    "power": 70,
-    "duration": 1,
-    "desc": "闪避减伤：本回所受伤害 -70%（引擎无真闪避，用高减伤近似）"
-  }
+ {
+  "id": "guard_up",
+  "name": "防反架势",
+  "type": "mitigation",
+  "power": 40,
+  "duration": 1,
+  "desc": "格挡减伤：本回所受伤害 -40%"
+ },
+ {
+  "id": "evade_up",
+  "name": "闪反架势",
+  "type": "mitigation",
+  "power": 70,
+  "duration": 1,
+  "desc": "闪避减伤：本回所受伤害 -70%（引擎无真闪避，用高减伤近似）"
+ },
+ {
+  "id": "surge_gain",
+  "name": "困斗+1",
+  "type": "mark_add",
+  "target": "self",
+  "mark": "surge_mark",
+  "count": 1
+ },
+ {
+  "id": "surge_gain2",
+  "name": "困斗+2",
+  "type": "mark_add",
+  "target": "self",
+  "mark": "surge_mark",
+  "count": 2
+ },
+ {
+  "id": "surge_vent5",
+  "name": "困斗回落",
+  "type": "mark_remove",
+  "target": "self",
+  "mark": "surge_mark",
+  "count": 5
+ },
+ {
+  "id": "heal_small",
+  "name": "小回复",
+  "type": "heal",
+  "power": 50
+ }
 ]

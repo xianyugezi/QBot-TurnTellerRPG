@@ -1,0 +1,82 @@
+[
+ {
+  "id": "bb_slam",
+  "name": "岩脊冲撞",
+  "kind": "active",
+  "power": 1.0,
+  "attack_type": "打",
+  "element": "earth",
+  "effects": [
+   "surge_gain"
+  ],
+  "weight": 30,
+  "probability": 0.6,
+  "intent": "伤害",
+  "cooldown": 0,
+  "hungry": 0,
+  "tags": [
+   "物理",
+   "困斗+1"
+  ]
+ },
+ {
+  "id": "bb_tail_sweep",
+  "name": "尾锤横扫",
+  "kind": "active",
+  "power": 0.8,
+  "attack_type": "打",
+  "element": "earth",
+  "effects": [
+   "surge_gain"
+  ],
+  "weight": 25,
+  "probability": 0.5,
+  "intent": "范围",
+  "cooldown": 1,
+  "hungry": 0,
+  "tags": [
+   "范围",
+   "困斗+1"
+  ]
+ },
+ {
+  "id": "bb_charge",
+  "name": "蓄力冲撞",
+  "kind": "active",
+  "power": 1.6,
+  "attack_type": "打",
+  "element": "earth",
+  "effects": [
+   "surge_gain2"
+  ],
+  "weight": 20,
+  "probability": 0.4,
+  "intent": "蓄力",
+  "cooldown": 2,
+  "hungry": 0,
+  "tags": [
+   "物理",
+   "困斗+2"
+  ]
+ },
+ {
+  "id": "bb_rampage",
+  "name": "蚀脉宣泄",
+  "kind": "active",
+  "power": 2.2,
+  "attack_type": "打",
+  "element": "void",
+  "effects": [
+   "surge_vent5"
+  ],
+  "weight": 0,
+  "probability": 1.0,
+  "intent": "宣泄",
+  "cooldown": 0,
+  "hungry": 0,
+  "tags": [
+   "范围",
+   "宣泄"
+  ]
+ }
+]

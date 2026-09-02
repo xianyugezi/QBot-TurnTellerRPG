@@ -1038,7 +1038,13 @@ def _inventory_hooks(ctx: MutableMapping[str, Any]) -> dict:
         ctx["_m8_dirty_inventory"] = True
 
     def add_item(item_id: str, count: int = 1, bound: bool = False, **kw: Any) -> bool:
-        """入包：计数映射累加 count；带 quality/traits → 实例通道；非法 count → False。"""
+        """入包：计数映射累加 count；带 quality/traits → 实例通道；非法 count → False。
+
+        2026-09-03（装备加成断链修复）：装备类物品（def 含 atk/def/hp/mp 数值字段）
+        实例化时把数值字段填 stats_bonus——原链路 def 数值字段从不转 stats_bonus，
+        穿装后 aggregate_bonus 读空 → 装备零加成（demo 包 latent 断链，实测确认）。
+        ctx["items"] 注册表（raw dict，含 resolve_item）在此闭包可见。
+        """
         try:
             c = int(count)
         except (TypeError, ValueError):
@@ -1047,8 +1053,18 @@ def _inventory_hooks(ctx: MutableMapping[str, Any]) -> dict:
             return False
         key = str(item_id)
         inv[key] = inv.get(key, 0) + c
+        # 装备数值字段 → stats_bonus（仅装备类：def 有 atk/def/hp/mp 数值键）
+        stat_keys = ("atk", "def", "hp", "mp", "str", "con", "agi", "foc", "spr", "lck", "spd", "mag")
+        _item_cfg = ctx.get("items")
+        _cfg = _item_cfg.get(key) if isinstance(_item_cfg, Mapping) else None
+        _bonus: Dict[str, float] = {}
+        if isinstance(_cfg, Mapping):
+            for _sk in stat_keys:
+                _v = _cfg.get(_sk)
+                if isinstance(_v, (int, float)) and not isinstance(_v, bool) and _v:
+                    _bonus[_sk] = float(_v)
         # M8 炼金产出实例（quality/traits 关键字）→ 追加实例通道（保留品质/特性落档）
-        if kw and (kw.get("quality") is not None or kw.get("traits")):
+        if kw and (kw.get("quality") is not None or kw.get("traits")) or _bonus:
             insts.append(
                 {
                     "item_id": key,
@@ -1056,6 +1072,7 @@ def _inventory_hooks(ctx: MutableMapping[str, Any]) -> dict:
                     "quality": kw.get("quality") or "normal",
                     "bound": bool(bound),
                     "traits": tuple(kw.get("traits") or ()),
+                    "stats_bonus": _bonus,
                 }
             )
         _mark()

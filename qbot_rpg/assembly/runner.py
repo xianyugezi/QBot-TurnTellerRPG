@@ -475,12 +475,15 @@ def _make_handler(spec: Any, parsed: ParsedCommand, ctx: MutableMapping[str, Any
                         if not isinstance(it, Mapping):
                             continue
                         try:
+                            _sb = it.get("stats_bonus")
                             new_inv = new_inv + (ItemInstance(
                                 item_id=str(it.get("item_id") or ""),
                                 name=str(it.get("name") or ""),
                                 count=int(it.get("count") or 1),
                                 quality=str(it.get("quality") or "normal"),
                                 bound=bool(it.get("bound", False)),
+                                slot=str(it.get("slot")) if it.get("slot") else None,
+                                stats_bonus=dict(_sb) if isinstance(_sb, Mapping) else {},
                                 traits=tuple(it.get("traits") or ()),
                             ),)
                         except (TypeError, ValueError):

@@ -42,7 +42,7 @@ from __future__ import annotations
 import copy
 import json
 from dataclasses import replace
-from typing import Any, Mapping, MutableMapping, Optional, Tuple
+from typing import Any, Dict, Mapping, MutableMapping, Optional, Tuple
 
 from qbot_rpg.core.shop import shop_buy
 from qbot_rpg.data.item import ItemInstance
@@ -182,11 +182,20 @@ def _ctx_inventory_to_player(
             by_id[item_id] = []
         else:
             name = ""
+            slot_v: Optional[str] = None
+            sb: Dict[str, float] = {}
             item_cfg = items.get(item_id) if isinstance(items, Mapping) else None
             if isinstance(item_cfg, Mapping):
                 name = str(item_cfg.get("name") or "")
+                slot_v = str(item_cfg.get("slot") or "") or None
+                # 2026-09-03 装备加成断链修复：def 数值字段 → stats_bonus（穿装聚合读它）
+                for _sk in ("atk", "def", "hp", "mp", "str", "con", "agi", "foc", "spr", "lck", "spd", "mag"):
+                    _v = item_cfg.get(_sk)
+                    if isinstance(_v, (int, float)) and not isinstance(_v, bool) and _v:
+                        sb[_sk] = float(_v)
             out.append(ItemInstance(item_id=item_id, name=name, count=n,
-                                    quality="normal", bound=False))
+                                    quality="normal", bound=False, slot=slot_v,
+                                    stats_bonus=sb))
     for rest in by_id.values():  # 旧背包中 ctx 未涉及的实例原样保留
         out.extend(rest)
     return tuple(out)

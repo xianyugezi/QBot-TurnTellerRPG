@@ -411,12 +411,14 @@ def _render_prefix_line(
 
 def _default_action_phrase(outcome: Any) -> str:
     """缺省动作短语（BREP-02/03/06 的 {攻击动作}）：优先接线层注入展示名
-    action_name，其次普攻（normal/attack）→「攻击」，最后回落 action_type 原词。"""
+    action_name，其次普攻（normal/attack）→「攻击」，最后回落 action_type 原词。
+    2026-09-03：skill 回退也归「攻击」（原回退裸英文 skill——玩家侧已有
+    action_name 注入，此分支主要覆盖敌方/未注入场景，显示「攻击」可读）。"""
     name = getattr(outcome, "action_name", None)
     if name:
         return str(name)
     atype = str(getattr(outcome, "action_type", "") or "")
-    if atype in ("normal", "attack", ""):
+    if atype in ("normal", "attack", "skill", ""):
         return "攻击"
     return atype
 

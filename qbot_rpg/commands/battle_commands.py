@@ -422,9 +422,12 @@ def _inject_display_outcomes(
         if actor == "player":
             overrides: dict = dict(target=enemy_name, target_max_hp=enemy_max_hp,
                                    player_max_hp=player_max_hp)
-            # 技能名注入（M13 6a 路3C）：玩家技能行动 → 战报显示技能名（BREP-07）
+            # 技能名注入（M13 6a 路3C）：玩家技能行动 → 战报显示技能名（BREP-07）。
+            # action_name 同注（2026-09-03 实机修复：渲染 _default_action_phrase 优先
+            # 读 action_name，只注 skill_name 导致「你skill」裸英文回退）。
             if str(getattr(oc, "action_type", "") or "") == "skill" and skill_name:
                 overrides["skill_name"] = skill_name
+                overrides["action_name"] = skill_name
             if segments:
                 final_hp = getattr(oc, "target_hp", None)
                 overrides["segments"] = [

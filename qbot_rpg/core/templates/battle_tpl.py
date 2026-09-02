@@ -55,7 +55,7 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     # —— BREP-09 操作提示行（战报末行；tail 独立模板）——
     "battle_action_hint": "你 {player_hp}/{player_max_hp} | {target_name} "
                           "{target_hp}/{target_max_hp} → {tail}",
-    "battle_action_hint_tail": "/攻击[技能] /道具 /防御 /逃跑",
+    "battle_action_hint_tail": "攻击 或 攻击 技能名",
 
     # —— BREP-04 会心/格挡附注 ——
     "battle_crit_note": "（会心·{tier} ×{mult}）",

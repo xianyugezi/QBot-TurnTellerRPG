@@ -141,7 +141,7 @@ def test_round_one_message_attack_merged(start_battle) -> None:
     assert any("✅ 你攻击" in ln for ln in lines)   # 玩家行动行（BREP-02）
     assert any("史莱姆" in ln and "你受到" in ln for ln in lines) or \
         any("史莱姆的攻击" in ln for ln in lines)   # 怪物反击行（BREP-10/11）
-    assert any("史莱姆 2" in ln for ln in lines) or any("→ /攻击" in ln for ln in lines)  # 提示行（BREP-09）
+    assert any("史莱姆 2" in ln for ln in lines) or any("→ 攻击" in ln for ln in lines)  # 提示行（BREP-09）
 
 
 def test_round_one_message_mock_sender_call_count(start_battle) -> None:
@@ -305,7 +305,7 @@ def test_enrich_injects_display_names(start_battle) -> None:
 
 def test_apply_battle_prefix_delegates_m5_01() -> None:
     """apply_battle_prefix = M5-01 apply_message_prefix 委托（铁律 1 前缀只加首行）。"""
-    body = "✅ 你攻击，造成 10 伤害（史莱姆 390/400）\n你 500/500 | 史莱姆 390/400 → /攻击"
+    body = "✅ 你攻击，造成 10 伤害（史莱姆 390/400）\n你 500/500 | 史莱姆 390/400 → 攻击 或 攻击 技能名"
     res = apply_message_prefix(body, level=LV, name=NAME, title=TITLE,
                                settings=DEFAULT_MESSAGE_PREFIX_SETTINGS)
     assert res.text == f"{PREFIX}\n{body}"

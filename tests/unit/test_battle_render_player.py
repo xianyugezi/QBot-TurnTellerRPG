@@ -205,7 +205,7 @@ def test_render_round_hint_when_max_known() -> None:
     ctx = SimpleNamespace(**tr.__dict__, player_max_hp=30, enemy_max_hp=25,
                           enemy_name="史莱姆", level=35, name="阿伟", title="斩龙者")
     lines = render_battle_round(ctx).split("\n")
-    assert lines[-1] == "你 21/30 | 史莱姆 7/25 → /攻击[技能] /道具 /防御 /逃跑"
+    assert lines[-1] == "你 21/30 | 史莱姆 7/25 → 攻击 或 攻击 技能名"
 
 
 # ---------------------------------------------------------------------------

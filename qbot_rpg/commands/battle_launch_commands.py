@@ -288,7 +288,7 @@ async def launch_pve_battle(
 
     e_name = str(e_comb.get("name") or "怪物")
     e_hp = int(e_comb.get("max_hp", 0))
-    msg = f"⚔️ 与 {e_name}（HP {e_hp}）的战斗开始！发 /攻击 出战。"
+    msg = f"⚔️ 与 {e_name}（HP {e_hp}）的战斗开始！发 攻击 出战。"
     return {"ok": True, "message": msg, "battle_engine": eng}
 
 

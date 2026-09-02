@@ -777,14 +777,18 @@ class BattleEngine:
         registry = getattr(self, "_resource_registry", None)
         if registry is None:
             return None
-        # energy_cost 门禁（技能 def 段）
+        # energy_cost 门禁（技能 def 段；支持 {axis: {key: amt}} 与 {axis: amt}
+        # 数值型简写两种形态——check_cost/pay_cost 内部归一（_cost_map_of））
         cost = sd.get("energy_cost")
         if isinstance(cost, Mapping) and cost:
             ctx = self._resource_ctx(attacker, target, registry)
             for axis_id, cost_map in cost.items():
-                if not isinstance(cost_map, Mapping):
+                if not isinstance(axis_id, str) or not axis_id:
                     continue
-                ok = resource_axis.check_cost(ctx, str(axis_id), dict(cost_map), side=attacker)
+                # 简写形态 {axis: int} → 归一 {axis: {axis: int}}（数值型 K1）
+                _norm_cost: Dict[str, Any] = dict(cost_map) if isinstance(cost_map, Mapping) \
+                    else {axis_id: int(cost_map or 0)}
+                ok = resource_axis.check_cost(ctx, axis_id, _norm_cost, side=attacker)
                 if not ok.get("ok", True):
                     seq = self._record_action(
                         attacker, str(ca.get("type", "skill")), target,
@@ -797,7 +801,7 @@ class BattleEngine:
                         int(self._combat(target).get("hp", 0)), (),
                         f"能量不足（{axis_id}），技能被拒（不耗回合）")
                 # 扣减
-                resource_axis.pay_cost(ctx, str(axis_id), dict(cost_map), side=attacker)
+                resource_axis.pay_cost(ctx, axis_id, _norm_cost, side=attacker)
         # energy_gain 结算（技能 def 段；成功施放后增加封顶）
         gain = sd.get("energy_gain")
         if isinstance(gain, Mapping) and gain:
@@ -1043,7 +1047,7 @@ class BattleEngine:
         - 未命中 → 被拒不耗回合（reason=no_combo_match）。
         审计落 ca 侧 combo_result（战报/测试可观察）。
         """
-        from qbot_rpg.core.combo_table import gate_combination  # noqa: PLC0415
+        from qbot_rpg.core.combo_table import resolve_trigger  # noqa: PLC0415
         from qbot_rpg.core.combo_settle import settle_combo  # noqa: PLC0415
 
         rows_exist = bool(sd.get("combo_table"))
@@ -1061,9 +1065,14 @@ class BattleEngine:
                     axis_id = str(aid)
                     break
         ctx = self._resource_ctx(attacker, target, registry or {})
-        gate = gate_combination(ctx, sd, axis_id, side=attacker)
+        # F-C1 一站式（resolve_trigger）：① 常规 → ② 总量门 → ③ 组合匹配
+        gate = resolve_trigger(ctx, sd, axis_id, side=attacker)
         if not gate.get("ok"):
             reason = gate.get("reason", "no_combo_match")
+            # 总量门不足优先提示（元素爆发 any:2 不足 → 「能量不足」）
+            msg = f"能量不足（{reason}），组合技能被拒（不耗回合）" \
+                if reason in ("total_insufficient", "energy_total_insufficient") \
+                else f"组合未达成（{reason}），技能被拒（不耗回合）"
             seq = self._record_action(
                 attacker, str(ca.get("type", "skill")), target,
                 {"hit": False, "crit": "low", "blocked": False, "pierce": 0.0,
@@ -1072,8 +1081,7 @@ class BattleEngine:
             return ActionOutcome(
                 False, seq, attacker, str(ca.get("type", "skill")), target,
                 False, "low", False, 0, 0,
-                int(self._combat(target).get("hp", 0)), (),
-                f"组合未达成（{reason}），技能被拒（不耗回合）")
+                int(self._combat(target).get("hp", 0)), (), msg)
         row = gate.get("row")
         if row is None:
             return None
@@ -1134,6 +1142,21 @@ class BattleEngine:
             pay_cost(dict(ctx), axis_id, dict(cost), side="player")
         except Exception:  # noqa: BLE001 - 防御兜底
             pass
+
+    def _tick_skill_cooldowns(self) -> None:
+        """M13 批17 路17C：技能冷却回合递减（end_turn tick ⑥ 后，每回合 -1）。"""
+        _cdm = self._snap.get("skill_cooldowns")
+        if not isinstance(_cdm, dict):
+            return
+        for side, _cds in list(_cdm.items()):
+            if not isinstance(_cds, dict):
+                continue
+            for _sid, _left in list(_cds.items()):
+                _n = int(_left or 0) - 1
+                if _n <= 0:
+                    _cds.pop(_sid, None)
+                else:
+                    _cds[_sid] = _n
 
     def _tick_transform_state(self) -> None:
         """M13 6b（细化_6b §2.2/D-03）：transform 回合 tick（end_turn ⑥ 后）。
@@ -1847,6 +1870,18 @@ class BattleEngine:
         if "effects" not in ca:
             ca["effects"] = list(sd.get("effects") or [])      # D4：skill def effects（标准技能路径也能执行印记/打断等）
         ca.setdefault("mult", float(ca.get("mult", 1.0)))
+        # M13 批17 路17C：技能冷却接线（14B 缺口②）——技能 def cooldown 字段。
+        # 冷却表 _snap["skill_cooldowns"] = {side: {skill_id: remaining}}；
+        # 施放成功设 cooldown、end_turn 递减、此处注入 action.cooldown_remaining
+        # 供 combo.should_reject 拒绝（冷却中被拒不耗回合）。
+        _cd_map = self._snap.get("skill_cooldowns")
+        _cd_side = _cd_map.get(attacker) if isinstance(_cd_map, dict) else None
+        _cd_left = _cd_side.get(str(ca.get("skill_id") or ""), 0) \
+            if isinstance(_cd_side, dict) else 0
+        if _cd_left > 0:
+            ca["cooldown_remaining"] = int(_cd_left)
+        else:
+            ca.pop("cooldown_remaining", None)
         # M13 批14 路14B：技能 def hits 多段展开（blade_dance hits=3 → 3 段伤害）。
         # 仅显式 hits>1 时展开（缺省 1 段不包 segments，保持既有单段路径零变化）。
         _hits = int(sd.get("hits", 1) or 1)
@@ -1881,6 +1916,9 @@ class BattleEngine:
                 step_tag = getattr(result.step, "tag", None)
                 if step_tag:
                     action.setdefault("tag", step_tag)
+            # M13 批17 路17C：同步 ca（segments/energy 等扩展随派生 skill_id 走）
+            ca["skill_id"] = result.form_id
+            ca["_derived"] = bool(result.derivation)
 
         # ---- M13 批15 路15C：组合技能战斗接线（细化_6c §三 F-C1/F-C2）----
         # 技能 def combo_table 段 → 施放时 F-C1 触发判定（gate_combination：
@@ -1895,6 +1933,16 @@ class BattleEngine:
         if _combo is not None:
             return _combo
 
+        # ---- M13 6c 批12 收口：技能 energy_cost 门禁 + energy_gain 结算 ----
+        # 技能 def 的 energy_cost（施放前检查：不足 → 被拒不耗回合，复用 rejected
+        # 语义——返回被拒 outcome 不继续）+ energy_gain（成功结算后增加封顶）。
+        # 组合已结算（_combo_settled）→ 跳过（settle_combo 已双耗，防重复）。
+        # 顺序：energy 门禁在 MP 扣费之前（被拒不扣任何消耗，批17 收口）。
+        if not ca.get("_combo_settled"):
+            _energy_gate = self._apply_skill_energy(attacker, ca, sd, target)
+            if _energy_gate is not None:
+                return _energy_gate
+
         # ---- M13 6a 路3C：技能 MP 消耗扣费（1a §2.2 mp_cost 语义；被拒不扣）----
         # should_reject 已做 MP 门槛检查（enforce_mp 开）；成功施放后实际扣费。
         # mp_cost 优先 action 显式（skill_mp_cost/mp_cost），缺失回退技能 def。
@@ -1907,14 +1955,23 @@ class BattleEngine:
             if _mp >= _mp_cost:
                 _c["mp"] = _mp - _mp_cost
 
-        # ---- M13 6c 批12 收口：技能 energy_cost 门禁 + energy_gain 结算 ----
-        # 技能 def 的 energy_cost（施放前检查：不足 → 被拒不耗回合，复用 rejected
-        # 语义——返回被拒 outcome 不继续）+ energy_gain（成功结算后增加封顶）。
-        # 组合已结算（_combo_settled）→ 跳过（settle_combo 已双耗，防重复）。
-        if not ca.get("_combo_settled"):
-            _energy_gate = self._apply_skill_energy(attacker, ca, sd, target)
-            if _energy_gate is not None:
-                return _energy_gate
+        # ---- M13 批17 路17C：技能冷却起算（技能 def cooldown > 0）----
+        # 成功施放（未拒绝）→ 冷却表写入；end_turn tick 递减（_tick_skill_cooldowns）。
+        # 语义：cooldown=N → 施放后 N 回合不可用（含下一回合）——存储 N+1，
+        # end_turn 逐回合递减（施放当回合不减，下一回合施放检查仍 = N 拦）。
+        _cd = int(sd.get("cooldown", 0) or 0)
+        if _cd > 0:
+            _cdm = self._snap.setdefault("skill_cooldowns", {})
+            if not isinstance(_cdm, dict):
+                _cdm = {}
+                self._snap["skill_cooldowns"] = _cdm
+            _cds = _cdm.setdefault(attacker, {})
+            if not isinstance(_cds, dict):
+                _cds = {}
+                _cdm[attacker] = _cds
+            _sid = str(ca.get("skill_id") or "")
+            if _sid:
+                _cds[_sid] = max(int(_cds.get(_sid, 0) or 0), _cd + 1)
 
         # ---- M13 批15 路15A：transform 触发技（transform_skill）战斗接线 ----
         # 细化_6b §2.1 F1：触发技（如狂暴/rage_burst）成功结算后触发变换——
@@ -1992,13 +2049,26 @@ class BattleEngine:
             self._absorb_runtime(rt)
         # 霸体窗口=行动阶段结束（D2 修复：原在技能结算内清位→同回合敌后手打断不免疫，
         # 1c2 §2.2「使用期间」应为整个行动阶段；清位移至 _after_actor_action）
-        out = self._resolve_damage_action(attacker, action)
+        # M13 批17 路17C：伤害结算传 ca（含 skill def 合并 + segments 多段展开 +
+        # 派生 skill_id 同步）——原 action 缺这些扩展（hits=3 只出 1 段问题根因）。
+        out = self._resolve_damage_action(attacker, ca)
+        # M13 批17 路17C：组合审计透出（ca 侧 combo_result → outcome.combo_result）
+        _cr = ca.get("combo_result")
+        if isinstance(_cr, dict):
+            out = ActionOutcome(
+                out.ok, out.seq, out.actor, out.action_type, out.target, out.hit,
+                out.crit, out.blocked, out.raw_damage, out.final_damage, out.target_hp,
+                out.side_effects, out.message,
+                battle_ended=out.battle_ended, status=out.status,
+                combo_result=_cr,
+            )
         if hit_effects:
             out = ActionOutcome(
                 out.ok, out.seq, out.actor, out.action_type, out.target, out.hit,
                 out.crit, out.blocked, out.raw_damage, out.final_damage, out.target_hp,
                 tuple(hit_effects) + out.side_effects, out.message,
                 battle_ended=out.battle_ended, status=out.status,
+                combo_result=out.combo_result,
             )
         return out
 
@@ -2410,6 +2480,8 @@ class BattleEngine:
         # 纯函数（transform_revert.tick_remaining/tick_cooldown/should_revert_natural）
         # 不引入定时器；形态配置经 job_def 惰性解析（无配置 → 常态无操作）。
         self._tick_transform_state()
+        # M13 批17 路17C：技能冷却回合递减（与 transform 冷却同拍）
+        self._tick_skill_cooldowns()
 
         # M13 6c（细化_6c §1.3 F-R1 tick）：resource_state 回合结束结清——契约
         # 无每回合自动变化字段 → 现行为=保留（零增减幂等钩子，S4 被控保留天然

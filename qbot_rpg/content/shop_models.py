@@ -1106,7 +1106,19 @@ def validate_shops(modules: Mapping[str, object], report: object) -> None:
         return  # 未接线 shop 模块 → 跳过（§2.3 默认放行）
 
     refs = _Refs()
-    refs.item_ids = _id_set(modules, "items")
+    # 2026-09-03（装备可购修复）：shop 商品引用集合并 items + equipment 两模块——
+    # item_lib 语义 = items∪equipment 同库（field_meta NAMESPACES），原只查 items
+    # 导致装备无法上架商店（demo 包铁剑在 equipment.json 从未可购）。
+    # 保留原语义：items 模块缺失 → item_ids=None 跳过引用检查（默认放行）。
+    _item_ids_raw = _id_set(modules, "items")
+    if _item_ids_raw is None:
+        refs.item_ids = None
+    else:
+        _item_ids = set(_item_ids_raw)
+        _equip_ids = _id_set(modules, "equipment")
+        if _equip_ids:
+            _item_ids |= set(_equip_ids)
+        refs.item_ids = _item_ids
     refs.currency_ids = _settings_currency_ids(modules)
     refs.npc_shop_refs = _npc_shop_refs(modules)
 

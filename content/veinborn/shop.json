@@ -1,0 +1,24 @@
+[
+  {
+    "id": "dragonbone_smithy",
+    "name": "龙骨铁匠铺",
+    "icon": "锻",
+    "type": "normal",
+    "currency": "coins",
+    "desc": "龙骨驿站里的铁匠铺，炉火映着蚀脉晶光。",
+    "visible": true,
+    "items": [
+      { "item": "ridge_blade_starter", "price": 150, "stock": 5, "sold_out_once": false },
+      { "item": "ridge_blade_veteran", "price": 600, "stock": 3, "sold_out_once": false },
+      { "item": "gravelcrown_cleaver", "price": 1800, "stock": 1, "sold_out_once": true },
+      { "item": "cub_leather_helm", "price": 80, "stock": 10, "sold_out_once": false },
+      { "item": "cub_leather_body", "price": 120, "stock": 10, "sold_out_once": false },
+      { "item": "cub_leather_hand", "price": 80, "stock": 10, "sold_out_once": false },
+      { "item": "cub_leather_leg", "price": 80, "stock": 10, "sold_out_once": false },
+      { "item": "cub_leather_foot", "price": 80, "stock": 10, "sold_out_once": false },
+      { "item": "ridge_bone_charm", "price": 200, "stock": 5, "sold_out_once": false },
+      { "item": "vein_jade_rough", "price": 300, "stock": 5, "sold_out_once": false },
+      { "item": "pulse_potion", "price": 120, "stock": 20, "sold_out_once": false }
+    ]
+  }
+]

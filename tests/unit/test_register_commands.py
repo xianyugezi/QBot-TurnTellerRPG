@@ -82,7 +82,7 @@ def test_tc_reg_01_first_register_success():
     assert "职业：战士（推荐新手） ｜ 位置：新手村" in out              # 推荐角标降级纯文本
     # 意见一同步：初始属性每项独立一行（生命/魔力/攻击/防御各一行）
     assert "初始属性：\n生命 100/100\n魔力 30/30\n攻击 12\n防御 10" in out
-    assert "下一步：发 /帮助 查看指令，或 /锁定 新手村怪物开战。" in out
+    assert "下一步：发 帮助 查看指令，或 锁定 新手村怪物开战。" in out
     # 建号状态写 ctx（REG-04/05）
     assert ctx["registered"] is True
     p = ctx["player"]
@@ -376,7 +376,7 @@ def test_register_rem_tpl_default_when_no_ctx_templates():
         "魔力 30/30\n"
         "攻击 12\n"
         "防御 10\n"
-        "下一步：发 /帮助 查看指令，或 /锁定 新手村怪物开战。"
+        "下一步：发 帮助 查看指令，或 锁定 新手村怪物开战。"
     )
 
 

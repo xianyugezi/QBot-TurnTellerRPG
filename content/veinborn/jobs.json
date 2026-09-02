@@ -1,0 +1,95 @@
+[
+ {
+  "id": "ridge_blade",
+  "name": "脊剑士",
+  "difficulty": "simple",
+  "playstyle": "近身连段，专精不竭",
+  "recommended_newbie": true,
+  "resource_axes": [
+   "mp",
+   "stamina",
+   "focus"
+  ],
+  "mechanic_tags": [
+   "近战",
+   "连段",
+   "专精",
+   "部位破坏"
+  ],
+  "weapon_types": [
+   "ridgeblade"
+  ],
+  "growth": {
+   "str": 2.0,
+   "con": 1.5,
+   "foc": 1.0,
+   "hp": 1.0,
+   "mp": 1.0
+  },
+  "transform": {
+   "transform_skill": "rb_mastery",
+   "transform_to": "inexhaustible_form",
+   "duration": "battle",
+   "revert": false,
+   "cooldown": 0,
+   "dispel_reverts": false,
+   "state_policy": {
+    "combo": "keep",
+    "marks": "keep",
+    "buff": "keep"
+   },
+   "skill_set": "mastery_skills",
+   "equip_restrict": [],
+   "derive_chains": [
+    "chain_ridge_combo"
+   ]
+  },
+  "description": "猎势·不竭：聚焦满翻面，本局连段回精力（专精恒效）。"
+ },
+ {
+  "id": "vein_archer",
+  "name": "脉矢手",
+  "difficulty": "simple",
+  "playstyle": "远程狙射，专精贯瞳",
+  "recommended_newbie": false,
+  "resource_axes": [
+   "mp",
+   "stamina",
+   "focus"
+  ],
+  "mechanic_tags": [
+   "远程",
+   "连段",
+   "专精"
+  ],
+  "weapon_types": [
+   "longbow"
+  ],
+  "growth": {
+   "str": 0.5,
+   "agi": 2.0,
+   "foc": 1.5,
+   "hp": 1.0,
+   "mp": 1.0
+  },
+  "transform": {
+   "transform_skill": "va_mastery",
+   "transform_to": "piercing_eye_form",
+   "duration": "battle",
+   "revert": false,
+   "cooldown": 0,
+   "dispel_reverts": false,
+   "state_policy": {
+    "combo": "keep",
+    "marks": "keep",
+    "buff": "keep"
+   },
+   "skill_set": "mastery_skills",
+   "equip_restrict": [],
+   "derive_chains": [
+    "chain_piercing_shot"
+   ]
+  },
+  "description": "猎势·贯瞳：聚焦满翻面，解锁终结技（专精恒效）。"
+ }
+]

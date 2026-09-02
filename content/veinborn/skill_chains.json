@@ -1,0 +1,90 @@
+[
+ {
+  "id": "chain_ridge_combo",
+  "name": "猎势连段",
+  "job_scope": "inexhaustible_form",
+  "trigger_skill": "rb_form_strike",
+  "max_combo": 3,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "rb_form_strike",
+    "to": "rb_form_finisher",
+    "tag": "combo",
+    "condition": {
+     "count": {
+      "eq": 3
+     }
+    },
+    "priority": 1,
+    "mode": "replace",
+    "armor": true,
+    "consume": 0,
+    "variant_override": {
+     "power": 300
+    }
+   }
+  ]
+ },
+ {
+  "id": "chain_core_break",
+  "name": "破脉核链",
+  "trigger_skill": "rb_core_strike",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "rb_core_strike",
+    "to": "vb_core_breaker",
+    "tag": "none",
+    "condition": {
+     "target_marks": {
+      "break_vein_core": {
+       "min": 120
+      }
+     }
+    },
+    "priority": 1,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
+ },
+ {
+  "id": "chain_tail_break",
+  "name": "断尾链",
+  "trigger_skill": "rb_tail_strike",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "rb_tail_strike",
+    "to": "vb_tail_breaker",
+    "tag": "none",
+    "condition": {
+     "target_marks": {
+      "break_tail_hammer": {
+       "min": 90
+      }
+     }
+    },
+    "priority": 1,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
+ },
+ {
+  "id": "chain_piercing_shot",
+  "name": "贯瞳狙击链",
+  "job_scope": "piercing_eye_form",
+  "trigger_skill": "va_form_shot",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": []
+ }
+]

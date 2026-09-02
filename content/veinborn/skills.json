@@ -1,0 +1,732 @@
+[
+ {
+  "id": "rb_slash",
+  "name": "脊斩",
+  "type": "basic",
+  "kind": "damage",
+  "power": 110,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "ridge_blade"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "攻·脊斩：基础攻击，耗 1 精力，聚焦 +1",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {
+   "focus": 1
+  }
+ },
+ {
+  "id": "rb_leap",
+  "name": "桩移",
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "type": "mark_remove",
+    "target": "enemy",
+    "mark": "surge_mark",
+    "count": 1
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "ridge_blade"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "机动·桩移（跃空）：回 1 精力，疏导敌方困斗 1 层",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "stamina": 1
+  }
+ },
+ {
+  "id": "rb_guard",
+  "name": "脊挡",
+  "type": "active",
+  "kind": "status",
+  "power": 0,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "effect": "guard_up"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "ridge_blade"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "格挡·脊挡（防反）：本回减伤 40%，回 1 精力",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "stamina": 1
+  }
+ },
+ {
+  "id": "rb_dodge",
+  "name": "堑跃",
+  "type": "active",
+  "kind": "status",
+  "power": 0,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "effect": "evade_up"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "ridge_blade"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "躲避·堑跃（闪反）：本回减伤 70%，回 1 精力",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "stamina": 1
+  }
+ },
+ {
+  "id": "rb_heavy_slash",
+  "name": "猛进斩",
+  "type": "active",
+  "kind": "damage",
+  "power": 160,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "ridge_blade"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "攻·猛进斩：高伤攻击，耗 2 精力，聚焦 +2",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_cost": {
+   "stamina": 2
+  },
+  "energy_gain": {
+   "focus": 2
+  }
+ },
+ {
+  "id": "rb_hunter_leap",
+  "name": "猎跃",
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "type": "mark_remove",
+    "target": "enemy",
+    "mark": "surge_mark",
+    "count": 1
+   },
+   {
+    "type": "mark_add",
+    "target": "enemy",
+    "mark": "vulnerable",
+    "count": 1
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "ridge_blade"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "机动·猎跃：回 2 精力，泄困斗 1，挂破绽（下次受伤翻倍）",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "stamina": 2
+  }
+ },
+ {
+  "id": "rb_counter",
+  "name": "盾返",
+  "type": "active",
+  "kind": "status",
+  "power": 0,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "effect": "guard_up"
+   },
+   {
+    "type": "mark_add",
+    "target": "enemy",
+    "mark": "vulnerable",
+    "count": 1
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 1,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "ridge_blade"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "格挡·盾返（防反）：强减伤 + 挂破绽反击",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "stamina": 1
+  }
+ },
+ {
+  "id": "rb_spine_breaker",
+  "name": "破脊斩",
+  "type": "active",
+  "kind": "damage",
+  "power": 240,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": true,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "ridge_blade"
+  ],
+  "job_form": null,
+  "derive_only": true,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "连段派生·破脊斩：攻→攻→机动 触发的高伤终结（霸体）",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_cost": {
+   "stamina": 1
+  }
+ },
+ {
+  "id": "rb_mastery",
+  "name": "猎势·不竭",
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "attack_type": "none",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "ridge_blade"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 1
+  },
+  "desc": "专精·猎势不竭：消耗 4 聚焦翻面，本局连段回精力（恒效形态）",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_cost": {
+   "focus": 4
+  }
+ },
+ {
+  "id": "rb_form_strike",
+  "name": "不竭连斩",
+  "type": "active",
+  "kind": "damage",
+  "power": 130,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "combo",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [
+   "chain_ridge_combo"
+  ],
+  "consume_marks": {},
+  "job_restrict": [
+   "ridge_blade"
+  ],
+  "job_form": "inexhaustible_form",
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "形态·不竭连斩：翻面后主循环，连段驱动回精力",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {
+   "focus": 0
+  }
+ },
+ {
+  "id": "rb_form_finisher",
+  "name": "不竭·终",
+  "type": "active",
+  "kind": "damage",
+  "power": 300,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "combo",
+  "armor": true,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "ridge_blade"
+  ],
+  "job_form": "inexhaustible_form",
+  "derive_only": true,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "形态终结·不竭终：派生大招 300%（霸体）",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto"
+ },
+ {
+  "id": "rb_core_strike",
+  "name": "贯核击",
+  "type": "active",
+  "kind": "damage",
+  "power": 60,
+  "attack_type": "pierce",
+  "element": null,
+  "effects": [
+   {
+    "type": "mark_add",
+    "target": "enemy",
+    "mark": "break_vein_core",
+    "count": 20
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [
+   "chain_core_break"
+  ],
+  "consume_marks": {},
+  "job_restrict": [
+   "ridge_blade"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "部位·贯核击：打脉核，累积破坏值 20（6 下满 120），无脉核已破印记才可用",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {
+   "focus": 1
+  }
+ },
+ {
+  "id": "rb_tail_strike",
+  "name": "断尾击",
+  "type": "active",
+  "kind": "damage",
+  "power": 55,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "type": "mark_add",
+    "target": "enemy",
+    "mark": "break_tail_hammer",
+    "count": 15
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [
+   "chain_tail_break"
+  ],
+  "consume_marks": {},
+  "job_restrict": [
+   "ridge_blade"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "部位·断尾击：打尾锤，累积破坏值 15（6 下满 90）",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {
+   "focus": 1
+  }
+ },
+ {
+  "id": "vb_core_breaker",
+  "name": "破脉核",
+  "type": "active",
+  "kind": "damage",
+  "power": 200,
+  "attack_type": "pierce",
+  "element": null,
+  "effects": [
+   {
+    "type": "mark_add",
+    "target": "enemy",
+    "mark": "core_broken",
+    "count": 1
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": true,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {
+   "break_vein_core": 120
+  },
+  "job_restrict": [
+   "ridge_blade"
+  ],
+  "job_form": null,
+  "derive_only": true,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 1
+  },
+  "desc": "破技·破脉核：破坏值满时派生，挂脉核已破印记（倒地窗口），清破坏值",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto"
+ },
+ {
+  "id": "vb_tail_breaker",
+  "name": "断尾",
+  "type": "active",
+  "kind": "damage",
+  "power": 180,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "type": "mark_add",
+    "target": "enemy",
+    "mark": "tail_broken",
+    "count": 1
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": true,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {
+   "break_tail_hammer": 90
+  },
+  "job_restrict": [
+   "ridge_blade"
+  ],
+  "job_form": null,
+  "derive_only": true,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 1
+  },
+  "desc": "破技·断尾：破坏值满时派生，挂尾锤已破印记（范围技失效），清破坏值",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto"
+ },
+ {
+  "id": "mastery_skills",
+  "name": "专精形态技能组",
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "attack_type": "none",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "形态技能组占位条目（transform.skill_set 引用；同组实际技能 = job_form=inexhaustible_form / piercing_eye_form 的技能）",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto"
+ },
+ {
+  "id": "va_shot",
+  "name": "脉矢",
+  "type": "basic",
+  "kind": "damage",
+  "power": 120,
+  "attack_type": "pierce",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_archer"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "攻·脉矢：基础射击，耗 1 精力，聚焦 +1",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {
+   "focus": 1
+  }
+ },
+ {
+  "id": "va_mastery",
+  "name": "猎势·贯瞳",
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "attack_type": "none",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_archer"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 1
+  },
+  "desc": "专精·猎势贯瞳：消耗 4 聚焦翻面，解锁终结技（恒效形态）",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_cost": {
+   "focus": 4
+  }
+ },
+ {
+  "id": "va_form_shot",
+  "name": "贯瞳狙击",
+  "type": "active",
+  "kind": "damage",
+  "power": 200,
+  "attack_type": "pierce",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": true,
+  "interrupt": false,
+  "chain_refs": [
+   "chain_piercing_shot"
+  ],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_archer"
+  ],
+  "job_form": "piercing_eye_form",
+  "derive_only": true,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "形态终结·贯瞳狙击：翻面后解锁的终结技（霸体，贯穿）",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "ignore"
+ }
+]

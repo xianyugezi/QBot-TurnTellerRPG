@@ -1969,6 +1969,25 @@ class BattleEngine:
             # M13 批17 路17C：同步 ca（segments/energy 等扩展随派生 skill_id 走）
             ca["skill_id"] = result.form_id
             ca["_derived"] = bool(result.derivation)
+            # 【G1 派生结算修复（veinborn 破脉核派生缺口）】form_id 替换发生后，
+            # 伤害倍率/effects/tag/armor/hits 重新按派生技 def 解析——原实现仅覆写
+            # skill_id，mult 与 effects 仍停留在源技能（rb_core_strike power60→
+            # 0.6×、mark_add 源印记重复执行），派生技 vb_core_breaker power200→
+            # 2.0×、core_broken 印记完全不生效。显式给定值保持优先（与上方 power
+            # 折算/effects 合并同一口径）：仅当 action 原样未显式给出时才跟随派生技。
+            _fsd = self.combo_engine().resolve_skill(str(result.form_id or "")) or {}
+            _f_power = float(_fsd.get("power", 0) or 0)
+            if _f_power > 0 and not _action_had_mult:
+                ca["mult"] = _f_power / 100.0
+            if "effects" not in action:
+                ca["effects"] = list(_fsd.get("effects") or [])
+            if not action.get("tag"):
+                ca["tag"] = str(_fsd.get("tag", "") or "")
+            if not action.get("armor"):
+                ca["armor"] = bool(_fsd.get("armor", False))
+            _f_hits = int(_fsd.get("hits", 1) or 1)
+            if _f_hits > 1 and "segments" not in ca:
+                ca["segments"] = [{"hit": True, "mult": 1.0} for _ in range(_f_hits)]
 
         # ---- M13 批15 路15C：组合技能战斗接线（细化_6c §三 F-C1/F-C2）----
         # 技能 def combo_table 段 → 施放时 F-C1 触发判定（gate_combination：

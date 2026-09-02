@@ -71,21 +71,25 @@ def _battle_defs(registry: Any):
 def _enemy_combatant(enemy_entry: Mapping[str, Any]) -> dict:
     """enemies.json 条目 → BattleEngine 敌方 combatant（stats 映射）。
 
-    对齐 scripts/e2e_m6_smoke._enemy_combatant：hp/mp/str/int/agi/spr/luk/con/foc
-    透传；引擎 _DEFAULT_STATS 合并补齐缺省键。
+    对齐 scripts/e2e_m6_smoke._enemy_combatant + 引擎字段体系（_DEFAULT_STATS：
+    atk/dfn/mag/spd 实读键；spd 驱动命中闪避/先手——2026-09-02 实机修复：
+    content stats agi→spd、spr→mag、str→atk、con→dfn 映射，否则敌方 spd 缺省 50
+    → 玩家 foc 10 打命中率 17% 全 miss）。
     """
     st = enemy_entry.get("stats") or {}
+    hp = int(st.get("hp", 100))
     return {
-        "hp": int(st.get("hp", 100)),
-        "max_hp": int(st.get("hp", 100)),
+        "hp": hp,
+        "max_hp": hp,
         "mp": int(st.get("mp", 0)),
-        "str": int(st.get("str", 10)),
-        "int": int(st.get("int", 10)),
-        "agi": int(st.get("agi", 10)),
-        "spr": int(st.get("spr", 10)),
+        "atk": int(st.get("str", st.get("atk", 10))),
+        "dfn": int(st.get("con", st.get("dfn", 10))),
+        "mag": int(st.get("spr", st.get("mag", 10))),
+        "spd": int(st.get("agi", st.get("spd", 10))),
+        "foc": int(st.get("foc", 10)),
         "lck": int(st.get("luk", st.get("lck", 10))),
         "con": int(st.get("con", 10)),
-        "foc": int(st.get("foc", 10)),
+        "agi": int(st.get("agi", 10)),
         "name": str(enemy_entry.get("name") or enemy_entry.get("id") or "怪物"),
     }
 

@@ -814,7 +814,8 @@ def _gate(ctx: Mapping[str, Any]) -> Optional[str]:
 def _fail(ctx: Mapping[str, Any], text: str) -> dict:
     """错误文案经管线发送（统一出口，无裸 send）。统一返回格式 {ok, sent, message}。"""
     sent = BattlePipeline.from_ctx(ctx).send(text)
-    return {"ok": False, "sent": sent, "message": text}
+    # send:False（同 _run_battle_action）：正文已由 pipeline 发送，阻止 runner 双发
+    return {"ok": False, "sent": sent, "message": text, "send": False}
 
 
 def _run_battle_action(ctx: Mapping[str, Any], action: Mapping[str, Any]) -> dict:
@@ -834,7 +835,10 @@ def _run_battle_action(ctx: Mapping[str, Any], action: Mapping[str, Any]) -> dic
         message = tpl_of(ctx, _TPL_RESULT_END_KEY, {"status": report.status})
     else:
         message = tpl_of(ctx, _TPL_RESULT_ROUND_KEY, {"turn": report.turn})
-    return {"ok": True, "sent": sent, "message": message}
+    # send:False —— 正文已由 dispatch_round/pipeline 发送（一轮 1 条铁律）；
+    # 阻止 runner sender 闭包重复发送 message（processing L202 send 开关，2026-09-02
+    # 实机双发修复：此前 runner 再发一遍「第 N 回合结算」造成重复消息）。
+    return {"ok": True, "sent": sent, "message": message, "send": False}
 
 
 def _resolve_skill(ctx: Mapping[str, Any], text: str) -> Optional[str]:

@@ -42,7 +42,7 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     # —— 注册：指令参数错误（REG-01；3d §5.1「原因 + 正确用法」句式）——
     "register_args_too_many": "❌ 指令不正确：/注册 最多 2 个参数。正确格式：{usage}",
     "register_args_missing": "❌ 指令不正确：/注册 需要角色名。正确格式：{usage}"
-                             "（或直接发 /注册，将用你的 QQ 号作为名字）",
+                             "（或直接发 注册，将用你的 QQ 号作为名字）",
 
     # —— 注册：无参 QQ 号兜底提示（用户拍板 2026-08-28：零输入开玩）——
     "register_auto_name": "已自动用你的 QQ 号「{name}」作为名字",

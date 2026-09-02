@@ -71,11 +71,11 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     "basic_skill_chain": "可派生成：{names}",
 
     # —— /帮助 注册引导版（B6 豁免）+ 组页头（4f RUL-23）——
-    "basic_register_guide": "【新手引导】发 /注册 名字 职业 创建角色\n"
+    "basic_register_guide": "【新手引导】发 注册 名字 职业 创建角色\n"
                             "注册 —— 创建角色（未注册必需）\n"
                             "状态 —— 查看角色状态面板\n"
                             "背包 —— 查看背包物品\n"
-                            "装备/技能 等更多指令注册后可用，发 /帮助 查看完整列表",
+                            "装备/技能 等更多指令注册后可用，发 帮助 查看完整列表",
     "basic_help_group_header": "【{group}】",
 }
 

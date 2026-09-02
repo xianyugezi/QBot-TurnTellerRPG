@@ -37,7 +37,7 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     "register_success_mp": "魔力 {mp}/{mp}",
     "register_success_atk": "攻击 {atk}",
     "register_success_dfn": "防御 {dfn}",
-    "register_success_next": "下一步：发 /帮助 查看指令，或 /锁定 {location}怪物开战。",
+    "register_success_next": "下一步：发 帮助 查看指令，或 锁定 {location}怪物开战。",
 
     # —— 注册：指令参数错误（REG-01；3d §5.1「原因 + 正确用法」句式）——
     "register_args_too_many": "❌ 指令不正确：/注册 最多 2 个参数。正确格式：{usage}",

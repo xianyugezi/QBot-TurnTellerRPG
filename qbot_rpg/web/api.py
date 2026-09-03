@@ -171,7 +171,10 @@ def _save_pipeline(
     from qbot_rpg.web import pages_crud
 
     ctx = _ctx_of(state)
-    module = pages_crud.PAGE_MODULE.get(page)
+    # M12.5 全量测试抓 P1：原查 pages_crud.PAGE_MODULE（六页兜底常量）→ 扩展页
+    # （items/effects 等 editor.json 登记页）create/update 全 404。改走 page_module_of
+    # 动态页表解析（与 list/get 同源，editor 页表优先 + 六页兜底兼容）。
+    module = pages_crud.page_module_of(ctx, page)
     if module is None:
         return {"ok": False, "errors": [{
             "level": "red", "code": "not_found", "field": "page",
@@ -196,6 +199,9 @@ def _save_pipeline(
     if not wr.get("ok"):
         return {"ok": False, "errors": wr.get("errors") or [{
             "level": "red", "code": "write_failed", "message": "写盘失败"}]}
+    # M12.5 全量测试抓 P0：写盘成功后内存数据源不同步 → 列表/搜索仍显示旧快照，
+    # 且后续基于旧内存的再保存会覆盖磁盘新值（丢改）。同步回 reg.modules_raw。
+    reg.modules_raw[module] = entries
     return {"ok": True, "data": {"item": item, "saved": True}}
 
 
@@ -528,7 +534,11 @@ def create_app(state: Optional[Any] = None) -> Any:
         if not out.get("ok"):
             code = out.get("code") or 404
             raise _HTTPException(status_code=code, detail=out)
-        module = pages_crud._page_info(ctx, page)["module"]
+        module = pages_crud.page_module_of(ctx, page)
+        if module is None:
+            raise _HTTPException(status_code=404, detail={"ok": False, "errors": [{
+                "level": "red", "code": "not_found", "field": "page",
+                "message": f"页面不存在：{page}"}]})
         wr = atomic_store.write_modules(content_dir, {module: ctx["modules_raw"][module]})
         if not wr.get("ok"):
             raise _HTTPException(status_code=500, detail=wr)

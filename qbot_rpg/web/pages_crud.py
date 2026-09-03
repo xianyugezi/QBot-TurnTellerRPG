@@ -166,6 +166,17 @@ def _page_info(
         return None
     return {"module": module, "id_prefix": PAGE_ID_PREFIX.get(page, page)}
 
+
+def page_module_of(ctx: Mapping[str, Any], page: str) -> Optional[str]:
+    """页 → 模块键公开解析（api 写端点/写盘层用；None = 页不可用 404）。
+
+    M12.5 全量测试补：api._save_pipeline 原查 PAGE_MODULE 常量 → 扩展页
+    create/update 404；统一走本封装（_page_info 动态页表 + 兜底）。
+    """
+    info = _page_info(ctx, page)
+    return info["module"] if info is not None else None
+
+
 # =============================================================================
 # 基础工具
 # =============================================================================

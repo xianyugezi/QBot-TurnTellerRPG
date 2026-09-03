@@ -847,6 +847,179 @@ def apply_delete_to_entries(
 # 模块文件映射导出（上层 /api/meta、写盘层复用）
 PAGE_FILE: Mapping[str, str] = {p: f"{m}.json" for p, m in PAGE_MODULE.items()}
 
+# =============================================================================
+# M12.5 批4：obj/map 形态模块读写（settings/forge/fishing 顶层 obj + stats/formula
+# map——list 条目 CRUD 之外的第二/第三形态；页面形态由 editor.json page_kind
+# 声明，editor_registry 页表驱动（批1 路1A _page_info 已取 module_file）。
+# obj 页 = 单对象整体读写（GET 整个 obj / PUT 整体覆盖合并）；map 页 = 键值
+# 对读写（GET 全键 / PUT 单键 / DELETE 单键——键空间由 field_meta key_regex）。
+# =============================================================================
+
+def module_shape(ctx: Mapping[str, Any], page: str) -> str:
+    """页面模块形态：'list'/'obj'/'map'（顶层 JSON 容器判定；缺省 list 兜底）。
+
+    obj = 顶层 dict 且无 pages 表驱动特判（settings/forge/fishing）；
+    map = 顶层 dict 且键值非段容器语义（stats/formula——由 field_meta
+    entry_type=map 判定，此处以 editor.json page_kind 优先）。
+    """
+    kind = _page_shape_of(ctx, page)
+    if kind:
+        return kind
+    info = _page_info(ctx, page)
+    if info is None:
+        return "list"
+    raw = ctx.get("modules_raw")
+    data = raw.get(info["module"]) if isinstance(raw, Mapping) else None
+    if isinstance(data, list):
+        return "list"
+    if isinstance(data, Mapping):
+        # map 模块（stats/formula）由 field_meta entry_type 判定
+        from qbot_rpg.content.field_meta import default_field_meta_table
+        table = default_field_meta_table()
+        mm = table.modules.get(info["module"])
+        if mm is not None and mm.entry_type == "map":
+            return "map"
+        return "obj"
+    return "list"
+
+
+def _page_shape_of(ctx: Mapping[str, Any], page: str) -> str:
+    """editor.json 页表 page_kind 显式形态（list/map/object/view 归一）。"""
+    raw = ctx.get("modules_raw")
+    if not isinstance(raw, Mapping) or not isinstance(raw.get("editor"), Mapping):
+        return ""
+    for spec in raw["editor"].get("pages") or ():
+        if isinstance(spec, Mapping) and spec.get("page_id") == page:
+            k = str(spec.get("page_kind") or "")
+            if k in ("map", "object", "obj"):
+                return "map" if k == "map" else "obj"
+            return ""
+    return ""
+
+
+def get_whole_module(
+    page: str,
+    ctx: Mapping[str, Any],
+) -> Dict[str, Any]:
+    """obj/map 页整模块读取（单对象/键值表整体；list 页返回列表兼容）。
+
+    出参 {ok, module, shape, data}：data = 顶层数据（obj dict / map dict /
+    list 条目数组）。未知页 → 404。
+    """
+    info = _page_info(ctx, page)
+    if info is None:
+        return {"ok": False, "errors": [_red("not_found", "page", f"页面不存在：{page}")]}
+    raw = ctx.get("modules_raw")
+    if not isinstance(raw, Mapping):
+        return {"ok": False, "errors": [_red("internal", "", "数据源不可用")]}
+    data = raw.get(info["module"])
+    shape = module_shape(ctx, page)
+    return {"ok": True, "module": info["module"], "shape": shape, "data": data}
+
+
+def update_whole_module(
+    page: str,
+    data: Mapping[str, Any],
+    ctx: MutableMapping[str, Any],
+) -> Dict[str, Any]:
+    """obj/map 页整模块覆盖合并保存（顶层 dict 整体替换；保留原 dict 合并语义）。
+
+    纯逻辑：返回 {ok, module, data}（合并后顶层 dict）；写盘由上层做。
+    仅 obj/map 形态可用；list 页 → 422 语义错误。
+    """
+    info = _page_info(ctx, page)
+    if info is None:
+        return {"ok": False, "errors": [_red("not_found", "page", f"页面不存在：{page}")]}
+    shape = module_shape(ctx, page)
+    if shape not in ("obj", "map"):
+        return {"ok": False, "code": 422,
+                "errors": [_red("shape_mismatch", "page",
+                                f"页面「{page}」是 {shape} 形态，不支持整模块保存")]}
+    raw = ctx.get("modules_raw")
+    if not isinstance(raw, MutableMapping):
+        return {"ok": False, "errors": [_red("internal", "", "数据源不可用")]}
+    merged = dict(raw.get(info["module"]) or {})
+    for k, v in data.items():
+        merged[k] = v
+    raw[info["module"]] = merged
+    return {"ok": True, "module": info["module"], "shape": shape, "data": merged}
+
+
+def get_map_key(
+    page: str,
+    key: str,
+    ctx: Mapping[str, Any],
+) -> Dict[str, Any]:
+    """map 页单键读取（stats/formula：键 → 值）。非 map → 422。"""
+    shape = module_shape(ctx, page)
+    if shape != "map":
+        return {"ok": False, "code": 422,
+                "errors": [_red("shape_mismatch", "page",
+                                f"页面「{page}」不是 map 形态")]}
+    info = _page_info(ctx, page)
+    if info is None:
+        return {"ok": False, "errors": [_red("not_found", "page", f"页面不存在：{page}")]}
+    raw = ctx.get("modules_raw")
+    data = raw.get(info["module"]) if isinstance(raw, Mapping) else None
+    if not isinstance(data, Mapping):
+        return {"ok": False, "errors": [_red("not_found", "key", f"键不存在：{key}")]}
+    if key not in data:
+        return {"ok": False, "errors": [_red("not_found", "key", f"键不存在：{key}")]}
+    return {"ok": True, "key": key, "value": data[key]}
+
+
+def put_map_key(
+    page: str,
+    key: str,
+    value: Any,
+    ctx: MutableMapping[str, Any],
+) -> Dict[str, Any]:
+    """map 页单键写入（新建/覆盖；返回新数据）。非 map → 422。"""
+    shape = module_shape(ctx, page)
+    if shape != "map":
+        return {"ok": False, "code": 422,
+                "errors": [_red("shape_mismatch", "page",
+                                f"页面「{page}」不是 map 形态")]}
+    if not key:
+        return {"ok": False, "errors": [_red("struct", "key", "键名不能为空")]}
+    info = _page_info(ctx, page)
+    if info is None:
+        return {"ok": False, "errors": [_red("not_found", "page", f"页面不存在：{page}")]}
+    raw = ctx.get("modules_raw")
+    if not isinstance(raw, MutableMapping):
+        return {"ok": False, "errors": [_red("internal", "", "数据源不可用")]}
+    data = raw.get(info["module"])
+    if not isinstance(data, MutableMapping):
+        data = {}
+        raw[info["module"]] = data
+    data[key] = value
+    return {"ok": True, "module": info["module"], "key": key, "value": value}
+
+
+def delete_map_key(
+    page: str,
+    key: str,
+    ctx: MutableMapping[str, Any],
+) -> Dict[str, Any]:
+    """map 页单键删除（返回被删键）。非 map / 键不存在 → 404。"""
+    shape = module_shape(ctx, page)
+    if shape != "map":
+        return {"ok": False, "code": 422,
+                "errors": [_red("shape_mismatch", "page",
+                                f"页面「{page}」不是 map 形态")]}
+    info = _page_info(ctx, page)
+    if info is None:
+        return {"ok": False, "errors": [_red("not_found", "page", f"页面不存在：{page}")]}
+    raw = ctx.get("modules_raw")
+    if not isinstance(raw, MutableMapping):
+        return {"ok": False, "errors": [_red("internal", "", "数据源不可用")]}
+    data = raw.get(info["module"])
+    if not isinstance(data, MutableMapping) or key not in data:
+        return {"ok": False, "errors": [_red("not_found", "key", f"键不存在：{key}")]}
+    removed = data.pop(key)
+    return {"ok": True, "key": key, "value": removed}
+
+
 __all__ = [
     "PAGE_MODULE",
     "PAGE_FILE",
@@ -858,4 +1031,10 @@ __all__ = [
     "list_page_items",
     "update_page_item",
     "validate_page_item",
+    "module_shape",
+    "get_whole_module",
+    "update_whole_module",
+    "get_map_key",
+    "put_map_key",
+    "delete_map_key",
 ]

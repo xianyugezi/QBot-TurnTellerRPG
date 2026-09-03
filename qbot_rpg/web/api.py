@@ -447,6 +447,93 @@ def create_app(state: Optional[Any] = None) -> Any:
         return {"ok": True, "data": simulate_catches(species, n, seed=seed)}
 
     # ---- 六页 CRUD+校验 6（§6.3）----
+    # ---- M12.5 批4：obj/map 形态读写（settings/forge/fishing 整对象 +
+    #      stats/formula 键值表）----
+    @router.get("/pages/{page}/whole")
+    def pages_whole_get(page: str,
+                        authorization: Optional[str] = _Header(default=None)) -> Dict[str, Any]:
+        """obj/map 页整模块读取（data = 顶层 obj dict / map dict）。"""
+        _require_auth(state, authorization)
+        reg = _require_state(state, "registry")
+        from qbot_rpg.web import pages_crud
+        ctx = {"modules_raw": reg.modules_raw}
+        out = pages_crud.get_whole_module(page, ctx)
+        if not out.get("ok"):
+            raise _HTTPException(status_code=404, detail=out)
+        return {"ok": True, "data": out}
+
+    @router.put("/pages/{page}/whole")
+    def pages_whole_put(page: str, body: Optional[Dict[str, Any]] = None,
+                        authorization: Optional[str] = _Header(default=None)) -> Dict[str, Any]:
+        """obj/map 页整模块保存（顶层 dict 覆盖合并 + 原子写盘）。"""
+        _require_auth(state, authorization)
+        content_dir = _require_state(state, "content_dir")
+        from qbot_rpg.content import atomic_store
+        from qbot_rpg.web import pages_crud
+        ctx = _ctx_of(state)
+        out = pages_crud.update_whole_module(page, dict(body or {}), ctx)
+        if not out.get("ok"):
+            code = out.get("code") or 422
+            raise _HTTPException(status_code=code, detail=out)
+        module = out["module"]
+        wr = atomic_store.write_modules(content_dir, {module: out["data"]})
+        if not wr.get("ok"):
+            raise _HTTPException(status_code=500, detail=wr)
+        return {"ok": True, "data": out}
+
+    @router.get("/pages/{page}/map/{key}")
+    def pages_map_get(page: str, key: str,
+                      authorization: Optional[str] = _Header(default=None)) -> Dict[str, Any]:
+        """map 页单键读取（stats/formula 键 → 值）。"""
+        _require_auth(state, authorization)
+        reg = _require_state(state, "registry")
+        from qbot_rpg.web import pages_crud
+        ctx = {"modules_raw": reg.modules_raw}
+        out = pages_crud.get_map_key(page, key, ctx)
+        if not out.get("ok"):
+            code = out.get("code") or 404
+            raise _HTTPException(status_code=code, detail=out)
+        return {"ok": True, "data": out}
+
+    @router.put("/pages/{page}/map/{key}")
+    def pages_map_put(page: str, key: str, body: Optional[Dict[str, Any]] = None,
+                      authorization: Optional[str] = _Header(default=None)) -> Dict[str, Any]:
+        """map 页单键写入（新建/覆盖 + 原子写盘）。"""
+        _require_auth(state, authorization)
+        content_dir = _require_state(state, "content_dir")
+        from qbot_rpg.content import atomic_store
+        from qbot_rpg.web import pages_crud
+        ctx = _ctx_of(state)
+        value = (body or {}).get("value")
+        out = pages_crud.put_map_key(page, key, value, ctx)
+        if not out.get("ok"):
+            code = out.get("code") or 422
+            raise _HTTPException(status_code=code, detail=out)
+        module = out["module"]
+        wr = atomic_store.write_modules(content_dir, {module: ctx["modules_raw"][module]})
+        if not wr.get("ok"):
+            raise _HTTPException(status_code=500, detail=wr)
+        return {"ok": True, "data": out}
+
+    @router.delete("/pages/{page}/map/{key}")
+    def pages_map_delete(page: str, key: str,
+                         authorization: Optional[str] = _Header(default=None)) -> Dict[str, Any]:
+        """map 页单键删除 + 原子写盘。"""
+        _require_auth(state, authorization)
+        content_dir = _require_state(state, "content_dir")
+        from qbot_rpg.content import atomic_store
+        from qbot_rpg.web import pages_crud
+        ctx = _ctx_of(state)
+        out = pages_crud.delete_map_key(page, key, ctx)
+        if not out.get("ok"):
+            code = out.get("code") or 404
+            raise _HTTPException(status_code=code, detail=out)
+        module = pages_crud._page_info(ctx, page)["module"]
+        wr = atomic_store.write_modules(content_dir, {module: ctx["modules_raw"][module]})
+        if not wr.get("ok"):
+            raise _HTTPException(status_code=500, detail=wr)
+        return {"ok": True, "data": out}
+
     @router.get("/pages/{page}")
     def pages_list(page: str, page_no: int = 1, size: int = 50,
                    q: str = "", sort: str = "",

@@ -23,6 +23,13 @@
     { "page_id": "traits",     "title": "词条",   "icon": "🏷️", "module_file": "traits.json",   "meta_source": "meta/traits",         "enabled": true,  "validator": "traits", "group": "战斗" },
     { "page_id": "skill_chains", "title": "技能链", "icon": "⛓️", "module_file": "skill_chains.json", "meta_source": "meta/skill_chains", "enabled": true, "validator": "skill_chains", "group": "战斗" },
     { "page_id": "recipe",     "title": "炼金配方", "icon": "⚗️", "module_file": "recipe.json",   "meta_source": "meta/recipe",         "enabled": true,  "validator": "recipe", "group": "成长" },
-    { "page_id": "proficiency", "title": "熟练度", "icon": "📈", "module_file": "proficiency.json", "meta_source": "meta/proficiency", "enabled": true, "validator": "proficiency", "group": "成长" }
+    { "page_id": "proficiency", "title": "熟练度", "icon": "📈", "module_file": "proficiency.json", "meta_source": "meta/proficiency", "enabled": true, "validator": "proficiency", "group": "成长" },
+    { "page_id": "dungeon",    "title": "副本",   "icon": "🏰", "module_file": "dungeon.json",    "meta_source": "meta/dungeon",        "enabled": true,  "validator": "dungeon", "group": "世界" },
+    { "page_id": "achievements", "title": "成就", "icon": "🏆", "module_file": "achievements.json", "meta_source": "meta/achievements", "enabled": true, "validator": "achievements", "group": "世界" },
+    { "page_id": "fishing",    "title": "钓鱼",   "icon": "🎣", "module_file": "fishing.json",    "meta_source": "meta/fishing",        "enabled": true,  "validator": "fishing", "group": "世界", "page_kind": "object" },
+    { "page_id": "forge",      "title": "锻造",   "icon": "🔨", "module_file": "forge.json",      "meta_source": "meta/forge",          "enabled": true,  "validator": "forge", "group": "世界", "page_kind": "object" },
+    { "page_id": "stats",      "title": "属性表", "icon": "📊", "module_file": "stats.json",      "meta_source": "meta/stats",          "enabled": true,  "validator": "stats", "group": "世界", "page_kind": "map" },
+    { "page_id": "formula",    "title": "公式",   "icon": "🧮", "module_file": "formula.json",    "meta_source": "meta/formula",        "enabled": true,  "validator": "formula", "group": "世界", "page_kind": "map" },
+    { "page_id": "settings",   "title": "世界设置", "icon": "🌍", "module_file": "settings.json", "meta_source": "meta/settings",       "enabled": true,  "validator": "settings", "group": "世界", "page_kind": "object" }
   ]
 }

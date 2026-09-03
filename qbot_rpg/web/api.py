@@ -48,6 +48,50 @@ _Header: Any = Header
 
 __all__ = ["create_app", "iter_routes", "FastAPI", "APIRouter"]
 
+# =============================================================================
+# M12.5 批1 路1B：/api/refs/{target} 引用候选别名表（审计点 17 单源；m125_启动包
+# §2.1「refs 候选覆盖全部 kind」）。target 字符串小写 → 模块键（field_meta 表键 /
+# Registry.modules_raw 键，二者同键——loader 按模块文件去 .json 登记同名键）。
+# 解析优先：field_meta 表键命中直查（含全部已登记 list/obj 模块）→ 未命中走本
+# 别名表（注册表 kind 或前端 ref_target 常见叫法：enemy→enemies、chain→
+# skill_chains 等）；仍无 → None（调用方 404/空列表）。
+# =============================================================================
+REFS_TARGET_ALIASES: Dict[str, str] = {
+    "monster": "enemies",   # 前端/页面页名 monster → enemies 表
+    "enemy": "enemies",
+    "item": "items",
+    "skill": "skills",
+    "job": "jobs",
+    "map": "maps",
+    "quest": "quest",
+    "shop": "shop",
+    "npc": "npc",
+    "effect": "effects",
+    "status": "statuses",
+    "mark": "marks",
+    "trait": "traits",
+    "action": "action",
+    "recipe": "recipe",
+    "equipment": "equipment",
+    "slot": "slots",
+    "chain": "skill_chains",
+}
+
+
+def _refs_module_for_target(target: str, table: Any) -> Optional[str]:
+    """/api/refs/{target} target → 模块键解析（审计点 17 统一解析器）。
+
+    口径：target 小写 → ①field_meta 表键命中直查（表键即模块键，含全部已登记
+    list 模块与 C/D 类扩展）；②未命中 → REFS_TARGET_ALIASES 别名表 → 模块键；
+    ③仍无 → None（调用方 404/空列表）。表对象惰性传入（fastapi 惰性 import，
+    表构造可能昂贵——只在确实需要时由调用方构建）。
+    """
+    key = str(target).lower()
+    if table is not None and getattr(table, "modules", None) is not None:
+        if key in table.modules:
+            return key
+    return REFS_TARGET_ALIASES.get(key)
+
 
 def _require_state(state: Any, name: str) -> Any:
     """取装配件；缺失抛 HTTPException 503（编辑器未装配）。"""
@@ -242,16 +286,28 @@ def create_app(state: Optional[Any] = None) -> Any:
         """该页字段元数据（表单渲染源，P-07 唯一数据源）。"""
         editor = getattr(state, "editor", None)
         meta_src: Optional[str] = None
+        page_kind: Optional[str] = None
+        ep = None
         if editor is not None and hasattr(editor, "get_page"):
             ep = editor.get_page(page)
             if ep is not None:
                 meta_src = ep.meta_source
+                # M12.5 路1B：page_kind 透传（editor.json 登记值；缺省 None =
+                # 上层按 field_meta entry_type / extends 宿主推导）
+                page_kind = getattr(ep, "page_kind", None)
         from qbot_rpg.content.field_meta import default_field_meta_table
         table = default_field_meta_table()
-        module = {"skill": "skills", "job": "jobs", "monster": "enemies",
-                  "map": "maps", "quest": "quest", "shop": "shop",
-                  "npc": "npc", "checkin": "checkin"}.get(page, page)
-        mm = table.modules.get(module)
+        # M12.5 路1B：删写死 8 键 dict（审计点 16）——editor.json 登记页的
+        # module_file 去 .json 后缀 = field_meta 表键（loader 同口径登记），
+        # 如 npc.json→npc / skills.json→skills / settings.json→settings；
+        # 页未登记（editor 无该页/未装配）→ 回退别名表解析（skill→skills、
+        # monster→enemies 等）；表查无 → 404（保持现语义）
+        module = ""
+        if ep is not None:
+            module = str(getattr(ep, "module_file", "") or "").removesuffix(".json")
+        if not module:
+            module = _refs_module_for_target(page, table) or ""
+        mm = table.modules.get(module) if module else None
         if mm is None:
             raise _HTTPException(status_code=404, detail={"ok": False, "errors": [{
                 "level": "red", "code": "not_found", "field": "page",
@@ -266,21 +322,25 @@ def create_app(state: Optional[Any] = None) -> Any:
                 "ref_target": fmeta.ref_target,
                 "enum": list(fmeta.enum or ()),
             })
+        # page_kind 透传：显式登记值优先；缺省 None → 按 field_meta entry_type
+        # 推导（entry_type=list|object|map）。meta 响应 data 增 page_kind/
+        # entry_type 供前端批4 特化渲染分支使用；缺省 list（现行为默认形态）。
+        eff_kind = page_kind or mm.entry_type or "list"
         return {"ok": True, "data": {"page": page, "meta_source": meta_src,
+                                     "page_kind": eff_kind,
+                                     "entry_type": mm.entry_type or "list",
                                      "fields": fields}}
 
     @router.get("/refs/{target}")
     def refs_target(target: str) -> Dict[str, Any]:
         """引用控件候选列表（动态 enum；target ∈ 怪物/物品/技能/职业/...）。"""
         reg = _require_state(state, "registry")
-        module_map = {
-            "monster": "enemies", "enemy": "enemies", "item": "items",
-            "skill": "skills", "job": "jobs", "map": "maps", "quest": "quest",
-            "shop": "shop", "npc": "npc", "effect": "effects",
-            "status": "statuses", "mark": "marks",
-        }
-        module = module_map.get(str(target).lower(), str(target).lower())
-        data = reg.modules_raw.get(module) if hasattr(reg, "modules_raw") else None
+        # M12.5 路1B：删写死 12 键 dict（审计点 17）——统一别名表解析：
+        # field_meta 表键命中直查（含 C/D 类已登记 list 模块）→ 未命中走
+        # REFS_TARGET_ALIASES 别名表（单源，模块级常量）
+        from qbot_rpg.content.field_meta import default_field_meta_table
+        module = _refs_module_for_target(target, default_field_meta_table())
+        data = reg.modules_raw.get(module) if (module and hasattr(reg, "modules_raw")) else None
         items = []
         if isinstance(data, list):
             for e in data:
@@ -306,6 +366,13 @@ def create_app(state: Optional[Any] = None) -> Any:
                 "tabs": list(p.tabs or ()),
                 "enabled": bool(p.enabled),
                 "extends": p.extends,
+                # M12.5 路1B：透传 EditorPage 全字段（审计点 18 漏 validator 修复
+                # + 扩展三字段）——id_prefix/group/page_kind 缺省 None（既有内容包
+                # editor.json 未登记 → null，前端按缺省语义处理）
+                "validator": p.validator,
+                "id_prefix": p.id_prefix,
+                "group": p.group,
+                "page_kind": p.page_kind,
             })
         return {"ok": True, "data": {"pages": pages}}
 

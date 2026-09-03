@@ -313,3 +313,126 @@ def test_validate_unknown_page():
     """未知 page → ok:false。"""
     out = validate_page_item("ghost", {}, make_ctx())
     assert out["ok"] is False
+
+
+# =============================================================================
+# M12.5 路1A：editor 模块页表动态驱动（扩展页 CRUD 打通）
+# =============================================================================
+def make_editor_ctx(**over):
+    """带 editor 模块页表的 ctx（模拟 editor.json 12 页登记 + 各模块数据）。"""
+    ctx = {
+        "modules_raw": {
+            "editor": {
+                "schema_version": 1,
+                "pages": [
+                    {"page_id": "skill", "title": "技能", "icon": "⚔️",
+                     "module_file": "skills.json", "meta_source": "meta/skill",
+                     "enabled": True, "validator": "skill"},
+                    {"page_id": "monster", "title": "怪物", "icon": "👹",
+                     "module_file": "enemies.json", "meta_source": "meta/monster",
+                     "enabled": True, "validator": "monster"},
+                    {"page_id": "npc", "title": "NPC", "icon": "🧙",
+                     "module_file": "npc.json", "meta_source": "meta/npc",
+                     "enabled": True, "validator": "npc"},
+                    {"page_id": "checkin", "title": "签到", "icon": "📅",
+                     "module_file": "checkin.json", "meta_source": "meta/checkin",
+                     "enabled": True, "validator": "checkin", "id_prefix": "chk"},
+                    {"page_id": "ai", "title": "AI", "icon": "🤖",
+                     "module_file": "enemies.json", "meta_source": "meta/ai",
+                     "enabled": True, "validator": "ai", "extends": "monster"},
+                    {"page_id": "secret", "title": "隐藏页", "icon": "🔮",
+                     "module_file": "hidden.json", "meta_source": "meta/hidden",
+                     "enabled": False},
+                ],
+            },
+            "enemies": [
+                {"id": "gust_wolf", "name": "风狼", "hp": 90, "atk": 12},
+            ],
+            "npc": [
+                {"id": "elder", "name": "长老", "dialog": "你好"},
+            ],
+            "checkin": [
+                {"id": "chk_0001", "name": "每日签到", "cycle": "day"},
+            ],
+            "hidden": [
+                {"id": "h1", "name": "彩蛋"},
+            ],
+        },
+    }
+    ctx.update(over)
+    return ctx
+
+
+def test_registry_extension_page_crud_npc():
+    """editor 页表登记 npc → list/get/create/update/delete 全通。"""
+    ctx = make_editor_ctx()
+    # list
+    out = list_page_items("npc", ctx)
+    assert out["ok"] is True
+    assert [i["id"] for i in out["items"]] == ["elder"]
+    # get
+    out = get_page_item("npc", "elder", ctx)
+    assert out["ok"] is True and out["item"]["name"] == "长老"
+    # create（无手填 id → 自动生成 npc_0001）
+    out = create_page_item("npc", {"name": "铁匠"}, ctx)
+    assert out["ok"] is True
+    assert out["id"] == "npc_0001"
+    assert out["item"]["id"] == "npc_0001"
+    # 写盘层语义：新条目合并回 modules_raw 后 update 才可见
+    ctx["modules_raw"]["npc"].append(out["item"])
+    # update
+    out = update_page_item("npc", "npc_0001", {"name": "铁匠铺老板"}, 0, ctx)
+    assert out["ok"] is True and out["item"]["name"] == "铁匠铺老板"
+    # delete
+    out = delete_page_item("npc", "npc_0001", ctx)
+    assert out["ok"] is True
+    out = apply_delete_to_entries("npc", "npc_0001", ctx)
+    assert out["ok"] is True and out["module"] == "npc"
+
+
+def test_registry_checkin_id_prefix():
+    """页表 id_prefix=chk → 自动 ID 用 chk_ 前缀（非页名 checkin_）。"""
+    ctx = make_editor_ctx()
+    out = create_page_item("checkin", {"name": "周签"}, ctx)
+    assert out["ok"] is True
+    assert out["id"].startswith("chk_")
+
+
+def test_registry_view_page_ai_reads_host_entries():
+    """extends 视图页 ai（module_file=enemies.json）→ 列表复用宿主条目。"""
+    ctx = make_editor_ctx()
+    out = list_page_items("ai", ctx)
+    assert out["ok"] is True
+    assert [i["id"] for i in out["items"]] == ["gust_wolf"]
+
+
+def test_registry_disabled_page_404():
+    """enabled:false 的页 → 视为不存在（404 语义）。"""
+    ctx = make_editor_ctx()
+    out = list_page_items("secret", ctx)
+    assert out["ok"] is False
+    out = get_page_item("secret", "h1", ctx)
+    assert out["ok"] is False
+    out = create_page_item("secret", {"name": "x"}, ctx)
+    assert out["ok"] is False
+
+
+def test_registry_fallback_no_editor_module():
+    """无 editor 模块的旧 ctx → 回退六页常量（既有测试语义保持）。"""
+    out = list_page_items("monster", make_ctx())
+    assert out["ok"] is True
+    out = list_page_items("npc", make_ctx())  # 兜底无 npc → 404
+    assert out["ok"] is False
+
+
+def test_registry_settings_page_empty_list():
+    """module_file=settings.json（顶层 obj 非 list）→ list 空不报错（段编辑归批4）。"""
+    ctx = make_editor_ctx()
+    ctx["modules_raw"]["editor"]["pages"].append(
+        {"page_id": "env_event", "title": "环境事件", "icon": "🌧️",
+         "module_file": "settings.json", "meta_source": "meta/env_event",
+         "enabled": True, "validator": "env_event"})
+    ctx["modules_raw"]["settings"] = {"default_map": "start_village"}
+    out = list_page_items("env_event", ctx)
+    assert out["ok"] is True
+    assert out["items"] == [] and out["total"] == 0

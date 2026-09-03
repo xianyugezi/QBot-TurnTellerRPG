@@ -53,32 +53,33 @@
 from __future__ import annotations
 
 import json
+from types import SimpleNamespace
 from typing import Any, Dict, List, Mapping, MutableMapping, Optional, Sequence
 
-# =============================================================================
-# 六页归口表（loader._KIND_FOR_MODULE 实际登记名；契约 P-06 quests.json 笔误修正）
-# =============================================================================
-# 【硬编码登记 · 2026-09-03 用户知悉】六页映射写死为模块常量。5a2 PR-01 本意
-# editor.json 可插拔（扩展页 npc/checkin/ai/hidden 等批 4 接入时）——本层 CRUD
-# 目前只服务六页；页面 → 模块文件映射的上层权威是 editor_registry（批 1 路 1A
-# 已交付），若批 4 把扩展页纳入 CRUD，应把 PAGE_MODULE 替换为 editor_registry
-# 动态解析（此常量届时废弃）。已记录待用户裁决是否改为 registry 驱动。
+from qbot_rpg.content.editor_registry import load_editor_registry
 
-# page_id → 模块文件名（Registry.modules_raw 键）
+# =============================================================================
+# 六页兜底归口表（loader._KIND_FOR_MODULE 实际登记名；契约 P-06 quests.json 笔误修正）
+# =============================================================================
+# 【2026-09-03 路1A 改造登记】PAGE_MODULE/PAGE_ID_PREFIX 已从「唯一数据源」降级为
+# 兜底常量：CRUD 页表解析统一走 _page_info()——优先 editor 模块页表
+# （load_editor_registry：module_file/enabled/id_prefix 均取页表登记），editor
+# 模块缺失或页未登记时才回退本表（旧内容包无 editor.json 仍六页可用）。
+# 导出保留：既有调用方（api.py 写端点 / 测试 import）兼容不断。
+
+# page_id → 模块文件名兜底（Registry.modules_raw 键）
 PAGE_MODULE: Mapping[str, str] = {
     "skill": "skills",
     "job": "jobs",
     "monster": "enemies",
     "map": "maps",
-    "quest": "quest",      # 契约 P-06 写 quests.json，loader 登记 quest.json（实测）
+    "quest": "quest",  # 契约 P-06 写 quests.json，loader 登记 quest.json（实测）
     "shop": "shop",
 }
 
-# page_id → 显示名前缀（ID 自动生成 `类型_序号`，TC-01 skill_0001 例：前缀=页名）
-# 【硬编码登记 · 2026-09-03】前缀与 page_id 同名绑定；内容包自定义 ID 风格无入口
-# （editor.json 页条目未声明 id_prefix）。保持页名前缀（契约 TC-01 口径），
-# 如需内容包自定义 → editor.json EditorPage 增加 id_prefix 字段（批 4 扩展页
-# 时一并评估）。
+# page_id → 显示名前缀兜底（ID 自动生成 `类型_序号`，TC-01 skill_0001 例：前缀=页名）
+# 【2026-09-03 路1A 改造登记】前缀与 page_id 同名绑定只作兜底；页表登记
+# id_prefix 字段时以页表为准（缺省仍回退 page_id）。
 PAGE_ID_PREFIX: Mapping[str, str] = {
     "skill": "skill",
     "job": "job",
@@ -88,10 +89,82 @@ PAGE_ID_PREFIX: Mapping[str, str] = {
     "shop": "shop",
 }
 
-# page_id → 条目主键字段（真实内容包统一 id）
+# page_id → 条目主键字段（真实内容包统一 id；页表驱动后主键恒 id，本表仅供导出兼容）
 PAGE_ID_FIELD: Mapping[str, str] = {
     p: "id" for p in PAGE_MODULE
 }
+
+# 页面信息（动态页表解析产物：module + id_prefix 已解析好；None = 页不可用）
+# 仅供 _page_info 内部使用，避免每请求重复解析页表（同一 ctx 页表恒定）。
+_PAGE_INFO_CACHE_KEY = "_page_info_cache"
+
+
+def _page_info(
+    ctx: Mapping[str, Any], page: str,
+) -> Optional[Dict[str, str]]:
+    """页表动态解析：page_id → {module, id_prefix}；不可用 → None（404 语义）。
+
+    解析优先级（editor 模块页表优先，缺失回退兜底常量）：
+      - ctx.modules_raw 含 "editor"（dict 形态）→ load_editor_registry 解析：
+        module = module_file 去 .json 后缀（npc.json → npc）；id_prefix = 页条目
+        id_prefix 字段，缺省 page_id；enabled:false 的页视为不存在（404）；
+        extends 视图页（ai→enemies.json 等）module = 宿主模块——CRUD 对象即
+        宿主条目（视图页创建/删除会作用于宿主条目，属预期形态边界）。
+      - editor 模块缺失 / 页不在页表 → 回退 PAGE_MODULE/PAGE_ID_PREFIX 常量
+        （旧内容包与既有测试假 ctx 无 editor 模块即走此路）。
+    结果缓存于 ctx["_page_info_cache"]（ctx 承载可变态；同 ctx 页表恒定）。
+    """
+    raw = ctx.get("modules_raw")
+    if isinstance(raw, Mapping) and isinstance(raw.get("editor"), Mapping):
+        cache = ctx.get(_PAGE_INFO_CACHE_KEY)
+        if not isinstance(cache, MutableMapping):
+            cache = {}
+            if isinstance(ctx, MutableMapping):
+                ctx[_PAGE_INFO_CACHE_KEY] = cache
+        info = cache.get(page)
+        if info is None:
+            # load_editor_registry 只消费 registry.modules_raw（registry.py L106
+            # 只读视图）——SimpleNamespace 轻量注入，避免 import Registry 真构造
+            # （Registry 构建需 loader 全量流程，纯逻辑层不引入）
+            try:
+                reg = load_editor_registry(  # type: ignore[arg-type]
+                    SimpleNamespace(modules_raw=raw))
+            except Exception:
+                reg = None
+            if reg is not None:
+                ep = reg.get_page(page)
+                if ep is None:
+                    # 页不在页表 → 回退兜底（editor 存在但该页未登记的兼容路径）
+                    ep_mod = PAGE_MODULE.get(page)
+                    info = ({"module": ep_mod, "id_prefix": page}
+                            if ep_mod else None)
+                elif not ep.enabled:
+                    info = None  # enabled:false → 视为不存在（404）
+                else:
+                    mod = ep.module_file
+                    if mod.endswith(".json"):
+                        mod = mod[:-len(".json")]
+                    # id_prefix：EditorPage 模型暂无该字段（m125 #31 登记缺口），
+                    # 直接读原始页条目 id_prefix 字段，缺省回退 page_id
+                    prefix = page
+                    editor_raw = raw.get("editor")
+                    raw_pages = (editor_raw.get("pages")
+                                 if isinstance(editor_raw, Mapping) else ())
+                    for spec in raw_pages or ():
+                        if (isinstance(spec, Mapping)
+                                and spec.get("page_id") == page):
+                            rp = spec.get("id_prefix")
+                            if isinstance(rp, str) and rp:
+                                prefix = rp
+                            break
+                    info = {"module": mod, "id_prefix": prefix}
+            cache[page] = info
+        return info
+    # 无 editor 模块 → 兜底常量（六页）
+    module = PAGE_MODULE.get(page)
+    if not module:
+        return None
+    return {"module": module, "id_prefix": PAGE_ID_PREFIX.get(page, page)}
 
 # =============================================================================
 # 基础工具
@@ -99,13 +172,13 @@ PAGE_ID_FIELD: Mapping[str, str] = {
 
 def _entries_of(ctx: Mapping[str, Any], page: str) -> list:
     """modules_raw 该页条目数组（顶层 list；非 list/缺失 → [] 安全兜底）。"""
-    module = PAGE_MODULE.get(page, "")
-    if not module:
+    info = _page_info(ctx, page)
+    if info is None:
         return []
     raw = ctx.get("modules_raw")
     if not isinstance(raw, Mapping):
         return []
-    data = raw.get(module)
+    data = raw.get(info["module"])
     return data if isinstance(data, list) else []
 
 
@@ -121,11 +194,10 @@ def _num(value: Any, default: int = 0) -> int:
 
 def _find_item(entries: Sequence[Any], page: str, item_id: str) -> Optional[Mapping[str, Any]]:
     """按主键查条目（宽容：dict 形态条目含 id 字段；无 id 跳过）。"""
-    key = PAGE_ID_FIELD.get(page, "id")
     for e in entries:
         if not isinstance(e, Mapping):
             continue
-        if str(e.get(key) or "") == item_id:
+        if str(e.get("id") or "") == item_id:
             return e
     return None
 
@@ -215,9 +287,9 @@ def list_page_items(
     """列表（分页/搜索/排序）：?page=&size=&q=&sort= 语义（5a L176）。
 
     搜索 q：name/id 子串匹配（大小写不敏感）；排序 sort：`字段` 或 `-字段`
-    （倒序），缺省保持声明序。未知 page → {ok:false, errors:[404]}。
+    （倒序），缺省保持声明序。未知 page（含 enabled:false）→ 404。
     """
-    if page not in PAGE_MODULE:
+    if _page_info(ctx, page) is None:
         return {"ok": False, "errors": [_red("not_found", "page", f"页面不存在：{page}")]}
     entries = _entries_of(ctx, page)
     page_no = max(1, _num(page_no, 1))
@@ -259,7 +331,7 @@ def list_page_items(
 
 def get_page_item(page: str, item_id: str, ctx: Mapping[str, Any]) -> Dict[str, Any]:
     """单条详情 + 引用字段中文名（5a L177：字段值 + 引用芯片渲染所需中文名）。"""
-    if page not in PAGE_MODULE:
+    if _page_info(ctx, page) is None:
         return {"ok": False, "errors": [_red("not_found", "page", f"页面不存在：{page}")]}
     entries = _entries_of(ctx, page)
     hit = _find_item(entries, page, item_id)
@@ -327,24 +399,27 @@ def get_page_item(page: str, item_id: str, ctx: Mapping[str, Any]) -> Dict[str, 
 def _next_id(entries: Sequence[Any], page: str, ctx: Mapping[str, Any]) -> str:
     """ID 自动生成：`类型_序号`，序号 = 现有同前缀最大序号 + 1，4 位零填充。
 
-    已用序号来源 = modules_raw 条目 ∪ 版本簿已登记 id（create 未落盘但已发号
-    的条目记入版本簿——纯逻辑层不 append 原列表，靠版本簿防连续 create 重号）。
+    前缀 = _page_info.id_prefix（页表 id_prefix 字段，缺省 page_id）。已用序号
+    来源 = modules_raw 条目 ∪ 版本簿已登记 id（create 未落盘但已发号的条目记入
+    版本簿——纯逻辑层不 append 原列表，靠版本簿防连续 create 重号）。
     """
-    prefix = PAGE_ID_PREFIX.get(page, page)
-    key = PAGE_ID_FIELD.get(page, "id")
+    info = _page_info(ctx, page)
+    if info is None:
+        return ""
+    prefix = info["id_prefix"]
+    module = info["module"]
     max_seq = 0
     seen: set = set()
     for e in entries:
         if not isinstance(e, Mapping):
             continue
-        eid = str(e.get(key) or "")
+        eid = str(e.get("id") or "")
         seen.add(eid)
         if eid.startswith(prefix + "_"):
             tail = eid[len(prefix) + 1:]
             if tail.isdigit():
                 max_seq = max(max_seq, int(tail))
     # 版本簿已发号 id 并入 seen/序号（连续 create 不 append 原列表的补偿）
-    module = PAGE_MODULE.get(page, "")
     vb = ctx.get("_page_versions")
     if isinstance(vb, Mapping) and module:
         for eid in (vb.get(module) or {}):
@@ -384,22 +459,22 @@ def create_page_item(
     ctx: MutableMapping[str, Any],
 ) -> Dict[str, Any]:
     """新建：ID 自动生成 `类型_序号`；返回条目（5a L178，201 语义）。"""
-    if page not in PAGE_MODULE:
+    info = _page_info(ctx, page)
+    if info is None:
         return {"ok": False, "errors": [_red("not_found", "page", f"页面不存在：{page}")]}
     entries = _entries_of(ctx, page)
-    key = PAGE_ID_FIELD.get(page, "id")
     item = dict(data)
-    new_id = str(item.get(key) or "").strip()
+    new_id = str(item.get("id") or "").strip()
     if new_id:
         if _find_item(entries, page, new_id) is not None:
             return {"ok": False, "errors": [
-                _red("dup_id", key, f"已经有一个叫『{new_id}』的条目了，换个 id 吧")]}
+                _red("dup_id", "id", f"已经有一个叫『{new_id}』的条目了，换个 id 吧")]}
     else:
         new_id = _next_id(entries, page, ctx)
-        item[key] = new_id
+        item["id"] = new_id
     item.setdefault("name", new_id)
     # 版本簿：create 置 0
-    module = PAGE_MODULE[page]
+    module = info["module"]
     _versions(ctx).setdefault(module, {})[new_id] = 0
     return {"ok": True, "item": item, "id": new_id}
 
@@ -412,14 +487,14 @@ def update_page_item(
     ctx: MutableMapping[str, Any],
 ) -> Dict[str, Any]:
     """更新：版本冲突 409（编辑锁）；版本簿自增（5a L179）。"""
-    if page not in PAGE_MODULE:
+    info = _page_info(ctx, page)
+    if info is None:
         return {"ok": False, "errors": [_red("not_found", "page", f"页面不存在：{page}")]}
     entries = _entries_of(ctx, page)
-    key = PAGE_ID_FIELD.get(page, "id")
     hit = _find_item(entries, page, item_id)
     if hit is None:
         return {"ok": False, "errors": [_red("not_found", "id", f"条目不存在：{item_id}")]}
-    module = PAGE_MODULE[page]
+    module = info["module"]
     vb = _versions(ctx).setdefault(module, {})
     cur_ver = int(vb.get(item_id, 0) or 0)
     if base_version is not None and int(base_version) != cur_ver:
@@ -429,7 +504,7 @@ def update_page_item(
     # 合并更新（保留未提交字段；id 不可改）
     merged = dict(hit)
     for k, v in data.items():
-        if k != key:
+        if k != "id":
             merged[k] = v
     vb[item_id] = cur_ver + 1
     return {"ok": True, "item": merged, "id": item_id, "version": vb[item_id]}
@@ -467,12 +542,13 @@ def delete_page_item(
     ctx: MutableMapping[str, Any],
 ) -> Dict[str, Any]:
     """删除 + 级联清理：返回 cascades 变更清单（待写盘，5a L180）。"""
-    if page not in PAGE_MODULE:
+    info = _page_info(ctx, page)
+    if info is None:
         return {"ok": False, "errors": [_red("not_found", "page", f"页面不存在：{page}")]}
     raw = ctx.get("modules_raw")
     if not isinstance(raw, MutableMapping):
         return {"ok": False, "errors": [_red("internal", "", "数据源不可用")]}
-    module = PAGE_MODULE[page]
+    module = info["module"]
     entries = raw.get(module)
     if not isinstance(entries, list):
         return {"ok": False, "errors": [_red("not_found", "id", f"条目不存在：{item_id}")]}
@@ -590,7 +666,7 @@ def validate_page_item(
     """草稿校验：红/黄两级清单（不落盘，200 语义）。红 = 5 类硬错；黄 = 提示。"""
     red: List[dict] = []
     yellow: List[dict] = []
-    if page not in PAGE_MODULE:
+    if _page_info(ctx, page) is None:
         return {"ok": False, "errors": [_red("not_found", "page", f"页面不存在：{page}")]}
 
     # 基础字段存在性（结构错误红拦：必填 id/name）
@@ -662,18 +738,18 @@ def apply_delete_to_entries(
     返回 {ok, module, entries}：entries = 移除目标后的新列表（供原子写盘层
     直接写 JSON）。纯逻辑，不碰磁盘。
     """
-    if page not in PAGE_MODULE:
+    info = _page_info(ctx, page)
+    if info is None:
         return {"ok": False, "errors": [_red("not_found", "page", f"页面不存在：{page}")]}
     raw = ctx.get("modules_raw")
     if not isinstance(raw, MutableMapping):
         return {"ok": False, "errors": [_red("internal", "", "数据源不可用")]}
-    module = PAGE_MODULE[page]
+    module = info["module"]
     entries = raw.get(module)
     if not isinstance(entries, list):
         return {"ok": False, "errors": [_red("not_found", "id", f"条目不存在：{item_id}")]}
-    key = PAGE_ID_FIELD.get(page, "id")
     kept = [e for e in entries if not (
-        isinstance(e, Mapping) and str(e.get(key) or "") == item_id)]
+        isinstance(e, Mapping) and str(e.get("id") or "") == item_id)]
     if len(kept) == len(entries):
         return {"ok": False, "errors": [_red("not_found", "id", f"条目不存在：{item_id}")]}
     raw[module] = kept

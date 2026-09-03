@@ -383,6 +383,40 @@ CHECKIN_FIELDS: Dict[str, FieldMeta] = {
     "makeup": FieldMeta(type="obj", children={}, soft_label=True, label="补签规则"),
 }
 
+# ---- M12.5 批1 路1C：C 类空表宽松注入（对齐 M12 4A npc 注入先例——仅 id required
+#      + 宽 obj/list 容器 + 闭合枚举；深结构由专项校验器 dungeon_models/
+#      achievements_models 全权，泛型并行零新增拦截；编辑器表单数据源 P-07）----
+# 依据 docs/m125_模块字段摸底.md：dungeon.json 实测 9 顶层键（2 条，maps=list(4)/
+# subquests=list/safe_zone=str 引用 map id/drops=obj 深嵌套）；type 实测闭合值
+# {explore,boss}；entry_limit 数值但专项全权 → 宽容器不设 range 防误拦。
+DUNGEON_FIELDS: Dict[str, FieldMeta] = {
+    "id": FieldMeta(type="str", required=True, label="副本 ID"),
+    "name": FieldMeta(type="str", required=True, label="名称"),
+    "type": FieldMeta(type="str", enum=("explore", "boss"), label="副本类型"),
+    "entry_item": FieldMeta(type="str", label="入场道具"),
+    "entry_limit": FieldMeta(type="obj", children={}, soft_label=True, label="入场限制"),
+    "maps": FieldMeta(type="list", element=FieldMeta(type="obj", children={}),
+                      soft_label=True, label="地图序列"),
+    "subquests": FieldMeta(type="list", element=FieldMeta(type="obj", children={}),
+                           soft_label=True, label="子任务"),
+    "safe_zone": FieldMeta(type="str", label="安全区地图"),
+    "drops": FieldMeta(type="obj", children={}, soft_label=True, label="掉落配置"),
+}
+
+# achievements.json 实测 7 顶层键（8 条）；trigger 实测闭合值 {check}；once 实测
+# bool true；conditions/reward 宽容器（专项 achievements_models ACH01-13 全权）。
+ACHIEVEMENT_FIELDS: Dict[str, FieldMeta] = {
+    "id": FieldMeta(type="str", required=True, label="成就 ID"),
+    "name": FieldMeta(type="str", required=True, label="名称"),
+    "desc": FieldMeta(type="str", label="描述"),
+    "conditions": FieldMeta(type="list", element=FieldMeta(type="obj", children={}),
+                            soft_label=True, label="解锁条件"),
+    "trigger": FieldMeta(type="str", enum=("check",), label="触发方式"),
+    "once": FieldMeta(type="bool", label="仅一次"),
+    "reward": FieldMeta(type="list", element=FieldMeta(type="obj", children={}),
+                        soft_label=True, label="奖励"),
+}
+
 # ---- AI 视图（5a2 PA-01~06，extends=monster——enemies.json 条目内嵌 AI 键视图；
 #      无真实 json 独立模块，按契约最小登记宽容器；表字段语义 = 敌人条目 AI 配置区）----
 AI_FIELDS: Dict[str, FieldMeta] = {
@@ -1038,9 +1072,11 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "fishing": fishing_module_meta(),
         "enemies": ModuleMeta(entry_type="list", fields=enemies_fields, kind="enemy", namespace="enemy_lib"),
         "maps": ModuleMeta(entry_type="list", fields=maps_fields, kind="map", namespace="map_lib"),
-        # M3 副本（m3_shared_contract §4）：新结构由 dungeon_models.validate_dungeons 专项全权，
-        # fields={} 空表防泛型误拦（专项自校验 type/maps/boss/safe_zone 等深结构）
-        "dungeon": ModuleMeta(entry_type="list", fields={}, kind="dungeon", namespace="dungeon_lib"),
+        # M3 副本（m3_shared_contract §4）：新结构由 dungeon_models.validate_dungeons 专项全权。
+        # M12.5 批1 路1C：宽松字段表注入（仅 id required + 宽容器 + 闭合枚举，
+        # 泛型零新增拦截——专项校验仍全权深结构）
+        "dungeon": ModuleMeta(entry_type="list", fields=DUNGEON_FIELDS, kind="dungeon",
+                              namespace="dungeon_lib"),
         "stats": ModuleMeta(entry_type="map", fields=stats_fields, kind="stat", namespace="stat_lib",
                             key_regex=r"[a-z][a-z0-9_]*"),
         # M4 交互系统（m4_shared_contract §3.1~3.4）：npc/shop/quest/checkin 专项校验器
@@ -1051,9 +1087,10 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "quest": ModuleMeta(entry_type="list", fields=QUEST_FIELDS, kind="quest", namespace="quest_lib"),
         "checkin": ModuleMeta(entry_type="list", fields=CHECKIN_FIELDS, kind="checkin",
                               namespace="checkin_lib"),
-        # M11 成就（4c §1.5）：顶层 list，fields 空表 + 专项校验器全权（对齐 quest/npc 口径）
-        "achievements": ModuleMeta(entry_type="list", fields={}, kind="achievement",
-                                   namespace="achievement_lib"),
+        # M11 成就（4c §1.5）：顶层 list；M12.5 批1 路1C 宽松字段表注入
+        # （专项校验器 achievements_models ACH01-13 仍全权深结构，泛型零新增拦截）
+        "achievements": ModuleMeta(entry_type="list", fields=ACHIEVEMENT_FIELDS,
+                                   kind="achievement", namespace="achievement_lib"),
         # 条件加成（细化_3b §3.2；环 + 引用存在性专项校验见 validator._check_conditional）
         "conditional": ModuleMeta(entry_type="object", fields=conditional_fields,
                                   kind="conditional", namespace="cond_lib"),
@@ -1102,4 +1139,6 @@ __all__ = [
     # 1g4 世界边界（细化_1g4 §6；settings 段 + maps F-05/F-06 字段口径）
     "DEATH_PENALTY_CHILDREN", "CURRENCY_ENTRY_CHILDREN", "SETTINGS_FIELDS",
     "DEFAULT_CURRENCY_IDS",
+    # M12.5 批1 路1C：C 类宽松注入表（dungeon/achievements 编辑器表单数据源）
+    "DUNGEON_FIELDS", "ACHIEVEMENT_FIELDS",
 ]

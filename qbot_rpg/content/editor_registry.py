@@ -155,6 +155,11 @@ class EditorPage:
     enabled: bool = True
     extends: Optional[str] = None
     validator: Optional[str] = None
+    # M12.5 批1 路1B（审计点 #3/#31）：可选扩展字段——缺省 None 向后兼容，
+    # 既有构造（默认六页/既有内容包 editor.json/测试）零改动零语义变化
+    id_prefix: Optional[str] = None  # ID 自动生成前缀（缺省回退 page_id）
+    group: Optional[str] = None      # 侧边栏分组名（缺省 None=不分）
+    page_kind: Optional[str] = None  # 页面形态 list/map/object/view（缺省 None=推导）
 
 
 @dataclass(frozen=True)
@@ -246,6 +251,17 @@ def _page_from_spec(spec: Mapping[str, object]) -> EditorPage:
     validator: Optional[str] = (
         str(raw_validator) if isinstance(raw_validator, str) else None
     )
+    # M12.5 批1 路1B：扩展三字段（id_prefix/group/page_kind）可空字符串解析
+    raw_id_prefix = spec.get("id_prefix")
+    id_prefix: Optional[str] = (
+        str(raw_id_prefix) if isinstance(raw_id_prefix, str) else None
+    )
+    raw_group = spec.get("group")
+    group: Optional[str] = str(raw_group) if isinstance(raw_group, str) else None
+    raw_kind = spec.get("page_kind")
+    page_kind: Optional[str] = (
+        str(raw_kind) if isinstance(raw_kind, str) else None
+    )
     return EditorPage(
         page_id=pid,
         title=ptitle,
@@ -256,6 +272,9 @@ def _page_from_spec(spec: Mapping[str, object]) -> EditorPage:
         enabled=enabled,
         extends=extends,
         validator=validator,
+        id_prefix=id_prefix,
+        group=group,
+        page_kind=page_kind,
     )
 
 

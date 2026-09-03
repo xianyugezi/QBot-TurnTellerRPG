@@ -124,3 +124,39 @@ def test_meta_endpoint_fields_have_labels() -> None:
         for fname, fmeta in m.fields.items():
             label = fmeta.label or fname
             assert label, f"{page}.{fname} label 空"
+
+
+# =============================================================================
+# M12.5 批1 路1C：C 类空表宽松注入（dungeon/achievements 编辑器表单数据源）
+# =============================================================================
+def test_dungeon_fields_injected() -> None:
+    """dungeon 9 字段注入 + id required + 闭合枚举 + 全中文 label。"""
+    f = _fields("dungeon")
+    assert len(f) >= 9
+    for key in ("id", "name", "type", "maps", "subquests", "safe_zone", "drops"):
+        assert key in f, f"dungeon 缺字段 {key}"
+    assert f["id"].required is True
+    assert f["type"].enum == ("explore", "boss")
+    assert all(x.label for x in f.values()), "dungeon 字段 label 应全非空"
+
+
+def test_achievements_fields_injected() -> None:
+    """achievements 7 字段注入 + id required + trigger/once 口径。"""
+    f = _fields("achievements")
+    assert len(f) >= 7
+    for key in ("id", "name", "desc", "conditions", "trigger", "once", "reward"):
+        assert key in f, f"achievements 缺字段 {key}"
+    assert f["id"].required is True
+    assert f["trigger"].enum == ("check",)
+    assert f["once"].type == "bool"
+    assert all(x.label for x in f.values()), "achievements 字段 label 应全非空"
+
+
+def test_c_class_pack_still_loads_zero_red() -> None:
+    """C 类注入后 test_demo 加载零新增红拦（dungeon/achievements 专项深结构不被泛型误拦）。"""
+    pack = asyncio.run(load_pack(_REPO / "content" / "test_demo"))
+    assert pack.pack_id == "test_demo"
+    # 两模块真实条目存在（加载成功即证明零新增红拦；modules_raw 挂 registry）
+    raw = pack.registry.modules_raw
+    assert len(raw.get("dungeon", [])) >= 2
+    assert len(raw.get("achievements", [])) >= 8

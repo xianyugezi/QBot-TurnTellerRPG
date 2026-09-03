@@ -79,6 +79,8 @@ def _enemy_combatant(enemy_entry: Mapping[str, Any]) -> dict:
     st = enemy_entry.get("stats") or {}
     hp = int(st.get("hp", 100))
     return {
+        # 2026-09-03 奖励结算：enemy id 随快照携带（击杀查 rewards）
+        "id": str(enemy_entry.get("id") or ""),
         "hp": hp,
         "max_hp": hp,
         "mp": int(st.get("mp", 0)),

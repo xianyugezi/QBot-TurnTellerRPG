@@ -625,7 +625,8 @@ class BattlePipeline:
                  summary: Any = None, to: Any = None,
                  status: Optional[str] = None, exp: int = 0, gold: int = 0,
                  drops: Any = None, enemy_name: Optional[str] = None,
-                 final_damage: int = 0) -> List[str]:
+                 final_damage: int = 0,
+                 leveled: Optional[Mapping[str, Any]] = None) -> List[str]:
         """战斗结束独立 1 条（用户 2026-08-27 拍板结算模板 + BREP-24/25；TC-18/25，铁律 11）。
 
         **M5 裁决（用户拍板）**：win 结束消息 = 用户结算模板（叙事句回顾最后一击
@@ -633,12 +634,14 @@ class BattlePipeline:
         列表），不含 `✅ 战斗胜利！` 横幅与 BREP-24 汇总行；军规5 掉落只输出一次；
         当轮消息只出行动+击杀。lose/draw 保留 BREP-16/18/19 + BREP-24 汇总行。
         final_damage（最后行动伤害，供叙事句）由 dispatch_round 从 report 取末注入。
+        leveled（2026-09-03 奖励结算：击杀经验触发升级信息）非 None 时战斗结束
+        消息附升级行（模板 battle_settle_levelup*，battle_tpl 分区）。
         """
         body = render_battle_end(
             _prefix_free_ns(player), _enemy_ns(enemy), winner, summary=summary,
             status=status, exp=exp, gold=gold, drops=drops,
             enemy_name=enemy_name or (getattr(enemy, "name", "") if enemy else None),
-            final_damage=final_damage, ctx=self._ctx,
+            final_damage=final_damage, leveled=leveled, ctx=self._ctx,
         )
         return self.send(body, to=to)
 
@@ -793,6 +796,7 @@ def dispatch_round(
                 drops=reward["drops"],
                 final_damage=last_pd,
                 enemy_name=e_name,          # _prefix_free_ns 剥离 dict name，显式注入
+                leveled=ctx.get("battle_leveled"),  # 2026-09-03 击杀升级信息
             )
         )
     return delivered

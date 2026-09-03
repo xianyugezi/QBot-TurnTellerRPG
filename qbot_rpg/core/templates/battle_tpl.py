@@ -94,6 +94,11 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     "battle_settle_gold": "获得金币：{gold}",
     "battle_settle_loot_header": "获得的战利品如下→",
     "battle_settle_loot_item": "{index}.{name}×{count}",
+    # —— 战斗升级行（2026-09-03 奖励结算：击杀奖励经验触发升级时附一行）——
+    # 默认文案合并各段（升级提示一行内，避免占多条消息；level 为升级后等级）
+    "battle_settle_levelup": "✅ 等级提升至 {level}！HP/MP 已回复",
+    "battle_settle_levelup_multi": "✅ 等级提升至 {level}（连升 {level_ups} 级）！HP/MP 已回复",
+    "battle_settle_levelup_sp": " 技能点 +{sp}",
 
     # —— BREP-16/18/19 lose / draw 结算 ——
     "battle_settle_lose": "❌ 你倒下了…",
@@ -168,6 +173,9 @@ PLACEHOLDER_WHITELIST: Dict[str, set] = {
     "battle_settle_gold": {"gold"},
     "battle_settle_loot_header": set(),
     "battle_settle_loot_item": {"index", "name", "count"},
+    "battle_settle_levelup": {"level"},
+    "battle_settle_levelup_multi": {"level", "level_ups"},
+    "battle_settle_levelup_sp": {"sp"},
     "battle_settle_lose": set(),
     "battle_settle_lose_fail": {"enemy"},
     "battle_settle_draw": set(),

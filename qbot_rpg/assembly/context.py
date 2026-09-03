@@ -1565,4 +1565,76 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
     # resolve_attr_final：status_commands 兜底取最终层（复用已算 attr_final）
     ctx["resolve_attr_final"] = lambda: ctx.get("attr_final") or {}
 
+    # 战斗击杀奖励结算装配（2026-09-03 · PvE 奖励断链修复）。
+    # 此前 battle_reward_fn 恒 None → _battle_rewards 读不到 fn/无直给 → 击杀
+    # 「获得经验 0 金币 0」（docs/veinborn_阶段一_进度存档 §三.1 拦路缺口）。
+    # 闭包 = battle_commands._battle_rewards 契约 fn(engine, report, ctx) ->
+    # {exp,gold,drops}：只在击杀胜利（report.ended + status=win）才结算——
+    # 经 core/battle_reward.settle_battle_rewards 落账（rewards exp/币 +
+    # drops.death 掉落，升级/入包/幂等同层处理），返回渲染行数据；非胜利
+    # （lose/escape/draw/未结束）→ 0/空（5e 军规5 结算一次性，仅胜利拿奖励）。
+    # drops 为 [(显示名, 数量)]（render_battle_end L922-932 消费）。
+    # 敌方解析：engine.battle_state()["enemy"]["id"]（launch _enemy_combatant
+    # 已带 id）；旧快照/直测引擎无 id → 按 name 匹配 ctx["enemies"] 表（id/name
+    # 双查），查无 → 无奖励（不崩，对齐 _battle_rewards 空兜底）。
+    def _make_battle_reward_fn() -> Any:
+        def _fn(engine: Any, report: Any, rctx: Mapping[str, Any]) -> Dict[str, Any]:
+            ended = bool(getattr(report, "ended", False))
+            status = str(getattr(report, "status", "") or "")
+            if not ended or status != "win":
+                return {"exp": 0, "gold": 0, "drops": []}
+            try:
+                snap = engine.battle_state() if engine is not None else {}
+            except Exception:
+                snap = {}
+            e = snap.get("enemy") if isinstance(snap, Mapping) else None
+            e = e if isinstance(e, Mapping) else {}
+            eid = str(e.get("id") or "")
+            ename = str(e.get("name") or "")
+            enemies = rctx.get("enemies")
+            entry: Optional[Mapping[str, Any]] = None
+            if isinstance(enemies, Mapping):
+                if eid and eid in enemies:
+                    hit = enemies[eid]
+                    entry = hit if isinstance(hit, Mapping) else getattr(hit, "raw", None)
+                if entry is None and ename:
+                    for _id, _e in enemies.items():
+                        if not isinstance(_e, Mapping):
+                            _e = getattr(_e, "raw", None)
+                        if isinstance(_e, Mapping) and (
+                            str(_e.get("id") or "") == eid
+                            or str(_e.get("name") or "") == ename
+                        ):
+                            entry = _e
+                            break
+            if not isinstance(entry, Mapping):
+                return {"exp": 0, "gold": 0, "drops": []}
+            from qbot_rpg.core.battle_reward import (  # noqa: PLC0415
+                settle_battle_rewards,
+            )
+
+            # settle 需 MutableMapping（就地写 ctx player/currencies）；装配产出的
+            # ctx 为 dict（Mutable），映射不可变时复制（测试直给 Mapping 兜底）
+            settle_ctx: MutableMapping[str, Any] = (
+                rctx if isinstance(rctx, MutableMapping) else dict(rctx)
+            )
+            try:
+                out = settle_battle_rewards(settle_ctx, entry, rng=settle_ctx.get("rng"))
+            except Exception:
+                return {"exp": 0, "gold": 0, "drops": []}
+            # 升级信息回挂 ctx（dispatch_round win 分支 send_end 渲染升级行；
+            # 只读消费，非核心奖励数据，缺省不渲染）
+            lv = out.get("leveled")
+            if isinstance(lv, Mapping):
+                settle_ctx["battle_leveled"] = lv
+            return {
+                "exp": int(out.get("exp", 0) or 0),
+                "gold": int(out.get("gold", 0) or 0),
+                "drops": list(out.get("drops") or ()),
+            }
+
+        return _fn
+
+    ctx["battle_reward_fn"] = _make_battle_reward_fn()
+
     return ctx

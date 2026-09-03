@@ -186,6 +186,7 @@ def render_battle_end(
     drops: Any = None,
     enemy_name: Optional[str] = None,
     final_damage: int = 0,
+    leveled: Optional[Mapping[str, Any]] = None,
     ctx: Any = None,
 ) -> str:
     """BREP-17~20 结算 + BREP-24/25 汇总明细（5e §6.2/§6.3 / TC-18/25~27，铁律 11）。
@@ -216,6 +217,7 @@ def render_battle_end(
             exp=exp, gold=gold, drops=drops or (),
             enemy_name=enemy_name or (getattr(enemy, "name", "") if enemy else "") or "敌人",
             final_damage=final_damage,
+            leveled=leveled,
         ), ctx=ctx)
         if settle:
             lines.extend(settle.split("\n"))           # 结算块（用户模板 / BREP-16~19）
@@ -930,6 +932,22 @@ def _render_settlement(round_result: Any, *, ctx: Any = None) -> Optional[str]:
                     name, count = str(d[0]), int(d[1])
                 lines.append(tpl_of(ctx, "battle_settle_loot_item", {
                     "index": i, "name": name, "count": count}))
+        # 2026-09-03 战斗奖励结算：击杀经验触发升级 → 附升级行（模板可配，
+        # 缺省单行合并 HP/MP 回复 + SP；leveled 由接线层注入，None 省略）
+        leveled = getattr(round_result, "leveled", None)
+        if isinstance(leveled, Mapping):
+            level = int(leveled.get("level", 0) or 0)
+            level_ups = int(leveled.get("level_ups", 0) or 0)
+            sp = int(leveled.get("sp_earned_delta", 0) or 0)
+            if level > 0:
+                if level_ups > 1:
+                    up_line = tpl_of(ctx, "battle_settle_levelup_multi",
+                                    {"level": level, "level_ups": level_ups})
+                else:
+                    up_line = tpl_of(ctx, "battle_settle_levelup", {"level": level})
+                if sp > 0:
+                    up_line += tpl_of(ctx, "battle_settle_levelup_sp", {"sp": sp})
+                lines.append(up_line)
     elif status == "lose":
         lines.append(tpl_of(ctx, "battle_settle_lose"))            # BREP-16
         lines.append(tpl_of(ctx, "battle_settle_lose_fail", {

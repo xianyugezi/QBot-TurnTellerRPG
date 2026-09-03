@@ -243,6 +243,136 @@ def test_delete_map_cascades_exits():
     assert any(c["removed_ref"]["field"] == "exits.north" for c in out["cascades"])
 
 
+# =============================================================================
+# M12.5 批2 路2A：删物品级联（enemies.drops/shop.items/quest.reward/recipe +
+#    quest/npc 条件 param/var 引用阻止删除）
+# =============================================================================
+def make_items_ctx(**over):
+    """删物品场景假数据：potion 被敌人掉落/商店/任务奖励/配方多处引用。
+
+    items 页非六页兜底（PAGE_MODULE 不含）——按批1 路1A 语义经 editor 模块
+    页表登记（module_file=items.json）后才可 CRUD（对齐 make_editor_ctx）。
+    """
+    ctx = {
+        "modules_raw": {
+            "editor": {
+                "schema_version": 1,
+                "pages": [
+                    {"page_id": "items", "title": "物品", "icon": "🎒",
+                     "module_file": "items.json", "meta_source": "meta/items",
+                     "enabled": True, "validator": "items"},
+                    {"page_id": "quest", "title": "任务", "icon": "📜",
+                     "module_file": "quest.json", "meta_source": "meta/quest",
+                     "enabled": True, "validator": "quest"},
+                    {"page_id": "shop", "title": "商店", "icon": "🏪",
+                     "module_file": "shop.json", "meta_source": "meta/shop",
+                     "enabled": True, "validator": "shop"},
+                ],
+            },
+            "enemies": [
+                {"id": "gust_wolf", "name": "风狼", "drops": {
+                    "battle": [{"item": "potion", "chance": 50}],
+                    "special": [], "death": []}},
+                {"id": "ridge_cub", "name": "脊冢幼兽", "drops": {
+                    "battle": [], "special": [{"item": "potion", "chance": 10}],
+                    "death": [{"item": "potion", "chance": 100}]}},
+            ],
+            "shop": [
+                {"id": "village_shop", "name": "杂货店",
+                 "items": [{"item": "potion", "price": 100},
+                           {"item": "antidote", "price": 60}]},
+            ],
+            "quest": [
+                {"id": "q1", "name": "备药", "reward": [{"coins": 50},
+                                                       {"item": "potion", "count": 1}]},
+            ],
+            "recipe": [
+                {"id": "rcp1", "name": "合成", "materials": [{"id": "potion", "count": 1}],
+                 "output": {"item": "elixir", "count": 1}},
+            ],
+            "items": [{"id": "potion", "name": "药水"},
+                      {"id": "antidote", "name": "解毒草"},
+                      {"id": "lonely_pebble", "name": "孤石"}],
+        },
+    }
+    ctx.update(over)
+    return ctx
+
+
+def test_delete_item_cascades_drops_shop_reward():
+    """删物品 potion → enemies.drops.*/shop.items/quest.reward 引用行全清，cascades 齐。"""
+    ctx = make_items_ctx()
+    out = delete_page_item("items", "potion", ctx)
+    assert out["ok"] is True
+    raw = ctx["modules_raw"]
+    # enemies：battle/special/death 三容器内 potion 行全移除
+    assert raw["enemies"][0]["drops"]["battle"] == []
+    assert raw["enemies"][1]["drops"]["special"] == []
+    assert raw["enemies"][1]["drops"]["death"] == []
+    # shop.items：potion 行移除、antidote 保留
+    assert raw["shop"][0]["items"] == [{"item": "antidote", "price": 60}]
+    # quest.reward：potion 行移除、coins 行保留
+    assert raw["quest"][0]["reward"] == [{"coins": 50}]
+    # cascades 覆盖三模块 + drops 子键 field 记 drops.battle 形态
+    # （recipe materials 命中另计——见 test_delete_item_cascades_recipe）
+    mods = {c["module"] for c in out["cascades"]}
+    assert mods >= {"enemies", "shop", "quest"}
+    fields = [c["removed_ref"]["field"] for c in out["cascades"]
+              if c["module"] != "recipe"]  # recipe 命中在 recipe 用例里单独断言
+    assert "drops.battle" in fields and "drops.special" in fields and "drops.death" in fields
+    assert "items" in fields and "reward" in fields
+    assert len(out["cascades"]) == 6  # drops×3 + shop + quest.reward + recipe.materials
+    assert all(c["removed_ref"]["value"] == "potion" for c in out["cascades"])
+
+
+def test_delete_item_cascades_recipe():
+    """删物品 potion → recipe materials 行移除；output 指别的物品则原样保留。"""
+    ctx = make_items_ctx()
+    out = delete_page_item("items", "potion", ctx)
+    assert out["ok"] is True
+    rcp = ctx["modules_raw"]["recipe"][0]
+    assert rcp["materials"] == []
+    assert rcp["output"] == {"item": "elixir", "count": 1}  # output 引用 elixir 不受影响
+    assert any(c["removed_ref"]["field"] == "materials" for c in out["cascades"])
+    assert not any(c["removed_ref"]["field"] == "output" for c in out["cascades"])
+
+
+def test_delete_item_recipe_output_ref_cleared():
+    """recipe.output.item==删除物品 → output 置空 + cascades 记 output 字段。"""
+    ctx = make_items_ctx()
+    ctx["modules_raw"]["recipe"][0]["output"] = {"item": "potion", "count": 2}
+    out = delete_page_item("items", "potion", ctx)
+    assert out["ok"] is True
+    rcp = ctx["modules_raw"]["recipe"][0]
+    assert rcp["output"] == {}
+    assert any(c["removed_ref"]["field"] == "output" for c in out["cascades"])
+
+
+def test_delete_item_blocked_by_quest_condition_param():
+    """potion 被 quest.conditions[].param 引用 → 阻止删除（in_use），零级联。"""
+    ctx = make_items_ctx()
+    ctx["modules_raw"]["quest"][0]["conditions"] = [
+        {"var": "item_count", "op": "ge", "value": 1, "param": "potion"}]
+    raw = ctx["modules_raw"]
+    raw["enemies"][0]["drops"]["battle"] = [{"item": "potion", "chance": 50}]
+    out = delete_page_item("items", "potion", ctx)
+    assert out["ok"] is False
+    assert out["errors"][0]["code"] == "in_use"
+    assert "q1" in out["errors"][0]["message"]
+    # 引用方未动：掉落行原样保留
+    assert raw["enemies"][0]["drops"]["battle"] == [{"item": "potion", "chance": 50}]
+
+
+def test_delete_item_unreferenced_ok():
+    """删无任何引用（且无条件引用）的孤石 → ok，cascades 空。"""
+    ctx = make_items_ctx()
+    out = delete_page_item("items", "lonely_pebble", ctx)
+    assert out["ok"] is True
+    assert out["cascades"] == []
+    # 引用了 potion 的行不受影响
+    assert ctx["modules_raw"]["shop"][0]["items"][0]["item"] == "potion"
+
+
 def test_delete_not_found():
     """删除不存在条目 → 404。"""
     out = delete_page_item("monster", "ghost", make_ctx())

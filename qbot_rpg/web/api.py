@@ -57,10 +57,15 @@ __all__ = ["create_app", "iter_routes", "FastAPI", "APIRouter"]
 # skill_chains 等）；仍无 → None（调用方 404/空列表）。
 # =============================================================================
 REFS_TARGET_ALIASES: Dict[str, str] = {
+    # 语义 kind（field_meta ref_target 全部集合 9 种，见下方组注释）
     "monster": "enemies",   # 前端/页面页名 monster → enemies 表
     "enemy": "enemies",
     "item": "items",
     "skill": "skills",
+    # skill_or_any：宽松引用 kind（validator R-4 兼容：命中任一注册 kind 即通过）。
+    # 归一为"任一技能/行动库" —— refs 候选语义最接近 skills 表（skill 字段无歧义时
+    # 直查 skills 已覆盖；本行兜底保证 ref_target 全集可解析、宁全勿漏）
+    "skill_or_any": "skills",
     "job": "jobs",
     "map": "maps",
     "quest": "quest",
@@ -333,7 +338,15 @@ def create_app(state: Optional[Any] = None) -> Any:
 
     @router.get("/refs/{target}")
     def refs_target(target: str) -> Dict[str, Any]:
-        """引用控件候选列表（动态 enum；target ∈ 怪物/物品/技能/职业/...）。"""
+        """引用控件候选列表（动态 enum；target ∈ 怪物/物品/技能/职业/...）。
+
+        契约（M12.5 批2 路2C 审计点 24：前端表单 ref_target → 引用控件）：
+          data.target = 请求原串（前端回显）
+          data.kind   = target 归一后的 kind（表键/别名键原样小写；表键直查命中
+                        = 表键本身，别名命中 = 别名键，即 field_meta ref_target 全集）
+          data.items  = [{id, name}]（module 原始 list 顺序）
+          data.total  = len(items)
+        """
         reg = _require_state(state, "registry")
         # M12.5 路1B：删写死 12 键 dict（审计点 17）——统一别名表解析：
         # field_meta 表键命中直查（含 C/D 类已登记 list 模块）→ 未命中走
@@ -347,7 +360,10 @@ def create_app(state: Optional[Any] = None) -> Any:
                 if isinstance(e, Mapping):
                     items.append({"id": str(e.get("id") or ""),
                                   "name": str(e.get("name") or "")})
-        return {"ok": True, "data": {"target": target, "items": items}}
+        return {"ok": True, "data": {"target": target,
+                                     "kind": str(target).lower(),
+                                     "items": items,
+                                     "total": len(items)}}
 
     @router.get("/editor/pages")
     def editor_pages() -> Dict[str, Any]:

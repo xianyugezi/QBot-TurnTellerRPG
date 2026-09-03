@@ -720,6 +720,28 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "next": FieldMeta(type="list", element=FieldMeta(type="str")),
         "actions": FieldMeta(type="list", element=FieldMeta(type="ref", ref_target="action")),
         "effects": F_EFFECTS,
+        # M12.5 批2 路2B（M13 技能链深结构顶层键补登记——实测 skill_chains.json
+        # 含 max_combo/max_combo_behavior/steps/trigger_skill（job_scope 归
+        # 细化_6b 附·未定稿依赖 1/3，由 6a 路收口——本表不越界登记）；steps
+        # 元素 {from,to,tag,condition{mode,count},priority,armor,consume,...}
+        # 深结构归 core/combo + 专项校验全权 → 宽 obj 容器防泛型误拦，仅登记
+        # 顶层键供编辑器表单渲染（原始 JSON 兜底仍可编深结构））
+        "max_combo": FieldMeta(type="int", label="最大连段数"),
+        "max_combo_behavior": FieldMeta(type="str", label="满连段行为"),
+        "steps": FieldMeta(type="list",
+                           element=FieldMeta(type="obj", children={
+                               "from": FieldMeta(type="str", label="源技能"),
+                               "to": FieldMeta(type="str", label="目标技能"),
+                               "tag": FieldMeta(type="str", label="标签"),
+                               "condition": FieldMeta(type="obj", children={},
+                                                      soft_label=True, label="触发条件"),
+                               "priority": FieldMeta(type="int", label="优先级"),
+                               "mode": FieldMeta(type="str", label="模式"),
+                               "armor": FieldMeta(type="bool", label="霸体"),
+                               "consume": FieldMeta(type="int", label="消耗"),
+                           }),
+                           soft_label=True, label="连段步骤"),
+        "trigger_skill": FieldMeta(type="str", label="触发技能"),
     }
     action_fields: Dict[str, FieldMeta] = {
         # ---- ActionCore 基础（T24-T26 / m2_shared_contract §四）----

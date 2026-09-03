@@ -536,6 +536,33 @@ def _remove_ref_from_list(entry: MutableMapping[str, Any], field: str, ref_id: s
     return removed
 
 
+def _find_condition_refs(
+    raw: MutableMapping[str, Any], ref_id: str,
+) -> List[str]:
+    """跨 quest/npc 模块找 conditions[].param 或 var 精确 == ref_id 的条目引用。
+
+    返回引用描述列表 ["quest:<id>", "npc:<id>"]（对齐 monster 分支的
+    conditions[].param 探针语义；param/var 同时探测——item_count 类条件
+    param 存物品 id，个别形态把 id 直接放 var 键）。JSON 序列化精确匹配
+    防子串误伤。
+    """
+    found: List[str] = []
+    for mod_name in ("quest", "npc"):
+        mod_data = raw.get(mod_name)
+        if not isinstance(mod_data, list):
+            continue
+        probe = json.dumps(mod_data, ensure_ascii=False)
+        if f'"param": "{ref_id}"' not in probe and f'"var": "{ref_id}"' not in probe:
+            continue
+        for entry in mod_data:
+            if not isinstance(entry, MutableMapping):
+                continue
+            blob = json.dumps(entry, ensure_ascii=False)
+            if f'"param": "{ref_id}"' in blob or f'"var": "{ref_id}"' in blob:
+                found.append(f"{mod_name}:{entry.get('id')}")
+    return found
+
+
 def delete_page_item(
     page: str,
     item_id: str,
@@ -596,6 +623,65 @@ def delete_page_item(
                 "in_use", "id",
                 f"『{item_id}』被 {len(refs_found)} 处条件引用（{'、'.join(refs_found[:5])}），"
                 "请先解除引用再删除")]} 
+    elif page == "items":
+        # 物品被任务/对话条件参数引用 → 阻止删除（对齐怪物分支语义：quest/npc
+        # conditions[].param / var 直接放 item id 的引用是运行时判定条件，级联移除
+        # 会静默破坏条件语义——正确语义 = 阻止删除并提示引用方先解除引用）。
+        # 探针放在级联之前：一旦命中立刻返回，引用数据零改动（阻止 = 不删）。
+        refs_found = _find_condition_refs(raw, item_id)
+        if refs_found:
+            return {"ok": False, "errors": [_red(
+                "in_use", "id",
+                f"『{item_id}』被 {len(refs_found)} 处条件引用（{'、'.join(refs_found[:5])}），"
+                "请先解除引用再删除")]}
+        enemies = raw.get("enemies")
+        if isinstance(enemies, list):
+            for e in enemies:
+                if not isinstance(e, MutableMapping):
+                    continue
+                drops = e.get("drops")
+                if not isinstance(drops, MutableMapping):
+                    continue
+                for sub in ("battle", "special", "death"):
+                    if not isinstance(drops.get(sub), list):
+                        continue
+                    field = f"drops.{sub}"
+                    if _remove_ref_from_list(drops, sub, item_id):
+                        cascades.append({"module": "enemies", "item_id": e.get("id"),
+                                         "removed_ref": {"field": field, "value": item_id}})
+        shop_rows = raw.get("shop")
+        if isinstance(shop_rows, list):
+            for s in shop_rows:
+                if not isinstance(s, MutableMapping):
+                    continue
+                if _remove_ref_from_list(s, "items", item_id):
+                    cascades.append({"module": "shop", "item_id": s.get("id"),
+                                     "removed_ref": {"field": "items", "value": item_id}})
+        quest_rows = raw.get("quest")
+        if isinstance(quest_rows, list):
+            for q in quest_rows:
+                if not isinstance(q, MutableMapping):
+                    continue
+                if _remove_ref_from_list(q, "reward", item_id):
+                    cascades.append({"module": "quest", "item_id": q.get("id"),
+                                     "removed_ref": {"field": "reward", "value": item_id}})
+        recipe_rows = raw.get("recipe")
+        if isinstance(recipe_rows, list):
+            for rc in recipe_rows:
+                if not isinstance(rc, MutableMapping):
+                    continue
+                if _remove_ref_from_list(rc, "materials", item_id):
+                    cascades.append({"module": "recipe", "item_id": rc.get("id"),
+                                     "removed_ref": {"field": "materials", "value": item_id}})
+                # output 字段可能是 {item: id} dict 或 ["item_id"] list（宽容处理）
+                output = rc.get("output")
+                if isinstance(output, Mapping) and str(output.get("item") or "") == item_id:
+                    rc["output"] = {}
+                    cascades.append({"module": "recipe", "item_id": rc.get("id"),
+                                     "removed_ref": {"field": "output", "value": item_id}})
+                elif isinstance(output, list) and _remove_ref_from_list(rc, "output", item_id):
+                    cascades.append({"module": "recipe", "item_id": rc.get("id"),
+                                     "removed_ref": {"field": "output", "value": item_id}})
     elif page == "shop":
         # 删商店条目本身（shop 是 list 条目）
         pass
@@ -646,7 +732,9 @@ def delete_page_item(
     # 任务奖励移除」，物品非六页（items.json 是素材/道具不是 monster），故 items 页
     # 不在六页 CRUD（P-06 六页 = skill/job/monster/map/quest/shop）。shop 页删除的
     # 商品引用自身已随条目移除。skill 页删除：契约 L180 未列技能级联（最小实现只
-    # 删条目本身，job.transform 引用属扩展页语义批 4 处理）。
+    # 删条目本身，job.transform 引用属扩展页语义批 4 处理）。删物品级联 = items
+    # 分支（本函数上方）：enemies.drops/shop.items/quest.reward/recipe 移除 +
+    # quest/npc 条件 param/var 引用阻止删除（M12.5 批2 路2A 补全）。
 
     # 版本簿清理
     vb = _versions(ctx).get(module, {})

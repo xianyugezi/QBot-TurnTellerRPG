@@ -160,3 +160,28 @@ def test_c_class_pack_still_loads_zero_red() -> None:
     raw = pack.registry.modules_raw
     assert len(raw.get("dungeon", [])) >= 2
     assert len(raw.get("achievements", [])) >= 8
+
+
+def test_skill_chains_fields_completed() -> None:
+    """M12.5 批2 路2B：skill_chains 顶层键补登记（M13 深结构 4 键 + steps children）。"""
+    f = _fields("skill_chains")
+    for key in ("max_combo", "max_combo_behavior", "steps", "trigger_skill"):
+        assert key in f, f"skill_chains 缺字段 {key}"
+    assert f["steps"].type == "list"
+    elem = f["steps"].element
+    assert elem.type == "obj" and elem.children, "steps 元素应有 children"
+    for k in ("from", "to", "tag", "condition", "priority", "mode", "armor",
+              "consume"):
+        assert k in elem.children, f"steps.children 缺 {k}"
+    # 新增的 4 个 M12.5 键 + steps children 全部有中文 label（既有共享常量键
+    # F_ID/F_NAME 等无 label 是历史口径，不在此断言范围）
+    for key in ("max_combo", "max_combo_behavior", "steps", "trigger_skill"):
+        assert f[key].label, f"{key} label 空"
+
+
+def test_skill_chains_pack_still_loads_zero_red() -> None:
+    """skill_chains 补键后 test_demo 加载零新增红拦（steps 深结构不被泛型误拦）。"""
+    pack = asyncio.run(load_pack(_REPO / "content" / "test_demo"))
+    raw = pack.registry.modules_raw
+    sc = raw.get("skill_chains")
+    assert isinstance(sc, list) and len(sc) >= 1

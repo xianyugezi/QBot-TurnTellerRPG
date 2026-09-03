@@ -10,8 +10,19 @@
     { "page_id": "npc",        "title": "NPC",    "icon": "🧙", "module_file": "npc.json",     "meta_source": "meta/npc",            "enabled": true,  "validator": "npc",     "tabs": ["基础", "地图挂点", "对话", "条件", "交互", "任务", "商店", "情报", "教学", "发牌"] },
     { "page_id": "checkin",    "title": "签到",   "icon": "📅", "module_file": "checkin.json", "meta_source": "meta/checkin",         "enabled": true,  "validator": "checkin", "tabs": ["基础", "周期", "每日奖励", "连签奖励", "月度累计", "补签", "预览"] },
     { "page_id": "ai",         "title": "AI",     "icon": "🤖", "module_file": "enemies.json", "meta_source": "meta/ai",              "enabled": true,  "validator": "ai",      "extends": "monster", "tabs": ["行动表", "条件行动", "状态机", "阶段", "连招链", "换区"] },
-    { "page_id": "hidden",     "title": "隐藏要素", "icon": "🔮", "module_file": "maps.json",  "meta_source": "meta/hidden",         "enabled": true,  "validator": "hidden",  "tabs": ["隐藏BOSS", "隐藏任务", "彩蛋"] },
-    { "page_id": "env_event",  "title": "环境事件", "icon": "🌧️", "module_file": "settings.json", "meta_source": "meta/env_event",     "enabled": true,  "validator": "env_event" },
-    { "page_id": "log_card",   "title": "日志卡片", "icon": "📔", "module_file": "settings.json", "meta_source": "meta/log_card",      "enabled": true,  "validator": "log_card" }
+    { "page_id": "hidden",     "title": "隐藏要素", "icon": "🔮", "module_file": "maps.json",    "meta_source": "meta/hidden",         "enabled": true,  "validator": "hidden",  "tabs": ["隐藏BOSS", "隐藏任务", "彩蛋"] },
+    { "page_id": "env_event",  "title": "环境事件", "icon": "🌧️", "module_file": "settings.json", "meta_source": "meta/env_event",     "enabled": true,  "validator": "env_event", "group": "世界", "page_kind": "object" },
+    { "page_id": "log_card",   "title": "日志卡片", "icon": "📔", "module_file": "settings.json", "meta_source": "meta/log_card",      "enabled": true,  "validator": "log_card", "group": "世界", "page_kind": "view" },
+    { "page_id": "items",      "title": "物品",   "icon": "🎒", "module_file": "items.json",   "meta_source": "meta/items",          "enabled": true,  "validator": "items", "group": "物品装备" },
+    { "page_id": "equipment",  "title": "装备",   "icon": "🛡️", "module_file": "equipment.json", "meta_source": "meta/equipment",     "enabled": true,  "validator": "equipment", "group": "物品装备" },
+    { "page_id": "slots",      "title": "装备槽位", "icon": "🔧", "module_file": "slots.json",   "meta_source": "meta/slots",          "enabled": true,  "validator": "slots", "group": "物品装备" },
+    { "page_id": "action",     "title": "行动",   "icon": "🎯", "module_file": "action.json",   "meta_source": "meta/action",         "enabled": true,  "validator": "action", "group": "战斗" },
+    { "page_id": "effects",    "title": "效果",   "icon": "✨", "module_file": "effects.json",  "meta_source": "meta/effects",        "enabled": true,  "validator": "effects", "group": "战斗" },
+    { "page_id": "statuses",   "title": "状态",   "icon": "💠", "module_file": "statuses.json", "meta_source": "meta/statuses",       "enabled": true,  "validator": "statuses", "group": "战斗" },
+    { "page_id": "marks",      "title": "印记",   "icon": "🔖", "module_file": "marks.json",    "meta_source": "meta/marks",          "enabled": true,  "validator": "marks", "group": "战斗" },
+    { "page_id": "traits",     "title": "词条",   "icon": "🏷️", "module_file": "traits.json",   "meta_source": "meta/traits",         "enabled": true,  "validator": "traits", "group": "战斗" },
+    { "page_id": "skill_chains", "title": "技能链", "icon": "⛓️", "module_file": "skill_chains.json", "meta_source": "meta/skill_chains", "enabled": true, "validator": "skill_chains", "group": "战斗" },
+    { "page_id": "recipe",     "title": "炼金配方", "icon": "⚗️", "module_file": "recipe.json",   "meta_source": "meta/recipe",         "enabled": true,  "validator": "recipe", "group": "成长" },
+    { "page_id": "proficiency", "title": "熟练度", "icon": "📈", "module_file": "proficiency.json", "meta_source": "meta/proficiency", "enabled": true, "validator": "proficiency", "group": "成长" }
   ]
 }

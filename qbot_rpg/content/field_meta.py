@@ -1108,6 +1108,16 @@ def _module_table() -> Dict[str, ModuleMeta]:
                                 kind="env_event", namespace="settings_lib"),
         "log_card": ModuleMeta(entry_type="object", fields=LOG_CARD_FIELDS,
                                kind="log_card", namespace="settings_lib"),
+        # M12.5 批1/2：editor.json 页面注册表模块（M12 起内容包实文件即存在；
+        # manifest 声明后才进 modules_raw → editor_registry 动态页表才生效）。
+        # 宽松 obj 登记：仅 schema_version/pages 两键宽容器（编辑器注册表语义，
+        # 深结构由 editor_registry.load_editor_registry 解析全权）
+        "editor": ModuleMeta(entry_type="object", fields={
+            "schema_version": FieldMeta(type="int", label="页表 schema 版本"),
+            "pages": FieldMeta(type="list",
+                               element=FieldMeta(type="obj", children={}),
+                               soft_label=True, label="页面登记"),
+        }),
     }
 
 

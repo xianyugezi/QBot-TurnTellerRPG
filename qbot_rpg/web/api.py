@@ -98,6 +98,79 @@ def _refs_module_for_target(target: str, table: Any) -> Optional[str]:
     return REFS_TARGET_ALIASES.get(key)
 
 
+# M12.5 中文显示：缺 label 字段的自动中文词典（编辑器表单显示层兜底——
+# field_meta 未注入 label 的通用键名在此补中文；未命中保留英文名回退。
+# 词典只服务显示，不影响校验/数据。字段专属名优先在 field_meta 手动注入。
+_FIELD_LABEL_ZH: Dict[str, str] = {
+    # 通用
+    "id": "ID", "name": "名称", "type": "类型", "desc": "描述",
+    "icon": "图标", "kind": "类别", "level": "等级", "max": "上限",
+    "growth": "成长", "tags": "标签", "note": "备注", "title": "标题",
+    "text": "文本", "value": "值", "count": "数量", "chance": "概率",
+    "rate": "比率", "ratio": "比率", "amount": "数量", "total": "总量",
+    "price": "价格", "cost": "消耗", "cooldown": "冷却", "slot": "槽位",
+    "bind": "绑定", "usable": "可使用", "stack": "堆叠", "max_stack": "最大堆叠",
+    "rarity": "稀有度", "grade": "品级", "weight": "重量", "size": "体型",
+    # 战斗数值
+    "hp": "生命", "mp": "魔力", "atk": "攻击", "def": "防御",
+    "str": "力量", "int": "智力", "con": "体质", "spr": "精神",
+    "foc": "专注", "agi": "敏捷", "lck": "幸运",
+    "power": "威力", "duration": "持续", "turns": "回合",
+    "probability": "概率", "damage": "伤害", "heal": "治疗",
+    "element": "属性", "elements": "属性", "attack_type": "攻击类型",
+    "interrupt": "打断", "armor": "护甲", "penetration": "穿透",
+    "crit": "暴击", "evasion": "闪避", "accuracy": "命中",
+    "revert": "回复", "resistance": "抗性", "weakness": "弱点",
+    # 结构引用
+    "effects": "效果", "actions": "行动", "conditions": "条件",
+    "condition": "条件", "reward": "奖励", "rewards": "奖励",
+    "require_status": "需要状态", "apply_status": "附加状态",
+    "require_mark": "需要印记", "apply_mark": "附加印记",
+    "target": "目标", "targets": "目标",
+    "buffs": "增益", "debuffs": "减益", "marks": "印记",
+    "skills": "技能", "items": "物品", "enemies": "敌人",
+    "monsters": "怪物", "npcs": "NPC", "drops": "掉落",
+    "quests": "任务", "maps": "地图", "chains": "链",
+    # 技能/任务
+    "skill": "技能", "sp": "技能点", "mp_cost": "魔力消耗",
+    "unlock": "解锁", "unlock_chain": "解锁链", "repeatable": "可重复",
+    "main": "主线", "zone": "区域", "board": "任务板", "timed": "限时",
+    "bonus": "加成", "consume": "消耗", "filter": "筛选",
+    # 其它
+    "state": "状态", "status": "状态", "phase": "阶段",
+    "trigger": "触发", "once": "仅一次", "order": "顺序",
+    "prefix": "前缀", "suffix": "后缀", "format": "格式",
+    # 模块专属高频（forge/fishing/装备/副本/成就等）
+    "alchemy": "炼金", "forge": "锻造", "fishing": "钓鱼",
+    "bait_ids": "鱼饵", "crown_thresholds": "冠级阈值",
+    "energy": "体力", "energy_max": "体力上限", "energy_enabled": "启用体力",
+    "energy_regen_sec": "体力恢复(秒)", "energy_regen_sec_safe": "安全区恢复(秒)",
+    "bait_bonus": "鱼饵加成", "augments_enabled": "启用客制强化",
+    "exp_per_forge": "锻造经验", "exp_sources": "经验来源",
+    "forge_fee": "锻造费用", "decompose_rate": "分解率",
+    "catalyst": "催化剂", "catalyst_consume": "催化剂消耗",
+    "catalyst_unlock_tier": "催化解锁阶", "combine_from": "由...合成",
+    "equip_id": "装备 ID", "equip_restrict": "装备限制",
+    "excludes": "互斥部位", "slot_defs": "槽位定义", "enabled": "启用",
+    "coins": "金币", "gem": "宝石", "exp": "经验", "rep": "声望",
+    "prof": "熟练度", "daily_limit": "每日上限", "difficulty": "难度",
+    "area": "区域", "author": "作者", "version": "版本",
+    "schema_version": "结构版本", "modules": "模块", "awaken": "觉醒",
+    "evolve_to": "进化到", "charges": "充能", "decay": "衰减",
+    "death": "死亡", "battle": "战斗", "drop_rate": "掉落率",
+    "drop_items": "掉落物品", "drop_exp": "掉落经验", "drop_currency": "掉落货币",
+    "enemy_pool": "敌池",
+    "description": "描述", "appliable_to": "可应用目标",
+    "conditional": "条件式", "consume_marks": "消耗印记",
+    "dispel_reverts": "驱散还原", "elem_res": "属性抗性",
+    "element_req": "属性需求", "base_effects": "基础效果",
+    "chain": "链", "chain_map": "链映射", "chain_refs": "链引用",
+    "crit_mod": "暴击修正", "def_base": "基础防御",
+    "block_mode": "格挡模式", "cool": "冷却", "copy_extra_cost": "复制额外消耗",
+    "derive_chains": "派生链",
+}
+
+
 def _require_state(state: Any, name: str) -> Any:
     """取装配件；缺失抛 HTTPException 503（编辑器未装配）。"""
     if state is None or not hasattr(state, name) or getattr(state, name) is None:
@@ -328,7 +401,10 @@ def create_app(state: Optional[Any] = None) -> Any:
             fields.append({
                 "name": fname,
                 "type": fmeta.type,
-                "label": getattr(fmeta, "label", "") or fname,
+                # M12.5 中文显示：label 优先级 = 表注入 label → 通用词典 → 键名
+                # （词典兜底让未注入的通用键名也显示中文，用户无需看懂英文）
+                "label": (getattr(fmeta, "label", "") or
+                          _FIELD_LABEL_ZH.get(fname) or fname),
                 "required": fmeta.required,
                 "ref_target": fmeta.ref_target,
                 "enum": list(fmeta.enum or ()),

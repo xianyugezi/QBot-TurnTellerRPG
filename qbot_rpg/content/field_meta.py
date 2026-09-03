@@ -226,8 +226,12 @@ CURRENCY_ENTRY_CHILDREN: Dict[str, FieldMeta] = {
 }
 # settings 模块已注册字段（其余段 level_cap/pvp/time_cycle/... 由 3h 路登记，缺省放行 §2.3）
 SETTINGS_FIELDS: Dict[str, FieldMeta] = {
-    "currencies": FieldMeta(type="list", element=FieldMeta(type="obj", children=CURRENCY_ENTRY_CHILDREN)),
-    "death_penalty": FieldMeta(type="obj", children=DEATH_PENALTY_CHILDREN),
+    # M12.5 批4：settings.json 实测标量键补登记（编辑器 obj 表单渲染源——
+    # default_map 引用 map id / world_name 展示名；缺 label 的容器段也补中文段名）
+    "default_map": FieldMeta(type="str", label="默认地图"),
+    "world_name": FieldMeta(type="str", label="世界名称"),
+    "currencies": FieldMeta(type="list", element=FieldMeta(type="obj", children=CURRENCY_ENTRY_CHILDREN), label="货币"),
+    "death_penalty": FieldMeta(type="obj", children=DEATH_PENALTY_CHILDREN, label="死亡惩罚"),
     # 2026-09-03 用户拍板：装备槽位 = 内容包可配置项（8 槽需求根因——引擎原硬编码
     # 6 槽）。settings.slots 段形态（对齐 core/equipment.EquipmentEngine slots 注入）：
     #   {"slots": {"weapon": {"name": "武器", "max": 1, "occupies": []}, ...}}
@@ -235,7 +239,7 @@ SETTINGS_FIELDS: Dict[str, FieldMeta] = {
     # + ctx["equip_engine"]（EquipmentEngineAdapter(slots=...)）；缺省无配置 → 默认 6 槽。
     # 注意：与 M8 slots.json 模块（装饰珠插槽 {equip_id, slots:[{slot_level}]}）是
     # 不同数据空间——这里是「装备部位定义」；字段 key 用 slot_defs 避免与既有撞名。
-    "slot_defs": FieldMeta(type="obj", children={}, soft_label=True),
+    "slot_defs": FieldMeta(type="obj", children={}, soft_label=True, label="装备槽位"),
 }
 
 # =============================================================================

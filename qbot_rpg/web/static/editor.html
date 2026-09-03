@@ -7,7 +7,9 @@
 <style>
   /* M12 批4 路4B：前端最小可用壳（P-01~P-04 固定视口/左列表右卡片简化版）。
      设计：顶栏（标题/包信息/登出）+ 侧边栏页清单 + 主区（列表/表单）。
-     纯原生 JS 零依赖；对接 /api/* 15 端点。 */
+     纯原生 JS 零依赖；对接 /api/* 15 端点。
+     M12.5 批4 路4C：三形态渲染特化（list 列表 CRUD / object 整对象表单 /
+     map 键值编辑）；侧边栏改按 p.group 动态分组。 */
   :root {
     --bg: #0f1115; --panel: #1a1d24; --border: #2a2f3a;
     --text: #d8dee6; --dim: #8b93a1; --accent: #4c8dff;
@@ -53,16 +55,21 @@
     width: 300px; border-right: 1px solid var(--border); display: flex;
     flex-direction: column; min-width: 0;
   }
+  #listpane.hidden { display: none; } /* M12.5 批4：object 形态隐藏左栏 */
   #listhead {
     padding: 8px 10px; border-bottom: 1px solid var(--border);
     display: flex; gap: 6px; align-items: center;
   }
+  #listhead.hidden { display: none; }
   #listhead input {
     flex: 1; background: #12151c; border: 1px solid var(--border);
     color: var(--text); padding: 4px 8px; border-radius: 4px;
   }
-  #listhead button {
+  #listhead #btnAddKey { /* map 形态「+ 新建键」（list 形态的 + 新建条目 btnNew 同款） */
     background: var(--accent); border: none; color: #fff;
+    padding: 4px 10px; border-radius: 4px; cursor: pointer;
+  }
+  #listhead #btnNew { background: var(--accent); border: none; color: #fff;
     padding: 4px 10px; border-radius: 4px; cursor: pointer;
   }
   #listbody { flex: 1; overflow-y: auto; }
@@ -73,10 +80,25 @@
   #listbody .row:hover { background: #232833; }
   #listbody .row.active { background: #263349; }
   #listbody .row .rid { color: var(--dim); font-size: 11px; }
+  /* M12.5 批4 map：键行 = 左键名 + 中值摘要 + 右删除钮 */
+  #listbody .mrow { display: flex; align-items: center; }
+  #listbody .mrow .mkey { flex: 0 0 auto; font-weight: 600; }
+  #listbody .mrow .msum {
+    flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap; color: var(--dim); font-size: 11px;
+  }
+  #listbody .mrow .mdel {
+    flex: 0 0 auto; background: none; border: 1px solid var(--border);
+    color: var(--red); font-size: 11px; padding: 1px 7px; border-radius: 3px;
+    cursor: pointer; visibility: hidden;
+  }
+  #listbody .mrow:hover .mdel { visibility: visible; }
+  #listbody .mrow .mdel:hover { background: #3a2626; }
   #listfoot {
     padding: 6px 10px; border-top: 1px solid var(--border); color: var(--dim);
     display: flex; gap: 8px; font-size: 12px; align-items: center;
   }
+  #listfoot.hidden { display: none; }
   #listfoot .spacer { flex: 1; }
   #listfoot button {
     background: none; border: 1px solid var(--border); color: var(--text);
@@ -92,9 +114,20 @@
   #edithead button {
     padding: 4px 14px; border-radius: 4px; cursor: pointer; border: none;
   }
+  #edithead button.hidden { display: none; }
   #btnSave { background: var(--accent); color: #fff; }
   #btnNew { background: #2d3542; color: var(--text); }
   #btnDel { background: #3a2626; color: #ff8a8a; }
+  /* M12.5 批4 map：单键值编辑区（大 JSON 文本域） */
+  #mapEdit { padding: 0 16px 10px; }
+  #mapEdit .mkeylab { font-size: 12px; color: var(--dim); margin-bottom: 3px; }
+  #mapEdit .mkeylab code { color: var(--yellow); }
+  #mapEdit textarea, #mapEdit input, #mapEdit select {
+    width: 100%; background: #12151c; border: 1px solid var(--border);
+    color: var(--text); padding: 5px 8px; border-radius: 4px;
+    font-size: 13px;
+  }
+  #mapEdit textarea { min-height: 220px; resize: vertical; font-family: monospace; }
   #formwrap { flex: 1; overflow-y: auto; padding: 12px 16px; }
   .field { margin-bottom: 10px; }
   .field label {
@@ -163,7 +196,9 @@
       <div id="listpane">
         <div id="listhead">
           <input id="search" placeholder="搜索...">
+          <input id="searchKey" placeholder="筛选键..." class="hidden" style="flex:1;background:#12151c;border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:4px;">
           <button id="btnNew" title="新建">+</button>
+          <button id="btnAddKey" title="新建键" class="hidden" style="flex:0 0 auto;">+ 新建键</button>
         </div>
         <div id="listbody"></div>
         <div id="listfoot">
@@ -177,8 +212,13 @@
         <div id="edithead">
           <span class="ename" id="editName">—</span>
           <span class="spacer"></span>
-          <button id="btnSave">保存</button>
-          <button id="btnDel">删除</button>
+          <button id="btnSave" class="hidden">保存</button>
+          <button id="btnDel" class="hidden">删除</button>
+        </div>
+        <div id="mapEdit" class="hidden">
+          <div class="mkeylab">编辑键 <code id="mapKeyName"></code></div>
+          <textarea id="mapValue" placeholder="对象/数组值写 JSON 文本"></textarea>
+          <div id="mapScalar" class="hidden"></div>
         </div>
         <div id="formwrap"><div class="empty">选择左侧条目或新建</div></div>
         <div id="msgs"></div>
@@ -323,14 +363,24 @@
   function renderSidebar() {
     var sb = $("sidebar");
     sb.innerHTML = "";
-    // 分组：主清单在前（enabled），扩展页在后（disabled 置灰仍可点开查看）
-    var groups = {};
+    // M12.5 批4 路4C：分组按 p.group 动态（缺省 None → 「未分组」）。
+    // 保留 enabled 语义：禁用页置灰仍可点开查看（disabled 只置灰不拦点击）。
+    // 组序 = 页清单首次出现顺序；组内序 = 声明序。
+    var groups = [];
+    function groupOf(name) {
+      for (var i = 0; i < groups.length; i++) {
+        if (groups[i].name === name) return groups[i];
+      }
+      var g = { name: name, el: null };
+      groups.push(g);
+      return g;
+    }
     state.pages.forEach(function (p) {
-      var g = p.enabled ? "主页面" : "扩展页";
-      if (!groups[g]) {
+      var g = groupOf(p.group || "未分组");
+      if (!g.el) {
         var h = document.createElement("div");
-        h.className = "group"; h.textContent = g;
-        sb.appendChild(h); groups[g] = true;
+        h.className = "group"; h.textContent = g.name;
+        sb.appendChild(h); g.el = h;
       }
       var b = document.createElement("button");
       b.className = "page" + (p.enabled ? "" : " disabled");
@@ -341,13 +391,32 @@
     });
   }
 
-  /* ---------- 页面选择 → 列表 ---------- */
+  /* ---------- 页面选择 → 形态分支 ---------- */
+  function pageKind() {
+    // meta 未到前先读页清单登记值；meta 到后以 meta.page_kind 为准（后端
+    // 归一 list/map/object）；两者皆无 → 缺省 list（现行为默认形态）
+    if (state.meta && state.meta.page_kind) return state.meta.page_kind;
+    var p = null;
+    for (var i = 0; i < state.pages.length; i++) {
+      if (state.pages[i].page_id === state.page) { p = state.pages[i]; break; }
+    }
+    return (p && p.page_kind) || "list";
+  }
   function selectPage(pageId) {
     state.page = pageId;
     state.pageNo = 1; state.cur = null; state.isNew = false;
-    document.querySelectorAll("#sidebar .page").forEach(function (b) {
-      b.classList.toggle("active", b.dataset.page === pageId);
-    });
+    state.kind = null; state.whole = null; state.curKey = null;
+    state.meta = null;  // 切页清 meta，防旧页 meta 误配新页表单（路4C 竞态）
+    // M12.5 批4 路4C：按形态走不同数据流——meta 先到即知形态；
+    // 页清单登记 page_kind 可先行（obj/map 不等 meta 直接拉 whole）
+    var kind = pageKind();
+    if (kind === "object" || kind === "map") {
+      uiMode(kind);
+      loadWhole();
+      loadMeta(pageId);
+      return;
+    }
+    uiMode("list");
     loadMeta(pageId);
     loadList(pageId, 1);
     $("editName").textContent = "—";
@@ -363,6 +432,85 @@
       }
     });
   }
+  /* ---------- M12.5 批4 路4C：obj/map 形态整模块读写 ---------- */
+  function loadWhole() {
+    // GET /api/pages/{page}/whole → data = {ok, module, shape, data}
+    api("GET", "/api/pages/" + state.page + "/whole").then(function (j) {
+      if (j.ok && j.data) {
+        var shape = j.data.shape || pageKind();
+        state.whole = (j.data.data && typeof j.data.data === "object") ? j.data.data : {};
+        if (shape === "map") {
+          if (!state.kind) { state.kind = "map"; uiMode("map"); }
+          renderMapKeys();
+          if (state.curKey) openMapKey(state.curKey, true);
+          else $("formwrap").innerHTML = '<div class="empty">点击左侧键名编辑；「+ 新建键」添加</div>';
+        } else {
+          // object：整对象编辑（含无 meta.fields 的 __raw__ 兜底）
+          state.kind = "object";
+          if (state.meta && state.meta.page_kind !== "object") {
+            state.meta = null;  // meta 竞态兜底：whole 已到而 meta 是旧页
+            loadMeta(state.page);
+          }
+          state.cur = state.whole; state.isNew = false;
+          $("btnSave").classList.remove("hidden");
+          $("btnDel").classList.add("hidden");
+          renderObjForm();
+        }
+      } else if (j._status === 401) {
+        TOKEN = ""; localStorage.removeItem("editor_token"); showLogin("登录已失效");
+      } else {
+        var errs = (j.errors || []).map(function (e) { return e.message; }).join("；");
+        state.whole = null;
+        $("formwrap").innerHTML = '<div class="empty">' + (errs || "整模块加载失败") + "</div>";
+      }
+    });
+  }
+  function openMapKey(key, skipListRedraw) {
+    if (!state.whole || key == null) return;
+    state.curKey = key;
+    // 值从本地 whole 快照取（map 键空间小、单键 PUT 后已重拉，本地即权威）
+    var val = state.whole[key];
+    var isObj = (val !== null && typeof val === "object");
+    $("mapEdit").classList.remove("hidden");
+    $("formwrap").classList.add("hidden");
+    $("btnSave").classList.remove("hidden");
+    $("btnDel").classList.remove("hidden");
+    $("mapKeyName").textContent = key;
+    $("editName").textContent = key + "（键值）";
+    var ta = $("mapValue");
+    if (isObj) {
+      ta.style.display = "";
+      $("mapScalar").classList.add("hidden");
+      try { ta.value = JSON.stringify(val, null, 2); } catch (e) { ta.value = String(val); }
+    } else {
+      ta.style.display = "none";
+      $("mapScalar").classList.remove("hidden");
+      var inp = $("mapScalar");
+      // 复用输入框：类型切换时重建以正确换控件（select for bool）
+      inp.innerHTML = "";
+      var ctl;
+      if (typeof val === "boolean") {
+        ctl = document.createElement("select");
+        [["", "（空）"], ["true", "true"], ["false", "false"]].forEach(function (pair) {
+          var o = document.createElement("option");
+          o.value = pair[0]; o.textContent = pair[1];
+          ctl.appendChild(o);
+        });
+        ctl.value = (val === true || val === false) ? String(val) : "";
+      } else if (typeof val === "number") {
+        ctl = document.createElement("input");
+        ctl.type = "number";
+        ctl.value = String(val);
+      } else {
+        ctl = document.createElement("input");
+        ctl.type = "text";
+        ctl.value = (val === undefined || val === null) ? "" : String(val);
+      }
+      inp.appendChild(ctl);
+    }
+    if (!skipListRedraw) renderMapKeys();
+  }
+  /* ---------- 列表（list 形态既有流程） ---------- */
   function loadList(pageId, pageNo) {
     var q = $("search").value.trim();
     var url = "/api/pages/" + pageId + "?page_no=" + pageNo + "&size=" + state.size +
@@ -417,6 +565,121 @@
     }, 350);
   });
 
+  function uiMode(kind) {
+    // 三形态布局切换：list = 左列表全要素（搜索/新建/分页）；object =
+    // 隐藏左栏（单对象整页表单）；map = 左键列表（键筛选/新建键/键删除）
+    var isList = kind === "list";
+    var isMap = kind === "map";
+    state.kind = kind;
+    $("listpane").classList.toggle("hidden", !isList && !isMap);
+    $("listhead").classList.toggle("hidden", !isList && !isMap);
+    $("search").classList.toggle("hidden", !isList);
+    $("btnNew").classList.toggle("hidden", !isList);
+    $("searchKey").classList.toggle("hidden", !isMap);
+    $("btnAddKey").classList.toggle("hidden", !isMap);
+    $("listfoot").classList.toggle("hidden", !isList);
+    $("btnSave").classList.add("hidden");
+    $("btnDel").classList.add("hidden");
+    $("mapEdit").classList.add("hidden");
+    $("mapScalar").classList.add("hidden");
+    $("formwrap").classList.remove("hidden");
+    if (isList) {
+      $("mapValue").style.display = "";
+      $("formwrap").innerHTML = '<div class="empty">选择左侧条目或新建</div>';
+    }
+  }
+  function mapKeyFilter() {
+    // 新建键名合法性预检（键值空间约束前端先行提示——最终以服务端为准）
+    if (state.kind !== "map" || !state.whole) return;
+    var k = prompt("新键名（唯一；已存在则打开编辑）：", "");
+    if (k === null) return;
+    k = String(k).trim();
+    if (!k) { msg("键名不能为空", "err"); return; }
+    if (Object.prototype.hasOwnProperty.call(state.whole, k)) {
+      msg("键已存在，直接打开编辑", "warn");
+      openMapKey(k);
+      return;
+    }
+    // 空串值兜底开局（用户随后在编辑区填值再保存）
+    state.whole[k] = "";
+    state.curKey = k;
+    renderMapKeys();
+    openMapKey(k);
+  }
+  function mapSummary(v) {
+    // 键行摘要：obj/array → JSON 压缩（截 60）；标量 → 原文
+    if (v === null) return "null";
+    if (typeof v === "object") {
+      var s;
+      try { s = JSON.stringify(v); } catch (e) { s = String(v); }
+      if (s.length > 60) s = s.slice(0, 60) + "…";
+      return s;
+    }
+    return String(v);
+  }
+  function renderMapKeys() {
+    var lb = $("listbody");
+    lb.innerHTML = "";
+    var q = $("searchKey").value.trim();
+    var keys = [];
+    for (var k in state.whole) {
+      if (Object.prototype.hasOwnProperty.call(state.whole, k)) {
+        if (!q || String(k).indexOf(q) >= 0) keys.push(k);
+      }
+    }
+    keys.sort();
+    if (!keys.length) {
+      lb.innerHTML = '<div class="empty">' + (q ? "无匹配键" : "（空）点「+ 新建键」") + "</div>";
+    }
+    keys.forEach(function (k) {
+      var row = document.createElement("div");
+      row.className = "row mrow" + (state.curKey === k ? " active" : "");
+      var lk = document.createElement("span");
+      lk.className = "mkey"; lk.textContent = k;
+      var sum = document.createElement("span");
+      sum.className = "msum"; sum.textContent = mapSummary(state.whole[k]);
+      var del = document.createElement("button");
+      del.className = "mdel"; del.textContent = "删";
+      del.title = "删除键 " + k;
+      del.addEventListener("click", function (ev) {
+        ev.stopPropagation();
+        delMapKeyRow(k);
+      });
+      row.appendChild(lk); row.appendChild(sum); row.appendChild(del);
+      row.addEventListener("click", function () { openMapKey(k); });
+      lb.appendChild(row);
+    });
+  }
+  $("searchKey").addEventListener("input", function () {
+    if (state.kind === "map") renderMapKeys();
+  });
+  $("btnAddKey").addEventListener("click", mapKeyFilter);
+  function renderObjForm() {
+    // object 形态整对象表单：渲染 meta.fields（renderFields 通用）+ __raw__ 兜底
+    $("editName").textContent = state.page + "（整对象）";
+    var fw = $("formwrap");
+    fw.innerHTML = "";
+    var fields = (state.meta && state.meta.fields) || [];
+    if (!fields.length) {
+      fw.innerHTML = '<div class="empty">该页暂无字段元数据——可展开下方原始 JSON 编辑</div>';
+    }
+    renderFields(fw, state.cur || {}, fields);
+    // 原始 JSON 折叠区（字段元数据缺失/扩展字段兜底查看）
+    var pre = document.createElement("details");
+    var sum = document.createElement("summary");
+    sum.textContent = "原始 JSON（仅高级编辑；改动才覆盖表单）";
+    pre.appendChild(sum);
+    var ta = document.createElement("textarea");
+    ta.style.minHeight = "200px"; ta.dataset.field = "__raw__";
+    var rawInit = JSON.stringify(state.cur || {}, null, 2);
+    ta.value = rawInit;
+    ta._rawInit = rawInit;
+    ta.addEventListener("input", function () {
+      ta._rawDirty = (ta.value !== ta._rawInit);
+    });
+    pre.appendChild(ta);
+    fw.appendChild(pre);
+  }
   /* ---------- 条目打开 / 新建 / 表单 ---------- */
   function openItem(id) {
     api("GET", "/api/pages/" + state.page + "/" + encodeURIComponent(id))
@@ -440,16 +703,10 @@
     if (typeof v === "object") return JSON.stringify(v);
     return v;
   }
-  function renderForm() {
-    if (!state.cur) return;
-    $("editName").textContent = (state.isNew ? "新建 · " : "") +
-      (state.cur.name || state.cur.id || "未命名");
-    var fw = $("formwrap");
-    fw.innerHTML = "";
-    var fields = (state.meta && state.meta.fields) || [];
-    if (!fields.length) {
-      fw.innerHTML = '<div class="empty">该页暂无字段元数据（field_meta 未注入）——可查看原始 JSON</div>';
-    }
+  function renderFields(container, data, fields) {
+    // M12.5 批4 路4C：renderForm 字段渲染抽出的通用函数（list 条目表单 /
+    // object 整对象表单共用）——按 field type 渲染 input/select/textarea JSON
+    container.appendChild(makeRawDetails(data));
     fields.forEach(function (f) {
       var div = document.createElement("div");
       div.className = "field";
@@ -488,7 +745,7 @@
         input.type = "text";
       }
       input.dataset.field = f.name;
-      var fv = fieldValue(state.cur, f.name, f);
+      var fv = fieldValue(data, f.name, f);
       if (input.tagName === "SELECT" && fv !== "" && input._enumValues &&
           input._enumValues.indexOf(fv) < 0) {
         // 原值不在枚举 → 追加「原值（未登记）」选项并选中（防静默清空）
@@ -504,25 +761,38 @@
         hint.className = "hint"; hint.textContent = "引用：" + f.ref_target;
         div.appendChild(hint);
       }
-      fw.appendChild(div);
+      container.appendChild(div);
     });
-    // 原始 JSON 折叠区（字段元数据缺失/扩展字段兜底查看）
+  }
+  function makeRawDetails(data) {
+    // 原始 JSON 折叠区构造（__raw__ 兜底：字段元数据缺失/扩展字段查看；
+    // 改动才覆盖表单——UI 检查修复 2026-09-03：防旧快照吞字段修改）
     var pre = document.createElement("details");
     var sum = document.createElement("summary");
     sum.textContent = "原始 JSON（仅高级编辑；改动才覆盖表单）";
     pre.appendChild(sum);
     var ta = document.createElement("textarea");
     ta.style.minHeight = "200px"; ta.dataset.field = "__raw__";
-    var rawInit = JSON.stringify(state.cur, null, 2);
+    var rawInit = JSON.stringify(data, null, 2);
     ta.value = rawInit;
-    ta._rawInit = rawInit;  // 初始快照（对比是否被用户改过——UI 检查修复 2026-09-03：
-                            // 原实现 collectForm 无条件用 raw 覆盖表单 → 任何字段修改
-                            // 都被旧快照吞掉（保存假成功真丢改））
+    ta._rawInit = rawInit;
     ta.addEventListener("input", function () {
       ta._rawDirty = (ta.value !== ta._rawInit);
     });
     pre.appendChild(ta);
-    fw.appendChild(pre);
+    return pre;
+  }
+  function renderForm() {
+    if (!state.cur) return;
+    $("editName").textContent = (state.isNew ? "新建 · " : "") +
+      (state.cur.name || state.cur.id || "未命名");
+    var fw = $("formwrap");
+    fw.innerHTML = "";
+    var fields = (state.meta && state.meta.fields) || [];
+    if (!fields.length) {
+      fw.innerHTML = '<div class="empty">该页暂无字段元数据（field_meta 未注入）——可查看原始 JSON</div>';
+    }
+    renderFields(fw, state.cur, fields);
   }
   function collectForm() {
     if (!state.meta) return Object.assign({}, state.cur);
@@ -549,8 +819,114 @@
   }
 
   /* ---------- 保存 / 删除 ---------- */
-  $("btnSave").addEventListener("click", function () {
-    if (!state.page || !state.cur) return;
+  /* map 键值行内删除（renderMapKeys 键行「删」按钮 / btnDel 共用路径；
+     删除后重拉 whole 而非本地 splice——单键写盘后键集以服务端为准） */
+  function delMapKeyRow(k) {
+    if (!k) return;
+    if (!confirm("确定删除键 " + k + " ？")) return;
+    api("DELETE", "/api/pages/" + state.page + "/map/" + encodeURIComponent(k))
+      .then(function (dj) {
+        if (dj.ok) {
+          msg("已删除键 " + k, "ok");
+          if (state.curKey === k) {
+            state.curKey = null;
+            $("mapEdit").classList.add("hidden");
+            $("mapScalar").classList.add("hidden");
+            $("btnSave").classList.add("hidden");
+            $("btnDel").classList.add("hidden");
+            $("formwrap").classList.remove("hidden");
+            $("editName").textContent = state.page;
+            $("formwrap").innerHTML = '<div class="empty">点击左侧键名编辑；「+ 新建键」添加</div>';
+          }
+          loadWhole();
+        } else {
+          var errs = (dj.errors || []).map(function (e) { return e.message; }).join("；");
+          msg(errs || "删除失败", "err");
+        }
+      });
+  }
+  /* map 键值删除（renderMapKeys 键行「删」/ btnDel 共用；删除后重拉
+     whole 而非本地 splice——单键写盘后键集以服务端为准） */
+  function delMapKeyRow(k) {
+    if (!k) return;
+    if (!confirm("确定删除键 " + k + " ？")) return;
+    api("DELETE", "/api/pages/" + state.page + "/map/" + encodeURIComponent(k))
+      .then(function (dj) {
+        if (dj.ok) {
+          msg("已删除键 " + k, "ok");
+          if (state.curKey === k) {
+            state.curKey = null;
+            $("mapEdit").classList.add("hidden");
+            $("mapScalar").classList.add("hidden");
+            $("btnSave").classList.add("hidden");
+            $("btnDel").classList.add("hidden");
+            $("formwrap").classList.remove("hidden");
+            $("editName").textContent = state.page;
+            $("formwrap").innerHTML = '<div class="empty">点击左侧键名编辑；「+ 新建键」添加</div>';
+          }
+          loadWhole();
+        } else {
+          var errs = (dj.errors || []).map(function (e) { return e.message; }).join("；");
+          msg(errs || "删除失败", "err");
+        }
+      });
+  }
+  function saveObj() {
+    // object 整对象保存：collectForm 收集顶层 dict → PUT /whole
+    var body = collectForm();
+    api("PUT", "/api/pages/" + state.page + "/whole", body).then(function (j) {
+      if (j.ok) {
+        msg("已保存 " + state.page, "ok");
+        loadWhole();
+      } else if (j._status === 409) {
+        msg("版本冲突：内容已被他人修改，请刷新后重试", "err");
+      } else {
+        var errs = (j.errors || []).map(function (e) { return e.message; }).join("；");
+        msg(errs || "保存失败", "err");
+      }
+    });
+  }
+  function saveMapKey() {
+    // map 单键保存：按控件类型收集值 → PUT /map/{key} body {value}
+    if (!state.curKey) return;
+    var ta = $("mapValue");
+    var scalar = $("mapScalar");
+    var ctl = scalar.querySelector("input,select");
+    var value;
+    if (ta.style.display !== "none") {
+      var text = ta.value.trim();
+      if (!text) {
+        msg("值不能为空 JSON", "err");
+        return;
+      }
+      try { value = JSON.parse(text); }
+      catch (e) { msg("值 JSON 解析失败：" + e.message, "err"); return; }
+    } else if (ctl && ctl.type === "number") {
+      value = ctl.value === "" ? "" : Number(ctl.value);
+    } else if (ctl && ctl.tagName === "SELECT") {
+      value = ctl.value === "" ? "" : (ctl.value === "true");
+    } else {
+      value = ctl ? ctl.value : "";
+    }
+    api("PUT", "/api/pages/" + state.page + "/map/" + encodeURIComponent(state.curKey),
+        { value: value }).then(function (j) {
+      if (j.ok) {
+        msg("已保存键 " + state.curKey, "ok");
+        state.whole[state.curKey] = value;
+        renderMapKeys();
+      } else if (j._status === 409) {
+        msg("版本冲突：内容已被他人修改，请刷新后重试", "err");
+      } else {
+        var errs = (j.errors || []).map(function (e) { return e.message; }).join("；");
+        msg(errs || "保存失败", "err");
+      }
+    });
+  }
+  function onSave() {
+    if (!state.page) return;
+    if (state.kind === "object") { saveObj(); return; }
+    if (state.kind === "map") { saveMapKey(); return; }
+    if (!state.cur) return;
     var body = collectForm();
     if (state.isNew) {
       // 用户手填 id → 保留（后端查重）；空 id → 删除触发自动生成 类型_序号
@@ -582,9 +958,21 @@
           }
         });
     }
-  });
-  $("btnDel").addEventListener("click", function () {
-    if (!state.page || !state.cur || state.isNew) return;
+  }
+  function onDel() {
+    if (!state.page) return;
+    if (state.kind === "map") {
+      // map 删除当前选中键（行内「删」按钮同路径；btnDel 复用）
+      if (!state.curKey) return;
+      delMapKeyRow(state.curKey);
+      return;
+    }
+    if (state.kind === "object") {
+      // object 形态无删除（整对象不删）
+      msg("整对象页不支持删除", "warn");
+      return;
+    }
+    if (!state.cur || state.isNew) return;
     if (!confirm("确定删除 " + state.cur.id + "？（级联清理引用）")) return;
     api("DELETE", "/api/pages/" + state.page + "/" + encodeURIComponent(state.cur.id))
       .then(function (j) {
@@ -599,7 +987,34 @@
           msg(errs || "删除失败", "err");
         }
       });
-  });
+  }
+  /* map 键值行内删除（renderMapKeys 键行「删」按钮独立路径；行删除后
+     重拉 whole 而非本地 splice——单键写盘后键序/键集以服务端为准） */
+  function delMapKeyRow(k) {
+    if (!confirm("确定删除键 " + k + " ？")) return;
+    api("DELETE", "/api/pages/" + state.page + "/map/" + encodeURIComponent(k))
+      .then(function (dj) {
+        if (dj.ok) {
+          msg("已删除键 " + k, "ok");
+          if (state.curKey === k) {
+            state.curKey = null;
+            $("mapEdit").classList.add("hidden");
+            $("mapScalar").classList.add("hidden");
+            $("btnSave").classList.add("hidden");
+            $("btnDel").classList.add("hidden");
+            $("formwrap").classList.remove("hidden");
+            $("editName").textContent = state.page;
+            $("formwrap").innerHTML = '<div class="empty">点击左侧键名编辑；「+ 新建键」添加</div>';
+          }
+          loadWhole();
+        } else {
+          var errs = (dj.errors || []).map(function (e) { return e.message; }).join("；");
+          msg(errs || "删除失败", "err");
+        }
+      });
+  }
+  $("btnSave").addEventListener("click", onSave);
+  $("btnDel").addEventListener("click", onDel);
 
   /* ---------- 启动 ---------- */
   if (TOKEN) {

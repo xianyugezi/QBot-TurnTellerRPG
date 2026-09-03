@@ -211,7 +211,8 @@ def create_app(state: Optional[Any] = None) -> Any:
         r = auth.login(owner, password)
         if not r.get("ok"):
             reason = str(r.get("reason") or "")
-            code = 423 if reason == "locked" else 401
+            # not_setup：428（前端识别后自动转 setup 引导；区别于密码错 401）
+            code = 428 if reason == "not_setup" else (423 if reason == "locked" else 401)
             detail: Dict[str, Any] = {"ok": False, "errors": [{
                 "level": "red", "code": reason,
                 "message": str(r.get("message") or "登录失败")}]}
@@ -376,8 +377,17 @@ def create_app(state: Optional[Any] = None) -> Any:
         apply_res = pages_crud.apply_delete_to_entries(page, item_id, ctx)
         if not apply_res.get("ok"):
             raise _HTTPException(status_code=404, detail=apply_res)
-        wr = atomic_store.write_modules(
-            content_dir, {apply_res["module"]: apply_res["entries"]})
+        # 级联模块（maps/dungeon 等被 delete_page_item 原地改过）→ 一起原子写盘
+        # （UI 检查修复 2026-09-03：原实现只写当前模块 → 删怪物后 maps 残留悬空
+        # 引用 → 内容包重载红拦阻断）
+        module_files: Dict[str, Any] = {apply_res["module"]: apply_res["entries"]}
+        for c in del_res.get("cascades", []):
+            cm = c.get("module")
+            if cm and cm != apply_res["module"] and cm not in module_files:
+                raw_list = ctx.get("modules_raw", {}).get(cm)
+                if isinstance(raw_list, list):
+                    module_files[cm] = raw_list
+        wr = atomic_store.write_modules(content_dir, module_files)
         if not wr.get("ok"):
             return {"ok": False, "errors": wr.get("errors") or [{
                 "level": "red", "code": "write_failed", "message": "写盘失败"}]}
@@ -421,12 +431,13 @@ def create_app(state: Optional[Any] = None) -> Any:
         """数据包管理：全部内容包 + 启用状态。"""
         _require_auth(state, authorization)
         reg = _require_state(state, "registry")
-        manifest = reg.manifest
-        info = {}
-        if manifest is not None:
-            info = {"pack_id": getattr(manifest, "pack_id", None)
-                    or getattr(manifest, "id", None),
-                    "version": getattr(manifest, "version", None)}
+        info = {
+            # pack_id 在 Registry.pack_id（目录名）；manifest 只含 name/version——
+            # UI 检查修复 2026-09-03：原读 manifest.pack_id 恒 null
+            "pack_id": getattr(reg, "pack_id", None) or "",
+            "version": getattr(reg.manifest, "version", None) if reg.manifest else None,
+            "name": getattr(reg.manifest, "name", None) if reg.manifest else None,
+        }
         return {"ok": True, "data": {"active": info,
                                      "generation": getattr(reg, "generation", None)}}
 

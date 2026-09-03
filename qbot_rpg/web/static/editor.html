@@ -205,7 +205,17 @@
     return fetch(path, { method: method, headers: headers,
                          body: body ? JSON.stringify(body) : undefined })
       .then(function (r) { return r.json().catch(function () { return {}; })
-          .then(function (j) { j._status = r.status; return j; }); });
+          .then(function (j) {
+            j._status = r.status;
+            // FastAPI HTTPException 把 detail 包在 {"detail": {...}}——
+            // 解包让错误处理统一读 j.errors/j.ok（UI 检查修复 2026-09-03）
+            if (j.detail && typeof j.detail === "object" && !j.ok) {
+              var d = j.detail;
+              d._status = j._status;
+              return d;
+            }
+            return j;
+          }); });
   }
 
   function msg(text, cls) {
@@ -242,12 +252,13 @@
           localStorage.setItem("editor_token", TOKEN);
           showApp();
         } else {
-          // 未设置密码 → 尝试 setup
-          var errs = (j.errors || []).map(function (e) { return e.message; }).join("；");
-          if (j._status === 401 && errs.indexOf("未设置") >= 0) {
-            // 走 setup（同表单二次提交）
+          // 428 = 未设密 → 自动转首次设密（同表单二次提交；UI 检查修复
+          // 2026-09-03：原判断 errs 含「未设置」永不命中——后端未设密
+          // 返回 wrong_password 导致 setup 引导断链）
+          if (j._status === 428) {
             setupOwner(owner, pass);
           } else {
+            var errs = (j.errors || []).map(function (e) { return e.message; }).join("；");
             $("loginErr").textContent = errs || ("登录失败（" + j._status + "）");
             if (j._status === 423) {
               $("loginHint").textContent = "失败次数过多，已锁定 15 分钟";
@@ -260,11 +271,23 @@
     api("POST", "/api/auth/setup", { qq_id: owner, password: pass })
       .then(function (j) {
         if (j.ok) {
-          $("loginHint").textContent = "密码已设置，请重新登录";
-          $("loginErr").textContent = "";
+          // 设密成功 → 自动登录（用户刚输过密码，无需二次输入；UI 检查优化）
+          api("POST", "/api/auth/login", { qq_id: owner, password: pass })
+            .then(function (lj) {
+              if (lj.ok && lj.data && lj.data.token) {
+                TOKEN = lj.data.token;
+                localStorage.setItem("editor_token", TOKEN);
+                showApp();
+              } else {
+                $("loginHint").textContent = "密码已设置，请重新登录";
+                $("loginErr").textContent = "";
+              }
+            });
         } else {
           var errs = (j.errors || []).map(function (e) { return e.message; }).join("；");
           $("loginErr").textContent = errs || "设置失败";
+          // 弱密码提示
+          if (j._status === 400) $("loginHint").textContent = "密码需 ≥8 位且含字母和数字";
         }
       });
   }
@@ -444,6 +467,9 @@
           o.value = e; o.textContent = e;
           input.appendChild(o);
         });
+        // 数据值不在枚举（内容-元数据不一致）→ 动态追加原值选项，
+        // 防 select 空选导致保存时静默清空该字段（UI 检查修复 2026-09-03）
+        input._enumValues = (f.enum || []).slice();
       } else if (f.type === "list" || f.type === "object") {
         input = document.createElement("textarea");
         input.dataset.json = "1";
@@ -462,7 +488,15 @@
         input.type = "text";
       }
       input.dataset.field = f.name;
-      input.value = fieldValue(state.cur, f.name, f);
+      var fv = fieldValue(state.cur, f.name, f);
+      if (input.tagName === "SELECT" && fv !== "" && input._enumValues &&
+          input._enumValues.indexOf(fv) < 0) {
+        // 原值不在枚举 → 追加「原值（未登记）」选项并选中（防静默清空）
+        var keep = document.createElement("option");
+        keep.value = fv; keep.textContent = fv + "（未登记）";
+        input.appendChild(keep);
+      }
+      input.value = fv;
       div.appendChild(lab);
       div.appendChild(input);
       if (f.ref_target) {
@@ -475,11 +509,18 @@
     // 原始 JSON 折叠区（字段元数据缺失/扩展字段兜底查看）
     var pre = document.createElement("details");
     var sum = document.createElement("summary");
-    sum.textContent = "原始 JSON";
+    sum.textContent = "原始 JSON（仅高级编辑；改动才覆盖表单）";
     pre.appendChild(sum);
     var ta = document.createElement("textarea");
     ta.style.minHeight = "200px"; ta.dataset.field = "__raw__";
-    ta.value = JSON.stringify(state.cur, null, 2);
+    var rawInit = JSON.stringify(state.cur, null, 2);
+    ta.value = rawInit;
+    ta._rawInit = rawInit;  // 初始快照（对比是否被用户改过——UI 检查修复 2026-09-03：
+                            // 原实现 collectForm 无条件用 raw 覆盖表单 → 任何字段修改
+                            // 都被旧快照吞掉（保存假成功真丢改））
+    ta.addEventListener("input", function () {
+      ta._rawDirty = (ta.value !== ta._rawInit);
+    });
     pre.appendChild(ta);
     fw.appendChild(pre);
   }
@@ -499,9 +540,9 @@
         out[name] = v;
       }
     });
-    // 原始 JSON 覆盖（若用户编辑了原始区）
+    // 原始 JSON 覆盖（仅用户实际改动过 raw 区才覆盖表单收集——UI 检查修复）
     var raw = document.querySelector('#formwrap [data-field="__raw__"]');
-    if (raw) {
+    if (raw && raw._rawDirty) {
       try { out = JSON.parse(raw.value); } catch (e) { /* 忽略原始区语法错 */ }
     }
     return out;
@@ -512,7 +553,9 @@
     if (!state.page || !state.cur) return;
     var body = collectForm();
     if (state.isNew) {
-      delete body.id;
+      // 用户手填 id → 保留（后端查重）；空 id → 删除触发自动生成 类型_序号
+      // （UI 检查修复 2026-09-03：原无条件 delete body.id → 手填 id 被覆盖）
+      if (!body.id || !String(body.id).trim()) delete body.id;
       api("POST", "/api/pages/" + state.page, body).then(function (j) {
         if (j.ok) {
           msg("已保存 " + (j.data.item && j.data.item.id), "ok");

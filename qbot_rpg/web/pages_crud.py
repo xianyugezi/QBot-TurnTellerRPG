@@ -52,6 +52,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any, Dict, List, Mapping, MutableMapping, Optional, Sequence
 
 # =============================================================================
@@ -497,6 +498,28 @@ def delete_page_item(
                     cascades.append({"module": "maps", "item_id": m.get("id"),
                                      "removed_ref": {"field": "gate_guard", "value": item_id}})
         # 怪物自身 drops 随条目移除（无需额外级联）
+        # 任务/对话条件参数引用保护（UI 检查 2026-09-03：删怪会静默破坏任务击杀
+        # 计数条件 quest.conditions[].param 与 npc 对话/交互 condition.param——
+        # 这些不是契约级联项（级联会误删任务条件），正确语义 = 阻止删除并提示引用方）
+        refs_found: List[str] = []
+        # quest/npc 模块（注释说明引用形态：conditions[].param / 对话交互 condition.param）
+        for mod_name in ("quest", "npc"):
+            mod_data = raw.get(mod_name)
+            if not isinstance(mod_data, list):
+                continue
+            blob = json.dumps(mod_data, ensure_ascii=False)
+            # param 值精确匹配（防子串误伤）
+            if f'"param": "{item_id}"' in blob:
+                for entry in mod_data:
+                    if not isinstance(entry, MutableMapping):
+                        continue
+                    if f'"param": "{item_id}"' in json.dumps(entry, ensure_ascii=False):
+                        refs_found.append(f"{mod_name}:{entry.get('id')}")
+        if refs_found:
+            return {"ok": False, "errors": [_red(
+                "in_use", "id",
+                f"『{item_id}』被 {len(refs_found)} 处条件引用（{'、'.join(refs_found[:5])}），"
+                "请先解除引用再删除")]} 
     elif page == "shop":
         # 删商店条目本身（shop 是 list 条目）
         pass

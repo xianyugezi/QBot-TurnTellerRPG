@@ -284,6 +284,11 @@ class AuthStore:
           token 立即失效（AU-03/TC-18）；{ok: True, token, expires_at}
         """
         owner = str(owner_id)
+        # 未设密 → not_setup（前端首次引导：自动转 setup；区别于密码错 401——
+        # UI 检查发现 2026-09-03：原实现未设密走 wrong_password → 前端永远无法
+        # 触发首次设密引导，setup API 存在但界面断链）
+        if not self.password_set:
+            return {_R_OK: False, _R_REASON: "not_setup"}
         # 锁定直接拒（AU-04，TC-17「第 6 次登录被锁」）
         if self._is_locked(owner):
             return {

@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "pages": [
+    { "page_id": "skill",      "title": "技能",   "icon": "⚔️", "module_file": "skills.json",  "meta_source": "meta/skill",          "enabled": true,  "validator": "skill" },
+    { "page_id": "job",        "title": "职业",   "icon": "🎖️", "module_file": "jobs.json",    "meta_source": "meta/job",            "enabled": true,  "validator": "job" },
+    { "page_id": "monster",    "title": "怪物",   "icon": "👹", "module_file": "enemies.json", "meta_source": "meta/monster",         "enabled": true,  "validator": "monster", "tabs": ["基本信息", "属性", "弱点", "PV", "抗性", "行动", "特殊行动", "掉落", "图鉴", "AI×6"] },
+    { "page_id": "map",        "title": "地图",   "icon": "🗺️", "module_file": "maps.json",    "meta_source": "meta/map",            "enabled": true,  "validator": "map",     "tabs": ["基础", "通道", "怪物", "NPC"] },
+    { "page_id": "quest",      "title": "任务",   "icon": "📜", "module_file": "quest.json",  "meta_source": "meta/quest",          "enabled": true,  "validator": "quest" },
+    { "page_id": "shop",       "title": "商店",   "icon": "🏪", "module_file": "shop.json",    "meta_source": "meta/shop",           "enabled": true,  "validator": "shop" },
+    { "page_id": "npc",        "title": "NPC",    "icon": "🧙", "module_file": "npc.json",     "meta_source": "meta/npc",            "enabled": true,  "validator": "npc",     "tabs": ["基础", "地图挂点", "对话", "条件", "交互", "任务", "商店", "情报", "教学", "发牌"] },
+    { "page_id": "checkin",    "title": "签到",   "icon": "📅", "module_file": "checkin.json", "meta_source": "meta/checkin",         "enabled": true,  "validator": "checkin", "tabs": ["基础", "周期", "每日奖励", "连签奖励", "月度累计", "补签", "预览"] },
+    { "page_id": "ai",         "title": "AI",     "icon": "🤖", "module_file": "enemies.json", "meta_source": "meta/ai",              "enabled": true,  "validator": "ai",      "extends": "monster", "tabs": ["行动表", "条件行动", "状态机", "阶段", "连招链", "换区"] },
+    { "page_id": "hidden",     "title": "隐藏要素", "icon": "🔮", "module_file": "maps.json",  "meta_source": "meta/hidden",         "enabled": true,  "validator": "hidden",  "tabs": ["隐藏BOSS", "隐藏任务", "彩蛋"] },
+    { "page_id": "env_event",  "title": "环境事件", "icon": "🌧️", "module_file": "settings.json", "meta_source": "meta/env_event",     "enabled": true,  "validator": "env_event" },
+    { "page_id": "log_card",   "title": "日志卡片", "icon": "📔", "module_file": "settings.json", "meta_source": "meta/log_card",      "enabled": true,  "validator": "log_card" }
+  ]
+}

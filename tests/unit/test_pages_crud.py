@@ -1,0 +1,315 @@
+"""编辑器六页 CRUD 纯逻辑层单测（tests/unit/test_pages_crud.py · M12 批1 路1C）。
+
+依据：docs/细化/细化_5a_编辑器契约.md §6.3（L176-181：列表/详情/新建/更新/删除/
+validate 语义）+ SV-03 红拦 5 类（L126）/ SV-04 黄提示（L127）+ TC-01 ID 自动生成
+（L214 skill_0001）+ 级联删除（L180）。
+
+覆盖：
+  - list_page_items：分页/搜索（q）/排序（sort/-sort）
+  - get_page_item：单条详情 + 引用字段中文名 refs
+  - create_page_item：ID 自动生成 `类型_序号` 不冲突 / 重复 id 拒绝
+  - update_page_item：版本冲突 409 / 合并更新 / id 不可改
+  - delete_page_item：级联（怪物→地图 monsters/gate_guard）+ cascades 清单
+  - validate_page_item：红（负数/类型/结构 min>max）黄（引用未登记/名字长）分级
+
+铁律：零 NoneBot import；零定时器/零睡眠；纯函数确定性；无 emoji；
+      新测试文件 ruff E501 零豁免（行宽 ≤100）。
+"""
+from __future__ import annotations
+
+from qbot_rpg.web.pages_crud import (
+    PAGE_MODULE,
+    apply_delete_to_entries,
+    create_page_item,
+    delete_page_item,
+    get_page_item,
+    list_page_items,
+    update_page_item,
+    validate_page_item,
+)
+
+# =============================================================================
+# 假 modules_raw（dict 直填，模拟 loader 解析产物：顶层 list + id/name）
+# =============================================================================
+def make_ctx(**over):
+    """CRUD ctx：modules_raw 是可变 dict（delete 级联会原地改它）。"""
+    ctx = {
+        "modules_raw": {
+            "enemies": [
+                {"id": "gust_wolf", "name": "风狼", "hp": 90, "atk": 12},
+                {"id": "ridge_cub", "name": "脊冢幼兽", "hp": 90, "atk": 8},
+            ],
+            "maps": [
+                {"id": "forest", "name": "风语森林", "monsters": [
+                    {"enemy": "gust_wolf"}, {"enemy": "ridge_cub"}],
+                 "exits": {"north": {"to": "cave"}}},
+                {"id": "cave", "name": "洞穴", "monsters": [{"enemy": "gust_wolf"}],
+                 "gate_guard": "gust_wolf"},
+            ],
+            "skills": [
+                {"id": "slash", "name": "脊斩", "job_restrict": ["ridge_blade"]},
+            ],
+            "jobs": [{"id": "ridge_blade", "name": "脊剑士"}],
+            "quest": [{"id": "q1", "name": "讨伐风狼", "reward": [{"item": "potion"}]}],
+            "shop": [{"id": "s1", "name": "杂货店", "items": [{"item": "potion"}]}],
+            "items": [{"id": "potion", "name": "药水"}],
+        },
+    }
+    ctx.update(over)
+    return ctx
+
+
+# =============================================================================
+# 列表：分页/搜索/排序
+# =============================================================================
+def test_list_all_pages_default():
+    """列表无参 → 全量条目（total 正确）。"""
+    out = list_page_items("monster", make_ctx())
+    assert out["ok"] is True
+    assert out["total"] == 2
+    assert [i["id"] for i in out["items"]] == ["gust_wolf", "ridge_cub"]
+
+
+def test_list_search_q():
+    """q=脊 → 名字匹配（子串，大小写不敏感）。"""
+    out = list_page_items("monster", make_ctx(), q="脊")
+    assert out["total"] == 1
+    assert out["items"][0]["id"] == "ridge_cub"
+
+
+def test_list_pagination():
+    """page/size 分页切片。"""
+    out = list_page_items("monster", make_ctx(), page_no=2, size=1)
+    assert out["total"] == 2
+    assert [i["id"] for i in out["items"]] == ["ridge_cub"]
+
+
+def test_list_sort_desc():
+    """sort=-atk → 攻击倒序（数值）。"""
+    out = list_page_items("monster", make_ctx(), sort="-atk")
+    assert [i["id"] for i in out["items"]] == ["gust_wolf", "ridge_cub"]
+
+
+def test_list_unknown_page():
+    """未知 page → ok:false + red 404。"""
+    out = list_page_items("ghost", make_ctx())
+    assert out["ok"] is False
+    assert out["errors"][0]["level"] == "red"
+
+
+def test_quest_module_is_quest_singular():
+    """契约 P-06 quests.json 笔误修正：quest 页 module=quest（loader 登记）。"""
+    assert PAGE_MODULE["quest"] == "quest"
+
+
+# =============================================================================
+# 详情：引用中文名
+# =============================================================================
+def test_get_item_with_refs():
+    """map 详情 monsters 引用 → refs 中文名解析（monsters 行 enemy 键 → monster 引用）。"""
+    out = get_page_item("map", "forest", make_ctx())
+    assert out["ok"] is True
+    assert out["item"]["id"] == "forest"
+    # monsters 列表内 enemy 引用（dict 行）→ refs["monster"] 中文名
+    assert out["refs"].get("monster", {}).get("gust_wolf") == "风狼"
+    assert out["refs"].get("monster", {}).get("ridge_cub") == "脊冢幼兽"
+    # exits 通道 to 引用（非 refs 扫描范围，但详情本身完整）
+    assert out["item"]["exits"]["north"]["to"] == "cave"
+
+
+def test_get_item_not_found():
+    """条目不存在 → 404 red。"""
+    out = get_page_item("monster", "ghost", make_ctx())
+    assert out["ok"] is False
+    assert out["errors"][0]["code"] == "not_found"
+
+
+# =============================================================================
+# 新建：ID 生成
+# =============================================================================
+def test_create_auto_id():
+    """无 id → 自动生成 monster_0001（类型_序号，4 位零填充）。"""
+    ctx = make_ctx()
+    out = create_page_item("monster", {"name": "新怪", "hp": 50}, ctx)
+    assert out["ok"] is True
+    assert out["id"] == "monster_0001"
+    # 再次生成 → 序号递增（条目数 3）
+    out2 = create_page_item("monster", {"name": "又一只", "hp": 40}, ctx)
+    assert out2["id"] == "monster_0002"
+
+
+def test_create_existing_prefix_continues():
+    """已有 monster_0005 → 新生成 monster_0006（取最大序号 + 1）。"""
+    ctx = make_ctx()
+    ctx["modules_raw"]["enemies"].append(
+        {"id": "monster_0005", "name": "旧序号", "hp": 1})
+    out = create_page_item("monster", {"name": "新怪", "hp": 2}, ctx)
+    assert out["id"] == "monster_0006"
+
+
+def test_create_dup_id_rejected():
+    """显式 id 已存在 → red dup_id。"""
+    out = create_page_item("monster", {"id": "gust_wolf", "name": "重复"}, make_ctx())
+    assert out["ok"] is False
+    assert out["errors"][0]["code"] == "dup_id"
+
+
+def test_create_sets_version_zero():
+    """新建条目版本簿置 0（编辑锁基线）。"""
+    ctx = make_ctx()
+    out = create_page_item("monster", {"name": "新怪", "hp": 1}, ctx)
+    assert ctx["_page_versions"]["enemies"][out["id"]] == 0
+
+
+# =============================================================================
+# 更新：版本冲突 409
+# =============================================================================
+def test_update_ok_and_version_bump():
+    """更新成功 → 合并字段 + 版本自增。"""
+    ctx = make_ctx()
+    out = update_page_item("monster", "gust_wolf",
+                           {"hp": 120}, base_version=0, ctx=ctx)
+    assert out["ok"] is True
+    assert out["item"]["hp"] == 120
+    assert out["item"]["name"] == "风狼"  # 未提交字段保留
+    assert out["version"] == 1
+
+
+def test_update_version_conflict_409():
+    """base_version 与当前不符 → 409（code=409 + red version_conflict）。"""
+    ctx = make_ctx()
+    # 先更新一次（版本 0→1）
+    update_page_item("monster", "gust_wolf", {"hp": 120}, base_version=0, ctx=ctx)
+    # 旧 base_version=0 再来 → 冲突
+    out = update_page_item("monster", "gust_wolf", {"hp": 999}, base_version=0, ctx=ctx)
+    assert out["ok"] is False
+    assert out.get("code") == 409
+    assert out["errors"][0]["code"] == "version_conflict"
+
+
+def test_update_id_immutable():
+    """id 字段不可改（更新忽略 id）。"""
+    ctx = make_ctx()
+    out = update_page_item("monster", "gust_wolf",
+                           {"id": "hacked"}, base_version=0, ctx=ctx)
+    assert out["ok"] is True
+    assert out["item"]["id"] == "gust_wolf"
+
+
+def test_update_not_found():
+    """条目不存在 → 404。"""
+    out = update_page_item("monster", "ghost", {"hp": 1}, base_version=0, ctx=make_ctx())
+    assert out["ok"] is False
+
+
+# =============================================================================
+# 删除：级联
+# =============================================================================
+def test_delete_monster_cascades_maps():
+    """删怪物 gust_wolf → maps monsters[] 移除 + gate_guard 清空，cascades 齐。"""
+    ctx = make_ctx()
+    out = delete_page_item("monster", "gust_wolf", ctx)
+    assert out["ok"] is True
+    assert out["id"] == "gust_wolf"
+    # forest monsters 移除 gust_wolf 保留 ridge_cub
+    forest = ctx["modules_raw"]["maps"][0]
+    assert [m["enemy"] for m in forest["monsters"]] == ["ridge_cub"]
+    # cave gate_guard 清空 + monsters 移除
+    cave = ctx["modules_raw"]["maps"][1]
+    assert cave["gate_guard"] == ""
+    assert cave["monsters"] == []
+    # cascades 清单覆盖两张图的 monsters 移除 + cave gate_guard
+    assert any(c["removed_ref"]["field"] == "gate_guard" for c in out["cascades"])
+    assert len(out["cascades"]) >= 3
+
+
+def test_delete_job_cascades_skills_job_restrict():
+    """删职业 ridge_blade → skills[].job_restrict[] 剔除。"""
+    ctx = make_ctx()
+    out = delete_page_item("job", "ridge_blade", ctx)
+    assert out["ok"] is True
+    slash = ctx["modules_raw"]["skills"][0]
+    assert slash["job_restrict"] == []
+    assert any(c["removed_ref"]["field"] == "job_restrict" for c in out["cascades"])
+
+
+def test_delete_map_cascades_exits():
+    """删地图 cave → 其它图 exits to==cave 移除。"""
+    ctx = make_ctx()
+    out = delete_page_item("map", "cave", ctx)
+    assert out["ok"] is True
+    forest = ctx["modules_raw"]["maps"][0]
+    assert "north" not in forest["exits"]  # north.to==cave 被移除
+    assert any(c["removed_ref"]["field"] == "exits.north" for c in out["cascades"])
+
+
+def test_delete_not_found():
+    """删除不存在条目 → 404。"""
+    out = delete_page_item("monster", "ghost", make_ctx())
+    assert out["ok"] is False
+
+
+def test_apply_delete_removes_entry():
+    """apply_delete_to_entries：条目从 modules_raw 移除，返回新列表。"""
+    ctx = make_ctx()
+    out = apply_delete_to_entries("monster", "gust_wolf", ctx)
+    assert out["ok"] is True
+    assert out["module"] == "enemies"
+    assert [e["id"] for e in out["entries"]] == ["ridge_cub"]
+    assert ctx["modules_raw"]["enemies"] == out["entries"]
+
+
+# =============================================================================
+# 草稿校验：红/黄分级
+# =============================================================================
+def test_validate_red_negative():
+    """负数 → red（SV-03 ②）。"""
+    out = validate_page_item("monster", {"id": "x", "name": "怪", "hp": -5}, make_ctx())
+    assert any(e["level"] == "red" and e["code"] == "negative" for e in out["red"])
+
+
+def test_validate_red_type_error():
+    """数字填文字 → red type_error（SV-03 ①）。"""
+    out = validate_page_item("monster", {"id": "x", "name": "怪", "hp": "abc"}, make_ctx())
+    assert any(e["level"] == "red" and e["code"] == "not_number" for e in out["red"])
+
+
+def test_validate_red_struct_min_max():
+    """条件 min>max → red struct（SV-03 ⑤ 死配置）。"""
+    out = validate_page_item("monster", {"id": "x", "name": "怪",
+                                         "min": 10, "max": 5}, make_ctx())
+    assert any(e["level"] == "red" and e["code"] == "struct" for e in out["red"])
+
+
+def test_validate_red_missing_id():
+    """缺 id → red struct 必填。"""
+    out = validate_page_item("monster", {"name": "无id"}, make_ctx())
+    assert any(e["level"] == "red" and e["code"] == "struct" for e in out["red"])
+
+
+def test_validate_yellow_long_name():
+    """名字 >20 字 → yellow。"""
+    out = validate_page_item("monster", {"id": "x", "name": "名" * 25}, make_ctx())
+    assert any(e["level"] == "yellow" and e["code"] == "range" for e in out["yellow"])
+
+
+def test_validate_yellow_unregistered_ref():
+    """引用未登记（enemy 查无）→ yellow ref_unregistered。"""
+    ctx = make_ctx()
+    out = validate_page_item("map", {"id": "m", "name": "图", "enemy": "ghost_beast"}, ctx)
+    assert any(e["level"] == "yellow" and e["code"] == "ref_unregistered"
+               for e in out["yellow"])
+
+
+def test_validate_clean_item():
+    """合法条目 → 零红零黄。"""
+    out = validate_page_item("monster", {"id": "ok", "name": "正常怪",
+                                         "hp": 100, "atk": 10}, make_ctx())
+    assert out["red"] == []
+    assert out["yellow"] == []
+
+
+def test_validate_unknown_page():
+    """未知 page → ok:false。"""
+    out = validate_page_item("ghost", {}, make_ctx())
+    assert out["ok"] is False

@@ -189,7 +189,7 @@
   "battle_flee_ok": "✅ 逃跑成功，脱离战斗",
   "battle_flee_failed": "❌ 逃跑失败，战斗继续",
   "battle_item_used": "✅ 你使用了{item_name}",
-  "battle_no_battle_map_monster": "❌ 当前没有进行中的战斗。开战功能尚未实装；进入战斗后使用 /攻击 <技能序号或名称> 发动技能。",
+  "battle_no_battle_map_monster": "❌ 当前没有进行中的战斗。可用 锁定 <怪物名> 开战；进入战斗后使用 攻击 <技能序号或名称> 发动技能。",
   "battle_result_end": "战斗结束（{status}）",
   "battle_result_round": "第 {turn} 回合结算",
   "battle_start_line": "与{name}的战斗开始！{name} {hp}/{max_hp}",

@@ -24,7 +24,7 @@
   ③ 前缀只加首行（M5-01 apply_message_prefix 统一装配：enabled/per_channel 门控 +
      截断黄提示）；
   ④ 统一出口：全部战斗消息经 Sender 发送（无裸 send，铁律 7）；
-  ⑤ 战斗指令（/攻击 /防御 /逃跑 /道具（战斗内））输出走此管线。
+  ⑤ 战斗指令（/攻击（防御/逃跑/道具入口 2026-08-31 用户拍板删除，引擎机制保留））输出走此管线。
 
 战斗 ctx 契约（装配层注入，批次7 装配待接线；注入前本层可纯函数单测直接构造 ctx）：
   ctx["battle_engine"]   BattleEngine 实例（战斗中；None=未进入战斗 → 「❌ 当前没有
@@ -1033,7 +1033,9 @@ def cmd_battle_attack(parsed: Any, ctx: MutableMapping[str, Any]) -> dict:
 # ---------------------------------------------------------------------------
 
 def register_battle_commands(router: Any, *, make_context: Optional[Callable[[Any], dict]] = None) -> Any:
-    """把 /攻击 /防御 /逃跑 /道具 注册进 Router（CommandSpec.handler 消费 ParsedCommand）。
+    """把 /攻击 注册进 Router（CommandSpec.handler 消费 ParsedCommand）。
+
+    防御/道具/逃跑指令入口已删（2026-08-31 用户拍板，引擎机制保留）。
 
     :param make_context: ParsedCommand → 战斗 ctx dict（battle_engine/sender/player/
         prefix_settings/channel/to 等，见模块头 ctx 契约）。None 时 handler 调用抛

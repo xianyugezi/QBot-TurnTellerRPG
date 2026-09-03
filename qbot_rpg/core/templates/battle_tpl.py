@@ -26,9 +26,10 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     "battle_flee_failed": "❌ 逃跑失败，战斗继续",
     # 道具使用行（P2-4 补白合成文案）
     "battle_item_used": "✅ 你使用了{item_name}",
-    # 参数为当前地图怪物名 → 开战引导（P2-3）
-    "battle_no_battle_map_monster": "❌ 当前没有进行中的战斗。开战功能尚未实装；"
-                                    "进入战斗后使用 /攻击 <技能序号或名称> 发动技能。",
+    # 参数为当前地图怪物名 → 开战引导（P2-3；2026-09-04：锁定已实装，
+    # 陈旧「开战功能尚未实装」误导 → 引导 /锁定 怪物名 开战）
+    "battle_no_battle_map_monster": "❌ 当前没有进行中的战斗。可用 锁定 <怪物名> 开战；"
+                                    "进入战斗后使用 攻击 <技能序号或名称> 发动技能。",
     # 指令返回 message 元数据（非发送正文，逐字迁移）
     "battle_result_end": "战斗结束（{status}）",
     "battle_result_round": "第 {turn} 回合结算",

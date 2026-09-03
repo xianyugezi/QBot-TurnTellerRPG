@@ -90,7 +90,7 @@ REGISTER_GROUPS: tuple = (
     shop_commands.register_shop_commands,          # /商店 /购买 /出售
     use_commands.register_use_commands,            # /使用（2026-08-28 接线：穿戴+道具）
     checkin_commands.register_checkin_commands,    # /签到
-    battle_commands.register_battle_commands,      # /攻击 /防御 /逃跑 /道具
+    battle_commands.register_battle_commands,      # /攻击（防御/道具/逃跑入口 2026-08-31 用户拍板删除，引擎保留）
     explore_commands.register_explore_commands,    # /进入 /休息
     dialog_commands.register_dialog_commands,      # /对话（N-01，BCH-03）
     log_commands.register_log_commands,            # /日志（F-03/F-04，BCH-05，ADR-09）

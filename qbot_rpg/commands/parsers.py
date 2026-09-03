@@ -151,12 +151,14 @@ DEFAULT_WHITELIST = frozenset(
         "锁定玩家", "攻击玩家",
         # GM 指令（5b；强制 / 前缀，永不快捷，规范 L128）
         "重载", "封禁", "日志", "编辑", "设置",
+        # M12 批3 路3A（5b G2/G3/G4/G12）：/备份 /恢复 /存档导出 /封禁列表
+        "备份", "恢复", "存档导出", "封禁列表",
     }
 )
 
 # 需 / 前缀的指令（免前缀一律忽略）：GM 指令（L128）+ /对话（m4 §2.3 接缝裁决：
 # 可快捷绑定、不可免前缀直发）+ /调查（3f R-07 同款接缝：可快捷绑定、不可免前缀直发）
-DEFAULT_PREFIX_REQUIRED = frozenset(
+DEFAULT_PREFIX_REQUIRED: frozenset[str] = frozenset(
     # 2026-09-03 用户拍板：全部指令免 / 前缀（global_shortcut 已默认免前缀；
     # 此处仅剩 GM 类由 gm_commands 独立强制 '/'——见 S5 判定，非 GM 无需前缀）。
     # 原非 GM 需前缀指令（调查/图鉴/成就/对话等）全部放行免前缀。
@@ -172,7 +174,8 @@ DEFAULT_FREE_ARG_COMMANDS = frozenset({"背包筛选"})
 # 快捷禁绑 C02）。与 router spec.is_gm 对齐（P1-2c 对拍）：GM 判定用本集合而非
 # prefix_required（后者另含非 GM 的 /对话）；GM 要求 '/' 前缀**真正落在当前展开串上**，
 # 快捷展开的触发 '/' 不豁免（对齐 router._trigger_allowed）。
-DEFAULT_GM_COMMANDS = frozenset({"重载", "封禁", "日志", "编辑", "设置"})
+DEFAULT_GM_COMMANDS = frozenset({"重载", "封禁", "日志", "编辑", "设置",
+                                 "备份", "恢复", "存档导出", "封禁列表"})
 
 # 旧空格数量格式兼容回退适用指令（规范 L238-239；调用方可覆盖）
 # M8 批13 审查收口（P2-5）：加「复制」——契约 §3.3 要求 /复制 兼容 `空格 数量` 旧式

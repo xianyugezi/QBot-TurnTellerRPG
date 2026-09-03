@@ -31,9 +31,13 @@ import qbot_rpg.commands.gm_commands as gc
 from qbot_rpg.commands.gm_commands import (
     BAN_DEFAULT_DURATION,
     GM_CMD_BAN,
+    GM_CMD_BACKUP,
+    GM_CMD_BANLIST,
     GM_CMD_EDIT,
+    GM_CMD_EXPORT,
     GM_CMD_LOG,
     GM_CMD_RELOAD,
+    GM_CMD_RESTORE,
     GM_CMD_SETTINGS,
     GM_COMMANDS,
     GM_COMMAND_INDEX,
@@ -52,9 +56,13 @@ from qbot_rpg.commands.gm_commands import (
     build_audit_record,
     check_gm_permission,
     cmd_gm_ban,
+    cmd_gm_backup,
+    cmd_gm_banlist,
     cmd_gm_edit,
+    cmd_gm_export,
     cmd_gm_log,
     cmd_gm_reload,
+    cmd_gm_restore,
     cmd_gm_settings,
     gm_binding_guard,
     handle_gm_command,
@@ -196,33 +204,46 @@ def last_audit(ctx: dict) -> dict:
 # ===========================================================================
 
 def test_gm_commands_long_list():
-    """GM 指令清单 = 分隔符规范 L160 长清单：重载/封禁/日志/编辑/设置（m4 §2.3）。"""
+    """GM 指令清单 = L160 长清单 5 条 + M12 批3 路3A 扩展 4 条（备份/恢复/存档导出/封禁列表）。"""
     assert GM_COMMANDS == frozenset({GM_CMD_RELOAD, GM_CMD_BAN, GM_CMD_LOG,
-                                     GM_CMD_EDIT, GM_CMD_SETTINGS})
+                                     GM_CMD_EDIT, GM_CMD_SETTINGS,
+                                     GM_CMD_BACKUP, GM_CMD_RESTORE,
+                                     GM_CMD_EXPORT, GM_CMD_BANLIST})
     assert set(GM_COMMAND_INDEX) == set(GM_COMMANDS)
     assert GM_COMMAND_INDEX[GM_CMD_RELOAD] == "G1"
     assert GM_COMMAND_INDEX[GM_CMD_BAN] == "G10"
     assert GM_COMMAND_INDEX[GM_CMD_LOG] == "G8"
     assert GM_COMMAND_INDEX[GM_CMD_EDIT] == "G13"
     assert GM_COMMAND_INDEX[GM_CMD_SETTINGS] == "G14"
+    assert GM_COMMAND_INDEX[GM_CMD_BACKUP] == "G2"
+    assert GM_COMMAND_INDEX[GM_CMD_RESTORE] == "G3"
+    assert GM_COMMAND_INDEX[GM_CMD_EXPORT] == "G4"
+    assert GM_COMMAND_INDEX[GM_CMD_BANLIST] == "G12"
 
 
 def test_gm_command_level_default_grant():
-    """每指令最低权限（5b §2.1 权限列）：重载/封禁/日志/编辑=manager（默认授予集）；
-    设置=admin（机主专属，per-command 下授）。"""
+    """每指令最低权限：重载/封禁/日志/编辑/备份/恢复/封禁列表=manager（默认授予集）；
+    设置/存档导出=admin（机主专属，per-command 下授）。"""
     assert GM_COMMAND_LEVEL[GM_CMD_RELOAD] == ROLE_MANAGER
     assert GM_COMMAND_LEVEL[GM_CMD_BAN] == ROLE_MANAGER
     assert GM_COMMAND_LEVEL[GM_CMD_LOG] == ROLE_MANAGER
     assert GM_COMMAND_LEVEL[GM_CMD_EDIT] == ROLE_MANAGER
     assert GM_COMMAND_LEVEL[GM_CMD_SETTINGS] == ROLE_ADMIN
-    assert GM_DEFAULT_GRANT == frozenset({GM_CMD_RELOAD, GM_CMD_BAN, GM_CMD_LOG, GM_CMD_EDIT})
+    assert GM_COMMAND_LEVEL[GM_CMD_BACKUP] == ROLE_MANAGER
+    assert GM_COMMAND_LEVEL[GM_CMD_RESTORE] == ROLE_MANAGER
+    assert GM_COMMAND_LEVEL[GM_CMD_EXPORT] == ROLE_ADMIN
+    assert GM_COMMAND_LEVEL[GM_CMD_BANLIST] == ROLE_MANAGER
+    assert GM_DEFAULT_GRANT == frozenset({GM_CMD_RELOAD, GM_CMD_BAN, GM_CMD_LOG,
+                                          GM_CMD_EDIT, GM_CMD_BACKUP,
+                                          GM_CMD_RESTORE, GM_CMD_BANLIST})
 
 
 def test_gm_prefix_required_wiring():
-    """GM 强制 / 前缀接线：L160 清单 5 条全部 ∈ parsers.DEFAULT_PREFIX_REQUIRED（L128/W07）
-    且 ∈ 白名单（前缀后能识别）；gm_requires_prefix() 单一事实源一致。"""
+    """GM 前缀接线：2026-09-03 用户拍板全部指令免 / 前缀 → DEFAULT_PREFIX_REQUIRED 空集；
+    GM 指令仍全在白名单（前缀后能识别）+ gm_requires_prefix() 单一事实源一致。"""
     assert set(gc.gm_requires_prefix()) == GM_COMMANDS
-    assert GM_COMMANDS <= set(DEFAULT_PREFIX_REQUIRED)
+    # 免前缀裁决（068bcd4）：prefix_required 空集；GM 判定走 is_gm_command_name/白名单
+    assert DEFAULT_PREFIX_REQUIRED == frozenset()
     assert GM_COMMANDS <= set(DEFAULT_WHITELIST)
 
 

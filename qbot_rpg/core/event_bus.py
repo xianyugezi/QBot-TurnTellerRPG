@@ -173,3 +173,37 @@ def bump_event(
                 "logged": len(log)}
     except Exception:  # 缺省兜底：任何异常不抛，事件不阻断结算
         return {"ok": False, "reason": "error", "logged": 0}
+
+
+def read_event_log(
+    ctx: Mapping[str, Any],
+    *,
+    limit: Optional[int] = None,
+    tag: Optional[str] = None,
+) -> list:
+    """事件实例日志读取（EV-05 日志卡片页数据源；倒序最近优先）。
+
+    入参 ctx: 玩家上下文（persistent_state[event_log] 优先，ctx[event_log] 兜底）；
+    limit: 返回条数上限（缺省全量，日志卡片页传页大小）；tag: 按 tag 过滤
+    （如 milestone/event，缺省不过滤）。
+    出参: list[dict]（副本，倒序 = 最新在前；空 → []）。
+    纯读零副作用；缺失/异常 → [] 不抛（对齐 bump_event 兜底精神）。
+    """
+    try:
+        raw = None
+        ps = ctx.get("persistent_state")
+        if isinstance(ps, Mapping):
+            raw = ps.get(EVENT_LOG_KEY)
+        if not isinstance(raw, list):
+            raw = ctx.get(EVENT_LOG_KEY)
+        if not isinstance(raw, list):
+            return []
+        entries = [dict(e) for e in raw if isinstance(e, Mapping)]
+        if tag is not None:
+            entries = [e for e in entries if str(e.get("tag") or "") == str(tag)]
+        entries.reverse()  # 最新在前（倒序）
+        if limit is not None and int(limit) > 0:
+            entries = entries[: int(limit)]
+        return entries
+    except Exception:  # 读取异常兜底空（不阻断日志卡片页）
+        return []

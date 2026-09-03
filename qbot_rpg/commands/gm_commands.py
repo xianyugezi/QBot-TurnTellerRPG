@@ -95,6 +95,8 @@ import hashlib
 import hmac
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
+
 from typing import Any, Callable, FrozenSet, List, Mapping, MutableMapping, Optional
 
 from qbot_rpg.content.hot_reload import HotReloadWatcher, ReloadResult
@@ -161,6 +163,10 @@ from qbot_rpg.data.gm_constants import (
     GM_CMD_LOG,
     GM_CMD_EDIT,
     GM_CMD_SETTINGS,
+    GM_CMD_BACKUP,
+    GM_CMD_RESTORE,
+    GM_CMD_EXPORT,
+    GM_CMD_BANLIST,
     GM_COMMANDS,
     GM_COMMAND_INDEX,
     GM_PREFIX_REQUIRED,
@@ -183,12 +189,18 @@ _ROLE_ALIASES: Mapping[str, str] = {
 
 # 每指令最低权限（5b §2.1 权限列；L160 清单内）：
 #   重载 G1 = GM / 封禁 G10 = GM / 日志 G8 = GM / 编辑 G13 = 机主·GM / 设置 G14 = 机主
+#   M12 批3 路3A：备份 G2 = GM / 恢复 G3 = GM / 存档导出 G4 = 机主(可下授) /
+#   封禁列表 G12 = GM
 GM_COMMAND_LEVEL: Mapping[str, str] = {
     GM_CMD_RELOAD: ROLE_MANAGER,
     GM_CMD_BAN: ROLE_MANAGER,
     GM_CMD_LOG: ROLE_MANAGER,
     GM_CMD_EDIT: ROLE_MANAGER,
     GM_CMD_SETTINGS: ROLE_ADMIN,
+    GM_CMD_BACKUP: ROLE_MANAGER,
+    GM_CMD_RESTORE: ROLE_MANAGER,
+    GM_CMD_EXPORT: ROLE_ADMIN,
+    GM_CMD_BANLIST: ROLE_MANAGER,
 }
 
 # 默认授予集（5b §1.1.1 裁决：默认授予集 = 全部指令表标注 GM 的指令）；
@@ -483,24 +495,104 @@ class GmBackend:
         return {"ok": True, "summary": reload_success_summary(result), "failures": []}
 
     def backup_content(self, pack_name: Any = None, ctx: Any = None) -> dict:
-        """/备份 真实后端（WIR-08 契约声明 · 【细化定型】已声明未接线）。
+        """/备份 真实后端（WIR-08 · M12 批3 路3A 实装：SNAP-6 备份恢复事务化）。
 
-        权限矩阵 = 机主全部 + GM（同 WIR-06）；M6 不实装（归 GM 后端批次，
-        5b/M12 编辑器工具：SNAP-6 备份恢复事务化）。调用抛【待接线】防御错误。
+        权限矩阵 = 机主全部 + GM（同 WIR-06）。流程：
+          ① ctx 取 content_dir（内容包目录）与 db 登记位（ctx[\"gm_backup_dir\"] 或
+             ctx[\"repo\"]/ctx[\"db\"] 鸭子 execute）；
+          ② content 目录打 zip（zipfile，含所有 .json）→ backups 目录
+             （权限 0o700，对齐 migrations.BACKUP_DIR_MODE）；
+          ③ backups 表登记（backup_id/file_path/backup_type=manual/size/ts）。
+        无 content_dir/登记位 → {ok: False, message: 人话}（装配层批 5 注入前降级）。
         """
-        raise NotImplementedError(
-            "【待接线】/备份 真实后端（WIR-08 已声明未接线；SNAP-6 备份恢复事务化归 GM 后端批次）"
-        )
+        import time
+        import zipfile
+
+        content_dir = (ctx or {}).get("content_dir") if isinstance(ctx, Mapping) else None
+        db = None
+        if isinstance(ctx, Mapping):
+            db = ctx.get("db") or ctx.get("repo")
+        if content_dir is None:
+            return {"ok": False, "message": "内容包目录未装配（/备份 需装配层注入 content_dir）"}
+        content_dir = Path(content_dir)
+        if not content_dir.is_dir():
+            return {"ok": False, "message": f"内容包目录不存在：{content_dir}"}
+        backup_root = (ctx or {}).get("backup_dir") if isinstance(ctx, Mapping) else None
+        backup_root = Path(backup_root) if backup_root else content_dir.parent / "backups"
+        try:
+            backup_root.mkdir(mode=0o700, parents=True, exist_ok=True)
+        except OSError:
+            backup_root.mkdir(parents=True, exist_ok=True)
+        pack = str(pack_name or "") or content_dir.name
+        ts = time.strftime("%Y%m%d_%H%M%S")
+        backup_id = f"content_{pack}_{ts}"
+        zip_path = backup_root / f"{backup_id}.zip"
+        try:
+            with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+                for f in sorted(content_dir.glob("*.json")):
+                    zf.write(f, arcname=f.name)
+        except OSError as exc:
+            return {"ok": False, "message": f"备份写盘失败：{exc}"}
+        size = zip_path.stat().st_size if zip_path.exists() else 0
+        # backups 表登记（db 鸭子 execute；无登记位 → 仅文件备份降级）
+        if db is not None and hasattr(db, "execute"):
+            try:
+                db.execute(
+                    "INSERT INTO backups (backup_id, file_path, backup_type,"
+                    " size_bytes, created_at) VALUES (?,?,?,?,?)",
+                    (backup_id, str(zip_path), "manual", size, ts),
+                )
+            except Exception:  # noqa: BLE001 - 登记失败不阻断备份文件（降级）
+                pass
+        return {"ok": True, "backup_id": backup_id, "path": str(zip_path),
+                "size": size, "message": f"已备份 {len(list(content_dir.glob('*.json')))} 个模块"}
 
     def restore_content(self, pack_name: Any = None, ctx: Any = None) -> dict:
-        """/恢复 真实后端（WIR-08 契约声明 · 【细化定型】已声明未接线）。
+        """/恢复 真实后端（WIR-08 · M12 批3 路3A 实装）。
 
-        权限矩阵 = 机主全部 + GM（同 WIR-06）；M6 不实装（归 GM 后端批次，
-        5b/M12 编辑器工具：SNAP-6 备份恢复事务化）。调用抛【待接线】防御错误。
+        流程：① 先备份当前 content（防恢复失败丢配置）；② 从备份 zip 解包覆盖
+        content 目录（原子：先写 .tmp 再 rename）；③ 返回 {ok, message}。
+        无备份文件/zip 缺失 → {ok: False, message: 人话}。
         """
-        raise NotImplementedError(
-            "【待接线】/恢复 真实后端（WIR-08 已声明未接线；SNAP-6 备份恢复事务化归 GM 后端批次）"
-        )
+        import os
+        import zipfile
+
+        backup_id = str(pack_name or "")
+        if not backup_id:
+            return {"ok": False, "message": "缺参：/恢复 <备份id>"}
+        content_dir = (ctx or {}).get("content_dir") if isinstance(ctx, Mapping) else None
+        if content_dir is None:
+            return {"ok": False, "message": "内容包目录未装配（/恢复 需装配层注入 content_dir）"}
+        content_dir = Path(content_dir)
+        backup_root = (ctx or {}).get("backup_dir") if isinstance(ctx, Mapping) else None
+        backup_root = Path(backup_root) if backup_root else content_dir.parent / "backups"
+        zip_path = backup_root / f"{backup_id}.zip"
+        if not zip_path.exists():
+            # 兼容绝对路径备份 id（db 登记的 file_path）
+            alt = Path(backup_id)
+            zip_path = alt if alt.exists() and alt.suffix == ".zip" else zip_path
+        if not zip_path.exists():
+            return {"ok": False, "message": f"备份不存在：{backup_id}"}
+        # 先备份当前（恢复失败可回滚）
+        try:
+            pre = self.backup_content(ctx=ctx)
+        except Exception:  # noqa: BLE001
+            pre = {}
+        try:
+            with zipfile.ZipFile(zip_path, "r") as zf:
+                for info in zf.infolist():
+                    if not info.filename.endswith(".json"):
+                        continue
+                    target = content_dir / os.path.basename(info.filename)
+                    tmp = target.with_name(target.name + ".tmp")
+                    with zf.open(info) as src, open(tmp, "wb") as dst:
+                        dst.write(src.read())
+                    os.replace(tmp, target)  # 原子覆盖
+        except (OSError, zipfile.BadZipFile) as exc:
+            return {"ok": False, "message": f"恢复失败：{exc}（已先备份当前配置）"}
+        restored = f"已从 {zip_path.name} 恢复内容包"
+        return {"ok": True, "message": restored, "backup_id": backup_id,
+                "pre_backup": pre.get("backup_id") if isinstance(pre, dict) else None}
 
 
 def _run_watcher_reload(watcher: HotReloadWatcher) -> Optional[ReloadResult]:
@@ -775,12 +867,153 @@ def cmd_gm_settings(parsed: Any, ctx: MutableMapping[str, Any],
                               detail=detail, parsed=parsed, params=f"{key}={value}", ref=key)
 
 
+def _safe_backend(ctx: Mapping[str, Any], method: str) -> Any:
+    """安全取 GM 后端方法（注入缺失/方法缺失 → None；新 4 条处理器降级用）。"""
+    try:
+        backend = _backend(ctx)
+    except RuntimeError:
+        return None
+    fn = getattr(backend, method, None)
+    return fn if callable(fn) else None
+
+
+def cmd_gm_backup(parsed: Any, ctx: MutableMapping[str, Any],
+                  perm: GmPermResult) -> GmResult:
+    """/备份 [类型]（5b G2，权限 GM）：内容包 zip 备份 + backups 表登记。
+
+    类型 auto|manual（缺省 manual）；后端未装配/失败 → 降级人话（不崩）。
+    """
+    args = list(getattr(parsed, "args", None) or [])
+    pack = str(args[0]) if args else ""
+    fn = _safe_backend(ctx, "backup_content")
+    if fn is None:
+        return _record_and_return(ctx, command=GM_CMD_BACKUP, result="failed",
+                                  detail="GM 后端未装配（/备份 需装配层注入 gm_backend）",
+                                  parsed=parsed, params=pack or "manual")
+    try:
+        res = fn(pack or None, ctx) or {}
+    except Exception as exc:  # noqa: BLE001 - 备份异常降级不崩
+        return _record_and_return(ctx, command=GM_CMD_BACKUP, result="failed",
+                                  detail=f"备份失败：{exc}", parsed=parsed,
+                                  params=pack or "manual")
+    if not res.get("ok"):
+        msg = str(res.get("message") or "备份失败")
+        return _record_and_return(ctx, command=GM_CMD_BACKUP, result="failed",
+                                  detail=msg, parsed=parsed, params=pack or "manual",
+                                  ref=res.get("backup_id"))
+    bid = str(res.get("backup_id") or "")
+    detail = f"已备份内容包（{res.get('message') or bid}）"
+    return _record_and_return(ctx, command=GM_CMD_BACKUP, result="success",
+                              detail=detail, parsed=parsed, params=pack or "manual",
+                              ref=bid)
+
+
+def cmd_gm_restore(parsed: Any, ctx: MutableMapping[str, Any],
+                   perm: GmPermResult) -> GmResult:
+    """/恢复 <备份id>（5b G3，权限 GM）：从备份 zip 恢复内容包（先备份当前）。"""
+    args = list(getattr(parsed, "args", None) or [])
+    if not args:
+        return _record_and_return(ctx, command=GM_CMD_RESTORE, result="failed",
+                                  detail="缺参：/恢复 <备份id>", parsed=parsed)
+    bid = str(args[0])
+    fn = _safe_backend(ctx, "restore_content")
+    if fn is None:
+        return _record_and_return(ctx, command=GM_CMD_RESTORE, result="failed",
+                                  detail="GM 后端未装配（/恢复 需装配层注入 gm_backend）",
+                                  parsed=parsed, params=bid)
+    try:
+        res = fn(bid, ctx) or {}
+    except Exception as exc:  # noqa: BLE001 - 恢复异常降级不崩
+        return _record_and_return(ctx, command=GM_CMD_RESTORE, result="failed",
+                                  detail=f"恢复失败：{exc}", parsed=parsed, params=bid)
+    if not res.get("ok"):
+        msg = str(res.get("message") or "恢复失败")
+        return _record_and_return(ctx, command=GM_CMD_RESTORE, result="failed",
+                                  detail=msg, parsed=parsed, params=bid)
+    detail = str(res.get("message") or f"已恢复 {bid}")
+    return _record_and_return(ctx, command=GM_CMD_RESTORE, result="success",
+                              detail=detail, parsed=parsed, params=bid, ref=bid)
+
+
+def cmd_gm_export(parsed: Any, ctx: MutableMapping[str, Any],
+                  perm: GmPermResult) -> GmResult:
+    """/存档导出（5b G4，机主专属可下授）：玩家存档导出（CSV 防公式注入 + 权限 600）。"""
+    args = list(getattr(parsed, "args", None) or [])
+    fmt = str(args[0]).lower() if args else "csv"
+    if fmt not in ("csv", "json"):
+        return _record_and_return(ctx, command=GM_CMD_EXPORT, result="failed",
+                                  detail="格式仅支持 csv/json", parsed=parsed, params=fmt)
+    fn = _safe_backend(ctx, "export_archive")
+    if fn is None:
+        # 后端无 export_archive → 降级（装配层批 5 提供；不崩）
+        return _record_and_return(ctx, command=GM_CMD_EXPORT, result="failed",
+                                  detail="存档导出后端未装配（批 5 装配层注入 export_archive）",
+                                  parsed=parsed, params=fmt)
+    try:
+        res = fn(fmt, ctx) or {}
+    except Exception as exc:  # noqa: BLE001
+        return _record_and_return(ctx, command=GM_CMD_EXPORT, result="failed",
+                                  detail=f"导出失败：{exc}", parsed=parsed, params=fmt)
+    if not res.get("ok"):
+        return _record_and_return(ctx, command=GM_CMD_EXPORT, result="failed",
+                                  detail=str(res.get("message") or "导出失败"),
+                                  parsed=parsed, params=fmt)
+    path = str(res.get("path") or "")
+    return _record_and_return(ctx, command=GM_CMD_EXPORT, result="success",
+                              detail=f"已导出存档（{path}）", parsed=parsed,
+                              params=fmt, ref=path)
+
+
+def cmd_gm_banlist(parsed: Any, ctx: MutableMapping[str, Any],
+                   perm: GmPermResult) -> GmResult:
+    """/封禁列表 [页码]（5b G12，权限 GM）：封禁清单分页 5 条/页。"""
+    args = list(getattr(parsed, "args", None) or [])
+    page = 1
+    if args:
+        p = parse_int(str(args[0]))
+        if p is None or p < 1:
+            return _record_and_return(ctx, command=GM_CMD_BANLIST, result="failed",
+                                      detail="页码非法（0/负数/非数字）", parsed=parsed)
+        page = int(p)
+    fn = _safe_backend(ctx, "ban_list")
+    if fn is None:
+        return _record_and_return(ctx, command=GM_CMD_BANLIST, result="failed",
+                                  detail="GM 后端未装配（/封禁列表 需装配层注入 gm_backend）",
+                                  parsed=parsed)
+    try:
+        res = fn(ctx) or {}
+    except Exception as exc:  # noqa: BLE001
+        return _record_and_return(ctx, command=GM_CMD_BANLIST, result="failed",
+                                  detail=f"封禁列表读取失败：{exc}", parsed=parsed)
+    items = res.get("items") if isinstance(res, dict) else (res or [])
+    if not items:
+        return _record_and_return(ctx, command=GM_CMD_BANLIST, result="success",
+                                  detail="当前无封禁", parsed=parsed, message="当前无封禁")
+    # 分页 5 条/页（对齐 /日志 render_list_page_text 风格；列表 5 条/页铁律）
+    lines = [str(x) for x in items]
+    total = len(lines)
+    total_pages = max(1, (total + 5 - 1) // 5)
+    if page > total_pages:
+        page = total_pages
+    start = (page - 1) * 5
+    body = "\n".join(f"{i + 1}. {ln}" for i, ln in enumerate(lines[start:start + 5]))
+    footer = f"—— 第 {page}/{total_pages} 页（共 {total} 条）——"
+    return _record_and_return(ctx, command=GM_CMD_BANLIST, result="success",
+                              detail=f"封禁列表（第 {page}/{total_pages} 页）",
+                              parsed=parsed, message=f"{body}\n{footer}")
+
+
 _HANDLERS: Mapping[str, Callable[..., GmResult]] = {
     GM_CMD_RELOAD: cmd_gm_reload,
     GM_CMD_BAN: cmd_gm_ban,
     GM_CMD_LOG: cmd_gm_log,
     GM_CMD_EDIT: cmd_gm_edit,
     GM_CMD_SETTINGS: cmd_gm_settings,
+    # M12 批3 路3A：/备份 G2 /恢复 G3 /存档导出 G4 /封禁列表 G12
+    GM_CMD_BACKUP: cmd_gm_backup,
+    GM_CMD_RESTORE: cmd_gm_restore,
+    GM_CMD_EXPORT: cmd_gm_export,
+    GM_CMD_BANLIST: cmd_gm_banlist,
 }
 
 

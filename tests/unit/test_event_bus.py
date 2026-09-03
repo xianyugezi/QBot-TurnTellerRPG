@@ -177,3 +177,64 @@ def test_checkin_bumps_event() -> None:
         assert len(ctx["persistent_state"].get(EVENT_LOG_KEY, [])) >= 1  # type: ignore[attr-defined]
     else:
         assert "[事件:签到]" not in ctx["event_counts"] or True
+
+
+# =============================================================================
+# read_event_log（M12 批3 路3B：EV-05 日志卡片页读取封装；倒序/limit/tag 过滤）
+# =============================================================================
+def test_read_event_log_empty() -> None:
+    """无事件 → []（缺失/异常兜底空不抛）。"""
+    from qbot_rpg.core.event_bus import read_event_log
+
+    assert read_event_log({}) == []
+    assert read_event_log({"persistent_state": {}}) == []
+    assert read_event_log({"persistent_state": {"event_log": "not_list"}}) == []
+
+
+def test_read_event_log_newest_first() -> None:
+    """写 3 事件 → 读回倒序（最新在前）+ limit 截断。"""
+    from qbot_rpg.core.event_bus import bump_event, read_event_log
+
+    ctx: dict = {"event_counts": {}, "longline_counters": {},
+                 "persistent_state": {}, "settings": {}}
+    for tag in ("a", "b", "c"):
+        bump_event(ctx, f"[事件:{tag}]", instance={"tag": "milestone"})
+    log = read_event_log(ctx)
+    assert len(log) == 3
+    # 倒序：c 最新在前
+    assert log[0]["count_key"] == "[事件:c]"
+    assert log[-1]["count_key"] == "[事件:a]"
+    # limit 截断
+    assert len(read_event_log(ctx, limit=2)) == 2
+    assert read_event_log(ctx, limit=2)[0]["count_key"] == "[事件:c]"
+
+
+def test_read_event_log_tag_filter() -> None:
+    """tag 过滤：只回 tag 匹配条目。"""
+    from qbot_rpg.core.event_bus import bump_event, read_event_log
+
+    ctx: dict = {"event_counts": {}, "longline_counters": {},
+                 "persistent_state": {}, "settings": {}}
+    bump_event(ctx, "[事件:怪物击杀]", instance={"tag": "event"})
+    bump_event(ctx, "[事件:等级提升]", instance={"tag": "milestone"})
+    log = read_event_log(ctx, tag="milestone")
+    assert len(log) == 1
+    assert log[0]["count_key"] == "[事件:等级提升]"
+
+
+def test_read_event_log_ring_300_persists() -> None:
+    """环形 300：写 305 条 → 保留 300 且最旧 5 条被挤掉（EV 环形语义）。"""
+    from qbot_rpg.core.event_bus import bump_event, read_event_log
+
+    ctx: dict = {"event_counts": {}, "longline_counters": {},
+                 "persistent_state": {}, "settings": {}}
+    for i in range(305):
+        bump_event(ctx, f"[事件:e{i}]", instance={"tag": "event"})
+    log = read_event_log(ctx)
+    assert len(log) == 300
+    # 最旧 e0~e4 被挤掉（最新在前：log[-1] 是第 300 旧 = e5）
+    keys = [e["count_key"] for e in log]
+    assert "[事件:e5]" in keys
+    assert "[事件:e0]" not in keys
+    # persistent_state 承载（随玩家 upsert 同事务落档）
+    assert len(ctx["persistent_state"]["event_log"]) == 300  # type: ignore[attr-defined]

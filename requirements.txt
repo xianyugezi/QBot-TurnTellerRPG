@@ -5,6 +5,9 @@
 
 # ---- 运行时 ----
 aiosqlite==0.22.1
+# M12 编辑器（细化_5a ED-01：Web 内容编辑器宿主；api.py 惰性 import 缺省可导入）
+fastapi==0.115.14
+uvicorn==0.34.3
 
 # ---- 开发/测试 ----
 pytest==9.1.1

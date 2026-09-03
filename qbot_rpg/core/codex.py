@@ -383,8 +383,12 @@ def mark_seen(
         except Exception:
             pass
         try:
+            # 图鉴新增写点（codex.py:387，与 log_codex_new 同源常量 EVENT_KEY_CODEX_NEW：
+            # 双路写同键防分裂——adventure_log 常量路暂未解析中心化，配置改名对该
+            # 路径 DELAYED（需 adventure_log 侧 log_codex_new 转 resolve_event_key））
+            from qbot_rpg.core.adventure_log import EVENT_KEY_CODEX_NEW
             from qbot_rpg.core.event_bus import bump_event
-            bump_event(ctx, "[事件:图鉴新增]",
+            bump_event(ctx, EVENT_KEY_CODEX_NEW,
                        instance={"tag": "codex_new", "target": rid})
         except Exception:
             pass

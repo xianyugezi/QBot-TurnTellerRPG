@@ -198,9 +198,15 @@ class LevelUpEngine:
                     player["mp"] = int(max_mp)
                     mp_restored = max(0, int(max_mp) - old_mp)
             # M7 N-03：等级提升事件（RN-10 三表 flat；player 为 MutableMapping 直键容器）
+            # M12.5 批5 路5B：键改读解析中心（settings.events 可配，缺省回退现键）
             try:
-                from qbot_rpg.core.event_bus import bump_event
-                bump_event(player, "[事件:等级提升]", instance={"tag": "milestone"})
+                from qbot_rpg.core.event_bus import bump_event, resolve_event_key
+
+                bump_event(
+                    player,
+                    resolve_event_key(player, "等级提升"),
+                    instance={"tag": "milestone"},
+                )
             except Exception:
                 pass
 

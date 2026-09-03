@@ -752,9 +752,13 @@ def dispatch_round(
         if winner == "win":
             try:
                 from qbot_rpg.core.adventure_log import log_first_kill
-                from qbot_rpg.core.event_bus import bump_event
-                bump_event(cast(MutableMapping, ctx), "[事件:怪物击杀]",
-                           instance={"tag": "event"})
+                from qbot_rpg.core.event_bus import bump_event, resolve_event_key
+
+                bump_event(
+                    cast(MutableMapping, ctx),
+                    resolve_event_key(ctx, "怪物击杀"),
+                    instance={"tag": "event"},
+                )
                 log_first_kill(
                     cast(MutableMapping, ctx), e_name,
                     monster_id=str(e.get("id") or e.get("monster_id") or e_name),

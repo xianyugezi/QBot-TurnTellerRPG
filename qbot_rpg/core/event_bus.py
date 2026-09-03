@@ -21,6 +21,10 @@
      直键（兄弟路兜底口径）；条目 ts 用 ctx["now"]/ctx["today"]（缺省 time 现刻 ISO）。
   4) 缺省兜底：ctx 缺任一表/字段不抛异常（只增不减语义），纯函数确定性（now/rng 由
      ctx 注入，无随机/时间外部依赖——ts 缺省用 time.time 为最后兜底）。
+  5) M12.5 批5 路5A 事件键注册中心：settings["events"] 段 {事件名: 键名} 可配
+     name 段（审计 docs/m125_事件键审计.md：写侧字面/常量 + 读侧前缀匹配双面协议，
+     `[事件:` 外壳与 `:target]` 拼装为路由语法硬编码保留，只可配 name 段）；
+     resolve_event_key 集中解析 + EVENT_KEY_DEFAULTS 缺省回退现键（向后兼容零破坏）。
 """
 
 from __future__ import annotations
@@ -28,7 +32,15 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Mapping, MutableMapping, Optional
 
-__all__ = ["DEFAULT_EVENT_LOG_CAP", "bump_event", "EVENT_LOG_KEY", "event_key_npc_dialog"]
+__all__ = [
+    "DEFAULT_EVENT_LOG_CAP",
+    "bump_event",
+    "EVENT_LOG_KEY",
+    "event_key_npc_dialog",
+    "EVENT_KEY",
+    "EVENT_KEY_DEFAULTS",
+    "resolve_event_key",
+]
 
 # event_log 在 persistent_state 的键（3f E-01 / ADR-05 落点）
 EVENT_LOG_KEY = "event_log"
@@ -36,10 +48,85 @@ EVENT_LOG_KEY = "event_log"
 # 环形容量缺省（3f E-01：300 条可配）
 DEFAULT_EVENT_LOG_CAP = 300
 
+# 事件键外壳前缀（路由语法：condition_engine/quest/内容校验器按 `[事件:` 前缀 +
+# `]` 尾缀 + rsplit(":") 解析——审计结论风险5：只可配 name 段，外壳硬编码保留）
+EVENT_KEY = "[事件:"
+
 
 def event_key_npc_dialog(npc_id: object) -> str:
     """NPC 对话事件键（N-03 RN-09）：`[事件:NPC对话:{npc_id}]`。"""
     return f"[事件:NPC对话:{npc_id}]"
+
+
+# ---------------------------------------------------------------------------
+# 事件键注册中心（M12.5 批5 路5A：settings["events"] 段可配 name 段）
+# ---------------------------------------------------------------------------
+# 默认键名表（审计 13 写点/14 行注册表去重后 13 类事件：name 段缺省值 =
+# 现字面量/常量，零配置时 resolve_event_key 回退至此，向后兼容零破坏）
+EVENT_KEY_DEFAULTS: Mapping[str, str] = {
+    "签到": "签到",          # core/checkin.py do_checkin 尾
+    "副本通关": "副本通关",    # core/dungeon.py 探索 clear 通关点
+    "等级提升": "等级提升",    # core/levelup.py 升级结算
+    "怪物击杀": "怪物击杀",    # commands/battle_commands.py win 结算
+    "任务完成": "任务完成",    # core/quest.py → adventure_log.log_story_node
+    "图鉴新增": "图鉴新增",    # core/codex.py + core/fishing_codex.py + log_codex_new
+    "成就达成": "成就达成",    # core/achievements.py _log_milestone
+    "首杀": "首杀",          # adventure_log.log_first_kill
+    "首钓冠级": "首钓冠级",    # adventure_log.log_first_crown
+    "隐藏发现": "隐藏发现",    # adventure_log.log_hidden_find + investigate_commands 兜底
+    "里程碑": "里程碑",       # adventure_log.log_milestone
+    "环境事件": "环境事件",    # environment_events ENV_EVENT_KEY_BASE
+    "NPC对话": "NPC对话",     # dialog 动态键 + event_key_npc_dialog
+}
+
+
+def _events_section(ctx_or_settings: Any) -> Any:
+    """取配置 events 段：入参可为 ctx（含 settings 子表）或 settings 本身。
+
+    入参 ctx_or_settings: Mapping——带 "settings" 子表 → settings["events"]；
+    否则视为 settings 自身 → settings["events"]。出参: Mapping 或 None（缺失/
+    非 Mapping 一律 None，resolve 侧回退默认键，零配置不抛）。
+    """
+    if not isinstance(ctx_or_settings, Mapping):
+        return None
+    settings = ctx_or_settings.get("settings")
+    if isinstance(settings, Mapping):
+        events = settings.get("events")
+    else:
+        events = ctx_or_settings.get("events")
+    return events if isinstance(events, Mapping) else None
+
+
+def resolve_event_key(ctx_or_settings: Any, event_name: str) -> str:
+    """事件键集中解析（M12.5 批5 路5A）：事件名 → 完整事件键。
+
+    入参 ctx_or_settings: ctx（Mapping 含 settings 子表）或 settings 本身
+    （含 events 段）均可；event_name: 事件名（如 "签到"，与 settings.events
+    键对应）。出参 str 完整事件键 `[事件:XXX]`。解析优先级:
+      - settings.events[event_name] 命中：配置值为完整键（已以 `[` 开头）→
+        原样直通（可配全键含自定义前缀）；否则为 name 段 → 包 `[事件:...]` 外壳。
+      - 未命中 / events 段缺失 / 配置值空 → EVENT_KEY_DEFAULTS 缺省回退
+        （零配置/零破坏，等价现字面量）；
+      - event_name 未知（不在默认表）→ 以其自身为 name 段回退（向前兼容）。
+      - event_name 已带 `[事件:` 外壳（迁移期双解析防呆）→ 原样直通。
+    纯函数确定性，任何入参不抛（对齐本模块兜底精神）。
+    """
+    name = str(event_name or "").strip()
+    if not name:
+        return ""
+    if name.startswith(EVENT_KEY):  # 已解析完整键：直通（防呆，避免二次包壳）
+        return name
+    conf = _events_section(ctx_or_settings)
+    if conf is not None:
+        raw = conf.get(name)
+        if raw is not None and str(raw).strip():
+            value = str(raw).strip()
+            if value.startswith("["):  # 配置为完整键（含前缀）：直接透传
+                return value
+            return f"{EVENT_KEY}{value}]"
+    default = EVENT_KEY_DEFAULTS.get(name, name)  # 缺省回退现键（零破坏）
+    return f"{EVENT_KEY}{default}]"
+
 
 
 def _now_iso(ctx: Mapping[str, Any]) -> str:

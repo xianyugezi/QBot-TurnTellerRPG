@@ -363,11 +363,11 @@ def _log_milestone(ctx: MutableMapping[str, Any], aid: str) -> dict:
     非首见类恒 first_seen=false。
     """
     try:
-        from qbot_rpg.core.event_bus import bump_event
+        from qbot_rpg.core.event_bus import bump_event, resolve_event_key
 
         return bump_event(
             ctx,
-            "[事件:成就达成]",
+            resolve_event_key(ctx, "成就达成"),
             instance={
                 "tag": "achievement",
                 "first_seen": False,

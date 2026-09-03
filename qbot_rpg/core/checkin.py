@@ -872,9 +872,11 @@ def checkin_do(ctx: MutableMapping[str, Any]) -> dict:
     checkin_condition_ctx(ctx)          # 刷新三键投影（结算后键值已更新，TC-32）
     _mark_idempotent(ctx)
     # M7 N-03：签到事件写入（RN-10 三表；补签 makeup 不触发，契约裁决⑦）
+    # M12.5 批5 路5B：键改读解析中心（settings.events 可配，缺省回退现键）
     try:
-        from qbot_rpg.core.event_bus import bump_event
-        bump_event(ctx, "[事件:签到]", instance={"tag": "milestone"})
+        from qbot_rpg.core.event_bus import bump_event, resolve_event_key
+
+        bump_event(ctx, resolve_event_key(ctx, "签到"), instance={"tag": "milestone"})
     except Exception:
         pass
     return {"ok": True, "today": today, "tables": results,

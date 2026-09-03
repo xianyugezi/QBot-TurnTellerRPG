@@ -167,9 +167,13 @@ def _mark_fish_seen(ctx: MutableMapping[str, Any], species_id: str, name: str) -
         except Exception:
             pass
         try:
+            # 图鉴新增写点（fishing_codex.py:172，与 log_codex_new 同源常量
+            # EVENT_KEY_CODEX_NEW：与 codex.mark_seen 同键双写不分裂；常量路
+            # 暂未解析中心化，配置改名对该路径 DELAYED）
+            from qbot_rpg.core.adventure_log import EVENT_KEY_CODEX_NEW
             from qbot_rpg.core.event_bus import bump_event
-
-            bump_event(ctx, "[事件:图鉴新增]", instance={"tag": "codex_new", "target": species_id})
+            bump_event(ctx, EVENT_KEY_CODEX_NEW,
+                       instance={"tag": "codex_new", "target": species_id})
         except Exception:
             pass
     return first_seen

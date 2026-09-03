@@ -57,7 +57,7 @@ def t_all_modules_registered_and_reachable() -> bool:
     if bad:
         print(f"  FAIL 页面可达性：{bad[:5]}")
         return False
-    print(f"  PASS 30 页登记全可达（list/obj/map 三形态）")
+    print("  PASS 30 页登记全可达（list/obj/map 三形态）")
     return True
 
 

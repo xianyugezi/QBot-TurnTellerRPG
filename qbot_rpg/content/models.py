@@ -141,6 +141,10 @@ class FieldMeta:
     allow_negative: bool = False  # 默认数值字段 <0 → R-2
     element: Optional["FieldMeta"] = None  # type=="list" 时元素元数据
     children: Mapping[str, "FieldMeta"] = field(default_factory=dict)  # type=="obj" 时子字段
+    # M12 编辑器（细化_5a P-07 四要素 + 中文名；摸底 L372「FieldMeta 缺中文名」修复）：
+    # label = 字段中文名（编辑器表单/CSV 列头/JSON Schema 共用；缺省空 = 未注入，
+    # 表单渲染回退字段名本身）。加在尾部带默认值，560 处既有构造零改动。
+    label: str = ""
 
 
 @dataclass(frozen=True)

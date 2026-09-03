@@ -57,6 +57,11 @@ from typing import Any, Dict, List, Mapping, MutableMapping, Optional, Sequence
 # =============================================================================
 # 六页归口表（loader._KIND_FOR_MODULE 实际登记名；契约 P-06 quests.json 笔误修正）
 # =============================================================================
+# 【硬编码登记 · 2026-09-03 用户知悉】六页映射写死为模块常量。5a2 PR-01 本意
+# editor.json 可插拔（扩展页 npc/checkin/ai/hidden 等批 4 接入时）——本层 CRUD
+# 目前只服务六页；页面 → 模块文件映射的上层权威是 editor_registry（批 1 路 1A
+# 已交付），若批 4 把扩展页纳入 CRUD，应把 PAGE_MODULE 替换为 editor_registry
+# 动态解析（此常量届时废弃）。已记录待用户裁决是否改为 registry 驱动。
 
 # page_id → 模块文件名（Registry.modules_raw 键）
 PAGE_MODULE: Mapping[str, str] = {
@@ -69,6 +74,10 @@ PAGE_MODULE: Mapping[str, str] = {
 }
 
 # page_id → 显示名前缀（ID 自动生成 `类型_序号`，TC-01 skill_0001 例：前缀=页名）
+# 【硬编码登记 · 2026-09-03】前缀与 page_id 同名绑定；内容包自定义 ID 风格无入口
+# （editor.json 页条目未声明 id_prefix）。保持页名前缀（契约 TC-01 口径），
+# 如需内容包自定义 → editor.json EditorPage 增加 id_prefix 字段（批 4 扩展页
+# 时一并评估）。
 PAGE_ID_PREFIX: Mapping[str, str] = {
     "skill": "skill",
     "job": "job",
@@ -352,7 +361,15 @@ def _next_id(entries: Sequence[Any], page: str, ctx: Mapping[str, Any]) -> str:
 
 
 def _versions(ctx: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
-    """版本簿（ctx 承载：{模块名: {id: version}}；create 置 0 / update 自增）。"""
+    """版本簿（ctx 承载：{模块名: {id: version}}；create 置 0 / update 自增）。
+
+    【硬编码登记 · 2026-09-03】版本簿挂 ctx 内存键：编辑锁计数放内存，进程重启/
+    换包即丢。契约 SV-08「旧快照续战」指对局持旧配置，编辑锁是否需要跨重启持久化
+    契约未定（5a L179 版本冲突 409 = 编辑锁提示，单进程内互斥语义足够）。web 层
+    若进程常驻（uvicorn 单进程）此实现满足编辑器并发编辑锁；多进程部署需换共享
+    存储——已记录待用户裁决。ctx 需为 MutableMapping（每请求新建则锁失效，web
+    层应传长活 ctx/存储对象）。
+    """
     vb = ctx.get("_page_versions")
     if not isinstance(vb, MutableMapping):
         vb = {}

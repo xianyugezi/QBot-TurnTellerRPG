@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import asyncio
 import pathlib
-from types import SimpleNamespace
 
 from qbot_rpg.content.editor_registry import load_editor_registry
 from qbot_rpg.content.loader import load_pack

@@ -819,58 +819,6 @@
   }
 
   /* ---------- 保存 / 删除 ---------- */
-  /* map 键值行内删除（renderMapKeys 键行「删」按钮 / btnDel 共用路径；
-     删除后重拉 whole 而非本地 splice——单键写盘后键集以服务端为准） */
-  function delMapKeyRow(k) {
-    if (!k) return;
-    if (!confirm("确定删除键 " + k + " ？")) return;
-    api("DELETE", "/api/pages/" + state.page + "/map/" + encodeURIComponent(k))
-      .then(function (dj) {
-        if (dj.ok) {
-          msg("已删除键 " + k, "ok");
-          if (state.curKey === k) {
-            state.curKey = null;
-            $("mapEdit").classList.add("hidden");
-            $("mapScalar").classList.add("hidden");
-            $("btnSave").classList.add("hidden");
-            $("btnDel").classList.add("hidden");
-            $("formwrap").classList.remove("hidden");
-            $("editName").textContent = state.page;
-            $("formwrap").innerHTML = '<div class="empty">点击左侧键名编辑；「+ 新建键」添加</div>';
-          }
-          loadWhole();
-        } else {
-          var errs = (dj.errors || []).map(function (e) { return e.message; }).join("；");
-          msg(errs || "删除失败", "err");
-        }
-      });
-  }
-  /* map 键值删除（renderMapKeys 键行「删」/ btnDel 共用；删除后重拉
-     whole 而非本地 splice——单键写盘后键集以服务端为准） */
-  function delMapKeyRow(k) {
-    if (!k) return;
-    if (!confirm("确定删除键 " + k + " ？")) return;
-    api("DELETE", "/api/pages/" + state.page + "/map/" + encodeURIComponent(k))
-      .then(function (dj) {
-        if (dj.ok) {
-          msg("已删除键 " + k, "ok");
-          if (state.curKey === k) {
-            state.curKey = null;
-            $("mapEdit").classList.add("hidden");
-            $("mapScalar").classList.add("hidden");
-            $("btnSave").classList.add("hidden");
-            $("btnDel").classList.add("hidden");
-            $("formwrap").classList.remove("hidden");
-            $("editName").textContent = state.page;
-            $("formwrap").innerHTML = '<div class="empty">点击左侧键名编辑；「+ 新建键」添加</div>';
-          }
-          loadWhole();
-        } else {
-          var errs = (dj.errors || []).map(function (e) { return e.message; }).join("；");
-          msg(errs || "删除失败", "err");
-        }
-      });
-  }
   function saveObj() {
     // object 整对象保存：collectForm 收集顶层 dict → PUT /whole
     var body = collectForm();
@@ -991,6 +939,7 @@
   /* map 键值行内删除（renderMapKeys 键行「删」按钮独立路径；行删除后
      重拉 whole 而非本地 splice——单键写盘后键序/键集以服务端为准） */
   function delMapKeyRow(k) {
+    if (!k) return;  // 空键守卫（M12.5 批4 清理重复定义后保留）
     if (!confirm("确定删除键 " + k + " ？")) return;
     api("DELETE", "/api/pages/" + state.page + "/map/" + encodeURIComponent(k))
       .then(function (dj) {

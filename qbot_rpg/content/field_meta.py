@@ -239,6 +239,188 @@ SETTINGS_FIELDS: Dict[str, FieldMeta] = {
 }
 
 # =============================================================================
+# M12 批4 路4A：quest/shop/npc/checkin 正式字段表注入（编辑器 19 页 meta_source
+# 数据源，P-07；此前 fields={} 专项全权，编辑器无字段元数据 → 表单无法渲染）。
+# 依据：docs/细化/细化_5a2_编辑器扩展页.md（NPC 10 标签 N-01~10 / 签到 7 区 CK-01~08）
+# + 真实内容包 content/test_demo/{quest,shop,npc,checkin}.json 条目口径（实测交叉验证）。
+# 宽松登记原则（对齐蓝图风险 2）：专项校验器（validate_quests/shops/npcs/checkins）
+# 全权深结构，本表只登记「字段口径 + label」供编辑器表单——仅 id required=True；
+# 嵌套容器一律 obj children={} / list element obj 防泛型误拦（str|dict|list 多形态
+# 字段用 soft_label 直通）；枚举仅在契约闭合处登（真实内容零新增拦截）。
+# =============================================================================
+
+# ---- quest（quest_models L270-271 17 顶层；reward str|dict|list 三形态 2b4 D-01）----
+QUEST_FIELDS: Dict[str, FieldMeta] = {
+    "id": FieldMeta(type="str", required=True, label="任务 ID"),
+    "name": FieldMeta(type="str", required=True, label="名称"),
+    "desc": FieldMeta(type="str", label="描述"),
+    "type": FieldMeta(type="str", label="类型"),
+    "main": FieldMeta(type="bool", label="主线标记"),
+    "zone": FieldMeta(type="str", label="区域"),
+    "consume": FieldMeta(type="obj", children={}, soft_label=True, label="消耗"),
+    "repeatable": FieldMeta(type="bool", label="可重复"),
+    "conditions": FieldMeta(type="list", element=FieldMeta(type="obj", children={}),
+                            label="解锁条件"),
+    "reward": FieldMeta(type="obj", children={}, soft_label=True,
+                        label="奖励（支持 货币/物品/多形态）"),
+    "board": FieldMeta(type="obj", children={}, soft_label=True, label="任务板"),
+    "timed": FieldMeta(type="obj", children={}, soft_label=True, label="限时"),
+    "unlock_chain": FieldMeta(type="str", soft_label=True, label="解锁链（前驱任务 ID）"),
+    "filter": FieldMeta(type="obj", children={}, soft_label=True, label="筛选"),
+    "bonus": FieldMeta(type="obj", children={}, soft_label=True, label="加成"),
+    "npc": FieldMeta(type="obj", children={}, soft_label=True, label="NPC 关联"),
+    "daily": FieldMeta(type="obj", children={}, soft_label=True, label="每日"),
+}
+
+# ---- shop（shop_models 顶层访问器 15；refresh 4 模式×5 key；条目 price 混合支付）----
+SHOP_ITEM_ENTRY_CHILDREN: Dict[str, FieldMeta] = {
+    "item": FieldMeta(type="str", label="物品引用"),
+    "price": FieldMeta(type="obj", children={}, soft_label=True, label="价格（混合支付）"),
+    "stock": FieldMeta(type="int", label="库存"),
+    "limit": FieldMeta(type="int", label="限购"),
+    "period": FieldMeta(type="obj", children={}, soft_label=True, label="上架时段"),
+}
+SHOP_REFRESH_CHILDREN: Dict[str, FieldMeta] = {
+    "mode": FieldMeta(type="str", enum=("daily", "weekly", "manual", "fixed"), label="刷新模式"),
+    "start": FieldMeta(type="str", label="开始时间"),
+    "end": FieldMeta(type="str", label="结束时间"),
+    "hour": FieldMeta(type="int", label="刷新小时"),
+    "interval": FieldMeta(type="int", label="间隔天数"),
+}
+SHOP_FIELDS: Dict[str, FieldMeta] = {
+    "id": FieldMeta(type="str", required=True, label="商店 ID"),
+    "name": FieldMeta(type="str", required=True, label="名称"),
+    "icon": FieldMeta(type="str", label="图标"),
+    "type": FieldMeta(type="str", enum=("general", "black", "reputation", "event", "quest"),
+                      label="类型"),
+    "currency": FieldMeta(type="str", label="默认货币"),
+    "level_required": FieldMeta(type="int", label="等级门槛"),
+    "reputation_required": FieldMeta(type="obj", children={}, soft_label=True,
+                                     label="声望门槛"),
+    "open_condition": FieldMeta(type="obj", children={}, soft_label=True,
+                                label="开放条件"),
+    "refresh": FieldMeta(type="obj", children=SHOP_REFRESH_CHILDREN, soft_label=True,
+                         label="刷新规则"),
+    "items": FieldMeta(type="list", element=FieldMeta(type="obj",
+                                                      children=SHOP_ITEM_ENTRY_CHILDREN),
+                       label="商品列表"),
+    "pool": FieldMeta(type="list", element=FieldMeta(type="obj", children={}),
+                      soft_label=True, label="黑市池"),
+    "price_fluctuation": FieldMeta(type="obj", children={}, soft_label=True,
+                                   label="价格波动"),
+    "visible": FieldMeta(type="bool", label="可见"),
+    "desc": FieldMeta(type="str", label="描述"),
+    "listing_count": FieldMeta(type="int", label="上架数（黑市）"),
+}
+
+# ---- npc（NPCDef 顶层 15 + 6 子表；type 6 枚举 / dealer strategy 3 枚举）----
+NPC_DIALOGUE_OPTION_CHILDREN: Dict[str, FieldMeta] = {
+    "text": FieldMeta(type="str", label="选项文本"),
+    "next": FieldMeta(type="str", label="下一对话"),
+    "action": FieldMeta(type="obj", children={}, soft_label=True, label="选项动作"),
+}
+NPC_FIELDS: Dict[str, FieldMeta] = {
+    "id": FieldMeta(type="str", required=True, label="NPC ID"),
+    "name": FieldMeta(type="str", required=True, label="名称"),
+    "icon": FieldMeta(type="str", label="图标"),
+    "map": FieldMeta(type="obj", children={}, soft_label=True, label="地图挂点"),
+    "type": FieldMeta(type="str", enum=("merchant", "blacksmith", "quest", "inn",
+                                        "alchemist", "fisher"), label="类型"),
+    "desc": FieldMeta(type="str", label="描述"),
+    "visible": FieldMeta(type="bool", label="可见"),
+    "dialogues": FieldMeta(type="obj", children={
+        "greeting": FieldMeta(type="obj", children={}, soft_label=True, label="问候语"),
+        "options": FieldMeta(type="list",
+                             element=FieldMeta(type="obj", children=NPC_DIALOGUE_OPTION_CHILDREN),
+                             label="对话选项"),
+    }, label="对话"),
+    "interactions": FieldMeta(type="list", element=FieldMeta(type="obj", children={}),
+                              soft_label=True, label="交互"),
+    "quests": FieldMeta(type="list", element=FieldMeta(type="obj", children={}),
+                        soft_label=True, label="任务"),
+    "dealer": FieldMeta(type="obj", children={}, soft_label=True, label="商人配置"),
+    "repair": FieldMeta(type="obj", children={}, soft_label=True, label="修理"),
+    "tutorials": FieldMeta(type="list", element=FieldMeta(type="str"), label="教学"),
+    "shop_refs": FieldMeta(type="list", element=FieldMeta(type="obj", children={}),
+                           soft_label=True, label="商店引用"),
+}
+
+# ---- checkin（CheckinDef 顶层 7+bonus；period.start/end 仅 activity 必填不设 required）----
+CHECKIN_PERIOD_CHILDREN: Dict[str, FieldMeta] = {
+    "cycle_days": FieldMeta(type="int", label="周期天数"),
+    "reset_on_break": FieldMeta(type="bool", label="断签重置"),
+    "start": FieldMeta(type="str", label="开始日期（activity）"),
+    "end": FieldMeta(type="str", label="结束日期（activity）"),
+}
+CHECKIN_REWARD_ENTRY_CHILDREN: Dict[str, FieldMeta] = {
+    "day": FieldMeta(type="int", label="第 N 天"),
+    "days": FieldMeta(type="int", label="连续 N 天"),
+    "items": FieldMeta(type="list", element=FieldMeta(type="obj", children={}),
+                       soft_label=True, label="物品奖励"),
+    "coins": FieldMeta(type="int", label="金币"),
+    "gem": FieldMeta(type="int", label="宝石"),
+    "exp": FieldMeta(type="int", label="经验"),
+    "rep": FieldMeta(type="int", label="声望"),
+}
+CHECKIN_FIELDS: Dict[str, FieldMeta] = {
+    "id": FieldMeta(type="str", required=True, label="签到表 ID"),
+    "name": FieldMeta(type="str", required=True, label="名称"),
+    "type": FieldMeta(type="str", enum=("loop", "monthly", "activity"), label="周期类型"),
+    "desc": FieldMeta(type="str", label="描述"),
+    "period": FieldMeta(type="obj", children=CHECKIN_PERIOD_CHILDREN, label="周期配置"),
+    "rewards": FieldMeta(type="obj", children={
+        "daily": FieldMeta(type="list",
+                           element=FieldMeta(type="obj", children=CHECKIN_REWARD_ENTRY_CHILDREN),
+                           label="每日奖励"),
+        "streak": FieldMeta(type="list",
+                            element=FieldMeta(type="obj", children=CHECKIN_REWARD_ENTRY_CHILDREN),
+                            label="连签奖励"),
+        "monthly_total": FieldMeta(type="list",
+                                   element=FieldMeta(type="obj", children=CHECKIN_REWARD_ENTRY_CHILDREN),
+                                   label="月度累计奖励"),
+    }, label="奖励配置"),
+    "makeup": FieldMeta(type="obj", children={}, soft_label=True, label="补签规则"),
+}
+
+# ---- AI 视图（5a2 PA-01~06，extends=monster——enemies.json 条目内嵌 AI 键视图；
+#      无真实 json 独立模块，按契约最小登记宽容器；表字段语义 = 敌人条目 AI 配置区）----
+AI_FIELDS: Dict[str, FieldMeta] = {
+    "ai_actions": FieldMeta(type="obj", children={}, soft_label=True, label="行动表"),
+    "ai_cond_actions": FieldMeta(type="obj", children={}, soft_label=True,
+                                 label="条件行动"),
+    "ai_state_machine": FieldMeta(type="obj", children={}, soft_label=True,
+                                  label="状态机"),
+    "ai_phases": FieldMeta(type="obj", children={}, soft_label=True, label="阶段"),
+    "ai_combo": FieldMeta(type="obj", children={}, soft_label=True, label="连招链"),
+    "ai_zone_switch": FieldMeta(type="obj", children={}, soft_label=True, label="换区"),
+}
+
+# ---- 隐藏要素视图（5a2 PH-01~04：隐藏BOSS/隐藏任务/彩蛋；可达性黄提示由专项管）----
+HIDDEN_FIELDS: Dict[str, FieldMeta] = {
+    "hidden_boss": FieldMeta(type="obj", children={}, soft_label=True, label="隐藏 BOSS"),
+    "hidden_quest": FieldMeta(type="obj", children={}, soft_label=True, label="隐藏任务"),
+    "easter_egg": FieldMeta(type="obj", children={}, soft_label=True, label="彩蛋"),
+}
+
+# ---- 环境事件视图（5a2 PE-01~04：settings.json env_event 段——窗口条件+效果引用）----
+ENV_EVENT_FIELDS: Dict[str, FieldMeta] = {
+    "env_event": FieldMeta(type="obj", children={}, soft_label=True,
+                           label="环境事件（settings.env_event 段）"),
+}
+
+# ---- 日志卡片视图（5a2 PL-01~04：settings.json log_card 段——记录类型/快照/容量）----
+LOG_CARD_FIELDS: Dict[str, FieldMeta] = {
+    "log_card": FieldMeta(type="obj", children={}, soft_label=True,
+                          label="日志卡片（settings.log_card 段）"),
+}
+
+# settings 段扩展（5a2 环境事件/日志卡片挂 settings.json；缺省零影响——无配置段不触发）
+SETTINGS_FIELDS.setdefault("env_event", FieldMeta(type="obj", children={}, soft_label=True,
+                                                  label="环境事件"))
+SETTINGS_FIELDS.setdefault("log_card", FieldMeta(type="obj", children={}, soft_label=True,
+                                                 label="日志卡片"))
+
+# =============================================================================
 # M8 炼金字段扩展（m8_contract_数据与校验 §四/§五）：items 扩展 / slots 模块 / settings.alchemy 段。
 # 定义归属本文件（schema 之家），alchemy_settings 专项校验器单向 import 本表——
 # 防 field_meta↔alchemy_settings 循环依赖（G0 TC-03 静态 import 图铁律，函数级 import 亦成环）。
@@ -860,12 +1042,14 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "dungeon": ModuleMeta(entry_type="list", fields={}, kind="dungeon", namespace="dungeon_lib"),
         "stats": ModuleMeta(entry_type="map", fields=stats_fields, kind="stat", namespace="stat_lib",
                             key_regex=r"[a-z][a-z0-9_]*"),
-        # M4 交互系统（m4_shared_contract §3.1~3.4）：npc/shop/quest/checkin 专项全权
-        # （fields={} 空表防泛型误拦；深结构由各 validate_* 专项校验器全权，同 dungeon 口径）
-        "npc": ModuleMeta(entry_type="list", fields={}, kind="npc", namespace="npc_lib"),
-        "shop": ModuleMeta(entry_type="list", fields={}, kind="shop", namespace="shop_lib"),
-        "quest": ModuleMeta(entry_type="list", fields={}, kind="quest", namespace="quest_lib"),
-        "checkin": ModuleMeta(entry_type="list", fields={}, kind="checkin", namespace="checkin_lib"),
+        # M4 交互系统（m4_shared_contract §3.1~3.4）：npc/shop/quest/checkin 专项校验器
+        # 全权深结构（R-1~R-5/Y-1~Y-8 专项判定）；M12 批4 路4A 注入正式字段表（宽松登记：
+        # 仅 id required + 宽 obj 容器 + 闭合枚举——编辑器表单数据源 P-07，泛型并行零新增拦截）
+        "npc": ModuleMeta(entry_type="list", fields=NPC_FIELDS, kind="npc", namespace="npc_lib"),
+        "shop": ModuleMeta(entry_type="list", fields=SHOP_FIELDS, kind="shop", namespace="shop_lib"),
+        "quest": ModuleMeta(entry_type="list", fields=QUEST_FIELDS, kind="quest", namespace="quest_lib"),
+        "checkin": ModuleMeta(entry_type="list", fields=CHECKIN_FIELDS, kind="checkin",
+                              namespace="checkin_lib"),
         # M11 成就（4c §1.5）：顶层 list，fields 空表 + 专项校验器全权（对齐 quest/npc 口径）
         "achievements": ModuleMeta(entry_type="list", fields={}, kind="achievement",
                                    namespace="achievement_lib"),
@@ -875,6 +1059,17 @@ def _module_table() -> Dict[str, ModuleMeta]:
         # 通用设置（细化_1g4 §6.1 death_penalty + currencies 段；其余段由 3h 路登记缺省放行）。
         # 注意：settings.json 为常驻模块（3h D-01），本表仅登记字段口径；loader 常驻加载归 3h/M 接线。
         "settings": ModuleMeta(entry_type="object", fields=SETTINGS_FIELDS),
+        # M12 批4 路4A 编辑器扩展页视图（5a2 PR-01：editor.json 页表 meta_source 指向；
+        # 无独立 json 模块——ai/hidden 是 enemies 条目内嵌视图、env_event/log_card 是
+        # settings 段视图；ModuleMeta 仅登记供 /api/meta/{page} 表单元数据，内容包不含
+        # 这些模块名 → 校验不触发，WIR-13 loader ⊆ field_meta 单向断言不受影响）
+        "ai": ModuleMeta(entry_type="list", fields=AI_FIELDS, kind="ai", namespace="enemy_lib"),
+        "hidden": ModuleMeta(entry_type="list", fields=HIDDEN_FIELDS, kind="hidden",
+                             namespace="enemy_lib"),
+        "env_event": ModuleMeta(entry_type="object", fields=ENV_EVENT_FIELDS,
+                                kind="env_event", namespace="settings_lib"),
+        "log_card": ModuleMeta(entry_type="object", fields=LOG_CARD_FIELDS,
+                               kind="log_card", namespace="settings_lib"),
     }
 
 

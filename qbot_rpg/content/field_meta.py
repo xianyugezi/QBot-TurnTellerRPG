@@ -389,32 +389,133 @@ CHECKIN_FIELDS: Dict[str, FieldMeta] = {
 # 依据 docs/m125_模块字段摸底.md：dungeon.json 实测 9 顶层键（2 条，maps=list(4)/
 # subquests=list/safe_zone=str 引用 map id/drops=obj 深嵌套）；type 实测闭合值
 # {explore,boss}；entry_limit 数值但专项全权 → 宽容器不设 range 防误拦。
+DUNGEON_MAP_ELEM_CHILDREN: Dict[str, FieldMeta] = {
+    # maps.json 地图条目顶层键并集（9 内容包实测：id/name/desc/npcs/monsters/exits/
+    # mechanics/gate_guard/gather_points/dungeon_entrances；mechanics/gather_points
+    # 为 list-of-dict 深嵌套 → 宽容器防误拦）
+    "id": FieldMeta(type="str", label="地图 ID"),
+    "name": FieldMeta(type="str", label="地图名"),
+    "desc": FieldMeta(type="str", label="描述"),
+    "npcs": FieldMeta(type="list", element=FieldMeta(type="str"), label="NPC 列表"),
+    "monsters": FieldMeta(type="list", element=FieldMeta(type="obj", children={
+        # monsters 刷怪行并集键（9 包实测 enemy/count/respawn_minutes；veinborn 扩展
+        # name/hidden_boss/intro/signal；细化_2a1b §2.1 另含 active_time/seasons/
+        # periods/weather_weights 时段天气键——宽松登记，专项刷怪校验 R24-26 全权）
+        "enemy": FieldMeta(type="str", label="怪物引用"),
+        "count": FieldMeta(type="int", label="同时在场上限"),
+        "respawn_minutes": FieldMeta(type="int", label="刷新间隔(分钟)"),
+        "name": FieldMeta(type="str", label="展示名"),
+        "hidden_boss": FieldMeta(type="bool", label="隐藏首领"),
+        "intro": FieldMeta(type="str", label="出场台词"),
+        "signal": FieldMeta(type="str", label="信号词"),
+        "active_time": FieldMeta(type="obj", children={}, soft_label=True,
+                                 label="出没钟点窗口"),
+        "seasons": FieldMeta(type="list", element=FieldMeta(type="str"),
+                             label="季节限定"),
+        "periods": FieldMeta(type="list", element=FieldMeta(type="str"),
+                             label="时段限定"),
+        "weather_weights": FieldMeta(type="obj", children={}, soft_label=True,
+                                      label="天气出现率倍率"),
+    }), label="刷怪行"),
+    "exits": FieldMeta(type="obj", children={}, soft_label=True, label="通道出口"),
+    "mechanics": FieldMeta(type="list", element=FieldMeta(type="obj", children={}),
+                            soft_label=True, label="地图机制"),
+    "gate_guard": FieldMeta(type="obj", children={}, soft_label=True, label="门卫"),
+    "gather_points": FieldMeta(type="list", element=FieldMeta(type="obj", children={}),
+                                soft_label=True, label="采集点"),
+    "dungeon_entrances": FieldMeta(type="list", element=FieldMeta(type="obj",
+                                                                    children={}),
+                                    soft_label=True, label="副本入口"),
+}
+DUNGEON_DROP_ENTRY_CHILDREN: Dict[str, FieldMeta] = {
+    # drops.normal/boss 普通掉落行（细化_2a1d §2.4 样例 {item,chance}）
+    "item": FieldMeta(type="str", label="掉落物品"),
+    "chance": FieldMeta(type="number", label="掉落概率"),
+}
+DUNGEON_FIRST_CLEAR_CHILDREN: Dict[str, FieldMeta] = {
+    "items": FieldMeta(type="list", element=FieldMeta(type="obj", children={
+        "item": FieldMeta(type="str", label="物品引用"),
+        "count": FieldMeta(type="int", label="数量"),
+    }), label="首通素材"),
+    "title": FieldMeta(type="str", label="称号引用"),
+    "codex": FieldMeta(type="list", element=FieldMeta(type="str"), label="图鉴点亮"),
+}
+DUNGEON_DROPS_CHILDREN: Dict[str, FieldMeta] = {
+    # drops 容器实测键并集：normal/boss（list of {item,chance}）+
+    # first_clear（首通子段 {items[],title,codex}，细化_2a1d §2.3/§2.4 结构同构）
+    "normal": FieldMeta(type="list", element=FieldMeta(type="obj",
+                                                        children=DUNGEON_DROP_ENTRY_CHILDREN),
+                         label="普通掉落"),
+    "boss": FieldMeta(type="list", element=FieldMeta(type="obj",
+                                                       children=DUNGEON_DROP_ENTRY_CHILDREN),
+                       label="首领掉落"),
+    "first_clear": FieldMeta(type="obj", children=DUNGEON_FIRST_CLEAR_CHILDREN,
+                              label="首通奖励"),
+}
 DUNGEON_FIELDS: Dict[str, FieldMeta] = {
     "id": FieldMeta(type="str", required=True, label="副本 ID"),
     "name": FieldMeta(type="str", required=True, label="名称"),
     "type": FieldMeta(type="str", enum=("explore", "boss"), label="副本类型"),
     "entry_item": FieldMeta(type="str", label="入场道具"),
     "entry_limit": FieldMeta(type="obj", children={}, soft_label=True, label="入场限制"),
-    "maps": FieldMeta(type="list", element=FieldMeta(type="obj", children={}),
-                      soft_label=True, label="地图序列"),
-    "subquests": FieldMeta(type="list", element=FieldMeta(type="obj", children={}),
-                           soft_label=True, label="子任务"),
+    # 实测 maps[] 为 str（引用 maps.json 地图 id，dungeon_models.maps 访问器
+    # str 元组）——批1 list[obj] 与实测形态不符，改 list[str] 对齐真实内容；
+    # children 细化走 DUNGEON_MAP_ELEM_CHILDREN（maps 页整图编辑，此处只引用 id）
+    "maps": FieldMeta(type="list", element=FieldMeta(type="str"), label="地图序列"),
+    "boss_room": FieldMeta(type="str", label="首领房地图"),
+    "boss": FieldMeta(type="str", label="首领怪物"),
+    "subquests": FieldMeta(type="list", element=FieldMeta(type="str"), label="子任务"),
     "safe_zone": FieldMeta(type="str", label="安全区地图"),
-    "drops": FieldMeta(type="obj", children={}, soft_label=True, label="掉落配置"),
+    "drops": FieldMeta(type="obj", children=DUNGEON_DROPS_CHILDREN,
+                       soft_label=True, label="掉落配置"),
 }
 
-# achievements.json 实测 7 顶层键（8 条）；trigger 实测闭合值 {check}；once 实测
-# bool true；conditions/reward 宽容器（专项 achievements_models ACH01-13 全权）。
+# achievements.json 实测 7 顶层键（8 条）+ hidden 段（1 条实测 clue_ref/mode/
+# reveal_text）；trigger 实测闭合值 {check}；once 实测 bool true；conditions/
+# reward 宽容器（专项 achievements_models ACH01-13 全权）。
+ACHIEVEMENT_COND_CHILDREN: Dict[str, FieldMeta] = {
+    # conditions 三原语条目并集键（实测 var/op/value/param；4c §2.2 var 注册表 +
+    # COND_OPERATORS 9 运算符；[事件:xxx]/x_ 前缀 var 运行时识别 → type=str 宽）
+    "var": FieldMeta(type="str", label="变量"),
+    "op": FieldMeta(type="str", label="运算符"),
+    # value 全包实测恒 int（16/16：成就条件目标值=次数/数值，无字符串形态）——
+    # 标 int 闭合真实内容，泛型零误拦
+    "value": FieldMeta(type="int", label="目标值"),
+    "param": FieldMeta(type="str", label="参数"),
+}
+ACHIEVEMENT_REWARD_CHILDREN: Dict[str, FieldMeta] = {
+    # reward 条目键并集（实测 coins/title；4c §三 + REWARD_ITEM_KEYS 口径含
+    # item/id/count/bound + 标量 gem/exp/rep/prof——宽登记防误拦）
+    "item": FieldMeta(type="str", label="物品引用"),
+    "id": FieldMeta(type="str", label="物品 ID"),
+    "count": FieldMeta(type="int", label="数量"),
+    "bound": FieldMeta(type="bool", label="绑定"),
+    "coins": FieldMeta(type="int", label="金币"),
+    "gem": FieldMeta(type="int", label="宝石"),
+    "exp": FieldMeta(type="int", label="经验"),
+    "rep": FieldMeta(type="int", label="声望"),
+    "prof": FieldMeta(type="int", label="熟练度"),
+    "title": FieldMeta(type="str", label="称号引用"),
+}
 ACHIEVEMENT_FIELDS: Dict[str, FieldMeta] = {
     "id": FieldMeta(type="str", required=True, label="成就 ID"),
     "name": FieldMeta(type="str", required=True, label="名称"),
     "desc": FieldMeta(type="str", label="描述"),
-    "conditions": FieldMeta(type="list", element=FieldMeta(type="obj", children={}),
-                            soft_label=True, label="解锁条件"),
+    "conditions": FieldMeta(type="list", element=FieldMeta(type="obj", children={
+        # 单对象 ≡ 单元素数组糖（ACH-12）；children 拆三原语逐键可编
+        **ACHIEVEMENT_COND_CHILDREN,
+    }), label="解锁条件"),
     "trigger": FieldMeta(type="str", enum=("check",), label="触发方式"),
     "once": FieldMeta(type="bool", label="仅一次"),
-    "reward": FieldMeta(type="list", element=FieldMeta(type="obj", children={}),
-                        soft_label=True, label="奖励"),
+    "hidden": FieldMeta(type="obj", children={
+        # hidden 实测段键（clue_ref/mode/reveal_text，8 条实测 1 条含段）
+        "clue_ref": FieldMeta(type="str", label="线索引用"),
+        "mode": FieldMeta(type="str", label="隐藏模式"),
+        "reveal_text": FieldMeta(type="str", label="揭示文案"),
+    }, soft_label=True, label="隐藏配置"),
+    "reward": FieldMeta(type="list", element=FieldMeta(type="obj", children={
+        **ACHIEVEMENT_REWARD_CHILDREN,
+    }), label="奖励"),
 }
 
 # ---- AI 视图（5a2 PA-01~06，extends=monster——enemies.json 条目内嵌 AI 键视图；
@@ -1085,7 +1186,9 @@ def _module_table() -> Dict[str, ModuleMeta]:
                                   kind="proficiency", namespace="proficiency_lib"),
         "slots": slots_module_meta(),
         # M9 锻造（m9_shared_contract §〇~§六）：forge.json 顶层 obj——模块级 ModuleMeta
-        # 由 forge_module_meta() 提供（entry_type=object）；深结构校验由
+        # 由 forge_module_meta() 提供（entry_type=object）；M12.5 批3 路3A 注入段级
+        # 字段表 FORGE_TOP_FIELD_DEFS（schema_version 精确 + trees/sets/augments/
+        # settings 四宽容器 soft_label——泛型零新增拦截）；深结构校验由
         # validate_forge 专项全权（V1-V15/W + 2c2d V1-V8/W1-W4），泛型只做顶层形态
         "forge": forge_module_meta(),
         # M10 钓鱼（m10_shared_contract §三）：fishing.json 顶层 obj——模块级 ModuleMeta

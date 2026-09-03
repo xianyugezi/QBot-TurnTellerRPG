@@ -990,13 +990,36 @@ def test_report_checker_form() -> None:
 
 
 def test_forge_module_meta_entry_type_object() -> None:
-    """forge_module_meta()：entry_type=object（forge.json 顶层 obj 非 list）+ fields={}。"""
+    """forge_module_meta()：entry_type=object（forge.json 顶层 obj 非 list）。
+
+    M12.5 批3 路3A：fields=FORGE_EDITOR_TOP_FIELDS 段级宽容器五键（编辑器 obj
+    表单段头数据源）——schema_version 精确 str + trees/sets/augments/settings
+    宽容器 soft_label（防泛型误拦，深结构归 validate_forge 专项全权 V1-V15/W +
+    2c2d V1-V8/W1-W4）；FORGE_TOP_FIELD_DEFS 详细版保留导出供深结构兜底。
+    """
     meta = forge_module_meta()
     assert meta.entry_type == "object", "forge 顶层是 obj 非 list → entry_type=object"
     assert meta.kind == "forge"
-    # fields={} 空表：根节点 parent=null 等可空字段防泛型 R-1 误拦，
-    # 深结构校验由 validate_forge 专项全权（对齐 dungeon/npc/shop 口径）
-    assert meta.fields == {}, "fields={} 空表（专项校验器全权）"
+    # 段级宽容器字段表注入（对齐 fishing_module_meta 三段宽容器口径）
+    assert set(meta.fields) == {"schema_version", "trees", "sets", "augments",
+                                "settings"}
+    assert meta.fields["schema_version"].type == "str"
+    for seg in ("trees", "sets"):
+        fmeta = meta.fields[seg]
+        assert fmeta.type == "list" and fmeta.element is not None
+        assert fmeta.element.type == "obj" and fmeta.element.children == {}
+        assert fmeta.soft_label is True
+    for seg in ("augments", "settings"):
+        fmeta = meta.fields[seg]
+        assert fmeta.type == "obj" and fmeta.children == {}
+        assert fmeta.soft_label is True
+    assert all(x.label for x in meta.fields.values()), "五段字段 label 应全中文非空"
+    # 详细版保留导出（深结构表单/原始 JSON 兜底复用）
+    from qbot_rpg.content.forge_models import FORGE_TOP_FIELD_DEFS
+    assert "trees" in FORGE_TOP_FIELD_DEFS
+    tree_meta = FORGE_TOP_FIELD_DEFS["trees"]
+    assert tree_meta.element is not None and tree_meta.element.children, \
+        "详细版 trees 元素应含 nodes children（深结构复用）"
 
 
 def test_def_accessors() -> None:

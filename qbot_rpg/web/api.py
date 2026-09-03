@@ -392,6 +392,60 @@ def create_app(state: Optional[Any] = None) -> Any:
             })
         return {"ok": True, "data": {"pages": pages}}
 
+    # ---- M12.5 批3 路3B：钓鱼 obj 页专属端点（复用 fishing_editor_service
+    #      纯函数层，零写盘——编辑写盘仍走 obj 页 CRUD/原始 JSON）----
+    @router.get("/editor/fishing/schema")
+    def fishing_schema(authorization: str = _Header(default=None)) -> Dict[str, Any]:
+        """钓鱼卡片表单 schema（settings.fishing 九键字段定义，T19 服务层）。"""
+        _require_auth(state, authorization)
+        from qbot_rpg.editor.fishing_editor_service import fish_card_schema
+        return {"ok": True, "data": {"schema": fish_card_schema()}}
+
+    @router.post("/editor/fishing/csv/validate")
+    def fishing_csv_validate(body: Optional[Dict[str, Any]] = None,
+                             authorization: str = _Header(default=None)) -> Dict[str, Any]:
+        """鱼种 CSV 导入预检（解析 + 逐行聚合 {ok,rows,errors,warnings}）。"""
+        _require_auth(state, authorization)
+        from qbot_rpg.editor.fishing_editor_service import (
+            fish_csv_import, fish_csv_validate as _csv_validate,
+        )
+        text = str((body or {}).get("text") or "")
+        try:
+            rows = fish_csv_import(text)
+        except Exception as exc:  # noqa: BLE001 - 解析异常聚合为错误返回
+            return {"ok": False, "errors": [{
+                "level": "red", "code": "csv_parse_error",
+                "message": f"CSV 解析失败：{exc}"}]}
+        out = _csv_validate(rows)
+        return {"ok": True, "data": {
+            "rows": rows, "errors": out.get("errors", []),
+            "warnings": out.get("warnings", []),
+            "total": len(rows)}}
+
+    @router.get("/editor/fishing/crown_preview")
+    def fishing_crown_preview(size: float = 50, weight: float = 50,
+                              authorization: str = _Header(default=None)) -> Dict[str, Any]:
+        """冠级阈值滑条预览（百分位 → 档位 + 中文标签）。"""
+        _require_auth(state, authorization)
+        from qbot_rpg.editor.fishing_editor_service import crown_preview
+        return {"ok": True, "data": crown_preview(size, weight)}
+
+    @router.post("/editor/fishing/simulate")
+    def fishing_simulate(body: Optional[Dict[str, Any]] = None,
+                         authorization: str = _Header(default=None)) -> Dict[str, Any]:
+        """图鉴模拟（种子化确定性：species 池 n 次捕捞 → 冠级分布）。"""
+        _require_auth(state, authorization)
+        from qbot_rpg.editor.fishing_editor_service import simulate_catches
+        b = body or {}
+        species = b.get("species")
+        if not isinstance(species, list):
+            raise _HTTPException(status_code=422, detail={"ok": False, "errors": [{
+                "level": "red", "code": "missing_field", "field": "species",
+                "message": "species 必填（鱼种对象数组）"}]})
+        n = int(b.get("n") or 100)
+        seed = b.get("seed", 42)
+        return {"ok": True, "data": simulate_catches(species, n, seed=seed)}
+
     # ---- 六页 CRUD+校验 6（§6.3）----
     @router.get("/pages/{page}")
     def pages_list(page: str, page_no: int = 1, size: int = 50,

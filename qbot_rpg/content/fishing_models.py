@@ -588,14 +588,36 @@ FISHING_SETTINGS_FIELD_DEFS: Dict[str, FieldMeta] = {
 }
 
 
+# fishing.json 顶层三段宽容器字段表（M12.5 批3 路3B：obj 页字段表接入）。
+# 宽松登记原则（对齐 field_meta M12.5 批1 路1C 口径）：仅登记三段宽容器 + 中文
+# label 供编辑器表单；species 行深结构（13 列）由 fishing_editor_service.
+# fish_card_schema + validate_fishing 专项全权（行级 king 可空、codex_text 多形态
+# 等结构语义防泛型误拦，同 forge FORGE_TOP_FIELD_DEFS 四段登记口径）。
+FISHING_TOP_FIELD_DEFS: Dict[str, FieldMeta] = {
+    # F-00 版本（契约 §〇：schema_version 字符串 "1.0"——登记 str 防泛型类型误拦）
+    "schema_version": FieldMeta(type="str", label="版本"),
+    # species[] 鱼种池（F-01~F-14 深结构专项全权；element children={} 防泛型误拦）
+    "species": FieldMeta(type="list",
+                         element=FieldMeta(type="obj", children={}),
+                         label="鱼种"),
+    # king[] 鱼王事件（K-01~K-07 深结构专项全权；宽容器同上）
+    "king": FieldMeta(type="list",
+                      element=FieldMeta(type="obj", children={}),
+                      label="鱼王"),
+}
+
+
 def fishing_module_meta() -> ModuleMeta:
     """fishing 模块 ModuleMeta（entry_type=object——fishing.json 顶层是 obj 非 list）。
 
-    对齐 forge_module_meta 口径：fields={} 空表防泛型误拦（spots 空数组等结构语义
-    会被泛型 R-1 误伤）——深结构校验由 validate_fishing 专项全权（V1-V6/W1）。
+    fields=三段宽容器（schema_version/species/king，中文 label：版本/鱼种/鱼王）——
+    对齐 forge_module_meta 口径：species/king 行深结构（spots 空数组等语义）会被
+    泛型 R-1 误伤 → 行级由 validate_fishing 专项全权（V1-V6/W1）+ 编辑器表单
+    fishing_editor_service.fish_card_schema 双全权；本表只登记顶层字段口径 + label
+    供 /api/meta/fishing 表单渲染（M12.5 批3 路3B）。
     FISHING_SETTINGS_FIELD_DEFS 保留导出，供 M12 编辑器元数据驱动复用。
     """
-    return ModuleMeta(entry_type="object", fields={}, kind="fish")
+    return ModuleMeta(entry_type="object", fields=FISHING_TOP_FIELD_DEFS, kind="fish")
 
 
 def fishing_settings_meta() -> FieldMeta:

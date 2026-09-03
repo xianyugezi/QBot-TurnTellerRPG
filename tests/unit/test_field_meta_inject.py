@@ -185,3 +185,46 @@ def test_skill_chains_pack_still_loads_zero_red() -> None:
     raw = pack.registry.modules_raw
     sc = raw.get("skill_chains")
     assert isinstance(sc, list) and len(sc) >= 1
+
+
+# =============================================================================
+# M12.5 批3 路3A：forge 顶层 obj 段级字段表注入（forge_module_meta fields 接线）
+# =============================================================================
+def test_forge_fields_injected() -> None:
+    """forge obj 表单字段表注入：五段键 + entry_type=object + 中文 label。
+
+    forge.json 顶层是 obj（非 list）——五段宽容器（schema_version 精确类型 +
+    trees/sets/augments/settings 段级容器）供编辑器 obj 表单渲染（P-07）；
+    深结构仍由 validate_forge 专项全权，泛型只做段级口径。
+    """
+    m = _table().modules["forge"]
+    assert m.entry_type == "object", "forge 顶层 obj → entry_type=object"
+    assert m.kind == "forge"
+    f = _fields("forge")
+    assert set(f) == {"schema_version", "trees", "sets", "augments", "settings"}
+    assert f["schema_version"].type == "str"
+    assert f["trees"].type == "list" and f["sets"].type == "list"
+    assert f["augments"].type == "obj" and f["settings"].type == "obj"
+    # label 中文非空（编辑器 obj 表单段头；版本/锻造树/套装/客制强化/设置）
+    for key in ("schema_version", "trees", "sets", "augments", "settings"):
+        label = f[key].label
+        assert label, f"forge 字段 {key} label 空"
+        assert any("\u4e00" <= ch <= "\u9fff" for ch in label), \
+            f"forge 字段 {key} label 应含中文: {label}"
+
+
+def test_forge_pack_still_loads_zero_red() -> None:
+    """forge 段级字段表注入后 test_demo 加载零新增红拦（宽容器不误拦深结构）。
+
+    trees/sets/augments/settings 元素与内部深结构全部归 validate_forge 专项
+    全权（V1-V15/W + 2c2d V1-V8/W1-W4）——load_pack 不抛即零新增红拦（加载
+    成功 + 真实 forge 段存在即证明：parent=null 等可空字段未被泛型 R-1 误拦）。
+    """
+    pack = asyncio.run(load_pack(_REPO / "content" / "test_demo"))
+    raw = pack.registry.modules_raw
+    forge_raw = raw.get("forge")
+    assert isinstance(forge_raw, dict), "test_demo 应含 forge 顶层 obj"
+    assert set(forge_raw) >= {"schema_version", "trees", "sets", "augments",
+                              "settings"}
+    assert len(forge_raw["trees"]) >= 1, "test_demo forge 至少 1 棵锻造树"
+    # modules_raw 挂 registry 即证明 check_pack 通过（errors 非空会被 PackLoadError 阻断）

@@ -756,15 +756,36 @@ FORGE_TOP_FIELD_DEFS: Dict[str, FieldMeta] = {
 }
 
 
+# M12.5 批3 路3A：forge 编辑器 obj 表单段级字段表（五键宽容器 + 中文段名 label）。
+# 与 fishing FISHING_TOP_FIELD_DEFS 同口径：详细深结构（trees.nodes/sets.skills/
+# augments/settings 内部）保持 FORGE_TOP_FIELD_DEFS 详细版保留导出（编辑器深结构
+# 原始 JSON 兜底）+ validate_forge 专项全权（V1-V15/W + 2c2d V1-V8/W1-W4）——
+# 段级宽容器防泛型误拦（根节点 parent=null / items 可空等真实结构不被 R-1 误伤）。
+FORGE_EDITOR_TOP_FIELDS: Dict[str, FieldMeta] = {
+    "schema_version": FieldMeta(type="str", label="版本"),
+    "trees": FieldMeta(type="list", element=FieldMeta(type="obj", children={}),
+                      soft_label=True, label="锻造树"),
+    "sets": FieldMeta(type="list", element=FieldMeta(type="obj", children={}),
+                     soft_label=True, label="套装"),
+    "augments": FieldMeta(type="obj", children={}, soft_label=True, label="客制强化"),
+    "settings": FieldMeta(type="obj", children={}, soft_label=True, label="设置"),
+}
+
+
 def forge_module_meta() -> ModuleMeta:
     """forge 模块 ModuleMeta（entry_type=object——forge.json 顶层是 obj 非 list）。
 
-    对齐 dungeon/npc/shop/quest/checkin 专项全权口径：fields={} 空表防泛型误拦
-    （根节点 parent=null / items 可空字段会被泛型 R-1 当 type 红拦）——深结构校验
-    由 validate_forge 专项全权（V1-V15/W + 2c2d V1-V8/W1-W4）。
-    FORGE_TOP_FIELD_DEFS（详细字段表）保留导出，供 M12 编辑器元数据驱动复用。
+    M12.5 批3 路3A：fields=FORGE_EDITOR_TOP_FIELDS 段级宽容器（五键 + 中文段名
+    label）——编辑器 obj 表单段头数据源（对齐 fishing_module_meta 三段宽容器
+    口径）。深结构（trees/sets/augments/settings 内部）由 validate_forge 专项
+    全权（V1-V15/W + 2c2d V1-V8/W1-W4），段级宽容器零新增红拦（根节点
+    parent=null / items 可空等真实结构不被泛型 R-1 误伤——M9 降级 fields={} 的
+    原由在段级宽容器下依然成立）。
+    FORGE_TOP_FIELD_DEFS（详细字段表）保留导出，供编辑器深结构/原始 JSON
+    兜底与未来细粒度表单复用。
     """
-    return ModuleMeta(entry_type="object", fields={}, kind="forge")
+    return ModuleMeta(entry_type="object", fields=FORGE_EDITOR_TOP_FIELDS,
+                      kind="forge")
 
 
 # =====================================================================================

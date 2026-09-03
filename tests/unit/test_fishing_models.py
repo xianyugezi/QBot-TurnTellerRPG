@@ -183,12 +183,24 @@ def test_def_accessors() -> None:
 
 
 def test_fishing_module_meta_entry_type_object() -> None:
-    """fishing_module_meta()：entry_type=object（fishing.json 顶层 obj 非 list）+ fields={}。"""
+    """fishing_module_meta()：entry_type=object（fishing.json 顶层 obj 非 list）。
+
+    M12.5 批3 路3B：fields=FISHING_TOP_FIELD_DEFS 三段宽容器（schema_version 精确
+    str + species/king 宽 list 容器 soft_label）——编辑器 obj 表单段头数据源；
+    species/king 行深结构由 validate_fishing 专项 + fish_card_schema 双全权。
+    """
     meta = fishing_module_meta()
     assert meta.entry_type == "object", "fishing 顶层是 obj 非 list → entry_type=object"
     assert meta.kind == "fish"
-    # fields={} 空表：spots 空数组等结构语义防泛型误拦，深结构校验由 validate_fishing 全权
-    assert meta.fields == {}, "fields={} 空表（专项校验器全权，对齐 forge/dungeon）"
+    # 三段宽容器字段表注入（对齐 forge FORGE_EDITOR_TOP_FIELDS 口径）
+    assert set(meta.fields) == {"schema_version", "species", "king"}
+    assert meta.fields["schema_version"].type == "str"
+    for seg in ("species", "king"):
+        fmeta = meta.fields[seg]
+        assert fmeta.type == "list" and fmeta.element is not None
+        # element children={} 即宽容器语义（行深结构归专项/服务层全权）
+        assert fmeta.element.type == "obj" and fmeta.element.children == {}
+    assert all(x.label for x in meta.fields.values()), "三段字段 label 应全中文非空"
 
 
 def test_fishing_settings_meta() -> None:

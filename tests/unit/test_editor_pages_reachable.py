@@ -59,4 +59,6 @@ def test_extension_modules_have_entries() -> None:
                        ("achievements", 1)):
         data = raw.get(mod)
         assert isinstance(data, list) and len(data) >= min_n, \
-            f"{mod} 条目不足（{type(data).__name__} {len(data) if isinstance(data, list) else '?'}）"
+            (f"{mod} 条目不足"
+             f"（{type(data).__name__}"
+             f" {len(data) if isinstance(data, list) else '?'}）")

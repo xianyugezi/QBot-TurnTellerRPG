@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QBot RPG 内容编辑器</title>
+<style>
+  /* M12 批4 路4B：前端最小可用壳（P-01~P-04 固定视口/左列表右卡片简化版）。
+     设计：顶栏（标题/包信息/登出）+ 侧边栏页清单 + 主区（列表/表单）。
+     纯原生 JS 零依赖；对接 /api/* 15 端点。 */
+  :root {
+    --bg: #0f1115; --panel: #1a1d24; --border: #2a2f3a;
+    --text: #d8dee6; --dim: #8b93a1; --accent: #4c8dff;
+    --red: #ff5c5c; --yellow: #e8c14c; --green: #3fbf6f;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    font-size: 13px; height: 100vh; overflow: hidden;
+  }
+  /* 固定视口：顶栏 + 下区（侧边栏 + 主区），无整页滚动（P-01/P-03 简化） */
+  #app { display: none; height: 100vh; flex-direction: column; }
+  #app.active { display: flex; }
+  #topbar {
+    height: 40px; display: flex; align-items: center; gap: 12px;
+    padding: 0 14px; border-bottom: 1px solid var(--border);
+    background: var(--panel); flex-shrink: 0;
+  }
+  #topbar .title { font-weight: 600; font-size: 14px; }
+  #topbar .spacer { flex: 1; }
+  #topbar .pkinfo { color: var(--dim); font-size: 12px; }
+  #main { flex: 1; display: flex; min-height: 0; }
+  #sidebar {
+    width: 170px; border-right: 1px solid var(--border); background: var(--panel);
+    overflow-y: auto; flex-shrink: 0; padding: 6px 0;
+  }
+  #sidebar .group {
+    font-size: 11px; color: var(--dim); padding: 8px 12px 4px;
+    letter-spacing: 1px;
+  }
+  #sidebar .page {
+    display: block; width: 100%; text-align: left; padding: 6px 14px;
+    background: none; border: none; color: var(--text); cursor: pointer;
+    font-size: 13px;
+  }
+  #sidebar .page:hover { background: #232833; }
+  #sidebar .page.active { background: #263349; color: var(--accent); }
+  #sidebar .page.disabled { color: var(--dim); opacity: .5; }
+  #content { flex: 1; display: flex; min-width: 0; }
+  /* 左列表 + 右编辑卡片（P-02 简化：固定表格内部滚动） */
+  #listpane {
+    width: 300px; border-right: 1px solid var(--border); display: flex;
+    flex-direction: column; min-width: 0;
+  }
+  #listhead {
+    padding: 8px 10px; border-bottom: 1px solid var(--border);
+    display: flex; gap: 6px; align-items: center;
+  }
+  #listhead input {
+    flex: 1; background: #12151c; border: 1px solid var(--border);
+    color: var(--text); padding: 4px 8px; border-radius: 4px;
+  }
+  #listhead button {
+    background: var(--accent); border: none; color: #fff;
+    padding: 4px 10px; border-radius: 4px; cursor: pointer;
+  }
+  #listbody { flex: 1; overflow-y: auto; }
+  #listbody .row {
+    padding: 7px 12px; border-bottom: 1px solid #20242d; cursor: pointer;
+    display: flex; justify-content: space-between; gap: 8px;
+  }
+  #listbody .row:hover { background: #232833; }
+  #listbody .row.active { background: #263349; }
+  #listbody .row .rid { color: var(--dim); font-size: 11px; }
+  #listfoot {
+    padding: 6px 10px; border-top: 1px solid var(--border); color: var(--dim);
+    display: flex; gap: 8px; font-size: 12px; align-items: center;
+  }
+  #listfoot .spacer { flex: 1; }
+  #listfoot button {
+    background: none; border: 1px solid var(--border); color: var(--text);
+    padding: 2px 8px; border-radius: 4px; cursor: pointer;
+  }
+  #editpane { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  #edithead {
+    padding: 8px 14px; border-bottom: 1px solid var(--border);
+    display: flex; gap: 8px; align-items: center;
+  }
+  #edithead .ename { font-weight: 600; font-size: 14px; }
+  #edithead .spacer { flex: 1; }
+  #edithead button {
+    padding: 4px 14px; border-radius: 4px; cursor: pointer; border: none;
+  }
+  #btnSave { background: var(--accent); color: #fff; }
+  #btnNew { background: #2d3542; color: var(--text); }
+  #btnDel { background: #3a2626; color: #ff8a8a; }
+  #formwrap { flex: 1; overflow-y: auto; padding: 12px 16px; }
+  .field { margin-bottom: 10px; }
+  .field label {
+    display: block; font-size: 12px; color: var(--dim); margin-bottom: 3px;
+  }
+  .field label .req { color: var(--red); }
+  .field input, .field select, .field textarea {
+    width: 100%; background: #12151c; border: 1px solid var(--border);
+    color: var(--text); padding: 5px 8px; border-radius: 4px;
+    font-size: 13px;
+  }
+  .field textarea { min-height: 64px; resize: vertical; font-family: monospace; }
+  .field .hint { font-size: 11px; color: var(--dim); margin-top: 2px; }
+  #msgs { padding: 4px 14px; font-size: 12px; max-height: 60px; overflow-y: auto; }
+  #msgs .ok { color: var(--green); }
+  #msgs .err { color: var(--red); }
+  #msgs .warn { color: var(--yellow); }
+  /* 登录页 */
+  #login {
+    height: 100vh; display: flex; align-items: center; justify-content: center;
+  }
+  #login .card {
+    background: var(--panel); border: 1px solid var(--border);
+    padding: 28px 34px; border-radius: 8px; width: 320px;
+  }
+  #login h1 { font-size: 17px; margin-bottom: 16px; text-align: center; }
+  #login input {
+    width: 100%; background: #12151c; border: 1px solid var(--border);
+    color: var(--text); padding: 7px 10px; border-radius: 4px; margin-bottom: 10px;
+  }
+  #login button {
+    width: 100%; background: var(--accent); color: #fff; border: none;
+    padding: 8px; border-radius: 4px; cursor: pointer; margin-top: 4px;
+  }
+  #login .err { color: var(--red); font-size: 12px; text-align: center; margin-top: 8px; }
+  #login .hint { color: var(--dim); font-size: 12px; text-align: center; margin-top: 8px; }
+  /* 空态 */
+  .empty { color: var(--dim); text-align: center; padding: 40px 20px; }
+</style>
+</head>
+<body>
+
+<!-- 登录 -->
+<div id="login">
+  <div class="card">
+    <h1>QBot RPG 内容编辑器</h1>
+    <input id="lg_owner" placeholder="机主 QQ" autocomplete="username">
+    <input id="lg_pass" type="password" placeholder="密码" autocomplete="current-password">
+    <button id="btnLogin">登录</button>
+    <div class="err" id="loginErr"></div>
+    <div class="hint" id="loginHint"></div>
+  </div>
+</div>
+
+<!-- 主界面 -->
+<div id="app">
+  <div id="topbar">
+    <span class="title">内容编辑器</span>
+    <span class="pkinfo" id="pkInfo"></span>
+    <span class="spacer"></span>
+    <button id="btnLogout" style="background:none;border:1px solid var(--border);color:var(--text);padding:3px 10px;border-radius:4px;cursor:pointer;">登出</button>
+  </div>
+  <div id="main">
+    <nav id="sidebar"></nav>
+    <div id="content">
+      <div id="listpane">
+        <div id="listhead">
+          <input id="search" placeholder="搜索...">
+          <button id="btnNew" title="新建">+</button>
+        </div>
+        <div id="listbody"></div>
+        <div id="listfoot">
+          <span id="pgInfo"></span>
+          <span class="spacer"></span>
+          <button id="pgPrev">上一页</button>
+          <button id="pgNext">下一页</button>
+        </div>
+      </div>
+      <div id="editpane">
+        <div id="edithead">
+          <span class="ename" id="editName">—</span>
+          <span class="spacer"></span>
+          <button id="btnSave">保存</button>
+          <button id="btnDel">删除</button>
+        </div>
+        <div id="formwrap"><div class="empty">选择左侧条目或新建</div></div>
+        <div id="msgs"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* M12 批4 路4B 前端最小可用壳：登录 → 页清单 → 列表 → meta 驱动表单 → 保存。
+   纯原生 JS 零依赖；全部走 /api 端点 + Bearer token。 */
+(function () {
+  var TOKEN = localStorage.getItem("editor_token") || "";
+  var state = { page: null, items: [], meta: null, cur: null, isNew: false,
+                pageNo: 1, size: 50, total: 0, pages: [] };
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  /* ---------- API 调用 ---------- */
+  function api(method, path, body) {
+    var headers = { "Content-Type": "application/json" };
+    if (TOKEN) headers["Authorization"] = "Bearer " + TOKEN;
+    return fetch(path, { method: method, headers: headers,
+                         body: body ? JSON.stringify(body) : undefined })
+      .then(function (r) { return r.json().catch(function () { return {}; })
+          .then(function (j) { j._status = r.status; return j; }); });
+  }
+
+  function msg(text, cls) {
+    var m = $("msgs");
+    var div = document.createElement("div");
+    div.className = cls || "err";
+    div.textContent = text;
+    m.appendChild(div);
+    while (m.children.length > 6) m.removeChild(m.firstChild);
+  }
+
+  /* ---------- 登录 ---------- */
+  function showApp() {
+    $("login").style.display = "none";
+    $("app").classList.add("active");
+    loadPackInfo();
+    loadPages();
+  }
+  function showLogin(errText) {
+    $("app").classList.remove("active");
+    $("login").style.display = "flex";
+    $("loginErr").textContent = errText || "";
+    if (!TOKEN) $("loginHint").textContent = "首次使用请先设置密码（机主 QQ + 新密码）";
+    else $("loginHint").textContent = "";
+  }
+  $("btnLogin").addEventListener("click", function () {
+    var owner = $("lg_owner").value.trim();
+    var pass = $("lg_pass").value;
+    if (!owner || !pass) { $("loginErr").textContent = "请输入机主 QQ 与密码"; return; }
+    api("POST", "/api/auth/login", { qq_id: owner, password: pass })
+      .then(function (j) {
+        if (j.ok && j.data && j.data.token) {
+          TOKEN = j.data.token;
+          localStorage.setItem("editor_token", TOKEN);
+          showApp();
+        } else {
+          // 未设置密码 → 尝试 setup
+          var errs = (j.errors || []).map(function (e) { return e.message; }).join("；");
+          if (j._status === 401 && errs.indexOf("未设置") >= 0) {
+            // 走 setup（同表单二次提交）
+            setupOwner(owner, pass);
+          } else {
+            $("loginErr").textContent = errs || ("登录失败（" + j._status + "）");
+            if (j._status === 423) {
+              $("loginHint").textContent = "失败次数过多，已锁定 15 分钟";
+            }
+          }
+        }
+      }).catch(function (e) { $("loginErr").textContent = "网络错误：" + e; });
+  });
+  function setupOwner(owner, pass) {
+    api("POST", "/api/auth/setup", { qq_id: owner, password: pass })
+      .then(function (j) {
+        if (j.ok) {
+          $("loginHint").textContent = "密码已设置，请重新登录";
+          $("loginErr").textContent = "";
+        } else {
+          var errs = (j.errors || []).map(function (e) { return e.message; }).join("；");
+          $("loginErr").textContent = errs || "设置失败";
+        }
+      });
+  }
+  $("btnLogout").addEventListener("click", function () {
+    api("POST", "/api/auth/logout").then(function () {
+      TOKEN = "";
+      localStorage.removeItem("editor_token");
+      showLogin("已登出");
+    });
+  });
+
+  /* ---------- 数据包信息 / 页清单 ---------- */
+  function loadPackInfo() {
+    api("GET", "/api/packs").then(function (j) {
+      if (j.ok && j.data) {
+        var a = j.data.active || {};
+        var name = a.pack_id || a.name || "";
+        $("pkInfo").textContent = "包：" + name + "  gen:" + (j.data.generation || 0);
+      }
+    });
+  }
+  function loadPages() {
+    api("GET", "/api/editor/pages").then(function (j) {
+      if (j.ok && j.data && j.data.pages) {
+        state.pages = j.data.pages;
+        renderSidebar();
+        if (state.pages.length) selectPage(state.pages[0].page_id);
+      } else if (j._status === 401) {
+        TOKEN = ""; localStorage.removeItem("editor_token"); showLogin("登录已失效");
+      }
+    });
+  }
+  function renderSidebar() {
+    var sb = $("sidebar");
+    sb.innerHTML = "";
+    // 分组：主清单在前（enabled），扩展页在后（disabled 置灰仍可点开查看）
+    var groups = {};
+    state.pages.forEach(function (p) {
+      var g = p.enabled ? "主页面" : "扩展页";
+      if (!groups[g]) {
+        var h = document.createElement("div");
+        h.className = "group"; h.textContent = g;
+        sb.appendChild(h); groups[g] = true;
+      }
+      var b = document.createElement("button");
+      b.className = "page" + (p.enabled ? "" : " disabled");
+      b.dataset.page = p.page_id;
+      b.textContent = (p.icon || "") + " " + p.title;
+      b.addEventListener("click", function () { selectPage(p.page_id); });
+      sb.appendChild(b);
+    });
+  }
+
+  /* ---------- 页面选择 → 列表 ---------- */
+  function selectPage(pageId) {
+    state.page = pageId;
+    state.pageNo = 1; state.cur = null; state.isNew = false;
+    document.querySelectorAll("#sidebar .page").forEach(function (b) {
+      b.classList.toggle("active", b.dataset.page === pageId);
+    });
+    loadMeta(pageId);
+    loadList(pageId, 1);
+    $("editName").textContent = "—";
+    $("formwrap").innerHTML = '<div class="empty">加载中...</div>';
+  }
+  function loadMeta(pageId) {
+    api("GET", "/api/meta/" + pageId).then(function (j) {
+      if (j.ok && j.data) {
+        state.meta = j.data;
+        if (state.cur) renderForm();
+      } else if (j._status !== 404) {
+        state.meta = null;
+      }
+    });
+  }
+  function loadList(pageId, pageNo) {
+    var q = $("search").value.trim();
+    var url = "/api/pages/" + pageId + "?page_no=" + pageNo + "&size=" + state.size +
+              (q ? "&q=" + encodeURIComponent(q) : "");
+    api("GET", url).then(function (j) {
+      if (j.ok && j.data) {
+        state.items = (j.data.items || []).slice(0, state.size);
+        state.total = j.data.total || state.items.length;
+        state.pageNo = pageNo;
+        renderList();
+      } else if (j._status === 401) {
+        TOKEN = ""; localStorage.removeItem("editor_token"); showLogin("登录已失效");
+      } else {
+        var errs = (j.errors || []).map(function (e) { return e.message; }).join("；");
+        $("listbody").innerHTML = '<div class="empty">' + (errs || "列表加载失败") + "</div>";
+      }
+    });
+  }
+  function renderList() {
+    var lb = $("listbody");
+    lb.innerHTML = "";
+    if (!state.items.length) {
+      lb.innerHTML = '<div class="empty">（空）点击 + 新建</div>';
+    }
+    state.items.forEach(function (it) {
+      var row = document.createElement("div");
+      row.className = "row" + (state.cur && state.cur.id === it.id ? " active" : "");
+      var name = it.name || it.id || "?";
+      var left = document.createElement("span"); left.textContent = name;
+      var right = document.createElement("span"); right.className = "rid";
+      right.textContent = it.id || "";
+      row.appendChild(left); row.appendChild(right);
+      row.addEventListener("click", function () { openItem(it.id); });
+      lb.appendChild(row);
+    });
+    var totalPages = Math.max(1, Math.ceil(state.total / state.size));
+    $("pgInfo").textContent = "第 " + state.pageNo + "/" + totalPages + " 页 · 共 " + state.total;
+    $("pgPrev").disabled = state.pageNo <= 1;
+    $("pgNext").disabled = state.pageNo >= totalPages;
+  }
+  $("pgPrev").addEventListener("click", function () {
+    if (state.page && state.pageNo > 1) loadList(state.page, state.pageNo - 1);
+  });
+  $("pgNext").addEventListener("click", function () {
+    if (state.page) loadList(state.page, state.pageNo + 1);
+  });
+  var searchTimer = null;
+  $("search").addEventListener("input", function () {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(function () {
+      if (state.page) { state.pageNo = 1; loadList(state.page, 1); }
+    }, 350);
+  });
+
+  /* ---------- 条目打开 / 新建 / 表单 ---------- */
+  function openItem(id) {
+    api("GET", "/api/pages/" + state.page + "/" + encodeURIComponent(id))
+      .then(function (j) {
+        if (j.ok && j.data && j.data.item) {
+          state.cur = j.data.item; state.isNew = false;
+          renderForm();
+        }
+      });
+  }
+  $("btnNew").addEventListener("click", function () {
+    if (!state.page) return;
+    state.cur = { id: "", name: "" };
+    state.isNew = true;
+    renderForm();
+  });
+  function fieldValue(it, name, f) {
+    var v = it[name];
+    if (v === undefined || v === null) return "";
+    if (f && f.type === "list") return JSON.stringify(v);
+    if (typeof v === "object") return JSON.stringify(v);
+    return v;
+  }
+  function renderForm() {
+    if (!state.cur) return;
+    $("editName").textContent = (state.isNew ? "新建 · " : "") +
+      (state.cur.name || state.cur.id || "未命名");
+    var fw = $("formwrap");
+    fw.innerHTML = "";
+    var fields = (state.meta && state.meta.fields) || [];
+    if (!fields.length) {
+      fw.innerHTML = '<div class="empty">该页暂无字段元数据（field_meta 未注入）——可查看原始 JSON</div>';
+    }
+    fields.forEach(function (f) {
+      var div = document.createElement("div");
+      div.className = "field";
+      var lab = document.createElement("label");
+      lab.innerHTML = (f.label || f.name) +
+        (f.required ? ' <span class="req">*</span>' : "") +
+        ' <span style="opacity:.6">[' + f.type + "]</span>";
+      var input;
+      if (f.type === "select" || (f.enum && f.enum.length)) {
+        input = document.createElement("select");
+        var opt0 = document.createElement("option"); opt0.value = ""; opt0.textContent = "（空）";
+        input.appendChild(opt0);
+        (f.enum || []).forEach(function (e) {
+          var o = document.createElement("option");
+          o.value = e; o.textContent = e;
+          input.appendChild(o);
+        });
+      } else if (f.type === "list" || f.type === "object") {
+        input = document.createElement("textarea");
+        input.dataset.json = "1";
+      } else if (f.type === "number") {
+        input = document.createElement("input");
+        input.type = "number";
+      } else if (f.type === "boolean") {
+        input = document.createElement("select");
+        ["", "true", "false"].forEach(function (v) {
+          var o = document.createElement("option");
+          o.value = v; o.textContent = v === "" ? "（空）" : v;
+          input.appendChild(o);
+        });
+      } else {
+        input = document.createElement("input");
+        input.type = "text";
+      }
+      input.dataset.field = f.name;
+      input.value = fieldValue(state.cur, f.name, f);
+      div.appendChild(lab);
+      div.appendChild(input);
+      if (f.ref_target) {
+        var hint = document.createElement("div");
+        hint.className = "hint"; hint.textContent = "引用：" + f.ref_target;
+        div.appendChild(hint);
+      }
+      fw.appendChild(div);
+    });
+    // 原始 JSON 折叠区（字段元数据缺失/扩展字段兜底查看）
+    var pre = document.createElement("details");
+    var sum = document.createElement("summary");
+    sum.textContent = "原始 JSON";
+    pre.appendChild(sum);
+    var ta = document.createElement("textarea");
+    ta.style.minHeight = "200px"; ta.dataset.field = "__raw__";
+    ta.value = JSON.stringify(state.cur, null, 2);
+    pre.appendChild(ta);
+    fw.appendChild(pre);
+  }
+  function collectForm() {
+    if (!state.meta) return Object.assign({}, state.cur);
+    var out = {};
+    document.querySelectorAll("#formwrap [data-field]").forEach(function (el) {
+      var name = el.dataset.field;
+      if (name === "__raw__") return;
+      var v = el.value;
+      if (el.dataset.json) {
+        try { out[name] = v.trim() ? JSON.parse(v) : undefined; }
+        catch (e) { msg("字段 " + name + " JSON 解析失败：" + e.message, "err"); }
+      } else if (el.type === "number") {
+        out[name] = v === "" ? undefined : Number(v);
+      } else {
+        out[name] = v;
+      }
+    });
+    // 原始 JSON 覆盖（若用户编辑了原始区）
+    var raw = document.querySelector('#formwrap [data-field="__raw__"]');
+    if (raw) {
+      try { out = JSON.parse(raw.value); } catch (e) { /* 忽略原始区语法错 */ }
+    }
+    return out;
+  }
+
+  /* ---------- 保存 / 删除 ---------- */
+  $("btnSave").addEventListener("click", function () {
+    if (!state.page || !state.cur) return;
+    var body = collectForm();
+    if (state.isNew) {
+      delete body.id;
+      api("POST", "/api/pages/" + state.page, body).then(function (j) {
+        if (j.ok) {
+          msg("已保存 " + (j.data.item && j.data.item.id), "ok");
+          state.isNew = false;
+          loadList(state.page, 1);
+          if (j.data.item) openItem(j.data.item.id);
+        } else {
+          var errs = (j.errors || []).map(function (e) { return e.message; }).join("；");
+          msg(errs || "保存失败", "err");
+        }
+      });
+    } else {
+      body.base_version = state.cur._version || 0;
+      api("PUT", "/api/pages/" + state.page + "/" + encodeURIComponent(state.cur.id), body)
+        .then(function (j) {
+          if (j.ok) {
+            msg("已保存 " + state.cur.id, "ok");
+            loadList(state.page, state.pageNo);
+          } else if (j._status === 409) {
+            msg("版本冲突：条目已被他人修改，请刷新后重试", "err");
+          } else {
+            var errs = (j.errors || []).map(function (e) { return e.message; }).join("；");
+            msg(errs || "保存失败", "err");
+          }
+        });
+    }
+  });
+  $("btnDel").addEventListener("click", function () {
+    if (!state.page || !state.cur || state.isNew) return;
+    if (!confirm("确定删除 " + state.cur.id + "？（级联清理引用）")) return;
+    api("DELETE", "/api/pages/" + state.page + "/" + encodeURIComponent(state.cur.id))
+      .then(function (j) {
+        if (j.ok) {
+          msg("已删除 " + state.cur.id, "ok");
+          state.cur = null;
+          loadList(state.page, 1);
+          $("editName").textContent = "—";
+          $("formwrap").innerHTML = '<div class="empty">选择左侧条目或新建</div>';
+        } else {
+          var errs = (j.errors || []).map(function (e) { return e.message; }).join("；");
+          msg(errs || "删除失败", "err");
+        }
+      });
+  });
+
+  /* ---------- 启动 ---------- */
+  if (TOKEN) {
+    // 验证 token：me 成功 → 主界面；失败 → 登录
+    api("GET", "/api/auth/me").then(function (j) {
+      if (j.ok) showApp();
+      else { TOKEN = ""; localStorage.removeItem("editor_token"); showLogin("登录已失效，请重新登录"); }
+    });
+  } else {
+    showLogin("");
+  }
+})();
+</script>
+</body>
+</html>

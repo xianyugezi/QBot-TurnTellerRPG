@@ -251,5 +251,36 @@ def test_iter_routes_15(tmp_path: Path) -> None:
                    "/api/auth/logout", "/api/meta/{page}", "/api/refs/{target}",
                    "/api/pages/{page}", "/api/pages/{page}/{item_id}",
                    "/api/pages/{page}/validate", "/api/reload",
-                   "/api/packs", "/api/packs/active"):
+                   "/api/packs", "/api/packs/active", "/api/editor/pages"):
         assert expect in paths, f"缺少路由 {expect}"
+
+
+# =============================================================================
+# 前端壳（批4 路4B）
+# =============================================================================
+def test_editor_root_serves_html(tmp_path: Path) -> None:
+    """GET / → editor.html（含编辑器登录壳标记）。"""
+    client = make_client(make_state(tmp_path))
+    r = client.get("/")
+    assert r.status_code == 200
+    assert "内容编辑器" in r.text
+
+
+def test_editor_pages_list(tmp_path: Path) -> None:
+    """GET /api/editor/pages → 页清单（editor_registry 六页兜底 ≥6 页）。"""
+    client = make_client(make_state(tmp_path))
+    token = owner_token(client)
+    r = client.get("/api/editor/pages", headers=auth_h(token))
+    assert r.status_code == 200
+    pages = r.json()["data"]["pages"]
+    assert len(pages) >= 6
+    ids = {p["page_id"] for p in pages}
+    assert {"skill", "monster", "map"} <= ids
+
+
+def test_healthz(tmp_path: Path) -> None:
+    """GET /healthz → 健康检查 ok。"""
+    client = make_client(make_state(tmp_path))
+    r = client.get("/healthz")
+    assert r.status_code == 200
+    assert r.json()["ok"] is True

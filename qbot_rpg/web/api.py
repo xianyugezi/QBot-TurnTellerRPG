@@ -162,6 +162,26 @@ def create_app(state: Optional[Any] = None) -> Any:
     app = FastAPI(title="QBot RPG 内容编辑器", docs_url=None, redoc_url=None)
     router = APIRouter(prefix="/api")
 
+    # ---- 前端壳（M12 批4 路4B：/ → editor.html 单文件最小可用壳）----
+    from pathlib import Path as _Path
+
+    _EDITOR_HTML = _Path(__file__).parent / "static" / "editor.html"
+
+    @app.get("/", include_in_schema=False)
+    def editor_root() -> Any:
+        """编辑器首页（单文件 HTML 壳）。"""
+        if _EDITOR_HTML.exists():
+            from fastapi.responses import FileResponse
+            return FileResponse(str(_EDITOR_HTML))
+        return {"ok": False, "errors": [{
+            "level": "red", "code": "not_found",
+            "message": "editor.html 缺失（web/static/editor.html）"}]}
+
+    @app.get("/healthz", include_in_schema=False)
+    def healthz() -> Dict[str, Any]:
+        """健康检查（宿主拉起后探测用）。"""
+        return {"ok": True, "service": "qbot-editor"}
+
     # ---- 认证 4（§6.1）----
     @router.post("/auth/setup")
     def auth_setup(body: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -267,6 +287,26 @@ def create_app(state: Optional[Any] = None) -> Any:
                     items.append({"id": str(e.get("id") or ""),
                                   "name": str(e.get("name") or "")})
         return {"ok": True, "data": {"target": target, "items": items}}
+
+    @router.get("/editor/pages")
+    def editor_pages() -> Dict[str, Any]:
+        """编辑器页清单（前端侧边栏数据源；editor_registry 页表，含启停语义）。"""
+        reg = _require_state(state, "registry")
+        from qbot_rpg.content.editor_registry import load_editor_registry
+        editor = load_editor_registry(reg)
+        pages = []
+        for p in editor.pages:
+            pages.append({
+                "page_id": p.page_id,
+                "title": p.title,
+                "icon": p.icon,
+                "module_file": p.module_file,
+                "meta_source": p.meta_source,
+                "tabs": list(p.tabs or ()),
+                "enabled": bool(p.enabled),
+                "extends": p.extends,
+            })
+        return {"ok": True, "data": {"pages": pages}}
 
     # ---- 六页 CRUD+校验 6（§6.3）----
     @router.get("/pages/{page}")

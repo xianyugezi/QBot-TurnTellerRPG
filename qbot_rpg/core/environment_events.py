@@ -51,7 +51,7 @@ from __future__ import annotations
 
 from typing import Any, Iterable, Mapping, MutableMapping, Optional, Tuple
 
-from qbot_rpg.core.event_bus import EVENT_LOG_KEY, bump_event
+from qbot_rpg.core.event_bus import EVENT_LOG_KEY, bump_event, resolve_event_key
 from qbot_rpg.engine.condition_engine import eval_condition
 
 __all__ = [
@@ -75,7 +75,10 @@ ENVIRONMENT_TAG = "environment"
 AMBIENT_TAG = "ambient"
 ENVIRONMENT_TAGS: Tuple[str, ...] = (ENVIRONMENT_TAG, AMBIENT_TAG)
 
-# 环境事件 base 键（bump_event 用；条件引擎引用全键 [事件:环境事件:ID]）
+# 环境事件 base 键（缺省值；写读点已改经 resolve_event_key(ctx, "环境事件") 解析，
+# settings.events 段可配 name 段——配置改名后写点落新键，条件/展示按新键写即可。
+# 常量保留供 event_key_environment 拼装 + 外部引用/测试 import，仅=缺省值，
+# 解析中心 EVENT_KEY_DEFAULTS 缺省回退同值，零配置零破坏）
 ENV_EVENT_KEY_BASE = "[事件:环境事件]"
 
 # 事件定义缺省优先级（补白 3：派生事件 / 定义缺省）
@@ -472,17 +475,20 @@ def check_environment_events(
     """
     reg = _registry_of(ctx, map_def, registry)
     map_id = _map_id(map_def)
+    # M12.5 批5 收口：环境事件写读键经解析中心（settings.events 可配 name 段，
+    # 缺省回退 ENV_EVENT_KEY_BASE 同值 [事件:环境事件]）
+    env_key = resolve_event_key(ctx, "环境事件")
     triggered: list = []
     for ev in reg.applicable(map_id):
         if not _cond_ok(ev["condition"], ctx):
             continue
         event_id = ev["event_id"]
-        first_seen = _prev_count(ctx, ENV_EVENT_KEY_BASE, event_id) == 0
+        first_seen = _prev_count(ctx, env_key, event_id) == 0
         params = dict(ev["params"])
         params.setdefault("event_id", event_id)
         res = bump_event(
             ctx,
-            ENV_EVENT_KEY_BASE,
+            env_key,
             instance={
                 "event_id": event_id,
                 "tag": ev["tag"],
@@ -500,7 +506,7 @@ def check_environment_events(
             "priority": ev["priority"],
             "first_seen": first_seen,
             "ok": bool(res.get("ok")),
-            "count": _prev_count(ctx, ENV_EVENT_KEY_BASE, event_id),
+            "count": _prev_count(ctx, env_key, event_id),
         })
     return {"triggered": triggered, "count": len(triggered)}
 

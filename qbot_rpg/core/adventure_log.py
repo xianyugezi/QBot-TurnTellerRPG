@@ -62,7 +62,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Any, Mapping, MutableMapping, Optional
 
-from qbot_rpg.core.event_bus import EVENT_LOG_KEY, bump_event
+from qbot_rpg.core.event_bus import EVENT_LOG_KEY, bump_event, resolve_event_key
 
 __all__ = [
     # 六类 tag（R-02 表，组序固定 R-03）
@@ -125,15 +125,21 @@ ADVENTURE_LOG_TAGS: tuple = (
 # -------------------------------------------------------------------------------------
 # 事件键约定（R-02 语义；base 键用于 bump_event，target 携带按目标维度；full 形态
 # 为条件引擎/展示引用全键）
+#
+# M12.5 批5 收口：以下 EVENT_KEY_* 常量的写读点（log_* 内 _prev_count/bump_event）
+# 已改经 resolve_event_key(ctx, 事件名) 解析（settings.events 段可配 name 段）。
+# 常量保留仅供 event_key_* 全键函数拼装与外部引用/测试 import —— 仅=缺省值，
+# 解析中心 EVENT_KEY_DEFAULTS 缺省回退同值（零配置零破坏；配置改名后写点落新键，
+# 条件/展示按新键写即可）。
 # -------------------------------------------------------------------------------------
-EVENT_KEY_FIRST_KILL = "[事件:首杀]"
-EVENT_KEY_FIRST_CROWN = "[事件:首钓冠级]"
+EVENT_KEY_FIRST_KILL = "[事件:首杀]"  # 写读点缺省值（resolve_event_key(ctx, "首杀")）
+EVENT_KEY_FIRST_CROWN = "[事件:首钓冠级]"  # 写读点缺省值（resolve_event_key(ctx, "首钓冠级")）
 # story_node 复用 N-03 预置键 [事件:任务完成]（quest 结算点既有点；flat 保持条件引擎
 # 读取源与 test_event_bus 平铺断言不变）
-EVENT_KEY_STORY_NODE = "[事件:任务完成]"
-EVENT_KEY_HIDDEN_FIND = "[事件:隐藏发现]"
-EVENT_KEY_MILESTONE = "[事件:里程碑]"
-EVENT_KEY_CODEX_NEW = "[事件:图鉴新增]"
+EVENT_KEY_STORY_NODE = "[事件:任务完成]"  # 写读点缺省值（resolve_event_key(ctx, "任务完成")）
+EVENT_KEY_HIDDEN_FIND = "[事件:隐藏发现]"  # 写读点缺省值（resolve_event_key(ctx, "隐藏发现")）
+EVENT_KEY_MILESTONE = "[事件:里程碑]"  # 写读点缺省值（resolve_event_key(ctx, "里程碑")）
+EVENT_KEY_CODEX_NEW = "[事件:图鉴新增]"  # 写读点缺省值（resolve_event_key(ctx, "图鉴新增")）
 
 
 def _full_key(base: str, target: object) -> str:
@@ -213,10 +219,12 @@ def log_first_kill(
     if not str(monster_name or ""):
         return {"ok": False, "reason": "empty_name"}
     target = str(monster_id) if monster_id is not None else str(monster_name)
-    first_seen = _prev_count(ctx, EVENT_KEY_FIRST_KILL, target) == 0
+    # M12.5 批5 收口：写读键经解析中心（settings.events 可配，缺省回退 EVENT_KEY_FIRST_KILL）
+    key = resolve_event_key(ctx, "首杀")
+    first_seen = _prev_count(ctx, key, target) == 0
     return bump_event(
         ctx,
-        EVENT_KEY_FIRST_KILL,
+        key,
         instance={
             "tag": FIRST_KILL_TAG,
             "target": target,
@@ -240,10 +248,12 @@ def log_first_crown(
     if not str(fish_name or ""):
         return {"ok": False, "reason": "empty_name"}
     target = str(fish_id) if fish_id is not None else str(fish_name)
-    first_seen = _prev_count(ctx, EVENT_KEY_FIRST_CROWN, target) == 0
+    # M12.5 批5 收口：写读键经解析中心（settings.events 可配，缺省回退 EVENT_KEY_FIRST_CROWN）
+    key = resolve_event_key(ctx, "首钓冠级")
+    first_seen = _prev_count(ctx, key, target) == 0
     return bump_event(
         ctx,
-        EVENT_KEY_FIRST_CROWN,
+        key,
         instance={
             "tag": FIRST_CROWN_TAG,
             "target": target,
@@ -268,9 +278,11 @@ def log_story_node(
     """
     if not str(node or ""):
         return {"ok": False, "reason": "empty_node"}
+    # M12.5 批5 收口：写读键经解析中心（settings.events 可配，缺省回退 EVENT_KEY_STORY_NODE）
+    key = resolve_event_key(ctx, "任务完成")
     return bump_event(
         ctx,
-        EVENT_KEY_STORY_NODE,
+        key,
         instance={
             "tag": STORY_NODE_TAG,
             "first_seen": False,
@@ -289,10 +301,12 @@ def log_hidden_find(ctx: MutableMapping[str, Any], hidden_id: str) -> dict:
     if not str(hidden_id or ""):
         return {"ok": False, "reason": "empty_hidden"}
     target = str(hidden_id)
-    first_seen = _prev_count(ctx, EVENT_KEY_HIDDEN_FIND, target) == 0
+    # M12.5 批5 收口：写读键经解析中心（settings.events 可配，缺省回退 EVENT_KEY_HIDDEN_FIND）
+    key = resolve_event_key(ctx, "隐藏发现")
+    first_seen = _prev_count(ctx, key, target) == 0
     return bump_event(
         ctx,
-        EVENT_KEY_HIDDEN_FIND,
+        key,
         instance={
             "tag": HIDDEN_FIND_TAG,
             "target": target,
@@ -312,9 +326,11 @@ def log_milestone(ctx: MutableMapping[str, Any], pct: object) -> dict:
     if pct is None:
         return {"ok": False, "reason": "empty_pct"}
     target = str(pct)
+    # M12.5 批5 收口：写读键经解析中心（settings.events 可配，缺省回退 EVENT_KEY_MILESTONE）
+    key = resolve_event_key(ctx, "里程碑")
     return bump_event(
         ctx,
-        EVENT_KEY_MILESTONE,
+        key,
         instance={
             "tag": MILESTONE_TAG,
             "target": target,
@@ -333,9 +349,11 @@ def log_codex_new(ctx: MutableMapping[str, Any], entry: str) -> dict:
     if not str(entry or ""):
         return {"ok": False, "reason": "empty_entry"}
     target = str(entry)
+    # M12.5 批5 收口：写读键经解析中心（settings.events 可配，缺省回退 EVENT_KEY_CODEX_NEW）
+    key = resolve_event_key(ctx, "图鉴新增")
     return bump_event(
         ctx,
-        EVENT_KEY_CODEX_NEW,
+        key,
         instance={
             "tag": CODEX_NEW_TAG,
             "target": target,

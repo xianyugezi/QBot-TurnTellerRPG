@@ -22,7 +22,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Mapping, MutableMapping, Optional
+from typing import Any, Dict, Mapping, MutableMapping, Optional
 
 # ---------------------------------------------------------------------------
 # settings.pvp 段配置（B-3：三态容错，对齐 fishing_cfg）
@@ -110,15 +110,31 @@ def _combatant_of(player: Mapping[str, Any]) -> dict:
         base = attrs.get("base") if isinstance(attrs.get("base"), Mapping) else {}
         bonus = attrs.get("bonus") if isinstance(attrs.get("bonus"), Mapping) else {}
         temp = attrs.get("temp") if isinstance(attrs.get("temp"), Mapping) else {}
+        cond = attrs.get("cond") if isinstance(attrs.get("cond"), Mapping) else {}
         b = base.get(key, default) if isinstance(base, Mapping) else default
         bf = bonus.get("flat", 0) if isinstance(bonus, Mapping) else 0
         bp = bonus.get("pct", 0) if isinstance(bonus, Mapping) else 0
         tf = temp.get("flat", 0) if isinstance(temp, Mapping) else 0
         tp = temp.get("pct", 0) if isinstance(temp, Mapping) else 0
-        v = (b + bf) * (1 + float(bp or 0)) + tf * (1 + float(tp or 0))
+        cf = cond.get(key, 0) if isinstance(cond, Mapping) else 0
+        if isinstance(bf, Mapping):
+            bf = bf.get(key, 0)
+        if isinstance(bp, Mapping):
+            bp = bp.get(key, 0)
+        if isinstance(tf, Mapping):
+            tf = tf.get(key, 0)
+        if isinstance(tp, Mapping):
+            tp = tp.get(key, 0)
+        b = b if isinstance(b, (int, float)) else default
+        bf = bf if isinstance(bf, (int, float)) else 0
+        bp = bp if isinstance(bp, (int, float)) else 0
+        tf = tf if isinstance(tf, (int, float)) else 0
+        tp = tp if isinstance(tp, (int, float)) else 0
+        cf = cf if isinstance(cf, (int, float)) else 0
+        v = (b + bf) * (1 + float(bp or 0)) + tf * (1 + float(tp or 0)) + cf
         return max(1, int(v))
 
-    return {
+    result: Dict[str, Any] = {
         "id": str(_pf(player, "qid") or name),
         "name": name,
         "level": level,
@@ -137,6 +153,19 @@ def _combatant_of(player: Mapping[str, Any]) -> dict:
         "int": _attr("int"),
         "lck": _attr("lck"),
     }
+    # M12.5 战斗数值 stat 键动态化（需求 1）批 A：全量透传——attrs 三层（base/flat/
+    # pct/temp）合成出的**全部键**追加进 combatant（含自定义 stat 键），公式/效果
+    # 可引用；语义键（atk/dfn/...）仍保留既有映射不破坏现状。缺省 _attr(key)
+    # 对未知键回落 default=10，引擎侧仍有 _DEFAULT_STATS 兜底，行为零变化。
+    if isinstance(attrs, Mapping):
+        base_m = attrs.get("base")
+        base_map: Mapping[str, Any] = base_m if isinstance(base_m, Mapping) else {}
+        for key in base_map:
+            if key in ("hp", "mp"):
+                continue  # hp/mp 是资源非战斗 stat，保持既有档案血量口径
+            if key not in result:
+                result[key] = _attr(key)
+    return result
 
 
 def _equipment_summary(player: Mapping[str, Any]) -> str:

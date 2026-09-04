@@ -185,7 +185,7 @@ _DEFAULT_STATS: Dict[str, Any] = {
     "max_hp": 500, "hp": 500, "max_mp": 100, "mp": 100,
     "atk": 50, "dfn": 50, "mag": 30, "spd": 50,
     "foc": 50, "con": 50, "str": 50, "int": 50, "agi": 50, "spr": 50, "lck": 50,
-    "elem_atk": 0, "name": "",
+    "elem_atk": 0, "elem_res": 0, "name": "",
 }
 
 # 五块效果快照键（细化_1b §1.4 / 定稿 §8.3）

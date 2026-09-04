@@ -77,8 +77,10 @@ def _enemy_combatant(enemy_entry: Mapping[str, Any]) -> dict:
     → 玩家 foc 10 打命中率 17% 全 miss）。
     """
     st = enemy_entry.get("stats") or {}
+    if not isinstance(st, Mapping):
+        st = {}
     hp = int(st.get("hp", 100))
-    return {
+    comb: Dict[str, Any] = {
         # 2026-09-03 奖励结算：enemy id 随快照携带（击杀查 rewards）
         "id": str(enemy_entry.get("id") or ""),
         "hp": hp,
@@ -94,6 +96,18 @@ def _enemy_combatant(enemy_entry: Mapping[str, Any]) -> dict:
         "agi": int(st.get("agi", 10)),
         "name": str(enemy_entry.get("name") or enemy_entry.get("id") or "怪物"),
     }
+    # M12.5 战斗数值 stat 键动态化（需求 1）批 A：敌方 stats 全键透传——除既有
+    # 语义映射键（hp/mp/str→atk/con→dfn/spr→mag/agi→spd/luk→lck）外的**全部
+    # 剩余键**原样进 combatant（含自定义 stat 键），公式/效果可引用；已映射键
+    # 保持既有 combatant 键不重复追加（str/spr/agi/luk 等原始键缺失时不再补齐，
+    # 引擎 _DEFAULT_STATS 已含 str/spr/agi/luk=50 兜底，行为零变化）。
+    for key, val in st.items():
+        if key in ("hp", "mp", "atk", "dfn", "mag", "spd", "foc", "lck", "con",
+                   "agi", "str", "spr", "luk", "name"):
+            continue
+        if key not in comb:
+            comb[key] = val
+    return comb
 
 
 def _player_combatant(ctx: Mapping[str, Any]) -> dict:

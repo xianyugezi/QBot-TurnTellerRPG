@@ -415,12 +415,19 @@ def _stat_name(ctx: Mapping[str, Any], attr_id: str) -> str:
 
 
 def _stat_order(ctx: Mapping[str, Any], attrs: PlayerAttributes) -> List[str]:
-    """属性展示顺序：stats.json 键序优先（含最终键并集），缺省九预置顺序。"""
+    """属性展示顺序：stats.json 键序优先；最终只显示 stats.json 声明键。
+
+    M12.5 动态化（2026-09-04）：原 union 把 attrs 残留键（老档案删属性前的
+    base/bonus 键）也列入显示 → 删属性后老玩家面板仍显示已删属性。现改为
+    「stats.json 声明键为准」：attrs 层（base/bonus/temp/cond）只取声明键交集，
+    未声明键一律不显示（属性注册表唯一源 = stats.json）。stats 缺失时回落
+    attrs 键并集（旧行为兜底，兼容无 stats 的裸 ctx 测试）。
+    """
     stats = ctx.get("stats")
     if isinstance(stats, Mapping) and stats:
         order = [str(k) for k in stats.keys()]
-    else:
-        order = list(_DEFAULT_STAT_ORDER)
+        return order
+    order = list(_DEFAULT_STAT_ORDER)
     union = set(attrs.base) | set(attrs.flat_bonus()) | set(attrs.pct_bonus()) \
         | set(attrs.temp_flat()) | set(attrs.temp_pct()) | set(attrs.cond)
     for k in union:

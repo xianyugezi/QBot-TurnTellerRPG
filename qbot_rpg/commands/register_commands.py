@@ -308,6 +308,24 @@ def _world_name(ctx: Mapping[str, Any]) -> str:
     return "世界名"
 
 
+def _stat_meta_of(ctx: Mapping[str, Any], attr_id: str) -> Optional[Mapping[str, Any]]:
+    """属性 id → stats.json 配置段（无 → None）。M12.5 动态化 helper。"""
+    stats = ctx.get("stats")
+    if isinstance(stats, Mapping):
+        d = stats.get(attr_id)
+        if isinstance(d, Mapping):
+            return d
+    return None
+
+
+def _stat_name_of(ctx: Mapping[str, Any], attr_id: str) -> str:
+    """属性 id → 中文名（stats.json name → 兜底键名）。M12.5 动态化 helper。"""
+    d = _stat_meta_of(ctx, attr_id)
+    if d is not None and d.get("name"):
+        return str(d["name"])
+    return str(attr_id)
+
+
 def render_register_success(
     ctx: Mapping[str, Any],
     name: str,
@@ -325,6 +343,11 @@ def render_register_success(
     attrs = player.get("attributes") if isinstance(player, Mapping) else getattr(player, "attributes", None)
     base = getattr(attrs, "base", None) if attrs is not None else None
     base = base if isinstance(base, Mapping) else {}
+    # M12.5 动态化（2026-09-04）：不再硬编码 hp/mp/atk/dfn 四行——遍历玩家
+    # attributes.base 实际键（stats.json 删键即不显示）；键序 = stats.json 键序
+    # （缺失回落 base 键序）；hp/mp 等 resource 型显示 cur/max，其余显示终值。
+    # 兼容：hp/mp/str/con 四键查得到时仍可被 register_success_hp/mp/atk/dfn
+    # 专属模板覆盖（内容包旧覆盖不破坏）；其它键走通用 register_success_attr_*。
     hp = int(base.get("hp", 100))
     mp = int(base.get("mp", 30))
     atk = int(base.get("str", 10))
@@ -338,12 +361,30 @@ def render_register_success(
     if job and job.get("recommended_newbie"):
         job_name += tpl_of(ctx, "register_success_recommended")
     lines.append(tpl_of(ctx, "register_success_job_loc", {"job": job_name, "location": location}))
-    # 意见一同步：初始属性每项独立一行（生命/魔力/攻击/防御各一行）；引导行尾加句号
     lines.append(tpl_of(ctx, "register_success_attr_title", {}))
-    lines.append(tpl_of(ctx, "register_success_hp", {"hp": hp}))
-    lines.append(tpl_of(ctx, "register_success_mp", {"mp": mp}))
-    lines.append(tpl_of(ctx, "register_success_atk", {"atk": atk}))
-    lines.append(tpl_of(ctx, "register_success_dfn", {"dfn": dfn}))
+    # 属性行（动态遍历；hp/mp/str/con 四键存在时走旧专属模板兼容覆盖）
+    # 键序 = stats.json 键序（注册场景 attributes.base 由 _initial_base 按同序
+    # 生成，故直接遍历 base；残留键也在 base 内 → 有 stats 才显示语义由
+    # _stat_meta_of 返回 None 的兜底名承接——注册时 base 无残留，正常）
+    for attr_id in base:
+        if attr_id == "hp":
+            lines.append(tpl_of(ctx, "register_success_hp", {"hp": hp}))
+        elif attr_id == "mp":
+            lines.append(tpl_of(ctx, "register_success_mp", {"mp": mp}))
+        elif attr_id == "str":
+            lines.append(tpl_of(ctx, "register_success_atk", {"atk": atk}))
+        elif attr_id == "con":
+            lines.append(tpl_of(ctx, "register_success_dfn", {"dfn": dfn}))
+        else:
+            stat = _stat_meta_of(ctx, attr_id)
+            nm = _stat_name_of(ctx, attr_id)
+            if stat and str(stat.get("type") or "") in ("resource", "rage"):
+                lines.append(tpl_of(ctx, "register_success_attr_resource",
+                                    {"attr_name": nm, "cur": int(base.get(attr_id, 0)),
+                                     "max": int(stat.get("max") or base.get(attr_id, 0))}))
+            else:
+                lines.append(tpl_of(ctx, "register_success_attr_plain",
+                                    {"attr_name": nm, "value": int(base.get(attr_id, 0))}))
     lines.append(tpl_of(ctx, "register_success_next", {"location": location}))
     if hint:
         lines.append(tpl_of(ctx, "register_reserved_hint", {"hint": hint}))

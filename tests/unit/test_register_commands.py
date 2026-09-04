@@ -365,7 +365,12 @@ def test_register_rem_tpl_override_via_ctx():
 
 
 def test_register_rem_tpl_default_when_no_ctx_templates():
-    """无 ctx['templates'] → tpl_of 回落内置默认（逐字对齐既有输出）。"""
+    """无 ctx['templates'] → tpl_of 回落内置默认（逐字对齐既有输出）。
+
+    M12.5 动态化（2026-09-04）：初始属性行遍历 attributes.base 全部键
+    （stats.json 删键即不显示）——hp/mp 走 resource 模板、str/con 走旧
+    专属键（攻击/防御中文名）、其余走通用 {attr_name} {value} 模板。
+    """
     out = cmd_register(parse("/注册 阿伟 战士"), make_ctx())
     assert out == (
         "Lv1.阿伟 - -\n"
@@ -376,6 +381,8 @@ def test_register_rem_tpl_default_when_no_ctx_templates():
         "魔力 30/30\n"
         "攻击 12\n"
         "防御 10\n"
+        "智力 10\n"
+        "敏捷 10\n"
         "下一步：发 帮助 查看指令，或 锁定 新手村怪物开战。"
     )
 

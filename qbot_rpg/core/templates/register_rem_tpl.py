@@ -33,6 +33,12 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     "register_success_job_loc": "职业：{job} ｜ 位置：{location}",
     "register_success_recommended": "（推荐新手）",
     "register_success_attr_title": "初始属性：",
+    # M12.5 动态化（2026-09-04）：注册成功属性行遍历 stats 实际键——hp/mp 等
+    # resource 型走 _resource 变体（cur/max），其余走 _plain；旧专属键
+    # register_success_hp/mp/atk/dfn 保留兼容（内容包覆盖仍生效，仅 hp/mp/str/con
+    # 四键查得到时使用；其它键一律走通用模板）。
+    "register_success_attr_plain": "{attr_name} {value}",
+    "register_success_attr_resource": "{attr_name} {cur}/{max}",
     "register_success_hp": "生命 {hp}/{hp}",
     "register_success_mp": "魔力 {mp}/{mp}",
     "register_success_atk": "攻击 {atk}",
@@ -79,6 +85,8 @@ PLACEHOLDER_WHITELIST: Dict[str, set] = {
     "register_success_job_loc": {"job", "location"},
     "register_success_recommended": set(),
     "register_success_attr_title": set(),
+    "register_success_attr_plain": {"attr_name", "value"},
+    "register_success_attr_resource": {"attr_name", "cur", "max"},
     "register_success_hp": {"hp"},
     "register_success_mp": {"mp"},
     "register_success_atk": {"atk"},

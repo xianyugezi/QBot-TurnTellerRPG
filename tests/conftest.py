@@ -91,7 +91,7 @@ def seeded_rng(seed: int) -> Callable[[int], random.Random]:
 
 # ---------------------------------------------------------------------------
 # FIX：formula.json 段级参数 → DamageFormulaParams 读取器（D6 §三 FIX-2 / F-FIX-01~27）
-# M12.5 需求1 批C：读取器已提生产侧（qbot_rpg/content/formula_loader.py），
+# M12.5 需求1 批C：读取器已提生产侧（qbot_rpg/core/formula_loader.py），
 # 本模块保留同名函数薄包装 + fixture（生产/测试同一装配源）。
 # ---------------------------------------------------------------------------
 
@@ -99,10 +99,10 @@ def seeded_rng(seed: int) -> Callable[[int], random.Random]:
 def load_formula_params(path: Path) -> DamageFormulaParams:
     """formula.json 段级参数 → DamageFormulaParams（D6 FIX-2 读取器，F-FIX-01~27 映射）。
 
-    生产侧装配源：qbot_rpg.content.formula_loader（同源同实现）；本包装保留
+    生产侧装配源：qbot_rpg.core.formula_loader（同源同实现）；本包装保留
     既有测试调用形态（fixture formula_params 等零改动）。
     """
-    from qbot_rpg.content.formula_loader import load_formula_params_from_path
+    from qbot_rpg.core.formula_loader import load_formula_params_from_path
 
     return load_formula_params_from_path(path)
 

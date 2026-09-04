@@ -1,6 +1,6 @@
 """formula.json 段级参数 → DamageFormulaParams 生产侧装配（M12.5 需求1 批C）。
 
-文件：qbot_rpg/content/formula_loader.py · 2026-09-04 · Hermes Agent
+文件：qbot_rpg/core/formula_loader.py · 2026-09-04 · Hermes Agent
 功能描述：
   - load_formula_params(data)：接受 formula.json 顶层 dict（registry.modules_raw
     ["formula"] 原样）→ DamageFormulaParams（含 stat_map 段），段缺省回退默认。

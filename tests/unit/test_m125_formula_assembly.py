@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from qbot_rpg.content.formula_loader import (
+from qbot_rpg.core.formula_loader import (
     load_formula_params,
     load_formula_params_from_path,
 )

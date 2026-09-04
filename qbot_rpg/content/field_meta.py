@@ -604,6 +604,32 @@ BATTLE_ALCHEMY_DEFAULT: Dict[str, object] = {"auto_use": True, "per_battle_limit
 # 8 元素注册表（地水火风雷晶月无；items.elements / REC-05 element_req 引用，定稿 L387）
 ALCHEMY_ELEMENTS: Tuple[str, ...] = ("地", "水", "火", "风", "雷", "晶", "月", "无")
 
+# M12.5 需求1 批D：formula 模块 stat_map 段字段口径（编辑器 meta 返回供 stat_map
+# 段逐键中文表单化渲染；校验宽松不红拦）。formula.json 顶层 stat_map = {语义键:
+# combatant 键}——语义键固定 13 个，值 = combatant 键名字符串（内容包自定义 stat
+# 全量透传后任意键合法，stat_map 缺省 = 现值键名零破坏）。
+FORMULA_FIELDS: Dict[str, FieldMeta] = {
+    "stat_map": FieldMeta(
+        type="obj",
+        label="属性映射",
+        children={
+            "hit_focus": FieldMeta(type="str", label="命中·攻击方属性"),
+            "hit_spd": FieldMeta(type="str", label="命中·防御方属性"),
+            "crit_luck": FieldMeta(type="str", label="会心·攻击方属性"),
+            "block_focus": FieldMeta(type="str", label="格挡·防御方属性"),
+            "def_con": FieldMeta(type="str", label="防御·防御方属性"),
+            "atk_atk": FieldMeta(type="str", label="物理攻击力属性"),
+            "mag_int": FieldMeta(type="str", label="魔法攻击力属性"),
+            "enemy_str": FieldMeta(type="str", label="敌方力量映射"),
+            "enemy_con": FieldMeta(type="str", label="敌方体质映射"),
+            "enemy_spr": FieldMeta(type="str", label="敌方精神映射"),
+            "enemy_agi": FieldMeta(type="str", label="敌方敏捷映射"),
+            "atk_base": FieldMeta(type="str", label="效果攻击力基值属性"),
+            "dfn_base": FieldMeta(type="str", label="效果防御基值属性"),
+        },
+    ),
+}
+
 # gem.* 中文键（ALC-14/ALC-23/ALC-15，键名照契约原样含点号）
 GEM_DECOMPOSE_KEY = "gem.分解"          # ALC-13（拍板②键集）
 GEM_DUPLICATE_KEY = "gem.复制"          # ALC-14（复制费基准率，可浮点，拍板④）
@@ -1053,7 +1079,9 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "respawn_point": FieldMeta(type="ref", ref_target="map"),
     }
     stats_fields: Dict[str, FieldMeta] = {}
-    formula_fields: Dict[str, FieldMeta] = {}
+    # M12.5 需求1 批D：formula 模块 stat_map 段字段口径（FORMULA_FIELDS 模块级常量，
+    # 见定义处；编辑器 meta 返回供 stat_map 段逐键中文表单化渲染）
+    formula_fields: Dict[str, FieldMeta] = dict(FORMULA_FIELDS)
     # M4 交互系统 4 模块（m4_shared_contract §3.1~3.4）：字段口径 fields={} 专项全权——
     # 校验唯一落点 = 各 validate_* 专项校验器（npc_models.validate_npcs / shop_models.validate_shops /
     # quest_models.validate_quests / checkin_models.validate_checkins），泛型字段表空表防误拦
@@ -1262,10 +1290,13 @@ def default_field_meta_table() -> FieldMetaTable:
         key_regex=r"[a-z][a-z0-9_]*",
         value_meta=FieldMeta(type="obj", children=STAT_CHILDREN),
     )
-    # formula：键=公式名，值为公式字符串或 {formula: 表达式}（长度>4KB / AST 黑名单 → 红拦，§3.3）
+    # formula：键=公式名，值为公式字符串或 {formula: 表达式}（长度>4KB / AST 黑名单 → 红拦，§3.3）；
+    # M12.5 需求1 批D：fields 注入 formula_fields（stat_map 段口径，编辑器 meta 可编）；
+    # value_meta=formula 保留（map 键值表公式语义；stat_map 键是段容器，字段表只供
+    # 编辑器 meta 展示，校验仍走 map 逐键 formula 值校验 + stat_map 宽松黄校验）。
     modules["formula"] = ModuleMeta(
         entry_type="map",
-        fields={},
+        fields=dict(FORMULA_FIELDS),
         kind="formula",
         namespace="formula_lib",
         value_meta=FieldMeta(type="formula"),

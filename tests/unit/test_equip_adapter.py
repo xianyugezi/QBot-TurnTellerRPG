@@ -234,3 +234,49 @@ def test_regress_p1_2_wear_uses_display_order():
     assert r["ok"] is True
     assert "新铁剑" in r["message"]
     assert ctx["player"]["attributes"].bonus["flat"] == {"str": 7.0}
+
+
+# ---------------------------------------------------------------------------
+# M12.5/veinborn 收口：dict 形态 inventory（装配层 Player asdict 后）穿装回归
+# ---------------------------------------------------------------------------
+
+def test_eqp_dict_inventory_wear_ok():
+    """Player dataclass asdict 后 inventory 为 list[dict]——equip_wear 须归一 ItemInstance。
+
+    回归：原实现 isinstance(item, ItemInstance) 判定 dict → False → 生产链路
+    （make_context 注入 Player → 适配层 asdict）穿装恒「这件物品不能装备」。
+    """
+    eng = EquipmentEngineAdapter(slots={"weapon": {"name": "武器", "max": 1}})
+    player = {
+        "inventory": [
+            {"item_id": "iron_sword", "name": "铁剑", "count": 1, "quality": "normal",
+             "bound": False, "slot": "weapon", "stats_bonus": {"str": 5.0}, "traits": []},
+        ],
+        "equipment": {},
+        "attributes": PlayerAttributes(base={"str": 15.0}),
+        "in_battle": False,
+    }
+    ctx = {"player": player, "equip_engine": eng}
+    r = eng.equip_wear(1, ctx)
+    assert r["ok"] is True
+    assert "铁剑" in r["message"]
+    # 穿后加成生效 + 装备栏写入
+    assert ctx["player"]["attributes"].bonus["flat"] == {"str": 5.0}
+    assert ctx["player"]["equipment"]["weapon"].item_id == "iron_sword"
+
+
+def test_eqp_dict_inventory_no_slot_rejected():
+    """dict 形态无 slot → 提示该物品不能装备（不崩）。"""
+    eng = EquipmentEngineAdapter(slots={"weapon": {"name": "武器", "max": 1}})
+    player = {
+        "inventory": [
+            {"item_id": "potion", "name": "药水", "count": 2, "quality": "normal",
+             "bound": False, "slot": None, "stats_bonus": {}, "traits": []},
+        ],
+        "equipment": {},
+        "attributes": PlayerAttributes(base={"str": 15.0}),
+        "in_battle": False,
+    }
+    ctx = {"player": player, "equip_engine": eng}
+    r = eng.equip_wear(1, ctx)
+    assert r["ok"] is False

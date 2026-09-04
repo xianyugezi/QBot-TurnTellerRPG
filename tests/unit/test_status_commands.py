@@ -82,7 +82,41 @@ def test_tc_stt_01_overview_panel():
     assert lines[5] == "【防御】10"
     assert lines[6] == "【位置】新手村 · 中央广场"               # ④ 位置行
     assert lines[7] == "【效果】无"                              # ⑤ 效果区
-    assert len(lines) == 8                                       # 战斗外无目标行、无前缀行
+    # M12.5/veinborn 收口：装备区放面板尾部（无装备 → 【装备】无；有装备见
+    # test_tc_stt_01_equipment_section）
+    assert lines[8] == "【装备】无"
+    assert len(lines) == 9                                       # 战斗外无目标行、无前缀行
+
+
+def test_tc_stt_01_equipment_section():
+    """/状态 装备区：已穿装备按槽位顺序显示（8 槽自定义 slot_defs 内容包可配）。"""
+    from qbot_rpg.core.equipment import EquipmentSlot
+
+    ctx = make_ctx(
+        equipment={
+            "weapon": EquipmentSlot(item_id="ridge_blade_starter", name="砺脊刃",
+                                    slot_level=1, locked=False),
+            "head": EquipmentSlot(item_id="cub_leather_helm", name="幼兽皮盔",
+                                  slot_level=0, locked=False),
+        },
+        slots={"slots": {
+            "weapon": {"name": "武器"}, "head": {"name": "头部"},
+            "body": {"name": "躯干"}, "hand": {"name": "手部"},
+            "leg": {"name": "护腿"}, "foot": {"name": "鞋子"},
+            "accessory": {"name": "饰品"}, "pulse_jade": {"name": "脉玉"},
+        }},
+    )
+    out = cmd_status(parse("/状态"), ctx)
+    lines = out.splitlines()
+    # 装备区：头部（在位置/效果后）
+    assert any("砺脊刃" in ln and "武器" in ln for ln in lines)
+    assert any("幼兽皮盔" in ln and "头部" in ln for ln in lines)
+    # 空槽（body 等未穿）不显示
+    assert not any("躯干" in ln for ln in lines)
+    assert not any("脉玉" in ln for ln in lines)
+    # 位置行之前无装备内容（装备区在尾部）
+    pos_idx = next(i for i, ln in enumerate(lines) if ln.startswith("【位置】"))
+    assert all(not ln.startswith("【装备】") and "砺脊刃" not in ln for ln in lines[: pos_idx + 1])
 
 
 def test_stt_prefix_no_title_dashes():

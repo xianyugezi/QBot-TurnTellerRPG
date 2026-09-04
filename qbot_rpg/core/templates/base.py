@@ -36,6 +36,10 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     "status_target": "【目标】{name} {hp_cur}/{hp_max}（第 {round} 回合）",
     "status_effects": "【效果】{effects}",
     "status_imprints": "【印记】{imprints}",
+    # —— 状态面板 · 装备区（M12.5/veinborn 收口：/状态 显示已穿装备；空槽不显示）——
+    "status_equip_empty": "【装备】无",
+    "status_equip_header": "【装备】",
+    "status_equip_line": "{slot}：{name}",
 
     # —— 角色面板（basic_commands view_header / attr_line）——
     "role_header": "【角色】{name}",
@@ -91,6 +95,9 @@ PLACEHOLDER_WHITELIST: Dict[str, set] = {
     "status_target": {"name", "hp_cur", "hp_max", "round"},
     "status_effects": {"effects"},
     "status_imprints": {"imprints"},
+    "status_equip_empty": set(),
+    "status_equip_header": set(),
+    "status_equip_line": {"slot", "name"},
     "role_header": {"name"},
     "role_level": {"level"},
     "role_job": {"job"},

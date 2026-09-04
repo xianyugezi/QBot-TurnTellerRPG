@@ -59,6 +59,8 @@ from qbot_rpg.data.player import PlayerAttributes
 # 同层兄弟引用架构合规，与 sender.py 同口径）。
 from .basic_commands import TPL_REGISTER_GATE
 from .basic_commands import _stat_name, _stat_order  # 属性全量渲染 helper（对齐 /角色 口径）
+# M12.5/veinborn 收口：装备区复用 basic_commands 槽位/装备 helper（8 槽自定义支持）
+from .basic_commands import _equipment_map, _slot_order, equip_line
 from .router import CommandSpec
 from .sender import format_tpl12
 
@@ -74,6 +76,7 @@ __all__ = [
     "effects_line",
     "imprints_line",
     "target_line",
+    "equip_section",
     # 装配
     "register_status_commands",
 ]
@@ -385,6 +388,30 @@ def target_line(ctx: Mapping[str, Any]) -> Optional[str]:
     return tpl_of(ctx, "status_target", {"name": name, "hp_cur": hp, "hp_max": mx, "round": turn})
 
 
+def equip_section(ctx: Mapping[str, Any]) -> str:
+    """装备区（M12.5/veinborn 收口）：`【装备】` + 已穿槽位一行一个（空槽不显示）。
+
+    对齐 /装备 装备栏渲染语义（basic_commands._render_equip_page）：槽位顺序 =
+    _slot_order(ctx)（settings.slot_defs 内容包可配 8 槽）+ ctx 额外槽位追加；
+    空装备 → `【装备】无`。复用 basic_commands equip_line（含 +N 强化后缀）。
+    """
+    eq = _equipment_map(ctx)
+    if not eq:
+        return tpl_of(ctx, "status_equip_empty", {})
+    order = list(_slot_order(ctx))
+    for sid in eq:
+        if sid not in order:
+            order.append(sid)
+    lines: List[str] = []
+    for sid in order:
+        ln = equip_line(sid, eq.get(sid), ctx)
+        if ln:
+            lines.append(ln)
+    if not lines:
+        return tpl_of(ctx, "status_equip_empty", {})
+    return tpl_of(ctx, "status_equip_header", {}) + "\n" + "\n".join(lines)
+
+
 # ---------------------------------------------------------------------------
 # 指令处理器（纯函数：ParsedCommand + ctx → 回复正文）
 # ---------------------------------------------------------------------------
@@ -420,6 +447,8 @@ def cmd_status(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     imp = imprints_line(ctx)
     if imp is not None:
         lines.append(imp)
+    # M12.5/veinborn 收口：装备区放面板尾部（不动 ①-⑤ 核心五区行序；无装备 → 【装备】无）
+    lines.append(equip_section(ctx))
     return "\n".join(lines)
 
 

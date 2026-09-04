@@ -1069,6 +1069,12 @@ def _inventory_hooks(ctx: MutableMapping[str, Any]) -> dict:
                 {
                     "item_id": key,
                     "count": c,
+                    # M12.5/veinborn 收口：实例通道带 name（从 items 注册表取中文名；
+                    # 原缺 name → runner 落档 ItemInstance.name 空 → 背包显示英文 id）
+                    "name": str(_cfg.get("name") or "") if isinstance(_cfg, Mapping) else "",
+                    # M12.5/veinborn 收口：实例通道带 slot（装备类物品穿装依赖；
+                    # 原缺 slot → 落档实例无槽位 → 装备 穿 拒绝）
+                    "slot": str(_cfg.get("slot") or "") if isinstance(_cfg, Mapping) else "",
                     "quality": kw.get("quality") or "normal",
                     "bound": bool(bound),
                     "traits": tuple(kw.get("traits") or ()),
@@ -1476,6 +1482,16 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
     # -- ⑤ 注册表/入包 hook（RA-03 之外、各指令壳显式要求） ----------------------
     ctx["gm_commands"] = _gm_commands()
     ctx["items"] = _table_from_registry(deps.registry, "item")
+    # M12.5/veinborn 收口：items∪equipment 同库（item_lib 语义，field_meta NAMESPACES
+    # + shop 引用集 a46d457 已定）——ctx["items"] 合并 equipment 表，否则装备上架商店
+    # 后 /商店 浏览 resolve 不到装备（kind=equipment 不在 kind=item 表）→ 商品行显示
+    # 英文 id。合并仅在 equipment 表非空时发生（无装备模块内容包零影响）。
+    _equip_tab = _table_from_registry(deps.registry, "equipment")
+    if _equip_tab:
+        merged_items = dict(ctx["items"])
+        for _eid, _edef in _equip_tab.items():
+            merged_items.setdefault(str(_eid), _edef)
+        ctx["items"] = merged_items
     ctx["effect_table"] = _table_from_registry(deps.registry, "effect")
     # quest 表（装配缺口修复：quest 引擎读 ctx["quests"]/quest_ids，注入 raw dict
     # 保证 resolve_quest Mapping.get 契约；2026-08-29 部署实测 test_demo 任务板空）

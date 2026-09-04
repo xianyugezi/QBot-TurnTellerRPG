@@ -1151,10 +1151,34 @@ class EquipmentEngineAdapter:
         if not (1 <= index <= len(sorted_inv)):
             return {"ok": False, "message": tpl_of(ctx, "basic_equip_no_item")}
         item = sorted_inv[index - 1]
+        # M12.5/veinborn 收口：装配层 Player dataclass asdict 后 inventory 为
+        # list[dict]（_player 静态转换），引擎契约须 ItemInstance——dict 形态归一
+        # 转换（字段与 ItemInstance 对齐；非 dict 保持原样走 isinstance 判定）。
+        if isinstance(item, Mapping):
+            try:
+                _sb = item.get("stats_bonus")
+                item = ItemInstance(
+                    item_id=str(item.get("item_id") or ""),
+                    name=str(item.get("name") or ""),
+                    count=int(item.get("count", 1)),
+                    quality=str(item.get("quality") or "normal"),
+                    bound=bool(item.get("bound", False)),
+                    slot=str(item.get("slot")) if item.get("slot") else None,
+                    stats_bonus=dict(_sb) if isinstance(_sb, Mapping) else {},
+                    traits=tuple(item.get("traits") or ()),
+                )
+            except (TypeError, ValueError):
+                pass
         if not isinstance(item, ItemInstance):
             return {"ok": False, "message": tpl_of(ctx, "basic_equip_not_equippable")}
         if not item.slot:
             return {"ok": False, "message": tpl_of(ctx, "basic_equip_no_slot")}
+        # dict 归一后写回 sorted 列表对应的背包实例，引擎 _inv 定位同一性需要
+        # （引擎按 r is item or r == item 找背包行——asdict dict 与原 ItemInstance
+        # 相等性成立但同一性失败；直接改背包列表对应位为归一实例）
+        player["inventory"] = [
+            item if (r is sorted_inv[index - 1]) else r for r in player["inventory"]
+        ]
         res = self._engine.equip(player, item, item.slot)
         if res.get("ok"):
             msg = tpl_of(ctx, "basic_equip_ok", {"name": item.name})

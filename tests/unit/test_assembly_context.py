@@ -541,3 +541,34 @@ async def test_slot_defs_absent_keeps_default() -> None:
     ctx = await make_context(_event(), _deps(_player()))
     assert ctx.get("slots") is None
     assert ctx.get("equip_engine") is None
+
+
+# ---------------------------------------------------------------------------
+# M12.5/veinborn 收口：ctx["items"] 合并 equipment 表（item_lib 同库语义）
+# ---------------------------------------------------------------------------
+def _registry_with_equipment() -> Registry:
+    """_registry() + equipment 表（ridge_blade_starter 砺脊刃）。"""
+    reg = _registry()
+    tbl = dict(reg._tables)
+    tbl["equipment"] = {"ridge_blade_starter": SimpleNamespace(
+        name="砺脊刃", raw={"id": "ridge_blade_starter", "name": "砺脊刃", "slot": "weapon"})}
+    reg._tables = tbl
+    reg._names = dict(reg._names, ridge_blade_starter="砺脊刃")
+    return reg
+
+
+async def test_items_merged_with_equipment_table() -> None:
+    """equipment 表非空 → ctx["items"] 合并装备（kind=equipment 条目可 resolve）。"""
+    ctx = await make_context(_event(), _deps(_player(), registry=_registry_with_equipment()))
+    items = ctx["items"]
+    assert "potion" in items and "iron_sword" in items  # 原 item 表保留
+    assert "ridge_blade_starter" in items              # 装备合并进 items
+    assert items["ridge_blade_starter"]["name"] == "砺脊刃"
+    # 无重叠冲突（item 表与 equipment 表同 id → item 优先，setdefault 语义）
+    assert items["ridge_blade_starter"]["slot"] == "weapon"
+
+
+async def test_items_without_equipment_table_unchanged() -> None:
+    """无 equipment 模块内容包 → ctx["items"] 零变化（不新增空表/键）。"""
+    ctx = await make_context(_event(), _deps(_player()))
+    assert set(ctx["items"]) == {"potion", "iron_sword"}

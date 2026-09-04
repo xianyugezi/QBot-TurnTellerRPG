@@ -224,6 +224,56 @@ class DerivedParams:
 
 
 @dataclass(frozen=True)
+class StatMap:
+    """formula.json ``stat_map`` 段：语义键 → combatant 键（M12.5 需求1 批B）。
+
+    战斗公式消费点（命中/会心/格挡/防御/攻击力等）经语义键取 combatant 属性，
+    内容包可把任一语义键重映射到自定义 stat（combatant 全量透传键，见批 A）。
+    缺省值 = 现值（键名与现状硬编码一致，零破坏）；内容包覆盖即换键。
+
+    语义键命名：
+      - ``hit_focus``：命中公式取攻击方专注（缺省 foc）
+      - ``hit_spd``：   命中公式取防御方敏捷（缺省 spd）
+      - ``crit_luck``： 会心公式取攻击方幸运（缺省 lck）
+      - ``block_focus``：格挡公式取防御方专注（缺省 foc）
+      - ``def_con``：   防御系数取防御方体质（缺省 con）
+      - ``atk_atk``/``mag_int``：物理/魔法攻击取攻击方攻击/智力
+        （缺省 atk；mag_int 缺省 int→mag 回退链，见 battle 消费点）
+      - ``enemy_str``/``enemy_con``/``enemy_spr``/``enemy_agi``：敌方 stats 原生键
+        语义（str→atk/con→dfn/spr→mag/agi→spd 映射由 _enemy_combatant 完成，
+        此处仅登记可供引用/校验，不参与战斗消费点取数——战斗消费点全在
+        combatant 语义键上，stat_map 覆盖的是 combatant 键）
+      - ``atk_base``：effects 层 damage/aoe 取攻击方攻击力基值（缺省 atk）
+      - ``dfn_base``：effects 层 pierce 取防御方防御基值（缺省 dfn）
+
+    用法：``combatant.get(stat_map.hit_focus, default)``——值须为 combatant
+    存在的键（combatant 全量透传后任意自定义键可用）；校验器宽松黄提示。
+    """
+
+    # 命中（攻击方专注 / 防御方敏捷）
+    hit_focus: str = "foc"
+    hit_spd: str = "spd"
+    # 会心（攻击方幸运）
+    crit_luck: str = "lck"
+    # 格挡（防御方专注）
+    block_focus: str = "foc"
+    # 防御系数（防御方体质）
+    def_con: str = "con"
+    # 攻击力（物理 atk / 魔法 int→mag 回退链首键）
+    atk_atk: str = "atk"
+    mag_int: str = "int"
+    # 敌方原生键语义登记（str→atk/con→dfn/spr→mag/agi→spd 已在 _enemy_combatant
+    # 完成映射；此处供内容包引用/校验器宽松核对，不直接消费）
+    enemy_str: str = "str"
+    enemy_con: str = "con"
+    enemy_spr: str = "spr"
+    enemy_agi: str = "agi"
+    # effects 层（L0 动作）取数语义（ctx.variables.stat_map 注入）
+    atk_base: str = "atk"
+    dfn_base: str = "dfn"
+
+
+@dataclass(frozen=True)
 class DamageFormulaParams:
     """formula.json 全段参数载体（细化_1a §2.1 字段表默认值）。
 
@@ -240,6 +290,8 @@ class DamageFormulaParams:
     weakness: WeaknessParams = field(default_factory=WeaknessParams)
     type_affinity: TypeAffinityParams = field(default_factory=TypeAffinityParams)
     derived: DerivedParams = field(default_factory=DerivedParams)
+    # M12.5 需求1 批B：stat_map 段（语义键 → combatant 键；缺省=现值零破坏）
+    stat_map: StatMap = field(default_factory=StatMap)
     # 元素注册表（细化_1a §1.1 / 数值层 L220-221）；键固定不可枚举，引用存在校验 L258
     elements: Mapping[str, str] = field(default_factory=lambda: dict(DEFAULT_ELEMENTS))
     # O1 怪物防御率（细化_1a §1.11 待策划裁决；工程默认 1.0 不参与乘法（登记 R-09，正式裁决后更新））

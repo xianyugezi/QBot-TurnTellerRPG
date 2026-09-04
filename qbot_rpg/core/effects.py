@@ -142,7 +142,8 @@ class DamageCtx:
     - snapshot: 战斗快照 Map（数据形态同 data/battle.BattleSnapshot 字段，**须为可变
       工作拷贝**——pipeline 会写 hp/status_state/defenses 等，见模块 docstring 补白①），
       必含每侧 combatant（hp/max_hp/...）与五块快照键。
-    - variables: {region,rng,luck,eval_formula,pipeline,is_reflect_damage,...} 运行期变量。
+    - variables: {region,rng,luck,eval_formula,pipeline,is_reflect_damage,stat_map,...}
+      运行期变量（M12.5 需求1：stat_map 由战斗层注入，L0 取数语义键可配）。
     """
 
     raw_damage: int
@@ -1535,6 +1536,21 @@ def _normalize_effect_ref(
     return [base], False
 
 
+def _ctx_stat_key(ctx: DamageCtx, semantic: str, fallback: str) -> str:
+    """ctx.variables.stat_map 语义键 → combatant 键（M12.5 需求1 批B）。
+
+    战斗层把 DamageFormulaParams.stat_map 注入 variables["stat_map"]；无注入 /
+    非 StatMap / 缺该语义键 → 回落 fallback（现值键名，零破坏）。effects 层
+    （L0 动作 damage/aoe/pierce 取数）统一经本函数取语义键，内容包可重映射。
+    """
+    sm = ctx.variables.get("stat_map") if isinstance(ctx.variables, Mapping) else None
+    if sm is not None:
+        key = getattr(sm, semantic, None)
+        if isinstance(key, str) and key:
+            return key
+    return fallback
+
+
 def _get_pipeline(ctx: DamageCtx) -> DamagePipeline:
     global _DEFAULT_PIPELINE
     p = ctx.variables.get("pipeline")
@@ -1737,7 +1753,8 @@ def execute_action(
         return ActionResult(True, side_effects)
     if atype == "pierce":
         pct = float(action.get("value", 0))
-        defense = int(ctx.snapshot.get(target, {}).get("dfn", 0))
+        # M12.5 需求1 批B：stat_map 语义键取数（缺省 dfn=现值，零破坏）
+        defense = int(ctx.snapshot.get(target, {}).get(_ctx_stat_key(ctx, "dfn_base", "dfn"), 0))
         effective = int(round(defense * (1 - pct / 100.0)))
         side_effects.append({"type": "pierce", "target": target, "pct": pct, "effective_defense": effective})
         return ActionResult(True, side_effects)
@@ -1752,7 +1769,8 @@ def execute_action(
 
     # ---- 直行动作 ----
     if atype == "damage":
-        base = int(ctx.snapshot.get(attacker, {}).get("atk", 0))
+        # M12.5 需求1 批B：stat_map 语义键取数（缺省 atk=现值，零破坏）
+        base = int(ctx.snapshot.get(attacker, {}).get(_ctx_stat_key(ctx, "atk_base", "atk"), 0))
         raw = _resolve_value(action.get("value"), base, ctx, "damage")
         sub_ctx = DamageCtx(
             raw_damage=raw,
@@ -1922,7 +1940,8 @@ def execute_action(
 
     if atype == "aoe":
         # 范围效果（1v1 = 对目标 + 提示，定稿 §7 保留）
-        base = int(ctx.snapshot.get(attacker, {}).get("atk", 0))
+        # M12.5 需求1 批B：stat_map 语义键取数（缺省 atk=现值，零破坏）
+        base = int(ctx.snapshot.get(attacker, {}).get(_ctx_stat_key(ctx, "atk_base", "atk"), 0))
         raw = _resolve_value(action.get("value"), base, ctx, "aoe")
         sub_ctx = DamageCtx(
             raw_damage=raw, attack_type="skill", attacker=attacker,

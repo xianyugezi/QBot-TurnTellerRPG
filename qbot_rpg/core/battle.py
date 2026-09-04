@@ -563,6 +563,9 @@ class BattleEngine:
             "eval_formula": self._make_eval_formula(attacker, target),  # P1-02：随当前行动者切换侧映射
             "pipeline": self._pipeline,
             "is_reflect_damage": False,
+            # M12.5 需求1 批B：stat_map 注入 effects 层（L0 动作 damage/aoe/pierce
+            # 取数语义键；缺省 = 现值键名零破坏，内容包覆盖即换键）
+            "stat_map": self._params.stat_map,
             "attacker": self._combat_map(attacker),
             "target": self._combat_map(target),
             "battle": {"round": int(self._snap.get("turn", 0))},
@@ -2272,8 +2275,9 @@ class BattleEngine:
             self._refresh_defenses()
             rt = self._new_runtime()
             # ---- ① 命中（1a §1 签名：hit_rate(专注, 对方敏捷)）----
-            focus = float(ac.get("foc", 50))
-            espd = float(tc.get("spd", 50))
+            # M12.5 需求1 批B：stat_map 语义键取数（缺省 foc/spd=现值，零破坏）
+            focus = float(ac.get(p.stat_map.hit_focus, 50))
+            espd = float(tc.get(p.stat_map.hit_spd, 50))
             hr = hit_rate(focus, espd, k=p.hit.k, cap_min=p.hit.cap_min, cap_max=p.hit.cap_max)
             if p.type_affinity.enabled and atk_type == "thrust":
                 hr = min(p.hit.cap_max / 100.0, hr + p.type_affinity.thrust_hit)
@@ -2291,7 +2295,8 @@ class BattleEngine:
                 continue
 
             # ---- ② 会心（1a §1.4/§1.5：√幸运/2，三档）----
-            lck = float(ac.get("lck", 50))
+            # M12.5 需求1 批B：stat_map 语义键取数（缺省 lck=现值，零破坏）
+            lck = float(ac.get(p.stat_map.crit_luck, 50))
             super_crit_lv = int(ac.get("super_crit_lv", 0) or 0)
             crit_r = self._roll()
             # G1 定稿对照修复（damage 定稿对照 G1）：斩击会心 +5%（数值层 L92/L216
@@ -2309,7 +2314,8 @@ class BattleEngine:
 
             # ---- ③ 格挡（1a §1.7：min(40%, 专注/(专注+150))；魔攻击无视）----
             magic = atk_type == "magic"
-            br = block_rate(float(tc.get("foc", 50)), k=p.block.k, cap=p.block.cap)
+            # M12.5 需求1 批B：stat_map 语义键取数（缺省 foc=现值，零破坏）
+            br = block_rate(float(tc.get(p.stat_map.block_focus, 50)), k=p.block.k, cap=p.block.cap)
             blocked = self._roll() <= br and not (magic and p.block.magic_ignores)
             rating["blocked"] = blocked
 
@@ -2319,7 +2325,8 @@ class BattleEngine:
                 pierce += pierce_pct(atk_type, blunt_pierce=p.type_affinity.blunt_pierce)
             pierce = min(0.6, pierce + float(seg.get("pierce", 0.0)))
             rating["pierce"] = pierce
-            eff_con = effective_con(float(tc.get("con", 50)), pierce)
+            # M12.5 需求1 批B：stat_map 语义键取数（缺省 con=现值，零破坏）
+            eff_con = effective_con(float(tc.get(p.stat_map.def_con, 50)), pierce)
             df = defense_factor(eff_con, k=p.defense.k)
             # M2 技能倍率 = 基础 ×（1 + F-23 效果加成/100）→ F-23 消费点
             # M2-C1 修复（怪物 AI 蓄力/起身占行动槽 mult=0 语义）：原 `or 1.0` 把显式 0 吞成 1.0，
@@ -2334,9 +2341,12 @@ class BattleEngine:
             if action.get("_derived"):
                 skill_mult = apply_derived_cap(skill_mult, max_total_mult=p.derived.max_total_mult)
             rating["multi"] = skill_mult
-            attack_value = float(ac.get("atk", 0))
+            # M12.5 需求1 批B：stat_map 语义键取数（缺省 atk / int→mag 回退链=现值，
+            # 零破坏）
+            attack_value = float(ac.get(p.stat_map.atk_atk, 0))
             if magic:
-                attack_value = float(ac.get("int", ac.get("mag", attack_value)))
+                attack_value = float(ac.get(p.stat_map.mag_int,
+                                            ac.get("mag", attack_value)))
             # G3 定稿对照修复（damage 定稿对照 G3）：base_attack_mult（M2 全局攻击倍率基线，
             # 数值层 L179/细化_1a §1.2）实战零消费——现乘入物理通道首因子。
             attack_value *= p.base_attack_mult

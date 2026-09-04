@@ -1601,6 +1601,16 @@ class _Checker:
                 # （_element_registry 已按 elements 段消费引用存在校验，validator.py L644-652）；
                 # 15 条段参数红黄校验（hit 0.05-1 / cap 10-100 / tiers 低<中<高等）归
                 # 实现层规划 T01「formula.json 唯一配置源与校验器」，此处不重复实现。
+                # M12.5 需求1 批C3：stat_map 段宽松黄校验——value 自身即 stat_map
+                # 段容器（formula 顶层键 stat_map 的值，键=语义键），各值须为非空
+                # 字符串（指向 combatant 键，内容包自定义 stat 全量透传后任意键合法）；
+                # 非字符串 → 黄提示不红拦（只建议不限制，未知键名是内容包自定义权利）。
+                # 仅当路径末端为 .stat_map 时触发（防误伤 damage/hit 等数值段容器）。
+                if path.endswith(".stat_map"):
+                    for sm_key, sm_val in value.items():
+                        if not (isinstance(sm_val, str) and sm_val.strip()):
+                            self._warn(module_name, f"{path}.{sm_key}", "Y-1",
+                                       rule="stat_map_value_not_string", value=repr(sm_val))
             else:
                 # M6 批6·路A/批6B FIX-2（D6 §三 FIX-1 / §3.4 边界异常）：formula 模块允许
                 # 顶层数值标量参数透传（如 monster_def_rate: 1.0 怪物防御率公式系数）——

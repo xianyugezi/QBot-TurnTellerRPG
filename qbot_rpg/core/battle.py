@@ -329,13 +329,18 @@ class BattleEngine:
         self._pipeline: DamagePipeline = (
             pipeline if pipeline is not None else DamagePipeline(registry=registry, defs=defs)
         )
-        self._params: DamageFormulaParams = params or DamageFormulaParams()
+        # M12.5 需求1 批C：formula.json 生产侧装配链——显式 params 优先；否则
+        # 从 registry.modules_raw["formula"] 装配段参数（含 stat_map），无 registry /
+        # 无 formula 模块 → DamageFormulaParams() 默认（缺省零破坏）。共享加载函数
+        # 生产侧落点 = content/formula_loader（原 conftest 读取器同源提权）。
+        _loaded_params = self._formula_params_from_registry(registry) if params is None else params
+        self._params: DamageFormulaParams = _loaded_params or DamageFormulaParams()
         # FIX-6 决策登记（细化_M6 测试体系强化 D6 §三 FIX-5/FIX-6 二选一 + §八）：
-        # 段级参数当前仅默认值——battle 尚未从内容包 formula.json 装配段参数（JSON 段 →
-        # DamageFormulaParams 的共享加载函数未落生产侧，测试侧读取器 = conftest
-        # load_formula_params/formula_params fixture 已消费 fixtures 包）；内容包
-        # formula.json 段参数暂无人消费，文档口径由 D6 §八 登记承接，生产装配随实现层
-        # 规划 T01（formula.json 唯一配置源与校验器）落地。
+        # M12.5 需求1 批C 已落地：battle 从内容包 formula.json 装配段参数（JSON 段 →
+        # DamageFormulaParams 共享加载函数生产侧 = content/formula_loader，conftest
+        # 读取器同源提权；registry.modules_raw["formula"] 装配，含 stat_map 段）。
+        # 内容包 formula.json 段参数现由引擎实消费；无 formula 模块/无 registry →
+        # 全默认（零破坏）。文档口径由 D6 §八 + m125 记录承接。
         self._config: Dict[str, Any] = dict(_BATTLE_DEFAULT_CONFIG)
         if config:
             self._config.update(config)
@@ -366,6 +371,28 @@ class BattleEngine:
                 enemy_def, lib, ai_rng if ai_rng is not None else random.Random()
             )
         self._reset_state()
+
+    def _formula_params_from_registry(self, registry: Any = None) -> Optional[DamageFormulaParams]:
+        """registry.modules_raw["formula"] → DamageFormulaParams（M12.5 需求1 批C）。
+
+        无 registry / 无 formula 模块 / 装配异常 → None（调用方回落默认，零破坏）。
+        共享加载函数生产侧落点 = content/formula_loader（原 conftest 读取器同源）。
+
+        注意：只在 __init__ 早期被调用（self._registry 尚未赋值），故只读入参
+        registry，不读 self._registry（from_snapshot 重建时显式传 registry）。
+        """
+        raw = getattr(registry, "modules_raw", None)
+        if not isinstance(raw, Mapping):
+            return None
+        formula = raw.get("formula")
+        if not isinstance(formula, Mapping):
+            return None
+        try:
+            from qbot_rpg.content.formula_loader import load_formula_params
+
+            return load_formula_params(formula)
+        except Exception:  # noqa: BLE001 —— 装配异常回落默认，不阻断开战
+            return None
 
     # ------------------------- 内部状态字段 -------------------------
 

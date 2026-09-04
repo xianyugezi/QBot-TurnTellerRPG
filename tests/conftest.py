@@ -7,25 +7,13 @@
 """
 from __future__ import annotations
 
-import json
 import random
 from pathlib import Path
-from typing import Callable, Tuple, cast
+from typing import Callable
 
 import pytest
 
-from qbot_rpg.core.damage import (
-    BlockParams,
-    CritMultUp,
-    CritParams,
-    CritTiers,
-    DamageFormulaParams,
-    DefenseParams,
-    DerivedParams,
-    HitParams,
-    TypeAffinityParams,
-    WeaknessParams,
-)
+from qbot_rpg.core.damage import DamageFormulaParams
 from qbot_rpg.data import EquipmentSlot, ItemInstance, Player, PlayerAttributes
 
 TESTS_DIR = Path(__file__).parent
@@ -103,92 +91,20 @@ def seeded_rng(seed: int) -> Callable[[int], random.Random]:
 
 # ---------------------------------------------------------------------------
 # FIX：formula.json 段级参数 → DamageFormulaParams 读取器（D6 §三 FIX-2 / F-FIX-01~27）
+# M12.5 需求1 批C：读取器已提生产侧（qbot_rpg/content/formula_loader.py），
+# 本模块保留同名函数薄包装 + fixture（生产/测试同一装配源）。
 # ---------------------------------------------------------------------------
 
 
 def load_formula_params(path: Path) -> DamageFormulaParams:
     """formula.json 段级参数 → DamageFormulaParams（D6 FIX-2 读取器，F-FIX-01~27 映射）。
 
-    - 段缺省回退：formula.json 缺某段/键 → 用 dataclass 默认值不抛错（D6 §3.4 边界异常）；
-    - 数组形态（rng/tier_p）→ tuple；扁平对象（tiers/crit_mult_up/pierce_types/elements）→
-      对应 frozen 子结构；
-    - floor_mode/deep_floor 等纯配置字段不在 DamageFormulaParams 内，读取器不消费（D6 §3.4）。
+    生产侧装配源：qbot_rpg.content.formula_loader（同源同实现）；本包装保留
+    既有测试调用形态（fixture formula_params 等零改动）。
     """
-    data = json.loads(path.read_text(encoding="utf-8"))
-    dmg, hit_seg, crit_seg, block_seg = (
-        data.get(k) or {} for k in ("damage", "hit", "crit", "block")
-    )
-    defense_seg = data.get("defense") or {}
-    weakness_seg = data.get("weakness") or {}
-    ta_seg = data.get("type_affinity") or {}
-    derived_seg = data.get("derived") or {}
-    base = DamageFormulaParams()  # 段缺省回退默认源（dataclass 默认 = F-FIX 表默认）
+    from qbot_rpg.content.formula_loader import load_formula_params_from_path
 
-    def _f(seg: dict, key: str, default):
-        v = seg.get(key)
-        return default if v is None else v
-
-    tiers = crit_seg.get("tiers") or {}
-    mult_up = crit_seg.get("crit_mult_up") or {}
-    return DamageFormulaParams(
-        base_attack_mult=float(_f(dmg, "base_attack_mult", base.base_attack_mult)),  # F-FIX-01
-        rng=cast(Tuple[float, float], tuple(float(x) for x in _f(dmg, "rng", base.rng))),  # F-FIX-02
-        hit=HitParams(
-            k=float(_f(hit_seg, "k", base.hit.k)),  # F-FIX-03
-            cap_min=float(_f(hit_seg, "cap_min", base.hit.cap_min)),  # F-FIX-04
-            cap_max=float(_f(hit_seg, "cap_max", base.hit.cap_max)),  # F-FIX-05
-        ),
-        crit=CritParams(
-            p_coef=float(_f(crit_seg, "p_coef", base.crit.p_coef)),  # F-FIX-06
-            cap=float(_f(crit_seg, "cap", base.crit.cap)),  # F-FIX-07
-            tiers=CritTiers(
-                high=float(_f(tiers, "high", base.crit.tiers.high)),  # F-FIX-08
-                mid=float(_f(tiers, "mid", base.crit.tiers.mid)),
-                low=float(_f(tiers, "low", base.crit.tiers.low)),
-            ),
-            tier_p=cast(Tuple[int, int], tuple(int(x) for x in _f(crit_seg, "tier_p", base.crit.tier_p))),  # F-FIX-09
-            crit_mult_up=CritMultUp(
-                lv1=float(_f(mult_up, "lv1", base.crit.crit_mult_up.lv1)),  # F-FIX-10
-                lv2=float(_f(mult_up, "lv2", base.crit.crit_mult_up.lv2)),
-                lv3=float(_f(mult_up, "lv3", base.crit.crit_mult_up.lv3)),
-            ),
-        ),
-        block=BlockParams(
-            k=float(_f(block_seg, "k", base.block.k)),  # F-FIX-11
-            cap=float(_f(block_seg, "cap", base.block.cap)),  # F-FIX-12
-            magic_ignores=bool(_f(block_seg, "magic_ignores", base.block.magic_ignores)),  # F-FIX-13
-            halve_after_block=bool(  # F-FIX-14
-                _f(block_seg, "halve_after_block", base.block.halve_after_block)
-            ),
-        ),
-        defense=DefenseParams(
-            mode=str(_f(defense_seg, "mode", base.defense.mode)),  # F-FIX-15
-            k=float(_f(defense_seg, "k", base.defense.k)),  # F-FIX-16
-            pierce_types=dict(  # F-FIX-17
-                _f(defense_seg, "pierce_types", base.defense.pierce_types)
-            ),
-        ),
-        weakness=WeaknessParams(
-            type_mult=float(_f(weakness_seg, "type_mult", base.weakness.type_mult)),  # F-FIX-18
-            element_mult=float(  # F-FIX-19
-                _f(weakness_seg, "element_mult", base.weakness.element_mult)
-            ),
-        ),
-        type_affinity=TypeAffinityParams(
-            enabled=bool(_f(ta_seg, "enabled", base.type_affinity.enabled)),  # F-FIX-20
-            blunt_pierce=float(_f(ta_seg, "blunt_pierce", base.type_affinity.blunt_pierce)),  # F-FIX-21
-            thrust_hit=float(_f(ta_seg, "thrust_hit", base.type_affinity.thrust_hit)),  # F-FIX-22
-            slash_crit=float(_f(ta_seg, "slash_crit", base.type_affinity.slash_crit)),  # F-FIX-23
-            magic_ignore_block=bool(  # F-FIX-24
-                _f(ta_seg, "magic_ignore_block", base.type_affinity.magic_ignore_block)
-            ),
-        ),
-        derived=DerivedParams(  # F-FIX-25
-            max_total_mult=float(_f(derived_seg, "max_total_mult", base.derived.max_total_mult))
-        ),
-        monster_def_rate=float(_f(data, "monster_def_rate", base.monster_def_rate)),  # F-FIX-26
-        elements=dict(_f(data, "elements", base.elements)),  # F-FIX-27
-    )
+    return load_formula_params_from_path(path)
 
 
 @pytest.fixture(scope="session")

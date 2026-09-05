@@ -106,6 +106,8 @@ __all__ = [
     "dispatch_round",
     # 指令处理器（parsed + ctx → {"ok","sent","message"}）
     "cmd_battle_attack",
+    "cmd_battle_target",
+    "TARGET_CMD",
     # 装配
     "register_battle_commands",
 ]
@@ -115,6 +117,14 @@ __all__ = [
 # ---------------------------------------------------------------------------
 
 ATTACK_CMD = "攻击"
+TARGET_CMD = "查看目标"
+
+# 元素中文（弱点展示；对齐 formula elements 命名常见集，未知原样透传）
+_ELEM_CN = {
+    "fire": "火", "water": "水", "ice": "冰", "thunder": "雷", "wind": "风",
+    "earth": "地", "light": "光", "dark": "暗", "斩": "斩", "打": "打",
+    "突": "突", "魔": "魔",
+}
 
 # 未进入战斗（铁律 2 单次操作 ≤1-2 条；战斗外指令不受影响，工程补白 5）
 _TPL_NO_BATTLE_KEY = "battle_no_battle"
@@ -1017,6 +1027,97 @@ def cmd_battle_attack(parsed: Any, ctx: MutableMapping[str, Any]) -> dict:
     return result
 
 
+def cmd_battle_target(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """/查看目标（框架 7.6 L1356/L1367）：战斗中查看当前目标属性面板。
+
+    只读展示（零副作用/不 roll/不改状态）；目标属性 = 战斗快照 enemy combatant
+    （HP/atk/dfn/spd/foc 等）+ 印记 + 状态 + 弱点（enemy_def weakness，不显示
+    掉落——L1356 原文约束）。战斗外 → 提示。
+    """
+    engine = ctx.get("battle_engine")
+    if engine is None:
+        return tpl_of(ctx, "battle_target_no_battle")
+    try:
+        state = engine.battle_state()
+    except Exception:  # noqa: BLE001 - 快照读取异常 → 视同无战斗
+        return tpl_of(ctx, "battle_target_no_battle")
+    if not isinstance(state, Mapping):
+        return tpl_of(ctx, "battle_target_no_battle")
+    enemy = state.get("enemy")
+    if not isinstance(enemy, Mapping) or not enemy.get("name"):
+        return tpl_of(ctx, "battle_target_no_battle")
+    turn = int(state.get("turn", 0) or 0)
+    lines: List[str] = [tpl_of(ctx, "battle_target_head",
+                               {"name": str(enemy.get("name") or "?"),
+                                "round": turn})]
+    # HP 行
+    hp = int(enemy.get("hp", 0) or 0)
+    mx = int(enemy.get("max_hp", hp) or hp)
+    lines.append(tpl_of(ctx, "battle_target_hp", {"hp": hp, "max_hp": mx}))
+    # 属性行（combatant 数值键；排除非属性键 + 引擎 _DEFAULT_STATS 兜底填充键——
+    # str/spr/int/luk/elem_res 等是语义映射源的原始键（con→dfn/str→atk 后冗余），
+    # 展示真实配置键 atk/dfn/mag/spd/foc/lck + 内容包自定义键）
+    skip = {"name", "hp", "max_hp", "mp", "max_mp", "id", "dead_mark",
+            "skip_turn", "defenses", "skills", "is_boss", "elem_atk",
+            "elem_res", "str", "spr", "int", "luk", "agi", "con"}
+    attr_names = {"atk": "攻击", "dfn": "防御", "mag": "魔力", "spd": "速度",
+                  "foc": "专注", "lck": "幸运"}
+    for k, v in enemy.items():
+        if k in skip or not isinstance(v, (int, float)) or isinstance(v, bool):
+            continue
+        name_cn = attr_names.get(k, k)
+        lines.append(tpl_of(ctx, "battle_target_attr",
+                            {"attr_name": name_cn, "value": int(v)}))
+    # 印记（marks_state enemy）
+    marks = state.get("marks_state") or {}
+    m_enemy = marks.get("enemy") if isinstance(marks, Mapping) else None
+    if isinstance(m_enemy, list) and m_enemy:
+        m_names = []
+        for m in m_enemy:
+            if isinstance(m, Mapping):
+                mn = m.get("name") or m.get("mark_id") or m.get("id")
+                if mn:
+                    m_names.append(str(mn))
+        if m_names:
+            lines.append(tpl_of(ctx, "battle_target_marks",
+                                {"marks": " ｜ ".join(m_names)}))
+    # 状态（status_state enemy — 简化：形态名/效果名）
+    ss = state.get("status_state") or {}
+    s_enemy = ss.get("enemy") if isinstance(ss, Mapping) else None
+    if isinstance(s_enemy, list) and s_enemy:
+        s_names = []
+        for s in s_enemy:
+            if isinstance(s, Mapping):
+                sn = s.get("name") or s.get("status_id") or s.get("form_status_id")
+                if sn:
+                    s_names.append(str(sn))
+        if s_names:
+            lines.append(tpl_of(ctx, "battle_target_status",
+                                {"statuses": " ｜ ".join(s_names[:6])}))
+    # 弱点（enemy_def weakness 配置；不显示掉落）
+    ed = getattr(engine, "_enemy_def", None)
+    if isinstance(ed, Mapping):
+        wk = ed.get("weakness")
+        if isinstance(wk, Mapping):
+            segs = []
+            for kk, vv in wk.items():
+                if kk == "types" and isinstance(vv, list) and vv:
+                    # 类型弱点：直接列（弱点类型名）
+                    segs.append("/".join(str(x) for x in vv))
+                elif kk == "elements" and isinstance(vv, Mapping):
+                    # 元素弱点：元素名 ×倍率（中文映射；未知原样）
+                    for elem, mult in vv.items():
+                        if isinstance(mult, (int, float)) and not isinstance(mult, bool):
+                            cn = _ELEM_CN.get(str(elem), str(elem))
+                            segs.append(f"{cn}×{mult}")
+                elif isinstance(vv, list) and vv:
+                    segs.append(f"{kk}：" + "/".join(str(x) for x in vv))
+            if segs:
+                lines.append(tpl_of(ctx, "battle_target_weak",
+                                    {"weak": " ｜ ".join(segs)}))
+    return "\n".join(lines)
+
+
 # ---------------------------------------------------------------------------
 # 装配（Router 注册；make_context 由装配层注入，批次7 待接线）
 # ---------------------------------------------------------------------------
@@ -1038,7 +1139,9 @@ def register_battle_commands(router: Any, *, make_context: Optional[Callable[[An
             )
         return make_context(parsed)
 
-    def _wrap(fn: Callable[..., dict]) -> Callable[..., dict]:
+    def _wrap(fn: Callable[..., Any]) -> Callable[..., Any]:
+        # fn 可返回 str（只读面板 /查看目标）或 dict（/攻击 战斗结果）——runner
+        # _normalize_plain 两者皆收；放宽标注避免 mypy arg-type 误报
         def handler(parsed: Any, *a: Any, **k: Any) -> dict:
             # 优先复用 runner 已构建 ctx（A-03 注入 k["ctx"]；含 sender/player/battle_engine
             # 等完整上下文）——否则回退 _ctx(parsed)（smoke/测试路径，批次7 待接线兜底）。
@@ -1051,4 +1154,7 @@ def register_battle_commands(router: Any, *, make_context: Optional[Callable[[An
         return handler
 
     router.register(CommandSpec(ATTACK_CMD, handler=_wrap(cmd_battle_attack)))
+    # M12.5 查看目标（2026-09-06 指令缺口补全批1路3）：/查看目标 战斗内只读面板
+    # （框架 7.6 L1356/L1367；同组 wrap——handler 契约 (parsed, *a, **k)）
+    router.register(CommandSpec(TARGET_CMD, handler=_wrap(cmd_battle_target)))
     return router

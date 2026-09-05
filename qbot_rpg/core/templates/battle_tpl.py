@@ -19,6 +19,15 @@ from typing import Any, Dict
 DEFAULT_TEMPLATES: Dict[str, Any] = {
     # —— battle_commands 壳层（6 TPL 常量 + 6 f-string 迁移）——
     "battle_no_battle": "❌ 当前没有进行中的战斗",
+    # —— /查看目标（框架 7.6 L1356/L1367：目标属性面板，掉落不显示）——
+    "battle_target_no_battle": "❌ 当前没有进行中的战斗（/锁定 1 开战后可查看目标）",
+    "battle_target_head": "【目标】{name}（第 {round} 回合）",
+    "battle_target_hp": "【生命】{hp}/{max_hp}",
+    "battle_target_attr": "【{attr_name}】{value}",
+    "battle_target_marks": "【印记】{marks}",
+    "battle_target_status": "【状态】{statuses}",
+    "battle_target_weak": "【弱点】{weak}",
+    "battle_target_tail": "查看目标不显示掉落（击破后见战报）",
     "battle_no_skill": "❌ 没有这个技能",
     "battle_no_item_arg": "❌ 请指定要使用的道具（/道具 药水）",
     "battle_no_item": "❌ 没有这个道具",
@@ -126,6 +135,14 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
 PLACEHOLDER_WHITELIST: Dict[str, set] = {
     # —— battle_commands 壳层 ——
     "battle_no_battle": set(),
+    "battle_target_no_battle": set(),
+    "battle_target_head": {"name", "round"},
+    "battle_target_hp": {"hp", "max_hp"},
+    "battle_target_attr": {"attr_name", "value"},
+    "battle_target_marks": {"marks"},
+    "battle_target_status": {"statuses"},
+    "battle_target_weak": {"weak"},
+    "battle_target_tail": set(),
     "battle_no_skill": set(),
     "battle_no_item_arg": set(),
     "battle_no_item": set(),

@@ -118,12 +118,34 @@ _DEFAULT_PAGE_SPECS: Tuple[Mapping[str, object], ...] = (
         "enabled": True,
         "validator": "shop",
     },
+    {
+        # M12.5/veinborn：装备页进默认页表（equipment.json 与 items 同库 item_lib；
+        # field_meta equipment_fields 已登记 dfn/foc/hp/agi 等属性键——veinborn
+        # 无 editor.json 声明时缺省即可编辑装备）
+        "page_id": "equipment",
+        "title": "装备",
+        "icon": "🛡️",
+        "module_file": "equipment.json",
+        "meta_source": "meta/equipment",
+        "enabled": True,
+        "validator": "equipment",
+    },
+    {
+        "page_id": "item",
+        "title": "物品",
+        "icon": "🎒",
+        "module_file": "items.json",
+        "meta_source": "meta/item",
+        "enabled": True,
+        "validator": "item",
+    },
 )
 
 # 默认校验器钩子名集合（PR-05：每 page_id 登记一个校验器钩子；本模块侧只登记
 # 钩子名存在性——钩子到 validate_* 函数的分派归 web/装配层，见模块 docstring）。
 DEFAULT_VALIDATORS: Tuple[str, ...] = (
     "skill", "job", "monster", "map", "quest", "shop",
+    "equipment", "item",
 )
 
 

@@ -21,19 +21,21 @@ from qbot_rpg.content.editor_registry import (
 from qbot_rpg.content.registry import Registry
 
 # =====================================================================================
-# 默认六页兜底（细化_5a2 M-06 5a2 L239 / PR-01 5a2 L50）
+# 默认页兜底（细化_5a2 M-06 5a2 L239 / PR-01 5a2 L50；M12.5/veinborn 扩展
+# equipment/item 两页——veinborn 等无 editor.json 内容包也可编辑装备/物品）
 # =====================================================================================
-def test_default_six_pages_when_no_editor_module() -> None:
-    """无 editor 模块 → 默认六页兜底（skill/job/monster/map/quest/shop）。"""
+def test_default_pages_when_no_editor_module() -> None:
+    """无 editor 模块 → 默认页兜底（skill/job/monster/map/quest/shop/equipment/item）。"""
     registry = Registry(pack_id="demo_blank")  # modules_raw 空 → 无 editor
     editor = load_editor_registry(registry)
     assert [p.page_id for p in editor.pages] == [
         "skill", "job", "monster", "map", "quest", "shop",
+        "equipment", "item",
     ]
     assert editor.schema_version is None
     assert editor.get_page("skill") is not None
-    # 兜底六页全部启用 → enabled_pages 与 pages 等长
-    assert len(editor.enabled_pages()) == 6
+    # 兜底页全部启用 → enabled_pages 与 pages 等长
+    assert len(editor.enabled_pages()) == 8
 
 
 def test_default_six_pages_field_defaults() -> None:

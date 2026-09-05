@@ -1018,6 +1018,13 @@ def _module_table() -> Dict[str, ModuleMeta]:
     # 部位互斥：entry.slot 与 entry.excludes 列表内部位互斥成环 → R-5（equipment 专项，§5.2 + L167）
     equipment_fields["slot"] = FieldMeta(type="str")
     equipment_fields["excludes"] = FieldMeta(type="list", element=FieldMeta(type="str"))
+    # M12.5/veinborn 属性键收口：装备词条键 atk/dfn/foc/hp/agi（stats.json 声明的
+    # combat 键空间；items_fields 复制源仍登记 def 旧键 → 追加 dfn/foc/hp/agi，
+    # 保留 def 兼容旧内容包（demo_full 等 def 词条不受影响）。
+    equipment_fields["dfn"] = FieldMeta(type="number", range_min=0, range_max=5000, label="防御")
+    equipment_fields["foc"] = FieldMeta(type="number", range_min=0, range_max=5000, label="专注")
+    equipment_fields["hp"] = FieldMeta(type="number", range_min=0, range_max=99999, label="生命")
+    equipment_fields["agi"] = FieldMeta(type="number", range_min=0, range_max=5000, label="敏捷")
     traits_fields: Dict[str, FieldMeta] = {
         "id": F_ID, "name": F_NAME, "type": F_TYPE,
         "probability": F_PROBABILITY, "max_stack": F_MAX_STACK,

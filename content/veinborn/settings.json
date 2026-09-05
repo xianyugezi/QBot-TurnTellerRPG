@@ -95,5 +95,21 @@
   "command_aliases": {
     "任务": "领取任务"
   },
-  "world_name": "蚀脉猎师"
+  "world_name": "蚀脉猎师",
+  "alchemy": {
+    "farming": {
+      "enabled": true,
+      "harvest_sec": 14400,
+      "plots_max": 3,
+      "trait_inherit": 1,
+      "greenhouse": {
+        "unlock_tier": "大师",
+        "copy_slot": 1,
+        "copy_cost": {
+          "gem": 10,
+          "coins": 1000
+        }
+      }
+    }
+  }
 }

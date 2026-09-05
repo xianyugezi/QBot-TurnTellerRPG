@@ -86,7 +86,7 @@ from __future__ import annotations
 import inspect
 import random
 import time
-from typing import Any, Callable, Mapping, MutableMapping, Optional
+from typing import Any, Callable, List, Mapping, MutableMapping, Optional
 
 from qbot_rpg.core.alchemy_auto import DEFAULT_MAX_QTY, AutoFeed
 from qbot_rpg.core.alchemy_core import (
@@ -153,6 +153,7 @@ __all__ = [
     "cmd_challenge", "render_alchemy_codex", "cmd_skill_panel", "cmd_tutorial",
     "cmd_instant", "cmd_assist",
     "cmd_plant", "cmd_harvest", "cmd_helper", "cmd_collect",
+    "GREENHOUSE_CMD", "cmd_greenhouse",
     # 装配
     "register_alchemy_commands",
 ]
@@ -202,6 +203,10 @@ HARVEST_CMD = "收获"          # GU-60/F-21/M-21：无参收全部成熟地块�
 HELPER_CMD = "代工"           # GU-62/63/F-22/M-22：精通解锁，键值列表设定持续代采/代调
                               #   （2026-08-28 用户拍板指令名改用「代工」，勿出现旧称）
 COLLECT_CMD = "收取"          # F-22/ASST-06/M-22：后台产出队列入包+清空（TC-30）
+# M12.5 温室查看/复制（2026-09-06 指令缺口补全批2路2）：/温室（状态查看）/
+# 温室 复制 <素材>（FARM-07/08 大师解锁复制）——引擎 greenhouse 已存在，本批补指令壳
+GREENHOUSE_CMD = "温室"
+GREENHOUSE_COPY_SUBWORD = "复制"
 
 # 固定子词（对齐 parsers.py FIXED_SUBWORDS：自动/追加 已在常量内，壳层显式引用防字面量漂移）
 AUTO_SUBWORD = "自动"
@@ -3368,6 +3373,66 @@ def _assist_materials_diff(ctx: Mapping[str, Any], need: list) -> str:
 # 装配（Router 注册；make_context 由装配层注入，批11 路11A 待接线）
 # ---------------------------------------------------------------------------
 
+def _greenhouse_status_lines(ctx: MutableMapping[str, Any],
+                             player: MutableMapping[str, Any],
+                             engine: Any) -> List[str]:
+    """温室状态查看行（零门槛只读）：地块占用/作物/成熟倒计时/复制位解锁档位。"""
+    plots = player.get("farm_plots")
+    plots = plots if isinstance(plots, Mapping) else {}
+    now = _clock_of(ctx)
+    plots_max = getattr(engine, "_plots_max", lambda: 3)()
+    lines: List[str] = [f"【温室】地块 {len(plots)}/{plots_max}"]
+    if not plots:
+        lines.append("无作物（/种植 <种子> 播种；种子可从商店/任务获得）")
+    for slot in sorted(plots, key=lambda k: str(k)):
+        p = plots[slot]
+        if not isinstance(p, Mapping):
+            continue
+        seed_name = str(p.get("seed_name") or p.get("seed_id") or "?")
+        harvest_at = int(p.get("harvest_at", 0) or 0)
+        remain = harvest_at - now
+        if remain <= 0:
+            lines.append(f"地块 {slot}：{seed_name}（可收获！/收获 {slot}）")
+        else:
+            mins = max(1, int(remain // 60))
+            lines.append(f"地块 {slot}：{seed_name}（剩 {mins} 分钟成熟）")
+    # 复制位解锁档位（FARM-07：大师）
+    gh = engine._greenhouse_cfg() if hasattr(engine, "_greenhouse_cfg") else {}
+    unlock_name = "大师"
+    if isinstance(gh, Mapping):
+        ut = gh.get("unlock_tier")
+        if isinstance(ut, str) and ut:
+            unlock_name = ut
+    lines.append(f"温室复制（{unlock_name} 解锁）：/温室 复制 <素材> 消耗宝石+金币量产素材")
+    return lines
+
+
+async def cmd_greenhouse(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """/温室 [复制 <素材>]：无参=温室状态查看（地块/作物/倒计时/解锁档位，零门槛只读）；
+    `温室 复制 <素材>`=大师解锁复制素材（FARM-07/08，引擎 greenhouse 原子结算）。
+
+    守卫：注册门槛（基础）→ 无参查看（零门槛）→ 复制子词走引擎大师判定。
+    """
+    player = _player_of(ctx)
+    args = list(getattr(parsed, "args", None) or [])
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    engine = HarvestEngine(settings=_settings_of(ctx))
+    if not getattr(engine, "_farming_enabled", lambda: True)():
+        return "种植系统未开启"
+    # 复制子词
+    if args and str(args[0]).strip() == GREENHOUSE_COPY_SUBWORD:
+        if len(args) < 2:
+            return "参数错误：/温室 复制 <素材名>（示例：/温室 复制 番茄）"
+        target = str(args[1])
+        res = engine.greenhouse(player, ctx, target, now=_clock_of(ctx))
+        ok_msg = "✅ 温室复制完成" if res.get("ok") else "❌ 温室复制失败"
+        return str(res.get("message") or ok_msg)
+    if args:
+        return format_tpl12(f"/{GREENHOUSE_CMD} [复制 <素材>]")
+    return "\n".join(_greenhouse_status_lines(ctx, player, engine))
+
+
 def register_alchemy_commands(
     router: Any,
     *,
@@ -3579,6 +3644,12 @@ def register_alchemy_commands(
             return cmd_collect(parsed, injected)
         return cmd_collect(parsed, _ctx(parsed))
 
+    def _greenhouse(parsed: Any, *a: Any, **k: Any):
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        if isinstance(injected, MutableMapping):
+            return cmd_greenhouse(parsed, injected)
+        return cmd_greenhouse(parsed, _ctx(parsed))
+
     router.register(CommandSpec(SYNTH_CMD, handler=_synth))
     router.register(CommandSpec(ALCHEMY_CMD, handler=_alchemy))
     router.register(CommandSpec(FEED_CMD, handler=_feed))
@@ -3610,4 +3681,6 @@ def register_alchemy_commands(
     router.register(CommandSpec(HARVEST_CMD, handler=_harvest))
     router.register(CommandSpec(HELPER_CMD, handler=_helper))
     router.register(CommandSpec(COLLECT_CMD, handler=_collect))
+    # M12.5 温室（2026-09-06 批2路2）：/温室 状态查看 + /温室 复制 <素材>
+    router.register(CommandSpec(GREENHOUSE_CMD, handler=_greenhouse))
     return router

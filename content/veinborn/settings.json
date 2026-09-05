@@ -205,5 +205,36 @@
         ]
       }
     ]
+  },
+  "assistant": {
+    "enabled": true,
+    "unlock_tier": "精通",
+    "energy_items": [
+      "pulse_candy"
+    ],
+    "queue": {
+      "max_slots": 3,
+      "tick_sec": 1800
+    },
+    "helpers": [
+      {
+        "id": "h1",
+        "name": "脉矿工",
+        "tier": 1,
+        "gather_rate": 1.0,
+        "trait_bonus": 0,
+        "quality_bonus": 0,
+        "desc": "骸骨草场的采掘老手，代采 1 小时产一批。"
+      },
+      {
+        "id": "h2",
+        "name": "调合徒",
+        "tier": 2,
+        "gather_rate": 1.2,
+        "trait_bonus": 1,
+        "quality_bonus": 5,
+        "desc": "略通调合的学徒，代调成功率略高。"
+      }
+    ]
   }
 }

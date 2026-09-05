@@ -195,6 +195,7 @@ def _item_from_dict(d: Dict[str, Any]) -> ItemInstance:
         stats_bonus=dict(stats) if isinstance(stats, dict) else {},
         traits=tuple(d.get("traits") or ()),
         cooldown_until=d.get("cooldown_until"),
+        enhance_level=int(d.get("enhance_level", 0) or 0),
     )
 
 

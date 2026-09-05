@@ -46,6 +46,7 @@ from qbot_rpg.commands import (
     checkin_commands,
     codex_commands,
     dialog_commands,
+    enhance_commands,  # M12.5 强化（2026-09-06）：/强化 /强化信息 /强化保护
     explore_commands,
     fishing_commands,
     fishing_reel_commands,
@@ -103,6 +104,9 @@ REGISTER_GROUPS: tuple = (
     # M10 钓鱼（批8 审查 A3 P0-1 收口 2026-09-01）：/钓鱼 /鱼讯 /收杆 三指令
     fishing_commands.register_fishing_commands,    # /钓鱼 钓点列举+鱼讯参考
     fishing_reel_commands.register_fishing_reel_commands,  # /鱼讯 + /收杆 三选一
+    # M12.5 强化（2026-09-06 指令缺口补全批1路1）：/强化 /强化信息 /强化保护
+    # 三指令（2c3b；白名单已登记 强化，本批补 强化信息/强化保护）
+    enhance_commands.register_enhance_commands,
     # M11 成就（m11 启动包 §2.1）：/成就 /成就信息 /称号 三指令
     achievement_commands.register_achievement_commands,
     # M11 PVP（m11 启动包 §2.3）：/锁定玩家 /攻击玩家 双指令
@@ -224,7 +228,6 @@ def build_router(deps: Any) -> Router:
         # G3 2026-09-02：/锁定 /锁定怪物 已接真实开战（battle_launch_commands），
         # 不再 stub；剩余未实装指令保留占位提示。
         "采集": "❌ 采集尚未实装（后续里程碑）",
-        "强化": "❌ 装备强化尚未实装（后续里程碑）",
         "调合": "❌ 调合尚未实装（后续里程碑）",
         # 2026-08-31 QA P1-4：帮助页引导的战斗指令 stub（防静默空回）。
         # 【2026-08-31 用户拍板】防御/道具/逃跑 战斗指令已定稿删除（引擎机制保留只删入口），

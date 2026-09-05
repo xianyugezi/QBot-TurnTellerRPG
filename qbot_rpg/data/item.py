@@ -35,3 +35,5 @@ class ItemInstance:
     stats_bonus: Dict[str, float] = field(default_factory=dict)  # 装备词条/虚拟属性键（细化_3b §4.1 ele_atk_*）
     traits: Tuple[str, ...] = ()               # 特性（tuple 保证冻结语义）
     cooldown_until: Optional[str] = None       # 冷却计时（ISO-8601 UTC）
+    enhance_level: int = 0                     # 强化等级 +N（M12.5 强化接线：装备实例级
+                                               # 持久化；穿装同步 EquipmentSlot.slot_level）

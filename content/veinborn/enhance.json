@@ -1,0 +1,114 @@
+{
+  "settings": {
+    "max_by_rarity": {
+      "normal": 5,
+      "fine": 8,
+      "epic": 10,
+      "legendary": 12
+    },
+    "fail_tier_split": 3,
+    "shatter_mode": false,
+    "luck_affects": true,
+    "transfer_allowed": false,
+    "level_gated": false
+  },
+  "cost": {
+    "coin_per_level": 100,
+    "stones_per_level": 1,
+    "stone_tiers": [
+      {
+        "tier": "low",
+        "item": "item_enhance_stone_low",
+        "levels": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "tier": "mid",
+        "item": "item_enhance_stone_mid",
+        "levels": [
+          4,
+          5,
+          6
+        ]
+      },
+      {
+        "tier": "high",
+        "item": "item_enhance_stone_high",
+        "levels": [
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      }
+    ]
+  },
+  "success_curve": [
+    {
+      "to": 1,
+      "rate": 90
+    },
+    {
+      "to": 2,
+      "rate": 85
+    },
+    {
+      "to": 3,
+      "rate": 80
+    },
+    {
+      "to": 4,
+      "rate": 70
+    },
+    {
+      "to": 5,
+      "rate": 60
+    },
+    {
+      "to": 6,
+      "rate": 50
+    },
+    {
+      "to": 7,
+      "rate": 40
+    },
+    {
+      "to": 8,
+      "rate": 35
+    },
+    {
+      "to": 9,
+      "rate": 30
+    },
+    {
+      "to": 10,
+      "rate": 25
+    },
+    {
+      "to": 11,
+      "rate": 20
+    },
+    {
+      "to": 12,
+      "rate": 15
+    }
+  ],
+  "values": {
+    "weapon_atk_per_level": {
+      "type": "flat",
+      "value": 5,
+      "stat_key": "atk"
+    },
+    "armor_def_per_level": {
+      "type": "flat",
+      "value": 3,
+      "stat_key": "dfn"
+    }
+  },
+  "protect_stone": "item_protect_stone"
+}

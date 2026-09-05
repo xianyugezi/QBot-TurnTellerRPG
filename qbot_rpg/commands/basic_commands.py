@@ -113,7 +113,7 @@ __all__ = [
     # 指令名 / 子指令词
     "VIEW_CMD", "BAG_CMD", "BAG_FILTER_CMD", "EQUIP_CMD", "SKILL_CMD", "HELP_CMD",
     "VIEW_DETAIL_CMD", "cmd_view_detail",
-    "SUB_WEAR", "SUB_REMOVE",
+    "SUB_REMOVE",
     # 渲染常量
     "TPL_REGISTER_GATE", "TPL_EMPTY_BAG", "TPL_NO_SLOT", "TPL_EQUIP_NAME_HINT",
     "QUALITY_LABELS", "TYPE_LABELS", "DEFAULT_SLOT_NAMES",
@@ -141,7 +141,8 @@ MY_SKILL_CMD = "我的技能"  # 2026-08-30 实机反馈：玩家用「我的技
 HELP_CMD = "帮助"
 
 # 装备子指令词（非解析器固定子词，经 args 位置参数识别；对齐 checkin「状态/补签」模式）
-SUB_WEAR = "穿"
+# 2026-09-05 用户拍板：穿戴统一「使用 序号」——「穿」子词整体删除（无独立指令，
+# 「装备 穿 N」落名称形式友好提示），仅保留「卸」
 SUB_REMOVE = "卸"
 
 # RUL-08 注册门槛（4f §1.4 / TC-05；/帮助 豁免见 B6；模板配置化：basic_register_gate 可内容包覆盖）
@@ -1315,16 +1316,6 @@ def _equip_engine(ctx: Mapping[str, Any]) -> Any:
         ) from exc
 
 
-def _cmd_equip_wear(ctx: Mapping[str, Any], index: int) -> str:
-    """/装备 穿 <序号>：切换穿戴背包第 index 件（引擎 equip_wear，消息透传）。"""
-    engine = _equip_engine(ctx)
-    try:
-        res = engine.equip_wear(index, ctx)
-    except Exception as exc:  # P2-3 修复：裸吞异常留日志（防故障不可诊断）
-        _logger.exception("equip_wear 异常（index=%s）: %s", index, exc)
-        res = {}
-    return str(res.get("message") or tpl_of(ctx, "basic_equip_wear_fail"))
-
 
 def _cmd_equip_remove(ctx: Mapping[str, Any], slot_id: str) -> str:
     """/装备 卸 <槽位>：卸下槽位装备（引擎 equip_remove，消息透传）。"""
@@ -1356,16 +1347,6 @@ def cmd_equip(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     if not args:
         return _render_equip_page(ctx, 1)
     first = str(args[0])
-    if first == SUB_WEAR:
-        # 2026-09-05 用户拍板：穿戴统一「使用 序号」——「装备 穿」是错误指令，
-        # 不再执行穿戴，提示改用（防旧攻略/肌肉记忆玩家误发后无反馈）
-        seq = args[1] if len(args) > 1 else None
-        n = parse_int(seq) if seq is not None else None
-        if n is None or n < 1:
-            return format_tpl12(_fragment(parsed))
-        if len(args) > 2:
-            return format_tpl12(_fragment(parsed))
-        return tpl_of(ctx, "basic_equip_wear_disabled", {"seq": n})
     if first == SUB_REMOVE:
         slot_arg = args[1] if len(args) > 1 else None
         if slot_arg is None or len(args) > 2:

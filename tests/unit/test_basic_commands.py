@@ -37,8 +37,6 @@ from qbot_rpg.commands.basic_commands import (
     HELP_CMD,
     HELP_GROUPS,
     SKILL_CMD,
-    SUB_REMOVE,
-    SUB_WEAR,
     TPL_EMPTY_BAG,
     TPL_NO_SLOT,
     TPL_REGISTER_GATE,
@@ -386,9 +384,9 @@ def test_equip_name_form_friendly_hint(raw):
 
 
 def test_equip_wear():
-    """2026-09-05 用户拍板：/装备 穿 禁用（穿戴统一 使用 序号）→ 提示改用。"""
+    """2026-09-05 用户拍板：「穿」子词删除——/装备 穿 N 落名称形式提示（穿戴统一 使用）。"""
     out = cmd_equip(parse("/装备 穿 3"), make_ctx())
-    assert "使用 3" in out and "穿戴" in out
+    assert out == bc.TPL_EQUIP_NAME_HINT
 
 
 def test_equip_wear_compact():
@@ -401,9 +399,9 @@ def test_equip_wear_compact():
 
 @pytest.mark.parametrize("raw", ["/装备 穿", "/装备 穿 abc", "/装备 穿 0"])
 def test_equip_wear_invalid(raw):
-    """/装备 穿 缺序号/非数字/0 → TPL-12。"""
+    """2026-09-05：「穿」子词已删——/装备 穿 X 落名称形式友好提示（非 TPL-12）。"""
     out = cmd_equip(parse(raw), make_ctx())
-    assert out.startswith("❌ 指令不正确：")
+    assert out == bc.TPL_EQUIP_NAME_HINT
 
 
 def test_equip_remove_by_id():
@@ -441,7 +439,7 @@ def test_equip_engine_injected_message():
     """2026-09-05：/装备 穿 禁用后不再透传引擎——穿戴走 /使用（use_commands 覆盖）。"""
     eng = FakeEquipEngine(messages={"wear": "✅ 已切换：铁剑"})
     out = cmd_equip(parse("/装备 穿 2"), make_ctx(equip_engine=eng))
-    assert "使用 2" in out  # 禁用提示（不执行穿戴）
+    assert out == bc.TPL_EQUIP_NAME_HINT  # 穿已删 → 名称形式提示（不执行穿戴）
 
 
 def test_equip_engine_missing_wear_disabled_hint(monkeypatch):
@@ -450,7 +448,7 @@ def test_equip_engine_missing_wear_disabled_hint(monkeypatch):
         raise ImportError(f"no module {name}")
     monkeypatch.setattr(bc.importlib, "import_module", boom)
     out = cmd_equip(parse("/装备 穿 1"), make_ctx(equip_engine=None))
-    assert "使用 1" in out
+    assert out == bc.TPL_EQUIP_NAME_HINT  # 穿已删 → 不触引擎
 
 
 def test_resolve_equip_slot():
@@ -695,10 +693,6 @@ def test_parse_command_integration():
     p = parse("/帮助 冒险")
     assert p.command == HELP_CMD and p.args == ["冒险"]
 
-
-def test_subword_constants():
-    """子指令词常量（穿/卸）。"""
-    assert SUB_WEAR == "穿" and SUB_REMOVE == "卸"
 
 
 def test_register_basic_commands():

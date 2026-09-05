@@ -36,8 +36,7 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     "basic_no_slot": "❌ 没有这个装备槽位",
     "basic_equip_name_hint": "❌ 装备指令：穿戴请用 /使用 <序号>"
                              "（序号见 /背包），如 /使用 1",
-    # 2026-09-05 用户拍板：「装备 穿」是错误指令，穿戴统一「使用 序号」——禁用提示
-    "basic_equip_wear_disabled": "❌ 穿戴装备请发 /使用 {seq}（装备与消耗品统一走使用）",
+
 
     # —— /装备 装备栏（意见一同步：去序号 + 头部 + 强化后缀）——
     "basic_equip_header": "【装备】",

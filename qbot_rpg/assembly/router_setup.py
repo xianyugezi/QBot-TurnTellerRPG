@@ -46,6 +46,7 @@ from qbot_rpg.commands import (
     checkin_commands,
     codex_commands,
     dialog_commands,
+    dummy_commands,  # M12.5 木桩（2026-09-06）：/木桩 /调整木桩
     enhance_commands,  # M12.5 强化（2026-09-06）：/强化 /强化信息 /强化保护
     explore_commands,
     fishing_commands,
@@ -107,6 +108,8 @@ REGISTER_GROUPS: tuple = (
     # M12.5 强化（2026-09-06 指令缺口补全批1路1）：/强化 /强化信息 /强化保护
     # 三指令（2c3b；白名单已登记 强化，本批补 强化信息/强化保护）
     enhance_commands.register_enhance_commands,
+    # M12.5 木桩（2026-09-06 批1路2）：/木桩 /调整木桩（怪物模块 §十五）
+    dummy_commands.register_dummy_commands,
     # M11 成就（m11 启动包 §2.1）：/成就 /成就信息 /称号 三指令
     achievement_commands.register_achievement_commands,
     # M11 PVP（m11 启动包 §2.3）：/锁定玩家 /攻击玩家 双指令

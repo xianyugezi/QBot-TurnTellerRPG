@@ -528,5 +528,39 @@
         "desc": "晶鬃是它的弱点，破坏后散射失效。"
       }
     ]
+  },
+  {
+    "id": "dummy_light",
+    "name": "训练木桩·轻甲",
+    "tier": "training",
+    "type": "dummy",
+    "desc": "驿站练功场的轻甲木桩，低防高血，适合测试连段尖峰与配装爆发。",
+    "stats": {
+      "hp": 3000,
+      "mp": 0,
+      "str": 1,
+      "con": 5,
+      "spr": 1,
+      "foc": 1,
+      "agi": 1,
+      "luk": 1
+    }
+  },
+  {
+    "id": "dummy_heavy",
+    "name": "训练木桩·重甲",
+    "tier": "training",
+    "type": "dummy",
+    "desc": "覆着砾岩板的加重木桩，高防高血，适合测试破防收益与真实斩杀线。",
+    "stats": {
+      "hp": 5000,
+      "mp": 0,
+      "str": 1,
+      "con": 40,
+      "spr": 1,
+      "foc": 1,
+      "agi": 1,
+      "luk": 1
+    }
   }
 ]

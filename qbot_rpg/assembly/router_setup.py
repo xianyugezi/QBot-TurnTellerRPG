@@ -51,6 +51,7 @@ from qbot_rpg.commands import (
     explore_commands,
     fishing_commands,
     fishing_reel_commands,
+    gift_commands,  # M12.5 赠送（2026-09-06）：/赠送
     forge_commands,
     gm_commands,  # 2026-09-06 GM 运维组挂载
     investigate_commands,
@@ -105,6 +106,8 @@ REGISTER_GROUPS: tuple = (
     # M10 钓鱼（批8 审查 A3 P0-1 收口 2026-09-01）：/钓鱼 /鱼讯 /收杆 三指令
     fishing_commands.register_fishing_commands,    # /钓鱼 钓点列举+鱼讯参考
     fishing_reel_commands.register_fishing_reel_commands,  # /鱼讯 + /收杆 三选一
+    # M12.5 赠送（2026-09-06 批2路1）：/赠送 <物品>*<数量> <玩家>（原子转移）
+    gift_commands.register_gift_commands,
     # M12.5 强化（2026-09-06 指令缺口补全批1路1）：/强化 /强化信息 /强化保护
     # 三指令（2c3b；白名单已登记 强化，本批补 强化信息/强化保护）
     enhance_commands.register_enhance_commands,

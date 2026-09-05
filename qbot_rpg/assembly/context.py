@@ -1220,6 +1220,9 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
         "current_shop_ref": [],
         # M8 炼金（批11-2 收口接线：注册表表视图 + 会话/战斗/引擎注入位；指令壳自兜底）
         "registry": deps.registry,
+        # M12.5 赠送（2026-09-06）：repo 注入位——跨玩家指令（赠送/交易引擎）需
+        # 事务内读写他人存档（同步 ctx 快照只含本人）；GM 备份类指令亦可受益。
+        "repo": getattr(deps, "repo", None),
         "session_mgr": deps.session_mgr,
         "items": _table_from_registry(deps.registry, "item"),
         "recipe": _table_from_registry(deps.registry, "recipe"),

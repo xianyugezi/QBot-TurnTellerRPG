@@ -58,6 +58,7 @@ from qbot_rpg.commands import (
     log_commands,
     pvp_commands,
     quest_commands,
+    quest_board_commands,  # M12.5 委托板（2026-09-06）：/委托
     register_commands,
     shop_commands,
     shortcut_commands,
@@ -90,7 +91,9 @@ REGISTER_GROUPS: tuple = (
     unregister_commands.register_unregister_commands,  # /注销（2026-08-28 新增）
     status_commands.register_status_commands,      # /状态
     shortcut_commands.register_shortcut_commands,  # /快捷解绑 /快捷列表
-    quest_commands.register_quest_commands,        # /任务
+    quest_commands.register_quest_commands,
+    # M12.5 委托板（2026-09-06 批2路3）：/委托 查看/接取/交付（双板仲裁带前缀）
+    quest_board_commands.register_quest_board_commands,        # /任务
     shop_commands.register_shop_commands,          # /商店 /购买 /出售
     use_commands.register_use_commands,            # /使用（2026-08-28 接线：穿戴+道具）
     checkin_commands.register_checkin_commands,    # /签到

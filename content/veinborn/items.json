@@ -132,5 +132,13 @@
     "price": 55,
     "usable": false,
     "desc": "暗处泛莹光的蘑菇，珍贵素材。"
+  },
+  {
+    "id": "ridge_ore",
+    "name": "脊脉矿",
+    "type": "material",
+    "price": 40,
+    "usable": false,
+    "desc": "脊脉地层的精炼矿石。"
   }
 ]

@@ -29,10 +29,13 @@ ENTER_CMD = "进入"
 REST_CMD = "休息"
 POSITION_CMD = "位置"  # M9 实机反馈修复（2026-08-30）：帮助/Tip 引导「位置」但从未实现 → 静默空回
 MAP_CMD = "地图"  # 实机反馈修复（2026-08-30）：白名单引导「地图」但从未实现 → 静默空回
+MONSTER_CMD = "怪物"  # 2026-09-06：stub 转真——当前地图活动怪物列表
+TIME_CMD = "时间"  # 2026-09-06：游戏内时间（ctx season/period，引擎未启用 → 提示）
+WEATHER_CMD = "天气"  # 2026-09-06：当前天气（ctx weather，未启用 → 提示）
 
 __all__ = [
-    "ENTER_CMD", "REST_CMD",
-    "cmd_enter", "cmd_rest", "register_explore_commands",
+    "ENTER_CMD", "REST_CMD", "MONSTER_CMD",
+    "cmd_enter", "cmd_rest", "cmd_monster", "register_explore_commands",
 ]
 
 
@@ -257,6 +260,81 @@ def cmd_map(parsed: Any, ctx: Mapping[str, Any]) -> str:
     return "\n".join(lines) + "\n" + tpl_of(ctx, "explore_map_tail")
 
 
+
+def cmd_monster(parsed: Any, ctx: Mapping[str, Any]) -> str:
+    """怪物：当前地图活动怪物列表（2026-09-06 stub 转真）。"""
+    g = _gate(ctx)
+    if g is not None:
+        return g
+    loc = str(ctx.get("location") or "")
+    if not loc:
+        return tpl_of(ctx, "explore_monster_empty")
+    maps = ctx.get("maps")
+    target = None
+    if isinstance(maps, list):
+        for m in maps:
+            if isinstance(m, Mapping) and (str(m.get("id") or "") == loc
+                                           or str(m.get("name") or "") == loc):
+                target = m
+                break
+    elif isinstance(maps, Mapping):
+        target = maps.get(loc) or maps.get(str(ctx.get("location_name") or ""))
+    line = _monster_line(ctx, target) if target is not None else None
+    if not line:
+        return tpl_of(ctx, "explore_monster_empty")
+    # 头部：当前地图名（maps 表 name 优先）
+    loc_name = str(ctx.get("location_name") or loc)
+    if isinstance(target, Mapping):
+        loc_name = str(target.get("name") or loc_name)
+    head = tpl_of(ctx, "explore_monster_header", {"loc": loc_name})
+    return f"{head}\n{line}"
+
+
+
+def cmd_time(parsed: Any, ctx: Mapping[str, Any]) -> str:
+    """时间：当前游戏季节/时段（2026-09-06；中文名经 time_query 映射，缺失 → 未启用提示）。"""
+    g = _gate(ctx)
+    if g is not None:
+        return g
+    season = str(ctx.get("season") or "--")
+    period = str(ctx.get("period") or "--")
+    if season == "--" and period == "--":
+        return tpl_of(ctx, "worldtime_disabled")
+    # 中文名（time_query 映射表；未知键回退原文）
+    try:
+        from qbot_rpg.engine.time_query import PERIOD_NAMES, SEASON_NAMES  # noqa: PLC0415
+        season = str(SEASON_NAMES.get(season, season))
+        period = str(PERIOD_NAMES.get(period, period))
+    except Exception:
+        pass
+    return tpl_of(ctx, "worldtime_now", {"season": season, "period": period})
+
+
+def cmd_weather(parsed: Any, ctx: Mapping[str, Any]) -> str:
+    """天气：当前地图天气（2026-09-06；中文名经 time_query 映射，缺失 → 未启用提示）。"""
+    g = _gate(ctx)
+    if g is not None:
+        return g
+    w = str(ctx.get("weather") or "--")
+    if w == "--":
+        return tpl_of(ctx, "worldtime_disabled")
+    try:
+        from qbot_rpg.engine.time_query import weather_name  # noqa: PLC0415
+        w = str(weather_name(w) or w)
+    except Exception:
+        pass
+    loc_name = str(ctx.get("location_name") or ctx.get("location") or "当前地图")
+    # 地图中文名（maps 表 name）
+    maps = ctx.get("maps")
+    loc = str(ctx.get("location") or "")
+    if isinstance(maps, list):
+        for m in maps:
+            if isinstance(m, Mapping) and str(m.get("id") or "") == loc:
+                loc_name = str(m.get("name") or loc_name)
+                break
+    return tpl_of(ctx, "weather_now", {"loc": loc_name, "weather": w})
+
+
 def cmd_position(parsed: Any, ctx: Mapping[str, Any]) -> str:
     """/位置 查询当前地点（M9 实机反馈修复 2026-08-30：帮助/Tip 引导但从未实现 → 静默空回）。
 
@@ -401,4 +479,7 @@ def register_explore_commands(router: Any, *,
     router.register(CommandSpec(REST_CMD, handler=_wrap(cmd_rest)))
     router.register(CommandSpec(POSITION_CMD, handler=_wrap(cmd_position)))
     router.register(CommandSpec(MAP_CMD, handler=_wrap(cmd_map)))
+    router.register(CommandSpec(MONSTER_CMD, handler=_wrap(cmd_monster)))
+    router.register(CommandSpec(TIME_CMD, handler=_wrap(cmd_time)))
+    router.register(CommandSpec(WEATHER_CMD, handler=_wrap(cmd_weather)))
     return router

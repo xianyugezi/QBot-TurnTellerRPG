@@ -31,6 +31,7 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
 
     # —— /任务 信息 N（info_text 正文）——
     "quest_info_header": "✅ 任务进度：{name}",
+    "quest_info_standalone_usage": "任务信息：发 任务信息 <序号> 查看进行中任务进度（发 任务 查看进行中列表）",
     "quest_info_line": "- {text} {mark}",
     "quest_info_met": "✅ 条件已满足，可交付（/任务 交付 {seq}）",
     "quest_info_not_met": "❌ 条件未达成，继续努力",
@@ -67,6 +68,7 @@ PLACEHOLDER_WHITELIST: Dict[str, set] = {
     "quest_progress_param": {"param"},
     "quest_progress_current": {"current"},
     "quest_info_header": {"name"},
+    "quest_info_standalone_usage": set(),
     "quest_info_line": {"text", "mark"},
     "quest_info_met": {"seq"},
     "quest_info_not_met": set(),

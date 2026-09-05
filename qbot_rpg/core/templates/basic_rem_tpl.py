@@ -44,6 +44,8 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     "bag_view_effect": "效果：{effects}",
     "bag_view_no_item": "❌ 背包里没有这件物品/部位（发 背包 查看你有啥）",
     "bag_view_empty_slot": "❌ 该部位（{slot}）未穿戴装备",
+    # 2026-09-06 卸下独立词
+    "unequip_usage": "卸下：发 卸下 <部位>（如 卸下 武器 / 卸下 1）",
 
 
     # —— /装备 装备栏（意见一同步：去序号 + 头部 + 强化后缀）——
@@ -113,6 +115,7 @@ PLACEHOLDER_WHITELIST: Dict[str, set] = {
     "bag_view_effect": {"effects"},
     "bag_view_no_item": set(),
     "bag_view_empty_slot": {"slot"},
+    "unequip_usage": set(),
     "basic_equip_header": set(),
     "basic_equip_line": {"slot", "name"},
     "basic_equip_enh": {"enhance"},

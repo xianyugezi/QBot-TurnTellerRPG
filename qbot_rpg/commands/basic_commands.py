@@ -147,6 +147,8 @@ HELP_CMD = "帮助"
 # 2026-09-05 用户拍板：穿戴统一「使用 序号」——「穿」子词整体删除（无独立指令，
 # 「装备 穿 N」落名称形式友好提示），仅保留「卸」
 SUB_REMOVE = "卸"
+# 2026-09-06 设计定稿独立词：卸下 <部位>（转发现有 装备 卸 逻辑）
+UNEQUIP_CMD = "卸下"
 
 # RUL-08 注册门槛（4f §1.4 / TC-05；/帮助 豁免见 B6；模板配置化：basic_register_gate 可内容包覆盖）
 TPL_REGISTER_GATE = "❌ 请先 /注册 创建角色（/注册 名字 职业）"
@@ -1503,6 +1505,27 @@ def cmd_equip(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 # /技能：技能列表（LV 行固定头部 + 类型/MP/描述 + 派生指向「可派生成：XX」）
 # ---------------------------------------------------------------------------
 
+
+def cmd_unequip(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """卸下 <部位|序号>：卸除指定部位装备（2026-09-06 独立词，转发 装备 卸 逻辑）。"""
+    g = _gate(ctx)
+    if g is not None:
+        return g
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    if getattr(parsed, "fixed_subword", None):
+        return format_tpl12(_fragment(parsed))
+    args = list(getattr(parsed, "args", None) or [])
+    if not args:
+        return tpl_of(ctx, "unequip_usage")
+    if len(args) > 1:
+        return format_tpl12(_fragment(parsed))
+    sid = resolve_equip_slot(ctx, str(args[0]))
+    if sid is None:
+        return tpl_of(ctx, "basic_no_slot")
+    return _cmd_equip_remove(ctx, sid)
+
+
 def _skill_def(ctx: Mapping[str, Any], sid: str) -> Any:
     """技能定义解析（ctx["skills"] 映射 / resolve_skill 解析器）；查无 → None。"""
     if not sid:
@@ -2111,6 +2134,7 @@ def register_basic_commands(router: Any, *, make_context: Optional[Callable[[Any
     router.register(CommandSpec(BAG_CMD, handler=_wrap(cmd_bag)))
     router.register(CommandSpec(BAG_FILTER_CMD, handler=_wrap(cmd_bag_filter)))
     router.register(CommandSpec(EQUIP_CMD, handler=_wrap(cmd_equip)))
+    router.register(CommandSpec(UNEQUIP_CMD, handler=_wrap(cmd_unequip)))  # 2026-09-06 独立词
     router.register(CommandSpec(SKILL_CMD, handler=_wrap(cmd_skill)))
     router.register(CommandSpec(MY_SKILL_CMD, handler=_wrap(cmd_skill)))  # 我的技能 → 技能
     # 2026-09-05 用户需求：技能详情 / 技能派生

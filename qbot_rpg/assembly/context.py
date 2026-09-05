@@ -961,11 +961,15 @@ def _season_period(time_query: Any) -> tuple:
     """season/period：deps.time_query() 环境快照；缺失 → ("--", "--")。
 
     入参 time_query: Callable。出参 tuple[str, str]。
-    核心逻辑: 兼容 Mapping（season/period 键）或标量 str（season）。
+    核心逻辑: 兼容 Mapping（season/period 键）/ tuple（(season, period)，装配层
+    _make_time_queries 形态）/ 标量 str（season）。tuple 兼容 2026-09-06 修复：
+    装配层 tq 返回 (season, period) 二元组，原仅 Mapping/str 分支 → 恒 "--"。
     """
     r = _safe_call(time_query, default=None)
     if isinstance(r, Mapping):
         return str(r.get("season") or _MISSING_ENV), str(r.get("period") or _MISSING_ENV)
+    if isinstance(r, (tuple, list)) and len(r) >= 2:
+        return str(r[0] or _MISSING_ENV), str(r[1] or _MISSING_ENV)
     if isinstance(r, str) and r:
         return r, _MISSING_ENV
     return _MISSING_ENV, _MISSING_ENV

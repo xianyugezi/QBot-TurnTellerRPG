@@ -28,7 +28,7 @@ from qbot_rpg.data.gm_constants import GM_COMMANDS
 # 9 组 22 指令（RA-06 M7 落地时点；gm 归 M12）——确定性注册清单断言锚点
 ALL_REGISTERED = {
     # basic
-    "角色", "角色详细", "背包", "背包筛选", "装备", "技能", "我的技能", "我的状态", "帮助",
+    "角色", "角色详细", "背包", "背包筛选", "装备", "卸下", "技能", "我的技能", "我的状态", "帮助",
     # 2026-09-05 技能详情/技能派生
     "技能详情", "技能派生",
     # register
@@ -41,6 +41,8 @@ ALL_REGISTERED = {
     "快捷解绑", "快捷列表",
     # quest
     "任务",
+    # 2026-09-06 任务独立词
+    "任务信息", "接取", "交付",
     # shop
     "商店", "购买", "出售",
     # 2026-09-05 商店列表/商店进入
@@ -52,11 +54,13 @@ ALL_REGISTERED = {
     # battle
     "攻击",
     # explore
-    "进入", "休息", "位置", "地图",
+    "进入", "休息", "位置", "地图", "怪物", "时间", "天气",
     # dialog（N-01，BCH-03）
     "对话",
     # log（F-03/F-04，BCH-05；is_gm=True）
     "日志",
+    # M12 GM 运维组（2026-09-06 挂载；日志已在上）
+    "重载", "封禁", "编辑", "设置", "备份", "恢复", "存档导出", "封禁列表",
     # investigate（F-05/F-06，BCH-06）
     "调查",
     # codex（F-11/F-12，BCH-08）
@@ -316,8 +320,11 @@ def test_build_router_gm_commands_loaded() -> None:
     router = build_router(_deps(make_context=_stub_ctx))
     assert router.gm_commands_set == set(GM_COMMANDS)  # type: ignore[attr-defined]
     assert {"重载", "封禁", "日志", "编辑", "设置"} <= router.gm_commands_set  # type: ignore[attr-defined]
-    # 不遮蔽 gm_commands()（/日志 玩家可用冒险日志，handler 按 ctx["is_gm"] 分支；ADR-09 修正）
-    assert router.gm_commands() == []
+    # 2026-09-06：GM 组挂载后 gm_commands() 返回注册的 GM 词（日志 由 log_commands
+    # 注册跳过——玩家可用冒险日志，handler 按 ctx["is_gm"] 分支；ADR-09 修正）
+    gm_reg = set(router.gm_commands())
+    assert {"重载", "封禁", "备份", "恢复", "存档导出", "封禁列表", "编辑", "设置"} <= gm_reg
+    assert "日志" not in gm_reg  # 日志走 log_commands（玩家可用的冒险日志入口）
 
 
 def test_build_router_shortcuts_carried_from_deps() -> None:
@@ -344,10 +351,13 @@ def test_check_consistency_whitelist_unregistered_is_expected_m7() -> None:
     router = build_router(_deps(make_context=_stub_ctx))
     result = check_consistency(router)
     unreg = set(result["whitelist_not_registered"])
-    # 已知 M7 未注册（信息性）——锚点抽样防未来漂移；「炼金」M8 已注册移出预期
-    # （M8 批11-2 收口：炼金 30+ 指令全部注册 + 白名单覆盖）
-    assert {"重载", "编辑", "封禁"} <= unreg
+    # 2026-09-06：GM/怪物/职业等已全挂载 → stub 词也算注册；白名单缺注册仅剩
+    # 后续里程碑词（信息性）。锚点：缺注册词绝不与已注册集重叠（防漂移）。
     assert not (unreg & set(ALL_REGISTERED))  # 已注册指令绝不落入白名单缺注册
+    assert unreg <= {  # 允许的缺注册白名单词（未注册 stub 提示词 + 后续系统词）
+        "调合", "快捷绑定", "木桩", "温室", "雇工", "投稿", "委托", "决斗",
+        "赠送", "卸下", "查看目标", "排行榜", "秘密", "秘钥", "换游戏",
+    }
 
 
 def test_check_consistency_reports_registered_missing_whitelist() -> None:

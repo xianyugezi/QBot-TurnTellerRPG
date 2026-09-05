@@ -50,6 +50,7 @@ from qbot_rpg.commands import (
     fishing_commands,
     fishing_reel_commands,
     forge_commands,
+    gm_commands,  # 2026-09-06 GM 运维组挂载
     investigate_commands,
     log_commands,
     pvp_commands,
@@ -108,6 +109,9 @@ REGISTER_GROUPS: tuple = (
     pvp_commands.register_pvp_commands,
     # G3（2026-09-02）：/锁定 /锁定怪物 实机 PvE 开战（白名单已登记未接线 → 接线）
     battle_launch_commands.register_battle_launch_commands,
+    # M12 GM 运维组（2026-09-06 收口接线：重载/封禁/日志/编辑/设置/备份/恢复/
+    # 存档导出/封禁列表 9 条，is_gm=True——此前注册函数存在但从未挂载）
+    gm_commands.register_gm_commands,
 )
 
 
@@ -219,7 +223,6 @@ def build_router(deps: Any) -> Router:
     _UNIMPLEMENTED_HINTS: Dict[str, str] = {
         # G3 2026-09-02：/锁定 /锁定怪物 已接真实开战（battle_launch_commands），
         # 不再 stub；剩余未实装指令保留占位提示。
-        "怪物": "❌ 怪物列表尚未实装（后续里程碑）",
         "采集": "❌ 采集尚未实装（后续里程碑）",
         "强化": "❌ 装备强化尚未实装（后续里程碑）",
         "调合": "❌ 调合尚未实装（后续里程碑）",

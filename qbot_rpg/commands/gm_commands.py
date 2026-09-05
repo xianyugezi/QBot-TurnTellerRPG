@@ -1142,7 +1142,12 @@ def register_gm_commands(router: Any, *,
     def _gm(parsed: Any, *a: Any, **k: Any) -> GmResult:
         return handle_gm_command(parsed, _ctx(parsed))
 
+    existing = set(router.names())
     for cmd in sorted(GM_COMMANDS, key=lambda c: GM_COMMAND_INDEX.get(c, "")):
+        # 2026-09-06：日志 已由 log_commands 注册（is_gm=True）→ 跳过防重名冲突；
+        # 其余 GM 词此前从未挂载，本组补齐注册
+        if cmd in existing:
+            continue
         level = GM_COMMAND_LEVEL[cmd]
         router.register(CommandSpec(
             cmd,

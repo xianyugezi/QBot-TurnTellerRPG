@@ -109,6 +109,10 @@ __all__ = [
 # ---------------------------------------------------------------------------
 
 QUEST_CMD = "任务"
+# 2026-09-06 设计定稿独立词形态（定稿 L1292：/任务信息 /接取 /交付）——注册独立指令转发子功能
+QUEST_INFO_CMD = "任务信息"
+QUEST_ACCEPT_CMD = "接取"
+QUEST_DELIVER_CMD = "交付"
 
 # 子指令词（m4 §3.3 收口形式：/任务 接取 N / 交付 N / 信息 N / 放弃 N）
 SUB_ACCEPT = "接取"
@@ -548,4 +552,36 @@ def register_quest_commands(router: Any, *, make_context: Optional[Callable[[Any
     # 2026-09-05 模拟器审计：旧引导形态「领取任务 N」注册为别名（防静默坑——
     # 曾教玩家这么发但顶层白名单忽略；归一逻辑见 cmd_quest alias 分支）
     router.register(CommandSpec(QUEST_CMD, handler=_quest, aliases=["领取任务"]))
+
+    # 2026-09-06 独立词：任务信息 / 接取 / 交付（转发子功能；无参给引导）
+    def _info_sa(parsed: Any, *a: Any, **k: Any) -> str:
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        ctx2 = injected if isinstance(injected, MutableMapping) else _ctx(parsed)
+        args2 = list(getattr(parsed, "args", None) or [])
+        n2 = parse_int(args2[0]) if args2 else None
+        if n2 is None or n2 < 1:
+            return tpl_of(ctx2, "quest_info_standalone_usage")
+        return cmd_quest_info(ctx2, n2)
+
+    def _accept_sa(parsed: Any, *a: Any, **k: Any) -> str:
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        ctx2 = injected if isinstance(injected, MutableMapping) else _ctx(parsed)
+        args2 = list(getattr(parsed, "args", None) or [])
+        n2 = parse_int(args2[0]) if args2 else None
+        if n2 is None or n2 < 1:
+            return format_tpl12(_fragment(parsed))
+        return cmd_quest_accept(ctx2, n2)
+
+    def _deliver_sa(parsed: Any, *a: Any, **k: Any) -> str:
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        ctx2 = injected if isinstance(injected, MutableMapping) else _ctx(parsed)
+        args2 = list(getattr(parsed, "args", None) or [])
+        n2 = parse_int(args2[0]) if args2 else None
+        if n2 is None or n2 < 1:
+            return format_tpl12(_fragment(parsed))
+        return cmd_quest_deliver(ctx2, n2)
+
+    router.register(CommandSpec(QUEST_INFO_CMD, handler=_info_sa))
+    router.register(CommandSpec(QUEST_ACCEPT_CMD, handler=_accept_sa))
+    router.register(CommandSpec(QUEST_DELIVER_CMD, handler=_deliver_sa))
     return router

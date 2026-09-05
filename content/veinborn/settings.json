@@ -236,5 +236,26 @@
         "desc": "略通调合的学徒，代调成功率略高。"
       }
     ]
+  },
+  "contest": {
+    "enabled": true,
+    "schedule": {
+      "weekday": 7,
+      "open_hour": 20
+    },
+    "score_weights": {
+      "quality": 0.4,
+      "trait": 0.3,
+      "awaken": 0.2,
+      "potential": 0.1
+    },
+    "reward": {
+      "title": "品评冠军",
+      "gem": 100,
+      "reputation": {
+        "submit": 5,
+        "win": 30
+      }
+    }
   }
 }

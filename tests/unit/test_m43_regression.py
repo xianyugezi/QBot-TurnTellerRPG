@@ -57,6 +57,9 @@ _TIMER_TOKENS = re.compile(r"time\.sleep|\bthreading\b|\bTimer\b|\bschedule\b|\b
 _ALLOWED_TIMER_TOKENS: dict = {
     ("qbot_rpg/content/registry.py", "threading"):
         "threading.Lock 内容注册表并发锁（线程安全原语，非计时器；不驱动任何周期值）",
+    ("qbot_rpg/core/contest.py", "schedule"):
+        "品评会配置键名（2c5c CT-01 contest.schedule 周赛窗口配置——纯数据键，"
+        "周窗口判定由锚点公式按现实时间戳计算，零定时器；词边界误伤配置键读写）",
 }
 
 

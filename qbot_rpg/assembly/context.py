@@ -1317,10 +1317,21 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
                 "title_state": player.title_state
                 if isinstance(player.title_state, MutableMapping)
                 else {},
+                # M12.5 委托板（2026-09-06 批2路3）：reputation_state 就地引用
+                # player.reputation_state（同 currencies 模式——quest_board 引擎写
+                # ctx["reputation_state"]["quest_board"] 即落档，声望双源归一 REP-02）
+                "reputation_state": player.reputation_state
+                if isinstance(player.reputation_state, MutableMapping)
+                else {},
+                # 委托板状态（板快照/进行中/交付记录——persistent_state 挂回）
+                "quest_board_state": _ps_init(ps, "quest_board_state", {}),
                 "personal_buys": _ps_init(ps, "personal_buys", {}),
                 "checkin_state": _ps_init(ps, "checkin", {}),
                 "shortcuts": _ps_init(ps, "shortcuts", {}),
                 "shortcut_max": int(settings.get("shortcut_max", 20) or 20),
+                # M12.5 委托板配置（2c5b：settings.quest_board 段；tiers 委托池/
+                # refresh_days/penalty/防刷限/声望阈值表 grade_bonus）
+                "quest_board_cfg": settings.get("quest_board") or {},
                 "npc_delivered": _ps_init(ps, "npc_delivered", {}),
                 "heard": _coerce_heard(ps.get("npc_heard")),
                 "codex_state": player.codex_state
@@ -1440,6 +1451,9 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
                 "checkin_state": {},
                 "shortcuts": {},
                 "shortcut_max": int(settings.get("shortcut_max", 20) or 20),
+                # M12.5 委托板配置（2c5b：settings.quest_board 段；tiers 委托池/
+                # refresh_days/penalty/防刷限/声望阈值表 grade_bonus）
+                "quest_board_cfg": settings.get("quest_board") or {},
                 "npc_delivered": {},
                 "heard": set(),
                 "codex_state": {},

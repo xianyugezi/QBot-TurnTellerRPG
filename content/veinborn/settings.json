@@ -111,5 +111,99 @@
         }
       }
     }
+  },
+  "quest_board": {
+    "enabled": true,
+    "refresh_days": 3,
+    "penalty": 0.1,
+    "active_limit": 5,
+    "daily_limit": 10,
+    "rep_levels": [
+      [
+        "陌生",
+        0
+      ],
+      [
+        "熟悉",
+        100
+      ],
+      [
+        "信赖",
+        300
+      ],
+      [
+        "崇敬",
+        600
+      ],
+      [
+        "传说",
+        1000
+      ]
+    ],
+    "grade_bonus": {
+      "S": 1.5,
+      "A": 1.0,
+      "B": 0.5
+    },
+    "tiers": [
+      {
+        "id": "qb_herb",
+        "name": "采集苔脉草",
+        "star": 1,
+        "desc": "给药剂师送去苔脉草。",
+        "require": {
+          "item": "mossvein_herb",
+          "count": 2,
+          "quality": "fine"
+        },
+        "rep_base": 10,
+        "rep_min": 0,
+        "reward": [
+          {
+            "item": "pulse_potion",
+            "count": 1
+          }
+        ]
+      },
+      {
+        "id": "qb_glowcap",
+        "name": "收集莹光菇",
+        "star": 2,
+        "desc": "洞窟探险队需要莹光菇照明。",
+        "require": {
+          "item": "glowcap",
+          "count": 1,
+          "quality": "epic"
+        },
+        "rep_base": 20,
+        "rep_min": 100,
+        "reward": [
+          {
+            "item": "pulse_potion",
+            "count": 3
+          }
+        ]
+      },
+      {
+        "id": "qb_ore",
+        "name": "王国矿脉委托",
+        "star": 4,
+        "desc": "王国工坊高价收购精炼矿。",
+        "require": {
+          "item": "ridge_ore",
+          "count": 3,
+          "quality": "legendary"
+        },
+        "rep_base": 40,
+        "rep_min": 300,
+        "job_level": 4,
+        "reward": [
+          {
+            "item": "gem",
+            "count": 5
+          }
+        ]
+      }
+    ]
   }
 }

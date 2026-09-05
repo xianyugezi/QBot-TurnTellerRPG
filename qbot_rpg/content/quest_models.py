@@ -1116,6 +1116,57 @@ def validate_quests(modules: Mapping[str, object], report: object) -> None:
             node_id = f"<quest.{idx}>"
         _check_quest(report, entry, idx, node_id, refs, seen_ids)
 
+    # ---- 全表级链检查（2026-09-05 审计 B 路 P3/P4：环/自引用 → 永不可解锁死内容；
+    # repeatable 前置 → 链后任务永久 chain_locked。逐 quest 校验看不到全局链）----
+    _check_unlock_chains(report, quests)
+
+
+def _check_unlock_chains(report: object, quests: list) -> None:
+    """unlock_chain 全表级检查：自引用/成环 → 黄提示（Y-4，永不可解锁死配置）；
+    unlock_chain 指向 repeatable 任务 → 黄提示（Y-4，repeatable 完成不登记
+    quest_completed → 后置永远 chain_locked）。纯函数，逐 quest 校验后统一扫链。"""
+    by_id: dict = {}
+    for q in quests:
+        if isinstance(q, Mapping):
+            qid = q.get("id")
+            if isinstance(qid, str) and qid:
+                by_id[qid] = q
+    for q in quests:
+        if not isinstance(q, Mapping):
+            continue
+        qid = q.get("id")
+        uc = q.get("unlock_chain")
+        if not isinstance(qid, str) or not qid or not isinstance(uc, str) or not uc:
+            continue
+        # 自引用 / 环检测：沿链走 seen，重复命中 = 成环；链正常终止（无 unlock_chain
+        # 或悬空引用）不算环
+        seen: list = []
+        cur = uc
+        cyclic = False
+        while cur in by_id and cur not in seen:
+            seen.append(cur)
+            nxt = by_id[cur].get("unlock_chain")
+            if not isinstance(nxt, str) or not nxt or nxt not in by_id:
+                break  # 链正常终止（无下一环 / 悬空由死链黄提示另行覆盖）
+            if nxt in seen or nxt == qid:
+                cyclic = True
+                break
+            cur = nxt
+        if cyclic or cur == qid:
+            # 成环（含自引用）：qid 的链最终回到自己或环内
+            _warn(report, f"quest.{qid}.unlock_chain", "Y-4",
+                  rule="quest_unlock_chain_cycle", node_id=qid, chain=seen + ([cur] if cur in by_id else []),
+                  msg="解锁链成环（%r 最终回到 %r）——链上任务永不可解锁，确认配置" % (qid, cur))
+            continue
+        # repeatable 前置：uc 指向的任务是 repeatable（真值 True/Mapping）→ 完成不
+        # 登记 completed → 后置死锁；repeatable=False/缺省 = 非 repeatable 正常链
+        prev = by_id.get(uc)
+        if prev is not None and prev.get("repeatable"):
+            _warn(report, f"quest.{qid}.unlock_chain", "Y-4",
+                  rule="quest_unlock_chain_repeatable_prev", node_id=qid, prev=uc,
+                  msg="链式前置 %r 配了 repeatable——repeatable 完成不登记 quest_completed，"
+                      "后置 %r 将永久无法解锁；链式前置须非 repeatable" % (uc, qid))
+
 
 __all__ = [
     # 常量

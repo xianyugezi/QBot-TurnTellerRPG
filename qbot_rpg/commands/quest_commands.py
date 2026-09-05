@@ -358,16 +358,25 @@ def render_board(board: Mapping[str, Any], page: object, *,
     start = (res.page - 1) * per_page
     slice_pairs = pairs[start:start + per_page]
     lines: List[str] = []
-    seen: set = set()
+    # 段头「该段首次出现才打」跨页生效（2026-09-05 审计 A 路 P2：原 seen 每页重建
+    # → 同段跨页时下一页开头重复打段头；现按全局首次位置判定——title 首个实例
+    # 的 index 落在本页才打，落在上一页 → 本页不打（玩家已知所在段））。
+    first_seen: dict = {}
+    for idx, (_t, _r) in enumerate(pairs):
+        if _t and _t not in first_seen:
+            first_seen[_t] = idx
     for i, (title, row) in enumerate(slice_pairs):
-        if title and title not in seen:
+        if title and first_seen.get(title, -1) >= start:
             lines.append(tpl_of(ctx, "quest_board_section_header", {"title": title}))
-            seen.add(title)
         lines.append(board_line(start + i + 1, row, ctx))
     tail = render_cake_tail(res.page, res.total_pages, tip=_BOARD_TAIL_TIP,
                             templates=ctx.get("templates") if isinstance(ctx, Mapping) else None)
     if res.clamped:
         tail = tail.replace("\n", f"\n{LAST_PAGE_HINT}\n", 1)
+    # 满员提示（2026-09-05 审计 B 路 P2：进行中满 → Tip 换「先腾位」，防玩家点可接行被拒）
+    if board.get("active_full"):
+        full_note = tpl_of(ctx, "quest_board_active_full_note")
+        tail = tail.replace(_BOARD_TAIL_TIP, full_note, 1)
     lines.append(tail)
     return "\n".join(lines)
 

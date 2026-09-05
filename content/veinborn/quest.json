@@ -9,14 +9,27 @@
     "consume": false,
     "repeatable": false,
     "conditions": [
-      { "var": "level", "op": "ge", "value": 1 }
+      {
+        "var": "level",
+        "op": "ge",
+        "value": 1
+      }
     ],
     "reward": [
-      { "item": "ridge_blade_starter", "count": 1 },
-      { "exp": 30 },
-      { "coins": 100 }
+      {
+        "item": "ridge_blade_starter",
+        "count": 1
+      },
+      {
+        "exp": 30
+      },
+      {
+        "coins": 100
+      }
     ],
-    "npc": { "id": "npc_old_hunter" }
+    "npc": {
+      "id": "npc_old_hunter"
+    }
   },
   {
     "id": "q_tut1_hunt_cubs",
@@ -29,15 +42,32 @@
     "repeatable": false,
     "unlock_chain": "q_tut0_first_blade",
     "conditions": [
-      { "var": "kill_count", "op": "ge", "value": 2, "param": "ridge_cub" }
+      {
+        "var": "kill_count",
+        "op": "ge",
+        "value": 2,
+        "param": "ridge_cub"
+      }
     ],
     "reward": [
-      { "item": "cub_leather_body", "count": 1 },
-      { "item": "cub_leather_helm", "count": 1 },
-      { "exp": 120 },
-      { "coins": 150 }
+      {
+        "item": "cub_leather_body",
+        "count": 1
+      },
+      {
+        "item": "cub_leather_helm",
+        "count": 1
+      },
+      {
+        "exp": 120
+      },
+      {
+        "coins": 150
+      }
     ],
-    "npc": { "id": "npc_old_hunter" }
+    "npc": {
+      "id": "npc_old_hunter"
+    }
   },
   {
     "id": "q_tut2_buy_charm",
@@ -50,34 +80,62 @@
     "repeatable": false,
     "unlock_chain": "q_tut1_hunt_cubs",
     "conditions": [
-      { "var": "item_count", "op": "ge", "value": 1, "param": "ridge_bone_charm" }
+      {
+        "var": "item_count",
+        "op": "ge",
+        "value": 1,
+        "param": "ridge_bone_charm"
+      }
     ],
     "reward": [
-      { "exp": 100 },
-      { "coins": 200 }
+      {
+        "exp": 100
+      },
+      {
+        "coins": 200
+      }
     ],
-    "npc": { "id": "npc_old_hunter" }
+    "npc": {
+      "id": "npc_old_hunter"
+    }
   },
   {
     "id": "q_tut3_wolf_pelt",
     "name": "荒原的馈赠",
     "type": "slay",
-    "desc": "老猎人·驼脊：荒原狼的皮是好材料，去断脊丘陵猎 2 只带回来。",
+    "desc": "老猎人·驼脊：荒原狼的皮是好材料，去断脊丘陵猎 2 只荒原狼。",
     "zone": "a2_ridge_hills",
     "main": true,
     "consume": false,
     "repeatable": false,
     "unlock_chain": "q_tut2_buy_charm",
     "conditions": [
-      { "var": "kill_count", "op": "ge", "value": 2, "param": "wasteland_wolf" }
+      {
+        "var": "kill_count",
+        "op": "ge",
+        "value": 2,
+        "param": "wasteland_wolf"
+      }
     ],
     "reward": [
-      { "item": "cub_leather_hand", "count": 1 },
-      { "item": "cub_leather_leg", "count": 1 },
-      { "exp": 260 },
-      { "coins": 220 }
+      {
+        "item": "cub_leather_hand",
+        "count": 1
+      },
+      {
+        "item": "cub_leather_leg",
+        "count": 1
+      },
+      {
+        "exp": 260
+      },
+      {
+        "coins": 220
+      }
     ],
-    "npc": { "id": "npc_old_hunter" }
+    "npc": {
+      "id": "npc_old_hunter"
+    }
   },
   {
     "id": "q_tut4_gravel_armor",
@@ -90,13 +148,27 @@
     "repeatable": false,
     "unlock_chain": "q_tut3_wolf_pelt",
     "conditions": [
-      { "var": "kill_count", "op": "ge", "value": 1, "param": "gravel_armor_beast" }
+      {
+        "var": "kill_count",
+        "op": "ge",
+        "value": 1,
+        "param": "gravel_armor_beast"
+      }
     ],
     "reward": [
-      { "item": "cub_leather_foot", "count": 1 },
-      { "exp": 400 },
-      { "coins": 300 }
+      {
+        "item": "cub_leather_foot",
+        "count": 1
+      },
+      {
+        "exp": 400
+      },
+      {
+        "coins": 300
+      }
     ],
-    "npc": { "id": "npc_old_hunter" }
+    "npc": {
+      "id": "npc_old_hunter"
+    }
   }
 ]

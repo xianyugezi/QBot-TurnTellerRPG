@@ -615,10 +615,19 @@ def quest_board(ctx: Mapping[str, Any]) -> dict:
         sections.append({"title": _SECTION_TITLES[title_key], "slot": title_key, "rows": built})
 
     total = index
+    # 满员标志（2026-09-05 审计 B 路 P2：accept_limit 满时板面零提示，玩家点可接
+    # 行才被拒。判定 = 进行中数 ≥ 各进行中任务 accept_limit 的最小值——quest_accept
+    # 按被接任务的 limit 拒绝，取最小 limit 为保守口径；active 空 → 恒不满）
+    active_full = False
+    if active_rows:
+        limits = [_accept_limit(ctx, q) for q, _s in active_rows if _accept_limit(ctx, q) > 0]
+        if limits and len(active_rows) >= min(limits):
+            active_full = True
     return {
         "ok": True,
         "sections": sections,
         "total": total,
+        "active_full": active_full,
         "tip": "请发送 /接取 <序号> 接取任务（* 为已接取）",
     }
 
@@ -792,13 +801,23 @@ class _Rollback(Exception):
 def _decay_state(quest: Mapping, ctx: MutableMapping[str, Any]) -> tuple:
     """重复衰减（F-4 / TC-23）：返回 (multiplier, cap_amount, prior_completions)。
 
-    repeatable=true → (1.0, 1, 0)；repeatable={decay,cap} → multiplier = decay^n（不封顶递减），
+    repeatable=true → (1.0, 1, prior)；repeatable={decay,cap} → multiplier = decay^n（不封顶递减），
     cap = 奖励金额下限（「至 cap 下限」= 单条奖励不低于 cap，工程补白 9），n = 已完次数；
     否则 → (1.0, 1, 0)。
+
+    2026-09-05 审计 B 路 P5：bool 分支 prior 恒 0 → decay 遥测覆盖写 1（完成 N 次仍显 1）。
+    现统一读 daily.decay[id] 真实累计（与 Mapping 分支同口径；倍率仍恒 1.0 不变）。
     """
     r = _repeatable_flag(quest)
     if not isinstance(r, Mapping):
-        return 1.0, 1, 0
+        prior = 0
+        if isinstance(ctx, MutableMapping):
+            daily = ctx.get("quest_daily")
+            if isinstance(daily, MutableMapping):
+                dec = daily.get("decay")
+                if isinstance(dec, MutableMapping):
+                    prior = _to_int(dec.get(quest.get("id")))
+        return 1.0, 1, prior
     decay = r.get("decay", 0.5)
     cap = r.get("cap", 1)
     try:
@@ -808,7 +827,7 @@ def _decay_state(quest: Mapping, ctx: MutableMapping[str, Any]) -> tuple:
     cap_i = _to_int(cap, default=1)
     cap_i = max(0, cap_i)
     if decay < 0:
-        decay = 0.0
+        decay = 0.5
     node = _daily_node(ctx)  # 需可写（内部清零惰性）；此处只读计数
     n = _to_int((node.get("decay") or {}).get(quest["id"]))
     mult = decay ** n
@@ -983,6 +1002,22 @@ def quest_complete(quest_id: str, ctx: MutableMapping[str, Any]) -> dict:
             _grant_label(g, ctx) for g in rw["granted"][:4]
         ) + "）"
     msg += f"，今日已完成 {completed_today}/{limit if limit > 0 else '∞'}"
+    # 2026-09-05 审计 C 路 P2（引导链断点）：完成后若解锁了新主线（unlock_chain
+    # 指向本任务的下一个 main 任务且未完成）→ 消息追加引导，玩家不必自己发 任务 才发现
+    next_name = None
+    try:
+        for _qid2 in _all_quest_ids(ctx):
+            _qd = resolve_quest(ctx, _qid2)
+            if _qd is None:
+                continue
+            if _qd.get("unlock_chain") == quest_id and _qd.get("main") is True \
+                    and not _is_completed(ctx, _qid2):
+                next_name = _quest_name(_qd)
+                break
+    except Exception:  # noqa: BLE001 —— 引导提示失败不阻断结算
+        next_name = None
+    if next_name:
+        msg += f"\n新主线开放：{next_name}——发 任务 领取"
     return {
         "ok": True,
         "message": msg,

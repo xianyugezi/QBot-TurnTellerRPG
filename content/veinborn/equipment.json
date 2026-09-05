@@ -94,7 +94,7 @@
     "name": "脊骨护符",
     "type": "accessory",
     "slot": "accessory",
-    "price": 300,
+    "price": 200,
     "foc": 5,
     "usable": false,
     "desc": "脊骨磨制的护符，凝神聚气。"

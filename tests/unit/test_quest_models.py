@@ -546,6 +546,40 @@ def test_unlock_chain_dead() -> None:
     assert not _warns(rep, "quest_unlock_chain_dead")
 
 
+def test_unlock_chain_cycle_detected() -> None:
+    """2026-09-05 审计 B 路 P3：unlock_chain 自引用/成环 → 黄提示（永不可解锁死配置）。"""
+    # 自引用
+    rep = _check([{"id": "q_a", "name": "自指", "conditions": [], "unlock_chain": "q_a"}])
+    assert len(_warns(rep, "quest_unlock_chain_cycle")) == 1
+    # 互指环 E↔F → 两个都报
+    rep = _check([{"id": "q_e", "name": "E", "conditions": [], "unlock_chain": "q_f"},
+                  {"id": "q_f", "name": "F", "conditions": [], "unlock_chain": "q_e"}])
+    assert len(_warns(rep, "quest_unlock_chain_cycle")) == 2
+    # 长环 A→B→C→A → 报（仅 A 起点报，B/C 的链指向环内非起点）
+    rep = _check([{"id": "q_a", "name": "A", "conditions": [], "unlock_chain": "q_b"},
+                  {"id": "q_b", "name": "B", "conditions": [], "unlock_chain": "q_c"},
+                  {"id": "q_c", "name": "C", "conditions": [], "unlock_chain": "q_a"}])
+    assert len(_warns(rep, "quest_unlock_chain_cycle")) >= 1
+    # 正常链（q_ore_20 无 uc）→ 零环告警
+    rep = _check([{"id": "q_ore_20", "name": "前置", "conditions": []},
+                  {"id": "q_chain", "name": "链式", "conditions": [],
+                   "unlock_chain": "q_ore_20"}])
+    assert not _warns(rep, "quest_unlock_chain_cycle")
+
+
+def test_unlock_chain_repeatable_prev_warned() -> None:
+    """2026-09-05 审计 B 路 P3：unlock_chain 前置配 repeatable → 黄提示（后置永锁）。"""
+    rep = _check([{"id": "q_rep", "name": "日常", "conditions": [], "repeatable": True},
+                  {"id": "q_chain", "name": "链式", "conditions": [],
+                   "unlock_chain": "q_rep"}])
+    assert len(_warns(rep, "quest_unlock_chain_repeatable_prev")) == 1
+    # repeatable=False / 缺省 → 不报
+    rep = _check([{"id": "q_rep", "name": "前置", "conditions": [], "repeatable": False},
+                  {"id": "q_chain", "name": "链式", "conditions": [],
+                   "unlock_chain": "q_rep"}])
+    assert not _warns(rep, "quest_unlock_chain_repeatable_prev")
+
+
 def test_npc_grant_ref_missing() -> None:
     """npc.id 引用不存在 → 红拦（R-4）；结构非法 → 红拦。"""
     q = {"id": "q_npc", "name": "支线", "conditions": [], "npc": {"id": "ghost_npc"}}

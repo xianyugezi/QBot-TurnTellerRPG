@@ -784,6 +784,12 @@
   }
   function renderForm() {
     if (!state.cur) return;
+    // UI 检查修复 2026-09-05（B 方案浏览器实测抓 P1）：uiMode(list) 切页时把
+    // 保存/删除按钮统一隐藏，但 list 模式编辑态（openItem/btnNew 进入）从不恢复
+    // → list 页（装备/物品/技能等全部 list 形态）无法保存。此处进入编辑态恢复。
+    // 新建态删除无意义（后端 404 提示即可）——btnDel 照显（编辑态统一语义）。
+    $("btnSave").classList.remove("hidden");
+    $("btnDel").classList.remove("hidden");
     $("editName").textContent = (state.isNew ? "新建 · " : "") +
       (state.cur.name || state.cur.id || "未命名");
     var fw = $("formwrap");

@@ -8,9 +8,10 @@
   - EditorPage：注册表条目模型（page_id/title/icon/module_file/meta_source/
     tabs/enabled/extends/validator，字段语义见 细化_5a2 PR-02 5a2 L51）。
   - load_editor_registry(registry)：从内容包 registry.modules_raw["editor"]
-    （editor.json 解析产物）读页表；无 editor 模块 → 返回默认六页兜底
-    （细化_5a2 M-06 5a2 L239：缺失 editor.json → 按 5a 六页默认值启动，
-    向后兼容——test_demo 等旧内容包未声明 editor.json 也能渲染六页）。
+    （editor.json 解析产物）读页表；无 editor 模块 → auto_pages_from_modules
+    按实际模块自动生成页表（B 方案 M12.5：新包 veinborn/demo_full 无 editor.json
+    也能出全模块编辑页；空 modules_raw → 空页表无幽灵页。原「默认六页兜底」
+    default_editor_pages 保留为兼容入口，load_editor_registry 不再直接返回它）。
   - pages()/get_page(page_id)/enabled_pages()：PR-03 启停语义 5a2 L52
     （enabled:false → 侧边栏不渲染、/api/pages/{page} 404、不纳入编辑器
     校验——引擎侧加载不受编辑器启停影响）。
@@ -44,6 +45,100 @@ from dataclasses import dataclass
 from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 
 from qbot_rpg.content.registry import Registry
+
+# =====================================================================================
+# 常量：模块页自动发现目录（B 方案 · 新包免配 editor.json 自动出全页）
+# =====================================================================================
+# 30 页母本浓缩（content/test_demo/editor.json 全规格逐条转录）：每个「独立模块页」
+# 登记一条，module_file 与 field_meta/loader 模块键一一对应（去 .json 即表键）。
+# 自动生成规则：module_file 在 registry.modules_raw 存在 → 生成该页。
+# 排除项 _NON_AUTO_PAGES（需 editor.json 显式声明才出现）：
+#   ai/hidden —— extends 挂载页（enemies.json/maps.json 子段编辑，不是独立模块）；
+#   env_event/log_card —— settings.json 段视图页（settings 已有独立页，避免重复）。
+# 说明：本目录与 _DEFAULT_PAGE_SPECS（六页兜底，兼容 default_editor_pages）并存；
+# auto 生成是 load_editor_registry 无 editor 模块时的页表来源，规格以本目录为准。
+_MODULE_PAGE_CATALOG: Tuple[Mapping[str, object], ...] = (
+    {"page_id": "skill", "title": "技能", "icon": "⚔️", "module_file": "skills.json",
+     "meta_source": "meta/skill", "enabled": True, "validator": "skill"},
+    {"page_id": "job", "title": "职业", "icon": "🎖️", "module_file": "jobs.json",
+     "meta_source": "meta/job", "enabled": True, "validator": "job"},
+    {"page_id": "monster", "title": "怪物", "icon": "👹", "module_file": "enemies.json",
+     "meta_source": "meta/monster", "enabled": True, "validator": "monster",
+     "tabs": ["基本信息", "属性", "弱点", "PV", "抗性", "行动", "特殊行动",
+              "掉落", "图鉴", "AI×6"]},
+    {"page_id": "map", "title": "地图", "icon": "🗺️", "module_file": "maps.json",
+     "meta_source": "meta/map", "enabled": True, "validator": "map",
+     "tabs": ["基础", "通道", "怪物", "NPC"]},
+    {"page_id": "quest", "title": "任务", "icon": "📜", "module_file": "quest.json",
+     "meta_source": "meta/quest", "enabled": True, "validator": "quest"},
+    {"page_id": "shop", "title": "商店", "icon": "🏪", "module_file": "shop.json",
+     "meta_source": "meta/shop", "enabled": True, "validator": "shop"},
+    {"page_id": "npc", "title": "NPC", "icon": "🧙", "module_file": "npc.json",
+     "meta_source": "meta/npc", "enabled": True, "validator": "npc",
+     "tabs": ["基础", "地图挂点", "对话", "条件", "交互", "任务", "商店",
+              "情报", "教学", "发牌"]},
+    {"page_id": "checkin", "title": "签到", "icon": "📅", "module_file": "checkin.json",
+     "meta_source": "meta/checkin", "enabled": True, "validator": "checkin",
+     "tabs": ["基础", "周期", "每日奖励", "连签奖励", "月度累计", "补签", "预览"]},
+    {"page_id": "items", "title": "物品", "icon": "🎒", "module_file": "items.json",
+     "meta_source": "meta/items", "enabled": True, "validator": "items",
+     "group": "物品装备"},
+    {"page_id": "equipment", "title": "装备", "icon": "🛡️", "module_file": "equipment.json",
+     "meta_source": "meta/equipment", "enabled": True, "validator": "equipment",
+     "group": "物品装备"},
+    {"page_id": "slots", "title": "装备槽位", "icon": "🔧", "module_file": "slots.json",
+     "meta_source": "meta/slots", "enabled": True, "validator": "slots",
+     "group": "物品装备"},
+    {"page_id": "action", "title": "行动", "icon": "🎯", "module_file": "action.json",
+     "meta_source": "meta/action", "enabled": True, "validator": "action",
+     "group": "战斗"},
+    {"page_id": "effects", "title": "效果", "icon": "✨", "module_file": "effects.json",
+     "meta_source": "meta/effects", "enabled": True, "validator": "effects",
+     "group": "战斗"},
+    {"page_id": "statuses", "title": "状态", "icon": "💠", "module_file": "statuses.json",
+     "meta_source": "meta/statuses", "enabled": True, "validator": "statuses",
+     "group": "战斗"},
+    {"page_id": "marks", "title": "印记", "icon": "🔖", "module_file": "marks.json",
+     "meta_source": "meta/marks", "enabled": True, "validator": "marks",
+     "group": "战斗"},
+    {"page_id": "traits", "title": "词条", "icon": "🏷️", "module_file": "traits.json",
+     "meta_source": "meta/traits", "enabled": True, "validator": "traits",
+     "group": "战斗"},
+    {"page_id": "skill_chains", "title": "技能链", "icon": "⛓️", "module_file": "skill_chains.json",
+     "meta_source": "meta/skill_chains", "enabled": True, "validator": "skill_chains",
+     "group": "战斗"},
+    {"page_id": "recipe", "title": "炼金配方", "icon": "⚗️", "module_file": "recipe.json",
+     "meta_source": "meta/recipe", "enabled": True, "validator": "recipe",
+     "group": "成长"},
+    {"page_id": "proficiency", "title": "熟练度", "icon": "📈", "module_file": "proficiency.json",
+     "meta_source": "meta/proficiency", "enabled": True, "validator": "proficiency",
+     "group": "成长"},
+    {"page_id": "dungeon", "title": "副本", "icon": "🏰", "module_file": "dungeon.json",
+     "meta_source": "meta/dungeon", "enabled": True, "validator": "dungeon",
+     "group": "世界"},
+    {"page_id": "achievements", "title": "成就", "icon": "🏆", "module_file": "achievements.json",
+     "meta_source": "meta/achievements", "enabled": True, "validator": "achievements",
+     "group": "世界"},
+    {"page_id": "fishing", "title": "钓鱼", "icon": "🎣", "module_file": "fishing.json",
+     "meta_source": "meta/fishing", "enabled": True, "validator": "fishing",
+     "group": "世界", "page_kind": "object"},
+    {"page_id": "forge", "title": "锻造", "icon": "🔨", "module_file": "forge.json",
+     "meta_source": "meta/forge", "enabled": True, "validator": "forge",
+     "group": "世界", "page_kind": "object"},
+    {"page_id": "stats", "title": "属性表", "icon": "📊", "module_file": "stats.json",
+     "meta_source": "meta/stats", "enabled": True, "validator": "stats",
+     "group": "世界", "page_kind": "map"},
+    {"page_id": "formula", "title": "公式", "icon": "🧮", "module_file": "formula.json",
+     "meta_source": "meta/formula", "enabled": True, "validator": "formula",
+     "group": "世界", "page_kind": "map"},
+    {"page_id": "settings", "title": "世界设置", "icon": "🌍", "module_file": "settings.json",
+     "meta_source": "meta/settings", "enabled": True, "validator": "settings",
+     "group": "世界", "page_kind": "object"},
+)
+
+# 自动生成不适用页（extends 挂载页 / settings 段视图页；需 editor.json 显式声明才出现）
+_NON_AUTO_PAGES: Tuple[str, ...] = ("ai", "hidden", "env_event", "log_card")
+
 
 # =====================================================================================
 # 常量：默认六页 + 校验器钩子登记（细化_5a P-06 六页归口 5a L80 / 细化_5a2 PR-01 5a2 L46）
@@ -246,6 +341,40 @@ def default_editor_pages() -> Tuple[EditorPage, ...]:
     return tuple(_page_from_spec(spec) for spec in _DEFAULT_PAGE_SPECS)
 
 
+def auto_pages_from_modules(
+    modules_raw: Mapping[str, object],
+) -> Tuple[EditorPage, ...]:
+    """B 方案：按内容包实际模块自动生成页表（新包免配 editor.json 出全页）。
+
+    规则（docs/m125_编辑器自动页表方案_B.md §3.1）：
+      1. 遍历 _MODULE_PAGE_CATALOG 全部页；
+      2. 页的 module_file（去 .json）在 modules_raw 存在 → 生成该页（如
+         skills.json → skills 模块存在才出技能页；无则跳过——demo_full
+         有 equipment 无 skills → 出装备页不出技能页）；
+      3. 特殊页（ai/hidden/env_event/log_card）不在目录 → 永不自动生成
+         （它们依赖宿主页子段结构；包恰好有 editor.json 时仍按声明走）；
+      4. 生成页继承目录 title/icon/group/tabs/page_kind/meta_source/validator
+         （= test_demo 30 页同款配置；id_prefix 目录未登记 → None 回退 page_id）。
+    空 modules_raw → 空页表（语义定稿：避免渲染幽灵页，见方案 B §3.4）。
+    确定性：同 modules_raw 恒同结果（零 IO 零随机）。
+    """
+    if not isinstance(modules_raw, Mapping):
+        return ()
+    present = {
+        str(k).removesuffix(".json") if str(k).endswith(".json") else str(k)
+        for k in modules_raw
+    }
+    pages: List[EditorPage] = []
+    for spec in _MODULE_PAGE_CATALOG:
+        mod = spec.get("module_file")
+        if not isinstance(mod, str):
+            continue
+        key = mod[:-len(".json")] if mod.endswith(".json") else mod
+        if key in present:
+            pages.append(_page_from_spec(spec))
+    return tuple(pages)
+
+
 def _page_from_spec(spec: Mapping[str, object]) -> EditorPage:
     """条目原始 dict → EditorPage（宽容解析：缺失键回落默认，类型不符回落默认）。"""
     page_id = spec.get("page_id")
@@ -311,15 +440,19 @@ def load_editor_registry(registry: Registry) -> EditorRegistry:
           - "pages"：条目列表 → EditorPage（逐条宽容解析 _page_from_spec；
             条目非 dict 跳过；缺 page_id/page_id 非字符串 → 丢弃该条并计入
             invalid 计数——PR-02 条目标识字段必填）
-        editor 模块缺失 → 返回默认六页兜底（M-06：内容包未声明页面 →
-        只显示总览/数据包管理，但默认六页登记保证向后兼容 5a 六页壳）。
-      - 页序 = editor.json 声明顺序（5a2 L62-75 样例序；侧边栏渲染按此序）。
+        editor 模块缺失 → auto_pages_from_modules(registry.modules_raw)
+        自动生成（B 方案 M12.5：按实际模块出页，空包出空页表无幽灵页——
+        替代原恒六页兜底 default_editor_pages）。
+      - 页序 = editor.json 声明顺序（5a2 L62-75 样例序；侧边栏渲染按此序）；
+        auto 生成时 = _MODULE_PAGE_CATALOG 声明序。
     确定性：同 registry 恒同结果（零 IO 零随机）。
     """
     raw_editor = registry.modules_raw.get("editor")
     if not isinstance(raw_editor, Mapping):
-        # PR-01/M-06（5a2 L50/L239）：内容包未声明 editor.json → 默认六页兜底
-        return EditorRegistry(pages=default_editor_pages())
+        # B 方案（M12.5）：内容包未声明 editor.json → 按实际模块自动生成全页
+        # （替代原恒六页兜底 default_editor_pages——auto 感知 modules_raw，
+        # 新包 veinborn/demo_full 出实际模块页，空包出空页表无幽灵页）
+        return EditorRegistry(pages=auto_pages_from_modules(registry.modules_raw))
 
     schema_raw = raw_editor.get("schema_version")
     schema: Optional[int] = (
@@ -387,6 +520,7 @@ __all__ = [
     "EDITOR_MODULE",
     "EditorPage",
     "EditorRegistry",
+    "auto_pages_from_modules",
     "default_editor_pages",
     "load_editor_registry",
     "validate_validators",

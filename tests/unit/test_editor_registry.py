@@ -21,23 +21,89 @@ from qbot_rpg.content.editor_registry import (
 from qbot_rpg.content.registry import Registry
 
 # =====================================================================================
+# B 方案自动页表（m125_编辑器自动页表方案_B.md §3：无 editor.json 按模块自动生成）
+# =====================================================================================
+def test_auto_pages_blank_modules_empty() -> None:
+    """modules_raw 空 → 空页表（语义定稿：无幽灵页，见方案 B §3.4）。"""
+    editor = load_editor_registry(Registry(pack_id="demo_blank"))
+    assert editor.pages == ()
+    assert editor.schema_version is None
+
+
+def test_auto_pages_demo_blank_five_modules() -> None:
+    """demo_blank 五模块（settings/stats/formula/effects/items）→ 恰好 5 页。"""
+    editor = load_editor_registry(Registry(
+        pack_id="demo_blank",
+        modules_raw={
+            "settings": {}, "stats": {}, "formula": {}, "effects": [], "items": [],
+        },
+    ))
+    assert [p.page_id for p in editor.pages] == [
+        "items", "effects", "stats", "formula", "settings",
+    ]
+    # catalog 顺序 = 页序（战斗组在物品组后；世界组最后）——见 _MODULE_PAGE_CATALOG
+    by_id = {p.page_id: p for p in editor.pages}
+    assert by_id["items"].title == "物品"
+    assert by_id["items"].meta_source == "meta/items"
+    assert by_id["items"].validator == "items"
+    assert by_id["settings"].page_kind == "object"
+    assert by_id["stats"].page_kind == "map"
+    assert by_id["effects"].page_kind is None  # list 形态缺省
+
+
+def test_auto_pages_veinborn_all_modules() -> None:
+    """veinborn 17 模块 → 17 页（含装备/物品/NPC/行动/效果；不含 ai/hidden 等特殊页）。"""
+    from qbot_rpg.content.loader import load_pack
+    import asyncio
+    from pathlib import Path
+    pack = asyncio.run(load_pack(Path(__file__).resolve().parent.parent.parent
+                                 / "content" / "veinborn"))
+    editor = load_editor_registry(pack.registry)
+    ids = [p.page_id for p in editor.pages]
+    assert len(ids) == 17
+    for must in ("skill", "job", "monster", "map", "quest", "shop", "npc",
+                 "items", "equipment", "action", "effects", "statuses",
+                 "marks", "skill_chains", "stats", "formula", "settings"):
+        assert must in ids, f"veinborn auto 页缺 {must}"
+    # 特殊页不自动生成
+    for non in ("ai", "hidden", "env_event", "log_card"):
+        assert non not in ids, f"特殊页 {non} 不应自动生成"
+
+
+def test_auto_pages_missing_module_skipped() -> None:
+    """模块缺失 → 对应页跳过（demo_full 有 equipment 无 skills → 无技能页）。"""
+    editor = load_editor_registry(Registry(
+        pack_id="demo_full",
+        modules_raw={
+            "settings": {}, "stats": {}, "formula": {}, "effects": [],
+            "statuses": [], "marks": [], "items": [], "equipment": [],
+            "action": [], "enemies": [], "maps": [], "dungeon": [],
+            "npc": [], "shop": [], "quest": [], "checkin": [],
+        },
+    ))
+    ids = [p.page_id for p in editor.pages]
+    assert "skill" not in ids
+    assert "job" not in ids
+    assert "equipment" in ids and "items" in ids
+    assert "npc" in ids and "checkin" in ids
+
+
+def test_auto_pages_editor_declared_wins() -> None:
+    """有 editor.json 声明 → 声明优先（auto 不覆盖声明页表）。"""
+    raw = _sample_raw_editor()
+    raw["pages"] = [p for p in raw["pages"] if p["page_id"] != "skill"]
+    editor = load_editor_registry(Registry(
+        pack_id="test", modules_raw={"editor": raw, "skills": [], "jobs": []},
+    ))
+    ids = [p.page_id for p in editor.pages]
+    assert "skill" not in ids  # 声明页表不自动补技能页
+    assert "npc" in ids
+
+
+# =====================================================================================
 # 默认页兜底（细化_5a2 M-06 5a2 L239 / PR-01 5a2 L50；M12.5/veinborn 扩展
 # equipment/item 两页——veinborn 等无 editor.json 内容包也可编辑装备/物品）
 # =====================================================================================
-def test_default_pages_when_no_editor_module() -> None:
-    """无 editor 模块 → 默认页兜底（skill/job/monster/map/quest/shop/equipment/item）。"""
-    registry = Registry(pack_id="demo_blank")  # modules_raw 空 → 无 editor
-    editor = load_editor_registry(registry)
-    assert [p.page_id for p in editor.pages] == [
-        "skill", "job", "monster", "map", "quest", "shop",
-        "equipment", "item",
-    ]
-    assert editor.schema_version is None
-    assert editor.get_page("skill") is not None
-    # 兜底页全部启用 → enabled_pages 与 pages 等长
-    assert len(editor.enabled_pages()) == 8
-
-
 def test_default_six_pages_field_defaults() -> None:
     """兜底六页字段齐：title/icon/module_file/meta_source/validator。"""
     pages = default_editor_pages()

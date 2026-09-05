@@ -104,18 +104,21 @@ def _page_info(
 ) -> Optional[Dict[str, str]]:
     """页表动态解析：page_id → {module, id_prefix}；不可用 → None（404 语义）。
 
-    解析优先级（editor 模块页表优先，缺失回退兜底常量）：
-      - ctx.modules_raw 含 "editor"（dict 形态）→ load_editor_registry 解析：
+    解析优先级（B 方案后 editor_registry 页表恒为数据源，缺失回退兜底常量）：
+      - ctx.modules_raw 为 Mapping → load_editor_registry 统一解析（内部：
+        editor 模块存在 → 声明页表优先；缺失 → auto_pages_from_modules
+        按实际模块自动生成——veinborn 等无 editor.json 内容包 equipment/
+        items/npc 等 auto 页同样可 CRUD）：
         module = module_file 去 .json 后缀（npc.json → npc）；id_prefix = 页条目
         id_prefix 字段，缺省 page_id；enabled:false 的页视为不存在（404）；
         extends 视图页（ai→enemies.json 等）module = 宿主模块——CRUD 对象即
         宿主条目（视图页创建/删除会作用于宿主条目，属预期形态边界）。
-      - editor 模块缺失 / 页不在页表 → 回退 PAGE_MODULE/PAGE_ID_PREFIX 常量
-        （旧内容包与既有测试假 ctx 无 editor 模块即走此路）。
+      - 页不在页表（含空 modules_raw 空页表）→ 回退 PAGE_MODULE/PAGE_ID_PREFIX
+        常量（旧内容包与既有测试假 ctx 兼容）。
     结果缓存于 ctx["_page_info_cache"]（ctx 承载可变态；同 ctx 页表恒定）。
     """
     raw = ctx.get("modules_raw")
-    if isinstance(raw, Mapping) and isinstance(raw.get("editor"), Mapping):
+    if isinstance(raw, Mapping):
         cache = ctx.get(_PAGE_INFO_CACHE_KEY)
         if not isinstance(cache, MutableMapping):
             cache = {}
@@ -127,17 +130,24 @@ def _page_info(
             # 只读视图）——SimpleNamespace 轻量注入，避免 import Registry 真构造
             # （Registry 构建需 loader 全量流程，纯逻辑层不引入）
             try:
-                reg = load_editor_registry(  # type: ignore[arg-type]
-                    SimpleNamespace(modules_raw=raw))
+                reg = load_editor_registry(
+                    SimpleNamespace(modules_raw=raw),  # type: ignore[arg-type]
+                )
             except Exception:
                 reg = None
             if reg is not None:
                 ep = reg.get_page(page)
                 if ep is None:
-                    # 页不在页表 → 回退兜底（editor 存在但该页未登记的兼容路径）
-                    ep_mod = PAGE_MODULE.get(page)
-                    info = ({"module": ep_mod, "id_prefix": page}
-                            if ep_mod else None)
+                    # 页不在页表 → 回退兜底。语义区分：
+                    #   - editor 模块存在（声明页表）→ PAGE_MODULE 常量兼容
+                    #     （editor.json 未登记该页但属六页范畴的旧包路径）；
+                    #   - editor 模块缺失（auto 页表）→ 不回退：auto 页表 = 模块
+                    #     实际存在性，页不在表 = 模块不存在 → None（404），
+                    #     避免渲染幽灵页（demo_full 无 skills → 技能页 404）。
+                    if isinstance(raw.get("editor"), Mapping):
+                        ep_mod = PAGE_MODULE.get(page)
+                        info = ({"module": ep_mod, "id_prefix": page}
+                                if ep_mod else None)
                 elif not ep.enabled:
                     info = None  # enabled:false → 视为不存在（404）
                 else:
@@ -160,7 +170,7 @@ def _page_info(
                     info = {"module": mod, "id_prefix": prefix}
             cache[page] = info
         return info
-    # 无 editor 模块 → 兜底常量（六页）
+    # modules_raw 缺失/非 Mapping（异常 ctx）→ 兜底常量（六页）兼容
     module = PAGE_MODULE.get(page)
     if not module:
         return None

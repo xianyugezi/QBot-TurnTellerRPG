@@ -548,11 +548,44 @@ def test_registry_disabled_page_404():
 
 
 def test_registry_fallback_no_editor_module():
-    """无 editor 模块的旧 ctx → 回退六页常量（既有测试语义保持）。"""
+    """无 editor 模块的 ctx → auto 页表驱动（六页模块在 → 可达；缺模块页 404）。"""
     out = list_page_items("monster", make_ctx())
     assert out["ok"] is True
-    out = list_page_items("npc", make_ctx())  # 兜底无 npc → 404
+    out = list_page_items("items", make_ctx())  # auto 含 items 模块 → 可达
+    assert out["ok"] is True
+    out = list_page_items("npc", make_ctx())  # make_ctx 无 npc 模块 → auto 无此页 → 404
     assert out["ok"] is False
+
+
+# =============================================================================
+# B 方案：无 editor.json 内容包（veinborn 等）→ auto 页表 CRUD 全可达
+# =============================================================================
+def test_auto_pages_no_editor_equipment_crud():
+    """无 editor 模块但含 equipment 模块 → 装备页 list/get/create 全通（auto 页表）。"""
+    ctx = {
+        "modules_raw": {
+            "equipment": [
+                {"id": "ridge_blade_1", "name": "砺脊刃", "slot": "weapon",
+                 "atk": 10},
+            ],
+            "items": [{"id": "potion", "name": "药水"}],
+        },
+    }
+    out = list_page_items("equipment", ctx)
+    assert out["ok"] is True
+    assert [i["id"] for i in out["items"]] == ["ridge_blade_1"]
+    out = get_page_item("equipment", "ridge_blade_1", ctx)
+    assert out["ok"] is True and out["item"]["name"] == "砺脊刃"
+    out = create_page_item("equipment", {"name": "测试甲", "slot": "armor"}, ctx)
+    assert out["ok"] is True and out["id"].startswith("equipment_")
+    ctx["modules_raw"]["equipment"].append(out["item"])
+    # npc 模块缺失 → auto 无 npc 页 → 404（非回退六页）
+    out = list_page_items("npc", ctx)
+    assert out["ok"] is False
+    # settings 页（obj 形态）在 auto 页表但 list 空安全
+    ctx["modules_raw"]["settings"] = {"default_map": "start"}
+    out = list_page_items("settings", ctx)
+    assert out["ok"] is True and out["items"] == []
 
 
 def test_registry_settings_page_empty_list():

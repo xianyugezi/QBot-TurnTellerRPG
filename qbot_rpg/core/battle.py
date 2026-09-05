@@ -354,6 +354,9 @@ class BattleEngine:
             config={"enforce_mp": bool(self._config.get("combo_enforce_mp", False))},
         )
         # M2-C1：怪物 AI 注入（enemy_ai 显式优先；enemy_def 自动构造）
+        # M12.5 木桩：enemy_def 原样保留（_is_dummy_enemy_def 判定源；from_snapshot
+        # 续战走快照 is_dummy_battle 标记，不依赖本属性）
+        self._enemy_def: Optional[Mapping[str, Any]] = enemy_def
         self._enemy_ai: Any = None
         # M13 6c（细化_6c §1.4 RS-3/RS-5）：资源轴注册表注入位——装配层传入
         # stats.json 资源轴注册段（stats["resource_axes"] 形态）供战斗结束 reset
@@ -1644,6 +1647,14 @@ class BattleEngine:
             "session_type": "battle",
             "battle_id": str(uuid.uuid4()),
             "battle_type": battle_type,
+            # M12.5 木桩标记：快照常驻（续战 from_snapshot 恢复即可判，不依赖
+            # 调用方 enemy_def 透传）；判定源 = 敌人条目 tier/type（怪物模块 §十五）
+            "is_dummy_battle": bool(
+                (self._enemy_def if isinstance(self._enemy_def, Mapping) else {})
+                .get("tier") == "training"
+                or (self._enemy_def if isinstance(self._enemy_def, Mapping) else {})
+                .get("type") == "dummy"
+            ),
             "status": STATUS_ACTIVE,
             "rule_version": str(self._config.get("rule_version", "battle_v1.1.1")),
             # P0-1 续战旧配置修复（M6 D3 RSM-02 / F-RSM-01）：世代绑定键——start 写当前
@@ -1817,11 +1828,31 @@ class BattleEngine:
             order.sort(key=_key)
         return tuple(s for s in order if self._alive(s))
 
+    def _is_dummy_enemy_def(self) -> bool:
+        """M12.5 木桩判定：enemy_def tier=training 或 type=dummy（怪物模块 §十五 15.1）。
+
+        依据内容包敌人条目本身而非 battle_type（battle_type 默认 "dummy" 历史
+        遗留——PvE 普通战斗也落该默认值，不可作判定依据）。优先读快照标记
+        is_dummy_battle（start 时写入；from_snapshot 续战无需 enemy_def 透传）。
+        """
+        if self._snap.get("is_dummy_battle"):
+            return True
+        ed = getattr(self, "_enemy_def", None)
+        if isinstance(ed, Mapping):
+            return ed.get("tier") == "training" or ed.get("type") == "dummy"
+        return False
+
     def next_action_owner(self) -> Optional[str]:
         """下一个可行动者（⑤ 后手判定：被先手击杀的怪物不执行反击，1g2 §1.1 特例）。"""
         order = self.action_order()
         for side in order:
             if not self._turn_acted.get(side, False):
+                # M12.5 木桩（怪物模块 §十五 15.2）：木桩敌人永不出手——即便快照
+                # 恢复后 turn_acted 未带标记也从行动者队列剔除（enemy_def 快照带
+                # tier/type，判定恒可复现）
+                if side == "enemy" and self._is_dummy_enemy_def():
+                    self._turn_acted["enemy"] = True
+                    continue
                 return side
         return None
 
@@ -2629,6 +2660,11 @@ class BattleEngine:
             return None
         if not self._alive("enemy") or self._dead("enemy"):
             return None  # 被先手击杀不反击（写死，1g2 §1.1 特例）
+        # M12.5 木桩（怪物模块 §十五 15.2）：木桩敌人（enemy_def tier=training/
+        # type=dummy）不行动——跳过。state 由 after_actor(player) 停在 RES
+        # （next=None 不迁移），end_turn→start_turn RES→ACT 合法
+        if self._is_dummy_enemy_def():
+            return None
         if action_dict is None:
             action_dict = self._ai_action_dict()
         if action_dict is None:

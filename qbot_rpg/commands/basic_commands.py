@@ -695,15 +695,58 @@ def _cake_tail(page: int, total_pages: int, *, category_word: Optional[str] = No
     return tail
 
 
+# 装备类型集（type 字段命中 = 装备——背包 Tip 区分穿戴/使用；内容包 type 自定义
+# 走 row.slot 兜底：有 slot 即装备）
+_EQUIP_TYPE_HINTS: tuple = ("weapon", "armor", "helmet", "gloves", "boots", "necklace",
+                            "ring", "charm", "trinket", "shield", "装备", "武器", "防具")
+
+
+def _is_equip_row(row: Any, ctx: Mapping[str, Any]) -> bool:
+    """行是否装备（type 命中装备集或定义含 slot）。"""
+    try:
+        if isinstance(row, Mapping):
+            t = str(row.get("type") or "")
+            if row.get("slot") and not t:
+                return True
+        else:
+            t = str(getattr(row, "type", "") or "")
+            if getattr(row, "slot", None) and not t:
+                return True
+        if t in _EQUIP_TYPE_HINTS:
+            return True
+        # 定义兜底（items 表查 type）
+        iid = row.get("item_id") if isinstance(row, Mapping) else getattr(row, "item_id", None)
+        if iid:
+            d = _item_def(ctx, str(iid))
+            if isinstance(d, Mapping):
+                dt = str(d.get("type") or "")
+                if dt in _EQUIP_TYPE_HINTS or (d.get("slot") and not dt):
+                    return True
+    except Exception:  # noqa: BLE001
+        pass
+    return False
+
+
+def _bag_has_equip(rows: Any, ctx: Mapping[str, Any]) -> bool:
+    """背包行里是否有装备（2026-09-05 模拟器审计：有装备时 Tip 须教穿戴路径）。"""
+    try:
+        return any(_is_equip_row(r, ctx) for r in (rows or []))
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def _bag_tail_lines(page: int, total_pages: int, total: int, clamped: bool,
-                    ctx: Mapping[str, Any], category_word: str = "全部") -> List[str]:
+                    ctx: Mapping[str, Any], category_word: str = "全部",
+                    tip: str = "") -> List[str]:
     """/背包 尾段：货币行 + `当前页：{page}/{total_pages}({类型词})` + 夹取提示 + Tip。
 
     （类型词 = 当前筛选的物品类型，用户 2026-08-27 拍板：/背包 → 全部，/背包筛选
-    装备 → 装备、/背包筛选药剂 → 药剂 等；原「共 N 条」改显示筛选类型。）"""
+    装备 → 装备、/背包筛选药剂 → 药剂 等；原「共 N 条」改显示筛选类型。
+    tip 空 → 默认 _BAG_TAIL_TIP（2026-09-05 模拟器审计：背包含装备时 Tip 教
+    「使用 物品名」与装备实际穿戴路径「装备 穿 序号」矛盾——调用方按内容传 tip）"""
     lines: List[str] = list(_currency_lines(ctx))
     lines.append(_cake_tail(page, total_pages, category_word=category_word,
-                            tip=_BAG_TAIL_TIP, clamped=clamped,
+                            tip=tip or _BAG_TAIL_TIP, clamped=clamped,
                             templates=ctx.get("templates")))
     return lines
 
@@ -723,7 +766,13 @@ def _render_bag_page(ctx: Mapping[str, Any], page: int) -> str:
     start = (res.page - 1) * DEFAULT_PAGE_SIZE
     slice_rows = rows[start:start + DEFAULT_PAGE_SIZE]
     lines: List[str] = [bag_line(start + i + 1, r, ctx) for i, r in enumerate(slice_rows)]
-    lines.extend(_bag_tail_lines(res.page, res.total_pages, res.total, res.clamped, ctx))
+    # 2026-09-05 模拟器审计：背包有装备时 Tip 教「使用 物品名」与穿戴实际路径
+    # （装备 穿 序号）矛盾——有装备 → Tip 含穿戴引导
+    _btip = ""
+    if _bag_has_equip(rows, ctx):
+        _btip = "发送'装备 穿 序号'穿戴装备；'使用 物品名'用消耗品"
+    lines.extend(_bag_tail_lines(res.page, res.total_pages, res.total, res.clamped, ctx,
+                                 tip=_btip))
     return "\n".join(lines)
 
 
@@ -1632,8 +1681,12 @@ def _render_help_directory(ctx: Mapping[str, Any], page: int) -> str:
         lines.append(_group_summary(ctx, g))
     if groups:
         # 2026-09-05 模拟器审计：目录仅 1 页时教「帮助2 翻页」是无效引导（普通玩家
-        # 5 组 1 页；GM 6 组 2 页才需要）——单页不渲染翻页 Tip
-        _dir_tip = _HELP_DIR_TAIL_TIP if (res.total_pages or 1) > 1 else ""
+        # 5 组 1 页；GM 6 组 2 页才需要）——单页渲染「发 帮助 <组名> 看组内指令」
+        # 引导（新手不知道组页存在，A 路审计）；多页才教翻页
+        if (res.total_pages or 1) > 1:
+            _dir_tip = _HELP_DIR_TAIL_TIP
+        else:
+            _dir_tip = "发送'帮助 组名'查看组内指令，如'帮助 冒险'"
         lines.append(_cake_tail(res.page, res.total_pages, tip=_dir_tip, clamped=res.clamped,
                                 templates=ctx.get("templates")))
     return "\n".join(lines)
@@ -1665,7 +1718,10 @@ def _render_help_group(ctx: Mapping[str, Any], group_name: str, page: int) -> st
         display = _command_alias_display(ctx, c[0])
         lines.append(group_page_line(start + i + 1, (display, c[1]), ctx))
     if cmds:
-        lines.append(_cake_tail(res.page, res.total_pages, tip=_HELP_GROUP_TAIL_TIP, clamped=res.clamped,
+        # 2026-09-05 模拟器审计：组页单页（≤5 条）教「帮助<组名><页数>」翻页是
+        # 空转引导（无处可翻）——仅多页组渲染翻页 Tip
+        _g_tip = _HELP_GROUP_TAIL_TIP if (res.total_pages or 1) > 1 else ""
+        lines.append(_cake_tail(res.page, res.total_pages, tip=_g_tip, clamped=res.clamped,
                                 templates=ctx.get("templates")))
     return "\n".join(lines)
 

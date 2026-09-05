@@ -66,6 +66,7 @@ from qbot_rpg.commands.router import (
     PERM_OWNER,
     ROUTE_HIDDEN,
     ROUTE_SESSION,
+    CommandSpec,
     Router,
     RouteResult,
     RoutingContext,
@@ -514,6 +515,24 @@ def _make_handler(spec: Any, parsed: ParsedCommand, ctx: MutableMapping[str, Any
                         except (TypeError, ValueError):
                             continue
                 p = _dcreplace(p, inventory=new_inv)
+            # RN-13 dialog 会话状态落盘（2026-09-05 模拟器审计实锤：cmd_dialog 激活/
+            # 收尾只改 ctx["dialog_active"]/ctx["dialog_session"]，从未回写
+            # player.persistent_state → 下条消息路由读 ps["dialog_active"]=False →
+            # 菜单选择（纯数字/选项文字）不送会话 → 裸静默，NPC 对话链断）
+            # 触发条件：dialog_active 变化（激活/收尾）或 ctx 携带会话实例（会话内
+            # 每步 state 迁移都要落快照——下次消息才能从正确状态续走）
+            _da = bool(ctx.get("dialog_active"))
+            _sess = ctx.get("dialog_session")
+            _ps = p.persistent_state
+            if _sess is not None or bool(_ps.get("dialog_active", False)) != _da:
+                from dataclasses import replace as _dcr  # noqa: PLC0415
+                _nps = dict(_ps)
+                _nps["dialog_active"] = _da
+                if _sess is not None and hasattr(_sess, "to_snapshot"):
+                    _nps["dialog_session"] = _sess.to_snapshot()
+                else:
+                    _nps.pop("dialog_session", None)
+                p = _dcr(p, persistent_state=_nps)
             await tx.upsert_player(p)
         elif isinstance(p, dict):
             qid = str(ctx.get("qq_id") or ctx.get("user_id") or "")
@@ -543,7 +562,7 @@ def _make_sender(deps: Any, ctx: Mapping[str, Any]):
     # 取 delivered 收集的战斗正文（BattlePipeline 经 ctx["sender"] 发送的正文）。
     try:
         if getattr(deps, "sender", None) is None:
-            deps.sender = sender_obj  # type: ignore[attr-defined]
+            deps.sender = sender_obj
     except Exception:  # noqa: BLE001 - 挂载失败不影响（收集路径仍工作）
         pass
     # M5-08 战斗 ctx 契约：ctx["sender"] = Sender 统一出口（battle_commands._sender_of
@@ -676,8 +695,36 @@ async def _run_command_inner(event: Mapping, deps: Any, raw: str) -> str:
     if route.ignored:
         return ""
     if route.kind == ROUTE_SESSION:
-        # 会话子词 → 送状态机（A-04 桥接层接线；本 runner 不消费，不误当指令处理）
-        return ""
+        # 会话子词 → 送对话状态机（2026-09-05 模拟器审计实锤修复：原「A-04 桥接层
+        # 接线」从未实现——菜单后纯数字/选项文字全部裸静默，NPC 对话链断）。
+        # 此处接真实状态机：classify → cmd_dialog_session，复用下方 process_message
+        # 管线（幂等/队列/事务落盘含 dialog 状态回写 _plain_handler）。
+        from qbot_rpg.core.dialog import classify_session_input  # noqa: PLC0415
+        from qbot_rpg.commands.dialog_commands import cmd_dialog_session  # noqa: PLC0415
+
+        _sub = classify_session_input(route.text)
+        if _sub is None:
+            return ""
+
+        async def _session_handler(parsed: Any, ctx: Any = None) -> str:  # noqa: ANN001
+            return cmd_dialog_session(_sub, ctx)
+
+        _sess_spec = CommandSpec(route.text or "_session", whitelisted=False,
+                                 handler=_session_handler)
+        ctx = await make_context(event, deps)
+        parsed = _parsed_from_route(route, raw)
+        handler = _make_handler(_sess_spec, parsed, ctx)
+        sender, send_state = _make_sender(deps, ctx)
+        timeout = getattr(deps, "queue_timeout", None)
+        outcome = await _drive_process(
+            repo, queue,
+            message_id=message_id, group_id=event.get("group_id"), player_qid=qid,
+            command="_session", handler=handler, sender=sender, timeout=timeout,
+        )
+        sent = send_state.get("sent")
+        if sent:
+            return str(sent)
+        return str(outcome.get("message") or "")
     if route.kind == ROUTE_HIDDEN:
         # 原指令被隐藏（A04）：「没有这个指令，试试『别名』？」不执行
         return f"没有这个指令，试试『{route.display_name}』？"

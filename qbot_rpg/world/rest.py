@@ -100,7 +100,7 @@ STATE_LEFT: str = "LEFT"
 MESSAGE_REST_LIMIT: str = "休息次数已用完"
 
 #: 非安全区拒绝文案（2a3 R16 / TC-2a3-15：安全区 /休息 ≠ 离开）。
-MESSAGE_REST_NOT_SAFE: str = "非安全区不可 /休息（2a3 R16 / TC-2a3-15：安全区 /休息 ≠ 离开）"
+MESSAGE_REST_NOT_SAFE: str = "❌ 当前不在安全区，无法休息（回营地/安全地点再休息）"
 
 #: 冷却登记表键（1b 效果系统；BattleSnapshot.effect_cooldowns = {effect_id: 剩余回合}）。
 _COOLDOWN_KEYS: Tuple[str, ...] = ("effect_cooldowns", "cooldowns")

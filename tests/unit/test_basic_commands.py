@@ -350,7 +350,7 @@ def test_equip_view_page1():
     assert "头部" not in out and "手部" not in out
     assert "腿部" not in out and "脚部" not in out
     assert "当前页" not in out         # 不加翻页
-    assert lines[-1] == "Tip:发送'装备 穿 序号'穿戴装备，如'装备 穿 1'"
+    assert lines[-1] == "Tip:发送'使用 序号'穿戴装备，如'使用 1'"
 
 
 def test_equip_view_page2():
@@ -382,13 +382,13 @@ def test_equip_name_form_friendly_hint(raw):
     （命令合法，不走 TPL-12 泛化拒绝）。"""
     out = cmd_equip(parse(raw), make_ctx())
     assert out == bc.TPL_EQUIP_NAME_HINT
-    assert "/装备 穿 <序号>" in out
+    assert "/使用 <序号>" in out
 
 
 def test_equip_wear():
-    """/装备 穿 3 → 引擎 equip_wear 消息透传（切换语义）。"""
+    """2026-09-05 用户拍板：/装备 穿 禁用（穿戴统一 使用 序号）→ 提示改用。"""
     out = cmd_equip(parse("/装备 穿 3"), make_ctx())
-    assert out == "✅ 已装备：背包第 3 件"
+    assert "使用 3" in out and "穿戴" in out
 
 
 def test_equip_wear_compact():
@@ -396,6 +396,7 @@ def test_equip_wear_compact():
     （P2-11 QA：紧凑子词+序号需空格，给友好提示而非 TPL-12 泛化拒绝）。"""
     out = cmd_equip(parse("/装备穿3"), make_ctx())
     assert out == bc.TPL_EQUIP_NAME_HINT
+    assert "/使用" in out
 
 
 @pytest.mark.parametrize("raw", ["/装备 穿", "/装备 穿 abc", "/装备 穿 0"])
@@ -437,21 +438,19 @@ def test_equip_remove_missing_arg():
 
 
 def test_equip_engine_injected_message():
-    """/装备 穿 2 引擎自定义消息透传（装配层注入替身）。"""
+    """2026-09-05：/装备 穿 禁用后不再透传引擎——穿戴走 /使用（use_commands 覆盖）。"""
     eng = FakeEquipEngine(messages={"wear": "✅ 已切换：铁剑"})
     out = cmd_equip(parse("/装备 穿 2"), make_ctx(equip_engine=eng))
-    assert out == "✅ 已切换：铁剑"
+    assert "使用 2" in out  # 禁用提示（不执行穿戴）
 
 
-def test_equip_engine_missing_raises_wiring_pending(monkeypatch):
-    """【待接线】防御：装备引擎缺失（core.equipment 不可导入 + 未注入）→ RuntimeError 显式标注。"""
+def test_equip_engine_missing_wear_disabled_hint(monkeypatch):
+    """2026-09-05：/装备 穿 禁用——引擎缺失也不触发（分支不再调引擎），直接禁用提示。"""
     def boom(name):
         raise ImportError(f"no module {name}")
     monkeypatch.setattr(bc.importlib, "import_module", boom)
-    with pytest.raises(RuntimeError) as ei:
-        cmd_equip(parse("/装备 穿 1"), make_ctx(equip_engine=None))
-    assert "【待接线】" in str(ei.value)
-    assert "core/equipment.py" in str(ei.value)
+    out = cmd_equip(parse("/装备 穿 1"), make_ctx(equip_engine=None))
+    assert "使用 1" in out
 
 
 def test_resolve_equip_slot():
@@ -740,7 +739,7 @@ def test_footer_tpl08_exact():
     assert "当前页" not in cmd_view(parse("/角色"), ctx)
     assert "当前页：1/2(全部)" in cmd_bag(parse("/背包"), ctx)       # /背包 自定义模板
     assert "Tip:发送'使用+物品名'即可使用物品" in cmd_bag(parse("/背包"), ctx)
-    assert "Tip:发送'装备 穿 序号'穿戴装备，如'装备 穿 1'" in cmd_equip(parse("/装备"), ctx)   # 意见一：不加翻页
+    assert "Tip:发送'使用 序号'穿戴装备，如'使用 1'" in cmd_equip(parse("/装备"), ctx)   # 意见一：不加翻页
     assert "当前页：1/2" in cmd_skill(parse("/技能"), ctx)
     assert "当前页：1/2" in cmd_help(parse("/帮助 冒险"), ctx)
 

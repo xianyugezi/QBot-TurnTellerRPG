@@ -11,7 +11,7 @@ effects 含 heal）→ 扣减 + 回血；其他 → 不可直接使用。战斗�
 from __future__ import annotations
 
 import importlib
-from typing import Any, Callable, MutableMapping, Optional
+from typing import Any, Callable, Mapping, MutableMapping, Optional
 
 from .basic_commands import TPL_REGISTER_GATE, _equip_engine
 from .router import CommandSpec
@@ -41,6 +41,16 @@ def _inventory_engine(ctx: MutableMapping[str, Any]) -> Any:
         return eng
     mod = importlib.import_module("qbot_rpg.core.inventory")
     return mod.InventoryEngine()
+
+
+def _field(row: Any, key: str) -> Any:
+    """dict/对象兼容字段读取（2026-09-05：asdict 化行是 dict，getattr 失效）。"""
+    try:
+        if isinstance(row, Mapping):
+            return row.get(key)
+        return getattr(row, key, None)
+    except Exception:  # noqa: BLE001
+        return None
 
 
 def _resolve_player(ctx: MutableMapping[str, Any]) -> Optional[MutableMapping[str, Any]]:
@@ -89,10 +99,10 @@ def _resolve_row(
             return rows[index - 1], index
         return None, None
     for i, r in enumerate(rows, 1):
-        if str(getattr(r, "item_id", "") or "") == target:
+        if str(_field(r, "item_id") or "") == target:
             return r, i
     for i, r in enumerate(rows, 1):
-        if str(getattr(r, "name", "") or "") == target:
+        if str(_field(r, "name") or "") == target:
             return r, i
     return None, None
 
@@ -122,7 +132,7 @@ def _use_consumable(
     if heal_total <= 0:
         return tpl_of(ctx, "use_cannot_use")
     inv = _inventory_engine(ctx)
-    res = inv.remove_item(player, str(getattr(inst, "item_id", "") or ""), 1)
+    res = inv.remove_item(player, str(_field(inst, "item_id") or ""), 1)
     if not res.get("ok"):
         reason = str(res.get("reason") or "")
         if reason == "bound":
@@ -140,7 +150,7 @@ def _use_consumable(
     cur = int(player.get("hp") or 0)
     player["hp"] = min(max_hp, cur + heal_total)
     return tpl_of(ctx, "use_ok", {
-        "name": str(getattr(inst, "name", "") or ""),
+        "name": str(_field(inst, "name") or ""),
         "heal_total": heal_total,
     })
 
@@ -168,9 +178,12 @@ def cmd_use(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     inst, index = _resolve_row(player, target, ctx)
     if inst is None:
         return tpl_of(ctx, "use_no_item")
-    item_id = str(getattr(inst, "item_id", "") or "")
+    # 2026-09-05 修复：_resolve_player 对 Player dataclass 走 asdict → 背包行变 dict，
+    # getattr 取不到字段（item_id/slot 全空 → 装备被误判「不能直接使用」）。统一
+    # dict/对象兼容取值（与 basic_commands._is_equip_row 同口径）。
+    item_id = _field(inst, "item_id")
     item_def = _def_dict((ctx.get("items") or {}).get(item_id))
-    slot = getattr(inst, "slot", None) or item_def.get("slot")
+    slot = _field(inst, "slot") or item_def.get("slot")
     if slot:
         if index is None:
             return tpl_of(ctx, "use_no_item")

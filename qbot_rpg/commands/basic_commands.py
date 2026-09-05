@@ -156,7 +156,7 @@ TPL_NO_SLOT = "❌ 没有这个装备槽位"
 # /装备 名称形式（如 /装备 铁剑）→ 友好提示引导序号用法（P2-11 QA：名称被泛化
 # 拒绝回「❌ 指令不正确」，应提示 /装备 <序号>；命令合法，不走 TPL-12，对齐 TPL_NO_SLOT；
 # 模板配置化：basic_equip_name_hint）
-TPL_EQUIP_NAME_HINT = "❌ 装备指令：请用 /装备 穿 <序号> 穿戴（序号见 /背包），如 /装备 穿 3"
+TPL_EQUIP_NAME_HINT = "❌ 装备指令：穿戴请用 /使用 <序号>（序号见 /背包），如 /使用 1"
 
 # 品质四档（4b GRD-x 唯一注册表；RUL-19：仅非 normal 档标注）
 QUALITY_LABELS: Mapping[str, str] = {
@@ -665,7 +665,7 @@ def _currency_lines(ctx: Mapping[str, Any]) -> List[str]:
 # CakeGame 式尾段 Tip 内容（`Tip:` 之后部分，2026-08-27 用户拍板统一列表尾段；无斜杠指令名）
 _BAG_TAIL_TIP = "发送'使用+物品名'即可使用物品"      # /背包（含货币行 + 类型词）
 _VIEW_TAIL_TIP = "发送'装备'查看当前装备"           # /角色（属性面板下一步）
-_EQUIP_TAIL_TIP = "发送'装备 穿 序号'穿戴装备，如'装备 穿 1'"  # /装备（穿戴引导；2026-09-05 模拟器审计：原「使用 序号」不可用——装备是穿不是用，实测「装备 穿 N」成功穿戴、「使用 N」报不能直接使用）
+_EQUIP_TAIL_TIP = "发送'使用 序号'穿戴装备，如'使用 1'"  # /装备（穿戴引导；2026-09-05 用户拍板穿戴统一走 使用——「使用 N」实测可穿，勿教「装备 穿」）
 _SKILL_TAIL_TIP = "发送'技能 页码'翻页查看，如'技能 2'"  # /技能（技能列表翻页；2026-09-05 模拟器审计：原「帮助 技能」不可解析）
 _HELP_TAIL_TIP = "发送'帮助 组名'翻页查看指令"      # /帮助 目录/组页（旧通用文案）
 # 2026-09-05 实机反馈：帮助翻页提示不明确 + 紧凑形态「帮助2」「帮助冒险2」不可用。
@@ -770,7 +770,7 @@ def _render_bag_page(ctx: Mapping[str, Any], page: int) -> str:
     # （装备 穿 序号）矛盾——有装备 → Tip 含穿戴引导
     _btip = ""
     if _bag_has_equip(rows, ctx):
-        _btip = "发送'装备 穿 序号'穿戴装备；'使用 物品名'用消耗品"
+        _btip = "发送'使用 序号'穿戴装备；消耗品直接'使用 物品名'"
     lines.extend(_bag_tail_lines(res.page, res.total_pages, res.total, res.clamped, ctx,
                                  tip=_btip))
     return "\n".join(lines)
@@ -1357,13 +1357,15 @@ def cmd_equip(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         return _render_equip_page(ctx, 1)
     first = str(args[0])
     if first == SUB_WEAR:
+        # 2026-09-05 用户拍板：穿戴统一「使用 序号」——「装备 穿」是错误指令，
+        # 不再执行穿戴，提示改用（防旧攻略/肌肉记忆玩家误发后无反馈）
         seq = args[1] if len(args) > 1 else None
         n = parse_int(seq) if seq is not None else None
         if n is None or n < 1:
             return format_tpl12(_fragment(parsed))
         if len(args) > 2:
             return format_tpl12(_fragment(parsed))
-        return _cmd_equip_wear(ctx, n)
+        return tpl_of(ctx, "basic_equip_wear_disabled", {"seq": n})
     if first == SUB_REMOVE:
         slot_arg = args[1] if len(args) > 1 else None
         if slot_arg is None or len(args) > 2:

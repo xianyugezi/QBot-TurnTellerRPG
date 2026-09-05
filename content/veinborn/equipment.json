@@ -7,7 +7,8 @@
     "price": 400,
     "atk": 18,
     "usable": false,
-    "desc": "龙骨驿站新手脊刃，脉晶淬刃，猎师的第一把武器。"
+    "desc": "龙骨驿站新手脊刃，脉晶淬刃，猎师的第一把武器。",
+    "foc": 10
   },
   {
     "id": "ridge_blade_veteran",
@@ -38,7 +39,8 @@
     "usable": false,
     "desc": "幼兽皮鞣制的轻帽，轻便透气。",
     "hp": 40,
-    "dfn": 6
+    "dfn": 6,
+    "foc": 2
   },
   {
     "id": "cub_leather_body",
@@ -49,7 +51,8 @@
     "hp": 60,
     "usable": false,
     "desc": "幼兽皮鞣制的护甲，护住要害。",
-    "dfn": 10
+    "dfn": 10,
+    "foc": 2
   },
   {
     "id": "cub_leather_hand",
@@ -60,7 +63,8 @@
     "usable": false,
     "desc": "幼兽皮护手，灵活不碍手。",
     "atk": 2,
-    "dfn": 4
+    "dfn": 4,
+    "foc": 3
   },
   {
     "id": "cub_leather_leg",
@@ -70,7 +74,8 @@
     "price": 150,
     "usable": false,
     "desc": "幼兽皮护腿，耐磨。",
-    "dfn": 6
+    "dfn": 6,
+    "foc": 2
   },
   {
     "id": "cub_leather_foot",
@@ -81,7 +86,8 @@
     "agi": 2,
     "usable": false,
     "desc": "轻便靴，脉晶纹路助力。",
-    "dfn": 4
+    "dfn": 4,
+    "foc": 2
   },
   {
     "id": "ridge_bone_charm",
@@ -89,7 +95,7 @@
     "type": "accessory",
     "slot": "accessory",
     "price": 300,
-    "foc": 3,
+    "foc": 5,
     "usable": false,
     "desc": "脊骨磨制的护符，凝神聚气。"
   },

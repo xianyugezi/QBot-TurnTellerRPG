@@ -12,7 +12,7 @@
       "con": 147,
       "spr": 25,
       "foc": 20,
-      "agi": 12,
+      "agi": 36,
       "luk": 8
     },
     "weakness": {
@@ -188,7 +188,7 @@
       "con": 13,
       "spr": 10,
       "foc": 6,
-      "agi": 8,
+      "agi": 7,
       "luk": 6
     },
     "rewards": {
@@ -231,7 +231,7 @@
       "con": 19,
       "spr": 10,
       "foc": 10,
-      "agi": 12,
+      "agi": 10,
       "luk": 8
     },
     "rewards": {
@@ -385,7 +385,7 @@
       "con": 72,
       "spr": 25,
       "foc": 20,
-      "agi": 16,
+      "agi": 26,
       "luk": 10
     },
     "weakness": {

@@ -83,7 +83,10 @@ class QQGroupSim:
     """QQ 群模拟器：多玩家 + 机器人回复收集，驱动真实桥接层 _on_message。"""
 
     def __init__(self, pack_dir: Optional[str] = None) -> None:
-        self._msg_seq = 0
+        # message_id 全局唯一（时间戳基）：幂等键按 (message_id, group, qid) 判重，
+        # 跨进程固定从 1 重计会与旧存档键相撞 → 新指令被误判「已处理」（模拟器审计发现）
+        import time as _t
+        self._msg_seq = int(_t.time() * 1000) % 100000000
         # 群成员（玩家 qid 集合；存档按 qid 隔离，注册后各自成角色）
         self.players: List[str] = ["10001", "10002", "10003"]
         self.cur_player = "10001"
@@ -198,6 +201,8 @@ async def _repl(sim: QQGroupSim, start_player: str) -> None:
 
 
 def main() -> None:
+    # stdout 行缓冲（os._exit 强杀前不丢输出——print 缓冲在 _exit 时被丢弃）
+    sys.stdout.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
     ap = argparse.ArgumentParser(description="QQ 群消息收发模拟器")
     ap.add_argument("msgs", nargs="*", help="直接发送的指令（可多条）")
     ap.add_argument("--player", default="10001", help="发言人 qid（默认 10001）")

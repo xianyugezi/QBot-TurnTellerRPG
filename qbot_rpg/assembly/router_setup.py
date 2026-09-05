@@ -232,7 +232,7 @@ def build_router(deps: Any) -> Router:
     }
     for _name, _hint in _UNIMPLEMENTED_HINTS.items():
         if _name not in set(router.names()):
-            router.register(CommandSpec(_name, whitelisted=True,
+            router.register(CommandSpec(_name, whitelisted=True, is_stub=True,
                                         handler=_stub_unimplemented(_hint)))
 
     # RA-07 配置装载（鸭式挂载，见模块工程补白 2；setattr 规避 Router 无属性槽的

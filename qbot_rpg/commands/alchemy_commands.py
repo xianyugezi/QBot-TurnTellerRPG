@@ -800,7 +800,8 @@ async def cmd_alchemy(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     if parsed.error:
         return format_tpl12(_fragment(parsed))
     if not parsed.args:
-        return format_tpl12(f"/{ALCHEMY_CMD}")
+        # 2026-09-05 模拟器审计：裸发「炼金」报「指令不正确」误导——缺参给用法
+        return tpl_of(ctx, "alchemy_err_usage")
     target = _target_of(parsed)
     qty = parsed.qty if parsed.qty is not None else 1
     auto = bool(getattr(parsed, "fixed_subword", None) == AUTO_SUBWORD) or any(

@@ -665,8 +665,8 @@ def _currency_lines(ctx: Mapping[str, Any]) -> List[str]:
 # CakeGame 式尾段 Tip 内容（`Tip:` 之后部分，2026-08-27 用户拍板统一列表尾段；无斜杠指令名）
 _BAG_TAIL_TIP = "发送'使用+物品名'即可使用物品"      # /背包（含货币行 + 类型词）
 _VIEW_TAIL_TIP = "发送'装备'查看当前装备"           # /角色（属性面板下一步）
-_EQUIP_TAIL_TIP = "发送'使用 序号'穿戴装备。"      # /装备（穿戴引导；意见一同步：Tip 改「使用 序号」）
-_SKILL_TAIL_TIP = "发送'帮助 技能'查看技能说明"     # /技能（技能说明引导）
+_EQUIP_TAIL_TIP = "发送'装备 穿 序号'穿戴装备，如'装备 穿 1'"  # /装备（穿戴引导；2026-09-05 模拟器审计：原「使用 序号」不可用——装备是穿不是用，实测「装备 穿 N」成功穿戴、「使用 N」报不能直接使用）
+_SKILL_TAIL_TIP = "发送'技能 页码'翻页查看，如'技能 2'"  # /技能（技能列表翻页；2026-09-05 模拟器审计：原「帮助 技能」不可解析）
 _HELP_TAIL_TIP = "发送'帮助 组名'翻页查看指令"      # /帮助 目录/组页（旧通用文案）
 # 2026-09-05 实机反馈：帮助翻页提示不明确 + 紧凑形态「帮助2」「帮助冒险2」不可用。
 # 拆分目录/组页两个 Tip，教紧凑页码翻页（对应 cmd_help 已支持的 帮助<数字> 目录页 /
@@ -686,7 +686,12 @@ def _cake_tail(page: int, total_pages: int, *, category_word: Optional[str] = No
     tail = render_cake_tail(page, total_pages, category_word=category_word, tip=tip,
                             templates=templates)
     if clamped:
-        tail = tail.replace("\n", f"\n{LAST_PAGE_HINT}\n", 1)
+        # 2026-09-05 修复：tail 无换行（单页 tip 空）时 replace 不命中 → 提示丢失；
+        # 统一「当前页 →（已到最后一页）→ Tip」顺序：无 tip 时提示接尾
+        if "\n" in tail:
+            tail = tail.replace("\n", f"\n{LAST_PAGE_HINT}\n", 1)
+        else:
+            tail = f"{tail}\n{LAST_PAGE_HINT}" if tail else LAST_PAGE_HINT
     return tail
 
 
@@ -1573,8 +1578,21 @@ def _command_alias_display(ctx: Mapping[str, Any], name: str) -> str:
 
 
 def _help_groups(ctx: Mapping[str, Any]) -> Tuple[Tuple[str, Tuple[Tuple[str, str], ...]], ...]:
-    """分组目录：普通玩家 5 组；GM 追加第 6 组（B8/RUL-25，GM 判定 ctx["is_gm"]）。"""
+    """分组目录：普通玩家 5 组；GM 追加第 6 组（B8/RUL-25，GM 判定 ctx["is_gm"]）。
+
+    2026-09-05 模拟器审计动态化：装配层注入 ctx["registered_cmds"]（已注册非 stub
+    指令名）时，组内指令按注册表过滤——未实装 stub（采集/强化/调合/快捷绑定等）与
+    未注册词（合成等）不再出现在帮助里（玩家照帮助发出去不再是「尚未实装/指令不正确」）。
+    无注入键（单测直调）→ 静态全表（兼容旧行为）。
+    """
     groups = list(HELP_GROUPS)
+    reg = ctx.get("registered_cmds")
+    if isinstance(reg, (set, list, tuple)) and reg:
+        groups = [
+            (gname, tuple((cname, desc) for cname, desc in cmds if cname in reg))
+            for gname, cmds in groups
+        ]
+        groups = [(gname, cmds) for gname, cmds in groups if cmds]
     if ctx.get("is_gm"):
         groups.append(GM_HELP_GROUP)
     return tuple(groups)
@@ -1613,7 +1631,10 @@ def _render_help_directory(ctx: Mapping[str, Any], page: int) -> str:
     for i, g in enumerate(slice_groups):
         lines.append(_group_summary(ctx, g))
     if groups:
-        lines.append(_cake_tail(res.page, res.total_pages, tip=_HELP_DIR_TAIL_TIP, clamped=res.clamped,
+        # 2026-09-05 模拟器审计：目录仅 1 页时教「帮助2 翻页」是无效引导（普通玩家
+        # 5 组 1 页；GM 6 组 2 页才需要）——单页不渲染翻页 Tip
+        _dir_tip = _HELP_DIR_TAIL_TIP if (res.total_pages or 1) > 1 else ""
+        lines.append(_cake_tail(res.page, res.total_pages, tip=_dir_tip, clamped=res.clamped,
                                 templates=ctx.get("templates")))
     return "\n".join(lines)
 

@@ -350,7 +350,7 @@ def test_equip_view_page1():
     assert "头部" not in out and "手部" not in out
     assert "腿部" not in out and "脚部" not in out
     assert "当前页" not in out         # 不加翻页
-    assert lines[-1] == "Tip:发送'使用 序号'穿戴装备。"
+    assert lines[-1] == "Tip:发送'装备 穿 序号'穿戴装备，如'装备 穿 1'"
 
 
 def test_equip_view_page2():
@@ -740,7 +740,7 @@ def test_footer_tpl08_exact():
     assert "当前页" not in cmd_view(parse("/角色"), ctx)
     assert "当前页：1/2(全部)" in cmd_bag(parse("/背包"), ctx)       # /背包 自定义模板
     assert "Tip:发送'使用+物品名'即可使用物品" in cmd_bag(parse("/背包"), ctx)
-    assert "Tip:发送'使用 序号'穿戴装备。" in cmd_equip(parse("/装备"), ctx)   # 意见一：不加翻页
+    assert "Tip:发送'装备 穿 序号'穿戴装备，如'装备 穿 1'" in cmd_equip(parse("/装备"), ctx)   # 意见一：不加翻页
     assert "当前页：1/2" in cmd_skill(parse("/技能"), ctx)
     assert "当前页：1/2" in cmd_help(parse("/帮助 冒险"), ctx)
 

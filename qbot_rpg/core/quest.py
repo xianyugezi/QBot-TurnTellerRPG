@@ -622,16 +622,19 @@ def quest_board(ctx: Mapping[str, Any]) -> dict:
     # 无 settings 全局覆盖时 accept_limit 取 quest.board 或默认 5（D-07）。
     active_full = False
     if active_rows:
-        all_blocked = True
-        for _q, _s in main_rows + slot_rows["daily"] + slot_rows["weekly"] \
-                + slot_rows["event"] + npc_rows:
-            if not _is_acceptable(_q, ctx):
-                continue
-            lim = _accept_limit(ctx, _q)
-            if lim <= 0 or len(active_rows) < lim:
-                all_blocked = False
-                break
-        active_full = all_blocked
+        # 可接候选（_is_acceptable 过滤后）；无任何候选 → 非满员（「暂无新任务」场景，
+        # 2026-09-05 模拟器审计：链锁/完成全锁时误报满员——满员=有候选但都超限）
+        _cands = [(_q, _s) for _q, _s in main_rows + slot_rows["daily"]
+                  + slot_rows["weekly"] + slot_rows["event"] + npc_rows
+                  if _is_acceptable(_q, ctx)]
+        if _cands:
+            all_blocked = True
+            for _q, _s in _cands:
+                lim = _accept_limit(ctx, _q)
+                if lim <= 0 or len(active_rows) < lim:
+                    all_blocked = False
+                    break
+            active_full = all_blocked
     return {
         "ok": True,
         "sections": sections,
@@ -1029,7 +1032,7 @@ def quest_complete(quest_id: str, ctx: MutableMapping[str, Any]) -> dict:
         except Exception:  # noqa: BLE001 —— 引导提示失败不阻断结算
             next_name = None
     if next_name:
-        msg += f"\n新主线开放：{next_name}——发 任务 领取"
+        msg += f"\n新主线开放：{next_name}——发 任务 查看（板上领取）"
     return {
         "ok": True,
         "message": msg,

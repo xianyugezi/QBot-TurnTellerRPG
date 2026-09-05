@@ -156,6 +156,7 @@ class CommandSpec:
         handler: Optional[Callable[..., Any]] = None,
         whitelisted: bool = True,
         is_gm: bool = False,
+        is_stub: bool = False,
     ) -> None:
         if not name or not isinstance(name, str):
             raise ValueError(f"指令名必须为非空 str，收到 {name!r}")
@@ -166,6 +167,9 @@ class CommandSpec:
         self.handler = handler
         self.whitelisted = bool(whitelisted)
         self.is_gm = bool(is_gm)
+        # 2026-09-05 模拟器审计：stub（未实装占位）标记——帮助组按注册生成时
+        # 剔除/标注未实装指令，避免「帮助列了但发出去是尚未实装」的引导落差
+        self.is_stub = bool(is_stub)
 
     def matches(self, raw: str) -> bool:
         """指令名/别名匹配（触发模式 @/前缀/直接/敏感词，【框架】L1604）。"""

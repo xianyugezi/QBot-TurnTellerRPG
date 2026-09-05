@@ -208,10 +208,10 @@ async def test_alchemy_recipe_not_found() -> None:
 
 
 async def test_alchemy_missing_arg_tpl12() -> None:
-    """负例：/炼金 缺参 → TPL-12（指令不正确）。"""
+    """负例：/炼金 缺参 → 用法引导（2026-09-05：原 TPL-12 误导）。"""
     ctx = make_ctx()
     out = await cmd_alchemy(parse_command("/炼金"), ctx)
-    assert "指令不正确" in out
+    assert "请输入配方" in out
 
 
 # ---------------------------------------------------------------------------

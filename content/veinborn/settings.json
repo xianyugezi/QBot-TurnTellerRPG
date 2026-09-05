@@ -91,5 +91,9 @@
       "name": "脉玉",
       "max": 1
     }
-  }
+  },
+  "command_aliases": {
+    "任务": "领取任务"
+  },
+  "world_name": "蚀脉猎师"
 }

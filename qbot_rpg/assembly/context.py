@@ -1113,6 +1113,17 @@ def _inventory_hooks(ctx: MutableMapping[str, Any]) -> dict:
 # =============================================================================
 # make_context 工厂（A-01 核心）
 # =============================================================================
+def _registered_cmds_of(deps: Any) -> set:
+    """已注册且非 stub 的指令名（帮助组过滤用；deps 无 router → 空集不拦截）。"""
+    router = getattr(deps, "router", None)
+    if router is None:
+        return set()
+    try:
+        return {n for n in router.names() if not getattr(router.get(n), "is_stub", False)}
+    except Exception:  # noqa: BLE001 —— 注册表异常 → 空集（帮助退化为静态全表）
+        return set()
+
+
 async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
     """A-01 make_context 工厂：事件 + 装配依赖 → 完整玩家 ctx（读快照，RA-03 全字段）。
 
@@ -1169,6 +1180,10 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
         "qid": qid or None,  # M8 批14 部署实测：_qid_of 取 ctx["qid"]（会话主键 MUT-02），
         # 仅 qq_id 时 _qid_of 读不到 → session.player_qid=None → /投料 按 qid 查无会话；补键对齐
         "is_gm": bool(event.get("is_gm", False)),
+        # 2026-09-05 帮助动态化：已注册非 stub 指令名集合（deps.router 读；帮助组
+        # 表按此过滤——剔除未实装 stub（采集/强化等）与未注册词，防「帮助列了但
+        # 发出去是尚未实装/指令不正确」的引导落差）
+        "registered_cmds": _registered_cmds_of(deps),
         # M8 批13 审查收口（P0-2 终态结算注入断裂）：message_id 透传——
         # /确认 /放弃 的 SettleEngine gate `if message_id:` 依赖它走 settle_alchemy
         # （delete_session+write_idem_key 同事务）；缺失则终态不删会话不落幂等键。

@@ -376,10 +376,17 @@ def render_board(board: Mapping[str, Any], page: object, *,
                             templates=ctx.get("templates") if isinstance(ctx, Mapping) else None)
     if res.clamped:
         tail = tail.replace("\n", f"\n{LAST_PAGE_HINT}\n", 1)
+    # 2026-09-05 模拟器审计：仅进行中（无任何可接行）时「任务 领取 序号」Tip 是
+    # 无效引导（无可领对象）。判定：pairs 存在非「进行中」区行 = 有可接取内容。
+    _active_title = "进行中"
+    _has_accept = any(t and t != _active_title for t, _ in pairs)
     # 满员提示（2026-09-05 审计 B 路 P2：进行中满 → Tip 换「先腾位」，防玩家点可接行被拒）
     if board.get("active_full"):
         full_note = tpl_of(ctx, "quest_board_active_full_note")
         tail = tail.replace(_BOARD_TAIL_TIP, full_note, 1)
+    elif not _has_accept:
+        no_new = tpl_of(ctx, "quest_board_no_accept_note")
+        tail = tail.replace(_BOARD_TAIL_TIP, no_new, 1)
     lines.append(tail)
     return "\n".join(lines)
 
@@ -476,6 +483,15 @@ def cmd_quest(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     """
     if parsed.error:
         return format_tpl12(_fragment(parsed))
+    # 2026-09-05 模拟器审计修复：旧引导形态「领取任务 N/领取任务N」——曾教玩家
+    # 这么发但白名单静默忽略。现注册为「任务」别名（Router aliases），此处把
+    # alias 触发的 N 归一为接取子词（原 args=["N"] 会误走页码路径）。
+    if getattr(parsed, "mode", None) == "alias" and getattr(parsed, "display_name", None) == "领取任务":
+        args0 = list(getattr(parsed, "args", None) or [])
+        n = parse_int(args0[0]) if args0 else None
+        if n is None or n < 1:
+            return format_tpl12(_fragment(parsed))
+        return cmd_quest_accept(ctx, n)
     gate = _gate(ctx)
     if gate is not None:
         return gate
@@ -529,5 +545,7 @@ def register_quest_commands(router: Any, *, make_context: Optional[Callable[[Any
             return cmd_quest(parsed, injected)
         return cmd_quest(parsed, _ctx(parsed))
 
-    router.register(CommandSpec(QUEST_CMD, handler=_quest))
+    # 2026-09-05 模拟器审计：旧引导形态「领取任务 N」注册为别名（防静默坑——
+    # 曾教玩家这么发但顶层白名单忽略；归一逻辑见 cmd_quest alias 分支）
+    router.register(CommandSpec(QUEST_CMD, handler=_quest, aliases=["领取任务"]))
     return router

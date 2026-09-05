@@ -196,7 +196,12 @@ def _safe_format_tail(template: str, page: int, total_pages: int,
         key = m.group(1)
         return str(data.get(key, m.group(0)))
 
-    return re.sub(r"\{([a-zA-Z0-9_]+)\}", _sub, template)
+    out = re.sub(r"\{([a-zA-Z0-9_]+)\}", _sub, template)
+    # 2026-09-05 模拟器审计：tip 为空时模板 `Tip:{tip}` 会留下空 `Tip:` 行——
+    # 单页列表（无翻页引导）不该出现悬空 Tip；去掉整行
+    if not tip:
+        out = re.sub(r"(^|\n)\s*Tip:\s*($|\n)", "\1", out)
+    return out
 
 
 def _default_item_line(index: int, item: Any) -> str:

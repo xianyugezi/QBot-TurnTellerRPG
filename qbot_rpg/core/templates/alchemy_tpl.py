@@ -91,6 +91,8 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     "alchemy_abandon_fail": "❌ 放弃失败",
     "alchemy_decompose_body": "✅ {items}",
     "alchemy_decompose_empty": "✅ 分解成功",
+    # 2026-09-05 模拟器审计：裸发「炼金」报「指令不正确」误导——缺参给用法
+    "alchemy_err_usage": "炼金：请输入配方（炼金 <配方>），发 帮助 查看炼金相关指令",
     "alchemy_decompose_gem": " + 宝石×{gem}",
     "alchemy_decompose_rate": "（回收 {pct}%）",
     "alchemy_decompose_fail": "❌ 分解失败",

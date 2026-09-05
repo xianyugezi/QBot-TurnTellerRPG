@@ -1252,7 +1252,9 @@ def cmd_forge(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     # 无 tokens 兜底用 args（直测 parse_command 均带 tokens；防御形态）
     body = raw_tokens[1:] if raw_tokens else args
     if not body and not args:
-        return format_tpl12(_fragment(parsed))
+        # 2026-09-05 模拟器审计：裸发「锻造」报「指令不正确」误导（像指令不存在）——
+        # 缺参应给用法引导（forge_err_empty 模板，内容包可覆盖）
+        return tpl_of(ctx, "forge_err_empty")
     # 显式「预览」子词：fixed_subword 或 token/args 中的「预览」标记（P-05 顺序兼容 `预览 *N`）
     fixed = getattr(parsed, "fixed_subword", None)
     has_preview = fixed == PREVIEW_SUBWORD or PREVIEW_SUBWORD in body or PREVIEW_SUBWORD in args

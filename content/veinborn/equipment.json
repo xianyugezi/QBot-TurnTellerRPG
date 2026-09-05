@@ -35,10 +35,10 @@
     "type": "armor",
     "slot": "head",
     "price": 200,
-    "def": 6,
     "usable": false,
     "desc": "幼兽皮鞣制的轻帽，轻便透气。",
-    "hp": 40
+    "hp": 40,
+    "dfn": 6
   },
   {
     "id": "cub_leather_body",
@@ -46,10 +46,10 @@
     "type": "armor",
     "slot": "body",
     "price": 300,
-    "def": 10,
     "hp": 60,
     "usable": false,
-    "desc": "幼兽皮鞣制的护甲，护住要害。"
+    "desc": "幼兽皮鞣制的护甲，护住要害。",
+    "dfn": 10
   },
   {
     "id": "cub_leather_hand",
@@ -57,10 +57,10 @@
     "type": "armor",
     "slot": "hand",
     "price": 150,
-    "def": 4,
     "usable": false,
     "desc": "幼兽皮护手，灵活不碍手。",
-    "atk": 2
+    "atk": 2,
+    "dfn": 4
   },
   {
     "id": "cub_leather_leg",
@@ -68,9 +68,9 @@
     "type": "armor",
     "slot": "leg",
     "price": 150,
-    "def": 6,
     "usable": false,
-    "desc": "幼兽皮护腿，耐磨。"
+    "desc": "幼兽皮护腿，耐磨。",
+    "dfn": 6
   },
   {
     "id": "cub_leather_foot",
@@ -78,10 +78,10 @@
     "type": "armor",
     "slot": "foot",
     "price": 150,
-    "def": 4,
     "agi": 2,
     "usable": false,
-    "desc": "轻便靴，脉晶纹路助力。"
+    "desc": "轻便靴，脉晶纹路助力。",
+    "dfn": 4
   },
   {
     "id": "ridge_bone_charm",

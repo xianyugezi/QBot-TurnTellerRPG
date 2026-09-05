@@ -759,20 +759,8 @@ def dispatch_round(
                     resolve_event_key(ctx, "怪物击杀"),
                     instance={"tag": "event"},
                 )
-                # M12.5/veinborn 收口：击杀累计计数（longline_counters.kill_count.<怪id>
-                # nested；任务/成就 kill_count 条件读取源——原只 bump 事件 flat 键，
-                # kill_count 条件恒 0）
-                try:
-                    _ll = ctx.get("longline_counters")
-                    if isinstance(_ll, MutableMapping):
-                        _kc = _ll.get("kill_count")
-                        if not isinstance(_kc, MutableMapping):
-                            _kc = {}
-                            _ll["kill_count"] = _kc
-                        _mid = str(e.get("id") or e.get("monster_id") or e_name)
-                        _kc[_mid] = int(_kc.get(_mid, 0)) + 1
-                except Exception:
-                    pass
+                # 击杀累计计数（kill_count）由 settle_battle_rewards 统一写
+                # （battle_reward.py ④ 段，Player 实例/ctx 就地 bump；此处不写防双计）
                 log_first_kill(
                     cast(MutableMapping, ctx), e_name,
                     monster_id=str(e.get("id") or e.get("monster_id") or e_name),

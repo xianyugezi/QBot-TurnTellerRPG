@@ -1114,6 +1114,16 @@ class EquipmentEngineAdapter:
             d = dataclasses.asdict(p)
             if isinstance(ctx, MutableMapping):
                 ctx["player"] = d
+                # M12.5/veinborn kill_count 落档断链：asdict 深拷贝切断 ctx 共享键
+                # （longline_counters/currencies 等）与 player 子结构的引用——战斗写
+                # ctx["longline_counters"] 落在旧对象上，落档（读 d["longline_counters"]）
+                # 拿空。asdict 后重挂 ctx 共享键 → 新 dict 子结构（就地改 = 落档保留）。
+                for _k in ("longline_counters", "currencies", "event_counts",
+                           "quest_active", "quest_completed", "quest_daily",
+                           "reputation_state", "codex_state", "title_state"):
+                    _sub = d.get(_k)
+                    if isinstance(_sub, MutableMapping) and _k in ctx:
+                        ctx[_k] = _sub
             return d
         return None
 

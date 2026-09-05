@@ -349,9 +349,28 @@ def settle_battle_rewards(
                 else:
                     settings = ctx.get("settings")
                     settings = settings if isinstance(settings, Mapping) else {}
+                    # M12.5/veinborn：职业 growth 注入（LVL-06 白值累加依赖——
+                    # 原构造只传 level_cap/exp_curve → growth 默认 {} → 升级不涨
+                    # 白值（atk/dfn/foc/hp 恒注册值）。ctx["jobs"] 表找当前职业 growth
+                    _growth: Dict[str, float] = {}
+                    try:
+                        _jb = ctx.get("jobs")
+                        _jid = str(player.get("job_id") or "novice")
+                        _job = _jb.get(_jid) if isinstance(_jb, Mapping) else None
+                        if isinstance(_job, Mapping):
+                            _g = _job.get("growth")
+                            if isinstance(_g, Mapping):
+                                _growth = {str(k): float(v) for k, v in _g.items()}
+                            else:
+                                _graw = getattr(_job, "growth", None)
+                                if isinstance(_graw, Mapping):
+                                    _growth = {str(k): float(v) for k, v in _graw.items()}
+                    except (TypeError, ValueError):
+                        _growth = {}
                     eng = LevelUpEngine(
                         level_cap=int(settings.get("level_cap", 45) or 45),
                         exp_curve=settings.get("exp_curve"),
+                        growth=_growth,
                     )
                     res = eng.gain_exp(player, exp_amt)
                     if isinstance(res, Mapping) and res.get("ok"):
@@ -409,6 +428,34 @@ def settle_battle_rewards(
 
     # ④ 玩家变更提交（Player → dataclasses.replace 新实例写回 ctx["player"]；
     #    dict 形态 → ctx 计数映射合并进 work["inventory"]）
+    # M12.5/veinborn 击杀计数（kill_count 条件数据源）：写 orig 实例/ctx 的
+    # longline_counters.kill_count.<怪id> 就地 bump——Player 形态 orig 是实例
+    # （可变子结构就地改 = 落档保留；_commit_player replace 不替换 longline_
+    # counters，写 work 副本会丢）；dict 形态写 ctx（runner 落档 dict 分支读
+    # player.longline_counters——ctx 已引用 player 子结构）。
+    try:
+        _eid = str(enemy_entry.get("id") or "")
+        if _eid:
+            if isinstance(orig_player, Player):
+                _ll = orig_player.longline_counters
+                if isinstance(_ll, MutableMapping):
+                    _kc = _ll.get("kill_count")
+                    if not isinstance(_kc, MutableMapping):
+                        _kc = {}
+                        _ll["kill_count"] = _kc
+                    _kc[_eid] = int(_kc.get(_eid, 0) or 0) + 1
+            else:
+                _ll = player.get("longline_counters")
+                if not isinstance(_ll, MutableMapping):
+                    _ll = {}
+                    player["longline_counters"] = _ll
+                _kc = _ll.get("kill_count")
+                if not isinstance(_kc, MutableMapping):
+                    _kc = {}
+                    _ll["kill_count"] = _kc
+                _kc[_eid] = int(_kc.get(_eid, 0) or 0) + 1
+    except Exception:
+        pass
     try:
         if entries or drop_items or player:
             _commit_player(ctx, orig_player, player)

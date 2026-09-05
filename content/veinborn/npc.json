@@ -14,9 +14,11 @@
           "text": "请教狩猎（接引导任务）",
           "action": "quest",
           "quests": [
+            { "quest_id": "q_tut0_first_blade" },
             { "quest_id": "q_tut1_hunt_cubs" },
-            { "quest_id": "q_tut2_wolf_pelt" },
-            { "quest_id": "q_tut3_gravel_armor" }
+            { "quest_id": "q_tut2_buy_charm" },
+            { "quest_id": "q_tut3_wolf_pelt" },
+            { "quest_id": "q_tut4_gravel_armor" }
           ]
         },
         {
@@ -34,16 +36,20 @@
         "action": "quest",
         "text": "请教狩猎",
         "quests": [
+          { "quest_id": "q_tut0_first_blade" },
           { "quest_id": "q_tut1_hunt_cubs" },
-          { "quest_id": "q_tut2_wolf_pelt" },
-          { "quest_id": "q_tut3_gravel_armor" }
+          { "quest_id": "q_tut2_buy_charm" },
+          { "quest_id": "q_tut3_wolf_pelt" },
+          { "quest_id": "q_tut4_gravel_armor" }
         ]
       }
     ],
     "quests": [
+      { "quest_id": "q_tut0_first_blade" },
       { "quest_id": "q_tut1_hunt_cubs" },
-      { "quest_id": "q_tut2_wolf_pelt" },
-      { "quest_id": "q_tut3_gravel_armor" }
+      { "quest_id": "q_tut2_buy_charm" },
+      { "quest_id": "q_tut3_wolf_pelt" },
+      { "quest_id": "q_tut4_gravel_armor" }
     ]
   }
 ]

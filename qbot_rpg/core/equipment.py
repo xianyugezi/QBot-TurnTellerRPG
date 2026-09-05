@@ -61,6 +61,14 @@ from qbot_rpg.data.player import EquipmentSlot, PlayerAttributes
 __all__ = ["EquipmentEngine", "validate_slot_exclusions", "DEFAULT_SLOT_NAMES", "DEFAULT_SLOT_ORDER"]
 
 
+def _row_item_id(row: Any) -> str:
+    """背包行 item_id 双读（ItemInstance 实例 / asdict dict 形态；M12.5/veinborn
+    适配层 asdict 链路兼容——背包列表混入 dict 行时引擎不崩）。"""
+    if isinstance(row, Mapping):
+        return str(row.get("item_id") or "")
+    return str(getattr(row, "item_id", "") or "")
+
+
 def _attrs_from_dict(attrs: Mapping[str, Any]) -> PlayerAttributes:
     """dict 形态 attributes → PlayerAttributes（M12.5/veinborn：适配层 asdict 链路
     兼容——引擎契约收 PlayerAttributes，装配层 asdict 后为 dict）。"""
@@ -229,7 +237,7 @@ class EquipmentEngine:
         故不以 slot 匹配；同 item_id 多件词条**不再假设一致**——精确穿戴行解析走
         `_resolve_worn_row`（_worn_refs 行引用优先），本函数仅作兜底匹配源。
         """
-        return [r for r in inv if r.item_id == item_id]
+        return [r for r in inv if _row_item_id(r) == item_id]
 
     def _worn_refs(self, player: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         """穿戴行引用表 {slot_id: 背包行对象引用}（P1-1/P1-2 修复，引擎私有进程态）。
@@ -256,7 +264,7 @@ class EquipmentEngine:
                 if r is ref:
                     return r
         for r in inv:
-            if r.item_id == item_id:
+            if _row_item_id(r) == item_id:
                 return r
         return None
 
@@ -409,7 +417,7 @@ class EquipmentEngine:
         _oid = str(_oid or "")
         _oname = str(_oname or "")
         inv = self._inv(player)
-        if not any(r.item_id == _oid for r in inv):
+        if not any(_row_item_id(r) == _oid for r in inv):
             inv.append(ItemInstance(
                 item_id=_oid, name=_oname, count=1, quality="normal",
                 bound=False, stack_max=1,
@@ -438,13 +446,23 @@ class EquipmentEngine:
             if isinstance(equipment, Mapping):
                 inv = self._inv(player)
                 for slot_id, slot_obj in equipment.items():
-                    item_id = getattr(slot_obj, "item_id", None) or slot_id
+                    # M12.5/veinborn：槽实例 dict 形态双读（asdict 链路——dict getattr
+                    # 失效 → 原回落 slot_id 当 item_id 找背包行 → 全 miss 聚合丢词条）
+                    _iid = (
+                        slot_obj.get("item_id") if isinstance(slot_obj, Mapping)
+                        else getattr(slot_obj, "item_id", None)
+                    )
+                    item_id = str(_iid) if _iid else slot_id
                     # P1-1/P1-2 修复（M6 批1A/1B 审查）：精确穿戴行解析——_worn_refs
                     # 行引用优先（同 item_id 多件/异词条只取穿戴行），兜底 item_id 首行。
                     worn = self._resolve_worn_row(player, slot_id, str(item_id))
                     if worn is None:
                         continue
-                    bonus = getattr(worn, "stats_bonus", None)
+                    # M12.5/veinborn：背包行 dict 形态 stats_bonus 双读
+                    bonus = (
+                        worn.get("stats_bonus") if isinstance(worn, Mapping)
+                        else getattr(worn, "stats_bonus", None)
+                    )
                     if isinstance(bonus, Mapping):
                         for k, v in bonus.items():
                             try:

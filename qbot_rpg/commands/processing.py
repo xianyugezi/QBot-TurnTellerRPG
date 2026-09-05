@@ -252,6 +252,15 @@ class PerPlayerQueue:
                 return result
         except Exception as exc:  # noqa: BLE001 —— 队列任务异常须捕获转人话（POOL-4），不静默吞
             # tx() 已 ROLLBACK（IDEM-6）
+            # 可观测性（veinborn 排障）：异常详情落 logger（含栈），线上同源排查
+            try:
+                import logging
+
+                logging.getLogger("qbot_rpg.processing").warning(
+                    "指令处理异常（已回滚）: %s", exc, exc_info=True
+                )
+            except Exception:
+                pass
             return _failure_reply(key.command, exc)
 
 

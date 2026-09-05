@@ -31,6 +31,7 @@ from typing import (
     Callable,
     Dict,
     List,
+    Mapping,
     Optional,
     Sequence,
     Set,
@@ -147,6 +148,14 @@ def player_to_row(player: Player) -> Dict[str, Any]:
     """
     persistent = dict(player.persistent_state)
     persistent[_JOB_ID_KEY] = player.job_id
+    # M12.5/veinborn：equipment/inventory 值兼容 dict 形态（适配层 asdict 链路写入
+    # dict 槽实例/背包行；_player_from_dict 重建时 equipment 保留原值未归一 dataclass
+    # → 此处对 dict 调 asdict 崩「asdict() should be called on dataclass instances」）
+    def _asdict_row(v: Any) -> Any:
+        if v is None:
+            return None
+        return dataclasses.asdict(v) if not isinstance(v, Mapping) else dict(v)
+
     return {
         "player_qid": player.qid,
         "nickname": player.name,
@@ -155,8 +164,8 @@ def player_to_row(player: Player) -> Dict[str, Any]:
         "hp": player.hp,
         "mp": player.mp,
         "currencies": _j(player.currencies),
-        "inventory": _j([dataclasses.asdict(i) for i in player.inventory]),
-        "equipment": _j({s: dataclasses.asdict(e) for s, e in player.equipment.items()}),
+        "inventory": _j([_asdict_row(i) for i in player.inventory]),
+        "equipment": _j({s: _asdict_row(e) for s, e in player.equipment.items()}),
         "stats": _j(dataclasses.asdict(player.attributes)),
         "persistent_state": _j(persistent),
         "longline_counters": _j(player.longline_counters),

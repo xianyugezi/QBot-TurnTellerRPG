@@ -140,5 +140,13 @@
     "price": 40,
     "usable": false,
     "desc": "脊脉地层的精炼矿石。"
+  },
+  {
+    "id": "pulse_candy",
+    "name": "脉糖",
+    "type": "material",
+    "price": 15,
+    "usable": true,
+    "desc": "脉矿甜味的硬糖，代工助手的能源。"
   }
 ]

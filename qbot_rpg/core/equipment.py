@@ -60,6 +60,24 @@ from qbot_rpg.data.player import EquipmentSlot, PlayerAttributes
 
 __all__ = ["EquipmentEngine", "validate_slot_exclusions", "DEFAULT_SLOT_NAMES", "DEFAULT_SLOT_ORDER"]
 
+
+def _attrs_from_dict(attrs: Mapping[str, Any]) -> PlayerAttributes:
+    """dict 形态 attributes → PlayerAttributes（M12.5/veinborn：适配层 asdict 链路
+    兼容——引擎契约收 PlayerAttributes，装配层 asdict 后为 dict）。"""
+    def _sub(key: str, subkey: str) -> Dict[str, float]:
+        node = attrs.get(key) if isinstance(attrs, Mapping) else None
+        sub = node.get(subkey) if isinstance(node, Mapping) else None
+        return {str(k): float(v) for k, v in sub.items()} if isinstance(sub, Mapping) else {}
+
+    _b = attrs.get("base")
+    _c = attrs.get("cond")
+    return PlayerAttributes(
+        base={str(k): float(v) for k, v in _b.items()} if isinstance(_b, Mapping) else {},
+        bonus={"flat": _sub("bonus", "flat"), "pct": _sub("bonus", "pct")},
+        temp={"pct": _sub("temp", "pct"), "flat": _sub("temp", "flat")},
+        cond={str(k): float(v) for k, v in _c.items()} if isinstance(_c, Mapping) else {},
+    )
+
 # 槽位缺省中文名（slots.json 未配置时兜底；与 commands/basic_commands.DEFAULT_SLOT_NAMES
 # 同值，工程补白 3）
 DEFAULT_SLOT_NAMES: Dict[str, str] = {
@@ -246,11 +264,17 @@ class EquipmentEngine:
         """aggregate_bonus（EQP-06）→ 全链重算（EQP-07）→ 返回 {snapshot, final_attributes}。"""
         snapshot = self.aggregate_bonus(player)
         attributes = player.get("attributes")
-        final = (
-            calc_all_final_attributes(attributes)
-            if isinstance(attributes, PlayerAttributes)
-            else {}
-        )
+        # M12.5/veinborn：dict attributes（asdict 链路）转 PlayerAttributes 重算，
+        # 否则 final 恒 {}（calc_all 只认实例）
+        if isinstance(attributes, PlayerAttributes):
+            final = calc_all_final_attributes(attributes)
+        elif isinstance(attributes, Mapping):
+            try:
+                final = calc_all_final_attributes(_attrs_from_dict(attributes))
+            except (TypeError, ValueError):
+                final = {}
+        else:
+            final = {}
         return {"snapshot": snapshot, "final_attributes": final}
 
     # ------------------------------------------------------------------
@@ -336,10 +360,12 @@ class EquipmentEngine:
         old = equipment.get(slot)
         replaced: Optional[str] = None
         if old is not None:
-            replaced = old.item_id
+            # M12.5/veinborn：装配层 asdict 后槽位实例为 dict 形态——item_id 双读
+            replaced = old.get("item_id") if isinstance(old, Mapping) else old.item_id
 
         # B-3 双向一致：equipment[slot] 更新为槽实例（同件重穿保留既有强化/镶嵌）
-        if old is not None and old.item_id == item.item_id:
+        old_iid = old.get("item_id") if isinstance(old, Mapping) else getattr(old, "item_id", None)
+        if old is not None and old_iid == item.item_id:
             equipment[slot] = old
         else:
             equipment[slot] = EquipmentSlot(item_id=item.item_id, name=item.name)
@@ -377,10 +403,15 @@ class EquipmentEngine:
         # EQP-05：槽位清空 → 回包。背包行 slot=可装备类型恒定保留（工程补白 2/8）；
         # 若背包已无对应行（状态不一致，B-3 兜底）→ 生成一行（EquipmentSlot 不含词条/
         # 品质/绑定，按缺省补全，装配层如需还原完整实例经 items 注册表补齐——工程补白）
+        # M12.5/veinborn：槽位实例 dict 形态双读（asdict 链路）
+        _oid = old.get("item_id") if isinstance(old, Mapping) else getattr(old, "item_id", "")
+        _oname = old.get("name") if isinstance(old, Mapping) else getattr(old, "name", "")
+        _oid = str(_oid or "")
+        _oname = str(_oname or "")
         inv = self._inv(player)
-        if not any(r.item_id == old.item_id for r in inv):
+        if not any(r.item_id == _oid for r in inv):
             inv.append(ItemInstance(
-                item_id=old.item_id, name=old.name, count=1, quality="normal",
+                item_id=_oid, name=_oname, count=1, quality="normal",
                 bound=False, stack_max=1,
             ))
         del equipment[slot]
@@ -391,7 +422,7 @@ class EquipmentEngine:
         return {
             "ok": True,
             "slot": slot,
-            "item_id": old.item_id,
+            "item_id": _oid,
             "returned_to_bag": True,
             "snapshot": recalc["snapshot"],
             "final_attributes": recalc["final_attributes"],
@@ -431,6 +462,16 @@ class EquipmentEngine:
         if isinstance(attributes, PlayerAttributes):
             attributes.bonus["flat"] = flat
             attributes.bonus["pct"] = pct
+        elif isinstance(attributes, MutableMapping):
+            # M12.5/veinborn：装配层 asdict 后 attributes 为 dict 形态（适配层
+            # basic_commands._player asdict(Player) 写回 ctx）——聚合结果写回 dict
+            # bonus 子键（引擎契约兼容，否则穿装加成恒丢）
+            _bn = attributes.get("bonus")
+            if not isinstance(_bn, MutableMapping):
+                _bn = {}
+                attributes["bonus"] = _bn
+            _bn["flat"] = flat
+            _bn["pct"] = pct
         return {"flat": flat, "pct": pct}
 
     def equip_search(self, query: Any, encode: bool = True) -> Any:

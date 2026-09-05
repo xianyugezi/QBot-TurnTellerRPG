@@ -1093,7 +1093,13 @@ def validate_quests(modules: Mapping[str, object], report: object) -> None:
 
     refs = _Refs()
     refs.quest_ids = _id_set(modules, QUEST_MODULE)
-    refs.item_ids = _id_set(modules, "items")
+    # M12.5/veinborn 收口：quest reward 引用集 items∪equipment 同库（item_lib 语义，
+    # 对齐 shop 校验 a46d457；否则装备作为任务奖励被红拦「items.json 不存在」）
+    item_ids = _id_set(modules, "items")
+    equip_ids = _id_set(modules, "equipment")
+    if item_ids is not None:
+        item_ids = item_ids | (equip_ids or set())
+    refs.item_ids = item_ids
     refs.zone_ids = _zone_union(modules)
     refs.npc_ids = _id_set(modules, "npc")
     refs.currency_ids = _settings_currency_ids(modules)

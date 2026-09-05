@@ -1253,8 +1253,11 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
                 "quest_active": _quest_active_init(ps),
                 "quest_completed": _ps_init(ps, "quest_completed", []),
                 "quest_daily": _ps_init(ps, "quest_daily", {}),
-                "longline_counters": dict(player.longline_counters)
-                if isinstance(player.longline_counters, Mapping)
+                # M12.5/veinborn 收口：ctx["longline_counters"] 直接引用 player 实例
+                # （同 currencies 修复模式 M8 批12）——原 dict() 拷贝致战斗/成就写
+                # kill_count 只改副本、Player 落档路径不回写丢失（任务 kill_count 恒 0）
+                "longline_counters": player.longline_counters
+                if isinstance(player.longline_counters, MutableMapping)
                 else {},
                 "event_counts": _ps_init(ps, "event_counts", {}),
                 # M8 批12 验收收口裁决（落档缺口修复）：ctx["currencies"] 直接引用

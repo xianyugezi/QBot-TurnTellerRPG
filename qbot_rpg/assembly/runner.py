@@ -385,7 +385,32 @@ def _player_from_dict(d: Mapping[str, Any], qid: str) -> Player:
     核心逻辑: 字段映射 + 缺省兜底（inventory/equipment/attributes 等按 Player 默认）。
     """
     attrs = d.get("attributes")
-    attributes = attrs if isinstance(attrs, PlayerAttributes) else PlayerAttributes()
+    # M12.5/veinborn 收口：attributes dict 形态重建（注册链路经 dict 化后
+    # PlayerAttributes 实例丢失 → 落档 base 空 → 玩家白值全丢。dict 键空间对齐
+    # data/player.PlayerAttributes：base/bonus{flat,pct}/temp{pct,flat}/cond）
+    if isinstance(attrs, PlayerAttributes):
+        attributes = attrs
+    elif isinstance(attrs, Mapping):
+        try:
+            def _sub(m: Any, key: str, subkey: str) -> Dict[str, float]:
+                node = m.get(key) if isinstance(m, Mapping) else None
+                sub = node.get(subkey) if isinstance(node, Mapping) else None
+                return {str(k): float(v) for k, v in sub.items()} if isinstance(sub, Mapping) else {}
+
+            _b = attrs.get("base")
+            attributes = PlayerAttributes(
+                base={str(k): float(v) for k, v in _b.items()} if isinstance(_b, Mapping) else {},
+                bonus={"flat": _sub(attrs, "bonus", "flat"),
+                       "pct": _sub(attrs, "bonus", "pct")},
+                temp={"pct": _sub(attrs, "temp", "pct"),
+                      "flat": _sub(attrs, "temp", "flat")},
+                cond={str(k): float(v) for k, v in (attrs.get("cond") or {}).items()}
+                if isinstance(attrs.get("cond"), Mapping) else {},
+            )
+        except (TypeError, ValueError):
+            attributes = PlayerAttributes()
+    else:
+        attributes = PlayerAttributes()
     return Player(
         qid=qid,
         name=str(d.get("name") or ""),

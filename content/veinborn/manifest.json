@@ -18,6 +18,8 @@
     "maps",
     "items",
     "equipment",
-    "shop"
+    "shop",
+    "quest",
+    "npc"
   ]
 }

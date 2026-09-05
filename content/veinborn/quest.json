@@ -1,0 +1,94 @@
+[
+  {
+    "id": "q_tut0_first_blade",
+    "name": "猎师的见面礼",
+    "type": "deliver",
+    "desc": "老猎人·驼脊：新猎师总得有把趁手的家伙。来领你的第一把脊刃吧。",
+    "zone": "a1_bone_field",
+    "main": true,
+    "consume": false,
+    "repeatable": false,
+    "conditions": [
+      {
+        "var": "level",
+        "op": "ge",
+        "value": 1
+      }
+    ],
+    "reward": [
+      { "item": "ridge_blade_starter", "count": 1 }
+    ],
+    "npc": { "id": "npc_old_hunter" }
+  },
+  {
+    "id": "q_tut1_hunt_cubs",
+    "name": "猎师的第一刀",
+    "type": "slay",
+    "desc": "老猎人·驼脊：拿上砺脊刃，去骸骨草场猎杀 2 只脊冢幼兽试试身手。",
+    "zone": "a1_bone_field",
+    "main": true,
+    "consume": false,
+    "repeatable": false,
+    "unlock_chain": "q_tut0_first_blade",
+    "conditions": [
+      {
+        "var": "kill_count",
+        "op": "ge",
+        "value": 2,
+        "param": "ridge_cub"
+      }
+    ],
+    "reward": [
+      { "item": "cub_leather_body", "count": 1 },
+      { "item": "cub_leather_helm", "count": 1 }
+    ],
+    "npc": { "id": "npc_old_hunter" }
+  },
+  {
+    "id": "q_tut2_wolf_pelt",
+    "name": "荒原的馈赠",
+    "type": "slay",
+    "desc": "老猎人·驼脊：荒原狼的皮是好材料，猎 2 只带回来。",
+    "zone": "a2_ridge_hills",
+    "main": true,
+    "consume": false,
+    "repeatable": false,
+    "unlock_chain": "q_tut1_hunt_cubs",
+    "conditions": [
+      {
+        "var": "kill_count",
+        "op": "ge",
+        "value": 2,
+        "param": "wasteland_wolf"
+      }
+    ],
+    "reward": [
+      { "item": "cub_leather_hand", "count": 1 },
+      { "item": "cub_leather_leg", "count": 1 }
+    ],
+    "npc": { "id": "npc_old_hunter" }
+  },
+  {
+    "id": "q_tut3_gravel_armor",
+    "name": "硬壳试炼",
+    "type": "slay",
+    "desc": "老猎人·驼脊：骨冢洼地的砾甲兽甲壳坚硬，击败它，这双靴子就是你的。",
+    "zone": "a3_bone_hollow",
+    "main": true,
+    "consume": false,
+    "repeatable": false,
+    "unlock_chain": "q_tut2_wolf_pelt",
+    "conditions": [
+      {
+        "var": "kill_count",
+        "op": "ge",
+        "value": 1,
+        "param": "gravel_armor_beast"
+      }
+    ],
+    "reward": [
+      { "item": "cub_leather_foot", "count": 1 }
+    ],
+    "npc": { "id": "npc_old_hunter" }
+  }
+]

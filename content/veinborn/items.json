@@ -27,5 +27,32 @@
     ],
     "usable": true,
     "desc": "燃脉淬体：战斗中回复生命"
+  },
+  {
+    "id": "wolf_pelt",
+    "name": "荒原狼皮",
+    "type": "material",
+    "price": 60,
+    "effects": [],
+    "usable": false,
+    "desc": "荒原狼的晶化毛皮：打造素材（骨脊系）"
+  },
+  {
+    "id": "gravel_plate",
+    "name": "砾岩甲片",
+    "type": "material",
+    "price": 150,
+    "effects": [],
+    "usable": false,
+    "desc": "砾甲兽的岩甲片：打造素材（脉铁系）"
+  },
+  {
+    "id": "lord_fang",
+    "name": "领主獠牙",
+    "type": "material",
+    "price": 400,
+    "effects": [],
+    "usable": false,
+    "desc": "荒原领主的巨獠牙：打造素材（王骸系·A）"
   }
 ]

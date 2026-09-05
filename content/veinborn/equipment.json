@@ -4,101 +4,104 @@
     "name": "砺脊刃",
     "type": "weapon",
     "slot": "weapon",
-    "price": 150,
-    "atk": 4,
+    "price": 400,
+    "atk": 18,
     "usable": false,
-    "desc": "龙骨驿站新手脊刃，刃口磨着脉晶碎屑"
+    "desc": "龙骨驿站新手脊刃，脉晶淬刃，猎师的第一把武器。"
   },
   {
     "id": "ridge_blade_veteran",
     "name": "长脊大剑",
     "type": "weapon",
     "slot": "weapon",
-    "price": 600,
-    "atk": 8,
+    "price": 1600,
+    "atk": 28,
     "usable": false,
-    "desc": "加长脊骨大剑，蓄力斩的骨架更稳"
+    "desc": "加长的脊刃大剑，蚀脉纹路更密。"
   },
   {
     "id": "gravelcrown_cleaver",
     "name": "砾冕斩脊",
     "type": "weapon",
     "slot": "weapon",
-    "price": 1800,
-    "atk": 14,
+    "price": 4500,
+    "atk": 42,
     "usable": false,
-    "desc": "用砾冕脊板磨成的大剑，真蓄斩如裂地"
+    "desc": "以砾冕冢核淬炼的大剑，重若骨冢。"
   },
   {
     "id": "cub_leather_helm",
     "name": "幼兽皮帽",
     "type": "armor",
     "slot": "head",
-    "price": 80,
-    "def": 2,
+    "price": 200,
+    "def": 6,
     "usable": false,
-    "desc": "脊冢幼兽皮缝的头帽，轻便透气"
+    "desc": "幼兽皮鞣制的轻帽，轻便透气。",
+    "hp": 40
   },
   {
     "id": "cub_leather_body",
     "name": "幼兽皮甲",
     "type": "armor",
     "slot": "body",
-    "price": 120,
-    "def": 3,
-    "hp": 10,
+    "price": 300,
+    "def": 10,
+    "hp": 60,
     "usable": false,
-    "desc": "脊冢幼兽皮鞣的胸甲，耐咬耐蚀"
+    "desc": "幼兽皮鞣制的护甲，护住要害。"
   },
   {
     "id": "cub_leather_hand",
     "name": "幼兽皮护手",
     "type": "armor",
     "slot": "hand",
-    "price": 80,
-    "def": 1,
+    "price": 150,
+    "def": 4,
     "usable": false,
-    "desc": "护住虎口的脉纹皮护手"
+    "desc": "幼兽皮护手，灵活不碍手。",
+    "atk": 2
   },
   {
     "id": "cub_leather_leg",
     "name": "幼兽皮护腿",
     "type": "armor",
     "slot": "leg",
-    "price": 80,
-    "def": 2,
+    "price": 150,
+    "def": 6,
     "usable": false,
-    "desc": "护腿皮甲，方便蹲伏蓄力"
+    "desc": "幼兽皮护腿，耐磨。"
   },
   {
     "id": "cub_leather_foot",
     "name": "脉行靴",
     "type": "armor",
     "slot": "foot",
-    "price": 80,
-    "def": 1,
-    "agi": 1,
+    "price": 150,
+    "def": 4,
+    "agi": 2,
     "usable": false,
-    "desc": "鞋底嵌脉晶，踏脉无声"
+    "desc": "轻便靴，脉晶纹路助力。"
   },
   {
     "id": "ridge_bone_charm",
     "name": "脊骨护符",
     "type": "accessory",
     "slot": "accessory",
-    "price": 200,
-    "foc": 1,
+    "price": 300,
+    "foc": 3,
     "usable": false,
-    "desc": "脊骨雕的护符，凝神聚气"
+    "desc": "脊骨磨制的护符，凝神聚气。"
   },
   {
     "id": "vein_jade_rough",
     "name": "原脉玉",
     "type": "accessory",
     "slot": "pulse_jade",
-    "price": 300,
-    "str": 1,
+    "price": 400,
     "usable": false,
-    "desc": "未琢的蚀脉晶玉，握之脉动如心跳"
+    "desc": "未雕琢的脉玉，蕴着蚀脉之力。",
+    "atk": 4,
+    "hp": 30
   }
 ]

@@ -22,5 +22,121 @@
     ],
     "exits": {},
     "mechanics": []
+  },
+  {
+    "id": "a1_bone_field",
+    "name": "骸骨草场",
+    "desc": "齐腰高的灰白草甸，幼兽在倒伏巨兽的肋骨间嬉戏。猎师入门之地。",
+    "npcs": [
+      "npc_old_hunter"
+    ],
+    "monsters": [
+      {
+        "enemy": "ridge_cub",
+        "name": "脊冢幼兽",
+        "count": 3,
+        "respawn_minutes": 3
+      }
+    ],
+    "exits": {
+      "up": {
+        "to": "a2_ridge_hills",
+        "mode": "bidirectional"
+      }
+    },
+    "mechanics": []
+  },
+  {
+    "id": "a2_ridge_hills",
+    "name": "断脊丘陵",
+    "desc": "丘陵如断脊起伏，荒原狼群在丘脊上逡巡，啃食骸骨碎屑。",
+    "monsters": [
+      {
+        "enemy": "wasteland_wolf",
+        "name": "荒原狼",
+        "count": 3,
+        "respawn_minutes": 4
+      },
+      {
+        "enemy": "ridge_cub",
+        "name": "脊冢幼兽",
+        "count": 2,
+        "respawn_minutes": 3
+      }
+    ],
+    "exits": {
+      "down": {
+        "to": "a1_bone_field",
+        "mode": "bidirectional"
+      },
+      "right": {
+        "to": "a3_bone_hollow",
+        "mode": "bidirectional"
+      }
+    },
+    "mechanics": []
+  },
+  {
+    "id": "a3_bone_hollow",
+    "name": "骨冢洼地",
+    "desc": "洼地堆满远古兽骨，砾甲兽蜷在骨堆间，脉晶自骨缝渗出。",
+    "monsters": [
+      {
+        "enemy": "gravel_armor_beast",
+        "name": "砾甲兽",
+        "count": 1,
+        "respawn_minutes": 8
+      },
+      {
+        "enemy": "wasteland_wolf",
+        "name": "荒原狼",
+        "count": 2,
+        "respawn_minutes": 4
+      }
+    ],
+    "exits": {
+      "left": {
+        "to": "a2_ridge_hills",
+        "mode": "bidirectional"
+      },
+      "right": {
+        "to": "a4_lord_plateau",
+        "mode": "bidirectional"
+      }
+    },
+    "camp": {
+      "name": "骨台",
+      "unlock": "arrive",
+      "safe": true
+    },
+    "mechanics": []
+  },
+  {
+    "id": "a4_lord_plateau",
+    "name": "领主高台",
+    "desc": "一座孤丘顶的平坦高台，荒原领主盘踞于此，俯视整片丘陵。",
+    "monsters": [
+      {
+        "enemy": "wasteland_lord",
+        "name": "A主·荒原领主",
+        "count": 1,
+        "respawn_minutes": 15,
+        "intro": "大地震颤，荒原领主自高台昂首咆哮！",
+        "signal": "领主的咆哮震彻丘陵"
+      },
+      {
+        "enemy": "wasteland_wolf",
+        "name": "荒原狼",
+        "count": 2,
+        "respawn_minutes": 5
+      }
+    ],
+    "exits": {
+      "left": {
+        "to": "a3_bone_hollow",
+        "mode": "bidirectional"
+      }
+    },
+    "mechanics": []
   }
 ]

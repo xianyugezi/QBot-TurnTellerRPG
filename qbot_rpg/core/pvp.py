@@ -139,17 +139,25 @@ def _combatant_of(player: Mapping[str, Any]) -> dict:
         "name": name,
         "level": level,
         "hp": int(_pf(player, "hp") or 100),
-        "max_hp": int(_pf(player, "max_hp") or 100),
+        # M12.5/veinborn：Player dataclass 无 max_hp 键 → 用 hp 兜底（原 100 兜底
+        # 导致 400 血玩家战斗显示 0/100 秒杀假象）
+        "max_hp": int(_pf(player, "max_hp") or _pf(player, "hp") or 100),
         "mp": int(_pf(player, "mp") or 50),
-        "max_mp": int(_pf(player, "max_mp") or 50),
+        "max_mp": int(_pf(player, "max_mp") or _pf(player, "mp") or 50),
         # M11 批4 A3 P2-1 修复：对齐 battle._DEFAULT_STATS 键全集（battle.py L184-189）——
         # 引擎伤害管线实读 dfn/foc/con/mag（L186/L1323-1405），原 def_ 是无效字段
         "atk": _attr("atk"),
-        "dfn": _attr("def"),
+        # M12.5/veinborn 键名统一：玩家防御主键 dfn（新包）与 con（老包）双兼容——
+        # 战斗减伤 def_con 语义读 con 键；dfn 属性存在（veinborn 白值 dfn）→ 用 dfn，
+        # 否则回落 con（demo 老包），再回落旧 def 键
+        "dfn": _attr("dfn", _attr("con", _attr("def", 10))),
+        # con（战斗减伤 def_con 读取键）：老包玩家白值 con 优先；新包（veinborn
+        # dfn 主键）回落 dfn 属性
+        "con": _attr("con", _attr("dfn", 10)),
         "mag": _attr("mag", 30),
-        "spd": _attr("spd"),
+        # spd：新包主键 agi（脉矢手成长 agi），老包 spd 兼容
+        "spd": _attr("agi", _attr("spd", 10)),
         "foc": _attr("foc"),
-        "con": _attr("con"),
         "int": _attr("int"),
         "lck": _attr("lck"),
     }

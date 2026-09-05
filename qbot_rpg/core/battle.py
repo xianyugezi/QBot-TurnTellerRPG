@@ -2895,8 +2895,18 @@ class BattleEngine:
         _rst = data.get("_rng_state")
         if isinstance(_rst, (list, tuple)) and _rst:
             try:
+                # M12.5/veinborn rng 死区修复：to_snapshot 存 list(self._rng.getstate())
+                # 只转外层——getstate 返回 (ver, tuple(ints), gauss)，list() 后内部 tuple
+                # 变 list；JSON 往返后 setstate(tuple(list)) 内部仍是 list → TypeError →
+                # 回落 seed 重播 → 每轮同 seed 序列重放（连续 miss 死区）。此处递归归一
+                # 内部 tuple：setstate 契约 (version:int, state:tuple[int,...], gauss)。
+                def _norm_rng_state(s: Any) -> Any:
+                    if isinstance(s, list):
+                        return tuple(_norm_rng_state(x) for x in s)
+                    return s
+
                 eng._rng = random.Random()
-                eng._rng.setstate(tuple(_rst))
+                eng._rng.setstate(_norm_rng_state(_rst))
             except Exception:  # pragma: no cover - 畸形 state 回落 seed
                 eng._rng = random.Random(eng._rng_seed)
         else:

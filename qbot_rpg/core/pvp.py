@@ -103,7 +103,20 @@ def _combatant_of(player: Mapping[str, Any]) -> dict:
 
     name = str(_pf(player, "name") or _pf(player, "qid") or "玩家")
     raw_attrs = _pf(player, "attributes")
-    attrs: Mapping[str, Any] = raw_attrs if isinstance(raw_attrs, Mapping) else {}
+    # M12.5/veinborn rng/数值断链：Player dataclass 形态 attributes 是
+    # PlayerAttributes 实例（非 Mapping）——原 isinstance(Mapping) 判定 → attrs={}
+    # → 玩家战斗 combatant 全默认 10（穿装/白值全丢）。实例形态归一为映射视角。
+    if isinstance(raw_attrs, Mapping):
+        attrs: Mapping[str, Any] = raw_attrs
+    elif hasattr(raw_attrs, "base"):
+        attrs = {
+            "base": getattr(raw_attrs, "base", {}) or {},
+            "bonus": getattr(raw_attrs, "bonus", None) or {},
+            "temp": getattr(raw_attrs, "temp", None) or {},
+            "cond": getattr(raw_attrs, "cond", None) or {},
+        }
+    else:
+        attrs = {}
     level = int(_pf(player, "level") or 1)
 
     def _attr(key: str, default: int = 10) -> int:

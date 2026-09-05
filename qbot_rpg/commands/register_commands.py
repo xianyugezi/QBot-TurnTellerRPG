@@ -343,6 +343,25 @@ def render_register_success(
     attrs = player.get("attributes") if isinstance(player, Mapping) else getattr(player, "attributes", None)
     base = getattr(attrs, "base", None) if attrs is not None else None
     base = base if isinstance(base, Mapping) else {}
+    # 2026-09-05 显示修复：location 是地图 id（settings.default_map），渲染为中文
+    # 地图名（ctx["maps"] 地图注册表可查时——装配层注入 list 形态，含 id/name）；
+    # 查不到 → id 兜底（不裸崩）
+    try:
+        _maps_tbl = ctx.get("maps")
+        if isinstance(_maps_tbl, (list, tuple)):
+            for _me in _maps_tbl:
+                if isinstance(_me, Mapping) and _me.get("id") == location:
+                    _mn = _me.get("name")
+                    if isinstance(_mn, str) and _mn:
+                        location = _mn
+                    break
+        elif isinstance(_maps_tbl, Mapping):
+            _me = _maps_tbl.get(location)
+            _mn = _me.get("name") if isinstance(_me, Mapping) else getattr(_me, "name", None)
+            if isinstance(_mn, str) and _mn:
+                location = _mn
+    except Exception:  # noqa: BLE001 —— 地图名解析失败不阻断注册
+        pass
     # M12.5 动态化（2026-09-04）：不再硬编码 hp/mp/atk/dfn 四行——遍历玩家
     # attributes.base 实际键（stats.json 删键即不显示）；键序 = stats.json 键序
     # （缺失回落 base 键序）；hp/mp 等 resource 型显示 cur/max，其余显示终值。

@@ -1047,10 +1047,28 @@ def quest_complete(quest_id: str, ctx: MutableMapping[str, Any]) -> dict:
 
 
 def _grant_label(grant: Mapping, ctx: Mapping[str, Any]) -> str:
-    """grant 记录 → 简短展示标签（「铁矿×3」/「exp50」/「金币80」）。"""
+    """grant 记录 → 简短展示标签（「铁矿×3」/「exp50」/「金币80」）。
+
+    2026-09-05 显示修复：item 显示中文名（ctx["items"] 注册表含 items∪equipment，
+    M12.5 同库语义；查不到 → id 兜底）。
+    """
     typ = grant.get("type")
     if typ == "item":
-        return f"{grant.get('item')}×{grant.get('count')}"
+        item_id = grant.get("item")
+        nm = None
+        try:
+            _tbl = ctx.get("items")
+            if isinstance(_tbl, Mapping):
+                _d = _tbl.get(item_id)
+                if isinstance(_d, Mapping) and _d.get("name"):
+                    nm = str(_d.get("name"))
+                elif _d is not None:
+                    _n2 = getattr(_d, "name", None)
+                    if _n2:
+                        nm = str(_n2)
+        except Exception:  # noqa: BLE001 —— 名称解析失败回落 id
+            nm = None
+        return f"{nm if nm else item_id}×{grant.get('count')}"
     if typ == "currency":
         return f"{grant.get('amount')} {grant.get('currency')}"
     if typ == "exp":

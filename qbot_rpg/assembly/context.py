@@ -1332,6 +1332,8 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
                 # M12.5 委托板配置（2c5b：settings.quest_board 段；tiers 委托池/
                 # refresh_days/penalty/防刷限/声望阈值表 grade_bonus）
                 "quest_board_cfg": settings.get("quest_board") or {},
+                # M12.5 品评会（2026-09-06 批3路2）：contest 配置段（settings.contest）
+                "contest_cfg": settings.get("contest") or {},
                 "npc_delivered": _ps_init(ps, "npc_delivered", {}),
                 "heard": _coerce_heard(ps.get("npc_heard")),
                 "codex_state": player.codex_state
@@ -1454,6 +1456,8 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
                 # M12.5 委托板配置（2c5b：settings.quest_board 段；tiers 委托池/
                 # refresh_days/penalty/防刷限/声望阈值表 grade_bonus）
                 "quest_board_cfg": settings.get("quest_board") or {},
+                # M12.5 品评会（2026-09-06 批3路2）：contest 配置段（settings.contest）
+                "contest_cfg": settings.get("contest") or {},
                 "npc_delivered": {},
                 "heard": set(),
                 "codex_state": {},

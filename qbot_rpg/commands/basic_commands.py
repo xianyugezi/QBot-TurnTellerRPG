@@ -1369,6 +1369,7 @@ class EquipmentEngineAdapter:
                     slot=str(item.get("slot")) if item.get("slot") else None,
                     stats_bonus=dict(_sb) if isinstance(_sb, Mapping) else {},
                     traits=tuple(item.get("traits") or ()),
+                    enhance_level=int(item.get("enhance_level", 0) or 0),
                 )
             except (TypeError, ValueError):
                 pass

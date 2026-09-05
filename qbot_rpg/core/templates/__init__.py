@@ -36,6 +36,8 @@ from qbot_rpg.core.templates.codex_tpl import DEFAULT_TEMPLATES as _CODEX
 from qbot_rpg.core.templates.codex_tpl import PLACEHOLDER_WHITELIST as _CODEX_WH
 from qbot_rpg.core.templates.dialog_tpl import DEFAULT_TEMPLATES as _DIALOG
 from qbot_rpg.core.templates.dialog_tpl import PLACEHOLDER_WHITELIST as _DIALOG_WH
+from qbot_rpg.core.templates.enhance_tpl import DEFAULT_TEMPLATES as _ENHANCE
+from qbot_rpg.core.templates.enhance_tpl import PLACEHOLDER_WHITELIST as _ENHANCE_WH
 from qbot_rpg.core.templates.explore_tpl import DEFAULT_TEMPLATES as _EXPLORE
 from qbot_rpg.core.templates.explore_tpl import PLACEHOLDER_WHITELIST as _EXPLORE_WH
 from qbot_rpg.core.templates.forge_tpl import DEFAULT_TEMPLATES as _FORGE
@@ -71,13 +73,13 @@ __all__ = [
 _ALL_TABLES: list = [
     _BASE_TEMPLATES, _USE, _SHORTCUT, _LOG, _CODEX, _DIALOG, _EXPLORE,
     _QUEST, _CHECKIN, _INVESTIGATE, _BATTLE, _FORGE, _ALCHEMY,
-    _BASIC_REM, _REG_REM, _FISHING, _ACHIEVEMENT, _PVP, _JOB,
+    _BASIC_REM, _REG_REM, _FISHING, _ACHIEVEMENT, _PVP, _JOB, _ENHANCE,
 ]
 _ALL_WHITELISTS: list = [
     _BASE_WHITELIST, _USE_WH, _SHORTCUT_WH, _LOG_WH, _CODEX_WH, _DIALOG_WH,
     _EXPLORE_WH, _QUEST_WH, _CHECKIN_WH, _INVESTIGATE_WH, _BATTLE_WH,
     _FORGE_WH, _ALCHEMY_WH, _BASIC_REM_WH, _REG_REM_WH, _FISHING_WH,
-    _ACHIEVEMENT_WH, _PVP_WH, _JOB_WH,
+    _ACHIEVEMENT_WH, _PVP_WH, _JOB_WH, _ENHANCE_WH,
 ]
 
 DEFAULT_TEMPLATES: Dict[str, Any] = {}

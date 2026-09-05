@@ -545,6 +545,22 @@ def _codex_categories_of(ctx: MutableMapping[str, Any]) -> Dict[str, float]:
         return {}
 
 
+def _enhance_module_raw(registry: Any) -> Mapping[str, object]:
+    """enhance.json 顶层 raw dict（M12.5 强化接线 2026-09-06）。
+
+    入参 registry: content Registry。出参 enhance 模块原始解析结果（Mapping，含
+    settings/cost/success_curve/values/protect_stone 段）；无 registry / 无
+    enhance 模块 → {}（GU-01 强化系统未启用兜底）。对齐 _forge_module_raw：
+    enhance 顶层 obj 非条目表，不走 _table_from_registry。
+    """
+    raw = getattr(registry, "modules_raw", None)
+    if isinstance(raw, Mapping):
+        v = raw.get("enhance")
+        if isinstance(v, Mapping):
+            return v
+    return {}
+
+
 def _fish_module_raw(registry: Any) -> Mapping[str, object]:
     """fishing.json 顶层 raw dict（M10 批6 路6B 收口 2026-09-01）。
 
@@ -1214,6 +1230,11 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
         # 表注入坑见 m9_接口摸底 §八-2），从 registry.modules_raw 直接取模块原始解析
         # 结果（Registry 新增 modules_raw public 访问器）。
         "forge": _forge_module_raw(deps.registry),
+        # M12.5 强化（2026-09-06）：ctx["enhance"] 注入 enhance.json 顶层 raw dict
+        # （含 settings/cost/success_curve/values/protect_stone 段）——enhance 指令
+        # 壳 _enhance_raw 消费；顶层 obj 非条目表，不走 _table_from_registry
+        # （对齐 forge 先例）。缺失 → {}（GU-01 系统未启用兜底）。
+        "enhance": _enhance_module_raw(deps.registry),
         # M10 钓鱼（批6 路6B 收口 2026-09-01）：ctx["fishing"] 注入 fishing.json 顶层
         # raw dict（含 species/king 两段）——钓鱼指令壳/引擎 _species_pool 消费；
         # fishing 顶层 obj 非条目表，不走 _table_from_registry（对齐 forge 先例）。

@@ -54,5 +54,37 @@
     "effects": [],
     "usable": false,
     "desc": "荒原领主的巨獠牙：打造素材（王骸系·A）"
+  },
+  {
+    "id": "item_enhance_stone_low",
+    "name": "低级强化石",
+    "type": "material",
+    "price": 50,
+    "usable": false,
+    "desc": "蚀脉碎晶磨制的低级强化石，用于强化 +1~+3。"
+  },
+  {
+    "id": "item_enhance_stone_mid",
+    "name": "中级强化石",
+    "type": "material",
+    "price": 150,
+    "usable": false,
+    "desc": "凝聚脉火的中级强化石，用于强化 +4~+6。"
+  },
+  {
+    "id": "item_enhance_stone_high",
+    "name": "高级强化石",
+    "type": "material",
+    "price": 400,
+    "usable": false,
+    "desc": "如骨玉般的高阶强化石，用于强化 +7 以上。"
+  },
+  {
+    "id": "item_protect_stone",
+    "name": "脉护石",
+    "type": "material",
+    "price": 500,
+    "usable": false,
+    "desc": "蕴着守护脉纹的护石，强化失败时抵消掉级。"
   }
 ]

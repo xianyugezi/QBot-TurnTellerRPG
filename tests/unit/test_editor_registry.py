@@ -52,7 +52,8 @@ def test_auto_pages_demo_blank_five_modules() -> None:
 
 
 def test_auto_pages_veinborn_all_modules() -> None:
-    """veinborn 17 模块 → 17 页（含装备/物品/NPC/行动/效果；不含 ai/hidden 等特殊页）。"""
+    """veinborn 17 模块 → 17 页（含装备/物品/NPC/行动/效果；不含 ai/hidden 等特殊页；
+    forge/fishing/enhance 等 object 形态模块不生成 auto 页——编辑器原始 JSON 兜底）。"""
     from qbot_rpg.content.loader import load_pack
     import asyncio
     from pathlib import Path

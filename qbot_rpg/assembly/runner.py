@@ -511,6 +511,7 @@ def _make_handler(spec: Any, parsed: ParsedCommand, ctx: MutableMapping[str, Any
                                 slot=str(it.get("slot")) if it.get("slot") else None,
                                 stats_bonus=dict(_sb) if isinstance(_sb, Mapping) else {},
                                 traits=tuple(it.get("traits") or ()),
+                                enhance_level=int(it.get("enhance_level", 0) or 0),
                             ),)
                         except (TypeError, ValueError):
                             continue

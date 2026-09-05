@@ -572,6 +572,10 @@ class _Checker:
         if module_name == "forge":
             from qbot_rpg.content.forge_models import validate_forge
             validate_forge(self._modules, self)
+        # M12.5 强化（2c3a §5.2 V1~V7）：enhance 专项校验（同鸭子类型 validate_xxx 口径）
+        if module_name == "enhance":
+            from qbot_rpg.content.enhance_models import validate_enhance
+            validate_enhance(self._modules, self)
         # M11 成就（m11 启动包 §2.1）：achievements 专项校验 ACH-01~13（同鸭子类型口径）
         if module_name == "achievements":
             from qbot_rpg.content.achievements_models import validate_achievements

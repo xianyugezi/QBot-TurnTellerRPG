@@ -52,7 +52,9 @@
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Mapping, MutableMapping, Optional, Sequence
+from typing import Any, Dict, List, Mapping, MutableMapping, Optional, Sequence, cast
+
+from dataclasses import replace as _dcreplace
 
 from qbot_rpg.core.player_attributes import calc_all_final_attributes
 from qbot_rpg.data.item import ItemInstance
@@ -374,9 +376,26 @@ class EquipmentEngine:
         # B-3 双向一致：equipment[slot] 更新为槽实例（同件重穿保留既有强化/镶嵌）
         old_iid = old.get("item_id") if isinstance(old, Mapping) else getattr(old, "item_id", None)
         if old is not None and old_iid == item.item_id:
+            # P1-2 修复（M12.5 强化接线）：同件重穿同步最新强化等级（背包实例可能
+            # 已被 /强化 提升过；槽位旧值过时 → 以实例为准刷新）
+            _slot_enh = int(getattr(item, "enhance_level", 0) or 0)
+            if isinstance(old, Mapping):
+                _cur = int(old.get("slot_level", old.get("enhance", 0)) or 0)
+                if _slot_enh != _cur:
+                    old = dict(old)
+                    old["slot_level"] = _slot_enh
+            else:
+                _cur = int(getattr(old, "slot_level", 0) or 0)
+                if _slot_enh != _cur:
+                    old = _dcreplace(old, slot_level=_slot_enh)
             equipment[slot] = old
         else:
-            equipment[slot] = EquipmentSlot(item_id=item.item_id, name=item.name)
+            # P1-2 修复（M12.5 强化接线）：新建槽位实例携带背包实例强化等级
+            # （原丢 slot_level → 强化后装备卡 +N 恒 0，P1-2 潜伏 bug）
+            equipment[slot] = EquipmentSlot(
+                item_id=item.item_id, name=item.name,
+                slot_level=int(getattr(item, "enhance_level", 0) or 0),
+            )
         # P1-1/P1-2：登记穿戴行引用（精确聚合；覆盖时更新为新行）
         self._worn_refs(player)[slot] = row
 
@@ -416,12 +435,35 @@ class EquipmentEngine:
         _oname = old.get("name") if isinstance(old, Mapping) else getattr(old, "name", "")
         _oid = str(_oid or "")
         _oname = str(_oname or "")
+        # P1-2 修复（M12.5 强化接线）：卸下回包携带强化等级（原丢 slot_level →
+        # 强化后的装备卸下再穿回强化丢失，P1-2 潜伏 bug）
+        _enh = (old.get("slot_level", old.get("enhance", 0))
+                if isinstance(old, Mapping) else getattr(old, "slot_level", 0))
         inv = self._inv(player)
-        if not any(_row_item_id(r) == _oid for r in inv):
-            inv.append(ItemInstance(
-                item_id=_oid, name=_oname, count=1, quality="normal",
-                bound=False, stack_max=1,
-            ))
+        _existing = next((r for r in inv if _row_item_id(r) == _oid), None)
+        if _existing is None:
+            try:
+                inv.append(ItemInstance(
+                    item_id=_oid, name=_oname, count=1, quality="normal",
+                    bound=False, stack_max=1,
+                    enhance_level=int(_enh or 0),
+                ))
+            except TypeError:  # pragma: no cover —— 旧实例无字段兜底
+                inv.append(ItemInstance(
+                    item_id=_oid, name=_oname, count=1, quality="normal",
+                    bound=False, stack_max=1,
+                ))
+        elif isinstance(_existing, ItemInstance) and int(_enh or 0):
+            _cur = int(getattr(_existing, "enhance_level", 0) or 0)
+            if int(_enh or 0) != _cur:
+                inv[inv.index(_existing)] = _dcreplace(
+                    _existing, enhance_level=int(_enh or 0))
+        elif isinstance(_existing, Mapping) and int(_enh or 0):
+            if int(_existing.get("enhance_level", 0) or 0) != int(_enh or 0):
+                # M12.5/veinborn：inv 可混 dict 行（asdict 链路）——cast 绕 mypy
+                # list[ItemInstance] 索引检查（运行期 dict 行真实存在）
+                inv[inv.index(_existing)] = cast(ItemInstance,
+                                                 {**_existing, "enhance_level": int(_enh or 0)})
         del equipment[slot]
         # P1-1/P1-2：移除穿戴行引用（卸下后不再聚合该行）
         self._worn_refs(player).pop(slot, None)

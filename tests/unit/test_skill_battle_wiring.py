@@ -48,8 +48,12 @@ def test_resolve_skill_by_name() -> None:
 
 
 def test_resolve_skill_by_index() -> None:
+    """数字序号 = /技能 列表序（skill_rows：basic 固定第 1 + active 按 id 序）。
+    _skills_map 序：basic_attack(basic) → healing_light/power_strike(active 按 id)。"""
     ctx = {"skills": _skills_map()}
-    assert _resolve_skill(ctx, "2") == "basic_attack"
+    assert _resolve_skill(ctx, "1") == "basic_attack"
+    assert _resolve_skill(ctx, "2") == "healing_light"
+    assert _resolve_skill(ctx, "3") == "power_strike"
 
 
 def test_resolve_skill_missing_returns_none() -> None:

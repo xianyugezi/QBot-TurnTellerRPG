@@ -866,8 +866,16 @@ def _resolve_skill(ctx: Mapping[str, Any], text: str) -> Optional[str]:
             return sid
     if text.isdigit():
         idx = int(text)
-        if 1 <= idx <= len(items):
-            return items[idx - 1][0]
+        if idx < 1:
+            return None
+        # 2026-09-05 用户需求：攻击 <序号> = /技能 列表序号（skill_rows 过滤后一致）
+        try:
+            from qbot_rpg.commands.basic_commands import skill_rows
+            sids = skill_rows(ctx)
+        except Exception:
+            sids = [s for s, _ in items]
+        if idx <= len(sids):
+            return sids[idx - 1]
     return None
 
 
@@ -897,31 +905,10 @@ def _attack_action(parsed: Any, ctx: Mapping[str, Any]) -> Tuple[Optional[dict],
         return {"type": "normal"}, None
     if len(args) > 1:
         return None, format_tpl12(_fragment(parsed))
-    # M13 批16 路16C：序号优先按装配快照行动位（basic+active 顺序）解析，
-    # 未装配技能不进列表（契约 §1.5「按装配快照生成可用技能列表」）；名称/id
-    # 仍走全表 _resolve_skill。
+    # 2026-09-05 用户需求：攻击 <序号> = /技能 列表序号（skill_rows 过滤后序，
+    # 与技能列表显示一致）；名称/id 同样走 _resolve_skill。
     sid: Optional[str] = None
-    if str(args[0]).isdigit():
-        try:
-            from qbot_rpg.core.skill_slots_battle import (  # noqa: PLC0415
-                _snapshot_of,
-                slots_from_snapshot,
-            )
-
-            idx = int(str(args[0]))
-            action_rows = [
-                r for r in slots_from_snapshot(_snapshot_of(ctx))
-                if r.get("slot") in ("basic", "active")
-            ]
-            if 1 <= idx <= len(action_rows):
-                _cand = str(action_rows[idx - 1].get("skill_id") or "")
-                sid = _cand or None
-        except Exception:  # pragma: no cover - 防御兜底
-            pass
-        if sid is None:
-            sid = _resolve_skill(ctx, str(args[0]))
-    else:
-        sid = _resolve_skill(ctx, str(args[0]))
+    sid = _resolve_skill(ctx, str(args[0]))
     if sid is None:
         # 2026-08-31 QA P2-3：参数为当前地图怪物名（如「攻击 疾风狼」）→ 未开战时
         # 给出明确引导而非「没有这个技能」（开战链路未接线，后续里程碑）。

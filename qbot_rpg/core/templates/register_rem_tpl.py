@@ -55,6 +55,9 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
 
     # —— 商店：无店 / 空店 / 一览标题（shop_commands；2b3 §2.1 + 定稿 L421）——
     "shop_no_shop": "❌ 商店不存在",
+    # 2026-09-05 商店进入独立指令
+    "shop_enter_usage": "商店进入：发 商店进入 <序号|商店名>（序号见 商店列表）",
+    "shop_enter_not_found": "❌ 找不到商店「{name}」（发 商店列表 查看可用商店）",
     "shop_browse_empty": "（这家店空空的）",
     "shop_list_title": "可用商店一览",
 
@@ -64,7 +67,7 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
 
     # —— 商店：CakeGame 式尾段 Tip 内容（尾段格式 list_tail 在 base.py，此处仅 Tip 文案）——
     "shop_browse_tail_tip": "发送'购买 序号'即可购买物品。",
-    "shop_list_tail_tip": "发送'商店 <名称>'即可进入商店",
+    "shop_list_tail_tip": "发送'商店进入 <序号|名称>'即可进入商店",
 
     # —— 商店：商品单价 / 折扣标记 / 一览行前缀（数据型展示片段）——
     "shop_price_single": "{unit}({currency})",
@@ -96,6 +99,8 @@ PLACEHOLDER_WHITELIST: Dict[str, set] = {
     "register_args_missing": {"usage"},
     "register_auto_name": {"name"},
     "shop_no_shop": set(),
+    "shop_enter_usage": set(),
+    "shop_enter_not_found": {"name"},
     "shop_browse_empty": set(),
     "shop_list_title": set(),
     "shop_buy_fail": set(),

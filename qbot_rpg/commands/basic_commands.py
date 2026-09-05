@@ -138,6 +138,9 @@ BAG_CMD = "背包"
 EQUIP_CMD = "装备"
 SKILL_CMD = "技能"
 MY_SKILL_CMD = "我的技能"  # 2026-08-30 实机反馈：玩家用「我的技能」→ 映射 技能（别名）
+# 2026-09-05 用户需求：技能详情 / 技能派生 独立指令
+SKILL_INFO_CMD = "技能详情"
+SKILL_CHAIN_CMD = "技能派生"
 HELP_CMD = "帮助"
 
 # 装备子指令词（非解析器固定子词，经 args 位置参数识别；对齐 checkin「状态/补签」模式）
@@ -173,6 +176,15 @@ TYPE_LABELS: Mapping[str, str] = {
     "active": "主动",
     "passive": "被动",
     "trigger": "触发",
+}
+KIND_LABELS: Mapping[str, str] = {
+    "damage": "伤害",
+    "heal": "治疗",
+    "buff": "增益",
+    "debuff": "减益",
+    "guard": "格挡",
+    "dodge": "闪避",
+    "utility": "功能性",
 }
 
 # 装备槽位缺省中文名（slots.json 未配置时兜底；EQP-04 slot_schema 引用）
@@ -784,15 +796,134 @@ def cmd_bag(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         return g
     if parsed.error:
         return format_tpl12(_fragment(parsed))
-    if getattr(parsed, "fixed_subword", None):
+    fs = getattr(parsed, "fixed_subword", None)
+    if fs == "查看":
+        # 2026-09-05 新功能：背包 查看 <序号|物品名|部位> —— 物品/已装备详情
+        args_v = list(getattr(parsed, "args", None) or [])
+        return _cmd_bag_view(ctx, args_v)
+    if fs:
         return format_tpl12(_fragment(parsed))
     args = list(getattr(parsed, "args", None) or [])
+    # router 链路（route_and_expand）不抽 fixed_subword → args[0] 可能直接是「查看」
+    if args and str(args[0]) == "查看":
+        return _cmd_bag_view(ctx, list(args[1:]))
     if len(args) > 1:
         return format_tpl12(_fragment(parsed))
     page = parse_page_arg(args[0] if args else None)
     if page is None:
         return format_tpl12(_fragment(parsed))
     return _render_bag_page(ctx, page)
+
+
+def _cmd_bag_view(ctx: Mapping[str, Any], args: list) -> str:
+    """背包 查看 <序号|物品名|部位>：物品/已装备详情（2026-09-05 新功能）。
+
+    - 部位名（武器/身体/头部…）→ 查装备栏该部位已装备详情
+    - 数字 → 背包第 N 件（展示序同 /背包）
+    - 名称 → 背包/物品注册表匹配
+    """
+    if not args:
+        return tpl_of(ctx, "bag_view_usage")
+    target = str(args[0])
+    rows = _inventory_rows(ctx)
+    # 1) 数字 → 背包序号（背包展示序，用户语义优先）
+    if target.isdigit():
+        n = int(target)
+        if 1 <= n <= len(rows):
+            return _render_item_detail(rows[n - 1], ctx, source="bag")
+        return tpl_of(ctx, "bag_view_no_item")
+    # 2) 名称：先背包行匹配（item_id/name），再物品注册表，最后槽位名（部位）
+    for r in rows:
+        f = _row_fields(r, ctx)
+        if f["item_id"] == target or f["name"] == target:
+            return _render_item_detail(r, ctx, source="bag")
+    d = _item_def(ctx, target)
+    if isinstance(d, Mapping):
+        return _render_item_detail({"item_id": d.get("id") or target, "count": 1}, ctx, source="def")
+    if d is None:
+        items = ctx.get("items")
+        if isinstance(items, Mapping):
+            for dd in items.values():
+                if isinstance(dd, Mapping) and str(dd.get("name") or "") == target:
+                    d = dd
+                    break
+    if isinstance(d, Mapping):
+        return _render_item_detail({"item_id": d.get("id") or target, "count": 1}, ctx, source="def")
+    # 3) 槽位名（武器/身体…）→ 已装备详情
+    slot_hit = resolve_equip_slot(ctx, target)
+    if slot_hit is not None:
+        eq = _equipment_map(ctx)
+        slot = eq.get(slot_hit)
+        if slot is None:
+            return tpl_of(ctx, "bag_view_empty_slot", {"slot": _slot_name(ctx, slot_hit)})
+        return _render_item_detail(slot, ctx, source="equip")
+    return tpl_of(ctx, "bag_view_no_item")
+
+
+def _render_item_detail(row: Any, ctx: Mapping[str, Any], *, source: str) -> str:
+    """物品详情面板（2026-09-05 新功能：背包 查看 / 装备部位详情渲染）。"""
+    f = _row_fields(row, ctx)
+    item_id = f["item_id"]
+    d = _item_def(ctx, item_id) or {}
+    lines: List[str] = [tpl_of(ctx, "bag_view_header", {"name": f["name"]})]
+    # 类型（大类中文：weapon→装备/consumable→药剂…）+ 品质 + 数量 + 绑定
+    meta_bits: List[str] = []
+    t = str(d.get("type") or "")
+    if t:
+        _cat_key = _CATEGORY_BY_TYPE.get(t)
+        meta_bits.append(_CATEGORY_CN.get(_cat_key or "", t))
+    q = QUALITY_LABELS.get(str(f.get("quality") or "normal"))
+    if q:
+        meta_bits.append(q)
+    if source in ("bag", "def"):
+        meta_bits.append(f"×{f.get('count', 1)}")
+    if f.get("bound"):
+        meta_bits.append("绑定")
+    if meta_bits:
+        lines.append(" ".join(meta_bits))
+    # 装备数值键（atk/def/hp/mp/str/con/agi/foc/spr/lck/spd/mag 等）
+    stat_keys = ("atk", "def", "hp", "mp", "str", "con", "agi", "foc", "spr", "lck", "spd", "mag")
+    stats = []
+    for k in stat_keys:
+        v = d.get(k)
+        if isinstance(v, (int, float)):
+            stats.append(f"{_stat_name_zh(k)} {int(v)}")
+    if stats:
+        lines.append("｜".join(stats))
+    # 装备槽位
+    slot = d.get("slot") or getattr(row, "slot", None)
+    if slot and source != "equip":
+        lines.append(tpl_of(ctx, "bag_view_slot", {"slot": _slot_name(ctx, str(slot))}))
+    # 效果（消耗品 effects → effect_table 翻译）
+    effs = d.get("effects") or []
+    if effs:
+        et = ctx.get("effect_table") or {}
+        parts = []
+        for eid in effs:
+            ed = et.get(str(eid)) if isinstance(et, Mapping) else None
+            if isinstance(ed, Mapping):
+                etp = str(ed.get("type") or "")
+                if etp == "heal":
+                    parts.append(f"恢复 {int(ed.get('power') or 0)}")
+                else:
+                    parts.append(str(ed.get("name") or etp or eid))
+            else:
+                parts.append(str(eid))
+        if parts:
+            lines.append(tpl_of(ctx, "bag_view_effect", {"effects": "；".join(parts)}))
+    # 描述
+    desc = str(d.get("desc") or "")
+    if desc:
+        lines.append(desc)
+    return "\n".join(lines)
+
+
+def _stat_name_zh(key: str) -> str:
+    """属性键 → 中文名（详情面板用；stats.json 配置优先？——缺省表兜底）。"""
+    _m = {"atk": "攻击", "def": "防御", "hp": "生命", "mp": "魔力", "str": "力量",
+          "con": "体魄", "agi": "敏捷", "foc": "专注", "spr": "精神", "lck": "幸运",
+          "spd": "速度", "mag": "魔法"}
+    return _m.get(key, key)
 
 
 # ---------------------------------------------------------------------------
@@ -1525,8 +1656,22 @@ def skill_rows(ctx: Mapping[str, Any]) -> List[str]:
                         return True
         return False
 
+    def _usable_now(sid: str) -> bool:
+        # 2026-09-05 用户需求：技能列表只显示「可以使用」的技能：
+        #  - job_form 非空 = 形态专属技（战斗形态中才可用；列表为非战斗常态查看
+        #    → 隐藏，形态中技能经技能面板/派生另行呈现）
+        #  - derive_only=True = 派生专属技（战斗中经派生获得 → 隐藏）
+        #  - placeholder = 技能组占位容器（既有 _placeholder）
+        _d = _skill_def(ctx, sid)
+        if _skill_field(_d, "job_form", None):
+            return False
+        if _skill_field(_d, "derive_only", False):
+            return False
+        return True
+
     visible = [sid for sid in ids
-               if _job_visible(ctx, sid) and not _placeholder(sid)]
+               if _job_visible(ctx, sid) and not _placeholder(sid)
+               and _usable_now(sid)]
     visible.sort(key=_key)
     return visible
 
@@ -1579,6 +1724,181 @@ def cmd_skill(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 # /帮助：分组目录（5 组单页 / GM 6 组 2 页）+ 组页指令列表（5 条/页）+ 注册引导版（B6）
 # ---------------------------------------------------------------------------
+
+
+
+def _resolve_skill_arg(ctx: Mapping[str, Any], arg: str) -> Optional[str]:
+    """技能详情/派生参数解析：序号（技能列表序）→ 名称 → job 限定名；查无 → None。"""
+    sids = skill_rows(ctx)
+    if arg.isdigit():
+        n = int(arg)
+        if 1 <= n <= len(sids):
+            return sids[n - 1]
+        return None
+    # 名称匹配（含从技能全表查——形态/派生技不在列表但可查详情）
+    all_ids = list(ctx.get("skill_ids") or ())
+    skills = ctx.get("skills")
+    if isinstance(skills, Mapping):
+        all_ids = list(skills.keys())
+    for sid in all_ids:
+        if sid == arg or _skill_name(ctx, sid) == arg:
+            return sid
+    return None
+
+
+def cmd_skill_info(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """技能详情 <序号|名称>：完整技能信息面板（2026-09-05 新功能）。"""
+    g = _gate(ctx)
+    if g is not None:
+        return g
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    args = list(getattr(parsed, "args", None) or [])
+    if not args:
+        return tpl_of(ctx, "skill_info_usage")
+    sid = _resolve_skill_arg(ctx, str(args[0]))
+    if sid is None:
+        return tpl_of(ctx, "skill_info_not_found", {"name": str(args[0])})
+    return _render_skill_info(ctx, sid)
+
+
+def cmd_skill_chain(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
+    """技能派生 <序号|技能名>：可派生技能及条件（2026-09-05 新功能）。"""
+    g = _gate(ctx)
+    if g is not None:
+        return g
+    if parsed.error:
+        return format_tpl12(_fragment(parsed))
+    args = list(getattr(parsed, "args", None) or [])
+    if not args:
+        return tpl_of(ctx, "skill_chain_usage")
+    sid = _resolve_skill_arg(ctx, str(args[0]))
+    if sid is None:
+        return tpl_of(ctx, "skill_chain_not_found", {"name": str(args[0])})
+    return _render_skill_chain(ctx, sid)
+
+
+def _render_skill_info(ctx: Mapping[str, Any], sid: str) -> str:
+    """技能详情面板（模板 basic_rem_tpl skill_info_* 可内容包覆盖）。"""
+    defn = _skill_def(ctx, sid)
+    name = _skill_name(ctx, sid)
+    lines = [tpl_of(ctx, "skill_info_header", {"name": name})]
+    if defn is None:
+        lines.append(tpl_of(ctx, "skill_info_not_found", {"name": sid}))
+        return "\n".join(lines)
+    # 类型/标签
+    t = str(_skill_field(defn, "type", "active"))
+    lines.append(tpl_of(ctx, "skill_info_line", {"k": "类型", "v": TYPE_LABELS.get(t, t)}))
+    # 消耗（MP + 冷却 + trigger_limit）
+    costs: List[str] = []
+    try:
+        mp = int(_skill_field(defn, "mp_cost", 0))
+        if mp > 0:
+            costs.append(f"{mp} 灵能")
+    except (TypeError, ValueError):
+        pass
+    cd = _skill_field(defn, "cooldown", 0)
+    if cd:
+        costs.append(f"冷却 {cd} 回合")
+    tl = _skill_field(defn, "trigger_limit")
+    if isinstance(tl, Mapping):
+        pr = tl.get("per_round")
+        if pr:
+            costs.append(f"每回合限 {pr} 次")
+    if costs:
+        lines.append(tpl_of(ctx, "skill_info_line", {"k": "消耗", "v": "、".join(costs)}))
+    # 效果（kind/power/命中/暴击/霸体/打断/段数）
+    effs: List[str] = []
+    kd = str(_skill_field(defn, "kind", ""))
+    if kd:
+        pw = _skill_field(defn, "power")
+        effs.append(KIND_LABELS.get(kd, kd) + (f" 威力 {pw}" if pw else ""))
+    hits = _skill_field(defn, "hits", 1)
+    if hits and int(hits) > 1:
+        effs.append(f"{hits} 段")
+    if _skill_field(defn, "armor"):
+        effs.append("霸体")
+    if _skill_field(defn, "interrupt"):
+        effs.append("打断")
+    if effs:
+        lines.append(tpl_of(ctx, "skill_info_line", {"k": "效果", "v": "、".join(str(e) for e in effs)}))
+    # 派生指向
+    chain_refs = _skill_field(defn, "chain_refs")
+    if isinstance(chain_refs, (list, tuple)) and chain_refs:
+        derived = _derived_names(ctx, sid, chain_refs)
+        if derived:
+            lines.append(tpl_of(ctx, "skill_info_line",
+                                {"k": "派生", "v": "、".join(derived) + "（发 技能派生 查看条件）"}))
+    # 描述
+    desc = _skill_field(defn, "desc")
+    if isinstance(desc, str) and desc:
+        lines.append(desc)
+    return "\n".join(lines)
+
+
+def _render_skill_chain(ctx: Mapping[str, Any], sid: str) -> str:
+    """技能派生面板：该技能可派生的技能 + 条件 + 效果变化。"""
+    defn = _skill_def(ctx, sid)
+    name = _skill_name(ctx, sid)
+    chain_refs = _skill_field(defn, "chain_refs")
+    lines = [tpl_of(ctx, "skill_chain_header", {"name": name})]
+    found = False
+    if isinstance(chain_refs, (list, tuple)):
+        for ref in chain_refs:
+            chain = _chain_def(ctx, str(ref))
+            if chain is None:
+                continue
+            steps = _skill_field(chain, "steps")
+            if not isinstance(steps, list):
+                continue
+            for step in steps:
+                if not isinstance(step, Mapping):
+                    continue
+                if str(step.get("from") or "") != sid:
+                    continue
+                found = True
+                to_id = str(step.get("to") or "")
+                to_name = _skill_name(ctx, to_id) if to_id else "?"
+                # 条件（count 连用 N 次；tag 标签）
+                cond_parts: List[str] = []
+                cond = step.get("condition")
+                if isinstance(cond, Mapping):
+                    cnt = cond.get("count")
+                    if cnt is not None:
+                        # count 可能嵌套 {eq: N} 形态
+                        if isinstance(cnt, Mapping) and cnt.get("eq") is not None:
+                            cond_parts.append(f"连用 {cnt['eq']} 次")
+                        else:
+                            cond_parts.append(f"连用 {cnt} 次")
+                    tm = cond.get("target_marks")
+                    if isinstance(tm, Mapping):
+                        for mk, mv in tm.items():
+                            if isinstance(mv, Mapping) and mv.get("min") is not None:
+                                _mk_tbl = ctx.get("marks") if isinstance(ctx.get("marks"), Mapping) else {}
+                                _mkd = _mk_tbl.get(str(mk)) if isinstance(_mk_tbl, Mapping) else None
+                                _mkn = str(_mkd.get("name") or mk) if isinstance(_mkd, Mapping) else str(mk)
+                                cond_parts.append(f"目标《{_mkn}》积累 {mv['min']}")
+                tag = step.get("tag")
+                if tag and str(tag) != "none":
+                    cond_parts.append(f"触发：{tag}")
+                if not cond_parts:
+                    cond_parts.append("满足条件")
+                # 效果变化（mode 默认 replace 不展示；variant_override 展示）
+                extra: List[str] = []
+                vo = step.get("variant_override")
+                if isinstance(vo, Mapping) and vo.get("power"):
+                    extra.append(f"威力 {vo['power']}")
+                if _skill_field(step, "armor"):
+                    extra.append("霸体")
+                ln = f"{to_name}（{'、'.join(cond_parts)}"
+                if extra:
+                    ln += "；" + "、".join(str(e) for e in extra)
+                ln += "）"
+                lines.append(ln)
+    if not found:
+        lines.append(tpl_of(ctx, "skill_chain_none", {}))
+    return "\n".join(lines)
+
 
 def _command_alias_display(ctx: Mapping[str, Any], name: str) -> str:
     """指令显示名别名替换（SHC-04 / 4f RUL-24 / 规范 6.7 L213-215）：
@@ -1793,5 +2113,8 @@ def register_basic_commands(router: Any, *, make_context: Optional[Callable[[Any
     router.register(CommandSpec(EQUIP_CMD, handler=_wrap(cmd_equip)))
     router.register(CommandSpec(SKILL_CMD, handler=_wrap(cmd_skill)))
     router.register(CommandSpec(MY_SKILL_CMD, handler=_wrap(cmd_skill)))  # 我的技能 → 技能
+    # 2026-09-05 用户需求：技能详情 / 技能派生
+    router.register(CommandSpec(SKILL_INFO_CMD, handler=_wrap(cmd_skill_info)))
+    router.register(CommandSpec(SKILL_CHAIN_CMD, handler=_wrap(cmd_skill_chain)))
     router.register(CommandSpec(HELP_CMD, handler=_wrap(cmd_help)))
     return router

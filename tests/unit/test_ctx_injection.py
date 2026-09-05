@@ -241,11 +241,12 @@ def test_resolve_skill_by_name(demo_ctx: dict) -> None:
 
 
 def test_resolve_skill_by_index(demo_ctx: dict) -> None:
-    """数字序号（配置序 1 起）：/攻击 2 → 第 2 个技能 id。"""
-    skills = demo_ctx["skills"]
-    sid = battle_commands._resolve_skill(demo_ctx, "2")
-    assert sid == list(skills.keys())[1]
-    assert battle_commands._resolve_skill(demo_ctx, "1") == list(skills.keys())[0]
+    """数字序号 = /技能 列表序（skill_rows 过滤排序，2026-09-05 与技能列表对齐）。"""
+    from qbot_rpg.commands.basic_commands import skill_rows
+    sids = skill_rows(demo_ctx)
+    assert sids, "demo 包应有可见技能"
+    assert battle_commands._resolve_skill(demo_ctx, "1") == sids[0]
+    assert battle_commands._resolve_skill(demo_ctx, "2") == sids[1]
 
 
 def test_resolve_skill_unknown_returns_none(demo_ctx: dict) -> None:

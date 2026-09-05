@@ -29,6 +29,16 @@ from qbot_rpg.commands.router import CommandSpec
 
 JOB_CMD = "转职"
 
+# 职业详情显示层翻译（2026-09-05：难度/武器类型枚举 → 中文；内容包可覆盖模板）
+_JOB_DIFFICULTY_CN = {"simple": "上手简单", "advanced": "进阶", "complex": "复杂"}
+_WEAPON_TYPE_CN = {"ridgeblade": "脊刃", "veinbow": "脉弓", "sword": "剑", "axe": "斧",
+                   "bow": "弓", "longbow": "长弓", "lance": "枪", "dagger": "匕首", "hammer": "锤",
+                   "staff": "法杖", "tome": "法术书"}
+# 2026-09-05 用户需求：职业列表/详情独立指令
+JOB_LIST_CMD = "职业"
+JOB_LIST_CMD2 = "职业列表"  # 2026-09-05 别名（原 stub 词转正）
+JOB_DETAIL_CMD = "职业详情"
+
 
 def _jobs_table(ctx: Mapping[str, Any]) -> Mapping[str, Any]:
     jobs = ctx.get("jobs")
@@ -48,6 +58,67 @@ def _job_list_text(ctx: Mapping[str, Any]) -> str:
         rec = "（推荐）" if d.get("recommended_newbie") else ""
         parts.append(f"{i}. {name}{rec}")
     return "，".join(parts)
+
+
+def _job_detail_text(ctx: Mapping[str, Any], job: Mapping[str, Any]) -> str:
+    """职业详情面板（2026-09-05 新功能：职业详情 <序号|名称>；模板 job_tpl 可覆盖）。"""
+    from qbot_rpg.core.templates import tpl_of  # noqa: PLC0415
+    name = str(job.get("name") or job.get("id") or "")
+    lines = [tpl_of(ctx, "job_detail_header", {"name": name})]
+    if job.get("recommended_newbie"):
+        lines.append(tpl_of(ctx, "job_detail_rec", {}))
+    dif = str(job.get("difficulty") or "")
+    if dif:
+        lines.append(tpl_of(ctx, "job_detail_line",
+                            {"k": "难度", "v": _JOB_DIFFICULTY_CN.get(dif, dif)}))
+    ps = str(job.get("playstyle") or "")
+    if ps:
+        lines.append(tpl_of(ctx, "job_detail_line", {"k": "玩法", "v": ps}))
+    tags = job.get("mechanic_tags")
+    if isinstance(tags, list) and tags:
+        lines.append(tpl_of(ctx, "job_detail_line",
+                            {"k": "标签", "v": "、".join(str(t) for t in tags)}))
+    # 武器类型（显示层翻译，未知类型原文兜底）
+    wts = job.get("weapon_types")
+    if isinstance(wts, list) and wts:
+        lines.append(tpl_of(ctx, "job_detail_line",
+                            {"k": "武器", "v": "、".join(_WEAPON_TYPE_CN.get(str(w), str(w)) for w in wts)}))
+    # 资源轴：stats 表中文翻译（name 字段），无 → 原文
+    ra = job.get("resource_axes")
+    if isinstance(ra, list) and ra:
+        stats_tbl = ctx.get("stats") if isinstance(ctx.get("stats"), Mapping) else {}
+        ra_cn = []
+        for r in ra:
+            rs = str(r)
+            sd2 = stats_tbl.get(rs) if isinstance(stats_tbl, Mapping) else None
+            if isinstance(sd2, Mapping) and sd2.get("name"):
+                ra_cn.append(str(sd2["name"]))
+            else:
+                ra_cn.append(rs)
+        lines.append(tpl_of(ctx, "job_detail_line", {"k": "资源", "v": "、".join(ra_cn)}))
+    growth = job.get("growth")
+    if isinstance(growth, Mapping) and growth:
+        stats_tbl = ctx.get("stats") if isinstance(ctx.get("stats"), Mapping) else {}
+        g_parts = []
+        for k, v in growth.items():
+            if v is None:
+                continue
+            sd3 = stats_tbl.get(str(k)) if isinstance(stats_tbl, Mapping) else None
+            kn = str(sd3.get("name") or k) if isinstance(sd3, Mapping) else str(k)
+            g_parts.append(f"{kn}+{v}")
+        if g_parts:
+            lines.append(tpl_of(ctx, "job_detail_line", {"k": "成长", "v": " ".join(g_parts)}))
+    tr = job.get("transform")
+    if isinstance(tr, Mapping):
+        tt = str(tr.get("transform_to") or tr.get("transform_skill") or "")
+        dur = str(tr.get("duration") or "")
+        tv = tt + (f"（时长 {dur}）" if dur and tt else "")
+        if tv:
+            lines.append(tpl_of(ctx, "job_detail_line", {"k": "形态", "v": tv}))
+    desc = str(job.get("description") or "")
+    if desc:
+        lines.append(desc)
+    return "\n".join(lines)
 
 
 def _find_job_by_index(ctx: Mapping[str, Any], arg: str) -> Optional[dict]:
@@ -159,4 +230,28 @@ def register_job_commands(
         return cmd_job(parsed, _ctx(parsed))
 
     router.register(CommandSpec(JOB_CMD, handler=_job))
+
+    # 2026-09-05 独立指令：职业（列表）/ 职业详情 <序号|名称>
+    def _job_list_cmd(parsed: Any, *a: Any, **k: Any) -> str:
+        from qbot_rpg.core.templates import tpl_of  # noqa: PLC0415
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        ctx2 = injected if isinstance(injected, MutableMapping) else _ctx(parsed)
+        return tpl_of(ctx2, "job_list", {"list": _job_list_text(ctx2)})
+
+    def _job_detail_cmd(parsed: Any, *a: Any, **k: Any) -> str:
+        from qbot_rpg.core.templates import tpl_of  # noqa: PLC0415
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        ctx2 = injected if isinstance(injected, MutableMapping) else _ctx(parsed)
+        args2 = list(getattr(parsed, "args", None) or [])
+        if not args2:
+            return tpl_of(ctx2, "job_detail_usage")
+        arg2 = str(args2[0]).strip()
+        job = resolve_job(ctx2, arg2) or _find_job_by_index(ctx2, arg2)
+        if job is None:
+            return tpl_of(ctx2, "job_not_found", {"job": arg2, "list": _job_list_text(ctx2)})
+        return _job_detail_text(ctx2, job)
+
+    router.register(CommandSpec(JOB_LIST_CMD, handler=_job_list_cmd))
+    router.register(CommandSpec(JOB_LIST_CMD2, handler=_job_list_cmd))
+    router.register(CommandSpec(JOB_DETAIL_CMD, handler=_job_detail_cmd))
     return router

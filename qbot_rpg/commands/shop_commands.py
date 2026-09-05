@@ -59,6 +59,7 @@ from qbot_rpg.core.message_format.list_render import (
 )
 from qbot_rpg.core.shop import (
     resolve_shop_arg,
+    set_current_shop,
     shop_browse,
     shop_buy,
     shop_list,
@@ -93,6 +94,9 @@ SHOP_CMD = "商店"
 BUY_CMD = "购买"
 SELL_CMD = "出售"
 LIST_KEYWORD = "列表"
+# 2026-09-05 用户需求：独立指令形态（原「商店 列表/商店 <名>」子词形态保留兼容）
+SHOP_LIST_CMD = "商店列表"
+SHOP_ENTER_CMD = "商店进入"
 
 # 商店类型徽标（列表/浏览头，数据型功能徽标，非装饰 emoji——纯文本）
 TYPE_BADGES: Mapping[str, str] = {
@@ -441,7 +445,7 @@ def cmd_buy(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     target = _target_of(parsed)
     qty = parsed.qty if parsed.qty is not None else 1
     shop_id = resolve_shop_arg(None, ctx)
-    res = shop_buy(shop_id, target, qty, ctx)  # type: ignore[arg-type]  # None=无商店→校验链① no_shop
+    res = shop_buy(shop_id, target, qty, ctx)  # None=无商店→校验链① no_shop
     return str(res.get("message") or tpl_of(ctx, "shop_buy_fail"))
 
 
@@ -500,4 +504,32 @@ def register_shop_commands(router: Any, *, make_context: Optional[Callable[[Any]
     router.register(CommandSpec(SHOP_CMD, handler=_shop))
     router.register(CommandSpec(BUY_CMD, handler=_buy))
     router.register(CommandSpec(SELL_CMD, handler=_sell))
+
+    # 2026-09-05 独立指令形态：商店列表 / 商店进入（复用 cmd_shop 子逻辑）
+    def _shop_list(parsed: Any, *a: Any, **k: Any) -> str:
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        ctx2 = injected if isinstance(injected, MutableMapping) else _ctx(parsed)
+        args2 = list(getattr(parsed, "args", None) or [])
+        page3: object = 1
+        if args2:
+            n3 = parse_int(str(args2[0]))
+            if n3 is None or n3 < 1:
+                return format_tpl12(f"/{SHOP_LIST_CMD} {args2[0]}")
+            page3 = n3
+        return cmd_shop_list(parsed, ctx2, page3)
+
+    def _shop_enter(parsed: Any, *a: Any, **k: Any) -> str:
+        injected = k.get("ctx") if isinstance(k, dict) else None
+        ctx2 = injected if isinstance(injected, MutableMapping) else _ctx(parsed)
+        args2 = list(getattr(parsed, "args", None) or [])
+        if not args2:
+            return tpl_of(ctx2, "shop_enter_usage")
+        ref2 = resolve_shop_arg(str(args2[0]), ctx2)
+        if ref2 is None:
+            return tpl_of(ctx2, "shop_enter_not_found", {"name": str(args2[0])})
+        set_current_shop(ctx2, ref2)
+        return cmd_shop_browse(parsed, ctx2, ref2, 1)
+
+    router.register(CommandSpec(SHOP_LIST_CMD, handler=_shop_list))
+    router.register(CommandSpec(SHOP_ENTER_CMD, handler=_shop_enter))
     return router

@@ -37,6 +37,14 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     "basic_equip_name_hint": "❌ 装备指令：穿戴请用 /使用 <序号>"
                              "（序号见 /背包），如 /使用 1",
 
+    # —— /背包 查看（2026-09-05 新功能：物品/装备详情）——
+    "bag_view_usage": "背包查看：发 背包 查看 <序号|物品名|部位>（如 背包 查看 1 / 查看 砺脊刃 / 查看 武器）",
+    "bag_view_header": "【{name}】",
+    "bag_view_slot": "部位：{slot}",
+    "bag_view_effect": "效果：{effects}",
+    "bag_view_no_item": "❌ 背包里没有这件物品/部位（发 背包 查看你有啥）",
+    "bag_view_empty_slot": "❌ 该部位（{slot}）未穿戴装备",
+
 
     # —— /装备 装备栏（意见一同步：去序号 + 头部 + 强化后缀）——
     "basic_equip_header": "【装备】",
@@ -70,6 +78,14 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     "basic_skill_row": "{idx}. {name}（{type}）",
     "basic_skill_mp": " {mp} MP",
     "basic_skill_chain": "可派生成：{names}",
+    # —— 2026-09-05 技能详情 / 技能派生 ——
+    "skill_info_usage": "技能详情：发 技能详情 <序号|名称>（如 技能详情 1 / 技能详情 脊斩）",
+    "skill_info_header": "【{name}】",
+    "skill_info_line": "{k}：{v}",
+    "skill_info_not_found": "❌ 没有『{name}』这个技能（发 技能 查看可用技能）",
+    "skill_chain_usage": "技能派生：发 技能派生 <序号|技能名>（如 技能派生 1 / 技能派生 脊斩）",
+    "skill_chain_header": "【{name}】派生",
+    "skill_chain_none": "该技能无可派生技能",
 
     # —— /帮助 注册引导版（B6 豁免）+ 组页头（4f RUL-23）——
     "basic_register_guide": "【新手引导】发 注册 名字 职业 创建角色\n"
@@ -90,6 +106,13 @@ PLACEHOLDER_WHITELIST: Dict[str, set] = {
     "basic_filter_unknown": {"word"},
     "basic_no_slot": set(),
     "basic_equip_name_hint": set(),
+    # 2026-09-05 /背包 查看 详情模板键
+    "bag_view_usage": set(),
+    "bag_view_header": {"name"},
+    "bag_view_slot": {"slot"},
+    "bag_view_effect": {"effects"},
+    "bag_view_no_item": set(),
+    "bag_view_empty_slot": {"slot"},
     "basic_equip_header": set(),
     "basic_equip_line": {"slot", "name"},
     "basic_equip_enh": {"enhance"},
@@ -117,6 +140,13 @@ PLACEHOLDER_WHITELIST: Dict[str, set] = {
     "basic_skill_row": {"idx", "name", "type"},
     "basic_skill_mp": {"mp"},
     "basic_skill_chain": {"names"},
+    "skill_info_usage": set(),
+    "skill_info_header": {"name"},
+    "skill_info_line": {"k", "v"},
+    "skill_info_not_found": {"name"},
+    "skill_chain_usage": set(),
+    "skill_chain_header": {"name"},
+    "skill_chain_none": set(),
     "basic_register_guide": set(),
     "basic_help_group_header": {"group"},
 }

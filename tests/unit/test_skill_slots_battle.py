@@ -284,17 +284,24 @@ def test_attack_action_unequipped_skill_rejected() -> None:
 
 
 def test_attack_action_equipped_by_index() -> None:
-    """/攻击 <序号>：装配内序号放行（序号按装配快照行动位，未装配技能不进列表）。"""
+    """/攻击 <序号>：序号 = /技能 列表序（skill_rows，2026-09-05 对齐），
+    未装配技能仍被装配过滤拒绝（is_slot_equipped）。
+    skill_rows 序（无 job 过滤全可见）：basic_attack → fireball → healing_light
+    → power_strike（active 按 id）→ stone_guard(passive) → counter_strike(trigger)。
+    装配行动位 = [basic_attack, power_strike, healing_light]（fireball 未装配）。"""
     c = _ctx()
-    # 装配快照行动位 = [basic_attack(1), power_strike(2), healing_light(3)]
-    # → 序号 2 = power_strike；序号 3 = healing_light
-    action, err = _attack_action(_Parsed(["2"]), c)
-    assert err is None and action == {"type": "skill", "skill_id": "power_strike"}
-    action3, err3 = _attack_action(_Parsed(["3"]), c)
-    assert err3 is None and action3 == {"type": "skill", "skill_id": "healing_light"}
-    # 序号 5（超出行动位）→ 回退全表？不——装配外序号拒绝
-    action5, err5 = _attack_action(_Parsed(["5"]), c)
-    assert action5 is None and err5
+    # 序号 1 = basic_attack（装配内放行）
+    action1, err1 = _attack_action(_Parsed(["1"]), c)
+    assert err1 is None and action1 == {"type": "skill", "skill_id": "basic_attack"}
+    # 序号 2 = fireball（列表序第 2，但未装配 → 装配过滤拒绝）
+    action2, err2 = _attack_action(_Parsed(["2"]), c)
+    assert action2 is None and err2
+    # 装配内技能按列表序可达：power_strike 在列表序 4
+    action4, err4 = _attack_action(_Parsed(["4"]), c)
+    assert err4 is None and action4 == {"type": "skill", "skill_id": "power_strike"}
+    # 序号越界（技能列表 6 项）→ 拒绝
+    action9, err9 = _attack_action(_Parsed(["9"]), c)
+    assert action9 is None and err9
 
 
 def test_attack_action_save_load_roundtrip_equipped() -> None:

@@ -223,6 +223,29 @@ def test_delete_monster_cascades_maps():
     assert len(out["cascades"]) >= 3
 
 
+def test_delete_monster_blocked_by_quest_param_keeps_maps_intact():
+    """删怪被 quest.conditions[].param 引用 → in_use 拦截，maps 引用零改动。
+
+    2026-09-05 回归测试（顺序 bug 修复）：原实现先级联清 maps 再查引用 →
+    拦截时 maps 内存已被污染（ridge_cub 等仍存活的怪引用被清），后续写盘落盘
+    丢引用。修复后检查必须先于级联清理，引用命中 → 零改动返回。
+    """
+    ctx = make_ctx()
+    ctx["modules_raw"]["quest"][0]["conditions"] = [
+        {"var": "kill_count", "op": "ge", "value": 1, "param": "gust_wolf"}]
+    raw = ctx["modules_raw"]
+    maps_before = [dict(m) for m in raw["maps"]]
+    out = delete_page_item("monster", "gust_wolf", ctx)
+    assert out["ok"] is False
+    assert out["errors"][0]["code"] == "in_use"
+    assert "q1" in out["errors"][0]["message"]
+    # maps 未被级联触碰：两张图的 monsters/gate_guard 原样保留
+    for i, m in enumerate(raw["maps"]):
+        assert m == maps_before[i], f"地图 {m['id']} 被级联污染"
+    assert [mo["enemy"] for mo in raw["maps"][0]["monsters"]] == ["gust_wolf", "ridge_cub"]
+    assert raw["maps"][1]["gate_guard"] == "gust_wolf"
+
+
 def test_delete_job_cascades_skills_job_restrict():
     """删职业 ridge_blade → skills[].job_restrict[] 剔除。"""
     ctx = make_ctx()

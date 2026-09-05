@@ -701,6 +701,14 @@ def create_app(state: Optional[Any] = None) -> Any:
         if not wr.get("ok"):
             return {"ok": False, "errors": wr.get("errors") or [{
                 "level": "red", "code": "write_failed", "message": "写盘失败"}]}
+        # 级联模块写盘后同步回内存（2026-09-05 修复：原 delete 只同步当前模块，
+        # maps 等被级联清理的模块内存残留旧引用 → 后续再保存基于旧内存覆盖磁盘
+        # 新值，把已删引用「复活」；对齐 _save_pipeline 的 modules_raw 同步语义。
+        # ctx.modules_raw 即 reg.modules_raw（_ctx_of 直传同一对象））
+        raw_mods = ctx.get("modules_raw")
+        if isinstance(raw_mods, MutableMapping):
+            for mod_name, mod_entries in module_files.items():
+                raw_mods[mod_name] = mod_entries
         return {"ok": True, "data": {"id": item_id,
                                      "cascades": del_res.get("cascades", [])}}
 

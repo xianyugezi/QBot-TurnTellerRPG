@@ -608,25 +608,13 @@ def delete_page_item(
     removed_name = _item_name(hit)
 
     if page == "monster":
-        # 删怪物 → maps[].monsters[]（enemy==id）移除、maps[].gate_guard==id 清空
-        maps = raw.get("maps")
-        if isinstance(maps, list):
-            for m in maps:
-                if not isinstance(m, MutableMapping):
-                    continue
-                if _remove_ref_from_list(m, "monsters", item_id):
-                    cascades.append({"module": "maps", "item_id": m.get("id"),
-                                     "removed_ref": {"field": "monsters", "value": item_id}})
-                if str(m.get("gate_guard") or "") == item_id:
-                    m["gate_guard"] = ""
-                    cascades.append({"module": "maps", "item_id": m.get("id"),
-                                     "removed_ref": {"field": "gate_guard", "value": item_id}})
-        # 怪物自身 drops 随条目移除（无需额外级联）
         # 任务/对话条件参数引用保护（UI 检查 2026-09-03：删怪会静默破坏任务击杀
         # 计数条件 quest.conditions[].param 与 npc 对话/交互 condition.param——
-        # 这些不是契约级联项（级联会误删任务条件），正确语义 = 阻止删除并提示引用方）
+        # 这些不是契约级联项（级联会误删任务条件），正确语义 = 阻止删除并提示引用方）。
+        # 【2026-09-05 修复顺序 bug】检查必须先于级联清理：原实现先清 maps 再查引用
+        # → 被拦截时 maps 内存已被污染（ridge_cub 引用被清），后续任意写盘把污染落盘
+        # （实测：删 gravelcrown 后 a1_bone_field 的 ridge_cub 引用丢失）。对齐 items 分支。
         refs_found: List[str] = []
-        # quest/npc 模块（注释说明引用形态：conditions[].param / 对话交互 condition.param）
         for mod_name in ("quest", "npc"):
             mod_data = raw.get(mod_name)
             if not isinstance(mod_data, list):
@@ -643,7 +631,21 @@ def delete_page_item(
             return {"ok": False, "errors": [_red(
                 "in_use", "id",
                 f"『{item_id}』被 {len(refs_found)} 处条件引用（{'、'.join(refs_found[:5])}），"
-                "请先解除引用再删除")]} 
+                "请先解除引用再删除")]}
+        # 删怪物 → maps[].monsters[]（enemy==id）移除、maps[].gate_guard==id 清空
+        maps = raw.get("maps")
+        if isinstance(maps, list):
+            for m in maps:
+                if not isinstance(m, MutableMapping):
+                    continue
+                if _remove_ref_from_list(m, "monsters", item_id):
+                    cascades.append({"module": "maps", "item_id": m.get("id"),
+                                     "removed_ref": {"field": "monsters", "value": item_id}})
+                if str(m.get("gate_guard") or "") == item_id:
+                    m["gate_guard"] = ""
+                    cascades.append({"module": "maps", "item_id": m.get("id"),
+                                     "removed_ref": {"field": "gate_guard", "value": item_id}})
+        # 怪物自身 drops 随条目移除（无需额外级联）
     elif page == "items":
         # 物品被任务/对话条件参数引用 → 阻止删除（对齐怪物分支语义：quest/npc
         # conditions[].param / var 直接放 item id 的引用是运行时判定条件，级联移除

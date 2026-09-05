@@ -166,6 +166,21 @@
   #login .hint { color: var(--dim); font-size: 12px; text-align: center; margin-top: 8px; }
   /* 空态 */
   .empty { color: var(--dim); text-align: center; padding: 40px 20px; }
+  /* 页面内确认层（2026-09-05：替代原生 confirm，可样式化/可自动化） */
+  .confirm-mask {
+    position: fixed; inset: 0; background: rgba(0,0,0,.45);
+    display: none; align-items: center; justify-content: center; z-index: 999;
+  }
+  .confirm-card {
+    background: var(--bg, #1e1e2e); color: var(--fg, #eee);
+    border: 1px solid #444; border-radius: 10px; padding: 18px 22px;
+    min-width: 260px; max-width: 420px; box-shadow: 0 8px 30px rgba(0,0,0,.5);
+  }
+  .confirm-text { margin-bottom: 14px; line-height: 1.5; white-space: pre-wrap; word-break: break-all; }
+  .confirm-btns { display: flex; gap: 10px; justify-content: flex-end; }
+  .confirm-btns button { padding: 6px 16px; border-radius: 6px; cursor: pointer; }
+  .confirm-btns .btn-yes { background: var(--accent, #c0392b); color: #fff; border: none; }
+  .confirm-btns .btn-no { background: #333; color: #ccc; border: 1px solid #555; }
 </style>
 </head>
 <body>
@@ -267,6 +282,37 @@
     while (m.children.length > 6) m.removeChild(m.firstChild);
   }
 
+  /* ---------- 页面内确认层（2026-09-05 三路实测修复：原原生 confirm() 弹窗
+     阻塞浏览器自动化 30s 挂死、无法自动确认——删除/键删除流不可 E2E 覆盖；
+     改页面内遮罩确认，可样式化可自动化。全局唯一实例，回调式。） ---------- */
+  var _confirmBox = null;
+  function askConfirm(text, onYes) {
+    if (!_confirmBox) {
+      _confirmBox = document.createElement("div");
+      _confirmBox.className = "confirm-mask";
+      _confirmBox.innerHTML =
+        '<div class="confirm-card">' +
+        '<div class="confirm-text"></div>' +
+        '<div class="confirm-btns">' +
+        '<button class="btn-yes">确定</button>' +
+        '<button class="btn-no">取消</button>' +
+        "</div></div>";
+      document.body.appendChild(_confirmBox);
+      _confirmBox.querySelector(".btn-no").addEventListener("click", function () {
+        _confirmBox.style.display = "none";
+      });
+      _confirmBox.querySelector(".btn-yes").addEventListener("click", function () {
+        var cb = _confirmBox._onYes;
+        _confirmBox.style.display = "none";
+        _confirmBox._onYes = null;
+        if (cb) cb();
+      });
+    }
+    _confirmBox.querySelector(".confirm-text").textContent = text;
+    _confirmBox._onYes = onYes || null;
+    _confirmBox.style.display = "flex";
+  }
+
   /* ---------- 登录 ---------- */
   function showApp() {
     $("login").style.display = "none";
@@ -278,8 +324,10 @@
     $("app").classList.remove("active");
     $("login").style.display = "flex";
     $("loginErr").textContent = errText || "";
-    if (!TOKEN) $("loginHint").textContent = "首次使用请先设置密码（机主 QQ + 新密码）";
-    else $("loginHint").textContent = "";
+    // 中性提示（2026-09-05 三路实测修复：原 !TOKEN 即显示「首次使用请先设置
+    // 密码」→ 登出后已设密用户看到误导文案；设密引导只在 428 分支/首次设密
+    // 流程中由 setupOwner 明确切换）
+    $("loginHint").textContent = "请输入机主 QQ 与密码登录";
   }
   $("btnLogin").addEventListener("click", function () {
     var owner = $("lg_owner").value.trim();
@@ -296,6 +344,7 @@
           // 2026-09-03：原判断 errs 含「未设置」永不命中——后端未设密
           // 返回 wrong_password 导致 setup 引导断链）
           if (j._status === 428) {
+            $("loginHint").textContent = "检测到首次使用：正在为你设置密码…";
             setupOwner(owner, pass);
           } else {
             var errs = (j.errors || []).map(function (e) { return e.message; }).join("；");
@@ -407,6 +456,16 @@
     state.pageNo = 1; state.cur = null; state.isNew = false;
     state.kind = null; state.whole = null; state.curKey = null;
     state.meta = null;  // 切页清 meta，防旧页 meta 误配新页表单（路4C 竞态）
+    // 立即清右栏编辑面板（2026-09-05 三路实测修复：原切页只清 state，map 编辑
+    // 框/旧表单内容残留到新页数据到达才被覆盖——属性表 atk 编辑框串到世界设置/
+    // 公式/怪物页 + toast 累积；切页瞬间即清并显「加载中」占位）
+    $("mapEdit").classList.add("hidden");
+    $("mapScalar").classList.add("hidden");
+    $("btnSave").classList.add("hidden");
+    $("btnDel").classList.add("hidden");
+    $("formwrap").classList.remove("hidden");
+    $("editName").textContent = "—";
+    $("formwrap").innerHTML = '<div class="empty">加载中...</div>';
     // M12.5 批4 路4C：按形态走不同数据流——meta 先到即知形态；
     // 页清单登记 page_kind 可先行（obj/map 不等 meta 直接拉 whole）
     var kind = pageKind();
@@ -419,8 +478,6 @@
     uiMode("list");
     loadMeta(pageId);
     loadList(pageId, 1);
-    $("editName").textContent = "—";
-    $("formwrap").innerHTML = '<div class="empty">加载中...</div>';
   }
   function loadMeta(pageId) {
     api("GET", "/api/meta/" + pageId).then(function (j) {
@@ -715,7 +772,18 @@
         (f.required ? ' <span class="req">*</span>' : "") +
         ' <span style="opacity:.6">[' + f.type + "]</span>";
       var input;
-      if (f.type === "select" || (f.enum && f.enum.length)) {
+      // bool 归一：field_meta type 用 "bool"（meta 原样下发），前端曾只认
+      // "boolean" → bool 字段落自由文本框、打开-保存即腐蚀成字符串（三路
+      // 浏览器实测抓 P1）。两种都走 select（空/true/false）。
+      var isBool = (f.type === "bool" || f.type === "boolean");
+      if (isBool) {
+        input = document.createElement("select");
+        ["", "true", "false"].forEach(function (v) {
+          var o = document.createElement("option");
+          o.value = v; o.textContent = v === "" ? "（空）" : v;
+          input.appendChild(o);
+        });
+      } else if (f.type === "select" || (f.enum && f.enum.length)) {
         input = document.createElement("select");
         var opt0 = document.createElement("option"); opt0.value = ""; opt0.textContent = "（空）";
         input.appendChild(opt0);
@@ -733,13 +801,6 @@
       } else if (f.type === "number") {
         input = document.createElement("input");
         input.type = "number";
-      } else if (f.type === "boolean") {
-        input = document.createElement("select");
-        ["", "true", "false"].forEach(function (v) {
-          var o = document.createElement("option");
-          o.value = v; o.textContent = v === "" ? "（空）" : v;
-          input.appendChild(o);
-        });
       } else {
         input = document.createElement("input");
         input.type = "text";
@@ -803,13 +864,21 @@
   function collectForm() {
     if (!state.meta) return Object.assign({}, state.cur);
     var out = {};
+    // meta 字段名 → 类型映射（bool select 收集要转回真布尔——P1 修复：
+    // 原无条件存字符串 → 打开-保存把布尔腐蚀成 "true"/"false" 字符串）
+    var typeOf = {};
+    (state.meta.fields || []).forEach(function (f) { typeOf[f.name] = f.type; });
     document.querySelectorAll("#formwrap [data-field]").forEach(function (el) {
       var name = el.dataset.field;
       if (name === "__raw__") return;
       var v = el.value;
+      var ftype = typeOf[name];
       if (el.dataset.json) {
         try { out[name] = v.trim() ? JSON.parse(v) : undefined; }
         catch (e) { msg("字段 " + name + " JSON 解析失败：" + e.message, "err"); }
+      } else if (ftype === "bool" || ftype === "boolean") {
+        // 空 → undefined（缺省不写）；"true"/"false" → 真布尔
+        out[name] = v === "" ? undefined : (v === "true");
       } else if (el.type === "number") {
         out[name] = v === "" ? undefined : Number(v);
       } else {
@@ -927,46 +996,48 @@
       return;
     }
     if (!state.cur || state.isNew) return;
-    if (!confirm("确定删除 " + state.cur.id + "？（级联清理引用）")) return;
-    api("DELETE", "/api/pages/" + state.page + "/" + encodeURIComponent(state.cur.id))
-      .then(function (j) {
-        if (j.ok) {
-          msg("已删除 " + state.cur.id, "ok");
-          state.cur = null;
-          loadList(state.page, 1);
-          $("editName").textContent = "—";
-          $("formwrap").innerHTML = '<div class="empty">选择左侧条目或新建</div>';
-        } else {
-          var errs = (j.errors || []).map(function (e) { return e.message; }).join("；");
-          msg(errs || "删除失败", "err");
-        }
-      });
+    askConfirm("确定删除 " + state.cur.id + "？\n（级联清理引用）", function () {
+      api("DELETE", "/api/pages/" + state.page + "/" + encodeURIComponent(state.cur.id))
+        .then(function (j) {
+          if (j.ok) {
+            msg("已删除 " + state.cur.id, "ok");
+            state.cur = null;
+            loadList(state.page, 1);
+            $("editName").textContent = "—";
+            $("formwrap").innerHTML = '<div class="empty">选择左侧条目或新建</div>';
+          } else {
+            var errs = (j.errors || []).map(function (e) { return e.message; }).join("；");
+            msg(errs || "删除失败", "err");
+          }
+        });
+    });
   }
   /* map 键值行内删除（renderMapKeys 键行「删」按钮独立路径；行删除后
      重拉 whole 而非本地 splice——单键写盘后键序/键集以服务端为准） */
   function delMapKeyRow(k) {
     if (!k) return;  // 空键守卫（M12.5 批4 清理重复定义后保留）
-    if (!confirm("确定删除键 " + k + " ？")) return;
-    api("DELETE", "/api/pages/" + state.page + "/map/" + encodeURIComponent(k))
-      .then(function (dj) {
-        if (dj.ok) {
-          msg("已删除键 " + k, "ok");
-          if (state.curKey === k) {
-            state.curKey = null;
-            $("mapEdit").classList.add("hidden");
-            $("mapScalar").classList.add("hidden");
-            $("btnSave").classList.add("hidden");
-            $("btnDel").classList.add("hidden");
-            $("formwrap").classList.remove("hidden");
-            $("editName").textContent = state.page;
-            $("formwrap").innerHTML = '<div class="empty">点击左侧键名编辑；「+ 新建键」添加</div>';
+    askConfirm("确定删除键 " + k + " ？", function () {
+      api("DELETE", "/api/pages/" + state.page + "/map/" + encodeURIComponent(k))
+        .then(function (dj) {
+          if (dj.ok) {
+            msg("已删除键 " + k, "ok");
+            if (state.curKey === k) {
+              state.curKey = null;
+              $("mapEdit").classList.add("hidden");
+              $("mapScalar").classList.add("hidden");
+              $("btnSave").classList.add("hidden");
+              $("btnDel").classList.add("hidden");
+              $("formwrap").classList.remove("hidden");
+              $("editName").textContent = state.page;
+              $("formwrap").innerHTML = '<div class="empty">点击左侧键名编辑；「+ 新建键」添加</div>';
+            }
+            loadWhole();
+          } else {
+            var errs = (dj.errors || []).map(function (e) { return e.message; }).join("；");
+            msg(errs || "删除失败", "err");
           }
-          loadWhole();
-        } else {
-          var errs = (dj.errors || []).map(function (e) { return e.message; }).join("；");
-          msg(errs || "删除失败", "err");
-        }
-      });
+        });
+    });
   }
   $("btnSave").addEventListener("click", onSave);
   $("btnDel").addEventListener("click", onDel);

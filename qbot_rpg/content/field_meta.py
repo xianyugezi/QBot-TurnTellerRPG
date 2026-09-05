@@ -1021,6 +1021,10 @@ def _module_table() -> Dict[str, ModuleMeta]:
     # M12.5/veinborn 属性键收口：装备词条键 atk/dfn/foc/hp/agi（stats.json 声明的
     # combat 键空间；items_fields 复制源仍登记 def 旧键 → 追加 dfn/foc/hp/agi，
     # 保留 def 兼容旧内容包（demo_full 等 def 词条不受影响）。
+    # label 区分（三路实测抓 P2）：def 与 dfn 同义「防御」→ 表单两个「防御」无法区分
+    # 填错位置；def 标「(旧键)」供 demo_full 兼容识别，dfn 为现行键保持「防御」。
+    equipment_fields["def"] = FieldMeta(type="number", range_min=0, range_max=5000,
+                                        label="防御(def·旧键)")
     equipment_fields["dfn"] = FieldMeta(type="number", range_min=0, range_max=5000, label="防御")
     equipment_fields["foc"] = FieldMeta(type="number", range_min=0, range_max=5000, label="专注")
     equipment_fields["hp"] = FieldMeta(type="number", range_min=0, range_max=99999, label="生命")

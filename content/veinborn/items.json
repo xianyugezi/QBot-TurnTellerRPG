@@ -86,5 +86,51 @@
     "price": 500,
     "usable": false,
     "desc": "蕴着守护脉纹的护石，强化失败时抵消掉级。"
+  },
+  {
+    "id": "mossvein_seed",
+    "name": "苔脉籽",
+    "type": "material",
+    "price": 30,
+    "usable": false,
+    "seed": {
+      "output": "mossvein_herb",
+      "quality_floor": 40,
+      "traits": [],
+      "harvest_sec": null
+    },
+    "desc": "脉堑石缝里的苔籽，种下 4 小时后可收苔脉草。"
+  },
+  {
+    "id": "glowcap_seed",
+    "name": "莹菇孢子",
+    "type": "material",
+    "price": 60,
+    "usable": false,
+    "seed": {
+      "output": "glowcap",
+      "quality_floor": 50,
+      "traits": [
+        "莹光"
+      ],
+      "harvest_sec": null
+    },
+    "desc": "蚀脉洞穴的莹菇孢子，种下 4 小时后可收莹光菇。"
+  },
+  {
+    "id": "mossvein_herb",
+    "name": "苔脉草",
+    "type": "material",
+    "price": 25,
+    "usable": false,
+    "desc": "脉气浸润的苔草，炼金/合成常用素材。"
+  },
+  {
+    "id": "glowcap",
+    "name": "莹光菇",
+    "type": "material",
+    "price": 55,
+    "usable": false,
+    "desc": "暗处泛莹光的蘑菇，珍贵素材。"
   }
 ]

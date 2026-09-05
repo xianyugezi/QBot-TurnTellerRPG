@@ -129,6 +129,30 @@ def test_quest_board_npc_section_page2():
     assert "当前页：2/2" in out
 
 
+def test_quest_board_section_header_once_per_page():
+    """2026-09-05 段头回归（V1 审计 P1）：段头每段每页只打一次——
+    页内不逐行重复、跨页首实例在上一页的段头不在本页重打、页 2 新段正确打头。"""
+    # 页 1：主线 2 行 + 每日 3 行（无 active）→ 各段头计数 1
+    out = cmd_quest(parse("/任务"), make_ctx())
+    assert out.count("━━ 主线（常驻） ━━") == 1
+    assert out.count("━━ 每日板上任务 ━━") == 1
+    # 页 2：NPC 支线段（首实例在页 2）→ 头 1 次；每日段首实例在页 1 → 0 次
+    out2 = cmd_quest(parse("/任务 2"), make_ctx())
+    assert out2.count("━━ NPC 支线 ━━") == 1
+    assert out2.count("━━ 每日板上任务 ━━") == 0
+    # 同段跨页：active 6 个 → 页 1 满 5 行，页 2 续 1 行同段 → 页 2 不重打段头
+    ctx = make_ctx(quest_active={"main_special_weapon": {"name": "特制武器"},
+                                 "main_forge": {"name": "锻造试炼"},
+                                 "collect_iron": {"name": "收集铁矿"},
+                                 "slay_beetle": {"name": "清剿熔岩甲虫"},
+                                 "forge_weapon": {"name": "打造武器"},
+                                 "scout_npc": {"name": "矿洞侦察"}})
+    p2 = cmd_quest(parse("/任务 2"), ctx)
+    assert p2.count("━━ 进行中 ━━") == 0  # 段在页 1 已开，页 2 续行不重打
+    p1 = cmd_quest(parse("/任务"), ctx)
+    assert p1.count("━━ 进行中 ━━") == 1
+
+
 def test_quest_noarg_command_equivalence():
     """/任务（第 1 页）与 /任务 1 输出一致。"""
     assert cmd_quest(parse("/任务"), make_ctx()) == cmd_quest(parse("/任务 1"), make_ctx())

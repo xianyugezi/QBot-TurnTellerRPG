@@ -340,6 +340,46 @@ def test_board_zone_main_guide_stays_visible():
     assert "guide2" not in ids
 
 
+def test_board_active_full_mixed_limits():
+    """2026-09-05 V1 审计 P2 修正：active_full 判定对齐 quest_accept 逐任务限额——
+    异 limit 场景（active 含低限任务 + 高限可接任务）不误报满员。"""
+    def _q(qid, limit):
+        return make_quest(qid, board={"slot": "daily", "accept_limit": limit})
+    ctx = make_ctx()
+    add_quests(ctx, _q("qa", 1), _q("qb", 5), _q("qc", 5))
+    assert quest_accept("qa", ctx)["ok"] is True
+    assert quest_accept("qb", ctx)["ok"] is True
+    # active=[qa,qb]；qa limit=1 但 qb/qc limit=5 → 仍有可接（qc）→ 不满
+    assert quest_board(ctx)["active_full"] is False
+    assert quest_accept("qc", ctx)["ok"] is True  # 确实还能接
+    # 同 limit=2 满员（qa/qb 都接满 2）→ 满
+    ctx2 = make_ctx()
+    add_quests(ctx2, _q("x1", 2), _q("x2", 2), _q("x3", 2))
+    quest_accept("x1", ctx2)
+    quest_accept("x2", ctx2)
+    assert quest_board(ctx2)["active_full"] is True
+    assert quest_accept("x3", ctx2)["ok"] is False
+
+
+def test_complete_repeatable_no_next_main_hint():
+    """2026-09-05 V1 审计 P2 修正：repeatable 前置完成不登记 quest_completed →
+    后继 main 仍 chain_locked → 不追加「新主线开放」话术（防与引擎状态矛盾）。"""
+    ctx = make_ctx()
+    add_quests(ctx, make_quest("rep", repeatable=True, conditions=[]),
+               make_quest("next_m", main=True, unlock_chain="rep", conditions=[]))
+    assert quest_accept("rep", ctx)["ok"] is True
+    out = quest_complete("rep", ctx)
+    assert out["ok"] is True
+    assert "新主线开放" not in out["message"]
+    # 对照：非 repeatable 前置 → 正常提示
+    ctx2 = make_ctx()
+    add_quests(ctx2, make_quest("p1", conditions=[]),
+               make_quest("n1", main=True, unlock_chain="p1", conditions=[]))
+    assert quest_accept("p1", ctx2)["ok"] is True
+    out2 = quest_complete("p1", ctx2)
+    assert "新主线开放" in out2["message"]
+
+
 # ===========================================================================
 # ③ 进度 / 交付判定（quest_progress）
 # ===========================================================================

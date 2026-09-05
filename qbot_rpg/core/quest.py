@@ -615,14 +615,23 @@ def quest_board(ctx: Mapping[str, Any]) -> dict:
         sections.append({"title": _SECTION_TITLES[title_key], "slot": title_key, "rows": built})
 
     total = index
-    # 满员标志（2026-09-05 审计 B 路 P2：accept_limit 满时板面零提示，玩家点可接
-    # 行才被拒。判定 = 进行中数 ≥ 各进行中任务 accept_limit 的最小值——quest_accept
-    # 按被接任务的 limit 拒绝，取最小 limit 为保守口径；active 空 → 恒不满）
+    # 满员标志（2026-09-05 审计 B 路 P2 + V1 修正）：accept_limit 满时板面提示腾位。
+    # 判定对齐 quest_accept 逐任务限额：对每个可接取候选行判 len(active) >= 其
+    # 自身 accept_limit → 该行接不了；所有可接候选都接不了才置 active_full
+    # （异 limit 场景不误报：A limit=1、B/C limit=5、active=[A,B] 时 C 仍可接）。
+    # 无 settings 全局覆盖时 accept_limit 取 quest.board 或默认 5（D-07）。
     active_full = False
     if active_rows:
-        limits = [_accept_limit(ctx, q) for q, _s in active_rows if _accept_limit(ctx, q) > 0]
-        if limits and len(active_rows) >= min(limits):
-            active_full = True
+        all_blocked = True
+        for _q, _s in main_rows + slot_rows["daily"] + slot_rows["weekly"] \
+                + slot_rows["event"] + npc_rows:
+            if not _is_acceptable(_q, ctx):
+                continue
+            lim = _accept_limit(ctx, _q)
+            if lim <= 0 or len(active_rows) < lim:
+                all_blocked = False
+                break
+        active_full = all_blocked
     return {
         "ok": True,
         "sections": sections,
@@ -1002,20 +1011,23 @@ def quest_complete(quest_id: str, ctx: MutableMapping[str, Any]) -> dict:
             _grant_label(g, ctx) for g in rw["granted"][:4]
         ) + "）"
     msg += f"，今日已完成 {completed_today}/{limit if limit > 0 else '∞'}"
-    # 2026-09-05 审计 C 路 P2（引导链断点）：完成后若解锁了新主线（unlock_chain
-    # 指向本任务的下一个 main 任务且未完成）→ 消息追加引导，玩家不必自己发 任务 才发现
+    # 2026-09-05 审计 C 路 P2（引导链断点）+ V1 修正：完成后若解锁了新主线
+    # （unlock_chain 指向本任务的下一个 main 任务且未完成）→ 消息追加引导。
+    # V1 修正：repeatable 任务完成不登记 quest_completed → 后继实际仍 chain_locked
+    # （内容校验 quest_models Y-4 已拦此配置，运行时再兜一层防误报话术）。
     next_name = None
-    try:
-        for _qid2 in _all_quest_ids(ctx):
-            _qd = resolve_quest(ctx, _qid2)
-            if _qd is None:
-                continue
-            if _qd.get("unlock_chain") == quest_id and _qd.get("main") is True \
-                    and not _is_completed(ctx, _qid2):
-                next_name = _quest_name(_qd)
-                break
-    except Exception:  # noqa: BLE001 —— 引导提示失败不阻断结算
-        next_name = None
+    if not _is_repeatable(quest):
+        try:
+            for _qid2 in _all_quest_ids(ctx):
+                _qd = resolve_quest(ctx, _qid2)
+                if _qd is None:
+                    continue
+                if _qd.get("unlock_chain") == quest_id and _qd.get("main") is True \
+                        and not _is_completed(ctx, _qid2):
+                    next_name = _quest_name(_qd)
+                    break
+        except Exception:  # noqa: BLE001 —— 引导提示失败不阻断结算
+            next_name = None
     if next_name:
         msg += f"\n新主线开放：{next_name}——发 任务 领取"
     return {

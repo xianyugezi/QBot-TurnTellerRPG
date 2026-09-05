@@ -112,7 +112,11 @@ def _fresh_ctx(**overrides) -> dict:
         "max_hp": 100,
         "max_mp": 100,
         "inventory": {},
-        "quest_active": [],
+        # quest 注册 + 状态（2026-09-05：NPC quest 动作真接取后需 quest 定义；
+        # quest_active 用 dict（引擎契约 Mapping，list 会被当空 active））
+        "quests": {"q_fetch": {"id": "q_fetch", "name": "铁匠的委托", "desc": "",
+                               "conditions": [], "reward": "exp=10"}},
+        "quest_active": {},
         "quest_completed": [],
         "quest_daily": {},
         "event_counts": {},
@@ -274,11 +278,15 @@ def test_session_select_word_executes() -> None:
 
 
 def test_session_digit_executes() -> None:
-    """RN-02：菜单激活后纯数字 1 → quest 动作执行（T07→T10 回菜单）。"""
+    """RN-02：菜单激活后纯数字 1 → quest 动作执行（T07→T10 回菜单）。
+
+    2026-09-05 审计修复：quest 动作真接取（回执含任务名 + quest_active 落键）。
+    """
     ctx = _fresh_ctx()
     cmd_dialog(_pc("铁匠·老周"), ctx)
     out = cmd_dialog_session(("digit", 1), ctx)
-    assert "接取任务" in out
+    assert "已接取：铁匠的委托" in out
+    assert "q_fetch" in ctx["quest_active"]  # 真接取
     assert "铁匠·老周：" in out  # 回菜单
     assert ctx["dialog_session"].state == "menu"
 
@@ -335,11 +343,12 @@ def test_session_invalid_option_stays() -> None:
 # ---------------------------------------------------------------------------
 
 def test_action_quest_delivery() -> None:
-    """TCN-04：选 quest 动作 → dispatch_action 调用 + ✅ 反馈 + 回菜单。"""
+    """TCN-04：选 quest 动作 → dispatch_action 调用 + 真接取回执 + 回菜单。"""
     ctx = _fresh_ctx()
     cmd_dialog(_pc("铁匠·老周"), ctx)
     out = cmd_dialog_session(("digit", 1), ctx)
-    assert "接取任务" in out
+    assert "已接取：铁匠的委托" in out
+    assert "q_fetch" in ctx["quest_active"]
     assert "铁匠·老周：" in out
     assert ctx["dialog_session"].state == "menu"
 

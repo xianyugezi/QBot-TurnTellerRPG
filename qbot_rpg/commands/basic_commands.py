@@ -667,7 +667,12 @@ _BAG_TAIL_TIP = "发送'使用+物品名'即可使用物品"      # /背包（�
 _VIEW_TAIL_TIP = "发送'装备'查看当前装备"           # /角色（属性面板下一步）
 _EQUIP_TAIL_TIP = "发送'使用 序号'穿戴装备。"      # /装备（穿戴引导；意见一同步：Tip 改「使用 序号」）
 _SKILL_TAIL_TIP = "发送'帮助 技能'查看技能说明"     # /技能（技能说明引导）
-_HELP_TAIL_TIP = "发送'帮助 组名'翻页查看指令"      # /帮助 目录/组页
+_HELP_TAIL_TIP = "发送'帮助 组名'翻页查看指令"      # /帮助 目录/组页（旧通用文案）
+# 2026-09-05 实机反馈：帮助翻页提示不明确 + 紧凑形态「帮助2」「帮助冒险2」不可用。
+# 拆分目录/组页两个 Tip，教紧凑页码翻页（对应 cmd_help 已支持的 帮助<数字> 目录页 /
+# 帮助<组名><数字> 组页——紧凑粘合拆分 2026-09-05 新增）：
+_HELP_DIR_TAIL_TIP = "发送'帮助<页数>'翻页，如'帮助2'"          # /帮助 目录（GM 6 组 2 页）
+_HELP_GROUP_TAIL_TIP = "发送'帮助<组名><页数>'翻页，如'帮助冒险2'"  # /帮助 <组名> 组页
 
 
 def _cake_tail(page: int, total_pages: int, *, category_word: Optional[str] = None,
@@ -1608,7 +1613,7 @@ def _render_help_directory(ctx: Mapping[str, Any], page: int) -> str:
     for i, g in enumerate(slice_groups):
         lines.append(_group_summary(ctx, g))
     if groups:
-        lines.append(_cake_tail(res.page, res.total_pages, tip=_HELP_TAIL_TIP, clamped=res.clamped,
+        lines.append(_cake_tail(res.page, res.total_pages, tip=_HELP_DIR_TAIL_TIP, clamped=res.clamped,
                                 templates=ctx.get("templates")))
     return "\n".join(lines)
 
@@ -1639,7 +1644,7 @@ def _render_help_group(ctx: Mapping[str, Any], group_name: str, page: int) -> st
         display = _command_alias_display(ctx, c[0])
         lines.append(group_page_line(start + i + 1, (display, c[1]), ctx))
     if cmds:
-        lines.append(_cake_tail(res.page, res.total_pages, tip=_HELP_TAIL_TIP, clamped=res.clamped,
+        lines.append(_cake_tail(res.page, res.total_pages, tip=_HELP_GROUP_TAIL_TIP, clamped=res.clamped,
                                 templates=ctx.get("templates")))
     return "\n".join(lines)
 
@@ -1667,6 +1672,19 @@ def cmd_help(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     first = str(args[0])
     if len(args) > 2:
         return format_tpl12(_fragment(parsed))
+    # 紧凑「组名+页码」粘合拆分（2026-09-05 实机反馈）：parsers 把「帮助冒险2」
+    # 解析为 args=['冒险2']（紧凑单 token）——此处按组名前缀拆成 (冒险, 2)。
+    # 「帮助2」（args=['2']）不受影响（纯数字走下方目录页码路径）。
+    if first not in GROUP_ORDER and len(args) == 1:
+        for gname in sorted(GROUP_ORDER, key=len, reverse=True):
+            if first.startswith(gname):
+                rest = first[len(gname):]
+                if rest.isdigit() and int(rest) >= 1:
+                    page = parse_page_arg(rest)
+                    if page is None:
+                        return format_tpl12(_fragment(parsed))
+                    return _render_help_group(ctx, gname, page)
+                break  # 组名前缀但剩余非页码（如「冒险x」）→ 交 TPL-12
     if first in GROUP_ORDER:
         page = parse_page_arg(args[1] if len(args) > 1 else None)
         if page is None:

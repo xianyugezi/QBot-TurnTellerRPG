@@ -76,12 +76,22 @@ async def _on_message(bot: Any, event: Any) -> None:
     （鸭式，build_event 消费属性）。
     出参 None（回复经 bot.send；空回复不发；未装配/异常 → TPL-12 兜底不崩）。
     核心逻辑:
-      ① _deps 未注入 → 静默忽略（装配前不响应，不抛不崩）；
-      ② reply = await run_bridge(event, _deps, runner=_runner)——内核返回回复串
+      ① QQ 官方事件（含 group_openid 属性、无 group_id/user_id 数字号）→
+        直接 return：官方通道由 qq_official 插件专属处理（openid 映射），
+        本处理器只服务 OneBot v11/NapCat 通道（2026-09-05：官方事件进来时
+        build_event 读到空 group_id/user_id → 重复处理 + 玩家身份错乱）；
+      ② _deps 未注入 → 静默忽略（装配前不响应，不抛不崩）；
+      ③ reply = await run_bridge(event, _deps, runner=_runner)——内核返回回复串
         （空串 = 无回复/忽略/会话子词/GM 静默）；
-      ③ reply 非空 → await bot.send(event, reply) 回 QQ。
+      ④ reply 非空 → await bot.send(event, reply) 回 QQ。
       异常兜底: 未预期异常 → TPL-12 人话（惰性 import format_tpl12），不裸崩。
     """
+    # QQ 官方事件判别：官方群消息事件 author.member_openid 是 openid 格式
+    # 群成员标识（OneBot v11 事件无 author.member_openid——其 sender 是
+    # user_id 数字号）——按鸭子属性区分最稳。
+    _author = getattr(event, "author", None)
+    if _author is not None and getattr(_author, "member_openid", None):
+        return  # QQ 官方通道（qq_official 插件专属处理）
     deps = _deps
     if deps is None:
         from qbot_rpg.data.logging_utils import get_logger  # noqa: PLC0415 —— 部署调试

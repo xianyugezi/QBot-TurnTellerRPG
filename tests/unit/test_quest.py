@@ -298,6 +298,48 @@ def test_accept_chain_locked():
     assert out2["ok"] is True
 
 
+def test_board_hides_chain_locked_and_completed():
+    """2026-09-05 用户拍板：任务板只显示可接取——未解锁（unlock_chain 前置未完成）
+    的任务隐藏；前置完成 → 出现；接取后 → 移入进行中区。"""
+    ctx = make_ctx()
+    add_quests(ctx,
+               make_quest("q_prev", conditions=[], reward="exp=10"),
+               make_quest("q_next", conditions=[], unlock_chain="q_prev"))
+    # 前置未完成：q_next 不在板（隐藏）
+    ids = [r["quest_id"] for s in quest_board(ctx)["sections"] for r in s["rows"]]
+    assert "q_prev" in ids and "q_next" not in ids
+    # 前置完成 → q_next 出现在板
+    assert quest_accept("q_prev", ctx)["ok"] is True
+    assert quest_complete("q_prev", ctx)["ok"] is True
+    ids = [r["quest_id"] for s in quest_board(ctx)["sections"] for r in s["rows"]]
+    assert "q_next" in ids
+    # 接取 q_next → 从可接取区消失、进入「进行中」区
+    assert quest_accept("q_next", ctx)["ok"] is True
+    sections = {s["slot"]: s["rows"] for s in quest_board(ctx)["sections"]}
+    active_ids = [r["quest_id"] for r in sections.get("active", [])]
+    assert "q_next" in active_ids
+    all_ids = [r["quest_id"] for s in sections.values() for r in s]
+    assert all_ids.count("q_next") == 1  # 只在进行中区出现一次
+
+
+def test_board_zone_main_guide_stays_visible():
+    """2026-09-05 用户拍板「引导保留」：main 引导任务即使带 zone（区域标签）也上板
+    ——zone 跳过只作用于非 main 副本子任务（任务定稿 L104/L251）。"""
+    ctx = make_ctx()
+    add_quests(ctx,
+               make_quest("guide1", conditions=[], main=True, zone="a1_bone_field",
+                          reward="exp=10"),
+               make_quest("guide2", conditions=[], main=True, zone="a2_ridge_hills",
+                          unlock_chain="guide1", reward="exp=10"),
+               make_quest("sub1", conditions=[], zone="a1_bone_field", reward="exp=10"))
+    ids = [r["quest_id"] for s in quest_board(ctx)["sections"] for r in s["rows"]]
+    # 引导主线（main+zone）上板；副本子任务（非 main+zone）不上板
+    assert "guide1" in ids
+    assert "sub1" not in ids
+    # 引导链：guide2 前置未完成 → 隐藏
+    assert "guide2" not in ids
+
+
 # ===========================================================================
 # ③ 进度 / 交付判定（quest_progress）
 # ===========================================================================
@@ -434,8 +476,10 @@ def test_complete_daily_limit_zero_unlimited_tc19():
     assert ctx["quest_daily"]["completed"] == 11
 
 
-def test_complete_main_progress_and_stays_on_board_tc22():
-    """TC-22：主线完成 → main_progress +1；/任务 仍置顶常驻显示；主线不可再接（防无限领奖）。"""
+def test_complete_main_progress_and_hidden_after_tc22():
+    """TC-22（2026-09-05 语义更新）：主线完成 → main_progress +1；/任务 板不再显示
+    已完成主线（用户拍板：任务板只显示可接取，进行中置顶区除外）；主线不可再接。
+    旧语义「完成仍常驻显示」废弃——原断言改为断言完成行从板消失。"""
     ctx = make_ctx()
     add_quests(ctx, make_quest("m1", conditions=[], main=True, reward="exp=100"))
     assert quest_accept("m1", ctx)["ok"] is True
@@ -444,9 +488,9 @@ def test_complete_main_progress_and_stays_on_board_tc22():
     assert ctx["longline_counters"]["main_progress"] == 1
     assert out["main_progress"] == 1
     board = quest_board(ctx)
-    main_rows = [s for s in board["sections"] if s["slot"] == "main"][0]["rows"]
-    assert len(main_rows) == 1 and main_rows[0]["quest_id"] == "m1"
-    assert main_rows[0]["marked"] is False  # 主线置顶不标 *
+    # 完成主线（非 repeatable）→ 不在进行中区也不在可接取区 = 整板消失
+    all_rows = [r for s in board["sections"] for r in s["rows"]]
+    assert all(r["quest_id"] != "m1" for r in all_rows)
     assert quest_accept("m1", ctx)["ok"] is False  # 非 repeatable 主线完成不可再接
 
 

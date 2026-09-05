@@ -37,6 +37,8 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
 
     # —— /任务 接取 N（引擎 message 透传；缺省兜底）——
     "quest_accept_failed": "❌ 接取失败",
+    # —— /任务 交付 N（2026-09-05 审计缓解：交付后序号前移提示，防旧板记忆错付）——
+    "quest_deliver_seq_shift_note": "（任务完成，其余进行中任务序号已前移——发 任务 查看最新板）",
 
     # —— /任务 交付 N（引擎 message 透传；缺省兜底 + P1-2 跳过注记）——
     "quest_deliver_failed": "❌ 交付失败",
@@ -68,5 +70,6 @@ PLACEHOLDER_WHITELIST: Dict[str, set] = {
     "quest_deliver_failed": set(),
     "quest_deliver_skipped": {"reason"},
     "quest_deliver_skipped_plain": set(),
+    "quest_deliver_seq_shift_note": set(),  # 2026-09-05 审计缓解：交付后序号前移提示（无占位符）
     "quest_abandon_failed": set(),
 }

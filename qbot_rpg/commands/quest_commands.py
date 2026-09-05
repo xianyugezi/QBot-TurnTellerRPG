@@ -128,8 +128,11 @@ _ALL_SUBWORDS: tuple = SUBWORDS + SUB_ACCEPT_ALIASES
 BOARD_PAGE_SIZE: int = DEFAULT_PAGE_SIZE  # 5 条/页
 
 # CakeGame 式尾段 Tip 内容（`Tip:` 之后部分，2026-08-27 用户拍板统一列表尾段；无斜杠指令名）
-# 意见一同步：Tip 改「领取任务 序号」（替代「任务 接取 序号」）
-_BOARD_TAIL_TIP = "发送'领取任务 序号'即可领取任务"    # /任务 任务板
+# 2026-09-05 文案修正（B 方案拍板）：原「领取任务 序号」是口语化说法，但实际可解析
+# 指令是「任务 领取 序号」（QUEST_CMD=任务 + 子词 领取/接取）——玩家按 Tip 发
+# 「领取任务1」被顶层白名单静默忽略（无法领取任务反馈）。改与 quest_info_met
+# 「/任务 交付 {seq}」同构的口径：任务 领取 序号（Tip 无斜杠惯例）。
+_BOARD_TAIL_TIP = "发送'任务 领取 序号'即可领取任务"    # /任务 任务板
 
 # 任务板不可用兜底（引擎 ok=False 且无 message 时）→ quest_no_board（quest_tpl 分区）
 # 展示序号越界/非法（resolve_board_index → None）→ quest_no_quest（quest_tpl 分区）
@@ -403,11 +406,17 @@ def cmd_quest_accept(ctx: Mapping[str, Any], seq: int) -> str:
 
 def cmd_quest_deliver(ctx: Mapping[str, Any], seq: int) -> str:
     """/任务 交付 N：完成交付 → 统一 reward 发放结果提示（引擎 message，2b4 §3.2）；
-    P1-2 逐条目失败黄字跳过注记（skipped 由本层渲染「（跳过：reason）」不吞整批）。"""
+    P1-2 逐条目失败黄字跳过注记（skipped 由本层渲染「（跳过：reason）」不吞整批）。
+
+    2026-09-05 审计缓解（B 路 P1 交付错位）：交付后 active 任务序号整体前移，玩家凭
+    旧板记忆再操作会命中别的任务——成功回执后追加提示（若还有其他进行中任务），
+    引导以最新板为准。
+    """
     engine = _engine_of(ctx)
     qid = _seq_to_quest_id(ctx, engine, seq)
     if qid is None:
         return tpl_of(ctx, "quest_no_quest")
+    active_before = dict(ctx.get("quest_active") or {})
     res = engine.quest_complete(qid, ctx)
     parts: List[str] = [str(res.get("message") or tpl_of(ctx, "quest_deliver_failed"))]
     for s in res.get("skipped") or []:
@@ -415,6 +424,11 @@ def cmd_quest_deliver(ctx: Mapping[str, Any], seq: int) -> str:
             parts.append(tpl_of(ctx, "quest_deliver_skipped", {"reason": s["reason"]}))
         else:
             parts.append(tpl_of(ctx, "quest_deliver_skipped_plain"))
+    # 交付成功且还有其他进行中任务 → 序号前移提示（防旧板记忆错付）
+    if res.get("ok") and qid in active_before:
+        remaining = [k for k in active_before if k != qid]
+        if remaining:
+            parts.append(tpl_of(ctx, "quest_deliver_seq_shift_note"))
     return "\n".join(parts)
 
 

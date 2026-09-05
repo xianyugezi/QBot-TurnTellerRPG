@@ -49,7 +49,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Mapping, MutableMapping, Optional
+from typing import Any, Mapping, MutableMapping, Optional, cast
 
 from qbot_rpg.core.dayroll import today_of
 from qbot_rpg.core.quest import resolve_quest
@@ -201,13 +201,16 @@ def _quest_npc_conditions(qid: str, ctx: Mapping[str, Any]) -> object:
 
 
 def available_quests(deliver: Mapping[str, Any], ctx: Mapping[str, Any]) -> list:
-    """候选任务可用列表（SM06 去重 + 条件过滤 + 发任务条件 gate，顺序即优先级）。
+    """候选任务可用列表（SM06 去重 + 条件过滤 + 发任务条件 gate + 链锁，顺序即优先级）。
 
     规则：① quest_active（活跃）/ quest_daily（今日已发）/ quest_completed（已完成）三表命中 → 不重发；
           ② 候选条目自带 condition（AC01）不满足 → 剔除；
           ③ quest 定义侧 quest.npc.conditions（发任务条件，RN-08 / 3f D-05）不满足 → 剔除
             （数组全与 AND，满足才主动发；不满足 → 普通对话分支零暗示）；
-          ④ 其余按候选数组顺序返回（首条即最高优先级）。
+          ④ unlock_chain 前置未完成 → 剔除（2026-09-05 审计修复 C 路 P2：与任务板
+            quest._is_acceptable 同语义——原 NPC 侧不查链锁，链中途会「提示」未解锁
+            任务；现前置未完成的任务不列为可发候选）；
+          ⑤ 其余按候选数组顺序返回（首条即最高优先级）。
     """
     out: list = []
     quests = deliver.get("quests")
@@ -233,6 +236,12 @@ def available_quests(deliver: Mapping[str, Any], ctx: Mapping[str, Any]) -> list
         # 满足才列入可发候选；不满足 → 剔除（普通对话分支零暗示，D-05 不提示原则）
         npc_conds = _quest_npc_conditions(qid, ctx)
         if npc_conds is not None and not eval_condition(npc_conds, ctx):
+            continue
+        # ④ unlock_chain 前置未完成 → 剔除（2026-09-05 审计修复 C 路 P2：
+        # 链锁任务不列为可发候选——与任务板 quest._is_acceptable 同语义）
+        qdef = resolve_quest(ctx, qid)
+        chain = qdef.get("unlock_chain") if qdef is not None else None
+        if chain is not None and not _in_coll(ctx, "quest_completed", str(chain)):
             continue
         out.append(q)
     return out
@@ -491,15 +500,41 @@ def _tutorial_keys(entry: Mapping[str, Any]) -> list:
 # 10 类动作分发（interactions[] 与 dealer.pool[].deliver 共用，S3 裁决）
 # -------------------------------------------------------------------------------------
 def _action_quest(entry: Mapping[str, Any], ctx: Mapping[str, Any], **kw: Any) -> dict:
-    """AC01 quest：候选任务+条件；去重由 quest_active/quest_daily 三表兜底（SM06）；顺序即优先级。"""
+    """AC01 quest：候选任务+条件；去重由 quest_active/quest_daily 三表兜底（SM06）；顺序即优先级。
+
+    2026-09-05 审计修复（三路审计 C 路 P1「NPC 死回执」）：原实现只返回 functional
+    回执「接取任务」但不落 quest_active——玩家在对话里选接任务看到提示、实际未接取
+    （quest_accept 唯一通路在任务板指令），误导性交互。现对最高优先级候选真实接取：
+    调 quest_accept（core 同层，无循环依赖；就地写 ctx quest_active/quest_daily），
+    回执透传引擎真实结果（成功含任务名 / 拦截含原因）。avail 为空 → 原「暂无任务」。
+    """
     deliver = {"quests": entry.get("quests")}
     avail = available_quests(deliver, ctx)
     if not avail:
         return _res("quest", False, kind="functional", reason="no_available_quest",
                     message="暂时没有可接的任务")
-    return _res("quest", True, kind="functional", reason=None,
-                data={"quest_id": avail[0]["quest_id"], "quests": [q["quest_id"] for q in avail]},
-                message="接取任务")
+    target = avail[0]
+    qid = target.get("quest_id") if isinstance(target, Mapping) else str(target or "")
+    if not qid:
+        return _res("quest", False, kind="functional", reason="no_available_quest",
+                    message="暂时没有可接的任务")
+    # 真实接取（M4 quest_accept 校验链：active/completed/unlock_chain/accept_limit 全走引擎）
+    from qbot_rpg.core.quest import quest_accept  # noqa: PLC0415 —— 惰性 import 防模块级环
+
+    # dispatch_action 的 ctx 契约是「就地改写」（docstring：currencies/map_id/…），
+    # 类型标注 Mapping 仅为读接口；quest_accept 需写 quest_active/quest_daily → cast 收窄。
+    mm_ctx = cast(MutableMapping, ctx)
+    try:
+        result = quest_accept(qid, mm_ctx)
+    except Exception:  # noqa: BLE001 —— 接取异常降级为可读回执（不裸崩对话）
+        result = {"ok": False, "message": "接取任务失败，请稍后再试"}
+    if result.get("ok"):
+        return _res("quest", True, kind="functional", reason=None,
+                    data={"quest_id": qid, "quests": [q.get("quest_id") if isinstance(q, Mapping) else str(q or "") for q in avail]},
+                    message=str(result.get("message") or "接取任务"))
+    return _res("quest", False, kind="functional", reason=result.get("reason"),
+                data={"quest_id": qid},
+                message=str(result.get("message") or "暂时无法接取该任务"))
 
 
 def _action_shop(entry: Mapping[str, Any], ctx: Mapping[str, Any], **kw: Any) -> dict:

@@ -59,6 +59,16 @@ def make_ctx(**overrides) -> dict:
         "npc_delivered": {},
         "active_effects": {},
         "codex_state": {},
+        # quest 注册表 + 状态表（2026-09-05：_action_quest 真接取后 quest_accept
+        # 需要 quest 定义存在；空 conditions = 接取即满足，测试关注去重/分发不关注条件）
+        "quests": {qid: {"id": qid, "name": f"任务{qid}", "desc": "",
+                         "conditions": [], "reward": "exp=10"} for qid in
+                   ("q1", "q2", "q_a", "q_ok", "q_active", "q_done",
+                    "q_daily_flat", "q_daily_nested")},
+        "quest_active": {},
+        "quest_completed": set(),
+        "quest_daily": {},
+        "longline_counters": {},
         **overrides,
     }
     return ctx
@@ -247,6 +257,22 @@ def test_available_quests_condition_gate():
     assert [q["quest_id"] for q in available_quests(deliver, make_ctx(level=10))] == ["q2"]
 
 
+def test_available_quests_unlock_chain_gate():
+    """2026-09-05 审计修复（C 路 P2）：unlock_chain 前置未完成 → 不列为可发候选
+    （与任务板 quest._is_acceptable 同语义，消除 NPC/板双语义分叉）。"""
+    def _q(qid, chain=None):
+        return {"id": qid, "name": f"任务{qid}", "desc": "", "conditions": [],
+                "reward": "exp=10", **({"unlock_chain": chain} if chain else {})}
+    quests = {"q_a": _q("q_a"), "q_b": _q("q_b", "q_a")}
+    deliver = {"quests": [{"quest_id": "q_a"}, {"quest_id": "q_b"}]}
+    # 前置 q_a 未完成 → q_b 被剔除（只剩 q_a）
+    ctx = make_ctx(quests=quests)
+    assert [q["quest_id"] for q in available_quests(deliver, ctx)] == ["q_a"]
+    # 前置完成后 q_b 可发（q_a 已完成被三表去重剔除 → 只剩 q_b）
+    ctx2 = make_ctx(quests=quests, quest_completed={"q_a"})
+    assert [q["quest_id"] for q in available_quests(deliver, ctx2)] == ["q_b"]
+
+
 # ---------------------------------------------------------------------------
 # deal 状态机（SM02-05）
 # ---------------------------------------------------------------------------
@@ -304,10 +330,11 @@ def test_deal_quest_card_dedup():
         {"id": "q1", "deliver": {"action": "quest", "quests": [{"quest_id": "q_a"}]}},
     ]}
     assert deal("npc1", dealer, ctx)["lonely"] is True
-    # 有可用任务时正常发
+    # 有可用任务时正常发并真接取（2026-09-05：quest 动作落 quest_active）
     ctx2 = make_ctx(npc_id="npc1")
     r = deal("npc1", dealer, ctx2)
     assert r["ok"] and r["data"]["quest_id"] == "q_a"
+    assert "q_a" in ctx2["quest_active"]
 
 
 def test_deal_rotate_persistent_state():
@@ -363,13 +390,15 @@ def test_dispatch_public_condition_gate():
 
 
 def test_dispatch_quest_returns_first_available():
-    """AC01 quest：返回匹配候选任务（去重 + 顺序即优先级）。"""
+    """AC01 quest：真接取最高优先级候选（2026-09-05 审计修复：原只回执不落 active）"""
     ctx = make_ctx(npc_id="npc1")
     r = dispatch_action({"action": "quest", "quests": [
         {"quest_id": "q1", "condition": {"var": "level", "op": "ge", "value": 50}},
         {"quest_id": "q2"},
     ]}, ctx, npc_id="npc1")
     assert r["ok"] and r["data"]["quest_id"] == "q2"
+    assert "q2" in ctx["quest_active"]  # 真接取：落 quest_active
+    assert "任务q2" in r["message"]  # 回执含任务名
     # 全部不可用 → 不发（不置灰，但无任务可给）
     r = dispatch_action({"action": "quest", "quests": [{"quest_id": "q_active"}]},
                         {"quest_active": {"q_active": {}}}, npc_id="npc1")

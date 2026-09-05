@@ -579,6 +579,32 @@ def test_help_group_page2():
     assert "当前页：2/2" in out
 
 
+def test_help_group_compact_page():
+    """紧凑形态「帮助冒险2」→ 冒险组第 2 页（2026-09-05 实机反馈修复）。
+
+    parsers 把「帮助冒险2」解析为 args=['冒险2']（紧凑单 token），cmd_help
+    按组名前缀拆分 → 与「帮助 冒险 2」同输出；末尾 Tip 教紧凑翻页。
+    """
+    out = cmd_help(parse("帮助冒险2"), make_ctx())
+    assert "6. 休息 —— 休息恢复" in out
+    assert "当前页：2/2" in out
+    assert "帮助<组名><页数>" in out  # 组页尾 Tip 教紧凑翻页
+
+
+def test_help_dir_compact_page_gm():
+    """紧凑形态「帮助2」（GM 6 组 2 页）→ 目录第 2 页（GM 组）。"""
+    out = cmd_help(parse("帮助2"), make_ctx(is_gm=True))
+    assert "GM" in out
+    assert "当前页：2/2" in out
+    assert "帮助<页数>" in out  # 目录尾 Tip 教紧凑翻页
+
+
+def test_help_group_compact_bad_suffix_tpl12():
+    """紧凑「帮助冒险x」（组名+非数字）→ TPL-12（不误拆）。"""
+    out = cmd_help(parse("帮助冒险x"), make_ctx())
+    assert out.startswith("❌ 指令不正确")
+
+
 def test_help_group_single_page_no_footer():
     """/帮助 战斗（2 条组）→ 单页无页脚。2026-08-31 拍板：防御/道具/逃跑 已删，战斗组仅 攻击/技能。"""
     out = cmd_help(parse("/帮助 战斗"), make_ctx())

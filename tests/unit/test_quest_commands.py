@@ -116,8 +116,9 @@ def test_quest_noarg_board_page1():
     assert "5. 打造武器  进度 1/1" in out
     # 5 条/页（m4 §2.2）：第 1 页 5 条 + TPL-08 页脚
     assert "当前页：1/2" in out
-    # 操作指引行（2b4 §5.2 语义，意见一同步：Tip 改「领取任务 序号」）
-    assert "Tip:发送'领取任务 序号'即可领取任务" in out
+    # 操作指引行（2b4 §5.2 语义；2026-09-05 文案修正：任务 领取 序号——与实际可解析
+    # 指令一致，防玩家发「领取任务1」被白名单静默忽略）
+    assert "Tip:发送'任务 领取 序号'即可领取任务" in out
 
 
 def test_quest_board_npc_section_page2():
@@ -202,17 +203,21 @@ def test_quest_board_tip_matches_accept_alias():
 
 
 def test_quest_accept_marked_in_board():
-    """TC-25：接取后 /任务 列表该序号变 *（已接取标记，不参与可接序号计数）。"""
+    """TC-25（2026-09-05 语义更新）：接取后任务移到置顶「进行中」区（带 * 标记），
+    不再留在原分组（原序号位置被后续任务顶替）。"""
     ctx = make_ctx()
     cmd_quest(parse("/任务 接取 3"), ctx)
     out = cmd_quest(parse("/任务"), ctx)
-    assert "3. 收集铁矿*  进度 25/20" in out
+    # 收集铁矿 → 进行中区第 1 位（带 * + 进度）；主线区从序号 2 开始
+    assert "━━ 进行中 ━━" in out
+    assert "1. 收集铁矿*  进度 25/20" in out
+    assert out.index("━━ 进行中 ━━") < out.index("━━ 主线（常驻） ━━")
 
 
 def test_quest_accept_already_active():
-    """/任务 接取 3 重复 → 引擎「该任务已在进行中」透传。"""
+    """/任务 接取 1（进行中区首位=已接取的收集铁矿）→ 引擎「该任务已在进行中」透传。"""
     ctx = make_ctx(quest_active={"collect_iron": {"name": "收集铁矿"}})
-    out = cmd_quest(parse("/任务 接取 3"), ctx)
+    out = cmd_quest(parse("/任务 接取 1"), ctx)
     assert out == "❌ 该任务已在进行中"
 
 
@@ -222,11 +227,19 @@ def test_quest_accept_out_of_range():
     assert out == "❌ 任务不存在"
 
 
-def test_quest_accept_already_completed():
-    """TC-21 后半：主线完成后再接（非 repeatable）→ 「❌ 任务已完成」。"""
+def test_quest_accept_completed_hidden():
+    """TC-21 板层（2026-09-05 语义更新）：已完成任务从板隐藏，原序号被后续任务
+    顶替——接取该序号命中顶替任务而非已完成任务（引擎层已完成拦截见 test_quest.py
+    test_accept_already_completed）。"""
     ctx = make_ctx(quest_completed={"main_special_weapon"})
-    out = cmd_quest(parse("/任务 接取 1"), ctx)
-    assert out == "❌ 任务已完成"
+    # 特制武器（main）已完成 → 隐藏；板 = 锻造试炼1 / 收集2 / 清剿3 / 打造4 / 矿洞5
+    out = cmd_quest(parse("/任务"), ctx)
+    assert "特制武器" not in out
+    assert "1. [主线] 锻造试炼" in out
+    # 引擎层直接 quest_accept 已完成任务 → 拒绝（板层序号已不可达，用 quest_id 直调）
+    engine = quest_engine
+    res = engine.quest_accept("main_special_weapon", ctx)
+    assert res["ok"] is False and res["reason"] == "already_completed"
 
 
 # ---------------------------------------------------------------------------
@@ -234,9 +247,9 @@ def test_quest_accept_already_completed():
 # ---------------------------------------------------------------------------
 
 def test_quest_deliver_reward_result_prompt():
-    """TC-26/3.2：/任务 交付 3 → 完成交付 → 统一 reward 发放结果提示（引擎 message 透传）。"""
+    """TC-26/3.2：/任务 交付 1（进行中区首位=收集铁矿）→ 完成交付 → 统一 reward 发放结果提示。"""
     ctx = make_ctx(quest_active={"collect_iron": {"name": "收集铁矿"}})
-    out = cmd_quest(parse("/任务 交付 3"), ctx)
+    out = cmd_quest(parse("/任务 交付 1"), ctx)
     assert "✅ 交付完成：收集铁矿" in out
     assert "exp50" in out  # 统一 reward 发放结果提示（+exp50 / 80 coins）
     assert "今日已完成 1/10" in out
@@ -246,9 +259,9 @@ def test_quest_deliver_reward_result_prompt():
 
 
 def test_quest_deliver_consume_removes_items():
-    """TC-26 consume=true：/任务 交付 5 → 校验背包够数 + 扣物出包 + 奖励入包。"""
+    """TC-26 consume=true：/任务 交付 1（进行中=打造武器）→ 校验背包够数 + 扣物出包 + 奖励入包。"""
     ctx = make_ctx(quest_active={"forge_weapon": {"name": "打造武器"}})
-    out = cmd_quest(parse("/任务 交付 5"), ctx)
+    out = cmd_quest(parse("/任务 交付 1"), ctx)
     assert "✅ 交付完成：打造武器" in out
     assert "铁矿×3" in out
     assert ctx["inventory"]["铁剑"] == 0  # consume 扣物出包（item_count 条件推导）
@@ -260,7 +273,7 @@ def test_quest_deliver_skipped_note():
     quests = {k: dict(v) for k, v in QUESTS.items()}
     quests["collect_iron"]["reward"] = [{"item": "不存在的物品", "count": 1}]
     ctx = make_ctx(quests=quests, quest_active={"collect_iron": {"name": "收集铁矿"}})
-    out = cmd_quest(parse("/任务 交付 3"), ctx)
+    out = cmd_quest(parse("/任务 交付 1"), ctx)
     assert "✅ 交付完成：收集铁矿" in out  # 整批结果提示仍在（跳过不中断）
     assert "（跳过：item_not_found）" in out
 
@@ -275,7 +288,7 @@ def test_quest_deliver_condition_not_met():
     """条件未达成 → 拒绝交付（引擎消息透传）。"""
     ctx = make_ctx(quest_active={"slay_beetle": {"name": "清剿熔岩甲虫"}},
                    longline_counters={"kill_count": {"熔岩甲虫": 1}})
-    out = cmd_quest(parse("/任务 交付 4"), ctx)
+    out = cmd_quest(parse("/任务 交付 1"), ctx)
     assert out == "❌ 任务条件未达成，暂不能交付"
 
 
@@ -287,20 +300,21 @@ def test_quest_deliver_daily_limit():
         quest_active={"collect_iron": {"name": "收集铁矿"}, "slay_beetle": {"name": "清剿熔岩甲虫"}},
         quest_daily={"key": "2026-08-26", "completed": 1, "accepted": 0, "decay": {}},
     )
-    out = cmd_quest(parse("/任务 交付 3"), ctx)
+    out = cmd_quest(parse("/任务 交付 1"), ctx)
     assert out == "❌ 今日任务已完成 1/1，明早 5 点刷新"
 
 
-def test_quest_deliver_main_stays_on_board():
-    """TC-22：main:true 主线交付完成 → 常驻不移除、仍在置顶显示（可重复查看/推进）。"""
+def test_quest_deliver_main_hidden_after():
+    """TC-22（2026-09-05 语义更新）：main:true 主线交付完成 → 从板消失（不再常驻
+    置顶显示）；main_progress 计数 +1；交付结果正常。"""
     ctx = make_ctx(quest_active={"main_special_weapon": {"name": "特制武器"}})
     out = cmd_quest(parse("/任务 交付 1"), ctx)
     assert "✅ 交付完成：特制武器" in out
     assert "main_progress" in ctx["longline_counters"]  # 主线 done 计数 +1
     assert ctx["longline_counters"]["main_progress"] == 1
-    # 完成后再看 /任务：主线仍在置顶（常驻不移除）
+    # 完成后再看 /任务：特制武器隐藏（不在进行中、不在可接取区）
     board = cmd_quest(parse("/任务"), ctx)
-    assert "1. [主线] 特制武器" in board
+    assert "特制武器" not in board
 
 
 # ---------------------------------------------------------------------------
@@ -334,17 +348,17 @@ def test_quest_info_out_of_range():
 # ---------------------------------------------------------------------------
 
 def test_quest_abandon_fixed_subword():
-    """TC-27：/任务 放弃 2（放弃=解析器固定子词 → fixed_subword 路径）→ 引擎移除 active。"""
+    """TC-27：/任务 放弃 1（进行中区首位=锻造试炼）→ 引擎移除 active。"""
     ctx = make_ctx(quest_active={"main_forge": {"name": "锻造试炼"}})
-    out = cmd_quest(parse("/任务 放弃 2"), ctx)
+    out = cmd_quest(parse("/任务 放弃 1"), ctx)
     assert out == "✅ 已放弃：锻造试炼"
     assert "main_forge" not in ctx["quest_active"]
 
 
 def test_quest_abandon_compact_no_space():
-    """紧凑形式：任务放弃2（无空格）→ 引擎 seq=2。"""
+    """紧凑形式：任务放弃1（无空格）→ 引擎 seq=1。"""
     ctx = make_ctx(quest_active={"main_forge": {"name": "锻造试炼"}})
-    assert cmd_quest(parse("任务放弃2"), ctx) == "✅ 已放弃：锻造试炼"
+    assert cmd_quest(parse("任务放弃1"), ctx) == "✅ 已放弃：锻造试炼"
 
 
 def test_quest_abandon_not_active():

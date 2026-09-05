@@ -466,6 +466,7 @@ def _normalized_condition(cond: Mapping) -> dict:
 # 任务板（主线置顶 + 板槽任务 + NPC 支线，双板仲裁 §5.4）
 # -------------------------------------------------------------------------------------
 _SECTION_TITLES: dict = {
+    "active": "进行中",
     "main": "主线（常驻）",
     "daily": "每日板上任务",
     "weekly": "每周板上任务",
@@ -527,13 +528,41 @@ def _npc_condition_hit(quest: Mapping, ctx: Mapping[str, Any]) -> bool:
     return eval_condition(conds, ctx)
 
 
-def quest_board(ctx: Mapping[str, Any]) -> dict:
-    """/任务：玩家任务板 = 主线置顶（常驻）+ 板槽任务（daily/weekly/event）+ NPC 支线（列尾）。
+def _is_acceptable(quest: Mapping, ctx: Mapping[str, Any]) -> bool:
+    """可接取判定（2026-09-05 任务板过滤：只显示能接的任务）。
 
-    分组规则（工程补白 6）：main:true → 主线；zone 限定（副本子任务）不占板槽 → 不显示；
-    npc 配置 → NPC 支线（候选命中条件求值）；其余 → 按 board.slot 分组。
-    每行带全局展示序号 index（/接取 N 即此序号）；主线行不标 *（2b4 §5.2 L285）。
+    对齐 quest_accept 校验链（除 accept_limit 数量闸——那是全局行数上限，
+    非任务自身属性，接取时引擎会拦；板上仍显示可接任务）：
+      ① 非进行中（active）
+      ② 非已完成（非 repeatable 已完成的不可再接）
+      ③ unlock_chain 前置已完成（未完成 → 隐藏，链上任务现在接不了）
+      ④ NPC 发任务条件命中（quest.npc.conditions 求值；缺省常驻可发）
     """
+    qid = quest["id"]
+    if _is_active(ctx, qid):
+        return False
+    if not _is_repeatable(quest) and _is_completed(ctx, qid):
+        return False
+    chain = quest.get("unlock_chain")
+    if chain is not None and not _is_completed(ctx, str(chain)):
+        return False
+    return _npc_condition_hit(quest, ctx)
+
+
+def quest_board(ctx: Mapping[str, Any]) -> dict:
+    """/任务：玩家任务板 = 进行中（置顶）+ 可接取（主线/板槽/NPC 支线）。
+
+    2026-09-05 用户拍板（任务板只显示可接取）：原「主线常驻置顶（完成亦显示）」
+    语义废弃——已完成/进行中/未解锁的任务全部隐藏，仅显示两类：
+      ① 进行中区（置顶）：quest_active 全部任务（带进度，marked 标记 *），
+         玩家在此看进度/交付/放弃（序号即板序号）；
+      ② 可接取区：_is_acceptable 过滤后的任务（非 active、非已完成非
+         repeatable、unlock_chain 前置完成、NPC 条件命中），按 main/daily/
+         weekly/event/npc 分组（工程补白 6 分组规则保留）。
+    每行带全局展示序号 index（接取/交付/信息/放弃 N 即此序号，跨区连续编号）。
+    分组规则（工程补白 6）：main:true → 主线；zone 限定（副本子任务）不占板槽 → 不显示。
+    """
+    active_rows: List[tuple] = []
     main_rows: List[tuple] = []
     slot_rows: dict = {s: [] for s in BOARD_SLOTS}
     npc_rows: List[tuple] = []
@@ -541,11 +570,21 @@ def quest_board(ctx: Mapping[str, Any]) -> dict:
         quest = resolve_quest(ctx, qid)
         if quest is None:
             continue
+        # 进行中任务优先可见（2026-09-05 审计修复 B 路 P2：zone-skip 原先于
+        # _is_active——副本子任务若已进 quest_active（扩展路径/NPC 直发）会被
+        # zone-skip 拦掉、板上不可达 → 无法交付/放弃。active 检查前置：已接取的
+        # zone 任务显示在「进行中」区供操作）。
+        if _is_active(ctx, qid):
+            active_rows.append((quest, "active"))  # 进行中置顶区
+            continue
+        # 副本子任务（zone 限定且非 main）不占板槽 → 不显示（任务定稿 L104/L251）。
+        # 2026-09-05 用户拍板「引导保留」：main 引导任务即使带 zone 也上板——
+        # zone 兼作区域标签的引导主线（veinborn 引导链）不被误判为副本子任务。
+        if quest.get("zone") is not None and quest.get("main") is not True:
+            continue
         if quest.get("main") is True:
             main_rows.append((quest, "main"))
             continue
-        if quest.get("zone") is not None:
-            continue  # 副本子任务不占板槽位
         if quest.get("npc") is not None:
             npc_rows.append((quest, "npc"))
             continue
@@ -553,7 +592,10 @@ def quest_board(ctx: Mapping[str, Any]) -> dict:
 
     sections: List[dict] = []
     index = 0
+    # 2026-09-05：active 任务 → 置顶「进行中」区（全部可见，供交付/放弃/进度）；
+    # 可接取区只放 _is_acceptable 过滤后的行（未解锁/已完成/非命中 → 隐藏）
     for title_key, rows in (
+        ("active", active_rows),
         ("main", main_rows),
         ("daily", slot_rows["daily"]),
         ("weekly", slot_rows["weekly"]),
@@ -562,6 +604,10 @@ def quest_board(ctx: Mapping[str, Any]) -> dict:
     ):
         if not rows:
             continue
+        if title_key != "active":
+            rows = [(q, s) for q, s in rows if _is_acceptable(q, ctx)]
+            if not rows:
+                continue
         built = []
         for quest, section in rows:
             index += 1

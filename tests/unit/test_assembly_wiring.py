@@ -480,5 +480,7 @@ async def test_hidden_quest_condition_met_offers_quest() -> None:
     res = npc_mod.dispatch_action(entry, ctx, ctx.get("rng"), "npc1")
     assert res["ok"] is True
     assert res["data"]["quest_id"] == "q_hidden"
-    assert quest_mod.quest_accept("q_hidden", ctx)["ok"] is True
-    assert "q_hidden" in ctx["quest_active"]
+    # 2026-09-05 审计修复：quest 动作真接取——dispatch 后 q_hidden 已在 active，
+    # 无需再手动 quest_accept（旧语义只回执，需手动接取）
+    assert "q_hidden" in (ctx.get("quest_active") or {})
+    assert quest_mod.quest_accept("q_hidden", ctx)["ok"] is False  # 已在进行中

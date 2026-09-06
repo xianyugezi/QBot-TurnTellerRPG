@@ -1,55 +1,112 @@
 [
-  {
-    "id": "npc_old_hunter",
-    "name": "老猎人·驼脊",
-    "icon": "猎",
-    "map": "a1_bone_field",
-    "type": "quest_giver",
-    "desc": "脊骸丘陵的老猎人，背微驼，眼却锐利如鹰。他熟悉这片丘陵的每一道骨缝。",
-    "visible": true,
-    "dialogues": {
-      "greeting": "新来的猎师？龙骨驿站的老驼脊没什么本事，就认得这丘陵的每一只兽。",
-      "options": [
-        {
-          "text": "请教狩猎（接引导任务）",
-          "action": "quest",
-          "quests": [
-            { "quest_id": "q_tut0_first_blade" },
-            { "quest_id": "q_tut1_hunt_cubs" },
-            { "quest_id": "q_tut2_buy_charm" },
-            { "quest_id": "q_tut3_wolf_pelt" },
-            { "quest_id": "q_tut4_gravel_armor" }
-          ]
-        },
-        {
-          "text": "这地方有什么野兽？",
-          "action": "reply",
-          "reply": "草场上有脊冢幼兽，胆小，练手正好。往断脊丘陵走有荒原狼，成群结队。最麻烦的是骨冢洼地的砾甲兽，甲壳硬得能崩断你的刃——打它要等甲缝充能时下手。"
-        },
-        {
-          "text": "离开"
-        }
-      ]
-    },
-    "interactions": [
+ {
+  "id": "npc_old_hunter",
+  "name": "老猎人·驼脊",
+  "icon": "猎",
+  "map": "a1_bone_field",
+  "type": "quest_giver",
+  "desc": "脊骸丘陵的老猎人，背微驼，眼却锐利如鹰。他熟悉这片丘陵的每一道骨缝。",
+  "visible": true,
+  "dialogues": {
+   "greeting": "新来的猎师？龙骨驿站的老驼脊没什么本事，就认得这丘陵的每一只兽。",
+   "options": [
+    {
+     "text": "请教狩猎（接引导任务）",
+     "action": "quest",
+     "quests": [
       {
-        "action": "quest",
-        "text": "请教狩猎",
-        "quests": [
-          { "quest_id": "q_tut0_first_blade" },
-          { "quest_id": "q_tut1_hunt_cubs" },
-          { "quest_id": "q_tut2_buy_charm" },
-          { "quest_id": "q_tut3_wolf_pelt" },
-          { "quest_id": "q_tut4_gravel_armor" }
-        ]
+       "quest_id": "q_tut0_first_blade"
+      },
+      {
+       "quest_id": "q_tut1_hunt_cubs"
+      },
+      {
+       "quest_id": "q_tut2_buy_charm"
+      },
+      {
+       "quest_id": "q_tut3_wolf_pelt"
+      },
+      {
+       "quest_id": "q_tut4_gravel_armor"
+      },
+      {
+       "quest_id": "q_b1_gale_wolves"
+      },
+      {
+       "quest_id": "q_b2_ridge_beasts"
+      },
+      {
+       "quest_id": "q_b3_elite_pair"
       }
-    ],
+     ]
+    },
+    {
+     "text": "这地方有什么野兽？",
+     "action": "reply",
+     "reply": "草场上有脊冢幼兽，胆小，练手正好。往断脊丘陵走有荒原狼，成群结队。最麻烦的是骨冢洼地的砾甲兽，甲壳硬得能崩断你的刃——打它要等甲缝充能时下手。往西的蚀风裂谷风大兽凶：风口的裂谷狼、晶壁回廊的风脊兽，骨场里还有晶鬃狼王和蚀甲兽——都是砾冕的亲戚，素材能打硬家伙。"
+    },
+    {
+     "text": "离开"
+    }
+   ]
+  },
+  "interactions": [
+   {
+    "action": "quest",
+    "text": "请教狩猎",
     "quests": [
-      { "quest_id": "q_tut0_first_blade" },
-      { "quest_id": "q_tut1_hunt_cubs" },
-      { "quest_id": "q_tut2_buy_charm" },
-      { "quest_id": "q_tut3_wolf_pelt" },
-      { "quest_id": "q_tut4_gravel_armor" }
+     {
+      "quest_id": "q_tut0_first_blade"
+     },
+     {
+      "quest_id": "q_tut1_hunt_cubs"
+     },
+     {
+      "quest_id": "q_tut2_buy_charm"
+     },
+     {
+      "quest_id": "q_tut3_wolf_pelt"
+     },
+     {
+      "quest_id": "q_tut4_gravel_armor"
+     },
+     {
+      "quest_id": "q_b1_gale_wolves"
+     },
+     {
+      "quest_id": "q_b2_ridge_beasts"
+     },
+     {
+      "quest_id": "q_b3_elite_pair"
+     }
     ]
-  }
+   }
+  ],
+  "quests": [
+   {
+    "quest_id": "q_tut0_first_blade"
+   },
+   {
+    "quest_id": "q_tut1_hunt_cubs"
+   },
+   {
+    "quest_id": "q_tut2_buy_charm"
+   },
+   {
+    "quest_id": "q_tut3_wolf_pelt"
+   },
+   {
+    "quest_id": "q_tut4_gravel_armor"
+   },
+   {
+    "quest_id": "q_b1_gale_wolves"
+   },
+   {
+    "quest_id": "q_b2_ridge_beasts"
+   },
+   {
+    "quest_id": "q_b3_elite_pair"
+   }
+  ]
+ }
 ]

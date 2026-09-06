@@ -1,566 +1,889 @@
 [
-  {
-    "id": "gravelcrown",
-    "name": "脊冢兽·砾冕",
-    "tier": "boss",
-    "area": "脉堑猎场",
-    "desc": "驮着半座骨冢行走的食脉巨兽。蚀脉随其呼吸涨落，怒极时宣泄毁灭。破坏部位可削弱其攻势。",
-    "stats": {
-      "hp": 5567,
-      "mp": 100,
-      "str": 787,
-      "con": 147,
-      "spr": 25,
-      "foc": 20,
-      "agi": 36,
-      "luk": 8
-    },
-    "weakness": {
-      "types": [
-        "突"
-      ],
-      "elements": {
-        "wind": 1.3
-      }
-    },
-    "pv": 200,
-    "pv_recover": "battle_end",
-    "phases": [
-      {
-        "threshold": 1.0,
-        "actions": [
-          {
-            "action": "bb_slam",
-            "weight": 30,
-            "probability": 1
-          },
-          {
-            "action": "bb_tail_sweep",
-            "weight": 25,
-            "probability": 1
-          },
-          {
-            "action": "bb_charge",
-            "weight": 20,
-            "probability": 1
-          }
-        ],
-        "enter_action": "bb_slam",
-        "broadcast": "{monster} 昂首踏碎岩脊，进入姿态Ⅰ：试探。"
-      },
-      {
-        "threshold": 0.7,
-        "actions": [
-          {
-            "action": "bb_slam",
-            "weight": 35,
-            "probability": 1
-          },
-          {
-            "action": "bb_tail_sweep",
-            "weight": 30,
-            "probability": 1
-          },
-          {
-            "action": "bb_charge",
-            "weight": 25,
-            "probability": 1
-          }
-        ],
-        "enter_action": "bb_charge",
-        "broadcast": "{monster} 咆哮震落骨屑，进入姿态Ⅱ：暴怒。蚀脉激荡！"
-      },
-      {
-        "threshold": 0.35,
-        "actions": [
-          {
-            "action": "bb_slam",
-            "weight": 30,
-            "probability": 1
-          },
-          {
-            "action": "bb_tail_sweep",
-            "weight": 35,
-            "probability": 1
-          },
-          {
-            "action": "bb_charge",
-            "weight": 35,
-            "probability": 1
-          }
-        ],
-        "enter_action": "bb_rampage",
-        "broadcast": "{monster} 脉核透体而亮，进入姿态Ⅲ：狂澜！"
-      }
-    ],
-    "resistance": {
-      "stun": 30,
-      "immune": [
-        "poison"
-      ]
-    },
+ {
+  "id": "gravelcrown",
+  "name": "脊冢兽·砾冕",
+  "tier": "boss",
+  "area": "脉堑猎场",
+  "desc": "驮着半座骨冢行走的食脉巨兽。蚀脉随其呼吸涨落，怒极时宣泄毁灭。破坏部位可削弱其攻势。",
+  "stats": {
+   "hp": 5567,
+   "mp": 100,
+   "str": 787,
+   "con": 147,
+   "spr": 25,
+   "foc": 20,
+   "agi": 36,
+   "luk": 8
+  },
+  "weakness": {
+   "types": [
+    "突"
+   ],
+   "elements": {
+    "wind": 1.3
+   }
+  },
+  "pv": 200,
+  "pv_recover": "battle_end",
+  "phases": [
+   {
+    "threshold": 1.0,
     "actions": [
-      {
-        "action": "bb_slam",
-        "weight": 30,
-        "probability": 1
-      },
-      {
-        "action": "bb_tail_sweep",
-        "weight": 25,
-        "probability": 1
-      },
-      {
-        "action": "bb_charge",
-        "weight": 20,
-        "probability": 1
-      }
+     {
+      "action": "bb_slam",
+      "weight": 30,
+      "probability": 1
+     },
+     {
+      "action": "bb_tail_sweep",
+      "weight": 25,
+      "probability": 1
+     },
+     {
+      "action": "bb_charge",
+      "weight": 20,
+      "probability": 1
+     }
     ],
-    "special_actions": [
-      {
-        "id": "vb_unleash",
-        "action": "bb_rampage",
-        "trigger": {
-          "type": "enemy_mark",
-          "mark": "surge_mark",
-          "min": 6,
-          "timing": "current_turn"
-        },
-        "once": false,
-        "priority": 30,
-        "desc": "困斗满 6：宣泄大招（蚀脉宣泄），宣泄后困斗回落",
-        "trigger_cooldown": 2
-      },
-      {
-        "id": "vb_tail_lost",
-        "action": "bb_tail_sweep",
-        "trigger": {
-          "type": "enemy_mark",
-          "mark": "tail_broken",
-          "absent": true,
-          "timing": "current_turn"
-        },
-        "once": false,
-        "priority": 5,
-        "desc": "尾锤已破：范围技失效（absent 条件 = 已破印记存在则不触发）"
-      }
+    "enter_action": "bb_slam",
+    "broadcast": "{monster} 昂首踏碎岩脊，进入姿态Ⅰ：试探。"
+   },
+   {
+    "threshold": 0.7,
+    "actions": [
+     {
+      "action": "bb_slam",
+      "weight": 35,
+      "probability": 1
+     },
+     {
+      "action": "bb_tail_sweep",
+      "weight": 30,
+      "probability": 1
+     },
+     {
+      "action": "bb_charge",
+      "weight": 25,
+      "probability": 1
+     }
     ],
-    "drops": {
-      "battle": [],
-      "special": [],
-      "death": [
-        {
-          "item": "barrow_core",
-          "chance": 100,
-          "count": 1
-        }
-      ]
+    "enter_action": "bb_charge",
+    "broadcast": "{monster} 咆哮震落骨屑，进入姿态Ⅱ：暴怒。蚀脉激荡！"
+   },
+   {
+    "threshold": 0.35,
+    "actions": [
+     {
+      "action": "bb_slam",
+      "weight": 30,
+      "probability": 1
+     },
+     {
+      "action": "bb_tail_sweep",
+      "weight": 35,
+      "probability": 1
+     },
+     {
+      "action": "bb_charge",
+      "weight": 35,
+      "probability": 1
+     }
+    ],
+    "enter_action": "bb_rampage",
+    "broadcast": "{monster} 脉核透体而亮，进入姿态Ⅲ：狂澜！"
+   }
+  ],
+  "resistance": {
+   "stun": 30,
+   "immune": [
+    "poison"
+   ]
+  },
+  "actions": [
+   {
+    "action": "bb_slam",
+    "weight": 30,
+    "probability": 1
+   },
+   {
+    "action": "bb_tail_sweep",
+    "weight": 25,
+    "probability": 1
+   },
+   {
+    "action": "bb_charge",
+    "weight": 20,
+    "probability": 1
+   }
+  ],
+  "special_actions": [
+   {
+    "id": "vb_unleash",
+    "action": "bb_rampage",
+    "trigger": {
+     "type": "enemy_mark",
+     "mark": "surge_mark",
+     "min": 6,
+     "timing": "current_turn"
     },
-    "lore": [
-      {
-        "unlock": 10,
-        "desc": "脊冢兽·砾冕：食脉巨兽，弱突刺与风蚀。"
-      },
-      {
-        "unlock": 50,
-        "desc": "蚀脉怒意积累会引发宣泄，机动牌可疏导其困斗。"
-      },
-      {
-        "unlock": 80,
-        "desc": "破坏脉核令其倒地；破坏尾锤令横扫失效。"
-      }
-    ],
-    "rewards": {
-      "exp": 3000,
-      "currencies": {
-        "coins": 1500
-      }
+    "once": false,
+    "priority": 30,
+    "desc": "困斗满 6：宣泄大招（蚀脉宣泄），宣泄后困斗回落",
+    "trigger_cooldown": 2
+   },
+   {
+    "id": "vb_tail_lost",
+    "action": "bb_tail_sweep",
+    "trigger": {
+     "type": "enemy_mark",
+     "mark": "tail_broken",
+     "absent": true,
+     "timing": "current_turn"
+    },
+    "once": false,
+    "priority": 5,
+    "desc": "尾锤已破：范围技失效（absent 条件 = 已破印记存在则不触发）"
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "barrow_core",
+     "chance": 100,
+     "count": 1
     }
+   ]
   },
-  {
-    "id": "ridge_cub",
-    "name": "脊冢幼兽",
-    "desc": "游荡在脉堑外围的脊冢兽幼崽，皮薄胆怯但会凶猛地扑咬。",
-    "stats": {
-      "hp": 230,
-      "mp": 20,
-      "str": 70,
-      "con": 13,
-      "spr": 10,
-      "foc": 6,
-      "agi": 7,
-      "luk": 6
-    },
-    "rewards": {
-      "exp": 100,
-      "currencies": {
-        "coins": 50
-      }
-    },
-    "drops": {
-      "battle": [],
-      "special": [],
-      "death": [
-        {
-          "item": "vein_shard",
-          "chance": 100,
-          "count": 1
-        }
-      ]
-    },
-    "phases": [],
-    "special_actions": [],
-    "actions": [
-      {
-        "action": "bb_cub_bite",
-        "weight": 100,
-        "probability": 1
-      }
-    ]
-  },
-  {
-    "id": "wasteland_wolf",
-    "name": "荒原狼",
-    "tier": "normal",
-    "area": "脊骸丘陵",
-    "desc": "蚀脉野化的灰狼，毛皮透着晶光，群体行动，善扑倒猎物。",
-    "stats": {
-      "hp": 380,
-      "mp": 20,
-      "str": 80,
-      "con": 19,
-      "spr": 10,
-      "foc": 10,
-      "agi": 10,
-      "luk": 8
-    },
-    "rewards": {
-      "exp": 180,
-      "currencies": {
-        "coins": 90
-      }
-    },
-    "drops": {
-      "battle": [],
-      "special": [],
-      "death": [
-        {
-          "item": "vein_shard",
-          "chance": 60,
-          "count": 1
-        },
-        {
-          "item": "wolf_pelt",
-          "chance": 35,
-          "count": 1
-        }
-      ]
-    },
-    "phases": [],
-    "special_actions": [],
-    "actions": [
-      {
-        "action": "wp_pounce",
-        "weight": 70,
-        "probability": 1
-      },
-      {
-        "action": "wp_howl",
-        "weight": 15,
-        "probability": 1
-      }
-    ]
-  },
-  {
-    "id": "gravel_armor_beast",
-    "name": "砾甲兽",
-    "tier": "elite",
-    "area": "脊骸丘陵",
-    "desc": "背覆砾岩甲壳的巨蜥，脉晶在甲缝间充能，防御极厚，怒时甲片竖立。",
-    "stats": {
-      "hp": 2615,
-      "mp": 40,
-      "str": 238,
-      "con": 45,
-      "spr": 20,
-      "foc": 15,
-      "agi": 8,
-      "luk": 5
-    },
-    "rewards": {
-      "exp": 650,
-      "currencies": {
-        "coins": 300
-      }
-    },
-    "drops": {
-      "battle": [],
-      "special": [],
-      "death": [
-        {
-          "item": "gravel_plate",
-          "chance": 80,
-          "count": 1
-        },
-        {
-          "item": "vein_shard",
-          "chance": 100,
-          "count": 2
-        }
-      ]
-    },
-    "phases": [
-      {
-        "threshold": 1.0,
-        "actions": [
-          {
-            "action": "gj_armor",
-            "weight": 35,
-            "probability": 1
-          },
-          {
-            "action": "gj_charge",
-            "weight": 40,
-            "probability": 1
-          },
-          {
-            "action": "gj_ram",
-            "weight": 25,
-            "probability": 1
-          }
-        ],
-        "broadcast": "{monster} 甲片竖立，脉晶在甲缝间充能！"
-      },
-      {
-        "threshold": 0.5,
-        "actions": [
-          {
-            "action": "gj_charge",
-            "weight": 45,
-            "probability": 1
-          },
-          {
-            "action": "gj_ram",
-            "weight": 40,
-            "probability": 1
-          },
-          {
-            "action": "gj_armor",
-            "weight": 15,
-            "probability": 1
-          }
-        ],
-        "broadcast": "{monster} 甲壳迸裂，狂暴冲撞！"
-      }
-    ],
-    "special_actions": [],
-    "actions": [
-      {
-        "action": "gj_charge",
-        "weight": 40,
-        "probability": 1
-      },
-      {
-        "action": "gj_ram",
-        "weight": 35,
-        "probability": 1
-      },
-      {
-        "action": "gj_armor",
-        "weight": 25,
-        "probability": 1
-      }
-    ]
-  },
-  {
-    "id": "wasteland_lord",
-    "name": "A主·荒原领主",
-    "tier": "boss",
-    "area": "脊骸丘陵",
-    "desc": "荒原狼王的蚀脉异变体，体型如小丘，鬃毛间嵌满脉晶，统御丘陵狼群。",
-    "stats": {
-      "hp": 4664,
-      "mp": 80,
-      "str": 439,
-      "con": 72,
-      "spr": 25,
-      "foc": 20,
-      "agi": 26,
-      "luk": 10
-    },
-    "weakness": {
-      "types": [
-        "突"
-      ],
-      "elements": {
-        "wind": 1.3
-      }
-    },
-    "pv": 300,
-    "pv_recover": "battle_end",
-    "phases": [
-      {
-        "threshold": 1.0,
-        "actions": [
-          {
-            "action": "al_bite",
-            "weight": 40,
-            "probability": 1
-          },
-          {
-            "action": "al_quake",
-            "weight": 30,
-            "probability": 1
-          },
-          {
-            "action": "al_howl_summon",
-            "weight": 30,
-            "probability": 1
-          }
-        ],
-        "enter_action": "al_quake",
-        "broadcast": "{monster} 低沉咆哮，唤来狼群助阵！"
-      },
-      {
-        "threshold": 0.6,
-        "actions": [
-          {
-            "action": "al_bite",
-            "weight": 35,
-            "probability": 1
-          },
-          {
-            "action": "al_ram",
-            "weight": 30,
-            "probability": 1
-          },
-          {
-            "action": "al_crystal_fur",
-            "weight": 20,
-            "probability": 1
-          },
-          {
-            "action": "al_quake",
-            "weight": 15,
-            "probability": 1
-          }
-        ],
-        "enter_action": "al_ram",
-        "broadcast": "{monster} 晶鬃炸立，进入暴怒！"
-      },
-      {
-        "threshold": 0.3,
-        "actions": [
-          {
-            "action": "al_bite",
-            "weight": 40,
-            "probability": 1
-          },
-          {
-            "action": "al_crystal_fur",
-            "weight": 30,
-            "probability": 1
-          },
-          {
-            "action": "al_ram",
-            "weight": 30,
-            "probability": 1
-          }
-        ],
-        "enter_action": "al_crystal_fur",
-        "broadcast": "{monster} 狂乱撕咬，晶屑飞溅！"
-      }
-    ],
-    "resistance": {
-      "stun": 20,
-      "immune": []
-    },
-    "special_actions": [],
-    "actions": [
-      {
-        "action": "al_bite",
-        "weight": 40,
-        "probability": 1
-      },
-      {
-        "action": "al_quake",
-        "weight": 25,
-        "probability": 1
-      },
-      {
-        "action": "al_crystal_fur",
-        "weight": 20,
-        "probability": 1
-      },
-      {
-        "action": "al_ram",
-        "weight": 15,
-        "probability": 1
-      }
-    ],
-    "drops": {
-      "battle": [],
-      "special": [],
-      "death": [
-        {
-          "item": "lord_fang",
-          "chance": 100,
-          "count": 1
-        },
-        {
-          "item": "wolf_pelt",
-          "chance": 60,
-          "count": 2
-        }
-      ]
-    },
-    "lore": [
-      {
-        "unlock": 10,
-        "desc": "A主·荒原领主：丘陵狼王，弱突刺与风蚀。"
-      },
-      {
-        "unlock": 50,
-        "desc": "暴怒时会呼唤狼群，优先击破召唤。"
-      },
-      {
-        "unlock": 80,
-        "desc": "晶鬃是它的弱点，破坏后散射失效。"
-      }
-    ]
-  },
-  {
-    "id": "dummy_light",
-    "name": "训练木桩·轻甲",
-    "tier": "training",
-    "type": "dummy",
-    "desc": "驿站练功场的轻甲木桩，低防高血，适合测试连段尖峰与配装爆发。",
-    "stats": {
-      "hp": 3000,
-      "mp": 0,
-      "str": 1,
-      "con": 5,
-      "spr": 1,
-      "foc": 1,
-      "agi": 1,
-      "luk": 1
-    }
-  },
-  {
-    "id": "dummy_heavy",
-    "name": "训练木桩·重甲",
-    "tier": "training",
-    "type": "dummy",
-    "desc": "覆着砾岩板的加重木桩，高防高血，适合测试破防收益与真实斩杀线。",
-    "stats": {
-      "hp": 5000,
-      "mp": 0,
-      "str": 1,
-      "con": 40,
-      "spr": 1,
-      "foc": 1,
-      "agi": 1,
-      "luk": 1
-    }
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "脊冢兽·砾冕：食脉巨兽，弱突刺与风蚀。"
+   },
+   {
+    "unlock": 50,
+    "desc": "蚀脉怒意积累会引发宣泄，机动牌可疏导其困斗。"
+   },
+   {
+    "unlock": 80,
+    "desc": "破坏脉核令其倒地；破坏尾锤令横扫失效。"
+   }
+  ],
+  "rewards": {
+   "exp": 3000,
+   "currencies": {
+    "coins": 1500
+   }
   }
+ },
+ {
+  "id": "ridge_cub",
+  "name": "脊冢幼兽",
+  "desc": "游荡在脉堑外围的脊冢兽幼崽，皮薄胆怯但会凶猛地扑咬。",
+  "stats": {
+   "hp": 230,
+   "mp": 20,
+   "str": 70,
+   "con": 13,
+   "spr": 10,
+   "foc": 6,
+   "agi": 7,
+   "luk": 6
+  },
+  "rewards": {
+   "exp": 100,
+   "currencies": {
+    "coins": 50
+   }
+  },
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "vein_shard",
+     "chance": 100,
+     "count": 1
+    }
+   ]
+  },
+  "phases": [],
+  "special_actions": [],
+  "actions": [
+   {
+    "action": "bb_cub_bite",
+    "weight": 100,
+    "probability": 1
+   }
+  ]
+ },
+ {
+  "id": "wasteland_wolf",
+  "name": "荒原狼",
+  "tier": "normal",
+  "area": "脊骸丘陵",
+  "desc": "蚀脉野化的灰狼，毛皮透着晶光，群体行动，善扑倒猎物。",
+  "stats": {
+   "hp": 380,
+   "mp": 20,
+   "str": 80,
+   "con": 19,
+   "spr": 10,
+   "foc": 10,
+   "agi": 10,
+   "luk": 8
+  },
+  "rewards": {
+   "exp": 180,
+   "currencies": {
+    "coins": 90
+   }
+  },
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "vein_shard",
+     "chance": 60,
+     "count": 1
+    },
+    {
+     "item": "wolf_pelt",
+     "chance": 35,
+     "count": 1
+    }
+   ]
+  },
+  "phases": [],
+  "special_actions": [],
+  "actions": [
+   {
+    "action": "wp_pounce",
+    "weight": 70,
+    "probability": 1
+   },
+   {
+    "action": "wp_howl",
+    "weight": 15,
+    "probability": 1
+   }
+  ]
+ },
+ {
+  "id": "gravel_armor_beast",
+  "name": "砾甲兽",
+  "tier": "elite",
+  "area": "脊骸丘陵",
+  "desc": "背覆砾岩甲壳的巨蜥，脉晶在甲缝间充能，防御极厚，怒时甲片竖立。",
+  "stats": {
+   "hp": 2615,
+   "mp": 40,
+   "str": 238,
+   "con": 45,
+   "spr": 20,
+   "foc": 15,
+   "agi": 8,
+   "luk": 5
+  },
+  "rewards": {
+   "exp": 650,
+   "currencies": {
+    "coins": 300
+   }
+  },
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "gravel_plate",
+     "chance": 80,
+     "count": 1
+    },
+    {
+     "item": "vein_shard",
+     "chance": 100,
+     "count": 2
+    }
+   ]
+  },
+  "phases": [
+   {
+    "threshold": 1.0,
+    "actions": [
+     {
+      "action": "gj_armor",
+      "weight": 35,
+      "probability": 1
+     },
+     {
+      "action": "gj_charge",
+      "weight": 40,
+      "probability": 1
+     },
+     {
+      "action": "gj_ram",
+      "weight": 25,
+      "probability": 1
+     }
+    ],
+    "broadcast": "{monster} 甲片竖立，脉晶在甲缝间充能！"
+   },
+   {
+    "threshold": 0.5,
+    "actions": [
+     {
+      "action": "gj_charge",
+      "weight": 45,
+      "probability": 1
+     },
+     {
+      "action": "gj_ram",
+      "weight": 40,
+      "probability": 1
+     },
+     {
+      "action": "gj_armor",
+      "weight": 15,
+      "probability": 1
+     }
+    ],
+    "broadcast": "{monster} 甲壳迸裂，狂暴冲撞！"
+   }
+  ],
+  "special_actions": [],
+  "actions": [
+   {
+    "action": "gj_charge",
+    "weight": 40,
+    "probability": 1
+   },
+   {
+    "action": "gj_ram",
+    "weight": 35,
+    "probability": 1
+   },
+   {
+    "action": "gj_armor",
+    "weight": 25,
+    "probability": 1
+   }
+  ]
+ },
+ {
+  "id": "wasteland_lord",
+  "name": "A主·荒原领主",
+  "tier": "boss",
+  "area": "脊骸丘陵",
+  "desc": "荒原狼王的蚀脉异变体，体型如小丘，鬃毛间嵌满脉晶，统御丘陵狼群。",
+  "stats": {
+   "hp": 4664,
+   "mp": 80,
+   "str": 439,
+   "con": 72,
+   "spr": 25,
+   "foc": 20,
+   "agi": 26,
+   "luk": 10
+  },
+  "weakness": {
+   "types": [
+    "突"
+   ],
+   "elements": {
+    "wind": 1.3
+   }
+  },
+  "pv": 300,
+  "pv_recover": "battle_end",
+  "phases": [
+   {
+    "threshold": 1.0,
+    "actions": [
+     {
+      "action": "al_bite",
+      "weight": 40,
+      "probability": 1
+     },
+     {
+      "action": "al_quake",
+      "weight": 30,
+      "probability": 1
+     },
+     {
+      "action": "al_howl_summon",
+      "weight": 30,
+      "probability": 1
+     }
+    ],
+    "enter_action": "al_quake",
+    "broadcast": "{monster} 低沉咆哮，唤来狼群助阵！"
+   },
+   {
+    "threshold": 0.6,
+    "actions": [
+     {
+      "action": "al_bite",
+      "weight": 35,
+      "probability": 1
+     },
+     {
+      "action": "al_ram",
+      "weight": 30,
+      "probability": 1
+     },
+     {
+      "action": "al_crystal_fur",
+      "weight": 20,
+      "probability": 1
+     },
+     {
+      "action": "al_quake",
+      "weight": 15,
+      "probability": 1
+     }
+    ],
+    "enter_action": "al_ram",
+    "broadcast": "{monster} 晶鬃炸立，进入暴怒！"
+   },
+   {
+    "threshold": 0.3,
+    "actions": [
+     {
+      "action": "al_bite",
+      "weight": 40,
+      "probability": 1
+     },
+     {
+      "action": "al_crystal_fur",
+      "weight": 30,
+      "probability": 1
+     },
+     {
+      "action": "al_ram",
+      "weight": 30,
+      "probability": 1
+     }
+    ],
+    "enter_action": "al_crystal_fur",
+    "broadcast": "{monster} 狂乱撕咬，晶屑飞溅！"
+   }
+  ],
+  "resistance": {
+   "stun": 20,
+   "immune": []
+  },
+  "special_actions": [],
+  "actions": [
+   {
+    "action": "al_bite",
+    "weight": 40,
+    "probability": 1
+   },
+   {
+    "action": "al_quake",
+    "weight": 25,
+    "probability": 1
+   },
+   {
+    "action": "al_crystal_fur",
+    "weight": 20,
+    "probability": 1
+   },
+   {
+    "action": "al_ram",
+    "weight": 15,
+    "probability": 1
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "lord_fang",
+     "chance": 100,
+     "count": 1
+    },
+    {
+     "item": "wolf_pelt",
+     "chance": 60,
+     "count": 2
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "A主·荒原领主：丘陵狼王，弱突刺与风蚀。"
+   },
+   {
+    "unlock": 50,
+    "desc": "暴怒时会呼唤狼群，优先击破召唤。"
+   },
+   {
+    "unlock": 80,
+    "desc": "晶鬃是它的弱点，破坏后散射失效。"
+   }
+  ]
+ },
+ {
+  "id": "dummy_light",
+  "name": "训练木桩·轻甲",
+  "tier": "training",
+  "type": "dummy",
+  "desc": "驿站练功场的轻甲木桩，低防高血，适合测试连段尖峰与配装爆发。",
+  "stats": {
+   "hp": 3000,
+   "mp": 0,
+   "str": 1,
+   "con": 5,
+   "spr": 1,
+   "foc": 1,
+   "agi": 1,
+   "luk": 1
+  }
+ },
+ {
+  "id": "dummy_heavy",
+  "name": "训练木桩·重甲",
+  "tier": "training",
+  "type": "dummy",
+  "desc": "覆着砾岩板的加重木桩，高防高血，适合测试破防收益与真实斩杀线。",
+  "stats": {
+   "hp": 5000,
+   "mp": 0,
+   "str": 1,
+   "con": 40,
+   "spr": 1,
+   "foc": 1,
+   "agi": 1,
+   "luk": 1
+  }
+ },
+ {
+  "id": "rift_wolf",
+  "name": "裂谷狼",
+  "tier": "normal",
+  "area": "蚀风裂谷",
+  "desc": "毛皮晶化如刃的野狼，风沙磨利爪牙，在裂谷风口游荡。",
+  "stats": {
+   "hp": 1581,
+   "mp": 30,
+   "str": 336,
+   "con": 48,
+   "spr": 15,
+   "foc": 18,
+   "agi": 28,
+   "luk": 10
+  },
+  "rewards": {
+   "exp": 1200,
+   "currencies": {
+    "coins": 400
+   }
+  },
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "rift_wolf_pelt",
+     "chance": 55,
+     "count": 1
+    },
+    {
+     "item": "vein_shard",
+     "chance": 70,
+     "count": 1
+    }
+   ]
+  },
+  "phases": [],
+  "special_actions": [],
+  "actions": [
+   {
+    "action": "rw_quick_bite",
+    "weight": 65,
+    "probability": 1
+   },
+   {
+    "action": "rw_gust_pounce",
+    "weight": 35,
+    "probability": 1
+   }
+  ]
+ },
+ {
+  "id": "wind_ridge_beast",
+  "name": "风脊兽",
+  "tier": "normal",
+  "area": "蚀风裂谷",
+  "desc": "流线型脊兽，晶背导风加速，在晶壁回廊间高速冲撞。",
+  "stats": {
+   "hp": 1623,
+   "mp": 40,
+   "str": 384,
+   "con": 54,
+   "spr": 20,
+   "foc": 20,
+   "agi": 24,
+   "luk": 8
+  },
+  "rewards": {
+   "exp": 1400,
+   "currencies": {
+    "coins": 450
+   }
+  },
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "wind_ridge_shell",
+     "chance": 50,
+     "count": 1
+    },
+    {
+     "item": "vein_shard",
+     "chance": 65,
+     "count": 2
+    }
+   ]
+  },
+  "phases": [],
+  "special_actions": [],
+  "actions": [
+   {
+    "action": "wr_charge",
+    "weight": 70,
+    "probability": 1
+   },
+   {
+    "action": "wr_rebound",
+    "weight": 30,
+    "probability": 1
+   }
+  ]
+ },
+ {
+  "id": "crystal_mane_lord",
+  "name": "晶鬃狼王",
+  "tier": "elite",
+  "area": "蚀风裂谷",
+  "desc": "荒原领主的近亲，鬃毛化作晶刺，能号令裂谷狼群作战。",
+  "stats": {
+   "hp": 3596,
+   "mp": 60,
+   "str": 515,
+   "con": 112,
+   "spr": 25,
+   "foc": 28,
+   "agi": 32,
+   "luk": 12
+  },
+  "weakness": {
+   "types": [
+    "突"
+   ]
+  },
+  "rewards": {
+   "exp": 3800,
+   "currencies": {
+    "coins": 900
+   }
+  },
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "crystal_mane",
+     "chance": 80,
+     "count": 1
+    },
+    {
+     "item": "rift_wolf_pelt",
+     "chance": 60,
+     "count": 2
+    }
+   ]
+  },
+  "phases": [
+   {
+    "threshold": 1.0,
+    "actions": [
+     {
+      "action": "cm_spike_volley",
+      "weight": 40,
+      "probability": 1
+     },
+     {
+      "action": "cm_rage_bite",
+      "weight": 40,
+      "probability": 1
+     },
+     {
+      "action": "cm_pack_call",
+      "weight": 20,
+      "probability": 1
+     }
+    ],
+    "broadcast": "{monster} 晶鬃炸立，召集群狼围猎！"
+   },
+   {
+    "threshold": 0.5,
+    "actions": [
+     {
+      "action": "cm_rage_bite",
+      "weight": 50,
+      "probability": 1
+     },
+     {
+      "action": "cm_spike_volley",
+      "weight": 30,
+      "probability": 1
+     },
+     {
+      "action": "cm_pack_call",
+      "weight": 20,
+      "probability": 1
+     }
+    ],
+    "enter_action": "cm_rage_bite",
+    "broadcast": "{monster} 鬃毛晶刺尽断，陷入狂暴撕咬！"
+   }
+  ],
+  "special_actions": [],
+  "actions": [
+   {
+    "action": "cm_rage_bite",
+    "weight": 45,
+    "probability": 1
+   },
+   {
+    "action": "cm_spike_volley",
+    "weight": 35,
+    "probability": 1
+   },
+   {
+    "action": "cm_pack_call",
+    "weight": 20,
+    "probability": 1
+   }
+  ]
+ },
+ {
+  "id": "eroded_armor_beast",
+  "name": "蚀甲兽",
+  "tier": "elite",
+  "area": "蚀风裂谷",
+  "desc": "砾冕同族远亲，蚀脉在甲下奔涌，蜷缩蓄力后爆发冲撞。",
+  "stats": {
+   "hp": 3664,
+   "mp": 60,
+   "str": 582,
+   "con": 131,
+   "spr": 30,
+   "foc": 22,
+   "agi": 12,
+   "luk": 6
+  },
+  "weakness": {
+   "types": [
+    "突"
+   ],
+   "elements": {
+    "wind": 1.2
+   }
+  },
+  "rewards": {
+   "exp": 4200,
+   "currencies": {
+    "coins": 1000
+   }
+  },
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "eroded_plate",
+     "chance": 80,
+     "count": 1
+    },
+    {
+     "item": "vein_shard",
+     "chance": 80,
+     "count": 2
+    }
+   ]
+  },
+  "phases": [
+   {
+    "threshold": 1.0,
+    "actions": [
+     {
+      "action": "ea_armor_up",
+      "weight": 30,
+      "probability": 1
+     },
+     {
+      "action": "ea_erupt_charge",
+      "weight": 40,
+      "probability": 1
+     },
+     {
+      "action": "ea_gore",
+      "weight": 30,
+      "probability": 1
+     }
+    ],
+    "broadcast": "{monster} 甲壳蜷缩，蚀脉在甲缝间奔涌充能！"
+   },
+   {
+    "threshold": 0.5,
+    "actions": [
+     {
+      "action": "ea_erupt_charge",
+      "weight": 55,
+      "probability": 1
+     },
+     {
+      "action": "ea_gore",
+      "weight": 35,
+      "probability": 1
+     },
+     {
+      "action": "ea_armor_up",
+      "weight": 10,
+      "probability": 1
+     }
+    ],
+    "enter_action": "ea_erupt_charge",
+    "broadcast": "{monster} 甲壳迸裂，蚀脉爆发！"
+   }
+  ],
+  "special_actions": [],
+  "actions": [
+   {
+    "action": "ea_erupt_charge",
+    "weight": 40,
+    "probability": 1
+   },
+   {
+    "action": "ea_gore",
+    "weight": 35,
+    "probability": 1
+   },
+   {
+    "action": "ea_armor_up",
+    "weight": 25,
+    "probability": 1
+   }
+  ]
+ }
 ]

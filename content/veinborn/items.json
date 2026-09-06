@@ -1,152 +1,188 @@
 [
-  {
-    "id": "barrow_core",
-    "name": "冢核",
-    "type": "material",
-    "price": 200,
-    "effects": [],
-    "usable": false,
-    "desc": "脊冢兽核心：脉髓结晶，锻造素材"
+ {
+  "id": "barrow_core",
+  "name": "冢核",
+  "type": "material",
+  "price": 200,
+  "effects": [],
+  "usable": false,
+  "desc": "脊冢兽核心：脉髓结晶，锻造素材"
+ },
+ {
+  "id": "vein_shard",
+  "name": "脉晶碎片",
+  "type": "material",
+  "price": 50,
+  "effects": [],
+  "usable": false,
+  "desc": "蚀脉结晶碎片：通用素材"
+ },
+ {
+  "id": "pulse_potion",
+  "name": "脉火药剂",
+  "type": "consumable",
+  "price": 120,
+  "effects": [
+   "heal_small"
+  ],
+  "usable": true,
+  "desc": "燃脉淬体：战斗中回复生命"
+ },
+ {
+  "id": "wolf_pelt",
+  "name": "荒原狼皮",
+  "type": "material",
+  "price": 60,
+  "effects": [],
+  "usable": false,
+  "desc": "荒原狼的晶化毛皮：打造素材（骨脊系）"
+ },
+ {
+  "id": "gravel_plate",
+  "name": "砾岩甲片",
+  "type": "material",
+  "price": 150,
+  "effects": [],
+  "usable": false,
+  "desc": "砾甲兽的岩甲片：打造素材（脉铁系）"
+ },
+ {
+  "id": "lord_fang",
+  "name": "领主獠牙",
+  "type": "material",
+  "price": 400,
+  "effects": [],
+  "usable": false,
+  "desc": "荒原领主的巨獠牙：打造素材（王骸系·A）"
+ },
+ {
+  "id": "item_enhance_stone_low",
+  "name": "低级强化石",
+  "type": "material",
+  "price": 50,
+  "usable": false,
+  "desc": "蚀脉碎晶磨制的低级强化石，用于强化 +1~+3。"
+ },
+ {
+  "id": "item_enhance_stone_mid",
+  "name": "中级强化石",
+  "type": "material",
+  "price": 150,
+  "usable": false,
+  "desc": "凝聚脉火的中级强化石，用于强化 +4~+6。"
+ },
+ {
+  "id": "item_enhance_stone_high",
+  "name": "高级强化石",
+  "type": "material",
+  "price": 400,
+  "usable": false,
+  "desc": "如骨玉般的高阶强化石，用于强化 +7 以上。"
+ },
+ {
+  "id": "item_protect_stone",
+  "name": "脉护石",
+  "type": "material",
+  "price": 500,
+  "usable": false,
+  "desc": "蕴着守护脉纹的护石，强化失败时抵消掉级。"
+ },
+ {
+  "id": "mossvein_seed",
+  "name": "苔脉籽",
+  "type": "material",
+  "price": 30,
+  "usable": false,
+  "seed": {
+   "output": "mossvein_herb",
+   "quality_floor": 40,
+   "traits": [],
+   "harvest_sec": null
   },
-  {
-    "id": "vein_shard",
-    "name": "脉晶碎片",
-    "type": "material",
-    "price": 50,
-    "effects": [],
-    "usable": false,
-    "desc": "蚀脉结晶碎片：通用素材"
+  "desc": "脉堑石缝里的苔籽，种下 4 小时后可收苔脉草。"
+ },
+ {
+  "id": "glowcap_seed",
+  "name": "莹菇孢子",
+  "type": "material",
+  "price": 60,
+  "usable": false,
+  "seed": {
+   "output": "glowcap",
+   "quality_floor": 50,
+   "traits": [
+    "莹光"
+   ],
+   "harvest_sec": null
   },
-  {
-    "id": "pulse_potion",
-    "name": "脉火药剂",
-    "type": "consumable",
-    "price": 120,
-    "effects": [
-      "heal_small"
-    ],
-    "usable": true,
-    "desc": "燃脉淬体：战斗中回复生命"
-  },
-  {
-    "id": "wolf_pelt",
-    "name": "荒原狼皮",
-    "type": "material",
-    "price": 60,
-    "effects": [],
-    "usable": false,
-    "desc": "荒原狼的晶化毛皮：打造素材（骨脊系）"
-  },
-  {
-    "id": "gravel_plate",
-    "name": "砾岩甲片",
-    "type": "material",
-    "price": 150,
-    "effects": [],
-    "usable": false,
-    "desc": "砾甲兽的岩甲片：打造素材（脉铁系）"
-  },
-  {
-    "id": "lord_fang",
-    "name": "领主獠牙",
-    "type": "material",
-    "price": 400,
-    "effects": [],
-    "usable": false,
-    "desc": "荒原领主的巨獠牙：打造素材（王骸系·A）"
-  },
-  {
-    "id": "item_enhance_stone_low",
-    "name": "低级强化石",
-    "type": "material",
-    "price": 50,
-    "usable": false,
-    "desc": "蚀脉碎晶磨制的低级强化石，用于强化 +1~+3。"
-  },
-  {
-    "id": "item_enhance_stone_mid",
-    "name": "中级强化石",
-    "type": "material",
-    "price": 150,
-    "usable": false,
-    "desc": "凝聚脉火的中级强化石，用于强化 +4~+6。"
-  },
-  {
-    "id": "item_enhance_stone_high",
-    "name": "高级强化石",
-    "type": "material",
-    "price": 400,
-    "usable": false,
-    "desc": "如骨玉般的高阶强化石，用于强化 +7 以上。"
-  },
-  {
-    "id": "item_protect_stone",
-    "name": "脉护石",
-    "type": "material",
-    "price": 500,
-    "usable": false,
-    "desc": "蕴着守护脉纹的护石，强化失败时抵消掉级。"
-  },
-  {
-    "id": "mossvein_seed",
-    "name": "苔脉籽",
-    "type": "material",
-    "price": 30,
-    "usable": false,
-    "seed": {
-      "output": "mossvein_herb",
-      "quality_floor": 40,
-      "traits": [],
-      "harvest_sec": null
-    },
-    "desc": "脉堑石缝里的苔籽，种下 4 小时后可收苔脉草。"
-  },
-  {
-    "id": "glowcap_seed",
-    "name": "莹菇孢子",
-    "type": "material",
-    "price": 60,
-    "usable": false,
-    "seed": {
-      "output": "glowcap",
-      "quality_floor": 50,
-      "traits": [
-        "莹光"
-      ],
-      "harvest_sec": null
-    },
-    "desc": "蚀脉洞穴的莹菇孢子，种下 4 小时后可收莹光菇。"
-  },
-  {
-    "id": "mossvein_herb",
-    "name": "苔脉草",
-    "type": "material",
-    "price": 25,
-    "usable": false,
-    "desc": "脉气浸润的苔草，炼金/合成常用素材。"
-  },
-  {
-    "id": "glowcap",
-    "name": "莹光菇",
-    "type": "material",
-    "price": 55,
-    "usable": false,
-    "desc": "暗处泛莹光的蘑菇，珍贵素材。"
-  },
-  {
-    "id": "ridge_ore",
-    "name": "脊脉矿",
-    "type": "material",
-    "price": 40,
-    "usable": false,
-    "desc": "脊脉地层的精炼矿石。"
-  },
-  {
-    "id": "pulse_candy",
-    "name": "脉糖",
-    "type": "material",
-    "price": 15,
-    "usable": true,
-    "desc": "脉矿甜味的硬糖，代工助手的能源。"
-  }
+  "desc": "蚀脉洞穴的莹菇孢子，种下 4 小时后可收莹光菇。"
+ },
+ {
+  "id": "mossvein_herb",
+  "name": "苔脉草",
+  "type": "material",
+  "price": 25,
+  "usable": false,
+  "desc": "脉气浸润的苔草，炼金/合成常用素材。"
+ },
+ {
+  "id": "glowcap",
+  "name": "莹光菇",
+  "type": "material",
+  "price": 55,
+  "usable": false,
+  "desc": "暗处泛莹光的蘑菇，珍贵素材。"
+ },
+ {
+  "id": "ridge_ore",
+  "name": "脊脉矿",
+  "type": "material",
+  "price": 40,
+  "usable": false,
+  "desc": "脊脉地层的精炼矿石。"
+ },
+ {
+  "id": "pulse_candy",
+  "name": "脉糖",
+  "type": "material",
+  "price": 15,
+  "usable": true,
+  "desc": "脉矿甜味的硬糖，代工助手的能源。"
+ },
+ {
+  "id": "rift_wolf_pelt",
+  "name": "裂谷狼皮",
+  "type": "material",
+  "price": 120,
+  "effects": [],
+  "usable": false,
+  "desc": "裂谷狼晶化如刃的毛皮：打造素材（鳞革系）"
+ },
+ {
+  "id": "wind_ridge_shell",
+  "name": "风脊晶壳",
+  "type": "material",
+  "price": 130,
+  "effects": [],
+  "usable": false,
+  "desc": "风脊兽导风晶背的甲壳：打造素材（脉铁系）"
+ },
+ {
+  "id": "crystal_mane",
+  "name": "晶鬃",
+  "type": "material",
+  "price": 260,
+  "effects": [],
+  "usable": false,
+  "desc": "晶鬃狼王炸立如刃的鬃毛晶刺：打造素材（鳞革系·精英）"
+ },
+ {
+  "id": "eroded_plate",
+  "name": "蚀甲片",
+  "type": "material",
+  "price": 280,
+  "effects": [],
+  "usable": false,
+  "desc": "蚀甲兽奔涌蚀脉的甲壳碎片：打造素材（脉铁系·精英）"
+ }
 ]

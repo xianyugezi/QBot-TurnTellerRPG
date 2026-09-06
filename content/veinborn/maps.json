@@ -1,142 +1,271 @@
 [
-  {
-    "id": "gravelcrown_hunt",
-    "name": "脉堑猎场",
-    "desc": "群脊荒原的蚀脉猎场，脊冢兽·砾冕在此徘徊。",
-    "monsters": [
-      {
-        "enemy": "ridge_cub",
-        "name": "脊冢幼兽",
-        "count": 3,
-        "respawn_minutes": 5
-      },
-      {
-        "enemy": "gravelcrown",
-        "name": "脊冢兽·砾冕",
-        "count": 1,
-        "respawn_minutes": 30,
-        "hidden_boss": true,
-        "intro": "蚀脉翻涌，脊冢兽·砾冕自骨冢间昂首而起！",
-        "signal": "砾冕的咆哮震彻猎场"
-      }
-    ],
-    "exits": {},
-    "mechanics": []
+ {
+  "id": "gravelcrown_hunt",
+  "name": "脉堑猎场",
+  "desc": "群脊荒原的蚀脉猎场，脊冢兽·砾冕在此徘徊。",
+  "monsters": [
+   {
+    "enemy": "ridge_cub",
+    "name": "脊冢幼兽",
+    "count": 3,
+    "respawn_minutes": 5
+   },
+   {
+    "enemy": "gravelcrown",
+    "name": "脊冢兽·砾冕",
+    "count": 1,
+    "respawn_minutes": 30,
+    "hidden_boss": true,
+    "intro": "蚀脉翻涌，脊冢兽·砾冕自骨冢间昂首而起！",
+    "signal": "砾冕的咆哮震彻猎场"
+   }
+  ],
+  "exits": {},
+  "mechanics": []
+ },
+ {
+  "id": "a1_bone_field",
+  "name": "骸骨草场",
+  "desc": "齐腰高的灰白草甸，幼兽在倒伏巨兽的肋骨间嬉戏。猎师入门之地。",
+  "npcs": [
+   "npc_old_hunter"
+  ],
+  "monsters": [
+   {
+    "enemy": "ridge_cub",
+    "name": "脊冢幼兽",
+    "count": 3,
+    "respawn_minutes": 3
+   }
+  ],
+  "exits": {
+   "up": {
+    "to": "a2_ridge_hills",
+    "mode": "bidirectional"
+   }
   },
-  {
-    "id": "a1_bone_field",
-    "name": "骸骨草场",
-    "desc": "齐腰高的灰白草甸，幼兽在倒伏巨兽的肋骨间嬉戏。猎师入门之地。",
-    "npcs": [
-      "npc_old_hunter"
-    ],
-    "monsters": [
-      {
-        "enemy": "ridge_cub",
-        "name": "脊冢幼兽",
-        "count": 3,
-        "respawn_minutes": 3
-      }
-    ],
-    "exits": {
-      "up": {
-        "to": "a2_ridge_hills",
-        "mode": "bidirectional"
-      }
-    },
-    "mechanics": []
+  "mechanics": []
+ },
+ {
+  "id": "a2_ridge_hills",
+  "name": "断脊丘陵",
+  "desc": "丘陵如断脊起伏，荒原狼群在丘脊上逡巡，啃食骸骨碎屑。",
+  "monsters": [
+   {
+    "enemy": "wasteland_wolf",
+    "name": "荒原狼",
+    "count": 3,
+    "respawn_minutes": 4
+   },
+   {
+    "enemy": "ridge_cub",
+    "name": "脊冢幼兽",
+    "count": 2,
+    "respawn_minutes": 3
+   }
+  ],
+  "exits": {
+   "down": {
+    "to": "a1_bone_field",
+    "mode": "bidirectional"
+   },
+   "right": {
+    "to": "a3_bone_hollow",
+    "mode": "bidirectional"
+   },
+   "left": {
+    "to": "b1_gale_mouth",
+    "mode": "bidirectional"
+   }
   },
-  {
-    "id": "a2_ridge_hills",
-    "name": "断脊丘陵",
-    "desc": "丘陵如断脊起伏，荒原狼群在丘脊上逡巡，啃食骸骨碎屑。",
-    "monsters": [
-      {
-        "enemy": "wasteland_wolf",
-        "name": "荒原狼",
-        "count": 3,
-        "respawn_minutes": 4
-      },
-      {
-        "enemy": "ridge_cub",
-        "name": "脊冢幼兽",
-        "count": 2,
-        "respawn_minutes": 3
-      }
-    ],
-    "exits": {
-      "down": {
-        "to": "a1_bone_field",
-        "mode": "bidirectional"
-      },
-      "right": {
-        "to": "a3_bone_hollow",
-        "mode": "bidirectional"
-      }
-    },
-    "mechanics": []
+  "mechanics": []
+ },
+ {
+  "id": "a3_bone_hollow",
+  "name": "骨冢洼地",
+  "desc": "洼地堆满远古兽骨，砾甲兽蜷在骨堆间，脉晶自骨缝渗出。",
+  "monsters": [
+   {
+    "enemy": "gravel_armor_beast",
+    "name": "砾甲兽",
+    "count": 1,
+    "respawn_minutes": 8
+   },
+   {
+    "enemy": "wasteland_wolf",
+    "name": "荒原狼",
+    "count": 2,
+    "respawn_minutes": 4
+   }
+  ],
+  "exits": {
+   "left": {
+    "to": "a2_ridge_hills",
+    "mode": "bidirectional"
+   },
+   "right": {
+    "to": "a4_lord_plateau",
+    "mode": "bidirectional"
+   }
   },
-  {
-    "id": "a3_bone_hollow",
-    "name": "骨冢洼地",
-    "desc": "洼地堆满远古兽骨，砾甲兽蜷在骨堆间，脉晶自骨缝渗出。",
-    "monsters": [
-      {
-        "enemy": "gravel_armor_beast",
-        "name": "砾甲兽",
-        "count": 1,
-        "respawn_minutes": 8
-      },
-      {
-        "enemy": "wasteland_wolf",
-        "name": "荒原狼",
-        "count": 2,
-        "respawn_minutes": 4
-      }
-    ],
-    "exits": {
-      "left": {
-        "to": "a2_ridge_hills",
-        "mode": "bidirectional"
-      },
-      "right": {
-        "to": "a4_lord_plateau",
-        "mode": "bidirectional"
-      }
-    },
-    "camp": {
-      "name": "骨台",
-      "unlock": "arrive",
-      "safe": true
-    },
-    "mechanics": []
+  "camp": {
+   "name": "骨台",
+   "unlock": "arrive",
+   "safe": true
   },
-  {
-    "id": "a4_lord_plateau",
-    "name": "领主高台",
-    "desc": "一座孤丘顶的平坦高台，荒原领主盘踞于此，俯视整片丘陵。",
-    "monsters": [
-      {
-        "enemy": "wasteland_lord",
-        "name": "A主·荒原领主",
-        "count": 1,
-        "respawn_minutes": 15,
-        "intro": "大地震颤，荒原领主自高台昂首咆哮！",
-        "signal": "领主的咆哮震彻丘陵"
-      },
-      {
-        "enemy": "wasteland_wolf",
-        "name": "荒原狼",
-        "count": 2,
-        "respawn_minutes": 5
-      }
-    ],
-    "exits": {
-      "left": {
-        "to": "a3_bone_hollow",
-        "mode": "bidirectional"
-      }
-    },
-    "mechanics": []
-  }
+  "mechanics": []
+ },
+ {
+  "id": "a4_lord_plateau",
+  "name": "领主高台",
+  "desc": "一座孤丘顶的平坦高台，荒原领主盘踞于此，俯视整片丘陵。",
+  "monsters": [
+   {
+    "enemy": "wasteland_lord",
+    "name": "A主·荒原领主",
+    "count": 1,
+    "respawn_minutes": 15,
+    "intro": "大地震颤，荒原领主自高台昂首咆哮！",
+    "signal": "领主的咆哮震彻丘陵"
+   },
+   {
+    "enemy": "wasteland_wolf",
+    "name": "荒原狼",
+    "count": 2,
+    "respawn_minutes": 5
+   }
+  ],
+  "exits": {
+   "left": {
+    "to": "a3_bone_hollow",
+    "mode": "bidirectional"
+   }
+  },
+  "mechanics": []
+ },
+ {
+  "id": "b1_gale_mouth",
+  "name": "裂谷风口",
+  "desc": "裂谷入口，晶砂扑面，风过如啸。裂谷狼群在风口逡巡。",
+  "monsters": [
+   {
+    "enemy": "rift_wolf",
+    "name": "裂谷狼",
+    "count": 3,
+    "respawn_minutes": 6
+   },
+   {
+    "enemy": "wasteland_wolf",
+    "name": "荒原狼",
+    "count": 2,
+    "respawn_minutes": 4
+   }
+  ],
+  "exits": {
+   "down": {
+    "to": "a2_ridge_hills",
+    "mode": "bidirectional"
+   },
+   "right": {
+    "to": "b2_crystal_corridor",
+    "mode": "bidirectional"
+   }
+  },
+  "mechanics": []
+ },
+ {
+  "id": "b2_crystal_corridor",
+  "name": "晶壁回廊",
+  "desc": "谷壁脉晶如镜，风廊折射尖啸，风脊兽沿壁高速冲掠。",
+  "monsters": [
+   {
+    "enemy": "wind_ridge_beast",
+    "name": "风脊兽",
+    "count": 3,
+    "respawn_minutes": 6
+   },
+   {
+    "enemy": "rift_wolf",
+    "name": "裂谷狼",
+    "count": 2,
+    "respawn_minutes": 5
+   }
+  ],
+  "exits": {
+   "left": {
+    "to": "b1_gale_mouth",
+    "mode": "bidirectional"
+   },
+   "right": {
+    "to": "b3_wind_bone_field",
+    "mode": "bidirectional"
+   }
+  },
+  "mechanics": []
+ },
+ {
+  "id": "b3_wind_bone_field",
+  "name": "风蚀骨场",
+  "desc": "谷底开阔地，兽骨被风磨成白砂。晶鬃狼王与蚀甲兽在此争夺领地。",
+  "monsters": [
+   {
+    "enemy": "crystal_mane_lord",
+    "name": "晶鬃狼王",
+    "count": 1,
+    "respawn_minutes": 15
+   },
+   {
+    "enemy": "eroded_armor_beast",
+    "name": "蚀甲兽",
+    "count": 1,
+    "respawn_minutes": 15
+   },
+   {
+    "enemy": "wind_ridge_beast",
+    "name": "风脊兽",
+    "count": 2,
+    "respawn_minutes": 6
+   }
+  ],
+  "exits": {
+   "left": {
+    "to": "b2_crystal_corridor",
+    "mode": "bidirectional"
+   },
+   "up": {
+    "to": "b4_gravelcrown_nest",
+    "mode": "bidirectional"
+   }
+  },
+  "mechanics": []
+ },
+ {
+  "id": "b4_gravelcrown_nest",
+  "name": "砾冕巢谷",
+  "desc": "环形谷地，砾冕以半座骨冢为巢。幼兽在巢区边缘啃食脉晶。",
+  "monsters": [
+   {
+    "enemy": "gravelcrown",
+    "name": "脊冢兽·砾冕",
+    "count": 1,
+    "respawn_minutes": 30,
+    "hidden_boss": true,
+    "intro": "骨冢震颤，脊冢兽·砾冕自巢中昂首而起！",
+    "signal": "砾冕的咆哮震彻巢谷"
+   },
+   {
+    "enemy": "ridge_cub",
+    "name": "脊冢幼兽",
+    "count": 2,
+    "respawn_minutes": 3
+   }
+  ],
+  "exits": {
+   "down": {
+    "to": "b3_wind_bone_field",
+    "mode": "bidirectional"
+   }
+  },
+  "mechanics": []
+ }
 ]

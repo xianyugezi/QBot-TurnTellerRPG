@@ -1,248 +1,405 @@
 [
-  {
-    "id": "bb_slam",
-    "name": "岩脊冲撞",
-    "kind": "active",
-    "power": 1.0,
-    "attack_type": "打",
-    "element": "earth",
-    "weight": 30,
-    "probability": 0.6,
-    "intent": "伤害",
-    "cooldown": 0,
-    "hungry": 0,
-    "tags": [
-      "物理",
-      "困斗+1"
-    ],
-    "apply_mark": "surge_mark"
-  },
-  {
-    "id": "bb_tail_sweep",
-    "name": "尾锤横扫",
-    "kind": "active",
-    "power": 0.8,
-    "attack_type": "打",
-    "element": "earth",
-    "weight": 25,
-    "probability": 0.5,
-    "intent": "范围",
-    "cooldown": 1,
-    "hungry": 0,
-    "tags": [
-      "范围",
-      "困斗+1"
-    ],
-    "apply_mark": "surge_mark"
-  },
-  {
-    "id": "bb_charge",
-    "name": "蓄力冲撞",
-    "kind": "active",
-    "power": 1.6,
-    "attack_type": "打",
-    "element": "earth",
-    "weight": 20,
-    "probability": 0.4,
-    "intent": "蓄力",
-    "cooldown": 2,
-    "hungry": 0,
-    "tags": [
-      "物理",
-      "困斗+2"
-    ],
-    "apply_mark": "surge_mark"
-  },
-  {
-    "id": "bb_rampage",
-    "name": "蚀脉宣泄",
-    "kind": "active",
-    "power": 2.2,
-    "attack_type": "打",
-    "element": "void",
-    "weight": 0,
-    "probability": 1.0,
-    "intent": "宣泄",
-    "cooldown": 0,
-    "hungry": 0,
-    "tags": [
-      "范围",
-      "宣泄"
-    ]
-  },
-  {
-    "id": "bb_cub_bite",
-    "name": "幼兽扑咬",
-    "kind": "active",
-    "power": 0.5,
-    "attack_type": "打",
-    "element": "none",
-    "weight": 100,
-    "probability": 1,
-    "intent": "伤害",
-    "cooldown": 0,
-    "tags": [
-      "物理"
-    ]
-  },
-  {
-    "id": "wp_pounce",
-    "name": "扑倒撕咬",
-    "kind": "active",
-    "power": 0.8,
-    "attack_type": "打",
-    "element": "none",
-    "weight": 60,
-    "probability": 1,
-    "intent": "伤害",
-    "cooldown": 0,
-    "tags": [
-      "物理"
-    ]
-  },
-  {
-    "id": "wp_howl",
-    "name": "呼唤狼群",
-    "kind": "active",
-    "power": 0.0,
-    "attack_type": "打",
-    "element": "none",
-    "weight": 25,
-    "probability": 1,
-    "intent": "召唤",
-    "cooldown": 3,
-    "tags": [
-      "召唤"
-    ],
-    "trigger_limit": {
-      "per_battle": 2
-    }
-  },
-  {
-    "id": "gj_charge",
-    "name": "甲缝充能",
-    "kind": "active",
-    "power": 0.0,
-    "attack_type": "打",
-    "element": "earth",
-    "weight": 35,
-    "probability": 1,
-    "intent": "蓄力",
-    "cooldown": 2,
-    "tags": [
-      "蓄力"
-    ]
-  },
-  {
-    "id": "gj_ram",
-    "name": "砾岩冲撞",
-    "kind": "active",
-    "power": 1.6,
-    "attack_type": "打",
-    "element": "earth",
-    "weight": 30,
-    "probability": 1,
-    "intent": "伤害",
-    "cooldown": 1,
-    "tags": [
-      "物理",
-      "重击"
-    ]
-  },
-  {
-    "id": "gj_armor",
-    "name": "甲壳蜷缩",
-    "kind": "active",
-    "power": 0.0,
-    "attack_type": "打",
-    "element": "none",
-    "weight": 20,
-    "probability": 1,
-    "intent": "防御",
-    "cooldown": 2,
-    "tags": [
-      "防御"
-    ]
-  },
-  {
-    "id": "al_bite",
-    "name": "领主撕咬",
-    "kind": "active",
-    "power": 1.2,
-    "attack_type": "打",
-    "element": "none",
-    "weight": 30,
-    "probability": 1,
-    "intent": "伤害",
-    "cooldown": 0,
-    "tags": [
-      "物理"
-    ]
-  },
-  {
-    "id": "al_howl_summon",
-    "name": "荒地咆哮",
-    "kind": "active",
-    "power": 0.0,
-    "attack_type": "打",
-    "element": "none",
-    "weight": 0,
-    "probability": 1,
-    "intent": "召唤",
-    "cooldown": 4,
-    "tags": [
-      "召唤"
-    ],
-    "trigger_limit": {
-      "per_battle": 1
-    }
-  },
-  {
-    "id": "al_ram",
-    "name": "领主冲撞",
-    "kind": "active",
-    "power": 1.8,
-    "attack_type": "打",
-    "element": "earth",
-    "weight": 25,
-    "probability": 1,
-    "intent": "蓄力",
-    "cooldown": 2,
-    "tags": [
-      "物理",
-      "蓄力"
-    ]
-  },
-  {
-    "id": "al_quake",
-    "name": "震地怒踏",
-    "kind": "active",
-    "power": 1.3,
-    "attack_type": "打",
-    "element": "earth",
-    "weight": 20,
-    "probability": 1,
-    "intent": "范围",
-    "cooldown": 2,
-    "tags": [
-      "范围",
-      "物理"
-    ]
-  },
-  {
-    "id": "al_crystal_fur",
-    "name": "晶鬃散射",
-    "kind": "active",
-    "power": 1.0,
-    "attack_type": "突",
-    "element": "wind",
-    "weight": 15,
-    "probability": 1,
-    "intent": "范围",
-    "cooldown": 3,
-    "tags": [
-      "范围",
-      "突"
-    ]
+ {
+  "id": "bb_slam",
+  "name": "岩脊冲撞",
+  "kind": "active",
+  "power": 1.0,
+  "attack_type": "打",
+  "element": "earth",
+  "weight": 30,
+  "probability": 0.6,
+  "intent": "伤害",
+  "cooldown": 0,
+  "hungry": 0,
+  "tags": [
+   "物理",
+   "困斗+1"
+  ],
+  "apply_mark": "surge_mark"
+ },
+ {
+  "id": "bb_tail_sweep",
+  "name": "尾锤横扫",
+  "kind": "active",
+  "power": 0.8,
+  "attack_type": "打",
+  "element": "earth",
+  "weight": 25,
+  "probability": 0.5,
+  "intent": "范围",
+  "cooldown": 1,
+  "hungry": 0,
+  "tags": [
+   "范围",
+   "困斗+1"
+  ],
+  "apply_mark": "surge_mark"
+ },
+ {
+  "id": "bb_charge",
+  "name": "蓄力冲撞",
+  "kind": "active",
+  "power": 1.6,
+  "attack_type": "打",
+  "element": "earth",
+  "weight": 20,
+  "probability": 0.4,
+  "intent": "蓄力",
+  "cooldown": 2,
+  "hungry": 0,
+  "tags": [
+   "物理",
+   "困斗+2"
+  ],
+  "apply_mark": "surge_mark"
+ },
+ {
+  "id": "bb_rampage",
+  "name": "蚀脉宣泄",
+  "kind": "active",
+  "power": 2.2,
+  "attack_type": "打",
+  "element": "void",
+  "weight": 0,
+  "probability": 1.0,
+  "intent": "宣泄",
+  "cooldown": 0,
+  "hungry": 0,
+  "tags": [
+   "范围",
+   "宣泄"
+  ]
+ },
+ {
+  "id": "bb_cub_bite",
+  "name": "幼兽扑咬",
+  "kind": "active",
+  "power": 0.5,
+  "attack_type": "打",
+  "element": "none",
+  "weight": 100,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 0,
+  "tags": [
+   "物理"
+  ]
+ },
+ {
+  "id": "wp_pounce",
+  "name": "扑倒撕咬",
+  "kind": "active",
+  "power": 0.8,
+  "attack_type": "打",
+  "element": "none",
+  "weight": 60,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 0,
+  "tags": [
+   "物理"
+  ]
+ },
+ {
+  "id": "wp_howl",
+  "name": "呼唤狼群",
+  "kind": "active",
+  "power": 0.0,
+  "attack_type": "打",
+  "element": "none",
+  "weight": 25,
+  "probability": 1,
+  "intent": "召唤",
+  "cooldown": 3,
+  "tags": [
+   "召唤"
+  ],
+  "trigger_limit": {
+   "per_battle": 2
   }
+ },
+ {
+  "id": "gj_charge",
+  "name": "甲缝充能",
+  "kind": "active",
+  "power": 0.0,
+  "attack_type": "打",
+  "element": "earth",
+  "weight": 35,
+  "probability": 1,
+  "intent": "蓄力",
+  "cooldown": 2,
+  "tags": [
+   "蓄力"
+  ]
+ },
+ {
+  "id": "gj_ram",
+  "name": "砾岩冲撞",
+  "kind": "active",
+  "power": 1.6,
+  "attack_type": "打",
+  "element": "earth",
+  "weight": 30,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 1,
+  "tags": [
+   "物理",
+   "重击"
+  ]
+ },
+ {
+  "id": "gj_armor",
+  "name": "甲壳蜷缩",
+  "kind": "active",
+  "power": 0.0,
+  "attack_type": "打",
+  "element": "none",
+  "weight": 20,
+  "probability": 1,
+  "intent": "防御",
+  "cooldown": 2,
+  "tags": [
+   "防御"
+  ]
+ },
+ {
+  "id": "al_bite",
+  "name": "领主撕咬",
+  "kind": "active",
+  "power": 1.2,
+  "attack_type": "打",
+  "element": "none",
+  "weight": 30,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 0,
+  "tags": [
+   "物理"
+  ]
+ },
+ {
+  "id": "al_howl_summon",
+  "name": "荒地咆哮",
+  "kind": "active",
+  "power": 0.0,
+  "attack_type": "打",
+  "element": "none",
+  "weight": 0,
+  "probability": 1,
+  "intent": "召唤",
+  "cooldown": 4,
+  "tags": [
+   "召唤"
+  ],
+  "trigger_limit": {
+   "per_battle": 1
+  }
+ },
+ {
+  "id": "al_ram",
+  "name": "领主冲撞",
+  "kind": "active",
+  "power": 1.8,
+  "attack_type": "打",
+  "element": "earth",
+  "weight": 25,
+  "probability": 1,
+  "intent": "蓄力",
+  "cooldown": 2,
+  "tags": [
+   "物理",
+   "蓄力"
+  ]
+ },
+ {
+  "id": "al_quake",
+  "name": "震地怒踏",
+  "kind": "active",
+  "power": 1.3,
+  "attack_type": "打",
+  "element": "earth",
+  "weight": 20,
+  "probability": 1,
+  "intent": "范围",
+  "cooldown": 2,
+  "tags": [
+   "范围",
+   "物理"
+  ]
+ },
+ {
+  "id": "al_crystal_fur",
+  "name": "晶鬃散射",
+  "kind": "active",
+  "power": 1.0,
+  "attack_type": "突",
+  "element": "wind",
+  "weight": 15,
+  "probability": 1,
+  "intent": "范围",
+  "cooldown": 3,
+  "tags": [
+   "范围",
+   "突"
+  ]
+ },
+ {
+  "id": "rw_quick_bite",
+  "name": "晶爪迅击",
+  "kind": "active",
+  "power": 0.85,
+  "attack_type": "打",
+  "element": "none",
+  "weight": 65,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 0,
+  "tags": [
+   "物理"
+  ]
+ },
+ {
+  "id": "rw_gust_pounce",
+  "name": "风沙扑击",
+  "kind": "active",
+  "power": 1.15,
+  "attack_type": "打",
+  "element": "wind",
+  "weight": 35,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 2,
+  "tags": [
+   "物理",
+   "风"
+  ]
+ },
+ {
+  "id": "wr_charge",
+  "name": "晶脊冲撞",
+  "kind": "active",
+  "power": 1.1,
+  "attack_type": "打",
+  "element": "wind",
+  "weight": 70,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 0,
+  "tags": [
+   "物理",
+   "风"
+  ]
+ },
+ {
+  "id": "wr_rebound",
+  "name": "折返再冲",
+  "kind": "active",
+  "power": 1.5,
+  "attack_type": "打",
+  "element": "wind",
+  "weight": 30,
+  "probability": 1,
+  "intent": "蓄力",
+  "cooldown": 3,
+  "tags": [
+   "物理",
+   "风"
+  ]
+ },
+ {
+  "id": "cm_spike_volley",
+  "name": "晶刺扫射",
+  "kind": "active",
+  "power": 0.9,
+  "attack_type": "突",
+  "element": "earth",
+  "weight": 35,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 1,
+  "tags": [
+   "物理"
+  ]
+ },
+ {
+  "id": "cm_pack_call",
+  "name": "号令群狼",
+  "kind": "active",
+  "power": 0.0,
+  "attack_type": "打",
+  "element": "none",
+  "weight": 20,
+  "probability": 1,
+  "intent": "召唤",
+  "cooldown": 5,
+  "tags": [
+   "召唤"
+  ],
+  "trigger_limit": {
+   "per_battle": 2
+  }
+ },
+ {
+  "id": "cm_rage_bite",
+  "name": "狂暴撕咬",
+  "kind": "active",
+  "power": 1.45,
+  "attack_type": "打",
+  "element": "none",
+  "weight": 45,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 0,
+  "tags": [
+   "物理"
+  ]
+ },
+ {
+  "id": "ea_armor_up",
+  "name": "重甲蜷缩",
+  "kind": "active",
+  "power": 0.0,
+  "attack_type": "打",
+  "element": "none",
+  "weight": 30,
+  "probability": 1,
+  "intent": "防御",
+  "cooldown": 3,
+  "tags": [
+   "防御"
+  ]
+ },
+ {
+  "id": "ea_erupt_charge",
+  "name": "蚀脉爆发冲撞",
+  "kind": "active",
+  "power": 1.7,
+  "attack_type": "打",
+  "element": "earth",
+  "weight": 40,
+  "probability": 1,
+  "intent": "蓄力",
+  "cooldown": 2,
+  "tags": [
+   "物理",
+   "蚀"
+  ]
+ },
+ {
+  "id": "ea_gore",
+  "name": "蚀甲顶撞",
+  "kind": "active",
+  "power": 1.05,
+  "attack_type": "打",
+  "element": "earth",
+  "weight": 30,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 0,
+  "tags": [
+   "物理"
+  ]
+ }
 ]

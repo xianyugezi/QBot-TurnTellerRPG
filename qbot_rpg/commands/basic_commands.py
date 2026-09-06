@@ -216,7 +216,7 @@ _DEFAULT_STAT_ORDER: tuple = ("hp", "mp", "str", "int", "con", "spr", "foc", "ag
 # /帮助 分组目录（4f RUL-21 六组顺序：冒险/战斗/成长/制造生活/快捷/GM；组内指令按框架章节顺序）
 HELP_GROUPS: Tuple[Tuple[str, Tuple[Tuple[str, str], ...]], ...] = (
     # 冒险组完整指令集（组页 /帮助 冒险 全部可见）；目录总览行展示子集见 _DIRECTORY_SHOW
-    ("冒险", (("角色", "查看角色属性面板"), ("背包", "查看背包物品"), ("装备", "查看/切换装备"),
+    ("冒险", (("角色", "查看角色属性面板"), ("背包", "查看背包/物品详情（背包 查看 序号）"), ("装备", "查看/切换装备"),
               ("位置", "查看当前地点"), ("进入", "进入地图"), ("休息", "休息恢复"),
               ("任务", "查看任务板"), ("赠送", "赠送物品给玩家"))),
     ("战斗", (("攻击", "选择技能攻击目标"), ("技能", "查看技能列表"), ("查看目标", "查看当前目标状态"),
@@ -788,9 +788,24 @@ def _render_bag_page(ctx: Mapping[str, Any], page: int) -> str:
     lines: List[str] = [bag_line(start + i + 1, r, ctx) for i, r in enumerate(slice_rows)]
     # 2026-09-05 模拟器审计：背包有装备时 Tip 教「使用 物品名」与穿戴实际路径
     # （装备 穿 序号）矛盾——有装备 → Tip 含穿戴引导
-    _btip = ""
+    # 2026-09-06 实机反馈：玩家想查看物品详情连试「查看1/物品详情1」全静默——
+    # 详情正确形态是「背包 查看 <序号|名|部位>」，Tip 必须教（发现性引导）
+    # 2026-09-06 用户拍板：Tip 太长 → 每次随机出现其中一条（轮换引导）
+    _tip_pool = ["发送'背包 查看 <序号>'看物品详情",
+                 "发送'使用 序号'穿戴装备"]
     if _bag_has_equip(rows, ctx):
-        _btip = "发送'使用 序号'穿戴装备；消耗品直接'使用 物品名'"
+        _tip_pool.append("消耗品直接'使用 物品名'")
+    # 2026-09-06 用户拍板「每次随机出现其中一条」：ctx rng 每指令同 seed 重播种
+    # （确定性设计）→ randrange 恒取序列首值 → 无法轮换。Tip 为展示层装饰
+    # （非游戏数值，无公平性要求），按当前时间秒级轮换（每指令变化、无状态、
+    # 不破坏确定性数值引擎）；测试 make_ctx 注入固定 now → 取池首条断言稳定。
+    # 轮换种子用毫秒级真实时间（展示层装饰；ctx.now 秒级同秒连发不变）
+    import time as _time  # noqa: PLC0415
+    try:
+        _ms = int(_time.time() * 1000)
+    except (TypeError, ValueError):
+        _ms = 0
+    _btip = _tip_pool[_ms % len(_tip_pool)]
     lines.extend(_bag_tail_lines(res.page, res.total_pages, res.total, res.clamped, ctx,
                                  tip=_btip))
     return "\n".join(lines)

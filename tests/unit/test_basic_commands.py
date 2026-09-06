@@ -277,7 +277,8 @@ def test_bag_page1_rows_and_footer():
     assert "4.[任务信物]×1（绑定）" in out                    # 绑定标签
     assert "5.[铁剑]×1（精良）" in out                        # 品质（非 normal 标注）
     assert "当前页：1/2(全部)" in out                         # 页数放尾部+类型词（用户模板）
-    assert "Tip:发送'使用+物品名'即可使用物品" in out
+    # Tip 引导（2026-09-06 起含详情查看引导；有装备时含穿戴引导）——宽松断言
+    assert "Tip:" in out and ("背包 查看" in out or "使用" in out)
 
 
 def test_bag_page2():
@@ -311,7 +312,7 @@ def test_bag_single_page_no_footer():
     out = cmd_bag(parse("/背包"), make_ctx(inventory=_INVENTORY[:3]))
     assert "当前页：1/1(全部)" in out                     # 单页也显示当前页+类型词（用户模板）
     # acquired_at 倒序：09:40 信物 → 09:35 铁剑 → 09:30 疗伤药
-    assert out.splitlines()[-1] == "Tip:发送'使用+物品名'即可使用物品"
+    assert out.splitlines()[-1].startswith("Tip:")  # 2026-09-06：无装备也教「背包 查看」详情
 
 
 def test_bag_iteminstance_dataclass_support():
@@ -732,7 +733,8 @@ def test_footer_tpl08_exact():
     assert "【幸运】10" in cmd_view(parse("/角色"), ctx)             # 全量属性，无分页
     assert "当前页" not in cmd_view(parse("/角色"), ctx)
     assert "当前页：1/2(全部)" in cmd_bag(parse("/背包"), ctx)       # /背包 自定义模板
-    assert "Tip:发送'使用+物品名'即可使用物品" in cmd_bag(parse("/背包"), ctx)
+    # Tip 随机轮换（2026-09-06 用户拍板：每次随机一条）→ 只断言 Tip 行存在
+    assert any("Tip:" in ln for ln in cmd_bag(parse("/背包"), ctx).splitlines())
     assert "Tip:发送'使用 序号'穿戴装备，如'使用 1'" in cmd_equip(parse("/装备"), ctx)   # 意见一：不加翻页
     assert "当前页：1/2" in cmd_skill(parse("/技能"), ctx)
     assert "当前页：1/2" in cmd_help(parse("/帮助 冒险"), ctx)

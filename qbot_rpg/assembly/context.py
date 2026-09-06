@@ -1074,7 +1074,10 @@ def _inventory_hooks(ctx: MutableMapping[str, Any]) -> dict:
         key = str(item_id)
         inv[key] = inv.get(key, 0) + c
         # 装备数值字段 → stats_bonus（仅装备类：def 有 atk/def/hp/mp 数值键）
-        stat_keys = ("atk", "def", "hp", "mp", "str", "con", "agi", "foc", "spr", "lck", "spd", "mag")
+        # 2026-09-06 veinborn 断链修复：白名单加 dfn（veinborn stats.json 防御主键——
+        # 原缺 dfn → 防具数值永不转 stats_bonus → 穿装零加成（端到端实测：
+        # 砾甲套 dfn 71 穿上后被打仍 80 伤）。demo 老包 def 键不受影响。
+        stat_keys = ("atk", "def", "dfn", "hp", "mp", "str", "con", "agi", "foc", "spr", "lck", "spd", "mag")
         _item_cfg = ctx.get("items")
         _cfg = _item_cfg.get(key) if isinstance(_item_cfg, Mapping) else None
         _bonus: Dict[str, float] = {}

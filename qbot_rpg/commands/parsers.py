@@ -98,6 +98,11 @@ ERR_RESERVED = "保留字符违规"  # 命名铁律 N03：黄色提示不拦截�
 # 固定子词表（规范 L71 / 3c P09）：内置常量，优先于物品匹配
 FIXED_SUBWORDS = frozenset({"追加", "预览", "自动", "查看", "确认", "放弃", "续"})
 
+# 固定子词 + 纯数字粘连（「查看1」→ 查看 + 1；物品名如「查看器」非纯数字后缀不拆）
+_SUBWORD_DIGIT_RE = re.compile(
+    r"^(" + "|".join(sorted(FIXED_SUBWORDS, key=len, reverse=True)) + r")(\d+)$"
+)
+
 # 会话子词（2b2 R1 泛化，3c §5）：纯数字 / 继续 / 退出 / 离开 / 再见 / 选择 N
 _SESSION_EXIT_WORDS = frozenset({"继续", "退出", "离开", "再见"})
 _RE_SESSION_DIGIT = re.compile(r"^\d+$")
@@ -544,6 +549,16 @@ def _subparse(
         if fixed_subword is None and idx <= 1 and tok in FIXED_SUBWORDS:
             fixed_subword = tok
             continue
+        # 固定子词紧凑粘连（2026-09-06 实机反馈「背包查看1 需空格」）：
+        # 「查看1/放弃2/确认3」——子词+纯数字粘连 → 拆出子词+数字参数。
+        # 仅限纯数字后缀（物品名以子词开头如「查看器」不受影响——非纯数字不拆）
+        if fixed_subword is None and idx <= 1:
+            _m = _SUBWORD_DIGIT_RE.match(tok)
+            if _m is not None:
+                fixed_subword = _m.group(1)
+                args.append(_m.group(2))
+                positional_count += 1
+                continue
 
         is_list = _contains_list_sep(tok)
         is_kv = "=" in tok

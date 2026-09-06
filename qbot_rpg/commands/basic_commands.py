@@ -826,9 +826,14 @@ def cmd_bag(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     if fs:
         return format_tpl12(_fragment(parsed))
     args = list(getattr(parsed, "args", None) or [])
-    # router 链路（route_and_expand）不抽 fixed_subword → args[0] 可能直接是「查看」
+    # router 链路（route_and_expand）不抽 fixed_subword → args[0] 可能直接是「查看」；
+    # 2026-09-06 实机「背包查看1」紧凑形：args[0]=「查看1」→ 拆子词+数字
     if args and str(args[0]) == "查看":
         return _cmd_bag_view(ctx, list(args[1:]))
+    if args and str(args[0]).startswith("查看"):
+        _rest = str(args[0])[2:]
+        if _rest.isdigit():
+            return _cmd_bag_view(ctx, [str(int(_rest))])
     if len(args) > 1:
         return format_tpl12(_fragment(parsed))
     page = parse_page_arg(args[0] if args else None)

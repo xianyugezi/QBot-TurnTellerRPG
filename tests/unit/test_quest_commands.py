@@ -491,7 +491,9 @@ def test_parse_command_integration():
     p = parse("/任务 放弃 2")
     assert p.command == "任务" and p.args == ["2"] and p.fixed_subword == "放弃"
     p = parse("任务放弃2")
-    assert p.command == "任务" and p.args == ["放弃2"] and p.compact is True
+    # 2026-09-06 解析器改进：子词+纯数字紧凑拆（放弃2 → fixed_subword=放弃 + args=[2]；
+    # quest sub_and_seq 两路径等价消费——fixed 分支取 args[0] 同给 ("放弃","2")）
+    assert p.command == "任务" and p.args == ["2"] and p.fixed_subword == "放弃" and p.compact is True
 
 
 def test_footer_tpl08_exact():

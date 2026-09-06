@@ -713,6 +713,15 @@ def parse_forge_target(fragment: str, eng: Optional[ForgeTreeEngine] = None,
         return {"ok": True, "key": name, "qty": qty, "error_code": None,
                 "message": None, "candidates": []}
 
+    # 2026-09-06 用户需求：锻造树序号锻造——纯数字参数 → 锻造树全局序号
+    # （与 /锻造树 行号同源：eng.nodes() 文件序）→ 节点 id 后走正常匹配。
+    if name.isdigit():
+        idx = int(name)
+        if idx >= 1:
+            _nids = [n.id for n in eng.nodes() if n.id]
+            if idx <= len(_nids):
+                name = str(_nids[idx - 1])
+
     # 匹配（喂 key 给 resolve_node；P-03 罗马等价 + P-04 ■ 省略由引擎 match_name 剥）
     hit_key, res = _resolve_with_roman(eng, name)
     if res.get("ok"):

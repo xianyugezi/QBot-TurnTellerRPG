@@ -235,6 +235,10 @@
    "up": {
     "to": "b4_gravelcrown_nest",
     "mode": "bidirectional"
+   },
+   "right": {
+    "to": "c1_crystal_mist_shoal",
+    "mode": "bidirectional"
    }
   },
   "mechanics": []
@@ -263,6 +267,188 @@
   "exits": {
    "down": {
     "to": "b3_wind_bone_field",
+    "mode": "bidirectional"
+   }
+  },
+  "mechanics": []
+ },
+ {
+  "id": "c1_crystal_mist_shoal",
+  "name": "晶雾浅滩",
+  "desc": "浅水覆着一层晶膜，雾气迷眼，晶沼蟾在雾中潜伏。",
+  "monsters": [
+   {
+    "enemy": "crystal_frog",
+    "name": "晶沼蟾",
+    "count": 3,
+    "respawn_minutes": 8
+   },
+   {
+    "enemy": "rift_wolf",
+    "name": "裂谷狼",
+    "count": 2,
+    "respawn_minutes": 6
+   }
+  ],
+  "exits": {
+   "left": {
+    "to": "b3_wind_bone_field",
+    "mode": "bidirectional"
+   },
+   "up": {
+    "to": "c2_moss_swamp",
+    "mode": "bidirectional"
+   }
+  },
+  "mechanics": []
+ },
+ {
+  "id": "c2_moss_swamp",
+  "name": "苔晶沼地",
+  "desc": "苔藓与脉晶共生，泽骨鳄半沉如朽木，静候猎物。",
+  "monsters": [
+   {
+    "enemy": "marsh_bone_croc",
+    "name": "泽骨鳄",
+    "count": 3,
+    "respawn_minutes": 8
+   },
+   {
+    "enemy": "crystal_frog",
+    "name": "晶沼蟾",
+    "count": 2,
+    "respawn_minutes": 7
+   }
+  ],
+  "exits": {
+   "down": {
+    "to": "c1_crystal_mist_shoal",
+    "mode": "bidirectional"
+   },
+   "right": {
+    "to": "c3_sunken_bone_bog",
+    "mode": "bidirectional"
+   }
+  },
+  "mechanics": []
+ },
+ {
+  "id": "c3_sunken_bone_bog",
+  "name": "沉骨泽",
+  "desc": "泽底兽骨被脉晶裹成晶骨林。渊晶螳在骨林间静立，暮影狼在暗处游弋。",
+  "monsters": [
+   {
+    "enemy": "abyss_crystal_mantis",
+    "name": "渊晶螳",
+    "count": 1,
+    "respawn_minutes": 20
+   },
+   {
+    "enemy": "marsh_bone_croc",
+    "name": "泽骨鳄",
+    "count": 2,
+    "respawn_minutes": 8
+   },
+   {
+    "enemy": "dusk_shadow_wolf",
+    "name": "暮影狼",
+    "count": 1,
+    "respawn_minutes": 15
+   }
+  ],
+  "exits": {
+   "left": {
+    "to": "c2_moss_swamp",
+    "mode": "bidirectional"
+   },
+   "right": {
+    "to": "c4_abyss_pool",
+    "mode": "bidirectional"
+   }
+  },
+  "mechanics": []
+ },
+ {
+  "id": "c4_abyss_pool",
+  "name": "渊晶潭",
+  "desc": "潭底脉晶如渊，苔甲龙盘踞潭心。潭水深处似有回廊入口。",
+  "monsters": [
+   {
+    "enemy": "moss_crystal_dragon",
+    "name": "苔甲龙",
+    "count": 1,
+    "respawn_minutes": 20
+   },
+   {
+    "enemy": "abyss_crystal_mantis",
+    "name": "渊晶螳",
+    "count": 1,
+    "respawn_minutes": 18
+   }
+  ],
+  "exits": {
+   "left": {
+    "to": "c3_sunken_bone_bog",
+    "mode": "bidirectional"
+   },
+   "up": {
+    "to": "c5_dragon_nest",
+    "mode": "bidirectional"
+   },
+   "down": {
+    "to": "c6_sunken_corridor",
+    "mode": "bidirectional"
+   }
+  },
+  "mechanics": []
+ },
+ {
+  "id": "c5_dragon_nest",
+  "name": "渊主巢域",
+  "desc": "晶化树丛深处，渊泽龙王以晶树为巢，吐息令草木晶化。",
+  "monsters": [
+   {
+    "enemy": "abyss_marsh_dragon",
+    "name": "渊泽龙王",
+    "count": 1,
+    "respawn_minutes": 30,
+    "hidden_boss": true,
+    "intro": "晶树震颤，渊泽龙王自晶巢中昂首，吐息凝雾成晶！",
+    "signal": "龙王的吐息让整片湿地泛起晶光"
+   },
+   {
+    "enemy": "moss_crystal_dragon",
+    "name": "苔甲龙",
+    "count": 1,
+    "respawn_minutes": 20
+   }
+  ],
+  "exits": {
+   "down": {
+    "to": "c4_abyss_pool",
+    "mode": "bidirectional"
+   }
+  },
+  "mechanics": []
+ },
+ {
+  "id": "c6_sunken_corridor",
+  "name": "沉渊回廊",
+  "desc": "泽底塌陷露出的远古回廊，壁刻蚀脉古纹。沉渊古兽在此沉眠。",
+  "monsters": [
+   {
+    "enemy": "sunken_ancient_beast",
+    "name": "沉渊古兽",
+    "count": 1,
+    "respawn_minutes": 40,
+    "hidden_boss": true,
+    "intro": "回廊深处的脉晶骤然亮起，沉渊古兽睁开远古的眼！",
+    "signal": "沉渊回廊传来远古的脉动"
+   }
+  ],
+  "exits": {
+   "up": {
+    "to": "c4_abyss_pool",
     "mode": "bidirectional"
    }
   },

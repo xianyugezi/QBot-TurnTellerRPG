@@ -184,5 +184,68 @@
   "effects": [],
   "usable": false,
   "desc": "蚀甲兽奔涌蚀脉的甲壳碎片：打造素材（脉铁系·精英）"
+ },
+ {
+  "id": "crystal_frog_gland",
+  "name": "晶蟾腺",
+  "type": "material",
+  "price": 200,
+  "effects": [],
+  "usable": false,
+  "desc": "晶沼蟾背瘤中的脉晶腺体：打造素材"
+ },
+ {
+  "id": "bone_croc_scale",
+  "name": "鳄骨鳞",
+  "type": "material",
+  "price": 220,
+  "effects": [],
+  "usable": false,
+  "desc": "泽骨鳄晶化骨甲的鳞片：打造素材"
+ },
+ {
+  "id": "mantis_crystal_blade",
+  "name": "渊晶螳刃",
+  "type": "material",
+  "price": 500,
+  "effects": [],
+  "usable": false,
+  "desc": "渊晶螳前肢的晶刃：打造素材（骨脊系·精英）"
+ },
+ {
+  "id": "moss_dragon_scale",
+  "name": "苔龙鳞",
+  "type": "material",
+  "price": 520,
+  "effects": [],
+  "usable": false,
+  "desc": "苔甲龙苔晶共生的鳞甲：打造素材（鳞革系·精英）"
+ },
+ {
+  "id": "dusk_wolf_pelt",
+  "name": "暮影狼皮",
+  "type": "material",
+  "price": 600,
+  "effects": [],
+  "usable": false,
+  "desc": "暮影狼融入夜色的皮：打造素材（骨脊系）"
+ },
+ {
+  "id": "dragon_abyss_scale",
+  "name": "渊龙王鳞",
+  "type": "material",
+  "price": 900,
+  "effects": [],
+  "usable": false,
+  "desc": "渊泽龙王鳞甲上的渊晶鳞片：王骸打造素材"
+ },
+ {
+  "id": "ancient_beast_shell",
+  "name": "古兽岩壳",
+  "type": "material",
+  "price": 1100,
+  "effects": [],
+  "usable": false,
+  "desc": "沉渊古兽沉积岩般的甲壳：王骸打造素材"
  }
 ]

@@ -274,5 +274,109 @@
   "npc": {
    "id": "npc_old_hunter"
   }
+ },
+ {
+  "id": "q_c1_marsh_frogs",
+  "name": "雾中蟾影",
+  "type": "slay",
+  "desc": "老猎人·驼脊：渊晶湿地雾大兽凶，先从晶雾浅滩的晶沼蟾练手，猎 3 只。",
+  "zone": "c1_crystal_mist_shoal",
+  "main": true,
+  "consume": false,
+  "repeatable": false,
+  "unlock_chain": "q_b3_elite_pair",
+  "conditions": [
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 3,
+    "param": "crystal_frog"
+   }
+  ],
+  "reward": [
+   {
+    "item": "crystal_frog_gland",
+    "count": 3
+   },
+   {
+    "exp": 6000
+   },
+   {
+    "coins": 1500
+   }
+  ],
+  "npc": {
+   "id": "npc_old_hunter"
+  }
+ },
+ {
+  "id": "q_c2_bone_crocs",
+  "name": "沉骨的猎手",
+  "type": "slay",
+  "desc": "老猎人·驼脊：苔晶沼地的泽骨鳄会装死拖人下水，猎 3 只回来。",
+  "zone": "c2_moss_swamp",
+  "main": true,
+  "consume": false,
+  "repeatable": false,
+  "unlock_chain": "q_c1_marsh_frogs",
+  "conditions": [
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 3,
+    "param": "marsh_bone_croc"
+   }
+  ],
+  "reward": [
+   {
+    "item": "bone_croc_scale",
+    "count": 3
+   },
+   {
+    "exp": 7500
+   },
+   {
+    "coins": 1800
+   }
+  ],
+  "npc": {
+   "id": "npc_old_hunter"
+  }
+ },
+ {
+  "id": "q_c3_wetland_elites",
+  "name": "湿地的獠牙",
+  "type": "slay",
+  "desc": "老猎人·驼脊：渊晶螳和苔甲龙是湿地最凶的两头，各猎 1 只，渊晶湿地才容得下你。",
+  "zone": "c3_sunken_bone_bog",
+  "main": true,
+  "consume": false,
+  "repeatable": false,
+  "unlock_chain": "q_c2_bone_crocs",
+  "conditions": [
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 1,
+    "param": "abyss_crystal_mantis"
+   },
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 1,
+    "param": "moss_crystal_dragon"
+   }
+  ],
+  "reward": [
+   {
+    "exp": 13000
+   },
+   {
+    "coins": 4000
+   }
+  ],
+  "npc": {
+   "id": "npc_old_hunter"
+  }
  }
 ]

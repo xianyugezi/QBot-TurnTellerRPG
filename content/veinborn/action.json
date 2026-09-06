@@ -401,5 +401,306 @@
   "tags": [
    "物理"
   ]
+ },
+ {
+  "id": "cf_hide",
+  "name": "潜影蛰伏",
+  "kind": "active",
+  "power": 0.0,
+  "attack_type": "打",
+  "element": "none",
+  "weight": 25,
+  "probability": 1,
+  "intent": "防御",
+  "cooldown": 3,
+  "tags": [
+   "防御"
+  ]
+ },
+ {
+  "id": "cf_mist_spray",
+  "name": "晶雾喷吐",
+  "kind": "active",
+  "power": 1.1,
+  "attack_type": "突",
+  "element": "water",
+  "weight": 40,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 1,
+  "tags": [
+   "元素",
+   "水"
+  ]
+ },
+ {
+  "id": "cf_tongue_lash",
+  "name": "舌卷扑击",
+  "kind": "active",
+  "power": 1.35,
+  "attack_type": "打",
+  "element": "none",
+  "weight": 35,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 0,
+  "tags": [
+   "物理"
+  ]
+ },
+ {
+  "id": "zb_ambush",
+  "name": "潜袭拖拽",
+  "kind": "active",
+  "power": 1.2,
+  "attack_type": "打",
+  "element": "water",
+  "weight": 45,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 0,
+  "tags": [
+   "物理",
+   "水"
+  ]
+ },
+ {
+  "id": "zb_death_roll",
+  "name": "死亡翻滚",
+  "kind": "active",
+  "power": 1.7,
+  "attack_type": "打",
+  "element": "water",
+  "weight": 30,
+  "probability": 1,
+  "intent": "蓄力",
+  "cooldown": 3,
+  "tags": [
+   "物理",
+   "水"
+  ]
+ },
+ {
+  "id": "zb_crystal_bite",
+  "name": "晶牙噬咬",
+  "kind": "active",
+  "power": 0.95,
+  "attack_type": "打",
+  "element": "none",
+  "weight": 25,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 0,
+  "tags": [
+   "物理"
+  ]
+ },
+ {
+  "id": "ym_blade_flurry",
+  "name": "晶刃连斩",
+  "kind": "active",
+  "power": 1.15,
+  "attack_type": "打",
+  "element": "earth",
+  "weight": 55,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 0,
+  "tags": [
+   "物理",
+   "连斩"
+  ]
+ },
+ {
+  "id": "ym_wing_dash",
+  "name": "晶翼突进",
+  "kind": "active",
+  "power": 1.6,
+  "attack_type": "打",
+  "element": "wind",
+  "weight": 30,
+  "probability": 1,
+  "intent": "蓄力",
+  "cooldown": 2,
+  "tags": [
+   "物理",
+   "风"
+  ]
+ },
+ {
+  "id": "ym_fake_death",
+  "name": "假死反击",
+  "kind": "active",
+  "power": 0.0,
+  "attack_type": "打",
+  "element": "none",
+  "weight": 15,
+  "probability": 1,
+  "intent": "防御",
+  "cooldown": 4,
+  "tags": [
+   "防御"
+  ]
+ },
+ {
+  "id": "td_dust_roar",
+  "name": "晶尘咆哮",
+  "kind": "active",
+  "power": 1.25,
+  "attack_type": "突",
+  "element": "earth",
+  "weight": 35,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 1,
+  "tags": [
+   "元素",
+   "土"
+  ]
+ },
+ {
+  "id": "td_stomp",
+  "name": "苔甲重踏",
+  "kind": "active",
+  "power": 1.3,
+  "attack_type": "打",
+  "element": "earth",
+  "weight": 35,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 0,
+  "tags": [
+   "物理",
+   "土"
+  ]
+ },
+ {
+  "id": "td_crystal_tail",
+  "name": "晶尾扫击",
+  "kind": "active",
+  "power": 1.55,
+  "attack_type": "打",
+  "element": "earth",
+  "weight": 30,
+  "probability": 1,
+  "intent": "蓄力",
+  "cooldown": 2,
+  "tags": [
+   "物理",
+   "土"
+  ]
+ },
+ {
+  "id": "ad_bite",
+  "name": "龙王噬咬",
+  "kind": "active",
+  "power": 1.35,
+  "attack_type": "打",
+  "element": "none",
+  "weight": 30,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 0,
+  "tags": [
+   "物理"
+  ]
+ },
+ {
+  "id": "ad_breath",
+  "name": "晶化吐息",
+  "kind": "active",
+  "power": 1.55,
+  "attack_type": "突",
+  "element": "water",
+  "weight": 30,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 1,
+  "tags": [
+   "元素",
+   "水"
+  ]
+ },
+ {
+  "id": "ad_tail",
+  "name": "龙王摆尾",
+  "kind": "active",
+  "power": 1.4,
+  "attack_type": "打",
+  "element": "water",
+  "weight": 25,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 0,
+  "tags": [
+   "物理",
+   "水"
+  ]
+ },
+ {
+  "id": "ad_roar_summon",
+  "name": "渊啸",
+  "kind": "active",
+  "power": 0.0,
+  "attack_type": "打",
+  "element": "none",
+  "weight": 15,
+  "probability": 1,
+  "intent": "召唤",
+  "cooldown": 5,
+  "tags": [
+   "召唤"
+  ],
+  "trigger_limit": {
+   "per_battle": 2
+  }
+ },
+ {
+  "id": "sa_ancient_bash",
+  "name": "古脉冲压",
+  "kind": "active",
+  "power": 1.5,
+  "attack_type": "打",
+  "element": "earth",
+  "weight": 35,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 0,
+  "tags": [
+   "物理",
+   "土"
+  ]
+ },
+ {
+  "id": "sa_vein_burst",
+  "name": "蚀脉奔涌",
+  "kind": "active",
+  "power": 1.8,
+  "attack_type": "突",
+  "element": "earth",
+  "weight": 30,
+  "probability": 1,
+  "intent": "蓄力",
+  "cooldown": 2,
+  "tags": [
+   "元素",
+   "土"
+  ]
+ },
+ {
+  "id": "sa_quake_stomp",
+  "name": "古兽震踏",
+  "kind": "active",
+  "power": 1.3,
+  "attack_type": "打",
+  "element": "earth",
+  "weight": 35,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 1,
+  "tags": [
+   "物理",
+   "土"
+  ]
  }
 ]

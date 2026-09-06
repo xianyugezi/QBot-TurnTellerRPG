@@ -885,5 +885,700 @@
     "probability": 1
    }
   ]
+ },
+ {
+  "id": "crystal_frog",
+  "name": "晶沼蟾",
+  "tier": "normal",
+  "area": "渊晶湿地",
+  "desc": "背生脉晶瘤的巨蟾，潜伏泥沼，雾吐迷眼、舌卷夺命。",
+  "stats": {
+   "hp": 1971,
+   "mp": 40,
+   "str": 649,
+   "con": 96,
+   "spr": 30,
+   "foc": 25,
+   "agi": 16,
+   "luk": 8
+  },
+  "rewards": {
+   "exp": 4200,
+   "currencies": {
+    "coins": 900
+   }
+  },
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "crystal_frog_gland",
+     "chance": 45,
+     "count": 1
+    },
+    {
+     "item": "vein_shard",
+     "chance": 75,
+     "count": 2
+    }
+   ]
+  },
+  "phases": [],
+  "special_actions": [],
+  "actions": [
+   {
+    "action": "cf_mist_spray",
+    "weight": 40,
+    "probability": 1
+   },
+   {
+    "action": "cf_tongue_lash",
+    "weight": 35,
+    "probability": 1
+   },
+   {
+    "action": "cf_hide",
+    "weight": 25,
+    "probability": 1
+   }
+  ]
+ },
+ {
+  "id": "marsh_bone_croc",
+  "name": "泽骨鳄",
+  "tier": "normal",
+  "area": "渊晶湿地",
+  "desc": "晶化骨甲的沼泽鳄，半沉如朽木，突袭拖拽猎物入水。",
+  "stats": {
+   "hp": 2362,
+   "mp": 40,
+   "str": 731,
+   "con": 106,
+   "spr": 30,
+   "foc": 22,
+   "agi": 14,
+   "luk": 6
+  },
+  "rewards": {
+   "exp": 4800,
+   "currencies": {
+    "coins": 1000
+   }
+  },
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "bone_croc_scale",
+     "chance": 50,
+     "count": 1
+    },
+    {
+     "item": "vein_shard",
+     "chance": 70,
+     "count": 2
+    }
+   ]
+  },
+  "phases": [],
+  "special_actions": [],
+  "actions": [
+   {
+    "action": "zb_ambush",
+    "weight": 45,
+    "probability": 1
+   },
+   {
+    "action": "zb_death_roll",
+    "weight": 30,
+    "probability": 1
+   },
+   {
+    "action": "zb_crystal_bite",
+    "weight": 25,
+    "probability": 1
+   }
+  ]
+ },
+ {
+  "id": "abyss_crystal_mantis",
+  "name": "渊晶螳",
+  "tier": "elite",
+  "area": "渊晶湿地",
+  "desc": "晶翼螳螂，前肢如晶刃，沉骨泽的寂静杀手。",
+  "stats": {
+   "hp": 3822,
+   "mp": 60,
+   "str": 809,
+   "con": 189,
+   "spr": 35,
+   "foc": 35,
+   "agi": 38,
+   "luk": 14
+  },
+  "weakness": {
+   "types": [
+    "突"
+   ],
+   "elements": {
+    "fire": 1.2
+   }
+  },
+  "rewards": {
+   "exp": 9000,
+   "currencies": {
+    "coins": 2200
+   }
+  },
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mantis_crystal_blade",
+     "chance": 80,
+     "count": 1
+    },
+    {
+     "item": "vein_shard",
+     "chance": 85,
+     "count": 3
+    }
+   ]
+  },
+  "phases": [
+   {
+    "threshold": 1.0,
+    "actions": [
+     {
+      "action": "ym_blade_flurry",
+      "weight": 55,
+      "probability": 1
+     },
+     {
+      "action": "ym_wing_dash",
+      "weight": 30,
+      "probability": 1
+     },
+     {
+      "action": "ym_fake_death",
+      "weight": 15,
+      "probability": 1
+     }
+    ],
+    "broadcast": "{monster} 晶翼轻振，前肢晶刃在雾中闪光！"
+   },
+   {
+    "threshold": 0.5,
+    "actions": [
+     {
+      "action": "ym_wing_dash",
+      "weight": 50,
+      "probability": 1
+     },
+     {
+      "action": "ym_blade_flurry",
+      "weight": 40,
+      "probability": 1
+     },
+     {
+      "action": "ym_fake_death",
+      "weight": 10,
+      "probability": 1
+     }
+    ],
+    "enter_action": "ym_wing_dash",
+    "broadcast": "{monster} 晶翼迸裂突进，垂死搏杀！"
+   }
+  ],
+  "special_actions": [],
+  "actions": [
+   {
+    "action": "ym_blade_flurry",
+    "weight": 55,
+    "probability": 1
+   },
+   {
+    "action": "ym_wing_dash",
+    "weight": 30,
+    "probability": 1
+   },
+   {
+    "action": "ym_fake_death",
+    "weight": 15,
+    "probability": 1
+   }
+  ]
+ },
+ {
+  "id": "moss_crystal_dragon",
+  "name": "苔甲龙",
+  "tier": "elite",
+  "area": "渊晶湿地",
+  "desc": "苔藓与晶甲共生的湿地龙兽，咆哮喷出晶尘。",
+  "stats": {
+   "hp": 4388,
+   "mp": 80,
+   "str": 967,
+   "con": 205,
+   "spr": 40,
+   "foc": 30,
+   "agi": 12,
+   "luk": 6
+  },
+  "weakness": {
+   "types": [
+    "突"
+   ]
+  },
+  "rewards": {
+   "exp": 10500,
+   "currencies": {
+    "coins": 2600
+   }
+  },
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "moss_dragon_scale",
+     "chance": 80,
+     "count": 1
+    },
+    {
+     "item": "vein_shard",
+     "chance": 85,
+     "count": 3
+    }
+   ]
+  },
+  "phases": [
+   {
+    "threshold": 1.0,
+    "actions": [
+     {
+      "action": "td_dust_roar",
+      "weight": 35,
+      "probability": 1
+     },
+     {
+      "action": "td_stomp",
+      "weight": 35,
+      "probability": 1
+     },
+     {
+      "action": "td_crystal_tail",
+      "weight": 30,
+      "probability": 1
+     }
+    ],
+    "broadcast": "{monster} 苔甲缝隙晶尘涌出，发出低吼！"
+   },
+   {
+    "threshold": 0.5,
+    "actions": [
+     {
+      "action": "td_crystal_tail",
+      "weight": 45,
+      "probability": 1
+     },
+     {
+      "action": "td_dust_roar",
+      "weight": 30,
+      "probability": 1
+     },
+     {
+      "action": "td_stomp",
+      "weight": 25,
+      "probability": 1
+     }
+    ],
+    "enter_action": "td_crystal_tail",
+    "broadcast": "{monster} 苔甲崩裂，渊晶透体而亮，狂暴扫尾！"
+   }
+  ],
+  "special_actions": [],
+  "actions": [
+   {
+    "action": "td_stomp",
+    "weight": 35,
+    "probability": 1
+   },
+   {
+    "action": "td_crystal_tail",
+    "weight": 30,
+    "probability": 1
+   },
+   {
+    "action": "td_dust_roar",
+    "weight": 35,
+    "probability": 1
+   }
+  ]
+ },
+ {
+  "id": "dusk_shadow_wolf",
+  "name": "暮影狼",
+  "tier": "normal",
+  "area": "夜嚎群山",
+  "desc": "融入夜色的影狼，眼如晶红，只在昏暗处出没。",
+  "stats": {
+   "hp": 2108,
+   "mp": 40,
+   "str": 993,
+   "con": 144,
+   "spr": 30,
+   "foc": 30,
+   "agi": 42,
+   "luk": 16
+  },
+  "rewards": {
+   "exp": 15000,
+   "currencies": {
+    "coins": 3000
+   }
+  },
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "dusk_wolf_pelt",
+     "chance": 50,
+     "count": 1
+    },
+    {
+     "item": "vein_shard",
+     "chance": 70,
+     "count": 2
+    }
+   ]
+  },
+  "phases": [],
+  "special_actions": [],
+  "actions": [
+   {
+    "action": "rw_quick_bite",
+    "weight": 60,
+    "probability": 1
+   },
+   {
+    "action": "rw_gust_pounce",
+    "weight": 40,
+    "probability": 1
+   }
+  ]
+ },
+ {
+  "id": "abyss_marsh_dragon",
+  "name": "C主·渊泽龙王",
+  "tier": "boss",
+  "area": "渊晶湿地",
+  "desc": "鳞甲嵌满渊晶的湿地霸主，吐息将猎物晶化。怒时渊啸召来晶沼蟾群。",
+  "stats": {
+   "hp": 5986,
+   "mp": 120,
+   "str": 1024,
+   "con": 221,
+   "spr": 45,
+   "foc": 35,
+   "agi": 22,
+   "luk": 10
+  },
+  "weakness": {
+   "types": [
+    "突"
+   ],
+   "elements": {
+    "fire": 1.3
+   }
+  },
+  "pv": 300,
+  "pv_recover": "battle_end",
+  "phases": [
+   {
+    "threshold": 1.0,
+    "actions": [
+     {
+      "action": "ad_bite",
+      "weight": 35,
+      "probability": 1
+     },
+     {
+      "action": "ad_breath",
+      "weight": 35,
+      "probability": 1
+     },
+     {
+      "action": "ad_tail",
+      "weight": 30,
+      "probability": 1
+     }
+    ],
+    "enter_action": "ad_breath",
+    "broadcast": "{monster} 鳞甲渊晶亮起，吐息凝雾成晶，进入姿态Ⅰ：晶蚀。"
+   },
+   {
+    "threshold": 0.7,
+    "actions": [
+     {
+      "action": "ad_breath",
+      "weight": 35,
+      "probability": 1
+     },
+     {
+      "action": "ad_bite",
+      "weight": 30,
+      "probability": 1
+     },
+     {
+      "action": "ad_roar_summon",
+      "weight": 20,
+      "probability": 1
+     },
+     {
+      "action": "ad_tail",
+      "weight": 15,
+      "probability": 1
+     }
+    ],
+    "enter_action": "ad_roar_summon",
+    "broadcast": "{monster} 渊啸震彻湿地，晶沼蟾群应召而来，进入姿态Ⅱ：渊怒！"
+   },
+   {
+    "threshold": 0.35,
+    "actions": [
+     {
+      "action": "ad_breath",
+      "weight": 40,
+      "probability": 1
+     },
+     {
+      "action": "ad_bite",
+      "weight": 35,
+      "probability": 1
+     },
+     {
+      "action": "ad_tail",
+      "weight": 25,
+      "probability": 1
+     }
+    ],
+    "enter_action": "ad_breath",
+    "broadcast": "{monster} 周身渊晶尽数亮起，晶化吐息如瀑，进入姿态Ⅲ：晶灭！"
+   }
+  ],
+  "resistance": {
+   "stun": 30,
+   "immune": [
+    "poison"
+   ]
+  },
+  "special_actions": [],
+  "actions": [
+   {
+    "action": "ad_bite",
+    "weight": 30,
+    "probability": 1
+   },
+   {
+    "action": "ad_breath",
+    "weight": 30,
+    "probability": 1
+   },
+   {
+    "action": "ad_tail",
+    "weight": 25,
+    "probability": 1
+   },
+   {
+    "action": "ad_roar_summon",
+    "weight": 15,
+    "probability": 1
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "dragon_abyss_scale",
+     "chance": 100,
+     "count": 1
+    },
+    {
+     "item": "moss_dragon_scale",
+     "chance": 60,
+     "count": 2
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "C主·渊泽龙王：湿地霸主，弱突刺与火蚀。"
+   },
+   {
+    "unlock": 50,
+    "desc": "渊怒时会召唤晶沼蟾群，优先打断召唤。"
+   },
+   {
+    "unlock": 80,
+    "desc": "晶化吐息是最大威胁，注意它的蓄力前摇。"
+   }
+  ]
+ },
+ {
+  "id": "sunken_ancient_beast",
+  "name": "C隐·沉渊古兽",
+  "tier": "boss",
+  "area": "渊晶湿地",
+  "desc": "沉渊回廊封存的远古蚀脉兽，甲壳如沉积岩层，脉动如地心。",
+  "stats": {
+   "hp": 6597,
+   "mp": 150,
+   "str": 1301,
+   "con": 243,
+   "spr": 50,
+   "foc": 30,
+   "agi": 14,
+   "luk": 6
+  },
+  "weakness": {
+   "types": [
+    "突"
+   ],
+   "elements": {
+    "wind": 1.3
+   }
+  },
+  "pv": 350,
+  "pv_recover": "battle_end",
+  "phases": [
+   {
+    "threshold": 1.0,
+    "actions": [
+     {
+      "action": "sa_ancient_bash",
+      "weight": 40,
+      "probability": 1
+     },
+     {
+      "action": "sa_quake_stomp",
+      "weight": 35,
+      "probability": 1
+     },
+     {
+      "action": "sa_vein_burst",
+      "weight": 25,
+      "probability": 1
+     }
+    ],
+    "enter_action": "sa_quake_stomp",
+    "broadcast": "{monster} 远古脉动苏醒，岩甲缝隙透出蚀光！"
+   },
+   {
+    "threshold": 0.6,
+    "actions": [
+     {
+      "action": "sa_vein_burst",
+      "weight": 45,
+      "probability": 1
+     },
+     {
+      "action": "sa_ancient_bash",
+      "weight": 30,
+      "probability": 1
+     },
+     {
+      "action": "sa_quake_stomp",
+      "weight": 25,
+      "probability": 1
+     }
+    ],
+    "enter_action": "sa_vein_burst",
+    "broadcast": "{monster} 蚀脉奔涌如潮，古兽发出远古的咆哮！"
+   },
+   {
+    "threshold": 0.3,
+    "actions": [
+     {
+      "action": "sa_vein_burst",
+      "weight": 50,
+      "probability": 1
+     },
+     {
+      "action": "sa_ancient_bash",
+      "weight": 30,
+      "probability": 1
+     },
+     {
+      "action": "sa_quake_stomp",
+      "weight": 20,
+      "probability": 1
+     }
+    ],
+    "enter_action": "sa_vein_burst",
+    "broadcast": "{monster} 蚀脉之力全开，岩甲碎裂处晶光如日！"
+   }
+  ],
+  "resistance": {
+   "stun": 40,
+   "immune": [
+    "poison",
+    "burn"
+   ]
+  },
+  "special_actions": [],
+  "actions": [
+   {
+    "action": "sa_ancient_bash",
+    "weight": 35,
+    "probability": 1
+   },
+   {
+    "action": "sa_quake_stomp",
+    "weight": 35,
+    "probability": 1
+   },
+   {
+    "action": "sa_vein_burst",
+    "weight": 30,
+    "probability": 1
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "ancient_beast_shell",
+     "chance": 100,
+     "count": 1
+    },
+    {
+     "item": "vein_shard",
+     "chance": 100,
+     "count": 5
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "C隐·沉渊古兽：远古蚀脉兽，弱突刺与风蚀。"
+   },
+   {
+    "unlock": 50,
+    "desc": "蚀脉奔涌是它的杀招，蓄力前摇明显。"
+   },
+   {
+    "unlock": 80,
+    "desc": "岩甲是它的防御，破坏后可大幅削弱。"
+   }
+  ]
  }
 ]

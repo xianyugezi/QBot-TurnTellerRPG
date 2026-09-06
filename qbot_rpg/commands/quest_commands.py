@@ -224,6 +224,16 @@ def _display_param(ctx: Optional[Mapping[str, Any]], param: object) -> str:
     return key
 
 
+def _int_cur(v: object) -> object:
+    """计数当前值显示整数化（引擎给 float 0.0/3.0 → 0/3；非整 float 保留）。"""
+    try:
+        if isinstance(v, float) and v.is_integer():
+            return int(v)
+    except Exception:  # noqa: BLE001
+        pass
+    return v
+
+
 def progress_text(cond: Mapping[str, Any], ctx: Optional[Mapping[str, Any]] = None) -> str:
     """单条三原语条件进度串：`背包数量 ≥ 20（当前 12）`。
 
@@ -243,13 +253,7 @@ def progress_text(cond: Mapping[str, Any], ctx: Optional[Mapping[str, Any]] = No
         base += tpl_of(ctx, "quest_progress_param",
                        {"param": _display_param(ctx, param)})
     if current is not None:
-        # 计数型当前值引擎给 float（0.0/3.0）——显示层整数化（3.0 → 3）
-        try:
-            if isinstance(current, float) and current.is_integer():
-                current = int(current)
-        except Exception:  # noqa: BLE001
-            pass
-        base += tpl_of(ctx, "quest_progress_current", {"current": current})
+        base += tpl_of(ctx, "quest_progress_current", {"current": _int_cur(current)})
     return base
 
 
@@ -274,7 +278,8 @@ def board_line(index: int, row: Mapping[str, Any], ctx: Optional[Mapping[str, An
             cur = c.get("current")
             target = c.get("target")
             if cur is not None and target is not None:
-                line += tpl_of(ctx, "quest_board_progress", {"cur": cur, "target": target})
+                line += tpl_of(ctx, "quest_board_progress",
+                               {"cur": _int_cur(cur), "target": _int_cur(target)})
     return line
 
 

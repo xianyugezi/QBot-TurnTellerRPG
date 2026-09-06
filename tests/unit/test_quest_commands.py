@@ -275,7 +275,8 @@ def test_quest_deliver_reward_result_prompt():
     ctx = make_ctx(quest_active={"collect_iron": {"name": "收集铁矿"}})
     out = cmd_quest(parse("/任务 交付 1"), ctx)
     assert "✅ 交付完成：收集铁矿" in out
-    assert "exp50" in out  # 统一 reward 发放结果提示（+exp50 / 80 coins）
+    # 2026-09-06 显示修复：exp → 经验（原「exp50」英文键）；货币名走 settings
+    assert "经验50" in out  # 统一 reward 发放结果提示（+经验50 / 80 coins）
     assert "今日已完成 1/10" in out
     assert ctx["currencies"]["coins"] == 1080  # 真实入账：+80 金币
     assert ctx["exp"] == 150                   # 真实入账：+50 经验

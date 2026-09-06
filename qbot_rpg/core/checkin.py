@@ -797,21 +797,66 @@ def _settle_table(table: Mapping, today: str, ctx: MutableMapping[str, Any]) -> 
     return base
 
 
-def _grant_label(grant: Mapping) -> str:
-    """grant 记录 → 简短展示标签（「药水×2」「50 金币」「exp20」）。"""
+def _grant_label(grant: Mapping, ctx: Optional[Mapping[str, Any]] = None) -> str:
+    """grant 记录 → 简短展示标签（「药水×2」「50 金币」「exp20」）。
+
+    2026-09-06 显示修复（对齐 quest 同款）：item/currency 显示中文名（ctx
+    items 注册表 + settings.currencies[].name）；exp → 经验。
+    """
     typ = grant.get("type")
     if typ == "item":
-        return f"{grant.get('item')}×{grant.get('count')}"
+        return f"{_item_name(ctx, grant.get('item'))}×{grant.get('count')}"
     if typ == "currency":
-        return f"{grant.get('amount')} {grant.get('currency')}"
+        return f"{grant.get('amount')} {_currency_name(ctx, grant.get('currency'))}"
     if typ == "exp":
-        return f"exp{grant.get('amount')}"
+        return f"经验{grant.get('amount')}"
     if typ == "rep":
         return f"声望{grant.get('amount')}"
     return str(grant)
 
 
-def _summary_lines(results: List[dict], today: str) -> List[str]:
+def _item_name(ctx: Optional[Mapping[str, Any]], item_id: object) -> str:
+    """物品 id → 中文名（ctx.items 注册表；查无 → id 兜底）。"""
+    key = str(item_id) if item_id is not None else ""
+    if not key or ctx is None:
+        return key
+    try:
+        tbl = ctx.get("items")
+        if isinstance(tbl, Mapping):
+            d = tbl.get(key)
+            if isinstance(d, Mapping) and d.get("name"):
+                return str(d.get("name"))
+            if d is not None:
+                n2 = getattr(d, "name", None)
+                if n2:
+                    return str(n2)
+    except Exception:  # noqa: BLE001
+        pass
+    return key
+
+
+def _currency_name(ctx: Optional[Mapping[str, Any]], cid: object) -> str:
+    """货币 id → 配置中文名（settings.currencies[].name；查无 → id 兜底）。"""
+    key = str(cid) if cid is not None else ""
+    if not key or ctx is None:
+        return key
+    try:
+        cfg = ctx.get("settings")
+        if isinstance(cfg, Mapping):
+            cur_list = cfg.get("currencies")
+            if isinstance(cur_list, list):
+                for c in cur_list:
+                    if isinstance(c, Mapping) and str(c.get("id") or "") == key:
+                        nm = c.get("name")
+                        if nm:
+                            return str(nm)
+    except Exception:  # noqa: BLE001
+        pass
+    return key
+
+
+def _summary_lines(results: List[dict], today: str,
+                    ctx: Optional[Mapping[str, Any]] = None) -> List[str]:
     """汇总单条消息（定稿 L25/L210 防刷屏：一次 /签到 汇总所有生效表单条消息输出；2.4 模板口径）。
     纯文本渲染（3d D-01：去除 ┌─📅 表框 / ⚠ 装饰 emoji——审查_M4实现_批次2_jspace.md 后续衔接提醒
     L221；指令层仍按 tables 重建正文，本 message 仅作引擎侧兜底/测试口径）。"""
@@ -830,7 +875,7 @@ def _summary_lines(results: List[dict], today: str) -> List[str]:
             continue
         daily = r.get("daily_granted") or []
         if daily:
-            lines.append("今日奖励：" + "、".join(_grant_label(g) for g in daily[:4]))
+            lines.append("今日奖励：" + "、".join(_grant_label(g, ctx) for g in daily[:4]))
         else:
             lines.append("今日奖励：无")
         for n in r.get("notes") or []:
@@ -838,10 +883,10 @@ def _summary_lines(results: List[dict], today: str) -> List[str]:
         pc, pt = r.get("progress_current"), r.get("progress_total")
         lines.append(f"连签天数：{r.get('streak', 0)} 天 ｜ 进度 {pc}/{pt}")
         for h in r.get("streak_hits") or []:
-            labs = "、".join(_grant_label(g) for g in h["granted"][:4])
+            labs = "、".join(_grant_label(g, ctx) for g in h["granted"][:4])
             lines.append(f"[连签里程碑达成] {labs}（连签 {h['days']} 天）")
         for h in r.get("month_hits") or []:
-            labs = "、".join(_grant_label(g) for g in h["granted"][:4])
+            labs = "、".join(_grant_label(g, ctx) for g in h["granted"][:4])
             lines.append(f"[月度累计达成] {labs}（本月签满 {h['days']} 天）")
     return lines
 
@@ -880,7 +925,7 @@ def checkin_do(ctx: MutableMapping[str, Any]) -> dict:
     except Exception:
         pass
     return {"ok": True, "today": today, "tables": results,
-            "message": "\n".join(_summary_lines(results, today))}
+            "message": "\n".join(_summary_lines(results, today, ctx))}
 
 
 # -------------------------------------------------------------------------------------

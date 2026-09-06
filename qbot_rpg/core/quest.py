@@ -1073,12 +1073,35 @@ def _grant_label(grant: Mapping, ctx: Mapping[str, Any]) -> str:
             nm = None
         return f"{nm if nm else item_id}×{grant.get('count')}"
     if typ == "currency":
-        return f"{grant.get('amount')} {grant.get('currency')}"
+        return f"{grant.get('amount')} {_currency_name(ctx, grant.get('currency'))}"
     if typ == "exp":
-        return f"exp{grant.get('amount')}"
+        return f"经验{grant.get('amount')}"
     if typ == "rep":
         return f"声望{grant.get('amount')}"
     return str(grant)
+
+
+def _currency_name(ctx: Mapping[str, Any], cid: object) -> str:
+    """货币 id → 配置中文名（2026-09-06 实机：奖励显示「200 coins」应为「200 脉晶币」）。
+
+    settings.currencies[].name（内容包可配）；查无 → id 兜底（不误导为别的币）。
+    """
+    key = str(cid) if cid is not None else ""
+    if not key:
+        return key
+    try:
+        cfg = ctx.get("settings")
+        if isinstance(cfg, Mapping):
+            cur_list = cfg.get("currencies")
+            if isinstance(cur_list, list):
+                for c in cur_list:
+                    if isinstance(c, Mapping) and str(c.get("id") or "") == key:
+                        nm = c.get("name")
+                        if nm:
+                            return str(nm)
+    except Exception:  # noqa: BLE001
+        pass
+    return key
 
 
 # -------------------------------------------------------------------------------------

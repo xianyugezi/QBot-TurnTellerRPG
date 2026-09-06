@@ -42,9 +42,9 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
 
     # —— grant 标签片段（_grant_label 四类）——
     "checkin_grant_item": "{item}×{count}",
-    "checkin_grant_currency": "{amount} {currency}",
-    "checkin_grant_exp": "exp{amount}",
-    "checkin_grant_rep": "声望{amount}",
+    "checkin_grant_currency": "{currency}×{amount}",
+    "checkin_grant_exp": "经验×{amount}",
+    "checkin_grant_rep": "声望×{amount}",
 }
 
 PLACEHOLDER_WHITELIST: Dict[str, set] = {

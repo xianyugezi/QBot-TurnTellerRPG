@@ -278,7 +278,8 @@ async def test_checkin_status_panel_and_idempotent() -> None:
     # ② 首次 /签到 → 发奖 + 进度
     r1 = await run_command(make_event(message="/签到", message_id="m-c1"), env["deps"])
     assert "✅ 今日签到完成" in r1, r1
-    assert "今日奖励：50 coins" in r1, f"首次签到应发奖: {r1}"
+    # 2026-09-06 统一 名×数量 格式（测试 settings 货币无 name → 兜底 id coins×50）
+    assert "今日奖励：coins×50" in r1, f"首次签到应发奖: {r1}"
     assert "连签天数：1 天" in r1, f"首次签到应推进连签: {r1}"
 
     # ③ 同日重复 /签到 → 幂等文案 + 不重复发奖（仍附进度）

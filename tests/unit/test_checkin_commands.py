@@ -53,7 +53,8 @@ ITEMS = {
     "强化石": {"id": "强化石", "name": "强化石", "quality": "rare"},
 }
 
-SETTINGS = {"refresh_time": "05:00", "currencies": [{"id": "coins"}, {"id": "gem"}]}
+SETTINGS = {"refresh_time": "05:00",
+              "currencies": [{"id": "coins", "name": "金币"}, {"id": "gem", "name": "宝石"}]}
 
 TABLES = {
     "loop": {"id": "loop", "name": "常驻循环", "type": "loop",
@@ -117,11 +118,11 @@ def test_checkin_noarg_today_page1():
     assert out.startswith("✅ 今日签到完成")
     # 常驻循环表（表段头 + 今日奖励 + 连签进度）
     assert "━━ 常驻循环（常驻循环） ━━" in out
-    assert "今日奖励：药水×2、50 coins、exp20" in out
+    assert "今日奖励：药水×2、金币×50、经验×20" in out
     assert "连签天数：1 天 ｜ 进度 1/7" in out
     # 月度表（页 1 为 rows 4-5：今日奖励 + 兜底提示 + 连签进度）
     assert "━━ 月度签到（月度签到） ━━" in out
-    assert "今日奖励：60 coins、exp25" in out
+    assert "今日奖励：金币×60、经验×25" in out
     # 5 条/页（m4 §2.2）：第 1 页 5 条 + TPL-08 页脚
     assert "当前页：1/2" in out
     # 活动表在页 2（8 条流水 → 2 页），页 1 不出现
@@ -132,7 +133,7 @@ def test_checkin_today_page2():
     """/签到 2 → 第 2 页：活动表段头 + 活动表流水 + 页脚。"""
     out = cmd_checkin(parse("/签到 2"), make_ctx())
     assert "━━ xx庆典（活动） ━━" in out
-    assert "今日奖励：药水×4、30 coins" in out
+    assert "今日奖励：药水×4、金币×30" in out
     assert "连签天数：1 天 ｜ 进度 26/14" in out
     assert "当前页：2/2" in out
 
@@ -399,7 +400,7 @@ def test_lazy_import_engine_fallback(monkeypatch):
     ctx.pop("checkin_engine")
     out = cmd_checkin(parse("/签到"), ctx)
     assert out.startswith("✅ 今日签到完成")
-    assert "今日奖励：药水×2、50 coins、exp20" in out
+    assert "今日奖励：药水×2、金币×50、经验×20" in out
 
 
 def test_engine_missing_raises_wiring_pending(monkeypatch):

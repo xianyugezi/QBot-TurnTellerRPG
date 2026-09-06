@@ -178,15 +178,56 @@ def _grant_label(ctx: Optional[Mapping[str, Any]], g: Mapping[str, Any]) -> str:
     """
     typ = g.get("type")
     if typ == "item":
-        return tpl_of(ctx, "checkin_grant_item", {"item": g.get("item"), "count": g.get("count")})
+        return tpl_of(ctx, "checkin_grant_item", {"item": _grant_item_name(ctx, g.get("item")),
+                                                  "count": g.get("count")})
     if typ == "currency":
         return tpl_of(ctx, "checkin_grant_currency", {"amount": g.get("amount"),
-                                                      "currency": g.get("currency")})
+                                                      "currency": _grant_currency_name(ctx, g.get("currency"))})
     if typ == "exp":
         return tpl_of(ctx, "checkin_grant_exp", {"amount": g.get("amount")})
     if typ == "rep":
         return tpl_of(ctx, "checkin_grant_rep", {"amount": g.get("amount")})
     return str(g)
+
+
+def _grant_item_name(ctx: Optional[Mapping[str, Any]], item_id: object) -> str:
+    """物品 id → 中文名（ctx.items 注册表；查无 → id 兜底，2026-09-06 同 quest 口径）。"""
+    key = str(item_id) if item_id is not None else ""
+    if not key or ctx is None:
+        return key
+    try:
+        tbl = ctx.get("items")
+        if isinstance(tbl, Mapping):
+            d = tbl.get(key)
+            if isinstance(d, Mapping) and d.get("name"):
+                return str(d.get("name"))
+            if d is not None:
+                n2 = getattr(d, "name", None)
+                if n2:
+                    return str(n2)
+    except Exception:  # noqa: BLE001
+        pass
+    return key
+
+
+def _grant_currency_name(ctx: Optional[Mapping[str, Any]], cid: object) -> str:
+    """货币 id → 配置中文名（settings.currencies[].name；查无 → id 兜底）。"""
+    key = str(cid) if cid is not None else ""
+    if not key or ctx is None:
+        return key
+    try:
+        cfg = ctx.get("settings")
+        if isinstance(cfg, Mapping):
+            cur_list = cfg.get("currencies")
+            if isinstance(cur_list, list):
+                for c in cur_list:
+                    if isinstance(c, Mapping) and str(c.get("id") or "") == key:
+                        nm = c.get("name")
+                        if nm:
+                            return str(nm)
+    except Exception:  # noqa: BLE001
+        pass
+    return key
 
 
 def _progress_line(ctx: Optional[Mapping[str, Any]], t: Mapping[str, Any]) -> str:

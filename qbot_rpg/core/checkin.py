@@ -807,11 +807,11 @@ def _grant_label(grant: Mapping, ctx: Optional[Mapping[str, Any]] = None) -> str
     if typ == "item":
         return f"{_item_name(ctx, grant.get('item'))}×{grant.get('count')}"
     if typ == "currency":
-        return f"{grant.get('amount')} {_currency_name(ctx, grant.get('currency'))}"
+        return f"{_currency_name(ctx, grant.get('currency'))}×{grant.get('amount')}"
     if typ == "exp":
-        return f"经验{grant.get('amount')}"
+        return f"经验×{grant.get('amount')}"
     if typ == "rep":
-        return f"声望{grant.get('amount')}"
+        return f"声望×{grant.get('amount')}"
     return str(grant)
 
 

@@ -365,8 +365,11 @@ def cmd_position(parsed: Any, ctx: Mapping[str, Any]) -> str:
     return _render_enter(result, ctx)
 
 
-def cmd_enter(parsed: Any, ctx: Mapping[str, Any]) -> str:
-    """/进入 <方向|序号|名称>：通道行走 / 副本入口 → 1 条结果消息。"""
+def cmd_enter(parsed: Any, ctx: Mapping[str, Any]) -> Any:
+    """/进入 <方向|序号|名称>：通道行走 / 副本入口 → 1 条结果消息。
+
+    可能返回 dict（离开锁定地图解除战斗：带 _battle_persist release，对齐
+    battle 组 send 收口）或 str（普通结果）。"""
     g = _gate(ctx)
     if g is not None:
         return g
@@ -424,7 +427,45 @@ def cmd_enter(parsed: Any, ctx: Mapping[str, Any]) -> str:
                               "desc": moved.get("desc"), "lore": moved.get("lore")}
             except ImportError:
                 pass
-    return _render_enter(result, ctx)
+    text = _render_enter(result, ctx)
+    # M12.5 离开锁定地图解除战斗（2026-09-06 拍板）：通道行走/地图传送成功
+    # （type=move 且目标 ≠ 当前地图）时，若玩家处于战斗（battle session 活跃）→
+    # 释放战斗会话——怪物已不在身边，战斗自然脱离（对齐 /木桩 退出 release 收口）。
+    _battle_release = _leave_battle_on_move(ctx, result, text)
+    if _battle_release is not None:
+        return _battle_release
+    return text
+
+
+def _leave_battle_on_move(ctx: Mapping[str, Any], result: Mapping[str, Any],
+                          text: str) -> Optional[Dict[str, Any]]:
+    """移动离开当前地图 → 若在战斗则释放会话。返回带 _battle_persist 的 dict 或 None。"""
+    if not result.get("ok"):
+        return None
+    if result.get("type") == "dungeon":
+        # 进副本：副本身份激活由批次 5 接线，不在此解除（副本内是另一套锁定语义）
+        return None
+    to_map = result.get("to")
+    if not to_map:
+        return None
+    cur_map = ctx.get("map_id") or ctx.get("location")
+    if cur_map and str(to_map) == str(cur_map):
+        return None  # 未离开（理论上 move 必换图；防御）
+    engine = ctx.get("battle_engine")
+    if engine is None:
+        return None  # 不在战斗
+    qid = str(ctx.get("qid") or ctx.get("qq_id") or "")
+    if not qid:
+        return None
+    msg = text + "\n" + tpl_of(ctx, "explore_leave_battle_ok")
+    try:
+        from qbot_rpg.commands.battle_commands import BattlePipeline  # noqa: PLC0415
+        BattlePipeline.from_ctx(ctx).send(msg)
+        return {"ok": True, "message": msg, "send": False,
+                "_battle_persist": ("release", qid)}
+    except Exception:  # noqa: BLE001 —— 无 sender/前缀装配缺键（轻量 ctx）→ 回落
+        return {"ok": True, "message": msg, "send": False,
+                "_battle_persist": ("release", qid)}
 
 
 def cmd_rest(parsed: Any, ctx: Mapping[str, Any]) -> str:

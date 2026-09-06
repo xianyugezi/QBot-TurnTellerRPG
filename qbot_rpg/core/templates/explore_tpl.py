@@ -36,6 +36,7 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     "explore_enter_fail_reason": "无法进入",
     "explore_enter_noarg": "❌ /进入：输入方向（上/下/左/右）或副本入口（序号/名称）",
     "explore_enter_not_wired": "❌ 进入功能未接线（引擎未加载）",
+    "explore_leave_battle_ok": "（已离开锁定怪物所在地图，战斗解除）",
     "explore_enter_engine_error": "❌ 进入失败（引擎返回异常）",
 
     # —— /休息 ——
@@ -74,6 +75,7 @@ PLACEHOLDER_WHITELIST: Dict[str, set] = {
     "explore_enter_fail_reason": set(),
     "explore_enter_noarg": set(),
     "explore_enter_not_wired": set(),
+    "explore_leave_battle_ok": set(),
     "explore_enter_engine_error": set(),
     "explore_rest_ok": {"hp", "mp"},
     "explore_rest_cooldown": {"cr"},

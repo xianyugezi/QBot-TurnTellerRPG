@@ -27,9 +27,7 @@
   "id": "a1_bone_field",
   "name": "骸骨草场",
   "desc": "齐腰高的灰白草甸，幼兽在倒伏巨兽的肋骨间嬉戏。猎师入门之地。",
-  "npcs": [
-   "npc_old_hunter"
-  ],
+  "npcs": [],
   "monsters": [
    {
     "enemy": "ridge_cub",
@@ -41,6 +39,10 @@
   "exits": {
    "up": {
     "to": "a2_ridge_hills",
+    "mode": "bidirectional"
+   },
+   "down": {
+    "to": "bone_station",
     "mode": "bidirectional"
    }
   },
@@ -678,6 +680,23 @@
   "exits": {
    "left": {
     "to": "d6_dark_cave",
+    "mode": "bidirectional"
+   }
+  },
+  "mechanics": []
+ },
+ {
+  "id": "bone_station",
+  "name": "龙骨驿站",
+  "desc": "脊骸丘陵脚下的猎师驿站：铁匠铺炉火通明，老猎人在廊下擦弓，补给铺的招牌被风吹得吱呀响。",
+  "monsters": [],
+  "npcs": [
+   "npc_old_hunter",
+   "npc_healer_apothecary"
+  ],
+  "exits": {
+   "down": {
+    "to": "a1_bone_field",
     "mode": "bidirectional"
    }
   },

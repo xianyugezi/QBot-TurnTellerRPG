@@ -306,6 +306,19 @@ def _quest_active_init(ps: Any) -> Any:
     return node
 
 
+def _discovered_init(ps: Any, location: Any) -> list:
+    """discovered_maps 惰性挂回（含 default_map/当前 location 种子——老档案平滑）。"""
+    raw = ps.get("discovered_maps") if isinstance(ps, Mapping) else None
+    if not isinstance(raw, list):
+        raw = []
+        if isinstance(ps, MutableMapping):
+            ps["discovered_maps"] = raw
+    for seed in (location,):
+        if isinstance(seed, str) and seed and seed not in raw:
+            raw.append(seed)
+    return raw
+
+
 def _ps_init(ps: Any, key: str, empty: Any) -> Any:
     """persistent_state 键惰性挂回（引擎写 ctx 对应键 → ps 持久化落档）。
 
@@ -1331,6 +1344,10 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
                 "personal_buys": _ps_init(ps, "personal_buys", {}),
                 "checkin_state": _ps_init(ps, "checkin", {}),
                 "shortcuts": _ps_init(ps, "shortcuts", {}),
+                # 2026-09-06 实机反馈（zerc）：/地图 应只显示已发现区域（野外默认
+                # 隐藏）——discovered_maps 惰性挂 persistent_state（到达/传送记录），
+                # cmd_map 按它过滤。初始含 default_map 与当前 location（平滑）。
+                "discovered_maps": _discovered_init(ps, location),
                 "shortcut_max": int(settings.get("shortcut_max", 20) or 20),
                 # M12.5 委托板配置（2c5b：settings.quest_board 段；tiers 委托池/
                 # refresh_days/penalty/防刷限/声望阈值表 grade_bonus）

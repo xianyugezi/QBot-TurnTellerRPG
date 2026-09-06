@@ -80,6 +80,47 @@ def _maps_index_for(ctx: Optional[Mapping[str, Any]]) -> Dict[str, Any]:
     return dict(index) if isinstance(index, Mapping) else {}
 
 
+def _known_maps_for(ctx: Optional[Mapping[str, Any]], index: Mapping[str, Any]) -> set:
+    """可显示/可传送地图集（2026-09-06 zerc 反馈）：discovered_maps ∪ 当前 location
+    ∪ default_map（城镇恒显）。内容包无城镇/无发现记录 → 空集（cmd_map 显示空，
+    cmd_enter 序号传送只认已发现——野外靠通道行走探索发现）。"""
+    known: set = set()
+    if not ctx:
+        return known
+    discovered = ctx.get("discovered_maps")
+    _has_ctx_key = "discovered_maps" in ctx if isinstance(ctx, Mapping) else False
+    if not _has_ctx_key:
+        # ctx 未装配 discovered_maps（裸 ctx/测试）→ 全量回退（零破坏；
+        # 装配层总会注入该键——空 list = 真无发现只显城镇）
+        return set(index.keys())
+    if not isinstance(discovered, (list, tuple, set)) or not discovered:
+        # 兜底：ctx 键缺失/空 → 读 player.persistent_state（跨层可靠，
+        # 2026-09-06 装配键异常时防地图空显）
+        _pl = ctx.get("player")
+        if isinstance(_pl, Mapping):
+            _ps = _pl.get("persistent_state")
+            if isinstance(_ps, Mapping):
+                discovered = _ps.get("discovered_maps")
+        elif hasattr(_pl, "persistent_state"):
+            _ps = getattr(_pl, "persistent_state")
+            if isinstance(_ps, Mapping):
+                discovered = _ps.get("discovered_maps")
+    if isinstance(discovered, (list, tuple, set)):
+        for d in discovered:
+            if isinstance(d, str) and d:
+                known.add(d)
+    cur_loc = ctx.get("location")
+    if isinstance(cur_loc, str) and cur_loc:
+        known.add(cur_loc)
+    dm = ctx.get("settings")
+    if isinstance(dm, Mapping):
+        _dmap = dm.get("default_map")
+        if isinstance(_dmap, str) and _dmap:
+            known.add(_dmap)
+    # 只保留真实存在的图
+    return {m for m in known if m in index}
+
+
 def _monster_names(ctx: Optional[Mapping[str, Any]]) -> Dict[str, str]:
     """enemy id → 怪物名 映射（ctx["monsters"] 优先，兜底 ctx["enemies"]；拿不到 → 空表）。
 
@@ -250,13 +291,20 @@ def cmd_map(parsed: Any, ctx: Mapping[str, Any]) -> str:
     index = _maps_index_for(ctx)
     if not index:
         return tpl_of(ctx, "explore_map_empty")
+    # 2026-09-06 实机反馈（zerc）：只显示已发现区域（discovered_maps ∪ 城镇），
+    # 野外未到达不列（原全量列表泄露全图）。发现记录由 cmd_enter 移动成功写。
+    known = _known_maps_for(ctx, index)
     lines = [tpl_of(ctx, "explore_map_title")]
-    for idx, mid in enumerate(list(index.keys()), start=1):
+    _shown = 0
+    for mid in list(index.keys()):
         entry = index[mid]
         if not entry:
             continue
+        if mid not in known:
+            continue  # 未发现区域隐藏（D-05 不提示原则）
+        _shown += 1
         name = entry.get("name") if isinstance(entry, Mapping) else getattr(entry, "name", None) or mid
-        lines.append(tpl_of(ctx, "explore_map_row", {"idx": idx, "name": name}))
+        lines.append(tpl_of(ctx, "explore_map_row", {"idx": _shown, "name": name}))
     return "\n".join(lines) + "\n" + tpl_of(ctx, "explore_map_tail")
 
 
@@ -410,7 +458,8 @@ def cmd_enter(parsed: Any, ctx: Mapping[str, Any]) -> Any:
     # 取地图传送（对齐 cmd_map 的 enumerate 序号；地图传送走 move_to_map 钩子）。
     if not result.get("ok") and arg.isascii() and arg.isdigit():
         index = _maps_index_for(ctx)
-        ordered = [m for m in list(index.keys()) if index.get(m)]
+        known = _known_maps_for(ctx, index)
+        ordered = [m for m in list(index.keys()) if index.get(m) and m in known]
         try:
             map_idx = int(arg)
         except ValueError:
@@ -427,6 +476,13 @@ def cmd_enter(parsed: Any, ctx: Mapping[str, Any]) -> Any:
                               "desc": moved.get("desc"), "lore": moved.get("lore")}
             except ImportError:
                 pass
+    # 2026-09-06 发现记录：移动/传送成功 → 目标图写 ctx discovered_maps（就地
+    # 改 persistent_state 挂回 list → runner 落档）。/地图 过滤依赖此集合。
+    if isinstance(result, Mapping) and result.get("ok"):
+        _dst = result.get("to")
+        _dm = ctx.get("discovered_maps")
+        if isinstance(_dst, str) and _dst and isinstance(_dm, list) and _dst not in _dm:
+            _dm.append(_dst)
     text = _render_enter(result, ctx)
     # M12.5 离开锁定地图解除战斗（2026-09-06 拍板）：通道行走/地图传送成功
     # （type=move 且目标 ≠ 当前地图）时，若玩家处于战斗（battle session 活跃）→

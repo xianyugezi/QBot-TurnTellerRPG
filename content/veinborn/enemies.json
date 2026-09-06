@@ -709,6 +709,11 @@
      "item": "rift_wolf_pelt",
      "chance": 60,
      "count": 2
+    },
+    {
+     "item": "crystal_mane_pendant",
+     "chance": 50,
+     "count": 1
     }
    ]
   },
@@ -819,6 +824,11 @@
      "item": "vein_shard",
      "chance": 80,
      "count": 2
+    },
+    {
+     "item": "eroded_core_jade",
+     "chance": 50,
+     "count": 1
     }
    ]
   },
@@ -1045,6 +1055,11 @@
      "item": "vein_shard",
      "chance": 85,
      "count": 3
+    },
+    {
+     "item": "mantis_wing_charm",
+     "chance": 50,
+     "count": 1
     }
    ]
   },
@@ -1152,6 +1167,11 @@
      "item": "vein_shard",
      "chance": 85,
      "count": 3
+    },
+    {
+     "item": "moss_dragon_saliva_jade",
+     "chance": 50,
+     "count": 1
     }
    ]
   },
@@ -2043,6 +2063,11 @@
      "item": "dusk_wolf_pelt",
      "chance": 60,
      "count": 2
+    },
+    {
+     "item": "lord_howl_fang",
+     "chance": 40,
+     "count": 1
     }
    ]
   },
@@ -2361,6 +2386,11 @@
     {
      "item": "abyss_lord_core",
      "chance": 40,
+     "count": 1
+    },
+    {
+     "item": "night_king_seal",
+     "chance": 60,
      "count": 1
     }
    ]

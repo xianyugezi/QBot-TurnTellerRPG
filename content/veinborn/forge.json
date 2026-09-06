@@ -845,6 +845,1897 @@
      "final": false
     }
    ]
+  },
+  {
+   "id": "tree_armor_head",
+   "name": "头防具树",
+   "type": "armor_head",
+   "roots": [
+    "node_jizha_helm",
+    "node_langwang_helm",
+    "node_shijia_helm",
+    "node_yuanjing_helm",
+    "node_tailong_helm",
+    "node_yingbao_helm",
+    "node_jumo_helm",
+    "node_lingzhu_helm",
+    "node_limian_helm",
+    "node_longwang_helm",
+    "node_gushou_helm",
+    "node_haozhu_helm",
+    "node_anzhu_helm",
+    "node_junwang_helm"
+   ],
+   "nodes": [
+    {
+     "id": "node_jizha_helm",
+     "name": "砾甲盔",
+     "item": "jizha_helm",
+     "type": "armor_head",
+     "level": 2,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 14
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "gravel_plate",
+       "count": 2
+      },
+      {
+       "item": "vein_shard",
+       "count": 2
+      }
+     ],
+     "rarity": "fine",
+     "final": true
+    },
+    {
+     "id": "node_langwang_helm",
+     "name": "狼王鬃盔",
+     "item": "langwang_helm",
+     "type": "armor_head",
+     "level": 3,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 27
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "crystal_mane",
+       "count": 2
+      },
+      {
+       "item": "rift_wolf_pelt",
+       "count": 2
+      }
+     ],
+     "rarity": "fine",
+     "final": true
+    },
+    {
+     "id": "node_shijia_helm",
+     "name": "蚀甲盔",
+     "item": "shijia_helm",
+     "type": "armor_head",
+     "level": 3,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 27
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "eroded_plate",
+       "count": 2
+      },
+      {
+       "item": "gravel_plate",
+       "count": 2
+      }
+     ],
+     "rarity": "fine",
+     "final": true
+    },
+    {
+     "id": "node_yuanjing_helm",
+     "name": "渊晶冠",
+     "item": "yuanjing_helm",
+     "type": "armor_head",
+     "level": 4,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 40
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "mantis_crystal_blade",
+       "count": 2
+      },
+      {
+       "item": "moss_dragon_scale",
+       "count": 2
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_tailong_helm",
+     "name": "苔龙盔",
+     "item": "tailong_helm",
+     "type": "armor_head",
+     "level": 4,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 40
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "moss_dragon_scale",
+       "count": 2
+      },
+      {
+       "item": "crystal_frog_gland",
+       "count": 2
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_yingbao_helm",
+     "name": "影豹兜",
+     "item": "yingbao_helm",
+     "type": "armor_head",
+     "level": 5,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 50
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "shadow_leopard_fang",
+       "count": 2
+      },
+      {
+       "item": "dusk_wolf_pelt",
+       "count": 2
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_jumo_helm",
+     "name": "巨魔盔",
+     "item": "jumo_helm",
+     "type": "armor_head",
+     "level": 5,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 56
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "black_crystal_chunk",
+       "count": 2
+      },
+      {
+       "item": "black_vein_fur",
+       "count": 2
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_lingzhu_helm",
+     "name": "领主鬃盔",
+     "item": "lingzhu_helm",
+     "type": "armor_head",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 16
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "lord_fang",
+       "count": 2
+      },
+      {
+       "item": "wolf_pelt",
+       "count": 2
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_limian_helm",
+     "name": "砾冕冠",
+     "item": "limian_helm",
+     "type": "armor_head",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 30
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "barrow_core",
+       "count": 2
+      },
+      {
+       "item": "eroded_plate",
+       "count": 2
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_longwang_helm",
+     "name": "龙王鳞盔",
+     "item": "longwang_helm",
+     "type": "armor_head",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 44
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "dragon_abyss_scale",
+       "count": 2
+      },
+      {
+       "item": "moss_dragon_scale",
+       "count": 2
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_gushou_helm",
+     "name": "古兽角盔",
+     "item": "gushou_helm",
+     "type": "armor_head",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 44
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "ancient_beast_shell",
+       "count": 2
+      },
+      {
+       "item": "dragon_abyss_scale",
+       "count": 2
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_haozhu_helm",
+     "name": "嚎主盔",
+     "item": "haozhu_helm",
+     "type": "armor_head",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 61
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "howl_lord_fang",
+       "count": 2
+      },
+      {
+       "item": "dusk_wolf_pelt",
+       "count": 2
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_anzhu_helm",
+     "name": "黯主盔",
+     "item": "anzhu_helm",
+     "type": "armor_head",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 61
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "abyss_lord_core",
+       "count": 2
+      },
+      {
+       "item": "night_bat_wing",
+       "count": 2
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_junwang_helm",
+     "name": "君王冕",
+     "item": "junwang_helm",
+     "type": "armor_head",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 61
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "king_night_crown",
+       "count": 2
+      },
+      {
+       "item": "abyss_lord_core",
+       "count": 2
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    }
+   ]
+  },
+  {
+   "id": "tree_armor_body",
+   "name": "身防具树",
+   "type": "armor_body",
+   "roots": [
+    "node_jizha_body",
+    "node_langwang_body",
+    "node_shijia_body",
+    "node_yuanjing_body",
+    "node_tailong_body",
+    "node_yingbao_body",
+    "node_jumo_body",
+    "node_lingzhu_body",
+    "node_limian_body",
+    "node_longwang_body",
+    "node_gushou_body",
+    "node_haozhu_body",
+    "node_anzhu_body",
+    "node_junwang_body"
+   ],
+   "nodes": [
+    {
+     "id": "node_jizha_body",
+     "name": "砾甲铠",
+     "item": "jizha_body",
+     "type": "armor_body",
+     "level": 2,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 21
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "gravel_plate",
+       "count": 2
+      },
+      {
+       "item": "vein_shard",
+       "count": 2
+      }
+     ],
+     "rarity": "fine",
+     "final": true
+    },
+    {
+     "id": "node_langwang_body",
+     "name": "狼王皮铠",
+     "item": "langwang_body",
+     "type": "armor_body",
+     "level": 3,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 41
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "crystal_mane",
+       "count": 2
+      },
+      {
+       "item": "rift_wolf_pelt",
+       "count": 2
+      }
+     ],
+     "rarity": "fine",
+     "final": true
+    },
+    {
+     "id": "node_shijia_body",
+     "name": "蚀甲铠",
+     "item": "shijia_body",
+     "type": "armor_body",
+     "level": 3,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 41
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "eroded_plate",
+       "count": 2
+      },
+      {
+       "item": "gravel_plate",
+       "count": 2
+      }
+     ],
+     "rarity": "fine",
+     "final": true
+    },
+    {
+     "id": "node_yuanjing_body",
+     "name": "渊晶壳甲",
+     "item": "yuanjing_body",
+     "type": "armor_body",
+     "level": 4,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 61
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "mantis_crystal_blade",
+       "count": 2
+      },
+      {
+       "item": "moss_dragon_scale",
+       "count": 2
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_tailong_body",
+     "name": "苔龙鳞甲",
+     "item": "tailong_body",
+     "type": "armor_body",
+     "level": 4,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 61
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "moss_dragon_scale",
+       "count": 2
+      },
+      {
+       "item": "crystal_frog_gland",
+       "count": 2
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_yingbao_body",
+     "name": "影豹皮甲",
+     "item": "yingbao_body",
+     "type": "armor_body",
+     "level": 5,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 75
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "shadow_leopard_fang",
+       "count": 2
+      },
+      {
+       "item": "dusk_wolf_pelt",
+       "count": 2
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_jumo_body",
+     "name": "巨魔重铠",
+     "item": "jumo_body",
+     "type": "armor_body",
+     "level": 5,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 84
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "black_crystal_chunk",
+       "count": 2
+      },
+      {
+       "item": "black_vein_fur",
+       "count": 2
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_lingzhu_body",
+     "name": "领主鬃铠",
+     "item": "lingzhu_body",
+     "type": "armor_body",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 24
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "lord_fang",
+       "count": 2
+      },
+      {
+       "item": "wolf_pelt",
+       "count": 2
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_limian_body",
+     "name": "砾冕骨铠",
+     "item": "limian_body",
+     "type": "armor_body",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 45
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "barrow_core",
+       "count": 2
+      },
+      {
+       "item": "eroded_plate",
+       "count": 2
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_longwang_body",
+     "name": "龙王鳞铠",
+     "item": "longwang_body",
+     "type": "armor_body",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 67
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "dragon_abyss_scale",
+       "count": 2
+      },
+      {
+       "item": "moss_dragon_scale",
+       "count": 2
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_gushou_body",
+     "name": "古兽壳铠",
+     "item": "gushou_body",
+     "type": "armor_body",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 67
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "ancient_beast_shell",
+       "count": 2
+      },
+      {
+       "item": "dragon_abyss_scale",
+       "count": 2
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_haozhu_body",
+     "name": "嚎主毛皮铠",
+     "item": "haozhu_body",
+     "type": "armor_body",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 92
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "howl_lord_fang",
+       "count": 2
+      },
+      {
+       "item": "dusk_wolf_pelt",
+       "count": 2
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_anzhu_body",
+     "name": "黯主渊铠",
+     "item": "anzhu_body",
+     "type": "armor_body",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 92
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "abyss_lord_core",
+       "count": 2
+      },
+      {
+       "item": "night_bat_wing",
+       "count": 2
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_junwang_body",
+     "name": "君王夜铠",
+     "item": "junwang_body",
+     "type": "armor_body",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 92
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "king_night_crown",
+       "count": 2
+      },
+      {
+       "item": "abyss_lord_core",
+       "count": 2
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    }
+   ]
+  },
+  {
+   "id": "tree_armor_hand",
+   "name": "手防具树",
+   "type": "armor_hand",
+   "roots": [
+    "node_jizha_hand",
+    "node_langwang_hand",
+    "node_shijia_hand",
+    "node_yuanjing_hand",
+    "node_tailong_hand",
+    "node_yingbao_hand",
+    "node_jumo_hand",
+    "node_lingzhu_hand",
+    "node_limian_hand",
+    "node_longwang_hand",
+    "node_gushou_hand",
+    "node_haozhu_hand",
+    "node_anzhu_hand",
+    "node_junwang_hand"
+   ],
+   "nodes": [
+    {
+     "id": "node_jizha_hand",
+     "name": "砾甲腕",
+     "item": "jizha_hand",
+     "type": "armor_hand",
+     "level": 2,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 9
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "gravel_plate",
+       "count": 1
+      },
+      {
+       "item": "vein_shard",
+       "count": 1
+      }
+     ],
+     "rarity": "fine",
+     "final": true
+    },
+    {
+     "id": "node_langwang_hand",
+     "name": "狼王腕甲",
+     "item": "langwang_hand",
+     "type": "armor_hand",
+     "level": 3,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 16
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "crystal_mane",
+       "count": 1
+      },
+      {
+       "item": "rift_wolf_pelt",
+       "count": 1
+      }
+     ],
+     "rarity": "fine",
+     "final": true
+    },
+    {
+     "id": "node_shijia_hand",
+     "name": "蚀甲腕",
+     "item": "shijia_hand",
+     "type": "armor_hand",
+     "level": 3,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 16
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "eroded_plate",
+       "count": 1
+      },
+      {
+       "item": "gravel_plate",
+       "count": 1
+      }
+     ],
+     "rarity": "fine",
+     "final": true
+    },
+    {
+     "id": "node_yuanjing_hand",
+     "name": "渊晶臂甲",
+     "item": "yuanjing_hand",
+     "type": "armor_hand",
+     "level": 4,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 24
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "mantis_crystal_blade",
+       "count": 1
+      },
+      {
+       "item": "moss_dragon_scale",
+       "count": 1
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_tailong_hand",
+     "name": "苔龙腕",
+     "item": "tailong_hand",
+     "type": "armor_hand",
+     "level": 4,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 24
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "moss_dragon_scale",
+       "count": 1
+      },
+      {
+       "item": "crystal_frog_gland",
+       "count": 1
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_yingbao_hand",
+     "name": "影豹爪腕",
+     "item": "yingbao_hand",
+     "type": "armor_hand",
+     "level": 5,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 30
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "shadow_leopard_fang",
+       "count": 1
+      },
+      {
+       "item": "dusk_wolf_pelt",
+       "count": 1
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_jumo_hand",
+     "name": "巨魔腕",
+     "item": "jumo_hand",
+     "type": "armor_hand",
+     "level": 5,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 33
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "black_crystal_chunk",
+       "count": 1
+      },
+      {
+       "item": "black_vein_fur",
+       "count": 1
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_lingzhu_hand",
+     "name": "领主爪腕",
+     "item": "lingzhu_hand",
+     "type": "armor_hand",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 10
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "lord_fang",
+       "count": 1
+      },
+      {
+       "item": "wolf_pelt",
+       "count": 1
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_limian_hand",
+     "name": "砾冕腕",
+     "item": "limian_hand",
+     "type": "armor_hand",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 18
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "barrow_core",
+       "count": 1
+      },
+      {
+       "item": "eroded_plate",
+       "count": 1
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_longwang_hand",
+     "name": "龙王腕",
+     "item": "longwang_hand",
+     "type": "armor_hand",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 27
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "dragon_abyss_scale",
+       "count": 1
+      },
+      {
+       "item": "moss_dragon_scale",
+       "count": 1
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_gushou_hand",
+     "name": "古兽腕",
+     "item": "gushou_hand",
+     "type": "armor_hand",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 27
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "ancient_beast_shell",
+       "count": 1
+      },
+      {
+       "item": "dragon_abyss_scale",
+       "count": 1
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_haozhu_hand",
+     "name": "嚎主腕",
+     "item": "haozhu_hand",
+     "type": "armor_hand",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 37
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "howl_lord_fang",
+       "count": 1
+      },
+      {
+       "item": "dusk_wolf_pelt",
+       "count": 1
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_anzhu_hand",
+     "name": "黯主腕",
+     "item": "anzhu_hand",
+     "type": "armor_hand",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 37
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "abyss_lord_core",
+       "count": 1
+      },
+      {
+       "item": "night_bat_wing",
+       "count": 1
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_junwang_hand",
+     "name": "君王腕",
+     "item": "junwang_hand",
+     "type": "armor_hand",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 37
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "king_night_crown",
+       "count": 1
+      },
+      {
+       "item": "abyss_lord_core",
+       "count": 1
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    }
+   ]
+  },
+  {
+   "id": "tree_armor_leg",
+   "name": "腿防具树",
+   "type": "armor_leg",
+   "roots": [
+    "node_jizha_leg",
+    "node_langwang_leg",
+    "node_shijia_leg",
+    "node_yuanjing_leg",
+    "node_tailong_leg",
+    "node_yingbao_leg",
+    "node_jumo_leg",
+    "node_lingzhu_leg",
+    "node_limian_leg",
+    "node_longwang_leg",
+    "node_gushou_leg",
+    "node_haozhu_leg",
+    "node_anzhu_leg",
+    "node_junwang_leg"
+   ],
+   "nodes": [
+    {
+     "id": "node_jizha_leg",
+     "name": "砾甲腿",
+     "item": "jizha_leg",
+     "type": "armor_leg",
+     "level": 2,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 13
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "gravel_plate",
+       "count": 2
+      },
+      {
+       "item": "vein_shard",
+       "count": 2
+      }
+     ],
+     "rarity": "fine",
+     "final": true
+    },
+    {
+     "id": "node_langwang_leg",
+     "name": "狼王腿套",
+     "item": "langwang_leg",
+     "type": "armor_leg",
+     "level": 3,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 24
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "crystal_mane",
+       "count": 2
+      },
+      {
+       "item": "rift_wolf_pelt",
+       "count": 2
+      }
+     ],
+     "rarity": "fine",
+     "final": true
+    },
+    {
+     "id": "node_shijia_leg",
+     "name": "蚀甲腿",
+     "item": "shijia_leg",
+     "type": "armor_leg",
+     "level": 3,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 24
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "eroded_plate",
+       "count": 2
+      },
+      {
+       "item": "gravel_plate",
+       "count": 2
+      }
+     ],
+     "rarity": "fine",
+     "final": true
+    },
+    {
+     "id": "node_yuanjing_leg",
+     "name": "渊晶胫甲",
+     "item": "yuanjing_leg",
+     "type": "armor_leg",
+     "level": 4,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 36
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "mantis_crystal_blade",
+       "count": 2
+      },
+      {
+       "item": "moss_dragon_scale",
+       "count": 2
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_tailong_leg",
+     "name": "苔龙腿",
+     "item": "tailong_leg",
+     "type": "armor_leg",
+     "level": 4,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 36
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "moss_dragon_scale",
+       "count": 2
+      },
+      {
+       "item": "crystal_frog_gland",
+       "count": 2
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_yingbao_leg",
+     "name": "影豹腿甲",
+     "item": "yingbao_leg",
+     "type": "armor_leg",
+     "level": 5,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 45
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "shadow_leopard_fang",
+       "count": 2
+      },
+      {
+       "item": "dusk_wolf_pelt",
+       "count": 2
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_jumo_leg",
+     "name": "巨魔腿",
+     "item": "jumo_leg",
+     "type": "armor_leg",
+     "level": 5,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 50
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "black_crystal_chunk",
+       "count": 2
+      },
+      {
+       "item": "black_vein_fur",
+       "count": 2
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_lingzhu_leg",
+     "name": "领主腿甲",
+     "item": "lingzhu_leg",
+     "type": "armor_leg",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 14
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "lord_fang",
+       "count": 2
+      },
+      {
+       "item": "wolf_pelt",
+       "count": 2
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_limian_leg",
+     "name": "砾冕腿",
+     "item": "limian_leg",
+     "type": "armor_leg",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 27
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "barrow_core",
+       "count": 2
+      },
+      {
+       "item": "eroded_plate",
+       "count": 2
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_longwang_leg",
+     "name": "龙王腿",
+     "item": "longwang_leg",
+     "type": "armor_leg",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 40
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "dragon_abyss_scale",
+       "count": 2
+      },
+      {
+       "item": "moss_dragon_scale",
+       "count": 2
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_gushou_leg",
+     "name": "古兽腿",
+     "item": "gushou_leg",
+     "type": "armor_leg",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 40
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "ancient_beast_shell",
+       "count": 2
+      },
+      {
+       "item": "dragon_abyss_scale",
+       "count": 2
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_haozhu_leg",
+     "name": "嚎主腿",
+     "item": "haozhu_leg",
+     "type": "armor_leg",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 55
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "howl_lord_fang",
+       "count": 2
+      },
+      {
+       "item": "dusk_wolf_pelt",
+       "count": 2
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_anzhu_leg",
+     "name": "黯主腿",
+     "item": "anzhu_leg",
+     "type": "armor_leg",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 55
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "abyss_lord_core",
+       "count": 2
+      },
+      {
+       "item": "night_bat_wing",
+       "count": 2
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_junwang_leg",
+     "name": "君王腿",
+     "item": "junwang_leg",
+     "type": "armor_leg",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 55
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "king_night_crown",
+       "count": 2
+      },
+      {
+       "item": "abyss_lord_core",
+       "count": 2
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    }
+   ]
+  },
+  {
+   "id": "tree_armor_foot",
+   "name": "足防具树",
+   "type": "armor_foot",
+   "roots": [
+    "node_jizha_foot",
+    "node_langwang_foot",
+    "node_shijia_foot",
+    "node_yuanjing_foot",
+    "node_tailong_foot",
+    "node_yingbao_foot",
+    "node_jumo_foot",
+    "node_lingzhu_foot",
+    "node_limian_foot",
+    "node_longwang_foot",
+    "node_gushou_foot",
+    "node_haozhu_foot",
+    "node_anzhu_foot",
+    "node_junwang_foot",
+    "node_yuanmai_foot"
+   ],
+   "nodes": [
+    {
+     "id": "node_jizha_foot",
+     "name": "砾甲靴",
+     "item": "jizha_foot",
+     "type": "armor_foot",
+     "level": 2,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 7
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "gravel_plate",
+       "count": 1
+      },
+      {
+       "item": "vein_shard",
+       "count": 1
+      }
+     ],
+     "rarity": "fine",
+     "final": true
+    },
+    {
+     "id": "node_langwang_foot",
+     "name": "狼王迅靴",
+     "item": "langwang_foot",
+     "type": "armor_foot",
+     "level": 3,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 14
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "crystal_mane",
+       "count": 1
+      },
+      {
+       "item": "rift_wolf_pelt",
+       "count": 1
+      }
+     ],
+     "rarity": "fine",
+     "final": true
+    },
+    {
+     "id": "node_shijia_foot",
+     "name": "蚀甲靴",
+     "item": "shijia_foot",
+     "type": "armor_foot",
+     "level": 3,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 14
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "eroded_plate",
+       "count": 1
+      },
+      {
+       "item": "gravel_plate",
+       "count": 1
+      }
+     ],
+     "rarity": "fine",
+     "final": true
+    },
+    {
+     "id": "node_yuanjing_foot",
+     "name": "渊晶足",
+     "item": "yuanjing_foot",
+     "type": "armor_foot",
+     "level": 4,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 20
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "mantis_crystal_blade",
+       "count": 1
+      },
+      {
+       "item": "moss_dragon_scale",
+       "count": 1
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_tailong_foot",
+     "name": "苔龙靴",
+     "item": "tailong_foot",
+     "type": "armor_foot",
+     "level": 4,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 20
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "moss_dragon_scale",
+       "count": 1
+      },
+      {
+       "item": "crystal_frog_gland",
+       "count": 1
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_yingbao_foot",
+     "name": "影豹足",
+     "item": "yingbao_foot",
+     "type": "armor_foot",
+     "level": 5,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 25
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "shadow_leopard_fang",
+       "count": 1
+      },
+      {
+       "item": "dusk_wolf_pelt",
+       "count": 1
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_jumo_foot",
+     "name": "巨魔重靴",
+     "item": "jumo_foot",
+     "type": "armor_foot",
+     "level": 5,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 28
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "black_crystal_chunk",
+       "count": 1
+      },
+      {
+       "item": "black_vein_fur",
+       "count": 1
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_lingzhu_foot",
+     "name": "领主踏靴",
+     "item": "lingzhu_foot",
+     "type": "armor_foot",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 8
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "lord_fang",
+       "count": 1
+      },
+      {
+       "item": "wolf_pelt",
+       "count": 1
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_limian_foot",
+     "name": "砾冕足",
+     "item": "limian_foot",
+     "type": "armor_foot",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 15
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "barrow_core",
+       "count": 1
+      },
+      {
+       "item": "eroded_plate",
+       "count": 1
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_longwang_foot",
+     "name": "龙王足",
+     "item": "longwang_foot",
+     "type": "armor_foot",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 22
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "dragon_abyss_scale",
+       "count": 1
+      },
+      {
+       "item": "moss_dragon_scale",
+       "count": 1
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_gushou_foot",
+     "name": "古兽足",
+     "item": "gushou_foot",
+     "type": "armor_foot",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 22
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "ancient_beast_shell",
+       "count": 1
+      },
+      {
+       "item": "dragon_abyss_scale",
+       "count": 1
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_haozhu_foot",
+     "name": "嚎主足",
+     "item": "haozhu_foot",
+     "type": "armor_foot",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 31
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "howl_lord_fang",
+       "count": 1
+      },
+      {
+       "item": "dusk_wolf_pelt",
+       "count": 1
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_anzhu_foot",
+     "name": "黯主足",
+     "item": "anzhu_foot",
+     "type": "armor_foot",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 31
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "abyss_lord_core",
+       "count": 1
+      },
+      {
+       "item": "night_bat_wing",
+       "count": 1
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_junwang_foot",
+     "name": "君王足",
+     "item": "junwang_foot",
+     "type": "armor_foot",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 31
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "king_night_crown",
+       "count": 1
+      },
+      {
+       "item": "abyss_lord_core",
+       "count": 1
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_yuanmai_foot",
+     "name": "渊脉足甲",
+     "item": "yuanmai_foot",
+     "type": "armor_foot",
+     "level": 5,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "dfn": 25
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "ancient_beast_shell",
+       "count": 2
+      },
+      {
+       "item": "vein_shard",
+       "count": 5
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    }
+   ]
   }
  ],
  "sets": [],

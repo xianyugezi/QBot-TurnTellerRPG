@@ -285,8 +285,15 @@ _RARITY_CN: Mapping[str, str] = {
     "epic": "史诗",
     "legendary": "传说",
 }
-# 部位中文（对齐 basic_commands._SLOT_NAME 口径：weapon→武器）
-_SLOT_CN: Mapping[str, str] = {"weapon": "武器"}
+# 部位中文（对齐 basic_commands.DEFAULT_SLOT_NAMES 口径：weapon→武器）
+_SLOT_CN: Mapping[str, str] = {
+    "weapon": "武器",
+    "armor_head": "头部",
+    "armor_body": "身体",
+    "armor_hand": "手部",
+    "armor_leg": "腿部",
+    "armor_foot": "脚部",
+}
 
 # ---------------------------------------------------------------------------
 # 参数词法常量（批4 路4C：P-01~06，细化 2c2b §五 5.1）

@@ -8,7 +8,9 @@ from __future__ import annotations
 from typing import Any, Dict
 
 DEFAULT_TEMPLATES: Dict[str, str] = {
-    "job_list": "当前可转职业：{list}",
+    # 2026-09-07 zerc 拍板格式：标题独立行 + 行列表 + 当前页 + Tip（render_cake_tail）
+    "job_list": "当前可转职业：\n{list}",
+    "job_list_tip": "发 转职 <序号|名称> 转职；发 职业详情 <序号|名称> 看详情",
     "job_not_found": "❌ 没有『{job}』这个职业，可用：{list}",
     "job_switch_success": "✅ 转职成功！当前职业：{job}{rec}",
     # 2026-09-05 职业详情（职业详情 <序号|名称>）
@@ -20,6 +22,7 @@ DEFAULT_TEMPLATES: Dict[str, str] = {
 
 PLACEHOLDER_WHITELIST: Dict[str, set] = {
     "job_list": {"list"},
+    "job_list_tip": set(),
     "job_not_found": {"job", "list"},
     "job_switch_success": {"job", "rec"},
     "job_detail_usage": set(),

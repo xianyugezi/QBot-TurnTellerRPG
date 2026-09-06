@@ -61,6 +61,39 @@ def _job_list_text(ctx: Mapping[str, Any]) -> str:
     return "\n".join(parts)
 
 
+def _job_list_render(ctx: Mapping[str, Any], page: int) -> str:
+    """职业列表分页渲染（2026-09-07 zerc 拍板格式）：标题独立行 + `N. 职业（推荐）`
+    行 + render_cake_tail（当前页：X/Y + Tip）。每页 DEFAULT_PAGE_SIZE 条。"""
+    from qbot_rpg.core.templates import tpl_of  # noqa: PLC0415
+    from qbot_rpg.core.message_format.list_render import (
+        DEFAULT_PAGE_SIZE,
+        render_cake_tail,
+        resolve_page,
+    )  # noqa: PLC0415
+
+    jobs = _jobs_table(ctx)
+    if not jobs:
+        return "当前无可转职业（系统未配置 jobs 表）"
+    items = [(jid, d) for jid, d in jobs.items() if isinstance(d, Mapping)]
+    res = resolve_page(page, len(items), DEFAULT_PAGE_SIZE)
+    if res.invalid:
+        from qbot_rpg.commands.sender import format_tpl12  # noqa: PLC0415
+        return format_tpl12(f"/转职 {page}")
+    assert res.page is not None
+    start = (res.page - 1) * DEFAULT_PAGE_SIZE
+    slice_items = items[start:start + DEFAULT_PAGE_SIZE]
+    lines = [tpl_of(ctx, "job_list", {"list": ""}).rstrip("\n") or "当前可转职业："]
+    for i, (jid, d) in enumerate(slice_items, start + 1):
+        name = str(d.get("name") or jid)
+        rec = "（推荐）" if d.get("recommended_newbie") else ""
+        lines.append(f"{i}. {name}{rec}")
+    lines.append(render_cake_tail(
+        res.page, res.total_pages,
+        tip=tpl_of(ctx, "job_list_tip", {}),
+        templates=ctx.get("templates")))
+    return "\n".join(lines)
+
+
 def _job_detail_text(ctx: Mapping[str, Any], job: Mapping[str, Any]) -> str:
     """职业详情面板（2026-09-05 新功能：职业详情 <序号|名称>；模板 job_tpl 可覆盖）。"""
     from qbot_rpg.core.templates import tpl_of  # noqa: PLC0415
@@ -207,8 +240,8 @@ def cmd_job(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         return format_tpl12(frag)
     args = list(getattr(parsed, "args", None) or [])
     if not args:
-        # 无参 → 职业列表
-        return tpl_of(ctx, "job_list", {"list": _job_list_text(ctx)})
+        # 无参 → 职业列表（2026-09-07：分页渲染——标题/行/当前页/Tip）
+        return _job_list_render(ctx, 1)
     arg = str(args[0]).strip()
     # 解析（名称/job_id/序号三形态）
     job = resolve_job(ctx, arg) or _find_job_by_index(ctx, arg)
@@ -246,7 +279,15 @@ def register_job_commands(
         from qbot_rpg.core.templates import tpl_of  # noqa: PLC0415
         injected = k.get("ctx") if isinstance(k, dict) else None
         ctx2 = injected if isinstance(injected, MutableMapping) else _ctx(parsed)
-        return tpl_of(ctx2, "job_list", {"list": _job_list_text(ctx2)})
+        page = 1
+        _args2 = list(getattr(parsed, "args", None) or [])
+        if _args2 and str(_args2[0]).isdigit():
+            page = int(str(_args2[0]))
+            if page < 1:
+                from qbot_rpg.commands.sender import format_tpl12  # noqa: PLC0415
+                raw = getattr(parsed, "raw", None) or ""
+                return format_tpl12(str(raw))
+        return _job_list_render(ctx2, page)
 
     def _job_detail_cmd(parsed: Any, *a: Any, **k: Any) -> str:
         from qbot_rpg.core.templates import tpl_of  # noqa: PLC0415

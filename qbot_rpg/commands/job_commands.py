@@ -57,7 +57,8 @@ def _job_list_text(ctx: Mapping[str, Any]) -> str:
         name = str(d.get("name") or jid)
         rec = "（推荐）" if d.get("recommended_newbie") else ""
         parts.append(f"{i}. {name}{rec}")
-    return "，".join(parts)
+    # 2026-09-07 zerc 实机反馈：职业列表换行显示（原「，」单行挤在一起）
+    return "\n".join(parts)
 
 
 def _job_detail_text(ctx: Mapping[str, Any], job: Mapping[str, Any]) -> str:
@@ -158,10 +159,19 @@ def _apply_job_switch(
         player["job_id"] = job_id
         player["job_name"] = str(job.get("name") or "")
     elif player is not None and not isinstance(player, Mapping):
+        # 2026-09-07 zerc 实机修复：Player 是 frozen dataclass——直接赋值抛
+        # FrozenInstanceError 被 except 吞 → job_id 未改 → 落档旧职业（转职
+        # 成功提示但档案不变）。frozen 形态用 dataclasses.replace 重建写回。
         try:
-            player.job_id = job_id  # dataclass 形态
-        except Exception:  # noqa: BLE001 - 只读对象防御
-            pass
+            import dataclasses  # noqa: PLC0415
+            _nb = dataclasses.replace(player, job_id=job_id)
+            ctx["player"] = _nb
+            player = _nb
+        except Exception:  # noqa: BLE001 - 重建失败回退直接赋值（非 frozen 可写）
+            try:
+                player.job_id = job_id
+            except Exception:  # noqa: BLE001 - 只读对象防御
+                pass
     ctx["job_id"] = job_id
     ctx["job_name"] = str(job.get("name") or "")
     # 技能位重排（14C：新职业视角装配 + job_restrict 过滤）

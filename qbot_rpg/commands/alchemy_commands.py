@@ -3388,7 +3388,21 @@ def _greenhouse_status_lines(ctx: MutableMapping[str, Any],
         p = plots[slot]
         if not isinstance(p, Mapping):
             continue
-        seed_name = str(p.get("seed_name") or p.get("seed_id") or "?")
+        seed_key = str(p.get("seed") or p.get("seed_id") or "")
+        seed_name = str(p.get("seed_name") or p.get("seed_id") or "")
+        if not seed_name or seed_name == "?" or seed_name == "None":
+            # 种植引擎地块行无 seed_name（仅 seed id）→ 从 items 注册表查名兜底
+            itab = ctx.get("items")
+            if isinstance(itab, Mapping):
+                _d = itab.get(seed_key)
+                if isinstance(_d, Mapping) and _d.get("name"):
+                    seed_name = str(_d.get("name"))
+                elif _d is not None:
+                    _n2 = getattr(_d, "name", None)
+                    if _n2:
+                        seed_name = str(_n2)
+            if not seed_name or seed_name == "?" or seed_name == "None":
+                seed_name = seed_key or "?"
         harvest_at = int(p.get("harvest_at", 0) or 0)
         remain = harvest_at - now
         if remain <= 0:

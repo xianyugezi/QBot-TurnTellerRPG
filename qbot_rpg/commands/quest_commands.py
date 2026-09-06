@@ -197,6 +197,33 @@ def _display_op(op: object) -> str:
     return _OP_DISPLAY.get(key, key)
 
 
+def _display_param(ctx: Optional[Mapping[str, Any]], param: object) -> str:
+    """三原语 param 展示名：怪物/物品 id → 中文名（2026-09-06 实机：任务模板
+    显示英文 id ridge_cub）。enemies/items 表按 id 查 name；查无 → 原样返回。"""
+    key = str(param) if param is not None else ""
+    if not key or ctx is None:
+        return key
+    for _tbl in ("enemies", "items"):
+        tbl = ctx.get(_tbl)
+        if isinstance(tbl, Mapping):
+            d = tbl.get(key)
+            if isinstance(d, Mapping):
+                nm = d.get("name")
+                if nm:
+                    return str(nm)
+            elif d is not None and hasattr(d, "get"):
+                nm = getattr(d, "get", lambda *a, **k: None)("name")
+                if nm:
+                    return str(nm)
+        elif isinstance(tbl, list):
+            for e in tbl:
+                if isinstance(e, Mapping) and str(e.get("id") or "") == key:
+                    nm = e.get("name")
+                    if nm:
+                        return str(nm)
+    return key
+
+
 def progress_text(cond: Mapping[str, Any], ctx: Optional[Mapping[str, Any]] = None) -> str:
     """单条三原语条件进度串：`背包数量 ≥ 20（当前 12）`。
 
@@ -213,8 +240,15 @@ def progress_text(cond: Mapping[str, Any], ctx: Optional[Mapping[str, Any]] = No
     else:
         base = tpl_of(ctx, "quest_progress_base_no_target", {"var": var, "op": op})
     if param is not None:
-        base += tpl_of(ctx, "quest_progress_param", {"param": param})
+        base += tpl_of(ctx, "quest_progress_param",
+                       {"param": _display_param(ctx, param)})
     if current is not None:
+        # 计数型当前值引擎给 float（0.0/3.0）——显示层整数化（3.0 → 3）
+        try:
+            if isinstance(current, float) and current.is_integer():
+                current = int(current)
+        except Exception:  # noqa: BLE001
+            pass
         base += tpl_of(ctx, "quest_progress_current", {"current": current})
     return base
 

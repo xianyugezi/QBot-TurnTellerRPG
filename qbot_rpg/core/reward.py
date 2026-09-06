@@ -253,6 +253,30 @@ def _write_ctx_int(ctx: Mapping[str, Any], key: str, value: int) -> bool:
         return False
 
 
+def _sync_player_scalar(ctx: Mapping[str, Any], key: str, value: int) -> None:
+    """ctx 顶层标量（exp）同步回 ctx["player"]（2026-09-06 实机修复）。
+
+    Player dataclass → dataclasses.replace 生成新实例写回 ctx["player"]（保持
+    dataclass 分支落档 + inventory merge）；MutableMapping → 直改。纯函数约束：
+    失败静默（奖励条目已 granted，同步失败由消费方整单回滚兜底）。
+    """
+    try:
+        import dataclasses  # noqa: PLC0415
+        p = ctx.get("player")
+        if isinstance(p, MutableMapping):
+            p[key] = value
+        elif p is not None and dataclasses.is_dataclass(p) and not isinstance(p, type):
+            try:
+                ctx["player"] = dataclasses.replace(p, **{key: value})  # type: ignore[index]
+            except Exception:  # noqa: BLE001 —— frozen/字段缺失兜底
+                try:
+                    ctx["player"] = dataclasses.replace(p, **{key: int(value)})  # type: ignore[index]
+                except Exception:  # noqa: BLE001
+                    pass
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def _grant_scalar(key: str, value: Any, entry: Mapping[str, Any], ctx: Mapping[str, Any]) -> Optional[dict]:
     """标量条目 coins/gem/exp/rep → 入账。失败=skip，不抛错。"""
     if not _valid_amount(value):
@@ -274,6 +298,11 @@ def _grant_scalar(key: str, value: Any, entry: Mapping[str, Any], ctx: Mapping[s
             return {"ok": False, "skip": {"type": "exp", "amount": value, "reason": "missing_bucket"}}
         if not _write_ctx_int(ctx, "exp", cur + value):
             return {"ok": False, "skip": {"type": "exp", "amount": value, "reason": "missing_bucket"}}
+        # 2026-09-06 实机修复：ctx["exp"] 是装配读出的顶层标量副本——只写它不落档
+        # （runner 落档读 ctx["player"].exp，Player dataclass 原引用未变 → 任务
+        # exp 奖励静默丢失；战斗奖励 battle_reward 有 _commit_player 同步，本层缺失）。
+        # 同步 player：dataclass → replace 写回；dict → 直改（对齐 use_commands 先例）。
+        _sync_player_scalar(ctx, "exp", cur + value)
         return {"ok": True, "grant": {"type": "exp", "amount": value}}
 
     if key == "rep":

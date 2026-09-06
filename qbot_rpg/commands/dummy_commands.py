@@ -54,6 +54,7 @@ __all__ = [
 
 DUMMY_CMD = "木桩"
 ADJUST_DUMMY_CMD = "调整木桩"
+_EXIT_SUBWORD = "退出"
 
 _DUMMY_OVERRIDE_KEY = "dummy_override"
 
@@ -288,6 +289,8 @@ def cmd_dummy(parsed: Any, ctx: MutableMapping[str, Any]) -> Any:
     dummies = _dummy_entries(ctx)
     if not dummies:
         return tpl_of(ctx, "dummy_list_empty")
+    if args and str(args[0]).strip() == _EXIT_SUBWORD:
+        return _exit_dummy_battle(ctx)
     if not args:
         lines = [tpl_of(ctx, "dummy_list_header")]
         for i, de in enumerate(dummies, 1):
@@ -304,6 +307,40 @@ def cmd_dummy(parsed: Any, ctx: MutableMapping[str, Any]) -> Any:
             _set_override(ctx, _overlay_from_enemy(e))
             ref = ""  # 默认木桩 + 覆盖
     return launch_dummy_battle(ctx, ref or None)
+
+
+def _exit_dummy_battle(ctx: MutableMapping[str, Any]) -> Any:
+    """/木桩 退出：结束训练木桩战（释放战斗会话，本次训练不结算）。
+
+    战斗中发 /木桩 退出 → 仅当当前战斗为训练木桩（引擎 is_dummy 判定）时
+    释放会话；普通战斗不可借木桩词退出（保持战斗指令纪律）。
+    """
+    p = ctx.get("player")
+    if p is None or not ctx.get("registered", False):
+        return tpl_of(ctx, "dummy_register_gate")
+    engine = ctx.get("battle_engine")
+    if engine is None:
+        return tpl_of(ctx, "dummy_exit_no_battle")
+    try:
+        is_dummy = bool(getattr(engine, "_is_dummy_enemy_def", lambda: False)())
+    except Exception:  # noqa: BLE001
+        is_dummy = False
+    if not is_dummy:
+        return tpl_of(ctx, "dummy_exit_not_dummy")
+    qid = str(ctx.get("qid") or ctx.get("qq_id") or "")
+    msg = tpl_of(ctx, "dummy_exit_ok")
+    # session release 走 post-commit（handler 在事务内不能开新 tx；同 G3 战斗释放）。
+    # 发送收口（battle_commands 同款）：BattlePipeline 直接发（带玩家名前缀），
+    # send:False 阻止 processing sender 再发——实测带 _battle_persist 的 dict 若
+    # 走默认 sender 会 reply 未前缀 + delivered 累积夹带进下条消息（双发/串台）
+    try:
+        from qbot_rpg.commands.battle_commands import BattlePipeline  # noqa: PLC0415
+        BattlePipeline.from_ctx(ctx).send(msg)
+        return {"ok": True, "message": msg, "send": False,
+                "_battle_persist": ("release", qid)}
+    except Exception:  # noqa: BLE001 —— 无 sender（轻量测试 ctx）→ 回落默认发送
+        return {"ok": True, "message": msg,
+                "_battle_persist": ("release", qid)}
 
 
 def cmd_adjust_dummy(parsed: Any, ctx: MutableMapping[str, Any]) -> str:

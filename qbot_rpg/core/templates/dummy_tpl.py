@@ -22,8 +22,10 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     "dummy_adjust_ok": "✅ 已把木桩面板调整为「{name}」的防御/抗性（HP 仍为木桩值）",
     "dummy_adjust_reset": "✅ 已重置木桩面板为默认档位",
     "dummy_adjust_missing": "怪物「{name}」不存在（enemies.json 里找）",
-    "dummy_adjust_usage": "调整木桩：/调整木桩 <怪物名> 覆盖面板（无参=重置）"
-                           "\n示例：/调整木桩 荒原狼",
+    "dummy_adjust_usage": "调整木桩：/调整木桩 <怪物名> 覆盖面板（无参=重置）",
+    "dummy_exit_no_battle": "当前没有进行中的训练战（/木桩 <档位> 进入）",
+    "dummy_exit_not_dummy": "当前是普通战斗，不是训练木桩（木桩战才能 /木桩 退出）",
+    "dummy_exit_ok": "已退出训练木桩（本次训练未结算；/木桩 <档位> 可重新进入）",
 }
 
 PLACEHOLDER_WHITELIST: Dict[str, set] = {
@@ -40,4 +42,7 @@ PLACEHOLDER_WHITELIST: Dict[str, set] = {
     "dummy_adjust_reset": set(),
     "dummy_adjust_missing": {"name"},
     "dummy_adjust_usage": set(),
+    "dummy_exit_no_battle": set(),
+    "dummy_exit_not_dummy": set(),
+    "dummy_exit_ok": set(),
 }

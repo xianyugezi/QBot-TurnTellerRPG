@@ -195,3 +195,56 @@ def test_register_dummy_commands() -> None:
         spec = router.get(name)
         assert spec is not None
         assert spec.whitelisted
+
+
+# ---------------------------------------------------------------------------
+# /木桩 退出（2026-09-06 拍板：木桩战可中途退出——释放战斗会话）
+# ---------------------------------------------------------------------------
+
+class _FakeDummyEngine:
+    """假木桩战斗引擎（仅暴露 dummy 判定与快照）。"""
+
+    def __init__(self, is_dummy: bool = True) -> None:
+        self._dummy = is_dummy
+
+    def _is_dummy_enemy_def(self) -> bool:
+        return self._dummy
+
+    def to_snapshot(self) -> dict:
+        return {}
+
+
+class _ReleaseSessionMgr(_FakeSessionMgr):
+    """记录 release 调用的 session 管理器。"""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.released: list = []
+
+    async def release(self, player_qid: str) -> None:
+        self.released.append(player_qid)
+
+
+def test_dummy_exit_no_battle() -> None:
+    """战斗外 /木桩 退出 → 无训练战提示。"""
+    ctx = make_ctx()
+    out = cmd_dummy(parse("/木桩 退出"), ctx)
+    assert isinstance(out, str) and "没有进行中的训练战" in out
+
+
+def test_dummy_exit_not_dummy_battle() -> None:
+    """普通战斗（非木桩）→ 拒绝（不借木桩词退普通战）。"""
+    ctx = make_ctx(battle_engine=_FakeDummyEngine(is_dummy=False))
+    out = cmd_dummy(parse("/木桩 退出"), ctx)
+    assert isinstance(out, str) and "不是训练木桩" in out
+
+
+def test_dummy_exit_ok_releases_session() -> None:
+    """木桩战中退出 → 返回 _battle_persist release（post-commit 释放会话）。"""
+    sm = _ReleaseSessionMgr()
+    ctx = make_ctx(battle_engine=_FakeDummyEngine(is_dummy=True), session_mgr=sm,
+                   qid="u1")
+    out = cmd_dummy(parse("/木桩 退出"), ctx)
+    assert isinstance(out, dict) and out.get("ok")
+    assert "已退出训练木桩" in out["message"]
+    assert out.get("_battle_persist") == ("release", "u1")

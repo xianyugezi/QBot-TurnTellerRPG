@@ -1648,5 +1648,48 @@
   "desc": "夜嚎君王印（D 夜嚎君王）",
   "atk": 10,
   "crit": 4
+ },
+ {
+  "id": "pulse_potion_med",
+  "name": "燃脉药剂",
+  "type": "consumable",
+  "price": 320,
+  "effects": [
+   "heal_med"
+  ],
+  "usable": true,
+  "desc": "燃脉淬体：战斗中回复生命（200）"
+ },
+ {
+  "id": "pulse_potion_large",
+  "name": "渊脉药剂",
+  "type": "consumable",
+  "price": 800,
+  "effects": [
+   "heal_large"
+  ],
+  "usable": true,
+  "desc": "渊脉淬体：战斗中回复生命（500）"
+ },
+ {
+  "id": "pulse_potion_xlarge",
+  "name": "夜脉秘药",
+  "type": "consumable",
+  "price": 2000,
+  "effects": [
+   "heal_xlarge"
+  ],
+  "usable": true,
+  "desc": "夜脉秘药：战斗中回复生命（1200）"
+ },
+ {
+  "id": "station_heavy_blade",
+  "name": "驿站重脊剑",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 768,
+  "atk": 128,
+  "usable": false,
+  "desc": "驿站精工重脊剑，20 级直购白板。"
  }
 ]

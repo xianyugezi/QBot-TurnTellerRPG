@@ -311,9 +311,24 @@ def default_shop_id(ctx: Mapping[str, Any]) -> Optional[str]:
     return None
 
 
+def _ps_of(ctx: Mapping[str, Any]) -> Optional[MutableMapping[str, Any]]:
+    """玩家持久态（persistent_state dict；Player dataclass/dict 双形态鸭子读）。"""
+    player = ctx.get("player")
+    if isinstance(player, Mapping):
+        ps = player.get("persistent_state")
+        return ps if isinstance(ps, MutableMapping) else None
+    ps = getattr(player, "persistent_state", None)
+    return ps if isinstance(ps, MutableMapping) else None
+
+
 def current_shop_id(ctx: Mapping[str, Any]) -> Optional[str]:
-    """当前商店（地图级，ctx["current_shop_ref"]）：引用存在才返回，否则 None（离图已清则回退默认）。"""
+    """当前商店（地图级，ctx["current_shop_ref"] → 兜底玩家持久态 current_shop）：
+    引用存在才返回，否则 None（离图已清则回退默认）。跨指令持久：/商店进入 X 写
+    ctx + persistent_state（2026-09-06 修复：ctx 每次指令重建，纯内存态购买丢失）。"""
     ref = ctx.get("current_shop_ref")
+    if not (isinstance(ref, str) and ref):
+        ps = _ps_of(ctx)
+        ref = ps.get("current_shop") if ps else None
     if isinstance(ref, str) and resolve_shop(ctx, ref) is not None:
         return ref
     return None
@@ -322,11 +337,17 @@ def current_shop_id(ctx: Mapping[str, Any]) -> Optional[str]:
 def set_current_shop(ctx: MutableMapping[str, Any], shop_id: object) -> None:
     """记录当前商店（地图级状态；打开瞬间写入，NPC 2b1 action:shop 已写 refs[0]）。"""
     ctx["current_shop_ref"] = shop_id
+    ps = _ps_of(ctx)
+    if ps is not None:
+        ps["current_shop"] = str(shop_id) if shop_id is not None else None
 
 
 def clear_current_shop(ctx: MutableMapping[str, Any]) -> None:
     """清除当前商店（离开该地图 → /商店 回退全局默认，定稿 L312）。"""
     ctx["current_shop_ref"] = None
+    ps = _ps_of(ctx)
+    if ps is not None:
+        ps["current_shop"] = None
 
 
 def resolve_shop_arg(ref: object, ctx: Mapping[str, Any]) -> Optional[str]:

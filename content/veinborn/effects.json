@@ -60,5 +60,23 @@
    }
   ],
   "desc": "每回合结束敌方困斗+1（蚀脉蓄能）"
+ },
+ {
+  "id": "heal_med",
+  "name": "中回复",
+  "type": "heal",
+  "power": 200
+ },
+ {
+  "id": "heal_large",
+  "name": "大回复",
+  "type": "heal",
+  "power": 500
+ },
+ {
+  "id": "heal_xlarge",
+  "name": "特大回复",
+  "type": "heal",
+  "power": 1200
  }
 ]

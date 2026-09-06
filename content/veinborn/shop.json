@@ -1,24 +1,191 @@
 [
-  {
-    "id": "dragonbone_smithy",
-    "name": "龙骨铁匠铺",
-    "icon": "锻",
-    "type": "normal",
-    "currency": "coins",
-    "desc": "龙骨驿站里的铁匠铺，炉火映着蚀脉晶光。",
-    "visible": true,
-    "items": [
-      { "item": "ridge_blade_starter", "price": 150, "stock": 5, "sold_out_once": false },
-      { "item": "ridge_blade_veteran", "price": 600, "stock": 3, "sold_out_once": false },
-      { "item": "gravelcrown_cleaver", "price": 1800, "stock": 1, "sold_out_once": true },
-      { "item": "cub_leather_helm", "price": 80, "stock": 10, "sold_out_once": false },
-      { "item": "cub_leather_body", "price": 120, "stock": 10, "sold_out_once": false },
-      { "item": "cub_leather_hand", "price": 80, "stock": 10, "sold_out_once": false },
-      { "item": "cub_leather_leg", "price": 80, "stock": 10, "sold_out_once": false },
-      { "item": "cub_leather_foot", "price": 80, "stock": 10, "sold_out_once": false },
-      { "item": "ridge_bone_charm", "price": 200, "stock": 5, "sold_out_once": false },
-      { "item": "vein_jade_rough", "price": 300, "stock": 5, "sold_out_once": false },
-      { "item": "pulse_potion", "price": 120, "stock": 20, "sold_out_once": false }
-    ]
-  }
+ {
+  "id": "dragonbone_smithy",
+  "name": "龙骨铁匠铺",
+  "icon": "锻",
+  "type": "normal",
+  "currency": "coins",
+  "desc": "龙骨驿站里的铁匠铺，炉火映着蚀脉晶光。",
+  "visible": true,
+  "items": [
+   {
+    "item": "ridge_blade_starter",
+    "price": 150,
+    "stock": 5,
+    "sold_out_once": false
+   },
+   {
+    "item": "cub_leather_helm",
+    "price": 80,
+    "stock": 10,
+    "sold_out_once": false
+   },
+   {
+    "item": "cub_leather_body",
+    "price": 120,
+    "stock": 10,
+    "sold_out_once": false
+   },
+   {
+    "item": "cub_leather_hand",
+    "price": 80,
+    "stock": 10,
+    "sold_out_once": false
+   },
+   {
+    "item": "cub_leather_leg",
+    "price": 80,
+    "stock": 10,
+    "sold_out_once": false
+   },
+   {
+    "item": "cub_leather_foot",
+    "price": 80,
+    "stock": 10,
+    "sold_out_once": false
+   },
+   {
+    "item": "ridge_bone_charm",
+    "price": 200,
+    "stock": 5,
+    "sold_out_once": false
+   },
+   {
+    "item": "vein_jade_rough",
+    "price": 300,
+    "stock": 5,
+    "sold_out_once": false
+   },
+   {
+    "item": "pulse_potion",
+    "price": 120,
+    "stock": 20,
+    "sold_out_once": false
+   },
+   {
+    "item": "iron_ridge_sword",
+    "price": 120,
+    "stock": 5,
+    "sold_out_once": false
+   },
+   {
+    "item": "yizhan_5_helm",
+    "price": 90,
+    "stock": 8,
+    "sold_out_once": false
+   },
+   {
+    "item": "yizhan_5_body",
+    "price": 150,
+    "stock": 8,
+    "sold_out_once": false
+   },
+   {
+    "item": "yizhan_5_hand",
+    "price": 70,
+    "stock": 8,
+    "sold_out_once": false
+   },
+   {
+    "item": "yizhan_5_leg",
+    "price": 110,
+    "stock": 8,
+    "sold_out_once": false
+   },
+   {
+    "item": "yizhan_5_foot",
+    "price": 60,
+    "stock": 8,
+    "sold_out_once": false
+   },
+   {
+    "item": "station_heavy_blade",
+    "price": 768,
+    "stock": 3,
+    "sold_out_once": false
+   }
+  ]
+ },
+ {
+  "id": "station_fine_store",
+  "name": "驿站精工坊",
+  "icon": "精",
+  "type": "normal",
+  "currency": "coins",
+  "desc": "驿站手艺人的精工防具铺，钢与革的做工比铁匠铺细三分。",
+  "visible": true,
+  "items": [
+   {
+    "item": "yizhan_20_helm",
+    "price": 480,
+    "stock": 5,
+    "sold_out_once": false
+   },
+   {
+    "item": "yizhan_20_body",
+    "price": 750,
+    "stock": 5,
+    "sold_out_once": false
+   },
+   {
+    "item": "yizhan_20_hand",
+    "price": 360,
+    "stock": 5,
+    "sold_out_once": false
+   },
+   {
+    "item": "yizhan_20_leg",
+    "price": 540,
+    "stock": 5,
+    "sold_out_once": false
+   },
+   {
+    "item": "yizhan_20_foot",
+    "price": 300,
+    "stock": 5,
+    "sold_out_once": false
+   }
+  ]
+ },
+ {
+  "id": "station_supply",
+  "name": "驿站补给铺",
+  "icon": "补",
+  "type": "normal",
+  "currency": "coins",
+  "desc": "猎师的消耗品铺子：脉火到夜脉，一应俱全。",
+  "visible": true,
+  "items": [
+   {
+    "item": "pulse_potion",
+    "price": 120,
+    "stock": 30,
+    "sold_out_once": false
+   },
+   {
+    "item": "pulse_potion_med",
+    "price": 320,
+    "stock": 20,
+    "sold_out_once": false
+   },
+   {
+    "item": "pulse_potion_large",
+    "price": 800,
+    "stock": 12,
+    "sold_out_once": false
+   },
+   {
+    "item": "pulse_potion_xlarge",
+    "price": 2000,
+    "stock": 6,
+    "sold_out_once": false
+   },
+   {
+    "item": "pulse_candy",
+    "price": 15,
+    "stock": 50,
+    "sold_out_once": false
+   }
+  ]
+ }
 ]

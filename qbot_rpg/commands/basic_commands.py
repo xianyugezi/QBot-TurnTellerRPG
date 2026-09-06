@@ -721,21 +721,34 @@ def _item_icon(ctx: Mapping[str, Any], item_id: str) -> str:
 
 
 def _row_fields(row: Any, ctx: Mapping[str, Any]) -> Mapping[str, Any]:
-    """背包行字段归一（ItemInstance dataclass 与 dict 行兼容，4a 存档行形态）。"""
+    """背包行字段归一（ItemInstance dataclass 与 dict 行兼容，4a 存档行形态）。
+
+    2026-09-06 zerc 反馈：背包行 name 缺失/为空时回退 item_id 导致详情显示英文
+    id（【linge_blade_d】）——name 缺失改查 items 注册表中文名兜底，最后才回退
+    item_id（仅注册表也查无的未知物品）。"""
     if isinstance(row, Mapping):
         item_id = str(row.get("item_id") or "")
-        name = str(row.get("name") or item_id or "?")
+        name = str(row.get("name") or "")
         count = row.get("count", 1)
         quality = str(row.get("quality") or "normal")
         bound = bool(row.get("bound"))
         icon = strip_icon_emoji(str(row.get("icon") or "") or _item_icon(ctx, item_id))
     else:
         item_id = str(getattr(row, "item_id", "") or "")
-        name = str(getattr(row, "name", None) or item_id or "?")
+        name = str(getattr(row, "name", None) or "")
         count = getattr(row, "count", 1)
         quality = str(getattr(row, "quality", None) or "normal")
         bound = bool(getattr(row, "bound", False))
         icon = strip_icon_emoji(_item_icon(ctx, item_id))
+    if not name:
+        # name 缺失 → items 注册表中文名兜底（不再裸显英文 id）
+        _d = _item_def(ctx, item_id) if item_id else None
+        if isinstance(_d, Mapping):
+            _nm = _d.get("name")
+            if isinstance(_nm, str) and _nm:
+                name = _nm
+    if not name:
+        name = item_id or "?"
     try:
         count = int(count)
     except (TypeError, ValueError):

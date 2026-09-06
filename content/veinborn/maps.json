@@ -113,7 +113,10 @@
    "unlock": "arrive",
    "safe": true
   },
-  "mechanics": []
+  "mechanics": [],
+  "npcs": [
+   "npc_healer_apothecary"
+  ]
  },
  {
   "id": "a4_lord_plateau",
@@ -241,7 +244,10 @@
     "mode": "bidirectional"
    }
   },
-  "mechanics": []
+  "mechanics": [],
+  "npcs": [
+   "npc_windguard"
+  ]
  },
  {
   "id": "b4_gravelcrown_nest",
@@ -370,7 +376,10 @@
     "mode": "bidirectional"
    }
   },
-  "mechanics": []
+  "mechanics": [],
+  "npcs": [
+   "npc_zeheart"
+  ]
  },
  {
   "id": "c4_abyss_pool",
@@ -546,7 +555,10 @@
     "mode": "bidirectional"
    }
   },
-  "mechanics": []
+  "mechanics": [],
+  "npcs": [
+   "npc_lamppost"
+  ]
  },
  {
   "id": "d4_bone_tableland",

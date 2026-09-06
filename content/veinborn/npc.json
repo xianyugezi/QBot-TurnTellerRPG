@@ -171,5 +171,211 @@
     "quest_id": "q_forge_intro"
    }
   ]
+ },
+ {
+  "id": "npc_healer_apothecary",
+  "name": "驿站药婆·脉姑",
+  "icon": "药",
+  "map": "a3_bone_hollow",
+  "type": "merchant",
+  "desc": "骨台营地随行的药婆，认得每种蚀脉伤。",
+  "visible": true,
+  "dialogues": {
+   "greeting": "伤筋动骨别硬撑，让药婆看看。",
+   "options": [
+    {
+     "text": "疗伤（免费）",
+     "action": "heal",
+     "heal": {
+      "hp": "100%"
+     }
+    },
+    {
+     "text": "买点补给",
+     "action": "shop",
+     "shop_refs": [
+      "station_supply"
+     ]
+    },
+    {
+     "text": "离开"
+    }
+   ]
+  },
+  "interactions": [
+   {
+    "action": "heal",
+    "text": "疗伤（免费）",
+    "heal": {
+     "hp": "100%"
+    }
+   },
+   {
+    "action": "shop",
+    "text": "买点补给",
+    "shop_refs": [
+     "station_supply"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "npc_windguard",
+  "name": "风息台守卫·铁脊",
+  "icon": "卫",
+  "map": "b3_wind_bone_field",
+  "type": "merchant",
+  "desc": "风息台的守卫，守着蚀风裂谷的补给线。",
+  "visible": true,
+  "dialogues": {
+   "greeting": "风大，别站风口发呆。要补给说一声。",
+   "options": [
+    {
+     "text": "疗伤（50 脉晶币）",
+     "action": "heal",
+     "cost": {
+      "coins": 50
+     },
+     "heal": {
+      "hp": "100%"
+     }
+    },
+    {
+     "text": "买点补给",
+     "action": "shop",
+     "shop_refs": [
+      "station_supply"
+     ]
+    },
+    {
+     "text": "离开"
+    }
+   ]
+  },
+  "interactions": [
+   {
+    "action": "heal",
+    "text": "疗伤（50 脉晶币）",
+    "cost": {
+     "coins": 50
+    },
+    "heal": {
+     "hp": "100%"
+    }
+   },
+   {
+    "action": "shop",
+    "text": "买点补给",
+    "shop_refs": [
+     "station_supply"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "npc_zeheart",
+  "name": "泽心台药师·芦荻",
+  "icon": "药",
+  "map": "c3_sunken_bone_bog",
+  "type": "merchant",
+  "desc": "泽心台的药师，专治湿地的蚀毒与霉疮。",
+  "visible": true,
+  "dialogues": {
+   "greeting": "湿气重，伤口容易烂。让我看看。",
+   "options": [
+    {
+     "text": "疗伤（80 脉晶币）",
+     "action": "heal",
+     "cost": {
+      "coins": 80
+     },
+     "heal": {
+      "hp": "100%"
+     }
+    },
+    {
+     "text": "买点补给",
+     "action": "shop",
+     "shop_refs": [
+      "station_supply"
+     ]
+    },
+    {
+     "text": "离开"
+    }
+   ]
+  },
+  "interactions": [
+   {
+    "action": "heal",
+    "text": "疗伤（80 脉晶币）",
+    "cost": {
+     "coins": 80
+    },
+    "heal": {
+     "hp": "100%"
+    }
+   },
+   {
+    "action": "shop",
+    "text": "买点补给",
+    "shop_refs": [
+     "station_supply"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "npc_lamppost",
+  "name": "矿灯站站长·老矿灯",
+  "icon": "灯",
+  "map": "d3_blackvein_mine",
+  "type": "merchant",
+  "desc": "黑脉矿道的守灯人，灯在人在。",
+  "visible": true,
+  "dialogues": {
+   "greeting": "矿道里黑，灯油管够。歇歇脚再走。",
+   "options": [
+    {
+     "text": "疗伤（120 脉晶币）",
+     "action": "heal",
+     "cost": {
+      "coins": 120
+     },
+     "heal": {
+      "hp": "100%"
+     }
+    },
+    {
+     "text": "买点补给",
+     "action": "shop",
+     "shop_refs": [
+      "station_supply"
+     ]
+    },
+    {
+     "text": "离开"
+    }
+   ]
+  },
+  "interactions": [
+   {
+    "action": "heal",
+    "text": "疗伤（120 脉晶币）",
+    "cost": {
+     "coins": 120
+    },
+    "heal": {
+     "hp": "100%"
+    }
+   },
+   {
+    "action": "shop",
+    "text": "买点补给",
+    "shop_refs": [
+     "station_supply"
+    ]
+   }
+  ]
  }
 ]

@@ -1417,6 +1417,17 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
                 "skill_slots_state": _ps_init(ps, "skill_slots", {}),
             }
         )
+        # 2026-09-06 营地 heal 收口：max_hp/max_mp 装配补键（npc heal N% 解析依赖
+        # ctx.max_hp——原装配缺键 → 治疗配置为空（resolve_heal 上限 0）。满值源 =
+        # attr_final 管线出口（3b 最终层 hp/mp 上限）。rest/_action_heal 等消费方同受益。
+        _af = ctx.get("attr_final")
+        if isinstance(_af, Mapping):
+            _mh = _af.get("hp")
+            _mm = _af.get("mp")
+            if isinstance(_mh, (int, float)) and not isinstance(_mh, bool) and _mh > 0:
+                ctx["max_hp"] = int(_mh)
+            if isinstance(_mm, (int, float)) and not isinstance(_mm, bool) and _mm > 0:
+                ctx["max_mp"] = int(_mm)
     else:
         ctx.update(
             {

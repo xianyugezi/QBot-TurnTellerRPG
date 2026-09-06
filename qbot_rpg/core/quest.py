@@ -1078,7 +1078,31 @@ def _grant_label(grant: Mapping, ctx: Mapping[str, Any]) -> str:
         return f"经验×{grant.get('amount')}"
     if typ == "rep":
         return f"声望×{grant.get('amount')}"
+    if typ == "prof":
+        return f"{_prof_name(ctx, grant.get('job'))}熟练×{grant.get('amount')}"
     return str(grant)
+
+
+def _prof_name(ctx: Mapping[str, Any], job: object) -> str:
+    """职业 id → 中文名（ctx.jobs 注册表；查无 → id 兜底）。"""
+    key = str(job) if job is not None else ""
+    if not key:
+        return ""
+    try:
+        jobs = ctx.get("jobs")
+        if isinstance(jobs, Mapping):
+            jd = jobs.get(key)
+            if isinstance(jd, Mapping) and jd.get("name"):
+                return str(jd.get("name"))
+        elif isinstance(jobs, list):
+            for j in jobs:
+                if isinstance(j, Mapping) and str(j.get("id") or "") == key:
+                    nm = j.get("name")
+                    if nm:
+                        return str(nm)
+    except Exception:  # noqa: BLE001
+        pass
+    return key
 
 
 def _currency_name(ctx: Mapping[str, Any], cid: object) -> str:

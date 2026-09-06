@@ -310,5 +310,345 @@
   "effects": [],
   "usable": false,
   "desc": "夜嚎君王冠上凝结的至纯脉晶：最终王骸素材"
+ },
+ {
+  "id": "maifeng_blade_a_mid",
+  "name": "精锻脉铁剑",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 540,
+  "atk": 90,
+  "usable": false,
+  "desc": "脉铁系精锻脉铁剑：脉铁淬炼的脊刃。"
+ },
+ {
+  "id": "maifeng_blade_b",
+  "name": "重脉铁脊刃",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 960,
+  "atk": 160,
+  "usable": false,
+  "desc": "脉铁系重脉铁脊刃：脉铁淬炼的脊刃。"
+ },
+ {
+  "id": "maifeng_blade_c",
+  "name": "淬脉大剑",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 1380,
+  "atk": 230,
+  "usable": false,
+  "desc": "脉铁系淬脉大剑：脉铁淬炼的脊刃。"
+ },
+ {
+  "id": "maifeng_blade_cd",
+  "name": "苍脉巨刃",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 1800,
+  "atk": 300,
+  "usable": false,
+  "desc": "脉铁系苍脉巨刃：脉铁淬炼的脊刃。"
+ },
+ {
+  "id": "maifeng_blade_d",
+  "name": "脉铁王斩",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 2160,
+  "atk": 360,
+  "usable": false,
+  "desc": "脉铁系脉铁王斩：脉铁淬炼的脊刃。"
+ },
+ {
+  "id": "guji_blade_a_mid",
+  "name": "脊骨猎刀",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 600,
+  "atk": 100,
+  "usable": false,
+  "desc": "骨脊系脊骨猎刀：骨脊淬炼的脊刃。"
+ },
+ {
+  "id": "guji_blade_b",
+  "name": "狼王脊刺",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 1056,
+  "atk": 176,
+  "usable": false,
+  "desc": "骨脊系狼王脊刺：骨脊淬炼的脊刃。"
+ },
+ {
+  "id": "guji_blade_c",
+  "name": "裂骨巨脊",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 1518,
+  "atk": 253,
+  "usable": false,
+  "desc": "骨脊系裂骨巨脊：骨脊淬炼的脊刃。"
+ },
+ {
+  "id": "guji_blade_cd",
+  "name": "渊兽脊斩",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 1980,
+  "atk": 330,
+  "usable": false,
+  "desc": "骨脊系渊兽脊斩：骨脊淬炼的脊刃。"
+ },
+ {
+  "id": "guji_blade_d",
+  "name": "龙骨噬脊刃",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 2376,
+  "atk": 396,
+  "usable": false,
+  "desc": "骨脊系龙骨噬脊刃：骨脊淬炼的脊刃。"
+ },
+ {
+  "id": "shijing_blade_a_mid",
+  "name": "脉晶长锋",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 498,
+  "atk": 83,
+  "usable": false,
+  "desc": "蚀晶系脉晶长锋：蚀晶淬炼的脊刃。"
+ },
+ {
+  "id": "shijing_blade_b",
+  "name": "晶蚀裂爪",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 882,
+  "atk": 147,
+  "usable": false,
+  "desc": "蚀晶系晶蚀裂爪：蚀晶淬炼的脊刃。"
+ },
+ {
+  "id": "shijing_blade_c",
+  "name": "渊晶法刃",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 1272,
+  "atk": 212,
+  "usable": false,
+  "desc": "蚀晶系渊晶法刃：蚀晶淬炼的脊刃。"
+ },
+ {
+  "id": "shijing_blade_cd",
+  "name": "沉晶噬脉刀",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 1656,
+  "atk": 276,
+  "usable": false,
+  "desc": "蚀晶系沉晶噬脉刀：蚀晶淬炼的脊刃。"
+ },
+ {
+  "id": "shijing_blade_d",
+  "name": "夜蚀晶冠刃",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 1986,
+  "atk": 331,
+  "usable": false,
+  "desc": "蚀晶系夜蚀晶冠刃：蚀晶淬炼的脊刃。"
+ },
+ {
+  "id": "linge_blade_a_mid",
+  "name": "迅鳞双刃",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 474,
+  "atk": 79,
+  "usable": false,
+  "desc": "鳞革系迅鳞双刃：鳞革淬炼的脊刃。"
+ },
+ {
+  "id": "linge_blade_b",
+  "name": "风鳞裂刃",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 846,
+  "atk": 141,
+  "usable": false,
+  "desc": "鳞革系风鳞裂刃：鳞革淬炼的脊刃。"
+ },
+ {
+  "id": "linge_blade_c",
+  "name": "渊鳞弯刀",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 1212,
+  "atk": 202,
+  "usable": false,
+  "desc": "鳞革系渊鳞弯刀：鳞革淬炼的脊刃。"
+ },
+ {
+  "id": "linge_blade_cd",
+  "name": "沉鳞影刃",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 1584,
+  "atk": 264,
+  "usable": false,
+  "desc": "鳞革系沉鳞影刃：鳞革淬炼的脊刃。"
+ },
+ {
+  "id": "linge_blade_d",
+  "name": "夜鳞苍牙",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 1902,
+  "atk": 317,
+  "usable": false,
+  "desc": "鳞革系夜鳞苍牙：鳞革淬炼的脊刃。"
+ },
+ {
+  "id": "yuanmai_blade_2",
+  "name": "渊脉骨刃",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 570,
+  "atk": 95,
+  "usable": false,
+  "desc": "渊脉系渊脉骨刃：渊脉淬刃，蚀力深藏。"
+ },
+ {
+  "id": "yuanmai_blade_3",
+  "name": "精英渊脉刃",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 1020,
+  "atk": 170,
+  "usable": false,
+  "desc": "渊脉系精英渊脉刃：渊脉淬刃，蚀力深藏。"
+ },
+ {
+  "id": "yuanmai_blade_4",
+  "name": "渊脉镇脊",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 1464,
+  "atk": 244,
+  "usable": false,
+  "desc": "渊脉系渊脉镇脊：渊脉淬刃，蚀力深藏。"
+ },
+ {
+  "id": "yuanmai_blade_5",
+  "name": "沉渊之刃",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 1908,
+  "atk": 318,
+  "usable": false,
+  "desc": "渊脉系沉渊之刃：渊脉淬刃，蚀力深藏。"
+ },
+ {
+  "id": "wasteland_lord_fang",
+  "name": "荒原领主牙刀",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 700,
+  "atk": 100,
+  "usable": false,
+  "desc": "荒原领主牙刀：以荒原领主素材铸就的王骸武器。"
+ },
+ {
+  "id": "dragon_abyss_polearm",
+  "name": "渊龙王戟",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 1771,
+  "atk": 253,
+  "usable": false,
+  "desc": "渊龙王戟：以渊泽龙王素材铸就的王骸武器。"
+ },
+ {
+  "id": "ancient_beast_spine",
+  "name": "沉渊古兽脊",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 2310,
+  "atk": 330,
+  "usable": false,
+  "desc": "沉渊古兽脊：以沉渊古兽素材铸就的王骸武器。"
+ },
+ {
+  "id": "howl_lord_blade",
+  "name": "群山嚎主刃",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 2772,
+  "atk": 396,
+  "usable": false,
+  "desc": "群山嚎主刃：以群山嚎主素材铸就的王骸武器。"
+ },
+ {
+  "id": "abyss_lord_fang",
+  "name": "黯穴之主牙",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 2772,
+  "atk": 396,
+  "usable": false,
+  "desc": "黯穴之主牙：以黯穴之主素材铸就的王骸武器。"
+ },
+ {
+  "id": "night_king_sword",
+  "name": "夜嚎君王剑",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 2772,
+  "atk": 396,
+  "usable": false,
+  "desc": "夜嚎君王剑：以夜嚎君王素材铸就的王骸武器。"
+ },
+ {
+  "id": "gravelcrown_cleaver",
+  "name": "砾冕斩脊",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 1232,
+  "atk": 176,
+  "usable": false,
+  "desc": "以砾冕冢核淬炼的大剑，重若骨冢。"
+ },
+ {
+  "id": "iron_ridge_sword",
+  "name": "铁脊剑",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 120,
+  "atk": 14,
+  "usable": false,
+  "desc": "驿站铁匠铺的入门铁剑，脊形剑身。"
+ },
+ {
+  "id": "bone_ridge_knife",
+  "name": "骨脊猎刀",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 130,
+  "atk": 15,
+  "usable": false,
+  "desc": "兽骨磨制的猎刀，荒野猎人的老伙伴。"
+ },
+ {
+  "id": "scale_ridge_blade",
+  "name": "鳞脊短刃",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 110,
+  "atk": 13,
+  "usable": false,
+  "desc": "鳞革缠柄的短刃，轻快趁手。"
  }
 ]

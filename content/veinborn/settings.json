@@ -1,261 +1,269 @@
 {
-  "default_map": "a1_bone_field",
-  "level_cap": 35,
-  "exp_curve": {
-    "1": 100,
-    "2": 480,
-    "3": 810,
-    "4": 1200,
-    "5": 1650,
-    "6": 2160,
-    "7": 2730,
-    "8": 3360,
-    "9": 4050,
-    "10": 4800,
-    "11": 5610,
-    "12": 6480,
-    "13": 7410,
-    "14": 8400,
-    "15": 9450,
-    "16": 10560,
-    "17": 11730,
-    "18": 12960,
-    "19": 14250,
-    "20": 15600,
-    "21": 17010,
-    "22": 18480,
-    "23": 20010,
-    "24": 21600,
-    "25": 23250,
-    "26": 24960,
-    "27": 26730,
-    "28": 28560,
-    "29": 30450,
-    "30": 32400,
-    "31": 34410,
-    "32": 36480,
-    "33": 38610,
-    "34": 40800,
-    "35": 43050
-  },
-  "currencies": [
-    {
-      "id": "coins",
-      "name": "脉晶币",
-      "icon": "晶",
-      "cap": 999999
-    }
-  ],
-  "death_penalty": {
-    "weak_duration_sec": 60,
-    "drop_currency": [],
-    "drop_exp": {
-      "enabled": true,
-      "percent": 10
-    },
-    "drop_items": {
-      "enabled": false,
-      "count": 1
-    }
-  },
-  "slot_defs": {
-    "weapon": {
-      "name": "武器",
-      "max": 1
-    },
-    "head": {
-      "name": "头部",
-      "max": 1
-    },
-    "body": {
-      "name": "躯干",
-      "max": 1
-    },
-    "hand": {
-      "name": "手部",
-      "max": 1
-    },
-    "leg": {
-      "name": "护腿",
-      "max": 1
-    },
-    "foot": {
-      "name": "鞋子",
-      "max": 1
-    },
-    "accessory": {
-      "name": "饰品",
-      "max": 1
-    },
-    "pulse_jade": {
-      "name": "脉玉",
-      "max": 1
-    }
-  },
-  "command_aliases": {
-    "任务": "领取任务"
-  },
-  "world_name": "蚀脉猎师",
-  "alchemy": {
-    "farming": {
-      "enabled": true,
-      "harvest_sec": 14400,
-      "plots_max": 3,
-      "trait_inherit": 1,
-      "greenhouse": {
-        "unlock_tier": "大师",
-        "copy_slot": 1,
-        "copy_cost": {
-          "gem": 10,
-          "coins": 1000
-        }
-      }
-    }
-  },
-  "quest_board": {
-    "enabled": true,
-    "refresh_days": 3,
-    "penalty": 0.1,
-    "active_limit": 5,
-    "daily_limit": 10,
-    "rep_levels": [
-      [
-        "陌生",
-        0
-      ],
-      [
-        "熟悉",
-        100
-      ],
-      [
-        "信赖",
-        300
-      ],
-      [
-        "崇敬",
-        600
-      ],
-      [
-        "传说",
-        1000
-      ]
-    ],
-    "grade_bonus": {
-      "S": 1.5,
-      "A": 1.0,
-      "B": 0.5
-    },
-    "tiers": [
-      {
-        "id": "qb_herb",
-        "name": "采集苔脉草",
-        "star": 1,
-        "desc": "给药剂师送去苔脉草。",
-        "require": {
-          "item": "mossvein_herb",
-          "count": 2,
-          "quality": "fine"
-        },
-        "rep_base": 10,
-        "rep_min": 0,
-        "reward": [
-          {
-            "item": "pulse_potion",
-            "count": 1
-          }
-        ]
-      },
-      {
-        "id": "qb_glowcap",
-        "name": "收集莹光菇",
-        "star": 2,
-        "desc": "洞窟探险队需要莹光菇照明。",
-        "require": {
-          "item": "glowcap",
-          "count": 1,
-          "quality": "epic"
-        },
-        "rep_base": 20,
-        "rep_min": 100,
-        "reward": [
-          {
-            "item": "pulse_potion",
-            "count": 3
-          }
-        ]
-      },
-      {
-        "id": "qb_ore",
-        "name": "王国矿脉委托",
-        "star": 4,
-        "desc": "王国工坊高价收购精炼矿。",
-        "require": {
-          "item": "ridge_ore",
-          "count": 3,
-          "quality": "legendary"
-        },
-        "rep_base": 40,
-        "rep_min": 300,
-        "job_level": 4,
-        "reward": [
-          {
-            "item": "gem",
-            "count": 5
-          }
-        ]
-      }
-    ]
-  },
-  "assistant": {
-    "enabled": true,
-    "unlock_tier": "精通",
-    "energy_items": [
-      "pulse_candy"
-    ],
-    "queue": {
-      "max_slots": 3,
-      "tick_sec": 1800
-    },
-    "helpers": [
-      {
-        "id": "h1",
-        "name": "脉矿工",
-        "tier": 1,
-        "gather_rate": 1.0,
-        "trait_bonus": 0,
-        "quality_bonus": 0,
-        "desc": "骸骨草场的采掘老手，代采 1 小时产一批。"
-      },
-      {
-        "id": "h2",
-        "name": "调合徒",
-        "tier": 2,
-        "gather_rate": 1.2,
-        "trait_bonus": 1,
-        "quality_bonus": 5,
-        "desc": "略通调合的学徒，代调成功率略高。"
-      }
-    ]
-  },
-  "contest": {
-    "enabled": true,
-    "schedule": {
-      "weekday": 7,
-      "open_hour": 20
-    },
-    "score_weights": {
-      "quality": 0.4,
-      "trait": 0.3,
-      "awaken": 0.2,
-      "potential": 0.1
-    },
-    "reward": {
-      "title": "品评冠军",
-      "gem": 100,
-      "reputation": {
-        "submit": 5,
-        "win": 30
-      }
-    }
+ "default_map": "a1_bone_field",
+ "level_cap": 35,
+ "exp_curve": {
+  "1": 100,
+  "2": 480,
+  "3": 810,
+  "4": 1200,
+  "5": 1650,
+  "6": 2160,
+  "7": 2730,
+  "8": 3360,
+  "9": 4050,
+  "10": 4800,
+  "11": 5610,
+  "12": 6480,
+  "13": 7410,
+  "14": 8400,
+  "15": 9450,
+  "16": 10560,
+  "17": 11730,
+  "18": 12960,
+  "19": 14250,
+  "20": 15600,
+  "21": 17010,
+  "22": 18480,
+  "23": 20010,
+  "24": 21600,
+  "25": 23250,
+  "26": 24960,
+  "27": 26730,
+  "28": 28560,
+  "29": 30450,
+  "30": 32400,
+  "31": 34410,
+  "32": 36480,
+  "33": 38610,
+  "34": 40800,
+  "35": 43050
+ },
+ "currencies": [
+  {
+   "id": "coins",
+   "name": "脉晶币",
+   "icon": "晶",
+   "cap": 999999
   }
+ ],
+ "death_penalty": {
+  "weak_duration_sec": 60,
+  "drop_currency": [],
+  "drop_exp": {
+   "enabled": true,
+   "percent": 10
+  },
+  "drop_items": {
+   "enabled": false,
+   "count": 1
+  }
+ },
+ "slot_defs": {
+  "weapon": {
+   "name": "武器",
+   "max": 1
+  },
+  "head": {
+   "name": "头部",
+   "max": 1
+  },
+  "body": {
+   "name": "躯干",
+   "max": 1
+  },
+  "hand": {
+   "name": "手部",
+   "max": 1
+  },
+  "leg": {
+   "name": "护腿",
+   "max": 1
+  },
+  "foot": {
+   "name": "鞋子",
+   "max": 1
+  },
+  "accessory": {
+   "name": "饰品",
+   "max": 1
+  },
+  "pulse_jade": {
+   "name": "脉玉",
+   "max": 1
+  }
+ },
+ "command_aliases": {
+  "任务": "领取任务"
+ },
+ "world_name": "蚀脉猎师",
+ "alchemy": {
+  "farming": {
+   "enabled": true,
+   "harvest_sec": 14400,
+   "plots_max": 3,
+   "trait_inherit": 1,
+   "greenhouse": {
+    "unlock_tier": "大师",
+    "copy_slot": 1,
+    "copy_cost": {
+     "gem": 10,
+     "coins": 1000
+    }
+   }
+  }
+ },
+ "quest_board": {
+  "enabled": true,
+  "refresh_days": 3,
+  "penalty": 0.1,
+  "active_limit": 5,
+  "daily_limit": 10,
+  "rep_levels": [
+   [
+    "陌生",
+    0
+   ],
+   [
+    "熟悉",
+    100
+   ],
+   [
+    "信赖",
+    300
+   ],
+   [
+    "崇敬",
+    600
+   ],
+   [
+    "传说",
+    1000
+   ]
+  ],
+  "grade_bonus": {
+   "S": 1.5,
+   "A": 1.0,
+   "B": 0.5
+  },
+  "tiers": [
+   {
+    "id": "qb_herb",
+    "name": "采集苔脉草",
+    "star": 1,
+    "desc": "给药剂师送去苔脉草。",
+    "require": {
+     "item": "mossvein_herb",
+     "count": 2,
+     "quality": "fine"
+    },
+    "rep_base": 10,
+    "rep_min": 0,
+    "reward": [
+     {
+      "item": "pulse_potion",
+      "count": 1
+     }
+    ]
+   },
+   {
+    "id": "qb_glowcap",
+    "name": "收集莹光菇",
+    "star": 2,
+    "desc": "洞窟探险队需要莹光菇照明。",
+    "require": {
+     "item": "glowcap",
+     "count": 1,
+     "quality": "epic"
+    },
+    "rep_base": 20,
+    "rep_min": 100,
+    "reward": [
+     {
+      "item": "pulse_potion",
+      "count": 3
+     }
+    ]
+   },
+   {
+    "id": "qb_ore",
+    "name": "王国矿脉委托",
+    "star": 4,
+    "desc": "王国工坊高价收购精炼矿。",
+    "require": {
+     "item": "ridge_ore",
+     "count": 3,
+     "quality": "legendary"
+    },
+    "rep_base": 40,
+    "rep_min": 300,
+    "job_level": 4,
+    "reward": [
+     {
+      "item": "gem",
+      "count": 5
+     }
+    ]
+   }
+  ]
+ },
+ "assistant": {
+  "enabled": true,
+  "unlock_tier": "精通",
+  "energy_items": [
+   "pulse_candy"
+  ],
+  "queue": {
+   "max_slots": 3,
+   "tick_sec": 1800
+  },
+  "helpers": [
+   {
+    "id": "h1",
+    "name": "脉矿工",
+    "tier": 1,
+    "gather_rate": 1.0,
+    "trait_bonus": 0,
+    "quality_bonus": 0,
+    "desc": "骸骨草场的采掘老手，代采 1 小时产一批。"
+   },
+   {
+    "id": "h2",
+    "name": "调合徒",
+    "tier": 2,
+    "gather_rate": 1.2,
+    "trait_bonus": 1,
+    "quality_bonus": 5,
+    "desc": "略通调合的学徒，代调成功率略高。"
+   }
+  ]
+ },
+ "contest": {
+  "enabled": true,
+  "schedule": {
+   "weekday": 7,
+   "open_hour": 20
+  },
+  "score_weights": {
+   "quality": 0.4,
+   "trait": 0.3,
+   "awaken": 0.2,
+   "potential": 0.1
+  },
+  "reward": {
+   "title": "品评冠军",
+   "gem": 100,
+   "reputation": {
+    "submit": 5,
+    "win": 30
+   }
+  }
+ },
+ "forge": {
+  "forge_fee": "节点等级×60",
+  "straight_forge": true,
+  "exp_per_forge": "节点等级×15",
+  "sets_enabled": false,
+  "augments_enabled": false,
+  "carry_sec": 90
+ }
 }

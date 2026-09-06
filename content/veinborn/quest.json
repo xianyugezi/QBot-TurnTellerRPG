@@ -484,5 +484,45 @@
   "npc": {
    "id": "npc_old_hunter"
   }
+ },
+ {
+  "id": "q_forge_intro",
+  "name": "铁砧的初鸣",
+  "type": "collect",
+  "desc": "龙骨铁匠铺的铁砧等你开张：收集 3 个脉晶碎片，铺里的老师傅教你认炉火。",
+  "zone": "a1_bone_field",
+  "main": false,
+  "consume": true,
+  "repeatable": false,
+  "unlock_chain": "q_tut4_gravel_armor",
+  "conditions": [
+   {
+    "var": "item_count",
+    "op": "ge",
+    "value": 3,
+    "param": "vein_shard"
+   }
+  ],
+  "reward": [
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 100
+    }
+   },
+   {
+    "item": "iron_ridge_sword",
+    "count": 1
+   },
+   {
+    "exp": 500
+   },
+   {
+    "coins": 300
+   }
+  ],
+  "npc": {
+   "id": "npc_old_hunter"
+  }
  }
 ]

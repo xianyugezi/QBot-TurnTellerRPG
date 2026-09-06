@@ -1,0 +1,78 @@
+[
+ {
+  "id": "forge",
+  "tier_names": [
+   "见习",
+   "正式",
+   "精通",
+   "专家",
+   "大师",
+   "宗师",
+   "王"
+  ],
+  "job_rank_levels": [
+   0,
+   100,
+   300,
+   700,
+   1500,
+   3000,
+   6000
+  ],
+  "exp_sources": {
+   "craft": 1.0,
+   "gather": 1.0,
+   "combat": 1.0
+  },
+  "sp_per_level": 1,
+  "sp_panel": [
+   {
+    "id": "unlock_branch_tree",
+    "name": "分支树视野",
+    "cost": 1,
+    "repeatable": false,
+    "max_repeat": 1,
+    "desc": "解锁分支树视野"
+   },
+   {
+    "id": "unlock_combine_3to1",
+    "name": "3:1 合成",
+    "cost": 1,
+    "repeatable": false,
+    "max_repeat": 1,
+    "desc": "解锁 3 普通素材→1 稀有素材 合成"
+   }
+  ],
+  "job_tier_map": {
+   "见习": [
+    1,
+    5
+   ],
+   "正式": [
+    6,
+    15
+   ],
+   "精通": [
+    16,
+    25
+   ],
+   "专家": [
+    26,
+    35
+   ],
+   "大师": [
+    36,
+    45
+   ],
+   "宗师": [
+    46,
+    60
+   ],
+   "王": [
+    61,
+    99
+   ]
+  },
+  "titles": []
+ }
+]

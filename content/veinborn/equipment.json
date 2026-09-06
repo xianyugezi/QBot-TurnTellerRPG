@@ -1,113 +1,103 @@
 [
-  {
-    "id": "ridge_blade_starter",
-    "name": "砺脊刃",
-    "type": "weapon",
-    "slot": "weapon",
-    "price": 400,
-    "atk": 18,
-    "usable": false,
-    "desc": "龙骨驿站新手脊刃，脉晶淬刃，猎师的第一把武器。",
-    "foc": 10
-  },
-  {
-    "id": "ridge_blade_veteran",
-    "name": "长脊大剑",
-    "type": "weapon",
-    "slot": "weapon",
-    "price": 1600,
-    "atk": 28,
-    "usable": false,
-    "desc": "加长的脊刃大剑，蚀脉纹路更密。"
-  },
-  {
-    "id": "gravelcrown_cleaver",
-    "name": "砾冕斩脊",
-    "type": "weapon",
-    "slot": "weapon",
-    "price": 4500,
-    "atk": 42,
-    "usable": false,
-    "desc": "以砾冕冢核淬炼的大剑，重若骨冢。"
-  },
-  {
-    "id": "cub_leather_helm",
-    "name": "幼兽皮帽",
-    "type": "armor",
-    "slot": "head",
-    "price": 200,
-    "usable": false,
-    "desc": "幼兽皮鞣制的轻帽，轻便透气。",
-    "hp": 40,
-    "dfn": 6,
-    "foc": 2
-  },
-  {
-    "id": "cub_leather_body",
-    "name": "幼兽皮甲",
-    "type": "armor",
-    "slot": "body",
-    "price": 300,
-    "hp": 60,
-    "usable": false,
-    "desc": "幼兽皮鞣制的护甲，护住要害。",
-    "dfn": 10,
-    "foc": 2
-  },
-  {
-    "id": "cub_leather_hand",
-    "name": "幼兽皮护手",
-    "type": "armor",
-    "slot": "hand",
-    "price": 150,
-    "usable": false,
-    "desc": "幼兽皮护手，灵活不碍手。",
-    "atk": 2,
-    "dfn": 4,
-    "foc": 3
-  },
-  {
-    "id": "cub_leather_leg",
-    "name": "幼兽皮护腿",
-    "type": "armor",
-    "slot": "leg",
-    "price": 150,
-    "usable": false,
-    "desc": "幼兽皮护腿，耐磨。",
-    "dfn": 6,
-    "foc": 2
-  },
-  {
-    "id": "cub_leather_foot",
-    "name": "脉行靴",
-    "type": "armor",
-    "slot": "foot",
-    "price": 150,
-    "agi": 2,
-    "usable": false,
-    "desc": "轻便靴，脉晶纹路助力。",
-    "dfn": 4,
-    "foc": 2
-  },
-  {
-    "id": "ridge_bone_charm",
-    "name": "脊骨护符",
-    "type": "accessory",
-    "slot": "accessory",
-    "price": 200,
-    "foc": 5,
-    "usable": false,
-    "desc": "脊骨磨制的护符，凝神聚气。"
-  },
-  {
-    "id": "vein_jade_rough",
-    "name": "原脉玉",
-    "type": "accessory",
-    "slot": "pulse_jade",
-    "price": 400,
-    "usable": false,
-    "desc": "未雕琢的脉玉，蕴着蚀脉之力。",
-    "atk": 4,
-    "hp": 30
-  }
+ {
+  "id": "ridge_blade_starter",
+  "name": "砺脊刃",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 400,
+  "atk": 18,
+  "usable": false,
+  "desc": "龙骨驿站新手脊刃，脉晶淬刃，猎师的第一把武器。",
+  "foc": 10
+ },
+ {
+  "id": "ridge_blade_veteran",
+  "name": "长脊大剑",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 1600,
+  "atk": 28,
+  "usable": false,
+  "desc": "加长的脊刃大剑，蚀脉纹路更密。"
+ },
+ {
+  "id": "cub_leather_helm",
+  "name": "幼兽皮帽",
+  "type": "armor",
+  "slot": "head",
+  "price": 200,
+  "usable": false,
+  "desc": "幼兽皮鞣制的轻帽，轻便透气。",
+  "hp": 40,
+  "dfn": 6,
+  "foc": 2
+ },
+ {
+  "id": "cub_leather_body",
+  "name": "幼兽皮甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 300,
+  "hp": 60,
+  "usable": false,
+  "desc": "幼兽皮鞣制的护甲，护住要害。",
+  "dfn": 10,
+  "foc": 2
+ },
+ {
+  "id": "cub_leather_hand",
+  "name": "幼兽皮护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 150,
+  "usable": false,
+  "desc": "幼兽皮护手，灵活不碍手。",
+  "atk": 2,
+  "dfn": 4,
+  "foc": 3
+ },
+ {
+  "id": "cub_leather_leg",
+  "name": "幼兽皮护腿",
+  "type": "armor",
+  "slot": "leg",
+  "price": 150,
+  "usable": false,
+  "desc": "幼兽皮护腿，耐磨。",
+  "dfn": 6,
+  "foc": 2
+ },
+ {
+  "id": "cub_leather_foot",
+  "name": "脉行靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 150,
+  "agi": 2,
+  "usable": false,
+  "desc": "轻便靴，脉晶纹路助力。",
+  "dfn": 4,
+  "foc": 2
+ },
+ {
+  "id": "ridge_bone_charm",
+  "name": "脊骨护符",
+  "type": "accessory",
+  "slot": "accessory",
+  "price": 200,
+  "foc": 5,
+  "usable": false,
+  "desc": "脊骨磨制的护符，凝神聚气。"
+ },
+ {
+  "id": "vein_jade_rough",
+  "name": "原脉玉",
+  "type": "accessory",
+  "slot": "pulse_jade",
+  "price": 400,
+  "usable": false,
+  "desc": "未雕琢的脉玉，蕴着蚀脉之力。",
+  "atk": 4,
+  "hp": 30
+ }
 ]

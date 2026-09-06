@@ -1,0 +1,859 @@
+{
+ "schema_version": "1.0",
+ "trees": [
+  {
+   "id": "tree_weapon",
+   "name": "武器锻造树",
+   "type": "weapon",
+   "roots": [
+    "node_shijing_blade_a_mid",
+    "node_yuanmai_blade_2",
+    "node_wasteland_lord_fang",
+    "node_gravelcrown_cleaver",
+    "node_dragon_abyss_polearm",
+    "node_ancient_beast_spine",
+    "node_howl_lord_blade",
+    "node_abyss_lord_fang",
+    "node_night_king_sword",
+    "node_iron_ridge_sword",
+    "node_bone_ridge_knife",
+    "node_scale_ridge_blade"
+   ],
+   "nodes": [
+    {
+     "id": "node_maifeng_blade_a_mid",
+     "name": "精锻脉铁剑",
+     "item": "maifeng_blade_a_mid",
+     "type": "weapon",
+     "level": 2,
+     "parent": "node_iron_ridge_sword",
+     "branch": [],
+     "stats": {
+      "atk": 90
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "wind_ridge_shell",
+       "count": 6
+      }
+     ],
+     "rarity": "fine",
+     "final": false
+    },
+    {
+     "id": "node_maifeng_blade_b",
+     "name": "重脉铁脊刃",
+     "item": "maifeng_blade_b",
+     "type": "weapon",
+     "level": 3,
+     "parent": "node_maifeng_blade_a_mid",
+     "branch": [],
+     "stats": {
+      "atk": 160
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "eroded_plate",
+       "count": 8
+      },
+      {
+       "item": "gravel_plate",
+       "count": 4
+      }
+     ],
+     "rarity": "fine",
+     "final": false
+    },
+    {
+     "id": "node_maifeng_blade_c",
+     "name": "淬脉大剑",
+     "item": "maifeng_blade_c",
+     "type": "weapon",
+     "level": 4,
+     "parent": "node_maifeng_blade_b",
+     "branch": [],
+     "stats": {
+      "atk": 230
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "black_crystal_chunk",
+       "count": 10
+      },
+      {
+       "item": "moss_dragon_scale",
+       "count": 5
+      }
+     ],
+     "rarity": "fine",
+     "final": false
+    },
+    {
+     "id": "node_maifeng_blade_cd",
+     "name": "苍脉巨刃",
+     "item": "maifeng_blade_cd",
+     "type": "weapon",
+     "level": 5,
+     "parent": "node_maifeng_blade_c",
+     "branch": [],
+     "stats": {
+      "atk": 300
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "ancient_beast_shell",
+       "count": 12
+      },
+      {
+       "item": "dragon_abyss_scale",
+       "count": 6
+      }
+     ],
+     "rarity": "fine",
+     "final": false
+    },
+    {
+     "id": "node_maifeng_blade_d",
+     "name": "脉铁王斩",
+     "item": "maifeng_blade_d",
+     "type": "weapon",
+     "level": 6,
+     "parent": "node_maifeng_blade_cd",
+     "branch": [],
+     "stats": {
+      "atk": 360
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "king_night_crown",
+       "count": 15
+      },
+      {
+       "item": "abyss_lord_core",
+       "count": 8
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_guji_blade_a_mid",
+     "name": "脊骨猎刀",
+     "item": "guji_blade_a_mid",
+     "type": "weapon",
+     "level": 2,
+     "parent": "node_bone_ridge_knife",
+     "branch": [],
+     "stats": {
+      "atk": 100
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "wolf_pelt",
+       "count": 8
+      }
+     ],
+     "rarity": "fine",
+     "final": false
+    },
+    {
+     "id": "node_guji_blade_b",
+     "name": "狼王脊刺",
+     "item": "guji_blade_b",
+     "type": "weapon",
+     "level": 3,
+     "parent": "node_guji_blade_a_mid",
+     "branch": [],
+     "stats": {
+      "atk": 176
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "crystal_mane",
+       "count": 6
+      },
+      {
+       "item": "rift_wolf_pelt",
+       "count": 4
+      }
+     ],
+     "rarity": "fine",
+     "final": false
+    },
+    {
+     "id": "node_guji_blade_c",
+     "name": "裂骨巨脊",
+     "item": "guji_blade_c",
+     "type": "weapon",
+     "level": 4,
+     "parent": "node_guji_blade_b",
+     "branch": [],
+     "stats": {
+      "atk": 253
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "mantis_crystal_blade",
+       "count": 8
+      },
+      {
+       "item": "shadow_leopard_fang",
+       "count": 5
+      }
+     ],
+     "rarity": "fine",
+     "final": false
+    },
+    {
+     "id": "node_guji_blade_cd",
+     "name": "渊兽脊斩",
+     "item": "guji_blade_cd",
+     "type": "weapon",
+     "level": 5,
+     "parent": "node_guji_blade_c",
+     "branch": [],
+     "stats": {
+      "atk": 330
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "dusk_wolf_pelt",
+       "count": 10
+      },
+      {
+       "item": "howl_lord_fang",
+       "count": 6
+      }
+     ],
+     "rarity": "fine",
+     "final": false
+    },
+    {
+     "id": "node_guji_blade_d",
+     "name": "龙骨噬脊刃",
+     "item": "guji_blade_d",
+     "type": "weapon",
+     "level": 6,
+     "parent": "node_guji_blade_cd",
+     "branch": [],
+     "stats": {
+      "atk": 396
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "king_night_crown",
+       "count": 12
+      },
+      {
+       "item": "abyss_lord_core",
+       "count": 8
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_shijing_blade_a_mid",
+     "name": "脉晶长锋",
+     "item": "shijing_blade_a_mid",
+     "type": "weapon",
+     "level": 2,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "atk": 83
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "vein_shard",
+       "count": 10
+      }
+     ],
+     "rarity": "fine",
+     "final": false
+    },
+    {
+     "id": "node_shijing_blade_b",
+     "name": "晶蚀裂爪",
+     "item": "shijing_blade_b",
+     "type": "weapon",
+     "level": 3,
+     "parent": "node_shijing_blade_a_mid",
+     "branch": [],
+     "stats": {
+      "atk": 147
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "eroded_plate",
+       "count": 6
+      },
+      {
+       "item": "gravel_plate",
+       "count": 4
+      }
+     ],
+     "rarity": "fine",
+     "final": false
+    },
+    {
+     "id": "node_shijing_blade_c",
+     "name": "渊晶法刃",
+     "item": "shijing_blade_c",
+     "type": "weapon",
+     "level": 4,
+     "parent": "node_shijing_blade_b",
+     "branch": [],
+     "stats": {
+      "atk": 212
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "moss_dragon_scale",
+       "count": 6
+      },
+      {
+       "item": "dragon_abyss_scale",
+       "count": 4
+      }
+     ],
+     "rarity": "fine",
+     "final": false
+    },
+    {
+     "id": "node_shijing_blade_cd",
+     "name": "沉晶噬脉刀",
+     "item": "shijing_blade_cd",
+     "type": "weapon",
+     "level": 5,
+     "parent": "node_shijing_blade_c",
+     "branch": [],
+     "stats": {
+      "atk": 276
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "ancient_beast_shell",
+       "count": 6
+      },
+      {
+       "item": "dragon_abyss_scale",
+       "count": 5
+      }
+     ],
+     "rarity": "fine",
+     "final": false
+    },
+    {
+     "id": "node_shijing_blade_d",
+     "name": "夜蚀晶冠刃",
+     "item": "shijing_blade_d",
+     "type": "weapon",
+     "level": 6,
+     "parent": "node_shijing_blade_cd",
+     "branch": [],
+     "stats": {
+      "atk": 331
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "king_night_crown",
+       "count": 8
+      },
+      {
+       "item": "abyss_lord_core",
+       "count": 8
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_linge_blade_a_mid",
+     "name": "迅鳞双刃",
+     "item": "linge_blade_a_mid",
+     "type": "weapon",
+     "level": 2,
+     "parent": "node_scale_ridge_blade",
+     "branch": [],
+     "stats": {
+      "atk": 79
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "rift_wolf_pelt",
+       "count": 8
+      }
+     ],
+     "rarity": "fine",
+     "final": false
+    },
+    {
+     "id": "node_linge_blade_b",
+     "name": "风鳞裂刃",
+     "item": "linge_blade_b",
+     "type": "weapon",
+     "level": 3,
+     "parent": "node_linge_blade_a_mid",
+     "branch": [],
+     "stats": {
+      "atk": 141
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "crystal_mane",
+       "count": 6
+      },
+      {
+       "item": "wind_ridge_shell",
+       "count": 4
+      }
+     ],
+     "rarity": "fine",
+     "final": false
+    },
+    {
+     "id": "node_linge_blade_c",
+     "name": "渊鳞弯刀",
+     "item": "linge_blade_c",
+     "type": "weapon",
+     "level": 4,
+     "parent": "node_linge_blade_b",
+     "branch": [],
+     "stats": {
+      "atk": 202
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "moss_dragon_scale",
+       "count": 6
+      },
+      {
+       "item": "shadow_leopard_fang",
+       "count": 5
+      }
+     ],
+     "rarity": "fine",
+     "final": false
+    },
+    {
+     "id": "node_linge_blade_cd",
+     "name": "沉鳞影刃",
+     "item": "linge_blade_cd",
+     "type": "weapon",
+     "level": 5,
+     "parent": "node_linge_blade_c",
+     "branch": [],
+     "stats": {
+      "atk": 264
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "black_vein_fur",
+       "count": 8
+      },
+      {
+       "item": "night_bat_wing",
+       "count": 5
+      }
+     ],
+     "rarity": "fine",
+     "final": false
+    },
+    {
+     "id": "node_linge_blade_d",
+     "name": "夜鳞苍牙",
+     "item": "linge_blade_d",
+     "type": "weapon",
+     "level": 6,
+     "parent": "node_linge_blade_cd",
+     "branch": [],
+     "stats": {
+      "atk": 317
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "king_night_crown",
+       "count": 10
+      },
+      {
+       "item": "abyss_lord_core",
+       "count": 8
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_yuanmai_blade_2",
+     "name": "渊脉骨刃",
+     "item": "yuanmai_blade_2",
+     "type": "weapon",
+     "level": 2,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "atk": 95
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "vein_shard",
+       "count": 12
+      }
+     ],
+     "rarity": "epic",
+     "final": false
+    },
+    {
+     "id": "node_yuanmai_blade_3",
+     "name": "精英渊脉刃",
+     "item": "yuanmai_blade_3",
+     "type": "weapon",
+     "level": 3,
+     "parent": "node_yuanmai_blade_2",
+     "branch": [],
+     "stats": {
+      "atk": 170
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "eroded_plate",
+       "count": 8
+      },
+      {
+       "item": "crystal_mane",
+       "count": 4
+      }
+     ],
+     "rarity": "epic",
+     "final": false
+    },
+    {
+     "id": "node_yuanmai_blade_4",
+     "name": "渊脉镇脊",
+     "item": "yuanmai_blade_4",
+     "type": "weapon",
+     "level": 4,
+     "parent": "node_yuanmai_blade_3",
+     "branch": [],
+     "stats": {
+      "atk": 244
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "abyss_lord_core",
+       "count": 8
+      },
+      {
+       "item": "dragon_abyss_scale",
+       "count": 5
+      }
+     ],
+     "rarity": "epic",
+     "final": false
+    },
+    {
+     "id": "node_yuanmai_blade_5",
+     "name": "沉渊之刃",
+     "item": "yuanmai_blade_5",
+     "type": "weapon",
+     "level": 5,
+     "parent": "node_yuanmai_blade_4",
+     "branch": [],
+     "stats": {
+      "atk": 318
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "ancient_beast_shell",
+       "count": 10
+      },
+      {
+       "item": "howl_lord_fang",
+       "count": 6
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_wasteland_lord_fang",
+     "name": "荒原领主牙刀",
+     "item": "wasteland_lord_fang",
+     "type": "weapon",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "atk": 100
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "lord_fang",
+       "count": 4
+      },
+      {
+       "item": "wolf_pelt",
+       "count": 4
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_gravelcrown_cleaver",
+     "name": "砾冕斩脊",
+     "item": "gravelcrown_cleaver",
+     "type": "weapon",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "atk": 176
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "barrow_core",
+       "count": 3
+      },
+      {
+       "item": "eroded_plate",
+       "count": 5
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_dragon_abyss_polearm",
+     "name": "渊龙王戟",
+     "item": "dragon_abyss_polearm",
+     "type": "weapon",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "atk": 253
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "dragon_abyss_scale",
+       "count": 3
+      },
+      {
+       "item": "moss_dragon_scale",
+       "count": 5
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_ancient_beast_spine",
+     "name": "沉渊古兽脊",
+     "item": "ancient_beast_spine",
+     "type": "weapon",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "atk": 330
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "ancient_beast_shell",
+       "count": 3
+      },
+      {
+       "item": "dragon_abyss_scale",
+       "count": 4
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_howl_lord_blade",
+     "name": "群山嚎主刃",
+     "item": "howl_lord_blade",
+     "type": "weapon",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "atk": 396
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "howl_lord_fang",
+       "count": 3
+      },
+      {
+       "item": "dusk_wolf_pelt",
+       "count": 6
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_abyss_lord_fang",
+     "name": "黯穴之主牙",
+     "item": "abyss_lord_fang",
+     "type": "weapon",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "atk": 396
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "abyss_lord_core",
+       "count": 3
+      },
+      {
+       "item": "night_bat_wing",
+       "count": 6
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_night_king_sword",
+     "name": "夜嚎君王剑",
+     "item": "night_king_sword",
+     "type": "weapon",
+     "level": 6,
+     "parent": null,
+     "branch": [],
+     "stats": {
+      "atk": 396
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "king_night_crown",
+       "count": 2
+      },
+      {
+       "item": "abyss_lord_core",
+       "count": 6
+      }
+     ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_iron_ridge_sword",
+     "name": "铁脊剑",
+     "item": "iron_ridge_sword",
+     "type": "weapon",
+     "level": 1,
+     "parent": null,
+     "branch": [
+      "node_maifeng_blade_a_mid"
+     ],
+     "materials": [
+      {
+       "item": "vein_shard",
+       "count": 3
+      }
+     ],
+     "stats": {
+      "atk": 14
+     },
+     "slots": [],
+     "rarity": "normal",
+     "final": false
+    },
+    {
+     "id": "node_bone_ridge_knife",
+     "name": "骨脊猎刀",
+     "item": "bone_ridge_knife",
+     "type": "weapon",
+     "level": 1,
+     "parent": null,
+     "branch": [
+      "node_guji_blade_a_mid"
+     ],
+     "materials": [
+      {
+       "item": "vein_shard",
+       "count": 3
+      }
+     ],
+     "stats": {
+      "atk": 15
+     },
+     "slots": [],
+     "rarity": "normal",
+     "final": false
+    },
+    {
+     "id": "node_scale_ridge_blade",
+     "name": "鳞脊短刃",
+     "item": "scale_ridge_blade",
+     "type": "weapon",
+     "level": 1,
+     "parent": null,
+     "branch": [
+      "node_linge_blade_a_mid"
+     ],
+     "materials": [
+      {
+       "item": "vein_shard",
+       "count": 3
+      }
+     ],
+     "stats": {
+      "atk": 13
+     },
+     "slots": [],
+     "rarity": "normal",
+     "final": false
+    }
+   ]
+  }
+ ],
+ "sets": [],
+ "augments": [],
+ "settings": {
+  "forge_fee": "节点等级×60",
+  "straight_forge": true,
+  "exp_per_forge": "节点等级×15",
+  "sets_enabled": false,
+  "augments_enabled": false
+ }
+}

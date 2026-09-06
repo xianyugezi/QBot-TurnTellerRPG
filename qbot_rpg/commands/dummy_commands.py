@@ -201,8 +201,14 @@ async def launch_dummy_battle(
     e_comb = _enemy_combatant(merged)
     try:
         from qbot_rpg.core.battle import BattleEngine  # noqa: PLC0415
+        # 2026-09-07：job_id 注入（transform 解析依赖——木桩战同样支持专精翻面）
+        _jid = str(ctx.get("job_id") or "")
         eng = BattleEngine(defs=all_defs, registry=registry, combo_engine=ce,
                            enemy_def=merged)
+        if _jid:
+            eng.set_job_id(_jid)
+        from qbot_rpg.commands.battle_launch_commands import _resource_registry_of  # noqa: PLC0415
+        eng._resource_registry = _resource_registry_of(ctx)
         eng.start(p_comb, e_comb, random_seed=None, battle_type="dummy")
     except Exception as exc:  # noqa: BLE001 - 开战失败不崩
         return {"ok": False, "message": f"❌ 开战失败：{exc}", "battle_engine": None}

@@ -1561,10 +1561,16 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
                 payload.get("player") or payload.get("combatants")
             ):
                 _all_defs, _chains, _ce = _battle_defs(deps.registry)
-                ctx["battle_engine"] = BattleEngine.from_snapshot(
+                _be = BattleEngine.from_snapshot(
                     payload, registry=deps.registry, defs=_all_defs,
                     combo_engine=_ce,
                 )
+                _jid = str(ctx.get("job_id") or "")
+                if _jid:
+                    _be.set_job_id(_jid)
+                from qbot_rpg.commands.battle_launch_commands import _resource_registry_of  # noqa: PLC0415
+                _be._resource_registry = _resource_registry_of(ctx)
+                ctx["battle_engine"] = _be
         except Exception as exc:  # noqa: BLE001 - 恢复失败降级 None（战斗不可续但指令不崩）
             _LOGGER.warning("battle_engine restore failed: %s", exc)
             ctx["battle_engine"] = None

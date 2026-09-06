@@ -21,7 +21,7 @@
     "armor": true,
     "consume": 0,
     "variant_override": {
-     "power": 300
+     "power": 320
     }
    }
   ]
@@ -178,6 +178,32 @@
     "condition": {
      "count": {
       "eq": 3
+     }
+    },
+    "priority": 1,
+    "mode": "replace",
+    "armor": true,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
+ },
+ {
+  "id": "chain_charge_breaker",
+  "name": "满蓄裂脊链",
+  "trigger_skill": "rb_sweep",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "rb_sweep",
+    "to": "rb_spine_breaker",
+    "tag": "none",
+    "condition": {
+     "self_marks": {
+      "edge_charge": {
+       "min": 3
+      }
      }
     },
     "priority": 1,

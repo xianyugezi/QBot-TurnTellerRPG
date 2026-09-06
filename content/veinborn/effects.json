@@ -127,5 +127,38 @@
   "polarity": "positive",
   "mark": "charge_mark",
   "count": 3
+ },
+ {
+  "id": "edge_gain1",
+  "name": "蓄刃+1",
+  "type": "mark_add",
+  "target": "self",
+  "mark": "edge_charge",
+  "count": 1
+ },
+ {
+  "id": "edge_gain2",
+  "name": "蓄刃+2",
+  "type": "mark_add",
+  "target": "self",
+  "mark": "edge_charge",
+  "count": 2
+ },
+ {
+  "id": "edge_clear3",
+  "name": "蓄刃清空",
+  "type": "mark_remove",
+  "marks_on": "self",
+  "polarity": "positive",
+  "mark": "edge_charge",
+  "count": 3
+ },
+ {
+  "id": "charge_guard15",
+  "name": "蓄势架势",
+  "type": "mitigation",
+  "power": 15,
+  "duration": 1,
+  "desc": "蓄力架势：本回所受伤害 -15%"
  }
 ]

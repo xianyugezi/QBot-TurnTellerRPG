@@ -711,10 +711,19 @@ def dispatch_round(
     e_name = str(e.get("name") or "怪物")
     reward = _battle_rewards(ctx, engine, report)
     segments = _build_segments(snap, int(getattr(report, "turn", 0)))
-    # 技能名注入（M13 6a 路3C）：player_action 含 skill_id → ctx["skills"] 查名
+    # 技能名注入（M13 6a 路3C）：player_action 含 skill_id → ctx["skills"] 查名。
+    # 2026-09-07 派生显示修复：玩家侧 outcome 带 combo_result.form_id（派生/自动
+    # 替换后的实际技能）→ 优先用派生技名（崩山/裂脊斩）；无派生 → 源技能名。
     skill_name = None
     if player_action and str(player_action.get("type") or "") == "skill":
         sid = str(player_action.get("skill_id") or "")
+        _oc = _first_player_outcome(report)
+        if _oc is not None:
+            _cr = getattr(_oc, "combo_result", None)
+            if isinstance(_cr, Mapping):
+                _fid = str(_cr.get("form_id") or "")
+                if _fid:
+                    sid = _fid
         skills = ctx.get("skills")
         if isinstance(skills, Mapping):
             d = skills.get(sid)

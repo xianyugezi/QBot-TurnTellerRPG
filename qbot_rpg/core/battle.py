@@ -2078,6 +2078,10 @@ class BattleEngine:
 
         result = self.combo_engine().apply_action(attacker, ca, self._snap, self._armor_active,
                                                   marks_lookup=_marks_lookup)
+        # 2026-09-07：派生审计透出——apply_action 的 form_id（派生/自动替换实际
+        # 技能）写 ca.combo_result → outcome.combo_result（消息层派生技名用）。
+        if result.form_id and result.form_id != ca.get("skill_id") and not ca.get("combo_result"):
+            ca["combo_result"] = {"form_id": str(result.form_id), "derived": bool(result.derivation)}
         if result.rejected:
             # P1-5（dsh 批3）：被拒不耗回合——回滚 _do_action_inner 前置的 _turn_acted，
             # 否则 next_action_owner/to_snapshot 把被拒当已行动（"不耗回合"被打穿）。

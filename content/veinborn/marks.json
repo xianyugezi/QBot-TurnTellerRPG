@@ -167,5 +167,18 @@
   "polarity": "positive",
   "duration": "battle",
   "desc": "蓄势层数：每层蓄势 +1，满 3 层碎颅变崩山"
+ },
+ {
+  "id": "edge_charge",
+  "name": "蓄刃",
+  "icon": "刃",
+  "type": "mark",
+  "max_stack": 3,
+  "appliable_to": [
+   "self"
+  ],
+  "polarity": "positive",
+  "duration": "battle",
+  "desc": "大剑蓄力层数：轻击/横扫 +1，脊靠 +2；满 3 层脊斩变裂脊斩"
  }
 ]

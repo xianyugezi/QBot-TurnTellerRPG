@@ -3,7 +3,7 @@
   "id": "ridge_blade",
   "name": "脊剑士",
   "difficulty": "simple",
-  "playstyle": "近身连段，专精不竭",
+  "playstyle": "蓄刃重击，一击必离",
   "recommended_newbie": true,
   "resource_axes": [
    "mp",
@@ -44,7 +44,7 @@
     "chain_ridge_combo"
    ]
   },
-  "description": "猎势·不竭：聚焦满翻面，本局连段回精力（专精恒效）。"
+  "description": "猎势·拔脊：聚焦满翻面，拔刀架势——出刀即满蓄（专精恒效）。"
  },
  {
   "id": "vein_archer",

@@ -41,6 +41,22 @@ _TPL_NO_MAP = "battle_lock_no_map"
 # 引擎装配（对齐 scripts/verify_veinborn_smoke.py 金标准：绕 registry Def 坑）
 # ---------------------------------------------------------------------------
 
+
+def _resource_registry_of(ctx: Mapping[str, Any]) -> dict:
+    """资源轴注册表（M13 6c 接线 2026-09-07）：ctx["stats"] 的 resource/rage 型
+    轴定义（stamina/focus 等）——battle energy_cost/gain 与专精翻面资源依赖。
+    无 → 空 dict（零操作降级）。"""
+    stats = ctx.get("stats")
+    out: dict = {}
+    if isinstance(stats, Mapping):
+        for k, v in stats.items():
+            if isinstance(v, Mapping) and (
+                str(v.get("type") or "") in ("resource", "rage", "pool") or v.get("max") is not None
+            ):
+                out[str(k)] = v
+    return out
+
+
 def _battle_defs(registry: Any):
     """registry.modules_raw → (all_defs raw dict 表, ComboEngine 自定 resolver)。
 
@@ -53,7 +69,10 @@ def _battle_defs(registry: Any):
     skills_map = {s["id"]: s for s in raw.get("skills", []) if isinstance(s, Mapping)}
     actions_map = {a["id"]: a for a in raw.get("action", []) if isinstance(a, Mapping)}
     chains_map = {c["id"]: c for c in raw.get("skill_chains", []) if isinstance(c, Mapping)}
+    jobs_map = {j.get("id"): j for j in raw.get("jobs", []) if isinstance(j, Mapping)}
     all_defs: Dict[str, Any] = {**skills_map, **actions_map}
+    if jobs_map:
+        all_defs["jobs"] = jobs_map  # 2026-09-07：transform 段解析（battle _job_transform_segment）
 
     def _resolver(id_: str, kind: str) -> Any:
         if kind == "skill_chain":
@@ -285,6 +304,12 @@ async def launch_pve_battle(
         eng = BattleEngine(
             defs=all_defs, registry=registry, combo_engine=ce, enemy_def=enemy_entry,
         )
+        # 2026-09-07：job_id 注入（transform 解析依赖——_job_transform_segment 查
+        # defs jobs 表 + _job_id；缺省空 → 专精翻面不触发）
+        _job_id = str(ctx.get("job_id") or "")
+        if _job_id:
+            eng.set_job_id(_job_id)
+        eng._resource_registry = _resource_registry_of(ctx)
         eng.start(p_comb, e_comb, random_seed=None)
     except Exception as exc:  # noqa: BLE001 - 开战失败不崩
         _LOGGER.warning("battle launch failed: %s", exc)

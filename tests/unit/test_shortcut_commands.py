@@ -139,13 +139,13 @@ def test_tc_shc_03_help_alias_display():
     不显示 `炼金`；发 `炼丹` 正常触发（解析走 parsers 别名机制，既有）。"""
     import qbot_rpg.commands.basic_commands as bc
     ctx = _make_help_ctx()
-    out = bc.cmd_help(parse("/帮助 制造生活"), ctx)
+    out = bc.cmd_help(parse("/帮助 制造 2"), ctx)  # 炼金在制造组第 2 页（2026-09-06 17 条 4 页）
     # 指令名已替换为别名（描述文本「炼金制作」保留，别名只作用于指令名列，TC-17）
     assert "炼丹 —— 炼金制作" in out
     assert "炼金 —— 炼金制作" not in out
     # keep_original 缺省 true → 双名并显
     ctx2 = _make_help_ctx(aliases={"锻造": "炼器"})
-    out2 = bc.cmd_help(parse("/帮助 制造生活"), ctx2)
+    out2 = bc.cmd_help(parse("/帮助 制造 1"), ctx2)
     assert "锻造/炼器" in out2
 
 

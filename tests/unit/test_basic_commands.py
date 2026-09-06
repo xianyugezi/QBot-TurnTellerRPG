@@ -539,15 +539,17 @@ def test_skill_empty():
 # ---------------------------------------------------------------------------
 
 def test_help_directory_normal():
-    """/帮助 → 普通玩家 5 组目录单页（无 GM 组、无页脚）。"""
+    """/帮助 → 普通玩家 9 组目录 2 页（无 GM 组；快捷/账号在第 2 页）。"""
     out = cmd_help(parse("/帮助"), make_ctx())
     assert "【指令总览】" in out
-    assert "冒险 — 角色/背包/位置/任务" in out
-    assert "战斗 — 攻击/技能" in out
+    assert "冒险 — 角色/角色详细/状态/我的状态/背包" in out  # 2026-09-06 无子集特例取前 5
+    assert "战斗 — 攻击/锁定/锁定怪物/查看目标/技能" in out  # 2026-09-06 前 5
     assert "防御" not in out and "道具" not in out and "逃跑" not in out  # 2026-08-31 拍板：三战斗指令永删
-    assert "快捷 — 快捷绑定/快捷解绑/快捷列表" in out
     assert "GM" not in out                 # RUL-25 普通玩家不渲染 GM 组
-    assert "输入 /帮助 页码 翻页" not in out  # 5 组单页无页脚
+    assert "当前页：1/2" in out             # 2026-09-06 9 组 2 页
+    out2 = cmd_help(parse("/帮助 2"), make_ctx())
+    assert "快捷 — 快捷列表/快捷绑定/快捷解绑" in out2  # 第 2 页（2026-09-06 组内序）
+    assert "账号 — 注册/注销" in out2
 
 
 def test_help_directory_gm_two_pages():
@@ -565,16 +567,16 @@ def test_help_group_page():
     """/帮助 冒险 → 冒险组指令列表 5 条/页 + TPL-08（页脚指令=帮助 冒险）。"""
     out = cmd_help(parse("/帮助 冒险"), make_ctx())
     assert "【冒险】" in out
-    assert "1. 角色 —— 查看角色属性面板" in out
-    assert "5. 进入 —— 进入地图" in out
-    assert "当前页：1/2" in out
+    assert "1. 角色 —— 查看角色面板" in out
+    assert "5. 背包 —— 查看背包（背包 查看 <序号|名称> 看详情）" in out
+    assert "当前页：1/4" in out  # 2026-09-06 冒险 16 条 = 4 页
 
 
 def test_help_group_page2():
     """/帮助 冒险 2 → 第 2 页（休息）。"""
     out = cmd_help(parse("/帮助 冒险 2"), make_ctx())
-    assert "6. 休息 —— 休息恢复" in out
-    assert "当前页：2/2" in out
+    assert "6. 背包筛选 —— 按类型筛选背包" in out
+    assert "当前页：2/4" in out
 
 
 def test_help_group_compact_page():
@@ -584,8 +586,8 @@ def test_help_group_compact_page():
     按组名前缀拆分 → 与「帮助 冒险 2」同输出；末尾 Tip 教紧凑翻页。
     """
     out = cmd_help(parse("帮助冒险2"), make_ctx())
-    assert "6. 休息 —— 休息恢复" in out
-    assert "当前页：2/2" in out
+    assert "6. 背包筛选 —— 按类型筛选背包" in out
+    assert "当前页：2/4" in out
     assert "帮助<组名><页数>" in out  # 组页尾 Tip 教紧凑翻页
 
 
@@ -604,12 +606,12 @@ def test_help_group_compact_bad_suffix_tpl12():
 
 
 def test_help_group_single_page_no_footer():
-    """/帮助 战斗（2 条组）→ 单页无页脚。2026-08-31 拍板：防御/道具/逃跑 已删，战斗组仅 攻击/技能。"""
-    out = cmd_help(parse("/帮助 战斗"), make_ctx())
-    assert "1. 攻击 —— 选择技能攻击目标" in out
-    assert "2. 技能 —— 查看技能列表" in out
+    """/帮助 快捷（3 条组）→ 单页无页脚。2026-08-31 拍板：防御/道具/逃跑 已删不出现。"""
+    out = cmd_help(parse("/帮助 快捷"), make_ctx())
+    assert "1. 快捷列表 —— 查看已绑快捷指令" in out
+    assert "3. 快捷解绑 —— 解绑快捷指令" in out
     assert "防御" not in out and "道具" not in out and "逃跑" not in out
-    assert "输入 /帮助 战斗 页码 翻页" not in out
+    assert "输入 /帮助 快捷 页码 翻页" not in out
 
 
 def test_help_unknown_group_tpl12():
@@ -626,9 +628,9 @@ def test_help_invalid_page_tpl12(raw):
 
 
 def test_help_directory_clamp_normal():
-    """裁决②：/帮助 2（普通玩家目录 1 页）→ 夹取最后一页 + （已到最后一页）。"""
-    out = cmd_help(parse("/帮助 2"), make_ctx())
-    assert "冒险 — 角色/背包/位置/任务" in out
+    """裁决②：/帮助 3（普通玩家目录 2 页）→ 夹取最后一页 + （已到最后一页）。"""
+    out = cmd_help(parse("/帮助 3"), make_ctx())
+    assert "快捷 — 快捷列表/快捷绑定/快捷解绑" in out  # 2026-09-06 第 2 页含快捷/账号
     assert "（已到最后一页）" in out
 
 
@@ -647,9 +649,9 @@ def test_help_unregistered_guide():
 
 def test_help_groups_constants():
     """/帮助 分组常量：普通 5 组 + GM 组；GM 组仅在 is_gm 时渲染（B8）。"""
-    assert len(HELP_GROUPS) == 5
+    assert len(HELP_GROUPS) == 9  # 2026-09-06 全量重建（冒险/战斗/任务/商店/成长/制造/生活/快捷/账号）
     names = [g[0] for g in HELP_GROUPS]
-    assert names == ["冒险", "战斗", "成长", "制造生活", "快捷"]
+    assert names == ["冒险", "战斗", "任务", "商店", "成长", "制造", "生活", "快捷", "账号"]  # 2026-09-06 全量 9 组
     assert bc.GM_HELP_GROUP[0] == "GM"
 
 
@@ -737,7 +739,7 @@ def test_footer_tpl08_exact():
     assert any("Tip:" in ln for ln in cmd_bag(parse("/背包"), ctx).splitlines())
     assert "Tip:发送'使用 序号'穿戴装备，如'使用 1'" in cmd_equip(parse("/装备"), ctx)   # 意见一：不加翻页
     assert "当前页：1/2" in cmd_skill(parse("/技能"), ctx)
-    assert "当前页：1/2" in cmd_help(parse("/帮助 冒险"), ctx)
+    assert "当前页：1/4" in cmd_help(parse("/帮助 冒险"), ctx)  # 2026-09-06 冒险 16 条 4 页
 
 
 def test_no_decorative_emoji():

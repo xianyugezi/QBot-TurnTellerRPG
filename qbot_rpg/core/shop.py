@@ -207,15 +207,10 @@ def _first_currency(ctx: Mapping[str, Any]) -> str:
 
 
 def _currency_name(ctx: Mapping[str, Any], key: str) -> str:
-    """货币键 → 中文名（settings currencies[].name；缺省兜底表；再缺省原键）。"""
-    currencies = _settings(ctx).get("currencies")
-    if isinstance(currencies, list):
-        for e in currencies:
-            if isinstance(e, Mapping) and e.get("id") == key:
-                name = e.get("name")
-                if isinstance(name, str) and name:
-                    return name
-    return _CURRENCY_NAME_FALLBACK.get(key, key)
+    """货币键 → 中文名（2026-09-06 统一走 reward.currency_display_name）。"""
+    from qbot_rpg.core.reward import currency_display_name  # noqa: PLC0415
+
+    return currency_display_name(ctx, key)
 
 
 def _currency_cap(ctx: Mapping[str, Any], key: str) -> Optional[int]:

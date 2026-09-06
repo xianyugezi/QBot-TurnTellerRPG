@@ -413,6 +413,29 @@ def _currencies(player: Mapping[str, Any]) -> MutableMapping[str, Any]:
     return c if isinstance(c, MutableMapping) else {}
 
 
+def _cur_name(ctx: Mapping[str, Any]) -> str:
+    """货币显示名（2026-09-06 硬编码清理：统一 reward.currency_display_name）。"""
+    from qbot_rpg.core.reward import currency_display_name  # noqa: PLC0415
+
+    return currency_display_name(ctx, "coins")
+
+
+
+def _gem_display_name(ctx: Mapping[str, Any]) -> str:
+    """宝石货币显示名（温室消耗的宝石账；无 gem/diamond 配置 → 兜底「宝石」）。"""
+    cfg = ctx.get("settings")
+    if isinstance(cfg, Mapping):
+        cl = cfg.get("currencies")
+        if isinstance(cl, list):
+            for c in cl:
+                if isinstance(c, Mapping):
+                    cid = str(c.get("id") or "")
+                    if cid in ("gem", "diamond"):
+                        nm = c.get("name")
+                        if nm:
+                            return str(nm)
+    return "宝石"
+
 def _coins_of(player: Mapping[str, Any]) -> int:
     """金币持有（currencies.coins，BATCH-05 原子校验）。"""
     try:
@@ -961,7 +984,7 @@ def _cmd_alchemy_batch(
         if have < ci * qty:
             shortfall.append({"item": mid, "count": ci * qty, "have": have})
     if coins_need > 0 and _coins_of(player) < coins_need:
-        shortfall.append({"item": "coins", "name": "金币",
+        shortfall.append({"item": "coins", "name": _cur_name(ctx),
                           "count": coins_need, "have": _coins_of(player)})
     if shortfall:
         diff = _shortfall_text(ctx, shortfall)
@@ -1001,7 +1024,8 @@ def _cmd_alchemy_batch(
                {"name": _item_name(ctx, mid), "count": ci * qty})
         for mid, ci in need_mats
     )
-    coin_text = (tpl_of(ctx, "alchemy_batch_coins", {"coins_need": coins_need})
+    coin_text = (tpl_of(ctx, "alchemy_batch_coins",
+                        {"coins_need": coins_need, "currency": _cur_name(ctx)})
                  if coins_need else "")
     output_name = _item_name(ctx, output_id)
     main = tpl_of(ctx, "alchemy_batch_output", {
@@ -3417,7 +3441,10 @@ def _greenhouse_status_lines(ctx: MutableMapping[str, Any],
         ut = gh.get("unlock_tier")
         if isinstance(ut, str) and ut:
             unlock_name = ut
-    lines.append(f"温室复制（{unlock_name} 解锁）：/温室 复制 <素材> 消耗宝石+金币量产素材")
+    _gem_name = _gem_display_name(ctx)
+    _coin_label = _cur_name(ctx)
+    lines.append(f"温室复制（{unlock_name} 解锁）：/温室 复制 <素材> "
+                 f"消耗{_gem_name}+{_coin_label}量产素材")
     return lines
 
 

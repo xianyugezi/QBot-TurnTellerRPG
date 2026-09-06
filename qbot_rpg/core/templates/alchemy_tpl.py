@@ -48,7 +48,7 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
 
     # —— /炼金 批量（BATCH-01~05）——
     "alchemy_batch_no_output": "❌ 该配方无法批量调合",
-    "alchemy_batch_coins": " + 金币 {coins_need}",
+    "alchemy_batch_coins": " + {currency} {coins_need}",
     "alchemy_batch_output": "✅ {output_name} ×{qty}（批量调合：消耗 {mats_text}"
                             "{coin_text}）｜平均品质 {score}·{tier}",
     "alchemy_batch_energy_suffix": "｜{note}",
@@ -231,7 +231,7 @@ PLACEHOLDER_WHITELIST: Dict[str, set] = {
 
     # —— /炼金 批量 ——
     "alchemy_batch_no_output": set(),
-    "alchemy_batch_coins": {"coins_need"},
+    "alchemy_batch_coins": {"currency", "coins_need"},
     "alchemy_batch_output": {"output_name", "qty", "mats_text", "coin_text",
                              "score", "tier"},
     "alchemy_batch_energy_suffix": {"note"},

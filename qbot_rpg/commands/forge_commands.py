@@ -1011,7 +1011,11 @@ def _execute(
         # 金币不足 → 回滚素材，失败零副作用
         for done in deducted:
             _add_item(ctx, done, int(holdings[done]["need"]), bound=False)
-        return tpl_of(ctx, "forge_coin_short", {"cost": cost, "coins_have": coins_have})
+        from qbot_rpg.core.reward import currency_display_name  # noqa: PLC0415
+
+        return tpl_of(ctx, "forge_coin_short", {
+            "cost": cost, "coins_have": coins_have,
+            "currency": currency_display_name(ctx, "coins")})
     if cost > 0 and isinstance(currencies, MutableMapping):
         currencies["coins"] = coins_have - cost
 

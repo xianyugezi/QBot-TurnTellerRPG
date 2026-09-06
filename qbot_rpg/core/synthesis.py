@@ -434,16 +434,37 @@ class SynthesisEngine:
                     found = True
         return short if found else None
 
-    @staticmethod
-    def _format_shortfall(short: Mapping[str, Any]) -> str:
+    def _coin_cn(self, ctx: Mapping[str, Any]) -> str:
+        """金币显示名（2026-09-06 硬编码清理）。"""
+        from qbot_rpg.core.reward import currency_display_name  # noqa: PLC0415
+
+        return currency_display_name(ctx, "coins")
+
+    def _gem_cn(self, ctx: Mapping[str, Any]) -> str:
+        """宝石显示名（gem/diamond 配置；查无宝石兜底）。"""
+        try:
+            cfg = ctx.get("settings")
+            if isinstance(cfg, Mapping):
+                cl = cfg.get("currencies")
+                if isinstance(cl, list):
+                    for c in cl:
+                        if isinstance(c, Mapping) and str(c.get("id") or "") in ("gem", "diamond"):
+                            nm = c.get("name")
+                            if nm:
+                                return str(nm)
+        except Exception:  # noqa: BLE001
+            pass
+        return "宝石"
+
+    def _format_shortfall(self, ctx: Mapping[str, Any], short: Mapping[str, Any]) -> str:
         """差异提示文案：「缺 水结晶×5 + 金币 30」（TC-23；材料×缺额 + 金币 缺额 + 宝石 缺额）。"""
         parts: List[str] = []
         for name, deficit in short.get("items", []):
             parts.append(f"{name}×{deficit}")
         if short.get("coins"):
-            parts.append(f"金币 {short['coins']}")
+            parts.append(f"{self._coin_cn(ctx)} {short['coins']}")
         if short.get("gem"):
-            parts.append(f"宝石 {short['gem']}")
+            parts.append(f"{self._gem_cn(ctx)} {short['gem']}")
         return " + ".join(parts)
 
     def _format_consume(self, ctx: Mapping[str, Any], recipe: Mapping[str, Any], n: int) -> str:
@@ -460,10 +481,11 @@ class SynthesisEngine:
                         parts.append(f"{_item_name(mid, ctx)}×{total}")
         cost = recipe.get("cost")
         if isinstance(cost, Mapping):
-            for key, label in (("coins", "金币"), ("gem", "宝石")):
+            for key in ("coins", "gem"):
                 total = (_as_int(cost.get(key)) or 0) * n
                 if total > 0:
-                    parts.append(f"{label} {total}")
+                    nm = self._coin_cn(ctx) if key == "coins" else self._gem_cn(ctx)
+                    parts.append(f"{nm} {total}")
         return " + ".join(parts)
 
     # ------------------------------------------------------------------
@@ -565,7 +587,7 @@ class SynthesisEngine:
         # 原子校验（GU-04/ATO-01：材料+金币全量满足才执行，否则全拒+差异提示）
         short = self._material_shortfall(ctx, recipe, n)
         if short is not None:
-            diff = self._format_shortfall(short)
+            diff = self._format_shortfall(ctx, short)
             return {"ok": False, "reason": "materials",
                     "message": f"❌ 材料不足：缺 {diff}",
                     "produced": None, "exp_gained": 0, "advisory": advisory,

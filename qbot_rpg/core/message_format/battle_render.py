@@ -869,9 +869,13 @@ def _render_reward_line(exp: int, gold: int, drops: Any = None, *, ctx: Any = No
     drops 为 (名称, 数量) 二元组序列或含 name/素材 + count/n 键的 dict 序列。
     模板 battle_reward_line / battle_reward_exp / battle_reward_gold / battle_reward_drop。
     """
+    # 2026-09-06 硬编码清理：货币名走配置（ctx settings currencies[].name）
+    from qbot_rpg.core.reward import currency_display_name  # noqa: PLC0415
+
+    cur_name = currency_display_name(ctx or {}, "coins")
     parts: List[str] = [
         tpl_of(ctx, "battle_reward_exp", {"exp": exp}),
-        tpl_of(ctx, "battle_reward_gold", {"gold": gold}),
+        tpl_of(ctx, "battle_reward_gold", {"gold": gold, "currency": cur_name}),
     ]
     for d in drops or ():
         if isinstance(d, Mapping):
@@ -919,8 +923,11 @@ def _render_settlement(round_result: Any, *, ctx: Any = None) -> Optional[str]:
                 "enemy": enemy_name}))
         lines.append(tpl_of(ctx, "battle_settle_exp", {
             "exp": int(getattr(round_result, "exp", 0) or 0)}))
+        from qbot_rpg.core.reward import currency_display_name  # noqa: PLC0415
+
         lines.append(tpl_of(ctx, "battle_settle_gold", {
-            "gold": int(getattr(round_result, "gold", 0) or 0)}))
+            "gold": int(getattr(round_result, "gold", 0) or 0),
+            "currency": currency_display_name(ctx or {}, "coins")}))
         drops = getattr(round_result, "drops", None)
         if drops:
             lines.append(tpl_of(ctx, "battle_settle_loot_header"))

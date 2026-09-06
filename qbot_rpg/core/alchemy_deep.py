@@ -555,10 +555,12 @@ class DeepEngine:
             cost_coins = max(0, _clamp_int(cost.get("coins"), 0, lo=0))
         if cost_coins > 0:
             if cur is None or _clamp_int(cur.get("coins", 0), 0, lo=0) < cost_coins:
+                from qbot_rpg.core.reward import currency_display_name  # noqa: PLC0415
+
                 return {
                     "ok": False,
                     "reason": "coins_insufficient",
-                    "message": f"金币不足（需 {cost_coins}）",
+                    "message": f"{currency_display_name(ctx, 'coins')}不足（需 {cost_coins}）",
                 }
         # ④ 扣材料+宝石（hook 缺失 → 拒绝零副作用）
         remove_item = ctx.get("remove_item")

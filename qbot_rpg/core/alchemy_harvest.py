@@ -261,6 +261,30 @@ def _count_item(ctx: Mapping[str, Any], item_id: str) -> int:
     return 0
 
 
+
+def _coin_cn(ctx: Mapping[str, Any]) -> str:
+    """金币显示名（2026-09-06 硬编码清理）。"""
+    from qbot_rpg.core.reward import currency_display_name  # noqa: PLC0415
+
+    return currency_display_name(ctx, "coins")
+
+
+def _gem_cn(ctx: Mapping[str, Any]) -> str:
+    """宝石显示名（gem/diamond 配置名；查无 → 宝石兜底）。"""
+    try:
+        cfg = ctx.get("settings")
+        if isinstance(cfg, Mapping):
+            cl = cfg.get("currencies")
+            if isinstance(cl, list):
+                for c in cl:
+                    if isinstance(c, Mapping) and str(c.get("id") or "") in ("gem", "diamond"):
+                        nm = c.get("name")
+                        if nm:
+                            return str(nm)
+    except Exception:  # noqa: BLE001
+        pass
+    return "宝石"
+
 def _snapshot(ctx: Mapping[str, Any], player: Mapping[str, Any]) -> dict:
     """快照（原子防双扣，对齐 synthesis._snapshot）。"""
     snap: dict = {"ctx": {}, "player": {}}
@@ -837,12 +861,12 @@ class HarvestEngine:
         coins_have = int(currencies.get("coins", 0)) if isinstance(currencies, Mapping) else 0
         if gem_cost > 0 and gem_have < gem_cost:
             return {"ok": False, "reason": "currency_shortfall",
-                    "message": f"温室复制需要 宝石 {gem_cost}，当前只有 {gem_have}",
+                    "message": f"温室复制需要 {_gem_cn(ctx)} {gem_cost}，当前只有 {gem_have}",
                     "material_id": material_id, "material_name": material_name,
                     "gem_cost": gem_cost, "coins_cost": coins_cost}
         if coins_cost > 0 and coins_have < coins_cost:
             return {"ok": False, "reason": "currency_shortfall",
-                    "message": f"温室复制需要 金币 {coins_cost}，当前只有 {coins_have}",
+                    "message": f"温室复制需要 {_coin_cn(ctx)} {coins_cost}，当前只有 {coins_have}",
                     "material_id": material_id, "material_name": material_name,
                     "gem_cost": gem_cost, "coins_cost": coins_cost}
         # 原子结算：扣货币 + 素材入包（快照-回滚防双扣；ARB-00 分账，金币账走 coins 键）
@@ -863,9 +887,9 @@ class HarvestEngine:
                     "material_id": material_id, "material_name": material_name}
         parts = []
         if gem_cost > 0:
-            parts.append(f"宝石 {gem_cost}")
+            parts.append(f"{_gem_cn(ctx)} {gem_cost}")
         if coins_cost > 0:
-            parts.append(f"金币 {coins_cost}")
+            parts.append(f"{_coin_cn(ctx)} {coins_cost}")
         cost_seg = " + ".join(parts) if parts else "无消耗"
         return {
             "ok": True,

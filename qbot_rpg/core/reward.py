@@ -49,6 +49,7 @@ __all__ = [
     "dispatch_reward",
     "expand_inline_reward",
     "normalize_reward",
+    "currency_display_name",
     "DEFAULT_CURRENCY_IDS",
 ]
 
@@ -64,6 +65,33 @@ _TITLE_KEYS: tuple = ("title",)
 
 # 内联键值串单段语法：key[:=]value，物品支持 item:名称*N 数量后缀
 _PAIR_RE = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*[:=]\s*(.+?)\s*$")
+
+
+def currency_display_name(ctx: Mapping[str, Any], key: object) -> str:
+    """货币 id → 显示名（2026-09-06 硬编码清理：settings.currencies[].name 优先）。
+
+    settings.currencies[].id/name 匹配（内容包可配：veinborn coins=脉晶币 /
+    demo coins=金币）；无 settings 或查无 → 兜底 coins→金币 + str(key)（测试/防御，
+    不误导为别的币）。全仓货币显示统一走本函数（原 basic/shop/quest/checkin
+    各持私有 dict 硬编码副本，且 basic 版误读 key 字段漏匹配 settings）。
+    """
+    key_s = str(key) if key is not None else ""
+    if not key_s:
+        return key_s
+    try:
+        cfg = ctx.get("settings")
+        if isinstance(cfg, Mapping):
+            cur_list = cfg.get("currencies")
+            if isinstance(cur_list, list):
+                for c in cur_list:
+                    if isinstance(c, Mapping) and str(c.get("id") or "") == key_s:
+                        nm = c.get("name")
+                        if nm:
+                            return str(nm)
+    except Exception:  # noqa: BLE001 —— 显示兜底，绝不抛
+        pass
+    _fb = {"coins": "金币", "gem": "宝石", "diamond": "钻石"}
+    return _fb.get(key_s, key_s)
 
 
 def _settings_currency_space(ctx: Mapping[str, Any]) -> tuple:

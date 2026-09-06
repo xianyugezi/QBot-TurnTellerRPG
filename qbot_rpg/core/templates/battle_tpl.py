@@ -94,14 +94,14 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     # —— BREP-20 经验与掉落行（items 已按 、 拼接）——
     "battle_reward_line": "✅ 获得 {items}",
     "battle_reward_exp": "经验 {exp}",
-    "battle_reward_gold": "金币 {gold}",
+    "battle_reward_gold": "{currency} {gold}",
     "battle_reward_drop": "{name}×{count}",
 
     # —— 用户结算模板（2026-08-27 拍板；win 叙事句 + 经验/金币分行 + 战利品列表）——
     "battle_settle_win_narrative": "您对{enemy}造成了{dmg}点伤害！{enemy}已死亡。",
     "battle_settle_win_narrative_fallback": "您击败了{enemy}！",
     "battle_settle_exp": "获得经验：{exp}",
-    "battle_settle_gold": "获得金币：{gold}",
+    "battle_settle_gold": "获得{currency}：{gold}",
     "battle_settle_loot_header": "获得的战利品如下→",
     "battle_settle_loot_item": "{index}.{name}×{count}",
     # —— 战斗升级行（2026-09-03 奖励结算：击杀奖励经验触发升级时附一行）——
@@ -183,12 +183,12 @@ PLACEHOLDER_WHITELIST: Dict[str, set] = {
     "battle_kill_line": {"target"},
     "battle_reward_line": {"items"},
     "battle_reward_exp": {"exp"},
-    "battle_reward_gold": {"gold"},
+    "battle_reward_gold": {"currency", "gold"},
     "battle_reward_drop": {"name", "count"},
     "battle_settle_win_narrative": {"enemy", "dmg"},
     "battle_settle_win_narrative_fallback": {"enemy"},
     "battle_settle_exp": {"exp"},
-    "battle_settle_gold": {"gold"},
+    "battle_settle_gold": {"currency", "gold"},
     "battle_settle_loot_header": set(),
     "battle_settle_loot_item": {"index", "name", "count"},
     "battle_settle_levelup": {"level"},

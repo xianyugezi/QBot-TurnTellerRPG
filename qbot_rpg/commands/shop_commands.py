@@ -140,19 +140,11 @@ def _gate(ctx: Mapping[str, Any]) -> Optional[str]:
 
 
 def _currency_name(ctx: Mapping[str, Any], key: object) -> str:
-    """货币键 → 中文名（settings currencies[].name；缺省兜底表；再缺省原键）。
+    """货币键 → 中文名（2026-09-06 硬编码清理：统一 reward.currency_display_name）。"""
+    # 2026-09-06 硬编码清理：统一 reward.currency_display_name
+    from qbot_rpg.core.reward import currency_display_name  # noqa: PLC0415
 
-    【工程补白】镜像引擎 _currency_name 私有实现（settings 消费语义一致，避免跨层改引擎）。
-    """
-    settings = ctx.get("settings") if isinstance(ctx, Mapping) else None
-    currencies = settings.get("currencies") if isinstance(settings, Mapping) else None
-    if isinstance(currencies, list):
-        for e in currencies:
-            if isinstance(e, Mapping) and e.get("id") == key:
-                name = e.get("name")
-                if isinstance(name, str) and name:
-                    return name
-    return {"coins": "金币", "gem": "宝石"}.get(key, key) if isinstance(key, str) else str(key)
+    return currency_display_name(ctx, key)
 
 
 def _fragment(parsed: Any) -> str:

@@ -662,14 +662,11 @@ def bag_line(index: int, row: Any, ctx: Mapping[str, Any]) -> str:
 def _currency_display_name(ctx: Mapping[str, Any], key: str) -> str:
     """货币键 → 中文名（settings currencies[].name 优先；缺省兜底 coins=金币/gem=钻石，
     框架 §8.1 默认模板「金币 + 钻石」）。"""
-    settings = ctx.get("settings")
-    currencies = settings.get("currencies") if isinstance(settings, Mapping) else None
-    if isinstance(currencies, list):
-        for e in currencies:
-            if (isinstance(e, Mapping) and str(e.get("key", "")) == str(key)
-                    and e.get("name")):
-                return str(e["name"])
-    return {"coins": "金币", "gem": "钻石"}.get(str(key), str(key))
+    # 2026-09-06 硬编码清理：统一 reward.currency_display_name（settings id 匹配；
+    # 原版误读 key 字段且 gem/钻石 fallback 与其他模块不一致）
+    from qbot_rpg.core.reward import currency_display_name  # noqa: PLC0415
+
+    return currency_display_name(ctx, key)
 
 
 def _currency_lines(ctx: Mapping[str, Any]) -> List[str]:

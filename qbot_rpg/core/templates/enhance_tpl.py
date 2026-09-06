@@ -52,7 +52,7 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     "enhance_material_short": "❌ 材料不足：需要 {need}；缺：{deficits}",
     "enhance_material_item": "{name}×{need}",
     "enhance_material_deficit": "{name}×{deficit}",
-    "enhance_coin_short": "❌ 金币不足：需要 {cost}，当前 {coins_have}",
+    "enhance_coin_short": "❌ {currency}不足：需要 {cost}，当前 {coins_have}",
     "enhance_protect_missing": "需要 保护石 ×1（来源：炼金产出 / 商店 / 活动奖励）",
 
     # —— 结算行（§1.5 模板：成功率显示拆分 + 成功/失败分级）——
@@ -71,7 +71,8 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     "enhance_info_title_zero": "{name}（品质：{quality}｜强化上限 +{max}）",
     "enhance_info_rate_row": "→ +{to} 成功率：{rate}%（基础 {base}% + 幸运 {luck}%）",
     "enhance_info_rate_row_luck_off": "→ +{to} 成功率：{rate}%（幸运修正已关）",
-    "enhance_info_cost_row": "→ +{to} 消耗：{stones} ｜ 持有：{stone_have} / 金币 {coins_have}",
+    "enhance_info_cost_row": ("→ +{to} 消耗：{stones} ｜ 持有：{stone_have}"
+                               " / {currency} {coins_have}"),
     "enhance_info_at_max": "已达强化上限（+{max}）",
     "enhance_info_dist": "距离上限：{dist} 级",
     "enhance_info_hint": "发送 /强化 {name} 或 /强化保护 {name} 强化",
@@ -102,7 +103,7 @@ PLACEHOLDER_WHITELIST: Dict[str, set] = {
     "enhance_material_short": {"need", "deficits"},
     "enhance_material_item": {"name", "need"},
     "enhance_material_deficit": {"name", "deficit"},
-    "enhance_coin_short": {"cost", "coins_have"},
+    "enhance_coin_short": {"cost", "coins_have", "currency"},
     "enhance_protect_missing": set(),
     "enhance_roll_line": {"name", "to", "rate", "base", "luck"},
     "enhance_roll_line_luck_off": {"name", "to", "rate"},
@@ -115,7 +116,7 @@ PLACEHOLDER_WHITELIST: Dict[str, set] = {
     "enhance_info_title_zero": {"name", "quality", "max"},
     "enhance_info_rate_row": {"to", "rate", "base", "luck"},
     "enhance_info_rate_row_luck_off": {"to", "rate"},
-    "enhance_info_cost_row": {"to", "stones", "stone_have", "coins_have"},
+    "enhance_info_cost_row": {"to", "stones", "stone_have", "coins_have", "currency"},
     "enhance_info_at_max": {"max"},
     "enhance_info_dist": {"dist"},
     "enhance_info_hint": {"name"},

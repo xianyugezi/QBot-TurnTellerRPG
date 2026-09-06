@@ -407,6 +407,28 @@ class UpgradeEngine:
                 return max(0, iv)
         return 0
 
+    def _coin_cn(self, ctx: Mapping[str, Any]) -> str:
+        """金币显示名（2026-09-06 硬编码清理）。"""
+        from qbot_rpg.core.reward import currency_display_name  # noqa: PLC0415
+
+        return currency_display_name(ctx, "coins")
+
+    def _gem_cn(self, ctx: Mapping[str, Any]) -> str:
+        """宝石显示名（gem/diamond 配置；查无宝石兜底）。"""
+        try:
+            cfg = ctx.get("settings")
+            if isinstance(cfg, Mapping):
+                cl = cfg.get("currencies")
+                if isinstance(cl, list):
+                    for c in cl:
+                        if isinstance(c, Mapping) and str(c.get("id") or "") in ("gem", "diamond"):
+                            nm = c.get("name")
+                            if nm:
+                                return str(nm)
+        except Exception:  # noqa: BLE001
+            pass
+        return "宝石"
+
     def _input_diffs(self, ctx: Mapping[str, Any], cfg: Mapping) -> List[str]:
         """输入持有差异清单：{item,count} 全量校验，不足项给差异提示（BATCH-06.3 全拒+差异）。"""
         diffs: List[str] = []
@@ -434,12 +456,12 @@ class UpgradeEngine:
             held = _as_int(cur.get("coins", 0))
             held = held if held is not None else 0
             if held < coins:
-                diffs.append(f"金币 ×{coins - held}（持有 {held}，需 {coins}）")
+                diffs.append(f"{self._coin_cn(ctx)} ×{coins - held}（持有 {held}，需 {coins}）")
         if gem > 0:
             held = _as_int(cur.get("gem", 0))
             held = held if held is not None else 0
             if held < gem:
-                diffs.append(f"宝石 ×{gem - held}（持有 {held}，需 {gem}）")
+                diffs.append(f"{self._gem_cn(ctx)} ×{gem - held}（持有 {held}，需 {gem}）")
         if diffs:
             return "、".join(diffs)
         return None

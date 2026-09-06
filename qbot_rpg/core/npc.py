@@ -114,6 +114,13 @@ DEGRADED_ACTIONS: tuple = ("repair",)
 # -------------------------------------------------------------------------------------
 # 结果构造（统一返回形态）
 # -------------------------------------------------------------------------------------
+
+def _coin_name(ctx: Mapping[str, Any]) -> str:
+    """金币显示名（2026-09-06 硬编码清理）。"""
+    from qbot_rpg.core.reward import currency_display_name  # noqa: PLC0415
+
+    return currency_display_name(ctx, "coins")
+
 def _res(action: str, ok: bool, kind: str = "functional", **kw: Any) -> dict:
     """动作结果：{ok, action, kind, reason?, message?, data?, granted?, skipped?, already?, delivered?}。
 
@@ -561,7 +568,7 @@ def _action_heal(entry: Mapping[str, Any], ctx: Mapping[str, Any], **kw: Any) ->
     if coins_cost and currencies.get("coins", 0) < coins_cost:
         return _res("heal", False, reason="insufficient_funds", data={"needed": coins_cost,
                                                                       "have": currencies.get("coins", 0)},
-                    message="金币不足，无法治疗")
+                    message=f"{_coin_name(ctx)}不足，无法治疗")
     healed = resolve_heal(entry.get("heal"), ctx)
     if not healed:
         return _res("heal", False, reason="no_heal_amount", message="治疗配置为空")

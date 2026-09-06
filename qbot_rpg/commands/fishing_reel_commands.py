@@ -227,7 +227,9 @@ def _settle_after_reel(ctx: MutableMapping[str, Any], result: Mapping[str, objec
                 int(x.get("amount", 0)) for x in reward
                 if isinstance(x, Mapping) and x.get("type") == "currency"
             )
-            lines.append(f"奖励：金币 +{coins}")
+            from qbot_rpg.core.reward import currency_display_name  # noqa: PLC0415
+
+            lines.append(f"奖励：{currency_display_name(ctx, 'coins')} +{coins}")
         return "\n".join(lines)
     except Exception:
         return None

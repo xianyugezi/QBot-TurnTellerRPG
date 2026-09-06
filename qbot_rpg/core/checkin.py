@@ -836,23 +836,10 @@ def _item_name(ctx: Optional[Mapping[str, Any]], item_id: object) -> str:
 
 
 def _currency_name(ctx: Optional[Mapping[str, Any]], cid: object) -> str:
-    """货币 id → 配置中文名（settings.currencies[].name；查无 → id 兜底）。"""
-    key = str(cid) if cid is not None else ""
-    if not key or ctx is None:
-        return key
-    try:
-        cfg = ctx.get("settings")
-        if isinstance(cfg, Mapping):
-            cur_list = cfg.get("currencies")
-            if isinstance(cur_list, list):
-                for c in cur_list:
-                    if isinstance(c, Mapping) and str(c.get("id") or "") == key:
-                        nm = c.get("name")
-                        if nm:
-                            return str(nm)
-    except Exception:  # noqa: BLE001
-        pass
-    return key
+    """货币 id → 配置中文名（2026-09-06 统一走 reward.currency_display_name）。"""
+    from qbot_rpg.core.reward import currency_display_name  # noqa: PLC0415
+
+    return currency_display_name(ctx or {}, cid)
 
 
 def _summary_lines(results: List[dict], today: str,

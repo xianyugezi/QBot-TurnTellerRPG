@@ -1082,26 +1082,10 @@ def _grant_label(grant: Mapping, ctx: Mapping[str, Any]) -> str:
 
 
 def _currency_name(ctx: Mapping[str, Any], cid: object) -> str:
-    """货币 id → 配置中文名（2026-09-06 实机：奖励显示「200 coins」应为「200 脉晶币」）。
+    """货币 id → 配置中文名（2026-09-06 统一走 reward.currency_display_name）。"""
+    from qbot_rpg.core.reward import currency_display_name  # noqa: PLC0415
 
-    settings.currencies[].name（内容包可配）；查无 → id 兜底（不误导为别的币）。
-    """
-    key = str(cid) if cid is not None else ""
-    if not key:
-        return key
-    try:
-        cfg = ctx.get("settings")
-        if isinstance(cfg, Mapping):
-            cur_list = cfg.get("currencies")
-            if isinstance(cur_list, list):
-                for c in cur_list:
-                    if isinstance(c, Mapping) and str(c.get("id") or "") == key:
-                        nm = c.get("name")
-                        if nm:
-                            return str(nm)
-    except Exception:  # noqa: BLE001
-        pass
-    return key
+    return currency_display_name(ctx, cid)
 
 
 # -------------------------------------------------------------------------------------

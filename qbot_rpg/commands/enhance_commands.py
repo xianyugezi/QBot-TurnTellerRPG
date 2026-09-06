@@ -462,6 +462,13 @@ def _remove_item(ctx: MutableMapping[str, Any], item_id: str, count: int) -> boo
     return False
 
 
+def _cur_name(ctx: Mapping[str, Any]) -> str:
+    """货币显示名（2026-09-06 硬编码清理：统一 reward.currency_display_name）。"""
+    from qbot_rpg.core.reward import currency_display_name  # noqa: PLC0415
+
+    return currency_display_name(ctx, "coins")
+
+
 def _coins(player: MutableMapping[str, Any]) -> int:
     cur = player.get("currencies")
     if isinstance(cur, Mapping):
@@ -738,12 +745,12 @@ def _settle(ctx: MutableMapping[str, Any], name: str, declared: int,
                                 "deficit": stones_n - have_stone}))
     have_coins = _coins(player)
     if have_coins < coin_n:
-        deficits.append(f"金币×{coin_n - have_coins}")
+        deficits.append(f"{_cur_name(ctx)}×{coin_n - have_coins}")
     if deficits:
         need = " + ".join([
             tpl_of(ctx, "enhance_material_item",
                    {"name": _stone_cn(ctx, stone_item), "need": stones_n}),
-            f"金币 {coin_n}"])
+            f"{_cur_name(ctx)} {coin_n}"])
         return tpl_of(ctx, "enhance_material_short",
                       {"need": need, "deficits": "、".join(deficits)})
 
@@ -796,7 +803,8 @@ def _commit_success(ctx: MutableMapping[str, Any], player: MutableMapping[str, A
                       {"need": stone_item, "deficits": f"{stone_item}×{stones_n}"})
     if not _spend_coins(player, coin_n):
         return tpl_of(ctx, "enhance_coin_short",
-                      {"cost": coin_n, "coins_have": _coins(player)})
+                      {"cost": coin_n, "coins_have": _coins(player),
+                       "currency": _cur_name(ctx)})
     # 先算属性增量（读旧 cur），再升档——顺序反了会读到自己刚写的等级而早退
     attr_key, old_v, new_v = _apply_enhance_stats(ctx, slot, slot_id, to_level)
     _set_slot_level(player, slot, slot_id, to_level)
@@ -824,7 +832,8 @@ def _commit_fail(ctx: MutableMapping[str, Any], player: MutableMapping[str, Any]
                       {"need": stone_item, "deficits": f"{stone_item}×{stones_n}"})
     if not _spend_coins(player, coin_n):
         return tpl_of(ctx, "enhance_coin_short",
-                      {"cost": coin_n, "coins_have": _coins(player)})
+                      {"cost": coin_n, "coins_have": _coins(player),
+                       "currency": _cur_name(ctx)})
     split = _fail_split(cfg)
     roll_line = tpl_of(ctx, "enhance_roll_line", {
         "name": name, "to": to_level, "rate": rate, "base": base, "luck": luck_pp})
@@ -913,8 +922,9 @@ def cmd_enhance_info(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     stone_have = _count_item(ctx, stone_item)
     cost_row = tpl_of(ctx, "enhance_info_cost_row", {
         "to": to_level,
-        "stones": f"{_stone_cn(ctx, stone_item)} ×{stones_n} + 金币 ×{coin_n}",
-        "stone_have": stone_have, "coins_have": _coins(player)})
+        "stones": f"{_stone_cn(ctx, stone_item)} ×{stones_n} + {_cur_name(ctx)} ×{coin_n}",
+        "stone_have": stone_have, "coins_have": _coins(player),
+        "currency": _cur_name(ctx)})
     lines = [head, rate_row, cost_row]
     dist = mx - cur
     if dist > 0:

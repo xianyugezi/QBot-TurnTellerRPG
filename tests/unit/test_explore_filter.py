@@ -192,6 +192,7 @@ def test_explore_shell_single_message():
 _ENTER_MAPS = [
     {
         "id": "start_village", "name": "起始村落", "desc": "宁静的小村",
+        "camp_name": "起始村落",
         "monsters": [
             {"enemy": "rock_weasel", "count": 3, "respawn_minutes": 10},
         ],
@@ -199,6 +200,7 @@ _ENTER_MAPS = [
     },
     {
         "id": "forest_edge", "name": "林间边缘", "desc": "树影幢幢的林缘",
+        "camp_name": "林间营地",
         "monsters": [
             {"enemy": "rock_weasel", "count": 2, "respawn_minutes": 10},
             {"enemy": "stone_skink", "count": 1, "respawn_minutes": 30},

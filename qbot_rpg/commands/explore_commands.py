@@ -81,43 +81,40 @@ def _maps_index_for(ctx: Optional[Mapping[str, Any]]) -> Dict[str, Any]:
 
 
 def _known_maps_for(ctx: Optional[Mapping[str, Any]], index: Mapping[str, Any]) -> set:
-    """可显示/可传送地图集（2026-09-06 zerc 反馈）：discovered_maps ∪ 当前 location
-    ∪ default_map（城镇恒显）。内容包无城镇/无发现记录 → 空集（cmd_map 显示空，
-    cmd_enter 序号传送只认已发现——野外靠通道行走探索发现）。"""
+    """可传送地图集（2026-09-06 zerc 反馈·三次修订：默认有怪=隐藏图）：
+    default_map（驿站）+ camp_name 营地标记图 + 无怪安全图。规则 = 有怪物
+    分布的地图默认隐藏（玩家不可直接传送进野外——探索靠通道行走）；
+    营地（camp_name）与安全图（无怪）常显。裸 ctx（纯函数测试）→ 全量零破坏。"""
     known: set = set()
     if not ctx:
         return known
-    discovered = ctx.get("discovered_maps")
-    _has_ctx_key = "discovered_maps" in ctx if isinstance(ctx, Mapping) else False
-    if not _has_ctx_key:
-        # ctx 未装配 discovered_maps（裸 ctx/测试）→ 全量回退（零破坏；
-        # 装配层总会注入该键——空 list = 真无发现只显城镇）
+    if "discovered_maps" not in ctx and "player" not in ctx and "settings" not in ctx:
         return set(index.keys())
-    if not isinstance(discovered, (list, tuple, set)) or not discovered:
-        # 兜底：ctx 键缺失/空 → 读 player.persistent_state（跨层可靠，
-        # 2026-09-06 装配键异常时防地图空显）
-        _pl = ctx.get("player")
-        if isinstance(_pl, Mapping):
-            _ps = _pl.get("persistent_state")
-            if isinstance(_ps, Mapping):
-                discovered = _ps.get("discovered_maps")
-        elif hasattr(_pl, "persistent_state"):
-            _ps = getattr(_pl, "persistent_state")
-            if isinstance(_ps, Mapping):
-                discovered = _ps.get("discovered_maps")
-    if isinstance(discovered, (list, tuple, set)):
-        for d in discovered:
-            if isinstance(d, str) and d:
-                known.add(d)
-    cur_loc = ctx.get("location")
-    if isinstance(cur_loc, str) and cur_loc:
-        known.add(cur_loc)
     dm = ctx.get("settings")
     if isinstance(dm, Mapping):
         _dmap = dm.get("default_map")
         if isinstance(_dmap, str) and _dmap:
             known.add(_dmap)
-    # 只保留真实存在的图
+    for mid in list(index.keys()):
+        entry = index[mid]
+        if entry is None:
+            continue
+        raw = getattr(entry, "raw", None) if not isinstance(entry, Mapping) else entry
+        raw = raw if isinstance(raw, Mapping) else {}
+        # 营地标记 → 常显（camp_name 纯配置字段，raw 透传）
+        cn = raw.get("camp_name")
+        if isinstance(cn, str) and cn:
+            known.add(mid)
+            continue
+        # 无怪安全图 → 常显（monsters 空；MapDef.spawn property / dict monsters 键）
+        mobs = raw.get("monsters")
+        if mobs is None and not isinstance(entry, Mapping):
+            try:
+                mobs = entry.spawn  # MapDef property（tuple）
+            except Exception:  # noqa: BLE001
+                mobs = None
+        if not mobs:
+            known.add(mid)
     return {m for m in known if m in index}
 
 

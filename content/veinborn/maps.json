@@ -118,7 +118,8 @@
   "mechanics": [],
   "npcs": [
    "npc_healer_apothecary"
-  ]
+  ],
+  "camp_name": "骨台营地"
  },
  {
   "id": "a4_lord_plateau",
@@ -249,7 +250,8 @@
   "mechanics": [],
   "npcs": [
    "npc_windguard"
-  ]
+  ],
+  "camp_name": "风息台"
  },
  {
   "id": "b4_gravelcrown_nest",
@@ -381,7 +383,8 @@
   "mechanics": [],
   "npcs": [
    "npc_zeheart"
-  ]
+  ],
+  "camp_name": "泽心台"
  },
  {
   "id": "c4_abyss_pool",
@@ -560,7 +563,8 @@
   "mechanics": [],
   "npcs": [
    "npc_lamppost"
-  ]
+  ],
+  "camp_name": "矿灯站"
  },
  {
   "id": "d4_bone_tableland",
@@ -700,6 +704,7 @@
     "mode": "bidirectional"
    }
   },
-  "mechanics": []
+  "mechanics": [],
+  "camp_name": "龙骨驿站"
  }
 ]

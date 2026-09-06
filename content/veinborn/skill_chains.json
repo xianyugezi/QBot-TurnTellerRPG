@@ -86,5 +86,106 @@
   "max_combo": 1,
   "max_combo_behavior": "reset",
   "steps": []
+ },
+ {
+  "id": "chain_hammer_avalanche",
+  "name": "蓄满崩山链",
+  "trigger_skill": "vc_crush",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "vc_crush",
+    "to": "vc_avalanche",
+    "tag": "none",
+    "condition": {
+     "self_marks": {
+      "charge_mark": {
+       "min": 3
+      }
+     }
+    },
+    "priority": 1,
+    "mode": "replace",
+    "armor": true,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
+ },
+ {
+  "id": "chain_hammer_skullbreak",
+  "name": "颅裂失衡链",
+  "trigger_skill": "vc_crush",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "vc_crush",
+    "to": "vc_skullbreak",
+    "tag": "none",
+    "condition": {
+     "target_marks": {
+      "hammer_mark": {
+       "min": 5
+      }
+     }
+    },
+    "priority": 1,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
+ },
+ {
+  "id": "chain_hammer_spin",
+  "name": "回旋大锤链",
+  "trigger_skill": "vc_spin",
+  "max_combo": 2,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "vc_spin",
+    "to": "vc_whirlwind",
+    "tag": "combo",
+    "condition": {
+     "count": {
+      "eq": 2
+     }
+    },
+    "priority": 1,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
+ },
+ {
+  "id": "chain_crush_combo",
+  "name": "碎脉陨击链",
+  "job_scope": "crush_form",
+  "trigger_skill": "vc_form_crush",
+  "max_combo": 3,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "vc_form_crush",
+    "to": "vc_form_finisher",
+    "tag": "combo",
+    "condition": {
+     "count": {
+      "eq": 3
+     }
+    },
+    "priority": 1,
+    "mode": "replace",
+    "armor": true,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
  }
 ]

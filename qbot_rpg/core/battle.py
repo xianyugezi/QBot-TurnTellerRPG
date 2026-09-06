@@ -2043,6 +2043,7 @@ class BattleEngine:
         ca.setdefault("armor", bool(sd.get("armor", False)))   # D4：skill def armor
         if "effects" not in ca:
             ca["effects"] = list(sd.get("effects") or [])      # D4：skill def effects（标准技能路径也能执行印记/打断等）
+
         _action_had_mult = "mult" in ca  # action 原样是否显式 mult（折算判据）
         ca.setdefault("mult", float(ca.get("mult", 1.0)))
         # M13 批21 dsh A1 P0-2：技能 power(F04) 折算战斗倍率——sd.power/100
@@ -2072,7 +2073,8 @@ class BattleEngine:
         def _marks_lookup(kind: str, which: str, rule: Mapping[str, Any], mark_id: Optional[str] = None) -> bool:
             # D1 定稿对照修复：combo 印记条件子句全量转接 MarksManager.evaluate（1d §3.1 唯一正确实现）
             side = attacker if which == "self" else target
-            return self.marks_manager().evaluate(kind, side, dict(rule), mark_id)
+            res = self.marks_manager().evaluate(kind, side, dict(rule), mark_id)
+            return res
 
         result = self.combo_engine().apply_action(attacker, ca, self._snap, self._armor_active,
                                                   marks_lookup=_marks_lookup)
@@ -2263,6 +2265,7 @@ class BattleEngine:
             )
             for eff_raw in eff_list:
                 if isinstance(eff_raw, dict):
+            
                     hit_effects.extend(execute_action(eff_raw, ctx, rt).side_effects)
             self._absorb_runtime(rt)
         # 霸体窗口=行动阶段结束（D2 修复：原在技能结算内清位→同回合敌后手打断不免疫，
@@ -2904,6 +2907,7 @@ class BattleEngine:
         ai_action_lib: Any = None,
         ai_rng: Any = None,
         resource_registry: Any = None,  # M13 6c：资源轴注册表注入（RS-2 恢复按注册表逐轴口径）
+        combo_engine: Any = None,  # 2026-09-07：连段引擎显式注入（raw defs resolver——绕 registry Def 坑）
     ) -> "BattleEngine":
         """快照还原（1g3 §2.3 恢复时序①-⑤）：还原最近回合边界状态 → T7 回 PREP →
         start_turn 回 ① 继续。
@@ -2922,7 +2926,7 @@ class BattleEngine:
         """
         eng = cls(pipeline=pipeline, registry=registry, defs=defs, config=config,
                   enemy_ai=enemy_ai, enemy_def=enemy_def, ai_action_lib=ai_action_lib,
-                  ai_rng=ai_rng)
+                  ai_rng=ai_rng, combo_engine=combo_engine)
         eng._resource_registry = resource_registry  # M13 6c：资源轴注册表透传（RS-2/RS-5）
         eng._snap = copy.deepcopy(dict(data))
         eng._rng_seed = int((data.get("formula_state") or {}).get("random_seed", 0) or 0)

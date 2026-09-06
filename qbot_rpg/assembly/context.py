@@ -1563,6 +1563,7 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
                 _all_defs, _chains, _ce = _battle_defs(deps.registry)
                 ctx["battle_engine"] = BattleEngine.from_snapshot(
                     payload, registry=deps.registry, defs=_all_defs,
+                    combo_engine=_ce,
                 )
         except Exception as exc:  # noqa: BLE001 - 恢复失败降级 None（战斗不可续但指令不崩）
             _LOGGER.warning("battle_engine restore failed: %s", exc)

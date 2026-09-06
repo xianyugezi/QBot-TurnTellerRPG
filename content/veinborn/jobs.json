@@ -110,5 +110,52 @@
    "mp": 1.0
   },
   "description": "锻造武器与防具的生活职业。蚀脉猎师的装备出自铁砧。"
+ },
+ {
+  "id": "vein_crusher",
+  "name": "碎脉锤师",
+  "difficulty": "medium",
+  "playstyle": "蓄力重击，破甲晕骸",
+  "recommended_newbie": false,
+  "resource_axes": [
+   "mp",
+   "stamina",
+   "focus"
+  ],
+  "mechanic_tags": [
+   "近战",
+   "蓄力",
+   "破防",
+   "重击"
+  ],
+  "weapon_types": [
+   "warhammer"
+  ],
+  "growth": {
+   "atk": 12.0,
+   "dfn": 7.0,
+   "foc": 5.0,
+   "hp": 13.0,
+   "mp": 0.5
+  },
+  "transform": {
+   "transform_skill": "vc_mastery",
+   "transform_to": "crush_form",
+   "duration": "battle",
+   "revert": false,
+   "cooldown": 0,
+   "dispel_reverts": false,
+   "state_policy": {
+    "combo": "keep",
+    "marks": "keep",
+    "buff": "keep"
+   },
+   "skill_set": "mastery_skills",
+   "equip_restrict": [],
+   "derive_chains": [
+    "chain_crush_combo"
+   ]
+  },
+  "description": "猎势·碎脉：聚焦满翻面，重击全变脉碎系（专精恒效）。"
  }
 ]

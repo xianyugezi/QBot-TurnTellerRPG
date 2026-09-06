@@ -128,5 +128,44 @@
   "polarity": "negative",
   "duration": "battle",
   "desc": "脊板已破坏：脉核暴露，玩家对其增伤"
+ },
+ {
+  "id": "hammer_mark",
+  "name": "锤痕",
+  "icon": "锤",
+  "type": "mark",
+  "max_stack": 5,
+  "appliable_to": [
+   "enemy"
+  ],
+  "polarity": "negative",
+  "duration": "battle",
+  "desc": "钝器重击在目标壳甲上凿出的裂纹。满 5 层触发颅裂失衡。"
+ },
+ {
+  "id": "stagger_weak",
+  "name": "失衡",
+  "icon": "晕",
+  "type": "mark",
+  "max_stack": 1,
+  "appliable_to": [
+   "enemy"
+  ],
+  "polarity": "negative",
+  "duration": "turns:2",
+  "desc": "失衡窗口：目标受伤 +30%（打头打晕任你输出的破甲窗口）"
+ },
+ {
+  "id": "charge_mark",
+  "name": "蓄力",
+  "icon": "蓄",
+  "type": "mark",
+  "max_stack": 3,
+  "appliable_to": [
+   "self"
+  ],
+  "polarity": "positive",
+  "duration": "battle",
+  "desc": "蓄势层数：每层蓄势 +1，满 3 层碎颅变崩山"
  }
 ]

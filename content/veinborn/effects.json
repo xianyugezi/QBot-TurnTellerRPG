@@ -78,5 +78,54 @@
   "name": "特大回复",
   "type": "heal",
   "power": 1200
+ },
+ {
+  "id": "hammer_mark1",
+  "name": "锤痕+1",
+  "type": "mark_add",
+  "target": "enemy",
+  "mark": "hammer_mark",
+  "count": 1
+ },
+ {
+  "id": "hammer_mark2",
+  "name": "锤痕+2",
+  "type": "mark_add",
+  "target": "enemy",
+  "mark": "hammer_mark",
+  "count": 2
+ },
+ {
+  "id": "stagger_apply",
+  "name": "失衡施加",
+  "type": "mark_add",
+  "target": "enemy",
+  "mark": "stagger_weak",
+  "count": 1
+ },
+ {
+  "id": "hammer_mitig",
+  "name": "蓄势减伤",
+  "type": "mitigation",
+  "power": 20,
+  "duration": 1,
+  "desc": "蓄势站桩：本回所受伤害 -20%"
+ },
+ {
+  "id": "charge_gain",
+  "name": "蓄力+1",
+  "type": "mark_add",
+  "target": "self",
+  "mark": "charge_mark",
+  "count": 1
+ },
+ {
+  "id": "charge_clear3",
+  "name": "蓄力清空",
+  "type": "mark_remove",
+  "marks_on": "self",
+  "polarity": "positive",
+  "mark": "charge_mark",
+  "count": 3
  }
 ]

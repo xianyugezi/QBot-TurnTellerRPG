@@ -247,5 +247,68 @@
   "effects": [],
   "usable": false,
   "desc": "沉渊古兽沉积岩般的甲壳：王骸打造素材"
+ },
+ {
+  "id": "black_vein_fur",
+  "name": "黑脉熊皮",
+  "type": "material",
+  "price": 700,
+  "effects": [],
+  "usable": false,
+  "desc": "黑脉熊蚀脉浸透的皮毛：打造素材（鳞革系）"
+ },
+ {
+  "id": "night_bat_wing",
+  "name": "夜嚎蝠翼",
+  "type": "material",
+  "price": 650,
+  "effects": [],
+  "usable": false,
+  "desc": "夜嚎蝠裂晶声波的膜翼：打造素材（脉铁系）"
+ },
+ {
+  "id": "shadow_leopard_fang",
+  "name": "影刃豹牙",
+  "type": "material",
+  "price": 1200,
+  "effects": [],
+  "usable": false,
+  "desc": "影刃豹的晶刃獠牙：打造素材（骨脊系·精英）"
+ },
+ {
+  "id": "black_crystal_chunk",
+  "name": "黑晶块",
+  "type": "material",
+  "price": 1300,
+  "effects": [],
+  "usable": false,
+  "desc": "黑晶巨魔崩落的黑脉晶块：打造素材（脉铁系·精英）"
+ },
+ {
+  "id": "howl_lord_fang",
+  "name": "嚎主牙",
+  "type": "material",
+  "price": 3000,
+  "effects": [],
+  "usable": false,
+  "desc": "群山嚎主的巨牙：王骸打造素材"
+ },
+ {
+  "id": "abyss_lord_core",
+  "name": "黯穴之核",
+  "type": "material",
+  "price": 3200,
+  "effects": [],
+  "usable": false,
+  "desc": "黯穴之主搏动的蚀脉核心：王骸打造素材"
+ },
+ {
+  "id": "king_night_crown",
+  "name": "夜君冠晶",
+  "type": "material",
+  "price": 5000,
+  "effects": [],
+  "usable": false,
+  "desc": "夜嚎君王冠上凝结的至纯脉晶：最终王骸素材"
  }
 ]

@@ -378,5 +378,111 @@
   "npc": {
    "id": "npc_old_hunter"
   }
+ },
+ {
+  "id": "q_d1_dusk_wolves",
+  "name": "暗影的猎手",
+  "type": "slay",
+  "desc": "老猎人·驼脊：暮色山麓的暮影狼会融进夜色，猎 3 只，练练你的眼力。",
+  "zone": "d1_dusk_foothills",
+  "main": true,
+  "consume": false,
+  "repeatable": false,
+  "unlock_chain": "q_c3_wetland_elites",
+  "conditions": [
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 3,
+    "param": "dusk_shadow_wolf"
+   }
+  ],
+  "reward": [
+   {
+    "item": "dusk_wolf_pelt",
+    "count": 3
+   },
+   {
+    "exp": 30000
+   },
+   {
+    "coins": 6000
+   }
+  ],
+  "npc": {
+   "id": "npc_old_hunter"
+  }
+ },
+ {
+  "id": "q_d2_forest_beasts",
+  "name": "夜嚎森林的住民",
+  "type": "slay",
+  "desc": "老猎人·驼脊：黑脉熊皮糙肉厚，夜嚎蝠成群难缠——各猎 2 只回来。",
+  "zone": "d2_howl_forest",
+  "main": true,
+  "consume": false,
+  "repeatable": false,
+  "unlock_chain": "q_d1_dusk_wolves",
+  "conditions": [
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 2,
+    "param": "vein_black_bear"
+   },
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 2,
+    "param": "night_howl_bat"
+   }
+  ],
+  "reward": [
+   {
+    "exp": 55000
+   },
+   {
+    "coins": 11000
+   }
+  ],
+  "npc": {
+   "id": "npc_old_hunter"
+  }
+ },
+ {
+  "id": "q_d3_dark_elites",
+  "name": "群山深处的影子",
+  "type": "slay",
+  "desc": "老猎人·驼脊：影刃豹和黑晶巨魔，一个快一个重。各猎 1 只——之后群山之巅就向你敞开了。",
+  "zone": "d3_blackvein_mine",
+  "main": true,
+  "consume": false,
+  "repeatable": false,
+  "unlock_chain": "q_d2_forest_beasts",
+  "conditions": [
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 1,
+    "param": "shadow_blade_leopard"
+   },
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 1,
+    "param": "black_crystal_troll"
+   }
+  ],
+  "reward": [
+   {
+    "exp": 80000
+   },
+   {
+    "coins": 18000
+   }
+  ],
+  "npc": {
+   "id": "npc_old_hunter"
+  }
  }
 ]

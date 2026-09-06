@@ -702,5 +702,387 @@
    "物理",
    "土"
   ]
+ },
+ {
+  "id": "dw_shadow_stalk",
+  "name": "暗影潜行",
+  "kind": "active",
+  "power": 0.0,
+  "attack_type": "打",
+  "element": "none",
+  "weight": 30,
+  "probability": 1,
+  "intent": "防御",
+  "cooldown": 3,
+  "tags": [
+   "防御"
+  ]
+ },
+ {
+  "id": "dw_backstab",
+  "name": "背袭扑咬",
+  "kind": "active",
+  "power": 1.55,
+  "attack_type": "打",
+  "element": "none",
+  "weight": 70,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 0,
+  "tags": [
+   "物理"
+  ]
+ },
+ {
+  "id": "bb_paw_swipe",
+  "name": "蛮力挥掌",
+  "kind": "active",
+  "power": 1.1,
+  "attack_type": "打",
+  "element": "none",
+  "weight": 55,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 0,
+  "tags": [
+   "物理"
+  ]
+ },
+ {
+  "id": "bb_rage_charge",
+  "name": "怒脉冲撞",
+  "kind": "active",
+  "power": 1.65,
+  "attack_type": "打",
+  "element": "earth",
+  "weight": 45,
+  "probability": 1,
+  "intent": "蓄力",
+  "cooldown": 2,
+  "tags": [
+   "物理",
+   "土"
+  ]
+ },
+ {
+  "id": "nb_sonic_scream",
+  "name": "声波尖啸",
+  "kind": "active",
+  "power": 1.0,
+  "attack_type": "突",
+  "element": "wind",
+  "weight": 45,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 1,
+  "tags": [
+   "元素",
+   "风"
+  ]
+ },
+ {
+  "id": "nb_dive_bite",
+  "name": "俯冲撕咬",
+  "kind": "active",
+  "power": 1.35,
+  "attack_type": "打",
+  "element": "none",
+  "weight": 55,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 0,
+  "tags": [
+   "物理"
+  ]
+ },
+ {
+  "id": "sb_shadow_flurry",
+  "name": "影步连爪",
+  "kind": "active",
+  "power": 1.2,
+  "attack_type": "打",
+  "element": "none",
+  "weight": 55,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 0,
+  "tags": [
+   "物理",
+   "连斩"
+  ]
+ },
+ {
+  "id": "sb_lethal_pounce",
+  "name": "致命扑杀",
+  "kind": "active",
+  "power": 1.75,
+  "attack_type": "打",
+  "element": "none",
+  "weight": 30,
+  "probability": 1,
+  "intent": "蓄力",
+  "cooldown": 2,
+  "tags": [
+   "物理"
+  ]
+ },
+ {
+  "id": "sb_shadow_veil",
+  "name": "影幕遮蔽",
+  "kind": "active",
+  "power": 0.0,
+  "attack_type": "打",
+  "element": "none",
+  "weight": 15,
+  "probability": 1,
+  "intent": "防御",
+  "cooldown": 4,
+  "tags": [
+   "防御"
+  ]
+ },
+ {
+  "id": "gm_crystal_fist",
+  "name": "晶拳重击",
+  "kind": "active",
+  "power": 1.5,
+  "attack_type": "打",
+  "element": "earth",
+  "weight": 55,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 0,
+  "tags": [
+   "物理",
+   "土"
+  ]
+ },
+ {
+  "id": "gm_shard_scatter",
+  "name": "黑晶碎裂散射",
+  "kind": "active",
+  "power": 1.2,
+  "attack_type": "突",
+  "element": "earth",
+  "weight": 30,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 1,
+  "tags": [
+   "元素",
+   "土"
+  ]
+ },
+ {
+  "id": "gm_ground_slam",
+  "name": "裂地震击",
+  "kind": "active",
+  "power": 1.65,
+  "attack_type": "打",
+  "element": "earth",
+  "weight": 15,
+  "probability": 1,
+  "intent": "蓄力",
+  "cooldown": 3,
+  "tags": [
+   "物理",
+   "土"
+  ]
+ },
+ {
+  "id": "hl_mountain_roar",
+  "name": "群山嚎令",
+  "kind": "active",
+  "power": 1.3,
+  "attack_type": "突",
+  "element": "wind",
+  "weight": 30,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 1,
+  "tags": [
+   "元素",
+   "风"
+  ]
+ },
+ {
+  "id": "hl_claw_sweep",
+  "name": "峰脊爪击",
+  "kind": "active",
+  "power": 1.45,
+  "attack_type": "打",
+  "element": "none",
+  "weight": 35,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 0,
+  "tags": [
+   "物理"
+  ]
+ },
+ {
+  "id": "hl_avalanche",
+  "name": "山崩践踏",
+  "kind": "active",
+  "power": 1.7,
+  "attack_type": "打",
+  "element": "earth",
+  "weight": 20,
+  "probability": 1,
+  "intent": "蓄力",
+  "cooldown": 2,
+  "tags": [
+   "物理",
+   "土"
+  ]
+ },
+ {
+  "id": "hl_call_summon",
+  "name": "嚎令召狼",
+  "kind": "active",
+  "power": 0.0,
+  "attack_type": "打",
+  "element": "none",
+  "weight": 15,
+  "probability": 1,
+  "intent": "召唤",
+  "cooldown": 3,
+  "tags": [
+   "召唤"
+  ],
+  "trigger_limit": {
+   "per_battle": 3
+  }
+ },
+ {
+  "id": "ac_dark_bite",
+  "name": "渊暗噬咬",
+  "kind": "active",
+  "power": 1.4,
+  "attack_type": "打",
+  "element": "none",
+  "weight": 35,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 0,
+  "tags": [
+   "物理"
+  ]
+ },
+ {
+  "id": "ac_vein_lash",
+  "name": "蚀脉鞭挞",
+  "kind": "active",
+  "power": 1.6,
+  "attack_type": "突",
+  "element": "earth",
+  "weight": 30,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 1,
+  "tags": [
+   "元素",
+   "土"
+  ]
+ },
+ {
+  "id": "ac_abyss_stomp",
+  "name": "深渊践踏",
+  "kind": "active",
+  "power": 1.5,
+  "attack_type": "打",
+  "element": "earth",
+  "weight": 20,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 0,
+  "tags": [
+   "物理",
+   "土"
+  ]
+ },
+ {
+  "id": "ac_awaken_summon",
+  "name": "脉裔苏醒",
+  "kind": "active",
+  "power": 0.0,
+  "attack_type": "打",
+  "element": "none",
+  "weight": 15,
+  "probability": 1,
+  "intent": "召唤",
+  "cooldown": 5,
+  "tags": [
+   "召唤"
+  ],
+  "trigger_limit": {
+   "per_battle": 2
+  }
+ },
+ {
+  "id": "nk_midnight_howl",
+  "name": "午夜嚎叫",
+  "kind": "active",
+  "power": 1.6,
+  "attack_type": "突",
+  "element": "wind",
+  "weight": 30,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 1,
+  "tags": [
+   "元素",
+   "风"
+  ]
+ },
+ {
+  "id": "nk_vein_claw",
+  "name": "蚀脉裂爪",
+  "kind": "active",
+  "power": 1.85,
+  "attack_type": "打",
+  "element": "earth",
+  "weight": 35,
+  "probability": 1,
+  "intent": "蓄力",
+  "cooldown": 2,
+  "tags": [
+   "物理",
+   "土"
+  ]
+ },
+ {
+  "id": "nk_dark_nova",
+  "name": "暗裔新星",
+  "kind": "active",
+  "power": 2.0,
+  "attack_type": "突",
+  "element": "earth",
+  "weight": 20,
+  "probability": 1,
+  "intent": "蓄力",
+  "cooldown": 3,
+  "tags": [
+   "元素",
+   "土"
+  ]
+ },
+ {
+  "id": "nk_shadow_call",
+  "name": "暗裔显现",
+  "kind": "active",
+  "power": 0.0,
+  "attack_type": "打",
+  "element": "none",
+  "weight": 15,
+  "probability": 1,
+  "intent": "召唤",
+  "cooldown": 5,
+  "tags": [
+   "召唤"
+  ],
+  "trigger_limit": {
+   "per_battle": 2
+  }
  }
 ]

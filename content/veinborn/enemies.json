@@ -1261,13 +1261,13 @@
   "special_actions": [],
   "actions": [
    {
-    "action": "rw_quick_bite",
-    "weight": 60,
+    "action": "dw_backstab",
+    "weight": 70,
     "probability": 1
    },
    {
-    "action": "rw_gust_pounce",
-    "weight": 40,
+    "action": "dw_shadow_stalk",
+    "weight": 30,
     "probability": 1
    }
   ]
@@ -1578,6 +1578,805 @@
    {
     "unlock": 80,
     "desc": "岩甲是它的防御，破坏后可大幅削弱。"
+   }
+  ]
+ },
+ {
+  "id": "vein_black_bear",
+  "name": "黑脉熊",
+  "tier": "normal",
+  "area": "夜嚎群山",
+  "desc": "蚀脉浸透的黑熊，背脊脉晶如火山脊般隆起，蛮力惊人。",
+  "stats": {
+   "hp": 2524,
+   "mp": 50,
+   "str": 1106,
+   "con": 154,
+   "spr": 35,
+   "foc": 28,
+   "agi": 18,
+   "luk": 8
+  },
+  "rewards": {
+   "exp": 22000,
+   "currencies": {
+    "coins": 4500
+   }
+  },
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "black_vein_fur",
+     "chance": 50,
+     "count": 1
+    },
+    {
+     "item": "vein_shard",
+     "chance": 75,
+     "count": 3
+    }
+   ]
+  },
+  "phases": [],
+  "special_actions": [],
+  "actions": [
+   {
+    "action": "bb_paw_swipe",
+    "weight": 55,
+    "probability": 1
+   },
+   {
+    "action": "bb_rage_charge",
+    "weight": 45,
+    "probability": 1
+   }
+  ]
+ },
+ {
+  "id": "night_howl_bat",
+  "name": "夜嚎蝠",
+  "tier": "normal",
+  "area": "夜嚎群山",
+  "desc": "声波蝠群，嚎叫能震裂脉晶，黑暗中成片扑袭。",
+  "stats": {
+   "hp": 2462,
+   "mp": 50,
+   "str": 1175,
+   "con": 160,
+   "spr": 40,
+   "foc": 35,
+   "agi": 45,
+   "luk": 15
+  },
+  "rewards": {
+   "exp": 20000,
+   "currencies": {
+    "coins": 4000
+   }
+  },
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "night_bat_wing",
+     "chance": 45,
+     "count": 1
+    },
+    {
+     "item": "vein_shard",
+     "chance": 70,
+     "count": 2
+    }
+   ]
+  },
+  "phases": [],
+  "special_actions": [],
+  "actions": [
+   {
+    "action": "nb_dive_bite",
+    "weight": 55,
+    "probability": 1
+   },
+   {
+    "action": "nb_sonic_scream",
+    "weight": 45,
+    "probability": 1
+   }
+  ]
+ },
+ {
+  "id": "shadow_blade_leopard",
+  "name": "影刃豹",
+  "tier": "elite",
+  "area": "夜嚎群山",
+  "desc": "暗影晶刃豹，黑脉矿道中的幽灵，影步连爪致命。",
+  "stats": {
+   "hp": 4020,
+   "mp": 70,
+   "str": 1254,
+   "con": 304,
+   "spr": 40,
+   "foc": 45,
+   "agi": 55,
+   "luk": 20
+  },
+  "weakness": {
+   "types": [
+    "突"
+   ],
+   "elements": {
+    "fire": 1.2
+   }
+  },
+  "rewards": {
+   "exp": 32000,
+   "currencies": {
+    "coins": 7000
+   }
+  },
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "shadow_leopard_fang",
+     "chance": 80,
+     "count": 1
+    },
+    {
+     "item": "vein_shard",
+     "chance": 85,
+     "count": 4
+    }
+   ]
+  },
+  "phases": [
+   {
+    "threshold": 1.0,
+    "actions": [
+     {
+      "action": "sb_shadow_flurry",
+      "weight": 55,
+      "probability": 1
+     },
+     {
+      "action": "sb_lethal_pounce",
+      "weight": 30,
+      "probability": 1
+     },
+     {
+      "action": "sb_shadow_veil",
+      "weight": 15,
+      "probability": 1
+     }
+    ],
+    "broadcast": "{monster} 晶瞳在黑暗中亮起，影刃豹无声逼近！"
+   },
+   {
+    "threshold": 0.5,
+    "actions": [
+     {
+      "action": "sb_lethal_pounce",
+      "weight": 55,
+      "probability": 1
+     },
+     {
+      "action": "sb_shadow_flurry",
+      "weight": 35,
+      "probability": 1
+     },
+     {
+      "action": "sb_shadow_veil",
+      "weight": 10,
+      "probability": 1
+     }
+    ],
+    "enter_action": "sb_lethal_pounce",
+    "broadcast": "{monster} 伤势激起凶性，影刃豹发动致命扑杀！"
+   }
+  ],
+  "special_actions": [],
+  "actions": [
+   {
+    "action": "sb_shadow_flurry",
+    "weight": 55,
+    "probability": 1
+   },
+   {
+    "action": "sb_lethal_pounce",
+    "weight": 30,
+    "probability": 1
+   },
+   {
+    "action": "sb_shadow_veil",
+    "weight": 15,
+    "probability": 1
+   }
+  ]
+ },
+ {
+  "id": "black_crystal_troll",
+  "name": "黑晶巨魔",
+  "tier": "elite",
+  "area": "夜嚎群山",
+  "desc": "黑脉晶凝结的巨魔，缓慢沉重，一拳能砸裂台地。",
+  "stats": {
+   "hp": 4285,
+   "mp": 80,
+   "str": 1445,
+   "con": 344,
+   "spr": 50,
+   "foc": 25,
+   "agi": 10,
+   "luk": 5
+  },
+  "weakness": {
+   "types": [
+    "突"
+   ]
+  },
+  "rewards": {
+   "exp": 35000,
+   "currencies": {
+    "coins": 7500
+   }
+  },
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "black_crystal_chunk",
+     "chance": 80,
+     "count": 1
+    },
+    {
+     "item": "vein_shard",
+     "chance": 85,
+     "count": 4
+    }
+   ]
+  },
+  "phases": [
+   {
+    "threshold": 1.0,
+    "actions": [
+     {
+      "action": "gm_crystal_fist",
+      "weight": 55,
+      "probability": 1
+     },
+     {
+      "action": "gm_shard_scatter",
+      "weight": 30,
+      "probability": 1
+     },
+     {
+      "action": "gm_ground_slam",
+      "weight": 15,
+      "probability": 1
+     }
+    ],
+    "broadcast": "{monster} 黑晶巨魔踏裂地面，晶拳高高举起！"
+   },
+   {
+    "threshold": 0.5,
+    "actions": [
+     {
+      "action": "gm_crystal_fist",
+      "weight": 45,
+      "probability": 1
+     },
+     {
+      "action": "gm_ground_slam",
+      "weight": 35,
+      "probability": 1
+     },
+     {
+      "action": "gm_shard_scatter",
+      "weight": 20,
+      "probability": 1
+     }
+    ],
+    "enter_action": "gm_ground_slam",
+    "broadcast": "{monster} 巨魔狂怒，裂地震击令整片台地颤抖！"
+   }
+  ],
+  "special_actions": [],
+  "actions": [
+   {
+    "action": "gm_crystal_fist",
+    "weight": 55,
+    "probability": 1
+   },
+   {
+    "action": "gm_shard_scatter",
+    "weight": 30,
+    "probability": 1
+   },
+   {
+    "action": "gm_ground_slam",
+    "weight": 15,
+    "probability": 1
+   }
+  ]
+ },
+ {
+  "id": "mountain_howl_lord",
+  "name": "D主1·群山嚎主",
+  "tier": "boss",
+  "area": "夜嚎群山",
+  "desc": "群山之王，嚎主峰之主。一声咆哮令山岳回响，唤来狼群如潮。",
+  "stats": {
+   "hp": 5569,
+   "mp": 150,
+   "str": 1735,
+   "con": 376,
+   "spr": 60,
+   "foc": 45,
+   "agi": 30,
+   "luk": 12
+  },
+  "weakness": {
+   "types": [
+    "突"
+   ],
+   "elements": {
+    "fire": 1.2
+   }
+  },
+  "pv": 350,
+  "pv_recover": "battle_end",
+  "phases": [
+   {
+    "threshold": 1.0,
+    "actions": [
+     {
+      "action": "hl_claw_sweep",
+      "weight": 40,
+      "probability": 1
+     },
+     {
+      "action": "hl_mountain_roar",
+      "weight": 35,
+      "probability": 1
+     },
+     {
+      "action": "hl_avalanche",
+      "weight": 25,
+      "probability": 1
+     }
+    ],
+    "enter_action": "hl_mountain_roar",
+    "broadcast": "{monster} 嚎主昂首，群山回应它的咆哮，进入姿态Ⅰ：山鸣。"
+   },
+   {
+    "threshold": 0.65,
+    "actions": [
+     {
+      "action": "hl_claw_sweep",
+      "weight": 35,
+      "probability": 1
+     },
+     {
+      "action": "hl_avalanche",
+      "weight": 30,
+      "probability": 1
+     },
+     {
+      "action": "hl_call_summon",
+      "weight": 20,
+      "probability": 1
+     },
+     {
+      "action": "hl_mountain_roar",
+      "weight": 15,
+      "probability": 1
+     }
+    ],
+    "enter_action": "hl_call_summon",
+    "broadcast": "{monster} 嚎令震彻群山，暮影狼群应召而来，进入姿态Ⅱ：狼潮！"
+   },
+   {
+    "threshold": 0.3,
+    "actions": [
+     {
+      "action": "hl_avalanche",
+      "weight": 40,
+      "probability": 1
+     },
+     {
+      "action": "hl_claw_sweep",
+      "weight": 35,
+      "probability": 1
+     },
+     {
+      "action": "hl_mountain_roar",
+      "weight": 25,
+      "probability": 1
+     }
+    ],
+    "enter_action": "hl_avalanche",
+    "broadcast": "{monster} 嚎主狂怒，山崩地裂般的践踏，进入姿态Ⅲ：山崩！"
+   }
+  ],
+  "resistance": {
+   "stun": 30,
+   "immune": []
+  },
+  "special_actions": [],
+  "actions": [
+   {
+    "action": "hl_claw_sweep",
+    "weight": 35,
+    "probability": 1
+   },
+   {
+    "action": "hl_mountain_roar",
+    "weight": 30,
+    "probability": 1
+   },
+   {
+    "action": "hl_avalanche",
+    "weight": 20,
+    "probability": 1
+   },
+   {
+    "action": "hl_call_summon",
+    "weight": 15,
+    "probability": 1
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "howl_lord_fang",
+     "chance": 100,
+     "count": 1
+    },
+    {
+     "item": "dusk_wolf_pelt",
+     "chance": 60,
+     "count": 2
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "D主1·群山嚎主：群山之王，弱突刺与火蚀。"
+   },
+   {
+    "unlock": 50,
+    "desc": "狼潮姿态会召唤暮影狼群，优先打断嚎令。"
+   },
+   {
+    "unlock": 80,
+    "desc": "山崩践踏蓄力明显，是它最重的一击。"
+   }
+  ]
+ },
+ {
+  "id": "abyss_cave_lord",
+  "name": "D主2·黯穴之主",
+  "tier": "boss",
+  "area": "夜嚎群山",
+  "desc": "深渊洞穴的蚀脉化身，蚀脉如血脉在岩壁搏动，它是黯穴的心脏。",
+  "stats": {
+   "hp": 5596,
+   "mp": 180,
+   "str": 1752,
+   "con": 400,
+   "spr": 70,
+   "foc": 40,
+   "agi": 24,
+   "luk": 8
+  },
+  "weakness": {
+   "types": [
+    "突"
+   ],
+   "elements": {
+    "wind": 1.3
+   }
+  },
+  "pv": 400,
+  "pv_recover": "battle_end",
+  "phases": [
+   {
+    "threshold": 1.0,
+    "actions": [
+     {
+      "action": "ac_dark_bite",
+      "weight": 40,
+      "probability": 1
+     },
+     {
+      "action": "ac_vein_lash",
+      "weight": 35,
+      "probability": 1
+     },
+     {
+      "action": "ac_abyss_stomp",
+      "weight": 25,
+      "probability": 1
+     }
+    ],
+    "enter_action": "ac_vein_lash",
+    "broadcast": "{monster} 黯穴之心脉动，蚀脉自岩壁涌出缠裹其身！"
+   },
+   {
+    "threshold": 0.65,
+    "actions": [
+     {
+      "action": "ac_vein_lash",
+      "weight": 35,
+      "probability": 1
+     },
+     {
+      "action": "ac_dark_bite",
+      "weight": 30,
+      "probability": 1
+     },
+     {
+      "action": "ac_awaken_summon",
+      "weight": 20,
+      "probability": 1
+     },
+     {
+      "action": "ac_abyss_stomp",
+      "weight": 15,
+      "probability": 1
+     }
+    ],
+    "enter_action": "ac_awaken_summon",
+    "broadcast": "{monster} 脉裔苏醒，夜嚎蝠群自洞顶俯冲而下！"
+   },
+   {
+    "threshold": 0.3,
+    "actions": [
+     {
+      "action": "ac_vein_lash",
+      "weight": 40,
+      "probability": 1
+     },
+     {
+      "action": "ac_dark_bite",
+      "weight": 35,
+      "probability": 1
+     },
+     {
+      "action": "ac_abyss_stomp",
+      "weight": 25,
+      "probability": 1
+     }
+    ],
+    "enter_action": "ac_vein_lash",
+    "broadcast": "{monster} 蚀脉如血脉搏动到极致，黯穴之主狂暴！"
+   }
+  ],
+  "resistance": {
+   "stun": 35,
+   "immune": [
+    "poison"
+   ]
+  },
+  "special_actions": [],
+  "actions": [
+   {
+    "action": "ac_dark_bite",
+    "weight": 35,
+    "probability": 1
+   },
+   {
+    "action": "ac_vein_lash",
+    "weight": 30,
+    "probability": 1
+   },
+   {
+    "action": "ac_abyss_stomp",
+    "weight": 20,
+    "probability": 1
+   },
+   {
+    "action": "ac_awaken_summon",
+    "weight": 15,
+    "probability": 1
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "abyss_lord_core",
+     "chance": 100,
+     "count": 1
+    },
+    {
+     "item": "vein_shard",
+     "chance": 100,
+     "count": 5
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "D主2·黯穴之主：蚀脉化身，弱突刺与风蚀。"
+   },
+   {
+    "unlock": 50,
+    "desc": "脉裔苏醒会召来夜嚎蝠，蚀脉鞭挞是主要威胁。"
+   },
+   {
+    "unlock": 80,
+    "desc": "它的核心是致命弱点，破坏后脉动紊乱。"
+   }
+  ]
+ },
+ {
+  "id": "midnight_howl_king",
+  "name": "D隐·夜嚎君王",
+  "tier": "boss",
+  "area": "夜嚎群山",
+  "desc": "群山真主，仅夜晚现身于最高峰巅。蚀脉如活物般俯首于它——毕业的最终挑战。",
+  "stats": {
+   "hp": 8000,
+   "mp": 250,
+   "str": 1841,
+   "con": 240,
+   "spr": 80,
+   "foc": 55,
+   "agi": 45,
+   "luk": 20
+  },
+  "weakness": {
+   "types": [
+    "突"
+   ],
+   "elements": {
+    "fire": 1.15
+   }
+  },
+  "pv": 500,
+  "pv_recover": "battle_end",
+  "phases": [
+   {
+    "threshold": 1.0,
+    "actions": [
+     {
+      "action": "nk_midnight_howl",
+      "weight": 35,
+      "probability": 1
+     },
+     {
+      "action": "nk_vein_claw",
+      "weight": 35,
+      "probability": 1
+     },
+     {
+      "action": "nk_dark_nova",
+      "weight": 30,
+      "probability": 1
+     }
+    ],
+    "enter_action": "nk_midnight_howl",
+    "broadcast": "{monster} 午夜嚎叫刺破黑暗，群山为之噤声！"
+   },
+   {
+    "threshold": 0.6,
+    "actions": [
+     {
+      "action": "nk_vein_claw",
+      "weight": 35,
+      "probability": 1
+     },
+     {
+      "action": "nk_dark_nova",
+      "weight": 30,
+      "probability": 1
+     },
+     {
+      "action": "nk_shadow_call",
+      "weight": 20,
+      "probability": 1
+     },
+     {
+      "action": "nk_midnight_howl",
+      "weight": 15,
+      "probability": 1
+     }
+    ],
+    "enter_action": "nk_shadow_call",
+    "broadcast": "{monster} 暗裔显现，影狼自夜色中凝聚成形！"
+   },
+   {
+    "threshold": 0.3,
+    "actions": [
+     {
+      "action": "nk_dark_nova",
+      "weight": 45,
+      "probability": 1
+     },
+     {
+      "action": "nk_vein_claw",
+      "weight": 35,
+      "probability": 1
+     },
+     {
+      "action": "nk_midnight_howl",
+      "weight": 20,
+      "probability": 1
+     }
+    ],
+    "enter_action": "nk_dark_nova",
+    "broadcast": "{monster} 蚀脉尽数俯首，暗裔新星在峰巅炸裂！"
+   }
+  ],
+  "resistance": {
+   "stun": 45,
+   "immune": [
+    "poison",
+    "burn"
+   ]
+  },
+  "special_actions": [],
+  "actions": [
+   {
+    "action": "nk_vein_claw",
+    "weight": 35,
+    "probability": 1
+   },
+   {
+    "action": "nk_midnight_howl",
+    "weight": 30,
+    "probability": 1
+   },
+   {
+    "action": "nk_dark_nova",
+    "weight": 20,
+    "probability": 1
+   },
+   {
+    "action": "nk_shadow_call",
+    "weight": 15,
+    "probability": 1
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "king_night_crown",
+     "chance": 100,
+     "count": 1
+    },
+    {
+     "item": "abyss_lord_core",
+     "chance": 40,
+     "count": 1
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "D隐·夜嚎君王：群山真主，仅夜现。毕业超模战。"
+   },
+   {
+    "unlock": 50,
+    "desc": "暗裔显现召唤影狼——它的召唤物随血线强化。"
+   },
+   {
+    "unlock": 80,
+    "desc": "暗裔新星是最强一击，满配毕业装也需谨慎。"
    }
   ]
  }

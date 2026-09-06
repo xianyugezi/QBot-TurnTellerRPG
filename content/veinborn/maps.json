@@ -364,6 +364,10 @@
    "right": {
     "to": "c4_abyss_pool",
     "mode": "bidirectional"
+   },
+   "up": {
+    "to": "d1_dusk_foothills",
+    "mode": "bidirectional"
    }
   },
   "mechanics": []
@@ -449,6 +453,219 @@
   "exits": {
    "up": {
     "to": "c4_abyss_pool",
+    "mode": "bidirectional"
+   }
+  },
+  "mechanics": []
+ },
+ {
+  "id": "d1_dusk_foothills",
+  "name": "暮色山麓",
+  "desc": "山影吞没天光，暗处亮着晶红的眼。暮影狼在山麓间无声游走。",
+  "monsters": [
+   {
+    "enemy": "dusk_shadow_wolf",
+    "name": "暮影狼",
+    "count": 3,
+    "respawn_minutes": 10
+   },
+   {
+    "enemy": "marsh_bone_croc",
+    "name": "泽骨鳄",
+    "count": 1,
+    "respawn_minutes": 8
+   }
+  ],
+  "exits": {
+   "down": {
+    "to": "c3_sunken_bone_bog",
+    "mode": "bidirectional"
+   },
+   "up": {
+    "to": "d2_howl_forest",
+    "mode": "bidirectional"
+   }
+  },
+  "mechanics": []
+ },
+ {
+  "id": "d2_howl_forest",
+  "name": "夜嚎森林",
+  "desc": "晶化黑林，风声穿过树梢如嚎。黑脉熊在林间巡行。",
+  "monsters": [
+   {
+    "enemy": "vein_black_bear",
+    "name": "黑脉熊",
+    "count": 3,
+    "respawn_minutes": 10
+   },
+   {
+    "enemy": "dusk_shadow_wolf",
+    "name": "暮影狼",
+    "count": 2,
+    "respawn_minutes": 9
+   }
+  ],
+  "exits": {
+   "down": {
+    "to": "d1_dusk_foothills",
+    "mode": "bidirectional"
+   },
+   "right": {
+    "to": "d3_blackvein_mine",
+    "mode": "bidirectional"
+   }
+  },
+  "mechanics": []
+ },
+ {
+  "id": "d3_blackvein_mine",
+  "name": "黑脉矿道",
+  "desc": "废弃矿隧中，蚀脉喂大的兽蛰伏黑暗。一盏矿灯在隧道中段亮着。",
+  "monsters": [
+   {
+    "enemy": "shadow_blade_leopard",
+    "name": "影刃豹",
+    "count": 1,
+    "respawn_minutes": 25
+   },
+   {
+    "enemy": "night_howl_bat",
+    "name": "夜嚎蝠",
+    "count": 2,
+    "respawn_minutes": 9
+   }
+  ],
+  "exits": {
+   "left": {
+    "to": "d2_howl_forest",
+    "mode": "bidirectional"
+   },
+   "right": {
+    "to": "d4_bone_tableland",
+    "mode": "bidirectional"
+   }
+  },
+  "mechanics": []
+ },
+ {
+  "id": "d4_bone_tableland",
+  "name": "蚀骨台地",
+  "desc": "骨与晶混合的高台，黑晶巨魔缓慢巡弋，每一步都令台地震动。",
+  "monsters": [
+   {
+    "enemy": "black_crystal_troll",
+    "name": "黑晶巨魔",
+    "count": 1,
+    "respawn_minutes": 25
+   },
+   {
+    "enemy": "shadow_blade_leopard",
+    "name": "影刃豹",
+    "count": 1,
+    "respawn_minutes": 22
+   }
+  ],
+  "exits": {
+   "left": {
+    "to": "d3_blackvein_mine",
+    "mode": "bidirectional"
+   },
+   "up": {
+    "to": "d5_howl_peak",
+    "mode": "bidirectional"
+   },
+   "right": {
+    "to": "d6_dark_cave",
+    "mode": "bidirectional"
+   }
+  },
+  "mechanics": []
+ },
+ {
+  "id": "d5_howl_peak",
+  "name": "嚎主峰",
+  "desc": "群山主峰，嚎声最烈之处。群山嚎主踞于峰顶，俯瞰整片夜嚎群山。",
+  "monsters": [
+   {
+    "enemy": "mountain_howl_lord",
+    "name": "群山嚎主",
+    "count": 1,
+    "respawn_minutes": 40,
+    "hidden_boss": true,
+    "intro": "嚎主峰顶的咆哮戛然而止——群山嚎主缓缓转身，血红的眼俯视着你！",
+    "signal": "嚎主的咆哮令整座山峰都在震颤"
+   },
+   {
+    "enemy": "dusk_shadow_wolf",
+    "name": "暮影狼",
+    "count": 2,
+    "respawn_minutes": 10
+   }
+  ],
+  "exits": {
+   "down": {
+    "to": "d4_bone_tableland",
+    "mode": "bidirectional"
+   },
+   "right": {
+    "to": "d6_dark_cave",
+    "mode": "bidirectional"
+   }
+  },
+  "mechanics": []
+ },
+ {
+  "id": "d6_dark_cave",
+  "name": "黯穴",
+  "desc": "峰下深渊洞窟，蚀脉如血脉在岩壁搏动。黯穴之主是这颗心脏。",
+  "monsters": [
+   {
+    "enemy": "abyss_cave_lord",
+    "name": "黯穴之主",
+    "count": 1,
+    "respawn_minutes": 40,
+    "hidden_boss": true,
+    "intro": "岩壁的脉动骤然加剧——黯穴之主自蚀脉中升起，凝视着你！",
+    "signal": "黯穴深处传来沉重的心跳声"
+   },
+   {
+    "enemy": "night_howl_bat",
+    "name": "夜嚎蝠",
+    "count": 2,
+    "respawn_minutes": 9
+   }
+  ],
+  "exits": {
+   "left": {
+    "to": "d4_bone_tableland",
+    "mode": "bidirectional"
+   },
+   "right": {
+    "to": "d7_night_summit",
+    "mode": "bidirectional"
+   }
+  },
+  "mechanics": []
+ },
+ {
+  "id": "d7_night_summit",
+  "name": "夜嚎之巅",
+  "desc": "最高峰巅，仅夜晚显露。夜嚎君王立于峰尖，蚀脉如活物般俯首于它。",
+  "monsters": [
+   {
+    "enemy": "midnight_howl_king",
+    "name": "夜嚎君王",
+    "count": 1,
+    "respawn_minutes": 60,
+    "hidden_boss": true,
+    "intro": "夜色最浓处，夜嚎君王的身影浮现——群山真主终于现身！",
+    "signal": "整座夜嚎群山在君王面前沉寂"
+   }
+  ],
+  "exits": {
+   "left": {
+    "to": "d6_dark_cave",
     "mode": "bidirectional"
    }
   },

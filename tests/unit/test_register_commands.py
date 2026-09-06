@@ -77,7 +77,7 @@ def test_tc_reg_01_first_register_success():
     ctx = make_ctx()
     out = cmd_register(parse("/注册 阿伟 战士"), ctx)
     lines = out.splitlines()
-    assert lines[0] == "Lv1.阿伟 - -"                                  # 前缀首行
+    assert lines[0].startswith("✅ 注册成功")  # 2026-09-06 前缀行移除（统一前缀注入）
     assert "✅ 注册成功！欢迎来到「艾泽拉」世界" in out
     assert "职业：战士（推荐新手） ｜ 位置：新手村" in out              # 推荐角标降级纯文本
     # 意见一同步：初始属性每项独立一行（生命/魔力/攻击/防御各一行）
@@ -318,7 +318,7 @@ def test_router_parse_integration():
     router = Router()
     register_register_commands(router, make_context=lambda p: make_ctx())
     out = router.get(REGISTER_CMD).handler(parse("/注册 阿伟 战士"))
-    assert out.startswith("Lv1.阿伟 - -")
+    assert out.startswith("✅ 注册成功")  # 2026-09-06 前缀行移除（统一前缀注入）
 
 
 def test_regress_p1_1_fixed_subword_name_not_swallowed():
@@ -373,7 +373,6 @@ def test_register_rem_tpl_default_when_no_ctx_templates():
     """
     out = cmd_register(parse("/注册 阿伟 战士"), make_ctx())
     assert out == (
-        "Lv1.阿伟 - -\n"
         "✅ 注册成功！欢迎来到「艾泽拉」世界\n"
         "职业：战士（推荐新手） ｜ 位置：新手村\n"
         "初始属性：\n"

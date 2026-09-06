@@ -51,7 +51,7 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
                              "（或直接发 注册，将用你的 QQ 号作为名字）",
 
     # —— 注册：无参 QQ 号兜底提示（用户拍板 2026-08-28：零输入开玩）——
-    "register_auto_name": "已自动用你的 QQ 号「{name}」作为名字",
+    "register_auto_name": "已自动取名「{name}」（无参注册默认如此；重名/换名请先发 注销 再注册）",
 
     # —— 商店：无店 / 空店 / 一览标题（shop_commands；2b3 §2.1 + 定稿 L421）——
     "shop_no_shop": "❌ 商店不存在",

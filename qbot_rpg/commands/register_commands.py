@@ -372,8 +372,9 @@ def render_register_success(
     atk = int(base.get("str", 10))
     dfn = int(base.get("con", 10))
     # 2026-08-31 模板配置化：逐行 tpl_of（register_success_* 分区，内容包可覆盖）
+    # 2026-09-06 zerc 反馈：消息自带前缀行移除（apply_message_prefix 统一前缀
+    # 已注入 Lv1.{name}——原双前缀：注入 Lv0.玩家 + 模板 Lv1.{name} 残影）。
     lines: List[str] = [
-        tpl_of(ctx, "register_success_prefix", {"name": name}),
         tpl_of(ctx, "register_success_welcome", {"world": _world_name(ctx)}),
     ]
     job_name = _job_name_of(job)
@@ -497,7 +498,13 @@ def cmd_register(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         auto_name = str(ctx.get("qq_id") or "").strip()
         if not auto_name:
             return tpl_of(ctx, "register_args_missing", {"usage": usage})
-        name = auto_name
+        # 2026-09-06 zerc 反馈：官方通道 qq_id=member_openid（32 位 hex）超 20 字
+        # 名字硬拦 → 无参注册必失败。兜底名长于上限时改「猎师+尾 4 位」（可读且
+        # 唯一性够）；短 QQ 号（数字 <20）仍原样（原拍板语义保留）。
+        if len(auto_name) > MAX_NAME_LEN:
+            name = f"猎师{auto_name[-4:]}"
+        else:
+            name = auto_name
         used_auto_name = True
     else:
         name = str(args[0])
@@ -563,6 +570,10 @@ def cmd_register(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     ctx["player"] = player
     ctx["registered"] = True
     ctx["location"] = location
+    # 2026-09-06 zerc 反馈：注册后顶层 level/name 同步（原装配占位 level=None/
+    # name=「玩家」→ 统一前缀渲染 Lv0.玩家残影）。同步后前缀 = Lv1.{name}。
+    ctx["level"] = int(getattr(player, "level", 1) or 1)
+    ctx["name"] = str(getattr(player, "name", None) or name)
 
     return render_register_success(ctx, name, job, player, location, hint=hint)
 

@@ -851,7 +851,11 @@ def _run_battle_action(ctx: Mapping[str, Any], action: Mapping[str, Any]) -> dic
     pipeline = BattlePipeline.from_ctx(ctx)
     if engine is None:
         sent = pipeline.send(tpl_of(ctx, _TPL_NO_BATTLE_KEY))
-        return {"ok": False, "sent": sent, "message": tpl_of(ctx, _TPL_NO_BATTLE_KEY)}
+        # send:False —— 正文已由 pipeline 发送（delivered 收集，桥接层 G3 补发）；
+        # 缺此标记会触发 runner sender 再发一遍（前缀文本）→ 补发取到 2 段重复
+        # （2026-09-06 实机「攻击 无战斗」双发修复，对齐下方正常战斗分支同款）
+        return {"ok": False, "sent": sent, "message": tpl_of(ctx, _TPL_NO_BATTLE_KEY),
+                "send": False}
     report = engine.player_act(action)
     sent = dispatch_round(engine, report, pipeline, ctx, player_action=action)
     if report.ended:

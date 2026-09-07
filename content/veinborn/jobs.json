@@ -285,5 +285,51 @@
    "mp": 1.5
   },
   "description": "探针职业：斩杀线/回合门/状态条件/复合判定全条件键审计。"
+ },
+ {
+  "id": "vein_dial",
+  "name": "双极·蚀脉轮转师",
+  "difficulty": "hard",
+  "playstyle": "轮转双极，形态锁闸",
+  "recommended_newbie": false,
+  "resource_axes": [
+   "mp",
+   "stamina",
+   "focus"
+  ],
+  "mechanic_tags": [
+   "探针",
+   "形态",
+   "双轨",
+   "复合"
+  ],
+  "weapon_types": [],
+  "growth": {
+   "atk": 9.5,
+   "dfn": 6.0,
+   "foc": 7.0,
+   "hp": 11.5,
+   "mp": 1.0
+  },
+  "transform": {
+   "transform_skill": "vd_dial_in",
+   "transform_to": "dial_form",
+   "duration": "turns",
+   "turns": 4,
+   "revert": true,
+   "cooldown": 2,
+   "dispel_reverts": false,
+   "state_policy": {
+    "combo": "clear",
+    "marks": "keep",
+    "buff": "keep"
+   },
+   "skill_set": "dial_skills",
+   "equip_restrict": [],
+   "derive_chains": [
+    "chain_dial_overdrive"
+   ]
+  },
+  "description": "探针职业：限时形态×冷却空窗×双资源轨×形态内链全审计。"
  }
 ]

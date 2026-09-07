@@ -494,5 +494,57 @@
     "variant_override": {}
    }
   ]
+ },
+ {
+  "id": "chain_dial_overdrive",
+  "name": "过载轮爆链",
+  "trigger_skill": "vd_heavy",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "vd_heavy",
+    "to": "vd_overdrive",
+    "tag": "none",
+    "condition": {
+     "self_marks": {
+      "vd_grip": {
+       "min": 5
+      }
+     }
+    },
+    "priority": 1,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
+ },
+ {
+  "id": "chain_dial_erode",
+  "name": "裂隙蚀爆链",
+  "trigger_skill": "vd_form_strike",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "vd_form_strike",
+    "to": "vd_form_overload",
+    "tag": "none",
+    "condition": {
+     "target_marks": {
+      "vd_erode": {
+       "min": 5
+      }
+     }
+    },
+    "priority": 1,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
  }
 ]

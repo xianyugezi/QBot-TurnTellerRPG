@@ -290,5 +290,27 @@
   "polarity": "positive",
   "duration": "battle",
   "max_stack": 6
+ },
+ {
+  "id": "vd_grip",
+  "name": "掣能",
+  "description": "形态燃料（自叠 max5）——满 5 过载",
+  "appliable_to": [
+   "self"
+  ],
+  "polarity": "positive",
+  "duration": "battle",
+  "max_stack": 5
+ },
+ {
+  "id": "vd_erode",
+  "name": "蚀隙",
+  "description": "蚀能轨（敌负叠 max5）——满 5 裂隙",
+  "appliable_to": [
+   "enemy"
+  ],
+  "polarity": "negative",
+  "duration": "battle",
+  "max_stack": 5
  }
 ]

@@ -541,5 +541,45 @@
   "type": "damage",
   "value": "10%",
   "target": "enemy"
+ },
+ {
+  "id": "vd_grip1",
+  "name": "掣能+1",
+  "type": "mark_add",
+  "target": "self",
+  "mark": "vd_grip",
+  "count": 1
+ },
+ {
+  "id": "vd_grip2",
+  "name": "掣能+2",
+  "type": "mark_add",
+  "target": "self",
+  "mark": "vd_grip",
+  "count": 2
+ },
+ {
+  "id": "vd_grip_clear",
+  "name": "掣能清",
+  "type": "clear_marks",
+  "marks_on": "self",
+  "polarity": "positive",
+  "mark": "vd_grip"
+ },
+ {
+  "id": "vd_erode1",
+  "name": "蚀隙+1",
+  "type": "mark_add",
+  "target": "enemy",
+  "mark": "vd_erode",
+  "count": 1
+ },
+ {
+  "id": "vd_erode_clear",
+  "name": "蚀隙清",
+  "type": "clear_marks",
+  "marks_on": "enemy",
+  "polarity": "negative",
+  "mark": "vd_erode"
  }
 ]

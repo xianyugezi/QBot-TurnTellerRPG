@@ -2851,5 +2851,353 @@
   "energy_gain": {},
   "desc": "双·双生连斩：220% 复合派生（HP≤60% AND 脉灼≥3）+脉灼+1",
   "derive_only": true
+ },
+ {
+  "type": "basic",
+  "kind": "damage",
+  "power": 110,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "effect": "vd_grip1"
+   },
+   {
+    "effect": "vd_erode1"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_dial"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vd_swing",
+  "name": "脉轮·轻旋",
+  "energy_cost": {},
+  "energy_gain": {
+   "focus": 1
+  },
+  "desc": "攻·轻旋：110%+掣能+1+蚀隙+1（普攻叠双轨）"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 170,
+  "attack_type": "blunt",
+  "element": null,
+  "effects": [
+   {
+    "effect": "vd_grip2"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [
+   "chain_dial_overdrive"
+  ],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_dial"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vd_heavy",
+  "name": "脉轮·重压",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {
+   "focus": 1
+  },
+  "desc": "压·重压：170%+掣能+2+聚焦+1——掣能满 5 自动过载爆发（可派生成：过载·轮爆）"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 300,
+  "attack_type": "blunt",
+  "element": null,
+  "effects": [
+   {
+    "effect": "vd_grip_clear"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_dial"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vd_overdrive",
+  "name": "过载·轮爆",
+  "energy_cost": {},
+  "energy_gain": {},
+  "desc": "爆·过载轮爆：300% 掣能满爆发（派生——形态激活期才可派生？）",
+  "derive_only": true
+ },
+ {
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "attack_type": "none",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_dial"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vd_dial_in",
+  "name": "轮转·袭脉",
+  "energy_cost": {
+   "focus": 4
+  },
+  "energy_gain": {},
+  "desc": "转·轮转袭脉：聚焦 4 翻面进袭脉形态（限时 4 回合——X8 形态冷却审计）"
+ },
+ {
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "attack_type": "none",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_dial"
+  ],
+  "job_form": "dial_form",
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vd_revert",
+  "name": "轮转·归位",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {},
+  "desc": "归·轮转归位：即时还原形态（revert_form——还原起形态冷却空窗）",
+  "revert_form": true
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 140,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "effect": "vd_erode1"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [
+   "chain_dial_erode"
+  ],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_dial"
+  ],
+  "job_form": "dial_form",
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vd_form_strike",
+  "name": "袭脉·轮斩",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {},
+  "desc": "袭·轮斩：140%（形态技）——蚀隙满 5 自动蚀爆（可派生成：袭脉·蚀爆）"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 260,
+  "attack_type": "blunt",
+  "element": null,
+  "effects": [
+   {
+    "effect": "vd_grip_clear"
+   },
+   {
+    "effect": "vd_erode_clear"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_dial"
+  ],
+  "job_form": "dial_form",
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vd_form_burst",
+  "name": "袭脉·终轮",
+  "energy_cost": {},
+  "energy_gain": {},
+  "desc": "终·终轮：260%（形态技 大招）",
+  "derive_only": true
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 320,
+  "attack_type": "blunt",
+  "element": null,
+  "effects": [
+   {
+    "effect": "vd_grip_clear"
+   },
+   {
+    "effect": "vd_erode_clear"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_dial"
+  ],
+  "job_form": "dial_form",
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vd_form_overload",
+  "name": "袭脉·蚀爆",
+  "energy_cost": {},
+  "energy_gain": {},
+  "desc": "蚀·蚀爆：320%（形态技派生——掣能满 5 形态内爆发）",
+  "derive_only": true
+ },
+ {
+  "id": "dial_skills",
+  "name": "袭脉形态技能组",
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "attack_type": "none",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "desc": "形态技能组占位（skill_set 引用锚点）",
+  "energy_cost": {},
+  "energy_gain": {}
  }
 ]

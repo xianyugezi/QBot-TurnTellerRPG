@@ -52,5 +52,10 @@
   "id": "cw_scorch_dot",
   "name": "灼脉·燃",
   "description": "dot 载体（回合结束扣血）"
+ },
+ {
+  "id": "dial_form",
+  "name": "轮转·袭脉",
+  "description": "限时 4 回合袭脉形态（技能组切换）"
  }
 ]

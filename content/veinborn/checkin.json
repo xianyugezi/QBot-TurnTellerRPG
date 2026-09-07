@@ -1,0 +1,86 @@
+[
+ {
+  "id": "checkin_vein",
+  "name": "驿站签到",
+  "type": "loop",
+  "desc": "龙骨驿站常驻签到，7 天一轮。",
+  "period": {
+   "cycle_days": 7,
+   "reset_on_break": true
+  },
+  "rewards": {
+   "daily": [
+    {
+     "day": 1,
+     "coins": 30
+    },
+    {
+     "day": 2,
+     "items": [
+      {
+       "id": "pulse_potion",
+       "count": 1
+      }
+     ],
+     "coins": 30
+    },
+    {
+     "day": 3,
+     "coins": 50
+    },
+    {
+     "day": 4,
+     "items": [
+      {
+       "id": "pulse_potion",
+       "count": 1
+      }
+     ],
+     "coins": 50
+    },
+    {
+     "day": 5,
+     "coins": 80
+    },
+    {
+     "day": 6,
+     "items": [
+      {
+       "id": "vein_shard",
+       "count": 2
+      }
+     ],
+     "coins": 80
+    },
+    {
+     "day": 7,
+     "items": [
+      {
+       "id": "pulse_potion_med",
+       "count": 1
+      }
+     ],
+     "coins": 150
+    }
+   ],
+   "streak": [
+    {
+     "days": 7,
+     "items": [
+      {
+       "id": "item_enhance_stone_low",
+       "count": 1
+      }
+     ],
+     "coins": 200
+    }
+   ],
+   "monthly_total": [
+    {
+     "days": 30,
+     "coins": 500
+    }
+   ]
+  }
+ }
+]

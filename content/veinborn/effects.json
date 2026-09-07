@@ -5,7 +5,8 @@
   "type": "mitigation",
   "power": 40,
   "duration": 1,
-  "desc": "格挡减伤：本回所受伤害 -40%"
+  "desc": "格挡减伤：本回所受伤害 -40%",
+  "target": "self"
  },
  {
   "id": "evade_up",
@@ -13,7 +14,8 @@
   "type": "mitigation",
   "power": 70,
   "duration": 1,
-  "desc": "闪避减伤：本回所受伤害 -70%（引擎无真闪避，用高减伤近似）"
+  "desc": "闪避减伤：本回所受伤害 -70%（引擎无真闪避，用高减伤近似）",
+  "target": "self"
  },
  {
   "id": "surge_gain",
@@ -109,7 +111,8 @@
   "type": "mitigation",
   "power": 20,
   "duration": 1,
-  "desc": "蓄势站桩：本回所受伤害 -20%"
+  "desc": "蓄势站桩：本回所受伤害 -20%",
+  "target": "self"
  },
  {
   "id": "charge_gain",
@@ -159,7 +162,8 @@
   "type": "mitigation",
   "power": 15,
   "duration": 1,
-  "desc": "蓄力架势：本回所受伤害 -15%"
+  "desc": "蓄力架势：本回所受伤害 -15%",
+  "target": "self"
  },
  {
   "id": "vs_gauge1",
@@ -226,7 +230,8 @@
   "type": "mitigation",
   "power": 30,
   "duration": 1,
-  "desc": "冲脉斩：本回所受伤害 -30%（霸体突进）"
+  "desc": "冲脉斩：本回所受伤害 -30%（霸体突进）",
+  "target": "self"
  },
  {
   "id": "vs_stagger",
@@ -297,7 +302,8 @@
   "type": "mitigation",
   "power": 40,
   "duration": 1,
-  "desc": "填弹盾构：本回所受伤害 -40%"
+  "desc": "填弹盾构：本回所受伤害 -40%",
+  "target": "self"
  },
  {
   "id": "po_period1",
@@ -465,7 +471,8 @@
   "name": "闸减伤20",
   "type": "mitigation",
   "power": 20,
-  "duration": 1
+  "duration": 1,
+  "target": "self"
  },
  {
   "id": "cw_dot_scorch",

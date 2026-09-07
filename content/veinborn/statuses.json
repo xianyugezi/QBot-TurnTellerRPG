@@ -57,5 +57,15 @@
   "id": "dial_form",
   "name": "轮转·袭脉",
   "description": "限时 4 回合袭脉形态（技能组切换）"
+ },
+ {
+  "id": "po_bleed_dot",
+  "name": "活期蚀息",
+  "description": "dot 载体（回合结束按生命上限扣血）"
+ },
+ {
+  "id": "po_sweep_dot",
+  "name": "呆账灼蚀",
+  "description": "dot 载体（回合结束按生命上限扣血）"
  }
 ]

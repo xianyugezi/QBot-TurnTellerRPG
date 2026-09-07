@@ -298,5 +298,111 @@
   "power": 40,
   "duration": 1,
   "desc": "填弹盾构：本回所受伤害 -40%"
+ },
+ {
+  "id": "po_period1",
+  "name": "账期+1",
+  "type": "mark_add",
+  "target": "self",
+  "mark": "order_period",
+  "count": 1
+ },
+ {
+  "id": "po_period3",
+  "name": "账期-3",
+  "type": "mark_remove",
+  "marks_on": "self",
+  "polarity": "positive",
+  "mark": "order_period",
+  "count": 3
+ },
+ {
+  "id": "po_period_clear",
+  "name": "账期清空",
+  "type": "clear_marks",
+  "marks_on": "self",
+  "polarity": "positive",
+  "mark": "order_period"
+ },
+ {
+  "id": "po_debt1",
+  "name": "脉账+1",
+  "type": "mark_add",
+  "target": "enemy",
+  "mark": "order_debt",
+  "count": 1
+ },
+ {
+  "id": "po_debt_clear",
+  "name": "脉账清空",
+  "type": "clear_marks",
+  "marks_on": "enemy",
+  "polarity": "negative",
+  "mark": "order_debt"
+ },
+ {
+  "id": "po_lifesteal30",
+  "name": "吸血30",
+  "type": "lifesteal",
+  "value": "30%",
+  "pct": true
+ },
+ {
+  "id": "po_pierce50",
+  "name": "穿防50",
+  "type": "pierce",
+  "value": 50
+ },
+ {
+  "id": "po_shield350",
+  "name": "敌盾350",
+  "type": "shield",
+  "value": 350,
+  "turns": 3,
+  "target": "enemy"
+ },
+ {
+  "id": "po_shield150",
+  "name": "自盾150",
+  "type": "shield",
+  "value": 150,
+  "turns": 2,
+  "target": "self"
+ },
+ {
+  "id": "po_dot_bleed",
+  "name": "活期dot",
+  "type": "dot",
+  "status": "po_bleed_dot",
+  "value": "6%",
+  "tick": "turn_end",
+  "turns": 3,
+  "target": "enemy"
+ },
+ {
+  "id": "po_dot_sweep",
+  "name": "呆账dot",
+  "type": "dot",
+  "status": "po_sweep_dot",
+  "value": "4%",
+  "tick": "turn_end",
+  "turns": 2,
+  "target": "enemy"
+ },
+ {
+  "id": "po_dispel_buff",
+  "name": "驱散buff",
+  "type": "dispel",
+  "filter": "buff",
+  "count": 1,
+  "target": "enemy"
+ },
+ {
+  "id": "po_stagger_hit",
+  "name": "清算失衡",
+  "type": "mark_add",
+  "target": "enemy",
+  "mark": "stagger_weak",
+  "count": 1
  }
 ]

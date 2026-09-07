@@ -894,6 +894,9 @@ class BattleEngine:
                     continue
                 side = _side_of(mark_id)
                 pol = _polarity_of(mark_id)
+                _md = self._resolver(mark_id, "mark")
+                _mraw = _md if isinstance(_md, Mapping) else (getattr(_md, "raw", None) if _md else None)
+                _mark_cn = str((_mraw or {}).get("name") or mark_id) if isinstance(_mraw, Mapping) else mark_id
                 have = mm.count_by_name(side, mark_id) if hasattr(mm, "count_by_name") else 0
                 if have < need_n:
                     seq = self._record_action(
@@ -905,7 +908,7 @@ class BattleEngine:
                         False, seq, attacker, str(ca.get("type", "skill")), target,
                         False, "low", False, 0, 0,
                         int(self._combat(target).get("hp", 0)), (),
-                        f"印记不足（{mark_id}），技能被拒（不耗回合）")
+                        f"印记不足（{_mark_cn}），技能被拒（不耗回合）")
             # 检查全部通过 → 施放后实际扣除（此处即扣：调用点在 effects 结算前，
             # 契约 ADR D-01「先于结算」；扣后由 marks_manager 回灌快照）
             for mark_id, need in consume.items():

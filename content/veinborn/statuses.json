@@ -42,5 +42,10 @@
   "id": "blade_form",
   "name": "剑形态",
   "description": "脉刃师剑形态——剑技可用，耗刃力叠过载（限时）"
+ },
+ {
+  "id": "b_interest",
+  "name": "高息",
+  "description": "结算顺序探针 buff：2 回合状态（压 status_apply 接线）"
  }
 ]

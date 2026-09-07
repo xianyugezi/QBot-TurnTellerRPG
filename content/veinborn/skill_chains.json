@@ -331,5 +331,31 @@
     "variant_override": {}
    }
   ]
+ },
+ {
+  "id": "chain_po_foreclose",
+  "name": "清算封息链",
+  "trigger_skill": "po_settle",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "po_settle",
+    "to": "po_foreclose",
+    "tag": "none",
+    "condition": {
+     "self_marks": {
+      "order_period": {
+       "min": 5
+      }
+     }
+    },
+    "priority": 1,
+    "mode": "replace",
+    "armor": true,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
  }
 ]

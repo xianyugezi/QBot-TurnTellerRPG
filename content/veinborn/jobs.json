@@ -206,5 +206,31 @@
    ]
   },
   "description": "脉变·入剑：刃力 4 变剑，剑形态耗刃力攒过载——过载满 5 释刃变零距解放（限时 6 回合）"
+ },
+ {
+  "id": "probe_order",
+  "name": "脉衡师",
+  "difficulty": "hard",
+  "playstyle": "先记后结，逐层对账",
+  "recommended_newbie": false,
+  "resource_axes": [
+   "mp",
+   "stamina",
+   "focus"
+  ],
+  "mechanic_tags": [
+   "探针",
+   "结算顺序",
+   "复合"
+  ],
+  "weapon_types": [],
+  "growth": {
+   "atk": 10.0,
+   "dfn": 6.0,
+   "foc": 7.0,
+   "hp": 11.0,
+   "mp": 1.5
+  },
+  "description": "探针职业：直伤/吸血/dot/破盾/驱散/叠账同技入账——凡结算有先后皆可审。"
  }
 ]

@@ -1702,5 +1702,429 @@
   "energy_gain": {},
   "desc": "雨·弹雨：散射风暴 180%（散射连用 2 次）",
   "derive_only": true
+ },
+ {
+  "type": "basic",
+  "kind": "damage",
+  "power": 110,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "effect": "po_period1"
+   },
+   {
+    "effect": "po_lifesteal30"
+   },
+   {
+    "effect": "po_debt1"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "probe_order"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "po_stab",
+  "name": "刺账·红字",
+  "energy_cost": {},
+  "energy_gain": {
+   "focus": 1
+  },
+  "desc": "攻·刺账红字：基础记账 110%，账期+1，吸血 30%，敌脉账 +1"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 150,
+  "attack_type": "pierce",
+  "element": null,
+  "effects": [
+   {
+    "effect": "po_pierce50"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "probe_order"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "ignore",
+  "id": "po_lien",
+  "name": "复利滚息",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {
+   "focus": 1
+  },
+  "desc": "利·复利滚息：150% 破格无视格挡+穿防 50%（双无视叠加审计）"
+ },
+ {
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "effect": "po_shield350"
+   },
+   {
+    "effect": "po_period1"
+   },
+   {
+    "effect": "po_debt1"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "probe_order"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "po_toll",
+  "name": "蚀约·放账",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {},
+  "desc": "约·蚀约放账：给敌挂盾 350（护盾目标侧接线审计）+自账期+1 敌脉账+1"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 130,
+  "attack_type": "magic",
+  "element": "void",
+  "effects": [
+   {
+    "effect": "po_dot_bleed"
+   },
+   {
+    "effect": "po_debt1"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "probe_order"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 3.0,
+  "block_mode": "auto",
+  "id": "po_bleed",
+  "name": "活期蚀息",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {},
+  "desc": "息·活期蚀息：130% 必暴（crit 3.0）+暗蚀 dot 6%×3 回合+敌脉账+1"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 220,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "effect": "po_dispel_buff"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "probe_order"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "ignore",
+  "id": "po_order",
+  "name": "对账封账",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {
+   "focus": 1
+  },
+  "desc": "账·对账封账：220% 破格+驱散敌 1 增益（驱散三命中面审计）"
+ },
+ {
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "effect": "po_period1"
+   },
+   {
+    "effect": "po_shield150"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 3,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "probe_order"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "po_rate",
+  "name": "高息率",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {},
+  "desc": "率·高息率：CD3+自挂高息 2 回合+自盾 150+账期+1（冷却×状态复合）"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 120,
+  "attack_type": "magic",
+  "element": "void",
+  "effects": [
+   {
+    "effect": "po_dot_sweep"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "probe_order"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "po_sweep",
+  "name": "呆账平账",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {},
+  "desc": "呆·呆账平账：范围 120（1v1 降级）+dot 4%×2+自盾 80"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 90,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "effect": "po_debt_clear"
+   },
+   {
+    "effect": "po_period_clear"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "probe_order"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "po_revoke",
+  "name": "赖账重估",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {},
+  "desc": "赖·赖账重估：90%+清敌脉账整组+清自账期（clear_marks 语义对照）"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 250,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "effect": "po_period3"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [
+   "chain_po_foreclose"
+  ],
+  "consume_marks": {
+   "order_period": 3
+  },
+  "job_restrict": [
+   "probe_order"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "po_settle",
+  "name": "终账·红字锁账",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {},
+  "desc": "终·红字锁账：250% 双门禁（精力1+账期3 原子审计）——账期满 5 自动变清算（可派生成：清算·封息）"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 400,
+  "attack_type": "magic",
+  "element": "void",
+  "effects": [
+   {
+    "effect": "po_period_clear"
+   },
+   {
+    "effect": "po_debt_clear"
+   },
+   {
+    "effect": "po_stagger_hit"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": true,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "probe_order"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "po_foreclose",
+  "name": "清算·封息",
+  "energy_cost": {},
+  "energy_gain": {},
+  "desc": "清·清算封息：400% 大招+清账期清脉账+失衡（账期满 5 自动变——派生）",
+  "derive_only": true
  }
 ]

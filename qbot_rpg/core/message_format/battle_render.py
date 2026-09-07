@@ -555,6 +555,12 @@ def _render_player_action(outcome: Any, *, ctx: Any = None) -> List[str]:
     if atype in ("guard", "defense"):
         return [_render_player_defend(outcome, ctx=ctx)]      # BREP-05
     if not bool(getattr(outcome, "hit", False)):
+        # 2026-09-07 探针实测：被拒（资源/印记不足）outcome hit=False 且 message
+        # 带拒因——原无条件渲染成「未命中」误导（玩家以为 miss 实为被拒）。
+        # 拒因消息优先；空消息才走 miss 模板。
+        _msg = str(getattr(outcome, "message", "") or "")
+        if _msg and ("被拒" in _msg or "不足" in _msg or "冷却" in _msg):
+            return [_msg]
         return [_render_player_miss(outcome, ctx=ctx)]        # BREP-03
     if atype == "skill" and int(getattr(outcome, "final_damage", 0)) <= 0:
         line = _render_skill_cast_line(outcome, ctx=ctx)      # M5-04 BREP-07

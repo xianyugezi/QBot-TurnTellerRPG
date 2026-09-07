@@ -224,5 +224,27 @@
   "polarity": "positive",
   "duration": "battle",
   "max_stack": 5
+ },
+ {
+  "id": "order_period",
+  "name": "账期",
+  "description": "自叠结算账期（上限 5）——满 5 终账催收",
+  "appliable_to": [
+   "self"
+  ],
+  "polarity": "positive",
+  "duration": "battle",
+  "max_stack": 5
+ },
+ {
+  "id": "order_debt",
+  "name": "脉账",
+  "description": "敌负叠账（上限 5）——满 5 红字破窗",
+  "appliable_to": [
+   "enemy"
+  ],
+  "polarity": "negative",
+  "duration": "battle",
+  "max_stack": 5
  }
 ]

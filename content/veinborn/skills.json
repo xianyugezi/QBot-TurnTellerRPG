@@ -36,7 +36,14 @@
   "power": 120,
   "attack_type": "pierce",
   "element": null,
-  "effects": [],
+  "effects": [
+   {
+    "effect": "va_ammo1"
+   },
+   {
+    "effect": "va_charge1"
+   }
+  ],
   "mp_cost": 0,
   "cooldown": 0,
   "tag": "none",
@@ -54,7 +61,7 @@
    "per_round": 10,
    "per_battle": 99
   },
-  "desc": "攻·脉矢：基础射击，耗 1 精力，聚焦 +1",
+  "desc": "攻·脉矢：基础射击，命中贯能 +1（射 6 发需填弹）",
   "hit_mod": 1.0,
   "crit_mod": 1.0,
   "block_mode": "auto",
@@ -88,7 +95,7 @@
    "per_round": 1,
    "per_battle": 1
   },
-  "desc": "专精·猎势贯瞳：消耗 4 聚焦翻面，解锁终结技（恒效形态）",
+  "desc": "专精·猎势贯瞳：消耗 4 聚焦翻面，解放龙击弹与狙击（恒效形态）",
   "hit_mod": 1.0,
   "crit_mod": 1.0,
   "block_mode": "auto",
@@ -125,7 +132,7 @@
    "per_round": 10,
    "per_battle": 99
   },
-  "desc": "形态终结·贯瞳狙击：翻面后解锁的终结技（霸体，贯穿）",
+  "desc": "狙·贯瞳狙击：翻面终结，200% 贯穿霸体（不耗弹，贯能满自动变贯脉炮）",
   "hit_mod": 1.0,
   "crit_mod": 1.0,
   "block_mode": "ignore"
@@ -1496,6 +1503,204 @@
   "energy_cost": {},
   "energy_gain": {},
   "desc": "旋·裂地旋：斧挥旋横扫 170%（旋斩连用 2 次）",
+  "derive_only": true
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 150,
+  "attack_type": "pierce",
+  "element": null,
+  "effects": [
+   {
+    "effect": "va_ammo2"
+   },
+   {
+    "effect": "va_charge2"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_archer"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "ignore",
+  "id": "va_heavy",
+  "name": "贯脉",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {},
+  "desc": "重·贯脉：贯通重弹，贯能 +2（贯穿——无视 20% 防御；重弹耗 2 弹量）"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 130,
+  "attack_type": "pierce",
+  "element": null,
+  "effects": [
+   {
+    "effect": "va_ammo2"
+   },
+   {
+    "effect": "va_charge1"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "combo",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [
+   "chain_va_spread"
+  ],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_archer"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "va_spread",
+  "name": "散射",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {},
+  "desc": "散·散射：近距霰弹，耗 2 弹量贯能 +1（连用 2 次变弹雨）"
+ },
+ {
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "effect": "va_ammo_full"
+   },
+   {
+    "effect": "va_shield_guard"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_archer"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "va_reload",
+  "name": "填弹·盾构",
+  "energy_cost": {},
+  "energy_gain": {},
+  "desc": "填·填弹盾构：清零弹耗（回满弹匣），本回减伤 40%（换弹窗口）"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 280,
+  "attack_type": "pierce",
+  "element": null,
+  "effects": [
+   {
+    "effect": "va_charge_clear"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": true,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_archer"
+  ],
+  "job_form": "piercing_eye_form",
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "ignore",
+  "id": "va_wyvern",
+  "name": "贯脉炮",
+  "energy_cost": {},
+  "energy_gain": {},
+  "desc": "炮·贯脉炮：龙击弹爆发 280%，清贯能，霸体贯穿（贯能满自动变）",
+  "derive_only": true
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 180,
+  "attack_type": "pierce",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_archer"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "ignore",
+  "id": "va_rain",
+  "name": "弹雨",
+  "energy_cost": {},
+  "energy_gain": {},
+  "desc": "雨·弹雨：散射风暴 180%（散射连用 2 次）",
   "derive_only": true
  }
 ]

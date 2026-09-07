@@ -235,5 +235,68 @@
   "target": "enemy",
   "mark": "stagger_weak",
   "count": 1
+ },
+ {
+  "id": "va_ammo1",
+  "name": "弹耗+1",
+  "type": "mark_add",
+  "marks_on": "self",
+  "polarity": "positive",
+  "mark": "va_ammo",
+  "count": 1,
+  "target": "self"
+ },
+ {
+  "id": "va_ammo2",
+  "name": "弹耗+2",
+  "type": "mark_add",
+  "marks_on": "self",
+  "polarity": "positive",
+  "mark": "va_ammo",
+  "count": 2,
+  "target": "self"
+ },
+ {
+  "id": "va_ammo_full",
+  "name": "弹耗清零",
+  "type": "mark_remove",
+  "target": "self",
+  "mark": "va_ammo",
+  "count": 6,
+  "marks_on": "self",
+  "polarity": "positive"
+ },
+ {
+  "id": "va_charge1",
+  "name": "贯能+1",
+  "type": "mark_add",
+  "target": "self",
+  "mark": "va_charge",
+  "count": 1
+ },
+ {
+  "id": "va_charge2",
+  "name": "贯能+2",
+  "type": "mark_add",
+  "target": "self",
+  "mark": "va_charge",
+  "count": 2
+ },
+ {
+  "id": "va_charge_clear",
+  "name": "贯能清空",
+  "type": "mark_remove",
+  "marks_on": "self",
+  "polarity": "positive",
+  "mark": "va_charge",
+  "count": 5
+ },
+ {
+  "id": "va_shield_guard",
+  "name": "弩盾构",
+  "type": "mitigation",
+  "power": 40,
+  "duration": 1,
+  "desc": "填弹盾构：本回所受伤害 -40%"
  }
 ]

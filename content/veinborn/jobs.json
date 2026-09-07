@@ -50,7 +50,7 @@
   "id": "vein_archer",
   "name": "脉矢手",
   "difficulty": "simple",
-  "playstyle": "远程狙射，专精贯瞳",
+  "playstyle": "远程炮台，填弹爆发",
   "recommended_newbie": false,
   "resource_axes": [
    "mp",
@@ -59,18 +59,20 @@
   ],
   "mechanic_tags": [
    "远程",
-   "连段",
-   "专精"
+   "弹匣",
+   "装填",
+   "炮台"
   ],
   "weapon_types": [
-   "longbow"
+   "heavybowgun"
   ],
   "growth": {
-   "agi": 10.0,
-   "atk": 5.0,
-   "foc": 6.5,
-   "hp": 12.0,
-   "mp": 1.0
+   "atk": 9.0,
+   "foc": 7.5,
+   "agi": 6.0,
+   "hp": 11.0,
+   "mp": 0.8,
+   "dfn": 2.0
   },
   "transform": {
    "transform_skill": "va_mastery",
@@ -90,7 +92,7 @@
     "chain_piercing_shot"
    ]
   },
-  "description": "猎势·贯瞳：聚焦满翻面，解锁终结技（专精恒效）。"
+  "description": "猎势·贯瞳：聚焦满翻面，贯瞳狙击与贯脉炮解放（恒效形态）。"
  },
  {
   "id": "forge",

@@ -202,5 +202,27 @@
   "polarity": "positive",
   "duration": "battle",
   "max_stack": 5
+ },
+ {
+  "id": "va_ammo",
+  "name": "弹耗",
+  "description": "已射弹数（上限 6）——满 6 需填弹（射击自动变填弹·盾构）",
+  "appliable_to": [
+   "self"
+  ],
+  "polarity": "positive",
+  "duration": "battle",
+  "max_stack": 6
+ },
+ {
+  "id": "va_charge",
+  "name": "贯能",
+  "description": "射击累积的特殊弹能量（上限 5）——满 5 重弹自动变贯脉炮",
+  "appliable_to": [
+   "self"
+  ],
+  "polarity": "positive",
+  "duration": "battle",
+  "max_stack": 5
  }
 ]

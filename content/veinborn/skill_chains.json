@@ -80,12 +80,30 @@
  },
  {
   "id": "chain_piercing_shot",
-  "name": "贯瞳狙击链",
+  "name": "贯脉炮解放链",
   "job_scope": "piercing_eye_form",
-  "trigger_skill": "va_form_shot",
+  "trigger_skill": "va_heavy",
   "max_combo": 1,
   "max_combo_behavior": "reset",
-  "steps": []
+  "steps": [
+   {
+    "from": "va_heavy",
+    "to": "va_wyvern",
+    "tag": "none",
+    "condition": {
+     "self_marks": {
+      "va_charge": {
+       "min": 5
+      }
+     }
+    },
+    "priority": 1,
+    "mode": "replace",
+    "armor": true,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
  },
  {
   "id": "chain_hammer_avalanche",
@@ -257,6 +275,56 @@
      }
     },
     "priority": 1,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
+ },
+ {
+  "id": "chain_va_spread",
+  "name": "散射弹雨链",
+  "trigger_skill": "va_spread",
+  "max_combo": 2,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "va_spread",
+    "to": "va_rain",
+    "tag": "none",
+    "condition": {
+     "count": {
+      "eq": 2
+     }
+    },
+    "priority": 1,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
+ },
+ {
+  "id": "chain_va_autoreload",
+  "name": "满弹自动填弹链",
+  "trigger_skill": "va_shot",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "va_shot",
+    "to": "va_reload",
+    "tag": "none",
+    "condition": {
+     "self_marks": {
+      "va_ammo": {
+       "min": 6
+      }
+     }
+    },
+    "priority": 0,
     "mode": "replace",
     "armor": false,
     "consume": 0,

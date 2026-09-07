@@ -1236,6 +1236,11 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
         "current_shop_ref": [],
         # M8 炼金（批11-2 收口接线：注册表表视图 + 会话/战斗/引擎注入位；指令壳自兜底）
         "registry": deps.registry,
+        # P1-2（qa_report_20260907）：templates 表无条件注入（基础 ctx）——原仅
+        # registered 分支注入，注册成功消息（注册前 ctx registered=False）拿不到
+        # 内容包模板覆盖，veinborn 等包的注册引导文案定制不生效。模板表与注册
+        # 态无关，任何消息（含未注册玩家）都应有内容包覆盖。
+        "templates": _templates_table(deps.registry),
         # M12.5 赠送（2026-09-06）：repo 注入位——跨玩家指令（赠送/交易引擎）需
         # 事务内读写他人存档（同步 ctx 快照只含本人）；GM 备份类指令亦可受益。
         "repo": getattr(deps, "repo", None),
@@ -1295,7 +1300,6 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
                 "location": location,
                 "title": _current_title(player.title_state),
                 "stats": _stats_table(deps.registry, settings),
-                "templates": _templates_table(deps.registry),
                 "attributes": attrs,
                 "attr_final": _attr_final(attrs, conditional_rules, settings, attr_types),
                 "exp_next": _exp_next(settings, player.level),

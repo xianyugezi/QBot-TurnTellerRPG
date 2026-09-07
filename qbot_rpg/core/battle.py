@@ -2292,6 +2292,23 @@ class BattleEngine:
         # M13 批17 路17C：伤害结算传 ca（含 skill def 合并 + segments 多段展开 +
         # 派生 skill_id 同步）——原 action 缺这些扩展（hits=3 只出 1 段问题根因）。
         out = self._resolve_damage_action(attacker, ca)
+        # 2026-09-07 探针 #5：transform 触发技/revert 技施放成功（power 0
+        # utility）但吃命中 roll miss → 渲染成「未命中」误导。功能成功事件
+        # 注入 message（渲染层 message 优先直出）。
+        if not out.message:
+            _tf = self._transform_events or []
+            _tf_types = {str(ev.get("type") or "") for ev in _tf}
+            if "transform_committed" in _tf_types or "transform_reverted" in _tf_types:
+                _msg = "形态切换完成"
+                if ca.get("transform_triggered"):
+                    _msg = f"形态切换：进入{ca.get('transform_form') or ''}形态"
+                out = ActionOutcome(
+                    out.ok, out.seq, out.actor, out.action_type, out.target, True,
+                    out.crit, out.blocked, 0, 0, out.target_hp,
+                    out.side_effects, _msg,
+                    battle_ended=out.battle_ended, status=out.status,
+                    combo_result=out.combo_result,
+                )
         # M13 批17 路17C：组合审计透出（ca 侧 combo_result → outcome.combo_result）
         _cr = ca.get("combo_result")
         if isinstance(_cr, dict):

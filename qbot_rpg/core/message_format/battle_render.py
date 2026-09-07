@@ -557,9 +557,17 @@ def _render_player_action(outcome: Any, *, ctx: Any = None) -> List[str]:
     if not bool(getattr(outcome, "hit", False)):
         # 2026-09-07 探针实测：被拒（资源/印记不足）outcome hit=False 且 message
         # 带拒因——原无条件渲染成「未命中」误导（玩家以为 miss 实为被拒）。
-        # 拒因消息优先；空消息才走 miss 模板。
+        # 拒因消息优先；utility/功能技（transform/revert/辅助——kind != damage）
+        # 施放走 skill_cast 而非 miss；空消息才走 miss 模板。
         _msg = str(getattr(outcome, "message", "") or "")
         if _msg and ("被拒" in _msg or "不足" in _msg or "冷却" in _msg):
+            return [_msg]
+        # 2026-09-07 探针 #5：utility/功能技（transform/revert/辅助）施放
+        # 成功但 power=0 → final_damage=0 + hit 可能 False（吃了命中 roll）——
+        # 原渲染成「未命中你的XX」（变身成功却误导）。battle 注入的形态切换
+        # 成功消息（含「形态」）→ 直出；其余（含测试 fixture 默认 message）
+        # 仍走 miss 模板。
+        if _msg and "形态" in _msg and int(getattr(outcome, "final_damage", 0) or 0) == 0:
             return [_msg]
         return [_render_player_miss(outcome, ctx=ctx)]        # BREP-03
     if atype == "skill" and int(getattr(outcome, "final_damage", 0)) <= 0:

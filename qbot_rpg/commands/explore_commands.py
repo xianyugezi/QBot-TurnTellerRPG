@@ -255,6 +255,32 @@ def _render_enter(result: Mapping[str, Any],
     return "\n".join(lines)
 
 
+def _apply_rest_heal(ctx: Mapping[str, Any], result: Mapping[str, Any]) -> None:
+    """P2-3 配套：营地休息恢复写回 ctx player（ctx 标量 + Player/dict 同步落档）。"""
+    hp = int(result.get("hp", 0) or 0)
+    mp = int(result.get("mp", 0) or 0)
+    if isinstance(ctx, MutableMapping):
+        ctx["hp"] = hp
+        ctx["mp"] = mp
+    p = ctx.get("player")
+    if p is None:
+        return
+    try:
+        import dataclasses  # noqa: PLC0415
+        from qbot_rpg.data import Player  # noqa: PLC0415
+
+        if isinstance(p, Player):
+            _nb = dataclasses.replace(p, hp=hp, mp=mp)
+            if isinstance(ctx, MutableMapping):
+                ctx["player"] = _nb
+            return
+    except Exception:  # noqa: BLE001 - Player 形态探测失败回落 dict
+        pass
+    if isinstance(p, MutableMapping):
+        p["hp"] = hp
+        p["mp"] = mp
+
+
 def _render_rest(result: Mapping[str, Any], ctx: Optional[Mapping[str, Any]] = None) -> str:
     """/休息 结果 → 1 条消息文本（成功 / 拒绝）。
 
@@ -532,10 +558,30 @@ def cmd_rest(parsed: Any, ctx: Mapping[str, Any]) -> str:
     if len(args) > 1:
         return tpl_of(ctx, "explore_rest_extra_arg")
     try:
-        from qbot_rpg.world.rest import rest_in_dungeon  # noqa: PLC0415
+        from qbot_rpg.world.rest import rest_at_camp, rest_in_dungeon  # noqa: PLC0415
     except ImportError:
         return tpl_of(ctx, "explore_rest_not_wired")
     session = ctx.get("dungeon_session")
+    if session is None:
+        # P2-3 配套（qa_report_20260907）：无副本会话 → 野图营地休息（camp_name
+        # 标记图：驿站/各区营地免费休整至满）。原实现 session=None 直落 rest_in_
+        # dungeon 报「不在安全区」——玩家在龙骨驿站（camp）发休息被拒且提示
+        # 「回营地再休息」自相矛盾。营地休息恢复写回 ctx player（落档）。
+        from qbot_rpg.world.rest import camp_map_of  # noqa: PLC0415
+
+        _loc = str(ctx.get("location") or ctx.get("map_id") or "")
+        _maps = ctx.get("maps")
+        _camp = camp_map_of(_maps, _loc)
+        if _camp is not None:
+            result = rest_at_camp(
+                _player_ctx(ctx),
+                max_hp=ctx.get("max_hp"),
+                max_mp=ctx.get("max_mp"),
+            )
+            _apply_rest_heal(ctx, result)
+            return _render_rest(result, ctx)
+        return tpl_of(ctx, "explore_rest_fail",
+                      {"reason": "当前不在营地或副本安全区（驿站/营地可休息，或找驿站药婆疗伤）"})
     result = rest_in_dungeon(
         session, _player_ctx(ctx),
         cfg=ctx.get("rest_cfg"),

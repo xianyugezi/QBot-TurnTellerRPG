@@ -506,3 +506,63 @@ def rest_is_not_exit(session: Any) -> dict:
         "chase_ctx_preserved": chase_preserved,
         "reset_triggered": False,
     }
+
+
+# =============================================================================
+# P2-3 配套（qa_report_20260907）：野图营地 /休息——camp_name 标记图免费休整
+# =============================================================================
+
+
+def camp_map_of(maps: Any, map_id: Optional[str]) -> Optional[Mapping[str, Any]]:
+    """maps（list/容器）中找 map_id 且带 camp_name 的营地节点（纯查询）。
+
+    入参 maps: ctx["maps"]（MapDef raw dict 列表）/ modules 容器 / None；
+    map_id: 当前地图 id。出参 营地节点 dict（含 camp_name）或 None。
+    """
+    if not map_id:
+        return None
+    entries: list = []
+    if isinstance(maps, Mapping) and "maps" in maps:
+        raw = maps.get("maps")
+        entries = [e for e in raw if isinstance(e, Mapping)] if isinstance(raw, list) else []
+    elif isinstance(maps, (list, tuple)):
+        entries = [e for e in maps if isinstance(e, Mapping)]
+    elif isinstance(maps, Mapping):
+        entries = [e for e in maps.values() if isinstance(e, Mapping)]
+    for e in entries:
+        if str(e.get("id") or "") == map_id and e.get("camp_name"):
+            return e
+    return None
+
+
+def rest_at_camp(
+    player_ctx: Mapping[str, Any],
+    *,
+    max_hp: Optional[float] = None,
+    max_mp: Optional[float] = None,
+) -> Dict[str, Any]:
+    """野图营地休整：HP/MP 恢复至满（营地帐篷免费补给，对齐 MH 猫车语义）。
+
+    纯计算不改入参；返回 {rested, hp_restored, mp_restored, hp, mp, message}。
+    调用方（指令层）负责把 hp/mp 写回 ctx player（落档）。
+    """
+    cur_hp = _read_current_resource(player_ctx, "hp")
+    cur_mp = _read_current_resource(player_ctx, "mp")
+    mh = max_hp
+    if mh is None:
+        mh = _read_max_resource(player_ctx, {}, "max_hp")
+    mm = max_mp
+    if mm is None:
+        mm = _read_max_resource(player_ctx, {}, "max_mp")
+    hp0 = int(cur_hp) if cur_hp is not None else 0
+    mp0 = int(cur_mp) if cur_mp is not None else 0
+    hp_restored = max(0, int(mh) - hp0) if mh is not None else 0
+    mp_restored = max(0, int(mm) - mp0) if mm is not None else 0
+    return {
+        "rested": True,
+        "hp_restored": hp_restored,
+        "mp_restored": mp_restored,
+        "hp": int(mh) if mh is not None else hp0,
+        "mp": int(mm) if mm is not None else mp0,
+        "message": f"✅ 你在营地歇了歇脚（回复 {hp_restored} 点 HP、{mp_restored} 点 MP）",
+    }

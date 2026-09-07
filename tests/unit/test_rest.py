@@ -35,7 +35,9 @@ from qbot_rpg.world.rest import (
     MESSAGE_REST_NOT_SAFE,
     REST_MODE_FULL,
     STATE_LEFT,
+    camp_map_of,
     is_safe_zone,
+    rest_at_camp,
     rest_in_dungeon,
     rest_is_not_exit,
 )
@@ -362,3 +364,39 @@ class TestRestIsNotExit:
         assert cleared["reset"] is True                      # 60 离开 → 重置
         assert rest_is_not_exit(cleared["session"])["kept"] is False  # 61 重置后非保留
         assert rest_is_not_exit(cleared["session"])["boss_state_preserved"] is False  # 62
+
+
+# ---------------------------------------------------------------------------
+# P2-3 配套（qa_report_20260907）：野图营地休息（camp_name 图免费休整）
+# ---------------------------------------------------------------------------
+
+
+def test_camp_map_of_finds_camp_node():
+    """camp_map_of：maps 列表找 camp_name 节点；非营地/未知图 → None。"""
+    maps = [
+        {"id": "bone_station", "name": "龙骨驿站", "camp_name": "龙骨驿站"},
+        {"id": "a1_bone_field", "name": "骸骨草场"},
+    ]
+    camp = camp_map_of(maps, "bone_station")
+    assert camp is not None and camp["camp_name"] == "龙骨驿站"
+    assert camp_map_of(maps, "a1_bone_field") is None
+    assert camp_map_of(maps, "no_such_map") is None
+    assert camp_map_of(None, "bone_station") is None
+    assert camp_map_of(maps, "") is None
+    # modules 容器形态
+    assert camp_map_of({"maps": maps}, "bone_station") is not None
+
+
+def test_rest_at_camp_restores_full():
+    """rest_at_camp：营地休整 HP/MP 恢复至满（纯计算）。"""
+    player = {"hp": 100, "mp": 5}
+    r = rest_at_camp(player, max_hp=400, max_mp=30)
+    assert r["rested"] is True
+    assert r["hp_restored"] == 300 and r["mp_restored"] == 25
+    assert r["hp"] == 400 and r["mp"] == 30
+    # 满血 → 0 恢复（幂等）
+    r2 = rest_at_camp({"hp": 400, "mp": 30}, max_hp=400, max_mp=30)
+    assert r2["hp_restored"] == 0 and r2["mp_restored"] == 0
+    # max 缺省从 player_ctx 读（max_hp 键）
+    r3 = rest_at_camp({"hp": 50, "mp": 1, "max_hp": 200, "max_mp": 20})
+    assert r3["hp"] == 200 and r3["mp"] == 20

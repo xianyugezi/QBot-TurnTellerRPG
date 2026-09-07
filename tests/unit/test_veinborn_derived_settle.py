@@ -224,3 +224,83 @@ def test_mult0_derived_skill_still_resolves() -> None:
     # mult=0 段：不造成伤害，但 effects 仍执行（core_broken 挂上）
     assert _enemy_hp(eng) == 2000, "mult=0 不应造成伤害"
     assert _mark_count(eng, "enemy", "core_broken") == 1, "mult=0 派生 effects 仍应执行"
+
+
+# ---------------------------------------------------------------------------
+# P1-1（qa_report 20260907）回归：派生技完整倍率不被 derived cap 误砍
+# ---------------------------------------------------------------------------
+# 背景：battle.py 对 action._derived 的 skill_mult 套 apply_derived_cap(1.5)，
+# 把派生大招的「技能自身完整 mult」（2.0/2.6/3.0/4.0 档，数值定稿 §4.2 预算
+# 大招 250-400%）误砍到 1.5。cap 语义（派生定稿 §6.3/风险表）只针对「派生链
+# 伤害加成增量」防膨胀，非单次 replace 大招的完整倍率。
+
+def _engine_power(power: float, cond: Any = None) -> BattleEngine:
+    """构造 to 技 power 任意的派生引擎（默认 200 → 2.0×）。
+
+    派生链 id 固定 chain_core_break（与 rb_core_strike.chain_refs 匹配），
+    to 技 big_ult 无 consume_marks（区别于 vb_core_breaker 的 consume 120），
+    使无条件 replace 派生无需预置破坏值即可触发。
+    """
+    skills = {
+        "big_ult": {
+            "id": "big_ult", "name": "大终技", "type": "active",
+            "kind": "damage", "power": power, "mp_cost": 0,
+        },
+    }
+    chains = {
+        "id": "chain_core_break", "name": "破脉核链",
+        "trigger_skill": "rb_core_strike", "max_combo": 1,
+        "max_combo_behavior": "reset",
+        "steps": [{
+            "from": "rb_core_strike", "to": "big_ult",
+            "tag": "none", "condition": dict(cond) if cond else {},
+            "priority": 1, "mode": "replace", "armor": False,
+            "consume": 0, "variant_override": {},
+        }],
+    }
+    d = _defs(skills=skills, chains=chains)
+    eng = BattleEngine(defs=d)
+    eng.start(
+        {"hp": 2000, "max_hp": 2000, "mp": 100, "max_mp": 100,
+         "atk": 100, "def": 0, "spr": 0, "spd": 10, "foc": 100, "con": 0,
+         "lck": 0, "int": 0, "elem_atk": 0, "name": "玩家"},
+        {"hp": 2000, "max_hp": 2000, "mp": 0, "max_mp": 0,
+         "atk": 0, "def": 0, "spr": 0, "spd": 10, "foc": 0, "con": 0,
+         "lck": 0, "int": 0, "elem_atk": 0, "name": "砾冕"},
+        random_seed=7,
+    )
+    return eng
+
+
+def _last_multi(eng: BattleEngine) -> float:
+    """读最近一条 action_record 的 rating.multi（伤害倍率结算值）。"""
+    recs = eng.battle_state().get("action_record", [])
+    assert recs, "应有 action_record"
+    return float(recs[-1].get("rating", {}).get("multi", 0.0))
+
+
+def test_p11_derived_ult_full_mult_not_capped_to_1_5() -> None:
+    """P1-1：派生大招完整倍率放行——200% 派生按 2.0× 结算（非 cap 1.5×）。"""
+    eng = _engine_power(200)
+    # 无条件 replace 派生 → 第一发 rb_core_strike 即派生 big_ult（power 200）
+    hp0 = _enemy_hp(eng)
+    out = eng.do_action("player", {"type": "skill", "skill_id": "rb_core_strike"})
+    assert out.ok is True, f"派生施放应成功，got {out}"
+    assert out.combo_result and out.combo_result.get("form_id") == "big_ult", \
+        f"应派生 big_ult，got {out.combo_result}"
+    multi = _last_multi(eng)
+    assert multi == 2.0, f"派生大招 mult 应 2.0×（power 200/100），got {multi}（cap 1.5 缺陷=1.5）"
+    dmg = hp0 - _enemy_hp(eng)
+    assert dmg > 170, f"派生大招 2.0× 应≈200，got {dmg}"
+
+
+def test_p11_derived_300_pct_full_mult() -> None:
+    """P1-1 上限回归：300%（裂脊斩同档）派生不被砍——mult 3.0 而非 1.5。"""
+    eng = _engine_power(300)
+    hp0 = _enemy_hp(eng)
+    out = eng.do_action("player", {"type": "skill", "skill_id": "rb_core_strike"})
+    assert out.ok is True, f"派生施放应成功，got {out}"
+    multi = _last_multi(eng)
+    assert multi == 3.0, f"派生大招 mult 应 3.0×（power 300/100），got {multi}（cap 1.5 缺陷=1.5）"
+    dmg = hp0 - _enemy_hp(eng)
+    assert dmg > 260, f"派生大招 3.0× 应≈300，got {dmg}"

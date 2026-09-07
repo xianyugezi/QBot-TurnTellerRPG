@@ -2432,11 +2432,18 @@ class BattleEngine:
             base_mult = float(_raw_mult) if _raw_mult is not None else 1.0
             skill_mult = self._apply_boost_to_mult(attacker, base_mult, "atk")
             # 派生累计 ≤1.5× 封顶（1a L129/L229；damage.apply_derived_cap，P1-7 消费）
-            # M2-C1 修正：封顶只对「派生技」（action._derived，_resolve_combo_action 打标）
-            # 生效——派生累计是派生链叠加的封顶，单技能基础倍率（技能库预算小技 150-200%）
-            # 不应被封顶（tc16 怪物行动 fireball power 1.6 期望 multi==1.6）。
+            # P1-1（qa_report_20260907）修正：cap 语义 = 派生链「伤害加成增量」防
+            # 膨胀（派生定稿 §6.3/风险表）——只约束 **boost 加成因子**（1+boost/100
+            # ≤1.5），不砍技能自身完整 base_mult（派生大招 power 200-420 → 2.0-4.2×
+            # 是数值定稿 §4.2 预算档位，非派生链累计）。修复前整个 skill_mult 被
+            # min 到 1.5，裂脊斩 300%/零距 320% 等派生终技全被误砍。
+            # M2-C1（tc16）保留：非派生技能（含怪物行动）不套此封顶。
             if action.get("_derived"):
-                skill_mult = apply_derived_cap(skill_mult, max_total_mult=p.derived.max_total_mult)
+                # base_mult 完整保留；仅加成因子 cap（boost +100% → 因子 2.0 压 1.5）
+                boost_factor = 1.0 + self._aggregate_boost(attacker, "atk") / 100.0
+                boost_factor = apply_derived_cap(
+                    boost_factor, max_total_mult=p.derived.max_total_mult)
+                skill_mult = base_mult * boost_factor
             rating["multi"] = skill_mult
             # M12.5 需求1 批B：stat_map 语义键取数（缺省 atk / int→mag 回退链=现值，
             # 零破坏）

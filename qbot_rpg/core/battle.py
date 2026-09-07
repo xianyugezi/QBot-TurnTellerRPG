@@ -2153,7 +2153,7 @@ class BattleEngine:
         if not ca.get("_combo_settled"):
             _energy_gate = self._apply_skill_energy(attacker, ca, sd, target)
             if _energy_gate is not None:
-                # 2026-09-07 变刃士实测：被拒不耗回合需回滚 _turn_acted（同
+                # 2026-09-07 脉刃师实测：被拒不耗回合需回滚 _turn_acted（同
                 # apply_action rejected 段 P1-5）——否则 end_turn→start_turn
                 # 状态机崩（act→act 非法迁移，贯刃/释刃 consume 不足实测）
                 self._turn_acted[attacker] = False
@@ -2810,7 +2810,7 @@ class BattleEngine:
         outcomes: List[ActionOutcome] = []
         res = self.do_action("player", action_dict)
         outcomes.append(res)
-        # 2026-09-07 变刃士实测：被拒（资源不足/consume 不足/派生条件）不耗
+        # 2026-09-07 脉刃师实测：被拒（资源不足/consume 不足/派生条件）不耗
         # 回合——不触发敌行动/回合推进（保持 ACT 等玩家下一指令）。原无条件
         # enemy_act→end_turn：被拒后 _turn_acted 已回滚，end_turn 仍会尝试
         # 推进 → start_turn 在 ACT 态非法迁移（act→act crash，贯刃/脉变实测）。

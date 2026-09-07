@@ -466,5 +466,80 @@
   "type": "mitigation",
   "power": 20,
   "duration": 1
+ },
+ {
+  "id": "cw_dot_scorch",
+  "name": "灼脉dot",
+  "type": "dot",
+  "status": "cw_scorch_dot",
+  "value": "5%",
+  "tick": "turn_end",
+  "turns": 3,
+  "target": "enemy"
+ },
+ {
+  "id": "cw_scorch1",
+  "name": "脉灼+1",
+  "type": "mark_add",
+  "target": "enemy",
+  "mark": "cw_scorch",
+  "count": 1
+ },
+ {
+  "id": "cw_scorch_clear",
+  "name": "脉灼清",
+  "type": "clear_marks",
+  "marks_on": "enemy",
+  "polarity": "negative",
+  "mark": "cw_scorch"
+ },
+ {
+  "id": "cw_karma1",
+  "name": "脉讖+1",
+  "type": "mark_add",
+  "target": "self",
+  "mark": "cw_karma",
+  "count": 1
+ },
+ {
+  "id": "cw_karma2",
+  "name": "脉讖+2",
+  "type": "mark_add",
+  "target": "self",
+  "mark": "cw_karma",
+  "count": 2
+ },
+ {
+  "id": "cw_karma_rm6",
+  "name": "脉讖清6",
+  "type": "mark_remove",
+  "marks_on": "self",
+  "polarity": "positive",
+  "mark": "cw_karma",
+  "count": 6
+ },
+ {
+  "id": "cw_freeze",
+  "name": "脉冻",
+  "type": "control",
+  "control_type": "freeze",
+  "skip_turn": 1.0,
+  "turns": 1,
+  "target": "enemy"
+ },
+ {
+  "id": "cw_karma3",
+  "name": "脉讖+3",
+  "type": "mark_add",
+  "target": "self",
+  "mark": "cw_karma",
+  "count": 3
+ },
+ {
+  "id": "cw_dot_burst",
+  "name": "引爆dot",
+  "type": "damage",
+  "value": "10%",
+  "target": "enemy"
  }
 ]

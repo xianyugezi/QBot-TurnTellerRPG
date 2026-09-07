@@ -268,5 +268,27 @@
   "polarity": "negative",
   "duration": "battle",
   "max_stack": 6
+ },
+ {
+  "id": "cw_scorch",
+  "name": "脉灼",
+  "description": "灼脉叠层（敌·上限 5）——满 5 引爆",
+  "appliable_to": [
+   "enemy"
+  ],
+  "polarity": "negative",
+  "duration": "battle",
+  "max_stack": 5
+ },
+ {
+  "id": "cw_karma",
+  "name": "脉讖",
+  "description": "自叠脉讖（上限 6）——满 6 汲满脉冲",
+  "appliable_to": [
+   "self"
+  ],
+  "polarity": "positive",
+  "duration": "battle",
+  "max_stack": 6
  }
 ]

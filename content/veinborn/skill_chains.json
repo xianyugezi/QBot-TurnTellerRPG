@@ -409,5 +409,90 @@
     "variant_override": {}
    }
   ]
+ },
+ {
+  "id": "chain_cw_kill",
+  "name": "斩杀线链",
+  "trigger_skill": "cw_kill",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "cw_kill",
+    "to": "cw_kill_cut",
+    "tag": "none",
+    "condition": {
+     "target_hp_pct": {
+      "max": 50
+     }
+    },
+    "priority": 1,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
+ },
+ {
+  "id": "chain_cw_delay",
+  "name": "延时释放链",
+  "trigger_skill": "cw_delay",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "cw_delay",
+    "to": "cw_pulse",
+    "tag": "none",
+    "condition": {
+     "self_marks": {
+      "cw_karma": {
+       "min": 6
+      }
+     }
+    },
+    "priority": 1,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
+ },
+ {
+  "id": "chain_cw_twin",
+  "name": "复合判定链",
+  "trigger_skill": "cw_twin",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "cw_twin",
+    "to": "cw_twin_strike",
+    "tag": "none",
+    "condition": {
+     "and": [
+      {
+       "target_hp_pct": {
+        "max": 60
+       }
+      },
+      {
+       "target_marks": {
+        "cw_scorch": {
+         "min": 3
+        }
+       }
+      }
+     ]
+    },
+    "priority": 1,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
  }
 ]

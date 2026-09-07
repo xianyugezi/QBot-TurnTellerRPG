@@ -258,5 +258,32 @@
    "mp": 1.0
   },
   "description": "探针职业：能量/印记/冷却/打断门禁的时序与原子性审计。"
+ },
+ {
+  "id": "vein_chainweaver",
+  "name": "链脉师",
+  "difficulty": "hard",
+  "playstyle": "织链为脉，状态织网",
+  "recommended_newbie": false,
+  "resource_axes": [
+   "mp",
+   "stamina",
+   "focus"
+  ],
+  "mechanic_tags": [
+   "探针",
+   "链条件",
+   "状态判定",
+   "复合"
+  ],
+  "weapon_types": [],
+  "growth": {
+   "atk": 8.5,
+   "dfn": 6.5,
+   "foc": 7.5,
+   "hp": 11.0,
+   "mp": 1.5
+  },
+  "description": "探针职业：斩杀线/回合门/状态条件/复合判定全条件键审计。"
  }
 ]

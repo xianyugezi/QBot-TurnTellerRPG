@@ -47,5 +47,10 @@
   "id": "b_interest",
   "name": "高息",
   "description": "结算顺序探针 buff：2 回合状态（压 status_apply 接线）"
+ },
+ {
+  "id": "cw_scorch_dot",
+  "name": "灼脉·燃",
+  "description": "dot 载体（回合结束扣血）"
  }
 ]

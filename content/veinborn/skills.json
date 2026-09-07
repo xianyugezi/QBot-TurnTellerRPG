@@ -2494,5 +2494,362 @@
   "energy_gain": {},
   "desc": "破·破核闸击：220%（派生——浊痕满 6 自动变破闸爆发）",
   "derive_only": true
+ },
+ {
+  "type": "basic",
+  "kind": "damage",
+  "power": 110,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "effect": "cw_scorch1"
+   },
+   {
+    "effect": "cw_karma1"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_chainweaver"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "cw_weave",
+  "name": "织脉",
+  "energy_cost": {},
+  "energy_gain": {
+   "focus": 1
+  },
+  "desc": "攻·织脉：110%+脉灼+1+脉讖+1（普攻叠双轨）"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 120,
+  "attack_type": "pierce",
+  "element": null,
+  "effects": [
+   {
+    "effect": "cw_scorch1"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [
+   "chain_cw_kill"
+  ],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_chainweaver"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "cw_kill",
+  "name": "斩杀线",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {},
+  "desc": "斩·斩杀线：120%+脉灼+1——目标 HP≤50% 自动变斩杀·噬心（血量门链）"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 260,
+  "attack_type": "pierce",
+  "element": null,
+  "effects": [
+   {
+    "effect": "cw_scorch_clear"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_chainweaver"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "cw_kill_cut",
+  "name": "斩杀·噬心",
+  "energy_cost": {},
+  "energy_gain": {},
+  "desc": "噬·斩杀噬心：260% 斩杀派生（HP≤50%）+清脉灼",
+  "derive_only": true
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 100,
+  "attack_type": "magic",
+  "element": "void",
+  "effects": [
+   {
+    "effect": "cw_karma2"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [
+   "chain_cw_delay"
+  ],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_chainweaver"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "cw_delay",
+  "name": "延时释放",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {},
+  "desc": "延·延时释放：100%+脉讖+2——脉讖满 6 自动变汲满脉冲（self_marks 链）"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 300,
+  "attack_type": "magic",
+  "element": "void",
+  "effects": [
+   {
+    "effect": "cw_karma_rm6"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_chainweaver"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "cw_pulse",
+  "name": "汲满脉冲",
+  "energy_cost": {},
+  "energy_gain": {},
+  "desc": "汲·汲满脉冲：300% 满讖爆发+清脉讖",
+  "derive_only": true
+ },
+ {
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "effect": "cw_freeze"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_chainweaver"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "cw_freeze",
+  "name": "脉冻",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {},
+  "desc": "冻·脉冻：控制 1 回合（skip_turn——目标被控期间 dot 照跳审计）"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 130,
+  "attack_type": "magic",
+  "element": "void",
+  "effects": [
+   {
+    "effect": "cw_dot_scorch"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_chainweaver"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "cw_scorch_bolt",
+  "name": "灼脉矢",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {},
+  "desc": "灼·灼脉矢：130%+dot 5%×3——dot 跨血量门审计（dot 打进 50% 当回合链触发？）"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 140,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "effect": "cw_scorch1"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [
+   "chain_cw_twin"
+  ],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_chainweaver"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "cw_twin",
+  "name": "复合判定",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {},
+  "desc": "复·复合判定：140%+脉灼+1——目标 HP≤60% AND 脉灼≥3 → 双生连斩（and 复合链）"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 220,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "effect": "cw_scorch1"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_chainweaver"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "cw_twin_strike",
+  "name": "双生连斩",
+  "energy_cost": {},
+  "energy_gain": {},
+  "desc": "双·双生连斩：220% 复合派生（HP≤60% AND 脉灼≥3）+脉灼+1",
+  "derive_only": true
  }
 ]

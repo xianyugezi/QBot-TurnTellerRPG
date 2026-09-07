@@ -249,7 +249,10 @@ def _browse_header(shop: Mapping[str, Any], ctx: Optional[Mapping[str, Any]] = N
     """商品列表头（模板配置化 2026-08-31：shop_header，内容包可覆盖）：
     第一行 `{name} {类型徽标}`，介绍单独另起一行（用户拍板）；表头不计入 5 条上限。"""
     parts: List[str] = []
-    name = f"{strip_icon_emoji(shop.get('icon', ''))}{shop.get('name', '')}"
+    # P2-6（qa_report_20260907）：icon 与店名粘连（「锻龙骨铁匠铺」）——icon 非空
+    # 时插空格分隔（icon 空 → 零前缀，不产生前导空格）
+    _icon = strip_icon_emoji(shop.get("icon", ""))
+    name = f"{_icon} {shop.get('name', '')}" if _icon else str(shop.get("name", ""))
     parts.append(name or "商店")
     t = shop.get("type", "normal")
     if t in TYPE_BADGES:
@@ -294,7 +297,9 @@ def _shop_row(index: int, row: Mapping[str, Any], ctx: Optional[Mapping[str, Any
 
     序号前缀模板化：shop_overview_row_prefix（register_rem_tpl 分区，内容包可覆盖）。
     """
-    name = f"{strip_icon_emoji(row.get('icon', ''))}{row.get('name', '')}"
+    # P2-6：icon 与店名分隔同上（一览行）
+    _icon = strip_icon_emoji(row.get("icon", ""))
+    name = f"{_icon} {row.get('name', '')}" if _icon else str(row.get("name", ""))
     parts: List[str] = [tpl_of(ctx, "shop_overview_row_prefix",
                                {"index": index, "name": name or "?"})]
     t = row.get("type", "normal")

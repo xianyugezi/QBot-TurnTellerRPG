@@ -1085,12 +1085,18 @@ def cmd_battle_target(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     marks = state.get("marks_state") or {}
     m_enemy = marks.get("enemy") if isinstance(marks, Mapping) else None
     if isinstance(m_enemy, list) and m_enemy:
+        # P2-4（qa_report_20260907）：印记显示带层数（困斗×5）——原只显名，
+        # 玩家无法判断叠层节奏（破坏值/困斗等判断时机全凭猜）
         m_names = []
         for m in m_enemy:
             if isinstance(m, Mapping):
                 mn = m.get("name") or m.get("mark_id") or m.get("id")
                 if mn:
-                    m_names.append(str(mn))
+                    try:
+                        _cnt = int(m.get("count", 0) or 0)
+                    except (TypeError, ValueError):
+                        _cnt = 0
+                    m_names.append(str(mn) if _cnt <= 1 else f"{mn}×{_cnt}")
         if m_names:
             lines.append(tpl_of(ctx, "battle_target_marks",
                                 {"marks": " ｜ ".join(m_names)}))

@@ -2058,8 +2058,18 @@ class BattleEngine:
         # M13 批21 dsh A1 P0-2：技能 power(F04) 折算战斗倍率——sd.power/100
         # （普攻 100 → 1.0×；强力斩击 150 → 1.5×）。仅当 mult 未被 action
         # 显式给定且当前 = 缺省 1.0 时折算（组合行/链步骤显式 mult 优先）。
+        # P2-10 衍生修复（qa_report_20260907）：power 显式为 0 的功能技（utility/
+        # status/transform：脊格/专精/填弹/放账等）mult 须 =0（零伤害只走 effects）——
+        # 原 `> 0` 条件使 power=0 不折算 → mult 保持 1.0 → 功能技当普攻打人。
+        # 语义：power 键存在（显式 0 也是声明「无伤害」）→ mult=power/100（0.0）；
+        # power 键缺失（普通攻击/buff 行无伤害语义）→ 保持缺省 1.0 不变。
+        # P2-10 衍生修复（qa_report_20260907）：power 显式为 0 的功能技（utility/
+        # status/transform：脊格/专精/填弹/放账等）mult 须 =0（零伤害只走 effects）——
+        # 原 `> 0` 条件使 power=0 不折算 → mult 保持 1.0 → 功能技当普攻打人。
+        # 语义：power 键存在（显式 0 也是声明「无伤害」）→ mult=power/100（0.0）；
+        # power 键缺失（普通攻击/buff 行无伤害语义）→ 保持缺省 1.0 不变。
         _sd_power = float(sd.get("power", 0) or 0)
-        if _sd_power > 0 and not _action_had_mult and ca.get("mult", 1.0) == 1.0:
+        if "power" in sd and not _action_had_mult and ca.get("mult", 1.0) == 1.0:
             ca["mult"] = _sd_power / 100.0
         # M13 批17 路17C：技能冷却接线（14B 缺口②）——技能 def cooldown 字段。
         # 冷却表 _snap["skill_cooldowns"] = {side: {skill_id: remaining}}；

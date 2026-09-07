@@ -61,7 +61,8 @@ def test_auto_pages_veinborn_all_modules() -> None:
                                  / "content" / "veinborn"))
     editor = load_editor_registry(pack.registry)
     ids = [p.page_id for p in editor.pages]
-    assert len(ids) == 19  # veinborn manifest +forge/proficiency（2026-09-06 武器锻造）
+    # veinborn manifest +forge/proficiency +checkin（2026-09-07 QA P2-7 签到表）
+    assert len(ids) == 20
     for must in ("skill", "job", "monster", "map", "quest", "shop", "npc",
                  "items", "equipment", "action", "effects", "statuses",
                  "marks", "skill_chains", "stats", "formula", "settings"):

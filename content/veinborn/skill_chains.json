@@ -213,5 +213,55 @@
     "variant_override": {}
    }
   ]
+ },
+ {
+  "id": "chain_swaxe_release",
+  "name": "解放·零距链",
+  "trigger_skill": "vs_release",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "vs_release",
+    "to": "vs_zsb",
+    "tag": "none",
+    "condition": {
+     "self_marks": {
+      "vs_overload": {
+       "min": 5
+      }
+     }
+    },
+    "priority": 1,
+    "mode": "replace",
+    "armor": true,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
+ },
+ {
+  "id": "chain_swaxe_spin",
+  "name": "旋斩裂地链",
+  "trigger_skill": "vs_spin",
+  "max_combo": 2,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "vs_spin",
+    "to": "vs_groundspin",
+    "tag": "none",
+    "condition": {
+     "count": {
+      "eq": 2
+     }
+    },
+    "priority": 1,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
  }
 ]

@@ -70,9 +70,24 @@ def _battle_defs(registry: Any):
     actions_map = {a["id"]: a for a in raw.get("action", []) if isinstance(a, Mapping)}
     chains_map = {c["id"]: c for c in raw.get("skill_chains", []) if isinstance(c, Mapping)}
     jobs_map = {j.get("id"): j for j in raw.get("jobs", []) if isinstance(j, Mapping)}
+    effects_map = {e.get("id"): e for e in raw.get("effects", []) if isinstance(e, Mapping)}
+    marks_map = {m.get("id"): m for m in raw.get("marks", []) if isinstance(m, Mapping)}
+    statuses_map = {s.get("id"): s for s in raw.get("statuses", []) if isinstance(s, Mapping)}
     all_defs: Dict[str, Any] = {**skills_map, **actions_map}
     if jobs_map:
         all_defs["jobs"] = jobs_map  # 2026-09-07：transform 段解析（battle _job_transform_segment）
+    # 2026-09-07：effects/marks/statuses 条目并入顶层扁平空间（resolver defs 优先
+    # 修复后，effect 引用式/印记寻址/状态解析全走 defs——registry Def 层查不到
+    # veinborn 扁平条目会静默失败；edge_clear3 清蓄刃不生效实测暴露）
+    for _tbl in (effects_map, marks_map, statuses_map):
+        for _eid, _edef in _tbl.items():
+            all_defs.setdefault(_eid, _edef)
+    if effects_map:
+        all_defs["effects"] = effects_map
+    if marks_map:
+        all_defs["marks"] = marks_map
+    if statuses_map:
+        all_defs["statuses"] = statuses_map
 
     def _resolver(id_: str, kind: str) -> Any:
         if kind == "skill_chain":

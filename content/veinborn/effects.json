@@ -160,5 +160,80 @@
   "power": 15,
   "duration": 1,
   "desc": "蓄力架势：本回所受伤害 -15%"
+ },
+ {
+  "id": "vs_gauge1",
+  "name": "刃力+1",
+  "type": "mark_add",
+  "target": "self",
+  "mark": "vs_gauge",
+  "count": 1
+ },
+ {
+  "id": "vs_gauge2",
+  "name": "刃力+2",
+  "type": "mark_add",
+  "target": "self",
+  "mark": "vs_gauge",
+  "count": 2
+ },
+ {
+  "id": "vs_gauge_rm1",
+  "name": "刃力-1",
+  "type": "mark_remove",
+  "marks_on": "self",
+  "polarity": "positive",
+  "mark": "vs_gauge",
+  "count": 1
+ },
+ {
+  "id": "vs_gauge_rm2",
+  "name": "刃力-2",
+  "type": "mark_remove",
+  "marks_on": "self",
+  "polarity": "positive",
+  "mark": "vs_gauge",
+  "count": 2
+ },
+ {
+  "id": "vs_overload1",
+  "name": "过载+1",
+  "type": "mark_add",
+  "target": "self",
+  "mark": "vs_overload",
+  "count": 1
+ },
+ {
+  "id": "vs_overload2",
+  "name": "过载+2",
+  "type": "mark_add",
+  "target": "self",
+  "mark": "vs_overload",
+  "count": 2
+ },
+ {
+  "id": "vs_overload_clear",
+  "name": "过载清空",
+  "type": "mark_remove",
+  "marks_on": "self",
+  "polarity": "positive",
+  "mark": "vs_overload",
+  "count": 5
+ },
+ {
+  "id": "vs_dash_guard",
+  "name": "冲脉架势",
+  "type": "mitigation",
+  "power": 30,
+  "duration": 1,
+  "desc": "冲脉斩：本回所受伤害 -30%（霸体突进）"
+ },
+ {
+  "id": "vs_stagger",
+  "name": "解放失衡",
+  "type": "mark_add",
+  "target": "enemy",
+  "mark": "stagger_weak",
+  "count": 1
  }
 ]

@@ -157,5 +157,52 @@
    ]
   },
   "description": "猎势·碎脉：聚焦满翻面，重击全变脉碎系（专精恒效）。"
+ },
+ {
+  "id": "vein_swaxe",
+  "name": "变刃士",
+  "difficulty": "medium",
+  "playstyle": "斧剑脉变，攒爆解放",
+  "recommended_newbie": false,
+  "resource_axes": [
+   "mp",
+   "stamina",
+   "focus"
+  ],
+  "mechanic_tags": [
+   "近战",
+   "双形态",
+   "变形",
+   "爆发"
+  ],
+  "weapon_types": [],
+  "growth": {
+   "atk": 11.0,
+   "dfn": 7.0,
+   "foc": 6.0,
+   "hp": 12.0,
+   "mp": 0.8
+  },
+  "transform": {
+   "transform_skill": "vs_transform",
+   "transform_to": "blade_form",
+   "duration": "turns",
+   "turns": 6,
+   "revert": true,
+   "cooldown": 0,
+   "dispel_reverts": false,
+   "state_policy": {
+    "combo": "clear",
+    "marks": "keep",
+    "buff": "keep"
+   },
+   "skill_set": "mastery_skills",
+   "equip_restrict": [],
+   "derive_chains": [
+    "chain_swaxe_release",
+    "chain_swaxe_spin"
+   ]
+  },
+  "description": "脉变·入剑：刃力 4 变剑，剑形态耗刃力攒过载——过载满 5 释刃变零距解放（限时 6 回合）"
  }
 ]

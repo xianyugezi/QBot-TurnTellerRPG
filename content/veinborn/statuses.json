@@ -37,5 +37,10 @@
   "decay": "none",
   "effects": [],
   "desc": "锤师专精翻面恒效形态标记"
+ },
+ {
+  "id": "blade_form",
+  "name": "剑形态",
+  "description": "变刃士剑形态——剑技可用，耗刃力叠过载（限时）"
  }
 ]

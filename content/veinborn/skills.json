@@ -1092,5 +1092,410 @@
    "stamina": 1
   },
   "desc": "格·脊格：举脊格挡，本回减伤 40%，回 1 精力（大剑防御——收招慢但能挡）"
+ },
+ {
+  "type": "basic",
+  "kind": "damage",
+  "power": 110,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "effect": "vs_gauge1"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_swaxe"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vs_slash",
+  "name": "挥斩",
+  "energy_cost": {},
+  "energy_gain": {
+   "focus": 1
+  },
+  "desc": "攻·挥斩：斧纵斩基础攻击，刃力 +1"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 130,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "effect": "vs_gauge2"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "combo",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [
+   "chain_swaxe_spin"
+  ],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_swaxe"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vs_spin",
+  "name": "旋斩",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {},
+  "desc": "旋·旋斩：斧挥旋连打，刃力 +2（连用 2 次变裂地旋）"
+ },
+ {
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "effect": "vs_dash_guard"
+   },
+   {
+    "effect": "vs_gauge1"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_swaxe"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vs_dash",
+  "name": "冲脉斩",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {},
+  "desc": "冲·冲脉斩：霸体突进，本回减伤 30%，刃力 +1"
+ },
+ {
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "attack_type": "none",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {
+   "vs_gauge": 4
+  },
+  "job_restrict": [
+   "vein_swaxe"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vs_transform",
+  "name": "脉变·入剑",
+  "energy_cost": {},
+  "energy_gain": {},
+  "desc": "变·脉变入剑：耗 4 刃力变形进剑（剑形态限时 6 回合）"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 130,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "effect": "vs_gauge_rm1"
+   },
+   {
+    "effect": "vs_overload1"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {
+   "vs_gauge": 1
+  },
+  "job_restrict": [
+   "vein_swaxe"
+  ],
+  "job_form": "blade_form",
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vs_thrust",
+  "name": "贯刃",
+  "energy_cost": {},
+  "energy_gain": {
+   "focus": 1
+  },
+  "desc": "剑·贯刃：剑形态纵刺，耗 1 刃力，过载 +1"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 160,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "effect": "vs_gauge_rm1"
+   },
+   {
+    "effect": "vs_overload2"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "combo",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {
+   "vs_gauge": 1
+  },
+  "job_restrict": [
+   "vein_swaxe"
+  ],
+  "job_form": "blade_form",
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vs_combo",
+  "name": "连刃",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {},
+  "desc": "剑·连刃：二连突刺，耗 1 刃力，过载 +2（攒解放主力）"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 140,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "effect": "vs_gauge_rm2"
+   },
+   {
+    "effect": "vs_overload2"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [
+   "chain_swaxe_release"
+  ],
+  "consume_marks": {
+   "vs_gauge": 2
+  },
+  "job_restrict": [
+   "vein_swaxe"
+  ],
+  "job_form": "blade_form",
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vs_release",
+  "name": "释刃",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {},
+  "desc": "剑·释刃：重突，耗 2 刃力，过载 +2（过载满 5 自动变零距解放）"
+ },
+ {
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "attack_type": "none",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_swaxe"
+  ],
+  "job_form": "blade_form",
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vs_revert",
+  "name": "脉变·归斧",
+  "energy_cost": {},
+  "energy_gain": {},
+  "desc": "变·脉变归斧：变形回斧形态（随时还原）",
+  "revert_form": true
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 320,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "effect": "vs_overload_clear"
+   },
+   {
+    "effect": "vs_gauge_rm2"
+   },
+   {
+    "effect": "vs_stagger"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": true,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {
+   "vs_gauge": 2
+  },
+  "job_restrict": [
+   "vein_swaxe"
+  ],
+  "job_form": "blade_form",
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vs_zsb",
+  "name": "零距·脉爆",
+  "energy_cost": {},
+  "energy_gain": {},
+  "desc": "爆·零距脉爆：剑插敌身引爆——解放大招 320%，清过载耗 2 刃力，命中失衡",
+  "derive_only": true
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 170,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_swaxe"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vs_groundspin",
+  "name": "裂地旋",
+  "energy_cost": {},
+  "energy_gain": {},
+  "desc": "旋·裂地旋：斧挥旋横扫 170%（旋斩连用 2 次）",
+  "derive_only": true
  }
 ]

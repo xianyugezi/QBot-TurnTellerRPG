@@ -180,5 +180,27 @@
   "polarity": "positive",
   "duration": "battle",
   "desc": "大剑蓄力层数：轻击/横扫 +1，脊靠 +2；满 3 层脊斩变裂脊斩"
+ },
+ {
+  "id": "vs_gauge",
+  "name": "刃力",
+  "description": "斧形态攒的变形能量（上限 5）——剑技燃料",
+  "appliable_to": [
+   "self"
+  ],
+  "polarity": "positive",
+  "duration": "battle",
+  "max_stack": 5
+ },
+ {
+  "id": "vs_overload",
+  "name": "过载",
+  "description": "剑形态攻击累积的解放能量（上限 5）——满 5 释刃变零距解放",
+  "appliable_to": [
+   "self"
+  ],
+  "polarity": "positive",
+  "duration": "battle",
+  "max_stack": 5
  }
 ]

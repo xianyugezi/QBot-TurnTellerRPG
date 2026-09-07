@@ -276,15 +276,21 @@ class BattleOutcome:
 def _make_battle_resolver(
     registry: Any = None, defs: Optional[Mapping[str, Any]] = None
 ) -> Callable[[str, str], Any]:
-    """归一化配置源为 callable(id, kind) -> Def|dict|None（对齐 effects._make_resolver）。"""
+    """归一化配置源为 callable(id, kind) -> Def|dict|None（对齐 effects._make_resolver）。
+
+    2026-09-07 修复：defs 优先于 registry——launch 侧 defs 由 modules_raw 全量
+    扁平构建（skills/actions/chains/effects/jobs 全含），registry.resolve 走 Def
+    包装层对 veinborn 扁平条目（effect 引用式等）查不到 → 效果静默安全失败
+    （edge_clear3 清蓄刃不生效实测暴露）。registry callable 形态保留原样。
+    """
+    if callable(registry):
+        return registry
+    if defs is not None:
+        return lambda id_, _kind: defs.get(id_)
     if registry is not None:
-        if callable(registry):
-            return registry
         resolve = getattr(registry, "resolve", None)
         if callable(resolve):
             return lambda id_, kind: resolve(id_, kind)
-    if defs is not None:
-        return lambda id_, _kind: defs.get(id_)
     return lambda _id_, _kind: None
 
 
@@ -2147,6 +2153,10 @@ class BattleEngine:
         if not ca.get("_combo_settled"):
             _energy_gate = self._apply_skill_energy(attacker, ca, sd, target)
             if _energy_gate is not None:
+                # 2026-09-07 变刃士实测：被拒不耗回合需回滚 _turn_acted（同
+                # apply_action rejected 段 P1-5）——否则 end_turn→start_turn
+                # 状态机崩（act→act 非法迁移，贯刃/释刃 consume 不足实测）
+                self._turn_acted[attacker] = False
                 return _energy_gate
 
         # ---- G2（2026-09-02）：consume_marks 门禁 + 扣除（细化_1d §4.2 / S-01）----
@@ -2165,6 +2175,8 @@ class BattleEngine:
                     _consume_sd = _cd
             _consume_gate = self._apply_consume_marks_gate(attacker, ca, _consume_sd, target)
             if _consume_gate is not None:
+                # 2026-09-07：同 energy gate——被拒不耗回合（回滚 _turn_acted）
+                self._turn_acted[attacker] = False
                 return _consume_gate
 
         # ---- M13 6a 路3C：技能 MP 消耗扣费（1a §2.2 mp_cost 语义；被拒不扣）----
@@ -2798,6 +2810,22 @@ class BattleEngine:
         outcomes: List[ActionOutcome] = []
         res = self.do_action("player", action_dict)
         outcomes.append(res)
+        # 2026-09-07 变刃士实测：被拒（资源不足/consume 不足/派生条件）不耗
+        # 回合——不触发敌行动/回合推进（保持 ACT 等玩家下一指令）。原无条件
+        # enemy_act→end_turn：被拒后 _turn_acted 已回滚，end_turn 仍会尝试
+        # 推进 → start_turn 在 ACT 态非法迁移（act→act crash，贯刃/脉变实测）。
+        if not getattr(res, "ok", True):
+            # 被拒 outcome 的 report（无敌行动/无 tick）
+            return TurnReport(
+                turn=int(self._snap.get("turn", 0)),
+                phases=(self._phase,),
+                player=int(self._combat("player").get("hp", 0)),
+                enemy=int(self._combat("enemy").get("hp", 0)),
+                ended=self._finished,
+                status=self._snap.get("status") if self._finished else None,
+                log=tuple(getattr(res, "side_effects", ()) or ()),
+                outcomes=tuple(outcomes),
+            )
         ores = self.enemy_act()
         if ores is not None:
             outcomes.append(ores)

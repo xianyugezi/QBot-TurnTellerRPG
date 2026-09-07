@@ -418,8 +418,10 @@ def _player_from_dict(d: Mapping[str, Any], qid: str) -> Player:
         job_id=str(d.get("job_id") or "novice"),
         level=int(d.get("level") or 1),
         exp=int(d.get("exp") or 0),
-        hp=int(d.get("hp") or 1),
-        mp=int(d.get("mp") or 1),
+        # P2-3 修复（qa_report_20260907）：hp/mp=0 是合法状态（死亡/空蓝）——
+        # `or 1` 把 0 转 1 致死亡玩家落档后 hp=1。仅 None/缺失才兜底。
+        hp=int(d["hp"]) if d.get("hp") is not None else 1,
+        mp=int(d["mp"]) if d.get("mp") is not None else 1,
         currencies=dict(d.get("currencies") or {}),
         inventory=tuple(_coerce_inventory_items(d.get("inventory"))),
         equipment=dict(d.get("equipment") or {}),

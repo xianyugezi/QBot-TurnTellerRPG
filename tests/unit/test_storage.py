@@ -376,3 +376,18 @@ async def test_delete_player_false_when_absent():
         assert deleted is False
     finally:
         await repo.close()
+
+
+# P2-3（qa_report_20260907）：hp=0/mp=0 是合法死亡/空蓝态——存档往返不得 0→1
+@pytest.mark.asyncio
+async def test_hp_zero_roundtrip_preserved(repo):
+    """save hp=0 的死亡玩家 → load 仍 hp=0（`or 1` 兜底只应作用于 None）。"""
+    from dataclasses import replace
+
+    p = make_player("10099", "死者")
+    p = replace(p, hp=0, mp=0)
+    await repo.save_player(p)
+    loaded = await repo.load_player("10099")
+    assert loaded is not None
+    assert loaded.hp == 0, f"死亡玩家 hp=0 应保留，got {loaded.hp}"
+    assert loaded.mp == 0, f"空蓝 mp=0 应保留，got {loaded.mp}"

@@ -573,6 +573,11 @@ def _action_heal(entry: Mapping[str, Any], ctx: Mapping[str, Any], **kw: Any) ->
     if not healed:
         return _res("heal", False, reason="no_heal_amount", message="治疗配置为空")
     # 应用恢复（封顶 max_hp/max_mp，纯函数就地改写 ctx）
+    # P2-3 配套修复（qa_report_20260907）：ctx 标量 hp/mp 同步回 ctx["player"]
+    # （Player frozen → dataclasses.replace 重建；dict → 就地）——原只写 ctx
+    # 标量，落档读 player 对象 → NPC 疗伤显示成功但存档 hp 不变（死亡复活
+    # 0 血卡死风险：驿站药婆免费疗伤必须真落档）。
+    _healed = {}
     for stat, amount in healed.items():
         cur = ctx.get(stat, 0)
         cap = ctx.get("max_" + stat)
@@ -582,6 +587,24 @@ def _action_heal(entry: Mapping[str, Any], ctx: Mapping[str, Any], **kw: Any) ->
             cur = int(cur) + amount
         if isinstance(ctx, MutableMapping):
             ctx[stat] = cur
+        _healed[stat] = cur
+    try:
+        import dataclasses  # noqa: PLC0415
+        from qbot_rpg.data import Player  # noqa: PLC0415
+
+        p = ctx.get("player") if isinstance(ctx, Mapping) else None
+        if isinstance(p, Player):
+            _kw = {}
+            for _s, _v in _healed.items():
+                _kw[_s] = int(_v)
+            _nb = dataclasses.replace(p, **_kw)
+            if isinstance(ctx, MutableMapping):
+                ctx["player"] = _nb
+        elif isinstance(p, MutableMapping):
+            for _s, _v in _healed.items():
+                p[_s] = int(_v)
+    except Exception:  # noqa: BLE001 - 同步失败不阻断疗伤（ctx 标量已改）
+        pass
     if coins_cost:
         currencies["coins"] = currencies.get("coins", 0) - coins_cost
     return _res("heal", True, kind="functional", data={"cost": coins_cost, "heal": healed},

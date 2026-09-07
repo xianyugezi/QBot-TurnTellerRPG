@@ -850,6 +850,130 @@ def _fail(ctx: Mapping[str, Any], text: str) -> dict:
     return {"ok": False, "sent": sent, "message": text, "send": False}
 
 
+def _sync_battle_vitals(ctx: Mapping[str, Any], engine: Any) -> None:
+    """P2-3（qa_report_20260907 · 用户拍板 a）：战斗后玩家 hp/mp 同步回 ctx player。
+
+    引擎快照玩家 hp/mp（战斗内扣血/耗魔后的真实值）→ ctx["player"]（Player
+    frozen → dataclasses.replace 重建写回；dict → 就地改写）。在 dispatch_round
+    （胜利 settle）之前调用——settle 的 work 起点即为战斗剩余血；lose 时 hp=0
+    由 _apply_death_penalty 接续（虚弱/掉落/回安全区）。
+    """
+    try:
+        snap = engine.battle_state() if engine is not None else {}
+    except Exception:  # noqa: BLE001 - 快照异常不阻断战斗响应
+        return
+    p = snap.get("player") if isinstance(snap, Mapping) else None
+    if not isinstance(p, Mapping):
+        return
+    cur = ctx.get("player")
+    hp = int(p.get("hp", 0) or 0)
+    mp = int(p.get("mp", 0) or 0)
+    if cur is None:
+        return
+    try:
+        import dataclasses  # noqa: PLC0415
+        from qbot_rpg.data import Player  # noqa: PLC0415
+
+        if isinstance(cur, Player):
+            _nb = dataclasses.replace(cur, hp=hp, mp=mp)
+            if isinstance(ctx, MutableMapping):
+                ctx["player"] = _nb
+                ctx["hp"] = hp
+                ctx["mp"] = mp
+            return
+    except Exception:  # noqa: BLE001 - Player 形态探测失败回落 dict 分支
+        pass
+    if isinstance(cur, MutableMapping):
+        cur["hp"] = hp
+        cur["mp"] = mp
+    if isinstance(ctx, MutableMapping):
+        ctx["hp"] = hp
+        ctx["mp"] = mp
+
+
+def _apply_death_penalty(ctx: Mapping[str, Any], engine: Any) -> None:
+    """P2-3（qa_report_20260907 · 用户拍板 a）：lose 死亡惩罚——虚弱 + 掉经验 +
+    回安全区（settings.death_penalty 配置；default_map 兜底复活点）。
+
+    简化实现（实机 content 驱动，无 world 地图拓扑）：复活点 = settings.default_map
+    （驿站/新手村），不跑 battle_boundary BFS（副本/PVP 界别后续扩展）。exp 掉
+    落按 drop_exp.percent（enabled 时）；虚弱 weak_until 写 persistent_state。
+    """
+    try:
+        settings = ctx.get("settings")
+        settings = settings if isinstance(settings, Mapping) else {}
+        dp = settings.get("death_penalty")
+        dp = dp if isinstance(dp, Mapping) else {}
+        # 虚弱时长（weak_duration_sec；0/缺省 = 不虚弱）
+        weak_sec = 0
+        try:
+            weak_sec = int(dp.get("weak_duration_sec", 0) or 0)
+        except (TypeError, ValueError):
+            weak_sec = 0
+        # 掉经验（drop_exp.enabled + percent）
+        drop_pct = 0.0
+        dexp = dp.get("drop_exp")
+        if isinstance(dexp, Mapping) and dexp.get("enabled"):
+            try:
+                drop_pct = float(dexp.get("percent", 0) or 0)
+            except (TypeError, ValueError):
+                drop_pct = 0.0
+        # 复活点 = default_map（安全区/驿站）
+        respawn = str(settings.get("default_map") or ctx.get("default_map") or "")
+        import time  # noqa: PLC0415
+
+        now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        cur = ctx.get("player")
+        if cur is None:
+            return
+        try:
+            import dataclasses  # noqa: PLC0415
+            from qbot_rpg.data import Player  # noqa: PLC0415
+
+            if isinstance(cur, Player):
+                exp = max(0, int(cur.exp - (cur.exp * drop_pct / 100.0)))
+                ps = dict(cur.persistent_state)
+                if respawn:
+                    ps["location"] = respawn
+                if weak_sec > 0:
+                    from datetime import datetime, timedelta  # noqa: PLC0415
+
+                    try:
+                        _until = datetime.fromisoformat(now_iso.replace("Z", "+00:00")) + timedelta(seconds=weak_sec)
+                        ps["weak_until"] = _until.strftime("%Y-%m-%dT%H:%M:%S+00:00")
+                    except (ValueError, TypeError):
+                        pass
+                _nb = dataclasses.replace(cur, hp=0, exp=exp, persistent_state=ps)
+                if isinstance(ctx, MutableMapping):
+                    ctx["player"] = _nb
+                    ctx["hp"] = 0
+                return
+        except Exception:  # noqa: BLE001 - Player 分支失败回落 dict
+            pass
+        if isinstance(cur, MutableMapping):
+            cur["hp"] = 0
+            exp = int(cur.get("exp", 0) or 0)
+            cur["exp"] = max(0, int(exp - (exp * drop_pct / 100.0)))
+            ps = cur.get("persistent_state")
+            if isinstance(ps, MutableMapping):
+                if respawn:
+                    ps["location"] = respawn
+                if weak_sec > 0:
+                    from datetime import datetime, timedelta  # noqa: PLC0415
+
+                    try:
+                        _until = datetime.fromisoformat(now_iso.replace("Z", "+00:00")) + timedelta(seconds=weak_sec)
+                        ps["weak_until"] = _until.strftime("%Y-%m-%dT%H:%M:%S+00:00")
+                    except (ValueError, TypeError):
+                        pass
+            elif isinstance(cur, MutableMapping):
+                cur["persistent_state"] = {"location": respawn} if respawn else {}
+        if isinstance(ctx, MutableMapping):
+            ctx["hp"] = 0
+    except Exception:  # noqa: BLE001 - 死亡惩罚异常不阻断战斗响应
+        return
+
+
 def _run_battle_action(ctx: Mapping[str, Any], action: Mapping[str, Any]) -> dict:
     """执行战斗行动并走消息管线（统一返回格式 {ok, sent, message}，工程补白 6）。
 
@@ -866,6 +990,15 @@ def _run_battle_action(ctx: Mapping[str, Any], action: Mapping[str, Any]) -> dic
         return {"ok": False, "sent": sent, "message": tpl_of(ctx, _TPL_NO_BATTLE_KEY),
                 "send": False}
     report = engine.player_act(action)
+    # P2-3 修复（qa_report_20260907 · 用户拍板 a）：战斗结算完整性——玩家战斗
+    # 扣血/耗魔须落玩家档案。原实现 release 会话即弃，players.hp 恒满值（死亡
+    # 无惩罚、营地/药剂回血失去意义）。此处 player_act 后（settle 前）无条件把
+    # 引擎快照最终 hp/mp 同步进 ctx player——win 保留剩余血、lose 归 0。
+    _sync_battle_vitals(ctx, engine)
+    if report.ended and str(getattr(report, "status", "") or "") == "lose":
+        # 死亡惩罚（lose=玩家死）：掉经验 + 虚弱 + 回安全区（settings.death_penalty
+        # 配置 + default_map 兜底；副本/PVP 界别由装配层后续扩展，此处仅野图语义）
+        _apply_death_penalty(ctx, engine)
     sent = dispatch_round(engine, report, pipeline, ctx, player_action=action)
     if report.ended:
         message = tpl_of(ctx, _TPL_RESULT_END_KEY, {"status": report.status})

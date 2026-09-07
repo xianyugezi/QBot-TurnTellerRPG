@@ -272,8 +272,9 @@ def row_to_player(row: Any) -> Player:
         job_id=job_id,
         level=int(col("level") or 1),
         exp=int(col("exp") or 0),
-        hp=int(col("hp") or 1),
-        mp=int(col("mp") or 1),
+        # P2-3 修复：hp/mp=0 合法（死亡/空蓝），`or 1` 致读档 0→1；None 才兜底
+        hp=int(col("hp")) if col("hp") is not None else 1,
+        mp=int(col("mp")) if col("mp") is not None else 1,
         currencies=_jloads(col("currencies"), {}),
         inventory=tuple(inv_items),
         equipment=equipment,

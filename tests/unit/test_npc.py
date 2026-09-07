@@ -593,3 +593,31 @@ def test_mark_delivered_creates_node_lazily():
     ctx = make_ctx()
     mark_delivered(ctx, "npc1", "card:c1")
     assert ctx["npc_delivered"] == {"npc1": {"card:c1": True}}
+
+
+# ---------------------------------------------------------------------------
+# P2-3 配套（qa_report_20260907）：heal 同步 ctx["player"]（Player frozen / dict）
+# ---------------------------------------------------------------------------
+
+def test_dispatch_heal_syncs_player_object():
+    """NPC heal 后 ctx["player"]（Player/dict）同步——落档读 player 不丢疗伤。
+
+    回归：驿站药婆疗伤显示成功但 players.hp 不变（ctx 标量改了 player 没改）。
+    """
+    from qbot_rpg.data.player import Player
+
+    # dict 形态 player
+    ctx = make_ctx(npc_id="npc1", player={"hp": 0, "mp": 0})
+    r = dispatch_action({"action": "heal", "heal": {"hp": "100%"}}, ctx, npc_id="npc1")
+    assert r["ok"]
+    assert ctx["hp"] == 100
+    assert ctx["player"]["hp"] == 100, "dict player hp 应同步"
+
+    # Player frozen 形态（dataclasses.replace 重建写回）
+    p = Player(qid="q1", name="阿伟", hp=0, mp=5)
+    ctx2 = make_ctx(npc_id="npc1", hp=0, max_hp=400, mp=5, max_mp=50, player=p)
+    r2 = dispatch_action({"action": "heal", "heal": {"hp": "100%", "mp": "100%"}}, ctx2, npc_id="npc1")
+    assert r2["ok"]
+    assert ctx2["hp"] == 400
+    assert ctx2["player"] is not p, "Player frozen 应 replace 重建"
+    assert ctx2["player"].hp == 400 and ctx2["player"].mp == 50

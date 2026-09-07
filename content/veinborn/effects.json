@@ -404,5 +404,67 @@
   "target": "enemy",
   "mark": "stagger_weak",
   "count": 1
+ },
+ {
+  "id": "vg_gate1",
+  "name": "充能闸+1",
+  "type": "mark_add",
+  "target": "self",
+  "mark": "vg_gate",
+  "count": 1
+ },
+ {
+  "id": "vg_gate_rm4",
+  "name": "充能闸清4",
+  "type": "mark_remove",
+  "marks_on": "self",
+  "polarity": "positive",
+  "mark": "vg_gate",
+  "count": 4
+ },
+ {
+  "id": "vg_gate_clear",
+  "name": "充能闸清空",
+  "type": "clear_marks",
+  "marks_on": "self",
+  "polarity": "positive",
+  "mark": "vg_gate"
+ },
+ {
+  "id": "vg_vitriol1",
+  "name": "浊痕+1",
+  "type": "mark_add",
+  "target": "enemy",
+  "mark": "vitriol_mark",
+  "count": 1
+ },
+ {
+  "id": "vg_vitriol2",
+  "name": "浊痕+2",
+  "type": "mark_add",
+  "target": "enemy",
+  "mark": "vitriol_mark",
+  "count": 2
+ },
+ {
+  "id": "vg_vitriol3",
+  "name": "浊痕+3",
+  "type": "mark_add",
+  "target": "enemy",
+  "mark": "vitriol_mark",
+  "count": 3
+ },
+ {
+  "id": "vg_interrupt",
+  "name": "截脉打断",
+  "type": "interrupt",
+  "target": "enemy"
+ },
+ {
+  "id": "vg_mit20",
+  "name": "闸减伤20",
+  "type": "mitigation",
+  "power": 20,
+  "duration": 1
  }
 ]

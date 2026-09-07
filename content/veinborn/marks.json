@@ -246,5 +246,27 @@
   "polarity": "negative",
   "duration": "battle",
   "max_stack": 5
+ },
+ {
+  "id": "vg_gate",
+  "name": "充能闸",
+  "description": "自叠闸能（上限 4）——满 4 爆锁",
+  "appliable_to": [
+   "self"
+  ],
+  "polarity": "positive",
+  "duration": "battle",
+  "max_stack": 4
+ },
+ {
+  "id": "vitriol_mark",
+  "name": "浊痕",
+  "description": "敌负叠（上限 6）——满 6 破闸",
+  "appliable_to": [
+   "enemy"
+  ],
+  "polarity": "negative",
+  "duration": "battle",
+  "max_stack": 6
  }
 ]

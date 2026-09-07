@@ -357,5 +357,57 @@
     "variant_override": {}
    }
   ]
+ },
+ {
+  "id": "chain_gate_full",
+  "name": "满闸爆锁链",
+  "trigger_skill": "vg_key",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "vg_key",
+    "to": "vg_blast_lock",
+    "tag": "none",
+    "condition": {
+     "self_marks": {
+      "vg_gate": {
+       "min": 4
+      }
+     }
+    },
+    "priority": 1,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
+ },
+ {
+  "id": "chain_vitriol_break",
+  "name": "浊痕破闸链",
+  "trigger_skill": "vg_rig",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "vg_rig",
+    "to": "vg_break",
+    "tag": "none",
+    "condition": {
+     "target_marks": {
+      "vitriol_mark": {
+       "min": 6
+      }
+     }
+    },
+    "priority": 1,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
  }
 ]

@@ -232,5 +232,31 @@
    "mp": 1.5
   },
   "description": "探针职业：直伤/吸血/dot/破盾/驱散/叠账同技入账——凡结算有先后皆可审。"
+ },
+ {
+  "id": "vein_gatekeeper",
+  "name": "蚀闸师",
+  "difficulty": "hard",
+  "playstyle": "铺扣锁闸，满闸爆锁",
+  "recommended_newbie": false,
+  "resource_axes": [
+   "mp",
+   "stamina",
+   "focus"
+  ],
+  "mechanic_tags": [
+   "探针",
+   "门禁时序",
+   "复合"
+  ],
+  "weapon_types": [],
+  "growth": {
+   "atk": 9.0,
+   "dfn": 7.0,
+   "foc": 7.0,
+   "hp": 11.0,
+   "mp": 1.0
+  },
+  "description": "探针职业：能量/印记/冷却/打断门禁的时序与原子性审计。"
  }
 ]

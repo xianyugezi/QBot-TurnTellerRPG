@@ -339,6 +339,35 @@ def _ps_init(ps: Any, key: str, empty: Any) -> Any:
     return node
 
 
+def _ps_raw_get(ps: Any, key: str) -> Any:
+    """persistent_state 键只读取值（缺省 None，不挂回——镜像类键只读消费）。"""
+    if isinstance(ps, Mapping):
+        return ps.get(key)
+    return None
+
+
+def _weak_remaining_sec(ps: Any) -> int:
+    """虚弱剩余秒数（P2-3 配套：persistent_state.weak_until ISO-8601 UTC → 剩余）。
+
+    无 weak_until / 解析失败 / 已过期 → 0（未虚弱）。时间源 = UTC now（对齐
+    battle_boundary.weak_remaining_sec 口径；ctx now 为 UTC+8 秒戳不可直用）。
+    """
+    raw = _ps_raw_get(ps, "weak_until")
+    if not isinstance(raw, str) or not raw:
+        return 0
+    try:
+        from datetime import datetime, timezone  # noqa: PLC0415
+
+        now = datetime.now(timezone.utc)
+        until = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        if until.tzinfo is None:
+            until = until.replace(tzinfo=timezone.utc)
+        remain = (until - now).total_seconds()
+        return max(0, int(remain))
+    except (ValueError, TypeError):
+        return 0
+
+
 def _skill_slots_interface(ctx: Mapping[str, Any], ps: Any) -> Dict[str, Any]:
     """M13 批13 路13B：技能位装配接口 dict（assemble/save/load 绑 persistent_state）。
 
@@ -1348,6 +1377,11 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
                 "personal_buys": _ps_init(ps, "personal_buys", {}),
                 "checkin_state": _ps_init(ps, "checkin", {}),
                 "shortcuts": _ps_init(ps, "shortcuts", {}),
+                # P2-3 配套（qa_report_20260907）：虚弱状态镜像——weak_until 原存
+                # persistent_state 但无人消费（锁定开战不拦虚弱期玩家，死亡惩罚形同
+                # 虚设）。镜像剩余秒数供开战/进危险区拦截（weak_remaining_sec 语义）。
+                "weak_until": _ps_raw_get(ps, "weak_until"),
+                "weak_remaining_sec": _weak_remaining_sec(ps),
                 # 2026-09-06 实机反馈（zerc）：/地图 应只显示已发现区域（野外默认
                 # 隐藏）——discovered_maps 惰性挂 persistent_state（到达/传送记录），
                 # cmd_map 按它过滤。初始含 default_map 与当前 location（平滑）。

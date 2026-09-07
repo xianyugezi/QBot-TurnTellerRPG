@@ -35,6 +35,7 @@ _TPL_NO_MONSTER = "battle_lock_no_monster"
 _TPL_ALREADY_IN_BATTLE = "battle_lock_already_in_battle"
 _TPL_HAS_OTHER_SESSION = "battle_lock_has_other_session"
 _TPL_NO_MAP = "battle_lock_no_map"
+_TPL_WEAK_BLOCK_KEY = "battle_lock_weak_block"  # P2-3：虚弱期开战拦截
 
 
 # ---------------------------------------------------------------------------
@@ -292,6 +293,19 @@ async def launch_pve_battle(
             return {"ok": False,
                     "message": _tpl(ctx, _TPL_HAS_OTHER_SESSION, "❌ 你还有未结束的会话，请先完成"),
                     "battle_engine": None}
+
+    # P2-3 配套（qa_report_20260907）：虚弱期拦截——死亡后 weak_duration 内禁止
+    # 开战（防死亡惩罚形同虚设：虚弱=强制休整，回营地疗伤后再出发）。
+    # ctx["weak_remaining_sec"] 由装配层镜像（persistent_state.weak_until → 剩余秒）。
+    try:
+        _weak_left = int(ctx.get("weak_remaining_sec", 0) or 0)
+    except (TypeError, ValueError):
+        _weak_left = 0
+    if _weak_left > 0:
+        return {"ok": False,
+                "message": _tpl(ctx, _TPL_WEAK_BLOCK_KEY,
+                                f"❌ 你还在虚弱中（剩余 {_weak_left} 秒）——先回营地休整（驿站药婆可免费疗伤）"),
+                "battle_engine": None}
 
     # 2. 解析怪物
     loc = str(ctx.get("location") or "")

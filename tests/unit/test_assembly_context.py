@@ -572,3 +572,23 @@ async def test_items_without_equipment_table_unchanged() -> None:
     """无 equipment 模块内容包 → ctx["items"] 零变化（不新增空表/键）。"""
     ctx = await make_context(_event(), _deps(_player()))
     assert set(ctx["items"]) == {"potion", "iron_sword"}
+
+
+# ---------------------------------------------------------------------------
+# P2-3 配套（qa_report_20260907）：虚弱状态 ctx 镜像
+# ---------------------------------------------------------------------------
+
+def test_weak_mirror_fields_present():
+    """registered ctx 应含 weak_until/weak_remaining_sec（虚弱拦截消费）。"""
+    from qbot_rpg.assembly.context import _weak_remaining_sec
+
+    # 纯函数：无 weak_until → 0；未来时间 → 正剩余；过期 → 0
+    assert _weak_remaining_sec({}) == 0
+    assert _weak_remaining_sec({"weak_until": None}) == 0
+    assert _weak_remaining_sec({"weak_until": "not-a-date"}) == 0
+    future = (datetime.now(timezone.utc) + timedelta(seconds=30)).strftime(
+        "%Y-%m-%dT%H:%M:%S+00:00")
+    assert 0 < _weak_remaining_sec({"weak_until": future}) <= 30
+    past = (datetime.now(timezone.utc) - timedelta(seconds=30)).strftime(
+        "%Y-%m-%dT%H:%M:%S+00:00")
+    assert _weak_remaining_sec({"weak_until": past}) == 0

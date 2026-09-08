@@ -1720,6 +1720,25 @@ class BattleEngine:
             # M13 6c（细化_6c §2.5 M7）：season_event_state 换季事件幂等段
             # （E2/E5：last_season_idx 恰一次幂等基准；战斗外/缺段 → 缺省 -1）。
             "season_event_state": {"last_season_idx": -1},
+            # 方位战斗系统 v0.6（草案 §三.1/§三.3/§三.7 + 附录 A Step 0 快照地基）：
+            # combat_position / parts_state / battle_resources 三段空壳。快照=战斗唯一
+            # 权威状态——空壳先随 start/中断/续战全链往返；机制按 §四 T8 时序由后续
+            # 步骤注入。读取侧一律缺段降级（旧快照无段不崩，对齐 resource_state RS-5）。
+            "combat_position": {
+                # §三.1：每 combatant 一份。1v1 双方相对寻址：player 恒朝敌，
+                # side=玩家相对怪物的方位格、height=空/地；默认正面贴地。
+                "player": {"relative_to": "enemy", "side": "front", "height": "ground"},
+                "enemy": {"relative_to": "player", "side": "front", "height": "ground"},
+            },
+            # §三.3：部位破坏实例态（part_id → {"break_value": 0, "broken": false}）。
+            # 配置源=EnemyDef.parts[]（内容包），本段=战斗内权威实例。1v1 单敌直接按
+            # part_id 索引；组队/多敌里程碑（§二.6）需扩 side 包裹，预留不预做。
+            "parts_state": {},
+            # §三.7：战斗携带素材冻结容器（start 冻结注入 + 即时调合只读写本段，不碰
+            # 玩家实时背包——接线见附录 A Step 5）。battle_alchemy_used 读写沿用顶层键
+            # （M8 BA-02/record_alchemy_used），本段内同键为 schema 定稿占位（Step 5
+            # 接线统一时迁移读点，双写前无消费方）。
+            "battle_resources": {"materials": {}, "battle_alchemy_used": 0},
         }
         self._finished = False
         self._death_order = []

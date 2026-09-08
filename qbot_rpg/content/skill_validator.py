@@ -543,6 +543,10 @@ def _check_v12_kind_inference(
                              "stat_modifier", "mark_add", "mark_remove"):
                     inferred = "status"
                     break
+                if etype in ("reposition", "reposition_all"):
+                    # 方位 v0.6 §三.5：置换原语=机动/位移（utility 类，非伤害非状态）
+                    inferred = "utility"
+                    break
     if inferred is None:
         _warn(report, f"{base}.kind", "V-12", rule="kind_not_inferred",
               node_id=sid, msg="kind 未能推断（effects 无 damage/heal/status 类行为）")

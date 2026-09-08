@@ -88,6 +88,10 @@ __all__ = [
 
 BATTLE_SIDES: Tuple[str, str] = ("player", "enemy")
 
+# 方位 v0.6 §三.1：方位格 side 四向（reposition 原子枚举，core 层常量；content 校验
+# 同源内联镜像不 cross-import）
+POSITION_SIDES: Tuple[str, ...] = ("front", "back", "left", "right")
+
 DEFAULT_PIPELINE_ORDER: Tuple[str, ...] = (
     "mitigation",   # ① 减伤/减免 —— 细化_1b §2 阶段①，定稿 §3.4①
     "shield",       # ② 护盾先扣 —— 阶段②
@@ -1703,9 +1707,10 @@ def execute_action(
 ) -> ActionResult:
     """L0 原子动作执行器（细化_1b §3）：
 
-    - 16 直行动作：damage / heal / stat_modifier / dot / control / status_apply /
+    - 18 直行动作：damage / heal / stat_modifier / dot / control / status_apply /
       dispel / shield / mark_add / mark_remove / clear_marks / summon / convert /
-      interrupt / aoe / proc；
+      interrupt / aoe / proc / reposition / reposition_all（后两者=方位 v0.6 §三.5
+      置换原语，怪物冲锋/转身 effects 载体）；
     - 3 结算修正器：lifesteal / pierce / mitigation（挂伤害管线自动生效，本入口亦可直达）；
     - proc 容器：chance/cooldown/actions + 每回合 10 / 每场 99 / 链深 3 上限
       （细化_1b §1.1 字段 10-12 / 定稿 §2.4）。
@@ -1953,6 +1958,78 @@ def execute_action(
 
     if atype == "proc":
         return execute_proc_action(action, ctx, runtime, depth)
+
+    # ---- 方位 v0.6 §三.5/附录 A Step 4：reposition 原子（怪物方位行动 effects 载体；
+    # 不新增 battle.py 特殊函数——走既有 effects 通道）----
+
+    if atype == "reposition":
+        # 单目标方位设定（mode=set_relative：提供哪个轴改哪个轴，缺省轴不动）。
+        # target 为绝对侧（self→施放者；player/enemy 按字面）——不走 _resolve_side
+        # 相对词汇（怪 reposition 玩家须写 target="player"，N6：1v1 仅 self/player）。
+        _who = str(action.get("target") or "player")
+        who = attacker if _who == "self" else _who
+        if who not in BATTLE_SIDES:
+            return ActionResult(False, side_effects,
+                                f"reposition 未知目标侧：{_who}")
+        mode = str(action.get("mode") or "set_relative")
+        if mode != "set_relative":
+            return ActionResult(False, side_effects,
+                                f"reposition 未知 mode：{mode}（仅 set_relative）")
+        cp = ctx.snapshot.get("combat_position")
+        if not isinstance(cp, dict):
+            # 旧快照无方位段 → 降级无操作不崩（对齐 resource_state RS-5 精神）
+            return ActionResult(True, side_effects)
+        ent = cp.get(who)
+        if not isinstance(ent, dict):
+            ent = {"side": "front", "height": "ground"}
+            cp[who] = ent
+        raw_side = action.get("side")
+        if raw_side is not None:
+            s = str(raw_side)
+            if s not in POSITION_SIDES:
+                return ActionResult(False, side_effects,
+                                    f"reposition side 非法：{s}")
+            ent["side"] = s
+        raw_height = action.get("height")
+        if raw_height is not None:
+            h = str(raw_height)
+            if h not in ("ground", "air"):
+                return ActionResult(False, side_effects,
+                                    f"reposition height 非法：{h}")
+            ent["height"] = h
+        side_effects.append({"type": "position_changed", "actor": who,
+                             "side": str(ent.get("side") or "front"),
+                             "height": str(ent.get("height") or "ground")})
+        return ActionResult(True, side_effects)
+
+    if atype == "reposition_all":
+        # 全场重映射（mode=rotate + mapping{旧侧:新侧}）：翻转除施放者外的所有
+        # combat_position 段（1v1=对方；组队里程碑 N6 扩全场）。height 不动。
+        # 示例：冲锋 rotate {front:back}；扫尾转身 rotate 180° 全映射。
+        mode = str(action.get("mode") or "rotate")
+        if mode != "rotate":
+            return ActionResult(False, side_effects,
+                                f"reposition_all 未知 mode：{mode}（仅 rotate）")
+        mapping = action.get("mapping")
+        if not isinstance(mapping, Mapping):
+            return ActionResult(False, side_effects,
+                                "reposition_all 缺 mapping（{旧侧:新侧}）")
+        cp = ctx.snapshot.get("combat_position")
+        if not isinstance(cp, dict):
+            return ActionResult(True, side_effects)  # 旧快照降级无操作
+        for who, ent in list(cp.items()):
+            if who == attacker or not isinstance(ent, dict):
+                continue
+            cur_side = str(ent.get("side") or "front")
+            next_side = mapping.get(cur_side, cur_side)
+            if not isinstance(next_side, str) or next_side not in POSITION_SIDES \
+                    or next_side == cur_side:
+                continue
+            ent["side"] = next_side
+            side_effects.append({"type": "position_changed", "actor": who,
+                                 "side": next_side,
+                                 "height": str(ent.get("height") or "ground")})
+        return ActionResult(True, side_effects)
 
     return ActionResult(False, side_effects, f"未知 L0 动作类型：{atype}")
 

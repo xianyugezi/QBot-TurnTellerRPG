@@ -574,8 +574,10 @@ def _render_player_action(outcome: Any, *, ctx: Any = None) -> List[str]:
             lines.append(line)                                # 数据未接则空行集
     else:
         lines.append(_render_player_hit(outcome, ctx=ctx))    # BREP-02（+BREP-04）
-    # 方位 v0.6（附录 A Step 3）：空中落地事件行（air_policy=land 结算产出）
+    # 方位 v0.6（附录 A Step 3/Step 4）：空中落地事件行（air_policy=land 结算）
+    # + 方位变化行（reposition 原子结算）
     lines.extend(_render_air_land_lines(outcome, ctx=ctx))
+    lines.extend(_render_position_changed_lines(outcome, ctx=ctx))
     return lines
 
 
@@ -739,6 +741,15 @@ def _position_cn(side: str, height: str) -> str:
     return f"{_s}上空" if height == "air" else _s
 
 
+def _fx_actor_cn(actor: str, outcome: Any) -> str:
+    """方位事件 actor 中文映射（显示层）：player→你；enemy→怪名；未知原样。"""
+    if actor == "player":
+        return "你"
+    if actor == "enemy":
+        return _enemy_name(outcome)
+    return actor
+
+
 def _render_air_land_lines(outcome: Any, *, ctx: Any = None) -> List[str]:
     """空中落地行（方位 v0.6 §三.6/附录 A Step 3）：outcome.side_effects 的 air_land
     事件（引擎 action_end 后 air_policy=land 结算产出）→ 模板 battle_actor_landed
@@ -747,10 +758,26 @@ def _render_air_land_lines(outcome: Any, *, ctx: Any = None) -> List[str]:
     for e in getattr(outcome, "side_effects", ()) or ():
         if not isinstance(e, Mapping) or e.get("type") != "air_land":
             continue
-        actor = str(e.get("actor") or "")
-        who = "你" if actor == "player" else (
-            _enemy_name(outcome) if actor == "enemy" else actor)
-        line = tpl_of(ctx, "battle_actor_landed", {"actor": who})
+        line = tpl_of(ctx, "battle_actor_landed",
+                      {"actor": _fx_actor_cn(str(e.get("actor") or ""), outcome)})
+        if line:
+            out.append(line)
+    return out
+
+
+def _render_position_changed_lines(outcome: Any, *, ctx: Any = None) -> List[str]:
+    """方位变化行（方位 v0.6 §三.5/附录 A Step 4）：outcome.side_effects 的
+    position_changed 事件（reposition/reposition_all 原子产出）→ 模板
+    battle_position_changed 一行；{pos} 由事件 side/height 格转中文（显示层映射，
+    模板配置化）。"""
+    out: List[str] = []
+    for e in getattr(outcome, "side_effects", ()) or ():
+        if not isinstance(e, Mapping) or e.get("type") != "position_changed":
+            continue
+        pos = _position_cn(str(e.get("side") or "front"),
+                           str(e.get("height") or "ground"))
+        line = tpl_of(ctx, "battle_position_changed", {
+            "actor": _fx_actor_cn(str(e.get("actor") or ""), outcome), "pos": pos})
         if line:
             out.append(line)
     return out
@@ -900,8 +927,10 @@ def _render_enemy_action(outcome: Any, *, ctx: Any = None) -> Optional[str]:
         lines.append(_render_enemy_hit(outcome, ctx=ctx))          # BREP-10
 
     lines.extend(_render_interception_lines(outcome, ctx=ctx))     # BREP-14
-    # 方位 v0.6（附录 A Step 3）：怪物侧空中落地事件行（怪行动 def air_policy=land）
+    # 方位 v0.6（附录 A Step 3/Step 4）：怪物侧空中落地事件行 + 方位变化行
+    # （怪行动 effects reposition/reposition_all 结算，如冲锋/转身）
     lines.extend(_render_air_land_lines(outcome, ctx=ctx))
+    lines.extend(_render_position_changed_lines(outcome, ctx=ctx))
     if not lines:
         return None
     return "\n".join(lines)

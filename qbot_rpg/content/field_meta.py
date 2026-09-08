@@ -770,10 +770,16 @@ ALCHEMY_SETTINGS_FIELD_DEFS: Dict[str, FieldMeta] = {
         "强度公式": FieldMeta(type="str"),
         "珠触发上限": FieldMeta(type="int", range_min=1),
     }),
-    # ALC-20 / ALC-20'（L425）
+    # ALC-20 / ALC-20'（L425）+ ALC-25（方位 v0.6 修正 #8/N2：熟练度乘区配置段；
+    # 缺段=引擎无乘区 1.0——默认值不内建，数值归内容包配置）
     BATTLE_ALCHEMY_KEY: FieldMeta(type="obj", children={
         "auto_use": FieldMeta(type="bool", default=True),
         "per_battle_limit": FieldMeta(type="int", range_min=1, default=1),
+        "proficiency_multiplier": FieldMeta(type="obj", children={
+            "min": FieldMeta(type="number", label="熟练度乘区下限"),
+            "max": FieldMeta(type="number", label="熟练度乘区上限"),
+            "curve": FieldMeta(type="str", label="乘区曲线形态"),
+        }),
     }),
     # ALC-21（拍板⑤）
     "max_qty": FieldMeta(type="int", range_min=1, default=MAX_QTY_DEFAULT),

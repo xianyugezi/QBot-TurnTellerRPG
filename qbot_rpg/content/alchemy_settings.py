@@ -481,6 +481,60 @@ def check_settings_alchemy(data: Mapping, report: object) -> None:
                     rule="per_battle_limit_invalid",
                     value=pbl,
                 )
+            # ---- ALC-25 熟练度乘区 proficiency_multiplier（方位 v0.6 修正 #8/N2：
+            #      {min,max,curve}，60~120% 语义由配置给；缺段=引擎无乘区 1.0）----
+            #      | 类型/值域红拦；curve 形态黄提示（linear 起步，扩展曲线时改枚举）----
+            pm = ba.get("proficiency_multiplier")
+            if pm is not None:
+                if not isinstance(pm, Mapping):
+                    _settings_err(
+                        report,
+                        f"settings.alchemy.{BATTLE_ALCHEMY_KEY}.proficiency_multiplier",
+                        "ALC-25",
+                        rule="proficiency_multiplier_not_object",
+                        got=type(pm).__name__,
+                    )
+                else:
+                    _pmlo = pm.get("min")
+                    _pmhi = pm.get("max")
+                    if _pmlo is not None and (
+                            isinstance(_pmlo, bool) or not _is_num(_pmlo) or _pmlo <= 0):
+                        _settings_err(
+                            report,
+                            f"settings.alchemy.{BATTLE_ALCHEMY_KEY}.proficiency_multiplier.min",
+                            "ALC-25",
+                            rule="proficiency_multiplier_min_invalid",
+                            value=_pmlo,
+                        )
+                    if _pmhi is not None and (
+                            isinstance(_pmhi, bool) or not _is_num(_pmhi) or _pmhi <= 0):
+                        _settings_err(
+                            report,
+                            f"settings.alchemy.{BATTLE_ALCHEMY_KEY}.proficiency_multiplier.max",
+                            "ALC-25",
+                            rule="proficiency_multiplier_max_invalid",
+                            value=_pmhi,
+                        )
+                    if _pmlo is not None and _pmhi is not None and not isinstance(
+                            _pmlo, bool) and not isinstance(_pmhi, bool) and _is_num(
+                            _pmlo) and _is_num(_pmhi) and _pmhi < _pmlo:
+                        _settings_err(
+                            report,
+                            f"settings.alchemy.{BATTLE_ALCHEMY_KEY}.proficiency_multiplier",
+                            "ALC-25",
+                            rule="proficiency_multiplier_max_below_min",
+                            value=_pmhi,
+                        )
+                    _pmc = pm.get("curve")
+                    if _pmc is not None and str(_pmc) != "linear":
+                        _settings_warn(
+                            report,
+                            f"settings.alchemy.{BATTLE_ALCHEMY_KEY}.proficiency_multiplier.curve",
+                            "ALC-25",
+                            rule="proficiency_multiplier_curve_unknown",
+                            value=_pmc,
+                            msg="乘区曲线仅 linear 起步（N2 扩展曲线形态时改枚举）",
+                        )
 
     # ---- ALC-21 max_qty 正整数（默认 2147483647，拍板⑤）| 红拦 | 拍板⑤ ----
     mq = a.get("max_qty")

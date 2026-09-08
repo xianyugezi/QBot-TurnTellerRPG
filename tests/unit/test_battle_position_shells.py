@@ -66,13 +66,15 @@ class TestPositionSnapshotShells:
         assert snap["parts_state"] == {}
         assert snap["battle_resources"] == {"materials": {}, "battle_alchemy_used": 0}
 
-    def test_record_alchemy_used_keeps_top_level_only(self) -> None:
-        """M8 BA-02 计数读写仍走顶层键；battle_resources 内同键为占位（Step 5 前无消费方）。"""
+    def test_record_alchemy_used_migrated_to_section(self) -> None:
+        """Step 5 迁移（方位 v0.6 §三.7）：计数权威落 battle_resources 段内；顶层键
+        保留同步镜像（旧读方/旧快照兼容）。原 Step 0「只走顶层/占位不污染」断言随
+        迁移收口更新。"""
         eng = _fresh_engine()
         assert eng.record_alchemy_used() == 1
-        assert eng.battle_state()["battle_alchemy_used"] == 1
-        # 占位键不被顶层计数污染——防双写源（接线迁移见附录 A Step 5）
-        assert eng.battle_state()["battle_resources"]["battle_alchemy_used"] == 0
+        state = eng.battle_state()
+        assert state["battle_resources"]["battle_alchemy_used"] == 1  # 段内权威
+        assert state["battle_alchemy_used"] == 1                       # 顶层镜像
 
 
 class TestPositionSnapshotRoundtrip:

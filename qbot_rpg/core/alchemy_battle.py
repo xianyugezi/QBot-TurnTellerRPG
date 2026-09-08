@@ -13,7 +13,9 @@
   ③ 一步出结果 resolve（BA-07/08/10：材料/宝石原子扣减 → 产出实例 ItemInstance 形态 →
      auto_use 默认当场自动使用走注入 use_fn（战斗道具行动入口 _resolve_item_action 鸭子，
      BA-07）或入包；限次幂等衔接 battle_alchemy_used）→
-  ④ 强度公式 intensity（BA-10：技能×(1+0.4×冷却数)，settings 战斗道具.强度公式 可配）→
+  ④ 强度公式 intensity（BA-10：技能×(1+0.4×冷却数)，settings 战斗道具.强度公式 可配；
+     方位 v0.6 修正 #8/N2：resolve 强度再乘熟练度乘区 proficiency_mult——settings 战斗
+     即时调合.proficiency_multiplier {min,max,curve} 配置，缺段=1.0 无乘区）→
   ⑤ 冷却 cooldown_of（BA-06：吃冷却对齐 /道具 冷却配置，炸弹 3 回合冷却）→
   ⑥ 能量 consume_energy（GU-52/R-08：energy_enabled=true 时 EnergyBar.consume(1)，关则直通）。
 
@@ -249,20 +251,31 @@ class BattleAlchemyEngine:
     # ------------------------------------------------------------------
     @staticmethod
     def read_used(battle_snapshot: Any) -> int:
-        """读取 battle_alchemy_used（BA-02）：战斗快照 dict 顶层键，缺失 → 0。"""
+        """读取 battle_alchemy_used（BA-02/方位 v0.6 §三.7）：战斗快照段内权威优先，
+        （battle_resources.battle_alchemy_used），顶层键兜底（旧快照 M8 形态），
+        均缺失 → 0。"""
         if not isinstance(battle_snapshot, Mapping):
             return 0
-        return BattleAlchemyEngine._norm_used(battle_snapshot.get(BATTLE_ALCHEMY_USED_KEY))
+        br = battle_snapshot.get("battle_resources")
+        if isinstance(br, Mapping) and br.get(BATTLE_ALCHEMY_USED_KEY) is not None:
+            return BattleAlchemyEngine._norm_used(br.get(BATTLE_ALCHEMY_USED_KEY))
+        return BattleAlchemyEngine._norm_used(
+            battle_snapshot.get(BATTLE_ALCHEMY_USED_KEY))
 
     @staticmethod
     def write_used(battle_snapshot: Any, count: Any) -> None:
-        """写入 battle_alchemy_used（BA-02）：挂战斗快照 dict 顶层键（非可变 dict 忽略）。
-
-        中断恢复不清零、战斗结束清零由战斗层负责（BA-02/BA-03 对齐 potion_use_counts 口径）。
-        """
+        """写入 battle_alchemy_used（BA-02/方位 v0.6 §三.7）：权威落段内
+        battle_resources.battle_alchemy_used；顶层键同步镜像写（旧读方/旧快照形态
+        一致）。非可变 dict 忽略。中断恢复不清零、战斗结束清零由战斗层负责
+        （BA-02/BA-03 对齐 potion_use_counts 口径）。"""
         if not isinstance(battle_snapshot, MutableMapping):
             return
-        battle_snapshot[BATTLE_ALCHEMY_USED_KEY] = BattleAlchemyEngine._norm_used(count)
+        n = BattleAlchemyEngine._norm_used(count)
+        br = battle_snapshot.setdefault("battle_resources", {})
+        if not isinstance(br, MutableMapping):
+            return
+        br[BATTLE_ALCHEMY_USED_KEY] = n
+        battle_snapshot[BATTLE_ALCHEMY_USED_KEY] = n
 
     # ------------------------------------------------------------------
     # 守卫（GU-50~52/54）
@@ -357,6 +370,35 @@ class BattleAlchemyEngine:
             return max(0, int(lv))
         except (TypeError, ValueError):
             return 0
+
+    def proficiency_mult(self, player: Any) -> float:
+        """熟练度乘区（方位 v0.6 修正 #8/N2：alchemy_proficiency_mult 配置变量）。
+
+        配置：settings.alchemy.战斗即时调合.proficiency_multiplier {min, max, curve}
+        （60~120% 语义由内容配置给——框架不硬编码、不发明默认）；缺段/非法 →
+        1.0（无乘区零破坏，现状行为保持）。curve=linear：熟练度档位索引按档数
+        线性插值 ratio=tier_idx/(档数-1)（见习→min、王→max）；未知 curve 回退
+        linear（校验器黄提示 ALC-25，扩展曲线时改）。乘入 resolve 产出强度。
+        """
+        pm = self._ba_cfg.get("proficiency_multiplier")
+        if not isinstance(pm, Mapping):
+            return 1.0
+        try:
+            lo = float(pm.get("min", 1.0))
+            hi = float(pm.get("max", 1.0))
+        except (TypeError, ValueError):
+            return 1.0
+        if lo <= 0 or hi < lo:
+            return 1.0
+        job_id = ALCHEMY_JOB_ID
+        level = self._player_level(player, job_id)
+        try:
+            idx = int(self._prof.tier_index_for_level(job_id, level))
+        except Exception:
+            idx = 0
+        denom = max(1, len(self._tier_names_of(job_id)) - 1)
+        ratio = max(0.0, min(1.0, float(idx) / float(denom)))
+        return lo + (hi - lo) * ratio
 
     # ------------------------------------------------------------------
     # 携带素材（GU-53）
@@ -457,6 +499,9 @@ class BattleAlchemyEngine:
             except (TypeError, ValueError):
                 pass
         strength = self.intensity(recipe_def, cooldown=cd)
+        # 熟练度乘区（修正 #8/N2）：缺省无配置 → 1.0 零破坏；内容配置后按熟练度线性
+        # （60~120% 语义随配置；乘入最终强度出参/auto_use 结算）
+        strength = strength * self.proficiency_mult(ctx.get("player"))
 
         # 全量原子校验（ATO-01/BA-08：材料+宝石全量满足才执行，否则全拒+差异，严禁部分扣除）
         needs = self._materials(recipe_def)

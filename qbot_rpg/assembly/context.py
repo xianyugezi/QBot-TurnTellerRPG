@@ -1796,4 +1796,63 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
 
     ctx["battle_reward_fn"] = _make_battle_reward_fn()
 
+    # 方位 v0.6（附录 A Step 5）：战斗即时调合接线四件套——battle_snapshot（快照权威
+    # dict）、battle_alchemy_engine（真实引擎鸭子，M8 遗留装配缺口）、素材 count/remove
+    # hook 绑 battle_resources.materials 冻结容器（查询以容器为准，不碰实时背包；扣减
+    # 同步落实时背包防消耗丢失）。use_battle_item 保持工程补白（auto_use 战斗道具行动
+    # 入口未接前回退入包）。须在 ctx.update(_inventory_hooks(ctx))（L1705）之后覆写，
+    # 否则被背包 hook 覆盖。
+    if ctx.get("in_battle") and isinstance(ctx.get("battle_engine"), object) \
+            and getattr(ctx.get("battle_engine"), "_snap", None) is not None:
+        try:
+            from qbot_rpg.core.alchemy_battle import BattleAlchemyEngine  # noqa: PLC0415
+
+            _be2 = ctx["battle_engine"]
+            _be2._snap.setdefault("battle_resources", {}).setdefault("materials", {})
+            ctx["battle_snapshot"] = _be2._snap
+            _ba_settings = ctx.get("settings")
+            ctx["battle_alchemy_engine"] = BattleAlchemyEngine(
+                settings=_ba_settings if isinstance(_ba_settings, Mapping) else {})
+            _mat2: Any = _be2._snap["battle_resources"]["materials"]
+            _orig_remove = ctx.get("remove_item")
+
+            def _battle_mat_count(item_id: Any) -> int:
+                """战斗素材计数（冻结容器；非携带素材=0——携带集由装配层冻结时定）。"""
+                if not isinstance(_mat2, MutableMapping):
+                    return 0
+                try:
+                    return max(0, int(_mat2.get(str(item_id), 0)))
+                except (TypeError, ValueError):
+                    return 0
+
+            def _battle_mat_remove(item_id: Any, count: int = 1) -> bool:
+                """扣减冻结容器（权威）+ 同步扣实时背包（防消耗丢失，账实一致）。"""
+                if not isinstance(_mat2, MutableMapping):
+                    return False
+                try:
+                    c = int(count)
+                except (TypeError, ValueError):
+                    return False
+                if c < 1:
+                    return False
+                key = str(item_id)
+                cur = _battle_mat_count(key)
+                if cur < c:
+                    return False
+                if cur == c:
+                    _mat2.pop(key, None)
+                else:
+                    _mat2[key] = cur - c
+                if callable(_orig_remove):
+                    try:
+                        _orig_remove(key, c)
+                    except Exception:  # noqa: BLE001 - 背包侧失败不回滚容器
+                        _LOGGER.warning("battle material bag sync failed: %s", key)
+                return True
+
+            ctx["count_item"] = _battle_mat_count
+            ctx["remove_item"] = _battle_mat_remove
+        except Exception as exc:  # noqa: BLE001 - 装配失败不炸指令（对齐引擎容错惯例）
+            _LOGGER.warning("battle alchemy wiring failed: %s", exc)
+
     return ctx

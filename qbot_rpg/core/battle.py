@@ -1655,6 +1655,8 @@ class BattleEngine:
             return merged
 
         now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        # 携带素材冻结源（battle_materials：装配层传背包素材集；None/非法 → {}）
+        _frozen_materials = self._config.get("battle_materials")
         self._snap = {
             "session_type": "battle",
             "battle_id": str(uuid.uuid4()),
@@ -1693,8 +1695,9 @@ class BattleEngine:
             # M2 审查 P2-3：lost_pending 预留（1g4 F-08 丢失挂起子态；M4 丢失判定写入，
             # to_snapshot 深拷贝自动携带——快照结构稳定，M4 读路径键存在）
             "lost_pending": None,
-            # M8 批9 收口（BA-02/IF-B03）：战斗即时调合计数落战斗快照顶层键，
-            # 中断恢复不清零、战斗结束由 start 重建清零——对齐 potion_use_counts 口径。
+            # M8 批9 收口（BA-02/IF-B03）：战斗即时调合计数。Step 5 迁移（方位 v0.6
+            # §三.7）后段内 battle_resources.battle_alchemy_used 为权威读点；顶层键保留
+            # 同步镜像（旧快照/旧读方兼容）。中断恢复不清零、战斗结束由 start 重建清零。
             "battle_alchemy_used": 0,
             "stats_collector": {"per_action": []},
             "formula_state": {"random_seed": self._rng_seed},
@@ -1737,11 +1740,19 @@ class BattleEngine:
             # 配置源=EnemyDef.parts[]（内容包），本段=战斗内权威实例。1v1 单敌直接按
             # part_id 索引；组队/多敌里程碑（§二.6）需扩 side 包裹，预留不预做。
             "parts_state": {},
-            # §三.7：战斗携带素材冻结容器（start 冻结注入 + 即时调合只读写本段，不碰
-            # 玩家实时背包——接线见附录 A Step 5）。battle_alchemy_used 读写沿用顶层键
-            # （M8 BA-02/record_alchemy_used），本段内同键为 schema 定稿占位（Step 5
-            # 接线统一时迁移读点，双写前无消费方）。
-            "battle_resources": {"materials": {}, "battle_alchemy_used": 0},
+            # §三.7：战斗携带素材冻结容器——start 从引擎配置 battle_materials 深拷贝
+            # 冻结（内容包装配层传背包素材集；N5 白名单随试点包定）；即时调合查询/扣减
+            # 以本段为权威（附录 A Step 5：count_item/remove_item hook 绑容器 + 扣减
+            # 同步落实时背包防消耗丢失）。battle_alchemy_used：段内权威读点（顶层=同步
+            # 镜像兼容旧快照/旧读方）。快照透传：续战 from_snapshot 全量还原不重冻。
+            "battle_resources": {
+                "materials": dict(
+                    copy.deepcopy(_frozen_materials)
+                    if isinstance(_frozen_materials, Mapping)
+                    else {}
+                ),
+                "battle_alchemy_used": 0,
+            },
         }
         self._finished = False
         self._death_order = []
@@ -3287,13 +3298,18 @@ class BattleEngine:
         return self.to_snapshot()
 
     def record_alchemy_used(self, n: int = 1) -> int:
-        """M8 批9（BA-02/IF-B03）：战斗即时调合次数累计（落 _snap.battle_alchemy_used）。
+        """M8 批9（BA-02/IF-B03）：战斗即时调合次数累计。
 
-        由战斗接线方在 /即时调合 结算后调用（中断恢复沿用快照值不清零；
+        Step 5 迁移（方位 v0.6 §三.7）：权威落 battle_resources.battle_alchemy_used
+        （段内优先读，顶层兜底兼容旧快照）；顶层键同步镜像写（旧读方/旧快照形态
+        一致）。由战斗接线方在 /即时调合 结算后调用（中断恢复沿用快照值不清零；
         新战斗 start 重建 _snap 自然清零）。返回累计值。
         """
-        cur = self._snap.get("battle_alchemy_used") or 0
-        cur = int(cur) + int(n)
+        br = self._snap.setdefault("battle_resources", {})
+        cur = int(br.get("battle_alchemy_used",
+                         self._snap.get("battle_alchemy_used", 0)) or 0)
+        cur = cur + int(n)
+        br["battle_alchemy_used"] = cur
         self._snap["battle_alchemy_used"] = cur
         return cur
 

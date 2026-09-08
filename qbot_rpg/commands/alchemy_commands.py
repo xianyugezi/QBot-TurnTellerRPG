@@ -2885,11 +2885,30 @@ def _battle_snapshot_of(ctx: Mapping[str, Any]) -> MutableMapping[str, Any]:
 
 
 def _battle_alchemy_used_of(snap: Mapping[str, Any]) -> int:
-    """battle_alchemy_used 读取（战斗快照顶层键；中断恢复不清零 BA-02，缺省 0）。"""
+    """battle_alchemy_used 读取（方位 v0.6 §三.7 Step 5 迁移：段内
+    battle_resources.battle_alchemy_used 权威优先，顶层键兜底旧快照 M8 形态；
+    中断恢复不清零 BA-02，缺省 0）。"""
+    br = snap.get("battle_resources")
+    if isinstance(br, Mapping) and br.get("battle_alchemy_used") is not None:
+        try:
+            return max(0, int(br.get("battle_alchemy_used", 0) or 0))
+        except (TypeError, ValueError):
+            return 0
     try:
         return max(0, int(snap.get("battle_alchemy_used", 0) or 0))
     except (TypeError, ValueError):
         return 0
+
+
+def _battle_alchemy_write(snap: MutableMapping[str, Any], n: int) -> None:
+    """battle_alchemy_used 写回（方位 v0.6 §三.7 Step 5 迁移）：权威落段内
+    battle_resources.battle_alchemy_used，顶层键同步镜像写（旧读方/旧快照形态一致）。"""
+    br = snap.setdefault("battle_resources", {})
+    if not isinstance(br, MutableMapping):
+        br = {}
+        snap["battle_resources"] = br
+    br["battle_alchemy_used"] = max(0, int(n))
+    snap["battle_alchemy_used"] = max(0, int(n))
 
 
 def _instant_carry_error(carry: Mapping[str, Any], ctx: Mapping[str, Any]) -> str:
@@ -3010,8 +3029,8 @@ async def cmd_instant(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     if not res.get("ok"):
         return str(res.get("message")
                    or tpl_of(ctx, "alchemy_instant_fail"))  # 失败透传
-    # 记 battle_alchemy_used+1（写回注入战斗快照顶层键，BA-02）
-    snap["battle_alchemy_used"] = used + 1
+    # 记 battle_alchemy_used+1（写回注入战斗快照：段内权威 + 顶层同步镜像，BA-02/方位 v0.6 §三.7）
+    _battle_alchemy_write(snap, used + 1)
     # 渲染 M-17 战斗一行（M5 无 emoji 纯文本）
     return _instant_render(res, recipe, ctx, auto_use)
 

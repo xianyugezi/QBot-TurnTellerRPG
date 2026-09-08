@@ -82,7 +82,8 @@ def _battle_defs(registry: Any):
     # veinborn 扁平条目会静默失败；edge_clear3 清蓄刃不生效实测暴露）
     for _tbl in (effects_map, marks_map, statuses_map):
         for _eid, _edef in _tbl.items():
-            all_defs.setdefault(_eid, _edef)
+            if isinstance(_eid, str):
+                all_defs.setdefault(_eid, _edef)
     if effects_map:
         all_defs["effects"] = effects_map
     if marks_map:
@@ -97,6 +98,43 @@ def _battle_defs(registry: Any):
 
     ce = ComboEngine(defs={**all_defs, **chains_map}, resolver=_resolver)
     return all_defs, chains_map, ce
+
+
+def _battle_materials_of(ctx: Mapping[str, Any]) -> Dict[str, int]:
+    """战斗携带素材冻结集（方位 v0.6 §三.7/附录 A Step 5：start 冻结注入）。
+
+    携带集口径：配方材料 item_id 并集 ∩ 玩家背包计数（只带战斗中用得上的素材，
+    避免全背包冻结污染战斗期通用 count_item 查询）。N5（全部 vs 白名单清单）随
+    首个试点包拍板——届时本函数改白名单读法即可，引擎侧不动（config 给什么冻
+    什么）。无 registry/无 recipes/背包空 → {}（零变化）。
+    """
+    mat_ids: set = set()
+    registry = ctx.get("registry")
+    raw = getattr(registry, "modules_raw", None) if registry is not None else None
+    recipes = raw.get("recipes") if isinstance(raw, Mapping) else None
+    if isinstance(recipes, list):
+        for rec in recipes:
+            if not isinstance(rec, Mapping):
+                continue
+            for m in rec.get("materials") or []:
+                if not isinstance(m, Mapping):
+                    continue
+                mid = m.get("id") or m.get("item")
+                if isinstance(mid, str) and mid:
+                    mat_ids.add(mid)
+    inv = ctx.get("inventory")
+    if not isinstance(inv, Mapping) or not mat_ids:
+        return {}
+    out: Dict[str, int] = {}
+    for k, v in inv.items():
+        if k in mat_ids:
+            try:
+                n = int(v)
+            except (TypeError, ValueError):
+                n = 0
+            if n > 0:
+                out[str(k)] = n
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -339,7 +377,10 @@ async def launch_pve_battle(
         if _job_id:
             eng.set_job_id(_job_id)
         eng._resource_registry = _resource_registry_of(ctx)
-        eng.start(p_comb, e_comb, random_seed=None)
+        # 方位 v0.6（附录 A Step 5）：携带素材冻结进战斗快照 battle_resources.materials
+        # （配方材料并集 ∩ 背包；N5 白名单随试点包定）。即时调合查询/扣减以容器为权威。
+        eng.start(p_comb, e_comb, random_seed=None,
+                  config={"battle_materials": _battle_materials_of(ctx)})
     except Exception as exc:  # noqa: BLE001 - 开战失败不崩
         _LOGGER.warning("battle launch failed: %s", exc)
         return {"ok": False, "message": f"❌ 开战失败：{exc}", "battle_engine": None}

@@ -178,6 +178,9 @@ _BATTLE_DEFAULT_CONFIG: Dict[str, Any] = {
     # 行动顺序（1g2 §1.1 先手写死 fixed；speed=按 spd 排序扩展，工程补白⑤）
     "actor_order": "fixed",
     "rule_version": "battle_v1.1.1",     # 1g1c rule_version（formula.json 对齐）
+    # 部位破位倒地状态 id（方位 v0.6 §五：knockdown 走既有 status 体系；内容包
+    # statuses.json 定义同 id 状态（damage_mult 增伤乘区），此键可改 id）
+    "knockdown_status_id": "knockdown",
 }
 
 # combatant 缺失字段兜底（细化_1g1c §1.2 双方单位 + 1a 公式所需属性）
@@ -1769,6 +1772,9 @@ class BattleEngine:
         # 无配置 → [] 零行为变化）
         self._dispatch_event("battle_start", "player")
         self._dispatch_event("battle_start", "enemy")
+        # 方位 v0.6（附录 A Step 2）：敌方 parts 配置 → parts_state 实例化（幂等；
+        # 无 parts 配置 → 空段零变化；中断恢复随快照段透传不重建）
+        self._init_parts_state()
         self.start_turn()
         return self
 
@@ -2071,6 +2077,10 @@ class BattleEngine:
         ca.setdefault("armor", bool(sd.get("armor", False)))   # D4：skill def armor
         if "effects" not in ca:
             ca["effects"] = list(sd.get("effects") or [])      # D4：skill def effects（标准技能路径也能执行印记/打断等）
+        # 方位 v0.6（附录 A Step 2）：skill def F08/F09 合并——position_rule（部位命中
+        # 资格，Step 2 part resolve 消费）、break_power（破坏力固有值）随技能 def 注入
+        ca.setdefault("position_rule", sd.get("position_rule"))
+        ca.setdefault("break_power", float(sd.get("break_power", 0) or 0))
 
         _action_had_mult = "mult" in ca  # action 原样是否显式 mult（折算判据）
         ca.setdefault("mult", float(ca.get("mult", 1.0)))
@@ -2402,6 +2412,157 @@ class BattleEngine:
             f"够不着：目标不在攻击方位内（{side}/{height}）",
         )
 
+    # ------------------------- 部位破坏（方位 v0.6 §三.3/§三.4，附录 A Step 2） -------------------------
+
+    def _enemy_parts_defs(self) -> List[Mapping[str, Any]]:
+        """敌方部位配置列表（快照 enemy combatant `parts` 透传：enemies.json parts[] 原样）。
+
+        无 parts 键/非列表 → []（既有怪零变化）；配置=只读镜像（战斗内权威实例态在
+        parts_state，§三.3）。
+        """
+        e = self._combat("enemy")
+        parts = e.get("parts") if isinstance(e, Mapping) else None
+        if not isinstance(parts, list):
+            return []
+        return [p for p in parts if isinstance(p, Mapping)]
+
+    def _init_parts_state(self) -> None:
+        """start 时按敌方 parts 配置实例化 parts_state（id → {break_value, broken}）。
+
+        幂等：已有 dict 实例不覆盖（续战快照段直接透传，不重建）；无 parts → 保持空段。
+        """
+        st = self._snap.setdefault("parts_state", {})
+        if not isinstance(st, dict):
+            st = {}
+            self._snap["parts_state"] = st
+        for pd_ in self._enemy_parts_defs():
+            pid = str(pd_.get("id") or "")
+            if not pid:
+                continue
+            cur = st.get(pid)
+            if not isinstance(cur, dict):
+                st[pid] = {"break_value": 0.0, "broken": False}
+
+    def _part_state_of(self, part_id: Optional[str]) -> Optional[Mapping[str, Any]]:
+        """部位实例态读取（缺 parts_state 段/缺键 → None；旧快照降级不崩）。"""
+        if not part_id:
+            return None
+        st = self._snap.get("parts_state")
+        if not isinstance(st, Mapping):
+            return None
+        cur = st.get(part_id)
+        return cur if isinstance(cur, Mapping) else None
+
+    def _resolve_part_target(
+        self, action: Mapping[str, Any]
+    ) -> Tuple[Optional[str], Mapping[str, Any]]:
+        """部位 resolve（§四 part resolve，方位 v0.6 §三.3/附录 A Step 2）。
+
+        候选条件（玩家当前格同时满足）：
+          1) part.positions 覆盖玩家当前 (side, height)（部位可达方位格，怪物局部坐标）
+          2) action.position_rule 放行该格（F08 玩家侧消费点；无 rule = 全量）
+        多候选 → target_priority 高者优先，同值随机（消耗一次 roll）；无候选 →
+        (None, {}) 纯本体（打整体 HP，无部位乘区/无破坏力累计）。
+        """
+        from qbot_rpg.core.position import position_of, rule_permits  # noqa: PLC0415
+
+        cell_side, cell_height = position_of(self._snap, "player")
+        rule = action.get("position_rule")
+        cands: List[Mapping[str, Any]] = []
+        for pd_ in self._enemy_parts_defs():
+            pos = pd_.get("positions")
+            if not isinstance(pos, Mapping):
+                continue
+            if rule_permits(pos, cell_side, cell_height) and rule_permits(
+                    rule, cell_side, cell_height):
+                cands.append(pd_)
+        if not cands:
+            return None, {}
+        cands.sort(key=lambda d: float(d.get("target_priority", 0) or 0), reverse=True)
+        top_val = float(cands[0].get("target_priority", 0) or 0)
+        top = [d for d in cands
+               if float(d.get("target_priority", 0) or 0) >= top_val]
+        pick = top[0]
+        if len(top) > 1:
+            idx = int(self._roll() * len(top))
+            pick = top[min(idx, len(top) - 1)]
+        return str(pick.get("id") or ""), pick
+
+    def _status_damage_mult(self, target: str) -> float:
+        """目标侧受击增伤乘区（§五：status def `damage_mult`；缺省/未知状态 → 1.0）。
+
+        knockdown 状态 def 挂 damage_mult 即倒地叠加增伤源（内容包 statuses.json）。
+        """
+        mult = 1.0
+        st = self._snap.get("status_state")
+        if isinstance(st, Mapping):
+            insts = st.get(target)
+            if isinstance(insts, list):
+                for inst in insts:
+                    if not isinstance(inst, Mapping):
+                        continue
+                    sid = str(inst.get("status_id") or "")
+                    if not sid:
+                        continue
+                    sdef = self._resolver(sid, "status")
+                    raw = getattr(sdef, "raw", sdef)
+                    if isinstance(raw, Mapping):
+                        dm = raw.get("damage_mult")
+                        if isinstance(dm, (int, float)) and not isinstance(dm, bool):
+                            mult *= float(dm)
+        return mult
+
+    def _fire_part_break(
+        self, attacker: str, target: str, part_def: Mapping[str, Any],
+        events: List[Mapping[str, Any]],
+    ) -> None:
+        """破位事件收口（§三.3 on_break + §四 破位时序）：全部走既有 effects 通道。
+
+        - knockdown（默认 1；部位覆写 0 = 该部位破位不倒地，§三.3 on_break.knockdown）
+          → status_apply 挂 knockdown_status_id 状态（config 可改 id）；窗口回合数 =
+          on_break.knockdown 值覆写实例 turns（N3 数值阶段，试点调）
+        - marks → mark_add 原子动作（破位附加印记，如素材掉落标记）
+        - effects → 原样执行（附加效果：断尾削扫尾范围=行动禁用/替换等）
+        相对侧语义：attacker=player 施加方，target 键用相对 "enemy"（effects 层口径）。
+        """
+        ob = part_def.get("on_break")
+        if not isinstance(ob, Mapping):
+            ob = {}
+        kd = int(ob.get("knockdown", 1) or 0)
+        kd_id = str(self._config.get("knockdown_status_id") or "knockdown")
+        entries: List[Mapping[str, Any]] = []
+        if kd > 0:
+            entries.append({"type": "status_apply", "status_id": kd_id,
+                            "source": "part_break", "target": "enemy"})
+        for mk in ob.get("marks") or []:
+            if isinstance(mk, str) and mk:
+                entries.append({"type": "mark_add", "mark": mk, "count": 1,
+                                "target": "enemy"})
+        for fx in ob.get("effects") or []:
+            if isinstance(fx, Mapping):
+                entries.append(fx)
+        if not entries:
+            return
+        rt = self._new_runtime()
+        ctx = DamageCtx(raw_damage=0, attack_type="basic", attacker=attacker,
+                        target=target, snapshot=self._snap,
+                        variables=self._base_variables(attacker, target))
+        for act in entries:
+            res = execute_action(act, ctx, rt)
+            events.extend(res.side_effects)
+        self._absorb_runtime(rt)
+        # 倒地窗口覆写：on_break.knockdown = 回合数（实例 turns 置位；状态 def 静态
+        # duration 不承载 N3 数值，窗口数值归部位配置）
+        if kd > 0:
+            st = self._snap.get("status_state")
+            insts = st.get(target) if isinstance(st, Mapping) else None
+            if isinstance(insts, list):
+                for inst in reversed(insts):
+                    if isinstance(inst, Mapping) and inst.get("status_id") == kd_id:
+                        if isinstance(inst, dict):
+                            inst["turns"] = kd
+                        break
+
     def _resolve_damage_action(self, attacker: str, action: Dict[str, Any]) -> ActionOutcome:
         """伤害行动闭环（核心）：命中→会心→格挡→双通道→总伤害→拦截链→扣血→
         死亡判定（每段后）→ 反射回注（F-22）→ 状态衰减（D5）。
@@ -2424,6 +2585,18 @@ class BattleEngine:
         last_hp: int = int(tc.get("hp", 0))
         rating: Dict[str, Any] = {"hit": True, "crit": "low", "blocked": False, "pierce": 0.0, "multi": 1.0}
         seg_damage: Dict[str, Any] = {"ch_phys": 0, "ch_elem": 0, "final": 0}
+
+        # ---- 方位 v0.6（附录 A Step 2）部位 resolve（§四 part resolve）：行动级选定 ----
+        # 玩家攻击 & 敌方带 parts：玩家当前格 ∈ 部位 positions ∩ action.position_rule
+        # → 候选部位（target_priority 高优先/同值随机）；无部位/无候选 → 纯本体
+        # （本行动打本体：无部位乘区、无破坏力累计——任意攻击仍打整体 HP，§二.3）。
+        part_id: Optional[str] = None
+        part_def: Mapping[str, Any] = {}
+        if attacker == "player" and target == "enemy" and self._enemy_parts_defs():
+            part_id, part_def = self._resolve_part_target(action)
+            if part_id:
+                all_effects.append({"type": "part_target", "part": part_id,
+                                    "actor": attacker, "target": target})
 
         for idx, seg in enumerate(segments, start=1):
             seg = dict(seg)
@@ -2554,7 +2727,52 @@ class BattleEngine:
                 halve_after_block=p.block.halve_after_block,
             )
             rating["blocked"] = blocked_eff
+            # ---- 方位 v0.6（附录 A Step 2）：部位乘区（position_bonus × knockdown_bonus）----
+            # 只对命中已破部位（broken）的段生效（§二.3：已破部位方位=常驻增伤；倒地
+            # 窗口内打已破部位=叠加增伤——knockdown 乘区挂 status def damage_mult，§五）。
+            # 硬时序：破坏力结算用未乘增伤的 base_raw（§三.4 basis=命中/会心/格挡/防御/
+            # 乱数后、DamagePipeline 前，不含破位乘区）——防「破位→增伤→破坏力膨胀」
+            # 自反馈（v0.6 修正 #4/#5）。本次破位不吃本次增伤（先乘后判，置位自下段起效）。
+            _part_state = self._part_state_of(part_id) if part_id else None
+            broken_hit = bool(_part_state and _part_state.get("broken"))
+            base_raw = raw
+            if broken_hit:
+                # 常驻增伤 × 倒地叠加（status def damage_mult）；整型入账对齐既有伤害口径
+                _dmg_float = float(raw) * float(p.battle_position.broken_part_mult)
+                _dmg_float = _dmg_float * self._status_damage_mult(target)
+                raw = int(_dmg_float)
             raw_total += raw
+
+            # ---- 破坏力（每段一次，写死多段 N 次；命中部位且未破才累计）----
+            if part_id and part_def and not (broken_hit):
+                _bpp = p.battle_position
+                _basis = max(0.0, float(base_raw) - float(_bpp.break_base_damage))
+                _delta = (float(action.get("break_power", 0) or 0)
+                          + float(_bpp.break_sqrt_coef) * (_basis ** 0.5))
+                _st_map = self._snap.setdefault("parts_state", {})
+                if not isinstance(_st_map, dict):
+                    _st_map = {}
+                    self._snap["parts_state"] = _st_map
+                _pst = _st_map.get(part_id)
+                if not isinstance(_pst, dict):
+                    _pst = {"break_value": 0.0, "broken": False}
+                    _st_map[part_id] = _pst
+                _pst["break_value"] = float(_pst.get("break_value", 0.0) or 0.0) + _delta
+                rating["part"] = part_id
+                rating["break_delta"] = round(_delta, 2)
+                all_effects.append({"type": "part_damage", "part": part_id,
+                                    "break_delta": round(_delta, 2),
+                                    "actor": attacker, "target": target})
+                _thr = float(part_def.get("break_threshold", 0) or 0)
+                if not _pst.get("broken") and _pst["break_value"] >= _thr:
+                    _pst["broken"] = True
+                    rating["part_broken"] = True
+                    all_effects.append({"type": "part_break", "part": part_id,
+                                        "actor": attacker, "target": target,
+                                        "break_value": round(_pst["break_value"], 2)})
+                    # on_break 收口（knockdown 状态/marks/effects 全走 effects 通道）；
+                    # 本段伤害已按破位前状态结算——本次破位不吃本次增伤（下段/下次起效）
+                    self._fire_part_break(attacker, target, part_def, all_effects)
 
             # ---- ⑥⑦⑧ 拦截链（1b §2：减伤→护盾→反弹→吸收→免疫→续行→扣血→死亡判定）----
             vars_ = self._base_variables(attacker, target)

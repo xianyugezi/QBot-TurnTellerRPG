@@ -274,6 +274,22 @@ class StatMap:
 
 
 @dataclass(frozen=True)
+class BattlePositionParams:
+    """battle_position 段参数（方位战斗系统 v0.6 §三.4/附录 A Step 2）。
+
+    破坏力公式 break_delta = break_power + break_sqrt_coef × √(max(0, basis −
+    break_base_damage))：结构定稿写死，数值全配置（N1 数值阶段）。默认零破坏
+    （base 0 / 系数 1.0 仍参与但无增伤配置时与旧行为一致）；broken_part_mult =
+    已破部位常驻增伤乘区（§二.3），默认 1.0（内容包 formula.json battle_position
+    段显式配置才生效——数值阶段待拍板，框架不发明默认）。
+    """
+
+    break_base_damage: float = 0.0   # 基准伤害（√ 括号内减项；N1）
+    break_sqrt_coef: float = 1.0     # √ 系数（N1）
+    broken_part_mult: float = 1.0    # 已破部位方位常驻增伤乘区（§二.3，试点调）
+
+
+@dataclass(frozen=True)
 class DamageFormulaParams:
     """formula.json 全段参数载体（细化_1a §2.1 字段表默认值）。
 
@@ -296,6 +312,8 @@ class DamageFormulaParams:
     elements: Mapping[str, str] = field(default_factory=lambda: dict(DEFAULT_ELEMENTS))
     # O1 怪物防御率（细化_1a §1.11 待策划裁决；工程默认 1.0 不参与乘法（登记 R-09，正式裁决后更新））
     monster_def_rate: float = O1_MONSTER_DEF_RATE
+    # 方位 v0.6（附录 A Step 2）：battle_position 段（破坏力公式参数 + 破位增伤乘区）
+    battle_position: BattlePositionParams = field(default_factory=BattlePositionParams)
 
 
 # P1-1 修复：DamageContext dataclass 与 DamagePipeline 类型别名已删除——

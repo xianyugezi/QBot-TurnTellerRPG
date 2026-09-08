@@ -829,6 +829,9 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "on_enter": FieldMeta(type="ref", ref_target="effect"),
         "on_tick": FieldMeta(type="ref", ref_target="effect"),
         "on_expire": FieldMeta(type="ref", ref_target="effect"),
+        # 受击增伤乘区（方位 v0.6 §五：knockdown 等状态 def 挂 damage_mult；引擎破位乘区消费）
+        "damage_mult": FieldMeta(type="number", range_min=0, range_max=10,
+                                 label="受击增伤倍率"),
     }
     marks_fields: Dict[str, FieldMeta] = {
         # 印记定稿 §八 数据结构汇总（2026-08-19 定稿对照 P0-1 **部分**修复——5 字段已补；
@@ -885,6 +888,8 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "kind": FieldMeta(type="str"),  # basic/active/...（枚举判定 A2 路）
         "type": F_TYPE,                  # 旧键兼容
         "position_rule": FieldMeta(type="obj"),  # F08 方位命中资格（方位 v0.6 §三.2；枚举校验 A2 路）
+        "break_power": FieldMeta(type="number", range_min=0, range_max=500,
+                                 label="破坏力固有值"),  # F09（方位 v0.6 §三.4）
         "power": F_POWER,
         "attack_type": FieldMeta(type="str"),  # 斩/打/突/魔（枚举判定 A2 路）
         "element": FieldMeta(type="str"),      # 元素 ID（元素注册表引用检查 A2/M2）
@@ -926,6 +931,8 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "id": F_ID, "name": F_NAME,
         "kind": FieldMeta(type="str"),  # F03 五枚举 damage/heal/status/control/utility（枚举 A2 路）
         "position_rule": FieldMeta(type="obj"),  # F08 方位命中资格（方位 v0.6 §三.2；枚举校验 A2 路）
+        "break_power": FieldMeta(type="number", range_min=0, range_max=500,
+                                 label="破坏力固有值"),  # F09（方位 v0.6 §三.4）
         "power": F_POWER,               # F04 倍率（滑条 10-500%；派生链累计 ≤1.5× 黄提示 V-6 属 A2）
         "attack_type": FieldMeta(type="str"),  # F05 斩/打/突/魔/无（枚举 A2 路；缺省按武器 f4）
         "element": FieldMeta(type="str", soft_label=True),  # F06 8 元素注册表（V-4 引用检查 A2）；null=按武器元素合法
@@ -1082,6 +1089,29 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "effects": F_EFFECTS,
         "traits": FieldMeta(type="list", element=FieldMeta(type="ref", ref_target="trait")),
         "skills": FieldMeta(type="list", element=FieldMeta(type="str")),  # 技能库 M6 注入
+        # ---- 部位破坏（方位 v0.6 §三.3/附录 A Step 2；专项校验 content/validator _check_enemy_parts）----
+        "parts": FieldMeta(type="list", element=FieldMeta(type="obj", children={
+            "id": FieldMeta(type="str", label="部位 ID"),
+            "name": FieldMeta(type="str", label="部位名"),
+            "positions": FieldMeta(type="obj", children={
+                "side": FieldMeta(type="list", element=FieldMeta(type="str"),
+                                  label="可达方位"),
+                "height": FieldMeta(type="list", element=FieldMeta(type="str"),
+                                    label="可达高度"),
+            }, label="可达方位格"),
+            "break_threshold": FieldMeta(type="number", range_min=0, range_max=99999,
+                                         label="破坏阈值"),
+            "target_priority": FieldMeta(type="number", range_min=0, range_max=999,
+                                         label="命中优先级"),
+            "on_break": FieldMeta(type="obj", children={
+                "knockdown": FieldMeta(type="number", range_min=0, range_max=99,
+                                       label="倒地回合"),
+                "marks": FieldMeta(type="list", element=FieldMeta(type="str"),
+                                   label="破位印记"),
+                "effects": FieldMeta(type="list", element=FieldMeta(type="obj"),
+                                     label="破位效果"),
+            }, label="破位行为"),
+        }), label="部位列表"),
     }
     maps_fields: Dict[str, FieldMeta] = {
         "id": F_ID, "name": F_NAME,

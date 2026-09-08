@@ -567,7 +567,7 @@ def _check_v13_basic_gate(
              msg=f"技能 block_mode {bm} 不在三枚举（V-13）")
     # 数值域
     for key, lo, hi in (("power", 0, 500), ("hits", 1, None), ("hit_mod", 0, None),
-                        ("crit_mod", 0, None)):
+                        ("crit_mod", 0, None), ("break_power", 0, None)):  # F09 方位 v0.6
         v = entry.get(key)
         if isinstance(v, (int, float)) and not isinstance(v, bool):
             if v < lo:

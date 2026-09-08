@@ -698,6 +698,7 @@ class _Checker:
         self._check_enemy_drops(module_name, base, entry, dummy)           # R5/R13 + R7
         self._check_enemy_lore(module_name, base, entry, dummy)            # R6 + R7
         self._check_enemy_dummy_numeric(module_name, base, entry, dummy)   # R14
+        self._check_enemy_parts(module_name, base, entry, dummy)           # R16（方位 v0.6 §三.3）
 
     # ---- meta 辅助（校验器走 FieldMetaTable 泛化驱动：键/枚举从表读，缺省常量兜底）----
     def _enemy_meta_fields(self) -> Optional[Mapping[str, FieldMeta]]:
@@ -736,6 +737,132 @@ class _Checker:
         """行动 ID 引用存在（R1；R2/R11/R13/R15 复用；action.json 未声明 → 按引用不存在红拦）。"""
         if aid not in self._id_space.get("action", {}):
             self._err(module_name, path, "R-4", rule="R1_action_ref", ref=aid, ref_target="action")
+
+    def _check_enemy_parts(self, module_name: str, base: str, entry: Mapping[str, object],
+                           dummy: bool) -> None:
+        """R16 部位破坏段（方位 v0.6 §三.3/附录 A Step 2）：结构/枚举/引用红拦。
+
+        parts = [{id, name, positions{side[], height[]}, break_threshold,
+                  target_priority, on_break{knockdown, marks[], effects[]}}]
+        语义：id 必填唯一；positions 必填且 side/height 轴枚举数组（非法值红拦）；
+        break_threshold 非负数值；target_priority 非负整数（缺省 0）；on_break 内
+        knockdown 非负整数（缺省 1）/marks 字符串数组（引用存在 R-4）/effects 条目数组。
+        只拦非法形状与引用缺失，不限制组合。
+        """
+        parts = entry.get("parts")
+        if parts is None:
+            return
+        if not isinstance(parts, list):
+            if not dummy:
+                self._err(module_name, f"{base}.parts", "R-1", rule="R16_parts_type",
+                          expect="list", got=type(parts).__name__)
+            return
+        if dummy:
+            self._warn(module_name, f"{base}.parts", "Y-10", rule="R7_dummy_ignored",
+                       field_name="parts")
+            return
+        seen: set = set()
+        for pi, part in enumerate(parts):
+            pth = f"{base}.parts.{pi}"
+            if not isinstance(part, Mapping):
+                self._err(module_name, pth, "R-1", rule="R16_part_type",
+                          expect="obj", got=type(part).__name__)
+                continue
+            pid = part.get("id")
+            if not isinstance(pid, str) or not pid:
+                self._err(module_name, f"{pth}.id", "R-5", rule="R16_part_id_required",
+                          name="id")
+            elif pid in seen:
+                self._err(module_name, f"{pth}.id", "R-5", rule="R16_part_id_duplicate",
+                          id=pid)
+            else:
+                seen.add(pid)
+            pos = part.get("positions")
+            if not isinstance(pos, Mapping):
+                self._err(module_name, f"{pth}.positions", "R-5",
+                          rule="R16_part_positions_required", name="positions")
+            else:
+                for axis, allowed in (("side", ("front", "back", "left", "right")),
+                                      ("height", ("ground", "air"))):
+                    raw = pos.get(axis)
+                    if raw is None:
+                        self._err(module_name, f"{pth}.positions.{axis}", "R-5",
+                                  rule="R16_part_positions_axis_required", axis=axis)
+                        continue
+                    if not isinstance(raw, list):
+                        self._err(module_name, f"{pth}.positions.{axis}", "R-1",
+                                  rule="R16_part_positions_axis_type", axis=axis,
+                                  expect="list[str]", got=type(raw).__name__)
+                        continue
+                    for v in raw:
+                        if not isinstance(v, str) or v not in allowed:
+                            self._err(module_name, f"{pth}.positions.{axis}", "R-5",
+                                      rule="R16_part_positions_enum", axis=axis,
+                                      value=v, allowed=list(allowed),
+                                      msg=("part.positions.%s 值 %s 不在枚举 %s"
+                                           % (axis, v, list(allowed))))
+            bt = part.get("break_threshold")
+            if bt is not None:
+                if isinstance(bt, bool) or not isinstance(bt, (int, float)):
+                    self._err(module_name, f"{pth}.break_threshold", "R-1",
+                              rule="R16_part_threshold_type", expect="number",
+                              got=type(bt).__name__)
+                elif bt < 0:
+                    self._err(module_name, f"{pth}.break_threshold", "R-2",
+                              rule="R16_part_threshold_negative", value=bt)
+            tp = part.get("target_priority")
+            if tp is not None:
+                if isinstance(tp, bool) or not isinstance(tp, (int, float)):
+                    self._err(module_name, f"{pth}.target_priority", "R-1",
+                              rule="R16_part_priority_type", expect="number",
+                              got=type(tp).__name__)
+                elif tp < 0:
+                    self._err(module_name, f"{pth}.target_priority", "R-2",
+                              rule="R16_part_priority_negative", value=tp)
+            ob = part.get("on_break")
+            if ob is not None:
+                if not isinstance(ob, Mapping):
+                    self._err(module_name, f"{pth}.on_break", "R-1",
+                              rule="R16_part_onbreak_type", expect="obj",
+                              got=type(ob).__name__)
+                else:
+                    kd = ob.get("knockdown")
+                    if kd is not None and (isinstance(kd, bool)
+                                           or not isinstance(kd, (int, float)) or kd < 0):
+                        self._err(module_name, f"{pth}.on_break.knockdown", "R-2",
+                                  rule="R16_part_knockdown_negative", value=kd)
+                    marks = ob.get("marks")
+                    if marks is not None:
+                        if not isinstance(marks, list):
+                            self._err(module_name, f"{pth}.on_break.marks", "R-1",
+                                      rule="R16_part_marks_type", expect="list[str]",
+                                      got=type(marks).__name__)
+                        else:
+                            for mk in marks:
+                                if not isinstance(mk, str) or not mk:
+                                    self._err(module_name, f"{pth}.on_break.marks", "R-5",
+                                              rule="R16_part_marks_entry", value=mk)
+                                elif "mark" in self._id_space and mk not in self._id_space["mark"]:
+                                    self._err(module_name, f"{pth}.on_break.marks", "R-4",
+                                              rule="R16_part_mark_ref", ref=mk,
+                                              ref_target="mark")
+                    fx = ob.get("effects")
+                    if fx is not None and not isinstance(fx, list):
+                        self._err(module_name, f"{pth}.on_break.effects", "R-1",
+                                  rule="R16_part_effects_type", expect="list",
+                                  got=type(fx).__name__)
+                    for k in ob:
+                        if k not in ("knockdown", "marks", "effects"):
+                            self._err(module_name, f"{pth}.on_break.{k}", "R-5",
+                                      rule="R16_part_onbreak_unknown_key", key=k,
+                                      msg="on_break 未知键 %r（仅 knockdown/marks/effects）" % (k,))
+            for k in part:
+                if k not in ("id", "name", "positions", "break_threshold",
+                             "target_priority", "on_break"):
+                    self._err(module_name, f"{pth}.{k}", "R-5",
+                              rule="R16_part_unknown_key", key=k,
+                              msg="part 未知键 %r（id/name/positions/break_threshold/"
+                                  "target_priority/on_break）" % (k,))
 
     def _check_enemy_required(self, module_name: str, base: str, entry: Mapping[str, object],
                               dummy: bool) -> None:

@@ -268,7 +268,7 @@ def test_6a_tc_23_groups() -> None:
 
 
 def test_6a_skills_fields_contract_core_24() -> None:
-    """§1.2 契约 24 字段 = skills_fields() 中 24 个契约原始键（挂点 6 键 + 方位扩展 1 键另计）。"""
+    """§1.2 契约 24 字段 = skills_fields() 中 24 个契约原始键（挂点 6 键 + 方位扩展 2 键另计）。"""
     contract_core = {
         "id", "name", "kind", "power", "attack_type", "element", "effects",
         "type", "mp_cost", "cooldown", "tag", "armor", "interrupt", "chain_refs",
@@ -279,9 +279,9 @@ def test_6a_skills_fields_contract_core_24() -> None:
     fields = set(skills_fields())
     assert contract_core <= fields
     assert len(contract_core) == 24
-    # 登记表总键数 = 24 契约 + 6 挂点 + 1 方位扩展 F08 position_rule = 31
-    # （M13 合写产物口径 + 2026-09-08 方位 v0.6 附录 A Step 1）
-    assert len(fields) == 31
+    # 登记表总键数 = 24 契约 + 6 挂点 + 2 方位扩展 F08 position_rule/F09 break_power = 32
+    # （M13 合写产物口径 + 2026-09-08 方位 v0.6 附录 A Step 1/Step 2）
+    assert len(fields) == 32
 
 
 # ---------------------------------------------------------------------------

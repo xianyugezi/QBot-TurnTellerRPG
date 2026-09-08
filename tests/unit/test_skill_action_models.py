@@ -163,7 +163,7 @@ def test_action_core_fields_tuple() -> None:
     方位 v0.6 §三.2/附录 A Step 1：position_rule 技能/行动共用）。"""
     assert ACTION_CORE_FIELDS == (
         "id", "name", "kind", "power", "attack_type", "element", "effects",
-        "position_rule",
+        "position_rule", "break_power",
     )
 
 

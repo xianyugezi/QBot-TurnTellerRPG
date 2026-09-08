@@ -72,6 +72,7 @@ from qbot_rpg.content.models import BaseDef, FieldMeta, ModuleMeta
 ACTION_CORE_FIELDS: Tuple[str, ...] = (
     "id", "name", "kind", "power", "attack_type", "element", "effects",
     "position_rule",
+    "break_power",
 )
 """ActionCore 共用核心 7 字段 + 方位扩展 1（契约 §2.2：F01-F07 逐字段同构、逐约束同源；
 F08 position_rule = 方位命中资格，方位 v0.6 §三.2/附录 A Step 1——skills 与 action 共用）。"""
@@ -83,6 +84,7 @@ ACTION_CORE_DEFAULTS: Dict[str, object] = {
     "element": None,           # F06 默认 null
     "effects": (),             # F07 默认 []（效果引用 + 原子动作双形态，1b 承接）
     "position_rule": None,     # F08 默认 null（=全量命中资格，方位 v0.6 §三.2）
+    "break_power": 0,          # F09 默认 0（无固有破坏力，方位 v0.6 §三.4）
 }
 """ActionCore 缺省兜底表（三铁律②：漏配 = 合理默认不是报错）。"""
 
@@ -128,9 +130,9 @@ DEFAULT_TRIGGER_LIMIT: Dict[str, int] = {"per_round": 10, "per_battle": 99}
 # （type/cost/cool/apply_status/apply_mark/require_status/skill——field_meta action_fields
 #  既有键，6a 契约未禁，宽松登记防误拦既有内容包）
 ACTION_FIELD_REGISTRY: Tuple[str, ...] = (
-    # ---- ActionCore 7 + 方位扩展 F08（契约 §2.2 / 方位 v0.6 §三.2）----
+    # ---- ActionCore 7 + 方位扩展 F08/F09（契约 §2.2 / 方位 v0.6 §三.2/§三.4）----
     "id", "name", "kind", "power", "attack_type", "element", "effects",
-    "position_rule",
+    "position_rule", "break_power",
     # ---- 怪物侧扩展 G01-G05 + 目标 G06 + 触发上限 G07（契约 §2.3）----
     "weight", "probability", "intent", "chain", "cooldown",
     "target", "trigger_limit",
@@ -203,6 +205,11 @@ class ActionDef(BaseDef):
     def position_rule(self) -> Mapping[str, object]:
         """方位命中资格（F08：{side: [...], height: [...]}，缺省全量；方位 v0.6 §三.2）。"""
         return self._mapping("position_rule")
+
+    @property
+    def break_power(self) -> float:
+        """破坏力固有值（F09：参与 break_delta 公式；方位 v0.6 §三.4）。"""
+        return self._num("break_power", 0.0)
 
     @property
     def effects(self) -> Tuple[object, ...]:
@@ -507,6 +514,17 @@ def _check_entry(report: object, entry: object, idx: int, seen_ids: Set[str]) ->
                      "random_enemy）（G06）" % (target,)
                  ))
 
+    # ---- F09 break_power 数值域（方位 v0.6 §三.4：非负数值，红拦类型/负值）----
+    bp = entry.get("break_power")
+    if bp is not None:
+        if isinstance(bp, bool) or not isinstance(bp, (int, float)):
+            _err(report, f"{base}.break_power", "R-1", rule="break_power_type",
+                 node_id=aid, got=type(bp).__name__,
+                 msg="行动 break_power 需数值（F09，缺省 0）")
+        elif bp < 0:
+            _err(report, f"{base}.break_power", "R-2", rule="break_power_negative",
+                 node_id=aid, value=bp, msg="行动 break_power 不能为负数（F09）")
+
     # ---- V-9 概率语义：probability ∈ {0,1}（红拦，契约 [L101/L112/L209]）----
     prob = entry.get("probability")
     if prob is not None and (not isinstance(prob, (int, float)) or isinstance(prob, bool)):
@@ -581,6 +599,8 @@ def action_core_meta() -> Dict[str, FieldMeta]:
         "effects": FieldMeta(type="list", element=FieldMeta(type="ref", ref_target="effect")),
         # F08 方位命中资格（方位 v0.6 §三.2/附录 A Step 1；skills 与 action 共用）
         "position_rule": FieldMeta(type="obj"),
+        # F09 破坏力固有值（方位 v0.6 §三.4/附录 A Step 2）
+        "break_power": FieldMeta(type="number", range_min=0, range_max=500),
     }
 
 
@@ -602,6 +622,8 @@ def skill_action_meta() -> ModuleMeta:
         "effects": FieldMeta(type="list", element=FieldMeta(type="ref", ref_target="effect")),
         # F08 方位命中资格（方位 v0.6 §三.2/附录 A Step 1）
         "position_rule": FieldMeta(type="obj"),
+        # F09 破坏力固有值（方位 v0.6 §三.4/附录 A Step 2）
+        "break_power": FieldMeta(type="number", range_min=0, range_max=500),
         # ---- G01-G07（契约 §2.3 / §2.4）----
         "weight": FieldMeta(type="number", range_min=0, range_max=100, default=0),
         "probability": FieldMeta(type="number", range_min=0, range_max=1, default=0),

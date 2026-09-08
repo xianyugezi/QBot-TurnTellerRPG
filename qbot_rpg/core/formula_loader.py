@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any, Mapping, Tuple, cast
 
 from qbot_rpg.core.damage import (
+    BattlePositionParams,
     BlockParams,
     CritMultUp,
     CritParams,
@@ -80,6 +81,7 @@ def load_formula_params(data: Mapping[str, Any]) -> DamageFormulaParams:
     dmg, hit_seg, crit_seg, block_seg = (
         data.get(k) or {} for k in ("damage", "hit", "crit", "block")
     )
+    bp_seg = data.get("battle_position") or {}
     defense_seg = data.get("defense") or {}
     weakness_seg = data.get("weakness") or {}
     ta_seg = data.get("type_affinity") or {}
@@ -97,7 +99,8 @@ def load_formula_params(data: Mapping[str, Any]) -> DamageFormulaParams:
     mult_up = crit_seg.get("crit_mult_up") or {} if isinstance(crit_seg, Mapping) else {}
     return DamageFormulaParams(
         base_attack_mult=float(_f(dmg, "base_attack_mult", base.base_attack_mult)),  # F-FIX-01
-        rng=cast(Tuple[float, float], tuple(float(x) for x in _f(dmg, "rng", base.rng))),  # F-FIX-02
+        rng=cast(Tuple[float, float],  # F-FIX-02
+                  tuple(float(x) for x in _f(dmg, "rng", base.rng))),
         hit=HitParams(
             k=float(_f(hit_seg, "k", base.hit.k)),  # F-FIX-03
             cap_min=float(_f(hit_seg, "cap_min", base.hit.cap_min)),  # F-FIX-04
@@ -111,7 +114,9 @@ def load_formula_params(data: Mapping[str, Any]) -> DamageFormulaParams:
                 mid=float(_f(tiers, "mid", base.crit.tiers.mid)),
                 low=float(_f(tiers, "low", base.crit.tiers.low)),
             ),
-            tier_p=cast(Tuple[int, int], tuple(int(x) for x in _f(crit_seg, "tier_p", base.crit.tier_p))),  # F-FIX-09
+            tier_p=cast(  # F-FIX-09
+                Tuple[int, int],
+                tuple(int(x) for x in _f(crit_seg, "tier_p", base.crit.tier_p))),
             crit_mult_up=CritMultUp(
                 lv1=float(_f(mult_up, "lv1", base.crit.crit_mult_up.lv1)),  # F-FIX-10
                 lv2=float(_f(mult_up, "lv2", base.crit.crit_mult_up.lv2)),
@@ -121,7 +126,8 @@ def load_formula_params(data: Mapping[str, Any]) -> DamageFormulaParams:
         block=BlockParams(
             k=float(_f(block_seg, "k", base.block.k)),  # F-FIX-11
             cap=float(_f(block_seg, "cap", base.block.cap)),  # F-FIX-12
-            magic_ignores=bool(_f(block_seg, "magic_ignores", base.block.magic_ignores)),  # F-FIX-13
+            magic_ignores=bool(  # F-FIX-13
+                _f(block_seg, "magic_ignores", base.block.magic_ignores)),
             halve_after_block=bool(  # F-FIX-14
                 _f(block_seg, "halve_after_block", base.block.halve_after_block)
             ),
@@ -141,7 +147,8 @@ def load_formula_params(data: Mapping[str, Any]) -> DamageFormulaParams:
         ),
         type_affinity=TypeAffinityParams(
             enabled=bool(_f(ta_seg, "enabled", base.type_affinity.enabled)),  # F-FIX-20
-            blunt_pierce=float(_f(ta_seg, "blunt_pierce", base.type_affinity.blunt_pierce)),  # F-FIX-21
+            blunt_pierce=float(  # F-FIX-21
+                _f(ta_seg, "blunt_pierce", base.type_affinity.blunt_pierce)),
             thrust_hit=float(_f(ta_seg, "thrust_hit", base.type_affinity.thrust_hit)),  # F-FIX-22
             slash_crit=float(_f(ta_seg, "slash_crit", base.type_affinity.slash_crit)),  # F-FIX-23
             magic_ignore_block=bool(  # F-FIX-24
@@ -154,6 +161,15 @@ def load_formula_params(data: Mapping[str, Any]) -> DamageFormulaParams:
         stat_map=_stat_map_from(stat_map_seg),  # M12.5 需求1 批C：stat_map 段装配
         monster_def_rate=float(_f(data, "monster_def_rate", base.monster_def_rate)),  # F-FIX-26
         elements=dict(_f(data, "elements", base.elements)),  # F-FIX-27
+        # 方位 v0.6（附录 A Step 2）：battle_position 段（破坏力公式参数，缺省=零破坏基线）
+        battle_position=BattlePositionParams(
+            break_base_damage=float(_f(bp_seg, "break_base_damage",
+                                       base.battle_position.break_base_damage)),
+            break_sqrt_coef=float(_f(bp_seg, "break_sqrt_coef",
+                                     base.battle_position.break_sqrt_coef)),
+            broken_part_mult=float(_f(bp_seg, "broken_part_mult",
+                                      base.battle_position.broken_part_mult)),
+        ),
     )
 
 

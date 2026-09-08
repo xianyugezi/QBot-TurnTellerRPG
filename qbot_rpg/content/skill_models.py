@@ -404,6 +404,8 @@ def skills_fields() -> Dict[str, FieldMeta]:
         # F08 方位命中资格（方位 v0.6 §三.2/附录 A Step 1；结构校验归 skill_validator
         # 与 action 库校验器同源，此处仅 obj 登记防泛型误拦）
         "position_rule": FieldMeta(type="obj"),
+        # F09 破坏力固有值（方位 v0.6 §三.4/附录 A Step 2）
+        "break_power": FieldMeta(type="number", range_min=0, range_max=500),
         # ---- B. 玩家侧扩展 11（§1.2-B）----
         "type": FieldMeta(type="enum", enum=SKILL_TYPES, default=DEFAULT_TYPE),
         "mp_cost": FieldMeta(type="number", range_min=0, default=DEFAULT_MP_COST),

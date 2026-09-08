@@ -49,14 +49,17 @@ __all__ = [
 _F = TypeVar("_F", bound=Callable[[Mapping, Mapping, Any], bool])
 
 # 触发类型权威枚举（contract §一 / 细化_1e A06 S3，权威=怪物行动AI定稿 §二）
-# 15 类 = 定稿 13 类 + 印记扩展 2 类（enemy_mark/player_mark，2026-09-02 框架级新增：
+# 16 类 = 定稿 13 类 + 印记扩展 2 类（enemy_mark/player_mark，2026-09-02 框架级新增：
 #   纯配置读 battle 内印记（含玩家施加的敌侧印记），支撑内容包"部位技无破坏印记才可用"
 #   "困斗满才宣泄"等状态响应；schema 见 monster_conditions docstring 附录 B）
+#   + 方位触发 1 类（position_match，2026-09-08 方位 v0.6：按战斗方位触发，schema 见
+#   _eval_position_match docstring）
 TRIGGER_TYPES: tuple = (
     "hp_below", "pv_broken", "get_up", "battle_start", "after_action",
     "player_status", "player_hp_below", "turn_count", "phase_changed",
     "zone_changed", "ally_dead", "combo_broken", "script",
     "enemy_mark", "player_mark",
+    "position_match",
 )
 
 # 旧别名归一（contract §一「旧别名接受（兼容）」；canonical = 权威枚举名，1e A06 S4）
@@ -294,6 +297,26 @@ def _eval_player_mark(trig, bs, ai, rng) -> bool:
     return _match_mark_trigger(trig, bs, "player")
 
 
+def _eval_position_match(trig, bs, ai, rng) -> bool:
+    """position_match：方位条件触发（方位 v0.6 附录 A Step 1）。
+
+    trigger schema（纯配置，值全部来自配置，零硬编码）：
+      {"type": "position_match", "which": "self"|"player",   // 缺省 self=怪物自己
+       "side": ["front", ...], "height": ["air"]}            // 轴缺省/空=该轴全量
+    语义：目标 combatant 当前方位（读 bs.combat_position，缺段/缺键降级 front/ground）
+    落在 side 与 height 两轴交集内 → 匹配。空 spec（无轴）恒匹配（校验器只拦非法枚举）。
+    适用：空中/背后才用的行动、玩家躲到侧后时触发的追击等（怪物行动 AI 方位感知）。
+    """
+    side_key = "enemy" if trig.get("which", "self") == "self" else (
+        "player" if trig.get("which") == "player" else None)
+    if side_key is None:
+        return False
+    from qbot_rpg.core.position import position_of, rule_permits  # noqa: PLC0415
+
+    s, h = position_of(bs, side_key)
+    return rule_permits(trig, s, h)
+
+
 def _match_mark_trigger(trig: Mapping[str, Any], bs: Mapping[str, Any],
                         side: str) -> bool:
     """印记触发统一求值（enemy_mark/player_mark 共用）：
@@ -416,6 +439,8 @@ _BUILTIN_HANDLERS: Dict[str, Callable] = {
     # 印记扩展 2 类（2026-09-02 框架级新增，schema 见上两函数 docstring）
     "enemy_mark": _eval_enemy_mark,
     "player_mark": _eval_player_mark,
+    # 方位扩展 1 类（2026-09-08 方位 v0.6，schema 见 _eval_position_match docstring）
+    "position_match": _eval_position_match,
 }
 
 

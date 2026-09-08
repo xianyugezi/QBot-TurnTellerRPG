@@ -2114,6 +2114,19 @@ class BattleEngine:
             res = self.marks_manager().evaluate(kind, side, dict(rule), mark_id)
             return res
 
+        # 方位战斗系统 v0.6（附录 A Step 1 / §四 height check）：怪物行动 position_rule
+        # 命中资格检查——够不着不拒施放（门禁/消耗已过、行动槽已占），整条行动打空：
+        # 无伤害/无破坏力/无效果（effects 消费点在其后），文案「够不着」由渲染层模板出。
+        # 玩家技能 position_rule 的消费点是部位命中资格（Step 2 part resolve），本步不检查。
+        if attacker == "enemy":
+            _pr = ca.get("position_rule")
+            if isinstance(_pr, Mapping) and _pr:
+                from qbot_rpg.core.position import position_of, rule_permits  # noqa: PLC0415
+
+                _ps, _ph = position_of(self._snap, "player")
+                if not rule_permits(_pr, _ps, _ph):
+                    return self._position_miss_outcome(attacker, ca, target, _ps, _ph)
+
         result = self.combo_engine().apply_action(attacker, ca, self._snap, self._armor_active,
                                                   marks_lookup=_marks_lookup)
         # 2026-09-07：派生审计透出——apply_action 的 form_id（派生/自动替换实际
@@ -2357,6 +2370,37 @@ class BattleEngine:
                 combo_result=out.combo_result,
             )
         return out
+
+    def _position_miss_outcome(
+        self, attacker: str, action: Mapping[str, Any], target: str, side: str, height: str
+    ) -> ActionOutcome:
+        """方位 miss 收口（方位 v0.6 §四：够不着——技能照常消耗、无伤害/破坏力/效果）。
+
+        行动槽已占（_do_action_inner 置 _turn_acted），与命中结算同构走完状态迁移与
+        行动收尾（RES 迁移 / action_record / tick / action_end / after_actor），只不产
+        生任何伤害与效果；渲染层经 side_effects 的 position_miss 标记出模板文案
+        （battle_enemy_position_miss，模板配置化），engine message 仅兜底直读方。
+        """
+        self._to_state(STATE_RES, "submit:position_miss")
+        rating: Dict[str, Any] = {
+            "hit": False, "crit": "low", "blocked": False, "pierce": 0.0, "multi": 1.0,
+            "position_miss": True, "side": side, "height": height,
+        }
+        seg_damage: Dict[str, Any] = {"ch_phys": 0, "ch_elem": 0, "final": 0}
+        self._record_action(
+            attacker, str(action.get("type", "normal")), target, rating, seg_damage, self._phase,
+        )
+        tick_after_action(self._snap, self._new_runtime(), attacker)
+        self._absorb_runtime(self._new_runtime())
+        self._dispatch_event("action_end", attacker)
+        self._after_actor_action(attacker)
+        return ActionOutcome(
+            True, self._seq, attacker, str(action.get("type", "normal")), target,
+            False, "low", False, 0, 0, int(self._combat(target).get("hp", 0) or 0),
+            ({"type": "position_miss", "actor": attacker, "target": target,
+              "side": side, "height": height},),
+            f"够不着：目标不在攻击方位内（{side}/{height}）",
+        )
 
     def _resolve_damage_action(self, attacker: str, action: Dict[str, Any]) -> ActionOutcome:
         """伤害行动闭环（核心）：命中→会心→格挡→双通道→总伤害→拦截链→扣血→
@@ -2676,6 +2720,9 @@ class BattleEngine:
                 ad.setdefault("attack_type", self._normalize_attack_type(atk))
             ad.setdefault("armor", bool(adef.get("armor", False)))
             ad.setdefault("effects", list(adef.get("effects") or []))
+            # 方位 v0.6（附录 A Step 1）：position_rule 随行动定义透传顶层（ActionCore
+            # 共用键，miss 检查读 action 顶层 position_rule）
+            ad.setdefault("position_rule", adef.get("position_rule"))
         return ad
 
     def _interrupt_enemy_ai(self) -> bool:

@@ -1097,6 +1097,36 @@ class _Checker:
             elif chance < 0 or chance > 100:
                 self._err(module_name, f"{spath}.trigger.chance", "R-2", rule="R11_chance_range",
                           value=chance, range_min=0, range_max=100)
+        # position_match 方位触发参数（方位 v0.6 §三.2/附录 A Step 1）：
+        # which ∈ {self, player}（缺省 self）；side/height 轴 = 枚举字符串数组（缺省/空=全量）
+        if ttype == "position_match":
+            _pm_which = trigger.get("which")
+            if _pm_which is not None and _pm_which not in ("self", "player"):
+                self._err(module_name, f"{spath}.trigger.which", "R-5",
+                          rule="R11_position_which_invalid", value=_pm_which,
+                          allowed=["self", "player"],
+                          msg="position_match.which 需 self（怪物自己）或 player（玩家）")
+            for _axis, _allowed in (("side", ("front", "back", "left", "right")),
+                                    ("height", ("ground", "air"))):
+                _raw = trigger.get(_axis)
+                if _raw is None:
+                    continue
+                if isinstance(_raw, str):
+                    _values = [_raw]
+                elif isinstance(_raw, list):
+                    _values = _raw
+                else:
+                    self._err(module_name, f"{spath}.trigger.{_axis}", "R-1",
+                              rule="R11_position_axis_type", axis=_axis,
+                              expect="list[str]", got=type(_raw).__name__)
+                    continue
+                for _v in _values:
+                    if not isinstance(_v, str) or _v not in _allowed:
+                        self._err(module_name, f"{spath}.trigger.{_axis}", "R-5",
+                                  rule="R11_position_axis_enum", axis=_axis, value=_v,
+                                  allowed=list(_allowed),
+                                  msg=("position_match.%s 值 %s 不在枚举 %s"
+                                       % (_axis, _v, list(_allowed))))
         # A08 timing 枚举（R11）
         timing = trigger.get("timing")
         if timing is not None and timing not in TRIGGER_TIMINGS:

@@ -401,6 +401,9 @@ def skills_fields() -> Dict[str, FieldMeta]:
         "element": FieldMeta(type="str", soft_label=True),
         # 8 元素注册表引用检查归校验器专项（V-4）
         "effects": FieldMeta(type="list", element=FieldMeta(type="ref", ref_target="effect")),
+        # F08 方位命中资格（方位 v0.6 §三.2/附录 A Step 1；结构校验归 skill_validator
+        # 与 action 库校验器同源，此处仅 obj 登记防泛型误拦）
+        "position_rule": FieldMeta(type="obj"),
         # ---- B. 玩家侧扩展 11（§1.2-B）----
         "type": FieldMeta(type="enum", enum=SKILL_TYPES, default=DEFAULT_TYPE),
         "mp_cost": FieldMeta(type="number", range_min=0, default=DEFAULT_MP_COST),

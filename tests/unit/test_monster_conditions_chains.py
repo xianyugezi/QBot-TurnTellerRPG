@@ -306,14 +306,15 @@ def test_trigger_script():
 
 
 def test_trigger_types_enum_complete():
-    """TRIGGER_TYPES 权威枚举 = 15 类（定稿 13 类 + 印记扩展 2 类 enemy_mark/player_mark，
-    2026-09-02 框架级新增；schema 见 monster_conditions _eval_enemy_mark docstring）。"""
-    assert len(TRIGGER_TYPES) == 15
+    """TRIGGER_TYPES 权威枚举 = 16 类（定稿 13 类 + 印记扩展 2 类 enemy_mark/player_mark，
+    2026-09-02 框架级新增 + 方位触发 position_match，2026-09-08 方位 v0.6；
+    schema 见 monster_conditions _eval_enemy_mark / _eval_position_match docstring）。"""
+    assert len(TRIGGER_TYPES) == 16
     assert set(TRIGGER_TYPES) == {
         "hp_below", "pv_broken", "get_up", "battle_start", "after_action",
         "player_status", "player_hp_below", "turn_count", "phase_changed",
         "zone_changed", "ally_dead", "combo_broken", "script",
-        "enemy_mark", "player_mark",
+        "enemy_mark", "player_mark", "position_match",
     }
 
 

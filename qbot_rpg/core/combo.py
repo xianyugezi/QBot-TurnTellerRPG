@@ -322,6 +322,7 @@ class ConditionCtx:
     self_statuses: frozenset = frozenset()
     target_statuses: frozenset = frozenset()
     round_: int = 1
+    positions: Mapping = field(default_factory=dict)
 
 
 def _cond_bound(cond: Mapping[str, Any], key: str, value: float) -> bool:
@@ -399,6 +400,26 @@ def _eval_marks_sub(
     return bool(marks_lookup(mkey, which, sub, None))
 
 
+def _position_match_ok(spec: object, ctx: ConditionCtx) -> bool:
+    """position_match 条件求值（方位 v0.6 §三.2/附录 A Step 1）。
+
+    spec: {"which": "self"|"target"（缺省 self）, "side": [...], "height": [...]}
+    对 ctx.positions[which] 格经 rule_permits 求值（位置=声明时快照，1c1a L92 不重评）。
+    """
+    if not isinstance(spec, Mapping):
+        return False
+    which = spec.get("which", "self")
+    if which not in ("self", "target"):
+        return False
+    cell = ctx.positions.get(which) if isinstance(ctx.positions, Mapping) else None
+    if not isinstance(cell, Mapping):
+        return False
+    from qbot_rpg.core.position import rule_permits  # noqa: PLC0415
+
+    return rule_permits(
+        spec, str(cell.get("side", "")), str(cell.get("height", "")))
+
+
 def evaluate_condition(
     cond: Optional[Mapping[str, Any]],
     ctx: ConditionCtx,
@@ -473,10 +494,17 @@ def evaluate_condition(
         if mkey in c and not _eval_marks_sub(c[mkey], which, marks_lookup, mkey):
             result = False
 
+    # 方位条件（方位 v0.6 附录 A Step 1）：position_match 统一原语——spec
+    # {"which": "self"|"target", "side": [...], "height": [...]} 对声明时快照方位格
+    # 求值（ctx.positions 注入）；spec 非对象/缺数据/未知 which → 不满足（安全失败）。
+    if "position_match" in c and not _position_match_ok(c["position_match"], ctx):
+        result = False
+
     # 未知键 → 安全失败（1c3 TC-13；P0-1 修复：原静默忽略恒 True）
     _KNOWN = {"count", "target_hp_pct", "round", "self_status", "target_status",
               "and", "or", "not",
-              "self_marks", "target_marks", "marks_total", "marks_set", "marks_any"}
+              "self_marks", "target_marks", "marks_total", "marks_set", "marks_any",
+              "position_match"}
     for k in c:
         if not isinstance(k, str) or k not in _KNOWN:
             result = False
@@ -800,6 +828,12 @@ class ComboEngine:
         c_tgt = _tgt if isinstance(_tgt, Mapping) else {}
         tgt_max = float(c_tgt.get("max_hp", 1) or 1)
         state = self.state_of(snap, side)
+        # 方位 v0.6（附录 A Step 1）：方位格随声明时快照注入（position_match 条件数据源；
+        # 缺 combat_position 段 → 经 position_of 降级 front/ground，旧快照不崩）
+        from qbot_rpg.core.position import position_of  # noqa: PLC0415
+
+        _ps, _ph = position_of(snap, side)
+        _ts, _th = position_of(snap, target)
         return ConditionCtx(
             count=state.count,
             target_hp_pct=(100.0 * float(c_tgt.get("hp", 0) or 0) / tgt_max
@@ -807,6 +841,8 @@ class ComboEngine:
             self_statuses=self._status_ids(snap, side),
             target_statuses=self._status_ids(snap, target),
             round_=int(snap.get("turn", 1)),
+            positions={"self": {"side": _ps, "height": _ph},
+                       "target": {"side": _ts, "height": _th}},
         )
 
     def pending_derivations(self, side: str, snap: Mapping[str, Any]) -> Tuple[DerivationRef, ...]:

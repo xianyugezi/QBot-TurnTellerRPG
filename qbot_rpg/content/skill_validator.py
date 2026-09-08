@@ -450,6 +450,47 @@ def _check_v11_field_registry(
                  msg=f"技能字段 {k} 未登记（V-11：须在 skills_fields 24 键内）")
 
 
+def _check_v14_position_rule(
+    report: object, base: str, sid: str, entry: Mapping[str, object]
+) -> None:
+    """F08 position_rule 形状（红拦；方位 v0.6 §三.2/附录 A Step 1）。
+
+    与行动库校验器（skill_action_models._check_entry F08）同源镜像（分层禁 cross-import
+    core，同源常量内联）；枚举外值红拦，缺省/空轴=全量。仅校验形状，不限制组合。
+    """
+    pr = entry.get("position_rule")
+    if pr is None:
+        return
+    if not isinstance(pr, Mapping):
+        _err(report, f"{base}.position_rule", "R-5", rule="position_rule_shape",
+             node_id=sid, got=type(pr).__name__,
+             msg="position_rule 需对象 {side: [...], height: [...]}（F08，缺省=全量）")
+        return
+    for axis, allowed in (("side", ("front", "back", "left", "right")),
+                          ("height", ("ground", "air"))):
+        raw = pr.get(axis)
+        if raw is None:
+            continue
+        values = [raw] if isinstance(raw, str) else (
+            raw if isinstance(raw, list) else None)
+        if values is None:
+            _err(report, f"{base}.position_rule.{axis}", "R-1",
+                 rule="position_rule_axis_type", node_id=sid, axis=axis,
+                 got=type(raw).__name__, msg=f"position_rule.{axis} 需字符串数组")
+            continue
+        for v in values:
+            if not isinstance(v, str) or v not in allowed:
+                _err(report, f"{base}.position_rule.{axis}", "R-5",
+                     rule="position_rule_axis_enum", node_id=sid, axis=axis,
+                     value=v, allowed=list(allowed),
+                     msg=f"position_rule.{axis} 值 %r 不在枚举 %s（F08）" % (v, list(allowed)))
+    for k in pr:
+        if k not in ("side", "height"):
+            _err(report, f"{base}.position_rule.{k}", "R-5",
+                 rule="position_rule_unknown_axis", node_id=sid, axis=k,
+                 msg="position_rule 未知轴 %r（仅 side/height）" % (k,))
+
+
 def _check_v12_kind_inference(
     report: object, base: str, sid: str, entry: Mapping[str, object]
 ) -> None:
@@ -633,6 +674,7 @@ def _check_skill_entry(
     _check_v9_mp_cost(report, base, sid, entry)
     _check_v10_duplicate_id(report, base, sid, entry, ctx)
     _check_v11_field_registry(report, base, sid, entry)
+    _check_v14_position_rule(report, base, sid, entry)
     _check_v12_kind_inference(report, base, sid, entry)
     _check_v13_basic_gate(report, base, sid, entry)
 

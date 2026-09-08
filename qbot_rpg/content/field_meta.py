@@ -133,6 +133,10 @@ SPECIAL_ACTION_TRIGGER_CHILDREN: Dict[str, FieldMeta] = {
     "timing": FieldMeta(type="str"),  # current_turn/next_turn/first_turn（A2）
     "action": FieldMeta(type="str"),
     "chance": FieldMeta(type="number", range_min=0, range_max=100),
+    # position_match 方位触发参数（方位 v0.6 §三.2/附录 A Step 1；枚举校验 A2 路）
+    "which": FieldMeta(type="str"),  # self=怪物自己 / player=玩家
+    "side": FieldMeta(type="list", element=FieldMeta(type="str")),
+    "height": FieldMeta(type="list", element=FieldMeta(type="str")),
 }
 # special_actions[] 条目（1.4 A04-A15）
 SPECIAL_ACTION_CHILDREN: Dict[str, FieldMeta] = {
@@ -880,6 +884,7 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "id": F_ID, "name": F_NAME,
         "kind": FieldMeta(type="str"),  # basic/active/...（枚举判定 A2 路）
         "type": F_TYPE,                  # 旧键兼容
+        "position_rule": FieldMeta(type="obj"),  # F08 方位命中资格（方位 v0.6 §三.2；枚举校验 A2 路）
         "power": F_POWER,
         "attack_type": FieldMeta(type="str"),  # 斩/打/突/魔（枚举判定 A2 路）
         "element": FieldMeta(type="str"),      # 元素 ID（元素注册表引用检查 A2/M2）
@@ -920,6 +925,7 @@ def _module_table() -> Dict[str, ModuleMeta]:
         # 原子动作双形态），登记为 ref 会被泛型按整条 dict 报 ref_not_str 误拦。
         "id": F_ID, "name": F_NAME,
         "kind": FieldMeta(type="str"),  # F03 五枚举 damage/heal/status/control/utility（枚举 A2 路）
+        "position_rule": FieldMeta(type="obj"),  # F08 方位命中资格（方位 v0.6 §三.2；枚举校验 A2 路）
         "power": F_POWER,               # F04 倍率（滑条 10-500%；派生链累计 ≤1.5× 黄提示 V-6 属 A2）
         "attack_type": FieldMeta(type="str"),  # F05 斩/打/突/魔/无（枚举 A2 路；缺省按武器 f4）
         "element": FieldMeta(type="str", soft_label=True),  # F06 8 元素注册表（V-4 引用检查 A2）；null=按武器元素合法

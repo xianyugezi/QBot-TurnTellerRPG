@@ -71,8 +71,10 @@ from qbot_rpg.content.models import BaseDef, FieldMeta, ModuleMeta
 
 ACTION_CORE_FIELDS: Tuple[str, ...] = (
     "id", "name", "kind", "power", "attack_type", "element", "effects",
+    "position_rule",
 )
-"""ActionCore 共用核心 7 字段（契约 §2.2：F01-F07 逐字段同构、逐约束同源）。"""
+"""ActionCore 共用核心 7 字段 + 方位扩展 1（契约 §2.2：F01-F07 逐字段同构、逐约束同源；
+F08 position_rule = 方位命中资格，方位 v0.6 §三.2/附录 A Step 1——skills 与 action 共用）。"""
 
 ACTION_CORE_DEFAULTS: Dict[str, object] = {
     "kind": "damage",          # F03 自动推断（f1：power>0 且无状态类效果 → damage）
@@ -80,6 +82,7 @@ ACTION_CORE_DEFAULTS: Dict[str, object] = {
     "attack_type": "slash",    # F05 默认按怪物模板/攻击部位（1e 承接；字段缺省值取 slash）
     "element": None,           # F06 默认 null
     "effects": (),             # F07 默认 []（效果引用 + 原子动作双形态，1b 承接）
+    "position_rule": None,     # F08 默认 null（=全量命中资格，方位 v0.6 §三.2）
 }
 """ActionCore 缺省兜底表（三铁律②：漏配 = 合理默认不是报错）。"""
 
@@ -125,8 +128,9 @@ DEFAULT_TRIGGER_LIMIT: Dict[str, int] = {"per_round": 10, "per_battle": 99}
 # （type/cost/cool/apply_status/apply_mark/require_status/skill——field_meta action_fields
 #  既有键，6a 契约未禁，宽松登记防误拦既有内容包）
 ACTION_FIELD_REGISTRY: Tuple[str, ...] = (
-    # ---- ActionCore 7（契约 §2.2）----
+    # ---- ActionCore 7 + 方位扩展 F08（契约 §2.2 / 方位 v0.6 §三.2）----
     "id", "name", "kind", "power", "attack_type", "element", "effects",
+    "position_rule",
     # ---- 怪物侧扩展 G01-G05 + 目标 G06 + 触发上限 G07（契约 §2.3）----
     "weight", "probability", "intent", "chain", "cooldown",
     "target", "trigger_limit",
@@ -194,6 +198,11 @@ class ActionDef(BaseDef):
     def element(self) -> Optional[str]:
         """元素 ID（F06：∈ 8 元素注册表，V-4 红拦；默认 null）。"""
         return self._str("element")
+
+    @property
+    def position_rule(self) -> Mapping[str, object]:
+        """方位命中资格（F08：{side: [...], height: [...]}，缺省全量；方位 v0.6 §三.2）。"""
+        return self._mapping("position_rule")
 
     @property
     def effects(self) -> Tuple[object, ...]:
@@ -450,6 +459,39 @@ def _check_entry(report: object, entry: object, idx: int, seen_ids: Set[str]) ->
                  node_id=aid, element=element, allowed=list(ELEMENT_VALUES),
                  msg="行动 element %r 不在 8 元素注册表（V-4）" % (element,))
 
+    # ---- F08 position_rule 形状（方位 v0.6 §三.2；枚举红拦，缺省/空轴=全量）----
+    pr = entry.get("position_rule")
+    if pr is not None:
+        if not isinstance(pr, Mapping):
+            _err(report, f"{base}.position_rule", "R-5", rule="position_rule_shape",
+                 node_id=aid, got=type(pr).__name__,
+                 msg="position_rule 需对象 {side: [...], height: [...]}（F08，缺省=全量）")
+        else:
+            for axis, allowed in (("side", ("front", "back", "left", "right")),
+                                  ("height", ("ground", "air"))):
+                raw = pr.get(axis)
+                if raw is None:
+                    continue
+                values = [raw] if isinstance(raw, str) else (
+                    raw if isinstance(raw, list) else None)
+                if values is None:
+                    _err(report, f"{base}.position_rule.{axis}", "R-1",
+                         rule="position_rule_axis_type", node_id=aid, axis=axis,
+                         got=type(raw).__name__, msg=f"position_rule.{axis} 需字符串数组")
+                    continue
+                for v in values:
+                    if not isinstance(v, str) or v not in allowed:
+                        _err(report, f"{base}.position_rule.{axis}", "R-5",
+                             rule="position_rule_axis_enum", node_id=aid, axis=axis,
+                             value=v, allowed=list(allowed),
+                             msg=("position_rule.%s 值 %r 不在枚举 %s（F08）"
+                                  % (axis, v, list(allowed))))
+            for k in pr:
+                if k not in ("side", "height"):
+                    _err(report, f"{base}.position_rule.{k}", "R-5",
+                         rule="position_rule_unknown_axis", node_id=aid, axis=k,
+                         msg="position_rule 未知轴 %r（仅 side/height）" % (k,))
+
     # ---- G06 target 六枚举（V-13 基础门禁）----
     target = entry.get("target")
     if target is not None:
@@ -537,6 +579,8 @@ def action_core_meta() -> Dict[str, FieldMeta]:
         "attack_type": FieldMeta(type="str"),  # 枚举判定（P-4：含中文旧值）由专项校验器全权
         "element": FieldMeta(type="str"),      # 8 元素注册表引用检查（V-4）由专项校验器全权
         "effects": FieldMeta(type="list", element=FieldMeta(type="ref", ref_target="effect")),
+        # F08 方位命中资格（方位 v0.6 §三.2/附录 A Step 1；skills 与 action 共用）
+        "position_rule": FieldMeta(type="obj"),
     }
 
 
@@ -556,6 +600,8 @@ def skill_action_meta() -> ModuleMeta:
         "attack_type": FieldMeta(type="str"),
         "element": FieldMeta(type="str"),
         "effects": FieldMeta(type="list", element=FieldMeta(type="ref", ref_target="effect")),
+        # F08 方位命中资格（方位 v0.6 §三.2/附录 A Step 1）
+        "position_rule": FieldMeta(type="obj"),
         # ---- G01-G07（契约 §2.3 / §2.4）----
         "weight": FieldMeta(type="number", range_min=0, range_max=100, default=0),
         "probability": FieldMeta(type="number", range_min=0, range_max=1, default=0),

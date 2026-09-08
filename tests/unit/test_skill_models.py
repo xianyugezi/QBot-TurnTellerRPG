@@ -332,10 +332,11 @@ def test_action_core_dual_library_defaults_align() -> None:
     assert s.power == (a.raw.get("power") if a.raw.get("power") is not None else 100.0)
 
 
-def test_skills_fields_24_keys_exact() -> None:
-    """skills_fields() 恰好 30 键（§1.2：A7 + B11 + C2 + D4 = 24 契约字段
+def test_skills_fields_keys_exact() -> None:
+    """skills_fields() 恰好 31 键（§1.2：A7 + B11 + C2 + D4 = 24 契约字段
     + 6b 技能挂点 2：revert_form/derive_only + 6c 技能扩展 4：
-    energy_gain/energy_cost/season/combo_table——M13 批7/批9 收口登记）。"""
+    energy_gain/energy_cost/season/combo_table + 方位扩展 1：position_rule
+    （F08，2026-09-08 方位 v0.6 附录 A Step 1）——M13 批7/批9 + 方位改造收口登记）。"""
     f = skills_fields()
     assert set(f.keys()) == {
         # A 核心 7
@@ -351,6 +352,8 @@ def test_skills_fields_24_keys_exact() -> None:
         "revert_form", "derive_only",
         # 6c 技能扩展 4（细化_6c：energy_gain/energy_cost/season/combo_table）
         "energy_gain", "energy_cost", "season", "combo_table",
+        # 方位扩展 1（F08 position_rule，2026-09-08 方位 v0.6）
+        "position_rule",
     }
 
 

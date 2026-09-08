@@ -706,6 +706,38 @@ def _render_enemy_hit(
         "name": name, "action": phrase, "damage": damage, "hp": hp, "max_hp": max_hp})
 
 
+def _render_enemy_position_miss(
+    outcome: Any,
+    event: Mapping[str, Any],
+    *,
+    attacker_name: Optional[str] = None,
+    player_max_hp: Optional[int] = None,
+    ctx: Any = None,
+) -> Optional[str]:
+    """方位 miss 行（方位 v0.6 §四/附录 A Step 1）：
+    `✅ 够不着：{怪物}的攻击够不到{方位}的你（HP {剩余}/{最大}）`。
+
+    玩家视角 ✅（打空=安全）；{方位} 由事件 side/height 格转中文（显示层映射，模板
+    配置化见 battle_tpl battle_enemy_position_miss）；HP 取 target_hp（未扣血=当前）。
+    """
+    name = attacker_name if attacker_name is not None else _enemy_name(outcome)
+    hp = int(getattr(outcome, "target_hp", 0))
+    max_hp = int(
+        player_max_hp if player_max_hp is not None
+        else getattr(outcome, "player_max_hp", hp)
+    )
+    pos = _position_cn(str(event.get("side") or "front"),
+                       str(event.get("height") or "ground"))
+    return tpl_of(ctx, "battle_enemy_position_miss", {
+        "name": name, "pos": pos, "hp": hp, "max_hp": max_hp})
+
+
+def _position_cn(side: str, height: str) -> str:
+    """方位格中文显示（显示层映射）：正面/背后/左侧/右侧；空中格追加「上空」（地面不追加）。"""
+    _s = {"front": "正面", "back": "背后", "left": "左侧", "right": "右侧"}.get(side, "正面")
+    return f"{_s}上空" if height == "air" else _s
+
+
 def _render_enemy_miss(
     outcome: Any,
     *,
@@ -832,7 +864,20 @@ def _render_enemy_action(outcome: Any, *, ctx: Any = None) -> Optional[str]:
     elif atype in _SPECIAL_TYPES or getattr(outcome, "special_action", None):
         lines.append(_render_enemy_special(outcome, ctx=ctx))      # BREP-13
     elif not hit:
-        lines.append(_render_enemy_miss(outcome, ctx=ctx))         # BREP-11
+        # 方位 miss（方位 v0.6 附录 A Step 1）：打空（够不着）≠ 躲开——engine 经
+        # side_effects position_miss 事件标记（含 side/height 格），渲染专属模板行；
+        # 无标记走既有 BREP-11 躲开行（零行为变化）。
+        pm = next(
+            (e for e in getattr(outcome, "side_effects", ()) or ()
+             if isinstance(e, Mapping) and e.get("type") == "position_miss"),
+            None,
+        )
+        if pm is not None:
+            line = _render_enemy_position_miss(outcome, pm, ctx=ctx)
+            if line:
+                lines.append(line)
+        else:
+            lines.append(_render_enemy_miss(outcome, ctx=ctx))     # BREP-11
     else:
         lines.append(_render_enemy_hit(outcome, ctx=ctx))          # BREP-10
 

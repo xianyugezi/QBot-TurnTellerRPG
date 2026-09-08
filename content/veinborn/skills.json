@@ -627,6 +627,7 @@
   "block_mode": "auto",
   "id": "rb_slash",
   "name": "脊斩",
+  "break_power": 15,
   "energy_gain": {
    "focus": 1
   },
@@ -746,6 +747,7 @@
   "block_mode": "auto",
   "id": "rb_sweep",
   "name": "脊扫",
+  "air_policy": "land",
   "energy_cost": {
    "stamina": 1
   },
@@ -3199,5 +3201,44 @@
   "desc": "形态技能组占位（skill_set 引用锚点）",
   "energy_cost": {},
   "energy_gain": {}
+ }
+,
+ {
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "type": "reposition",
+    "target": "self",
+    "height": "air"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 1,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "ridge_blade"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 10
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "rb_vault",
+  "name": "跃空",
+  "energy_gain": {},
+  "desc": "机动·跃空：纵身跃上空中——甲壳怪的背壳只在空中够得到；行动后保持空中"
  }
 ]

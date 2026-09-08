@@ -1085,4 +1085,20 @@
    "per_battle": 2
   }
  }
+,
+ {
+  "id": "gt_ram",
+  "name": "砾壳冲撞",
+  "kind": "active",
+  "power": 0.4,
+  "attack_type": "打",
+  "element": "none",
+  "weight": 100,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 0,
+  "tags": [
+   "物理"
+  ]
+ }
 ]

@@ -2409,5 +2409,93 @@
     "desc": "暗裔新星是最强一击，满配毕业装也需谨慎。"
    }
   ]
- }
-]
+ },
+ {
+  "id": "gravel_tortoise",
+  "name": "砾背龟",
+  "tier": "normal",
+  "area": "骸骨草场",
+  "desc": "驮着砾岩龟壳的幼龟，伏地时壳背朝天。破壳需跃空居高临下——壳破后翻身倒地露出破绽（方位试点怪：砾背壳=空中可达四面）。",
+  "stats": {
+   "hp": 240,
+   "mp": 0,
+   "str": 55,
+   "con": 60,
+   "spr": 12,
+   "foc": 8,
+   "agi": 4,
+   "luk": 4
+  },
+  "rewards": {
+   "exp": 110,
+   "currencies": {
+    "coins": 60
+   }
+  },
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "vein_shard",
+     "chance": 100,
+     "count": 1
+    }
+   ]
+  },
+  "phases": [],
+  "special_actions": [],
+  "actions": [
+   {
+    "action": "gt_ram",
+    "weight": 100,
+    "probability": 1
+   }
+  ],
+  "parts": [
+   {
+    "id": "gravel_shell",
+    "name": "砾背壳",
+    "positions": {
+     "side": [
+      "front",
+      "back",
+      "left",
+      "right"
+     ],
+     "height": [
+      "air"
+     ]
+    },
+    "break_threshold": 30,
+    "target_priority": 0,
+    "on_break": {
+     "knockdown": 2,
+     "marks": [],
+     "effects": []
+    }
+   },
+   {
+    "id": "gravel_head",
+    "name": "头",
+    "positions": {
+     "side": [
+      "front",
+      "back",
+      "left",
+      "right"
+     ],
+     "height": [
+      "ground"
+     ]
+    },
+    "break_threshold": 500,
+    "target_priority": 0,
+    "on_break": {
+     "knockdown": 0,
+     "marks": [],
+     "effects": []
+    }
+   }
+  ]
+ }]

@@ -425,3 +425,52 @@ class TestOnBreak:
         hit = [m for m in enemy_marks
                if (m.get("mark_id") == "shell_drop" or m.get("name") == "shell_drop")]
         assert hit, f"enemy 印记应含 shell_drop：{enemy_marks}"
+
+
+# =====================================================================================
+# 6. 破位渲染行（Step 6 试点暴露缺口收口：part_break 事件 → 模板两形态）
+# =====================================================================================
+
+
+class TestPartBreakRender:
+    """破位行（方位 v0.6 §三.3 渲染可见性）：part_break 事件（knockdown>0 轰然倒地 /
+    knockdown=0 部位不倒地）→ battle_part_broken / battle_part_broken_no_knock。"""
+
+    def _player_outcome(self, ev):
+        from types import SimpleNamespace
+
+        return SimpleNamespace(
+            actor="player", action_type="skill", target="砾背龟", hit=True,
+            side_effects=(ev,), final_damage=20, raw_damage=20, target_hp=180,
+            player_max_hp=400, target_name="砾背龟", message="",
+            intent_skill=None, special_action=None, player_guarding=False,
+            defending=False, blocked=False, crit="low",
+        )
+
+    def test_break_with_knockdown_line(self) -> None:
+        """knockdown>0 破位 → 「{part}被击碎！{name}轰然倒地」（怪名=target 回退）。"""
+        from qbot_rpg.core.message_format.battle_render import _render_player_action
+
+        ev = {"type": "part_break", "part": "gravel_shell", "part_name": "砾背壳",
+              "knockdown": 2, "actor": "player", "target": "enemy"}
+        lines = _render_player_action(self._player_outcome(ev))
+        hit = [ln for ln in lines if "被击碎" in ln and "倒地" in ln]
+        assert hit and "砾背壳" in hit[0] and "砾背龟" in hit[0]
+
+    def test_break_without_knockdown_line(self) -> None:
+        """knockdown=0 部位（如头）破位 → 不倒地文案模板。"""
+        from qbot_rpg.core.message_format.battle_render import _render_player_action
+
+        ev = {"type": "part_break", "part": "gravel_head", "part_name": "头",
+              "knockdown": 0, "actor": "player", "target": "enemy"}
+        lines = _render_player_action(self._player_outcome(ev))
+        assert any("被击碎" in ln and "稳立" in ln for ln in lines)
+        assert not any("倒地" in ln for ln in lines)
+
+    def test_no_part_break_no_line(self) -> None:
+        """无 part_break 事件 → 无破位行。"""
+        from qbot_rpg.core.message_format.battle_render import _render_player_action
+
+        lines = _render_player_action(self._player_outcome(
+            {"type": "part_damage", "part": "gravel_shell", "part_name": "砾背壳"}))
+        assert not any("被击碎" in ln for ln in lines)

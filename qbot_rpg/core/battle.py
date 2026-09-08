@@ -2826,9 +2826,15 @@ class BattleEngine:
                 if not _pst.get("broken") and _pst["break_value"] >= _thr:
                     _pst["broken"] = True
                     rating["part_broken"] = True
-                    all_effects.append({"type": "part_break", "part": part_id,
-                                        "actor": attacker, "target": target,
-                                        "break_value": round(_pst["break_value"], 2)})
+                    _ob_raw = part_def.get("on_break")
+                    _ob_kd = int((_ob_raw.get("knockdown", 1) or 0)) \
+                        if isinstance(_ob_raw, Mapping) else 1
+                    all_effects.append({
+                        "type": "part_break", "part": part_id,
+                        "part_name": str(part_def.get("name") or part_id),
+                        "knockdown": _ob_kd,
+                        "actor": attacker, "target": target,
+                        "break_value": round(_pst["break_value"], 2)})
                     # on_break 收口（knockdown 状态/marks/effects 全走 effects 通道）；
                     # 本段伤害已按破位前状态结算——本次破位不吃本次增伤（下段/下次起效）
                     self._fire_part_break(attacker, target, part_def, all_effects)

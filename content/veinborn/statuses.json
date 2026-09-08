@@ -67,5 +67,18 @@
   "id": "po_sweep_dot",
   "name": "呆账灼蚀",
   "description": "dot 载体（回合结束按生命上限扣血）"
+ },
+ {
+  "id": "knockdown",
+  "name": "倒地",
+  "max_stack": 1,
+  "duration": {
+   "turns": 1,
+   "charges": 0
+  },
+  "decay": "none",
+  "effects": [],
+  "damage_mult": 1.5,
+  "desc": "破位倒地（方位 v0.6 §五）：受击增伤 ×1.5，N3 数值试点窗口 1 回合"
  }
 ]

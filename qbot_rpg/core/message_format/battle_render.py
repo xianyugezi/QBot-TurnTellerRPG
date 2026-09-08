@@ -578,6 +578,7 @@ def _render_player_action(outcome: Any, *, ctx: Any = None) -> List[str]:
     # + 方位变化行（reposition 原子结算）
     lines.extend(_render_air_land_lines(outcome, ctx=ctx))
     lines.extend(_render_position_changed_lines(outcome, ctx=ctx))
+    lines.extend(_render_part_break_lines(outcome, ctx=ctx))
     return lines
 
 
@@ -742,11 +743,19 @@ def _position_cn(side: str, height: str) -> str:
 
 
 def _fx_actor_cn(actor: str, outcome: Any) -> str:
-    """方位事件 actor 中文映射（显示层）：player→你；enemy→怪名；未知原样。"""
+    """方位事件 actor 中文映射（显示层）：player→你；enemy→怪名；未知原样。
+
+    怪名解析：优先注入展示名（attacker_name/actor_name，怪行动自身场景）；玩家
+    行动行集里引用怪（被打目标）时回退 outcome.target（M5-08 包装后=怪名中文，
+    对齐 BREP-02 命中行 {目标} 同通道）；兜底「怪物」。
+    """
     if actor == "player":
         return "你"
     if actor == "enemy":
-        return _enemy_name(outcome)
+        name = _enemy_name(outcome)
+        if name == "怪物":
+            name = str(getattr(outcome, "target", "") or "怪物")
+        return name
     return actor
 
 
@@ -778,6 +787,25 @@ def _render_position_changed_lines(outcome: Any, *, ctx: Any = None) -> List[str
                            str(e.get("height") or "ground"))
         line = tpl_of(ctx, "battle_position_changed", {
             "actor": _fx_actor_cn(str(e.get("actor") or ""), outcome), "pos": pos})
+        if line:
+            out.append(line)
+    return out
+
+
+def _render_part_break_lines(outcome: Any, *, ctx: Any = None) -> List[str]:
+    """破位行（方位 v0.6 §三.3/附录 A Step 2/6）：outcome.side_effects 的 part_break
+    事件 → 模板 battle_part_broken（knockdown>0 轰然倒地）/ battle_part_broken_no_knock
+    （knockdown=0 部位不倒地）一行；{part} 部位中文名由引擎事件携带（part_name），
+    {name} 怪名显示层映射（模板配置化）。"""
+    out: List[str] = []
+    for e in getattr(outcome, "side_effects", ()) or ():
+        if not isinstance(e, Mapping) or e.get("type") != "part_break":
+            continue
+        part = str(e.get("part_name") or e.get("part") or "")
+        name = _fx_actor_cn(str(e.get("target") or e.get("actor") or ""), outcome)
+        kd = int(e.get("knockdown", 1) or 0)
+        key = "battle_part_broken" if kd > 0 else "battle_part_broken_no_knock"
+        line = tpl_of(ctx, key, {"part": part, "name": name})
         if line:
             out.append(line)
     return out
@@ -931,6 +959,7 @@ def _render_enemy_action(outcome: Any, *, ctx: Any = None) -> Optional[str]:
     # （怪行动 effects reposition/reposition_all 结算，如冲锋/转身）
     lines.extend(_render_air_land_lines(outcome, ctx=ctx))
     lines.extend(_render_position_changed_lines(outcome, ctx=ctx))
+    lines.extend(_render_part_break_lines(outcome, ctx=ctx))
     if not lines:
         return None
     return "\n".join(lines)

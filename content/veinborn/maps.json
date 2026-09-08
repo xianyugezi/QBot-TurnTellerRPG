@@ -34,6 +34,12 @@
     "name": "脊冢幼兽",
     "count": 3,
     "respawn_minutes": 3
+   },
+   {
+    "enemy": "gravel_tortoise",
+    "name": "砾背龟",
+    "count": 1,
+    "respawn_minutes": 5
    }
   ],
   "exits": {

@@ -1,4 +1,9 @@
 {
   "damage_base": "atk * 2 - def",
-  "heal_rate": "power * 0.5"
+  "heal_rate": "power * 0.5",
+  "battle_position": {
+    "break_base_damage": 0,
+    "break_sqrt_coef": 1.0,
+    "broken_part_mult": 1.3
+  }
 }

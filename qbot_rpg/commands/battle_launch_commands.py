@@ -180,6 +180,12 @@ def _enemy_combatant(enemy_entry: Mapping[str, Any]) -> dict:
             continue
         if key not in comb:
             comb[key] = val
+    # 方位 v0.6（附录 A Step 2 装配缺口收口，Step 6 黑盒暴露）：enemies.json parts[]
+    # （部位破坏配置）透传 combatant——引擎 start() 依 combatant.parts 实例化
+    # parts_state（E3）；缺透传 → 真实战斗怪无部位机制（黑盒砾背龟只打本体）
+    _parts = enemy_entry.get("parts")
+    if isinstance(_parts, list):
+        comb["parts"] = _parts
     return comb
 
 

@@ -890,6 +890,7 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "position_rule": FieldMeta(type="obj"),  # F08 方位命中资格（方位 v0.6 §三.2；枚举校验 A2 路）
         "break_power": FieldMeta(type="number", range_min=0, range_max=500,
                                  label="破坏力固有值"),  # F09（方位 v0.6 §三.4）
+        "air_policy": FieldMeta(type="str", label="空中策略"),  # F10（方位 v0.6 §三.6）
         "power": F_POWER,
         "attack_type": FieldMeta(type="str"),  # 斩/打/突/魔（枚举判定 A2 路）
         "element": FieldMeta(type="str"),      # 元素 ID（元素注册表引用检查 A2/M2）
@@ -933,6 +934,7 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "position_rule": FieldMeta(type="obj"),  # F08 方位命中资格（方位 v0.6 §三.2；枚举校验 A2 路）
         "break_power": FieldMeta(type="number", range_min=0, range_max=500,
                                  label="破坏力固有值"),  # F09（方位 v0.6 §三.4）
+        "air_policy": FieldMeta(type="str", label="空中策略"),  # F10（方位 v0.6 §三.6）
         "power": F_POWER,               # F04 倍率（滑条 10-500%；派生链累计 ≤1.5× 黄提示 V-6 属 A2）
         "attack_type": FieldMeta(type="str"),  # F05 斩/打/突/魔/无（枚举 A2 路；缺省按武器 f4）
         "element": FieldMeta(type="str", soft_label=True),  # F06 8 元素注册表（V-4 引用检查 A2）；null=按武器元素合法

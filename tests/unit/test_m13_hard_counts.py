@@ -108,7 +108,7 @@ SKILLS_FIELDS_MIN: int = 30
 # 6b：顶层 11 + growth 9 + transform 11 + state_policy 3 = 34（M13 合写产物）
 JOBS_FIELDS_MIN: int = 34
 # 6a：定稿 10 + 细化增补 3 = 13 条（§3.1/§3.2）
-SKILL_RULES: int = 14  # V-1~V-13 + V-14（2026-09-08 方位 v0.6：F08 position_rule 形状红拦）
+SKILL_RULES: int = 15  # V-1~V-13 + V-14/V-15（2026-09-08 方位 v0.6：F08 position_rule 形状、F10 air_policy 枚举红拦）
 # 6b：V1~V8（§五）恰 8 条
 JOB_RULES: int = 8
 # 6c：V1~V11（§五）恰 11 条
@@ -120,12 +120,12 @@ JOB_TC: int = 18
 # 6c：§六 20 例（资源轴 8/季节 5/组合 3/校验 4）
 RESOURCE_TC: int = 20
 
-# 6a 校验 14 条的红黄分级（§3.1/§3.2 级别表：红拦 V-1~V-5/V-7~V-11/V-13 +
-# V-14 方位扩展 F08 position_rule 形状（2026-09-08 方位 v0.6），黄提示 V-6/V-12）
-# ——红黄集合供逐条直连断言（不参与计数，只作分级核对）
+# 6a 校验 15 条的红黄分级（§3.1/§3.2 级别表：红拦 V-1~V-5/V-7~V-11/V-13 +
+# V-14/V-15 方位扩展 F08 position_rule 形状 / F10 air_policy 枚举（2026-09-08 方位
+# v0.6），黄提示 V-6/V-12）——红黄集合供逐条直连断言（不参与计数，只作分级核对）
 SKILL_RED_RULES: Set[str] = {
     "V-1", "V-2", "V-3", "V-4", "V-5", "V-7", "V-8", "V-9", "V-10", "V-11", "V-13",
-    "V-14",
+    "V-14", "V-15",
 }
 SKILL_WARN_RULES: Set[str] = {"V-6", "V-12"}
 
@@ -241,11 +241,11 @@ def test_6a_trigger_types_13() -> None:
 
 
 def test_6a_validator_rules_13_functions() -> None:
-    """§3.1/§3.2 校验规则 14 条：skill_validator._check_vN_* 逐条函数级直连。
+    """§3.1/§3.2 校验规则 15 条：skill_validator._check_vN_* 逐条函数级直连。
 
-    规则计数 = 实现函数计数（V-1~V-14 各恰一个实现；V-7 库级单独跑，
-    函数名 _check_v7_basic_per_job 亦在 _check_vN_* 扫描域内；V-14 = 方位扩展
-    F08 position_rule 形状，2026-09-08 方位 v0.6）。
+    规则计数 = 实现函数计数（V-1~V-15 各恰一个实现；V-7 库级单独跑，
+    函数名 _check_v7_basic_per_job 亦在 _check_vN_* 扫描域内；V-14/V-15 = 方位扩展
+    F08 position_rule 形状 / F10 air_policy 枚举，2026-09-08 方位 v0.6）。
     """
     vfuncs = _v_functions(validate_skills.__module__)
     assert len(vfuncs) == SKILL_RULES
@@ -255,9 +255,9 @@ def test_6a_validator_rules_13_functions() -> None:
 
 
 def test_6a_validator_rule_levels_red_warn() -> None:
-    """§3.1/§3.2 红黄分级核对：红拦 12 条 + 黄提示 2 条 = 14 条（含 V-14 方位扩展）。"""
-    assert SKILL_RED_RULES | SKILL_WARN_RULES == {f"V-{n}" for n in range(1, 15)}
-    assert len(SKILL_RED_RULES) == 12 and len(SKILL_WARN_RULES) == 2
+    """§3.1/§3.2 红黄分级核对：红拦 13 条 + 黄提示 2 条 = 15 条（含 V-14/V-15 方位扩展）。"""
+    assert SKILL_RED_RULES | SKILL_WARN_RULES == {f"V-{n}" for n in range(1, 16)}
+    assert len(SKILL_RED_RULES) == 13 and len(SKILL_WARN_RULES) == 2
     assert not (SKILL_RED_RULES & SKILL_WARN_RULES)
 
 
@@ -279,9 +279,9 @@ def test_6a_skills_fields_contract_core_24() -> None:
     fields = set(skills_fields())
     assert contract_core <= fields
     assert len(contract_core) == 24
-    # 登记表总键数 = 24 契约 + 6 挂点 + 2 方位扩展 F08 position_rule/F09 break_power = 32
-    # （M13 合写产物口径 + 2026-09-08 方位 v0.6 附录 A Step 1/Step 2）
-    assert len(fields) == 32
+    # 登记表总键数 = 24 契约 + 6 挂点 + 3 方位扩展 F08 position_rule/F09 break_power/
+    # F10 air_policy = 33（M13 合写产物口径 + 2026-09-08 方位 v0.6 附录 A Step 1/2/3）
+    assert len(fields) == 33
 
 
 # ---------------------------------------------------------------------------
@@ -497,7 +497,7 @@ def test_docs_overview_counts_reconcile() -> None:
     assert len(combo_row_7) == 7 and len(snapshot_3) == 3
     assert 10 + 4 + 7 + 3 == 24
     # 规则/用例计数与实现直连常量一致
-    assert SKILL_RULES == 14 and JOB_RULES == 8 and RESOURCE_RULES == 11
+    assert SKILL_RULES == 15 and JOB_RULES == 8 and RESOURCE_RULES == 11
     assert SKILL_TC == 23 and JOB_TC == 18 and RESOURCE_TC == 20
 
 

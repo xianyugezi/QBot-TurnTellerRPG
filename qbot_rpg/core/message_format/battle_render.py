@@ -550,32 +550,33 @@ def _render_player_defend_hit(
 def _render_player_action(outcome: Any, *, ctx: Any = None) -> List[str]:
     """玩家先手行动行集（BREP-02~05 分发，5e §2.1/§2.2）：
     防御指令 → BREP-05；未命中 → BREP-03；非伤害技能 → M5-04 BREP-07（render_skill_cast）
-    钩子（数据缺失时省略）；其余命中 → BREP-02（含 BREP-04 会心/格挡附注）。"""
+    钩子（数据缺失时省略）；其余命中 → BREP-02（含 BREP-04 会心/格挡附注）；
+    行动行之后追加方位落地行（air_land 事件，方位 v0.6 附录 A Step 3）。"""
+    lines: List[str] = []
     atype = str(getattr(outcome, "action_type", "") or "")
     if atype in ("guard", "defense"):
-        return [_render_player_defend(outcome, ctx=ctx)]      # BREP-05
-    if not bool(getattr(outcome, "hit", False)):
+        lines.append(_render_player_defend(outcome, ctx=ctx))  # BREP-05
+    elif not bool(getattr(outcome, "hit", False)):
         # 2026-09-07 探针实测：被拒（资源/印记不足）outcome hit=False 且 message
         # 带拒因——原无条件渲染成「未命中」误导（玩家以为 miss 实为被拒）。
         # 拒因消息优先；utility/功能技（transform/revert/辅助——kind != damage）
         # 施放走 skill_cast 而非 miss；空消息才走 miss 模板。
         _msg = str(getattr(outcome, "message", "") or "")
         if _msg and ("被拒" in _msg or "不足" in _msg or "冷却" in _msg):
-            return [_msg]
-        # 2026-09-07 探针 #5：utility/功能技（transform/revert/辅助）施放
-        # 成功但 power=0 → final_damage=0 + hit 可能 False（吃了命中 roll）——
-        # 原渲染成「未命中你的XX」（变身成功却误导）。battle 注入的形态切换
-        # 成功消息（含「形态」）→ 直出；其余（含测试 fixture 默认 message）
-        # 仍走 miss 模板。
-        if _msg and "形态" in _msg and int(getattr(outcome, "final_damage", 0) or 0) == 0:
-            return [_msg]
-        return [_render_player_miss(outcome, ctx=ctx)]        # BREP-03
-    if atype == "skill" and int(getattr(outcome, "final_damage", 0)) <= 0:
+            lines.append(_msg)
+        elif _msg and "形态" in _msg and int(getattr(outcome, "final_damage", 0) or 0) == 0:
+            lines.append(_msg)  # 形态切换成功消息（同原 return 直出语义）
+        else:
+            lines.append(_render_player_miss(outcome, ctx=ctx))  # BREP-03
+    elif atype == "skill" and int(getattr(outcome, "final_damage", 0)) <= 0:
         line = _render_skill_cast_line(outcome, ctx=ctx)      # M5-04 BREP-07
         if line:
-            return [line]
-        return []                                             # 数据未接，收口补齐
-    return [_render_player_hit(outcome, ctx=ctx)]             # BREP-02（+BREP-04）
+            lines.append(line)                                # 数据未接则空行集
+    else:
+        lines.append(_render_player_hit(outcome, ctx=ctx))    # BREP-02（+BREP-04）
+    # 方位 v0.6（附录 A Step 3）：空中落地事件行（air_policy=land 结算产出）
+    lines.extend(_render_air_land_lines(outcome, ctx=ctx))
+    return lines
 
 
 # ---------------------------------------------------------------------------
@@ -738,6 +739,23 @@ def _position_cn(side: str, height: str) -> str:
     return f"{_s}上空" if height == "air" else _s
 
 
+def _render_air_land_lines(outcome: Any, *, ctx: Any = None) -> List[str]:
+    """空中落地行（方位 v0.6 §三.6/附录 A Step 3）：outcome.side_effects 的 air_land
+    事件（引擎 action_end 后 air_policy=land 结算产出）→ 模板 battle_actor_landed
+    一行；actor 名映射：player→你、enemy→怪名（显示层映射，模板配置化）。"""
+    out: List[str] = []
+    for e in getattr(outcome, "side_effects", ()) or ():
+        if not isinstance(e, Mapping) or e.get("type") != "air_land":
+            continue
+        actor = str(e.get("actor") or "")
+        who = "你" if actor == "player" else (
+            _enemy_name(outcome) if actor == "enemy" else actor)
+        line = tpl_of(ctx, "battle_actor_landed", {"actor": who})
+        if line:
+            out.append(line)
+    return out
+
+
 def _render_enemy_miss(
     outcome: Any,
     *,
@@ -882,6 +900,8 @@ def _render_enemy_action(outcome: Any, *, ctx: Any = None) -> Optional[str]:
         lines.append(_render_enemy_hit(outcome, ctx=ctx))          # BREP-10
 
     lines.extend(_render_interception_lines(outcome, ctx=ctx))     # BREP-14
+    # 方位 v0.6（附录 A Step 3）：怪物侧空中落地事件行（怪行动 def air_policy=land）
+    lines.extend(_render_air_land_lines(outcome, ctx=ctx))
     if not lines:
         return None
     return "\n".join(lines)

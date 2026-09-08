@@ -391,7 +391,7 @@ def _check_v6_ratio(
 
 
 # =====================================================================================
-# V-7 ~ V-13 条目级/库级校验（批2 路2B；V-7 为库级单独跑）
+# V-7 ~ V-15 条目级/库级校验（批2 路2B；V-7 为库级单独跑；V-14/V-15 = 方位 v0.6）
 # =====================================================================================
 
 
@@ -489,6 +489,28 @@ def _check_v14_position_rule(
             _err(report, f"{base}.position_rule.{k}", "R-5",
                  rule="position_rule_unknown_axis", node_id=sid, axis=k,
                  msg="position_rule 未知轴 %r（仅 side/height）" % (k,))
+
+
+def _check_v15_air_policy(
+    report: object, base: str, sid: str, entry: Mapping[str, object]
+) -> None:
+    """F10 air_policy 三枚举（红拦；方位 v0.6 §三.6/附录 A Step 3）。
+
+    与行动库校验器（skill_action_models._check_entry F10）同源镜像（分层禁 cross-import
+    core，同源常量内联）；preserve/land/preserve_height 三值，缺省/None=保持高度。
+    仅校验枚举，不与 combo/施放门禁做组合限制（§三.6 正交）。
+    """
+    ap = entry.get("air_policy")
+    if ap is None:
+        return
+    if not isinstance(ap, str):
+        _err(report, f"{base}.air_policy", "R-1", rule="air_policy_type",
+             node_id=sid, got=type(ap).__name__,
+             msg="技能 air_policy 需字符串（F10，preserve/land/preserve_height）")
+    elif ap not in ("preserve", "land", "preserve_height"):
+        _err(report, f"{base}.air_policy", "R-5", rule="air_policy_enum",
+             node_id=sid, value=ap, allowed=["preserve", "land", "preserve_height"],
+             msg="技能 air_policy %r 不在三枚举（F10：preserve/land/preserve_height）" % (ap,))
 
 
 def _check_v12_kind_inference(
@@ -675,6 +697,7 @@ def _check_skill_entry(
     _check_v10_duplicate_id(report, base, sid, entry, ctx)
     _check_v11_field_registry(report, base, sid, entry)
     _check_v14_position_rule(report, base, sid, entry)
+    _check_v15_air_policy(report, base, sid, entry)
     _check_v12_kind_inference(report, base, sid, entry)
     _check_v13_basic_gate(report, base, sid, entry)
 

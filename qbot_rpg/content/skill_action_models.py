@@ -73,9 +73,12 @@ ACTION_CORE_FIELDS: Tuple[str, ...] = (
     "id", "name", "kind", "power", "attack_type", "element", "effects",
     "position_rule",
     "break_power",
+    "air_policy",
 )
 """ActionCore 共用核心 7 字段 + 方位扩展 1（契约 §2.2：F01-F07 逐字段同构、逐约束同源；
-F08 position_rule = 方位命中资格，方位 v0.6 §三.2/附录 A Step 1——skills 与 action 共用）。"""
+F08 position_rule = 方位命中资格，方位 v0.6 §三.2/附录 A Step 1；F09 break_power =
+破坏力固有值，§三.4/附录 A Step 2；F10 air_policy = 行动后高度策略，§三.6/附录 A
+Step 3——skills 与 action 共用）。"""
 
 ACTION_CORE_DEFAULTS: Dict[str, object] = {
     "kind": "damage",          # F03 自动推断（f1：power>0 且无状态类效果 → damage）
@@ -85,6 +88,7 @@ ACTION_CORE_DEFAULTS: Dict[str, object] = {
     "effects": (),             # F07 默认 []（效果引用 + 原子动作双形态，1b 承接）
     "position_rule": None,     # F08 默认 null（=全量命中资格，方位 v0.6 §三.2）
     "break_power": 0,          # F09 默认 0（无固有破坏力，方位 v0.6 §三.4）
+    "air_policy": None,         # F10 默认 null（=保持当前高度，方位 v0.6 §三.6）
 }
 """ActionCore 缺省兜底表（三铁律②：漏配 = 合理默认不是报错）。"""
 
@@ -99,6 +103,10 @@ ACTION_KIND_LEGACY_VALUES: Tuple[str, ...] = ("basic", "active")
 ATTACK_TYPE_VALUES: Tuple[str, ...] = (
     "slash", "blunt", "pierce", "magic", "none",
 )
+
+AIR_POLICY_VALUES: Tuple[str, ...] = ("preserve", "land", "preserve_height")
+"""air_policy 三枚举（F10：preserve=保持高度 / land=行动后落地 / preserve_height=保持显式
+别名（兼容默认）；方位 v0.6 §三.6/附录 A Step 3——与 combo 完全正交）。"""
 """attack_type 五枚举（契约 F05 [L49]）。"""
 
 # 【工程补白 P-4】既有内容包中文旧值（斩/打/突/魔 读兼容，摸底 §8-4）
@@ -130,9 +138,9 @@ DEFAULT_TRIGGER_LIMIT: Dict[str, int] = {"per_round": 10, "per_battle": 99}
 # （type/cost/cool/apply_status/apply_mark/require_status/skill——field_meta action_fields
 #  既有键，6a 契约未禁，宽松登记防误拦既有内容包）
 ACTION_FIELD_REGISTRY: Tuple[str, ...] = (
-    # ---- ActionCore 7 + 方位扩展 F08/F09（契约 §2.2 / 方位 v0.6 §三.2/§三.4）----
+    # ---- ActionCore 7 + 方位扩展 F08/F09/F10（契约 §2.2 / 方位 v0.6 §三.2/§三.4/§三.6）----
     "id", "name", "kind", "power", "attack_type", "element", "effects",
-    "position_rule", "break_power",
+    "position_rule", "break_power", "air_policy",
     # ---- 怪物侧扩展 G01-G05 + 目标 G06 + 触发上限 G07（契约 §2.3）----
     "weight", "probability", "intent", "chain", "cooldown",
     "target", "trigger_limit",
@@ -209,7 +217,13 @@ class ActionDef(BaseDef):
     @property
     def break_power(self) -> float:
         """破坏力固有值（F09：参与 break_delta 公式；方位 v0.6 §三.4）。"""
-        return self._num("break_power", 0.0)
+        return self._num("break_power") or 0.0
+
+    @property
+    def air_policy(self) -> Optional[str]:
+        """行动后高度策略（F10：preserve/land/preserve_height，缺省 None=保持；
+        与 combo 完全正交；方位 v0.6 §三.6）。"""
+        return self._str("air_policy")
 
     @property
     def effects(self) -> Tuple[object, ...]:
@@ -525,6 +539,19 @@ def _check_entry(report: object, entry: object, idx: int, seen_ids: Set[str]) ->
             _err(report, f"{base}.break_power", "R-2", rule="break_power_negative",
                  node_id=aid, value=bp, msg="行动 break_power 不能为负数（F09）")
 
+    # ---- F10 air_policy 三枚举（方位 v0.6 §三.6：preserve/land/preserve_height，
+    # 缺省 None=保持高度；枚举外值红拦，与 combo 正交不做组合限制）----
+    ap = entry.get("air_policy")
+    if ap is not None:
+        if not isinstance(ap, str):
+            _err(report, f"{base}.air_policy", "R-1", rule="air_policy_type",
+                 node_id=aid, got=type(ap).__name__,
+                 msg="行动 air_policy 需字符串（F10，preserve/land/preserve_height）")
+        elif ap not in AIR_POLICY_VALUES:
+            _err(report, f"{base}.air_policy", "R-5", rule="air_policy_enum",
+                 node_id=aid, value=ap, allowed=list(AIR_POLICY_VALUES),
+                 msg="行动 air_policy %r 不在三枚举（F10：preserve/land/preserve_height）" % (ap,))
+
     # ---- V-9 概率语义：probability ∈ {0,1}（红拦，契约 [L101/L112/L209]）----
     prob = entry.get("probability")
     if prob is not None and (not isinstance(prob, (int, float)) or isinstance(prob, bool)):
@@ -601,6 +628,8 @@ def action_core_meta() -> Dict[str, FieldMeta]:
         "position_rule": FieldMeta(type="obj"),
         # F09 破坏力固有值（方位 v0.6 §三.4/附录 A Step 2）
         "break_power": FieldMeta(type="number", range_min=0, range_max=500),
+        # F10 行动后高度策略（方位 v0.6 §三.6/附录 A Step 3；skills 与 action 共用）
+        "air_policy": FieldMeta(type="str"),
     }
 
 
@@ -624,6 +653,8 @@ def skill_action_meta() -> ModuleMeta:
         "position_rule": FieldMeta(type="obj"),
         # F09 破坏力固有值（方位 v0.6 §三.4/附录 A Step 2）
         "break_power": FieldMeta(type="number", range_min=0, range_max=500),
+        # F10 行动后高度策略（方位 v0.6 §三.6/附录 A Step 3）
+        "air_policy": FieldMeta(type="str"),
         # ---- G01-G07（契约 §2.3 / §2.4）----
         "weight": FieldMeta(type="number", range_min=0, range_max=100, default=0),
         "probability": FieldMeta(type="number", range_min=0, range_max=1, default=0),
@@ -668,6 +699,7 @@ __all__ = [
     "ACTION_CORE_DEFAULTS",
     "ACTION_KIND_VALUES",
     "ATTACK_TYPE_VALUES",
+    "AIR_POLICY_VALUES",
     "ELEMENT_VALUES",
     "TARGET_VALUES",
     "INTENT_VALUES",

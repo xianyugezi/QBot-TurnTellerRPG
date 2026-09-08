@@ -159,11 +159,12 @@ def test_tc02_minimal_defaults() -> None:
 # ActionCore 7 字段同构 + ActionDef 访问器
 # ---------------------------------------------------------------------------
 def test_action_core_fields_tuple() -> None:
-    """ActionCore 共用块 7 字段 + 方位扩展 F08（契约 §2.2：F01-F07 逐字段同构；
-    方位 v0.6 §三.2/附录 A Step 1：position_rule 技能/行动共用）。"""
+    """ActionCore 共用块 7 字段 + 方位扩展 F08/F09/F10（契约 §2.2：F01-F07 逐字段同构；
+    方位 v0.6 §三.2/§三.4/§三.6 附录 A Step 1/2/3：position_rule/break_power/
+    air_policy 技能/行动共用）。"""
     assert ACTION_CORE_FIELDS == (
         "id", "name", "kind", "power", "attack_type", "element", "effects",
-        "position_rule", "break_power",
+        "position_rule", "break_power", "air_policy",
     )
 
 

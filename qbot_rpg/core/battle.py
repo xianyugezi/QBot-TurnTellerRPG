@@ -2055,6 +2055,12 @@ class BattleEngine:
         tick_after_action(self._snap, rt, attacker)
         # 功能三批2：action_end（道具行动收尾）
         self._dispatch_event("action_end", attacker)
+        # 方位 v0.6（§四 T8：action_end → air_policy → next actor）：道具行动（含
+        # 即时调合接线层 auto_use 注入的 action_category=alchemy + air_policy=land）
+        # 按行动定义 air_policy 结算——land → 空中落地；缺省保持（接线层显式传参）
+        _land = self._settle_air_policy(attacker, action.get("air_policy"))
+        if _land is not None:
+            effects.append(_land)
         self._after_actor_action(attacker)
         return ActionOutcome(True, seq, attacker, "item", target, True, "low", False,
                              0, 0, int(self._combat(target).get("hp", 0)), tuple(effects),
@@ -2077,10 +2083,12 @@ class BattleEngine:
         ca.setdefault("armor", bool(sd.get("armor", False)))   # D4：skill def armor
         if "effects" not in ca:
             ca["effects"] = list(sd.get("effects") or [])      # D4：skill def effects（标准技能路径也能执行印记/打断等）
-        # 方位 v0.6（附录 A Step 2）：skill def F08/F09 合并——position_rule（部位命中
-        # 资格，Step 2 part resolve 消费）、break_power（破坏力固有值）随技能 def 注入
+        # 方位 v0.6（附录 A Step 2/Step 3）：skill def F08/F09/F10 合并——position_rule
+        # （部位命中资格，Step 2 part resolve 消费）、break_power（破坏力固有值）、
+        # air_policy（行动后高度策略，Step 3 行动收尾消费）随技能 def 注入
         ca.setdefault("position_rule", sd.get("position_rule"))
         ca.setdefault("break_power", float(sd.get("break_power", 0) or 0))
+        ca.setdefault("air_policy", sd.get("air_policy"))
 
         _action_had_mult = "mult" in ca  # action 原样是否显式 mult（折算判据）
         ca.setdefault("mult", float(ca.get("mult", 1.0)))
@@ -2186,6 +2194,10 @@ class BattleEngine:
             _f_hits = int(_fsd.get("hits", 1) or 1)
             if _f_hits > 1 and "segments" not in ca:
                 ca["segments"] = [{"hit": True, "mult": 1.0} for _ in range(_f_hits)]
+            # 方位 v0.6（附录 A Step 3）：air_policy 随派生技 def 解析（同 effects/tag/
+            # armor 口径——派生=实际施放技能；仅当行动原样未显式给出时跟随派生技）
+            if not action.get("air_policy"):
+                ca["air_policy"] = _fsd.get("air_policy")
 
         # ---- M13 批15 路15C：组合技能战斗接线（细化_6c §三 F-C1/F-C2）----
         # 技能 def combo_table 段 → 施放时 F-C1 触发判定（gate_combination：
@@ -2403,14 +2415,50 @@ class BattleEngine:
         tick_after_action(self._snap, self._new_runtime(), attacker)
         self._absorb_runtime(self._new_runtime())
         self._dispatch_event("action_end", attacker)
+        # 方位 v0.6（§四 T8）：miss 也是完整行动——action_end 后按行动 air_policy 结算
+        _land = self._settle_air_policy(attacker, action.get("air_policy"))
         self._after_actor_action(attacker)
+        _fx: List[Mapping[str, Any]] = [
+            {"type": "position_miss", "actor": attacker, "target": target,
+             "side": side, "height": height},
+        ]
+        if _land is not None:
+            _fx.append(_land)
         return ActionOutcome(
             True, self._seq, attacker, str(action.get("type", "normal")), target,
             False, "low", False, 0, 0, int(self._combat(target).get("hp", 0) or 0),
-            ({"type": "position_miss", "actor": attacker, "target": target,
-              "side": side, "height": height},),
+            tuple(_fx),
             f"够不着：目标不在攻击方位内（{side}/{height}）",
         )
+
+    # ------------------------- 空中规则（方位 v0.6 §三.6/§四 T8，附录 A Step 3） -------------------------
+
+    def _settle_air_policy(
+        self, actor: str, policy: Optional[str]
+    ) -> Optional[Dict[str, Any]]:
+        """air_policy 行动收尾结算（方位 v0.6 §三.6/§四 T8：action_end → air_policy → next actor）。
+
+        - land：行动者当前 height=air → 落地（height=ground），返回落地事件
+          {"type": "air_land", "actor"}（渲染层出「落回地面」行，模板配置化）；
+          已在地面 → 无变化、无事件。
+        - preserve / preserve_height / 缺省（None）：保持当前高度，无事件。
+        - 旧快照无 combat_position 段 / 缺 actor 段 → 降级不动（读取侧缺段不崩，
+          对齐 resource_state RS-5 精神）。
+
+        与 combo 完全正交：本结算只改高度快照字段，不触碰 combo_state（§三.6）。
+        """
+        if policy != "land":
+            return None
+        cp = self._snap.get("combat_position")
+        if not isinstance(cp, MutableMapping):
+            return None
+        me = cp.get(actor)
+        if not isinstance(me, MutableMapping):
+            return None
+        if me.get("height") != "air":
+            return None
+        me["height"] = "ground"
+        return {"type": "air_land", "actor": actor}
 
     # ------------------------- 部位破坏（方位 v0.6 §三.3/§三.4，附录 A Step 2） -------------------------
 
@@ -2829,6 +2877,12 @@ class BattleEngine:
         self._absorb_runtime(self._new_runtime())
         # 功能三批2：action_end（普攻/技能行动收尾）
         self._dispatch_event("action_end", attacker)
+        # 方位 v0.6（§四 T8：action_end → air_policy → next actor）：按行动定义
+        # air_policy（skill def F10 合并/接线层显式）结算——land → 空中落地；事件
+        # 随 side_effects 出渲染行（击杀终局路径在上方已 return，不落地）
+        _land = self._settle_air_policy(attacker, action.get("air_policy"))
+        if _land is not None:
+            all_effects.append(_land)
         self._after_actor_action(attacker)
         return self._action_outcome(attacker, action, target, rating, seg_damage,
                                     all_effects, last_hp)
@@ -2938,9 +2992,11 @@ class BattleEngine:
                 ad.setdefault("attack_type", self._normalize_attack_type(atk))
             ad.setdefault("armor", bool(adef.get("armor", False)))
             ad.setdefault("effects", list(adef.get("effects") or []))
-            # 方位 v0.6（附录 A Step 1）：position_rule 随行动定义透传顶层（ActionCore
-            # 共用键，miss 检查读 action 顶层 position_rule）
+            # 方位 v0.6（附录 A Step 1/Step 3）：position_rule / air_policy 随行动定义
+            # 透传顶层（ActionCore 共用键：miss 检查读 position_rule；行动收尾读
+            # air_policy 结算——怪侧配置 land 且自身空中时同样落地）
             ad.setdefault("position_rule", adef.get("position_rule"))
+            ad.setdefault("air_policy", adef.get("air_policy"))
         return ad
 
     def _interrupt_enemy_ai(self) -> bool:

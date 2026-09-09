@@ -134,7 +134,7 @@ def test_enemy_miss_exact() -> None:
     """BREP-11：未命中逐字 `✅ 史莱姆的攻击被你躲开（HP 21/30）`；miss 不扣血（L24）。"""
     oc = _outcome(hit=False, raw_damage=0, final_damage=0, target_hp=21)
     line = _render_enemy_miss(_enriched(oc, attacker_name="史莱姆", player_max_hp=30))
-    assert line == ""  # 2026-09-09：miss 播报移除（模板置空）
+    assert line == "✅ 史莱姆的攻击被你躲开（HP 21/30）"  # 模板兜底（roll miss 已移除）
 
 
 def test_enemy_action_miss_branch() -> None:
@@ -143,7 +143,7 @@ def test_enemy_action_miss_branch() -> None:
         _outcome(hit=False, raw_damage=0, final_damage=0, target_hp=21),
         attacker_name="史莱姆", player_max_hp=30,
     )
-    assert _render_enemy_action(oc) == ""  # 2026-09-09：miss 播报移除
+    assert _render_enemy_action(oc) == "✅ 史莱姆的攻击被你躲开（HP 21/30）"  # 模板兜底
 
 
 # ---------------------------------------------------------------------------

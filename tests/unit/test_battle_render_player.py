@@ -95,10 +95,10 @@ def test_tc07_hit_with_target_phrase() -> None:
 # ---------------------------------------------------------------------------
 
 def test_tc08_player_miss_exact() -> None:
-    """2026-09-09 用户拍板：miss 播报移除——玩家未命中不渲染行（模板置空）。"""
+    """TC-08 未命中行逐字（模板兜底——roll miss 已移除，渲染层仍按模板输出）。"""
     oc = _outcome(hit=False, crit="low", blocked=False, raw_damage=0, final_damage=0, target_hp=25)
     line = _render_player_miss(oc, action_phrase="攻击", target_max_hp=25)
-    assert line == ""
+    assert line == "❌ 未命中：史莱姆 闪过了你的攻击（史莱姆 25/25）"
 
 
 # ---------------------------------------------------------------------------
@@ -195,7 +195,7 @@ def test_render_round_miss_via_round() -> None:
     """render_battle_round：未命中走 BREP-03；并行路钩子（M5-05/06）未落地优雅跳过。"""
     oc = _outcome(hit=False, raw_damage=0, final_damage=0, target_hp=25)
     text = render_battle_round(_report(oc))
-    assert text == ""  # 2026-09-09：miss 播报移除——整轮空文本
+    assert text == "❌ 未命中：史莱姆 闪过了你的攻击（史莱姆 25/25）"  # 模板兜底（roll miss 已移除）
 
 
 def test_render_round_hint_when_max_known() -> None:

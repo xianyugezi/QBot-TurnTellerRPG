@@ -1599,9 +1599,39 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
                 payload.get("player") or payload.get("combatants")
             ):
                 _all_defs, _chains, _ce = _battle_defs(deps.registry)
+                _enemy_entry = None
+                _eid = str((payload.get("enemy") or {}).get("id") or "")
+                if _eid:
+                    # 2026-09-09：enemy_def 直查 registry raw（ctx.enemies 装配时序不可靠——
+                    # 恢复段先于表注入时查空 → AI 注入失败；registry.modules_raw 恒可用）
+                    _raw_enemies = getattr(getattr(deps, "registry", None),
+                                           "modules_raw", {}).get("enemies")
+                    _etab = ctx.get("enemies")
+                    if not isinstance(_etab, Mapping):
+                        _etab = {e.get("id"): e for e in (_raw_enemies or [])
+                                 if isinstance(e, Mapping) and e.get("id")}
+                    if isinstance(_etab, Mapping):
+                        _d = _etab.get(_eid)
+                        _raw = getattr(_d, "raw", None)
+                        _enemy_entry = _raw if isinstance(_raw, Mapping) else (
+                            _d if isinstance(_d, Mapping) else None)
+                _ai = None
+                if _enemy_entry is not None:
+                    try:
+                        from qbot_rpg.core.monster_ai import MonsterAI  # noqa: PLC0415
+
+                        _ai = MonsterAI(
+                            enemy_def=_enemy_entry,
+                            action_lib=lambda i: _all_defs.get(i),
+                            rng=_rng(deps.rng_factory, str(qid)) if callable(
+                                getattr(deps, "rng_factory", None)) else random.Random(str(qid)),
+                        )
+                    except Exception as _aexc:  # noqa: BLE001 - AI 恢复失败回落 normal
+                        _LOGGER.warning("MonsterAI 恢复注入失败: %s", _aexc)
+                        _ai = None
                 _be = BattleEngine.from_snapshot(
                     payload, registry=deps.registry, defs=_all_defs,
-                    combo_engine=_ce,
+                    combo_engine=_ce, enemy_ai=_ai,
                 )
                 _jid = str(ctx.get("job_id") or "")
                 if _jid:

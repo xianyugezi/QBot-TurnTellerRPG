@@ -50,16 +50,20 @@ def _mk_enemy(et, st, parts=None):
 
 
 def test_sw_vault_dodge_feedback():
-    """腾空原版：sw_vault 挂腾空姿态（air+status）；怪攻击 roll miss → 闪避回馈 +30 剑势。"""
+    """腾空原版（方位制）：sw_vault 挂腾空姿态（air+status）；怪 ground 技打空中玩家
+    =position miss（够不着）→ 闪避回馈 +30 剑势。"""
     raw, all_defs, ce = _load_pack()
     et = next(e for e in raw["enemies"] if e["id"] == "gravel_tortoise")
     st = et.get("stats") or {}
+    from qbot_rpg.core.monster_ai import MonsterAI  # noqa: PLC0415
+    ai = MonsterAI(enemy_def=et, action_lib=lambda i: all_defs.get(i), rng=_QR([0.1] * 800))
     eng = BattleEngine(defs=all_defs, combo_engine=ce, enemy_def=et)
-    eng._rng = _QR([0.9] * 800)  # type: ignore[assignment]  高值 → 怪命中 roll miss
+    eng._rng = _QR([0.1] * 800)  # type: ignore[assignment]
     player = {"max_hp": 900, "hp": 900, "max_mp": 30, "mp": 30, "atk": 50, "dfn": 60, "foc": 10,
               "agi": 10, "spr": 10, "con": 10, "str": 50, "int": 10, "lck": 10, "elem_atk": 0,
               "name": "P", "spd": 10, "mag": 10, "proficiency": {"alchemy": {"level": 4, "exp": 0}}}
     eng.start(player, _mk_enemy(et, st, et.get("parts")), random_seed=7)
+    eng._enemy_ai = ai
     snap = eng._snap
 
     def aura():

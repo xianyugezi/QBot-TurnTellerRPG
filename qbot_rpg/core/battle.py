@@ -2731,14 +2731,12 @@ class BattleEngine:
             # （F-21 prepare_defense 归一化，docstring 自述「每次结算前刷新」）。
             self._refresh_defenses()
             rt = self._new_runtime()
-            # ---- ① 命中（1a §1 签名：hit_rate(专注, 对方敏捷)）----
-            # M12.5 需求1 批B：stat_map 语义键取数（缺省 foc/spd=现值，零破坏）
-            focus = float(ac.get(p.stat_map.hit_focus, 50))
-            espd = float(tc.get(p.stat_map.hit_spd, 50))
-            hr = hit_rate(focus, espd, k=p.hit.k, cap_min=p.hit.cap_min, cap_max=p.hit.cap_max)
-            if p.type_affinity.enabled and atk_type == "thrust":
-                hr = min(p.hit.cap_max / 100.0, hr + p.type_affinity.thrust_hit)
-            hit = self._roll() <= hr
+            # ---- ① 命中（方位制——2026-09-09 用户拍板：移除命中/闪避 roll 计算）----
+            # 攻击资格由方位判定（position_rule：行动覆盖方位 vs 目标当前方位）前置把关
+            # （_resolve_combo_action L2160 区：范围内必中；范围外=position_miss 够不着，
+            # 不会进入伤害管线）；此处不再 roll——命中恒真。玩家防御=主动闪反（位移离开
+            # 攻击方位）/防反（守势减伤）。miss 分支保留作安全网（不进即不触发）。
+            hit = True
 
             rating: Dict[str, Any] = {  # type: ignore[no-redef]
                 "hit": hit, "crit": "low", "blocked": False, "pierce": 0.0, "multi": 1.0,
@@ -3049,6 +3047,8 @@ class BattleEngine:
             act = self._enemy_ai.decide(self._snap)
         except Exception as exc:  # M2 审查 P2-1：decide 异常回落 M1 默认普攻（docstring 承诺落地）
             self._snap.setdefault("ai_errors", []).append(str(exc)[:200])
+            import logging  # noqa: PLC0415
+            logging.getLogger("qbot_rpg.ai").warning("MonsterAI decide 异常: %s", exc)
             return None
         if not isinstance(act, Mapping):
             return None

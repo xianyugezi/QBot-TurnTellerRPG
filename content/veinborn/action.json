@@ -15,7 +15,15 @@
    "物理",
    "困斗+1"
   ],
-  "apply_mark": "surge_mark"
+  "apply_mark": "surge_mark",
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "bb_tail_sweep",
@@ -33,7 +41,12 @@
    "范围",
    "困斗+1"
   ],
-  "apply_mark": "surge_mark"
+  "apply_mark": "surge_mark",
+  "position_rule": {
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "bb_charge",
@@ -51,7 +64,15 @@
    "物理",
    "困斗+2"
   ],
-  "apply_mark": "surge_mark"
+  "apply_mark": "surge_mark",
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "bb_rampage",
@@ -68,7 +89,12 @@
   "tags": [
    "范围",
    "宣泄"
-  ]
+  ],
+  "position_rule": {
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "bb_cub_bite",
@@ -83,7 +109,15 @@
   "cooldown": 0,
   "tags": [
    "物理"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "wp_pounce",
@@ -98,7 +132,15 @@
   "cooldown": 0,
   "tags": [
    "物理"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "wp_howl",
@@ -131,7 +173,15 @@
   "cooldown": 2,
   "tags": [
    "蓄力"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "gj_ram",
@@ -147,7 +197,15 @@
   "tags": [
    "物理",
    "重击"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "gj_armor",
@@ -177,7 +235,15 @@
   "cooldown": 0,
   "tags": [
    "物理"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "al_howl_summon",
@@ -211,7 +277,15 @@
   "tags": [
    "物理",
    "蓄力"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "al_quake",
@@ -227,7 +301,12 @@
   "tags": [
    "范围",
    "物理"
-  ]
+  ],
+  "position_rule": {
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "al_crystal_fur",
@@ -243,7 +322,16 @@
   "tags": [
    "范围",
    "突"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground",
+    "air"
+   ]
+  }
  },
  {
   "id": "rw_quick_bite",
@@ -258,7 +346,15 @@
   "cooldown": 0,
   "tags": [
    "物理"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "rw_gust_pounce",
@@ -274,7 +370,15 @@
   "tags": [
    "物理",
    "风"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "wr_charge",
@@ -290,7 +394,15 @@
   "tags": [
    "物理",
    "风"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "wr_rebound",
@@ -306,7 +418,15 @@
   "tags": [
    "物理",
    "风"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "cm_spike_volley",
@@ -321,7 +441,16 @@
   "cooldown": 1,
   "tags": [
    "物理"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground",
+    "air"
+   ]
+  }
  },
  {
   "id": "cm_pack_call",
@@ -354,7 +483,15 @@
   "cooldown": 0,
   "tags": [
    "物理"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "ea_armor_up",
@@ -385,7 +522,15 @@
   "tags": [
    "物理",
    "蚀"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "ea_gore",
@@ -400,7 +545,15 @@
   "cooldown": 0,
   "tags": [
    "物理"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "cf_hide",
@@ -431,7 +584,16 @@
   "tags": [
    "元素",
    "水"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground",
+    "air"
+   ]
+  }
  },
  {
   "id": "cf_tongue_lash",
@@ -446,7 +608,15 @@
   "cooldown": 0,
   "tags": [
    "物理"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "zb_ambush",
@@ -462,7 +632,15 @@
   "tags": [
    "物理",
    "水"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "zb_death_roll",
@@ -478,7 +656,15 @@
   "tags": [
    "物理",
    "水"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "zb_crystal_bite",
@@ -493,7 +679,15 @@
   "cooldown": 0,
   "tags": [
    "物理"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "ym_blade_flurry",
@@ -509,7 +703,15 @@
   "tags": [
    "物理",
    "连斩"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "ym_wing_dash",
@@ -525,7 +727,15 @@
   "tags": [
    "物理",
    "风"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "ym_fake_death",
@@ -556,7 +766,16 @@
   "tags": [
    "元素",
    "土"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground",
+    "air"
+   ]
+  }
  },
  {
   "id": "td_stomp",
@@ -572,7 +791,12 @@
   "tags": [
    "物理",
    "土"
-  ]
+  ],
+  "position_rule": {
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "td_crystal_tail",
@@ -588,7 +812,12 @@
   "tags": [
    "物理",
    "土"
-  ]
+  ],
+  "position_rule": {
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "ad_bite",
@@ -603,7 +832,15 @@
   "cooldown": 0,
   "tags": [
    "物理"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "ad_breath",
@@ -619,7 +856,16 @@
   "tags": [
    "元素",
    "水"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground",
+    "air"
+   ]
+  }
  },
  {
   "id": "ad_tail",
@@ -635,7 +881,15 @@
   "tags": [
    "物理",
    "水"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "ad_roar_summon",
@@ -669,7 +923,15 @@
   "tags": [
    "物理",
    "土"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "sa_vein_burst",
@@ -685,7 +947,15 @@
   "tags": [
    "元素",
    "土"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "sa_quake_stomp",
@@ -701,7 +971,12 @@
   "tags": [
    "物理",
    "土"
-  ]
+  ],
+  "position_rule": {
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "dw_shadow_stalk",
@@ -731,7 +1006,15 @@
   "cooldown": 0,
   "tags": [
    "物理"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "bb_paw_swipe",
@@ -746,7 +1029,15 @@
   "cooldown": 0,
   "tags": [
    "物理"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "bb_rage_charge",
@@ -762,7 +1053,15 @@
   "tags": [
    "物理",
    "土"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "nb_sonic_scream",
@@ -778,7 +1077,13 @@
   "tags": [
    "元素",
    "风"
-  ]
+  ],
+  "position_rule": {
+   "height": [
+    "ground",
+    "air"
+   ]
+  }
  },
  {
   "id": "nb_dive_bite",
@@ -793,7 +1098,16 @@
   "cooldown": 0,
   "tags": [
    "物理"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground",
+    "air"
+   ]
+  }
  },
  {
   "id": "sb_shadow_flurry",
@@ -809,7 +1123,15 @@
   "tags": [
    "物理",
    "连斩"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "sb_lethal_pounce",
@@ -824,7 +1146,15 @@
   "cooldown": 2,
   "tags": [
    "物理"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "sb_shadow_veil",
@@ -855,7 +1185,15 @@
   "tags": [
    "物理",
    "土"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "gm_shard_scatter",
@@ -871,7 +1209,16 @@
   "tags": [
    "元素",
    "土"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground",
+    "air"
+   ]
+  }
  },
  {
   "id": "gm_ground_slam",
@@ -887,7 +1234,12 @@
   "tags": [
    "物理",
    "土"
-  ]
+  ],
+  "position_rule": {
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "hl_mountain_roar",
@@ -903,7 +1255,13 @@
   "tags": [
    "元素",
    "风"
-  ]
+  ],
+  "position_rule": {
+   "height": [
+    "ground",
+    "air"
+   ]
+  }
  },
  {
   "id": "hl_claw_sweep",
@@ -918,7 +1276,15 @@
   "cooldown": 0,
   "tags": [
    "物理"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "hl_avalanche",
@@ -934,7 +1300,12 @@
   "tags": [
    "物理",
    "土"
-  ]
+  ],
+  "position_rule": {
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "hl_call_summon",
@@ -967,7 +1338,15 @@
   "cooldown": 0,
   "tags": [
    "物理"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "ac_vein_lash",
@@ -983,7 +1362,16 @@
   "tags": [
    "元素",
    "土"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground",
+    "air"
+   ]
+  }
  },
  {
   "id": "ac_abyss_stomp",
@@ -999,7 +1387,12 @@
   "tags": [
    "物理",
    "土"
-  ]
+  ],
+  "position_rule": {
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "ac_awaken_summon",
@@ -1033,7 +1426,13 @@
   "tags": [
    "元素",
    "风"
-  ]
+  ],
+  "position_rule": {
+   "height": [
+    "ground",
+    "air"
+   ]
+  }
  },
  {
   "id": "nk_vein_claw",
@@ -1049,7 +1448,15 @@
   "tags": [
    "物理",
    "土"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground"
+   ]
+  }
  },
  {
   "id": "nk_dark_nova",
@@ -1065,7 +1472,16 @@
   "tags": [
    "元素",
    "土"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground",
+    "air"
+   ]
+  }
  },
  {
   "id": "nk_shadow_call",
@@ -1084,8 +1500,7 @@
   "trigger_limit": {
    "per_battle": 2
   }
- }
-,
+ },
  {
   "id": "gt_ram",
   "name": "砾壳冲撞",
@@ -1099,6 +1514,14 @@
   "cooldown": 0,
   "tags": [
    "物理"
-  ]
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground"
+   ]
+  }
  }
 ]

@@ -387,6 +387,19 @@ async def launch_pve_battle(
         # （配方材料并集 ∩ 背包；N5 白名单随试点包定）。即时调合查询/扣减以容器为权威。
         eng.start(p_comb, e_comb, random_seed=None,
                   config={"battle_materials": _battle_materials_of(ctx)})
+        # 2026-09-09：MonsterAI 注入（装配缺口修复——怪行动 defs 自此启用：
+        # 行动方位规则 position_rule 生效 + 蓄力/召唤/防御/范围技可被 AI 选用。
+        # 注入须在 start 后（rng 由 start 初始化；start 前 rng=None → decide 异常
+        # 静默回落 normal——「怪只会普通攻击」实机根因））
+        try:
+            from qbot_rpg.core.monster_ai import MonsterAI  # noqa: PLC0415
+
+            eng._enemy_ai = MonsterAI(
+                enemy_def=enemy_entry, action_lib=lambda i: all_defs.get(i), rng=eng._rng,
+            )
+        except Exception as exc:  # noqa: BLE001 - AI 注入失败回落 normal 攻击
+            _LOGGER.warning("MonsterAI 注入失败（回落 normal）: %s", exc)
+            eng._enemy_ai = None
     except Exception as exc:  # noqa: BLE001 - 开战失败不崩
         _LOGGER.warning("battle launch failed: %s", exc)
         return {"ok": False, "message": f"❌ 开战失败：{exc}", "battle_engine": None}

@@ -3812,7 +3812,9 @@
   "tag": "none",
   "armor": false,
   "interrupt": false,
-  "chain_refs": [],
+  "chain_refs": [
+   "chain_sw_thrust_master"
+  ],
   "consume_marks": {
    "sword_aura": 50
   },
@@ -3831,7 +3833,7 @@
   "block_mode": "auto",
   "id": "sw_thrust",
   "name": "御剑·突",
-  "desc": "式·御剑突：突剑一击 150%，耗剑势 50（命中灌注 +15）；连用每次 +10%（连势印）；1/2/3 剑印时自动派生穿锋/双锋/四象（耗 1/2/2 印，派生系解锁后可不耗印施放）"
+  "desc": "式·御剑突：突剑一击 150%，耗剑势 50（命中灌注 +15）；连用每次 +10%（连势印）；1/2/3 剑印时自动派生穿锋/双锋/四象（耗 1/2/3 印，派生系解锁后可不耗印施放）"
  },
  {
   "type": "active",
@@ -4222,7 +4224,7 @@
   "interrupt": false,
   "chain_refs": [],
   "consume_marks": {
-   "sword_seal": 2
+   "sword_seal": 3
   },
   "job_restrict": [
    "vein_sworder"

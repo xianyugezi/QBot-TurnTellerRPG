@@ -370,6 +370,8 @@ def move_to_map(player_ctx: dict, map_id: str, maps: Optional[object] = None) ->
     ps = _persistent_state_of(player_ctx)
     if ps is not None:
         ps["location"] = target  # 玩家位置持久落点（重启后仍保持）
+        # 2026-09-09 移动清战斗锁定记忆（zerc 拍板：离开地图=解除锁定目标）
+        ps.pop("battle_last", None)
     if isinstance(player, MutableMapping):
         player["map_id"] = target  # dict 形态（旧测试/纯 dict ctx）兼容：原地改
     player_ctx["map_id"] = target  # 同步会话上下文当前图（_current_map_id 兜底读序第 1 位）

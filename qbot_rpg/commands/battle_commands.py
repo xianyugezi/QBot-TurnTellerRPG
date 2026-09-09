@@ -1167,7 +1167,7 @@ def _item_action(parsed: Any, ctx: Mapping[str, Any]) -> Tuple[Optional[dict], O
     return {"type": "item", "item_id": item_id, "actions": actions, "item_name": item_name}, None
 
 
-def cmd_battle_attack(parsed: Any, ctx: MutableMapping[str, Any]) -> dict:
+async def cmd_battle_attack(parsed: Any, ctx: MutableMapping[str, Any]) -> dict:
     """/攻击 [技能]：普攻或技能攻击一轮（玩家行动+怪物反击合并 1 条；
     结束追加战斗结束汇总 1 条，单次操作 ≤2 条）。"""
     if getattr(parsed, "error", False):
@@ -1179,6 +1179,44 @@ def cmd_battle_attack(parsed: Any, ctx: MutableMapping[str, Any]) -> dict:
     if err is not None:
         return _fail(ctx, err)
     assert action is not None  # err=None → 行动已就绪（类型收窄）
+    # 2026-09-09 战后自动续战（zerc 拍板：未解锁/未离开地图不解除锁定目标）：
+    # 无进行中战斗但玩家有 battle_last 记忆（同位置）→ 自动开战再执行行动
+    if ctx.get("battle_engine") is None and isinstance(ctx, MutableMapping):
+        _pl0 = ctx.get("player")
+        _lf0 = None
+        _ps0 = getattr(_pl0, "persistent_state", None)
+        if _ps0 is None and isinstance(_pl0, Mapping):
+            _ps0 = _pl0.get("persistent_state")
+        if isinstance(_ps0, Mapping):
+            _lf0 = _ps0.get("battle_last")
+        if isinstance(_lf0, Mapping) and str(_lf0.get("loc") or "") == str(
+                ctx.get("location") or ""):
+            from qbot_rpg.commands.battle_launch_commands import launch_pve_battle  # noqa: PLC0415
+            try:
+                _res0 = await launch_pve_battle(ctx, _lf0.get("ref"))
+            except Exception:  # noqa: BLE001 - 自动续战失败回落既有拒绝提示
+                _res0 = None
+            if _res0 and _res0.get("ok") and _res0.get("battle_engine") is not None:
+                ctx["battle_engine"] = _res0["battle_engine"]
+                _sent0: List[str] = [str(_res0.get("message") or "")]
+                result = _run_battle_action(ctx, action)
+                _s2 = result.get("sent")
+                if isinstance(_s2, list):
+                    _sent0.extend(_s2)
+                result["sent"] = _sent0
+                # G3 续战落档（同既有逻辑）
+                engine2 = ctx.get("battle_engine")
+                sm2 = ctx.get("session_mgr")
+                if engine2 is not None and sm2 is not None and result.get("ok"):
+                    qid2 = str(ctx.get("qid") or ctx.get("qq_id") or "")
+                    try:
+                        if bool(getattr(engine2, "finished", False)):
+                            result["_battle_persist"] = ("release", qid2)
+                        else:
+                            result["_battle_persist"] = ("suspend", qid2, engine2.to_snapshot())
+                    except Exception:  # noqa: BLE001
+                        pass
+                return result
     result = _run_battle_action(ctx, action)
     # G3 续战落档（2026-09-02）：战斗后 session 写（suspend 保留会话+payload 更新 /
     # 结束 release 清会话）——不在 handler 内执行（process_message 事务内不能开

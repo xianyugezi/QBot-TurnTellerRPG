@@ -25,6 +25,7 @@ from __future__ import annotations
 import unittest.mock
 from types import SimpleNamespace
 
+import asyncio
 import pytest
 
 import qbot_rpg.commands.battle_commands as bc
@@ -125,12 +126,17 @@ def start_battle(seed: int):
 # 一轮 1 条（玩家行动+怪物反击合并；mock Sender 断言调用次数）
 # ---------------------------------------------------------------------------
 
+def _run_attack(*args, **kwargs):
+    """cmd_battle_attack 现为 async（2026-09-09 战后自动续战）——测试同步包装。"""
+    return asyncio.run(bc.cmd_battle_attack(*args, **kwargs))
+
+
 def test_round_one_message_attack_merged(start_battle) -> None:
     """/攻击 一轮 = 1 条：玩家行动 + 怪物反击合并进 render_battle_round 单条
     （军规3 / 铁律 2）；真实 Sender 仅 1 次调用。"""
     sender = RecordingSender()
     eng = start_battle()
-    res = bc.cmd_battle_attack(parse_command("/攻击"), make_ctx(sender, engine=eng))
+    res = _run_attack(parse_command("/攻击"), make_ctx(sender, engine=eng))
     assert res["ok"] is True
     assert len(res["sent"]) == 1
     assert len(sender.calls) == 1                     # 一轮 1 条
@@ -160,7 +166,7 @@ def test_round_prefix_only_first_line(start_battle) -> None:
     """前缀只加首行（铁律 1 / TC-01）：多行战报仅首行带前缀，其余行无前缀。"""
     sender = RecordingSender()
     eng = start_battle()
-    bc.cmd_battle_attack(parse_command("/攻击"), make_ctx(sender, engine=eng))
+    _run_attack(parse_command("/攻击"), make_ctx(sender, engine=eng))
     lines = sender.calls[0].split("\n")
     assert lines[0] == PREFIX
     for rest in lines[1:]:
@@ -216,7 +222,7 @@ def test_battle_end_flow_summary_and_drops(start_battle) -> None:
     sender = RecordingSender()
     eng = start_battle(enemy=WEAK_ENEMY)
     rewards = {"exp": 100, "gold": 50, "drops": [("史莱姆粘液", 2)]}
-    res = bc.cmd_battle_attack(
+    res = _run_attack(
         parse_command("/攻击"), make_ctx(sender, engine=eng, battle_rewards=rewards),
     )
     assert res["ok"] is True and res["message"] == "战斗结束（win）"
@@ -224,7 +230,7 @@ def test_battle_end_flow_summary_and_drops(start_battle) -> None:
     round_msg, end_msg = sender.calls
     assert "✅ 你击败了史莱姆！" in round_msg          # BREP-15 击杀紧跟伤害行
     assert "✅ 战斗胜利！" not in round_msg
-    assert "您对史莱姆造成了" in end_msg and "史莱姆已死亡。" in end_msg   # 叙事句（用户结算模板）
+    assert "您对史莱姆造成了" not in end_msg  # 2026-09-09 击杀去重（叙事句删除）   # 叙事句（用户结算模板）
     assert "获得经验：100" in end_msg and "获得金币：50" in end_msg        # 经验/金币分行
     assert "1.史莱姆粘液×2" in end_msg                                     # 战利品列表
     assert "战斗结束：" not in end_msg               # win 无汇总行（用户模板，2026-08-27）
@@ -242,7 +248,7 @@ def test_no_battle_clean_error_not_affect_others() -> None:
     不触碰引擎/其他指令；同一 Sender 只收到这 1 条。"""
     sender = RecordingSender()
     ctx = make_ctx(sender, engine=None)
-    res = bc.cmd_battle_attack(parse_command("/攻击"), ctx)
+    res = _run_attack(parse_command("/攻击"), ctx)
     assert res["ok"] is False
     assert res["message"] == bc.TPL_NO_BATTLE
     assert len(sender.calls) == 1
@@ -263,7 +269,7 @@ def test_prefix_disabled_no_prefix(start_battle) -> None:
     sender = RecordingSender()
     settings = dict(DEFAULT_MESSAGE_PREFIX_SETTINGS, enabled=False)
     eng = start_battle()
-    bc.cmd_battle_attack(parse_command("/攻击"), make_ctx(sender, engine=eng,
+    _run_attack(parse_command("/攻击"), make_ctx(sender, engine=eng,
                                                           prefix_settings=settings))
     assert sender.calls[0].split("\n")[0].startswith("✅ 你攻击")   # 无前缀首行
 

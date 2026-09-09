@@ -122,7 +122,9 @@ def test_tc16_kill_line_right_after_damage_line() -> None:
         SimpleNamespace(), SimpleNamespace(name="史莱姆", turn=1), "win",
         status="win", enemy_name="史莱姆", exp=42, gold=25, drops=[("史莱姆凝胶", 2)], final_damage=25,
     )
-    assert "您对史莱姆造成了" in end and "史莱姆已死亡。" in end   # 叙事句
+    # 2026-09-09 击杀去重：结算消息不再含叙事句（攻击行已含伤害/击败行已报击杀）
+    assert "您对史莱姆造成了" not in end
+    assert end.lstrip().startswith("获得经验")
     assert "获得经验：42" in end and "获得金币：25" in end              # 分行
     assert "1.史莱姆凝胶×2" in end                                       # 战利品列表
 
@@ -168,7 +170,7 @@ def test_tc18_victory_full_message_with_drops_once() -> None:
         SimpleNamespace(), SimpleNamespace(name="史莱姆", turn=1), "win",
         status="win", enemy_name="史莱姆", exp=42, gold=25, drops=[("史莱姆凝胶", 2)], final_damage=25,
     )
-    assert "您对史莱姆造成了" in text and "史莱姆已死亡。" in text   # 叙事句
+    assert "您对史莱姆造成了" not in text
     assert "获得经验：42" in text and "获得金币：25" in text            # 分行
     assert "1.史莱姆凝胶×2" in text                                      # 战利品列表
     assert "战斗结束：" not in text                                      # win 无汇总行
@@ -314,7 +316,7 @@ def test_tc23_boss_early_end_subsequent_segments_dropped() -> None:
         SimpleNamespace(), SimpleNamespace(name="史莱姆王", turn=1), "win",
         status="win", enemy_name="史莱姆王", exp=120, gold=60, drops=[("史莱姆王冠", 1)], final_damage=13,
     )
-    assert "您对史莱姆王造成了" in end and "史莱姆王已死亡。" in end   # 叙事句
+    assert "您对史莱姆王造成了" not in end
     assert "获得经验：120" in end and "获得金币：60" in end              # 分行
     assert "1.史莱姆王冠×1" in end                                       # 战利品列表
 
@@ -361,7 +363,7 @@ def test_settlement_rendered_once_only_when_ended() -> None:
         SimpleNamespace(), SimpleNamespace(name="史莱姆", turn=1), "win",
         status="win", enemy_name="史莱姆", exp=42, gold=25, drops=[("史莱姆凝胶", 2)], final_damage=25,
     )
-    assert "您对史莱姆造成了" in text                    # 叙事句
+    assert "您对史莱姆造成了" not in text  # 2026-09-09 击杀去重（叙事句删除）
     assert "获得经验：42" in text and "获得金币：25" in text   # 分行
     assert "1.史莱姆凝胶×2" in text                            # 战利品列表恰一次
 

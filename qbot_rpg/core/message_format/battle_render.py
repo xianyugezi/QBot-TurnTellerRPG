@@ -1083,14 +1083,8 @@ def _render_settlement(round_result: Any, *, ctx: Any = None) -> Optional[str]:
     enemy_name = str(getattr(round_result, "enemy_name", "") or "敌人")
     lines: List[str] = []
     if status == "win":
-        # 用户结算模板（2026-08-27 拍板）：叙事句 + 经验/金币分行 + 战利品列表
-        dmg = int(getattr(round_result, "final_damage", 0) or 0)
-        if dmg > 0:
-            lines.append(tpl_of(ctx, "battle_settle_win_narrative", {
-                "enemy": enemy_name, "dmg": dmg}))
-        else:
-            lines.append(tpl_of(ctx, "battle_settle_win_narrative_fallback", {
-                "enemy": enemy_name}))
+        # 结算消息（2026-09-09 实机反馈：击杀信息去重——攻击行已含伤害、击败行已报
+        # 击杀，narrative 句整行删除，结算只输出奖励）
         lines.append(tpl_of(ctx, "battle_settle_exp", {
             "exp": int(getattr(round_result, "exp", 0) or 0)}))
         from qbot_rpg.core.reward import currency_display_name  # noqa: PLC0415

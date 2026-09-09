@@ -419,6 +419,25 @@ async def launch_pve_battle(
     e_name = str(e_comb.get("name") or "怪物")
     e_hp = int(e_comb.get("max_hp", 0))
     msg = f"⚔️ 与 {e_name}（HP {e_hp}）的战斗开始！发 攻击 出战。"
+    # 2026-09-09 战后自动续战记忆（zerc 拍板：玩家未解锁/未离开地图不解除锁定目标）
+    try:
+        _pl = ctx.get("player")
+        _loc = ctx.get("location")
+        if _pl is not None and _loc:
+            # Player frozen dataclass 可变子结构：persistent_state dict 就地改即落档
+            _ps2 = getattr(_pl, "persistent_state", None)
+            if _ps2 is None and isinstance(_pl, Mapping):
+                _ps2 = _pl.get("persistent_state")
+            if not isinstance(_ps2, dict):
+                _ps2 = {}
+                try:
+                    _pl["persistent_state"] = _ps2  # dict 形态 ctx 兼容
+                except Exception:  # noqa: BLE001 - frozen dataclass 无 setitem → 跳过
+                    _ps2 = None
+            if isinstance(_ps2, dict):
+                _ps2["battle_last"] = {"loc": str(_loc), "ref": monster_ref}
+    except Exception:  # noqa: BLE001 - 记忆失败不阻断开战
+        pass
     return {"ok": True, "message": msg, "battle_engine": eng}
 
 

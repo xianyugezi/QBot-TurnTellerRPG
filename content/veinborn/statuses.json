@@ -80,8 +80,7 @@
   "effects": [],
   "damage_mult": 1.5,
   "desc": "破位倒地（方位 v0.6 §五）：受击增伤 ×1.5，N3 数值试点窗口 1 回合"
- }
-,
+ },
  {
   "id": "sw_tier2_pierce",
   "name": "穿锋·极势",
@@ -127,5 +126,77 @@
   "id": "sw_omni_dot",
   "name": "四象残响",
   "description": "四象·极 后 2 回合持续四向伤害载体（回合末结算）"
+ },
+ {
+  "id": "rb_tier_breaker",
+  "name": "裂脊·极势",
+  "max_stack": 1,
+  "duration": {
+   "turns": 2,
+   "charges": 0
+  },
+  "decay": "none",
+  "effects": [],
+  "desc": "裂脊斩后 1 回合窗口：脊扫可接裂脊·极（未用消失）"
+ },
+ {
+  "id": "rb_core_window",
+  "name": "断脉·极势",
+  "max_stack": 1,
+  "duration": {
+   "turns": 2,
+   "charges": 0
+  },
+  "decay": "none",
+  "effects": [],
+  "desc": "破脉核后 1 回合窗口：贯核击可接断脉·极（未用消失）"
+ },
+ {
+  "id": "vc_break_window",
+  "name": "破壳追击势",
+  "max_stack": 1,
+  "duration": {
+   "turns": 2,
+   "charges": 0
+  },
+  "decay": "none",
+  "effects": [],
+  "desc": "崩山破壳后 1 回合窗口：抡锤自动变碎甲·极（未用消失）"
+ },
+ {
+  "id": "vs_blade_window",
+  "name": "入剑之势",
+  "max_stack": 1,
+  "duration": {
+   "turns": 2,
+   "charges": 0
+  },
+  "decay": "none",
+  "effects": [],
+  "desc": "入剑之势：切换/跃空后 1 回合窗口（未用消失）"
+ },
+ {
+  "id": "vs_axe_window",
+  "name": "归斧之势",
+  "max_stack": 1,
+  "duration": {
+   "turns": 2,
+   "charges": 0
+  },
+  "decay": "none",
+  "effects": [],
+  "desc": "归斧之势：切换/跃空后 1 回合窗口（未用消失）"
+ },
+ {
+  "id": "vs_air_window",
+  "name": "空连之势",
+  "max_stack": 1,
+  "duration": {
+   "turns": 2,
+   "charges": 0
+  },
+  "decay": "none",
+  "effects": [],
+  "desc": "空连之势：切换/跃空后 1 回合窗口（未用消失）"
  }
 ]

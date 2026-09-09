@@ -481,6 +481,11 @@
     "polarity": "positive",
     "mark": "charge_mark",
     "count": 3
+   },
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "vc_break_window"
    }
   ],
   "mp_cost": 0,
@@ -871,6 +876,11 @@
   "effects": [
    {
     "effect": "edge_clear3"
+   },
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "rb_tier_breaker"
    }
   ],
   "mp_cost": 0,
@@ -900,7 +910,7 @@
   "energy_cost": {
    "stamina": 2
   },
-  "desc": "满蓄·裂脊斩：蓄刃满 3 的纵斩真蓄爆发 300%，清蓄刃（霸体）"
+  "desc": "满蓄·裂脊斩：蓄刃满 3 的纵斩真蓄爆发 300%，清蓄刃（霸体）；斩后 1 回合窗口可接裂脊·极"
  },
  {
   "type": "active",
@@ -1006,6 +1016,11 @@
     "target": "enemy",
     "mark": "core_broken",
     "count": 1
+   },
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "rb_core_window"
    }
   ],
   "mp_cost": 0,
@@ -1031,7 +1046,7 @@
   "id": "vb_core_breaker",
   "name": "破脉核",
   "derive_only": true,
-  "desc": "破技·破脉核：破坏值满派生，挂脉核已破印记，清破坏值"
+  "desc": "破技·破脉核：破坏值满派生，挂脉核已破印记，清破坏值；破核后 1 回合窗口贯核击可接断脉·极"
  },
  {
   "type": "active",
@@ -1238,7 +1253,13 @@
   "power": 0,
   "attack_type": "none",
   "element": null,
-  "effects": [],
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "vs_blade_window"
+   }
+  ],
   "mp_cost": 0,
   "cooldown": 0,
   "tag": "none",
@@ -1409,7 +1430,13 @@
   "power": 0,
   "attack_type": "none",
   "element": null,
-  "effects": [],
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "vs_axe_window"
+   }
+  ],
   "mp_cost": 0,
   "cooldown": 0,
   "tag": "none",
@@ -3310,6 +3337,11 @@
     "type": "reposition",
     "target": "self",
     "height": "air"
+   },
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "vs_air_window"
    }
   ],
   "mp_cost": 0,
@@ -4616,5 +4648,552 @@
   "id": "sw_aura_blade",
   "name": "御剑·剑罡",
   "desc": "罡·剑罡化盾：耗 100 剑势化 300 剑罡护盾 2 回合；冷却 3"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 360,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "effect": "edge_clear3"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": true,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "ridge_blade"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "rb_breaker_x",
+  "name": "裂脊·极",
+  "break_power": 35,
+  "air_policy": "land",
+  "derive_only": true,
+  "energy_cost": {
+   "stamina": 2
+  },
+  "desc": "窗口·裂脊极：裂脊斩后 1 回合窗口，脊扫自动化为纵斩再起 360%，清蓄刃（霸体）"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 320,
+  "attack_type": "pierce",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "ridge_blade"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "rb_core_x",
+  "name": "断脉·极",
+  "derive_only": true,
+  "desc": "追击·断脉极：破脉核后 1 回合窗口，贯核击自动化为破核追击 320%"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 145,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "edge_charge",
+    "count": 1
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "ridge_blade"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "rb_sweep_2",
+  "name": "脊扫·连",
+  "air_policy": "land",
+  "derive_only": true,
+  "energy_cost": {
+   "stamina": 1
+  },
+  "desc": "连·脊扫：蓄刃 1 时连用横扫 145%，蓄刃 +1（连用回馈）"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 250,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "ridge_blade"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "rb_drop",
+  "name": "御脊·空坠",
+  "break_power": 25,
+  "air_policy": "land",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "desc": "空·御脊坠：跃空后脊坠重击 250% 并落地（空中收势技）"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 170,
+  "attack_type": "blunt",
+  "element": null,
+  "effects": [
+   {
+    "type": "mark_add",
+    "target": "enemy",
+    "mark": "hammer_mark",
+    "count": 2
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_crusher"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vc_crush_l1",
+  "name": "碎颅·夯",
+  "energy_gain": {
+   "focus": 2
+  },
+  "energy_cost": {
+   "stamina": 2
+  },
+  "derive_only": true,
+  "break_power": 30,
+  "desc": "碎颅夯（蓄 1 层）：夯击 170%+锤痕 2，未至满蓄的轻档碎颅"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 230,
+  "attack_type": "blunt",
+  "element": null,
+  "effects": [
+   {
+    "type": "mark_add",
+    "target": "enemy",
+    "mark": "hammer_mark",
+    "count": 2
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_crusher"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vc_crush_l2",
+  "name": "碎颅·崩",
+  "energy_gain": {
+   "focus": 2
+  },
+  "energy_cost": {
+   "stamina": 2
+  },
+  "derive_only": true,
+  "break_power": 35,
+  "desc": "碎颅崩（蓄 2 层）：崩击 230%+锤痕 2，中档碎颅（满 3 仍归崩山）"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 380,
+  "attack_type": "blunt",
+  "element": null,
+  "effects": [
+   {
+    "type": "mark_add",
+    "target": "enemy",
+    "mark": "stagger_weak",
+    "count": 1
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_crusher"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vc_break_x",
+  "name": "碎甲·极",
+  "energy_cost": {
+   "stamina": 2
+  },
+  "derive_only": true,
+  "break_power": 40,
+  "desc": "碎甲·极：破壳追击 380%+晕骸 1（仅破壳后 1 回合窗口，未用消失）"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 260,
+  "attack_type": "blunt",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_crusher"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vc_drop",
+  "name": "碎脉·天坠",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "break_power": 35,
+  "air_policy": "land",
+  "desc": "空·碎脉天坠：跃空后坠击 260% 破壳并落地"
+ },
+ {
+  "type": "active",
+  "kind": "status",
+  "power": 0,
+  "attack_type": "blunt",
+  "element": null,
+  "effects": [
+   {
+    "effect": "guard_up"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 2,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_crusher"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vc_guard",
+  "name": "举锤架势",
+  "desc": "守·举锤架势：横锤护体本回减伤 40%（防反架势）；冷却 2"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 260,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "effect": "vs_stagger"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {
+   "vs_overload": 3
+  },
+  "job_restrict": [
+   "vein_swaxe"
+  ],
+  "job_form": "blade_form",
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vs_zsb_mid",
+  "name": "零距·脉冲",
+  "derive_only": true,
+  "desc": "解放·零距脉冲（过载 3-4）：中档零距解放 260%+失衡（过载 5 仍走零距·脉爆 320%）"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 170,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "effect": "vs_overload2"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {
+   "vs_gauge": 1
+  },
+  "job_restrict": [
+   "vein_swaxe"
+  ],
+  "job_form": "blade_form",
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vs_combo_full",
+  "name": "连刃·满",
+  "derive_only": true,
+  "desc": "连刃·满（剑脉满 5）：满势连刃 170%（剑脉如满月，刃力更沉）"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 200,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "effect": "vs_overload2"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {
+   "vs_gauge": 1
+  },
+  "job_restrict": [
+   "vein_swaxe"
+  ],
+  "job_form": "blade_form",
+  "level": null,
+  "hits": 2,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vs_combo_x",
+  "name": "入剑·疾",
+  "derive_only": true,
+  "desc": "入剑·疾：入剑首击疾斩 200% 两段（仅入剑后 1 回合窗口，未用消失）"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 250,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "effect": "vs_gauge2"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_swaxe"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vs_axe_x",
+  "name": "归斧·斩",
+  "derive_only": true,
+  "desc": "归斧·斩：归斧首斩 250%+刃力 2（仅归斧后 1 回合窗口，未用消失）"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 240,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "effect": "vs_overload2"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {
+   "vs_gauge": 1
+  },
+  "job_restrict": [
+   "vein_swaxe"
+  ],
+  "job_form": "blade_form",
+  "level": null,
+  "hits": 2,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vs_air_x",
+  "name": "空连·极",
+  "derive_only": true,
+  "air_policy": "land",
+  "desc": "空连·极：空中连刃收势 240% 两段并落地（仅跃空后 1 回合窗口，未用消失）"
  }
 ]

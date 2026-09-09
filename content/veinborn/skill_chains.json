@@ -49,6 +49,23 @@
     "armor": false,
     "consume": 0,
     "variant_override": {}
+   },
+   {
+    "from": "rb_core_strike",
+    "to": "rb_core_x",
+    "tag": "none",
+    "condition": {
+     "self_status": {
+      "has": [
+       "rb_core_window"
+      ]
+     }
+    },
+    "priority": 96,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
    }
   ]
  },
@@ -177,6 +194,41 @@
     "armor": true,
     "consume": 0,
     "variant_override": {}
+   },
+   {
+    "from": "rb_sweep",
+    "to": "rb_breaker_x",
+    "tag": "none",
+    "condition": {
+     "self_status": {
+      "has": [
+       "rb_tier_breaker"
+      ]
+     }
+    },
+    "priority": 97,
+    "mode": "replace",
+    "armor": true,
+    "consume": 0,
+    "variant_override": {}
+   },
+   {
+    "from": "rb_sweep",
+    "to": "rb_sweep_2",
+    "tag": "none",
+    "condition": {
+     "self_marks": {
+      "edge_charge": {
+       "min": 1,
+       "max": 1
+      }
+     }
+    },
+    "priority": 55,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
    }
   ]
  },
@@ -201,6 +253,24 @@
     "priority": 1,
     "mode": "replace",
     "armor": true,
+    "consume": 0,
+    "variant_override": {}
+   },
+   {
+    "from": "vs_release",
+    "to": "vs_zsb_mid",
+    "tag": "none",
+    "condition": {
+     "self_marks": {
+      "vs_overload": {
+       "min": 3,
+       "max": 4
+      }
+     }
+    },
+    "priority": 8,
+    "mode": "replace",
+    "armor": false,
     "consume": 0,
     "variant_override": {}
    }
@@ -842,6 +912,146 @@
      }
     },
     "priority": 5,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   },
+   {
+    "from": "vc_crush",
+    "to": "vc_crush_l1",
+    "tag": "none",
+    "condition": {
+     "self_marks": {
+      "charge_mark": {
+       "min": 1,
+       "max": 1
+      }
+     }
+    },
+    "priority": 8,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   },
+   {
+    "from": "vc_crush",
+    "to": "vc_crush_l2",
+    "tag": "none",
+    "condition": {
+     "self_marks": {
+      "charge_mark": {
+       "min": 2,
+       "max": 2
+      }
+     }
+    },
+    "priority": 9,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   },
+   {
+    "from": "vc_crush",
+    "to": "vc_break_x",
+    "tag": "none",
+    "condition": {
+     "self_status": {
+      "has": [
+       "vc_break_window"
+      ]
+     }
+    },
+    "priority": 96,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
+ },
+ {
+  "id": "chain_swaxe_combo",
+  "name": "连刃诸势链",
+  "trigger_skill": "vs_combo",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "vs_combo",
+    "to": "vs_combo_full",
+    "tag": "combo",
+    "condition": {
+     "self_marks": {
+      "vs_gauge": {
+       "min": 5,
+       "max": 5
+      }
+     }
+    },
+    "priority": 60,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   },
+   {
+    "from": "vs_combo",
+    "to": "vs_combo_x",
+    "tag": "combo",
+    "condition": {
+     "self_status": {
+      "has": [
+       "vs_blade_window"
+      ]
+     }
+    },
+    "priority": 97,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   },
+   {
+    "from": "vs_combo",
+    "to": "vs_air_x",
+    "tag": "combo",
+    "condition": {
+     "self_status": {
+      "has": [
+       "vs_air_window"
+      ]
+     }
+    },
+    "priority": 95,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
+ },
+ {
+  "id": "chain_swaxe_axe",
+  "name": "归斧斩链",
+  "trigger_skill": "vs_slash",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "vs_slash",
+    "to": "vs_axe_x",
+    "tag": "none",
+    "condition": {
+     "self_status": {
+      "has": [
+       "vs_axe_window"
+      ]
+     }
+    },
+    "priority": 96,
     "mode": "replace",
     "armor": false,
     "consume": 0,

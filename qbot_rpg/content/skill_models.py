@@ -449,4 +449,7 @@ def skills_fields() -> Dict[str, FieldMeta]:
         "hit_mod": FieldMeta(type="number", range_min=0, default=DEFAULT_HIT_MOD),
         "crit_mod": FieldMeta(type="number", range_min=0, default=DEFAULT_CRIT_MOD),
         "block_mode": FieldMeta(type="enum", enum=BLOCK_MODES, default=DEFAULT_BLOCK_MODE),
+        # ---- E. 防反/闪反姿态（2026-09-09 用户拍板标签制）----
+        "counter_type": FieldMeta(type="str"),   # parry/dodge（姿态标记；无=非姿态技能）
+        "counter_skill": FieldMeta(type="str"),  # 成功派生反击技 id
     }

@@ -95,7 +95,7 @@ def test_settings_env_and_logcard_segments() -> None:
 def test_existing_modules_counts_stable() -> None:
     """既有完备模块计数硬断言（M13 硬计数连锁：改动会破坏 test_m13_hard_counts）。"""
     t = _table()
-    assert len(t.modules["skills"].fields) == 28  # 25 + 方位扩展 F08/F09/F10（2026-09-08）
+    assert len(t.modules["skills"].fields) == 30  # 25 + 方位 F08/F09/F10 + 防反/闪反 counter 2（2026-09-09）
     assert len(t.modules["jobs"].fields) == 11
     assert len(t.modules["enemies"].fields) == 27  # 26 + parts 部位段（方位 v0.6 §三.3）
     assert len(t.modules["maps"].fields) == 12

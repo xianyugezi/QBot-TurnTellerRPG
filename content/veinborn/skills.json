@@ -4534,7 +4534,9 @@
   "block_mode": "auto",
   "id": "sw_vault",
   "name": "御剑·腾空",
-  "desc": "空·御剑腾空：跃空俯击——腾空斩向当前方位 150%（命中灌注剑势+15），空中地面技够不着（天然闪反）；闪避成功回剑势 30"
+  "desc": "空·御剑腾空：跃空俯击——腾空斩向当前方位 150%（命中灌注剑势+15），空中地面技够不着（天然闪反）；闪避成功回剑势 30",
+  "counter_type": "dodge",
+  "counter_skill": "sw_vault_counter"
  },
  {
   "type": "active",
@@ -4574,7 +4576,9 @@
   "block_mode": "auto",
   "id": "sw_circle",
   "name": "御剑·回环",
-  "desc": "机动·回环：侧移闪反——横掠右侧并起回环架势（本回减伤 30%）"
+  "desc": "机动·回环：侧移闪反——横掠右侧并起回环架势（本回减伤 30%）",
+  "counter_type": "dodge",
+  "counter_skill": "sw_circle_counter"
  },
  {
   "type": "active",
@@ -4700,7 +4704,9 @@
   "block_mode": "auto",
   "id": "sw_guard",
   "name": "御剑·守势",
-  "desc": "守·御剑守势：举剑护体本回减伤 40%（防反架势），凝 1 剑印保底；冷却 2"
+  "desc": "守·御剑守势：举剑护体本回减伤 40%（防反架势），凝 1 剑印保底；冷却 2",
+  "counter_type": "parry",
+  "counter_skill": "sw_guard_counter"
  },
  {
   "type": "active",
@@ -6175,5 +6181,101 @@
   "name": "归位·重旋",
   "desc": "归位·重旋：归位后重旋 160%+握力 2（仅归位后 1 回合窗口）——【压测面：形态归位窗口接常态资源】",
   "derive_only": true
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 250,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "probe_order"
+  ],
+  "job_form": null,
+  "level": 1,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 0
+  },
+  "hit_mod": 0.0,
+  "crit_mod": 0.0,
+  "block_mode": "normal",
+  "derive_only": true,
+  "name": "守势·反击",
+  "desc": "反·守势反击：格挡成功顺势重斩 250%（防反成功派生——不可主动施放）",
+  "id": "sw_guard_counter"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 250,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "probe_order"
+  ],
+  "job_form": null,
+  "level": 1,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 0
+  },
+  "hit_mod": 0.0,
+  "crit_mod": 0.0,
+  "block_mode": "normal",
+  "derive_only": true,
+  "name": "回环·反击",
+  "desc": "反·回环反击：闪开攻击侧身回斩 250%（闪反成功派生——不可主动施放）",
+  "id": "sw_circle_counter"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 250,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "probe_order"
+  ],
+  "job_form": null,
+  "level": 1,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 0
+  },
+  "hit_mod": 0.0,
+  "crit_mod": 0.0,
+  "block_mode": "normal",
+  "derive_only": true,
+  "name": "腾空·反击",
+  "desc": "反·腾空反击：空中闪避借势俯斩 250%（闪反成功派生——不可主动施放）",
+  "id": "sw_vault_counter"
  }
 ]

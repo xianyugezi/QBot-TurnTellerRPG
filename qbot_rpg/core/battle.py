@@ -490,6 +490,50 @@ class BattleEngine:
         for key in _FIVE_BLOCKS:
             self._snap[key] = getattr(rt, key)
 
+    def _player_stance(self) -> Optional[Tuple[str, str]]:
+        """防反/闪反姿态检测（2026-09-09 用户拍板标签制）：当前回合玩家施放过的
+        姿态技能（counter_type/counter_skill 配置）→ (parry|dodge, counter_skill_id)。
+        姿态窗口=施放当回合（施放成功写入 snap.counter_stance 标记；turn 比对过期）。"""
+        try:
+            _st = self._snap.get("counter_stance")
+            if isinstance(_st, Mapping):
+                _t = str(_st.get("type") or "")
+                _c = str(_st.get("skill") or "")
+                _tn = int(_st.get("turn") or -1)
+                if _t in ("parry", "dodge") and _c \
+                        and _tn == int(self._snap.get("turn", 0)):
+                    return (_t, _c)
+            return None
+        except Exception:
+            return None
+
+    def _action_tags(self, action: Mapping[str, Any]) -> Tuple[bool, bool]:
+        """怪行动可反标签（tags 含 可防反/可闪反——内容配置；ca 未合并时从 defs 解析）。"""
+        _t = tuple(str(x) for x in (action.get("tags") or ()))
+        if not _t:
+            _sid = str(action.get("skill_id") or "")
+            if _sid:
+                _sd = self.combo_engine().resolve_skill(_sid) or {}
+                _t = tuple(str(x) for x in (_sd.get("tags") or ()))
+        return ("可防反" in _t, "可闪反" in _t)
+
+    def _run_counter(self, skill_id: str) -> int:
+        """执行反击技（防反/闪反成功派生——玩家对怪造成一次反击伤害，不占行动/无消耗）。
+        返回反击伤害（0=未执行）。"""
+        _sd = self.combo_engine().resolve_skill(skill_id)
+        if not isinstance(_sd, Mapping):
+            return 0
+        try:
+            _ca = dict(_sd)
+            _ca["type"] = "skill"
+            _ca["skill_id"] = skill_id
+            _ca.pop("cooldown_remaining", None)
+            out = self._resolve_damage_action("player", _ca)
+            _dmg = int(getattr(out, "final_damage", 0) or 0) if out is not None else 0
+            return _dmg
+        except Exception:
+            return 0
+
     def _refresh_defenses(self) -> None:
         """F-21（contract_deviations P1-2）：战斗路径真实调用 prepare_defense(side,
         effect_ids, status_instances) 把效果/状态配置归一化为 defense 行。
@@ -2163,7 +2207,20 @@ class BattleEngine:
                 if not rule_permits(_pr, _ps, _ph):
                     # 2026-09-09：够不着=闪避成功（防御方空中姿态 on_dodge_effects）
                     self._trigger_on_dodge(target, attacker)
-                    return self._position_miss_outcome(attacker, ca, target, _ps, _ph)
+                    # 闪反成功派生（2026-09-09 用户拍板：可闪反行动+玩家闪反姿态
+                    # → 免伤（天然）+ 自动反击）
+                    _st = self._player_stance()
+                    _p_ca = ca.get("skill_id")
+                    _pdef = self.combo_engine().resolve_skill(_p_ca) if _p_ca else None
+                    _dodgeable = "可闪反" in tuple(str(x) for x in ((_pdef or {}).get("tags") or ()))
+                    _dodge_ct = None
+                    if _st and _st[0] == "dodge" and _dodgeable:
+                        _cd = self._run_counter(_st[1])
+                        _dodge_ct = {"type": "dodge_counter", "target": "enemy",
+                                     "attacker": "player", "skill_id": _st[1],
+                                     "damage": _cd}
+                    return self._position_miss_outcome(attacker, ca, target, _ps, _ph,
+                                                       extra_effect=_dodge_ct)
 
         result = self.combo_engine().apply_action(attacker, ca, self._snap, self._armor_active,
                                                   marks_lookup=_marks_lookup)
@@ -2218,6 +2275,19 @@ class BattleEngine:
             # armor 口径——派生=实际施放技能；仅当行动原样未显式给出时跟随派生技）
             if not action.get("air_policy"):
                 ca["air_policy"] = _fsd.get("air_policy")
+
+        # 防反/闪反姿态标记（2026-09-09 用户拍板）：玩家施放技能若带 counter_type/
+        # counter_skill（守势=parry/回环+腾空=dodge）→ 记入 snap.counter_stance
+        # （姿态窗口=当回合；怪行动判定消费——回合边界 turn 比对自然过期）
+        if attacker == "player":
+            _sid_now = str(ca.get("skill_id") or "")
+            _sd_now = self.combo_engine().resolve_skill(_sid_now) or {}
+            _ct_now = str(_sd_now.get("counter_type") or "")
+            _cs_now = str(_sd_now.get("counter_skill") or "")
+            if _ct_now in ("parry", "dodge") and _cs_now:
+                self._snap["counter_stance"] = {
+                    "type": _ct_now, "skill": _cs_now,
+                    "turn": int(self._snap.get("turn", 0))}
 
         # ---- M13 批15 路15C：组合技能战斗接线（细化_6c §三 F-C1/F-C2）----
         # 技能 def combo_table 段 → 施放时 F-C1 触发判定（gate_combination：
@@ -2460,7 +2530,8 @@ class BattleEngine:
             pass
 
     def _position_miss_outcome(
-        self, attacker: str, action: Mapping[str, Any], target: str, side: str, height: str
+        self, attacker: str, action: Mapping[str, Any], target: str, side: str, height: str,
+        extra_effect: Optional[Mapping[str, Any]] = None,
     ) -> ActionOutcome:
         """方位 miss 收口（方位 v0.6 §四：够不着——技能照常消耗、无伤害/破坏力/效果）。
 
@@ -2469,7 +2540,10 @@ class BattleEngine:
         生任何伤害与效果；渲染层经 side_effects 的 position_miss 标记出模板文案
         （battle_enemy_position_miss，模板配置化），engine message 仅兜底直读方。
         """
-        self._to_state(STATE_RES, "submit:position_miss")
+        # 2026-09-09：状态容错——行动已提交（RES）时 position_miss 幂等收尾
+        # （正常路径：技能施放提交 RES → 怪行动 position_miss 前置判定；不重复迁移）
+        if self._state != STATE_RES:
+            self._to_state(STATE_RES, "submit:position_miss")
         rating: Dict[str, Any] = {
             "hit": False, "crit": "low", "blocked": False, "pierce": 0.0, "multi": 1.0,
             "position_miss": True, "side": side, "height": height,
@@ -2488,6 +2562,8 @@ class BattleEngine:
             {"type": "position_miss", "actor": attacker, "target": target,
              "side": side, "height": height},
         ]
+        if extra_effect is not None:
+            _fx.append(extra_effect)
         if _land is not None:
             _fx.append(_land)
         return ActionOutcome(
@@ -2685,7 +2761,10 @@ class BattleEngine:
         A-03/TC-07；套内击杀后续段照常 A4；BOSS/最后目标死亡 A5 立即结束）。
         \\
         """
-        self._to_state(STATE_RES, f"submit:{action.get('type', 'normal')}")
+        # 2026-09-09：submit 幂等容错（防反/闪反反击在行动已提交 RES 后结算——
+        # 反击不重复提交状态；正常路径 act→res 不变）
+        if self._state != STATE_RES:
+            self._to_state(STATE_RES, f"submit:{action.get('type', 'normal')}")
         target = self._opposite(attacker)
         segments = action.get("segments") or [action]
         ac, tc = self._combat(attacker), self._combat(target)
@@ -2711,6 +2790,53 @@ class BattleEngine:
             if part_id:
                 all_effects.append({"type": "part_target", "part": part_id,
                                     "actor": attacker, "target": target})
+
+        # ---- 防反判定（2026-09-09 用户拍板标签制）：怪攻击命中路径——行动带可防反
+        # 标签 + 玩家当回合防反姿态（守势类）→ 整次攻击完全免伤 + 自动反击；
+        # 无标签 → 失败：受伤（姿态减伤照常）+ 无反击（用户示例语义）。----
+        self._snap.pop("_parried_this_act", None)
+        if attacker == "enemy" and target == "player":
+            _st = self._player_stance()
+            _at = self._action_tags(action)
+            if _st and _st[0] == "parry" and _at[0]:
+                self._snap["_parried_this_act"] = True
+                rating0 = {"hit": True, "crit": "low", "blocked": False,
+                           "pierce": 0.0, "multi": 0.0}
+                seg0 = {"ch_phys": 0, "ch_elem": 0, "final": 0}
+                self._record_action(attacker, str(action.get("type", "normal")), target,
+                                    rating0, seg0, self._phase)
+                all_effects.append({"type": "parry", "target": target,
+                                    "attacker": attacker, "skill_id": _st[1]})
+                _cd = self._run_counter(_st[1])
+                all_effects.append({"type": "parry_counter", "target": "enemy",
+                                    "attacker": "player", "skill_id": _st[1],
+                                    "damage": _cd})
+                # 防反=完整行动收尾（状态机不绕过：tick/action_end/air_policy/after_actor
+                # ——否则状态链断（后续 position_miss 等 res→res 崩溃））
+                tick_after_action(self._snap, self._new_runtime(), attacker)
+                self._absorb_runtime(self._new_runtime())
+                self._dispatch_event("action_end", attacker)
+                _land = self._settle_air_policy(attacker, action.get("air_policy"))
+                if _land is not None:
+                    all_effects.append(_land)
+                self._after_actor_action(attacker)
+                _thp_now = int((self._snap.get(target) or {}).get("hp", 0))
+                return self._action_outcome(attacker, action, target, rating0, seg0,
+                                            all_effects, _thp_now,
+                                            battle_ended=False)
+            # 闪反失败：可闪反行动命中位移中的玩家（已在攻击范围）→ 受伤照常 +
+            # 击退回正面（失败位移语义）
+            if _st and _st[0] == "dodge" and _at[1]:
+                all_effects.append({"type": "dodge_fail", "target": target,
+                                    "attacker": attacker})
+                try:
+                    _cp = self._snap.setdefault("combat_position", {}).setdefault(
+                        "player", {"relative_to": "enemy"})
+                    if isinstance(_cp, dict):
+                        _cp["side"] = "front"
+                        _cp["height"] = "ground"
+                except Exception:
+                    pass
 
         for idx, seg in enumerate(segments, start=1):
             seg = dict(seg)

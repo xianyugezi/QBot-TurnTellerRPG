@@ -92,6 +92,9 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     "battle_enemy_special_suffix": "（{change}）",
     "battle_intercept_absorb": "{shield} 吸收了 {n} 点伤害",
     "battle_intercept_reflect": "反弹 {n} 伤害给{target}",
+    # 2026-09-09 防反/闪反（用户拍板标签制）：格挡免伤行 + 反击行
+    "battle_parry_success": "✅ 你格挡了{action}（完全免伤）",
+    "battle_counter_hit": "⚔️ 反击：{name}造成 {damage} 伤害",
     "battle_intercept_immune": "免疫了{effect}",
 
     # —— BREP-15 击杀行 ——

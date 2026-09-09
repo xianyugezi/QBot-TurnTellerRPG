@@ -356,6 +356,8 @@ def test_skills_fields_keys_exact() -> None:
         # 方位扩展 3（F08 position_rule / F09 break_power / F10 air_policy，
         # 2026-09-08 方位 v0.6）
         "position_rule", "break_power", "air_policy",
+        # 防反/闪反姿态 2（2026-09-09 用户拍板标签制：counter_type/counter_skill）
+        "counter_type", "counter_skill",
     }
 
 

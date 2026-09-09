@@ -939,7 +939,14 @@ def _render_enemy_action(outcome: Any, *, ctx: Any = None) -> Optional[str]:
         getattr(outcome, "defending", False)
     )
 
-    if guarding and hit:
+    # 2026-09-09 防反成功（用户拍板标签制）：parry 事件 → 格挡免伤行（替代伤害行）
+    _fx_all = list(getattr(outcome, "side_effects", ()) or ())
+    _parry_fx = next((e for e in _fx_all
+                      if isinstance(e, Mapping) and e.get("type") == "parry"), None)
+    if _parry_fx is not None:
+        lines.append(tpl_of(ctx, "battle_parry_success",
+                            {"action": str(getattr(outcome, "action_type", "") or "攻击")}))
+    elif guarding and hit:
         lines.append(_render_player_defend_hit(outcome, ctx=ctx))  # BREP-06（5e §3.1）
     elif atype in _INTENT_TYPES or getattr(outcome, "intent_skill", None):
         line = _render_enemy_intent(outcome, ctx=ctx)              # BREP-12
@@ -966,6 +973,21 @@ def _render_enemy_action(outcome: Any, *, ctx: Any = None) -> Optional[str]:
         lines.append(_render_enemy_hit(outcome, ctx=ctx))          # BREP-10
 
     lines.extend(_render_interception_lines(outcome, ctx=ctx))     # BREP-14
+    # 2026-09-09 防反/闪反反击行（用户拍板成功派生）：parry_counter/dodge_counter
+    for _e2 in _fx_all:
+        if not isinstance(_e2, Mapping):
+            continue
+        if _e2.get("type") not in ("parry_counter", "dodge_counter"):
+            continue
+        _sid2 = str(_e2.get("skill_id") or "")
+        _nm2 = _sid2
+        _sk2 = (ctx or {}).get("skills") if isinstance(ctx, Mapping) else None
+        if isinstance(_sk2, Mapping):
+            _d2 = _sk2.get(_sid2)
+            if isinstance(_d2, Mapping) and _d2.get("name"):
+                _nm2 = str(_d2["name"])
+        lines.append(tpl_of(ctx, "battle_counter_hit",
+                            {"name": _nm2, "damage": int(_e2.get("damage") or 0)}))
     # 方位 v0.6（附录 A Step 3/Step 4）：怪物侧空中落地事件行 + 方位变化行
     # （怪行动 effects reposition/reposition_all 结算，如冲锋/转身）
     lines.extend(_render_air_land_lines(outcome, ctx=ctx))

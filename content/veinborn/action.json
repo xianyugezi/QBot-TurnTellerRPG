@@ -13,7 +13,9 @@
   "hungry": 0,
   "tags": [
    "物理",
-   "困斗+1"
+   "困斗+1",
+   "可防反",
+   "可闪反"
   ],
   "apply_mark": "surge_mark",
   "position_rule": {
@@ -39,7 +41,8 @@
   "hungry": 0,
   "tags": [
    "范围",
-   "困斗+1"
+   "困斗+1",
+   "可防反"
   ],
   "apply_mark": "surge_mark",
   "position_rule": {
@@ -108,7 +111,9 @@
   "intent": "伤害",
   "cooldown": 0,
   "tags": [
-   "物理"
+   "物理",
+   "可防反",
+   "可闪反"
   ],
   "position_rule": {
    "side": [
@@ -131,7 +136,9 @@
   "intent": "伤害",
   "cooldown": 0,
   "tags": [
-   "物理"
+   "物理",
+   "可防反",
+   "可闪反"
   ],
   "position_rule": {
    "side": [
@@ -196,7 +203,9 @@
   "cooldown": 1,
   "tags": [
    "物理",
-   "重击"
+   "重击",
+   "可防反",
+   "可闪反"
   ],
   "position_rule": {
    "side": [
@@ -234,7 +243,9 @@
   "intent": "伤害",
   "cooldown": 0,
   "tags": [
-   "物理"
+   "物理",
+   "可防反",
+   "可闪反"
   ],
   "position_rule": {
    "side": [
@@ -321,7 +332,9 @@
   "cooldown": 3,
   "tags": [
    "范围",
-   "突"
+   "突",
+   "可防反",
+   "可闪反"
   ],
   "position_rule": {
    "side": [
@@ -345,7 +358,9 @@
   "intent": "伤害",
   "cooldown": 0,
   "tags": [
-   "物理"
+   "物理",
+   "可防反",
+   "可闪反"
   ],
   "position_rule": {
    "side": [
@@ -369,7 +384,9 @@
   "cooldown": 2,
   "tags": [
    "物理",
-   "风"
+   "风",
+   "可防反",
+   "可闪反"
   ],
   "position_rule": {
    "side": [
@@ -393,7 +410,9 @@
   "cooldown": 0,
   "tags": [
    "物理",
-   "风"
+   "风",
+   "可防反",
+   "可闪反"
   ],
   "position_rule": {
    "side": [
@@ -440,7 +459,9 @@
   "intent": "伤害",
   "cooldown": 1,
   "tags": [
-   "物理"
+   "物理",
+   "可防反",
+   "可闪反"
   ],
   "position_rule": {
    "side": [
@@ -482,7 +503,9 @@
   "intent": "伤害",
   "cooldown": 0,
   "tags": [
-   "物理"
+   "物理",
+   "可防反",
+   "可闪反"
   ],
   "position_rule": {
    "side": [
@@ -544,7 +567,9 @@
   "intent": "伤害",
   "cooldown": 0,
   "tags": [
-   "物理"
+   "物理",
+   "可防反",
+   "可闪反"
   ],
   "position_rule": {
    "side": [
@@ -583,7 +608,9 @@
   "cooldown": 1,
   "tags": [
    "元素",
-   "水"
+   "水",
+   "可防反",
+   "可闪反"
   ],
   "position_rule": {
    "side": [
@@ -607,7 +634,9 @@
   "intent": "伤害",
   "cooldown": 0,
   "tags": [
-   "物理"
+   "物理",
+   "可防反",
+   "可闪反"
   ],
   "position_rule": {
    "side": [
@@ -631,7 +660,9 @@
   "cooldown": 0,
   "tags": [
    "物理",
-   "水"
+   "水",
+   "可防反",
+   "可闪反"
   ],
   "position_rule": {
    "side": [
@@ -678,7 +709,9 @@
   "intent": "伤害",
   "cooldown": 0,
   "tags": [
-   "物理"
+   "物理",
+   "可防反",
+   "可闪反"
   ],
   "position_rule": {
    "side": [
@@ -702,7 +735,9 @@
   "cooldown": 0,
   "tags": [
    "物理",
-   "连斩"
+   "连斩",
+   "可防反",
+   "可闪反"
   ],
   "position_rule": {
    "side": [
@@ -765,7 +800,9 @@
   "cooldown": 1,
   "tags": [
    "元素",
-   "土"
+   "土",
+   "可防反",
+   "可闪反"
   ],
   "position_rule": {
    "side": [
@@ -831,7 +868,9 @@
   "intent": "伤害",
   "cooldown": 0,
   "tags": [
-   "物理"
+   "物理",
+   "可防反",
+   "可闪反"
   ],
   "position_rule": {
    "side": [
@@ -855,7 +894,9 @@
   "cooldown": 1,
   "tags": [
    "元素",
-   "水"
+   "水",
+   "可防反",
+   "可闪反"
   ],
   "position_rule": {
    "side": [
@@ -880,7 +921,9 @@
   "cooldown": 0,
   "tags": [
    "物理",
-   "水"
+   "水",
+   "可防反",
+   "可闪反"
   ],
   "position_rule": {
    "side": [
@@ -922,7 +965,9 @@
   "cooldown": 0,
   "tags": [
    "物理",
-   "土"
+   "土",
+   "可防反",
+   "可闪反"
   ],
   "position_rule": {
    "side": [
@@ -1005,7 +1050,9 @@
   "intent": "伤害",
   "cooldown": 0,
   "tags": [
-   "物理"
+   "物理",
+   "可防反",
+   "可闪反"
   ],
   "position_rule": {
    "side": [
@@ -1028,7 +1075,9 @@
   "intent": "伤害",
   "cooldown": 0,
   "tags": [
-   "物理"
+   "物理",
+   "可防反",
+   "可闪反"
   ],
   "position_rule": {
    "side": [
@@ -1097,7 +1146,9 @@
   "intent": "伤害",
   "cooldown": 0,
   "tags": [
-   "物理"
+   "物理",
+   "可防反",
+   "可闪反"
   ],
   "position_rule": {
    "side": [
@@ -1122,7 +1173,9 @@
   "cooldown": 0,
   "tags": [
    "物理",
-   "连斩"
+   "连斩",
+   "可防反",
+   "可闪反"
   ],
   "position_rule": {
    "side": [
@@ -1184,7 +1237,9 @@
   "cooldown": 0,
   "tags": [
    "物理",
-   "土"
+   "土",
+   "可防反",
+   "可闪反"
   ],
   "position_rule": {
    "side": [
@@ -1208,7 +1263,9 @@
   "cooldown": 1,
   "tags": [
    "元素",
-   "土"
+   "土",
+   "可防反",
+   "可闪反"
   ],
   "position_rule": {
    "side": [
@@ -1275,7 +1332,9 @@
   "intent": "伤害",
   "cooldown": 0,
   "tags": [
-   "物理"
+   "物理",
+   "可防反",
+   "可闪反"
   ],
   "position_rule": {
    "side": [
@@ -1337,7 +1396,9 @@
   "intent": "伤害",
   "cooldown": 0,
   "tags": [
-   "物理"
+   "物理",
+   "可防反",
+   "可闪反"
   ],
   "position_rule": {
    "side": [
@@ -1361,7 +1422,9 @@
   "cooldown": 1,
   "tags": [
    "元素",
-   "土"
+   "土",
+   "可防反",
+   "可闪反"
   ],
   "position_rule": {
    "side": [
@@ -1513,7 +1576,9 @@
   "intent": "伤害",
   "cooldown": 0,
   "tags": [
-   "物理"
+   "物理",
+   "可防反",
+   "可闪反"
   ],
   "position_rule": {
    "side": [

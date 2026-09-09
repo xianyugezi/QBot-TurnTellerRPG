@@ -272,7 +272,7 @@
   "armor": false,
   "interrupt": false,
   "chain_refs": [
-   "chain_hammer_avalanche"
+   "chain_hammer_crush_master"
   ],
   "consume_marks": {},
   "job_restrict": [

@@ -2154,6 +2154,8 @@ class BattleEngine:
 
                 _ps, _ph = position_of(self._snap, "player")
                 if not rule_permits(_pr, _ps, _ph):
+                    # 2026-09-09：够不着=闪避成功（防御方空中姿态 on_dodge_effects）
+                    self._trigger_on_dodge(target, attacker)
                     return self._position_miss_outcome(attacker, ca, target, _ps, _ph)
 
         result = self.combo_engine().apply_action(attacker, ca, self._snap, self._armor_active,
@@ -2403,6 +2405,52 @@ class BattleEngine:
                 combo_result=out.combo_result,
             )
         return out
+
+    def _trigger_on_dodge(self, defender: str, attacker: str) -> None:
+        """闪避回馈（2026-09-09 御剑·腾空原版）：防御方空中被攻击未命中
+        （roll miss / 够不着 position miss）→ 遍历其 status def 的
+        on_dodge_effects 执行（statuses.json 内容配置；无 → 零操作）。
+
+        条件：defender 当前 height == air 且 status_state 含带
+        on_dodge_effects 的 status。执行失败不阻断战斗。
+        """
+        try:
+            from qbot_rpg.core.position import position_of  # noqa: PLC0415
+
+            _s, _h = position_of(self._snap, defender)
+            if _h != "air":
+                return
+            st = self._snap.get("status_state")
+            insts = st.get(defender) if isinstance(st, Mapping) else None
+            if not insts:
+                return
+            todo: List[Mapping[str, Any]] = []
+            for inst in insts:
+                if not isinstance(inst, Mapping):
+                    continue
+                sid = str(inst.get("status_id") or "")
+                if not sid:
+                    continue
+                sdef = self._resolver(sid, "status")
+                raw = getattr(sdef, "raw", sdef)
+                if isinstance(raw, Mapping):
+                    ode = raw.get("on_dodge_effects")
+                    if isinstance(ode, list):
+                        todo.extend(e for e in ode if isinstance(e, dict))
+            if not todo:
+                return
+            rt = self._new_runtime()
+            ctx = DamageCtx(
+                raw_damage=0, attack_type="skill", attacker=defender, target=attacker,
+                snapshot=self._snap, variables=self._base_variables(defender, attacker),
+            )
+            from qbot_rpg.core.effects import execute_action  # noqa: PLC0415
+
+            for eff in todo:
+                execute_action(eff, ctx, rt)
+            self._absorb_runtime(rt)
+        except Exception:  # noqa: BLE001 - 闪避回馈失败不阻断战斗
+            pass
 
     def _position_miss_outcome(
         self, attacker: str, action: Mapping[str, Any], target: str, side: str, height: str
@@ -2694,6 +2742,8 @@ class BattleEngine:
                 self._record_action(attacker, str(action.get("type", "normal")), target,
                                     rating, seg_damage, self._phase)
                 all_effects.append({"type": "miss", "target": target, "attacker": attacker})
+                # 2026-09-09：闪避回馈（防御方空中姿态 on_dodge_effects——御剑腾空）
+                self._trigger_on_dodge(target, attacker)
                 continue
 
             # ---- ② 会心（1a §1.4/§1.5：√幸运/2，三档）----

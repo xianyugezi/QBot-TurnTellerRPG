@@ -1268,6 +1268,26 @@ def tick_turn_end(snapshot: Mapping[str, Any], runtime: EffectRuntime) -> List[D
                     hp = int(c.get("hp", 0))
                     c["hp"] = max(0, hp - value)
                     log.append({"type": "dot_damage", "side": side, "status": dot.get("status_id", dot_id), "value": value})
+                    # dot 破位（2026-09-09 御剑二阶残响：dot 每跳造成部位破坏值；
+                    # part_break_per_tick 仅作用于未破部位；部位破值入 parts_state）
+                    _pb = dot.get("part_break_per_tick")
+                    if _pb:
+                        _ps = snapshot.get("parts_state")
+                        _cparts = c.get("parts") if isinstance(c, dict) else None
+                        if isinstance(_ps, dict) and isinstance(_cparts, list):
+                            _thr = {}
+                            for _pd in _cparts:
+                                if isinstance(_pd, dict):
+                                    _thr[str(_pd.get("id") or "")] = float(
+                                        _pd.get("break_threshold") or 0)
+                            for _pid, _pst in list(_ps.items()):
+                                if isinstance(_pst, dict) and not _pst.get("broken"):
+                                    _bv = float(_pst.get("break_value", 0.0)) + float(_pb)
+                                    _pst["break_value"] = _bv
+                                    if _thr.get(_pid) and _bv >= _thr[_pid]:
+                                        _pst["broken"] = True
+                                        log.append({"type": "part_break", "side": side,
+                                                    "part_id": _pid, "source": "dot"})
                     rt = int(dot.get("turns", 0))
                     if rt > 0:
                         dot["turns"] = rt - 1
@@ -1834,7 +1854,12 @@ def execute_action(
         c = ctx.snapshot.get(target)
         if isinstance(c, dict):
             pool = c.setdefault("dot_pool", {})
-            pool[status_id] = {"status_id": status_id, "value": max(0, value), "tick": tick, "turns": turns, "source": attacker}
+            inst: Dict[str, Any] = {"status_id": status_id, "value": max(0, value),
+                                    "tick": tick, "turns": turns, "source": attacker}
+            _pb = action.get("part_break_per_tick")
+            if _pb:
+                inst["part_break_per_tick"] = int(_pb)
+            pool[status_id] = inst
         side_effects.append({"type": "dot_applied", "target": target, "status_id": status_id, "value": max(0, value), "tick": tick})
         return ActionResult(True, side_effects)
 

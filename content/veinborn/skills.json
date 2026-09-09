@@ -4490,8 +4490,8 @@
  },
  {
   "type": "active",
-  "kind": "utility",
-  "power": 0,
+  "kind": "damage",
+  "power": 150,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -4505,6 +4505,11 @@
     "target": "self",
     "mark": "sword_aura",
     "count": 15
+   },
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "sw_vault_air"
    }
   ],
   "mp_cost": 0,
@@ -4529,7 +4534,7 @@
   "block_mode": "auto",
   "id": "sw_vault",
   "name": "御剑·腾空",
-  "desc": "机动·腾空：御剑腾空——空中可斩四向壳背，地面技够不到你（天然闪反）；腾空斩击灌注剑势 +15"
+  "desc": "空·御剑腾空：跃空俯击——腾空斩向当前方位 150%（命中灌注剑势+15），空中地面技够不着（天然闪反）；闪避成功回剑势 30"
  },
  {
   "type": "active",

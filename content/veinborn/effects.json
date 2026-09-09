@@ -588,8 +588,7 @@
   "marks_on": "enemy",
   "polarity": "negative",
   "mark": "vd_erode"
- }
-,
+ },
  {
   "id": "sw_flank_dot_fx",
   "name": "双锋残响dot",
@@ -599,7 +598,8 @@
   "tick": "turn_end",
   "turns": 2,
   "target": "enemy",
-  "desc": "双锋·极残响：接下来 2 回合回合末对敌造成 4% 生命伤害"
+  "desc": "双锋·极残响：接下来 2 回合回合末对敌造成 4% 生命伤害并持续破坏部位 6",
+  "part_break_per_tick": 6
  },
  {
   "id": "sw_omni_dot_fx",
@@ -610,7 +610,8 @@
   "tick": "turn_end",
   "turns": 2,
   "target": "enemy",
-  "desc": "四象·极残响：接下来 2 回合回合末对敌造成 3% 生命伤害"
+  "desc": "四象·极残响：接下来 2 回合回合末对敌造成 3% 生命伤害并持续破坏部位 5",
+  "part_break_per_tick": 5
  },
  {
   "id": "sw_aura_shield",

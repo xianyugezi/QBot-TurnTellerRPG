@@ -390,5 +390,25 @@
   "decay": "none",
   "effects": [],
   "desc": "归位后 1 回合窗口：轻旋可自动接归位·重旋（未用消失）"
+ },
+ {
+  "id": "sw_vault_air",
+  "name": "腾空姿态",
+  "max_stack": 1,
+  "duration": {
+   "turns": 5,
+   "charges": 0
+  },
+  "decay": "none",
+  "effects": [],
+  "on_dodge_effects": [
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "sword_aura",
+    "count": 30
+   }
+  ],
+  "desc": "腾空姿态：空中闪避回剑势 30（姿态 5 回合内有效，落地后自然消散）"
  }
 ]

@@ -258,6 +258,9 @@ class TurnReport:
     status: Optional[str]            # None=进行中
     log: Tuple[Mapping[str, Any], ...] = ()
     outcomes: Tuple[ActionOutcome, ...] = ()
+    # 方位 v0.6 HUD：双方当前方位格（side/height 原值；缺省 None——旧调用方零变化）
+    player_pos: Optional[Tuple[str, str]] = None
+    enemy_pos: Optional[Tuple[str, str]] = None
 
 
 @dataclass(frozen=True)
@@ -665,6 +668,7 @@ class BattleEngine:
         rating: Dict[str, Any],
         damage: Dict[str, Any],
         phase: str,
+        name: Optional[str] = None,
     ) -> int:
         """按「段」写入行动流水（1g1c §② B2：每段独立记录，收集时机=拦截链→扣血后）。"""
         self._seq += 1
@@ -674,6 +678,7 @@ class BattleEngine:
             "phase": phase,
             "actor": actor,
             "action": atype,
+            "name": (name or atype),
             "target": target,
             "rating": rating,
             "damage": damage,
@@ -1857,6 +1862,8 @@ class BattleEngine:
             player=int(self._combat("player").get("hp", 0)),
             enemy=int(self._combat("enemy").get("hp", 0)),
             ended=self._finished, status=self._snap.get("status"),
+            player_pos=self._snapshot_pos("player"),
+            enemy_pos=self._snapshot_pos("enemy"),
         )
 
     def action_order(self) -> Tuple[str, ...]:
@@ -2899,8 +2906,14 @@ class BattleEngine:
             seg_damage["final"] += res.final_damage
             all_effects.extend(res.side_effects)
             last_hp = res.target_hp
+            _rname: Optional[str] = None
+            if str(action.get("type", "normal")) == "skill":
+                _sid = str(action.get("skill_id") or "")
+                if _sid:
+                    _sd = self.combo_engine().resolve_skill(_sid) or {}
+                    _rname = str(_sd.get("name") or "") or None
             self._record_action(attacker, str(action.get("type", "normal")), target,
-                                rating, seg_damage, self._phase)
+                                rating, seg_damage, self._phase, name=_rname)
 
             # ⑧ 死亡判定（每次扣血后立即，1g2 §1.2 ④；1g1b 不变量2）
             # 先手击杀来源标记（TC-11 order 基准：玩家行动直击杀敌）
@@ -3232,6 +3245,21 @@ class BattleEngine:
         # ⑨ 下一回合（回合边界=回合结束 tick 后 → 可落快照）
         return self.start_turn()
 
+    def _snapshot_pos(self, side: str) -> Optional[Tuple[str, str]]:
+        """快照当前方位（side/height 原值）；缺段/非法 → None（HUD 省略）。"""
+        try:
+            cp = self._snap.get("combat_position")
+            ent = cp.get(side) if isinstance(cp, Mapping) else None
+            if not isinstance(ent, Mapping):
+                return None
+            s = str(ent.get("side") or "")
+            h = str(ent.get("height") or "")
+            if s not in ("front", "back", "left", "right") or h not in ("ground", "air"):
+                return None
+            return (s, h)
+        except Exception:  # noqa: BLE001 - HUD 方位缺失不阻断
+            return None
+
     def _turn_report(self, log: Sequence[Mapping[str, Any]] = ()) -> TurnReport:
         return TurnReport(
             turn=int(self._snap.get("turn", 0)),
@@ -3241,6 +3269,8 @@ class BattleEngine:
             ended=self._finished,
             status=self._snap.get("status") if self._finished else None,
             log=tuple(log),
+            player_pos=self._snapshot_pos("player"),
+            enemy_pos=self._snapshot_pos("enemy"),
         )
 
     def player_act(self, action: Any, params: Any = None) -> TurnReport:
@@ -3269,6 +3299,8 @@ class BattleEngine:
                 status=self._snap.get("status") if self._finished else None,
                 log=tuple(getattr(res, "side_effects", ()) or ()),
                 outcomes=tuple(outcomes),
+                player_pos=self._snapshot_pos("player"),
+                enemy_pos=self._snapshot_pos("enemy"),
             )
         ores = self.enemy_act()
         if ores is not None:
@@ -3286,6 +3318,7 @@ class BattleEngine:
             phases=(PHASE_PLAYER_ACTION, PHASE_ENEMY_ACTION, PHASE_TURN_END_TICK),
             player=rep.player, enemy=rep.enemy, ended=rep.ended, status=rep.status,
             log=rep.log, outcomes=tuple(outcomes),
+            player_pos=rep.player_pos, enemy_pos=rep.enemy_pos,
         )
 
     def _normalize_action(self, action: Any, params: Any = None) -> Mapping[str, Any]:

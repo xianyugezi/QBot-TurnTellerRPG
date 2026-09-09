@@ -63,8 +63,8 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     "battle_status_diff_more": " ｜ 还有 {rest} 个状态",
 
     # —— BREP-09 操作提示行（战报末行；tail 独立模板）——
-    "battle_action_hint": "你 {player_hp}/{player_max_hp} | {target_name} "
-                          "{target_hp}/{target_max_hp} → {tail}",
+    "battle_action_hint": "你 {player_hp}/{player_max_hp}{player_pos} | {target_name} "
+                          "{target_hp}/{target_max_hp}{target_pos} → {tail}",
     "battle_action_hint_tail": "攻击 或 攻击 技能名",
 
     # —— BREP-04 会心/格挡附注 ——
@@ -73,16 +73,16 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
 
     # —— BREP-02/03/05/06 玩家行动 ——
     "battle_player_hit": "✅ 你{action}，造成 {damage} 伤害{note}（{target} {hp}/{max_hp}）",
-    "battle_player_miss": "❌ 未命中：{target} 闪过了你的{action}（{target} {hp}/{max_hp}）",
+    "battle_player_miss": "",
     "battle_player_defend": "✅ 你进入防御姿态（本回合受到伤害减半）",
     "battle_player_defend_hit": "✅ 你防御了{attacker}的{action}，"
                                "受到 {damage} 伤害（HP {hp}/{max_hp}）",
 
     # —— BREP-10~14 怪物行动 ——
     "battle_enemy_hit": "❌ {name}{action}，你受到 {damage} 伤害（HP {hp}/{max_hp}）",
-    "battle_enemy_miss": "✅ {name}的攻击被你躲开（HP {hp}/{max_hp}）",
+    "battle_enemy_miss": "",
     # 方位 miss（方位 v0.6 §四/附录 A Step 1：够不着——怪物行动打不到玩家当前方位）
-    "battle_enemy_position_miss": "✅ 够不着：{name}的攻击够不到{pos}的你（HP {hp}/{max_hp}）",
+    "battle_enemy_position_miss": "",
 "battle_actor_landed": "{actor} 从空中落回地面",
 "battle_position_changed": "{actor} 移动到了{pos}",
 "battle_part_broken": "{part}被击碎！{name}轰然倒地",

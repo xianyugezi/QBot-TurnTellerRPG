@@ -95,10 +95,10 @@ def test_tc07_hit_with_target_phrase() -> None:
 # ---------------------------------------------------------------------------
 
 def test_tc08_player_miss_exact() -> None:
-    """TC-08：未命中逐字 `❌ 未命中：史莱姆 闪过了你的攻击（史莱姆 25/25）`；不扣血。"""
+    """2026-09-09 用户拍板：miss 播报移除——玩家未命中不渲染行（模板置空）。"""
     oc = _outcome(hit=False, crit="low", blocked=False, raw_damage=0, final_damage=0, target_hp=25)
     line = _render_player_miss(oc, action_phrase="攻击", target_max_hp=25)
-    assert line == "❌ 未命中：史莱姆 闪过了你的攻击（史莱姆 25/25）"
+    assert line == ""
 
 
 # ---------------------------------------------------------------------------
@@ -195,7 +195,7 @@ def test_render_round_miss_via_round() -> None:
     """render_battle_round：未命中走 BREP-03；并行路钩子（M5-05/06）未落地优雅跳过。"""
     oc = _outcome(hit=False, raw_damage=0, final_damage=0, target_hp=25)
     text = render_battle_round(_report(oc))
-    assert text == "❌ 未命中：史莱姆 闪过了你的攻击（史莱姆 25/25）"
+    assert text == ""  # 2026-09-09：miss 播报移除——整轮空文本
 
 
 def test_render_round_hint_when_max_known() -> None:
@@ -216,7 +216,6 @@ def test_no_banned_emoji_in_all_templates() -> None:
     """本路全部模板输出零装饰 emoji；行首功能性标记仅 ✅/❌（D-01）。"""
     samples = [
         _render_player_hit(_outcome(crit="high"), action_phrase="施放火球术", target_max_hp=25),
-        _render_player_miss(_outcome(hit=False, target_hp=25), action_phrase="攻击"),
         _render_player_defend(_outcome(action_type="guard")),
         _render_player_defend_hit(_outcome(target_hp=19), attacker_name="史莱姆",
                                   action_phrase="撞击", player_max_hp=30),

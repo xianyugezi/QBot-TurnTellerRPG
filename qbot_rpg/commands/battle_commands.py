@@ -184,6 +184,8 @@ class EnrichedTurnReport:
     log: Tuple[Mapping[str, Any], ...] = ()
     outcomes: Tuple[Any, ...] = ()
     enemy_name: str = "怪物"
+    player_pos: Optional[Tuple[str, str]] = None
+    enemy_pos: Optional[Tuple[str, str]] = None
     player_max_hp: Optional[int] = None
     enemy_max_hp: Optional[int] = None
     exp: int = 0
@@ -264,6 +266,8 @@ def enrich_round_report(
         log=tuple(getattr(report, "log", ()) or ()),
         outcomes=outcomes,
         enemy_name=str(enemy_name or "怪物"),
+        player_pos=getattr(report, "player_pos", None),
+        enemy_pos=getattr(report, "enemy_pos", None),
         player_max_hp=player_max_hp,
         enemy_max_hp=enemy_max_hp,
         exp=int(exp or 0),
@@ -475,8 +479,8 @@ def _build_segments(snap: Mapping[str, Any], turn: int) -> List[Mapping[str, Any
         dmg = entry.get("damage") if isinstance(entry.get("damage"), Mapping) else {}
         rating = entry.get("rating") if isinstance(entry.get("rating"), Mapping) else {}
         segs.append({
-            "seg": i + 1,                                   # 收集器 seg（累计段号）
-            "action": str(entry.get("action") or ""),
+            "seg": len(segs) + 1,                           # 2026-09-09：本轮行动内相对段号
+            "action": str(entry.get("name") or entry.get("action") or ""),
             "final_damage": int(dmg.get("final", 0) or 0),  # type: ignore[union-attr]
             "target_hp": None,                              # 聚合末值由注入侧填充
             "target_max_hp": None,

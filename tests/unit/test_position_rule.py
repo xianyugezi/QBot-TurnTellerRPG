@@ -390,13 +390,11 @@ class TestPositionMissRender:
         )
 
     def test_position_miss_line_uses_template(self) -> None:
-        """position_miss 标记 → 渲染「够不着」专属行（含中文方位）。"""
+        """2026-09-09 用户拍板：miss 播报移除——够不着行不再渲染（模板置空）。"""
         line = _render_enemy_action(self._outcome(True))
-        assert line is not None
-        assert "够不着" in line and "背后上空" in line
-        assert "躲开" not in line
+        assert line is None or line == ""
 
     def test_dodge_miss_still_brep11(self) -> None:
-        """无 position_miss 标记的 miss 走既有躲开行（零行为变化）。"""
+        """2026-09-09：miss 播报移除——躲开行不再渲染。"""
         line = _render_enemy_action(self._outcome(False))
-        assert line is not None and "躲开" in line and "够不着" not in line
+        assert line is None or line == ""

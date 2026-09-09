@@ -170,6 +170,8 @@ def render_battle_round(round_result: Any, *, ctx: Any = None) -> str:
     if hint:
         lines.append(hint)
 
+    # 2026-09-09：空模板行统一过滤（miss 播报移除等——模板置空即行消失）
+    lines = [ln for ln in lines if isinstance(ln, str) and ln.strip()]
     # 16 行折叠（铁律 11 / 5e TC-06）：超限折叠中间过程行，保留首行 + 末段关键行
     return "\n".join(_fold_message_lines(lines, ctx=ctx))
 
@@ -331,20 +333,24 @@ def render_action_hint(
     target_max_hp: int,
     target_name: str = "目标",
     *,
+    player_pos: str = "",
+    enemy_pos: str = "",
     ctx: Any = None,
 ) -> str:
     """BREP-09 操作提示行（战报末行）。
 
-    模板：`你 {HP}/{最大} | {目标} {HP}/{最大} → /攻击[技能] /道具 /防御 /逃跑`
+    模板：`你 {HP}/{最大}{方位} | {目标} {HP}/{最大}{方位} → /攻击[技能] /道具 /防御 /逃跑`
     （battle_action_hint + battle_action_hint_tail，battle_tpl 分区）。
     示例：`你 21/30 | 史莱姆 7/25 → /攻击[技能] /道具 /防御 /逃跑`
+    - 方位 v0.6 HUD：player_pos/target_pos 中文方位格（缺省空串——无方位战斗省略）
     - 含 /最大 分母（5e 原文，【前缀】L31）；多怪时目标取战场第一个存活怪
       （调用方先用 first_alive_enemy 选取目标快照再传入本函数）。
     """
     tail = tpl_of(ctx, "battle_action_hint_tail")
     return tpl_of(ctx, "battle_action_hint", {
         "player_hp": player_hp, "player_max_hp": player_max_hp,
-        "target_name": target_name, "target_hp": target_hp,
+        "target_name": target_name,
+        "player_pos": player_pos, "target_pos": enemy_pos, "target_hp": target_hp,
         "target_max_hp": target_max_hp, "tail": tail,
     })
 
@@ -621,9 +627,14 @@ def _render_action_hint_from_report(round_result: Any, *, ctx: Any = None) -> st
     target_name = str(getattr(round_result, "enemy_name", "") or "目标")
     if player_hp is None or enemy_hp is None or player_max is None or enemy_max is None:
         return ""
+    # 方位 v0.6 HUD：双方方位格（中文；缺省空串——旧快照/无方位战斗省略）
+    _pp = getattr(round_result, "player_pos", None)
+    _ep = getattr(round_result, "enemy_pos", None)
+    player_pos = _position_cn(*_pp) if isinstance(_pp, (tuple, list)) and len(_pp) == 2 else ""
+    enemy_pos = _position_cn(*_ep) if isinstance(_ep, (tuple, list)) and len(_ep) == 2 else ""
     return render_action_hint(
         int(player_hp), int(player_max), int(enemy_hp), int(enemy_max), target_name,
-        ctx=ctx,
+        player_pos=player_pos, enemy_pos=enemy_pos, ctx=ctx,
     )
 
 
@@ -1147,6 +1158,9 @@ def _render_combo_segments(outcome: Any, *, ctx: Any = None) -> List[str]:
         seg_no = int(s.get("seg", len(lines) + 1))
         action = str(s.get("action", "") or "")
         dmg = int(s.get("final_damage", 0))
+        if dmg <= 0 and not bool(s.get("blocked", False)):
+            # 2026-09-09：0 伤害段（miss/完全防穿）不渲染——无信息量噪音
+            continue
         target = str(s.get("target", "") or getattr(outcome, "target", "") or "目标")
         hp = int(s.get("target_hp", 0))
         max_hp = int(s.get("target_max_hp", hp))

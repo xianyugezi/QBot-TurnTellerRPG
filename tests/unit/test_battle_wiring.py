@@ -349,7 +349,8 @@ def test_combo_segments_injection_renders_seg_lines() -> None:
     }
     segs = bc._build_segments(snap, turn=2)
     assert len(segs) == 2                       # 本轮玩家两段 → 注入
-    assert segs[0]["seg"] == 2 and segs[1]["seg"] == 3   # 收集器累计段号
+    # 2026-09-09：段号改为本轮行动内相对（原收集器累计号）
+    assert segs[0]["seg"] == 1 and segs[1]["seg"] == 2
     assert bc._build_segments(snap, turn=1) == []        # 单段 → 不注入
 
     report = SimpleNamespace(
@@ -364,7 +365,7 @@ def test_combo_segments_injection_renders_seg_lines() -> None:
         report, enemy_name="史莱姆", player_max_hp=30, enemy_max_hp=40, segments=segs,
     )
     text = br.render_battle_round(enriched)
-    assert "第 2 段：连斩 造成 6 伤害" in text
-    assert "第 3 段：连斩 造成 7 伤害" in text
+    assert "第 1 段：连斩 造成 6 伤害" in text
+    assert "第 2 段：连斩 造成 7 伤害" in text
     assert "（史莱姆 18/40）" in text          # target_hp 聚合末值近似 + 展示名
     assert "（会心·中阶 ×1.7）" in text       # 段内会心附注（第 2 段 crit=mid）

@@ -250,7 +250,9 @@
   "block_mode": "auto",
   "id": "vc_charge",
   "name": "蓄势",
-  "desc": "蓄·蓄势：轻击蓄力，蓄力 +1，减伤 20%（蓄满 3 层后碎颅变崩山）"
+  "desc": "蓄·蓄势：轻击蓄力，蓄力 +1，减伤 20%（蓄满 3 层后碎颅变崩山）",
+  "counter_type": "parry",
+  "counter_skill": "vc_charge_counter"
  },
  {
   "type": "active",
@@ -683,7 +685,9 @@
   "energy_gain": {
    "focus": 1
   },
-  "desc": "蓄·蓄刃：蓄力轻挥，蓄刃 +1 减伤 15%（大剑蓄力架势——满 3 刃出终结）"
+  "desc": "蓄·蓄刃：蓄力轻挥，蓄刃 +1 减伤 15%（大剑蓄力架势——满 3 刃出终结）",
+  "counter_type": "parry",
+  "counter_skill": "rb_charge_counter"
  },
  {
   "type": "active",
@@ -1247,7 +1251,9 @@
    "stamina": 1
   },
   "energy_gain": {},
-  "desc": "冲·冲脉斩：霸体突进，本回减伤 30%，刃力 +1"
+  "desc": "冲·冲脉斩：霸体突进，本回减伤 30%，刃力 +1",
+  "counter_type": "parry",
+  "counter_skill": "vs_dash_counter"
  },
  {
   "type": "active",
@@ -6447,5 +6453,101 @@
   "name": "回收·反击",
   "desc": "反·回收反击：侧撤闪过攻击回身逆斩 250%（闪反成功派生——不可主动施放）",
   "id": "sw_recall_counter"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 250,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_swaxe"
+  ],
+  "job_form": null,
+  "level": 1,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 0
+  },
+  "hit_mod": 0.0,
+  "crit_mod": 0.0,
+  "block_mode": "normal",
+  "derive_only": true,
+  "name": "冲脉·反击",
+  "desc": "反·冲脉反击：霸体挡下攻击顺势冲斩 250%（防反成功派生——不可主动施放）",
+  "id": "vs_dash_counter"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 250,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "ridge_blade"
+  ],
+  "job_form": null,
+  "level": 1,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 0
+  },
+  "hit_mod": 0.0,
+  "crit_mod": 0.0,
+  "block_mode": "normal",
+  "derive_only": true,
+  "name": "蓄刃·反击",
+  "desc": "反·蓄刃反击：蓄力格挡成功顺势重斩 250%（防反成功派生——不可主动施放）",
+  "id": "rb_charge_counter"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 250,
+  "attack_type": "blunt",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_crusher"
+  ],
+  "job_form": null,
+  "level": 1,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 0
+  },
+  "hit_mod": 0.0,
+  "crit_mod": 0.0,
+  "block_mode": "normal",
+  "derive_only": true,
+  "name": "蓄势·反击",
+  "desc": "反·蓄势反击：蓄力格挡成功顺势重锤 250%（防反成功派生——不可主动施放）",
+  "id": "vc_charge_counter"
  }
 ]

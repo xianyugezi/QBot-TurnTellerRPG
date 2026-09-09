@@ -3573,5 +3573,1048 @@
   "desc": "压·袭脉空压：170% 空中强击+20 固有破坏力，行动后落地（land）——【压测面：空中强击 + land 落地（伤害+落地同行动）】",
   "break_power": 20,
   "air_policy": "land"
+ },
+ {
+  "type": "basic",
+  "kind": "damage",
+  "power": 110,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "sword_aura",
+    "count": 15
+   },
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "sword_seal",
+    "count": 1
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_sworder"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "sw_slash",
+  "name": "御剑·斩",
+  "energy_gain": {
+   "focus": 1
+  },
+  "desc": "攻·御剑斩：飞剑纵斩，命中灌注剑势 +15 并凝 1 剑印（印满 3 普攻自化为万象斩）"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 45,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "sword_aura",
+    "count": 15
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_sworder"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 4,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "sw_omni_slash",
+  "name": "御剑·万象斩",
+  "derive_only": true,
+  "air_policy": "land",
+  "desc": "万象斩：三印齐发，飞剑分袭四向（四段各向破位）；跃空施放则斩空中四向并落地"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 150,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "sword_aura",
+    "count": 15
+   },
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "sword_flow",
+    "count": 1
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {
+   "sword_aura": 50
+  },
+  "job_restrict": [
+   "vein_sworder"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "sw_thrust",
+  "name": "御剑·突",
+  "desc": "式·御剑突：突剑一击 150%，耗剑势 50（命中灌注 +15）；连用每次 +10%（连势印）"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 165,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "sword_aura",
+    "count": 15
+   },
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "sword_flow",
+    "count": 1
+   },
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "sword_aura",
+    "count": 40
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {
+   "sword_aura": 50
+  },
+  "job_restrict": [
+   "vein_sworder"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "sw_thrust_2",
+  "name": "御剑·突·贰",
+  "derive_only": true,
+  "desc": "突剑第 2 连 165%（连用递增 +10%），整百收势回剑势 40"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 180,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "sword_aura",
+    "count": 15
+   },
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "sword_flow",
+    "count": 1
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {
+   "sword_aura": 50
+  },
+  "job_restrict": [
+   "vein_sworder"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "sw_thrust_3",
+  "name": "御剑·突·叁",
+  "derive_only": true,
+  "desc": "突剑第 3 连 180%（连用递增 +10%）"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 195,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "sword_aura",
+    "count": 15
+   },
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "sword_flow",
+    "count": 1
+   },
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "sword_aura",
+    "count": 80
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {
+   "sword_aura": 50
+  },
+  "job_restrict": [
+   "vein_sworder"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "sw_thrust_4",
+  "name": "御剑·突·肆",
+  "derive_only": true,
+  "desc": "突剑第 4 连 195%（连用递增 +10%），整百收势回剑势 80"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 210,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "sword_aura",
+    "count": 15
+   },
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "sword_flow",
+    "count": 1
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {
+   "sword_aura": 50
+  },
+  "job_restrict": [
+   "vein_sworder"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "sw_thrust_5",
+  "name": "御剑·突·伍",
+  "derive_only": true,
+  "desc": "突剑第 5 连 210%（连用递增 +10%）"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 225,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "sword_aura",
+    "count": 15
+   },
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "sword_flow",
+    "count": 1
+   },
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "sword_aura",
+    "count": 120
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {
+   "sword_aura": 50
+  },
+  "job_restrict": [
+   "vein_sworder"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "sw_thrust_6",
+  "name": "御剑·突·陆",
+  "derive_only": true,
+  "desc": "突剑第 6 连 225%（连用递增 +10%），整百收势回剑势 120"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 190,
+  "attack_type": "pierce",
+  "element": null,
+  "effects": [
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "sword_aura",
+    "count": 15
+   },
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "sw_pierce_unlock",
+    "count": 1
+   },
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "sw_tier2_pierce"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {
+   "sword_seal": 1
+  },
+  "job_restrict": [
+   "vein_sworder"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "sw_pierce",
+  "name": "御剑·穿锋",
+  "desc": "式·穿锋（1 印）：穿锋剑气单点部位穿透 190%，耗 1 剑印；解锁穿锋诀，1 回合内可接穿锋·极"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 200,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "sword_aura",
+    "count": 15
+   },
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "sw_flank_unlock",
+    "count": 1
+   },
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "sw_tier2_flank"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {
+   "sword_seal": 2
+  },
+  "job_restrict": [
+   "vein_sworder"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 2,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "sw_flank",
+  "name": "御剑·双锋",
+  "desc": "式·双锋（2 印）：剑气分袭两侧部位 200%（两段各向破位），耗 2 剑印；解锁双锋诀，1 回合内可接双锋·极"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 210,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "sword_aura",
+    "count": 15
+   },
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "sw_omni_unlock",
+    "count": 1
+   },
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "sw_tier2_omni"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {
+   "sword_seal": 2
+  },
+  "job_restrict": [
+   "vein_sworder"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 4,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "sw_omni",
+  "name": "御剑·四象",
+  "desc": "式·四象（3 印）：剑化四象分袭四向部位 210%（四段各向破位），耗 2 剑印；解锁四象诀，1 回合内可接四象·极"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 155,
+  "attack_type": "pierce",
+  "element": null,
+  "effects": [
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "sword_aura",
+    "count": 15
+   },
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "sw_tier2_pierce"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_sworder"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "sw_pierce_f",
+  "name": "御剑·穿锋·诀",
+  "derive_only": true,
+  "desc": "穿锋诀（无印常驻）：穿锋剑式无印版 155%，命中部位穿透；1 回合内可接穿锋·极"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 175,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "sword_aura",
+    "count": 15
+   },
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "sw_tier2_flank"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_sworder"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 2,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "sw_flank_f",
+  "name": "御剑·双锋·诀",
+  "derive_only": true,
+  "desc": "双锋诀（无印常驻）：双锋剑式无印版 175% 两段；1 回合内可接双锋·极"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 190,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "sword_aura",
+    "count": 15
+   },
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "sw_tier2_omni"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_sworder"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 4,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "sw_omni_f",
+  "name": "御剑·四象·诀",
+  "derive_only": true,
+  "desc": "四象诀（无印常驻）：四象剑式无印版 190% 四段；1 回合内可接四象·极"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 240,
+  "attack_type": "pierce",
+  "element": null,
+  "effects": [
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "sword_aura",
+    "count": 15
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_sworder"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "sw_pierce_x",
+  "name": "御剑·穿锋·极",
+  "derive_only": true,
+  "air_policy": "land",
+  "desc": "穿锋·极：更高穿透 240% 单点部位；跃空施放落地（仅 1 回合窗口，未用消失）"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 250,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "sword_aura",
+    "count": 15
+   },
+   {
+    "effect": "sw_flank_dot_fx"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_sworder"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 2,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "sw_flank_x",
+  "name": "御剑·双锋·极",
+  "derive_only": true,
+  "air_policy": "land",
+  "desc": "双锋·极：两侧 250% 两段，残响 2 回合持续两侧伤害；跃空施放落地（1 回合窗口）"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 270,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "sword_aura",
+    "count": 15
+   },
+   {
+    "effect": "sw_omni_dot_fx"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_sworder"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 4,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "sw_omni_x",
+  "name": "御剑·四象·极",
+  "derive_only": true,
+  "air_policy": "land",
+  "desc": "四象·极：四向 270% 四段，残响 2 回合持续四向伤害；跃空施放落地（1 回合窗口）"
+ },
+ {
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "type": "reposition",
+    "target": "self",
+    "height": "air"
+   },
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "sword_aura",
+    "count": 15
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 1,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_sworder"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "sw_vault",
+  "name": "御剑·腾空",
+  "desc": "机动·腾空：御剑腾空——空中可斩四向壳背，地面技够不到你（天然闪反）；腾空斩击灌注剑势 +15"
+ },
+ {
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "type": "reposition",
+    "target": "self",
+    "side": "right"
+   },
+   {
+    "effect": "sw_circle_guard"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 1,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_sworder"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "sw_circle",
+  "name": "御剑·回环",
+  "desc": "机动·回环：侧移闪反——横掠右侧并起回环架势（本回减伤 30%）"
+ },
+ {
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "type": "reposition",
+    "target": "self",
+    "side": "left"
+   },
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "sword_aura",
+    "count": 30
+   },
+   {
+    "effect": "sw_recall_guard"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 1,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_sworder"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "sw_recall",
+  "name": "御剑·回收",
+  "desc": "机动·回收：收剑归鞘侧撤——回收飞剑余势 +30 剑势，回收架势本回减伤 20%"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 160,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "sword_aura",
+    "count": 15
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_sworder"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "sw_drop",
+  "name": "御剑·落",
+  "air_policy": "land",
+  "desc": "空·御剑落：空中驭剑坠击 160% 并落地（空中收势技，落地后回常态）"
+ },
+ {
+  "type": "active",
+  "kind": "status",
+  "power": 0,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "effect": "guard_up"
+   },
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "sword_seal",
+    "count": 1
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 2,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_sworder"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "sw_guard",
+  "name": "御剑·守势",
+  "desc": "守·御剑守势：举剑护体本回减伤 40%（防反架势），凝 1 剑印保底；冷却 2"
+ },
+ {
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "effect": "sw_aura_shield"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 3,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {
+   "sword_aura": 100
+  },
+  "job_restrict": [
+   "vein_sworder"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "sw_aura_blade",
+  "name": "御剑·剑罡",
+  "desc": "罡·剑罡化盾：耗 100 剑势化 300 剑罡护盾 2 回合；冷却 3"
  }
 ]

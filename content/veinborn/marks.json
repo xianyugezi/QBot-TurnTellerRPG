@@ -313,4 +313,83 @@
   "duration": "battle",
   "max_stack": 5
  }
+,
+ {
+  "id": "sword_aura",
+  "name": "剑势",
+  "icon": "势",
+  "type": "mark",
+  "max_stack": 300,
+  "appliable_to": [
+   "self"
+  ],
+  "polarity": "positive",
+  "duration": "battle",
+  "desc": "御剑师地脉剑势：伤害命中 +15，上限 300；剑式消耗、满档回馈、剑盾转化"
+ },
+ {
+  "id": "sword_seal",
+  "name": "剑印",
+  "icon": "印",
+  "type": "mark",
+  "max_stack": 3,
+  "appliable_to": [
+   "self"
+  ],
+  "polarity": "positive",
+  "duration": "battle",
+  "desc": "御剑凝印：普攻命中 +1；三印驱动剑式与万象普攻"
+ },
+ {
+  "id": "sword_flow",
+  "name": "连势",
+  "icon": "连",
+  "type": "mark",
+  "max_stack": 6,
+  "appliable_to": [
+   "self"
+  ],
+  "polarity": "positive",
+  "duration": "battle",
+  "desc": "突剑连用计数：每用一次 +1，伤害阶梯 +10%/连；2/4/6 连整百回馈剑势"
+ },
+ {
+  "id": "sw_pierce_unlock",
+  "name": "穿锋诀",
+  "icon": "诀",
+  "type": "mark",
+  "max_stack": 1,
+  "appliable_to": [
+   "self"
+  ],
+  "polarity": "positive",
+  "duration": "battle",
+  "desc": "穿锋剑式解锁（用过印版后常驻无印版可用）"
+ },
+ {
+  "id": "sw_flank_unlock",
+  "name": "双锋诀",
+  "icon": "诀",
+  "type": "mark",
+  "max_stack": 1,
+  "appliable_to": [
+   "self"
+  ],
+  "polarity": "positive",
+  "duration": "battle",
+  "desc": "双锋剑式解锁"
+ },
+ {
+  "id": "sw_omni_unlock",
+  "name": "四象诀",
+  "icon": "诀",
+  "type": "mark",
+  "max_stack": 1,
+  "appliable_to": [
+   "self"
+  ],
+  "polarity": "positive",
+  "duration": "battle",
+  "desc": "四象剑式解锁"
+ }
 ]

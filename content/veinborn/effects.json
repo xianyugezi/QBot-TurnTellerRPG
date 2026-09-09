@@ -589,4 +589,54 @@
   "polarity": "negative",
   "mark": "vd_erode"
  }
+,
+ {
+  "id": "sw_flank_dot_fx",
+  "name": "双锋残响dot",
+  "type": "dot",
+  "status": "sw_flank_dot",
+  "value": "4%",
+  "tick": "turn_end",
+  "turns": 2,
+  "target": "enemy",
+  "desc": "双锋·极残响：接下来 2 回合回合末对敌造成 4% 生命伤害"
+ },
+ {
+  "id": "sw_omni_dot_fx",
+  "name": "四象残响dot",
+  "type": "dot",
+  "status": "sw_omni_dot",
+  "value": "3%",
+  "tick": "turn_end",
+  "turns": 2,
+  "target": "enemy",
+  "desc": "四象·极残响：接下来 2 回合回合末对敌造成 3% 生命伤害"
+ },
+ {
+  "id": "sw_aura_shield",
+  "name": "剑罡盾",
+  "type": "shield",
+  "value": 300,
+  "turns": 2,
+  "target": "self",
+  "desc": "剑势化罡：300 护盾 2 回合"
+ },
+ {
+  "id": "sw_circle_guard",
+  "name": "回环架势",
+  "type": "mitigation",
+  "power": 30,
+  "duration": 1,
+  "target": "self",
+  "desc": "御剑回环：本回所受伤害 -30%（侧移闪反架势）"
+ },
+ {
+  "id": "sw_recall_guard",
+  "name": "回收架势",
+  "type": "mitigation",
+  "power": 20,
+  "duration": 1,
+  "target": "self",
+  "desc": "收剑回防：本回所受伤害 -20%"
+ }
 ]

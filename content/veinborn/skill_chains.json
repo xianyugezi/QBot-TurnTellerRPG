@@ -547,4 +547,428 @@
    }
   ]
  }
+,
+ {
+  "id": "chain_sw_omni_slash",
+  "name": "万象斩链",
+  "trigger_skill": "sw_slash",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "sw_slash",
+    "to": "sw_omni_slash",
+    "tag": "none",
+    "condition": {
+     "self_marks": {
+      "sword_seal": {
+       "min": 3
+      }
+     }
+    },
+    "priority": 100,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
+ },
+ {
+  "id": "chain_sw_thrust_2",
+  "name": "突剑连势·2",
+  "trigger_skill": "sw_thrust",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "sw_thrust",
+    "to": "sw_thrust_2",
+    "tag": "none",
+    "condition": {
+     "self_marks": {
+      "sword_flow": {
+       "eq": 1
+      }
+     }
+    },
+    "priority": 52,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
+ },
+ {
+  "id": "chain_sw_thrust_3",
+  "name": "突剑连势·3",
+  "trigger_skill": "sw_thrust",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "sw_thrust",
+    "to": "sw_thrust_3",
+    "tag": "none",
+    "condition": {
+     "self_marks": {
+      "sword_flow": {
+       "eq": 2
+      }
+     }
+    },
+    "priority": 53,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
+ },
+ {
+  "id": "chain_sw_thrust_4",
+  "name": "突剑连势·4",
+  "trigger_skill": "sw_thrust",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "sw_thrust",
+    "to": "sw_thrust_4",
+    "tag": "none",
+    "condition": {
+     "self_marks": {
+      "sword_flow": {
+       "eq": 3
+      }
+     }
+    },
+    "priority": 54,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
+ },
+ {
+  "id": "chain_sw_thrust_5",
+  "name": "突剑连势·5",
+  "trigger_skill": "sw_thrust",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "sw_thrust",
+    "to": "sw_thrust_5",
+    "tag": "none",
+    "condition": {
+     "self_marks": {
+      "sword_flow": {
+       "eq": 4
+      }
+     }
+    },
+    "priority": 55,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
+ },
+ {
+  "id": "chain_sw_thrust_6",
+  "name": "突剑连势·6",
+  "trigger_skill": "sw_thrust",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "sw_thrust",
+    "to": "sw_thrust_6",
+    "tag": "none",
+    "condition": {
+     "self_marks": {
+      "sword_flow": {
+       "eq": 5
+      }
+     }
+    },
+    "priority": 56,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
+ },
+ {
+  "id": "chain_sw_pierce",
+  "name": "穿锋链",
+  "trigger_skill": "sw_thrust",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "sw_thrust",
+    "to": "sw_pierce",
+    "tag": "none",
+    "condition": {
+     "self_marks": {
+      "sword_seal": {
+       "min": 1
+      }
+     }
+    },
+    "priority": 80,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
+ },
+ {
+  "id": "chain_sw_flank",
+  "name": "双锋链",
+  "trigger_skill": "sw_thrust",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "sw_thrust",
+    "to": "sw_flank",
+    "tag": "none",
+    "condition": {
+     "self_marks": {
+      "sword_seal": {
+       "min": 2
+      }
+     }
+    },
+    "priority": 85,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
+ },
+ {
+  "id": "chain_sw_omni",
+  "name": "四象链",
+  "trigger_skill": "sw_thrust",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "sw_thrust",
+    "to": "sw_omni",
+    "tag": "none",
+    "condition": {
+     "self_marks": {
+      "sword_seal": {
+       "min": 3
+      }
+     }
+    },
+    "priority": 87,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
+ },
+ {
+  "id": "chain_sw_pierce_free",
+  "name": "穿锋诀链",
+  "trigger_skill": "sw_thrust",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "sw_thrust",
+    "to": "sw_pierce_f",
+    "tag": "none",
+    "condition": {
+     "or": [
+      {
+       "self_marks": {
+        "sword_seal": {
+         "min": 1
+        }
+       }
+      },
+      {
+       "self_marks": {
+        "sw_pierce_unlock": {
+         "min": 1
+        }
+       }
+      }
+     ]
+    },
+    "priority": 70,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
+ },
+ {
+  "id": "chain_sw_flank_free",
+  "name": "双锋诀链",
+  "trigger_skill": "sw_thrust",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "sw_thrust",
+    "to": "sw_flank_f",
+    "tag": "none",
+    "condition": {
+     "or": [
+      {
+       "self_marks": {
+        "sword_seal": {
+         "min": 2
+        }
+       }
+      },
+      {
+       "self_marks": {
+        "sw_flank_unlock": {
+         "min": 1
+        }
+       }
+      }
+     ]
+    },
+    "priority": 72,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
+ },
+ {
+  "id": "chain_sw_omni_free",
+  "name": "四象诀链",
+  "trigger_skill": "sw_thrust",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "sw_thrust",
+    "to": "sw_omni_f",
+    "tag": "none",
+    "condition": {
+     "or": [
+      {
+       "self_marks": {
+        "sword_seal": {
+         "min": 3
+        }
+       }
+      },
+      {
+       "self_marks": {
+        "sw_omni_unlock": {
+         "min": 1
+        }
+       }
+      }
+     ]
+    },
+    "priority": 74,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
+ },
+ {
+  "id": "chain_sw_pierce_x",
+  "name": "穿锋极链",
+  "trigger_skill": "sw_thrust",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "sw_thrust",
+    "to": "sw_pierce_x",
+    "tag": "none",
+    "condition": {
+     "self_status": {
+      "has": [
+       "sw_tier2_pierce"
+      ]
+     }
+    },
+    "priority": 95,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
+ },
+ {
+  "id": "chain_sw_flank_x",
+  "name": "双锋极链",
+  "trigger_skill": "sw_thrust",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "sw_thrust",
+    "to": "sw_flank_x",
+    "tag": "none",
+    "condition": {
+     "self_status": {
+      "has": [
+       "sw_tier2_flank"
+      ]
+     }
+    },
+    "priority": 96,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
+ },
+ {
+  "id": "chain_sw_omni_x",
+  "name": "四象极链",
+  "trigger_skill": "sw_thrust",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "sw_thrust",
+    "to": "sw_omni_x",
+    "tag": "none",
+    "condition": {
+     "self_status": {
+      "has": [
+       "sw_tier2_omni"
+      ]
+     }
+    },
+    "priority": 97,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
+ }
 ]

@@ -332,4 +332,35 @@
   },
   "description": "探针职业：限时形态×冷却空窗×双资源轨×形态内链全审计。"
  }
+,
+ {
+  "id": "vein_sworder",
+  "name": "御剑师",
+  "difficulty": "hard",
+  "playstyle": "御剑攒势，印衍三锋",
+  "recommended_newbie": false,
+  "resource_axes": [
+   "stamina",
+   "focus"
+  ],
+  "mechanic_tags": [
+   "近战",
+   "飞剑",
+   "剑势",
+   "剑印",
+   "方位",
+   "复合"
+  ],
+  "weapon_types": [
+   "sword"
+  ],
+  "growth": {
+   "atk": 10.5,
+   "dfn": 5.5,
+   "foc": 7.0,
+   "hp": 11.5,
+   "mp": 1.2
+  },
+  "description": "借地脉脉气御剑的剑修：剑势如池、剑印如符——伤害灌注剑势（每击 +15，上限 300）、普攻凝剑印（上限 3）。三印驱动三种剑式（穿锋/双锋/四象），势满换盾或回锋，是唯一不靠身位也够得到四向部位的御器者。"
+ }
 ]

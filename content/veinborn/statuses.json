@@ -318,5 +318,77 @@
   "decay": "none",
   "effects": [],
   "desc": "脉冻后 1 回合窗口：织脉·贯壳可自动接冻裂·贯（未用消失）"
+ },
+ {
+  "id": "po_close_window",
+  "name": "清算之势",
+  "max_stack": 1,
+  "duration": {
+   "turns": 2,
+   "charges": 0
+  },
+  "decay": "none",
+  "effects": [],
+  "desc": "清算后 1 回合窗口：刺账自动变收账·终息（未用消失）"
+ },
+ {
+  "id": "po_rate_window",
+  "name": "高息之势",
+  "max_stack": 1,
+  "duration": {
+   "turns": 2,
+   "charges": 0
+  },
+  "decay": "none",
+  "effects": [],
+  "desc": "高息率后 1 回合窗口：活期蚀息自动变高息·活期（未用消失）"
+ },
+ {
+  "id": "po_toll_window",
+  "name": "放账之势",
+  "max_stack": 1,
+  "duration": {
+   "turns": 2,
+   "charges": 0
+  },
+  "decay": "none",
+  "effects": [],
+  "desc": "放账后 1 回合窗口：复利滚息自动变复利·追息（未用消失）"
+ },
+ {
+  "id": "vd_over_window",
+  "name": "轮爆之势",
+  "max_stack": 1,
+  "duration": {
+   "turns": 2,
+   "charges": 0
+  },
+  "decay": "none",
+  "effects": [],
+  "desc": "轮爆后 1 回合窗口：重压可自动接轮爆·二段（未用消失）"
+ },
+ {
+  "id": "vd_erode_window",
+  "name": "蚀爆之势",
+  "max_stack": 1,
+  "duration": {
+   "turns": 2,
+   "charges": 0
+  },
+  "decay": "none",
+  "effects": [],
+  "desc": "蚀爆后 1 回合窗口：轮斩可自动接蚀爆·余蚀（未用消失）"
+ },
+ {
+  "id": "vd_revert_window",
+  "name": "归位之势",
+  "max_stack": 1,
+  "duration": {
+   "turns": 2,
+   "charges": 0
+  },
+  "decay": "none",
+  "effects": [],
+  "desc": "归位后 1 回合窗口：轻旋可自动接归位·重旋（未用消失）"
  }
 ]

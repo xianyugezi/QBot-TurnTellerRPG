@@ -1864,6 +1864,11 @@
    },
    {
     "effect": "po_debt1"
+   },
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "po_toll_window"
    }
   ],
   "mp_cost": 0,
@@ -1892,7 +1897,7 @@
    "stamina": 1
   },
   "energy_gain": {},
-  "desc": "约·蚀约放账：给敌挂盾 350（护盾目标侧接线审计）+自账期+1 敌脉账+1"
+  "desc": "约·蚀约放账：给敌挂盾 350（护盾目标侧接线审计）+自账期+1 敌脉账+1；放账后 1 回合窗口：复利滚息自动派生复利·追息"
  },
  {
   "type": "active",
@@ -1989,6 +1994,11 @@
    },
    {
     "effect": "po_shield150"
+   },
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "po_rate_window"
    }
   ],
   "mp_cost": 0,
@@ -2017,7 +2027,7 @@
    "stamina": 1
   },
   "energy_gain": {},
-  "desc": "率·高息率：CD3+自挂高息 2 回合+自盾 150+账期+1（冷却×状态复合）"
+  "desc": "率·高息率：CD3+自挂高息 2 回合+自盾 150+账期+1（冷却×状态复合）；高息后 1 回合窗口：活期蚀息自动派生高息·活期"
  },
  {
   "type": "active",
@@ -2158,6 +2168,11 @@
    },
    {
     "effect": "po_stagger_hit"
+   },
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "po_close_window"
    }
   ],
   "mp_cost": 0,
@@ -2184,7 +2199,7 @@
   "name": "清算·封息",
   "energy_cost": {},
   "energy_gain": {},
-  "desc": "清·清算封息：400% 大招+清账期清脉账+失衡（账期满 5 自动变——派生）",
+  "desc": "清·清算封息：400% 大招+清账期清脉账+失衡（账期满 5 自动变——派生）；清算后 1 回合收账窗口：刺账自动派生收账·终息",
   "derive_only": true
  },
  {
@@ -3031,6 +3046,11 @@
   "effects": [
    {
     "effect": "vd_grip_clear"
+   },
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "vd_over_window"
    }
   ],
   "mp_cost": 0,
@@ -3057,7 +3077,7 @@
   "name": "过载·轮爆",
   "energy_cost": {},
   "energy_gain": {},
-  "desc": "爆·过载轮爆：300% 掣能满爆发（派生——形态激活期才可派生？）",
+  "desc": "爆·过载轮爆：300% 掣能满爆发（派生——形态激活期才可派生？）；轮爆后 1 回合内进入轮爆之势（可派生轮爆·二段）",
   "derive_only": true
  },
  {
@@ -3101,7 +3121,13 @@
   "power": 0,
   "attack_type": "none",
   "element": null,
-  "effects": [],
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "vd_revert_window"
+   }
+  ],
   "mp_cost": 0,
   "cooldown": 0,
   "tag": "none",
@@ -3128,7 +3154,7 @@
    "stamina": 1
   },
   "energy_gain": {},
-  "desc": "归·轮转归位：即时还原形态（revert_form——还原起形态冷却空窗）",
+  "desc": "归·轮转归位：即时还原形态（revert_form——还原起形态冷却空窗）；归位后 1 回合内进入归位之势（轻旋可派生归位·重旋）",
   "revert_form": true
  },
  {
@@ -3225,6 +3251,11 @@
    },
    {
     "effect": "vd_erode_clear"
+   },
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "vd_erode_window"
    }
   ],
   "mp_cost": 0,
@@ -3251,7 +3282,7 @@
   "name": "袭脉·蚀爆",
   "energy_cost": {},
   "energy_gain": {},
-  "desc": "蚀·蚀爆：320%（形态技派生——掣能满 5 形态内爆发）",
+  "desc": "蚀·蚀爆：320%（形态技派生——掣能满 5 形态内爆发）；蚀爆后 1 回合内进入蚀爆之势（可派生蚀爆·余蚀）",
   "derive_only": true
  },
  {
@@ -5793,6 +5824,348 @@
   "energy_gain": {},
   "desc": "冻裂·贯：脉冻后贯壳 240% 破壳 30（仅脉冻后 1 回合窗口）——【压测面：窗口极式+破位复合】",
   "break_power": 30,
+  "derive_only": true
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 280,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "probe_order"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "po_settle_mid",
+  "name": "锁账·中息",
+  "energy_cost": {},
+  "energy_gain": {},
+  "desc": "锁账·中息：账期 3-4 的中计锁账 280%（账期满 5 仍自动清算 400）——【压测面：档位阶梯与满值既有派生互斥】",
+  "derive_only": true
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 180,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "effect": "po_period1"
+   },
+   {
+    "effect": "po_debt1"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "probe_order"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "po_close_x",
+  "name": "收账·终息",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {},
+  "desc": "收账·终息：清算后收账起新息 180%+账期 1（仅清算后 1 回合窗口）——【压测面：窗口极式与资源重新累积】",
+  "derive_only": true
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 200,
+  "attack_type": "magic",
+  "element": "void",
+  "effects": [
+   {
+    "effect": "po_dot_bleed"
+   },
+   {
+    "effect": "po_debt1"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "probe_order"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 3.0,
+  "block_mode": "auto",
+  "id": "po_rate_x",
+  "name": "高息·活期",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {},
+  "desc": "高息·活期：高息后活期放贷 200%+蚀息+债务 1（仅高息率后 1 回合窗口）——【压测面：窗口极式带 dot 复合】",
+  "derive_only": true
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 220,
+  "attack_type": "pierce",
+  "element": null,
+  "effects": [
+   {
+    "effect": "po_pierce50"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "probe_order"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "ignore",
+  "id": "po_lien_x",
+  "name": "复利·追息",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {},
+  "desc": "复利·追息：放账后滚息 220% 破防（仅放账后 1 回合窗口）——【压测面：窗口极式+穿透复合】",
+  "derive_only": true
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 200,
+  "attack_type": "blunt",
+  "element": null,
+  "effects": [
+   {
+    "effect": "vd_grip2"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_dial"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_cost": {},
+  "energy_gain": {},
+  "id": "vd_heavy_mid",
+  "name": "脉轮·重夯",
+  "desc": "脉轮·重夯：握力 1-2 中档重压 200%（握力满 5 仍轮爆 300）——【压测面：档位阶梯与满值既有互斥】",
+  "derive_only": true
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 240,
+  "attack_type": "blunt",
+  "element": null,
+  "effects": [
+   {
+    "effect": "vd_grip2"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_dial"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_cost": {},
+  "energy_gain": {},
+  "id": "vd_heavy_x",
+  "name": "脉轮·重巅",
+  "desc": "脉轮·重巅：握力 3-4 满档重压 240%——【压测面：档位阶梯上界】",
+  "derive_only": true
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 320,
+  "attack_type": "blunt",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_dial"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_cost": {},
+  "energy_gain": {},
+  "id": "vd_over_x",
+  "name": "轮爆·二段",
+  "desc": "轮爆·二段：轮爆后追压 320%（仅轮爆后 1 回合窗口）——【压测面：窗口极式接清资源爆发】",
+  "derive_only": true
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 300,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_dial"
+  ],
+  "job_form": "dial_form",
+  "level": null,
+  "hits": 2,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_cost": {},
+  "energy_gain": {},
+  "id": "vd_erode_x",
+  "name": "蚀爆·余蚀",
+  "desc": "蚀爆·余蚀：蚀爆后余蚀连斩 300% 两段（仅蚀爆后 1 回合窗口）——【压测面：窗口极式多段接怪身印清零】",
+  "derive_only": true
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 160,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "effect": "vd_grip2"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_dial"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_cost": {},
+  "energy_gain": {},
+  "id": "vd_swing_x",
+  "name": "归位·重旋",
+  "desc": "归位·重旋：归位后重旋 160%+握力 2（仅归位后 1 回合窗口）——【压测面：形态归位窗口接常态资源】",
   "derive_only": true
  }
 ]

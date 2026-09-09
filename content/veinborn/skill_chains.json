@@ -460,6 +460,24 @@
     "armor": true,
     "consume": 0,
     "variant_override": {}
+   },
+   {
+    "from": "po_settle",
+    "to": "po_settle_mid",
+    "tag": "none",
+    "condition": {
+     "self_marks": {
+      "order_period": {
+       "min": 3,
+       "max": 4
+      }
+     }
+    },
+    "priority": 9,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
    }
   ]
  },
@@ -744,6 +762,59 @@
     "armor": false,
     "consume": 0,
     "variant_override": {}
+   },
+   {
+    "from": "vd_heavy",
+    "to": "vd_heavy_mid",
+    "tag": "none",
+    "condition": {
+     "self_marks": {
+      "vd_grip": {
+       "min": 1,
+       "max": 2
+      }
+     }
+    },
+    "priority": 8,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   },
+   {
+    "from": "vd_heavy",
+    "to": "vd_heavy_x",
+    "tag": "none",
+    "condition": {
+     "self_marks": {
+      "vd_grip": {
+       "min": 3,
+       "max": 4
+      }
+     }
+    },
+    "priority": 9,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   },
+   {
+    "from": "vd_heavy",
+    "to": "vd_over_x",
+    "tag": "none",
+    "condition": {
+     "self_status": {
+      "has": [
+       "vd_over_window"
+      ]
+     }
+    },
+    "priority": 97,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
    }
   ]
  },
@@ -766,6 +837,23 @@
      }
     },
     "priority": 1,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   },
+   {
+    "from": "vd_form_strike",
+    "to": "vd_erode_x",
+    "tag": "none",
+    "condition": {
+     "self_status": {
+      "has": [
+       "vd_erode_window"
+      ]
+     }
+    },
+    "priority": 97,
     "mode": "replace",
     "armor": false,
     "consume": 0,
@@ -1309,6 +1397,110 @@
      "self_status": {
       "has": [
        "cw_freeze_window"
+      ]
+     }
+    },
+    "priority": 96,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
+ },
+ {
+  "id": "chain_po_close",
+  "name": "收账·终息链",
+  "trigger_skill": "po_stab",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "po_stab",
+    "to": "po_close_x",
+    "tag": "none",
+    "condition": {
+     "self_status": {
+      "has": [
+       "po_close_window"
+      ]
+     }
+    },
+    "priority": 97,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
+ },
+ {
+  "id": "chain_po_rate_bleed",
+  "name": "高息·活期链",
+  "trigger_skill": "po_bleed",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "po_bleed",
+    "to": "po_rate_x",
+    "tag": "none",
+    "condition": {
+     "self_status": {
+      "has": [
+       "po_rate_window"
+      ]
+     }
+    },
+    "priority": 96,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
+ },
+ {
+  "id": "chain_po_lien_toll",
+  "name": "复利·追息链",
+  "trigger_skill": "po_lien",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "po_lien",
+    "to": "po_lien_x",
+    "tag": "none",
+    "condition": {
+     "self_status": {
+      "has": [
+       "po_toll_window"
+      ]
+     }
+    },
+    "priority": 96,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
+ },
+ {
+  "id": "chain_dial_swing",
+  "name": "归位重旋链",
+  "trigger_skill": "vd_swing",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "vd_swing",
+    "to": "vd_swing_x",
+    "tag": "none",
+    "condition": {
+     "self_status": {
+      "has": [
+       "vd_revert_window"
       ]
      }
     },

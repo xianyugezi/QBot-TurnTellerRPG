@@ -1561,6 +1561,7 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
     # 2026-09-05 技能详情/派生：skill_chain 表注入（原装配缺失 → 派生查无）
     ctx["skill_chains"] = _table_from_registry(deps.registry, "skill_chain")
     ctx["marks"] = _table_from_registry(deps.registry, "mark")  # 2026-09-05 技能派生条件印记名
+    ctx["statuses"] = _table_from_registry(deps.registry, "status")  # 2026-09-09 派生条件姿态名
     # npc_interactions hook（RN-05）：按 id 从 ctx["npcs"] 解析 interactions（N-02 收口，
     # dialog 引擎 _npc_interactions 优先消费本 hook；缺省 [] → 菜单仅「离开」）
     ctx["npc_interactions"] = lambda npc_id: _npc_interactions_of(ctx["npcs"], npc_id)

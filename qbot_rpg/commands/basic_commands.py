@@ -1743,6 +1743,15 @@ def _derived_names(ctx: Mapping[str, Any], sid: str, chain_refs: Sequence[Any]) 
                 continue
             if str(step.get("from") or "") != sid:
                 continue
+            # 连段计数段过滤（2026-09-09：sword_flow 恰等=连用第 N 连形态，非派生）
+            _c0 = step.get("condition")
+            if isinstance(_c0, Mapping):
+                _sm0 = _c0.get("self_marks")
+                if isinstance(_sm0, Mapping) and "sword_flow" in _sm0:
+                    _v0 = _sm0["sword_flow"]
+                    if isinstance(_v0, Mapping) and _v0.get("min") is not None \
+                            and int(_v0.get("max", _v0["min"])) == int(_v0["min"]):
+                        continue
             to_id = step.get("to")
             if not to_id:
                 continue
@@ -2023,25 +2032,71 @@ def _render_skill_chain(ctx: Mapping[str, Any], sid: str) -> str:
                 found = True
                 to_id = str(step.get("to") or "")
                 to_name = _skill_name(ctx, to_id) if to_id else "?"
-                # 条件（count 连用 N 次；tag 标签）
+                # 条件（count 连用 N 次；tag 标签；marks/status/or——2026-09-09 扩展）
                 cond_parts: List[str] = []
                 cond = step.get("condition")
-                if isinstance(cond, Mapping):
-                    cnt = cond.get("count")
+
+                def _mark_cn(mkid: str) -> str:
+                    _tbl = ctx.get("marks") if isinstance(ctx.get("marks"), Mapping) else {}
+                    _d = _tbl.get(str(mkid)) if isinstance(_tbl, Mapping) else None
+                    return str(_d.get("name") or mkid) if isinstance(_d, Mapping) else str(mkid)
+
+                def _status_cn(sid2: str) -> str:
+                    _tbl = ctx.get("statuses") if isinstance(ctx.get("statuses"), Mapping) else {}
+                    _d = _tbl.get(str(sid2)) if isinstance(_tbl, Mapping) else None
+                    return str(_d.get("name") or sid2) if isinstance(_d, Mapping) else str(sid2)
+
+                def _cond_cn(c: Mapping[str, Any]) -> List[str]:
+                    parts: List[str] = []
+                    cnt = c.get("count")
                     if cnt is not None:
-                        # count 可能嵌套 {eq: N} 形态
                         if isinstance(cnt, Mapping) and cnt.get("eq") is not None:
-                            cond_parts.append(f"连用 {cnt['eq']} 次")
+                            parts.append(f"连用 {cnt['eq']} 次")
                         else:
-                            cond_parts.append(f"连用 {cnt} 次")
-                    tm = cond.get("target_marks")
+                            parts.append(f"连用 {cnt} 次")
+                    sm = c.get("self_marks")
+                    if isinstance(sm, Mapping):
+                        for mk, mv in sm.items():
+                            if not isinstance(mv, Mapping):
+                                continue
+                            mn = mv.get("min")
+                            mx = mv.get("max")
+                            if mn is None:
+                                continue
+                            mkn = _mark_cn(str(mk))
+                            if mx is not None and int(mx) == int(mn):
+                                parts.append(f"{mkn} {mn}")
+                            else:
+                                parts.append(f"{mkn}≥{mn}")
+                    ss = c.get("self_status")
+                    if isinstance(ss, Mapping):
+                        for s2 in ss.get("has") or ():
+                            parts.append(f"姿态《{_status_cn(str(s2))}》")
+                    tm = c.get("target_marks")
                     if isinstance(tm, Mapping):
                         for mk, mv in tm.items():
                             if isinstance(mv, Mapping) and mv.get("min") is not None:
-                                _mk_tbl = ctx.get("marks") if isinstance(ctx.get("marks"), Mapping) else {}
-                                _mkd = _mk_tbl.get(str(mk)) if isinstance(_mk_tbl, Mapping) else None
-                                _mkn = str(_mkd.get("name") or mk) if isinstance(_mkd, Mapping) else str(mk)
-                                cond_parts.append(f"目标《{_mkn}》积累 {mv['min']}")
+                                parts.append(f"目标《{_mark_cn(str(mk))}》积累 {mv['min']}")
+                    ors = c.get("or")
+                    if isinstance(ors, list):
+                        subs: List[str] = []
+                        for o2 in ors:
+                            if isinstance(o2, Mapping):
+                                subs.extend(_cond_cn(o2))
+                        if subs:
+                            parts.append("或".join(subs))
+                    return parts
+
+                if isinstance(cond, Mapping):
+                    # 连段计数段过滤（2026-09-09 实机：sword_flow 恰等 = 连用第 N 连
+                    # 自动化形态，非印派生——派生面板不列连段段）
+                    _sm0 = cond.get("self_marks")
+                    if isinstance(_sm0, Mapping) and "sword_flow" in _sm0:
+                        _v0 = _sm0["sword_flow"]
+                        if isinstance(_v0, Mapping) and _v0.get("min") is not None \
+                                and int(_v0.get("max", _v0["min"])) == int(_v0["min"]):
+                            continue
+                    cond_parts.extend(_cond_cn(cond))
                 tag = step.get("tag")
                 if tag and str(tag) != "none":
                     cond_parts.append(f"触发：{tag}")

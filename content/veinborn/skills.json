@@ -1123,7 +1123,9 @@
   "energy_gain": {
    "stamina": 1
   },
-  "desc": "格·脊格：举脊格挡，本回减伤 40%，回 1 精力（大剑防御——收招慢但能挡）"
+  "desc": "格·脊格：举脊格挡，本回减伤 40%，回 1 精力（大剑防御——收招慢但能挡）",
+  "counter_type": "parry",
+  "counter_skill": "rb_guard_counter"
  },
  {
   "type": "basic",
@@ -1676,7 +1678,9 @@
   "name": "填弹·盾构",
   "energy_cost": {},
   "energy_gain": {},
-  "desc": "填·填弹盾构：清零弹耗（回满弹匣），本回减伤 40%（换弹窗口）；填弹后 1 回合窗口"
+  "desc": "填·填弹盾构：清零弹耗（回满弹匣），本回减伤 40%（换弹窗口）；填弹后 1 回合窗口",
+  "counter_type": "parry",
+  "counter_skill": "va_reload_counter"
  },
  {
   "type": "active",
@@ -2454,7 +2458,9 @@
    "stamina": 1
   },
   "energy_gain": {},
-  "desc": "铁·铁闸挡：霸体+减伤20% 当回（X2 霸体窗口真免疫打断）"
+  "desc": "铁·铁闸挡：霸体+减伤20% 当回（X2 霸体窗口真免疫打断）",
+  "counter_type": "parry",
+  "counter_skill": "vg_iron_counter"
  },
  {
   "type": "active",
@@ -4624,7 +4630,9 @@
   "block_mode": "auto",
   "id": "sw_recall",
   "name": "御剑·回收",
-  "desc": "机动·回收：收剑归鞘侧撤——回收飞剑余势 +30 剑势，回收架势本回减伤 20%"
+  "desc": "机动·回收：收剑归鞘侧撤——回收飞剑余势 +30 剑势，回收架势本回减伤 20%",
+  "counter_type": "dodge",
+  "counter_skill": "sw_recall_counter"
  },
  {
   "type": "active",
@@ -5101,7 +5109,9 @@
   "block_mode": "auto",
   "id": "vc_guard",
   "name": "举锤架势",
-  "desc": "守·举锤架势：横锤护体本回减伤 40%（防反架势）；冷却 2"
+  "desc": "守·举锤架势：横锤护体本回减伤 40%（防反架势）；冷却 2",
+  "counter_type": "parry",
+  "counter_skill": "vc_guard_counter"
  },
  {
   "type": "active",
@@ -6197,7 +6207,7 @@
   "chain_refs": [],
   "consume_marks": {},
   "job_restrict": [
-   "probe_order"
+   "vein_sworder"
   ],
   "job_form": null,
   "level": 1,
@@ -6229,7 +6239,7 @@
   "chain_refs": [],
   "consume_marks": {},
   "job_restrict": [
-   "probe_order"
+   "vein_sworder"
   ],
   "job_form": null,
   "level": 1,
@@ -6261,7 +6271,7 @@
   "chain_refs": [],
   "consume_marks": {},
   "job_restrict": [
-   "probe_order"
+   "vein_sworder"
   ],
   "job_form": null,
   "level": 1,
@@ -6277,5 +6287,165 @@
   "name": "腾空·反击",
   "desc": "反·腾空反击：空中闪避借势俯斩 250%（闪反成功派生——不可主动施放）",
   "id": "sw_vault_counter"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 250,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "ridge_blade"
+  ],
+  "job_form": null,
+  "level": 1,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 0
+  },
+  "hit_mod": 0.0,
+  "crit_mod": 0.0,
+  "block_mode": "normal",
+  "derive_only": true,
+  "name": "脊格·反击",
+  "desc": "反·脊格反击：举脊格挡成功顺势重斩 250%（防反成功派生——不可主动施放）",
+  "id": "rb_guard_counter"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 250,
+  "attack_type": "blunt",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_crusher"
+  ],
+  "job_form": null,
+  "level": 1,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 0
+  },
+  "hit_mod": 0.0,
+  "crit_mod": 0.0,
+  "block_mode": "normal",
+  "derive_only": true,
+  "name": "举锤·反击",
+  "desc": "反·举锤反击：横锤格挡成功顺势重锤 250%（防反成功派生——不可主动施放）",
+  "id": "vc_guard_counter"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 250,
+  "attack_type": "pierce",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_archer"
+  ],
+  "job_form": null,
+  "level": 1,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 0
+  },
+  "hit_mod": 0.0,
+  "crit_mod": 0.0,
+  "block_mode": "normal",
+  "derive_only": true,
+  "name": "盾构·反击",
+  "desc": "反·盾构反击：盾构挡下攻击近距补射 250%（防反成功派生——不可主动施放）",
+  "id": "va_reload_counter"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 250,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_gatekeeper"
+  ],
+  "job_form": null,
+  "level": 1,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 0
+  },
+  "hit_mod": 0.0,
+  "crit_mod": 0.0,
+  "block_mode": "normal",
+  "derive_only": true,
+  "name": "铁闸·反击",
+  "desc": "反·铁闸反击：闸身挡下攻击顺势闸斩 250%（防反成功派生——不可主动施放）",
+  "id": "vg_iron_counter"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 250,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_sworder"
+  ],
+  "job_form": null,
+  "level": 1,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 0
+  },
+  "hit_mod": 0.0,
+  "crit_mod": 0.0,
+  "block_mode": "normal",
+  "derive_only": true,
+  "name": "回收·反击",
+  "desc": "反·回收反击：侧撤闪过攻击回身逆斩 250%（闪反成功派生——不可主动施放）",
+  "id": "sw_recall_counter"
  }
 ]

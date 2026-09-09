@@ -239,6 +239,7 @@ def enrich_round_report(
     segments: Optional[Sequence[Mapping[str, Any]]] = None,
     player_action: Optional[Mapping[str, Any]] = None,
     skill_name: Optional[str] = None,
+    enemy_action_name: Optional[str] = None,
 ) -> EnrichedTurnReport:
     """TurnReport → EnrichedTurnReport（纯函数，测试/装配可直接消费）。
 
@@ -255,6 +256,7 @@ def enrich_round_report(
         segments=segments,
         player_action=player_action,
         skill_name=skill_name,
+        enemy_action_name=enemy_action_name,
     )
     return EnrichedTurnReport(
         turn=int(getattr(report, "turn", 0)),
@@ -416,6 +418,7 @@ def _inject_display_outcomes(
     segments: Optional[Sequence[Mapping[str, Any]]] = None,
     player_action: Optional[Mapping[str, Any]] = None,
     skill_name: Optional[str] = None,
+    enemy_action_name: Optional[str] = None,
 ) -> Tuple[Any, ...]:
     """ActionOutcome → 渲染用副本（接线层注入展示字段，M5-08；不改引擎不改模板）。
 
@@ -452,10 +455,13 @@ def _inject_display_outcomes(
                 ]
             injected.append(_outcome_copy(oc, **overrides))
         elif actor == "enemy":
-            injected.append(
-                _outcome_copy(oc, attacker_name=enemy_name, actor_name=enemy_name,
+            _ov2: dict = dict(attacker_name=enemy_name, actor_name=enemy_name,
                               player_max_hp=player_max_hp, target_max_hp=enemy_max_hp)
-            )
+            # 2026-09-09：怪 skill 行动名注入（格挡行/反击行/攻击行显示真实行动名，
+            # 如「幼兽扑咬」——record name 尾取；normal 回落「攻击」）
+            if enemy_action_name:
+                _ov2["action_name"] = enemy_action_name
+            injected.append(_outcome_copy(oc, **_ov2))
         else:
             injected.append(oc)
     return tuple(injected)
@@ -733,6 +739,19 @@ def dispatch_round(
             d = skills.get(sid)
             if isinstance(d, Mapping):
                 skill_name = str(d.get("name") or "") or None
+    # 怪行动名（2026-09-09）：本轮 enemy 行动 record name（skill 类行动如「幼兽扑咬」；
+    # normal/普攻类回落渲染「攻击」不注入）
+    enemy_action_name = None
+    _ar = snap.get("action_record") or ()
+    for _e2 in reversed(_ar):
+        if not isinstance(_e2, Mapping):
+            continue
+        if str(_e2.get("actor") or "") != "enemy":
+            continue
+        _n2 = str(_e2.get("name") or "")
+        if _n2 and _n2 not in ("normal", "attack", "skill"):
+            enemy_action_name = f"使出{_n2}"
+        break
     enriched = enrich_round_report(
         report,
         enemy_name=e_name,
@@ -745,6 +764,7 @@ def dispatch_round(
         segments=segments,
         player_action=player_action,
         skill_name=skill_name,
+        enemy_action_name=enemy_action_name,
     )
     player_outcome = _first_player_outcome(report)
     atype = str(getattr(player_outcome, "action_type", "") or "") if player_outcome else ""

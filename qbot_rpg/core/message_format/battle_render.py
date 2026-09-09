@@ -945,7 +945,7 @@ def _render_enemy_action(outcome: Any, *, ctx: Any = None) -> Optional[str]:
                       if isinstance(e, Mapping) and e.get("type") == "parry"), None)
     if _parry_fx is not None:
         lines.append(tpl_of(ctx, "battle_parry_success",
-                            {"action": str(getattr(outcome, "action_type", "") or "攻击")}))
+                            {"action": _default_action_phrase(outcome)}))
     elif guarding and hit:
         lines.append(_render_player_defend_hit(outcome, ctx=ctx))  # BREP-06（5e §3.1）
     elif atype in _INTENT_TYPES or getattr(outcome, "intent_skill", None):

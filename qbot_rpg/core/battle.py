@@ -2803,8 +2803,13 @@ class BattleEngine:
                 rating0 = {"hit": True, "crit": "low", "blocked": False,
                            "pierce": 0.0, "multi": 0.0}
                 seg0 = {"ch_phys": 0, "ch_elem": 0, "final": 0}
+                _rname = None
+                _rca = action.get("skill_id")
+                if _rca:
+                    _rsd = self.combo_engine().resolve_skill(str(_rca)) or {}
+                    _rname = str(_rsd.get("name") or "") or None
                 self._record_action(attacker, str(action.get("type", "normal")), target,
-                                    rating0, seg0, self._phase)
+                                    rating0, seg0, self._phase, name=_rname)
                 all_effects.append({"type": "parry", "target": target,
                                     "attacker": attacker, "skill_id": _st[1]})
                 _cd = self._run_counter(_st[1])

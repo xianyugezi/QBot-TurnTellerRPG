@@ -1006,13 +1006,16 @@ def _player_with_unlocks(*panels: str) -> Dict[str, Any]:
     return p
 
 
-def test_7c_sets_locked_rejected() -> None:
-    """7C：/套装 SP-F4（unlock_sets）未解锁 → 拒绝 SETS_LOCKED_MSG。"""
+def test_7c_sets_no_unlock_required() -> None:
+    """7C：/套装 全员可看（2026-09-09 拍板）——无 SP-F4 解锁也放行查询。
+
+    未解锁 → 直接进引擎加载（test_demo sets=[] → 空态 SETS_EMPTY，不再拒绝）。
+    """
     player = _player(forged=[], forge_level=1)  # 无 unlock_sets
     ctx = _make_ctx({}, player)
     out = cmd_sets(_parsed("/套装"), ctx)
-    assert out == SETS_LOCKED_MSG
-    assert "未解锁 套装" in out and "技能面板" in out
+    assert "未解锁 套装" not in out
+    assert out == SETS_EMPTY  # 无 sets 数据 → 空态（不拒绝）
 
 
 def test_7c_sets_unlocked_query_list() -> None:

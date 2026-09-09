@@ -101,7 +101,7 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     # —— /套装 /客制（cmd_sets / cmd_augments）——
     "forge_sets_locked": "未解锁 套装（消耗 1 SP 在 技能面板 解锁）",
     "forge_augments_locked": "未解锁 客制（消耗 1 SP 在 技能面板 解锁）",
-    "forge_sets_empty": "当前没有可组成的套装（内容包 forge.json 未配置 sets 段）",
+    "forge_sets_empty": "当前没有可组成的锻造套装（集齐同系列锻造装备即可组成；套装目录待内容配置后开放）",
     "forge_augments_empty": "当前没有可用的客制项（内容包 forge.json 未配置 augments 段）",
     "forge_sets_seg": "{name}（{have}/{total} 件）",
     "forge_sets_row": "{index}. {value}",

@@ -1759,8 +1759,8 @@ def cmd_sets(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     无铸造等级门槛（§1.5「无」）；纯读渲染不覆盖既有确认窗；不执行套装激活（P1 预留）。
     """
     player = _player_of(ctx)
-    if sp_locked(player, SETS_UNLOCK_ID):
-        return SETS_LOCKED_MSG
+    # 2026-09-09 用户拍板：套装效果全员可看——/套装 查询不再受 SP-F4（unlock_sets）
+    # 解锁门槛（SP-F4 保留给后续套装激活 ACT 通道；查询只读展示全开放）
 
     eng = _engine(ctx)
     if not eng.load_trees():
@@ -1771,6 +1771,7 @@ def cmd_sets(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         return SETS_EMPTY
 
     rows = set_lookup(player, sets)
+    # 2026-09-09 全员可看（用户拍板）：玩家无持有件也列出全套装目录（含效果/件名）
     if not rows:
         return SETS_EMPTY
 

@@ -1645,6 +1645,11 @@
    },
    {
     "effect": "va_shield_guard"
+   },
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "va_reload_window"
    }
   ],
   "mp_cost": 0,
@@ -1671,7 +1676,7 @@
   "name": "填弹·盾构",
   "energy_cost": {},
   "energy_gain": {},
-  "desc": "填·填弹盾构：清零弹耗（回满弹匣），本回减伤 40%（换弹窗口）"
+  "desc": "填·填弹盾构：清零弹耗（回满弹匣），本回减伤 40%（换弹窗口）；填弹后 1 回合窗口"
  },
  {
   "type": "active",
@@ -1682,6 +1687,11 @@
   "effects": [
    {
     "effect": "va_charge_clear"
+   },
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "va_recoil_window"
    }
   ],
   "mp_cost": 0,
@@ -1710,7 +1720,7 @@
   "air_policy": "land",
   "energy_cost": {},
   "energy_gain": {},
-  "desc": "炮·贯脉炮：龙击弹爆发 280%，清贯能，霸体贯穿（贯能满自动变）",
+  "desc": "炮·贯脉炮：龙击弹爆发 280%，清贯能，霸体贯穿（贯能满自动变）；炮后 1 回合窗口",
   "derive_only": true
  },
  {
@@ -1719,7 +1729,13 @@
   "power": 180,
   "attack_type": "pierce",
   "element": null,
-  "effects": [],
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "va_rain_window"
+   }
+  ],
   "mp_cost": 0,
   "cooldown": 0,
   "tag": "none",
@@ -1744,7 +1760,7 @@
   "name": "弹雨",
   "energy_cost": {},
   "energy_gain": {},
-  "desc": "雨·弹雨：散射风暴 180%（散射连用 2 次）",
+  "desc": "雨·弹雨：散射风暴 180%（散射连用 2 次）；雨后 1 回合窗口",
   "derive_only": true
  },
  {
@@ -2472,6 +2488,11 @@
    },
    {
     "effect": "vg_vitriol2"
+   },
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "vg_lock_window"
    }
   ],
   "mp_cost": 0,
@@ -2498,7 +2519,7 @@
   "name": "爆锁·满闸",
   "energy_cost": {},
   "energy_gain": {},
-  "desc": "爆·爆锁满闸：260%（derive 变体——充能闸满 4 自动变）",
+  "desc": "爆·爆锁满闸：260%（derive 变体——充能闸满 4 自动变）；爆锁后 1 回合窗口可派生：锁后·连闸",
   "derive_only": true
  },
  {
@@ -2510,6 +2531,11 @@
   "effects": [
    {
     "effect": "vg_vitriol2"
+   },
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "vg_break_window"
    }
   ],
   "mp_cost": 0,
@@ -2536,7 +2562,7 @@
   "name": "破核·闸击",
   "energy_cost": {},
   "energy_gain": {},
-  "desc": "破·破核闸击：220%（派生——浊痕满 6 自动变破闸爆发）",
+  "desc": "破·破核闸击：220%（派生——浊痕满 6 自动变破闸爆发）；破核后 1 回合窗口可派生：破闸·极",
   "derive_only": true
  },
  {
@@ -2631,6 +2657,11 @@
   "effects": [
    {
     "effect": "cw_scorch_clear"
+   },
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "cw_cut_window"
    }
   ],
   "mp_cost": 0,
@@ -2657,7 +2688,7 @@
   "name": "斩杀·噬心",
   "energy_cost": {},
   "energy_gain": {},
-  "desc": "噬·斩杀噬心：260% 斩杀派生（HP≤50%）+清脉灼",
+  "desc": "噬·斩杀噬心：260% 斩杀派生（HP≤50%）+清脉灼；此后 1 回合窗口可接噬心·连",
   "derive_only": true
  },
  {
@@ -2748,6 +2779,11 @@
   "effects": [
    {
     "effect": "cw_freeze"
+   },
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "cw_freeze_window"
    }
   ],
   "mp_cost": 0,
@@ -2776,7 +2812,7 @@
    "stamina": 1
   },
   "energy_gain": {},
-  "desc": "冻·脉冻：控制 1 回合（skip_turn——目标被控期间 dot 照跳审计）"
+  "desc": "冻·脉冻：控制 1 回合（skip_turn——目标被控期间 dot 照跳审计）；脉冻后 1 回合窗口可接冻裂·贯"
  },
  {
   "type": "active",
@@ -2867,6 +2903,11 @@
   "effects": [
    {
     "effect": "cw_scorch1"
+   },
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "cw_twin_window"
    }
   ],
   "mp_cost": 0,
@@ -2893,7 +2934,7 @@
   "name": "双生连斩",
   "energy_cost": {},
   "energy_gain": {},
-  "desc": "双·双生连斩：220% 复合派生（HP≤60% AND 脉灼≥3）+脉灼+1",
+  "desc": "双·双生连斩：220% 复合派生（HP≤60% AND 脉灼≥3）+脉灼+1；此后 1 回合窗口可接双生·极",
   "derive_only": true
  },
  {
@@ -3380,6 +3421,11 @@
     "type": "reposition",
     "target": "self",
     "height": "air"
+   },
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "va_air_window"
    }
   ],
   "mp_cost": 0,
@@ -3405,7 +3451,7 @@
   "id": "va_hover",
   "name": "空降悬停",
   "energy_gain": {},
-  "desc": "机动·空降悬停：脉翼展开悬停上空——甲壳怪背壳只在空中够得到；行动后保持空中"
+  "desc": "机动·空降悬停：脉翼展开悬停上空——甲壳怪背壳只在空中够得到；行动后保持空中；悬停后 1 回合窗口"
  },
  {
   "type": "active",
@@ -3459,6 +3505,11 @@
     "type": "reposition",
     "target": "self",
     "side": "back"
+   },
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "vg_side_window"
    }
   ],
   "mp_cost": 0,
@@ -3487,7 +3538,7 @@
    "stamina": 1
   },
   "energy_gain": {},
-  "desc": "绕·绕闸：绕背机动（自身方位→back，height 轴不动；CD1）——【压测面：reposition 只改 side 轴、height 轴保持不变（side:back 绕背）】"
+  "desc": "绕·绕闸：绕背机动（自身方位→back，height 轴不动；CD1）——【压测面：reposition 只改 side 轴、height 轴保持不变（side:back 绕背）】；绕后之势窗口（1 回合未用消失）"
  },
  {
   "type": "active",
@@ -5195,5 +5246,553 @@
   "derive_only": true,
   "air_policy": "land",
   "desc": "空连·极：空中连刃收势 240% 两段并落地（仅跃空后 1 回合窗口，未用消失）"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 170,
+  "attack_type": "pierce",
+  "element": null,
+  "effects": [
+   {
+    "effect": "va_ammo2"
+   },
+   {
+    "effect": "va_charge2"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_archer"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "ignore",
+  "id": "va_heavy_lite",
+  "name": "贯脉·点",
+  "break_power": 25,
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {},
+  "desc": "贯脉·点：过充初段狙击 170%（弹药+2/过充+2）——档位阶梯轻档",
+  "derive_only": true
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 210,
+  "attack_type": "pierce",
+  "element": null,
+  "effects": [
+   {
+    "effect": "va_ammo2"
+   },
+   {
+    "effect": "va_charge2"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_archer"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "ignore",
+  "id": "va_heavy_mid",
+  "name": "贯脉·聚",
+  "break_power": 30,
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {},
+  "desc": "贯脉·聚：过充中段狙击 210%——档位阶梯中档",
+  "derive_only": true
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 200,
+  "attack_type": "pierce",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_archer"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 2,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "ignore",
+  "id": "va_after_rain",
+  "name": "雨后·追射",
+  "break_power": 25,
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {},
+  "desc": "雨后·追射：弹雨后追击 200% 两段（仅弹雨后 1 回合窗口，未用消失）",
+  "derive_only": true
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 230,
+  "attack_type": "pierce",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_archer"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "ignore",
+  "id": "va_hover_shot",
+  "name": "悬停狙击",
+  "break_power": 35,
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {},
+  "desc": "悬停狙击：空中悬停狙击 230% 破壳（仅悬停后 1 回合窗口，未用消失）",
+  "derive_only": true
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 140,
+  "attack_type": "pierce",
+  "element": null,
+  "effects": [
+   {
+    "effect": "va_charge1"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_archer"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "ignore",
+  "id": "va_shot_full",
+  "name": "填弹·速射",
+  "break_power": 25,
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {},
+  "desc": "填弹·速射：填弹后首射 140%+过充 1（仅填弹后 1 回合窗口，未用消失）",
+  "derive_only": true
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 160,
+  "attack_type": "blunt",
+  "element": null,
+  "effects": [
+   {
+    "effect": "vg_gate1"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_gatekeeper"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vg_key_x",
+  "name": "锁后·连闸",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {},
+  "desc": "锁后·连闸：爆锁后快速铺闸 160%+闸 1（仅爆锁后 1 回合窗口）——【压测面：爆锁清闸后的资源回补窗口】",
+  "derive_only": true
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 300,
+  "attack_type": "blunt",
+  "element": null,
+  "effects": [
+   {
+    "effect": "vg_vitriol2"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_gatekeeper"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vg_break_x",
+  "name": "破闸·极",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {},
+  "desc": "破闸·极：破核后闸击极式 300%+蚀印 2（仅破核后 1 回合窗口）——【压测面：target_marks 满值触发后窗口极式链】",
+  "derive_only": true
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 240,
+  "attack_type": "blunt",
+  "element": null,
+  "effects": [
+   {
+    "effect": "vg_gate_rm4"
+   },
+   {
+    "effect": "vg_vitriol2"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_gatekeeper"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vg_rig_x",
+  "name": "背闸·双扣",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {},
+  "desc": "背闸·双扣：绕后双扣 240%+蚀印 2（仅绕闸后 1 回合窗口）——【压测面：reposition side 与派生窗口联动】",
+  "derive_only": true
+ },
+ {
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "type": "reposition",
+    "target": "self",
+    "side": "back"
+   },
+   {
+    "effect": "vg_gate1"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 1,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_gatekeeper"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vg_side_x",
+  "name": "绕闸·回充",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {},
+  "desc": "绕闸·回充：绕后回闸——位移+闸 1（机动带资源联动）——【压测面：reposition 与 mark_add 资源复合 effects】",
+  "derive_only": true
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 160,
+  "attack_type": "magic",
+  "element": "void",
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_chainweaver"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "cw_pulse_lite",
+  "name": "汲满·小脉",
+  "energy_cost": {},
+  "energy_gain": {},
+  "desc": "汲满·小脉：业力小脉冲 160%（业力恰 2 档）——【压测面：印记恰等 min/max 档位阶梯下界】",
+  "derive_only": true
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 220,
+  "attack_type": "magic",
+  "element": "void",
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_chainweaver"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "cw_pulse_mid",
+  "name": "汲满·中脉",
+  "energy_cost": {},
+  "energy_gain": {},
+  "desc": "汲满·中脉：业力中脉冲 220%（业力恰 4 档）——【压测面：档位阶梯中界；满 6 仍走既有汲满脉冲 300】",
+  "derive_only": true
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 300,
+  "attack_type": "pierce",
+  "element": null,
+  "effects": [
+   {
+    "effect": "cw_scorch1"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_chainweaver"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "cw_kill_x",
+  "name": "噬心·连",
+  "energy_cost": {},
+  "energy_gain": {},
+  "desc": "噬心·连：斩杀后追击 300%+灼印 1（仅噬心后 1 回合窗口）——【压测面：斩杀窗口极式】",
+  "derive_only": true
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 280,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_chainweaver"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 2,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "cw_twin_x",
+  "name": "双生·极",
+  "energy_cost": {},
+  "energy_gain": {},
+  "desc": "双生·极：双生极式 280% 两段（仅双生斩后 1 回合窗口）——【压测面：窗口极式多段】",
+  "derive_only": true
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 240,
+  "attack_type": "pierce",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_chainweaver"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 3,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "cw_pierce_x",
+  "name": "冻裂·贯",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {},
+  "desc": "冻裂·贯：脉冻后贯壳 240% 破壳 30（仅脉冻后 1 回合窗口）——【压测面：窗口极式+破位复合】",
+  "break_power": 30,
+  "derive_only": true
  }
 ]

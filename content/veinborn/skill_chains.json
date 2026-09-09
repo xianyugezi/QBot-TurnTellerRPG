@@ -119,6 +119,76 @@
     "armor": true,
     "consume": 0,
     "variant_override": {}
+   },
+   {
+    "from": "va_heavy",
+    "to": "va_heavy_lite",
+    "tag": "none",
+    "condition": {
+     "self_marks": {
+      "va_charge": {
+       "min": 1,
+       "max": 2
+      }
+     }
+    },
+    "priority": 8,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   },
+   {
+    "from": "va_heavy",
+    "to": "va_heavy_mid",
+    "tag": "none",
+    "condition": {
+     "self_marks": {
+      "va_charge": {
+       "min": 3,
+       "max": 4
+      }
+     }
+    },
+    "priority": 9,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   },
+   {
+    "from": "va_heavy",
+    "to": "va_after_rain",
+    "tag": "none",
+    "condition": {
+     "self_status": {
+      "has": [
+       "va_rain_window"
+      ]
+     }
+    },
+    "priority": 96,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   },
+   {
+    "from": "va_heavy",
+    "to": "va_hover_shot",
+    "tag": "none",
+    "condition": {
+     "self_status": {
+      "has": [
+       "va_air_window"
+      ]
+     }
+    },
+    "priority": 95,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
    }
   ]
  },
@@ -347,6 +417,23 @@
     "armor": false,
     "consume": 0,
     "variant_override": {}
+   },
+   {
+    "from": "va_shot",
+    "to": "va_shot_full",
+    "tag": "none",
+    "condition": {
+     "self_status": {
+      "has": [
+       "va_reload_window"
+      ]
+     }
+    },
+    "priority": 96,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
    }
   ]
  },
@@ -399,6 +486,23 @@
     "armor": false,
     "consume": 0,
     "variant_override": {}
+   },
+   {
+    "from": "vg_key",
+    "to": "vg_key_x",
+    "tag": "none",
+    "condition": {
+     "self_status": {
+      "has": [
+       "vg_lock_window"
+      ]
+     }
+    },
+    "priority": 96,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
    }
   ]
  },
@@ -421,6 +525,40 @@
      }
     },
     "priority": 1,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   },
+   {
+    "from": "vg_rig",
+    "to": "vg_break_x",
+    "tag": "none",
+    "condition": {
+     "self_status": {
+      "has": [
+       "vg_break_window"
+      ]
+     }
+    },
+    "priority": 97,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   },
+   {
+    "from": "vg_rig",
+    "to": "vg_rig_x",
+    "tag": "none",
+    "condition": {
+     "self_status": {
+      "has": [
+       "vg_side_window"
+      ]
+     }
+    },
+    "priority": 96,
     "mode": "replace",
     "armor": false,
     "consume": 0,
@@ -449,6 +587,23 @@
     "armor": false,
     "consume": 0,
     "variant_override": {}
+   },
+   {
+    "from": "cw_kill",
+    "to": "cw_kill_x",
+    "tag": "none",
+    "condition": {
+     "self_status": {
+      "has": [
+       "cw_cut_window"
+      ]
+     }
+    },
+    "priority": 97,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
    }
   ]
  },
@@ -471,6 +626,42 @@
      }
     },
     "priority": 1,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   },
+   {
+    "from": "cw_delay",
+    "to": "cw_pulse_lite",
+    "tag": "none",
+    "condition": {
+     "self_marks": {
+      "cw_karma": {
+       "min": 2,
+       "max": 2
+      }
+     }
+    },
+    "priority": 8,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   },
+   {
+    "from": "cw_delay",
+    "to": "cw_pulse_mid",
+    "tag": "none",
+    "condition": {
+     "self_marks": {
+      "cw_karma": {
+       "min": 4,
+       "max": 4
+      }
+     }
+    },
+    "priority": 9,
     "mode": "replace",
     "armor": false,
     "consume": 0,
@@ -506,6 +697,23 @@
      ]
     },
     "priority": 1,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   },
+   {
+    "from": "cw_twin",
+    "to": "cw_twin_x",
+    "tag": "none",
+    "condition": {
+     "self_status": {
+      "has": [
+       "cw_twin_window"
+      ]
+     }
+    },
+    "priority": 97,
     "mode": "replace",
     "armor": false,
     "consume": 0,
@@ -1048,6 +1256,59 @@
      "self_status": {
       "has": [
        "vs_axe_window"
+      ]
+     }
+    },
+    "priority": 96,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
+ },
+ {
+  "id": "chain_gate_side",
+  "name": "绕闸回充链",
+  "trigger_skill": "vg_side",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "vg_side",
+    "to": "vg_side_x",
+    "tag": "none",
+    "condition": {
+     "self_marks": {
+      "vg_gate": {
+       "min": 1,
+       "max": 3
+      }
+     }
+    },
+    "priority": 60,
+    "mode": "replace",
+    "armor": false,
+    "consume": 0,
+    "variant_override": {}
+   }
+  ]
+ },
+ {
+  "id": "chain_cw_pierce_freeze",
+  "name": "冻裂·贯壳链",
+  "trigger_skill": "cw_pierce",
+  "max_combo": 1,
+  "max_combo_behavior": "reset",
+  "steps": [
+   {
+    "from": "cw_pierce",
+    "to": "cw_pierce_x",
+    "tag": "none",
+    "condition": {
+     "self_status": {
+      "has": [
+       "cw_freeze_window"
       ]
      }
     },

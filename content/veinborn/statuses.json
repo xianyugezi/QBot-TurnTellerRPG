@@ -198,5 +198,125 @@
   "decay": "none",
   "effects": [],
   "desc": "空连之势：切换/跃空后 1 回合窗口（未用消失）"
+ },
+ {
+  "id": "va_recoil_window",
+  "name": "炮后之势",
+  "max_stack": 1,
+  "duration": {
+   "turns": 2,
+   "charges": 0
+  },
+  "decay": "none",
+  "effects": [],
+  "desc": "贯脉炮后 1 回合窗口（未用消失）"
+ },
+ {
+  "id": "va_rain_window",
+  "name": "雨后之势",
+  "max_stack": 1,
+  "duration": {
+   "turns": 2,
+   "charges": 0
+  },
+  "decay": "none",
+  "effects": [],
+  "desc": "弹雨后 1 回合窗口：可接雨后·追射（未用消失）"
+ },
+ {
+  "id": "va_air_window",
+  "name": "悬停之势",
+  "max_stack": 1,
+  "duration": {
+   "turns": 2,
+   "charges": 0
+  },
+  "decay": "none",
+  "effects": [],
+  "desc": "悬停后 1 回合窗口：可接悬停狙击（未用消失）"
+ },
+ {
+  "id": "va_reload_window",
+  "name": "填弹之势",
+  "max_stack": 1,
+  "duration": {
+   "turns": 2,
+   "charges": 0
+  },
+  "decay": "none",
+  "effects": [],
+  "desc": "填弹后 1 回合窗口：脉矢可速射填弹（未用消失）"
+ },
+ {
+  "id": "vg_lock_window",
+  "name": "锁后之势",
+  "max_stack": 1,
+  "duration": {
+   "turns": 2,
+   "charges": 0
+  },
+  "decay": "none",
+  "effects": [],
+  "desc": "爆锁后 1 回合窗口：可放锁后·连闸（未用消失）"
+ },
+ {
+  "id": "vg_break_window",
+  "name": "破后之势",
+  "max_stack": 1,
+  "duration": {
+   "turns": 2,
+   "charges": 0
+  },
+  "decay": "none",
+  "effects": [],
+  "desc": "破核后 1 回合窗口：可放破闸·极（未用消失）"
+ },
+ {
+  "id": "vg_side_window",
+  "name": "绕后之势",
+  "max_stack": 1,
+  "duration": {
+   "turns": 2,
+   "charges": 0
+  },
+  "decay": "none",
+  "effects": [],
+  "desc": "绕闸后 1 回合窗口：双扣闸可接背闸·双扣（未用消失）"
+ },
+ {
+  "id": "cw_cut_window",
+  "name": "噬心之势",
+  "max_stack": 1,
+  "duration": {
+   "turns": 2,
+   "charges": 0
+  },
+  "decay": "none",
+  "effects": [],
+  "desc": "噬心斩后 1 回合窗口：斩杀线可自动接噬心·连（未用消失）"
+ },
+ {
+  "id": "cw_twin_window",
+  "name": "双生之势",
+  "max_stack": 1,
+  "duration": {
+   "turns": 2,
+   "charges": 0
+  },
+  "decay": "none",
+  "effects": [],
+  "desc": "双生斩后 1 回合窗口：复合判定可自动接双生·极（未用消失）"
+ },
+ {
+  "id": "cw_freeze_window",
+  "name": "冻裂之势",
+  "max_stack": 1,
+  "duration": {
+   "turns": 2,
+   "charges": 0
+  },
+  "decay": "none",
+  "effects": [],
+  "desc": "脉冻后 1 回合窗口：织脉·贯壳可自动接冻裂·贯（未用消失）"
  }
 ]

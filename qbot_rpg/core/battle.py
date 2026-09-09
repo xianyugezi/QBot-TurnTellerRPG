@@ -2483,6 +2483,52 @@ class BattleEngine:
             )
         return out
 
+    def _face_enemy(self) -> None:
+        """玩家行动前自动转向怪物（side 归 front——2026-09-09 zerc 实机反馈）。
+
+        每轮行动开始将玩家 side 复位 front（位移技如回环施放后仍 reposition 生效，
+        侧移仅当轮闪避窗口；高度不动——腾空空中行动不受影响）。
+        """
+        try:
+            _cp = self._snap.get("combat_position")
+            if isinstance(_cp, dict):
+                _pe = _cp.get("player")
+                if isinstance(_pe, dict) and str(_pe.get("side") or "front") != "front":
+                    _pe["side"] = "front"
+        except Exception:  # noqa: BLE001 - 归位失败不阻断行动
+            return
+
+    def _settle_air_landing(self) -> None:
+        """空中姿态（腾空/悬停/空连）回合到期自动落地（2026-09-09 zerc 拍板）。
+
+        状态 duration 回合扣减归零由 tick_turn_end 移除；此处兜底：玩家仍滞空但已无
+        任何空中姿态状态 → reposition height=ground（落地）。空中姿态尚存（3 回合内）
+        不落地。
+        """
+        try:
+            _ps, _ph = position_of(self._snap, "player")
+            if _ph != "air":
+                return
+            _rt = self._new_runtime()
+            _air_sids = {"sw_vault_air", "vs_air_window", "va_air_window"}
+            for _inst in _rt.status_instances("player"):
+                if isinstance(_inst, Mapping):
+                    _sid = str(_inst.get("status_id") or _inst.get("id") or "")
+                else:
+                    _sid = str(getattr(_inst, "status_id", None)
+                               or getattr(_inst, "id", "") or "")
+                if _sid in _air_sids:
+                    return
+            _ctx = DamageCtx(raw_damage=0, attack_type="basic", attacker="player",
+                             target="enemy", snapshot=self._snap, runtime=_rt)
+            execute_action({"type": "reposition", "target": "self", "height": "ground"},
+                           _ctx, _rt)
+            self._absorb_runtime(_rt)
+            self._snap.setdefault("battle_notes", []).append(
+                {"type": "air_land", "side": "player", "auto": True})
+        except Exception:  # noqa: BLE001 - 落地失败不阻断回合收尾
+            return
+
     def _trigger_on_dodge(self, defender: str, attacker: str) -> None:
         """闪避回馈（2026-09-09 御剑·腾空原版）：防御方空中被攻击未命中
         （roll miss / 够不着 position miss）→ 遍历其 status def 的
@@ -3299,6 +3345,9 @@ class BattleEngine:
         rt = self._new_runtime()
         log = tick_turn_end(self._snap, rt)
         self._absorb_runtime(rt)
+        # 2026-09-09 跃空姿态到期自动落地（zerc 拍板：跃空只持续 3 回合——
+        # 空中姿态状态回合扣减归零后仍滞空 → 强制落地 ground）
+        self._settle_air_landing()
         # 功能三批2：turn_end 事件（effects trigger=turn_end；在既有 tick 清单
         # 之后并行触发，无配置 → [] 零行为变化）
         self._dispatch_event("turn_end", "player")
@@ -3412,6 +3461,9 @@ class BattleEngine:
         返回 TurnReport（含 outcomes 流水）。一轮一条消息（框架 L69/L1571）。
         """
         action_dict = self._normalize_action(action, params)
+        # 2026-09-09 转向怪（zerc 实机：侧移滞留可无伤站侧白打——玩家行动前自动回正面；
+        # 位移技（回环侧移/腾空跃空）施放后仍生效——侧移仅当轮闪避窗口）
+        self._face_enemy()
         outcomes: List[ActionOutcome] = []
         res = self.do_action("player", action_dict)
         outcomes.append(res)

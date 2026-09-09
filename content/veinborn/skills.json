@@ -106,6 +106,7 @@
  {
   "id": "va_form_shot",
   "name": "贯瞳狙击",
+  "break_power": 30,
   "type": "active",
   "kind": "damage",
   "power": 200,
@@ -204,6 +205,7 @@
   "block_mode": "auto",
   "id": "vc_smash",
   "name": "抡锤",
+  "break_power": 20,
   "energy_gain": {
    "focus": 1
   },
@@ -288,6 +290,7 @@
   "block_mode": "auto",
   "id": "vc_crush",
   "name": "碎颅",
+  "break_power": 30,
   "energy_cost": {
    "stamina": 2
   },
@@ -455,6 +458,7 @@
   "block_mode": "auto",
   "id": "vc_form_finisher",
   "name": "碎脉陨击",
+  "break_power": 50,
   "derive_only": true,
   "desc": "形态终结·碎脉陨击：蓄满派生大招 420%（霸体，命中必失衡）"
  },
@@ -501,6 +505,8 @@
   "block_mode": "auto",
   "id": "vc_avalanche",
   "name": "满蓄·崩山",
+  "break_power": 45,
+  "air_policy": "land",
   "derive_only": true,
   "energy_cost": {
    "stamina": 2
@@ -852,6 +858,7 @@
   "block_mode": "auto",
   "id": "rb_form_finisher",
   "name": "裂脊·终",
+  "break_power": 30,
   "derive_only": true,
   "desc": "形态终结·裂脊终：拔刀架势真蓄爆发 320%（霸体必出）"
  },
@@ -888,6 +895,7 @@
   "block_mode": "auto",
   "id": "rb_spine_breaker",
   "name": "裂脊斩",
+  "break_power": 35,
   "derive_only": true,
   "energy_cost": {
    "stamina": 2
@@ -1341,6 +1349,7 @@
   "block_mode": "auto",
   "id": "vs_combo",
   "name": "连刃",
+  "break_power": 10,
   "energy_cost": {
    "stamina": 1
   },
@@ -1387,6 +1396,7 @@
   "block_mode": "auto",
   "id": "vs_release",
   "name": "释刃",
+  "break_power": 15,
   "energy_cost": {
    "stamina": 1
   },
@@ -1468,6 +1478,7 @@
   "block_mode": "auto",
   "id": "vs_zsb",
   "name": "零距·脉爆",
+  "break_power": 40,
   "energy_cost": {},
   "energy_gain": {},
   "desc": "爆·零距脉爆：剑插敌身引爆——解放大招 320%，清过载耗 2 刃力，命中失衡",
@@ -1502,6 +1513,7 @@
   "block_mode": "auto",
   "id": "vs_groundspin",
   "name": "裂地旋",
+  "break_power": 35,
   "energy_cost": {},
   "energy_gain": {},
   "desc": "旋·裂地旋：斧挥旋横扫 170%（旋斩连用 2 次）",
@@ -1543,6 +1555,7 @@
   "block_mode": "ignore",
   "id": "va_heavy",
   "name": "贯脉",
+  "break_power": 25,
   "energy_cost": {
    "stamina": 1
   },
@@ -1666,6 +1679,8 @@
   "block_mode": "ignore",
   "id": "va_wyvern",
   "name": "贯脉炮",
+  "break_power": 40,
+  "air_policy": "land",
   "energy_cost": {},
   "energy_gain": {},
   "desc": "炮·贯脉炮：龙击弹爆发 280%，清贯能，霸体贯穿（贯能满自动变）",
@@ -3201,8 +3216,7 @@
   "desc": "形态技能组占位（skill_set 引用锚点）",
   "energy_cost": {},
   "energy_gain": {}
- }
-,
+ },
  {
   "type": "active",
   "kind": "utility",
@@ -3240,5 +3254,324 @@
   "name": "跃空",
   "energy_gain": {},
   "desc": "机动·跃空：纵身跃上空中——甲壳怪的背壳只在空中够得到；行动后保持空中"
+ },
+ {
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "type": "reposition",
+    "target": "self",
+    "height": "air"
+   },
+   {
+    "type": "mark_add",
+    "target": "self",
+    "mark": "charge_mark",
+    "count": 1
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 1,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_crusher"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 10
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vc_vault",
+  "name": "跃锤",
+  "energy_gain": {},
+  "desc": "机动·跃锤：举锤纵跃上空蓄势——甲壳类背壳只在空中够得到；行动后保持空中"
+ },
+ {
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "attack_type": "slash",
+  "element": null,
+  "effects": [
+   {
+    "type": "reposition",
+    "target": "self",
+    "height": "air"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 1,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_swaxe"
+  ],
+  "job_form": "blade_form",
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 10
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vs_blade_vault",
+  "name": "脉跃",
+  "energy_gain": {},
+  "desc": "机动·脉跃：剑态纵跃腾空——空中连刃可削甲壳；行动后保持空中"
+ },
+ {
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "attack_type": "pierce",
+  "element": null,
+  "effects": [
+   {
+    "type": "reposition",
+    "target": "self",
+    "height": "air"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 1,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_archer"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 1,
+   "per_battle": 10
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "va_hover",
+  "name": "空降悬停",
+  "energy_gain": {},
+  "desc": "机动·空降悬停：脉翼展开悬停上空——甲壳怪背壳只在空中够得到；行动后保持空中"
+ },
+ {
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "type": "reposition",
+    "target": "self",
+    "height": "air"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 1,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "probe_order"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "po_vault",
+  "name": "跃账",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {},
+  "desc": "跃·跃账：跃空机动（自身高度→air，side 轴不动；CD1）——【压测面：玩家跃空+行动后保持空中（缺省 preserve）】"
+ },
+ {
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "type": "reposition",
+    "target": "self",
+    "side": "back"
+   }
+  ],
+  "mp_cost": 0,
+  "cooldown": 1,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_gatekeeper"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vg_side",
+  "name": "绕闸",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {},
+  "desc": "绕·绕闸：绕背机动（自身方位→back，height 轴不动；CD1）——【压测面：reposition 只改 side 轴、height 轴保持不变（side:back 绕背）】"
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 110,
+  "attack_type": "pierce",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_chainweaver"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 3,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "cw_pierce",
+  "name": "织脉·贯壳",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {},
+  "desc": "织·织脉贯壳：110%×3 段穿刺，每段固有破坏力+12——【压测面：多段 hits>1 技能每段一次破坏力累计（hits×每段 delta）】",
+  "break_power": 12
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 120,
+  "attack_type": "blunt",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_dial"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vd_ground_only",
+  "name": "轮转·贴地",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {
+   "focus": 1
+  },
+  "desc": "转·轮转贴地：120% 贴地轮转，position_rule 仅 ground 部位——【压测面：玩家 position_rule 挑部位交集——升空后该技打不到 air 部位（候选空→纯本体）】",
+  "position_rule": {
+   "height": [
+    "ground"
+   ]
+  }
+ },
+ {
+  "type": "active",
+  "kind": "damage",
+  "power": 170,
+  "attack_type": "blunt",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "vein_dial"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "id": "vd_air_heavy",
+  "name": "袭脉·空压",
+  "energy_cost": {
+   "stamina": 1
+  },
+  "energy_gain": {
+   "focus": 1
+  },
+  "desc": "压·袭脉空压：170% 空中强击+20 固有破坏力，行动后落地（land）——【压测面：空中强击 + land 落地（伤害+落地同行动）】",
+  "break_power": 20,
+  "air_policy": "land"
  }
 ]

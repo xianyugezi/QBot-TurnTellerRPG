@@ -187,6 +187,13 @@ def _apply_job_switch(
 ) -> Mapping[str, Any]:
     """转职执行：更新 player job_id + 技能位重排落档（14C 接口）。"""
     job_id = str(job.get("id") or "")
+    # 2026-09-09 用户拍板：职业成长跟随职业——转职需按新旧职业成长差
+    # 补正白值（重算在 job_id 更新后执行；记录旧职业供补差）。
+    _old_player = ctx.get("player")
+    if isinstance(_old_player, MutableMapping):
+        _old_job_id = str(_old_player.get("job_id") or "")
+    else:
+        _old_job_id = str(getattr(_old_player, "job_id", "") or "") if _old_player is not None else ""
     player = ctx.get("player")
     if isinstance(player, MutableMapping):
         player["job_id"] = job_id
@@ -207,6 +214,49 @@ def _apply_job_switch(
                 pass
     ctx["job_id"] = job_id
     ctx["job_name"] = str(job.get("name") or "")
+    # 2026-09-09：职业成长跟随职业——白值按 (lv-1)×(新 growth−旧 growth) 补差
+    # （levelup.rebase_white_for_job_change；失败不阻断转职）。重算后按新上限回满
+    # HP/MP（升级 LVL-05 先例：转职=重训）。
+    try:
+        _old_job = str(_old_job_id or "")
+        if _old_job and _old_job != job_id:
+            _jobs = _jobs_table(ctx)
+            _oj = _jobs.get(_old_job) if isinstance(_jobs, Mapping) else None
+            _oj = _oj if isinstance(_oj, Mapping) else {}
+            _og = _oj.get("growth")
+            _ng = job.get("growth")
+            if isinstance(_og, Mapping) and isinstance(_ng, Mapping):
+                from qbot_rpg.core.levelup import (  # noqa: PLC0415
+                    calc_all_final_attributes as _recalc_final,
+                    rebase_white_for_job_change,
+                )
+                _pl = ctx.get("player")
+                _attrs = getattr(_pl, "attributes", None) or (
+                    _pl.get("attributes") if isinstance(_pl, Mapping) else None
+                )
+                if _attrs is not None:
+                    _lvl = int(getattr(_pl, "level", 1) if not isinstance(_pl, Mapping)
+                               else (_pl.get("level") or 1) or 1)
+                    rebase_white_for_job_change(_attrs, _lvl, _og, _ng)
+                    _final = _recalc_final(_attrs)
+                    _maxhp = _final.get("hp") if isinstance(_final, Mapping) else None
+                    _maxmp = _final.get("mp") if isinstance(_final, Mapping) else None
+                    if isinstance(_pl, MutableMapping):
+                        if _maxhp is not None:
+                            _pl["hp"] = int(_maxhp)
+                        if _maxmp is not None:
+                            _pl["mp"] = int(_maxmp)
+                    elif _pl is not None and not isinstance(_pl, Mapping):
+                        import dataclasses  # noqa: PLC0415
+                        _kw: dict[str, Any] = {}
+                        if _maxhp is not None:
+                            _kw["hp"] = int(_maxhp)
+                        if _maxmp is not None:
+                            _kw["mp"] = int(_maxmp)
+                        if _kw:
+                            ctx["player"] = dataclasses.replace(_pl, **_kw)
+    except Exception:  # noqa: BLE001 - 重算失败不阻断转职（落档兜底）
+        pass
     # 技能位重排（14C：新职业视角装配 + job_restrict 过滤）
     try:
         from qbot_rpg.core.job_slots import rearrange_job_slots, save_rearranged_slots  # noqa: PLC0415

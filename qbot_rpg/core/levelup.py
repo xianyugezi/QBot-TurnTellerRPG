@@ -251,3 +251,38 @@ class LevelUpEngine:
             "amount": int(amount),
             "base": new_value,
         }
+
+
+def rebase_white_for_job_change(
+    attributes: Any,
+    level: int,
+    old_growth: Optional[Mapping[str, float]],
+    new_growth: Optional[Mapping[str, float]],
+) -> list[str]:
+    """转职白值重算（2026-09-09 用户拍板：职业成长跟随职业，不保留旧职业成长）。
+
+    白值 base 已含旧职业每级成长累加与自由加点（混存同桶，3b §4.4 口径）——
+    采用成长差补正而非整体重置：delta = (level-1)×(new_growth − old_growth)，
+    只对 growth 涉及属性键补差；自由加点/装备外其他白值来源原样保留。
+
+    局限（docstring 明示）：无成长历史存储，多次转职历史段按最后一次职业贯穿
+    全程近似补差（单段直通成长玩家精确）。
+
+    返回受影响属性键列表（delta≠0 的键）。
+    """
+    if level < 2:
+        return []  # 1 级无历史成长，无需补差
+    old = {str(k): float(v) for k, v in (old_growth or {}).items() if v}
+    new = {str(k): float(v) for k, v in (new_growth or {}).items() if v}
+    if not old and not new:
+        return []
+    base = attributes.base if hasattr(attributes, "base") else None
+    if base is None or not hasattr(base, "get"):
+        return []
+    affected: list[str] = []
+    for attr in sorted(set(old) | set(new)):
+        delta = (level - 1) * (new.get(attr, 0.0) - old.get(attr, 0.0))
+        if delta:
+            base[attr] = float(base.get(attr, 0.0)) + delta
+            affected.append(attr)
+    return affected

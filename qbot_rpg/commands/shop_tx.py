@@ -151,13 +151,91 @@ def _build_ctx(
     return ctx
 
 
+# 品质档序（低 → 高；2026-09-11 P0 修复：多品质行保真的排序依据——扣减低品质优先、
+# 入包并入普通行）。未知档按 normal 对待（排最前）。
+_QUALITY_ORDER: tuple = ("normal", "fine", "epic", "legendary")
+
+
+def _quality_rank(q: Any) -> int:
+    """品质排名（_QUALITY_ORDER 下标；未知档 → 0 按普通档对待）。"""
+    try:
+        return _QUALITY_ORDER.index(str(q or "normal"))
+    except ValueError:
+        return 0
+
+
+def _new_default_instance(item_id: str, count: int, items: Any) -> ItemInstance:
+    """以 items 注册表构造默认字段实例（name/slot/stats_bonus；工程补白 5）。"""
+    name = ""
+    slot_v: Optional[str] = None
+    sb: Dict[str, float] = {}
+    item_cfg = items.get(item_id) if isinstance(items, Mapping) else None
+    if isinstance(item_cfg, Mapping):
+        name = str(item_cfg.get("name") or "")
+        slot_v = str(item_cfg.get("slot") or "") or None
+        # 2026-09-03 装备加成断链修复：def 数值字段 → stats_bonus（穿装聚合读它）
+        for _sk in ("atk", "def", "hp", "mp", "str", "con", "agi", "foc", "spr", "lck", "spd", "mag"):
+            _v = item_cfg.get(_sk)
+            if isinstance(_v, (int, float)) and not isinstance(_v, bool) and _v:
+                sb[_sk] = float(_v)
+    return ItemInstance(item_id=item_id, name=name, count=count,
+                        quality="normal", bound=False, slot=slot_v, stats_bonus=sb)
+
+
+def _pool_add(pool: list, delta: int, item_id: str, items: Any) -> list:
+    """净入包（delta>0）：优先并入普通（normal）行；无普通行 → 新建普通行。
+
+    2026-09-11 P0 修复：其余品质行原样保留（修复前实现把同 id 全部行并入首行）。
+    """
+    out = []
+    merged = False
+    for inst in pool:
+        if not merged and str(inst.quality or "normal") == "normal":
+            out.append(replace(inst, count=int(inst.count) + delta))
+            merged = True
+        else:
+            out.append(inst)
+    if not merged:
+        out.append(_new_default_instance(item_id, delta, items))
+    return out
+
+
+def _pool_remove(pool: list, need: int) -> list:
+    """净扣减（need>0）：按「非绑定优先 → 低品质优先 → 行序」逐行扣减，扣空的行移除。
+
+    2026-09-11 P0 修复：只在被扣行内减数量，其余品质行原样保留。
+    剩余不足（数据不一致防御）→ 忽略差额，保持行内非负。
+    """
+    order = sorted(range(len(pool)),
+                   key=lambda i: (bool(pool[i].bound), _quality_rank(pool[i].quality), i))
+    take: Dict[int, int] = {}
+    rem = need
+    for i in order:
+        if rem <= 0:
+            break
+        c = int(pool[i].count)
+        t = min(c, rem)
+        take[i] = t
+        rem -= t
+    out = []
+    for i, inst in enumerate(pool):
+        left = int(inst.count) - take.get(i, 0)
+        if left > 0:
+            out.append(replace(inst, count=left) if take.get(i, 0) else inst)
+    return out
+
+
 def _ctx_inventory_to_player(
     inv_ctx: Any, old: Tuple[ItemInstance, ...], items: Any
 ) -> Tuple[ItemInstance, ...]:
     """ctx 背包 {item_id: count} → Player.inventory（保留旧实例 quality/bound/slot/stats 等字段）。
 
-    - count<=0 → 移除该实例；新 item_id 以 items 注册表名 + 默认字段构造（工程补白 5）。
-    - 同 id 多实例：合并计数到首实例，其余保留原样（购买场景物品通常单实例，防御性处理）。
+    - count<=0 → 移除该 id 全部实例；新 item_id 以 items 注册表名 + 默认字段构造（工程补白 5）。
+    - 同 id 多实例（2026-09-11 P0 修复）：ctx 计数为去品质扁平总数，与旧行总数的差值
+      按「加 → 并入普通行（无则新建）；扣 → 非绑定优先、低品质优先、行序」分摊，各行
+      quality/bound/slot/stats 原样保留——修复原实现「全部并入首行（replace(pool[0])
+      + 清空其余）」导致同 id 附加品质行被静默吞掉（9-6 黑盒实测：普通药剂×6 + 传说
+      药剂×1 任意背包操作后传说行消失）。
     """
     if not isinstance(inv_ctx, Mapping):
         return old
@@ -172,30 +250,23 @@ def _ctx_inventory_to_player(
         except (TypeError, ValueError):
             continue
         if n <= 0:
+            # 2026-09-11 P0 修复（扣光行清除）：0/负计数 = 该 id 已清空（hooks 扣光
+            # 置 0 而非 pop 键）→ 移除旧实例行，不再经 rest 通道回填残留行。
+            by_id[item_id] = []
             continue
         pool = by_id.get(item_id, [])
-        if pool:
-            # P1-1 修复（M6 批2 审查）：ctx 背包为 {item_id: count} 扁平计数，n 已是同 id
-            # 多实例的合并总量——其余实例必须移除（count 归并到首实例），否则
-            # pool[1:] 原计数 + 合并总量 = 计数膨胀（静默数据损坏）。
-            out.append(replace(pool[0], count=n))
-            by_id[item_id] = []
+        if not pool:
+            out.append(_new_default_instance(item_id, n, items))
         else:
-            name = ""
-            slot_v: Optional[str] = None
-            sb: Dict[str, float] = {}
-            item_cfg = items.get(item_id) if isinstance(items, Mapping) else None
-            if isinstance(item_cfg, Mapping):
-                name = str(item_cfg.get("name") or "")
-                slot_v = str(item_cfg.get("slot") or "") or None
-                # 2026-09-03 装备加成断链修复：def 数值字段 → stats_bonus（穿装聚合读它）
-                for _sk in ("atk", "def", "hp", "mp", "str", "con", "agi", "foc", "spr", "lck", "spd", "mag"):
-                    _v = item_cfg.get(_sk)
-                    if isinstance(_v, (int, float)) and not isinstance(_v, bool) and _v:
-                        sb[_sk] = float(_v)
-            out.append(ItemInstance(item_id=item_id, name=name, count=n,
-                                    quality="normal", bound=False, slot=slot_v,
-                                    stats_bonus=sb))
+            total = sum(int(i.count) for i in pool)
+            delta = n - total
+            if delta == 0:
+                out.extend(pool)
+            elif delta > 0:
+                out.extend(_pool_add(pool, delta, item_id, items))
+            else:
+                out.extend(_pool_remove(pool, -delta))
+            by_id[item_id] = []
     for rest in by_id.values():  # 旧背包中 ctx 未涉及的实例原样保留
         out.extend(rest)
     return tuple(out)

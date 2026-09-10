@@ -1150,7 +1150,13 @@ def _inventory_hooks(ctx: MutableMapping[str, Any]) -> dict:
         return True
 
     def remove_item(item_id: str, count: int = 1) -> bool:
-        """扣物：够数则扣减（0 移除），否则 False。"""
+        """扣物：够数则扣减（扣光置 0），否则 False。
+
+        2026-09-11 P0 修复（扣光行残留）：扣光不再 pop 键，改置 0——落档 merge
+        （shop_tx._ctx_inventory_to_player）据此清除该 id 全部实例行；原 pop 实现
+        使扣光物品在合并时被当作「ctx 未涉及」原样回填（背包残留 + 引擎计数已空，
+        显示与逻辑不一致）。
+        """
         try:
             c = int(count)
         except (TypeError, ValueError):
@@ -1161,10 +1167,7 @@ def _inventory_hooks(ctx: MutableMapping[str, Any]) -> dict:
         cur = int(inv.get(key, 0))
         if cur < c:
             return False
-        if cur == c:
-            inv.pop(key, None)
-        else:
-            inv[key] = cur - c
+        inv[key] = cur - c
         _mark()
         return True
 

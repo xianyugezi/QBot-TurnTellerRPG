@@ -594,6 +594,20 @@ class GmBackend:
         return {"ok": True, "message": restored, "backup_id": backup_id,
                 "pre_backup": pre.get("backup_id") if isinstance(pre, dict) else None}
 
+    def editor_link(self, role_level: str, ctx: Any = None) -> dict:
+        """/编辑（5b G13）：编辑器链接 + 权限级提示。
+
+        2026-09-11 接线（编辑器恢复随附）：契约声明（模块头 L48-49）实装——
+        URL 配置源 = ctx["settings"]["editor_url"]（内容包 settings.json 可配；
+        缺省 "" → 指令层显示「暂未配置链接」，不崩）。hint 为 5b L167-168
+        契约原文（权限级说明：机主=全功能，GM=只读预览）。
+        """
+        settings = ctx.get("settings") if isinstance(ctx, Mapping) else None
+        url = ""
+        if isinstance(settings, Mapping):
+            url = str(settings.get("editor_url") or "")
+        return {"url": url, "hint": "机主=全功能，GM=只读预览"}
+
 
 def _run_watcher_reload(watcher: HotReloadWatcher) -> Optional[ReloadResult]:
     """同步执行 watcher.reload（GmBackend.reload_content 内部；ReloadResult|None）。

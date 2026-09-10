@@ -10,14 +10,14 @@
   http://<host>:<port>/ 即可编辑指定内容包。
 
 用法：
-  .venv/bin/python scripts/editor_host.py                          # 默认 content/veinborn @ 127.0.0.1:8080
+  .venv/bin/python scripts/editor_host.py                          # 默认 content/veinborn @ 127.0.0.1:8090
   .venv/bin/python scripts/editor_host.py --pack content/test_demo --port 8090
   .venv/bin/python scripts/editor_host.py --host 0.0.0.0           # 公网（建议反代 + HTTPS）
 
 参数：
   --pack  内容包目录（相对仓库根或绝对路径；缺省 env QBotRPG_PACK_DIR → content/veinborn）
   --host  监听地址（默认 127.0.0.1；AU-01 公网默认关）
-  --port  端口（默认 8080，对齐 M12 UX 架构方案）
+  --port  端口（默认 8090——避让 nonebot2 同机占用的 8080；M12 目标 8xxx 段）
   --owner 机主身份键（编辑器登录 qq_id；缺省 env QBotRPG_EDITOR_OWNER → "owner"）
 
 登录流程：浏览器首次访问 → 引导设置密码（AU-02：≥8 位含字母数字）→ 登录；
@@ -49,7 +49,8 @@ def _parse_args(argv: List[str]) -> argparse.Namespace:
                     help="内容包目录（缺省 env QBotRPG_PACK_DIR → content/veinborn）")
     ap.add_argument("--host", default="127.0.0.1",
                     help="监听地址（默认 127.0.0.1，公网请加反代）")
-    ap.add_argument("--port", type=int, default=8080, help="端口（默认 8080）")
+    ap.add_argument("--port", type=int, default=8090,
+                    help="端口（默认 8090，避让 nonebot2 同机占用的 8080）")
     ap.add_argument("--owner", default=os.environ.get("QBotRPG_EDITOR_OWNER", "owner"),
                     help="机主身份键（编辑器登录 qq_id）")
     return ap.parse_args(argv)

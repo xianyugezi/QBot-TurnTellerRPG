@@ -132,22 +132,39 @@ def _run_attack(*args, **kwargs):
 
 
 def test_round_one_message_attack_merged(start_battle) -> None:
-    """/攻击 一轮 = 1 条：玩家行动 + 怪物反击合并进 render_battle_round 单条
-    （军规3 / 铁律 2）；真实 Sender 仅 1 次调用。"""
+    """/攻击 单次操作 = 2 条（NPC 连锁段 1 条 + 玩家行动段 1 条；铁律 2）。
+
+    CTB 重写（Agent 4 · Wave B）：无「回合」——一次玩家操作 = 一次玩家行动 + 调度器
+    自动推进的 NPC 连锁（`dispatch_batch` 批量 NPC 段 1 条，无 NPC 行动则静默不发）。
+
+    CTB 迁移（2026-09-10 Wave C · C-6）：Wave B 时引擎 NPC 行动通道未补齐，
+    `dispatch_batch` **恒静默退化**（`04_wave_b_integration.md` L122/L173-175 登记的
+    遗留事实：「战斗实机为玩家单方面输出、怪不反击」）→ 当时恰 1 条。**引擎侧现已
+    补齐**（`_npc_outcomes` 汇总进 `report.outcomes`，Wave B 遗留风险 1 收口）→
+    `dispatch_batch` 契约自动生效：本场景玩家 spd 50 / 敌 spd 40，玩家行动后时间轴
+    推进使怪物 ready 并出手 → **NPC 连锁段 1 条 + 玩家行动段 1 条 = 2 条**（≤2 军规内）。
+    这正是台账预告的「引擎补齐后接线层自动生效、无需再改」。
+    """
     sender = RecordingSender()
     eng = start_battle()
     res = _run_attack(parse_command("/攻击"), make_ctx(sender, engine=eng))
     assert res["ok"] is True
-    assert len(res["sent"]) == 1
-    assert len(sender.calls) == 1                     # 一轮 1 条
-    text = sender.calls[0]
-    _assert_no_banned_emoji(text)
-    lines = text.split("\n")
-    assert lines[0] == PREFIX                      # 前缀只加首行
-    assert any("✅ 你攻击" in ln for ln in lines)   # 玩家行动行（BREP-02）
-    assert any("史莱姆" in ln and "你受到" in ln for ln in lines) or \
-        any("史莱姆的攻击" in ln for ln in lines)   # 怪物反击行（BREP-10/11）
-    assert any("史莱姆 2" in ln for ln in lines) or any("→ 攻击" in ln for ln in lines)  # 提示行（BREP-09）
+    assert len(res["sent"]) == 2                      # NPC 连锁段 + 玩家行动段
+    assert len(sender.calls) == 2
+    texts = [c for c in sender.calls]
+    for text in texts:
+        _assert_no_banned_emoji(text)
+    # NPC 连锁段（先发）：怪出手行 + 前缀
+    npc_text = next(c for c in texts if "❌" in c or "史莱姆攻击" in c)
+    assert npc_text.split("\n")[0] == PREFIX            # 前缀只加首行
+    assert any("史莱姆" in ln for ln in npc_text.split("\n"))
+    # 玩家行动段（后发）：玩家攻击行 + 提示行（BREP-02/09）
+    player_text = next(c for c in texts if "✅ 你攻击" in c)
+    assert player_text.split("\n")[0] == PREFIX         # 前缀只加首行
+    plines = player_text.split("\n")
+    assert any("✅ 你攻击" in ln for ln in plines)      # 玩家行动行（BREP-02）
+    assert any("史莱姆" in ln for ln in plines)         # 怪物状态行（HP/提示）
+    assert any("→ 攻击" in ln for ln in plines)         # 提示行（BREP-09）
 
 
 def test_round_one_message_mock_sender_call_count(start_battle) -> None:
@@ -188,7 +205,7 @@ def test_start_one_message_with_hint() -> None:
 
 
 def test_end_one_message_summary() -> None:
-    """战斗结束独立 1 条（TC-25）：BREP-24 汇总含回合数与明细入口；前缀首行。"""
+    """战斗结束独立 1 条（TC-25）：BREP-24 汇总含行动数与明细入口；前缀首行。"""
     sender = RecordingSender()
     pipeline = bc.BattlePipeline(sender, level=LV, name=NAME, title=TITLE, to="g1")
     delivered = pipeline.send_end(SimpleNamespace(), SimpleNamespace(name="史莱姆", turn=5), "win")
@@ -196,7 +213,7 @@ def test_end_one_message_summary() -> None:
     assert len(sender.calls) == 1
     assert sender.calls[0].split("\n") == [
         PREFIX,
-        "战斗结束：胜利｜回合数 5｜输入 /战斗记录 查看明细",
+        "战斗结束：胜利｜行动数 5｜输入 /战斗记录 查看明细",
     ]
 
 
@@ -211,7 +228,7 @@ def test_end_one_message_with_summary_block() -> None:
     )
     assert len(sender.calls) == 1                     # 汇总+明细同一条
     text = sender.calls[0]
-    assert "战斗结束：胜利｜回合数 5｜输入 /战斗记录 查看明细" in text
+    assert "战斗结束：胜利｜行动数 5｜输入 /战斗记录 查看明细" in text
     assert "摘要：总伤害 1220" in text
 
 
@@ -265,13 +282,19 @@ def test_no_battle_clean_error_not_affect_others() -> None:
 
 
 def test_prefix_disabled_no_prefix(start_battle) -> None:
-    """enabled=false（M5-01 总开关）→ 战斗消息无前缀（【前缀】L42）。"""
+    """enabled=false（M5-01 总开关）→ 战斗消息无前缀（【前缀】L42）。
+
+    CTB 迁移（2026-09-10 Wave C · C-6）：引擎 NPC 行动通道补齐后一次操作 2 条
+    （NPC 连锁段 + 玩家行动段），故任意一条消息的首行都应是正文（无前缀）。
+    """
     sender = RecordingSender()
     settings = dict(DEFAULT_MESSAGE_PREFIX_SETTINGS, enabled=False)
     eng = start_battle()
     _run_attack(parse_command("/攻击"), make_ctx(sender, engine=eng,
-                                                          prefix_settings=settings))
-    assert sender.calls[0].split("\n")[0].startswith("✅ 你攻击")   # 无前缀首行
+                                                 prefix_settings=settings))
+    assert sender.calls, "应产出战斗消息"
+    player_text = next((c for c in sender.calls if "✅ 你攻击" in c), sender.calls[0])
+    assert player_text.split("\n")[0].startswith("✅ 你攻击")   # 无前缀首行
 
 
 def test_register_battle_commands_routes_attack() -> None:
@@ -341,23 +364,24 @@ def test_battle_rewards_from_fn_and_ctx(start_battle) -> None:
 def test_combo_segments_injection_renders_seg_lines() -> None:
     """P1-3：snap action_record >1 段 → 注入 segments → 战报含「第 N 段」段行。
 
-    段号 = 收集器累计 index（action_record 位置，5e §5.1）；单段不注入（走聚合 BREP-02）。
+    段号 = 本次行动内相对 index；单段不注入（走聚合 BREP-02）。
+    CTB（Agent 4 · Wave B）：过滤键 = action_seq（本夹具仅写 turn → _entry_progress 回退命中）。
     """
     snap = {
         "action_record": [
-            {"turn": 1, "actor": "player", "action": "连斩", "target": "enemy",
+            {"action_seq": 1, "turn": 1, "actor": "player", "action": "连斩", "target": "enemy",
              "rating": {"crit": "low", "blocked": False}, "damage": {"final": 5}},
-            {"turn": 2, "actor": "player", "action": "连斩", "target": "enemy",
+            {"action_seq": 2, "turn": 2, "actor": "player", "action": "连斩", "target": "enemy",
              "rating": {"crit": "mid", "blocked": False}, "damage": {"final": 6}},
-            {"turn": 2, "actor": "player", "action": "连斩", "target": "enemy",
+            {"action_seq": 2, "turn": 2, "actor": "player", "action": "连斩", "target": "enemy",
              "rating": {"crit": "low", "blocked": False}, "damage": {"final": 7}},
         ],
     }
-    segs = bc._build_segments(snap, turn=2)
-    assert len(segs) == 2                       # 本轮玩家两段 → 注入
-    # 2026-09-09：段号改为本轮行动内相对（原收集器累计号）
+    segs = bc._build_segments(snap, action_seq=2)
+    assert len(segs) == 2                       # 本次行动玩家两段 → 注入
+    # 2026-09-09：段号改为本次行动内相对（原收集器累计号）
     assert segs[0]["seg"] == 1 and segs[1]["seg"] == 2
-    assert bc._build_segments(snap, turn=1) == []        # 单段 → 不注入
+    assert bc._build_segments(snap, action_seq=1) == []        # 单段 → 不注入
 
     report = SimpleNamespace(
         turn=2, phases=(), player=30, enemy=25, ended=False, status=None, log=(),

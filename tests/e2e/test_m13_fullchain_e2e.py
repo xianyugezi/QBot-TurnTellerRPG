@@ -85,9 +85,14 @@ def _engine(**over: Any) -> BattleEngine:
 
 
 def _full_turn(eng: BattleEngine, action: Dict[str, Any]) -> Any:
-    eng.do_action("player", action)
-    eng.enemy_act()
-    return eng.end_turn()
+    """提交一次玩家行动（CTB：`player_act` 内含调度器自动推进 NPC 连锁）。
+
+    CTB 迁移（2026-09-10 Wave C · C-6）：旧「do_action(player) → enemy_act() →
+    end_turn()」三段式已被删除（`enemy_act`/`end_turn` 为 NotImplementedError 壳）。
+    CTB 下一拍 = 一次 `player_act`：玩家行动结算后调度器自动推到下一个 ready
+    （NPC 行动连锁自动走完、玩家 ready 暂停），签名零改动。
+    """
+    return eng.player_act(action)
 
 
 # ---------------------------------------------------------------------------

@@ -32,7 +32,7 @@ from qbot_rpg.assembly.bootstrap import bootstrap
 from qbot_rpg.assembly.context import AssemblyDeps
 from qbot_rpg.assembly.router_setup import build_router
 from qbot_rpg.commands.processing import PerPlayerQueue
-from qbot_rpg.engine.worldtime import WorldTime
+from qbot_rpg.core.worldtime import WorldTime
 from qbot_rpg.storage.connection import Database
 from qbot_rpg.storage.repository import Repository
 

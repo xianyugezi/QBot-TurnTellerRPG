@@ -35,7 +35,7 @@
   B-1  skills.json 示例扩展（本路登记）→ 本测试经 build_pack 真实加载
        content/test_demo 断言 rage_burst/fury_slash 等技能 energy 段存在，
        build_pack 零红拦（6c 六字段已登记 skills_fields）。
-  B-2  条件求值复用 qbot_rpg.engine.condition_engine.eval_condition（9B 路
+  B-2  条件求值复用 qbot_rpg.core.condition_engine.eval_condition（9B 路
        产出）；本路只做 TC-07 的 [我方资源:rage] 断言与 TC-08 池级引用断言。
 
 铁律：零 NoneBot import；纯函数确定性（同刻同参必同值）；零定时器/零睡眠
@@ -64,7 +64,7 @@ from qbot_rpg.core.resource_axis import (
     trigger_energy_cost,
 )
 from qbot_rpg.core.resource_lifecycle import ResourceLifecycle
-from qbot_rpg.engine.condition_engine import eval_condition
+from qbot_rpg.core.condition_engine import eval_condition
 
 # =====================================================================================
 # 夹具：狂战士 rage（数值型）+ 元素法师 element_energy（子池型），对齐 6c §1.1 示例

@@ -276,13 +276,16 @@ def npc_flow(smoke: Smoke, ctx: MutableMapping) -> dict:
     states: List[str] = []
     s = DialogSession()
 
-    # ---- 路由器层：/对话 需前缀（接缝裁决，parsers.DEFAULT_PREFIX_REQUIRED）----
+    # ---- 路由器层：裸「对话」免前缀（2026-09-03 拍板全指令免 / 前缀）----
     routed = route_message("/对话", {"registry": _build_registry(), "shortcuts": {},
                                      "command_mode": "global_shortcut"})
     smoke.check_eq(routed.kind, ROUTE_COMMAND, "NPC：/对话 路由到指令白名单")
     smoke.check_eq(routed.command, "对话", "NPC：/对话 command=对话")
+    # 原断言「裸『对话』→ ignored（/对话 需前缀）」随 068bcd4 裁决作废——
+    # parsers.py L186-193：原需前缀指令（调查/图鉴/对话等）全部放行免前缀，
+    # DEFAULT_PREFIX_REQUIRED 收敛为空集（仅 GM 类由 gm_commands 独立强制 '/'）。
     bare = parse_command("对话")
-    smoke.check_eq(bare.mode, "ignored", "NPC：裸「对话」忽略（/对话 需前缀，接缝裁决）")
+    smoke.check_eq(bare.mode, "normal", "NPC：裸「对话」免前缀直发（2026-09-03 裁决）")
 
     # ---- T01 列表 ----
     r = s.step(("dialog", {"mode": "list"}), ctx)
@@ -460,7 +463,10 @@ def quest_flow(smoke: Smoke, ctx: MutableMapping) -> dict:
     out = cmd_quest(_parse("/任务"), ctx)
     smoke.check("━━ NPC 支线 ━━" in out, "任务：任务板含 NPC 支线段头")
     smoke.check("1. 药水补给" in out, "任务：任务板条目 1.药水补给")
-    smoke.check("Tip:发送'领取任务 序号'即可领取任务" in out, "任务：操作指引行（CakeGame 式 Tip）")
+    # Tip 文案 2026-09-05 B 方案修正：原「领取任务 序号」（口语化，顶层白名单静默忽略）
+    # 改与 quest_info_met 同构的「任务 领取 序号」（quest_commands L134-138 _BOARD_TAIL_TIP）
+    smoke.check("Tip:发送'任务 领取 序号'即可领取任务" in out,
+                "任务：操作指引行（CakeGame 式 Tip）")
     _trace_append(trace, "/任务 板", out)
 
     # ---- /任务 接取 1 ----
@@ -480,7 +486,8 @@ def quest_flow(smoke: Smoke, ctx: MutableMapping) -> dict:
     # ---- /任务 信息 1：进度渲染 ----
     out = cmd_quest(_parse("/任务 信息 1"), ctx)
     smoke.check("✅ 任务进度：药水补给" in out, "任务：信息头部")
-    smoke.check("背包数量 ≥ 2（potion），当前 2" in out, "任务：三原语进度逐条显示")
+    # 实现口径：param 走 _display_param 中文化（potion→药水）+ 满足态尾标 ✅
+    smoke.check("背包数量 ≥ 2（药水），当前 2 ✅" in out, "任务：三原语进度逐条显示")
     smoke.check("可交付" in out, "任务：条件已满足可交付提示")
     _trace_append(trace, "/任务 信息 1", out)
 
@@ -488,7 +495,7 @@ def quest_flow(smoke: Smoke, ctx: MutableMapping) -> dict:
     before = int(ctx["inventory"].get("potion", 0))
     out = cmd_quest(_parse("/任务 交付 1"), ctx)
     smoke.check("✅ 交付完成：药水补给" in out, "任务：交付完成文案")
-    smoke.check("potion×2" in out, "任务：交付奖励展示（统一 reward 入账提示）")
+    smoke.check("药水×2" in out, "任务：交付奖励展示（统一 reward 入账提示）")
     smoke.check_eq(ctx["inventory"].get("potion"), before + 2, "任务：reward 药水×2 实际入账")
     smoke.check("q_potion_supply" in ctx["quest_completed"], "任务：quest_completed 登记（完成即移出）")
     smoke.check("q_potion_supply" not in ctx["quest_active"], "任务：完成即移出 quest_active")
@@ -496,8 +503,11 @@ def quest_flow(smoke: Smoke, ctx: MutableMapping) -> dict:
     _trace_append(trace, "/任务 交付 1", out)
 
     # ---- 交付后不可再接（非 repeatable）----
+    # 实现口径：交付完成即从任务板移除（quest_completed 登记 + 移出 active），
+    # 序号 1 已不存在 → 引擎回 quest_not_found「❌ 任务不存在」。原断言
+    # 「❌ 任务已完成」是任务板保留已完成条目的旧实现语义，已作废。
     out = cmd_quest(_parse("/任务 接取 1"), ctx)
-    smoke.check("❌ 任务已完成" in out, "任务：已完成任务拒绝再接")
+    smoke.check("❌ 任务不存在" in out, "任务：已完成任务拒绝再接（交付即移出板）")
 
     result = {"trace": trace, "assertions": smoke.passed}
     smoke.passed = 0
@@ -518,7 +528,7 @@ def checkin_flow(smoke: Smoke, ctx: MutableMapping) -> dict:
     # ---- 第 1 天：/签到 多表一次结算（loop + monthly；activity 未开门）----
     out = cmd_checkin(_parse("/签到"), ctx)
     smoke.check("✅ 今日签到完成" in out, "签到：首签结算文案")
-    smoke.check("今日奖励：potion×1" in out, "签到：loop 今日奖励（day1 药水×1）")
+    smoke.check("今日奖励：药水×1" in out, "签到：loop 今日奖励（day1 药水×1）")
     smoke.check("连签天数：1 天" in out, "签到：loop 连签 1 天")
     smoke.check("月度签到（月度签到）" in out, "签到：monthly 段头（render_summary 排版带空格）")
     smoke.check("活动" not in out, "签到：activity 未开门（2099 窗口）不结算")
@@ -709,11 +719,14 @@ def pageclamp_flow(smoke: Smoke, ctx: MutableMapping) -> dict:
     _trace_append(trace, "/商店 2 切店", out)
 
     # ---- /任务 9：任务板夹取（单任务 1 页）----
-    out = cmd_quest(_parse("/任务 9"), ctx)
+    # 独立 ctx（与上条 /商店 2 同款）：共享 ctx 的任务已在 quest_flow 交付并移出板，
+    # 板空 → 走 quest_empty_board 分支拿不到夹取行；此处用全新 ctx 复现「单任务 1 页」。
+    fresh_q = build_ctx()
+    out = cmd_quest(_parse("/任务 9"), fresh_q)
     smoke.check("（已到最后一页）" in out, "夹取：/任务 9 → 已到最后一页")
-    out = cmd_quest(_parse("/任务 0"), ctx)
+    out = cmd_quest(_parse("/任务 0"), fresh_q)
     smoke.check("❌ 指令不正确" in out, "夹取：/任务 0 → TPL-12")
-    out = cmd_quest(_parse("/任务 -2"), ctx)
+    out = cmd_quest(_parse("/任务 -2"), fresh_q)
     smoke.check("❌ 指令不正确" in out, "夹取：/任务 -2 → TPL-12")
     _trace_append(trace, "/任务 页码", "clamp + TPL-12×2")
 

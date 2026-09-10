@@ -1972,12 +1972,12 @@ def _render_skill_info(ctx: Mapping[str, Any], sid: str) -> str:
         pass
     cd = _skill_field(defn, "cooldown", 0)
     if cd:
-        costs.append(f"冷却 {cd} 回合")
+        costs.append(f"冷却 {cd} 次行动")
     tl = _skill_field(defn, "trigger_limit")
     if isinstance(tl, Mapping):
         pr = tl.get("per_round")
         if pr:
-            costs.append(f"每回合限 {pr} 次")
+            costs.append(f"每次行动限 {pr} 次")
     if costs:
         lines.append(tpl_of(ctx, "skill_info_line", {"k": "消耗", "v": "、".join(costs)}))
     # 效果（kind/power/命中/暴击/霸体/打断/段数）

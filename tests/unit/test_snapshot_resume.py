@@ -49,15 +49,23 @@ _ENEMY = {"max_hp":400,"hp":400,"max_mp":0,"mp":0,"atk":80,"dfn":40,"mag":30,"sp
 
 
 def _snapshot(**over) -> dict:
-    """进行中战斗快照（1g3 §1.2 字段级形态：ai_state/combo_state/turn 双写齐全）。"""
+    """进行中战斗快照（CTB V2 形态：ai_state/combo_state 齐备 + action_seq 双写）。
+
+    CTB 重写（Agent 4 · Wave B）：schema_version=2 + snapshot_at.action_seq 为权威进度；
+    顶层 turn 仅为 action_seq 兼容镜像（R-A）。旧 V1 回合制快照已被 `resume_from_snapshot`
+    的 V2 门禁拒绝（reason="incompatible_snapshot"）。
+    """
     base = {
-        "schema_version": 1,
+        "schema_version": 2,
+        "rule_version": "battle_ctb_v1",
         "snapshot_id": "snap-1",
-        "snapshot_at": {"boundary": "turn_end", "turn": 12},
+        "snapshot_at": {"boundary": "actor_ready", "action_seq": 12,
+                        "battle_time": 1200.0, "turn": 12},
         "saved_at": "2026-08-26T00:00:00Z",
         "session_type": "battle",
         "turn": 12,
-        "turn_boundary": "turn_end",
+        "action_seq": 12,
+        "battle_time": 1200.0,
         "player": {"uid": "p1", "hp": 320, "mp": 45},
         "enemy": {"uid": "ember_drake", "hp": 137, "max_hp": 1000, "pv": 150},
         "ai_state": {
@@ -200,11 +208,25 @@ class TestResumeFromSnapshot:
         assert out["ai_state_preserved"] is True    # 4 ai_state 保留判定独立
 
     def test_turn_from_snapshot_at_fallback(self) -> None:
-        """turn 双写任一处（1g3 §1.3）：顶层缺失 → snapshot_at.turn；反之亦然。"""
-        snap = _snapshot(turn=None)
-        assert resume_from_snapshot({}, snap, _StubFactory())["turn"] == 12  # 1
-        snap2 = _snapshot(snapshot_at={}, turn=7)
-        assert resume_from_snapshot({}, snap2, _StubFactory())["turn"] == 7  # 2
+        """CTB 进度读取（_snapshot_turn）：snapshot_at.action_seq 优先，逐级回退。
+
+        CTB 重写（Agent 4 · Wave B）：权威进度 = action_seq；顶层 turn 仅兜底镜像。
+        """
+        snap = _snapshot(snapshot_at={"boundary": "actor_ready", "action_seq": 12})
+        assert resume_from_snapshot({}, snap, _StubFactory())["turn"] == 12  # 1 snapshot_at.action_seq
+        snap2 = _snapshot(snapshot_at={}, action_seq=7, turn=7)
+        assert resume_from_snapshot({}, snap2, _StubFactory())["turn"] == 7  # 2 顶层 action_seq
+        snap3 = _snapshot(snapshot_at={}, action_seq=None, turn=9)
+        assert resume_from_snapshot({}, snap3, _StubFactory())["turn"] == 9  # 3 turn 兜底镜像
+
+    def test_legacy_v1_snapshot_rejected(self) -> None:
+        """V2 门禁（Agent 4 · Wave B）：schema_version<2 旧回合制快照 → 拒绝，不兼容不迁移。"""
+        with_v1 = _snapshot(schema_version=1)
+        out = resume_from_snapshot({}, with_v1, battle_factory=_StubFactory())
+        assert out["resumed"] is False                       # 1 不续玩
+        assert out["reason"] == "incompatible_snapshot"       # 2 明确理由
+        assert out["schema_version"] == 1                    # 3 版本透出
+        assert "已随 CTB 重写废弃" in out["detail"]           # 4 可读 detail
 
     def test_incomplete_snapshot_rejected_without_factory_call(self) -> None:
         """完整性失败（缺 combo_state）→ 拒绝续玩，不调用工厂，missing_fields 明示。"""
@@ -268,27 +290,36 @@ class TestResumeFromSnapshot:
         assert out["chase_context_preserved"] is False  # 4 空 ai_state 无换区字段
 
     def test_real_battle_engine_from_snapshot_factory(self) -> None:
-        """真实 BattleEngine.from_snapshot 端到端续玩：中断快照 → 引擎还原逐字段一致。"""
+        """真实 BattleEngine.from_snapshot 端到端续玩：中断快照 → 引擎还原逐字段一致。
+
+        CTB 迁移（2026-09-10）：旧回合三段（do_action→enemy_act→end_turn）已删；
+        改一次 `player_act`（提交行动 + 调度器自动推进）。快照落 CTB 边界
+        `after_action`，断言 V2 契约（schema_version=2 / battle_ctb_v1）与
+        `action_seq`/`battle_time` 往返一致。
+        """
         eng = BattleEngine().start(_PLAYER, _ENEMY, random_seed=42)
-        eng.do_action("player", {"type": "normal", "mult": 1.0})
-        eng.enemy_act()
-        eng.end_turn()  # 回合边界（1g3 S0：快照只落回合边界）
+        eng.player_act("normal")  # CTB：一次玩家行动 + 调度器自动推进（替代回合三段）
         eng._snap["ai_state"] = {"boss_phase": 2,
                                  "zone_change": {"triggered": True, "from": "molten_core"},
                                  "pv_recover_pending": 0.5}
         eng._snap["combo_state"] = {"active_combo": "combo_flame", "seg": 3, "total_segs": 5}
-        snap = eng.to_snapshot()
+        snap = eng.to_snapshot("after_action")
+        assert int(snap["schema_version"]) == 2                 # CTB V2
+        assert snap["rule_version"] == "battle_ctb_v1"
         out = resume_from_snapshot({}, snap, battle_factory=BattleEngine.from_snapshot)
         assert out["resumed"] is True               # 1 真实引擎还原成功
         assert isinstance(out["engine"], BattleEngine)  # 2 引擎类型正确
-        assert out["turn"] == snap["turn"]          # 3 回合数与中断前一致
+        assert out["turn"] == snap["action_seq"]    # 3 行动计数与中断前一致（action_seq 权威）
         assert out["ai_state_preserved"] is True    # 4
         assert out["combo_state_preserved"] is True  # 5
         assert out["chase_context_preserved"] is True  # 6 ai_state 内嵌换区字段命中
         restored = out["engine"].battle_state()
-        assert restored["ai_state"]["boss_phase"] == 2  # 7 还原引擎 ai_state 逐字段一致
-        assert restored["ai_state"]["zone_change"]["triggered"] is True  # 8 换区上下文一致
-        assert restored["combo_state"]["seg"] == 3  # 9 连段 seg 逐字段一致
+        assert restored["action_seq"] == snap["action_seq"]      # 7 行动计数往返一致
+        assert restored["battle_time"] == snap["battle_time"]    # 8 逻辑时间往返一致
+        assert restored["rng_state"] == snap["rng_state"]        # 9 RNG 状态往返一致
+        assert restored["ai_state"]["boss_phase"] == 2  # 10 还原引擎 ai_state 逐字段一致
+        assert restored["ai_state"]["zone_change"]["triggered"] is True  # 11 换区上下文一致
+        assert restored["combo_state"]["seg"] == 3  # 12 连段 seg 逐字段一致
 
 
 # ---------------------------------------------------------------------------

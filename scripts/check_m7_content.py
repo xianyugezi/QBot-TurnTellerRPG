@@ -15,7 +15,7 @@
 
 退出码：0=通过（无提示）；1=有提示（提示性不阻断，可保存但建议修复，对齐
 「只建议不限制」哲学 NPC 4.5 / R-16）。支持 --path 指定内容包目录；纯 Python 标准库
-（仅 import 仓库内 qbot_rpg.engine.condition_engine / qbot_rpg.core.adventure_log 的
+（仅 import 仓库内 qbot_rpg.core.condition_engine / qbot_rpg.core.adventure_log 的
 常量与 normalize_var，两者均零第三方依赖）。
 
 用法：python scripts/check_m7_content.py [--path 内容包目录]   （缺省 content/demo_lv15）
@@ -43,7 +43,7 @@ from qbot_rpg.core.adventure_log import (  # noqa: E402
     EVENT_KEY_MILESTONE,
     EVENT_KEY_STORY_NODE,
 )
-from qbot_rpg.engine.condition_engine import (  # noqa: E402
+from qbot_rpg.core.condition_engine import (  # noqa: E402
     EVENT_PRESETS,
     normalize_var,
 )

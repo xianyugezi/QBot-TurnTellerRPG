@@ -1,4 +1,4 @@
-"""M3 批次2·路H（M39）：天气消费方联动测试 —— qbot_rpg.engine.weather_consumers。
+"""M3 批次2·路H（M39）：天气消费方联动测试 —— qbot_rpg.core.weather_consumers。
 
 依据：细化_2a4b §4（4.3 采集 weather_mods R25 / 4.4 战斗 combat.weather_mult R26）
       + 细化_2a1d（§一 GP-08~GP-11 weather_mods 字段 / §三 LC-01~LC-04 lore.condition）
@@ -16,13 +16,13 @@ from __future__ import annotations
 
 import pytest
 
-from qbot_rpg.engine.weather_consumers import (
+from qbot_rpg.core.weather_consumers import (
     RARITY_TIERS,
     apply_weather_mods,
     combat_weather_mult,
     lore_visible,
 )
-from qbot_rpg.engine.worldtime import ANCHOR, WorldTime
+from qbot_rpg.core.worldtime import ANCHOR, WorldTime
 
 # 2a1d GP-08 列表形态样例（细化_2a4b §4.3 原样）
 _LIST_MODS = [

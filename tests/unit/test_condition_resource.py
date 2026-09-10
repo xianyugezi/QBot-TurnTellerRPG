@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from qbot_rpg.engine.condition_engine import (
+from qbot_rpg.core.condition_engine import (
     REGISTERED_VARS,
     VAR_ALIASES,
     eval_condition,

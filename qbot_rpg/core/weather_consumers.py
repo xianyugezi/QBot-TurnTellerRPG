@@ -43,7 +43,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping, Optional, Tuple, Union
 
-from qbot_rpg.engine.weather_conditions import eval_condition
+from qbot_rpg.core.weather_conditions import eval_condition
 
 __all__ = [
     "RARITY_TIERS",

@@ -373,7 +373,7 @@ def cmd_time(parsed: Any, ctx: Mapping[str, Any]) -> str:
         return tpl_of(ctx, "worldtime_disabled")
     # 中文名（time_query 映射表；未知键回退原文）
     try:
-        from qbot_rpg.engine.time_query import PERIOD_NAMES, SEASON_NAMES  # noqa: PLC0415
+        from qbot_rpg.core.time_query import PERIOD_NAMES, SEASON_NAMES  # noqa: PLC0415
         season = str(SEASON_NAMES.get(season, season))
         period = str(PERIOD_NAMES.get(period, period))
     except Exception:
@@ -390,7 +390,7 @@ def cmd_weather(parsed: Any, ctx: Mapping[str, Any]) -> str:
     if w == "--":
         return tpl_of(ctx, "worldtime_disabled")
     try:
-        from qbot_rpg.engine.time_query import weather_name  # noqa: PLC0415
+        from qbot_rpg.core.time_query import weather_name  # noqa: PLC0415
         w = str(weather_name(w) or w)
     except Exception:
         pass

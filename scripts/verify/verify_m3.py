@@ -187,7 +187,7 @@ def _yellow(text: str) -> None:
 # 核心断言 ①：关键模块可导入（M3 全部新增/改动模块）
 # ==============================================================================
 _MODULES: dict = {
-    "worldtime": "qbot_rpg.engine.worldtime",
+    "worldtime": "qbot_rpg.core.worldtime",
     "map_models": "qbot_rpg.content.map_models",
     "dungeon_models": "qbot_rpg.content.dungeon_models",
     "map_graph": "qbot_rpg.content.map_graph",
@@ -200,8 +200,8 @@ _MODULES: dict = {
     "rest": "qbot_rpg.world.rest",
     "snapshot_resume": "qbot_rpg.world.snapshot_resume",
     "dungeon_persist": "qbot_rpg.world.dungeon_persist",
-    "weather_conditions": "qbot_rpg.engine.weather_conditions",
-    "weather_consumers": "qbot_rpg.engine.weather_consumers",
+    "weather_conditions": "qbot_rpg.core.weather_conditions",
+    "weather_consumers": "qbot_rpg.core.weather_consumers",
     "weather_validator": "qbot_rpg.content.weather_validator",
 }
 
@@ -212,7 +212,7 @@ def t_module_imports() -> None:
     for label, dotted in _MODULES.items():
         importlib.import_module(dotted)
     # 关键类可实例化/引用（冒烟：不触发构造）
-    from qbot_rpg.engine.worldtime import WorldTime  # noqa: F401
+    from qbot_rpg.core.worldtime import WorldTime  # noqa: F401
     from qbot_rpg.content.map_models import MapDef  # noqa: F401
     from qbot_rpg.content.dungeon_models import DungeonDef  # noqa: F401
     from qbot_rpg.core.dungeon import DungeonStateMachine  # noqa: F401
@@ -272,7 +272,7 @@ def t_key_functions() -> None:
         obj = getattr(mod, cls_name) if cls_name else mod
         assert callable(getattr(obj, member)), f"{label}.{cls_name or ''}.{member} 缺失/不可调用"
     # M3 铁律 ① 零定时器：周期值由锚点公式得出（探针扫源码，M43 回归同口径）
-    from qbot_rpg.engine.worldtime import ANCHOR, DEFAULT_POOL, WorldTime  # noqa: F401
+    from qbot_rpg.core.worldtime import ANCHOR, DEFAULT_POOL, WorldTime  # noqa: F401
     wt = WorldTime()
     assert callable(wt.map_weather) and callable(wt.map_pool) and callable(wt.check_changes)
     assert isinstance(ANCHOR, (int, float)) and DEFAULT_POOL, "锚点/默认池常量缺失"

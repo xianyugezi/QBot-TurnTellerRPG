@@ -9,6 +9,17 @@
   - 边界纪律（§六）：高度独立字段不塞 combo_state；行动定义显式传参，框架不发明
     默认（缺省=保持，旧内容零行为变化）
 
+CTB 迁移（2026-09-10）：旧 round 语义 → CTB 语义。两处关键口径变化：
+
+  1. **空中姿态 = 持有空中姿态状态**（R16）。CTB 下落地结算在 `_after_actor_action`
+     （ACTOR_TURN_END 位点）——`_settle_air_landing()` 判定「玩家仍在空中但已无任何
+     空中姿态状态 → 自动落地」。故「单纯改写 height=air」不加状态会被行动收尾立即
+     落地；本文件用 `_set_air()` 同时注入 height=air + 空中姿态状态（`sw_vault_air`），
+     才能表达 CTB「腾空中」的真实语义。
+  2. 怪侧行动不再走 `enemy_act`（已为 NotImplementedError 壳）——改用单次结算入口
+     `do_action("enemy", ...)`（等价 CTB「怪在自身 ACTOR_READY 时出手」）。
+     收尾链断言不再用 `end_turn`（已删）——改为 `player_act` 后 `action_seq` 严格增加。
+
 铁律：零 NoneBot import；纯逻辑断言；确定性（QueueRNG + 固定 seed）。
 
 验收覆盖：
@@ -77,6 +88,27 @@ def _set_height(eng: BattleEngine, height: str, which: str = "player") -> None:
     ent["height"] = height
 
 
+# 空中姿态状态 id 全集（battle._settle_air_landing 的 `_air_sids`，R16）
+_AIR_STATUS_IDS = ("sw_vault_air", "vs_air_window", "va_air_window")
+
+
+def _set_air(eng: BattleEngine, which: str = "player",
+             status_id: str = "sw_vault_air") -> None:
+    """把 `which` 置于「腾空中」——CTB 真实语义 = height=air **且持有空中姿态状态**。
+
+    CTB 迁移（2026-09-10 Wave C · C-5）：R16 的 `_settle_air_landing()` 在每次
+    ACTOR_TURN_END 检查「height=air 但无任何空中姿态状态 → 自动落地」。故旧口径的
+    「单纯 `_set_height("air")`」会被行动收尾立即落地**抹掉**，无法表达腾空。正确
+    注入 = 同时写 height=air + 挂空中姿态状态实例（与真实腾空技能 `sw_vault` 的产物
+    一致，见 test_sword_vault_dot_fix）。status_id 可切换以覆盖 `_air_sids` 全集。
+    """
+    assert status_id in _AIR_STATUS_IDS, f"非空中姿态状态：{status_id}"
+    _set_height(eng, "air", which)
+    rt = eng._new_runtime()
+    rt.apply_status(status_id, which, force=True)
+    eng._absorb_runtime(rt)
+
+
 def _height(eng: BattleEngine, which: str = "player") -> str:
     cp = eng._snap.get("combat_position") or {}
     ent = cp.get(which) or {}
@@ -88,6 +120,12 @@ def _land_events(outcome: Any) -> List[Mapping[str, Any]]:
             if isinstance(e, Mapping) and e.get("type") == "air_land"]
 
 
+#: 空中姿态状态 def（CTB R16：空中姿态 = 持有空中姿态状态；无状态则行动收尾自动落地）。
+#: 名称与内容包 veinborn 的 `sw_vault_air` 一致（`_settle_air_landing` 按 id 白名单判定）。
+_AIR_STANCE_DEF = {"id": "sw_vault_air", "name": "腾空姿态", "max_stack": 1,
+                   "duration": {"turns": 3, "charges": 0}, "decay": "none", "effects": []}
+
+
 # =====================================================================================
 # 1. 四类 policy 引擎行为（§三.6 + §四 T8：action_end → air_policy → next actor）
 # =====================================================================================
@@ -95,8 +133,9 @@ def _land_events(outcome: Any) -> List[Mapping[str, Any]]:
 
 class TestAirPolicyEngine:
     def _air_eng(self, defs: Optional[Mapping[str, Any]] = None) -> BattleEngine:
-        eng = make(defs=dict(defs or {})).start(PLAYER, ENEMY, random_seed=11)
-        _set_height(eng, "air")
+        merged = {"sw_vault_air": dict(_AIR_STANCE_DEF), **dict(defs or {})}
+        eng = make(defs=merged).start(PLAYER, ENEMY, random_seed=11)
+        _set_air(eng)
         return eng
 
     def test_land_from_air_lands_with_event(self) -> None:
@@ -145,12 +184,18 @@ class TestAirPolicyEngine:
         assert _land_events(out) == []
 
     def test_land_does_not_disturb_action_end_chain(self) -> None:
-        """落地结算不破坏收尾链：end_turn → start_turn 正常推进。"""
+        """落地结算不破坏收尾链：`player_act` 后行动条正常推进（action_seq 严格增加）。
+
+        CTB 迁移：旧「end_turn → start_turn 正常推进 / report.turn==2」依赖已删除的
+        回合边界；改为断言 CTB 权威进度计量 `action_seq` 严格增加，且落地后状态恒为
+        `act`（CTB 唯一「交还行动条」落点，无回合边界）。
+        """
         eng = self._air_eng()
-        eng.do_action("player", {"type": "normal", "mult": 1.0, "air_policy": "land"})
-        eng.enemy_act()
-        report = eng.end_turn()
-        assert report is not None and report.turn == 2
+        seq0 = int(eng.battle_state()["action_seq"])
+        tr = eng.player_act({"type": "normal", "mult": 1.0, "air_policy": "land"})
+        assert tr is not None
+        assert int(eng.battle_state()["action_seq"]) > seq0, "落地行动后行动条应推进"
+        assert _height(eng) == "ground"
         assert eng.state == "act"
 
 
@@ -167,8 +212,10 @@ _KEEP_DEF = {"id": "keep_strike", "name": "空斩", "kind": "damage", "type": "a
 class TestSkillDefAirPolicy:
     def test_skill_def_land_merged(self) -> None:
         """skill def 顶层 air_policy=land 随 F10 合并进行动 → 空中落地。"""
-        eng = make(defs={"land_strike": _LAND_DEF}).start(PLAYER, ENEMY, random_seed=11)
-        _set_height(eng, "air")
+        eng = make(defs={"land_strike": _LAND_DEF,
+                         "sw_vault_air": dict(_AIR_STANCE_DEF)}).start(
+            PLAYER, ENEMY, random_seed=11)
+        _set_air(eng)
         out = eng.do_action("player", {"type": "skill", "skill_id": "land_strike"})
         assert out.ok is True and out.hit is True
         assert _height(eng) == "ground"
@@ -176,8 +223,10 @@ class TestSkillDefAirPolicy:
 
     def test_action_explicit_policy_overrides_def(self) -> None:
         """行动原样显式 air_policy 优先于 skill def（merge setdefault 不覆写显式）。"""
-        eng = make(defs={"land_strike": _LAND_DEF}).start(PLAYER, ENEMY, random_seed=11)
-        _set_height(eng, "air")
+        eng = make(defs={"land_strike": _LAND_DEF,
+                         "sw_vault_air": dict(_AIR_STANCE_DEF)}).start(
+            PLAYER, ENEMY, random_seed=11)
+        _set_air(eng)
         out = eng.do_action("player", {"type": "skill", "skill_id": "land_strike",
                                        "air_policy": "preserve"})
         assert out.ok is True
@@ -186,19 +235,25 @@ class TestSkillDefAirPolicy:
 
     def test_def_without_policy_keeps_air(self) -> None:
         """skill def 无 air_policy → 缺省保持（空中连段续打不落地）。"""
-        eng = make(defs={"keep_strike": _KEEP_DEF}).start(PLAYER, ENEMY, random_seed=11)
-        _set_height(eng, "air")
+        eng = make(defs={"keep_strike": _KEEP_DEF,
+                         "sw_vault_air": dict(_AIR_STANCE_DEF)}).start(
+            PLAYER, ENEMY, random_seed=11)
+        _set_air(eng)
         out = eng.do_action("player", {"type": "skill", "skill_id": "keep_strike"})
         assert out.ok is True and out.hit is True
         assert _height(eng) == "air"
         assert _land_events(out) == []
 
     def test_enemy_skill_def_land_ground_no_event(self) -> None:
-        """怪侧 skill def 带 land：怪恒地面 → 行动照常、无落地事件（零变化）。"""
+        """怪侧 skill def 带 land：怪恒地面 → 行动照常、无落地事件（零变化）。
+
+        CTB 迁移：怪侧行动经单次结算入口 `do_action("enemy", ...)` 显式驱动
+        （`enemy_act` 已为 NotImplementedError 壳）。
+        """
         eng = make(defs={"e_land": dict(_LAND_DEF, id="e_land")}).start(
             PLAYER, ENEMY, random_seed=11)
-        out = eng.enemy_act(action_dict={"type": "skill", "skill_id": "e_land",
-                                         "mult": 1.0})
+        out = eng.do_action("enemy", {"type": "skill", "skill_id": "e_land",
+                                      "mult": 1.0})
         assert out is not None and out.hit is True and out.final_damage > 0
         assert _height(eng, "enemy") == "ground"
         assert _land_events(out) == []
@@ -213,8 +268,9 @@ class TestSkillDefAirPolicy:
 class TestInstantWiring:
     def test_item_action_land_lands_from_air(self) -> None:
         """道具行动带 air_policy=land + action_category=alchemy → 空中落地。"""
-        eng = make().start(PLAYER, ENEMY, random_seed=11)
-        _set_height(eng, "air")
+        eng = make(defs={"sw_vault_air": dict(_AIR_STANCE_DEF)}).start(
+            PLAYER, ENEMY, random_seed=11)
+        _set_air(eng)
         out = eng.do_action("player", {
             "type": "item", "item_id": "bomb", "actions": [],
             "action_category": "alchemy", "air_policy": "land"})
@@ -224,8 +280,9 @@ class TestInstantWiring:
 
     def test_item_without_policy_keeps_air(self) -> None:
         """道具行动缺 air_policy → 保持（引擎不发明默认；接线层显式传参）。"""
-        eng = make().start(PLAYER, ENEMY, random_seed=11)
-        _set_height(eng, "air")
+        eng = make(defs={"sw_vault_air": dict(_AIR_STANCE_DEF)}).start(
+            PLAYER, ENEMY, random_seed=11)
+        _set_air(eng)
         out = eng.do_action("player", {"type": "item", "item_id": "bomb",
                                        "actions": []})
         assert out.ok is True
@@ -235,8 +292,9 @@ class TestInstantWiring:
     def test_use_battle_item_callback_shape(self) -> None:
         """use_battle_item 回调契约形状（cmd_instant 注入位）：回调内构造 item 行动
         并带接线层标记 → 空中即时调合产物自动使用后落地。"""
-        eng = make().start(PLAYER, ENEMY, random_seed=11)
-        _set_height(eng, "air")
+        eng = make(defs={"sw_vault_air": dict(_AIR_STANCE_DEF)}).start(
+            PLAYER, ENEMY, random_seed=11)
+        _set_air(eng)
 
         def use_battle_item(item_id: str, count: int, produced: Mapping[str, Any]) -> Any:
             return eng.do_action("player", {

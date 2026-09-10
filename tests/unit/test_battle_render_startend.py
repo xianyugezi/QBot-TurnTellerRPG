@@ -5,12 +5,12 @@
      + TC-24~27 + 铁律 2（开始/结束各 1 条）/铁律 11（结算一次性 + 16 行折叠
      TPL-09，3d D-03/L184）+ 细化_3d_消息模板规范 §2（5 条/页 + TPL-08 页脚）+ m5_batch_plan M5-07。
 
-覆盖：TC-24 战斗开始（BREP-23 + 弱点情报行）/ TC-25 结束汇总含回合数与明细入口
+覆盖：TC-24 战斗开始（BREP-23 + 弱点情报行）/ TC-25 结束汇总含行动数与明细入口
 （BREP-24）/ TC-26 木桩明细 5 条/页 + 页脚 TPL-08（BREP-25 分页，第 1/2 页）/
 TC-27 普通战斗默认不展示明细 / TC-06 单条消息 ≤16 行超限折叠 TPL-09 /
 emoji 纪律（仅 ✅/❌ + 排版符号豁免 D-5B）。
 
-说明：{怪物} 展示名 / HP / 回合数 / 收集器聚合（total/max_hit/crits/blocks/items）
+说明：{怪物} 展示名 / HP / 行动数 / 收集器聚合（total/max_hit/crits/blocks/items）
 非 ActionOutcome 字段（shared_contract §5.1 字段清单无），由接线层（M5-08）注入
 ——集成断言经 SimpleNamespace / dict 承载（对齐 test_battle_render_settlement.py
 的注入形态）。军规5：胜负横幅/掉落（BREP-17~20）由 render_battle_round 结算一次
@@ -102,51 +102,51 @@ def test_tc24_start_fallback_name_and_no_prefix() -> None:
 
 
 # ---------------------------------------------------------------------------
-# TC-25 战斗结束汇总（BREP-24：含回合数与明细入口）
+# TC-25 战斗结束汇总（BREP-24：含行动数与明细入口）
 # ---------------------------------------------------------------------------
 
 
 def test_tc25_end_summary_line_exact_with_turns() -> None:
-    """TC-25：BOSS 战胜利结束 —— BREP-24 汇总行逐字含回合数与明细入口指令：
-    `战斗结束：胜利｜回合数 5｜输入 /战斗记录 查看明细`（回合数对照斩杀基准，
+    """TC-25：BOSS 战胜利结束 —— BREP-24 汇总行逐字含行动数与明细入口指令：
+    `战斗结束：胜利｜行动数 5｜输入 /战斗记录 查看明细`（行动数对照斩杀基准，
     5e §6.2 L147；无 summary → 不展示明细，TC-27）。"""
     text = render_battle_end(_party(), _enemy(turns=5), "win")
     _assert_no_banned_emoji(text)
     assert text.split("\n") == [
         "Lv35.阿伟 -斩龙者-",
-        "战斗结束：胜利｜回合数 5｜输入 /战斗记录 查看明细",
+        "战斗结束：胜利｜行动数 5｜输入 /战斗记录 查看明细",
     ]
 
 
 def test_tc25_winner_labels_win_lose_draw() -> None:
     """BREP-24 {胜负结果}：win/lose/draw → 胜利/失败/平局（5e §4.2）；中文透传。"""
-    assert "战斗结束：失败｜回合数 7" in render_battle_end(
+    assert "战斗结束：失败｜行动数 7" in render_battle_end(
         SimpleNamespace(), _enemy(turns=7), "lose",
     )
-    assert "战斗结束：平局｜回合数 3" in render_battle_end(
+    assert "战斗结束：平局｜行动数 3" in render_battle_end(
         SimpleNamespace(), _enemy(turns=3), "draw",
     )
-    assert "战斗结束：失败｜回合数 1" in render_battle_end(
+    assert "战斗结束：失败｜行动数 1" in render_battle_end(
         SimpleNamespace(), _enemy(turns=1), "失败",
     )
 
 
 def test_tc25_turns_fallback_player_then_summary_then_zero() -> None:
-    """回合数 N 回落链：enemy.turns → player.turns → summary.turns → 0。"""
+    """行动数 N 回落链：enemy.turns → player.turns → summary.turns → 0。"""
     # enemy.turns 优先
-    assert "回合数 5" in render_battle_end(
+    assert "行动数 5" in render_battle_end(
         SimpleNamespace(), _enemy(turns=5), "win",
     )
     # 无 enemy → 回落 player.turns
-    assert "回合数 4" in render_battle_end(
+    assert "行动数 4" in render_battle_end(
         SimpleNamespace(turns=4), SimpleNamespace(), "win",
     )
     # 无 enemy/player → 回落 summary.turns
-    assert "回合数 2" in render_battle_end(
+    assert "行动数 2" in render_battle_end(
         SimpleNamespace(), SimpleNamespace(), "win", {"turns": 2},
     )
     # 全缺省 → 0
-    assert "回合数 0" in render_battle_end(
+    assert "行动数 0" in render_battle_end(
         SimpleNamespace(), SimpleNamespace(), "win",
     )
 
@@ -227,7 +227,7 @@ def test_tc27_normal_battle_no_detail_by_default() -> None:
     lines = text.split("\n")
     assert lines == [
         "Lv35.阿伟 -斩龙者-",
-        "战斗结束：胜利｜回合数 3｜输入 /战斗记录 查看明细",
+        "战斗结束：胜利｜行动数 3｜输入 /战斗记录 查看明细",
     ]
     assert "摘要：" not in text
     assert "（%" not in text
@@ -240,7 +240,7 @@ def test_tc27_end_with_summary_appends_detail_block() -> None:
     )
     lines = text.split("\n")
     assert lines[0] == "Lv35.阿伟 -斩龙者-"
-    assert lines[1] == "战斗结束：胜利｜回合数 8｜输入 /战斗记录 查看明细"
+    assert lines[1] == "战斗结束：胜利｜行动数 8｜输入 /战斗记录 查看明细"
     assert lines[2] == "摘要：总伤害 1220｜最大单段 180｜会心 4 次｜格挡 2 次"
     assert len(lines) == 2 + 1 + 8                      # 前缀+BREP-24 + 摘要 + 8 条目
     _assert_no_banned_emoji(text)
@@ -263,7 +263,7 @@ def test_tc06_fold_over_16_lines() -> None:
     _assert_no_banned_emoji(text)
     assert len(lines) <= 16                              # 超限折叠（3d D-03）
     assert lines[0] == "Lv35.阿伟 -斩龙者-"
-    assert lines[1] == "战斗结束：胜利｜回合数 45｜输入 /战斗记录 查看明细"
+    assert lines[1] == "战斗结束：胜利｜行动数 45｜输入 /战斗记录 查看明细"
     assert lines[2] == "摘要：总伤害 5000｜最大单段 300｜会心 5 次｜格挡 2 次"
     # 折叠行 TPL-09：保留头部 12 条，折叠 8 条（keep=16-2-2=12），被折叠内容在第 3 页
     assert lines[-1] == "…（其余 8 条已折叠，输入 /战斗记录 3 查看）"

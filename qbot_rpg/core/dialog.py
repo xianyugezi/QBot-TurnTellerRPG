@@ -864,7 +864,7 @@ class DialogSession:
                 return False
         # 缺省：A2 统一条件引擎（fail-safe → False，D-03 工程补白）
         try:
-            from qbot_rpg.engine.condition_engine import eval_condition as _a2
+            from qbot_rpg.core.condition_engine import eval_condition as _a2
             return bool(_a2(cond, ctx.get("condition_ctx") or {}))
         except Exception:
             return False

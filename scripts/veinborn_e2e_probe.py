@@ -52,7 +52,7 @@ async def main() -> None:
         _SENT.clear()
         await say("/攻击 脊斩")
         joined = " | ".join(_SENT)
-        print(f"回合{i + 1}: {joined[:180]}")
+        print(f"行动{i + 1}: {joined[:180]}")
         if "死亡" in joined or "战斗结束" in joined or "胜利" in joined or "lose" in joined or "win" in joined:
             print("战斗结束")
             break

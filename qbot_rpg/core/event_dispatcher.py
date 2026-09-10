@@ -34,6 +34,14 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
+# 2026-09-10 环打破：DamageCtx / chance_roll 自 effects 下沉至 core/effect_types.py，
+# 本模块改为顶层单向引入（原「函数内 lazy import effects」是环的补丁，现依赖方向为
+# effect_types ← event_dispatcher，与 effects 同向，环已消除）。
+from qbot_rpg.core.effect_types import DamageCtx, chance_roll
+# 2026-09-10 环打破：本模块 → effects 为单向依赖（effects 已改为回调注入，不再
+# reverse import 本模块），故此处可由原「函数内 lazy import」提升为顶层 import。
+from qbot_rpg.core.effects import execute_action, register_event_dispatcher
+
 __all__ = [
     "EVENT_POINTS",
     "dispatch_event",
@@ -134,9 +142,10 @@ def _build_ctx(
     target: str,
     variables: Optional[Mapping[str, Any]],
 ) -> Any:
-    """构造 execute_action 的 DamageCtx（lazy import 防环；snapshot 必须含 combatant）。"""
-    from qbot_rpg.core.effects import DamageCtx  # lazy：同 core 层，防环
+    """构造 execute_action 的 DamageCtx（snapshot 必须含 combatant）。
 
+    2026-09-10：DamageCtx 自 effect_types 顶层引入（原 lazy import effects 已消除）。
+    """
     vmap: Dict[str, Any] = dict(variables or {})
     vmap.setdefault("event", event)
     return DamageCtx(
@@ -177,15 +186,13 @@ def _run_candidate(
     # chance 三态（-1 必定 / 0-100 固定 / lucky；复用 effects._chance_roll）
     chance = raw.get("chance")
     if chance is not None:
-        from qbot_rpg.core.effects import _chance_roll  # lazy
-
         try:
-            if not _chance_roll(chance, ctx):
+            if not chance_roll(chance, ctx):
                 return []
         except Exception:  # noqa: BLE001 —— chance 求值异常 → 不触发（安全失败）
             return []
     # 执行（引用归一 + condition 门控由 execute_action 内部处理）
-    from qbot_rpg.core.effects import execute_action  # lazy
+    # 2026-09-10：execute_action 顶层引入（环打破后无需 lazy）。
 
     if kind == "effect":
         # 候选 raw 是 effects 定义：包成引用执行（execute_action 会查表展开）。
@@ -266,3 +273,14 @@ def dispatch_event(
             _run_candidate(eid, raw, kind, event, side, snapshot, runtime, ctx, depth)
         )
     return effects_out
+
+
+# ---------------------------------------------------------------------------
+# 回调注册（2026-09-10 环打破 · 见 effects.register_event_dispatcher docstring）
+#
+# effects.execute_action 在状态施加/移除后需要触发 status_gain/status_lose 事件分派，
+# 但 effects 不得 import 本模块（否则成环）。故由本模块在加载末尾主动注入 dispatch_event
+# 至 effects 的回调槽——依赖单向：本模块 → effects。
+# ---------------------------------------------------------------------------
+
+register_event_dispatcher(dispatch_event)

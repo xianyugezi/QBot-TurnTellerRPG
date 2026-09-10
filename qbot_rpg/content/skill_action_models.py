@@ -131,7 +131,7 @@ PROBABILITY_VALUES: Tuple[int, ...] = (0, 1)
 """入池开关 G02 枚举（契约：0=锚点行动 / 1=参与随机池；必须 ∈ {0,1}）。"""
 
 DEFAULT_TRIGGER_LIMIT: Dict[str, int] = {"per_round": 10, "per_battle": 99}
-"""G07 trigger_limit 默认值（契约「同 F20」[L208]：每回合 10 / 每场 99，0=不限）。"""
+"""G07 trigger_limit 默认值（契约「同 F20」[L208]：每次行动 10 / 每场 99，0=不限）。"""
 
 # 行动库全字段注册表（V-11 判定依据：字段 ∈ 本表 + charge_* 前缀登记键）
 # 登记口径：ActionCore 7 + G01-G07 + G08-G16 AI 登记接口 + desc（P-1）+ 读兼容旧键

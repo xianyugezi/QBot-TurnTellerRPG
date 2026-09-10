@@ -43,7 +43,7 @@ from __future__ import annotations
 
 from typing import Any, Iterable, Mapping, Optional, Tuple
 
-from qbot_rpg.engine.worldtime import PERIODS, SEASONS
+from qbot_rpg.core.worldtime import PERIODS, SEASONS
 
 __all__ = [
     "SEASON_KEYS",

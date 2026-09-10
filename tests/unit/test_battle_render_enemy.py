@@ -52,9 +52,14 @@ def _outcome(**kw: Any) -> ActionOutcome:
 
 
 def _report(*outcomes: Any, **kw: Any) -> TurnReport:
-    """构造 TurnReport（真实字段；player/enemy 为 HP 快照，outcomes 流水）。"""
+    """构造 TurnReport（CTB 真实字段；player/enemy 为 HP 快照，outcomes 流水）。
+
+    CTB 迁移（2026-09-10 · Agent 4）：`phases` 已由 dataclass 字段改为只读 property
+    （底层 `_phase_label`），构造器不再接受 `phases` 实参；CTB 进度以 `action_seq`
+    （int）+ `battle_time`（float）为准，顶层 `turn` 仅为 `action_seq` 兼容镜像。
+    """
     defaults: Dict[str, Any] = {
-        "turn": 1, "phases": ("player_action", "enemy_action"),
+        "turn": 1, "action_seq": 1, "battle_time": 100.0,
         "player": 21, "enemy": 7, "ended": False, "status": None,
         "log": (), "outcomes": tuple(outcomes),
     }
@@ -170,19 +175,19 @@ def test_tc13_killed_enemy_no_counter() -> None:
 
 
 def test_tc14_intent_exact() -> None:
-    """TC-14：意图预告逐字 `史莱姆王 蓄力中（下回合发动「毒雾吐息」）`（BREP-12）。"""
+    """TC-14：意图预告逐字 `史莱姆王 蓄力中（下次行动发动「毒雾吐息」）`（BREP-12）。"""
     oc = _outcome(action_type="charge")
     line = _render_enemy_intent(
         _enriched(oc, attacker_name="史莱姆王", intent_skill="毒雾吐息"),
     )
-    assert line == "史莱姆王 蓄力中（下回合发动「毒雾吐息」）"
+    assert line == "史莱姆王 蓄力中（下次行动发动「毒雾吐息」）"
 
 
 def test_tc14_intent_via_dispatcher() -> None:
     """TC-14：action_type=charge（蓄力/读招归类）→ BREP-12 分支。"""
     oc = _enriched(_outcome(action_type="charge"), attacker_name="史莱姆王",
                    intent_skill="毒雾吐息")
-    assert _render_enemy_action(oc) == "史莱姆王 蓄力中（下回合发动「毒雾吐息」）"
+    assert _render_enemy_action(oc) == "史莱姆王 蓄力中（下次行动发动「毒雾吐息」）"
 
 
 def test_tc14_intent_missing_skill_returns_none() -> None:

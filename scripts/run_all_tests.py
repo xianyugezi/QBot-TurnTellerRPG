@@ -113,8 +113,10 @@ def _pytest(paths: list[str], *, report: bool = False) -> int:
 # ---- M6 批7·路A（细化_M6_质量门禁 D7 · COV 组）----
 # COV-02/03：口径定死 = qbot_rpg/core + engine + content 三目录各自 ≥80% 行覆盖，禁合计稀释
 # （总纲 ADR-04；批6B P1-2；D7 §1.4「合计稀释拦截」）
-COV_SOURCES = "qbot_rpg/core,qbot_rpg/engine,qbot_rpg/content"
-COV_DIRS: tuple[str, ...] = ("qbot_rpg/core", "qbot_rpg/engine", "qbot_rpg/content")
+# 2026-09-10 架构违规修复：原 engine/ 按契约 §2.3 更名 core/（源码已迁入 core），
+# 覆盖率口径目录随之收敛为 core + content 两目录（engine 不再独立存在，禁新增稀释）。
+COV_SOURCES = "qbot_rpg/core,qbot_rpg/content"
+COV_DIRS: tuple[str, ...] = ("qbot_rpg/core", "qbot_rpg/content")
 COV_THRESHOLD = 80.0
 # COV-05：报表归档 docs/verify/coverage_latest.txt，写入者 = 本覆盖率段（D8 verify_m6 断言对象）
 COV_ARCHIVE = REPO.parent / "docs" / "verify" / "coverage_latest.txt"

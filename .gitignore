@@ -19,3 +19,4 @@ logs/
 htmlcov/
 coverage.xml
 .hermes/
+.venv

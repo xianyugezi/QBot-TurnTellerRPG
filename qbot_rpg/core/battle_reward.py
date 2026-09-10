@@ -437,17 +437,17 @@ def settle_battle_rewards(
         _eid = str(enemy_entry.get("id") or "")
         if _eid:
             if isinstance(orig_player, Player):
-                _ll = orig_player.longline_counters
-                if isinstance(_ll, MutableMapping):
-                    _kc = _ll.get("kill_count")
+                if isinstance(orig_player.longline_counters, MutableMapping):
+                    _ll_player: MutableMapping = orig_player.longline_counters
+                    _kc = _ll_player.get("kill_count")
                     if not isinstance(_kc, MutableMapping):
                         _kc = {}
-                        _ll["kill_count"] = _kc
+                        _ll_player["kill_count"] = _kc
                     _kc[_eid] = int(_kc.get(_eid, 0) or 0) + 1
             else:
-                _ll = player.get("longline_counters")
-                if not isinstance(_ll, MutableMapping):
-                    _ll = {}
+                _ll_raw = player.get("longline_counters")
+                _ll: MutableMapping = _ll_raw if isinstance(_ll_raw, MutableMapping) else {}
+                if not isinstance(_ll_raw, MutableMapping):
                     player["longline_counters"] = _ll
                 _kc = _ll.get("kill_count")
                 if not isinstance(_kc, MutableMapping):

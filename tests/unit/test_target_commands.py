@@ -35,10 +35,16 @@ class _FakeEngine:
         return dict(self._state)
 
 
-def _state(enemy: Dict[str, Any], turn: int = 3,
+def _state(enemy: Dict[str, Any], turn: int = 3, action_seq: int = 3,
            marks: list | None = None, statuses: list | None = None) -> Dict[str, Any]:
+    """战斗态快照夹具。
+
+    CTB 口径（2026-09-10 收口）：面板「第 N 行动」读 `action_seq`（已结算行动数），
+    顶层 `turn` 仅为兼容镜像。夹具同时给出两键，`turn` 保留供旧断言/回退路径。
+    """
     return {
         "turn": turn,
+        "action_seq": action_seq,
         "enemy": enemy,
         "marks_state": {"player": [], "enemy": marks or []},
         "status_state": {"player": [], "enemy": statuses or []},
@@ -79,11 +85,11 @@ def test_target_no_battle() -> None:
 
 
 def test_target_panel_basic() -> None:
-    """战斗中 → 面板含目标名/回合/HP/属性。"""
+    """战斗中 → 面板含目标名/行动数/HP/属性。"""
     ctx = make_ctx()
     out = cmd_battle_target(parse("/查看目标"), ctx)
     assert "脊冢幼兽" in out
-    assert "第 3 回合" in out
+    assert "第 3 行动" in out
     assert "208/230" in out
     assert "【攻击】70" in out
     assert "【防御】13" in out

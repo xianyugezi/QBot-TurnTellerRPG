@@ -90,7 +90,8 @@ def test_battle_start_event_fires():
 
 
 def test_turn_start_event_fires():
-    """turn_start 事件（回合+1 时触发）——第二回合 enemy 血被扣（每回合都触发会累扣）。"""
+    """turn_start 事件（该 actor 行动开始时触发）——player_act 推进到玩家 ready，
+    玩家自身 ACTOR_TURN_START 派发 turn_start → enemy 血被扣（每行动一次触发）。"""
     reg_effects = {
         "ts_fx": {"id": "ts_fx", "type": "special", "trigger": "turn_start",
                   "actions": [{"type": "damage", "value": 10, "target": "enemy"}]},
@@ -98,49 +99,51 @@ def test_turn_start_event_fires():
     eng = _engine(reg_effects)
     eng.start(PLAYER, ENEMY, random_seed=1)
     hp_after_t1 = eng.battle_state()["enemy"]["hp"]
-    # 玩家行动 → 回合推进（end_turn）
-    eng.do_action("player", {"type": "normal"})
-    eng.enemy_act()
-    # turn 2 start 时触发 ts_fx（damage 10 enemy）
+    # CTB：一次玩家行动 + 调度器自动推进（替代 do_action+enemy_act 的回合三段）
+    eng.player_act("normal")
     hp_after_t2 = eng.battle_state()["enemy"]["hp"]
     assert hp_after_t2 < hp_after_t1, "turn_start 事件应扣 enemy 血"
 
 
 def test_action_end_event_fires():
-    """action_end 事件（普攻收尾触发）——heal player 生效。"""
-    # player 残血才能观测 heal：先手动扣血
+    """action_end 事件（普攻收尾触发）——heal player 生效。
+
+    CTB：改用 `player_act`；为隔离玩家自身 action_end（不受 NPC 连锁伤害干扰），
+    敌方设极低速度，使本次推进仅玩家出手。
+    """
     reg_effects = {
         "ae_fx": {"id": "ae_fx", "type": "special", "trigger": "action_end",
                   "actions": [{"type": "heal", "value": 50, "target": "player"}]},
     }
     eng = _engine(reg_effects)
-    eng.start(PLAYER, ENEMY, random_seed=1)
+    slow_enemy = dict(ENEMY, spd=1, max_hp=99999, hp=99999)
+    eng.start(PLAYER, slow_enemy, random_seed=1)
     eng._snap["player"]["hp"] = 300  # 残血
-    out = eng.do_action("player", {"type": "normal"})
-    assert out.ok
+    out = eng.player_act("normal")
+    assert out.outcomes and out.outcomes[0].ok
     hp = eng.battle_state()["player"]["hp"]
     assert hp > 300, f"action_end heal 应生效，实际 hp={hp}"
     assert hp <= 500, "heal 应封顶 max_hp"
 
 
 def test_turn_end_event_fires():
-    """turn_end 事件（回合收尾 tick 后触发）——需构造完整回合推进。"""
+    """CTB：整轮收尾 `turn_end` 触发**已随回合制删除**（清点表 §1.12 / R-20）。
+
+    旧「回合收尾 tick 后触发 turn_end」映射到 CTB 的**行动者收尾**
+    （`ACTOR_TURN_END` / `AFTER_ACTION` 位点），旧的 effect trigger="turn_end"
+    不再派发——回合是已删除的时间单位，故该 trigger 不应凭空生效。
+    """
     reg_effects = {
         "te_fx": {"id": "te_fx", "type": "special", "trigger": "turn_end",
                   "actions": [{"type": "heal", "value": 50, "target": "player"}]},
     }
     eng = _engine(reg_effects)
-    eng.start(PLAYER, ENEMY, random_seed=1)
+    slow_enemy = dict(ENEMY, spd=1, max_hp=99999, hp=99999)
+    eng.start(PLAYER, slow_enemy, random_seed=1)
     eng._snap["player"]["hp"] = 300
-    eng.do_action("player", {"type": "normal"})
-    eng._rng = QueueRNG([0.5, 0.5, 0.5, 1.0])
-    eng.enemy_act()
-    hp_after_enemy = eng._snap["player"]["hp"]
-    # 回合收尾（end_turn）→ turn_end 事件 heal player +50
-    eng.end_turn()
+    eng.player_act("normal")
     hp = eng.battle_state()["player"]["hp"]
-    assert hp == hp_after_enemy + 50, \
-        f"turn_end heal 50 应生效，实际 {hp_after_enemy} → {hp}"
+    assert hp == 300, f"turn_end 触发已删除，不应生效，实际 hp={hp}"
 
 
 def test_no_events_config_zero_change():
@@ -184,13 +187,8 @@ def test_battle_end_event_fires():
     eng._snap["player"]["hp"] = 200
     eng._snap["enemy"]["hp"] = 1
     eng._rng = QueueRNG([0.5, 0.5, 0.5, 1.0])
-    eng.do_action("player", {"type": "normal", "mult": 1.0})
-    # enemy 死（mark_win）→ 推进回合收尾触发 _settle（battle_end 事件 heal player）
-    if not eng.finished:
-        eng._rng = QueueRNG([0.5, 0.5, 0.5, 1.0])
-        eng.enemy_act()
-    if not eng.finished:
-        eng.end_turn()
+    # CTB：玩家一击必杀 → 调度器在 player_act 内推进终局（BATTLE_END → _settle）
+    eng.player_act("normal")
     assert eng.finished, "战斗应已结束"
     hp = eng.battle_state()["player"]["hp"]
     assert hp > 200, f"battle_end heal 应生效，实际 hp={hp}"

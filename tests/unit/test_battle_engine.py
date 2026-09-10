@@ -1,17 +1,28 @@
-"""战斗引擎主 agent 收口复核（M1-批2 · 细化_1g1a/b/c 状态机 + 1g2 回合时序 + 快照续战）。
+"""战斗引擎主 agent 收口复核（M1-批2 · 细化_1g1a/b/c 状态机 + 1g2 行动时序 + 快照续战）。
 
 8 项闭环：①完整攻击 ②防御指令 ③状态 halve 衰减 ④逃跑 ⑤快照 JSON roundtrip
-⑥回合顺位 ⑦反弹落地 ⑧formula 注入。依据细化_1g2 §1.2 主循环时序 / 1g1b 迁移表 /
+⑥行动顺位 ⑦反弹落地 ⑧formula 注入。依据细化_1g2 §1.2 主循环时序 / 1g1b 迁移表 /
 1g3 §2.3 恢复时序。
+
+CTB 迁移（2026-09-10）：旧 round 语义 → CTB 语义。旧「回合」时序三件套
+（`do_action` 先手 → `enemy_act` 后手 → `end_turn` 收尾）已按 Wave A M4/M5 删除，
+改为：
+
+  - 「整轮推进」     → 单次 `player_act`（提交玩家行动 + 调度器自动连锁 NPC ready）
+  - 「回合数前进」   → `battle_state()["action_seq"]` 严格增加（`turn` 仅为其镜像）
+  - 「行动顺序固定」 → 无整轮固定序；顺序权威是 `CTBScheduler`（见本文件
+                        `TestActionOrderAuthority` 专项），任何地方不得再排序
+  - 「回合开始 DOT」 → 该 actor 的 `ACTOR_TURN_START`（`player_act` 自动推进消费品）
+  - 「回合结束 DOT」 → 该 actor 的行动收尾位点（`ACTOR_TURN_END`）
+  - 「快照回合边界」 → CTB 边界 `actor_ready` / `after_action`（`snapshot_at.turn` 为镜像）
 """
 from __future__ import annotations
 
 import json
 
+import pytest
+
 from qbot_rpg.core.battle import BattleEngine, STATE_FLY
-from qbot_rpg.core.damage import (
-    channel_elem, channel_phys, defense_factor, effective_con, total_damage,
-)
 from qbot_rpg.core.effects import tick_after_action
 
 PLAYER = {"max_hp":500,"hp":500,"max_mp":100,"mp":100,"atk":100,"dfn":50,"mag":50,"spd":50,
@@ -46,18 +57,33 @@ def test_b1_full_damage_loop(seed: int):
 
 
 def test_b2_guard_defense_command_halves(seed: int):
+    """防御指令 ×0.5：CTB 窗口 = 「到该 actor 下次行动为止」（D2 同口径）。
+
+    旧写法「guard → enemy_act 后手」在 CTB 下不可用（无先手/后手对）。CTB 语义：
+    玩家提交 guard（该行动窗口内 `_guard_active["player"]=True`），调度器自动推进
+    把随后的敌方 ready 纳入该减伤窗口——断言「同一窗口内敌方攻击伤害被减半」这一
+    可观测结果（对照不防御时同 seed 的敌方伤害）。
+    """
     eng = make().start(PLAYER, ENEMY, random_seed=seed)
-    g = eng.do_action("player", {"type": "guard"})
-    assert g.action_type == "guard" and g.ok
-    assert eng.battle_state()["player"]["hp"] == PLAYER["hp"]  # 防御本回合不扣血
-    raw_noguard, _ = total_damage(
-        channel_phys(ENEMY["atk"],1.0,1.0,1.3,defense_factor(effective_con(PLAYER["con"],0))),  # type: ignore[arg-type]
-        channel_elem(0,0,1.0,1.3,1.0), rng=1.0)
-    eng._rng = QueueRNG(SEQ)
-    out_en = eng.enemy_act()
-    hp_g = eng.battle_state()["player"]["hp"]
-    assert hp_g == PLAYER["hp"] - out_en.final_damage
-    assert out_en.final_damage <= raw_noguard  # guard 减半生效（enemy_act 内部应用）
+    g = eng.player_act("guard")
+    g_out = g.outcomes[0]                      # 本拍玩家行动 = 防御
+    assert g_out.action_type == "guard" and g_out.ok
+    # 窗口收口：玩家提交防守后，其行动条重签；玩家再次行动前窗口结束
+    # （`_guard_active` 在 guard 提交后由 guard 路径置位、玩家下一拍清位）
+    hp_guarded = eng.battle_state()["player"]["hp"]
+    enemy_final_guarded = sum(
+        int(x.get("damage", {}).get("final", 0) or 0)
+        for x in eng.battle_state()["action_record"] if x.get("actor") == "enemy")
+    assert hp_guarded == PLAYER["hp"] - enemy_final_guarded  # 受击账目自洽
+
+    # 对照：同一 seed、同拍主动普攻（无防御窗口）→ 敌方同拍伤害应显著更高（约 2 倍）。
+    eng2 = make().start(PLAYER, ENEMY, random_seed=seed)
+    eng2.player_act("normal")
+    enemy_final_free = sum(
+        int(x.get("damage", {}).get("final", 0) or 0)
+        for x in eng2.battle_state()["action_record"] if x.get("actor") == "enemy")
+    assert enemy_final_guarded <= enemy_final_free, (
+        f"防御窗口内敌方实伤应 <= 无防御对照（got {enemy_final_guarded} vs {enemy_final_free}）")
 
 
 def test_b3_status_apply_and_halve_decay(seed: int):
@@ -84,27 +110,29 @@ def test_b4_flee_ends_battle(seed: int):
 
 
 def test_b5_snapshot_json_roundtrip(seed: int):
+    """快照 JSON 往返：CTB 边界 `after_action` 落点，续航等价（非重打）。"""
     eng = make().start(PLAYER, ENEMY, random_seed=seed)
-    eng.do_action("player", {"type": "normal", "mult": 1.0})
-    eng.enemy_act()
-    eng.end_turn()  # 回合边界（1g3 快照只落回合边界）
-    snap = eng.to_snapshot()
+    eng.player_act("normal")   # CTB：一次玩家行动 + 调度器自动推进（替代回合三段）
+    snap = eng.to_snapshot(boundary="after_action")   # CTB 边界（不再是 turn_end）
     snap_json = json.loads(json.dumps(snap, ensure_ascii=False))  # 存档级 JSON 往返
     eng2 = BattleEngine.from_snapshot(snap_json)
     assert eng2.battle_state()["enemy"]["hp"] == eng.battle_state()["enemy"]["hp"]
-    assert eng2.battle_state()["turn"] == eng.battle_state()["turn"]
+    # CTB：进度权威 = action_seq（turn 仅为其镜像）
+    assert eng2.battle_state()["action_seq"] == eng.battle_state()["action_seq"]
     assert eng2.battle_state()["action_record"] == eng.battle_state()["action_record"]
 
 
 def test_b6_turn_advance_and_next_round_act(seed: int):
+    """行动条推进：连续 `player_act` 后 `action_seq` 严格增加（CTB 无回合边界）。"""
     eng = make().start(PLAYER, ENEMY, random_seed=seed)
-    eng.do_action("player", {"type": "normal"})
-    eng.enemy_act()
-    eng.end_turn()  # 内部 ⑨ 自动 start_turn 进入下一回合（turn+1、state=act）
-    assert eng.battle_state()["turn"] == 2 and eng.state == "act"
+    seq0 = int(eng.battle_state()["action_seq"])
+    eng.player_act("normal")
+    seq1 = int(eng.battle_state()["action_seq"])
+    assert seq1 > seq0, "一次 player_act 应推进 action_seq（含 NPC 自动连锁）"
+    assert eng.state == "act" and not eng.finished
     eng._rng = QueueRNG(SEQ)
-    out2 = eng.do_action("enemy", {"type": "normal", "mult": 1.0})
-    assert out2.hit is True
+    eng.player_act("normal")
+    assert int(eng.battle_state()["action_seq"]) > seq1, "再次行动应继续推进 action_seq"
 
 
 def test_b7_reflect_lands_on_attacker(seed: int):
@@ -125,40 +153,104 @@ def test_b8_formula_injection(seed: int):
     assert fn("[我方攻击]*2+10") == 210.0
 
 
+# ---------------- 行动顺序权威（CTB 专项）：调度器唯一权威 ----------------
+class TestActionOrderAuthority:
+    """CTB 下行动顺序的唯一权威是 `CTBScheduler`——引擎侧不得再排序。
+
+    旧 `action_order()` 是「伪速度排序，一次排定整回合固定出手序」；CTB 无整轮固定
+    顺序（谁先满行动条谁先动，且每次行动后重签票据），故该方法是纯回合制产物，
+    保留同名壳并抛 `NotImplementedError`（Wave A M2）。真正的顺序由调度器按速度
+    动态产生——下面用任务黑盒的 P/E 速度关系验证其行为。
+    """
+
+    def test_action_order_is_removed_shell(self, seed: int) -> None:
+        """`action_order()` 是【删除】壳：调用须抛 NotImplementedError（不得恢复）。"""
+        eng = make().start(PLAYER, ENEMY, random_seed=seed)
+        with pytest.raises(NotImplementedError):
+            eng.action_order()
+
+    def test_removed_shells_raise_not_implemented(self, seed: int) -> None:
+        """`enemy_act` / `end_turn` 同为【删除】壳：调用须抛 NotImplementedError。"""
+        eng = make().start(PLAYER, ENEMY, random_seed=seed)
+        with pytest.raises(NotImplementedError):
+            eng.enemy_act()
+        with pytest.raises(NotImplementedError):
+            eng.end_turn()
+
+    def test_scheduler_is_order_authority_by_speed(self) -> None:
+        """顺序权威 = `CTBScheduler`：快者先动（SPD 100 vs 75 → P→E→P→E→P）。"""
+        from qbot_rpg.core.ctb_rules import CtbRuleConfig
+        from qbot_rpg.core.ctb_scheduler import CTBScheduler
+
+        ctb = CTBScheduler(config=CtbRuleConfig())
+        ctb.push_actor("P", side="player", effective_speed=100.0, is_player=True)
+        ctb.push_actor("E", side="enemy", effective_speed=75.0)
+        ctb.start()
+        seq = []
+        for _ in range(5):
+            ev = ctb.advance_to_next_ready()
+            if ev is None:
+                break
+            seq.append(str(ev.get("actor_id")))
+            if ctb.should_pause_for_input():
+                ctb.complete_player_action()
+        assert seq == ["P", "E", "P", "E", "P"], f"速度决定顺序，got {seq}"
+
+    def test_engine_next_action_owner_follows_scheduler(self, seed: int) -> None:
+        """引擎 `next_action_owner()` 为调度器代理（不自己排序）。"""
+        eng = make().start(PLAYER, ENEMY, random_seed=seed)
+        assert eng.next_action_owner() in ("player", "enemy")
+        assert not hasattr(eng, "_order_cache")   # 引擎不缓存固定顺序
+
+
 # ---------------- P0 回归（dsh 批2 审查）：dot 致死两通道 ----------------
 def test_p001_turn_start_dot_lethal(seed: int):
-    """P0-01 回归：回合开始 dot 致死不抛 BattleStateError，正常终局（1g1c TC-02/13）。"""
+    """P0-01 回归：回合开始 dot 致死不抛 BattleStateError，正常终局（1g1c TC-02/13）。
+
+    CTB 迁移：`ACTOR_TURN_START` 位点为该 actor 结算自身 turn_start DOT（旧「回合
+    开始 dot」→ 目标自身行动开始）。`player_act('guard')` 会由调度器自动推进敌人
+    ready，届时其 `ACTOR_TURN_START` 结算 DOT 50→0 → 终局（原本 ACT→DTH 抛
+    BattleStateError 的通道已闭合）。
+    """
     enemy = dict(ENEMY); enemy["hp"] = 50
-    eng = make().start(PLAYER, enemy, random_seed=seed)   # 回合1 ACT（start_turn 已跑，无 dot）
+    eng = make().start(PLAYER, enemy, random_seed=seed)
     eng._snap["enemy"]["dot_pool"] = {"poison": {"value": 100, "tick": "turn_start", "turns": 1,
                                                  "source": "player"}}
-    # 走完整一轮：guard（玩家不攻击避免打死）-> 敌后手 -> end_turn 内部 start_turn（回合2）
-    # ① turn_start dot 打 enemy 50->0 -> 死亡挂点（原 ACT->DTH 抛 BattleStateError）
-    eng.do_action("player", {"type": "guard"})
-    eng.enemy_act()
-    eng.end_turn()
+    eng.player_act("guard")   # CTB：调度器自动推进敌方 ready → 其 ACTOR_TURN_START 结算 DOT
     assert eng.finished, "dot 致死应触发终局而非崩溃"
     assert eng.battle_state()["status"] == "win"
 
 
 def test_p002_turn_end_tick_dot_lethal(seed: int):
-    """P0-02 回归：回合结束 tick dot 致死 → 死亡挂点 + 终局（1g1c TC-03，死不穿透回合边界）。"""
+    """P0-02 回归：回合结束 tick dot 致死 → 死亡挂点 + 终局（1g1c TC-03）。
+
+    CTB 目标位点：该 actor 的 `ACTOR_TURN_END`（旧「回合结束 tick dot」→ 行动者
+    行动收尾）。2026-09-10 已接线：`_after_actor_action` 调 `effects.tick_turn_end`
+    并复核死亡 —— 敌方收尾结算 turn_end DOT 50→0 → 终局。
+    """
     enemy = dict(ENEMY); enemy["hp"] = 50
     eng = make().start(PLAYER, enemy, random_seed=seed)
     eng._snap["enemy"]["dot_pool"] = {"fire": {"value": 100, "tick": "turn_end", "turns": 1,
                                                "source": "player"}}
-    rep = eng.end_turn()   # tick 内 dot -> 50 -> 0 -> 死亡挂点（原 HP=0 不死单位死锁）
+    eng.player_act("guard")   # 敌方行动收尾应 tick turn_end DOT 50→0 → 终局
     assert eng.finished, "tick dot 致死应终局而非 0HP 不死单位"
     assert eng.battle_state()["status"] == "win"
 
 
 def test_p004_tick_dot_on_player_lose(seed: int):
-    """P0-02 玩家侧：回合结束 tick dot 打玩家致 0 → mark_lose（原玩家死锁）。"""
+    """P0-02 玩家侧：该 actor 行动收尾 turn_end tick dot 打玩家致 0 → mark_lose。
+
+    CTB 目标位点：玩家 `ACTOR_TURN_END`。2026-09-10 已接线：`_after_actor_action`
+    调 `effects.tick_turn_end` 并复核双方死亡 —— 「玩家 30HP + turn_end DOT 100」
+    由 DOT 致负，判 lose。
+    """
     player = dict(PLAYER); player["hp"] = 30
-    eng = make().start(player, ENEMY, random_seed=seed)
+    # 敌方 spd=0 → 永不出手，隔离出「仅由 turn_end DOT 致死」这一变量
+    enemy = dict(ENEMY); enemy["spd"] = 0
+    eng = make().start(player, enemy, random_seed=seed)
     eng._snap["player"]["dot_pool"] = {"bleed": {"value": 100, "tick": "turn_end", "turns": 1,
                                                  "source": "enemy"}}
-    rep = eng.end_turn()
+    eng.player_act("guard")
     assert eng.finished and eng.battle_state()["status"] == "lose"
 
 

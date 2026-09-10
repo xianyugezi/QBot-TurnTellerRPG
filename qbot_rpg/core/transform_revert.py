@@ -226,7 +226,7 @@ def revert_transform(
         rem = int(ts.get(STATE_REMAINING, 0) or 0)
         if rem > 0:
             return {"ok": False, "reverted": False, "reason": reason,
-                    "messages": [f"形态剩余 {rem} 回合，未到自然结束"],
+                    "messages": [f"形态剩余 {rem} 次行动，未到自然结束"],
                     "state": dict(ts)}
     # state_policy 执行
     policy = _policy_of(transform)
@@ -245,7 +245,7 @@ def revert_transform(
     }
     return {
         "ok": True, "reverted": True, "reason": reason,
-        "messages": [f"形态还原（{reason}），进入冷却 {cd} 回合"],
+        "messages": [f"形态还原（{reason}），进入冷却 {cd} 次行动"],
         "state": new_state, "policy_applied": applied,
     }
 

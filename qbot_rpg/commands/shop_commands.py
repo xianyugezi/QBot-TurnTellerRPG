@@ -442,7 +442,9 @@ def cmd_buy(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     target = _target_of(parsed)
     qty = parsed.qty if parsed.qty is not None else 1
     shop_id = resolve_shop_arg(None, ctx)
-    res = shop_buy(shop_id, target, qty, ctx)  # None=无商店→校验链① no_shop
+    if shop_id is None:  # 无商店 → 校验链① no_shop（不进入 shop_buy）
+        return str(tpl_of(ctx, "shop_buy_fail"))
+    res = shop_buy(shop_id, target, qty, ctx)
     return str(res.get("message") or tpl_of(ctx, "shop_buy_fail"))
 
 

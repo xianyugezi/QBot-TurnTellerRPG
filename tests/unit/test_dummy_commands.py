@@ -132,7 +132,8 @@ def test_dummy_start_normal_monster_auto_overlay() -> None:
     ov = ps.get("dummy_override")
     assert ov is not None
     assert ov.get("name") == "荒原狼"
-    assert out["message"].startswith("⚔️ 与 训练木桩·荒原狼")
+    # M5 裁决（登记表 §一.3）：训练战开始行删除装饰性 ⚔️，断言同步纯文本前缀
+    assert out["message"].startswith("与 训练木桩·荒原狼")
 
 
 def test_dummy_battle_lock_when_active() -> None:

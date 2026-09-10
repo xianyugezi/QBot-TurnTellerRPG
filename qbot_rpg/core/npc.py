@@ -14,9 +14,10 @@
     作兼容映射，保留兼容迁移提示）
 
 【工程补白 · 显式标注】（契约/定稿未给字段名或落点，按"只建议不限制"取点定型，命名可改）：
-  1) 条件求值统一走 qbot_rpg.engine.condition_engine.eval_condition（A2 唯一实现，m4 §1 A2）；
-     core→engine 依赖由 G0 依赖矩阵允许（scripts/check_architecture.py ALLOWED_DEP["core"] += "engine"，
-     契约 A2「任务/NPC/商店/签到全系统复用」的前提；本文件为 M4 首批消费方）。
+  1) 条件求值统一走 qbot_rpg.core.condition_engine.eval_condition（A2 唯一实现，m4 §1 A2）；
+     2026-09-10 架构违规修复：condition_engine 原在契约外的 qbot_rpg/engine/ 层，已按契约 §2.3
+     「原 engine/ 更名 core/」迁入 qbot_rpg/core/——同层引用，不再需要跨层豁免
+     （ALLOWED_DEP["core"] 的临时 "engine" 项已撤销；本文件为 M4 首批消费方）。
   2) 玩家存档一次性节点 npc_delivered（O07）：ctx["npc_delivered"] = {npc_id: {交付键: 值}}；
      交付键 = "intel:<ref_id>" / "tutorial:<tutorial_id>" / "give_item:<指纹>" / "card:<牌id>"（P05）；
      值 = True（once/intel/tutorial/池牌）或日期键 "YYYY-MM-DD"（give_item repeat=daily 最后领取日）。
@@ -49,12 +50,12 @@
 
 from __future__ import annotations
 
-from typing import Any, Mapping, MutableMapping, Optional, cast
+from typing import Any, Dict, Mapping, MutableMapping, Optional, cast
 
 from qbot_rpg.core.dayroll import today_of
 from qbot_rpg.core.quest import resolve_quest
 from qbot_rpg.core.reward import dispatch_reward
-from qbot_rpg.engine.condition_engine import eval_condition
+from qbot_rpg.core.condition_engine import eval_condition
 
 __all__ = [
     "STRATEGY_CONDITION",
@@ -594,9 +595,9 @@ def _action_heal(entry: Mapping[str, Any], ctx: Mapping[str, Any], **kw: Any) ->
 
         p = ctx.get("player") if isinstance(ctx, Mapping) else None
         if isinstance(p, Player):
-            _kw = {}
+            _kw: Dict[str, Any] = {}
             for _s, _v in _healed.items():
-                _kw[_s] = int(_v)
+                _kw[str(_s)] = int(_v)
             _nb = dataclasses.replace(p, **_kw)
             if isinstance(ctx, MutableMapping):
                 ctx["player"] = _nb

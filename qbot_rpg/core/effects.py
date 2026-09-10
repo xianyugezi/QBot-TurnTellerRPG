@@ -39,12 +39,18 @@ import warnings
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
+from qbot_rpg.core.effect_types import DamageCtx, chance_roll
 from qbot_rpg.core.marks import (
     AddMark,
     ClearMarks,
     MarksManager,
     RemoveMark,
 )
+
+# 2026-09-10 环打破：DamageCtx + chance_roll 已下沉 qbot_rpg/core/effect_types.py
+# （原 effects ↔ event_dispatcher 循环 import 的消除，详见该模块 docstring）。
+# 本文件保留 `_chance_roll` 别名，兼容既有调用点与测试对私有名的引用。
+_chance_roll = chance_roll
 
 # 效果引用归一 / 效果条件化（功能二《框架_功能二_效果引用归一与条件化_设计.md》§2）：
 # 执行链入口常量，纯配置可写（skill effects 条目 / statuses actions / proc actions 内嵌）。
@@ -136,26 +142,10 @@ def _deep_mapping_of(value: Optional[Mapping[str, Any]]) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-@dataclass(frozen=True)
-class DamageCtx:
-    """单次受击上下文（细化_1b §2 接口签名【细化】：raw_damage/attack_type/attacker/
-    target/snapshot/variables）。
-
-    - attack_type: basic/skill/status/crit/element（普攻/技能/异常/暴击/属性分型，
-      细化_1b §2 阶段① scope 参数化依据）。
-    - snapshot: 战斗快照 Map（数据形态同 data/battle.BattleSnapshot 字段，**须为可变
-      工作拷贝**——pipeline 会写 hp/status_state/defenses 等，见模块 docstring 补白①），
-      必含每侧 combatant（hp/max_hp/...）与五块快照键。
-    - variables: {region,rng,luck,eval_formula,pipeline,is_reflect_damage,stat_map,...}
-      运行期变量（M12.5 需求1：stat_map 由战斗层注入，L0 取数语义键可配）。
-    """
-
-    raw_damage: int
-    attack_type: str = "basic"
-    attacker: str = "player"
-    target: str = "enemy"
-    snapshot: Mapping[str, Any] = field(default_factory=dict)
-    variables: Mapping[str, Any] = field(default_factory=dict)
+# DamageCtx（单次受击上下文 dataclass）2026-09-10 下沉至 qbot_rpg/core/effect_types.py：
+# 该类型被 event_dispatcher 反向引用，留在本文件会构成 effects ↔ event_dispatcher 环。
+# 本文件经顶部 `from qbot_rpg.core.effect_types import DamageCtx` 引入，对外语义不变
+# （__all__ 仍导出 DamageCtx，调用方零改动）。
 
 
 @dataclass(frozen=True)
@@ -1655,36 +1645,35 @@ def _resolve_value(
     return 0
 
 
-def _chance_roll(
-    chance: Any,
-    ctx: DamageCtx,
-    attacker_luck: int = 0,
-    target_luck: int = 0,
-) -> bool:
-    """概率三态判定（细化_1b §1.1 chance / 定稿 §2.1）。
+# _chance_roll 2026-09-10 下沉至 qbot_rpg/core/effect_types.py（公开名 chance_roll）：
+# 本文件顶部以 `_chance_roll = chance_roll` 保留私有别名，既有调用点/测试零改动。
 
-    -1 = 必定；0~100 固定；+0~100 幸运修正 =（√我方幸运−√对方幸运+概率）%，
-    为负或超 100 均截断（变量定稿「只建议不限制」精神，【工程补白】截断）。
-    可经 ctx.variables["rng"] 注入随机源（确定性测试）。
+
+# ---------------------------------------------------------------------------
+# 状态事件分派回调注册点（2026-09-10 环打破 · 依赖注入）
+#
+# 背景：execute_action 在 status_apply 成功 / dispel 移除后需触发事件分派
+# （status_gain / status_lose），而事件分派器本身要调 execute_action 执行候选效果——
+# 双向引用构成 effects ↔ event_dispatcher 环（契约 R3 禁止）。
+#
+# 解法（控制反转）：本模块只声明「面向接口」的回调槽，不 import 分派器；
+# event_dispatcher 在模块加载末尾调用 register_event_dispatcher(dispatch_event)
+# 完成注册（其 → effects 为单向依赖，环消除）。
+# 依赖方向：event_dispatcher → effects（注册）＋ → effect_types，单向。
+# 未注册（如单测只 import effects）→ 状态事件静默跳过，与既有「无 resolver 则 []」
+# 的安全失败语义一致，不影响主流程。
+# ---------------------------------------------------------------------------
+
+_STATUS_EVENT_DISPATCHER: Optional[Callable[..., List[Dict[str, Any]]]] = None
+
+
+def register_event_dispatcher(fn: Callable[..., List[Dict[str, Any]]]) -> None:
+    """注册状态事件分派回调（event_dispatcher 模块加载时调用，见上注）。
+
+    幂等：重复注册以最后一次为准（热重载场景下模块重入安全）。
     """
-    if chance is None:
-        return True
-    mode = chance.get("mode", "-1") if isinstance(chance, dict) else "-1"
-    value = float(chance.get("value", -1)) if isinstance(chance, dict) else -1.0
-    rng_ = ctx.variables.get("rng")
-    roll = rng_.random() if rng_ is not None else random.random()
-    mode_s = str(mode).strip()
-    if mode_s in ("-1", "always"):
-        return True
-    # P1-4 修复：识别字面 "lucky"（细化_1b A-3：mode=lucky, value=20 =>
-    #（√我方幸运−√对方幸运+value）%）；"+" 前缀与 "lucky" 同走幸运修正分支
-    if mode_s.isdigit() or mode_s.lstrip("+").isdigit() or mode_s == "lucky":
-        if mode_s.isdigit() and not mode_s.startswith("+"):
-            return (roll * 100.0) <= value  # 固定概率（不幸运修正）
-        lucky = (math.sqrt(max(0, attacker_luck)) - math.sqrt(max(0, target_luck)) + value) / 100.0
-        lucky = max(0.0, min(1.0, lucky))
-        return roll < lucky
-    return False
+    global _STATUS_EVENT_DISPATCHER
+    _STATUS_EVENT_DISPATCHER = fn
 
 
 def _dispatch_status_event(event: str, status_id: str, side: str,
@@ -1695,7 +1684,13 @@ def _dispatch_status_event(event: str, status_id: str, side: str,
     registry（resolve 同形，all_ids 空——dispatch 对 status_id 精确查不需要全扫），
     在 execute_action 的 status_apply 成功 / dispel 移除后触发状态 on_gain/on_lose
     效果。无 resolver / 异常 → [] 安全失败（不阻断主动作）。
+
+    2026-09-10：分派器经 register_event_dispatcher 注入（原 lazy import 消除，破环），
+    未注册 → [] （安全失败）。
     """
+    dispatch_event = _STATUS_EVENT_DISPATCHER
+    if dispatch_event is None:
+        return []
     try:
         resolver = getattr(runtime, "_resolver", None)
         if not callable(resolver):
@@ -1708,8 +1703,6 @@ def _dispatch_status_event(event: str, status_id: str, side: str,
 
             def all_ids(self, kind: str) -> tuple:
                 return ()
-
-        from qbot_rpg.core.event_dispatcher import dispatch_event  # lazy：防环
 
         return dispatch_event(
             event, side, ctx.snapshot, _ResolverRegistry(),
@@ -2088,7 +2081,7 @@ def execute_proc_action(
     per_turn, per_battle = runtime.trigger_counts(actor, proc_id)
     if per_turn >= int(runtime.config.get("max_triggers_per_turn", 10)):
         side_effects.append({"type": "proc_blocked", "reason": "per_turn_limit"})
-        return ActionResult(False, side_effects, "每回合触发上限")
+        return ActionResult(False, side_effects, "每次行动触发上限")
     if per_battle >= int(runtime.config.get("max_triggers_per_battle", 99)):
         side_effects.append({"type": "proc_blocked", "reason": "per_battle_limit"})
         return ActionResult(False, side_effects, "每场触发上限")

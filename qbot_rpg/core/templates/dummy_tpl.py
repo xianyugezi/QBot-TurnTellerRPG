@@ -18,7 +18,7 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     "dummy_list_tail": "发送 /木桩 <序号或名称> 进入训练；/调整木桩 <怪物名> 覆盖面板",
     "dummy_list_empty": "当前内容包没有训练木桩（enemies.json 配 tier=training）",
     "dummy_not_found": "未找到木桩「{name}」，发送 /木桩 查看档位",
-    "dummy_start": "⚔️ 与 {name}（HP {hp}）的训练战开始！发 攻击 出战（木桩不反击，胜利无掉落）。",
+    "dummy_start": "与 {name}（HP {hp}）的训练战开始！发 攻击 出战（木桩不反击，胜利无掉落）。",
     "dummy_adjust_ok": "✅ 已把木桩面板调整为「{name}」的防御/抗性（HP 仍为木桩值）",
     "dummy_adjust_reset": "✅ 已重置木桩面板为默认档位",
     "dummy_adjust_missing": "怪物「{name}」不存在（enemies.json 里找）",

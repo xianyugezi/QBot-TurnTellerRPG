@@ -1015,7 +1015,7 @@ class ComboEngine:
         if not t_state.active:
             return InterruptResult(
                 False, target, "no_active",
-                f"{target} 无活跃连段，打断无效果（仍耗回合/MP）",
+                f"{target} 无活跃连段，打断无效果（仍消耗行动/MP）",
                 t_state.count, t_state.count,
             )
         # ② 霸体免疫
@@ -1161,7 +1161,7 @@ class ComboEngine:
                 count_before=state.count, count_after=state.count,
                 chain_id=state.chain_id, chain_name=state.chain_name,
                 state=derive_state(state, self.chain_by_id(state.chain_id) if state.chain_id else None),
-                messages=(f"指令被拒（{rej_reason}）：不改连段、不耗回合",),
+                messages=(f"指令被拒（{rej_reason}）：不改连段、不消耗行动",),
             )
 
         # 链解析：已有活跃链 或 首次使用注册（trigger_skill/参与技能命中）

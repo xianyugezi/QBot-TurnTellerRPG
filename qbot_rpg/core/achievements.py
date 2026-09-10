@@ -10,7 +10,7 @@
   - qbot_rpg/core/codex_milestones.py（check_milestones L337-375：结算后调用 + 逐档
     授予 + 幂等集合先例）
   - qbot_rpg/core/reward.py（dispatch_reward 唯一发放器，含称号型 G2）
-  - qbot_rpg/engine/condition_engine.py（eval_condition L611：list=全与，fail-safe）
+  - qbot_rpg/core/condition_engine.py（eval_condition L611：list=全与，fail-safe）
 
 职责（G1）：
   check_achievements(ctx, *, sources=None) 为结算点钩子唯一入口——图鉴点亮 / 事件
@@ -279,7 +279,7 @@ def check_achievements(
         # ② 条件求值（list=全与 AND，D-02；求值失败 fail-safe False，D-03）
         conditions = entry.get("conditions")
         try:
-            from qbot_rpg.engine.condition_engine import eval_condition
+            from qbot_rpg.core.condition_engine import eval_condition
 
             met = eval_condition(conditions, ctx) if conditions is not None else True
         except Exception:

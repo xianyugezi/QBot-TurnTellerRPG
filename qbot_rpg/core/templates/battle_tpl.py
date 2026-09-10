@@ -21,7 +21,7 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     "battle_no_battle": "❌ 当前没有进行中的战斗",
     # —— /查看目标（框架 7.6 L1356/L1367：目标属性面板，掉落不显示）——
     "battle_target_no_battle": "❌ 当前没有进行中的战斗（/锁定 1 开战后可查看目标）",
-    "battle_target_head": "【目标】{name}（第 {round} 回合）",
+    "battle_target_head": "【目标】{name}（第 {round} 行动）",
     "battle_target_hp": "【生命】{hp}/{max_hp}",
     "battle_target_attr": "【{attr_name}】{value}",
     "battle_target_marks": "【印记】{marks}",
@@ -41,17 +41,27 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
                                     "进入战斗后使用 攻击 <技能序号或名称> 发动技能。",
     # 指令返回 message 元数据（非发送正文，逐字迁移）
     "battle_result_end": "战斗结束（{status}）",
-    "battle_result_round": "第 {turn} 回合结算",
+    # CTB 口径（收口 2026-09-10）：{turn} 槽位承载 `action_seq`（已结算行动数）——
+    # CTB 无「回合」概念，玩家可见文案统一改「第 N 行动」。
+    "battle_result_round": "第 {turn} 行动结算",
 
-    # —— battle_render BREP-23 战斗开始 ——
+    # —— BREP-23 战斗开始 ——
     "battle_start_line": "与{name}的战斗开始！{name} {hp}/{max_hp}",
+
+    # —— CTB 重写（Agent 5 · DataRender）：单次行动 / 批量 NPC 行动 / 玩家 ready ——
+    # 依据 docs/ctb/01_asset_inventory.md §0.2 事件位点词典（ACTOR_READY / ACTOR_TURN_START）+
+    # docs/ctb/02_wave_a_decisions.md 裁决口径。CTB 无「回合」概念，状态行以逻辑时间计。
+    "battle_ctb_ready": "轮到你行动了",
+    "battle_ctb_status": "距离你下次行动：{n}",
+    "battle_ctb_turn_start": "轮到 {actor} 行动",
+    "battle_ctb_batch_head": "（行动时间 {start} → {end}）",
 
     # —— TPL-09 16 行折叠（战斗轮 / 明细块）——
     "battle_fold_lines": "…（其余 {n} 行已折叠）",
     "battle_fold_items": "…（其余 {n} 条已折叠，输入 /{command} {page} 查看）",
 
     # —— BREP-24 战斗结束汇总行 ——
-    "battle_end_summary": "战斗结束：{label}｜回合数 {turns}｜输入 /战斗记录 查看明细",
+    "battle_end_summary": "战斗结束：{label}｜行动数 {turns}｜输入 /战斗记录 查看明细",
 
     # —— BREP-07 技能释放（resource_text 空省略括号）——
     "battle_skill_cast": "✅ 你施放{skill_name}：{effect_desc}",
@@ -74,7 +84,7 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     # —— BREP-02/03/05/06 玩家行动 ——
     "battle_player_hit": "✅ 你{action}，造成 {damage} 伤害{note}（{target} {hp}/{max_hp}）",
     "battle_player_miss": "❌ 未命中：{target} 闪过了你的{action}（{target} {hp}/{max_hp}）",
-    "battle_player_defend": "✅ 你进入防御姿态（本回合受到伤害减半）",
+    "battle_player_defend": "✅ 你进入防御姿态（本次行动受到伤害减半）",
     "battle_player_defend_hit": "✅ 你防御了{attacker}的{action}，"
                                "受到 {damage} 伤害（HP {hp}/{max_hp}）",
 
@@ -87,14 +97,14 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
 "battle_position_changed": "{actor} 移动到了{pos}",
 "battle_part_broken": "{part}被击碎！{name}轰然倒地",
 "battle_part_broken_no_knock": "{part}被击碎，{name}仍稳立当场",
-    "battle_enemy_intent": "{name} 蓄力中（下回合发动「{skill}」）",
+    "battle_enemy_intent": "{name} 蓄力中（下次行动发动「{skill}」）",
     "battle_enemy_special": "{name} {action}",
     "battle_enemy_special_suffix": "（{change}）",
     "battle_intercept_absorb": "{shield} 吸收了 {n} 点伤害",
     "battle_intercept_reflect": "反弹 {n} 伤害给{target}",
     # 2026-09-09 防反/闪反（用户拍板标签制）：格挡免伤行 + 反击行
     "battle_parry_success": "✅ 你格挡了{action}（完全免伤）",
-    "battle_counter_hit": "⚔️ 反击：{name}造成 {damage} 伤害",
+    "battle_counter_hit": "反击：{name}造成 {damage} 伤害",
     "battle_intercept_immune": "免疫了{effect}",
 
     # —— BREP-15 击杀行 ——
@@ -133,7 +143,7 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     "battle_combo_settle": "连段 {total} 段已结算",
     "battle_combo_settle_suffix": "（{remark}）",
     "battle_combo_remark_boss": "BOSS 已倒下，战斗结束，后续段数作废",
-    "battle_combo_remark_waste": "目标已倒下，下一回合退出战场",
+    "battle_combo_remark_waste": "目标已倒下，该段连式为无效消耗",
 
     # —— BREP-25 木桩明细（摘要行 + 条目行）——
     "battle_summary_header": "摘要：总伤害 {total}｜最大单段 {max_hit}｜会心 {crits} 次"
@@ -164,6 +174,11 @@ PLACEHOLDER_WHITELIST: Dict[str, set] = {
 
     # —— battle_render ——
     "battle_start_line": {"name", "hp", "max_hp"},
+    # CTB 三入口模板（Agent 5 · DataRender）
+    "battle_ctb_ready": set(),
+    "battle_ctb_status": {"n"},
+    "battle_ctb_turn_start": {"actor"},
+    "battle_ctb_batch_head": {"start", "end"},
     "battle_fold_lines": {"n"},
     "battle_fold_items": {"n", "command", "page"},
     "battle_end_summary": {"label", "turns"},

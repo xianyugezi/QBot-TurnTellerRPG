@@ -48,9 +48,14 @@ def _outcome(**kw: Any) -> ActionOutcome:
 
 
 def _report(*outcomes: Any, **kw: Any) -> TurnReport:
-    """构造 TurnReport（真实字段；player/enemy 为 HP 快照，outcomes 流水）。"""
+    """构造 TurnReport（CTB 真实字段；player/enemy 为 HP 快照，outcomes 流水）。
+
+    CTB 迁移（2026-09-10 · Agent 4）：`phases` 已由 dataclass 字段改为只读 property
+    （底层 `_phase_label`），构造器不再接受 `phases` 实参；CTB 进度以 `action_seq`
+    （int）+ `battle_time`（float）为准，顶层 `turn` 仅为 `action_seq` 兼容镜像。
+    """
     defaults: Dict[str, Any] = {
-        "turn": 1, "phases": ("player_action", "enemy_action"),
+        "turn": 1, "action_seq": 1, "battle_time": 100.0,
         "player": 21, "enemy": 7, "ended": False, "status": None,
         "log": (), "outcomes": tuple(outcomes),
     }
@@ -149,9 +154,9 @@ def test_tc09_no_note_when_plain() -> None:
 # ---------------------------------------------------------------------------
 
 def test_tc10_defend_enter_exact() -> None:
-    """TC-10：`✅ 你进入防御姿态（本回合受到伤害减半）`（BREP-05）。"""
+    """TC-10：`✅ 你进入防御姿态（本次行动受到伤害减半）`（BREP-05）。"""
     oc = _outcome(action_type="guard", hit=True, raw_damage=0, final_damage=0, target_hp=7)
-    assert _render_player_defend(oc) == "✅ 你进入防御姿态（本回合受到伤害减半）"
+    assert _render_player_defend(oc) == "✅ 你进入防御姿态（本次行动受到伤害减半）"
 
 
 def test_tc10_defend_hit_exact() -> None:
@@ -195,7 +200,8 @@ def test_render_round_miss_via_round() -> None:
     """render_battle_round：未命中走 BREP-03；并行路钩子（M5-05/06）未落地优雅跳过。"""
     oc = _outcome(hit=False, raw_damage=0, final_damage=0, target_hp=25)
     text = render_battle_round(_report(oc))
-    assert text == "❌ 未命中：史莱姆 闪过了你的攻击（史莱姆 25/25）"  # 模板兜底（roll miss 已移除）
+    # 模板兜底（roll miss 已移除）
+    assert text == "❌ 未命中：史莱姆 闪过了你的攻击（史莱姆 25/25）"
 
 
 def test_render_round_hint_when_max_known() -> None:

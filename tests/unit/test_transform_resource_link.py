@@ -3,8 +3,7 @@
 覆盖（真实战斗驱动：BattleEngine + resource_registry + transform 段全链路）：
   1) C2 资源门禁（触发技 energy_cost 不足 → 形态不触发、怒气保留、被拒不耗回合）：
      - 怒气满 → 触发成功（100 沉没 0，TRF-5）+ 形态切换 + transform_committed
-     - 怒气不足（<100）→ C2 拒绝（transform_rejected guard=C2）形态不触发
-     - 怒气不足时触发技仍按普通技能结算（效果通道已结算，TRF-1），但变换不触发
+     - 怒气不足（<100）→ 能量门禁拒（技能被拦，变换闸未达），形态不触发
      - 怒气保留语义：被拒后怒气不变（energy_cost 不足不扣，REV-5 沉没问题）
      - 怒气恰好=100 → 边界放行（check_cost >= 语义）
      - 未注入 resource_registry → 触发技零操作降级（不触发变换，不报错）
@@ -20,10 +19,17 @@
      - 怒气沉没：还原后 rage 不返还（REV-5，资源槽保持触发后值）
      - 触发时 combo=clear 亦真实清连段（触发瞬间 ④d）
 
+CTB 迁移（2026-09-10 · Agent 3）：旧「do_action → enemy_act → end_turn」三段已删
+（`enemy_act`/`end_turn` 为 `NotImplementedError` 壳，禁止恢复）→ 统一走
+`player_act`：一次提交 = 一次玩家行动 + 调度器自动推进 NPC 连锁到下一个 ready。
+**形态 remaining 与形态/技能冷却按持有者（player）自身行动次数递减**
+（`_after_actor_action` 的 ACTOR_TURN_END 位点），故旧「N 回合」语义变为
+「持有者 N 次行动」。
+
 测试目标：qbot_rpg.core.battle.BattleEngine 真实战斗驱动（不 mock 引擎内部）。
 
-铁律：零 NoneBot import（G0 门禁）；文件头不写 time.sleep 字面量（本文件
-零定时器/零睡眠，纯函数确定性）；不引入随机；不 git commit。
+铁律：零 NoneBot import（G0 门禁）；本文件零定时器/零睡眠，纯函数确定性；
+不引入随机；不 git commit。
 """
 
 from __future__ import annotations
@@ -93,9 +99,9 @@ def _engine(**over: Any) -> BattleEngine:
         eng._resource_registry = {"rage": _RAGE}
     eng.start(
         {"hp": 500, "max_hp": 500, "mp": 100, "max_mp": 100,
-         "atk": 50, "def": 30, "spr": 20, "spd": 10, "name": "玩家"},
+         "atk": 50, "def": 30, "spr": 20, "spd": 10, "name": "玩家", "agi": 10},
         {"hp": 500, "max_hp": 500, "mp": 100, "max_mp": 100,
-         "atk": 40, "def": 20, "spr": 15, "spd": 8, "name": "疾风狼"},
+         "atk": 40, "def": 20, "spr": 15, "spd": 8, "name": "疾风狼", "agi": 10},
         random_seed=42,
     )
     eng._snap["resource_state"] = {"player": {"rage": rage}, "enemy": {}}
@@ -113,11 +119,11 @@ def _ts(eng: BattleEngine) -> Dict[str, Any]:
 
 
 def _full_turn(eng: BattleEngine, action: Dict[str, Any]) -> Any:
-    """完整一轮：玩家行动 → 敌后手 → end_turn tick。"""
-    out = eng.do_action("player", action)
-    eng.enemy_act()
-    eng.end_turn()
-    return out
+    """提交一次玩家行动（CTB：`player_act` 含调度器自动推进 + 收尾 tick 一次）。
+
+    旧 `do_action + enemy_act + end_turn` 三件套已随 Wave A M4/M5 删除，禁止恢复。
+    """
+    return eng.player_act(action)
 
 
 def _events(eng: BattleEngine) -> Any:
@@ -140,8 +146,8 @@ def _rejected(eng: BattleEngine) -> Any:
 def test_c2_full_rage_triggers_and_sinks() -> None:
     """怒气满（100）→ 触发成功：形态切换 + 怒气 100 沉没为 0（TRF-5）。"""
     eng = _engine(rage=100)
-    out = eng.do_action("player", {"type": "skill", "skill_id": "rage_burst"})
-    assert out.ok is True, f"触发技应成功结算，got {out.message}"
+    out = _full_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
+    assert out.outcomes[0].ok is True, f"触发技应成功结算，got {out}"
     ts = _ts(eng)
     assert ts["form"] == "berserker_form", f"形态应切换，got {ts}"
     assert _rage(eng) == 0, f"怒气 100 应沉没为 0（TRF-5），got {_rage(eng)}"
@@ -149,15 +155,15 @@ def test_c2_full_rage_triggers_and_sinks() -> None:
 
 
 def test_c2_insufficient_rage_rejects_transform() -> None:
-    """怒气不足（80 < 100）→ C2 拒绝：形态不触发、transform_rejected guard=C2。
+    """怒气不足（80 < 100）→ 能量门禁拒：形态不触发，变换闸 C2 未达。
 
     能量门禁（_apply_skill_energy 先行）不足 → 触发技本身被拒不耗回合
     （energy_insufficient 拒绝消息）——技能结算即被拦，变换闸 C2 未达。
     """
     eng = _engine(rage=80)
-    out = eng.do_action("player", {"type": "skill", "skill_id": "rage_burst"})
-    assert out.ok is False, f"怒气不足应被拒，got {out.message}"
-    assert "能量不足" in out.message
+    out = _full_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
+    assert out.outcomes[0].ok is False, f"怒气不足应被拒，got {out}"
+    assert "能量不足" in out.outcomes[0].message
     ts = _ts(eng)
     assert ts["form"] is None, f"怒气不足形态不应触发，got {ts}"
     # 被拒路径不产生 transform_rejected（技能结算即被拦，C2 闸未达）——
@@ -168,15 +174,15 @@ def test_c2_insufficient_rage_rejects_transform() -> None:
 def test_c2_insufficient_rage_keeps_rage() -> None:
     """怒气不足被拒：怒气保留（80 不变，不扣不增——C2 门禁在扣费之前）。"""
     eng = _engine(rage=80)
-    eng.do_action("player", {"type": "skill", "skill_id": "rage_burst"})
+    _full_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
     assert _rage(eng) == 80, f"被拒怒气应保留 80，got {_rage(eng)}"
 
 
 def test_c2_exact_rage_boundary_triggers() -> None:
     """怒气恰好=100（边界）→ check_cost >= 语义放行 → 触发成功。"""
     eng = _engine(rage=100)
-    out = eng.do_action("player", {"type": "skill", "skill_id": "rage_burst"})
-    assert out.ok is True
+    out = _full_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
+    assert out.outcomes[0].ok is True
     assert _ts(eng)["form"] == "berserker_form", "边界 100 应触发"
     assert _rage(eng) == 0, "触发后怒气沉没为 0"
 
@@ -184,7 +190,7 @@ def test_c2_exact_rage_boundary_triggers() -> None:
 def test_c2_zero_rage_rejects() -> None:
     """怒气 0 → C2 拒绝（形态不触发，怒气保持 0）。"""
     eng = _engine(rage=0)
-    eng.do_action("player", {"type": "skill", "skill_id": "rage_burst"})
+    _full_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
     assert _ts(eng)["form"] is None, "零怒气不应触发"
     assert _rage(eng) == 0
 
@@ -196,8 +202,8 @@ def test_c2_no_registry_noop() -> None:
     正常结算并触发变换（资源轴未装配时引擎不臆造资源约束，B-3 常规回退）。
     """
     eng = _engine(rage=80, no_registry=True)
-    out = eng.do_action("player", {"type": "skill", "skill_id": "rage_burst"})
-    assert out.ok is True, f"无注册表不拦技能，got {out.message}"
+    out = _full_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
+    assert out.outcomes[0].ok is True, f"无注册表不拦技能，got {out}"
     assert _ts(eng)["form"] == "berserker_form", "无注册表资源门禁降级放行 → 触发变换"
 
 
@@ -229,9 +235,9 @@ def test_form_skill_cost_insufficient_rejected() -> None:
     eng = _engine(rage=100)
     _full_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
     eng._snap["resource_state"]["player"]["rage"] = 5
-    out = eng.do_action("player", {"type": "skill", "skill_id": "fury_cost"})
-    assert out.ok is False, f"能量不足应被拒，got {out}"
-    assert "能量不足" in out.message
+    out = _full_turn(eng, {"type": "skill", "skill_id": "fury_cost"})
+    assert out.outcomes[0].ok is False, f"能量不足应被拒，got {out}"
+    assert "能量不足" in out.outcomes[0].message
     assert _rage(eng) == 5, "被拒不应扣增"
 
 
@@ -249,22 +255,19 @@ def test_form_skill_gain_capped_at_max() -> None:
 # ---------------------------------------------------------------------------
 
 def test_revert_combo_clear_real_snapshot() -> None:
-    """还原（natural）state_policy.combo=clear：战斗快照 combo_state 清空。"""
+    """还原（natural）state_policy.combo=clear：战斗快照 combo_state 清空。
+
+    CTB：turns=3 → 持有者行动 3 次（触发当次 + 2 次后续玩家行动）后自然还原。
+    """
     eng = _engine(rage=100)
-    eng.do_action("player", {"type": "skill", "skill_id": "rage_burst"})
+    _full_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
     eng._snap["combo_state"] = {"player": {"chain_id": "c", "chain_name": "链",
                                            "count": 3, "hold": True, "step_index": 1},
                                 "enemy": {}}
-    eng.enemy_act()
-    eng.end_turn()
-    eng.do_action("player", {"type": "normal"})
-    eng.enemy_act()
-    eng.end_turn()
-    eng.do_action("player", {"type": "normal"})
-    eng.enemy_act()
-    eng.end_turn()
+    _full_turn(eng, {"type": "normal"})
+    _full_turn(eng, {"type": "normal"})
     ts = _ts(eng)
-    assert ts["form"] is None, f"turns=3 耗尽应自然还原，got {ts}"
+    assert ts["form"] is None, f"持有者行动 3 次应自然还原，got {ts}"
     cs = eng.battle_state().get("combo_state", {}).get("player", {})
     assert cs.get("count") == 0, f"还原 combo=clear 应清连段，got {cs}"
     assert cs.get("chain_id") is None, f"还原应清活跃链，got {cs}"
@@ -284,7 +287,7 @@ def test_revert_marks_clear_and_buff_clear() -> None:
                    {"id": "t1", "category": "弱化"}],
         "enemy": [],
     }
-    eng.do_action("player", {"type": "skill", "skill_id": "rage_burst"})
+    _full_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
     assert _ts(eng)["form"] == "berserker_form"
     snap0 = eng.battle_state()
     # 触发时（④d）同策略已清：marks=clear → 印记清空；buff=clear → 强化类清空
@@ -293,16 +296,10 @@ def test_revert_marks_clear_and_buff_clear() -> None:
     remain0 = [s.get("id") for s in snap0["status_state"]["player"]]
     assert "t1" in remain0 and "rage_form" not in remain0, \
         f"触发 ④d buff=clear 应清强化类，got {remain0}"
-    eng.enemy_act()
-    eng.end_turn()
-    eng.do_action("player", {"type": "normal"})
-    eng.enemy_act()
-    eng.end_turn()
-    eng.do_action("player", {"type": "normal"})
-    eng.enemy_act()
-    eng.end_turn()
+    _full_turn(eng, {"type": "normal"})
+    _full_turn(eng, {"type": "normal"})
     ts = _ts(eng)
-    assert ts["form"] is None, f"turns 耗尽应自然还原，got {ts}"
+    assert ts["form"] is None, f"持有者行动 3 次应自然还原，got {ts}"
     snap = eng.battle_state()
     assert snap["marks_state"]["player"] == [], \
         f"marks=clear 应清印记，got {snap['marks_state']['player']}"
@@ -314,21 +311,15 @@ def test_revert_marks_clear_and_buff_clear() -> None:
 def test_revert_marks_buff_keep() -> None:
     """还原 state_policy marks/buff=keep（默认）：印记与强化类状态保留。"""
     eng = _engine(rage=100)
-    eng.do_action("player", {"type": "skill", "skill_id": "rage_burst"})
+    _full_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
     eng._snap["marks_state"] = {"player": [{"mark_id": "m1"}], "enemy": []}
     eng._snap["status_state"] = {
         "player": [{"id": "b1", "category": "强化"}], "enemy": [],
     }
-    eng.enemy_act()
-    eng.end_turn()
-    eng.do_action("player", {"type": "normal"})
-    eng.enemy_act()
-    eng.end_turn()
-    eng.do_action("player", {"type": "normal"})
-    eng.enemy_act()
-    eng.end_turn()
+    _full_turn(eng, {"type": "normal"})
+    _full_turn(eng, {"type": "normal"})
     ts = _ts(eng)
-    assert ts["form"] is None, f"turns 耗尽应自然还原，got {ts}"
+    assert ts["form"] is None, f"持有者行动 3 次应自然还原，got {ts}"
     snap = eng.battle_state()
     assert snap["marks_state"]["player"] == [{"mark_id": "m1"}], \
         f"marks=keep 应保留印记，got {snap['marks_state']['player']}"
@@ -357,7 +348,7 @@ def test_trigger_combo_clear_real() -> None:
     eng._snap["combo_state"] = {"player": {"chain_id": "x", "chain_name": "链",
                                            "count": 4, "hold": True, "step_index": 2},
                                 "enemy": {}}
-    eng.do_action("player", {"type": "skill", "skill_id": "rage_burst"})
+    _full_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
     assert _ts(eng)["form"] == "berserker_form"
     cs = eng.battle_state().get("combo_state", {}).get("player", {})
     assert cs.get("count") == 0, f"触发应清连段（④d），got {cs}"

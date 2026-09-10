@@ -33,7 +33,7 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     "status_attr": "【{attr_name}】{value}",
     "status_attr_resource": "【{attr_name}】{cur}/{max}",
     "status_location": "【位置】{location}",
-    "status_target": "【目标】{name} {hp_cur}/{hp_max}（第 {round} 回合）",
+    "status_target": "【目标】{name} {hp_cur}/{hp_max}（第 {round} 行动）",
     "status_effects": "【效果】{effects}",
     "status_imprints": "【印记】{imprints}",
     # —— 状态面板 · 装备区（M12.5/veinborn 收口：/状态 显示已穿装备；空槽不显示）——

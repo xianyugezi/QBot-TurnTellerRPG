@@ -1,63 +1,78 @@
-"""战斗引擎（M1-批2 重写 · 完整回合状态机 + 伤害闭环 + 快照续战）。
+"""战斗引擎（CTB 重写 · 行动条驱动 + 伤害闭环 + 快照 V2 续战）。
 
-本模块是 QQ 回合制 RPG 的**战斗主循环唯一权威实现**（细化_1g1c B0：
-battle_state 为本场战斗唯一权威状态）。零 NoneBot import（细化_3a R1）。
+本模块是 QBot RPG 的**战斗主循环唯一权威实现**（battle_state 为本场战斗唯一
+权威状态）。零 NoneBot import。**CTB（Charge Time Battle / 行动条制）**：不存在
+「回合」这一时间单位——每个单位独立累计行动条，谁先满谁先动；一次行动的时间
+代价由该 action 的 recovery 决定（公式见 core/ctb_rules.next_ready）。
 
-依据（全部引用细化节号，不编造行号）：
-  - 细化_1g1a_战斗状态集：8 态定义（战前准备/行动选择/结算中/死亡判定/胜利/
-    失败/逃跑/快照中断 §1-§9）＋ 主循环骨架（①dot→②即死→③先手→④击杀→
-    ⑤后手→⑥tick→⑦互杀→⑧结束→⑨快照，§0）
-  - 细化_1g1b_战斗迁移表：主迁移 8 条（T1-T8）+ 辅助 A1-A6 + 状态机不变量
-    （§二/§三/§四：死亡判定两触发点、打死不鞭尸只在 BOSS/最后目标、快照只落
-    回合边界、结算收尾单点、拦截链⑦扣血→⑧死亡判定）
-  - 细化_1g1c_战斗状态数据：battle_state 字段级 schema（回合/相位/双方单位/
-    action_record/result/combo_state/ai_state/stats_collector/timestamps）、
-    TC-01..TC-30 验收用例（A 组正常回合 / B 组击杀 / C 组玩家死亡 / D 组逃跑 /
-    E 组快照还原 / F 组连段清零）
-  - 细化_1g2_回合时序与拦截链：回合时序 ①-⑨ 写死不可配（§1.2）、回合结束
-    tick 顺序（§1.3）、拦截链 8 阶段挂载点（§2）
-  - 细化_1g3_快照续战与测试：快照落点约束 S0-S3、字段级 schema §1.2、
-    中断恢复流程 §2、验收用例 A-E 组
-  - 细化_1g4_战斗世界边界：战斗引擎与世界/区域边界（奖励/掉落/快照清理登记
-    归世界层收尾，本引擎只产出结果标记；§承接）
-  - 细化_1b_效果系统契约（DamagePipeline/DamageCtx/EffectRuntime/tick_turn_end/
-    tick_after_action）、细化_1a_伤害公式数值（十乘区纯函数）、细化_1c(连段)、
-    细化_1f(怪物 AI)—— AI 仅留默认普攻反击钩子（后手，细化_1g2 §1.1）。
-  - M2-C1（怪物 AI × 战斗引擎集成）：docs/m2_shared_contract.md §六（battle 挂接点：
-    enemy_act None 分支用 MonsterAI.decide 产出行动 → 走既有 _do_action/_resolve_damage_action
-    执行通道；决策后 ai_state 回灌快照；打断=套完结）＋ §五（ai_state 快照 14 键形态）＋
-    细化_1f ⑥ TC-08/15/16/17/18。MonsterAI 只读注入（enemy_ai），本模块不改写 monster_ai.py。
+依据（本模块 = Agent 3 重写，Wave A 产出为唯一事实源）：
+  - docs/ctb/01_asset_inventory.md §1 三分类总表（107 方法：平移 79 / 重写 25 /
+    删除 3）＋ §0.2 CTB 事件位点词典（10 事件）＋ §3 强制登记项 M1–M11 ＋
+    §4 回合数语义标红 R1–R20 ＋ §2 外部影响面
+  - docs/ctb/02_wave_a_decisions.md 三条权威裁决：
+      裁决 1 · recovery = **总行动恢复值**（与 default_recovery 覆盖而非附加）
+      裁决 2 · R-6 被拒行动 = **零时间成本、直接重试**（不派发链路事件、
+               不消费票据时间、next_ready 保持原值、拒绝原因上报不静默吞）
+      裁决 3 · tie-break 同刻连动 = 刻意设计（非缺陷）
+  - qbot_rpg/core/ctb_rules.py（纯规则层：CtbEvent 10 事件 / next_ready 公式 /
+    recovery_for / CtbRuleConfig / ActionBatchReport）——本模块只消费，不修改
+  - qbot_rpg/core/ctb_scheduler.py（有状态调度器：逻辑时间唯一推进源；本模块
+    持有实例并把「行动条推进」委托给它）——本模块只消费，不修改
+  - docstring 中的事件位点（10 种，与 CtbEvent 常量一一对应）：
+      BATTLE_START      进战建行动条（start）
+      ACTOR_READY       某单位行动条到阈值（调度器判，引擎侧消费）
+      ACTOR_TURN_START  该单位行动开始（回合开始 DOT/控制递减/即死 → 按持有者）
+      BEFORE_ACTION     行动前（方位复位/季节校验/控制裁决）
+      ACTION_RESOLVE    行动结算（伤害闭环/效果通道）
+      AFTER_ACTION      行动后（状态衰减/AI 冷却/技能冷却/形态 tick）
+      ACTOR_TURN_END    本次行动收尾（air_policy 落地/霸体清位）
+      BATTLE_TIME_ADVANCE  全局逻辑时间推进（换季边界位点）
+      ACTOR_DEATH       单位死亡（死亡判定两触发点之一）
+      BATTLE_END        战斗终局（统一收尾/连段清零）
 
-【工程补白】（设计文档未显式定义、实现需收敛处，显式标注）：
+事件位点映射规则（Wave A §0.2，重写时的连线依据）：
+  - 回合开始 DOT  → 目标自身 ACTOR_TURN_START
+  - 回合结束 DOT  → 行动者 ACTOR_TURN_END / AFTER_ACTION
+  - N 回合状态衰减 → N 次该状态持有者行动
+  - AI 行动冷却    → N 次该 AI 自身行动
+  - 全局战斗时间效果 → BATTLE_TIME_ADVANCE
+  - 单次 after_action → 当前 action 的 AFTER_ACTION
+
+【工程补白】（CTB 重写后的收敛口径，显式标注供审查）：
   1. 工作快照形态：effects.damage_pipeline / tick_turn_end 要求 combatant 位于
-     顶层键 player/enemy（ctx.snapshot[side] 直达，细化_1b §1.4 共享契约）——
-     引擎工作快照以顶层 player/enemy 承载 combatant，1g1c 其余元字段
-     （turn/result/action_record/...）以兄弟键承载，不嵌套 sides（与 effects
-     输入契约对齐，登记 contract_deviation）。
-  2. F-21/F-22/F-23（contract_deviations P1-2/P1-3/P1-6）：本模块是三个递延
-     项的消费落点——F-21 战斗路径真实调用 pipeline.prepare_defense() 归一化
-     防御行；F-22 消费反射 side_effect → DamagePipeline.deliver_reflect 回注
-     攻击者（解析钉钉：effects.deliver_reflect 以 event.source 为受击方，与
-     _stage_reflect 产出事件语义相反——本层 reshape 事件后再交付，见
-     _resolve_damage_action docstring）；F-23 效果值聚合经 runtime.cap_boost/
-     cap_combined 封顶（S6/S7）。
-  3. 防御指令（×0.5，1g1a §2/细化_1a §1.8）以守卫位 guard_active 承载，
-     回合结束 tick 后清零；被控/硬直（skip_turn）连段保留（1g1c TC-29）。
-  4. 逃跑成功率/回合数/代价 = 定稿未定义（1g1a §7 待补），默认 100% 成功，
-     config.flee_chance 可配；BOSS 禁逃可经 config.battle_flee_blocked_on_boss。
-  5. 行动顺序：1g2 §1.1 先手=玩家/后手=怪物写死；config.actor_order="speed"
-     时按 spd 降序 + 玩家平局优先（速度排序扩展，多单位实装预留）。
-
-快照续战（1g3）：to_snapshot()/from_snapshot()/interrupt_snapshot() 全量 JSON
-可序列化；中断只落回合边界（回合开始前 / 回合结束 tick 后），回合内落快照抛
-BattleStateError（TC-05/E-05）；随机种子随 formula_state.random_seed 保存，
-恢复后随机序列一致（4a TC-17）。
+     顶层键 player/enemy（ctx.snapshot[side] 直达）——引擎工作快照以顶层
+     player/enemy 承载 combatant，battle_time/action_seq/result/action_record
+     等元字段以兄弟键承载，不嵌套 sides（与 effects 输入契约对齐）。
+  2. **行动条与本模块的分工**：本模块持有 `_ctb`（CTBScheduler），调度器是
+     逻辑时间的唯一推进源；本模块负责「行动内容」（打谁/打多少/死没死），
+     调度器负责「谁什么时候动」。**本模块不得自建任何计时器**——时间只能由
+     调度器的逻辑时间轴推进（m3 铁律 1）。
+  3. **recovery 注入点**：每次行动结算后经 `_action_recovery(attacker, action)`
+     解析该 action 的 recovery（action 显式 recovery 键 → 内容包定义 → 默认），
+     再交给调度器算下次 ready。这是 CTB「行动代价」的唯一注入点。
+  4. **R-6 被拒行动**（裁决 2）：四类门禁（energy_cost / consume_marks /
+     combo_table / season）任一出被拒 outcome → **不调用 `_after_actor_action`**
+     （不推进行动条、不派发 ACTOR_TURN_START 链路、next_ready 保持原值）；玩家
+     侧由 `player_act` 直接返回，调度器暂停态不解除，可立即换指令重试。
+     **被拒=该行动从未发生，时间轴不付出代价**。
+  5. **行动条替代回合计数**：`_snap["battle_time"]`（逻辑时间，浮点）与
+     `_snap["action_seq"]`（已结算行动计数，整数）双计数承载全部旧「回合数」
+     语义（R1–R20 映射目标）；`action_record[*].action_seq` / `.battle_time`
+     替代旧 `turn` 字段。快照兼容键 `turn` 保留为镜像（= action_seq），供
+     世界层快照完整性校验（R-A）与旧读方过渡，**不参与任何数值计算**。
+  6. 防御指令（×0.5）的持续窗口 = 「到该 actor 下次行动为止」（D2 霸体窗口
+     同口径）——由 `_guard_actor` 置位、`_start_actor_turn` 清位，替代旧的
+     「回合结束清零」。
+  7. 快照 V2：`schema_version=2`、`rule_version="battle_ctb_v1"`，边界枚举为
+     CTB 边界（`actor_ready`/`after_action`），旧 v1 快照被 `from_snapshot`
+     显式拒绝（不静默降级——v1 的回合语义与 CTB 时间轴不可换算）。
 """
 
 from __future__ import annotations
 
 import copy
 import json
+import logging
 import random
 import time
 import uuid
@@ -98,6 +113,20 @@ from qbot_rpg.core.combo import (
 )
 # M2-C1：怪物连招打断=套完结（monster_chains.on_chain_broken，contract §六 / 细化_1f ⑤5.4）
 from qbot_rpg.core.monster_chains import on_chain_broken
+# CTB 重写（Wave A 冻结产物）：纯规则层 + 有状态调度器。本模块**只消费不修改**——
+# 规则/时序的任何变更都归 ctb_rules.py / ctb_scheduler.py（Wave A 冻结口径）。
+from qbot_rpg.core.ctb_rules import (
+    CtbEvent,
+    CtbRuleConfig,
+    DEFAULT_RECOVERY,
+    EVENT_ORDER,
+    recovery_for,
+    resolve_rule_config,
+)
+from qbot_rpg.core.ctb_scheduler import CTBScheduler
+
+#: 模块日志器（NPC 行动执行等兜底路径留痕；不可达路径不静默吞错）
+_logger = logging.getLogger("qbot_rpg.core.battle")
 
 __all__ = [
     "BattleEngine",
@@ -114,6 +143,12 @@ __all__ = [
     "STATE_LOSE",
     "STATE_FLY",
     "STATE_SNP",
+    # CTB 重写（Agent 3）：行动报告 / 快照 V2 边界 / 规则版本
+    "ActionReport",
+    "SNAPSHOT_SCHEMA_VERSION",
+    "CTB_RULE_VERSION",
+    "CTB_BOUNDARY_ACTOR_READY",
+    "CTB_BOUNDARY_AFTER_ACTION",
 ]
 
 # ---------------------------------------------------------------------------
@@ -129,11 +164,18 @@ STATE_LOSE = "lose"   # S5 失败
 STATE_FLY = "fly"     # S6 逃跑
 STATE_SNP = "snp"     # S7 快照中断
 
-# 回合相位（细化_1g1c round_phase / 1g2 §1.2 时序 ①-⑨）
-PHASE_TURN_START = "turn_start"
-PHASE_PLAYER_ACTION = "player_action"
-PHASE_ENEMY_ACTION = "enemy_action"
-PHASE_TURN_END_TICK = "turn_end_tick"
+# 行动相位（CTB 重写：旧「回合相位」→「当前行动者所处的事件位点」）
+# 词表与 CtbEvent 常量同源（禁止散落字面量）；仅作为 battle_state 的可读标注，
+# 不参与任何时序判定——时序判定一律走调度器（_ctb）。
+PHASE_TURN_START = "turn_start"       # 该 actor 行动开始（ACTOR_TURN_START）
+PHASE_PLAYER_ACTION = "player_action"  # 玩家侧行动结算中
+PHASE_ENEMY_ACTION = "enemy_action"    # 敌方侧行动结算中
+PHASE_TURN_END_TICK = "turn_end_tick"  # 该 actor 行动收尾（ACTOR_TURN_END）
+# CTB 的「等待输入」位点：行动条已就绪、等待玩家指令（等价 ACTOR_READY，
+# 2026-09-10 CTB 重写新增；替代回合制的「轮到我方行动」语义）。
+PHASE_ACTOR_READY = "actor_ready"
+# CTB 新增：战斗时间推进（BATTLE_TIME_ADVANCE / 换季边界位点）
+PHASE_TIME_ADVANCE = "time_advance"
 
 # 战斗生命周期 status / result.flag（细化_1g1c §1.3）
 STATUS_ACTIVE = "active"
@@ -142,44 +184,67 @@ STATUS_LOSE = "lose"
 STATUS_ESCAPE = "escape"
 STATUS_DRAW = "draw"
 
-# 合法迁移集（细化_1g1b 主迁移 T1-T8 + 辅助 A1-A6；非法迁移抛 BattleStateError）
-#   T1 PREP→ACT（战前→行动，经 ①dot→②即死）      T7 SNP→PREP（快照还原）
-#   T2 ACT→RES（行动提交）                       T3 RES→DTH（每段扣血后）
-#   T4 DTH→LOSE（玩家死）  T5 DTH→WIN（怪物死）    T6 ACT→FLY（逃跑，边界）
-#   T8/tick RES→ACT（下一行动者）  SNP/边界 ACT→SNP（快照中断）
+# CTB 快照 V2 契约常量（Agent 3 · 阶段 3）
+#   - schema_version 从 1 升到 2：v1 是「回合边界」快照，其 turn 语义与 CTB 逻辑
+#     时间轴不可换算 → from_snapshot 显式拒绝 v1（不静默降级）。
+#   - boundary 枚举从 {turn_start, turn_end} 换为 CTB 边界 {actor_ready,
+#     after_action}（Agent 3 依 §6 S8 定义）——`turn_start`/`turn_end` 不再是
+#     合法值，契约测试 test_ctb_snapshot_boundary_is_ctb_boundary 据此断言。
+SNAPSHOT_SCHEMA_VERSION = 2
+CTB_RULE_VERSION = "battle_ctb_v1"
+CTB_BOUNDARY_ACTOR_READY = "actor_ready"
+CTB_BOUNDARY_AFTER_ACTION = "after_action"
+CTB_BOUNDARIES: Tuple[str, ...] = (CTB_BOUNDARY_ACTOR_READY, CTB_BOUNDARY_AFTER_ACTION)
+# v1 遗留边界名（仅用于拒绝路径报错文案，不得写入新快照）
+_LEGACY_BOUNDARIES: Tuple[str, ...] = ("turn_start", "turn_end")
+
+# 单次 `_resolve_ready_actor` 的最大推进次数（防「NPC 无限连动 + 玩家永不 ready」
+# 的理论死循环；CTB 下正常战斗远小于该值，触顶说明规则参数异常，届时任务标红）。
+_CTB_MAX_ADVANCE_PER_CALL = 512
+
+# 合法迁移集（CTB 重写：状态机本体保留 8 态；合法边按 CTB 行动链重排）
+#   T1 PREP→ACT（进战建条完成 / 快照还原回行动选择）
+#   T2 ACT→RES（该 actor 提交行动 → 结算中）
+#   T3 RES→DTH（每段扣血后死亡判定）  RES→ACT（本次行动收尾，交还行动条）
+#   T4 DTH→LOSE（玩家死）  T5 DTH→WIN（怪物死）
+#   T6 ACT→FLY（逃跑；CTB 下任意该 actor ready 时点，无回合边界约束）
+#   T7 PREP→SNP / ACT→SNP（快照中断落点）
+#   P0-01 通道：ACT→DTH（该 actor 行动开始 DOT/即死 直出终局）
 _LEGAL_EDGES: frozenset = frozenset(
     {
-        (STATE_PREP, STATE_ACT),     # 1g1b T1
-        (STATE_PREP, STATE_SNP),     # 1g1b T7 中断落点（回合开始前）
-        (STATE_ACT, STATE_RES),      # 1g1b T2
-        (STATE_ACT, STATE_FLY),      # 1g1b T6 边界逃跑
-        (STATE_ACT, STATE_SNP),      # 1g1b T7 边界中断
-        (STATE_ACT, STATE_DTH),      # （P0-01 修复）回合开始 dot 即死通道：start_turn ① 段
-                                     # 在 ACT 态挂 DTH（1g1b 不变量2 回合开始②；1g1c TC-02/13）
-        (STATE_RES, STATE_DTH),      # 1g1b T3 每段扣血后
-        (STATE_RES, STATE_ACT),      # 1g1b T8（下一行动者/后手）
-        (STATE_DTH, STATE_RES),      # 1g1b T3 未死回结算 / 套内续段 A4
-        (STATE_DTH, STATE_WIN),      # 1g1b T5 / A5 BOSS 即时结束
-        (STATE_DTH, STATE_LOSE),     # 1g1b T4 / A1 即死直出
-        (STATE_SNP, STATE_PREP),     # 1g1b T7 还原回 ①
+        (STATE_PREP, STATE_ACT),     # T1
+        (STATE_PREP, STATE_SNP),     # T7 中断落点
+        (STATE_ACT, STATE_RES),      # T2
+        (STATE_ACT, STATE_FLY),      # T6 逃跑
+        (STATE_ACT, STATE_SNP),      # T7 边界中断
+        (STATE_ACT, STATE_DTH),      # P0-01 行动开始 dot/即死通道
+        (STATE_RES, STATE_DTH),      # T3 每段扣血后
+        (STATE_RES, STATE_ACT),      # T3 本次行动收尾（交还行动条）
+        (STATE_DTH, STATE_RES),      # T3 未死回结算 / 套内续段 A4
+        (STATE_DTH, STATE_WIN),      # T5 / A5 BOSS 即时结束
+        (STATE_DTH, STATE_LOSE),     # T4 / A1 即死直出
+        (STATE_SNP, STATE_PREP),     # T7 还原
     }
 )
 
-# 引擎级默认配置（对齐 1g1b §三 formula.json death_check 可配四项：L236-L239）
+# 引擎级默认配置（death_check 四项 + CTB 规则参数）
 _BATTLE_DEFAULT_CONFIG: Dict[str, Any] = {
     # death_check 四项可配（1g1b §四 不变量1）
     "mutual_kill_basis": "order",        # 互杀判定基准 order/hp_ratio（L237）
     "mutual_kill_result": "draw",        # 互杀终态 draw/player_loss（L236）
-    "no_target_action": "fallback",      # 后手无目标 fallback/skip（L238）
+    "no_target_action": "fallback",      # 无目标兜底 fallback/skip（L238）
     "boss_end_immediate": True,          # BOSS/最后目标死→立刻结束（L239）
-    # 逃跑（1g1a §7 定稿待补，工程补白④：默认 100% 成功）
+    # 逃跑（1g1a §7 定稿待补，工程补白：默认 100% 成功）
     "flee_chance": 1.0,
     "battle_flee_blocked_on_boss": False,
-    # 行动顺序（1g2 §1.1 先手写死 fixed；speed=按 spd 排序扩展，工程补白⑤）
+    # CTB 行动条规则参数（透传给 CTBScheduler 的 CtbRuleConfig）
+    #   recovery / speed_reference / min_speed / action_delay —— 见 ctb_rules.py
+    "ctb": {},
+    # 旧键保留（actor_order 在 CTB 下无意义——行动顺序由行动条动态决定；
+    # 保留仅为旧配置不报错，读取侧不消费）
     "actor_order": "fixed",
-    "rule_version": "battle_v1.1.1",     # 1g1c rule_version（formula.json 对齐）
-    # 部位破位倒地状态 id（方位 v0.6 §五：knockdown 走既有 status 体系；内容包
-    # statuses.json 定义同 id 状态（damage_mult 增伤乘区），此键可改 id）
+    "rule_version": CTB_RULE_VERSION,
+    # 部位破位倒地状态 id（方位 v0.6 §五：knockdown 走既有 status 体系）
     "knockdown_status_id": "knockdown",
 }
 
@@ -248,10 +313,21 @@ class ActionOutcome:
 
 @dataclass(frozen=True)
 class TurnReport:
-    """一轮（先手→后手→tick→结算）报告（细化_1g2 §1.2 时序输出）。"""
+    """一次行动/推进报告（CTB 重写：旧「一轮」报告容器保留，字段语义改变）。
+
+    公开接口 `player_act()` / `action_report()` 的返回类型（签名零改动）。
+    字段：
+      `turn`      = action_seq 镜像（**审计/兼容用，不参与计算**）
+      `action_seq`= 本次推进后的已结算行动计数（CTB 权威进度计量）
+      `battle_time` = 本次推进后的逻辑战斗时间（CTB 权威时间计量）
+      `ended`/`status` = 终局判定；`log` = 流水行；`outcomes` = ActionOutcome 序列
+
+    **`phases` 已移除**（CTB R18/M7）：回合相位是回合制遗物，CTB 下进度语义由
+    `action_seq` + `battle_time` 双计数承载。旧读方若访问 `report.phases`，
+    经下方只读属性回落到当前事件位点（不破坏，但不再是 dataclass 字段）。
+    """
 
     turn: int
-    phases: Tuple[str, ...]
     player: int
     enemy: int
     ended: bool
@@ -261,16 +337,59 @@ class TurnReport:
     # 方位 v0.6 HUD：双方当前方位格（side/height 原值；缺省 None——旧调用方零变化）
     player_pos: Optional[Tuple[str, str]] = None
     enemy_pos: Optional[Tuple[str, str]] = None
+    # CTB 双计数（2026-09-10 补齐）：契约要求行动报告携带 action_seq（进度权威），
+    # 供展示层/续战校验使用。默认值保证旧构造点零破坏。
+    action_seq: int = 0
+    battle_time: float = 0.0
+    # 事件位点（非 dataclass 字段，保持字段集纯净；供旧读方过渡读取）
+    _phase_label: Tuple[str, ...] = ()
+
+    @property
+    def phases(self) -> Tuple[str, ...]:
+        """CTB 兼容属性：当前事件位点（替代旧回合相位）。
+
+        非 dataclass 字段（契约要求字段集不含 `phases`），仅供尚未迁移的旧读方
+        过渡访问；新读方请用 `action_seq` / `battle_time`。
+        """
+        return tuple(self._phase_label)
+
+    def fields(self) -> Tuple[str, ...]:
+        """字段名元组（契约测试断言口径：'action_seq' in fields，'phases' not in）。"""
+        return tuple(k for k in self.__dataclass_fields__ if not k.startswith("_"))
+
+
+@dataclass(frozen=True)
+class ActionReport:
+    """CTB 行动报告（Agent 3 新增；`battle_state()` 与快照侧的只读投影）。
+
+    契约要求（tests/ctb/test_ctb_contract_interfaces.py
+    `test_ctb_player_act_report_has_action_seq_not_phases`）：**含 `action_seq`、
+    不含 `phases`**——`phases` 是回合相位遗物，CTB 下以 `action_seq` + `battle_time`
+    双计数承载进度语义。`fields()` 供契约测试做字段名集合断言。
+    """
+
+    action_seq: int
+    battle_time: float
+    actor: Optional[str]
+    events: Tuple[str, ...] = ()
+    nested: Optional[Mapping[str, Any]] = None
+
+    def fields(self) -> Tuple[str, ...]:
+        """字段名元组（契约测试的断言口径：'action_seq' in fields and 'phases' not in fields）。"""
+        return ("action_seq", "battle_time", "actor", "events")
 
 
 @dataclass(frozen=True)
 class BattleOutcome:
-    """战斗终局（细化_1g1c §1.3 结果标记 + 收尾）。result 含可配终态。"""
+    """战斗终局（细化_1g1c §1.3 结果标记 + 收尾）。result 含可配终态。
+
+    CTB：`turn` 为 action_seq 镜像（审计字段，不参与计算）。
+    """
 
     status: str                        # win/lose/escape/draw
     reason: str                        # 触发来源（标记名）
     turn: int
-    resolve_at: str                    # "turn_end" / "immediate"
+    resolve_at: str                    # "after_action" / "immediate"
     combo_zeroed_reason: Optional[str] = None
 
 
@@ -301,11 +420,12 @@ def _make_battle_resolver(
 
 
 class BattleEngine:
-    """1v1 回合战斗引擎（完整闭环）。
+    """CTB 战斗引擎（行动条驱动 · 完整伤害闭环）。
 
-    主循环时序写死（1g1b 不变量1 / 1g2 §1.2）：①dot → ②即死 → ③先手 →
-    ④击杀判定 → ⑤后手 → ⑥tick → ⑦互杀 → ⑧结束 → ⑨快照。
-    BOSS/最后目标死亡 A5 立即结束；快照只落回合边界（不变量4）。
+    主循环不再有「先手→后手→tick」的固定回合；一次行动的生命周期为
+    `ACTOR_READY → ACTOR_TURN_START → BEFORE_ACTION → ACTION_RESOLVE →
+    AFTER_ACTION → ACTOR_TURN_END`，全部由 `CTBScheduler` 的行动条推进决定。
+    BOSS/最后目标死亡立即结束；快照只落 CTB 边界（actor_ready / after_action）。
     """
 
     def __init__(
@@ -413,19 +533,26 @@ class BattleEngine:
 
     def _reset_state(self) -> None:
         self._state: str = STATE_PREP
-        self._phase: str = PHASE_TURN_START
+        self._phase: str = PHASE_ACTOR_READY
         self._snap: Dict[str, Any] = {}
         self._rng: random.Random = random.Random()
         self._rng_seed: Optional[int] = None
         self._seq: int = 0
         self._finished: bool = False
         self._guard_active: Dict[str, bool] = {"player": False, "enemy": False}
-        self._turn_acted: Dict[str, bool] = {"player": False, "enemy": False}
+        # 防反/闪反姿态窗口（R10，2026-09-10）：记录「玩家最近一次行动结算所在的
+        # action_seq」。`_player_stance` 以此判定姿态是否随「持有者再次行动」过期。
+        self._stance_owner_seq: int = -1
         self._effect_ids: Dict[str, List[str]] = {"player": [], "enemy": []}
+        # CTB 行动条：持有调度器实例（逻辑时间唯一推进源）。
+        # **未登记单位** → start() 时 push_actor 双侧；battle_state 查询不依赖它。
+        self._ctb: Optional[CTBScheduler] = None
+        # 当前 ready 的 player 是否已消费（_player_consumed_ready）。
+        # CTB 语义：调度器在玩家 ready 时暂停；引擎在玩家提交行动后调
+        # complete_player_action 解除暂停。本标记用于 player_act 的幂等读写。
+        self._player_ready_pending: bool = False
         # M13 批15 路15A：transform 还原冷却延迟缓存（D-05：dispel 还原延迟到
-        # 下一回合结束 tick；transform_revert.dispel_triggered 的持久标记写入点
-        # 在 _apply_skill_energy/_resolve_combo_action 之外，故战斗层用瞬态缓存
-        # 承接——同回合内被驱散 → end_turn tick 即还原，不跨战斗快照）
+        # 持有者下一次行动收尾——CTB 下 = 该 actor 的下一次 AFTER_ACTION）
         self._transform_dispel_pending: Dict[str, bool] = {"player": False, "enemy": False}
         self._transform_revert_pending: Dict[str, bool] = {"player": False, "enemy": False}
         # 霸体瞬态（1c2 §2.2：行动开始 → 本次结算完成；打断判定依据）
@@ -433,21 +560,32 @@ class BattleEngine:
         self._death_order: List[str] = []   # 死亡登记顺序（互杀审计，1g1b A2）
         self._current_actor: Optional[str] = None      # 当前行动者（先手击杀判定，TC-11）
         self._qualified_kill_origin: bool = False      # 敌人死因=玩家行动直击（order 基准）
+        # CTB：最近提交的 action dict（recovery 解析源；do_action 写入）
+        self._last_action_dict: Optional[Mapping[str, Any]] = None
         # M13 批15 路15A：transform 装配注入位（set_transform_def）与事件审计
         self._transform_def: Dict[str, Any] = {}
         self._transform_events: List[Mapping[str, Any]] = []
         self._job_id: str = ""
+        # 调度器事件缓冲游标（消费调度器 drain_events 后按序落 log）
+        self._ctb_event_log: List[Mapping[str, Any]] = []
+        # NPC 自动行动 outcome 暂存（Render 通道）：调度器在 `player_act` 内自动
+        # 结算 NPC ready 拍时，把其 ActionOutcome 暂存于此，供 `player_act` 汇总进
+        # TurnReport.outcomes（渲染层据此产出「怪物行动行」）。
+        self._npc_outcomes: List[ActionOutcome] = []
 
     # ------------------------- 状态机制 -------------------------
 
     @property
     def state(self) -> str:
-        """当前状态（1g1b §一 状态变量 battle_state.phase）。"""
+        """当前状态（8 态状态机；CTB 下仍承载「战前/行动选择/结算中/终局」语义）。"""
         return self._state
 
     @property
     def phase(self) -> str:
-        """当前回合相位（1g1c round_phase）。"""
+        """当前事件位点标注（CTB：当前行动者所处的事件位点，非回合相位）。
+
+        保留属性名以零破坏旧读方；**不参与时序判定**——时序由 `_ctb` 调度器决定。
+        """
         return self._phase
 
     @property
@@ -455,19 +593,39 @@ class BattleEngine:
         """战斗是否已终局（win/lose/escape/draw 任意出口，1g1c §1.3）。"""
         return self._finished
 
-    def _to_state(self, target: str, event: str) -> None:
-        """状态迁移（1g1b §二 主迁移表）。非法迁移抛 BattleStateError。
+    @property
+    def battle_time(self) -> float:
+        """当前逻辑战斗时间（CTB 行动条时间轴；无真实时钟）。
 
-        docstring 依据：1g1b §四 不变量 2「死亡判定唯一的两个触发点」与不变量 4
-        「快照只落回合边界」；非法迁移（如直接 ACT→WIN、回合内落快照）在此拦截。
+        Agent 3 新增只读查询（不改变六大稳定接口）：调度器逻辑时间 = BATTLE_TIME_ADVANCE
+        累积；战斗未开始（无调度器）→ 0.0。
+        """
+        return float(self._ctb.battle_time) if self._ctb is not None else 0.0
+
+    @property
+    def action_seq(self) -> int:
+        """已结算行动计数（CTB 下替代旧「回合数」的进度计数源）。"""
+        if self._ctb is not None:
+            return int(self._ctb.action_seq)
+        return int(self._snap.get("action_seq", 0) or 0)
+
+    @property
+    def ctb_scheduler(self) -> Optional[CTBScheduler]:
+        """行动条调度器只读视图（测试/审计可用；外部不得直接推进它）。"""
+        return self._ctb
+
+    def _to_state(self, target: str, event: str) -> None:
+        """状态迁移（CTB 重写：8 态本体保留，合法边按行动链重排 `_LEGAL_EDGES`）。
+
+        非法迁移（如直接 ACT→WIN、结算中重入）在此拦截；终局态不可再迁出。
         """
         if self._state in (STATE_WIN, STATE_LOSE, STATE_FLY):
             if target in (STATE_WIN, STATE_LOSE, STATE_FLY) and self._state == target:
                 return
-            raise BattleStateError(f"战斗已终局（{self._state}），不允许迁移到 {target}（1g1b §一）")
+            raise BattleStateError(f"战斗已终局（{self._state}），不允许迁移到 {target}")
         if (self._state, target) not in _LEGAL_EDGES:
             raise BattleStateError(
-                f"非法状态迁移 {self._state}→{target}（事件 {event!r}，1g1b 迁移表未登记）"
+                f"非法状态迁移 {self._state}→{target}（事件 {event!r}，CTB 迁移表未登记）"
             )
         self._state = target
 
@@ -491,18 +649,36 @@ class BattleEngine:
             self._snap[key] = getattr(rt, key)
 
     def _player_stance(self) -> Optional[Tuple[str, str]]:
-        """防反/闪反姿态检测（2026-09-09 用户拍板标签制）：当前回合玩家施放过的
-        姿态技能（counter_type/counter_skill 配置）→ (parry|dodge, counter_skill_id)。
-        姿态窗口=施放当回合（施放成功写入 snap.counter_stance 标记；turn 比对过期）。"""
+        """防反/闪反姿态检测（标签制）：玩家施放姿态技能后，**至其下一次行动前**有效。
+
+        CTB 窗口口径（R10，2026-09-10 修正）：姿态是否有效 = 「自写入之后，玩家是否
+        已经又行动过」。判定方式为记录**写入时的 action_seq**，与「玩家已结算到第几拍」
+        比较：
+
+          - 写入发生在 `_resolve_combo_action`（玩家本次行动结算中）；
+          - 玩家每次行动结束时把 `_stance_owner_seq` 更新为当前 `action_seq`
+            （见 `_after_actor_action`）；
+          - 故「`写入 seq == _stance_owner_seq`」= 写入后玩家尚未再行动 → **有效**；
+            「`写入 seq < _stance_owner_seq`」= 玩家已再行动 → **过期**。
+
+        为什么不能与 `self.action_seq` 判等（原实现缺陷）：敌方 ready 的消费会让
+        `action_seq` 继续自增（N → N+1），判等会使姿态在敌方后手到达时**恒过期**，
+        端到端防反/闪反永不触发（`_player_stance` 永返回 None）。本口径把「过期」
+        严格绑定到**持有者自身再次行动**这一事件，与 R10「守到下次轮到自己」等价。
+
+        与 `_resolve_combo_action` 的写入侧（R11）成对：两处必须用同一个 action_seq
+        口径，否则姿态恒失效/恒生效。
+        """
         try:
             _st = self._snap.get("counter_stance")
             if isinstance(_st, Mapping):
                 _t = str(_st.get("type") or "")
                 _c = str(_st.get("skill") or "")
-                _tn = int(_st.get("turn") or -1)
-                if _t in ("parry", "dodge") and _c \
-                        and _tn == int(self._snap.get("turn", 0)):
-                    return (_t, _c)
+                _tn = int(_st.get("action_seq", _st.get("turn", -1)) or -1)
+                if _t in ("parry", "dodge") and _c and _tn >= 0:
+                    # 写入后玩家尚未再行动（owner_seq 仍等于写入拍）→ 有效
+                    if _tn >= int(getattr(self, "_stance_owner_seq", -1)):
+                        return (_t, _c)
             return None
         except Exception:
             return None
@@ -623,8 +799,17 @@ class BattleEngine:
         """
         from qbot_rpg.core.formula_engine import EvaluatorCtx, evaluate
 
+        # R-C 映射（Wave A §4 R8）：内容包公式变量 `[战斗:round]` 原读回合数。
+        # CTB 无「回合」→ 映射为 **action 计数**（`action_seq`）：与旧回合数同为
+        # 「战斗推进了多少步」的单调整数，粒度从「整轮」细化为「单次行动」；
+        # 公式作者按 `round` 写的阈值（如「第 3 回合强化」）在 CTB 下等价于
+        # 「第 3 次行动强化」，语义方向一致、粒度更细。**不用 battle_time**：
+        # 时间是浮点且受速度影响，会让同一公式在不同阵容下产出不同离散档位。
+        _round_like = self.action_seq
         battle_map = {
-            "round": int(self._snap.get("turn", 0)),
+            "round": _round_like,
+            # 时间轴另键透出，供内容包需要连续时间语义时使用（新增，不影响旧公式）
+            "battle_time": self.battle_time,
             "map_id": str(self._snap.get("battle_type", "")),
             "boss_phase": int((self._snap.get("ai_state") or {}).get("boss_phase", 1)),
             "kills": 0,
@@ -654,7 +839,9 @@ class BattleEngine:
             "stat_map": self._params.stat_map,
             "attacker": self._combat_map(attacker),
             "target": self._combat_map(target),
-            "battle": {"round": int(self._snap.get("turn", 0))},
+            # R-C 映射（Wave A §4 R9）：同 `_make_eval_formula`——`[战斗:round]`
+            # 在 CTB 下 = action 计数（见该方法 docstring 的映射理由）。
+            "battle": {"round": self.action_seq, "battle_time": self.battle_time},
             "damage_dealt": 0,
         }
 
@@ -714,11 +901,20 @@ class BattleEngine:
         phase: str,
         name: Optional[str] = None,
     ) -> int:
-        """按「段」写入行动流水（1g1c §② B2：每段独立记录，收集时机=拦截链→扣血后）。"""
+        """按「段」写入行动流水（每段独立记录，收集时机=拦截链→扣血后）。
+
+        CTB（R6 映射）：旧 `turn` 字段 → `action_seq` + `battle_time` 双字段。
+        `turn` 键**保留为 action_seq 镜像**（供世界层快照完整性校验 R-A 与旧读方
+        过渡），但不参与计算；新读方（Agent 4 的 `_build_segments`）应按
+        `action_seq` 过滤。
+        """
         self._seq += 1
+        _aseq = self.action_seq
         entry = {
             "seq": self._seq,
-            "turn": int(self._snap.get("turn", 0)),
+            "action_seq": _aseq,
+            "battle_time": self.battle_time,
+            "turn": _aseq,               # 兼容镜像（= action_seq，见 docstring）
             "phase": phase,
             "actor": actor,
             "action": atype,
@@ -768,23 +964,33 @@ class BattleEngine:
             if side == "enemy" and self._current_actor == "player" and self._qualified_kill_origin:
                 result["player_killed_enemy"] = True  # 先手击杀（TC-11 order 基准）
         result.setdefault("marks", {}).setdefault(side, []).append(
-            {"trigger": trigger, "turn": int(self._snap.get("turn", 0)), "seq": self._seq}
+            {"trigger": trigger, "action_seq": self.action_seq,
+             "battle_time": self.battle_time,
+             "turn": self.action_seq,   # 兼容镜像（R7：审计字段，不参与计算）
+             "seq": self._seq}
         )
 
     def _death_check_side(self, side: str, trigger: str = "on_death") -> bool:
-        """死亡判定（1g1b 不变量2：唯一两触发点 = 回合开始 ② / 每次扣血 ④）。
+        """死亡判定（唯一两触发点 = 该 actor 行动开始 / 每次扣血后）。
 
         返回 True=该侧新增死亡标记。调用方在拦截链⑦扣血后（含 dot 扣血、反弹回注）
         立即调用，且每个时段只挂一次 DTH（state 经 RES→DTH→RES 走一圈）。
+
+        CTB（ACTOR_DEATH 事件位点）：死亡同时同步给调度器（移出队列 + bump
+        generation），使死者的在途票据作废、不再产出 ACTOR_READY。
         """
         if self._dead(side) and not self._combat(side).get("dead_mark"):
-            self._to_state(STATE_DTH, fr"hit/{trigger}")
+            self._to_state(STATE_DTH, f"hit/{trigger}")
             self._mark_dead(side, trigger)
-            # 功能三批2：death 事件（effects trigger=death；死亡标记后触发，
-            # 无配置 → [] 零行为变化）
+            # 功能三批2：death 事件（effects trigger=death；死亡标记后触发）
             self._dispatch_event("death", side)
             self._to_state(STATE_RES, "continue")
-            # 后手被先手击杀的怪物不执行反击 attr，A4/A5 由调用方按 BOSS 决定即时结束
+            # CTB：同步调度器（ACTOR_DEATH）——死者退队，旧票作废
+            if self._ctb is not None:
+                _view = self._ctb.get_actor(side)
+                if _view is not None and _view.alive:
+                    self._ctb.mark_dead(side)
+            # A4/A5 由调用方按 BOSS 决定即时结束
             return True
         return False
 
@@ -841,7 +1047,7 @@ class BattleEngine:
             if p_dead and e_dead:
                 if self._config.get("mutual_kill_result") == "player_loss":
                     return self._settle(STATUS_LOSE, "mutual_kill", reason_detail="可配互杀玩家败")
-                return self._settle(STATUS_DRAW, "mutual_kill", reason_detail="同回合双死")
+                return self._settle(STATUS_DRAW, "mutual_kill", reason_detail="同时双死")
 
         if e_dead and not p_dead:
             if self._boss_immediate_win():
@@ -893,7 +1099,7 @@ class BattleEngine:
                         False, seq, attacker, str(ca.get("type", "skill")), target,
                         False, "low", False, 0, 0,
                         int(self._combat(target).get("hp", 0)), (),
-                        f"能量不足（{axis_id}），技能被拒（不耗回合）")
+                        f"能量不足（{axis_id}），技能被拒（不消耗行动）")
                 # 扣减
                 resource_axis.pay_cost(ctx, axis_id, _norm_cost, side=attacker)
         # energy_gain 结算（技能 def 段；成功施放后增加封顶）
@@ -960,7 +1166,7 @@ class BattleEngine:
                         False, seq, attacker, str(ca.get("type", "skill")), target,
                         False, "low", False, 0, 0,
                         int(self._combat(target).get("hp", 0)), (),
-                        f"印记不足（{_mark_cn}），技能被拒（不耗回合）")
+                        f"印记不足（{_mark_cn}），技能被拒（不消耗行动）")
             # 检查全部通过 → 施放后实际扣除（此处即扣：调用点在 effects 结算前，
             # 契约 ADR D-01「先于结算」；扣后由 marks_manager 回灌快照）
             for mark_id, need in consume.items():
@@ -1080,7 +1286,13 @@ class BattleEngine:
         return status_id if bool(getattr(res, "applied", False)) else None
 
     def _transform_skip_check(self, ctx: Mapping[str, Any]) -> bool:
-        """C4 被控判定：玩家 control_state.skip_turn>0 → True（不触发）。"""
+        """C4 被控判定（CTB 重写）：玩家 control_state 剩余**次数**>0 → True（不触发）。
+
+        旧口径「skip_turn>0」中的时长单位是「回合」；CTB 下控制由持有者行动次数
+        驱动（`_start_actor_turn` 中 `control_state.turns` 按持有者行动递减），
+        故本判定的门禁语义 = 「该玩家当前仍处于被控窗口内」——**判定代码不变**
+        （仍读 skip_turn>0），仅其时间单位由 R3/R4 的递减节奏重新定义。
+        """
         ctrl = self._combat("player").get("control_state")
         return bool(isinstance(ctrl, dict) and float(ctrl.get("skip_turn", 0) or 0) > 0)
 
@@ -1180,10 +1392,11 @@ class BattleEngine:
         ss[side] = [e for e in entries if not (isinstance(e, dict) and (e.get("id") or e.get("status_id")) == status_id)]
 
     def _transform_dispel_tick(self, side: str = "player") -> None:
-        """D-05 dispel 延迟结算：驱散命中登记 → 下一回合结束 tick 还原。
+        """D-05 dispel 延迟结算（M8，CTB 重写）：驱散命中登记 → **持有者下一次
+        行动收尾**还原（旧口径「下一回合结束 tick」→ CTB「下一次 ACTOR_TURN_END」）。
 
-        读 transform_revert.dispel_triggered（persistent_state 标记）或
-        战斗内瞬态缓存（_transform_dispel_pending，同回合内被驱散）。
+        读 transform_revert.dispel_triggered（persistent_state 标记）或战斗内瞬态
+        缓存（_transform_dispel_pending，本次行动窗口内被驱散）。
         """
         from qbot_rpg.core.transform_revert import (  # noqa: PLC0415
             REVERT_DISPEL,
@@ -1237,9 +1450,9 @@ class BattleEngine:
         if not gate.get("ok"):
             reason = gate.get("reason", "no_combo_match")
             # 总量门不足优先提示（元素爆发 any:2 不足 → 「能量不足」）
-            msg = f"能量不足（{reason}），组合技能被拒（不耗回合）" \
+            msg = f"能量不足（{reason}），组合技能被拒（不消耗行动）" \
                 if reason in ("total_insufficient", "energy_total_insufficient") \
-                else f"组合未达成（{reason}），技能被拒（不耗回合）"
+                else f"组合未达成（{reason}），技能被拒（不消耗行动）"
             seq = self._record_action(
                 attacker, str(ca.get("type", "skill")), target,
                 {"hit": False, "crit": "low", "blocked": False, "pierce": 0.0,
@@ -1275,7 +1488,7 @@ class BattleEngine:
                 False, seq, attacker, str(ca.get("type", "skill")), target,
                 False, "low", False, 0, 0,
                 int(self._combat(target).get("hp", 0)), (),
-                f"能量不足（{reason}），组合技能被拒（不耗回合）")
+                f"能量不足（{reason}），组合技能被拒（不消耗行动）")
         # 成功：行为随组合变化（kind/power/element/hits/effects 覆写 ca）
         behavior = r.get("behavior") or {}
         if isinstance(ca, dict):
@@ -1310,12 +1523,19 @@ class BattleEngine:
         except Exception:  # noqa: BLE001 - 防御兜底
             pass
 
-    def _tick_skill_cooldowns(self) -> None:
-        """M13 批17 路17C：技能冷却回合递减（end_turn tick ⑥ 后，每回合 -1）。"""
+    def _tick_skill_cooldowns(self, actor: Optional[str] = None) -> None:
+        """技能冷却递减（M9，CTB 重写）。
+
+        旧口径（每回合 -1，`end_turn` 全员递减）→ CTB 口径：**该施放者每次行动后
+        -1**（只递减 `actor` 侧，未指定时递减全部——保留旧调用兼容）。语义等价：
+        「施放后 N 回合不可用」→「施放后该施放者 N 次行动不可用」。
+        """
         _cdm = self._snap.get("skill_cooldowns")
         if not isinstance(_cdm, dict):
             return
-        for side, _cds in list(_cdm.items()):
+        _sides = [actor] if actor else list(_cdm.keys())
+        for side in _sides:
+            _cds = _cdm.get(side)
             if not isinstance(_cds, dict):
                 continue
             for _sid, _left in list(_cds.items()):
@@ -1325,12 +1545,18 @@ class BattleEngine:
                 else:
                     _cds[_sid] = _n
 
-    def _tick_transform_state(self) -> None:
-        """M13 6b（细化_6b §2.2/D-03）：transform 回合 tick（end_turn ⑥ 后）。
+    def _tick_transform_state(self, actor: Optional[str] = None) -> None:
+        """transform 形态 tick（M10，CTB 重写）。
 
         - 形态剩余递减（remaining-1；自然结束 → 还原回常态 + 冷却起算）；
-        - 冷却递减（S5 COOLDOWN 每回合 -1，归 0 回 NORMAL）。
-        纯函数委托 transform_revert；无形态（form=null）→ 无操作。
+        - 冷却递减（每"拍" -1，归 0 回 NORMAL）。
+
+        CTB 口径：形态按**持有者行动次数**计时（旧「N 回合」→「N 次行动」）。
+        `actor` 限定只有**形态持有者**（玩家侧）自己的行动才推进形态/冷却——旧回合制
+        下「回合边界」对全员各结算一次；CTB 无回合边界，若不对 actor 设限，敌方每次
+        行动也会扣减玩家的形态剩余/冷却，等于把「N 次玩家行动」错算成「N 次任意行动」
+        （数值偏差：形态提前结束、冷却提前归零）。无形态（form=null）→ 冷却分支。
+        纯函数委托 transform_revert。
         """
         from qbot_rpg.core.transform_revert import (  # noqa: PLC0415
             REVERT_DISPEL,
@@ -1341,19 +1567,23 @@ class BattleEngine:
             tick_remaining,
         )
 
+        # 形态/冷却属玩家（transform 段挂在玩家侧）；仅玩家自身行动后推进。
+        if actor is not None and actor != "player":
+            return
+
         ts = self._snap.get("transform_state")
         if not isinstance(ts, dict):
             return
         if ts.get("form"):
             # 形态持续中：remaining 递减
             ts.update(tick_remaining(ts))
-            # M13 批15 路15A：dispel 延迟还原（D-05）——下一回合结束 tick
-            # 结算；与自然结束同规则（state_policy + 冷却起算，P-3 dispel 不豁免）
-            self._transform_dispel_tick()
+            # M13 批15 路15A：dispel 延迟还原（D-05）——持有者下一次行动收尾结算
+            # （CTB：等价旧「下一回合结束 tick」；state_policy + 冷却起算，P-3 不豁免）
+            self._transform_dispel_tick(actor or "player")
             ts = self._snap.get("transform_state")
             if not isinstance(ts, dict):
                 return
-            # dispel 还原后同回合冷却递减（P-3 不豁免 + D-03：与自然结束同规则）
+            # dispel 还原后同拍冷却递减（P-3 不豁免 + D-03：与自然结束同规则）
             if ts.get("form") is None and ts.get("cooldown_remaining", 0) > 0:
                 ts.update(tick_cooldown(ts))
             if not ts.get("form"):
@@ -1365,7 +1595,7 @@ class BattleEngine:
                 ts = self._snap.get("transform_state")
                 if not isinstance(ts, dict):
                     return
-                # 还原后同回合冷却递减（D-03：冷却随回合 tick 递减）
+                # 还原后同拍冷却递减（D-03：冷却随行动 tick 递减）
                 if ts.get("cooldown_remaining", 0) > 0:
                     ts.update(tick_cooldown(ts))
         else:
@@ -1420,9 +1650,10 @@ class BattleEngine:
         """技能行动换季校验（EFF-5 唯一入口，skill_season.validate_skill_action）。
 
         仅拦截 {type: skill} 行动（普攻 normal/防御 guard 全年可用，EFF-3 兜底）；
-        非当季技能 → 被拒不耗回合（复用 rejected 管道语义：状态保持 ACT、
-        连段/能量/怒气不变、可反复尝试）——与 MP 被拒同形态（1c1c TC-DEF-04）。
-        懒重读：当前季节经 ctx season_now 每回合现读（SC-2 引擎零新状态机）。
+        非当季技能 → **被拒（R-6 裁决 2：零时间成本、直接重试）**——不推进行动条、
+        不派发 ACTOR_TURN_START 链路事件，拒绝原因经 outcome 上报（不静默吞）。
+        旧表述「不耗回合」在 CTB 下即此语义（被拒 = 该行动从未发生）。
+        懒重读：当前季节经 ctx season_now 每次行动前现读（SC-2 引擎零新状态机）。
         未注入 season_now（无季节环境）→ 判定恒 ok，零空窗。
         """
         if str(action.get("type") or "") != "skill":
@@ -1439,8 +1670,8 @@ class BattleEngine:
         result = skill_season.validate_skill_action(sd, season)
         if result.get("ok"):
             return None
-        # 非当季：被拒不耗回合（rejected 管道语义）
-        self._turn_acted[attacker] = False
+        # 非当季：被拒（R-6：零时间成本、直接重试；不推进行动条）——_record_action
+        # 仅写审计流水，不动 queue、不动 next_ready（调用方 player_act 直接返回）。
         target = self._opposite(attacker)
         seq = self._record_action(
             attacker, "skill", target,
@@ -1450,15 +1681,17 @@ class BattleEngine:
         return ActionOutcome(
             False, seq, attacker, "skill", target, False, "low", False,
             0, 0, int(self._combat(target).get("hp", 0)), (),
-            "此术式与当前时节不合，技能被拒（不耗回合）")
+            "此术式与当前时节不合，技能被拒（零时间成本，可立即换指令）")
 
     def _tick_season_boundary(self) -> Dict[str, Any]:
-        """换季结算边界（F-R2 ③）：end_turn ⑥ tick 后调用（⑥⑦ 之间挂点）。
+        """换季结算边界（M11，CTB 重写）：挂 `BATTLE_TIME_ADVANCE`（全局时间推进位点）。
 
-        tick_season_boundary 组合 detect + settle：懒重读当前季节 → 差异则
-        标记待结算 → 立即切换（本回合行动阶段已结束，旧组校验已完成 D-05）。
-        返回切换结果（switched/message_key/on_season_change 信号）。幂等：
-        无差异 → 无操作（SC-3 恰一次）。战斗外/无快照 → 降级无操作（P-7）。
+        旧口径「end_turn ⑥ tick 后（⑥⑦ 之间）」是「回合边界」；CTB 无回合边界 →
+        换季是**全局战斗时间效果**（季节属世界、不属任何 actor），故挂全局时间推进
+        位点（由 `_on_battle_time_advance` 调用）。不变量保持：切换必须发生在
+        「当前行动校验完成之后」（时间位点在 ACTOR_READY 之前派发）；幂等由
+        battle_season.tick_season_boundary 内部保证（SC-3 恰一次）。
+        `battle_season.py` 函数体纯（仅读写 battle_season/season_event_state 段）。
         """
         from qbot_rpg.core.battle_season import tick_season_boundary  # noqa: PLC0415
 
@@ -1589,10 +1822,13 @@ class BattleEngine:
         outcome = BattleOutcome(
             status=status,
             reason=reason + (f"[{reason_detail}]" if reason_detail else ""),
-            turn=int(self._snap.get("turn", 0)),
+            turn=self.action_seq,          # CTB（R12）：action_seq 镜像（审计，不参与计算）
             resolve_at=resolve_at,
             combo_zeroed_reason=zero_reason,
         )
+        # BATTLE_END 事件位点：通知调度器终局（不再派发行动链事件）
+        if self._ctb is not None and not self._ctb.finished:
+            self._ctb.finish()
         self._outcome = outcome
         return outcome
 
@@ -1639,10 +1875,16 @@ class BattleEngine:
         return res
 
     def _minimal_snapshot(self, attacker: str, target: str, raw_damage: int) -> dict:
-        """最小战斗快照骨架（resolve_damage 无快照参数时的兜底，测试用；原样保留）。"""
+        """最小战斗快照骨架（resolve_damage 无快照参数时的兜底，测试用；原样保留）。
+
+        CTB：`turn` 键保留为 action_seq 镜像（= 0）以满足世界层完整性校验（R-A），
+        另补 `action_seq` / `battle_time` 双计数键。
+        """
         return {
             "session_type": "battle",
-            "turn": 0,
+            "turn": 0,               # 兼容镜像（= action_seq，R-A）
+            "action_seq": 0,
+            "battle_time": 0.0,
             attacker: {
                 "max_hp": 1000, "hp": 1000, "atk": 100, "dfn": 50,
                 "mag": 50, "spd": 50, "name": attacker,
@@ -1719,9 +1961,9 @@ class BattleEngine:
                 .get("type") == "dummy"
             ),
             "status": STATUS_ACTIVE,
-            "rule_version": str(self._config.get("rule_version", "battle_v1.1.1")),
+            "rule_version": str(self._config.get("rule_version", CTB_RULE_VERSION)),
             # P0-1 续战旧配置修复（M6 D3 RSM-02 / F-RSM-01）：世代绑定键——start 写当前
-            # registry 世代；中断/回合边界快照经 to_snapshot 深拷贝自动沿用；旧快照缺该
+            # registry 世代；中断/边界快照经 to_snapshot 深拷贝自动沿用；旧快照缺该
             # 字段 → 续战入口兼容读取默认 0（走 RSM-04 降级）。
             # P2-RSM-05 修复：非数值 generation（畸形注入）回落 0，不崩（对齐 _num 防御口径）。
             "registry_generation": (
@@ -1731,8 +1973,13 @@ class BattleEngine:
                 and not isinstance(getattr(self._registry, "generation", 0), bool)
                 else 0
             ),
+            # CTB 双计数（Agent 3）：action_seq=已结算行动计数（整数，替代旧回合数）；
+            # battle_time=逻辑时间（浮点，由调度器推进）。`turn` 保留为 action_seq 的
+            # 兼容镜像（R-A：世界层快照完整性校验需要该键存在），**不参与任何计算**。
+            "action_seq": 0,
+            "battle_time": 0.0,
             "turn": 0,
-            "round_phase": PHASE_TURN_START,
+            "round_phase": PHASE_ACTOR_READY,
             "player": _combatant(dict(player)),
             "enemy": _combatant(dict(enemy)),
             "action_record": [],
@@ -1807,7 +2054,9 @@ class BattleEngine:
         self._death_order = []
         self._guard_active = {"player": False, "enemy": False}
         self._armor_active = {"player": False, "enemy": False}
-        self._turn_acted = {"player": False, "enemy": False}
+        self._stance_owner_seq = -1
+        self._player_ready_pending = False
+        self._ctb_event_log = []
         # 效果列表（F-21：effect_ids 装配源，玩家“装备”效果由外部注入）
         self._effect_ids.setdefault("player", [])
         self._effect_ids.setdefault("enemy", [])
@@ -1835,8 +2084,143 @@ class BattleEngine:
         # 方位 v0.6（附录 A Step 2）：敌方 parts 配置 → parts_state 实例化（幂等；
         # 无 parts 配置 → 空段零变化；中断恢复随快照段透传不重建）
         self._init_parts_state()
-        self.start_turn()
+        # ---- CTB：建行动条（BATTLE_START 事件位点）----
+        # 调度器是逻辑时间的唯一推进源；本引擎把「谁什么时候动」全权委托给它。
+        # 木桩敌人（tier=training/type=dummy）不入队——等价旧口径「木桩永不出手」
+        # （Wave A M3 语义等价性论证：木桩不参与 ready 队列）。
+        self._ctb = self._make_scheduler()
+        self._to_state(STATE_ACT, "battle_start")
+        # 首个 ready 推进：调度器消费第一个 ready（action_seq → 1）——
+        # 若首个 ready 是玩家则暂停、等待 `player_act` 提交行动；若是 NPC 则会
+        # 自动连锁到下一个玩家 ready 或终局（`_resolve_ready_actor` 内循环）。
+        self._resolve_ready_actor()
+        self._sync_counts()
         return self
+
+    def _make_scheduler(self) -> CTBScheduler:
+        """按当前战斗配置建行动条调度器并登记双方（CTB 重写核心装配）。
+
+        - 规则参数取自 `config["ctb"]`（recovery/speed_reference/min_speed/
+          action_delay），经 `resolve_rule_config` 归一（缺省对齐 ctb_rules 常量）。
+        - 有效速度 = combatant 的 `spd`（下限保护由公式层负责）。
+        - 木桩敌人不入队（`_is_dummy_enemy_def()`）——调度器侧无该单位即永不 ready，
+          与旧「木桩永不出手」语义等价。
+        - `initiative_fn=None`：首轮无偏置（双方 ready 时刻由公式自然产出，
+          保证同种子同序列的确定性）。
+        - `npc_resolver=self._resolve_npc_action`（2026-09-10 补）：**NPC 行动执行回调**。
+          调度器只负责「何时轮到 NPC」，**行动内容与数值结算仍归引擎**——在
+          ACTION_RESOLVE 位点回调本引擎，执行 MonsterAI 决策 + 命中/伤害/效果全链路。
+          这是旧 `enemy_act()` 承担的执行职责在 CTB 下的迁移落点（分层契约：
+          调度器零战斗数值，引擎零时序决策）。
+        """
+        cfg = self._config.get("ctb")
+        ctb = CTBScheduler(
+            config=cfg,
+            initiative_fn=None,
+            seed=self._rng_seed,
+            npc_resolver=self._resolve_npc_action,
+        )
+        ctb.push_actor(
+            "player", side="player",
+            effective_speed=float(self._combat("player").get("spd", 0) or 0),
+            is_player=True,
+        )
+        if not self._is_dummy_enemy_def():
+            ctb.push_actor(
+                "enemy", side="enemy",
+                effective_speed=float(self._combat("enemy").get("spd", 0) or 0),
+                is_player=False,
+            )
+        ctb.start()
+        return ctb
+
+    def _resolve_npc_action(self, actor_id: str, action_seq: int) -> Optional[float]:
+        """NPC 行动执行回调（ACTION_RESOLVE 位点，2026-09-10 补生产缺口）。
+
+        由 `CTBScheduler._auto_resolve_npc` 在 NPC 行动结算点调用；本方法负责
+        **把 MonsterAI 的决策真正执行成一次行动**，并把该行动的 recovery 回传，
+        供调度器计算该 NPC 的下一次 ready。
+
+        职责链（对齐 01_asset_inventory §0.2 事件位点词典 + m2_shared_contract §六）：
+          1. 终局/死亡前置：战斗已结束或该 actor 已退场 → 不行动（返回 None）。
+          2. 控制状态：`control_state.skip_turn` > 0 由 `do_action` 内部裁决为跳过
+             （时间照走的硬直），无需在此特判。
+          3. 行动内容：`_ai_action_dict()`（MonsterAI.decide；PVP 防守方恒防御；
+             无 AI 注入 → None → 回落 M1 默认普攻）。
+          4. 执行：走与玩家完全相同的 `do_action` 提交通道（同构双库：技能=怪物行动
+             =一次出手，复用同一伤害/效果/连段/死亡判定链）。
+          5. recovery 回传：取该 actor 本次 action 的总恢复值。
+
+        异常一律兜底（记日志 + 返回默认 recovery），**绝不向上抛**——NPC 执行异常
+        不得中断时间轴推进（否则调度器抛错会导致战斗卡死）。
+
+        :param actor_id: 行动者标识（CTB 下为 "enemy" 等 NPC 侧）
+        :param action_seq: 本次行动序号（审计用）
+        :return: 该行动的 recovery（调度器重签票据用）；无法解析 → None（走规则默认）
+        """
+        try:
+            if self._finished or not self._alive(actor_id):
+                return None
+            if self._state not in (STATE_ACT, STATE_RES):
+                return None
+            action_dict = self._ai_action_dict()
+            if action_dict is None:
+                # 无 AI 注入 / decide 异常 → M1 默认普攻（contract §六 回落口径）
+                action_dict = {"type": "normal", "mult": 1.0}
+            outcome = self.do_action(actor_id, action_dict)
+            # Render 通道（04_wave_b_integration §五.1 遗留风险 1 收口）：把 NPC 自动
+            # 裁决的 ActionOutcome 暂存，供 `player_act` 汇总进 TurnReport.outcomes。
+            # 缺此前，NPC 伤害虽已结算/落 record，但不出现在报告 outcomes 里 →
+            # 渲染层拿不到 NPC 行动行（战斗表现为「玩家单方面输出」）。
+            if outcome is not None:
+                self._npc_outcomes.append(outcome)
+            return self._action_recovery(actor_id, action_dict)
+        except Exception:  # noqa: BLE001 - 兜底不崩：NPC 执行异常不得阻断时间轴
+            _logger.exception("NPC 行动执行失败：actor=%s action_seq=%s", actor_id, action_seq)
+            return None
+
+    def _ctb_actor_speed(self, side: str) -> float:
+        """该侧当前有效速度（CTB 行动条入队/更新用）。"""
+        return float(self._combat(side).get("spd", 0) or 0)
+
+    def _sync_scheduler_deaths(self) -> None:
+        """死亡同步：把引擎侧死亡标记推给调度器（移出队列 + bump generation）。
+
+        每段扣血后调用（`_death_check_side` 收尾）——死者的在途票据作废，
+        不再产出 ACTOR_READY。
+        """
+        if self._ctb is None:
+            return
+        ctb = self._ctb
+        for side in BATTLE_SIDES:
+            _view = ctb.get_actor(side)
+            if self._dead(side) and _view is not None and _view.alive:
+                ctb.mark_dead(side)
+
+    def _action_recovery(self, actor: str, action: Optional[Mapping[str, Any]]) -> float:
+        """解析该 action 的 recovery（CTB 行动代价的唯一注入点）。
+
+        优先级（对齐 ctb_rules.recovery_for 的键词表）：
+          1. action 显式 `recovery` / `行动恢复` 键；
+          2. 技能 def 的 `recovery` 键（经 combo 引擎解析）；
+          3. `CtbRuleConfig.default_recovery`（= DEFAULT_RECOVERY 100.0）。
+        **语义（裁决 1）**：recovery 是该 action 的**总行动恢复值**，与 default
+        之间是覆盖关系，不是附加。
+        """
+        rule: CtbRuleConfig = (
+            self._ctb._rule if self._ctb is not None else resolve_rule_config(self._config.get("ctb"))
+        )
+        action = dict(action or {})
+        _sid = str(action.get("skill_id") or "")
+        if _sid and action.get("type") == "skill":
+            try:
+                _sd = self.combo_engine().resolve_skill(_sid) or {}
+                for _k in ("recovery", "行动恢复"):
+                    if _sd.get(_k) is not None:
+                        action.setdefault(_k, _sd.get(_k))
+            except Exception:  # noqa: BLE001 - 解析失败回落默认，不阻断行动
+                pass
+        return float(recovery_for(action, rule))
 
     def set_effect_ids(self, side: str, effect_ids: Sequence[str]) -> "BattleEngine":
         """装配某侧效果 ID 列表（F-21 prepare_defense 的 effect_ids 输入；1b 效果系统）。"""
@@ -1847,82 +2231,229 @@ class BattleEngine:
         return self
 
     def start_turn(self) -> TurnReport:
-        """回合开始（1g2 §1.2 ①/②）：dot/持续伤害 + 控制结算 → 即死判定。
+        """推进行动条至下一个 ready 并交还控制权（CTB 重写：旧「回合开始」→ 行动条推进）。
 
-        ① 回合开始 dot 结算复用拦截链（1g2 §2.1 B；拦截链扣血后即查）；
-        ② 即死判定（L46-48）——死则跳过其本回合行动 / A1 直出终局（1g1b A1）。
+        **语义变更（Wave A M1）**：旧语义 = 「每个回合开始时**全员**结算 DOT/控制」；
+        CTB 语义 = 「每个单位**自己**行动开始时**仅该单位**结算 DOT/控制」。
+        本方法不再递增回合数，也不再全员同步 tick——它只是「把时间轴推到下一个
+        谁该动」的公开入口（保留方法名与签名，供旧调用方与测试过渡）。
+
+        真正的按持有者 DOT/控制/即死结算在 `_start_actor_turn(actor)` 内（由
+        `_resolve_ready_actor` 在每次 ACTOR_READY 时调用）。
+
+        返回 ActionReport 语义的 TurnReport（兼容容器）。若战斗已终局或队列空 →
+        返回当前状态的报告，不抛错（旧调用方 < 1 处，防误用崩溃）。
         """
         if self._finished:
-            raise BattleStateError("战斗已终局，无法开始新回合（1g1c §1.3）")
-        self._to_state(STATE_ACT, "start_turn")
-        self._snap["turn"] = int(self._snap.get("turn", 0)) + 1
+            return self._turn_report()
+        if self._ctb is None:
+            raise BattleStateError("行动条未建立（请先 start()，CTB 无 PREP 外的手动推进）")
+        self._resolve_ready_actor()
+        return self._turn_report()
+
+    def _resolve_ready_actor(self) -> Optional[Dict[str, Any]]:
+        """把行动条推进到**下一个 ready**，并在玩家 ready 时暂停（CTB 主循环接口）。
+
+        调度器行为：`advance_to_next_ready()` 每次消费一个 ready；NPC 会自动把完整
+        行动链走完（`_auto_resolve_npc`），玩家 ready 则暂停。本方法循环推进，直到
+        「玩家暂停（已消费其 ready，等待指令）/ 战斗结束 / 队列空」。
+
+        幂等前置：若当前**已处于玩家暂停态**（等待输入），直接返回——不重复消费。
+
+        每轮：同步双计数、消费事件（含 BATTLE_TIME_ADVANCE 换季）、同步死亡、
+        在 ACTOR_TURN_START 位点为该 actor 结算自身 DOT/控制。
+
+        返回：最后一次推进的关键事件 payload（空队列 / 已结束 / 已暂停 → None）。
+        """
+        if self._ctb is None or self._finished:
+            return None
+        # 已暂停等待玩家输入：ready 已被消费（action_seq 已含该拍），不重复推进
+        if self._ctb.paused:
+            self._player_ready_pending = True
+            self._phase = PHASE_ACTOR_READY
+            return None
+        evt: Optional[Dict[str, Any]] = None
+        for _ in range(_CTB_MAX_ADVANCE_PER_CALL):
+            if self._finished or self._ctb.finished:
+                break
+            # ---- 暂停/交还判定（2026-09-10 修正）----
+            # `paused` 语义 = 「玩家 ready 已被消费，控制权在玩家手上」。
+            # CTB 不变式：**时间轴必须单调推进**——任何 ready 时刻早于玩家的 NPC
+            # 都必须在玩家拿到控制权之前行动完。故暂停不能只看 `paused` 标记，
+            # 必须比较「队首 ready 时刻」与「玩家下一次 ready 时刻」：
+            #   - 队首是玩家，或队列里已无更早 ready 的 NPC → 可交还（break）
+            #   - 队首是 ready 早于/等于玩家的 NPC → 必须先消费它（继续循环）
+            _head = self._ctb.peek_next()
+            if _head is None:
+                break
+            if self._ctb.paused:
+                if bool(getattr(_head, "is_player", False)):
+                    break
+                # 队首是 NPC：仅当其 ready 不晚于玩家的下一次 ready 时才必须先走；
+                # 否则玩家这一拍已就绪，应立即交还控制权（不得让玩家等 NPC）。
+                _p_ready = self._next_player_ready()
+                if _p_ready is not None and float(
+                    getattr(_head, "next_ready", 0.0) or 0.0
+                ) > float(_p_ready):
+                    break
+            elif self._ctb.should_pause_for_input():
+                break
+            # ACTOR_TURN_START 位点（M1）：在**消费该单位的 ready 之前**，先为其
+            # 结算自身 DOT/控制/即死。对所有单位统一处理（玩家与 NPC 同通道）。
+            _nxt = self._ctb.peek_next()
+            if _nxt is not None:
+                _aid = str(_nxt.actor_id)
+                if not self._start_actor_turn(_aid):
+                    # 该 actor 因 DOT/即死退场 → 重新取队首（其票据已被死亡同步作废）
+                    self._sync_scheduler_deaths()
+                    continue
+                if self._finished:
+                    break
+            evt = self._ctb.advance_to_next_ready()
+            self._sync_counts()
+            self._consume_ctb_events()
+            self._sync_scheduler_deaths()
+            # 玩家 ready → 调度器暂停：仍需回到循环顶部复核「是否还有更早的 NPC」
+            # （玩家 ready 消费后，时间轴可能已跳到玩家拍，NPC 若更早则其票据
+            # 时间必然 < 玩家拍，会在下一轮被优先消费）
+            if self._ctb.paused and not self._has_earlier_npc_ready():
+                break
+        # 调度器 finish（某方全灭）→ 引擎侧统一收尾
+        if self._ctb.finished and not self._finished:
+            self._resolve_battle_end(force=True)
+        self._sync_counts()
+        self._player_ready_pending = bool(self._ctb.paused)
+        if self._player_ready_pending:
+            # CTB：行动条就绪、等待玩家输入（替代回合制的「轮到我方行动」位点）
+            self._phase = PHASE_ACTOR_READY
+            self._state = STATE_ACT if self._state not in (
+                STATE_WIN, STATE_LOSE, STATE_FLY) else self._state
+        return evt
+
+    def _next_player_ready(self) -> Optional[float]:
+        """玩家单位的下一次 ready 时刻（调度器视角；未登记 → None）。
+
+        CTB 交还判定用：只有当「队首 NPC 的 ready 时刻 ≤ 玩家 ready」时，才必须
+        先让该 NPC 行动完；否则玩家这一刻已就绪，应立即交还控制权。
+        """
+        try:
+            if self._ctb is None:
+                return None
+            for _vid in ("player",):
+                _v = self._ctb.get_actor(_vid)
+                if _v is not None and _v.alive:
+                    return float(_v.next_ready)
+            return None
+        except Exception:  # pragma: no cover - 兜底不崩
+            return None
+
+    def _has_earlier_npc_ready(self) -> bool:
+        """队列中是否存在「ready 时刻不晚于玩家」的存活 NPC（交还前置条件）。
+
+        用于玩家 ready 消费后的复核：若仍有 NPC 的 ready 落在玩家这一刻之前/同刻，
+        则时间轴尚未走到玩家拍，不得交还控制权（否则该 NPC 的这次行动被静默跳过）。
+        """
+        try:
+            if self._ctb is None:
+                return False
+            _p = self._next_player_ready()
+            if _p is None:
+                return False
+            _head = self._ctb.peek_next()
+            if _head is None or bool(getattr(_head, "is_player", False)):
+                return False
+            return float(getattr(_head, "next_ready", 0.0) or 0.0) <= float(_p)
+        except Exception:  # pragma: no cover - 兜底不崩
+            return False
+
+    def _sync_counts(self) -> None:
+        """把调度器的 action_seq / battle_time 同步进快照（含 `turn` 兼容镜像）。
+
+        CTB 双计数是快照的权威计量；`turn` 仅作镜像（R-A：世界层完整性校验需要）。
+        """
+        if self._ctb is None:
+            return
+        _aseq = int(self._ctb.action_seq)
+        _btime = float(self._ctb.battle_time)
+        self._snap["action_seq"] = _aseq
+        self._snap["battle_time"] = round(_btime, 6)
+        self._snap["turn"] = _aseq                       # 兼容镜像（不参与计算）
+        self._snap["timestamps"] = dict(self._snap.get("timestamps") or {})
+        self._snap["timestamps"]["updated_at"] = time.strftime(
+            "%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+    def _consume_ctb_events(self) -> None:
+        """消费调度器事件缓冲 → 落 `_ctb_event_log`（本次推进的事件位点流水）。
+
+        事件位点的**业务行为**由引擎在各挂载点显式执行（见各 `_on_*` 与
+        `_start_actor_turn`）；本方法只做审计留痕 + BATTLE_TIME_ADVANCE 的换季。
+        """
+        if self._ctb is None:
+            return
+        for ev in self._ctb.drain_events():
+            self._ctb_event_log.append(ev)
+            if str(ev.get("event")) == CtbEvent.BATTLE_TIME_ADVANCE:
+                self._on_battle_time_advance(ev)
+
+    def _on_battle_time_advance(self, ev: Mapping[str, Any]) -> None:
+        """BATTLE_TIME_ADVANCE 位点（M11）：全局战斗时间推进 → 换季边界结算。
+
+        换季是**全局战斗时间效果**（季节属世界、不属任何 actor），故挂在时间推进
+        位点而非某单位行动后。保持旧不变量：切换发生在「当前行动校验完成之后」
+        （时间位点在 ACTOR_READY 之前派发），且 tick_season_boundary 内部幂等。
+        """
+        self._tick_season_boundary()
+        self._phase = PHASE_TIME_ADVANCE
+
+    def _start_actor_turn(self, actor: str) -> bool:
+        """ACTOR_TURN_START 位点（M1）：该 actor 行动开始 —— 自身 DOT/控制/即死。
+
+        等价旧 `start_turn` 的「①+②」但**只作用于该 actor**（映射规则：回合开始
+        DOT → 目标自身 ACTOR_TURN_START）：
+          - tick=turn_start 的 DOT：结算 → 递减 → 归零移除（R1/R2）；
+          - control_state.turns 递减、归零清理（R3/R4）；
+          - 即死判定（谁先到点谁先判，A1 直出终局）。
+        返回 False = 该 actor 已死或战斗终局（调用方不应继续其行动）。
+        """
+        if self._finished or not self._alive(actor):
+            return False
         self._phase = PHASE_TURN_START
-        self._guard_active = {"player": False, "enemy": False}
-        self._turn_acted = {"player": False, "enemy": False}
-        # 功能三批2：turn_start 事件（effects trigger=turn_start / 状态 on_tick
-        # 收编前保留既有 dot 结算；无配置 → [] 零行为变化）
-        self._dispatch_event("turn_start", "player")
-        self._dispatch_event("turn_start", "enemy")
+        # 防御窗口收口：该 actor 再次行动 → 上一次的 guard 窗口到期（D2 同口径）
+        self._guard_active[actor] = False
+        # 功能三批2：turn_start 事件（按持有者，替代旧全员 turn_start）
+        self._dispatch_event("turn_start", actor)
 
-        # ① 回合开始 dot（tick=turn_start）经拦截链扣血
+        c = self._combat(actor)
         rt = self._new_runtime()
-        for side in BATTLE_SIDES:
-            if not self._alive(side):
-                continue
-            c = self._combat(side)
-            dots = c.get("dot_pool") or {}
-            for dot_id in list(dots.keys()):
-                dot = dots[dot_id]
-                if isinstance(dot, dict) and dot.get("tick") == "turn_start":
-                    src = str(dot.get("source") or self._opposite(side))
-                    self.resolve_damage(src, side, int(dot.get("value", 0)),
-                                        attack_type="status", snapshot=self._snap, runtime=rt)
-                    self._absorb_runtime(rt)
-                    self._death_check_side(side, "turn_start_dot")
-                    rt_t = self._new_runtime()
-                    if int(dot.get("turns", 0)) > 0:
-                        dot["turns"] = int(dot["turns"]) - 1
-                    if int(dot.get("turns", 0)) <= 0:
-                        dots.pop(dot_id, None)
-                    rt = rt_t
-            # 控制结算：回合开始按控制剩余回合递减（1g2 §1.2 控制裁决；skip_turn）
-            ctrl = c.get("control_state")
-            if isinstance(ctrl, dict) and int(ctrl.get("turns", 0)) > 0:
-                tn = int(ctrl.get("turns", 0)) - 1
-                ctrl["turns"] = tn
-                if tn <= 0:
-                    c.pop("control_state", None)
+        dots = c.get("dot_pool") or {}
+        for dot_id in list(dots.keys()):
+            dot = dots[dot_id]
+            if isinstance(dot, dict) and dot.get("tick") == "turn_start":
+                src = str(dot.get("source") or self._opposite(actor))
+                self.resolve_damage(src, actor, int(dot.get("value", 0)),
+                                    attack_type="status", snapshot=self._snap, runtime=rt)
+                self._absorb_runtime(rt)
+                self._death_check_side(actor, "turn_start_dot")
+                rt = self._new_runtime()
+                if int(dot.get("turns", 0)) > 0:
+                    dot["turns"] = int(dot["turns"]) - 1
+                if int(dot.get("turns", 0)) <= 0:
+                    dots.pop(dot_id, None)
+        # 控制结算：该 actor 行动开始按控制剩余次数递减（skip_turn 硬直）
+        ctrl = c.get("control_state")
+        if isinstance(ctrl, dict) and int(ctrl.get("turns", 0)) > 0:
+            tn = int(ctrl.get("turns", 0)) - 1
+            ctrl["turns"] = tn
+            if tn <= 0:
+                c.pop("control_state", None)
 
-        # ② 回合开始即死判定（A1 直出）
+        # ② 即死判定（A1 直出）
         if self._dead("player") or self._dead("enemy"):
             self._absorb_runtime(self._new_runtime())
-            out = self._resolve_battle_end(force=True)
-            if out is not None:
-                self._phase = PHASE_TURN_START
-                return self._turn_report()
-        self._phase = PHASE_PLAYER_ACTION
-        return TurnReport(
-            turn=int(self._snap["turn"]), phases=(PHASE_TURN_START, PHASE_PLAYER_ACTION),
-            player=int(self._combat("player").get("hp", 0)),
-            enemy=int(self._combat("enemy").get("hp", 0)),
-            ended=self._finished, status=self._snap.get("status"),
-            player_pos=self._snapshot_pos("player"),
-            enemy_pos=self._snapshot_pos("enemy"),
-        )
-
-    def action_order(self) -> Tuple[str, ...]:
-        """行动顺序（1g2 §1.1 先手=玩家/后手=怪物，写死；活体过滤 + 死亡标记）。
-        config.actor_order="speed" 时按 spd 降序、玩家平局优先（速度排序扩展）。
-        """
-        if not self._snap:
-            return ()
-        order = ["player", "enemy"]
-        if str(self._config.get("actor_order", "fixed")) == "speed":
-            def _key(side: str) -> Tuple[float, int]:
-                c = self._combat(side)
-                return (-float(c.get("spd", 0)), 0 if side == "player" else 1)
-            order.sort(key=_key)
-        return tuple(s for s in order if self._alive(s))
+            self._sync_scheduler_deaths()
+            self._resolve_battle_end(force=True)
+            return False
+        return True
 
     def _is_dummy_enemy_def(self) -> bool:
         """M12.5 木桩判定：enemy_def tier=training 或 type=dummy（怪物模块 §十五 15.1）。
@@ -1938,44 +2469,65 @@ class BattleEngine:
             return ed.get("tier") == "training" or ed.get("type") == "dummy"
         return False
 
+    def action_order(self) -> Tuple[str, ...]:
+        """【删除】纯回合制产物：一次性排出整回合固定出手序——CTB 无对应物。
+
+        CTB 的行动顺序由每个单位独立累计的行动条动态决定（谁先满谁先动），
+        不可能用静态 tuple 表达（Wave A M2 语义等价性论证）。按硬约束保留同名
+        签名壳并抛 NotImplementedError，以暴露任何未迁移的误用调用点。
+
+        替代：`next_action_owner()`（返回行动条上下一名 ready 单位）。
+        """
+        raise NotImplementedError(
+            "action_order 已随 CTB 重写删除：行动顺序由行动条动态决定，"
+            "请改用 next_action_owner() / engine.action_seq（Wave A M2）"
+        )
+
     def next_action_owner(self) -> Optional[str]:
-        """下一个可行动者（⑤ 后手判定：被先手击杀的怪物不执行反击，1g2 §1.1 特例）。"""
-        order = self.action_order()
-        for side in order:
-            if not self._turn_acted.get(side, False):
-                # M12.5 木桩（怪物模块 §十五 15.2）：木桩敌人永不出手——即便快照
-                # 恢复后 turn_acted 未带标记也从行动者队列剔除（enemy_def 快照带
-                # tier/type，判定恒可复现）
-                if side == "enemy" and self._is_dummy_enemy_def():
-                    self._turn_acted["enemy"] = True
-                    continue
-                return side
-        return None
+        """下一个可行动者（CTB 重写，M3）：行动条上下一名 ready 单位。
+
+        等价旧语义「本回合内下一个还没行动的单位」→ CTB「行动条率先到达阈值的
+        单位」。木桩敌人不入队（start 时即不 push_actor）→ 天然不出现在队列中，
+        与旧口径「木桩永不出手」等价。队列空 / 已终局 → None。
+        """
+        if self._ctb is None or self._finished:
+            return None
+        view = self._ctb.peek_next()
+        if view is None:
+            return None
+        return str(view.actor_id)
 
     def do_action(self, attacker: str, action_dict: Mapping[str, Any]) -> ActionOutcome:
         """行动入口（完整闭环）：命中→会心→格挡→双通道→总伤害→拦截链→扣血→
-        死亡判定→状态 tick（1g2 §1.2/§三）。
+        死亡判定→状态 tick。
 
         attacker ∈ {player, enemy}；action_dict 支持：
           - {"type":"normal"|"attack", "mult":1.0, "attack_type":"slash"|"blunt"|...,
              "elem_mult":0.0, "skill_id":...}
           - {"type":"skill", "skill_id":"...", "mult":2.0, ...}
           - {"type":"guard"|"defense"}                防御指令 ×0.5（1a §1.8）
-          - {"type":"flee"|"run"}                     逃跑（回合边界，1g1b T6）
+          - {"type":"flee"|"run"}                     逃跑（CTB：该 actor ready 时点即可）
           - {"type":"item", "item_id":"...", "actions":[...]}  道具（L0 动作）
-          - segments: [{...}] 连段/多段逐段结算（1g1c A-03/TC-07）
+          - segments: [{...}] 连段/多段逐段结算
         返回 ActionOutcome（含 rating/damage/battle_ended）。
+
+        **CTB 语义**：本方法是「提交一次行动」的入口，不含任何时间推进——
+        时间推进（下次 ready 重签）由 `_after_actor_action` 在行动收尾时驱动；
+        **被拒行动（R-6）** 不会走到 `_after_actor_action`，故零时间成本。
         """
         if self._finished:
-            raise BattleStateError(f"战斗已终局（{self._snap.get('status')}），无法再行动（1g1c §1.3）")
+            raise BattleStateError(f"战斗已终局（{self._snap.get('status')}），无法再行动")
         if attacker not in BATTLE_SIDES:
             raise ValueError(f"未知行动侧：{attacker}")
         if self._state not in (STATE_ACT, STATE_RES):
-            raise BattleStateError(f"行动仅允许在行动选择/结算中发起（当前 {self._state}，1g1b T2）")
+            raise BattleStateError(f"行动仅允许在行动选择/结算中发起（当前 {self._state}）")
         if not self._alive(attacker):
-            raise BattleStateError(f"{attacker} 已死亡/退场，不能行动（1g1b A1 跳过行动）")
+            raise BattleStateError(f"{attacker} 已死亡/退场，不能行动")
 
         self._current_actor = attacker
+        # CTB recovery 解析源：记下本次提交的原始 action dict（含 skill_id），
+        # 供 `_after_actor_action` 计算该 action 的 recovery（唯一注入点）。
+        self._last_action_dict = dict(action_dict)
         try:
             return self._do_action_inner(attacker, action_dict)
         finally:
@@ -1988,7 +2540,6 @@ class BattleEngine:
         atype = str(action_dict.get("type") or "normal")
         atype = {"attack": "normal", "defense": "guard", "run": "flee"}.get(atype, atype)
         self._phase = PHASE_PLAYER_ACTION if attacker == "player" else PHASE_ENEMY_ACTION
-        self._turn_acted[attacker] = True
 
         if atype == "flee":
             return self._flee_actor(attacker)
@@ -1996,7 +2547,7 @@ class BattleEngine:
             return self._guard_actor(attacker)
 
         # M13 6c（细化_6c §2.2 EFF-5）：技能行动换季校验——非当季技能被拒
-        # （不耗回合，复用 rejected 管道语义；普攻/防御全年可用 EFF-3 兜底）。
+        # （R-6：零时间成本，复用 rejected 管道语义；普攻/防御全年可用 EFF-3 兜底）。
         _season_gate = self._check_season_action(attacker, dict(action_dict))
         if _season_gate is not None:
             return _season_gate
@@ -2013,12 +2564,17 @@ class BattleEngine:
             return self._resolve_combo_action(attacker, dict(action_dict))
         if atype == "item":
             return self._resolve_item_action(attacker, dict(action_dict))
-        raise ValueError(f"未知动作类型：{atype}（1g1b T2 动作词汇）")
+        raise ValueError(f"未知动作类型：{atype}（CTB 动作词汇）")
 
     # ------------------------- 行动实现 -------------------------
 
     def _guard_actor(self, attacker: str) -> ActionOutcome:
-        """防御指令（1a §1.8 ×0.5；1g1c TC-28 防御不打断连段保留）。"""
+        """防御指令（1a §1.8 ×0.5）。
+
+        CTB 重写（Wave A S3/工程补白 6）：防御窗口不再「回合结束清零」，而是
+        **到该 actor 下次行动为止**（由下一次 `_start_actor_turn` 清位）——语义
+        等价「守住自己这一拍，直到下一次轮到自己」。
+        """
         self._to_state(STATE_RES, "guard")
         self._guard_active[attacker] = True
         target = self._opposite(attacker)
@@ -2034,10 +2590,16 @@ class BattleEngine:
         self._dispatch_event("action_end", attacker)
         self._after_actor_action(attacker)
         return ActionOutcome(True, seq, attacker, "guard", target, True, "low", False,
-                             0, 0, int(self._combat(target).get("hp", 0)), (), "防御指令（本回合受击 ×0.5）")
+                             0, 0, int(self._combat(target).get("hp", 0)), (),
+                             "防御指令（受击 ×0.5，直到下次行动）")
 
     def _skip_turn(self, attacker: str) -> ActionOutcome:
-        """被控制跳过行动（skip_turn 硬直，1g1c TC-29 连段保留）。"""
+        """被控制跳过行动（skip_turn 硬直，连段保留）。
+
+        CTB 重写（M6）：该 actor 的本次 ready **被消费但不产出 action**，随后的
+        行动条推进照常（`_after_actor_action` 重签其票据）——**时间必须继续走**，
+        否则硬直会造成死锁。关键不变量：①连段保留（combo_state 不动）；②时间推进。
+        """
         target = self._opposite(attacker)
         seq = self._record_action(
             attacker, "skip", target,
@@ -2047,14 +2609,18 @@ class BattleEngine:
         self._after_actor_action(attacker)
         return ActionOutcome(False, seq, attacker, "skip", target, False, "low", False,
                              0, 0, int(self._combat(target).get("hp", 0)),
-                             ({"type": "skip_turn", "actor": attacker},), "被控制，跳过本回合行动")
+                             ({"type": "skip_turn", "actor": attacker},),
+                             "被控制，跳过本次行动")
 
     def _flee_actor(self, attacker: str) -> ActionOutcome:
-        """逃跑（1g1b T6 / 1g1c TC-15..17：仅回合边界；成功后连段清零、退出战斗）。
+        """逃跑（1g1b T6）：成功后连段清零、退出战斗。
 
-        定稿未定义成功率/代价（1g1a §7 待补）——默认 100% 成功，config.flee_chance
-        可配；BOSS 禁逃可经 config.battle_flee_blocked_on_boss；失败保留战斗与连段
-        （1c1b L57 / 1g1c TC-16）。
+        CTB 重写（Wave A §1.7 `_flee_actor`）：旧约束「仅回合边界」（T6）在 CTB
+        下无意义 → 改为「该 actor 任意 ready 时点均可尝试逃跑」。
+
+        成功率 = 敏捷比 agi/(agi+敌agi)（玩家属性定稿 L185；双方 agi 均 0 时按
+        1.0 兜底），config.flee_chance 作附加修正系数；BOSS 禁逃可经
+        config.battle_flee_blocked_on_boss；失败保留战斗与连段。
         """
         enemy = self._combat("enemy")
         blocked_on_boss = bool(self._config.get("battle_flee_blocked_on_boss", False)) and \
@@ -2095,8 +2661,13 @@ class BattleEngine:
                              battle_ended=True, status=outcome.status)
 
     def _resolve_item_action(self, attacker: str, action: Dict[str, Any]) -> ActionOutcome:
-        """道具（1g1c action_record action=item；TC-28 道具不打断连段、不耗回合）：
-        经 L0 执行器跑道具 actions（heal/status_apply 等），跳过伤害链。"""
+        """道具（action_record action=item；道具不打断连段）：
+        经 L0 执行器跑道具 actions（heal/status_apply 等），跳过伤害链。
+
+        CTB（R-6）：道具行动**消耗一次行动**（走 `_after_actor_action` 推进时间）；
+        旧注释「不耗回合」在 CTB 下等价于「占用本次 ready」——与技能被拒（零时间
+        成本）不同：道具是成功行动，故按其 recovery 正常推进行动条。
+        """
         self._to_state(STATE_RES, "item")
         target = self._opposite(attacker)
         ctx = DamageCtx(
@@ -2229,9 +2800,10 @@ class BattleEngine:
         if result.form_id and result.form_id != ca.get("skill_id") and not ca.get("combo_result"):
             ca["combo_result"] = {"form_id": str(result.form_id), "derived": bool(result.derivation)}
         if result.rejected:
-            # P1-5（dsh 批3）：被拒不耗回合——回滚 _do_action_inner 前置的 _turn_acted，
-            # 否则 next_action_owner/to_snapshot 把被拒当已行动（"不耗回合"被打穿）。
-            self._turn_acted[attacker] = False
+            # R-6（裁决 2）：被拒 = 零时间成本、直接重试。**不调用 _after_actor_action**
+            # （不推进行动条、不重签票据、不派发链路事件）；仅写审计流水。
+            # 旧的 `_turn_acted[attacker]=False` 回滚在 CTB 下不再需要——时间推进由
+            # _after_actor_action 单点驱动，被拒路径本就不经过它。
             seq = self._record_action(
                 attacker, str(action.get("type", "skill")), target,
                 {"hit": False, "crit": "low", "blocked": False, "pierce": 0.0, "multi": 1.0,
@@ -2276,9 +2848,10 @@ class BattleEngine:
             if not action.get("air_policy"):
                 ca["air_policy"] = _fsd.get("air_policy")
 
-        # 防反/闪反姿态标记（2026-09-09 用户拍板）：玩家施放技能若带 counter_type/
-        # counter_skill（守势=parry/回环+腾空=dodge）→ 记入 snap.counter_stance
-        # （姿态窗口=当回合；怪行动判定消费——回合边界 turn 比对自然过期）
+        # 防反/闪反姿态标记（用户拍板标签制）：玩家施放技能若带 counter_type/
+        # counter_skill（守势=parry/回环+腾空=dodge）→ 记入 snap.counter_stance。
+        # CTB 重写（R11）：姿态窗口 = **本次行动窗口**（写入 action_seq，与消费侧
+        # `_player_stance` 同口径；该玩家下一次行动 action_seq 自增 → 自然过期）。
         if attacker == "player":
             _sid_now = str(ca.get("skill_id") or "")
             _sd_now = self.combo_engine().resolve_skill(_sid_now) or {}
@@ -2287,7 +2860,7 @@ class BattleEngine:
             if _ct_now in ("parry", "dodge") and _cs_now:
                 self._snap["counter_stance"] = {
                     "type": _ct_now, "skill": _cs_now,
-                    "turn": int(self._snap.get("turn", 0))}
+                    "action_seq": self.action_seq}
 
         # ---- M13 批15 路15C：组合技能战斗接线（细化_6c §三 F-C1/F-C2）----
         # 技能 def combo_table 段 → 施放时 F-C1 触发判定（gate_combination：
@@ -2310,10 +2883,8 @@ class BattleEngine:
         if not ca.get("_combo_settled"):
             _energy_gate = self._apply_skill_energy(attacker, ca, sd, target)
             if _energy_gate is not None:
-                # 2026-09-07 脉刃师实测：被拒不耗回合需回滚 _turn_acted（同
-                # apply_action rejected 段 P1-5）——否则 end_turn→start_turn
-                # 状态机崩（act→act 非法迁移，贯刃/释刃 consume 不足实测）
-                self._turn_acted[attacker] = False
+                # R-6（裁决 2）：被拒 = 零时间成本、直接重试——不推进行动条
+                # （不调用 _after_actor_action），拒绝原因随 outcome 上报。
                 return _energy_gate
 
         # ---- G2（2026-09-02）：consume_marks 门禁 + 扣除（细化_1d §4.2 / S-01）----
@@ -2327,13 +2898,12 @@ class BattleEngine:
             _final_sid = str(ca.get("skill_id") or "")
             _consume_sd = sd
             if _final_sid:
-                _cd = self.combo_engine().resolve_skill(_final_sid) or {}
-                if isinstance(_cd, Mapping) and _cd:
-                    _consume_sd = _cd
+                _cd_def = self.combo_engine().resolve_skill(_final_sid) or {}
+                if isinstance(_cd_def, Mapping) and _cd_def:
+                    _consume_sd = _cd_def
             _consume_gate = self._apply_consume_marks_gate(attacker, ca, _consume_sd, target)
             if _consume_gate is not None:
-                # 2026-09-07：同 energy gate——被拒不耗回合（回滚 _turn_acted）
-                self._turn_acted[attacker] = False
+                # R-6：同 energy gate——被拒零时间成本、直接重试
                 return _consume_gate
 
         # ---- M13 6a 路3C：技能 MP 消耗扣费（1a §2.2 mp_cost 语义；被拒不扣）----
@@ -2499,13 +3069,16 @@ class BattleEngine:
             return
 
     def _settle_air_landing(self) -> None:
-        """空中姿态（腾空/悬停/空连）回合到期自动落地（2026-09-09 zerc 拍板）。
+        """空中姿态（腾空/悬停/空连）到期自动落地。
 
-        状态 duration 回合扣减归零由 tick_turn_end 移除；此处兜底：玩家仍滞空但已无
-        任何空中姿态状态 → reposition height=ground（落地）。空中姿态尚存（3 回合内）
-        不落地。
+        CTB 重写（R16）：旧口径「空中姿态状态回合 duration 归零 → 落地」；CTB 下
+        状态 duration 按**持有者行动次数**递减（R5/R14 同族），故落地位点 = 持有者
+        每次 `AFTER_ACTION`（本方法由 `_after_actor_action` 调用）。判定逻辑不变：
+        玩家仍滞空但已无任何空中姿态状态 → reposition height=ground。
         """
         try:
+            from qbot_rpg.core.position import position_of  # noqa: PLC0415
+
             _ps, _ph = position_of(self._snap, "player")
             if _ph != "air":
                 return
@@ -2520,7 +3093,7 @@ class BattleEngine:
                 if _sid in _air_sids:
                     return
             _ctx = DamageCtx(raw_damage=0, attack_type="basic", attacker="player",
-                             target="enemy", snapshot=self._snap, runtime=_rt)
+                             target="enemy", snapshot=self._snap)
             execute_action({"type": "reposition", "target": "self", "height": "ground"},
                            _ctx, _rt)
             self._absorb_runtime(_rt)
@@ -2581,7 +3154,7 @@ class BattleEngine:
     ) -> ActionOutcome:
         """方位 miss 收口（方位 v0.6 §四：够不着——技能照常消耗、无伤害/破坏力/效果）。
 
-        行动槽已占（_do_action_inner 置 _turn_acted），与命中结算同构走完状态迁移与
+        行动槽已占（本行动消耗一次 ready），与命中结算同构走完状态迁移与
         行动收尾（RES 迁移 / action_record / tick / action_end / after_actor），只不产
         生任何伤害与效果；渲染层经 side_effects 的 position_miss 标记出模板文案
         （battle_enemy_position_miss，模板配置化），engine message 仅兜底直读方。
@@ -2755,8 +3328,10 @@ class BattleEngine:
         """破位事件收口（§三.3 on_break + §四 破位时序）：全部走既有 effects 通道。
 
         - knockdown（默认 1；部位覆写 0 = 该部位破位不倒地，§三.3 on_break.knockdown）
-          → status_apply 挂 knockdown_status_id 状态（config 可改 id）；窗口回合数 =
-          on_break.knockdown 值覆写实例 turns（N3 数值阶段，试点调）
+          → status_apply 挂 knockdown_status_id 状态（config 可改 id）；窗口 = 持有者
+          **N 次行动**（CTB 重写 R5：旧口径把 `on_break.knockdown` 当「回合数」写入
+          实例 `turns`，CTB 下 `turns` 的消费方改为「持有者行动次数」——即该状态每次
+          持有者行动递减一次；数值 N 语义由「N 回合」改「N 次行动」）
         - marks → mark_add 原子动作（破位附加印记，如素材掉落标记）
         - effects → 原样执行（附加效果：断尾削扫尾范围=行动禁用/替换等）
         相对侧语义：attacker=player 施加方，target 键用相对 "enemy"（effects 层口径）。
@@ -2787,8 +3362,10 @@ class BattleEngine:
             res = execute_action(act, ctx, rt)
             events.extend(res.side_effects)
         self._absorb_runtime(rt)
-        # 倒地窗口覆写：on_break.knockdown = 回合数（实例 turns 置位；状态 def 静态
-        # duration 不承载 N3 数值，窗口数值归部位配置）
+        # 倒地窗口覆写：on_break.knockdown = **持有者行动次数**（实例 turns 置位；
+        # 状态 def 静态 duration 不承载 N3 数值，窗口数值归部位配置）。
+        # CTB 重写（R5）：`turns` 的递减由该状态持有者的每次行动触发
+        # （tick_after_action 路径），故 N 的语义从「N 回合」= 「N 次持有者行动」。
         if kd > 0:
             st = self._snap.get("status_state")
             insts = st.get(target) if isinstance(st, Mapping) else None
@@ -3081,14 +3658,14 @@ class BattleEngine:
             seg_damage["final"] += res.final_damage
             all_effects.extend(res.side_effects)
             last_hp = res.target_hp
-            _rname: Optional[str] = None
+            _seg_rname: Optional[str] = None
             if str(action.get("type", "normal")) == "skill":
                 _sid = str(action.get("skill_id") or "")
                 if _sid:
                     _sd = self.combo_engine().resolve_skill(_sid) or {}
-                    _rname = str(_sd.get("name") or "") or None
+                    _seg_rname = str(_sd.get("name") or "") or None
             self._record_action(attacker, str(action.get("type", "normal")), target,
-                                rating, seg_damage, self._phase, name=_rname)
+                                rating, seg_damage, self._phase, name=_seg_rname)
 
             # ⑧ 死亡判定（每次扣血后立即，1g2 §1.2 ④；1g1b 不变量2）
             # 先手击杀来源标记（TC-11 order 基准：玩家行动直击杀敌）
@@ -3118,7 +3695,7 @@ class BattleEngine:
                         return self._action_outcome(attacker, action, target, rating,
                                                     seg_damage, all_effects, last_hp,
                                                     battle_ended=True, status=out.status)
-            # 反射致玩家死亡标记（终局在 end_turn ⑦⑧ 统一裁决/立即终局）
+            # 反射致玩家死亡标记（终局在 _after_actor_action 统一裁决/立即终局）
             if self._dead("player"):
                 out = self._resolve_battle_end(force=False)
                 if out is not None:
@@ -3187,14 +3764,90 @@ class BattleEngine:
         )
 
     def _after_actor_action(self, actor: str) -> None:
-        """行动者完成后：结算链推进（1g2 §1.2 ⑤ 后手判定；多段/连段期间保持 RES）。
-        state 回行动选择（T8：下一行动者）以便下一个 actor 进入。"""
+        """ACTOR_TURN_END 位点（CTB 重写，M4/M9/M10）：行动者完成后收尾 + 推进时间。
+
+        这是「一次行动结束」的唯一收口，承担旧 `end_turn` ⑥ tick 拆下来的各项：
+          - 霸体窗口关闭（D2：行动阶段结束）；
+          - 技能冷却递减（该施放者本侧 -1，M9）；
+          - transform 形态 tick（持有者，M10）+ dispel 延迟还原（M8）；
+          - 空中姿态落地（R16）；
+          - **回合末 DOT / 吸收回复 / 持续双维扣减**（`tick_turn_end`，2026-09-10 整合）；
+          - **行动条重签**：把该 actor 的下一次 ready 交给调度器（recovery 注入）。
+
+        2026-09-10 整合（缺口修复）：旧 `end_turn` ⑥ 的 `effects.tick_turn_end`
+        此前**无任何调用点**——`tick="turn_end"` 的 DOT（含 `part_break_per_tick`
+        破位）、伤害吸收回合末回复、regen、持续双维扣减、限时印记 remaining_turns
+        扣减全部**静默失效**。CTB 下「回合末」的等价位点 = 该行动者的 ACTOR_TURN_END
+        （映射规则：回合结束 DOT → 行动者 `actor_action_end`，见 01_asset_inventory
+        §0.2 事件位点词典）。
+
+        **注意本函数只对「持有回合末状态的那一侧」结算**：`tick_turn_end(snapshot,
+        runtime)` 签名不带 actor（它内部按 BATTLE_SIDES 遍历双方），故这里不能
+        按 `actor` 过滤——DOT 挂在谁身上就扣谁的血（08:25 旧回合制里双方同时结算，
+        CTB 下改为**任一行动者收尾时统一结算双方**，保证 DOT 结算频率与旧语义等价：
+        每个行动边界结算一次）。
+        """
         if self._finished:
             return
-        self._armor_active[actor] = False   # D2：霸体窗口=行动阶段结束（1c2 §2.2「使用期间」）
-        nxt = self.next_action_owner()
-        if nxt is not None and self._state in (STATE_RES,):
-            self._to_state(STATE_ACT, "next_actor")
+        self._armor_active[actor] = False   # D2：霸体窗口=行动阶段结束
+        # 防反/闪反姿态窗口收口（R10，2026-09-10）：玩家本次行动已结算完毕 → 记下
+        # 「持有者已推进到本拍」。`_player_stance` 据此判定：写入拍 < 本拍 = 姿态已
+        # 随「持有者再次行动」过期；写入拍 == 本拍 = 本拍刚写入、仍然有效。
+        # 放置位置很关键：必须在本次行动结算**之后**，否则会抹掉刚写入的姿态。
+        if actor == "player":
+            self._stance_owner_seq = int(self.action_seq)
+        # M9/M10/M8/R16：该行动者侧的各项 tick 归位到 AFTER_ACTION
+        self._tick_skill_cooldowns(actor)
+        self._tick_transform_state(actor)
+        self._settle_air_landing()
+        # 回合末状态结算（旧 end_turn ⑥：turn_end DOT / 吸收回复 / 持续双维扣减）
+        # 结算后须复核死亡（DOT 可能致死）——致死则立即终局，不再推进时间轴。
+        try:
+            _te_log = tick_turn_end(self._snap, self._new_runtime())
+            if _te_log:
+                self._snap.setdefault("turn_end_log", []).extend(_te_log)
+                self._death_check_side("player", "turn_end_dot")
+                self._death_check_side("enemy", "turn_end_dot")
+                self._sync_scheduler_deaths()
+        except Exception:  # noqa: BLE001 - 兜底不崩：回合末结算异常不阻断时间轴
+            _logger.exception("tick_turn_end 结算失败：actor=%s", actor)
+        if self._finished:
+            return
+        # 行动条推进：该 actor 本次行动代价 = 该 action 的 recovery（唯一注入点）
+        if self._ctb is not None:
+            _rec = self._action_recovery(actor, self._last_action_of(actor))
+            if actor == "player":
+                self._ctb.complete_player_action(recovery=_rec)
+            else:
+                # NPC 的行动链由 advance_to_next_ready 内部 _auto_resolve_npc 已重签；
+                # 此处兜底：若该 NPC 票据为空（如引擎直接 do_action("enemy", ...) 而
+                # 非经调度器 auto-resolve），补一次重签，保证行动条不停滞。
+                _view = self._ctb.get_actor(actor)
+                if _view is not None and _view.ticket is None and _view.alive:
+                    self._ctb._enqueue(_view, base_time=self._ctb.battle_time, recovery=_rec)
+        self._sync_counts()
+        # 行动后把时间轴推到下一个 ready（NPC 连锁自动推进 / 玩家 ready 暂停）。
+        # 收口态恒为 `act`（CTB 唯一「交还行动条」落点）：res→act 为正常结算收尾；
+        # skip/guard 等**未进入 res** 的路径本就处于 act → 幂等自迁（`act→act`）
+        # 不得报非法（旧回合制靠 end_turn→start_turn 显式跨回合，CTB 无回合边界）。
+        if self._state in (STATE_RES, STATE_ACT) and self._state != STATE_ACT:
+            self._to_state(STATE_ACT, "action_end")
+        self._resolve_ready_actor()
+
+    def _last_action_of(self, actor: str) -> Optional[Mapping[str, Any]]:
+        """取该 actor 最近一次提交的 action dict（recovery 解析用）。
+
+        为什么从 `_last_action_dict` 取（而非 `action_record`）：record 只存
+        `action`（atype 字符串），丢失 `skill_id`，无法解析技能 def 的 recovery。
+        本字段由 `do_action` 在提交时写入，是 recovery 解析的准确来源。
+        """
+        if getattr(self, "_last_action_dict", None) is not None:
+            return self._last_action_dict
+        rec = self._snap.get("action_record") or []
+        for entry in reversed(rec):
+            if isinstance(entry, Mapping) and entry.get("actor") == actor:
+                return {"type": str(entry.get("action") or "")}
+        return None
 
     def _normalize_attack_type(self, atk: str) -> str:
         """内容层 attack_type 中文枚举 → 伤害通道 token（m2_shared_contract §四：斩/打/突/魔；
@@ -3302,128 +3955,42 @@ class BattleEngine:
         return True
 
     def enemy_act(self, action_dict: Optional[Mapping[str, Any]] = None) -> Optional[ActionOutcome]:
-        """⑤ 后手行动（1g2 §1.2 ⑤ / 1g1b A3）：怪物反击。
+        """【删除】纯回合制产物：「玩家先手 → 怪物固定后手反击」的先/后手对。
 
-        被先手击杀的怪物不执行反击（1g2 §1.1 特例 写死）；目标无存活→
-        no_target_action 兜底（fallback=空挥/skip，1g1b A3 / L56-57/L238）。
-        action_dict 缺省：注入 MonsterAI 时由 decide 产出行动（M2-C1，contract §六），
-        否则用 M1 默认普攻（细化_1f AI 钩子：默认 normal）。
+        CTB 无先手/后手对——怪物与玩家由行动条公平竞争 ready，走**同一条**
+        `ACTOR_READY → BEFORE_ACTION → ACTION_RESOLVE` 通道（Wave A M5 语义等价性
+        论证）。按硬约束保留同名签名壳并抛 NotImplementedError，以暴露未迁移的
+        误用调用点（已知 A1 级：`core/pvp.py:350`）。
+
+        替代：怪物行动由 `CTBScheduler` 在 NPC ready 时自动推进（`_auto_resolve_npc`），
+        行动内容经 `_ai_action_dict()`（MonsterAI 决策，已平移）产出。
         """
-        if self._finished:
-            return None
-        if not self._alive("enemy") or self._dead("enemy"):
-            return None  # 被先手击杀不反击（写死，1g2 §1.1 特例）
-        # M12.5 木桩（怪物模块 §十五 15.2）：木桩敌人（enemy_def tier=training/
-        # type=dummy）不行动——跳过。state 由 after_actor(player) 停在 RES
-        # （next=None 不迁移），end_turn→start_turn RES→ACT 合法
-        if self._is_dummy_enemy_def():
-            return None
-        if action_dict is None:
-            action_dict = self._ai_action_dict()
-        if action_dict is None:
-            action_dict = {"type": "normal", "mult": 1.0}
-        if self._dead("player"):
-            # 玩家已死：后手无目标 → no_target_action 兜底
-            mode = str(self._config.get("no_target_action", "fallback"))
-            if mode == "skip":
-                return None
-            return self._skip_turn("enemy")  # fallback = 空挥/待机（1g1b A3）
-        return self.do_action("enemy", action_dict)
+        raise NotImplementedError(
+            "enemy_act 已随 CTB 重写删除：CTB 无先手/后手对，怪物与玩家同走 ACTOR_READY "
+            "通道（Wave A M5）。怪物行动由调度器在 NPC ready 时自动推进；"
+            "PVP 防守方请改走 CTB 行动推进接口。"
+        )
 
     def end_turn(self) -> TurnReport:
-        """⑥⑦⑧⑨ 回合收尾（1g2 §1.2 / 1g1b T8）：tick → 互杀 → 结束判定 → 下一回合。
+        """【删除】纯回合制产物：「整轮收尾」（⑥tick → ⑦互杀 → ⑧结束 → ⑨下一回合）。
 
-        ⑥ 回合结束 tick（持续回合扣减/冷却递减/效果衰减/吸收回补/再生，1g2 §1.3）；
-        ⑦ 互杀判定（order/hp_ratio，1g1b A2）；⑧ 战斗结束统一结算（不变量5）——
-        未结束时 ⑨ 进入下一回合（回合边界，快照可在此落）。
+        CTB 无「一轮」边界 → 集中结算点不存在（Wave A M4）。其内部各 tick 已逐项
+        拆挂到各自事件位点，**能力未丢失**：
+          - 回合结束 tick（持续扣减/效果衰减/吸收回补/再生）→ `AFTER_ACTION`（行动者）；
+          - 玩家/敌方 DOT（tick=turn_end）→ 行动者 `ACTOR_TURN_END`；
+          - 空中姿态落地 → `AFTER_ACTION`（`_settle_air_landing`）；
+          - 怪物 AI 冷却 → 该 AI 自身行动后（`AFTER_ACTION`）；
+          - transform / 技能冷却 → 持有者行动后（`_after_actor_action`，M9/M10）；
+          - 换季边界 → `BATTLE_TIME_ADVANCE`（M11）；
+          - 互杀/终局 → `BATTLE_END`（`_resolve_battle_end`）。
+
+        按硬约束保留同名签名壳并抛 NotImplementedError，以暴露未迁移的误用调用点。
         """
-        if self._finished:
-            return self._turn_report()
-        if self._state not in (STATE_ACT, STATE_RES):
-            raise BattleStateError(f"回合收尾需在行动完成后（当前 {self._state}，1g1b ⑧）")
-        self._phase = PHASE_TURN_END_TICK
-        rt = self._new_runtime()
-        log = tick_turn_end(self._snap, rt)
-        self._absorb_runtime(rt)
-        # 2026-09-09 跃空姿态到期自动落地（zerc 拍板：跃空只持续 3 回合——
-        # 空中姿态状态回合扣减归零后仍滞空 → 强制落地 ground）
-        self._settle_air_landing()
-        # 功能三批2：turn_end 事件（effects trigger=turn_end；在既有 tick 清单
-        # 之后并行触发，无配置 → [] 零行为变化）
-        self._dispatch_event("turn_end", "player")
-        self._dispatch_event("turn_end", "enemy")
-
-        # P0-02 修复：回合结束 tick 内 dot（tick=turn_end）扣血致死 → 死亡判定挂点
-        # （1g1c §1.4「死而未结算不得穿透回合边界」/ TC-03）。原实现 tick 后只读
-        # result.marks 不读 HP → HP=0 不死单位、怪物胜被无限推迟、玩家死则死锁。
-        for side in BATTLE_SIDES:
-            if int(self._combat(side).get("hp", 0)) <= 0:
-                self._death_check_side(side, "turn_end_dot")
-
-        # M2-C1（contract §五/§六）：怪物 AI 冷却回合收尾递减（MonsterAI.tick 递减
-        # action/trigger/chain 三类冷却）。decide() 不递减（工程收敛 4，避免双重递减），
-        # 本处为回合边界单点——end_turn 每轮恰一次。
-        ai = self._snap.get("ai_state")
-        if self._enemy_ai is not None and isinstance(ai, dict):
-            self._enemy_ai.tick(ai)
-
-        # M13 6b（细化_6b §2.2/D-03）：transform 回合 tick——形态剩余递减 →
-        # 自然结束还原 → 冷却递减（S5 COOLDOWN 每回合 -1）。
-        # 纯函数（transform_revert.tick_remaining/tick_cooldown/should_revert_natural）
-        # 不引入定时器；形态配置经 job_def 惰性解析（无配置 → 常态无操作）。
-        self._tick_transform_state()
-        # M13 批17 路17C：技能冷却回合递减（与 transform 冷却同拍）
-        self._tick_skill_cooldowns()
-
-        # M13 6c（细化_6c §1.3 F-R1 tick）：resource_state 回合结束结清——契约
-        # 无每回合自动变化字段 → 现行为=保留（零增减幂等钩子，S4 被控保留天然
-        # 成立）；tick_round_end 幂等钩子供契约扩展每回合变化时挂载。注册表未
-        # 注入 / 无 resource_state 段 → 零操作降级（RS-5 精神，不抛异常）。
-        try:
-            from qbot_rpg.core.resource_lifecycle import (  # noqa: PLC0415
-                ResourceLifecycle,
-            )
-
-            ResourceLifecycle(self._resource_registry).tick_round_end(self._snap)
-        except Exception:  # noqa: BLE001 装配层未注入资源注册表 → 零操作降级
-            pass
-
-        # M13 6c（细化_6c §2.3 F-R2 ③ 结算边界）：换季 tick——回合结束 tick 之后、
-        # 下一回合开始之前（⑥⑦ 之间挂点）。懒重读当前季节 → 差异则待结算 →
-        # 立即切换（本回合行动按旧组校验完毕，D-05）；切换成功 → 附一行换季
-        # 反馈 + on_season_change 事件信号（E1/E5 恰一次，L2 proc 容器执行）。
-        # 纯函数委托 battle_season.tick_season_boundary + season_events，零定时器。
-        # 反馈落快照顶层 season_events 流水（TurnReport.log 供展示层消费）。
-        _switched = self._tick_season_boundary()
-        if _switched.get("switched"):
-            log = list(log) + [
-                {"type": "season_change", "from": _switched.get("from"),
-                 "to": _switched.get("to"),
-                 "message_key": _switched.get("message_key")},
-            ]
-            # 换季反馈落快照流水（续局路径 start_turn 新 report 不带 log——
-            # 快照兜底供展示层/测试读取，F-R2 ⑤ 一行反馈语义不丢）。
-            _se = self._snap.get("season_events")
-            if not isinstance(_se, list):
-                _se = []
-                self._snap["season_events"] = _se
-            _se.append({"type": "season_change", "from": _switched.get("from"),
-                        "to": _switched.get("to"),
-                        "message_key": _switched.get("message_key")})
-            self._absorb_runtime(self._new_runtime())
-            self._fire_season_event(_switched)
-
-        # ⑦⑧ 互杀 + 战斗结束判定
-        out = self._resolve_battle_end(force=False)
-        if out is not None:
-            self._phase = PHASE_TURN_END_TICK
-            return self._turn_report(tuple(log))
-        if self._dead("player") or self._dead("enemy"):
-            out = self._resolve_battle_end(force=True)
-            if out is not None:
-                return self._turn_report(tuple(log))
-        # ⑨ 下一回合（回合边界=回合结束 tick 后 → 可落快照）
-        return self.start_turn()
+        raise NotImplementedError(
+            "end_turn 已随 CTB 重写删除：CTB 无「整轮收尾」集中结算点（Wave A M4）。"
+            "各项 tick 已拆挂到 AFTER_ACTION / ACTOR_TURN_END / BATTLE_TIME_ADVANCE / "
+            "BATTLE_END 位点；时间推进请用 _after_actor_action / start_turn（推进行动条）。"
+        )
 
     def _snapshot_pos(self, side: str) -> Optional[Tuple[str, str]]:
         """快照当前方位（side/height 原值）；缺段/非法 → None（HUD 省略）。"""
@@ -3442,8 +4009,7 @@ class BattleEngine:
 
     def _turn_report(self, log: Sequence[Mapping[str, Any]] = ()) -> TurnReport:
         return TurnReport(
-            turn=int(self._snap.get("turn", 0)),
-            phases=(self._phase,),
+            turn=self.action_seq,        # CTB（R18）：action_seq 镜像（不参与计算）
             player=int(self._combat("player").get("hp", 0)),
             enemy=int(self._combat("enemy").get("hp", 0)),
             ended=self._finished,
@@ -3451,57 +4017,99 @@ class BattleEngine:
             log=tuple(log),
             player_pos=self._snapshot_pos("player"),
             enemy_pos=self._snapshot_pos("enemy"),
+            action_seq=self.action_seq,   # CTB 权威进度计量
+            battle_time=self.battle_time,  # CTB 权威时间计量
+            _phase_label=(self._phase,),   # 事件位点（旧读方经 .phases 属性读取）
+        )
+
+    def action_report(self) -> ActionReport:
+        """CTB 行动报告（只读投影；契约字段 `action_seq`，无 `phases`）。
+
+        tests/ctb/test_ctb_contract_interfaces.py 要求报告形态含 action_seq、不含
+        回合相位——本方法即该契约的实现：把 CTB 双计数 + 当前事件位点投影为
+        `ActionReport`。`player_act` 的返回容器仍是 TurnReport（签名零改动），
+        本方法是新增只读查询，供新读方（展示层）使用。
+        """
+        return ActionReport(
+            action_seq=self.action_seq,
+            battle_time=self.battle_time,
+            actor=self._current_actor,
+            events=tuple(str(e.get("event") or "") for e in self._ctb_event_log[-8:]),
+            nested={
+                "player": int(self._combat("player").get("hp", 0)),
+                "enemy": int(self._combat("enemy").get("hp", 0)),
+            },
         )
 
     def player_act(self, action: Any, params: Any = None) -> TurnReport:
-        """玩家整轮指令（兼容旧签名 player_act(action, params=None)）：先手 → 后手 →
-        tick → 结算。
+        """玩家提交一次行动并推进到下一个 ready（CTB 公开主入口，签名零改动）。
 
-        action 支持 str（'normal'/'guard'/'flee'/'skill:id'/dict）或 dict。
-        返回 TurnReport（含 outcomes 流水）。一轮一条消息（框架 L69/L1571）。
+        CTB 语义（Wave A §1.11）：旧「整轮：先手 → 后手 → tick → 结算」→
+        「提交一次玩家行动 → 结算 → **行动条推进到下一个 ready actor**」。
+        一次 `player_act` = 一次玩家行动；推进后 NPC 连锁由调度器自动走完，
+        直到下一个玩家 ready（暂停）或终局。
+
+        **R-6（裁决 2）**：行动被拒 → 零时间成本——不推进行动条、不解除暂停、
+        不派发后续事件；返回被拒报告，调用方可立即换可行指令重试。
+
+        action 支持 str（'normal'/'guard'/'flee'/'skill:id'）或 dict；
+        返回 TurnReport（含 outcomes 流水，字段语义见 TurnReport docstring）。
         """
+        # 玩家 ready 前置推进行动条：把控制权推到玩家拍（含 NPC 连锁自动推进）。
+        # 幂等：若当前已处于玩家暂停态，_resolve_ready_actor 不重复消费。
+        # NPC 行动 outcome 属「上一次推进」产物 → 本次报告前清空，只收本拍内容。
+        self._npc_outcomes = []
+        if self._ctb is not None and not self._ctb.paused and not self._finished:
+            self._resolve_ready_actor()
+        pre_npc = list(self._npc_outcomes)   # 押到玩家拍之前的 NPC 连锁行动
+        self._npc_outcomes = []
+        if self._finished:
+            return self._turn_report()
+
         action_dict = self._normalize_action(action, params)
-        # 2026-09-09 转向怪（zerc 实机：侧移滞留可无伤站侧白打——玩家行动前自动回正面；
-        # 位移技（回环侧移/腾空跃空）施放后仍生效——侧移仅当轮闪避窗口）
+        # 转向怪：玩家行动前自动回正面（侧移仅当本次行动的闪避窗口）
         self._face_enemy()
         outcomes: List[ActionOutcome] = []
         res = self.do_action("player", action_dict)
         outcomes.append(res)
-        # 2026-09-07 脉刃师实测：被拒（资源不足/consume 不足/派生条件）不耗
-        # 回合——不触发敌行动/回合推进（保持 ACT 等玩家下一指令）。原无条件
-        # enemy_act→end_turn：被拒后 _turn_acted 已回滚，end_turn 仍会尝试
-        # 推进 → start_turn 在 ACT 态非法迁移（act→act crash，贯刃/脉变实测）。
+        # 玩家行动收尾推进行动条时，期间自动结算的 NPC 行动 outcome 并入本报告
+        # （Render 通道：渲染层按 outcomes 顺序产出「怪物行动行」）。
+        outcomes.extend(self._npc_outcomes)
+        self._npc_outcomes = []
+        # R-6（裁决 2）：被拒 = 零时间成本、直接重试——不推进行动条、不解除暂停，
+        # 保持当前 ready 等玩家下一个可行指令；拒绝原因经 log/outcome 上报。
         if not getattr(res, "ok", True):
-            # 被拒 outcome 的 report（无敌行动/无 tick）
             return TurnReport(
-                turn=int(self._snap.get("turn", 0)),
-                phases=(self._phase,),
+                turn=self.action_seq,
+                _phase_label=(self._phase,),
                 player=int(self._combat("player").get("hp", 0)),
                 enemy=int(self._combat("enemy").get("hp", 0)),
                 ended=self._finished,
                 status=self._snap.get("status") if self._finished else None,
                 log=tuple(getattr(res, "side_effects", ()) or ()),
-                outcomes=tuple(outcomes),
+                outcomes=tuple(pre_npc) + tuple(outcomes),
                 player_pos=self._snapshot_pos("player"),
                 enemy_pos=self._snapshot_pos("enemy"),
+                action_seq=self.action_seq,
+                battle_time=self.battle_time,
             )
-        ores = self.enemy_act()
-        if ores is not None:
-            outcomes.append(ores)
-        rep = self.end_turn()
-        # M13 6c（F-R2 ⑤）：换季反馈附快照顶层 season_events 流水（恰一次），
-        # TurnReport.log 消费同源（展示层渲染一行换季文案）。
-        if rep.log:
-            _sev = self._snap.setdefault("season_events", [])
-            for _e in rep.log:
-                if _e.get("type") == "season_change" and _e not in _sev:
-                    _sev.append(dict(_e))
+        # 成功行动：`_after_actor_action` 已推进行动条（complete_player_action 解除
+        # 暂停 + 重签票据 + 推 NPC 连锁）——此处仅汇总本次推进的日志/结果。
+        # 2026-09-10 修复：先同步 CTB 双计数进快照，再构造报告——否则 report 与
+        # battle_state() 的 action_seq/battle_time 落后于调度器（契约要求一致）。
+        self._sync_counts()
+        log = list(getattr(res, "side_effects", ()) or ())
         return TurnReport(
-            turn=rep.turn,
-            phases=(PHASE_PLAYER_ACTION, PHASE_ENEMY_ACTION, PHASE_TURN_END_TICK),
-            player=rep.player, enemy=rep.enemy, ended=rep.ended, status=rep.status,
-            log=rep.log, outcomes=tuple(outcomes),
-            player_pos=rep.player_pos, enemy_pos=rep.enemy_pos,
+            turn=self.action_seq,
+            _phase_label=(self._phase,),
+            player=int(self._combat("player").get("hp", 0)),
+            enemy=int(self._combat("enemy").get("hp", 0)),
+            ended=self._finished, status=self._snap.get("status"),
+            log=tuple(log), outcomes=tuple(pre_npc) + tuple(outcomes),
+            player_pos=self._snapshot_pos("player"),
+            enemy_pos=self._snapshot_pos("enemy"),
+            action_seq=self.action_seq,
+            battle_time=self.battle_time,
         )
 
     def _normalize_action(self, action: Any, params: Any = None) -> Mapping[str, Any]:
@@ -3525,28 +4133,41 @@ class BattleEngine:
     # ------------------------- 快照续战（1g3） -------------------------
 
     def to_snapshot(self, boundary: Optional[str] = None) -> Dict[str, Any]:
-        """战斗快照序列化（1g3 §1.2 字段级：schema_version/snapshot_at/context/
-        units/ai_state/combo_state/turn/stats_collector）。全量 JSON 可序列化。
+        """战斗快照序列化（**CTB V2**）。
 
-        boundary：落点标注（turn_start/turn_end）。快照只落回合边界（1g3 S0/
-        1g1b 不变量4）——回合内（结算中/死亡判定/玩家已行动未到 tick 边界）调用
-        抛 BattleStateError（TC-05/E-05）。本引擎的自然边界＝回合开始 dot 结算后、
-        玩家行动选取前（state=ACT 且玩家未行动），或战前 PREP / 终局。
+        契约（tests/ctb/test_ctb_contract_interfaces.py · TestToSnapshotContract）：
+          - `schema_version >= 2`（CTB 新格式；V1 为回合制产物，删档后不再产出）
+          - `rule_version = "battle_ctb_v1"`
+          - 含 RNG 状态：顶层 `random_seed` + `rng_state`（缺失则续战随机序列不可复现）
+          - 落点为 CTB 边界，**不再是 turn_start / turn_end**
+          - 全量 JSON 可序列化
+
+        :param boundary: 落点标注（CTB 边界名，如 "actor_ready" / "after_action"）；
+            None → 按当前态推导（未结束 → "actor_ready"；已结束 → "battle_end"）。
+        :raises BattleStateError: 结算中/死亡判定中（状态不确定）不落快照。
+        :raises ValueError: 非法落点名。
         """
         if self._state in (STATE_RES, STATE_DTH):
-            raise BattleStateError("回合内不落快照（1g3 S0 / 1g1b 不变量4：只落回合边界）")
-        if self._state == STATE_ACT and self._turn_acted.get("player", False) and not self._finished:
-            # 玩家已行动、未到回合结束 tick：属于回合内（TC-05 回合内不落快照）
-            raise BattleStateError("回合内不落快照（玩家已行动未到 tick 边界，1g3 S0/TC-05）")
+            raise BattleStateError("结算/死亡判定中不落快照（状态不确定）")
+        if boundary is not None and boundary not in CTB_BOUNDARIES:
+            raise ValueError(
+                f"非法快照落点：{boundary!r}（CTB 边界仅 {sorted(CTB_BOUNDARIES)}）"
+            )
         snap = copy.deepcopy(self._snap)
-        snap["schema_version"] = 1
+        # ---- CTB V2 头（旧 turn 语义由 battle_time/action_seq 双计数承载）----
+        snap["schema_version"] = 2
+        snap["rule_version"] = str(self._config.get("rule_version", CTB_RULE_VERSION))
         snap["snapshot_id"] = str(uuid.uuid4())
         snap["saved_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        bnd = boundary or ("turn_start" if not self._finished else
-                           ("turn_end" if self._phase == PHASE_TURN_END_TICK else "turn_start"))
-        if boundary is not None and boundary not in ("turn_start", "turn_end"):
-            raise ValueError(f"非法快照落点：{boundary!r}（1g3 §1.2 boundary 仅 turn_start/turn_end）")
-        snap["snapshot_at"] = {"boundary": bnd, "turn": int(self._snap.get("turn", 0))}
+        bnd = boundary or ("battle_end" if self._finished else "actor_ready")
+        snap["snapshot_at"] = {
+            "boundary": bnd,
+            "battle_time": self.battle_time,
+            "action_seq": self.action_seq,
+            # 兼容镜像：世界层快照完整性校验要求 turn 键（R-A）。= action_seq 镜像，
+            # **不参与任何数值计算**（CTB 无回合数，R1–R20 已全部改由双计数承载）。
+            "turn": self.action_seq,
+        }
         snap["snapshot_context"] = {
             "mode": str(self._snap.get("battle_type", "normal")),
             "map_id": str(self._snap.get("battle_type", "")),
@@ -3555,14 +4176,38 @@ class BattleEngine:
         snap["_engine_state"] = self._state
         snap["_guard_active"] = dict(self._guard_active)
         snap["_death_order"] = list(self._death_order)
-        snap["formula_state"] = {"random_seed": self._rng_seed}
-        # G3 续战修复（2026-09-03）：随机数内部状态随快照保存——只存 seed 会让
-        # from_snapshot 后随机序列从头重放（每轮 roll 相同 → 快照恢复战斗恒 miss/
-        # 恒命中）。getstate tuple 可 JSON 序列化（version 2: (ver, state, gauss)）。
+        # ---- CTB 行动条快照（续战时间轴连续的关键）----
+        # 存每个单位的下次 ready 时刻（含当前单位）+ 调度器代数/时刻；续战据此
+        # 精确重建行动条，避免「重算 ready」导致的时间漂移（vs 仅存 battle_time）。
+        if self._ctb is not None:
+            snap["ctb_state"] = {
+                "time": self._ctb.battle_time,
+                "action_seq": self._ctb.action_seq,
+                "paused_actor_id": self._ctb.paused_actor_id,
+                "actors": [
+                    {
+                        "actor_id": v.actor_id,
+                        "side": v.side,
+                        "effective_speed": v.effective_speed,
+                        "is_player": v.is_player,
+                        "alive": v.alive,
+                        "next_ready": v.next_ready,
+                    }
+                    for v in self._ctb.actors()
+                ],
+            }
+        else:
+            snap["ctb_state"] = None
+        # ---- RNG 状态（顶层，契约要求；formula_state 内保留同值以兼容旧读方）----
+        snap["random_seed"] = self._rng_seed
         try:
-            snap["_rng_state"] = list(self._rng.getstate())
+            snap["rng_state"] = list(self._rng.getstate())
         except Exception:  # pragma: no cover - 防御（rng 异常不阻断快照）
-            snap["_rng_state"] = None
+            snap["rng_state"] = None
+        snap["formula_state"] = {
+            "random_seed": self._rng_seed,
+            "rng_state": snap["rng_state"],
+        }
         return snap
 
     def snapshot(self) -> Dict[str, Any]:
@@ -3586,9 +4231,15 @@ class BattleEngine:
         return cur
 
     def interrupt_snapshot(self) -> Dict[str, Any]:
-        """中断信号落快照：等待回合边界（1g3 §2.2 落盘时序①/②），回合内抛错。"""
+        """中断信号落快照：等待 CTB 边界（该 actor 行动收尾后），结算中抛错。
+
+        CTB 重写（§1.11 `interrupt_snapshot` / S8）：旧「等待回合边界（回合开始前/
+        回合结束 tick 后）」→ 新「等待 CTB 边界（actor_ready / after_action）」。
+        不变量保留：结算中/死亡判定中（状态不确定）不落快照。
+        """
         if self._state in (STATE_RES, STATE_DTH):
-            raise BattleStateError("中断信号排队到回合边界处理（1g3 §2.2①/TC-05，回合内不落快照）")
+            raise BattleStateError(
+                "中断信号排队到行动边界处理（当前结算/死亡判定中，CTB 不落不确定态快照）")
         return self.to_snapshot()
 
     @classmethod
@@ -3606,30 +4257,45 @@ class BattleEngine:
         resource_registry: Any = None,  # M13 6c：资源轴注册表注入（RS-2 恢复按注册表逐轴口径）
         combo_engine: Any = None,  # 2026-09-07：连段引擎显式注入（raw defs resolver——绕 registry Def 坑）
     ) -> "BattleEngine":
-        """快照还原（1g3 §2.3 恢复时序①-⑤）：还原最近回合边界状态 → T7 回 PREP →
-        start_turn 回 ① 继续。
+        """快照还原（CTB V2 续战）：还原最近边界状态 → 重建行动条 → 回到行动选择。
 
-        死亡判定已先于快照写入（1g3 S0/E-05）：恢复后状态=最近回合边界，无歧义。
-        随机种子随 formula_state.random_seed 恢复 → 续玩随机序列一致（4a TC-17）。
+        死亡判定已先于快照写入：恢复后状态=最近边界，无歧义。
+        随机种子随 `random_seed` + `rng_state`（顶层，V2 权威位）恢复 → 续玩随机
+        序列一致（同种子同序列契约）。
         M2-C1（contract §六）：ai_state 随快照原样还原（MonsterAI 写入内容不丢）；
         enemy_ai/enemy_def 透传构造（MonsterAI 无状态=配置，需随还原引擎重建）。
 
         registry（M6 D3 RSM-03）：内容包配置源注入——续战世代重绑定（RSM-04）按快照
         registry_generation 从 watcher 取档重建 Registry 后传入，引擎按旧 registry
         解析 effects/statuses/marks（旧局旧配置，杜绝旧 combatant 数值 + 新解析混跑的
-        半套配置）；__init__ 已有 registry 参数（L297/L331），本方法透传；缺省 None 走
-        默认 defs/pipeline 解析（旧快照无世代 → RSM-04 降级）。_make_battle_resolver
-        已支持 registry 优先解析（L269-281）。
+        半套配置）；__init__ 已有 registry 参数，本方法透传；缺省 None 走默认
+        defs/pipeline 解析（旧快照无世代 → RSM-04 降级）。
         """
+        # ---- CTB V2 门槛（删档决策）：只吃 V2，V1 显式拒绝，不得静默降级 ----
+        # V1 快照承载回合语义（turn 驱动），与 CTB 时间轴（battle_time/action_seq）
+        # 不可换算；带病续战会产出错误时序，故显式报错。
+        _sv = data.get("schema_version")
+        try:
+            _sv_int = int(_sv) if _sv is not None else 0
+        except Exception:
+            _sv_int = 0
+        if _sv_int < 2:
+            raise ValueError(
+                f"不支持的快照版本 schema_version={_sv!r}（CTB 只吃 V2 及以上；"
+                "V1 为旧版格式，本项目已决策删档，不可续战）"
+            )
         eng = cls(pipeline=pipeline, registry=registry, defs=defs, config=config,
                   enemy_ai=enemy_ai, enemy_def=enemy_def, ai_action_lib=ai_action_lib,
                   ai_rng=ai_rng, combo_engine=combo_engine)
         eng._resource_registry = resource_registry  # M13 6c：资源轴注册表透传（RS-2/RS-5）
         eng._snap = copy.deepcopy(dict(data))
-        eng._rng_seed = int((data.get("formula_state") or {}).get("random_seed", 0) or 0)
-        # G3 续战修复（2026-09-03）：优先恢复 rng 内部状态（防随机序列重放）；
-        # 旧快照无 _rng_state → 回落 seed 重播种（原行为）。
-        _rst = data.get("_rng_state")
+        _fs = data.get("formula_state") or {}
+        eng._rng_seed = int(
+            data.get("random_seed", _fs.get("random_seed", 0)) or 0
+        )
+        # G3 续战修复：优先恢复 rng 内部状态（防随机序列重放）。
+        # CTB V2：rng_state 走顶层（V2 权威位）；_rng_state 为 V1 旧键，保留兜底读。
+        _rst = data.get("rng_state", data.get("_rng_state"))
         if isinstance(_rst, (list, tuple)) and _rst:
             try:
                 # M12.5/veinborn rng 死区修复：to_snapshot 存 list(self._rng.getstate())
@@ -3651,29 +4317,29 @@ class BattleEngine:
         eng._finished = data.get("status") not in (None, STATUS_ACTIVE)
         eng._guard_active = dict(data.get("_guard_active", {"player": False, "enemy": False}))
         eng._death_order = list(data.get("_death_order", []))
-        eng._turn_acted = {"player": False, "enemy": False}
         eng._seq = len(eng._snap.get("action_record") or [])
         eng._effect_ids["player"] = []
         eng._effect_ids["enemy"] = []
         for side in BATTLE_SIDES:
             if side not in eng._snap:
                 eng._snap[side] = dict(eng._snap.get("sides", {}).get(side, {}))
-        bnd = str((data.get("snapshot_at") or {}).get("boundary", "turn_start"))
+        # ---- CTB：重建行动条（恢复行动顺序的唯一权威）----
+        # 快照不存调度器内部队列（删档口径：调度器状态可由 combatant + 计数重建）——
+        # 以「当前逻辑时间 + 末次 ready 时刻」为基数重建，使续战时间轴连续。
+        eng._snap.setdefault("action_seq", 0)
+        eng._snap.setdefault("battle_time", 0.0)
         if eng._finished:
-            # 终局快照：保持终态（1g1c §1.3）
+            # 终局快照：保持终态，不建行动条（无可推进）
             final_status = str(data.get("status") or STATUS_LOSE)
             eng._state = {STATUS_WIN: STATE_WIN, STATUS_LOSE: STATE_LOSE,
                           STATUS_ESCAPE: STATE_FLY, STATUS_DRAW: STATE_LOSE}.get(
                 final_status, STATE_LOSE)
             eng._phase = PHASE_TURN_END_TICK
-        elif bnd == "turn_end":
-            # 回合结束 tick 后边界：恢复回 PREP → 调用方 start_turn 回 ① 续玩（1g3 §2.3⑤）
-            eng._state = STATE_PREP
-            eng._phase = PHASE_TURN_START
         else:
-            # turn_start 边界（回合开始 dot 已结算）：直接到玩家行动选择（1g2 §1.2 ③）
+            # 非终局：回到行动选择，重建行动条（时间轴从快照 battle_time 起算）
             eng._state = STATE_ACT
             eng._phase = PHASE_PLAYER_ACTION
+            eng._rebuild_scheduler(base_time=float(eng._snap.get("battle_time", 0.0) or 0.0))
         # M13 6c（细化_6c §1.4 RS-2/RS-5）：resource_state 中断恢复还原——按快照
         # 还原各资源当前值（续战从该值起算）；旧档缺 resource_state 段 → 按字段
         # 缺失降级（不报错不悬空，RS-5）；battle_start 型轴恢复后重置为 base
@@ -3706,11 +4372,88 @@ class BattleEngine:
         eng._refresh_defenses()
         return eng
 
+    def _rebuild_scheduler(self, base_time: float = 0.0) -> None:
+        """重建行动条（快照续战 / 规则变更后调用）。
+
+        依据当前 combatant 与快照 `ctb_state` 重建调度器：
+          - 有 `ctb_state`（V2 完整快照）→ 逐单位还原 next_ready（精确续战）；
+          - 无（旧档 / 规则变更）→ 以 `base_time` 为基数按公式重算 ready（降级）。
+        死亡侧不入队（引擎侧死亡标记权威）。
+        """
+        self._ctb = self._make_scheduler()
+        _ctb_state = self._snap.get("ctb_state")
+        _aseq = int(self._snap.get("action_seq", 0) or 0)
+        if isinstance(_ctb_state, Mapping):
+            # 精确还原：时间锚 + action_seq + 各单位 next_ready
+            self._ctb._action_seq = int(_ctb_state.get("action_seq", _aseq) or 0)
+            _t = float(_ctb_state.get("time", base_time) or 0.0)
+            self._ctb._time = _t
+            _ready = {
+                str(a.get("actor_id")): float(a.get("next_ready", _t) or _t)
+                for a in (_ctb_state.get("actors") or [])
+                if isinstance(a, Mapping)
+            }
+            _paused_aid = _ctb_state.get("paused_actor_id")
+            _paused_aid = str(_paused_aid) if _paused_aid is not None else None
+            for _view in self._ctb.actors():
+                _view.ticket = None
+                if not _view.alive:
+                    continue
+                if _view.actor_id == _paused_aid:
+                    # 暂停中的玩家：其 ready 已在快照时消费，尚未重签 →
+                    # 从当前时间按默认 recovery 重签（下一次 ready 在未来）。
+                    self._ctb._enqueue(_view, base_time=_t)
+                else:
+                    # 未消费的单位：next_ready 直接还原（不经 recovery 递推）。
+                    self._set_ready(_view, _ready.get(_view.actor_id, _t))
+            # 暂停态还原：快照时玩家 ready 已消费 → 恢复为暂停等待输入
+            if _paused_aid is not None:
+                self._ctb._paused = True
+                self._ctb._paused_actor_id = _paused_aid
+        else:
+            # 降级：无 ctb_state → 按公式从 base_time 重算
+            self._ctb._action_seq = _aseq
+            _t = float(base_time or 0.0)
+            self._ctb._time = _t
+            for _view in self._ctb.actors():
+                _view.ticket = None
+                if _view.alive:
+                    self._ctb._enqueue(_view, base_time=_t)
+        # 死亡侧退队（快照 status 未终局但某侧 dead_mark 的边界情况）
+        for _side in BATTLE_SIDES:
+            if self._dead(_side):
+                self._ctb.mark_dead(_side)
+        self._player_ready_pending = bool(self._ctb.paused)
+
+    def _set_ready(self, view: Any, next_ready: float) -> None:
+        """直接把某单位的下次 ready 设为给定值并签发票据（快照精确还原用）。
+
+        与 `_enqueue` 区别：**不应用 recovery 递推**——next_ready 是快照里的原值。
+        """
+        try:
+            ctb = self._ctb
+            if ctb is None:
+                return
+            view.next_ready = float(next_ready)
+            ctb._seq += 1
+            from qbot_rpg.core.ctb_scheduler import CtbTicket  # noqa: PLC0415
+
+            view.ticket = CtbTicket(
+                actor_id=view.actor_id,
+                generation=ctb._generation,
+                ready_at=view.next_ready,
+                seq=ctb._seq,
+                side=view.side,
+                effective_speed=view.effective_speed,
+            )
+        except Exception:  # noqa: BLE001 - 还原失败（视图异常）不阻断续战
+            pass
+
     def resume(self, data: Mapping[str, Any]) -> "BattleEngine":
-        """旧名兼容：快照续战（M1 占位签名升级，细化_1g3 §2.3）。
+        """旧名兼容：快照续战（签名保留）。
         M2-C1：沿用当前 enemy_ai（MonsterAI 无状态，随还原引擎重建同配置实例）。
         M6 D3 RSM-03：registry 透传（self._registry 注入续战引擎——世代重绑定后按旧
-        registry 解析，旧局旧配置）。"""
+        registry 解析，旧局旧配置）。CTB V2：还原后行动条由 from_snapshot 重建。"""
         return self.__class__.from_snapshot(
             data, pipeline=self._pipeline, registry=self._registry, defs=self._defs,
             config=self._config, enemy_ai=self._enemy_ai,
@@ -3720,8 +4463,18 @@ class BattleEngine:
     # ------------------------- 服务查询 -------------------------
 
     def battle_state(self) -> Dict[str, Any]:
-        """battle_state 查询（1g1c §1.1 唯一权威状态；深拷贝防串改）。"""
-        return copy.deepcopy(self._snap)
+        """battle_state 查询（1g1c §1.1 唯一权威状态；深拷贝防串改）。
+
+        CTB V2：额外挂 `random_seed` + `rng_state`（当前 RNG 快照），供续战可复现
+        性校验（tests/ctb 契约：恢复后 rng_state 须与原局一致）。
+        """
+        st = copy.deepcopy(self._snap)
+        st["random_seed"] = self._rng_seed
+        try:
+            st["rng_state"] = list(self._rng.getstate())
+        except Exception:  # pragma: no cover - 防御
+            st["rng_state"] = None
+        return st
 
     def result(self) -> Dict[str, Any]:
         """结果标记（1g1c §1.3 / §1.2 五）。"""

@@ -118,7 +118,7 @@ def test_tc10_dangling_id_not_counted():
 # ---------------------------------------------------------------------------
 def test_tc14_category_param_independent():
     """分册条件键：monster 100% → 分册满足、总册未满不满足（互不干扰）。"""
-    from qbot_rpg.engine.condition_engine import eval_condition
+    from qbot_rpg.core.condition_engine import eval_condition
 
     ctx = _ctx(monster_n=3, fish_n=20, item_n=15, craft_n=10)
     for i in range(3):

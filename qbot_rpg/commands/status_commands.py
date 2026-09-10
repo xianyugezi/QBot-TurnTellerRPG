@@ -324,7 +324,7 @@ def _effect_text(e: Mapping[str, Any]) -> Optional[str]:
         if total is not None:
             seg += f" {remaining}/{total}"
         else:
-            seg += f" {remaining}回合"
+            seg += f" {remaining}次行动"
     src = e.get("source")
     if src:
         seg += f"（来源：{src}）"
@@ -373,16 +373,20 @@ def imprints_line(ctx: Mapping[str, Any]) -> Optional[str]:
 
 
 def target_line(ctx: Mapping[str, Any]) -> Optional[str]:
-    """战斗内【目标】行（RUL-15/STT-04）：`【目标】史莱姆 18/30（第 3 回合）`；
+    """战斗内【目标】行（RUL-15/STT-04）：`【目标】史莱姆 18/30（第 3 行动）`；
     ctx["target"] 缺省或字段不全（hp/max_hp/turn 任一 None）→ 整行降级 None（P2-9 修复，
-    防 `【目标】xx None/None（第 None 回合）`）。"""
+    防 `【目标】xx None/None（第 None 行动）`）。
+
+    CTB 口径（2026-09-10 收口）：`{round}` 槽位承载 `action_seq`（已结算行动数）——
+    优先读 `action_seq`，缺失回落 `turn`（兼容镜像键，世界层快照仍写）。
+    """
     t = ctx.get("target")
     if not isinstance(t, Mapping):
         return None
     name = str(t.get("name") or "?")
     hp = t.get("hp")
     mx = t.get("max_hp")
-    turn = t.get("turn")
+    turn = t.get("action_seq", t.get("turn"))
     if hp is None or mx is None or turn is None:
         return None
     return tpl_of(ctx, "status_target", {"name": name, "hp_cur": hp, "hp_max": mx, "round": turn})

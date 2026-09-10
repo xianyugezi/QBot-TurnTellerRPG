@@ -17,7 +17,7 @@ maps.json 装载（每张地图 raw 的 `environment_events[]` 顶层字段；�
     instance.target → event_counts nested {key:{target:count}}；event_log 环形 300 可配）。
   - qbot_rpg/core/adventure_log.py（log_hidden_find 归隐藏发现语义，本模块环境事件
     不走该函数——采用「独立环境段」tag=environment 经 bump_event 直写，语义分离）。
-  - qbot_rpg/engine/condition_engine.py（eval_condition(cond, ctx) -> bool fail-safe；
+  - qbot_rpg/core/condition_engine.py（eval_condition(cond, ctx) -> bool fail-safe；
     [事件:环境事件:雨夜] → name=[事件:环境事件] + param=雨夜，读 event_counts 嵌套；
     时间三键真实读取键 season_now/period_now/weather_now）。
 
@@ -52,7 +52,7 @@ from __future__ import annotations
 from typing import Any, Iterable, Mapping, MutableMapping, Optional, Tuple
 
 from qbot_rpg.core.event_bus import EVENT_LOG_KEY, bump_event, resolve_event_key
-from qbot_rpg.engine.condition_engine import eval_condition
+from qbot_rpg.core.condition_engine import eval_condition
 
 __all__ = [
     "ENVIRONMENT_TAG",

@@ -6,7 +6,7 @@
 
 本文件 = M36 查询接口的「引擎侧数据组装」纯模块：产出结构化状态 dict
 （中文文案模板两用，文案拼装/未注册玩家提示属指令层 M4 接线）。
-依赖 qbot_rpg/engine/worldtime.py 的 IF01~IF07：
+依赖 qbot_rpg/core/worldtime.py 的 IF01~IF07：
   IF02 season_now / IF03 period_now / IF06 cycle_tick / IF07 time_remaining；
 不修改 worldtime.py（零冲突），不读写任何状态。
 
@@ -33,7 +33,7 @@ from __future__ import annotations
 
 from typing import Mapping, Optional
 
-from qbot_rpg.engine.worldtime import WorldTime
+from qbot_rpg.core.worldtime import WorldTime
 
 __all__ = [
     "SEASON_NAMES",

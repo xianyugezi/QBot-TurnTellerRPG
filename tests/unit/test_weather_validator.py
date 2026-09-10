@@ -6,7 +6,7 @@
 """
 
 from qbot_rpg.content.weather_validator import validate_weather
-from qbot_rpg.engine.worldtime import DEFAULT_POOL
+from qbot_rpg.core.worldtime import DEFAULT_POOL
 
 
 class _Report:

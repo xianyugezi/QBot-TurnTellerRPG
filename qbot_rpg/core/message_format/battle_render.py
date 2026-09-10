@@ -20,6 +20,7 @@ M1 实装依据：
 """
 from __future__ import annotations
 
+import logging
 from types import SimpleNamespace
 from typing import Any, List, Mapping, Optional, Tuple
 
@@ -32,10 +33,16 @@ from qbot_rpg.core.message_format.list_render import (
 from qbot_rpg.core.message_format.prefix_render import render_prefix
 from qbot_rpg.core.templates import tpl_of  # 消息模板配置化（2026-08-31 用户拍板）
 
+_logger = logging.getLogger("qbot_rpg.battle_render")
+
 __all__ = [
     "render_battle_start",
     "render_battle_round",
     "render_battle_end",
+    # CTB 重写（Agent 5 · DataRender）：单次行动 / 批量 NPC 行动 / 玩家 ready 三入口
+    "render_battle_action",
+    "render_battle_action_batch",
+    "render_battle_ready",
     # M5-07（BREP-25 木桩明细分页块，/木桩 翻页消费）
     "render_battle_summary",
     # M5-04（BREP-07~09，玩家技能 / 状态差分 / 操作提示行）
@@ -67,17 +74,24 @@ def render_battle_start(
     enemy.hp / enemy.max_hp（最大缺省回落当前 HP）。hint 由接线层提供（类型/元素
     弱点 ×1.3 / BOSS 阶段机制预告 / BREP-12 意图预告），纯文本禁 emoji（D-01）。
     模板 battle_start_line（battle_tpl 分区，内容包可覆盖）。
+
+    兜底：渲染层不崩（CTB 重写后既有入口仍须可用）——enemy 属性缺失/异常时回落
+    「怪物」，模板渲染异常时给出最简开始行。
     """
-    name = str(
-        getattr(enemy, "name", "") or getattr(enemy, "enemy_name", "") or "怪物"
-    )
-    hp = int(getattr(enemy, "hp", 0))
-    max_hp = int(getattr(enemy, "max_hp", hp))
-    lines: List[str] = [tpl_of(ctx, "battle_start_line", {
-        "name": name, "hp": hp, "max_hp": max_hp})]   # BREP-23
-    if hint:
-        lines.append(str(hint))                        # 意图/弱点情报行（可选）
-    return "\n".join(lines)
+    try:
+        name = str(
+            getattr(enemy, "name", "") or getattr(enemy, "enemy_name", "") or "怪物"
+        )
+        hp = int(getattr(enemy, "hp", 0))
+        max_hp = int(getattr(enemy, "max_hp", hp))
+        lines: List[str] = [tpl_of(ctx, "battle_start_line", {
+            "name": name, "hp": hp, "max_hp": max_hp})]   # BREP-23
+        if hint:
+            lines.append(str(hint))                        # 意图/弱点情报行（可选）
+        return "\n".join(lines)
+    except Exception:  # pragma: no cover - 渲染层兜底不崩
+        _logger.exception("render_battle_start 渲染失败，返回最简开始行")
+        return tpl_of(ctx, "battle_start_line", {"name": "怪物", "hp": 0, "max_hp": 0})
 
 
 def _fold_message_lines(
@@ -123,57 +137,63 @@ def render_battle_round(round_result: Any, *, ctx: Any = None) -> str:
     防御受击归属后手行，由 M5-05 依玩家守卫态分发（5e §3.1）。
 
     模板配置化：全部行模板 battle_tpl 分区（ctx 可覆盖，None 回落默认）。
+
+    兜底：渲染层不崩（CTB 重写后本入口仍须可用）——内部异常时返回已装配行。
     """
-    outcomes = tuple(getattr(round_result, "outcomes", ()) or ())
     lines: List[str] = []
+    try:
+        outcomes = tuple(getattr(round_result, "outcomes", ()) or ())
 
-    # BREP-01 前缀行（D1，首行；委托 prefix_render.render_prefix，5e §1.5）
-    prefix = _render_prefix_line(round_result)
-    if prefix:
-        lines.append(prefix)
+        # BREP-01 前缀行（D1，首行；委托 prefix_render.render_prefix，5e §1.5）
+        prefix = _render_prefix_line(round_result)
+        if prefix:
+            lines.append(prefix)
 
-    # 行序 = 回合死亡判定顺序执行序（军规4，数值层 L44-72）：先手→击杀→后手→结算
-    for oc in outcomes:
-        actor = str(getattr(oc, "actor", "") or "")
-        if actor == "player":
-            combo = _render_combo_segments(oc, ctx=ctx)        # M5-06 BREP-21（段行）
-            if combo:
-                lines.extend(combo)                            # 连段行动：段行替代聚合单行（D-5C）
-                settle = _render_combo_settle(oc, ctx=ctx)     # M5-06 BREP-22
-                if settle:
-                    lines.append(settle)
-            else:
-                lines.extend(_render_player_action(oc, ctx=ctx))  # BREP-02~05（+07）
-                if int(getattr(oc, "target_hp", 1)) <= 0:      # 扣血后立即查击杀（L54）
-                    kill = _render_template("_render_kill_line", oc, ctx=ctx)  # BREP-15
-                    if kill:
-                        lines.append(kill)
-        elif actor == "enemy":
-            # 后手行（M5-05 BREP-10~14；玩家防御中受击 → BREP-06，M5-05 分发）
-            # 守卫：玩家 HP<=0（已倒下）时不渲染反击行（数值层 L49-52 写死语义防引擎时序异常）
-            if int(getattr(round_result, "player", 1) or 1) <= 0:
-                continue
-            enemy = _render_template("_render_enemy_action", oc, ctx=ctx)
-            if enemy:
-                lines.append(enemy)
+        # 行序 = 回合死亡判定顺序执行序（军规4，数值层 L44-72）：先手→击杀→后手→结算
+        for oc in outcomes:
+            actor = str(getattr(oc, "actor", "") or "")
+            if actor == "player":
+                combo = _render_combo_segments(oc, ctx=ctx)        # M5-06 BREP-21（段行）
+                if combo:
+                    lines.extend(combo)                            # 连段行动：段行替代聚合单行（D-5C）
+                    settle = _render_combo_settle(oc, ctx=ctx)     # M5-06 BREP-22
+                    if settle:
+                        lines.append(settle)
+                else:
+                    lines.extend(_render_player_action(oc, ctx=ctx))  # BREP-02~05（+07）
+                    if int(getattr(oc, "target_hp", 1)) <= 0:      # 扣血后立即查击杀（L54）
+                        kill = _render_template("_render_kill_line", oc, ctx=ctx)  # BREP-15
+                        if kill:
+                            lines.append(kill)
+            elif actor == "enemy":
+                # 后手行（M5-05 BREP-10~14；玩家防御中受击 → BREP-06，M5-05 分发）
+                # 守卫：玩家 HP<=0（已倒下）时不渲染反击行（数值层 L49-52 写死语义防引擎时序异常）
+                if int(getattr(round_result, "player", 1) or 1) <= 0:
+                    continue
+                enemy = _render_template("_render_enemy_action", oc, ctx=ctx)
+                if enemy:
+                    lines.append(enemy)
 
-    # BREP-08 状态资源差分行（M5-04 render_status_diff，D-5D 只显实际变化轴）
-    status_line = _render_status_diff_from_report(round_result, ctx=ctx)
-    if status_line:
-        lines.append(status_line)
+        # BREP-08 状态资源差分行（M5-04 render_status_diff，D-5D 只显实际变化轴）
+        status_line = _render_status_diff_from_report(round_result, ctx=ctx)
+        if status_line:
+            lines.append(status_line)
 
-    # 【M5 裁决 P1-1】结算（BREP-16~20）移入 render_battle_end（结束消息一次性输出，
-    # TC-18「同一消息含胜利+汇总+掉落」）；当轮只出行动+击杀（BREP-15），不重复结算。
+        # 【M5 裁决 P1-1】结算（BREP-16~20）移入 render_battle_end（结束消息一次性输出，
+        # TC-18「同一消息含胜利+汇总+掉落」）；当轮只出行动+击杀（BREP-15），不重复结算。
 
-    # BREP-09 操作提示行（M5-04 render_action_hint，5e §1.5 战报末行）
-    hint = _render_action_hint_from_report(round_result, ctx=ctx)
-    if hint:
-        lines.append(hint)
+        # BREP-09 操作提示行（M5-04 render_action_hint，5e §1.5 战报末行）
+        hint = _render_action_hint_from_report(round_result, ctx=ctx)
+        if hint:
+            lines.append(hint)
 
-    # 2026-09-09：空模板行统一过滤（miss 播报移除等——模板置空即行消失）
-    lines = [ln for ln in lines if isinstance(ln, str) and ln.strip()]
-    # 16 行折叠（铁律 11 / 5e TC-06）：超限折叠中间过程行，保留首行 + 末段关键行
-    return "\n".join(_fold_message_lines(lines, ctx=ctx))
+        # 2026-09-09：空模板行统一过滤（miss 播报移除等——模板置空即行消失）
+        lines = [ln for ln in lines if isinstance(ln, str) and ln.strip()]
+        # 16 行折叠（铁律 11 / 5e TC-06）：超限折叠中间过程行，保留首行 + 末段关键行
+        return "\n".join(_fold_message_lines(lines, ctx=ctx))
+    except Exception:  # pragma: no cover - 渲染层兜底不崩
+        _logger.exception("render_battle_round 渲染失败，返回已装配行")
+        return "\n".join(ln for ln in lines if isinstance(ln, str) and ln.strip())
 
 
 def render_battle_end(
@@ -208,32 +228,38 @@ def render_battle_end(
 
     返回：单条消息字符串（首行前缀 + 结算 [+ 汇总] [+ 明细块]）。
     模板 battle_end_summary / battle_settle_*（battle_tpl 分区，ctx 可覆盖）。
+
+    兜底：渲染层不崩（CTB 重写后本入口仍须可用）——内部异常时返回已装配行。
     """
     lines: List[str] = []
-    prefix = _render_prefix_line(player)               # 前缀首行（TC-25）
-    if prefix:
-        lines.append(prefix)
-    if status:
-        settle = _render_settlement(SimpleNamespace(
-            ended=True, status=status,
-            exp=exp, gold=gold, drops=drops or (),
-            enemy_name=enemy_name or (getattr(enemy, "name", "") if enemy else "") or "敌人",
-            final_damage=final_damage,
-            leveled=leveled,
-        ), ctx=ctx)
-        if settle:
-            lines.extend(settle.split("\n"))           # 结算块（用户模板 / BREP-16~19）
-    # 用户模板：win 无 BREP-24 汇总行（战利品列表为主）；lose/draw 保留汇总反馈
-    if status != "win":
-        label = _winner_label(winner)                  # 胜利/失败/平局
-        turns = _battle_turns(player, enemy, summary)  # 回合数 N
-        lines.append(tpl_of(ctx, "battle_end_summary", {
-            "label": label, "turns": turns}))          # BREP-24
-    if summary is not None:
-        block = _render_summary_block(summary, overhead=len(lines), ctx=ctx)
-        if block:
-            lines.extend(block)                        # BREP-25 木桩明细块
-    return "\n".join(lines)
+    try:
+        prefix = _render_prefix_line(player)               # 前缀首行（TC-25）
+        if prefix:
+            lines.append(prefix)
+        if status:
+            settle = _render_settlement(SimpleNamespace(
+                ended=True, status=status,
+                exp=exp, gold=gold, drops=drops or (),
+                enemy_name=enemy_name or (getattr(enemy, "name", "") if enemy else "") or "敌人",
+                final_damage=final_damage,
+                leveled=leveled,
+            ), ctx=ctx)
+            if settle:
+                lines.extend(settle.split("\n"))           # 结算块（用户模板 / BREP-16~19）
+        # 用户模板：win 无 BREP-24 汇总行（战利品列表为主）；lose/draw 保留汇总反馈
+        if status != "win":
+            label = _winner_label(winner)                  # 胜利/失败/平局
+            turns = _battle_turns(player, enemy, summary)  # 回合数 N（CTB 下 = 行动数）
+            lines.append(tpl_of(ctx, "battle_end_summary", {
+                "label": label, "turns": turns}))          # BREP-24
+        if summary is not None:
+            block = _render_summary_block(summary, overhead=len(lines), ctx=ctx)
+            if block:
+                lines.extend(block)                        # BREP-25 木桩明细块
+        return "\n".join(lines)
+    except Exception:  # pragma: no cover - 渲染层兜底不崩
+        _logger.exception("render_battle_end 渲染失败，返回已装配行")
+        return "\n".join(ln for ln in lines if isinstance(ln, str) and ln.strip())
 
 
 # ---------------------------------------------------------------------------
@@ -1475,3 +1501,406 @@ def render_battle_summary(
     if footer:
         lines.append(footer)                                 # TPL-08（多页时）
     return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# CTB 重写 · 三渲染入口（Agent 5 · DataRender）
+# 依据：docs/ctb/01_asset_inventory.md §0.2 CTB 事件位点词典（BATTLE_START / ACTOR_READY /
+#       BEFORE_ACTION / ACTION_RESOLVE / AFTER_ACTION / ACTOR_TURN_START / ACTOR_TURN_END /
+#       BATTLE_TIME_ADVANCE / ACTOR_DEATH / BATTLE_END）+ §0.1 三分类口径（回合制产物删除、
+#       业务资产平移）；docs/ctb/02_wave_a_decisions.md 裁决 1（recovery = 总行动恢复值）+
+#       裁决 3（同刻连动刻意设计）+ 修复 2（per-action recovery 注入入口）；
+#       core/ctb_rules.ActionBatchReport（多 NPC 连锁行动合并上报载体）。
+#
+# 设计口径（复用而非重写）：CTB 的「一次行动」与既有 render_battle_round 的「一个 outcome」
+#   是**同粒度**——两者都吃 outcomes 流水、都按 actor 分派玩家/怪物积木。故本三入口 = 新的
+#   **编排层**：只做「事件链 → 既有 private 积木」的装配与折叠，绝不复制积木内部逻辑。
+#     render_battle_ready       ← ACTOR_READY（玩家 ready 提示，CTB 下「轮到你行动」）
+#     render_battle_action      ← 一次 action 完整链路（prefix + 行动积木 + 状态/提示/结算）
+#     render_battle_action_batch ← 多个 NPC 连锁行动合并为一条（ActionBatchReport.entries）
+# ---------------------------------------------------------------------------
+
+#: CTB 行动状态前缀候选键（不同接线层形态差异；按序取首个非空）
+_CTB_STATUS_KEYS: Tuple[str, ...] = (
+    "status_line", "ctb_status", "ctb_status_line", "ready_hint",
+)
+
+
+def _ctb_status_line(ctx: Any, ready_in: Any = None) -> str:
+    """CTB 状态行（「距离你行动：{n}」）——取 ctx 显式注入值或按 ready_in 组装。
+
+    数据源 ctx.ctb_status_line（接线层注入，优先）或 ctx.ctb_status（含 {n} 模板串）；
+    均缺 → 用 tpl_of 默认模板 battle_ctb_status（内容包可覆盖）；ready_in 为空/非法 →
+    返回空串（省略该行，不臆造）。
+    """
+    for key in _CTB_STATUS_KEYS:
+        val = (ctx or {}).get(key) if isinstance(ctx, Mapping) else getattr(ctx, key, None)
+        if val:
+            return str(val)
+    if ready_in is None:
+        return ""
+    try:
+        n = int(ready_in)
+    except (TypeError, ValueError):
+        return ""
+    if n < 0:
+        return ""
+    return tpl_of(ctx, "battle_ctb_status", {"n": n})
+
+
+def _render_outcome_lines(oc: Any, *, ctx: Any = None) -> List[str]:
+    """单个 outcome → 行集（CTB 与回合制共用粒度：actor 分派玩家/怪物积木）。
+
+    与 render_battle_round 内联的 actor 分派**同口径**（连段段行优先替代聚合单行，
+    D-5C；其后紧跟击杀行，铁律 9）：本函数是复用的公共内层，render_battle_action 与
+    render_battle_action_batch 都经它装配，避免两处各写一份 actor 分派。
+    actor==player：连段段行 + 连段结算，或玩家行动积木 + 击杀；
+    actor==enemy ：怪物行动积木（守卫：玩家已倒下则不渲染反击行）。
+
+    兼容 Mapping 形态条目（ActionBatchReport.entries 经 to_dict() 后为 dict）——
+    先归一为属性对象，再走同一积木分派（积木内部按属性读字段）。
+    """
+    if isinstance(oc, Mapping):
+        oc = SimpleNamespace(**dict(oc))
+    actor = str(getattr(oc, "actor", "") or "")
+    lines: List[str] = []
+    if actor == "player":
+        combo = _render_combo_segments(oc, ctx=ctx)                # BREP-21 段行
+        if combo:
+            lines.extend(combo)
+            settle = _render_combo_settle(oc, ctx=ctx)             # BREP-22
+            if settle:
+                lines.append(settle)
+        else:
+            lines.extend(_render_player_action(oc, ctx=ctx))       # BREP-02~05（+07）
+            if int(getattr(oc, "target_hp", 1)) <= 0:              # 扣血后立即查击杀（L54）
+                kill = _render_template("_render_kill_line", oc, ctx=ctx)  # BREP-15
+                if kill:
+                    lines.append(kill)
+    elif actor == "enemy":
+        enemy = _render_template("_render_enemy_action", oc, ctx=ctx)      # BREP-10~14
+        if enemy:
+            lines.append(enemy)
+    return lines
+
+
+def render_battle_action(
+    action_result: Any,
+    *,
+    ctx: Any = None,
+) -> str:
+    """CTB 单次行动渲染（一次 action 的完整链路输出，ACTOR_READY→ACTOR_TURN_END）。
+
+    输入：一次行动的**报告载体**（对象或 Mapping），承载：
+      - outcomes      行动流水（ActionOutcome 序列；与回合制同粒度，必填）
+      - actor_id      （可选）行动者标识——用于 ACTOR_TURN_START 头部行判定
+      - turn_name     （可选）行动者展示名（缺省从 outcome.actor_name/attacker_name 推）
+      - level/name/title/prefix_extra  玩家前缀信息（同 render_battle_round 口径）
+      - status_changes / player_max_hp / enemy_max_hp / enemy_name / player_pos /
+        enemy_pos / ready_in（CTB 距下次 ready）等 CTB 字段（可省略）
+      - ended/status/exp/gold/drops/final_damage/leveled（行动即终局的结算，可选）
+      - batch         （可选）ActionBatchReport.to_dict()——含多条 entries 时并入本入口
+
+    输出：单条消息（prefix 首行 + 行动积木行 + BREP-08/09 + [结算]），≤16 行折叠。
+
+    复用：actor 分派走 _render_outcome_lines（内含 _render_player_action /
+    _render_enemy_action / 连段积木 / 击杀积木）；终局走 _render_settlement；
+    行数控制复用 _fold_message_lines。**不复制任何积木内部逻辑**（编排层职责）。
+
+    兜底：任何异常 → 记日志并返回已装配行（或空串），绝不抛出（渲染层不崩铁律）。
+    """
+    lines: List[str] = []
+    try:
+        # ① prefix 首行（BREP-01；玩家信息缺失自动省略）
+        prefix = _render_prefix_line(action_result)
+        if prefix:
+            lines.append(prefix)
+
+        # ② 行动头（CTB ACTOR_TURN_START：行动者是 NPC 时的归属行，玩家侧已有 prefix）
+        head = _ctb_action_head(action_result, ctx=ctx)
+        if head:
+            lines.append(head)
+
+        # ③ 行动积木（actor 分派：player/enemy 复用回合制同粒度积木）
+        for oc in _iter_outcomes(action_result):
+            lines.extend(_render_outcome_lines(oc, ctx=ctx))
+
+        # ④ 【可选】并入批量 entries（同一 action_result 携带 ActionBatchReport 形态）
+        for entry in _iter_batch_entries(action_result):
+            lines.extend(_render_outcome_lines(entry, ctx=ctx))
+
+        # ⑤ BREP-08 状态资源差分行 + ⑥ CTB 状态行（距下次 ready）
+        status_line = _render_status_diff_from_report(action_result, ctx=ctx)
+        if status_line:
+            lines.append(status_line)
+        ready_line = _ctb_status_line(ctx, getattr(action_result, "ready_in", None))
+        if ready_line:
+            lines.append(ready_line)
+
+        # ⑦ 行动即终局 → 结算一次（军规5；未结束时不输出，结算走 render_battle_end）
+        settle = _render_settlement(action_result, ctx=ctx)
+        if settle:
+            lines.extend(settle.split("\n"))
+
+        # ⑧ BREP-09 操作提示行（末行；数据缺省优雅省略）
+        hint = _render_action_hint_from_report(action_result, ctx=ctx)
+        if hint:
+            lines.append(hint)
+
+        # ⑨ 空模板行过滤 + 16 行折叠（铁律 11）
+        lines = [ln for ln in lines if isinstance(ln, str) and ln.strip()]
+        return "\n".join(_fold_message_lines(lines, ctx=ctx))
+    except Exception:  # pragma: no cover - 渲染层兜底不崩
+        _logger.exception("render_battle_action 渲染失败，返回已装配行")
+        return "\n".join(ln for ln in lines if isinstance(ln, str) and ln.strip())
+
+
+def render_battle_action_batch(
+    batch_result: Any,
+    *,
+    ctx: Any = None,
+) -> str:
+    """CTB 批量行动渲染（多个 NPC 连锁行动**合并为一条消息**）。
+
+    语义（core/ctb_rules.ActionBatchReport）：可暂停输入式 CTB 下，NPC 连锁行动时引擎
+    自动推进不等待输入；多个 NPC 行动在玩家 Ready 前合并为一次上报 → 本入口把它们渲染
+    为**同一条消息**（对齐 3d S4 单轮单条 / 铁律 9 合并策略）。
+
+    输入：ActionBatchReport（对象或 to_dict() 形态）或含以下键的 Mapping：
+      - entries         每条 NPC 行动的摘要（dict；可含 actor/action_type/hit/... 或
+                        嵌套 outcome 键，两种形态均支持）
+      - start_time/end_time   批次逻辑时间区间（可选，渲染时间头行）
+      - paused_actor_id/paused_ready_at  触发暂停的玩家（可选，渲染 CTB ready 提示行）
+      亦兼容直接传 outcomes 序列（等价于单 actor 多次行动）。
+
+    输出：单条消息（prefix + [批次时间头] + 逐条 NPC 行动积木 + [CTB 状态行] + [提示]），
+    ≤16 行折叠。**复用** _render_outcome_lines / _fold_message_lines；不复制积木逻辑。
+
+    兜底：异常 → 记日志返回已装配行，绝不抛出。
+    """
+    lines: List[str] = []
+    try:
+        # ① prefix 首行（batch_result 或 ctx 可承载玩家信息）
+        prefix = _render_prefix_line(batch_result if batch_result is not None else ctx)
+        if prefix:
+            lines.append(prefix)
+
+        # ② 批次时间头（可选：start_time→end_time，纯数字不臆造文案）
+        start_t = getattr(batch_result, "start_time", None)
+        end_t = getattr(batch_result, "end_time", None)
+        if isinstance(batch_result, Mapping):
+            start_t = batch_result.get("start_time", start_t)
+            end_t = batch_result.get("end_time", end_t)
+        if start_t is not None and end_t is not None:
+            head = tpl_of(ctx, "battle_ctb_batch_head", {
+                "start": _fmt_time(start_t), "end": _fmt_time(end_t)})
+            if head:
+                lines.append(head)
+
+        # ③ 逐条 NPC 行动积木（entries 优先；无 entries → 退化为 outcomes 序列）
+        entries = _batch_entry_list(batch_result)
+        if entries:
+            for entry in entries:
+                lines.extend(_render_outcome_lines(entry, ctx=ctx))
+        else:
+            for oc in _iter_outcomes(batch_result):
+                lines.extend(_render_outcome_lines(oc, ctx=ctx))
+
+        # ④ CTB 状态行（玩家 ready 距下次：paused_ready_at）
+        paused_ready = getattr(batch_result, "paused_ready_at", None)
+        if isinstance(batch_result, Mapping):
+            paused_ready = batch_result.get("paused_ready_at", paused_ready)
+        ready_line = _ctb_status_line(ctx, paused_ready)
+        if ready_line:
+            lines.append(ready_line)
+
+        # ⑤ 批次状态资源差分行 + 操作提示行（可选）
+        status_line = _render_status_diff_from_report(batch_result, ctx=ctx)
+        if status_line:
+            lines.append(status_line)
+        hint = _render_action_hint_from_report(batch_result, ctx=ctx)
+        if hint:
+            lines.append(hint)
+
+        # ⑥ 空模板行过滤 + 16 行折叠（铁律 11）
+        lines = [ln for ln in lines if isinstance(ln, str) and ln.strip()]
+        return "\n".join(_fold_message_lines(lines, ctx=ctx))
+    except Exception:  # pragma: no cover - 渲染层兜底不崩
+        _logger.exception("render_battle_action_batch 渲染失败，返回已装配行")
+        return "\n".join(ln for ln in lines if isinstance(ln, str) and ln.strip())
+
+
+def render_battle_ready(
+    ready_info: Any = None,
+    *,
+    ctx: Any = None,
+    player: Any = None,
+    enemy: Any = None,
+    ready_in: Any = None,
+    hint: Optional[str] = None,
+) -> str:
+    """CTB 玩家 ready 提示（「轮到你行动」；对应 ACTOR_READY 事件位点）。
+
+    语义（docs/ctb/01_asset_inventory.md §0.2）：CTB 下玩家 ready 时暂停并交还控制权；
+    本入口渲染该暂停时点的提示消息（**独立 1 条**，对齐铁律 2 战斗开始=1 条）。
+
+    输入（均可省略，缺数据优雅降级）：
+      - ready_info：承载上述字段的对象/Mapping（与显式参数同键；显式参数优先）
+      - player/enemy：HP 快照（供 hint 行渲染，走 render_action_hint 复用）
+      - ready_in：距下次 ready 的逻辑时间（CTB 状态行 bat tle_ctb_status 的 {n}）
+      - hint：显式提示文本（优先于自动组装的 HP/方位提示行）
+
+    输出：单条消息（prefix 首行 + ready 行 + [CTB 状态行] + [提示/操作提示行]），≤16 行折叠。
+    复用：_render_prefix_line（前缀首行）、render_action_hint（BREP-09 操作提示）/
+    _render_action_hint_from_report（CTB 数据源）、_fold_message_lines。不复制积木逻辑。
+
+    兜底：异常 → 记日志返回已装配行，绝不抛出。
+    """
+    lines: List[str] = []
+    try:
+        src = ready_info if ready_info is not None else ctx
+
+        # ① prefix 首行（玩家信息；缺失自动省略）
+        prefix = _render_prefix_line(src)
+        if prefix:
+            lines.append(prefix)
+
+        # ② CTB ready 行（「轮到你行动」，模板可覆盖）
+        ready_line = tpl_of(ctx, "battle_ctb_ready")
+        if ready_line:
+            lines.append(ready_line)
+
+        # ③ CTB 状态行（距下次 ready 的逻辑时间；显式 ready_in 优先，其次 ready_info）
+        if ready_in is None:
+            ready_in = getattr(src, "ready_in", None)
+            if isinstance(src, Mapping):
+                ready_in = src.get("ready_in", ready_in)
+        status_line = _ctb_status_line(ctx, ready_in)
+        if status_line:
+            lines.append(status_line)
+
+        # ④ 提示行：显式 hint 优先；否则复用 HP/方位操作提示（缺数据自动省略）
+        if hint:
+            lines.append(str(hint))
+        else:
+            src_for_hint = src if src is not None else SimpleNamespace(
+                player=player, enemy=enemy)
+            if player is not None and getattr(src_for_hint, "player", None) is None:
+                try:
+                    src_for_hint.player = player          # 显式参数补位（对象形态）
+                except Exception:  # pragma: no cover - SimpleNamespace 可写；防御
+                    pass
+            if enemy is not None and getattr(src_for_hint, "enemy", None) is None:
+                try:
+                    src_for_hint.enemy = enemy
+                except Exception:  # pragma: no cover
+                    pass
+            auto_hint = _render_action_hint_from_report(src_for_hint, ctx=ctx)
+            if auto_hint:
+                lines.append(auto_hint)
+
+        # ⑤ 空模板行过滤 + 16 行折叠（铁律 11）
+        lines = [ln for ln in lines if isinstance(ln, str) and ln.strip()]
+        return "\n".join(_fold_message_lines(lines, ctx=ctx))
+    except Exception:  # pragma: no cover - 渲染层兜底不崩
+        _logger.exception("render_battle_ready 渲染失败，返回已装配行")
+        return "\n".join(ln for ln in lines if isinstance(ln, str) and ln.strip())
+
+
+# ---------------------------------------------------------------------------
+# CTB 入口内部辅助（纯装配，不产生业务数值）
+# ---------------------------------------------------------------------------
+def _iter_outcomes(action_result: Any) -> List[Any]:
+    """从行动报告载体取 outcomes 流水（属性/Mapping 双形态；缺省空列表）。
+
+    兼容 action_result 本身即 outcome（无 outcomes 键）→ 单元素列表；避免调用方
+    为「只有一条流水」额外包壳。
+    """
+    if action_result is None:
+        return []
+    raw = (action_result.get("outcomes")
+           if isinstance(action_result, Mapping)
+           else getattr(action_result, "outcomes", None))
+    if raw:
+        return [oc for oc in raw if oc is not None]
+    # 单 outcome 直传（含 batch entry 形态）：无 outcomes 键但本身像 outcome
+    if isinstance(action_result, Mapping) or any(
+        hasattr(action_result, k)
+        for k in ("actor", "action_type", "hit", "final_damage")
+    ):
+        return [action_result]
+    return []
+
+
+def _batch_entry_list(batch_result: Any) -> List[Any]:
+    """取批量 entries 列表（ActionBatchReport.entries / Mapping["entries"]；缺省空）。"""
+    if batch_result is None:
+        return []
+    if isinstance(batch_result, Mapping):
+        raw = batch_result.get("entries", ())
+    else:
+        raw = getattr(batch_result, "entries", ())
+    return [e for e in (raw or ()) if e is not None]
+
+
+def _iter_batch_entries(action_result: Any) -> List[Any]:
+    """render_battle_action 的可选并入口：action_result 若携带 batch，取其 entries。"""
+    batch = (action_result.get("batch")
+             if isinstance(action_result, Mapping)
+             else getattr(action_result, "batch", None))
+    if not batch:
+        return []
+    # batch 可为 ActionBatchReport / to_dict() / 裸 entries 序列
+    if isinstance(batch, Mapping):
+        return [e for e in batch.get("entries", ()) or () if e is not None]
+    if hasattr(batch, "entries"):
+        return [e for e in (batch.entries or ()) if e is not None]
+    if isinstance(batch, (list, tuple)):
+        return [e for e in batch if e is not None]
+    return []
+
+
+def _ctb_action_head(action_result: Any, *, ctx: Any = None) -> Optional[str]:
+    """CTB 行动头行（ACTOR_TURN_START 归属行）——仅 NPC 行动输出。
+
+    玩家行动已有 prefix 首行（BREP-01），不再重复头行；NPC 行动时输出
+    `battle_ctb_turn_start`（{actor} 展示名）标识「轮到谁」，缺展示名 → 省略
+    （不臆造空白行）。数据源 action_result.turn_name / 首条 outcome 的
+    actor_name/attacker_name。
+    """
+    if action_result is None:
+        return None
+    name = None
+    if isinstance(action_result, Mapping):
+        name = action_result.get("turn_name") or action_result.get("actor_name")
+    else:
+        name = (getattr(action_result, "turn_name", None)
+                or getattr(action_result, "actor_name", None))
+    if not name:
+        outcomes = _iter_outcomes(action_result)
+        if outcomes:
+            first = outcomes[0]
+            if isinstance(first, Mapping):
+                name = first.get("actor_name") or first.get("attacker_name")
+            else:
+                name = (getattr(first, "actor_name", None)
+                        or getattr(first, "attacker_name", None))
+    # 玩家侧不输出头行（prefix 已承担首行职责，防重复刷屏）
+    actor = (action_result.get("actor_id")
+             if isinstance(action_result, Mapping)
+             else getattr(action_result, "actor_id", None))
+    if str(actor or "") == "player":
+        return None
+    if not name:
+        return None
+    return tpl_of(ctx, "battle_ctb_turn_start", {"actor": str(name)})
+
+
+def _fmt_time(value: Any) -> str:
+    """逻辑时间展示（秒；非数值 → 原样字符串）。纯数字/一位小数兼容。"""
+    try:
+        f = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+    return f"{f:.1f}" if f != int(f) else str(int(f))
+

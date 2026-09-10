@@ -390,7 +390,7 @@ def test_hidden_find_event_chain_referenceable() -> None:
     ctx = _mk_ctx()
     m = _mk_map(interact_points=[_egg_point(lore_condition=None)])
     investigate_map(ctx, m, "石像", today="2026-08-28")
-    from qbot_rpg.engine.condition_engine import eval_condition
+    from qbot_rpg.core.condition_engine import eval_condition
     cond = {"var": "[事件:隐藏发现:egg_statue]", "op": "ge", "value": 1}
     assert eval_condition(cond, ctx) is True
 

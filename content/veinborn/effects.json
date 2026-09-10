@@ -5,7 +5,7 @@
   "type": "mitigation",
   "power": 40,
   "duration": 1,
-  "desc": "格挡减伤：本回所受伤害 -40%",
+  "desc": "格挡减伤：本次行动所受伤害 -40%",
   "target": "self"
  },
  {
@@ -14,7 +14,7 @@
   "type": "mitigation",
   "power": 70,
   "duration": 1,
-  "desc": "闪避减伤：本回所受伤害 -70%（引擎无真闪避，用高减伤近似）",
+  "desc": "闪避减伤：本次行动所受伤害 -70%（引擎无真闪避，用高减伤近似）",
   "target": "self"
  },
  {
@@ -61,7 +61,7 @@
     "count": 1
    }
   ],
-  "desc": "每回合结束敌方困斗+1（蚀脉蓄能）"
+  "desc": "每次行动结束时敌方困斗+1（蚀脉蓄能）"
  },
  {
   "id": "heal_med",
@@ -111,7 +111,7 @@
   "type": "mitigation",
   "power": 20,
   "duration": 1,
-  "desc": "蓄势站桩：本回所受伤害 -20%",
+  "desc": "蓄势站桩：本次行动所受伤害 -20%",
   "target": "self"
  },
  {
@@ -162,7 +162,7 @@
   "type": "mitigation",
   "power": 15,
   "duration": 1,
-  "desc": "蓄力架势：本回所受伤害 -15%",
+  "desc": "蓄力架势：本次行动所受伤害 -15%",
   "target": "self"
  },
  {
@@ -230,7 +230,7 @@
   "type": "mitigation",
   "power": 30,
   "duration": 1,
-  "desc": "冲脉斩：本回所受伤害 -30%（霸体突进）",
+  "desc": "冲脉斩：本次行动所受伤害 -30%（霸体突进）",
   "target": "self"
  },
  {
@@ -302,7 +302,7 @@
   "type": "mitigation",
   "power": 40,
   "duration": 1,
-  "desc": "填弹盾构：本回所受伤害 -40%",
+  "desc": "填弹盾构：本次行动所受伤害 -40%",
   "target": "self"
  },
  {
@@ -598,7 +598,7 @@
   "tick": "turn_end",
   "turns": 2,
   "target": "enemy",
-  "desc": "双锋·极残响：接下来 2 回合回合末对敌造成 4% 生命伤害并持续破坏部位 6",
+  "desc": "双锋·极残响：接下来 2 次行动结束时对敌造成 4% 生命伤害并持续破坏部位 6",
   "part_break_per_tick": 6
  },
  {
@@ -610,7 +610,7 @@
   "tick": "turn_end",
   "turns": 2,
   "target": "enemy",
-  "desc": "四象·极残响：接下来 2 回合回合末对敌造成 3% 生命伤害并持续破坏部位 5",
+  "desc": "四象·极残响：接下来 2 次行动结束时对敌造成 3% 生命伤害并持续破坏部位 5",
   "part_break_per_tick": 5
  },
  {
@@ -620,7 +620,7 @@
   "value": 300,
   "turns": 2,
   "target": "self",
-  "desc": "剑势化罡：300 护盾 2 回合"
+  "desc": "剑势化罡：300 护盾 2 次行动"
  },
  {
   "id": "sw_circle_guard",
@@ -629,7 +629,7 @@
   "power": 30,
   "duration": 1,
   "target": "self",
-  "desc": "御剑回环：本回所受伤害 -30%（侧移闪反架势）"
+  "desc": "御剑回环：本次行动所受伤害 -30%（侧移闪反架势）"
  },
  {
   "id": "sw_recall_guard",
@@ -638,6 +638,6 @@
   "power": 20,
   "duration": 1,
   "target": "self",
-  "desc": "收剑回防：本回所受伤害 -20%"
+  "desc": "收剑回防：本次行动所受伤害 -20%"
  }
 ]

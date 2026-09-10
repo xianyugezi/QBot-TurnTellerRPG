@@ -35,6 +35,10 @@
                          日志告警（ADR-D3-03）；世代不一致 → RSM-09 降级 + 日志
 
 工程补白（定稿/契约未明示处，显式标注，不冒充定稿）：
+  0. CTB V2 门禁（Agent 4 · Wave B）：`schema_version < 2` 的旧回合制快照一律拒绝续玩
+     （reason="incompatible_snapshot" + detail 可读理由），**不兼容不迁移**（用户已删档）；
+     进度数读取改为 `action_seq` 优先（`turn` 仅兜底镜像）。见 `_snapshot_schema_version`
+     / `_snapshot_turn`。
   1. battle_factory 注入（BattleEngine.from_snapshot 类方法或可调用 stub）：未注入时本函数
      退化为契约形态校验闸门——resumed=False、reason="factory_missing"，校验结论由 valid /
      missing_fields 承载；注入工厂则实际构建引擎（factory(snapshot) -> engine），resumed
@@ -102,7 +106,14 @@ __all__ = [
 # -------------------------------------------------------------------------------------
 
 #: 快照完整性校验键（1g3 §1.2 / S1：ai_state+combo_state 全保留 + turn 双写；补白 2）。
+#: CTB（Agent 4 · Wave B）：`turn` 保留——V2 快照写 `turn = action_seq` 兼容镜像（R-A），
+#: 故该校验键不会因 CTB 重写断裂；权威进度由 `_snapshot_turn` 优先读 `action_seq`。
 _SNAPSHOT_REQUIRED_KEYS: tuple = ("ai_state", "combo_state", "turn")
+
+#: CTB V2 快照最低 schema 版本（**硬门禁**：低于此版本拒绝续玩）。
+#: V1 为回合制产物，`snapshot_at.boundary` 用 turn_start/turn_end、进度语义为「回合数」；
+#: CTB 重写后旧快照的 action_record/事件位点/双计数均不兼容（用户已删档），不提供迁移。
+_CTB_MIN_SCHEMA_VERSION: int = 2
 
 #: 换区上下文顶层键（补白 3：随副本会话持久化的换区上下文形态，对齐 chase_resume 补白 7）。
 _CHASE_CTX_KEYS: tuple = ("chase_ctx", "zone_chase", "zone_change", "chasing", "chase_target")
@@ -144,16 +155,47 @@ def _to_int(value: Any) -> Optional[int]:
 
 
 def _snapshot_turn(snapshot: Mapping[str, Any]) -> Optional[int]:
-    """快照回合数：顶层 turn 或 snapshot_at.turn 双写任一处（1g3 §1.2/§1.3）。"""
+    """快照进度数（CTB 口径：`action_seq` 优先，`turn` 兜底兼容镜像）。
+
+    CTB 重写（Agent 4 · Wave B）：V2 快照的权威进度计量是 `snapshot_at.action_seq`
+    （顶层 `action_seq` 次之）；顶层 `turn` 仅为 `action_seq` 兼容镜像（R-A：世界层
+    完整性校验需要该键），**仅在 CTB 双计数缺失时**作兜底读取——保证 V1 形态快照
+    与畸形快照仍能取到数值，不因镜像键移除而静默失败。
+
+    :param snapshot: 战斗快照（V2 CTB 形态或 V1 旧形态）。
+    :return: 进度计数（action_seq 优先）；全部缺失/非法 → None。
+    """
+    sat = snapshot.get("snapshot_at")
+    if isinstance(sat, Mapping):
+        t = _to_int(sat.get("action_seq"))
+        if t is not None:
+            return t
+    t = _to_int(snapshot.get("action_seq"))
+    if t is not None:
+        return t
     t = _to_int(snapshot.get("turn"))
     if t is not None:
         return t
-    sat = snapshot.get("snapshot_at")
     if isinstance(sat, Mapping):
         t = _to_int(sat.get("turn"))
         if t is not None:
             return t
     return None
+
+
+def _snapshot_schema_version(snapshot: Mapping[str, Any]) -> int:
+    """读取快照 schema_version（CTB V2 门禁键）。
+
+    CTB 重写后 V2 快照写 `schema_version = 2`；V1 回合制快照写 1（或缺失默认 1）。
+    非数值/布尔 → 按 1（旧形态）。
+
+    :param snapshot: 战斗快照（Mapping）。
+    :return: schema 版本整数（缺失/畸形 → 1）。
+    """
+    v = snapshot.get("schema_version", 1)
+    if isinstance(v, bool) or not isinstance(v, (int, float)):
+        return 1
+    return int(v)
 
 
 def _collect_chase_fields(snapshot: Mapping[str, Any]) -> list:
@@ -320,9 +362,13 @@ def resume_from_snapshot(
     Returns:
         快照续玩结果 dict：
           resumed                   引擎已构建、续玩就绪（True）；完整性失败 / 未注入工厂 /
-                                    工厂异常 / 工厂返回空 → False
-          reason                    None（成功）| "incomplete_snapshot" | "factory_missing" |
-                                    "factory_error" | "factory_empty" | "invalid_snapshot"
+                                    工厂异常 / 工厂返回空 / 旧版快照 → False
+          reason                    None（成功）| "incompatible_snapshot"（schema_version<2
+                                    旧回合制快照，CTB 不兼容）| "incomplete_snapshot" |
+                                    "factory_missing" | "factory_error" | "factory_empty" |
+                                    "invalid_snapshot"
+          detail                    拒绝理由的可读串（仅 incompatible_snapshot 分支给出）
+          schema_version            快照 schema 版本（V2 门禁结论键）
           valid                     快照契约形态是否完整（校验闸门结论，补白 1）
           missing_fields            缺失的契约键（ai_state/combo_state 缺键或非 Mapping、
                                     turn 非数值）
@@ -347,6 +393,7 @@ def resume_from_snapshot(
             "valid": False,
             "missing_fields": list(_SNAPSHOT_REQUIRED_KEYS),
             "turn": None,
+            "schema_version": 0,
             "ai_state_preserved": False,
             "combo_state_preserved": False,
             "chase_context_preserved": False,
@@ -360,6 +407,34 @@ def resume_from_snapshot(
         }
 
     snap: Mapping[str, Any] = snapshot
+    # ---- CTB V2 门禁（Agent 4 · Wave B）---------------------------------------------
+    # 旧回合制快照（schema_version < 2）已随 CTB 重写废弃（用户已删档），**不兼容**：
+    # action_record 进度键、事件位点（turn_start/turn_end → actor_ready/after_action）、
+    # 双计数语义全部改变，无迁移路径 → 在调用工厂前显式拒绝，给出清晰可读理由。
+    schema_version = _snapshot_schema_version(snap)
+    if schema_version < _CTB_MIN_SCHEMA_VERSION:
+        return {
+            "resumed": False,
+            "reason": "incompatible_snapshot",
+            "valid": False,
+            "missing_fields": [],
+            "turn": None,
+            "ai_state_preserved": False,
+            "combo_state_preserved": False,
+            "chase_context_preserved": False,
+            "chase_fields": [],
+            "reset": False,
+            "state_unchanged": True,
+            "rebind_generation": 0,
+            "rebound_generation": None,
+            "rebind_status": _REBIND_SKIPPED,
+            "degraded": False,
+            "schema_version": schema_version,
+            "detail": (
+                f"旧版快照（schema_version={schema_version}）已随 CTB 重写废弃，"
+                f"需 schema_version>={_CTB_MIN_SCHEMA_VERSION}（用户已删档，不提供迁移）"
+            ),
+        }
     ai_state = snap.get("ai_state")
     combo_state = snap.get("combo_state")
     ai_state_preserved = isinstance(ai_state, Mapping)
@@ -379,6 +454,7 @@ def resume_from_snapshot(
 
     base: dict = {
         "turn": turn,
+        "schema_version": schema_version,
         "ai_state_preserved": ai_state_preserved,
         "combo_state_preserved": combo_state_preserved,
         "chase_context_preserved": chase_context_preserved,

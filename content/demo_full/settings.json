@@ -30,5 +30,16 @@
       "enabled": false,
       "count": 1
     }
+  },
+  "ctb": {
+    "enabled": true,
+    "default_recovery": 100,
+    "action_recovery": {
+      "basic": 100,
+      "skill": 100,
+      "item": 100,
+      "guard": 100,
+      "flee": 100
+    }
   }
 }

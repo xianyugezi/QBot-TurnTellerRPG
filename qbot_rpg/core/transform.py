@@ -565,7 +565,7 @@ def can_transform(
     if ts["cooldown_remaining"] > 0:
         return {
             "ok": False,
-            "reason": f"形态冷却中（剩余 {ts['cooldown_remaining']} 回合，C3）",
+            "reason": f"形态冷却中（剩余 {ts['cooldown_remaining']} 次行动，C3）",
             "guard": "C3",
         }
     if _resolve_skip_check(ctx):

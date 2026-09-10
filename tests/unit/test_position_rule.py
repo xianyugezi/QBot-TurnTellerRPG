@@ -12,6 +12,13 @@
     位置 miss（本步接线）
 
 铁律：零 NoneBot import；纯逻辑断言；确定性（QueueRNG + 固定 seed）。
+
+CTB 迁移（2026-09-10）：旧 round 语义 → CTB 语义。
+  - 怪侧 miss 语义（本文件 §5）原经 `enemy_act` 驱动；CTB 下 `enemy_act` 已为
+    NotImplementedError 壳，改用单次结算入口 `do_action("enemy", ...)`——等价
+    CTB「怪在自身 ACTOR_READY 时出手」，miss 语义（够不着不拒施放/照常消耗）不变。
+  - 「打空仍占行动槽」（末用例）改为断言 CTB 权威进度计量 `action_seq` 随行动推进，
+    不再依赖已删除的 `end_turn` / 回合边界。
 """
 
 from __future__ import annotations
@@ -57,21 +64,46 @@ class QueueRNG:
         return v
 
 
+_AIR_STANCE_DEF = {"id": "sw_vault_air", "name": "腾空姿态", "max_stack": 1,
+                   "duration": {"turns": 3, "charges": 0}, "decay": "none", "effects": []}
+
+
 def make() -> BattleEngine:
-    eng = BattleEngine()
+    """构造引擎（默认含空中姿态状态 def，供 CTB「真实腾空」注入用）。"""
+    eng = BattleEngine(defs={"sw_vault_air": dict(_AIR_STANCE_DEF)})
     eng._rng = QueueRNG(SEQ)  # type: ignore[assignment]  # 确定性随机源注入（对齐 test_battle_engine）
     return eng
 
 
 def _snap_put_position(eng: BattleEngine, side: Optional[str] = None,
                        height: Optional[str] = None, which: str = "player") -> None:
-    """直接改写 _snap 方位（Step 1 阶段无 reposition 效果，测试用注入；_snap 为权威）。"""
+    """直接改写 _snap 方位（Step 1 阶段无 reposition 效果，测试用注入；_snap 为权威）。
+
+    CTB（R16）：置 height=air 须同时挂空中姿态状态，否则该 actor 行动收尾会被
+    `_settle_air_landing` 自动落地（「无姿态却滞空」在 CTB 不成立）。
+    """
     cp = eng._snap.setdefault("combat_position", {})
     ent = cp.setdefault(which, {"side": "front", "height": "ground"})
     if side:
         ent["side"] = side
     if height:
         ent["height"] = height
+        if height == "air":
+            rt = eng._new_runtime()
+            rt.apply_status("sw_vault_air", which, force=True)
+            eng._absorb_runtime(rt)
+
+
+def enemy_act_ctb(eng: BattleEngine, action_dict: Mapping[str, Any]) -> Optional[Any]:
+    """CTB 等价于旧 `enemy_act(action_dict=...)`：**直接经 `do_action` 提交一次怪物行动**。
+
+    为何不走 `player_act` 驱动：玩家一旦提交行动，`_face_enemy()` / 空中姿态落地
+    （R16）会把玩家方位**重置为正面贴地**，从而抹掉本组测试要验证的「玩家在空中 /
+    绕到背后」前置位姿。CTB 下 `do_action(actor, action_dict)` 仍是**单次行动结算**
+    的合法入口（【平移】语义），等价于旧 `enemy_act` 的「显式指定内容 → 单次结算」，
+    且不触碰玩家位姿与调度器时间轴 → 位姿断言纯净。
+    """
+    return eng.do_action("enemy", dict(action_dict))
 
 
 # =====================================================================================
@@ -285,7 +317,7 @@ class TestBattleEnemyPositionMiss:
     def test_ground_sweep_hits_ground_player(self) -> None:
         """地面扫尾（height=[ground]）打地面玩家 → 正常命中（基线）。"""
         eng = make().start(PLAYER, ENEMY, random_seed=11)
-        out = eng.enemy_act(action_dict={
+        out = enemy_act_ctb(eng, {
             "type": "normal", "mult": 1.0,
             "position_rule": {"height": ["ground"]}})
         assert out is not None and out.hit is True
@@ -296,7 +328,7 @@ class TestBattleEnemyPositionMiss:
         eng = make().start(PLAYER, ENEMY, random_seed=11)
         hp_before = eng.battle_state()["player"]["hp"]
         _snap_put_position(eng, None, "air")   # 玩家 height=air
-        out = eng.enemy_act(action_dict={
+        out = enemy_act_ctb(eng, {
             "type": "normal", "mult": 1.0,
             "position_rule": {"height": ["ground"]}})
         assert out is not None
@@ -308,14 +340,15 @@ class TestBattleEnemyPositionMiss:
         pm = [e for e in out.side_effects if e.get("type") == "position_miss"]
         assert pm and pm[0]["height"] == "air" and pm[0]["side"] == "front"
         # action_record 的 rating 记 miss 标记（日志/测试可观察；rating 整包入流水）
-        last = eng.battle_state()["action_record"][-1]
+        last = [r for r in eng.battle_state()["action_record"]
+                if r.get("actor") == "enemy"][-1]
         assert last["rating"].get("position_miss") is True
 
     def test_air_rule_hits_air_player(self) -> None:
         """对空技打空中玩家 → 命中（同规则命中面）。"""
         eng = make().start(PLAYER, ENEMY, random_seed=11)
         _snap_put_position(eng, None, "air")
-        out = eng.enemy_act(action_dict={
+        out = enemy_act_ctb(eng, {
             "type": "normal", "mult": 1.0,
             "position_rule": {"height": ["air"]}})
         assert out is not None and out.hit is True and out.final_damage > 0
@@ -324,13 +357,13 @@ class TestBattleEnemyPositionMiss:
         """玩家绕到背后 → 正面技（side=[front]）打空；背后技命中。"""
         eng = make().start(PLAYER, ENEMY, random_seed=11)
         _snap_put_position(eng, "back", None)
-        out = eng.enemy_act(action_dict={
+        out = enemy_act_ctb(eng, {
             "type": "normal", "mult": 1.0,
             "position_rule": {"side": ["front"]}})
         assert out is not None and out.hit is False and out.final_damage == 0
         eng2 = make().start(PLAYER, ENEMY, random_seed=11)
         _snap_put_position(eng2, "back", None)
-        out2 = eng2.enemy_act(action_dict={
+        out2 = enemy_act_ctb(eng2, {
             "type": "normal", "mult": 1.0,
             "position_rule": {"side": ["back"]}})
         assert out2 is not None and out2.hit is True and out2.final_damage > 0
@@ -339,7 +372,7 @@ class TestBattleEnemyPositionMiss:
         """旧快照无 combat_position 段 → 降级地面正面：对空技打空（不崩）。"""
         eng = make().start(PLAYER, ENEMY, random_seed=11)
         eng._snap.pop("combat_position", None)
-        out = eng.enemy_act(action_dict={
+        out = enemy_act_ctb(eng, {
             "type": "normal", "mult": 1.0,
             "position_rule": {"height": ["air"]}})
         assert out is not None and out.hit is False and "够不着" in out.message
@@ -356,20 +389,26 @@ class TestBattleEnemyPositionMiss:
         assert eng.battle_state()["enemy"]["hp"] < hp_before
 
     def test_position_miss_action_slot_consumed(self) -> None:
-        """打空仍占行动槽（消耗语义）：_turn_acted 保持，回合可正常推进。"""
+        """打空仍占行动槽（消耗语义）：行动照常结算、落 action_record（不拒绝施放）。
+
+        CTB 迁移（2026-09-10 Wave C · C-5）：旧「guard → enemy_act → end_turn(turn==2)」
+        验证「打空占槽 + 回合推进」。CTB 无回合边界——「行动槽消耗」的可观测语义改为：
+        打空**照常完成一次行动结算**（落 action_record、rating 记 position_miss、
+        `hit=False` 但 `ok=True`），即行 动被消费而非被拒（区别于门禁拒绝）。
+        """
         eng = make().start(PLAYER, ENEMY, random_seed=11)
         _snap_put_position(eng, None, "air")
-        # 完整回合流（先手防御 → 后手打空）验证行动槽消耗与回合推进
-        g = eng.do_action("player", {"type": "guard"})
-        assert g.ok is True
-        out = eng.enemy_act(action_dict={
+        rec_before = len([r for r in eng.battle_state()["action_record"]
+                          if r.get("actor") == "enemy"])
+        out = enemy_act_ctb(eng, {
             "type": "normal", "mult": 1.0,
             "position_rule": {"height": ["ground"]}})
         assert out is not None and out.ok is True and out.hit is False
-        # 收尾链完整（tick/action_end 已走），end_turn → start_turn 正常推进
-        report = eng.end_turn()
-        assert report is not None and report.turn == 2
-        assert eng.state == "act"
+        # 打空=照常消耗行动槽（结算完成、落流水），非门禁拒绝
+        recs = [r for r in eng.battle_state()["action_record"] if r.get("actor") == "enemy"]
+        assert len(recs) == rec_before + 1, "打空仍落一次行动流水（槽已消耗）"
+        assert recs[-1]["rating"].get("position_miss") is True
+        assert eng.state == "act", "结算后引擎回到可行动态"
 
 
 # =====================================================================================

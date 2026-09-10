@@ -24,7 +24,7 @@
     触发契约 R-12 归 BCH-07 hidden_trigger.py，本模块仅回 kind:"hunt" 信号）。
   - qbot_rpg/core/adventure_log.py（log_hidden_find：bump_event 三表 + nested target
     + first_seen 首见日志，真实签名已 read 核对）。
-  - qbot_rpg/engine/condition_engine.py（eval_condition(cond, ctx)->bool fail-safe；
+  - qbot_rpg/core/condition_engine.py（eval_condition(cond, ctx)->bool fail-safe；
     时间三键真实读取键为 season_now/period_now/weather_now 直键或 worldtime 鸭子类型）。
 
 【工程补白 · 显式标注】
@@ -64,7 +64,7 @@ from __future__ import annotations
 from typing import Any, List, Mapping, MutableMapping, Optional, Tuple
 
 from qbot_rpg.core.adventure_log import EVENT_KEY_HIDDEN_FIND, log_hidden_find
-from qbot_rpg.engine.condition_engine import eval_condition
+from qbot_rpg.core.condition_engine import eval_condition
 
 __all__ = [
     "DEFAULT_DAILY_QUOTA",

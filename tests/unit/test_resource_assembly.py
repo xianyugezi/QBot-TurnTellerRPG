@@ -1,10 +1,17 @@
 """M13 6c 资源轴引擎装配单测（tests/unit/test_resource_assembly.py · M13 批12 路12C）。
 
 覆盖：
-  - battle 引擎 energy_cost 门禁（不足 → 被拒不耗回合）
+  - battle 引擎 energy_cost 门禁（不足 → 被拒）
   - battle 引擎 energy_gain 结算（成功施放后增加封顶）
   - resource_state 快照段（start 建段/_settle 清零）
-  - 回合结清 tick
+
+CTB 迁移（2026-09-10）：旧 round 语义 → CTB 语义 对照
+  - 旧「资源不足 → 被拒不耗回合」→ CTB「被拒 = 零时间成本（action_seq 不增）」
+    （R-6 裁决 2：被拒不推进行动条、不派发链路事件）。
+  - 旧「end_turn 后触发 _settle 战斗结束清零」→ CTB「一次 `player_act` 提交
+    行动 + 调度器自动推进；终局（敌 HP 归零）由调度器 finish → BATTLE_END →
+    `_settle` 清零」。改用 `player_act` 驱动终局，不再调用 end_turn 壳。
+  - 旧「回合结清 tick」→ CTB「AFTER_ACTION 资源轴结算」（`do_action` 收尾）。
 
 铁律：零 NoneBot import；纯函数确定性；零定时器/零睡眠。
 """
@@ -97,14 +104,14 @@ def test_no_registry_noop() -> None:
 
 
 def test_settle_clears_resource_state() -> None:
-    """战斗结束 → resource_state 按 reset 策略清零。"""
+    """战斗结束 → resource_state 按 reset 策略清零（CTB 终局路径）。"""
     eng = _engine()
     eng._resource_registry = {"rage": _RAGE, "element_energy": _ELEMENT}
     eng._snap["resource_state"] = {"player": {"rage": 72}, "enemy": {}}
     eng._snap["enemy"]["hp"] = 0
-    eng.do_action("player", {"type": "normal"})
-    eng.enemy_act()
-    eng.end_turn()
+    # CTB：一次玩家行动 + 调度器自动推进 → 终局（BATTLE_END）→ _settle 清零
+    eng.player_act("normal")
+    assert eng.finished is True, "敌 HP 归零后调度器 finish 应触发终局"
     snap = eng.battle_state()
     rs = snap.get("resource_state", {})
     # battle 型 rage → 清零（ResourceLifecycle.battle_end_reset）

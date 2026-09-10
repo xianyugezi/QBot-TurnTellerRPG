@@ -7,6 +7,16 @@
   - 被控保留（S4）
   - 快照 round-trip 续战
 
+CTB 迁移（2026-09-10）：旧 round 语义 → CTB 语义 对照
+  - 旧「回合结束 tick_round_end 结算」→ CTB「`AFTER_ACTION` 资源轴结算」：
+    旧测试用 `do_action → enemy_act → end_turn` 驱动回合边界；CTB 改用
+    一次 `player_act`（提交行动 + 调度器自动推进），资源在行动收尾保持
+    零增减（幂等钩子）——`tick_round_end` 现行为即保留，挂在 AFTER_ACTION。
+  - 旧「end_turn 触发 _settle 战斗结束」→ CTB「终局（敌 HP 归零）由调度器
+    finish → BATTLE_END → `_settle` 按 reset 策略处理」。
+  - 旧「被控 skip → 资源保留（S4）」：CTB 的 skip 路径见下方用例说明。
+  - 旧「快照 round-trip 续战」→ CTB 快照 V2（schema_version=2 / battle_ctb_v1）。
+
 铁律：零 NoneBot import；纯函数确定性；零定时器/零睡眠。
 """
 
@@ -60,77 +70,80 @@ def test_start_no_registry_noop() -> None:
 
 
 def test_round_end_tick_preserves() -> None:
-    """回合结束 tick_round_end 幂等保留（rage 60→60）。"""
+    """行动后（AFTER_ACTION）资源轴结算幂等保留（rage 60→60）。"""
     eng = _engine()
     eng._resource_registry = {"rage": _RAGE}
     eng._snap["resource_state"] = {"player": {"rage": 60}, "enemy": {}}
-    eng.do_action("player", {"type": "normal"})
-    eng.enemy_act()
-    eng.end_turn()
+    # CTB：一次玩家行动 + 调度器自动推进；资源在行动收尾零增减（幂等钩子）
+    eng.player_act("normal")
     assert eng.battle_state()["resource_state"]["player"]["rage"] == 60, \
-        "tick_round_end 应幂等保留"
+        "AFTER_ACTION 资源轴结算应幂等保留"
 
 
 def test_settle_battle_reset_clears_battle_axis() -> None:
-    """战斗结束：battle 型资源清零。"""
+    """战斗结束：battle 型资源清零（CTB 终局路径）。"""
     eng = _engine()
     eng._resource_registry = {"rage": _RAGE}
     eng._snap["resource_state"] = {"player": {"rage": 72}, "enemy": {}}
     eng._snap["enemy"]["hp"] = 0
-    eng.do_action("player", {"type": "normal"})
-    eng.enemy_act()
-    eng.end_turn()
+    eng.player_act("normal")
+    assert eng.finished is True, "敌 HP 归零应触发终局"
     rs = eng.battle_state()["resource_state"]
     assert rs["player"].get("rage", 0) == 0 or "rage" not in rs["player"], \
         f"battle 型资源战斗结束应清零，got {rs}"
 
 
 def test_settle_keep_preserves_axis() -> None:
-    """战斗结束：keep 型资源保留。"""
+    """战斗结束：keep 型资源保留（CTB 终局路径）。"""
     eng = _engine()
     eng._resource_registry = {"heat": _HEAT}
     eng._snap["resource_state"] = {"player": {"heat": 55}, "enemy": {}}
     eng._snap["enemy"]["hp"] = 0
-    eng.do_action("player", {"type": "normal"})
-    eng.enemy_act()
-    eng.end_turn()
+    eng.player_act("normal")
+    assert eng.finished is True
     rs = eng.battle_state()["resource_state"]
     assert rs["player"].get("heat", 0) == 55, f"keep 型资源应保留，got {rs}"
 
 
 def test_settle_battle_start_preserves_then_resets() -> None:
-    """battle_start 型：战斗结束保留、下次战斗开始置 base。"""
+    """battle_start 型：战斗结束保留、下次战斗开始置 base（CTB 终局路径）。"""
     eng = _engine()
     eng._resource_registry = {"focus": _FOCUS}
     eng._snap["resource_state"] = {"player": {"focus": 40}, "enemy": {}}
     eng._snap["enemy"]["hp"] = 0
-    eng.do_action("player", {"type": "normal"})
-    eng.enemy_act()
-    eng.end_turn()
+    eng.player_act("normal")
+    assert eng.finished is True
     rs = eng.battle_state()["resource_state"]
     assert rs["player"].get("focus", 0) == 40, f"battle_start 型结束应保留，got {rs}"
 
 
 def test_controlled_skip_preserves() -> None:
-    """被控 skip → 资源保留（S4）。"""
+    """被控 skip → 资源保留（S4）。
+
+    CTB 迁移说明（2026-09-10）：旧测试用 `do_action(player)` 在控制态触发
+    `_skip_turn`；CTB 改用一次 `player_act`，控制态下行动被跳过（skip），
+    资源轴在行动收尾零增减 → 保留原值。
+    """
     eng = _engine()
     eng._resource_registry = {"rage": _RAGE}
     eng._snap["resource_state"] = {"player": {"rage": 60}, "enemy": {}}
     eng._snap["player"]["control_state"] = {
         "type": "睡眠", "skip_turn": 1.0, "turns": 1, "source": "enemy",
     }
-    out = eng.do_action("player", {"type": "normal"})
+    out = eng.player_act("normal").outcomes[0]
     assert out.action_type == "skip"
     assert eng.battle_state()["resource_state"]["player"]["rage"] == 60, \
         "被控跳过应保留资源"
 
 
 def test_snapshot_roundtrip_resume() -> None:
-    """快照 round-trip：resource_state 随快照携带，恢复续战。"""
+    """快照 round-trip：resource_state 随快照携带，恢复续战（CTB 快照 V2）。"""
     eng = _engine()
     eng._resource_registry = {"rage": _RAGE}
     eng._snap["resource_state"] = {"player": {"rage": 72}, "enemy": {}}
-    snap = eng.battle_state()
+    # CTB：to_snapshot 产 V2（schema_version=2 / rule_version=battle_ctb_v1）
+    snap = eng.to_snapshot("actor_ready")
+    assert int(snap["schema_version"]) >= 2
     eng2 = BattleEngine.from_snapshot(snap, resource_registry={"rage": _RAGE})
     rs = eng2.battle_state()["resource_state"]
     assert rs["player"]["rage"] == 72, f"恢复应续战 rage 72，got {rs}"

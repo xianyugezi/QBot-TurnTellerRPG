@@ -173,7 +173,11 @@ async def test_settle_new_week(repo_factory) -> None:
     row = await repo.db.fetchone_read(
         "SELECT value_json FROM world_state WHERE key='contest_board'")
     board = json.loads(row["value_json"])
-    last_week = ct.week_key_of(int(time.time()) - 7 * 86400)
+    # 时基必须与 ctx["now"] 一致（_SUNDAY_21H）：原实现用 int(time.time()) 取真实
+    # 当前时刻，与固定 ctx["now"] 分属不同 ISO 周（实测真实时钟 2026-W36 vs
+    # ctx 2026-W35），导致改写后的 board["week"] 恰等于结算函数算出的 cur_week
+    # → _settle_if_new_week L77「board.week == cur_week」提前 return，结算不触发。
+    last_week = ct.week_key_of(_SUNDAY_21H - 7 * 86400)
     board["week"] = last_week
     board["settled_week"] = ""
     await repo.db.execute(

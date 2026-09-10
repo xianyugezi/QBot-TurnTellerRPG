@@ -1,4 +1,4 @@
-"""M4 批次0·路A2：统一条件引擎 condition_engine 测试 —— qbot_rpg.engine.condition_engine。
+"""M4 批次0·路A2：统一条件引擎 condition_engine 测试 —— qbot_rpg.core.condition_engine。
 
 依据：m4_shared_contract §1 A2（9 运算符/三原语/组合/互译表/求值失败默认 False）
       + NPC 系统设计定稿 §四（4.0-4.4：{var,op,value,param} / 9 运算符 / is-not 语义 /
@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import pytest
 
-from qbot_rpg.engine.condition_engine import (
+from qbot_rpg.core.condition_engine import (
     CHECKIN_FIELDS,
     CHECKIN_TABLES,
     EVENT_PRESETS,

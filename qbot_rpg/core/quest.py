@@ -73,7 +73,7 @@ from typing import Any, List, Mapping, MutableMapping, MutableSet, Optional
 
 from qbot_rpg.core.dayroll import today_of
 from qbot_rpg.core.reward import dispatch_reward, normalize_reward
-from qbot_rpg.engine.condition_engine import (
+from qbot_rpg.core.condition_engine import (
     normalize_op,
     normalize_var,
     eval_condition,

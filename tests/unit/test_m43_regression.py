@@ -25,7 +25,7 @@
          用法必须为 Lock——若出现 threading.Timer/Thread/sleep 类计时用法则红拦。
      周期引擎本体（engine/worldtime.py + engine/time_query.py）必须在扫描范围内且零
      命中（无允许清单可依——周期值只由锚点公式得出）。
-  ② 确定性抽签 —— 真实 qbot_rpg.engine.worldtime.WorldTime.map_weather（IF08）：
+  ② 确定性抽签 —— 真实 qbot_rpg.core.worldtime.WorldTime.map_weather（IF08）：
      同 tick 同池两次同值 / 重构造实例（=重启）同值不重抽 / 池键乱序注入同值（seed 用
      排序后键列表 + str(tick) sha256，与配置顺序无关）/ 不同 tick 窗口内取值可不同。
   ③ 快照完整性 —— 真实 BattleEngine（start→行动→end_turn 回合边界）注入
@@ -42,7 +42,7 @@ import re
 from pathlib import Path
 
 from qbot_rpg.core.battle import BattleEngine
-from qbot_rpg.engine.worldtime import DEFAULT_POOL, WorldTime
+from qbot_rpg.core.worldtime import DEFAULT_POOL, WorldTime
 from qbot_rpg.world.snapshot_resume import resume_from_snapshot
 
 # 仓库根 = tests/unit/test_m43_regression.py 上溯三级
@@ -93,8 +93,9 @@ def test_m43_zero_timer_repo_wide_scan() -> None:
     # 全仓规模自检：防 glob 静默缩水导致「扫不到 = 通过」假绿（当前 75 个 .py 源文件）
     assert len(sources) >= 50, f"M43①: 全仓源文件数异常少（{len(sources)}，扫描范围可能失效）"
     # 周期引擎本体必须在扫描范围内（零定时器探针的靶心）
+    # 路径变更（2026-09-10 架构违规修复）：engine/ 已按契约 §2.3 更名 core/，同步改扫新路径。
     engine_files = {_rel(p) for p in sources}
-    for must in ("qbot_rpg/engine/worldtime.py", "qbot_rpg/engine/time_query.py"):
+    for must in ("qbot_rpg/core/worldtime.py", "qbot_rpg/core/time_query.py"):
         assert must in engine_files, f"M43①: 周期引擎源码 {must} 未在扫描范围内（glob 未命中）"
 
     violations: dict = {}
@@ -176,13 +177,15 @@ _ENEMY = {"max_hp": 400, "hp": 400, "max_mp": 0, "mp": 0, "atk": 80, "dfn": 40, 
 def test_m43_snapshot_integrity_ai_combo_chase_field_level() -> None:
     """战斗中断 → 续玩：ai_state+combo_state+换区上下文（chase ctx）逐字段一致（m3 铁律 10）。
 
-    装配走真实链路：BattleEngine 实战到回合边界 → 注入三态 → to_snapshot →
+    装配走真实链路：BattleEngine 实战到 CTB 边界 → 注入三态 → to_snapshot →
     resume_from_snapshot(battle_factory=真实 BattleEngine.from_snapshot) → 续玩推进。
+
+    CTB 迁移（2026-09-10 · Agent 3）：旧「do_action → enemy_act → end_turn」回合
+    三段（enemy_act/end_turn 已按 Wave A M4/M5 删除）→ CTB 单次 `player_act`
+    （提交玩家行动 + 调度器自动推进敌人 ready），仍在「行动边界」落快照。
     """
     eng = BattleEngine().start(_PLAYER, _ENEMY, random_seed=42)
-    eng.do_action("player", {"type": "normal", "mult": 1.0})
-    eng.enemy_act()
-    eng.end_turn()  # 回合边界（1g3 S0：快照只落回合边界）
+    eng.player_act("normal")  # CTB：一次玩家行动 + 调度器自动推进（替代回合三段）
 
     injected_ai = {
         "boss_phase": 2,
@@ -214,8 +217,9 @@ def test_m43_snapshot_integrity_ai_combo_chase_field_level() -> None:
     turn_before = int(eng.battle_state()["turn"])
     enemy_hp_before = eng.battle_state()["enemy"]["hp"]
 
-    snap = eng.to_snapshot(boundary="turn_end")
-    assert int(snap["turn"]) == turn_before  # 中断快照回合数 = 中断前
+    # CTB：落点为 CTB 边界（actor_ready / after_action），不再是 turn_start/turn_end
+    snap = eng.to_snapshot(boundary="after_action")
+    assert int(snap["turn"]) == turn_before  # 中断快照计数 = 中断前（turn 为 action_seq 镜像）
 
     # 续玩装配：battle_factory = 真实 BattleEngine.from_snapshot（M27 真实链路）
     out = resume_from_snapshot({}, snap, battle_factory=BattleEngine.from_snapshot)
@@ -249,15 +253,13 @@ def test_m43_snapshot_integrity_ai_combo_chase_field_level() -> None:
     for k, v in injected_chase_ctx.items():
         assert rcc[k] == v, f"M43③: chase_ctx.{k} 续玩后不一致"
 
-    # ---- 续玩推进：真实引擎继续作战（非重打），回合前进、双方状态延续 ----
-    assert restored["turn"] == turn_before                 # 还原回合数 = 中断前（续玩非重打）
+    # ---- 续玩推进：真实引擎继续作战（非重打），行动条前进、双方状态延续 ----
+    assert restored["turn"] == turn_before                 # 还原计数 = 中断前（续玩非重打）
     engine2 = out["engine"]
-    engine2.start_turn()                                   # 恢复时序 ⑤：回 ① 继续
-    engine2.do_action("player", {"type": "normal", "mult": 1.0})
-    engine2.enemy_act()
-    engine2.end_turn()
+    engine2.player_act("normal")                           # CTB：行动条自动推进（含敌侧）
+    engine2.player_act("normal")
     after = engine2.battle_state()
-    assert int(after["turn"]) == turn_before + 2           # 续玩继续推进两回合（start+end）
+    assert int(after["action_seq"]) > turn_before          # 续玩继续推进行动计数
     assert after["enemy"]["hp"] < enemy_hp_before          # 敌方血量延续扣减（非重打满血）
     assert after["enemy"]["hp"] >= 0                       # 血量合法
     # 续玩推进中 ai_state 逐字段仍与中断前一致（玩家行动不冲掉 AI 状态，M2-C1 原样还原）

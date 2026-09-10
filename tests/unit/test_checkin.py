@@ -30,7 +30,7 @@ from qbot_rpg.core.checkin import (
     day_index_of,
 )
 from qbot_rpg.core.dayroll import today_of
-from qbot_rpg.engine.condition_engine import eval_condition
+from qbot_rpg.core.condition_engine import eval_condition
 
 _TZ_UTC8 = datetime.timezone(datetime.timedelta(hours=8))
 

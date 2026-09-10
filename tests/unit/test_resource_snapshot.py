@@ -20,7 +20,15 @@
   15. from_snapshot 恢复 resource_state（RS-2）
   16. 旧档缺 resource_state 段 → from_snapshot 降级不报错（RS-5）
   17. _settle 战斗结束按 reset 策略清零（battle 型）/保留（keep 型，RS-3）
-  18. end_turn tick 后 resource_state 保留（F-R1 tick 幂等钩子）
+  18. 行动后（AFTER_ACTION）resource_state 保留（F-R1 幂等钩子）
+
+CTB 迁移（2026-09-10）：旧 round 语义 → CTB 语义 对照
+  - 旧「end_turn ⑥⑦ 触发 _settle 战斗结束」→ CTB「终局由调度器 finish →
+    BATTLE_END → `_settle`」，用一次 `player_act` 驱动（不再调 end_turn 壳）。
+  - 旧「回合结束 tick 保留资源」→ CTB「行动后 AFTER_ACTION 资源轴结算保留」。
+  - 旧「快照 round-trip」→ CTB 快照 V2；`to_snapshot(boundary)` 的落点为 CTB
+    边界（actor_ready / after_action），不再 use turn_start/turn_end。
+  - 断言「回合数前进」的位置一律改用 `battle_state()["action_seq"]` 严格增加。
 
 铁律：零 NoneBot import；零定时器/零睡眠；纯函数确定性；不碰兄弟文件。
 """
@@ -44,14 +52,14 @@ from qbot_rpg.core.resource_lifecycle import (
 
 REGISTRY: Dict[str, Dict[str, Any]] = {
     "rage": {
-        "name": "怒气", "type": "resource", "icon": "💢",
+        "name": "怒气", "type": "resource", "icon": "rage",
         "base": 0, "max": 100, "reset": "battle", "display": "status_line",
     },
     "element_energy": {
         "name": "元素能量", "type": "resource_custom",  # D-01b 兼容别名
         "base": 0, "max_per_pool": 3,
         "pools": ["fire", "water", "wind"],
-        "pool_icons": {"fire": "🔥", "water": "💧", "wind": "🌪"},
+        "pool_icons": {"fire": "fire", "water": "water", "wind": "wind"},
         "display": "status_line",
     },
     "heat": {
@@ -310,14 +318,19 @@ def test_battle_from_snapshot_restores_resource_state() -> None:
 
 
 def test_battle_from_snapshot_legacy_missing_section_degrades() -> None:
-    """旧档缺 resource_state 段 → from_snapshot 降级不报错（RS-5）。"""
+    """旧档缺 resource_state 段 → from_snapshot 降级不报错（RS-5）。
+
+    CTB：续战进度以 `action_seq` 为权威计数（`turn` 仅为其兼容镜像）。
+    """
     eng = _battle_engine()
-    snap = eng.to_snapshot()
+    snap = eng.to_snapshot("actor_ready")
     snap.pop(RESOURCE_STATE_KEY, None)  # 模拟旧档无该段
     eng2 = BattleEngine().from_snapshot(snap, resource_registry=REGISTRY)
     rs2 = eng2.battle_state().get(RESOURCE_STATE_KEY, {})
     assert rs2.get("player", {}) == {}  # 缺段 → 不写入，不悬空
-    assert eng2.battle_state()["turn"] == snap["turn"]  # 续战其余状态不受影响
+    # 续战其余状态不受影响：action_seq 恢复 = 中断前
+    assert eng2.battle_state()["action_seq"] == snap["action_seq"]
+    assert eng2.battle_state()["turn"] == eng2.battle_state()["action_seq"]  # 镜像一致
 
 
 def test_battle_from_snapshot_old_axes_degrade_rs5() -> None:
@@ -335,7 +348,11 @@ def test_battle_from_snapshot_old_axes_degrade_rs5() -> None:
 
 
 def test_battle_settle_resets_battle_axis_keeps_keep_axis() -> None:
-    """_settle 战斗结束：battle 型清零 / keep 型保留（RS-3，F-R1 终段）。"""
+    """_settle 战斗结束：battle 型清零 / keep 型保留（RS-3，F-R1 终段）。
+
+    CTB：终局由调度器 finish → BATTLE_END → `_settle`；用一次 `player_act`
+    （提交玩家行动 + 调度器自动推进）驱动，不再调用 end_turn 壳。
+    """
     eng = _battle_engine()
     eng._resource_registry = REGISTRY
     eng._snap[RESOURCE_STATE_KEY] = {
@@ -344,9 +361,7 @@ def test_battle_settle_resets_battle_axis_keeps_keep_axis() -> None:
         "enemy": {"rage": 5},
     }
     eng._snap["enemy"]["hp"] = 0  # 杀敌触发战斗结束
-    eng.do_action("player", {"type": "normal"})
-    eng.enemy_act()
-    eng.end_turn()
+    eng.player_act("normal")
     rs = eng.battle_state()[RESOURCE_STATE_KEY]
     assert eng.battle_state()["status"] == "win"
     assert rs["player"]["rage"] == 0           # battle → 清零
@@ -356,31 +371,34 @@ def test_battle_settle_resets_battle_axis_keeps_keep_axis() -> None:
 
 
 def test_battle_end_turn_tick_preserves_resource_state() -> None:
-    """end_turn tick 后 resource_state 保留（F-R1 tick 幂等钩子，零增减）。"""
+    """行动后（AFTER_ACTION）resource_state 保留（F-R1 幂等钩子，零增减）。
+
+    CTB：一次 `player_act` 提交行动 + 调度器自动推进；资源在行动收尾保持
+    零增减（`tick_round_end` 现行为=保留，挂 AFTER_ACTION）。
+    """
     eng = _battle_engine()
     _write_resource_state(eng)
-    eng.do_action("player", {"type": "normal"})
-    eng.enemy_act()
-    eng.end_turn()
+    eng.player_act("normal")
     rs = eng.battle_state()[RESOURCE_STATE_KEY]
     assert rs["player"]["rage"] == 72
     assert rs["player"]["element_energy"] == {"fire": 2, "water": 1, "wind": 0}
 
 
 def test_battle_no_registry_degrades_gracefully() -> None:
-    """未注入资源注册表 → 接线零操作降级不报错（RS-5 精神）。"""
+    """未注入资源注册表 → 接线零操作降级不报错（RS-5 精神）。
+
+    CTB：行动后资源保留；快照 V2 round-trip 恢复；终局 `_settle` 无注册表
+    时 battle 型轴未知 → 降级不清零（保留原值）。
+    """
     eng = _battle_engine()  # _resource_registry = None
     _write_resource_state(eng)
-    eng.do_action("player", {"type": "normal"})
-    eng.enemy_act()
-    eng.end_turn()  # tick 降级
-    eng2 = BattleEngine().from_snapshot(eng.to_snapshot())  # 恢复降级（无注册表）
+    eng.player_act("normal")  # 行动收尾 tick（无可注册轴 → 降级无操作）
+    eng2 = BattleEngine().from_snapshot(eng.to_snapshot("actor_ready"))
+
     assert eng2.battle_state()[RESOURCE_STATE_KEY]["player"]["rage"] == 72
     # 战斗结束 _settle 降级：直接杀敌
     eng2._snap["enemy"]["hp"] = 0
-    eng2.do_action("player", {"type": "normal"})
-    eng2.enemy_act()
-    eng2.end_turn()
+    eng2.player_act("normal")
     assert eng2.battle_state()["status"] == "win"
     # 无注册表 → battle 型轴未知，保留原值（降级不清零）
     assert eng2.battle_state()[RESOURCE_STATE_KEY]["player"]["rage"] == 72

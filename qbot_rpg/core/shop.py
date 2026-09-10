@@ -79,7 +79,7 @@ from qbot_rpg.core.dayroll import (
     today_of,
     weeks_elapsed,
 )
-from qbot_rpg.engine.condition_engine import eval_condition
+from qbot_rpg.core.condition_engine import eval_condition
 
 __all__ = [
     "SHOP_TYPES",

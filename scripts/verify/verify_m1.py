@@ -73,7 +73,7 @@ def t_1a_formula_branch():
     from qbot_rpg.core.formula_engine import EvaluatorCtx, evaluate
     ctx = EvaluatorCtx(attacker={"atk": 180}, target={}, battle={"round": 3}, rng_state=11)
     assert evaluate("Math.min(500,[我方攻击]*2)", ctx) == 360.0
-    assert evaluate("[当前回合数]*10", ctx) == 30.0
+    assert evaluate("[当前行动数]*10", ctx) == 30.0
 
 
 # ---------------- 1b 拦截链 8 阶段顺序 ----------------

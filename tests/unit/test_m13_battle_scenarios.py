@@ -1,12 +1,22 @@
 """M13 6c 战斗集成场景单测（tests/unit/test_m13_battle_scenarios.py · M13 批17 路17C）。
 
-真实 BattleEngine 驱动（do_action / enemy_act / end_turn 全流程，零 mock 引擎内部）：
-  1. 狂战士场景：rage_burst 触发狂暴形态 → 形态技能怒涛斩 → 回合 tick →
+真实 BattleEngine 驱动（`player_act` 全流程，零 mock 引擎内部）：
+  1. 狂战士场景：rage_burst 触发狂暴形态 → 形态技能怒涛斩 → 形态拍 tick →
      自然还原 → 冷却归零可再次触发（细化_6b F1/F2/S5 + TC-01/TC-05/TC-17）
   2. 元素法师场景：元素能量积蓄（fire/wind gain）→ 组合触发（火火水）→
      双耗结算 → 能量池分布行为变化（细化_6c F-C1/F-C2 + TC-14/TC-15）
   3. 多段 hits：blade_dance 3 段伤害战报（细化_6a TC-03 / 1g1c 段级流水）
   4. 集成闭环：怒气/能量战斗结束清零 + 快照 round-trip 续战携带双段
+
+CTB 迁移（2026-09-10）：旧 round 语义 → CTB 语义。
+  - 旧 `_full_turn` = `do_action("player")` → `enemy_act()`（怪物后手）→ `end_turn()`（⑥tick）
+    三段；`enemy_act`/`end_turn` 已按 Wave A M4/M5 删除（壳方法抛 NotImplementedError），
+    合并为**一次 `player_act`**（提交玩家行动 + 调度器自动推进 NPC 连锁）。
+  - 形态（transform）在 CTB 下按**持有者行动次数**计时：形态属玩家 → 每次玩家
+    `player_act` 后 remaining/cooldown 递减一拍（`_tick_transform_state(actor)`），
+    与旧「回合 tick」逐拍等价。故本文件「一次玩家行动」即旧「一回合」的迁移目标。
+  - 进度断言改用 `battle_state()["action_seq"]`（权威行动计数）；`turn` 仅为镜像。
+  - 快照落点为 CTB 边界（`after_action`），不再是 `turn_start`/`turn_end`。
 
 铁律：零 NoneBot import（平台无关核心包）；零定时器/零睡眠（引擎纯函数
 确定性 tick）；每个用例至少一条断言；不 commit。
@@ -114,12 +124,14 @@ def _rs(eng: BattleEngine, side: str = "player") -> Dict[str, Any]:
     return eng.battle_state()["resource_state"].get(side, {})
 
 
-def _full_turn(eng: BattleEngine, action: Dict[str, Any]) -> Any:
-    """完整一轮：玩家行动 → 敌后手 → end_turn tick（真实引擎驱动）。"""
-    out = eng.do_action("player", action)
-    eng.enemy_act()
-    eng.end_turn()
-    return out
+def _player_turn(eng: BattleEngine, action: Dict[str, Any]) -> Any:
+    """CTB 单次玩家行动（替代旧「完整一轮」三段）。
+
+    CTB 迁移（2026-09-10）：旧 `_full_turn` 走 `do_action("player")` → `enemy_act()`
+    → `end_turn()`；CTB 下一次 `player_act` 即完成「玩家一拍 + 调度器自动推进 NPC
+    连锁」。形态计时按持有者（玩家）行动次数推进，故本函数 = 旧「一回合」的等价物。
+    """
+    return eng.player_act(action)
 
 
 def _last_events(eng: BattleEngine) -> Any:
@@ -131,14 +143,19 @@ def _last_events(eng: BattleEngine) -> Any:
 # ---------------------------------------------------------------------------
 
 def test_berserker_rage_burst_triggers_form() -> None:
-    """狂战士：满怒施放狂暴 → 形态切换 + remaining/冷却起算。"""
+    """狂战士：满怒施放狂暴 → 形态切换 + remaining/冷却起算。
+
+    CTB 迁移（2026-09-10）：改用 `player_act`（旧 `do_action` 单步不推进行动条）。
+    形态在触发行动自身的 AFTER_ACTION 位点即 tick 一拍（remaining 4→3）；冷却
+    在形态激活期不递减（保持 5）。
+    """
     eng = _engine()
     eng._snap["resource_state"] = {"player": {"rage": 100}, "enemy": {}}  # type: ignore[attr-defined]
-    out = eng.do_action("player", {"type": "skill", "skill_id": "rage_burst"})
-    assert out.ok is True, f"狂暴应成功结算，got {out.message}"
+    out = eng.player_act({"type": "skill", "skill_id": "rage_burst"})
+    assert out.outcomes[0].ok is True, f"狂暴应成功结算，got {out.outcomes[0].message}"
     ts = _ts(eng)
     assert ts["form"] == "berserker_form", f"形态应切换，got {ts}"
-    assert ts["remaining"] == 4, f"remaining 应=turns(4) 含变身当回合，got {ts['remaining']}"
+    assert ts["remaining"] == 3, f"CTB：触发起算 4，触发行动自身 tick 后为 3，got {ts['remaining']}"
     assert ts["cooldown_remaining"] == 5, f"冷却应从触发起算 5，got {ts['cooldown_remaining']}"
     # C2 资源门禁：怒气 100 已消耗（TRF-5 怒气沉没）
     rs = _rs(eng)
@@ -146,98 +163,134 @@ def test_berserker_rage_burst_triggers_form() -> None:
 
 
 def test_berserker_insufficient_rage_rejected() -> None:
-    """狂战士：怒气不足（80<100）施放狂暴 → 被拒不耗回合、怒气不变。"""
+    """狂战士：怒气不足（80<100）施放狂暴 → 被拒不耗回合、怒气不变。
+
+    CTB 迁移（2026-09-10）：R-6（裁决 2）被拒行动 = 零时间成本——经 `player_act`
+    提交后 `action_seq` 不前进（旧「不耗回合」的 CTB 对应断言）。
+    """
     eng = _engine()
     eng._snap["resource_state"] = {"player": {"rage": 80}, "enemy": {}}  # type: ignore[attr-defined]
-    out = eng.do_action("player", {"type": "skill", "skill_id": "rage_burst"})
+    seq_before = int(eng.battle_state()["action_seq"])
+    rep = eng.player_act({"type": "skill", "skill_id": "rage_burst"})
+    out = rep.outcomes[0]
     assert out.ok is False, f"怒气不足应被拒，got {out}"
     assert "能量不足" in out.message
+    assert int(eng.battle_state()["action_seq"]) == seq_before, \
+        "CTB R-6：被拒行动零时间成本，action_seq 不得前进"
     assert _rs(eng).get("rage", 0) == 80, "被拒不应消耗怒气"
     assert _ts(eng)["form"] is None, "被拒不应触发形态"
     assert eng.battle_state()["player"]["mp"] == 100, "被拒不应扣 MP"
 
 
 def test_berserker_form_skill_fury_slash() -> None:
-    """狂战士：形态激活期施放怒涛斩（形态技能）→ 伤害结算且形态持续。"""
+    """狂战士：形态激活期施放怒涛斩（形态技能）→ 伤害结算且形态持续。
+
+    CTB 迁移（2026-09-10）：经 `player_act`（含行动条推进）；形态技能自身 tick
+    使 remaining 3→2，但形态保持（形态技能不触发还原）。
+    """
     eng = _engine()
     eng._snap["resource_state"] = {"player": {"rage": 100}, "enemy": {}}  # type: ignore[attr-defined]
-    _full_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
+    _player_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
     assert _ts(eng)["form"] == "berserker_form" and _ts(eng)["remaining"] == 3
     hp_before = eng.battle_state()["enemy"]["hp"]
-    out = eng.do_action("player", {"type": "skill", "skill_id": "fury_slash"})
-    assert out.ok is True, f"怒涛斩应成功，got {out}"
+    rep = eng.player_act({"type": "skill", "skill_id": "fury_slash"})
+    assert rep.outcomes[0].ok is True, f"怒涛斩应成功，got {rep.outcomes[0]}"
     assert eng.battle_state()["enemy"]["hp"] < hp_before, "怒涛斩应造成伤害"
     assert _ts(eng)["form"] == "berserker_form", "形态技能不触发还原"
+    assert _ts(eng)["remaining"] == 2, "CTB：形态技能行动自身 tick 使 remaining 3→2"
 
 
 def test_berserker_revert_form_active_immediate() -> None:
     """狂战士：形态内施放平息战意（revert_form）→ 即时还原 + 冷却起算。"""
     eng = _engine()
     eng._snap["resource_state"] = {"player": {"rage": 100}, "enemy": {}}  # type: ignore[attr-defined]
-    _full_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
+    _player_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
     assert _ts(eng)["form"] == "berserker_form"
-    _full_turn(eng, {"type": "skill", "skill_id": "calm_down"})
+    _player_turn(eng, {"type": "skill", "skill_id": "calm_down"})
     ts = _ts(eng)
     assert ts["form"] is None, f"平息战意应即时还原，got {ts}"
     assert ts["cooldown_remaining"] == 4, \
-        f"主动还原后冷却应 5→4（还原当回合 tick 递减），got {ts['cooldown_remaining']}"
+        f"主动还原后冷却应 5→4（还原行动自身 tick 递减），got {ts['cooldown_remaining']}"
     evs = _last_events(eng)
     assert any(e.get("type") == "transform_reverted" for e in evs), \
         f"应有还原事件，got {evs}"
 
 
 def test_berserker_natural_revert_and_cooldown_full_cycle() -> None:
-    """狂战士：turns=4 自然还原 → 冷却 5 逐回合递减 → 归零可再次触发。"""
+    """狂战士：turns=4 自然还原 → 冷却 5 逐次玩家行动递减 → 归零可再次触发。
+
+    CTB 迁移（2026-09-10）：旧「回合」→「玩家行动次数」。形态 remaining（4）在
+    触发行动自身 tick 后为 3，再经 3 次玩家行动走完 → 自然还原；冷却按玩家行动
+    逐拍递减 4→3→2→1→0。
+    """
     eng = _engine()
     eng._snap["resource_state"] = {"player": {"rage": 100}, "enemy": {}}  # type: ignore[attr-defined]
-    _full_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
+    _player_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
     assert _ts(eng)["form"] == "berserker_form" and _ts(eng)["remaining"] == 3
     for _ in range(3):
-        _full_turn(eng, {"type": "normal"})
+        _player_turn(eng, {"type": "normal"})
     ts = _ts(eng)
-    assert ts["form"] is None, f"4 回合后应自然还原，got {ts}"
-    # 冷却 5 起算，还原当回合 tick 已递减 → 4
+    assert ts["form"] is None, f"形态拍走完应自然还原，got {ts}"
+    # 冷却 5 起算，还原行动自身 tick 已递减 → 4
     assert ts["cooldown_remaining"] == 4, f"自然还原后冷却应 5→4，got {ts}"
-    # 冷却逐回合递减 4→3→2→1→0
+    # 冷却逐次玩家行动递减 4→3→2→1→0
     for expected in (3, 2, 1, 0):
-        _full_turn(eng, {"type": "normal"})
+        _player_turn(eng, {"type": "normal"})
         assert _ts(eng)["cooldown_remaining"] == expected, \
             f"冷却应递减到 {expected}，got {_ts(eng)}"
     # 归零回常态 → 再次触发（怒气重新攒满）
     eng._snap["resource_state"] = {"player": {"rage": 100}, "enemy": {}}  # type: ignore[attr-defined]
-    _full_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
+    _player_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
     ts = _ts(eng)
     assert ts["form"] == "berserker_form", f"冷却归零应可再次触发，got {ts}"
     assert ts["cooldown_remaining"] == 5, f"二次触发冷却应从 5 起算，got {ts}"
 
 
 def test_berserker_cooldown_rejects_retrigger() -> None:
-    """狂战士：还原后冷却期（>0）施放狂暴 → C3 拒绝（不触发变换）。"""
+    """狂战士：还原后冷却期（>0）施放狂暴 → C3 拒绝（不触发变换）。
+
+    CTB 迁移（2026-09-10）：经 `player_act` 提交。形态门禁（C3）是**变换提交层**
+    的否决（transform_rejected），非 R-6 整行动拒绝——故行动本身照常结算、行动条
+    照常前进；断言口径为「产生 C3 拒绝事件且不提交新变换」。
+    """
     eng = _engine()
     eng._snap["resource_state"] = {"player": {"rage": 100}, "enemy": {}}  # type: ignore[attr-defined]
-    _full_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
+    _player_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
     for _ in range(3):
-        _full_turn(eng, {"type": "normal"})
+        _player_turn(eng, {"type": "normal"})
     assert _ts(eng)["form"] is None and _ts(eng)["cooldown_remaining"] == 4
     eng._snap["resource_state"] = {"player": {"rage": 100}, "enemy": {}}  # type: ignore[attr-defined]
-    eng.do_action("player", {"type": "skill", "skill_id": "rage_burst"})
+    seq_before = int(eng.battle_state()["action_seq"])
+    eng.player_act({"type": "skill", "skill_id": "rage_burst"})
     evs = _last_events(eng)
     rej = [e for e in evs if e.get("type") == "transform_rejected"]
     assert rej and rej[-1].get("guard") == "C3", f"冷却期应 C3 拒绝，got {evs}"
+    assert _ts(eng)["form"] is None, "C3 拒绝不应触发形态"
+    # CTB：行动照常结算 → 行动条前进（形态门禁不影响本次行动的结算与推进）
+    assert int(eng.battle_state()["action_seq"]) > seq_before, \
+        "CTB：C3 仅否决变换提交，玩家行动本身仍推进 action_seq"
 
 
 def test_berserker_form_active_rejects_retrigger() -> None:
-    """狂战士：形态激活期再次施放狂暴 → C1 拒绝（形态不变）。"""
+    """狂战士：形态激活期再次施放狂暴 → C1 拒绝（形态不变）。
+
+    CTB 迁移（2026-09-10）：经 `player_act` 提交。形态激活期二次触发由 C1 互斥
+    否决变换提交（不产生新形态），但行动本身照常结算、行动条前进。
+    """
     eng = _engine()
     eng._snap["resource_state"] = {"player": {"rage": 100}, "enemy": {}}  # type: ignore[attr-defined]
-    _full_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
+    _player_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
     assert _ts(eng)["form"] == "berserker_form"
     eng._snap["resource_state"] = {"player": {"rage": 100}, "enemy": {}}  # type: ignore[attr-defined]
-    eng.do_action("player", {"type": "skill", "skill_id": "rage_burst"})
+    seq_before = int(eng.battle_state()["action_seq"])
+    eng.player_act({"type": "skill", "skill_id": "rage_burst"})
     assert _ts(eng)["form"] == "berserker_form", "C1 拒绝不应改形态"
     evs = _last_events(eng)
     committed = [e for e in evs if e.get("type") == "transform_committed"]
     assert len(committed) == 1, f"二次触发不应提交新变换，got {evs}"
+    # CTB：C1 仅否决变换提交，玩家行动本身仍推进 action_seq
+    assert int(eng.battle_state()["action_seq"]) > seq_before, \
+        "CTB：C1 拒绝不影响本次行动的结算与行动条推进"
 
 
 # ---------------------------------------------------------------------------
@@ -247,11 +300,11 @@ def test_berserker_form_active_rejects_retrigger() -> None:
 def test_element_mage_energy_gain_fire_and_wind() -> None:
     """元素法师：火球术/风刃命中 → fire/wind 池各 +1（封顶 3）。"""
     eng = _engine()
-    _full_turn(eng, {"type": "skill", "skill_id": "fireball"})
+    _player_turn(eng, {"type": "skill", "skill_id": "fireball"})
     rs = _rs(eng)
     assert rs["element_energy"] == {"fire": 1, "water": 0, "wind": 0}, \
         f"火球应 fire+1，got {rs['element_energy']}"
-    _full_turn(eng, {"type": "skill", "skill_id": "wind_blade"})
+    _player_turn(eng, {"type": "skill", "skill_id": "wind_blade"})
     rs = _rs(eng)
     assert rs["element_energy"] == {"fire": 1, "water": 0, "wind": 1}, \
         f"风刃应 wind+1，got {rs['element_energy']}"
@@ -261,7 +314,7 @@ def test_element_mage_pool_cap_at_max_per_pool() -> None:
     """元素法师：fire 池连打 4 次 → 封顶 3（第 4 次不累计）。"""
     eng = _engine()
     for _ in range(4):
-        _full_turn(eng, {"type": "skill", "skill_id": "fireball"})
+        _player_turn(eng, {"type": "skill", "skill_id": "fireball"})
     rs = _rs(eng)
     assert rs["element_energy"]["fire"] == 3, f"fire 应封顶 3，got {rs['element_energy']}"
     assert rs["element_energy"]["water"] == 0 and rs["element_energy"]["wind"] == 0, \
@@ -288,34 +341,46 @@ def test_element_mage_combo_fire_fire_water() -> None:
 
 
 def test_element_mage_combo_insufficient_rejected() -> None:
-    """元素法师：能量不足（总量门 any:2 不满足）→ 被拒不耗回合。"""
+    """元素法师：能量不足（总量门 any:2 不满足）→ 被拒不耗回合。
+
+    CTB 迁移（2026-09-10）：R-6 被拒 = 零时间成本（`action_seq` 不前进）。
+    """
     eng = _engine()
     eng._snap["resource_state"] = {  # type: ignore[attr-defined]
         "player": {"element_energy": {"fire": 1, "water": 0, "wind": 0}},
         "enemy": {},
     }
-    out = eng.do_action("player", {"type": "skill", "skill_id": "elemental_burst"})
+    seq_before = int(eng.battle_state()["action_seq"])
+    out = eng.player_act({"type": "skill", "skill_id": "elemental_burst"}).outcomes[0]
     assert out.ok is False, f"能量不足应被拒，got {out}"
     assert "能量不足" in out.message
     assert eng.battle_state()["player"]["mp"] == 100, "被拒不应扣 MP"
+    assert int(eng.battle_state()["action_seq"]) == seq_before, \
+        "CTB R-6：被拒行动不应推进行动条"
     rs = _rs(eng)
     assert rs["element_energy"] == {"fire": 1, "water": 0, "wind": 0}, \
         f"被拒能量不变，got {rs['element_energy']}"
 
 
 def test_element_mage_combo_no_match_rejected() -> None:
-    """元素法师：总量满足但池分布不匹配任何组合行 → 被拒不耗能量。"""
+    """元素法师：总量满足但池分布不匹配任何组合行 → 被拒不耗能量。
+
+    CTB 迁移（2026-09-10）：R-6 被拒 = 零时间成本（`action_seq` 不前进）。
+    """
     eng = _engine()
     eng._snap["resource_state"] = {  # type: ignore[attr-defined]
         "player": {"element_energy": {"fire": 1, "water": 1, "wind": 0}},
         "enemy": {},
     }
-    out = eng.do_action("player", {"type": "skill", "skill_id": "elemental_burst"})
+    seq_before = int(eng.battle_state()["action_seq"])
+    out = eng.player_act({"type": "skill", "skill_id": "elemental_burst"}).outcomes[0]
     assert out.ok is False, f"分布不匹配应被拒，got {out}"
     assert "组合未达成" in out.message
     rs = _rs(eng)
     assert rs["element_energy"] == {"fire": 1, "water": 1, "wind": 0}, \
         f"被拒能量不变，got {rs['element_energy']}"
+    assert int(eng.battle_state()["action_seq"]) == seq_before, \
+        "CTB R-6：被拒行动不应推进行动条"
 
 
 def test_element_mage_combo_behavior_changes_with_pool() -> None:
@@ -336,28 +401,39 @@ def test_element_mage_combo_behavior_changes_with_pool() -> None:
 
 
 def test_element_mage_burst_cooldown_blocks_next_turn() -> None:
-    """元素法师：爆发冷却 1 → 下一回合不可连续爆发（被拒）。"""
+    """元素法师：爆发冷却 1 → 下一回合不可连续爆发（被拒）。
+
+    CTB 迁移（2026-09-10）：冷却窗口按持有者行动次数计时；沿用 `player_act`
+    推进（旧「下一回合」→ CTB「下一次玩家行动」）。二次爆发 R-6 被拒 →
+    零时间成本（`action_seq` 不前进）。
+    """
     eng = _engine()
     eng._snap["resource_state"] = {  # type: ignore[attr-defined]
         "player": {"element_energy": {"fire": 2, "water": 1, "wind": 0}},
         "enemy": {},
     }
-    _full_turn(eng, {"type": "skill", "skill_id": "elemental_burst"})
+    _player_turn(eng, {"type": "skill", "skill_id": "elemental_burst"})
     # 重新攒能量后立即再爆发 → 冷却中（combo 引擎 should_reject）
     eng._snap["resource_state"] = {  # type: ignore[attr-defined]
         "player": {"element_energy": {"fire": 2, "water": 1, "wind": 0}},
         "enemy": {},
     }
-    out = eng.do_action("player", {"type": "skill", "skill_id": "elemental_burst"})
+    seq_before = int(eng.battle_state()["action_seq"])
+    out = eng.player_act({"type": "skill", "skill_id": "elemental_burst"}).outcomes[0]
     assert out.ok is False, f"冷却中应被拒，got {out}"
     assert eng.battle_state()["player"]["mp"] == 84, "被拒不扣 MP"
     rs = _rs(eng)
     assert rs["element_energy"] == {"fire": 2, "water": 1, "wind": 0}, \
         f"被拒能量不变，got {rs['element_energy']}"
+    assert int(eng.battle_state()["action_seq"]) == seq_before, \
+        "CTB R-6：冷却被拒不应推进行动条"
 
 
 # ---------------------------------------------------------------------------
 # 场景 3：多段 hits——blade_dance 3 段伤害战报
+#
+# CTB 迁移（2026-09-10）：本场景验证「单次结算的段级内容」（与时间轴正交），
+# 沿用 `do_action`（平移的单次结算入口）；不涉及旧回合推进语义，无需改扫描口径。
 # ---------------------------------------------------------------------------
 
 def test_blade_dance_three_segments_in_action_record() -> None:
@@ -420,33 +496,40 @@ def test_blade_dance_segments_total_damage() -> None:
 # ---------------------------------------------------------------------------
 
 def test_battle_end_resets_rage_and_energy() -> None:
-    """战斗结束（reset=battle）：怒气/元素能量同批清零。"""
+    """战斗结束（reset=battle）：怒气/元素能量同批清零。
+
+    CTB 迁移（2026-09-10）：旧三段 `do_action("player")` → `enemy_act()` → `end_turn()`
+    → 单次 `player_act`（调度器检测敌方 0 血 → 自动收尾 `BATTLE_END`）。
+    """
     eng = _engine()
     eng._snap["resource_state"] = {  # type: ignore[attr-defined]
         "player": {"rage": 72, "element_energy": {"fire": 2, "water": 1, "wind": 0}},
         "enemy": {},
     }
     eng._snap["enemy"]["hp"] = 0  # type: ignore[attr-defined]
-    eng.do_action("player", {"type": "normal"})
-    eng.enemy_act()
-    eng.end_turn()
+    rep = eng.player_act({"type": "normal"})
     rs = _rs(eng)
     assert rs.get("rage", 0) == 0 or "rage" not in rs, f"怒气战斗结束应清零，got {rs}"
     ee = rs.get("element_energy")
     assert ee is None or all(v == 0 for v in ee.values()), \
         f"元素能量战斗结束应清零，got {rs}"
     assert eng.battle_state()["status"] == "win", "敌人 0 血应胜利结算"
+    assert rep.ended is True, "CTB：终局应由 player_act 报告 ended"
 
 
 def test_snapshot_roundtrip_carries_both_segments() -> None:
-    """快照 round-trip：transform_state + resource_state 双段携带续战。"""
+    """快照 round-trip：transform_state + resource_state 双段携带续战。
+
+    CTB 迁移（2026-09-10）：快照落点改为 CTB 边界 `after_action`（不再是
+    `turn_start`/`turn_end`）；形态 remaining 按玩家行动次数计时（触发后 3）。
+    """
     eng = _engine()
     eng._snap["resource_state"] = {  # type: ignore[attr-defined]
         "player": {"rage": 100, "element_energy": {"fire": 2, "water": 0, "wind": 1}},
         "enemy": {},
     }
-    _full_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
-    snap = eng.to_snapshot()
+    _player_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
+    snap = eng.to_snapshot(boundary="after_action")
     assert snap.get("transform_state", {}).get("form") == "berserker_form", \
         "快照应含形态"
     assert snap.get("resource_state", {}).get("player", {}).get("element_energy") == \

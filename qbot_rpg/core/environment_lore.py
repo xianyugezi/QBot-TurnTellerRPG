@@ -28,7 +28,7 @@
   - qbot_rpg/core/investigate.py（_condition_ctx 桥接：season/period/weather → 条件引擎
     三键 season_now/period_now/weather_now；_render_text 模板占位符；DEFAULT_GENERIC_TEXT
     泛化缺省——R-23 复用口径，补白 2）。
-  - qbot_rpg/engine/condition_engine.py（eval_condition(cond, ctx)->bool fail-safe；
+  - qbot_rpg/core/condition_engine.py（eval_condition(cond, ctx)->bool fail-safe；
     三键 var ∈ _PARAM_OPERAND_VARS，value 缺省时 param 作比较操作数 L669-672）。
 
 【工程补白 · 显式标注】
@@ -66,7 +66,7 @@ from __future__ import annotations
 
 from typing import Any, List, Mapping, MutableMapping, Optional, Tuple, cast
 
-from qbot_rpg.engine.condition_engine import eval_condition
+from qbot_rpg.core.condition_engine import eval_condition
 
 __all__ = [
     "RUMOR_PREFIX",

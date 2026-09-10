@@ -49,9 +49,15 @@ def _parsed(raw: str) -> Any:
 # 白名单与注册
 # ---------------------------------------------------------------------------
 def test_codex_in_whitelist_and_prefix_required() -> None:
-    """「图鉴」入白名单 + 需 / 前缀（对话/调查同款接缝）。"""
+    """「图鉴」入白名单；前缀口径同步 2026-09-03 裁决（全指令免 / 前缀）。
+
+    原断言「图鉴 ∈ DEFAULT_PREFIX_REQUIRED」随 068bcd4 裁决作废——parsers.py
+    L186-193 注释：原非 GM 需前缀指令（调查/图鉴/成就/对话等）全部放行免前缀，
+    DEFAULT_PREFIX_REQUIRED 收敛为空集（GM 类由 gm_commands 独立强制 '/'）。
+    """
     assert CODEX_CMD in DEFAULT_WHITELIST
-    assert CODEX_CMD in DEFAULT_PREFIX_REQUIRED
+    assert DEFAULT_PREFIX_REQUIRED == frozenset()
+    assert CODEX_CMD not in DEFAULT_PREFIX_REQUIRED
 
 
 def test_register_codex_commands_no_make_context_registers() -> None:

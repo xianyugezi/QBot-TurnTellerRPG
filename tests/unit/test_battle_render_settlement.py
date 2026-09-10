@@ -60,16 +60,31 @@ def _enriched(oc: ActionOutcome, **extra: Any) -> SimpleNamespace:
 
 def _round(**kw: Any) -> SimpleNamespace:
     """接线层形态 round_result：TurnReport 真实字段 + 注入字段
-    （enemy_name/exp/gold/drops 等，TurnReport dataclass 不承载，M5-08 注入）。"""
-    std = {"turn", "phases", "player", "enemy", "ended", "status", "log", "outcomes"}
+    （enemy_name/exp/gold/drops 等，TurnReport dataclass 不承载，M5-08 注入）。
+
+    CTB 迁移（2026-09-10 · Agent 4）：字段集契约改为 `action_seq` 权威 ——
+    `phases` 已由 dataclass 字段改为只读 property（底层 `_phase_label`），
+    构造器不再接受 `phases` 实参；进度字段改以 `action_seq`（int）+
+    `battle_time`（float）承载，顶层 `turn` 仅为 `action_seq` 兼容镜像。
+    契约自检沿用 TurnReport.fields()（`'action_seq' in fields` 且
+    `'phases' not in fields`，见 core/battle.py TurnReport.fields docstring）。
+    """
+    tr_fields = set(TurnReport(
+        turn=1, action_seq=1, battle_time=0.0, player=21, enemy=0,
+        ended=False, status=None, log=(), outcomes=(),
+    ).fields())
+    # 契约锚点（CTB 硬约束）：phases 不再是字段，action_seq 是
+    assert "action_seq" in tr_fields and "battle_time" in tr_fields
+    assert "phases" not in tr_fields
     defaults: Dict[str, Any] = {
-        "turn": 1, "phases": ("player_action",), "player": 21, "enemy": 0,
+        "turn": 1, "action_seq": 1, "battle_time": 0.0, "player": 21, "enemy": 0,
         "ended": False, "status": None, "log": (), "outcomes": (),
     }
-    merged = {**defaults, **{k: v for k, v in kw.items() if k in std}}
+    merged = {**defaults, **{k: v for k, v in kw.items() if k in tr_fields}}
     tr = TurnReport(**merged)
-    extra = {k: v for k, v in kw.items() if k not in std}
-    return SimpleNamespace(**{**tr.__dict__, **extra})
+    extra = {k: v for k, v in kw.items() if k not in tr_fields}
+    # dict(tr.__dict__) 含 phases（property 不回填 __dict__，安全）+ _phase_label（下划线）
+    return SimpleNamespace(**{**dict(tr.__dict__), **extra})
 
 
 def _combo(segments: list, target_hp: int, **extra: Any) -> SimpleNamespace:
@@ -263,7 +278,7 @@ def test_tc21_combo_seg_crit_note() -> None:
 
 def test_tc22_third_seg_kills_fourth_still_renders() -> None:
     """TC-22：连段第 3 段击杀普通怪 —— 击杀行紧跟第 3 段伤害行，
-    第 4 段照常渲染（鞭尸）→ BREP-22 备注「目标已倒下，下一回合退出战场」。"""
+    第 4 段照常渲染（鞭尸）→ BREP-22 备注「目标已倒下，该段连式为无效消耗」。"""
     segs = [
         {"seg": 1, "action": "你挥动铁剑攻击史莱姆", "final_damage": 8,
          "target_hp": 17, "target_max_hp": 25, "target": "史莱姆"},
@@ -281,7 +296,7 @@ def test_tc22_third_seg_kills_fourth_still_renders() -> None:
     assert lines[2] == "第 3 段：你挥动铁剑攻击史莱姆 造成 10 伤害（史莱姆 0/25）"
     assert lines[3] == "✅ 你击败了史莱姆！"       # 击杀行紧跟第 3 段伤害行（L54）
     assert lines[4] == "第 4 段：你挥动铁剑攻击史莱姆 造成 9 伤害（史莱姆 0/25）"
-    assert lines[5] == "连段 4 段已结算（目标已倒下，下一回合退出战场）"
+    assert lines[5] == "连段 4 段已结算（目标已倒下，该段连式为无效消耗）"
 
 
 # ---------------------------------------------------------------------------
@@ -337,8 +352,8 @@ def test_tc23_derived_cap_note_on_segment_line() -> None:
 def test_combo_settle_line_variants() -> None:
     """BREP-22 备注四态：正常完结（无备注）/ 鞭尸 / BOSS 提前结束 / 派生封顶。"""
     assert _render_combo_settle_line(3) == "连段 3 段已结算"
-    assert _render_combo_settle_line(4, "目标已倒下，下一回合退出战场") == (
-        "连段 4 段已结算（目标已倒下，下一回合退出战场）"
+    assert _render_combo_settle_line(4, "目标已倒下，该段连式为无效消耗") == (
+        "连段 4 段已结算（目标已倒下，该段连式为无效消耗）"
     )
     assert _render_combo_settle_line(3, "BOSS 已倒下，战斗结束，后续段数作废") == (
         "连段 3 段已结算（BOSS 已倒下，战斗结束，后续段数作废）"
@@ -390,7 +405,7 @@ def test_no_banned_emoji_in_settlement_templates() -> None:
         _render_settlement(SimpleNamespace(ended=True, status="lose",
                                            enemy_name="史莱姆")),
         _render_settlement(SimpleNamespace(ended=True, status="draw")),
-        _render_combo_settle_line(4, "目标已倒下，下一回合退出战场"),
+        _render_combo_settle_line(4, "目标已倒下，该段连式为无效消耗"),
         _render_combo_settle_line(3, "BOSS 已倒下，战斗结束，后续段数作废"),
         _render_combo_settle_line(3, "派生倍率已达上限 1.5×"),
     ]

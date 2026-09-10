@@ -351,7 +351,7 @@ def pvp_attack(ctx: MutableMapping[str, Any], skill_id: str) -> dict:
         else:
             r = battle.player_act(action, params=ctx.get("params"))
     except Exception:
-        return {"ok": False, "message": "回合结算失败"}
+        return {"ok": False, "message": "战斗结算失败"}
 
     return pvp_settle(ctx, battle, r, target, sneak=sneak)
 

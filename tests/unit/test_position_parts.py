@@ -79,6 +79,18 @@ def _enemy_hp(eng: BattleEngine) -> int:
     return int(eng.battle_state()["enemy"]["hp"])
 
 
+def _player_segment_records(eng: BattleEngine, n: int = 2) -> list:
+    """取该玩家行动产生的**最后 n 条玩家段记录**（按 actor 过滤）。
+
+    CTB 迁移（2026-09-10 Wave C · C-5）：`do_action("player", ...)` 尾段经
+    `_after_actor_action` → `_resolve_ready_actor` 会自动推进 NPC，把**怪物那一拍**
+    也写进 `action_record`。故旧 `action_record[-2:]` 会错取成「玩家次段 + 怪物行动」。
+    正确口径 = 只看 `actor == "player"` 的段记录（一次技能多段共属该玩家）。
+    """
+    recs = [r for r in eng.battle_state()["action_record"] if r.get("actor") == "player"]
+    return recs[-n:]
+
+
 def _parts_state(eng: BattleEngine) -> dict:
     return eng.battle_state().get("parts_state") or {}
 
@@ -216,7 +228,8 @@ class TestBreakPower:
         st = eng._snap["parts_state"]["shell"]
         assert st["broken"] is False
         # 每段一次：delta = break_power + √(段 raw)（basis 按段记录 final 反推）
-        recs = eng.battle_state()["action_record"][-2:]
+        # CTB 迁移：段记录按 actor 过滤取（`do_action` 尾段自动推进 NPC 一拍）
+        recs = _player_segment_records(eng, 2)
         expected = sum(3.0 + float(r["damage"]["final"]) ** 0.5 for r in recs)
         assert abs(st["break_value"] - expected) < 1e-6
         dmg_events = [e for e in out.side_effects if e.get("type") == "part_damage"]
@@ -239,7 +252,11 @@ class TestBreakPower:
         assert eng_a._snap["parts_state"]["shell"]["broken"] is True
 
     def test_broken_bonus_applies_next_segment(self) -> None:
-        """破位后（同行动次段）打已破部位 = 常驻增伤 × broken_part_mult。"""
+        """破位后（同行动次段）打已破部位 = 常驻增伤 × broken_part_mult。
+
+        CTB 迁移（2026-09-10 Wave C · C-5）：段记录改按 actor 过滤取（`do_action` 尾段
+        会自动推进 NPC 一拍，旧 `action_record[-2:]` 会混入怪物记录）。
+        """
         bp = BattlePositionParams(broken_part_mult=1.5, break_sqrt_coef=1.0)
         parts = [dict(SHELL_PART, positions={"side": ["front"], "height": ["ground"]},
                       break_threshold=1)]
@@ -249,7 +266,7 @@ class TestBreakPower:
             "type": "skill", "mult": 1.0, "break_power": 1,
             "segments": [{"mult": 1.0}, {"mult": 1.0}]})
         assert out.hit is True
-        recs = eng.battle_state()["action_record"][-2:]
+        recs = _player_segment_records(eng, 2)
         d1, d2 = int(recs[0]["damage"]["final"]), int(recs[1]["damage"]["final"])
         assert d2 > d1 and d2 <= int(d1 * 1.5) + 1    # 次段 ≈ 首段 ×1.5（同 rolls）
         assert recs[0]["rating"].get("part") == "shell"
@@ -377,16 +394,35 @@ class TestOnBreak:
             PLAYER, _parts_enemy(parts), random_seed=9)
 
     def test_break_applies_knockdown_status(self) -> None:
-        """破位 → 默认挂 knockdown 状态（turns=on_break.knockdown=1）+ 事件。"""
+        """破位 → 默认挂 knockdown 状态（turns=on_break.knockdown=1）+ 事件。
+
+        CTB 迁移（2026-09-10）：旧回合制断言「破位后 `status_state.enemy` 里仍有
+        knockdown(turns=1)」在 CTB 下不再恒成立——`do_action` 收尾会自动把时间轴
+        推进到下一个 ready（敌方 ready=250 早于玩家下一次 ready），**倒地状态在该
+        怪物自己行动开始时被 `_start_actor_turn` 递减至 0 并清除**（R3/R4：控制
+        按持有者行动次数递减，这正是「倒地一次」的正确语义）。
+
+        故本用例分两段验证 CTB 生命周期：
+          1. 破位事件与状态**施加**发生（`part_break` + `status_apply` 出现在本行动
+             的 side_effects，证明确实挂了 knockdown）；
+          2. 该状态确实在**怪物行动一拍后被消费**（终态为空 = 恰好持续一次敌方行动）。
+        """
         part = dict(SHELL_PART, positions={"side": ["front"], "height": ["ground"]},
                     break_threshold=1)
         eng = self._eng([part])
         out = eng.do_action("player", {"type": "normal", "mult": 1.0, "break_power": 5})
-        insts = eng.battle_state()["status_state"]["enemy"]
-        kd = [i for i in insts if i.get("status_id") == "knockdown"]
-        assert kd and int(kd[0]["turns"]) == 1
+        fx = [str(e.get("type")) for e in (out.side_effects or ())]
+        # ① 破位 + 状态施加（同一次行动内发生）
         ev = [e for e in out.side_effects if e.get("type") == "part_break"]
-        assert ev
+        assert ev, f"破位应产 part_break 事件，got {fx}"
+        assert "status_apply" in fx, f"破位应施加倒地状态，got {fx}"
+        # ② CTB：敌方 ready 早于玩家下一拍 → 其行动开始消费该 1 拍倒地
+        acted = [r for r in (eng._snap.get("action_record") or [])
+                 if r.get("actor") == "enemy"]
+        assert acted, "CTB 下敌方应已行动（ready=250 早于玩家下一拍）"
+        kd = [i for i in eng.battle_state()["status_state"]["enemy"]
+              if i.get("status_id") == "knockdown"]
+        assert kd == [], "倒地 turns=1 应在怪物行动开始后清零（持有者行动次数口径）"
 
     def test_knockdown_zero_skips_status(self) -> None:
         """on_break.knockdown=0（部位覆写）→ 破位不倒地。"""
@@ -400,7 +436,11 @@ class TestOnBreak:
         assert kd == []
 
     def test_knockdown_stack_mult_on_broken_part(self) -> None:
-        """倒地窗口打已破部位 = 常驻增伤 × 状态 damage_mult 叠加（1.5×1.5=2.25）。"""
+        """倒地窗口打已破部位 = 常驻增伤 × 状态 damage_mult 叠加（1.5×1.5=2.25）。
+
+        CTB 迁移（2026-09-10 Wave C · C-5）：段记录按 actor 过滤取（见
+        `_player_segment_records` 说明——`do_action` 尾段自动推进 NPC 一拍）。
+        """
         part = dict(SHELL_PART, positions={"side": ["front"], "height": ["ground"]},
                     break_threshold=1)
         eng = self._eng([part])
@@ -408,7 +448,7 @@ class TestOnBreak:
             "type": "skill", "mult": 1.0, "break_power": 1,
             "segments": [{"mult": 1.0}, {"mult": 1.0}]})
         assert out.hit is True
-        recs = eng.battle_state()["action_record"][-2:]
+        recs = _player_segment_records(eng, 2)
         d1, d2 = int(recs[0]["damage"]["final"]), int(recs[1]["damage"]["final"])
         assert d2 > int(d1 * 2.0)          # 1.5×1.5=2.25 叠加（>2 即证明双乘区生效）
         assert d2 <= int(d1 * 2.25) + 2

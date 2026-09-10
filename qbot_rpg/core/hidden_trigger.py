@@ -30,7 +30,7 @@
   - qbot_rpg/core/npc.py（available_quests/_action_quest 未消费 quest.npc.conditions——
     BCH-04 登记缺口，本模块提供 npc_quest_conditions_met 求值 helper，npc.py 的接线
     由兄弟路做）。
-  - qbot_rpg/engine/condition_engine.py（eval_condition(cond, ctx)->bool fail-safe；
+  - qbot_rpg/core/condition_engine.py（eval_condition(cond, ctx)->bool fail-safe；
     事件型 [事件:环境事件:雨夜] → name=[事件:环境事件] + param=雨夜，读 event_counts
     嵌套；时间三键真实读取键 season_now/period_now/weather_now 或 worldtime 鸭子类型）。
 
@@ -73,7 +73,7 @@ from __future__ import annotations
 from typing import Any, Mapping, MutableMapping, Optional
 
 from qbot_rpg.core.adventure_log import EVENT_KEY_HIDDEN_FIND, log_hidden_find
-from qbot_rpg.engine.condition_engine import eval_condition
+from qbot_rpg.core.condition_engine import eval_condition
 
 __all__ = [
     "PITY_THRESHOLD",

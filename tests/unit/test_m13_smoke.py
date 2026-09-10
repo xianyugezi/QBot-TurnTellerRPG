@@ -8,6 +8,16 @@
   - 资源：energy_gain/cost 增减
   - 季节：换季检测/事件
 
+CTB 迁移（2026-09-10）：旧 round 语义 → CTB 语义。
+  - 旧「一轮」= `do_action`（玩家先手）→ `enemy_act`（怪物后手）→ `end_turn`（⑥tick
+    收尾）三段；`enemy_act`/`end_turn` 已按 Wave A M4/M5 删除（保留壳抛
+    NotImplementedError），旧三段合并为**一次 `player_act`**（提交玩家行动 + 调度器
+    自动推进 NPC 连锁）。
+  - 旧断言「经过 N 回合」→「执行 N 次 `player_act`」；旧「回合数 turn」→ 权威计量
+    `battle_state()["action_seq"]`（`turn` 仅为 action_seq 镜像，不再作进度断言）。
+  - 变换（transform）的形态计时在 CTB 下按**持有者行动次数**推进：形态属玩家，
+    故每次玩家 `player_act` 后 remaining/cooldown 递减一拍 —— 与旧「回合 tick」等价。
+
 铁律：零 NoneBot import；纯函数确定性；零定时器/零睡眠。
 """
 
@@ -58,10 +68,14 @@ def _engine(**over: Any) -> BattleEngine:
     return eng
 
 
-def _full_turn(eng: BattleEngine, action: Dict[str, Any]) -> Any:
-    eng.do_action("player", action)
-    eng.enemy_act()
-    return eng.end_turn()
+def _player_act(eng: BattleEngine, action: Dict[str, Any]) -> Any:
+    """CTB 单次玩家行动：提交一次行动 + 调度器自动推进 NPC 连锁。
+
+    CTB 迁移（2026-09-10）：替代旧 `_full_turn`（player do_action → enemy_act →
+    end_turn 三段）。CTB 下一次 `player_act` 即承载「玩家一拍 + 后续自动推进」，
+    故「一次玩家行动」= 一次调用。
+    """
+    return eng.player_act(action)
 
 
 # ---------------------------------------------------------------------------
@@ -116,17 +130,19 @@ def test_battle_normal_attack() -> None:
 # 变换链路
 # ---------------------------------------------------------------------------
 def test_transform_trigger_form_and_revert() -> None:
-    """触发技 → 形态切换 → 自然还原 → 冷却。"""
+    """触发技 → 形态切换 → 自然还原（CTB：形态按持有者行动次数计时）。"""
     eng = _engine()
     eng._snap["resource_state"] = {"player": {"rage": 100}, "enemy": {}}
-    _full_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
+    _player_act(eng, {"type": "skill", "skill_id": "rage_burst"})
     ts = eng.battle_state()["transform_state"]
     assert ts["form"] == "berserker_form", f"应切换形态，got {ts}"
-    # 走完 remaining 回合 → 自然还原
-    for _ in range(5):
-        _full_turn(eng, {"type": "normal"})
+    # CTB：形态 remaining（turns=4）按玩家行动次数递减；再执行 3 次玩家行动走完剩余拍
+    for _ in range(3):
+        _player_act(eng, {"type": "normal"})
     ts2 = eng.battle_state()["transform_state"]
-    assert ts2["form"] is None, f"应自然还原，got {ts2}"
+    assert ts2["form"] is None, f"形态应自然还原，got {ts2}"
+    # CTB 进度权威：形态走完 = action_seq 严格前进（不再用回合数断言）
+    assert int(eng.battle_state()["action_seq"]) > 0, "行动计数应已推进"
 
 
 # ---------------------------------------------------------------------------
@@ -137,7 +153,7 @@ def test_resource_gain_and_cost() -> None:
     eng = _engine()
     eng._resource_registry = {"rage": {"name": "怒气", "type": "rage", "base": 0, "max": 100}}
     eng._snap["resource_state"] = {"player": {"rage": 100}, "enemy": {}}
-    _full_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
+    _player_act(eng, {"type": "skill", "skill_id": "rage_burst"})
     rs = eng.battle_state()["resource_state"]
     assert rs["player"]["rage"] == 0, f"狂暴应耗怒 100→0，got {rs}"
 
@@ -171,16 +187,31 @@ def test_battle_cast_insufficient_mp_rejected() -> None:
 
 
 def test_transform_cooldown_blocks_retrigger() -> None:
-    """形态冷却期 → 再次触发被拒（C3）。"""
+    """形态变更期 → 再次触发不产生**额外**形态提交（C1 互斥/C3 冷却）。
+
+    CTB 迁移（2026-09-10）：旧口径按「回合」推演冷却；CTB 二次触发的门禁由
+    transform 引擎在同一玩家行动拍上判定 —— 断言不再依赖回合数，而改为
+    「形态保持唯一、且提交次数不因二次触发而累加」的 CTB 行为断言。
+    """
     eng = _engine()
     eng._snap["resource_state"] = {"player": {"rage": 100}, "enemy": {}}
-    _full_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
-    # 形态激活期 C1 互斥 → 触发被拒（不二次触发）
+    _player_act(eng, {"type": "skill", "skill_id": "rage_burst"})
+    committed_after_first = [
+        e for e in eng._transform_events if e.get("type") == "transform_committed"
+    ]
+    assert len(committed_after_first) == 1, "首次触发应恰提交一次形态"
+    # 形态激活期再次触发（怒气重新注入）：C1 互斥 → 不得新增提交
     eng._snap["resource_state"] = {"player": {"rage": 100}, "enemy": {}}
-    _full_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
+    _player_act(eng, {"type": "skill", "skill_id": "rage_burst"})
+    committed_after_second = [
+        e for e in eng._transform_events if e.get("type") == "transform_committed"
+    ]
     ts = eng.battle_state()["transform_state"]
-    # 冷却或形态激活期：不产生第二次 form 提交（保持原形态或已还原）
-    assert ts["form"] in (None, "berserker_form"), f"不应二次触发，got {ts}"
+    assert ts["form"] in (None, "berserker_form"), f"形态仍应合法，got {ts}"
+    assert len(committed_after_second) == len(committed_after_first), \
+        f"形态激活期不应二次提交变换，got {committed_after_second}"
+    # CTB 进度：两次玩家行动应使 action_seq 严格前进
+    assert int(eng.battle_state()["action_seq"]) > 0
 
 
 def test_skill_def_resolve_from_registry() -> None:

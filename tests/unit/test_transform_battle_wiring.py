@@ -2,9 +2,15 @@
 
 覆盖：
   - start() 建 transform_state 段（常态骨架 form=null）
-  - end_turn ⑥ tick 后：remaining 递减 + 自然结束还原 + 冷却递减
+  - 持有者行动收尾（ACTOR_TURN_END）后：remaining 递减 + 自然结束还原 + 冷却递减
   - _settle 战斗结束 transform 清零回常态
   - to_snapshot/from_snapshot 携带 transform_state
+
+CTB 迁移（2026-09-10 · Agent 3）：旧「end_turn ⑥ tick」（回合边界全员 tick）在
+CTB 下不存在——`enemy_act`/`end_turn` 已按 Wave A 删除为 `NotImplementedError` 壳。
+形态/冷却改由**持有者（player）自己的 `_after_actor_action`（ACTOR_TURN_END）**
+推进，因此旧「do_action → enemy_act → end_turn」三段被替换为一次 `player_act`
+（提交玩家行动 + 调度器自动推进 NPC 连锁到下一个 ready）。
 
 铁律：零 NoneBot import；零定时器/零睡眠；纯函数确定性。
 """
@@ -20,9 +26,9 @@ def _engine(**over: Any) -> BattleEngine:
     eng = BattleEngine()
     eng.start(
         {"hp": 500, "max_hp": 500, "mp": 100, "max_mp": 100,
-         "atk": 50, "def": 30, "spr": 20, "spd": 10, "name": "玩家"},
+         "atk": 50, "def": 30, "spr": 20, "spd": 10, "name": "玩家", "agi": 10},
         {"hp": 500, "max_hp": 500, "mp": 100, "max_mp": 100,
-         "atk": 40, "def": 20, "spr": 15, "spd": 8, "name": "疾风狼"},
+         "atk": 40, "def": 20, "spr": 15, "spd": 8, "name": "疾风狼", "agi": 10},
         random_seed=42,
     )
     return eng
@@ -39,6 +45,11 @@ def _set_form(eng: BattleEngine, **over: Any) -> None:
     }
 
 
+def _seq(eng: BattleEngine) -> int:
+    """当前已结算行动计数（CTB 权威进度计量）。"""
+    return int(eng.battle_state()["action_seq"])
+
+
 def test_start_builds_transform_state() -> None:
     """start() 建 transform_state 常态骨架（form=null）。"""
     eng = _engine()
@@ -48,40 +59,39 @@ def test_start_builds_transform_state() -> None:
     assert ts["cooldown_remaining"] == 0
 
 
-def test_end_turn_decrements_remaining() -> None:
-    """形态持续中 → end_turn tick remaining-1。"""
+def test_owner_action_end_decrements_remaining() -> None:
+    """形态持续中 → 持有者一次行动收尾（ACTOR_TURN_END）remaining-1。
+
+    CTB 语义：形态按**持有者（player）自身行动次数**计时，不再随「回合」推进。
+    """
     eng = _engine()
     _set_form(eng, remaining=2)
-    eng.do_action("player", {"type": "normal"})
-    eng.enemy_act()
-    eng.end_turn()
+    seq0 = _seq(eng)
+    eng.player_act("normal")  # 持有者提交一次行动（调度器自动推进 NPC 连锁）
     ts = eng.battle_state()["transform_state"]
     assert ts["remaining"] == 1, f"remaining 应 2→1，got {ts['remaining']}"
+    assert _seq(eng) > seq0, "行动计数应严格增加（CTB 时间轴前进）"
 
 
-def test_end_turn_natural_revert_when_remaining_zero() -> None:
+def test_owner_action_end_natural_revert_when_remaining_zero() -> None:
     """remaining 递减到 0 → 自然结束还原（form 清空）。"""
     eng = _engine()
     _set_form(eng, remaining=1)
-    eng.do_action("player", {"type": "normal"})
-    eng.enemy_act()
-    eng.end_turn()
+    eng.player_act("normal")
     ts = eng.battle_state()["transform_state"]
     assert ts["form"] is None, f"形态应自然还原，got {ts}"
     assert ts["remaining"] == 0
 
 
-def test_end_turn_cooldown_decrements() -> None:
-    """常态+冷却期 → end_turn tick cooldown-1。"""
+def test_cooldown_decrements_on_owner_action() -> None:
+    """常态+冷却期 → 持有者一次行动收尾冷却 -1。"""
     eng = _engine()
     eng._snap["transform_state"] = {
         "job_id": "berserker", "form": None, "form_name": None,
         "remaining": 0, "cooldown_remaining": 5,
         "form_status_id": None, "active_skill_set": None,
     }
-    eng.do_action("player", {"type": "normal"})
-    eng.enemy_act()
-    eng.end_turn()
+    eng.player_act("normal")
     ts = eng.battle_state()["transform_state"]
     assert ts["cooldown_remaining"] == 4, f"冷却应 5→4，got {ts['cooldown_remaining']}"
 
@@ -92,10 +102,9 @@ def test_settle_clears_transform_state() -> None:
     _set_form(eng, remaining=3)
     # 直接杀敌触发战斗结束
     eng._snap["enemy"]["hp"] = 0
-    eng.do_action("player", {"type": "normal"})
-    eng.enemy_act()
-    eng.end_turn()
+    eng.player_act("normal")
     ts = eng.battle_state()["transform_state"]
+    assert eng.finished is True, "敌方归零后战斗应终局"
     assert ts["form"] is None, f"战斗结束形态应清零，got {ts}"
 
 

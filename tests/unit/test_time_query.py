@@ -15,7 +15,7 @@ from __future__ import annotations
 import datetime
 from typing import List, Mapping
 
-from qbot_rpg.engine.time_query import (
+from qbot_rpg.core.time_query import (
     DEFAULT_WEATHER_NAMES,
     PERIOD_NAMES,
     SEASON_NAMES,
@@ -24,7 +24,7 @@ from qbot_rpg.engine.time_query import (
     weather_name,
     weather_status,
 )
-from qbot_rpg.engine.worldtime import DEFAULT_POOL, PERIODS, SEASONS, WorldTime
+from qbot_rpg.core.worldtime import DEFAULT_POOL, PERIODS, SEASONS, WorldTime
 
 _TZ_UTC8 = datetime.timezone(datetime.timedelta(hours=8))
 

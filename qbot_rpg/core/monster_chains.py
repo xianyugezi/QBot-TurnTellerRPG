@@ -21,7 +21,7 @@ chain C 模型（1f ⑤5.2 / 核心规则2）：
      建议 ≥80%）；成功 → 整链入队（enqueue_chain），入队后套内确定性执行（中途不被条件打断）。
   2. roll 失败 = 断链（该链进入冷却；B1 monster_ai._produce False 分支 _break_chain 落账）。
   3. 打断 = 套完结（1f ⑤5.4 / 核心规则3）：on_chain_broken 清在途队列 + exec_state 回
-     idle + 当前链进冷却（防同链立即重触发）；下一回合走随机流程 L6（不继续原套）。
+     idle + 当前链进冷却（防同链立即重触发）；下次行动走随机流程 L6（不继续原套）。
 
 ai_state 读取/写入键（contract §五快照）：chain_queue / chain_id / chain_pos / exec_state /
 chain_cooldowns。本模块不改写除这些以外的键。
@@ -136,8 +136,8 @@ def on_chain_broken(ai_state: Dict[str, Any]) -> None:
     """打断 = 套完结（1f ⑤5.4 / 核心规则3）：清在途队列 + exec_state 回 idle + 链进冷却。
 
     - 打断（玩家 interrupt 命中，contract §六）由 C1/battle 侧调用；
-    - 清 chain_queue / chain_pos=0 / chain_id=None / exec_state="idle"（下一回合走随机流程 L6）；
-    - 当前链进冷却（chain_cooldowns[chain_id] 缺省 1 回合，防同链立即重触发；打断≠roll 断链，
+    - 清 chain_queue / chain_pos=0 / chain_id=None / exec_state="idle"（下次行动走随机流程 L6）；
+    - 当前链进冷却（chain_cooldowns[chain_id] 缺省 1 次行动，防同链立即重触发；打断≠roll 断链，
       语义是套完结，核心=不继续原套）。
     """
     cid = ai_state.get("chain_id")

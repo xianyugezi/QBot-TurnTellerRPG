@@ -25,7 +25,7 @@
      rarity（不在档位表）→ 原值返回（fail-safe 不平移不报错）。
   3. combat.weather_mult 配置形态（2a4b §4.4）：{enabled: bool, mults: {天气: 倍率}}；
      默认关（enabled 缺省 false，契约 §6.1 R26「默认关，respect 战斗数值层」）。
-     本函数只返回倍率供战斗侧每回合开始相乘，不触碰 formula 伤害公式本体
+     本函数只返回倍率供战斗侧每次行动开始相乘，不触碰 formula 伤害公式本体
      （2a4b R26 L230）。mults 值非正数（0/负）视为坏配置 → 1.0（fail-safe）。
   4. lore_visible：lore_condition 为 None/空 = 缺省显示 True（LC-01 原语义不变）；
      非空单原语 dict 或多条件 list（LC-C AND）逐项经 eval_condition 判定；求值失败
@@ -33,7 +33,7 @@
      weather_now 直接值）；current_weather 参数在 ctx 无天气源时兜底注入（工程补白：
      图鉴渲染侧已取当前图天气时可直接传参）。
   5. 公式接线：weather_mods 应用 / combat 倍率相乘 / lore 显示判定的**实际接线**由
-     收口在采集结算、战斗每回合开始、图鉴详情渲染点接入本模块函数——本路仅提供
+     收口在采集结算、战斗每次行动开始、图鉴详情渲染点接入本模块函数——本路仅提供
      纯函数装配，零新增机制（契约 §八 铁律 7 消费方零新增机制）。
 
 铁律：零 NoneBot import（契约 §八 4）；纯函数无 IO（同刻同参必同值）。
@@ -143,7 +143,7 @@ def combat_weather_mult(combat_cfg: object, current_weather: object) -> float:
     combat_cfg: combat 段 dict，形态 {weather_mult: {enabled: bool, mults: {天气: 倍率}}}
                 （2a4b §4.4）；None/空/缺 weather_mult / enabled 非 true → 1.0（默认关）。
     current_weather: 当前图当前天气键（IF04）；缺省/非字符串 → 1.0。
-    返回 float 倍率；本函数不改伤害公式，供战斗侧每回合开始读取天气后相乘
+    返回 float 倍率；本函数不改伤害公式，供战斗侧每次行动开始读取天气后相乘
     （2a4b L228-230）。mults 值非正数（0/负）或非数值 → 1.0（fail-safe 坏配置）。
     """
     if not isinstance(combat_cfg, Mapping):

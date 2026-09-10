@@ -18,7 +18,7 @@ L1 状态机切换（transitions 条件求值 / enter_action 入强制队列 / w
 L3 条件行动（委托 monster_conditions 13 类触发）、L4 连锁队列（委托 monster_chains chain C 模型）、
 L5 状态专属行动（exclusive_actions 白名单）、L6 随机行动表（probability 入池 /
 P=(w×c×s)/Σ 归一化 / hungry 保底先查 / cooldown 过滤）、L7 兜底普攻、冷却/饥饿登记与
-回合 tick（tick 由 battle 回合收尾单点调用）、intent 意图预告（委托 monster_intent）、
+行动 tick（tick 由 battle 行动收尾单点调用）、intent 意图预告（委托 monster_intent）、
 phases 阶段表写端（委托 monster_phases，套间更新 ai_state.phase 驱动 phase_changed 联动）。
 
 工程收敛（设计文档未显式定义处，显式标注供审查）：
@@ -27,13 +27,13 @@ phases 阶段表写端（委托 monster_phases，套间更新 ai_state.phase 驱
      其余类型经 register_condition_handler 注册表扩展（B2 填充 13 类全量）。
   2. weight_mod 键 = 行动 tags（1f ④ 4.2 示例：attack×1.5 / defense×0.5 按 tag 归属，
      tag 归属为示例假设【细化】）；s_a = Σ 乘积 weight_mod[tag]（无匹配 tag → 1.0）。
-  3. hungry 保底口径：hungry=N 表示「连续 N 回合未选中即强制」，取「第 N 回合强制选」读法
+  3. hungry 保底口径：hungry=N 表示「连续 N 次行动未选中即强制」，取「第 N 次行动强制选」读法
      （TC-15）——本轮若 count+1 ≥ N 则强制，强制轮计入 N；count 只在随机池实际运行的回合
      对池内未选行动 +1（L0-L5 短路回合不计）。
-  4. 冷却递减是回合边界事件，decide() 不递减（避免与 battle 回合收尾 tick 双重递减）；
-     C1 在回合收尾调用 tick(ai_state) 统一递减 action/trigger/chain 三类冷却。
-  5. 蓄力模型：选中蓄力行动 → 起手回合播报 1/N（占行动槽）→ 之后每回合 L0 结算播报
-     k/N（k=2..N）→ shown≥total 的下一个 L0 回合释放行动本体。charge 快照键
+  4. 冷却递减是行动边界事件，decide() 不递减（避免与 battle 行动收尾 tick 双重递减）；
+     C1 在行动收尾调用 tick(ai_state) 统一递减 action/trigger/chain 三类冷却。
+  5. 蓄力模型：选中蓄力行动 → 起手行动播报 1/N（占行动槽）→ 之后每次行动 L0 结算播报
+     k/N（k=2..N）→ shown≥total 的下一个 L0 层行动释放行动本体。charge 快照键
      {action_id, total, shown, remaining_turns, armor}（remaining_turns 对齐 contract §五）。
   6. 链入队（chain_queue）由 L0 推进；触发行动=链首节点（TC-16 火球→尾扫：火球由触发者
      本次执行，尾扫入队待 L0）。roll_chain 由 B2 填充，False=断链+冷却（本路 stub 恒 False）。
@@ -73,7 +73,7 @@ def _default_ai_state() -> Dict[str, Any]:
         "chain_pos": 0,             # 连招链位置
         "chain_queue": [],          # 在途链（action id 序列）
         "chain_id": None,           # 当前链 id
-        "chain_cooldowns": {},      # 链冷却 {chain_id: 剩余回合}
+        "chain_cooldowns": {},      # 链冷却 {chain_id: 剩余行动数}
         "charge": None,             # 蓄力 {action_id, total, shown, remaining_turns, armor}
         "trigger_cooldowns": {},    # 条件行动冷却 {special_action_id: 剩余}
         "action_cooldowns": {},     # 行动冷却 {action_id: 剩余}
@@ -273,10 +273,10 @@ class MonsterAI:
         self._condition_handlers[trigger_type] = fn
 
     def tick(self, ai_state: Mapping[str, Any]) -> None:
-        """回合收尾冷却递减（C1 在战斗回合收尾调用；工程收敛 4）。
+        """行动收尾冷却递减（C1 在战斗行动收尾调用；工程收敛 4）。
 
         递减 action_cooldowns / trigger_cooldowns / chain_cooldowns 三表（≤0 移除）。
-        decide() 不递减——冷却递减是回合边界事件，避免与 battle tick 双重递减。
+        decide() 不递减——冷却递减是行动边界事件，避免与 battle tick 双重递减。
         """
         for key in ("action_cooldowns", "trigger_cooldowns", "chain_cooldowns"):
             cd = ai_state.get(key)
@@ -334,7 +334,7 @@ class MonsterAI:
     def _settle_charge(self, ai: Dict[str, Any], battle_state: dict) -> dict:
         """L0 蓄力结算：shown≥total → 释放行动本体；否则播报进度 k/N 继续蓄力（TC-18）。
 
-        蓄力跨回合=同一套（核心规则1）：结算期间不评估条件/状态/权重。
+        蓄力跨行动=同一套（核心规则1）：结算期间不评估条件/状态/权重。
         蓄力可被打断（armor=true 霸体免疫）——打断由执行侧/效果系统接线（1f ①1.1 核心规则7）。
         """
         ch = ai.get("charge") or {}
@@ -632,7 +632,7 @@ class MonsterAI:
         """断链+冷却（roll 失败，1f ⑤5.2-3）：在途链清空 + chain_cooldowns 登记。
 
         M2 审查 P1-2：冷却 max 保留（不覆盖既有冷却），冷却中重触发不会重置冷却
-        ——否则条件持续成立时可每回合重置冷却锁死该链；断链冷却起算避免当回合
+        ——否则条件持续成立时可每次行动重置冷却锁死该链；断链冷却起算避免当次行动
         被 tick 清零（登记 +1，次回合起算实际阻断）。
         """
         ai["chain_queue"] = []

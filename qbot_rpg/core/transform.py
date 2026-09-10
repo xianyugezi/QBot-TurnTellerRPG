@@ -12,18 +12,18 @@
      S4 REVERTING 瞬态 / S5 COOLDOWN；§3.1 状态集 + §3.2 状态图）：
      - STATE_* 常量 + STATE_TRANSITIONS 迁移表（源态 → 事件 → 目标态）
      - state_of_transform_state() 从 transform_state 段推导可观测用户态
-       （S1/S3/S5 常态；S2/S4 瞬态不落快照不占回合，D-03）
+       （S1/S3/S5 常态；S2/S4 瞬态不落快照不占用行动，D-03）
      - can_transform() 触发闸 C1~C4（常态判定 + 冷却 + 形态激活互斥）
   2) F1 变换触发主流程 trigger_transform（细化_6b §2.1 流程 F1 ①~⑥）：
      ① 触发技效果先结算（resolve_hook 注入，TRF-1）→
-     ② 变换（不额外耗回合，TRF-2）四动作同拍：
+     ② 变换（不额外消耗行动，TRF-2）四动作同拍：
        ④a 施加形态状态（apply_status_hook 注入，D-02 双轨效果侧）
        ④b 切换 job_form 指针（transform_state.form）
        ④c 技能位重排（rearrange_hook 注入，SH-1~5，派生/被动/触发槽独立）
        ④d 按 state_policy 处理（combo/marks/buff 三键 clear|keep，§1.4）→
      ⑤ 形态专属派生链重评估（reassess_chains_hook 注入，job_scope 命中）→
-     ⑥ remaining=turns（含变身当回合）+ cooldown_remaining=cooldown（从触发
-       起算）进入 S3 形态持续计数（D-03 回合结束 tick 递减，递减归 F2）
+     ⑥ remaining=turns（含变身当次行动）+ cooldown_remaining=cooldown（从触发
+       起算）进入 S3 形态持续计数（D-03 行动收尾 tick 递减，递减归 F2）
   3) 技能位重排实现（SH-1~5）：rearrange_slots() 纯函数——按 skill_set 组内
      技能（basic/active/passive/trigger 四类）重排快照，derive_only 不占位
      （SH-3），被动/触发槽独立装配（SH-2），缺省组空 → 原样保留（防御兜底）
@@ -44,20 +44,20 @@
 
 依据：
   - docs/细化/细化_6b_职业库与变换引擎.md（409 行 v1.0）：
-    §2.1 流程 F1（①~⑥ 时序 + TRF-1~6 规则：效果先结算 / 零额外回合 /
+    §2.1 流程 F1（①~⑥ 时序 + TRF-1~6 规则：效果先结算 / 零额外行动 /
     不重结算 / 触发技标签显式 combo_preserve / 怒气沉没 / 形态代价可配）；
     §3.1 状态集（S1~S5 五态：NORMAL/TRANSFORMING/FORM_ACTIVE/REVERTING/
     COOLDOWN，逐态进入/退出语义）；§3.2 状态图；§3.3 触发条件 C1~C4 /
     持续时间 / 洗牌 SH-1~5（主动位互换 / 被动触发槽独立 / derive_only 不占位 /
     装备限制 / 常态回归）；§1.4 state_policy 三键（combo/marks/buff
     clear|keep，默认 clear/keep/keep）；§0.3 ADR D-01~D-05（D-02 双轨 /
-    D-03 计时挂回合 tick）；
+    D-03 计时挂行动 tick）；
     §1.3 transform 段 11 字段（transform_skill/transform_to/duration/turns/
     cooldown/state_policy/skill_set/derive_chains 等）；§1.5 技能挂点
     （job_form/revert_form/derive_only）；§六 TC-01~04（触发 4 例）。
   - docs/m13_6b摸底.md（缺口：5 态状态机与 F1/F2/F3 引擎全缺；已就绪：
     effects 通道 / stat_modifier 通道 battle.py:561-577 / combo_preserve tag /
-    快照回合边界机制）。
+    快照行动边界机制）。
   - 批4 已落盘：qbot_rpg/content/job_models.py（JobDef/TransformDef/
     StatePolicyDef + transform_fields/state_policy_fields 字段表）——本文件
     零 import content（G0），仅按契约字段口径读取 ctx 注入的 transform 段。
@@ -97,9 +97,9 @@
         （引擎不持有链表——skill_chains 数据经 ctx 注入，job_scope 求值归
         接线方/6a 链引擎；本层只保证「变换后重新评估」时序钩子位）。
   F1-6  remaining/cooldown 口径（§2.1⑥ / §3.3 / D-03）：remaining 初始 =
-        transform.turns（含变身当回合，TC-01④）；duration=battle 时
+        transform.turns（含变身当次行动，TC-01④）；duration=battle 时
         remaining=-1 哨兵（整场不还原，F2 不递减）；cooldown_remaining 初始 =
-        transform.cooldown（从触发起算，§2.2② REV-6）；回合结束 tick 递减归
+        transform.cooldown（从触发起算，§2.2② REV-6）；行动收尾 tick 递减归
         F2 tick 引擎（本文件不含 tick 推进，避免与兄弟路重叠）。
   F1-7  触发闸 C1~C4 的引擎侧判定：C1 常态（S1/S5）可由 transform_state.form
         为空判定 + 显式互斥拒绝（形态激活期 transform_skill 不可用，TC-03）；
@@ -140,14 +140,14 @@ from typing import (
 
 # S1 常态（职业默认形态，使用常态技能组；怒气/冷却积累中；初始 / REVERTING 完成）
 STATE_NORMAL: str = "NORMAL"
-# S2 变换中（瞬态：不落快照、不占回合；四动作同拍执行，F1 ④）
+# S2 变换中（瞬态：不落快照、不占用行动；四动作同拍执行，F1 ④）
 STATE_TRANSFORMING: str = "TRANSFORMING"
-# S3 形态激活（常态：形态技能组可用；持续回合 tick 递减；形态专属派生链生效）
+# S3 形态激活（常态：形态技能组可用；持续行动数 tick 递减；形态专属派生链生效）
 STATE_FORM_ACTIVE: str = "FORM_ACTIVE"
-# S4 还原结算（瞬态：不落快照、不占回合；state_policy + job_form 切回 +
+# S4 还原结算（瞬态：不落快照、不占用行动；state_policy + job_form 切回 +
 # 技能位重排回常态 + 形态状态移除，F2）
 STATE_REVERTING: str = "REVERTING"
-# S5 冷却期（常态：形态冷却随回合 tick 递减；期间 transform_skill 施放被拒）
+# S5 冷却期（常态：形态冷却随行动 tick 递减；期间 transform_skill 施放被拒）
 STATE_COOLDOWN: str = "COOLDOWN"
 
 # 五态全集（§3.1 状态集登记，防漂移）
@@ -159,7 +159,7 @@ TRANSFORM_STATES: Tuple[str, ...] = (
     STATE_COOLDOWN,
 )
 
-# 瞬态集合（S2/S4：不落快照、不占回合，D-03）
+# 瞬态集合（S2/S4：不落快照、不占用行动，D-03）
 TRANSIENT_STATES: Tuple[str, ...] = (STATE_TRANSFORMING, STATE_REVERTING)
 
 # 常态（可观测用户态）集合（S1/S3/S5）
@@ -169,7 +169,7 @@ OBSERVABLE_STATES: Tuple[str, ...] = (STATE_NORMAL, STATE_FORM_ACTIVE, STATE_COO
 # 状态迁移表（细化_6b §3.1 进入/退出 + §3.2 状态图）
 # =====================================================================================
 # 事件键：trigger（F1 触发技结算成功） / complete（瞬态同拍完成） /
-#         expire（turns 用尽/驱散命中，回合结束 tick 结算） /
+#         expire（turns 用尽/驱散命中，行动收尾 tick 结算） /
 #         revert_now（revert_form 技能即时还原） / cooldown_done（冷却 tick 归零）
 STATE_TRANSITIONS: Dict[str, Dict[str, str]] = {
     STATE_NORMAL: {
@@ -228,7 +228,7 @@ TRANSFORM_STATE_FIELDS: Tuple[str, ...] = (
     "job_id",               # T1 职业 ID 冗余（防热重载失效）
     "form",                 # T2 当前形态 ID；null=常态（S1/S5）
     "form_name",            # T3 形态显示名冗余
-    "remaining",            # T4 形态剩余回合（含当回合；S3 >0）
+    "remaining",            # T4 形态剩余行动数（含当次行动；S3 >0）
     "cooldown_remaining",   # T5 形态冷却剩余（S5 >0）
     "form_status_id",       # T6 形态标记状态引用（双轨持久化）
     "active_skill_set",     # T7 当前技能位方案 ID（技能位重排恢复基准）
@@ -349,7 +349,7 @@ class TransformStateKind(Protocol):
 
     @property
     def remaining(self) -> int:
-        """T4 形态剩余回合（含当回合；缺省 0）。"""
+        """T4 形态剩余行动数（含当次行动；缺省 0）。"""
         ...
 
     @property
@@ -445,7 +445,7 @@ def normalize_transform_state(
     out["form_status_id"] = _norm_opt_str(raw.get("form_status_id"))
     out["active_skill_set"] = _norm_str(raw.get("active_skill_set"))
     if out["form"] is None:
-        out["remaining"] = 0  # 常态无剩余回合（§4.1 T4）
+        out["remaining"] = 0  # 常态无剩余行动数（§4.1 T4）
     return out
 
 
@@ -479,7 +479,7 @@ def state_of_transform_state(state: Any) -> str:
 
     判定序（确定性）：form 非空 → S3 FORM_ACTIVE；form 空且
     cooldown_remaining > 0 → S5 COOLDOWN；否则 → S1 NORMAL。
-    S2/S4 为瞬态（不落快照、不占回合，D-03）——快照推导不到，返回由
+    S2/S4 为瞬态（不落快照、不占用行动，D-03）——快照推导不到，返回由
     transient 事件语义表达（resolve_transition 迁移路径），本函数只产
     可观测常态（S1/S3/S5）。
     """
@@ -938,11 +938,11 @@ def trigger_transform(
     时序（契约逐条）：
       ① 玩家选择触发技（一次行动技能，耗 MP+回合）——调用方已识别
          transform_skill（技能结算通道）；
-      ② 资源校验（C2/C3/C4 闸门：can_transform；不足 → 被拒不耗回合、
+      ② 资源校验（C2/C3/C4 闸门：can_transform；不足 → 被拒不消耗行动、
          不触发变换——TC-02/03/04）【资源本体归战斗层 6c，闸门可注入】；
       ③ 结算技能效果（先结算：resolve_hook 注入，TRF-1）——效果本体走
          现有技能结算通道（摸底报告已就绪），本流程保证时序先后；
-      ④ 触发变换（不额外耗回合，TRF-2）四动作同拍：
+      ④ 触发变换（不额外消耗行动，TRF-2）四动作同拍：
          ④a 施加形态状态（apply_status_hook，D-02 效果侧；form_status_id
              登记 T6 双写）；
          ④b 切换 job_form → transform_to（transform_state.form）；
@@ -951,9 +951,9 @@ def trigger_transform(
          ④d 按 state_policy 处理（apply_state_policy：combo/marks/buff
              三键，默认清连段+清活跃链/印记 keep/buff keep，§1.4）；
       ⑤ 形态专属派生链重评估（reassess_chains_hook，job_scope 命中）；
-      ⑥ 进入形态持续计数（remaining = transform.turns 含变身当回合，
+      ⑥ 进入形态持续计数（remaining = transform.turns 含变身当次行动，
          TC-01④；cooldown_remaining = transform.cooldown 从触发起算
-         REV-6；D-03 回合结束 tick 递减归 F2 tick 引擎）。
+         REV-6；D-03 行动收尾 tick 递减归 F2 tick 引擎）。
 
     入参：
       ctx:       战斗上下文（MutableMapping；读写 transform_state /
@@ -976,9 +976,9 @@ def trigger_transform(
       - chains:       重评估命中的形态专属派生链 ID 列表（job_scope）；
       - side_effects: 效果轨事件列表（含 form_status_id 登记与 resolve
                       效果，D-02 双轨产物）；
-      - action_used:  True（本次行动权已由触发技消耗，变换不额外耗回合
+      - action_used:  True（本次行动权已由触发技消耗，变换不额外消耗行动
                       TRF-2——本字段供战斗层核对行动权语义）。
-    拒绝路径不写任何段（幂等：不触发变换、不重结算、不耗额外回合）。
+    拒绝路径不写任何段（幂等：不触发变换、不重结算、不消耗额外行动）。
     """
     seg = transform if isinstance(transform, Mapping) else _transform_segment_of(ctx)
     ts = transform_state_of(ctx)
@@ -1013,7 +1013,7 @@ def trigger_transform(
             "policy_report": None, "chains": (), "side_effects": effects_log,
             "action_used": True,
         }
-    # ④ 触发变换（不额外耗回合，TRF-2）四动作同拍
+    # ④ 触发变换（不额外消耗行动，TRF-2）四动作同拍
     form = _norm_opt_str(seg.get("transform_to")) or ""
     form_name = _norm_str(seg.get("form_name")) or form
     form_status_id = _apply_form_status(ctx, seg, form)

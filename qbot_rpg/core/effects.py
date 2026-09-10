@@ -111,7 +111,7 @@ DEFAULT_PIPELINE_ORDER: Tuple[str, ...] = (
 
 _DEFAULT_CONFIG: Dict[str, Any] = {
     "chain_depth": 3,              # 特效链深度上限（细化_1b §1.1 字段 12 / 定稿 §2.4）
-    "max_triggers_per_turn": 10,   # 每回合触发上限（细化_1b §1.1 字段 10）
+    "max_triggers_per_turn": 10,   # 每次行动触发上限（细化_1b §1.1 字段 10）
     "max_triggers_per_battle": 99,  # 每场触发上限（细化_1b §1.1 字段 11）
     "fatal_guard_max": 3,          # 免死类每场上限 1-3（细化_1b §4.4 I7，默认 3；0=不限）
     "allow_dual_fatal_guard": False,  # 同类型互斥默认（I7 可配）
@@ -362,7 +362,7 @@ class EffectRuntime:
         return per_turn, per_battle
 
     def reset_turn_triggers(self, side: str) -> None:
-        """回合结束重置每回合触发计数（定稿 §2.4 / 细化_1b §0 结算时点）。"""
+        """行动结束重置每次行动触发计数（定稿 §2.4 / 细化_1b §0 结算时点）。"""
         self.ensure_actor(side)
         self.effect_triggers[side]["per_turn"] = {}
 
@@ -665,7 +665,7 @@ class EffectRuntime:
         source: str,
         category: str = "other",
     ) -> Dict[str, Any]:
-        """新建状态实例（细化_1b §1.4 status_state：层数/等级/剩余回合/剩余次数/衰减值）。"""
+        """新建状态实例（细化_1b §1.4 status_state：层数/等级/剩余行动数/剩余次数/衰减值）。"""
         return {
             "status_id": status_id,
             "name": name,
@@ -750,8 +750,8 @@ class EffectRuntime:
         """D4 trigger 衰减 + D6 次数触发时扣减（细化_1b §4.1 P0-3 / §4.2 D4/D6）。
 
         返回被移除的实例（None=仍存活）。次数维：charges>0 每次触发 -1，归零即消失
-        （回合0+次数10 = 触发 10 次后消失，C-9）；charges==0 视作「该维无限」
-        （回合10+次数0 = 10 回合内无限触发）；turns==-1 维永不被清（D6 行）。
+        （turns=0+次数10 = 触发 10 次后消失，C-9）；charges==0 视作「该维无限」
+        （turns=10+次数0 = 10 次行动内无限触发）；turns==-1 维永不被清（D6 行）。
         """
         inst = self.find_status(side, status_id)
         if inst is None:
@@ -768,10 +768,10 @@ class EffectRuntime:
         return None
 
     def tick_turns(self, side: str) -> None:
-        """D6 持续回合回合结束 tick 扣减（细化_1b §4.1 P0-3：回合=回合结束扣）。
+        """D6 持续行动数——行动收尾 tick 扣减（细化_1b §4.1 P0-3：在行动收尾扣）。
 
         turns>0 → -1 后归零移除；turns==-1 → 永不被清（D6 行：-1 维不被清除）；
-        turns==0 → 回合维无限（配合 回合0+次数N 语义，C-9）。
+        turns==0 → turns 维无限（配合 turns=0+次数N 语义，C-9）。
         """
         lst = self.status_instances(side)
         for inst in list(lst):
@@ -1223,20 +1223,20 @@ class DamagePipeline:
 
 
 def tick_turn_end(snapshot: Mapping[str, Any], runtime: EffectRuntime) -> List[Dict[str, Any]]:
-    """回合结束 tick（细化_1b §0 结算时点：回合结束 tick 持续回合扣减 + 四路回复结算）：
+    """行动收尾 tick（细化_1b §0 结算时点：行动收尾 tick 持续行动数扣减 + 四路回复结算）：
 
-    ① 伤害吸收回合末回复（④ 记录实伤，定稿 §7.2 时点矩阵「受伤害后回合末」）
+    ① 伤害吸收行动收尾回复（④ 记录实伤，定稿 §7.2 时点矩阵「受伤害后行动收尾」）
     ② dot 持续伤害（定稿 §4.3 伤害类 / 细化_1b §3.1 dot 动作 tick）
-    ③ 再生 regen 回复（tpl_regen 回合末）
+    ③ 再生 regen 回复（tpl_regen 行动收尾）
     ④ 持续双维·回合扣减（D6）+ 限时印记 remaining_turns 扣减（细化_1d §三）
-    ⑤ 每回合触发计数重置（定稿 §2.4）
+    ⑤ 每次行动触发计数重置（定稿 §2.4）
     """
     log: List[Dict[str, Any]] = []
     for side in BATTLE_SIDES:
         c = snapshot.get(side)
         if not isinstance(c, dict):
             continue
-        # ① 伤害吸收回合末回复
+        # ① 伤害吸收行动收尾回复
         defs = c.get("defenses")
         if isinstance(defs, dict):
             absb = defs.get("absorb")
@@ -1283,7 +1283,7 @@ def tick_turn_end(snapshot: Mapping[str, Any], runtime: EffectRuntime) -> List[D
                         dot["turns"] = rt - 1
                     if dot.get("turns", 0) == 0:
                         dots.pop(dot_id, None)
-        # ③ 再生 regen（tpl_regen 回合末）
+        # ③ 再生 regen（tpl_regen 行动收尾）
         regen = defs.get("regen") if isinstance(defs, dict) else None
         if isinstance(regen, dict):
             v = int(regen.get("value", 0))
@@ -1295,7 +1295,7 @@ def tick_turn_end(snapshot: Mapping[str, Any], runtime: EffectRuntime) -> List[D
         #    tick 扣减、归零移除入快照 —— 委托 MarksManager.tick_turn 唯一实现）
         runtime.tick_turns(side)
         runtime.marks_manager().tick_turn(side)
-        # ⑤ 每回合触发计数重置
+        # ⑤ 每次行动触发计数重置
         runtime.reset_turn_triggers(side)
         runtime.tick_cooldowns(side)
     return log
@@ -1725,7 +1725,7 @@ def execute_action(
       interrupt / aoe / proc / reposition / reposition_all（后两者=方位 v0.6 §三.5
       置换原语，怪物冲锋/转身 effects 载体）；
     - 3 结算修正器：lifesteal / pierce / mitigation（挂伤害管线自动生效，本入口亦可直达）；
-    - proc 容器：chance/cooldown/actions + 每回合 10 / 每场 99 / 链深 3 上限
+    - proc 容器：chance/cooldown/actions + 每次行动 10 / 每场 99 / 链深 3 上限
       （细化_1b §1.1 字段 10-12 / 定稿 §2.4）。
 
     功能二（《框架_功能二_效果引用归一与条件化_设计.md》§2）入口扩展：
@@ -1816,7 +1816,7 @@ def execute_action(
                 c[key] = min(cap, cur + v)
             side_effects.append({"type": "heal", "target": target, "stat": stat, "value": v})
         else:
-            # 回合末/on_turn_start/on_turn_end 登记
+            # 行动收尾/on_turn_start/on_turn_end 登记
             c = ctx.snapshot.get(target)
             if isinstance(c, dict):
                 pool = c.setdefault("heal_pool", [])
@@ -2060,7 +2060,7 @@ def execute_proc_action(
 ) -> ActionResult:
     """proc 触发容器（细化_1b §2.5 / §1.1 字段 10-12，定稿 §2.5）：
 
-    - 每回合上限（默认 10）+ 每场上限（默认 99）双重封顶（E-8 / G-2）；
+    - 每次行动上限（默认 10）+ 每场上限（默认 99）双重封顶（E-8 / G-2）；
     - 链深度上限（默认 3，防递归无限）；
     - chance 概率三态 + cooldown 冷却；
     - 触发时按序执行子动作（E-1 追击→偷取可链）。

@@ -5,8 +5,8 @@
 依据：docs/细化/细化_6b_职业库与变换引擎.md（409 行 v1.0）：
   - §2.2 还原结算 F2：三路归一（自然结束 turns 耗尽 / 主动 revert_form /
     被驱散 dispel_reverts）→ state_policy 执行（combo/marks/buff 按
-    clear/keep）→ 形态冷却（cooldown 起算）→ 回合 tick 推进（D-03 挂
-    end_turn tick；D-05 驱散时点：dispel 立即清状态、还原延迟到下一回合
+    clear/keep）→ 形态冷却（cooldown 起算）→ 行动 tick 推进（D-03 挂
+    end_turn tick；D-05 驱散时点：dispel 立即清状态、还原延迟到下次行动
     结束 tick）。
   - §3.1 五态 S3（FORM_ACTIVE）→ S4（REVERTING 瞬态）→ S5（COOLDOWN）。
 
@@ -18,14 +18,14 @@
       - dispel：形态状态被驱散（dispel_reverts=true 联动）。
   - state_policy 执行：combo/marks/buff 按 {clear, keep} 决定是否清空。
   - 形态冷却：cooldown_remaining = transform.cooldown（还原后进入 COOLDOWN）。
-  - 回合 tick：tick_cooldown(state, ctx) 回合结束递减（D-03）。
+  - 行动 tick：tick_cooldown(state, ctx) 行动结束递减（D-03）。
 
 工程补白（契约/细化未显式定义处的实现口径，显式标注供审查）：
   P-1  state_policy 三键缺省 keep（契约 §1.4 枚举 {clear, keep}，缺省保守不清）。
-  P-2  natural 还原时 remaining<=0 判定（含当回合：remaining 初始=turns 含当回合）。
+  P-2  natural 还原时 remaining<=0 判定（含当次行动：remaining 初始=turns 含当次行动）。
   P-3  dispel 还原的冷却口径与 natural/revert_form 一致（dispel_reverts 联动不豁免冷却）。
   P-4  被驱散时点（D-05）：本引擎提供 dispel_triggered() 标记函数，实际延迟
-       还原由战斗层在下一回合结束 tick 调用 revert_transform 完成（引擎不内置定时）。
+       还原由战斗层在下次行动收尾 tick 调用 revert_transform 完成（引擎不内置定时）。
 
 铁律：零 NoneBot import；完整类型标注；纯函数确定性；零定时器/零睡眠；
 不引入随机；不 git commit。仅依赖标准库（core 层零 import content/data）。
@@ -158,11 +158,11 @@ def apply_state_policy(
 
 
 # =====================================================================================
-# 回合 tick（D-03：挂 end_turn ⑥ 之后）
+# 行动 tick（D-03：挂 end_turn ⑥ 之后）
 # =====================================================================================
 
 def tick_cooldown(state: Dict[str, Any]) -> Dict[str, Any]:
-    """回合结束冷却递减（D-03：S5 COOLDOWN 每回合 -1，归 0 回 NORMAL）。
+    """行动结束冷却递减（D-03：S5 COOLDOWN 每次行动 -1，归 0 回 NORMAL）。
 
     纯函数：返回新 state（不原地改）。
     """
@@ -174,7 +174,7 @@ def tick_cooldown(state: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def tick_remaining(state: Dict[str, Any]) -> Dict[str, Any]:
-    """回合结束形态剩余递减（F2 自然结束判定：remaining-1，<=0 触发还原）。
+    """行动结束形态剩余递减（F2 自然结束判定：remaining-1，<=0 触发还原）。
 
     纯函数：返回新 state。remaining<=0 时保持 0（还原判定由调用方做）。
     """
@@ -263,10 +263,10 @@ def should_revert_natural(state: Mapping[str, Any]) -> bool:
 
 
 def dispel_triggered(ctx: Mapping[str, Any], *, side: str = "player") -> bool:
-    """被驱散标记（D-05：dispel 立即清状态，还原延迟下一回合结束 tick）。
+    """被驱散标记（D-05：dispel 立即清状态，还原延迟下次行动收尾 tick）。
 
     战斗层在 dispel 事件发生时写 ctx[side].persistent_state.transform_pending_dispel=True，
-    本函数读取该标记；战斗层在下一回合结束 tick 消费后清除。
+    本函数读取该标记；战斗层在下次行动收尾 tick 消费后清除。
     """
     player = ctx.get(side)
     if not isinstance(player, Mapping):

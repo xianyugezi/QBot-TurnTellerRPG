@@ -20,7 +20,7 @@ CTB 变更（2026-09-10）：
     apply_message_prefix；无裸 send；验收：一轮 1 条/开始 1 条/结束 1 条）
   - docs/细化/细化_3d_消息模板规范.md §3.1（消息合并策略承接表：战斗一轮 1 条
     （玩家行动+怪物反击合并）/ 战斗开始 1 条 / 战斗结束 1 条；单次操作最多 1-2 条）
-  - docs/细化/细化_5e_战斗战报格式.md（军规1 前缀只加合并消息首行 / 军规3 单回合单条 /
+  - docs/细化/细化_5e_战斗战报格式.md（军规1 前缀只加合并消息首行 / 军规3 单行动单条 /
     军规5 结算一次性：经验/掉落只在战斗结束消息输出一次）
   - qbot_rpg/core/battle.py（引擎 1841 行：start/player_act → TurnReport(outcomes)，
     rewards 由世界层 1g4 消费 result 后统一结算——_settle 注释）
@@ -175,7 +175,7 @@ TPL_FLEE_FAILED = _BATTLE_TPL[_TPL_FLEE_FAILED_KEY]
 
 
 # ---------------------------------------------------------------------------
-# 回合数据增强（TurnReport → 渲染用 EnrichedTurnReport）
+# 行动数据增强（TurnReport → 渲染用 EnrichedTurnReport）
 # ---------------------------------------------------------------------------
 
 @dataclass(frozen=True)
@@ -370,7 +370,7 @@ def _enemy_ns(enemy: Any, *, turn: Optional[int] = None) -> SimpleNamespace:
     """怪物形态 → SimpleNamespace（render 取数：name/hp/max_hp/turn）；剥离前缀键。"""
     ns = _prefix_free_ns(enemy)
     if turn is not None and not hasattr(ns, "turn") and not hasattr(ns, "turns"):
-        ns.turn = turn  # SimpleNamespace 允许动态属性（BREP-24 回合数，TC-25）
+        ns.turn = turn  # SimpleNamespace 允许动态属性（BREP-24 行动数，TC-25）
     return ns
 
 
@@ -1340,7 +1340,7 @@ def _run_battle_action(ctx: Mapping[str, Any], action: Mapping[str, Any]) -> dic
         message = tpl_of(ctx, _TPL_RESULT_ROUND_KEY, {"turn": report.turn})
     # send:False —— 正文已由 dispatch_batch/dispatch_round 经 pipeline 发送（一轮 1 条
     # 铁律）；阻止 runner sender 闭包重复发送 message（processing L202 send 开关，
-    # 2026-09-02 实机双发修复：此前 runner 再发一遍「第 N 回合结算」造成重复消息）。
+    # 2026-09-02 实机双发修复：此前 runner 再发一遍「第 N 次行动结算」造成重复消息）。
     return {"ok": True, "sent": _sent, "message": message, "send": False}
 
 

@@ -405,7 +405,7 @@ def gate_conventional(
     skill: Any,  # noqa: ARG001 - 占位签名，语义归调用方管道
     side: str = "player",  # noqa: ARG001 - 占位签名，语义归调用方管道
 ) -> Dict[str, Any]:
-    """① 常规门禁占位（F-C1 ①：mp_cost/cooldown/条件 → 任一不足被拒不耗回合）。
+    """① 常规门禁占位（F-C1 ①：mp_cost/cooldown/条件 → 任一不足被拒不消耗行动）。
 
     mp_cost/cooldown/条件判定由战斗层既有管道承载（combo.should_reject +
     battle rejected 短路，摸底 L856/L1215-1229），本引擎不重复实现：
@@ -427,7 +427,7 @@ def gate_total(
       {fire:1,water:1} → 求和 2（具名键同为能量消耗，K2 口径）；
     - 数值型：energy_cost {rage:100} → 100 ≤ 轴单值（资源 ID 键，K1）；
     - 无 energy_cost 段 / 未注册轴 → 放行 ok（RS-5 降级，V1 红拦归批12）；
-    - 不足 → {ok:False, reason:energy_total_insufficient}（被拒不耗回合）。
+    - 不足 → {ok:False, reason:energy_total_insufficient}（被拒不消耗行动）。
     返回 {ok, reason, need, have}（need = 全键求和，have = 当前可用总数）。
     """
     cost = _energy_cost_of(skill)
@@ -503,7 +503,7 @@ def resolve_trigger(
     返回 {ok, rejected, reason, row, axis, total, need, matched, hints,
     events}：
       - ok=True → 门禁全过，row = 锁定组合行（F-C2 结算阶段按行扣池）；
-      - ok=False + rejected=True → 被拒不耗回合（能量/MP/连段不变，可反复
+      - ok=False + rejected=True → 被拒不消耗行动（能量/MP/连段不变，可反复
         尝试；D-02/CM-3）；reason ∈ total_insufficient / no_combo_match /
         no_combo_rows；
       - 无 combo_table 段 → ok=True + row=None（B-3 常规技能语义）；

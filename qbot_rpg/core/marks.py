@@ -6,7 +6,7 @@
     §3.1 条件原语 C-1..C-5、§3.2 原子动作 A-1..A-3、§4（D-03 饱和减法）、
     §五 边界（不吃驱散/免疫/反射/解除）、§六 验收 AT-01..AT-20。
   - 《印记系统设计定稿》v1.0：§二 定义 schema（max_stack / appliable_to / polarity /
-    element / duration）、§2.1 极性规则、§三 实例与状态（双向表、name 冗余、剩余回合
+    element / duration）、§2.1 极性规则、§三 实例与状态（双向表、name 冗余、剩余行动数
     入快照）、§4.1 施加（必中/到顶不再涨）、§4.2 消除寻址、§5.1 条件引用、
     §八 数据汇总。
 
@@ -321,7 +321,7 @@ class MarksManager:
     # ---------------- 生命周期（细化_1d §2.2 / 印记 §三） ----------------
 
     def tick_turn(self, side: str) -> int:
-        """回合结束统一 tick：限时印记 remaining_turns -1，归零移除（§2.2/§三「剩余
+        """行动结束统一 tick：限时印记 remaining_turns -1，归零移除（§2.2/§三「剩余
         回合记入快照」）；battle 型无 remaining_turns 不受影响。返回移除条数。"""
         removed = 0
         for inst in self.instances(side):

@@ -62,7 +62,7 @@
      世界层快照完整性校验（R-A）与旧读方过渡，**不参与任何数值计算**。
   6. 防御指令（×0.5）的持续窗口 = 「到该 actor 下次行动为止」（D2 霸体窗口
      同口径）——由 `_guard_actor` 置位、`_start_actor_turn` 清位，替代旧的
-     「回合结束清零」。
+     「行动结束清零」。
   7. 快照 V2：`schema_version=2`、`rule_version="battle_ctb_v1"`，边界枚举为
      CTB 边界（`actor_ready`/`after_action`），旧 v1 快照被 `from_snapshot`
      显式拒绝（不静默降级——v1 的回合语义与 CTB 时间轴不可换算）。
@@ -422,7 +422,7 @@ def _make_battle_resolver(
 class BattleEngine:
     """CTB 战斗引擎（行动条驱动 · 完整伤害闭环）。
 
-    主循环不再有「先手→后手→tick」的固定回合；一次行动的生命周期为
+    主循环不再有「先手→后手→tick」的固定行动序；一次行动的生命周期为
     `ACTOR_READY → ACTOR_TURN_START → BEFORE_ACTION → ACTION_RESOLVE →
     AFTER_ACTION → ACTOR_TURN_END`，全部由 `CTBScheduler` 的行动条推进决定。
     BOSS/最后目标死亡立即结束；快照只落 CTB 边界（actor_ready / after_action）。
@@ -947,7 +947,7 @@ class BattleEngine:
         怪物死→mark_win L48）。同侧去重；顺序入 _death_order 供互杀审计。
 
         player_killed_enemy 标记先手击杀（1g1c TC-11：互杀 order 基准＝先手击杀
-        生效→玩家胜）——仅当敌人死于玩家行动阶段时置位，回合开始 dot 双杀不入。
+        生效→玩家胜）——仅当敌人死于玩家行动阶段时置位，行动开始 dot 双杀不入。
         """
         c = self._combat(side)
         if not c or c.get("dead_mark"):
@@ -1025,7 +1025,7 @@ class BattleEngine:
             if basis == "order":
                 # 互杀判定（定稿 L60-62 + 1g1c TC-11）——【D5 拍板，用户 2026-08-19】：
                 # 「先手击杀生效 → 先手胜」（玩家对怪物：玩家先手击杀怪物即使同归于尽也判玩家胜）；
-                # 无先手击杀的双死（回合开始 dot 双杀等）→ 平局。原实现 L62 互杀一律平局已按拍板覆盖。
+                # 无先手击杀的双死（行动开始 dot 双杀等）→ 平局。原实现 L62 互杀一律平局已按拍板覆盖。
                 if bool(result.get("player_killed_enemy", False)):
                     # player_killed_enemy 由 _mark_dead 在「敌人死于玩家行动阶段」时置位
                     p_dead, e_dead = False, True   # 先手击杀生效 → 玩家胜（玩家视为存活结算）
@@ -1065,7 +1065,7 @@ class BattleEngine:
     ) -> Optional[ActionOutcome]:
         """M13 6c 批12：技能 energy_cost 门禁 + energy_gain 结算（resource_axis 委托）。
 
-        - energy_cost：施放前检查（不足 → 被拒不耗回合，返回被拒 ActionOutcome）；
+        - energy_cost：施放前检查（不足 → 被拒不消耗行动，返回被拒 ActionOutcome）；
         - energy_gain：成功路径（调用方继续）后增加封顶——本方法在检查通过时
           立即结算 gain（同一技能 energy_cost+gain 并存时：先扣后增，契约 K4）。
         未注入 resource_registry（引擎无注册表）→ 零操作（容错，装配层接线后生效）。
@@ -1114,7 +1114,7 @@ class BattleEngine:
     ) -> Optional[ActionOutcome]:
         """技能 consume_marks 门禁 + 扣除（G2 2026-09-02 接线，细化_1d §4.2）。
 
-        - consume_marks：{mark_id: count} 施放前检查（不足 → 被拒不耗回合，S-01
+        - consume_marks：{mark_id: count} 施放前检查（不足 → 被拒不消耗行动，S-01
           完全免费：不耗 MP/行动/连段保留；AT-17）；成功路径施放后扣除（AT-16）。
         - 侧判定（契约 P-1）：印记定义 appliable_to 含 self → attacker 侧；
           仅 enemy → target 侧（test_demo fire_mark / veinborn break_* 先例）。
@@ -1237,7 +1237,7 @@ class BattleEngine:
             注入（技能条目 raw dict），缺省引擎侧 rearrange_slots 装配
             （SH-1~5；装配层 skill_slots.apply_job_form 委托由 15B 路覆盖）；
           - resource_check_hook：C2 资源门禁——MP 足够 + energy_cost 已由
-            战斗层上方门禁扣费，此处放行（防双重扣费，TRF-2 不额外耗回合）；
+            战斗层上方门禁扣费，此处放行（防双重扣费，TRF-2 不额外消耗行动）；
           - skip_check：C4 被控判定（skip_turn 不触发）。
         """
         from qbot_rpg.core.transform import (  # noqa: PLC0415
@@ -1410,7 +1410,7 @@ class BattleEngine:
         ps = self._snap.get("player")
         if isinstance(ps, dict) and dispel_triggered({"player": ps}, side=side):
             self._apply_transform_revert(REVERT_DISPEL)
-            # 消费持久标记（防下一回合重复还原；_apply_transform_revert 内
+            # 消费持久标记（防下次行动重复还原；_apply_transform_revert 内
             # 已在 REVERT_DISPEL 分支清除，此处兜底幂等）
             ps_ps = ps.get("persistent_state")
             if isinstance(ps_ps, dict):
@@ -1424,7 +1424,7 @@ class BattleEngine:
         - 无 combo_table 段 → None（B-3 常规技能回退）；
         - gate_combination 命中组合行 → settle_combo 双耗结算（MP+能量按行
           池分布扣减）+ 行为随组合变化，返回组合结算 ActionOutcome；
-        - 未命中 → 被拒不耗回合（reason=no_combo_match）。
+        - 未命中 → 被拒不消耗行动（reason=no_combo_match）。
         审计落 ca 侧 combo_result（战报/测试可观察）。
         """
         from qbot_rpg.core.combo_table import resolve_trigger  # noqa: PLC0415
@@ -2235,7 +2235,7 @@ class BattleEngine:
 
         **语义变更（Wave A M1）**：旧语义 = 「每个回合开始时**全员**结算 DOT/控制」；
         CTB 语义 = 「每个单位**自己**行动开始时**仅该单位**结算 DOT/控制」。
-        本方法不再递增回合数，也不再全员同步 tick——它只是「把时间轴推到下一个
+        本方法不再递增行动数，也不再全员同步 tick——它只是「把时间轴推到下一个
         谁该动」的公开入口（保留方法名与签名，供旧调用方与测试过渡）。
 
         真正的按持有者 DOT/控制/即死结算在 `_start_actor_turn(actor)` 内（由
@@ -2703,7 +2703,7 @@ class BattleEngine:
         """连段性行动（1c1a/b/c + 1c2）：combo 引擎判定 → 被拒短路 / 派生表单 → 伤害结算。
 
         M1-批3 主 agent 收口：combo.py 引擎已实现但本 battle 接线缺失（子代理撞迭代上限）。
-        - ⑥ 被拒（MP/冷却/条件不足）：不改连段、不耗回合、可反复尝试（1c1c TC-DEF-04 /
+        - ⑥ 被拒（MP/冷却/条件不足）：不改连段、不消耗行动、可反复尝试（1c1c TC-DEF-04 /
           1c2 §2.4 / 1c3 TC-30）——状态保持 ACT（未推 RES），调用方可直接再次 do_action。
         - 派生/自动替换：ComboActionResult.form_id 覆写 action.skill_id 后走既有伤害通道。
         """
@@ -2744,7 +2744,7 @@ class BattleEngine:
         # M13 批17 路17C：技能冷却接线（14B 缺口②）——技能 def cooldown 字段。
         # 冷却表 _snap["skill_cooldowns"] = {side: {skill_id: remaining}}；
         # 施放成功设 cooldown、end_turn 递减、此处注入 action.cooldown_remaining
-        # 供 combo.should_reject 拒绝（冷却中被拒不耗回合）。
+        # 供 combo.should_reject 拒绝（冷却中被拒不消耗行动）。
         _cd_map = self._snap.get("skill_cooldowns")
         _cd_side = _cd_map.get(attacker) if isinstance(_cd_map, dict) else None
         _cd_left = _cd_side.get(str(ca.get("skill_id") or ""), 0) \
@@ -2867,7 +2867,7 @@ class BattleEngine:
         # 常规门禁由上方管道承载 → 总量门 → 多重集匹配）。命中组合行 → 锁定
         # 行为随组合变化（kind/power/element/hits/effects）+ F-C2 双耗结算
         # （MP+能量按行池分布扣减，CM-2 先匹配后消耗）；未命中 → 回退常规
-        # 技能路径（energy_cost/gain 已在上方照常，被拒不耗回合语义不适用——
+        # 技能路径（energy_cost/gain 已在上方照常，被拒不消耗行动语义不适用——
         # 无组合表 = 常规技能 B-3）。审计落 combo_result（战报/测试可观察）。
         # 注意：组合 gate 在 MP/energy 扣费之前（F-C2 双耗由 settle_combo 完成，
         # 命中标记 _combo_settled 跳过下方常规扣费防重复；被拒不扣）。
@@ -2876,7 +2876,7 @@ class BattleEngine:
             return _combo
 
         # ---- M13 6c 批12 收口：技能 energy_cost 门禁 + energy_gain 结算 ----
-        # 技能 def 的 energy_cost（施放前检查：不足 → 被拒不耗回合，复用 rejected
+        # 技能 def 的 energy_cost（施放前检查：不足 → 被拒不消耗行动，复用 rejected
         # 语义——返回被拒 outcome 不继续）+ energy_gain（成功结算后增加封顶）。
         # 组合已结算（_combo_settled）→ 跳过（settle_combo 已双耗，防重复）。
         # 顺序：energy 门禁在 MP 扣费之前（被拒不扣任何消耗，批17 收口）。
@@ -2888,7 +2888,7 @@ class BattleEngine:
                 return _energy_gate
 
         # ---- G2（2026-09-02）：consume_marks 门禁 + 扣除（细化_1d §4.2 / S-01）----
-        # 施放前检查（不足 → 被拒不耗回合，零副作用）；检查通过后即扣。
+        # 施放前检查（不足 → 被拒不消耗行动，零副作用）；检查通过后即扣。
         # 顺序：energy 之后、MP 扣费之前（与 energy_cost 同语义，被拒不扣任何消耗）。
         # 派生路径：ca.skill_id 已同步为派生技（G1），此处按最终 skill_id 解析 def，
         # 取派生技的 consume_marks（若 action 显式带 consume_marks 则优先）。
@@ -2920,8 +2920,8 @@ class BattleEngine:
 
         # ---- M13 批17 路17C：技能冷却起算（技能 def cooldown > 0）----
         # 成功施放（未拒绝）→ 冷却表写入；end_turn tick 递减（_tick_skill_cooldowns）。
-        # 语义：cooldown=N → 施放后 N 回合不可用（含下一回合）——存储 N+1，
-        # end_turn 逐回合递减（施放当回合不减，下一回合施放检查仍 = N 拦）。
+        # 语义：cooldown=N → 施放后 N 次行动不可用（含下次行动）——存储 N+1，
+        # end_turn 逐行动递减（施放当次行动不减，下次行动施放检查仍 = N 拦）。
         _cd = int(sd.get("cooldown", 0) or 0)
         if _cd > 0:
             _cdm = self._snap.setdefault("skill_cooldowns", {})
@@ -2938,12 +2938,12 @@ class BattleEngine:
 
         # ---- M13 批15 路15A：transform 触发技（transform_skill）战斗接线 ----
         # 细化_6b §2.1 F1：触发技（如狂暴/rage_burst）成功结算后触发变换——
-        # 形态切换 + 技能位重排 + state_policy（清连段等），不额外耗回合。
+        # 形态切换 + 技能位重排 + state_policy（清连段等），不额外消耗行动。
         # 触发条件 C1~C4 经 transform.can_transform 判定（C1 形态激活期互斥 /
         # C2 资源 / C3 冷却 / C4 被控）；触发技效果本体走上方既有效果通道
         # （TRF-1 效果先结算），此处仅做变换挂接。job/transform 配置经
         # self._job_transform_segment() 惰性解析（无配置 → 零操作降级）。
-        # 拒绝路径：不改 transform_state、不耗额外回合（同 combo rejected 语义）。
+        # 拒绝路径：不改 transform_state、不消耗额外行动（同 combo rejected 语义）。
         if not ca.get("_derived"):
             ts = self._snap.get("transform_state")
             if isinstance(ts, dict) and ts.get("form") is None:
@@ -2965,13 +2965,13 @@ class BattleEngine:
                         ca.setdefault("transform_form", str(tr["transform_state"].get("form") or ""))
                     else:
                         # 变换被拒（C1 形态激活互斥 / C3 冷却中 / C2 资源不足 /
-                        # C4 被控）：拒绝不耗回合、不改形态——触发技效果已在上方
+                        # C4 被控）：拒绝不消耗行动、不改形态——触发技效果已在上方
                         # 通道结算，此处登记拒绝事件（战报/测试可观察）
                         self._transform_events = [
                             {"type": "transform_rejected", "reason": str(tr.get("reason") or ""),
                              "guard": str(tr.get("guard") or "")}
                         ]
-                    # 拒绝（C1~C4/资源不足）→ 变换不触发：不耗回合、不改形态，
+                    # 拒绝（C1~C4/资源不足）→ 变换不触发：不消耗行动、不改形态，
                     # 触发技本身仍按普通技能结算（技能效果已在上方通道结算）
         # ---- M13 批15 路15A：revert_form 技能主动还原（D-05 即时，不判 remaining）----
         # 技能带 revert_form=true 且当前形态激活 → 施放即还原（还原钩子经
@@ -2993,7 +2993,7 @@ class BattleEngine:
             # P1-4：打断技攻击窗口三条件（1c2 §2.2）——目标连段清零
             self.combo_engine().apply_interrupt(attacker, target, self._snap, self._armor_active)
             # M2-C1（contract §六）：玩家 interrupt 命中怪物 → 套完结（在途链/蓄力清空，
-            # 下一回合随机流程；怪物连招走 ai_state，combo 引擎对怪物恒 no_active，
+            # 下次行动随机流程；怪物连招走 ai_state，combo 引擎对怪物恒 no_active，
             # 故独立评估 _interrupt_enemy_ai，免疫/霸体检查在内部）
             if target == "enemy":
                 self._interrupt_enemy_ai()
@@ -3011,7 +3011,7 @@ class BattleEngine:
             
                     hit_effects.extend(execute_action(eff_raw, ctx, rt).side_effects)
             self._absorb_runtime(rt)
-        # 霸体窗口=行动阶段结束（D2 修复：原在技能结算内清位→同回合敌后手打断不免疫，
+        # 霸体窗口=行动阶段结束（D2 修复：原在技能结算内清位→同一次行动敌后手打断不免疫，
         # 1c2 §2.2「使用期间」应为整个行动阶段；清位移至 _after_actor_action）
         # M13 批17 路17C：伤害结算传 ca（含 skill def 合并 + segments 多段展开 +
         # 派生 skill_id 同步）——原 action 缺这些扩展（hits=3 只出 1 段问题根因）。
@@ -3099,7 +3099,7 @@ class BattleEngine:
             self._absorb_runtime(_rt)
             self._snap.setdefault("battle_notes", []).append(
                 {"type": "air_land", "side": "player", "auto": True})
-        except Exception:  # noqa: BLE001 - 落地失败不阻断回合收尾
+        except Exception:  # noqa: BLE001 - 落地失败不阻断行动收尾
             return
 
     def _trigger_on_dodge(self, defender: str, attacker: str) -> None:
@@ -3415,7 +3415,7 @@ class BattleEngine:
                                     "actor": attacker, "target": target})
 
         # ---- 防反判定（2026-09-09 用户拍板标签制）：怪攻击命中路径——行动带可防反
-        # 标签 + 玩家当回合防反姿态（守势类）→ 整次攻击完全免伤 + 自动反击；
+        # 标签 + 玩家当次行动防反姿态（守势类）→ 整次攻击完全免伤 + 自动反击；
         # 无标签 → 失败：受伤（姿态减伤照常）+ 无反击（用户示例语义）。----
         self._snap.pop("_parried_this_act", None)
         if attacker == "enemy" and target == "player":
@@ -3771,17 +3771,17 @@ class BattleEngine:
           - 技能冷却递减（该施放者本侧 -1，M9）；
           - transform 形态 tick（持有者，M10）+ dispel 延迟还原（M8）；
           - 空中姿态落地（R16）；
-          - **回合末 DOT / 吸收回复 / 持续双维扣减**（`tick_turn_end`，2026-09-10 整合）；
+          - **行动收尾 DOT / 吸收回复 / 持续双维扣减**（`tick_turn_end`，2026-09-10 整合）；
           - **行动条重签**：把该 actor 的下一次 ready 交给调度器（recovery 注入）。
 
         2026-09-10 整合（缺口修复）：旧 `end_turn` ⑥ 的 `effects.tick_turn_end`
         此前**无任何调用点**——`tick="turn_end"` 的 DOT（含 `part_break_per_tick`
-        破位）、伤害吸收回合末回复、regen、持续双维扣减、限时印记 remaining_turns
+        破位）、伤害吸收行动收尾回复、regen、持续双维扣减、限时印记 remaining_turns
         扣减全部**静默失效**。CTB 下「回合末」的等价位点 = 该行动者的 ACTOR_TURN_END
         （映射规则：回合结束 DOT → 行动者 `actor_action_end`，见 01_asset_inventory
         §0.2 事件位点词典）。
 
-        **注意本函数只对「持有回合末状态的那一侧」结算**：`tick_turn_end(snapshot,
+        **注意本函数只对「持有行动收尾状态的那一侧」结算**：`tick_turn_end(snapshot,
         runtime)` 签名不带 actor（它内部按 BATTLE_SIDES 遍历双方），故这里不能
         按 `actor` 过滤——DOT 挂在谁身上就扣谁的血（08:25 旧回合制里双方同时结算，
         CTB 下改为**任一行动者收尾时统一结算双方**，保证 DOT 结算频率与旧语义等价：
@@ -3800,7 +3800,7 @@ class BattleEngine:
         self._tick_skill_cooldowns(actor)
         self._tick_transform_state(actor)
         self._settle_air_landing()
-        # 回合末状态结算（旧 end_turn ⑥：turn_end DOT / 吸收回复 / 持续双维扣减）
+        # 行动收尾状态结算（旧 end_turn ⑥：turn_end DOT / 吸收回复 / 持续双维扣减）
         # 结算后须复核死亡（DOT 可能致死）——致死则立即终局，不再推进时间轴。
         try:
             _te_log = tick_turn_end(self._snap, self._new_runtime())
@@ -3809,7 +3809,7 @@ class BattleEngine:
                 self._death_check_side("player", "turn_end_dot")
                 self._death_check_side("enemy", "turn_end_dot")
                 self._sync_scheduler_deaths()
-        except Exception:  # noqa: BLE001 - 兜底不崩：回合末结算异常不阻断时间轴
+        except Exception:  # noqa: BLE001 - 兜底不崩：行动收尾结算异常不阻断时间轴
             _logger.exception("tick_turn_end 结算失败：actor=%s", actor)
         if self._finished:
             return
@@ -3885,14 +3885,14 @@ class BattleEngine:
         ai = act.get("ai_state")
         if isinstance(ai, Mapping):
             self._snap["ai_state"] = ai  # 回灌快照（吸收返回）
-        # M2 审查 P1-1：combo_broken 为「本回合连招被打断」一次性标记——
-        # 打断同回合的怪物决策（本轮反击）应命中一次（立即反应），决策后清除，
-        # 防跨回合/跨快照续玩无限期触发（monster_conditions._eval_combo_broken 消费）
+        # M2 审查 P1-1：combo_broken 为「本次行动连招被打断」一次性标记——
+        # 打断同一次行动的怪物决策（本轮反击）应命中一次（立即反应），决策后清除，
+        # 防跨行动/跨快照续玩无限期触发（monster_conditions._eval_combo_broken 消费）
         self._snap.pop("combo_broken", None)
         ad = dict(act)
         ad.pop("ai_state", None)  # 已回灌，不随行动 dict 下传
         # 蓄力起手/进度播报（charging）与起身演出（get_up）：占行动槽不造成伤害
-        # （细化_1f：蓄力起手回合播报 1/N；起身演出占用行动槽；行动本体在 L0 释放/起身完成）
+        # （细化_1f：蓄力起手行动播报 1/N；起身演出占用行动槽；行动本体在 L0 释放/起身完成）
         if ad.get("charging") or ad.get("kind") == "get_up":
             ad["mult"] = 0.0
         adef = ad.get("action")
@@ -3914,7 +3914,7 @@ class BattleEngine:
 
         怪物连招（chain_queue / exec_state=in_chain）与蓄力（exec_state=charging）被打断：
         - 在途链 → monster_chains.on_chain_broken（清队列、回 idle、当前链进冷却，
-          下一回合走随机流程 L6，不继续原套）；
+          下次行动走随机流程 L6，不继续原套）；
         - 蓄力 → 清除 charge（蓄力可被打断；armor=true 霸体免疫，细化_1f ①1.1 核心规则7）；
         - 免疫检查：蓄力 charge.armor、战斗瞬态 armor_active（1c2 §2.2 霸体窗口）、
           效果系统 I3 打断免疫（effects.immune_to_interrupt，1b §4.4）。
@@ -3945,8 +3945,8 @@ class BattleEngine:
         if charging:
             ai["charge"] = None
             ai["exec_state"] = "idle"
-        # 打断标记（monster_conditions._eval_combo_broken 消费：本回合连招被打断 →
-        # 下一回合 L3 可评估 combo_broken 触发行动，细化_1f ②L3）
+        # 打断标记（monster_conditions._eval_combo_broken 消费：本次行动连招被打断 →
+        # 下次行动 L3 可评估 combo_broken 触发行动，细化_1f ②L3）
         self._snap["combo_broken"] = True
         self._snap.setdefault("combo_events", []).append({
             "type": "monster_chain_broken", "side": "enemy",
@@ -3976,7 +3976,7 @@ class BattleEngine:
 
         CTB 无「一轮」边界 → 集中结算点不存在（Wave A M4）。其内部各 tick 已逐项
         拆挂到各自事件位点，**能力未丢失**：
-          - 回合结束 tick（持续扣减/效果衰减/吸收回补/再生）→ `AFTER_ACTION`（行动者）；
+          - 行动收尾 tick（持续扣减/效果衰减/吸收回补/再生）→ `AFTER_ACTION`（行动者）；
           - 玩家/敌方 DOT（tick=turn_end）→ 行动者 `ACTOR_TURN_END`；
           - 空中姿态落地 → `AFTER_ACTION`（`_settle_air_landing`）；
           - 怪物 AI 冷却 → 该 AI 自身行动后（`AFTER_ACTION`）；

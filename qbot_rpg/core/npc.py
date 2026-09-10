@@ -29,7 +29,7 @@
   5) rotate 轮转指针由调用方持有的可变 dict（rotate_state={"index": N}）持久化；本模块原地改写。
      回复 text[] 循环 mode="cycle" 复用同一 state（reply_index）。random 用 rng()/Random 实例注入。
   6) buff 增益落点：ctx["active_effects"]（dict {effect_id: {effect,turns,refreshed}}，同 buff 重触发仅刷新
-     剩余回合，对齐 AC05 补白）；有 ctx["apply_effect"] 可调用 hook 时优先走 hook（对齐 A1 add_item 模式）。
+     剩余行动数，对齐 AC05 补白）；有 ctx["apply_effect"] 可调用 hook 时优先走 hook（对齐 A1 add_item 模式）。
   7) teleport 纯函数语义：扣费 + 改写 ctx["map_id"]=目标图；实际迁移（离图清当前商店/快照等世界侧副作用）
      由调用方（world 层）执行。
   8) repair 当前降级（S4 裁决/AC06/L139）：依赖装备耐久系统框架未实现 → 恒"不可用+友好提示"，配置不拦截。
@@ -656,7 +656,7 @@ def _action_give_item(entry: Mapping[str, Any], ctx: Mapping[str, Any], **kw: An
 
 
 def _action_buff(entry: Mapping[str, Any], ctx: Mapping[str, Any], **kw: Any) -> dict:
-    """AC05 buff：effects[] 临时增益 + turns 持续回合（同 buff 重触发仅刷新回合，补白⑥）。"""
+    """AC05 buff：effects[] 临时增益 + turns 持续行动数（同 buff 重触发仅刷新时长，补白⑥）。"""
     effects = entry.get("effects")
     if not isinstance(effects, (list, tuple)) or not effects:
         return _res("buff", False, reason="no_effects", message="没有可施加的增益")

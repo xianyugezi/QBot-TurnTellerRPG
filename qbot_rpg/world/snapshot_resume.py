@@ -342,7 +342,7 @@ def resume_from_snapshot(
 ) -> dict:
     """战斗快照续玩（M27，1g3 §2.3 恢复时序 + m3 §4.4：ai_state+combo_state 全保留）。
 
-    战斗中断（退出/超时/锁屏）→ 从最近回合边界快照续玩；续玩 = 原会话恢复继续，**不改变
+    战斗中断（退出/超时/锁屏）→ 从最近行动边界快照续玩；续玩 = 原会话恢复继续，**不改变
     副本状态**（m3 §4.4：战斗中断不改变副本状态，走快照续玩而非重置，2a2 §5.2）。
 
     M6 D3 RSM-04：注入 watcher 时按快照 registry_generation 世代重绑定——从 watcher 取
@@ -372,7 +372,7 @@ def resume_from_snapshot(
           valid                     快照契约形态是否完整（校验闸门结论，补白 1）
           missing_fields            缺失的契约键（ai_state/combo_state 缺键或非 Mapping、
                                     turn 非数值）
-          turn                      续玩回合数（顶层 turn / snapshot_at.turn，None=缺失）
+          turn                      续玩行动数（顶层 turn / snapshot_at.turn，None=缺失）
           ai_state_preserved        ai_state 键存在且为 Mapping（逐字段保留载体）
           combo_state_preserved     combo_state 键存在且为 Mapping
           chase_context_preserved   换区上下文（chase ctx）任一字段存在

@@ -12,9 +12,9 @@
   1) 战斗内换季检测（F-R2 ②）：check_changes 复用（IF09 缓存索引对比，
      worldtime 现成；本引擎不 import engine 层，检测结果经注入通道传入，
      G0 core 只依赖 data 口径）→ 检测到季节差异 → 标记「换季待结算」；
-  2) 待结算期（F-R2 ②③ / D-05）：检测到差异的当回合行动按旧组校验
+  2) 待结算期（F-R2 ②③ / D-05）：检测到差异的当次行动按旧组校验
      （旧季节技能照常可用，SC-1）；新季节下一回合才生效；
-  3) 切换时点（F-R2 ③ 结算边界）：回合结束 tick 之后、下一回合开始之前
+  3) 切换时点（F-R2 ③ 结算边界）：行动收尾 tick 之后、下次行动开始之前
      → 技能组切换为新季节组；切换幂等（SC-3：连续两回合同季节 → 无差异、
      不标记、不触发，恰一次原则）；
   4) 保留项（F-R2 ④）：MP / 连段段数 / 印记 / 冷却剩余 / 全部进行中 buff
@@ -31,8 +31,8 @@
 依据：
   - docs/细化/细化_6c_资源轴与职业机制.md（497 行 v1.0）：
     §2.2 EFF-2（进战懒加载）/ EFF-3（展示过滤置灰 + 普攻防御兜底）/
-    EFF-5（行动校验引用在回合开始懒重读时更新——SC-2 引擎零新状态机）；
-    §2.3 机制 M6 流程 F-R2 全六步（① 懒重读 ② 检测标记待结算 ③ 回合结束
+    EFF-5（行动校验引用在行动开始懒重读时更新——SC-2 引擎零新状态机）；
+    §2.3 机制 M6 流程 F-R2 全六步（① 懒重读 ② 检测标记待结算 ③ 行动结束
     tick 后切换 ④ 保留项 ⑤ 反馈+on_season_change ⑥ 战斗外不切换）；
     §2.3 SC-1（待结算期按旧组校验）/ SC-2（引擎零新状态机）/ SC-3（切换
     幂等恰一次）；§2.5 E1（on_season_change 事件）/ E5（战斗内才触发，
@@ -58,15 +58,15 @@
   P-2  生效季节状态段：换季状态落在 battle_state 顶层键 battle_season
        （结构 {season, pending}；pending=True = 换季待结算标记）。
        season 字段 = 当前生效季节（行动校验消费的「当前季节组」引用）；
-       pending = 本回合已检测到差异但尚未切换（D-05 待结算期）。
+       pending = 本次行动已检测到差异但尚未切换（D-05 待结算期）。
        战斗开始缺省：season=SEASON_ANY（无季节环境全技能可用，EFF-1
        战斗外口径延伸），pending=False。
-  P-3  检测时序（F-R2 ②）：detect_season_change 在回合开始懒重读时调用
-       （对齐 EFF-5「引用在回合开始懒重读时更新」）——当前季节 ≠ 生效
-       季节 → 置 pending=True（本回合不变更，行动照旧组校验 SC-1）；
+  P-3  检测时序（F-R2 ②）：detect_season_change 在行动开始懒重读时调用
+       （对齐 EFF-5「引用在行动开始懒重读时更新」）——当前季节 ≠ 生效
+       季节 → 置 pending=True（本次行动不变更，行动照旧组校验 SC-1）；
        当前季节 == 生效季节 → 清 pending（幂等复位，SC-3）。
-  P-4  切换时点（F-R2 ③）：settle_season_change 在回合结束 tick 之后、
-       下一回合开始之前调用（battle.end_turn ⑥⑦ 之间挂点）——仅当
+  P-4  切换时点（F-R2 ③）：settle_season_change 在行动收尾 tick 之后、
+       下次行动开始之前调用（battle.end_turn ⑥⑦ 之间挂点）——仅当
        pending=True 且存在可切换目标时切换：生效季节 ← 当前季节，
        pending 复位 False；返回切换事件 {switched, season, from, to,
        message_key, on_season_change}（on_season_change=True = 装配层
@@ -90,7 +90,7 @@
        中文名）由展示层模板消费本引擎返回的 from/to 渲染，本引擎零
        模板输出。
   P-9  零定时器/零睡眠：本引擎不含任何 sleep/定时器字面量——换季检测
-       依赖注入的当前季节快照值，切换时点由战斗层回合边界驱动，引擎
+       依赖注入的当前季节快照值，切换时点由战斗层行动边界驱动，引擎
        零时间依赖零轮询。
   P-10 大小写敏感（对齐 6c D-06）：season 值比较一律精确字符串比较；
        注入的当前季节非四枚举 → 回落 SEASON_ANY（无季节环境兜底，
@@ -196,7 +196,7 @@ def effective_season(battle_state: Mapping[str, Any]) -> str:
 
 
 def pending_flag(battle_state: Mapping[str, Any]) -> bool:
-    """换季待结算标记（D-05 待结算期：True = 本回合已检测差异未切换）。"""
+    """换季待结算标记（D-05 待结算期：True = 本次行动已检测差异未切换）。"""
     seg = _season_state_of(battle_state)
     return bool(seg.get(PENDING_STATE_KEY, False))
 
@@ -217,7 +217,7 @@ def detect_season_change(
     battle_state: MutableMapping[str, Any],
     current_season: Any,
 ) -> Dict[str, Any]:
-    """回合开始懒重读检测（F-R2 ②）：当前季节 ≠ 生效季节 → 标记待结算。
+    """行动开始懒重读检测（F-R2 ②）：当前季节 ≠ 生效季节 → 标记待结算。
 
     入参：
       battle_state   —— 战斗快照 dict（就地改 battle_season.pending）；
@@ -225,14 +225,14 @@ def detect_season_change(
                         season_now；非四枚举 → SEASON_ANY 兜底 P-10）。
     出参：检测结果 dict：
       {changed, pending, season, detected}
-      - changed=True：当前季节 ≠ 生效季节 → pending 置 True（本回合
+      - changed=True：当前季节 ≠ 生效季节 → pending 置 True（本次行动
         不变更，行动照旧组校验 D-05/SC-1）；
       - changed=False：当前季节 == 生效季节 → pending 复位 False
         （SC-3 幂等：连续两回合同季节无差异不标记）。
       detected 恒等于 changed（本次检测是否检测到差异的语义键）。
     语义：本方法只改 pending 标记，不切换生效季节（切换归
       settle_season_change，P-4）；战斗结束/无 battle_season 段 → 惰性
-      建段后检测（防御，战斗层每回合调用前先 init）。
+      建段后检测（防御，战斗层每次行动调用前先 init）。
     """
     if not isinstance(battle_state, MutableMapping):
         return {"changed": False, "pending": False, "season": SEASON_ANY,
@@ -253,7 +253,7 @@ def detect_season_change(
 
 
 # =====================================================================================
-# 换季结算切换（F-R2 ③ 结算边界：回合结束 tick 之后、下一回合开始之前；P-4）
+# 换季结算切换（F-R2 ③ 结算边界：行动收尾 tick 之后、下次行动开始之前；P-4）
 # =====================================================================================
 
 
@@ -263,8 +263,8 @@ def settle_season_change(
 ) -> Dict[str, Any]:
     """换季结算切换（F-R2 ③ 结算边界挂点函数）。
 
-    调用时点：回合结束 tick 之后、下一回合开始之前（battle.end_turn
-      ⑥⑦ 之间挂点）——仅当 pending=True（本回合检测到差异、待结算期
+    调用时点：行动收尾 tick 之后、下次行动开始之前（battle.end_turn
+      ⑥⑦ 之间挂点）——仅当 pending=True（本次行动检测到差异、待结算期
       已按旧组校验完毕）且存在可切换目标时切换。
 
     入参：
@@ -283,8 +283,8 @@ def settle_season_change(
         恒 False/空。
     语义：切换只改 battle_season 段——MP/连段/印记/冷却/buff 全保留
       （P-5 零触碰，F-R2 ④）；战斗结束/段缺失 → 惰性建段后幂等判定
-      （防御）；切换在当回合行动阶段之后发生 → 待结算期旧组校验已
-      完成，新季节下一回合开始生效（D-05）。
+      （防御）；切换在当次行动阶段之后发生 → 待结算期旧组校验已
+      完成，新季节下次行动开始生效（D-05）。
     """
     if not isinstance(battle_state, MutableMapping):
         return {
@@ -439,7 +439,7 @@ def skill_available(
 
 
 # =====================================================================================
-# 挂点辅助（battle.py 接线用：end_turn tick 后 settle、回合开始 detect）
+# 挂点辅助（battle.py 接线用：end_turn tick 后 settle、行动开始 detect）
 # =====================================================================================
 
 
@@ -449,9 +449,9 @@ def tick_season_boundary(
 ) -> Dict[str, Any]:
     """换季结算边界挂点（battle.end_turn ⑥ tick 之后调用，F-R2 ③）。
 
-    组合 detect + settle 的便捷入口：回合结束 tick 后先补一次检测
-    （懒重读当前季节，对齐 F-R2 ① 每回合重读语义），若标记待结算则
-    立即切换（本回合行动阶段已结束，旧组校验已完成，D-05 切换时点
+    组合 detect + settle 的便捷入口：行动收尾 tick 后先补一次检测
+    （懒重读当前季节，对齐 F-R2 ① 每次行动重读语义），若标记待结算则
+    立即切换（本次行动阶段已结束，旧组校验已完成，D-05 切换时点
     成立）。等价于先 detect_season_change 再 settle_season_change，
     幂等无副作用（未检测差异 → settle 无操作 SC-3）。
 

@@ -125,7 +125,7 @@ def render_battle_round(round_result: Any, *, ctx: Any = None) -> str:
     """战斗一轮渲染（IF31 · 先手→击杀→后手→结算，铁律 9 / 5e §1.2 军规4）。
 
     输入：引擎 TurnReport（outcomes 流水按行动时序输出）；输出玩家行动+怪物反击
-    合并 1 条消息（5e 军规3 单回合单条）。取数口径（shared_contract §5.1）：
+    合并 1 条消息（5e 军规3 单行动单条）。取数口径（shared_contract §5.1）：
     战报伤害 = ActionOutcome.final_damage（拦截链后实际扣血）、目标 HP = target_hp
     （扣血后即时值）；**不直接复用引擎 message**（5e P2-8）。
 
@@ -221,8 +221,8 @@ def render_battle_end(
         结束消息一次性输出（军规5，结算不重复）。
       - lose/draw：保留 BREP-16/18/19 + BREP-24 汇总行（用户未给失败模板，维持现状）。
 
-    BREP-24 汇总行：`战斗结束：{胜负结果}｜回合数 N｜输入 /战斗记录 查看明细`
-    （lose/draw 输出；回合数 N 依次取 enemy/player/summary 的 turns|turn）。
+    BREP-24 汇总行：`战斗结束：{胜负结果}｜行动数 N｜输入 /战斗记录 查看明细`
+    （lose/draw 输出；行动数 N 依次取 enemy/player/summary 的 turns|turn）。
     status 非 None 时渲染结算块（final_damage 供 win 叙事句）；summary 非 None 时
     追加 BREP-25 木桩明细块（≤16 行折叠 TPL-09）。
 
@@ -541,7 +541,7 @@ def _render_player_miss(
 
 def _render_player_defend(outcome: Any, *, ctx: Any = None) -> str:
     """BREP-05 进入防御（5e §2.2 / TC-10）：
-    `✅ 你进入防御姿态（本回合受到伤害减半）`（防御指令 ×0.5，数值层 L36）。
+    `✅ 你进入防御姿态（本次行动受到伤害减半）`（防御指令 ×0.5，数值层 L36）。
     模板 battle_player_defend（battle_tpl 分区）。
     """
     return tpl_of(ctx, "battle_player_defend")
@@ -879,10 +879,10 @@ def _render_enemy_intent(
     ctx: Any = None,
 ) -> Optional[str]:
     """BREP-12 怪物意图预告（5e §3.2 / TC-14，固定句式 D-5E）：
-    `{怪物} 蓄力中（下回合发动「{招名}」）`。
+    `{怪物} 蓄力中（下次行动发动「{招名}」）`。
 
     无 emoji；招名取 outcome.intent_skill（接线层注入），缺失 → None（调用方省略该行）；
-    预告行不计入怪物回合行动行数（5e §3.2「预告不是行动」）。
+    预告行不计入怪物行动行数（5e §3.2「预告不是行动」）。
     模板 battle_enemy_intent（battle_tpl 分区）。
     """
     skill = getattr(outcome, "intent_skill", None)
@@ -1233,7 +1233,7 @@ def _render_combo_settle_line(
     """BREP-22 连段结算行模板：`连段 {N} 段已结算（{备注}）`（5e §5.2）。
 
     - 正常完结：`连段 3 段已结算`（remark 空串省略括号）；
-    - 鞭尸（目标套中击杀，L55-56）：remark=`目标已倒下，下一回合退出战场`；
+    - 鞭尸（目标套中击杀，L55-56）：remark=`目标已倒下，下次行动退出战场`；
     - BOSS/最后目标提前结束（L57/L69）：remark=`BOSS 已倒下，战斗结束，后续段数作废`；
     - 派生倍率封顶（L133）：remark=`派生倍率已达上限 1.5×`。
     模板 battle_combo_settle + battle_combo_settle_suffix（battle_tpl 分区）。
@@ -1282,7 +1282,7 @@ def _render_combo_settle(outcome: Any, *, ctx: Any = None) -> Optional[str]:
 # 挂接：render_battle_start / render_battle_end（公共入口，M5-08 接线消费）；
 #       /木桩 分页浏览经 render_battle_summary（独立公共函数，5 条/页 + 页脚
 #       TPL-08 复用 list_render，3d D-02 / 数值层 L348）。
-# 取数：{怪物} 展示名 / HP / 回合数 / 收集器聚合（total/max_hit/crits/blocks/
+# 取数：{怪物} 展示名 / HP / 行动数 / 收集器聚合（total/max_hit/crits/blocks/
 #       items）由接线层注入（非 ActionOutcome 字段），缺省优雅回落（不报错）；
 #       明细条目按总伤害降序、占比 = 总伤害占比取整（数值层 L340/L347）。
 # 模板：battle_summary_header / battle_summary_item / battle_fold_items（battle_tpl）。
@@ -1316,7 +1316,7 @@ def _winner_label(winner: Any) -> str:
 
 
 def _battle_turns(player: Any, enemy: Any, summary: Any) -> int:
-    """回合数提取（BREP-24 {N}）：依次取 enemy/player/summary 的 turns|turn
+    """行动数提取（BREP-24 {N}）：依次取 enemy/player/summary 的 turns|turn
     （接线层注入；TurnReport.turn 亦可，回合数对照斩杀回合基准 L139-147），
     首个非负整数生效；全缺省回落 0。"""
     for obj in (enemy, player, summary):

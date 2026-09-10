@@ -3,7 +3,7 @@
 依据：
   - 细化_M6_三引擎与基础指令（D1）§二 inventory 引擎实装契约：规则 INV-01~INV-11、
     字段 F-08~F-14、边界异常 INV-E1~INV-E5、验收用例 TC-INV-01~TC-INV-06。
-  - 【框架】L129-138（3.3 背包引擎：堆叠/类型/局内道具不耗回合/药剂同类型回合限次 1/绑定）、
+  - 【框架】L129-138（3.3 背包引擎：堆叠/类型/局内道具不消耗行动/药剂同类型行动限次 1/绑定）、
     L130（堆叠语义）、L138（绑定不可赠送/掉落）。
   - 【4b】INV-R01~R07（堆叠合并/不可堆叠/入包原子/数量上限/格数上限/到期惰性移除/使用入口）、
     ITM-07（stack_max 默认 99）、ITM-10（bound）、LIF-R05（同类药剂不叠加）、LIF-R10（消耗即删）。
@@ -51,8 +51,8 @@ __all__ = ["InventoryEngine", "POTION_USE_COUNTS_KEY"]
 _SINGLE_ADD_CAP: int = 99   # 单次入包数量上限默认（INV-08/4b INV-R04）
 _TRUNCATE_MSG: str = "最多一次购买 99 个"
 
-# 战斗内同类型药剂一回合限 1 次的计数落点键（INV-11/LIF-R05：回血+回蓝可各 1 次，
-# 回血不能 2 次；回合推进重置、中断恢复不重置——判定归战斗/使用入口，引擎只提供落点）
+# 战斗内同类型药剂一行动限 1 次的计数落点键（INV-11/LIF-R05：回血+回蓝可各 1 次，
+# 回血不能 2 次；行动推进重置、中断恢复不重置——判定归战斗/使用入口，引擎只提供落点）
 POTION_USE_COUNTS_KEY: str = "potion_use_counts"
 
 
@@ -154,7 +154,7 @@ class InventoryEngine:
             return None
 
     # ------------------------------------------------------------------
-    # INV-11 药剂类型键与回合限次计数落点（引擎只提供键与落点，判定归使用入口）
+    # INV-11 药剂类型键与行动限次计数落点（引擎只提供键与落点，判定归使用入口）
     # ------------------------------------------------------------------
     @staticmethod
     def potion_type_of(row: Any) -> str:
@@ -166,10 +166,10 @@ class InventoryEngine:
 
     @staticmethod
     def potion_use_counts(player: MutableMapping[str, Any]) -> MutableMapping[str, int]:
-        """战斗内同类型药剂一回合限 1 次的计数落点（INV-11/LIF-R05）。
+        """战斗内同类型药剂一行动限 1 次的计数落点（INV-11/LIF-R05）。
 
         返回 player["potion_use_counts"] 可变 dict（potion_type → 已用次数）；
-        回合推进重置 / 入战斗快照（中断恢复不重置）由战斗入口负责，本引擎不越权。
+        行动推进重置 / 入战斗快照（中断恢复不重置）由战斗入口负责，本引擎不越权。
         """
         raw = player.get(POTION_USE_COUNTS_KEY)
         if not isinstance(raw, MutableMapping):

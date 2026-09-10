@@ -2966,7 +2966,7 @@ async def cmd_instant(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 
     一步出结果（F-17/BA-07/08）：auto_use 默认 true（settings 战斗即时调合.auto_use）→
     注入 use_fn（ctx[\"use_battle_item\"]）走战斗道具行动入口当场结算；false → 入包本场不可再用；
-    use_fn 缺失 → auto_use 回退入包（【工程补白】）。吃冷却（engine.cooldown_of，炸弹 3 回合）
+    use_fn 缺失 → auto_use 回退入包（【工程补白】）。吃冷却（engine.cooldown_of，炸弹 3 次行动）
     传 resolve。渲染 M-17 一行 → 记 battle_alchemy_used+1（写回注入战斗快照 dict 顶层键）。
 
     入参：parsed（ParsedCommand）、ctx（in_battle/battle_snapshot/battle_alchemy_engine/
@@ -3020,7 +3020,7 @@ async def cmd_instant(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     use_fn = ctx.get("use_battle_item")
     if auto_use and use_fn is None:
         auto_use = False  # 【工程补白】无战斗道具行动入口 → 回退入包
-    cooldown = engine.cooldown_of(recipe)  # 吃冷却（BA-06：炸弹 3 回合）
+    cooldown = engine.cooldown_of(recipe)  # 吃冷却（BA-06：炸弹 3 次行动）
     res = engine.resolve(
         ctx, recipe,
         battle_alchemy_used=used, auto_use=auto_use,

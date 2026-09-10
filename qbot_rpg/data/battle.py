@@ -1,7 +1,7 @@
 """战斗快照领域类型 CombatantSnapshot / BattleSnapshot。
 
 依据：细化_3a_架构分层契约 §3.2（BattleSnapshot 字段要点：会话类型、双方
-CombatantSnapshot、回合数、combo_state、ai_state、status_state、marks_state、
+CombatantSnapshot、行动数、combo_state、ai_state、status_state、marks_state、
 resist_table、effect_triggers/cooldowns、formula_state{random_seed}；CombatantSnapshot
 为 frozen 正例，细化_规则 L81-87 原样）；细化_1g1c_战斗状态数据（会话快照全量
 状态登记）；细化_4a_存储层契约 §0.1 术语表（会话快照 ID+名称冗余存储，按旧配置
@@ -44,7 +44,7 @@ class CombatantSnapshot:
 
 @dataclass(frozen=True)
 class BattleSnapshot:
-    """进行中战斗会话的全量快照（1v1 回合制，一轮一条消息）。
+    """进行中战斗会话的全量快照（1v1 行动条制，一轮一条消息）。
 
     各 *_state 为纯 JSON 可序列化 map：
       - combo_state   连段状态（细化_1c1a 连段状态集）

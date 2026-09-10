@@ -23,9 +23,9 @@ __all__ = ["Duration", "StatusInstance"]
 
 @dataclass(frozen=True)
 class Duration:
-    """状态时长：回合数 + 次数（双形，任一生效按效果系统语义）。"""
+    """状态时长：行动数 + 次数（双形，任一生效按效果系统语义）。"""
 
-    turns: int        # 剩余回合数
+    turns: int        # 剩余行动数
     charges: int      # 剩余触发次数
 
 

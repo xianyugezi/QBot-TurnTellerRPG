@@ -18,7 +18,7 @@ on_death / 季节 / 状态施加移除）收敛为统一可配置事件分派。
      （status 定义既有 on_tick/effects 字段先例，test_demo statuses.json）
   C. 装配注入 procs（season_procs 同款形态，可选）——ctx_vars 传 procs 列表。
 
-chance 三态 / 每回合每场上限 / 递归深度：全部复用 effects.EffectRuntime 既有语义
+chance 三态 / 每次行动每场上限 / 递归深度：全部复用 effects.EffectRuntime 既有语义
 （increment_trigger / trigger_counts / reset_turn_triggers / config.max_triggers_* /
 config.chain_depth / _chance_roll）。效果动作执行复用 execute_action（功能二引用归一
 + condition 门控已通）。

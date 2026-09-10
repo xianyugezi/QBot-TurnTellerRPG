@@ -26,7 +26,7 @@
      - 未注册资源键 / 非 int 值 → 跳过不报错（三铁律② 防御兜底）；
      - apply_gain()：按 skill def 的 energy_gain 段批量结算（技能/派生/proc 通用）。
   3) energy_cost 施放前检查（M2 E2，§1.3 施放前段）：
-     - check_cost()：施放前检查消耗是否足够——不足 → 被拒不耗回合（复用
+     - check_cost()：施放前检查消耗是否足够——不足 → 被拒不消耗行动（复用
        combo.should_reject 被拒管道语义：能量/怒气不变、连段不变、可反复尝试）；
      - 数值型键 = 资源 ID（K1）；子池型键 = 池名 + any 键（K2/D-02：any:n 为
        总量门，任意池合计 ≥ n）；any 与具名键互斥（K3，防御：并存时 any 优先）；
@@ -36,7 +36,7 @@
   4) 触发类 energy_cost 语义（D-03）：
      - check_trigger_cost()：proc/trigger 内挂 energy_cost（元素能量屏障受击耗 1）
        触发事件发生时检查；不足 → 本次触发不生效、不耗能量、不计触发上限；
-     - 生效后才计入「每回合 N 次」上限（TC-06③ 语义：不足不计数、生效计数）。
+     - 生效后才计入「每次行动 N 次」上限（TC-06③ 语义：不足不计数、生效计数）。
   5) 两型统一读写接口（数值型单值 / 子池型池级）：
      - get_value() / set_value() / add_value() / total_of()：数值型直接读写单值，
        子池型读写池级 {pool: value} 展开（D-04 池级原子粒度 RS-6）——统一入口
@@ -54,13 +54,13 @@
   - §1.2 M2 字段级 schema（E1 energy_gain 成功结算时 / E2 energy_cost 施放前
     检查；K1~K6 键空间：数值型键=资源 ID、子池型键=池名+any、any 与具名互斥、
     多资源增减、0=无操作、负值笔误）；
-  - §1.3 F-R1 回合结清（施放前 energy_cost 门禁不足被拒不耗回合 / 成功结算
+  - §1.3 F-R1 行动结清（施放前 energy_cost 门禁不足被拒不消耗行动 / 成功结算
     energy_gain 追加封顶 ≤max（0=不限）·子池型每池 ≤max_per_pool 超出不累计
     不回滚 / proc 时点同规则 / D-03 触发类不足不生效不耗不计上限）；
   - §0.3 ADR：D-01（pools 判别两型）/ D-01b（type 归一 resource）/ D-02
     （any:n 总量门 + 多重集匹配）/ D-03（触发类语义）/ D-06（0=无操作、负数笔误）；
   - §1.4 RS-5（恢复时注册已删 → 按字段缺失降级不报错）/ RS-6（池级原子粒度）；
-  - §六 TC-02（命中 +15 / 未命中不变 / 95→100 封顶）/ TC-03（不足被拒不耗回合）
+  - §六 TC-02（命中 +15 / 未命中不变 / 95→100 封顶）/ TC-03（不足被拒不消耗行动）
     / TC-06③（屏障不足不生效不耗不计上限）/ TC-08（池独立增减 + fire 封顶 3）。
   - docs/m13_6c摸底.md：M2 缺口（全库零命中 energy_gain/energy_cost；施放前
     检查 combo.py L856 should_reject + battle.py L1215-1229 rejected 管道现成；
@@ -539,7 +539,7 @@ def total_of(ctx: Mapping[str, Any], axis_id: str, side: str = "player") -> int:
 
 
 # =====================================================================================
-# energy_cost 施放前检查（M2 E2 / F-R1 施放前段；不足 → 被拒不耗回合）
+# energy_cost 施放前检查（M2 E2 / F-R1 施放前段；不足 → 被拒不消耗行动）
 # =====================================================================================
 
 
@@ -564,7 +564,7 @@ def check_cost(
     cost: Mapping[str, int],
     side: str = "player",
 ) -> Dict[str, Any]:
-    """energy_cost 施放前检查（E2/K1-K3/D-02）：不足 → 被拒不耗回合。
+    """energy_cost 施放前检查（E2/K1-K3/D-02）：不足 → 被拒不消耗行动。
 
     判定（确定性，短路返回）：
       - cost 空（{}/None）→ ok（无消耗）；0 值键 = 无操作（D-06）；
@@ -829,7 +829,7 @@ def check_trigger_cost(
     """触发类 energy_cost 检查（D-03）：不足 → 本次触发不生效、不耗、不计上限。
 
     与主动技能 check_cost 同构（E2 语义 + 触发时点），但返回契约对齐 D-03：
-      - ok=True（能量足）→ 触发可生效，调用方执行效果并**计入**「每回合 N 次」
+      - ok=True（能量足）→ 触发可生效，调用方执行效果并**计入**「每次行动 N 次」
         上限（TC-06③：生效后才计数）；
       - ok=False（不足）→ 本次触发不生效、不耗能量、**不计**触发上限
         （调用方跳过效果且不计数）。
@@ -1018,7 +1018,7 @@ class ResourceAxisEngine:
       audit:           审计观察口 callable(str)（记录 ok/axis/事件摘要）。
 
     方法（技能级便捷入口，skill def 经 ctx 注入 G0）：
-      check(skill, side)   —— 施放前 energy_cost 检查（不足 → 被拒不耗回合）；
+      check(skill, side)   —— 施放前 energy_cost 检查（不足 → 被拒不消耗行动）；
       pay(skill, side)     —— 施放成功 energy_cost 扣减（原子）；
       gain(skill, side)    —— 成功结算 energy_gain 追加（封顶）；
       check_trigger / pay_trigger / trigger_energy —— D-03 触发类语义；
@@ -1051,7 +1051,7 @@ class ResourceAxisEngine:
     def check(
         self, ctx: MutableMapping[str, Any], skill: Any, side: str = "player"
     ) -> Dict[str, Any]:
-        """施放前 energy_cost 检查（不足 → 被拒不耗回合，复用 should_reject 管道语义）。"""
+        """施放前 energy_cost 检查（不足 → 被拒不消耗行动，复用 should_reject 管道语义）。"""
         result = check_skill_cost(self._inject(ctx), skill, side=side)
         self._audit_log("resource_cost_check: ok=%s axes=%s" % (
             result.get("ok"), ",".join(result.get("axes", []))))

@@ -87,7 +87,7 @@ SESSION_GATE_GUARDS_KEY: str = "gate_guards_defeated"
 #: on_chase_continue 读该标记 → 透传落库值，避免二次恢复漂移）。
 SESSION_BOSS_PV_RESTORED_KEY: str = "pv_restored"
 
-#: zone_change.timing 枚举键：行动后触发（怪物回合行动结算后，2a2 R5）。
+#: zone_change.timing 枚举键：行动后触发（怪物行动结算后，2a2 R5）。
 ZC_TRIGGER_AFTER_ACTION: str = "after_action"
 
 #: zone_change.timing 枚举键：阶段切换后触发（衔接 monster_phases phase_changed）。

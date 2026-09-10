@@ -16,7 +16,7 @@
   ④ 强度公式 intensity（BA-10：技能×(1+0.4×冷却数)，settings 战斗道具.强度公式 可配；
      方位 v0.6 修正 #8/N2：resolve 强度再乘熟练度乘区 proficiency_mult——settings 战斗
      即时调合.proficiency_multiplier {min,max,curve} 配置，缺段=1.0 无乘区）→
-  ⑤ 冷却 cooldown_of（BA-06：吃冷却对齐 /道具 冷却配置，炸弹 3 回合冷却）→
+  ⑤ 冷却 cooldown_of（BA-06：吃冷却对齐 /道具 冷却配置，炸弹 3 次行动冷却）→
   ⑥ 能量 consume_energy（GU-52/R-08：energy_enabled=true 时 EnergyBar.consume(1)，关则直通）。
 
 依据：
@@ -53,7 +53,7 @@
        ctx["currencies"]["gem"]（全量校验、全拒+差异，ATO-01）；金币 cost.coins 不扣
        （F-17 仅「素材+能量 1 格」+ 宝石口径，即时调合不消耗金币——定稿未言，保守不扣）。
   E-A5  冷却读取顺序（BA-06）：recipe_def.cooldown > recipe_def.output.cooldown >
-       默认 3（炸弹 3 回合冷却）。物品级冷却配置（/道具 冷却配置）由壳层解析 items def 后
+       默认 3（炸弹 3 次行动冷却）。物品级冷却配置（/道具 冷却配置）由壳层解析 items def 后
        并入配方 cooldown 字段，或经 resolve(cooldown=...) 显式传入——本签名 cooldown_of
        (recipe_def) 无 ctx，不从 items 注册表解析。
   E-A6  强度公式基准（BA-10「技能×(1+0.4×冷却数)」）：「技能」基准值取 recipe_def.skill
@@ -103,7 +103,7 @@ BATTLE_ALCHEMY_USED_KEY: str = "battle_alchemy_used"
 DEFAULT_PER_BATTLE_LIMIT: int = 1
 # BA-07：auto_use 默认 true（当场自动使用；settings 战斗即时调合.auto_use 可配）
 DEFAULT_AUTO_USE: bool = True
-# BA-06：炸弹 3 回合冷却（对齐 /道具 冷却配置）
+# BA-06：炸弹 3 次行动冷却（对齐 /道具 冷却配置）
 DEFAULT_BOMB_COOLDOWN: int = 3
 # BA-10：道具强度公式 技能×(1+0.4×冷却数)（settings 战斗道具.强度公式 可配）
 DEFAULT_INTENSITY_COEF: float = 0.4
@@ -199,10 +199,10 @@ class BattleAlchemyEngine:
     # ------------------------------------------------------------------
     @staticmethod
     def cooldown_of(recipe_def: Any) -> int:
-        """冷却回合数（BA-06/E-A5）：配方 cooldown > 配方 output.cooldown > 默认 3。
+        """冷却时长（次行动；BA-06/E-A5）：配方 cooldown > 配方 output.cooldown > 默认 3。
 
         入参：recipe_def（配方 def，可带 cooldown 字段或 output.cooldown）。
-        出参：冷却回合数 int（非负；非法/缺失 → 默认 3 炸弹冷却）。
+        出参：冷却时长（次行动）int（非负；非法/缺失 → 默认 3 炸弹冷却）。
         核心：对齐 /道具 冷却配置——物品级冷却由壳层解析 items def 后并入配方 cooldown 或
               经 resolve(cooldown=...) 显式传入（本签名无 ctx，不从 items 注册表解析）。
         """
@@ -224,7 +224,7 @@ class BattleAlchemyEngine:
     def intensity(self, recipe_def: Any, *, cooldown: Any) -> float:
         """道具强度公式（BA-10/E-A6）：强度 = 技能 × (1 + 系数 × 冷却数)。
 
-        入参：recipe_def（配方 def，skill 字段为「技能」基准值）；cooldown 冷却回合数。
+        入参：recipe_def（配方 def，skill 字段为「技能」基准值）；cooldown 冷却时长（次行动）。
         出参：强度 float（技能缺省 1.0；系数 settings 战斗道具.强度公式，缺省 0.4）。
         核心：技能基准缺省 1.0，强度参与伤害链结算由战斗层消费。
         """
@@ -457,7 +457,7 @@ class BattleAlchemyEngine:
             ctx["battle_snapshot"] 经 read_used 读取，E-A1）。
           - auto_use：当场自动使用开关（None → settings 战斗即时调合.auto_use，默认 true，
             BA-07）。
-          - cooldown：本次产出冷却回合数（0/None → cooldown_of(recipe_def) 兜底，BA-06）。
+          - cooldown：本次产出冷却时长（次行动）（0/None → cooldown_of(recipe_def) 兜底，BA-06）。
           - use_fn：道具行动入口回调 use_fn(item_id, count, produced)（战斗层注入
             _resolve_item_action 鸭子，BA-07；返回 outcome 或 None）。
         出参：

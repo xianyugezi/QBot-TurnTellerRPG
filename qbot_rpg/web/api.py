@@ -115,7 +115,7 @@ _FIELD_LABEL_ZH: Dict[str, str] = {
     "hp": "生命", "mp": "魔力", "atk": "攻击", "def": "防御",
     "str": "力量", "int": "智力", "con": "体质", "spr": "精神",
     "foc": "专注", "agi": "敏捷", "lck": "幸运",
-    "power": "威力", "duration": "持续", "turns": "回合",
+    "power": "威力", "duration": "持续", "turns": "行动数",
     "probability": "概率", "damage": "伤害", "heal": "治疗",
     "element": "属性", "elements": "属性", "attack_type": "攻击类型",
     "interrupt": "打断", "armor": "护甲", "penetration": "穿透",

@@ -258,7 +258,7 @@ class SkillDef(BaseDef):
 
     @property
     def cooldown(self) -> float:
-        """F10 冷却回合（缺省 0；basic=0 无冷却 [L62]；负值钳制 0；计数由引擎 1g2 管理）。"""
+        """F10 冷却时长（次行动，缺省 0；basic=0 无冷却 [L62]；负值钳制 0；计数由引擎 1g2 管理）。"""
         v = self._num("cooldown")
         v = v if v is not None else DEFAULT_COOLDOWN
         return max(v, 0.0)
@@ -433,7 +433,7 @@ def skills_fields() -> Dict[str, FieldMeta]:
         # （细化_6c V1~V3/V7，resource_axis_validator.py），本表仅登记放行
         "energy_cost": FieldMeta(type="obj", soft_label=True),
         # 6c 资源轴消耗（细化_6c §1.2 E2，M2）：{axis_id: {key: amount}}；不足
-        # → 被拒不耗回合（F-R1 施放前段）；键空间归资源轴校验器（V1/V2/V7）
+        # → 被拒不消耗行动（F-R1 施放前段）；键空间归资源轴校验器（V1/V2/V7）
         "season": FieldMeta(type="str", soft_label=True),
         # 6c 季节技能组（细化_6c §2.1 SE1）：spring/summer/autumn/winter（缺省
         # =通用）；枚举校验归资源轴校验器（V9）

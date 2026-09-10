@@ -254,7 +254,7 @@ class ActionDef(BaseDef):
 
     @property
     def cooldown(self) -> Optional[float]:
-        """冷却回合（G05：≥0 整数；默认 0）。"""
+        """冷却时长（次行动；G05：≥0 整数，默认 0）。"""
         return self._num("cooldown")
 
     @property
@@ -275,7 +275,7 @@ class ActionDef(BaseDef):
 
     @property
     def hungry(self) -> Optional[float]:
-        """饥饿保底（G09：连续 N 回合未选中则强制选，默认 0=关）。"""
+        """饥饿保底（G09：连续 N 次行动未选中则强制选，默认 0=关）。"""
         return self._num("hungry")
 
     @property

@@ -46,10 +46,10 @@ combo_state 始终以战斗快照为权威（同 effects.EffectRuntime 哲学）
      循环互派生（TC-15）据此在步 tag=combo/源 tag=combo 下持续累计不归零。
   4. reset 归零时点（收敛 1c1c §1.1 回合粒度与 1c1b 主迁移④）：以「到顶后下一
      次连段技/普攻成功结算时先归零再 +delta」实现（可观察结果 = 0→1 重打，
-     TC-TOP-01）；到顶当回合 eq=max 派生先判（TC-TOP-02 / TC-21，L158）在派生
+     TC-TOP-01）；到顶当次行动 eq=max 派生先判（TC-TOP-02 / TC-21，L158）在派生
      解析阶段先行处理，与归零解耦（先判 eq=max 再视无派生归零）。
   5. 指令被拒（MP/冷却/条件，⑥）：engine 层提供 should_reject/can_execute 完整
-     判定（TC-30/32/49-52 + 派生原子拒绝）；battle 层 MP 扣费与「不耗回合」接线
+     判定（TC-30/32/49-52 + 派生原子拒绝）；battle 层 MP 扣费与「不消耗行动」接线
      随 contract_deviations F-24 递延至 M5 技能库（本层保留 rejected 通道，
      战斗层可据 plan.rejected 短路）。
   6. hold「到顶普通技能不清零」仅豁免 hold 且 count==max（TC-TOP-05 特例，
@@ -109,7 +109,7 @@ __all__ = [
 COMBO_IDLE = "idle"                 # ① 空闲：无活跃连段链 count=0
 COMBO_IN_COMBO = "in_combo"         # ② 连段中：1 <= count < max，条件全不满足
 COMBO_DERIVABLE = "derivable"       # ③ 段数达标：>=1 条派生条件成立（不强制派生）
-COMBO_DERIVING = "deriving"         # ④ 派生中：本回合正在执行派生形态
+COMBO_DERIVING = "deriving"         # ④ 派生中：本次行动正在执行派生形态
 COMBO_AT_MAX_RESET = "at_max_reset"  # ⑤ 到顶-reset：count==max 且 behavior=reset
 COMBO_AT_MAX_HOLD = "at_max_hold"   # ⑥ 到顶-hold：count==max 且 behavior=hold
 
@@ -431,7 +431,7 @@ def evaluate_condition(
       - {count: {eq|min|max}} 段数（TC-03/11/12）
       - {target_hp_pct: {min|max}} 目标血量百分比（TC-09-11，边界含）
       - {self_status: {has: [...]}} {target_status: {has:[...]}} 状态引用
-      - {round: {eq|min|max}} 战斗第 N 回合，与段数独立（TC-14/L214）
+      - {round: {eq|min|max}} 战斗第 N 次行动，与段数独立（TC-14/L214）
       - {self_marks/target_marks/marks_total/marks_set/marks_any: ...} 印记条件
         （1d §3.1 C-1..C-5，需 marks_lookup 接线；无接线或求值失败 → 不满足）
       - 复合 {and: [...]}/{or: [...]}/{not: {...}} 任意拓扑（TC-09/L91）
@@ -533,7 +533,7 @@ class DerivationRef:
 class ComboActionResult:
     """单次连段性行动的结果（battle 层消费：形态替换/计数/反馈事件）。
 
-    - ok: 行动是否被接受（命令被拒=false，不改连段不耗回合，⑥）
+    - ok: 行动是否被接受（命令被拒=false，不改连段不消耗行动，⑥）
     - rejected: 是否被拒（MP/冷却/条件，⑥）——rejected 必与 ok=False 同现
     - count_before/count_after: 结算前后段数
     - chain_id/chain_name: 行动结算后活跃链（可为 None）
@@ -895,7 +895,7 @@ class ComboEngine:
         action: Mapping[str, Any],
         snap: Mapping[str, Any],
     ) -> Tuple[bool, str]:
-        """⑥ 指令被拒判定（MP/冷却/条件）：不耗回合、不改连段、可反复尝试。
+        """⑥ 指令被拒判定（MP/冷却/条件）：不消耗行动、不改连段、可反复尝试。
 
         - action["rejected"]=true（外部预设拒绝通道，含条件不足派生强行使用）→ 拒；
         - config.enforce_mp 开启：mp_cost > 当前 mp → 拒（F-24 递延 M5，engine 可测）；
@@ -986,7 +986,7 @@ class ComboEngine:
     def is_armored(self, side: str, snap: Mapping[str, Any], armor_active: Optional[Mapping[str, bool]] = None) -> bool:
         """目标当前是否处于霸体：「使用期间」= 行动开始 → 本次结算完成（1c2 §2.2）。
 
-        数据源：战斗层瞬态 armor_active（本回合声明且已进入结算的技能 armor=true）
+        数据源：战斗层瞬态 armor_active（本次行动声明且已进入结算的技能 armor=true）
         + 效果系统免疫矩阵 immune_vs:interrupt（1c2 §1.3 字段 19 归口。
         两个来源任一为真即霸体）。
         """
@@ -1277,9 +1277,9 @@ class ComboEngine:
                         max_combo=chain.max_combo, at_max=False,
                     )
 
-        # ---- 到顶当回合 eq=max 派生（TC-21 / TC-TOP-02，L158）----
+        # ---- 到顶当次行动 eq=max 派生（TC-21 / TC-TOP-02，L158）----
         # reset 链：本次 +1 达顶后，按**新快照**（count==max）先判 eq=max 派生并
-        # 执行（替换形态），再执行归零重打（count→0，下回合 0→1）。
+        # 执行（替换形态），再执行归零重打（count→0，下次行动 0→1）。
         if (
             step is None
             and new_state.count >= chain.max_combo
@@ -1347,7 +1347,7 @@ class ComboEngine:
         snap: Mapping[str, Any],
         post_state: ComboState,
     ) -> Optional[StepConfig]:
-        """reset 链达顶当回合的 eq=max 派生判定（L158，基于**达顶后新快照**）。
+        """reset 链达顶当次行动的 eq=max 派生判定（L158，基于**达顶后新快照**）。
 
         仅在 count==max 的 replace 步 → 返回该步（每条来自基技能、条件达顶可用）。
         无则 None（本次为纯达顶，下回连段技归零重打）。
@@ -1433,7 +1433,7 @@ class ComboEngine:
                     "reason": self._condition_reason(base.condition, ctx)}
 
         # 路径 c：cast from（基技能）——存在可用 replace 步 → 自动替换（TC-03）
-        # 门限：仅当预施放 count < max（到顶不自动替换；到顶当回合的 eq=max 派生由
+        # 门限：仅当预施放 count < max（到顶不自动替换；到顶当次行动的 eq=max 派生由
         # _at_max_derivation 在达顶后新快照判定，TC-21/TC-TOP-02）。
         if from_steps and state.count < chain.max_combo:
             avail = [s for s in from_steps if _avail(s)]

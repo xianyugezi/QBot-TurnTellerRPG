@@ -478,11 +478,12 @@ def _without_npc_outcomes(report: EnrichedTurnReport) -> SimpleNamespace:
     )
 
 
-# ActionOutcome 全字段清单（frozen dataclass 复制用，shared_contract §5.1/§5.2）
+# ActionOutcome 渲染取数字段清单（frozen dataclass 复制用，shared_contract §5.1/§5.2）
+# 批④ 背击：backstab 附注字段随 copy 透传（渲染「（背击）」；combo_result 渲染层不消费不入表）
 _OUTCOME_FIELDS: Tuple[str, ...] = (
     "ok", "seq", "actor", "action_type", "target", "hit", "crit", "blocked",
     "raw_damage", "final_damage", "target_hp", "side_effects", "message",
-    "battle_ended", "status",
+    "battle_ended", "status", "backstab",
 )
 
 

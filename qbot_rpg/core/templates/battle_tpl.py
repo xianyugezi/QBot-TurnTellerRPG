@@ -82,6 +82,8 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     # —— BREP-04 会心/格挡附注 ——
     "battle_crit_note": "（会心·{tier} ×{mult}）",
     "battle_blocked_note": "（被格挡，伤害减半）",
+    # 背击附注（B5 背击闭环，批④）：只露行为不露倍率（软提示口径）
+    "battle_backstab_note": "（背击）",
 
     # —— BREP-02/03/05/06 玩家行动 ——
     "battle_player_hit": "✅ 你{action}，造成 {damage} 伤害{note}（{target} {hp}/{max_hp}）",
@@ -198,6 +200,7 @@ PLACEHOLDER_WHITELIST: Dict[str, set] = {
     "battle_action_hint_tail": set(),
     "battle_crit_note": {"tier", "mult"},
     "battle_blocked_note": set(),
+    "battle_backstab_note": set(),
     "battle_player_hit": {"action", "damage", "note", "target", "hp", "max_hp"},
     "battle_player_miss": {"target", "action", "hp", "max_hp"},
     "battle_player_defend": set(),

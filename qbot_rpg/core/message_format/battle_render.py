@@ -479,6 +479,9 @@ def _render_crit_block_note(
         notes.append(tpl_of(ctx, "battle_crit_note", {"tier": tier, "mult": mult}))
     if bool(getattr(outcome, "blocked", False)):
         notes.append(tpl_of(ctx, "battle_blocked_note"))
+    # 背击附注（B5 背击闭环，批④）：位于怪背面结算 → 「（背击）」；零数值
+    if bool(getattr(outcome, "backstab", False)):
+        notes.append(tpl_of(ctx, "battle_backstab_note"))
     return "".join(notes)
 
 
@@ -612,10 +615,9 @@ def _render_player_action(outcome: Any, *, ctx: Any = None) -> List[str]:
     lines.extend(_render_air_drop_lines(outcome, ctx=ctx))
     lines.extend(_render_position_changed_lines(outcome, ctx=ctx))
     lines.extend(_render_part_break_lines(outcome, ctx=ctx))
-    # 转向行（增补 v1 §三）：玩家行动前怪转回面向——置于行动行之前（先转向后出招）
-    _turn_lines = _render_enemy_turn_lines(outcome, ctx=ctx)
-    if _turn_lines:
-        lines[:0] = _turn_lines
+    # 转向行（增补 v1 §三；批④ 时序修订）：行动结算**后**怪才转回面向——置于
+    # 行动行之后（「你先在背后得手 → 怪才转身」；原「行动前」序已随 v1.3 修订）
+    lines.extend(_render_enemy_turn_lines(outcome, ctx=ctx))
     return lines
 
 
@@ -833,8 +835,8 @@ def _render_air_drop_lines(outcome: Any, *, ctx: Any = None) -> List[str]:
 
 
 def _render_enemy_turn_lines(outcome: Any, *, ctx: Any = None) -> List[str]:
-    """怪转向行（增补 v1 §三 转向事件化）：outcome.side_effects 的 enemy_turned
-    事件（引擎「玩家行动前怪转回面向」产出）→ 模板 battle_enemy_turned 一行；
+    """怪转向行（增补 v1 §三 转向事件化；批④ 时序修订）：outcome.side_effects 的
+    enemy_turned 事件（引擎「行动结算后怪转回面向」产出）→ 模板 battle_enemy_turned 一行；
     {name} 经显示层怪名映射（与命中行同通道）；零数值（隐性口径，玩家不可见）。"""
     out: List[str] = []
     for e in getattr(outcome, "side_effects", ()) or ():

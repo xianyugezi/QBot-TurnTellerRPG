@@ -79,6 +79,7 @@ __all__ = [
     "DEFAULT_TURN_COST",
     "DEFAULT_AIR_HIT_SHRINK",
     "DEFAULT_AIR_DROP_DELAY",
+    "DEFAULT_COUNTER_REFUND",
     "SIDE_PRIORITY",
     "CtbRuleConfig",
     "TieBreakKey",
@@ -183,6 +184,11 @@ DEFAULT_AIR_HIT_SHRINK: float = 400.0
 #: 可经 CtbRuleConfig / settings["ctb"]["air_drop_delay"] 覆盖（可调，勿硬编码）。
 DEFAULT_AIR_DROP_DELAY: float = 400.0
 
+#: 反击返还的行动条缺省值（怪猎采纳 C11）：防反/闪反成功时返还给玩家的时间
+#: （`next_ready −= 本值`，不低于当前时刻）；范围参考 150~250。**隐性口径（玩家不可见）**。
+#: 可经 CtbRuleConfig / settings["ctb"]["counter_refund"] 覆盖（可调，勿硬编码）。
+DEFAULT_COUNTER_REFUND: float = 200.0
+
 #: 黑盒验收场景 2 的 recovery 下界（供测试引用，避免魔数散落）。
 #:
 #: 推演（P SPD=100 / E SPD=75 / speed_reference=100 / 普攻 recovery=100）：
@@ -233,6 +239,7 @@ class CtbRuleConfig:
                        命中空中玩家时其窗口缩短，隐性口径）
       air_drop_delay:  被击落硬直——下次 ready 追加值（行动条；对空必杀
                        `air_drop=knockdown` 命中空中玩家，隐性口径）
+      counter_refund:  反击返还的行动条（防反/闪反成功；隐性口径）
     """
 
     speed_reference: float = SPEED_REFERENCE
@@ -247,6 +254,7 @@ class CtbRuleConfig:
     turn_cost: float = DEFAULT_TURN_COST
     air_hit_shrink: float = DEFAULT_AIR_HIT_SHRINK
     air_drop_delay: float = DEFAULT_AIR_DROP_DELAY
+    counter_refund: float = DEFAULT_COUNTER_REFUND
 
     def with_overrides(self, overrides: Optional[Mapping[str, Any]]) -> "CtbRuleConfig":
         """返回覆盖部分字段后的新配置（缺省/非法值保持原值，不抛错）。
@@ -280,6 +288,9 @@ class CtbRuleConfig:
                 ),
                 air_drop_delay=_to_float(
                     overrides.get("air_drop_delay"), self.air_drop_delay
+                ),
+                counter_refund=_to_float(
+                    overrides.get("counter_refund"), self.counter_refund
                 ),
             )
         except Exception:  # pragma: no cover - 兜底不崩（规则层 fail-safe）

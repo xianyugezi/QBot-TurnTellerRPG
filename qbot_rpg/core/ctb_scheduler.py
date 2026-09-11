@@ -773,6 +773,37 @@ class CTBScheduler:
             _logger.exception("delay_actor 失败：%s", actor_id)
             return False
 
+    def hasten_actor(self, actor_id: Any, refund_bars: Any = 0.0) -> bool:
+        """给单位的下一次 ready 返还时间（反击返还——怪猎采纳 C11）。
+
+        语义：`next_ready ← max(now, next_ready − refund_bars)`（纯时间平移，不重算
+        recovery；下限钳到当前时刻=最多「立即行动」，不倒流）；bump generation 使旧票
+        失效，并为其余存活单位按现有时间表重签票据（除目标外，其它单位时序不变）。
+
+        :param actor_id: 单位标识
+        :param refund_bars: 返还的行动条数（≤0 → 无害空操作返回 True）
+        :return: True = 已处理；False = 单位不存在/已阵亡
+        """
+        view = self._actors.get(str(actor_id))
+        if view is None or not view.alive:
+            return False
+        try:
+            extra = _to_float(refund_bars, 0.0)
+            if extra <= 0:
+                return True
+            self.bump_generation("hasten")
+            view.next_ready = max(self._time, view.next_ready - extra)
+            self._enqueue(view, ready_at=view.next_ready)
+            for other in self._actors.values():
+                if other is view or not other.alive or other.ticket is None:
+                    continue
+                self._enqueue(other, ready_at=other.next_ready)
+            self._rebuild_queue()
+            return True
+        except Exception:  # pragma: no cover - 兜底不崩
+            _logger.exception("hasten_actor 失败：%s", actor_id)
+            return False
+
     def mark_dead(self, actor_id: Any) -> bool:
         """标记单位死亡：移出队列 + bump generation（旧票回流必被丢弃）。
 

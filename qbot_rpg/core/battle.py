@@ -246,6 +246,12 @@ _BATTLE_DEFAULT_CONFIG: Dict[str, Any] = {
     "rule_version": CTB_RULE_VERSION,
     # 部位破位倒地状态 id（方位 v0.6 §五：knockdown 走既有 status 体系）
     "knockdown_status_id": "knockdown",
+    # 被击落倒地状态 id（跃空风险闭环，批③：action.air_drop=knockdown 命中空中玩家，
+    # 走既有 status 体系；可配）
+    "air_drop_status_id": "knockdown",
+    # 被击落倒地窗口（实例 turns 覆写值；系统每个行动收尾双端各扣 1，缺省 3 =
+    # 覆盖「玩家下一拍 + 怪下一次出手」的追击窗；可配）
+    "air_drop_turns": 3,
 }
 
 # combatant 缺失字段兜底（细化_1g1c §1.2 双方单位 + 1a 公式所需属性）
@@ -2760,6 +2766,8 @@ class BattleEngine:
         ca.setdefault("position_rule", sd.get("position_rule"))
         ca.setdefault("break_power", float(sd.get("break_power", 0) or 0))
         ca.setdefault("air_policy", sd.get("air_policy"))
+        # 跃空风险闭环（批③）：air_drop=对空击落档（knockdown=击中空中玩家即击落）
+        ca.setdefault("air_drop", sd.get("air_drop"))
 
         _action_had_mult = "mult" in ca  # action 原样是否显式 mult（折算判据）
         ca.setdefault("mult", float(ca.get("mult", 1.0)))
@@ -2885,6 +2893,9 @@ class BattleEngine:
             # armor 口径——派生=实际施放技能；仅当行动原样未显式给出时跟随派生技）
             if not action.get("air_policy"):
                 ca["air_policy"] = _fsd.get("air_policy")
+            # 跃空风险闭环（批③）：air_drop 同口径随派生技 def 解析
+            if not action.get("air_drop"):
+                ca["air_drop"] = _fsd.get("air_drop")
 
         # 防反/闪反姿态标记（用户拍板标签制）：玩家施放技能若带 counter_type/
         # counter_skill（守势=parry/回环+腾空=dodge）→ 记入 snap.counter_stance。
@@ -3305,6 +3316,111 @@ class BattleEngine:
                 {"type": "air_land", "actor": "player", "auto": True})
         except Exception:  # noqa: BLE001 - 落地失败不阻断行动收尾
             return
+
+    def _apply_air_hit_consequences(
+        self, attacker: str, action: Mapping[str, Any],
+        effects: List[Mapping[str, Any]],
+    ) -> Optional[Mapping[str, Any]]:
+        """怪物攻击命中空中玩家后的跃空后果（跃空风险闭环，2026-09-11 批③实装）。
+
+        调用点：`_resolve_damage_action` 收尾、`_after_actor_action` 之前——到达本点
+        = 方位检查已过（该行动可触达空中）、防反早段分流已完毕（防反成功=完全免伤，
+        不吃本后果）。两档（均**隐性口径，玩家不可见**）：
+
+        - **击落档**（`action.air_drop == "knockdown"`，对空必杀）：立即落地（清理空中
+          姿态 + height=ground）+ 倒地状态（`air_drop_status_id`，缺省 knockdown；受击
+          增伤=可被追击）+ 行动条硬直（`ctb.air_drop_delay` 经 `delay_actor` 追加到
+          玩家下次 ready，纯时间平移）+ `air_drop` 事件（渲染「将你从空中击落」行）；
+        - **柔和档**（缺省）：各空中姿态窗口缩短 `ctb.air_hit_shrink`（行动条）——窗口
+          降至当前时刻以下则本行动收尾由 `_settle_air_landing` 按既有「到期」语义落地
+          （无硬直）。
+
+        护栏：非 enemy→player / 行动无伤害语义（mult≤0，如召唤/辅助） / 玩家不在空中 /
+        无空中姿态实例 → 无操作返回 None。
+        """
+        try:
+            if attacker != "enemy":
+                return None
+            try:
+                _mult = float(action.get("mult", 1.0) or 0.0)
+            except (TypeError, ValueError):
+                _mult = 0.0
+            if _mult <= 0:
+                return None
+            # 对空口径 = **招式显式声明**（position_rule.height 含 "air"）：只有内容层
+            # 标了「对空」的招式才有跃空后果。无 rule 的兜底普攻（系统「无 rule=全量」
+            # 旧口径，可打到空中）不触发——它非「对空招式」，不吃缩短/击落（批③裁决）。
+            _pr = action.get("position_rule")
+            _height = _pr.get("height") if isinstance(_pr, Mapping) else None
+            if not (isinstance(_height, (list, tuple))
+                    and "air" in [str(x) for x in _height]):
+                return None
+            from qbot_rpg.core.position import position_of  # noqa: PLC0415
+
+            _ps, _ph = position_of(self._snap, "player")
+            if _ph != "air":
+                return None
+            insts = self._air_stance_instances("player")
+            if not insts:
+                return None
+            _rule = self._rule_config()
+            if str(action.get("air_drop") or "").strip().lower() == "knockdown":
+                # 击落：清理姿态 → 落地 → 倒地（可被追击）→ 行动条硬直 → 事件
+                self._clear_air_stances("player")
+                _rt = self._new_runtime()
+                _ctx = DamageCtx(raw_damage=0, attack_type="basic", attacker="player",
+                                 target="enemy", snapshot=self._snap)
+                execute_action({"type": "reposition", "target": "self",
+                                "height": "ground"}, _ctx, _rt)
+                _sid = str(self._config.get("air_drop_status_id") or "knockdown")
+                execute_action({"type": "status_apply", "status_id": _sid,
+                                "source": "air_drop", "target": "self"}, _ctx, _rt)
+                self._absorb_runtime(_rt)
+                # 倒地窗口覆写（对齐破位口径「持有者行动次数」）：系统在**每个行动
+                # 收尾**对双端各扣 1（`tick_turn_end` → `tick_turns`），状态 def 的
+                # turns=1 会在本次行动收尾即被扣除——置位 `air_drop_turns`（缺省 3；
+                # 含本次收尾扣减 → 实际撑过「玩家下一拍 + 怪下一次出手」的追击窗，
+                # 可被追击 ×1.5 实际生效）。
+                _turns = int(self._config.get("air_drop_turns", 3) or 0)
+                if _turns > 0:
+                    _st = self._snap.get("status_state")
+                    _insts = _st.get("player") if isinstance(_st, Mapping) else None
+                    if isinstance(_insts, list):
+                        for _inst in reversed(_insts):
+                            if (isinstance(_inst, Mapping)
+                                    and _inst.get("status_id") == _sid):
+                                if isinstance(_inst, dict):
+                                    _inst["turns"] = _turns
+                                break
+                _delay = float(getattr(_rule, "air_drop_delay", 0.0) or 0.0)
+                if _delay > 0 and self._ctb is not None:
+                    self._ctb.delay_actor("player", _delay)
+                self._snap.setdefault("battle_notes", []).append(
+                    {"type": "air_drop", "side": "player", "attacker": "enemy"})
+                _ev: Mapping[str, Any] = {"type": "air_drop", "actor": "player",
+                                          "attacker": "enemy"}
+                if isinstance(effects, list):
+                    effects.append(_ev)
+                return _ev
+            # 柔和档：窗口缩短；缩至当前时刻以下 → 立即按「到期」语义落地（无硬直）。
+            # 须在本方法内直接结算：行动收尾的窗口维护（`_update_air_window`）会把
+            # 「非正值」当作未初始化**重设**（reinit 守卫）——不先落地反而会重置窗口。
+            _shrink = float(getattr(_rule, "air_hit_shrink", 0.0) or 0.0)
+            if _shrink > 0:
+                for inst in insts:
+                    if not isinstance(inst, dict):
+                        continue
+                    _v = inst.get("air_expire_at")
+                    try:
+                        _exp = float(_v) if _v is not None else None
+                    except (TypeError, ValueError):
+                        _exp = None
+                    if _exp is not None:
+                        inst["air_expire_at"] = _exp - _shrink
+                self._settle_air_landing()
+            return None
+        except Exception:  # noqa: BLE001 - 跃空后果失败不阻断行动收尾
+            return None
 
     def _trigger_on_dodge(self, defender: str, attacker: str) -> None:
         """闪避回馈（2026-09-09 御剑·腾空原版）：防御方空中被攻击未命中
@@ -3924,6 +4040,9 @@ class BattleEngine:
         _land = self._settle_air_policy(attacker, action.get("air_policy"))
         if _land is not None:
             all_effects.append(_land)
+        # 跃空风险闭环（批③）：怪物攻击命中空中玩家 → 柔和档窗口缩短 / 对空必杀击落。
+        # 到达本点 = 方位检查已过、防反/闪反失败路径已分流（防反成功早退不吃本后果）。
+        self._apply_air_hit_consequences(attacker, action, all_effects)
         self._after_actor_action(attacker)
         return self._action_outcome(attacker, action, target, rating, seg_damage,
                                     all_effects, last_hp)

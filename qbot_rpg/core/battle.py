@@ -258,6 +258,10 @@ _BATTLE_DEFAULT_CONFIG: Dict[str, Any] = {
     # 不计」口径——乘区挂在物理侧 skill_mult 上）。内容侧可经 settings["battle"]
     # 段覆盖（battle_config.resolve_battle_settings）。
     "backstab_bonus": 0.10,
+    # 条件型会心「逆境」阈值（怪猎采纳 E20，2026-09-12 批⑤）：攻击方 HP ≤ 本比例
+    # 时触发 combatant.crit_bonus_cond 的 low_hp 加成项（缺省 0.3=30%）；可经
+    # settings["battle"] 段覆盖（battle_config.resolve_battle_settings）。
+    "crit_cond_low_hp": 0.3,
 }
 
 # combatant 缺失字段兜底（细化_1g1c §1.2 双方单位 + 1a 公式所需属性）
@@ -2841,6 +2845,9 @@ class BattleEngine:
                     _dodgeable = "可闪反" in tuple(str(x) for x in ((_pdef or {}).get("tags") or ()))
                     _dodge_ct = None
                     if _st and _st[0] == "dodge" and _dodgeable:
+                        # 反击返还（怪猎采纳 C11，批⑤）：闪反成功 → 玩家返还（同防反
+                        # 口径——须在 _run_counter 之前，先返还再让内部收尾推进时间轴）
+                        self._hasten_player_after_counter()
                         _cd = self._run_counter(_st[1])
                         _dodge_ct = {"type": "dodge_counter", "target": "enemy",
                                      "attacker": "player", "skill_id": _st[1],
@@ -3150,6 +3157,74 @@ class BattleEngine:
             return {"type": "enemy_turned", "actor": "enemy"}
         except Exception:  # noqa: BLE001 - 归位/计费失败不阻断行动
             return None
+
+    # -------------------- 反击返还 + 会心来源（怪猎采纳 C11/E19/E20，批⑤） --------------------
+
+    def _hasten_player_after_counter(self) -> None:
+        """防反/闪反成功 → 玩家行动条返还（怪猎采纳 C11；`ctb.counter_refund`）。
+
+        语义：`CTBScheduler.hasten_actor("player", refund)`——玩家下一次 ready 减
+        返还值（下限钳到当前时刻=最多「立即行动」，不倒流）；失败路径不调用
+        （落空不双罚：只付行动条、不返还资源）。**隐性口径（玩家不可见）**——
+        加速本身即反馈；调度器未装配 / 配置非法 → 静默跳过（不阻断战斗结算）。
+        """
+        try:
+            if self._ctb is None:
+                return
+            _refund = float(getattr(self._rule_config(), "counter_refund", 0.0) or 0.0)
+            if _refund > 0:
+                self._ctb.hasten_actor("player", _refund)
+        except Exception:  # noqa: BLE001 - 返还失败不阻断行动
+            return
+
+    def _crit_bonus_of(self, attacker: str, target: str) -> float:
+        """攻击方会心加成聚合（小数口径；怪猎采纳 E19/E20，批⑤）。
+
+        - 基础：combatant `crit_bonus`（**百分数**；可为负 → 负会心/赌狗流派；
+          缺省 0）；
+        - 条件：combatant `crit_bonus_cond` 映射 {back/low_hp/first: 百分数}——
+            back：攻击方位于目标**背面**（方位联动；口径同 B5 背击）；
+            low_hp：攻击方 HP ≤ `crit_cond_low_hp` 阈值（缺省 0.3）；
+            first：本场首次**命中**（命中评估即消耗，写入快照 first_strike_used）；
+          未知条件键忽略（只建议不限制）。
+        本函数仅在「命中成立」的会心求值点被调用 → 调用即视为本次命中消费首击。
+        异常兜底 0.0（绝不阻断伤害结算）。
+        """
+        try:
+            ac = self._combat(attacker)
+            total = 0.0
+            _base = ac.get("crit_bonus", 0)
+            if isinstance(_base, (int, float)) and not isinstance(_base, bool):
+                total += float(_base) / 100.0
+            cond = ac.get("crit_bonus_cond")
+            if isinstance(cond, Mapping):
+                _used = bool(self._snap.get("first_strike_used", {}).get(attacker))
+                for key, val in cond.items():
+                    if not isinstance(val, (int, float)) or isinstance(val, bool):
+                        continue
+                    if key == "back":
+                        from qbot_rpg.core.position import position_of  # noqa: PLC0415
+
+                        if (attacker == "player" and target == "enemy"
+                                and position_of(self._snap, "player")[0] == "back"):
+                            total += float(val) / 100.0
+                    elif key == "low_hp":
+                        _mx = float(ac.get("max_hp", 0) or 0)
+                        _hp = float(ac.get("hp", 0) or 0)
+                        try:
+                            _thr = float(self._config.get("crit_cond_low_hp", 0.3) or 0.0)
+                        except (TypeError, ValueError):
+                            _thr = 0.0
+                        if _mx > 0 and _thr > 0 and (_hp / _mx) <= _thr:
+                            total += float(val) / 100.0
+                    elif key == "first":
+                        if not _used:
+                            total += float(val) / 100.0
+            # 首击消费置位（本函数=命中评估点；置位后本场后续命中不再吃首击）
+            self._snap.setdefault("first_strike_used", {})[attacker] = True
+            return total
+        except Exception:  # noqa: BLE001 - 兜底 0（不阻断伤害结算）
+            return 0.0
 
     # ------------------------- 跃空窗口（增补 v1 §四，2026-09-11） -------------------------
 
@@ -3758,6 +3833,12 @@ class BattleEngine:
                                     rating0, seg0, self._phase, name=_rname)
                 all_effects.append({"type": "parry", "target": target,
                                     "attacker": attacker, "skill_id": _st[1]})
+                # 反击返还（怪猎采纳 C11，批⑤）：防反成功 → 玩家下一 ready 返还
+                # `ctb.counter_refund`（缺省 200 行动条；隐性口径玩家不可见）。
+                # **须在 `_run_counter` 之前**——反击技内部走完整收尾链（含本拍
+                # 时间轴推进），先返还才能让推进落在提早后的 ready 上；失败路径
+                # 不调用（落空不双罚——只付行动条）。
+                self._hasten_player_after_counter()
                 _cd = self._run_counter(_st[1])
                 all_effects.append({"type": "parry_counter", "target": "enemy",
                                     "attacker": "player", "skill_id": _st[1],
@@ -3839,12 +3920,16 @@ class BattleEngine:
             # type_affinity.slash_crit）实战零生效——crit_prob 原全库零调用、crit_roll 无加成/
             # cap（CritParams.cap，默认 100；判定前应用，细化_1a §5-⑦/增补 v1 §五）再判档。
             slash_bonus = p.type_affinity.slash_crit if atk_type == "slash" else 0.0
-            p_eff = crit_prob(lck, p_coef=p.crit.p_coef, crit_bonus=0.0,
-                              cap=p.crit.cap, slash_crit=slash_bonus)
+            # 会心来源（怪猎采纳 E19/E20，批⑤）：combatant 显式 crit_bonus（百分数；
+            # 负值 → 负会心/赌狗流派）+ 条件型会心（crit_bonus_cond：方位/逆境/首击）。
+            # 口径=小数（crit_prob 直接相加）；slash 加成独立保留（原 G1 口径不变）。
+            crit_bonus_all = self._crit_bonus_of(attacker, target) + slash_bonus
+            p_eff = crit_prob(lck, p_coef=p.crit.p_coef, crit_bonus=crit_bonus_all,
+                              cap=p.crit.cap)
             crit_id, crit_mult = crit_roll(
                 crit_r, lck, p_coef=p.crit.p_coef, tiers=p.crit.tiers,
                 tier_p=p.crit.tier_p, super_crit_level=super_crit_lv,
-                p_override=p_eff,
+                p_override=p_eff, negative_crit=p.crit.negative_crit,
             )
             rating["crit"] = crit_id
 
@@ -3921,8 +4006,17 @@ class BattleEngine:
                                    monster_def_rate=mdr)
             elem_atk = float(ac.get("elem_atk", 0) or 0)
             elem_f = elem_factor(float(tc.get("elem_res", 0)), k=p.defense.k)
+            # 属性会心（怪猎采纳 E21，批⑤）：元素通道默认不吃会心（×1.0，防双通道
+            # 会心膨胀）；天赋 Lv1-3（combatant `elem_crit_lv`）→ ×(1 + 步进×Lv)
+            # （缺省步进 0.05 → +5%/10%/15%；Lv>3 按 3 封顶）。步进可经
+            # formula.json crit.elem_crit_step 调（CritParams.elem_crit_step）。
+            try:
+                _elem_lv = int(ac.get("elem_crit_lv", 0) or 0)
+            except (TypeError, ValueError):
+                _elem_lv = 0
+            elem_crit_mult = 1.0 + p.crit.elem_crit_step * min(max(_elem_lv, 0), 3)
             ch_elem = channel_elem(elem_atk, float(seg.get("elem_mult", 0.0)), weak_mult,
-                                   crit_mult, elem_f, monster_def_rate=mdr)
+                                   elem_crit_mult, elem_f, monster_def_rate=mdr)
             seg_damage["ch_phys"], seg_damage["ch_elem"] = ch_phys, ch_elem
 
             # ---- ⑤ 总伤害（1a §1.7-1.9：格挡×0.5 / 防御指令×0.5 / 乱数[0.9,1.1]）----

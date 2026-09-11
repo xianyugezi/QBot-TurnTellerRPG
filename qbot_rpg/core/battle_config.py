@@ -10,6 +10,8 @@
 白名单键（键值语义见 qbot_rpg/core/battle.py `_BATTLE_DEFAULT_CONFIG`）：
   - backstab_bonus: float ≥ 0 —— 背击加成（B5 背击闭环；缺省 0.10、0=关）。
     非数值 / 布尔 / 负数 → 忽略（回落引擎默认，绝不因配置失误关掉或放大机制）。
+  - crit_cond_low_hp: (0, 1] —— 条件型会心「逆境」阈值（E20 批⑤；缺省 0.3）。
+    非数值 / 布尔 / 越界 → 忽略（回落默认）。
 
 调用点（与 ctb 段同源原则——实机开战 / 木桩战一致）：
   - qbot_rpg/commands/battle_launch_commands.py（launch_pve_battle）
@@ -32,7 +34,7 @@ __all__ = [
 _logger = logging.getLogger(__name__)
 
 #: settings["battle"] 段可透传键白名单（新增键须同步 battle.py 默认表 + 本表）。
-BATTLE_SETTINGS_KEYS = ("backstab_bonus",)
+BATTLE_SETTINGS_KEYS = ("backstab_bonus", "crit_cond_low_hp")
 
 
 def resolve_battle_settings(settings: Any = None) -> Dict[str, Any]:
@@ -57,6 +59,13 @@ def resolve_battle_settings(settings: Any = None) -> Dict[str, Any]:
             and float(raw) >= 0.0
         ):
             out["backstab_bonus"] = float(raw)
+        raw_lh = seg.get("crit_cond_low_hp")
+        if (
+            isinstance(raw_lh, (int, float))
+            and not isinstance(raw_lh, bool)
+            and 0.0 < float(raw_lh) <= 1.0
+        ):
+            out["crit_cond_low_hp"] = float(raw_lh)
         return out
     except Exception:  # pragma: no cover - 兜底不崩
         _logger.exception("resolve_battle_settings 失败，跳过 battle 段")

@@ -1,15 +1,15 @@
-"""6c 资源轴回合结清与生命周期引擎单测（tests/unit/test_resource_lifecycle.py · M13 批8 路8C）。
+"""6c 资源轴行动结清与生命周期引擎单测（tests/unit/test_resource_lifecycle.py · M13 批8 路8C）。
 
 覆盖（细化_6c §1.3 机制 M3 · 流程 F-R1 + §1.4 快照 RS-1~6，对齐 TC-02~07）：
   1. 战斗开始：数值型置 base / 子池型各池置 base（F-R1 首行）
   2. 成功结算后 energy_gain 追加 + 封顶（数值型 ≤ max / 子池型每池 ≤ max_per_pool）
   3. 未命中不改（引擎不调用即不变，与 mark_add 同拍由接线方控制）
-  4. 施放前 energy_cost 不足 → 被拒不耗回合（不增减、可反复尝试）
+  4. 施放前 energy_cost 不足 → 被拒不消耗行动（不增减、可反复尝试）
   5. 施放前 energy_cost 足 → 扣减成功
   6. 多资源同时增减（K4/K6）
   7. 0 值无操作（D-06）
   8. 被控 skip_turn 保留判定（S4）
-  9. 回合结束结清：契约无每回合变化 → 保留（幂等钩子）
+  9. 行动结束结清：契约无每次行动变化 → 保留（幂等钩子）
   10. 战斗结束 reset=battle → 清零（S5）
   11. 战斗结束 reset=keep → 跨战斗保留（RS-3）
   12. 战斗结束 reset=battle_start → 战斗内保留（下次战斗开始置 base）
@@ -174,7 +174,7 @@ def test_apply_gain_unknown_axis_skipped(
 def test_cost_insufficient_rejected_no_spend(
     lc: ResourceLifecycle, battle_state: Dict[str, Any],
 ) -> None:
-    """不足 → 被拒不耗回合：不增减、可反复尝试（TC-03①）。"""
+    """不足 → 被拒不消耗行动：不增减、可反复尝试（TC-03①）。"""
     lc.battle_start_init(battle_state, "player")
     _side(battle_state)["rage"] = 80
     ok = lc.try_apply_cost(battle_state, "player", {"rage": 100})
@@ -249,14 +249,14 @@ def test_controlled_preserved(
 
 
 # ---------------------------------------------------------------------------
-# ⑤ 回合结束结清（F-R1 tick）
+# ⑤ 行动结束结清（F-R1 tick）
 # ---------------------------------------------------------------------------
 
 
 def test_tick_round_end_preserves_all(
     lc: ResourceLifecycle, battle_state: Dict[str, Any],
 ) -> None:
-    """回合结束结清：契约无每回合变化字段 → 全保留（零增减幂等钩子）。"""
+    """行动结束结清：契约无每次行动变化字段 → 全保留（零增减幂等钩子）。"""
     lc.battle_start_init(battle_state, "player")
     _side(battle_state)["rage"] = 40
     _side(battle_state)["element_energy"] = {"fire": 1, "water": 1, "wind": 0}

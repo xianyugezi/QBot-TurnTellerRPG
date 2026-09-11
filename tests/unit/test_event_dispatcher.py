@@ -8,7 +8,7 @@
   3. 无候选/未配置事件 → []（零行为变化）
   4. 未知事件 → []（安全失败）
   5. chance 三态（必定执行 / 固定概率命中不命中）
-  6. 每回合/每场上限（effect_triggers 计数）
+  6. 每次行动/每场上限（effect_triggers 计数）
   7. 深度上限（链递归截断）
   8. registry 缺方法 → []（防御）
   9. execute_action 复用（引用归一 + condition 门控生效）
@@ -180,7 +180,7 @@ def test_chance_fixed_hit_and_miss():
 # ---------------------------------------------------------------- 5. 计数上限
 
 def test_trigger_count_limit():
-    """每回合触发上限：max_triggers_per_turn=1 → 第二次不触发。"""
+    """每次行动触发上限：max_triggers_per_turn=1 → 第二次不触发。"""
     snap = _snap()
     reg = FakeRegistry(effects={
         "fx": _effect_ev("fx", "turn_end",

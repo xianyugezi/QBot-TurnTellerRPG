@@ -1,7 +1,7 @@
 """M2 怪物 AI × 战斗引擎集成（C1 路）集成测试。
 
 依据：细化_1f_怪物AI状态机.md（⑥ TC-08 套内不评估 / TC-15 hungry 保底 / TC-16 chain C roll /
-TC-17 打断=套完结 / TC-18 蓄力跨回合）＋ docs/m2_shared_contract.md 第六节（battle 挂接点：
+TC-17 打断=套完结 / TC-18 蓄力跨行动）＋ docs/m2_shared_contract.md 第六节（battle 挂接点：
 MonsterAI.decide 产出行动 → 走既有 _do_action/_resolve_damage_action 执行通道；决策后
 ai_state 回灌快照；打断=套完结）＋ 第八节铁律（确定性注入 rng / 拦截链接线 / 零 NoneBot import）。
 
@@ -100,7 +100,7 @@ ENEMY_A = {
     },
 }
 
-# TC-15：hungry 保底（big_bite hungry=3 → 第 3 回合强制选）
+# TC-15：hungry 保底（big_bite hungry=3 → 第 3 次行动强制选）
 ENEMY_B = {
     "id": "hungry_wolf", "name": "饥饿狼",
     "actions": [
@@ -125,7 +125,7 @@ ENEMY_C = {
     ],
 }
 
-# TC-18：蓄力跨回合（doomsday_breath charge_turns=2，hungry=1 强制起手）
+# TC-18：蓄力跨行动（doomsday_breath charge_turns=2，hungry=1 强制起手）
 ENEMY_D = {
     "id": "charge_drake", "name": "蓄力龙",
     "actions": [
@@ -189,7 +189,7 @@ def enemy_ready(eng, action="normal", max_actions=12):
     CTB 节奏现实：行动条按 spd 竞争——玩家 spd 50 > 怪 spd 40 时，怪每两次玩家
     行动才 ready 一次（不是旧回合制的 1:1）。本助手把「怪物 ready 一次」作为观察
     窗口：连续提交玩家 `action`，遇到第一个 enemy outcome 即返回——等价旧测试
-    「怪物第 N 回合的行动」。超过 max_actions 仍未 ready → None（防死循环）。
+    「怪物第 N 次行动的行动」。超过 max_actions 仍未 ready → None（防死循环）。
     """
     for _ in range(max_actions):
         rep = eng.player_act(action)
@@ -313,7 +313,7 @@ def test_tc17_interrupt_breaks_chain():
     broken = [e for e in eng.battle_state().get("combo_events", [])
               if e.get("type") == "monster_chain_broken"]
     assert broken and broken[-1].get("chain_id") == "molten", "打断事件记录被断的链"
-    # combo_broken 是「本回合连招被打断」**一次性标记**（battle._ai_action_dict 消费后清除，
+    # combo_broken 是「本次行动连招被打断」**一次性标记**（battle._ai_action_dict 消费后清除，
     # 防跨拍无限触发）：CTB 下 `player_act` 已推进到怪物下一拍，决策已即时消费该标记 →
     # 此刻应为 None（已被消费，而非未置位）。置位与消费的完整链路在下一条用例单独验证。
     assert eng.battle_state().get("combo_broken") is None, "一次性标记已被怪物决策消费"
@@ -351,7 +351,7 @@ def test_interrupt_enemy_ai_unit_semantics():
     assert eng2.battle_state().get("combo_broken") is None, "未打断 → 不置标记"
 
 
-# ================================================================== TC-18 蓄力跨回合
+# ================================================================== TC-18 蓄力跨行动
 
 def test_tc18_charge_cross_rounds():
     eng = make_battle(ENEMY_D, [0.0], seed=106)  # hungry=1 强制蓄力起手

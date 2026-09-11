@@ -15,7 +15,7 @@
   - energy_gain 结算（TC-02/TC-08）：命中 +15 / 池独立 +1 / 封顶
     （95→100 不累计 / fire 3 封顶第 4 次不累计）/ 0 无操作（D-06）/
     负值钳 0（B-6）/ 未注册资源降级（RS-5）；
-  - energy_cost 施放前检查（TC-03）：不足被拒不耗回合（资源不变）/
+  - energy_cost 施放前检查（TC-03）：不足被拒不消耗行动（资源不变）/
     any:n 总量门（D-02）/ 具名池扣减方案（B-5）/ 原子扣减不半扣；
   - 触发类 D-03（TC-06③）：不足不生效不耗不计上限 / 生效才耗 /
     applied 标志供触发计数；
@@ -24,7 +24,7 @@
 
 依据：docs/细化/细化_6c_资源轴与职业机制.md：
   - §1.2 M2 字段级 schema（E1/E2 + K1~K6）；
-  - §1.3 F-R1 回合结清（施放前门禁 / 成功结算封顶 / D-03）；
+  - §1.3 F-R1 行动结清（施放前门禁 / 成功结算封顶 / D-03）；
   - §0.3 ADR（D-01/D-01b/D-02/D-03/D-06）；
   - §1.4 RS-5/RS-6；§六 TC-02/TC-03/TC-06③/TC-08。
 
@@ -377,14 +377,14 @@ def test_check_cost_numeric_sufficient():
 
 
 def test_check_cost_numeric_insufficient():
-    """TC-03①：怒气 80 施放狂暴（cost {rage:100}）→ 被拒不耗回合（资源不变）。"""
+    """TC-03①：怒气 80 施放狂暴（cost {rage:100}）→ 被拒不消耗行动（资源不变）。"""
     ctx = _ctx()
     _seed_rage(ctx, 80)
     r = check_cost(ctx, RAGE_ID, {"rage": 100})
     assert r["ok"] is False
     assert r["reason"] == "energy_insufficient"
     assert r["missing"] == [{"axis": RAGE_ID, "key": "rage", "need": 100, "have": 80}]
-    assert get_value(ctx, RAGE_ID) == 80  # 不变（不耗回合语义）
+    assert get_value(ctx, RAGE_ID) == 80  # 不变（不消耗行动语义）
 
 
 def test_check_cost_empty_and_zero():

@@ -111,7 +111,7 @@ def test_trigger_pv_broken():
 
 def test_trigger_get_up():
     sa = [{"action": "roar_again", "trigger": {"type": "get_up"}}]
-    # battle_state["downed"]=True → 命中（TC-05：起身后下一回合窗口）
+    # battle_state["downed"]=True → 命中（TC-05：起身后下次行动窗口）
     bs = bs_builder(downed=True)
     m = mc.evaluate_conditions_all(sa, bs, ScriptedRng([0.5]))
     assert len(m) == 1 and m[0]["action"] == "roar_again", m
@@ -281,7 +281,7 @@ def test_trigger_ally_dead():
 
 def test_trigger_combo_broken():
     sa = [{"action": "counter", "trigger": {"type": "combo_broken"}}]
-    # 本回合连招被打断（C1 置 battle_state["combo_broken"]=True）→ 命中
+    # 本次行动连招被打断（C1 置 battle_state["combo_broken"]=True）→ 命中
     bs = bs_builder(combo_broken=True)
     m = mc.evaluate_conditions_all(sa, bs, ScriptedRng([0.5]))
     assert len(m) == 1 and m[0]["action"] == "counter", m
@@ -455,7 +455,7 @@ def test_trigger_cooldown_blocks():
     assert bs["ai_state"]["trigger_cooldowns"][_fireball_key()] == 3
     # 冷却中 → 过滤
     assert mc.evaluate_conditions_all(sa, bs, ScriptedRng([0.5])) == []
-    # 冷却归零（C1 回合边界递减）→ 可再次触发
+    # 冷却归零（C1 行动边界递减）→ 可再次触发
     bs["ai_state"]["trigger_cooldowns"][_fireball_key()] = 0
     assert len(mc.evaluate_conditions_all(sa, bs, ScriptedRng([0.5]))) == 1
 
@@ -606,7 +606,7 @@ def test_on_chain_broken_clears_and_cooldown():
     assert ai["chain_queue"] == [], "打断清在途队列"
     assert ai["chain_pos"] == 0
     assert ai["chain_id"] is None
-    assert ai["exec_state"] == "idle", "下一回合走随机流程 L6"
+    assert ai["exec_state"] == "idle", "下次行动走随机流程 L6"
     assert ai["chain_cooldowns"].get("molten", 0) == 1, "当前链进冷却（防同链立即重触发）"
 
 

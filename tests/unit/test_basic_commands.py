@@ -109,7 +109,7 @@ _SKILLS = {
     "heavy_smash": {"id": "heavy_smash", "name": "重击", "type": "active", "mp_cost": 8,
                     "desc": "重击地面目标", "chain_refs": ["chain_heavy"]},
     "battle_qi": {"id": "battle_qi", "name": "战意", "type": "passive", "mp_cost": 0,
-                  "desc": "每回合回复少量 HP"},
+                  "desc": "每次行动回复少量 HP"},
     "counter": {"id": "counter", "name": "反击", "type": "trigger", "mp_cost": 0,
                 "desc": "受击时反击"},
     "mage_only": {"id": "mage_only", "name": "奥术弹", "type": "active", "mp_cost": 10,
@@ -485,7 +485,7 @@ def test_skill_page1():
     assert "2. 火球术（主动） 12 MP ｜ 对目标造成火焰伤害 ｜ 可派生成：陨星落" in out
     assert "3. 重击（主动） 8 MP ｜ 重击地面目标 ｜ 可派生成：陨星落" in out
     assert "4. 陨星落（主动） 30 MP ｜ 跃空重击倒地目标" in out        # 无派生链 → 无指向
-    assert "5. 战意（被动） ｜ 每回合回复少量 HP" in out
+    assert "5. 战意（被动） ｜ 每次行动回复少量 HP" in out
     assert "当前页：1/2" in out
 
 

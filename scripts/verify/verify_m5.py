@@ -98,7 +98,7 @@ COVERAGE: dict = {
     "3d TC-26 前缀样式文本作为指令不影响解析（渲染层产物不进解析器）":
         "pytest:test_message_prefix_wiring.py::test_prefix_does_not_affect_parsing",
     # ── 5e 战斗战报（27：TC-01~27）──────────────────────────────────────────
-    "5e TC-01 单回合输出 1 条消息（攻击行+反击行+提示行合并；前缀首行）":
+    "5e TC-01 单行动输出 1 条消息（攻击行+反击行+提示行合并；前缀首行）":
         "pytest:test_battle_wiring.py::test_round_one_message_attack_merged + test_battle_wiring.py::test_round_prefix_only_first_line",
     "5e TC-02 前缀渲染三态回归（有称号/无称号/hide_when_empty）":
         "pytest:test_core.py::test_prefix_three_states",
@@ -108,7 +108,7 @@ COVERAGE: dict = {
         "pytest:test_emoji_discipline.py::test_no_emoji_in_render_strings + test_battle_render_settlement.py::test_no_banned_emoji_in_settlement_templates + test_battle_render_enemy.py::test_emoji_discipline_enemy_templates",
     "5e TC-05 排版符号豁免（| → × / 「」【】；emoji 箭头 ➡️/▸ 不出现）":
         "pytest:test_battle_render_skill.py::test_emoji_discipline_samples + test_battle_render_enemy.py::test_emoji_discipline_enemy_templates",
-    "5e TC-06 每回合 1 条消息（总消息数=回合数）+ 单条 ≤16 行折叠 + 状态行只显变化轴":
+    "5e TC-06 每次行动 1 条消息（总消息数=行动数）+ 单条 ≤16 行折叠 + 状态行只显变化轴":
         "pytest:test_battle_render_startend.py::test_tc06_fold_over_16_lines + test_battle_render_startend.py::test_tc06_no_fold_within_limit + test_battle_render_skill.py::test_status_diff_only_changed_axes + test_battle_wiring.py::test_round_one_message_mock_sender_call_count",
     "5e TC-07 /攻击 命中（BREP-02，HP 为扣血后即时值）":
         "pytest:test_battle_render_player.py::test_tc07_player_hit_exact + test_battle_render_player.py::test_tc07_hit_with_target_phrase",
@@ -130,11 +130,11 @@ COVERAGE: dict = {
         "pytest:test_battle_render_enemy.py::test_tc15_special_exact + test_battle_render_enemy.py::test_tc15_special_via_dispatcher + test_battle_render_enemy.py::test_tc15_summon_and_mark_forms + test_battle_render_enemy.py::test_brep14_interception_three_forms",
     "5e TC-16 普攻击杀（BREP-15 紧跟伤害行，扣血后立即查）":
         "pytest:test_battle_render_settlement.py::test_tc16_kill_line_exact + test_battle_render_settlement.py::test_tc16_kill_line_right_after_damage_line",
-    "5e TC-17 回合开始 dot 杀死玩家（BREP-16，玩家本回合行动不渲染）":
+    "5e TC-17 行动开始 dot 杀死玩家（BREP-16，玩家本次行动不渲染）":
         "pytest:test_battle_render_settlement.py::test_tc17_player_dead_line",
     "5e TC-18 战斗胜利完整消息（BREP-17/24/20，掉落仅此一次）":
         "pytest:test_battle_render_settlement.py::test_tc18_victory_full_message_with_drops_once + test_battle_render_settlement.py::test_reward_line_exact_and_multi_drop + test_battle_wiring.py::test_battle_end_flow_summary_and_drops",
-    "5e TC-19 同回合互杀平局（BREP-19 默认 draw / player_loss 配置）":
+    "5e TC-19 同一次行动互杀平局（BREP-19 默认 draw / player_loss 配置）":
         "pytest:test_battle_render_settlement.py::test_tc19_mutual_kill_draw + test_battle_render_settlement.py::test_tc19_mutual_kill_player_loss_config",
     "5e TC-20 玩家死亡（BREP-18，胜利/掉落行不出现）":
         "pytest:test_battle_render_settlement.py::test_tc20_player_death_no_victory_no_drop",
@@ -146,7 +146,7 @@ COVERAGE: dict = {
         "pytest:test_battle_render_settlement.py::test_tc23_boss_early_end_subsequent_segments_dropped + test_battle_render_settlement.py::test_tc23_derived_cap_note_on_segment_line",
     "5e TC-24 /攻击 战斗开始（BREP-23 + 弱点情报行，独立 1 条带前缀）":
         "pytest:test_battle_render_startend.py::test_tc24_start_exact_with_prefix_and_hint + test_battle_render_startend.py::test_tc24_start_hint_none_omits_hint_line + test_battle_wiring.py::test_start_one_message_with_hint",
-    "5e TC-25 BOSS 战胜利结束汇总（BREP-24 回合数 + 明细入口）":
+    "5e TC-25 BOSS 战胜利结束汇总（BREP-24 行动数 + 明细入口）":
         "pytest:test_battle_render_startend.py::test_tc25_end_summary_line_exact_with_turns + test_battle_render_startend.py::test_tc25_winner_labels_win_lose_draw + test_battle_wiring.py::test_end_one_message_summary",
     "5e TC-26 /木桩 战后明细（BREP-25 摘要 + 5 条/页 + CakeGame 式尾段 + 翻页）":
         "pytest:test_battle_render_startend.py::test_tc26_summary_page1_5_items_plus_footer + test_battle_render_startend.py::test_tc26_summary_page2_3_items_footer + test_battle_render_startend.py::test_tc26_single_page_no_footer + test_battle_render_startend.py::test_tc26_invalid_page_raises_valueerror",

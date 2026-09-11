@@ -1,7 +1,7 @@
 """背包引擎单测（M6 批次1·路A · qbot_rpg/core/inventory.py）——TC-INV-01~06 全量 + 规则补充。
 
 依据：细化_M6_三引擎与基础指令（D1）§二（INV-01~INV-11 / TC-INV-01~TC-INV-06）；
-【框架】L129-138（堆叠/绑定/药剂同类型回合限次）；【4b】INV-R01~R07 / ITM-07 / ITM-10。
+【框架】L129-138（堆叠/绑定/药剂同类型行动限次）；【4b】INV-R01~R07 / ITM-07 / ITM-10。
 
 测试风格对齐 tests/unit/test_basic_commands.py：纯 pytest、零 NoneBot、断言具体行为。
 """
@@ -240,7 +240,7 @@ def test_supplement_inv_10_lazy_expire_purge(monkeypatch):
 
 
 def test_supplement_inv_11_potion_type_hook():
-    """INV-11：引擎提供 potion_type 键与回合限次计数落点（判定归战斗/使用入口）。"""
+    """INV-11：引擎提供 potion_type 键与行动限次计数落点（判定归战斗/使用入口）。"""
     eng = InventoryEngine()
     # potion_type 键（ITM-17，缺省 "auto"）
     assert eng.potion_type_of(_item("potion", "药水")) == "auto"

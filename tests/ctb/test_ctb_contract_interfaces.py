@@ -12,7 +12,7 @@
 
 本文件定义的契约（= Agent 3 重写时的靶子）：
   1. `battle_state()`  —— 唯一权威状态查询；深拷贝；CTB 下含 battle_time/action_seq；
-                          且**不得**再暴露 `turn`（回合数）语义作为推进主键。
+                          且**不得**再暴露 `turn`（行动数）语义作为推进主键。
   2. `do_action()`     —— 单次结算入口；签名 `do_action(attacker, action_dict)` 零改动。
   3. `start()`         —— 签名 `start(player, enemy, random_seed, battle_type, config)` 零改动；
                           RNG 状态可导出（`random_seed` + `rng_state`）。

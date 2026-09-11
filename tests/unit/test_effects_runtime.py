@@ -229,16 +229,16 @@ def test_c9_dual_duration_dimensions():
     rt.apply_status("c", "enemy", source="a", attacker="player", force=True)
     for _ in range(10):
         rt.tick_trigger("enemy", "c")
-    assert rt.find_status("enemy", "c") is None  # 回合0+次数10 → 触发10次消失
+    assert rt.find_status("enemy", "c") is None  # turns=0+次数10 → 触发10次消失
 
-    rt = eff_rt(t=sdef("t", "回合限", duration={"turns": 10, "charges": 0}))
+    rt = eff_rt(t=sdef("t", "行动限", duration={"turns": 10, "charges": 0}))
     rt.apply_status("t", "enemy", source="a", attacker="player", force=True)
     for _ in range(5):
         rt.tick_trigger("enemy", "t")  # 次数0 → 触发不扣
     still = rt.find_status("enemy", "t")
     for _ in range(10):
         rt.tick_turns("enemy")
-    assert still is not None and rt.find_status("enemy", "t") is None  # 回合10 → 回合末10次后消失
+    assert still is not None and rt.find_status("enemy", "t") is None  # turns=10 → 行动收尾10次后消失
 
     rt = eff_rt(e=sdef("e", "永续", duration={"turns": -1, "charges": 0}))
     rt.apply_status("e", "enemy", source="a", attacker="player", force=True)
@@ -353,7 +353,7 @@ def test_l0_proc_per_turn_limit(ctx):
     for _ in range(12):
         if execute_proc_action(proc, ctx(snap, 0), rtp).ok:
             okc += 1
-    assert okc == 10  # 每回合上限 10（E-8）
+    assert okc == 10  # 每次行动上限 10（E-8）
 
 
 def test_l0_interrupt_clears_combo(ctx):

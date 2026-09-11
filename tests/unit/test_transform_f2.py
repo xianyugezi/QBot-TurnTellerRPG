@@ -4,7 +4,7 @@
   - 三路归一：自然结束（turns 耗尽）/ 主动 revert_form / 被驱散 dispel_reverts
   - state_policy 执行（combo/marks/buff 按 clear/keep）
   - 形态冷却（cooldown 起算）
-  - 回合 tick 推进（D-03 冷却递减 / remaining 递减）
+  - 行动 tick 推进（D-03 冷却递减 / remaining 递减）
   - 已常态时还原 → ok=True reverted=False
 
 测试目标：qbot_rpg.core.transform_revert.{revert_transform, apply_state_policy,
@@ -180,7 +180,7 @@ def test_state_policy_default_keep() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 回合 tick（D-03）
+# 行动 tick（D-03）
 # ---------------------------------------------------------------------------
 def test_tick_cooldown_decrements() -> None:
     """冷却 5 → tick → 4。"""

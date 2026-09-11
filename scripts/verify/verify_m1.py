@@ -4,7 +4,7 @@
 覆盖口径（5d L90）：
 - 具名 TC：细化_1c1c 到顶与清零(19)、1c2 combo 配置(15)、1c3 连段测试集(52)、1g1c 战斗状态数据(30) = 116
 - 补充引擎覆盖：1a 伤害公式（4.4 三型）、1b 效果、1c1a/1c1b 迁移表（逐格）、1d 印记、
-  1g1a/1g1b 迁移表、1g2 回合时序、1g3 快照续战（round-trip + random_seed）
+  1g1a/1g1b 迁移表、1g2 行动时序、1g3 快照续战（round-trip + random_seed）
 - 机制：脚本内核心断言 + 子进程跑全量 pytest（combo/marks/damage/effects/battle 单测承载 TC 断言）
 
 用法：.venv/bin/python scripts/verify/verify_m1.py
@@ -175,7 +175,7 @@ def t_1d_mark_add_remove_saturate():
     assert mm.formula_view("enemy")["marks_total"] == 0
 
 
-# ---------------- 1g2 回合时序 / 1g3 快照续战 ----------------
+# ---------------- 1g2 行动时序 / 1g3 快照续战 ----------------
 from qbot_rpg.core.battle import BattleEngine  # noqa: E402
 
 _PLANNER = {"max_hp": 500, "hp": 500, "max_mp": 100, "mp": 100, "atk": 100, "dfn": 50, "mag": 50, "spd": 50,
@@ -197,7 +197,7 @@ def t_1g2_round_timeline():
     assert eng.state == "act" and eng.battle_state()["turn"] == 1
     eng.do_action("player", {"type": "normal", "mult": 1.0})
     eng.enemy_act()
-    eng.end_turn()                                   # ⑨ 自动进入下一回合
+    eng.end_turn()                                   # ⑨ 自动进入下次行动
     assert eng.battle_state()["turn"] == 2 and eng.state == "act"
     assert not eng.finished
 

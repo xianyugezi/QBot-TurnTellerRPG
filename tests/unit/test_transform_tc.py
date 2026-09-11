@@ -16,9 +16,9 @@
   仅用公开接口（零私有函数、零 NoneBot、零 battle.py/content JSON 依赖）。
 
 【COVERAGE 映射】（TC-XX → 测试函数，逐条可回溯细化_6b §六 TC 表）：
-  TC-01  触发全流程（效果先结算/四动作同拍/零额外回合/remaining 含当回合）
+  TC-01  触发全流程（效果先结算/四动作同拍/零额外行动/remaining 含当次行动）
          → test_tc01_trigger_full_flow
-  TC-02  怒气不足被拒不耗回合（怒气保留/形态不触发/可继续其他技能）
+  TC-02  怒气不足被拒不消耗行动（怒气保留/形态不触发/可继续其他技能）
          → test_tc02_resource_insufficient_rejected
   TC-03  MP 不足 / 冷却中拒绝（C1 形态激活互斥 + C3 冷却两条拒绝路径）
          → test_tc03_mp_insufficient_and_cooldown_rejected
@@ -30,8 +30,8 @@
   TC-06  主动还原（revert_form 即时生效/不等 tick/常态技能组可用/行动权已耗/
          冷却起算）
          → test_tc06_revert_form_immediate
-  TC-07  被驱散还原（dispel_reverts=true：下一回合结束 tick 触发/清连段/
-         印记 buff keep/怒气不返还；驱散当回合形态技能仍可用）
+  TC-07  被驱散还原（dispel_reverts=true：下次行动收尾 tick 触发/清连段/
+         印记 buff keep/怒气不返还；驱散当次行动形态技能仍可用）
          → test_tc07_dispel_revert_next_tick
   TC-08  被驱散免疫（dispel_reverts=false：形态持续至自然结束；仅自然/主动
          还原两条退出路）
@@ -47,13 +47,13 @@
          → test_tc12_derive_only_forbidden_direct
   TC-13  形态激活中快照（7 字段全量/round-trip 一致/T6 交叉一致）
          → test_tc13_snapshot_roundtrip
-  TC-14  中断恢复续战（恢复即形态态/技能位=形态组/剩余回合继续 tick 递减）
+  TC-14  中断恢复续战（恢复即形态态/技能位=形态组/剩余行动数继续 tick 递减）
          → test_tc14_interrupt_resume
   TC-15  战斗结束清零（胜利/失败/逃跑三路径：transform_state 清零回常态）
          → test_tc15_battle_end_clear
   TC-16  热重载旧局旧配置（旧快照按旧配置结算 turns=4；新对局按新配置 turns=2）
          → test_tc16_hot_reload_old_snapshot
-  TC-17  状态机边界（二次触发互斥 C1/冷却 5 回合内拒绝第 5 回合后允许/
+  TC-17  状态机边界（二次触发互斥 C1/冷却 5 次行动内拒绝第 5 次行动后允许/
          瞬态无残留）
          → test_tc17_state_machine_boundary
   TC-18  单段单形态（D-01：transform 段单例 transform_to 单一；校验级联清引用）
@@ -246,7 +246,7 @@ def _active_slots_of(snapshot: Mapping[str, Any]) -> List[str]:
 def test_tc01_trigger_full_flow() -> None:
     """TC-01 常态满怒施放「狂暴」：① 效果先结算（HP 增加）② 四动作同拍
     （rage_form 施加 / job_form 切换 / 技能位重排 / 连段清除）③ 行动权已用
-    （变换零额外回合）④ remaining=4 含变身当回合。"""
+    （变换零额外行动）④ remaining=4 含变身当次行动。"""
     order: List[str] = []
     ctx = _ctx(combo_state={"player": {"count": 3, "chain_id": "chain_normal"}, "enemy": {}})
 
@@ -275,9 +275,9 @@ def test_tc01_trigger_full_flow() -> None:
     assert slots["slots"][0] == {"slot": SLOT_BASIC, "skill_id": "form_basic"}
     # 连段清除（state_policy 默认 combo=clear；marks/buff keep 不动）
     assert ctx["combo_state"]["player"]["count"] == 0
-    # ③ 行动权已由触发技消耗，变换零额外回合（TRF-2）
+    # ③ 行动权已由触发技消耗，变换零额外行动（TRF-2）
     assert result["action_used"] is True
-    # ④ remaining=turns=4 含变身当回合 + cooldown 从触发起算（REV-6）
+    # ④ remaining=turns=4 含变身当次行动 + cooldown 从触发起算（REV-6）
     assert ts["remaining"] == 4
     assert ts["cooldown_remaining"] == 5
     # 引擎轨落 ctx（防二次触发 C1 互斥生效）
@@ -285,7 +285,7 @@ def test_tc01_trigger_full_flow() -> None:
 
 
 def test_tc02_resource_insufficient_rejected() -> None:
-    """TC-02 怒气不足（rage=80）施放「狂暴」：被拒不耗回合；怒气保持 80 不变；
+    """TC-02 怒气不足（rage=80）施放「狂暴」：被拒不消耗行动；怒气保持 80 不变；
     形态不触发；后可正常选其他技能（闸门恢复放行）。"""
     ctx = _ctx()
     ctx["resource_check_hook"] = (
@@ -295,7 +295,7 @@ def test_tc02_resource_insufficient_rejected() -> None:
     assert result["ok"] is False
     assert result["guard"] == "C2"
     assert "怒气不足" in str(result["reason"])
-    # 不耗回合（TRF-2 拒绝路径：action_used=False）
+    # 不消耗行动（TRF-2 拒绝路径：action_used=False）
     assert result["action_used"] is False
     # 形态不触发（不写任何段）
     assert result["transform_state"]["form"] is None
@@ -308,7 +308,7 @@ def test_tc02_resource_insufficient_rejected() -> None:
 
 
 def test_tc03_mp_insufficient_and_cooldown_rejected() -> None:
-    """TC-03 MP 不足 / 冷却中两条拒绝路径：均被拒不耗回合；
+    """TC-03 MP 不足 / 冷却中两条拒绝路径：均被拒不消耗行动；
     形态激活期 transform_skill 不可用（C1）与冷却期（C3）分别断言。"""
     # 路径一：MP 不足 → C2 拒绝（资源不足统一走 C2 闸门）
     ctx = _ctx()
@@ -335,7 +335,7 @@ def test_tc03_mp_insufficient_and_cooldown_rejected() -> None:
 
 
 def test_tc04_skipped_turn_no_transform() -> None:
-    """TC-04 被控制（skip_turn）回合内尝试变身：不触发变换（无行动权）；
+    """TC-04 被控制（skip_turn）行动内尝试变身：不触发变换（无行动权）；
     怒气保留（不被清除）；解除控制后可正常施放。"""
     ctx = _ctx(combo_state={"player": {"count": 2, "chain_id": "c"}, "enemy": {}})
     ctx["skip_check"] = lambda c: True
@@ -366,9 +366,9 @@ def _revert_ctx(ts: Mapping[str, Any], **over: Any) -> Dict[str, Any]:
 
 
 def test_tc05_natural_end_revert() -> None:
-    """TC-05 自然结束：形态第 4 回合结束时 tick 触发还原——job_form 回 null、
+    """TC-05 自然结束：形态第 4 次行动结束时 tick 触发还原——job_form 回 null、
     技能位回常态组（SH-5）、连段清/印记 buff keep、怒气不返还、冷却起算=5。"""
-    # 回合结束 tick：remaining 4 → 3 → 2 → 1 → 0（第 4 回合结束）
+    # 行动收尾 tick：remaining 4 → 3 → 2 → 1 → 0（第 4 次行动结束）
     state = _active_ts(remaining=4, cooldown_remaining=5)
     for _ in range(4):
         state = tick_remaining(state)
@@ -415,13 +415,13 @@ def test_tc06_revert_form_immediate() -> None:
     """TC-06 主动还原（平息战意 revert_form）：① 即时还原（不等 tick）② 效果
     同拍（本层验证还原动作即时；L0 效果归战斗层通道）③ 常态技能组可用
     ④ 行动权已由平息战意消耗 ⑤ cooldown 起算。"""
-    # 形态第 2 回合（remaining=2）施放平息战意 → 立即还原，不等 tick
+    # 形态第 2 次行动（remaining=2）施放平息战意 → 立即还原，不等 tick
     ctx = _revert_ctx(_active_ts(remaining=2))
     r = revert_transform(ctx, _transform(), reason=REVERT_FORM)
     assert r["ok"] is True and r["reverted"] is True
     assert r["reason"] == REVERT_FORM
     assert r["state"]["form"] is None
-    # 剩余回合本应 >0（natural 不还原），revert_form 忽略 remaining 即时生效
+    # 剩余行动数本应 >0（natural 不还原），revert_form 忽略 remaining 即时生效
     assert r["state"]["remaining"] == 0
     # ③ 常态技能组可用：还原后以常态组重排（SH-5 反向洗牌）
     normal_slots = rearrange_slots(_normal_snapshot(), _NORMAL_SKILLS)
@@ -434,18 +434,18 @@ def test_tc06_revert_form_immediate() -> None:
 
 
 def test_tc07_dispel_revert_next_tick() -> None:
-    """TC-07 被驱散还原（dispel_reverts=true）：驱散当回合形态技能仍可用；
-    下一回合结束 tick 触发还原（D-05 同自然结束规则）；清连段、印记/buff
+    """TC-07 被驱散还原（dispel_reverts=true）：驱散当次行动形态技能仍可用；
+    下次行动收尾 tick 触发还原（D-05 同自然结束规则）；清连段、印记/buff
     keep、怒气不返还。"""
-    # 驱散命中当回合：形态保持（还原延迟到下一回合结束 tick，D-05）
+    # 驱散命中当次行动：形态保持（还原延迟到下次行动收尾 tick，D-05）
     ctx = _revert_ctx(_active_ts(remaining=2))
     assert dispel_triggered(ctx) is False  # 无标记 → 不触发
     # 战斗层写 pending_dispel 标记（D-05 挂点）
     ctx["player"]["persistent_state"]["transform_pending_dispel"] = True
     assert dispel_triggered(ctx) is True
-    # 驱散当回合形态技能仍可用：transform_state 未动（form 保持）
+    # 驱散当次行动形态技能仍可用：transform_state 未动（form 保持）
     assert ctx["player"]["persistent_state"]["transform_state"]["form"] == FORM_ID
-    # 下一回合结束 tick：tick_remaining 递减 → 0，自然还原路径触发
+    # 下次行动收尾 tick：tick_remaining 递减 → 0，自然还原路径触发
     ts = dict(ctx["player"]["persistent_state"]["transform_state"])
     ts = tick_remaining(ts)
     assert ts["remaining"] == 1
@@ -464,7 +464,7 @@ def test_tc07_dispel_revert_next_tick() -> None:
     r = revert_transform(
         ctx2,
         _transform(),
-        reason=REVERT_NATURAL,  # D-05：与自然结束同规则（回合结束 tick 结算）
+        reason=REVERT_NATURAL,  # D-05：与自然结束同规则（行动收尾 tick 结算）
         combo_clear=lambda side, snap, reason: called.append("combo"),
         marks_clear=lambda side, snap: called.append("marks"),
         buff_remove=lambda side, snap, sid: called.append("buff"),
@@ -506,7 +506,7 @@ def test_tc08_dispel_immune() -> None:
 
 def test_tc09_no_re_resolution_on_transform_revert() -> None:
     """TC-09 变身/还原不重结算（TRF-3/REV-4）：形态激活时带 burn（dot）与
-    赋能增益——变身/还原时刻 dot 与 buff 照常回合 tick 结算，不被变换打断、
+    赋能增益——变身/还原时刻 dot 与 buff 照常行动 tick 结算，不被变换打断、
     不重复结算（每 tick 恰一次）。"""
     # 形态激活中：dot/buff 照常 tick（每 tick 恰一次递减，与变换解耦）
     dot_state: Dict[str, Any] = {"burn": 3}
@@ -521,7 +521,7 @@ def test_tc09_no_re_resolution_on_transform_revert() -> None:
         buff_state["赋能"] -= 1
         ticks.append("buff")
 
-    # 第 1 tick（变换当回合结算）
+    # 第 1 tick（变换当次行动结算）
     tick_dot()
     tick_buff()
     assert dot_state["burn"] == 2 and buff_state["赋能"] == 1
@@ -668,7 +668,7 @@ def test_tc13_snapshot_roundtrip() -> None:
 
 def test_tc14_interrupt_resume() -> None:
     """TC-14 中断恢复（续战）：恢复即处于形态态（无需重新触发）；技能位=形态组；
-    剩余回合=2；回合结束 tick 递减继续。"""
+    剩余行动数=2；行动收尾 tick 递减继续。"""
     # 恢复（F3 ②~⑤）：形态上下文完整还原
     restored = snapshot_restore(_snap_of(_active_ts(remaining=2)))
     assert restored["form"] == FORM_ID
@@ -677,7 +677,7 @@ def test_tc14_interrupt_resume() -> None:
     # 无需重新触发：形态技能组直接可用（T7 恢复基准 → 重排）
     form_snapshot = rearrange_slots(_normal_snapshot(), _FORM_SKILLS)
     assert "狂暴斩" in _active_slots_of(form_snapshot)
-    # 回合结束 tick 递减继续（D-03：恢复后递减与中断前一致）
+    # 行动收尾 tick 递减继续（D-03：恢复后递减与中断前一致）
     ts = dict(restored)
     ts = tick_remaining(ts)
     assert ts["remaining"] == 1
@@ -738,7 +738,7 @@ def test_tc16_hot_reload_old_snapshot() -> None:
 
 def test_tc17_state_machine_boundary() -> None:
     """TC-17 状态机边界：① 形态激活期再施放狂暴 → 拒绝（C1）② 还原后冷却 5
-    回合内施放 → 拒绝（C3），第 5 回合后允许 ③ 变换/还原瞬态不落快照、不留
+    行动内施放 → 拒绝（C3），第 5 次行动后允许 ③ 变换/还原瞬态不落快照、不留
     中间态（S2/S4 无残留）。"""
     # ① 二次触发互斥：触发成功后 transform_state 落 ctx → 再触发 C1 拒绝
     ctx = _ctx()
@@ -747,7 +747,7 @@ def test_tc17_state_machine_boundary() -> None:
     assert ctx[TRANSFORM_STATE_KEY]["form"] == FORM_ID
     again = trigger_transform(ctx)
     assert again["ok"] is False and again["guard"] == "C1"
-    # ② 还原后冷却 5 回合：冷却 5 → 4 → 3 → 2 → 1 → 0（第 5 回合后允许）
+    # ② 还原后冷却 5 次行动：冷却 5 → 4 → 3 → 2 → 1 → 0（第 5 次行动后允许）
     state = _cast(first["transform_state"])
     reverted = revert_transform(_revert_ctx(state), _transform(), reason=REVERT_FORM)
     assert reverted["ok"] is True
@@ -761,7 +761,7 @@ def test_tc17_state_machine_boundary() -> None:
     ctx2 = _ctx(transform_state=cd_state)
     third = trigger_transform(ctx2)
     assert third["ok"] is True
-    # 冷却 5 回合内：拒绝路径（C3）——cooldown_remaining>0
+    # 冷却 5 次行动内：拒绝路径（C3）——cooldown_remaining>0
     ctx3 = _ctx(transform_state={"form": None, "cooldown_remaining": 1})
     blocked = trigger_transform(ctx3)
     assert blocked["ok"] is False and blocked["guard"] == "C3"

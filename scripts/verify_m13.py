@@ -8,7 +8,7 @@
     2. 6b 职业库变换引擎（jobs.json schema + 5 态状态机 + 三路归一 +
        快照续战 + 校验器 8 条 + 18 TC）
     3. 6c 资源轴职业机制（两型注册段 + energy_gain/energy_cost +
-       回合结清 + resource_state 快照 + 季节技能组 + combo_table +
+       行动结清 + resource_state 快照 + 季节技能组 + combo_table +
        校验 11 条 + 20 TC）
     4. 装配接线（ctx["skills"]/ctx["jobs"] 注入 + 技能位装配落存档 +
        /转职 指令 + 注册默认职业 B7 + 战斗技能消费接线）

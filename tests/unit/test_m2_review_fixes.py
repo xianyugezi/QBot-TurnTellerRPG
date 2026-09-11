@@ -143,7 +143,7 @@ def test_chain_cooldown_not_reset_on_repeat():
     cd1 = bs["ai_state"]["chain_cooldowns"].get("molten", 0)
     assert cd1 >= 3, f"断链应登记冷却，实际 {cd1}"
     # 冷却中同链重触发：不缩短冷却（max 保留），不重置
-    bs["ai_state"]["chain_cooldowns"]["molten"] = 4  # 模拟已有 4 回合冷却
+    bs["ai_state"]["chain_cooldowns"]["molten"] = 4  # 模拟已有 4 次行动冷却
     bs["ai_state"]["forced_queue"] = [{"action": "fireball", "chain_ref": "molten"}]
     ai.decide(bs)
     cd2 = bs["ai_state"]["chain_cooldowns"].get("molten", 0)

@@ -155,13 +155,13 @@ def test_e2e_battle_attack_unequipped_rejected() -> None:
 # 变换链路
 # ---------------------------------------------------------------------------
 def test_e2e_transform_full_cycle() -> None:
-    """满怒狂暴 → 形态切换 → 回合 tick → 自然还原 → 冷却。"""
+    """满怒狂暴 → 形态切换 → 行动 tick → 自然还原 → 冷却。"""
     eng = _engine()
     eng._snap["resource_state"] = {"player": {"rage": 100}, "enemy": {}}
     _full_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
     ts = eng.battle_state()["transform_state"]
     assert ts["form"] == "berserker_form", f"应切换形态，got {ts}"
-    # 触发当回合 remaining=4，_full_turn 的 end_turn tick 已递减 → 3
+    # 触发当次行动 remaining=4，_full_turn 的 end_turn tick 已递减 → 3
     assert ts["remaining"] == 3, f"remaining 应=3（4-1 tick），got {ts}"
     # 形态技能怒涛斩可用
     out = eng.do_action("player", {"type": "skill", "skill_id": "fury_slash"})

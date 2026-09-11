@@ -1,7 +1,7 @@
 """M13 批16 路16B · transform×资源联动单测（tests/unit/test_transform_resource_link.py）。
 
 覆盖（真实战斗驱动：BattleEngine + resource_registry + transform 段全链路）：
-  1) C2 资源门禁（触发技 energy_cost 不足 → 形态不触发、怒气保留、被拒不耗回合）：
+  1) C2 资源门禁（触发技 energy_cost 不足 → 形态不触发、怒气保留、被拒不消耗行动）：
      - 怒气满 → 触发成功（100 沉没 0，TRF-5）+ 形态切换 + transform_committed
      - 怒气不足（<100）→ 能量门禁拒（技能被拦，变换闸未达），形态不触发
      - 怒气保留语义：被拒后怒气不变（energy_cost 不足不扣，REV-5 沉没问题）
@@ -10,7 +10,7 @@
   2) 形态技能 energy_gain 增减（fury_slash 带 energy_gain rage）：
      - 触发成功后形态技能施放 → rage 0→gain 值（成功施放后增加封顶）
      - energy_cost+gain 并存（先扣后增，K4）：形态技能带 cost 10 + gain 15
-     - 施放 cost 不足 → 被拒不耗回合（energy_insufficient 拒绝消息）
+     - 施放 cost 不足 → 被拒不消耗行动（energy_insufficient 拒绝消息）
      - 封顶：rage 95 + gain 15 → 100（≤max，超出不累计，TC-02③）
   3) 还原 state_policy（combo/marks/buff clear/keep 三键战斗内真实生效）：
      - 还原（natural）→ combo 清空（快照 combo_state 五字段空态）
@@ -157,7 +157,7 @@ def test_c2_full_rage_triggers_and_sinks() -> None:
 def test_c2_insufficient_rage_rejects_transform() -> None:
     """怒气不足（80 < 100）→ 能量门禁拒：形态不触发，变换闸 C2 未达。
 
-    能量门禁（_apply_skill_energy 先行）不足 → 触发技本身被拒不耗回合
+    能量门禁（_apply_skill_energy 先行）不足 → 触发技本身被拒不消耗行动
     （energy_insufficient 拒绝消息）——技能结算即被拦，变换闸 C2 未达。
     """
     eng = _engine(rage=80)
@@ -231,7 +231,7 @@ def test_form_skill_cost_then_gain() -> None:
 
 
 def test_form_skill_cost_insufficient_rejected() -> None:
-    """形态技能 cost 不足（rage 5 < 10）→ 被拒不耗回合（energy_insufficient）。"""
+    """形态技能 cost 不足（rage 5 < 10）→ 被拒不消耗行动（energy_insufficient）。"""
     eng = _engine(rage=100)
     _full_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
     eng._snap["resource_state"]["player"]["rage"] = 5

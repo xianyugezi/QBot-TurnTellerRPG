@@ -11,7 +11,7 @@
   非占位：
   - TC-01 两型注册读取（数值型 rage / 子池型 element_energy，D-01/D-01b）
   - TC-02 energy_gain 命中 +15 / 未命中不变 / 95→100 封顶（F-R1 成功结算段）
-  - TC-03 energy_cost 不足被拒不耗回合（狂暴 80/100；元素爆发 any:2 总量门
+  - TC-03 energy_cost 不足被拒不消耗行动（狂暴 80/100；元素爆发 any:2 总量门
     + 池分布不足 D-02 双重判定，资源/MP/连段全不变）
   - TC-04 被控 skip_turn 保留（S4：is_controlled_preserved 显式声明）
   - TC-05 清零策略三枚举（battle 清零 / keep 保留 / battle_start 战斗开始置
@@ -260,7 +260,7 @@ def test_tc02_cap_at_max() -> None:
 
 
 def test_tc03_berserk_insufficient_rejected() -> None:
-    """TC-03①：怒气 80 施放狂暴（cost {rage:100}）→ 被拒不耗回合：怒气不变、
+    """TC-03①：怒气 80 施放狂暴（cost {rage:100}）→ 被拒不消耗行动：怒气不变、
     MP 不退、连段不变（门禁语义：资源零变化，可反复尝试）。"""
     ctx = _ctx()
     _seed_rage(ctx, 80)
@@ -278,7 +278,7 @@ def test_tc03_berserk_insufficient_rejected() -> None:
 
 
 def test_tc03_element_burst_any_gate() -> None:
-    """TC-03②：元素爆发 any:2 总量门——fire=1 总量不足 → 被拒不耗回合（能量不变）。"""
+    """TC-03②：元素爆发 any:2 总量门——fire=1 总量不足 → 被拒不消耗行动（能量不变）。"""
     ctx = _ctx()
     _seed_pool(ctx, {"fire": 1, "water": 0, "wind": 0})
     skill = _skill(energy_cost={ELEMENT_ID: {ANY_KEY: 2}}, mp_cost=16)
@@ -393,18 +393,18 @@ def test_tc05_battle_start_resets_to_base() -> None:
 
 
 def test_tc06_fury_rage_on_turn_start() -> None:
-    """TC-06①：怒意（on_turn_start energy_gain +6）→ 每回合开始恰 +1 次。"""
+    """TC-06①：怒意（on_turn_start energy_gain +6）→ 每次行动开始恰 +1 次。"""
     ctx = _ctx()
     engine = ResourceAxisEngine()
     for _ in range(3):
         r = engine.gain_axis(ctx, RAGE_ID, {"rage": 6}, source="proc")
         assert r["ok"] is True
         assert r["events"][0]["source"] == "proc"
-    assert get_value(ctx, RAGE_ID) == 18  # 3 回合 × 6
+    assert get_value(ctx, RAGE_ID) == 18  # 3 次行动 × 6
 
 
 def test_tc06_blood_rage_on_hit() -> None:
-    """TC-06②：血怒（on_hit energy_gain +10，每回合≤2）→ 引擎逐次 +10 追加；
+    """TC-06②：血怒（on_hit energy_gain +10，每次行动≤2）→ 引擎逐次 +10 追加；
     触发上限计数由 effects 容器强制（1b），本路断言 proc 增减语义正确。"""
     ctx = _ctx()
     engine = ResourceAxisEngine()

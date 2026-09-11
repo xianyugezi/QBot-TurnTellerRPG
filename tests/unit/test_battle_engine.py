@@ -205,7 +205,7 @@ class TestActionOrderAuthority:
 
 # ---------------- P0 回归（dsh 批2 审查）：dot 致死两通道 ----------------
 def test_p001_turn_start_dot_lethal(seed: int):
-    """P0-01 回归：回合开始 dot 致死不抛 BattleStateError，正常终局（1g1c TC-02/13）。
+    """P0-01 回归：行动开始 dot 致死不抛 BattleStateError，正常终局（1g1c TC-02/13）。
 
     CTB 迁移：`ACTOR_TURN_START` 位点为该 actor 结算自身 turn_start DOT（旧「回合
     开始 dot」→ 目标自身行动开始）。`player_act('guard')` 会由调度器自动推进敌人
@@ -222,7 +222,7 @@ def test_p001_turn_start_dot_lethal(seed: int):
 
 
 def test_p002_turn_end_tick_dot_lethal(seed: int):
-    """P0-02 回归：回合结束 tick dot 致死 → 死亡挂点 + 终局（1g1c TC-03）。
+    """P0-02 回归：行动收尾 tick dot 致死 → 死亡挂点 + 终局（1g1c TC-03）。
 
     CTB 目标位点：该 actor 的 `ACTOR_TURN_END`（旧「回合结束 tick dot」→ 行动者
     行动收尾）。2026-09-10 已接线：`_after_actor_action` 调 `effects.tick_turn_end`
@@ -289,7 +289,7 @@ def test_g4_mutual_kill_order_tc11_first_strike_wins(seed: int):
 
 
 def test_g4_dot_double_kill_draw(seed: int):
-    """D5 拍板：无先手击杀的双死（回合开始 dot 双杀等）→ 平局（定稿 L62）。"""
+    """D5 拍板：无先手击杀的双死（行动开始 dot 双杀等）→ 平局（定稿 L62）。"""
     eng = make().start(PLAYER, ENEMY, random_seed=seed)
     eng._snap["result"]["mark_lose"] = True
     eng._snap["result"]["mark_win"] = True
@@ -325,7 +325,7 @@ def test_p1_marks_cleared_on_battle_end(seed: int):
 
 def test_p1_rejected_keeps_act_and_no_turn(seed: int):
     """P1-5 回归：指令被拒（MP 不足）→ 状态保持 ACT、不改连段、_turn_acted 回滚
-    （"不耗回合、可反复尝试" 1c1c TC-DEF-04）。"""
+    （"不消耗行动、可反复尝试" 1c1c TC-DEF-04）。"""
     _chain = {"id": "c1", "name": "试链", "trigger_skill": "a", "max_combo": 3,
               "max_combo_behavior": "reset", "steps": []}
     _skill = {"a": {"id": "a", "name": "火球", "tag": "combo", "mp_cost": 100}}

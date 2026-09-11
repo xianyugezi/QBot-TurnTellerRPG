@@ -213,9 +213,9 @@ def test_guard_vs_non_parryable_action_takes_damage():
     eng._rng = _QR([0.1] * 800)  # type: ignore[assignment]
     eng.start(dict(_PLAYER), mob, random_seed=7)
     eng._enemy_ai = ai
-    # 玩家先施守势（姿态在当回合）
+    # 玩家先施守势（姿态在当次行动）
     eng.player_act({"type": "skill", "skill_id": "sw_guard"})
-    # 再开一局干净验证：守势当回合被不可反行动打
+    # 再开一局干净验证：守势当次行动被不可反行动打
     eng2 = _fresh(raw, all_defs, ce)
     eng2._snap["counter_stance"] = {"type": "parry", "skill": "sw_guard_counter",
                                     "turn": int(eng2._snap.get("turn", 0))}

@@ -7,7 +7,7 @@ AlwaysZero/AlwaysHigh——自包含复制，不依赖测试文件间 import）�
   C-2 dual 并存相加 / C-4 level_based 叠至 max_level（默认 5）/ C-7 decrement 每次行动 -1 /
   C-8 trigger 触发时 -1 或减半（一次性型）/ D-4 弱体盾 Mount 抵消一次弱体 /
   D-6 免死超上限警告 + 互斥 + PVP 可禁用 / E-7 追击→偷取可链 + 链深 ≤3 递归不上 /
-  G-2 每回合 10 / 每场 99 / 免死类 1-3 上限拦截 / G-3 装备概率表达式锁定 /
+  G-2 每次行动 10 / 每场 99 / 免死类 1-3 上限拦截 / G-3 装备概率表达式锁定 /
   G-4 野图 /休息 冷却-3 回春 20% 一天 3 次
 
 【实现差异/缺陷记录】
@@ -307,11 +307,11 @@ def test_e7_proc_chain_and_depth_limit(ctx):
     assert _DEFAULT_CONFIG["chain_depth"] == 3       # 默认链深 3
 
 
-# ---------------- G 组 · 触发计数上限（细化_1b §5 G-2 / §2.4，每回合 10 + 每场 99 + 免死 1-3） ----------------
+# ---------------- G 组 · 触发计数上限（细化_1b §5 G-2 / §2.4，每次行动 10 + 每场 99 + 免死 1-3） ----------------
 
 
 def test_g2_trigger_capacity_limits(ctx):
-    # 默认容量：每回合 10 / 每场 99 / 免死类 1-3（细化_1b §1.1 / I7）
+    # 默认容量：每次行动 10 / 每场 99 / 免死类 1-3（细化_1b §1.1 / I7）
     assert _DEFAULT_CONFIG["max_triggers_per_turn"] == 10
     assert _DEFAULT_CONFIG["max_triggers_per_battle"] == 99
     assert _DEFAULT_CONFIG["fatal_guard_max"] == 3
@@ -330,7 +330,7 @@ def test_g2_trigger_capacity_limits(ctx):
             blocked_msgs.append(r.message)
     assert oks == 3 and "每场触发上限" in blocked_msgs   # 第 4 次起被每场上限拦截
     assert rt.trigger_counts("player", "p1") == (3, 3)
-    # 回合翻转只重置 per_turn，不重置 per_battle（每场上限跨回合累计）
+    # 行动切换只重置 per_turn，不重置 per_battle（每场上限跨行动累计）
     rt.reset_turn_triggers("player")
     assert rt.trigger_counts("player", "p1") == (0, 3)
     r = execute_proc_action(proc, ctx(snap, 0), rt)

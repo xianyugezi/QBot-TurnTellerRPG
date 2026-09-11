@@ -11,7 +11,7 @@
 
 覆盖矩阵（每条正例 + 负例，断言精确文本/数值/快照字段/引擎调用记录；asyncio_mode=auto 直接 await）：
   TC-24 正例：战斗中+大师+素材齐 → 一步出结果：resolve 收到 battle_alchemy_used=0/cooldown=3
-    （炸弹 3 回合）→ use_fn 被调（auto_use=true）→ 渲染 M-17 伤害行「火焰弹！造成 58 伤害」
+    （炸弹 3 次行动）→ use_fn 被调（auto_use=true）→ 渲染 M-17 伤害行「火焰弹！造成 58 伤害」
     （M5 无 emoji 纯文本）→ battle_alchemy_used 写回 1
   TC-24 负例：素材不足 → carry_ok 全拒差异「❌ 材料不足：缺 月光草×2」+ 快照不写
   TC-25 负例：同场第 2 次（battle_alchemy_used=1）→ 「本场战斗已使用过即时调合（限 1 次/场）」
@@ -89,7 +89,7 @@ class FakeBattleAlchemyEngine:
 
     - carry_ok：真查 ctx["inventory"] 对 recipe.materials 全量持有（不足全拒+shortfall 差异）；
     - consume_energy：委托真实 EnergyBar.consume(player, 1)（energy_enabled 关闭 → bypassed 直通）；
-    - cooldown_of：炸弹 3 回合（BA-06），返回 self.cooldown（默认 3）；
+    - cooldown_of：炸弹 3 次行动（BA-06），返回 self.cooldown（默认 3）；
     - resolve：真扣素材 → auto_use+use_fn → 调 use_fn 返回 ActionOutcome 同型 dict；
       auto_use=false 或 use_fn 缺失 → 入包（ctx["inventory"] 加产出）返回包行数据。
     调用记录 self.calls 供断言（GU-53/54/F-17 时序）。
@@ -231,7 +231,7 @@ async def test_instant_one_step_auto_use_true() -> None:
     # M-17 一行（M5 无 emoji 纯文本）：「火焰弹！造成 58 伤害」
     assert out == "火焰弹！造成 58 伤害"
     assert "🔥" not in out
-    # resolve 调用签名：battle_alchemy_used=0（首用）、auto_use=True、cooldown=3（炸弹 3 回合）
+    # resolve 调用签名：battle_alchemy_used=0（首用）、auto_use=True、cooldown=3（炸弹 3 次行动）
     resolve_call = engine.calls[-1]
     assert resolve_call[0] == "resolve" and resolve_call[1] == 0
     assert resolve_call[2] is True and resolve_call[3] == 3

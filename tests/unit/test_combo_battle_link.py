@@ -3,7 +3,7 @@
 覆盖：
   - 技能 combo_table 段 → F-C1 触发判定（gate_combination）
   - 命中组合行 → F-C2 结算（settle_combo 双耗）
-  - 未命中 → 被拒不耗回合
+  - 未命中 → 被拒不消耗行动
   - 无组合表 → 常规技能路径
 
 铁律：零 NoneBot import；纯函数确定性；零定时器/零睡眠。
@@ -63,7 +63,7 @@ def test_combo_table_skill_succeeds_with_energy() -> None:
 
 
 def test_combo_table_insufficient_rejected() -> None:
-    """组合技能 + 能量池不足 → 被拒不耗回合。"""
+    """组合技能 + 能量池不足 → 被拒不消耗行动。"""
     eng = _engine()
     eng._resource_registry = {"element_energy": _ELEMENT}
     eng._snap["resource_state"] = {

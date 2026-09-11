@@ -68,7 +68,7 @@ def _recipes() -> Dict[str, dict]:
                           {"id": "moon_grass", "count": 2}],
             "output": {"item": "flame_bomb", "count": 1},
             "cost": {"coins": 0, "gem": 0},
-            "cooldown": 3,  # BA-06 炸弹 3 回合冷却
+            "cooldown": 3,  # BA-06 炸弹 3 次行动冷却
             "skill": 50,    # BA-10 强度公式「技能」基准
         },
         "r_gem": {

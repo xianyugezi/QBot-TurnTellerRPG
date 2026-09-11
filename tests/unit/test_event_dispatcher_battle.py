@@ -5,7 +5,7 @@
 覆盖（battle 各时点 dispatch_event 接线真触发）：
   1. battle_start：start() 时 effects trigger=battle_start 触发
   2. turn_start：start_turn() 时触发
-  3. turn_end：回合收尾 tick 后触发
+  3. turn_end：行动收尾 tick 后触发
   4. action_end：普攻/技能/防御/道具行动收尾触发
   5. death：死亡标记时触发
   6. battle_end：_settle 收尾（marks 清零前）触发
@@ -91,7 +91,7 @@ def test_battle_start_event_fires():
 
 def test_turn_start_event_fires():
     """turn_start 事件（该 actor 行动开始时触发）——player_act 推进到玩家 ready，
-    玩家自身 ACTOR_TURN_START 派发 turn_start → enemy 血被扣（每行动一次触发）。"""
+    玩家自身 ACTOR_TURN_START 派发 turn_start → enemy 血被扣（每次行动一次触发）。"""
     reg_effects = {
         "ts_fx": {"id": "ts_fx", "type": "special", "trigger": "turn_start",
                   "actions": [{"type": "damage", "value": 10, "target": "enemy"}]},

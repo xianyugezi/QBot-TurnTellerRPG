@@ -86,7 +86,7 @@ def test_energy_cost_deducted() -> None:
 
 
 def test_energy_insufficient_rejected() -> None:
-    """energy_cost 不足 → 被拒不耗回合。"""
+    """energy_cost 不足 → 被拒不消耗行动。"""
     eng = _engine()
     eng._resource_registry = {"rage": _RAGE, "element_energy": _ELEMENT}
     eng._snap["resource_state"] = {"player": {"rage": 5}, "enemy": {}}

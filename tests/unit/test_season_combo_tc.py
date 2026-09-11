@@ -65,7 +65,7 @@ def test_tc09_skill_in_season() -> None:
 
 
 def test_tc10_validate_skill_action_season_mismatch() -> None:
-    """TC-10：非当季技能行动 → 被拒不耗回合（season_mismatch）。"""
+    """TC-10：非当季技能行动 → 被拒不消耗行动（season_mismatch）。"""
     r = validate_skill_action({"season": "winter"}, "summer")
     assert r["ok"] is False
     assert r.get("code") == "season_mismatch" or r.get("reason") == "season_mismatch"

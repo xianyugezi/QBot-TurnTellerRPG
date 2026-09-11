@@ -2,7 +2,7 @@
 
 依据：细化_1f_怪物AI状态机.md（② L0-L7 决策管线 / TC-01 状态机 / TC-03 L5 状态专属 /
 TC-08 套内不评估 / TC-09 L7 兜底 / TC-15 hungry 保底 / TC-16 chain C roll /
-TC-18 蓄力跨回合）＋ docs/m2_shared_contract.md §五（MonsterAI 接口 / ai_state 14 键快照 /
+TC-18 蓄力跨行动）＋ docs/m2_shared_contract.md §五（MonsterAI 接口 / ai_state 14 键快照 /
 intent_for 契约结构 / evaluate_conditions & roll_chain 语义）。
 
 原 /tmp/smoke_monster_ai.py 已全绿（exit 0, SMOKE PASS: 76 assertions），此处按 pytest
@@ -10,7 +10,7 @@ intent_for 契约结构 / evaluate_conditions & roll_chain 语义）。
   S1  归一化概率（normal/enraged 两态）+ 注入 rng 固定选择 + 大样本统计
   S2  hungry 强制选（TC-15）
   S3  L0 套内门跳过评估（TC-08）
-  S4  蓄力起手/结算/跨回合不切态（TC-18）
+  S4  蓄力起手/结算/跨行动不切态（TC-18）
   S5  L2 强制队列优先于随机池
   S6  L5 状态专属行动（TC-03 语义）+ 冷却过滤 + tick 递减
   S7  L7 兜底普攻（TC-09）
@@ -203,13 +203,13 @@ def test_s2_hungry_forced_pick():
     ai_b = MonsterAI(ENEMY_B, ACTION_LIB, ScriptedRng([0.001]))  # 恒选 claw
     bsb = new_state(100)
     r1 = ai_b.decide(bsb)
-    assert r1["action_id"] == "claw_swipe", "第1回合选 claw"
+    assert r1["action_id"] == "claw_swipe", "第1次行动选 claw"
     assert bsb["ai_state"]["hungry_count"]["big_bite"] == 1, "hungry big_bite=1"
     r2 = ai_b.decide(bsb)
-    assert r2["action_id"] == "claw_swipe", "第2回合选 claw"
+    assert r2["action_id"] == "claw_swipe", "第2次行动选 claw"
     assert bsb["ai_state"]["hungry_count"]["big_bite"] == 2, "hungry big_bite=2"
     r3 = ai_b.decide(bsb)
-    assert r3["action_id"] == "big_bite", "第3回合 hungry 强制选 big_bite"
+    assert r3["action_id"] == "big_bite", "第3次行动 hungry 强制选 big_bite"
     assert bsb["ai_state"]["hungry_count"]["big_bite"] == 0, "选中后饥饿清零"
 
 
@@ -228,7 +228,7 @@ def test_s3_l0_chain_inside_skips_eval():
     assert bs3["ai_state"]["forced_queue"] == [], "套内不入强制队列"
     assert bs3["ai_state"]["chain_queue"] == [], "链走完清空"
     assert bs3["ai_state"]["exec_state"] == IDLE, "套结算完回 idle"
-    # 下一回合：套间评估 → HP 40 < 50 → 切 enraged + enter_action roar 走 L2
+    # 下次行动：套间评估 → HP 40 < 50 → 切 enraged + enter_action roar 走 L2
     r2b = ai_a7.decide(bs3)
     assert r2b["action_id"] == "roar", "套间 L1→L2 enter_action 吼叫"
     assert r2b["source"] == "L2", "enter_action 来源 L2"
@@ -364,7 +364,7 @@ def test_s11_chain_roll_fail_breaks():
     r = ai_e2.decide(bs11b)
     assert r["action_id"] == "fireball" and r["source"] == "L2", "断链时行动照常"
     assert bs11b["ai_state"]["chain_queue"] == [], "断链队列清空"
-    # M2 审查 P1-2：冷却 max 保留 + 起算偏移（登记 cooldown+1，防断链当回合被 tick 清零）
+    # M2 审查 P1-2：冷却 max 保留 + 起算偏移（登记 cooldown+1，防断链当次行动被 tick 清零）
     # molten cooldown=2 → 登记 3（次回合起算实际阻断）
     assert bs11b["ai_state"]["chain_cooldowns"].get("molten", 0) == 3, "断链+链冷却(起算偏移)"
 

@@ -177,7 +177,7 @@ def test_season_change_event_state() -> None:
 
 
 def test_battle_cast_insufficient_mp_rejected() -> None:
-    """MP 不足 → 技能被拒不耗回合（enforce_mp 开）。"""
+    """MP 不足 → 技能被拒不消耗行动（enforce_mp 开）。"""
     eng = _engine(config={"combo_enforce_mp": True})
     eng._snap["player"]["mp"] = 3  # power_strike 需 8
     mp_before = eng.battle_state()["player"]["mp"]
@@ -190,7 +190,7 @@ def test_transform_cooldown_blocks_retrigger() -> None:
     """形态变更期 → 再次触发不产生**额外**形态提交（C1 互斥/C3 冷却）。
 
     CTB 迁移（2026-09-10）：旧口径按「回合」推演冷却；CTB 二次触发的门禁由
-    transform 引擎在同一玩家行动拍上判定 —— 断言不再依赖回合数，而改为
+    transform 引擎在同一玩家行动拍上判定 —— 断言不再依赖行动数，而改为
     「形态保持唯一、且提交次数不因二次触发而累加」的 CTB 行为断言。
     """
     eng = _engine()

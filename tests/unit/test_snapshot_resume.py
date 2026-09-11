@@ -140,7 +140,7 @@ class TestResumeFromSnapshot:
         factory = _StubFactory()
         out = resume_from_snapshot({}, snap, battle_factory=factory)
         assert out["resumed"] is True              # 1 引擎已构建续玩就绪
-        assert out["turn"] == 12                   # 2 回合数恢复（顶层 turn）
+        assert out["turn"] == 12                   # 2 行动数恢复（顶层 turn）
         assert out["ai_state_preserved"] is True   # 3 ai_state 保留
         assert out["combo_state_preserved"] is True  # 4 combo_state 保留
         assert out["chase_context_preserved"] is True  # 5 换区上下文保留

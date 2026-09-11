@@ -7,7 +7,7 @@
 
 依据：docs/细化/细化_6c_资源轴与职业机制.md：
   - §2.2 EFF-2（进战懒加载）/ EFF-3（展示过滤置灰 + 普攻防御兜底全年可用）；
-  - §2.3 机制 M6 流程 F-R2 全六步（① 懒重读 ② 检测标记待结算 ③ 回合结束
+  - §2.3 机制 M6 流程 F-R2 全六步（① 懒重读 ② 检测标记待结算 ③ 行动结束
     tick 后切换 ④ 保留项 ⑤ 反馈+on_season_change ⑥ 战斗外不切换）；
   - §2.3 SC-1（待结算期按旧组校验）/ SC-2（引擎零新状态机）/ SC-3（切换
     幂等恰一次）；§2.5 E1/E5（on_season_change 事件：战斗内换季才触发，
@@ -21,7 +21,7 @@
 覆盖矩阵（18 用例 = A 状态段 3 + B 换季检测 5 + C 换季结算切换 4 +
   D 展示过滤置灰 3 + E 兜底/幂等 3）：
   A init/effective/pending（EFF-2 进战懒加载 + P-2 缺省骨架）
-  B detect_season_change（F-R2 ② 标记待结算 / SC-1 当回合旧组 / SC-3 幂等
+  B detect_season_change（F-R2 ② 标记待结算 / SC-1 当次行动旧组 / SC-3 幂等
     复位 / 懒重读差异检测 / 防御建段）
   C settle_season_change（F-R2 ③ 结算边界切换 / 保留项零触碰 F-R2 ④ /
     恰一次 on_season_change E5 / 非 pending 幂等无操作 SC-3 / 防御回环）
@@ -162,21 +162,21 @@ def test_pending_flag_reads_marker() -> None:
 
 
 def test_detect_marks_pending_on_season_diff() -> None:
-    """检测到差异 → 标记待结算（F-R2 ②），本回合不变更（SC-1）。"""
+    """检测到差异 → 标记待结算（F-R2 ②），本次行动不变更（SC-1）。"""
     bs = _battle_state()
     init_battle_season(bs, season="spring")
     result = detect_season_change(bs, current_season="summer")
     assert result["changed"] is True
     assert result["detected"] is True
     assert result["pending"] is True
-    # 标记已写回快照；生效季节仍是 spring（当回合行动照旧组校验，D-05）
+    # 标记已写回快照；生效季节仍是 spring（当次行动照旧组校验，D-05）
     assert pending_flag(bs) is True
     assert effective_season(bs) == "spring"
     assert bs[BATTLE_SEASON_KEY][SEASON_STATE_KEY] == "spring"
 
 
 def test_detect_rereread_same_diff_keeps_pending() -> None:
-    """待结算期重复检测（同回合）：差异仍在 → pending 保持（SC-3 幂等，
+    """待结算期重复检测（同一次行动）：差异仍在 → pending 保持（SC-3 幂等，
     结算前不丢失待结算标记；生效季节未切换前差异持续）。"""
     bs = _battle_state()
     init_battle_season(bs, season="spring")
@@ -195,7 +195,7 @@ def test_detect_after_settle_same_season_clears_pending() -> None:
     detect_season_change(bs, current_season="summer")
     settle_season_change(bs, current_season="summer")  # 生效 → summer
     assert effective_season(bs) == "summer"
-    # 下一回合懒重读：当前 == 生效 → 无差异，pending 复位
+    # 下次行动懒重读：当前 == 生效 → 无差异，pending 复位
     result = detect_season_change(bs, current_season="summer")
     assert result["changed"] is False
     assert pending_flag(bs) is False
@@ -211,7 +211,7 @@ def test_detect_same_season_no_marker() -> None:
 
 
 def test_detect_lazy_reread_new_season() -> None:
-    """懒重读检测：回合开始重读当前季节，跨多季直接检测最新差异。"""
+    """懒重读检测：行动开始重读当前季节，跨多季直接检测最新差异。"""
     bs = _battle_state()
     init_battle_season(bs, season="spring")
     # 世界已到冬季（离线跨多周期只报最新值，check_changes 同口径）
@@ -222,7 +222,7 @@ def test_detect_lazy_reread_new_season() -> None:
 
 
 def test_detect_without_init_lazy_builds_segment() -> None:
-    """未 init 直接检测 → 惰性建段（防御，战斗层每回合调用前先 init）。"""
+    """未 init 直接检测 → 惰性建段（防御，战斗层每次行动调用前先 init）。"""
     bs = _battle_state()
     result = detect_season_change(bs, current_season="autumn")
     assert bs[BATTLE_SEASON_KEY][SEASON_STATE_KEY] == SEASON_ANY
@@ -231,7 +231,7 @@ def test_detect_without_init_lazy_builds_segment() -> None:
 
 
 # ===========================================================================
-# C 换季结算切换（F-R2 ③ 结算边界：回合结束 tick 后、下一回合开始前）
+# C 换季结算切换（F-R2 ③ 结算边界：行动收尾 tick 后、下次行动开始前）
 # ===========================================================================
 
 
@@ -240,7 +240,7 @@ def test_settle_switches_season_at_boundary() -> None:
     bs = _battle_state()
     init_battle_season(bs, season="spring")
     detect_season_change(bs, current_season="summer")
-    # 当回合行动阶段已过（旧组校验完毕）→ 结算边界切换
+    # 当次行动阶段已过（旧组校验完毕）→ 结算边界切换
     result = settle_season_change(bs, current_season="summer")
     assert result["switched"] is True
     assert result["from"] == "spring"
@@ -376,19 +376,19 @@ def test_tick_season_boundary_full_cycle() -> None:
     """挂点全链路（TC-11）：检测差异 → 待结算 → 边界切换 → 事件信号。"""
     bs = _battle_state()
     init_battle_season(bs, season="spring")
-    # 回合 1：春季，无差异
+    # 第 1 次行动：春季，无差异
     r1 = tick_season_boundary(bs, current_season="spring")
     assert r1["switched"] is False
     assert effective_season(bs) == "spring"
-    # 回合 2 开始：懒重读发现已到夏季（标记待结算）
+    # 第 2 次行动开始：懒重读发现已到夏季（标记待结算）
     detect_season_change(bs, current_season="summer")
     assert pending_flag(bs) is True
-    # 回合 2 结束 tick 后：结算边界切换（tick_season_boundary 组合入口）
+    # 第 2 次行动收尾 tick 后：结算边界切换（tick_season_boundary 组合入口）
     r2 = tick_season_boundary(bs, current_season="summer")
     assert r2["switched"] is True
     assert r2["to"] == "summer"
     assert r2[ON_SEASON_CHANGE_KEY] is True
-    # 回合 3：新季节生效，技能列表 = 夏组 + 通用
+    # 第 3 次行动：新季节生效，技能列表 = 夏组 + 通用
     assert effective_season(bs) == "summer"
     r3 = tick_season_boundary(bs, current_season="summer")
     assert r3["switched"] is False  # 幂等：连续同季不重复触发（SC-3）

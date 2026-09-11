@@ -28,7 +28,7 @@
   ② 确定性抽签 —— 真实 qbot_rpg.core.worldtime.WorldTime.map_weather（IF08）：
      同 tick 同池两次同值 / 重构造实例（=重启）同值不重抽 / 池键乱序注入同值（seed 用
      排序后键列表 + str(tick) sha256，与配置顺序无关）/ 不同 tick 窗口内取值可不同。
-  ③ 快照完整性 —— 真实 BattleEngine（start→行动→end_turn 回合边界）注入
+  ③ 快照完整性 —— 真实 BattleEngine（start→行动→end_turn 行动边界）注入
      ai_state/combo_state/chase_ctx → to_snapshot → resume_from_snapshot（battle_factory =
      真实 BattleEngine.from_snapshot，即续玩装配走真实引擎还原）→ 续玩推进。
 
@@ -225,7 +225,7 @@ def test_m43_snapshot_integrity_ai_combo_chase_field_level() -> None:
     out = resume_from_snapshot({}, snap, battle_factory=BattleEngine.from_snapshot)
     assert out["resumed"] is True                          # 真实引擎还原成功
     assert out["reason"] is None                           # 无异常原因
-    assert out["turn"] == turn_before                      # 续玩回合数恢复
+    assert out["turn"] == turn_before                      # 续玩行动数恢复
     assert out["ai_state_preserved"] is True               # ai_state 保留判定
     assert out["combo_state_preserved"] is True            # combo_state 保留判定
     assert out["chase_context_preserved"] is True          # 换区上下文保留判定

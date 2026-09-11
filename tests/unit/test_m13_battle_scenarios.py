@@ -163,7 +163,7 @@ def test_berserker_rage_burst_triggers_form() -> None:
 
 
 def test_berserker_insufficient_rage_rejected() -> None:
-    """狂战士：怒气不足（80<100）施放狂暴 → 被拒不耗回合、怒气不变。
+    """狂战士：怒气不足（80<100）施放狂暴 → 被拒不消耗行动、怒气不变。
 
     CTB 迁移（2026-09-10）：R-6（裁决 2）被拒行动 = 零时间成本——经 `player_act`
     提交后 `action_seq` 不前进（旧「不耗回合」的 CTB 对应断言）。
@@ -341,7 +341,7 @@ def test_element_mage_combo_fire_fire_water() -> None:
 
 
 def test_element_mage_combo_insufficient_rejected() -> None:
-    """元素法师：能量不足（总量门 any:2 不满足）→ 被拒不耗回合。
+    """元素法师：能量不足（总量门 any:2 不满足）→ 被拒不消耗行动。
 
     CTB 迁移（2026-09-10）：R-6 被拒 = 零时间成本（`action_seq` 不前进）。
     """
@@ -401,7 +401,7 @@ def test_element_mage_combo_behavior_changes_with_pool() -> None:
 
 
 def test_element_mage_burst_cooldown_blocks_next_turn() -> None:
-    """元素法师：爆发冷却 1 → 下一回合不可连续爆发（被拒）。
+    """元素法师：爆发冷却 1 → 下次行动不可连续爆发（被拒）。
 
     CTB 迁移（2026-09-10）：冷却窗口按持有者行动次数计时；沿用 `player_act`
     推进（旧「下一回合」→ CTB「下一次玩家行动」）。二次爆发 R-6 被拒 →

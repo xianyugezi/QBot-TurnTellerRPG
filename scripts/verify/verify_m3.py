@@ -68,7 +68,7 @@ COVERAGE: dict = {
     # ── 2a2 换区追击（24 TC，细化_2a2 §⑥；路 Q：test_chase + test_dungeon_boss + test_chase_resume）──
     "2a2-TC-01 血量≤30% 触发换区": "pytest:test_chase.py::TestChaseTrigger::test_threshold_hit + test_dungeon_boss.py::TestShouldZoneChange::test_threshold_hit_and_miss",
     "2a2-TC-02 血量>30% 全程不触发": "pytest:test_chase.py::TestChaseTrigger::test_threshold_boundary_and_miss + test_dungeon_boss.py::TestShouldZoneChange::test_threshold_hit_and_miss（30.1% 不触发）",
-    "2a2-TC-03 血量=0 当回合击杀优先": "pytest:test_chase.py::TestChaseTrigger::test_hp_zero_kill_priority + test_dungeon_boss.py::TestShouldZoneChange::test_hp_zero_kill_priority",
+    "2a2-TC-03 血量=0 当次行动击杀优先": "pytest:test_chase.py::TestChaseTrigger::test_hp_zero_kill_priority + test_dungeon_boss.py::TestShouldZoneChange::test_hp_zero_kill_priority",
     "2a2-TC-04 普通怪（无 zone_change）永不换区": "pytest:test_chase.py::TestChaseTrigger::test_no_targets_or_missing_cfg + test_dungeon_boss.py::TestShouldZoneChange::test_no_targets_or_missing_cfg（无配置/空候选不触发）",
     "2a2-TC-05 提示含目标地图名": "pytest:test_chase.py::TestBeginChase::test_hint_with_maps_name + test_unknown_map_fallback_to_id",
     "2a2-TC-06 随机候选 ∈ targets 且两目标均现": "pytest:test_chase.py::TestPickChaseTarget::test_different_rng_different + test_random_index_mapping",

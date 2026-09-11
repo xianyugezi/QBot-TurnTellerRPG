@@ -150,7 +150,7 @@ def test_tc16_kill_line_right_after_damage_line() -> None:
 
 
 def test_tc17_player_dead_line() -> None:
-    """TC-17：回合开始 dot 杀死玩家 → `❌ 你倒下了…`（BREP-16）→ 失败标记（BREP-18）。"""
+    """TC-17：行动开始 dot 杀死玩家 → `❌ 你倒下了…`（BREP-16）→ 失败标记（BREP-18）。"""
     text = render_battle_end(
         SimpleNamespace(), SimpleNamespace(name="史莱姆", turn=1), "lose",
         status="lose", enemy_name="史莱姆",
@@ -208,7 +208,7 @@ def test_reward_line_exact_and_multi_drop() -> None:
 
 
 def test_tc19_mutual_kill_draw() -> None:
-    """TC-19：同回合互杀默认 draw → `双方同归于尽，战斗以平局结束`（BREP-19）。"""
+    """TC-19：同一次行动互杀默认 draw → `双方同归于尽，战斗以平局结束`（BREP-19）。"""
     text = render_battle_end(
         SimpleNamespace(), SimpleNamespace(name="史莱姆", turn=1), "draw",
         status="draw",

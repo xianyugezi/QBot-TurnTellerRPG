@@ -489,7 +489,7 @@ def test_dispatch_give_item_default_once_and_skipped_entries():
 
 
 def test_dispatch_buff_records_active_effects():
-    """AC05 buff：effects[] 入 ctx["active_effects"]；同 buff 重触发仅刷新回合（补白⑥）。"""
+    """AC05 buff：effects[] 入 ctx["active_effects"]；同 buff 重触发仅刷新时长（补白⑥）。"""
     ctx = make_ctx(npc_id="npc1")
     r = dispatch_action({"action": "buff", "effects": ["atk_up"], "turns": 3}, ctx, npc_id="npc1")
     assert r["ok"] and ctx["active_effects"]["atk_up"]["turns"] == 3

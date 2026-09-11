@@ -76,7 +76,7 @@ import logging
 import random
 import time
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Callable, Dict, List, Mapping, MutableMapping, Optional, Sequence, Tuple
 
 from qbot_rpg.core.damage import (
@@ -252,6 +252,12 @@ _BATTLE_DEFAULT_CONFIG: Dict[str, Any] = {
     # 被击落倒地窗口（实例 turns 覆写值；系统每个行动收尾双端各扣 1，缺省 3 =
     # 覆盖「玩家下一拍 + 怪下一次出手」的追击窗；可配）
     "air_drop_turns": 3,
+    # 背击加成（B5 背击闭环，2026-09-11 批④；怪猎闇討ち映射）：玩家攻击结算时
+    # 位于怪**背面**（combat_position.player.side == "back"）→ 物理通道伤害 ×
+    # (1 + backstab_bonus)。缺省 +10%（0=关、可配）；元素不吃（闇討ち「属性伤害
+    # 不计」口径——乘区挂在物理侧 skill_mult 上）。内容侧可经 settings["battle"]
+    # 段覆盖（battle_config.resolve_battle_settings）。
+    "backstab_bonus": 0.10,
 }
 
 # combatant 缺失字段兜底（细化_1g1c §1.2 双方单位 + 1a 公式所需属性）
@@ -323,6 +329,9 @@ class ActionOutcome:
     # reason∈{no_combo_match, energy_total_insufficient}（回退常规路径，能量
     # gain/cost 照常）。战报/展示层可据此渲染「烈焰爆破！」组合名。
     combo_result: Optional[Dict[str, Any]] = None
+    # 背击附注（B5 背击闭环，2026-09-11 批④）：本次行动为「位于怪背面」结算
+    # （吃了 backstab_bonus）→ 命中行尾拼「（背击）」；False = 常规（零副作用）。
+    backstab: bool = False
 
 
 @dataclass(frozen=True)
@@ -3085,47 +3094,36 @@ class BattleEngine:
                 _msg = "形态切换完成"
                 if ca.get("transform_triggered"):
                     _msg = f"形态切换：进入{ca.get('transform_form') or ''}形态"
-                out = ActionOutcome(
-                    out.ok, out.seq, out.actor, out.action_type, out.target, True,
-                    out.crit, out.blocked, 0, 0, out.target_hp,
-                    out.side_effects, _msg,
-                    battle_ended=out.battle_ended, status=out.status,
-                    combo_result=out.combo_result,
-                )
+                # dataclasses.replace：字段整包复制——新增字段自动随行，勿再手抄字段
+                # （批④ 背击实证：手抄回包漏抄新字段致旗标丢失）
+                out = replace(out, hit=True, raw_damage=0, final_damage=0, message=_msg)
         # M13 批17 路17C：组合审计透出（ca 侧 combo_result → outcome.combo_result）
         _cr = ca.get("combo_result")
         if isinstance(_cr, dict):
-            out = ActionOutcome(
-                out.ok, out.seq, out.actor, out.action_type, out.target, out.hit,
-                out.crit, out.blocked, out.raw_damage, out.final_damage, out.target_hp,
-                out.side_effects, out.message,
-                battle_ended=out.battle_ended, status=out.status,
-                combo_result=_cr,
-            )
+            out = replace(out, combo_result=_cr)
         if hit_effects:
-            out = ActionOutcome(
-                out.ok, out.seq, out.actor, out.action_type, out.target, out.hit,
-                out.crit, out.blocked, out.raw_damage, out.final_damage, out.target_hp,
-                tuple(hit_effects) + out.side_effects, out.message,
-                battle_ended=out.battle_ended, status=out.status,
-                combo_result=out.combo_result,
-            )
+            out = replace(
+                out, side_effects=tuple(hit_effects) + tuple(out.side_effects or ()))
         return out
 
-    def _face_enemy(self) -> Optional[Mapping[str, Any]]:
-        """玩家行动前怪转回面向（**转向事件化 + 行动条成本**，增补 v1 §三，2026-09-11）。
+    def _face_enemy(self, pre_side: Optional[str] = None) -> Optional[Mapping[str, Any]]:
+        """怪转回面向（**转向事件化 + 行动条成本**；背击窗口时序修订，2026-09-11 批④）。
 
-        1v1 落地切片（「玩家绕背/侧移后，怪按行动条成本转回面向」——现行「玩家行动
-        前自动回正面」的延伸）：
+        v1 §三 1v1 落地切片（原「玩家行动**前**」时序在批④ 修订为「行动**结算后**」——
+        否则背击永远无成立时机，见 v1 变更记录 v1.3）：
 
-        - 目标未变（玩家已在正面）/ 快照缺段 / 终局 → **不转向、零消耗**，返回 None；
-        - 玩家 side ∈ {back/left/right} → 怪转身（玩家 side 归位 front），并把**转向
-          成本**（`ctb.turn_cost`，行动条；隐性口径玩家不可见）追加到怪的下一次 ready
-          （`CTBScheduler.delay_actor`）——转向是可读的节奏事件（渲染层出
-          `battle_enemy_turned` 行）。
+        - 判定基准 = **行动前捕获的侧位** `pre_side`（缺省读当前侧位——兼容直调）；
+          目标未变（行动前已在正面）/ 快照缺段 / 终局 → **不转向、零消耗**，返回 None；
+        - 玩家 side ∈ {back/left/right} → 本次行动已在侧位/背后**结算完毕**（背面攻击
+          已吃背击加成）→ 怪转身：玩家 side 归位 front + **转向成本**（`ctb.turn_cost`，
+          行动条；隐性口径玩家不可见）追加到怪的下一次 ready（`CTBScheduler.delay_actor`）
+          ——转向是可读的节奏事件（渲染层出 `battle_enemy_turned` 行）。
+        - 重定位类行动（行动前=front，行动把 side 移到 back/left/right）**不触发**转向
+          （捕获方位在移动前 = front）；被拒行动（R-6 零成本）调用方不调本函数。
         - 高度不动（腾空空中行动不受影响）；完整仇恨值（来源/衰减/远程系数）依赖
           多目标选择，属组队里程碑前置，见增补 v1 §三.5。
 
+        :param pre_side: 行动前捕获的玩家侧位（None → 读当前快照侧位）
         :return: 转向事件 dict（无转向 → None）
         """
         try:
@@ -3137,7 +3135,9 @@ class BattleEngine:
             _pe = _cp.get("player")
             if not isinstance(_pe, dict):
                 return None
-            if str(_pe.get("side") or "front") == "front":
+            _pre = pre_side if isinstance(pre_side, str) and pre_side else str(
+                _pe.get("side") or "front")
+            if _pre == "front":
                 return None
             _pe["side"] = "front"
             _cost = 0.0
@@ -3883,6 +3883,21 @@ class BattleEngine:
                 boost_factor = apply_derived_cap(
                     boost_factor, max_total_mult=p.derived.max_total_mult)
                 skill_mult = base_mult * boost_factor
+            # ---- 背击（B5 背击闭环，2026-09-11 批④）：玩家攻击结算时位于怪背面 ----
+            # → 物理通道伤害 ×(1 + backstab_bonus)。乘区挂在 skill_mult 上＝只影响
+            # 物理通道（ch_elem 走 elem_mult 不吃——怪猎闇討ち「属性伤害不计」口径）。
+            # 可配（缺省 +10%；0=关）；命中行「（背击）」附注经 rating 透传 ActionOutcome。
+            if attacker == "player":
+                try:
+                    _bs_bonus = float(self._config.get("backstab_bonus", 0.10) or 0.0)
+                except (TypeError, ValueError):
+                    _bs_bonus = 0.0
+                if _bs_bonus > 0:
+                    from qbot_rpg.core.position import position_of  # noqa: PLC0415
+
+                    if position_of(self._snap, "player")[0] == "back":
+                        skill_mult *= (1.0 + _bs_bonus)
+                        rating["backstab"] = True
             rating["multi"] = skill_mult
             # M12.5 需求1 批B：stat_map 语义键取数（缺省 atk / int→mag 回退链=现值，
             # 零破坏）
@@ -4089,21 +4104,16 @@ class BattleEngine:
             target_hp=hp, side_effects=self._seal_side_effects(effects),
             message=f"{attacker} 对 {target} 造成 {damage.get('final', 0)} 伤害",
             battle_ended=battle_ended, status=status,
+            backstab=bool(rating.get("backstab", False)),
         )
 
     def _with_extra_effects(
         self, out: ActionOutcome, extra: Sequence[Mapping[str, Any]]
     ) -> ActionOutcome:
-        """在既有 outcome 的 side_effects 尾部追加引擎级事件（frozen 重建）。"""
+        """在既有 outcome 的 side_effects 尾部追加引擎级事件（frozen；replace 整包复制）。"""
         if out is None or not extra:
             return out
-        return ActionOutcome(
-            out.ok, out.seq, out.actor, out.action_type, out.target, out.hit,
-            out.crit, out.blocked, out.raw_damage, out.final_damage, out.target_hp,
-            tuple(out.side_effects or ()) + tuple(extra), out.message,
-            battle_ended=out.battle_ended, status=out.status,
-            combo_result=out.combo_result,
-        )
+        return replace(out, side_effects=tuple(out.side_effects or ()) + tuple(extra))
 
     def _after_actor_action(self, actor: str) -> None:
         """ACTOR_TURN_END 位点（CTB 重写，M4/M9/M10）：行动者完成后收尾 + 推进时间。
@@ -4409,13 +4419,23 @@ class BattleEngine:
             return self._turn_report()
 
         action_dict = self._normalize_action(action, params)
-        # 转向怪（增补 v1 §三）：玩家行动前怪转回面向——转向事件化 + 行动条成本
-        # （「目标未变不转向=零消耗」；成本计入怪的下一次 ready，隐性口径玩家不可见）
-        _turn_ev = self._face_enemy()
+        # 背击窗口（B5 背击闭环，2026-09-11 批④）：**捕获行动前侧位**——本次行动于
+        # 该侧位结算（side=back → 背击加成）；结算**后**怪才转回面向（转向事件 +
+        # 行动条成本，见 _face_enemy）。重定位类行动（行动前=front、行动把 side
+        # 移到 back/left/right）不触发转向；被拒行动零成本不触发（R-6）。
+        _pre_side: Optional[str] = None
+        try:
+            from qbot_rpg.core.position import position_of  # noqa: PLC0415
+
+            _pre_side = position_of(self._snap, "player")[0]
+        except Exception:  # noqa: BLE001 - 方位读取失败按缺省正面（不阻断行动）
+            _pre_side = "front"
         outcomes: List[ActionOutcome] = []
         res = self.do_action("player", action_dict)
-        if _turn_ev is not None:
-            res = self._with_extra_effects(res, (_turn_ev,))
+        if getattr(res, "ok", True):
+            _turn_ev = self._face_enemy(_pre_side)
+            if _turn_ev is not None:
+                res = self._with_extra_effects(res, (_turn_ev,))
         outcomes.append(res)
         # 玩家行动收尾推进行动条时，期间自动结算的 NPC 行动 outcome 并入本报告
         # （Render 通道：渲染层按 outcomes 顺序产出「怪物行动行」）。

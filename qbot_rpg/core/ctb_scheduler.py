@@ -329,6 +329,7 @@ class CTBScheduler:
         view: CtbActorView,
         base_time: Optional[float] = None,
         recovery: Optional[Any] = None,
+        ready_at: Optional[float] = None,
     ) -> None:
         """为某单位计算下一次 ready 并签发票据。
 
@@ -337,11 +338,16 @@ class CTBScheduler:
         :param recovery: 本次行动的行动恢复值；None → 规则默认 default_recovery。
             引擎在每次行动结算后传入实际 action 的 recovery（普攻 100 / 重技能 150…），
             这是 CTB「行动代价」的唯一注入点（P0：per-action recovery）。
+        :param ready_at: 显式 ready 时刻（非 None 时直接采用、忽略 base_time/recovery）
+            ——「纯时间平移」场景使用（delay_actor，增补 v1 §三）。
         """
-        base = self._time if base_time is None else base_time
-        rec = self._rule.default_recovery if recovery is None else recovery
-        action = {"recovery": rec}
-        view.next_ready = next_ready(base, action, view.effective_speed, self._rule)
+        if ready_at is not None:
+            view.next_ready = float(ready_at)
+        else:
+            base = self._time if base_time is None else base_time
+            rec = self._rule.default_recovery if recovery is None else recovery
+            action = {"recovery": rec}
+            view.next_ready = next_ready(base, action, view.effective_speed, self._rule)
         self._seq += 1
         view.ticket = CtbTicket(
             actor_id=view.actor_id,
@@ -731,6 +737,40 @@ class CTBScheduler:
             return True
         except Exception:  # pragma: no cover - 兜底不崩
             _logger.exception("update_speed 失败：%s", actor_id)
+            return False
+
+    def delay_actor(self, actor_id: Any, extra_bars: Any = 0.0) -> bool:
+        """给单位的下一次 ready 追加时间成本（转向等，增补 v1 §三）。
+
+        语义：`next_ready ← max(next_ready, now) + extra_bars`（纯时间平移，不重算
+        recovery）；bump generation 使旧票失效，同时为其余存活单位按现有时间表
+        重签票据（除目标外，其它单位的时序不变）。
+
+        :param actor_id: 单位标识
+        :param extra_bars: 追加的行动条数（≤0 → 无害空操作返回 True）
+        :return: True = 已处理；False = 单位不存在/已阵亡
+        """
+        view = self._actors.get(str(actor_id))
+        if view is None or not view.alive:
+            return False
+        try:
+            extra = _to_float(extra_bars, 0.0)
+            if extra <= 0:
+                return True
+            self.bump_generation("delay")
+            # 本拍已消费（待重签）与在队票据：一律以「现有时刻表与当前时刻的较大者」
+            # 为基点纯时间平移（不重算 recovery——转向≠重新行动代价）。
+            view.next_ready = max(view.next_ready, self._time) + extra
+            self._enqueue(view, ready_at=view.next_ready)
+            # 其余存活单位按现有时间表重签（新 generation；时序不变）
+            for other in self._actors.values():
+                if other is view or not other.alive or other.ticket is None:
+                    continue
+                self._enqueue(other, ready_at=other.next_ready)
+            self._rebuild_queue()
+            return True
+        except Exception:  # pragma: no cover - 兜底不崩
+            _logger.exception("delay_actor 失败：%s", actor_id)
             return False
 
     def mark_dead(self, actor_id: Any) -> bool:

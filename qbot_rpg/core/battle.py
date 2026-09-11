@@ -265,6 +265,14 @@ _FIVE_BLOCKS: Tuple[str, ...] = (
     "effect_cooldowns",
 )
 
+#: 空中姿态状态 ID 全集（跃空窗口载体；窗口初始化/到期判定/落地清理共用——增补 v1 §四）。
+#: 2026-09-11 关联状态同步审计：补齐 rb/vc/po 系跃空姿态（此前三技缺挂载 → 跃起即被
+#: R16 兜底静默落地）。内容侧新增任何「跃空保持」状态须同步登记本表。
+_AIR_STATUS_IDS: Tuple[str, ...] = (
+    "sw_vault_air", "vs_air_window", "va_air_window",
+    "rb_vault_air", "vc_vault_air", "po_vault_air",
+)
+
 
 class BattleStateError(Exception):
     """非法状态迁移 / 非法操作（细化_1g1b §二 状态机不变量，不变量2/4）。"""
@@ -572,6 +580,11 @@ class BattleEngine:
         # 结算 NPC ready 拍时，把其 ActionOutcome 暂存于此，供 `player_act` 汇总进
         # TurnReport.outcomes（渲染层据此产出「怪物行动行」）。
         self._npc_outcomes: List[ActionOutcome] = []
+        # 跃空窗口（增补 v1 §四）：引擎级待发事件（自动落地等）——并入下一次行动
+        # outcome 的 side_effects（渲染层出「落回地面」行）；取走即清（防重复播报）。
+        self._pending_air_events: List[Mapping[str, Any]] = []
+        # 空中延长幂等标记（同一行动多次收尾调用只延长一次）
+        self._air_ext_marker: Optional[str] = None
 
     # ------------------------- 状态机制 -------------------------
 
@@ -2614,7 +2627,8 @@ class BattleEngine:
         self._dispatch_event("action_end", attacker)
         self._after_actor_action(attacker)
         return ActionOutcome(True, seq, attacker, "guard", target, True, "low", False,
-                             0, 0, int(self._combat(target).get("hp", 0)), (),
+                             0, 0, int(self._combat(target).get("hp", 0)),
+                             self._seal_side_effects(()),
                              "防御指令（受击 ×0.5，直到下次行动）")
 
     def _skip_turn(self, attacker: str) -> ActionOutcome:
@@ -2633,7 +2647,7 @@ class BattleEngine:
         self._after_actor_action(attacker)
         return ActionOutcome(False, seq, attacker, "skip", target, False, "low", False,
                              0, 0, int(self._combat(target).get("hp", 0)),
-                             ({"type": "skip_turn", "actor": attacker},),
+                             self._seal_side_effects(({"type": "skip_turn", "actor": attacker},)),
                              "被控制，跳过本次行动")
 
     def _flee_actor(self, attacker: str) -> ActionOutcome:
@@ -3087,28 +3101,106 @@ class BattleEngine:
             )
         return out
 
-    def _face_enemy(self) -> None:
-        """玩家行动前自动转向怪物（side 归 front——2026-09-09 zerc 实机反馈）。
+    def _face_enemy(self) -> Optional[Mapping[str, Any]]:
+        """玩家行动前怪转回面向（**转向事件化 + 行动条成本**，增补 v1 §三，2026-09-11）。
 
-        每轮行动开始将玩家 side 复位 front（位移技如回环施放后仍 reposition 生效，
-        侧移仅当轮闪避窗口；高度不动——腾空空中行动不受影响）。
+        1v1 落地切片（「玩家绕背/侧移后，怪按行动条成本转回面向」——现行「玩家行动
+        前自动回正面」的延伸）：
+
+        - 目标未变（玩家已在正面）/ 快照缺段 / 终局 → **不转向、零消耗**，返回 None；
+        - 玩家 side ∈ {back/left/right} → 怪转身（玩家 side 归位 front），并把**转向
+          成本**（`ctb.turn_cost`，行动条；隐性口径玩家不可见）追加到怪的下一次 ready
+          （`CTBScheduler.delay_actor`）——转向是可读的节奏事件（渲染层出
+          `battle_enemy_turned` 行）。
+        - 高度不动（腾空空中行动不受影响）；完整仇恨值（来源/衰减/远程系数）依赖
+          多目标选择，属组队里程碑前置，见增补 v1 §三.5。
+
+        :return: 转向事件 dict（无转向 → None）
         """
         try:
+            if self._finished:
+                return None
             _cp = self._snap.get("combat_position")
-            if isinstance(_cp, dict):
-                _pe = _cp.get("player")
-                if isinstance(_pe, dict) and str(_pe.get("side") or "front") != "front":
-                    _pe["side"] = "front"
-        except Exception:  # noqa: BLE001 - 归位失败不阻断行动
+            if not isinstance(_cp, dict):
+                return None
+            _pe = _cp.get("player")
+            if not isinstance(_pe, dict):
+                return None
+            if str(_pe.get("side") or "front") == "front":
+                return None
+            _pe["side"] = "front"
+            _cost = 0.0
+            try:
+                _cost = float(self._rule_config().turn_cost)
+            except Exception:  # noqa: BLE001 - 配置解析失败按零成本（不阻断行动）
+                _cost = 0.0
+            if _cost > 0 and self._ctb is not None:
+                self._ctb.delay_actor("enemy", _cost)
+            return {"type": "enemy_turned", "actor": "enemy"}
+        except Exception:  # noqa: BLE001 - 归位/计费失败不阻断行动
+            return None
+
+    # ------------------------- 跃空窗口（增补 v1 §四，2026-09-11） -------------------------
+
+    def _air_stance_instances(self, side: str = "player") -> List[Mapping[str, Any]]:
+        """该侧空中姿态状态实例列表（sw_vault_air / vs_air_window / va_air_window）。
+
+        兼容实例的 dict / 对象两种形态（对齐旧 `_settle_air_landing` 扫描口径）。
+        """
+        st = self._snap.get("status_state")
+        insts = st.get(side) if isinstance(st, Mapping) else None
+        if not isinstance(insts, list):
+            return []
+        out: List[Mapping[str, Any]] = []
+        for inst in insts:
+            if isinstance(inst, Mapping):
+                sid = str(inst.get("status_id") or inst.get("id") or "")
+            else:
+                sid = str(getattr(inst, "status_id", None)
+                          or getattr(inst, "id", "") or "")
+            if sid in _AIR_STATUS_IDS:
+                out.append(inst)
+        return out
+
+    def _clear_air_stances(self, side: str = "player") -> None:
+        """清理该侧空中姿态实例（落地统一清理点：到期 / air_policy=land / 击落）。
+
+        原地重写（保持列表对象同一性——陈旧运行时引用不回灌脏数据）。
+        """
+        st = self._snap.get("status_state")
+        if not isinstance(st, dict):
             return
+        insts = st.get(side)
+        if not isinstance(insts, list):
+            return
+        st[side][:] = [
+            inst for inst in insts
+            if not (isinstance(inst, Mapping)
+                    and str(inst.get("status_id") or inst.get("id") or "") in _AIR_STATUS_IDS)
+        ]
 
-    def _settle_air_landing(self) -> None:
-        """空中姿态（腾空/悬停/空连）到期自动落地。
+    def _take_pending_air_events(self) -> List[Mapping[str, Any]]:
+        """取走引擎级待发事件（跃空自动落地等；取走即清，防重复播报）。"""
+        _evs = list(getattr(self, "_pending_air_events", None) or [])
+        self._pending_air_events = []
+        return _evs
 
-        CTB 重写（R16）：旧口径「空中姿态状态回合 duration 归零 → 落地」；CTB 下
-        状态 duration 按**持有者行动次数**递减（R5/R14 同族），故落地位点 = 持有者
-        每次 `AFTER_ACTION`（本方法由 `_after_actor_action` 调用）。判定逻辑不变：
-        玩家仍滞空但已无任何空中姿态状态 → reposition height=ground。
+    def _seal_side_effects(
+        self, seq: Sequence[Mapping[str, Any]]
+    ) -> Tuple[Mapping[str, Any], ...]:
+        """收口 side_effects：既有序列 + 引擎级待发事件（跃空自动落地等）。"""
+        return tuple(seq or ()) + tuple(self._take_pending_air_events())
+
+    def _update_air_window(self, actor: str) -> None:
+        """跃空窗口维护：初始化 + 使用攻击/技能的延长（增补 v1 §四）。
+
+        - 窗口载体 = 空中姿态状态实例的 `air_expire_at`（行动条时刻；**隐性口径**，
+          玩家不可见）；窗口时长取 `ctb.air_time`（缺省 2000，可调）。
+        - 玩家在空中且持有姿态：实例缺窗口起点 → 初始化为「本拍时刻 + air_time」
+          （本拍时刻 = 该行动起始的 battle_time，收尾时尚未推进）。
+        - 玩家**在自己行动中**使用攻击/技能 → 各姿态窗口 +延长值（技能 `air_extend`
+          正数优先，否则规则缺省 `ctb.air_extend`）；每次行动只延长一次
+          （`_air_ext_marker` 幂等，防多级收尾重入重复计费）。
         """
         try:
             from qbot_rpg.core.position import position_of  # noqa: PLC0415
@@ -3116,16 +3208,92 @@ class BattleEngine:
             _ps, _ph = position_of(self._snap, "player")
             if _ph != "air":
                 return
+            insts = self._air_stance_instances("player")
+            if not insts:
+                return   # 无姿态：交由 _settle_air_landing 兜底落地
+            _now = float(self.battle_time)
+            _rule = self._rule_config()
+            for inst in insts:
+                if not isinstance(inst, dict):
+                    continue
+                _v = inst.get("air_expire_at")
+                _ok = False
+                if _v is not None and not isinstance(_v, bool):
+                    try:
+                        _ok = float(_v) > 0
+                    except (TypeError, ValueError):
+                        _ok = False
+                if not _ok:
+                    inst["air_expire_at"] = _now + float(_rule.air_time)
+            if actor != "player" or getattr(self, "_current_actor", None) != "player":
+                return
+            _act = self._last_action_of(actor) or {}
+            if str(_act.get("type") or "").lower() not in ("normal", "attack", "skill"):
+                return
+            _key = "{}:{:.6f}".format(int(self.action_seq), _now)
+            if getattr(self, "_air_ext_marker", None) == _key:
+                return
+            self._air_ext_marker = _key
+            _ext = self._air_extend_of(_act, _rule)
+            if _ext > 0:
+                for inst in insts:
+                    if not isinstance(inst, dict):
+                        continue
+                    try:
+                        _base = float(inst.get("air_expire_at") or _now)
+                    except (TypeError, ValueError):
+                        _base = _now
+                    inst["air_expire_at"] = _base + float(_ext)
+        except Exception:  # noqa: BLE001 - 窗口维护失败不阻断行动收尾
+            return
+
+    def _air_extend_of(self, action: Mapping[str, Any], rule: Any) -> float:
+        """本次空中行动的延长值：技能 `air_extend`（正数）优先，否则规则缺省。"""
+        _def_ext = float(getattr(rule, "air_extend", 0.0) or 0.0)
+        _sid = str(action.get("skill_id") or "")
+        if _sid:
+            try:
+                _sd = self.combo_engine().resolve_skill(_sid) or {}
+                _v = _sd.get("air_extend")
+                if isinstance(_v, (int, float)) and not isinstance(_v, bool) and _v > 0:
+                    return float(_v)
+            except Exception:  # noqa: BLE001 - 解析失败回退缺省
+                pass
+        return _def_ext
+
+    def _settle_air_landing(self) -> None:
+        """空中姿态到期自动落地（**行动条口径**——增补 v1 §四，2026-09-11）。
+
+        判定（玩家侧；本方法由 `_after_actor_action` 调用）：
+
+        - 不在空中 → 无操作；
+        - 空中但无任何空中姿态状态 → 落地（R16 兜底语义保留）；
+        - 空中且有姿态：窗口 = `air_expire_at`（初始化/延长见 `_update_air_window`）；
+          全部到期（now >= expire）→ 清理姿态 + 自动落地；任一未到期 → 保持。
+
+        落地产出 `air_land` 事件（经 `_pending_air_events` 并入下一次行动 outcome，
+        渲染层出「落回地面」行）；battle_notes 审计记录保留。
+        """
+        try:
+            from qbot_rpg.core.position import position_of  # noqa: PLC0415
+
+            _ps, _ph = position_of(self._snap, "player")
+            if _ph != "air":
+                return
+            insts = self._air_stance_instances("player")
+            if insts:
+                _now = float(self.battle_time)
+                for inst in insts:
+                    _v = inst.get("air_expire_at")
+                    try:
+                        _exp = float(_v) if _v is not None else None
+                    except (TypeError, ValueError):
+                        _exp = None
+                    if _exp is not None and _exp > _now:
+                        return   # 窗口未到期：保持空中
+            # 落地：清理姿态 → height=ground → 事件（自动落地可被玩家读到）
+            self._clear_air_stances("player")
             _rt = self._new_runtime()
-            _air_sids = {"sw_vault_air", "vs_air_window", "va_air_window"}
-            for _inst in _rt.status_instances("player"):
-                if isinstance(_inst, Mapping):
-                    _sid = str(_inst.get("status_id") or _inst.get("id") or "")
-                else:
-                    _sid = str(getattr(_inst, "status_id", None)
-                               or getattr(_inst, "id", "") or "")
-                if _sid in _air_sids:
-                    return
             _ctx = DamageCtx(raw_damage=0, attack_type="basic", attacker="player",
                              target="enemy", snapshot=self._snap)
             execute_action({"type": "reposition", "target": "self", "height": "ground"},
@@ -3133,6 +3301,8 @@ class BattleEngine:
             self._absorb_runtime(_rt)
             self._snap.setdefault("battle_notes", []).append(
                 {"type": "air_land", "side": "player", "auto": True})
+            self._pending_air_events.append(
+                {"type": "air_land", "actor": "player", "auto": True})
         except Exception:  # noqa: BLE001 - 落地失败不阻断行动收尾
             return
 
@@ -3219,6 +3389,7 @@ class BattleEngine:
             _fx.append(extra_effect)
         if _land is not None:
             _fx.append(_land)
+        _fx.extend(self._take_pending_air_events())
         return ActionOutcome(
             True, self._seq, attacker, str(action.get("type", "normal")), target,
             False, "low", False, 0, 0, int(self._combat(target).get("hp", 0) or 0),
@@ -3253,6 +3424,8 @@ class BattleEngine:
         if me.get("height") != "air":
             return None
         me["height"] = "ground"
+        # 落地统一清理：空中姿态状态（跃空窗口载体）随落地自然消散（增补 v1 §四）
+        self._clear_air_stances(actor)
         return {"type": "air_land", "actor": actor}
 
     # ------------------------- 部位破坏（方位 v0.6 §三.3/§三.4，附录 A Step 2） -------------------------
@@ -3499,6 +3672,8 @@ class BattleEngine:
                         _cp["height"] = "ground"
                 except Exception:
                     pass
+                # 闪反失败击落：空中姿态（窗口载体）随落地清理（增补 v1 §四）
+                self._clear_air_stances("player")
 
         for idx, seg in enumerate(segments, start=1):
             seg = dict(seg)
@@ -3792,9 +3967,23 @@ class BattleEngine:
             hit=bool(rating.get("hit", False)), crit=str(rating.get("crit", "low")),
             blocked=bool(rating.get("blocked", False)),
             raw_damage=int(damage.get("final", 0)), final_damage=int(damage.get("final", 0)),
-            target_hp=hp, side_effects=tuple(effects),
+            target_hp=hp, side_effects=self._seal_side_effects(effects),
             message=f"{attacker} 对 {target} 造成 {damage.get('final', 0)} 伤害",
             battle_ended=battle_ended, status=status,
+        )
+
+    def _with_extra_effects(
+        self, out: ActionOutcome, extra: Sequence[Mapping[str, Any]]
+    ) -> ActionOutcome:
+        """在既有 outcome 的 side_effects 尾部追加引擎级事件（frozen 重建）。"""
+        if out is None or not extra:
+            return out
+        return ActionOutcome(
+            out.ok, out.seq, out.actor, out.action_type, out.target, out.hit,
+            out.crit, out.blocked, out.raw_damage, out.final_damage, out.target_hp,
+            tuple(out.side_effects or ()) + tuple(extra), out.message,
+            battle_ended=out.battle_ended, status=out.status,
+            combo_result=out.combo_result,
         )
 
     def _after_actor_action(self, actor: str) -> None:
@@ -3804,7 +3993,7 @@ class BattleEngine:
           - 霸体窗口关闭（D2：行动阶段结束）；
           - 技能冷却递减（该施放者本侧 -1，M9）；
           - transform 形态 tick（持有者，M10）+ dispel 延迟还原（M8）；
-          - 空中姿态落地（R16）；
+          - 跃空窗口维护（初始化/延长——增补 v1 §四）+ 到期自动落地（R16）；
           - **行动收尾 DOT / 吸收回复 / 持续双维扣减**（`tick_turn_end`，2026-09-10 整合）；
           - **行动条重签**：把该 actor 的下一次 ready 交给调度器（recovery 注入）。
 
@@ -3831,6 +4020,8 @@ class BattleEngine:
         # M9/M10/M8/R16：该行动者侧的各项 tick 归位到 AFTER_ACTION
         self._tick_skill_cooldowns(actor)
         self._tick_transform_state(actor)
+        # 跃空窗口（增补 v1 §四）：初始化/延长（玩家行动使用攻击/技能）→ 到期判定
+        self._update_air_window(actor)
         self._settle_air_landing()
         # 行动收尾状态结算（旧 end_turn ⑥：turn_end DOT / 吸收回复 / 持续双维扣减）
         # 结算后须复核死亡（DOT 可能致死）——致死则立即终局，不再推进时间轴。
@@ -4099,10 +4290,13 @@ class BattleEngine:
             return self._turn_report()
 
         action_dict = self._normalize_action(action, params)
-        # 转向怪：玩家行动前自动回正面（侧移仅当本次行动的闪避窗口）
-        self._face_enemy()
+        # 转向怪（增补 v1 §三）：玩家行动前怪转回面向——转向事件化 + 行动条成本
+        # （「目标未变不转向=零消耗」；成本计入怪的下一次 ready，隐性口径玩家不可见）
+        _turn_ev = self._face_enemy()
         outcomes: List[ActionOutcome] = []
         res = self.do_action("player", action_dict)
+        if _turn_ev is not None:
+            res = self._with_extra_effects(res, (_turn_ev,))
         outcomes.append(res)
         # 玩家行动收尾推进行动条时，期间自动结算的 NPC 行动 outcome 并入本报告
         # （Render 通道：渲染层按 outcomes 顺序产出「怪物行动行」）。

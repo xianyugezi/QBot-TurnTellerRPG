@@ -327,6 +327,11 @@
       "action": "gj_ram",
       "weight": 25,
       "probability": 1
+     },
+     {
+      "action": "gj_shard_spray",
+      "weight": 15,
+      "probability": 1
      }
     ],
     "broadcast": "{monster} 甲片竖立，脉晶在甲缝间充能！"
@@ -348,6 +353,11 @@
       "action": "gj_armor",
       "weight": 15,
       "probability": 1
+     },
+     {
+      "action": "gj_shard_spray",
+      "weight": 25,
+      "probability": 1
      }
     ],
     "broadcast": "{monster} 甲壳迸裂，狂暴冲撞！"
@@ -368,6 +378,11 @@
    {
     "action": "gj_armor",
     "weight": 25,
+    "probability": 1
+   },
+   {
+    "action": "gj_shard_spray",
+    "weight": 20,
     "probability": 1
    }
   ]
@@ -850,6 +865,11 @@
       "action": "ea_gore",
       "weight": 30,
       "probability": 1
+     },
+     {
+      "action": "ea_vein_spray",
+      "weight": 15,
+      "probability": 1
      }
     ],
     "broadcast": "{monster} 甲壳蜷缩，蚀脉在甲缝间奔涌充能！"
@@ -870,6 +890,11 @@
      {
       "action": "ea_armor_up",
       "weight": 10,
+      "probability": 1
+     },
+     {
+      "action": "ea_vein_spray",
+      "weight": 25,
       "probability": 1
      }
     ],
@@ -892,6 +917,11 @@
    {
     "action": "ea_armor_up",
     "weight": 25,
+    "probability": 1
+   },
+   {
+    "action": "ea_vein_spray",
+    "weight": 20,
     "probability": 1
    }
   ]

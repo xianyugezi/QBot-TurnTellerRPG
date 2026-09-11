@@ -42,12 +42,14 @@
   "tags": [
    "范围",
    "困斗+1",
-   "可防反"
+   "可防反",
+   "对空"
   ],
   "apply_mark": "surge_mark",
   "position_rule": {
    "height": [
-    "ground"
+    "ground",
+    "air"
    ]
   }
  },
@@ -113,14 +115,16 @@
   "tags": [
    "物理",
    "可防反",
-   "可闪反"
+   "可闪反",
+   "对空"
   ],
   "position_rule": {
    "side": [
     "front"
    ],
    "height": [
-    "ground"
+    "ground",
+    "air"
    ]
   }
  },
@@ -138,14 +142,16 @@
   "tags": [
    "物理",
    "可防反",
-   "可闪反"
+   "可闪反",
+   "对空"
   ],
   "position_rule": {
    "side": [
     "front"
    ],
    "height": [
-    "ground"
+    "ground",
+    "air"
    ]
   }
  },
@@ -334,7 +340,8 @@
    "范围",
    "突",
    "可防反",
-   "可闪反"
+   "可闪反",
+   "对空"
   ],
   "position_rule": {
    "side": [
@@ -386,14 +393,16 @@
    "物理",
    "风",
    "可防反",
-   "可闪反"
+   "可闪反",
+   "对空"
   ],
   "position_rule": {
    "side": [
     "front"
    ],
    "height": [
-    "ground"
+    "ground",
+    "air"
    ]
   }
  },
@@ -436,14 +445,16 @@
   "cooldown": 3,
   "tags": [
    "物理",
-   "风"
+   "风",
+   "对空"
   ],
   "position_rule": {
    "side": [
     "front"
    ],
    "height": [
-    "ground"
+    "ground",
+    "air"
    ]
   }
  },
@@ -461,7 +472,8 @@
   "tags": [
    "物理",
    "可防反",
-   "可闪反"
+   "可闪反",
+   "对空"
   ],
   "position_rule": {
    "side": [
@@ -610,7 +622,8 @@
    "元素",
    "水",
    "可防反",
-   "可闪反"
+   "可闪反",
+   "对空"
   ],
   "position_rule": {
    "side": [
@@ -662,16 +675,19 @@
    "物理",
    "水",
    "可防反",
-   "可闪反"
+   "可闪反",
+   "对空"
   ],
   "position_rule": {
    "side": [
     "front"
    ],
    "height": [
-    "ground"
+    "ground",
+    "air"
    ]
-  }
+  },
+  "air_drop": "knockdown"
  },
  {
   "id": "zb_death_roll",
@@ -761,14 +777,16 @@
   "cooldown": 2,
   "tags": [
    "物理",
-   "风"
+   "风",
+   "对空"
   ],
   "position_rule": {
    "side": [
     "front"
    ],
    "height": [
-    "ground"
+    "ground",
+    "air"
    ]
   }
  },
@@ -802,7 +820,8 @@
    "元素",
    "土",
    "可防反",
-   "可闪反"
+   "可闪反",
+   "对空"
   ],
   "position_rule": {
    "side": [
@@ -896,7 +915,8 @@
    "元素",
    "水",
    "可防反",
-   "可闪反"
+   "可闪反",
+   "对空"
   ],
   "position_rule": {
    "side": [
@@ -1015,13 +1035,16 @@
   "cooldown": 1,
   "tags": [
    "物理",
-   "土"
+   "土",
+   "对空"
   ],
   "position_rule": {
    "height": [
-    "ground"
+    "ground",
+    "air"
    ]
-  }
+  },
+  "air_drop": "knockdown"
  },
  {
   "id": "dw_shadow_stalk",
@@ -1052,14 +1075,16 @@
   "tags": [
    "物理",
    "可防反",
-   "可闪反"
+   "可闪反",
+   "对空"
   ],
   "position_rule": {
    "side": [
     "front"
    ],
    "height": [
-    "ground"
+    "ground",
+    "air"
    ]
   }
  },
@@ -1077,14 +1102,16 @@
   "tags": [
    "物理",
    "可防反",
-   "可闪反"
+   "可闪反",
+   "对空"
   ],
   "position_rule": {
    "side": [
     "front"
    ],
    "height": [
-    "ground"
+    "ground",
+    "air"
    ]
   }
  },
@@ -1125,7 +1152,8 @@
   "cooldown": 1,
   "tags": [
    "元素",
-   "风"
+   "风",
+   "对空"
   ],
   "position_rule": {
    "height": [
@@ -1148,7 +1176,8 @@
   "tags": [
    "物理",
    "可防反",
-   "可闪反"
+   "可闪反",
+   "对空"
   ],
   "position_rule": {
    "side": [
@@ -1198,16 +1227,19 @@
   "intent": "蓄力",
   "cooldown": 2,
   "tags": [
-   "物理"
+   "物理",
+   "对空"
   ],
   "position_rule": {
    "side": [
     "front"
    ],
    "height": [
-    "ground"
+    "ground",
+    "air"
    ]
-  }
+  },
+  "air_drop": "knockdown"
  },
  {
   "id": "sb_shadow_veil",
@@ -1265,7 +1297,8 @@
    "元素",
    "土",
    "可防反",
-   "可闪反"
+   "可闪反",
+   "对空"
   ],
   "position_rule": {
    "side": [
@@ -1311,7 +1344,8 @@
   "cooldown": 1,
   "tags": [
    "元素",
-   "风"
+   "风",
+   "对空"
   ],
   "position_rule": {
    "height": [
@@ -1424,7 +1458,8 @@
    "元素",
    "土",
    "可防反",
-   "可闪反"
+   "可闪反",
+   "对空"
   ],
   "position_rule": {
    "side": [
@@ -1488,7 +1523,8 @@
   "cooldown": 1,
   "tags": [
    "元素",
-   "风"
+   "风",
+   "对空"
   ],
   "position_rule": {
    "height": [
@@ -1534,7 +1570,8 @@
   "cooldown": 3,
   "tags": [
    "元素",
-   "土"
+   "土",
+   "对空"
   ],
   "position_rule": {
    "side": [
@@ -1578,14 +1615,72 @@
   "tags": [
    "物理",
    "可防反",
-   "可闪反"
+   "可闪反",
+   "对空"
   ],
   "position_rule": {
    "side": [
     "front"
    ],
    "height": [
-    "ground"
+    "ground",
+    "air"
+   ]
+  }
+ },
+ {
+  "id": "gj_shard_spray",
+  "name": "砾甲迸溅",
+  "kind": "active",
+  "power": 1.0,
+  "attack_type": "突",
+  "element": "earth",
+  "weight": 25,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 1,
+  "tags": [
+   "元素",
+   "土",
+   "可防反",
+   "可闪反",
+   "对空"
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground",
+    "air"
+   ]
+  }
+ },
+ {
+  "id": "ea_vein_spray",
+  "name": "蚀脉喷溅",
+  "kind": "active",
+  "power": 1.1,
+  "attack_type": "突",
+  "element": "earth",
+  "weight": 25,
+  "probability": 1,
+  "intent": "伤害",
+  "cooldown": 1,
+  "tags": [
+   "元素",
+   "蚀",
+   "可防反",
+   "可闪反",
+   "对空"
+  ],
+  "position_rule": {
+   "side": [
+    "front"
+   ],
+   "height": [
+    "ground",
+    "air"
    ]
   }
  }

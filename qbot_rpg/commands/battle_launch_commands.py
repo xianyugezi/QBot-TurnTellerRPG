@@ -389,8 +389,17 @@ async def launch_pve_battle(
         # **无需 rule_version 分派**——CTB 是唯一实现（引擎内部固定走 CTBScheduler）；
         # 玩家行动经 BattleEngine.player_act 单入口（见 battle_commands 派发层），
         # 不再有先手/后手对（enemy_act / end_turn / action_order 已删除）。
-        eng.start(p_comb, e_comb, random_seed=None,
-                  config={"battle_materials": _battle_materials_of(ctx)})
+        # ctb 配置管道接通（2026-09-11 增补 v1）：settings.json 的 "ctb" 段（隐性标准
+        # time_unit / air_time / air_extend / turn_cost 等）→ 引擎调度器规则（可调）。
+        _start_cfg: Dict[str, Any] = {"battle_materials": _battle_materials_of(ctx)}
+        try:
+            from qbot_rpg.core.ctb_config import resolve_ctb_settings  # noqa: PLC0415
+
+            _start_cfg["ctb"] = resolve_ctb_settings(
+                ctx.get("settings") if isinstance(ctx, Mapping) else None)
+        except Exception:  # noqa: BLE001 - 配置接通失败回落默认（不阻断开战）
+            pass
+        eng.start(p_comb, e_comb, random_seed=None, config=_start_cfg)
         # 2026-09-09：MonsterAI 注入（装配缺口修复——怪行动 defs 自此启用：
         # 行动方位规则 position_rule 生效 + 蓄力/召唤/防御/范围技可被 AI 选用。
         # 注入须在 start 后（rng 由 start 初始化；start 前 rng=None → decide 异常

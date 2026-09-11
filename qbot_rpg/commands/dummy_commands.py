@@ -209,7 +209,17 @@ async def launch_dummy_battle(
             eng.set_job_id(_jid)
         from qbot_rpg.commands.battle_launch_commands import _resource_registry_of  # noqa: PLC0415
         eng._resource_registry = _resource_registry_of(ctx)
-        eng.start(p_comb, e_comb, random_seed=None, battle_type="dummy")
+        # ctb 配置管道接通（2026-09-11）：与实机开战同源（settings["ctb"] → 规则）
+        _dummy_cfg: Dict[str, Any] = {}
+        try:
+            from qbot_rpg.core.ctb_config import resolve_ctb_settings  # noqa: PLC0415
+
+            _dummy_cfg["ctb"] = resolve_ctb_settings(
+                ctx.get("settings") if isinstance(ctx, Mapping) else None)
+        except Exception:  # noqa: BLE001 - 配置接通失败回落默认
+            pass
+        eng.start(p_comb, e_comb, random_seed=None, battle_type="dummy",
+                  config=_dummy_cfg)
     except Exception as exc:  # noqa: BLE001 - 开战失败不崩
         return {"ok": False, "message": f"❌ 开战失败：{exc}", "battle_engine": None}
 

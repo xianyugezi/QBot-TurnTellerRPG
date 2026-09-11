@@ -192,12 +192,12 @@
   "name": "空连之势",
   "max_stack": 1,
   "duration": {
-   "turns": 2,
+   "turns": -1,
    "charges": 0
   },
   "decay": "none",
   "effects": [],
-  "desc": "空连之势：切换/跃空后 1 次行动窗口（未用消失）"
+  "desc": "空连之势：跃空后展开之势（落地后自然消散）"
  },
  {
   "id": "va_recoil_window",
@@ -228,12 +228,12 @@
   "name": "悬停之势",
   "max_stack": 1,
   "duration": {
-   "turns": 2,
+   "turns": -1,
    "charges": 0
   },
   "decay": "none",
   "effects": [],
-  "desc": "悬停后 1 次行动窗口：可接悬停狙击（未用消失）"
+  "desc": "悬停之势：悬停后展开之势（落地后自然消散）"
  },
  {
   "id": "va_reload_window",
@@ -396,7 +396,7 @@
   "name": "腾空姿态",
   "max_stack": 1,
   "duration": {
-   "turns": 3,
+   "turns": -1,
    "charges": 0
   },
   "decay": "none",
@@ -409,6 +409,42 @@
     "count": 30
    }
   ],
-  "desc": "腾空姿态：空中闪避回剑势 30（姿态 3 次行动内有效，落地后自然消散）"
+  "desc": "腾空姿态：空中闪避回剑势 30（跃空期间有效，落地后自然消散）"
+ },
+ {
+  "id": "rb_vault_air",
+  "name": "跃空之势",
+  "max_stack": 1,
+  "duration": {
+   "turns": -1,
+   "charges": 0
+  },
+  "decay": "none",
+  "effects": [],
+  "desc": "跃空之势：纵跃于空（跃空期间有效，落地后自然消散）"
+ },
+ {
+  "id": "vc_vault_air",
+  "name": "跃锤之势",
+  "max_stack": 1,
+  "duration": {
+   "turns": -1,
+   "charges": 0
+  },
+  "decay": "none",
+  "effects": [],
+  "desc": "跃锤之势：举锤纵跃蓄势（跃空期间有效，落地后自然消散）"
+ },
+ {
+  "id": "po_vault_air",
+  "name": "跃空之势·测",
+  "max_stack": 1,
+  "duration": {
+   "turns": -1,
+   "charges": 0
+  },
+  "decay": "none",
+  "effects": [],
+  "desc": "压测跃空之势：验证跃空后保持空中（跃空期间有效，落地后自然消散）"
  }
 ]

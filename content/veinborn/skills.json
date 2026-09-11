@@ -3345,6 +3345,11 @@
     "type": "reposition",
     "target": "self",
     "height": "air"
+   },
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "rb_vault_air"
    }
   ],
   "mp_cost": 0,
@@ -3389,6 +3394,11 @@
     "target": "self",
     "mark": "charge_mark",
     "count": 1
+   },
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "vc_vault_air"
    }
   ],
   "mp_cost": 0,
@@ -3513,6 +3523,11 @@
     "type": "reposition",
     "target": "self",
     "height": "air"
+   },
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "po_vault_air"
    }
   ],
   "mp_cost": 0,

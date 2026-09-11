@@ -59,7 +59,8 @@ def test_white_base_growth():
 def test_crit_rate_formula():
     assert crit_rate(100.0, 0.0, 95) == 5.0
     assert crit_rate(100.0, 3.0, 95) == 8.0
-    assert crit_rate(40000.0, 0.0, 95) == 95.0  # cap
+    assert crit_rate(40000.0, 0.0, 95) == 95.0  # 显式 cap
+    assert crit_rate(40000.0, 0.0) == 100.0      # 默认满会心放开（增补 v1 §五）
     assert crit_rate(40000.0, 0.0, 0) > 95.0     # cap=0 不封顶
 
 

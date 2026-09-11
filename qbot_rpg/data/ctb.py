@@ -39,9 +39,12 @@ __all__ = [
     "DEFAULT_ACTION_RECOVERY",
     "ACTION_RECOVERY_TABLE",
     "HEAVY_RECOVERY_HINT",
-    # —— 时间标准（隐性换算口径；增补 v1 §〇/§一）——
+    # —— 时间标准（隐性换算口径；增补 v1 §〇/§一/§三/§四）——
     "DEFAULT_TIME_UNIT",
     "DEFAULT_ACTION_TIME",
+    "DEFAULT_AIR_TIME",
+    "DEFAULT_AIR_EXTEND",
+    "DEFAULT_TURN_COST",
     # —— 键名常量 ——
     "RECOVERY_KEY",
     "RECOVERY_KEY_CN",
@@ -97,6 +100,15 @@ DEFAULT_TIME_UNIT: float = 1000.0
 #: 技能「行动时间」（反应窗口时长，行动条）缺省值；默认 400.0（增补 v1 §一）。
 DEFAULT_ACTION_TIME: float = 400.0
 
+#: 跃空维持（行动条）缺省值；默认 2000.0（增补 v1 §四；隐性口径玩家不可见）。
+DEFAULT_AIR_TIME: float = 2000.0
+
+#: 空中攻击/技能每次延长的缺省值（行动条）；默认 150.0（增补 v1 §四）。
+DEFAULT_AIR_EXTEND: float = 150.0
+
+#: 怪物转向的行动条成本；默认 400.0（增补 v1 §三）。
+DEFAULT_TURN_COST: float = 400.0
+
 
 # ---------------------------------------------------------------------------
 # 三、键名常量（内容包 recovery 键的中英候选，解析逻辑在 core/ctb_config.py）
@@ -123,4 +135,7 @@ DEFAULT_CTB_SETTINGS: Mapping[str, object] = {
     "recovery_table": {},
     "time_unit": DEFAULT_TIME_UNIT,
     "default_action_time": DEFAULT_ACTION_TIME,
+    "air_time": DEFAULT_AIR_TIME,
+    "air_extend": DEFAULT_AIR_EXTEND,
+    "turn_cost": DEFAULT_TURN_COST,
 }

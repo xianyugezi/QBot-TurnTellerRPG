@@ -74,6 +74,9 @@ __all__ = [
     "ACTION_DELAY",
     "TIME_UNIT",
     "DEFAULT_ACTION_TIME",
+    "DEFAULT_AIR_TIME",
+    "DEFAULT_AIR_EXTEND",
+    "DEFAULT_TURN_COST",
     "SIDE_PRIORITY",
     "CtbRuleConfig",
     "TieBreakKey",
@@ -153,6 +156,21 @@ TIME_UNIT: float = 1000.0
 #: 技能 def 未显式给 action_time 时的兜底；默认 400.0（闪反标准示例）。
 DEFAULT_ACTION_TIME: float = 400.0
 
+#: 跃空维持（行动条）：进入空中后的默认维持时长——**隐性口径（玩家不可见）**；
+#: 增补 v1 §四（2026-09-11 拍板）：跃空默认维持 2000 行动条；使用攻击/技能小幅延长
+#: （见 DEFAULT_AIR_EXTEND），专用技可用技能自身 `air_extend` 大幅延长；到期自动落地。
+#: 可经 CtbRuleConfig / settings["ctb"]["air_time"] 覆盖（可调，勿硬编码）。
+DEFAULT_AIR_TIME: float = 2000.0
+
+#: 空中攻击/技能每次「延长」的缺省值（行动条；增补 v1 §四：少量延长）。
+#: 技能 def 可用自身 `air_extend`（正数）覆盖本缺省（大幅延长档参考 400~600）。
+DEFAULT_AIR_EXTEND: float = 150.0
+
+#: 怪物转向的行动条成本（增补 v1 §三）：「转向消耗行动条（时间成本）」的 1v1 落地
+#: 切片——玩家绕背/侧移后，怪转回面向时其下次 ready 追加本值；目标未变不转向=零消耗。
+#: 可经 CtbRuleConfig / settings["ctb"]["turn_cost"] 覆盖（可调）。
+DEFAULT_TURN_COST: float = 400.0
+
 #: 黑盒验收场景 2 的 recovery 下界（供测试引用，避免魔数散落）。
 #:
 #: 推演（P SPD=100 / E SPD=75 / speed_reference=100 / 普攻 recovery=100）：
@@ -196,6 +214,9 @@ class CtbRuleConfig:
       recovery_table:  按 action 标识的恢复值覆盖表（键可为 action id / kind）
       time_unit:       时间单位（行动条／标准时长；隐性换算口径，增补 v1 §〇）
       default_action_time: 技能「行动时间」（反应窗口）缺省值（增补 v1 §一）
+      air_time:        跃空维持（行动条；隐性口径，增补 v1 §四）
+      air_extend:      空中攻击/技能每次延长的缺省值（行动条；增补 v1 §四）
+      turn_cost:       怪物转向的行动条成本（增补 v1 §三）
     """
 
     speed_reference: float = SPEED_REFERENCE
@@ -205,6 +226,9 @@ class CtbRuleConfig:
     recovery_table: Mapping[str, float] = field(default_factory=dict)
     time_unit: float = TIME_UNIT
     default_action_time: float = DEFAULT_ACTION_TIME
+    air_time: float = DEFAULT_AIR_TIME
+    air_extend: float = DEFAULT_AIR_EXTEND
+    turn_cost: float = DEFAULT_TURN_COST
 
     def with_overrides(self, overrides: Optional[Mapping[str, Any]]) -> "CtbRuleConfig":
         """返回覆盖部分字段后的新配置（缺省/非法值保持原值，不抛错）。
@@ -230,6 +254,9 @@ class CtbRuleConfig:
                 default_action_time=_to_float(
                     overrides.get("default_action_time"), self.default_action_time
                 ),
+                air_time=_to_float(overrides.get("air_time"), self.air_time),
+                air_extend=_to_float(overrides.get("air_extend"), self.air_extend),
+                turn_cost=_to_float(overrides.get("turn_cost"), self.turn_cost),
             )
         except Exception:  # pragma: no cover - 兜底不崩（规则层 fail-safe）
             _logger.exception("CtbRuleConfig.with_overrides 失败，回退原配置")

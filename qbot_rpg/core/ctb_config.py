@@ -39,7 +39,10 @@ from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple
 
 from qbot_rpg.core.ctb_rules import (
     DEFAULT_ACTION_TIME,
+    DEFAULT_AIR_EXTEND,
+    DEFAULT_AIR_TIME,
     DEFAULT_RECOVERY,
+    DEFAULT_TURN_COST,
     TIME_UNIT,
     CtbRuleConfig,
     recovery_for,
@@ -54,7 +57,10 @@ from qbot_rpg.data.ctb import (
     ActionRecoveryTable,
 )
 from qbot_rpg.data.ctb import DEFAULT_ACTION_TIME as DATA_DEFAULT_ACTION_TIME
+from qbot_rpg.data.ctb import DEFAULT_AIR_EXTEND as DATA_DEFAULT_AIR_EXTEND
+from qbot_rpg.data.ctb import DEFAULT_AIR_TIME as DATA_DEFAULT_AIR_TIME
 from qbot_rpg.data.ctb import DEFAULT_TIME_UNIT as DATA_DEFAULT_TIME_UNIT
+from qbot_rpg.data.ctb import DEFAULT_TURN_COST as DATA_DEFAULT_TURN_COST
 
 __all__ = [
     "resolve_action_recovery",
@@ -100,6 +106,24 @@ def _assert_no_value_drift() -> None:
                 "CTB 行动时间缺省存在分层漂移：data.DEFAULT_ACTION_TIME=%s "
                 "vs core.DEFAULT_ACTION_TIME=%s（请同步两处）",
                 DATA_DEFAULT_ACTION_TIME, DEFAULT_ACTION_TIME,
+            )
+        if float(DATA_DEFAULT_AIR_TIME) != float(DEFAULT_AIR_TIME):
+            _logger.warning(
+                "CTB 跃空维持存在分层漂移：data.DEFAULT_AIR_TIME=%s "
+                "vs core.DEFAULT_AIR_TIME=%s（请同步两处）",
+                DATA_DEFAULT_AIR_TIME, DEFAULT_AIR_TIME,
+            )
+        if float(DATA_DEFAULT_AIR_EXTEND) != float(DEFAULT_AIR_EXTEND):
+            _logger.warning(
+                "CTB 空中延长存在分层漂移：data.DEFAULT_AIR_EXTEND=%s "
+                "vs core.DEFAULT_AIR_EXTEND=%s（请同步两处）",
+                DATA_DEFAULT_AIR_EXTEND, DEFAULT_AIR_EXTEND,
+            )
+        if float(DATA_DEFAULT_TURN_COST) != float(DEFAULT_TURN_COST):
+            _logger.warning(
+                "CTB 转向成本存在分层漂移：data.DEFAULT_TURN_COST=%s "
+                "vs core.DEFAULT_TURN_COST=%s（请同步两处）",
+                DATA_DEFAULT_TURN_COST, DEFAULT_TURN_COST,
             )
     except Exception:  # pragma: no cover - 兜底不崩
         _logger.exception("_assert_no_value_drift 失败")

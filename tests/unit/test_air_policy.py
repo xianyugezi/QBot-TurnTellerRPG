@@ -88,7 +88,7 @@ def _set_height(eng: BattleEngine, height: str, which: str = "player") -> None:
     ent["height"] = height
 
 
-# 空中姿态状态 id 全集（battle._settle_air_landing 的 `_air_sids`，R16）
+# 空中姿态状态 id（本文件覆盖 sw_vault_air 线；全量登记见 battle._AIR_STATUS_IDS）
 _AIR_STATUS_IDS = ("sw_vault_air", "vs_air_window", "va_air_window")
 
 

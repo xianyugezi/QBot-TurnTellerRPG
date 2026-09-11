@@ -165,7 +165,7 @@ def test_batch_merges_npc_actions_one_message() -> None:
                    action_name="撕咬", attacker_name="狼", player_max_hp=30)
     batch = {"entries": [e1.__dict__, e2.__dict__], "start_time": 100, "end_time": 133.33}
     lines = render_battle_action_batch(batch).split("\n")
-    assert lines[0] == "（行动时间 100 → 133.3）"
+    assert lines[0] == "（怪物行动）"
     assert lines[1] == "❌ 史莱姆撞击，你受到 18 伤害（HP 21/30）"
     assert lines[2] == "❌ 狼撕咬，你受到 18 伤害（HP 14/30）"
     assert isinstance(render_battle_action_batch(batch), str)

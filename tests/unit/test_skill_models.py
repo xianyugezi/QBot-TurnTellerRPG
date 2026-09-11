@@ -360,6 +360,8 @@ def test_skills_fields_keys_exact() -> None:
         "counter_type", "counter_skill",
         # 行动时间 1（2026-09-11 增补 v1 §一 实装：action_time 反应窗口时长）
         "action_time",
+        # 空中延长 1（2026-09-11 增补 v1 §四 实装：air_extend 跃空窗口延长量）
+        "air_extend",
     }
 
 

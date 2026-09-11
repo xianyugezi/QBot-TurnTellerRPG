@@ -281,8 +281,9 @@ def test_6a_skills_fields_contract_core_24() -> None:
     assert len(contract_core) == 24
     # 登记表总键数 = 24 契约 + 6 挂点 + 3 方位扩展 F08/F09/F10
     # + 2 防反/闪反姿态 counter_type/counter_skill（2026-09-09 用户拍板标签制）
-    # + 1 行动时间 action_time（2026-09-11 增补 v1 §一 实装）= 36
-    assert len(fields) == 36
+    # + 1 行动时间 action_time（2026-09-11 增补 v1 §一 实装）
+    # + 1 空中延长 air_extend（2026-09-11 增补 v1 §四 实装）= 37
+    assert len(fields) == 37
 
 
 # ---------------------------------------------------------------------------

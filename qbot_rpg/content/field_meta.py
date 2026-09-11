@@ -902,6 +902,7 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "break_power": FieldMeta(type="number", range_min=0, range_max=500,
                                  label="破坏力固有值"),  # F09（方位 v0.6 §三.4）
         "air_policy": FieldMeta(type="str", label="空中策略"),  # F10（方位 v0.6 §三.6）
+        "air_drop": FieldMeta(type="str", label="对空击落"),  # 跃空风险闭环批③（knockdown=击中空中玩家即击落）
         "power": F_POWER,
         "attack_type": FieldMeta(type="str"),  # 斩/打/突/魔（枚举判定 A2 路）
         "element": FieldMeta(type="str"),      # 元素 ID（元素注册表引用检查 A2/M2）

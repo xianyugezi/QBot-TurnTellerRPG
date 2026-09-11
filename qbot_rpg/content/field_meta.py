@@ -977,6 +977,7 @@ def _module_table() -> Dict[str, ModuleMeta]:
         # ---- F25-F26 防反/闪反姿态（2026-09-09 用户拍板标签制：姿态技能配反击类型与反击技）----
         "counter_type": FieldMeta(type="str"),  # F25 parry/dodge（防反/闪反姿态标记）
         "counter_skill": FieldMeta(type="str"),  # F26 姿态成功派生反击技 id（V-2 引用检查）
+        "action_time": FieldMeta(type="number", range_min=0),  # F27 行动时间（反应窗口时长，行动条；缺省=ctb.default_action_time）
         # ---- 兼容旧键（enemies[].skills 引用的技能表旧键）----
         "skill": FieldMeta(type="ref", ref_target="skill_or_any"),
     }

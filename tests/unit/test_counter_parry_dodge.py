@@ -4,16 +4,18 @@
 - 闪反：怪行动带「可闪反」+ 玩家闪反姿态（回环/腾空 dodge）位移出范围 → 免伤（天然）+ 反击
 - 失败：行动无标签 → 受伤（姿态减伤照常）+ 无反击
 
-CTB 迁移（2026-09-10）：旧 round 语义 → CTB 语义。
-  1. 怪侧行动经单次结算入口 `do_action("enemy", ...)` 显式驱动（`enemy_act` 已为
-     NotImplementedError 壳）——等价 CTB「怪在自身 ACTOR_READY 时出手」。
-  2. 姿态窗口口径（R10 消费侧，2026-09-10 定稿）：`counter_stance` 写入时记
-     `_stance_owner_seq = action_seq`，消费侧 `_player_stance` 要求
-     `当前 action_seq >= 记`（「自写入起、至持有者再次行动止」）——CTB 下等价于
-     「写入的那一拍之后的所有怪行动都在窗口内」，直到玩家**下一次**行动才过期。
-  3. `test_parry_stance_expires_across_action_seq`（下方）：锁定「玩家再次行动后
-     姿态失效」这一窗口上界；`test_parry_via_player_act_end_to_end`：锁定经
-     `player_act` 的「守势 → 敌后手」端到端链路**可**防反（写入一拍 + 后续怪行动）。
+窗口口径（2026-09-11 增补 v1 §一 **实装为时间制**）：
+  姿态窗口 = [写入时刻, 写入时刻 + 行动时间)（行动条；半开区间）——「行动时间」
+  取技能 def 的 `action_time`（缺省 = 规则 `default_action_time`，默认 400）。
+  到期自然结束（无补偿）；**持有者提前再次行动不提前关闭窗口**（纯时间口径）。
+  原 R10「至持有者再次行动止」计数口径（`_stance_owner_seq`）已退役。
+
+  触发几何：窗口命中 = 敌方行动的时刻落在施放后的 0~400 行动条内。怪与玩家
+  同拍（速度比整除）时窗口恒空；怪不同拍时（本文件用 spd=8 → 怪 +250 出手）
+  自然命中。测试分两层：直写窗口（边界精确）+ 端到端（spd=8 自然触发）。
+
+CTB 语义（2026-09-10 迁移保留）：怪侧行动经单次结算入口 `do_action("enemy", ...)`
+显式驱动；玩家侧走 `player_act`（调度器自动推进 NPC 连锁）。
 """
 from pathlib import Path
 
@@ -35,9 +37,18 @@ class _QR:
         return v
 
 
-def _pack():
+def _pack(action_time=None):
+    """加载 veinborn 包并构建 defs/combo 引擎。
+
+    :param action_time: 测试专用——统一改写全部反制技的 `action_time`（窗宽实验：
+        传具体值统一覆盖；None → 保持内容包原值 400）。
+    """
     pack, _ = build_pack(Path("content/veinborn"))
     raw = pack.registry.modules_raw
+    if action_time is not None:
+        for _sk in raw["skills"]:
+            if isinstance(_sk, dict) and _sk.get("counter_type"):
+                _sk["action_time"] = action_time
     skills = {s["id"]: s for s in raw["skills"]}
     actions = {a["id"]: a for a in raw["action"]}
     chains = {c["id"]: c for c in raw.get("skill_chains", [])}
@@ -81,8 +92,8 @@ def _enemy(raw, eid, *, spd=None):
     }
 
 
-def _fresh(raw, all_defs, ce):
-    et, mob = _enemy(raw, "ridge_cub")
+def _fresh(raw, all_defs, ce, *, spd=None):
+    et, mob = _enemy(raw, "ridge_cub", spd=spd)
     ai = MonsterAI(enemy_def=et, action_lib=lambda i: all_defs.get(i),
                    rng=_QR([0.1] * 800))
     eng = BattleEngine(defs=all_defs, combo_engine=ce, enemy_def=et)
@@ -92,65 +103,226 @@ def _fresh(raw, all_defs, ce):
     return eng
 
 
+def _set_window(eng, cast_time=None, dur=400, ctype="parry", skill="sw_guard_counter"):
+    """测试专用：直写姿态窗口（精确控制 [cast_time, cast_time+dur)）。
+
+    cast_time=None → 对齐到当前 battle_time（模拟「敌方攻击恰在窗口内」）。
+    """
+    eng._snap["counter_stance"] = {
+        "type": ctype, "skill": skill,
+        "cast_time": float(eng.battle_time if cast_time is None else cast_time),
+        "action_time": float(dur),
+    }
+
+
 def _fx_types(outcomes):
+    """TurnReport.outcomes → 各 outcome 的 side_effects type 列表。"""
     out = []
-    for o in outcomes:
+    for o in (getattr(outcomes, "outcomes", None) or []):
         for x in (getattr(o, "side_effects", ()) or ()):
             out.append(str(x.get("type")))
     return out
 
 
-def test_parry_guard_fully_negates_and_counter():
-    """守势（防反姿态）挡可防反扑咬 → 完全免伤（hp 不减）+ parry_counter 反击伤害。
+def _fx_of(outcome):
+    """单个 ActionOutcome → side_effects type 列表。"""
+    return [str(x.get("type")) for x in (getattr(outcome, "side_effects", ()) or ())]
 
-    CTB 迁移（2026-09-10）：姿态写入侧（R11）经真实 `sw_guard` 施放触发（不再手写
-    `counter_stance`），随后把窗口对齐到**当前** action_seq —— R10 口径「姿态窗口 =
-    写入时的 action_seq == 消费时的 action_seq（本次行动窗口）」。怪物行动经单次结算
-    入口 `do_action("enemy", ...)` 显式驱动（`enemy_act` 已删）。核心断言仍是 CTB 语义：
-    「同一 action 窗口内可防反 → 完全免伤 + 自动反击」。
+
+def _parryable_action(raw):
+    act = next((a for a in raw["action"] if "可防反" in (a.get("tags") or [])), None)
+    assert act is not None, "内容层应有可防反行动"
+    return act
+
+
+# ---------------------------------------------------------------------------
+# 一、窗口写入：时间字段（cast_time + action_time）
+# ---------------------------------------------------------------------------
+
+
+def test_stance_written_with_time_window_fields():
+    """施放守势 → snap.counter_stance 记「写入时刻 + 时长」（时间窗口口径）。
+
+    窗宽实验（action_time=5000）让窗口横跨整段自动推进 → 窗口数据可直接观察：
+    cast_time=施放时刻的 battle_time（1000），action_time=技能 def 值（5000）。
+    """
+    raw, all_defs, ce = _pack(action_time=5000)
+    eng = _fresh(raw, all_defs, ce)
+    eng.do_action("player", {"type": "skill", "skill_id": "sw_guard"})
+    st = dict(eng._snap.get("counter_stance") or {})
+    assert st.get("type") == "parry" and st.get("skill") == "sw_guard_counter", \
+        f"守势施放应写入防反姿态，got {st}"
+    assert float(st.get("cast_time", -1)) == 1000.0, f"cast_time 应为施放时刻，got {st}"
+    assert float(st.get("action_time", -1)) == 5000.0, f"action_time 应取技能 def，got {st}"
+    # 闪反（dodge）侧同构：回环施放 → 姿态 type=dodge / skill=回环反击
+    eng2 = _fresh(raw, all_defs, ce)
+    eng2.do_action("player", {"type": "skill", "skill_id": "sw_circle"})
+    st2 = dict(eng2._snap.get("counter_stance") or {})
+    assert st2.get("type") == "dodge" and st2.get("skill") == "sw_circle_counter", \
+        f"回环施放应写入闪反姿态，got {st2}"
+    assert float(st2.get("cast_time", -1)) == 1000.0, f"dodge cast_time 异常，got {st2}"
+
+
+def test_content_action_time_is_400():
+    """内容层：veinborn 反制技 action_time 标配 400（增补 v1 §一标准示例）。"""
+    raw, _, _ = _pack()
+    for sk in raw["skills"]:
+        if isinstance(sk, dict) and sk.get("counter_type"):
+            assert sk.get("action_time") == 400, f"{sk.get('id')} 缺 action_time=400"
+
+
+# ---------------------------------------------------------------------------
+# 二、防反：命中窗口 → 完全免伤 + 反击
+# ---------------------------------------------------------------------------
+
+
+def test_parry_guard_fully_negates_and_counter():
+    """守势挡可防反行动（窗口内）→ 完全免伤（hp 不减）+ parry_counter 反击伤害。
+
+    窗口口径（时间制）：直写窗口对齐当前时刻（模拟敌方攻击恰在窗口内）——
+    与旧 R10「对齐 action_seq」等价，但判据是 battle_time。
     """
     raw, all_defs, ce = _pack()
     eng = _fresh(raw, all_defs, ce)
-    act = next((a for a in raw["action"] if "可防反" in (a.get("tags") or [])), None)
-    assert act is not None, "内容层应有可防反行动"
-    # 写入侧：真实施放守势（R11 写 counter_stance）
     eng.do_action("player", {"type": "skill", "skill_id": "sw_guard"})
-    st = eng._snap.get("counter_stance") or {}
-    assert st.get("type") == "parry" and st.get("skill") == "sw_guard_counter", \
-        f"守势施放应写入防反姿态，got {st}"
-    # R10 同一窗口：把姿态的 action_seq 对齐到当前（施放收尾已推进一格）
-    st["action_seq"] = eng.action_seq
+    hp_before = int(eng._snap["player"]["hp"])
+    _set_window(eng)  # cast_time=当前时刻 → 敌方下一步行动恰在窗口内
+    act = _parryable_action(raw)
     out = eng.do_action("enemy", {"type": "skill", "skill_id": act["id"]})
-    fx = [str(x.get("type")) for x in (getattr(out, "side_effects", ()) or ())]
+    fx = _fx_of(out)
     assert "parry" in fx and "parry_counter" in fx, f"防反应触发 parry/counter，got {fx}"
-    assert out.target_hp == 900, f"防反成功应完全免伤（hp 900），got {out.target_hp}"
+    assert out.target_hp == hp_before, \
+        f"防反成功应完全免伤（hp {hp_before}），got {out.target_hp}"
     cd = next((int(x.get("damage") or 0)
                for x in (getattr(out, "side_effects", ()) or ())
                if x.get("type") == "parry_counter"), 0)
     assert cd > 0, f"防反反击应造成伤害，got {cd}"
 
 
+def test_guard_vs_non_parryable_action_takes_damage():
+    """守势挡不可防反行动（窗口内）→ 受伤（减伤照常）+ 无 parry 事件。"""
+    raw, all_defs, ce = _pack()
+    act = next((a for a in raw["action"]
+                if a.get("intent") == "伤害" and "可防反" not in (a.get("tags") or [])), None)
+    assert act is not None, "内容层应有不可防反的伤害行动"
+    eng = _fresh(raw, all_defs, ce)
+    eng.do_action("player", {"type": "skill", "skill_id": "sw_guard"})
+    _set_window(eng)
+    out = eng.do_action("enemy", {"type": "skill", "skill_id": act["id"]})
+    fx = _fx_of(out)
+    assert "parry" not in fx, f"不可防反行动不应触发防反，got {fx}"
+    assert out.target_hp < 900, "不可防反行动应造成伤害"
+
+
+# ---------------------------------------------------------------------------
+# 三、窗口边界与到期（时间制：半开区间 [cast, cast+dur)）
+# ---------------------------------------------------------------------------
+
+
+def test_window_boundary_half_open():
+    """边界：cast_time = now-399（内）触发；= now-400（外）不触发（半开区间）。"""
+    raw, all_defs, ce = _pack()
+    act = _parryable_action(raw)
+
+    eng_in = _fresh(raw, all_defs, ce)
+    eng_in.do_action("player", {"type": "skill", "skill_id": "sw_guard"})
+    hp_in = int(eng_in._snap["player"]["hp"])
+    _set_window(eng_in, cast_time=eng_in.battle_time - 399)
+    out_in = eng_in.do_action("enemy", {"type": "skill", "skill_id": act["id"]})
+    assert "parry" in _fx_of(out_in), "399 < 400 应在窗口内"
+    assert out_in.target_hp == hp_in, "窗口内应完全免伤"
+
+    eng_out = _fresh(raw, all_defs, ce)
+    eng_out.do_action("player", {"type": "skill", "skill_id": "sw_guard"})
+    _set_window(eng_out, cast_time=eng_out.battle_time - 400)
+    out_out = eng_out.do_action("enemy", {"type": "skill", "skill_id": act["id"]})
+    assert "parry" not in _fx_of(out_out), "400 恰在窗口外（半开区间）"
+    assert out_out.target_hp < 900, "窗口外应照常受伤"
+
+
+def test_window_expired_and_cleaned():
+    """到期自然结束：远离窗口的敌方行动不触发，且过期窗口被清理（快照不残留）。"""
+    raw, all_defs, ce = _pack()
+    eng = _fresh(raw, all_defs, ce)
+    eng.do_action("player", {"type": "skill", "skill_id": "sw_guard"})
+    # 默认 400 窗口 + 默认 spd=5 怪：自动推进后（2000）窗口早已过期并被清理
+    assert eng._snap.get("counter_stance") is None or \
+        eng._snap["counter_stance"].get("cast_time") is not None, "窗口数据形态异常"
+    _set_window(eng, cast_time=eng.battle_time - 100000)  # 人为写入已过期窗口
+    act = _parryable_action(raw)
+    out = eng.do_action("enemy", {"type": "skill", "skill_id": act["id"]})
+    assert "parry" not in _fx_of(out), "过期窗口不应触发"
+    assert out.target_hp < 900, "过期后应照常受伤"
+
+
+# ---------------------------------------------------------------------------
+# 四、端到端：自然节奏下的触发 / 不触发（spd 决定窗口几何）
+# ---------------------------------------------------------------------------
+
+
+def test_e2e_trigger_when_enemy_action_within_window():
+    """端到端（spd=8）：怪在 +250 行动条出手 → 落在 [1000,1400) 窗口内 → 防反触发。
+
+    几何：玩家普攻 1000 行动条/次行动；spd=8 怪每 1250 行动条行动一次 → 首次
+    施放后怪的下次行动在 +250 处 → 窗口命中。
+    """
+    raw, all_defs, ce = _pack()
+    eng = _fresh(raw, all_defs, ce, spd=8)
+    tr = eng.player_act({"type": "skill", "skill_id": "sw_guard"})
+    fx = _fx_types(tr)
+    assert "parry" in fx and "parry_counter" in fx, f"端到端防反应触发，got {fx}"
+    assert tr.player == 900, f"防反成功应完全免伤，got {tr.player}"
+
+
+def test_e2e_no_trigger_when_enemy_action_outside_window():
+    """端到端（spd=5 默认）：怪在 +1000 行动条出手 → 窗口（+400）已过 → 不触发。
+
+    几何：spd=5 怪每 2000 行动条行动一次，与玩家 1000 拍同相 → 窗口恒空——
+    这是「行动时间」的取舍一面（窗口越长覆盖率越高；数值可调）。
+    """
+    raw, all_defs, ce = _pack()
+    eng = _fresh(raw, all_defs, ce)  # spd=None → 取怪 agi=5
+    tr = eng.player_act({"type": "skill", "skill_id": "sw_guard"})
+    fx = _fx_types(tr)
+    assert "parry" not in fx and "parry_counter" not in fx, \
+        f"窗口外的怪行动不应触发防反，got {fx}"
+    assert tr.player < 900, "窗口未命中应照常受伤"
+
+
+def test_fallback_default_action_time():
+    """行动时间缺省链：技能未给有效 action_time（0/缺失）→ 规则 default_action_time（400）。
+
+    spd=8 场景（+250 命中 400 窗）：若回退失败（窗宽 0 → 恒空）则不会触发。
+    """
+    raw, all_defs, ce = _pack(action_time=0)  # 0 = 非法 → 应回退默认 400
+    eng = _fresh(raw, all_defs, ce, spd=8)
+    tr = eng.player_act({"type": "skill", "skill_id": "sw_guard"})
+    fx = _fx_types(tr)
+    assert "parry" in fx, f"action_time 非法应回退 default_action_time=400，got {fx}"
+
+
+# ---------------------------------------------------------------------------
+# 五、闪反（dodge）：位移出范围 → 未命中 + dodge_counter
+# ---------------------------------------------------------------------------
+
+
 def test_dodge_circle_position_miss_counter():
     """回环（闪反姿态）→ 侧移出扑咬方位 → 未命中（免伤）+ dodge_counter 反击。
 
-    CTB 迁移（2026-09-10）：同 `test_parry_guard_fully_negates_and_counter` —— 真实施放
-    回环写姿态（R11），再把姿态窗口对齐到**当前** action_seq（R10 本次行动窗口），怪物
-    行动经 `do_action("enemy", ...)` 显式驱动。
+    窗口口径（时间制）：直写窗口对齐当前时刻，再直驱怪行动（旧 R10 对齐
+    action_seq 的等价改造）；侧移用回环施放产物 + 显式置 side 保证确定性。
     """
     raw, all_defs, ce = _pack()
     eng = _fresh(raw, all_defs, ce)
     act = next((a for a in raw["action"] if "可闪反" in (a.get("tags") or [])), None)
     assert act is not None, "内容层应有可闪反行动"
-    # 真实施放回环 → 位移（side）+ 写姿态
+    # 真实施放回环 → 侧移产物（默认窗在自动推进后到期清理——直写窗口再驱动）
     eng.do_action("player", {"type": "skill", "skill_id": "sw_circle"})
-    st = eng._snap.get("counter_stance") or {}
-    assert st.get("type") == "dodge" and st.get("skill") == "sw_circle_counter", \
-        f"回环施放应写入闪反姿态，got {st}"
     pos = eng._snap.setdefault("combat_position", {}).setdefault("player", {})
     pos["side"] = "right"                      # 位移出正面（回环侧移产物）
-    st["action_seq"] = eng.action_seq          # R10 同一窗口
+    _set_window(eng, ctype="dodge", skill="sw_circle_counter")  # 对齐当前时刻
     out = eng.do_action("enemy", {"type": "skill", "skill_id": act["id"]})
-    fx = [str(x.get("type")) for x in (getattr(out, "side_effects", ()) or ())]
+    fx = _fx_of(out)
     assert "position_miss" in fx, f"回环侧移后扑咬应未命中，got {fx}"
     assert out.target_hp == 900, f"闪反成功应免伤，got {out.target_hp}"
     cd = next((int(x.get("damage") or 0)
@@ -159,67 +331,38 @@ def test_dodge_circle_position_miss_counter():
     assert cd > 0, f"闪反反击应造成伤害，got {cd}"
 
 
-def test_parry_stance_expires_across_action_seq():
-    """CTB 语义：姿态窗口 = 「自写入起至持有者再次行动止」；持有者再行动后即失效。
+def test_e2e_dodge_natural_trigger():
+    """端到端（spd=8）：回环在 +250 处自然命中窗口 → position_miss + dodge_counter。"""
+    raw, all_defs, ce = _pack()
+    eng = _fresh(raw, all_defs, ce, spd=8)
+    tr = eng.player_act({"type": "skill", "skill_id": "sw_circle"})
+    fx = _fx_types(tr)
+    assert "dodge_counter" in fx, f"端到端闪反应触发，got {fx}"
+    assert tr.player == 900, f"闪反应免伤，got {tr.player}"
 
-    锁死 R10 口径：姿态写入 action_seq=N 且持有者此后未再行动 → 有效；
-    一旦持有者自己又行动了一次（`_stance_owner_seq` 前移越过写入拍）→ 姿态过期，
-    再受同一次可防反攻击不触发 parry（照常受伤）。
 
-    CTB 迁移（2026-09-10）：不再用「写入拍 == 当前拍」的判等口径（那会使姿态在
-    敌方后手到达时恒过期）。过期由**持有者再次行动**这一事件保证。
+# ---------------------------------------------------------------------------
+# 六、窗口与持有者行动解耦（纯时间口径）
+# ---------------------------------------------------------------------------
+
+
+def test_window_survives_holder_next_action():
+    """持有者提前再次行动**不**提前关闭窗口（增补 v1 §一推定：以时间到期为准）。
+
+    窗宽实验（5000）：施放后跨越持有者再行动 + 敌方后手，窗口仍在 → 后半段
+    敌方行动仍触发防反（旧 R10 口径下此处必然过期）。
     """
-    raw, all_defs, ce = _pack()
+    raw, all_defs, ce = _pack(action_time=5000)
     eng = _fresh(raw, all_defs, ce)
-    act = next((a for a in raw["action"] if "可防反" in (a.get("tags") or [])), None)
-    assert act is not None
-    eng.do_action("player", {"type": "skill", "skill_id": "sw_guard"})
-    st = eng._snap.get("counter_stance") or {}
-    assert st, "守势应写入防反姿态"
-    # 模拟「持有者此后又行动了一次」：owner_seq 前移越过写入拍 → 窗口关闭
-    eng._stance_owner_seq = int(st.get("action_seq", 0)) + 1
-    out = eng.do_action("enemy", {"type": "skill", "skill_id": act["id"]})
-    fx = [str(x.get("type")) for x in (getattr(out, "side_effects", ()) or ())]
-    assert "parry" not in fx, f"持有者再行动后姿态应失效，got {fx}"
-    assert out.target_hp < 900, "姿态过期应照常受伤"
-
-
-def test_parry_via_player_act_end_to_end():
-    """端到端：经 `player_act(sw_guard)` 由调度器自动推进敌方后手 → 应触发防反。
-
-    CTB 语义（R10，2026-09-10 修复后）：玩家守势写入姿态 → 窗口为「自写入起至
-    持有者再次行动止」，横跨调度器自动推进的敌方后手拍 → 该敌方可防反行动落在
-    有效窗口内 → 免伤 + 反击。
-    """
-    raw, all_defs, ce = _pack()
-    eng = _fresh(raw, all_defs, ce)
-    tr = eng.player_act({"type": "skill", "skill_id": "sw_guard"})
-    fx = _fx_types(tr.outcomes)
-    assert "parry" in fx and "parry_counter" in fx, f"端到端防反应触发，got {fx}"
-    assert tr.player == 900, f"防反成功应完全免伤，got {tr.player}"
-
-
-def test_guard_vs_non_parryable_action_takes_damage():
-    """守势挡不可防反行动 → 受伤（减伤照常）+ 无 parry 事件（用户示例语义）。"""
-    raw, all_defs, ce = _pack()
-    # 找无「可防反」标签的伤害行动（td_stomp 震地类）
-    act = next((a for a in raw["action"]
-                if a.get("intent") == "伤害" and "可防反" not in (a.get("tags") or [])), None)
-    assert act is not None, "内容层应有不可防反的伤害行动"
-    et, mob = _enemy(raw, "ridge_cub")
-    ai = MonsterAI(enemy_def=et, action_lib=lambda i: all_defs.get(i),
-                   rng=_QR([0.1] * 800))
-    eng = BattleEngine(defs=all_defs, combo_engine=ce, enemy_def=et)
-    eng._rng = _QR([0.1] * 800)  # type: ignore[assignment]
-    eng.start(dict(_PLAYER), mob, random_seed=7)
-    eng._enemy_ai = ai
-    # 玩家先施守势（姿态在当次行动）
     eng.player_act({"type": "skill", "skill_id": "sw_guard"})
-    # 再开一局干净验证：守势当次行动被不可反行动打
-    eng2 = _fresh(raw, all_defs, ce)
-    eng2._snap["counter_stance"] = {"type": "parry", "skill": "sw_guard_counter",
-                                    "turn": int(eng2._snap.get("turn", 0))}
-    out = eng2.do_action("enemy", {"type": "skill", "skill_id": act["id"]})
-    fx = [str(x.get("type")) for x in (getattr(out, "side_effects", ()) or ())]
-    assert "parry" not in fx, f"不可防反行动不应触发防反，got {fx}"
-    assert out.target_hp < 900, "不可防反行动应造成伤害"
+    assert eng._snap.get("counter_stance") is not None, "窗宽 5000 下姿态应仍在"
+    # 持有者再行动（窗宽 5000 内不会被关闭）
+    eng.player_act({"type": "skill", "skill_id": "sw_slash"})
+    st = eng._snap.get("counter_stance")
+    assert st is not None, "持有者再次行动不应关闭时间窗口"
+    # 后半段敌方行动（仍在窗口内）→ 触发
+    act = _parryable_action(raw)
+    out = eng.do_action("enemy", {"type": "skill", "skill_id": act["id"]})
+    fx = _fx_of(out)
+    assert "parry" in fx and "parry_counter" in fx, \
+        f"窗口内（即使持有者已再行动）应触发防反，got {fx}"

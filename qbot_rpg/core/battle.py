@@ -540,9 +540,9 @@ class BattleEngine:
         self._seq: int = 0
         self._finished: bool = False
         self._guard_active: Dict[str, bool] = {"player": False, "enemy": False}
-        # 防反/闪反姿态窗口（R10，2026-09-10）：记录「玩家最近一次行动结算所在的
-        # action_seq」。`_player_stance` 以此判定姿态是否随「持有者再次行动」过期。
-        self._stance_owner_seq: int = -1
+        # 防反/闪反姿态窗口：时间口径（增补 v1 §一，2026-09-11）——窗口数据存于
+        # snap.counter_stance（cast_time + action_time），到期自然结束（见
+        # `_expire_counter_stance` / `_player_stance`）；原 R10 计数口径已退役。
         self._effect_ids: Dict[str, List[str]] = {"player": [], "enemy": []}
         # CTB 行动条：持有调度器实例（逻辑时间唯一推进源）。
         # **未登记单位** → start() 时 push_actor 双侧；battle_state 查询不依赖它。
@@ -649,39 +649,56 @@ class BattleEngine:
             self._snap[key] = getattr(rt, key)
 
     def _player_stance(self) -> Optional[Tuple[str, str]]:
-        """防反/闪反姿态检测（标签制）：玩家施放姿态技能后，**至其下一次行动前**有效。
+        """防反/闪反姿态检测（标签制；**行动时间窗口**口径——增补 v1 §一，2026-09-11）。
 
-        CTB 窗口口径（R10，2026-09-10 修正）：姿态是否有效 = 「自写入之后，玩家是否
-        已经又行动过」。判定方式为记录**写入时的 action_seq**，与「玩家已结算到第几拍」
-        比较：
+        窗口 = [写入时刻, 写入时刻 + 行动时间)（行动条；半开区间）：
 
-          - 写入发生在 `_resolve_combo_action`（玩家本次行动结算中）；
-          - 玩家每次行动结束时把 `_stance_owner_seq` 更新为当前 `action_seq`
-            （见 `_after_actor_action`）；
-          - 故「`写入 seq == _stance_owner_seq`」= 写入后玩家尚未再行动 → **有效**；
-            「`写入 seq < _stance_owner_seq`」= 玩家已再行动 → **过期**。
+          - 写入时刻 `cast_time` = 姿态技能结算时的 `battle_time`（写侧见
+            `_resolve_combo_action`，与 R11 结构成对）；
+          - 时长 `action_time` = 技能 def 的 `action_time`（缺省 →
+            规则 `default_action_time`，默认 400）；
+          - 消费时以**当前 `battle_time`**（= 敌方该次行动的结算时刻）落入区间
+            判定——窗口内出现符合标签条件的敌方行动 → 可触发。
 
-        为什么不能与 `self.action_seq` 判等（原实现缺陷）：敌方 ready 的消费会让
-        `action_seq` 继续自增（N → N+1），判等会使姿态在敌方后手到达时**恒过期**，
-        端到端防反/闪反永不触发（`_player_stance` 永返回 None）。本口径把「过期」
-        严格绑定到**持有者自身再次行动**这一事件，与 R10「守到下次轮到自己」等价。
-
-        与 `_resolve_combo_action` 的写入侧（R11）成对：两处必须用同一个 action_seq
-        口径，否则姿态恒失效/恒生效。
+        到期自然结束（无补偿）；**持有者提前再次行动不提前关闭窗口**（纯时间口径；
+        原 R10「至持有者再次行动止」计数口径 `_stance_owner_seq` 已退役）。
         """
         try:
             _st = self._snap.get("counter_stance")
             if isinstance(_st, Mapping):
                 _t = str(_st.get("type") or "")
                 _c = str(_st.get("skill") or "")
-                _tn = int(_st.get("action_seq", _st.get("turn", -1)) or -1)
-                if _t in ("parry", "dodge") and _c and _tn >= 0:
-                    # 写入后玩家尚未再行动（owner_seq 仍等于写入拍）→ 有效
-                    if _tn >= int(getattr(self, "_stance_owner_seq", -1)):
+                if _t in ("parry", "dodge") and _c:
+                    _cast = _st.get("cast_time")
+                    _dur = _st.get("action_time")
+                    if _cast is None or _dur is None:
+                        return None
+                    _now = float(self.battle_time)
+                    _t0 = float(_cast)
+                    if _t0 <= _now < _t0 + float(_dur):
                         return (_t, _c)
             return None
         except Exception:
             return None
+
+    def _expire_counter_stance(self) -> None:
+        """姿态窗口到期清理：`now >= cast_time + action_time` → 移除（无补偿）。
+
+        纯时间口径（增补 v1 §一）：到期即结束、与持有者是否再次行动无关；
+        消费侧 `_player_stance` 做同口径判空（双保险——快照不留残存过期窗口）。
+        """
+        try:
+            _st = self._snap.get("counter_stance")
+            if not isinstance(_st, Mapping):
+                return
+            _cast = _st.get("cast_time")
+            _dur = _st.get("action_time")
+            if _cast is None or _dur is None:
+                return
+            if float(self.battle_time) >= float(_cast) + float(_dur):
+                self._snap.pop("counter_stance", None)
+        except Exception:  # pragma: no cover - 清理失败不阻断行动收尾
+            return
 
     def _action_tags(self, action: Mapping[str, Any]) -> Tuple[bool, bool]:
         """怪行动可反标签（tags 含 可防反/可闪反——内容配置；ca 未合并时从 defs 解析）。"""
@@ -2054,7 +2071,6 @@ class BattleEngine:
         self._death_order = []
         self._guard_active = {"player": False, "enemy": False}
         self._armor_active = {"player": False, "enemy": False}
-        self._stance_owner_seq = -1
         self._player_ready_pending = False
         self._ctb_event_log = []
         # 效果列表（F-21：effect_ids 装配源，玩家“装备”效果由外部注入）
@@ -2197,6 +2213,16 @@ class BattleEngine:
             if self._dead(side) and _view is not None and _view.alive:
                 ctb.mark_dead(side)
 
+    def _rule_config(self) -> CtbRuleConfig:
+        """当前 CTB 规则配置（可调参数读取的唯一入口）。
+
+        调度器已装配 → 调度器当前生效值（含运行期 change_rules 变更）；未装配 →
+        由 `config["ctb"]` 段归一（缺省对齐 ctb_rules 常量）。
+        """
+        if self._ctb is not None:
+            return self._ctb._rule
+        return resolve_rule_config(self._config.get("ctb"))
+
     def _action_recovery(self, actor: str, action: Optional[Mapping[str, Any]]) -> float:
         """解析该 action 的 recovery（CTB 行动代价的唯一注入点）。
 
@@ -2207,9 +2233,7 @@ class BattleEngine:
         **语义（裁决 1）**：recovery 是该 action 的**总行动恢复值**，与 default
         之间是覆盖关系，不是附加。
         """
-        rule: CtbRuleConfig = (
-            self._ctb._rule if self._ctb is not None else resolve_rule_config(self._config.get("ctb"))
-        )
+        rule: CtbRuleConfig = self._rule_config()
         action = dict(action or {})
         _sid = str(action.get("skill_id") or "")
         if _sid and action.get("type") == "skill":
@@ -2850,17 +2874,27 @@ class BattleEngine:
 
         # 防反/闪反姿态标记（用户拍板标签制）：玩家施放技能若带 counter_type/
         # counter_skill（守势=parry/回环+腾空=dodge）→ 记入 snap.counter_stance。
-        # CTB 重写（R11）：姿态窗口 = **本次行动窗口**（写入 action_seq，与消费侧
-        # `_player_stance` 同口径；该玩家下一次行动 action_seq 自增 → 自然过期）。
+        # 窗口=行动时间口径（增补 v1 §一，2026-09-11；替换原 R10 计数口径）：
+        # 记「写入时刻 + 时长」——消费侧 `_player_stance` 按 battle_time 判窗口，
+        # 到期自然结束；时长取技能 def `action_time`（缺省 → 规则 default_action_time）。
         if attacker == "player":
             _sid_now = str(ca.get("skill_id") or "")
             _sd_now = self.combo_engine().resolve_skill(_sid_now) or {}
             _ct_now = str(_sd_now.get("counter_type") or "")
             _cs_now = str(_sd_now.get("counter_skill") or "")
             if _ct_now in ("parry", "dodge") and _cs_now:
+                _at_raw = _sd_now.get("action_time")
+                if (
+                    isinstance(_at_raw, (int, float))
+                    and not isinstance(_at_raw, bool)
+                    and float(_at_raw) > 0
+                ):
+                    _at = float(_at_raw)
+                else:
+                    _at = float(self._rule_config().default_action_time)
                 self._snap["counter_stance"] = {
                     "type": _ct_now, "skill": _cs_now,
-                    "action_seq": self.action_seq}
+                    "cast_time": float(self.battle_time), "action_time": _at}
 
         # ---- M13 批15 路15C：组合技能战斗接线（细化_6c §三 F-C1/F-C2）----
         # 技能 def combo_table 段 → 施放时 F-C1 触发判定（gate_combination：
@@ -3512,7 +3546,7 @@ class BattleEngine:
             crit_r = self._roll()
             # G1 定稿对照修复（damage 定稿对照 G1）：斩击会心 +5%（数值层 L92/L216
             # type_affinity.slash_crit）实战零生效——crit_prob 原全库零调用、crit_roll 无加成/
-            # cap。现在先算有效 P（含 slash 加成 + cap 95，判定前应用，细化_1a §5-⑦）再判档。
+            # cap（CritParams.cap，默认 100；判定前应用，细化_1a §5-⑦/增补 v1 §五）再判档。
             slash_bonus = p.type_affinity.slash_crit if atk_type == "slash" else 0.0
             p_eff = crit_prob(lck, p_coef=p.crit.p_coef, crit_bonus=0.0,
                               cap=p.crit.cap, slash_crit=slash_bonus)
@@ -3790,12 +3824,10 @@ class BattleEngine:
         if self._finished:
             return
         self._armor_active[actor] = False   # D2：霸体窗口=行动阶段结束
-        # 防反/闪反姿态窗口收口（R10，2026-09-10）：玩家本次行动已结算完毕 → 记下
-        # 「持有者已推进到本拍」。`_player_stance` 据此判定：写入拍 < 本拍 = 姿态已
-        # 随「持有者再次行动」过期；写入拍 == 本拍 = 本拍刚写入、仍然有效。
-        # 放置位置很关键：必须在本次行动结算**之后**，否则会抹掉刚写入的姿态。
-        if actor == "player":
-            self._stance_owner_seq = int(self.action_seq)
+        # 防反/闪反姿态窗口到期清理（时间口径，增补 v1 §一，2026-09-11）：到期即
+        # 自然结束（now >= cast_time + action_time → 移除）；与持有者是否再次行动
+        # 无关（原 R10「随持有者行动过期」计数口径已退役）。
+        self._expire_counter_stance()
         # M9/M10/M8/R16：该行动者侧的各项 tick 归位到 AFTER_ACTION
         self._tick_skill_cooldowns(actor)
         self._tick_transform_state(actor)

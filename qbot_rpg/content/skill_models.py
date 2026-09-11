@@ -258,7 +258,8 @@ class SkillDef(BaseDef):
 
     @property
     def cooldown(self) -> float:
-        """F10 冷却时长（次行动，缺省 0；basic=0 无冷却 [L62]；负值钳制 0；计数由引擎 1g2 管理）。"""
+        """F10 冷却时长（次行动，缺省 0；basic=0 无冷却 [L62]；负值钳制 0；
+        计数由引擎 1g2 管理）。"""
         v = self._num("cooldown")
         v = v if v is not None else DEFAULT_COOLDOWN
         return max(v, 0.0)
@@ -452,4 +453,7 @@ def skills_fields() -> Dict[str, FieldMeta]:
         # ---- E. 防反/闪反姿态（2026-09-09 用户拍板标签制）----
         "counter_type": FieldMeta(type="str"),   # parry/dodge（姿态标记；无=非姿态技能）
         "counter_skill": FieldMeta(type="str"),  # 成功派生反击技 id
+        # F27 行动时间（反应窗口时长，行动条；缺省 = 规则 default_action_time）。
+        # 窗口口径：增补 v1 §一（2026-09-11 实装）——[写入时刻, 写入时刻+本值)。
+        "action_time": FieldMeta(type="number", range_min=0),
     }

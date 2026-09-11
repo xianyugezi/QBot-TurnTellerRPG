@@ -252,7 +252,8 @@
   "name": "蓄势",
   "desc": "蓄·蓄势：轻击蓄力，蓄力 +1，减伤 20%（蓄满 3 层后碎颅变崩山）",
   "counter_type": "parry",
-  "counter_skill": "vc_charge_counter"
+  "counter_skill": "vc_charge_counter",
+  "action_time": 400
  },
  {
   "type": "active",
@@ -687,7 +688,8 @@
   },
   "desc": "蓄·蓄刃：蓄力轻挥，蓄刃 +1 减伤 15%（大剑蓄力架势——满 3 刃出终结）",
   "counter_type": "parry",
-  "counter_skill": "rb_charge_counter"
+  "counter_skill": "rb_charge_counter",
+  "action_time": 400
  },
  {
   "type": "active",
@@ -1129,7 +1131,8 @@
   },
   "desc": "格·脊格：举脊格挡，本次行动减伤 40%，回 1 精力（大剑防御——收招慢但能挡）",
   "counter_type": "parry",
-  "counter_skill": "rb_guard_counter"
+  "counter_skill": "rb_guard_counter",
+  "action_time": 400
  },
  {
   "type": "basic",
@@ -1253,7 +1256,8 @@
   "energy_gain": {},
   "desc": "冲·冲脉斩：霸体突进，本次行动减伤 30%，刃力 +1",
   "counter_type": "parry",
-  "counter_skill": "vs_dash_counter"
+  "counter_skill": "vs_dash_counter",
+  "action_time": 400
  },
  {
   "type": "active",
@@ -1686,7 +1690,8 @@
   "energy_gain": {},
   "desc": "填·填弹盾构：清零弹耗（回满弹匣），本次行动减伤 40%（换弹窗口）；填弹后 1 次行动窗口",
   "counter_type": "parry",
-  "counter_skill": "va_reload_counter"
+  "counter_skill": "va_reload_counter",
+  "action_time": 400
  },
  {
   "type": "active",
@@ -2466,7 +2471,8 @@
   "energy_gain": {},
   "desc": "铁·铁闸挡：霸体+减伤20% 当回（X2 霸体窗口真免疫打断）",
   "counter_type": "parry",
-  "counter_skill": "vg_iron_counter"
+  "counter_skill": "vg_iron_counter",
+  "action_time": 400
  },
  {
   "type": "active",
@@ -4550,7 +4556,8 @@
   "name": "御剑·腾空",
   "desc": "空·御剑腾空：跃空俯击——腾空斩向当前方位 150%（命中灌注剑势+15），空中地面技未命中（天然闪反）；闪避成功回剑势 30",
   "counter_type": "dodge",
-  "counter_skill": "sw_vault_counter"
+  "counter_skill": "sw_vault_counter",
+  "action_time": 400
  },
  {
   "type": "active",
@@ -4592,7 +4599,8 @@
   "name": "御剑·回环",
   "desc": "机动·回环：侧移闪反——横掠右侧并起回环架势（本次行动减伤 30%）",
   "counter_type": "dodge",
-  "counter_skill": "sw_circle_counter"
+  "counter_skill": "sw_circle_counter",
+  "action_time": 400
  },
  {
   "type": "active",
@@ -4640,7 +4648,8 @@
   "name": "御剑·回收",
   "desc": "机动·回收：收剑归鞘侧撤——回收飞剑余势 +30 剑势，回收架势本次行动减伤 20%",
   "counter_type": "dodge",
-  "counter_skill": "sw_recall_counter"
+  "counter_skill": "sw_recall_counter",
+  "action_time": 400
  },
  {
   "type": "active",
@@ -4722,7 +4731,8 @@
   "name": "御剑·守势",
   "desc": "守·御剑守势：举剑护体本次行动减伤 40%（防反架势），凝 1 剑印保底；冷却 2",
   "counter_type": "parry",
-  "counter_skill": "sw_guard_counter"
+  "counter_skill": "sw_guard_counter",
+  "action_time": 400
  },
  {
   "type": "active",
@@ -5119,7 +5129,8 @@
   "name": "举锤架势",
   "desc": "守·举锤架势：横锤护体本次行动减伤 40%（防反架势）；冷却 2",
   "counter_type": "parry",
-  "counter_skill": "vc_guard_counter"
+  "counter_skill": "vc_guard_counter",
+  "action_time": 400
  },
  {
   "type": "active",

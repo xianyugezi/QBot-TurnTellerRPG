@@ -358,6 +358,8 @@ def test_skills_fields_keys_exact() -> None:
         "position_rule", "break_power", "air_policy",
         # 防反/闪反姿态 2（2026-09-09 用户拍板标签制：counter_type/counter_skill）
         "counter_type", "counter_skill",
+        # 行动时间 1（2026-09-11 增补 v1 §一 实装：action_time 反应窗口时长）
+        "action_time",
     }
 
 

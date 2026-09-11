@@ -10,7 +10,7 @@
   http://<host>:<port>/ 即可编辑指定内容包。
 
 用法：
-  .venv/bin/python scripts/editor_host.py                          # 默认 content/veinborn @ 127.0.0.1:8090
+  .venv/bin/python scripts/editor_host.py          # 默认 content/veinborn @ 127.0.0.1:8090
   .venv/bin/python scripts/editor_host.py --pack content/test_demo --port 8090
   .venv/bin/python scripts/editor_host.py --host 0.0.0.0           # 公网（建议反代 + HTTPS）
 

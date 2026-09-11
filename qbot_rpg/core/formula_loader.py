@@ -122,6 +122,8 @@ def load_formula_params(data: Mapping[str, Any]) -> DamageFormulaParams:
                 lv2=float(_f(mult_up, "lv2", base.crit.crit_mult_up.lv2)),
                 lv3=float(_f(mult_up, "lv3", base.crit.crit_mult_up.lv3)),
             ),
+            negative_crit=float(_f(crit_seg, "negative_crit", base.crit.negative_crit)),  # E19
+            elem_crit_step=float(_f(crit_seg, "elem_crit_step", base.crit.elem_crit_step)),  # E21
         ),
         block=BlockParams(
             k=float(_f(block_seg, "k", base.block.k)),  # F-FIX-11

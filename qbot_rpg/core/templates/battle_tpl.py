@@ -54,7 +54,9 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     "battle_ctb_ready": "轮到你行动了",
     "battle_ctb_status": "距离你下次行动：{n}",
     "battle_ctb_turn_start": "轮到 {actor} 行动",
-    "battle_ctb_batch_head": "（行动时间 {start} → {end}）",
+    # 批次时间头（2026-09-11 增补 v1 调整显示词）：隐性标准——玩家文案不暴露行动条
+    # 原始数值；原「（行动时间 {start} → {end}）」与技能「行动时间」撞名，退役。
+    "battle_ctb_batch_head": "（怪物行动）",
 
     # —— TPL-09 16 行折叠（战斗轮 / 明细块）——
     "battle_fold_lines": "…（其余 {n} 行已折叠）",
@@ -94,6 +96,8 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     # 方位 miss（方位 v0.6 §四/附录 A Step 1：未命中——怪物行动打不到玩家当前方位）
     "battle_enemy_position_miss": "✅ 未命中：{name}的攻击未能命中{pos}的你（HP {hp}/{max_hp}）",
 "battle_actor_landed": "{actor} 从空中落回地面",
+# 转向行（增补 v1 §三 转向事件化：怪在玩家行动前转回面向——纯行为播报，零数值）
+"battle_enemy_turned": "{name}转过身来，盯住了你",
 "battle_position_changed": "{actor} 移动到了{pos}",
 "battle_part_broken": "{part}被击碎！{name}轰然倒地",
 "battle_part_broken_no_knock": "{part}被击碎，{name}仍稳立当场",
@@ -178,7 +182,7 @@ PLACEHOLDER_WHITELIST: Dict[str, set] = {
     "battle_ctb_ready": set(),
     "battle_ctb_status": {"n"},
     "battle_ctb_turn_start": {"actor"},
-    "battle_ctb_batch_head": {"start", "end"},
+    "battle_ctb_batch_head": set(),
     "battle_fold_lines": {"n"},
     "battle_fold_items": {"n", "command", "page"},
     "battle_end_summary": {"label", "turns"},
@@ -200,6 +204,7 @@ PLACEHOLDER_WHITELIST: Dict[str, set] = {
     "battle_enemy_miss": {"name", "hp", "max_hp"},
     "battle_enemy_position_miss": {"name", "pos", "hp", "max_hp"},
 "battle_actor_landed": {"actor"},
+"battle_enemy_turned": {"name"},
 "battle_position_changed": {"actor", "pos"},
 "battle_part_broken": {"part", "name"},
 "battle_part_broken_no_knock": {"part", "name"},

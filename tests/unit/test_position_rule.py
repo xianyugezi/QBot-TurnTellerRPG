@@ -4,9 +4,9 @@
   - §三.1 PositionState（combat_position 每 combatant：side/height）
   - §三.2 PositionRule（ActionCore 统一扩展 side[]/height[]，缺省=全量；命中资格）
   - §四 T8 结算时序（height check → 无命中资格 → miss 语义：照常消耗、无伤害/破坏力，
-    文案「够不着」，不拒绝施放）
+    文案「未命中」，不拒绝施放）
   - 附录 A Step 1：ActionCore 扩展 position_rule（skills/action 共用）；miss 语义
-    （够不着不拒施放）；条件 position_match（统一原语，勿做多个零散条件）
+    （未命中不拒施放）；条件 position_match（统一原语，勿做多个零散条件）
   - 硬性规则：玩家技能 position_rule 消费点=部位命中资格（Step 2 part resolve），
     Step 1 只登记/校验不消费（引擎对玩家侧 rule 惰性）；怪物行动 rule 消费点=玩家
     位置 miss（本步接线）
@@ -16,7 +16,7 @@
 CTB 迁移（2026-09-10）：旧 round 语义 → CTB 语义。
   - 怪侧 miss 语义（本文件 §5）原经 `enemy_act` 驱动；CTB 下 `enemy_act` 已为
     NotImplementedError 壳，改用单次结算入口 `do_action("enemy", ...)`——等价
-    CTB「怪在自身 ACTOR_READY 时出手」，miss 语义（够不着不拒施放/照常消耗）不变。
+    CTB「怪在自身 ACTOR_READY 时出手」，miss 语义（未命中不拒施放/照常消耗）不变。
   - 「打空仍占行动槽」（末用例）改为断言 CTB 权威进度计量 `action_seq` 随行动推进，
     不再依赖已删除的 `end_turn` / 回合边界。
 """
@@ -309,7 +309,7 @@ class TestMonsterPositionMatchTrigger:
 
 
 # =====================================================================================
-# 5. 战斗引擎：怪物 miss（够不着）语义 + 玩家侧 rule 惰性（施放门禁不变）
+# 5. 战斗引擎：怪物 miss（未命中）语义 + 玩家侧 rule 惰性（施放门禁不变）
 # =====================================================================================
 
 
@@ -324,7 +324,7 @@ class TestBattleEnemyPositionMiss:
         assert out.final_damage > 0
 
     def test_ground_only_rule_misses_air_player(self) -> None:
-        """玩家在空中 → 地面技打空：照常消耗、无伤害、文案够不着（不拒绝施放）。"""
+        """玩家在空中 → 地面技打空：照常消耗、无伤害、文案未命中（不拒绝施放）。"""
         eng = make().start(PLAYER, ENEMY, random_seed=11)
         hp_before = eng.battle_state()["player"]["hp"]
         _snap_put_position(eng, None, "air")   # 玩家 height=air
@@ -334,7 +334,7 @@ class TestBattleEnemyPositionMiss:
         assert out is not None
         assert out.ok is True and out.hit is False
         assert out.final_damage == 0 and out.raw_damage == 0
-        assert "够不着" in out.message
+        assert "未命中" in out.message
         assert eng.battle_state()["player"]["hp"] == hp_before  # 无扣血
         # side_effects 带 position_miss 事件（含方位格，渲染层模板消费）
         pm = [e for e in out.side_effects if e.get("type") == "position_miss"]
@@ -375,7 +375,7 @@ class TestBattleEnemyPositionMiss:
         out = enemy_act_ctb(eng, {
             "type": "normal", "mult": 1.0,
             "position_rule": {"height": ["air"]}})
-        assert out is not None and out.hit is False and "够不着" in out.message
+        assert out is not None and out.hit is False and "未命中" in out.message
 
     def test_player_side_rule_inert_until_step2(self) -> None:
         """玩家技能 position_rule 本步惰性（消费点=Step 2 part resolve）：不造成 miss，
@@ -412,7 +412,7 @@ class TestBattleEnemyPositionMiss:
 
 
 # =====================================================================================
-# 6. 渲染层：够不着行（模板配置化）vs 既有躲开行
+# 6. 渲染层：未命中行（模板配置化）vs 既有躲开行
 # =====================================================================================
 
 
@@ -429,13 +429,13 @@ class TestPositionMissRender:
         )
 
     def test_position_miss_line_uses_template(self) -> None:
-        """position_miss 标记 → 渲染「够不着」专属行（含中文方位——方位制闪避反馈）。"""
+        """position_miss 标记 → 渲染「未命中」专属行（含中文方位——方位制闪避反馈）。"""
         line = _render_enemy_action(self._outcome(True))
         assert line is not None
-        assert "够不着" in line and "背后上空" in line
+        assert "未命中" in line and "背后上空" in line
         assert "躲开" not in line
 
     def test_dodge_miss_still_brep11(self) -> None:
         """miss 渲染兜底（模板含躲开行——roll miss 已移除，行为上不再触发）。"""
         line = _render_enemy_action(self._outcome(False))
-        assert line is not None and "躲开" in line and "够不着" not in line
+        assert line is not None and "躲开" in line and "未命中" not in line

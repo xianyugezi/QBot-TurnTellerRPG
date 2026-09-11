@@ -91,8 +91,8 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     # —— BREP-10~14 怪物行动 ——
     "battle_enemy_hit": "❌ {name}{action}，你受到 {damage} 伤害（HP {hp}/{max_hp}）",
     "battle_enemy_miss": "✅ {name}的攻击被你躲开（HP {hp}/{max_hp}）",
-    # 方位 miss（方位 v0.6 §四/附录 A Step 1：够不着——怪物行动打不到玩家当前方位）
-    "battle_enemy_position_miss": "✅ 够不着：{name}的攻击够不到{pos}的你（HP {hp}/{max_hp}）",
+    # 方位 miss（方位 v0.6 §四/附录 A Step 1：未命中——怪物行动打不到玩家当前方位）
+    "battle_enemy_position_miss": "✅ 未命中：{name}的攻击未能命中{pos}的你（HP {hp}/{max_hp}）",
 "battle_actor_landed": "{actor} 从空中落回地面",
 "battle_position_changed": "{actor} 移动到了{pos}",
 "battle_part_broken": "{part}被击碎！{name}轰然倒地",

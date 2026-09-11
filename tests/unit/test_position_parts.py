@@ -302,7 +302,7 @@ class TestPartResolve:
         assert out.hit is True
         st = _parts_state(eng)
         assert st["head"]["break_value"] > 0
-        assert st["shell"]["break_value"] == 0       # 壳在 air 格，地面玩家够不着
+        assert st["shell"]["break_value"] == 0       # 壳在 air 格，地面玩家未命中
         events = [e for e in out.side_effects if e.get("type") == "part_target"]
         assert events and events[0]["part"] == "head"
 

@@ -756,7 +756,7 @@ def _render_enemy_position_miss(
     ctx: Any = None,
 ) -> Optional[str]:
     """方位 miss 行（方位 v0.6 §四/附录 A Step 1）：
-    `✅ 够不着：{怪物}的攻击够不到{方位}的你（HP {剩余}/{最大}）`。
+    `✅ 未命中：{怪物}的攻击未能命中{方位}的你（HP {剩余}/{最大}）`。
 
     玩家视角 ✅（打空=安全）；{方位} 由事件 side/height 格转中文（显示层映射，模板
     配置化见 battle_tpl battle_enemy_position_miss）；HP 取 target_hp（未扣血=当前）。
@@ -981,7 +981,7 @@ def _render_enemy_action(outcome: Any, *, ctx: Any = None) -> Optional[str]:
     elif atype in _SPECIAL_TYPES or getattr(outcome, "special_action", None):
         lines.append(_render_enemy_special(outcome, ctx=ctx))      # BREP-13
     elif not hit:
-        # 方位 miss（方位 v0.6 附录 A Step 1）：打空（够不着）≠ 躲开——engine 经
+        # 方位 miss（方位 v0.6 附录 A Step 1）：打空（未命中）≠ 躲开——engine 经
         # side_effects position_miss 事件标记（含 side/height 格），渲染专属模板行；
         # 无标记走既有 BREP-11 躲开行（零行为变化）。
         pm = next(

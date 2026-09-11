@@ -2766,8 +2766,8 @@ class BattleEngine:
             return res
 
         # 方位战斗系统 v0.6（附录 A Step 1 / §四 height check）：怪物行动 position_rule
-        # 命中资格检查——够不着不拒施放（门禁/消耗已过、行动槽已占），整条行动打空：
-        # 无伤害/无破坏力/无效果（effects 消费点在其后），文案「够不着」由渲染层模板出。
+        # 命中资格检查——未命中不拒施放（门禁/消耗已过、行动槽已占），整条行动打空：
+        # 无伤害/无破坏力/无效果（effects 消费点在其后），文案「未命中」由渲染层模板出。
         # 玩家技能 position_rule 的消费点是部位命中资格（Step 2 part resolve），本步不检查。
         if attacker == "enemy":
             _pr = ca.get("position_rule")
@@ -2776,7 +2776,7 @@ class BattleEngine:
 
                 _ps, _ph = position_of(self._snap, "player")
                 if not rule_permits(_pr, _ps, _ph):
-                    # 2026-09-09：够不着=闪避成功（防御方空中姿态 on_dodge_effects）
+                    # 2026-09-09：未命中=闪避成功（防御方空中姿态 on_dodge_effects）
                     self._trigger_on_dodge(target, attacker)
                     # 闪反成功派生（2026-09-09 用户拍板：可闪反行动+玩家闪反姿态
                     # → 免伤（天然）+ 自动反击）
@@ -3104,7 +3104,7 @@ class BattleEngine:
 
     def _trigger_on_dodge(self, defender: str, attacker: str) -> None:
         """闪避回馈（2026-09-09 御剑·腾空原版）：防御方空中被攻击未命中
-        （roll miss / 够不着 position miss）→ 遍历其 status def 的
+        （roll miss / 未命中 position miss）→ 遍历其 status def 的
         on_dodge_effects 执行（statuses.json 内容配置；无 → 零操作）。
 
         条件：defender 当前 height == air 且 status_state 含带
@@ -3152,7 +3152,7 @@ class BattleEngine:
         self, attacker: str, action: Mapping[str, Any], target: str, side: str, height: str,
         extra_effect: Optional[Mapping[str, Any]] = None,
     ) -> ActionOutcome:
-        """方位 miss 收口（方位 v0.6 §四：够不着——技能照常消耗、无伤害/破坏力/效果）。
+        """方位 miss 收口（方位 v0.6 §四：未命中——技能照常消耗、无伤害/破坏力/效果）。
 
         行动槽已占（本行动消耗一次 ready），与命中结算同构走完状态迁移与
         行动收尾（RES 迁移 / action_record / tick / action_end / after_actor），只不产
@@ -3189,7 +3189,7 @@ class BattleEngine:
             True, self._seq, attacker, str(action.get("type", "normal")), target,
             False, "low", False, 0, 0, int(self._combat(target).get("hp", 0) or 0),
             tuple(_fx),
-            f"够不着：目标不在攻击方位内（{side}/{height}）",
+            f"未命中：目标不在攻击方位内（{side}/{height}）",
         )
 
     # ------------------------- 空中规则（方位 v0.6 §三.6/§四 T8，附录 A Step 3） -------------------------
@@ -3487,7 +3487,7 @@ class BattleEngine:
             rt = self._new_runtime()
             # ---- ① 命中（方位制——2026-09-09 用户拍板：移除命中/闪避 roll 计算）----
             # 攻击资格由方位判定（position_rule：行动覆盖方位 vs 目标当前方位）前置把关
-            # （_resolve_combo_action L2160 区：范围内必中；范围外=position_miss 够不着，
+            # （_resolve_combo_action L2160 区：范围内必中；范围外=position_miss 未命中，
             # 不会进入伤害管线）；此处不再 roll——命中恒真。玩家防御=主动闪反（位移离开
             # 攻击方位）/防反（守势减伤）。miss 分支保留作安全网（不进即不触发）。
             hit = True

@@ -74,7 +74,7 @@ def _mk_enemy(et, st, parts=None):
 
 def test_sw_vault_dodge_feedback():
     """腾空原版（方位制）：sw_vault 挂腾空姿态（air+status）；怪 ground 技打空中玩家
-    =position miss（够不着）→ 闪避回馈 +30 剑势。
+    =position miss（未命中）→ 闪避回馈 +30 剑势。
 
     CTB 迁移：怪侧攻击经 `do_action("enemy", ...)` 显式驱动（替代已删除的
     enemy_act + 自动后手）。
@@ -101,7 +101,7 @@ def test_sw_vault_dodge_feedback():
     assert a0 == 15, f"腾空斩灌注剑势应 15，got {a0}"
     # CTB：怪在自身 ACTOR_READY 时行动（单次结算入口显式驱动）——ground 技打空中玩家
     out = eng.do_action("enemy", {"type": "skill", "skill_id": "gj_ram", "mult": 1.0})
-    assert out.hit is False, "ground 技打空中玩家应 miss（够不着）"
+    assert out.hit is False, "ground 技打空中玩家应 miss（未命中）"
     assert aura() == a0 + 30, "被攻击 miss 应闪避回馈 +30 剑势"
 
 

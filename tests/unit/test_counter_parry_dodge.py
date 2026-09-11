@@ -131,7 +131,7 @@ def test_parry_guard_fully_negates_and_counter():
 
 
 def test_dodge_circle_position_miss_counter():
-    """回环（闪反姿态）→ 侧移出扑咬方位 → 够不着（免伤）+ dodge_counter 反击。
+    """回环（闪反姿态）→ 侧移出扑咬方位 → 未命中（免伤）+ dodge_counter 反击。
 
     CTB 迁移（2026-09-10）：同 `test_parry_guard_fully_negates_and_counter` —— 真实施放
     回环写姿态（R11），再把姿态窗口对齐到**当前** action_seq（R10 本次行动窗口），怪物
@@ -151,7 +151,7 @@ def test_dodge_circle_position_miss_counter():
     st["action_seq"] = eng.action_seq          # R10 同一窗口
     out = eng.do_action("enemy", {"type": "skill", "skill_id": act["id"]})
     fx = [str(x.get("type")) for x in (getattr(out, "side_effects", ()) or ())]
-    assert "position_miss" in fx, f"回环侧移后扑咬应够不着，got {fx}"
+    assert "position_miss" in fx, f"回环侧移后扑咬应未命中，got {fx}"
     assert out.target_hp == 900, f"闪反成功应免伤，got {out.target_hp}"
     cd = next((int(x.get("damage") or 0)
                for x in (getattr(out, "side_effects", ()) or ())

@@ -77,6 +77,8 @@ __all__ = [
     "DEFAULT_AIR_TIME",
     "DEFAULT_AIR_EXTEND",
     "DEFAULT_TURN_COST",
+    "DEFAULT_AIR_HIT_SHRINK",
+    "DEFAULT_AIR_DROP_DELAY",
     "SIDE_PRIORITY",
     "CtbRuleConfig",
     "TieBreakKey",
@@ -171,6 +173,16 @@ DEFAULT_AIR_EXTEND: float = 150.0
 #: 可经 CtbRuleConfig / settings["ctb"]["turn_cost"] 覆盖（可调）。
 DEFAULT_TURN_COST: float = 400.0
 
+#: 跃空窗口「对空命中缩短」缺省值（行动条）——跃空风险闭环（2026-09-11 批③实装）：
+#: 怪物攻击命中空中玩家 → 该玩家各空中姿态窗口缩短本值（柔和档；**隐性口径，玩家不可见**）。
+#: 可经 CtbRuleConfig / settings["ctb"]["air_hit_shrink"] 覆盖（可调，勿硬编码）。
+DEFAULT_AIR_HIT_SHRINK: float = 400.0
+
+#: 「被击落」行动条硬直缺省值（行动条）——对空必杀（action.air_drop="knockdown"）命中
+#: 空中玩家 → 立即落地 + 倒地，且其下次 ready 追加本值（大硬直；**隐性口径，玩家不可见**）。
+#: 可经 CtbRuleConfig / settings["ctb"]["air_drop_delay"] 覆盖（可调，勿硬编码）。
+DEFAULT_AIR_DROP_DELAY: float = 400.0
+
 #: 黑盒验收场景 2 的 recovery 下界（供测试引用，避免魔数散落）。
 #:
 #: 推演（P SPD=100 / E SPD=75 / speed_reference=100 / 普攻 recovery=100）：
@@ -217,6 +229,10 @@ class CtbRuleConfig:
       air_time:        跃空维持（行动条；隐性口径，增补 v1 §四）
       air_extend:      空中攻击/技能每次延长的缺省值（行动条；增补 v1 §四）
       turn_cost:       怪物转向的行动条成本（增补 v1 §三）
+      air_hit_shrink:  对空命中缩短值（行动条；跃空风险闭环柔和档——怪物攻击
+                       命中空中玩家时其窗口缩短，隐性口径）
+      air_drop_delay:  被击落硬直——下次 ready 追加值（行动条；对空必杀
+                       `air_drop=knockdown` 命中空中玩家，隐性口径）
     """
 
     speed_reference: float = SPEED_REFERENCE
@@ -229,6 +245,8 @@ class CtbRuleConfig:
     air_time: float = DEFAULT_AIR_TIME
     air_extend: float = DEFAULT_AIR_EXTEND
     turn_cost: float = DEFAULT_TURN_COST
+    air_hit_shrink: float = DEFAULT_AIR_HIT_SHRINK
+    air_drop_delay: float = DEFAULT_AIR_DROP_DELAY
 
     def with_overrides(self, overrides: Optional[Mapping[str, Any]]) -> "CtbRuleConfig":
         """返回覆盖部分字段后的新配置（缺省/非法值保持原值，不抛错）。
@@ -257,6 +275,12 @@ class CtbRuleConfig:
                 air_time=_to_float(overrides.get("air_time"), self.air_time),
                 air_extend=_to_float(overrides.get("air_extend"), self.air_extend),
                 turn_cost=_to_float(overrides.get("turn_cost"), self.turn_cost),
+                air_hit_shrink=_to_float(
+                    overrides.get("air_hit_shrink"), self.air_hit_shrink
+                ),
+                air_drop_delay=_to_float(
+                    overrides.get("air_drop_delay"), self.air_drop_delay
+                ),
             )
         except Exception:  # pragma: no cover - 兜底不崩（规则层 fail-safe）
             _logger.exception("CtbRuleConfig.with_overrides 失败，回退原配置")

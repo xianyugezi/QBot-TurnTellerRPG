@@ -218,6 +218,14 @@ async def launch_dummy_battle(
                 ctx.get("settings") if isinstance(ctx, Mapping) else None)
         except Exception:  # noqa: BLE001 - 配置接通失败回落默认
             pass
+        # 战斗规则配置管道（批④）：settings["battle"] 段（背击加成等）——与实机开战同源
+        try:
+            from qbot_rpg.core.battle_config import resolve_battle_settings  # noqa: PLC0415
+
+            _dummy_cfg.update(resolve_battle_settings(
+                ctx.get("settings") if isinstance(ctx, Mapping) else None))
+        except Exception:  # noqa: BLE001 - 配置接通失败回落默认
+            pass
         eng.start(p_comb, e_comb, random_seed=None, battle_type="dummy",
                   config=_dummy_cfg)
     except Exception as exc:  # noqa: BLE001 - 开战失败不崩

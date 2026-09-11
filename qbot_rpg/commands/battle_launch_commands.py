@@ -399,6 +399,14 @@ async def launch_pve_battle(
                 ctx.get("settings") if isinstance(ctx, Mapping) else None)
         except Exception:  # noqa: BLE001 - 配置接通失败回落默认（不阻断开战）
             pass
+        # 战斗规则配置管道（批④）：settings["battle"] 段（背击加成等）→ 引擎战斗配置
+        try:
+            from qbot_rpg.core.battle_config import resolve_battle_settings  # noqa: PLC0415
+
+            _start_cfg.update(resolve_battle_settings(
+                ctx.get("settings") if isinstance(ctx, Mapping) else None))
+        except Exception:  # noqa: BLE001 - 配置接通失败回落默认（不阻断开战）
+            pass
         eng.start(p_comb, e_comb, random_seed=None, config=_start_cfg)
         # 2026-09-09：MonsterAI 注入（装配缺口修复——怪行动 defs 自此启用：
         # 行动方位规则 position_rule 生效 + 蓄力/召唤/防御/范围技可被 AI 选用。

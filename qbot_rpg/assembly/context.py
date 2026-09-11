@@ -1637,6 +1637,17 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
                     payload, registry=deps.registry, defs=_all_defs,
                     combo_engine=_ce, enemy_ai=_ai,
                 )
+                # 2026-09-11 修复（批③黑盒实测发现）：恢复段 AI rng 对齐开战口径——
+                # 用引擎 rng（rng_state 跨指令持久化、逐指令推进）。原实现给 AI 注入
+                # `deps.rng_factory`（按 qid 定种；每指令 make_context 重建同 seed）→
+                # AI 随机流每条指令从头重放：相同指令序列下怪每轮抽到同一结果
+                # （「选招恒定」——黑盒实测泽骨鳄单招 19 连、r 值逐指令相同）。
+                # 开战路径本就传 `eng._rng`（battle_launch_commands L411），恢复路径对齐。
+                if _ai is not None:
+                    try:
+                        _ai._rng = _be._rng
+                    except Exception:  # noqa: BLE001 - rng 对齐失败不阻断恢复
+                        pass
                 _jid = str(ctx.get("job_id") or "")
                 if _jid:
                     _be.set_job_id(_jid)

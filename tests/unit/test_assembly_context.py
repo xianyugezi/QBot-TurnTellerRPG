@@ -592,3 +592,77 @@ def test_weak_mirror_fields_present():
     past = (datetime.now(timezone.utc) - timedelta(seconds=30)).strftime(
         "%Y-%m-%dT%H:%M:%S+00:00")
     assert _weak_remaining_sec({"weak_until": past}) == 0
+
+
+# ---------------------------------------------------------------------------
+# 战斗恢复段：AI rng 对齐（2026-09-11 批③修复回归）
+# ---------------------------------------------------------------------------
+class _BattleSession:
+    """假 battle session（payload=引擎快照）。"""
+
+    def __init__(self, payload: dict) -> None:
+        self.session_type = "battle"
+        self.payload = payload
+
+
+class SessionMgrBattle:
+    """get_active 返回预置 battle session。"""
+
+    def __init__(self, session: _BattleSession) -> None:
+        self._session = session
+
+    def get_active(self, qid: str):  # noqa: ANN001
+        return self._session
+
+
+def _battle_registry() -> Registry:
+    """带 modules_raw（enemies）的最小注册表（恢复段 enemy_def 直查用）。"""
+    return Registry(
+        pack_id="t", generation=1,
+        tables={
+            "job": {"warrior": SimpleNamespace(name="战士")},
+            "effect": {"poison": SimpleNamespace(name="中毒")},
+            "item": {"potion": SimpleNamespace(name="药水"),
+                     "iron_sword": SimpleNamespace(name="铁剑")},
+            "shop": {"shop1": SimpleNamespace(name="杂货店")},
+        },
+        names={"warrior": "战士", "poison": "中毒",
+               "potion": "药水", "iron_sword": "铁剑", "shop1": "杂货店"},
+        modules_raw={
+            "enemies": [{"id": "slime", "name": "史莱姆", "actions": [],
+                         "stats": {"hp": 400, "str": 80, "con": 40, "agi": 40}}],
+        },
+    )
+
+
+async def test_battle_restore_ai_rng_equals_engine_rng() -> None:
+    """恢复段（每指令重建）：AI rng 必须 = 引擎 rng（开战口径）。
+
+    背景：原实现给恢复出的 MonsterAI 注入 `deps.rng_factory`（按 qid 定种、
+    每指令 make_context 重建同 seed）→ AI 随机流每条指令从头重放，相同指令
+    序列下怪选招恒定（黑盒实测：泽骨鳄单招 19 连）。修复：恢复后对齐引擎 rng
+    （rng_state 跨指令持久化推进），与开战路径（launch 传 eng._rng）同口径。
+    """
+    from qbot_rpg.core.battle import BattleEngine
+
+    eng = BattleEngine().start(
+        {"max_hp": 500, "hp": 500, "atk": 100, "dfn": 50, "mag": 50, "spd": 50,
+         "name": "阿伟"},
+        {"id": "slime", "max_hp": 400, "hp": 400, "atk": 80, "dfn": 40,
+         "mag": 30, "spd": 40, "name": "史莱姆"},
+        random_seed=5,
+    )
+    payload = eng.to_snapshot()
+    assert payload.get("rng_state")  # 快照带 rng 状态（恢复推进的依据）
+
+    deps = _deps(_player(), registry=_battle_registry(),
+                 session_mgr=SessionMgrBattle(_BattleSession(payload)))
+    ctx = await make_context(_event(), deps)
+    be = ctx["battle_engine"]
+    assert be is not None, "battle session 活跃 → 引擎应恢复"
+    ai = be._enemy_ai
+    assert ai is not None, "enemy_def 可解析 → AI 应恢复注入"
+    assert ai._rng is be._rng, (
+        "恢复段 AI rng 应等于引擎 rng（rng_state 持久化推进）；"
+        "if 按 qid 定种随机源 → 每指令重放、选招恒定（回归）"
+    )

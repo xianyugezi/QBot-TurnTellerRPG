@@ -827,8 +827,13 @@ def _module_table() -> Dict[str, ModuleMeta]:
         # duration 权威形态 = 对象 {turns:int, charges:int}（细化_1b §1.2 字段9/子结构 2a）
         # —— 不再用 F_DURATION(number)，否则合法 {turns,charges} 会被 R-1 误拦
         "duration": FieldMeta(type="obj", children={
-            "turns": FieldMeta(type="int", range_min=0, range_max=9999),
-            "charges": FieldMeta(type="int", range_min=0, range_max=9999),
+            # allow_negative：-1 = 该维「永不被清」引擎哨兵（细化_1b §4.2 D6 口径；
+            # 跃空姿态等「行动条窗口管理、不走行动次数递减」的时间型持续用）；负数
+            # 仅黄提示（Y-1 越界）不红拦——与 base/growth 负数口径一致。
+            "turns": FieldMeta(type="int", range_min=0, range_max=9999,
+                               allow_negative=True),
+            "charges": FieldMeta(type="int", range_min=0, range_max=9999,
+                                 allow_negative=True),
         }),
         "decay": FieldMeta(type="str"),  # 枚举（per_turn…）由正式表注入
         "effects": F_EFFECTS,
@@ -978,6 +983,7 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "counter_type": FieldMeta(type="str"),  # F25 parry/dodge（防反/闪反姿态标记）
         "counter_skill": FieldMeta(type="str"),  # F26 姿态成功派生反击技 id（V-2 引用检查）
         "action_time": FieldMeta(type="number", range_min=0),  # F27 行动时间（反应窗口时长，行动条；缺省=ctb.default_action_time）
+        "air_extend": FieldMeta(type="number", range_min=0),  # F28 空中延长（跃空窗口延长量，行动条；缺省=ctb.air_extend）
         # ---- 兼容旧键（enemies[].skills 引用的技能表旧键）----
         "skill": FieldMeta(type="ref", ref_target="skill_or_any"),
     }

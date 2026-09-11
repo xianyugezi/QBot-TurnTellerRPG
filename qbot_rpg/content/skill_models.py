@@ -456,4 +456,7 @@ def skills_fields() -> Dict[str, FieldMeta]:
         # F27 行动时间（反应窗口时长，行动条；缺省 = 规则 default_action_time）。
         # 窗口口径：增补 v1 §一（2026-09-11 实装）——[写入时刻, 写入时刻+本值)。
         "action_time": FieldMeta(type="number", range_min=0),
+        # F28 空中延长（跃空窗口延长量，行动条；正数=技能自带大幅延长，缺省走
+        # 规则 ctb.air_extend）。窗口口径：增补 v1 §四（2026-09-11 实装）。
+        "air_extend": FieldMeta(type="number", range_min=0),
     }

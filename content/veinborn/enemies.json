@@ -213,7 +213,12 @@
   "actions": [
    {
     "action": "bb_cub_bite",
-    "weight": 100,
+    "weight": 70,
+    "probability": 1
+   },
+   {
+    "action": "bb_cub_tail",
+    "weight": 30,
     "probability": 1
    }
   ]
@@ -2478,7 +2483,12 @@
   "actions": [
    {
     "action": "gt_ram",
-    "weight": 100,
+    "weight": 70,
+    "probability": 1
+   },
+   {
+    "action": "gt_shell_roll",
+    "weight": 30,
     "probability": 1
    }
   ],

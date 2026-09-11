@@ -129,6 +129,28 @@
   }
  },
  {
+  "id": "bb_cub_tail",
+  "name": "幼兽甩尾",
+  "kind": "active",
+  "power": 0.45,
+  "attack_type": "打",
+  "element": "none",
+  "weight": 30,
+  "probability": 1,
+  "intent": "范围",
+  "cooldown": 1,
+  "tags": [
+   "物理",
+   "可防反",
+   "可闪反"
+  ],
+  "position_rule": {
+   "height": [
+    "ground"
+   ]
+  }
+ },
+ {
   "id": "wp_pounce",
   "name": "扑倒撕咬",
   "kind": "active",
@@ -146,9 +168,6 @@
    "对空"
   ],
   "position_rule": {
-   "side": [
-    "front"
-   ],
    "height": [
     "ground",
     "air"
@@ -397,9 +416,6 @@
    "对空"
   ],
   "position_rule": {
-   "side": [
-    "front"
-   ],
    "height": [
     "ground",
     "air"
@@ -449,9 +465,6 @@
    "对空"
   ],
   "position_rule": {
-   "side": [
-    "front"
-   ],
    "height": [
     "ground",
     "air"
@@ -476,9 +489,6 @@
    "对空"
   ],
   "position_rule": {
-   "side": [
-    "front"
-   ],
    "height": [
     "ground",
     "air"
@@ -626,9 +636,6 @@
    "对空"
   ],
   "position_rule": {
-   "side": [
-    "front"
-   ],
    "height": [
     "ground",
     "air"
@@ -705,9 +712,6 @@
    "水"
   ],
   "position_rule": {
-   "side": [
-    "front"
-   ],
    "height": [
     "ground"
    ]
@@ -756,9 +760,6 @@
    "可闪反"
   ],
   "position_rule": {
-   "side": [
-    "front"
-   ],
    "height": [
     "ground"
    ]
@@ -946,9 +947,6 @@
    "可闪反"
   ],
   "position_rule": {
-   "side": [
-    "front"
-   ],
    "height": [
     "ground"
    ]
@@ -1079,9 +1077,6 @@
    "对空"
   ],
   "position_rule": {
-   "side": [
-    "front"
-   ],
    "height": [
     "ground",
     "air"
@@ -1106,9 +1101,6 @@
    "对空"
   ],
   "position_rule": {
-   "side": [
-    "front"
-   ],
    "height": [
     "ground",
     "air"
@@ -1207,9 +1199,6 @@
    "可闪反"
   ],
   "position_rule": {
-   "side": [
-    "front"
-   ],
    "height": [
     "ground"
    ]
@@ -1629,6 +1618,28 @@
   }
  },
  {
+  "id": "gt_shell_roll",
+  "name": "砾壳翻滚",
+  "kind": "active",
+  "power": 0.5,
+  "attack_type": "打",
+  "element": "none",
+  "weight": 30,
+  "probability": 1,
+  "intent": "范围",
+  "cooldown": 1,
+  "tags": [
+   "物理",
+   "可防反",
+   "可闪反"
+  ],
+  "position_rule": {
+   "height": [
+    "ground"
+   ]
+  }
+ },
+ {
   "id": "gj_shard_spray",
   "name": "砾甲迸溅",
   "kind": "active",
@@ -1647,9 +1658,6 @@
    "对空"
   ],
   "position_rule": {
-   "side": [
-    "front"
-   ],
    "height": [
     "ground",
     "air"
@@ -1675,9 +1683,6 @@
    "对空"
   ],
   "position_rule": {
-   "side": [
-    "front"
-   ],
    "height": [
     "ground",
     "air"

@@ -609,6 +609,7 @@ def _render_player_action(outcome: Any, *, ctx: Any = None) -> List[str]:
     # 方位 v0.6（附录 A Step 3/Step 4）：空中落地事件行（air_policy=land 结算）
     # + 方位变化行（reposition 原子结算）
     lines.extend(_render_air_land_lines(outcome, ctx=ctx))
+    lines.extend(_render_air_drop_lines(outcome, ctx=ctx))
     lines.extend(_render_position_changed_lines(outcome, ctx=ctx))
     lines.extend(_render_part_break_lines(outcome, ctx=ctx))
     # 转向行（增补 v1 §三）：玩家行动前怪转回面向——置于行动行之前（先转向后出招）
@@ -810,6 +811,22 @@ def _render_air_land_lines(outcome: Any, *, ctx: Any = None) -> List[str]:
             continue
         line = tpl_of(ctx, "battle_actor_landed",
                       {"actor": _fx_actor_cn(str(e.get("actor") or ""), outcome)})
+        if line:
+            out.append(line)
+    return out
+
+
+def _render_air_drop_lines(outcome: Any, *, ctx: Any = None) -> List[str]:
+    """被击落行（跃空风险闭环，批③）：outcome.side_effects 的 air_drop 事件（对空
+    必杀命中空中玩家——引擎 `_apply_air_hit_consequences` 产出）→ 模板
+    battle_air_dropped 一行；{name} 经显示层怪名映射（与命中行同通道）；零数值
+    （隐性口径，玩家不可见）。"""
+    out: List[str] = []
+    for e in getattr(outcome, "side_effects", ()) or ():
+        if not isinstance(e, Mapping) or e.get("type") != "air_drop":
+            continue
+        line = tpl_of(ctx, "battle_air_dropped",
+                      {"name": _fx_actor_cn(str(e.get("attacker") or "enemy"), outcome)})
         if line:
             out.append(line)
     return out
@@ -1036,6 +1053,7 @@ def _render_enemy_action(outcome: Any, *, ctx: Any = None) -> Optional[str]:
     # 方位 v0.6（附录 A Step 3/Step 4）：怪物侧空中落地事件行 + 方位变化行
     # （怪行动 effects reposition/reposition_all 结算，如冲锋/转身）
     lines.extend(_render_air_land_lines(outcome, ctx=ctx))
+    lines.extend(_render_air_drop_lines(outcome, ctx=ctx))
     lines.extend(_render_position_changed_lines(outcome, ctx=ctx))
     lines.extend(_render_part_break_lines(outcome, ctx=ctx))
     if not lines:

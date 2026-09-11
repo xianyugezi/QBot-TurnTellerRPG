@@ -96,6 +96,8 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     # 方位 miss（方位 v0.6 §四/附录 A Step 1：未命中——怪物行动打不到玩家当前方位）
     "battle_enemy_position_miss": "✅ 未命中：{name}的攻击未能命中{pos}的你（HP {hp}/{max_hp}）",
 "battle_actor_landed": "{actor} 从空中落回地面",
+# 被击落行（跃空风险闭环，批③：对空必杀命中空中玩家——纯行为播报，零数值）
+"battle_air_dropped": "{name}将你从空中击落——你重重摔落在地",
 # 转向行（增补 v1 §三 转向事件化：怪在玩家行动前转回面向——纯行为播报，零数值）
 "battle_enemy_turned": "{name}转过身来，盯住了你",
 "battle_position_changed": "{actor} 移动到了{pos}",
@@ -204,6 +206,7 @@ PLACEHOLDER_WHITELIST: Dict[str, set] = {
     "battle_enemy_miss": {"name", "hp", "max_hp"},
     "battle_enemy_position_miss": {"name", "pos", "hp", "max_hp"},
 "battle_actor_landed": {"actor"},
+"battle_air_dropped": {"name"},
 "battle_enemy_turned": {"name"},
 "battle_position_changed": {"actor", "pos"},
 "battle_part_broken": {"part", "name"},

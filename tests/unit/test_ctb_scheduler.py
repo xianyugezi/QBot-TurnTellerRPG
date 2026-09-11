@@ -107,6 +107,40 @@ def test_action_delay_default_zero() -> None:
     assert next_ready(0.0, {"recovery": 10}, 100) == 10.0
 
 
+def test_time_unit_and_default_action_time_configurable() -> None:
+    """时间标准可调（增补 v1 §〇/§一，2026-09-11）：默认值 + 覆盖 + 换算辅助。
+
+    time_unit = 「1 个标准时长（设计文 1 回合）」的行动条数——隐性换算口径
+    （玩家不可见）；default_action_time = 反应窗口缺省时长（行动条）。
+    """
+    from qbot_rpg.core.ctb_rules import (
+        DEFAULT_ACTION_TIME,
+        TIME_UNIT,
+        bars_to_rounds,
+        rounds_to_bars,
+        resolve_rule_config,
+    )
+
+    cfg = CtbRuleConfig()
+    assert cfg.time_unit == TIME_UNIT == 1000.0
+    assert cfg.default_action_time == DEFAULT_ACTION_TIME == 400.0
+    # 默认换算：5 个标准时长 = 5000 行动条
+    assert rounds_to_bars(5) == 5000.0
+    assert bars_to_rounds(5000) == 5.0
+    # 覆盖（可调）：800/350
+    cfg2 = cfg.with_overrides({"time_unit": 800.0, "default_action_time": 350.0})
+    assert cfg2.time_unit == 800.0 and cfg2.default_action_time == 350.0
+    assert rounds_to_bars(5, cfg2) == 4000.0
+    assert bars_to_rounds(4000, cfg2) == 5.0
+    # 非法输入容错（不抛错）
+    assert rounds_to_bars(None) == 0.0
+    assert bars_to_rounds("x") == 0.0
+    assert cfg.with_overrides({"time_unit": "x"}).time_unit == TIME_UNIT
+    # resolve_rule_config 透传（settings 段可覆盖）
+    got = resolve_rule_config({"ctb": {"time_unit": 1200, "default_action_time": 600}})
+    assert got.time_unit == 1200.0 and got.default_action_time == 600.0
+
+
 # ---------------------------------------------------------------------------
 # 2. tie-break 键与规则确定性
 # ---------------------------------------------------------------------------

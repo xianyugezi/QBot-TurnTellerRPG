@@ -38,7 +38,9 @@ import logging
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple
 
 from qbot_rpg.core.ctb_rules import (
+    DEFAULT_ACTION_TIME,
     DEFAULT_RECOVERY,
+    TIME_UNIT,
     CtbRuleConfig,
     recovery_for,
     resolve_rule_config,
@@ -51,6 +53,8 @@ from qbot_rpg.data.ctb import (
     RECOVERY_KEY_CN,
     ActionRecoveryTable,
 )
+from qbot_rpg.data.ctb import DEFAULT_ACTION_TIME as DATA_DEFAULT_ACTION_TIME
+from qbot_rpg.data.ctb import DEFAULT_TIME_UNIT as DATA_DEFAULT_TIME_UNIT
 
 __all__ = [
     "resolve_action_recovery",
@@ -84,6 +88,18 @@ def _assert_no_value_drift() -> None:
                 "CTB 默认恢复值存在分层漂移：data.DEFAULT_ACTION_RECOVERY=%s "
                 "vs core.DEFAULT_RECOVERY=%s（请同步两处）",
                 DEFAULT_ACTION_RECOVERY, DEFAULT_RECOVERY,
+            )
+        if float(DATA_DEFAULT_TIME_UNIT) != float(TIME_UNIT):
+            _logger.warning(
+                "CTB 时间单位存在分层漂移：data.DEFAULT_TIME_UNIT=%s "
+                "vs core.TIME_UNIT=%s（请同步两处）",
+                DATA_DEFAULT_TIME_UNIT, TIME_UNIT,
+            )
+        if float(DATA_DEFAULT_ACTION_TIME) != float(DEFAULT_ACTION_TIME):
+            _logger.warning(
+                "CTB 行动时间缺省存在分层漂移：data.DEFAULT_ACTION_TIME=%s "
+                "vs core.DEFAULT_ACTION_TIME=%s（请同步两处）",
+                DATA_DEFAULT_ACTION_TIME, DEFAULT_ACTION_TIME,
             )
     except Exception:  # pragma: no cover - 兜底不崩
         _logger.exception("_assert_no_value_drift 失败")

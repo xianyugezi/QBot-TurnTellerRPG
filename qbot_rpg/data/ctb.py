@@ -39,6 +39,9 @@ __all__ = [
     "DEFAULT_ACTION_RECOVERY",
     "ACTION_RECOVERY_TABLE",
     "HEAVY_RECOVERY_HINT",
+    # —— 时间标准（隐性换算口径；增补 v1 §〇/§一）——
+    "DEFAULT_TIME_UNIT",
+    "DEFAULT_ACTION_TIME",
     # —— 键名常量 ——
     "RECOVERY_KEY",
     "RECOVERY_KEY_CN",
@@ -86,6 +89,15 @@ ACTION_RECOVERY_TABLE: Mapping[str, float] = {
 HEAVY_RECOVERY_HINT: float = 200.0
 
 
+#: 时间单位（行动条）：1 个标准时长（设计文「1 回合」）的行动条数——**隐性换算口径
+#: （玩家不可见）**。「N 回合」= N × 本值。默认 1000.0（= 基准速度一次普攻时长；
+#: 增补 v1 §〇 2026-09-11 拍板；可调，与 core/ctb_rules.TIME_UNIT 同值、由 ctb_config 校验）。
+DEFAULT_TIME_UNIT: float = 1000.0
+
+#: 技能「行动时间」（反应窗口时长，行动条）缺省值；默认 400.0（增补 v1 §一）。
+DEFAULT_ACTION_TIME: float = 400.0
+
+
 # ---------------------------------------------------------------------------
 # 三、键名常量（内容包 recovery 键的中英候选，解析逻辑在 core/ctb_config.py）
 # ---------------------------------------------------------------------------
@@ -109,4 +121,6 @@ DEFAULT_CTB_SETTINGS: Mapping[str, object] = {
     "action_delay": 0.0,
     "default_recovery": DEFAULT_ACTION_RECOVERY,
     "recovery_table": {},
+    "time_unit": DEFAULT_TIME_UNIT,
+    "default_action_time": DEFAULT_ACTION_TIME,
 }

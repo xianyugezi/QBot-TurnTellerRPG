@@ -72,12 +72,16 @@ __all__ = [
     "SPEED_REFERENCE",
     "MIN_SPEED",
     "ACTION_DELAY",
+    "TIME_UNIT",
+    "DEFAULT_ACTION_TIME",
     "SIDE_PRIORITY",
     "CtbRuleConfig",
     "TieBreakKey",
     "build_tiebreak_key",
     "next_ready",
     "recovery_for",
+    "rounds_to_bars",
+    "bars_to_rounds",
     "action_delay_for",
     "time_cost",
     "ActionBatchReport",
@@ -139,6 +143,16 @@ MIN_SPEED: float = 1.0
 #: 基础延迟（每次行动结算后叠加的固定时间片）
 ACTION_DELAY: float = 0.0
 
+#: 时间单位（行动条）：1 个标准时长（设计文「1 回合」）的行动条数——**隐性换算口径
+#: （玩家不可见）**：设计文 / 内容中的「N 回合」时长 = N × 本值行动条。
+#: 默认 1000.0（= 基准速度一次普攻的行动条时长；增补 v1 §〇 2026-09-11 拍板）。
+#: 可经 CtbRuleConfig / settings["ctb"]["time_unit"] 覆盖（可调，勿硬编码）。
+TIME_UNIT: float = 1000.0
+
+#: 技能「行动时间」（反应类窗口时长，行动条）缺省值（增补 v1 §一）：
+#: 技能 def 未显式给 action_time 时的兜底；默认 400.0（闪反标准示例）。
+DEFAULT_ACTION_TIME: float = 400.0
+
 #: 黑盒验收场景 2 的 recovery 下界（供测试引用，避免魔数散落）。
 #:
 #: 推演（P SPD=100 / E SPD=75 / speed_reference=100 / 普攻 recovery=100）：
@@ -180,6 +194,8 @@ class CtbRuleConfig:
       action_delay:    基础延迟
       default_recovery: 普通行动缺省恢复值
       recovery_table:  按 action 标识的恢复值覆盖表（键可为 action id / kind）
+      time_unit:       时间单位（行动条／标准时长；隐性换算口径，增补 v1 §〇）
+      default_action_time: 技能「行动时间」（反应窗口）缺省值（增补 v1 §一）
     """
 
     speed_reference: float = SPEED_REFERENCE
@@ -187,6 +203,8 @@ class CtbRuleConfig:
     action_delay: float = ACTION_DELAY
     default_recovery: float = DEFAULT_RECOVERY
     recovery_table: Mapping[str, float] = field(default_factory=dict)
+    time_unit: float = TIME_UNIT
+    default_action_time: float = DEFAULT_ACTION_TIME
 
     def with_overrides(self, overrides: Optional[Mapping[str, Any]]) -> "CtbRuleConfig":
         """返回覆盖部分字段后的新配置（缺省/非法值保持原值，不抛错）。
@@ -208,6 +226,10 @@ class CtbRuleConfig:
                     overrides.get("default_recovery"), self.default_recovery
                 ),
                 recovery_table=table if isinstance(table, Mapping) else self.recovery_table,
+                time_unit=_to_float(overrides.get("time_unit"), self.time_unit),
+                default_action_time=_to_float(
+                    overrides.get("default_action_time"), self.default_action_time
+                ),
             )
         except Exception:  # pragma: no cover - 兜底不崩（规则层 fail-safe）
             _logger.exception("CtbRuleConfig.with_overrides 失败，回退原配置")
@@ -319,6 +341,44 @@ def recovery_for(action: Any, config: Optional[CtbRuleConfig] = None) -> float:
     except Exception:  # pragma: no cover - 兜底不崩
         _logger.exception("recovery_for 失败，回退 default_recovery")
         return cfg.default_recovery
+
+
+def rounds_to_bars(rounds: Any, config: Optional[CtbRuleConfig] = None) -> float:
+    """设计文「N 个标准时长（回合）」→ 行动条（隐性换算口径；增补 v1 §〇）。
+
+    换算：bars = N × time_unit（默认 1000 → ``rounds_to_bars(5) == 5000.0``）。
+    非法 / None → 0.0；time_unit 非法（≤0）→ 回退模块默认 TIME_UNIT。
+
+    :param rounds: 「N 回合」的 N（设计文口径；玩家不可见）
+    :param config: 规则配置（None → 默认配置）
+    :return: 对应行动条数（float，非负）
+    """
+    try:
+        cfg = config or CtbRuleConfig()
+        _unit = cfg.time_unit if (cfg.time_unit and cfg.time_unit > 0) else TIME_UNIT
+        return max(0.0, _to_float(rounds, 0.0)) * float(_unit)
+    except Exception:  # pragma: no cover - 兜底不崩
+        _logger.exception("rounds_to_bars 失败，回退 0.0")
+        return 0.0
+
+
+def bars_to_rounds(bars: Any, config: Optional[CtbRuleConfig] = None) -> float:
+    """行动条 → 设计文「N 个标准时长（回合）」（隐性换算口径；增补 v1 §〇）。
+
+    换算：N = bars ÷ time_unit（默认 1000 → ``bars_to_rounds(5000) == 5.0``）。
+    非法 / None → 0.0；time_unit 非法（≤0）→ 回退模块默认 TIME_UNIT。
+
+    :param bars: 行动条数
+    :param config: 规则配置（None → 默认配置）
+    :return: 标准时长数（float）
+    """
+    try:
+        cfg = config or CtbRuleConfig()
+        _unit = cfg.time_unit if (cfg.time_unit and cfg.time_unit > 0) else TIME_UNIT
+        return _to_float(bars, 0.0) / float(_unit)
+    except Exception:  # pragma: no cover - 兜底不崩
+        _logger.exception("bars_to_rounds 失败，回退 0.0")
+        return 0.0
 
 
 def _clamp_non_negative(value: float, default: float) -> float:

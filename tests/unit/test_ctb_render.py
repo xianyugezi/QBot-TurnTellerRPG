@@ -312,7 +312,7 @@ def test_ctb_data_layer_is_dependency_free() -> None:
 
 
 def test_ctb_data_settings_defaults_aligned_with_rules() -> None:
-    """data 层 DEFAULT_CTB_SETTINGS 的公式三参对齐 ctb_rules 常量。"""
+    """data 层 DEFAULT_CTB_SETTINGS 的公式三参 + 时间标准两参对齐 ctb_rules 常量。"""
     from qbot_rpg.core import ctb_rules
     from qbot_rpg.data.ctb import DEFAULT_CTB_SETTINGS
 
@@ -321,6 +321,9 @@ def test_ctb_data_settings_defaults_aligned_with_rules() -> None:
     assert DEFAULT_CTB_SETTINGS["action_delay"] == ctb_rules.ACTION_DELAY
     assert DEFAULT_CTB_SETTINGS["default_recovery"] == ctb_rules.DEFAULT_RECOVERY
     assert DEFAULT_CTB_SETTINGS["enabled"] is True
+    # 时间标准（2026-09-11 增补 v1 §〇/§一：隐性口径、可调）
+    assert DEFAULT_CTB_SETTINGS["time_unit"] == ctb_rules.TIME_UNIT
+    assert DEFAULT_CTB_SETTINGS["default_action_time"] == ctb_rules.DEFAULT_ACTION_TIME
 
 
 def test_ctb_resolve_action_recovery_override() -> None:

@@ -1,8 +1,9 @@
-"""怪转向事件化（增补 v1 §三）验收测试——2026-09-11 实装。
+"""怪转向事件化（增补 v1 §三）验收测试——2026-09-11 实装；批④ 时序修订。
 
-口径（docs/veinborn_战斗规则增补_v1.md §三 · 1v1 落地切片）：
-  - 玩家绕背/侧移（side ∈ back/left/right）后、玩家行动前：怪**转回面向**
-    （玩家 side 归位 front）；
+口径（docs/veinborn_战斗规则增补_v1.md §三 · 1v1 落地切片；批④ 背击窗口修订）：
+  - 玩家绕背/侧移（side ∈ back/left/right）后、玩家行动**结算后**：怪**转回面向**
+    （玩家 side 归位 front）——批④ 修订（原「行动前」：背击永远无成立时机；
+    修订后本次行动于捕获侧位结算，背面攻击吃背击加成，见 test_backstab.py）；
   - **转向消耗行动条**：成本 `ctb.turn_cost`（缺省 400，可调）追加到怪的下一次
     ready（`CTBScheduler.delay_actor`；隐性口径，玩家不可见）；
   - **目标未变不转向（零消耗）**：玩家已在正面 → 无事件、无延迟；
@@ -85,7 +86,7 @@ def _turn_events(outcomes) -> list:
 
 class TestEnemyTurnEngine:
     def test_turn_on_side_move(self) -> None:
-        """玩家在侧 → 行动前怪转身：side 归位 front + 怪 next_ready +turn_cost + 事件。"""
+        """玩家在侧 → 行动结算后怪转身：side 归位 front + 怪 next_ready +turn_cost + 事件。"""
         eng = _start()
         _set_side(eng, "right")
         before = _enemy_ready(eng)              # 500（怪首拍）
@@ -160,6 +161,23 @@ class TestEnemyTurnRender:
 
         assert DEFAULT_TEMPLATES["battle_enemy_turned"] == "{name}转过身来，盯住了你"
         assert PLACEHOLDER_WHITELIST["battle_enemy_turned"] == {"name"}
+
+    def test_turn_line_after_action_line(self) -> None:
+        """批④ 时序修订：转身行置于行动行**之后**（先出手后转身；原「行动前」序已修订）。"""
+        from qbot_rpg.core.message_format.battle_render import (  # noqa: PLC0415
+            _render_player_action,
+        )
+
+        out = SimpleNamespace(
+            ok=True, seq=1, actor="player", action_type="normal", hit=True,
+            crit="low", blocked=False, raw_damage=18, final_damage=18,
+            target="灰狼", target_hp=7,
+            side_effects=({"type": "enemy_turned", "actor": "enemy"},),
+            message="", battle_ended=False, status=None,
+        )
+        lines = _render_player_action(out)
+        assert lines[-1] == "灰狼转过身来，盯住了你"     # 末行 = 转身行
+        assert any("造成" in ln for ln in lines[:-1])   # 行动行在前
 
     def test_render_ignores_other_events(self) -> None:
         """无 enemy_turned → 空行集（零副作用）。"""

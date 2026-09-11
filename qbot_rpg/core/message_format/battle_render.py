@@ -1012,8 +1012,13 @@ def _render_enemy_action(outcome: Any, *, ctx: Any = None) -> Optional[str]:
     _parry_fx = next((e for e in _fx_all
                       if isinstance(e, Mapping) and e.get("type") == "parry"), None)
     if _parry_fx is not None:
-        lines.append(tpl_of(ctx, "battle_parry_success",
-                            {"action": _default_action_phrase(outcome)}))
+        # 展示串清洗（批⑤顺手修）：怪行动名注入为「使出X」（供「怪使出X，你受到…」
+        # 攻击行用）；格挡行模板是「你格挡了{action}」——直接拼会读成
+        # 「你格挡了使出X」，此处剥「使出」前缀 → 「你格挡了X（完全免伤）」。
+        _act_phrase = _default_action_phrase(outcome)
+        if _act_phrase.startswith("使出"):
+            _act_phrase = _act_phrase[len("使出"):]
+        lines.append(tpl_of(ctx, "battle_parry_success", {"action": _act_phrase}))
     elif guarding and hit:
         lines.append(_render_player_defend_hit(outcome, ctx=ctx))  # BREP-06（5e §3.1）
     elif atype in _INTENT_TYPES or getattr(outcome, "intent_skill", None):

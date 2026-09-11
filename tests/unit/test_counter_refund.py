@@ -228,3 +228,23 @@ def test_helper_survives_without_scheduler():
     eng = BattleEngine()
     eng._ctb = None
     eng._hasten_player_after_counter()  # 不抛错即通过
+
+# =====================================================================================
+# 5. 渲染：格挡行清洗（「使出X」前缀剥离）
+# =====================================================================================
+
+
+def test_parry_render_strips_shishi_prefix():
+    """格挡行不出现「你格挡了使出X」——展示串剥「使出」前缀。"""
+    from types import SimpleNamespace
+
+    from qbot_rpg.core.message_format.battle_render import _render_enemy_action
+
+    out = SimpleNamespace(
+        action_type="skill", hit=True, action_name="使出晶牙噬咬",
+        side_effects=[{"type": "parry", "target": "player",
+                       "attacker": "enemy", "skill_id": "x"}],
+    )
+    rendered = _render_enemy_action(out)
+    assert "你格挡了晶牙噬咬（完全免伤）" in rendered, rendered
+    assert "使出晶牙噬咬" not in rendered

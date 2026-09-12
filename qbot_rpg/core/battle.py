@@ -336,6 +336,9 @@ class ActionOutcome:
     # 背击附注（B5 背击闭环，2026-09-11 批④）：本次行动为「位于怪背面」结算
     # （吃了 backstab_bonus）→ 命中行尾拼「（背击）」；False = 常规（零副作用）。
     backstab: bool = False
+    # 批⑥ 会心倍率动态化（方案B）：本次会心实际生效倍率（含超会心加成/负会心配置）；
+    # 渲染直读「（会心·高阶 ×2.25）」；None=非会心或旧构造点 → 渲染回退静态档位表。
+    crit_mult: Optional[float] = None
 
 
 @dataclass(frozen=True)
@@ -3932,6 +3935,8 @@ class BattleEngine:
                 p_override=p_eff, negative_crit=p.crit.negative_crit,
             )
             rating["crit"] = crit_id
+            # 批⑥ 方案B：实际生效倍率透传（含超会心加成）→ ActionOutcome → 渲染动态化
+            rating["crit_mult"] = crit_mult
 
             # ---- ③ 格挡（1a §1.7：min(40%, 专注/(专注+150))；魔攻击无视）----
             magic = atk_type == "magic"
@@ -4199,6 +4204,7 @@ class BattleEngine:
             message=f"{attacker} 对 {target} 造成 {damage.get('final', 0)} 伤害",
             battle_ended=battle_ended, status=status,
             backstab=bool(rating.get("backstab", False)),
+            crit_mult=rating.get("crit_mult"),
         )
 
     def _with_extra_effects(

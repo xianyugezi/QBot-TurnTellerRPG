@@ -614,6 +614,7 @@ def _build_segments(snap: Mapping[str, Any], action_seq: int) -> List[Mapping[st
             "target_max_hp": None,
             "target": str(entry.get("target") or ""),
             "crit": str(rating.get("crit", "low") or "low"),
+            "crit_mult": rating.get("crit_mult"),
             "blocked": bool(rating.get("blocked", False)),
             "derived_capped": False,
         })

@@ -419,6 +419,21 @@ _CRIT_TIERS: Mapping[str, Tuple[str, str]] = {
 }
 
 
+def _fmt_crit_mult(value: Any, fallback: str) -> str:
+    """会心倍率展示格式化（批⑥ 方案B）：优先实际生效值，缺省回退档位静态值。
+
+    例：2.2 → "2.2"；2.2500000000000004（超会心浮点相加）→ "2.25"；
+    非数值 / NaN / 非正 → 回退 fallback（旧构造点零破坏）。
+    """
+    try:
+        m = float(value)
+    except (TypeError, ValueError):
+        return fallback
+    if m != m or m <= 0:
+        return fallback
+    return "%g" % round(m, 4)
+
+
 def _render_prefix_line(
     round_result: Any = None,
     *,
@@ -473,13 +488,16 @@ def _render_crit_block_note(
     会心优先于格挡（判定顺序 命中→会心→格挡，数值层 L16 写死）；两者并存时都输出。
     低级会心默认省略（D-5D 差分精神：引擎每击都会心档，low=基线 ×1.3 全显刷屏；
     TC-09 要求 low 可渲染 → include_low=True，作者可配），high/mid 始终输出。
-    档位取 ActionOutcome.crit（crit_roll 三档 id，battle._action_outcome），倍率表 _CRIT_TIERS。
+    档位取 ActionOutcome.crit（crit_roll 三档 id，battle._action_outcome）；倍率取
+    ActionOutcome.crit_mult 实际生效值（批⑥ 方案B），缺省回退 _CRIT_TIERS 档位基础值。
     模板 battle_crit_note / battle_blocked_note（battle_tpl 分区）。
     """
     notes: List[str] = []
     crit = str(getattr(outcome, "crit", "") or "")
     if crit in _CRIT_TIERS and (crit != "low" or include_low):
-        tier, mult = _CRIT_TIERS[crit]
+        tier, base_mult = _CRIT_TIERS[crit]
+        # 批⑥ 方案B：倍率取实际生效值（含超会心/负会心），缺省回退档位静态表值
+        mult = _fmt_crit_mult(getattr(outcome, "crit_mult", None), base_mult)
         notes.append(tpl_of(ctx, "battle_crit_note", {"tier": tier, "mult": mult}))
     if bool(getattr(outcome, "blocked", False)):
         notes.append(tpl_of(ctx, "battle_blocked_note"))
@@ -1205,7 +1223,8 @@ def _render_settlement(round_result: Any, *, ctx: Any = None) -> Optional[str]:
 
 
 def _render_combo_seg_note(seg: Mapping[str, Any], *, ctx: Any = None) -> str:
-    """BREP-21 段行附注：BREP-04 会心/格挡（复用 _CRIT_TIERS 档位表，数值层 L25-26）。
+    """BREP-21 段行附注：BREP-04 会心/格挡（倍率取段记录 crit_mult 实际生效值——批⑥
+    方案B；缺省回退 _CRIT_TIERS，数值层 L25-26）。
 
     段内判定各跑一次完整管线（L16/L132），段行尾可拼会心附注（5e §5.1 示例
     `（会心·中阶 ×1.7）`）；低级会心默认省略（D-5D 防噪声，对齐 _render_crit_block_note）。
@@ -1214,7 +1233,9 @@ def _render_combo_seg_note(seg: Mapping[str, Any], *, ctx: Any = None) -> str:
     notes: List[str] = []
     crit = str(seg.get("crit", "") or "")
     if crit in _CRIT_TIERS and crit != "low":
-        tier, mult = _CRIT_TIERS[crit]
+        tier, base_mult = _CRIT_TIERS[crit]
+        # 批⑥ 方案B：倍率取段记录实际生效值，缺省回退档位静态表值
+        mult = _fmt_crit_mult(seg.get("crit_mult"), base_mult)
         notes.append(tpl_of(ctx, "battle_crit_note", {"tier": tier, "mult": mult}))
     if bool(seg.get("blocked", False)):
         notes.append(tpl_of(ctx, "battle_blocked_note"))

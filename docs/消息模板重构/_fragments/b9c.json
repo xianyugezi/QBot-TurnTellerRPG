@@ -1,0 +1,37 @@
+{
+  "rail": "b9c",
+  "scope": "批9·路C：图鉴 14 键（codex_commands 渲染壳；qbot_rpg/core/templates/codex_tpl.py 全量迁移）",
+  "templates": {
+    "codex_category_empty": "本册暂无收集记录",
+    "codex_category_header": "【{label}】",
+    "codex_entry_line": "{mark} {name}{kill}{rumor}",
+    "codex_killed_mark": "（已击杀）",
+    "codex_next_tier": "下一档：{tier}%\n还差 {gap}%",
+    "codex_overview_header": "【图鉴】收集总览",
+    "codex_overview_hint": "看分册：发 图鉴 怪物 2\n每页 5 条",
+    "codex_progress_line": "{label}：{pct}%\n已见 {seen}/{total}",
+    "codex_rumor_mark": "（传闻）",
+    "codex_tail_tip": "本册共 {total} 条",
+    "codex_tier_maxed": "已达最高档\n图鉴收藏家 100%",
+    "codex_total_progress": "总完成度：{pct}%\n已见 {seen}/{total}",
+    "codex_unknown_category": "❌ 没有这个图鉴分册\n发 图鉴 查看总览",
+    "codex_unknown_name": "???"
+  },
+  "prose_keys": {},
+  "notes": {
+    "codex_overview_header": "段头重写：【图鉴】+「收集总览」（旧「【图鉴总览】」不合「【主题】+副题」形态）；无占位符",
+    "codex_progress_line": "分册进度行拆两行：分册名+百分比 / 已见 seen/total（大数值独立行防爆宽，8 位数列仍单行容纳）；占位符 label/pct/seen/total 4 个不变",
+    "codex_total_progress": "总完成度行同构拆两行（总完成度：pct% / 已见 seen/total）；占位符 pct/seen/total 不变",
+    "codex_next_tier": "里程碑行拆两行：下一档：tier% / 还差 gap%（数值独立行）；占位符 tier/gap 不变",
+    "codex_tier_maxed": "满档行拆两行：已达最高档 / 图鉴收藏家 100%（保留 100%/收藏家 语义，去括号挤宽）；无占位符",
+    "codex_overview_hint": "提示行免斜杠重写：看分册：发 图鉴 怪物 2 / 每页 5 条（去旧「（每页 5 条）」括号挤宽，页大小独立行）；无占位符",
+    "codex_unknown_category": "错误行 ❌ + 原因 + 下一步两行：❌ 没有这个图鉴分册 / 发 图鉴 查看总览（免斜杠；旧「未知图鉴分册。」仅一行无下一步）；无占位符",
+    "codex_category_header": "段头结构模板保留【】+ 分册名形态（labels 最长 4 字=8 半角，4+8=12 ≤28，已达标无可重排空间；R-19 分册头锚点）",
+    "codex_category_empty": "空态重写：本册暂无收集记录（半角当量 16，去旧全角括号「（还没有收集记录）」）；无占位符",
+    "codex_entry_line": "条目行结构模板保留「标记 空格 名称 + 状态后缀紧密拼接」——状态后缀必须紧贴名称（跨模块锚点 test_environment_lore「蚀月之狼（传闻）」按无空格拼接断言）；占位符 mark/name/kill/rumor 不变",
+    "codex_killed_mark": "字形锚点保留「（已击杀）」（全角括号为既有排版符号口径，10 半角）；无占位符",
+    "codex_rumor_mark": "字形锚点保留「（传闻）」——test_environment_lore 逐字断言（含拼接形态）；改字会破坏 R-24/F-16 标记消费契约；无占位符",
+    "codex_unknown_name": "字形锚点保留「???」——R-19/R-20 不泄露语义 + test_codex/test_codex_commands/test_fishing_codex 三处断言；属引擎占位字形非文案；无占位符",
+    "codex_tail_tip": "尾段 Tip 重写：本册共 {total} 条（去旧「共 N 条记录」；由 render_cake_tail 拼为 Tip: 行）；占位符 total 不变"
+  }
+}

@@ -19,6 +19,13 @@
   F-2  揭示卡片（隐藏成就达成瞬间）由引擎 check_achievements 返回 reveals 字段，
        壳层渲染走 ach_reveal_card 模板；正常指令流不主动触发。
   F-3  /称号 无参默认即查看（对齐契约「/称号」与「/称号 查看」双写）。
+
+2026-09-12 消息模板重构（批8·路C）：本模块消费的 16 键（ach_*）已迁全量表
+`qbot_rpg/core/templates/template_table.json` 并按手机QQ 14 全角新规范重写
+（段头【成就】/【称号】、多字段拆行、免斜杠、❌ + 原因 + 下一步）；渲染调用点与
+占位符名不变。分布：列表 4 / 详情 4 / 揭示 1 / 称号 6 / 空态 1。
+（已知：ach_list_tail / ach_reveal_card 在代码中无 tpl_of 调用点——列表尾段仍走
+`render_cake_tail(tip=...)` 硬编码，揭示卡属引擎 reveals 侧；两键留表待批18 死键清扫裁决。）
 """
 
 from __future__ import annotations
@@ -37,9 +44,10 @@ CMD_ACH = "成就"
 CMD_ACH_INFO = "成就信息"
 CMD_TITLE = "称号"
 
-# 占位兜底（tpl_of 缺省走 achievement_tpl 分区，此处为兼容旧测试/裸 ctx）
-_DEF_EMPTY = "【成就】暂无成就"
-_DEF_VIEW_NOT_FOUND = "❌ 成就不存在：{aid}"
+# 占位兜底（tpl_of 缺省走全量表 achievement 16 键，此处为兼容旧测试/裸 ctx）
+# 2026-09-12 批8·路C：随 16 键重做同步（免斜杠/❌+下一步）；两常量当前无调用点，待批18 死键清扫裁决
+_DEF_EMPTY = "【成就】暂无成就\n继续冒险即可解锁"
+_DEF_VIEW_NOT_FOUND = "❌ 没有这个成就：{aid}\n发 成就 查看全部成就"
 
 
 def _gate(ctx: Mapping[str, Any]) -> Optional[str]:

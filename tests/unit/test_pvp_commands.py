@@ -2,6 +2,9 @@
 
 覆盖细化_4e CMD-05/06（/锁定玩家 /攻击玩家）+ CMD-R02~R05（参数解析 +
 错误模板 4 类）+ 注册/白名单，对齐 docs/m11_启动包.md §2.3。
+
+2026-09-12 消息模板重构·批8·路A：pvp 20 键迁全量表 template_table.json
+（分区 pvp_tpl.py 清空），断言随新文案同步（免斜杠 + ❌ 原因/下一步两行化）。
 """
 from __future__ import annotations
 
@@ -105,7 +108,7 @@ def test_lock_ok_renders_target_status(monkeypatch) -> None:
                         "equipment_summary": "weapon:法杖"}},
                     attack_result={})
     out = cmd_pvp_lock(_P("123456789"), _ctx())
-    assert "✅ 已锁定玩家：小王" in out
+    assert "✅ 已锁定玩家\n小王" in out
     assert "【等级】8" in out
     assert "【职业】mage" in out
     assert "【血量】60/80" in out
@@ -129,19 +132,19 @@ def test_lock_self_via_player_qid() -> None:
 def test_lock_missing_qq() -> None:
     """缺参 → pvp_err_missing（错误模板 4 类·缺参）。"""
     out = cmd_pvp_lock(_P(), _ctx())
-    assert "请指定目标" in out
+    assert "缺少目标" in out
 
 
 def test_lock_invalid_qq() -> None:
     """QQ 格式非法 → pvp_err_missing（CMD-R04 格式错误）。"""
     out = cmd_pvp_lock(_P("abc"), _ctx())
-    assert "请指定目标" in out
+    assert "缺少目标" in out
 
 
 def test_lock_unregistered_gate() -> None:
     """未注册 → 注册门槛拒绝（RUL-08）。"""
     out = cmd_pvp_lock(_P("123456789"), _ctx(registered=False))
-    assert "请先 /注册" in out
+    assert "请先创建角色" in out
 
 
 def test_lock_engine_missing(monkeypatch) -> None:
@@ -174,26 +177,26 @@ def test_attack_ok_renders_result(monkeypatch) -> None:
                                    "damage": 15, "hp": 45, "max_hp": 80,
                                    "result": "火球命中"})
     out = cmd_pvp_attack(_P("2"), _ctx())
-    assert "✅ 对 小王 发起攻击" in out
-    assert "小王 受到 15 点伤害，剩余 45/80" in out
+    assert "✅ 已攻击 小王" in out
+    assert "小王 受到 15 伤害\n剩余 45/80" in out
 
 
 def test_attack_missing_seq() -> None:
     """缺参 → pvp_err_missing。"""
     out = cmd_pvp_attack(_P(), _ctx())
-    assert "请指定目标" in out
+    assert "缺少目标" in out
 
 
 def test_attack_unknown_skill() -> None:
     """技能序号非法 → 值域拒绝（对齐 /攻击 battle_no_skill 口径，不走 TPL-12）。"""
     out = cmd_pvp_attack(_P("99"), _ctx())
-    assert "请先 /锁定玩家" in out
+    assert "尚未锁定目标" in out
 
 
 def test_attack_unregistered_gate() -> None:
     """未注册 → 注册门槛拒绝。"""
     out = cmd_pvp_attack(_P("2"), _ctx(registered=False))
-    assert "请先 /注册" in out
+    assert "请先创建角色" in out
 
 
 def test_attack_engine_missing(monkeypatch) -> None:
@@ -211,7 +214,7 @@ def test_attack_no_locked_target(monkeypatch) -> None:
                     lock_result={},
                     attack_result={"ok": False, "reason": "no_target"})
     out = cmd_pvp_attack(_P("2"), _ctx())
-    assert "请先 /锁定玩家" in out
+    assert "尚未锁定目标" in out
 
 
 # ---------------------------------------------------------------------------
@@ -220,19 +223,19 @@ def test_attack_no_locked_target(monkeypatch) -> None:
 def test_err_missing() -> None:
     """缺参 → pvp_err_missing。"""
     out = cmd_pvp_lock(_P(error="缺参"), _ctx())
-    assert "请指定目标" in out
+    assert "缺少目标" in out
 
 
 def test_err_too_many() -> None:
     """超参 → pvp_err_too_many。"""
     out = cmd_pvp_lock(_P("123456789", "99", error="超参"), _ctx())
-    assert "参数过多" in out
+    assert "参数太多" in out
 
 
 def test_err_unknown_sep() -> None:
     """未知分隔符（列表/数量/键值）→ pvp_err_unknown_sep。"""
     out = cmd_pvp_lock(_P("123456789,99", error="未知分隔符"), _ctx())
-    assert "不支持列表/数量/键值参数" in out
+    assert "不支持列表/数量/键值" in out
 
 
 def test_err_reserved() -> None:
@@ -289,31 +292,58 @@ def test_parse_command_real_parsing() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 模板分区（pvp_tpl：白名单完整性 + 默认文案可覆盖）
+# 模板全量表（pvp 20 键 · 2026-09-12 批8·路A 迁表；白名单 + 覆盖）
 # ---------------------------------------------------------------------------
-def test_pvp_tpl_whitelist_coverage() -> None:
-    """白名单完整性：pvp 分区模板占位符 ⊆ 白名单，登记 key 与模板表一一对应。"""
-    import re
-
-    from qbot_rpg.core.templates.pvp_tpl import (
-        DEFAULT_TEMPLATES as PT,
-        PLACEHOLDER_WHITELIST as PW,
+def test_pvp_tpl_whitelist_registered() -> None:
+    """白名单测试：PVP 20 键已迁全量表（分区默认表清空）——表内文本、派生白名单与占位符一一对应。"""
+    import qbot_rpg.core.templates.pvp_tpl as _pvp_partition
+    from qbot_rpg.core.templates import (
+        DEFAULT_TEMPLATES,
+        PLACEHOLDER_WHITELIST,
+        TABLE_TEMPLATES,
     )
-    assert set(PT) == set(PW)
-    for key, tpl in PT.items():
-        ph = set(re.findall(r"\{([a-zA-Z0-9_]+)\}", str(tpl)))
-        assert ph <= PW[key], f"{key}: {ph - PW[key]} 不在白名单"
+    # 2026-09-12 批8·路A：分区默认表/白名单已清空（20 键全部迁全量表；空壳保留 import 兼容）
+    assert not _pvp_partition.DEFAULT_TEMPLATES
+    assert not _pvp_partition.PLACEHOLDER_WHITELIST
+    pvp_keys = {k for k in TABLE_TEMPLATES if k.startswith("pvp")}
+    assert len(pvp_keys) == 20
+    for key in sorted(pvp_keys):
+        tpl = TABLE_TEMPLATES[key]
+        assert DEFAULT_TEMPLATES[key] == tpl, f"聚合未走表：{key}"
+        assert PLACEHOLDER_WHITELIST[key] == _scan_placeholders(tpl), f"白名单不一致：{key}"
+    # 占位符清单逐键核对（信息要素不丢字段）
+    assert PLACEHOLDER_WHITELIST["pvp_lock_ok"] == {"name"}
+    assert PLACEHOLDER_WHITELIST["pvp_lock_status_level"] == {"level"}
+    assert PLACEHOLDER_WHITELIST["pvp_lock_status_job"] == {"job"}
+    assert PLACEHOLDER_WHITELIST["pvp_lock_status_hp"] == {"hp", "max_hp"}
+    assert PLACEHOLDER_WHITELIST["pvp_lock_status_equip"] == {"summary"}
+    assert PLACEHOLDER_WHITELIST["pvp_lock_equip_summary"] == {"slot", "item"}
+    assert PLACEHOLDER_WHITELIST["pvp_lock_not_found"] == {"qq"}
+    assert PLACEHOLDER_WHITELIST["pvp_attack_ok"] == {"name", "result"}
+    assert PLACEHOLDER_WHITELIST["pvp_attack_result_line"] == {"name", "damage", "hp", "max_hp"}
+    # 无占位符模板：白名单空集
+    for key in ("pvp_err_missing", "pvp_err_too_many", "pvp_err_unknown_sep",
+                "pvp_err_reserved", "pvp_engine_missing", "pvp_engine_unavailable",
+                "pvp_lock_self", "pvp_lock_no_target", "pvp_attack_no_target",
+                "pvp_registered_gate", "pvp_not_registered"):
+        assert PLACEHOLDER_WHITELIST[key] == set(), f"{key} 应无占位符"
+
+
+def _scan_placeholders(tpl: str) -> set:
+    """扫描模板字符串里的 {name} 占位符名。"""
+    import re
+    return set(re.findall(r"\{([a-zA-Z0-9_]+)\}", tpl))
 
 
 def test_pvp_tpl_registered_in_global_registry() -> None:
-    """pvp 分区登记进 templates 全局注册表（两清单含 pvp_* key）。"""
+    """pvp 键登记进 templates 全局注册表（表 + 派生白名单均含 pvp_* key）。"""
     from qbot_rpg.core.templates import DEFAULT_TEMPLATES, PLACEHOLDER_WHITELIST
     assert "pvp_lock_ok" in DEFAULT_TEMPLATES
     assert "pvp_err_missing" in PLACEHOLDER_WHITELIST
 
 
 def test_pvp_tpl_override_via_ctx(monkeypatch) -> None:
-    """内容包覆盖：ctx[\"templates\"] 覆盖 pvp 分区默认 → 渲染处 tpl_of 生效。"""
+    """内容包覆盖：ctx["templates"] 覆盖全量表默认 → 渲染处 tpl_of 生效。"""
     from qbot_rpg.core.templates import resolve_templates
     _install_engine(monkeypatch,
                     lock_result={"ok": True, "target": {

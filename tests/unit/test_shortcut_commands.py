@@ -69,8 +69,8 @@ def test_tc_shc_01_unbind_missing():
 def test_shc_unbind_syntax_tpl12():
     """工程补白 1：解绑必须恰好 1 参数；0 参/超参/解析错误 → TPL-12。"""
     ctx = make_ctx()
-    assert cmd_shortcut_unbind(parse("/快捷解绑"), ctx).startswith("❌ 指令不正确：/快捷解绑")
-    assert cmd_shortcut_unbind(parse("/快捷解绑 1 2"), ctx).startswith("❌ 指令不正确：/快捷解绑 1 2")
+    assert cmd_shortcut_unbind(parse("/快捷解绑"), ctx).startswith("❌ 指令不正确：快捷解绑")
+    assert cmd_shortcut_unbind(parse("/快捷解绑 1 2"), ctx).startswith("❌ 指令不正确：快捷解绑 1 2")
 
 
 def test_shc_unbind_unregistered_gate():
@@ -120,8 +120,8 @@ def test_shc_list_paging_clamp():
     assert "s6 → 攻击6" in out2 and "s1 → 攻击1" not in out2      # 第 2 页 2 条
     out3 = cmd_shortcut_list(parse("/快捷列表 99"), ctx)          # 夹取最后一页
     assert "s6 → 攻击6" in out3
-    assert cmd_shortcut_list(parse("/快捷列表 0"), ctx).startswith("❌ 指令不正确：/快捷列表 0")
-    assert cmd_shortcut_list(parse("/快捷列表 abc"), ctx).startswith("❌ 指令不正确：/快捷列表 abc")
+    assert cmd_shortcut_list(parse("/快捷列表 0"), ctx).startswith("❌ 指令不正确：快捷列表 0")
+    assert cmd_shortcut_list(parse("/快捷列表 abc"), ctx).startswith("❌ 指令不正确：快捷列表 abc")
 
 
 def test_shc_list_no_decorative_emoji():
@@ -206,7 +206,7 @@ def test_regress_p2_5_list_fixed_subword_tpl12():
     不静默渲染第 1 页。"""
     ctx = make_ctx()
     out = cmd_shortcut_list(parse("/快捷列表 自动"), ctx)
-    assert out.startswith("❌ 指令不正确：/快捷列表 自动")
+    assert out.startswith("❌ 指令不正确：快捷列表 自动")
 
 
 def test_regress_p2_4_shortcut_max_zero_unlimited():

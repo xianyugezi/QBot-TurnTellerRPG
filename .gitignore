@@ -20,3 +20,6 @@ htmlcov/
 coverage.xml
 .hermes/
 .venv
+
+# j-space 工作台账（会话内推理状态，不入库）
+.jspace/

@@ -176,7 +176,7 @@ def test_quest_clamp_last_page():
 def test_quest_invalid_input_tpl12(raw, fragment):
     """裁决② + 3d §5.1：0/负数/非数字 → TPL-12 统一报错。"""
     out = cmd_quest(parse(raw), make_ctx())
-    assert out == f"❌ 指令不正确：{fragment}。输入 /帮助 查看可用指令。"
+    assert out == f"❌ 指令不正确：{str(fragment).lstrip('/')}\n发 帮助 查看可用指令"
 
 
 def test_quest_empty_board():
@@ -408,7 +408,7 @@ def test_quest_missing_seq_tpl12():
     for raw in ("/任务 接取", "/任务 信息", "/任务 放弃", "/任务 交付"):
         out = cmd_quest(parse(raw), make_ctx())
         assert out.startswith("❌ 指令不正确："), raw
-        assert "输入 /帮助 查看可用指令。" in out, raw
+        assert "发 帮助 查看可用指令" in out, raw
 
 
 @pytest.mark.parametrize("raw", ["/任务 接取 abc", "/任务 接取 0", "/任务 接取 -2"])

@@ -185,7 +185,7 @@ def test_shop_integer_clamp_last_page():
 def test_shop_invalid_input_tpl12(raw, fragment):
     """裁决② + 3d §5.1：0/负数/未命名商店 → TPL-12 统一报错。"""
     out = cmd_shop(parse(raw), make_ctx())
-    assert out == f"❌ 指令不正确：{fragment}。输入 /帮助 查看可用指令。"
+    assert out == f"❌ 指令不正确：{str(fragment).lstrip('/')}\n发 帮助 查看可用指令"
 
 
 def test_shop_name_with_page_arg():
@@ -230,7 +230,7 @@ def test_shop_list_clamp_last_page():
 def test_shop_list_invalid_page_tpl12(raw):
     """裁决② + 3d §5.1：列表页码 0/非数字 → TPL-12。"""
     out = cmd_shop(parse(raw), make_ctx())
-    assert out.startswith("❌ 指令不正确：/商店 列表 ")
+    assert out.startswith("❌ 指令不正确：商店 列表 ")
 
 
 def test_shop_list_single_page_no_footer():
@@ -354,7 +354,7 @@ def test_buy_mixed_payment():
 
 def test_buy_missing_target_tpl12():
     """缺参 → TPL-12。"""
-    assert cmd_buy(parse("/购买"), make_ctx()) == "❌ 指令不正确：/购买。输入 /帮助 查看可用指令。"
+    assert cmd_buy(parse("/购买"), make_ctx()) == "❌ 指令不正确：购买\n发 帮助 查看可用指令"
 
 
 def test_buy_shortname_prefix_match():
@@ -431,7 +431,7 @@ def test_sell_item_missing():
 
 def test_sell_missing_target_tpl12():
     """缺参 → TPL-12。"""
-    assert cmd_sell(parse("/出售"), make_ctx()) == "❌ 指令不正确：/出售。输入 /帮助 查看可用指令。"
+    assert cmd_sell(parse("/出售"), make_ctx()) == "❌ 指令不正确：出售\n发 帮助 查看可用指令"
 
 
 # ---------------------------------------------------------------------------

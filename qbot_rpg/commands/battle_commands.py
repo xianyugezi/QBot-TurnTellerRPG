@@ -1055,6 +1055,7 @@ def dispatch_batch(
     ctx: Mapping[str, Any],
     *,
     player_action: Optional[Mapping[str, Any]] = None,
+    render_effect_events: bool = True,
 ) -> List[str]:
     """NPC 连锁批量行动派发（CTB 新增；职责 1/2 拆分）。
 
@@ -1068,6 +1069,10 @@ def dispatch_batch(
     :param pipeline: 统一出口（前缀 + Sender）。
     :param ctx: 战斗 ctx（状态差分/展示名注入）。
     :param player_action: 玩家行动 dict（保留参数；批量渲染只出 NPC 段）。
+    :param render_effect_events: 是否在批量段渲染本次 `effect_events`。默认 True——
+        **批量段单独发送**时仍要出效果行（不丢事件）。`_dispatch_merged_action`
+        紧随玩家段时传 False：本次行动 owner = 玩家段，同一批事件两段各渲染一次
+        会造成重复（H1 复核 · 2026-09-12）。
     :return: 实际发送段列表（无 NPC 行动 → []）。
     """
     try:
@@ -1092,7 +1097,8 @@ def dispatch_batch(
             status_changes=ctx.get("battle_status_changes") or (),
             start_time=getattr(report, "battle_time", None),
             end_time=getattr(report, "battle_time", None),
-            effect_events=tuple(getattr(report, "effect_events", ()) or ()),
+            effect_events=(tuple(getattr(report, "effect_events", ()) or ())
+                           if render_effect_events else ()),
             **battle_hud_payload(snap),        # 战斗 HUD v2 分项资源行取数
         )
         return pipeline.send_action_batch(batch)
@@ -1442,6 +1448,24 @@ def _apply_death_penalty(ctx: Mapping[str, Any], engine: Any) -> None:
         return
 
 
+def _effect_events_owned_by_player_segment(report: Any) -> bool:
+    """本拍 `effect_events` 是否由玩家段渲染（H1 归属原则）。
+
+    一次玩家操作用同一条合并消息承载「NPC 连锁段 + 玩家段」；两段若都渲染同一批
+    `effect_events`，`【持续效果】/【效果失效】` 会在桥接合并后的消息里各出现两次。
+    归属原则（2026-09-12 复核修复）：**本次行动 owner = 玩家段**，批量段不再渲染。
+
+    唯一例外：逃跑成功走固定文案 `send_flee`（不渲染 HUD 行）→ 由批量段承载，
+    避免丢事件。其余路径（攻击/技能/道具/逃跑失败）玩家段都会经
+    `render_battle_round` 渲染 effect 行。
+    """
+    oc = _first_player_outcome(report)
+    if oc is None:
+        return True
+    atype = str(getattr(oc, "action_type", "") or "")
+    return not (atype == "flee" and bool(getattr(oc, "ok", False)))
+
+
 def _dispatch_merged_action(
     engine: Any,
     report: Any,
@@ -1463,10 +1487,14 @@ def _dispatch_merged_action(
       同一 NPC 行动行。
     合计 ≤2 条（铁律 2「单次操作 ≤1-2 条」）。
 
+    effect 行归属：本次行动 owner = 玩家段（见 `_effect_events_owned_by_player_segment`）；
+    仅逃跑成功等玩家段不出 effect 行的路径交给批量段，两段绝不重复渲染同一批事件（H1）。
+
     :return: 实际发送段列表。
     """
     sent: List[str] = []
-    _batch = dispatch_batch(engine, report, pipeline, ctx, player_action=player_action)
+    _batch = dispatch_batch(engine, report, pipeline, ctx, player_action=player_action,
+                            render_effect_events=not _effect_events_owned_by_player_segment(report))
     sent.extend(_batch)
     # 2026-09-12 用户拍板：批量段（怪行动）已带前缀 → 玩家段压掉自己的前缀行，
     # 桥接层把两段合并为一条消息时**只在最顶部保留一个**「Lv{n}.{玩家名}」。

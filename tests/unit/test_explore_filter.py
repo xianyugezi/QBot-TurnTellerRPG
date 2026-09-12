@@ -131,7 +131,7 @@ def test_filter_page_invalid_tpl12():
     """裁决②：/背包筛选装备 0/-1/负数 页码 → TPL-12（不崩溃、不当筛选词）。"""
     for raw in ["/背包筛选装备 0", "/背包筛选装备 -1", "/背包筛选装备 -3"]:
         out = cmd_bag_filter(parse(raw), make_ctx())
-        assert out == f"❌ 指令不正确：{raw}。输入 /帮助 查看可用指令。", raw
+        assert out == f"❌ 指令不正确：{str(raw).lstrip('/')}\n发 帮助 查看可用指令", raw
 
 
 def test_filter_missing_category():
@@ -450,5 +450,5 @@ def test_register_gate_default_text():
 def test_enter_noarg_default_text():
     """/进入 无参默认文案：方向枚举行 + 副本入口行（批1·路C 新口径，免斜杠）。"""
     out = cmd_enter(parse("/进入"), make_ctx())
-    assert out == "❌ 发 进入 上/下/左/右\n或 副本入口 <序号 或 名称>"
+    assert out == "❌ 发 进入 上或下或左或右\n或 副本入口 <序号 或 名称>"
 

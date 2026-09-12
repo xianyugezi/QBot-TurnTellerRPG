@@ -301,7 +301,7 @@ def test_player_invalid_page_tpl12(raw, args) -> None:
     """裁决② + 3d §5.1：0/负数/非数字/超参/传记页码非法 → TPL-12。"""
     ctx = _ctx(event_log=[_ev("milestone", "2026-08-28", pct=50)])
     out = cmd_log(_pc(*args, raw=raw), ctx)
-    assert out == f"❌ 指令不正确：{raw}。输入 /帮助 查看可用指令。"
+    assert out == f"❌ 指令不正确：{str(raw).lstrip('/')}\n发 帮助 查看可用指令"
 
 
 def test_unknown_tag_not_in_adventure() -> None:
@@ -433,7 +433,7 @@ def test_gm_invalid_tpl12(raw, args) -> None:
     parsed = _pc(*args, raw=raw)
     parsed.kv = kv
     out = cmd_log(parsed, ctx)
-    assert out == f"❌ 指令不正确：{raw}。输入 /帮助 查看可用指令。"
+    assert out == f"❌ 指令不正确：{str(raw).lstrip('/')}\n发 帮助 查看可用指令"
 
 
 # ---------------------------------------------------------------------------

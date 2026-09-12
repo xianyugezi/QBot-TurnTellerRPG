@@ -212,7 +212,7 @@ def test_synthesis_qty_cap_hint_not_block():
 def test_synthesis_missing_arg_tpl12():
     """/合成 缺参 → TPL-12 统一报错。"""
     out = cmd_synthesis(parse("/合成"), make_ctx())
-    assert out == "❌ 指令不正确：/合成。输入 /帮助 查看可用指令。"
+    assert out == "❌ 指令不正确：合成\n发 帮助 查看可用指令"
 
 
 def test_synthesis_parse_error_tpl12():

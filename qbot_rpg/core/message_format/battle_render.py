@@ -110,25 +110,41 @@ def _fold_message_lines(
     分页折叠走 _fold_item_lines（列表页可查），本函数服务战斗轮消息。
     折叠行模板 battle_fold_lines（battle_tpl 分区，内容包可覆盖）。
     """
+    max_lines = max(1, int(max_lines))
     counts = [max(1, len(str(ln).splitlines())) for ln in lines]   # 物理行数（元素可含换行）
     if sum(counts) <= max_lines:
         return lines
-    keep_head = 1                          # 首行（前缀/首行动）
-    budget = max_lines - counts[0] - 1     # 末段关键行预算（-1 给省略行）
-    if budget < 1:
-        budget = 1
-    keep_tail = 0
-    acc = 0
-    for c in reversed(counts[keep_head:]):
-        if acc + c > budget:
-            break
-        acc += c
-        keep_tail += 1
-    if keep_tail < 1:
-        keep_tail = 1
-    head = lines[:keep_head]
-    tail = lines[len(lines) - keep_tail:]
-    folded = sum(counts[keep_head:len(lines) - keep_tail])         # 折叠内容物理行数
+    # 折叠行自身也可能多行（模板可覆盖）→ 先按物理行预留；异常配置（折叠行即超预算）兜底
+    fold_probe = str(tpl_of(ctx, "battle_fold_lines", {"n": 0}) or "")
+    fold_phys = max(1, len(fold_probe.splitlines()))
+    if fold_phys >= max_lines:
+        return (fold_probe.splitlines() or [fold_probe])[:max_lines]
+    budget = max_lines - fold_phys          # 可分配给头部 + 末段的物理行
+    total_phys = sum(counts)
+    # 头部：优先保留首元素的原始多行形态；放不下则按物理行截断为前缀
+    first_all = str(lines[0]).splitlines() or [str(lines[0])]
+    reserve_tail = 1 if len(lines) > 1 else 0          # 末段至少留 1 行（旧 keep_tail≥1 语义）
+    head_allow = max(1, budget - reserve_tail)
+    head_take = min(len(first_all), head_allow)
+    head: List[str] = [lines[0]] if head_take == len(first_all) \
+        else ["\n".join(first_all[:head_take])]
+    budget -= head_take
+    kept_phys = head_take
+    # 末段：从尾往前整元素拟合（保留原始元素）；单个多行元素放不下 → 只留其末尾物理行
+    tail: List[str] = []
+    idx = len(lines) - 1
+    while idx >= 1 and budget > 0:
+        el_all = str(lines[idx]).splitlines() or [str(lines[idx])]
+        if len(el_all) <= budget:
+            tail = [lines[idx]] + tail
+            budget -= len(el_all)
+            kept_phys += len(el_all)
+            idx -= 1
+            continue
+        tail = ["\n".join(el_all[-budget:])] + tail      # 截断：保留该元素末尾 budget 行
+        kept_phys += budget
+        budget = 0
+    folded = max(0, total_phys - kept_phys)
     return head + [tpl_of(ctx, "battle_fold_lines", {"n": folded})] + tail
 
 
@@ -269,16 +285,21 @@ def render_battle_end(
             turns = _battle_turns(player, enemy, summary)  # 回合数 N（CTB 下 = 行动数）
             lines.append(tpl_of(ctx, "battle_end_summary", {
                 "label": label, "turns": turns}))          # BREP-24
+        tail_text = str(tail) if (tail and str(tail).strip()) else ""
         if summary is not None:
             # 物理行计数（元素可含换行：BREP-24 三行块/逐行结算块）——批6 收口修：
             # 原按 len(lines) 元素数计，三行化后预算虚高 2 行 → 明细块超 16 行上限。
+            # M2 复核修复（2026-09-12）：尾提示置底行（defer_tail）也必须计入预算，
+            # 否则 16 行硬上限被 tail 多出 1+ 行击穿。
             overhead = sum(max(1, len(str(ln).splitlines())) for ln in lines)
+            overhead += max(1, len(tail_text.splitlines())) if tail_text else 0
             block = _render_summary_block(summary, overhead=overhead, ctx=ctx)
             if block:
                 lines.extend(block)                        # BREP-25 木桩明细块
-        if tail and str(tail).strip():
-            lines.append(str(tail))                        # 尾提示置底（用户 2026-09-12 拍板）
-        return "\n".join(lines)
+        if tail_text:
+            lines.append(tail_text)                        # 尾提示置底（用户 2026-09-12 拍板）
+        # 终局消息同样守 16 行硬上限（含 tail 与多行元素，统一物理行口径；M2/M3）
+        return "\n".join(_fold_message_lines(lines, ctx=ctx))
     except Exception:  # pragma: no cover - 渲染层兜底不崩
         _logger.exception("render_battle_end 渲染失败，返回已装配行")
         return "\n".join(ln for ln in lines if isinstance(ln, str) and ln.strip())

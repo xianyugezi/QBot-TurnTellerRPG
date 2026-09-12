@@ -87,3 +87,41 @@ def test_derived_line_registered_as_intentional_exemption():
     assert reason, "skill_info_derived 未登记为有意豁免"
     assert "不折行" in reason and "用户拍板" in reason
     assert "派生：{names}" in _doc()["templates"].get("skill_info_derived", "")
+
+
+def test_load_table_tolerates_corrupt_table(tmp_path):
+    """M4（复核修复 2026-09-12）：JSON 截断 / 编码损坏 / 文件缺失 → 空表回落，绝不抛。"""
+    from qbot_rpg.core.templates import _load_table
+
+    bad_json = tmp_path / "bad.json"
+    bad_json.write_text("{ not json", encoding="utf-8")
+    assert _load_table(bad_json) == {}
+
+    bad_utf = tmp_path / "bad_utf.json"
+    bad_utf.write_bytes(b'{"templates": {"a": "\xff\xfe"}}')       # 非法 UTF-8
+    assert _load_table(bad_utf) == {}
+
+    assert _load_table(tmp_path / "missing.json") == {}
+
+    good = tmp_path / "good.json"
+    good.write_text(json.dumps({"templates": {"k": "v", "n": 1}}), encoding="utf-8")
+    assert _load_table(good) == {"k": "v"}                          # 只收 str 值
+
+
+def test_hud_lines_registered_as_intentional_exemption():
+    """L3/L6（复核修复 2026-09-12）：HUD 三数值键 +「怪物状态」行登记 meta.prose_keys。
+
+    口径来源：用户 2026-09-12 拍板（HUD 数值行极端大数值允许超 28 半角；
+    怪物状态行整行全量枚举、不折行）→ 宽度门禁跳过。
+    """
+    prose = (_doc().get("meta") or {}).get("prose_keys") or {}
+    for key in ("battle_hud_enemy_status", "battle_hud_player_hp",
+                "battle_hud_player_mp", "battle_hud_enemy_hp"):
+        assert prose.get(key), f"{key} 未登记 prose_keys"
+        assert "2026-09-12" in prose[key] and "用户拍板" in prose[key]
+
+    # 登记后宽度门禁跳过 → HUD 三数值键不再进 WARN
+    _fails, warns = _mod.scan(TABLE)
+    warned = {r["key"] for r in warns}
+    assert not (warned & {"battle_hud_player_hp", "battle_hud_player_mp",
+                          "battle_hud_enemy_hp"})

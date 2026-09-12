@@ -326,10 +326,10 @@ def test_regress_p1_1_fixed_subword_name_not_swallowed():
     """P1-1 回归（M6 批1B 审查）：`注册 自动 战士` 的 fixed_subword「自动」被解析器抽离后
     不得静默把「战士」当角色名注册——应 TPL-12 明确拒绝（角色名含会话子词无法经解析器）。"""
     out = cmd_register(parse("/注册 自动 战士"), make_ctx())
-    assert out.startswith("❌ 指令不正确：/注册 自动 战士")
+    assert out.startswith("❌ 指令不正确：注册 自动 战士")
     # 无 job 参数同样拒绝
     out2 = cmd_register(parse("/注册 自动"), make_ctx())
-    assert out2.startswith("❌ 指令不正确：/注册 自动")
+    assert out2.startswith("❌ 指令不正确：注册 自动")
 
 
 # ---------------------------------------------------------------------------

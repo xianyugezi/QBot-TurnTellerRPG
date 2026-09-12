@@ -167,7 +167,7 @@ _TC26_SUMMARY: Dict[str, Any] = {
 
 def test_tc26_summary_page1_5_items_plus_footer() -> None:
     """TC-26：`/木桩` 战后明细（来源 8 项）第 1 页 —— 摘要四行（批6 拆行）+ 前 5 条条目
-    + 页脚 TPL-08 `— 第 1/2 页 · 共 8 条 · 输入 /木桩 页码 翻页 —`；条目占比降序。"""
+    + 页脚 TPL-08 `— 第 1/2 页 · 共 8 条 · 发 木桩 页码 翻页 —`；条目占比降序。"""
     text = render_battle_summary(_TC26_SUMMARY, page=1)
     _assert_no_banned_emoji(text)
     assert text.split("\n") == [
@@ -180,7 +180,7 @@ def test_tc26_summary_page1_5_items_plus_footer() -> None:
         "3. 灼烧 210（17%）",
         "4. 突刺 90（7%）",
         "5. 追击 40（3%）",
-        "— 第 1/2 页 · 共 8 条 · 输入 /木桩 页码 翻页 —",
+        "— 第 1/2 页 · 共 8 条 · 发 木桩 页码 翻页 —",
     ]
 
 
@@ -196,7 +196,7 @@ def test_tc26_summary_page2_3_items_footer() -> None:
         "1. 反击 30（2%）",
         "2. 反弹 15（1%）",
         "3. dot 5（0%）",
-        "— 第 2/2 页 · 共 8 条 · 输入 /木桩 页码 翻页 —",
+        "— 第 2/2 页 · 共 8 条 · 发 木桩 页码 翻页 —",
     ]
 
 
@@ -345,3 +345,38 @@ def test_render_battle_round_folds_over16() -> None:
     assert "第 1 段" in folded[0]              # 保留首段（3 物理行）
     assert "…（其余 45 行已折叠）" in folded   # 折叠中间 15 段=45 物理行（head1+tail4+fold1）
     assert "第 20 段" in folded[-1]            # 保留末段
+
+
+# ---------------------------------------------------------------------------
+# M2/M3（2026-09-12 复核修复）：16 行硬上限按物理行统一计算，不被击穿
+# ---------------------------------------------------------------------------
+
+
+def test_render_battle_end_tail_counted_in_16_line_budget() -> None:
+    """M2：终局尾提示（defer_tail 置底）计入 16 行物理行预算，总行数不超限。"""
+    s20: Dict[str, Any] = {
+        "total": 5000, "max_hit": 300, "crits": 5, "blocks": 2,
+        "items": [("来源%02d" % i, 5000 - i * 200) for i in range(1, 21)],
+    }
+    tail = "→ 攻击 或 攻击 <技能名>"
+    text = render_battle_end(_party(), _enemy(turns=45), "win", s20, tail=tail)
+    lines = text.split("\n")
+    assert len(lines) <= 16, text
+    assert lines[-1] == tail                    # 尾提示仍置底
+
+
+def test_fold_message_lines_hard_cap_multiline_elements() -> None:
+    """M3/T11：单个多行元素不得击穿 16 行硬上限（含多行 tail / 多行首元素）。"""
+    big_tail = "\n".join(f"尾{i}" for i in range(20))
+    folded = br._fold_message_lines(["头", "中", big_tail], max_lines=16)
+    assert len("\n".join(folded).split("\n")) <= 16
+
+    first_big = "\n".join(f"首{i}" for i in range(15))
+    folded2 = br._fold_message_lines([first_big, "尾1", "尾2"], max_lines=16)
+    assert len("\n".join(folded2).split("\n")) <= 16
+
+    # 多行元素可完整容纳时保留原始元素形态（不碎化为逐行元素）
+    three = "\n".join(f"段{i}" for i in range(3))
+    folded3 = br._fold_message_lines([three] + [f"行{i}" for i in range(20)], max_lines=16)
+    assert len("\n".join(folded3).split("\n")) <= 16
+    assert folded3[0] == three

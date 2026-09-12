@@ -84,11 +84,16 @@ def segment_by_length(
 
 
 def format_tpl12(fragment: str) -> str:
-    """TPL-12 指令出错（3d §5.1）：``❌ 指令不正确：{原指令片段}。输入 /帮助 查看可用指令。``
+    """TPL-12 指令出错（3d §5.1）：``❌ 指令不正确：{原指令片段}\n发 帮助 查看可用指令``。
 
-    原指令片段截取前 20 字符，超过截断加 ``…``（3d §5.1 防刷屏）。文案唯一源 errors.py（D-04）。
+    原指令片段截取前 20 字符，超过截断加 ``…``（3d §5.1 防刷屏）；片段保留原样。
+    免斜杠（M8 复核修复 2026-09-12）：片段若带前导 ``/`` 先剥掉（玩家可见文案零斜杠），
+    指令指引改「发 帮助 …」；文案唯一源 = 全量表键 ``err_bad_command``（errors.py 读取）。
     """
-    clipped = fragment[:20] + ("…" if len(fragment) > 20 else "")
+    frag = str(fragment or "")
+    if frag.startswith("/"):
+        frag = frag[1:]
+    clipped = frag[:20] + ("…" if len(frag) > 20 else "")
     return TPL_ERR_BAD_COMMAND.format(fragment=clipped)
 
 

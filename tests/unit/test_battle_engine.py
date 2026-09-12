@@ -338,3 +338,32 @@ def test_p1_rejected_keeps_act_and_no_turn(seed: int):
     assert eng.state == "act", "被拒后状态保持 ACT（可反复尝试）"
     assert eng.battle_state()["combo_state"].get("player", {}).get("count", 0) == 0, "不改连段"
     assert eng.battle_state()["player"]["mp"] == 0, "不耗 MP"
+
+
+# ---------------------------------------------------------------------------
+# M1（2026-09-12 复核修复）：玩家拍前 NPC 连锁的 effect_events 不被清空时序吞掉
+# ---------------------------------------------------------------------------
+
+def test_player_act_keeps_pre_ready_effect_events(monkeypatch) -> None:
+    """M1：`_effect_events` 必须在 `_resolve_ready_actor()` **之前**清空。
+
+    复现：把清空放在 resolve 之后（原实现）会连「玩家拍前 NPC 连锁」刚追加的
+    DOT/失效事件一起清掉且不再补发 → 这批效果行永久丢失。这里强制进入
+    `not paused` 分支，并让首次 resolve 追加一条事件，断言它出现在报告里。
+    """
+    eng = BattleEngine().start(dict(PLAYER), dict(ENEMY), random_seed=1)
+    eng._ctb._paused = False               # 强制进入「玩家拍前自动推进」分支
+    calls = {"n": 0}
+
+    def _fake_resolve():
+        calls["n"] += 1
+        if calls["n"] == 1:                # 仅首次（清空时点前的那次）追加
+            eng._effect_events.append(
+                {"type": "status_expired", "status": "rage", "name": "狂暴"})
+        return None
+
+    monkeypatch.setattr(eng, "_resolve_ready_actor", _fake_resolve)
+    report = eng.player_act("normal")
+    assert calls["n"] >= 1
+    assert any(ev.get("type") == "status_expired" for ev in report.effect_events), \
+        "玩家拍前 NPC 连锁的 effect_events 被清空时序吞掉"

@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from pathlib import Path
 from typing import Any, Dict, Mapping, Optional
@@ -38,17 +39,30 @@ PLACEHOLDER_WHITELIST: Dict[str, set] = dict(_BASE_WHITELIST)
 
 _PLACEHOLDER_RE = re.compile(r"\{([a-zA-Z0-9_]+)\}")
 
+_LOGGER = logging.getLogger(__name__)
+
+
+def _load_table(path: Path) -> Dict[str, str]:
+    """读取全量模板表（唯一存储）；不可读 → 空 dict（绝不让 import 崩）。
+
+    M4 复核修复（2026-09-12）：兼容路径必须同时兜住 **OSError 族**（文件缺失/权限/IO）
+    与 **ValueError 族**（`json.JSONDecodeError` 截断、`UnicodeDecodeError` 编码损坏）——
+    原实现只捕 OSError，表损坏时 import 直接抛异常、整包不可用，与注释承诺不符。
+    抽出独立函数便于单测（临时文件注入损坏内容）。
+    """
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        tpl_raw = doc.get("templates") if isinstance(doc, dict) else None
+        if isinstance(tpl_raw, dict):
+            return {k: v for k, v in tpl_raw.items() if isinstance(v, str)}
+    except (OSError, ValueError) as exc:
+        _LOGGER.warning("模板表不可读（回落 base 默认）：%s（%s）", path, exc)
+    return {}
+
+
 # —— 全量模板表（唯一存储）——
 _TABLE_PATH = Path(__file__).with_name("template_table.json")
-TABLE_TEMPLATES: Dict[str, str] = {}
-try:
-    _doc = json.loads(_TABLE_PATH.read_text(encoding="utf-8"))
-    _tpl_raw = _doc.get("templates") if isinstance(_doc, dict) else None
-    if isinstance(_tpl_raw, dict):
-        TABLE_TEMPLATES = {k: v for k, v in _tpl_raw.items() if isinstance(v, str)}
-except OSError:
-    # 表文件缺失（非 repo 部署的兼容路径）：表现同迁移前（全走 base 默认）。
-    TABLE_TEMPLATES = {}
+TABLE_TEMPLATES: Dict[str, str] = _load_table(_TABLE_PATH)
 DEFAULT_TEMPLATES.update(TABLE_TEMPLATES)
 
 # 表内 key 的占位符白名单自动派生（与旧分区手工登记同语义；测试锚定同款）。

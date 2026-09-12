@@ -161,7 +161,7 @@ def test_checkin_clamp_last_page():
 def test_checkin_invalid_input_tpl12(raw, fragment):
     """裁决② + 3d §5.1：0/负数/非数字/未知子词 → TPL-12 统一报错。"""
     out = cmd_checkin(parse(raw), make_ctx())
-    assert out == f"❌ 指令不正确：{fragment}。输入 /帮助 查看可用指令。"
+    assert out == f"❌ 指令不正确：{str(fragment).lstrip('/')}\n发 帮助 查看可用指令"
 
 
 def test_checkin_idempotent_still_shows_progress():
@@ -238,7 +238,7 @@ def test_checkin_status_clamp():
 def test_checkin_status_invalid_page_tpl12(raw):
     """裁决②：状态页码 0/负数/非数字 → TPL-12。"""
     out = cmd_checkin(parse(raw), make_ctx())
-    assert out.startswith("❌ 指令不正确：/签到 状态 ")
+    assert out.startswith("❌ 指令不正确：签到 状态 ")
 
 
 # ---------------------------------------------------------------------------
@@ -309,7 +309,7 @@ def test_checkin_parse_error_tpl12():
     """超参（3 个位置参数）→ 解析 error → TPL-12。"""
     out = cmd_checkin(parse("/签到 状态 1 2"), make_ctx())
     assert out.startswith("❌ 指令不正确：")
-    assert "输入 /帮助 查看可用指令。" in out
+    assert "发 帮助 查看可用指令" in out
 
 
 # ---------------------------------------------------------------------------

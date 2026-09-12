@@ -4937,12 +4937,16 @@ class BattleEngine:
         # 玩家 ready 前置推进行动条：把控制权推到玩家拍（含 NPC 连锁自动推进）。
         # 幂等：若当前已处于玩家暂停态，_resolve_ready_actor 不重复消费。
         # NPC 行动 outcome 属「上一次推进」产物 → 本次报告前清空，只收本拍内容。
+        # HUD v2 效果事件（M1 复核修复 2026-09-12）：**先清历史再收集本拍**——原实现
+        # 先 `_resolve_ready_actor()`（可能追加玩家拍前 NPC 连锁的 DOT/失效事件）再清空，
+        # 会把刚追加的事件一并清掉且不再补发 → 这批效果行永久丢失。清空提到 if 之前，
+        # 玩家拍前 NPC 连锁产生的 effect_events 随本报告上报（正常暂停态无新增不变）。
         self._npc_outcomes = []
+        self._effect_events = []             # HUD v2：本拍效果事件从零收集（先清历史）
         if self._ctb is not None and not self._ctb.paused and not self._finished:
             self._resolve_ready_actor()
         pre_npc = list(self._npc_outcomes)   # 押到玩家拍之前的 NPC 连锁行动
         self._npc_outcomes = []
-        self._effect_events = []             # HUD v2：本拍效果事件从零收集
         if self._finished:
             return self._turn_report()
 

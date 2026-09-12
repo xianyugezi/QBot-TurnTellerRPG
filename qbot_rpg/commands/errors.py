@@ -11,6 +11,8 @@ from __future__ import annotations
 
 from typing import Any, Optional, Type
 
+from qbot_rpg.core.templates import DEFAULT_TEMPLATES
+
 __all__ = [
     "errors",
     "translate_error",
@@ -19,8 +21,13 @@ __all__ = [
     "TPL_ERR_LACK_RESOURCE",
 ]
 
-# 统一错误模板（细化_3d §五 TPL-12/13/14；禁止各系统自造文案 D-04）
-TPL_ERR_BAD_COMMAND: str = "❌ 指令不正确：{fragment}。输入 /帮助 查看可用指令。"
+# 统一错误模板（细化_3d §五 TPL-12/13/14；禁止各系统自造文案 D-04）。
+# TPL-12（M8 复核修复 2026-09-12）：文案迁全量表键 `err_bad_command`（免斜杠「发 帮助 …」）；
+# 本模块读**默认表值**作唯一源——format_tpl12 家族无 ctx 形参，内容包覆盖需后续给调用方
+# 注入 templates（当前为默认表文本，已入表可被脚本/门禁校验）。
+_FALLBACK_BAD_COMMAND = "❌ 指令不正确：{fragment}\n发 帮助 查看可用指令"
+TPL_ERR_BAD_COMMAND: str = str(
+    DEFAULT_TEMPLATES.get("err_bad_command") or _FALLBACK_BAD_COMMAND)
 TPL_ERR_CONDITION: str = "❌ 条件不满足：{name}（当前 {current}，需要 {required}）"
 TPL_ERR_LACK_RESOURCE: str = "❌ 资源不足：需要 {resource}{amount}，当前 {current}"
 

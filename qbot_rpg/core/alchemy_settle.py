@@ -458,7 +458,7 @@ class SettleEngine:
             return {
                 "ok": False,
                 "reason": "no_snapshot",
-                "message": "当前没有调合会话，先 /炼金 <配方> 开始",
+                "message": tpl_of(ctx, "alchemy_no_session"),
             }
         # ⑨ 终态幂等 gate（Q-S7：重复确认/重投递 → 直接「已结算」零业务写）
         settled = False

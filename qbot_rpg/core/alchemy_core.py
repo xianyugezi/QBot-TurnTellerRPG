@@ -741,7 +741,7 @@ class AlchemyCore:
             return {
                 "ok": False,
                 "reason": "no_snapshot",
-                "message": "当前没有调合会话，先 /炼金 <配方> 开始",
+                "message": tpl_of(ctx, "alchemy_no_session"),
             }
         if not isinstance(materials, (list, tuple)):
             return {"ok": False, "reason": "invalid_materials", "message": "投料参数非法"}
@@ -890,7 +890,7 @@ class AlchemyCore:
                 "ok": False,
                 "reason": "no_snapshot",
                 "shortfall": [],
-                "message": "当前没有调合会话，先 /炼金 <配方> 开始",
+                "message": tpl_of(ctx, "alchemy_no_session"),
             }
         shortfall: List[dict] = []
         for rec in snap.get("materials") or []:

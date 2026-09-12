@@ -413,3 +413,50 @@ def test_combo_segments_injection_renders_seg_lines() -> None:
     assert "第 2 段：连斩" in text and "造成 7 伤害" in text
     assert "史莱姆 18/40" in text              # target_hp 聚合末值近似 + 展示名
     assert "（会心·中阶 ×1.7）" in text       # 段内会心附注（第 1 段 crit=mid）
+
+
+# ---------------------------------------------------------------------------
+# H1（2026-09-12 复核修复）：effect_events 单次渲染（owner = 玩家段）
+# ---------------------------------------------------------------------------
+
+def test_effect_events_single_render_in_merged_message(start_battle) -> None:
+    """H1：合并消息里【持续效果】/【效果失效】各只出现一次（批量段不再重复渲染）。
+
+    真实引擎跑一拍（含 NPC 连锁）→ 注入同一批 effect_events → 走 `_dispatch_merged_action`；
+    桥接层把「NPC 连锁段 + 玩家段」join 成一条消息后，效果行必须各只出现一次
+    （修前：两段各渲染一次 → 各 2 次）。
+    """
+    import dataclasses
+
+    sender = RecordingSender()
+    eng = start_battle()
+    ctx = make_ctx(sender, engine=eng)
+    report = eng.player_act({"type": "normal"})
+    assert any(getattr(oc, "actor", "") != "player" for oc in report.outcomes), \
+        "本场景需存在 NPC 连锁（否则批量段不发送，测不到重复）"
+    evs = (
+        {"type": "dot_damage", "side": "player", "status": "bleed", "name": "流血", "value": 7},
+        {"type": "status_expired", "side": "enemy", "status": "rage", "name": "狂暴"},
+    )
+    report = dataclasses.replace(report, effect_events=evs)
+    sent = bc._dispatch_merged_action(
+        eng, report, bc.BattlePipeline.from_ctx(ctx), ctx, {"type": "normal"})
+    joined = "\n".join(sent)
+    assert len(sent) == 2, "NPC 连锁段 + 玩家段各一条"
+    assert joined.count("【持续效果】") == 1, joined
+    assert joined.count("【效果失效】") == 1, joined
+
+
+def test_batch_alone_still_renders_effect_events(start_battle) -> None:
+    """H1 边界：批量段**单独发送**（无玩家段跟随）时仍要出效果行（不丢事件）。"""
+    import dataclasses
+
+    sender = RecordingSender()
+    eng = start_battle()
+    ctx = make_ctx(sender, engine=eng)
+    report = eng.player_act({"type": "normal"})
+    evs = ({"type": "status_expired", "side": "enemy", "status": "rage", "name": "狂暴"},)
+    report = dataclasses.replace(report, effect_events=evs)
+    pipeline = bc.BattlePipeline.from_ctx(ctx)
+    sent = bc.dispatch_batch(eng, report, pipeline, ctx)   # 默认 render_effect_events=True
+    assert any("【效果失效】" in seg for seg in sent), sent

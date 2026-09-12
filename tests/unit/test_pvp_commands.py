@@ -235,7 +235,7 @@ def test_err_too_many() -> None:
 def test_err_unknown_sep() -> None:
     """未知分隔符（列表/数量/键值）→ pvp_err_unknown_sep。"""
     out = cmd_pvp_lock(_P("123456789,99", error="未知分隔符"), _ctx())
-    assert "不支持列表/数量/键值" in out
+    assert "不支持列表或数量或键值" in out
 
 
 def test_err_reserved() -> None:

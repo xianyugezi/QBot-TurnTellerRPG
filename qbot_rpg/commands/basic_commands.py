@@ -186,22 +186,28 @@ _ENERGY_LABELS: Mapping[str, str] = {
 }
 
 _SKILL_TAG_ORDER: Tuple[str, ...] = (
-    "damage", "cost", "combo", "derive", "air", "dodge", "parry",
-    "move", "part", "multi", "armor", "interrupt",
+    "damage", "cost", "combo", "combo_preserve", "combo_push", "derive", "air",
+    "dodge", "parry", "move", "part", "multi", "armor", "interrupt",
 )
-_SKILL_TAG_LABELS: Mapping[str, str] = {
-    "damage": "【伤害】",
-    "cost": "【消耗】",
-    "combo": "【连段】",
-    "derive": "【派生】",
-    "air": "【跃空】",
-    "dodge": "【闪反】",
-    "parry": "【防反】",
-    "move": "【机动】",
-    "part": "【部位】",
-    "multi": "【多段】",
-    "armor": "【霸体】",
-    "interrupt": "【打断】",
+# 标签 id → 模板表 key（M7 复核修复 2026-09-12：原 _SKILL_TAG_LABELS 的玩家可见中文
+# 迁入全量表，内容包可按同键覆盖；代码只留 id→键名映射，零中文文案）。
+# combo 变体语义（细化_1c1c L81-82 / 细化_1c2 L74-75）：combo=结算 +1；
+# combo_preserve=+0 不清零（喘息技）；combo_push=+N 不清零（推进技）→ 各自独立标签。
+_SKILL_TAG_KEYS: Mapping[str, str] = {
+    "damage": "skill_tag_damage",
+    "cost": "skill_tag_cost",
+    "combo": "skill_tag_combo",
+    "combo_preserve": "skill_tag_combo_preserve",
+    "combo_push": "skill_tag_combo_push",
+    "derive": "skill_tag_derive",
+    "air": "skill_tag_air",
+    "dodge": "skill_tag_dodge",
+    "parry": "skill_tag_parry",
+    "move": "skill_tag_move",
+    "part": "skill_tag_part",
+    "multi": "skill_tag_multi",
+    "armor": "skill_tag_armor",
+    "interrupt": "skill_tag_interrupt",
 }
 
 TYPE_LABELS: Mapping[str, str] = {
@@ -1808,8 +1814,15 @@ def _derived_names(ctx: Mapping[str, Any], sid: str, chain_refs: Sequence[Any]) 
     return out
 
 
-def _derived_tags(defn: Any) -> List[str]:
-    """按技能机制推导标签（**仅兜底**：内容包 `brief` 为空时使用；自由文本以 brief 为准）。"""
+def _derived_tags(defn: Any, ctx: Any = None) -> List[str]:
+    """按技能机制推导标签（**仅兜底**：内容包 `brief` 为空时使用；自由文本以 brief 为准）。
+
+    M7（2026-09-12）：标签文案迁全量表键（`_SKILL_TAG_KEYS`），本函数只做机制判定 +
+    `tpl_of` 取文（内容包可覆盖）。
+    M5（2026-09-12）：`tag` 的 combo 三变体（combo/combo_preserve/combo_push）各自出标签，
+    原实现只认 `== "combo"` → combo_push（剑舞）/combo_preserve（平息战意）在 brief 为空时
+    整项缺失。
+    """
     tags: List[str] = []
     kind = str(_skill_field(defn, "kind", "") or "")
     if kind == "damage" or _skill_field(defn, "power", 0):
@@ -1818,8 +1831,9 @@ def _derived_tags(defn: Any) -> List[str]:
             or bool(_skill_field(defn, "consume_marks", None))
             or bool(_skill_field(defn, "energy_cost", None))):
         tags.append("cost")
-    if str(_skill_field(defn, "tag", "") or "") == "combo":
-        tags.append("combo")
+    _tag = str(_skill_field(defn, "tag", "") or "")
+    if _tag in ("combo", "combo_preserve", "combo_push"):
+        tags.append(_tag)
     if _skill_field(defn, "chain_refs", None):
         tags.append("derive")
     if _skill_field(defn, "air_policy", None):
@@ -1841,7 +1855,7 @@ def _derived_tags(defn: Any) -> List[str]:
         tags.append("armor")
     if _skill_field(defn, "interrupt", False):
         tags.append("interrupt")
-    return [_SKILL_TAG_LABELS[t] for t in _SKILL_TAG_ORDER if t in tags]
+    return [tpl_of(ctx, _SKILL_TAG_KEYS[t]) for t in _SKILL_TAG_ORDER if t in tags]
 
 
 def skill_brief(ctx: Mapping[str, Any], sid: str) -> str:
@@ -1853,7 +1867,7 @@ def skill_brief(ctx: Mapping[str, Any], sid: str) -> str:
     brief = _skill_field(defn, "brief", None)
     if isinstance(brief, str) and brief.strip():
         return brief.strip()
-    return "".join(_derived_tags(defn))
+    return "".join(_derived_tags(defn, ctx))
 
 
 def skill_line(index: int, sid: str, ctx: Mapping[str, Any]) -> str:

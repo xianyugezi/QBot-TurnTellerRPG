@@ -241,7 +241,7 @@ def test_view_clamp_last_page():
 def test_view_invalid_tpl12(raw):
     """裁决② + 3d §5.1：0/负数/非数字/超参 → TPL-12。"""
     out = cmd_view(parse(raw), make_ctx())
-    assert out == f"❌ 指令不正确：{raw}。输入 /帮助 查看可用指令。"
+    assert out == f"❌ 指令不正确：{str(raw).lstrip('/')}\n发 帮助 查看可用指令"
 
 
 def test_view_noarg_equiv_page1():
@@ -299,7 +299,7 @@ def test_bag_clamp_last_page():
 def test_bag_invalid_tpl12(raw):
     """裁决②：0/负数/非数字/超参 → TPL-12。"""
     out = cmd_bag(parse(raw), make_ctx())
-    assert out == f"❌ 指令不正确：{raw}。输入 /帮助 查看可用指令。"
+    assert out == f"❌ 指令不正确：{str(raw).lstrip('/')}\n发 帮助 查看可用指令"
 
 
 def test_bag_empty():
@@ -563,7 +563,7 @@ def test_skill_rows_order():
 def test_skill_invalid_tpl12(raw):
     """裁决②：0/负数/非数字/超参 → TPL-12。"""
     out = cmd_skill(parse(raw), make_ctx())
-    assert out == f"❌ 指令不正确：{raw}。输入 /帮助 查看可用指令。"
+    assert out == f"❌ 指令不正确：{str(raw).lstrip('/')}\n发 帮助 查看可用指令"
 
 
 def test_skill_empty():
@@ -655,7 +655,7 @@ def test_help_group_single_page_no_footer():
 def test_help_unknown_group_tpl12():
     """/帮助 不存在组 → TPL-12。"""
     out = cmd_help(parse("/帮助 不存在"), make_ctx())
-    assert out == "❌ 指令不正确：/帮助 不存在。输入 /帮助 查看可用指令。"
+    assert out == "❌ 指令不正确：帮助 不存在\n发 帮助 查看可用指令"
 
 
 @pytest.mark.parametrize("raw", ["/帮助 0", "/帮助 -1", "/帮助 abc", "/帮助 冒险 0", "/帮助 冒险 abc"])
@@ -816,3 +816,43 @@ def test_pure_helpers_no_nonebot():
     for name in ("attr_line", "bag_line", "equip_line", "skill_line", "group_page_line",
                  "resolve_equip_slot", "parse_page_arg", "view_header", "skill_rows"):
         assert callable(getattr(bc, name)), name
+
+
+# ---------------------------------------------------------------------------
+# 技能标签兜底：combo 三变体 + 文案迁表（M5/M7 复核修复 2026-09-12）
+# ---------------------------------------------------------------------------
+
+def test_derived_tags_combo_variants():
+    """M5：combo/combo_preserve/combo_push 三变体各自出标签（brief 为空时的机制兜底）。"""
+    ctx = make_ctx()
+    assert "【连段】" in bc._derived_tags({"tag": "combo"}, ctx)
+    assert "【保留】" in bc._derived_tags({"tag": "combo_preserve"}, ctx)
+    assert "【推进】" in bc._derived_tags({"tag": "combo_push"}, ctx)
+    assert bc._derived_tags({"tag": "none"}, ctx) == []
+
+
+def test_skill_tag_labels_migrated_to_table():
+    """M7：标签文案来自全量表键（skill_tag_*），代码零中文字面量 + 内容包可覆盖。"""
+    from qbot_rpg.core.templates import DEFAULT_TEMPLATES
+
+    for tid, key in bc._SKILL_TAG_KEYS.items():
+        assert key in DEFAULT_TEMPLATES, f"{tid} 缺表键 {key}"
+        assert DEFAULT_TEMPLATES[key] == bc.tpl_of(None, key)
+
+    over = make_ctx(templates={"skill_tag_combo_push": "《推》", "skill_tag_damage": "《伤》"})
+    tags = bc._derived_tags({"tag": "combo_push", "power": 100}, over)
+    assert "《推》" in tags and "《伤》" in tags and "【伤害】" not in tags
+
+
+def test_demo_combo_variant_skills_get_fallback_tags():
+    """M5 实机内容：剑舞(combo_push)/平息战意(combo_preserve) brief 为空 → 兜底标签不缺失。"""
+    import json
+    import pathlib
+
+    repo = pathlib.Path(__file__).resolve().parents[2]
+    rows = json.loads(
+        (repo / "content" / "test_demo" / "skills.json").read_text(encoding="utf-8"))
+    by_id = {s.get("id"): s for s in rows if isinstance(s, dict)}
+    ctx = make_ctx()
+    assert "【推进】" in bc._derived_tags(by_id["blade_dance"], ctx)
+    assert "【保留】" in bc._derived_tags(by_id["calm_fury"], ctx)

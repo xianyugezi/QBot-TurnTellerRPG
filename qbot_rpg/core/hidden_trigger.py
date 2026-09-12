@@ -74,6 +74,7 @@ from typing import Any, Mapping, MutableMapping, Optional
 
 from qbot_rpg.core.adventure_log import EVENT_KEY_HIDDEN_FIND, log_hidden_find
 from qbot_rpg.core.condition_engine import eval_condition
+from qbot_rpg.core.templates import tpl_of
 
 __all__ = [
     "PITY_THRESHOLD",
@@ -336,7 +337,7 @@ def _spawn_result(ctx: MutableMapping[str, Any], map_def: object, row: Mapping[s
     investigate hunt 形态，补白 4）。首见日志在击败后经 reveal_find 结算。"""
     text = row.get("desc") or row.get("hint")
     if not (isinstance(text, str) and text):
-        text = f"你察觉到了「{boss_ref}」出没的迹象。"
+        text = tpl_of(ctx, "invest_hunt_fallback", {"boss": boss_ref})
     hfid = row.get("hidden_find_id")
     hfid_s = str(hfid) if isinstance(hfid, str) and hfid else None
     signal = {
@@ -573,13 +574,15 @@ def reveal_find(ctx: MutableMapping[str, Any], hidden_find_id: str, title: str) 
     rid = f"hidden_find:{hfid}"
     if rid in _revealed_set(ctx):
         # 已 one_shot（补白 6）：简短确认，无卡片、不再计数、不再首见
-        return {"ok": True, "card": DEFAULT_CONFIRM_TEXT, "first_seen": False,
+        return {"ok": True,
+                "card": tpl_of(ctx, "hidden_confirm") or DEFAULT_CONFIRM_TEXT,
+                "first_seen": False,
                 "logged": False, "revealed": True, "hidden_find_id": hfid,
                 "title": shown_title, "lore_pending": False}
     first_seen = _prev_hidden_count(ctx, hfid) == 0
     logged = bool(log_hidden_find(ctx, hfid).get("ok"))
     _mark_revealed(ctx, rid)
-    card = f"【发现】{shown_title}"
+    card = tpl_of(ctx, "hidden_find_card", {"title": shown_title})
     return {"ok": True, "card": card, "first_seen": first_seen, "logged": logged,
             "revealed": True, "hidden_find_id": hfid, "title": shown_title,
             "lore_pending": True}

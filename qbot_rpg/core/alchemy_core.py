@@ -65,6 +65,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
+from qbot_rpg.core.templates import tpl_of
+
 __all__ = [
     "ALCHEMY_JOB_ID",
     "ELEMENTS",
@@ -745,7 +747,8 @@ class AlchemyCore:
             return {"ok": False, "reason": "invalid_materials", "message": "投料参数非法"}
         recipe = self._find_recipe(snap.get("recipe_id"), ctx)
         if recipe is None:
-            return {"ok": False, "reason": "recipe_not_found", "message": "配方不存在"}
+            return {"ok": False, "reason": "recipe_not_found",
+                    "message": tpl_of(ctx, "alchemy_engine_recipe_missing")}
 
         # ① 材料解析 + 存在校验（FEED-05 前置 / REC-03 引用硬拦）
         records: List[dict] = []
@@ -802,7 +805,7 @@ class AlchemyCore:
             return {
                 "ok": False,
                 "reason": "materials_insufficient",
-                "message": "材料不足",
+                "message": tpl_of(ctx, "alchemy_engine_materials_short"),
                 "shortfall": shortfall,
             }
 
@@ -916,7 +919,7 @@ class AlchemyCore:
                 "ok": False,
                 "reason": "materials_insufficient",
                 "shortfall": shortfall,
-                "message": "材料不足，无法确认",
+                "message": tpl_of(ctx, "alchemy_engine_materials_short_confirm"),
             }
         return {"ok": True, "shortfall": [], "message": ""}
 

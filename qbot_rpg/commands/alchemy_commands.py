@@ -2537,7 +2537,7 @@ async def cmd_deep(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
             return TEMPLATE_MESSAGES[TEMPLATE_IN_PROGRESS]
         return TEMPLATE_MESSAGES[TEMPLATE_ALREADY_ACTIVE]
     # DeepEngine.deep_snapshot（F-06：6 槽/核心槽/3 普通+1 金/刻度/进化线；MUT-07 分型）
-    snap = deep.deep_snapshot(recipe, job_tier_index=tier_index)
+    snap = deep.deep_snapshot(recipe, job_tier_index=tier_index, ctx=ctx)
     if not isinstance(snap, Mapping) or snap.get("ok") is False:
         msg = snap.get("message") if isinstance(snap, Mapping) else None
         return str(msg or tpl_of(ctx, "alchemy_deep_open_fail"))
@@ -3235,7 +3235,7 @@ async def cmd_helper(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     gather: Any = None
     craft: Any = None
     if spec:
-        parsed_spec = parse_task_spec(spec)
+        parsed_spec = parse_task_spec(spec, ctx)
         if not parsed_spec.get("ok"):
             return str(parsed_spec.get("message")
                        or tpl_of(ctx, "alchemy_helper_task_invalid"))

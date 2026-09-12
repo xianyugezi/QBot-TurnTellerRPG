@@ -150,7 +150,8 @@ def cmd_achievements(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         if e.get("locked") and not e.get("unlocked"):
             lines.append(tpl_of(ctx, "ach_list_locked", {"index": i}))
         else:
-            state = "✅" if e.get("unlocked") else "未达成"
+            state = (tpl_of(ctx, "ach_state_done") if e.get("unlocked")
+                     else tpl_of(ctx, "ach_state_undone"))
             lines.append(tpl_of(ctx, "ach_list_line", {
                 "index": i, "name": e.get("name", "？"), "state": state}))
     lines.append(render_cake_tail(page, res.total_pages, category_word="成就",
@@ -188,7 +189,9 @@ def cmd_achievement_info(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     lines = [tpl_of(ctx, "ach_view_header", {"name": name})]
     if desc:
         lines.append(tpl_of(ctx, "ach_view_desc", {"desc": desc}))
-    lines.append("状态：" + ("✅ 已达成" if e.get("unlocked") else "未达成"))
+    state = (tpl_of(ctx, "ach_state_done") if e.get("unlocked")
+             else tpl_of(ctx, "ach_state_undone"))
+    lines.append(tpl_of(ctx, "ach_status_line", {"state": state}))
     return "\n".join(lines)
 
 

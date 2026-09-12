@@ -74,6 +74,7 @@ from typing import Any, Mapping, MutableMapping, Optional, Sequence
 from qbot_rpg.core.alchemy_core import ALCHEMY_JOB_ID, PROFICIENT_TIER_INDEX
 from qbot_rpg.core.proficiency import ProficiencyEngine
 from qbot_rpg.core.synthesis import resolve_recipe
+from qbot_rpg.core.templates import tpl_of
 
 __all__ = [
     "DEFAULT_ENERGY_ITEMS",
@@ -116,17 +117,19 @@ def _as_int(value: Any) -> Optional[int]:
     return None
 
 
-def parse_task_spec(spec: Any) -> dict:
+def parse_task_spec(spec: Any, ctx: Any = None) -> dict:
     """键值列表解析（P-22/SEP-22：= 定键、, 分隔、* 数量，规范 L49 原例语法）。
 
-    入参：spec —— '代采=矿石*5,代调=药剂*2'（或 None/空串 → 无任务）。
+    入参：spec —— '代采=矿石*5,代调=药剂*2'（或 None/空串 → 无任务）；ctx 可选（模板覆盖，
+      None → 全量表默认值；纯函数保持零副作用）。
     出参：{ok, raw, gather?, craft?}；gather/craft = {target, count}（count 缺省 1）；
       非法段/未知键/重复键/非正整数量 → {ok: False, reason, message}。
     """
     if spec is None:
         return {"ok": True, "raw": spec}
     if not isinstance(spec, str):
-        return {"ok": False, "reason": "invalid_spec", "message": "任务格式非法"}
+        return {"ok": False, "reason": "invalid_spec",
+                "message": tpl_of(ctx, "alchemy_engine_task_spec_invalid")}
     text = spec.strip()
     out: dict = {"ok": True, "raw": spec}
     seen: set = set()
@@ -136,31 +139,42 @@ def parse_task_spec(spec: Any) -> dict:
             continue
         key, sep, rest = part.partition("=")
         if not sep or not rest:
-            return {"ok": False, "reason": "invalid_spec", "message": f"无法解析的任务段：{part}"}
+            return {"ok": False, "reason": "invalid_spec",
+                    "message": tpl_of(ctx, "alchemy_engine_task_seg_invalid",
+                                      {"seg": part})}
         key = key.strip()
         if key in _TASK_KEYS_CN:
             field = _TASK_KEYS_CN[key]
         elif key in ("gather", "craft"):
             field = key
         else:
-            return {"ok": False, "reason": "invalid_spec", "message": f"未知任务键：{key}"}
+            return {"ok": False, "reason": "invalid_spec",
+                    "message": tpl_of(ctx, "alchemy_engine_task_key_unknown",
+                                      {"key": key})}
         if field in seen:
-            return {"ok": False, "reason": "invalid_spec", "message": f"重复任务键：{key}"}
+            return {"ok": False, "reason": "invalid_spec",
+                    "message": tpl_of(ctx, "alchemy_engine_task_key_dup",
+                                      {"key": key})}
         seen.add(field)
         value = rest.strip()
         target, mul, cnt_s = value.partition("*")
         target = target.strip()
         if not target:
-            return {"ok": False, "reason": "invalid_spec", "message": f"任务目标为空：{part}"}
+            return {"ok": False, "reason": "invalid_spec",
+                    "message": tpl_of(ctx, "alchemy_engine_task_target_empty",
+                                      {"seg": part})}
         if mul:
             cnt = _as_int(cnt_s.strip())
             if cnt is None or cnt <= 0:
-                return {"ok": False, "reason": "invalid_spec", "message": f"任务数量非法：{part}"}
+                return {"ok": False, "reason": "invalid_spec",
+                        "message": tpl_of(ctx, "alchemy_engine_task_count_invalid",
+                                          {"seg": part})}
         else:
             cnt = 1
         out[field] = {"target": target, "count": cnt}
     if "gather" not in out and "craft" not in out:
-        return {"ok": False, "reason": "invalid_spec", "message": "任务段为空"}
+        return {"ok": False, "reason": "invalid_spec",
+                "message": tpl_of(ctx, "alchemy_engine_task_empty")}
     return out
 
 
@@ -544,22 +558,27 @@ class HelperEngine:
           level}；拒绝 reason 见上。
         """
         if not isinstance(player, MutableMapping):
-            return {"ok": False, "reason": "invalid_player", "message": "玩家状态非法"}
+            return {"ok": False, "reason": "invalid_player",
+                    "message": tpl_of(ctx, "alchemy_engine_player_invalid")}
         if not isinstance(assistant, str) or not assistant.strip():
-            return {"ok": False, "reason": "assistant_invalid", "message": "助手名非法"}
+            return {"ok": False, "reason": "assistant_invalid",
+                    "message": tpl_of(ctx, "alchemy_engine_assist_name_invalid")}
         assistant = assistant.strip()
         if not self._enabled():
-            return {"ok": False, "reason": "module_disabled", "message": "代工系统未开启"}
+            return {"ok": False, "reason": "module_disabled",
+                    "message": tpl_of(ctx, "alchemy_engine_assist_off")}
         try:
             g = self._norm_task(gather)
             c = self._norm_task(craft)
         except ValueError as exc:
-            return {"ok": False, "reason": "invalid_task", "message": f"任务格式非法：{exc}"}
+            return {"ok": False, "reason": "invalid_task",
+                    "message": tpl_of(ctx, "alchemy_engine_assist_task_invalid",
+                                      {"reason": exc})}
         if g is None and c is None:
             return {
                 "ok": False,
                 "reason": "no_task",
-                "message": "请指定 代采 或 代调 任务（如 代采=矿石*5,代调=药剂*2）",
+                "message": tpl_of(ctx, "alchemy_engine_assist_no_task"),
             }
         # GU-62 炼金职业 ≥ 精通
         prof_level = self._alchemy_level(player)
@@ -567,13 +586,14 @@ class HelperEngine:
             return {
                 "ok": False,
                 "reason": "level_insufficient",
-                "message": "等级不足：代工助手需炼金职业 ≥ 精通",
+                "message": tpl_of(ctx, "alchemy_engine_assist_level"),
             }
         # 助手表校验（helpers[] 配置非空 → 必须在表内）
         if self._helper_def(assistant) is None:
             return {
                 "ok": False, "reason": "assistant_not_found",
-                "message": f"没有这个助手：{assistant}",
+                "message": tpl_of(ctx, "alchemy_engine_assist_not_found",
+                                  {"name": assistant}),
             }
         # 任务配置构建（配方在此解析，B-11；配置快照供 tick 使用）
         cfg: dict = {"assistant": assistant, "gather": None, "craft": None, "produced_total": 0}
@@ -588,7 +608,8 @@ class HelperEngine:
             if recipe is None:
                 return {
                     "ok": False, "reason": "recipe_not_found",
-                    "message": f"代调配方不存在：{c['target']}",
+                    "message": tpl_of(ctx, "alchemy_engine_assist_recipe_missing",
+                                      {"target": c["target"]}),
                 }
             ro = recipe.get("output")
             oitem = ro.get("item") if isinstance(ro, Mapping) else None
@@ -612,7 +633,7 @@ class HelperEngine:
         if max_slots > 0 and len(prospective) > max_slots:
             return {
                 "ok": False, "reason": "queue_full",
-                "message": "产出队列已满，请先 /收取 腾出空间",
+                "message": tpl_of(ctx, "alchemy_engine_assist_queue_full"),
             }
         # GU-63 消耗能源道具（L461；不足 → 提示缺能源道具）
         consumed = None
@@ -625,12 +646,13 @@ class HelperEngine:
             return {
                 "ok": False,
                 "reason": "no_energy_item",
-                "message": f"缺少能源道具：需要 {items}（商店或合成获取）",
+                "message": tpl_of(ctx, "alchemy_engine_assist_no_energy",
+                                  {"items": items}),
             }
         if not self._remove_item(ctx, consumed, 1):
             return {
                 "ok": False, "reason": "energy_item_deduct_failed",
-                "message": "能源道具扣减失败",
+                "message": tpl_of(ctx, "alchemy_engine_assist_energy_fail"),
             }
         # F-22 设定持续代采/代调 → 状态存档（助手名/配置/启动时间/产出队列）
         now_ts = self._now(None, ctx)
@@ -645,10 +667,16 @@ class HelperEngine:
         # queue 保留既有产出（ASST-05 已产出项保留）；produced_total 终身累计（B-7 只升不降）
         parts: list = []
         if cfg["gather"] is not None:
-            parts.append(f"开始代采 {cfg['gather']['target']}*{cfg['gather']['count']}")
+            parts.append(tpl_of(ctx, "alchemy_engine_assist_ok_gather",
+                                {"target": cfg["gather"]["target"],
+                                 "count": cfg["gather"]["count"]}))
         if cfg["craft"] is not None:
-            parts.append(f"代调 {cfg['craft']['target']}*{cfg['craft']['count']}")
-        msg = f"{assistant} " + "，".join(parts) + f"（消耗 {self._item_name(consumed, ctx)}×1）"
+            parts.append(tpl_of(ctx, "alchemy_engine_assist_ok_craft",
+                                {"target": cfg["craft"]["target"],
+                                 "count": cfg["craft"]["count"]}))
+        msg = tpl_of(ctx, "alchemy_engine_assist_ok",
+                     {"assistant": assistant, "tasks": "，".join(parts),
+                      "item": self._item_name(consumed, ctx)})
         return {
             "ok": True,
             "assistant": assistant,
@@ -676,7 +704,8 @@ class HelperEngine:
         出参：{ok, now, tick_sec, produced: {助手: {item_id: 数量}}, total_ticks, skipped}。
         """
         if not isinstance(player, MutableMapping):
-            return {"ok": False, "reason": "invalid_player", "message": "玩家状态非法"}
+            return {"ok": False, "reason": "invalid_player",
+                    "message": tpl_of(ctx, "alchemy_engine_player_invalid")}
         now_ts = self._now(now)
         tick_sec = self._tick_sec()
         helpers = self._helpers(player, create=False)
@@ -735,7 +764,8 @@ class HelperEngine:
           空队列 → {ok: False, reason: "queue_empty", message}。
         """
         if not isinstance(player, MutableMapping):
-            return {"ok": False, "reason": "invalid_player", "message": "玩家状态非法"}
+            return {"ok": False, "reason": "invalid_player",
+                    "message": tpl_of(ctx, "alchemy_engine_player_invalid")}
         helpers = self._helpers(player, create=False)
         totals: dict = {}
         if helpers is not None:
@@ -749,7 +779,8 @@ class HelperEngine:
                         if v and v > 0:
                             totals[item] = totals.get(item, 0) + v
         if not totals:
-            return {"ok": False, "reason": "queue_empty", "message": "当前没有待收取的代工产出"}
+            return {"ok": False, "reason": "queue_empty",
+                    "message": tpl_of(ctx, "alchemy_engine_assist_queue_empty")}
         now_ts = self._now(None, ctx)
         collected: list = []
         skipped: list = []
@@ -773,8 +804,10 @@ class HelperEngine:
                         if item not in failed:
                             q.pop(item, None)
                 entry["last_collect_at"] = now_ts
-        parts = [f"{x['item_name']}×{x['count']}" for x in collected]
-        msg = "收取：" + "、".join(parts)
+        parts = [tpl_of(ctx, "alchemy_engine_assist_collect_item",
+                        {"name": x["item_name"], "count": x["count"]})
+                 for x in collected]
+        msg = tpl_of(ctx, "alchemy_engine_assist_collect", {"items": "、".join(parts)})
         return {
             "ok": True, "collected": collected, "skipped": skipped,
             "message": msg, "last_collect_at": now_ts,

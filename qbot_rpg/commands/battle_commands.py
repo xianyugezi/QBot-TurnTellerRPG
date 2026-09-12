@@ -534,8 +534,11 @@ def _battle_rewards(
     }
 
 
-def _without_player_outcomes(report: EnrichedTurnReport) -> SimpleNamespace:
+def _without_player_outcomes(report: EnrichedTurnReport, *,
+                             suppress_prefix: bool = False) -> SimpleNamespace:
     """剥离玩家行动 outcome 的报告（道具回合：只渲染怪物反击/结算/提示段）。
+
+    :param suppress_prefix: 本段正文与已发批量段合并为同一条消息 → 不再渲染前缀行。
 
     CTB：透传 `action_seq` / `battle_time`（权威进度计量；`turn` 仅作镜像回退），
     不再写 `phases`（CTB 下 `EnrichedTurnReport.phases` 恒为空元组，render 层对
@@ -550,6 +553,7 @@ def _without_player_outcomes(report: EnrichedTurnReport) -> SimpleNamespace:
         enemy_max_hp=report.enemy_max_hp, exp=report.exp, gold=report.gold,
         drops=report.drops, status_changes=report.status_changes,
         player_pos=report.player_pos, enemy_pos=report.enemy_pos,  # 方位 HUD 透传（2026-09-10 修复）
+        suppress_prefix=suppress_prefix,
         # 战斗 HUD v2（2026-09-12）：分项资源行 + 持续效果事件随投影透传
         player_mp=report.player_mp, player_mp_max=report.player_mp_max,
         player_shield=report.player_shield, player_shield_turns=report.player_shield_turns,
@@ -559,8 +563,12 @@ def _without_player_outcomes(report: EnrichedTurnReport) -> SimpleNamespace:
     )
 
 
-def _without_npc_outcomes(report: EnrichedTurnReport) -> SimpleNamespace:
+def _without_npc_outcomes(report: EnrichedTurnReport, *, suppress_prefix: bool = False) -> SimpleNamespace:
     """剥离非玩家（NPC）outcome 的报告（玩家单行动渲染：只出玩家自身行动段）。
+
+    :param suppress_prefix: 本段正文会与已发的批量段合并为同一条消息 → 不再渲染前缀行
+        （2026-09-12 用户拍板：一条消息只保留最顶部一个玩家前缀）。
+    
 
     CTB（2026-09-10 · NPC 行动执行打通后）：`player_act` 返回的 `outcomes` 现同时含
     玩家行动与调度器自动推进的 NPC 连锁行动。NPC 连锁由 `dispatch_batch` 单独批量
@@ -583,6 +591,7 @@ def _without_npc_outcomes(report: EnrichedTurnReport) -> SimpleNamespace:
         enemy_shield=report.enemy_shield, enemy_shield_turns=report.enemy_shield_turns,
         enemy_air=report.enemy_air, enemy_broken_parts=report.enemy_broken_parts,
         effect_events=report.effect_events,
+        suppress_prefix=suppress_prefix,   # 末段合并进同一条消息 → 前缀只在最顶行
     )
 
 
@@ -907,14 +916,17 @@ class BattlePipeline:
                                    hint=hint, ctx=self._ctx)
         return self.send(body, to=to, prefix=False)
 
-    def send_round(self, report: Any, *, to: Any = None) -> List[str]:
+    def send_round(self, report: Any, *, to: Any = None, prefix: bool = True) -> List[str]:
         """玩家单行动 1 条（CTB：`render_battle_round` 渲染玩家行动积木；军规3/铁律 9）。
 
         **语义更新（CTB）**：历史命名 "round"（回合）——CTB 下无回合，本方法实际渲染
         **一次玩家行动**（EnrichedTurnReport 承载接线层字段）。保留方法名与签名兼容
         既有调用方。
+
+        :param prefix: False = 不注入前缀行（本段将与先发的批量段合并为同一条消息 →
+            前缀只在最顶部保留一个，2026-09-12 用户拍板）。
         """
-        return self.send(render_battle_round(report, ctx=self._ctx), to=to)
+        return self.send(render_battle_round(report, ctx=self._ctx), to=to, prefix=prefix)
 
     def send_action_batch(self, report: Any, *, to: Any = None) -> List[str]:
         """NPC 连锁批量行动 1 条（CTB 新增；`render_battle_action_batch`）。
@@ -967,6 +979,8 @@ def _send_item_round(
     pipeline: BattlePipeline,
     report: EnrichedTurnReport,
     item_name: str,
+    *,
+    suppress_prefix: bool = False,
 ) -> List[str]:
     """道具行动（无 BREP 行动模板，本层合成；工程补白 2）：
 
@@ -982,10 +996,11 @@ def _send_item_round(
     :return: 实际发送段列表。
     """
     body = tpl_of(pipeline._ctx, _TPL_ITEM_USED_KEY, {"item_name": item_name})
-    counter = render_battle_round(_without_player_outcomes(report), ctx=pipeline._ctx)
+    counter = render_battle_round(
+        _without_player_outcomes(report, suppress_prefix=suppress_prefix), ctx=pipeline._ctx)
     if counter:
         body = f"{body}\n{counter}"
-    return pipeline.send(body)
+    return pipeline.send(body, prefix=not suppress_prefix)
 
 
 def _skill_name_of(
@@ -1082,6 +1097,7 @@ def dispatch_round(
     ctx: Mapping[str, Any],
     *,
     player_action: Optional[Mapping[str, Any]] = None,
+    suppress_prefix: bool = False,
 ) -> List[str]:
     """单次行动派发（**薄兼容外壳**；"round" 是历史命名，CTB 下无「回合」）。
 
@@ -1140,17 +1156,22 @@ def dispatch_round(
             else:
                 # 逃跑失败：战斗继续 → 逃跑结果 + NPC 连锁合并 1 条（铁律 2/军规3）
                 body = tpl_of(ctx, _TPL_FLEE_FAILED_KEY)
-                counter = render_battle_round(_without_player_outcomes(enriched), ctx=ctx)
+                counter = render_battle_round(
+                    _without_player_outcomes(enriched, suppress_prefix=suppress_prefix), ctx=ctx)
                 if counter:
                     body = f"{body}\n{counter}"
-                delivered.extend(pipeline.send(body))
+                delivered.extend(pipeline.send(body, prefix=not suppress_prefix))
         elif atype == "item":
             item_name = str((player_action or {}).get("item_name") or "道具")
-            delivered.extend(_send_item_round(pipeline, enriched, item_name))
+            delivered.extend(_send_item_round(pipeline, enriched, item_name,
+                                               suppress_prefix=suppress_prefix))
         else:
             # CTB：玩家单行动只渲染玩家自身 outcome——NPC 连锁行已由 dispatch_batch
             # 批量渲染，此处剥离以防同一 NPC 行动行重复出现。
-            delivered.extend(pipeline.send_round(_without_npc_outcomes(enriched)))
+            delivered.extend(pipeline.send_round(
+                _without_npc_outcomes(enriched, suppress_prefix=suppress_prefix),
+                prefix=not suppress_prefix,
+            ))
 
         if getattr(report, "ended", False):
             delivered.extend(
@@ -1410,8 +1431,12 @@ def _dispatch_merged_action(
     :return: 实际发送段列表。
     """
     sent: List[str] = []
-    sent.extend(dispatch_batch(engine, report, pipeline, ctx, player_action=player_action))
-    sent.extend(dispatch_round(engine, report, pipeline, ctx, player_action=player_action))
+    _batch = dispatch_batch(engine, report, pipeline, ctx, player_action=player_action)
+    sent.extend(_batch)
+    # 2026-09-12 用户拍板：批量段（怪行动）已带前缀 → 玩家段压掉自己的前缀行，
+    # 桥接层把两段合并为一条消息时**只在最顶部保留一个**「Lv{n}.{玩家名}」。
+    sent.extend(dispatch_round(engine, report, pipeline, ctx, player_action=player_action,
+                               suppress_prefix=bool(_batch)))
     return sent
 
 

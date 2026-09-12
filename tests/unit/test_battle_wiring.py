@@ -160,11 +160,15 @@ def test_round_one_message_attack_merged(start_battle) -> None:
     assert any("史莱姆" in ln for ln in npc_text.split("\n"))
     # 玩家行动段（后发）：玩家攻击行 + 提示行（BREP-02/09）
     player_text = next(c for c in texts if "✅ 你攻击" in c)
-    assert player_text.split("\n")[0] == PREFIX         # 前缀只加首行
     plines = player_text.split("\n")
     assert any("✅ 你攻击" in ln for ln in plines)      # 玩家行动行（BREP-02）
     assert any("怪物生命" in ln for ln in plines)       # HUD v2：怪物行（无目标名，用户样稿口径）
     assert any("→ 攻击" in ln for ln in plines)         # 提示行（BREP-09）
+    # 2026-09-12 用户拍板：两段会被桥接层合并为**一条**消息 → 整条消息只在最顶部
+    # 保留一个玩家前缀；后发段不再重复前缀行（防「玩家名/等级出现两次」）
+    assert not player_text.split("\n")[0].startswith("Lv"), "后发段不应再带前缀行"
+    _joined = "\n".join(texts)
+    assert _joined.count(PREFIX) == 1, "合并消息只能有一个玩家前缀行"
 
 
 def test_round_one_message_mock_sender_call_count(start_battle) -> None:

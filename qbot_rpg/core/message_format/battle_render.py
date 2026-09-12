@@ -21,7 +21,6 @@ M1 实装依据：
 from __future__ import annotations
 
 import logging
-import unicodedata
 from types import SimpleNamespace
 from typing import Any, List, Mapping, Optional, Sequence, Tuple
 
@@ -442,11 +441,11 @@ def render_action_hint(
             "turns_suffix": _shield_turns_suffix(target_shield_turns, ctx)})
         if line:
             lines.append(line)
-    # ⑦ 怪物状态（跃空/部位破坏；超宽折行）
+    # ⑦ 怪物状态（跃空/部位破坏）——**整行全量显示，不折行**（2026-09-12 用户拍板：
+    # 「状态全量显示不会影响玩家阅读效果，不需要换行」；本行不受 14 全角结构化行约束）
     _states = [str(s) for s in (target_states or ()) if str(s)]
-    for idx, seg in enumerate(_wrap_state_segments(_states)):
-        key = "battle_hud_enemy_status" if idx == 0 else "battle_hud_enemy_status_cont"
-        line = tpl_of(ctx, key, {"status": seg})
+    if _states:
+        line = tpl_of(ctx, "battle_hud_enemy_status", {"status": "丨".join(_states)})
         if line:
             lines.append(line)
     # ⑧ 尾行
@@ -456,14 +455,6 @@ def render_action_hint(
         if line:
             lines.append(line)
     return "\n".join(ln for ln in lines if ln)
-
-
-def _display_width_half(text: Any) -> int:
-    """半角当量宽（与 scripts/check_template_width.py 同口径：W/F/A → 2，其余 → 1）。"""
-    return sum(
-        2 if unicodedata.east_asian_width(ch) in ("W", "F", "A") else 1
-        for ch in str(text or "") if ch != "\n"
-    )
 
 
 def _fmt_pct(cur: Any, mx: Any) -> str:
@@ -490,24 +481,6 @@ def _shield_turns_suffix(turns: Any, ctx: Any = None) -> str:
     if n <= 0:
         return ""
     return str(tpl_of(ctx, "battle_hud_shield_turns", {"turns": n}) or "")
-
-
-def _wrap_state_segments(states: Sequence[str], *, budget_half: int = 28,
-                         prefix_half: int = 10) -> List[str]:
-    """怪物状态分段（丨分隔；首行扣减「怪物状态：」前缀宽，续行整宽，均 ≤14 全角）。"""
-    segs: List[str] = []
-    cur = ""
-    for st in states:
-        cand = f"{cur}丨{st}" if cur else st
-        limit = budget_half - (prefix_half if not segs else 0)
-        if _display_width_half(cand) <= limit or not cur:
-            cur = cand
-        else:
-            segs.append(cur)
-            cur = st
-    if cur:
-        segs.append(cur)
-    return segs
 
 
 def _status_display_name(ev: Mapping[str, Any], ctx: Any = None) -> str:
@@ -624,7 +597,13 @@ def _render_prefix_line(
     注入；默认模板 TPL-01 `Lv[等级].[玩家名] -[称号]-`，【前缀】L22）。玩家信息
     缺失（level 空或 name 空）→ 返回空串（无前缀，由装配层/收口补；前缀不计入
     正文防刷屏长度，【前缀】L17/L97-99）。显式参数优先于 round_result 属性。
+
+    **suppress_prefix（2026-09-12 用户拍板）**：同一玩家操作的多段战斗正文会被桥接层
+    合并为**一条**消息（NPC 连锁段 + 玩家行动段）→ 第 2 段起带 `suppress_prefix=True`
+    则不再渲染前缀行，整条消息**只在最顶部保留一个**玩家前缀。
     """
+    if getattr(round_result, "suppress_prefix", False):
+        return ""
     if level is None:
         level = getattr(round_result, "level", None)
     if not name:

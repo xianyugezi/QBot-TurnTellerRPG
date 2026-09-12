@@ -24,7 +24,6 @@ from qbot_rpg.core.message_format.battle_render import (
     _fmt_pct,
     _render_effect_lines,
     _render_action_hint_from_report,
-    _wrap_state_segments,
     render_action_hint,
 )
 
@@ -146,10 +145,9 @@ def test_hud_enemy_states_air_and_parts() -> None:
         enemy_air=True, enemy_broken_parts=("左翼", "尾部"),
     )
     lines = _render_action_hint_from_report(src).split("\n")
-    # 用户样稿三态整行 = 34 半角（17 全角）> 14 全角上限 → 按定稿「结构化行 ≤14 全角」折行，
-    # 首行带「怪物状态：」前缀、续行只出状态串（信息不丢）
-    assert "怪物状态：跃空丨左翼破坏" in lines
-    assert "尾部破坏" in lines
+    # 2026-09-12 用户拍板：状态行**整行全量显示、不折行**（超 14 全角无妨——状态全量
+    # 不影响阅读；本行不受结构化行宽度约束）
+    assert "怪物状态：跃空丨左翼破坏丨尾部破坏" in lines
 
 
 def test_hud_enemy_states_hidden_when_empty() -> None:
@@ -161,16 +159,15 @@ def test_hud_enemy_states_hidden_when_empty() -> None:
     assert "怪物状态" not in _render_action_hint_from_report(src)
 
 
-def test_wrap_state_segments_stays_within_budget() -> None:
-    """状态超宽自动折行：每段（含「怪物状态：」前缀）≤ 14 全角当量。"""
-    segs = _wrap_state_segments(["跃空", "左翼破坏", "尾部破坏", "右翼破坏", "头壳破坏"])
-    assert len(segs) > 1
-    assert segs[0].startswith("跃空")
-    from qbot_rpg.core.message_format.battle_render import _display_width_half
-
-    assert _display_width_half(segs[0]) + 10 <= 28          # 首行含前缀
-    for seg in segs[1:]:
-        assert _display_width_half(seg) <= 28
+def test_hud_enemy_states_long_line_not_wrapped() -> None:
+    """状态多且长（超 14 全角）→ 仍单行全量输出，不折行（用户 2026-09-12 拍板）。"""
+    src = SimpleNamespace(
+        player=10, enemy=5, player_max_hp=20, enemy_max_hp=10, enemy_name="脊冢幼兽",
+        enemy_air=True, enemy_broken_parts=("左翼", "尾部", "右翼", "头壳"),
+    )
+    lines = _render_action_hint_from_report(src).split("\n")
+    assert "怪物状态：跃空丨左翼破坏丨尾部破坏丨右翼破坏丨头壳破坏" in lines
+    assert not any(ln.strip() in ("右翼破坏", "头壳破坏") for ln in lines)   # 无续行
 
 
 # ---------------------------------------------------------------------------

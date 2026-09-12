@@ -3,7 +3,12 @@
   "meta": {
     "note": "蚀脉猎师 全量消息模板表（唯一存储）。迁移期：同名 key 覆盖旧分区默认；内容包 templates.json 覆盖同 key。排版规范=docs/消息模板重构/00_方案与规范_v1.md：结构化行≤14全角（28半角当量）；少｜多换行；介绍类文本豁免（prose_keys / prose_placeholders 登记）。字段说明：templates=全量模板；meta.prose_keys=整条豁免的 key→理由；meta.prose_placeholders=行内含这些占位符则该行按介绍类豁免。",
     "prose_keys": {
-      "explore_map_desc": "介绍类：内嵌地图描述文本，允许自然折行"
+      "explore_map_desc": "介绍类：内嵌地图描述文本，允许自然折行",
+      "battle_player_hit": "叙述句行：按用户样稿整句形态（含「，」「。」）——命中播报句允许自然折行",
+      "battle_enemy_hit": "叙述句行：同上（怪物行动播报句，用户样稿「❌ {怪}使出{招}，你受到 N 伤害。」）",
+      "battle_effect_tick_player": "叙述句行：按用户样稿形态整句（含 ，。 与「你受到」视角），非结构化 HUD 行；窄屏自然折行，允许自然换行",
+      "battle_effect_tick_enemy": "叙述句行：同上（对怪视角「造成 N 伤害。」）",
+      "battle_effect_expire": "叙述句行：同上（效果失效播报）"
     },
     "prose_placeholders": []
   },
@@ -167,7 +172,6 @@
     "battle_ctb_batch_head": "（怪物行动）",
     "battle_fold_lines": "…（其余 {n} 行已折叠）",
     "battle_fold_items": "…（其余 {n} 条已折叠）\n发 {command} {page} 查看",
-    "battle_action_hint": "你 {player_hp}/{player_max_hp}{player_pos}\n{target_name} {target_hp}/{target_max_hp}{target_pos}\n→ {tail}",
     "battle_action_hint_tail": "攻击 或 攻击 <技能名>",
     "battle_resource_cur_max": "{label} {cur}/{max}",
     "battle_status_diff_item": "{label} {old}→{new}",
@@ -175,7 +179,7 @@
     "battle_start_line": "与{name}的战斗开始！\n{name} {hp}/{max_hp}",
     "battle_result_end": "战斗结束（{status}）",
     "battle_result_round": "第 {turn} 行动结算",
-    "battle_player_hit": "✅ 你{action}\n造成 {damage} 伤害{note}",
+    "battle_player_hit": "✅ 你{action}，造成 {damage} 伤害{note}。",
     "battle_player_miss": "❌ 未命中\n{target} 闪过了你的{action}",
     "battle_player_defend": "✅ 你进入防御姿态\n本次行动受到伤害减半",
     "battle_player_defend_hit": "✅ 你防御了{attacker}的{action}\n受到 {damage} 伤害",
@@ -319,7 +323,7 @@
     "skill_chain_usage": "查看技能派生\n发 技能派生 <序号>\n或 <技能名>\n示例：发 技能派生 1",
     "skill_chain_header": "【{name}】派生",
     "skill_chain_none": "该技能无可派生技能",
-    "battle_enemy_hit": "❌ {name}{action}\n你受到 {damage} 伤害",
+    "battle_enemy_hit": "❌ {name}{action}，你受到 {damage} 伤害。",
     "battle_enemy_miss": "✅ {name}的攻击被你躲开",
     "battle_enemy_position_miss": "✅ 未命中\n{name}未能命中【{pos}】的你",
     "battle_actor_landed": "{actor} 从空中落回地面",
@@ -534,6 +538,22 @@
     "alchemy_codex_king_granted": "✅ 已获得「炼金王」称号\n图鉴已全点亮",
     "alchemy_codex_reward": "成长奖励：",
     "alchemy_codex_reward_exp": "成长奖励：经验 +{exp}",
-    "alchemy_codex_reward_recipes": "\n新配方：{recipes}"
+    "alchemy_codex_reward_recipes": "\n新配方：{recipes}",
+    "battle_hud_player_hp": "剩余生命：{hp}/{max}（{pct}%）",
+    "battle_hud_player_mp": "剩余法力：{mp}/{max}（{pct}%）",
+    "battle_hud_player_shield": "剩余护盾：{shield}{turns_suffix}",
+    "battle_hud_shield_turns": "（{turns}s）",
+    "battle_hud_player_pos": "玩家站位：{pos}",
+    "battle_hud_enemy_hp": "怪物生命：{hp}/{max}（{pct}%）",
+    "battle_hud_enemy_shield": "怪物护盾：{shield}{turns_suffix}",
+    "battle_hud_enemy_status": "怪物状态：{status}",
+    "battle_hud_enemy_status_cont": "{status}",
+    "battle_effect_tick_player": "【持续效果】{name} 生效，你受到 {damage} 伤害。",
+    "battle_effect_tick_enemy": "【持续效果】{name} 生效，造成 {damage} 伤害。",
+    "battle_effect_expire": "【效果失效】{name} 效果时间结束。",
+    "battle_action_skill_verb": "发动技能 {name}",
+    "battle_hud_tail": "→ {tail}",
+    "battle_hud_state_air": "跃空",
+    "battle_hud_state_part_broken": "{name}破坏"
   }
 }

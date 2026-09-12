@@ -163,7 +163,7 @@ def test_round_one_message_attack_merged(start_battle) -> None:
     assert player_text.split("\n")[0] == PREFIX         # 前缀只加首行
     plines = player_text.split("\n")
     assert any("✅ 你攻击" in ln for ln in plines)      # 玩家行动行（BREP-02）
-    assert any("史莱姆" in ln for ln in plines)         # 怪物状态行（HP/提示）
+    assert any("怪物生命" in ln for ln in plines)       # HUD v2：怪物行（无目标名，用户样稿口径）
     assert any("→ 攻击" in ln for ln in plines)         # 提示行（BREP-09）
 
 

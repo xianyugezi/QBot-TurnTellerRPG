@@ -5,8 +5,11 @@
   python scripts/tpl_merge_fragments.py frag1.json [frag2.json ...] [--table PATH] [--dry-run]
 
 行为：
-- 读片段文件（{"rail": "...", "templates": {key: text}, "prose_keys": {key: reason}}）；
+- 读片段文件（{"rail": "...", "templates": {key: text}, "prose_keys": {key: reason},
+"overwrite_keys": [key...], "removed_keys": [key...]}）；
 - 把 templates 依次并入目标表 templates（重复 key 且值不同 → 报错退出，防误合并）；
+  例外：key 列在片段 `overwrite_keys`（**改值片段**：如 HUD v2 行动行整句化）→ 覆盖并记数；
+- `removed_keys`：从表中删除该死键（**被替代键**，如 battle_action_hint）——删除前打印原值；
 - prose_keys 并入 meta.prose_keys（重复且不同 → 报错）；
 - 合并后跑结构自检：宽度扫描（复用 check_template_width.scan，0 FAIL 门禁）；
 - 写回表（indent=2，ensure_ascii=False），并打印汇总。
@@ -43,9 +46,12 @@ def merge(table_path: Path, frag_paths: List[Path], dry_run: bool = False) -> in
     meta = doc.setdefault("meta", {})
     prose = meta.setdefault("prose_keys", {})
     added: List[str] = []
+    overwritten: List[str] = []
+    removed: List[str] = []
     for fp in frag_paths:
         frag = load_fragment(fp)
         rail = str(frag.get("rail") or fp.name)
+        overwrite = {str(k) for k in (frag.get("overwrite_keys") or ())}
         for key, text in frag["templates"].items():
             if not isinstance(text, str):
                 print(f"[ERR] {rail}: {key} 非字符串值")
@@ -53,12 +59,22 @@ def merge(table_path: Path, frag_paths: List[Path], dry_run: bool = False) -> in
             if key in templates:
                 if templates[key] == text:
                     continue  # 幂等：重复合并同值 = 无害
+                if key in overwrite:
+                    templates[key] = text       # 改值片段：显式声明覆盖
+                    overwritten.append(f"{rail}:{key}")
+                    continue
                 print(f"[ERR] {rail}: key 冲突且值不同：{key}")
                 print(f"   旧: {templates[key]!r}")
                 print(f"   新: {text!r}")
                 return 1
             templates[key] = text
             added.append(f"{rail}:{key}")
+        for key in (frag.get("removed_keys") or ()):
+            k = str(key)
+            if k in templates:
+                print(f"[del] {rail}: 删除被替代键 {k}（原值 {templates[k]!r}）")
+                templates.pop(k)
+                removed.append(f"{rail}:{k}")
         for key, reason in (frag.get("prose_keys") or {}).items():
             if key in prose and prose[key] != reason:
                 print(f"[ERR] {rail}: prose_keys 冲突：{key}")
@@ -73,7 +89,8 @@ def merge(table_path: Path, frag_paths: List[Path], dry_run: bool = False) -> in
         fails, warns = _cw.scan(tmp)
     finally:
         tmp.unlink()
-    print(f"[merge] 新增 {len(added)} / 冲突 0 / 宽度 FAIL {len(fails)} / WARN {len(warns)}")
+    print(f"[merge] 新增 {len(added)} / 覆盖 {len(overwritten)} / 删除 {len(removed)}"
+          f" / 冲突 0 / 宽度 FAIL {len(fails)} / WARN {len(warns)}")
     if fails:
         for rec in fails[:20]:
             print(f"[FAIL] {rec['key']} L{rec['line_no']} {rec['half']}/28 {rec['line']!r}")

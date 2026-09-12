@@ -21,8 +21,9 @@ M1 实装依据：
 from __future__ import annotations
 
 import logging
+import unicodedata
 from types import SimpleNamespace
-from typing import Any, List, Mapping, Optional, Tuple
+from typing import Any, List, Mapping, Optional, Sequence, Tuple
 
 from qbot_rpg.core.message_format.list_render import (
     DEFAULT_PAGE_SIZE,
@@ -193,7 +194,9 @@ def render_battle_round(round_result: Any, *, ctx: Any = None) -> str:
         # 【M5 裁决 P1-1】结算（BREP-16~20）移入 render_battle_end（结束消息一次性输出，
         # TC-18「同一消息含胜利+汇总+掉落」）；当轮只出行动+击杀（BREP-15），不重复结算。
 
-        # BREP-09 操作提示行（M5-04 render_action_hint，5e §1.5 战报末行）
+        # 持续效果行（HUD v2：DOT 生效 / 效果失效；引擎 effect_events 驱动）
+        lines.extend(_render_effect_lines(round_result, ctx=ctx))
+        # 战斗 HUD 分项块（HUD v2，原 BREP-09 操作提示行；末行提示行含于块内）
         hint = _render_action_hint_from_report(round_result, ctx=ctx)
         if hint:
             lines.append(hint)
@@ -374,25 +377,184 @@ def render_action_hint(
     target_name: str = "目标",
     *,
     player_pos: str = "",
-    enemy_pos: str = "",
+    enemy_pos: str = "",          # 兼容保留：HUD v2 起**不渲染怪物朝向**（用户拍板）
+    player_mp: Optional[int] = None,
+    player_mp_max: Optional[int] = None,
+    player_shield: int = 0,
+    player_shield_turns: int = 0,
+    target_shield: int = 0,
+    target_shield_turns: int = 0,
+    target_states: Sequence[str] = (),
     ctx: Any = None,
 ) -> str:
-    """BREP-09 操作提示行（战报末行）。
+    """战斗 HUD 分项块（2026-09-12 用户样稿重构；原 BREP-09 三行操作提示）。
 
-    模板三行：`你 {HP}/{最大}{方位}` / `{目标} {HP}/{最大}{方位}` / `→ {提示}`
-    （battle_action_hint + battle_action_hint_tail，battle_tpl 分区）。
-    示例：`你 21/30` / `史莱姆 7/25` / `→ 攻击 或 攻击 <技能名>`
-    - 方位 v0.6 HUD：player_pos/target_pos 中文方位格（缺省空串——无方位战斗省略）
-    - 含 /最大 分母（5e 原文，【前缀】L31）；多怪时目标取战场第一个存活怪
-      （调用方先用 first_alive_enemy 选取目标快照再传入本函数）。
+    行序（**缺资源不显示对应行**——用户拍板「没有护盾/法力等资源则不显示」）：
+      [剩余生命：{hp}/{max}（{pct}%）]
+      [剩余法力：{mp}/{max}（{pct}%）]   ← 仅玩家有法力资源
+      [剩余护盾：{shield}（{turns}s）]    ← 仅护盾 > 0
+      [玩家站位：{pos}]                   ← 玩家相对怪物方位（**怪物无朝向**，enemy_pos 不渲染）
+      [怪物生命：{hp}/{max}（{pct}%）]
+      [怪物护盾：{shield}（{turns}s）]
+      [怪物状态：跃空丨…]                 ← 超 14 全角自动折行（续行 status_cont）
+      [→ {tail}]
+
+    百分比口径（用户样稿）：一位小数，整数省略小数（92.5% / 34.2% / 1% / 100%）。
+    模板：battle_hud_* + battle_action_hint_tail + battle_hud_tail（内容包可覆盖）。
     """
+    lines: List[str] = []
+    # ① 剩余生命
+    line = tpl_of(ctx, "battle_hud_player_hp", {
+        "hp": int(player_hp or 0), "max": int(player_max_hp or player_hp or 0),
+        "pct": _fmt_pct(player_hp, player_max_hp)})
+    if line:
+        lines.append(line)
+    # ② 剩余法力（无资源 → 整行不出）
+    _mp = int(player_mp) if player_mp is not None else 0
+    _mp_max = int(player_mp_max or 0)
+    if player_mp is not None and _mp_max > 0:
+        line = tpl_of(ctx, "battle_hud_player_mp", {
+            "mp": _mp, "max": _mp_max, "pct": _fmt_pct(_mp, _mp_max)})
+        if line:
+            lines.append(line)
+    # ③ 剩余护盾（无护盾 → 整行不出）
+    if int(player_shield or 0) > 0:
+        line = tpl_of(ctx, "battle_hud_player_shield", {
+            "shield": int(player_shield),
+            "turns_suffix": _shield_turns_suffix(player_shield_turns, ctx)})
+        if line:
+            lines.append(line)
+    # ④ 玩家站位（方位可得时；怪物无朝向）
+    if str(player_pos or ""):
+        line = tpl_of(ctx, "battle_hud_player_pos", {"pos": str(player_pos)})
+        if line:
+            lines.append(line)
+    # ⑤ 怪物生命
+    line = tpl_of(ctx, "battle_hud_enemy_hp", {
+        "hp": int(target_hp or 0), "max": int(target_max_hp or target_hp or 0),
+        "pct": _fmt_pct(target_hp, target_max_hp)})
+    if line:
+        lines.append(line)
+    # ⑥ 怪物护盾（无 → 整行不出）
+    if int(target_shield or 0) > 0:
+        line = tpl_of(ctx, "battle_hud_enemy_shield", {
+            "shield": int(target_shield),
+            "turns_suffix": _shield_turns_suffix(target_shield_turns, ctx)})
+        if line:
+            lines.append(line)
+    # ⑦ 怪物状态（跃空/部位破坏；超宽折行）
+    _states = [str(s) for s in (target_states or ()) if str(s)]
+    for idx, seg in enumerate(_wrap_state_segments(_states)):
+        key = "battle_hud_enemy_status" if idx == 0 else "battle_hud_enemy_status_cont"
+        line = tpl_of(ctx, key, {"status": seg})
+        if line:
+            lines.append(line)
+    # ⑧ 尾行
     tail = tpl_of(ctx, "battle_action_hint_tail")
-    return tpl_of(ctx, "battle_action_hint", {
-        "player_hp": player_hp, "player_max_hp": player_max_hp,
-        "target_name": target_name,
-        "player_pos": player_pos, "target_pos": enemy_pos, "target_hp": target_hp,
-        "target_max_hp": target_max_hp, "tail": tail,
-    })
+    if tail:
+        line = tpl_of(ctx, "battle_hud_tail", {"tail": str(tail)})
+        if line:
+            lines.append(line)
+    return "\n".join(ln for ln in lines if ln)
+
+
+def _display_width_half(text: Any) -> int:
+    """半角当量宽（与 scripts/check_template_width.py 同口径：W/F/A → 2，其余 → 1）。"""
+    return sum(
+        2 if unicodedata.east_asian_width(ch) in ("W", "F", "A") else 1
+        for ch in str(text or "") if ch != "\n"
+    )
+
+
+def _fmt_pct(cur: Any, mx: Any) -> str:
+    """HUD v2 百分比数值（**不含 % 号**——% 由模板承载：`（{pct}%）`）。
+
+    一位小数，整数省略小数（92.5 / 34.2 / 1 / 100）。
+    """
+    try:
+        c, m = int(cur), int(mx)
+    except (TypeError, ValueError):
+        return "0"
+    if m <= 0:
+        return "0"
+    s = f"{c * 100.0 / m:.1f}"
+    return s[:-2] if s.endswith(".0") else s
+
+
+def _shield_turns_suffix(turns: Any, ctx: Any = None) -> str:
+    """护盾剩余行动数后缀（`（3s）`）；无剩余数（0/缺省）→ 空串（不出括号）。"""
+    try:
+        n = int(turns or 0)
+    except (TypeError, ValueError):
+        n = 0
+    if n <= 0:
+        return ""
+    return str(tpl_of(ctx, "battle_hud_shield_turns", {"turns": n}) or "")
+
+
+def _wrap_state_segments(states: Sequence[str], *, budget_half: int = 28,
+                         prefix_half: int = 10) -> List[str]:
+    """怪物状态分段（丨分隔；首行扣减「怪物状态：」前缀宽，续行整宽，均 ≤14 全角）。"""
+    segs: List[str] = []
+    cur = ""
+    for st in states:
+        cand = f"{cur}丨{st}" if cur else st
+        limit = budget_half - (prefix_half if not segs else 0)
+        if _display_width_half(cand) <= limit or not cur:
+            cur = cand
+        else:
+            segs.append(cur)
+            cur = st
+    if cur:
+        segs.append(cur)
+    return segs
+
+
+def _status_display_name(ev: Mapping[str, Any], ctx: Any = None) -> str:
+    """持续效果展示名：事件自带 name → ctx["statuses"] 查表 → 回落状态 id。"""
+    name = str(ev.get("name") or "")
+    if name:
+        return name
+    sid = str(ev.get("status") or "")
+    statuses = ctx.get("statuses") if isinstance(ctx, Mapping) else None
+    if isinstance(statuses, Mapping):
+        d = statuses.get(sid)
+        if isinstance(d, Mapping):
+            return str(d.get("name") or sid)
+        if d is not None:
+            return str(d)
+    return sid
+
+
+def _render_effect_lines(source: Any, *, ctx: Any = None) -> List[str]:
+    """持续效果行（HUD v2）：本行动 effect_events → `【持续效果】…` / `【效果失效】…`。
+
+    事件源：引擎 `TurnReport.effect_events`（行动收尾 DOT / 行动开始 DOT / 状态到期）。
+      dot_damage + side=player → `【持续效果】{名} 生效，你受到 {n} 伤害。`
+      dot_damage + side=enemy  → `【持续效果】{名} 生效，造成 {n} 伤害。`
+      status_expired           → `【效果失效】{名} 效果时间结束。`
+    其余事件（regen/absorb_heal/part_break…）不出行。
+    """
+    events = getattr(source, "effect_events", None)
+    if events is None and isinstance(source, Mapping):
+        events = source.get("effect_events")
+    lines: List[str] = []
+    for ev in events or ():
+        if not isinstance(ev, Mapping):
+            continue
+        etype = str(ev.get("type") or "")
+        if etype == "dot_damage":
+            key = ("battle_effect_tick_player"
+                   if str(ev.get("side") or "") == "player" else "battle_effect_tick_enemy")
+            line = tpl_of(ctx, key, {"name": _status_display_name(ev, ctx),
+                                     "damage": int(ev.get("value") or 0)})
+        elif etype == "status_expired":
+            line = tpl_of(ctx, "battle_effect_expire", {"name": _status_display_name(ev, ctx)})
+        else:
+            line = ""
+        if line:
+            lines.append(str(line))
+    return lines
 
 
 def first_alive_enemy(enemies: Any) -> Optional[Any]:
@@ -547,6 +709,12 @@ def _render_player_hit(
         else getattr(outcome, "target_max_hp", hp)
     )
     phrase = action_phrase if action_phrase is not None else _default_action_phrase(outcome)
+    # HUD v2（2026-09-12 用户样稿）：技能行动展示「发动技能 {技能名}」——
+    # 「✅ 你发动技能 御剑·斩，造成 76 伤害。」（模板 battle_action_skill_verb，可覆盖）
+    if action_phrase is None and str(getattr(outcome, "action_type", "") or "") == "skill":
+        _sk = str(getattr(outcome, "action_name", "") or "")
+        if _sk:
+            phrase = str(tpl_of(ctx, "battle_action_skill_verb", {"name": _sk}) or _sk)
     note = _render_crit_block_note(outcome, include_low=include_low, ctx=ctx)  # BREP-04
     return tpl_of(ctx, "battle_player_hit", {
         "action": phrase, "damage": damage, "note": note,
@@ -688,9 +856,9 @@ def _render_status_diff_from_report(round_result: Any, *, ctx: Any = None) -> st
 
 
 def _render_action_hint_from_report(round_result: Any, *, ctx: Any = None) -> str:
-    """BREP-09 操作提示行（M5-04 render_action_hint 委托，5e §1.5 战报末行）：
-    数据源 round_result（player/enemy HP + 可省略最大 HP/目标名，接线层注入）；
-    缺最大 HP 数据 → 空串（省略提示行，收口接线补齐）。"""
+    """战斗 HUD 分项块取数（HUD v2 · 原 BREP-09 操作提示行委托）：
+    数据源 round_result（HP/最大 HP/目标名 + 法力/护盾/怪物状态，接线层注入）；
+    缺最大 HP → 空串（HUD 不可用，省略整块）。**怪物朝向不再渲染**（用户拍板）。"""
     player_hp = getattr(round_result, "player", None)
     enemy_hp = getattr(round_result, "enemy", None)
     player_max = getattr(round_result, "player_max_hp", None)
@@ -698,16 +866,41 @@ def _render_action_hint_from_report(round_result: Any, *, ctx: Any = None) -> st
     target_name = str(getattr(round_result, "enemy_name", "") or "目标")
     if player_hp is None or enemy_hp is None or player_max is None or enemy_max is None:
         return ""
-    # 方位 v0.6 HUD：双方方位格（中文；缺省空串——旧快照/无方位战斗省略）
+    # 玩家站位：玩家相对怪物的方位（中文；HUD v2 不带【】，按用户样稿口径；
+    # 怪物朝向不再渲染——「只有玩家位于怪物的哪个方位，没有怪物哪个方位」）
     _pp = getattr(round_result, "player_pos", None)
-    _ep = getattr(round_result, "enemy_pos", None)
-    # 2026-09-12 用户拍板：方位格加【】强调（无方位战斗仍省略，不留空【】）
-    player_pos = f"【{_position_cn(*_pp)}】" if isinstance(_pp, (tuple, list)) and len(_pp) == 2 else ""
-    enemy_pos = f"【{_position_cn(*_ep)}】" if isinstance(_ep, (tuple, list)) and len(_ep) == 2 else ""
+    player_pos = _position_cn(*_pp) if isinstance(_pp, (tuple, list)) and len(_pp) == 2 else ""
     return render_action_hint(
         int(player_hp), int(player_max), int(enemy_hp), int(enemy_max), target_name,
-        player_pos=player_pos, enemy_pos=enemy_pos, ctx=ctx,
+        player_pos=player_pos,
+        player_mp=getattr(round_result, "player_mp", None),
+        player_mp_max=getattr(round_result, "player_mp_max", None),
+        player_shield=int(getattr(round_result, "player_shield", 0) or 0),
+        player_shield_turns=int(getattr(round_result, "player_shield_turns", 0) or 0),
+        target_shield=int(getattr(round_result, "enemy_shield", 0) or 0),
+        target_shield_turns=int(getattr(round_result, "enemy_shield_turns", 0) or 0),
+        target_states=_enemy_hud_states(round_result, ctx),
+        ctx=ctx,
     )
+
+
+def _enemy_hud_states(round_result: Any, ctx: Any = None) -> List[str]:
+    """怪物状态序列（HUD v2）：跃空 + 已破坏部位（「{部位}破坏」）。
+
+    数据源：接线层注入的 enemy_air（combat_position.enemy.height == "air"）与
+    enemy_broken_parts（parts_state.broken × 内容包 parts[].name）。文案走模板
+    battle_hud_state_air / battle_hud_state_part_broken（零硬编码）。
+    """
+    states: List[str] = []
+    if bool(getattr(round_result, "enemy_air", False)):
+        air = tpl_of(ctx, "battle_hud_state_air")
+        if air:
+            states.append(str(air))
+    for name in getattr(round_result, "enemy_broken_parts", ()) or ():
+        line = tpl_of(ctx, "battle_hud_state_part_broken", {"name": str(name)})
+        if line:
+            states.append(str(line))
+    return states
 
 
 def _render_template(name: str, *args: Any, ctx: Any = None) -> Optional[str]:
@@ -1808,7 +2001,8 @@ def render_battle_action(
         if settle:
             lines.extend(settle.split("\n"))
 
-        # ⑧ BREP-09 操作提示行（末行；数据缺省优雅省略）
+        # ⑧ 持续效果行 + 战斗 HUD 分项块（HUD v2；数据缺省优雅省略）
+        lines.extend(_render_effect_lines(action_result, ctx=ctx))
         hint = _render_action_hint_from_report(action_result, ctx=ctx)
         if hint:
             lines.append(hint)
@@ -1884,6 +2078,7 @@ def render_battle_action_batch(
         status_line = _render_status_diff_from_report(batch_result, ctx=ctx)
         if status_line:
             lines.append(status_line)
+        lines.extend(_render_effect_lines(batch_result, ctx=ctx))   # HUD v2 持续效果行
         hint = _render_action_hint_from_report(batch_result, ctx=ctx)
         if hint:
             lines.append(hint)
@@ -1961,6 +2156,7 @@ def render_battle_ready(
                     src_for_hint.enemy = enemy
                 except Exception:  # pragma: no cover
                     pass
+            lines.extend(_render_effect_lines(src_for_hint, ctx=ctx))   # HUD v2 持续效果行
             auto_hint = _render_action_hint_from_report(src_for_hint, ctx=ctx)
             if auto_hint:
                 lines.append(auto_hint)

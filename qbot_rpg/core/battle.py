@@ -400,6 +400,10 @@ class TurnReport:
     # 供展示层/续战校验使用。默认值保证旧构造点零破坏。
     action_seq: int = 0
     battle_time: float = 0.0
+    # 2026-09-12 战斗 HUD v2：本行动的持续效果事件（DOT 生效 / 效果失效 / 再生 / 吸收回复），
+    # 由引擎在行动收尾与行动开始结算时收集（`battle_effect_tick_*` / `battle_effect_expire`
+    # 渲染行数据源）。默认空元组——旧构造点零破坏。
+    effect_events: Tuple[Mapping[str, Any], ...] = ()
     # 事件位点（非 dataclass 字段，保持字段集纯净；供旧读方过渡读取）
     _phase_label: Tuple[str, ...] = ()
 
@@ -631,6 +635,9 @@ class BattleEngine:
         # 结算 NPC ready 拍时，把其 ActionOutcome 暂存于此，供 `player_act` 汇总进
         # TurnReport.outcomes（渲染层据此产出「怪物行动行」）。
         self._npc_outcomes: List[ActionOutcome] = []
+        # 2026-09-12 战斗 HUD v2：本行动的持续效果事件缓冲（行动开始清空；DOT 生效 /
+        # 效果失效 / 再生 / 吸收回复在结算点追加；随 TurnReport.effect_events 上报渲染层）。
+        self._effect_events: List[Mapping[str, Any]] = []
         # 跃空窗口（增补 v1 §四）：引擎级待发事件（自动落地等）——并入下一次行动
         # outcome 的 side_effects（渲染层出「落回地面」行）；取走即清（防重复播报）。
         self._pending_air_events: List[Mapping[str, Any]] = []
@@ -2570,6 +2577,13 @@ class BattleEngine:
                 self.resolve_damage(src, actor, int(dot.get("value", 0)),
                                     attack_type="status", snapshot=self._snap, runtime=rt)
                 self._absorb_runtime(rt)
+                # HUD v2：行动开始 DOT 生效事件（`【持续效果】…生效…` 行数据源）
+                self._effect_events.append({
+                    "type": "dot_damage", "side": actor,
+                    "status": str(dot.get("status_id") or dot_id),
+                    "value": int(dot.get("value", 0)),
+                    "name": str(dot.get("name") or ""),
+                })
                 self._death_check_side(actor, "turn_start_dot")
                 rt = self._new_runtime()
                 if int(dot.get("turns", 0)) > 0:
@@ -4657,6 +4671,7 @@ class BattleEngine:
             _te_log = tick_turn_end(self._snap, self._new_runtime())
             if _te_log:
                 self._snap.setdefault("turn_end_log", []).extend(_te_log)
+                self._effect_events.extend(_te_log)     # HUD v2：本行动效果事件（DOT/失效/再生）
                 self._death_check_side("player", "turn_end_dot")
                 self._death_check_side("enemy", "turn_end_dot")
                 self._sync_scheduler_deaths()
@@ -4882,6 +4897,7 @@ class BattleEngine:
             enemy_pos=self._snapshot_pos("enemy"),
             action_seq=self.action_seq,   # CTB 权威进度计量
             battle_time=self.battle_time,  # CTB 权威时间计量
+            effect_events=tuple(self._effect_events),   # HUD v2：本行动效果事件
             _phase_label=(self._phase,),   # 事件位点（旧读方经 .phases 属性读取）
         )
 
@@ -4926,6 +4942,7 @@ class BattleEngine:
             self._resolve_ready_actor()
         pre_npc = list(self._npc_outcomes)   # 押到玩家拍之前的 NPC 连锁行动
         self._npc_outcomes = []
+        self._effect_events = []             # HUD v2：本拍效果事件从零收集
         if self._finished:
             return self._turn_report()
 
@@ -4968,6 +4985,7 @@ class BattleEngine:
                 enemy_pos=self._snapshot_pos("enemy"),
                 action_seq=self.action_seq,
                 battle_time=self.battle_time,
+                effect_events=tuple(self._effect_events),   # HUD v2：本行动效果事件
             )
         # 成功行动：`_after_actor_action` 已推进行动条（complete_player_action 解除
         # 暂停 + 重签票据 + 推 NPC 连锁）——此处仅汇总本次推进的日志/结果。
@@ -4986,6 +5004,7 @@ class BattleEngine:
             enemy_pos=self._snapshot_pos("enemy"),
             action_seq=self.action_seq,
             battle_time=self.battle_time,
+            effect_events=tuple(self._effect_events),   # HUD v2：本行动效果事件
         )
 
     def _normalize_action(self, action: Any, params: Any = None) -> Mapping[str, Any]:

@@ -187,7 +187,7 @@ async def test_deep_master_opens_session() -> None:
 async def test_deep_recipe_not_found() -> None:
     ctx = make_ctx(_player(level=4))
     out = await cmd_deep(_pc("/深度炼金 不存在的配方"), ctx)
-    assert "配方不存在" in out
+    assert "未找到配方" in out
 
 
 # ---------------------------------------------------------------------------

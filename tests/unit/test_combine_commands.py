@@ -618,13 +618,13 @@ async def test_missing_arg_tpl12() -> None:
 
 
 async def test_mount_jewel_not_found() -> None:
-    """负例：/镶嵌 非装饰珠 → 装饰珠不存在；/镶嵌 装备不存在 → 装备不存在。"""
+    """负例：/镶嵌 非装饰珠 → 未找到装饰珠；/镶嵌 装备不存在 → 未找到装备。"""
     ctx = make_ctx(level=0, held={})
     out = await cmd_mount(parse_command("/镶嵌 烈焰弹·改 长剑", whitelist=W), ctx)
-    assert "装饰珠不存在" in out
+    assert "未找到装饰珠" in out
     ctx2 = make_ctx(level=0, held={"jewel_atk_common": 1})
     out2 = await cmd_mount(parse_command("/镶嵌 攻击珠·普通 不存在之剑", whitelist=W), ctx2)
-    assert "装备不存在" in out2
+    assert "未找到装备" in out2
 
 
 async def test_copy_qty_fallback_parse() -> None:

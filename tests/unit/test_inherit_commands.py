@@ -170,11 +170,11 @@ async def test_inherit_no_session_rejected() -> None:
 
 
 async def test_inherit_battle_intercept() -> None:
-    """GU-10/MUT-04 负例：战斗中发 /继承 → 「战斗中使用 /即时调合 <配方>」（L295）。"""
+    """GU-10/MUT-04 负例：战斗中发 /继承 → 「❌ 战斗中不可调合」（L295）。"""
     ctx = make_ctx(in_battle=True)
     ctx["session_mgr"].store["u1"] = {"session_type": "battle", "payload": {}, "version": 1}
     out = await cmd_inherit(parse_command("/继承 灼烧强化"), ctx)
-    assert "战斗中使用 /即时调合 <配方>" in out
+    assert "❌ 战斗中不可调合" in out
 
 
 async def test_inherit_non_alchemy_session_rejected() -> None:

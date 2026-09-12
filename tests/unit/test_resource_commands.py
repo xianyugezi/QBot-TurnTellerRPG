@@ -176,10 +176,13 @@ async def test_plant_formal_ok() -> None:
 
 
 async def test_plant_apprentice_rejected() -> None:
-    """TC-29 反例：见习（tier 0）/种植 → 壳层 GU-60 拒绝「❌ 等级不足…正式」，零写入。"""
+    """TC-29 反例：见习（tier 0）/种植 → 壳层 GU-60 拒绝「❌ 炼金等级不足」+「种植需达
+    「正式」」，零写入。"""
     ctx = make_ctx(prof_level=0, inventory={"tomato_seed": 3})
     out = await cmd_plant(_p("/种植 番茄种子"), ctx)
-    assert out == "❌ 等级不足：炼金职业需达到 正式（种植解锁）"
+    lines = out.split("\n")
+    assert lines[0] == "❌ 炼金等级不足"
+    assert lines[1] == "种植需达「正式」"
     assert "farm_plots" not in ctx
     assert ctx["inventory"]["tomato_seed"] == 3  # 未消耗
 
@@ -212,9 +215,11 @@ async def test_plant_seed_missing_inventory_rejected() -> None:
 # TC-29 /收获：GU-60 · F-21 未成熟拒绝 / 到点收获（品质≥种子+继承特性）/ 入包清空
 # ---------------------------------------------------------------------------
 async def test_harvest_apprentice_rejected() -> None:
-    """TC-29 反例：见习 /收获 → 壳层 GU-60 拒绝「❌ 等级不足…收获」。"""
+    """TC-29 反例：见习 /收获 → 壳层 GU-60 拒绝「❌ 炼金等级不足」+「收获需达「正式」」。"""
     out = await cmd_harvest(_p("/收获"), make_ctx(prof_level=0))
-    assert out == "❌ 等级不足：炼金职业需达到 正式（收获解锁）"
+    lines = out.split("\n")
+    assert lines[0] == "❌ 炼金等级不足"
+    assert lines[1] == "收获需达「正式」"
 
 
 async def test_harvest_immature_rejected() -> None:
@@ -292,11 +297,13 @@ async def test_helper_no_energy_rejected() -> None:
 
 
 async def test_helper_not_proficient_rejected() -> None:
-    """GU-62 反例：非精通（正式/无建档）→ 壳层拒绝「❌ 等级不足：代工助手需炼金职业 ≥ 精通」。"""
+    """GU-62 反例：非精通（正式/无建档）→ 壳层拒绝「❌ 炼金等级不足」+「代工需达「精通」」。"""
     for lv in (None, 0, 1):
         ctx = make_ctx(prof_level=lv, inventory={"candy": 1})
         out = await cmd_helper(_p("/代工 小助手 代采=矿石*5"), ctx)
-        assert out == "❌ 等级不足：代工助手需炼金职业 ≥ 精通"
+        lines = out.split("\n")
+        assert lines[0] == "❌ 炼金等级不足"
+        assert lines[1] == "代工需达「精通」"
         assert ctx["helpers"] == {} and ctx["inventory"]["candy"] == 1
 
 

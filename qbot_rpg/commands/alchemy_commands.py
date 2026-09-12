@@ -2414,7 +2414,11 @@ def _render_challenge_panel(ctx: Mapping[str, Any], snap: Mapping[str, Any],
 def _render_sp_panel(ctx: Mapping[str, Any],
                      view: Mapping[str, Any]) -> str:
     """技能面板渲染（F-19/M-19；**纯文本降级**——✨ 弃用）：
-    `SP 3 点可用：品质上限+10（已 2 次）/投入次数+1/解锁复制`。"""
+    标题 + 每项一行（批7·路T：`alchemy_sp_panel` 拆行 + 面板项 join 改换行）：
+    `SP 3 点可用`
+    `品质上限+10（已 2 次）`
+    `投入次数+1`
+    `解锁复制`"""
     try:
         sp = max(0, int(view.get("sp_available", 0)))
     except (TypeError, ValueError):
@@ -2435,7 +2439,7 @@ def _render_sp_panel(ctx: Mapping[str, Any],
             parts.append(str(name))
     if parts:
         return tpl_of(ctx, "alchemy_sp_panel",
-                      {"sp": sp, "items": "/".join(parts)})
+                      {"sp": sp, "items": "\n".join(parts)})
     return tpl_of(ctx, "alchemy_sp_panel_empty", {"sp": sp})
 
 
@@ -2754,7 +2758,9 @@ def render_alchemy_codex(ctx: MutableMapping[str, Any]) -> str:
     无门槛（只读+成长奖励幂等领取）：AlchemyMeta.codex_summary（进度 lit/total/all_lit）+
       codex_reward（点亮 N 格 → 经验/新配方，L210，idempotent）→ king_eligible（全亮 → 炼金王
       称号，TTL-01）渲染；M5 无 emoji 渲染纯文本：
-      `炼金图鉴：已点亮 23/40（点亮 40 → 炼金王称号）`。
+      `炼金图鉴：点亮 23/40`
+      `全点亮 → 「炼金王」称号`
+      （批7·路T：`alchemy_codex_line` 精简 + `alchemy_codex_king_hint` 换行独占一行）
     入参：ctx（codex_state/registry/prof_engine）。出参：回复正文 str。
     """
     settings = _settings_of(ctx)
@@ -2797,7 +2803,7 @@ async def cmd_skill_panel(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     """`/技能面板 [解锁=<面板项>]`（P-19/SEP-19 查看态 + 工程补白解锁子词，GU-58/F-19/M-19/
     SP-02~05/TC-27）。
 
-    无门槛：AlchemyMeta.skill_panel_view 渲染「SP 3 点可用：品质上限+10（已 2 次）/…」；
+    无门槛：AlchemyMeta.skill_panel_view 渲染「SP 3 点可用」+ 面板项逐行；
     可选 `解锁=<面板项>`（工程补白：SP-04/05 自选解锁子词 → skill_panel_unlock，SP 不足拒绝）。
     入参：parsed、ctx（prof_engine）。出参：回复正文 str。
     """
@@ -2997,7 +3003,7 @@ async def cmd_instant(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     上下文（战斗快照即过程态），无 投料/继承/确认 链。
 
     守卫链（合同顺序 GU-50→51→52→53→54）：
-      - GU-50 战斗中（ctx.in_battle，非战斗 → 「即时调合仅限战斗中」）；
+      - GU-50 战斗中（ctx.in_battle，非战斗 → 「❌ 即时调合仅限战斗中」+ 下一步）；
       - GU-51 炼金职业 ≥ 大师（proficiency.alchemy level ≥ 4，L425）；
       - GU-52 能量 ≥1 格（energy_enabled=true 时 engine.consume_energy，不足拒；R-08 关闭直通）；
       - GU-53 素材全量校验（engine.carry_ok，不足全拒+差异）；
@@ -3278,7 +3284,7 @@ async def cmd_assist(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
       会话 version 可复现【工程补白】）→ 写会话快照 assist_bonus 字段（F-15 加持当前会话
       后续结算；/确认 结算叠加落点见报告给批11-2）→ suspend 持久化（version 递增）。
     渲染（M-15 纯文本降级，装饰性 emoji 禁用——对齐 cmd_plant M-21 口径）：
-      「协力调和：〈玩家名〉加入，获得随机加成：〈加成描述〉」。
+      「协力调和：〈玩家名〉 加入」+「随机加成：〈加成描述〉」（批7·路T 拆两行）。
     入参：parsed（ParsedCommand，args[0]=被邀请玩家纯 QQ 号，@ 已由消息层剥离）、
       ctx（session_mgr/proficiency/items/recipe/inventory + resolve_player_name/same_group hook）。
     出参：回复正文 str。

@@ -16,7 +16,7 @@
 覆盖规则（每条正反例，断言精确文本/数值/快照字段）：
   P-15/SEP-15（@ 消息层剥离 → 纯 QQ 号参数）、GU-44（大师门槛）、GU-45（会话前置/
   无会话模板 L175）、GU-46（同群校验/保守放行）、F-15（材料链消耗+随机加成+assist_bonus
-  落快照）、M-15（「协力调和：〈玩家名〉加入，获得随机加成：〈加成描述〉」纯文本降级）、
+  落快照）、M-15（「协力调和：〈玩家名〉 加入」+「随机加成：〈加成描述〉」纯文本降级）、
   ATO-01（材料全量校验全拒+差异）、TC-22。
 
 依据：docs/m8_contract_指令契约.md §14（P-15/GU-44~46/F-15/M-15）+ 细化_2c4d §15 +
@@ -188,14 +188,14 @@ def _open_alchemy(ctx: dict, payload: Optional[dict] = None, version: int = 3) -
 # /协力：正例（大师+会话中+同群 → 随机加成写快照）
 # ---------------------------------------------------------------------------
 async def test_assist_success_master_in_session() -> None:
-    """GU-44/45/46 + F-15/M-15 正例：/协力 @玩家 → 「协力调和：〈玩家名〉加入，获得
-    随机加成：〈加成描述〉」；消耗快照材料链（moon_grass 5→3）+ assist_bonus 写会话快照
+    """GU-44/45/46 + F-15/M-15 正例：/协力 @玩家 → 「协力调和：〈玩家名〉 加入」+
+    「随机加成：〈加成描述〉」；消耗快照材料链（moon_grass 5→3）+ assist_bonus 写会话快照
     （version 递增 3→4）。"""
     ctx = make_ctx()
     _open_alchemy(ctx)
     out = await cmd_assist(parse_command("/协力 123456", whitelist=W), ctx)
     assert out.startswith("协力调和：")
-    assert "加入，获得随机加成：" in out
+    assert "随机加成：" in out
     assert "玩家123456" in out            # resolve_player_name hook 渲染玩家名
     # F-15 材料链消耗（快照材料链 月光草×2 → 5-2=3）
     assert ctx["inventory"]["moon_grass"] == 3
@@ -334,7 +334,8 @@ async def test_assist_player_name_fallback_qid() -> None:
     del ctx["resolve_player_name"]
     _open_alchemy(ctx)
     out = await cmd_assist(parse_command("/协力 123456", whitelist=W), ctx)
-    assert "协力调和：123456加入，获得随机加成：" in out
+    assert "协力调和：123456 加入" in out
+    assert "随机加成：" in out
 
 
 async def test_assist_missing_arg_tpl12() -> None:

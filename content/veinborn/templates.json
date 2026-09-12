@@ -1,4 +1,4 @@
 {
  "register_success_next": "下一步：\n发 任务 领取 1 接见面礼\n发 位置 看出口，进入 下\n发 怪物 锁定 1 开战",
- "job_switch_success": "✅ 转职成功！当前职业：{job}{rec}（属性按新职业成长重算，HP/MP 回满）"
+ "job_switch_success": "✅ 转职成功\n当前职业：{job}{rec}\n属性按新职业成长重算\nHP/MP 回满"
 }

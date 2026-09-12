@@ -595,6 +595,26 @@
     "ach_view_desc": "描述：{desc}",
     "ach_view_header": "【成就】{name}",
     "ach_view_hidden": "？？？\n该成就尚未解锁",
-    "ach_view_not_found": "❌ 没有这个成就：{aid}\n发 成就 查看全部成就"
+    "ach_view_not_found": "❌ 没有这个成就：{aid}\n发 成就 查看全部成就",
+    "pvp_err_missing": "❌ 缺少目标\n发 锁定玩家 <QQ号>\n发 攻击玩家 <技能名>",
+    "pvp_err_too_many": "❌ 参数太多\nPVP 指令只收 1 个参数",
+    "pvp_err_unknown_sep": "❌ 不支持列表/数量/键值\nPVP 指令只收 1 个参数",
+    "pvp_err_reserved": "❌ 参数含保留字符\n请去掉 * , = + / 空格",
+    "pvp_engine_missing": "❌ PVP 引擎未接线\n请等待后续里程碑",
+    "pvp_engine_unavailable": "❌ PVP 引擎不可用\n请稍后再试",
+    "pvp_lock_ok": "✅ 已锁定玩家\n{name}",
+    "pvp_lock_status_level": "【等级】{level}",
+    "pvp_lock_status_job": "【职业】{job}",
+    "pvp_lock_status_hp": "【血量】{hp}/{max_hp}",
+    "pvp_lock_status_equip": "【装备】{summary}",
+    "pvp_lock_equip_summary": "{slot}：{item}",
+    "pvp_lock_self": "❌ 不能锁定自己\n请选择其他玩家",
+    "pvp_lock_not_found": "❌ 未找到玩家\n{qq} 未注册或不在线",
+    "pvp_lock_no_target": "❌ 尚未锁定目标\n发 锁定玩家 <QQ号>",
+    "pvp_attack_no_target": "❌ 尚未锁定目标\n发 锁定玩家 <QQ号>",
+    "pvp_attack_ok": "✅ 已攻击 {name}\n{result}",
+    "pvp_attack_result_line": "{name} 受到 {damage} 伤害\n剩余 {hp}/{max_hp}",
+    "pvp_registered_gate": "❌ 请先创建角色\n发 注册 名字 职业",
+    "pvp_not_registered": "❌ 请先创建角色\n发 注册 名字 职业"
   }
 }

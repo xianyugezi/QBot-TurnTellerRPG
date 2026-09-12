@@ -617,5 +617,17 @@
   "env_ambient_default": "四周一片寂静，并没有特别的发现。",
   "env_investigate_generic": "四周一片寂静，并没有特别的发现。",
   "env_investigate_confirm": "这里没有新的发现。",
-  "ach_list_tail_tip": "发 成就信息 <序号> 查看详情"
+  "ach_list_tail_tip": "发 成就信息 <序号> 查看详情",
+  "tip_bag": "发 使用 <物品名>",
+  "tip_bag_view": "发 背包 查看 <序号> 详情",
+  "tip_consume": "发 使用 <物品名> 消耗品",
+  "tip_equip": "发 使用 <序号> 穿戴装备",
+  "tip_view": "发 装备 查看当前装备",
+  "tip_skill": "发 技能 <页码> 翻页",
+  "tip_help": "发 帮助 <组名> 组内指令",
+  "tip_help_dir": "发 帮助 <页数> 翻页",
+  "tip_help_group": "发 帮助 <组名> <页数> 翻页",
+  "tip_checkin": "发 签到 补签",
+  "tip_quest_board": "发 任务 领取 <序号>",
+  "tip_shop": "发 购买 <物品名>"
 }

@@ -349,7 +349,9 @@ def test_equip_view_page1():
     assert "头部" not in out and "手部" not in out
     assert "腿部" not in out and "脚部" not in out
     assert "当前页" not in out         # 不加翻页
-    assert lines[-1] == "Tip:发送'使用 序号'穿戴装备，如'使用 1'"
+    # 2026-09-12 专项·尾行 Tip 统一：表键 tip_equip（免斜杠「发 使用 <序号> 穿戴装备」）
+    assert lines[-1] == "Tip:发 使用 <序号> 穿戴装备"
+    assert "发送'" not in out
 
 
 def test_equip_view_page2():
@@ -592,7 +594,7 @@ def test_help_group_compact_page():
     out = cmd_help(parse("帮助冒险2"), make_ctx())
     assert "6. 背包筛选 —— 按类型筛选背包" in out
     assert "当前页：2/4" in out
-    assert "帮助<组名><页数>" in out  # 组页尾 Tip 教紧凑翻页
+    assert "发 帮助 <组名> <页数> 翻页" in out  # 组页尾 Tip（免斜杠 + 翻页提示）
 
 
 def test_help_dir_compact_page_gm():
@@ -600,7 +602,7 @@ def test_help_dir_compact_page_gm():
     out = cmd_help(parse("帮助2"), make_ctx(is_gm=True))
     assert "GM" in out
     assert "当前页：2/2" in out
-    assert "帮助<页数>" in out  # 目录尾 Tip 教紧凑翻页
+    assert "发 帮助 <页数> 翻页" in out  # 目录尾 Tip 教紧凑翻页（免斜杠口径）
 
 
 def test_help_group_compact_bad_suffix_tpl12():
@@ -744,7 +746,7 @@ def test_footer_tpl08_exact():
     assert "当前页：1/2(全部)" in cmd_bag(parse("/背包"), ctx)       # /背包 自定义模板
     # Tip 随机轮换（2026-09-06 用户拍板：每次随机一条）→ 只断言 Tip 行存在
     assert any("Tip:" in ln for ln in cmd_bag(parse("/背包"), ctx).splitlines())
-    assert "Tip:发送'使用 序号'穿戴装备，如'使用 1'" in cmd_equip(parse("/装备"), ctx)   # 意见一：不加翻页
+    assert "Tip:发 使用 <序号> 穿戴装备" in cmd_equip(parse("/装备"), ctx)   # 意见一：不加翻页（tip_equip）
     assert "当前页：1/2" in cmd_skill(parse("/技能"), ctx)
     assert "当前页：1/4" in cmd_help(parse("/帮助 冒险"), ctx)  # 2026-09-06 冒险 16 条 4 页
 

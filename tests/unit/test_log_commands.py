@@ -200,11 +200,11 @@ def test_six_groups_fixed_order() -> None:
     ctx = _ctx(event_log=entries)
     out = cmd_log(_pc(), ctx)
     # 组序固定：首杀 → 首钓冠级 → 剧情节点 → 隐藏发现 → 里程碑（第 1 页 5 条）
-    order = ["■ 首杀", "■ 首钓冠级", "■ 剧情节点", "■ 隐藏发现", "■ 里程碑"]
+    order = ["【首杀】", "【首钓冠级】", "【剧情节点】", "【隐藏发现】", "【里程碑】"]
     idx = [out.index(h) for h in order]
     assert idx == sorted(idx)
     out2 = cmd_log(_pc("2"), ctx)        # 第 2 页 → 图鉴新增
-    assert "■ 图鉴新增" in out2
+    assert "【图鉴新增】" in out2
     assert "图鉴新增：雾沼水蛭" in out2
 
 
@@ -227,10 +227,13 @@ def test_adventure_five_per_page_and_header() -> None:
     entries = [_ev("first_kill", f"2026-08-{d:02d}", name=f"怪{d}") for d in range(1, 14)]
     ctx = _ctx(event_log=entries)
     out = cmd_log(_pc(), ctx)
-    assert "【冒险日志】" in out
-    assert "第 1 页 / 共 3 页" not in out.splitlines()[0]   # 页码不在页头（保留在尾段当前页）
-    log_lines = [ln for ln in out.splitlines() if ln.startswith("[日志]")]
-    assert len(log_lines) == 5
+    assert out.splitlines()[0] == "【冒险日志】"          # 页头 = 标题行（无页码）
+    # 条目首行 = 「时间 天气」（批2·路F 拆行：时间天气行 + 文本行）
+    entry_heads = [
+        ln for ln in out.splitlines()
+        if len(ln) >= 6 and ln[:2].isdigit() and ln[2] == ":"
+    ]
+    assert len(entry_heads) == 5
 
 
 def test_adventure_clamp_last_page() -> None:
@@ -239,8 +242,7 @@ def test_adventure_clamp_last_page() -> None:
     entries = [_ev("first_kill", f"2026-08-{d:02d}", name=f"怪{d}") for d in range(1, 14)]
     ctx = _ctx(event_log=entries)
     out = cmd_log(_pc("3"), ctx)
-    assert "【冒险日志】" in out
-    assert "第 3 页 / 共 3 页" not in out                    # 页头无页码
+    assert out.splitlines()[0] == "【冒险日志】"              # 页头 = 标题行（无页码）
     assert "怪13" not in out                     # 最末页 = 最新段（怪11..怪13 在第 1 页）?
     assert "（已到最后一页）" not in out           # 合法最末页不夹取
     out9 = cmd_log(_pc("9"), ctx)
@@ -256,8 +258,8 @@ def test_first_seen_and_weather_snapshot() -> None:
         _ev("codex_new", "2026-08-28", weather="晴", name="雾沼水蛭"),
     ])
     out = cmd_log(_pc(), ctx)
-    assert "首次发现隐藏要素『蚀月之狼』【首见】" in out
-    assert "[日志] 10:30 雨夜 ·" in out
+    assert "10:30 雨夜【首见】" in out                    # 批2·路F：首见标记挂时间天气行尾
+    assert "首次发现隐藏要素「蚀月之狼」" in out
     assert "图鉴新增：雾沼水蛭" in out
     assert "10:30 晴" in out
 
@@ -282,13 +284,13 @@ def test_adventure_local_fallback(monkeypatch) -> None:
     entries = [_ev("first_kill", f"2026-08-{d:02d}", name=f"怪{d}") for d in range(1, 14)]
     ctx = _ctx(event_log=entries)
     out = cmd_log(_pc("9"), ctx)
-    assert "【冒险日志】" in out
-    assert "第 3 页 / 共 3 页" not in out       # 意见一同步：页头去页码
+    assert out.splitlines()[0] == "【冒险日志】"    # 意见一同步：页头 = 标题行（无页码）
     assert "（已到最后一页）" in out
     out2 = cmd_log(_pc(), _ctx(event_log=[_ev("hidden_find", "2026-08-28",
                                               weather="雨夜", name="蚀月之狼",
                                               first_seen=True)]))
-    assert "首次发现隐藏要素『蚀月之狼』【首见】" in out2
+    assert "10:30 雨夜【首见】" in out2
+    assert "首次发现隐藏要素「蚀月之狼」" in out2
 
 
 @pytest.mark.parametrize("raw,args", [
@@ -314,7 +316,7 @@ def test_unknown_tag_not_in_adventure() -> None:
     assert "图鉴新增：雾沼水蛭" in out
     assert "冒险记录" not in out                     # 非六类条目不渲染（六类分组边界）
     assert "【冒险日志】" in out
-    assert "■ 图鉴新增" in out
+    assert "【图鉴新增】" in out
 
 
 # ---------------------------------------------------------------------------
@@ -329,7 +331,7 @@ def test_bio_default_newest_segment() -> None:
         _ev("codex_new", "2026-08-28", weather="晴", name="雾沼水蛭"),
     ])
     out = cmd_log(_pc(BIO_SUBWORD), ctx)
-    assert "【传记】第 1 段 / 共 2 段" in out
+    assert "【传记】第1/2段" in out
     assert "2026-08-28 · 图鉴新增" in out
     assert "晴×1" in out
     assert "蚀月之狼" not in out          # 只展示最近 1 段
@@ -343,9 +345,10 @@ def test_bio_page_flips_segments() -> None:
         _ev("codex_new", "2026-08-28", weather="晴", name="雾沼水蛭"),
     ])
     out = cmd_log(_pc(BIO_SUBWORD, "2"), ctx)
-    assert "【传记】第 2 段 / 共 2 段" in out
+    assert "【传记】第2/2段" in out
     assert "2026-08-27 · 隐藏发现" in out
-    assert "隐藏发现 2 条 · 雨夜×2" in out
+    assert "隐藏发现 2 条" in out          # 批2·路F：组+计数一行、天气一行（防多天气爆宽）
+    assert "雨夜×2" in out
 
 
 def test_bio_cap_50_ring() -> None:
@@ -355,7 +358,7 @@ def test_bio_cap_50_ring() -> None:
         entries.append(_ev("codex_new", f"2026-07-{d:02d}", name=f"物{d}"))
     ctx = _ctx(event_log=entries)
     out = cmd_log(_pc(BIO_SUBWORD, "60"), ctx)   # 超段 → 夹取最末段
-    assert "【传记】第 50 段 / 共 50 段" in out
+    assert "【传记】第50/50段" in out
     assert "（已到最后一页）" in out
     assert "2026-07-03" in out            # 最旧保留段（52 日 → 覆盖 07-01/07-02 → 剩 50 段）
     assert "2026-07-01" not in out
@@ -380,7 +383,7 @@ def test_sys_log_newest_first() -> None:
         _audit("2026-08-28T12:00:00", "编辑"),
     ])
     out = cmd_log(_pc(), ctx)
-    assert "【系统日志】第 1 页 / 共 1 页" in out
+    assert "【系统日志】第1/1页" in out
     assert out.index("/编辑") < out.index("/日志") < out.index("/重载")
 
 
@@ -391,12 +394,12 @@ def test_sys_log_default_show_and_page_size() -> None:
         for i in range(1, 26)             # 25 条审计
     ])
     out = cmd_log(_pc(), ctx)
-    assert "【系统日志】第 1 页 / 共 1 页" in out     # 默认 20 条 → 1 页
+    assert "【系统日志】第1/1页" in out     # 默认 20 条 → 1 页
     assert "[25:00:00]" in out and "[01:00:00]" not in out   # 最近 20 条（p6..p25）
     out2 = _pc("2")
     out2.kv = [{"key": "条数", "value": "50"}]       # 条数=N 走 kv（对齐 gm_commands 5b G8）
     out2 = cmd_log(out2, ctx)  # type: ignore[assignment]
-    assert "【系统日志】第 2 页 / 共 2 页" in out2  # type: ignore[operator]  # 25 条 → 20/5 两页
+    assert "【系统日志】第2/2页" in out2  # type: ignore[operator]  # 25 条 → 20/5 两页
     assert "[01:00:00]" in out2  # type: ignore[operator]  # 第 2 页含最旧 p1
 
 
@@ -407,7 +410,7 @@ def test_sys_log_settings_override() -> None:
                audit_log=[_audit(f"2026-08-28T{i:02d}:00:00", "日志", params=f"p{i}")
                           for i in range(1, 13)])
     out = cmd_log(_pc(), ctx)
-    assert "【系统日志】第 1 页 / 共 1 页" in out     # 窗口 10 条 → 展示 5 条
+    assert "【系统日志】第1/1页" in out     # 窗口 10 条 → 展示 5 条
     assert "p12" in out and "p6" not in out
 
 
@@ -501,12 +504,28 @@ def test_log_custom_template_unknown_placeholder_kept() -> None:
     assert "完成度 50% ・ 段数 {segments}" in out
 
 
-def test_log_tpl_whitelist_registered() -> None:
-    """占位符白名单：log_tpl.PLACEHOLDER_WHITELIST 与模板占位符一一对应。"""
-    from qbot_rpg.core.templates.log_tpl import (
+def test_log_templates_migrated_to_table() -> None:
+    """批2·路F 迁表：29 条 log_* 唯一源 = 全量模板表；表侧白名单 = 文本占位符；旧分区已清空。"""
+    import re
+
+    from qbot_rpg.core.templates import (
         DEFAULT_TEMPLATES,
         PLACEHOLDER_WHITELIST,
+        TABLE_TEMPLATES,
     )
+    from qbot_rpg.core.templates import log_tpl as _log_partition
+
+    log_keys = {k for k in TABLE_TEMPLATES if k.startswith("log_")}
+    assert len(log_keys) == 29                    # 本批全部 29 键已入表
+    # 旧分区清空（键不回流 log_tpl）
+    assert not _log_partition.DEFAULT_TEMPLATES
+    assert not _log_partition.PLACEHOLDER_WHITELIST
+    # 聚合与表一致；白名单 = 文本占位符（表侧自动派生，防漏登）
+    for key in sorted(log_keys):
+        assert DEFAULT_TEMPLATES[key] == TABLE_TEMPLATES[key]
+        phs = set(re.findall(r"\{([a-zA-Z0-9_]+)\}", TABLE_TEMPLATES[key]))
+        assert PLACEHOLDER_WHITELIST[key] == phs
+    # 关键键抽查（对齐旧断言口径）
     assert PLACEHOLDER_WHITELIST["log_adventure_line"] == {"time", "weather", "text"}
     assert PLACEHOLDER_WHITELIST["log_group_header"] == {"name"}
     assert PLACEHOLDER_WHITELIST["log_entry_milestone"] == {"pct"}
@@ -515,8 +534,6 @@ def test_log_tpl_whitelist_registered() -> None:
     # 无占位符模板：白名单空集
     assert PLACEHOLDER_WHITELIST["log_adventure_header"] == set()
     assert PLACEHOLDER_WHITELIST["log_permission_denied"] == set()
-    # 白名单登记齐全（每 key 都有登记；默认模板每 key 都有条目）
-    assert set(DEFAULT_TEMPLATES) == set(PLACEHOLDER_WHITELIST)
 
 
 def test_log_permission_denied_uses_template() -> None:

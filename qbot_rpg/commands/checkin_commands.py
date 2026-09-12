@@ -134,8 +134,10 @@ SUB_STATUS = "状态"
 SUB_MAKEUP = "补签"
 SUBWORDS: tuple = (SUB_STATUS, SUB_MAKEUP)
 
-# CakeGame 式尾段 Tip 内容（`Tip:` 之后部分，2026-08-27 用户拍板统一列表尾段；无斜杠指令名）
-_TAIL_TIP = "发送'签到 补签'即可补签"   # /签到 结算汇总与状态视图（补签为真实子指令）
+# CakeGame 式尾段 Tip 内容（`Tip:` 之后部分，2026-08-27 用户拍板统一列表尾段）。
+# 2026-09-12 专项·尾行 Tip 统一：文案常量撤除 → 全量表键 tip_checkin
+# 「发 签到 补签」（免斜杠「发 <指令> <参数>」写法；补签为真实子指令 SUB_MAKEUP，指令串逐字一致；
+# 内容包 templates.json 可覆盖同键）；渲染走 tpl_of(ctx, "tip_checkin")。
 
 # 结算/状态不可用兜底（引擎 ok=False 且无 message 时；文本唯一源 = 全量表，渲染 tpl_of）
 TPL_NO_CHECKIN: str = _ALL_TPL["checkin_unavailable"]
@@ -441,7 +443,7 @@ def render_summary(res: Mapping[str, Any], page: object, *,
             lines.append(tpl_of(ctx, "checkin_section_header", {"title": title}))
             seen.add(title)
         lines.append(row)
-    tail = render_cake_tail(pg.page, pg.total_pages, tip=_TAIL_TIP,
+    tail = render_cake_tail(pg.page, pg.total_pages, tip=tpl_of(ctx, "tip_checkin"),
                             templates=ctx.get("templates") if isinstance(ctx, Mapping) else None)
     if pg.clamped:
         tail = tail.replace("\n", f"\n{LAST_PAGE_HINT}\n", 1)

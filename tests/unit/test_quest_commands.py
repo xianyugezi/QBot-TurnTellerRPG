@@ -117,8 +117,9 @@ def test_quest_noarg_board_page1():
     # 5 条/页（m4 §2.2）：第 1 页 5 条 + TPL-08 页脚
     assert "当前页：1/2" in out
     # 操作指引行（2b4 §5.2 语义；2026-09-05 文案修正：任务 领取 序号——与实际可解析
-    # 指令一致，防玩家发「领取任务1」被白名单静默忽略）
-    assert "Tip:发送'任务 领取 序号'即可领取任务" in out
+    # 指令一致，防玩家发「领取任务1」被白名单静默忽略；2026-09-12 专项·尾行 Tip 统一：
+    # 表键 tip_quest_board，免斜杠「发 任务 领取 <序号>」）
+    assert "Tip:发 任务 领取 <序号>" in out
 
 
 def test_quest_board_npc_section_page2():
@@ -217,9 +218,16 @@ def test_quest_accept_alias_lingqu():
 
 
 def test_quest_board_tip_matches_accept_alias():
-    """P2-12 QA：任务板 Tip「领取任务 序号」与可用子词一致（「领取」已注册为「接取」等价子词）。"""
-    tip = qc._BOARD_TAIL_TIP
-    assert "领取任务" in tip and "接取" not in tip  # 口语化引导词保留
+    """P2-12 QA：任务板 Tip「任务 领取 <序号>」与可用子词一致（「领取」已注册为「接取」等价子词）。
+
+    2026-09-12 专项·尾行 Tip 统一：Tip 文案改为全量表键 tip_quest_board（免斜杠），
+    本测试断言改读表值（不再读模块常量 _BOARD_TAIL_TIP——该常量已撤除）。
+    """
+    from qbot_rpg.core.templates import tpl_of
+
+    tip = tpl_of(None, "tip_quest_board")
+    assert "领取" in tip and "接取" not in tip  # 引导词保留（领取 = 接取 等价子词）
+    assert "发送'" not in tip and "/" not in tip
     assert qc.SUB_ACCEPT_ALIASES == ("领取",)
     # Tip 引导的形式能直接路由成功
     out = cmd_quest(parse("/任务 领取 3"), make_ctx())

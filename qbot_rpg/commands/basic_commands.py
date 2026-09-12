@@ -48,10 +48,12 @@ TPL-12（sender.format_tpl12，文案唯一源 errors.py D-04）。
      /帮助 目录/组页 全部按 m4 §2.2 5 条/页；尾段统一 CakeGame 式「当前页 + Tip 尾行」
      （render_cake_tail，2026-08-27 用户拍板，替代 TPL-08 页脚）：当前页恒显示 + 各指令定制
      Tip（/角色=查看当前装备、/装备=穿戴、/技能=技能说明、/帮助=翻页查看指令；/背包/背包筛选
-     带货币行 + 类型词）。
+     带货币行 + 类型词）。2026-09-12 专项·尾行 Tip 统一后，各 Tip 均为全量表键
+     （tip_bag / tip_bag_view / tip_consume / tip_equip / tip_view / tip_skill /
+     tip_help / tip_help_dir / tip_help_group，免斜杠口径；内容包可覆盖），本层零文案常量。
   2) **4f TPL-4F-06 目录页脚「输入 /帮助 组名 翻页」归一**：2026-08-27 用户拍板后基础指令组
      列表尾段不再用 TPL-08，统一 CakeGame 式（当前页 + Tip）；/帮助 目录/组页 Tip =
-     「发送'帮助 组名'翻页查看指令」。
+     「发 帮助 <页数> 翻页」（表键 tip_help_dir；单页回落 tip_help「发 帮助 <组名> 组内指令」）。
   3) **/角色 = 玩家属性面板（B4 裁决承接）**：4f /状态 面板五区中「前缀行/位置行/效果区」由装配层
      prefix_render 与后续批次承接；本路 /角色 聚焦任务口径「LV 行固定头部 + 属性三层结构
      （白值/加成/临时）」，9 项属性 5 条/页 = 2 页 + CakeGame 尾段（当前页 + Tip）+ 裁决② 夹取。resource 型（生命/魔力）
@@ -820,17 +822,19 @@ def _currency_lines(ctx: Mapping[str, Any]) -> List[str]:
             for k, v in cur.items()]
 
 
-# CakeGame 式尾段 Tip 内容（`Tip:` 之后部分，2026-08-27 用户拍板统一列表尾段；无斜杠指令名）
-_BAG_TAIL_TIP = "发送'使用+物品名'即可使用物品"      # /背包（含货币行 + 类型词）
-_VIEW_TAIL_TIP = "发送'装备'查看当前装备"           # /角色（属性面板下一步）
-_EQUIP_TAIL_TIP = "发送'使用 序号'穿戴装备，如'使用 1'"  # /装备（穿戴引导；2026-09-05 用户拍板穿戴统一走 使用——「使用 N」实测可穿，勿教「装备 穿」）
-_SKILL_TAIL_TIP = "发送'技能 页码'翻页查看，如'技能 2'"  # /技能（技能列表翻页；2026-09-05 模拟器审计：原「帮助 技能」不可解析）
-_HELP_TAIL_TIP = "发送'帮助 组名'翻页查看指令"      # /帮助 目录/组页（旧通用文案）
-# 2026-09-05 实机反馈：帮助翻页提示不明确 + 紧凑形态「帮助2」「帮助冒险2」不可用。
-# 拆分目录/组页两个 Tip，教紧凑页码翻页（对应 cmd_help 已支持的 帮助<数字> 目录页 /
-# 帮助<组名><数字> 组页——紧凑粘合拆分 2026-09-05 新增）：
-_HELP_DIR_TAIL_TIP = "发送'帮助<页数>'翻页，如'帮助2'"          # /帮助 目录（GM 6 组 2 页）
-_HELP_GROUP_TAIL_TIP = "发送'帮助<组名><页数>'翻页，如'帮助冒险2'"  # /帮助 <组名> 组页
+# CakeGame 式尾段 Tip 内容（`Tip:` 之后部分，2026-08-27 用户拍板统一列表尾段）。
+# 2026-09-12 专项·尾行 Tip 统一：文案常量全部撤除 → 全量表键（免斜杠「发 <指令> <参数>」写法；
+# 内容包 templates.json 可覆盖同键）；本层只留键名，渲染统一走 tpl_of(ctx, key)。
+#   tip_bag        /背包     兜底（含货币行 + 类型词）
+#   tip_bag_view   /背包     轮换池①：物品详情发现性引导
+#   tip_consume    /背包     轮换池②（有装备时追加）：消耗品直发物品名
+#   tip_equip      /装备     穿戴引导 + /背包 轮换池②（2026-09-05 用户拍板穿戴统一走 使用——
+#                            「使用 N」实测可穿，勿教「装备 穿」）
+#   tip_view       /角色     属性面板下一步（留表；旧常量亦零调用点，待批18 死键清扫裁决）
+#   tip_skill      /技能     技能列表翻页（2026-09-05 模拟器审计：原「帮助 技能」不可解析）
+#   tip_help       /帮助 组页 单页引导（2026-09-05 实机反馈：单页教翻页 = 空转引导，改教组内指令）
+#   tip_help_dir   /帮助 目录 多页翻页（GM 6 组 2 页；紧凑形态「帮助2」解析层仍双认）
+#   tip_help_group /帮助 <组名> 组页 多页翻页（紧凑形态「帮助冒险2」解析层仍双认）
 
 
 def _cake_tail(page: int, total_pages: int, *, category_word: Optional[str] = None,
@@ -900,11 +904,11 @@ def _bag_tail_lines(page: int, total_pages: int, total: int, clamped: bool,
 
     （类型词 = 当前筛选的物品类型，用户 2026-08-27 拍板：/背包 → 全部，/背包筛选
     装备 → 装备、/背包筛选药剂 → 药剂 等；原「共 N 条」改显示筛选类型。
-    tip 空 → 默认 _BAG_TAIL_TIP（2026-09-05 模拟器审计：背包含装备时 Tip 教
+    tip 空 → 默认 tip_bag 表键（2026-09-05 模拟器审计：背包含装备时 Tip 教
     「使用 物品名」与装备实际穿戴路径「装备 穿 序号」矛盾——调用方按内容传 tip）"""
     lines: List[str] = list(_currency_lines(ctx))
     lines.append(_cake_tail(page, total_pages, category_word=category_word,
-                            tip=tip or _BAG_TAIL_TIP, clamped=clamped,
+                            tip=tip or tpl_of(ctx, "tip_bag"), clamped=clamped,
                             templates=ctx.get("templates")))
     return lines
 
@@ -929,10 +933,11 @@ def _render_bag_page(ctx: Mapping[str, Any], page: int) -> str:
     # 2026-09-06 实机反馈：玩家想查看物品详情连试「查看1/物品详情1」全静默——
     # 详情正确形态是「背包 查看 <序号|名|部位>」，Tip 必须教（发现性引导）
     # 2026-09-06 用户拍板：Tip 太长 → 每次随机出现其中一条（轮换引导）
-    _tip_pool = ["发送'背包 查看 <序号>'看物品详情",
-                 "发送'使用 序号'穿戴装备"]
+    # 2026-09-12 专项·尾行 Tip 统一：池内文案 → 全量表键（免斜杠，内容包可覆盖）
+    _tip_pool = [tpl_of(ctx, "tip_bag_view"),
+                 tpl_of(ctx, "tip_equip")]
     if _bag_has_equip(rows, ctx):
-        _tip_pool.append("消耗品直接'使用 物品名'")
+        _tip_pool.append(tpl_of(ctx, "tip_consume"))
     # 2026-09-06 用户拍板「每次随机出现其中一条」：ctx rng 每指令同 seed 重播种
     # （确定性设计）→ randrange 恒取序列首值 → 无法轮换。Tip 为展示层装饰
     # （非游戏数值，无公平性要求），按当前时间秒级轮换（每指令变化、无状态、
@@ -1410,7 +1415,7 @@ def _render_equip_page(ctx: Mapping[str, Any], page: int = 1) -> str:
         ln = equip_line(sid, eq.get(sid), ctx)
         if ln:
             lines.append(ln)
-    lines.append(f"Tip:{_EQUIP_TAIL_TIP}")
+    lines.append(f"Tip:{tpl_of(ctx, 'tip_equip')}")
     return "\n".join(lines)
 
 
@@ -1958,7 +1963,8 @@ def _render_skill_page(ctx: Mapping[str, Any], page: int) -> str:
             continue
         lines.append(skill_line(start + i + 1, sid, ctx))
     if sids:
-        lines.append(_cake_tail(res.page, res.total_pages, tip=_SKILL_TAIL_TIP, clamped=res.clamped,
+        lines.append(_cake_tail(res.page, res.total_pages, tip=tpl_of(ctx, "tip_skill"),
+                                clamped=res.clamped,
                                 templates=ctx.get("templates")))
     return "\n".join(lines)
 
@@ -2339,12 +2345,12 @@ def _render_help_directory(ctx: Mapping[str, Any], page: int) -> str:
         lines.append(_group_summary(ctx, g))
     if groups:
         # 2026-09-05 模拟器审计：目录仅 1 页时教「帮助2 翻页」是无效引导（普通玩家
-        # 5 组 1 页；GM 6 组 2 页才需要）——单页渲染「发 帮助 <组名> 看组内指令」
+        # 5 组 1 页；GM 6 组 2 页才需要）——单页渲染「发 帮助 <组名> 组内指令」
         # 引导（新手不知道组页存在，A 路审计）；多页才教翻页
         if (res.total_pages or 1) > 1:
-            _dir_tip = _HELP_DIR_TAIL_TIP
+            _dir_tip = tpl_of(ctx, "tip_help_dir")
         else:
-            _dir_tip = "发送'帮助 组名'查看组内指令，如'帮助 冒险'"
+            _dir_tip = tpl_of(ctx, "tip_help")
         lines.append(_cake_tail(res.page, res.total_pages, tip=_dir_tip, clamped=res.clamped,
                                 templates=ctx.get("templates")))
     return "\n".join(lines)
@@ -2378,7 +2384,7 @@ def _render_help_group(ctx: Mapping[str, Any], group_name: str, page: int) -> st
     if cmds:
         # 2026-09-05 模拟器审计：组页单页（≤5 条）教「帮助<组名><页数>」翻页是
         # 空转引导（无处可翻）——仅多页组渲染翻页 Tip
-        _g_tip = _HELP_GROUP_TAIL_TIP if (res.total_pages or 1) > 1 else ""
+        _g_tip = tpl_of(ctx, "tip_help_group") if (res.total_pages or 1) > 1 else ""
         lines.append(_cake_tail(res.page, res.total_pages, tip=_g_tip, clamped=res.clamped,
                                 templates=ctx.get("templates")))
     return "\n".join(lines)

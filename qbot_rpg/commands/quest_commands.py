@@ -55,7 +55,8 @@ D-04）。
   3) **双板段头**：引擎 sections 已带标题（"主线（常驻）"/"每日板上任务"/"NPC 支线"），本层
      按 2b4 §5.2 排版包成段头「【标题】」（表键 quest_board_section_header，2026-09-12
      批7·路U 由「━━ 标题 ━━」改全角【】口径）；尾段 Tip **不用引擎 tip**（引擎 tip 为 §5.1 裸
-     `/接取` 旧口径），以本层 _BOARD_TAIL_TIP 为准（`领取任务 序号`，意见一同步）。
+     `/接取` 旧口径），以全量表键 tip_quest_board 为准（「发 任务 领取 <序号>」，意见一同步；
+     2026-09-12 专项·尾行 Tip 统一后本层零文案常量）。
   4) **裸 /接取 /交付 /放弃 /任务信息 不注册**（2b4 §5.1 旧列法与 §5.4 双板仲裁）：本批只接
      m4 §3.3 收口形式 `/任务 <子词> <N>`（任务派工单口径），避免与批次 6 基础指令组注册冲突；
      委托板（/委托）独立板不在本批范围。
@@ -133,12 +134,12 @@ _ALL_SUBWORDS: tuple = SUBWORDS + SUB_ACCEPT_ALIASES
 # 任务板分页每页上限（m4 §2.2 横切；引擎 sections 全量返回后由本层重分页，工程补白 2）
 BOARD_PAGE_SIZE: int = DEFAULT_PAGE_SIZE  # 5 条/页
 
-# CakeGame 式尾段 Tip 内容（`Tip:` 之后部分，2026-08-27 用户拍板统一列表尾段；无斜杠指令名）
-# 2026-09-05 文案修正（B 方案拍板）：原「领取任务 序号」是口语化说法，但实际可解析
-# 指令是「任务 领取 序号」（QUEST_CMD=任务 + 子词 领取/接取）——玩家按 Tip 发
-# 「领取任务1」被顶层白名单静默忽略（无法领取任务反馈）。改与 quest_info_met
-# 「/任务 交付 {seq}」同构的口径：任务 领取 序号（Tip 无斜杠惯例）。
-_BOARD_TAIL_TIP = "发送'任务 领取 序号'即可领取任务"    # /任务 任务板
+# CakeGame 式尾段 Tip 内容（`Tip:` 之后部分，2026-08-27 用户拍板统一列表尾段）。
+# 2026-09-12 专项·尾行 Tip 统一：文案常量撤除 → 全量表键 tip_quest_board
+# 「发 任务 领取 <序号>」（免斜杠「发 <指令> <参数>」写法；内容包 templates.json 可覆盖同键）。
+# 2026-09-05 文案校验（B 方案拍板）保留：可解析指令 =「任务 领取 序号」（QUEST_CMD=任务 +
+# 子词 领取/接取）——玩家按旧 Tip 发「领取任务1」会被顶层白名单静默忽略；「领取」仍是
+# 已注册的「接取」等价子词（SUB_ACCEPT_ALIASES），本键与 quest_info_met 同构口径。
 
 # 任务板不可用兜底（引擎 ok=False 且无 message 时）→ quest_no_board（全量表 template_table.json）
 # 展示序号越界/非法（resolve_board_index → None）→ quest_no_quest（全量表 template_table.json）
@@ -421,7 +422,8 @@ def render_board(board: Mapping[str, Any], page: object, *,
         if title and first_seen.get(title, -1) == abs_i:
             lines.append(tpl_of(ctx, "quest_board_section_header", {"title": title}))
         lines.append(board_line(abs_i + 1, row, ctx))
-    tail = render_cake_tail(res.page, res.total_pages, tip=_BOARD_TAIL_TIP,
+    _btip = tpl_of(ctx, "tip_quest_board")
+    tail = render_cake_tail(res.page, res.total_pages, tip=_btip,
                             templates=ctx.get("templates") if isinstance(ctx, Mapping) else None)
     if res.clamped:
         tail = tail.replace("\n", f"\n{LAST_PAGE_HINT}\n", 1)
@@ -432,10 +434,10 @@ def render_board(board: Mapping[str, Any], page: object, *,
     # 满员提示（2026-09-05 审计 B 路 P2：进行中满 → Tip 换「先腾位」，防玩家点可接行被拒）
     if board.get("active_full"):
         full_note = tpl_of(ctx, "quest_board_active_full_note")
-        tail = tail.replace(_BOARD_TAIL_TIP, full_note, 1)
+        tail = tail.replace(_btip, full_note, 1)
     elif not _has_accept:
         no_new = tpl_of(ctx, "quest_board_no_accept_note")
-        tail = tail.replace(_BOARD_TAIL_TIP, no_new, 1)
+        tail = tail.replace(_btip, no_new, 1)
     lines.append(tail)
     return "\n".join(lines)
 

@@ -80,6 +80,7 @@ from qbot_rpg.core.dayroll import (
     weeks_elapsed,
 )
 from qbot_rpg.core.condition_engine import eval_condition
+from qbot_rpg.core.templates import tpl_of
 
 __all__ = [
     "SHOP_TYPES",
@@ -1055,7 +1056,11 @@ def shop_browse(shop_id: str, ctx: MutableMapping[str, Any], page: int = 1) -> d
         "title": f"LV{level}.{name}",
         "rows": slice_rows,
         "page": p, "pages": pages, "total": total,
-        "tip": "发送'购买+物品名'即可购买商品",
+        # 2026-09-12 专项·尾行 Tip 统一：尾行 Tip → 全量表键 tip_shop
+        # 「发 购买 <物品名>」（免斜杠；旧硬编码「发送'购买+物品名'即可购买商品」）。
+        # 注：商店壳层实际尾段走 shop_browse_tail_tip（发 购买 <序号> 即可买下），
+        # 本字段为引擎返回契约值，经 tpl_of 读表 → 内容包可覆盖。
+        "tip": tpl_of(ctx, "tip_shop"),
     }
 
 
@@ -1348,6 +1353,8 @@ def shop_list(ctx: MutableMapping[str, Any], page: int = 1) -> dict:
     pages = max(1, math.ceil(total / _PAGE_SIZE))
     p = _as_int(page) or 1
     p = max(1, min(p, pages))
+    # 2026-09-12 专项·尾行 Tip 统一：一览尾行 Tip → 全量表键 shop_list_tail_tip
+    # （「发 商店进入 <序号> 进店」；旧硬编码「/商店 序号 切换商店」含斜杠、与壳层渲染口径不一致）。
     return {"ok": True, "rows": rows[(p - 1) * _PAGE_SIZE: p * _PAGE_SIZE],
             "page": p, "pages": pages, "total": total,
-            "tip": "/商店 序号 切换商店"}
+            "tip": tpl_of(ctx, "shop_list_tail_tip")}

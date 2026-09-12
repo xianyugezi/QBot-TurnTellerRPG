@@ -22,20 +22,25 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     "help_directory_row": "{group} — {cmds}",
     "help_group_row": "{idx}. {cmd} —— {desc}",
     "help_group_empty": "该组暂无指令",
-    "help_tail": "Tip:发送'帮助 组名'翻页查看指令",
+    # 2026-09-12 专项·尾行 Tip 统一：尾段 Tip 文案改免斜杠「发 <指令> <参数>」写法
+    # （旧「发送'…'」式撤除）；本三键为迁移期遗留的整段尾行壳（含 Tip: 前缀，全仓零调用点），
+    # 指令模块现统一用全量表 tip_* 键（tip_help / tip_bag / tip_shop…），本处仅同步口径。
+    "help_tail": "Tip:发 帮助 <组名> 组内指令",
 
     # —— 背包（basic_commands bag）——
     "bag_empty": "❌ 背包空空如也",
     "bag_row": "{idx}.[{name}]×{count}",
-    "bag_tail": "Tip:发送'使用+物品名'即可使用物品",
+    "bag_tail": "Tip:发 使用 <物品名>",
 
     # —— 商店（shop_commands）——
     "shop_header": "{name}\n{desc}",   # 2026-08-31 用户拍板：介绍单独换行（name 已含类型徽标）
     "shop_row": "{idx}. {name} ｜ 商品单价：{price}{markers}",
     "shop_empty": "❌ 商店空空如也",
-    "shop_tail": "Tip:发送'购买 {idx}'即可购买物品。",
+    "shop_tail": "Tip:发 购买 <序号>",
 
     # —— 列表尾段（CakeGame 式，list_render.render_cake_tail）——
+    # `Tip:` 前缀为 CakeGame 规范拼接口径（渲染行 = `Tip:{tip}`，tip 由各指令表键提供），
+    # 故 list_tail 保留前缀不表驱动（2026-09-12 专项·尾行 Tip 统一结论）。
     "list_tail": "当前页：{page}/{pages}{filter}\nTip:{tip}",
 }
 
@@ -54,6 +59,6 @@ PLACEHOLDER_WHITELIST: Dict[str, set] = {
     "shop_header": {"name", "badge", "desc"},
     "shop_row": {"idx", "name", "price", "markers"},
     "shop_empty": set(),
-    "shop_tail": {"idx"},
+    "shop_tail": set(),
     "list_tail": {"page", "pages", "filter", "tip"},
 }

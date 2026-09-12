@@ -464,8 +464,9 @@ def quest_flow(smoke: Smoke, ctx: MutableMapping) -> dict:
     smoke.check("【NPC 支线】" in out, "任务：任务板含 NPC 支线段头")
     smoke.check("1. 药水补给" in out, "任务：任务板条目 1.药水补给")
     # Tip 文案 2026-09-05 B 方案修正：原「领取任务 序号」（口语化，顶层白名单静默忽略）
-    # 改与 quest_info_met 同构的「任务 领取 序号」（quest_commands L134-138 _BOARD_TAIL_TIP）
-    smoke.check("Tip:发送'任务 领取 序号'即可领取任务" in out,
+    # 改与 quest_info_met 同构的「任务 领取 序号」；2026-09-12 专项·尾行 Tip 统一：
+    # 全量表键 tip_quest_board，免斜杠「发 任务 领取 <序号>」
+    smoke.check("Tip:发 任务 领取 <序号>" in out,
                 "任务：操作指引行（CakeGame 式 Tip）")
     _trace_append(trace, "/任务 板", out)
 

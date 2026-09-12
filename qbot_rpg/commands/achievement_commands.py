@@ -24,8 +24,12 @@
 `qbot_rpg/core/templates/template_table.json` 并按手机QQ 14 全角新规范重写
 （段头【成就】/【称号】、多字段拆行、免斜杠、❌ + 原因 + 下一步）；渲染调用点与
 占位符名不变。分布：列表 4 / 详情 4 / 揭示 1 / 称号 6 / 空态 1。
-（已知：ach_list_tail / ach_reveal_card 在代码中无 tpl_of 调用点——列表尾段仍走
-`render_cake_tail(tip=...)` 硬编码，揭示卡属引擎 reveals 侧；两键留表待批18 死键清扫裁决。）
+2026-09-12 专项·引擎文案1（引擎层直出文案第一批）：列表尾段 Tip 改模板表驱动——新键
+`ach_list_tail_tip`（免斜杠「发 成就信息 <序号> 查看详情」），原硬编码
+`tip="输入 /成就信息 <N> 查看详情"` 撤除；`Tip:` 前缀仍由 list_render.render_cake_tail 负责。
+（已知：ach_list_tail / ach_reveal_card 在代码中仍无 tpl_of 调用点——ach_list_tail 与本批
+新键 ach_list_tail_tip 语义重叠、逻辑上被替代，留表待批18 死键清扫统一裁决；
+ach_reveal_card 属引擎 reveals 侧，同前。）
 """
 
 from __future__ import annotations
@@ -150,7 +154,7 @@ def cmd_achievements(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
             lines.append(tpl_of(ctx, "ach_list_line", {
                 "index": i, "name": e.get("name", "？"), "state": state}))
     lines.append(render_cake_tail(page, res.total_pages, category_word="成就",
-                                  tip="输入 /成就信息 <N> 查看详情"))
+                                  tip=tpl_of(ctx, "ach_list_tail_tip")))
     return "\n".join(lines)
 
 

@@ -57,6 +57,10 @@
      period/weather 从 ctx 直读（对齐 investigate 补白 8 口径），无外部时间依赖。
   7) 泛化缺省文本复用 investigate.DEFAULT_GENERIC_TEXT（惰性 import 兜底，R-23 复用
      口径）；本地零暗示池补齐多样性（全部零「此处有隐藏」措辞，TC-09）。
+  8) 【2026-09-12 专项·引擎文案1】中性文本池迁模板表：零暗示池读 env_neutral_pool_1..4、
+     泛化缺省读 env_ambient_default（tpl_of，内容包可覆盖同键）；_NEUTRAL_POOL /
+     DEFAULT_AMBIENT_TEXT 降级为 ctx 无 templates / 表缺键时的兜底常量（兜底链：
+     表 → investigate 常量 → 本地常量）。池化「多条随机」语义与 rng 确定性不变。
 
 铁律：零 NoneBot import；纯函数确定性（rng ctx 注入）；每函数 docstring；无 emoji；
 最小侵入（不改兄弟路环境事件/校验器文件）；不 git commit。
@@ -67,6 +71,7 @@ from __future__ import annotations
 from typing import Any, List, Mapping, MutableMapping, Optional, Tuple, cast
 
 from qbot_rpg.core.condition_engine import eval_condition
+from qbot_rpg.core.templates import tpl_of
 
 __all__ = [
     "RUMOR_PREFIX",
@@ -98,6 +103,14 @@ _LOCAL_CATEGORIES: Mapping[str, Tuple[str, ...]] = {
 }
 
 # 零暗示泛化池（R-23 复用口径 + 本地多样性；绝无「此处有隐藏」措辞，TC-09）
+# 2026-09-12 专项·引擎文案1：迁模板表驱动——主路径读 env_neutral_pool_1..4（键名后缀
+# 保留「多条随机」语义）；本元组 = ctx 无 templates / 内容包缺键时的兜底常量。
+_NEUTRAL_POOL_KEYS: Tuple[str, ...] = (
+    "env_neutral_pool_1",
+    "env_neutral_pool_2",
+    "env_neutral_pool_3",
+    "env_neutral_pool_4",
+)
 _NEUTRAL_POOL: Tuple[str, ...] = (
     "四周一片寂静，并没有特别的发现。",
     "风穿过原野，带起一阵沙沙声，别无他物。",
@@ -205,19 +218,33 @@ def _env_header(ctx: Mapping[str, Any]) -> str:
     return "（" + "·".join(parts) + "）"
 
 
+def _neutral_pool(ctx: Mapping[str, Any]) -> Tuple[str, ...]:
+    """零暗示泛化池（2026-09-12 专项·引擎文案1 · 模板表驱动）：读 env_neutral_pool_1..4
+    （内容包同名覆盖生效）；表缺键/空串 → 本地兜底常量元组（绝不为空，TC-09）。"""
+    texts = tuple(t for t in (tpl_of(ctx, k) for k in _NEUTRAL_POOL_KEYS) if t)
+    return texts or _NEUTRAL_POOL
+
+
 def _neutral_text(ctx: Mapping[str, Any]) -> str:
-    """零暗示泛化文本（R-07 / TC-09）：rng 确定性选择（无 rng → 池首条）。"""
+    """零暗示泛化文本（R-07 / TC-09）：池化语义不变——rng 确定性选择（无 rng → 池首条）；
+    池来源 = 模板表 env_neutral_pool_1..4（兜底 _NEUTRAL_POOL 常量元组）。"""
+    pool = _neutral_pool(ctx)
     rng = ctx.get("rng")
     if rng is not None and hasattr(rng, "randrange"):
         try:
-            return _NEUTRAL_POOL[rng.randrange(len(_NEUTRAL_POOL))]
+            return pool[rng.randrange(len(pool))]
         except Exception:
             pass
-    return _NEUTRAL_POOL[0]
+    return pool[0]
 
 
-def _default_generic() -> str:
-    """泛化缺省文本（R-23 复用 investigate.DEFAULT_GENERIC_TEXT；惰性 import 兜底）。"""
+def _default_generic(ctx: Optional[Mapping[str, Any]] = None) -> str:
+    """泛化缺省文本（R-23 复用口径；2026-09-12 专项·引擎文案1 迁表）：ctx 注入时经
+    tpl_of 读 env_ambient_default（内容包可覆盖）→ 惰性 import investigate.
+    DEFAULT_GENERIC_TEXT → 本地 DEFAULT_AMBIENT_TEXT（兜底常量链，逐级降级）。"""
+    t = tpl_of(ctx, "env_ambient_default")
+    if t:
+        return t
     try:
         from qbot_rpg.core.investigate import DEFAULT_GENERIC_TEXT  # noqa: PLC0415
         if isinstance(DEFAULT_GENERIC_TEXT, str) and DEFAULT_GENERIC_TEXT:

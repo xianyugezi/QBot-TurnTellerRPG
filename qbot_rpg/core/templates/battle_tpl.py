@@ -40,57 +40,32 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     "battle_no_battle_map_monster": "❌ 当前没有进行中的战斗。可用 锁定 <怪物名> 开战；"
                                     "进入战斗后使用 攻击 <技能序号或名称> 发动技能。",
     # 指令返回 message 元数据（非发送正文，逐字迁移）
-    "battle_result_end": "战斗结束（{status}）",
     # CTB 口径（收口 2026-09-10）：{turn} 槽位承载 `action_seq`（已结算行动数）——
     # CTB 无「回合」概念，玩家可见文案统一改「第 N 行动」。
-    "battle_result_round": "第 {turn} 行动结算",
 
     # —— BREP-23 战斗开始 ——
-    "battle_start_line": "与{name}的战斗开始！{name} {hp}/{max_hp}",
 
     # —— CTB 重写（Agent 5 · DataRender）：单次行动 / 批量 NPC 行动 / 玩家 ready ——
     # 依据 docs/ctb/01_asset_inventory.md §0.2 事件位点词典（ACTOR_READY / ACTOR_TURN_START）+
     # docs/ctb/02_wave_a_decisions.md 裁决口径。CTB 无「回合」概念，状态行以逻辑时间计。
-    "battle_ctb_ready": "轮到你行动了",
-    "battle_ctb_status": "距离你下次行动：{n}",
-    "battle_ctb_turn_start": "轮到 {actor} 行动",
     # 批次时间头（2026-09-11 增补 v1 调整显示词）：隐性标准——玩家文案不暴露行动条
     # 原始数值；原「（行动时间 {start} → {end}）」与技能「行动时间」撞名，退役。
-    "battle_ctb_batch_head": "（怪物行动）",
 
     # —— TPL-09 16 行折叠（战斗轮 / 明细块）——
-    "battle_fold_lines": "…（其余 {n} 行已折叠）",
-    "battle_fold_items": "…（其余 {n} 条已折叠，输入 /{command} {page} 查看）",
 
     # —— BREP-24 战斗结束汇总行 ——
     "battle_end_summary": "战斗结束：{label}｜行动数 {turns}｜输入 /战斗记录 查看明细",
 
     # —— BREP-07 技能释放（resource_text 空省略括号）——
-    "battle_skill_cast": "✅ 你施放{skill_name}：{effect_desc}",
-    "battle_skill_cast_suffix": "（{resource_text}）",
-    "battle_resource_cur_max": "{label} {cur}/{max}",
 
     # —— BREP-08 状态资源差分行（D-5D 只显变化轴；L509 前 5 个）——
-    "battle_status_diff_item": "{label} {old}→{new}",
-    "battle_status_diff_more": " ｜ 还有 {rest} 个状态",
 
     # —— BREP-09 操作提示行（战报末行；tail 独立模板）——
-    "battle_action_hint": "你 {player_hp}/{player_max_hp}{player_pos} | {target_name} "
-                          "{target_hp}/{target_max_hp}{target_pos} → {tail}",
-    "battle_action_hint_tail": "攻击 或 攻击 技能名",
 
     # —— BREP-04 会心/格挡附注 ——
-    "battle_crit_note": "（会心·{tier} ×{mult}）",
-    "battle_blocked_note": "（被格挡，伤害减半）",
     # 背击附注（B5 背击闭环，批④）：只露行为不露倍率（软提示口径）
-    "battle_backstab_note": "（背击）",
 
     # —— BREP-02/03/05/06 玩家行动 ——
-    "battle_player_hit": "✅ 你{action}，造成 {damage} 伤害{note}（{target} {hp}/{max_hp}）",
-    "battle_player_miss": "❌ 未命中：{target} 闪过了你的{action}（{target} {hp}/{max_hp}）",
-    "battle_player_defend": "✅ 你进入防御姿态（本次行动受到伤害减半）",
-    "battle_player_defend_hit": "✅ 你防御了{attacker}的{action}，"
-                               "受到 {damage} 伤害（HP {hp}/{max_hp}）",
 
     # —— BREP-10~14 怪物行动 ——
     "battle_enemy_hit": "❌ {name}{action}，你受到 {damage} 伤害（HP {hp}/{max_hp}）",
@@ -156,9 +131,6 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     "battle_settle_draw": "双方同归于尽，战斗以平局结束",
 
     # —— BREP-21 连段段行 + 派生封顶附注（L133）——
-    "battle_combo_seg": "第 {seg} 段：{action} 造成 {damage} 伤害{note}"
-                        "（{target} {hp}/{max_hp}）",
-    "battle_derived_cap": "（派生倍率已达上限 1.5×）",
 
     # —— BREP-22 连段结算行（remark 空省略括号）+ 备注文案 ——
     "battle_combo_settle": "连段 {total} 段已结算",
@@ -190,34 +162,10 @@ PLACEHOLDER_WHITELIST: Dict[str, set] = {
     "battle_flee_failed": set(),
     "battle_item_used": {"item_name"},
     "battle_no_battle_map_monster": set(),
-    "battle_result_end": {"status"},
-    "battle_result_round": {"turn"},
 
     # —— battle_render ——
-    "battle_start_line": {"name", "hp", "max_hp"},
     # CTB 三入口模板（Agent 5 · DataRender）
-    "battle_ctb_ready": set(),
-    "battle_ctb_status": {"n"},
-    "battle_ctb_turn_start": {"actor"},
-    "battle_ctb_batch_head": set(),
-    "battle_fold_lines": {"n"},
-    "battle_fold_items": {"n", "command", "page"},
     "battle_end_summary": {"label", "turns"},
-    "battle_skill_cast": {"skill_name", "effect_desc"},
-    "battle_skill_cast_suffix": {"resource_text"},
-    "battle_resource_cur_max": {"label", "cur", "max"},
-    "battle_status_diff_item": {"label", "old", "new"},
-    "battle_status_diff_more": {"rest"},
-    "battle_action_hint": {"player_hp", "player_max_hp", "target_name",
-                           "target_hp", "target_max_hp", "tail"},
-    "battle_action_hint_tail": set(),
-    "battle_crit_note": {"tier", "mult"},
-    "battle_blocked_note": set(),
-    "battle_backstab_note": set(),
-    "battle_player_hit": {"action", "damage", "note", "target", "hp", "max_hp"},
-    "battle_player_miss": {"target", "action", "hp", "max_hp"},
-    "battle_player_defend": set(),
-    "battle_player_defend_hit": {"attacker", "action", "damage", "hp", "max_hp"},
     "battle_enemy_hit": {"name", "action", "damage", "hp", "max_hp"},
     "battle_enemy_miss": {"name", "hp", "max_hp"},
     "battle_enemy_position_miss": {"name", "pos", "hp", "max_hp"},
@@ -260,8 +208,6 @@ PLACEHOLDER_WHITELIST: Dict[str, set] = {
     "battle_settle_lose": set(),
     "battle_settle_lose_fail": {"enemy"},
     "battle_settle_draw": set(),
-    "battle_combo_seg": {"seg", "action", "damage", "note", "target", "hp", "max_hp"},
-    "battle_derived_cap": set(),
     "battle_combo_settle": {"total"},
     "battle_combo_settle_suffix": {"remark"},
     "battle_combo_remark_boss": set(),

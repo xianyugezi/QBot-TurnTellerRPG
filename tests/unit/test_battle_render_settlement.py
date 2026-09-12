@@ -130,8 +130,10 @@ def test_tc16_kill_line_right_after_damage_line() -> None:
         exp=42, gold=25, drops=[("史莱姆凝胶", 2)],
     ))
     lines = text.split("\n")
-    assert lines[0] == "✅ 你攻击，造成 25 伤害（史莱姆 0/25）"
-    assert lines[1] == "✅ 你击败了史莱姆！"      # 击杀行紧跟伤害行
+    assert lines[0] == "✅ 你攻击"
+    assert lines[1] == "造成 25 伤害"
+    assert lines[2] == "史莱姆 0/25"
+    assert lines[3] == "✅ 你击败了史莱姆！"      # 击杀行紧跟伤害行
     assert "✅ 战斗胜利！" not in text            # 结算已移结束消息（P1-1）
     end = render_battle_end(
         SimpleNamespace(), SimpleNamespace(name="史莱姆", turn=1), "win",
@@ -248,10 +250,10 @@ def test_tc21_combo_four_segments_continuous() -> None:
     oc = _combo(segs, target_hp=1)
     lines = render_battle_round(_round(outcomes=(oc,))).split("\n")
     assert lines == [
-        "第 1 段：突刺 造成 6 伤害（史莱姆 19/25）",
-        "第 2 段：突刺 造成 6 伤害（史莱姆 13/25）",
-        "第 3 段：突刺 造成 6 伤害（史莱姆 7/25）",
-        "第 4 段：突刺 造成 6 伤害（史莱姆 1/25）",
+        "第 1 段：突刺", "造成 6 伤害", "史莱姆 19/25",
+        "第 2 段：突刺", "造成 6 伤害", "史莱姆 13/25",
+        "第 3 段：突刺", "造成 6 伤害", "史莱姆 7/25",
+        "第 4 段：突刺", "造成 6 伤害", "史莱姆 1/25",
         "连段 4 段已结算",
     ]
 
@@ -268,7 +270,7 @@ def test_tc21_combo_seg_crit_note() -> None:
     ]
     oc = _combo(segs, target_hp=2)
     lines = _render_combo_segments(oc)
-    assert lines[2] == "第 3 段：突刺 造成 11 伤害（会心·中阶 ×1.7）（史莱姆 2/25）"
+    assert lines[2] == "第 3 段：突刺\n造成 11 伤害（会心·中阶 ×1.7）\n史莱姆 2/25"
 
 
 # ---------------------------------------------------------------------------
@@ -291,12 +293,15 @@ def test_tc22_third_seg_kills_fourth_still_renders() -> None:
     ]
     oc = _combo(segs, target_hp=0)
     lines = render_battle_round(_round(outcomes=(oc,))).split("\n")
-    # 段行模板（§1.4 BREP-21 / 任务口径）：`第 {N} 段：{动作} 造成 {伤害} 伤害`——无逗号
-    assert lines[0] == "第 1 段：你挥动铁剑攻击史莱姆 造成 8 伤害（史莱姆 17/25）"
-    assert lines[2] == "第 3 段：你挥动铁剑攻击史莱姆 造成 10 伤害（史莱姆 0/25）"
-    assert lines[3] == "✅ 你击败了史莱姆！"       # 击杀行紧跟第 3 段伤害行（L54）
-    assert lines[4] == "第 4 段：你挥动铁剑攻击史莱姆 造成 9 伤害（史莱姆 0/25）"
-    assert lines[5] == "连段 4 段已结算（目标已倒下，该段连式为无效消耗）"
+    # 段行模板（§1.4 BREP-21 / 任务口径）：三段行——`第 {N} 段：{动作}` / `造成 {伤害} 伤害` / `{目标} {HP}/{最大}`
+    assert lines == [
+        "第 1 段：你挥动铁剑攻击史莱姆", "造成 8 伤害", "史莱姆 17/25",
+        "第 2 段：你挥动铁剑攻击史莱姆", "造成 8 伤害", "史莱姆 9/25",
+        "第 3 段：你挥动铁剑攻击史莱姆", "造成 10 伤害", "史莱姆 0/25",
+        "✅ 你击败了史莱姆！",
+        "第 4 段：你挥动铁剑攻击史莱姆", "造成 9 伤害", "史莱姆 0/25",
+        "连段 4 段已结算（目标已倒下，该段连式为无效消耗）",
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -346,7 +351,7 @@ def test_tc23_derived_cap_note_on_segment_line() -> None:
     ]
     oc = _combo(segs, target_hp=11)
     text = render_battle_round(_round(outcomes=(oc,)))
-    assert "第 2 段：突刺 造成 8 伤害（史莱姆 11/25）（派生倍率已达上限 1.5×）" in text
+    assert "第 2 段：突刺\n造成 8 伤害\n史莱姆 11/25（派生倍率已达上限 1.5×）" in text
 
 
 def test_combo_settle_line_variants() -> None:

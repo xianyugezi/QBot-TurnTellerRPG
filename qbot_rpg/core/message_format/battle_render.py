@@ -64,7 +64,7 @@ def render_battle_start(
 ) -> str:
     """BREP-23 战斗开始（5e §6.1 / TC-24）：独立 1 条消息（铁律2 / 3d 承接表）。
 
-    `与{怪物}的战斗开始！{怪物} {HP}/{最大HP}` + hint（意图/弱点情报行，如
+    `与{怪物}的战斗开始！` / `{怪物} {HP}/{最大HP}`（两行）+ hint（意图/弱点情报行，如
     `弱点：火（×1.3）`，hint=None 时省略）。意见一同步：战斗开始消息**不再渲染
     前缀行**（去 `Lv35.阿伟` 前缀，只留 与{怪物}的战斗开始！+ 弱点行）；前缀是否
     注入由接线层 BattlePipeline.send() 决定（send_start 已改 prefix=False 跳过）。
@@ -105,19 +105,30 @@ def _fold_message_lines(
 
     保留首行（前缀/首行动）与末尾关键段（状态差分/结算/操作提示行），折叠中间
     过程行（连段段行/拦截链行等）为省略行 `…（其余 {N} 行已折叠）`。折叠行计入
-    ≤16 行上限（3d §3.2 L184）；只折叠不截断（3d §3.2 L183）。BREP-25 明细块的
+    ≤16 行上限（3d §3.2 L184）；只折叠不截断（3d §3.2 L183）。行数按物理行计
+    （2026-09-12 批3·路G 起：三行化 HUD/命中/段行元素含换行，折叠按真实渲染行）。BREP-25 明细块的
     分页折叠走 _fold_item_lines（列表页可查），本函数服务战斗轮消息。
     折叠行模板 battle_fold_lines（battle_tpl 分区，内容包可覆盖）。
     """
-    if len(lines) <= max_lines:
+    counts = [max(1, len(str(ln).splitlines())) for ln in lines]   # 物理行数（元素可含换行）
+    if sum(counts) <= max_lines:
         return lines
-    keep_head = 1          # 首行（前缀/首行动）
-    keep_tail = max_lines - keep_head - 1  # 末段关键行（-1 给省略行）
+    keep_head = 1                          # 首行（前缀/首行动）
+    budget = max_lines - counts[0] - 1     # 末段关键行预算（-1 给省略行）
+    if budget < 1:
+        budget = 1
+    keep_tail = 0
+    acc = 0
+    for c in reversed(counts[keep_head:]):
+        if acc + c > budget:
+            break
+        acc += c
+        keep_tail += 1
     if keep_tail < 1:
         keep_tail = 1
     head = lines[:keep_head]
-    tail = lines[-keep_tail:]
-    folded = len(lines) - keep_head - keep_tail
+    tail = lines[len(lines) - keep_tail:]
+    folded = sum(counts[keep_head:len(lines) - keep_tail])         # 折叠内容物理行数
     return head + [tpl_of(ctx, "battle_fold_lines", {"n": folded})] + tail
 
 
@@ -301,7 +312,7 @@ def render_skill_cast(
 ) -> str:
     """BREP-07 玩家技能释放行。
 
-    模板：`✅ 你施放{技能}：{效果描述}（{资源变化}）`（battle_skill_cast +
+    模板：`✅ 你施放{技能}` / `{效果描述}（{资源变化}）`（battle_skill_cast +
     battle_skill_cast_suffix，battle_tpl 分区）。
     示例：`✅ 你施放治疗术：回复 30 点 HP（MP 22/60）`（MP 消耗 8，落在小技 5-10）
     - resource_text：资源变化（当前/最大，如 `MP 22/60`），可用 format_resource_cur_max 拼装；
@@ -330,7 +341,7 @@ def render_status_diff(
     - 出参：差分行字符串；无变化项时返回空串（调用方据此省略该行）。
     - 模板 battle_status_diff_item / battle_status_diff_more（battle_tpl 分区）。
     - 示例：render_status_diff([("MP", 30, 22), ("印记", 0, 2)])
-          -> "MP 30→22 ｜ 印记 0→2"
+          -> "MP 30→22\n印记 0→2"
     """
     items: list = []
     for ch in changes or ():
@@ -345,10 +356,10 @@ def render_status_diff(
     if not items:
         return ""
     shown = items[:max_status]
-    text = " ｜ ".join(shown)
+    text = "\n".join(shown)
     rest = len(items) - len(shown)
     if rest > 0:
-        text += tpl_of(ctx, "battle_status_diff_more", {"rest": rest})
+        text += "\n" + tpl_of(ctx, "battle_status_diff_more", {"rest": rest})
     return text
 
 
@@ -365,9 +376,9 @@ def render_action_hint(
 ) -> str:
     """BREP-09 操作提示行（战报末行）。
 
-    模板：`你 {HP}/{最大}{方位} | {目标} {HP}/{最大}{方位} → /攻击[技能] /道具 /防御 /逃跑`
+    模板三行：`你 {HP}/{最大}{方位}` / `{目标} {HP}/{最大}{方位}` / `→ {提示}`
     （battle_action_hint + battle_action_hint_tail，battle_tpl 分区）。
-    示例：`你 21/30 | 史莱姆 7/25 → /攻击[技能] /道具 /防御 /逃跑`
+    示例：`你 21/30` / `史莱姆 7/25` / `→ 攻击 或 攻击 <技能名>`
     - 方位 v0.6 HUD：player_pos/target_pos 中文方位格（缺省空串——无方位战斗省略）
     - 含 /最大 分母（5e 原文，【前缀】L31）；多怪时目标取战场第一个存活怪
       （调用方先用 first_alive_enemy 选取目标快照再传入本函数）。
@@ -516,7 +527,7 @@ def _render_player_hit(
     ctx: Any = None,
 ) -> str:
     """BREP-02 攻击命中行（5e §2.1 / TC-07）：
-    `✅ 你{动作短语}，造成 {伤害} 伤害（{目标} {剩余HP}/{最大HP}）`。
+    `✅ 你{动作短语}` / `造成 {伤害} 伤害` / `{目标} {剩余HP}/{最大HP}`（三行）。
 
     {目标} 可选仅指动作短语「你{动作短语}」（省略时 `你施放火球术，造成 …`，
     3d D-01 降级口径）；**HP 后缀 `（{目标} {剩余HP}/{最大HP}）` 必须保留**。
@@ -547,7 +558,7 @@ def _render_player_miss(
     ctx: Any = None,
 ) -> str:
     """BREP-03 未命中行（5e §2.1 / TC-08）：
-    `❌ 未命中：{目标} 闪过了你的{攻击动作}（{目标} {HP}/{最大HP}）`。
+    `❌ 未命中` / `{目标} 闪过了你的{攻击动作}` / `{目标} {HP}/{最大HP}`（三行）。
 
     miss → 伤害 0 不扣血（数值层 L24）；{目标} HP 取 target_hp（真实字段）；
     「当前/最大」双值显示（TC-08 示例 `（史莱姆 25/25）`：未命中不扣血，当前=最大）。
@@ -566,7 +577,7 @@ def _render_player_miss(
 
 def _render_player_defend(outcome: Any, *, ctx: Any = None) -> str:
     """BREP-05 进入防御（5e §2.2 / TC-10）：
-    `✅ 你进入防御姿态（本次行动受到伤害减半）`（防御指令 ×0.5，数值层 L36）。
+    `✅ 你进入防御姿态` / `本次行动受到伤害减半`（两行；防御指令 ×0.5，数值层 L36）。
     模板 battle_player_defend（battle_tpl 分区）。
     """
     return tpl_of(ctx, "battle_player_defend")
@@ -581,7 +592,7 @@ def _render_player_defend_hit(
     ctx: Any = None,
 ) -> str:
     """BREP-06 防御受击（5e §2.2 / TC-10）：
-    `✅ 你防御了{目标}的{攻击动作}，受到 {伤害} 伤害（HP {剩余}/{最大}）`。
+    `✅ 你防御了{目标}的{攻击动作}` / `受到 {伤害} 伤害` / `HP {剩余}/{最大}`（三行）。
 
     因 ×0.5 生效（数值层 L36），玩家视角标记 ✅；本行归属后手受击，由 M5-05 依玩家
     守卫态分发（5e §3.1「防御中受击走 BREP-06，不再输出 BREP-10」）。取数：伤害=
@@ -1324,7 +1335,7 @@ def _render_combo_seg_note(seg: Mapping[str, Any], *, ctx: Any = None) -> str:
 def _render_combo_segments(outcome: Any, *, ctx: Any = None) -> List[str]:
     """BREP-21 连段段行（5e §5.1 / D-5C）：每段独立一行、每段独立取整。
 
-    `第 {N} 段：{动作} 造成 {伤害} 伤害（{目标} {剩余HP}/{最大HP}）`——段号 N 即
+    `第 {N} 段：{动作}` / `造成 {伤害} 伤害` / `{目标} {剩余HP}/{最大HP}`（三行）`——段号 N 即
     收集器 seg 字段（数值层 L319），段行即收集器记录的人类可读镜像（D-5C）。数据源
     outcome.segments（接线层注入的段记录序列，每段含 seg/action/final_damage/
     target_hp/target_max_hp/target/crit/blocked/derived_capped），缺省 → 空列表
@@ -1574,11 +1585,10 @@ def _fold_item_lines(
     ctx: Any = None,
 ) -> List[str]:
     """16 行折叠（铁律 11 / 3d D-03 / TPL-09）：条目行超 keep 时按「正文尾部 →
-    中间过程行」优先折叠为省略行 `…（其余 {N} 条已折叠，输入 /{command} {page}
-    查看）`。
+    中间过程行」优先折叠为省略行 `…（其余 {N} 条已折叠` + `发 {command} {page} 查看`。
 
     保留前 keep 条（正文头部，占比降序前段），N = 被折叠条目数，page = 被折叠
-    内容在 per_page 分页口径下第一条所在页码（`…` 折叠行亦计入 16 行，L184）。
+    内容在 per_page 分页口径下第一条所在页码（`…` 折叠两行亦计入 16 行，L184）。
     只折叠不截断语义：折叠内容仍在后续页可查（3d §3.2，L183）。
     折叠行模板 battle_fold_items（battle_tpl 分区）。
     """
@@ -1604,15 +1614,15 @@ def _render_summary_block(
     """BREP-25 木桩明细块（5e §6.3，render_battle_end 内联形态）：摘要行 + 条目行
     + ≤16 行折叠 TPL-09（铁律 11）。
 
-    消息总行数（overhead = 前缀/BREP-24 行数，摘要行与 TPL-09 折叠行各占 1 行）
-    ≤ limit（默认 16，3d D-03/L184）——超限时条目行按正文尾部折叠（keep =
-    limit - overhead - 2：1 行留给摘要行、1 行留给 TPL-09）。占比降序（L347）。
+    消息总行数（overhead = 前缀/BREP-24 行数；摘要行 1 行、TPL-09 折叠行 2 行——
+    批3 路G 起折叠提示为两行）≤ limit（默认 16，3d D-03/L184）——超限时条目行按
+    正文尾部折叠（keep = limit - overhead - 3：1 行摘要 + 2 行 TPL-09）。占比降序（L347）。
     """
     items = _summary_items(summary)
     total = _summary_field(summary, "total", "总伤害")
     header = _summary_header(summary, ctx=ctx)
     item_lines = _summary_item_lines(items, total, ctx=ctx)
-    keep = max(0, limit - overhead - 2)                     # 1=摘要行 1=TPL-09 折叠行
+    keep = max(0, limit - overhead - 3)                     # 1=摘要行 2=TPL-09 折叠行（两行）
     return [header] + _fold_item_lines(
         item_lines, keep=keep, command=command, per_page=per_page, ctx=ctx,
     )

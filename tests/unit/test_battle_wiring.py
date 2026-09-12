@@ -200,7 +200,7 @@ def test_start_one_message_with_hint() -> None:
     assert len(delivered) == 1
     assert len(sender.calls) == 1
     lines = sender.calls[0].split("\n")
-    assert lines == ["与史莱姆的战斗开始！史莱姆 25/25", "弱点：火（×1.3）"]
+    assert lines == ["与史莱姆的战斗开始！", "史莱姆 25/25", "弱点：火（×1.3）"]
     _assert_no_banned_emoji(sender.calls[0])
 
 
@@ -334,7 +334,7 @@ def test_enrich_injects_display_names(start_battle) -> None:
 
 def test_apply_battle_prefix_delegates_m5_01() -> None:
     """apply_battle_prefix = M5-01 apply_message_prefix 委托（铁律 1 前缀只加首行）。"""
-    body = "✅ 你攻击，造成 10 伤害（史莱姆 390/400）\n你 500/500 | 史莱姆 390/400 → 攻击 或 攻击 技能名"
+    body = "✅ 你攻击\n造成 10 伤害\n史莱姆 390/400\n你 500/500\n史莱姆 390/400\n→ 攻击 或 攻击 <技能名>"
     res = apply_message_prefix(body, level=LV, name=NAME, title=TITLE,
                                settings=DEFAULT_MESSAGE_PREFIX_SETTINGS)
     assert res.text == f"{PREFIX}\n{body}"
@@ -395,7 +395,7 @@ def test_combo_segments_injection_renders_seg_lines() -> None:
         report, enemy_name="史莱姆", player_max_hp=30, enemy_max_hp=40, segments=segs,
     )
     text = br.render_battle_round(enriched)
-    assert "第 1 段：连斩 造成 6 伤害" in text
-    assert "第 2 段：连斩 造成 7 伤害" in text
-    assert "（史莱姆 18/40）" in text          # target_hp 聚合末值近似 + 展示名
-    assert "（会心·中阶 ×1.7）" in text       # 段内会心附注（第 2 段 crit=mid）
+    assert "第 1 段：连斩" in text and "造成 6 伤害（会心·中阶 ×1.7）" in text
+    assert "第 2 段：连斩" in text and "造成 7 伤害" in text
+    assert "史莱姆 18/40" in text              # target_hp 聚合末值近似 + 展示名
+    assert "（会心·中阶 ×1.7）" in text       # 段内会心附注（第 1 段 crit=mid）

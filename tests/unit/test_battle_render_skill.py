@@ -46,9 +46,9 @@ def _assert_emoji_discipline(text: str) -> None:
 
 
 def test_skill_cast_tc11_exact():
-    """TC-11：BREP-07 逐字 = `✅ 你施放治疗术：回复 30 点 HP（MP 22/60）`。"""
+    """TC-11：BREP-07 逐字 = `✅ 你施放治疗术\n回复 30 点 HP（MP 22/60）`。"""
     assert render_skill_cast("治疗术", "回复 30 点 HP", "MP 22/60") == (
-        "✅ 你施放治疗术：回复 30 点 HP（MP 22/60）"
+        "✅ 你施放治疗术\n回复 30 点 HP（MP 22/60）"
     )
 
 
@@ -61,7 +61,7 @@ def test_skill_cast_mp_cost_small_skill_range():
 
 def test_skill_cast_no_resource_omits_parenthesis():
     """无资源消耗的技能不输出空括号（兜底：resource_text 空串省略括号）。"""
-    assert render_skill_cast("鼓舞", "攻击提升", "") == "✅ 你施放鼓舞：攻击提升"
+    assert render_skill_cast("鼓舞", "攻击提升", "") == "✅ 你施放鼓舞\n攻击提升"
 
 
 def test_format_resource_cur_max():
@@ -80,8 +80,8 @@ def test_status_diff_tc11_single_axis():
 
 
 def test_status_diff_multi_axis_matches_doc_example():
-    """5e §1.4 示例逐字：`MP 30→22 ｜ 印记 0→2`（竖线 ｜ 排版符号豁免 D-5B）。"""
-    assert render_status_diff([("MP", 30, 22), ("印记", 0, 2)]) == "MP 30→22 ｜ 印记 0→2"
+    """5e §1.4 示例逐字：`MP 30→22\n印记 0→2`（竖线 ｜ 排版符号豁免 D-5B）。"""
+    assert render_status_diff([("MP", 30, 22), ("印记", 0, 2)]) == "MP 30→22\n印记 0→2"
 
 
 def test_status_diff_only_changed_axes():
@@ -107,14 +107,14 @@ def test_status_diff_over_five_appends_remainder():
     """开发规则 L509：超出 5 个 → 前 5 个 + 追加「还有 N 个状态」。"""
     changes = [(f"轴{i}", i, i + 1) for i in range(1, 8)]
     assert render_status_diff(changes) == (
-        "轴1 1→2 ｜ 轴2 2→3 ｜ 轴3 3→4 ｜ 轴4 4→5 ｜ 轴5 5→6 ｜ 还有 2 个状态"
+        "轴1 1→2\n轴2 2→3\n轴3 3→4\n轴4 4→5\n轴5 5→6\n还有 2 个状态"
     )
 
 
 def test_status_diff_custom_max():
     """max_status 可配（作者收敛）：超限追加剩余计数。"""
     changes = [(f"轴{i}", i, i + 1) for i in range(1, 5)]
-    assert render_status_diff(changes, max_status=2) == "轴1 1→2 ｜ 轴2 2→3 ｜ 还有 2 个状态"
+    assert render_status_diff(changes, max_status=2) == "轴1 1→2\n轴2 2→3\n还有 2 个状态"
 
 
 def test_status_diff_accepts_dicts():
@@ -135,19 +135,19 @@ def test_action_hint_exact_with_denominator():
     """BREP-09：操作提示行含 /最大 分母（5e 原文，【前缀】L31）。
 
     指令尾口径同步 2026-09-09 实机拍板：全指令免 / 前缀 → tail 模板改为
-    `攻击 或 攻击 技能名`（battle_tpl L68；同口径断言见 test_battle_render_player
+    `攻击 或 攻击 <技能名>`（battle_action_hint_tail；同口径断言见 test_battle_render_player
     L208 / test_battle_wiring L314）。原 `/攻击[技能] /道具 /防御 /逃跑` 为 5e
     定稿前置前缀时代写法，随免前缀裁决作废。
     """
     assert render_action_hint(21, 30, 7, 25, target_name="史莱姆") == (
-        "你 21/30 | 史莱姆 7/25 → 攻击 或 攻击 技能名"
+        "你 21/30\n史莱姆 7/25\n→ 攻击 或 攻击 <技能名>"
     )
 
 
 def test_action_hint_default_target():
     """缺省目标名 =「目标」（模板 `{目标}` 占位）。"""
     assert render_action_hint(21, 30, 7, 25) == (
-        "你 21/30 | 目标 7/25 → 攻击 或 攻击 技能名"
+        "你 21/30\n目标 7/25\n→ 攻击 或 攻击 <技能名>"
     )
 
 

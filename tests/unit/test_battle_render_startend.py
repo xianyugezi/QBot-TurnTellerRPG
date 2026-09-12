@@ -75,14 +75,15 @@ def _assert_no_banned_emoji(text: str) -> None:
 
 def test_tc24_start_exact_with_hint() -> None:
     """TC-24：`/攻击 史莱姆` 战斗开始 —— 独立消息逐字断言（意见一同步：无前缀行）：
-    `与史莱姆的战斗开始！史莱姆 25/25`（BREP-23）+ 弱点情报行 `弱点：火（×1.3）`；
+    `与史莱姆的战斗开始！\n史莱姆 25/25`（BREP-23）+ 弱点情报行 `弱点：火（×1.3）`；
     战斗开始消息不再渲染前缀首行（去 `Lv35.阿伟` 前缀）。"""
     text = render_battle_start(
         _party(), _enemy(), hint="弱点：火（×1.3）",
     )
     _assert_no_banned_emoji(text)
     assert text.split("\n") == [
-        "与史莱姆的战斗开始！史莱姆 25/25",
+        "与史莱姆的战斗开始！",
+        "史莱姆 25/25",
         "弱点：火（×1.3）",
     ]
 
@@ -91,14 +92,15 @@ def test_tc24_start_hint_none_omits_hint_line() -> None:
     """hint=None 时弱点/意图情报行省略：仅 BREP-23 一行（无 hint 行，5e §6.1；无前缀行）。"""
     text = render_battle_start(_party(), _enemy())
     assert text.split("\n") == [
-        "与史莱姆的战斗开始！史莱姆 25/25",
+        "与史莱姆的战斗开始！",
+        "史莱姆 25/25",
     ]
 
 
 def test_tc24_start_fallback_name_and_no_prefix() -> None:
     """缺省回落：玩家信息缺失 → 无前缀；怪物名缺失 → 「怪物」；max_hp 缺省回落当前 HP。"""
     text = render_battle_start(SimpleNamespace(), SimpleNamespace(hp=30))
-    assert text.split("\n") == ["与怪物的战斗开始！怪物 30/30"]
+    assert text.split("\n") == ["与怪物的战斗开始！", "怪物 30/30"]
 
 
 # ---------------------------------------------------------------------------
@@ -253,7 +255,7 @@ def test_tc27_end_with_summary_appends_detail_block() -> None:
 
 def test_tc06_fold_over_16_lines() -> None:
     """TC-06：明细条目超限 → 单条消息 ≤16 行，按正文尾部折叠 TPL-09
-    `…（其余 {N} 条已折叠，输入 /战斗记录 {page} 查看）`（折叠行亦计入 16 行）。"""
+    `…（其余 {N} 条已折叠` / `发 战斗记录 {page} 查看`（折叠两行亦计入 16 行）。"""
     s20: Dict[str, Any] = {
         "total": 5000, "max_hit": 300, "crits": 5, "blocks": 2,
         "items": [("来源%02d" % i, 5000 - i * 200) for i in range(1, 21)],
@@ -265,9 +267,10 @@ def test_tc06_fold_over_16_lines() -> None:
     assert lines[0] == "Lv35.阿伟 -斩龙者-"
     assert lines[1] == "战斗结束：胜利｜行动数 45｜输入 /战斗记录 查看明细"
     assert lines[2] == "摘要：总伤害 5000｜最大单段 300｜会心 5 次｜格挡 2 次"
-    # 折叠行 TPL-09：保留头部 12 条，折叠 8 条（keep=16-2-2=12），被折叠内容在第 3 页
-    assert lines[-1] == "…（其余 8 条已折叠，输入 /战斗记录 3 查看）"
-    assert len(lines) == 16                              # 前缀+BREP-24+摘要+12 条+TPL-09
+    # 折叠行 TPL-09（两行）：保留头部 11 条，折叠 9 条（keep=16-2-1-2=11），被折叠内容在第 3 页
+    assert lines[-2] == "…（其余 9 条已折叠）"
+    assert lines[-1] == "发 战斗记录 3 查看"
+    assert len(lines) == 16                              # 前缀+BREP-24+摘要+11 条+TPL-09 两行
 
 
 def test_tc06_no_fold_within_limit() -> None:
@@ -316,7 +319,7 @@ def test_render_battle_round_folds_over16() -> None:
     seg_lines = br._render_combo_segments(out)
     assert len(seg_lines) == 20                      # 段行 20 行（未折叠）
     folded = br._fold_message_lines(seg_lines, max_lines=16)
-    assert len(folded) == 16
-    assert "第 1 段" in folded[0]              # 保留首段
-    assert "…（其余 5 行已折叠）" in folded     # 折叠中间 5 段（head1 + tail14 + fold1）
+    assert len(folded) == 6
+    assert "第 1 段" in folded[0]              # 保留首段（3 物理行）
+    assert "…（其余 45 行已折叠）" in folded   # 折叠中间 15 段=45 物理行（head1+tail4+fold1）
     assert "第 20 段" in folded[-1]            # 保留末段

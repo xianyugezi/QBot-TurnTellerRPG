@@ -72,7 +72,7 @@ def test_action_player_hit_reuses_round_blocks() -> None:
     oc = _enriched(_outcome(action_type="skill"), action_name="施放火球术", target_max_hp=25)
     src = SimpleNamespace(outcomes=(oc,), actor_id="player")
     assert render_battle_action(src) == render_battle_round(src)
-    assert render_battle_action(src) == "✅ 你施放火球术，造成 18 伤害（史莱姆 7/25）"
+    assert render_battle_action(src) == "✅ 你施放火球术\n造成 18 伤害\n史莱姆 7/25"
 
 
 def test_action_prefix_first_line_and_ctb_status() -> None:
@@ -82,7 +82,9 @@ def test_action_prefix_first_line_and_ctb_status() -> None:
                           level=35, name="阿伟", title="斩龙者")
     lines = render_battle_action(src).split("\n")
     assert lines[0] == "Lv35.阿伟 -斩龙者-"
-    assert lines[1] == "✅ 你施放火球术，造成 18 伤害（史莱姆 7/25）"
+    assert lines[1] == "✅ 你施放火球术"
+    assert lines[2] == "造成 18 伤害"
+    assert lines[3] == "史莱姆 7/25"
     assert lines[-1] == "距离你下次行动：33"
     assert not any("Lv35" in ln for ln in lines[1:])
 
@@ -107,7 +109,9 @@ def test_action_kill_line_follows_damage() -> None:
                    action_name="施放火球术", target_max_hp=25)
     text = render_battle_action(SimpleNamespace(outcomes=(oc,), actor_id="player"))
     assert text.split("\n") == [
-        "✅ 你施放火球术，造成 25 伤害（史莱姆 0/25）",
+        "✅ 你施放火球术",
+        "造成 25 伤害",
+        "史莱姆 0/25",
         "✅ 你击败了史莱姆！",
     ]
 
@@ -132,7 +136,7 @@ def test_action_batch_entries_merged_into_action() -> None:
     src = SimpleNamespace(outcomes=(p,), actor_id="player",
                           batch={"entries": [e.__dict__]})
     text = render_battle_action(src)
-    assert "你攻击，造成 18 伤害" in text   # 玩家行动
+    assert "✅ 你攻击" in text and "造成 18 伤害" in text   # 玩家行动（三行化）
     assert "史莱姆撞击" in text              # 批量并入的 NPC 行动
 
 
@@ -222,7 +226,7 @@ def test_ready_auto_hint_from_hp_snapshot() -> None:
     src = SimpleNamespace(level=1, name="阿伟", player=21, enemy=7,
                           player_max_hp=30, enemy_max_hp=25, enemy_name="史莱姆")
     text = render_battle_ready(src)
-    assert "你 21/30 | 史莱姆 7/25 → 攻击 或 攻击 技能名" in text
+    assert "你 21/30\n史莱姆 7/25\n→ 攻击 或 攻击 <技能名>" in text
 
 
 def test_ready_no_prefix_when_info_missing() -> None:
@@ -242,11 +246,11 @@ def test_ready_tolerates_bad_input() -> None:
 def test_existing_entries_still_work() -> None:
     """render_battle_start / render_battle_round / render_battle_end 保持可用。"""
     enemy = SimpleNamespace(name="史莱姆", hp=25, max_hp=25)
-    assert render_battle_start(None, enemy) == "与史莱姆的战斗开始！史莱姆 25/25"
+    assert render_battle_start(None, enemy) == "与史莱姆的战斗开始！\n史莱姆 25/25"
 
     oc = _enriched(_outcome(action_type="skill"), action_name="施放火球术", target_max_hp=25)
     assert render_battle_round(SimpleNamespace(outcomes=(oc,))) == (
-        "✅ 你施放火球术，造成 18 伤害（史莱姆 7/25）")
+        "✅ 你施放火球术\n造成 18 伤害\n史莱姆 7/25")
 
     end = render_battle_end(SimpleNamespace(), enemy, "lose", status="lose",
                             enemy_name="史莱姆")

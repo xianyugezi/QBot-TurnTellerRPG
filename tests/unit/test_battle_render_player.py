@@ -80,19 +80,19 @@ def _assert_no_banned_emoji(text: str) -> None:
 # ---------------------------------------------------------------------------
 
 def test_tc07_player_hit_exact() -> None:
-    """TC-07：命中逐字 `✅ 你施放火球术，造成 18 伤害（史莱姆 7/25）`；HP 后缀保留。"""
+    """TC-07：命中逐字 `✅ 你施放火球术\n造成 18 伤害\n史莱姆 7/25`；HP 后缀保留。"""
     oc = _outcome(action_type="skill", raw_damage=18, final_damage=18, target_hp=7)
     line = _render_player_hit(oc, action_phrase="施放火球术", target_max_hp=25)
-    assert line == "✅ 你施放火球术，造成 18 伤害（史莱姆 7/25）"
-    assert "（史莱姆 7/25）" in line                 # HP 后缀必须保留（P0-2 锚点）
+    assert line == "✅ 你施放火球术\n造成 18 伤害\n史莱姆 7/25"
+    assert line.endswith("史莱姆 7/25")             # HP 行必须保留（P0-2 锚点）
     assert oc.message not in line                    # 不直接复用引擎 message（5e P2-8）
 
 
 def test_tc07_hit_with_target_phrase() -> None:
-    """5e §2.1 示例：动作短语含目标 → `✅ 你挥动铁剑攻击史莱姆，造成 12 伤害（史莱姆 18/25）`。"""
+    """5e §2.1 示例：动作短语含目标 → `✅ 你挥动铁剑攻击史莱姆\n造成 12 伤害\n史莱姆 18/25`。"""
     oc = _outcome(raw_damage=12, final_damage=12, target_hp=18)
     line = _render_player_hit(oc, action_phrase="挥动铁剑攻击史莱姆", target_max_hp=25)
-    assert line == "✅ 你挥动铁剑攻击史莱姆，造成 12 伤害（史莱姆 18/25）"
+    assert line == "✅ 你挥动铁剑攻击史莱姆\n造成 12 伤害\n史莱姆 18/25"
 
 
 # ---------------------------------------------------------------------------
@@ -103,7 +103,7 @@ def test_tc08_player_miss_exact() -> None:
     """TC-08 未命中行逐字（模板兜底——roll miss 已移除，渲染层仍按模板输出）。"""
     oc = _outcome(hit=False, crit="low", blocked=False, raw_damage=0, final_damage=0, target_hp=25)
     line = _render_player_miss(oc, action_phrase="攻击", target_max_hp=25)
-    assert line == "❌ 未命中：史莱姆 闪过了你的攻击（史莱姆 25/25）"
+    assert line == "❌ 未命中\n史莱姆 闪过了你的攻击\n史莱姆 25/25"
 
 
 # ---------------------------------------------------------------------------
@@ -124,7 +124,7 @@ def test_tc09_crit_note_position_before_hp_suffix() -> None:
     """5e §2.1 示例 L150：会心附注拼在伤害值与 HP 后缀之间。"""
     oc = _outcome(crit="high", blocked=False, final_damage=27, target_hp=1)
     line = _render_player_hit(oc, action_phrase="施放火球术攻击史莱姆", target_max_hp=25)
-    assert line == "✅ 你施放火球术攻击史莱姆，造成 27 伤害（会心·高阶 ×2.2）（史莱姆 1/25）"
+    assert line == "✅ 你施放火球术攻击史莱姆\n造成 27 伤害（会心·高阶 ×2.2）\n史莱姆 1/25"
 
 
 def test_tc09_crit_low_renders_when_include_low() -> None:
@@ -154,18 +154,18 @@ def test_tc09_no_note_when_plain() -> None:
 # ---------------------------------------------------------------------------
 
 def test_tc10_defend_enter_exact() -> None:
-    """TC-10：`✅ 你进入防御姿态（本次行动受到伤害减半）`（BREP-05）。"""
+    """TC-10：`✅ 你进入防御姿态\n本次行动受到伤害减半`（BREP-05）。"""
     oc = _outcome(action_type="guard", hit=True, raw_damage=0, final_damage=0, target_hp=7)
-    assert _render_player_defend(oc) == "✅ 你进入防御姿态（本次行动受到伤害减半）"
+    assert _render_player_defend(oc) == "✅ 你进入防御姿态\n本次行动受到伤害减半"
 
 
 def test_tc10_defend_hit_exact() -> None:
-    """TC-10：防御受击逐字 `✅ 你防御了史莱姆的撞击，受到 2 伤害（HP 19/30）`（BREP-06）。"""
+    """TC-10：防御受击逐字 `✅ 你防御了史莱姆的撞击\n受到 2 伤害\nHP 19/30`（BREP-06）。"""
     oc = _outcome(actor="enemy", action_type="normal", target="player",
                   raw_damage=4, final_damage=2, target_hp=19)   # ×0.5 生效后 2 伤
     line = _render_player_defend_hit(oc, attacker_name="史莱姆", action_phrase="撞击",
                                      player_max_hp=30)
-    assert line == "✅ 你防御了史莱姆的撞击，受到 2 伤害（HP 19/30）"
+    assert line == "✅ 你防御了史莱姆的撞击\n受到 2 伤害\nHP 19/30"
 
 
 # ---------------------------------------------------------------------------
@@ -176,13 +176,13 @@ def test_render_round_player_action_first() -> None:
     """render_battle_round：接线层形态 outcome（真实字段+展示名/最大 HP）→ 先手行输出。"""
     oc = _enriched(_outcome(action_type="skill"), action_name="施放火球术", target_max_hp=25)
     text = render_battle_round(_report(oc))
-    assert text == "✅ 你施放火球术，造成 18 伤害（史莱姆 7/25）"
+    assert text == "✅ 你施放火球术\n造成 18 伤害\n史莱姆 7/25"
 
 
 def test_render_round_default_phrase_normal_attack() -> None:
     """render_battle_round：真实 ActionOutcome（普攻，无展示名）→ 缺省动作短语「攻击」。"""
     text = render_battle_round(_report(_outcome()))
-    assert text == "✅ 你攻击，造成 18 伤害（史莱姆 7/7）"   # 最大 HP 未接 → 回落当前 HP
+    assert text == "✅ 你攻击\n造成 18 伤害\n史莱姆 7/7"   # 最大 HP 未接 → 回落当前 HP
 
 
 def test_render_round_prefix_first_line_when_info() -> None:
@@ -192,7 +192,9 @@ def test_render_round_prefix_first_line_when_info() -> None:
     ctx = SimpleNamespace(**tr.__dict__, level=35, name="阿伟", title="斩龙者")
     lines = render_battle_round(ctx).split("\n")
     assert lines[0] == "Lv35.阿伟 -斩龙者-"
-    assert lines[1] == "✅ 你施放火球术，造成 18 伤害（史莱姆 7/25）"
+    assert lines[1] == "✅ 你施放火球术"
+    assert lines[2] == "造成 18 伤害"
+    assert lines[3] == "史莱姆 7/25"
     assert not any("Lv35" in ln for ln in lines[1:])   # 前缀仅首行（【前缀】L34/L82）
 
 
@@ -201,7 +203,7 @@ def test_render_round_miss_via_round() -> None:
     oc = _outcome(hit=False, raw_damage=0, final_damage=0, target_hp=25)
     text = render_battle_round(_report(oc))
     # 模板兜底（roll miss 已移除）
-    assert text == "❌ 未命中：史莱姆 闪过了你的攻击（史莱姆 25/25）"
+    assert text == "❌ 未命中\n史莱姆 闪过了你的攻击\n史莱姆 25/25"
 
 
 def test_render_round_hint_when_max_known() -> None:
@@ -211,7 +213,9 @@ def test_render_round_hint_when_max_known() -> None:
     ctx = SimpleNamespace(**tr.__dict__, player_max_hp=30, enemy_max_hp=25,
                           enemy_name="史莱姆", level=35, name="阿伟", title="斩龙者")
     lines = render_battle_round(ctx).split("\n")
-    assert lines[-1] == "你 21/30 | 史莱姆 7/25 → 攻击 或 攻击 技能名"
+    assert lines[-3] == "你 21/30"
+    assert lines[-2] == "史莱姆 7/25"
+    assert lines[-1] == "→ 攻击 或 攻击 <技能名>"
 
 
 # ---------------------------------------------------------------------------

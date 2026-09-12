@@ -484,7 +484,7 @@ def t_gate_prefix_example() -> None:
     assert render_prefix(35, "阿伟", None) == "Lv35.阿伟 - -"
     assert render_prefix(35, "阿伟", None, hide_when_empty=True) == "Lv35.阿伟"
     # 正文第二行起：apply_message_prefix 只挂首行（铁律 1 / TC-23）
-    body = "✅ 你施放火球术，造成 18 伤害（史莱姆 7/25）\n❌ 史莱姆反击，你受到 4 伤害（HP 21/30）"
+    body = "✅ 你施放火球术\n造成 18 伤害\n史莱姆 7/25\n❌ 史莱姆反击，你受到 4 伤害（HP 21/30）"
     res = apply_message_prefix(body, level=35, name="阿伟", title="斩龙者",
                                settings=DEFAULT_MESSAGE_PREFIX_SETTINGS)
     lines = res.text.splitlines()
@@ -560,7 +560,7 @@ def t_gate_emoji_static() -> None:
     samples = [
         render_prefix(35, "阿伟", "斩龙者"),
         render_prefix(35, "阿伟", None),
-        "✅ 你施放火球术，造成 18 伤害（史莱姆 7/25）",
+        "✅ 你施放火球术\n造成 18 伤害\n史莱姆 7/25",
         "❌ 史莱姆反击，你受到 4 伤害（HP 21/30）",
         "战斗结束：胜利｜行动数 5｜输入 /战斗记录 查看明细",
         "— 第 1/3 页 · 共 14 条 · 输入 /背包 2 翻页 —",

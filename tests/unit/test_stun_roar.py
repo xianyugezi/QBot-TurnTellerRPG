@@ -435,7 +435,8 @@ def test_render_roar_lines():
 
 def test_templates_registered():
     """五条新模板可渲染（占位符替换）。"""
-    assert tpl_of(None, "battle_stun_hint", {"name": "X"}).startswith("（X")
+    assert tpl_of(None, "battle_stun_hint", {"name": "X"}).startswith("X的步幅一滞")
+    assert "气息开始散乱" in tpl_of(None, "battle_stun_hint", {"name": "X"})
     assert "【气绝】" in tpl_of(None, "battle_stun_ko", {"name": "X"})
     assert "仰天咆哮" in tpl_of(None, "battle_roar", {"name": "X"})
     assert "仰天咆哮" in tpl_of(None, "battle_roar_plain", {"name": "X"})

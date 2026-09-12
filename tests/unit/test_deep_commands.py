@@ -26,6 +26,7 @@ from __future__ import annotations
 from typing import Any, Dict, Optional
 
 from qbot_rpg.commands.alchemy_commands import (
+    _render_sp_panel,
     cmd_buff,
     cmd_challenge,
     cmd_core,
@@ -276,6 +277,15 @@ async def test_codex_progress_and_king() -> None:
     assert "炼金图鉴" in out
 
 
+async def test_codex_line_and_king_hint_multiline() -> None:
+    """批7·路T 结构回归：`alchemy_codex_line` 首行进度 + `alchemy_codex_king_hint`
+    换行独占一行（23/40 与「炼金王」提示不再挤在一行）。"""
+    ctx = make_ctx(_player(level=5, codex_lit=2))
+    lines = render_alchemy_codex(ctx).split("\n")
+    assert lines[0].startswith("炼金图鉴：点亮 ")
+    assert any(ln == "全点亮 → 「炼金王」称号" for ln in lines)
+
+
 async def test_codex_all_lit_grant_king() -> None:
     """TTL-01：全点亮 → 「炼金王」称号。"""
     # codex_lit 覆盖全部注册条目（r_deep/r_low/r_high + items 5 = 8 个 seen）
@@ -299,6 +309,18 @@ async def test_skill_panel_view() -> None:
     ctx = make_ctx(_player(level=4, sp_used=0))
     out = await cmd_skill_panel(_pc("/技能面板"), ctx)
     assert "SP" in out or "可用" in out
+
+
+async def test_skill_panel_items_multiline() -> None:
+    """批7·路T 结构回归：SP 面板 = 标题行 + 面板项逐行（join 由「/」改换行）。"""
+    view = {"sp_available": 3, "items": [
+        {"name": "品质上限+10", "unlocked_count": 2},
+        {"name": "投入次数+1", "unlocked_count": 0},
+    ]}
+    lines = _render_sp_panel(make_ctx(_player(level=4)), view).split("\n")
+    assert lines[0] == "SP 3 点可用"
+    assert lines[1] == "品质上限+10（已 2 次）"
+    assert lines[2] == "投入次数+1"
 
 
 async def test_skill_panel_unlock_subword() -> None:

@@ -336,6 +336,9 @@ async def test_assist_player_name_fallback_qid() -> None:
     out = await cmd_assist(parse_command("/协力 123456", whitelist=W), ctx)
     assert "协力调和：123456 加入" in out
     assert "随机加成：" in out
+    # 批7·路T 结构回归：加成独立成行（不再与首行拼接）
+    assert out.split("\n")[0] == "协力调和：123456 加入"
+    assert out.split("\n")[1].startswith("随机加成：")
 
 
 async def test_assist_missing_arg_tpl12() -> None:

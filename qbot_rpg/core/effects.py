@@ -767,12 +767,16 @@ class EffectRuntime:
                 return inst
         return None
 
-    def tick_turns(self, side: str) -> None:
+    def tick_turns(self, side: str) -> List[Dict[str, Any]]:
         """D6 持续行动数——行动收尾 tick 扣减（细化_1b §4.1 P0-3：在行动收尾扣）。
 
         turns>0 → -1 后归零移除；turns==-1 → 永不被清（D6 行：-1 维不被清除）；
         turns==0 → turns 维无限（配合 turns=0+次数N 语义，C-9）。
+
+        返回：本次因 turns 归零被移除的状态实例序列（2026-09-12 HUD v2
+        `【效果失效】` 行数据源；旧调用方忽略返回值 → 零破坏）。
         """
+        removed: List[Dict[str, Any]] = []
         lst = self.status_instances(side)
         for inst in list(lst):
             t = int(inst.get("turns", 0))
@@ -780,6 +784,8 @@ class EffectRuntime:
                 inst["turns"] = t - 1
                 if inst["turns"] == 0:
                     self._remove_status(side, inst)
+                    removed.append(dict(inst))
+        return removed
 
     def clear_safe_zone(self, side: str) -> None:
         """安全区清除增减益：任一维 -1 永不被清（细化_1b §4.1 §4.2 D6 / 定稿 §4.1）。"""
@@ -1257,7 +1263,8 @@ def tick_turn_end(snapshot: Mapping[str, Any], runtime: EffectRuntime) -> List[D
                     value = int(dot.get("value", 0))
                     hp = int(c.get("hp", 0))
                     c["hp"] = max(0, hp - value)
-                    log.append({"type": "dot_damage", "side": side, "status": dot.get("status_id", dot_id), "value": value})
+                    log.append({"type": "dot_damage", "side": side, "status": dot.get("status_id", dot_id),
+                                "value": value, "name": str(dot.get("name") or "")})
                     # dot 破位（2026-09-09 御剑二阶残响：dot 每跳造成部位破坏值；
                     # part_break_per_tick 仅作用于未破部位；部位破值入 parts_state）
                     _pb = dot.get("part_break_per_tick")
@@ -1293,7 +1300,11 @@ def tick_turn_end(snapshot: Mapping[str, Any], runtime: EffectRuntime) -> List[D
             log.append({"type": "regen", "side": side, "heal": v})
         # ④ 持续双维·回合扣减 + 限时印记扣减（细化_1d §2.2/§三：remaining_turns 统一
         #    tick 扣减、归零移除入快照 —— 委托 MarksManager.tick_turn 唯一实现）
-        runtime.tick_turns(side)
+        for _exp in runtime.tick_turns(side):
+            # HUD v2：效果失效事件（`【效果失效】{名} 效果时间结束。` 行数据源）
+            log.append({"type": "status_expired", "side": side,
+                        "status": str(_exp.get("status_id") or ""),
+                        "name": str(_exp.get("name") or "")})
         runtime.marks_manager().tick_turn(side)
         # ⑤ 每次行动触发计数重置
         runtime.reset_turn_triggers(side)
@@ -1849,6 +1860,9 @@ def execute_action(
             pool = c.setdefault("dot_pool", {})
             inst: Dict[str, Any] = {"status_id": status_id, "value": max(0, value),
                                     "tick": tick, "turns": turns, "source": attacker}
+            _dot_name = str(action.get("name") or action.get("status_name") or "")
+            if _dot_name:
+                inst["name"] = _dot_name   # HUD v2：DOT 生效行展示名（缺失由渲染层按 id 查表）
             _pb = action.get("part_break_per_tick")
             if _pb:
                 inst["part_break_per_tick"] = int(_pb)

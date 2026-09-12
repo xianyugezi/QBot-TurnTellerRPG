@@ -1,0 +1,35 @@
+{
+  "rail": "b7s",
+  "scope": "专项·战斗 HUD v2（按用户样稿重构回合消息）：分项资源行 + 百分比 + 按需显示（无资源不出行）+ 方位语义修正（只有玩家站位，怪物无朝向）+ 持续效果/失效行。新增 12 键；被替代键 battle_action_hint 已从全量表删除（改由 battle_hud_* 分项行 + battle_action_hint_tail 尾行组装）；battle_player_hit / battle_enemy_hit 叙述句形态已就地改写（值变更，走表内直改，见 notes）。",
+  "templates": {
+    "battle_hud_player_hp": "剩余生命：{hp}/{max}（{pct}%）",
+    "battle_hud_player_mp": "剩余法力：{mp}/{max}（{pct}%）",
+    "battle_hud_player_shield": "剩余护盾：{shield}{turns_suffix}",
+    "battle_hud_shield_turns": "（{turns}s）",
+    "battle_hud_player_pos": "玩家站位：{pos}",
+    "battle_hud_enemy_hp": "怪物生命：{hp}/{max}（{pct}%）",
+    "battle_hud_enemy_shield": "怪物护盾：{shield}{turns_suffix}",
+    "battle_hud_enemy_status": "怪物状态：{status}",
+    "battle_hud_enemy_status_cont": "{status}",
+    "battle_effect_tick_player": "【持续效果】{name} 生效，你受到 {damage} 伤害。",
+    "battle_effect_tick_enemy": "【持续效果】{name} 生效，造成 {damage} 伤害。",
+    "battle_effect_expire": "【效果失效】{name} 效果时间结束。",
+    "battle_action_skill_verb": "发动技能 {name}",
+    "battle_hud_tail": "→ {tail}",
+    "battle_hud_state_air": "跃空",
+    "battle_hud_state_part_broken": "{name}破坏",
+    "battle_player_hit": "✅ 你{action}，造成 {damage} 伤害{note}。",
+    "battle_enemy_hit": "❌ {name}{action}，你受到 {damage} 伤害。"
+  },
+  "prose_keys": {
+    "battle_player_hit": "叙述句行：按用户样稿整句形态（含「，」「。」）——命中播报句允许自然折行",
+    "battle_enemy_hit": "叙述句行：同上（怪物行动播报句，用户样稿「❌ {怪}使出{招}，你受到 N 伤害。」）",
+    "battle_effect_tick_player": "叙述句行：按用户样稿形态整句（含 ，。 与「你受到」视角），非结构化 HUD 行；窄屏自然折行，允许自然换行",
+    "battle_effect_tick_enemy": "叙述句行：同上（对怪视角「造成 N 伤害。」）",
+    "battle_effect_expire": "叙述句行：同上（效果失效播报）"
+  },
+  "notes": "战斗 HUD v2（用户 2026-09-12 样稿）：分项资源行+百分比/缺资源不显示/怪物无朝向/行动行整句化（叙述句，prose 豁免）；battle_action_hint 删除（由 battle_hud_* 分项块替代）",
+  "removed_keys": [
+    "battle_action_hint"
+  ]
+}

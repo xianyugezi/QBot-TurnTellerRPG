@@ -130,9 +130,8 @@ def test_tc16_kill_line_right_after_damage_line() -> None:
         exp=42, gold=25, drops=[("史莱姆凝胶", 2)],
     ))
     lines = text.split("\n")
-    assert lines[0] == "✅ 你攻击"
-    assert lines[1] == "造成 25 伤害"
-    assert lines[2] == "✅ 你击败了史莱姆"        # 批4：目标血量行已砍；批6：去「！」
+    assert lines[0] == "✅ 你攻击，造成 25 伤害。"
+    assert lines[1] == "✅ 你击败了史莱姆"        # 批4：目标血量行已砍；批6：去「！」
     assert "✅ 战斗胜利！" not in text            # 结算已移结束消息（P1-1）
     end = render_battle_end(
         SimpleNamespace(), SimpleNamespace(name="史莱姆", turn=1), "win",

@@ -104,29 +104,29 @@ def test_tc12_enemy_hit_exact() -> None:
     line = _render_enemy_hit(
         _enriched(oc, attacker_name="史莱姆", action_name="反击", player_max_hp=30),
     )
-    assert line == "❌ 史莱姆反击\n你受到 4 伤害"
+    assert line == "❌ 史莱姆反击，你受到 4 伤害。"
     assert oc.message not in line                    # 不直接复用引擎 message（5e P2-8）
 
 
 def test_tc12_enemy_action_dispatcher() -> None:
     """TC-12：_render_enemy_action 命中分支 → BREP-10（接线层展示属性经 outcome 注入）。"""
     oc = _enriched(_outcome(), attacker_name="史莱姆", action_name="反击", player_max_hp=30)
-    assert _render_enemy_action(oc) == "❌ 史莱姆反击\n你受到 4 伤害"
+    assert _render_enemy_action(oc) == "❌ 史莱姆反击，你受到 4 伤害。"
 
 
 def test_tc12_render_round_enemy_counter() -> None:
     """TC-12：render_battle_round 先手行动+怪物反击合并 1 条消息（军规3，同条换行）。"""
     player = _enriched(
-        _outcome(actor="player", seq=1, target="史莱姆", raw_damage=18,
-                 final_damage=18, target_hp=7),
-        action_name="施放火球术", target_max_hp=25,
+        _outcome(actor="player", seq=1, action_type="skill", target="史莱姆",
+                 raw_damage=18, final_damage=18, target_hp=7),
+        action_name="火球术", target_max_hp=25,
     )
     enemy = _enriched(_outcome(seq=2), attacker_name="史莱姆", action_name="反击",
                       player_max_hp=30)
     text = render_battle_round(_report(player, enemy))
     assert text == (
-        "✅ 你施放火球术\n造成 18 伤害\n"
-        "❌ 史莱姆反击\n你受到 4 伤害"
+        "✅ 你发动技能 火球术，造成 18 伤害。\n"
+        "❌ 史莱姆反击，你受到 4 伤害。"
     )
 
 
@@ -164,7 +164,7 @@ def test_tc13_killed_enemy_no_counter() -> None:
         action_name="攻击", target_max_hp=25,
     )
     text = render_battle_round(_report(player))      # 无 enemy outcome
-    assert "✅ 你攻击\n造成 25 伤害" in text
+    assert "✅ 你攻击，造成 25 伤害。" in text
     assert "反击" not in text
     assert "你受到" not in text
 
@@ -260,7 +260,7 @@ def test_brep14_appended_after_hit_line() -> None:
         attacker_name="史莱姆", action_name="反击", player_max_hp=30,
     )
     text = _render_enemy_action(oc)
-    assert text == "❌ 史莱姆反击\n你受到 4 伤害\n冰霜结界 吸收了 5 点伤害"
+    assert text == "❌ 史莱姆反击，你受到 4 伤害。\n冰霜结界 吸收了 5 点伤害"
 
 
 def test_brep14_render_round_with_interception() -> None:
@@ -275,7 +275,7 @@ def test_brep14_render_round_with_interception() -> None:
         attacker_name="史莱姆", action_name="反击", player_max_hp=30,
     )
     text = render_battle_round(_report(player, enemy))
-    assert "❌ 史莱姆反击\n你受到 4 伤害\n冰霜结界 吸收了 5 点伤害" in text
+    assert "❌ 史莱姆反击，你受到 4 伤害。\n冰霜结界 吸收了 5 点伤害" in text
 
 
 def test_brep14_unknown_effect_skipped() -> None:
@@ -302,7 +302,7 @@ def test_enemy_action_defend_dispatch_brep06() -> None:
 
 def test_enemy_action_fallback_defaults() -> None:
     """缺接线属性（真实 ActionOutcome）→ 缺省回落：怪物名「怪物」、普攻「攻击」、最大 HP=当前。"""
-    assert _render_enemy_action(_outcome()) == "❌ 怪物攻击\n你受到 4 伤害"
+    assert _render_enemy_action(_outcome()) == "❌ 怪物攻击，你受到 4 伤害。"
 
 
 # ---------------------------------------------------------------------------

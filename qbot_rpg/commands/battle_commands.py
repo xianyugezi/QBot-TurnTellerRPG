@@ -220,6 +220,17 @@ class EnrichedTurnReport:
     # CTB 双计数（默认值保证旧构造点零破坏，且不移动既有字段位置）
     action_seq: int = 0
     battle_time: float = 0.0
+    # 战斗 HUD v2（2026-09-12）：分项资源行数据——None/0/空序列 → 渲染层不输出对应行
+    # （用户口径：没有护盾/法力等资源则不显示这些资源，持续效果同样）
+    player_mp: Optional[int] = None
+    player_mp_max: Optional[int] = None
+    player_shield: int = 0
+    player_shield_turns: int = 0
+    enemy_shield: int = 0
+    enemy_shield_turns: int = 0
+    enemy_air: bool = False                        # 怪物跃空（「怪物状态：跃空丨…」首项）
+    enemy_broken_parts: Tuple[str, ...] = ()        # 已破坏部位中文名序列
+    effect_events: Tuple[Mapping[str, Any], ...] = ()   # 本行动持续效果事件（DOT 生效/失效）
 
     @classmethod
     def from_report(
@@ -233,6 +244,7 @@ class EnrichedTurnReport:
         gold: int = 0,
         drops: Sequence[Any] = (),
         status_changes: Sequence[Any] = (),
+        hud: Optional[Mapping[str, Any]] = None,
     ) -> "EnrichedTurnReport":
         """TurnReport → EnrichedTurnReport（补齐接线层字段，其余字段透传）。
 
@@ -245,8 +257,10 @@ class EnrichedTurnReport:
         :param gold: 结算金币。
         :param drops: 战利品序列。
         :param status_changes: BREP-08 状态资源差分序列。
+        :param hud: 战斗 HUD v2 分项资源数据（battle_hud_payload 产出；None → 全缺省）。
         :return: EnrichedTurnReport（冻结 dataclass）。
         """
+        _hud: Mapping[str, Any] = hud or {}
         return cls(
             turn=int(getattr(report, "turn", 0)),
             phases=tuple(getattr(report, "phases", ()) or ()),
@@ -265,6 +279,15 @@ class EnrichedTurnReport:
             status_changes=tuple(status_changes or ()),
             action_seq=int(getattr(report, "action_seq", 0) or 0),
             battle_time=float(getattr(report, "battle_time", 0.0) or 0.0),
+            player_mp=_hud.get("player_mp"),
+            player_mp_max=_hud.get("player_mp_max"),
+            player_shield=int(_hud.get("player_shield") or 0),
+            player_shield_turns=int(_hud.get("player_shield_turns") or 0),
+            enemy_shield=int(_hud.get("enemy_shield") or 0),
+            enemy_shield_turns=int(_hud.get("enemy_shield_turns") or 0),
+            enemy_air=bool(_hud.get("enemy_air")),
+            enemy_broken_parts=tuple(_hud.get("enemy_broken_parts") or ()),
+            effect_events=tuple(getattr(report, "effect_events", ()) or ()),
         )
 
 
@@ -282,6 +305,7 @@ def enrich_round_report(
     player_action: Optional[Mapping[str, Any]] = None,
     skill_name: Optional[str] = None,
     enemy_action_name: Optional[str] = None,
+    hud: Optional[Mapping[str, Any]] = None,
 ) -> EnrichedTurnReport:
     """TurnReport → EnrichedTurnReport（纯函数，测试/装配可直接消费）。
 
@@ -305,8 +329,10 @@ def enrich_round_report(
     :param player_action: 玩家行动 dict（技能名派生显示用）。
     :param skill_name: 技能展示名（注入 player skill outcome）。
     :param enemy_action_name: 怪物行动展示名（注入 enemy outcome）。
+    :param hud: 战斗 HUD v2 分项资源数据（battle_hud_payload 产出）。
     :return: EnrichedTurnReport。
     """
+    _hud: Mapping[str, Any] = hud or {}
     outcomes = _inject_display_outcomes(
         getattr(report, "outcomes", ()) or (),
         enemy_name=enemy_name,
@@ -337,7 +363,76 @@ def enrich_round_report(
         status_changes=tuple(status_changes or ()),
         action_seq=int(getattr(report, "action_seq", 0) or 0),
         battle_time=float(getattr(report, "battle_time", 0.0) or 0.0),
+        player_mp=_hud.get("player_mp"),
+        player_mp_max=_hud.get("player_mp_max"),
+        player_shield=int(_hud.get("player_shield") or 0),
+        player_shield_turns=int(_hud.get("player_shield_turns") or 0),
+        enemy_shield=int(_hud.get("enemy_shield") or 0),
+        enemy_shield_turns=int(_hud.get("enemy_shield_turns") or 0),
+        enemy_air=bool(_hud.get("enemy_air")),
+        enemy_broken_parts=tuple(_hud.get("enemy_broken_parts") or ()),
+        effect_events=tuple(getattr(report, "effect_events", ()) or ()),
     )
+
+
+def battle_hud_payload(snap: Mapping[str, Any]) -> Dict[str, Any]:
+    """战斗 HUD v2 取数（2026-09-12）：engine.battle_state() → 分项资源行原始数据。
+
+    用户口径：**没有护盾/法力等资源则不显示这些资源**（渲染层据缺省判空）。
+    产出键（原始数据，中文文案一律由渲染层模板产出，本层零硬编码）：
+      player_mp / player_mp_max        玩家法力当前/上限（缺失 → None）
+      player_shield / _turns           玩家护盾剩余值 / 剩余行动数（combatant.defenses.shield）
+      enemy_shield / _turns            怪物护盾（同上；怪物无护盾 → 0/0）
+      enemy_air                        怪物跃空中（combat_position.enemy.height == "air"）
+      enemy_broken_parts               已破坏部位**展示名**序列（parts_state.broken × parts[].name）
+    """
+    out: dict[str, Any] = {
+        "player_mp": None, "player_mp_max": None,
+        "player_shield": 0, "player_shield_turns": 0,
+        "enemy_shield": 0, "enemy_shield_turns": 0,
+        "enemy_air": False, "enemy_broken_parts": (),
+    }
+    if not isinstance(snap, Mapping):
+        return out
+    p = snap.get("player")
+    e = snap.get("enemy")
+    p = p if isinstance(p, Mapping) else {}
+    e = e if isinstance(e, Mapping) else {}
+
+    def _mp(c: Mapping[str, Any], cur_key: str, max_key: str,
+            src_cur: str, src_max: str) -> None:
+        if c.get(src_cur) is not None:
+            out[cur_key] = int(c.get(src_cur) or 0)
+        if c.get(src_max) is not None:
+            out[max_key] = int(c.get(src_max) or 0)
+
+    def _shield(c: Mapping[str, Any]) -> Tuple[int, int]:
+        d = c.get("defenses")
+        s = d.get("shield") if isinstance(d, Mapping) else None
+        if not isinstance(s, Mapping):
+            return 0, 0
+        return int(s.get("remaining") or 0), int(s.get("turns") or 0)
+
+    _mp(p, "player_mp", "player_mp_max", "mp", "max_mp")
+    out["player_shield"], out["player_shield_turns"] = _shield(p)
+    out["enemy_shield"], out["enemy_shield_turns"] = _shield(e)
+    # 怪物跃空：方位快照 height == "air"
+    cp = snap.get("combat_position")
+    ent = cp.get("enemy") if isinstance(cp, Mapping) else None
+    out["enemy_air"] = bool(isinstance(ent, Mapping) and str(ent.get("height") or "") == "air")
+    # 已破坏部位：parts_state[pid].broken → parts[].name（内容包展示名，缺失回落 id）
+    ps = snap.get("parts_state")
+    names: dict[str, str] = {}
+    parts = e.get("parts")
+    for pd in parts if isinstance(parts, list) else ():
+        if isinstance(pd, Mapping) and pd.get("id"):
+            names[str(pd["id"])] = str(pd.get("name") or pd["id"])
+    broken: list[str] = []
+    for pid, st in (ps.items() if isinstance(ps, Mapping) else ()):
+        if isinstance(st, Mapping) and st.get("broken"):
+            broken.append(names.get(str(pid), str(pid)))
+    out["enemy_broken_parts"] = tuple(broken)
+    return out
 
 
 # ---------------------------------------------------------------------------

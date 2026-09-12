@@ -69,22 +69,21 @@ def _assert_no_banned_emoji(text: str) -> None:
 # ---------------------------------------------------------------------------
 def test_action_player_hit_reuses_round_blocks() -> None:
     """单次行动（玩家命中）= 复用回合制玩家积木 → 与 render_battle_round 逐字一致。"""
-    oc = _enriched(_outcome(action_type="skill"), action_name="施放火球术", target_max_hp=25)
+    oc = _enriched(_outcome(action_type="skill"), action_name="火球术", target_max_hp=25)
     src = SimpleNamespace(outcomes=(oc,), actor_id="player")
     assert render_battle_action(src) == render_battle_round(src)
-    assert render_battle_action(src) == "✅ 你施放火球术\n造成 18 伤害"
+    assert render_battle_action(src) == "✅ 你发动技能 火球术，造成 18 伤害。"
 
 
 def test_action_prefix_first_line_and_ctb_status() -> None:
     """前缀首行 + CTB 状态行（距离你下次行动：{n}）；前缀仅首行。"""
-    oc = _enriched(_outcome(action_type="skill"), action_name="施放火球术", target_max_hp=25)
+    oc = _enriched(_outcome(action_type="skill"), action_name="火球术", target_max_hp=25)
     src = SimpleNamespace(outcomes=(oc,), actor_id="player", ready_in=33,
                           level=35, name="阿伟", title="斩龙者")
     lines = render_battle_action(src).split("\n")
     assert lines[0] == "Lv35.阿伟 -斩龙者-"
-    assert lines[1] == "✅ 你施放火球术"
-    assert lines[2] == "造成 18 伤害"
-    assert len(lines) == 4                              # 批4：目标血量行已砍
+    assert lines[1] == "✅ 你发动技能 火球术，造成 18 伤害。"
+    assert len(lines) == 3                              # 批4：血量行已砍；HUD v2：整句
     assert lines[-1] == "距离你下次行动：33"
     assert not any("Lv35" in ln for ln in lines[1:])
 
@@ -106,11 +105,10 @@ def test_action_npc_turn_head_line() -> None:
 def test_action_kill_line_follows_damage() -> None:
     """扣血后 target_hp<=0 → 击杀行紧跟伤害行（铁律 9）。"""
     oc = _enriched(_outcome(action_type="skill", final_damage=25, target_hp=0),
-                   action_name="施放火球术", target_max_hp=25)
+                   action_name="火球术", target_max_hp=25)
     text = render_battle_action(SimpleNamespace(outcomes=(oc,), actor_id="player"))
     assert text.split("\n") == [
-        "✅ 你施放火球术",
-        "造成 25 伤害",
+        "✅ 你发动技能 火球术，造成 25 伤害。",
         "✅ 你击败了史莱姆",
     ]
 
@@ -169,10 +167,8 @@ def test_batch_merges_npc_actions_one_message() -> None:
     batch = {"entries": [e1.__dict__, e2.__dict__], "start_time": 100, "end_time": 133.33}
     lines = render_battle_action_batch(batch).split("\n")
     assert lines[0] == "（怪物行动）"
-    assert lines[1] == "❌ 史莱姆撞击"
-    assert lines[2] == "你受到 18 伤害"
-    assert lines[3] == "❌ 狼撕咬"
-    assert lines[4] == "你受到 18 伤害"
+    assert lines[1] == "❌ 史莱姆撞击，你受到 18 伤害。"
+    assert lines[2] == "❌ 狼撕咬，你受到 18 伤害。"
     assert isinstance(render_battle_action_batch(batch), str)
 
 
@@ -227,7 +223,7 @@ def test_ready_auto_hint_from_hp_snapshot() -> None:
     src = SimpleNamespace(level=1, name="阿伟", player=21, enemy=7,
                           player_max_hp=30, enemy_max_hp=25, enemy_name="史莱姆")
     text = render_battle_ready(src)
-    assert "你 21/30\n史莱姆 7/25\n→ 攻击 或 攻击 <技能名>" in text
+    assert "剩余生命：21/30（70%）\n怪物生命：7/25（28%）\n→ 攻击 或 攻击 <技能名>" in text
 
 
 def test_ready_no_prefix_when_info_missing() -> None:
@@ -249,9 +245,9 @@ def test_existing_entries_still_work() -> None:
     enemy = SimpleNamespace(name="史莱姆", hp=25, max_hp=25)
     assert render_battle_start(None, enemy) == "与史莱姆的战斗开始！\n史莱姆 25/25"
 
-    oc = _enriched(_outcome(action_type="skill"), action_name="施放火球术", target_max_hp=25)
+    oc = _enriched(_outcome(action_type="skill"), action_name="火球术", target_max_hp=25)
     assert render_battle_round(SimpleNamespace(outcomes=(oc,))) == (
-        "✅ 你施放火球术\n造成 18 伤害")
+        "✅ 你发动技能 火球术，造成 18 伤害。")
 
     end = render_battle_end(SimpleNamespace(), enemy, "lose", status="lose",
                             enemy_name="史莱姆")

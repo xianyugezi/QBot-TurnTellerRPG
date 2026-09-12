@@ -140,14 +140,14 @@ def test_action_hint_exact_with_denominator():
     定稿前置前缀时代写法，随免前缀裁决作废。
     """
     assert render_action_hint(21, 30, 7, 25, target_name="史莱姆") == (
-        "你 21/30\n史莱姆 7/25\n→ 攻击 或 攻击 <技能名>"
+        "剩余生命：21/30（70%）\n怪物生命：7/25（28%）\n→ 攻击 或 攻击 <技能名>"
     )
 
 
 def test_action_hint_default_target():
-    """缺省目标名 =「目标」（模板 `{目标}` 占位）。"""
+    """HUD v2：怪物行不再带目标名（`怪物生命：{hp}/{max}（{pct}%）`）；缺省调用仍成形。"""
     assert render_action_hint(21, 30, 7, 25) == (
-        "你 21/30\n目标 7/25\n→ 攻击 或 攻击 <技能名>"
+        "剩余生命：21/30（70%）\n怪物生命：7/25（28%）\n→ 攻击 或 攻击 <技能名>"
     )
 
 

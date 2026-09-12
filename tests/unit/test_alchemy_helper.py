@@ -249,7 +249,7 @@ def test_assign_consumes_energy_item():
     assert entry["started_at"] == T0
     assert entry["queue"] == {}
     # 消息：M-22 纯文本（B-9 无 emoji）
-    assert r["message"] == "小助手 开始代采 矿石*5，代调 药剂*2（消耗 糖果×1）"
+    assert r["message"] == "小助手\n开始代采 矿石*5，代调 药剂*2\n消耗 糖果×1"
     assert "📦" not in r["message"] and "⚒" not in r["message"]
 
 

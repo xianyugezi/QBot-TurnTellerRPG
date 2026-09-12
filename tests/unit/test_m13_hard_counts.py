@@ -108,7 +108,8 @@ SKILLS_FIELDS_MIN: int = 30
 # 6b：顶层 11 + growth 9 + transform 11 + state_policy 3 = 34（M13 合写产物）
 JOBS_FIELDS_MIN: int = 34
 # 6a：定稿 10 + 细化增补 3 = 13 条（§3.1/§3.2）
-SKILL_RULES: int = 15  # V-1~V-13 + V-14/V-15（2026-09-08 方位 v0.6：F08 position_rule 形状、F10 air_policy 枚举红拦）
+# V-1~V-13 + V-14/V-15（2026-09-08 方位 v0.6：F08 position_rule 形状、F10 air_policy 枚举红拦）
+SKILL_RULES: int = 15
 # 6b：V1~V8（§五）恰 8 条
 JOB_RULES: int = 8
 # 6c：V1~V11（§五）恰 11 条

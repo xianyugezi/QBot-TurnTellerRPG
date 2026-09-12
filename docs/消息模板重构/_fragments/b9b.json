@@ -1,0 +1,50 @@
+{
+  "rail": "b9b",
+  "scope": "钓鱼 15 键（全部在 qbot_rpg/core/templates/fishing_tpl.py：钓点列举 5 / 鱼讯 3 / 收杆 4 / 鱼图鉴 3；无死键清除，15 键全仓均有渲染调用点）。键名与 tpl_of 调用点/参数名不变，占位符集合沿用（map_name / spot_name / periods / rarity / spot / elapsed / kind_cn / golden_line / rarity_cn / caught / king）。咬钩/等待/跑鱼 三类氛围叙事句登记 meta.prose_keys 允许自然折行。",
+  "templates": {
+    "fish_off": "❌ 钓鱼功能已关闭\n本服暂不开放垂钓",
+    "fish_spot_list_header": "【垂钓点】\n当前地图：{map_name}",
+    "fish_spot_line": "- {spot_name}\n时段：{periods}\n稀有度：{rarity}",
+    "fish_spot_empty": "【垂钓点】\n本图暂无可钓鱼点",
+    "fish_intent_ref": "【鱼讯对照】\n微动 → 小鱼\n拉扯 → 中鱼\n猛烈 → 大鱼或鱼王",
+    "fish_bite_idle": "无进行中钓局\n发 钓鱼 <钓点> 开始垂钓",
+    "fish_bite_waiting": "【等待中】{spot}\n已耗时 {elapsed}s\n水面平静，鱼讯尚未触发",
+    "fish_bite_triggered": "{kind_cn}！{golden_line}\n浮漂猛地一沉，快收杆！\n收杆：满力 或 自动 或 止损",
+    "fish_reel_bad_choice": "❌ 无效的收杆选择\n满力 或 自动 或 止损",
+    "fish_reel_timeout": "鱼跑了……水面重归平静\n（收杆超时，本局无鱼获）",
+    "fish_reel_stop": "已止损收杆\n饵已消耗\n本局无鱼获",
+    "fish_reel_success": "✅ 收杆成功\n{kind_cn}｜{rarity_cn}",
+    "fish_codex_header": "【鱼图鉴】",
+    "fish_codex_summary": "已捕获 {caught} 种\n鱼王讨伐胜利 {king} 次",
+    "fish_codex_empty": "还没有捕获记录\n发 钓鱼 <钓点> 试试手气"
+  },
+  "prose_keys": {
+    "fish_bite_waiting": "氛围叙事：等待期水面状态句（咬钩前的静默氛围，非结构化键值行）——允许自然折行",
+    "fish_bite_triggered": "氛围叙事：咬钩瞬间演出句（浮漂下沉 + 收杆提示，整句叙事）——允许自然折行",
+    "fish_reel_timeout": "氛围叙事：跑鱼播报句（收杆超时演出 + 无鱼获结论）——允许自然折行"
+  },
+  "notes": {
+    "fish_off": "重做——旧「钓鱼功能已关闭」7 全角虽合规但无归因；改 ❌ 拒绝行 + 独立原因行（本服未开放），保留「钓鱼功能已关闭」识别子串（指令壳 off 拒绝测试锚点；引擎侧 core/fishing.py MSG_OFF 属引擎中性文本池，不在本路范围）",
+    "fish_spot_list_header": "重做——旧「【垂钓点】当前地图：{map_name}」单行挤宽（静态 15 全角 = 30 半角 > 28）；按「每行一字段」拆两行（段头【垂钓点】 / 当前地图：{map_name}），对齐 checkin_section_header「【{title}】」段头口径，map_name 要素保留",
+    "fish_spot_line": "重做——旧「- {spot_name}｜时段：{periods}｜稀有度：{rarity}」单行 45 半角严重超宽且依赖 ｜ 挤宽；按拆行优先序①改每行一字段（- {spot_name} / 时段：{periods} / 稀有度：{rarity}），保留「- 」列表前缀与「时段：/稀有度：」标签（测试锚点）",
+    "fish_spot_empty": "重做——旧「【垂钓点】本图暂无可钓鱼点」静态 29 半角 > 28；拆段头行 + 结论行（【垂钓点】 / 本图暂无可钓鱼点），保留「本图暂无可钓鱼点」识别子串（TC-02 锚点）",
+    "fish_intent_ref": "重做——旧「微动=小鱼 / 拉扯=中鱼 / 猛烈=大鱼或鱼王！」用 = 与 / 单行串接，属旧规范；改【鱼讯对照】段头 + 每行一组映射（→ 连接），免斜杠/免 =，三组关键词要素逐条保留（微动/拉扯/猛烈 × 小鱼/中鱼/鱼王）",
+    "fish_bite_idle": "重做——旧「无进行中钓局」7 全角虽合规但只给状态无出口；保留状态行 + 免斜杠下一步（发 钓鱼 <钓点> 开始垂钓），覆盖 /鱼讯 与 /收杆 两处空态消费点（simple 模式下 /钓鱼 仍可达，提示成立）",
+    "fish_bite_waiting": "重做——旧「等待中：{spot} · 已耗时 {elapsed}s（鱼讯未触发）」静态 31 半角超宽且括注挤宽；按拆行优先序①②改三行（【等待中】{spot} / 已耗时 {elapsed}s / 水面平静，鱼讯尚未触发），钓点/已耗时/等待中三要素保留（TC-21 锚点）",
+    "fish_bite_triggered": "重做——旧「{kind_cn}！{golden_line}收杆吧：/收杆 满力 / 自动 / 止损」带旧斜杠写法且单行超宽；改三行（类别行 / 咬钩演出句 / 收杆选项行「满力 或 自动 或 止损」），斜杠去除、多选一改「或」，kind_cn/golden_line 与「收杆」要素保留（TC-22 锚点），无 ｜ 依赖",
+    "fish_reel_bad_choice": "重做——旧「请选择：满力 / 自动 / 止损」为旧斜杠枚举；改 ❌ 原因行（无效的收杆选择）+ 免斜杠选项行（满力 或 自动 或 止损），三选项要素保留（R-2 锚点）",
+    "fish_reel_timeout": "重做——旧「鱼跑了……（收杆超时）」括注挤宽且无结果结论；改跑鱼演出句 + 独立结论行（收杆超时，本局无鱼获），「跑/超时」识别子串保留（TC-08 锚点），行尾仍为 ）（错误行格式测试锚点）",
+    "fish_reel_stop": "重做——旧「已止损收杆（饵已消耗，本局无鱼获）」静态 34 半角超宽；拆三行（已止损收杆 / 饵已消耗 / 本局无鱼获），止损动作、饵已耗、无鱼获三要素逐条保留（TC-17 锚点）",
+    "fish_reel_success": "重做——旧「收杆成功！{kind_cn} · {rarity_cn}」单行 + · 连接；改 ✅ 结果行 + 鱼种/稀有度并排行（{kind_cn}｜{rarity_cn}，｜ 作两个短并列字段的最后手段），「收杆成功」识别子串保留（TC-15~20 锚点）",
+    "fish_codex_header": "维持（已合规；【鱼图鉴】段头 5 全角 = 10 半角，且为图鉴渲染页头固定口径（D-2），无更优等价写法）",
+    "fish_codex_summary": "重做——旧「已捕获 {caught} 种 · 鱼王讨伐胜利 {king} 次」静态 28 半角 + 占位符估算 36 半角（WARN 级）；按拆行优先序①改每行一指标（已捕获 {caught} 种 / 鱼王讨伐胜利 {king} 次），caught/king 两要素保留（2c1c E-01 锚点）",
+    "fish_codex_empty": "重做——旧「（还没有捕获记录）」仅为括注短语；改状态行（还没有捕获记录，保留识别子串）+ 免斜杠下一步（发 钓鱼 <钓点> 试试手气），引导新玩家进入钓鱼循环",
+    "code__fishing_tpl": "配套代码同步：qbot_rpg/core/templates/fishing_tpl.py 清空本分区 15 键 DEFAULT_TEMPLATES 与 PLACEHOLDER_WHITELIST（白名单由全量表自动派生），模块 docstring 改为「已迁全量表 + 空壳待批18 删除」口径",
+    "code__fishing_commands": "配套代码同步：fishing_commands.py 本地 fallback 常量 _DEF_FISH_* 逐条改新文案（与表内文本一致）、FISH_INTENT_REF 改新三行对照文本（_DEF_FISH_INTENT_REF_LINE 直接等于该常量，去「鱼讯参考：」旧前缀），模块/函数 docstring 中旧文案引用（「微动=小鱼 / …」「本图暂无可钓鱼点」示例）逐处改新口径；渲染逻辑与 tpl_of 调用点/参数名不变",
+    "code__fishing_reel_commands": "配套代码同步：fishing_reel_commands.py 本地 fallback 常量 _DEF_BITE_* / _DEF_REEL_* 逐条改新文案（与表内文本一致）；docstring 内旧文案引用逐处更新；tpl_of 调用点/参数名不变",
+    "code__fishing_codex_commands": "配套代码同步：fishing_codex_commands.py 本地 fallback 常量 _DEF_FISH_CODEX_* 逐条改新文案（与表内文本一致）；render_fish_codex docstring 的渲染结构示例（【鱼图鉴】/ 已捕获 N 种 · 鱼王讨伐胜利 K 次）改新两行口径",
+    "test__fishing_tpl": "测试同步：tests/unit/test_fishing_tpl.py 的 emoji 正则改为仓库口径（排除功能标记 ✅/❌，对齐 test_emoji_discipline._ALLOWED）、off 精确断言改新文案、白名单断言改走 TABLE_TEMPLATES（分区清空后原分区断言失去对象）并新增分区空壳断言",
+    "test__fishing_commands": "测试同步：tests/unit/test_fishing_commands.py 中 FISH_INTENT_REF 逐字断言与「三组关键词」整句断言改新三行文本；4 处「钓点行同行含时段/稀有度」断言改按新三行结构定位（钓点行下一行 = 时段、再下一行 = 稀有度），字段要素不变",
+    "content_test_demo": "内容包最小同步：content/test_demo/templates.json 增补 15 键新文案（该内容包原无 fish_* 覆盖条目，按合表口径镜像为有意一致）"
+  }
+}

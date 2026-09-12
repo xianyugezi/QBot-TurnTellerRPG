@@ -5,6 +5,11 @@
 作者：Hermes 主 agent（路6A 子 agent 撞迭代上限零落盘，按侦察结论补齐）
 
 覆盖：定稿 §六 消息模板 + M9 模板迁移先例；渲染零 emoji、可覆盖、格式规范。
+
+2026-09-12 消息模板重构（批9·路B）：fishing_tpl 15 键全部迁入全量模板表
+（qbot_rpg/core/templates/template_table.json），本分区默认表/白名单清空为
+空壳 + import 兼容。本文件断言随之改走全量表口径（TABLE_TEMPLATES）：分区空壳
+断言、白名单派生一致性、off 新文案；emoji 正则改仓库口径（排除功能标记 ✅/❌）。
 """
 
 from __future__ import annotations
@@ -14,7 +19,20 @@ from typing import Any, Dict
 
 from qbot_rpg.core.templates import DEFAULT_TEMPLATES, PLACEHOLDER_WHITELIST, tpl_of
 
-_EMOJI_RE = re.compile(r"[\U0001F300-\U0001FAFF\u2600-\u27BF\uFE0F]")
+# 非白名单 emoji 判定（对齐 tests/unit/test_emoji_discipline.py：排除 ✅/❌ 功能标记）
+_EMOJI_RE = re.compile(
+    r"[\U0001F000-\U0001FAFF]"
+    r"|[\U00002600-\U000027BF]"
+    r"|[\U0001F1E6-\U0001F1FF]"
+    r"|\ufe0f"
+    r"|\u200d"
+)
+_ALLOWED_EMOJI = {"\u2705", "\u274c"}  # ✅ ❌ 功能性标记（排版规范保留）
+
+
+def _emoji_hits(text: str) -> set:
+    """非白名单 emoji 命中集合（✅/❌ 不计）。"""
+    return set(_EMOJI_RE.findall(text)) - _ALLOWED_EMOJI
 
 
 def _ctx(**kw: Any) -> Dict[str, Any]:
@@ -77,9 +95,9 @@ def test_render_codex_summary() -> None:
 
 
 def test_render_off() -> None:
-    """钓鱼关闭文案。"""
+    """钓鱼关闭文案（2026-09-12 批9·路B：❌ 拒绝行 + 本服未开放原因行）。"""
     ctx = _ctx()
-    assert tpl_of(ctx, "fish_off", {}) == "钓鱼功能已关闭"
+    assert tpl_of(ctx, "fish_off", {}) == "❌ 钓鱼功能已关闭\n本服暂不开放垂钓"
 
 
 # ---------------------------------------------------------------------------
@@ -104,7 +122,7 @@ def test_no_emoji_in_templates() -> None:
     """全部 fish_* 默认模板零 emoji。"""
     for k, v in DEFAULT_TEMPLATES.items():
         if k.startswith("fish_") and isinstance(v, str):
-            assert not _EMOJI_RE.search(v), f"模板 {k} 含 emoji: {v}"
+            assert not _emoji_hits(v), f"模板 {k} 含非白名单 emoji: {v}"
 
 
 def test_no_emoji_in_rendered() -> None:
@@ -117,7 +135,7 @@ def test_no_emoji_in_rendered() -> None:
         tpl_of(ctx, "fish_codex_summary", {"caught": 1, "king": 1}),
     ]
     for out in samples:
-        assert not _EMOJI_RE.search(out), f"渲染含 emoji: {out}"
+        assert not _emoji_hits(out), f"渲染含非白名单 emoji: {out}"
 
 
 # ---------------------------------------------------------------------------
@@ -161,6 +179,22 @@ def test_missing_placeholder_preserved() -> None:
 # 白名单（提示性：文档给内容包作者的占位符清单，非强制拦截——渲染器不校验）
 # ---------------------------------------------------------------------------
 def test_whitelist_documented() -> None:
-    """白名单为文档提示（fish_spot_line 列 spot_name/periods/rarity），不强制拦截。"""
+    """白名单为文档提示（fish_spot_line 列 spot_name/periods/rarity），不强制拦截。
+
+    2026-09-12 批9·路B：fishing_tpl 15 键已迁全量表（分区默认表/白名单清空）——
+    断言改走 TABLE_TEMPLATES（对齐 test_investigate_commands 同款口径）。
+    """
+    import qbot_rpg.core.templates.fishing_tpl as _fish_partition
+    from qbot_rpg.core.templates import TABLE_TEMPLATES
+
+    # 分区空壳（15 键全部迁全量表；空壳保留 import 兼容，待批18 删除）
+    assert not _fish_partition.DEFAULT_TEMPLATES
+    assert not _fish_partition.PLACEHOLDER_WHITELIST
+    fish_keys = {k for k in TABLE_TEMPLATES if k.startswith("fish_")}
+    assert len(fish_keys) == 15
+    for key in sorted(fish_keys):
+        used = set(re.findall(r"\{([a-zA-Z0-9_]+)\}", TABLE_TEMPLATES[key]))
+        assert used <= set(PLACEHOLDER_WHITELIST[key]), f"{key}: 占位符超出白名单"
     assert set(PLACEHOLDER_WHITELIST["fish_spot_line"]) == {"spot_name", "periods", "rarity"}
     assert set(PLACEHOLDER_WHITELIST["fish_bite_triggered"]) == {"kind_cn", "golden_line"}
+    assert set(PLACEHOLDER_WHITELIST["fish_codex_summary"]) == {"caught", "king"}

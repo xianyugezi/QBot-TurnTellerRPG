@@ -16,7 +16,10 @@
       "investigate_ambient_5": "介绍类：泛化环境风味文本（同上）——允许自然折行",
       "investigate_hunt_intro": "叙事演出句：蹲点开场氛围句（R-09 狼嗥演出，整句叙事）——允许自然折行",
       "investigate_hidden_map_text": "介绍类：隐藏地图入口揭示默认介绍（F-07 无 intro/desc 兜底，叙事句）——允许自然折行",
-      "ach_view_desc": "介绍类：内嵌成就描述文本，允许自然折行（结构化前缀「描述：」保留）"
+      "ach_view_desc": "介绍类：内嵌成就描述文本，允许自然折行（结构化前缀「描述：」保留）",
+      "fish_bite_waiting": "氛围叙事：等待期水面状态句（咬钩前的静默氛围，非结构化键值行）——允许自然折行",
+      "fish_bite_triggered": "氛围叙事：咬钩瞬间演出句（浮漂下沉 + 收杆提示，整句叙事）——允许自然折行",
+      "fish_reel_timeout": "氛围叙事：跑鱼播报句（收杆超时演出 + 无鱼获结论）——允许自然折行"
     },
     "prose_placeholders": []
   },
@@ -631,6 +634,21 @@
     "dummy_adjust_usage": "调整木桩\n发 调整木桩 <怪物名>\n覆盖面板\n无参：重置",
     "dummy_exit_no_battle": "❌ 没有进行中的训练战\n发 木桩 <档位> 进入",
     "dummy_exit_not_dummy": "❌ 当前不是训练木桩\n普通战斗无法退出",
-    "dummy_exit_ok": "✅ 已退出训练木桩\n本次训练未结算\n发 木桩 <档位> 可重进"
+    "dummy_exit_ok": "✅ 已退出训练木桩\n本次训练未结算\n发 木桩 <档位> 可重进",
+    "fish_off": "❌ 钓鱼功能已关闭\n本服暂不开放垂钓",
+    "fish_spot_list_header": "【垂钓点】\n当前地图：{map_name}",
+    "fish_spot_line": "- {spot_name}\n时段：{periods}\n稀有度：{rarity}",
+    "fish_spot_empty": "【垂钓点】\n本图暂无可钓鱼点",
+    "fish_intent_ref": "【鱼讯对照】\n微动 → 小鱼\n拉扯 → 中鱼\n猛烈 → 大鱼或鱼王",
+    "fish_bite_idle": "无进行中钓局\n发 钓鱼 <钓点> 开始垂钓",
+    "fish_bite_waiting": "【等待中】{spot}\n已耗时 {elapsed}s\n水面平静，鱼讯尚未触发",
+    "fish_bite_triggered": "{kind_cn}！{golden_line}\n浮漂猛地一沉，快收杆！\n收杆：满力 或 自动 或 止损",
+    "fish_reel_bad_choice": "❌ 无效的收杆选择\n满力 或 自动 或 止损",
+    "fish_reel_timeout": "鱼跑了……水面重归平静\n（收杆超时，本局无鱼获）",
+    "fish_reel_stop": "已止损收杆\n饵已消耗\n本局无鱼获",
+    "fish_reel_success": "✅ 收杆成功\n{kind_cn}｜{rarity_cn}",
+    "fish_codex_header": "【鱼图鉴】",
+    "fish_codex_summary": "已捕获 {caught} 种\n鱼王讨伐胜利 {king} 次",
+    "fish_codex_empty": "还没有捕获记录\n发 钓鱼 <钓点> 试试手气"
   }
 }

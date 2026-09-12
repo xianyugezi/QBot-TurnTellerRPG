@@ -2,11 +2,12 @@
 模板分区：register_rem（注册指令剩余 + 商店指令剩余，2026-08-31 模板配置化包拆分）。
 
 默认模板表 + 占位符白名单；内容包 templates.json 可覆盖同 key。
+2026-09-12 消息模板重构批1：注册指令剩余（register_*）已迁全量模板表
+（template_table.json）并从本分区移除；本分区现存 = 商店指令剩余。
 
-铁律：字符串 = 2026-08-31 前写死在 register_commands.py / shop_commands.py 的逐字文案迁移
-（注册成功回显 / 名字校验 / 指令参数错误 / 商店无店·空店·一览标题 / 购买出售失败兜底 /
-尾段 Tip），默认值改动会导致现有测试断言失效——需与两模块渲染处
-tpl_of(ctx, "register_*"/"shop_*", {...}) 一致。
+铁律：字符串 = 2026-08-31 前写死在 shop_commands.py 的逐字文案迁移（商店无店·空店·
+一览标题 / 购买出售失败兜底 / 尾段 Tip），默认值改动会导致现有测试断言失效——需与
+shop_commands 渲染处 tpl_of(ctx, "shop_*", {...}) 一致。
 
 注意：shop_header / shop_row / shop_tail（尾段）已在 base.py 迁移，本分区不重复收录。
 """
@@ -15,44 +16,6 @@ from __future__ import annotations
 from typing import Any, Dict
 
 DEFAULT_TEMPLATES: Dict[str, Any] = {
-    # —— 注册：名字校验（REG-02 / RUL-02；【框架】L1156 安全补强）——
-    "register_name_too_long": "❌ 角色名最多 20 个字",
-    "register_name_bad_chars": "❌ 角色名含非法字符，请重新输入（过滤控制字符/超长 emoji）",
-
-    # —— 注册：重名红拦 / 职业不存在（REG-03 / RUL-03/07 / B5）——
-    "register_dup_name": "❌ 已经有一个叫『{name}』的角色了，换个名字吧",
-    "register_job_not_found": "❌ 没有『{job}』这个职业，可用：{list}",
-    "register_job_recommended": "（推荐）",
-
-    # —— 注册：保留字符黄提示尾缀（RUL-02 ③「只建议不限制」）——
-    "register_reserved_hint": "（提示：{hint}）",
-
-    # —— 注册成功回显（TPL-4F-01 语义；工程补白 1 前缀行 + 初始属性逐行 + 引导行）——
-    "register_success_prefix": "Lv1.{name} - -",
-    "register_success_welcome": "✅ 注册成功！欢迎来到「{world}」世界",
-    "register_success_job_loc": "职业：{job} ｜ 位置：{location}",
-    "register_success_recommended": "（推荐新手）",
-    "register_success_attr_title": "初始属性：",
-    # M12.5 动态化（2026-09-04）：注册成功属性行遍历 stats 实际键——hp/mp 等
-    # resource 型走 _resource 变体（cur/max），其余走 _plain；旧专属键
-    # register_success_hp/mp/atk/dfn 保留兼容（内容包覆盖仍生效，仅 hp/mp/str/con
-    # 四键查得到时使用；其它键一律走通用模板）。
-    "register_success_attr_plain": "{attr_name} {value}",
-    "register_success_attr_resource": "{attr_name} {cur}/{max}",
-    "register_success_hp": "生命 {hp}/{hp}",
-    "register_success_mp": "魔力 {mp}/{mp}",
-    "register_success_atk": "攻击 {atk}",
-    "register_success_dfn": "防御 {dfn}",
-    "register_success_next": "下一步：发 帮助 查看指令，或 发 锁定 1 与当前地图怪物开战。",
-
-    # —— 注册：指令参数错误（REG-01；3d §5.1「原因 + 正确用法」句式）——
-    "register_args_too_many": "❌ 指令不正确：/注册 最多 2 个参数。正确格式：{usage}",
-    "register_args_missing": "❌ 指令不正确：/注册 需要角色名。正确格式：{usage}"
-                             "（或直接发 注册，将用你的 QQ 号作为名字）",
-
-    # —— 注册：无参 QQ 号兜底提示（用户拍板 2026-08-28：零输入开玩）——
-    "register_auto_name": "已自动取名「{name}」（无参注册默认如此；重名/换名请先发 注销 再注册）",
-
     # —— 商店：无店 / 空店 / 一览标题（shop_commands；2b3 §2.1 + 定稿 L421）——
     "shop_no_shop": "❌ 商店不存在",
     # 2026-09-05 商店进入独立指令
@@ -77,27 +40,6 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
 }
 
 PLACEHOLDER_WHITELIST: Dict[str, set] = {
-    "register_name_too_long": set(),
-    "register_name_bad_chars": set(),
-    "register_dup_name": {"name"},
-    "register_job_not_found": {"job", "list"},
-    "register_job_recommended": set(),
-    "register_reserved_hint": {"hint"},
-    "register_success_prefix": {"name"},
-    "register_success_welcome": {"world"},
-    "register_success_job_loc": {"job", "location"},
-    "register_success_recommended": set(),
-    "register_success_attr_title": set(),
-    "register_success_attr_plain": {"attr_name", "value"},
-    "register_success_attr_resource": {"attr_name", "cur", "max"},
-    "register_success_hp": {"hp"},
-    "register_success_mp": {"mp"},
-    "register_success_atk": {"atk"},
-    "register_success_dfn": {"dfn"},
-    "register_success_next": {"location"},
-    "register_args_too_many": {"usage"},
-    "register_args_missing": {"usage"},
-    "register_auto_name": {"name"},
     "shop_no_shop": set(),
     "shop_enter_usage": set(),
     "shop_enter_not_found": {"name"},

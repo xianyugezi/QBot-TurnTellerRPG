@@ -235,17 +235,19 @@ def test_stt_effect_remaining_only_and_no_source():
 # ---------------------------------------------------------------------------
 
 def test_tc_stt_03_battle_target_line():
-    """TC-STT-03：战斗中 /状态 → 面板 + `【目标】史莱姆 18/30（第 3 行动）`；并行不互斥。"""
+    """TC-STT-03：战斗中 /状态 → 面板 + 目标块（名称/血量/行动数三行；批1 新口径）；并行不互斥。"""
     ctx = make_ctx(target={"name": "史莱姆", "hp": 18, "max_hp": 30, "turn": 3})
     out = cmd_status(parse("/状态"), ctx)
     lines = out.splitlines()
-    assert "【目标】史莱姆 18/30（第 3 行动）" in out
-    # 目标行位于位置行之后、效果区之前（TPL-4F-03 行序；2026-08-31 去前缀后前移）
+    assert "【目标】史莱姆\n18/30\n【行动数】3" in out
+    # 目标块位于位置行之后、效果区之前（TPL-4F-03 行序；2026-08-31 去前缀后前移）
     assert lines[6] == "【位置】新手村 · 中央广场"
-    assert lines[7] == "【目标】史莱姆 18/30（第 3 行动）"
-    assert lines[8] == "【效果】无"
+    assert lines[7] == "【目标】史莱姆"
+    assert lines[8] == "18/30"
+    assert lines[9] == "【行动数】3"
+    assert lines[10] == "【效果】无"
     # 战斗指令并行不互斥：/状态 照常渲染（非战斗指令不受限，框架 L248）
-    assert target_line(ctx) == "【目标】史莱姆 18/30（第 3 行动）"
+    assert target_line(ctx) == "【目标】史莱姆\n18/30\n【行动数】3"
 
 
 def test_stt_target_absent_no_line():
@@ -361,4 +363,4 @@ def test_stt_target_partial_fields_degrade():
     assert target_line(make_ctx(target={"name": "史莱姆", "hp": 18, "max_hp": None, "turn": 3})) is None
     assert target_line(make_ctx(target={"name": "史莱姆", "hp": 18, "max_hp": 30, "turn": None})) is None
     assert target_line(make_ctx(target={"name": "史莱姆", "hp": 18, "max_hp": 30, "turn": 3})) \
-        == "【目标】史莱姆 18/30（第 3 行动）"
+        == "【目标】史莱姆\n18/30\n【行动数】3"

@@ -223,3 +223,17 @@ def test_render_negative_tier_note():
     assert _render_crit_block_note(out) == "（会心·负阶 ×0.75）"
     low = SimpleNamespace(crit="low", blocked=False, backstab=False)
     assert _render_crit_block_note(low) == "", "低档缺省仍省略"
+
+
+def test_render_crit_mult_dynamic():
+    """批⑥ 方案B：倍率显示读实际生效值（含超会心）；缺省/非法回退静态档位表。"""
+    hi = SimpleNamespace(crit="high", crit_mult=2.25, blocked=False, backstab=False)
+    assert _render_crit_block_note(hi) == "（会心·高阶 ×2.25）"
+    base = SimpleNamespace(crit="high", crit_mult=2.2, blocked=False, backstab=False)
+    assert _render_crit_block_note(base) == "（会心·高阶 ×2.2）"
+    neg = SimpleNamespace(crit="negative", crit_mult=0.6, blocked=False, backstab=False)
+    assert _render_crit_block_note(neg) == "（会心·负阶 ×0.6）"
+    fb = SimpleNamespace(crit="negative", blocked=False, backstab=False)
+    assert _render_crit_block_note(fb) == "（会心·负阶 ×0.75）", "旧构造点回退静态表"
+    bad = SimpleNamespace(crit="mid", crit_mult=float("nan"), blocked=False, backstab=False)
+    assert _render_crit_block_note(bad) == "（会心·中阶 ×1.7）", "非法值回退"

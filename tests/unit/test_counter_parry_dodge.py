@@ -14,6 +14,10 @@
   同拍（速度比整除）时窗口恒空；怪不同拍时（本文件用 spd=8 → 怪 +250 出手）
   自然命中。测试分两层：直写窗口（边界精确）+ 端到端（spd=8 自然触发）。
 
+  批⑥（2026-09-12 C10 内容恢复值逐动作化）：守势拍变快（400 档）→ 直驱用例须先
+  隔离怪的自然调度拍（_isolate_enemy——否则怪的自然行动在直驱结算链中先到、污染
+ 「完全免伤」断言）；端到端「不触发」用例按新几何推进一拍再断言受伤。
+
 CTB 语义（2026-09-10 迁移保留）：怪侧行动经单次结算入口 `do_action("enemy", ...)`
 显式驱动；玩家侧走 `player_act`（调度器自动推进 NPC 连锁）。
 """
@@ -115,6 +119,16 @@ def _set_window(eng, cast_time=None, dur=400, ctype="parry", skill="sw_guard_cou
     }
 
 
+def _isolate_enemy(eng):
+    """批⑥ 隔离怪的自然调度拍：把怪的下一次 ready 推远（直驱单次行动不受自然连锁干扰）。
+
+    新几何（C10）：守势恢复值变小 → 玩家下一拍（≈1410）早于怪首拍（spd=5/8 下
+    2000/1250…）——直驱 `do_action("enemy", …)` 时，调度器的自然行动会在结算链
+    中先到；推远即恢复「单发直驱」测试语境（与旧几何等价）。
+    """
+    assert eng._ctb.delay_actor("enemy", 100000) is True, "隔离失败（怪不存在？）"
+
+
 def _fx_types(outcomes):
     """TurnReport.outcomes → 各 outcome 的 side_effects type 列表。"""
     out = []
@@ -185,6 +199,7 @@ def test_parry_guard_fully_negates_and_counter():
     raw, all_defs, ce = _pack()
     eng = _fresh(raw, all_defs, ce)
     eng.do_action("player", {"type": "skill", "skill_id": "sw_guard"})
+    _isolate_enemy(eng)  # 批⑥：隔离怪的自然拍（守势更快 → 自然行动会先结算）
     hp_before = int(eng._snap["player"]["hp"])
     _set_window(eng)  # cast_time=当前时刻 → 敌方下一步行动恰在窗口内
     act = _parryable_action(raw)
@@ -207,6 +222,7 @@ def test_guard_vs_non_parryable_action_takes_damage():
     assert act is not None, "内容层应有不可防反的伤害行动"
     eng = _fresh(raw, all_defs, ce)
     eng.do_action("player", {"type": "skill", "skill_id": "sw_guard"})
+    _isolate_enemy(eng)  # 批⑥：隔离怪的自然拍
     _set_window(eng)
     out = eng.do_action("enemy", {"type": "skill", "skill_id": act["id"]})
     fx = _fx_of(out)
@@ -226,6 +242,7 @@ def test_window_boundary_half_open():
 
     eng_in = _fresh(raw, all_defs, ce)
     eng_in.do_action("player", {"type": "skill", "skill_id": "sw_guard"})
+    _isolate_enemy(eng_in)  # 批⑥：隔离怪的自然拍
     hp_in = int(eng_in._snap["player"]["hp"])
     _set_window(eng_in, cast_time=eng_in.battle_time - 399)
     out_in = eng_in.do_action("enemy", {"type": "skill", "skill_id": act["id"]})
@@ -234,6 +251,7 @@ def test_window_boundary_half_open():
 
     eng_out = _fresh(raw, all_defs, ce)
     eng_out.do_action("player", {"type": "skill", "skill_id": "sw_guard"})
+    _isolate_enemy(eng_out)  # 批⑥：隔离怪的自然拍
     _set_window(eng_out, cast_time=eng_out.battle_time - 400)
     out_out = eng_out.do_action("enemy", {"type": "skill", "skill_id": act["id"]})
     assert "parry" not in _fx_of(out_out), "400 恰在窗口外（半开区间）"
@@ -245,6 +263,7 @@ def test_window_expired_and_cleaned():
     raw, all_defs, ce = _pack()
     eng = _fresh(raw, all_defs, ce)
     eng.do_action("player", {"type": "skill", "skill_id": "sw_guard"})
+    _isolate_enemy(eng)  # 批⑥：隔离怪的自然拍（断言聚焦窗口过期单发语义）
     # 默认 400 窗口 + 默认 spd=5 怪：自动推进后（2000）窗口早已过期并被清理
     assert eng._snap.get("counter_stance") is None or \
         eng._snap["counter_stance"].get("cast_time") is not None, "窗口数据形态异常"
@@ -286,7 +305,13 @@ def test_e2e_no_trigger_when_enemy_action_outside_window():
     fx = _fx_types(tr)
     assert "parry" not in fx and "parry_counter" not in fx, \
         f"窗口外的怪行动不应触发防反，got {fx}"
-    assert tr.player < 900, "窗口未命中应照常受伤"
+    # 批⑥ 几何：守势拍变快 → 怪首拍落在玩家下一拍之后；推进一拍让怪自然
+    # 行动结算（窗口 [1000,1400) 早过期 → 照常受伤）
+    tr2 = eng.player_act({"type": "normal"})
+    fx2 = _fx_types(tr2)
+    assert "parry" not in fx2 and "parry_counter" not in fx2, \
+        f"窗口外的怪行动不应触发防反，got {fx2}"
+    assert tr2.player < 900, "窗口未命中应照常受伤"
 
 
 def test_fallback_default_action_time():

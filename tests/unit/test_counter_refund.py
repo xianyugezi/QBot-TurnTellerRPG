@@ -9,6 +9,9 @@
     完整收尾链（含本拍时间轴推进），先返还才能让推进落在提早后的 ready 上。
   - 隐性口径：玩家不可见（加速本身即反馈）——本测试为引擎级断言。
 
+> 批⑥（2026-09-12）口径：内容恢复值逐动作化后，**期望值一律由内容推导**——守势/
+> 闪反技能的 `recovery` × 速度系数（`_bars`/`_settle`），不写死绝对时序。
+
 铁律：零 NoneBot import；确定性（_QR 固定序列）；真跑断言（非静态）。
 """
 
@@ -19,6 +22,7 @@ from pathlib import Path
 from qbot_rpg.content.loader import build_pack
 from qbot_rpg.core.battle import BattleEngine
 from qbot_rpg.core.combo import ComboEngine
+from qbot_rpg.core.ctb_rules import DEFAULT_RECOVERY, SPEED_REFERENCE
 from qbot_rpg.core.monster_ai import MonsterAI
 
 
@@ -114,16 +118,33 @@ def _spy_hasten(eng) -> list:
     return calls
 
 
+def _rec(raw, sid):
+    """技能恢复值（内容读取；批⑥ 后逐动作可调——期望值推导用）。"""
+    return next(s for s in raw["skills"] if s["id"] == sid)["recovery"]
+
+
+def _bars(rec, spd):
+    """恢复值 → 行动条（cost = rec × SPEED_REFERENCE / spd）。"""
+    return rec * SPEED_REFERENCE / spd
+
+
+def _settle(raw, skill_id, refund, *, spd=10):
+    """防反/闪反成功后收口（内容推导）：max(本拍 ready − 返还, 怪出手时刻)。"""
+    ready_after = _bars(DEFAULT_RECOVERY, spd) + _bars(_rec(raw, skill_id), spd)
+    enemy_moment = _bars(DEFAULT_RECOVERY, 8)   # 怪 spd=8 首拍（初始缺省恢复）
+    return max(ready_after - refund, enemy_moment)
+
+
 # =====================================================================================
 # 1. 防反成功 → 返还（E2E：spd=8，怪 +250 出手落窗）
 # =====================================================================================
 
 
 def test_parry_success_refunds_action_bar():
-    """防反成功：玩家 ready 2000 → 1800（返还缺省 200），本拍收口于提早后的时点。
+    """防反成功：返还缺省 200，收口 = _settle(sw_guard, 200)（内容推导）。
 
-    挂点回归：若返还在 `_run_counter` 之后调用（反击内部收尾已把时间推到 2000），
-    此处将得到 battle_time=2000——本质检即挂点顺序守卫。
+    挂点回归：若返还在 `_run_counter` 之后才生效，收口将停在守势后 ready（未提早）
+    ——`_settle` 断言即挂点顺序守卫（批⑥ 起不写死绝对时序）。
     """
     raw, all_defs, ce = _pack()
     eng = _fresh(raw, all_defs, ce)
@@ -134,8 +155,9 @@ def test_parry_success_refunds_action_bar():
     assert tr.player == 900, "防反成功应完全免伤"
     # 返还证据链：恰一次调用 + 时点/数值正确 + 时间轴收口在 1800
     assert calls == [("player", 200.0)], f"返还调用异常：{calls}"
-    assert eng.battle_time == 1800.0, f"防反后收口应提早至 1800，got {eng.battle_time}"
-    assert _player_ready(eng) == 1800.0
+    expect = _settle(raw, "sw_guard", 200.0)
+    assert eng.battle_time == expect, f"防反后收口应 {expect}，got {eng.battle_time}"
+    assert _player_ready(eng) == expect
 
 
 def test_no_counter_no_refund_baseline():
@@ -162,7 +184,8 @@ def test_counter_fail_no_refund():
     assert "parry" not in fx and "parry_counter" not in fx, f"不可反行动不应触发：{fx}"
     assert tr.player < 900, "失败路径应照常受伤（不双罚：只付行动条）"
     assert calls == [], f"失败路径不应返还：{calls}"
-    assert eng.battle_time == 2000.0, f"失败收口应 2000，got {eng.battle_time}"
+    expect = _bars(DEFAULT_RECOVERY, 10) + _bars(_rec(raw, "sw_guard"), 10)
+    assert eng.battle_time == expect, f"失败收口应 {expect}（照付守势代价），got {eng.battle_time}"
 
 
 # =====================================================================================
@@ -171,7 +194,7 @@ def test_counter_fail_no_refund():
 
 
 def test_dodge_success_refunds_action_bar():
-    """闪反成功（回环侧移出扑咬方位）：玩家 ready 2000 → 1800。"""
+    """闪反成功（回环侧移出扑咬方位）：收口 = _settle(sw_circle, 200)（内容推导）。"""
     raw, all_defs, ce = _pack()
     eng = _fresh(raw, all_defs, ce)
     calls = _spy_hasten(eng)
@@ -180,7 +203,8 @@ def test_dodge_success_refunds_action_bar():
     assert "dodge_counter" in fx, f"闪反应触发，got {fx}"
     assert tr.player == 900, "闪反成功应免伤"
     assert calls == [("player", 200.0)], f"返还调用异常：{calls}"
-    assert eng.battle_time == 1800.0, f"闪反后收口应 1800，got {eng.battle_time}"
+    expect = _settle(raw, "sw_circle", 200.0)
+    assert eng.battle_time == expect, f"闪反后收口应 {expect}，got {eng.battle_time}"
 
 
 # =====================================================================================
@@ -189,22 +213,26 @@ def test_dodge_success_refunds_action_bar():
 
 
 def test_refund_configurable():
-    """counter_refund=150（settings→ctb 段）→ 收口 1850（返还 150）。"""
+    """counter_refund=150（settings→ctb 段）→ 收口 = _settle(…, 150)（内容推导）。"""
     raw, all_defs, ce = _pack()
     eng = _fresh(raw, all_defs, ce, config={"ctb": {"counter_refund": 150}})
     tr = eng.player_act({"type": "skill", "skill_id": "sw_guard"})
     assert "parry_counter" in _fx_types(tr)
-    assert eng.battle_time == 1850.0, f"got {eng.battle_time}"
-    assert _player_ready(eng) == 1850.0
+    expect = _settle(raw, "sw_guard", 150.0)
+    assert eng.battle_time == expect, f"got {eng.battle_time} expect {expect}"
+    assert _player_ready(eng) == expect
 
 
 def test_refund_zero_disables():
-    """counter_refund=0 → 关（收口回 2000，防反其余效果不变）。"""
+    """counter_refund=0 → 关（无返还调用、照付守势代价，防反其余效果不变）。"""
     raw, all_defs, ce = _pack()
     eng = _fresh(raw, all_defs, ce, config={"ctb": {"counter_refund": 0}})
+    calls = _spy_hasten(eng)
     tr = eng.player_act({"type": "skill", "skill_id": "sw_guard"})
     assert "parry_counter" in _fx_types(tr), "关断只影响时间返还，防反本体照常"
-    assert eng.battle_time == 2000.0, f"got {eng.battle_time}"
+    assert calls == [], f"关断不应有返还调用：{calls}"
+    expect = _bars(DEFAULT_RECOVERY, 10) + _bars(_rec(raw, "sw_guard"), 10)
+    assert eng.battle_time == expect, f"got {eng.battle_time}"
 
 
 def test_refund_clamped_at_now():
@@ -213,9 +241,15 @@ def test_refund_clamped_at_now():
     eng = _fresh(raw, all_defs, ce, config={"ctb": {"counter_refund": 900}})
     tr = eng.player_act({"type": "skill", "skill_id": "sw_guard"})
     assert "parry_counter" in _fx_types(tr)
-    # 怪 @1250 出手；2000−900=1100 < 1250 → 钳到 1250
-    assert eng.battle_time == 1250.0, f"got {eng.battle_time}"
-    assert _player_ready(eng) == 1250.0
+    # 守势后 ready − 900 已低于怪出手时刻（1250）=返还下限钳到当前时刻
+    floor = _bars(DEFAULT_RECOVERY, 8)
+    assert eng.battle_time == floor, f"got {eng.battle_time}"
+    assert _player_ready(eng) == floor
+    # 超量返还（5000）与 900 同钳到下限（不倒流）
+    eng2 = _fresh(raw, all_defs, ce, config={"ctb": {"counter_refund": 5000}})
+    tr2 = eng2.player_act({"type": "skill", "skill_id": "sw_guard"})
+    assert "parry_counter" in _fx_types(tr2)
+    assert eng2.battle_time == floor, f"got {eng2.battle_time}"
 
 
 # =====================================================================================

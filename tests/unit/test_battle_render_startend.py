@@ -109,28 +109,27 @@ def test_tc24_start_fallback_name_and_no_prefix() -> None:
 
 
 def test_tc25_end_summary_line_exact_with_turns() -> None:
-    """TC-25：BOSS 战胜利结束 —— BREP-24 汇总行逐字含行动数与明细入口指令：
-    `战斗结束：胜利｜行动数 5｜输入 /战斗记录 查看明细`（行动数对照斩杀基准，
+    """TC-25：BOSS 战胜利结束 —— BREP-24 汇总三行（批6 路P：免斜杠 + 少｜多换行）：
+    `战斗结束：胜利` / `行动数 5` / `发 战斗记录 查看明细`（行动数对照斩杀基准，
     5e §6.2 L147；无 summary → 不展示明细，TC-27）。"""
     text = render_battle_end(_party(), _enemy(turns=5), "win")
     _assert_no_banned_emoji(text)
     assert text.split("\n") == [
         "Lv35.阿伟 -斩龙者-",
-        "战斗结束：胜利｜行动数 5｜输入 /战斗记录 查看明细",
+        "战斗结束：胜利",
+        "行动数 5",
+        "发 战斗记录 查看明细",
     ]
 
 
 def test_tc25_winner_labels_win_lose_draw() -> None:
     """BREP-24 {胜负结果}：win/lose/draw → 胜利/失败/平局（5e §4.2）；中文透传。"""
-    assert "战斗结束：失败｜行动数 7" in render_battle_end(
-        SimpleNamespace(), _enemy(turns=7), "lose",
-    )
-    assert "战斗结束：平局｜行动数 3" in render_battle_end(
-        SimpleNamespace(), _enemy(turns=3), "draw",
-    )
-    assert "战斗结束：失败｜行动数 1" in render_battle_end(
-        SimpleNamespace(), _enemy(turns=1), "失败",
-    )
+    text = render_battle_end(SimpleNamespace(), _enemy(turns=7), "lose")
+    assert "战斗结束：失败" in text and "行动数 7" in text
+    text = render_battle_end(SimpleNamespace(), _enemy(turns=3), "draw")
+    assert "战斗结束：平局" in text and "行动数 3" in text
+    text = render_battle_end(SimpleNamespace(), _enemy(turns=1), "失败")
+    assert "战斗结束：失败" in text and "行动数 1" in text
 
 
 def test_tc25_turns_fallback_player_then_summary_then_zero() -> None:
@@ -167,12 +166,15 @@ _TC26_SUMMARY: Dict[str, Any] = {
 
 
 def test_tc26_summary_page1_5_items_plus_footer() -> None:
-    """TC-26：`/木桩` 战后明细（来源 8 项）第 1 页 —— 摘要行 + 前 5 条条目
+    """TC-26：`/木桩` 战后明细（来源 8 项）第 1 页 —— 摘要四行（批6 拆行）+ 前 5 条条目
     + 页脚 TPL-08 `— 第 1/2 页 · 共 8 条 · 输入 /木桩 页码 翻页 —`；条目占比降序。"""
     text = render_battle_summary(_TC26_SUMMARY, page=1)
     _assert_no_banned_emoji(text)
     assert text.split("\n") == [
-        "摘要：总伤害 1220｜最大单段 180｜会心 4 次｜格挡 2 次",
+        "摘要：总伤害 1220",
+        "最大单段 180",
+        "会心 4 次",
+        "格挡 2 次",
         "1. 火球术 520（43%）",
         "2. 普攻 310（25%）",
         "3. 灼烧 210（17%）",
@@ -187,7 +189,10 @@ def test_tc26_summary_page2_3_items_footer() -> None:
     text = render_battle_summary(_TC26_SUMMARY, page=2)
     _assert_no_banned_emoji(text)
     assert text.split("\n") == [
-        "摘要：总伤害 1220｜最大单段 180｜会心 4 次｜格挡 2 次",
+        "摘要：总伤害 1220",
+        "最大单段 180",
+        "会心 4 次",
+        "格挡 2 次",
         "1. 反击 30（2%）",
         "2. 反弹 15（1%）",
         "3. dot 5（0%）",
@@ -196,12 +201,16 @@ def test_tc26_summary_page2_3_items_footer() -> None:
 
 
 def test_tc26_single_page_no_footer() -> None:
-    """3 条来源单页 —— 无页脚（3d §2.3 D-02：单页无页脚）；条目逐字 `{来源} {总伤害}（{占比}%）`。"""
+    """3 条来源单页 —— 无页脚（3d §2.3 D-02：单页无页脚）；摘要四行 + 条目逐字
+    `{序号}. {来源} {总伤害}（{占比}%）`。"""
     s = {"total": 300, "max_hit": 120, "crits": 1, "blocks": 0,
          "items": [("火球术", 120), ("普攻", 110), ("灼烧", 70)]}
     text = render_battle_summary(s, page=1)
     assert text.split("\n") == [
-        "摘要：总伤害 300｜最大单段 120｜会心 1 次｜格挡 0 次",
+        "摘要：总伤害 300",
+        "最大单段 120",
+        "会心 1 次",
+        "格挡 0 次",
         "1. 火球术 120（40%）",
         "2. 普攻 110（37%）",
         "3. 灼烧 70（23%）",
@@ -229,7 +238,9 @@ def test_tc27_normal_battle_no_detail_by_default() -> None:
     lines = text.split("\n")
     assert lines == [
         "Lv35.阿伟 -斩龙者-",
-        "战斗结束：胜利｜行动数 3｜输入 /战斗记录 查看明细",
+        "战斗结束：胜利",
+        "行动数 3",
+        "发 战斗记录 查看明细",
     ]
     assert "摘要：" not in text
     assert "（%" not in text
@@ -242,9 +253,14 @@ def test_tc27_end_with_summary_appends_detail_block() -> None:
     )
     lines = text.split("\n")
     assert lines[0] == "Lv35.阿伟 -斩龙者-"
-    assert lines[1] == "战斗结束：胜利｜行动数 8｜输入 /战斗记录 查看明细"
-    assert lines[2] == "摘要：总伤害 1220｜最大单段 180｜会心 4 次｜格挡 2 次"
-    assert len(lines) == 2 + 1 + 8                      # 前缀+BREP-24 + 摘要 + 8 条目
+    assert lines[1] == "战斗结束：胜利"
+    assert lines[2] == "行动数 8"
+    assert lines[3] == "发 战斗记录 查看明细"
+    assert lines[4] == "摘要：总伤害 1220"
+    assert lines[5] == "最大单段 180"
+    assert lines[6] == "会心 4 次"
+    assert lines[7] == "格挡 2 次"
+    assert len(lines) == 1 + 3 + 4 + 8                   # 前缀 + BREP-24（三行）+ 摘要（四行）+ 8 条目
     _assert_no_banned_emoji(text)
 
 
@@ -255,7 +271,8 @@ def test_tc27_end_with_summary_appends_detail_block() -> None:
 
 def test_tc06_fold_over_16_lines() -> None:
     """TC-06：明细条目超限 → 单条消息 ≤16 行，按正文尾部折叠 TPL-09
-    `…（其余 {N} 条已折叠` / `发 战斗记录 {page} 查看`（折叠两行亦计入 16 行）。"""
+    `…（其余 {N} 条已折叠）` / `发 战斗记录 {page} 查看`（折叠两行亦计入 16 行；
+    批6 起 BREP-24 三行 + 摘要四行均计入预算）。"""
     s20: Dict[str, Any] = {
         "total": 5000, "max_hit": 300, "crits": 5, "blocks": 2,
         "items": [("来源%02d" % i, 5000 - i * 200) for i in range(1, 21)],
@@ -265,12 +282,17 @@ def test_tc06_fold_over_16_lines() -> None:
     _assert_no_banned_emoji(text)
     assert len(lines) <= 16                              # 超限折叠（3d D-03）
     assert lines[0] == "Lv35.阿伟 -斩龙者-"
-    assert lines[1] == "战斗结束：胜利｜行动数 45｜输入 /战斗记录 查看明细"
-    assert lines[2] == "摘要：总伤害 5000｜最大单段 300｜会心 5 次｜格挡 2 次"
-    # 折叠行 TPL-09（两行）：保留头部 11 条，折叠 9 条（keep=16-2-1-2=11），被折叠内容在第 3 页
-    assert lines[-2] == "…（其余 9 条已折叠）"
-    assert lines[-1] == "发 战斗记录 3 查看"
-    assert len(lines) == 16                              # 前缀+BREP-24+摘要+11 条+TPL-09 两行
+    assert lines[1] == "战斗结束：胜利"
+    assert lines[2] == "行动数 45"
+    assert lines[3] == "发 战斗记录 查看明细"
+    assert lines[4] == "摘要：总伤害 5000"
+    assert lines[5] == "最大单段 300"
+    assert lines[6] == "会心 5 次"
+    assert lines[7] == "格挡 2 次"
+    # 折叠行 TPL-09（两行）：保留头部 6 条，折叠 14 条（keep=16-4-4-2=6），被折叠内容在第 2 页
+    assert lines[-2] == "…（其余 14 条已折叠）"
+    assert lines[-1] == "发 战斗记录 2 查看"
+    assert len(lines) == 16                              # 前缀+BREP-24 三行+摘要 四行+6 条+TPL-09 两行
 
 
 def test_tc06_no_fold_within_limit() -> None:
@@ -283,7 +305,7 @@ def test_tc06_no_fold_within_limit() -> None:
     lines = text.split("\n")
     assert len(lines) <= 16
     assert "已折叠" not in text
-    assert len(lines) == 2 + 1 + 6                       # 前缀+BREP-24 + 摘要 + 6 条
+    assert len(lines) == 1 + 3 + 4 + 6                   # 前缀 + BREP-24（三行）+ 摘要（四行）+ 6 条
 
 
 # ---------------------------------------------------------------------------

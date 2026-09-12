@@ -224,17 +224,17 @@ def render_battle_end(
 ) -> str:
     """BREP-17~20 结算 + BREP-24/25 汇总明细（5e §6.2/§6.3 / TC-18/25~27，铁律 11）。
 
-    **M5 裁决（2026-08-27 用户拍板结算模板）**：
-      - win：结束消息 = **用户结算模板**（叙事句 `您对{怪物}造成了{伤害}点伤害！{怪物}
-        已死亡。` + `获得经验：{exp}` + `获得金币：{gold}` + `获得的战利品如下→` +
-        逐行 `{序号}.{名称}×{数量}`），**不含** `✅ 战斗胜利！` 横幅与 BREP-24 汇总行
-        （用户模板为主，2026-08-27）；当轮消息只出行动+击杀（BREP-15），结算统一在
+    **M5 裁决（2026-08-27 用户拍板结算模板；2026-09-09 击杀去重修订）**：
+      - win：结束消息 = 奖励结算块（`获得经验 {exp}` + `获得{货币} {gold}` +
+        `【战利品】` + 逐行 `{序号}.{名称}×{数量}`），叙事句整行已删（模板
+        battle_settle_win_narrative 按零引用死键清除）；**不含** `✅ 战斗胜利！`
+        横幅与 BREP-24 汇总行；当轮消息只出行动+击杀（BREP-15），结算统一在
         结束消息一次性输出（军规5，结算不重复）。
       - lose/draw：保留 BREP-16/18/19 + BREP-24 汇总行（用户未给失败模板，维持现状）。
 
-    BREP-24 汇总行：`战斗结束：{胜负结果}｜行动数 N｜输入 /战斗记录 查看明细`
+    BREP-24 汇总行：`战斗结束：{胜负结果}` / `行动数 N` / `发 战斗记录 查看明细`（三行）
     （lose/draw 输出；行动数 N 依次取 enemy/player/summary 的 turns|turn）。
-    status 非 None 时渲染结算块（final_damage 供 win 叙事句）；summary 非 None 时
+    status 非 None 时渲染结算块；summary 非 None 时
     追加 BREP-25 木桩明细块（≤16 行折叠 TPL-09）。
 
     返回：单条消息字符串（首行前缀 + 结算 [+ 汇总] [+ 明细块]）。
@@ -264,7 +264,10 @@ def render_battle_end(
             lines.append(tpl_of(ctx, "battle_end_summary", {
                 "label": label, "turns": turns}))          # BREP-24
         if summary is not None:
-            block = _render_summary_block(summary, overhead=len(lines), ctx=ctx)
+            # 物理行计数（元素可含换行：BREP-24 三行块/逐行结算块）——批6 收口修：
+            # 原按 len(lines) 元素数计，三行化后预算虚高 2 行 → 明细块超 16 行上限。
+            overhead = sum(max(1, len(str(ln).splitlines())) for ln in lines)
+            block = _render_summary_block(summary, overhead=overhead, ctx=ctx)
             if block:
                 lines.extend(block)                        # BREP-25 木桩明细块
         return "\n".join(lines)
@@ -1199,7 +1202,7 @@ def _render_enemy_action(outcome: Any, *, ctx: Any = None) -> Optional[str]:
 
 
 def _render_kill_line(outcome: Any, *, ctx: Any = None) -> Optional[str]:
-    """BREP-15 击杀行（5e §4.1 / 数值层 L54）：`✅ 你击败了{怪物}！`。
+    """BREP-15 击杀行（5e §4.1 / 数值层 L54）：`✅ 你击败了{怪物}`。
 
     紧跟造成击杀的伤害行（render_battle_round 扣血后立即查，target_hp<=0 即调，L54）；
     {怪物} 取 outcome.target（引擎真实字段），缺省「怪物」。兼容 mapping 形态
@@ -1217,9 +1220,10 @@ def _render_kill_line(outcome: Any, *, ctx: Any = None) -> Optional[str]:
 
 def _render_reward_line(exp: int, gold: int, drops: Any = None, *, ctx: Any = None) -> str:
     """BREP-20 经验与掉落行（5e §4.3 / 数值层 L68/L171）：
-    `✅ 获得 经验 {n}、金币 {n}、{素材}×{n}`——多素材以 `、` 分隔；只在战斗结束
-    消息输出一次（军规5，调用方 _render_settlement 保证，禁止逐怪逐段刷掉落）。
-    drops 为 (名称, 数量) 二元组序列或含 name/素材 + count/n 键的 dict 序列。
+    `✅ 获得奖励` + 逐行字段（`经验 {n}` / `{货币} {n}` / `{素材}×{n}`，多素材换行不挤
+    单行）；只在战斗结束消息输出一次（军规5，调用方 _render_settlement 保证，禁止
+    逐怪逐段刷掉落）。drops 为 (名称, 数量) 二元组序列或含 name/素材 + count/n 键的
+    dict 序列。
     模板 battle_reward_line / battle_reward_exp / battle_reward_gold / battle_reward_drop。
     """
     # 2026-09-06 硬编码清理：货币名走配置（ctx settings currencies[].name）
@@ -1237,7 +1241,7 @@ def _render_reward_line(exp: int, gold: int, drops: Any = None, *, ctx: Any = No
         else:
             name, count = str(d[0]), int(d[1])
         parts.append(tpl_of(ctx, "battle_reward_drop", {"name": name, "count": count}))
-    return tpl_of(ctx, "battle_reward_line", {"items": "、".join(parts)})
+    return tpl_of(ctx, "battle_reward_line", {"items": "\n".join(parts)})
 
 
 def _render_settlement(round_result: Any, *, ctx: Any = None) -> Optional[str]:
@@ -1245,14 +1249,14 @@ def _render_settlement(round_result: Any, *, ctx: Any = None) -> Optional[str]:
 
     round_result.ended 时由 render_battle_end 调用一次，按引擎终态 status
     （win/lose/draw/escape，battle.py STATUS_*）分发：
-      - win  → **用户结算模板**（2026-08-27 拍板）：
-        `您对{怪物}造成了{伤害}点伤害！{怪物}已死亡。`（叙事句，回顾最后一击，
-        final_damage 由接线层注入，缺省 `您击败了{怪物}！`）
-        `获得经验：{exp}` / `获得金币：{gold}` / `获得的战利品如下→`
-        + `{序号}.{名称}×{数量}` 逐行（掉落列表，军规5 只输出一次）；
-      - lose → BREP-16 `❌ 你倒下了…` + BREP-18 `❌ 战斗失败：你被{怪物}击败了`
+      - win  → 奖励结算（2026-09-09 击杀去重后不再含单行叙事句；win 叙事模板
+        battle_settle_win_narrative 已按零引用死键清除）：`获得经验 {exp}` /
+        `获得{货币} {gold}` / `【战利品】` + `{序号}.{名称}×{数量}` 逐行
+        （掉落列表，军规5 只输出一次）+ 升级行 battle_settle_levelup*
+        （leveled 由接线层注入，None 省略）；
+      - lose → BREP-16 `❌ 你倒下了…` + BREP-18 `❌ 战斗失败` / `你被{怪物}击败了`
         （玩家死亡 → 失败标记，5e §4.1/§4.2；lose 即玩家死，数值层 L50-51）；
-      - draw → BREP-19 `双方同归于尽，战斗以平局结束`（默认 draw；可配
+      - draw → BREP-19 `双方同归于尽` / `战斗以平局结束`（默认 draw；可配
         mutual_kill_result=player_loss 时引擎已落 lose → 走 BREP-18，本层只读
         status 不重复判定，5e §4.2）；
       - escape → 无横幅（不臆造胜负文案）。
@@ -1390,11 +1394,11 @@ def _render_combo_settle_line(
     *,
     ctx: Any = None,
 ) -> str:
-    """BREP-22 连段结算行模板：`连段 {N} 段已结算（{备注}）`（5e §5.2）。
+    """BREP-22 连段结算行模板：`连段 {N} 段已结算` + 备注独立行（5e §5.2）。
 
-    - 正常完结：`连段 3 段已结算`（remark 空串省略括号）；
-    - 鞭尸（目标套中击杀，L55-56）：remark=`目标已倒下，下次行动退出战场`；
-    - BOSS/最后目标提前结束（L57/L69）：remark=`BOSS 已倒下，战斗结束，后续段数作废`；
+    - 正常完结：`连段 3 段已结算`（remark 空串省略备注行）；
+    - 鞭尸（目标套中击杀，L55-56）：remark=`目标已倒下` / `该段连式为无效消耗`；
+    - BOSS/最后目标提前结束（L57/L69）：remark=`BOSS 已倒下` / `后续段数作废`；
     - 派生倍率封顶（L133）：remark=`派生倍率已达上限 1.5×`。
     模板 battle_combo_settle + battle_combo_settle_suffix（battle_tpl 分区）。
     """
@@ -1533,8 +1537,8 @@ def _summary_items(summary: Any) -> List[Tuple[str, int]]:
 
 
 def _summary_header(summary: Any, *, ctx: Any = None) -> str:
-    """BREP-25 摘要行：`摘要：总伤害 {N}｜最大单段 {M}｜会心 {K} 次｜格挡 {G} 次`
-    （对齐收集器聚合字段，数值层 L340 / TC-26）。
+    """BREP-25 摘要行：`摘要：总伤害 {N}` / `最大单段 {M}` / `会心 {K} 次` /
+    `格挡 {G} 次` 四行（少｜多换行，对齐收集器聚合字段，数值层 L340 / TC-26）。
     模板 battle_summary_header（battle_tpl 分区，内容包可覆盖）。
     """
     total = _summary_field(summary, "total", "总伤害")
@@ -1615,16 +1619,19 @@ def _render_summary_block(
     """BREP-25 木桩明细块（5e §6.3，render_battle_end 内联形态）：摘要行 + 条目行
     + ≤16 行折叠 TPL-09（铁律 11）。
 
-    消息总行数（overhead = 前缀/BREP-24 行数；摘要行 1 行、TPL-09 折叠行 2 行——
-    批3 路G 起折叠提示为两行）≤ limit（默认 16，3d D-03/L184）——超限时条目行按
-    正文尾部折叠（keep = limit - overhead - 3：1 行摘要 + 2 行 TPL-09）。占比降序（L347）。
+    消息总行数（overhead = 前缀/BREP-24 行数，**按物理行计**——元素可含换行；
+    摘要行数按实际渲染取——批6 路P 起摘要拆四行；TPL-09 折叠行 2 行——批3 路G 起
+    折叠提示为两行）≤ limit（默认 16，3d D-03/L184）——超限时条目行按正文尾部折叠
+    （keep = limit - overhead - 摘要行数 - 2）。占比降序（L347）。
     """
     items = _summary_items(summary)
     total = _summary_field(summary, "total", "总伤害")
     header = _summary_header(summary, ctx=ctx)
+    header_lines = header.split("\n")                       # 摘要行数（批6：≤14 全角拆行）
     item_lines = _summary_item_lines(items, total, ctx=ctx)
-    keep = max(0, limit - overhead - 3)                     # 1=摘要行 2=TPL-09 折叠行（两行）
-    return [header] + _fold_item_lines(
+    # 摘要行数 + 2 行 TPL-09 折叠行（两行）计入总行预算
+    keep = max(0, limit - overhead - len(header_lines) - 2)
+    return header_lines + _fold_item_lines(
         item_lines, keep=keep, command=command, per_page=per_page, ctx=ctx,
     )
 

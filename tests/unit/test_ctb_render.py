@@ -111,7 +111,7 @@ def test_action_kill_line_follows_damage() -> None:
     assert text.split("\n") == [
         "✅ 你施放火球术",
         "造成 25 伤害",
-        "✅ 你击败了史莱姆！",
+        "✅ 你击败了史莱姆",
     ]
 
 
@@ -122,9 +122,9 @@ def test_action_end_settlement_block() -> None:
     src = SimpleNamespace(outcomes=(oc,), actor_id="player", ended=True, status="win",
                           exp=30, gold=12, drops=(("狼牙", 2),), enemy_name="史莱姆")
     text = render_battle_action(src)
-    assert "✅ 你击败了史莱姆！" in text
-    assert "获得经验：30" in text and "获得金币：12" in text
-    assert "1.狼牙×2" in text
+    assert "✅ 你击败了史莱姆" in text
+    assert "获得经验 30" in text and "获得金币 12" in text
+    assert "【战利品】" in text and "1.狼牙×2" in text
 
 
 def test_action_batch_entries_merged_into_action() -> None:

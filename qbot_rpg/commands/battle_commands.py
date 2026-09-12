@@ -830,13 +830,13 @@ class BattlePipeline:
                  leveled: Optional[Mapping[str, Any]] = None) -> List[str]:
         """战斗结束独立 1 条（用户 2026-08-27 拍板结算模板 + BREP-24/25；TC-18/25，铁律 11）。
 
-        **M5 裁决（用户拍板）**：win 结束消息 = 用户结算模板（叙事句回顾最后一击
-        `您对{怪物}造成了{伤害}点伤害！{怪物}已死亡。` + 获得经验/金币分行 + 战利品
-        列表），不含 `✅ 战斗胜利！` 横幅与 BREP-24 汇总行；军规5 掉落只输出一次；
-        当轮消息只出行动+击杀。lose/draw 保留 BREP-16/18/19 + BREP-24 汇总行。
-        final_damage（最后行动伤害，供叙事句）由 dispatch_round 从 report 取末注入。
+        **M5 裁决（用户拍板；2026-09-09 击杀去重修订）**：win 结束消息 = 奖励结算块
+        （`获得经验 {exp}` + `获得{货币} {gold}` + `【战利品】` + 战利品 `{序号}.{名称}×{数量}`
+        逐行；叙事句模板已死键清除），不含 `✅ 战斗胜利！` 横幅与 BREP-24 汇总行；
+        军规5 掉落只输出一次；当轮消息只出行动+击杀。lose/draw 保留 BREP-16/18/19 +
+        BREP-24 汇总行。final_damage（最后行动伤害）由 dispatch_round 从 report 取末注入。
         leveled（2026-09-03 奖励结算：击杀经验触发升级信息）非 None 时战斗结束
-        消息附升级行（模板 battle_settle_levelup*，battle_tpl 分区）。
+        消息附升级行（模板 battle_settle_levelup*，全量模板表）。
         """
         body = render_battle_end(
             _prefix_free_ns(player), _enemy_ns(enemy), winner, summary=summary,

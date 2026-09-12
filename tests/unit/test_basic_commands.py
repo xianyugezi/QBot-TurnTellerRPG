@@ -476,44 +476,46 @@ def test_equip_line_pure():
 # ---------------------------------------------------------------------------
 
 def test_skill_page1():
-    """/技能 → 头部（标题 + Lv/职业行）+ 技能块（类型/MP/描述/派生指向，少｜多换行）
-    + 5 条/页 + TPL-08（批4·路L 拆行重做）。"""
+    """/技能 → 头部「【技能列表】」+ 技能块（`{序号}. {名称}（{类型}）` + 简述 + 分隔线）
+    + 5 条/页 + TPL-08（2026-09-12 用户样稿：普攻不出现在列表）。"""
     out = cmd_skill(parse("/技能"), make_ctx())
     lines = out.splitlines()
-    assert lines[0] == "【技能】阿伟"
-    assert lines[1] == "Lv3（战士）"
-    assert lines[2] == "技能 6 项"
-    assert "1. 攻击（普攻）\n对目标发起普通攻击" in out            # basic 固定第 1 位；MP 0 不显示
-    assert "2. 火球术（主动） 12 MP\n对目标造成火焰伤害\n可派生成：陨星落" in out
-    assert "3. 重击（主动） 8 MP\n重击地面目标\n可派生成：陨星落" in out
-    assert "4. 陨星落（主动） 30 MP\n跃空重击倒地目标" in out        # 无派生链 → 无指向
-    assert "5. 战意（被动）\n每次行动回复少量 HP" in out
+    assert lines[0] == "【技能列表】"
+    assert "1. 攻击（普攻）" not in out                     # 普攻不入列表（用户 2026-09-12 拍板）
+    assert "2. 火球术（主动）" in out
+    assert "3. 重击（主动）" in out
+    assert "4. 陨星落（主动）" in out
+    assert "5. 战意（被动）" in out
+    assert "————" in out                                   # 条目分隔线（样稿形态）
     assert "当前页：1/2" in out
+    # 简述行：内容包 brief 优先，缺省机制兜底标签（火球术：耗灵能 + 有派生链）
+    assert "【消耗】【派生】" in out
 
 
 def test_skill_page2():
     """/技能 2 → 第 2 页（反击·触发）。"""
     out = cmd_skill(parse("/技能 2"), make_ctx())
-    assert "6. 反击（触发）\n受击时反击" in out
+    assert "6. 反击（触发）" in out                          # 序号沿用完整列表（普攻占 1）
     assert "当前页：2/2" in out
 
 
 def test_skill_job_filter():
-    """/技能 职业过滤：job_restrict=['mage'] 的技能对战士不可见（技能 6 项，无 奥术弹）。"""
+    """/技能 职业过滤：job_restrict=['mage'] 的技能对战士不可见（列表无 奥术弹）。"""
     out = cmd_skill(parse("/技能"), make_ctx())
     assert "奥术弹" not in out
-    assert "技能 6 项" in out
-    # 法师可见 奥术弹（技能 7 项：basic/active×4/被动/触发/法师专属）
+    # 法师可见 奥术弹（完整列表第 7 位：basic/active×4/被动/触发/法师专属）
     out_mage = cmd_skill(parse("/技能"), make_ctx(job_id="mage", job_name="法师"))
-    assert "奥术弹（主动） 10 MP\n法师专属" in out_mage
-    assert "技能 7 项" in out_mage
+    assert "4. 奥术弹（主动）" in out_mage      # 法师完整列表内序号（active 按 id 排序）
 
 
-def test_skill_derived_names_pure():
-    """skill_line 派生指向：chain_refs → steps[].to 技能名（可派生成：XX）。"""
+def test_skill_derived_names_in_detail():
+    """派生指向：列表不再带派生行 → 改为详情面板输出（发 技能派生 查看条件）。"""
+    from qbot_rpg.commands.basic_commands import _render_skill_info
+
     ctx = make_ctx()
-    assert "可派生成：陨星落" in skill_line(2, "fireball", ctx)
-    assert "可派生成：" not in skill_line(4, "meteor", ctx)  # 无 chain_refs
+    assert "陨星落" in _render_skill_info(ctx, "fireball")
+    assert "派生" not in _render_skill_info(ctx, "meteor")    # 无 chain_refs → 无派生行
+    assert "————" not in skill_line(2, "fireball", ctx).split("\n")[1]   # 第 2 行是简述不是分隔
 
 
 def test_skill_rows_order():
@@ -531,9 +533,9 @@ def test_skill_invalid_tpl12(raw):
 
 
 def test_skill_empty():
-    """/技能 无技能 → 仅头部（标题 + Lv/职业行 + 技能 0 项），无页脚。"""
+    """/技能 无技能 → 仅头部「【技能列表】」，无页脚。"""
     out = cmd_skill(parse("/技能"), make_ctx(skills={}))
-    assert out == "【技能】阿伟\nLv3（战士）\n技能 0 项"
+    assert out == "【技能列表】"
 
 
 # ---------------------------------------------------------------------------

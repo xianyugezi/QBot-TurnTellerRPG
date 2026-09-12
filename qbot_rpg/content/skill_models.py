@@ -151,6 +151,12 @@ DEFAULT_ATTACK_TYPE: str = "none"
 # F21 desc 缺省（§1.2-D F21：无；空串兜底，非空建议归 V-13 黄提示）
 DEFAULT_DESC: str = ""
 
+# F29/F30 展示文本缺省（2026-09-12 用户拍板：编辑器两个文本框「简述」「详情」）
+#  - brief  = 技能列表的简述行（自由文本标签串，如「【伤害】【消耗】【连段】【派生】」）
+#  - detail = 技能详情面板尾部详情文本（CTB 口径；空 → 展示层回落 desc）
+DEFAULT_BRIEF: str = ""
+DEFAULT_DETAIL: str = ""
+
 # 默认伤害/治疗数值字段（field_meta F_* 系列同源，供 FieldMeta 注册表复用）
 _F_NUMBER: FieldMeta = FieldMeta(type="number", range_min=0)
 _F_INT: FieldMeta = FieldMeta(type="int", range_min=0)
@@ -361,6 +367,18 @@ class SkillDef(BaseDef):
         return v if v is not None else DEFAULT_DESC
 
     @property
+    def brief(self) -> str:
+        """F29 技能简述（缺省空串；技能列表简述行 = 自由文本标签串，内容作者自定）。"""
+        v = self._str("brief")
+        return v if v is not None else DEFAULT_BRIEF
+
+    @property
+    def detail(self) -> str:
+        """F30 技能详情文本（缺省空串；技能详情面板尾部；空则展示层回落 desc）。"""
+        v = self._str("detail")
+        return v if v is not None else DEFAULT_DETAIL
+
+    @property
     def hit_mod(self) -> float:
         """F22 命中率修正乘数（缺省 1.0；>0，命中公式 [数 L21-22]）。"""
         v = self._num("hit_mod")
@@ -447,6 +465,9 @@ def skills_fields() -> Dict[str, FieldMeta]:
         "trigger_limit": FieldMeta(type="obj"),  # {per_round, per_battle}，0=不限
         # ---- D. 细化定型 4（§1.2-D）----
         "desc": FieldMeta(type="str", default=DEFAULT_DESC),
+        # ---- F29/F30 展示文本（2026-09-12 用户拍板：编辑器「简述」「详情」两个文本框）----
+        "brief": FieldMeta(type="str", default=DEFAULT_BRIEF, label="简述"),
+        "detail": FieldMeta(type="str", default=DEFAULT_DETAIL, label="详情"),
         "hit_mod": FieldMeta(type="number", range_min=0, default=DEFAULT_HIT_MOD),
         "crit_mod": FieldMeta(type="number", range_min=0, default=DEFAULT_CRIT_MOD),
         "block_mode": FieldMeta(type="enum", enum=BLOCK_MODES, default=DEFAULT_BLOCK_MODE),

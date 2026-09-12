@@ -663,6 +663,7 @@
   "crit_mod": 1.0,
   "block_mode": "auto",
   "id": "rb_slash",
+  "brief": "【伤害】",
   "name": "脊斩",
   "break_power": 15,
   "energy_gain": {
@@ -706,6 +707,7 @@
   "crit_mod": 1.0,
   "block_mode": "auto",
   "id": "rb_charge",
+  "brief": "【防反】【架势】",
   "name": "蓄刃",
   "energy_gain": {
    "focus": 1
@@ -749,6 +751,7 @@
   "crit_mod": 1.0,
   "block_mode": "auto",
   "id": "rb_tackle",
+  "brief": "【伤害】【机动】【霸体】",
   "name": "脊靠",
   "energy_gain": {
    "stamina": 1
@@ -790,6 +793,7 @@
   "crit_mod": 1.0,
   "block_mode": "auto",
   "id": "rb_sweep",
+  "brief": "【伤害】【连段】",
   "name": "脊扫",
   "air_policy": "land",
   "energy_cost": {
@@ -826,6 +830,7 @@
   "crit_mod": 1.0,
   "block_mode": "auto",
   "id": "rb_mastery",
+  "brief": "【增益】【消耗】",
   "name": "猎势·拔脊",
   "energy_cost": {
    "focus": 4
@@ -987,6 +992,7 @@
   "crit_mod": 1.0,
   "block_mode": "auto",
   "id": "rb_core_strike",
+  "brief": "【伤害】【部位】【派生】",
   "name": "贯核击",
   "energy_cost": {
    "stamina": 1
@@ -1034,6 +1040,7 @@
   "crit_mod": 1.0,
   "block_mode": "auto",
   "id": "rb_tail_strike",
+  "brief": "【伤害】【部位】【派生】",
   "name": "断脊击",
   "energy_cost": {
    "stamina": 1
@@ -1161,6 +1168,7 @@
   "crit_mod": 1.0,
   "block_mode": "auto",
   "id": "rb_guard",
+  "brief": "【防反】【架势】",
   "name": "脊格",
   "energy_gain": {
    "stamina": 1
@@ -3468,6 +3476,7 @@
   "crit_mod": 1.0,
   "block_mode": "auto",
   "id": "rb_vault",
+  "brief": "【机动】【跃空】",
   "name": "跃空",
   "energy_gain": {},
   "desc": "机动·跃空：纵身跃上空中——甲壳怪的背壳只在空中够得到；行动后保持空中"
@@ -3868,6 +3877,7 @@
   "crit_mod": 1.0,
   "block_mode": "auto",
   "id": "sw_slash",
+  "brief": "【伤害】",
   "name": "御剑·斩",
   "energy_gain": {
    "focus": 1
@@ -3961,6 +3971,7 @@
   "crit_mod": 1.0,
   "block_mode": "auto",
   "id": "sw_thrust",
+  "brief": "【伤害】【消耗】【连段】【派生】",
   "name": "御剑·突",
   "desc": "式·御剑突：突剑一击 150%，耗剑势 50（命中灌注 +15）；连用每次 +10%（连势印）；1/2/3 剑印时自动派生穿锋/双锋/四象（耗 1/2/3 印，派生系解锁后可不耗印施放）"
  },
@@ -4691,6 +4702,7 @@
   "crit_mod": 1.0,
   "block_mode": "auto",
   "id": "sw_vault",
+  "brief": "【伤害】【跃空】【闪反】",
   "name": "御剑·腾空",
   "desc": "空·御剑腾空：跃空俯击——腾空斩向当前方位 150%（命中灌注剑势+15），空中地面技未命中（天然闪反）；闪避成功回剑势 30",
   "counter_type": "dodge",
@@ -4735,6 +4747,7 @@
   "crit_mod": 1.0,
   "block_mode": "auto",
   "id": "sw_circle",
+  "brief": "【机动】【闪反】",
   "name": "御剑·回环",
   "desc": "机动·回环：侧移闪反——横掠右侧并起回环架势（本次行动减伤 30%）",
   "counter_type": "dodge",
@@ -4785,6 +4798,7 @@
   "crit_mod": 1.0,
   "block_mode": "auto",
   "id": "sw_recall",
+  "brief": "【机动】【回收】",
   "name": "御剑·回收",
   "desc": "机动·回收：收剑归鞘侧撤——回收飞剑余势 +30 剑势，回收架势本次行动减伤 20%",
   "counter_type": "dodge",
@@ -4827,6 +4841,7 @@
   "crit_mod": 1.0,
   "block_mode": "auto",
   "id": "sw_drop",
+  "brief": "【伤害】【跃空】",
   "name": "御剑·落",
   "air_policy": "land",
   "desc": "空·御剑落：空中驭剑坠击 160% 并落地（空中收势技，落地后回常态）"
@@ -4870,6 +4885,7 @@
   "crit_mod": 1.0,
   "block_mode": "auto",
   "id": "sw_guard",
+  "brief": "【防反】【架势】",
   "name": "御剑·守势",
   "desc": "守·御剑守势：举剑护体本次行动减伤 40%（防反架势），凝 1 剑印保底；冷却 2",
   "counter_type": "parry",
@@ -4911,6 +4927,7 @@
   "crit_mod": 1.0,
   "block_mode": "auto",
   "id": "sw_aura_blade",
+  "brief": "【消耗】【护盾】",
   "name": "御剑·剑罡",
   "desc": "罡·剑罡化盾：耗 100 剑势化 300 剑罡护盾 2 次行动；冷却 3"
  },
@@ -5062,6 +5079,7 @@
   "crit_mod": 1.0,
   "block_mode": "auto",
   "id": "rb_drop",
+  "brief": "【伤害】【跃空】【部位】",
   "name": "御脊·空坠",
   "break_power": 25,
   "air_policy": "land",

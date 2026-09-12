@@ -311,11 +311,8 @@
     "basic_no_slot": "❌ 没有这个装备槽位",
     "basic_equip_name_hint": "❌ 穿戴请用 使用 <序号>\n序号见 背包 列表\n示例：发 使用 1",
     "unequip_usage": "卸下装备\n发 卸下 <部位 或 序号>\n示例：发 卸下 武器",
-    "basic_skill_header": "【技能】{name}\nLv{level}（{job}）",
-    "basic_skill_count": "技能 {count} 项",
+    "basic_skill_header": "【技能列表】",
     "basic_skill_row": "{idx}. {name}（{type}）",
-    "basic_skill_mp": " {mp} MP",
-    "basic_skill_chain": "可派生成：{names}",
     "skill_info_usage": "查看技能详情\n发 技能详情 <序号>\n或 <技能名>\n示例：发 技能详情 1",
     "skill_info_header": "【{name}】",
     "skill_info_line": "{k}：{v}",
@@ -554,6 +551,8 @@
     "battle_action_skill_verb": "发动技能 {name}",
     "battle_hud_tail": "→ {tail}",
     "battle_hud_state_air": "跃空",
-    "battle_hud_state_part_broken": "{name}破坏"
+    "battle_hud_state_part_broken": "{name}破坏",
+    "basic_skill_brief": "{brief}",
+    "basic_skill_sep": "————"
   }
 }

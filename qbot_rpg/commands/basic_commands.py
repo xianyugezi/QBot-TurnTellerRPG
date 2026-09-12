@@ -176,6 +176,32 @@ QUALITY_LABELS: Mapping[str, str] = {
 }
 
 # 技能 type 四类中文（6a §1.4）
+# 技能标签兜底（2026-09-12 用户拍板：标签=**自由文本**，内容包 `brief` 字段为准；
+# 本表仅在未配置 brief 时按机制兜底生成，供玩家先看到像样的标签行）。
+# 资源/精力键展示名（消耗行）：内容包 `energy_cost` 键 → 中文（自由文本 brief 之外仍可覆盖）
+_ENERGY_LABELS: Mapping[str, str] = {
+    "focus": "聚焦", "stamina": "精力", "mp": "灵能", "sp": "SP",
+}
+
+_SKILL_TAG_ORDER: Tuple[str, ...] = (
+    "damage", "cost", "combo", "derive", "air", "dodge", "parry",
+    "move", "part", "multi", "armor", "interrupt",
+)
+_SKILL_TAG_LABELS: Mapping[str, str] = {
+    "damage": "【伤害】",
+    "cost": "【消耗】",
+    "combo": "【连段】",
+    "derive": "【派生】",
+    "air": "【跃空】",
+    "dodge": "【闪反】",
+    "parry": "【防反】",
+    "move": "【机动】",
+    "part": "【部位】",
+    "multi": "【多段】",
+    "armor": "【霸体】",
+    "interrupt": "【打断】",
+}
+
 TYPE_LABELS: Mapping[str, str] = {
     "basic": "普攻",
     "active": "主动",
@@ -1777,31 +1803,75 @@ def _derived_names(ctx: Mapping[str, Any], sid: str, chain_refs: Sequence[Any]) 
     return out
 
 
+def _derived_tags(defn: Any) -> List[str]:
+    """按技能机制推导标签（**仅兜底**：内容包 `brief` 为空时使用；自由文本以 brief 为准）。"""
+    tags: List[str] = []
+    kind = str(_skill_field(defn, "kind", "") or "")
+    if kind == "damage" or _skill_field(defn, "power", 0):
+        tags.append("damage")
+    if (int(_skill_field(defn, "mp_cost", 0) or 0) > 0
+            or bool(_skill_field(defn, "consume_marks", None))
+            or bool(_skill_field(defn, "energy_cost", None))):
+        tags.append("cost")
+    if str(_skill_field(defn, "tag", "") or "") == "combo":
+        tags.append("combo")
+    if _skill_field(defn, "chain_refs", None):
+        tags.append("derive")
+    if _skill_field(defn, "air_policy", None):
+        tags.append("air")
+    _ctr = str(_skill_field(defn, "counter_type", "") or "")
+    if _ctr == "dodge":
+        tags.append("dodge")
+    elif _ctr == "parry":
+        tags.append("parry")
+    _eff = [str((e.get("type") or e.get("effect")) or "")
+            for e in (_skill_field(defn, "effects", None) or ()) if isinstance(e, Mapping)]
+    if "reposition" in _eff:
+        tags.append("move")
+    if _skill_field(defn, "break_power", None):
+        tags.append("part")
+    if int(_skill_field(defn, "hits", 1) or 1) > 1:
+        tags.append("multi")
+    if _skill_field(defn, "armor", False):
+        tags.append("armor")
+    if _skill_field(defn, "interrupt", False):
+        tags.append("interrupt")
+    return [_SKILL_TAG_LABELS[t] for t in _SKILL_TAG_ORDER if t in tags]
+
+
+def skill_brief(ctx: Mapping[str, Any], sid: str) -> str:
+    """技能简述行（列表用）：内容包 `brief` 自由文本（编辑器「简述」文本框）→ 兜底机制标签。
+
+    2026-09-12 用户拍板：标签是**文本类型**，后续由内容作者自定义；本函数只负责取值与兜底。
+    """
+    defn = _skill_def(ctx, sid)
+    brief = _skill_field(defn, "brief", None)
+    if isinstance(brief, str) and brief.strip():
+        return brief.strip()
+    return "".join(_derived_tags(defn))
+
+
 def skill_line(index: int, sid: str, ctx: Mapping[str, Any]) -> str:
-    """技能行：`{序号}. {名称}（{类型}）{MP} MP ｜ {描述} ｜ 可派生成：XX`（M2 技能卡派生指向）。
-    MP 仅 >0 显示；无描述不输出描述段；无派生链不输出指向（工程补白 5）。模板配置化
-    2026-08-31：basic_skill_row / basic_skill_mp / basic_skill_chain 可内容包覆盖。"""
+    """技能行（2026-09-12 用户样稿）：`{序号}. {名称}（{类型}）` + 简述行 + 分隔线。
+
+    样稿形态：
+        6. 御剑·回收（主动）
+        【机动】【回收】
+        ————
+    简述 = 内容包 `brief`（自由文本）；缺省按机制兜底标签。模板：
+    basic_skill_row / basic_skill_brief / basic_skill_sep（内容包可覆盖）。
+    """
     defn = _skill_def(ctx, sid)
     name = _skill_name(ctx, sid)
     type_label = TYPE_LABELS.get(str(_skill_field(defn, "type", "active")), "主动")
     parts: List[str] = [tpl_of(ctx, "basic_skill_row",
                                {"idx": index, "name": name, "type": type_label})]
-    mp = _skill_field(defn, "mp_cost", 0)
-    try:
-        mp = int(mp)
-    except (TypeError, ValueError):
-        mp = 0
-    if mp > 0:
-        parts[0] += tpl_of(ctx, "basic_skill_mp", {"mp": mp})
-    desc = _skill_field(defn, "desc")
-    if isinstance(desc, str) and desc:
-        parts.append(desc)
-    chain_refs = _skill_field(defn, "chain_refs")
-    if isinstance(chain_refs, (list, tuple)) and chain_refs:
-        derived = _derived_names(ctx, sid, chain_refs)
-        if derived:
-            parts.append(tpl_of(ctx, "basic_skill_chain", {"names": "、".join(derived)}))
-    # 2026-09-12 模板重构·路L：少 ｜ 多换行——技能行/MP/描述/派生 各占一行（手机QQ 14 全角）
+    brief = skill_brief(ctx, sid)
+    if brief:
+        parts.append(tpl_of(ctx, "basic_skill_brief", {"brief": brief}))
+    sep = tpl_of(ctx, "basic_skill_sep")
+    if sep:
+        parts.append(sep)
     return "\n".join(parts)
 
 
@@ -1880,9 +1950,12 @@ def _render_skill_page(ctx: Mapping[str, Any], page: int) -> str:
     lines: List[str] = [
         tpl_of(ctx, "basic_skill_header",
                {"level": f["level"], "name": f["name"], "job": job}),
-        tpl_of(ctx, "basic_skill_count", {"count": len(sids)}),
     ]
+    # 2026-09-12 用户拍板：**普攻（type=basic）不出现在技能列表**——行内跳过，
+    # 但分页与序号仍按完整列表计（技能详情 <序号> / 攻击 <序号> 口径不变）。
     for i, sid in enumerate(slice_ids):
+        if str(_skill_field(_skill_def(ctx, sid), "type", "active")) == "basic":
+            continue
         lines.append(skill_line(start + i + 1, sid, ctx))
     if sids:
         lines.append(_cake_tail(res.page, res.total_pages, tip=_SKILL_TAIL_TIP, clamped=res.clamped,
@@ -1966,18 +2039,44 @@ def cmd_skill_chain(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     return _render_skill_chain(ctx, sid)
 
 
+def _mark_display_name(ctx: Mapping[str, Any], mid: str) -> str:
+    """印记展示名（消耗行）：ctx["marks"] 定义 name → 回落 id（不臆造）。"""
+    marks = ctx.get("marks")
+    if isinstance(marks, Mapping):
+        d = marks.get(mid)
+        if isinstance(d, Mapping):
+            return str(d.get("name") or mid)
+        if d is not None:
+            return str(d)
+    return mid
+
+
 def _render_skill_info(ctx: Mapping[str, Any], sid: str) -> str:
-    """技能详情面板（模板 basic_rem_tpl skill_info_* 可内容包覆盖）。"""
+    """技能详情面板（2026-09-12 CTB 重写；模板 skill_info_* 可内容包覆盖）。
+
+    CTB 口径（去回合制残留）：
+      - 消耗：灵能 / 精力 / 印记（剑势·剑印等按定义名）+ 冷却（N 次行动）；
+        **不再输出旧回合式的「每次行动限 N 次」**（trigger_limit 是引擎护栏，非玩家消耗）
+      - 效果：威力 / 段数 / 破坏值 / 霸体 / 打断
+      - **行动恢复**（recovery，CTB 核心数值：越大＝下一次行动来得越晚）
+      - 派生指向（发 技能派生 查看条件）
+      - 面板尾部文本 = 技能 def `detail`（编辑器「详情」文本框）→ 回落 `desc`
+    行宽口径：结构化行 ≤14 全角；详情文本属介绍类，允许自然折行。
+    """
     defn = _skill_def(ctx, sid)
     name = _skill_name(ctx, sid)
     lines = [tpl_of(ctx, "skill_info_header", {"name": name})]
     if defn is None:
         lines.append(tpl_of(ctx, "skill_info_not_found", {"name": sid}))
         return "\n".join(lines)
-    # 类型/标签
+    # 类型
     t = str(_skill_field(defn, "type", "active"))
     lines.append(tpl_of(ctx, "skill_info_line", {"k": "类型", "v": TYPE_LABELS.get(t, t)}))
-    # 消耗（MP + 冷却 + trigger_limit）
+    # 标签（简述行同源：内容包 brief 自由文本 → 机制兜底）
+    brief = skill_brief(ctx, sid)
+    if brief:
+        lines.append(tpl_of(ctx, "skill_info_line", {"k": "标签", "v": brief}))
+    # 消耗（CTB：灵能 / 精力 / 印记 / 冷却行动数）
     costs: List[str] = []
     try:
         mp = int(_skill_field(defn, "mp_cost", 0))
@@ -1985,17 +2084,30 @@ def _render_skill_info(ctx: Mapping[str, Any], sid: str) -> str:
             costs.append(f"{mp} 灵能")
     except (TypeError, ValueError):
         pass
+    _energy = _skill_field(defn, "energy_cost", None)
+    if isinstance(_energy, Mapping):
+        for k, v in _energy.items():
+            try:
+                n = int(v)
+            except (TypeError, ValueError):
+                continue
+            if n > 0:
+                costs.append(f"{_ENERGY_LABELS.get(str(k), str(k))} {n}")
+    _consume = _skill_field(defn, "consume_marks", None)
+    if isinstance(_consume, Mapping):
+        for k, v in _consume.items():
+            try:
+                n = int(v)
+            except (TypeError, ValueError):
+                continue
+            if n > 0:
+                costs.append(f"{_mark_display_name(ctx, str(k))} {n}")
     cd = _skill_field(defn, "cooldown", 0)
     if cd:
         costs.append(f"冷却 {cd} 次行动")
-    tl = _skill_field(defn, "trigger_limit")
-    if isinstance(tl, Mapping):
-        pr = tl.get("per_round")
-        if pr:
-            costs.append(f"每次行动限 {pr} 次")
     if costs:
         lines.append(tpl_of(ctx, "skill_info_line", {"k": "消耗", "v": "、".join(costs)}))
-    # 效果（kind/power/命中/暴击/霸体/打断/段数）
+    # 效果（kind/power/段数/破坏值/霸体/打断）
     effs: List[str] = []
     kd = str(_skill_field(defn, "kind", ""))
     if kd:
@@ -2004,12 +2116,19 @@ def _render_skill_info(ctx: Mapping[str, Any], sid: str) -> str:
     hits = _skill_field(defn, "hits", 1)
     if hits and int(hits) > 1:
         effs.append(f"{hits} 段")
+    bp = _skill_field(defn, "break_power", None)
+    if bp:
+        effs.append(f"破坏值 {bp}")
     if _skill_field(defn, "armor"):
         effs.append("霸体")
     if _skill_field(defn, "interrupt"):
         effs.append("打断")
     if effs:
         lines.append(tpl_of(ctx, "skill_info_line", {"k": "效果", "v": "、".join(str(e) for e in effs)}))
+    # 行动恢复（CTB 核心：下一次行动的时间代价）
+    rec = _skill_field(defn, "recovery", None)
+    if rec:
+        lines.append(tpl_of(ctx, "skill_info_line", {"k": "行动恢复", "v": rec}))
     # 派生指向
     chain_refs = _skill_field(defn, "chain_refs")
     if isinstance(chain_refs, (list, tuple)) and chain_refs:
@@ -2017,10 +2136,12 @@ def _render_skill_info(ctx: Mapping[str, Any], sid: str) -> str:
         if derived:
             lines.append(tpl_of(ctx, "skill_info_line",
                                 {"k": "派生", "v": "、".join(derived) + "（发 技能派生 查看条件）"}))
-    # 描述
-    desc = _skill_field(defn, "desc")
-    if isinstance(desc, str) and desc:
-        lines.append(desc)
+    # 详情文本（编辑器「详情」文本框 → 回落 desc）
+    detail = _skill_field(defn, "detail", None)
+    if not (isinstance(detail, str) and detail.strip()):
+        detail = _skill_field(defn, "desc", None)
+    if isinstance(detail, str) and detail:
+        lines.append(detail)
     return "\n".join(lines)
 
 

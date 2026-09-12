@@ -459,4 +459,7 @@ def skills_fields() -> Dict[str, FieldMeta]:
         # F28 空中延长（跃空窗口延长量，行动条；正数=技能自带大幅延长，缺省走
         # 规则 ctb.air_extend）。窗口口径：增补 v1 §四（2026-09-11 实装）。
         "air_extend": FieldMeta(type="number", range_min=0),
+        # 批⑥ C10 行动恢复值（总行动恢复值，行动条；缺省 =
+        # 规则 ctb.default_recovery）。口径：增补 v1 附·怪猎对照 C10（2026-09-12 实装）。
+        "recovery": FieldMeta(type="number", range_min=0),
     }

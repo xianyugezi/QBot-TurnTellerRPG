@@ -916,6 +916,7 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "probability": FieldMeta(type="number", range_min=0, range_max=1),
         "intent": FieldMeta(type="str"),  # 伤害/防御/蓄力/治疗/控制/buff/debuff/印记/功能（枚举 A2）
         "cooldown": FieldMeta(type="number", range_min=0, range_max=999),
+        "recovery": FieldMeta(type="number", range_min=0),  # 批⑥ C10 行动恢复值（总恢复值；缺省=ctb.default_recovery）
         # P2-9 修复：condition 条件权重修正为 obj/string 双形态（1e A03b），
         # str 注册会误拦合法 obj 形态 → 不注册（未知字段默认放行），形态校验留 A2/运行期
         "hungry": FieldMeta(type="number", range_min=0, range_max=999),
@@ -985,6 +986,7 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "counter_skill": FieldMeta(type="str"),  # F26 姿态成功派生反击技 id（V-2 引用检查）
         "action_time": FieldMeta(type="number", range_min=0),  # F27 行动时间（反应窗口时长，行动条；缺省=ctb.default_action_time）
         "air_extend": FieldMeta(type="number", range_min=0),  # F28 空中延长（跃空窗口延长量，行动条；缺省=ctb.air_extend）
+        "recovery": FieldMeta(type="number", range_min=0),  # 批⑥ C10 行动恢复值（总恢复值，行动条；缺省=ctb.default_recovery）
         # ---- 兼容旧键（enemies[].skills 引用的技能表旧键）----
         "skill": FieldMeta(type="ref", ref_target="skill_or_any"),
     }

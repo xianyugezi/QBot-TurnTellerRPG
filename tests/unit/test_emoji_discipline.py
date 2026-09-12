@@ -134,3 +134,21 @@ def test_strip_icon_emoji_registry_contract():
     assert strip_icon_emoji("💰 钱袋") == " 钱袋"
     # 非字符串容错
     assert strip_icon_emoji(None) == ""
+
+
+def test_template_table_no_emoji():
+    """全量模板表（template_table.json）值零非白名单 emoji（2026-09-12 消息模板重构）。"""
+    import json
+
+    table = REPO / "core" / "templates" / "template_table.json"
+    if not table.exists():
+        return
+    doc = json.loads(table.read_text(encoding="utf-8"))
+    bad = []
+    for key, value in (doc.get("templates") or {}).items():
+        for ch in set(value):
+            if ch in _ALLOWED:
+                continue
+            if _EMOJI.match(ch):
+                bad.append((key, ch))
+    assert not bad, f"模板表含非白名单 emoji：{bad[:10]}"

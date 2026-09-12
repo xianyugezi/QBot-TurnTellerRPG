@@ -17,7 +17,9 @@ register_rem_tpl/pvp_tpl（各命令模块剩余模板，子 agent 分区独占�
 """
 from __future__ import annotations
 
+import json
 import re
+from pathlib import Path
 from typing import Any, Dict, Mapping, Optional
 
 from qbot_rpg.core.templates.base import DEFAULT_TEMPLATES as _BASE_TEMPLATES
@@ -68,6 +70,7 @@ from qbot_rpg.core.templates.job_tpl import PLACEHOLDER_WHITELIST as _JOB_WH
 __all__ = [
     "DEFAULT_TEMPLATES",
     "PLACEHOLDER_WHITELIST",
+    "TABLE_TEMPLATES",
     "resolve_templates",
     "render_template",
     "tpl_of",
@@ -96,6 +99,25 @@ for _w in _ALL_WHITELISTS:
     PLACEHOLDER_WHITELIST.update(_w)
 
 _PLACEHOLDER_RE = re.compile(r"\{([a-zA-Z0-9_]+)\}")
+
+# —— 全量模板表（2026-09-12 消息模板重构起：新表 = 全部消息模板的唯一存储）——
+# 过渡期：旧分区默认先汇总，同名 key 由新表覆盖；终态旧分区文件全部删除、只剩本表。
+# 排版规范见 docs/消息模板重构/00_方案与规范_v1.md；宽度校验 scripts/check_template_width.py。
+_TABLE_PATH = Path(__file__).with_name("template_table.json")
+TABLE_TEMPLATES: Dict[str, str] = {}
+try:
+    _doc = json.loads(_TABLE_PATH.read_text(encoding="utf-8"))
+    _tpl_raw = _doc.get("templates") if isinstance(_doc, dict) else None
+    if isinstance(_tpl_raw, dict):
+        TABLE_TEMPLATES = {k: v for k, v in _tpl_raw.items() if isinstance(v, str)}
+except OSError:
+    # 表文件缺失（非 repo 部署的兼容路径）：表现同迁移前（全走分区默认）。
+    TABLE_TEMPLATES = {}
+DEFAULT_TEMPLATES.update(TABLE_TEMPLATES)
+
+# 新表 key 的占位符白名单自动派生（与旧分区手工登记同语义；测试锚定同款）。
+for _k, _v in TABLE_TEMPLATES.items():
+    PLACEHOLDER_WHITELIST.setdefault(_k, set(_PLACEHOLDER_RE.findall(_v)))
 
 
 def _safe_format(template: str, data: Mapping[str, Any]) -> str:

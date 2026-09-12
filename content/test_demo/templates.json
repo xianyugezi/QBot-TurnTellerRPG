@@ -568,5 +568,20 @@
   "pvp_attack_ok": "✅ 已攻击 {name}\n{result}",
   "pvp_attack_result_line": "{name} 受到 {damage} 伤害\n剩余 {hp}/{max_hp}",
   "pvp_registered_gate": "❌ 请先创建角色\n发 注册 名字 职业",
-  "pvp_not_registered": "❌ 请先创建角色\n发 注册 名字 职业"
+  "pvp_not_registered": "❌ 请先创建角色\n发 注册 名字 职业",
+  "fish_off": "❌ 钓鱼功能已关闭\n本服暂不开放垂钓",
+  "fish_spot_list_header": "【垂钓点】\n当前地图：{map_name}",
+  "fish_spot_line": "- {spot_name}\n时段：{periods}\n稀有度：{rarity}",
+  "fish_spot_empty": "【垂钓点】\n本图暂无可钓鱼点",
+  "fish_intent_ref": "【鱼讯对照】\n微动 → 小鱼\n拉扯 → 中鱼\n猛烈 → 大鱼或鱼王",
+  "fish_bite_idle": "无进行中钓局\n发 钓鱼 <钓点> 开始垂钓",
+  "fish_bite_waiting": "【等待中】{spot}\n已耗时 {elapsed}s\n水面平静，鱼讯尚未触发",
+  "fish_bite_triggered": "{kind_cn}！{golden_line}\n浮漂猛地一沉，快收杆！\n收杆：满力 或 自动 或 止损",
+  "fish_reel_bad_choice": "❌ 无效的收杆选择\n满力 或 自动 或 止损",
+  "fish_reel_timeout": "鱼跑了……水面重归平静\n（收杆超时，本局无鱼获）",
+  "fish_reel_stop": "已止损收杆\n饵已消耗\n本局无鱼获",
+  "fish_reel_success": "✅ 收杆成功\n{kind_cn}｜{rarity_cn}",
+  "fish_codex_header": "【鱼图鉴】",
+  "fish_codex_summary": "已捕获 {caught} 种\n鱼王讨伐胜利 {king} 次",
+  "fish_codex_empty": "还没有捕获记录\n发 钓鱼 <钓点> 试试手气"
 }

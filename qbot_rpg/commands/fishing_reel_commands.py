@@ -93,15 +93,18 @@ _CHOICE_ALIASES: Mapping[str, str] = {
 }
 
 # ---------------------------------------------------------------------------
-# 消息常量（R-4：TODO 批6 fishing_tpl 分区迁移，默认模板与旧输出逐字一致）
+# 消息常量（R-4；2026-09-12 批9·路B：7 键已迁全量模板表 template_table.json，
+# 本组常量逐字镜像表内新文案——tpl_of 命中时以表为准）
 # ---------------------------------------------------------------------------
-_DEF_BITE_WAITING: str = "等待中：{spot} · 已耗时 {elapsed}s（鱼讯未触发）"
-_DEF_BITE_TRIGGERED: str = "{kind_cn}！{golden_line}收杆吧：/收杆 满力 / 自动 / 止损"
-_DEF_BITE_IDLE: str = "无进行中钓局"
-_DEF_REEL_STOP: str = "已止损收杆（饵已消耗，本局无鱼获）"
-_DEF_REEL_RUN: str = "收杆成功！{kind_cn} · {rarity_cn}"
-_DEF_REEL_TIMEOUT: str = "鱼跑了……（收杆超时）"
-_DEF_REEL_BAD_CHOICE: str = "请选择：满力 / 自动 / 止损"
+_DEF_BITE_WAITING: str = "【等待中】{spot}\n已耗时 {elapsed}s\n水面平静，鱼讯尚未触发"
+_DEF_BITE_TRIGGERED: str = (
+    "{kind_cn}！{golden_line}\n浮漂猛地一沉，快收杆！\n收杆：满力 或 自动 或 止损"
+)
+_DEF_BITE_IDLE: str = "无进行中钓局\n发 钓鱼 <钓点> 开始垂钓"
+_DEF_REEL_STOP: str = "已止损收杆\n饵已消耗\n本局无鱼获"
+_DEF_REEL_RUN: str = "✅ 收杆成功\n{kind_cn}｜{rarity_cn}"
+_DEF_REEL_TIMEOUT: str = "鱼跑了……水面重归平静\n（收杆超时，本局无鱼获）"
+_DEF_REEL_BAD_CHOICE: str = "❌ 无效的收杆选择\n满力 或 自动 或 止损"
 
 # 稀有度中文标记（对齐 fishing_commands._RARITY_CN 口径）
 _RARITY_CN: Mapping[str, str] = {
@@ -129,7 +132,7 @@ def _mode_of(ctx: Mapping[str, Any]) -> str:
 
 
 def _render(ctx: Mapping[str, Any], key: str, fallback: str, data: Mapping[str, Any]) -> str:
-    """tpl_of 渲染 + 本地 fallback（批6 迁模板后 tpl_of 分区 key 生效）。"""
+    """tpl_of 渲染 + 本地 fallback（全量模板表 template_table.json 命中，内容包可覆盖）。"""
     out = tpl_of(ctx, key, data)
     return out if out else fallback.format(**data)
 

@@ -36,18 +36,19 @@
   D-1  只列已捕获：codex_state["fish"] 中 seen=true 的条目（__meta__ 聚合段除外）
        全部列出；未捕获无条目 → 不列不泄露（对齐 codex_view 未收集「???」不提示
        原则 R-19 的鱼册等价口径）。排序按条目名（中文名，确定性字典序）。
-  D-2  渲染格式：页头「【鱼图鉴】」+ 鱼综述行「已捕获 N 种 · 鱼王讨伐胜利 K 次」
-       + 逐条 best_mask 模板行（render_fish_entry_line：{name} Lv{lv} · 最大
-       {best_size}cm/{best_weight}kg · {best_crown} · 逆金冠×{reverse_crown_count}，
-       2c1a C-03）+ 空态「（还没有捕获记录）」。Lv 批5 熟练度接线，本路占位 0。
+  D-2  渲染格式：页头「【鱼图鉴】」+ 鱼综述两行（已捕获 N 种 / 鱼王讨伐胜利 K 次；
+       2026-09-12 批9·路B 新排版每行一指标）+ 逐条 best_mask 模板行
+       （render_fish_entry_line：{name} Lv{lv} · 最大 {best_size}cm/{best_weight}kg ·
+       {best_crown} · 逆金冠×{reverse_crown_count}，2c1a C-03）+ 空态
+       （还没有捕获记录 + 免斜杠下一步）。Lv 批5 熟练度接线，本路占位 0。
   D-3  不教攻略：渲染不含任何阈值词汇（5%/85%/95%/逆金冠判定条件等）——R-06
        铁律，TC-07/TC-17 检索空断言。
   D-4  无 registry 依赖：鱼册分母由内容包 fishing.json 全量决定，渲染不读
        registry（fishing 顶层 obj 非条目表，摸底 §三）；捕获总数 = seen=true 条目
        数（与总览 codex_progress 的 seen 口径一致）。
   D-5  模板化占位：页头/综述/空态文案走 tpl_of(ctx, "fish_codex_*", {...}) 优先、
-       本地 fallback 兜底（对齐 fishing_commands F-6 模式——批6 fishing_tpl 分区
-       接管前本地常量兜底，TODO 标注批6 迁移）。
+       本地 fallback 兜底（对齐 fishing_commands F-6 模式；2026-09-12 批9·路B 起
+       3 键存于全量模板表 template_table.json，本地常量镜像表内文案）。
 
 铁律：零 NoneBot import；纯函数确定性零 IO 零定时器/零睡眠（只读展示）；rng 不
       涉及；文件头/docstring 不含计时器函数字面量（M43 探针）；渲染零 emoji（仅
@@ -70,16 +71,18 @@ from qbot_rpg.core.templates import tpl_of  # 消息模板配置化（批6 fishi
 __all__ = ["render_fish_codex"]
 
 # ---------------------------------------------------------------------------
-# 本地 fallback 文案（D-5：tpl_of 无 fish_codex_* 分区 key 返回空串 → 本地兜底；
-# TODO 批6：fishing_tpl 分区接管后删除 fallback，统一走 tpl_of）
+# 本地 fallback 文案（D-5：tpl_of 无 fish_codex_* key 返回空串 → 本地兜底；
+# 2026-09-12 批9·路B：3 键已迁全量模板表 template_table.json，本组常量逐字镜像
+# 表内新文案——tpl_of 命中时以表为准）
 # ---------------------------------------------------------------------------
 _DEF_FISH_CODEX_HEADER: str = "【鱼图鉴】"
-_DEF_FISH_CODEX_SUMMARY: str = "已捕获 {caught} 种 · 鱼王讨伐胜利 {king} 次"
-_DEF_FISH_CODEX_EMPTY: str = "（还没有捕获记录）"
+_DEF_FISH_CODEX_SUMMARY: str = "已捕获 {caught} 种\n鱼王讨伐胜利 {king} 次"
+_DEF_FISH_CODEX_EMPTY: str = "还没有捕获记录\n发 钓鱼 <钓点> 试试手气"
 
 
 def _render(ctx: Mapping[str, Any], key: str, fallback: str, data: Mapping[str, Any]) -> str:
-    """模板渲染：tpl_of 优先（批6 fishing_tpl 分区覆盖）；空串 → 本地 fallback 兜底。
+    """模板渲染：tpl_of 优先（全量模板表 template_table.json；内容包可覆盖）；
+    空串 → 本地 fallback 兜底。
 
     tpl_of 对无分区 key 返回空串（render_template 缺失 key → ""），此时回退本地
     fallback（D-5）。fallback 内含 {占位符}，用 data format_map 填充；占位符缺键 →
@@ -122,7 +125,8 @@ def render_fish_codex(ctx: MutableMapping[str, Any]) -> str:
     入参：ctx（codex_state["fish"] 条目数据源；templates 可选）。出参：回复正文 str。
     渲染结构（D-2）：
       【鱼图鉴】
-      已捕获 N 种 · 鱼王讨伐胜利 K 次
+      已捕获 N 种
+      鱼王讨伐胜利 K 次
       {name} Lv0 · 最大 {best_size}cm/{best_weight}kg · {best_crown} · 逆金冠×{n}
       ...
     规则：

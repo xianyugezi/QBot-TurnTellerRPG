@@ -12,8 +12,8 @@
      当前地图节点 gather_points + 鱼种 spots 引用匹配）；候选规则 = 当前季节/时段
      存在候选鱼种的钓点（消费 2c1a §1.4 时段匹配契约：seasons/periods 偏好白名单，
      空=不限）；每点展示 名称 / 时段偏好 / 稀有度标记（候选鱼种最高 rarity）。
-  ② 固定附注鱼讯参考说明：「微动=小鱼 / 拉扯=中鱼 / 猛烈=大鱼或鱼王！」（逐字三组
-     关键词，TC-01）。
+  ② 固定附注鱼讯参考说明：【鱼讯对照】段头 + 三行映射（微动 → 小鱼 / 拉扯 → 中鱼 /
+     猛烈 → 大鱼或鱼王；三组关键词逐条保留，TC-01；2026-09-12 批9·路B 新排版）。
   ③ 无钓点地图 → 空态文案（含「本图暂无可钓鱼点」，不输出任何钓点实体，TC-02）。
   ④ off 模式：/钓鱼 一律拒绝（GU-01，TC-09）。
   ⑤ 有参：转发 core.fishing_cast.cast_fishing（路2B 落盘）——本路以 try/except
@@ -60,8 +60,9 @@
        （路2B 独占文件，本路不触碰）；未落盘 → 本地兜底返回【工程补白】文案
        （FISH_CAST_FALLBACK），待路2B 落盘后本路 forward 直接生效（无需改动）。
        转发时 spot 缺省位传 None → 由路2B 按「无参缺省默认选中第一个可钓点」兜底。
-  F-8  off 拒绝文案对齐引擎 MSG_OFF（core/fishing.py「钓鱼功能已关闭」）；本壳层
-       先判 off（GU-01 全拒绝，含无参列举与有参下钩，TC-09）。
+  F-8  off 拒绝文案对齐引擎 MSG_OFF 语义（core/fishing.py「钓鱼功能已关闭」；批9·路B
+       起壳层模板为「❌ 钓鱼功能已关闭 / 本服暂不开放垂钓」两行，保留该识别子串）；
+       本壳层先判 off（GU-01 全拒绝，含无参列举与有参下钩，TC-09）。
   F-9  /收杆 /鱼讯 指令注册归各自路（路2C fishing_reel_commands 等）；本路
        register_fishing_commands 只注册 /钓鱼。白名单「钓鱼/收杆/鱼讯」三词与
        REGISTER_GROUPS 接线由主 agent 装配收口（对齐接口摸底 §八-5）。
@@ -106,9 +107,13 @@ __all__ = [
 # 指令名（接口摸底 §八-5：白名单「钓鱼」由主 agent 装配收口登记）
 FISH_CMD: str = "钓鱼"
 
-# 鱼讯参考说明（细化 2c1b §一 1.1 原话语义，逐字保留三类关键词，TC-01）：
-#   微动=小鱼 / 拉扯=中鱼 / 猛烈=大鱼或鱼王！
-FISH_INTENT_REF: str = "微动=小鱼 / 拉扯=中鱼 / 猛烈=大鱼或鱼王！"
+# 鱼讯参考说明（细化 2c1b §一 1.1 原话语义，三类关键词逐条保留，TC-01；
+# 2026-09-12 批9·路B 按手机QQ 14 全角新规范重排为段头 + 三行对照，免斜杠/免 =）：
+#   【鱼讯对照】
+#   微动 → 小鱼
+#   拉扯 → 中鱼
+#   猛烈 → 大鱼或鱼王
+FISH_INTENT_REF: str = "【鱼讯对照】\n微动 → 小鱼\n拉扯 → 中鱼\n猛烈 → 大鱼或鱼王"
 
 # 有参下钩转发兜底（工程补白 F-7：路2B 未落盘时本地兜底；待 sibling 落盘后本
 # forward 直接生效，无需改动）
@@ -161,14 +166,14 @@ _CN_PERIOD: Mapping[str, str] = {
 }
 
 # ---------------------------------------------------------------------------
-# 本地 fallback 文案（F-6：tpl_of 无 fish_* 分区 key 返回空串 → 本地兜底；
-# TODO 批6：fishing_tpl 分区接管后删除 fallback，统一走 tpl_of）
-# ---------------------------------------------------------------------------
-_DEF_FISH_SPOT_LIST_HEADER: str = "【垂钓点】当前地图：{map_name}"
-_DEF_FISH_SPOT_LINE: str = "- {spot_name}｜时段：{periods}｜稀有度：{rarity}"
-_DEF_FISH_SPOT_EMPTY: str = "【垂钓点】本图暂无可钓鱼点"
-_DEF_FISH_OFF: str = "钓鱼功能已关闭"
-_DEF_FISH_INTENT_REF_LINE: str = "鱼讯参考：" + FISH_INTENT_REF
+# 本地 fallback 文案（F-6：tpl_of 无 fish_* 分区 key 返回空串 → 本地兜底）
+# 2026-09-12 批9·路B：15 键已迁全量模板表（qbot_rpg/core/templates/template_table.json），
+# 本组常量逐字镜像表内新文案（tpl_of 命中时以表为准；待批18 分区空壳删除时一并清理）。
+_DEF_FISH_SPOT_LIST_HEADER: str = "【垂钓点】\n当前地图：{map_name}"
+_DEF_FISH_SPOT_LINE: str = "- {spot_name}\n时段：{periods}\n稀有度：{rarity}"
+_DEF_FISH_SPOT_EMPTY: str = "【垂钓点】\n本图暂无可钓鱼点"
+_DEF_FISH_OFF: str = "❌ 钓鱼功能已关闭\n本服暂不开放垂钓"
+_DEF_FISH_INTENT_REF_LINE: str = FISH_INTENT_REF
 
 
 # ---------------------------------------------------------------------------
@@ -176,7 +181,8 @@ _DEF_FISH_INTENT_REF_LINE: str = "鱼讯参考：" + FISH_INTENT_REF
 # ---------------------------------------------------------------------------
 
 def _render(ctx: Mapping[str, Any], key: str, fallback: str, data: Mapping[str, Any]) -> str:
-    """模板渲染：tpl_of 优先（批6 fishing_tpl 分区覆盖）；空串 → 本地 fallback 兜底。
+    """模板渲染：tpl_of 优先（全量模板表 template_table.json；内容包可覆盖）；
+    空串 → 本地 fallback 兜底。
 
     tpl_of 对无分区 key 返回空串（render_template 缺失 key → ""），此时回退本地
     fallback（F-6）。fallback 内含 {占位符}，用 data format_map 填充；占位符缺键 →
@@ -426,7 +432,8 @@ def cmd_fishing(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     """/钓鱼 主入口（T05 · 细化 2c1b §一 1.1/1.2，纯函数确定性）。
 
     路由：
-      - GU-01（off 模式）→ 拒绝「钓鱼功能已关闭」（TC-09；无参/有参全拒绝）；
+      - GU-01（off 模式）→ 拒绝（❌ 钓鱼功能已关闭 / 本服暂不开放垂钓 两行；
+        TC-09；无参/有参全拒绝）；
       - 有参 → 转发 core.fishing_cast.cast_fishing（路2B；未落盘 → 工程补白兜底
         F-7），spot 缺省位传 None → 默认选中第一个可钓点（细化 1.2）；
       - 无参 → 列当前地图全部可钓鱼点（list_fishable_spots）+ 固定附注鱼讯参考说明

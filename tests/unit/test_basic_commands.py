@@ -214,8 +214,8 @@ def test_view_noarg_page1():
 def test_view_detail_three_layers():
     """/角色详细 → 完整三层明细（白值/加成/临时，2026-08-27 用户拍板 /角色详细 才显示）。"""
     out = cmd_view_detail(parse("/角色详细"), make_ctx())
-    assert "【力量】29（白值 15 ｜ 加成 +5·+10% ｜ 临时 +3·+20%）" in out
-    assert "【生命】30/100（白值 100 ｜ 加成 0 ｜ 临时 0）" in out
+    assert "【力量】29\n白值15，加成+5·+10%，临时+3·+20%" in out
+    assert "【生命】30/100\n白值100，加成0，临时0" in out
     assert "当前页" not in out  # 全量展示，无分页尾段
 
 
@@ -260,8 +260,8 @@ def test_attr_line_pure():
     attrs = bc._to_attributes(make_ctx())
     assert attr_line("str", "力量", 29, attrs) == "【力量】29"                       # 默认简洁版
     assert attr_line("hp", "生命", 100, attrs, current=30) == "【生命】30/100"
-    assert attr_line("str", "力量", 29, attrs, detail=True) == "【力量】29（白值 15 ｜ 加成 +5·+10% ｜ 临时 +3·+20%）"
-    assert attr_line("hp", "生命", 100, attrs, current=30, detail=True) == "【生命】30/100（白值 100 ｜ 加成 0 ｜ 临时 0）"
+    assert attr_line("str", "力量", 29, attrs, detail=True) == "【力量】29\n白值15，加成+5·+10%，临时+3·+20%"
+    assert attr_line("hp", "生命", 100, attrs, current=30, detail=True) == "【生命】30/100\n白值100，加成0，临时0"
 
 
 # ---------------------------------------------------------------------------

@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Any, Callable, MutableMapping, Optional
 
-from qbot_rpg.core.templates import tpl_of  # 消息模板配置化（2026-08-31 用户拍板）
+from qbot_rpg.core.templates import DEFAULT_TEMPLATES as _ALL_TPL, tpl_of
 from .router import CommandSpec
 
 UNREGISTER_CMD = "注销"
@@ -21,15 +21,12 @@ UNREGISTER_CMD = "注销"
 # 二次确认固定子词（parsers.FIXED_SUBWORDS 含「确认」，/注销 确认 → fixed_subword 抽取）
 CONFIRM_SUBWORD = "确认"
 
-# 模板（D-04 文案唯一源本模块；仅 ✅/❌ +「」排版符）
-# 2026-08-31 用户拍板：主句与「确认请发」分两行
-TPL_UNREG_CONFIRM = (
-    "注销将删除角色「{name}」所有数据（等级/装备/背包/图鉴/成就/日志）且不可恢复！\n"
-    "确认请发：/注销 确认"
-)
-TPL_UNREG_OK = "✅ 已注销角色「{name}」，数据已删除。想再玩随时 /注册 重新开始"
-TPL_UNREG_NONE = "❌ 你还没有注册角色"
-TPL_UNREG_AGAIN = "❌ 你没有可注销的角色"
+# 模板（2026-09-12 消息模板重构批1：文本唯一源 = 全量模板表 template_table.json；
+# 模块常量改表别名，保住测试导入与 import 兼容）
+TPL_UNREG_CONFIRM = _ALL_TPL["unregister_confirm"]
+TPL_UNREG_OK = _ALL_TPL["unregister_done"]
+TPL_UNREG_NONE = _ALL_TPL["unregister_no_player"]
+TPL_UNREG_AGAIN = _ALL_TPL["unregister_nothing"]
 
 __all__ = [
     "UNREGISTER_CMD",
@@ -43,14 +40,15 @@ def cmd_unregister(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 
     入参 parsed: ParsedCommand（fixed_subword/args 消费）；ctx: 玩家上下文
     （registered/player/unregister_player 消费/写入）。出参 str——回复正文。
-    核心逻辑: 未注册 → TPL_UNREG_NONE；已注册但未二次确认 → TPL_UNREG_CONFIRM；
-    已注册且确认 → 置 ctx["unregister_player"]=True + ctx["player"]=None +
-    ctx["registered"]=False（装配层 runner 检测后同事务删档），返回 TPL_UNREG_OK。
+    核心逻辑: 未注册 → tpl_of unregister_no_player；已注册但未二次确认 → tpl_of
+    unregister_confirm；已注册且确认 → 置 ctx["unregister_player"]=True +
+    ctx["player"]=None + ctx["registered"]=False（装配层 runner 检测后同事务删档），
+    返回 tpl_of unregister_done。
     注意: parsers 把「确认」抽为 fixed_subword（args 为空）——确认判定必须
     fixed_subword == "确认" 或 args 含「确认」（防御快捷展开路径）。
     """
     if not bool(ctx.get("registered")):
-        return TPL_UNREG_NONE
+        return tpl_of(ctx, "unregister_no_player")
     player = ctx.get("player")
     name = ""
     if isinstance(player, MutableMapping):
@@ -66,7 +64,7 @@ def cmd_unregister(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     ctx["unregister_player"] = True
     ctx["player"] = None
     ctx["registered"] = False
-    return TPL_UNREG_OK.format(name=name)
+    return tpl_of(ctx, "unregister_done", {"name": name})
 
 
 def register_unregister_commands(

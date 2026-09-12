@@ -62,7 +62,7 @@ from __future__ import annotations
 
 from typing import Any, Callable, List, Mapping, MutableMapping, Optional
 
-from qbot_rpg.core.templates import tpl_of  # 消息模板配置化（2026-08-31 用户拍板）
+from qbot_rpg.core.templates import DEFAULT_TEMPLATES as _ALL_TPL, tpl_of  # 消息模板配置化（2026-08-31 用户拍板）
 from qbot_rpg.data.player import PlayerAttributes
 
 # 同包兄弟模块：相对导入（G0 架构门禁 test_commands_web_not_depended 不产生
@@ -97,21 +97,21 @@ __all__ = [
 REGISTER_CMD = "注册"
 
 # 角色名校验（REG-02 / RUL-02；【框架】L1156 安全补强）
-TPL_NAME_TOO_LONG = "❌ 角色名最多 20 个字"
-TPL_NAME_BAD_CHARS = "❌ 角色名含非法字符，请重新输入（过滤控制字符/超长 emoji）"
+# 2026-09-12 消息模板重构批1：文本唯一源 = 全量模板表（template_table.json）；
+# 模块常量改表别名（保住测试导入与 import 兼容）。
+TPL_NAME_TOO_LONG = _ALL_TPL["register_name_too_long"]
+TPL_NAME_BAD_CHARS = _ALL_TPL["register_name_bad_chars"]
 
 # 已注册幂等拒绝（REG-03 / RUL-09；B5：禁止重复建号覆盖原档）
 # 意见一同步：注销指令已拍板存在，文案改为引导「发送注销」（去掉旧「请联系管理员」）
 # 2026-08-31 用户拍板：job 为空格时省略职业（内容包无 jobs 表不显示英文 id）
-TPL_ALREADY_REGISTERED = (
-    "❌ 你已经注册过了！当前角色：{name}（Lv{level}{job}）。\n想重新开始请发送注销。"
-)
+TPL_ALREADY_REGISTERED = _ALL_TPL["already_registered"]
 
 # 重名红拦换名（REG-03 / RUL-07 / B5）
-TPL_DUP_NAME = "❌ 已经有一个叫『{name}』的角色了，换个名字吧"
+TPL_DUP_NAME = _ALL_TPL["register_dup_name"]
 
 # 职业不存在（RUL-03：精确匹配 jobs 显示名；推荐角标源 L591）
-TPL_JOB_NOT_FOUND = "❌ 没有『{job}』这个职业，可用：{list}"
+TPL_JOB_NOT_FOUND = _ALL_TPL["register_job_not_found"]
 
 # 初始属性兜底（stats.json base 缺失时；【框架】L608-611：hp 100 / mp 30 / 战斗 10~15）
 _BASE_FALLBACK: Mapping[str, float] = {"hp": 100.0, "mp": 30.0}
@@ -489,7 +489,7 @@ def cmd_register(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     if getattr(parsed, "fixed_subword", None):
         return format_tpl12(_fragment(parsed))
     args = list(getattr(parsed, "args", None) or [])
-    usage = "/注册 <角色名> [职业]"
+    usage = "注册 <名字> [职业]"
     if len(args) > 2:
         # 超参 → 正确格式引导（3d §5.1「原因 + 正确用法 + 下一步」句式；TPL-12 同款错误头）
         return tpl_of(ctx, "register_args_too_many", {"usage": usage})
@@ -528,7 +528,7 @@ def cmd_register(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     if len(args) == 2:
         job = resolve_job(ctx, args[1])
         if job is None:
-            avail = " ".join(_available_jobs(ctx)) or "?"
+            avail = "\n".join(_available_jobs(ctx)) or "?"
             return tpl_of(ctx, "register_job_not_found", {"job": str(args[1]), "list": avail})
     else:
         job = default_job(ctx)

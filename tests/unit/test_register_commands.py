@@ -19,6 +19,7 @@ from qbot_rpg.commands.register_commands import (
     TPL_ALREADY_REGISTERED,
     TPL_DUP_NAME,
     TPL_JOB_NOT_FOUND,
+    TPL_NAME_BAD_CHARS,
     TPL_NAME_TOO_LONG,
     build_initial_player,
     cmd_register,
@@ -78,11 +79,11 @@ def test_tc_reg_01_first_register_success():
     out = cmd_register(parse("/注册 阿伟 战士"), ctx)
     lines = out.splitlines()
     assert lines[0].startswith("✅ 注册成功")  # 2026-09-06 前缀行移除（统一前缀注入）
-    assert "✅ 注册成功！欢迎来到「艾泽拉」世界" in out
-    assert "职业：战士（推荐新手） ｜ 位置：新手村" in out              # 推荐角标降级纯文本
+    assert "✅ 注册成功！\n欢迎来到「艾泽拉」世界" in out
+    assert "职业：战士（推荐新手）\n位置：新手村" in out              # 2026-09-12 批1：欢迎/职业/位置逐行（14全角规范）
     # 意见一同步：初始属性每项独立一行（生命/魔力/攻击/防御各一行）
     assert "初始属性：\n生命 100/100\n魔力 30/30\n攻击 12\n防御 10" in out
-    assert "下一步：发 帮助 查看指令，或 发 锁定 1 与当前地图怪物开战。" in out
+    assert "下一步：\n发 帮助 查看全部指令\n发 锁定 1 与地图怪物开战" in out
     # 建号状态写 ctx（REG-04/05）
     assert ctx["registered"] is True
     p = ctx["player"]
@@ -152,7 +153,7 @@ def test_job_not_found_lists_available():
     """RUL-03：职业不存在 → `❌ 没有『XX』这个职业，可用：…（推荐角标）`。"""
     ctx = make_ctx()
     out = cmd_register(parse("/注册 阿伟 刺客"), ctx)
-    assert out == "❌ 没有『刺客』这个职业，可用：战士（推荐） 法师（推荐） 游侠"
+    assert out == "❌ 没有「刺客」这个职业\n可选职业：\n战士（推荐）\n法师（推荐）\n游侠"
     assert ctx["registered"] is False and ctx["player"] is None      # 不建号
 
 
@@ -230,7 +231,7 @@ def test_tc_reg_05_control_chars_filtered():
     ctx = make_ctx()
     parsed = ParsedCommand("/注册", command=REGISTER_CMD, args=["阿\u0000伟", "战士"])
     out = cmd_register(parsed, ctx)
-    assert out == "❌ 角色名含非法字符，请重新输入（过滤控制字符/超长 emoji）"
+    assert out == TPL_NAME_BAD_CHARS
     assert ctx["registered"] is False and ctx["player"] is None
 
 
@@ -240,10 +241,10 @@ def test_tc_reg_05_control_chars_filtered():
 
 @pytest.mark.parametrize("raw", ["/注册", "/注册 阿伟 战士 3", "/注册 1 2 3", "/注册 阿伟 战士 4 5"])
 def test_register_syntax_tpl12(raw):
-    """REG-01：缺名/超参 → TPL-12（格式错误统一）。"""
+    """REG-01：缺名/超参 → 统一格式错误（❌ + 原因 + 正确格式；批1 新口径）。"""
     ctx = make_ctx()
     out = cmd_register(parse(raw), ctx)
-    assert out.startswith("❌ 指令不正确：")
+    assert out.startswith("❌ ")  # 缺名走 register_args_missing；超参走解析器 TPL-12 helper（跨模块面，另批重做）
 
 
 def test_register_parse_error_tpl12():
@@ -258,7 +259,7 @@ def test_register_syntax_error_before_registered_check():
     """语法错误优先于幂等检查：已注册玩家发空 `注册` → TPL-12（缺参）。"""
     ctx = make_ctx(registered=True, player={"name": "小李", "level": 5, "job_id": "mage"})
     out = cmd_register(parse("/注册"), ctx)
-    assert out.startswith("❌ 指令不正确：")
+    assert out.startswith("❌ 缺少角色名")
 
 
 # ---------------------------------------------------------------------------
@@ -356,7 +357,7 @@ def test_register_rem_tpl_override_via_ctx():
     assert "✅ 自定义欢迎「艾泽拉」！" in out
     assert "【HP】100" in out
     # 职业推荐角标覆盖（warrior recommended_newbie=True）
-    assert "职业：战士（自定义推荐） ｜ 位置：新手村" in out
+    assert "职业：战士（自定义推荐）\n位置：新手村" in out
 
     ctx2 = make_ctx(templates=resolve_templates({"register_name_too_long": "❌ 名字太长啦（自定义）"}))
     name21 = "一二三四五六七八九十一二三四五六七八九十" + "一"
@@ -373,8 +374,10 @@ def test_register_rem_tpl_default_when_no_ctx_templates():
     """
     out = cmd_register(parse("/注册 阿伟 战士"), make_ctx())
     assert out == (
-        "✅ 注册成功！欢迎来到「艾泽拉」世界\n"
-        "职业：战士（推荐新手） ｜ 位置：新手村\n"
+        "✅ 注册成功！\n"
+        "欢迎来到「艾泽拉」世界\n"
+        "职业：战士（推荐新手）\n"
+        "位置：新手村\n"
         "初始属性：\n"
         "生命 100/100\n"
         "魔力 30/30\n"
@@ -382,7 +385,9 @@ def test_register_rem_tpl_default_when_no_ctx_templates():
         "防御 10\n"
         "智力 10\n"
         "敏捷 10\n"
-        "下一步：发 帮助 查看指令，或 发 锁定 1 与当前地图怪物开战。"
+        "下一步：\n"
+        "发 帮助 查看全部指令\n"
+        "发 锁定 1 与地图怪物开战"
     )
 
 

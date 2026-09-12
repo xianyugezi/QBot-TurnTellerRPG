@@ -346,7 +346,7 @@ def effects_line(ctx: Mapping[str, Any]) -> str:
         parts.append(f"还有 {len(effects) - EFFECTS_SHOWN} 个状态")
     if not parts:
         return tpl_of(ctx, "status_effects", {"effects": "无"})
-    return tpl_of(ctx, "status_effects", {"effects": " ｜ ".join(parts)})
+    return tpl_of(ctx, "status_effects", {"effects": "、".join(parts)})
 
 
 def imprints_line(ctx: Mapping[str, Any]) -> Optional[str]:
@@ -369,7 +369,7 @@ def imprints_line(ctx: Mapping[str, Any]) -> Optional[str]:
         segs.append(seg)
     if not segs:
         return None
-    return tpl_of(ctx, "status_imprints", {"imprints": " ｜ ".join(segs)})
+    return tpl_of(ctx, "status_imprints", {"imprints": "、".join(segs)})
 
 
 def target_line(ctx: Mapping[str, Any]) -> Optional[str]:

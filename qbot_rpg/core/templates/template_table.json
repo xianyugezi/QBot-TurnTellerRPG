@@ -663,6 +663,19 @@
     "codex_tier_maxed": "已达最高档\n图鉴收藏家 100%",
     "codex_total_progress": "总完成度：{pct}%\n已见 {seen}/{total}",
     "codex_unknown_category": "❌ 没有这个图鉴分册\n发 图鉴 查看总览",
-    "codex_unknown_name": "???"
+    "codex_unknown_name": "???",
+    "shop_no_shop": "❌ 商店不存在\n发 商店列表 查看可用商店",
+    "shop_enter_usage": "发 商店进入 <序号 或 店名>\n序号见 商店列表",
+    "shop_enter_not_found": "❌ 找不到商店「{name}」\n发 商店列表 查看可用商店",
+    "shop_browse_empty": "（本店暂无商品）",
+    "shop_list_title": "【商店】可用商店一览",
+    "shop_buy_fail": "❌ 购买失败\n稍后重试或换个目标",
+    "shop_sell_fail": "❌ 出售失败\n稍后重试或换个目标",
+    "shop_browse_tail_tip": "发 购买 <序号> 即可买下",
+    "shop_list_tail_tip": "发 商店进入 <序号> 进店",
+    "shop_price_single": "{unit}({currency})",
+    "shop_price_part": "{amount}({currency})",
+    "shop_discount_marker": "[折扣 -{discount}%]",
+    "shop_overview_row_prefix": "{index}. {name}"
   }
 }

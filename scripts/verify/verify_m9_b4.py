@@ -284,7 +284,7 @@ def t_preview_confirm() -> None:
     # c4 无进行中预览 /确认 → 拒绝
     ctx = fresh_ctx({"ore": 3}, player, now=1000.0)
     out_txt = cmd_confirm(parsed("/确认"), ctx)
-    assert "当前无可确认的锻造预览" in out_txt, out_txt
+    assert "❌ 当前无待确认预览" in out_txt, out_txt
 
 
 def t_param_lexing() -> None:

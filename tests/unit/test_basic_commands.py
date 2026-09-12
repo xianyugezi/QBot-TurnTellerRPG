@@ -377,11 +377,11 @@ def test_equip_invalid_page_tpl12(raw):
 
 @pytest.mark.parametrize("raw", ["/装备 abc", "/装备 铁剑"])
 def test_equip_name_form_friendly_hint(raw):
-    """P2-11 QA：名称形式（非数字非子词，如 铁剑/abc）→ 友好提示引导 /装备 穿 <序号>
-    （命令合法，不走 TPL-12 泛化拒绝）。"""
+    """P2-11 QA：名称形式（非数字非子词，如 铁剑/abc）→ 友好提示引导 使用 <序号>
+    （命令合法，不走 TPL-12 泛化拒绝；批4·路L 免斜杠重做）。"""
     out = cmd_equip(parse(raw), make_ctx())
     assert out == bc.TPL_EQUIP_NAME_HINT
-    assert "/使用 <序号>" in out
+    assert "使用 <序号>" in out
 
 
 def test_equip_wear():
@@ -391,11 +391,11 @@ def test_equip_wear():
 
 
 def test_equip_wear_compact():
-    """/装备穿3（紧凑）→ 解析器 args[0]="穿3" → 非数字名称形态 → 友好提示引导 /装备 穿 <序号>
+    """/装备穿3（紧凑）→ 解析器 args[0]="穿3" → 非数字名称形态 → 友好提示引导 使用 <序号>
     （P2-11 QA：紧凑子词+序号需空格，给友好提示而非 TPL-12 泛化拒绝）。"""
     out = cmd_equip(parse("/装备穿3"), make_ctx())
     assert out == bc.TPL_EQUIP_NAME_HINT
-    assert "/使用" in out
+    assert "使用 <序号>" in out
 
 
 @pytest.mark.parametrize("raw", ["/装备 穿", "/装备 穿 abc", "/装备 穿 0"])
@@ -476,23 +476,25 @@ def test_equip_line_pure():
 # ---------------------------------------------------------------------------
 
 def test_skill_page1():
-    """/技能 → LV 行固定头部 + 技能行（类型/MP/描述/派生指向）+ 5 条/页 + TPL-08。"""
+    """/技能 → 头部（标题 + Lv/职业行）+ 技能块（类型/MP/描述/派生指向，少｜多换行）
+    + 5 条/页 + TPL-08（批4·路L 拆行重做）。"""
     out = cmd_skill(parse("/技能"), make_ctx())
     lines = out.splitlines()
-    assert lines[0] == "【技能】Lv3.阿伟（战士）"
-    assert lines[1] == "技能 6 项"
-    assert "1. 攻击（普攻） ｜ 对目标发起普通攻击" in out            # basic 固定第 1 位；MP 0 不显示
-    assert "2. 火球术（主动） 12 MP ｜ 对目标造成火焰伤害 ｜ 可派生成：陨星落" in out
-    assert "3. 重击（主动） 8 MP ｜ 重击地面目标 ｜ 可派生成：陨星落" in out
-    assert "4. 陨星落（主动） 30 MP ｜ 跃空重击倒地目标" in out        # 无派生链 → 无指向
-    assert "5. 战意（被动） ｜ 每次行动回复少量 HP" in out
+    assert lines[0] == "【技能】阿伟"
+    assert lines[1] == "Lv3（战士）"
+    assert lines[2] == "技能 6 项"
+    assert "1. 攻击（普攻）\n对目标发起普通攻击" in out            # basic 固定第 1 位；MP 0 不显示
+    assert "2. 火球术（主动） 12 MP\n对目标造成火焰伤害\n可派生成：陨星落" in out
+    assert "3. 重击（主动） 8 MP\n重击地面目标\n可派生成：陨星落" in out
+    assert "4. 陨星落（主动） 30 MP\n跃空重击倒地目标" in out        # 无派生链 → 无指向
+    assert "5. 战意（被动）\n每次行动回复少量 HP" in out
     assert "当前页：1/2" in out
 
 
 def test_skill_page2():
     """/技能 2 → 第 2 页（反击·触发）。"""
     out = cmd_skill(parse("/技能 2"), make_ctx())
-    assert "6. 反击（触发） ｜ 受击时反击" in out
+    assert "6. 反击（触发）\n受击时反击" in out
     assert "当前页：2/2" in out
 
 
@@ -503,7 +505,7 @@ def test_skill_job_filter():
     assert "技能 6 项" in out
     # 法师可见 奥术弹（技能 7 项：basic/active×4/被动/触发/法师专属）
     out_mage = cmd_skill(parse("/技能"), make_ctx(job_id="mage", job_name="法师"))
-    assert "奥术弹（主动） 10 MP ｜ 法师专属" in out_mage
+    assert "奥术弹（主动） 10 MP\n法师专属" in out_mage
     assert "技能 7 项" in out_mage
 
 
@@ -529,9 +531,9 @@ def test_skill_invalid_tpl12(raw):
 
 
 def test_skill_empty():
-    """/技能 无技能 → 仅 LV 行固定头部（技能 0 项），无页脚。"""
+    """/技能 无技能 → 仅头部（标题 + Lv/职业行 + 技能 0 项），无页脚。"""
     out = cmd_skill(parse("/技能"), make_ctx(skills={}))
-    assert out == "【技能】Lv3.阿伟（战士）\n技能 0 项"
+    assert out == "【技能】阿伟\nLv3（战士）\n技能 0 项"
 
 
 # ---------------------------------------------------------------------------

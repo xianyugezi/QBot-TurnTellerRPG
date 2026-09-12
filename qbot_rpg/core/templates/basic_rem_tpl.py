@@ -4,9 +4,12 @@
 默认模板表 + 占位符白名单；内容包 templates.json 可覆盖同 key。
 
 铁律：字符串 = 2026-08-31 前写死在 basic_commands.py 的逐字文案迁移（RUL-08 注册门槛 /
-空背包 / 装备栏 / 装备穿卸适配器消息 / 技能行与头 / 货币行 / 物品品质·绑定后缀 / 背包筛选 /
-帮助注册引导与组页头），默认值改动会导致现有测试断言失效——需与 basic_commands 渲染处
-tpl_of(ctx, "basic_*", {...}) 一致。
+装备栏 / 装备穿卸适配器消息 / 帮助注册引导与组页头），默认值改动会导致现有测试断言失效——
+需与 basic_commands 渲染处 tpl_of(ctx, "basic_*", {...}) 一致。
+
+2026-09-12 消息模板重构·批4·路L：本分区 27 键（/背包查看 bag_view_*、/背包 empty/品质/绑定/
+货币/筛选、/装备 槽位·名称提示、卸下、/技能列表与详情·派生）迁出至全量表
+core/templates/template_table.json；本文件不再登记这些 key（加载链默认表优先，同名以新表覆盖）。
 """
 from __future__ import annotations
 
@@ -15,38 +18,6 @@ from typing import Any, Dict
 DEFAULT_TEMPLATES: Dict[str, Any] = {
     # —— RUL-08 注册门槛（对齐 register_commands / explore / investigate 本地门）——
     "basic_register_gate": "❌ 请先 /注册 创建角色（/注册 名字 职业）",
-
-    # —— /背包 空背包（4f §3.4）——
-    "basic_empty_bag": "❌ 背包空空如也",
-
-    # —— /背包 物品行品质·绑定后缀（RUL-19：仅非 normal 标注品质；绑定标注）——
-    "basic_quality_suffix": "（{quality}）",
-    "basic_bound_suffix": "（绑定）",
-
-    # —— /背包 货币行（用户模板 `金币：0` / `钻石：0`）——
-    "basic_currency_row": "{name}：{value}",
-
-    # —— /背包筛选（框架 §7.4）——
-    "basic_filter_hint": "❌ 背包筛选：输入物品类型（装备/药剂/货币袋/材料/技能书/任务）"
-                             "，如「背包筛选装备」",
-    "basic_filter_unknown": "❌ 没有「{word}」这个物品类型"
-                             "（装备/药剂/货币袋/材料/技能书/任务）",
-
-    # —— /装备 槽位 / 名称形式（值域文案，命令合法，不走 TPL-12）——
-    "basic_no_slot": "❌ 没有这个装备槽位",
-    "basic_equip_name_hint": "❌ 装备指令：穿戴请用 /使用 <序号>"
-                             "（序号见 /背包），如 /使用 1",
-
-    # —— /背包 查看（2026-09-05 新功能：物品/装备详情）——
-    "bag_view_usage": "背包查看：发 背包 查看 <序号|物品名|部位>（如 背包 查看 1 / 查看 砺脊刃 / 查看 武器）",
-    "bag_view_header": "【{name}】",
-    "bag_view_slot": "部位：{slot}",
-    "bag_view_effect": "效果：{effects}",
-    "bag_view_no_item": "❌ 背包里没有这件物品/部位（发 背包 查看你有啥）",
-    "bag_view_empty_slot": "❌ 该部位（{slot}）未穿戴装备",
-    # 2026-09-06 卸下独立词
-    "unequip_usage": "卸下：发 卸下 <部位>（如 卸下 武器 / 卸下 1）",
-
 
     # —— /装备 装备栏（意见一同步：去序号 + 头部 + 强化后缀）——
     "basic_equip_header": "【装备】",
@@ -74,21 +45,6 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     "basic_equip_reason_unknown_slot": "没有这个装备槽位",
     "basic_equip_reason_max_reached": "该槽位已达可装备数量上限",
 
-    # —— /技能（LV 行固定头部 + 类型/MP/描述 + 派生指向；MP 仅 >0 显示）——
-    "basic_skill_header": "【技能】Lv{level}.{name}（{job}）",
-    "basic_skill_count": "技能 {count} 项",
-    "basic_skill_row": "{idx}. {name}（{type}）",
-    "basic_skill_mp": " {mp} MP",
-    "basic_skill_chain": "可派生成：{names}",
-    # —— 2026-09-05 技能详情 / 技能派生 ——
-    "skill_info_usage": "技能详情：发 技能详情 <序号|名称>（如 技能详情 1 / 技能详情 脊斩）",
-    "skill_info_header": "【{name}】",
-    "skill_info_line": "{k}：{v}",
-    "skill_info_not_found": "❌ 没有『{name}』这个技能（发 技能 查看可用技能）",
-    "skill_chain_usage": "技能派生：发 技能派生 <序号|技能名>（如 技能派生 1 / 技能派生 脊斩）",
-    "skill_chain_header": "【{name}】派生",
-    "skill_chain_none": "该技能无可派生技能",
-
     # —— /帮助 注册引导版（B6 豁免）+ 组页头（4f RUL-23）——
     "basic_register_guide": "【新手引导】发 注册 名字 职业 创建角色\n"
                             "注册 —— 创建角色（未注册必需）\n"
@@ -100,22 +56,6 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
 
 PLACEHOLDER_WHITELIST: Dict[str, set] = {
     "basic_register_gate": set(),
-    "basic_empty_bag": set(),
-    "basic_quality_suffix": {"quality"},
-    "basic_bound_suffix": set(),
-    "basic_currency_row": {"name", "value"},
-    "basic_filter_hint": set(),
-    "basic_filter_unknown": {"word"},
-    "basic_no_slot": set(),
-    "basic_equip_name_hint": set(),
-    # 2026-09-05 /背包 查看 详情模板键
-    "bag_view_usage": set(),
-    "bag_view_header": {"name"},
-    "bag_view_slot": {"slot"},
-    "bag_view_effect": {"effects"},
-    "bag_view_no_item": set(),
-    "bag_view_empty_slot": {"slot"},
-    "unequip_usage": set(),
     "basic_equip_header": set(),
     "basic_equip_line": {"slot", "name"},
     "basic_equip_enh": {"enhance"},
@@ -138,18 +78,6 @@ PLACEHOLDER_WHITELIST: Dict[str, set] = {
     "basic_equip_reason_item_not_found": set(),
     "basic_equip_reason_unknown_slot": set(),
     "basic_equip_reason_max_reached": set(),
-    "basic_skill_header": {"level", "name", "job"},
-    "basic_skill_count": {"count"},
-    "basic_skill_row": {"idx", "name", "type"},
-    "basic_skill_mp": {"mp"},
-    "basic_skill_chain": {"names"},
-    "skill_info_usage": set(),
-    "skill_info_header": {"name"},
-    "skill_info_line": {"k", "v"},
-    "skill_info_not_found": {"name"},
-    "skill_chain_usage": set(),
-    "skill_chain_header": {"name"},
-    "skill_chain_none": set(),
     "basic_register_guide": set(),
     "basic_help_group_header": {"group"},
 }

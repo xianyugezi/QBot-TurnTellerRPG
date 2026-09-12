@@ -72,7 +72,7 @@ def test_action_player_hit_reuses_round_blocks() -> None:
     oc = _enriched(_outcome(action_type="skill"), action_name="施放火球术", target_max_hp=25)
     src = SimpleNamespace(outcomes=(oc,), actor_id="player")
     assert render_battle_action(src) == render_battle_round(src)
-    assert render_battle_action(src) == "✅ 你施放火球术\n造成 18 伤害\n史莱姆 7/25"
+    assert render_battle_action(src) == "✅ 你施放火球术\n造成 18 伤害"
 
 
 def test_action_prefix_first_line_and_ctb_status() -> None:
@@ -84,7 +84,7 @@ def test_action_prefix_first_line_and_ctb_status() -> None:
     assert lines[0] == "Lv35.阿伟 -斩龙者-"
     assert lines[1] == "✅ 你施放火球术"
     assert lines[2] == "造成 18 伤害"
-    assert lines[3] == "史莱姆 7/25"
+    assert len(lines) == 4                              # 批4：目标血量行已砍
     assert lines[-1] == "距离你下次行动：33"
     assert not any("Lv35" in ln for ln in lines[1:])
 
@@ -111,7 +111,6 @@ def test_action_kill_line_follows_damage() -> None:
     assert text.split("\n") == [
         "✅ 你施放火球术",
         "造成 25 伤害",
-        "史莱姆 0/25",
         "✅ 你击败了史莱姆！",
     ]
 
@@ -250,7 +249,7 @@ def test_existing_entries_still_work() -> None:
 
     oc = _enriched(_outcome(action_type="skill"), action_name="施放火球术", target_max_hp=25)
     assert render_battle_round(SimpleNamespace(outcomes=(oc,))) == (
-        "✅ 你施放火球术\n造成 18 伤害\n史莱姆 7/25")
+        "✅ 你施放火球术\n造成 18 伤害")
 
     end = render_battle_end(SimpleNamespace(), enemy, "lose", status="lose",
                             enemy_name="史莱姆")

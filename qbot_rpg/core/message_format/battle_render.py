@@ -698,8 +698,9 @@ def _render_action_hint_from_report(round_result: Any, *, ctx: Any = None) -> st
     # 方位 v0.6 HUD：双方方位格（中文；缺省空串——旧快照/无方位战斗省略）
     _pp = getattr(round_result, "player_pos", None)
     _ep = getattr(round_result, "enemy_pos", None)
-    player_pos = _position_cn(*_pp) if isinstance(_pp, (tuple, list)) and len(_pp) == 2 else ""
-    enemy_pos = _position_cn(*_ep) if isinstance(_ep, (tuple, list)) and len(_ep) == 2 else ""
+    # 2026-09-12 用户拍板：方位格加【】强调（无方位战斗仍省略，不留空【】）
+    player_pos = f"【{_position_cn(*_pp)}】" if isinstance(_pp, (tuple, list)) and len(_pp) == 2 else ""
+    enemy_pos = f"【{_position_cn(*_ep)}】" if isinstance(_ep, (tuple, list)) and len(_ep) == 2 else ""
     return render_action_hint(
         int(player_hp), int(player_max), int(enemy_hp), int(enemy_max), target_name,
         player_pos=player_pos, enemy_pos=enemy_pos, ctx=ctx,

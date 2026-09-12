@@ -125,7 +125,7 @@ def test_tc12_render_round_enemy_counter() -> None:
                       player_max_hp=30)
     text = render_battle_round(_report(player, enemy))
     assert text == (
-        "✅ 你施放火球术\n造成 18 伤害\n史莱姆 7/25\n"
+        "✅ 你施放火球术\n造成 18 伤害\n"
         "❌ 史莱姆反击，你受到 4 伤害（HP 21/30）"
     )
 
@@ -164,7 +164,7 @@ def test_tc13_killed_enemy_no_counter() -> None:
         action_name="攻击", target_max_hp=25,
     )
     text = render_battle_round(_report(player))      # 无 enemy outcome
-    assert "✅ 你攻击\n造成 25 伤害\n史莱姆 0/25" in text
+    assert "✅ 你攻击\n造成 25 伤害" in text
     assert "反击" not in text
     assert "你受到" not in text
 

@@ -1591,7 +1591,8 @@ def cmd_blueprint(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 
     res = parse_forge_target(fragment, eng=eng, ctx=ctx)
     if not res.get("ok"):
-        # 未知节点 → /图纸 空态（TC-19：❌ 未找到「<名>」+ 该名暂无锻造链）；歧义/词法 → 解析 message
+        # 未知节点 → /图纸 空态（TC-19：❌ 未找到「<名>」+ 该名暂无锻造链）；
+        # 歧义/词法 → 解析 message
         if res.get("error_code") == ERR_P_UNKNOWN:
             return tpl_of(ctx, "forge_blueprint_not_found", {"name": fragment})
         return res.get("message") or format_tpl12(_fragment(parsed))

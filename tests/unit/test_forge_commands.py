@@ -252,7 +252,8 @@ def test_tc10_preview_card_no_slots_branch() -> None:
     assert lines[0] == "铁剑Ⅰ（攻击+18）"
     assert lines[1] == "素材：铁剑 + 矿石×5"
     assert lines[2] == "需求：铸造 精通 级"
-    # 铁剑Ⅰ 无孔位，但主线仍有后续 → 「可继续锻造：铁剑Ⅱ」+「终点：■炎王剑」行存在（2c2b §3.2 后续段）
+    # 铁剑Ⅰ 无孔位，但主线仍有后续 → 「可继续锻造：铁剑Ⅱ」+
+    # 「终点：■炎王剑」行存在（2c2b §3.2 后续段）
     assert any("可继续锻造" in ln for ln in lines)
     assert any(ln == "终点：■炎王剑" for ln in lines)
 

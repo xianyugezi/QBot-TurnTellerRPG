@@ -511,5 +511,8 @@
   "shop_price_single": "{unit}({currency})",
   "shop_price_part": "{amount}({currency})",
   "shop_discount_marker": "[折扣 -{discount}%]",
-  "shop_overview_row_prefix": "{index}. {name}"
+  "shop_overview_row_prefix": "{index}. {name}",
+  "battle_settle_levelup": "✅ 等级提升至 {level}\nHP/MP 已回复",
+  "battle_settle_levelup_multi": "✅ 等级提升至 {level}\n连升 {level_ups} 级\nHP/MP 已回复",
+  "battle_settle_levelup_sp": "\n技能点 +{sp}"
 }

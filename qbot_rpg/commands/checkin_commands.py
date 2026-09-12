@@ -267,15 +267,15 @@ def _table_rows(ctx: Optional[Mapping[str, Any]], t: Mapping[str, Any]) -> List[
         for h in t.get("streak_hits") or []:
             if not isinstance(h, Mapping):
                 continue
-            labs = "\n".join(_grant_label(ctx, g) for g in (h.get("granted") or [])[:4]) \
+            joined = "\n".join(_grant_label(ctx, g) for g in (h.get("granted") or [])[:4]) \
                 or tpl_of(ctx, "checkin_daily_none")
-            rows.append(tpl_of(ctx, "checkin_streak_hit", {"grants": labs, "days": h.get("days")}))
+            rows.append(tpl_of(ctx, "checkin_streak_hit", {"grants": joined, "days": h.get("days")}))
         for h in t.get("month_hits") or []:
             if not isinstance(h, Mapping):
                 continue
-            labs = "\n".join(_grant_label(ctx, g) for g in (h.get("granted") or [])[:4]) \
+            joined = "\n".join(_grant_label(ctx, g) for g in (h.get("granted") or [])[:4]) \
                 or tpl_of(ctx, "checkin_daily_none")
-            rows.append(tpl_of(ctx, "checkin_month_hit", {"grants": labs, "days": h.get("days")}))
+            rows.append(tpl_of(ctx, "checkin_month_hit", {"grants": joined, "days": h.get("days")}))
         return rows
     # checkin_state 状态查询形态
     rows.append(tpl_of(ctx, "checkin_state_streak", {"streak": t.get("streak", 0)}))

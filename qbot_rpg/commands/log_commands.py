@@ -63,7 +63,7 @@ from qbot_rpg.core.message_format.list_render import (
     render_cake_tail,
     resolve_page,
 )
-from qbot_rpg.core.templates import DEFAULT_TEMPLATES as _ALL_TPL  # 消息模板配置化（2026-08-31 用户拍板）
+from qbot_rpg.core.templates import DEFAULT_TEMPLATES as _ALL_TPL  # 模板唯一源：全量表
 from qbot_rpg.core.templates import tpl_of
 
 __all__ = [

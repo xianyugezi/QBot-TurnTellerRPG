@@ -252,6 +252,23 @@ _BATTLE_DEFAULT_CONFIG: Dict[str, Any] = {
     # 被击落倒地窗口（实例 turns 覆写值；系统每个行动收尾双端各扣 1，缺省 3 =
     # 覆盖「玩家下一拍 + 怪下一次出手」的追击窗；可配）
     "air_drop_turns": 3,
+    # 气绝 KO 槽（怪猎采纳 #3，2026-09-12 批⑦A）：打击命中「正」方位才积累；
+    # 满值 → 眩晕倒地（knockdown 窗口 + 起身占行动槽）。数值全隐性、可经
+    # settings["battle"] 段覆盖（battle_config 白名单；改数值不改代码）。
+    "stun_enabled": True,
+    "stun_base_threshold": 100.0,      # 首阈值基准（敌 resistance.stun 为百分比加成）
+    "stun_escalation": 1.4,            # 每次 KO 后阈值的倍率递增（防无限控场）
+    "stun_decay_per_action": 0.05,     # 行动收尾衰减比例（0=不衰减）
+    "stun_ko_window": 2,               # KO 倒地窗口（持有者行动次数）
+    "stun_ko_skip": True,              # KO 是否吞掉怪下一次行动（起身演出）
+    "stun_hint_at": 0.7,               # 软提示阈值（进度比例；0=关）
+    "stun_side_mult": 0.0,             # 侧位积累倍率（0=仅正方位）
+    "stun_back_mult": 0.0,             # 背位积累倍率
+    # 咆哮（怪猎采纳 #2，批⑦A）：怪招式 roar=1/2 → 震散玩家连势 + 行动条后推；
+    # 「耳栓」（玩家 combatant earplug ≥ 招式等级）完全免疫。数值隐性、可配。
+    "roar_light_delay": 350.0,         # 轻咆哮行动条后推量
+    "roar_heavy_delay": 550.0,         # 大咆哮行动条后推量
+    "roar_combo_clear": True,          # 是否震散玩家在途连势
     # 背击加成（B5 背击闭环，2026-09-11 批④；怪猎闇討ち映射）：玩家攻击结算时
     # 位于怪**背面**（combat_position.player.side == "back"）→ 物理通道伤害 ×
     # (1 + backstab_bonus)。缺省 +10%（0=关、可配）；元素不吃（闇討ち「属性伤害
@@ -2784,6 +2801,16 @@ class BattleEngine:
         ca.setdefault("air_policy", sd.get("air_policy"))
         # 跃空风险闭环（批③）：air_drop=对空击落档（knockdown=击中空中玩家即击落）
         ca.setdefault("air_drop", sd.get("air_drop"))
+        # 批⑦A（2026-09-12，顺手修复 latent gap）：skill def attack_type 合并——
+        # 玩家技能此前未合并，伤害管线一律按 slash 默认：打类型内置破防
+        # （pierce_pct，细化_1a §1.6「打 0.2」）与 effects 的 attack_type scope
+        # （effects.py L1077）对玩家技能均静默失效。口径同 tag/effects：显式优先。
+        _att = sd.get("attack_type")
+        if _att and not ca.get("attack_type"):
+            ca["attack_type"] = self._normalize_attack_type(str(_att))
+        # 批⑦A：气绝值 / 咆哮等级随技能 def 合并（直驱与实机路径一致）
+        ca.setdefault("stun", sd.get("stun"))
+        ca.setdefault("roar", sd.get("roar"))
 
         _action_had_mult = "mult" in ca  # action 原样是否显式 mult（折算判据）
         ca.setdefault("mult", float(ca.get("mult", 1.0)))
@@ -2915,6 +2942,13 @@ class BattleEngine:
             # 跃空风险闭环（批③）：air_drop 同口径随派生技 def 解析
             if not action.get("air_drop"):
                 ca["air_drop"] = _fsd.get("air_drop")
+            # 批⑦A：attack_type / stun 随派生技 def 解析（派生=实际施放技能）
+            if not action.get("attack_type"):
+                _f_att = _fsd.get("attack_type")
+                if _f_att:
+                    ca["attack_type"] = self._normalize_attack_type(str(_f_att))
+            if not action.get("stun") and _fsd.get("stun"):
+                ca["stun"] = _fsd.get("stun")
 
         # 防反/闪反姿态标记（用户拍板标签制）：玩家施放技能若带 counter_type/
         # counter_skill（守势=parry/回环+腾空=dodge）→ 记入 snap.counter_stance。
@@ -3089,6 +3123,15 @@ class BattleEngine:
             
                     hit_effects.extend(execute_action(eff_raw, ctx, rt).side_effects)
             self._absorb_runtime(rt)
+        # ---- 咆哮（批⑦A #2，2026-09-12）：怪招式带 roar=1/2 → 打断玩家连势 +
+        # 行动条后推；「耳栓」（玩家 earplug ≥ 等级）完全免疫。纯行为事件。----
+        try:
+            _roar_lv = int(ca.get("roar") or 0)
+        except (TypeError, ValueError):
+            _roar_lv = 0
+        if _roar_lv > 0 and target == "player" and not ca.get("_roar_done"):
+            ca["_roar_done"] = True
+            hit_effects.extend(self._apply_roar(_roar_lv))
         # 霸体窗口=行动阶段结束（D2 修复：原在技能结算内清位→同一次行动敌后手打断不免疫，
         # 1c2 §2.2「使用期间」应为整个行动阶段；清位移至 _after_actor_action）
         # M13 批17 路17C：伤害结算传 ca（含 skill def 合并 + segments 多段展开 +
@@ -3777,6 +3820,147 @@ class BattleEngine:
                             inst["turns"] = kd
                         break
 
+    # ------------------------- 气绝 KO / 咆哮（批⑦A，2026-09-12） -------------------------
+
+    def _cfg_float(self, key: str, default: float) -> float:
+        """配置取 float（坏值/缺省回落默认，绝不抛错）。"""
+        try:
+            v = self._config.get(key, default)
+            return default if v is None or isinstance(v, bool) else float(v)
+        except (TypeError, ValueError):
+            return default
+
+    def _cfg_int(self, key: str, default: int) -> int:
+        try:
+            v = self._config.get(key, default)
+            return default if v is None or isinstance(v, bool) else int(v)
+        except (TypeError, ValueError):
+            return default
+
+    def _cfg_bool(self, key: str, default: bool) -> bool:
+        v = self._config.get(key, default)
+        return bool(v) if isinstance(v, bool) else default
+
+    def _stun_state(self) -> Dict[str, Any]:
+        """气绝槽实例态（快照持久；懒初始化）。"""
+        st = self._snap.get("stun_state")
+        if not isinstance(st, dict):
+            st = {"value": 0.0, "ko_count": 0, "hinted": False}
+            self._snap["stun_state"] = st
+        st.setdefault("value", 0.0)
+        st.setdefault("ko_count", 0)
+        st.setdefault("hinted", False)
+        return st
+
+    def _stun_threshold(self) -> float:
+        """当前气绝阈值 = 基准 × (1 + 敌 resistance.stun/100) × 递增^KO次数（全隐性）。"""
+        base = self._cfg_float("stun_base_threshold", 100.0)
+        res = 0.0
+        try:
+            ed = self._enemy_def if isinstance(self._enemy_def, Mapping) else {}
+            rd = ed.get("resistance") if isinstance(ed, Mapping) else None
+            if isinstance(rd, Mapping):
+                res = float(rd.get("stun", 0) or 0)
+        except (TypeError, ValueError):
+            res = 0.0
+        esc = max(1.0, self._cfg_float("stun_escalation", 1.4))
+        k = int(self._stun_state().get("ko_count", 0) or 0)
+        return max(1.0, base * (1.0 + res / 100.0) * (esc ** k))
+
+    def _decay_stun_gauge(self) -> None:
+        """行动收尾衰减（配合阈值递增防无限；0=不衰减）。"""
+        rate = self._cfg_float("stun_decay_per_action", 0.05)
+        st = self._stun_state()
+        v = float(st.get("value", 0.0) or 0.0)
+        if rate <= 0 or v <= 0:
+            return
+        v *= max(0.0, 1.0 - min(rate, 1.0))
+        st["value"] = 0.0 if v < 0.5 else v
+
+    def _stun_accumulate(self, delta: float, attacker: str,
+                         events: List[Mapping[str, Any]]) -> None:
+        """气绝积累（单段）：加值 → 软提示 → 满值触发 KO（事件入 events 供渲染）。"""
+        if delta <= 0:
+            return
+        st = self._stun_state()
+        st["value"] = float(st.get("value", 0.0) or 0.0) + float(delta)
+        thr = self._stun_threshold()
+        hint_at = self._cfg_float("stun_hint_at", 0.7)
+        if (not st.get("hinted") and hint_at > 0
+                and st["value"] >= thr * hint_at and st["value"] < thr):
+            st["hinted"] = True
+            events.append({"type": "stun_hint", "actor": attacker, "target": "enemy"})
+        if st["value"] >= thr:
+            self._fire_stun_ko(attacker, "enemy", events)
+
+    def _fire_stun_ko(self, attacker: str, target: str,
+                      events: List[Mapping[str, Any]]) -> None:
+        """气绝 KO 收口：清零+递增计数 → knockdown 状态（窗口）→ 打断在途 →
+        起身占行动槽（exec_state=downed）→ 事件（渲染/测试可观察）。"""
+        st = self._stun_state()
+        st["value"] = 0.0
+        st["ko_count"] = int(st.get("ko_count", 0) or 0) + 1
+        st["hinted"] = False
+        kd_id = str(self._config.get("knockdown_status_id") or "knockdown")
+        kd = max(0, self._cfg_int("stun_ko_window", 2))
+        try:
+            rt = self._new_runtime()
+            ctx = DamageCtx(raw_damage=0, attack_type="basic", attacker=attacker,
+                            target=target, snapshot=self._snap,
+                            variables=self._base_variables(attacker, target))
+            res = execute_action({"type": "status_apply", "status_id": kd_id,
+                                  "source": "stun_ko", "target": "enemy"}, ctx, rt)
+            events.extend(res.side_effects)
+            self._absorb_runtime(rt)
+        except Exception:  # noqa: BLE001 - 兜底不崩：KO 状态结算异常不阻断伤害链
+            pass
+        if kd > 0:
+            st_map = self._snap.get("status_state")
+            insts = st_map.get(target) if isinstance(st_map, Mapping) else None
+            if isinstance(insts, list):
+                for inst in reversed(insts):
+                    if isinstance(inst, Mapping) and inst.get("status_id") == kd_id:
+                        if isinstance(inst, dict):
+                            inst["turns"] = kd
+                        break
+        if self._cfg_bool("stun_ko_skip", True) and target == "enemy":
+            try:
+                self._interrupt_enemy_ai()
+            except Exception:  # noqa: BLE001
+                pass
+            ai = self._snap.get("ai_state")
+            if (isinstance(ai, dict) and not ai.get("chain_queue")
+                    and ai.get("exec_state") != "charging"):
+                ai["exec_state"] = "downed"
+        events.append({"type": "stun_ko", "actor": attacker, "target": target,
+                       "window": kd})
+
+    def _apply_roar(self, level: int) -> List[Mapping[str, Any]]:
+        """咆哮结算（怪→玩家）：耳栓（≥等级）完全免疫；否则震散连势 + 行动条后推。
+        返回渲染事件（纯行为播报、零数值）。"""
+        _lv = max(1, int(level))
+        try:
+            _ep = int(self._combat("player").get("earplug", 0) or 0)
+        except (TypeError, ValueError):
+            _ep = 0
+        if _ep >= _lv:
+            return [{"type": "roar_blocked", "level": _lv, "target": "player"}]
+        cleared = False
+        if self._cfg_bool("roar_combo_clear", True):
+            try:
+                if self.combo_engine().state_of(self._snap, "player").count > 0:
+                    self.combo_engine().clear("player", self._snap, "roar")
+                    cleared = True
+            except Exception:  # noqa: BLE001
+                cleared = False
+        _delay = (self._cfg_float("roar_heavy_delay", 550.0) if _lv >= 2
+                  else self._cfg_float("roar_light_delay", 350.0))
+        delayed = False
+        if self._ctb is not None and _delay > 0:
+            delayed = bool(self._ctb.delay_actor("player", _delay))
+        return [{"type": "roar", "level": _lv, "earplug": _ep,
+                 "combo": cleared, "delayed": delayed, "target": "player"}]
+
     def _resolve_damage_action(self, attacker: str, action: Dict[str, Any]) -> ActionOutcome:
         """伤害行动闭环（核心）：命中→会心→格挡→双通道→总伤害→拦截链→扣血→
         死亡判定（每段后）→ 反射回注（F-22）→ 状态衰减（D5）。
@@ -4087,6 +4271,31 @@ class BattleEngine:
                     # 本段伤害已按破位前状态结算——本次破位不吃本次增伤（下段/下次起效）
                     self._fire_part_break(attacker, target, part_def, all_effects)
 
+            # ---- 气绝槽（批⑦A #3）：打击 × 正方位积累（每段一次；全隐性） ----
+            if (attacker == "player" and target == "enemy" and raw > 0
+                    and self._cfg_bool("stun_enabled", True)):
+                try:
+                    _sv = seg.get("stun")
+                    if _sv is None:
+                        _sv = action.get("stun")
+                    _sv = float(_sv or 0.0)
+                except (TypeError, ValueError):
+                    _sv = 0.0
+                _seg_atk = self._normalize_attack_type(
+                    str(seg.get("attack_type") or atk_type))
+                if _sv > 0 and _seg_atk == "blunt":
+                    from qbot_rpg.core.position import position_of  # noqa: PLC0415
+
+                    _side = position_of(self._snap, "player")[0]
+                    _pm = {"front": 1.0,
+                           "left": self._cfg_float("stun_side_mult", 0.0),
+                           "right": self._cfg_float("stun_side_mult", 0.0),
+                           "back": self._cfg_float("stun_back_mult", 0.0)}.get(_side, 0.0)
+                    _delta = _sv * _pm
+                    if _delta > 0:
+                        self._stun_accumulate(_delta, attacker, all_effects)
+                        rating["stun"] = round(float(_delta), 2)
+
             # ---- ⑥⑦⑧ 拦截链（1b §2：减伤→护盾→反弹→吸收→免疫→续行→扣血→死亡判定）----
             vars_ = self._base_variables(attacker, target)
             vars_["damage_dealt"] = seg_total
@@ -4246,6 +4455,8 @@ class BattleEngine:
         # 自然结束（now >= cast_time + action_time → 移除）；与持有者是否再次行动
         # 无关（原 R10「随持有者行动过期」计数口径已退役）。
         self._expire_counter_stance()
+        # 气绝槽衰减（批⑦A：每次行动收尾；0=不衰减）
+        self._decay_stun_gauge()
         # M9/M10/M8/R16：该行动者侧的各项 tick 归位到 AFTER_ACTION
         self._tick_skill_cooldowns(actor)
         self._tick_transform_state(actor)
@@ -4359,6 +4570,8 @@ class BattleEngine:
             # air_policy 结算——怪侧配置 land 且自身空中时同样落地）
             ad.setdefault("position_rule", adef.get("position_rule"))
             ad.setdefault("air_policy", adef.get("air_policy"))
+            # 咆哮字段透传（批⑦A #2：怪行动 roar=1/2 随行动定义顶层）
+            ad.setdefault("roar", adef.get("roar"))
         return ad
 
     def _interrupt_enemy_ai(self) -> bool:

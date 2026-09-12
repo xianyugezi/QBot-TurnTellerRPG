@@ -637,6 +637,7 @@ def _render_player_action(outcome: Any, *, ctx: Any = None) -> List[str]:
     lines.extend(_render_air_drop_lines(outcome, ctx=ctx))
     lines.extend(_render_position_changed_lines(outcome, ctx=ctx))
     lines.extend(_render_part_break_lines(outcome, ctx=ctx))
+    lines.extend(_render_stun_lines(outcome, ctx=ctx))  # 批⑦A 气绝事件行
     # 转向行（增补 v1 §三；批④ 时序修订）：行动结算**后**怪才转回面向——置于
     # 行动行之后（「你先在背后得手 → 怪才转身」；原「行动前」序已随 v1.3 修订）
     lines.extend(_render_enemy_turn_lines(outcome, ctx=ctx))
@@ -908,6 +909,24 @@ def _render_part_break_lines(outcome: Any, *, ctx: Any = None) -> List[str]:
     return out
 
 
+def _render_stun_lines(outcome: Any, *, ctx: Any = None) -> List[str]:
+    """气绝事件行（批⑦A #3）：outcome.side_effects 的 stun_hint / stun_ko 事件 →
+    模板 battle_stun_hint / battle_stun_ko 各一行（纯行为播报，零数值）。"""
+    out: List[str] = []
+    for e in getattr(outcome, "side_effects", ()) or ():
+        if not isinstance(e, Mapping):
+            continue
+        et = e.get("type")
+        if et not in ("stun_hint", "stun_ko"):
+            continue
+        name = _fx_actor_cn(str(e.get("target") or "enemy"), outcome)
+        key = "battle_stun_ko" if et == "stun_ko" else "battle_stun_hint"
+        line = tpl_of(ctx, key, {"name": name})
+        if line:
+            out.append(line)
+    return out
+
+
 def _render_enemy_miss(
     outcome: Any,
     *,
@@ -1027,9 +1046,21 @@ def _render_enemy_action(outcome: Any, *, ctx: Any = None) -> Optional[str]:
 
     # 2026-09-09 防反成功（用户拍板标签制）：parry 事件 → 格挡免伤行（替代伤害行）
     _fx_all = list(getattr(outcome, "side_effects", ()) or ())
+    # 咆哮（批⑦A #2）：roar 事件 → 专属行（替代伤害行；耳栓 / 连势震散分支）
+    _roar_fx = next((e for e in _fx_all
+                     if isinstance(e, Mapping) and e.get("type") in ("roar", "roar_blocked")), None)
     _parry_fx = next((e for e in _fx_all
                       if isinstance(e, Mapping) and e.get("type") == "parry"), None)
-    if _parry_fx is not None:
+    if _roar_fx is not None:
+        name = _enemy_name(outcome)
+        if _roar_fx.get("type") == "roar_blocked":
+            line = tpl_of(ctx, "battle_roar_blocked", {"name": name})
+        else:
+            key = "battle_roar" if bool(_roar_fx.get("combo")) else "battle_roar_plain"
+            line = tpl_of(ctx, key, {"name": name})
+        if line:
+            lines.append(line)
+    elif _parry_fx is not None:
         # 展示串清洗（批⑤顺手修）：怪行动名注入为「使出X」（供「怪使出X，你受到…」
         # 攻击行用）；格挡行模板是「你格挡了{action}」——直接拼会读成
         # 「你格挡了使出X」，此处剥「使出」前缀 → 「你格挡了X（完全免伤）」。
@@ -1085,6 +1116,7 @@ def _render_enemy_action(outcome: Any, *, ctx: Any = None) -> Optional[str]:
     lines.extend(_render_air_drop_lines(outcome, ctx=ctx))
     lines.extend(_render_position_changed_lines(outcome, ctx=ctx))
     lines.extend(_render_part_break_lines(outcome, ctx=ctx))
+    lines.extend(_render_stun_lines(outcome, ctx=ctx))  # 批⑦A 气绝事件行
     if not lines:
         return None
     return "\n".join(lines)

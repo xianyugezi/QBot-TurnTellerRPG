@@ -1,4 +1,17 @@
 {
+ "battle": {
+  "stun_base_threshold": 100,
+  "stun_escalation": 1.4,
+  "stun_decay_per_action": 0.05,
+  "stun_ko_window": 2,
+  "stun_ko_skip": true,
+  "stun_hint_at": 0.7,
+  "stun_side_mult": 0,
+  "stun_back_mult": 0,
+  "roar_light_delay": 350,
+  "roar_heavy_delay": 550,
+  "roar_combo_clear": true
+ },
  "default_map": "bone_station",
  "level_cap": 35,
  "exp_curve": {

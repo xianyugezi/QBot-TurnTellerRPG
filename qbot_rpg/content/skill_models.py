@@ -462,4 +462,6 @@ def skills_fields() -> Dict[str, FieldMeta]:
         # 批⑥ C10 行动恢复值（总行动恢复值，行动条；缺省 =
         # 规则 ctb.default_recovery）。口径：增补 v1 附·怪猎对照 C10（2026-09-12 实装）。
         "recovery": FieldMeta(type="number", range_min=0),
+        # 批⑦A 气绝值（打击 × 正方位积累 KO 槽；缺省 0=不积累，全隐性）
+        "stun": FieldMeta(type="number", range_min=0),
     }

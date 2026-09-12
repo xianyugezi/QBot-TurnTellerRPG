@@ -1004,6 +1004,7 @@
   "weight": 15,
   "probability": 1,
   "intent": "召唤",
+  "roar": 2,
   "cooldown": 5,
   "tags": [
    "召唤"
@@ -1388,6 +1389,7 @@
   "weight": 30,
   "probability": 1,
   "intent": "伤害",
+  "roar": 2,
   "cooldown": 1,
   "tags": [
    "元素",
@@ -1575,6 +1577,7 @@
   "weight": 30,
   "probability": 1,
   "intent": "伤害",
+  "roar": 2,
   "cooldown": 1,
   "tags": [
    "元素",
@@ -1761,5 +1764,95 @@
     "air"
    ]
   }
+ },
+ {
+  "id": "bb_roar",
+  "name": "震岳咆哮",
+  "kind": "active",
+  "power": 0.0,
+  "recovery": 105,
+  "attack_type": "打",
+  "element": "none",
+  "weight": 12,
+  "probability": 1,
+  "intent": "咆哮",
+  "cooldown": 2,
+  "hungry": 0,
+  "tags": [
+   "咆哮"
+  ],
+  "roar": 1
+ },
+ {
+  "id": "al_roar",
+  "name": "裂野咆哮",
+  "kind": "active",
+  "power": 0.0,
+  "recovery": 110,
+  "attack_type": "打",
+  "element": "none",
+  "weight": 12,
+  "probability": 1,
+  "intent": "咆哮",
+  "cooldown": 2,
+  "hungry": 0,
+  "tags": [
+   "咆哮"
+  ],
+  "roar": 1
+ },
+ {
+  "id": "sa_ancient_roar",
+  "name": "古兽长鸣",
+  "kind": "active",
+  "power": 0.0,
+  "recovery": 145,
+  "attack_type": "打",
+  "element": "none",
+  "weight": 12,
+  "probability": 1,
+  "intent": "咆哮",
+  "cooldown": 2,
+  "hungry": 0,
+  "tags": [
+   "咆哮"
+  ],
+  "roar": 2
+ },
+ {
+  "id": "ac_roar",
+  "name": "穴渊怒嚎",
+  "kind": "active",
+  "power": 0.0,
+  "recovery": 140,
+  "attack_type": "打",
+  "element": "none",
+  "weight": 12,
+  "probability": 1,
+  "intent": "咆哮",
+  "cooldown": 2,
+  "hungry": 0,
+  "tags": [
+   "咆哮"
+  ],
+  "roar": 2
+ },
+ {
+  "id": "gm_roar",
+  "name": "巨魔咆哮",
+  "kind": "active",
+  "power": 0.0,
+  "recovery": 100,
+  "attack_type": "打",
+  "element": "none",
+  "weight": 10,
+  "probability": 1,
+  "intent": "咆哮",
+  "cooldown": 2,
+  "hungry": 0,
+  "tags": [
+   "咆哮"
+  ],
+  "roar": 1
  }
 ]

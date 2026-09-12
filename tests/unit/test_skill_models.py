@@ -333,7 +333,7 @@ def test_action_core_dual_library_defaults_align() -> None:
 
 
 def test_skills_fields_keys_exact() -> None:
-    """skills_fields() 恰好 38 键（§1.2：A7 + B11 + C2 + D4 = 24 契约字段
+    """skills_fields() 恰好 39 键（§1.2：A7 + B11 + C2 + D4 = 24 契约字段
     + 6b 技能挂点 2：revert_form/derive_only + 6c 技能扩展 4：
     energy_gain/energy_cost/season/combo_table + 方位扩展 3：position_rule（F08）/
     break_power（F09）/air_policy（F10，2026-09-08 方位 v0.6 附录 A Step 1/2/3）
@@ -364,6 +364,8 @@ def test_skills_fields_keys_exact() -> None:
         "air_extend",
         # 行动恢复 1（2026-09-12 批⑥ C10 实装：recovery 行动恢复值，行动条）
         "recovery",
+        # 气绝 1（2026-09-12 批⑦A 实装：stun 打击 × 正方位积累的气绝值，全隐性）
+        "stun",
     }
 
 

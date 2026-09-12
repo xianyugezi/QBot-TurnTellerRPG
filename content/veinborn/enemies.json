@@ -114,6 +114,11 @@
     "action": "bb_charge",
     "weight": 20,
     "probability": 1
+   },
+   {
+    "action": "bb_roar",
+    "weight": 12,
+    "probability": 1
    }
   ],
   "special_actions": [
@@ -515,6 +520,11 @@
    {
     "action": "al_ram",
     "weight": 15,
+    "probability": 1
+   },
+   {
+    "action": "al_roar",
+    "weight": 12,
     "probability": 1
    }
   ],
@@ -1603,6 +1613,11 @@
     "action": "sa_vein_burst",
     "weight": 30,
     "probability": 1
+   },
+   {
+    "action": "sa_ancient_roar",
+    "weight": 12,
+    "probability": 1
    }
   ],
   "drops": {
@@ -1956,6 +1971,11 @@
     "action": "gm_ground_slam",
     "weight": 15,
     "probability": 1
+   },
+   {
+    "action": "gm_roar",
+    "weight": 10,
+    "probability": 1
    }
   ]
  },
@@ -2246,6 +2266,11 @@
    {
     "action": "ac_awaken_summon",
     "weight": 15,
+    "probability": 1
+   },
+   {
+    "action": "ac_roar",
+    "weight": 12,
     "probability": 1
    }
   ],
@@ -2538,4 +2563,5 @@
     }
    }
   ]
- }]
+ }
+]

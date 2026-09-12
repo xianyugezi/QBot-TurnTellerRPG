@@ -915,6 +915,7 @@ def _module_table() -> Dict[str, ModuleMeta]:
         # 与 enemies.actions[].probability 口径一致，1e S1 语义）
         "probability": FieldMeta(type="number", range_min=0, range_max=1),
         "intent": FieldMeta(type="str"),  # 伤害/防御/蓄力/治疗/控制/buff/debuff/印记/功能（枚举 A2）
+        "roar": FieldMeta(type="number", range_min=0, range_max=2),  # 批⑦A 咆哮等级（1 轻 / 2 大；耳栓反制）
         "cooldown": FieldMeta(type="number", range_min=0, range_max=999),
         "recovery": FieldMeta(type="number", range_min=0),  # 批⑥ C10 行动恢复值（总恢复值；缺省=ctb.default_recovery）
         # P2-9 修复：condition 条件权重修正为 obj/string 双形态（1e A03b），
@@ -987,6 +988,7 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "action_time": FieldMeta(type="number", range_min=0),  # F27 行动时间（反应窗口时长，行动条；缺省=ctb.default_action_time）
         "air_extend": FieldMeta(type="number", range_min=0),  # F28 空中延长（跃空窗口延长量，行动条；缺省=ctb.air_extend）
         "recovery": FieldMeta(type="number", range_min=0),  # 批⑥ C10 行动恢复值（总恢复值，行动条；缺省=ctb.default_recovery）
+        "stun": FieldMeta(type="number", range_min=0),  # 批⑦A 气绝值（打击 × 正方位积累；全隐性）
         # ---- 兼容旧键（enemies[].skills 引用的技能表旧键）----
         "skill": FieldMeta(type="ref", ref_target="skill_or_any"),
     }

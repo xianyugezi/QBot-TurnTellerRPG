@@ -98,7 +98,8 @@ def test_existing_modules_counts_stable() -> None:
     # 25 + 方位 F08/F09/F10 + 防反/闪反 counter 2（2026-09-09）
     # + 行动时间 1 + 空中延长 1（2026-09-11 增补 v1 §一/§四）
     # + 行动恢复 1（2026-09-12 批⑥ C10：recovery 行动恢复值）
-    assert len(t.modules["skills"].fields) == 33
+    # + 气绝 1（2026-09-12 批⑦A：stun 气绝值）
+    assert len(t.modules["skills"].fields) == 34
     assert len(t.modules["jobs"].fields) == 11
     assert len(t.modules["enemies"].fields) == 27  # 26 + parts 部位段（方位 v0.6 §三.3）
     assert len(t.modules["maps"].fields) == 12

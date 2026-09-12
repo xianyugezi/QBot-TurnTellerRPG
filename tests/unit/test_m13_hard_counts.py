@@ -283,8 +283,9 @@ def test_6a_skills_fields_contract_core_24() -> None:
     # + 2 防反/闪反姿态 counter_type/counter_skill（2026-09-09 用户拍板标签制）
     # + 1 行动时间 action_time（2026-09-11 增补 v1 §一 实装）
     # + 1 空中延长 air_extend（2026-09-11 增补 v1 §四 实装）
-    # + 1 行动恢复 recovery（2026-09-12 批⑥ C10 实装）= 38
-    assert len(fields) == 38
+    # + 1 行动恢复 recovery（2026-09-12 批⑥ C10 实装）
+    # + 1 气绝 stun（2026-09-12 批⑦A 气绝 KO 实装）= 39
+    assert len(fields) == 39
 
 
 # ---------------------------------------------------------------------------

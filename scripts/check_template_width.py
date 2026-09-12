@@ -32,9 +32,10 @@ BUDGET_HALF = 28
 DEFAULT_ESTIMATE = 6
 PLACEHOLDER_ESTIMATES: Dict[str, int] = {
     "name": 8, "item": 8, "target": 8, "job": 8, "skill": 8, "title": 8,
-    "damage": 7, "gold": 7, "coins": 7, "exp": 8, "level": 4, "count": 4,
-    "amount": 6, "hp": 10, "mp": 10, "cur": 10, "max": 10, "index": 4,
+    "damage": 7, "gold": 7, "coins": 7, "exp": 8, "level": 3, "count": 4,
+    "amount": 6, "hp": 10, "mp": 10, "cur": 8, "max": 8, "index": 4,
     "seq": 4, "num": 4, "qty": 4, "time": 10, "location": 8,
+    "base": 4, "bonus": 4, "temp": 4,
 }
 
 _PLACEHOLDER_RE = re.compile(r"\{([a-zA-Z0-9_]+)\}")

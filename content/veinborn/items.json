@@ -368,6 +368,7 @@
   "slot": "weapon",
   "price": 600,
   "atk": 100,
+  "crit": 2,
   "usable": false,
   "desc": "骨脊系脊骨猎刀：骨脊淬炼的脊刃。"
  },
@@ -378,6 +379,7 @@
   "slot": "weapon",
   "price": 1056,
   "atk": 176,
+  "crit": 2,
   "usable": false,
   "desc": "骨脊系狼王脊刺：骨脊淬炼的脊刃。"
  },
@@ -388,6 +390,7 @@
   "slot": "weapon",
   "price": 1518,
   "atk": 253,
+  "crit": 2,
   "usable": false,
   "desc": "骨脊系裂骨巨脊：骨脊淬炼的脊刃。"
  },
@@ -398,6 +401,7 @@
   "slot": "weapon",
   "price": 1980,
   "atk": 330,
+  "crit": 2,
   "usable": false,
   "desc": "骨脊系渊兽脊斩：骨脊淬炼的脊刃。"
  },
@@ -408,8 +412,30 @@
   "slot": "weapon",
   "price": 2376,
   "atk": 396,
+  "crit": 2,
   "usable": false,
   "desc": "骨脊系龙骨噬脊刃：骨脊淬炼的脊刃。"
+ },
+ {
+  "id": "guji_blade_frenzy",
+  "name": "狂乱裂脊",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 1700,
+  "atk": 273,
+  "crit": -12,
+  "usable": false,
+  "desc": "骨脊系狂乱变体：舍弃准绳的嗜血脊刃，每一刀都是豪赌。"
+ },
+ {
+  "id": "shijing_short_blade",
+  "name": "蚀晶短刃",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 110,
+  "atk": 17,
+  "usable": false,
+  "desc": "蚀晶系蚀晶短刃：蚀晶淬炼的短刃。"
  },
  {
   "id": "shijing_blade_a_mid",
@@ -468,6 +494,7 @@
   "slot": "weapon",
   "price": 474,
   "atk": 79,
+  "agi": 3,
   "usable": false,
   "desc": "鳞革系迅鳞双刃：鳞革淬炼的脊刃。"
  },
@@ -478,6 +505,7 @@
   "slot": "weapon",
   "price": 846,
   "atk": 141,
+  "agi": 3,
   "usable": false,
   "desc": "鳞革系风鳞裂刃：鳞革淬炼的脊刃。"
  },
@@ -488,6 +516,7 @@
   "slot": "weapon",
   "price": 1212,
   "atk": 202,
+  "agi": 3,
   "usable": false,
   "desc": "鳞革系渊鳞弯刀：鳞革淬炼的脊刃。"
  },
@@ -498,6 +527,7 @@
   "slot": "weapon",
   "price": 1584,
   "atk": 264,
+  "agi": 3,
   "usable": false,
   "desc": "鳞革系沉鳞影刃：鳞革淬炼的脊刃。"
  },
@@ -508,6 +538,7 @@
   "slot": "weapon",
   "price": 1902,
   "atk": 317,
+  "agi": 3,
   "usable": false,
   "desc": "鳞革系夜鳞苍牙：鳞革淬炼的脊刃。"
  },
@@ -518,6 +549,7 @@
   "slot": "weapon",
   "price": 570,
   "atk": 95,
+  "atk_pct": 5,
   "usable": false,
   "desc": "渊脉系渊脉骨刃：渊脉淬刃，蚀力深藏。"
  },
@@ -528,6 +560,7 @@
   "slot": "weapon",
   "price": 1020,
   "atk": 170,
+  "atk_pct": 5,
   "usable": false,
   "desc": "渊脉系精英渊脉刃：渊脉淬刃，蚀力深藏。"
  },
@@ -538,6 +571,7 @@
   "slot": "weapon",
   "price": 1464,
   "atk": 244,
+  "atk_pct": 5,
   "usable": false,
   "desc": "渊脉系渊脉镇脊：渊脉淬刃，蚀力深藏。"
  },
@@ -548,6 +582,7 @@
   "slot": "weapon",
   "price": 1908,
   "atk": 318,
+  "atk_pct": 5,
   "usable": false,
   "desc": "渊脉系沉渊之刃：渊脉淬刃，蚀力深藏。"
  },
@@ -558,6 +593,7 @@
   "slot": "weapon",
   "price": 700,
   "atk": 100,
+  "atk_pct": 8,
   "usable": false,
   "desc": "荒原领主牙刀：以荒原领主素材铸就的王骸武器。"
  },
@@ -568,6 +604,7 @@
   "slot": "weapon",
   "price": 1771,
   "atk": 253,
+  "atk_pct": 8,
   "usable": false,
   "desc": "渊龙王戟：以渊泽龙王素材铸就的王骸武器。"
  },
@@ -578,6 +615,7 @@
   "slot": "weapon",
   "price": 2310,
   "atk": 330,
+  "atk_pct": 8,
   "usable": false,
   "desc": "沉渊古兽脊：以沉渊古兽素材铸就的王骸武器。"
  },
@@ -588,6 +626,7 @@
   "slot": "weapon",
   "price": 2772,
   "atk": 396,
+  "atk_pct": 8,
   "usable": false,
   "desc": "群山嚎主刃：以群山嚎主素材铸就的王骸武器。"
  },
@@ -598,6 +637,7 @@
   "slot": "weapon",
   "price": 2772,
   "atk": 396,
+  "atk_pct": 8,
   "usable": false,
   "desc": "黯穴之主牙：以黯穴之主素材铸就的王骸武器。"
  },
@@ -608,6 +648,7 @@
   "slot": "weapon",
   "price": 2772,
   "atk": 396,
+  "atk_pct": 8,
   "usable": false,
   "desc": "夜嚎君王剑：以夜嚎君王素材铸就的王骸武器。"
  },
@@ -618,6 +659,7 @@
   "slot": "weapon",
   "price": 1232,
   "atk": 176,
+  "atk_pct": 8,
   "usable": false,
   "desc": "以砾冕冢核淬炼的大剑，重若骨冢。"
  },
@@ -638,6 +680,7 @@
   "slot": "weapon",
   "price": 130,
   "atk": 15,
+  "crit": 2,
   "usable": false,
   "desc": "兽骨磨制的猎刀，荒野猎人的老伙伴。"
  },
@@ -648,6 +691,7 @@
   "slot": "weapon",
   "price": 110,
   "atk": 13,
+  "agi": 3,
   "usable": false,
   "desc": "鳞革缠柄的短刃，轻快趁手。"
  },
@@ -1270,7 +1314,8 @@
   "dfn": 61,
   "usable": false,
   "desc": "嚎主王骸套：嚎主盔（王骸系防具）",
-  "atk": 16
+  "atk": 16,
+  "earplug": 1
  },
  {
   "id": "haozhu_body",
@@ -1281,7 +1326,8 @@
   "dfn": 92,
   "usable": false,
   "desc": "嚎主王骸套：嚎主毛皮铠（王骸系防具）",
-  "atk": 16
+  "atk": 16,
+  "earplug": 1
  },
  {
   "id": "haozhu_hand",
@@ -1580,7 +1626,8 @@
   "usable": false,
   "desc": "晶鬃坠（B 晶鬃狼王）",
   "crit": 3,
-  "atk": 6
+  "atk": 6,
+  "earplug": 1
  },
  {
   "id": "eroded_core_jade",
@@ -1647,7 +1694,8 @@
   "usable": false,
   "desc": "夜嚎君王印（D 夜嚎君王）",
   "atk": 10,
-  "crit": 4
+  "crit": 4,
+  "super_crit_lv": 1
  },
  {
   "id": "pulse_potion_med",

@@ -158,6 +158,11 @@
      "item": "barrow_core",
      "chance": 100,
      "count": 1
+    },
+    {
+     "item": "gravelcrown_core_jade",
+     "chance": 60,
+     "count": 1
     }
    ]
   },
@@ -1232,6 +1237,11 @@
     {
      "item": "mantis_wing_charm",
      "chance": 50,
+     "count": 1
+    },
+    {
+     "item": "shijing_waist",
+     "chance": 40,
      "count": 1
     }
    ]

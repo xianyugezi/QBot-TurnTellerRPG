@@ -103,6 +103,12 @@
     "price": 768,
     "stock": 3,
     "sold_out_once": false
+   },
+   {
+    "item": "ridge_blade_veteran",
+    "price": 1600,
+    "stock": 5,
+    "sold_out_once": false
    }
   ]
  },

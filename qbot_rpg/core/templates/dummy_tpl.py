@@ -1,48 +1,29 @@
-"""模板分区：dummy_tpl（训练木桩指令（dummy_commands）；2026-09-06 指令缺口补全批1路2）。
+"""
+模板分区：dummy_tpl（训练木桩指令（dummy_commands）；2026-09-06 指令缺口补全批1路2）。
 
 默认模板表 + 占位符白名单；内容包 templates.json 可覆盖同 key。
 
-铁律：渲染走 tpl_of(ctx, "dummy_*", {...})；占位符白名单见下；渲染零 emoji
-（仅 ✅/❌ 功能性标记 + 排版符号 | → 等）。
+2026-09-12 消息模板重构：
+- 批9·路A：本分区全部 16 键（注册门槛 dummy_register_gate / 系统开关
+  dummy_system_disabled / 战斗锁 dummy_battle_lock / 档位列表 4 键
+  dummy_list_header·row·tail·empty / 未找到 dummy_not_found / 开战 dummy_start /
+  调整面板 4 键 dummy_adjust_ok·reset·missing·usage / 退出 3 键
+  dummy_exit_no_battle·not_dummy·ok）全部迁入全量表
+  qbot_rpg/core/templates/template_table.json，按手机QQ 14 全角新规范重写
+  （免斜杠指令书写、❌ 原因 + 下一步拆行、档位列表每行一字段、开战段头 + 规则行）；
+  本分区默认表与占位符白名单清空。
+  本路无死键清除：dummy_adjust_usage 全仓无消费方，按信息要素等价重做后
+  留待批18 死键清扫复核。
+
+渲染链 = 新表（全量默认）→ 内容包 templates.json（覆盖）→ tpl_of（接口不变）；
+渲染零装饰 emoji（仅 ✅/❌ 功能性标记 + 排版符号）。
+
+本空壳文件待批18 死键清扫时随其余已迁分区一并删除（过渡期保留 import 兼容）。
 """
 from __future__ import annotations
 
 from typing import Any, Dict
 
-DEFAULT_TEMPLATES: Dict[str, Any] = {
-    "dummy_register_gate": "❌ 请先 /注册 创建角色（/注册 名字 职业）",
-    "dummy_system_disabled": "❌ 木桩训练未启用（内容包未配置训练木桩）",
-    "dummy_battle_lock": "❌ 你已经在战斗中了（先结束当前战斗）",
-    "dummy_list_header": "【训练木桩】可挑战档位：",
-    "dummy_list_row": "{idx}. {name}（HP {hp}｜防御 {dfn}）",
-    "dummy_list_tail": "发送 /木桩 <序号或名称> 进入训练；/调整木桩 <怪物名> 覆盖面板",
-    "dummy_list_empty": "当前内容包没有训练木桩（enemies.json 配 tier=training）",
-    "dummy_not_found": "未找到木桩「{name}」，发送 /木桩 查看档位",
-    "dummy_start": "与 {name}（HP {hp}）的训练战开始！发 攻击 出战（木桩不反击，胜利无掉落）。",
-    "dummy_adjust_ok": "✅ 已把木桩面板调整为「{name}」的防御/抗性（HP 仍为木桩值）",
-    "dummy_adjust_reset": "✅ 已重置木桩面板为默认档位",
-    "dummy_adjust_missing": "怪物「{name}」不存在（enemies.json 里找）",
-    "dummy_adjust_usage": "调整木桩：/调整木桩 <怪物名> 覆盖面板（无参=重置）",
-    "dummy_exit_no_battle": "当前没有进行中的训练战（/木桩 <档位> 进入）",
-    "dummy_exit_not_dummy": "当前是普通战斗，不是训练木桩（木桩战才能 /木桩 退出）",
-    "dummy_exit_ok": "已退出训练木桩（本次训练未结算；/木桩 <档位> 可重新进入）",
-}
-
-PLACEHOLDER_WHITELIST: Dict[str, set] = {
-    "dummy_register_gate": set(),
-    "dummy_system_disabled": set(),
-    "dummy_battle_lock": set(),
-    "dummy_list_header": set(),
-    "dummy_list_row": {"idx", "name", "hp", "dfn"},
-    "dummy_list_tail": set(),
-    "dummy_list_empty": set(),
-    "dummy_not_found": {"name"},
-    "dummy_start": {"name", "hp"},
-    "dummy_adjust_ok": {"name"},
-    "dummy_adjust_reset": set(),
-    "dummy_adjust_missing": {"name"},
-    "dummy_adjust_usage": set(),
-    "dummy_exit_no_battle": set(),
-    "dummy_exit_not_dummy": set(),
-    "dummy_exit_ok": set(),
-}
+# 已清空：键已迁全量模板表；白名单由表自动派生（见 core/templates/__init__.py）。
+DEFAULT_TEMPLATES: Dict[str, Any] = {}
+PLACEHOLDER_WHITELIST: Dict[str, set] = {}

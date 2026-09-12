@@ -95,7 +95,8 @@ def test_dummy_list_no_arg() -> None:
     assert "训练木桩·轻甲" in out
     assert "训练木桩·重甲" in out
     assert "HP 3000" in out
-    assert "发送 /木桩" in out
+    # 批9·路A 排版重做：尾行免斜杠（「发 木桩 <序号或名称> 进入」）
+    assert "发 木桩 <序号或名称> 进入" in out
 
 
 def test_dummy_start_by_index() -> None:
@@ -132,8 +133,9 @@ def test_dummy_start_normal_monster_auto_overlay() -> None:
     ov = ps.get("dummy_override")
     assert ov is not None
     assert ov.get("name") == "荒原狼"
-    # M5 裁决（登记表 §一.3）：训练战开始行删除装饰性 ⚔️，断言同步纯文本前缀
-    assert out["message"].startswith("与 训练木桩·荒原狼")
+    # 批9·路A 排版重做：【训练战开始】段头 + 名字独立字段（覆盖面板名生效）
+    assert out["message"].startswith("【训练战开始】")
+    assert "训练木桩·荒原狼" in out["message"]
 
 
 def test_dummy_battle_lock_when_active() -> None:
@@ -185,7 +187,8 @@ def test_dummy_not_registered_gate() -> None:
     """未注册 → 注册门槛。"""
     ctx = make_ctx(registered=False, player=None)
     out = cmd_dummy(parse("/木桩"), ctx)
-    assert "请先 /注册" in out
+    # 批9·路A：注册门槛免斜杠（「❌ 请先创建角色」+「发 注册 名字 职业」）
+    assert "请先创建角色" in out
 
 
 def test_register_dummy_commands() -> None:

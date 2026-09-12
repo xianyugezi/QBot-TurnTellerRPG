@@ -319,14 +319,6 @@ _AIR_STATUS_IDS: Tuple[str, ...] = (
 )
 
 
-#: 跃空续航「翔虫」资源轴 ID（批⑨：起跳/大幅延长/受身耗格、行动条自然回复）。
-#: 内容包 stats.json 注册（name=翔虫）；未注册 → 相关门禁零操作降级（RS-5 口径）。
-_WIREBUG_AXIS_ID: str = "wirebug"
-
-#: 跃空续航辅助状态段名（`snap` 内；记录翔虫回复时刻——行动条自然回复调度位）。
-_AIR_WIREBUG_SNAP_KEY: str = "air_wirebug"
-
-
 class BattleStateError(Exception):
     """非法状态迁移 / 非法操作（细化_1g1b §二 状态机不变量，不变量2/4）。"""
 
@@ -1281,116 +1273,7 @@ class BattleEngine:
             RESOURCE_STATE_KEY: state,
         }
 
-    # ------------------------- 跃空续航「翔虫」（批⑨，2026-09-12） -------------------------
-
-    def _wirebug_axis_ctx(self):
-        """翔虫资源轴 (ctx, axis)；未装配/未注册 → (None, None)（零操作降级，RS-5）。"""
-        try:
-            registry = getattr(self, "_resource_registry", None)
-            if not registry:
-                return None, None
-            from qbot_rpg.core import resource_axis  # noqa: PLC0415
-
-            ctx = self._resource_ctx("player", "enemy", registry)
-            axis = resource_axis.axis_of(ctx, _WIREBUG_AXIS_ID)
-            if axis is None:
-                return None, None
-            return ctx, axis
-        except Exception:  # noqa: BLE001 - 防御兜底：不可用视作未装配
-            return None, None
-
-    def _wirebug_have(self, ctx: Mapping[str, Any]) -> int:
-        """当前翔虫格数（侧=player；槽缺失回落注册 base）。"""
-        try:
-            from qbot_rpg.core import resource_axis  # noqa: PLC0415
-
-            return int(resource_axis.get_value(ctx, _WIREBUG_AXIS_ID, side="player") or 0)
-        except Exception:  # noqa: BLE001
-            return 0
-
-    def _wirebug_pay(self, ctx: Dict[str, Any], n: int) -> bool:
-        """扣 n 格翔虫（原子：先查后扣不半扣）+ 安排回复计时；不足 → False。"""
-        try:
-            from qbot_rpg.core import resource_axis  # noqa: PLC0415
-
-            _n = max(0, int(n or 0))
-            if _n <= 0:
-                return True
-            if self._wirebug_have(ctx) < _n:
-                return False
-            res = resource_axis.add_value(ctx, _WIREBUG_AXIS_ID, -_n, side="player")
-            if not (isinstance(res, Mapping) and res.get("ok", True)):
-                return False
-            self._schedule_wirebug_regen()
-            return True
-        except Exception:  # noqa: BLE001 - 扣减异常视作失败（不误扣）
-            return False
-
-    def _schedule_wirebug_regen(self) -> None:
-        """安排/保持翔虫回复计时（行动条口径：`next_regen_at` = 当前时刻 + 间隔）。"""
-        try:
-            _ctx, _axis = self._wirebug_axis_ctx()
-            if _ctx is None:
-                return
-            _rule = self._rule_config()
-            _iv = float(getattr(_rule, "air_wirebug_regen", 0.0) or 0.0)
-            if _iv <= 0:
-                return
-            node = self._snap.setdefault(_AIR_WIREBUG_SNAP_KEY, {})
-            if not isinstance(node, dict):
-                node = {}
-                self._snap[_AIR_WIREBUG_SNAP_KEY] = node
-            if node.get("next_regen_at") is None:
-                node["next_regen_at"] = float(self.battle_time) + _iv
-        except Exception:  # noqa: BLE001
-            return
-
-    def _tick_air_wirebug(self) -> None:
-        """跃空续航自然回复（批⑨；每次行动收尾调用——行动条口径）。
-
-        计数 = 距上次结算经过的整间隔数（可一次回多格，封顶 max）。
-        `next_regen_at` 为空且未满格 → 惰性起表（防快照恢复后永不回复）。
-        """
-        try:
-            ctx, axis = self._wirebug_axis_ctx()
-            if ctx is None:
-                return
-            _rule = self._rule_config()
-            _iv = float(getattr(_rule, "air_wirebug_regen", 0.0) or 0.0)
-            _mx = int(axis.max or 0)
-            if _iv <= 0 or _mx <= 0:
-                return
-            node = self._snap.setdefault(_AIR_WIREBUG_SNAP_KEY, {})
-            if not isinstance(node, dict):
-                node = {}
-                self._snap[_AIR_WIREBUG_SNAP_KEY] = node
-            have = self._wirebug_have(ctx)
-            if have >= _mx:
-                node["next_regen_at"] = None
-                return
-            _now = float(self.battle_time)
-            nxt = node.get("next_regen_at")
-            if nxt is None:
-                node["next_regen_at"] = _now + _iv
-                return
-            try:
-                nxt_f = float(nxt)
-            except (TypeError, ValueError):
-                node["next_regen_at"] = _now + _iv
-                return
-            if _now < nxt_f:
-                return
-            steps = int((_now - nxt_f) // _iv) + 1
-            add = min(steps, _mx - have)
-            from qbot_rpg.core import resource_axis  # noqa: PLC0415
-
-            resource_axis.add_value(ctx, _WIREBUG_AXIS_ID, add, side="player")
-            if have + add >= _mx:
-                node["next_regen_at"] = None
-            else:
-                node["next_regen_at"] = nxt_f + add * _iv
-        except Exception:  # noqa: BLE001 - 回复失败不阻断行动收尾
-            return
+    # ------------------------- 跃空受身（批⑨，2026-09-12） -------------------------
 
     def _action_has_tag(self, action: Mapping[str, Any], tag: str) -> bool:
         """行动标签包含判定（内容配置；ca 未合并时从 defs 解析——同 `_action_tags` 口径）。"""
@@ -1405,94 +1288,19 @@ class BattleEngine:
         except Exception:  # noqa: BLE001
             return False
 
-    def _is_leap_skill(self, sd: Mapping[str, Any]) -> bool:
-        """起跳技判定（批⑨）：技能 def effects 含「自身入空」或「授予空中姿态」。
-
-        内容侧跃空技统一形态（reposition height=air + status_apply 姿态）——两键
-        任一命中即计入；未来新增跃空技零接线自动覆盖。
-        """
-        try:
-            for ef in (sd.get("effects") or ()):
-                if not isinstance(ef, Mapping):
-                    continue
-                _t = str(ef.get("type") or "")
-                if _t == "reposition" and str(ef.get("height") or "") == "air":
-                    return True
-                if _t == "status_apply" and str(ef.get("status_id") or "") in _AIR_STATUS_IDS:
-                    return True
-        except Exception:  # noqa: BLE001
-            return False
-        return False
-
-    def _apply_air_wirebug_gate(
-        self, attacker: str, ca: Mapping[str, Any],
-        sd: Mapping[str, Any], target: str,
-    ):
-        """跃空续航门禁（批⑨）：起跳耗 1 格翔虫（不足 → 被拒零时间成本，R-6）。
-
-        - 仅玩家侧；仅「起跳技」（def effects 含自身入空/授予空中姿态）；
-        - 已空中 → 不重复计费（窗口维持走 `_update_air_window`，零消耗）；
-        - 翔虫轴未注册（内容包未启用）→ 零操作（RS-5 降级）。
-        """
-        try:
-            if attacker != "player":
-                return None
-            ctx, _axis = self._wirebug_axis_ctx()
-            if ctx is None:
-                return None
-            _rule = self._rule_config()
-            _cost = max(1, int(getattr(_rule, "air_wirebug_leap_cost", 1) or 1))
-            # 仅「地面 → 空中」计费：已在空中时跃空为重复动作，不再耗格
-            try:
-                from qbot_rpg.core.position import position_of  # noqa: PLC0415
-
-                _ps, _ph = position_of(self._snap, "player")
-            except Exception:  # noqa: BLE001
-                _ph = "ground"
-            if str(_ph) == "air":
-                return None
-            _sid = str(ca.get("skill_id") or "")
-            _sd2 = sd
-            if _sid:
-                _fin = self.combo_engine().resolve_skill(_sid) or {}
-                if isinstance(_fin, Mapping) and _fin:
-                    _sd2 = _fin
-            if not self._is_leap_skill(_sd2):
-                return None
-            if not self._wirebug_pay(ctx, _cost):
-                seq = self._record_action(
-                    attacker, str(ca.get("type", "skill")), target,
-                    {"hit": False, "crit": "low", "blocked": False, "pierce": 0.0,
-                     "multi": 1.0, "combo_rejected": True,
-                     "combo_reason": "air_wirebug_insufficient"},
-                    {"ch_phys": 0, "ch_elem": 0, "final": 0}, self._phase)
-                return ActionOutcome(
-                    False, seq, attacker, str(ca.get("type", "skill")), target,
-                    False, "low", False, 0, 0,
-                    int(self._combat(target).get("hp", 0)), (),
-                    "翔虫不足，技能被拒（不消耗行动）")
-            return None
-        except Exception:  # noqa: BLE001 - 防御兜底不阻断战斗
-            return None
-
     def _try_air_recover(
-        self, action: Mapping[str, Any], insts: Sequence[Mapping[str, Any]], rule: Any,
+        self, action: Mapping[str, Any], insts: Sequence[Mapping[str, Any]],
     ) -> bool:
-        """受身判定（批⑨）：窗口仍有效 + 翔虫≥1 + 非「不可受身」→ 耗 1 格返回 True。
+        """受身判定（批⑨）：当次窗口仍有效 + 非「不可受身」→ True（取消倒地与硬直）。
 
-        被击落瞬间调用（`_apply_air_hit_consequences` 击落档）；True = 取消倒地
-        与硬直（借翔虫翻身稳落，渲染 `battle_air_recover` 行）。
+        被击落瞬间调用（`_apply_air_hit_consequences` 击落档）；True = 凌空翻身稳落
+        （渲染 `battle_air_recover` 行）。**无消耗自动档**（2026-09-12 拍板：不引入
+        续航资源成本）；「当次窗口仍有效」= 任一空中姿态 air_expire_at > now。
         """
         try:
             if self._action_has_tag(action, "不可受身"):
                 return False
-            ctx, _axis = self._wirebug_axis_ctx()
-            if ctx is None:
-                return False
-            _cost = max(1, int(getattr(rule, "air_wirebug_recover_cost", 1) or 1))
-            # 「当次窗口仍有效」：任一空中姿态未到期（口径：air_expire_at > now）
             _now = float(self.battle_time)
-            _valid = False
             for inst in insts or ():
                 if not isinstance(inst, Mapping):
                     continue
@@ -1502,11 +1310,8 @@ class BattleEngine:
                 except (TypeError, ValueError):
                     _exp = None
                 if _exp is not None and _exp > _now:
-                    _valid = True
-                    break
-            if not _valid:
-                return False
-            return self._wirebug_pay(ctx, _cost)
+                    return True
+            return False
         except Exception:  # noqa: BLE001
             return False
 
@@ -3282,14 +3087,6 @@ class BattleEngine:
                 # R-6：同 energy gate——被拒零时间成本、直接重试
                 return _consume_gate
 
-        # ---- 批⑨（2026-09-12）：跃空续航门禁（翔虫：起跳耗格；不足 → 被拒零时间成本）----
-        # 仅玩家侧、仅「起跳技」（skills def effects 含自身入空/授予空中姿态）；
-        # 已空中不重复计费；翔虫轴未注册 → 零操作降级（RS-5）。
-        if not ca.get("_combo_settled"):
-            _wb_gate = self._apply_air_wirebug_gate(attacker, ca, sd, target)
-            if _wb_gate is not None:
-                return _wb_gate
-
         # ---- M13 6a 路3C：技能 MP 消耗扣费（1a §2.2 mp_cost 语义；被拒不扣）----
         # should_reject 已做 MP 门槛检查（enforce_mp 开）；成功施放后实际扣费。
         # mp_cost 优先 action 显式（skill_mp_cost/mp_cost），缺失回退技能 def。
@@ -3642,15 +3439,7 @@ class BattleEngine:
             if getattr(self, "_air_ext_marker", None) == _key:
                 return
             self._air_ext_marker = _key
-            _ext, _big = self._air_extend_of(_act, _rule)
-            if _big and _ext > 0:
-                # 批⑨：大幅延长档（专门空中技能 `air_extend`）耗 1 格翔虫；不足 →
-                # 回落规则缺省小幅延长（不拒绝行动）。未注册翔虫 → 免费降级。
-                _wb_ctx, _wb_axis = self._wirebug_axis_ctx()
-                _wb_cost = max(0, int(getattr(_rule, "air_wirebug_extend_cost", 1) or 0))
-                if (_wb_axis is not None and _wb_cost > 0
-                        and not self._wirebug_pay(_wb_ctx, _wb_cost)):
-                    _ext = float(getattr(_rule, "air_extend", 0.0) or 0.0)
+            _ext = self._air_extend_of(_act, _rule)
             if _ext > 0:
                 for inst in insts:
                     if not isinstance(inst, dict):
@@ -3663,12 +3452,8 @@ class BattleEngine:
         except Exception:  # noqa: BLE001 - 窗口维护失败不阻断行动收尾
             return
 
-    def _air_extend_of(self, action: Mapping[str, Any], rule: Any) -> Tuple[float, bool]:
-        """本次空中行动的延长值：技能 `air_extend`（正数）优先，否则规则缺省。
-
-        返回 (延长值, 是否大幅档)：技能显式 `air_extend` 命中 = 大幅档（批⑨，
-        消耗翔虫）；规则缺省 = 小幅档（免费）。
-        """
+    def _air_extend_of(self, action: Mapping[str, Any], rule: Any) -> float:
+        """本次空中行动的延长值：技能 `air_extend`（正数）优先，否则规则缺省。"""
         _def_ext = float(getattr(rule, "air_extend", 0.0) or 0.0)
         _sid = str(action.get("skill_id") or "")
         if _sid:
@@ -3676,10 +3461,10 @@ class BattleEngine:
                 _sd = self.combo_engine().resolve_skill(_sid) or {}
                 _v = _sd.get("air_extend")
                 if isinstance(_v, (int, float)) and not isinstance(_v, bool) and _v > 0:
-                    return float(_v), True
+                    return float(_v)
             except Exception:  # noqa: BLE001 - 解析失败回退缺省
                 pass
-        return _def_ext, False
+        return _def_ext
 
     def _settle_air_landing(self) -> None:
         """空中姿态到期自动落地（**行动条口径**——增补 v1 §四，2026-09-11）。
@@ -3774,9 +3559,9 @@ class BattleEngine:
                 return None
             _rule = self._rule_config()
             if str(action.get("air_drop") or "").strip().lower() == "knockdown":
-                # 批⑨ 受身：窗口仍有效 + 翔虫≥1 + 非「不可受身」→ 自动耗 1 格取消
-                # 倒地与硬直（借翔虫翻身稳落；`air_recover` 事件渲染专行）。
-                if self._try_air_recover(action, insts, _rule):
+                # 批⑨ 受身（2026-09-12）：当次窗口仍有效 + 非「不可受身」→ 自动取消
+                # 倒地与硬直（凌空翻身稳落；`air_recover` 事件渲染专行）。无消耗自动档。
+                if self._try_air_recover(action, insts):
                     self._clear_air_stances("player")
                     _rt_r = self._new_runtime()
                     _ctx_r = DamageCtx(raw_damage=0, attack_type="basic",
@@ -4860,8 +4645,6 @@ class BattleEngine:
         self._decay_stun_gauge()
         # 敌侧双轴维护（批⑦B：怒态冷却 / 耐力回复）
         self._tick_enemy_axis(actor)
-        # 跃空续航（批⑨）：翔虫行动条自然回复
-        self._tick_air_wirebug()
         # M9/M10/M8/R16：该行动者侧的各项 tick 归位到 AFTER_ACTION
         self._tick_skill_cooldowns(actor)
         self._tick_transform_state(actor)

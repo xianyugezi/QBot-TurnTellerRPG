@@ -10,6 +10,8 @@
       硬直（`ctb.air_drop_delay` 缺省 400，经 `delay_actor`）+「将你从空中击落」行；
   - 护栏：非攻击（mult≤0，召唤/辅助防御） / 地面玩家 / 防反成功（完全免伤早退）——
     均不吃对空后果。
+  - （批⑨ 补充：击落档在「当次窗口仍有效」时由受身自动取消——本文件完整击落链测试
+    以过期窗口驱动；受身专项见 test_air_recover.py。）
 
 铁律：零 NoneBot import；纯逻辑断言；确定性（QueueRNG 固定序列）。
 """
@@ -267,7 +269,7 @@ class TestAirKnockdown:
         raw, all_defs, ce = _pack()
         eng = _fresh(raw, all_defs, ce)
         eng.do_action("player", {"type": "guard"})   # 归一化起步（时间轴推进一拍）
-        _set_air(eng, expire=999999.0)
+        _set_air(eng, expire=1.0)   # 窗口已过期（受身不适用）→ 验证完整击落链
         before = _player_ready(eng)
         now = float(eng.battle_time)
         out = eng.do_action("enemy", {"type": "skill", "skill_id": "zb_ambush"})
@@ -291,7 +293,7 @@ class TestAirKnockdown:
         """ctb.air_drop_delay 可调。"""
         raw, all_defs, ce = _pack()
         eng = _fresh(raw, all_defs, ce, config={"ctb": {"air_drop_delay": 900}})
-        _set_air(eng, expire=999999.0)
+        _set_air(eng, expire=1.0)   # 窗口已过期（受身不适用）
         before = _player_ready(eng)
         now = float(eng.battle_time)
         eng.do_action("enemy", {"type": "skill", "skill_id": "zb_ambush"})
@@ -301,7 +303,7 @@ class TestAirKnockdown:
         """air_drop_turns 可调（倒地追击窗覆写值）。"""
         raw, all_defs, ce = _pack()
         eng = _fresh(raw, all_defs, ce, config={"air_drop_turns": 5})
-        _set_air(eng, expire=999999.0)
+        _set_air(eng, expire=1.0)   # 窗口已过期（受身不适用）
         eng.do_action("enemy", {"type": "skill", "skill_id": "zb_ambush"})
         _kd = [i for i in eng._snap["status_state"]["player"]
                if isinstance(i, dict) and i.get("status_id") == "knockdown"]

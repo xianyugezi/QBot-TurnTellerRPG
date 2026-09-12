@@ -80,11 +80,6 @@ __all__ = [
     "DEFAULT_AIR_HIT_SHRINK",
     "DEFAULT_AIR_DROP_DELAY",
     "DEFAULT_COUNTER_REFUND",
-    "DEFAULT_AIR_WIREBUG_MAX",
-    "DEFAULT_AIR_WIREBUG_REGEN",
-    "DEFAULT_AIR_WIREBUG_LEAP_COST",
-    "DEFAULT_AIR_WIREBUG_EXTEND_COST",
-    "DEFAULT_AIR_WIREBUG_RECOVER_COST",
     "SIDE_PRIORITY",
     "CtbRuleConfig",
     "TieBreakKey",
@@ -194,27 +189,6 @@ DEFAULT_AIR_DROP_DELAY: float = 400.0
 #: 可经 CtbRuleConfig / settings["ctb"]["counter_refund"] 覆盖（可调，勿硬编码）。
 DEFAULT_COUNTER_REFUND: float = 200.0
 
-#: 跃空续航「翔虫」上限（格）——批⑨（2026-09-12 实装）：起跳/大幅延长/受身消耗、
-#: 行动条自然回复（见 DEFAULT_AIR_WIREBUG_REGEN）。**隐性口径（玩家不可见）**。
-#: 可经 CtbRuleConfig / settings["ctb"]["air_wirebug_max"] 覆盖（可调，勿硬编码）。
-DEFAULT_AIR_WIREBUG_MAX: float = 2.0
-
-#: 翔虫自然回复间隔（行动条）：每经过该时长回复 1 格（批⑨；**隐性口径**）。
-#: 可经 settings["ctb"]["air_wirebug_regen"] 覆盖（可调，勿硬编码）。
-DEFAULT_AIR_WIREBUG_REGEN: float = 1500.0
-
-#: 「起跳」耗格数——跃空进入空中时的消耗（批⑨；**隐性口径**）。
-#: 可经 settings["ctb"]["air_wirebug_leap_cost"] 覆盖（可调，勿硬编码）。
-DEFAULT_AIR_WIREBUG_LEAP_COST: float = 1.0
-
-#: 「大幅延长」耗格数——空中使用带 `air_extend` 的专门技能时的消耗（批⑨；
-#: 不足则回落缺省小幅延长，不拒绝）。可经 settings["ctb"]["air_wirebug_extend_cost"] 覆盖。
-DEFAULT_AIR_WIREBUG_EXTEND_COST: float = 1.0
-
-#: 「受身」耗格数——被击落时自动取消倒地的消耗（批⑨；**隐性口径**）。
-#: 可经 settings["ctb"]["air_wirebug_recover_cost"] 覆盖（可调，勿硬编码）。
-DEFAULT_AIR_WIREBUG_RECOVER_COST: float = 1.0
-
 #: 黑盒验收场景 2 的 recovery 下界（供测试引用，避免魔数散落）。
 #:
 #: 推演（P SPD=100 / E SPD=75 / speed_reference=100 / 普攻 recovery=100）：
@@ -266,11 +240,6 @@ class CtbRuleConfig:
       air_drop_delay:  被击落硬直——下次 ready 追加值（行动条；对空必杀
                        `air_drop=knockdown` 命中空中玩家，隐性口径）
       counter_refund:  反击返还的行动条（防反/闪反成功；隐性口径）
-      air_wirebug_max: 跃空续航「翔虫」上限（格；批⑨；隐性口径）
-      air_wirebug_regen: 翔虫自然回复间隔（行动条；批⑨；隐性口径）
-      air_wirebug_leap_cost: 起跳耗格数（批⑨；隐性口径）
-      air_wirebug_extend_cost: 大幅延长耗格数（批⑨；隐性口径）
-      air_wirebug_recover_cost: 受身耗格数（批⑨；隐性口径）
     """
 
     speed_reference: float = SPEED_REFERENCE
@@ -286,11 +255,6 @@ class CtbRuleConfig:
     air_hit_shrink: float = DEFAULT_AIR_HIT_SHRINK
     air_drop_delay: float = DEFAULT_AIR_DROP_DELAY
     counter_refund: float = DEFAULT_COUNTER_REFUND
-    air_wirebug_max: float = DEFAULT_AIR_WIREBUG_MAX
-    air_wirebug_regen: float = DEFAULT_AIR_WIREBUG_REGEN
-    air_wirebug_leap_cost: float = DEFAULT_AIR_WIREBUG_LEAP_COST
-    air_wirebug_extend_cost: float = DEFAULT_AIR_WIREBUG_EXTEND_COST
-    air_wirebug_recover_cost: float = DEFAULT_AIR_WIREBUG_RECOVER_COST
 
     def with_overrides(self, overrides: Optional[Mapping[str, Any]]) -> "CtbRuleConfig":
         """返回覆盖部分字段后的新配置（缺省/非法值保持原值，不抛错）。
@@ -327,21 +291,6 @@ class CtbRuleConfig:
                 ),
                 counter_refund=_to_float(
                     overrides.get("counter_refund"), self.counter_refund
-                ),
-                air_wirebug_max=_to_float(
-                    overrides.get("air_wirebug_max"), self.air_wirebug_max
-                ),
-                air_wirebug_regen=_to_float(
-                    overrides.get("air_wirebug_regen"), self.air_wirebug_regen
-                ),
-                air_wirebug_leap_cost=_to_float(
-                    overrides.get("air_wirebug_leap_cost"), self.air_wirebug_leap_cost
-                ),
-                air_wirebug_extend_cost=_to_float(
-                    overrides.get("air_wirebug_extend_cost"), self.air_wirebug_extend_cost
-                ),
-                air_wirebug_recover_cost=_to_float(
-                    overrides.get("air_wirebug_recover_cost"), self.air_wirebug_recover_cost
                 ),
             )
         except Exception:  # pragma: no cover - 兜底不崩（规则层 fail-safe）

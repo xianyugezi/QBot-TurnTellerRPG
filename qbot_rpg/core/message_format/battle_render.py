@@ -859,8 +859,8 @@ def _render_air_drop_lines(outcome: Any, *, ctx: Any = None) -> List[str]:
 
 
 def _render_air_recover_lines(outcome: Any, *, ctx: Any = None) -> List[str]:
-    """受身行（跃空续航批⑨）：outcome.side_effects 的 air_recover 事件（被击落时
-    翔虫受身成功——引擎 `_try_air_recover` 产出）→ 模板 battle_air_recover 一行；
+    """受身行（批⑨）：outcome.side_effects 的 air_recover 事件（被击落受身成功
+    ——引擎 `_try_air_recover` 产出）→ 模板 battle_air_recover 一行；
     {name} 经显示层怪名映射（与命中行同通道）；零数值（隐性口径，玩家不可见）。"""
     out: List[str] = []
     for e in getattr(outcome, "side_effects", ()) or ():

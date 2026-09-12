@@ -1,10 +1,14 @@
 """使用指令接线 use_commands.py（2026-08-28 用户拍板：装备穿戴统一用「使用」）。
 
-依据：用户拍板「用使用」（装备穿戴 + 背包道具统一走 /使用）；白名单 parsers.py 已有
+依据：用户拍板「用使用」（装备穿戴 + 背包道具统一走 使用）；白名单 parsers.py 已有
 「使用」（DEFAULT_WHITELIST + DEFAULT_QUANTITY_COMMANDS）；设计契约见 记录.md 需求池。
-职责：/使用 <序号> 或 <物品名> 统一承载——装备类（ItemInstance.slot 非空）→ 穿戴
+职责：使用 <序号> 或 <物品名> 统一承载——装备类（ItemInstance.slot 非空）→ 穿戴
 （复用 basic_commands._equip_engine 适配器）；消耗类（物品 def usable/type=consumable +
 effects 含 heal）→ 扣减 + 回血；其他 → 不可直接使用。战斗内拒绝。
+
+2026-09-12 消息模板重构·批11 路B：本模块 6 键（use_in_battle/use_no_arg/use_no_item/
+use_cannot_use/use_bound/use_ok）文案唯一源 = 全量模板表
+qbot_rpg/core/templates/template_table.json，use_tpl 分区已清空。
 
 零 IO、零 NoneBot、纯函数确定性（引擎注入/懒加载；读 ctx 快照）。零装饰 emoji。
 """
@@ -156,7 +160,7 @@ def _use_consumable(
 
 
 def cmd_use(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
-    """/使用 指令壳：序号/名称 → 装备穿戴或消耗使用（统一承载）。
+    """使用 指令壳：序号/名称 → 装备穿戴或消耗使用（统一承载）。
 
     入参 parsed: ParsedCommand（args 消费）；ctx: 玩家上下文。出参 str——回复正文。
     核心逻辑: 未注册 → TPL_REGISTER_GATE；战斗中 → use_in_battle；缺参 → use_no_arg；
@@ -199,7 +203,7 @@ def cmd_use(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 def register_use_commands(
     router: Any, *, make_context: Optional[Callable[[Any], dict]] = None
 ) -> Any:
-    """把 /使用 注册进 Router（同 register_commands 模式；make_context 由装配层注入）。"""
+    """把 使用 注册进 Router（同 register_commands 模式；make_context 由装配层注入）。"""
     def _ctx(parsed: Any) -> dict:
         if make_context is None:
             raise RuntimeError(

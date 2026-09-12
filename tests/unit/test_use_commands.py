@@ -3,8 +3,10 @@
 承接 use_commands.py：注册门槛/战斗内拒绝/缺参/无物品/装备穿戴/消耗回血/不可使用。
 风格照 test_register_commands.py（make_ctx + parse_command + BANNED_EMOJI 扫描）。
 
-2026-08-31 模板配置化：文案断言改用 use_tpl 默认模板 key（不再依赖 use_commands 的
+2026-08-31 模板配置化：文案断言改用模板 key（不再依赖 use_commands 的
 TPL_* 常量）；新增内容包覆盖 + 白名单外占位符原样保留测试。
+2026-09-12 消息模板重构·批11 路B：use_* 6 键迁全量模板表（use_tpl 分区清空），
+文案锚点改走 qbot_rpg.core.templates.DEFAULT_TEMPLATES（表源）。
 """
 from __future__ import annotations
 
@@ -14,11 +16,13 @@ from typing import Any
 from qbot_rpg.commands.parsers import parse_command, ParsedCommand
 from qbot_rpg.commands.router import Router
 from qbot_rpg.commands.use_commands import cmd_use, register_use_commands
-from qbot_rpg.core.templates.use_tpl import DEFAULT_TEMPLATES as USE_TPL
+# 本路（批11·路B）已迁表：use_* 6 键唯一源 = 全量模板表（use_tpl 分区清空）；
+# 文案锚点走聚合默认表（表源），不再 import use_tpl 的分区默认。
+from qbot_rpg.core.templates import DEFAULT_TEMPLATES as USE_TPL
 
 BANNED_EMOJI = set("🔥🟢💥⚔️🛡️✨⭐🌟🎉🎊💎🏆❤️💖⚠️🚫📜🗡️🛒🧪⏰📅➡️🔹🔸▸")
 
-# 本模块全部 use_* 模板 key（文案唯一源 use_tpl.py；渲染走 tpl_of）
+# 本模块全部 use_* 模板 key（文案唯一源 = 全量模板表；渲染走 tpl_of）
 USE_TPL_KEYS = (
     "use_in_battle", "use_no_arg", "use_no_item", "use_cannot_use", "use_bound", "use_ok",
 )
@@ -177,3 +181,28 @@ def test_use_template_unknown_placeholder_kept() -> None:
     ctx["templates"] = {"use_ok": "✅ 使用成功：{name}（生命 +{heal_total}）{hint}"}
     out = cmd_use(parse("/使用 2"), ctx)
     assert out == "✅ 使用成功：疗伤药（生命 +50）{hint}"
+
+
+def test_use_templates_migrated_to_table() -> None:
+    """批11·路B 迁表：use_* 6 键唯一源 = 全量模板表；表侧白名单 = 文本占位符；旧分区已清空。"""
+    import re
+
+    from qbot_rpg.core.templates import (
+        DEFAULT_TEMPLATES,
+        PLACEHOLDER_WHITELIST,
+        TABLE_TEMPLATES,
+    )
+    from qbot_rpg.core.templates import use_tpl as _use_partition
+
+    for key in USE_TPL_KEYS:
+        assert key in TABLE_TEMPLATES, f"未入表：{key}"
+        assert DEFAULT_TEMPLATES[key] == TABLE_TEMPLATES[key]
+        phs = set(re.findall(r"\{([a-zA-Z0-9_]+)\}", TABLE_TEMPLATES[key]))
+        assert PLACEHOLDER_WHITELIST[key] == phs
+    # 旧分区清空（键不回流 use_tpl）
+    assert not _use_partition.DEFAULT_TEMPLATES
+    assert not _use_partition.PLACEHOLDER_WHITELIST
+    # 新文案锚点（批11·路B 重做口径：免斜杠下一步行 / 成功行拆三行）
+    assert TABLE_TEMPLATES["use_no_arg"] == "❌ 缺少物品\n发 使用 <序号或名称>"
+    assert TABLE_TEMPLATES["use_ok"] == "✅ 使用成功\n{name}\n生命 +{heal_total}"
+    assert TABLE_TEMPLATES["use_no_item"] == "❌ 背包中没有这个物品"

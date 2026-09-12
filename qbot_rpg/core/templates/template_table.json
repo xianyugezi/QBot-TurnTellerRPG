@@ -2,7 +2,9 @@
   "version": 1,
   "meta": {
     "note": "蚀脉猎师 全量消息模板表（唯一存储）。迁移期：同名 key 覆盖旧分区默认；内容包 templates.json 覆盖同 key。排版规范=docs/消息模板重构/00_方案与规范_v1.md：结构化行≤14全角（28半角当量）；少｜多换行；介绍类文本豁免（prose_keys / prose_placeholders 登记）。字段说明：templates=全量模板；meta.prose_keys=整条豁免的 key→理由；meta.prose_placeholders=行内含这些占位符则该行按介绍类豁免。",
-    "prose_keys": {},
+    "prose_keys": {
+      "explore_map_desc": "介绍类：内嵌地图描述文本，允许自然折行"
+    },
     "prose_placeholders": []
   },
   "templates": {
@@ -54,6 +56,23 @@
     "role_attr": "【{attr_name}】{value}",
     "role_attr_resource": "【{attr_name}】{cur}/{max}",
     "role_attr_detail": "【{attr_name}】{value}\n白值{base}，加成{bonus}，临时{temp}",
-    "role_attr_detail_resource": "【{attr_name}】{cur}/{max}\n白值{base}，加成{bonus}，临时{temp}"
+    "role_attr_detail_resource": "【{attr_name}】{cur}/{max}\n白值{base}，加成{bonus}，临时{temp}",
+    "explore_enter_ok": "✅ 你来到了「{name}」",
+    "explore_map_desc": "地图介绍：{desc}",
+    "explore_monster_line": "活动怪物：{items}",
+    "explore_monster_row": "{i}.{nm}×{cnt}",
+    "explore_monster_overflow": " …",
+    "explore_channel_row": "{dir}：{name}",
+    "explore_tip": "Tip:发 位置 查看当前地图",
+    "explore_enter_dungeon": "✅ 你进入了「{name}」副本",
+    "explore_enter_fail": "❌ {reason}",
+    "explore_enter_fail_reason": "无法进入",
+    "explore_enter_noarg": "❌ 发 进入 上/下/左/右\n或 副本入口 <序号 或 名称>",
+    "explore_enter_not_wired": "❌ 进入不可用（引擎未加载）",
+    "explore_enter_engine_error": "❌ 进入失败（引擎异常）",
+    "explore_leave_battle_ok": "（离开怪物地图，战斗解除）",
+    "explore_position_unknown": "❌ 位置未知：{loc}\n发 地图 查看可去地点",
+    "explore_position_unknown_none": "未记录",
+    "explore_register_gate": "❌ 请先创建角色\n发 注册 名字 职业"
   }
 }

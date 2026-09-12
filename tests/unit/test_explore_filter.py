@@ -151,10 +151,10 @@ def test_filter_no_emoji():
 # ---------------------------------------------------------------------------
 
 def test_enter_noarg_hint():
-    """/进入 无参 → ❌ 用法提示（1 条）。"""
+    """/进入 无参 → ❌ 用法提示（1 条；批1·路C：免斜杠 + 必要时拆两行）。"""
     out = cmd_enter(parse("/进入"), make_ctx())
-    assert out.startswith("❌ ") and "/进入" in out
-    assert "\n" not in out
+    assert out.startswith("❌ ") and "发 进入" in out
+    assert len(out.split("\n")) <= 2
 
 
 def test_enter_invalid_direction_fail_reason():
@@ -239,11 +239,11 @@ def test_enter_move_enriched():
     out = cmd_enter(parse("/进入 上"), _enter_ctx())
     assert out.startswith("✅ 你来到了「林间边缘」")
     assert "地图介绍：树影幢幢的林缘" in out
-    assert "活动怪物：1.岩皮鼬×2 2.石甲蜥×1" in out
+    assert "活动怪物：\n1.岩皮鼬×2\n2.石甲蜥×1" in out  # 批1·路C：多怪物拆行（每条目独占一行）
     assert "下：起始村落" in out
     assert "右：熔岩坑道" in out
     assert "左：" not in out              # 无通道方向省略
-    assert "Tip:发送'位置'即可查询当前位置信息" in out
+    assert "Tip:发 位置 查看当前地图" in out
     assert "区域角色" not in out          # maps 无 npcs 字段 → 行省略（DELAYED）
 
 
@@ -337,7 +337,7 @@ def test_explore_template_custom_override():
     assert "地图简介：树影幢幢的林缘" in out
     assert "Tip:发送'位置'看当前位置" in out
     # 未覆盖 key 用默认 → 活动怪物行 / 通道行 / 怪物名映射不受影响
-    assert "活动怪物：1.岩皮鼬×2 2.石甲蜥×1" in out
+    assert "活动怪物：\n1.岩皮鼬×2\n2.石甲蜥×1" in out  # 批1·路C：多怪物拆行（每条目独占一行）
     assert "下：起始村落" in out
     assert "右：熔岩坑道" in out
     assert "✅ 你来到了「林间边缘」" not in out
@@ -385,3 +385,68 @@ def test_explore_register_gate_templated():
     }))
     out = cmd_enter(parse("/进入 上"), ctx)
     assert out == "❌ 尚未创建角色，请先 /注册"
+
+
+# ---------------------------------------------------------------------------
+# 批1·路C（2026-09-12）：位置/进入/移动/到达 模板重做回归
+# 规范：结构化行 ≤14 全角（28 半角当量）；免斜杠；多怪物拆行；错误行 ❌+原因(+下一步)
+# ---------------------------------------------------------------------------
+
+def _half_width(s: str) -> int:
+    """半角当量（全角/宽 = 2；换行不计）——对齐 scripts/check_template_width.py。"""
+    import unicodedata
+    return sum(2 if unicodedata.east_asian_width(ch) in ("W", "F", "A") else 1
+               for ch in s)
+
+
+def test_enter_move_lines_within_budget():
+    """到达块逐行 ≤28 半角（手机QQ 14 全角；介绍类行除外——本夹具 desc 短）。"""
+    out = cmd_enter(parse("/进入 上"), _enter_ctx())
+    for line in out.split("\n"):
+        assert _half_width(line) <= 28, f"超宽：{line!r}"
+
+
+def test_enter_move_multi_monster_split_and_overflow():
+    """>1 只拆行（首行「活动怪物：」独占）+ >5 只截断折叠尾标 `…`。"""
+    maps = [
+        {"id": "village", "name": "起始村落", "desc": "小村",
+         "monsters": [], "exits": {"up": {"to": "wild", "mode": "bidirectional"}}},
+        {"id": "wild", "name": "荒野", "desc": "荒芜",
+         "monsters": [{"enemy": f"m{i}", "count": 1} for i in range(7)],
+         "exits": {}},
+    ]
+    monsters = {f"m{i}": {"name": f"兽{i}"} for i in range(7)}
+    ctx = make_ctx(player={"map_id": "village", "name": "阿伟"}, maps=maps, monsters=monsters)
+    ctx["map_id"] = "village"
+    out = cmd_enter(parse("/进入 上"), ctx)
+    assert "活动怪物：\n1.兽0×1\n2.兽1×1\n3.兽2×1\n4.兽3×1\n5.兽4×1 …" in out
+    assert "6.兽5" not in out  # 超 5 只折叠
+
+
+def test_render_enter_dungeon_text():
+    """/进入 副本 → ✅ 你进入了「{name}」副本（批1·路C 新口径）。"""
+    from qbot_rpg.commands.explore_commands import _render_enter
+
+    out = _render_enter({"ok": True, "type": "dungeon", "name": "蚀脉洞窟"}, make_ctx())
+    assert out == "✅ 你进入了「蚀脉洞窟」副本"
+
+
+def test_position_unknown_hint():
+    """/位置 未进图 → ❌ 位置未知：{loc} + 下一步（发 地图）——免斜杠、两行。"""
+    from qbot_rpg.commands.explore_commands import cmd_position
+
+    out = cmd_position(parse("/位置"), make_ctx())
+    assert out == "❌ 位置未知：未记录\n发 地图 查看可去地点"
+
+
+def test_register_gate_default_text():
+    """RUL-08 门槛默认文案：免斜杠 + 原因行 + 用法行（批1·路C 新口径）。"""
+    out = cmd_enter(parse("/进入 上"), make_ctx(registered=False))
+    assert out == "❌ 请先创建角色\n发 注册 名字 职业"
+
+
+def test_enter_noarg_default_text():
+    """/进入 无参默认文案：方向枚举行 + 副本入口行（批1·路C 新口径，免斜杠）。"""
+    out = cmd_enter(parse("/进入"), make_ctx())
+    assert out == "❌ 发 进入 上/下/左/右\n或 副本入口 <序号 或 名称>"
+

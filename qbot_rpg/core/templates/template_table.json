@@ -246,6 +246,21 @@
     "forge_success_slot": "部位：{slot}",
     "forge_success_slot_text": "槽位：{slot}",
     "forge_success_quality": "品质：{quality}（固定）",
-    "forge_slot_none": "无"
+    "forge_slot_none": "无",
+    "battle_no_battle": "❌ 当前没有进行中的战斗\n发 锁定 <序号> 开战",
+    "battle_target_no_battle": "❌ 当前没有进行中的战斗\n开战后可查看目标",
+    "battle_target_head": "【目标】{name}\n【行动数】{round}",
+    "battle_target_hp": "【生命】{hp}/{max_hp}",
+    "battle_target_attr": "【{attr_name}】{value}",
+    "battle_target_marks": "【印记】\n{marks}",
+    "battle_target_status": "【状态】\n{statuses}",
+    "battle_target_weak": "【弱点】\n{weak}",
+    "battle_no_skill": "❌ 没有这个技能\n发 技能 查看可用技能",
+    "battle_no_item_arg": "❌ 请指定要使用的道具",
+    "battle_no_item": "❌ 没有这个道具\n发 背包 查看道具",
+    "battle_flee_ok": "✅ 逃跑成功，脱离战斗",
+    "battle_flee_failed": "❌ 逃跑失败，战斗继续",
+    "battle_item_used": "✅ 你使用了「{item_name}」",
+    "battle_no_battle_map_monster": "❌ 当前没有进行中的战斗\n发 锁定 <序号> 开战\n战斗中发 攻击 <技能名>"
   }
 }

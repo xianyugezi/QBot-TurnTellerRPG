@@ -6,7 +6,7 @@
 
 覆盖：
   - 战斗外 → battle_target_no_battle
-  - 战斗中 → 目标面板（名称/回合/HP/属性/印记/状态/弱点）
+  - 战斗中 → 目标面板（名称/行动数/HP/属性/印记/状态/弱点）
   - 掉落不显示（enemy_def 有 drops 也不出现在面板）
   - 注册：CommandSpec 白名单标记
 风格对齐 test_dummy_commands.py（make_ctx + parse_command + 指令壳直调）。
@@ -39,8 +39,9 @@ def _state(enemy: Dict[str, Any], turn: int = 3, action_seq: int = 3,
            marks: list | None = None, statuses: list | None = None) -> Dict[str, Any]:
     """战斗态快照夹具。
 
-    CTB 口径（2026-09-10 收口）：面板「第 N 行动」读 `action_seq`（已结算行动数），
-    顶层 `turn` 仅为兼容镜像。夹具同时给出两键，`turn` 保留供旧断言/回退路径。
+    CTB 口径（2026-09-10 收口；批4 路J 面板改【行动数】行）：面板读 `action_seq`
+    （已结算行动数），顶层 `turn` 仅为兼容镜像。夹具同时给出两键，`turn` 保留供
+    旧断言/回退路径。
     """
     return {
         "turn": turn,
@@ -89,7 +90,8 @@ def test_target_panel_basic() -> None:
     ctx = make_ctx()
     out = cmd_battle_target(parse("/查看目标"), ctx)
     assert "脊冢幼兽" in out
-    assert "第 3 行动" in out
+    # 批4 路J：行动数对齐 status_target 口径（【目标】/【行动数】分行，勿用「第 N 行动」）
+    assert "【行动数】3" in out
     assert "208/230" in out
     assert "【攻击】70" in out
     assert "【防御】13" in out
@@ -109,6 +111,8 @@ def test_target_weakness_shown() -> None:
     out = cmd_battle_target(parse("/查看目标"), ctx)
     assert "打击" in out
     assert "火×1.3" in out
+    # 批4 路J：弱点区「标题行 + 每值一行」（少｜多换行）
+    assert "【弱点】\n打击\n火×1.3" in out
 
 
 def test_target_marks_and_status() -> None:
@@ -121,6 +125,9 @@ def test_target_marks_and_status() -> None:
     out = cmd_battle_target(parse("/查看目标"), ctx)
     assert "裂痕" in out
     assert "灼烧" in out
+    # 批4 路J：印记/状态区「标题行 + 每值一行」（少｜多换行）
+    assert "【印记】\n裂痕" in out
+    assert "【状态】\n灼烧" in out
 
 
 def test_register_target_command() -> None:

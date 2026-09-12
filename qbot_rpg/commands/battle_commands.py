@@ -101,8 +101,9 @@ from qbot_rpg.core.message_format.battle_render import (
     render_battle_round,
     render_battle_start,
 )
-from qbot_rpg.core.templates import tpl_of  # 消息模板配置化（2026-08-31 用户拍板）
-from qbot_rpg.core.templates.battle_tpl import DEFAULT_TEMPLATES as _BATTLE_TPL  # 兼容导出默认文案
+# 全量表（迁移期聚合入口）+ tpl_of：批4 路J 起 mock 目标面板/基础交互文案已入表，
+# 兼容导出常量改读聚合表（对齐 checkin/forge 已迁键口径）。
+from qbot_rpg.core.templates import DEFAULT_TEMPLATES as _ALL_TPL, tpl_of  # 消息模板配置化
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -165,13 +166,13 @@ _TPL_NO_BATTLE_MAP_MONSTER_KEY = "battle_no_battle_map_monster"
 _TPL_RESULT_END_KEY = "battle_result_end"
 _TPL_RESULT_ROUND_KEY = "battle_result_round"
 
-# 向后兼容导出（= battle_tpl 默认文案；渲染一律 tpl_of(ctx, _KEY)，内容包可覆盖）
-TPL_NO_BATTLE = _BATTLE_TPL[_TPL_NO_BATTLE_KEY]
-TPL_NO_SKILL = _BATTLE_TPL[_TPL_NO_SKILL_KEY]
-TPL_NO_ITEM_ARG = _BATTLE_TPL[_TPL_NO_ITEM_ARG_KEY]
-TPL_NO_ITEM = _BATTLE_TPL[_TPL_NO_ITEM_KEY]
-TPL_FLEE_OK = _BATTLE_TPL[_TPL_FLEE_OK_KEY]
-TPL_FLEE_FAILED = _BATTLE_TPL[_TPL_FLEE_FAILED_KEY]
+# 向后兼容导出（= 全量表默认文案；渲染一律 tpl_of(ctx, _KEY)，内容包可覆盖）
+TPL_NO_BATTLE = _ALL_TPL[_TPL_NO_BATTLE_KEY]
+TPL_NO_SKILL = _ALL_TPL[_TPL_NO_SKILL_KEY]
+TPL_NO_ITEM_ARG = _ALL_TPL[_TPL_NO_ITEM_ARG_KEY]
+TPL_NO_ITEM = _ALL_TPL[_TPL_NO_ITEM_KEY]
+TPL_FLEE_OK = _ALL_TPL[_TPL_FLEE_OK_KEY]
+TPL_FLEE_FAILED = _ALL_TPL[_TPL_FLEE_FAILED_KEY]
 
 
 # ---------------------------------------------------------------------------
@@ -1566,8 +1567,9 @@ def cmd_battle_target(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     enemy = state.get("enemy")
     if not isinstance(enemy, Mapping) or not enemy.get("name"):
         return tpl_of(ctx, "battle_target_no_battle")
-    # CTB 口径（收口）：`{round}` 槽位供「第 N 行动」——取 action_seq（已结算行动数），
-    # 而非顶层 turn（兼容镜像、CTB 下不推进）。缺 action_seq 时回退 turn 兜底。
+    # CTB 口径（收口）：`{round}` 槽位供【行动数】行（批4 路J 对齐 status_target 口径，
+    # CTB 无「回合」）——取 action_seq（已结算行动数），而非顶层 turn（兼容镜像、
+    # CTB 下不推进）。缺 action_seq 时回退 turn 兜底。
     turn = int(state.get("action_seq", state.get("turn", 0)) or 0)
     lines: List[str] = [tpl_of(ctx, "battle_target_head",
                                {"name": str(enemy.get("name") or "?"),
@@ -1607,8 +1609,9 @@ def cmd_battle_target(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
                         _cnt = 0
                     m_names.append(str(mn) if _cnt <= 1 else f"{mn}×{_cnt}")
         if m_names:
+            # 批4 路J：多值改「每值一行」（少｜多换行，防多印记叠层爆宽）
             lines.append(tpl_of(ctx, "battle_target_marks",
-                                {"marks": " ｜ ".join(m_names)}))
+                                {"marks": "\n".join(m_names)}))
     # 状态（status_state enemy — 简化：形态名/效果名）
     ss = state.get("status_state") or {}
     s_enemy = ss.get("enemy") if isinstance(ss, Mapping) else None
@@ -1620,8 +1623,9 @@ def cmd_battle_target(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
                 if sn:
                     s_names.append(str(sn))
         if s_names:
+            # 批4 路J：多值改「每值一行」（少｜多换行）
             lines.append(tpl_of(ctx, "battle_target_status",
-                                {"statuses": " ｜ ".join(s_names[:6])}))
+                                {"statuses": "\n".join(s_names[:6])}))
     # 弱点（enemy_def weakness 配置；不显示掉落）
     ed = getattr(engine, "_enemy_def", None)
     if isinstance(ed, Mapping):
@@ -1641,8 +1645,9 @@ def cmd_battle_target(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
                 elif isinstance(vv, list) and vv:
                     segs.append(f"{kk}：" + "/".join(str(x) for x in vv))
             if segs:
+                # 批4 路J：多值改「每值一行」（少｜多换行）
                 lines.append(tpl_of(ctx, "battle_target_weak",
-                                    {"weak": " ｜ ".join(segs)}))
+                                    {"weak": "\n".join(segs)}))
     return "\n".join(lines)
 
 

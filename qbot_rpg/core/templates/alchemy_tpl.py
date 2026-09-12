@@ -17,6 +17,8 @@ key 命名：alchemy_<用途>。占位符白名单：每类模板允许的占位
 2026-09-12（批4·路K）：投料/继承/确认 30 键（M-03 投料反馈、M-04 继承成功/失败透传、
 终态错误）迁至全量表；本分区仅保留尚未迁移的键（珠与合成/深度炼金/图鉴技能/即时调合/
 资源循环/协力/分解）。
+2026-09-12（批5·路N）：挑战/深度/进化/教学 26 键迁至全量表（本路收口后本分区仅剩
+珠与合成/图鉴技能面板/即时调合/资源循环/协力/分解，待后续批迁移）。
 """
 from __future__ import annotations
 
@@ -51,32 +53,8 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     "alchemy_copy_fail": "❌ 复制失败",
 
     # —— 深度炼金（/深度炼金 /进化 /镶核心 /加成 /挑战）——
-    "alchemy_deep_locked": "深度未解锁",
-    "alchemy_deep_open_fail": "❌ 深度会话开启失败",
-    "alchemy_deep_announce": "【深度炼金·解锁公告】{ann}",
-    "alchemy_deep_panel_header": "{recipe_name}（配方Lv{level}）深度调合：材料：{mats}",
-    "alchemy_deep_panel_meta": "属性刻度：{scales} | 槽位 {units}/{slots} | "
-                               "核心槽：{core_text} | 特性位 0/{traits_max} 普通{gold} | "
-                               "PP {pp_used}/{pp_budget}",
-    "alchemy_deep_gold_suffix": " + 第 4 位金色",
-    "alchemy_deep_evolve_line": "进化线：{source} {done}/{need} → /进化 解锁 {tname}",
-    "alchemy_evolve_fail": "❌ 进化失败",
-    "alchemy_core_mismatch": "核心不匹配",
-    "alchemy_core_fail": "❌ 镶核心失败",
-    "alchemy_buff_fail": "加成失败",
-    "alchemy_buff_fail_mark": "❌ 加成失败",
-    "alchemy_challenge_condition": "连锁 ≥{need_chain} {op} 刻度 ≥{need_elem}",
-    "alchemy_challenge_panel": "{name} 挑战会话已开启（材料×2 已付：{paid_text}）\n"
-                              "苛刻条件：{cond}\n"
-                              "当前：连锁 {chain}/{need_chain}，刻度 {elems}/{need_elem} ｜ "
-                              "/确认 时判定，达标 → 品质上限+10；未达标 → 品质降级+退 50% 材料",
-    "alchemy_challenge_success": "挑战成功！品质上限 +10",
-    "alchemy_challenge_fail": "❌ 挑战失败：条件未达标（连锁 {segments}/{need_chain}），"
-                              "品质降级，退还 50% 材料",
-    "alchemy_challenge_settle_fail": "❌ 挑战结算失败",
-    "alchemy_challenge_in_challenge": "❌ 挑战会话内不可再开挑战",
-    "alchemy_challenge_recipe_mismatch": "❌ 挑战配方与当前深度调合配方不一致",
-    "alchemy_challenge_no_materials": "❌ 配方无材料可挑战",
+    # 2026-09-12（批5·路N）：深度/挑战/进化 20 键 + 教学 6 键迁至全量表
+    # template_table.json（按新规范拆行压宽/免斜杠/错误行 ❌+原因），本分区不再保留。
 
     # —— 图鉴 /技能面板 /教学（查看态）——
     "alchemy_codex_unavailable": "❌ 图鉴不可用（{reason}）",
@@ -97,12 +75,7 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     "alchemy_sp_unlock_fail": "❌ 解锁失败",
     "alchemy_sp_item_not_found": "❌ 技能面板项不存在：{name}",
     "alchemy_sp_panel_unavailable": "❌ 技能面板不可用（{reason}）",
-    "alchemy_announce_item": "{name}：{preview}",
-    "alchemy_tutorial_master_preview": "【升大师·深度炼金 6 机制预览】{ann}",
-    "alchemy_tutorial_catalog": "教学目录：",
-    "alchemy_tutorial_catalog_item": "- {name}：{example}",
-    "alchemy_tutorial_show": "教学·{name}：{text}",
-    "alchemy_tutorial_not_found": "未找到机制「{name}」，教学目录：",
+    # 2026-09-12（批5·路N）：解锁公告项 + 教学 5 键迁至全量表（见上注）。
 
     # —— /即时调合（M-17 战斗一行）——
     "alchemy_instant_not_battle": "即时调合仅限战斗中",
@@ -160,28 +133,7 @@ PLACEHOLDER_WHITELIST: Dict[str, set] = {
     "alchemy_copy_fail": set(),
 
     # —— 深度炼金 ——
-    "alchemy_deep_locked": set(),
-    "alchemy_deep_open_fail": set(),
-    "alchemy_deep_announce": {"ann"},
-    "alchemy_deep_panel_header": {"recipe_name", "level", "mats"},
-    "alchemy_deep_panel_meta": {"scales", "units", "slots", "core_text",
-                                "traits_max", "gold", "pp_used", "pp_budget"},
-    "alchemy_deep_gold_suffix": set(),
-    "alchemy_deep_evolve_line": {"source", "done", "need", "tname"},
-    "alchemy_evolve_fail": set(),
-    "alchemy_core_mismatch": set(),
-    "alchemy_core_fail": set(),
-    "alchemy_buff_fail": set(),
-    "alchemy_buff_fail_mark": set(),
-    "alchemy_challenge_condition": {"need_chain", "op", "need_elem"},
-    "alchemy_challenge_panel": {"name", "paid_text", "cond", "chain", "need_chain",
-                                "elems", "need_elem"},
-    "alchemy_challenge_success": set(),
-    "alchemy_challenge_fail": {"segments", "need_chain"},
-    "alchemy_challenge_settle_fail": set(),
-    "alchemy_challenge_in_challenge": set(),
-    "alchemy_challenge_recipe_mismatch": set(),
-    "alchemy_challenge_no_materials": set(),
+    # 2026-09-12（批5·路N）：深度/挑战/进化/教学 26 键白名单随键迁表（表内自动派生）。
 
     # —— 图鉴 /技能面板 /教学 ——
     "alchemy_codex_unavailable": {"reason"},
@@ -202,12 +154,7 @@ PLACEHOLDER_WHITELIST: Dict[str, set] = {
     "alchemy_sp_unlock_fail": set(),
     "alchemy_sp_item_not_found": {"name"},
     "alchemy_sp_panel_unavailable": {"reason"},
-    "alchemy_announce_item": {"name", "preview"},
-    "alchemy_tutorial_master_preview": {"ann"},
-    "alchemy_tutorial_catalog": set(),
-    "alchemy_tutorial_catalog_item": {"name", "example"},
-    "alchemy_tutorial_show": {"name", "text"},
-    "alchemy_tutorial_not_found": {"name"},
+    # 2026-09-12（批5·路N）：解锁公告项 + 教学 5 键白名单随键迁表（表内自动派生）。
 
     # —— /即时调合 ——
     "alchemy_instant_not_battle": set(),

@@ -585,19 +585,29 @@ async def test_alchemy_templates_default_when_no_ctx_templates() -> None:
 
 
 def test_alchemy_tpl_placeholder_whitelist_coverage() -> None:
-    """alchemy_tpl 白名单：默认模板占位符 ⊆ 白名单（防内容包拼错 key 引入缺键不替换）。"""
+    """alchemy_tpl 全键迁全量表（批7·路T）→ 断言改表侧（分区自洽口径作废）。
+
+    分区已清空为空壳（39 键迁入 template_table.json）；聚合白名单 == 表侧派生，
+    逐 key 校验表内模板占位符 ⊆ 聚合白名单（防内容包拼错 key 引入缺键不替换）。
+    """
     import re
 
+    from qbot_rpg.core.templates import (
+        DEFAULT_TEMPLATES as _ALL_TPL,
+        PLACEHOLDER_WHITELIST as _ALL_WH,
+    )
     from qbot_rpg.core.templates.alchemy_tpl import (
         DEFAULT_TEMPLATES as _ACH_TPL,
         PLACEHOLDER_WHITELIST as _ACH_WH,
     )
     pat = re.compile(r"\{([a-zA-Z0-9_]+)\}")
-    assert _ACH_TPL, "alchemy_tpl 默认模板表非空"
-    for key, tpl in _ACH_TPL.items():
-        used = set(pat.findall(str(tpl)))
-        assert used <= _ACH_WH.get(key, set()), (
-            f"{key}: 占位符 {used} 超出白名单 {_ACH_WH.get(key, set())}"
+    assert _ACH_TPL == {} and _ACH_WH == {}, "alchemy_tpl 已全键迁表，应为空壳"
+    keys = sorted(k for k in _ALL_TPL if k.startswith("alchemy_"))
+    assert keys, "聚合表内应有 alchemy_* 模板"
+    for key in keys:
+        used = set(pat.findall(str(_ALL_TPL[key])))
+        assert used <= set(_ALL_WH.get(key, set())), (
+            f"{key}: 占位符 {used} 超出聚合白名单 {_ALL_WH.get(key, set())}"
         )
 
 

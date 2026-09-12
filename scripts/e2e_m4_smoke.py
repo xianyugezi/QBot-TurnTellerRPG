@@ -530,7 +530,7 @@ def checkin_flow(smoke: Smoke, ctx: MutableMapping) -> dict:
     smoke.check("✅ 今日签到完成" in out, "签到：首签结算文案")
     smoke.check("今日奖励：药水×1" in out, "签到：loop 今日奖励（day1 药水×1）")
     smoke.check("连签天数：1 天" in out, "签到：loop 连签 1 天")
-    smoke.check("月度签到（月度签到）" in out, "签到：monthly 段头（render_summary 排版带空格）")
+    smoke.check("【月度签到（月度签到）】" in out, "签到：monthly 段头（render_summary 【】 段头）")
     smoke.check("活动" not in out, "签到：activity 未开门（2099 窗口）不结算")
     smoke.check_eq(ctx["inventory"].get("potion"), 4 + 2, "签到：首签入账 2 瓶药水（loop+monthly）")
     st = ctx["checkin_state"]["checkin_loop"]
@@ -541,7 +541,7 @@ def checkin_flow(smoke: Smoke, ctx: MutableMapping) -> dict:
     # ---- 同日幂等（D-02 不重复发奖）----
     before_potion = int(ctx["inventory"].get("potion", 0))
     out = cmd_checkin(_parse("/签到"), ctx)
-    smoke.check("今天已签到（重复指令，未重复发放）" in out, "签到：同日重复 → 幂等文案")
+    smoke.check("今天已签到" in out and "未重复发放奖励" in out, "签到：同日重复 → 幂等文案")
     smoke.check_eq(int(ctx["inventory"].get("potion", 0)), before_potion, "签到：幂等不重复发奖")
     _trace_append(trace, "同日幂等", out)
 

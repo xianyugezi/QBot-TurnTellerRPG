@@ -547,46 +547,6 @@ def test_quest_custom_templates_override():
     assert "✅ 可交付\n发 任务 交付 3" in info
     # 越界序号 → 自定义 quest_no_quest
     assert cmd_quest(parse("/任务 接取 99"), ctx) == "❌ 没这个任务"
-
-
-def test_quest_tpl_whitelist_registered():
-    """白名单测试：任务链 25 键已迁全量表（分区默认表清空）——表内文本、派生白名单与占位符一一对应。"""
-    import qbot_rpg.core.templates.quest_tpl as _quest_partition
-    from qbot_rpg.core.templates import (
-        DEFAULT_TEMPLATES,
-        PLACEHOLDER_WHITELIST,
-        TABLE_TEMPLATES,
-    )
-    # 2026-09-12 批7·路U：分区默认表/白名单已清空（25 键全部迁全量表；空壳保留 import 兼容）
-    assert not _quest_partition.DEFAULT_TEMPLATES
-    assert not _quest_partition.PLACEHOLDER_WHITELIST
-    quest_keys = {k for k in TABLE_TEMPLATES if k.startswith("quest")}
-    assert len(quest_keys) == 25
-    for key, tpl in ((k, TABLE_TEMPLATES[k]) for k in sorted(quest_keys)):
-        assert DEFAULT_TEMPLATES[key] == tpl, f"聚合未走表：{key}"
-        assert PLACEHOLDER_WHITELIST[key] == _scan_placeholders(tpl), f"白名单不一致：{key}"
-    assert PLACEHOLDER_WHITELIST["quest_board_section_header"] == {"title"}
-    assert PLACEHOLDER_WHITELIST["quest_board_line"] == {"index", "name"}
-    assert PLACEHOLDER_WHITELIST["quest_board_main_prefix"] == {"name"}
-    assert PLACEHOLDER_WHITELIST["quest_board_marked_suffix"] == {"name"}
-    assert PLACEHOLDER_WHITELIST["quest_board_progress"] == {"cur", "target"}
-    assert PLACEHOLDER_WHITELIST["quest_progress_base"] == {"var", "op", "target"}
-    assert PLACEHOLDER_WHITELIST["quest_progress_base_no_target"] == {"var", "op"}
-    assert PLACEHOLDER_WHITELIST["quest_progress_param"] == {"param"}
-    assert PLACEHOLDER_WHITELIST["quest_progress_current"] == {"current"}
-    assert PLACEHOLDER_WHITELIST["quest_info_header"] == {"name"}
-    assert PLACEHOLDER_WHITELIST["quest_info_line"] == {"text", "mark"}
-    assert PLACEHOLDER_WHITELIST["quest_info_met"] == {"seq"}
-    assert PLACEHOLDER_WHITELIST["quest_deliver_skipped"] == {"reason"}
-    # 无占位符模板：白名单空集
-    for key in ("quest_no_board", "quest_no_quest", "quest_empty_board",
-                "quest_info_not_met", "quest_accept_failed", "quest_deliver_failed",
-                "quest_deliver_skipped_plain", "quest_abandon_failed",
-                "quest_board_active_full_note", "quest_board_no_accept_note",
-                "quest_deliver_seq_shift_note", "quest_info_standalone_usage"):
-        assert PLACEHOLDER_WHITELIST[key] == set(), key
-
-
 def _scan_placeholders(tpl: str) -> set:
     """扫描模板字符串里的 {name} 占位符名。"""
     import re

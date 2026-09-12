@@ -1,0 +1,33 @@
+{
+  "rail": "b11b",
+  "scope": "批11·路B：快捷指令 6 键（shortcut_tpl.py）+ 使用物品 6 键（use_tpl.py）全量迁入全量表，按手机QQ 14 全角规范重写",
+  "templates": {
+    "shortcut_unbind_missing": "❌ 未绑定快捷「{name}」",
+    "shortcut_unbind_ok": "✅ 已解绑快捷「{name}」",
+    "shortcut_empty": "❌ 还没有快捷绑定\n发 快捷绑定 名字 指令",
+    "shortcut_list_header": "【快捷 {count}/{cap}】",
+    "shortcut_list_row": "{name} → {command}",
+    "shortcut_list_tail_tip": "发 快捷绑定 名字 指令",
+    "use_in_battle": "❌ 战斗中无法使用物品",
+    "use_no_arg": "❌ 缺少物品\n发 使用 <序号或名称>",
+    "use_no_item": "❌ 背包中没有这个物品",
+    "use_cannot_use": "❌ 这个物品无法直接使用",
+    "use_bound": "❌ 已绑定物品无法使用",
+    "use_ok": "✅ 使用成功\n{name}\n生命 +{heal_total}"
+  },
+  "prose_keys": {},
+  "notes": {
+    "shortcut_unbind_missing": "解绑未命中错误行重写：❌ 未绑定快捷「{name}」（旧「❌ 没有绑定『{name}』」；名称标记统一为全表口径「」——与 gift/背包等分区一致；占位符 name 集不变；静态宽 17/28 半角）。测试锚点 test_tc_shc_01_unbind_missing 由「没有绑定『不存在』」更新为「未绑定快捷「不存在」」",
+    "shortcut_unbind_ok": "解绑成功行重写：✅ 已解绑快捷「{name}」（旧「✅ 已解绑『{name}』」；补「快捷」限定词 + 「」标记；占位符 name 不变；静态宽 17/28）。测试锚点 test_tc_shc_01_unbind_ok / test_router_parse_integration 同步",
+    "shortcut_empty": "空表提示重写为「❌+下一步」两行：❌ 还没有快捷绑定 / 发 快捷绑定 名字 指令（旧单行「❌ 还没有快捷绑定，试试 /快捷绑定 1 攻击」去逗号挤宽、去 / 斜杠前缀，改全表统一「发 <指令> <参数>」免斜杠写法，并把绑定语法示例与尾行 Tip 统一为同一句）。占位符空集不变；测试 test_tc_shc_02_list_empty 走 SHORTCUT_TPL 动态锚点（已改为表源）",
+    "shortcut_list_header": "列表头重写：【快捷 {count}/{cap}】（旧「【快捷（{count}/{cap}）】」去全角括号挤宽，对齐「少｜多换行/精简冗余」；cap 为「不限」时同渲染：『【快捷 2/不限】』）。占位符 count/cap 集不变；静态宽 10/28。测试 test_tc_shc_02_list / test_shc_list_paging_clamp / test_shc_list_persist_in_ctx / test_regress_p2_4_shortcut_max_zero_unlimited 锚点同步",
+    "shortcut_list_row": "列表行保留原形态「{name} → {command}」：该行本身已合规（每行一字段、无空格对齐、无挤宽符、静态宽仅 4/28 半角），重做时不再增加「」/括号装饰（避免为超长指令串再加 4 半角挤宽）；占位符 name/command 集不变",
+    "shortcut_list_tail_tip": "尾段 Tip 重写：发 快捷绑定 名字 指令（旧「发送'快捷绑定 名字 指令'即可绑定快捷」去引号与「即可…」冗余、去 / 斜杠、对齐免斜杠全局口径）。该值由 render_cake_tail 以 f'Tip:{tip}' 拼接 → 合成行宽 = 4+21 = 25/28 半角 ✓（不折行）。占位符空集不变；与 shortcut_empty 第二行同句，玩家两处看到同一语法",
+    "use_in_battle": "战斗内拒绝错误行重写：❌ 战斗中无法使用物品（旧「❌ 战斗中不能使用物品」；「不能」→「无法」统一全表错误行措辞；无占位符；静态宽 21/28）",
+    "use_no_arg": "缺参错误行重写为「❌+下一步」两行：❌ 缺少物品 / 发 使用 <序号或名称>（旧「❌ /使用：需要物品序号或名称（/使用 1 或 /使用 疗伤药）」——去 / 斜杠前缀、去括号双示例挤宽、参数占位改 <…>、多选一保留「或」）。占位符空集不变；测试 test_use_no_arg 走 USE_TPL 动态锚点（已改为表源）",
+    "use_no_item": "物品未命中错误行重写：❌ 背包中没有这个物品（旧「❌ 背包里没有这个物品」；「里」→「中」对齐全表 bag_view_no_item「背包里没有这件物品」的差异化措辞——本键=指令寻址失败、非背包查看缺行）；无占位符；静态宽 21/28",
+    "use_cannot_use": "不可直接使用错误行重写：❌ 这个物品无法直接使用（旧「❌ 这个物品不能直接使用」；「不能」→「无法」全表统一）；无占位符；静态宽 21/28",
+    "use_bound": "绑定拒用错误行重写：❌ 已绑定物品无法使用（旧「❌ 这个物品已绑定，无法使用」；去逗号挤宽、语序调整为「已绑定物品」定语式，语义等价：绑定 → 不能使用）；无占位符；静态宽 21/28",
+    "use_ok": "使用成功行拆三行（每行一字段，对齐 gift_ok 成功行口径）：✅ 使用成功 / {name} / 生命 +{heal_total}（旧「✅ 使用成功：{name}（生命 +{heal_total}）」去冒号与全角括号挤宽；回血量独立行亦满足「大数值防爆宽」——百万级 heal 仍单行）。占位符 name/heal_total 集不变；测试 test_use_consumable_heal 锚点「使用成功」「生命 +50」均保留（无需改断言）"
+  }
+}

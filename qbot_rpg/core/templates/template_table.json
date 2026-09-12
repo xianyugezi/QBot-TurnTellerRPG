@@ -716,6 +716,18 @@
     "job_detail_line": "{k}：{v}",
     "dialog_menu_head": "{npc_name}：",
     "dialog_dispatch_error": "❌ 动作执行异常",
-    "dialog_dispatch_bad_return": "❌ 动作返回异常"
+    "dialog_dispatch_bad_return": "❌ 动作返回异常",
+    "shortcut_unbind_missing": "❌ 未绑定快捷「{name}」",
+    "shortcut_unbind_ok": "✅ 已解绑快捷「{name}」",
+    "shortcut_empty": "❌ 还没有快捷绑定\n发 快捷绑定 名字 指令",
+    "shortcut_list_header": "【快捷 {count}/{cap}】",
+    "shortcut_list_row": "{name} → {command}",
+    "shortcut_list_tail_tip": "发 快捷绑定 名字 指令",
+    "use_in_battle": "❌ 战斗中无法使用物品",
+    "use_no_arg": "❌ 缺少物品\n发 使用 <序号或名称>",
+    "use_no_item": "❌ 背包中没有这个物品",
+    "use_cannot_use": "❌ 这个物品无法直接使用",
+    "use_bound": "❌ 已绑定物品无法使用",
+    "use_ok": "✅ 使用成功\n{name}\n生命 +{heal_total}"
   }
 }

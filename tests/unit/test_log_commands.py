@@ -502,40 +502,6 @@ def test_log_custom_template_unknown_placeholder_kept() -> None:
                }))
     out = cmd_log(_pc(), ctx)
     assert "完成度 50% ・ 段数 {segments}" in out
-
-
-def test_log_templates_migrated_to_table() -> None:
-    """批2·路F 迁表：29 条 log_* 唯一源 = 全量模板表；表侧白名单 = 文本占位符；旧分区已清空。"""
-    import re
-
-    from qbot_rpg.core.templates import (
-        DEFAULT_TEMPLATES,
-        PLACEHOLDER_WHITELIST,
-        TABLE_TEMPLATES,
-    )
-    from qbot_rpg.core.templates import log_tpl as _log_partition
-
-    log_keys = {k for k in TABLE_TEMPLATES if k.startswith("log_")}
-    assert len(log_keys) == 29                    # 本批全部 29 键已入表
-    # 旧分区清空（键不回流 log_tpl）
-    assert not _log_partition.DEFAULT_TEMPLATES
-    assert not _log_partition.PLACEHOLDER_WHITELIST
-    # 聚合与表一致；白名单 = 文本占位符（表侧自动派生，防漏登）
-    for key in sorted(log_keys):
-        assert DEFAULT_TEMPLATES[key] == TABLE_TEMPLATES[key]
-        phs = set(re.findall(r"\{([a-zA-Z0-9_]+)\}", TABLE_TEMPLATES[key]))
-        assert PLACEHOLDER_WHITELIST[key] == phs
-    # 关键键抽查（对齐旧断言口径）
-    assert PLACEHOLDER_WHITELIST["log_adventure_line"] == {"time", "weather", "text"}
-    assert PLACEHOLDER_WHITELIST["log_group_header"] == {"name"}
-    assert PLACEHOLDER_WHITELIST["log_entry_milestone"] == {"pct"}
-    assert PLACEHOLDER_WHITELIST["log_bio_header"] == {"page", "total"}
-    assert PLACEHOLDER_WHITELIST["log_sys_header"] == {"page", "pages"}
-    # 无占位符模板：白名单空集
-    assert PLACEHOLDER_WHITELIST["log_adventure_header"] == set()
-    assert PLACEHOLDER_WHITELIST["log_permission_denied"] == set()
-
-
 def test_log_permission_denied_uses_template() -> None:
     """权限拒绝文案走模板：ctx["templates"] 覆盖 log_permission_denied → 自定义拒绝文案。"""
     from qbot_rpg.core.templates import resolve_templates

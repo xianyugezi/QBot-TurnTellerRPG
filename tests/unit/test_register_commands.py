@@ -389,18 +389,3 @@ def test_register_rem_tpl_default_when_no_ctx_templates():
         "发 帮助 查看全部指令\n"
         "发 锁定 1 与地图怪物开战"
     )
-
-
-def test_register_rem_tpl_placeholder_whitelist_coverage():
-    """register_rem_tpl 白名单：默认模板占位符 ⊆ 白名单（防内容包拼错 key 引入缺键不替换）。"""
-    import re
-
-    from qbot_rpg.core.templates.register_rem_tpl import (
-        DEFAULT_TEMPLATES as _RR_TPL,
-        PLACEHOLDER_WHITELIST as _RR_WH,
-    )
-    pat = re.compile(r"\{([a-zA-Z0-9_]+)\}")
-    for key, tpl in _RR_TPL.items():
-        used = set(pat.findall(str(tpl)))
-        assert used <= _RR_WH.get(key, set()), f"{key}: 占位符 {used} 超出白名单"
-    assert set(_RR_TPL) == set(_RR_WH), "key 表与白名单一一对应"

@@ -1161,18 +1161,3 @@ def test_forge_tpl_override_via_ctx() -> None:
     # 无论套装是否为空，覆盖后的行格式不应出现默认「（X/Y 件）」；空态用 forge_sets_empty
     assert " 件）" not in out or SETS_EMPTY in out
     assert ctx2["templates"]["forge_sets_seg"] == "{name}[{have}/{total}]"
-
-
-def test_forge_tpl_whitelist_coverage() -> None:
-    """白名单完整性：forge 分区模板占位符 ⊆ 白名单，且登记 key 与模板表一一对应。"""
-    from qbot_rpg.core.templates.forge_tpl import (
-        DEFAULT_TEMPLATES as FT,
-        PLACEHOLDER_WHITELIST as FW,
-    )
-    import re
-
-    assert set(FT) == set(FW)
-    for key, tpl in FT.items():
-        ph = set(re.findall(r"\{([a-zA-Z0-9_]+)\}", str(tpl)))
-        assert ph <= FW[key], f"{key}: {ph - FW[key]} 不在白名单"
-

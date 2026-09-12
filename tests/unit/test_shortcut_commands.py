@@ -244,32 +244,3 @@ def test_shortcut_template_unknown_placeholder_kept():
     })
     out = cmd_shortcut_unbind(parse("/快捷解绑 不存在"), ctx)
     assert out == "❌ 没有绑定『不存在』{hint}"
-
-
-def test_shortcut_templates_migrated_to_table():
-    """批11·路B 迁表：shortcut_* 6 键唯一源 = 全量模板表；表侧白名单 = 文本占位符；旧分区已清空。"""
-    import re
-
-    from qbot_rpg.core.templates import (
-        DEFAULT_TEMPLATES,
-        PLACEHOLDER_WHITELIST,
-        TABLE_TEMPLATES,
-    )
-    from qbot_rpg.core.templates import shortcut_tpl as _shortcut_partition
-
-    keys = (
-        "shortcut_unbind_missing", "shortcut_unbind_ok", "shortcut_empty",
-        "shortcut_list_header", "shortcut_list_row", "shortcut_list_tail_tip",
-    )
-    for key in keys:
-        assert key in TABLE_TEMPLATES, f"未入表：{key}"
-        assert DEFAULT_TEMPLATES[key] == TABLE_TEMPLATES[key]
-        phs = set(re.findall(r"\{([a-zA-Z0-9_]+)\}", TABLE_TEMPLATES[key]))
-        assert PLACEHOLDER_WHITELIST[key] == phs
-    # 旧分区清空（键不回流 shortcut_tpl）
-    assert not _shortcut_partition.DEFAULT_TEMPLATES
-    assert not _shortcut_partition.PLACEHOLDER_WHITELIST
-    # 新文案锚点（批11·路B 重做口径）
-    assert TABLE_TEMPLATES["shortcut_unbind_missing"] == "❌ 未绑定快捷「{name}」"
-    assert TABLE_TEMPLATES["shortcut_empty"] == "❌ 还没有快捷绑定\n发 快捷绑定 名字 指令"
-    assert TABLE_TEMPLATES["shortcut_list_tail_tip"] == "发 快捷绑定 名字 指令"

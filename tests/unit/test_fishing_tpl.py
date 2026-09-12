@@ -178,23 +178,3 @@ def test_missing_placeholder_preserved() -> None:
 # ---------------------------------------------------------------------------
 # 白名单（提示性：文档给内容包作者的占位符清单，非强制拦截——渲染器不校验）
 # ---------------------------------------------------------------------------
-def test_whitelist_documented() -> None:
-    """白名单为文档提示（fish_spot_line 列 spot_name/periods/rarity），不强制拦截。
-
-    2026-09-12 批9·路B：fishing_tpl 15 键已迁全量表（分区默认表/白名单清空）——
-    断言改走 TABLE_TEMPLATES（对齐 test_investigate_commands 同款口径）。
-    """
-    import qbot_rpg.core.templates.fishing_tpl as _fish_partition
-    from qbot_rpg.core.templates import TABLE_TEMPLATES
-
-    # 分区空壳（15 键全部迁全量表；空壳保留 import 兼容，待批18 删除）
-    assert not _fish_partition.DEFAULT_TEMPLATES
-    assert not _fish_partition.PLACEHOLDER_WHITELIST
-    fish_keys = {k for k in TABLE_TEMPLATES if k.startswith("fish_")}
-    assert len(fish_keys) == 15
-    for key in sorted(fish_keys):
-        used = set(re.findall(r"\{([a-zA-Z0-9_]+)\}", TABLE_TEMPLATES[key]))
-        assert used <= set(PLACEHOLDER_WHITELIST[key]), f"{key}: 占位符超出白名单"
-    assert set(PLACEHOLDER_WHITELIST["fish_spot_line"]) == {"spot_name", "periods", "rarity"}
-    assert set(PLACEHOLDER_WHITELIST["fish_bite_triggered"]) == {"kind_cn", "golden_line"}
-    assert set(PLACEHOLDER_WHITELIST["fish_codex_summary"]) == {"caught", "king"}

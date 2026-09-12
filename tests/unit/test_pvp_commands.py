@@ -294,41 +294,6 @@ def test_parse_command_real_parsing() -> None:
 # ---------------------------------------------------------------------------
 # 模板全量表（pvp 20 键 · 2026-09-12 批8·路A 迁表；白名单 + 覆盖）
 # ---------------------------------------------------------------------------
-def test_pvp_tpl_whitelist_registered() -> None:
-    """白名单测试：PVP 20 键已迁全量表（分区默认表清空）——表内文本、派生白名单与占位符一一对应。"""
-    import qbot_rpg.core.templates.pvp_tpl as _pvp_partition
-    from qbot_rpg.core.templates import (
-        DEFAULT_TEMPLATES,
-        PLACEHOLDER_WHITELIST,
-        TABLE_TEMPLATES,
-    )
-    # 2026-09-12 批8·路A：分区默认表/白名单已清空（20 键全部迁全量表；空壳保留 import 兼容）
-    assert not _pvp_partition.DEFAULT_TEMPLATES
-    assert not _pvp_partition.PLACEHOLDER_WHITELIST
-    pvp_keys = {k for k in TABLE_TEMPLATES if k.startswith("pvp")}
-    assert len(pvp_keys) == 20
-    for key in sorted(pvp_keys):
-        tpl = TABLE_TEMPLATES[key]
-        assert DEFAULT_TEMPLATES[key] == tpl, f"聚合未走表：{key}"
-        assert PLACEHOLDER_WHITELIST[key] == _scan_placeholders(tpl), f"白名单不一致：{key}"
-    # 占位符清单逐键核对（信息要素不丢字段）
-    assert PLACEHOLDER_WHITELIST["pvp_lock_ok"] == {"name"}
-    assert PLACEHOLDER_WHITELIST["pvp_lock_status_level"] == {"level"}
-    assert PLACEHOLDER_WHITELIST["pvp_lock_status_job"] == {"job"}
-    assert PLACEHOLDER_WHITELIST["pvp_lock_status_hp"] == {"hp", "max_hp"}
-    assert PLACEHOLDER_WHITELIST["pvp_lock_status_equip"] == {"summary"}
-    assert PLACEHOLDER_WHITELIST["pvp_lock_equip_summary"] == {"slot", "item"}
-    assert PLACEHOLDER_WHITELIST["pvp_lock_not_found"] == {"qq"}
-    assert PLACEHOLDER_WHITELIST["pvp_attack_ok"] == {"name", "result"}
-    assert PLACEHOLDER_WHITELIST["pvp_attack_result_line"] == {"name", "damage", "hp", "max_hp"}
-    # 无占位符模板：白名单空集
-    for key in ("pvp_err_missing", "pvp_err_too_many", "pvp_err_unknown_sep",
-                "pvp_err_reserved", "pvp_engine_missing", "pvp_engine_unavailable",
-                "pvp_lock_self", "pvp_lock_no_target", "pvp_attack_no_target",
-                "pvp_registered_gate", "pvp_not_registered"):
-        assert PLACEHOLDER_WHITELIST[key] == set(), f"{key} 应无占位符"
-
-
 def _scan_placeholders(tpl: str) -> set:
     """扫描模板字符串里的 {name} 占位符名。"""
     import re

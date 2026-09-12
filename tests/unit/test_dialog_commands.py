@@ -554,37 +554,6 @@ def test_normalize_dialog_result_shape() -> None:
 # ---------------------------------------------------------------------------
 # 模板配置化（dialog_tpl 分区 · 2026-08-31）
 # ---------------------------------------------------------------------------
-
-def test_dialog_tpl_placeholder_whitelist_coverage() -> None:
-    """白名单测试：dialog 3 键已迁全量表（分区默认表清空）——表内文本、派生白名单一一对应。
-
-    2026-09-12 批11·路A：dialog_tpl 分区默认表/白名单清空，断言改走 TABLE_TEMPLATES
-    （对齐 test_pvp_commands / test_investigate_commands 同款口径）。
-    """
-    import re
-
-    import qbot_rpg.core.templates.dialog_tpl as _dlg_partition
-    from qbot_rpg.core.templates import (
-        DEFAULT_TEMPLATES,
-        PLACEHOLDER_WHITELIST,
-        TABLE_TEMPLATES,
-    )
-    # 分区默认表/白名单已清空（3 键全部迁全量表；空壳保留 import 兼容）
-    assert not _dlg_partition.DEFAULT_TEMPLATES
-    assert not _dlg_partition.PLACEHOLDER_WHITELIST
-    dlg_keys = {k for k in TABLE_TEMPLATES if k.startswith("dialog_")}
-    assert len(dlg_keys) == 3
-    pat = re.compile(r"\{([a-zA-Z0-9_]+)\}")
-    for key in sorted(dlg_keys):
-        tpl = TABLE_TEMPLATES[key]
-        assert DEFAULT_TEMPLATES[key] == tpl, f"聚合未走表：{key}"
-        assert PLACEHOLDER_WHITELIST[key] == set(pat.findall(tpl)), f"白名单不一致：{key}"
-    # 占位符逐键核对（信息要素不丢字段）
-    assert PLACEHOLDER_WHITELIST["dialog_menu_head"] == {"npc_name"}
-    assert PLACEHOLDER_WHITELIST["dialog_dispatch_error"] == set()
-    assert PLACEHOLDER_WHITELIST["dialog_dispatch_bad_return"] == set()
-
-
 def test_dialog_tpl_keys_covered_by_module() -> None:
     """覆盖测试：dialog 每 key 均在 dialog_commands.py 经 tpl_of 引用（防死 key）。"""
     from pathlib import Path

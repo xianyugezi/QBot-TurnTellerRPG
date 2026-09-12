@@ -66,13 +66,12 @@ def merge(table_path: Path, frag_paths: List[Path], dry_run: bool = False) -> in
             if key not in prose:
                 prose[key] = reason
                 print(f"[prose+] {key}: {reason}")
-    # 宽度自检
-    fails, warns = _cw.scan(table_path) if not dry_run else ([], [])
-    if dry_run:
-        # dry-run 时对「内存合并后的临时表」校验：写临时文件
-        tmp = table_path.with_suffix(".dryrun.json")
-        tmp.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    # 宽度自检（对「合并后内容」校验：先写临时文件再扫描，防扫到旧表）
+    tmp = table_path.with_suffix(".mergecheck.json")
+    tmp.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    try:
         fails, warns = _cw.scan(tmp)
+    finally:
         tmp.unlink()
     print(f"[merge] 新增 {len(added)} / 冲突 0 / 宽度 FAIL {len(fails)} / WARN {len(warns)}")
     if fails:

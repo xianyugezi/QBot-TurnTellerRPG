@@ -99,8 +99,9 @@ from qbot_rpg.core.message_format.list_render import (
     render_cake_tail,
     resolve_page,
 )
-from qbot_rpg.core.templates import tpl_of  # 消息模板配置化（2026-08-31 用户拍板）
-from qbot_rpg.core.templates.checkin_tpl import DEFAULT_TEMPLATES as _CHECKIN_TPL_DEFAULT
+# 消息模板配置化（2026-08-31 用户拍板）；批2·路E（2026-09-12）：文本唯一源 = 全量模板表
+# （template_table.json），模块常量改表别名（保住测试导入与 import 兼容）。
+from qbot_rpg.core.templates import DEFAULT_TEMPLATES as _ALL_TPL, tpl_of
 
 # 同包兄弟模块：相对导入（G0 架构门禁 test_commands_web_not_depended 不产生
 # `qbot_rpg.commands` 前缀反向依赖边；同层兄弟引用架构合规，与 sender.py 同口径）。
@@ -136,12 +137,12 @@ SUBWORDS: tuple = (SUB_STATUS, SUB_MAKEUP)
 # CakeGame 式尾段 Tip 内容（`Tip:` 之后部分，2026-08-27 用户拍板统一列表尾段；无斜杠指令名）
 _TAIL_TIP = "发送'签到 补签'即可补签"   # /签到 结算汇总与状态视图（补签为真实子指令）
 
-# 结算/状态不可用兜底（引擎 ok=False 且无 message 时；文本唯一源 = checkin_tpl 分区，渲染 tpl_of）
-TPL_NO_CHECKIN: str = _CHECKIN_TPL_DEFAULT["checkin_unavailable"]
+# 结算/状态不可用兜底（引擎 ok=False 且无 message 时；文本唯一源 = 全量表，渲染 tpl_of）
+TPL_NO_CHECKIN: str = _ALL_TPL["checkin_unavailable"]
 
 # 补签表名非法/不存在（resolve_checkin_table_arg → None；对齐 quest「任务不存在」值域口径，工程补白 7；
-# 文本唯一源 = checkin_tpl 分区，渲染 tpl_of）
-TPL_NO_TABLE: str = _CHECKIN_TPL_DEFAULT["checkin_no_table"]
+# 文本唯一源 = 全量表，渲染 tpl_of）
+TPL_NO_TABLE: str = _ALL_TPL["checkin_no_table"]
 
 # 签到表类型中文标注（镜像 core/checkin._TYPE_CN，段头「{表名}（{类型}）」用；2b5 §2.4 表段头）
 _TYPE_CN: dict = {"loop": "常驻循环", "monthly": "月度签到", "activity": "活动"}
@@ -174,7 +175,7 @@ def _gate(ctx: Mapping[str, Any]) -> Optional[str]:
 def _grant_label(ctx: Optional[Mapping[str, Any]], g: Mapping[str, Any]) -> str:
     """grant 记录 → 简短展示标签（镜像 core/checkin._grant_label；「药水×2」「50 coins」「exp20」）。
 
-    文本模板化（checkin_tpl 分区，渲染 tpl_of）：item/currency/exp/rep 四类各一 key。
+    文本模板化（全量表 template_table.json，渲染 tpl_of）：item/currency/exp/rep 四类各一 key。
     """
     typ = g.get("type")
     if typ == "item":
@@ -219,7 +220,11 @@ def _grant_currency_name(ctx: Optional[Mapping[str, Any]], cid: object) -> str:
 
 
 def _progress_line(ctx: Optional[Mapping[str, Any]], t: Mapping[str, Any]) -> str:
-    """连签进度行（「连签天数：N 天 ｜ 进度 X/Y」，2b5 §2.4；文本 checkin_tpl 分区）。"""
+    """连签进度块（「连签天数：N 天」+「进度：X/Y」两行拆行，2b5 §2.4；文本全量表）。
+
+    批2·路E（2026-09-12）：旧单行「连签天数：N 天 ｜ 进度 X/Y」大数值 32 半角超宽 →
+    少｜多换行、拆两行（模板内含换行）。
+    """
     return tpl_of(ctx, "checkin_progress_line", {
         "streak": t.get("streak", 0),
         "cur": t.get("progress_current", 0),
@@ -234,7 +239,7 @@ def _table_rows(ctx: Optional[Mapping[str, Any]], t: Mapping[str, Any]) -> List[
       正常 → 今日奖励 / notes / 连签进度 / 里程碑提示。
     - 状态查询形态（checkin_state 返回，无 granted）：连签 / 本月累计 / 今日已签 / 补签用量。
 
-    文本全部模板化（checkin_tpl 分区，渲染 tpl_of）。
+    文本全部模板化（全量表 template_table.json，渲染 tpl_of）。
     """
     rows: List[str] = []
     if "granted" in t:
@@ -246,7 +251,15 @@ def _table_rows(ctx: Optional[Mapping[str, Any]], t: Mapping[str, Any]) -> List[
             rows.append(str(t.get("message") or tpl_of(ctx, "checkin_failed_fallback")))
             return rows
         daily = t.get("daily_granted") or []
-        grants = "、".join(_grant_label(ctx, g) for g in daily[:4]) if daily else tpl_of(ctx, "checkin_daily_none")
+        labs = [_grant_label(ctx, g) for g in daily[:4]]
+        # 批2·路E（2026-09-12）：≥2 条奖励拆行——标签行「今日奖励：」独占、每条一行
+        # （旧「、」join 单行易超宽；对齐 explore_monster_line 拆行口径）；单条同行。
+        if not labs:
+            grants = tpl_of(ctx, "checkin_daily_none")
+        elif len(labs) == 1:
+            grants = labs[0]
+        else:
+            grants = "\n" + "\n".join(labs)
         rows.append(tpl_of(ctx, "checkin_daily_reward", {"grants": grants}))
         for n in t.get("notes") or []:
             rows.append(str(n))
@@ -254,12 +267,14 @@ def _table_rows(ctx: Optional[Mapping[str, Any]], t: Mapping[str, Any]) -> List[
         for h in t.get("streak_hits") or []:
             if not isinstance(h, Mapping):
                 continue
-            labs = "、".join(_grant_label(ctx, g) for g in (h.get("granted") or [])[:4])
+            labs = "\n".join(_grant_label(ctx, g) for g in (h.get("granted") or [])[:4]) \
+                or tpl_of(ctx, "checkin_daily_none")
             rows.append(tpl_of(ctx, "checkin_streak_hit", {"grants": labs, "days": h.get("days")}))
         for h in t.get("month_hits") or []:
             if not isinstance(h, Mapping):
                 continue
-            labs = "、".join(_grant_label(ctx, g) for g in (h.get("granted") or [])[:4])
+            labs = "\n".join(_grant_label(ctx, g) for g in (h.get("granted") or [])[:4]) \
+                or tpl_of(ctx, "checkin_daily_none")
             rows.append(tpl_of(ctx, "checkin_month_hit", {"grants": labs, "days": h.get("days")}))
         return rows
     # checkin_state 状态查询形态
@@ -385,7 +400,7 @@ def _engine_of(ctx: Mapping[str, Any]) -> Any:
 def _today_message(res: Mapping[str, Any], ctx: Optional[Mapping[str, Any]] = None) -> str:
     """结算首行（纯文本，D-02 幂等口径）：全部生效表已签 → 幂等文案；否则今日结算完成。
 
-    文本模板化（checkin_tpl 分区：checkin_today_idempotent / checkin_today_done）。
+    文本模板化（全量表：checkin_today_idempotent / checkin_today_done）。
     """
     if res.get("idempotent") or res.get("already_signed"):
         return tpl_of(ctx, "checkin_today_idempotent")

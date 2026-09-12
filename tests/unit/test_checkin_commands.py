@@ -117,24 +117,24 @@ def test_checkin_noarg_today_page1():
     out = cmd_checkin(parse("/签到"), make_ctx())
     assert out.startswith("✅ 今日签到完成")
     # 常驻循环表（表段头 + 今日奖励 + 连签进度）
-    assert "━━ 常驻循环（常驻循环） ━━" in out
-    assert "今日奖励：药水×2、金币×50、经验×20" in out
-    assert "连签天数：1 天 ｜ 进度 1/7" in out
+    assert "【常驻循环（常驻循环）】" in out
+    assert "今日奖励：\n药水×2\n金币×50\n经验×20" in out
+    assert "连签天数：1 天\n进度：1/7" in out
     # 月度表（页 1 为 rows 4-5：今日奖励 + 兜底提示 + 连签进度）
-    assert "━━ 月度签到（月度签到） ━━" in out
-    assert "今日奖励：金币×60、经验×25" in out
+    assert "【月度签到（月度签到）】" in out
+    assert "今日奖励：\n金币×60\n经验×25" in out
     # 5 条/页（m4 §2.2）：第 1 页 5 条 + TPL-08 页脚
     assert "当前页：1/2" in out
     # 活动表在页 2（8 条流水 → 2 页），页 1 不出现
-    assert "━━ xx庆典（活动） ━━" not in out
+    assert "【xx庆典（活动）】" not in out
 
 
 def test_checkin_today_page2():
     """/签到 2 → 第 2 页：活动表段头 + 活动表流水 + 页脚。"""
     out = cmd_checkin(parse("/签到 2"), make_ctx())
-    assert "━━ xx庆典（活动） ━━" in out
-    assert "今日奖励：药水×4、金币×30" in out
-    assert "连签天数：1 天 ｜ 进度 26/14" in out
+    assert "【xx庆典（活动）】" in out
+    assert "今日奖励：\n药水×4\n金币×30" in out
+    assert "连签天数：1 天\n进度：26/14" in out
     assert "当前页：2/2" in out
 
 
@@ -146,8 +146,8 @@ def test_checkin_noarg_command_equivalence():
 def test_checkin_clamp_last_page():
     """裁决②：/签到 9 超总页数 → 夹取最后一页 + （已到最后一页）。"""
     out = cmd_checkin(parse("/签到 9"), make_ctx())
-    assert "━━ xx庆典（活动） ━━" in out
-    assert "连签天数：1 天 ｜ 进度 26/14" in out
+    assert "【xx庆典（活动）】" in out
+    assert "连签天数：1 天\n进度：26/14" in out
     assert "（已到最后一页）" in out
     assert "当前页：2/2" in out
 
@@ -169,8 +169,9 @@ def test_checkin_idempotent_still_shows_progress():
     ctx = make_ctx()
     cmd_checkin(parse("/签到"), ctx)
     out = cmd_checkin(parse("/签到"), ctx)
-    assert out.startswith("今天已签到（重复指令，未重复发放）")
-    assert "连签天数：1 天 ｜ 进度 1/7" in out   # 附进度
+    assert out.startswith("今天已签到")
+    assert "未重复发放奖励" in out
+    assert "连签天数：1 天\n进度：1/7" in out   # 附进度
     assert "今天已签到（不重复发奖）" in out    # 各表幂等行（不重复发奖语义由引擎保证）
     assert "当前页：1/2" in out
 
@@ -203,15 +204,15 @@ def test_checkin_status_page1():
     cmd_checkin(parse("/签到"), ctx)
     out = cmd_checkin(parse("/签到 状态"), ctx)
     assert out.startswith("✅ 签到状态")
-    assert "━━ 常驻循环（常驻循环） ━━" in out
+    assert "【常驻循环（常驻循环）】" in out
     assert "连签天数：1 天" in out
     assert "本月累计：1 天" in out
     assert "今日已签：是" in out
     assert "补签：0/3" in out
-    assert "━━ 月度签到（月度签到） ━━" in out
+    assert "【月度签到（月度签到）】" in out
     # 页脚指令名 = 签到 状态（TPL-08 引导翻页）
     assert "当前页：1/2" in out
-    assert "━━ xx庆典（活动） ━━" not in out
+    assert "【xx庆典（活动）】" not in out
 
 
 def test_checkin_status_page2():
@@ -219,7 +220,7 @@ def test_checkin_status_page2():
     ctx = make_ctx()
     cmd_checkin(parse("/签到"), ctx)
     out = cmd_checkin(parse("/签到 状态 2"), ctx)
-    assert "━━ xx庆典（活动） ━━" in out
+    assert "【xx庆典（活动）】" in out
     assert "今日已签：是" in out
     assert "当前页：2/2" in out
 
@@ -229,7 +230,7 @@ def test_checkin_status_clamp():
     ctx = make_ctx()
     cmd_checkin(parse("/签到"), ctx)
     out = cmd_checkin(parse("/签到 状态 9"), ctx)
-    assert "━━ xx庆典（活动） ━━" in out
+    assert "【xx庆典（活动）】" in out
     assert "（已到最后一页）" in out
 
 
@@ -319,14 +320,14 @@ def test_render_summary_pagination():
     """"5 条/页边界：8 条 → 页 1 五条 + 页脚，页 2 三条 + 段头 + 页脚（裁决② 夹取已单测）。"""
     res = real_checkin.checkin_do(make_ctx())
     p1 = render_summary(res, 1)
-    headers1 = sum(1 for line in p1.splitlines() if line.startswith("━━"))
+    headers1 = sum(1 for line in p1.splitlines() if line.startswith("【"))
     assert headers1 == 2                   # 常驻循环 + 月度签到 两个段头
-    assert "━━ 常驻循环（常驻循环） ━━" in p1
+    assert "【常驻循环（常驻循环）】" in p1
     assert "当前页：1/2" in p1
     p2 = render_summary(res, 2)
-    headers2 = sum(1 for line in p2.splitlines() if line.startswith("━━"))
+    headers2 = sum(1 for line in p2.splitlines() if line.startswith("【"))
     assert headers2 == 1                   # 活动 段头（页 2 仅活动流水）
-    assert "━━ xx庆典（活动） ━━" in p2
+    assert "【xx庆典（活动）】" in p2
     assert "当前页：2/2" in p2
 
 
@@ -336,6 +337,25 @@ def test_render_summary_invalid_page_raises():
     for bad in (0, -1, "abc"):
         with pytest.raises(ValueError):
             render_summary(res, bad)
+
+
+def test_render_summary_milestone_and_reward_split():
+    """批2·路E（2026-09-12）：奖励/里程碑拆行——单条奖励同行；≥2 条每条一行；
+    【连签里程碑】/【月度里程碑】两行块；进度「连签天数 / 进度」拆两行。"""
+    res = {"ok": True, "tables": [{
+        "table_id": "loop", "name": "常驻循环", "type": "loop", "active": True,
+        "granted": True, "streak": 7, "progress_current": 7, "progress_total": 7,
+        "daily_granted": [{"type": "item", "item": "药水", "count": 2}],
+        "streak_hits": [{"days": 7, "granted": [
+            {"type": "item", "item": "钻石", "count": 1},
+            {"type": "currency", "currency": "coins", "amount": 3}]}],
+        "month_hits": [{"days": 15, "granted": [{"type": "exp", "amount": 20}]}],
+    }]}
+    out = render_summary(res, 1, ctx=make_ctx())
+    assert "今日奖励：药水×2" in out                       # 单条奖励同行
+    assert "连签天数：7 天\n进度：7/7" in out              # 进度拆两行
+    assert "【连签里程碑】连签 7 天\n钻石×1\n金币×3" in out  # 里程碑块 + 多条奖励每条一行
+    assert "【月度里程碑】本月签满 15 天\n经验×20" in out
 
 
 def test_flatten_sections_pure():
@@ -400,7 +420,7 @@ def test_lazy_import_engine_fallback(monkeypatch):
     ctx.pop("checkin_engine")
     out = cmd_checkin(parse("/签到"), ctx)
     assert out.startswith("✅ 今日签到完成")
-    assert "今日奖励：药水×2、金币×50、经验×20" in out
+    assert "今日奖励：\n药水×2\n金币×50\n经验×20" in out
 
 
 def test_engine_missing_raises_wiring_pending(monkeypatch):
@@ -488,18 +508,20 @@ def test_checkin_templates_override_via_ctx():
 def test_checkin_templates_default_when_no_ctx_templates():
     """无 ctx['templates'] → tpl_of 回落内置默认（逐字对齐既有输出）。"""
     out = cmd_checkin(parse("/签到"), make_ctx())
-    assert "━━ 常驻循环（常驻循环） ━━" in out
-    assert "连签天数：1 天 ｜ 进度 1/7" in out
+    assert "【常驻循环（常驻循环）】" in out
+    assert "连签天数：1 天\n进度：1/7" in out
 
 
 def test_checkin_tpl_placeholder_whitelist_coverage():
-    """checkin_tpl 白名单：默认模板占位符 ⊆ 白名单（防内容包拼错 key 引入缺键不替换）。"""
+    """签到键白名单（批2·路E 迁全量表后）：表聚合 checkin_* 占位符 ⊆ 白名单（防内容包拼错 key 引入缺键不替换）。"""
     import re
-    from qbot_rpg.core.templates.checkin_tpl import (
-        DEFAULT_TEMPLATES as _CHK_TPL,
-        PLACEHOLDER_WHITELIST as _CHK_WH,
+    from qbot_rpg.core.templates import (
+        DEFAULT_TEMPLATES as _ALL_TPL,
+        PLACEHOLDER_WHITELIST as _WH,
     )
     pat = re.compile(r"\{([a-zA-Z0-9_]+)\}")
-    for key, tpl in _CHK_TPL.items():
-        used = set(pat.findall(str(tpl)))
-        assert used <= _CHK_WH.get(key, set()), f"{key}: 占位符 {used} 超出白名单"
+    keys = [k for k in _ALL_TPL if k.startswith("checkin_")]
+    assert len(keys) == 23  # 批2·路E：23 键全部迁全量表
+    for key in keys:
+        used = set(pat.findall(str(_ALL_TPL[key])))
+        assert used <= _WH.get(key, set()), f"{key}: 占位符 {used} 超出白名单"

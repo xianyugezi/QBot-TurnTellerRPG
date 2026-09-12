@@ -222,9 +222,13 @@ def render_battle_end(
     enemy_name: Optional[str] = None,
     final_damage: int = 0,
     leveled: Optional[Mapping[str, Any]] = None,
+    tail: Optional[str] = None,
     ctx: Any = None,
 ) -> str:
     """BREP-17~20 结算 + BREP-24/25 汇总明细（5e §6.2/§6.3 / TC-18/25~27，铁律 11）。
+
+    :param tail: 末行提示（`→ 攻击 或 攻击 <技能名>`）——战斗结束时该行**置底**
+        （2026-09-12 用户拍板），由本入口追加在结算块之后。
 
     **M5 裁决（2026-08-27 用户拍板结算模板；2026-09-09 击杀去重修订）**：
       - win：结束消息 = 奖励结算块（`获得经验 {exp}` + `获得{货币} {gold}` +
@@ -272,6 +276,8 @@ def render_battle_end(
             block = _render_summary_block(summary, overhead=overhead, ctx=ctx)
             if block:
                 lines.extend(block)                        # BREP-25 木桩明细块
+        if tail and str(tail).strip():
+            lines.append(str(tail))                        # 尾提示置底（用户 2026-09-12 拍板）
         return "\n".join(lines)
     except Exception:  # pragma: no cover - 渲染层兜底不崩
         _logger.exception("render_battle_end 渲染失败，返回已装配行")
@@ -384,6 +390,7 @@ def render_action_hint(
     target_shield: int = 0,
     target_shield_turns: int = 0,
     target_states: Sequence[str] = (),
+    include_tail: bool = True,
     ctx: Any = None,
 ) -> str:
     """战斗 HUD 分项块（2026-09-12 用户样稿重构；原 BREP-09 三行操作提示）。
@@ -448,12 +455,14 @@ def render_action_hint(
         line = tpl_of(ctx, "battle_hud_enemy_status", {"status": "丨".join(_states)})
         if line:
             lines.append(line)
-    # ⑧ 尾行
-    tail = tpl_of(ctx, "battle_action_hint_tail")
-    if tail:
-        line = tpl_of(ctx, "battle_hud_tail", {"tail": str(tail)})
-        if line:
-            lines.append(line)
+    # ⑧ 尾行（`→ 攻击 或 攻击 <技能名>`）：战斗结束时置底——本块不出，由结束消息末尾补
+    #    （2026-09-12 用户拍板：「这个提示应该置底」）
+    if include_tail:
+        tail = tpl_of(ctx, "battle_action_hint_tail")
+        if tail:
+            line = tpl_of(ctx, "battle_hud_tail", {"tail": str(tail)})
+            if line:
+                lines.append(line)
     return "\n".join(ln for ln in lines if ln)
 
 
@@ -859,6 +868,7 @@ def _render_action_hint_from_report(round_result: Any, *, ctx: Any = None) -> st
         target_shield=int(getattr(round_result, "enemy_shield", 0) or 0),
         target_shield_turns=int(getattr(round_result, "enemy_shield_turns", 0) or 0),
         target_states=_enemy_hud_states(round_result, ctx),
+        include_tail=not bool(getattr(round_result, "defer_tail", False)),
         ctx=ctx,
     )
 

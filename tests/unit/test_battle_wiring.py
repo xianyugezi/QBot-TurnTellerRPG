@@ -256,11 +256,16 @@ def test_battle_end_flow_summary_and_drops(start_battle) -> None:
     assert "✅ 你击败了史莱姆" in round_msg            # BREP-15 击杀紧跟伤害行（批6 去「！」）
     assert "✅ 战斗胜利！" not in round_msg
     assert "您对史莱姆造成了" not in end_msg  # 2026-09-09 击杀去重（叙事句删除）   # 叙事句（用户结算模板）
-    assert "获得经验 100" in end_msg and "获得金币 50" in end_msg          # 经验/金币分行（批6 去全角冒号）
+    assert "获得经验：100" in end_msg and "获得金币：50" in end_msg        # 分行 + 不空格（用户 2026-09-12 拍板）
     assert "【战利品】" in end_msg                                        # 战利品头（批6）
     assert "1.史莱姆粘液×2" in end_msg                                     # 战利品列表
     assert "战斗结束：" not in end_msg               # win 无汇总行（用户模板，2026-08-27）
-    assert end_msg.split("\n")[0] == PREFIX
+    # 2026-09-12 用户拍板：两段合并为同一条消息 → 前缀只在最顶（行动段）；结束段不再重复，
+    # 且 HUD 尾提示「→ 攻击 或 …」从行动段移到结束段末尾（置底）
+    assert end_msg.split("\n")[0] != PREFIX
+    assert end_msg.split("\n")[-1] == "→ 攻击 或 攻击 <技能名>"
+    assert "→ 攻击" not in round_msg
+    assert round_msg.split("\n")[0] == PREFIX
     _assert_no_banned_emoji(round_msg)
     _assert_no_banned_emoji(end_msg)
 

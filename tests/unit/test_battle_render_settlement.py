@@ -140,7 +140,7 @@ def test_tc16_kill_line_right_after_damage_line() -> None:
     # 2026-09-09 击杀去重：结算消息不再含叙事句（攻击行已含伤害/击败行已报击杀）
     assert "您对史莱姆造成了" not in end
     assert end.lstrip().startswith("获得经验")
-    assert "获得经验 42" in end and "获得金币 25" in end                # 分行（批6 去全角冒号）
+    assert "获得经验：42" in end and "获得金币：25" in end              # 分行 + 不空格（用户 2026-09-12 拍板）
     assert "【战利品】" in end                                          # 战利品头（批6）
     assert "1.史莱姆凝胶×2" in end                                       # 战利品列表
 
@@ -188,7 +188,7 @@ def test_tc18_victory_full_message_with_drops_once() -> None:
         status="win", enemy_name="史莱姆", exp=42, gold=25, drops=[("史莱姆凝胶", 2)], final_damage=25,
     )
     assert "您对史莱姆造成了" not in text
-    assert "获得经验 42" in text and "获得金币 25" in text              # 分行（批6 去全角冒号）
+    assert "获得经验：42" in text and "获得金币：25" in text            # 分行 + 不空格
     assert "【战利品】" in text                                         # 战利品头（批6）
     assert "1.史莱姆凝胶×2" in text                                      # 战利品列表
     assert "战斗结束：" not in text                                      # win 无汇总行
@@ -340,7 +340,7 @@ def test_tc23_boss_early_end_subsequent_segments_dropped() -> None:
         status="win", enemy_name="史莱姆王", exp=120, gold=60, drops=[("史莱姆王冠", 1)], final_damage=13,
     )
     assert "您对史莱姆王造成了" not in end
-    assert "获得经验 120" in end and "获得金币 60" in end               # 分行（批6 去全角冒号）
+    assert "获得经验：120" in end and "获得金币：60" in end             # 分行 + 不空格
     assert "1.史莱姆王冠×1" in end                                       # 战利品列表
 
 
@@ -388,7 +388,7 @@ def test_settlement_rendered_once_only_when_ended() -> None:
         status="win", enemy_name="史莱姆", exp=42, gold=25, drops=[("史莱姆凝胶", 2)], final_damage=25,
     )
     assert "您对史莱姆造成了" not in text  # 2026-09-09 击杀去重（叙事句删除）
-    assert "获得经验 42" in text and "获得金币 25" in text     # 分行（批6 去全角冒号）
+    assert "获得经验：42" in text and "获得金币：25" in text     # 分行 + 不空格
     assert "1.史莱姆凝胶×2" in text                            # 战利品列表恰一次
 
 

@@ -535,10 +535,12 @@ def _battle_rewards(
 
 
 def _without_player_outcomes(report: EnrichedTurnReport, *,
-                             suppress_prefix: bool = False) -> SimpleNamespace:
+                             suppress_prefix: bool = False,
+                             defer_tail: bool = False) -> SimpleNamespace:
     """剥离玩家行动 outcome 的报告（道具回合：只渲染怪物反击/结算/提示段）。
 
     :param suppress_prefix: 本段正文与已发批量段合并为同一条消息 → 不再渲染前缀行。
+    :param defer_tail: 终局时尾提示行改由结算消息末尾输出（置底）。
 
     CTB：透传 `action_seq` / `battle_time`（权威进度计量；`turn` 仅作镜像回退），
     不再写 `phases`（CTB 下 `EnrichedTurnReport.phases` 恒为空元组，render 层对
@@ -554,6 +556,7 @@ def _without_player_outcomes(report: EnrichedTurnReport, *,
         drops=report.drops, status_changes=report.status_changes,
         player_pos=report.player_pos, enemy_pos=report.enemy_pos,  # 方位 HUD 透传（2026-09-10 修复）
         suppress_prefix=suppress_prefix,
+        defer_tail=defer_tail,
         # 战斗 HUD v2（2026-09-12）：分项资源行 + 持续效果事件随投影透传
         player_mp=report.player_mp, player_mp_max=report.player_mp_max,
         player_shield=report.player_shield, player_shield_turns=report.player_shield_turns,
@@ -563,11 +566,14 @@ def _without_player_outcomes(report: EnrichedTurnReport, *,
     )
 
 
-def _without_npc_outcomes(report: EnrichedTurnReport, *, suppress_prefix: bool = False) -> SimpleNamespace:
+def _without_npc_outcomes(report: EnrichedTurnReport, *, suppress_prefix: bool = False,
+                          defer_tail: bool = False) -> SimpleNamespace:
     """剥离非玩家（NPC）outcome 的报告（玩家单行动渲染：只出玩家自身行动段）。
 
     :param suppress_prefix: 本段正文会与已发的批量段合并为同一条消息 → 不再渲染前缀行
         （2026-09-12 用户拍板：一条消息只保留最顶部一个玩家前缀）。
+    :param defer_tail: 本行动同时触发终局结算 → HUD 块的尾提示行不出，由结算消息末尾补
+        （用户拍板：「→ 攻击 或 攻击 <技能名> 这个提示应该置底」）。
     
 
     CTB（2026-09-10 · NPC 行动执行打通后）：`player_act` 返回的 `outcomes` 现同时含
@@ -592,6 +598,7 @@ def _without_npc_outcomes(report: EnrichedTurnReport, *, suppress_prefix: bool =
         enemy_air=report.enemy_air, enemy_broken_parts=report.enemy_broken_parts,
         effect_events=report.effect_events,
         suppress_prefix=suppress_prefix,   # 末段合并进同一条消息 → 前缀只在最顶行
+        defer_tail=defer_tail,             # 终局时尾提示改由结算消息末尾输出（置底）
     )
 
 
@@ -946,7 +953,9 @@ class BattlePipeline:
                  status: Optional[str] = None, exp: int = 0, gold: int = 0,
                  drops: Any = None, enemy_name: Optional[str] = None,
                  final_damage: int = 0,
-                 leveled: Optional[Mapping[str, Any]] = None) -> List[str]:
+                 leveled: Optional[Mapping[str, Any]] = None,
+                 tail: Optional[str] = None,
+                 prefix: bool = True) -> List[str]:
         """战斗结束独立 1 条（用户 2026-08-27 拍板结算模板 + BREP-24/25；TC-18/25，铁律 11）。
 
         **M5 裁决（用户拍板；2026-09-09 击杀去重修订）**：win 结束消息 = 奖励结算块
@@ -961,9 +970,9 @@ class BattlePipeline:
             _prefix_free_ns(player), _enemy_ns(enemy), winner, summary=summary,
             status=status, exp=exp, gold=gold, drops=drops,
             enemy_name=enemy_name or (getattr(enemy, "name", "") if enemy else None),
-            final_damage=final_damage, leveled=leveled, ctx=self._ctx,
+            final_damage=final_damage, leveled=leveled, tail=tail, ctx=self._ctx,
         )
-        return self.send(body, to=to)
+        return self.send(body, to=to, prefix=prefix)
 
     def send_flee(self, *, ok: bool, to: Any = None) -> List[str]:
         """逃跑结果 1 条（无 BREP 模板，本层合成；工程补白 2）。"""
@@ -981,6 +990,7 @@ def _send_item_round(
     item_name: str,
     *,
     suppress_prefix: bool = False,
+    defer_tail: bool = False,
 ) -> List[str]:
     """道具行动（无 BREP 行动模板，本层合成；工程补白 2）：
 
@@ -997,7 +1007,8 @@ def _send_item_round(
     """
     body = tpl_of(pipeline._ctx, _TPL_ITEM_USED_KEY, {"item_name": item_name})
     counter = render_battle_round(
-        _without_player_outcomes(report, suppress_prefix=suppress_prefix), ctx=pipeline._ctx)
+        _without_player_outcomes(report, suppress_prefix=suppress_prefix,
+                                 defer_tail=defer_tail), ctx=pipeline._ctx)
     if counter:
         body = f"{body}\n{counter}"
     return pipeline.send(body, prefix=not suppress_prefix)
@@ -1098,6 +1109,7 @@ def dispatch_round(
     *,
     player_action: Optional[Mapping[str, Any]] = None,
     suppress_prefix: bool = False,
+    defer_tail: bool = False,
 ) -> List[str]:
     """单次行动派发（**薄兼容外壳**；"round" 是历史命名，CTB 下无「回合」）。
 
@@ -1157,30 +1169,47 @@ def dispatch_round(
                 # 逃跑失败：战斗继续 → 逃跑结果 + NPC 连锁合并 1 条（铁律 2/军规3）
                 body = tpl_of(ctx, _TPL_FLEE_FAILED_KEY)
                 counter = render_battle_round(
-                    _without_player_outcomes(enriched, suppress_prefix=suppress_prefix), ctx=ctx)
+                    _without_player_outcomes(enriched, suppress_prefix=suppress_prefix,
+                                             defer_tail=defer_tail), ctx=ctx)
                 if counter:
                     body = f"{body}\n{counter}"
                 delivered.extend(pipeline.send(body, prefix=not suppress_prefix))
         elif atype == "item":
             item_name = str((player_action or {}).get("item_name") or "道具")
             delivered.extend(_send_item_round(pipeline, enriched, item_name,
-                                               suppress_prefix=suppress_prefix))
+                                               suppress_prefix=suppress_prefix,
+                                               defer_tail=defer_tail))
         else:
             # CTB：玩家单行动只渲染玩家自身 outcome——NPC 连锁行已由 dispatch_batch
             # 批量渲染，此处剥离以防同一 NPC 行动行重复出现。
             delivered.extend(pipeline.send_round(
-                _without_npc_outcomes(enriched, suppress_prefix=suppress_prefix),
+                _without_npc_outcomes(enriched, suppress_prefix=suppress_prefix,
+                                      defer_tail=defer_tail),
                 prefix=not suppress_prefix,
             ))
 
         if getattr(report, "ended", False):
             delivered.extend(
-                _dispatch_battle_end(engine, report, pipeline, ctx, e, e_name, reward)
+                # 本段已带前缀（行动段）→ 结束消息不再重复前缀（一条消息只留最顶一个）
+                _dispatch_battle_end(engine, report, pipeline, ctx, e, e_name, reward,
+                                     suppress_prefix=bool(delivered))
             )
         return delivered
     except Exception:  # noqa: BLE001 - 派发异常不向上抛（战斗响应不崩，兜底返回已发送段）
         _LOGGER.exception("dispatch_round 失败：降级为空发送")
         return []
+
+
+def _hud_tail_line(ctx: Mapping[str, Any]) -> str:
+    """HUD 尾提示行（`→ 攻击 或 攻击 <技能名>`）——战斗结束时**置底**用。
+
+    2026-09-12 用户拍板：「这个提示应该置底」——终局消息里 HUD 块不出尾行，改由战斗结束
+    消息末尾输出（模板 battle_hud_tail + battle_action_hint_tail，内容包可覆盖）。
+    """
+    inner = tpl_of(ctx, "battle_action_hint_tail")
+    if not inner:
+        return ""
+    return str(tpl_of(ctx, "battle_hud_tail", {"tail": str(inner)}) or "")
 
 
 def _dispatch_battle_end(
@@ -1191,6 +1220,8 @@ def _dispatch_battle_end(
     e: Mapping[str, Any],
     e_name: str,
     reward: Mapping[str, Any],
+    *,
+    suppress_prefix: bool = False,
 ) -> List[str]:
     """终局收尾 1 条（战斗结束汇总 + 击杀接线；军规5 掉落只输出一次）。
 
@@ -1259,6 +1290,8 @@ def _dispatch_battle_end(
         final_damage=last_pd,
         enemy_name=e_name,          # _prefix_free_ns 剥离 dict name，显式注入
         leveled=ctx.get("battle_leveled"),  # 2026-09-03 击杀升级信息
+        tail=_hud_tail_line(ctx),   # 尾提示置底（用户 2026-09-12 拍板）
+        prefix=not suppress_prefix,  # 与行动段合并为同一条消息 → 前缀只在最顶行
     )
 
 
@@ -1415,6 +1448,8 @@ def _dispatch_merged_action(
     pipeline: BattlePipeline,
     ctx: Mapping[str, Any],
     player_action: Optional[Mapping[str, Any]],
+    *,
+    defer_tail: bool = False,
 ) -> List[str]:
     """单次玩家操作派发（CTB 合并模型）。
 
@@ -1436,7 +1471,7 @@ def _dispatch_merged_action(
     # 2026-09-12 用户拍板：批量段（怪行动）已带前缀 → 玩家段压掉自己的前缀行，
     # 桥接层把两段合并为一条消息时**只在最顶部保留一个**「Lv{n}.{玩家名}」。
     sent.extend(dispatch_round(engine, report, pipeline, ctx, player_action=player_action,
-                               suppress_prefix=bool(_batch)))
+                               suppress_prefix=bool(_batch), defer_tail=defer_tail))
     return sent
 
 
@@ -1471,6 +1506,7 @@ def _run_battle_action(ctx: Mapping[str, Any], action: Mapping[str, Any]) -> dic
     # 逃跑/道具/终局等特殊路径仍走 `dispatch_round`（自行发送，不再额外合并）。
     _sent: List[str] = _dispatch_merged_action(
         engine, report, pipeline, ctx, action,
+        defer_tail=bool(getattr(report, "ended", False)),
     )
     if report.ended:
         message = tpl_of(ctx, _TPL_RESULT_END_KEY, {"status": report.status})

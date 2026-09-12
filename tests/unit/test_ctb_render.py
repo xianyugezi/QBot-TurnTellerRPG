@@ -121,7 +121,7 @@ def test_action_end_settlement_block() -> None:
                           exp=30, gold=12, drops=(("狼牙", 2),), enemy_name="史莱姆")
     text = render_battle_action(src)
     assert "✅ 你击败了史莱姆" in text
-    assert "获得经验 30" in text and "获得金币 12" in text
+    assert "获得经验：30" in text and "获得金币：12" in text     # 不空格（用户 2026-09-12 拍板）
     assert "【战利品】" in text and "1.狼牙×2" in text
 
 

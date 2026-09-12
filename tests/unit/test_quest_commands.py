@@ -106,14 +106,14 @@ def test_quest_noarg_board_page1():
     """TC-24：/任务 → 主线置顶 + 每日板上任务 + NPC 支线；5 条/页 + TPL-08 页脚 + 操作指引。"""
     out = cmd_quest(parse("/任务"), make_ctx())
     # 双板段头（主线在前，板上任务在后）——主线置顶成立
-    assert out.index("━━ 主线（常驻） ━━") < out.index("━━ 每日板上任务 ━━")
-    # 主线行带 [主线] 前缀（main 常驻置顶）
-    assert "1. [主线] 特制武器" in out
-    assert "2. [主线] 锻造试炼" in out
-    # 板上任务行：进度（三原语 current/target 摘要）
-    assert "3. 收集铁矿  进度 25/20" in out
-    assert "4. 清剿熔岩甲虫  进度 5/3" in out
-    assert "5. 打造武器  进度 1/1" in out
+    assert out.index("【主线（常驻）】") < out.index("【每日板上任务】")
+    # 主线行带【主线】前缀（main 常驻置顶）
+    assert "1. 【主线】特制武器" in out
+    assert "2. 【主线】锻造试炼" in out
+    # 板上任务行：进度（三原语 current/target 摘要，独立行）
+    assert "3. 收集铁矿\n进度 25/20" in out
+    assert "4. 清剿熔岩甲虫\n进度 5/3" in out
+    assert "5. 打造武器\n进度 1/1" in out
     # 5 条/页（m4 §2.2）：第 1 页 5 条 + TPL-08 页脚
     assert "当前页：1/2" in out
     # 操作指引行（2b4 §5.2 语义；2026-09-05 文案修正：任务 领取 序号——与实际可解析
@@ -124,7 +124,7 @@ def test_quest_noarg_board_page1():
 def test_quest_board_npc_section_page2():
     """TC-24 尾段：第 2 页 = NPC 支线段（段头 + 行）。"""
     out = cmd_quest(parse("/任务 2"), make_ctx())
-    assert "━━ NPC 支线 ━━" in out
+    assert "【NPC 支线】" in out
     assert "6. 矿洞侦察" in out
     assert "当前页：2/2" in out
 
@@ -134,12 +134,12 @@ def test_quest_board_section_header_once_per_page():
     页内不逐行重复、跨页首实例在上一页的段头不在本页重打、页 2 新段正确打头。"""
     # 页 1：主线 2 行 + 每日 3 行（无 active）→ 各段头计数 1
     out = cmd_quest(parse("/任务"), make_ctx())
-    assert out.count("━━ 主线（常驻） ━━") == 1
-    assert out.count("━━ 每日板上任务 ━━") == 1
+    assert out.count("【主线（常驻）】") == 1
+    assert out.count("【每日板上任务】") == 1
     # 页 2：NPC 支线段（首实例在页 2）→ 头 1 次；每日段首实例在页 1 → 0 次
     out2 = cmd_quest(parse("/任务 2"), make_ctx())
-    assert out2.count("━━ NPC 支线 ━━") == 1
-    assert out2.count("━━ 每日板上任务 ━━") == 0
+    assert out2.count("【NPC 支线】") == 1
+    assert out2.count("【每日板上任务】") == 0
     # 同段跨页：active 6 个 → 页 1 满 5 行，页 2 续 1 行同段 → 页 2 不重打段头
     ctx = make_ctx(quest_active={"main_special_weapon": {"name": "特制武器"},
                                  "main_forge": {"name": "锻造试炼"},
@@ -148,9 +148,9 @@ def test_quest_board_section_header_once_per_page():
                                  "forge_weapon": {"name": "打造武器"},
                                  "scout_npc": {"name": "矿洞侦察"}})
     p2 = cmd_quest(parse("/任务 2"), ctx)
-    assert p2.count("━━ 进行中 ━━") == 0  # 段在页 1 已开，页 2 续行不重打
+    assert p2.count("【进行中】") == 0  # 段在页 1 已开，页 2 续行不重打
     p1 = cmd_quest(parse("/任务"), ctx)
-    assert p1.count("━━ 进行中 ━━") == 1
+    assert p1.count("【进行中】") == 1
 
 
 def test_quest_noarg_command_equivalence():
@@ -181,7 +181,7 @@ def test_quest_invalid_input_tpl12(raw, fragment):
 def test_quest_empty_board():
     """空任务板 → 空板文案（无操作指引/无页脚，单页）。"""
     out = cmd_quest(parse("/任务"), make_ctx(quests={}))
-    assert out == "（任务板空空如也）"
+    assert out == "（任务板暂无内容）"
 
 
 def test_quest_single_page_no_footer():
@@ -189,7 +189,7 @@ def test_quest_single_page_no_footer():
     out = cmd_quest(parse("/任务"), make_ctx(quests={
         "main_special_weapon": {"id": "main_special_weapon", "name": "特制武器",
                                 "main": True, "conditions": [], "reward": "exp=100"}}))
-    assert "1. [主线] 特制武器" in out
+    assert "1. 【主线】特制武器" in out
     assert "翻页" not in out
 
 
@@ -233,9 +233,9 @@ def test_quest_accept_marked_in_board():
     cmd_quest(parse("/任务 接取 3"), ctx)
     out = cmd_quest(parse("/任务"), ctx)
     # 收集铁矿 → 进行中区第 1 位（带 * + 进度）；主线区从序号 2 开始
-    assert "━━ 进行中 ━━" in out
-    assert "1. 收集铁矿*  进度 25/20" in out
-    assert out.index("━━ 进行中 ━━") < out.index("━━ 主线（常驻） ━━")
+    assert "【进行中】" in out
+    assert "1. 收集铁矿*\n进度 25/20" in out
+    assert out.index("【进行中】") < out.index("【主线（常驻）】")
 
 
 def test_quest_accept_already_active():
@@ -246,9 +246,9 @@ def test_quest_accept_already_active():
 
 
 def test_quest_accept_out_of_range():
-    """展示序号越界 → resolve_board_index None → 「❌ 任务不存在」（工程补白 6）。"""
+    """展示序号越界 → resolve_board_index None → quest_no_quest 两行（工程补白 6）。"""
     out = cmd_quest(parse("/任务 接取 99"), make_ctx())
-    assert out == "❌ 任务不存在"
+    assert out == "❌ 任务不存在\n发 任务 查看任务板"
 
 
 def test_quest_accept_completed_hidden():
@@ -259,7 +259,7 @@ def test_quest_accept_completed_hidden():
     # 特制武器（main）已完成 → 隐藏；板 = 锻造试炼1 / 收集2 / 清剿3 / 打造4 / 矿洞5
     out = cmd_quest(parse("/任务"), ctx)
     assert "特制武器" not in out
-    assert "1. [主线] 锻造试炼" in out
+    assert "1. 【主线】锻造试炼" in out
     # 引擎层直接 quest_accept 已完成任务 → 拒绝（板层序号已不可达，用 quest_id 直调）
     engine = quest_engine
     res = engine.quest_accept("main_special_weapon", ctx)
@@ -350,8 +350,8 @@ def test_quest_info():
     """/任务 信息 3 → 三原语进度逐条显示 + 交付判定。"""
     out = cmd_quest(parse("/任务 信息 3"), make_ctx())
     assert "✅ 任务进度：收集铁矿" in out
-    assert "累计获得 ≥ 20（铁矿），当前 25 ✅" in out
-    assert "✅ 条件已满足，可交付（/任务 交付 3）" in out
+    assert "✅ 累计获得 ≥ 20（铁矿）\n当前 25" in out
+    assert "✅ 条件已满足，可交付\n发 任务 交付 3" in out
 
 
 def test_quest_info_not_met():
@@ -359,13 +359,13 @@ def test_quest_info_not_met():
     ctx = make_ctx(longline_counters={"kill_count": {"熔岩甲虫": 1}})
     out = cmd_quest(parse("/任务 信息 4"), ctx)
     assert "✅ 任务进度：清剿熔岩甲虫" in out
-    assert "累计击杀 ≥ 3（熔岩甲虫），当前 1 ❌" in out
-    assert "❌ 条件未达成，继续努力" in out
+    assert "❌ 累计击杀 ≥ 3（熔岩甲虫）\n当前 1" in out
+    assert "❌ 条件未达成\n达成后可交付" in out
 
 
 def test_quest_info_out_of_range():
-    """/任务 信息 99 → 「❌ 任务不存在」。"""
-    assert cmd_quest(parse("/任务 信息 99"), make_ctx()) == "❌ 任务不存在"
+    """/任务 信息 99 → quest_no_quest 两行。"""
+    assert cmd_quest(parse("/任务 信息 99"), make_ctx()) == "❌ 任务不存在\n发 任务 查看任务板"
 
 
 # ---------------------------------------------------------------------------
@@ -424,9 +424,9 @@ def test_render_board_sections_pagination():
     """5 条/页边界：6 行 → 页 1 五条 + 页脚，页 2 一条 + 页脚。"""
     board = quest_engine.quest_board(make_ctx())
     p1 = render_board(board, 1)
-    assert "━━ 主线（常驻） ━━" in p1  # 主线段头
-    assert "━━ 每日板上任务 ━━" in p1  # 每日板段头（双板）
-    assert "━━ NPC 支线 ━━" not in p1  # NPC 段在页 2
+    assert "【主线（常驻）】" in p1  # 主线段头
+    assert "【每日板上任务】" in p1  # 每日板段头（双板）
+    assert "【NPC 支线】" not in p1  # NPC 段在页 2
     assert "5. 打造武器" in p1
     p2 = render_board(board, 2)
     assert "6. 矿洞侦察" in p2
@@ -435,9 +435,9 @@ def test_render_board_sections_pagination():
 
 def test_board_line_markers():
     """board_line 纯函数：主线前缀 / marked * / 进度摘要。"""
-    assert board_line(1, {"name": "A", "main": True, "marked": False, "progress": []}) == "1. [主线] A"
+    assert board_line(1, {"name": "A", "main": True, "marked": False, "progress": []}) == "1. 【主线】A"
     assert board_line(2, {"name": "B", "main": False, "marked": True,
-                          "progress": [{"current": 1, "target": 5}]}) == "2. B*  进度 1/5"
+                          "progress": [{"current": 1, "target": 5}]}) == "2. B*\n进度 1/5"
     assert board_line(3, {"name": "C", "main": False, "marked": False,
                           "progress": [{"current": None, "target": 5}]}) == "3. C"
 
@@ -467,7 +467,7 @@ def test_lazy_import_engine_fallback():
     ctx = make_ctx()
     ctx.pop("quest_engine")
     out = cmd_quest(parse("/任务"), ctx)
-    assert "━━ 主线（常驻） ━━" in out
+    assert "【主线（常驻）】" in out
 
 
 def test_engine_missing_raises_wiring_pending(monkeypatch):
@@ -535,7 +535,7 @@ def test_quest_custom_templates_override():
         "quest_board_section_header": "【{title}】",
         "quest_board_line": "{index}. {name}",
         "quest_info_header": "✅ 任务进度：{name}",
-        "quest_info_met": "✅ 可交付（/任务 交付 {seq}）",
+        "quest_info_met": "✅ 可交付\n发 任务 交付 {seq}",
         "quest_accept_failed": "❌ 接取不了",
         "quest_no_quest": "❌ 没这个任务",
     })
@@ -544,17 +544,27 @@ def test_quest_custom_templates_override():
     assert "【主线（常驻）】" in out
     # 信息正文覆盖生效
     info = cmd_quest(parse("/任务 信息 3"), ctx)
-    assert "✅ 可交付（/任务 交付 3）" in info
+    assert "✅ 可交付\n发 任务 交付 3" in info
     # 越界序号 → 自定义 quest_no_quest
     assert cmd_quest(parse("/任务 接取 99"), ctx) == "❌ 没这个任务"
 
 
 def test_quest_tpl_whitelist_registered():
-    """白名单测试：quest_tpl.PLACEHOLDER_WHITELIST 与模板占位符一一对应 + 登记齐全。"""
-    from qbot_rpg.core.templates.quest_tpl import (
+    """白名单测试：任务链 25 键已迁全量表（分区默认表清空）——表内文本、派生白名单与占位符一一对应。"""
+    import qbot_rpg.core.templates.quest_tpl as _quest_partition
+    from qbot_rpg.core.templates import (
         DEFAULT_TEMPLATES,
         PLACEHOLDER_WHITELIST,
+        TABLE_TEMPLATES,
     )
+    # 2026-09-12 批7·路U：分区默认表/白名单已清空（25 键全部迁全量表；空壳保留 import 兼容）
+    assert not _quest_partition.DEFAULT_TEMPLATES
+    assert not _quest_partition.PLACEHOLDER_WHITELIST
+    quest_keys = {k for k in TABLE_TEMPLATES if k.startswith("quest")}
+    assert len(quest_keys) == 25
+    for key, tpl in ((k, TABLE_TEMPLATES[k]) for k in sorted(quest_keys)):
+        assert DEFAULT_TEMPLATES[key] == tpl, f"聚合未走表：{key}"
+        assert PLACEHOLDER_WHITELIST[key] == _scan_placeholders(tpl), f"白名单不一致：{key}"
     assert PLACEHOLDER_WHITELIST["quest_board_section_header"] == {"title"}
     assert PLACEHOLDER_WHITELIST["quest_board_line"] == {"index", "name"}
     assert PLACEHOLDER_WHITELIST["quest_board_main_prefix"] == {"name"}
@@ -571,14 +581,10 @@ def test_quest_tpl_whitelist_registered():
     # 无占位符模板：白名单空集
     for key in ("quest_no_board", "quest_no_quest", "quest_empty_board",
                 "quest_info_not_met", "quest_accept_failed", "quest_deliver_failed",
-                "quest_deliver_skipped_plain", "quest_abandon_failed"):
+                "quest_deliver_skipped_plain", "quest_abandon_failed",
+                "quest_board_active_full_note", "quest_board_no_accept_note",
+                "quest_deliver_seq_shift_note", "quest_info_standalone_usage"):
         assert PLACEHOLDER_WHITELIST[key] == set(), key
-    # 白名单登记齐全（每 key 都有登记；默认模板每 key 都有条目）
-    assert set(DEFAULT_TEMPLATES) == set(PLACEHOLDER_WHITELIST)
-    # 模板占位符 ⊆ 白名单（无漏登占位符）
-    for key, tpl in DEFAULT_TEMPLATES.items():
-        found = {name for name in _scan_placeholders(tpl)}
-        assert found <= PLACEHOLDER_WHITELIST[key], f"{key} 白名单缺 {found - PLACEHOLDER_WHITELIST[key]}"
 
 
 def _scan_placeholders(tpl: str) -> set:

@@ -53,15 +53,17 @@ D-04）。
      后按 m4 §2.2 5 条/页重分页（跨路分页口径收敛，与 shop_commands 同模式）；页脚只用
      render_footer（TPL-08），禁止自造页脚。
   3) **双板段头**：引擎 sections 已带标题（"主线（常驻）"/"每日板上任务"/"NPC 支线"），本层
-     按 2b4 §5.2 排版包成「━━ 标题 ━━」；尾段 Tip **不用引擎 tip**（引擎 tip 为 §5.1 裸
+     按 2b4 §5.2 排版包成段头「【标题】」（表键 quest_board_section_header，2026-09-12
+     批7·路U 由「━━ 标题 ━━」改全角【】口径）；尾段 Tip **不用引擎 tip**（引擎 tip 为 §5.1 裸
      `/接取` 旧口径），以本层 _BOARD_TAIL_TIP 为准（`领取任务 序号`，意见一同步）。
   4) **裸 /接取 /交付 /放弃 /任务信息 不注册**（2b4 §5.1 旧列法与 §5.4 双板仲裁）：本批只接
      m4 §3.3 收口形式 `/任务 <子词> <N>`（任务派工单口径），避免与批次 6 基础指令组注册冲突；
      委托板（/委托）独立板不在本批范围。
   5) **/任务 <整数> 二义性**：整数参数 = 页码（m4 §2.2 翻页 + CakeGame 尾段「当前页：X/Y」），
      0/负数/非数字 → TPL-12（裁决②）；超总页数 → 夹取最后一页 +「已到最后一页」（裁决②）。
-  6) **展示序号越界/非法**（resolve_board_index → None）：返回引擎口径「❌ 任务不存在」
-     （对齐 quest_accept no_quest message），不走 TPL-12（命令本身合法，参数值域问题）。
+  6) **展示序号越界/非法**（resolve_board_index → None）：返回表键 quest_no_quest
+     「❌ 任务不存在 / 发 任务 查看任务板」（与引擎 quest_accept no_quest message 同文口径），
+     不走 TPL-12（命令本身合法，参数值域问题）。
   7) **/任务 信息 N 渲染**：引擎 quest_progress 成功态无 message 字段（进度数据在 conditions），
      本层按「三原语进度逐条显示」（2b4 §5.1）合成正文（var/op 互译中文展示，判定权威仍在引擎）。
   8) 本模块的玩家上下文工厂 make_context（NoneBot 事件 + 存储 → ctx dict）由装配层注入
@@ -138,9 +140,9 @@ BOARD_PAGE_SIZE: int = DEFAULT_PAGE_SIZE  # 5 条/页
 # 「/任务 交付 {seq}」同构的口径：任务 领取 序号（Tip 无斜杠惯例）。
 _BOARD_TAIL_TIP = "发送'任务 领取 序号'即可领取任务"    # /任务 任务板
 
-# 任务板不可用兜底（引擎 ok=False 且无 message 时）→ quest_no_board（quest_tpl 分区）
-# 展示序号越界/非法（resolve_board_index → None）→ quest_no_quest（quest_tpl 分区）
-# 空板文案 → quest_empty_board（quest_tpl 分区）
+# 任务板不可用兜底（引擎 ok=False 且无 message 时）→ quest_no_board（全量表 template_table.json）
+# 展示序号越界/非法（resolve_board_index → None）→ quest_no_quest（全量表 template_table.json）
+# 空板文案 → quest_empty_board（全量表 template_table.json）
 
 # 紧凑「子词+序号」形态：接取3 / 放弃2 / 交付5 / 领取3（分隔符 `*` 连数量、`+` 等级均不适用序号）
 # 注：rf 字符串内 `\d` 为原样正则（勿写 `\\d`，rf 下会变成字面反斜杠+d）
@@ -238,7 +240,8 @@ def progress_text(cond: Mapping[str, Any], ctx: Optional[Mapping[str, Any]] = No
     """单条三原语条件进度串：`背包数量 ≥ 20（当前 12）`。
 
     模板配置化（2026-08-31）：quest_progress_base / quest_progress_base_no_target /
-    quest_progress_param / quest_progress_current（quest_tpl 分区）。
+    quest_progress_param / quest_progress_current（全量表 template_table.json；
+    2026-09-12 批7·路U：current 片段改独立行「\n当前 {current}」，条件行不再与当前值挤宽）。
     """
     var = _display_var(cond.get("var"))
     op = _display_op(cond.get("op"))
@@ -258,12 +261,13 @@ def progress_text(cond: Mapping[str, Any], ctx: Optional[Mapping[str, Any]] = No
 
 
 def board_line(index: int, row: Mapping[str, Any], ctx: Optional[Mapping[str, Any]] = None) -> str:
-    """任务板条目行（2b4 §5.2 / TC-24/25）：`N. [主线]名称*  进度 12/20`。
+    """任务板条目行（2b4 §5.2 / TC-24/25）：`N. 【主线】名称*` + 独立行 `进度 12/20`。
 
-    - 主线 → 名称前缀 `[主线]`；marked（active 且非主线）→ 后缀 `*`（TC-25，引擎已算）；
-    - 进度 = 首条三原语条件 current/target（引擎 row.progress 列表）。
+    - 主线 → 名称前缀 `【主线】`；marked（active 且非主线）→ 后缀 `*`（TC-25，引擎已算）；
+    - 进度 = 首条三原语条件 current/target（引擎 row.progress 列表）——2026-09-12 批7·路U 起
+      由表键 quest_board_progress 输出为独立行（旧「  进度 x/y」依赖对齐空格，已废）。
     - 模板配置化（2026-08-31）：quest_board_line / quest_board_main_prefix /
-      quest_board_marked_suffix / quest_board_progress（quest_tpl 分区）。
+      quest_board_marked_suffix / quest_board_progress（全量表 template_table.json）。
     """
     name = str(row.get("name") or "?")
     if row.get("main"):
@@ -287,7 +291,9 @@ def info_text(res: Mapping[str, Any], seq: object, ctx: Optional[Mapping[str, An
     """/任务 信息 N 正文（2b4 §5.1：三原语进度逐条显示 + 交付判定；工程补白 7）。
 
     模板配置化（2026-08-31）：quest_info_header / quest_info_line / quest_info_met /
-    quest_info_not_met（quest_tpl 分区）。
+    quest_info_not_met（全量表 template_table.json）。
+    2026-09-12 批7·路U：quest_info_line 标记前置（{mark} {text}）；quest_info_met 结论 +
+    免斜杠下一步两行。
     """
     name = res.get("name") or "?"
     lines: List[str] = [tpl_of(ctx, "quest_info_header", {"name": name})]
@@ -382,7 +388,7 @@ def render_board(board: Mapping[str, Any], page: object, *,
                  per_page: int = BOARD_PAGE_SIZE, ctx: Optional[Mapping[str, Any]] = None) -> str:
     """/任务 任务板列表正文（工程补白 2/3；模板配置化 2026-08-31：ctx 传 list_tail 覆盖尾段）：
 
-    - 引擎 sections 扁平化后按 5 条/页横切（m4 §2.2）；段头「━━ {引擎标题} ━━」首次出现输出
+    - 引擎 sections 扁平化后按 5 条/页横切（m4 §2.2）；段头「【引擎标题】」首次出现输出
       （表头不计条数，3d §2.1）；
     - 页码超总页数 → 夹取最后一页 + LAST_PAGE_HINT（裁决②）；0/负数/非数字 → raise ValueError
       （壳层应先经 resolve_page 判 TPL-12）；
@@ -468,7 +474,8 @@ def cmd_quest_accept(ctx: Mapping[str, Any], seq: int) -> str:
 
 def cmd_quest_deliver(ctx: Mapping[str, Any], seq: int) -> str:
     """/任务 交付 N：完成交付 → 统一 reward 发放结果提示（引擎 message，2b4 §3.2）；
-    P1-2 逐条目失败黄字跳过注记（skipped 由本层渲染「（跳过：reason）」不吞整批）。
+    P1-2 逐条目失败黄字跳过注记（skipped 由本层渲染表键 quest_deliver_skipped「（跳过：reason）」/
+    quest_deliver_skipped_plain「（已跳过）」，不吞整批）。
 
     2026-09-05 审计缓解（B 路 P1 交付错位）：交付后 active 任务序号整体前移，玩家凭
     旧板记忆再操作会命中别的任务——成功回执后追加提示（若还有其他进行中任务），

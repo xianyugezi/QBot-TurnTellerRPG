@@ -442,13 +442,13 @@ async def test_feed_missing_arg_tpl12() -> None:
 # /投料：F-03 链式投料成功（M-03 反馈）
 # ---------------------------------------------------------------------------
 async def test_feed_ok_chain_and_inherit_feedback() -> None:
-    """F-03/M-03 正例：投 火晶石,火晶石 → 「⚗️ 火+8 | 连锁 1 段 | 可继承特性：灼烧强化(PP1)」。"""
+    """F-03/M-03 正例：投 火晶石,火晶石 → 多行反馈「火+8 / 连锁 1 段 / 可继承特性：\n灼烧强化(PP1)」。"""
     ctx = make_ctx()
     await cmd_alchemy(parse_command("/炼金 火焰弹"), ctx)
     out = await cmd_feed(parse_command("/投料 火晶石,火晶石"), ctx)
     assert "火+8" in out
     assert "连锁 1 段" in out
-    assert "可继承特性：灼烧强化(PP1)" in out
+    assert "可继承特性：" in out and "灼烧强化(PP1)" in out
     # 快照持久化（suspend 后 version 递增：acquire=1 → feed 后=2）
     snap = ctx["session_mgr"].store["u1"]["payload"]
     assert [r["item"] for r in snap["materials"]] == ["fire_crystal", "fire_crystal"]
@@ -479,12 +479,12 @@ async def test_feed_quantity_parse() -> None:
 
 
 async def test_feed_slots_overflow() -> None:
-    """GU-11/FEED-04 负例：投满 5 槽再追加 → 「投料超槽位」（L344）。"""
+    """GU-11/FEED-04 负例：投满 5 槽再追加 → 「❌ 投料超出槽位」（L344）。"""
     ctx = make_ctx()
     await cmd_alchemy(parse_command("/炼金 火焰弹"), ctx)  # slots=5
     await cmd_feed(parse_command("/投料 火晶石*5"), ctx)
     out = await cmd_feed(parse_command("/投料 追加 冰晶"), ctx)
-    assert "投料超槽位" in out
+    assert "投料超出槽位" in out
     # 拒绝不改快照（原子）
     snap = ctx["session_mgr"].store["u1"]["payload"]
     assert len(snap["materials"]) == 1 and snap["materials"][0]["count"] == 5

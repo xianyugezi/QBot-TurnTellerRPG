@@ -13,49 +13,17 @@ key 命名：alchemy_<用途>。占位符白名单：每类模板允许的占位
 
 2026-09-12 消息模板重构（批3·路H）：炼金主流程与材料 28 键（通用错误/守卫、/合成失败、
 面板/触媒/刻度、批量、确认复核差异、缺参用法）迁至全量表 template_table.json（按新规范
-全新重写；新表同名 key 在聚合时覆盖本分区）；本分区仅保留尚未迁移的键（投料/继承/珠与
-合成/深度炼金/图鉴技能/即时调合/资源循环/协力）。
+全新重写；新表同名 key 在聚合时覆盖本分区）。
+2026-09-12（批4·路K）：投料/继承/确认 30 键（M-03 投料反馈、M-04 继承成功/失败透传、
+终态错误）迁至全量表；本分区仅保留尚未迁移的键（珠与合成/深度炼金/图鉴技能/即时调合/
+资源循环/协力/分解）。
 """
 from __future__ import annotations
 
 from typing import Any, Dict
 
 DEFAULT_TEMPLATES: Dict[str, Any] = {
-    # —— /投料（M-03 反馈 + 失败透传）——
-    "alchemy_feed_elem_score": "{elem_cn}+{main_score}",
-    "alchemy_feed_chain": "连锁 {segments} 段",
-    "alchemy_feed_trait_item": "{name}(PP{pp})",
-    "alchemy_feed_trait_gold": "金色：{items}",
-    "alchemy_feed_trait_awaken": "觉醒：{items}",
-    "alchemy_feed_traits_header": "可继承特性：{items}",
-    "alchemy_feed_chain_effect": "连锁 {segments} 段 → 效果等级 {effect_level}",
-    "alchemy_feed_scale_met": "刻度达标 {cn}+{score}（刻度 {th}·{effect}）",
-    "alchemy_feed_slots_overflow": "投料超槽位",
-    "alchemy_feed_expert_required": "全物入料需专家级",
-    "alchemy_feed_item_not_found": "材料不存在",
-    "alchemy_feed_fail": "投料失败",
-    "alchemy_auto_balance_fail": "❌ 自动配平失败",
-
-    # —— /继承 /继承超（M-04 + 失败透传）——
-    "alchemy_inherit_no_slot": "❌ 见习无继承位",
-    "alchemy_inherit_pp": "❌ PP 不足",
-    "alchemy_inherit_overflow": "❌ 继承超 {limit} 项",
-    "alchemy_inherit_group_conflict": "❌ 互斥组内最多 1 项：{g}",
-    "alchemy_inherit_not_repeatable": "❌ 该特性不可重复继承",
-    "alchemy_inherit_gold_occupied": "❌ 第 4 位金色已占用",
-    "alchemy_inherit_fail": "❌ {msg}",
-    "alchemy_inherit_fail_msg": "继承失败",
-    "alchemy_inherit_done": "已继承：{names}",
-    "alchemy_inherit_negatives": "负面特性：{names}",
-    "alchemy_inherit_slot_used": "特性位 {normal_used} 普通",
-    "alchemy_inherit_gold_slot": " + 第 4 位金色（{name}）",
-    "alchemy_inherit_super_single": "❌ /继承超 仅支持 1 个金色特性",
-
-    # —— /确认 /放弃 /调合续 /分解（终态）——
-    "alchemy_settle_placement_conflict": "❌ 结算校验：互斥组/repeatable 冲突",
-    "alchemy_confirm_already_settled": "已结算",
-    "alchemy_confirm_fail": "❌ 确认失败",
-    "alchemy_abandon_fail": "❌ 放弃失败",
+    # —— /分解（终态）——
     "alchemy_decompose_body": "✅ {items}",
     "alchemy_decompose_empty": "✅ 分解成功",
     "alchemy_decompose_gem": " + 宝石×{gem}",
@@ -165,41 +133,7 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
 }
 
 PLACEHOLDER_WHITELIST: Dict[str, set] = {
-    # —— /投料 ——
-    "alchemy_feed_elem_score": {"elem_cn", "main_score"},
-    "alchemy_feed_chain": {"segments"},
-    "alchemy_feed_trait_item": {"name", "pp"},
-    "alchemy_feed_trait_gold": {"items"},
-    "alchemy_feed_trait_awaken": {"items"},
-    "alchemy_feed_traits_header": {"items"},
-    "alchemy_feed_chain_effect": {"segments", "effect_level"},
-    "alchemy_feed_scale_met": {"cn", "score", "th", "effect"},
-    "alchemy_feed_slots_overflow": set(),
-    "alchemy_feed_expert_required": set(),
-    "alchemy_feed_item_not_found": set(),
-    "alchemy_feed_fail": set(),
-    "alchemy_auto_balance_fail": set(),
-
-    # —— /继承 /继承超 ——
-    "alchemy_inherit_no_slot": set(),
-    "alchemy_inherit_pp": set(),
-    "alchemy_inherit_overflow": {"limit"},
-    "alchemy_inherit_group_conflict": {"g"},
-    "alchemy_inherit_not_repeatable": set(),
-    "alchemy_inherit_gold_occupied": set(),
-    "alchemy_inherit_fail": {"msg"},
-    "alchemy_inherit_fail_msg": set(),
-    "alchemy_inherit_done": {"names"},
-    "alchemy_inherit_negatives": {"names"},
-    "alchemy_inherit_slot_used": {"normal_used"},
-    "alchemy_inherit_gold_slot": {"name"},
-    "alchemy_inherit_super_single": set(),
-
-    # —— /确认 /放弃 /调合续 /分解 ——
-    "alchemy_settle_placement_conflict": set(),
-    "alchemy_confirm_already_settled": set(),
-    "alchemy_confirm_fail": set(),
-    "alchemy_abandon_fail": set(),
+    # —— /分解 ——
     "alchemy_decompose_body": {"items"},
     "alchemy_decompose_empty": set(),
     "alchemy_decompose_gem": {"gem"},

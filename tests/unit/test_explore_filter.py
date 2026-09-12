@@ -123,7 +123,8 @@ def test_filter_empty_result():
 def test_filter_invalid_category():
     """无效物品类型词 → ❌ 提示（非 TPL-12，值域问题）。"""
     out = cmd_bag_filter(parse("/背包筛选 传说"), make_ctx())
-    assert "没有「传说」这个物品类型" in out
+    assert "❌ 没有「传说」这个类型" in out
+    assert "可选：装备 药剂 货币袋" in out
 
 
 def test_filter_page_invalid_tpl12():
@@ -136,7 +137,8 @@ def test_filter_page_invalid_tpl12():
 def test_filter_missing_category():
     """缺物品类型词 → ❌ 用法提示。"""
     out = cmd_bag_filter(parse("/背包筛选"), make_ctx())
-    assert "背包筛选：输入物品类型" in out
+    assert "❌ 缺少筛选类型" in out
+    assert "示例：发 背包筛选 装备" in out
 
 
 def test_filter_no_emoji():

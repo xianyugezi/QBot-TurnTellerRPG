@@ -163,7 +163,7 @@ TPL_NO_SLOT = "❌ 没有这个装备槽位"
 # /装备 名称形式（如 /装备 铁剑）→ 友好提示引导序号用法（P2-11 QA：名称被泛化
 # 拒绝回「❌ 指令不正确」，应提示 /装备 <序号>；命令合法，不走 TPL-12，对齐 TPL_NO_SLOT；
 # 模板配置化：basic_equip_name_hint）
-TPL_EQUIP_NAME_HINT = "❌ 装备指令：穿戴请用 /使用 <序号>（序号见 /背包），如 /使用 1"
+TPL_EQUIP_NAME_HINT = "❌ 穿戴请用 使用 <序号>\n序号见 背包 列表\n示例：发 使用 1"
 
 # 品质四档（4b GRD-x 唯一注册表；RUL-19：仅非 normal 档标注）
 QUALITY_LABELS: Mapping[str, str] = {
@@ -1805,7 +1805,8 @@ def skill_line(index: int, sid: str, ctx: Mapping[str, Any]) -> str:
         derived = _derived_names(ctx, sid, chain_refs)
         if derived:
             parts.append(tpl_of(ctx, "basic_skill_chain", {"names": "、".join(derived)}))
-    return " ｜ ".join(parts)
+    # 2026-09-12 模板重构·路L：少 ｜ 多换行——技能行/MP/描述/派生 各占一行（手机QQ 14 全角）
+    return "\n".join(parts)
 
 
 def _job_visible(ctx: Mapping[str, Any], sid: str) -> bool:

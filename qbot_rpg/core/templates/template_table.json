@@ -8,7 +8,14 @@
       "battle_enemy_hit": "叙述句行：同上（怪物行动播报句，用户样稿「❌ {怪}使出{招}，你受到 N 伤害。」）",
       "battle_effect_tick_player": "叙述句行：按用户样稿形态整句（含 ，。 与「你受到」视角），非结构化 HUD 行；窄屏自然折行，允许自然换行",
       "battle_effect_tick_enemy": "叙述句行：同上（对怪视角「造成 N 伤害。」）",
-      "battle_effect_expire": "叙述句行：同上（效果失效播报）"
+      "battle_effect_expire": "叙述句行：同上（效果失效播报）",
+      "investigate_ambient_1": "介绍类：泛化环境风味文本（R-22 零暗示池，非结构化行）——允许自然折行",
+      "investigate_ambient_2": "介绍类：泛化环境风味文本（同上）——允许自然折行",
+      "investigate_ambient_3": "介绍类：泛化环境风味文本（同上）——允许自然折行",
+      "investigate_ambient_4": "介绍类：泛化环境风味文本（同上）——允许自然折行",
+      "investigate_ambient_5": "介绍类：泛化环境风味文本（同上）——允许自然折行",
+      "investigate_hunt_intro": "叙事演出句：蹲点开场氛围句（R-09 狼嗥演出，整句叙事）——允许自然折行",
+      "investigate_hidden_map_text": "介绍类：隐藏地图入口揭示默认介绍（F-07 无 intro/desc 兜底，叙事句）——允许自然折行"
     },
     "prose_placeholders": []
   },
@@ -553,6 +560,24 @@
     "battle_hud_state_air": "跃空",
     "battle_hud_state_part_broken": "{name}破坏",
     "basic_skill_brief": "{brief}",
-    "basic_skill_sep": "————"
+    "basic_skill_sep": "————",
+    "investigate_register_gate": "❌ 请先注册角色\n发 注册 <名字> <职业>",
+    "investigate_no_map": "❌ 无法确定当前位置\n发 位置 查看所在地",
+    "investigate_env_header": "（{season}·{period}·{weather}）",
+    "investigate_ambient_1": "四下安静，只有风掠过旷野。",
+    "investigate_ambient_2": "你环顾四周，没发现什么异常。",
+    "investigate_ambient_3": "眼前一如往常，只有惯常的声响。",
+    "investigate_ambient_4": "薄雾缓缓流动，远处几声鸟鸣。",
+    "investigate_ambient_5": "风穿过林间，沙沙声过后重归寂静。",
+    "investigate_eggshell_done": "此处已仔细查看过\n暂无新发现",
+    "investigate_hunt_done": "这一带已确认过\n暂无新发现",
+    "investigate_hidden_map_done": "这条路径已知晓\n无需再探",
+    "investigate_hunt_intro": "你屏息凝神，荒野深处传来一声狼嗥。",
+    "investigate_hunt_signal": "【遭遇】巨大的黑影浮现\n战斗即将开始",
+    "investigate_hidden_map_text": "你拨开垂落的藤蔓，一条陌生小径显现在眼前。",
+    "investigate_discover_card": "【发现】{label}{title}",
+    "investigate_codex_ref": "【图鉴】{name}（传说）\n传闻记载着出没之谜",
+    "investigate_discover_label_boss": "隐藏 BOSS：",
+    "investigate_discover_label_map": "隐藏地图："
   }
 }

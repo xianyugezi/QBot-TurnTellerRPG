@@ -39,7 +39,7 @@
      未给逐字字段名）：怪物行带 `hidden_boss: true`（或 `boss: true` + `window`）即
      蹲点目标；`window` 接受两种形态——条件表达式（var/all/any/not → 统一条件引擎）
      或 {season, period, weather} 直接值形态（值为 str/list，全匹配才通过）。
-  4) 泛化文本（R-22 / R-07 零暗示）：环境快照头 `（季节·时段·天气）` + 中性文本池，
+  4) 泛化文本（R-22 / R-07 零暗示）：环境快照头 `（{season}·{period}·{weather}）` + 中性文本池，
      rng 确定性选择（rng 注入；未注入 → 池首条），池内零暗示措辞。
   5) 渲染兜底：hunt 的图鉴传闻引用仅在引擎提供 `lore` 字段时渲染（本地兜底由怪物行
      codex_ref 提供；兄弟路未提供则不拼接——壳层不凭空编造 lore 内容）。
@@ -164,7 +164,7 @@ def _map_raw(map_def: Any) -> Mapping[str, Any]:
 
 
 def _env_header(ctx: Mapping[str, Any]) -> str:
-    """环境快照头（3f R-05 展示口径）：`（{季节}·{时段}·{天气}）`，缺失 → "--"。
+    """环境快照头（3f R-05 展示口径）：`（{season}·{period}·{weather}）`，缺失 → "--"。
 
     值透传 ctx season/period/weather（对齐 event_bus._snapshot_of），不做语言映射；
     文本 investigate_tpl 分区（investigate_env_header），渲染 tpl_of。
@@ -842,7 +842,8 @@ def render_investigate_result(result: Mapping[str, Any], ctx: Mapping[str, Any])
         if isinstance(lore, str) and lore:
             lines.append(lore)
         elif name:
-            # 图鉴传闻引用（R-09 / R-23 L349 格式；引擎未给 lore 时中性合成，不编造细节）
+            # 图鉴传闻引用（R-09 / R-23 L349 格式，批8·路B 重做两行「【图鉴】{name}（传说）」+
+            # 「传闻记载着出没之谜」；引擎未给 lore 时中性合成，不编造细节）
             lines.append(tpl_of(ctx, "investigate_codex_ref", {"name": name}))
         card = _discover_card(ctx, name,
                               label=tpl_of(ctx, "investigate_discover_label_boss"))

@@ -298,17 +298,33 @@ def test_investigate_templates_default_when_no_ctx_templates() -> None:
     ctx = _base_ctx()
     ctx["map_def"] = None
     ctx["location"] = None
-    assert cmd_investigate(_parsed("/调查"), ctx) == "❌ 无法确定当前位置，无法调查。"
+    # 2026-09-12 批8·路B：investigate_no_map 重做（❌ 原因 + 免斜杠下一步两行）
+    assert cmd_investigate(_parsed("/调查"), ctx) == "❌ 无法确定当前位置\n发 位置 查看所在地"
 
 
 def test_investigate_tpl_placeholder_whitelist_coverage() -> None:
-    """investigate_tpl 白名单：默认模板占位符 ⊆ 白名单（防内容包拼错 key 引入缺键不替换）。"""
+    """investigate_tpl 白名单：调查 18 键已迁全量表（分区默认表清空）——表内文本、
+    派生白名单与占位符一一对应（防内容包拼错 key 引入缺键不替换）。
+
+    2026-09-12 批8·路B：分区默认表/白名单清空，断言改走 TABLE_TEMPLATES（对齐
+    test_quest_commands.test_quest_tpl_whitelist_registered 同款口径）。
+    """
     import re
-    from qbot_rpg.core.templates.investigate_tpl import (
-        DEFAULT_TEMPLATES as _INV_TPL,
-        PLACEHOLDER_WHITELIST as _INV_WH,
+
+    import qbot_rpg.core.templates.investigate_tpl as _inv_partition
+    from qbot_rpg.core.templates import (
+        PLACEHOLDER_WHITELIST,
+        TABLE_TEMPLATES,
     )
+    # 分区默认表/白名单已清空（18 键全部迁全量表；空壳保留 import 兼容）
+    assert not _inv_partition.DEFAULT_TEMPLATES
+    assert not _inv_partition.PLACEHOLDER_WHITELIST
+    invest_keys = {k for k in TABLE_TEMPLATES if k.startswith("investigate_")}
+    assert len(invest_keys) == 18
     pat = re.compile(r"\{([a-zA-Z0-9_]+)\}")
-    for key, tpl in _INV_TPL.items():
-        used = set(pat.findall(str(tpl)))
-        assert used <= _INV_WH.get(key, set()), f"{key}: 占位符 {used} 超出白名单"
+    for key in sorted(invest_keys):
+        used = set(pat.findall(TABLE_TEMPLATES[key]))
+        assert used == set(PLACEHOLDER_WHITELIST.get(key, set())), f"{key}: 白名单不一致"
+    assert PLACEHOLDER_WHITELIST["investigate_env_header"] == {"season", "period", "weather"}
+    assert PLACEHOLDER_WHITELIST["investigate_discover_card"] == {"label", "title"}
+    assert PLACEHOLDER_WHITELIST["investigate_codex_ref"] == {"name"}

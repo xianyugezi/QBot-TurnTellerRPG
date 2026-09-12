@@ -195,7 +195,9 @@ def test_effect_lines_absent_when_no_events() -> None:
     """⑥ 无事件（含缺字段的对象）→ 无行、不崩。"""
     assert _render_effect_lines(SimpleNamespace()) == []
     assert _render_effect_lines(SimpleNamespace(effect_events=())) == []
-    assert _render_effect_lines(SimpleNamespace(effect_events=({"type": "regen", "side": "player"},))) == []
+    assert _render_effect_lines(
+        SimpleNamespace(effect_events=({"type": "regen", "side": "player"},))
+    ) == []
 
 
 def test_effect_lines_unknown_status_falls_back_to_id() -> None:

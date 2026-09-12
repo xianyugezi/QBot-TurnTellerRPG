@@ -375,7 +375,7 @@ def enrich_round_report(
     )
 
 
-def battle_hud_payload(snap: Mapping[str, Any]) -> Dict[str, Any]:
+def battle_hud_payload(snap: Mapping[str, Any]) -> dict[str, Any]:
     """战斗 HUD v2 取数（2026-09-12）：engine.battle_state() → 分项资源行原始数据。
 
     用户口径：**没有护盾/法力等资源则不显示这些资源**（渲染层据缺省判空）。

@@ -15,7 +15,6 @@ from __future__ import annotations
 from typing import Any, Dict
 
 from qbot_rpg.commands.job_commands import cmd_job
-from qbot_rpg.core.templates import PLACEHOLDER_WHITELIST
 
 
 def _jobs() -> Dict[str, Dict[str, Any]]:
@@ -93,12 +92,38 @@ def test_switch_saves_slot_snapshot() -> None:
 
 
 def test_templates_registered() -> None:
-    """job_* 模板已注册 + 占位符白名单。"""
-    from qbot_rpg.core.templates import DEFAULT_TEMPLATES
+    """job 8 键已迁全量表（分区默认表清空）+ 派生白名单与占位符一一对应。
 
-    for key in ("job_list", "job_not_found", "job_switch_success"):
-        assert key in DEFAULT_TEMPLATES, f"模板 {key} 应注册"
-    assert "job_list" in PLACEHOLDER_WHITELIST
+    2026-09-12 批11·路A：job_tpl 分区默认表/白名单清空，断言改走 TABLE_TEMPLATES
+    （对齐 test_pvp_commands / test_investigate_commands 同款口径）。
+    """
+    import re
+
+    import qbot_rpg.core.templates.job_tpl as _job_partition
+    from qbot_rpg.core.templates import DEFAULT_TEMPLATES, PLACEHOLDER_WHITELIST, TABLE_TEMPLATES
+
+    # 分区默认表/白名单已清空（8 键全部迁全量表；空壳保留 import 兼容）
+    assert not _job_partition.DEFAULT_TEMPLATES
+    assert not _job_partition.PLACEHOLDER_WHITELIST
+    job_keys = {k for k in TABLE_TEMPLATES if k.startswith("job_")}
+    assert job_keys == {
+        "job_list", "job_list_tip", "job_not_found", "job_switch_success",
+        "job_detail_usage", "job_detail_header", "job_detail_rec", "job_detail_line",
+    }
+    pat = re.compile(r"\{([a-zA-Z0-9_]+)\}")
+    for key in sorted(job_keys):
+        tpl = TABLE_TEMPLATES[key]
+        assert DEFAULT_TEMPLATES[key] == tpl, f"聚合未走表：{key}"
+        assert PLACEHOLDER_WHITELIST[key] == set(pat.findall(tpl)), f"白名单不一致：{key}"
+    # 占位符逐键核对（信息要素不丢字段）
+    assert PLACEHOLDER_WHITELIST["job_list"] == {"list"}
+    assert PLACEHOLDER_WHITELIST["job_not_found"] == {"job", "list"}
+    assert PLACEHOLDER_WHITELIST["job_switch_success"] == {"job", "rec"}
+    assert PLACEHOLDER_WHITELIST["job_detail_header"] == {"name"}
+    assert PLACEHOLDER_WHITELIST["job_detail_line"] == {"k", "v"}
+    assert PLACEHOLDER_WHITELIST["job_list_tip"] == set()
+    assert PLACEHOLDER_WHITELIST["job_detail_usage"] == set()
+    assert PLACEHOLDER_WHITELIST["job_detail_rec"] == set()
 
 
 def test_job_list_empty() -> None:

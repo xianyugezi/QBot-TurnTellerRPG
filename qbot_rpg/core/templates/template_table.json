@@ -705,6 +705,17 @@
     "shop_price_single": "{unit}({currency})",
     "shop_price_part": "{amount}({currency})",
     "shop_discount_marker": "[折扣 -{discount}%]",
-    "shop_overview_row_prefix": "{index}. {name}"
+    "shop_overview_row_prefix": "{index}. {name}",
+    "job_list": "当前可转职业：\n{list}",
+    "job_list_tip": "发 转职 <序号 或 名称>\n发 职业详情 <序号 或 名称>",
+    "job_not_found": "❌ 没有「{job}」这个职业\n可用职业：\n{list}",
+    "job_switch_success": "✅ 转职成功\n当前职业：{job}{rec}",
+    "job_detail_usage": "发 职业详情 <序号 或 名称>\n示例：发 职业详情 1",
+    "job_detail_header": "【{name}】",
+    "job_detail_rec": "（推荐新手）",
+    "job_detail_line": "{k}：{v}",
+    "dialog_menu_head": "{npc_name}：",
+    "dialog_dispatch_error": "❌ 动作执行异常",
+    "dialog_dispatch_bad_return": "❌ 动作返回异常"
   }
 }

@@ -74,3 +74,16 @@ def test_width_no_fail():
     assert not fails, "宽度 FAIL：\n" + "\n".join(
         f"{r['key']} L{r['line_no']} {r['half']}/28 {r['line']!r}" for r in fails[:20]
     )
+
+
+def test_derived_line_registered_as_intentional_exemption():
+    """技能详情派生行（遗留 #37）：登记为**有意豁免** —— 整行全量显示、不折行。
+
+    口径来源：2026-09-12 用户拍板（同「怪物状态」行）。键 `skill_info_derived`，
+    经 meta.prose_keys 跳过宽度门禁（非介绍类豁免，属有意超宽）。
+    """
+    meta = _doc().get("meta") or {}
+    reason = (meta.get("prose_keys") or {}).get("skill_info_derived", "")
+    assert reason, "skill_info_derived 未登记为有意豁免"
+    assert "不折行" in reason and "用户拍板" in reason
+    assert "派生：{names}" in _doc()["templates"].get("skill_info_derived", "")

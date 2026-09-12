@@ -2068,6 +2068,9 @@ def _render_skill_info(ctx: Mapping[str, Any], sid: str) -> str:
       - 派生指向（发 技能派生 查看条件）
       - 面板尾部文本 = 技能 def `detail`（编辑器「详情」文本框）→ 回落 `desc`
     行宽口径：结构化行 ≤14 全角；详情文本属介绍类，允许自然折行。
+    **派生行有意豁免（遗留 #37，2026-09-12 用户拍板）**：派生名整行全量显示、不折行
+    （同「怪物状态」行口径）——派生名数量由 chain_refs 内容决定（最多 9 个），
+    拆行/精简会丢失或割裂信息；登记 `skill_info_derived` 于表 meta.prose_keys（有意豁免）。
     """
     defn = _skill_def(ctx, sid)
     name = _skill_name(ctx, sid)
@@ -2135,13 +2138,13 @@ def _render_skill_info(ctx: Mapping[str, Any], sid: str) -> str:
     rec = _skill_field(defn, "recovery", None)
     if rec:
         lines.append(tpl_of(ctx, "skill_info_line", {"k": "行动恢复", "v": rec}))
-    # 派生指向
+    # 派生指向（整行全量显示、不折行——有意豁免，见 docstring；文案走 skill_info_derived）
     chain_refs = _skill_field(defn, "chain_refs")
     if isinstance(chain_refs, (list, tuple)) and chain_refs:
         derived = _derived_names(ctx, sid, chain_refs)
         if derived:
-            lines.append(tpl_of(ctx, "skill_info_line",
-                                {"k": "派生", "v": "、".join(derived) + "（发 技能派生 查看条件）"}))
+            lines.append(tpl_of(ctx, "skill_info_derived",
+                                {"names": "、".join(derived)}))
     # 详情文本（编辑器「详情」文本框 → 回落 desc）
     detail = _skill_field(defn, "detail", None)
     if not (isinstance(detail, str) and detail.strip()):

@@ -511,13 +511,45 @@ def test_skill_job_filter():
 
 
 def test_skill_derived_names_in_detail():
-    """派生指向：列表不再带派生行 → 改为详情面板输出（发 技能派生 查看条件）。"""
+    """派生指向：列表不再带派生行 → 改为详情面板输出（发 技能派生 查看条件）。
+
+    2026-09-12 收尾（遗留 #37）：派生行整行全量显示、不折行（同「怪物状态」行口径）——
+    文案走 `skill_info_derived`（有意豁免，登记于表 meta.prose_keys）。
+    """
     from qbot_rpg.commands.basic_commands import _render_skill_info
 
     ctx = make_ctx()
-    assert "陨星落" in _render_skill_info(ctx, "fireball")
+    fireball = _render_skill_info(ctx, "fireball")
+    assert "陨星落" in fireball
+    assert "派生：陨星落（发 技能派生 查看条件）" in fireball.splitlines()
     assert "派生" not in _render_skill_info(ctx, "meteor")    # 无 chain_refs → 无派生行
     assert "————" not in skill_line(2, "fireball", ctx).split("\n")[1]   # 第 2 行是简述不是分隔
+
+
+def test_skill_derived_line_full_display_no_wrap():
+    """遗留 #37 有意豁免：派生行整行全量显示、不折行（9 个派生名约 50 字仍单行）。
+
+    口径来源：2026-09-12 用户拍板（同「怪物状态」行）。渲染层不做折行/精简，
+    窄屏自然折行由手机端承担；键 `skill_info_derived` 登记于表 meta.prose_keys。
+    """
+    from qbot_rpg.commands.basic_commands import _render_skill_info
+
+    import unicodedata
+
+    names = [f"派生技{i}" for i in range(1, 10)]
+    skills = {f"d{i}": {"id": f"d{i}", "name": n, "type": "active"}
+              for i, n in enumerate(names, 1)}
+    skills["root"] = {"id": "root", "name": "根技", "type": "active", "chain_refs": ["c"]}
+    steps = [{"from": "root", "to": f"d{i}"} for i in range(1, 10)]
+    ctx = make_ctx(skills=skills, skill_chains={"c": {"id": "c", "steps": steps}})
+    derived_lines = [ln for ln in _render_skill_info(ctx, "root").splitlines()
+                     if ln.startswith("派生：")]
+    assert len(derived_lines) == 1
+    line = derived_lines[0]
+    assert line == "派生：" + "、".join(names) + "（发 技能派生 查看条件）"
+    assert "\n" not in line                                  # 渲染层不折行（整行全量）
+    half = sum(2 if unicodedata.east_asian_width(ch) in ("W", "F") else 1 for ch in line)
+    assert half > 28                                          # 确超 28 半角而行不拆（有意豁免）
 
 
 def test_skill_rows_order():

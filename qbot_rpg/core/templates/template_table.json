@@ -27,7 +27,8 @@
       "env_ambient_default": "介绍类：环境泛暗示缺省兜底句（environment_lore.DEFAULT_AMBIENT_TEXT 迁表）——允许自然折行",
       "env_investigate_generic": "介绍类：/调查 泛化环境缺省文本（investigate.DEFAULT_GENERIC_TEXT 迁表）——允许自然折行",
       "invest_map_reveal_fallback": "介绍类：调查 map_reveal 无 desc 时的兜底叙事句（#52a，允许自然折行；f-string 迁表）",
-      "invest_hunt_fallback": "介绍类：investigate._hunt_outcome / hidden_trigger._spawn_result 无 desc/hint 时的蹲点兜底叙事句（#52a，允许自然折行；f-string 迁表）"
+      "invest_hunt_fallback": "介绍类：investigate._hunt_outcome / hidden_trigger._spawn_result 无 desc/hint 时的蹲点兜底叙事句（#52a，允许自然折行；f-string 迁表）",
+      "skill_info_derived": "有意豁免（遗留 #37）：技能详情「派生」行整行全量显示、不折行——口径来源 2026-09-12 用户拍板（同「怪物状态」行）；派生名最多 9 个（约 50 字），拆行/精简会丢信息，故不适用 14 全角结构化行约束"
     },
     "prose_placeholders": []
   },
@@ -335,6 +336,7 @@
     "skill_info_usage": "查看技能详情\n发 技能详情 <序号>\n或 <技能名>\n示例：发 技能详情 1",
     "skill_info_header": "【{name}】",
     "skill_info_line": "{k}：{v}",
+    "skill_info_derived": "派生：{names}（发 技能派生 查看条件）",
     "skill_info_not_found": "❌ 没有「{name}」这个技能\n发 技能 查看可用技能",
     "skill_chain_usage": "查看技能派生\n发 技能派生 <序号>\n或 <技能名>\n示例：发 技能派生 1",
     "skill_chain_header": "【{name}】派生",

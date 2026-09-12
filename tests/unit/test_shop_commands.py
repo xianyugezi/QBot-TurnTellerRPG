@@ -15,6 +15,8 @@
 
 from __future__ import annotations
 
+import unicodedata
+
 import pytest
 
 from qbot_rpg.commands.parsers import parse_command
@@ -198,26 +200,29 @@ def test_shop_name_with_page_arg():
 # ---------------------------------------------------------------------------
 
 def test_shop_list_overview_page1():
-    """补缺漏 /商店 列表：类型徽标 + 门槛标记（置灰不隐藏）+ 5 条/页 + TPL-08 页脚。"""
+    """补缺漏 /商店 列表：类型徽标 + 门槛标记（置灰不隐藏）+ 5 条/页 + TPL-08 页脚。
+
+    2026-09-12 收尾（遗留 #47）：一览行拆「头行 / 描述行 / 门槛行」，不再空格拼单行。
+    """
     out = cmd_shop(parse("/商店 列表"), make_ctx())
     assert out.startswith("【商店】可用商店一览")
-    assert "1. 杂货铺 [普通商店] 新手村杂货铺" in out
-    assert "3. 冒险者公会商店 [声望商店] 公会专属 需要 熟悉" in out
-    assert "5. 神秘商人 [黑市] 深夜黑市" in out
+    assert "1. 杂货铺 [普通商店]\n新手村杂货铺" in out
+    assert "3. 冒险者公会商店 [声望商店]\n公会专属\n需要 熟悉" in out
+    assert "5. 神秘商人 [黑市]\n深夜黑市" in out
     assert "当前页：1/2" in out
 
 
 def test_shop_list_overview_page2():
     """列表第 2 页（第 6 家 + 门槛标记）。"""
     out = cmd_shop(parse("/商店 列表 2"), make_ctx())
-    assert "6. 炼金工坊 [普通商店] 炼金材料 需要 LV10" in out
+    assert "6. 炼金工坊 [普通商店]\n炼金材料\n需要 LV10" in out
     assert "当前页：2/2" in out
 
 
 def test_shop_list_clamp_last_page():
     """裁决②：/商店 列表 9 超总页数 → 夹取最后一页 + （已到最后一页）。"""
     out = cmd_shop(parse("/商店 列表 9"), make_ctx())
-    assert "6. 炼金工坊 [普通商店] 炼金材料 需要 LV10" in out
+    assert "6. 炼金工坊 [普通商店]\n炼金材料\n需要 LV10" in out
     assert "（已到最后一页）" in out
 
 
@@ -239,6 +244,34 @@ def test_shop_list_single_page_no_footer():
     assert "1. 甲店 [普通商店]" in out
     assert "2. 乙店 [NPC 商店]" in out
     assert "翻页" not in out
+
+
+def _half_width(s: str) -> int:
+    """半角当量（全角/宽 = 2；对齐 scripts/check_template_width.py）。"""
+    return sum(2 if unicodedata.east_asian_width(ch) in ("W", "F") else 1 for ch in s)
+
+
+def test_shop_overview_structured_lines_within_budget():
+    """遗留 #47 收尾：一览**结构化行 ≤28 半角**（头行 = 序号+名+徽标；门槛行）。
+
+    描述行属内容数据（介绍类），允许自然折行，不计入结构化行预算。
+    """
+    import re
+
+    out = cmd_shop(parse("/商店 列表"), make_ctx())
+    structured = [
+        ln for ln in out.splitlines()
+        if re.match(r"^\d+\. |^需要 |^已售罄|^全服|^.+限购", ln)
+    ]
+    # 头行逐条 ≤28；门槛标记行（需要…）≤28
+    for ln in structured:
+        assert _half_width(ln) <= 28, f"一览结构化行超宽（{_half_width(ln)}）：{ln!r}"
+    # 描述独立成行（介绍类），不再与头行/门槛挤在同一行
+    assert "1. 杂货铺 [普通商店]" in out.splitlines()
+    assert "新手村杂货铺" in out.splitlines()
+    assert "3. 冒险者公会商店 [声望商店]" in out.splitlines()
+    assert "公会专属" in out.splitlines()
+    assert "需要 熟悉" in out.splitlines()
 
 
 # ---------------------------------------------------------------------------
@@ -516,7 +549,7 @@ def test_shop_rem_tpl_override_via_ctx():
     ctx = make_ctx(templates=templates)
     out = cmd_shop(parse("/商店 列表"), ctx)
     assert out.startswith("自定义商店一览")
-    assert "【1】杂货铺 [普通商店] 新手村杂货铺" in out
+    assert "【1】杂货铺 [普通商店]\n新手村杂货铺" in out
     # 无当前商店且无默认 normal → no_shop 覆盖
     ctx2 = make_ctx(shops={}, templates=templates)
     assert cmd_shop(parse("/商店"), ctx2) == "❌ 自定义无此商店"
@@ -530,7 +563,7 @@ def test_shop_rem_tpl_default_when_no_ctx_templates():
     """无 ctx['templates'] → tpl_of 回落全量模板表（批10·路C 新排版）。"""
     out = cmd_shop(parse("/商店 列表"), make_ctx())
     assert out.startswith("【商店】可用商店一览")
-    assert "1. 杂货铺 [普通商店] 新手村杂货铺" in out
+    assert "1. 杂货铺 [普通商店]\n新手村杂货铺" in out
 
 
 def test_shop_b10c_new_copy_anchors():

@@ -294,25 +294,33 @@ def render_shop_items(shop: Mapping[str, Any], rows: list, page: object,
 
 
 def _shop_row(index: int, row: Mapping[str, Any], ctx: Optional[Mapping[str, Any]] = None) -> str:
-    """商店一览行（定稿 L42/L367-370）：`序号. {icon}{name} {类型徽标} {desc} {门槛标记}`。
+    """商店一览行（定稿 L42/L367-370；2026-09-12 收尾·行宽重排 = 遗留 #47）：
 
-    序号前缀模板化：shop_overview_row_prefix（2026-09-12 批10·路C 迁全量模板表，内容包可覆盖）。
+    行结构（每行一字段；结构化行 ≤28 半角，长描述属介绍类 → 独立成行允许自然折行）：
+      ① 头行：`{index}. {icon}{name} {类型徽标}`（`shop_overview_row_prefix` + 数据徽标）
+      ② 描述（可选；店 def 内容数据，介绍类自由文本）
+      ③ 门槛标记（可选；引擎 markers 逐项拼接，结构化短字段）
+    旧版把 ①②③ 空格拼成**单行**，实渲染可达 33+ 半角（如
+    「1. 杂货铺 [普通商店] 新手村杂货铺」=33）→ 本收尾拆行消除。
+
+    序号前缀模板化：shop_overview_row_prefix（2026-09-12 批10·路C 迁全量模板表，内容包可覆盖）；
+    描述/门槛标记为引擎数据（非硬编码文案），头行徽标沿用 TYPE_BADGES 数据映射（豁免）。
     """
     # P2-6：icon 与店名分隔同上（一览行）
     _icon = strip_icon_emoji(row.get("icon", ""))
     name = f"{_icon} {row.get('name', '')}" if _icon else str(row.get("name", ""))
-    parts: List[str] = [tpl_of(ctx, "shop_overview_row_prefix",
-                               {"index": index, "name": name or "?"})]
+    head_parts: List[str] = [tpl_of(ctx, "shop_overview_row_prefix",
+                                    {"index": index, "name": name or "?"})]
     t = row.get("type", "normal")
     if t in TYPE_BADGES:
-        parts.append(TYPE_BADGES[t])
+        head_parts.append(TYPE_BADGES[t])
+    lines: List[str] = [" ".join(head_parts)]
     if row.get("desc"):
-        parts.append(str(row["desc"]))
-    line = " ".join(parts)
+        lines.append(str(row["desc"]))
     markers = list(row.get("markers", []) or [])
     if markers:
-        line += " " + " ".join(str(m) for m in markers)
-    return line
+        lines.append(" ".join(str(m) for m in markers))
+    return "\n".join(lines)
 
 
 def render_shops_overview(rows: list, page: object, *,
@@ -321,7 +329,9 @@ def render_shops_overview(rows: list, page: object, *,
     """`/商店 列表`：【商店】可用商店一览 + 5 条/页 + CakeGame 式尾段（当前页 + Tip）+ 裁决② 夹取。
 
     类型图标/门槛标记置灰不隐藏；标题/尾段 Tip 模板化：shop_list_title / shop_list_tail_tip
-    （2026-09-12 批10·路C 新排版：尾段 Tip 免斜杠「发 商店进入 <序号> 进店」）。"""
+    （2026-09-12 批10·路C 新排版：尾段 Tip 免斜杠「发 商店进入 <序号> 进店」）。
+    2026-09-12 收尾（遗留 #47）：单条行改「头行 + 描述行 + 门槛行」多行（`_shop_row`），
+    结构化头行 ≤28 半角；描述独立成行（介绍类自然折行）。"""
     sl, pg, pgs, total, clamped = _paginate(rows, page, per_page)
     lines: List[str] = [tpl_of(ctx, "shop_list_title")]
     start = (pg - 1) * per_page

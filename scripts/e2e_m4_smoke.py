@@ -394,7 +394,8 @@ def shop_flow(smoke: Smoke, ctx: MutableMapping) -> dict:
     out = cmd_shop(_parse("/商店 列表"), ctx)
     smoke.check("可用商店一览" in out, "商店：列表一览标题")
     smoke.check("铁匠铺" in out and "补给站" in out, "商店：一览含两店")
-    smoke.check(out.count("\n") <= 5, "商店：列表单页无页脚（2 店 ≤5 条）")
+    smoke.check("当前页：1/1" in out and "翻页" not in out,
+                "商店：列表单页（2 店 ≤5 条，无翻页页脚）")
     _trace_append(trace, "/商店 列表", out)
 
     # ---- /商店：浏览当前商店（NPC 移交 village_shop）----

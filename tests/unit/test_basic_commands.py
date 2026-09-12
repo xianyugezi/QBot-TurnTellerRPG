@@ -639,14 +639,17 @@ def test_help_directory_clamp_normal():
 def test_help_unregistered_guide():
     """/帮助 未注册 → 注册引导版（B6 豁免；注册/状态/背包 三项，4f B6 裁决原文）。"""
     out = cmd_help(parse("/帮助"), make_ctx(registered=False))
-    assert "【新手引导】发 注册 名字 职业 创建角色" in out
-    assert "注册 —— 创建角色（未注册必需）" in out
-    assert "状态 —— 查看角色状态面板" in out
-    assert "背包 —— 查看背包物品" in out
+    # 批5·路O：basic_register_guide 重做（免斜杠、去「——」装饰、标题独立行）
+    assert "【新手引导】" in out
+    assert "发 注册 名字 职业" in out
+    assert "注册：创建角色（必需）" in out
+    assert "状态：查看角色状态面板" in out
+    assert "背包：查看背包物品" in out
+    assert "发 帮助 查看完整列表" in out
     # P2-6：未注册玩家任意 /帮助（含解析错误）均返回引导版（B6 豁免前置）
     out2 = cmd_help(parse("/帮助 xx!"), make_ctx(registered=False))
     assert "【新手引导】" in out2
-    assert "状态 —— 查看角色状态面板" in out2   # 引导版为 注册/状态/背包（非 角色）
+    assert "状态：查看角色状态面板" in out2   # 引导版为 注册/状态/背包（非 角色）
 
 
 def test_help_groups_constants():

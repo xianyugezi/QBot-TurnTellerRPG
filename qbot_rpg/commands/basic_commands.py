@@ -68,7 +68,8 @@ TPL-12（sender.format_tpl12，文案唯一源 errors.py D-04）。
      普通玩家 5 组单页；GM 6 组 2 页（带 CakeGame 尾段）；组内指令列表 5 条/页。未注册玩家返回注册引导版
      （B6 豁免）。GM 判定读 ctx["is_gm"]（缺省 False=普通玩家，对齐 RUL-25 静默隐藏）。
   7) **注册门槛（RUL-08）**：/角色 /背包 /装备 /技能 在 ctx["registered"] is False 时统一返回
-     「❌ 请先 /注册 创建角色（/注册 名字 职业）」；/帮助 豁免（B6）。ctx 缺省 registered=True
+     「❌ 请先创建角色 / 发 注册 名字 职业」（批5·路O 新规范：免斜杠、拆两行）；/帮助 豁免（B6）。
+     ctx 缺省 registered=True
      （未注入时不拦截，保持既有命令壳纯函数可测）。
   8) **/背包 数据源**：ctx["inventory"]（ItemInstance 或 dict 行均可，兼容 4a 存档行形态）优先，
      ctx["player"].inventory 兜底；排序 = acquired_at 倒序（INV-07/RUL-17），无时间字段保持存储序
@@ -152,7 +153,8 @@ SUB_REMOVE = "卸"
 UNEQUIP_CMD = "卸下"
 
 # RUL-08 注册门槛（4f §1.4 / TC-05；/帮助 豁免见 B6；模板配置化：basic_register_gate 可内容包覆盖）
-TPL_REGISTER_GATE = "❌ 请先 /注册 创建角色（/注册 名字 职业）"
+# 批5·路O（2026-09-12）：文案与新规范统一（免斜杠、拆两行），模板 key = basic_register_gate
+TPL_REGISTER_GATE = "❌ 请先创建角色\n发 注册 名字 职业"
 
 # /背包 空背包（4f §3.4 边界：对齐 L1353 反向兜底；模板配置化：basic_empty_bag）
 TPL_EMPTY_BAG = "❌ 背包空空如也"
@@ -352,14 +354,8 @@ GM_HELP_GROUP: Tuple[str, Tuple[Tuple[str, str], ...]] = (
 # 分组名常量（目录页/组页引用）
 GROUP_ORDER: Tuple[str, ...] = tuple(g[0] for g in HELP_GROUPS) + (GM_HELP_GROUP[0],)
 
-# /帮助 注册引导版（B6：仅分组目录+注册/状态/背包 三项引导，4f B6 裁决原文；单页无页脚）
-_REGISTER_GUIDE: str = "\n".join([
-    "【新手引导】发 注册 名字 职业 创建角色",
-    "注册 —— 创建角色（未注册必需）",
-    "状态 —— 查看角色状态面板",
-    "背包 —— 查看背包物品",
-    "装备/技能 等更多指令注册后可用，发 帮助 查看完整列表",
-])
+# 批5·路O（2026-09-12）：原硬编码 _REGISTER_GUIDE 已删（全仓零引用；注册引导统一走
+# basic_register_guide 模板，见 cmd_help 未注册分支）。
 
 # 目录头（4f TPL-4F-06；2026-08-31 用户拍板：标题只留【指令总览】，翻页提示由尾段 Tip 承担）
 _DIRECTORY_TITLE = "【指令总览】"

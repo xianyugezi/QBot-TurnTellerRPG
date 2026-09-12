@@ -76,7 +76,8 @@ def parse(raw: str) -> ParsedCommand:
 def test_use_not_registered_gate() -> None:
     """未注册 → TPL_REGISTER_GATE。"""
     ctx = make_ctx(registered=False, player=None)
-    assert cmd_use(parse("/使用 1"), ctx) == "❌ 请先 /注册 创建角色（/注册 名字 职业）"
+    # 批5·路O：RUL-08 门槛文案与全表统一（免斜杠、拆两行）
+    assert cmd_use(parse("/使用 1"), ctx) == "❌ 请先创建角色\n发 注册 名字 职业"
 
 
 def test_use_in_battle_rejected() -> None:

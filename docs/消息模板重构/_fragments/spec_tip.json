@@ -1,0 +1,33 @@
+{
+  "rail": "spec_tip",
+  "scope": "专项·跨模块尾行 Tip 统一（免斜杠 + 表驱动）：basic_commands / checkin_commands / quest_commands / core/shop.py / core/templates/base.py 尾行 Tip 常量 → 全量表键；文案去单引号与「发送」字样，统一「发 <指令> <参数>」写法。Tip: 前缀仍由 list_render.render_cake_tail 拼装（规范口径，不表驱动）。12 键，全部满足「Tip: 前缀后 ≤28 半角」且「含 Tip: 前缀渲染行 ≤28 半角」（对齐 b10c shop_browse_tail_tip 的「含前缀 27/28」实测口径）。",
+  "templates": {
+    "tip_bag": "发 使用 <物品名>",
+    "tip_bag_view": "发 背包 查看 <序号> 详情",
+    "tip_consume": "发 使用 <物品名> 消耗品",
+    "tip_equip": "发 使用 <序号> 穿戴装备",
+    "tip_view": "发 装备 查看当前装备",
+    "tip_skill": "发 技能 <页码> 翻页",
+    "tip_help": "发 帮助 <组名> 组内指令",
+    "tip_help_dir": "发 帮助 <页数> 翻页",
+    "tip_help_group": "发 帮助 <组名> <页数>",
+    "tip_checkin": "发 签到 补签",
+    "tip_quest_board": "发 任务 领取 <序号>",
+    "tip_shop": "发 购买 <物品名>"
+  },
+  "prose_keys": {},
+  "notes": {
+    "tip_bag": "背包尾段默认 Tip（basic_commands._bag_tail_lines 的 tip 兜底）。旧 `_BAG_TAIL_TIP = \"发送'使用+物品名'即可使用物品\"`（含单引号与「发送」；含 Tip: 前缀 23 半角）→「发 使用 <物品名>」= 静态 16 / 含 Tip: 前缀 20 半角。`<…>` 为字面示例文本（非 {占位符}），白名单空集；调用方仍按内容传 tip（含装备时走类型引导池），仅兜底路径改表",
+    "tip_bag_view": "背包 Tip 轮换池第 1 条（物品详情发现性引导，2026-09-06 实机反馈：玩家试「查看1/物品详情1」全静默）。旧字面量 `\"发送'背包 查看 <序号>'看物品详情\"` →「发 背包 查看 <序号> 详情」= 静态 24 / 含前缀 28 半角（≤28）；对齐表内 ach_list_tail_tip「发 成就信息 <序号> 查看详情」house 形态（指令 + 参数 + 名物词）",
+    "tip_consume": "背包 Tip 轮换池第 3 条（有装备时追加；消耗品可直发物品名）。旧字面量 `\"消耗品直接'使用 物品名'\"`（口语化 + 单引号 + 非「发 …」形态）→「发 使用 <物品名> 消耗品」= 静态 24 / 含前缀 28 半角；「消耗品」作尾标词（同 shop_list_tail_tip「进店」house 形态），与 tip_bag 区分语用",
+    "tip_equip": "装备页尾行 Tip（basic_commands._render_equip_page `f\"Tip:{...}\"`）+ 背包轮换池第 2 条共用。旧 `_EQUIP_TAIL_TIP = \"发送'使用 序号'穿戴装备，如'使用 1'\"` →「发 使用 <序号> 穿戴装备」= 静态 23 / 含前缀 27 半角；2026-09-05 用户拍板「穿戴统一走 使用」（勿教「装备 穿」）语义保留；去掉「如'使用 1'」冗余示例（免斜杠示例已含 <序号>）",
+    "tip_view": "角色面板下一步引导（原 `_VIEW_TAIL_TIP`，全仓**零调用点**——纯登记键）。旧「发送'装备'查看当前装备」→「发 装备 查看当前装备」= 静态 20 / 含前缀 24 半角；留表待批18 死键清扫统一裁决（旧常量亦无调用点）",
+    "tip_skill": "技能列表翻页 Tip（basic_commands._cake_tail tip=_SKILL_TAIL_TIP）。旧 `_SKILL_TAIL_TIP = \"发送'技能 页码'翻页查看，如'技能 2'\"` →「发 技能 <页码> 翻页」= 静态 19 / 含前缀 23 半角；参数用表内统一 `<页码>` 口径（与 tip_help_dir 的 <页数> 同族）",
+    "tip_help": "帮助组页**单页**引导 + 承接原通用帮助尾行（原 `_HELP_TAIL_TIP`，零调用点）。2026-09-05 实机反馈：单页教翻页是空转引导 → 单页改教「进组页看组内指令」（A 路审计：新手不知道组页存在）。旧「发送'帮助 组名'翻页查看指令」→「发 帮助 <组名> 组内指令」= 静态 23 / 含前缀 27 半角；`_HELP_TAIL_TIP` 常量随之删除，其口径由本键承接",
+    "tip_help_dir": "帮助目录多页翻页 Tip（basic_commands cmd_help 目录分支 `_dir_tip`；单页不出）。旧 `_HELP_DIR_TAIL_TIP = \"发送'帮助<页数>'翻页，如'帮助2'\"`（教粘合形态「帮助2」）→「发 帮助 <页数> 翻页」= 静态 19 / 含前缀 23 半角；紧凑粘合翻页（帮助2 / 帮助冒险2）仍由解析层双认（cmd_help 兼容），文案改教空格分隔以免误导",
+    "tip_help_group": "帮助组页多页翻页 Tip（basic_commands _render_help_group；单页不出）。旧 `_HELP_GROUP_TAIL_TIP = \"发送'帮助<组名><页数>'翻页，如'帮助冒险2'\"` →「发 帮助 <组名> <页数>」= 静态 21 / 含前缀 25 半角（去「翻页」尾词以守住「含前缀 ≤28」实测口径；双参数形态即翻页语义，参数多段空格分隔）",
+    "tip_checkin": "签到结算汇总/状态视图尾段 Tip（checkin_commands.render_summary tip=_TAIL_TIP）。旧 `_TAIL_TIP = \"发送'签到 补签'即可补签\"` →「发 签到 补签」= 静态 12 / 含前缀 16 半角；补签为真实子指令（SUB_MAKEUP），指令串逐字一致",
+    "tip_quest_board": "任务板尾段 Tip（quest_commands 任务板渲染 tip=_BOARD_TAIL_TIP；active_full / 无可接行时以同一渲染值 replace 成 note → 调用点改用局部变量）。旧 `_BOARD_TAIL_TIP = \"发送'任务 领取 序号'即可领取任务\"` →「发 任务 领取 <序号>」= 静态 19 / 含前缀 23 半角；「领取」仍为已注册的「接取」等价子词（SUB_ACCEPT_ALIASES），P2-12 引导语义保留",
+    "tip_shop": "商店商品列表尾行 Tip（core/shop.py `shop_browse` 返回体 \"tip\" 字段）。旧硬编码「发送'购买+物品名'即可购买商品」→「发 购买 <物品名>」= 静态 16 / 含前缀 20 半角；core 引擎层经 tpl_of(ctx, ...) 读表（与 investigate / environment_lore 引擎层表驱动同模式），内容包可覆盖。注：商店壳层实际尾段走 shop_browse_tail_tip（发 购买 <序号> 即可买下），本键为该 dict 字段的契约值"
+  }
+}

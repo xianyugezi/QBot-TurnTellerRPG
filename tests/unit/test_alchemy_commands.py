@@ -442,7 +442,8 @@ async def test_feed_missing_arg_tpl12() -> None:
 # /投料：F-03 链式投料成功（M-03 反馈）
 # ---------------------------------------------------------------------------
 async def test_feed_ok_chain_and_inherit_feedback() -> None:
-    """F-03/M-03 正例：投 火晶石,火晶石 → 多行反馈「火+8 / 连锁 1 段 / 可继承特性：\n灼烧强化(PP1)」。"""
+    """F-03/M-03 正例：投 火晶石,火晶石 → 多行反馈
+    「火+8 / 连锁 1 段 / 可继承特性：\n灼烧强化(PP1)」。"""
     ctx = make_ctx()
     await cmd_alchemy(parse_command("/炼金 火焰弹"), ctx)
     out = await cmd_feed(parse_command("/投料 火晶石,火晶石"), ctx)

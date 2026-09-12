@@ -320,7 +320,7 @@ def t_param_lexing() -> None:
     player = make_player(forge_level=1)
     ctx = fresh_ctx({"ore": 3}, player)
     out_txt = cmd_forge(parsed("/锻造 铁剑 Ⅰ"), ctx)
-    assert "参数错误：节点名不含空格" in out_txt, out_txt
+    assert "❌ 节点名不含空格" in out_txt, out_txt
 
 
 def t_batch_forge() -> None:

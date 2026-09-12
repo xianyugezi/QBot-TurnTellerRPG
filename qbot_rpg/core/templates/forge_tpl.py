@@ -7,19 +7,25 @@
 锻造树/套装/客制 等 f-string 与模块常量）的逐字文案迁移，默认值改动会导致现有测试
 断言失效——需与 forge_commands.py 渲染处 tpl_of(ctx, "forge_*", {...}) 一致。
 
+2026-09-12 消息模板重构（批3·路I）：执行流 33 键（系统/守卫/解析错误 + 批量/成功路径 +
+forge_redflag_suffix）迁至全量表 qbot_rpg/core/templates/template_table.json，按
+手机QQ 14 全角新规范重写；同名 key 由新表在聚合时覆盖本分区。
+
 key 命名：forge_<用途>。占位符白名单：每类模板允许的占位符；超出白名单渲染时原样
 保留（提示缺失）。渲染零 emoji（仅 ✅/❌ 功能性标记 + 排版符号 | → × / ■ 等）。
 
 分区（段落）：
-- 系统/守卫/解析错误：forge_system_disabled / forge_tree_no_root / forge_err_* /
-  forge_not_found / forge_ambiguous* / forge_redflag_reject / forge_prereq* /
-  forge_material_* / forge_level_gate / forge_king_gate*（forge_atomic/_forge_once/
-  parse_forge_target）
-- 批量与成功路径：forge_batch_* / forge_success* / forge_coin_short 等（_execute）
+- 系统/守卫/解析错误（2026-09-12 批3·路I 迁全量表 template_table.json）：
+  forge_system_disabled / forge_tree_no_root / forge_err_* / forge_not_found /
+  forge_ambiguous* / forge_redflag_reject / forge_prereq* / forge_material_* /
+  forge_level_gate / forge_king_gate*（forge_atomic/_forge_once/parse_forge_target）
+- 批量与成功路径（2026-09-12 批3·路I 迁全量表）：forge_batch_* / forge_success* /
+  forge_coin_short 等（_execute）
 - 预览卡片与确认窗：forge_preview_* / forge_req_line / forge_element_summary /
   forge_atk_summary / forge_slots* / forge_continue* / forge_confirm_none /
   forge_preview_expired（_render_preview / cmd_confirm）
-- /图纸：forge_blueprint_* / forge_terminal_element / forge_branch* / forge_redflag_suffix
+- /图纸：forge_blueprint_* / forge_terminal_element / forge_branch*（forge_redflag_suffix
+  已迁全量表 · 批3·路I）
 - /锻造树：forge_tree_*（cmd_forge_tree 分页 + _tree_row_line 状态）
 - /套装 /客制：forge_sets_* / forge_augments_*（cmd_sets / cmd_augments）
 
@@ -31,42 +37,8 @@ from __future__ import annotations
 from typing import Any, Dict
 
 DEFAULT_TEMPLATES: Dict[str, Any] = {
-    # —— 系统/守卫/解析错误（forge_atomic / _forge_once / parse_forge_target）——
-    "forge_system_disabled": "❌ 锻造系统未启用（内容包 forge.json 未注册）",
-    "forge_tree_no_root": "❌ 当前锻造树没有根节点（内容包 forge.json 异常）",
-    "forge_err_empty": "参数错误：缺少锻造目标（示例：/锻造 铁剑 或 /锻造 炎剑Ⅱ*3）",
-    "forge_err_space": "参数错误：节点名不含空格",
-    "forge_err_qty": "参数错误：数量须为正整数（示例：/锻造 炎剑Ⅱ*3）",
-    "forge_err_charset": "参数错误：节点名含非法字符"
-                         "（仅允许 中文/字母/数字/·/Ⅰ-Ⅹ/【】/-/■）",
-    "forge_not_found": "未找到「{name}」→ /锻造树 查看可锻装备",
-    "forge_ambiguous_item": "{name}（Lv{level}）",
-    "forge_ambiguous": "候选多个节点：{candidates} → /锻造树 查看可锻装备",
-    "forge_redflag_reject": "❌ 已失效：物品已删除",
-    "forge_prereq_hint": "需先锻造：{name}",
-    "forge_prereq_hint_default": "需先锻造：前置节点",
-    "forge_prereq": "❌ {hint} → /图纸 查看全链",
-    "forge_material_item": "{name}×{need}",
-    "forge_material_deficit": "{name}×{deficit}",
-    "forge_material_deficit_source": "{base}（来源：{src}）",
-    "forge_material_shortfall": "❌ 素材不足：需要 {need}；缺：{deficits} → /图纸 查看全链",
-    "forge_level_gate": "需要 {need_rank} 级，当前 {cur_rank}（还差 {missing} 熟练）",
-    "forge_king_gate": "❌ {message}",
-    "forge_king_gate_fallback": "未获铸造王",
-
-    # —— 批量与成功路径（forge_atomic 批量 / _execute 原子结算）——
-    "forge_batch_fail": "第 {i} 次失败，已成功 {successes} 次\n{out}",
-    "forge_batch_success": "{head} ×{n}\n{tail}",
-    "forge_material_deduct_fail": "❌ 素材扣减失败，本次锻造未执行（零副作用）",
-    "forge_coin_short": "❌ {currency}不足：需要 {cost}，当前 {coins_have}",
-    "forge_item_add_fail": "❌ 装备入包失败，本次锻造未执行（零副作用）",
-    "forge_exp_fail": "❌ 熟练入账失败，本次锻造已回滚（零副作用）",
-    "forge_success": "✅ {name} 锻造完成！\n{fields}",
-    "forge_success_atk": "攻击 {atk}",
-    "forge_success_slot": "部位：{slot}",
-    "forge_success_slot_text": "槽位：{slot}",
-    "forge_success_quality": "品质：{quality}（固定）",
-    "forge_slot_none": "无",
+    # 2026-09-12 批3·路I：系统/守卫/解析错误 + 批量与成功路径 33 键已迁全量表
+    #（template_table.json 同名 key 聚合覆盖；含 forge_redflag_suffix）。
 
     # —— 预览卡片与确认窗（_render_preview / cmd_confirm）——
     "forge_preview_occupied": "已有待确认的锻造预览，请先 /确认 或等待超时\n{card}",
@@ -88,7 +60,6 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     "forge_terminal_element": "{name}（{element}）",
     "forge_branch_seg": "{name} ← {mat}",
     "forge_branch_line": "{prefix} 分支：{seg}",
-    "forge_redflag_suffix": "（已失效：物品已删除）",
 
     # —— /锻造树（cmd_forge_tree 分页 + _tree_row_line 状态）——
     "forge_tree_row": "{name}（{level}级/{tier}）",
@@ -109,41 +80,8 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
 }
 
 PLACEHOLDER_WHITELIST: Dict[str, set] = {
-    # —— 系统/守卫/解析错误 ——
-    "forge_system_disabled": set(),
-    "forge_tree_no_root": set(),
-    "forge_err_empty": set(),
-    "forge_err_space": set(),
-    "forge_err_qty": set(),
-    "forge_err_charset": set(),
-    "forge_not_found": {"name"},
-    "forge_ambiguous_item": {"name", "level"},
-    "forge_ambiguous": {"candidates"},
-    "forge_redflag_reject": set(),
-    "forge_prereq_hint": {"name"},
-    "forge_prereq_hint_default": set(),
-    "forge_prereq": {"hint"},
-    "forge_material_item": {"name", "need"},
-    "forge_material_deficit": {"name", "deficit"},
-    "forge_material_deficit_source": {"base", "src"},
-    "forge_material_shortfall": {"need", "deficits"},
-    "forge_level_gate": {"need_rank", "cur_rank", "missing"},
-    "forge_king_gate": {"message"},
-    "forge_king_gate_fallback": set(),
-
-    # —— 批量与成功路径 ——
-    "forge_batch_fail": {"i", "successes", "out"},
-    "forge_batch_success": {"head", "n", "tail"},
-    "forge_material_deduct_fail": set(),
-    "forge_coin_short": {"cost", "coins_have", "currency"},
-    "forge_item_add_fail": set(),
-    "forge_exp_fail": set(),
-    "forge_success": {"name", "fields"},
-    "forge_success_atk": {"atk"},
-    "forge_success_slot": {"slot"},
-    "forge_success_slot_text": {"slot"},
-    "forge_success_quality": {"quality"},
-    "forge_slot_none": set(),
+    # 2026-09-12 批3·路I：系统/守卫/解析错误 + 批量与成功路径 共 32 键已迁全量表
+    #（白名单由表文本自动派生；forge_redflag_suffix 见 /图纸 段注）。
 
     # —— 预览卡片与确认窗 ——
     "forge_preview_occupied": {"card"},
@@ -165,7 +103,7 @@ PLACEHOLDER_WHITELIST: Dict[str, set] = {
     "forge_terminal_element": {"name", "element"},
     "forge_branch_seg": {"name", "mat"},
     "forge_branch_line": {"prefix", "seg"},
-    "forge_redflag_suffix": set(),
+    # forge_redflag_suffix：已迁全量表（批3·路I；白名单自动派生）。
 
     # —— /锻造树 ——
     "forge_tree_row": {"name", "level", "tier"},

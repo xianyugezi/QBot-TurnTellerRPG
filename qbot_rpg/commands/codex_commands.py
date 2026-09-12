@@ -45,7 +45,10 @@ _PAGE_SIZE = 5
 
 
 def _render_progress(label: str, p: Mapping[str, Any], ctx: Mapping[str, Any]) -> str:
-    """分册进度行：{label} 完成度 {pct}%（已见/总数）。模板配置化 → codex_progress_line。"""
+    """分册进度行两行：「{label}：{pct}%」+「已见 {seen}/{total}」（大数值独立行）。
+
+    模板配置化 → 全量表 key codex_progress_line（2026-09-12 批9·路C 重做）。
+    """
     pct = round(float(p.get("pct", 0.0)))
     return tpl_of(ctx, "codex_progress_line",
                   {"label": label, "pct": pct,
@@ -67,9 +70,10 @@ def _gate(ctx: Mapping[str, Any]) -> Optional[str]:
 def _overview(ctx: MutableMapping[str, Any]) -> str:
     """总览：四册各自完成度 + 总完成度 + 下一档里程碑提示（未收集条目仅计数不展示名称）。
 
-    模板配置化（2026-08-31 + M11 批2 路2C）：页头/分册行/总行/下一档/提示行全部来自
-    codex_tpl（codex_overview_* / codex_progress_line / codex_total_progress /
-    codex_next_tier / codex_tier_maxed），渲染处 tpl_of。
+    模板配置化：页头/分册行/总行/下一档/提示行全部来自全量表（codex_overview_* /
+    codex_progress_line / codex_total_progress / codex_next_tier / codex_tier_maxed），
+    渲染处 tpl_of。2026-09-12 批9·路C：14 键按手机QQ 14 全角规范重做（进度/里程碑拆两行、
+    提示行免斜杠）；原分区 codex_tpl 已空壳化。
     """
     from qbot_rpg.core.codex import CATEGORY_ORDER, _CATEGORY_LABELS, codex_progress
     lines = [tpl_of(ctx, "codex_overview_header")]
@@ -102,9 +106,11 @@ def _category_page(
 ) -> str:
     """分册分页展示（5 条/页，未收集「???」不泄露名称）。
 
-    模板配置化（2026-08-31）：分册头/空态/条目行/已击杀/传闻/???/尾段 Tip 全部来自 codex_tpl
+    模板配置化：分册头/空态/条目行/已击杀/传闻/???/尾段 Tip 全部来自全量表
     （codex_category_* / codex_entry_line / codex_killed_mark / codex_rumor_mark /
-    codex_unknown_name / codex_tail_tip），渲染处 tpl_of。
+    codex_unknown_name / codex_tail_tip），渲染处 tpl_of。2026-09-12 批9·路C 重做：
+    空态/尾段 Tip 改词、错误行 ❌ + 原因 + 下一步；「（已击杀）」「（传闻）」「???」为
+    引擎语义字形锚点（R-19/R-20 不泄露、R-24/F-16 传闻消费），保留不动。
     """
     from qbot_rpg.core.codex import codex_view
     from qbot_rpg.core.message_format.list_render import render_cake_tail

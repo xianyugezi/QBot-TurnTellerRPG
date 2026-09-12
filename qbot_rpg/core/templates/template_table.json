@@ -615,6 +615,20 @@
     "pvp_attack_ok": "✅ 已攻击 {name}\n{result}",
     "pvp_attack_result_line": "{name} 受到 {damage} 伤害\n剩余 {hp}/{max_hp}",
     "pvp_registered_gate": "❌ 请先创建角色\n发 注册 名字 职业",
-    "pvp_not_registered": "❌ 请先创建角色\n发 注册 名字 职业"
+    "pvp_not_registered": "❌ 请先创建角色\n发 注册 名字 职业",
+    "codex_category_empty": "本册暂无收集记录",
+    "codex_category_header": "【{label}】",
+    "codex_entry_line": "{mark} {name}{kill}{rumor}",
+    "codex_killed_mark": "（已击杀）",
+    "codex_next_tier": "下一档：{tier}%\n还差 {gap}%",
+    "codex_overview_header": "【图鉴】收集总览",
+    "codex_overview_hint": "看分册：发 图鉴 怪物 2\n每页 5 条",
+    "codex_progress_line": "{label}：{pct}%\n已见 {seen}/{total}",
+    "codex_rumor_mark": "（传闻）",
+    "codex_tail_tip": "本册共 {total} 条",
+    "codex_tier_maxed": "已达最高档\n图鉴收藏家 100%",
+    "codex_total_progress": "总完成度：{pct}%\n已见 {seen}/{total}",
+    "codex_unknown_category": "❌ 没有这个图鉴分册\n发 图鉴 查看总览",
+    "codex_unknown_name": "???"
   }
 }

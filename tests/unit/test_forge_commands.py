@@ -63,7 +63,6 @@ from qbot_rpg.commands.forge_commands import (
     PREVIEW_WINDOW_KEY,
     SETS_CMD,
     SETS_EMPTY,
-    SETS_LOCKED_MSG,
     SETS_UNLOCK_ID,
     TREE_CMD,
     TREE_EMPTY_PAGE,

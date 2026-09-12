@@ -186,7 +186,7 @@ def t_blueprint_marks() -> None:
     assert "矿石 3/3" in out_txt and "✅" in out_txt, out_txt
     # b3 未知节点 → 空态
     out_txt = cmd_blueprint(parsed("/图纸 不存在之剑"), ctx)
-    assert "未找到「不存在之剑」相关锻造链" in out_txt, out_txt
+    assert "❌ 未找到「不存在之剑」" in out_txt, out_txt
 
 
 def t_forge_tree_view() -> None:

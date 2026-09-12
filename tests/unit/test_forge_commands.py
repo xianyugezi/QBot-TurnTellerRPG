@@ -18,7 +18,7 @@
   - TC-11  预览后不 /确认（超时）→ 无锻造、无扣款、无经验（窗口作废）
   - TC-12  预览后 /确认 → 重跑守卫再扣素材发经验 → ✅ 锻造完成
   - TC-13  straight_forge=false（深度模式）→ 全部 /锻造 强制预览（前台无直锻入口）
-  - TC-14  无进行中预览时 /确认 → 拒绝「当前无可确认的锻造预览」
+  - TC-14  无进行中预览时 /确认 → 拒绝「❌ 当前无待确认预览」
   - 3.3 边界：同一玩家仅 1 个待确认窗（新预览不覆盖）；carry_sec=0 不限时；
     确认失败（素材不足）零副作用；/图纸 不覆盖既有窗（注册断言）。
   - 装配：register_forge_commands 注册 /锻造 /确认（CommandSpec 白名单标记）。
@@ -213,11 +213,11 @@ def test_tc09_straight_forge_direct_success() -> None:
 def test_tc10_preview_card_fields() -> None:
     """TC-10：/锻造 炎剑Ⅱ 预览 → 📖 卡片字段（标题/素材行/孔位/可继续锻造）。
 
-    断言（2c2b §3.2 字段接线，真实 test_demo 数据）：
+    断言（2c2b §3.2 字段接线，真实 test_demo 数据；2026-09-12 批6·路R：字段改换行）：
       - 标题：`炎剑Ⅱ（火属性+8）`（节点名 + 属性摘要，element=fire→火 +8）；
-      - 素材行：`素材：炎剑 + 火龙鳞×5 + 火晶石×2 | 需求：铸造 宗师 级`
+      - 素材行：`素材：炎剑 + 火龙鳞×5 + 火晶石×2` + `需求：铸造 宗师 级`
         （前置节点名 炎剑 + 各行素材 + 需求档位；lv5 → tier index 5=宗师）；
-      - 孔位/后续：`孔位：1 级槽 ×1 | 2 级槽 ×1 | 可继续锻造：炎剑Ⅲ → ■炎王剑`
+      - 孔位/后续：`孔位：1级槽×1 | 2级槽×1` / `可继续锻造：炎剑Ⅲ` / `终点：■炎王剑`
         （slots 1/2 + 主线 child 炎剑Ⅲ → line_endpoint ■炎王剑）。
     预览不扣任何资源（inventory/金币/经验/forged 全不变）。
     """
@@ -228,8 +228,11 @@ def test_tc10_preview_card_fields() -> None:
     out = cmd_forge(_parsed("/锻造 炎剑Ⅱ 预览"), ctx)
     lines = out.split("\n")
     assert lines[0] == "炎剑Ⅱ（火属性+8）"
-    assert lines[1] == "素材：炎剑 + 火龙鳞×5 + 火晶石×2 | 需求：铸造 宗师 级"
-    assert lines[2] == "孔位：1 级槽 ×1 | 2 级槽 ×1 | 可继续锻造：炎剑Ⅲ → ■炎王剑"
+    assert lines[1] == "素材：炎剑 + 火龙鳞×5 + 火晶石×2"
+    assert lines[2] == "需求：铸造 宗师 级"
+    assert lines[3] == "孔位：1级槽×1 | 2级槽×1"
+    assert lines[4] == "可继续锻造：炎剑Ⅲ"
+    assert lines[5] == "终点：■炎王剑"
     # 预览 0 资源副作用
     assert ctx["inventory"]["fire_dragon_scale"] == 5
     assert ctx["inventory"]["alch_ember_crystal"] == 2
@@ -247,9 +250,11 @@ def test_tc10_preview_card_no_slots_branch() -> None:
     out = cmd_forge(_parsed("/锻造 铁剑Ⅰ 预览"), ctx)
     lines = out.split("\n")
     assert lines[0] == "铁剑Ⅰ（攻击+18）"
-    assert lines[1] == "素材：铁剑 + 矿石×5 | 需求：铸造 精通 级"
-    # 铁剑Ⅰ 无孔位，但主线仍有后续 → 「可继续锻造：铁剑Ⅱ → ■炎王剑」行存在（2c2b §3.2 后续段）
+    assert lines[1] == "素材：铁剑 + 矿石×5"
+    assert lines[2] == "需求：铸造 精通 级"
+    # 铁剑Ⅰ 无孔位，但主线仍有后续 → 「可继续锻造：铁剑Ⅱ」+「终点：■炎王剑」行存在（2c2b §3.2 后续段）
     assert any("可继续锻造" in ln for ln in lines)
+    assert any(ln == "终点：■炎王剑" for ln in lines)
 
 
 # ---------------------------------------------------------------------------
@@ -285,7 +290,7 @@ def test_tc11_timeout_invalidates_window() -> None:
     # 超时后 /确认 → 拒绝 + 窗口作废
     ctx["now"] = 1000.0 + 91
     out = cmd_confirm(_parsed("/确认"), ctx)
-    assert "预览已过期" in out and "重新 /锻造" in out
+    assert "预览已过期" in out and "发 锻造" in out
     assert PREVIEW_WINDOW_KEY not in ctx or "u1" not in ctx[PREVIEW_WINDOW_KEY]
     # 零副作用
     assert ctx["inventory"]["fire_dragon_scale"] == 5
@@ -373,11 +378,11 @@ def test_tc13_straight_forge_false_force_preview() -> None:
 # ---------------------------------------------------------------------------
 
 def test_tc14_confirm_without_preview_rejected() -> None:
-    """TC-14：无任何进行中预览时 /确认 → 拒绝「当前无可确认的锻造预览」。"""
+    """TC-14：无任何进行中预览时 /确认 → 拒绝「❌ 当前无待确认预览」。"""
     player = _player(forged=[], forge_level=1)
     ctx = _make_ctx({"ore": 3}, player)
     out = cmd_confirm(_parsed("/确认"), ctx)
-    assert out == "当前无可确认的锻造预览"
+    assert out == "❌ 当前无待确认预览"
     assert ctx["inventory"]["ore"] == 3  # 无锻造
 
 
@@ -394,7 +399,7 @@ def test_single_window_no_overwrite() -> None:
     assert ctx[PREVIEW_WINDOW_KEY]["u1"]["node_id"] == N_IRON_1
     # 再预览 铁剑（同玩家）→ 不覆盖既有窗，返回提示 + 原卡片
     out2 = cmd_forge(_parsed("/锻造 铁剑 预览"), ctx)
-    assert "已有待确认的锻造预览" in out2
+    assert "❌ 已有待确认的预览" in out2
     assert ctx[PREVIEW_WINDOW_KEY]["u1"]["node_id"] == N_IRON_1  # 保持原窗
 
 

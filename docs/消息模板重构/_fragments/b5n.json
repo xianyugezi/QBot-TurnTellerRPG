@@ -2,7 +2,7 @@
   "rail": "b5n",
   "scope": "炼金·挑战/深度/进化/教学 26 键（alchemy_tpl.py：deep_*7 / evolve_fail / core_mismatch / core_fail / buff_fail / buff_fail_mark / challenge_*8 / announce_item / tutorial_*5）",
   "templates": {
-    "alchemy_challenge_condition": "连锁 ≥{need_chain} {op} 刻度 ≥{need_elem}",
+    "alchemy_challenge_condition": "连锁 ≥{need_chain}\n{op} 刻度 ≥{need_elem}",
     "alchemy_challenge_panel": "{name} 挑战已开启\n材料×2 已付\n{paid_text}\n苛刻条件：{cond}\n当前：连锁 {chain}/{need_chain}\n当前：刻度 {elems}/{need_elem}\n判定：确认时结算\n达标：品质上限 +10\n未达标：品质降级\n退还 50% 材料",
     "alchemy_challenge_success": "✅ 挑战成功\n品质上限 +10",
     "alchemy_challenge_fail": "❌ 挑战失败：条件未达标\n连锁 {segments}/{need_chain}\n品质降级\n退还 50% 材料",
@@ -32,7 +32,7 @@
   "prose_keys": {},
   "notes": {
     "alchemy_challenge_panel": "重做（旧 63 全角=全仓最宽）——拆 10 行：标题 / 材料×2 已付 + 明细行 / 苛刻条件 / 当前连锁 / 当前刻度 / 判定时机 / 达标 / 未达标品质降级 / 退还 50% 材料；去「｜」「/确认」免斜杠；数值口径（品质上限+10 / 品质降级 / 退还 50%）不变",
-    "alchemy_challenge_condition": "维持——占位符集合与语义不变；实渲染「连锁 ≥5 且 刻度 ≥2」=10 全角；checker 估算 WARN（占位符默认估宽 6/个虚高）已人工核",
+    "alchemy_challenge_condition": "重做——拆两行（连锁行 / 算子+刻度行）：原单行 + 面板前缀「苛刻条件：」实宽 15 全角会折行；占位符集合与语义不变；checker 0 FAIL/WARN",
     "alchemy_challenge_success": "重做——补 ✅（成功标记）+ 拆行；「品质上限 +10」数值口径不变",
     "alchemy_challenge_fail": "重做——拆 4 行（❌失败+原因 / 连锁实况 / 品质降级 / 退还 50%）；去全角括号与句内逗号",
     "alchemy_challenge_settle_fail": "维持（已合规）",

@@ -2287,10 +2287,18 @@ def _evolve_error(res: Mapping[str, Any], ctx: Mapping[str, Any]) -> str:
 def _render_deep_panel(core: AlchemyCore, snap: Mapping[str, Any],
                        ctx: Mapping[str, Any], job_tier_index: int) -> str:
     """深度会话面板（F-06/M-06：6 槽/核心槽/3 普通+1 金/刻度/进化线；**纯文本降级**——emoji
-    纪律同 _render_panel，M-06 深度面板模板结构）：
-    `炼狱爆弹·深度（配方Lv40）深度调合：材料：火晶石×2(火8)`
-    `属性刻度：火≥5 显现"burn" | 槽位 0/6 | 核心槽：空 | 特性位 0/3 普通+1金 | PP 0/5`
-    `进化线：炼金产出 0/5 → /进化 解锁 烈焰弹·改配方`
+    纪律同 _render_panel，M-06 深度面板模板结构；2026-09-12 批5·路N 改逐字段拆行）：
+    `炼狱爆弹·深度（配方Lv40）`
+    `深度调合`
+    `材料：火晶石×2(火8)`
+    `属性刻度：火≥5 显现「burn」`
+    `槽位 0/6`
+    `核心槽：空`
+    `特性位 0/3 普通`
+    `第 4 位金色`（金位独占时才有此行）
+    `PP 0/5`
+    `进化线：炼金产出 0/5`
+    `解锁：发 进化 烈焰弹·改配方`
     """
     panel = core.assemble_panel(snap, ctx, job_tier_index=job_tier_index)
     recipe = _find_recipe(ctx, snap.get("recipe_id"))
@@ -2466,7 +2474,7 @@ def _render_announcement(meta: AlchemyMeta, tier_index: int,
         preview = m.get("preview") if isinstance(m, Mapping) else None
         parts.append(tpl_of(ctx, "alchemy_announce_item",
                             {"name": name, "preview": preview}))
-    return " | ".join(parts)
+    return "\n".join(parts)
 
 
 async def cmd_deep(parsed: Any, ctx: MutableMapping[str, Any]) -> str:

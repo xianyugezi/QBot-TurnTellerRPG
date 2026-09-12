@@ -10,7 +10,16 @@
   "stun_back_mult": 0,
   "roar_light_delay": 350,
   "roar_heavy_delay": 550,
-  "roar_combo_clear": true
+  "roar_combo_clear": true,
+  "rage_per_damage": 0.35,
+  "rage_cool_actions": 6,
+  "stamina_max": 60,
+  "stamina_drain_blunt": 6,
+  "stamina_regen_per_action": 1.2,
+  "enrage_damage_mult": 1.15,
+  "enrage_recovery_mult": 0.8,
+  "fatigue_recovery_mult": 1.25,
+  "fatigue_stagger_chance": 0.12
  },
  "default_map": "bone_station",
  "level_cap": 35,

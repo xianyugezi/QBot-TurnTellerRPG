@@ -269,6 +269,18 @@ _BATTLE_DEFAULT_CONFIG: Dict[str, Any] = {
     "roar_light_delay": 350.0,         # 轻咆哮行动条后推量
     "roar_heavy_delay": 550.0,         # 大咆哮行动条后推量
     "roar_combo_clear": True,          # 是否震散玩家在途连势
+    # 怒·三态 / 疲劳（怪猎采纳 #4/#5，2026-09-12 批⑦B）：敌侧双轴（怒值/耐力）
+    # 驱动行为态切换（normal/enraged/fatigued；状态权重/入场动作/转场条件走内容
+    # ai 段，条件类型 `enemy_axis`）。数值全隐性、可配；内容未配 ai 段时自然静默。
+    "rage_per_damage": 0.35,          # 受击怒气积累（每 1 点伤害）
+    "rage_cool_actions": 6,           # 怒态持续（怪的行动次数；冷却计数器）
+    "stamina_max": 60.0,              # 耐力上限（标定：一次 BOSS 战 1~2 次疲劳）
+    "stamina_drain_blunt": 6.0,       # 玩家打击命中一次削减的耐力（减气）
+    "stamina_regen_per_action": 1.2,  # 每次行动边界耐力回复
+    "enrage_damage_mult": 1.15,       # 怒态敌方伤害倍率（增伤）
+    "enrage_recovery_mult": 0.8,      # 怒态敌方行动恢复倍率（提速）
+    "fatigue_recovery_mult": 1.25,    # 疲劳敌方行动恢复倍率（拖慢）
+    "fatigue_stagger_chance": 0.12,   # 疲劳敌方行动自摔概率（0=关）
     # 背击加成（B5 背击闭环，2026-09-11 批④；怪猎闇討ち映射）：玩家攻击结算时
     # 位于怪**背面**（combat_position.player.side == "back"）→ 物理通道伤害 ×
     # (1 + backstab_bonus)。缺省 +10%（0=关、可配）；元素不吃（闇討ち「属性伤害
@@ -2296,7 +2308,14 @@ class BattleEngine:
                         action.setdefault(_k, _sd.get(_k))
             except Exception:  # noqa: BLE001 - 解析失败回落默认，不阻断行动
                 pass
-        return float(recovery_for(action, rule))
+        rec = float(recovery_for(action, rule))
+        # 批⑦B：怒（提速）/ 疲劳（拖慢）对敌方行动恢复的节奏修正（全隐性、可配）
+        if actor == "enemy":
+            if self._enemy_enraged():
+                rec *= max(0.05, self._cfg_float("enrage_recovery_mult", 1.0))
+            elif self._enemy_fatigued():
+                rec *= max(0.05, self._cfg_float("fatigue_recovery_mult", 1.0))
+        return rec
 
     def set_effect_ids(self, side: str, effect_ids: Sequence[str]) -> "BattleEngine":
         """装配某侧效果 ID 列表（F-21 prepare_defense 的 effect_ids 输入；1b 效果系统）。"""
@@ -2636,6 +2655,14 @@ class BattleEngine:
             action_dict = {"type": "normal", "controlled": ctrl.get("type", "混乱")}
             atype = "normal"
 
+        # 疲劳自摔（批⑦B #4）：疲劳态敌方行动有概率直接踉跄（行动作废、时间照走）；
+        # 0=关；蓄力释放/起身演出不受影响。
+        if (attacker == "enemy" and self._enemy_fatigued()
+                and not action_dict.get("charging")
+                and action_dict.get("kind") != "get_up"):
+            _fs_ch = self._cfg_float("fatigue_stagger_chance", 0.0)
+            if _fs_ch > 0 and float(self._roll()) < _fs_ch:
+                return self._fatigue_stagger(attacker, action_dict)
         if atype in ("normal", "skill"):
             return self._resolve_combo_action(attacker, dict(action_dict))
         if atype == "item":
@@ -3132,6 +3159,10 @@ class BattleEngine:
         if _roar_lv > 0 and target == "player" and not ca.get("_roar_done"):
             ca["_roar_done"] = True
             hit_effects.extend(self._apply_roar(_roar_lv))
+        # 批⑦B：行为态切换事件透出（渲染「被激怒/迟滞/稳住」行）
+        _sev = ca.get("enemy_state_event")
+        if isinstance(_sev, Mapping):
+            hit_effects.append(dict(_sev))
         # 霸体窗口=行动阶段结束（D2 修复：原在技能结算内清位→同一次行动敌后手打断不免疫，
         # 1c2 §2.2「使用期间」应为整个行动阶段；清位移至 _after_actor_action）
         # M13 批17 路17C：伤害结算传 ca（含 skill def 合并 + segments 多段展开 +
@@ -3961,6 +3992,85 @@ class BattleEngine:
         return [{"type": "roar", "level": _lv, "earplug": _ep,
                  "combo": cleared, "delayed": delayed, "target": "player"}]
 
+    # ---------------------- 怒·三态 / 疲劳（批⑦B，2026-09-12） ----------------------
+
+    def _enemy_axis(self) -> Dict[str, Any]:
+        """敌侧双轴（怒值 / 耐力）实例态（快照持久；懒初始化）。"""
+        ax = self._snap.get("enemy_axis")
+        if not isinstance(ax, dict):
+            ax = {}
+            self._snap["enemy_axis"] = ax
+        ax.setdefault("rage", 0.0)
+        ax.setdefault("stamina", self._cfg_float("stamina_max", 100.0))
+        ax.setdefault("rage_cool", None)
+        ax.setdefault("state_seen", "normal")
+        return ax
+
+    def _enemy_ai_state(self) -> str:
+        """敌当前行为态（ai_state.state；缺省 normal）。"""
+        ai = self._snap.get("ai_state")
+        return str((ai.get("state") if isinstance(ai, Mapping) else None) or "normal")
+
+    def _enemy_enraged(self) -> bool:
+        return self._enemy_ai_state() == "enraged"
+
+    def _enemy_fatigued(self) -> bool:
+        return self._enemy_ai_state() == "fatigued"
+
+    def _add_enemy_rage(self, damage: float) -> None:
+        """受击怒气积累（怒态中不积累；全隐性）。"""
+        rate = self._cfg_float("rage_per_damage", 0.35)
+        if rate <= 0 or damage <= 0 or self._enemy_enraged():
+            return
+        ax = self._enemy_axis()
+        ax["rage"] = float(ax.get("rage", 0.0) or 0.0) + float(damage) * rate
+
+    def _drain_enemy_stamina(self) -> None:
+        """打击削减敌方耐力（减气；全隐性）。"""
+        drain = self._cfg_float("stamina_drain_blunt", 5.0)
+        if drain <= 0:
+            return
+        ax = self._enemy_axis()
+        ax["stamina"] = max(0.0, float(ax.get("stamina", 0.0) or 0.0) - drain)
+
+    def _tick_enemy_axis(self, actor: str) -> None:
+        """敌侧双轴行动边界维护：怒态冷却计数 / 耐力回复 / 态见跟踪（批⑦B）。"""
+        ax = self._enemy_axis()
+        cur = self._enemy_ai_state()
+        if cur == "enraged":
+            ax["rage"] = 0.0  # 怒态期间清空怒气（退出后从零重新积累）
+            if ax.get("rage_cool") is None:
+                ax["rage_cool"] = max(1, self._cfg_int("rage_cool_actions", 6))
+        else:
+            ax["rage_cool"] = None
+        if actor == "enemy":
+            _c = ax.get("rage_cool")
+            if isinstance(_c, int) and _c > 0:
+                ax["rage_cool"] = _c - 1
+            ax["state_seen"] = cur
+        regen = self._cfg_float("stamina_regen_per_action", 3.0)
+        if regen > 0:
+            _mx = self._cfg_float("stamina_max", 100.0)
+            ax["stamina"] = min(_mx, float(ax.get("stamina", 0.0) or 0.0) + regen)
+
+    def _fatigue_stagger(self, attacker: str,
+                         action_dict: Optional[Mapping[str, Any]] = None) -> ActionOutcome:
+        """疲劳自摔：本次敌方行动作废（时间照走；渲染「腿下一软」行）。"""
+        target = self._opposite(attacker)
+        seq = self._record_action(
+            attacker, "fatigue_stagger", target,
+            {"hit": False, "crit": "low", "blocked": False, "pierce": 0.0, "multi": 1.0},
+            {"ch_phys": 0, "ch_elem": 0, "final": 0}, self._phase,
+        )
+        events: List[Mapping[str, Any]] = [{"type": "fatigue_stagger", "actor": attacker}]
+        _sev = (action_dict or {}).get("enemy_state_event")
+        if isinstance(_sev, Mapping):
+            events.append(dict(_sev))
+        self._after_actor_action(attacker)
+        return ActionOutcome(False, seq, attacker, "fatigue_stagger", target, False,
+                             "low", False, 0, 0, int(self._combat(target).get("hp", 0)),
+                             self._seal_side_effects(tuple(events)), "疲劳自摔")
+
     def _resolve_damage_action(self, attacker: str, action: Dict[str, Any]) -> ActionOutcome:
         """伤害行动闭环（核心）：命中→会心→格挡→双通道→总伤害→拦截链→扣血→
         死亡判定（每段后）→ 反射回注（F-22）→ 状态衰减（D5）。
@@ -4172,6 +4282,12 @@ class BattleEngine:
                     if position_of(self._snap, "player")[0] == "back":
                         skill_mult *= (1.0 + _bs_bonus)
                         rating["backstab"] = True
+            # ---- 怒态增伤（批⑦B #5）：敌方处于怒态 → 其攻击物理乘区 ×倍率（全隐性）----
+            if attacker == "enemy":
+                _em = self._cfg_float("enrage_damage_mult", 1.15)
+                if _em != 1.0 and self._enemy_enraged():
+                    skill_mult *= max(0.05, _em)
+                    rating["enraged"] = True
             rating["multi"] = skill_mult
             # M12.5 需求1 批B：stat_map 语义键取数（缺省 atk / int→mag 回退链=现值，
             # 零破坏）
@@ -4296,6 +4412,13 @@ class BattleEngine:
                         self._stun_accumulate(_delta, attacker, all_effects)
                         rating["stun"] = round(float(_delta), 2)
 
+            # ---- 减气（批⑦B #4）：打击命中削减敌方耐力（与气绝同源打击判定）----
+            if attacker == "player" and target == "enemy" and raw > 0:
+                _seg_atk_b = self._normalize_attack_type(
+                    str(seg.get("attack_type") or atk_type))
+                if _seg_atk_b == "blunt":
+                    self._drain_enemy_stamina()
+
             # ---- ⑥⑦⑧ 拦截链（1b §2：减伤→护盾→反弹→吸收→免疫→续行→扣血→死亡判定）----
             vars_ = self._base_variables(attacker, target)
             vars_["damage_dealt"] = seg_total
@@ -4303,6 +4426,9 @@ class BattleEngine:
                                       snapshot=self._snap, runtime=rt, variables=vars_)
             self._absorb_runtime(rt)
             seg_total += res.final_damage
+            # 怒值积累（批⑦B）：玩家对敌实际伤害 → 敌方怒气（全隐性）
+            if attacker == "player" and target == "enemy" and res.final_damage > 0:
+                self._add_enemy_rage(res.final_damage)
             seg_damage["final"] += res.final_damage
             all_effects.extend(res.side_effects)
             last_hp = res.target_hp
@@ -4457,6 +4583,8 @@ class BattleEngine:
         self._expire_counter_stance()
         # 气绝槽衰减（批⑦A：每次行动收尾；0=不衰减）
         self._decay_stun_gauge()
+        # 敌侧双轴维护（批⑦B：怒态冷却 / 耐力回复）
+        self._tick_enemy_axis(actor)
         # M9/M10/M8/R16：该行动者侧的各项 tick 归位到 AFTER_ACTION
         self._tick_skill_cooldowns(actor)
         self._tick_transform_state(actor)
@@ -4572,6 +4700,16 @@ class BattleEngine:
             ad.setdefault("air_policy", adef.get("air_policy"))
             # 咆哮字段透传（批⑦A #2：怪行动 roar=1/2 随行动定义顶层）
             ad.setdefault("roar", adef.get("roar"))
+        # 批⑦B：行为态切换检测（决策时点）——事件随本次行动透出（渲染状态行）
+        try:
+            _ax = self._enemy_axis()
+            _cur = self._enemy_ai_state()
+            _seen = str(_ax.get("state_seen") or "normal")
+            if _cur != _seen:
+                ad["enemy_state_event"] = {"type": "enemy_state", "state": _cur,
+                                           "prev": _seen, "target": "enemy"}
+        except Exception:  # noqa: BLE001 - 检测失败不阻断决策
+            pass
         return ad
 
     def _interrupt_enemy_ai(self) -> bool:

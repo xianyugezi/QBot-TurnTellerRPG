@@ -687,6 +687,24 @@ class MonsterAI:
                 return False
             ai = battle_state["ai_state"]
             return int(ai.get("phase", 1)) >= int(val)
+        if ctype == "enemy_axis":
+            # 批⑦B（2026-09-12）：敌侧双轴（怒值/耐力）条件——转场状态机驱动源。
+            # 缺省：stamina 视为充沛（inf，防未初始化误触发疲劳）；其余为 0。
+            axis = battle_state.get("enemy_axis")
+            key = str(cond.get("key") or "")
+            aval: Any = axis.get(key) if isinstance(axis, Mapping) else None
+            if aval is None:
+                # 缺省口径：stamina / rage_cool 视为「未到期」（+inf，防止
+                # 初始化前被 <=0 条件误判）；其余为 0（未积累）。
+                aval = float("inf") if key in ("stamina", "rage_cool") else 0.0
+            try:
+                fv = float(aval)
+                tv = float(cond.get("value", 0))
+            except (TypeError, ValueError):
+                return False
+            op = cond.get("op", ">=")
+            return {"<": fv < tv, "<=": fv <= tv, ">": fv > tv,
+                    ">=": fv >= tv, "==": fv == tv}.get(op, False)
         return False
 
     def _hp_ratio(self, battle_state: dict) -> float:

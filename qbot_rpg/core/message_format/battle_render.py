@@ -927,6 +927,23 @@ def _render_stun_lines(outcome: Any, *, ctx: Any = None) -> List[str]:
     return out
 
 
+def _render_state_lines(outcome: Any, *, ctx: Any = None) -> List[str]:
+    """行为态切换行（批⑦B #5）：outcome.side_effects 的 enemy_state 事件 →
+    被激怒 / 迟滞 / 稳住 三分支（纯行为播报，零数值）。"""
+    out: List[str] = []
+    for e in getattr(outcome, "side_effects", ()) or ():
+        if not isinstance(e, Mapping) or e.get("type") != "enemy_state":
+            continue
+        st = str(e.get("state") or "")
+        key = {"enraged": "battle_state_enraged",
+               "fatigued": "battle_state_fatigued"}.get(st, "battle_state_recovered")
+        name = _fx_actor_cn(str(e.get("target") or "enemy"), outcome)
+        line = tpl_of(ctx, key, {"name": name})
+        if line:
+            out.append(line)
+    return out
+
+
 def _render_enemy_miss(
     outcome: Any,
     *,
@@ -1049,17 +1066,29 @@ def _render_enemy_action(outcome: Any, *, ctx: Any = None) -> Optional[str]:
     # 咆哮（批⑦A #2）：roar 事件 → 专属行（替代伤害行；耳栓 / 连势震散分支）
     _roar_fx = next((e for e in _fx_all
                      if isinstance(e, Mapping) and e.get("type") in ("roar", "roar_blocked")), None)
+    # 疲劳自摔（批⑦B #4）：fatigue_stagger 事件 → 专属行（行动作废）
+    _fs_fx = next((e for e in _fx_all
+                   if isinstance(e, Mapping) and e.get("type") == "fatigue_stagger"), None)
     _parry_fx = next((e for e in _fx_all
                       if isinstance(e, Mapping) and e.get("type") == "parry"), None)
+    _roar_only = False
     if _roar_fx is not None:
         name = _enemy_name(outcome)
         if _roar_fx.get("type") == "roar_blocked":
-            line = tpl_of(ctx, "battle_roar_blocked", {"name": name})
+            _rline = tpl_of(ctx, "battle_roar_blocked", {"name": name})
         else:
             key = "battle_roar" if bool(_roar_fx.get("combo")) else "battle_roar_plain"
-            line = tpl_of(ctx, key, {"name": name})
-        if line:
-            lines.append(line)
+            _rline = tpl_of(ctx, key, {"name": name})
+        if _rline:
+            lines.append(_rline)
+        # 纯咆哮行动（无伤害）→ 不再渲染伤害行；兼带伤害的嚎叫照常渲染伤害行
+        _roar_only = int(getattr(outcome, "final_damage", 0) or 0) <= 0
+    if _roar_only:
+        pass
+    elif _fs_fx is not None:
+        _fsline = tpl_of(ctx, "battle_fatigue_stagger", {"name": _enemy_name(outcome)})
+        if _fsline:
+            lines.append(_fsline)
     elif _parry_fx is not None:
         # 展示串清洗（批⑤顺手修）：怪行动名注入为「使出X」（供「怪使出X，你受到…」
         # 攻击行用）；格挡行模板是「你格挡了{action}」——直接拼会读成
@@ -1117,6 +1146,7 @@ def _render_enemy_action(outcome: Any, *, ctx: Any = None) -> Optional[str]:
     lines.extend(_render_position_changed_lines(outcome, ctx=ctx))
     lines.extend(_render_part_break_lines(outcome, ctx=ctx))
     lines.extend(_render_stun_lines(outcome, ctx=ctx))  # 批⑦A 气绝事件行
+    lines.extend(_render_state_lines(outcome, ctx=ctx))  # 批⑦B 行为态切换行
     if not lines:
         return None
     return "\n".join(lines)

@@ -27,7 +27,7 @@
   "pv_recover": "battle_end",
   "phases": [
    {
-    "threshold": 1.0,
+    "threshold": 100,
     "actions": [
      {
       "action": "bb_slam",
@@ -49,7 +49,7 @@
     "broadcast": "{monster} 昂首踏碎岩脊，进入姿态Ⅰ：试探。"
    },
    {
-    "threshold": 0.7,
+    "threshold": 70,
     "actions": [
      {
       "action": "bb_slam",
@@ -71,7 +71,7 @@
     "broadcast": "{monster} 咆哮震落骨屑，进入姿态Ⅱ：暴怒。蚀脉激荡！"
    },
    {
-    "threshold": 0.35,
+    "threshold": 35,
     "actions": [
      {
       "action": "bb_slam",
@@ -180,6 +180,70 @@
    "currencies": {
     "coins": 1500
    }
+  },
+  "ai": {
+   "states": {
+    "enraged": {
+     "weight_mod": {
+      "物理": 1.3,
+      "元素": 1.15,
+      "防御": 0.6,
+      "召唤": 0.6
+     },
+     "enter_action": "bb_roar"
+    },
+    "fatigued": {
+     "weight_mod": {
+      "物理": 0.6,
+      "元素": 0.7,
+      "防御": 1.4,
+      "召唤": 0.7,
+      "咆哮": 0.5
+     }
+    }
+   },
+   "transitions": [
+    {
+     "from": "normal",
+     "to": "enraged",
+     "condition": {
+      "type": "enemy_axis",
+      "key": "rage",
+      "op": ">=",
+      "value": 260
+     }
+    },
+    {
+     "from": "enraged",
+     "to": "normal",
+     "condition": {
+      "type": "enemy_axis",
+      "key": "rage_cool",
+      "op": "<=",
+      "value": 0
+     }
+    },
+    {
+     "from": "normal",
+     "to": "fatigued",
+     "condition": {
+      "type": "enemy_axis",
+      "key": "stamina",
+      "op": "<=",
+      "value": 0
+     }
+    },
+    {
+     "from": "fatigued",
+     "to": "normal",
+     "condition": {
+      "type": "enemy_axis",
+      "key": "stamina",
+      "op": ">=",
+      "value": 24
+     }
+    }
+   ]
   }
  },
  {
@@ -321,7 +385,7 @@
   },
   "phases": [
    {
-    "threshold": 1.0,
+    "threshold": 100,
     "actions": [
      {
       "action": "gj_armor",
@@ -347,7 +411,7 @@
     "broadcast": "{monster} 甲片竖立，脉晶在甲缝间充能！"
    },
    {
-    "threshold": 0.5,
+    "threshold": 50,
     "actions": [
      {
       "action": "gj_charge",
@@ -425,7 +489,7 @@
   "pv_recover": "battle_end",
   "phases": [
    {
-    "threshold": 1.0,
+    "threshold": 100,
     "actions": [
      {
       "action": "al_bite",
@@ -447,7 +511,7 @@
     "broadcast": "{monster} 低沉咆哮，唤来狼群助阵！"
    },
    {
-    "threshold": 0.6,
+    "threshold": 60,
     "actions": [
      {
       "action": "al_bite",
@@ -474,7 +538,7 @@
     "broadcast": "{monster} 晶鬃炸立，进入暴怒！"
    },
    {
-    "threshold": 0.3,
+    "threshold": 30,
     "actions": [
      {
       "action": "al_bite",
@@ -557,7 +621,71 @@
     "unlock": 80,
     "desc": "晶鬃是它的弱点，破坏后散射失效。"
    }
-  ]
+  ],
+  "ai": {
+   "states": {
+    "enraged": {
+     "weight_mod": {
+      "物理": 1.3,
+      "元素": 1.15,
+      "防御": 0.6,
+      "召唤": 0.6
+     },
+     "enter_action": "al_roar"
+    },
+    "fatigued": {
+     "weight_mod": {
+      "物理": 0.6,
+      "元素": 0.7,
+      "防御": 1.4,
+      "召唤": 0.7,
+      "咆哮": 0.5
+     }
+    }
+   },
+   "transitions": [
+    {
+     "from": "normal",
+     "to": "enraged",
+     "condition": {
+      "type": "enemy_axis",
+      "key": "rage",
+      "op": ">=",
+      "value": 240
+     }
+    },
+    {
+     "from": "enraged",
+     "to": "normal",
+     "condition": {
+      "type": "enemy_axis",
+      "key": "rage_cool",
+      "op": "<=",
+      "value": 0
+     }
+    },
+    {
+     "from": "normal",
+     "to": "fatigued",
+     "condition": {
+      "type": "enemy_axis",
+      "key": "stamina",
+      "op": "<=",
+      "value": 0
+     }
+    },
+    {
+     "from": "fatigued",
+     "to": "normal",
+     "condition": {
+      "type": "enemy_axis",
+      "key": "stamina",
+      "op": ">=",
+      "value": 24
+     }
+    }
+   ]
+  }
  },
  {
   "id": "dummy_light",
@@ -749,7 +877,7 @@
   },
   "phases": [
    {
-    "threshold": 1.0,
+    "threshold": 100,
     "actions": [
      {
       "action": "cm_spike_volley",
@@ -770,7 +898,7 @@
     "broadcast": "{monster} 晶鬃炸立，召集群狼围猎！"
    },
    {
-    "threshold": 0.5,
+    "threshold": 50,
     "actions": [
      {
       "action": "cm_rage_bite",
@@ -864,7 +992,7 @@
   },
   "phases": [
    {
-    "threshold": 1.0,
+    "threshold": 100,
     "actions": [
      {
       "action": "ea_armor_up",
@@ -890,7 +1018,7 @@
     "broadcast": "{monster} 甲壳蜷缩，蚀脉在甲缝间奔涌充能！"
    },
    {
-    "threshold": 0.5,
+    "threshold": 50,
     "actions": [
      {
       "action": "ea_erupt_charge",
@@ -1110,7 +1238,7 @@
   },
   "phases": [
    {
-    "threshold": 1.0,
+    "threshold": 100,
     "actions": [
      {
       "action": "ym_blade_flurry",
@@ -1131,7 +1259,7 @@
     "broadcast": "{monster} 晶翼轻振，前肢晶刃在雾中闪光！"
    },
    {
-    "threshold": 0.5,
+    "threshold": 50,
     "actions": [
      {
       "action": "ym_wing_dash",
@@ -1222,7 +1350,7 @@
   },
   "phases": [
    {
-    "threshold": 1.0,
+    "threshold": 100,
     "actions": [
      {
       "action": "td_dust_roar",
@@ -1243,7 +1371,7 @@
     "broadcast": "{monster} 苔甲缝隙晶尘涌出，发出低吼！"
    },
    {
-    "threshold": 0.5,
+    "threshold": 50,
     "actions": [
      {
       "action": "td_crystal_tail",
@@ -1365,7 +1493,7 @@
   "pv_recover": "battle_end",
   "phases": [
    {
-    "threshold": 1.0,
+    "threshold": 100,
     "actions": [
      {
       "action": "ad_bite",
@@ -1387,7 +1515,7 @@
     "broadcast": "{monster} 鳞甲渊晶亮起，吐息凝雾成晶，进入姿态Ⅰ：晶蚀。"
    },
    {
-    "threshold": 0.7,
+    "threshold": 70,
     "actions": [
      {
       "action": "ad_breath",
@@ -1414,7 +1542,7 @@
     "broadcast": "{monster} 渊啸震彻湿地，晶沼蟾群应召而来，进入姿态Ⅱ：渊怒！"
    },
    {
-    "threshold": 0.35,
+    "threshold": 35,
     "actions": [
      {
       "action": "ad_breath",
@@ -1494,7 +1622,71 @@
     "unlock": 80,
     "desc": "晶化吐息是最大威胁，注意它的蓄力前摇。"
    }
-  ]
+  ],
+  "ai": {
+   "states": {
+    "enraged": {
+     "weight_mod": {
+      "物理": 1.3,
+      "元素": 1.15,
+      "防御": 0.6,
+      "召唤": 0.6
+     },
+     "enter_action": "ad_roar_summon"
+    },
+    "fatigued": {
+     "weight_mod": {
+      "物理": 0.6,
+      "元素": 0.7,
+      "防御": 1.4,
+      "召唤": 0.7,
+      "咆哮": 0.5
+     }
+    }
+   },
+   "transitions": [
+    {
+     "from": "normal",
+     "to": "enraged",
+     "condition": {
+      "type": "enemy_axis",
+      "key": "rage",
+      "op": ">=",
+      "value": 280
+     }
+    },
+    {
+     "from": "enraged",
+     "to": "normal",
+     "condition": {
+      "type": "enemy_axis",
+      "key": "rage_cool",
+      "op": "<=",
+      "value": 0
+     }
+    },
+    {
+     "from": "normal",
+     "to": "fatigued",
+     "condition": {
+      "type": "enemy_axis",
+      "key": "stamina",
+      "op": "<=",
+      "value": 0
+     }
+    },
+    {
+     "from": "fatigued",
+     "to": "normal",
+     "condition": {
+      "type": "enemy_axis",
+      "key": "stamina",
+      "op": ">=",
+      "value": 24
+     }
+    }
+   ]
+  }
  },
  {
   "id": "sunken_ancient_beast",
@@ -1524,7 +1716,7 @@
   "pv_recover": "battle_end",
   "phases": [
    {
-    "threshold": 1.0,
+    "threshold": 100,
     "actions": [
      {
       "action": "sa_ancient_bash",
@@ -1546,7 +1738,7 @@
     "broadcast": "{monster} 远古脉动苏醒，岩甲缝隙透出蚀光！"
    },
    {
-    "threshold": 0.6,
+    "threshold": 60,
     "actions": [
      {
       "action": "sa_vein_burst",
@@ -1568,7 +1760,7 @@
     "broadcast": "{monster} 蚀脉奔涌如潮，古兽发出远古的咆哮！"
    },
    {
-    "threshold": 0.3,
+    "threshold": 30,
     "actions": [
      {
       "action": "sa_vein_burst",
@@ -1649,7 +1841,71 @@
     "unlock": 80,
     "desc": "岩甲是它的防御，破坏后可大幅削弱。"
    }
-  ]
+  ],
+  "ai": {
+   "states": {
+    "enraged": {
+     "weight_mod": {
+      "物理": 1.3,
+      "元素": 1.15,
+      "防御": 0.6,
+      "召唤": 0.6
+     },
+     "enter_action": "sa_ancient_roar"
+    },
+    "fatigued": {
+     "weight_mod": {
+      "物理": 0.6,
+      "元素": 0.7,
+      "防御": 1.4,
+      "召唤": 0.7,
+      "咆哮": 0.5
+     }
+    }
+   },
+   "transitions": [
+    {
+     "from": "normal",
+     "to": "enraged",
+     "condition": {
+      "type": "enemy_axis",
+      "key": "rage",
+      "op": ">=",
+      "value": 300
+     }
+    },
+    {
+     "from": "enraged",
+     "to": "normal",
+     "condition": {
+      "type": "enemy_axis",
+      "key": "rage_cool",
+      "op": "<=",
+      "value": 0
+     }
+    },
+    {
+     "from": "normal",
+     "to": "fatigued",
+     "condition": {
+      "type": "enemy_axis",
+      "key": "stamina",
+      "op": "<=",
+      "value": 0
+     }
+    },
+    {
+     "from": "fatigued",
+     "to": "normal",
+     "condition": {
+      "type": "enemy_axis",
+      "key": "stamina",
+      "op": ">=",
+      "value": 24
+     }
+    }
+   ]
+  }
  },
  {
   "id": "vein_black_bear",
@@ -1805,7 +2061,7 @@
   },
   "phases": [
    {
-    "threshold": 1.0,
+    "threshold": 100,
     "actions": [
      {
       "action": "sb_shadow_flurry",
@@ -1826,7 +2082,7 @@
     "broadcast": "{monster} 晶瞳在黑暗中亮起，影刃豹无声逼近！"
    },
    {
-    "threshold": 0.5,
+    "threshold": 50,
     "actions": [
      {
       "action": "sb_lethal_pounce",
@@ -1912,7 +2168,7 @@
   },
   "phases": [
    {
-    "threshold": 1.0,
+    "threshold": 100,
     "actions": [
      {
       "action": "gm_crystal_fist",
@@ -1933,7 +2189,7 @@
     "broadcast": "{monster} 黑晶巨魔踏裂地面，晶拳高高举起！"
    },
    {
-    "threshold": 0.5,
+    "threshold": 50,
     "actions": [
      {
       "action": "gm_crystal_fist",
@@ -1977,7 +2233,71 @@
     "weight": 10,
     "probability": 1
    }
-  ]
+  ],
+  "ai": {
+   "states": {
+    "enraged": {
+     "weight_mod": {
+      "物理": 1.3,
+      "元素": 1.15,
+      "防御": 0.6,
+      "召唤": 0.6
+     },
+     "enter_action": "gm_roar"
+    },
+    "fatigued": {
+     "weight_mod": {
+      "物理": 0.6,
+      "元素": 0.7,
+      "防御": 1.4,
+      "召唤": 0.7,
+      "咆哮": 0.5
+     }
+    }
+   },
+   "transitions": [
+    {
+     "from": "normal",
+     "to": "enraged",
+     "condition": {
+      "type": "enemy_axis",
+      "key": "rage",
+      "op": ">=",
+      "value": 250
+     }
+    },
+    {
+     "from": "enraged",
+     "to": "normal",
+     "condition": {
+      "type": "enemy_axis",
+      "key": "rage_cool",
+      "op": "<=",
+      "value": 0
+     }
+    },
+    {
+     "from": "normal",
+     "to": "fatigued",
+     "condition": {
+      "type": "enemy_axis",
+      "key": "stamina",
+      "op": "<=",
+      "value": 0
+     }
+    },
+    {
+     "from": "fatigued",
+     "to": "normal",
+     "condition": {
+      "type": "enemy_axis",
+      "key": "stamina",
+      "op": ">=",
+      "value": 24
+     }
+    }
+   ]
+  }
  },
  {
   "id": "mountain_howl_lord",
@@ -2007,7 +2327,7 @@
   "pv_recover": "battle_end",
   "phases": [
    {
-    "threshold": 1.0,
+    "threshold": 100,
     "actions": [
      {
       "action": "hl_claw_sweep",
@@ -2029,7 +2349,7 @@
     "broadcast": "{monster} 嚎主昂首，群山回应它的咆哮，进入姿态Ⅰ：山鸣。"
    },
    {
-    "threshold": 0.65,
+    "threshold": 65,
     "actions": [
      {
       "action": "hl_claw_sweep",
@@ -2056,7 +2376,7 @@
     "broadcast": "{monster} 嚎令震彻群山，暮影狼群应召而来，进入姿态Ⅱ：狼潮！"
    },
    {
-    "threshold": 0.3,
+    "threshold": 30,
     "actions": [
      {
       "action": "hl_avalanche",
@@ -2139,7 +2459,71 @@
     "unlock": 80,
     "desc": "山崩践踏蓄力明显，是它最重的一击。"
    }
-  ]
+  ],
+  "ai": {
+   "states": {
+    "enraged": {
+     "weight_mod": {
+      "物理": 1.3,
+      "元素": 1.15,
+      "防御": 0.6,
+      "召唤": 0.6
+     },
+     "enter_action": "hl_mountain_roar"
+    },
+    "fatigued": {
+     "weight_mod": {
+      "物理": 0.6,
+      "元素": 0.7,
+      "防御": 1.4,
+      "召唤": 0.7,
+      "咆哮": 0.5
+     }
+    }
+   },
+   "transitions": [
+    {
+     "from": "normal",
+     "to": "enraged",
+     "condition": {
+      "type": "enemy_axis",
+      "key": "rage",
+      "op": ">=",
+      "value": 280
+     }
+    },
+    {
+     "from": "enraged",
+     "to": "normal",
+     "condition": {
+      "type": "enemy_axis",
+      "key": "rage_cool",
+      "op": "<=",
+      "value": 0
+     }
+    },
+    {
+     "from": "normal",
+     "to": "fatigued",
+     "condition": {
+      "type": "enemy_axis",
+      "key": "stamina",
+      "op": "<=",
+      "value": 0
+     }
+    },
+    {
+     "from": "fatigued",
+     "to": "normal",
+     "condition": {
+      "type": "enemy_axis",
+      "key": "stamina",
+      "op": ">=",
+      "value": 24
+     }
+    }
+   ]
+  }
  },
  {
   "id": "abyss_cave_lord",
@@ -2169,7 +2553,7 @@
   "pv_recover": "battle_end",
   "phases": [
    {
-    "threshold": 1.0,
+    "threshold": 100,
     "actions": [
      {
       "action": "ac_dark_bite",
@@ -2191,7 +2575,7 @@
     "broadcast": "{monster} 黯穴之心脉动，蚀脉自岩壁涌出缠裹其身！"
    },
    {
-    "threshold": 0.65,
+    "threshold": 65,
     "actions": [
      {
       "action": "ac_vein_lash",
@@ -2218,7 +2602,7 @@
     "broadcast": "{monster} 脉裔苏醒，夜嚎蝠群自洞顶俯冲而下！"
    },
    {
-    "threshold": 0.3,
+    "threshold": 30,
     "actions": [
      {
       "action": "ac_vein_lash",
@@ -2303,7 +2687,71 @@
     "unlock": 80,
     "desc": "它的核心是致命弱点，破坏后脉动紊乱。"
    }
-  ]
+  ],
+  "ai": {
+   "states": {
+    "enraged": {
+     "weight_mod": {
+      "物理": 1.3,
+      "元素": 1.15,
+      "防御": 0.6,
+      "召唤": 0.6
+     },
+     "enter_action": "ac_roar"
+    },
+    "fatigued": {
+     "weight_mod": {
+      "物理": 0.6,
+      "元素": 0.7,
+      "防御": 1.4,
+      "召唤": 0.7,
+      "咆哮": 0.5
+     }
+    }
+   },
+   "transitions": [
+    {
+     "from": "normal",
+     "to": "enraged",
+     "condition": {
+      "type": "enemy_axis",
+      "key": "rage",
+      "op": ">=",
+      "value": 280
+     }
+    },
+    {
+     "from": "enraged",
+     "to": "normal",
+     "condition": {
+      "type": "enemy_axis",
+      "key": "rage_cool",
+      "op": "<=",
+      "value": 0
+     }
+    },
+    {
+     "from": "normal",
+     "to": "fatigued",
+     "condition": {
+      "type": "enemy_axis",
+      "key": "stamina",
+      "op": "<=",
+      "value": 0
+     }
+    },
+    {
+     "from": "fatigued",
+     "to": "normal",
+     "condition": {
+      "type": "enemy_axis",
+      "key": "stamina",
+      "op": ">=",
+      "value": 24
+     }
+    }
+   ]
+  }
  },
  {
   "id": "midnight_howl_king",
@@ -2333,7 +2781,7 @@
   "pv_recover": "battle_end",
   "phases": [
    {
-    "threshold": 1.0,
+    "threshold": 100,
     "actions": [
      {
       "action": "nk_midnight_howl",
@@ -2355,7 +2803,7 @@
     "broadcast": "{monster} 午夜嚎叫刺破黑暗，群山为之噤声！"
    },
    {
-    "threshold": 0.6,
+    "threshold": 60,
     "actions": [
      {
       "action": "nk_vein_claw",
@@ -2382,7 +2830,7 @@
     "broadcast": "{monster} 暗裔显现，影狼自夜色中凝聚成形！"
    },
    {
-    "threshold": 0.3,
+    "threshold": 30,
     "actions": [
      {
       "action": "nk_dark_nova",
@@ -2468,7 +2916,71 @@
     "unlock": 80,
     "desc": "暗裔新星是最强一击，满配毕业装也需谨慎。"
    }
-  ]
+  ],
+  "ai": {
+   "states": {
+    "enraged": {
+     "weight_mod": {
+      "物理": 1.3,
+      "元素": 1.15,
+      "防御": 0.6,
+      "召唤": 0.6
+     },
+     "enter_action": "nk_midnight_howl"
+    },
+    "fatigued": {
+     "weight_mod": {
+      "物理": 0.6,
+      "元素": 0.7,
+      "防御": 1.4,
+      "召唤": 0.7,
+      "咆哮": 0.5
+     }
+    }
+   },
+   "transitions": [
+    {
+     "from": "normal",
+     "to": "enraged",
+     "condition": {
+      "type": "enemy_axis",
+      "key": "rage",
+      "op": ">=",
+      "value": 360
+     }
+    },
+    {
+     "from": "enraged",
+     "to": "normal",
+     "condition": {
+      "type": "enemy_axis",
+      "key": "rage_cool",
+      "op": "<=",
+      "value": 0
+     }
+    },
+    {
+     "from": "normal",
+     "to": "fatigued",
+     "condition": {
+      "type": "enemy_axis",
+      "key": "stamina",
+      "op": "<=",
+      "value": 0
+     }
+    },
+    {
+     "from": "fatigued",
+     "to": "normal",
+     "condition": {
+      "type": "enemy_axis",
+      "key": "stamina",
+      "op": ">=",
+      "value": 24
+     }
+    }
+   ]
+  }
  },
  {
   "id": "gravel_tortoise",

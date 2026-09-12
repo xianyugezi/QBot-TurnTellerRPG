@@ -44,6 +44,11 @@ BATTLE_SETTINGS_KEYS = (
     "stun_hint_at", "stun_side_mult", "stun_back_mult",
     # 批⑦A 咆哮（怪猎采纳 #2）：打断连势 + 行动条后推；耳栓反制
     "roar_light_delay", "roar_heavy_delay", "roar_combo_clear",
+    # 批⑦B 怒·三态 / 疲劳（怪猎采纳 #4/#5）：敌侧双轴
+    "rage_per_damage", "rage_cool_actions", "stamina_max",
+    "stamina_drain_blunt", "stamina_regen_per_action",
+    "enrage_damage_mult", "enrage_recovery_mult",
+    "fatigue_recovery_mult", "fatigue_stagger_chance",
 )
 
 
@@ -109,6 +114,16 @@ def resolve_battle_settings(settings: Any = None) -> Dict[str, Any]:
         _num("roar_light_delay", 0.0, 100000.0)
         _num("roar_heavy_delay", 0.0, 100000.0)
         _bool("roar_combo_clear")
+        # ---- 批⑦B：怒·三态 / 疲劳参数（同一白名单口径）----
+        _num("rage_per_damage", 0.0, 100.0)
+        _int("rage_cool_actions", 1, 1000)
+        _num("stamina_max", 1.0, 1e9)
+        _num("stamina_drain_blunt", 0.0, 1e6)
+        _num("stamina_regen_per_action", 0.0, 1e6)
+        _num("enrage_damage_mult", 0.05, 100.0)
+        _num("enrage_recovery_mult", 0.05, 100.0)
+        _num("fatigue_recovery_mult", 0.05, 100.0)
+        _num("fatigue_stagger_chance", 0.0, 1.0)
         return out
     except Exception:  # pragma: no cover - 兜底不崩
         _logger.exception("resolve_battle_settings 失败，跳过 battle 段")

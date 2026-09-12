@@ -19,7 +19,13 @@
       "ach_view_desc": "介绍类：内嵌成就描述文本，允许自然折行（结构化前缀「描述：」保留）",
       "fish_bite_waiting": "氛围叙事：等待期水面状态句（咬钩前的静默氛围，非结构化键值行）——允许自然折行",
       "fish_bite_triggered": "氛围叙事：咬钩瞬间演出句（浮漂下沉 + 收杆提示，整句叙事）——允许自然折行",
-      "fish_reel_timeout": "氛围叙事：跑鱼播报句（收杆超时演出 + 无鱼获结论）——允许自然折行"
+      "fish_reel_timeout": "氛围叙事：跑鱼播报句（收杆超时演出 + 无鱼获结论）——允许自然折行",
+      "env_neutral_pool_1": "介绍类：环境泛暗示零暗示池第 1 条（R-07/TC-09，非结构化行）——允许自然折行",
+      "env_neutral_pool_2": "介绍类：环境泛暗示零暗示池第 2 条（同上）——允许自然折行",
+      "env_neutral_pool_3": "介绍类：环境泛暗示零暗示池第 3 条（同上）——允许自然折行",
+      "env_neutral_pool_4": "介绍类：环境泛暗示零暗示池第 4 条（同上）——允许自然折行",
+      "env_ambient_default": "介绍类：环境泛暗示缺省兜底句（environment_lore.DEFAULT_AMBIENT_TEXT 迁表）——允许自然折行",
+      "env_investigate_generic": "介绍类：/调查 泛化环境缺省文本（investigate.DEFAULT_GENERIC_TEXT 迁表）——允许自然折行"
     },
     "prose_placeholders": []
   },
@@ -705,6 +711,14 @@
     "shop_price_single": "{unit}({currency})",
     "shop_price_part": "{amount}({currency})",
     "shop_discount_marker": "[折扣 -{discount}%]",
-    "shop_overview_row_prefix": "{index}. {name}"
+    "shop_overview_row_prefix": "{index}. {name}",
+    "env_neutral_pool_1": "四周一片寂静，并没有特别的发现。",
+    "env_neutral_pool_2": "风穿过原野，带起一阵沙沙声，别无他物。",
+    "env_neutral_pool_3": "眼前的景象一如既往，并无异常。",
+    "env_neutral_pool_4": "你仔细环顾四周，一切如常。",
+    "env_ambient_default": "四周一片寂静，并没有特别的发现。",
+    "env_investigate_generic": "四周一片寂静，并没有特别的发现。",
+    "env_investigate_confirm": "这里没有新的发现。",
+    "ach_list_tail_tip": "发 成就信息 <序号> 查看详情"
   }
 }

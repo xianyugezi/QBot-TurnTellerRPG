@@ -32,6 +32,16 @@
     "display": "status_line",
     "growth": 0
   },
+  "wirebug": {
+    "name": "翔虫",
+    "type": "rage",
+    "icon": "🧵",
+    "base": 2,
+    "max": 2,
+    "reset": "battle",
+    "display": "status_line",
+    "growth": 0
+  },
   "agi": {
     "name": "敏捷",
     "type": "combat",

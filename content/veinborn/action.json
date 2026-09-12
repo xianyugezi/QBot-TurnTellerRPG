@@ -1271,7 +1271,8 @@
   "cooldown": 2,
   "tags": [
    "物理",
-   "对空"
+   "对空",
+   "不可受身"
   ],
   "position_rule": {
    "side": [

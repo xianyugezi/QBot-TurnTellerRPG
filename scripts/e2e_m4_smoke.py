@@ -461,7 +461,7 @@ def quest_flow(smoke: Smoke, ctx: MutableMapping) -> dict:
 
     # ---- /任务：任务板（NPC 支线：药水补给）----
     out = cmd_quest(_parse("/任务"), ctx)
-    smoke.check("━━ NPC 支线 ━━" in out, "任务：任务板含 NPC 支线段头")
+    smoke.check("【NPC 支线】" in out, "任务：任务板含 NPC 支线段头")
     smoke.check("1. 药水补给" in out, "任务：任务板条目 1.药水补给")
     # Tip 文案 2026-09-05 B 方案修正：原「领取任务 序号」（口语化，顶层白名单静默忽略）
     # 改与 quest_info_met 同构的「任务 领取 序号」（quest_commands L134-138 _BOARD_TAIL_TIP）
@@ -486,8 +486,10 @@ def quest_flow(smoke: Smoke, ctx: MutableMapping) -> dict:
     # ---- /任务 信息 1：进度渲染 ----
     out = cmd_quest(_parse("/任务 信息 1"), ctx)
     smoke.check("✅ 任务进度：药水补给" in out, "任务：信息头部")
-    # 实现口径：param 走 _display_param 中文化（potion→药水）+ 满足态尾标 ✅
-    smoke.check("背包数量 ≥ 2（药水），当前 2 ✅" in out, "任务：三原语进度逐条显示")
+    # 实现口径：param 走 _display_param 中文化（potion→药水）+ 标记前置 ✅；
+    # 2026-09-12 批7·路U：current 片段独立行（表键 quest_progress_current 「\n当前 {current}」）
+    smoke.check("✅ 背包数量 ≥ 2（药水）" in out, "任务：三原语进度逐条显示")
+    smoke.check("当前 2" in out, "任务：三原语 current 独立行")
     smoke.check("可交付" in out, "任务：条件已满足可交付提示")
     _trace_append(trace, "/任务 信息 1", out)
 

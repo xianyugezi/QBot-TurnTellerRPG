@@ -3,81 +3,25 @@
 
 默认模板表 + 占位符白名单；内容包 templates.json 可覆盖同 key。
 
-铁律：字符串 = 2026-08-31 前写死在各命令模块的逐字文案迁移，默认值改动会导致
-现有测试断言失效——需与 quest_commands 渲染处 tpl_of(ctx, "quest_*", {...}) 一致。
+2026-09-12 消息模板重构：
+- 批7·路U：本分区全部 25 键（任务板 quest_board_* 7 / 任务信息 quest_info_* 5 /
+  三原语进度 quest_progress_* 4 / 接取·放弃·交付 quest_accept_failed /
+  quest_abandon_failed / quest_deliver_failed / quest_deliver_skipped* /
+  quest_deliver_seq_shift_note 6 / 空态门禁 quest_no_board / quest_no_quest /
+  quest_empty_board 3）全部迁入全量表 qbot_rpg/core/templates/template_table.json，
+  按手机QQ 14 全角新规范重写（段头改【title】、进度改独立行、❌ + 下一步、免斜杠、
+  信息行标记前置）；本分区默认表与占位符白名单清空。
+  本路无死键清除（25 键全仓均有渲染调用点）。
+
+渲染链 = 新表（全量默认）→ 内容包 templates.json（覆盖）→ tpl_of（接口不变）；
+渲染零装饰 emoji（仅 ✅/❌ 功能性标记）。
+
+本空壳文件待批18 死键清扫时随其余已迁分区一并删除（过渡期保留 import 兼容）。
 """
 from __future__ import annotations
 
 from typing import Any, Dict
 
-DEFAULT_TEMPLATES: Dict[str, Any] = {
-    # —— 任务板（/任务 无参·页码；TPL_NO_BOARD / TPL_NO_QUEST / _EMPTY_BOARD 迁移）——
-    "quest_no_board": "❌ 任务板暂不可用",
-    "quest_no_quest": "❌ 任务不存在",
-    "quest_empty_board": "（任务板空空如也）",
-    "quest_board_section_header": "━━ {title} ━━",
-
-    # —— 任务板条目行（board_line：主线前缀 / marked 后缀 / 序号行 / 进度摘要）——
-    "quest_board_line": "{index}. {name}",
-    "quest_board_main_prefix": "[主线] {name}",
-    "quest_board_marked_suffix": "{name}*",
-    "quest_board_progress": "  进度 {cur}/{target}",
-
-    # —— 三原语进度串（progress_text：base + 可选 param/current 片段）——
-    "quest_progress_base": "{var} {op} {target}",
-    "quest_progress_base_no_target": "{var} {op}",
-    "quest_progress_param": "（{param}）",
-    "quest_progress_current": "，当前 {current}",
-
-    # —— /任务 信息 N（info_text 正文）——
-    "quest_info_header": "✅ 任务进度：{name}",
-    "quest_info_standalone_usage": "任务信息：发 任务信息 <序号> 查看进行中任务进度（发 任务 查看进行中列表）",
-    "quest_info_line": "- {text} {mark}",
-    "quest_info_met": "✅ 条件已满足，可交付（/任务 交付 {seq}）",
-    "quest_info_not_met": "❌ 条件未达成，继续努力",
-
-    # —— /任务 接取 N（引擎 message 透传；缺省兜底）——
-    "quest_accept_failed": "❌ 接取失败",
-    # —— /任务 任务板满员（2026-09-05 审计 B 路 P2：accept_limit 满时 Tip 换腾位提示）——
-    "quest_board_active_full_note": "同时进行任务已满，先 任务 交付/放弃 腾出位置",
-    # 2026-09-05 模拟器审计：板无可接任务（仅进行中）→ 不教「领取」教交付
-    "quest_board_no_accept_note": "暂无新任务——进行中任务完成：任务 交付 序号",
-    # —— /任务 交付 N（2026-09-05 审计缓解：交付后序号前移提示，防旧板记忆错付）——
-    "quest_deliver_seq_shift_note": "（任务完成，其余进行中任务序号已前移——发 任务 查看最新板）",
-
-    # —— /任务 交付 N（引擎 message 透传；缺省兜底 + P1-2 跳过注记）——
-    "quest_deliver_failed": "❌ 交付失败",
-    "quest_deliver_skipped": "（跳过：{reason}）",
-    "quest_deliver_skipped_plain": "（跳过）",
-
-    # —— /任务 放弃 N（引擎 message 透传；缺省兜底）——
-    "quest_abandon_failed": "❌ 放弃失败",
-}
-
-PLACEHOLDER_WHITELIST: Dict[str, set] = {
-    "quest_no_board": set(),
-    "quest_no_quest": set(),
-    "quest_empty_board": set(),
-    "quest_board_section_header": {"title"},
-    "quest_board_line": {"index", "name"},
-    "quest_board_main_prefix": {"name"},
-    "quest_board_marked_suffix": {"name"},
-    "quest_board_progress": {"cur", "target"},
-    "quest_progress_base": {"var", "op", "target"},
-    "quest_progress_base_no_target": {"var", "op"},
-    "quest_progress_param": {"param"},
-    "quest_progress_current": {"current"},
-    "quest_info_header": {"name"},
-    "quest_info_standalone_usage": set(),
-    "quest_info_line": {"text", "mark"},
-    "quest_info_met": {"seq"},
-    "quest_info_not_met": set(),
-    "quest_accept_failed": set(),
-    "quest_board_active_full_note": set(),  # 2026-09-05：满员提示（无占位符）
-    "quest_board_no_accept_note": set(),  # 2026-09-05：无可接提示（无占位符）
-    "quest_deliver_failed": set(),
-    "quest_deliver_skipped": {"reason"},
-    "quest_deliver_skipped_plain": set(),
-    "quest_deliver_seq_shift_note": set(),  # 2026-09-05 审计缓解：交付后序号前移提示（无占位符）
-    "quest_abandon_failed": set(),
-}
+# 已清空：键已迁全量模板表；白名单由表自动派生（见 core/templates/__init__.py）。
+DEFAULT_TEMPLATES: Dict[str, Any] = {}
+PLACEHOLDER_WHITELIST: Dict[str, set] = {}

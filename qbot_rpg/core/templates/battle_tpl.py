@@ -54,40 +54,18 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     # —— BREP-02/03/05/06 玩家行动 ——
 
     # —— BREP-10~14 怪物行动 ——
-    "battle_enemy_hit": "❌ {name}{action}，你受到 {damage} 伤害（HP {hp}/{max_hp}）",
-    "battle_enemy_miss": "✅ {name}的攻击被你躲开（HP {hp}/{max_hp}）",
-    # 方位 miss（方位 v0.6 §四/附录 A Step 1：未命中——怪物行动打不到玩家当前方位）
-    "battle_enemy_position_miss": "✅ 未命中：{name}的攻击未能命中{pos}的你（HP {hp}/{max_hp}）",
-"battle_actor_landed": "{actor} 从空中落回地面",
-# 被击落行（跃空风险闭环，批③：对空必杀命中空中玩家——纯行为播报，零数值）
-"battle_air_dropped": "{name}将你从空中击落——你重重摔落在地",
-# 受身行（批⑨：被击落时自动受身——纯行为播报，零数值）
-"battle_air_recover": "{name}将你从空中击落——你凌空翻身，稳稳落地",
-# 转向行（增补 v1 §三 转向事件化：怪在玩家行动前转回面向——纯行为播报，零数值）
-"battle_enemy_turned": "{name}转过身来，盯住了你",
-"battle_position_changed": "{actor} 移动到了{pos}",
-"battle_part_broken": "{part}被击碎！{name}轰然倒地",
-"battle_part_broken_no_knock": "{part}被击碎，{name}仍稳立当场",
-# 气绝 KO / 咆哮（批⑦A #2/#3）：纯行为播报、零数值
-"battle_stun_hint": "（{name}的步幅一滞，气息开始散乱……）",
-"battle_stun_ko": "{name}颅腔嗡鸣，四肢一软伏倒在地——【气绝】",
-"battle_roar": "{name}仰天咆哮，声浪碾过旷野——你被震得踉跄后退（连势震散）",
-"battle_roar_plain": "{name}仰天咆哮，声浪碾过旷野——你被震得踉跄后退",
-"battle_roar_blocked": "{name}仰天咆哮——轰鸣掠过，你的耳栓滤去声浪，身形纹丝未动",
-# 怒·三态 / 疲劳（批⑦B #4/#5）：纯行为播报、零数值
-"battle_state_enraged": "{name}的脉息陡然暴涨——它被激怒了！",
-"battle_state_fatigued": "{name}的喘息粗重起来，动作明显迟滞了",
-"battle_state_recovered": "{name}重新稳住了呼吸",
-"battle_fatigue_stagger": "{name}腿下一软，这一击失了准头",
-    "battle_enemy_intent": "{name} 蓄力中（下次行动发动「{skill}」）",
-    "battle_enemy_special": "{name} {action}",
-    "battle_enemy_special_suffix": "（{change}）",
-    "battle_intercept_absorb": "{shield} 吸收了 {n} 点伤害",
-    "battle_intercept_reflect": "反弹 {n} 伤害给{target}",
-    # 2026-09-09 防反/闪反（用户拍板标签制）：格挡免伤行 + 反击行
-    "battle_parry_success": "✅ 你格挡了{action}（完全免伤）",
-    "battle_counter_hit": "反击：{name}造成 {damage} 伤害",
-    "battle_intercept_immune": "免疫了{effect}",
+    # 2026-09-12 消息模板重构·批5 路M：敌方行动与状态机制 27 键已迁全量模板表
+    # （qbot_rpg/core/templates/template_table.json，fragment b5m）——
+    # battle_enemy_hit / battle_enemy_miss / battle_enemy_position_miss /
+    # battle_actor_landed / battle_air_dropped / battle_air_recover /
+    # battle_enemy_turned / battle_position_changed / battle_part_broken(+_no_knock) /
+    # battle_stun_hint / battle_stun_ko / battle_roar(+_plain/_blocked) /
+    # battle_state_enraged / battle_state_fatigued / battle_state_recovered /
+    # battle_fatigue_stagger / battle_enemy_intent / battle_enemy_special(+_suffix) /
+    # battle_intercept_absorb / battle_intercept_reflect / battle_intercept_immune /
+    # battle_parry_success / battle_counter_hit。
+    # 【口径】受击/未命中行不重复血量（HP 括注已去，血量只在 HUD 两行，批4 拍板）；
+    # 方位格入模板包裹【{pos}】（_position_cn 恒返回非空方位，不产生空【】）。
 
     # —— BREP-15 击杀行 ——
     "battle_kill_line": "✅ 你击败了{target}！",
@@ -137,33 +115,11 @@ PLACEHOLDER_WHITELIST: Dict[str, set] = {
     # {statuses}/{weak}/{item_name}）；battle_target_tail 死键清除。
 
     # —— battle_render ——
+    # 2026-09-12 批5 路M：敌方行动与状态机制 27 键已迁全量模板表，白名单由 __init__
+    # 自动派生（表内文本占位符 = {name}/{action}/{damage}/{pos}/{actor}/{skill}/
+    # {part}/{shield}/{n}/{target}/{effect}/{change}）。
     # CTB 三入口模板（Agent 5 · DataRender）
     "battle_end_summary": {"label", "turns"},
-    "battle_enemy_hit": {"name", "action", "damage", "hp", "max_hp"},
-    "battle_enemy_miss": {"name", "hp", "max_hp"},
-    "battle_enemy_position_miss": {"name", "pos", "hp", "max_hp"},
-"battle_actor_landed": {"actor"},
-"battle_air_dropped": {"name"},
-"battle_air_recover": {"name"},
-"battle_enemy_turned": {"name"},
-"battle_position_changed": {"actor", "pos"},
-"battle_part_broken": {"part", "name"},
-"battle_part_broken_no_knock": {"part", "name"},
-"battle_stun_hint": {"name"},
-"battle_stun_ko": {"name"},
-"battle_roar": {"name"},
-"battle_roar_plain": {"name"},
-"battle_roar_blocked": {"name"},
-"battle_state_enraged": {"name"},
-"battle_state_fatigued": {"name"},
-"battle_state_recovered": {"name"},
-"battle_fatigue_stagger": {"name"},
-    "battle_enemy_intent": {"name", "skill"},
-    "battle_enemy_special": {"name", "action"},
-    "battle_enemy_special_suffix": {"change"},
-    "battle_intercept_absorb": {"shield", "n"},
-    "battle_intercept_reflect": {"n", "target"},
-    "battle_intercept_immune": {"effect"},
     "battle_kill_line": {"target"},
     "battle_reward_line": {"items"},
     "battle_reward_exp": {"exp"},

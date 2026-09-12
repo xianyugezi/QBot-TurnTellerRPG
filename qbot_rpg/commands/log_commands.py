@@ -63,8 +63,8 @@ from qbot_rpg.core.message_format.list_render import (
     render_cake_tail,
     resolve_page,
 )
-from qbot_rpg.core.templates import tpl_of  # 消息模板配置化（2026-08-31 用户拍板）
-from qbot_rpg.core.templates.log_tpl import DEFAULT_TEMPLATES as _LOG_TPL_DEFAULT
+from qbot_rpg.core.templates import DEFAULT_TEMPLATES as _ALL_TPL  # 消息模板配置化（2026-08-31 用户拍板）
+from qbot_rpg.core.templates import tpl_of
 
 __all__ = [
     "LOG_CMD",
@@ -130,10 +130,12 @@ SYS_LOG_PAGE_SIZE: int = 20
 SYS_LOG_MAX_ENTRIES: int = 50
 
 # 3c 权限拒绝模板（工程补白 2：无 GM 权限执行 GM 视图，不泄露系统日志内容）。
-# 模板唯一源 log_tpl.log_permission_denied；本常量 = 默认模板值（兼容导出，供测试/装配引用）。
-PERMISSION_DENIED: str = _LOG_TPL_DEFAULT["log_permission_denied"]
+# 模板唯一源 = 全量模板表的 log_permission_denied（2026-09-12 批2·路F 迁表）；
+# 本常量 = 表别名（兼容导出，供测试/装配引用）。
+PERMISSION_DENIED: str = _ALL_TPL["log_permission_denied"]
 
-# 空文案 / 尾段 Tip / 六类条目文本等消息模板全部配置化（log_tpl 分区），渲染处一律 tpl_of，
+# 空文案 / 尾段 Tip / 六类条目文本等消息模板全部配置化（2026-09-12 批2·路F 起
+# 唯一源 = 全量模板表 template_table.json），渲染处一律 tpl_of，
 # 不再在本模块硬编码（2026-08-31 用户拍板：消息模板配置化，不写死代码）。
 
 # 环境快照缺失占位（3f R-05：缺失 → "--"，不阻塞）
@@ -231,7 +233,7 @@ def _count_key_name(entry: Mapping[str, Any]) -> str:
 def _entry_text(entry: Mapping[str, Any], ctx: Mapping[str, Any]) -> str:
     """六类条目文本（R-02 表逐类模板渲染，D-01 不落自由文本；参数缺省 count_key 尾段兜底）。
 
-    模板配置化（2026-08-31）：逐类文案来自 log_tpl 分区（log_entry_* / *_none 无值兜底变体），
+    模板配置化（2026-09-12 迁全量模板表）：逐类文案来自 log_entry_* / *_none 无值兜底变体，
     渲染处 tpl_of(ctx, key, {...})；本函数只做 有值/无值 分支判定（机械性逻辑）。
     """
     tag = _entry_tag(entry)
@@ -275,16 +277,22 @@ def _entry_text(entry: Mapping[str, Any], ctx: Mapping[str, Any]) -> str:
 
 
 def _render_adventure_line(entry: Mapping[str, Any], ctx: Mapping[str, Any]) -> str:
-    """冒险日志条目行（对齐 3f L137 样例）：`[日志] {HH:MM} {天气} · {文本}` + 首见标记。
+    """冒险日志条目行（2026-09-12 批2·路F 拆行）：`{HH:MM} {天气}` 首行 + 条目文本次行。
 
-    模板配置化（2026-08-31）：行格式 = log_adventure_line、首见标记 = log_first_seen_mark。
+    模板配置化：行格式 = log_adventure_line（首行时间+天气、次行文本）；首见标记 =
+    log_first_seen_mark，渲染于首行行尾（防「文本+标记」超 14 全角；单行模板兜底挂行尾）。
     """
     _, time = _split_ts(entry.get("ts"))
     weather = _entry_weather(entry)
     line = tpl_of(ctx, "log_adventure_line",
                   {"time": time, "weather": weather, "text": _entry_text(entry, ctx)})
     if bool(entry.get("first_seen")):
-        line += tpl_of(ctx, "log_first_seen_mark")
+        mark = tpl_of(ctx, "log_first_seen_mark")
+        if "\n" in line:
+            head, sep, rest = line.partition("\n")
+            line = f"{head}{mark}{sep}{rest}"
+        else:
+            line += mark
     return line
 
 

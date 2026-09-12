@@ -54,6 +54,10 @@
   9) 命中彩蛋 → 复用 adventure_log.log_hidden_find（内部 bump_event：event_counts
      nested {[事件:隐藏发现]:{ID:count}} + longline_counters + event_log 首见日志），
      与本批契约「event_bus.bump_event nested target + first_seen」同口径。
+  10) 【2026-09-12 专项·引擎文案1】直出文案迁模板表：泛化缺省读 env_investigate_generic、
+      one_shot 去重确认读 env_investigate_confirm（经 _tpl_text = tpl_of + 兜底常量链，
+      内容包注入 ctx["templates"] 可覆盖同键）。DEFAULT_GENERIC_TEXT / DEFAULT_CONFIRM_TEXT
+      降级为兜底常量（ctx 无 templates / 表缺键时）；调用链 ctx 由装配层注入，引擎不造 ctx。
 
 铁律：零 NoneBot import；纯函数确定性（today/rng 由 ctx 注入）；每函数 docstring；
 无 emoji（3d/emoji 纪律）；最小侵入（不改兄弟路 investigate_commands.py）。
@@ -65,6 +69,7 @@ from typing import Any, List, Mapping, MutableMapping, Optional, Tuple
 
 from qbot_rpg.core.adventure_log import EVENT_KEY_HIDDEN_FIND, log_hidden_find
 from qbot_rpg.core.condition_engine import eval_condition
+from qbot_rpg.core.templates import tpl_of
 
 __all__ = [
     "DEFAULT_DAILY_QUOTA",
@@ -90,9 +95,12 @@ QUOTA_KEY = "investigate_quota"
 REVEALED_KEY = "investigate_revealed"
 
 # 泛化环境文本（不提示原则：零「此处有隐藏」措辞）
+# 2026-09-12 专项·引擎文案1：主路径走模板表 env_investigate_generic；本常量 = 兜底
+# （ctx 无 templates / 表缺键时用），调用方注入的 ctx["templates"] 可覆盖表值。
 DEFAULT_GENERIC_TEXT = "四周一片寂静，并没有特别的发现。"
 
 # one_shot 已触发后的简短确认（R-11 去重：无彩蛋正文、无揭示卡片）
+# 2026-09-12 专项·引擎文案1：主路径走模板表 env_investigate_confirm；本常量 = 兜底。
 DEFAULT_CONFIRM_TEXT = "这里没有新的发现。"
 
 # 多命中优先级（R-11 D-04：隐藏 BOSS 蹲点 > 隐藏地图 > 交互点彩蛋 > 泛化文本）
@@ -267,7 +275,11 @@ def _render_text(template: Optional[str], ctx: Mapping[str, Any], map_def: objec
 
 
 def _generic_text(ctx: Mapping[str, Any], map_def: object) -> str:
-    """泛化环境文本（不提示原则）：settings 池（rng 确定性）→ 地图 desc → 缺省中性文本。"""
+    """泛化环境文本（不提示原则）：settings 池（rng 确定性）→ 地图 desc → 缺省中性文本。
+
+    2026-09-12 专项·引擎文案1：缺省中性文本主路径走模板表 env_investigate_generic
+    （tpl_of，内容包可覆盖），表缺键/ctx 无 templates → 兜底常量 DEFAULT_GENERIC_TEXT。
+    """
     s = ctx.get("settings")
     if isinstance(s, Mapping):
         inv = s.get("investigate")
@@ -284,7 +296,13 @@ def _generic_text(ctx: Mapping[str, Any], map_def: object) -> str:
     desc = _map_desc(map_def)
     if desc:
         return desc
-    return DEFAULT_GENERIC_TEXT
+    return _tpl_text(ctx, "env_investigate_generic", DEFAULT_GENERIC_TEXT)
+
+
+def _tpl_text(ctx: Mapping[str, Any], key: str, fallback: str) -> str:
+    """模板表取文案（2026-09-12 专项·引擎文案1 兜底链）：tpl_of(ctx, key) 非空 → 用之；
+    否则回落模块兜底常量（ctx 无 templates / 内容包缺该键时）。"""
+    return tpl_of(ctx, key) or fallback
 
 
 def _prev_hidden_count(ctx: Mapping[str, Any], hidden_id: str) -> int:
@@ -377,7 +395,7 @@ def _egg_outcome(ctx: MutableMapping[str, Any], map_def: object,
         # R-11 去重：已 one_shot → 简短确认，无彩蛋正文、无揭示卡片、不再计数
         text = point.get("confirm")
         if not (isinstance(text, str) and text):
-            text = DEFAULT_CONFIRM_TEXT
+            text = _tpl_text(ctx, "env_investigate_confirm", DEFAULT_CONFIRM_TEXT)
         return {
             "kind": "egg_confirm",
             "text": _render_text(text, ctx, map_def),
@@ -428,7 +446,7 @@ def _map_reveal_outcome(ctx: MutableMapping[str, Any], map_def: object,
     if one_shot and rid and rid in _revealed_set(ctx):
         return {
             "kind": "map_reveal_confirm",
-            "text": DEFAULT_CONFIRM_TEXT,
+            "text": _tpl_text(ctx, "env_investigate_confirm", DEFAULT_CONFIRM_TEXT),
             "hidden_find_id": None,
             "one_shot": True,
             "quota_remaining": quota_left,

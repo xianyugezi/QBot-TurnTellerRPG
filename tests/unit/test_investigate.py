@@ -413,3 +413,28 @@ def test_generic_uses_settings_pool_deterministic() -> None:
     r = investigate_map(ctx, m, None, today="2026-08-28")
     assert r["kind"] == "generic"
     assert r["text"] in pool
+
+
+# ---------------------------------------------------------------------------
+# 2026-09-12 专项·引擎文案1：泛化缺省/去重确认 模板表驱动
+# ---------------------------------------------------------------------------
+def test_generic_and_confirm_text_table_driven() -> None:
+    """泛化缺省 env_investigate_generic / 去重确认 env_investigate_confirm 主路径走表，
+    ctx["templates"] 注入可覆盖（兜底常量仅后备）。"""
+    from qbot_rpg.core.templates import DEFAULT_TEMPLATES
+
+    over = {"templates": {"env_investigate_generic": "【覆盖】调查泛化。",
+                          "env_investigate_confirm": "【覆盖】去重确认。"}}
+    # 泛化缺省：无交互点 + 无地图 desc + 无 settings 池 → 表值
+    m = _mk_map(desc="", interact_points=[])
+    assert investigate_map(_mk_ctx(), m, None, today="2026-08-28")["text"] \
+        == DEFAULT_TEMPLATES["env_investigate_generic"]
+    assert investigate_map(_mk_ctx(**over), m, None, today="2026-08-28")["text"] \
+        == "【覆盖】调查泛化。"
+    # 去重确认：one_shot 二次命中 → 确认文案走表（覆盖值生效）
+    m2 = _mk_map(interact_points=[_egg_point()])
+    c2 = _mk_ctx(codex=80, **over)
+    investigate_map(c2, m2, "石像", today="2026-08-28")
+    r2 = investigate_map(c2, m2, "石像", today="2026-08-28")
+    assert r2["kind"] == "egg_confirm"
+    assert r2["text"] == "【覆盖】去重确认。"

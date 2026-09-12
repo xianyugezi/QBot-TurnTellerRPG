@@ -630,5 +630,13 @@
   "gift_target_not_found": "❌ 玩家不存在或未注册\n{target}",
   "gift_ok": "✅ 已赠送 {name}×{qty}\n给 {target}\n你剩余 {remain}",
   "gift_receive": "{target_name} 收到赠礼\n{name}×{qty}",
-  "gift_system_disabled": "❌ 赠送功能未开放\n本服暂不支持赠送"
+  "gift_system_disabled": "❌ 赠送功能未开放\n本服暂不支持赠送",
+  "env_neutral_pool_1": "四周一片寂静，并没有特别的发现。",
+  "env_neutral_pool_2": "风穿过原野，带起一阵沙沙声，别无他物。",
+  "env_neutral_pool_3": "眼前的景象一如既往，并无异常。",
+  "env_neutral_pool_4": "你仔细环顾四周，一切如常。",
+  "env_ambient_default": "四周一片寂静，并没有特别的发现。",
+  "env_investigate_generic": "四周一片寂静，并没有特别的发现。",
+  "env_investigate_confirm": "这里没有新的发现。",
+  "ach_list_tail_tip": "发 成就信息 <序号> 查看详情"
 }

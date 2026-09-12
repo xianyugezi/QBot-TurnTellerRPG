@@ -1,4 +1,4 @@
-"""赠送指令：/赠送 <物品>*<数量> <玩家>（定稿 L1286/L953 + 4f B5：原子转移引擎）。
+"""赠送指令：赠送 <物品>*<数量> <玩家>（定稿 L1286/L953 + 4f B5：原子转移引擎）。
 
 文件名：gift_commands.py
 创建时间：2026-09-06
@@ -208,7 +208,7 @@ async def _gift_core(ctx: MutableMapping[str, Any], item_ref: str, qty: int,
 
 
 def cmd_gift(parsed: Any, ctx: MutableMapping[str, Any]) -> Any:
-    """/赠送 <物品>*<数量> <玩家>：原子转移（async 事务——返回 coroutine 由
+    """赠送 <物品>*<数量> <玩家>：原子转移（async 事务——返回 coroutine 由
     runner _invoke_handler await）。"""
     p = ctx.get("player")
     if p is None or not ctx.get("registered", False):
@@ -247,7 +247,7 @@ def register_gift_commands(
     *,
     make_context: Optional[Callable[[Any], dict]] = None,
 ) -> Any:
-    """把 /赠送 注册进 Router。"""
+    """把 赠送 注册进 Router。"""
     from qbot_rpg.commands.router import CommandSpec  # noqa: PLC0415
 
     def _ctx(parsed: Any) -> dict:

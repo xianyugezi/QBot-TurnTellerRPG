@@ -144,14 +144,14 @@ def test_gift_register_gate() -> None:
     """未注册 → 注册门槛（同步路径）。"""
     ctx = {"registered": False, "player": None, "repo": None}
     out = cmd_gift(parse("/赠送 药水 20002"), ctx)
-    assert "请先 /注册" in out
+    assert "请先注册" in out
 
 
 def test_gift_missing_args() -> None:
-    """缺参 → 参数错误。"""
+    """缺参 → 缺少参数。"""
     ctx = {"registered": True, "player": {"name": "阿伟"}, "repo": None}
     out = cmd_gift(parse("/赠送"), ctx)
-    assert "参数错误" in out
+    assert "缺少参数" in out
     out2 = cmd_gift(parse("/赠送 药水"), ctx)
     assert "接收玩家" in out2
 

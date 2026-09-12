@@ -100,6 +100,8 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
 "battle_actor_landed": "{actor} 从空中落回地面",
 # 被击落行（跃空风险闭环，批③：对空必杀命中空中玩家——纯行为播报，零数值）
 "battle_air_dropped": "{name}将你从空中击落——你重重摔落在地",
+# 受身行（跃空续航批⑨：被击落时翔虫受身——纯行为播报，零数值）
+"battle_air_recover": "{name}将你从空中击落——你借翔虫之力翻身，稳稳落地",
 # 转向行（增补 v1 §三 转向事件化：怪在玩家行动前转回面向——纯行为播报，零数值）
 "battle_enemy_turned": "{name}转过身来，盯住了你",
 "battle_position_changed": "{actor} 移动到了{pos}",
@@ -221,6 +223,7 @@ PLACEHOLDER_WHITELIST: Dict[str, set] = {
     "battle_enemy_position_miss": {"name", "pos", "hp", "max_hp"},
 "battle_actor_landed": {"actor"},
 "battle_air_dropped": {"name"},
+"battle_air_recover": {"name"},
 "battle_enemy_turned": {"name"},
 "battle_position_changed": {"actor", "pos"},
 "battle_part_broken": {"part", "name"},

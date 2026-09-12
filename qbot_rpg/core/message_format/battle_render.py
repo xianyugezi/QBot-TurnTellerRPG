@@ -635,6 +635,7 @@ def _render_player_action(outcome: Any, *, ctx: Any = None) -> List[str]:
     # + 方位变化行（reposition 原子结算）
     lines.extend(_render_air_land_lines(outcome, ctx=ctx))
     lines.extend(_render_air_drop_lines(outcome, ctx=ctx))
+    lines.extend(_render_air_recover_lines(outcome, ctx=ctx))
     lines.extend(_render_position_changed_lines(outcome, ctx=ctx))
     lines.extend(_render_part_break_lines(outcome, ctx=ctx))
     lines.extend(_render_stun_lines(outcome, ctx=ctx))  # 批⑦A 气绝事件行
@@ -851,6 +852,21 @@ def _render_air_drop_lines(outcome: Any, *, ctx: Any = None) -> List[str]:
         if not isinstance(e, Mapping) or e.get("type") != "air_drop":
             continue
         line = tpl_of(ctx, "battle_air_dropped",
+                      {"name": _fx_actor_cn(str(e.get("attacker") or "enemy"), outcome)})
+        if line:
+            out.append(line)
+    return out
+
+
+def _render_air_recover_lines(outcome: Any, *, ctx: Any = None) -> List[str]:
+    """受身行（跃空续航批⑨）：outcome.side_effects 的 air_recover 事件（被击落时
+    翔虫受身成功——引擎 `_try_air_recover` 产出）→ 模板 battle_air_recover 一行；
+    {name} 经显示层怪名映射（与命中行同通道）；零数值（隐性口径，玩家不可见）。"""
+    out: List[str] = []
+    for e in getattr(outcome, "side_effects", ()) or ():
+        if not isinstance(e, Mapping) or e.get("type") != "air_recover":
+            continue
+        line = tpl_of(ctx, "battle_air_recover",
                       {"name": _fx_actor_cn(str(e.get("attacker") or "enemy"), outcome)})
         if line:
             out.append(line)
@@ -1143,6 +1159,7 @@ def _render_enemy_action(outcome: Any, *, ctx: Any = None) -> Optional[str]:
     # （怪行动 effects reposition/reposition_all 结算，如冲锋/转身）
     lines.extend(_render_air_land_lines(outcome, ctx=ctx))
     lines.extend(_render_air_drop_lines(outcome, ctx=ctx))
+    lines.extend(_render_air_recover_lines(outcome, ctx=ctx))
     lines.extend(_render_position_changed_lines(outcome, ctx=ctx))
     lines.extend(_render_part_break_lines(outcome, ctx=ctx))
     lines.extend(_render_stun_lines(outcome, ctx=ctx))  # 批⑦A 气绝事件行

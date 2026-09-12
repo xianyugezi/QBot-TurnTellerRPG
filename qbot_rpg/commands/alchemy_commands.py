@@ -2289,9 +2289,10 @@ def _render_deep_panel(core: AlchemyCore, snap: Mapping[str, Any],
     if chain:
         mats = " ".join(_material_entry_text(r, ctx) for r in chain if isinstance(r, Mapping))
         if not mats:
-            mats = "（无）"
+            mats = tpl_of(ctx, "alchemy_no_materials")
     else:
-        mats = _recipe_material_text(core, recipe, ctx) if recipe else "（无）"
+        mats = (_recipe_material_text(core, recipe, ctx) if recipe
+                else tpl_of(ctx, "alchemy_no_materials"))
     scales = _render_scales(ctx, recipe)
     try:
         slots = max(2, int(snap.get("slots", 6)))

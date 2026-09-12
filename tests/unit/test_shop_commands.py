@@ -194,13 +194,13 @@ def test_shop_name_with_page_arg():
 
 
 # ---------------------------------------------------------------------------
-# /商店 列表（补缺漏）：可用商店一览
+# /商店 列表（补缺漏）：【商店】可用商店一览（2026-09-12 批10·路C 新排版）
 # ---------------------------------------------------------------------------
 
 def test_shop_list_overview_page1():
     """补缺漏 /商店 列表：类型徽标 + 门槛标记（置灰不隐藏）+ 5 条/页 + TPL-08 页脚。"""
     out = cmd_shop(parse("/商店 列表"), make_ctx())
-    assert out.startswith("可用商店一览")
+    assert out.startswith("【商店】可用商店一览")
     assert "1. 杂货铺 [普通商店] 新手村杂货铺" in out
     assert "3. 冒险者公会商店 [声望商店] 公会专属 需要 熟悉" in out
     assert "5. 神秘商人 [黑市] 深夜黑市" in out
@@ -235,7 +235,7 @@ def test_shop_list_single_page_no_footer():
         {"id": "b", "name": "乙店", "type": "npc", "icon": "", "desc": "", "markers": []},
     ]
     out = render_shops_overview(rows, 1)
-    assert out.startswith("可用商店一览")
+    assert out.startswith("【商店】可用商店一览")
     assert "1. 甲店 [普通商店]" in out
     assert "2. 乙店 [NPC 商店]" in out
     assert "翻页" not in out
@@ -527,23 +527,68 @@ def test_shop_rem_tpl_override_via_ctx():
 
 
 def test_shop_rem_tpl_default_when_no_ctx_templates():
-    """无 ctx['templates'] → tpl_of 回落内置默认（逐字对齐既有输出）。"""
+    """无 ctx['templates'] → tpl_of 回落全量模板表（批10·路C 新排版）。"""
     out = cmd_shop(parse("/商店 列表"), make_ctx())
-    assert out.startswith("可用商店一览")
+    assert out.startswith("【商店】可用商店一览")
     assert "1. 杂货铺 [普通商店] 新手村杂货铺" in out
 
 
-def test_shop_rem_tpl_placeholder_whitelist_coverage():
-    """register_rem_tpl shop_* 白名单：默认模板占位符 ⊆ 白名单（防内容包拼错 key 缺键不替换）。"""
+def test_shop_b10c_new_copy_anchors():
+    """批10·路C 新排版锚点：无店两行（❌+下一步）/ 尾段 Tip 免斜杠 / 进店用法与未命中两行。"""
+    from qbot_rpg.core.templates import tpl_of
+
+    # 无店兜底：❌ + 原因 + 下一步（两行；旧版单行「❌ 商店不存在」）
+    assert cmd_shop(parse("/商店"), make_ctx(shops={})) == "❌ 商店不存在\n发 商店列表 查看可用商店"
+    # 尾段 Tip 免单引号（旧「发送'购买 序号'即可购买物品。」）
+    out = cmd_shop(parse("/商店"), make_ctx())
+    assert "Tip:发 购买 <序号> 即可买下" in out
+    assert "'" not in out.split("Tip:")[-1]
+    # 进店用法 / 未命中：免斜杠 +「或」替代旧「|」+ 下一步独立行
+    assert tpl_of(None, "shop_enter_usage") == "发 商店进入 <序号 或 店名>\n序号见 商店列表"
+    assert tpl_of(None, "shop_enter_not_found", {"name": "幽灵店"}) == (
+        "❌ 找不到商店「幽灵店」\n发 商店列表 查看可用商店"
+    )
+
+
+def test_shop_rem_tpl_whitelist_registered():
+    """白名单测试：商店 13 键已迁全量表（register_rem_tpl 分区默认表清空）——表内文本、
+    派生白名单与占位符一致。
+
+    2026-09-12 批10·路C：分区默认表/白名单清空，断言改走 TABLE_TEMPLATES（对齐
+    test_codex_commands.test_codex_tpl_whitelist_registered / test_pvp_commands 同款口径）。
+    """
     import re
 
-    from qbot_rpg.core.templates.register_rem_tpl import (
-        DEFAULT_TEMPLATES as _RR_TPL,
-        PLACEHOLDER_WHITELIST as _RR_WH,
+    import qbot_rpg.core.templates.register_rem_tpl as _reg_rem_partition
+    from qbot_rpg.core.templates import (
+        DEFAULT_TEMPLATES,
+        PLACEHOLDER_WHITELIST,
+        TABLE_TEMPLATES,
     )
+
+    # 分区默认表/白名单已清空（13 键全部迁全量表；空壳保留 import 兼容）
+    assert not _reg_rem_partition.DEFAULT_TEMPLATES
+    assert not _reg_rem_partition.PLACEHOLDER_WHITELIST
+    shop_keys = {k for k in TABLE_TEMPLATES if k.startswith("shop_")}
+    assert shop_keys == {
+        "shop_no_shop", "shop_enter_usage", "shop_enter_not_found", "shop_browse_empty",
+        "shop_list_title", "shop_buy_fail", "shop_sell_fail", "shop_browse_tail_tip",
+        "shop_list_tail_tip", "shop_price_single", "shop_price_part",
+        "shop_discount_marker", "shop_overview_row_prefix",
+    }
     pat = re.compile(r"\{([a-zA-Z0-9_]+)\}")
-    shop_keys = {k for k in _RR_TPL if k.startswith("shop_")}
-    assert shop_keys, "register_rem_tpl 应含 shop_* 分区 key"
-    for key in shop_keys:
-        used = set(pat.findall(str(_RR_TPL[key])))
-        assert used <= _RR_WH.get(key, set()), f"{key}: 占位符 {used} 超出白名单"
+    for key in sorted(shop_keys):
+        assert DEFAULT_TEMPLATES[key] == TABLE_TEMPLATES[key], f"聚合未走表：{key}"
+        assert PLACEHOLDER_WHITELIST[key] == set(pat.findall(TABLE_TEMPLATES[key])), (
+            f"白名单不一致：{key}"
+        )
+    # 占位符逐键核对（信息要素不丢字段）
+    assert PLACEHOLDER_WHITELIST["shop_enter_not_found"] == {"name"}
+    assert PLACEHOLDER_WHITELIST["shop_price_single"] == {"unit", "currency"}
+    assert PLACEHOLDER_WHITELIST["shop_price_part"] == {"amount", "currency"}
+    assert PLACEHOLDER_WHITELIST["shop_discount_marker"] == {"discount"}
+    assert PLACEHOLDER_WHITELIST["shop_overview_row_prefix"] == {"index", "name"}
+    # 无占位符模板：白名单空集
+    for key in ("shop_no_shop", "shop_enter_usage", "shop_browse_empty", "shop_list_title",
+                "shop_buy_fail", "shop_sell_fail", "shop_browse_tail_tip", "shop_list_tail_tip"):
+        assert PLACEHOLDER_WHITELIST[key] == set(), key

@@ -1,0 +1,35 @@
+{
+  "rail": "b10c",
+  "scope": "批10·路C：商店 13 键（shop_commands 渲染壳；qbot_rpg/core/templates/register_rem_tpl.py 全量迁移）",
+  "templates": {
+    "shop_no_shop": "❌ 商店不存在\n发 商店列表 查看可用商店",
+    "shop_enter_usage": "发 商店进入 <序号 或 店名>\n序号见 商店列表",
+    "shop_enter_not_found": "❌ 找不到商店「{name}」\n发 商店列表 查看可用商店",
+    "shop_browse_empty": "（本店暂无商品）",
+    "shop_list_title": "【商店】可用商店一览",
+    "shop_buy_fail": "❌ 购买失败\n稍后重试或换个目标",
+    "shop_sell_fail": "❌ 出售失败\n稍后重试或换个目标",
+    "shop_browse_tail_tip": "发 购买 <序号> 即可买下",
+    "shop_list_tail_tip": "发 商店进入 <序号> 进店",
+    "shop_price_single": "{unit}({currency})",
+    "shop_price_part": "{amount}({currency})",
+    "shop_discount_marker": "[折扣 -{discount}%]",
+    "shop_overview_row_prefix": "{index}. {name}"
+  },
+  "prose_keys": {},
+  "notes": {
+    "shop_no_shop": "错误行两行化：❌ + 原因 / 下一步「发 商店列表 查看可用商店」（免斜杠）；旧版单行无下一步。无占位符",
+    "shop_enter_usage": "用法行免斜杠重写：发 商店进入 <序号 或 店名> / 序号见 商店列表（多选一用「或」替代旧「|」，长行拆两行防爆宽；旧「商店进入：发 商店进入 <序号|商店名>（序号见 商店列表）」= 54 半角超宽）。无占位符",
+    "shop_enter_not_found": "错误行两行化：❌ 找不到商店「{name}」 / 发 商店列表 查看可用商店（去旧全角括号挤宽，下一步独立行）；占位符 name 不变",
+    "shop_browse_empty": "空态重写：全角括号保留既有口径（对齐「（已击杀）」形态），文案「本店暂无商品」（18 半角）；无占位符",
+    "shop_list_title": "段头重写：【商店】+副题「可用商店一览」（规范段头形态「【主题】+副题」）；无占位符",
+    "shop_buy_fail": "错误行两行化：❌ 购买失败 / 稍后重试或换个目标（引擎 message 缺失/无当前商店兜底，不误导具体下一步）；无占位符",
+    "shop_sell_fail": "错误行两行化：同 shop_buy_fail 形态（❌ 出售失败 / 稍后重试或换个目标）；无占位符",
+    "shop_browse_tail_tip": "尾段 Tip 免斜杠重写：发 购买 <序号> 即可买下（去旧单引号「发送'购买 序号'即可购买物品。」；含 Tip: 前缀渲染宽 27 ≤28）；无占位符",
+    "shop_list_tail_tip": "尾段 Tip 免斜杠重写：发 商店进入 <序号> 进店（去旧单引号 + 收窄至含 Tip: 前缀 27 ≤28；序号/店名双形态在 shop_enter_usage 行承载）；无占位符",
+    "shop_price_single": "数据片段保留原形态「{unit}({currency})」（壳层拼「100(金币)」；半角括号为既有货币单位口径，非可重排空间）；占位符 unit/currency 不变",
+    "shop_price_part": "数据片段保留原形态「{amount}({currency})」（mixed 价 shell 以 + 拼接「50(金币)+5(宝石)」）；占位符 amount/currency 不变",
+    "shop_discount_marker": "数据片段保留原形态「[折扣 -{discount}%]」（方括号为既有折扣标记口径；渲染宽 15 ≤28）；占位符 discount 不变",
+    "shop_overview_row_prefix": "数据片段保留原形态「{index}. {name}」（一览行序号前缀锚点，壳层再拼类型徽标/描述/门槛标记；test_shop_commands 多处逐字断言「1. 杂货铺 …」）；占位符 index/name 不变"
+  }
+}

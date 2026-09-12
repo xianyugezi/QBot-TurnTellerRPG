@@ -34,6 +34,7 @@
   "type": "basic",
   "kind": "damage",
   "power": 120,
+  "recovery": 40,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -75,6 +76,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 36,
   "attack_type": "none",
   "element": null,
   "effects": [],
@@ -109,7 +111,8 @@
   "break_power": 30,
   "type": "active",
   "kind": "damage",
-  "power": 200,
+  "power": 160,
+  "recovery": 78,
   "attack_type": "pierce",
   "element": null,
   "effects": [],
@@ -144,6 +147,7 @@
   "type": "basic",
   "kind": "damage",
   "power": 100,
+  "recovery": 37,
   "attack_type": "none",
   "element": null,
   "effects": [],
@@ -173,6 +177,7 @@
   "type": "basic",
   "kind": "damage",
   "power": 130,
+  "recovery": 41,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -215,6 +220,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 36,
   "attack_type": "none",
   "element": null,
   "effects": [
@@ -259,6 +265,7 @@
   "type": "active",
   "kind": "damage",
   "power": 200,
+  "recovery": 68,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -306,6 +313,7 @@
   "type": "active",
   "kind": "damage",
   "power": 150,
+  "recovery": 62,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -349,6 +357,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 38,
   "attack_type": "none",
   "element": null,
   "effects": [],
@@ -383,6 +392,7 @@
   "type": "active",
   "kind": "damage",
   "power": 230,
+  "recovery": 72,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -428,7 +438,8 @@
  {
   "type": "active",
   "kind": "damage",
-  "power": 420,
+  "power": 336,
+  "recovery": 130,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -469,6 +480,7 @@
   "type": "active",
   "kind": "damage",
   "power": 260,
+  "recovery": 104,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -525,6 +537,7 @@
   "type": "active",
   "kind": "damage",
   "power": 230,
+  "recovery": 73,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -574,6 +587,7 @@
   "type": "active",
   "kind": "damage",
   "power": 90,
+  "recovery": 65,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -616,6 +630,7 @@
   "type": "basic",
   "kind": "damage",
   "power": 110,
+  "recovery": 38,
   "attack_type": "slash",
   "element": null,
   "effects": [],
@@ -651,6 +666,7 @@
   "type": "active",
   "kind": "utility",
   "power": 80,
+  "recovery": 41,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -694,7 +710,8 @@
  {
   "type": "active",
   "kind": "damage",
-  "power": 90,
+  "power": 72,
+  "recovery": 52,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -733,6 +750,7 @@
   "type": "active",
   "kind": "damage",
   "power": 130,
+  "recovery": 43,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -774,6 +792,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 36,
   "attack_type": "none",
   "element": null,
   "effects": [],
@@ -808,6 +827,7 @@
   "type": "active",
   "kind": "damage",
   "power": 150,
+  "recovery": 63,
   "attack_type": "slash",
   "element": null,
   "effects": [],
@@ -843,7 +863,8 @@
  {
   "type": "active",
   "kind": "damage",
-  "power": 320,
+  "power": 256,
+  "recovery": 118,
   "attack_type": "slash",
   "element": null,
   "effects": [],
@@ -876,7 +897,8 @@
  {
   "type": "active",
   "kind": "damage",
-  "power": 300,
+  "power": 240,
+  "recovery": 114,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -922,6 +944,7 @@
   "type": "active",
   "kind": "damage",
   "power": 60,
+  "recovery": 39,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -968,6 +991,7 @@
   "type": "active",
   "kind": "damage",
   "power": 55,
+  "recovery": 39,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -1013,7 +1037,8 @@
  {
   "type": "active",
   "kind": "damage",
-  "power": 200,
+  "power": 160,
+  "recovery": 78,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -1057,7 +1082,8 @@
  {
   "type": "active",
   "kind": "damage",
-  "power": 180,
+  "power": 144,
+  "recovery": 76,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -1097,6 +1123,7 @@
   "type": "active",
   "kind": "status",
   "power": 0,
+  "recovery": 40,
   "attack_type": "none",
   "element": null,
   "effects": [
@@ -1138,6 +1165,7 @@
   "type": "basic",
   "kind": "damage",
   "power": 110,
+  "recovery": 38,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -1177,6 +1205,7 @@
   "type": "active",
   "kind": "damage",
   "power": 130,
+  "recovery": 45,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -1218,6 +1247,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 46,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -1231,7 +1261,7 @@
   "mp_cost": 0,
   "cooldown": 0,
   "tag": "none",
-  "armor": false,
+  "armor": true,
   "interrupt": false,
   "chain_refs": [],
   "consume_marks": {},
@@ -1263,6 +1293,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 36,
   "attack_type": "none",
   "element": null,
   "effects": [
@@ -1304,6 +1335,7 @@
   "type": "active",
   "kind": "damage",
   "power": 130,
+  "recovery": 45,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -1348,6 +1380,7 @@
   "type": "active",
   "kind": "damage",
   "power": 160,
+  "recovery": 63,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -1393,6 +1426,7 @@
   "type": "active",
   "kind": "damage",
   "power": 140,
+  "recovery": 43,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -1440,6 +1474,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 36,
   "attack_type": "none",
   "element": null,
   "effects": [
@@ -1479,7 +1514,8 @@
  {
   "type": "active",
   "kind": "damage",
-  "power": 320,
+  "power": 256,
+  "recovery": 116,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -1527,6 +1563,7 @@
   "type": "active",
   "kind": "damage",
   "power": 170,
+  "recovery": 64,
   "attack_type": "slash",
   "element": null,
   "effects": [],
@@ -1562,6 +1599,7 @@
   "type": "active",
   "kind": "damage",
   "power": 150,
+  "recovery": 63,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -1605,6 +1643,7 @@
   "type": "active",
   "kind": "damage",
   "power": 130,
+  "recovery": 44,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -1649,6 +1688,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 38,
   "attack_type": "none",
   "element": null,
   "effects": [
@@ -1696,7 +1736,8 @@
  {
   "type": "active",
   "kind": "damage",
-  "power": 280,
+  "power": 224,
+  "recovery": 112,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -1742,6 +1783,7 @@
   "type": "active",
   "kind": "damage",
   "power": 180,
+  "recovery": 66,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -1782,6 +1824,7 @@
   "type": "basic",
   "kind": "damage",
   "power": 110,
+  "recovery": 38,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -1827,6 +1870,7 @@
   "type": "active",
   "kind": "damage",
   "power": 150,
+  "recovery": 62,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -1868,6 +1912,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 38,
   "attack_type": "none",
   "element": null,
   "effects": [
@@ -1918,6 +1963,7 @@
   "type": "active",
   "kind": "damage",
   "power": 130,
+  "recovery": 44,
   "attack_type": "magic",
   "element": "void",
   "effects": [
@@ -1960,6 +2006,7 @@
   "type": "active",
   "kind": "damage",
   "power": 220,
+  "recovery": 71,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -2001,6 +2048,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 38,
   "attack_type": "none",
   "element": null,
   "effects": [
@@ -2048,6 +2096,7 @@
   "type": "active",
   "kind": "damage",
   "power": 120,
+  "recovery": 44,
   "attack_type": "magic",
   "element": "void",
   "effects": [
@@ -2087,6 +2136,7 @@
   "type": "active",
   "kind": "damage",
   "power": 90,
+  "recovery": 41,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -2129,6 +2179,7 @@
   "type": "active",
   "kind": "damage",
   "power": 250,
+  "recovery": 100,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -2171,7 +2222,8 @@
  {
   "type": "active",
   "kind": "damage",
-  "power": 400,
+  "power": 320,
+  "recovery": 126,
   "attack_type": "magic",
   "element": "void",
   "effects": [
@@ -2221,6 +2273,7 @@
   "type": "basic",
   "kind": "damage",
   "power": 110,
+  "recovery": 38,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -2265,6 +2318,7 @@
   "type": "active",
   "kind": "damage",
   "power": 200,
+  "recovery": 70,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -2311,6 +2365,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 36,
   "attack_type": "none",
   "element": null,
   "effects": [
@@ -2355,6 +2410,7 @@
   "type": "active",
   "kind": "damage",
   "power": 130,
+  "recovery": 44,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -2394,6 +2450,7 @@
   "type": "active",
   "kind": "damage",
   "power": 180,
+  "recovery": 67,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -2430,12 +2487,13 @@
    "stamina": 1
   },
   "energy_gain": {},
-  "desc": "截·碎闸截脉：180% 打断+减伤20%（X2 打断×霸体窗口审计）"
+  "desc": "截·碎闸截脉：180% 打断+减伤20%"
  },
  {
   "type": "active",
   "kind": "status",
   "power": 0,
+  "recovery": 51,
   "attack_type": "none",
   "element": null,
   "effects": [
@@ -2469,7 +2527,7 @@
    "stamina": 1
   },
   "energy_gain": {},
-  "desc": "铁·铁闸挡：霸体+减伤20% 当回（X2 霸体窗口真免疫打断）",
+  "desc": "铁·铁闸挡：霸体+减伤20% 当回",
   "counter_type": "parry",
   "counter_skill": "vg_iron_counter",
   "action_time": 400
@@ -2478,6 +2536,7 @@
   "type": "active",
   "kind": "damage",
   "power": 150,
+  "recovery": 62,
   "attack_type": "magic",
   "element": "void",
   "effects": [],
@@ -2513,6 +2572,7 @@
   "type": "active",
   "kind": "damage",
   "power": 260,
+  "recovery": 102,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -2559,6 +2619,7 @@
   "type": "active",
   "kind": "damage",
   "power": 220,
+  "recovery": 73,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -2602,6 +2663,7 @@
   "type": "basic",
   "kind": "damage",
   "power": 110,
+  "recovery": 38,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -2644,6 +2706,7 @@
   "type": "active",
   "kind": "damage",
   "power": 120,
+  "recovery": 42,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -2685,6 +2748,7 @@
   "type": "active",
   "kind": "damage",
   "power": 260,
+  "recovery": 101,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -2728,6 +2792,7 @@
   "type": "active",
   "kind": "damage",
   "power": 100,
+  "recovery": 41,
   "attack_type": "magic",
   "element": "void",
   "effects": [
@@ -2769,6 +2834,7 @@
   "type": "active",
   "kind": "damage",
   "power": 300,
+  "recovery": 106,
   "attack_type": "magic",
   "element": "void",
   "effects": [
@@ -2807,6 +2873,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 36,
   "attack_type": "none",
   "element": null,
   "effects": [
@@ -2851,6 +2918,7 @@
   "type": "active",
   "kind": "damage",
   "power": 130,
+  "recovery": 44,
   "attack_type": "magic",
   "element": "void",
   "effects": [
@@ -2890,6 +2958,7 @@
   "type": "active",
   "kind": "damage",
   "power": 140,
+  "recovery": 44,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -2931,6 +3000,7 @@
   "type": "active",
   "kind": "damage",
   "power": 220,
+  "recovery": 72,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -2974,6 +3044,7 @@
   "type": "basic",
   "kind": "damage",
   "power": 110,
+  "recovery": 39,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -3016,6 +3087,7 @@
   "type": "active",
   "kind": "damage",
   "power": 170,
+  "recovery": 66,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -3059,6 +3131,7 @@
   "type": "active",
   "kind": "damage",
   "power": 300,
+  "recovery": 106,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -3102,6 +3175,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 35,
   "attack_type": "none",
   "element": null,
   "effects": [],
@@ -3137,6 +3211,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 36,
   "attack_type": "none",
   "element": null,
   "effects": [
@@ -3179,6 +3254,7 @@
   "type": "active",
   "kind": "damage",
   "power": 140,
+  "recovery": 45,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -3220,6 +3296,7 @@
   "type": "active",
   "kind": "damage",
   "power": 260,
+  "recovery": 100,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -3261,6 +3338,7 @@
   "type": "active",
   "kind": "damage",
   "power": 320,
+  "recovery": 106,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -3338,6 +3416,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 36,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -3381,6 +3460,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 35,
   "attack_type": "none",
   "element": null,
   "effects": [
@@ -3430,6 +3510,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 35,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -3473,6 +3554,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 34,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -3516,6 +3598,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 35,
   "attack_type": "none",
   "element": null,
   "effects": [
@@ -3562,6 +3645,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 36,
   "attack_type": "none",
   "element": null,
   "effects": [
@@ -3608,6 +3692,7 @@
   "type": "active",
   "kind": "damage",
   "power": 110,
+  "recovery": 107,
   "attack_type": "pierce",
   "element": null,
   "effects": [],
@@ -3644,6 +3729,7 @@
   "type": "active",
   "kind": "damage",
   "power": 120,
+  "recovery": 35,
   "attack_type": "blunt",
   "element": null,
   "effects": [],
@@ -3686,6 +3772,7 @@
   "type": "active",
   "kind": "damage",
   "power": 170,
+  "recovery": 66,
   "attack_type": "blunt",
   "element": null,
   "effects": [],
@@ -3725,6 +3812,7 @@
   "type": "basic",
   "kind": "damage",
   "power": 110,
+  "recovery": 39,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -3772,6 +3860,7 @@
   "type": "active",
   "kind": "damage",
   "power": 45,
+  "recovery": 65,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -3812,6 +3901,7 @@
   "type": "active",
   "kind": "damage",
   "power": 150,
+  "recovery": 62,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -3860,6 +3950,7 @@
   "type": "active",
   "kind": "damage",
   "power": 165,
+  "recovery": 64,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -3913,6 +4004,7 @@
   "type": "active",
   "kind": "damage",
   "power": 180,
+  "recovery": 67,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -3960,6 +4052,7 @@
   "type": "active",
   "kind": "damage",
   "power": 195,
+  "recovery": 67,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -4013,6 +4106,7 @@
   "type": "active",
   "kind": "damage",
   "power": 210,
+  "recovery": 70,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -4060,6 +4154,7 @@
   "type": "active",
   "kind": "damage",
   "power": 225,
+  "recovery": 73,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -4113,6 +4208,7 @@
   "type": "active",
   "kind": "damage",
   "power": 190,
+  "recovery": 68,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -4165,6 +4261,7 @@
   "type": "active",
   "kind": "damage",
   "power": 200,
+  "recovery": 115,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -4217,6 +4314,7 @@
   "type": "active",
   "kind": "damage",
   "power": 210,
+  "recovery": 121,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -4269,6 +4367,7 @@
   "type": "active",
   "kind": "damage",
   "power": 155,
+  "recovery": 62,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -4313,6 +4412,7 @@
   "type": "active",
   "kind": "damage",
   "power": 175,
+  "recovery": 109,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -4357,6 +4457,7 @@
   "type": "active",
   "kind": "damage",
   "power": 190,
+  "recovery": 120,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -4401,6 +4502,7 @@
   "type": "active",
   "kind": "damage",
   "power": 240,
+  "recovery": 101,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -4441,6 +4543,7 @@
   "type": "active",
   "kind": "damage",
   "power": 250,
+  "recovery": 122,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -4484,6 +4587,7 @@
   "type": "active",
   "kind": "damage",
   "power": 270,
+  "recovery": 122,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -4527,6 +4631,7 @@
   "type": "active",
   "kind": "damage",
   "power": 150,
+  "recovery": 62,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -4578,6 +4683,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 37,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -4621,6 +4727,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 38,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -4670,6 +4777,7 @@
   "type": "active",
   "kind": "damage",
   "power": 160,
+  "recovery": 63,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -4709,6 +4817,7 @@
   "type": "active",
   "kind": "status",
   "power": 0,
+  "recovery": 41,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -4753,6 +4862,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 36,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -4789,7 +4899,8 @@
  {
   "type": "active",
   "kind": "damage",
-  "power": 360,
+  "power": 288,
+  "recovery": 123,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -4831,6 +4942,7 @@
   "type": "active",
   "kind": "damage",
   "power": 320,
+  "recovery": 111,
   "attack_type": "pierce",
   "element": null,
   "effects": [],
@@ -4863,6 +4975,7 @@
   "type": "active",
   "kind": "damage",
   "power": 145,
+  "recovery": 45,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -4906,6 +5019,7 @@
   "type": "active",
   "kind": "damage",
   "power": 250,
+  "recovery": 100,
   "attack_type": "slash",
   "element": null,
   "effects": [],
@@ -4942,6 +5056,7 @@
   "type": "active",
   "kind": "damage",
   "power": 170,
+  "recovery": 64,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -4988,6 +5103,7 @@
   "type": "active",
   "kind": "damage",
   "power": 230,
+  "recovery": 73,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -5034,6 +5150,7 @@
   "type": "active",
   "kind": "damage",
   "power": 380,
+  "recovery": 115,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -5077,6 +5194,7 @@
   "type": "active",
   "kind": "damage",
   "power": 260,
+  "recovery": 102,
   "attack_type": "blunt",
   "element": null,
   "effects": [],
@@ -5113,6 +5231,7 @@
   "type": "active",
   "kind": "status",
   "power": 0,
+  "recovery": 39,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -5151,6 +5270,7 @@
   "type": "active",
   "kind": "damage",
   "power": 260,
+  "recovery": 101,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -5189,6 +5309,7 @@
   "type": "active",
   "kind": "damage",
   "power": 170,
+  "recovery": 64,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -5227,6 +5348,7 @@
   "type": "active",
   "kind": "damage",
   "power": 200,
+  "recovery": 114,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -5265,6 +5387,7 @@
   "type": "active",
   "kind": "damage",
   "power": 250,
+  "recovery": 100,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -5301,6 +5424,7 @@
   "type": "active",
   "kind": "damage",
   "power": 240,
+  "recovery": 123,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -5340,6 +5464,7 @@
   "type": "active",
   "kind": "damage",
   "power": 170,
+  "recovery": 66,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -5384,6 +5509,7 @@
   "type": "active",
   "kind": "damage",
   "power": 210,
+  "recovery": 69,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -5428,6 +5554,7 @@
   "type": "active",
   "kind": "damage",
   "power": 200,
+  "recovery": 116,
   "attack_type": "pierce",
   "element": null,
   "effects": [],
@@ -5465,6 +5592,7 @@
   "type": "active",
   "kind": "damage",
   "power": 230,
+  "recovery": 73,
   "attack_type": "pierce",
   "element": null,
   "effects": [],
@@ -5502,6 +5630,7 @@
   "type": "active",
   "kind": "damage",
   "power": 140,
+  "recovery": 45,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -5543,6 +5672,7 @@
   "type": "active",
   "kind": "damage",
   "power": 160,
+  "recovery": 64,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -5583,6 +5713,7 @@
   "type": "active",
   "kind": "damage",
   "power": 300,
+  "recovery": 108,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -5623,6 +5754,7 @@
   "type": "active",
   "kind": "damage",
   "power": 240,
+  "recovery": 75,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -5666,6 +5798,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 35,
   "attack_type": "none",
   "element": null,
   "effects": [
@@ -5711,6 +5844,7 @@
   "type": "active",
   "kind": "damage",
   "power": 160,
+  "recovery": 64,
   "attack_type": "magic",
   "element": "void",
   "effects": [],
@@ -5745,6 +5879,7 @@
   "type": "active",
   "kind": "damage",
   "power": 220,
+  "recovery": 71,
   "attack_type": "magic",
   "element": "void",
   "effects": [],
@@ -5779,6 +5914,7 @@
   "type": "active",
   "kind": "damage",
   "power": 300,
+  "recovery": 106,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -5817,6 +5953,7 @@
   "type": "active",
   "kind": "damage",
   "power": 280,
+  "recovery": 122,
   "attack_type": "slash",
   "element": null,
   "effects": [],
@@ -5851,6 +5988,7 @@
   "type": "active",
   "kind": "damage",
   "power": 240,
+  "recovery": 121,
   "attack_type": "pierce",
   "element": null,
   "effects": [],
@@ -5888,6 +6026,7 @@
   "type": "active",
   "kind": "damage",
   "power": 280,
+  "recovery": 103,
   "attack_type": "slash",
   "element": null,
   "effects": [],
@@ -5922,6 +6061,7 @@
   "type": "active",
   "kind": "damage",
   "power": 180,
+  "recovery": 67,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -5965,6 +6105,7 @@
   "type": "active",
   "kind": "damage",
   "power": 200,
+  "recovery": 69,
   "attack_type": "magic",
   "element": "void",
   "effects": [
@@ -6008,6 +6149,7 @@
   "type": "active",
   "kind": "damage",
   "power": 220,
+  "recovery": 71,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -6048,6 +6190,7 @@
   "type": "active",
   "kind": "damage",
   "power": 200,
+  "recovery": 68,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -6086,6 +6229,7 @@
   "type": "active",
   "kind": "damage",
   "power": 240,
+  "recovery": 75,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -6124,6 +6268,7 @@
   "type": "active",
   "kind": "damage",
   "power": 320,
+  "recovery": 106,
   "attack_type": "blunt",
   "element": null,
   "effects": [],
@@ -6158,6 +6303,7 @@
   "type": "active",
   "kind": "damage",
   "power": 300,
+  "recovery": 121,
   "attack_type": "slash",
   "element": null,
   "effects": [],
@@ -6192,6 +6338,7 @@
   "type": "active",
   "kind": "damage",
   "power": 160,
+  "recovery": 62,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -6230,6 +6377,7 @@
   "type": "active",
   "kind": "damage",
   "power": 250,
+  "recovery": 71,
   "attack_type": "slash",
   "element": null,
   "effects": [],
@@ -6262,6 +6410,7 @@
   "type": "active",
   "kind": "damage",
   "power": 250,
+  "recovery": 70,
   "attack_type": "slash",
   "element": null,
   "effects": [],
@@ -6294,6 +6443,7 @@
   "type": "active",
   "kind": "damage",
   "power": 250,
+  "recovery": 72,
   "attack_type": "slash",
   "element": null,
   "effects": [],
@@ -6326,6 +6476,7 @@
   "type": "active",
   "kind": "damage",
   "power": 250,
+  "recovery": 70,
   "attack_type": "slash",
   "element": null,
   "effects": [],
@@ -6358,6 +6509,7 @@
   "type": "active",
   "kind": "damage",
   "power": 250,
+  "recovery": 73,
   "attack_type": "blunt",
   "element": null,
   "effects": [],
@@ -6390,6 +6542,7 @@
   "type": "active",
   "kind": "damage",
   "power": 250,
+  "recovery": 71,
   "attack_type": "pierce",
   "element": null,
   "effects": [],
@@ -6422,6 +6575,7 @@
   "type": "active",
   "kind": "damage",
   "power": 250,
+  "recovery": 72,
   "attack_type": "slash",
   "element": null,
   "effects": [],
@@ -6454,6 +6608,7 @@
   "type": "active",
   "kind": "damage",
   "power": 250,
+  "recovery": 71,
   "attack_type": "slash",
   "element": null,
   "effects": [],
@@ -6486,6 +6641,7 @@
   "type": "active",
   "kind": "damage",
   "power": 250,
+  "recovery": 72,
   "attack_type": "slash",
   "element": null,
   "effects": [],
@@ -6518,6 +6674,7 @@
   "type": "active",
   "kind": "damage",
   "power": 250,
+  "recovery": 70,
   "attack_type": "slash",
   "element": null,
   "effects": [],
@@ -6550,6 +6707,7 @@
   "type": "active",
   "kind": "damage",
   "power": 250,
+  "recovery": 73,
   "attack_type": "blunt",
   "element": null,
   "effects": [],

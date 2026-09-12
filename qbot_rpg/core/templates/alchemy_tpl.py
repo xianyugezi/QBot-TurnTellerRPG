@@ -19,38 +19,17 @@ key 命名：alchemy_<用途>。占位符白名单：每类模板允许的占位
 资源循环/协力/分解）。
 2026-09-12（批5·路N）：挑战/深度/进化/教学 26 键迁至全量表（本路收口后本分区仅剩
 珠与合成/图鉴技能面板/即时调合/资源循环/协力/分解，待后续批迁移）。
+2026-09-12（批6·路Q）：拆解 6 键 + 镶嵌/拆珠/珠升阶/成品合成/配方合成/特性合成/登记/复制
+16 键迁至全量表（本分区仅剩图鉴技能面板/即时调合/资源循环/协力，待后续批迁移）。
 """
 from __future__ import annotations
 
 from typing import Any, Dict
 
 DEFAULT_TEMPLATES: Dict[str, Any] = {
-    # —— /分解（终态）——
-    "alchemy_decompose_body": "✅ {items}",
-    "alchemy_decompose_empty": "✅ 分解成功",
-    "alchemy_decompose_gem": " + 宝石×{gem}",
-    "alchemy_decompose_rate": "（回收 {pct}%）",
-    "alchemy_decompose_fail": "❌ 分解失败",
-    "alchemy_decompose_remove_fail": "❌ 分解失败：道具扣减异常",
-
-    # —— 珠与合成（/镶嵌 /拆珠 /珠升阶 /成品合成 /配方合成 /特性合成 /登记 /复制）——
-    "alchemy_mount_slots_full": "❌ 装备珠槽已满，需先 /拆珠（SOCK-03 无损拆珠）",
-    "alchemy_mount_fail": "❌ 镶嵌失败",
-    "alchemy_slot_invalid": "❌ 槽位无效：{slot}",
-    "alchemy_slot_from_one": "❌ 槽位从 1 开始",
-    "alchemy_unmount_fail": "❌ 拆珠失败",
-    "alchemy_jewel_up_no_recipe": "❌ 未找到 {name} 的珠升阶配方"
-                                  "（BEL-12：3×同档同 ID+宝石10，禁跳级）",
-    "alchemy_jewel_up_fail": "❌ 珠升阶失败",
-    "alchemy_merge_no_combos": "❌ 「{a}」+「{b}」没有已知组合",
-    "alchemy_product_merge_fail": "❌ 成品合成失败",
-    "alchemy_formula_not_learned": "❌ 配方未全部习得：{names}",
-    "alchemy_formula_merge_fail": "❌ 配方合成失败",
-    "alchemy_trait_merge_no_recipe": "❌ 未配置特性合成配方",
-    "alchemy_trait_merge_fail": "❌ 特性合成失败",
-    "alchemy_register_master_required": "❌ 等级不足：登记复制需炼金大师（SP 面板可解锁）",
-    "alchemy_register_fail": "❌ 登记失败",
-    "alchemy_copy_fail": "❌ 复制失败",
+    # —— /分解（终态）/ 珠与合成 ——
+    # 2026-09-12（批6·路Q）：拆解 6 键 + 镶嵌/拆珠/珠升阶/成品合成/配方合成/特性合成/登记/复制 16 键
+    # 迁至全量表 template_table.json（按新规范拆行压宽/免斜杠/❌+原因），本分区不再保留。
 
     # —— 深度炼金（/深度炼金 /进化 /镶核心 /加成 /挑战）——
     # 2026-09-12（批5·路N）：深度/挑战/进化 20 键 + 教学 6 键迁至全量表
@@ -106,31 +85,8 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
 }
 
 PLACEHOLDER_WHITELIST: Dict[str, set] = {
-    # —— /分解 ——
-    "alchemy_decompose_body": {"items"},
-    "alchemy_decompose_empty": set(),
-    "alchemy_decompose_gem": {"gem"},
-    "alchemy_decompose_rate": {"pct"},
-    "alchemy_decompose_fail": set(),
-    "alchemy_decompose_remove_fail": set(),
-
-    # —— 珠与合成 ——
-    "alchemy_mount_slots_full": set(),
-    "alchemy_mount_fail": set(),
-    "alchemy_slot_invalid": {"slot"},
-    "alchemy_slot_from_one": set(),
-    "alchemy_unmount_fail": set(),
-    "alchemy_jewel_up_no_recipe": {"name"},
-    "alchemy_jewel_up_fail": set(),
-    "alchemy_merge_no_combos": {"a", "b"},
-    "alchemy_product_merge_fail": set(),
-    "alchemy_formula_not_learned": {"names"},
-    "alchemy_formula_merge_fail": set(),
-    "alchemy_trait_merge_no_recipe": set(),
-    "alchemy_trait_merge_fail": set(),
-    "alchemy_register_master_required": set(),
-    "alchemy_register_fail": set(),
-    "alchemy_copy_fail": set(),
+    # —— /分解 / 珠与合成 ——
+    # 2026-09-12（批6·路Q）：拆解 6 键 + 珠与合成 16 键白名单随键迁表（表内自动派生）。
 
     # —— 深度炼金 ——
     # 2026-09-12（批5·路N）：深度/挑战/进化/教学 26 键白名单随键迁表（表内自动派生）。

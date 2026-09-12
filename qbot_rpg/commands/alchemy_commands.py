@@ -1397,9 +1397,15 @@ def _confirm_error(res: Mapping[str, Any], ctx: Mapping[str, Any]) -> str:
 def _render_decompose(
     res: Mapping[str, Any], ctx: Mapping[str, Any], *, rate: Optional[float] = None
 ) -> str:
-    """两段式消息渲染（M-10 / GEM-15：材料回收段 + 宝石段，纯文本无装饰 emoji）：
+    """多段式消息渲染（M-10 / GEM-15：材料回收段 + 宝石段 + 回收率段，纯文本无装饰 emoji；
+    2026-09-12 批6·路Q 改逐行——材料逐行、宝石/回收率各占一行，避免多材料/长数挤行折行）：
 
-    `✅ 火晶石×2 月光草×1 + 宝石×3（回收 60%）`——宝石 = 平铺基础值不乘回收率（拍板①，
+    逐行示例：
+    `✅ 火晶石×2`
+    `月光草×1`
+    `宝石×3`
+    `回收 60%`
+    宝石 = 平铺基础值不乘回收率（拍板①，
     普通1/精良3/史诗8/传说20，可配 gem.分解）。rate 为回收率小数（None → 不显示）。
     入参：res（gem_wallet.decompose 成功输出 {materials, gem, ...}）、ctx（物品名解析）、
       rate（decompose_rate，可选）。出参：成功正文 str。
@@ -1416,7 +1422,7 @@ def _render_decompose(
             cnt = 1
         parts.append(tpl_of(ctx, "alchemy_material_entry_plain",
                             {"name": name, "count": cnt}))
-    body = (tpl_of(ctx, "alchemy_decompose_body", {"items": " ".join(parts)})
+    body = (tpl_of(ctx, "alchemy_decompose_body", {"items": "\n".join(parts)})
             if parts else tpl_of(ctx, "alchemy_decompose_empty"))
     gem = 0
     try:

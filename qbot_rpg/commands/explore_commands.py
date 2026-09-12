@@ -153,7 +153,8 @@ def _map_name(index: Mapping[str, Any], map_id: str) -> str:
 
 
 def _monster_line(ctx: Optional[Mapping[str, Any]], target: Any) -> Optional[str]:
-    """活动怪物行：`活动怪物：1.岩皮鼬×3 2.石甲蜥×1`（对齐 /背包 行格式 ×数量）。
+    """活动怪物行块：单只 `活动怪物：1.岩皮鼬×3`；多只（≥2）首行「活动怪物：」独占、
+    每条目独占一行（批1·路C 拆行防超宽；每行 ≤14 全角）。
 
     数据源 = maps 目标图 monsters 行（{enemy, count, ...}）；enemy id → 怪物名经
     ctx["monsters"]/ctx["enemies"] 解析，拿不到直接显示 enemy id；>5 只截断折叠（铁律 11）。
@@ -180,7 +181,10 @@ def _monster_line(ctx: Optional[Mapping[str, Any]], target: Any) -> Optional[str
         except (TypeError, ValueError):
             cnt = 1
         parts.append(tpl_of(ctx, "explore_monster_row", {"i": i, "nm": nm, "cnt": cnt}))
-    line = tpl_of(ctx, "explore_monster_line", {"items": " ".join(parts)})
+    # 批1·路C（2026-09-12）：≥2 只拆行——首行「活动怪物：」独占、每条目独占一行
+    # （旧「空格 join」单行易超 14 全角）；单只怪物同行（`活动怪物：1.xxx×n`）。
+    items = "\n" + "\n".join(parts) if len(parts) >= 2 else (parts[0] if parts else "")
+    line = tpl_of(ctx, "explore_monster_line", {"items": items})
     if len(rows) > _MONSTER_SHOW_LIMIT:
         line += tpl_of(ctx, "explore_monster_overflow")
     return line

@@ -6,38 +6,24 @@
 铁律：字符串 = 2026-08-31 前写死在各命令模块的逐字文案迁移（explore_commands 的
 f-string / TPL 常量 / 中文输出拼接），默认值改动会导致现有测试断言失效——需与
 explore_commands 渲染处 tpl_of(ctx, "explore_*", {...}) 一致。
+
+2026-09-12 消息模板重构（批1·路C）：位置/进入/移动/到达 17 键迁至全量表
+qbot_rpg/core/templates/template_table.json（按新规范全新重写；新表同名 key
+在聚合时覆盖本分区）；本分区仅保留尚未迁移的键（时间天气/怪物头/休息/地图）。
 """
 from __future__ import annotations
 
 from typing import Any, Dict
 
 DEFAULT_TEMPLATES: Dict[str, Any] = {
-    # —— RUL-08 注册门槛（对齐 basic_commands；explore_commands 本地常量的模板化）——
-    "explore_register_gate": "❌ 请先 /注册 创建角色（/注册 名字 职业）",
-
-    # —— /进入 move（通道行走）成功：CakeGame 模板 28 风格（用户 2026-08-27 拍板）——
-    "explore_enter_ok": "✅ 你来到了「{name}」",
-    "explore_map_desc": "地图介绍：{desc}",
-    "explore_monster_line": "活动怪物：{items}",
-    "explore_monster_header": "【{loc}】活动怪物",
-    "explore_monster_empty": "❌ 当前地图没有活动怪物",
     # —— 2026-09-06 时间/天气指令 ——
     "worldtime_now": "时间：{season}季 · {period}",
     "weather_now": "天气：{loc} · {weather}",
     "worldtime_disabled": "❌ 时间/天气系统未启用（内容包未配置 time_cycle）",
-    "explore_monster_row": "{i}.{nm}×{cnt}",
-    "explore_monster_overflow": " …",
-    "explore_channel_row": "{dir}：{name}",
-    "explore_tip": "Tip:发送'位置'即可查询当前位置信息",
 
-    # —— /进入 副本入口 / 失败 ——
-    "explore_enter_dungeon": "✅ 你进入了「{name}」（副本）",
-    "explore_enter_fail": "❌ {reason}",
-    "explore_enter_fail_reason": "无法进入",
-    "explore_enter_noarg": "❌ /进入：输入方向（上/下/左/右）或副本入口（序号/名称）",
-    "explore_enter_not_wired": "❌ 进入功能未接线（引擎未加载）",
-    "explore_leave_battle_ok": "（已离开锁定怪物所在地图，战斗解除）",
-    "explore_enter_engine_error": "❌ 进入失败（引擎返回异常）",
+    # —— /怪物 列表头（条目行块 explore_monster_row/line/overflow 已迁全量表） ——
+    "explore_monster_header": "【{loc}】活动怪物",
+    "explore_monster_empty": "❌ 当前地图没有活动怪物",
 
     # —— /休息 ——
     "explore_rest_ok": "✅ 你休息了一会，回复 {hp} 点 HP、{mp} 点 MP",
@@ -53,30 +39,14 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     "explore_map_row": "{idx}. {name}",
     "explore_map_tail": "Tip:发送'进入 <序号>'前往",
     "explore_map_empty": "❌ 当前没有可探索的地图（/进入 尝试）",
-
-    # —— /位置 ——
-    "explore_position_unknown": "❌ 当前位置未知：{loc}（/进入 探索地图）",
-    "explore_position_unknown_none": "无",
 }
 
 PLACEHOLDER_WHITELIST: Dict[str, set] = {
-    "explore_register_gate": set(),
-    "explore_enter_ok": {"name"},
-    "explore_map_desc": {"desc"},
-    "explore_monster_line": {"items"},
+    "worldtime_now": {"season", "period"},
+    "weather_now": {"loc", "weather"},
+    "worldtime_disabled": set(),
     "explore_monster_header": {"loc"},
     "explore_monster_empty": set(),
-    "explore_monster_row": {"i", "nm", "cnt"},
-    "explore_monster_overflow": set(),
-    "explore_channel_row": {"dir", "name"},
-    "explore_tip": set(),
-    "explore_enter_dungeon": {"name"},
-    "explore_enter_fail": {"reason"},
-    "explore_enter_fail_reason": set(),
-    "explore_enter_noarg": set(),
-    "explore_enter_not_wired": set(),
-    "explore_leave_battle_ok": set(),
-    "explore_enter_engine_error": set(),
     "explore_rest_ok": {"hp", "mp"},
     "explore_rest_cooldown": {"cr"},
     "explore_rest_fail": {"reason"},
@@ -88,6 +58,4 @@ PLACEHOLDER_WHITELIST: Dict[str, set] = {
     "explore_map_row": {"idx", "name"},
     "explore_map_tail": set(),
     "explore_map_empty": set(),
-    "explore_position_unknown": {"loc"},
-    "explore_position_unknown_none": set(),
 }

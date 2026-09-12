@@ -550,6 +550,12 @@ def _without_player_outcomes(report: EnrichedTurnReport) -> SimpleNamespace:
         enemy_max_hp=report.enemy_max_hp, exp=report.exp, gold=report.gold,
         drops=report.drops, status_changes=report.status_changes,
         player_pos=report.player_pos, enemy_pos=report.enemy_pos,  # 方位 HUD 透传（2026-09-10 修复）
+        # 战斗 HUD v2（2026-09-12）：分项资源行 + 持续效果事件随投影透传
+        player_mp=report.player_mp, player_mp_max=report.player_mp_max,
+        player_shield=report.player_shield, player_shield_turns=report.player_shield_turns,
+        enemy_shield=report.enemy_shield, enemy_shield_turns=report.enemy_shield_turns,
+        enemy_air=report.enemy_air, enemy_broken_parts=report.enemy_broken_parts,
+        effect_events=report.effect_events,
     )
 
 
@@ -571,6 +577,12 @@ def _without_npc_outcomes(report: EnrichedTurnReport) -> SimpleNamespace:
         enemy_max_hp=report.enemy_max_hp, exp=report.exp, gold=report.gold,
         drops=report.drops, status_changes=report.status_changes,
         player_pos=report.player_pos, enemy_pos=report.enemy_pos,  # 方位 HUD 透传（2026-09-10 修复）
+        # 战斗 HUD v2（2026-09-12）：分项资源行 + 持续效果事件随投影透传
+        player_mp=report.player_mp, player_mp_max=report.player_mp_max,
+        player_shield=report.player_shield, player_shield_turns=report.player_shield_turns,
+        enemy_shield=report.enemy_shield, enemy_shield_turns=report.enemy_shield_turns,
+        enemy_air=report.enemy_air, enemy_broken_parts=report.enemy_broken_parts,
+        effect_events=report.effect_events,
     )
 
 
@@ -1054,6 +1066,8 @@ def dispatch_batch(
             status_changes=ctx.get("battle_status_changes") or (),
             start_time=getattr(report, "battle_time", None),
             end_time=getattr(report, "battle_time", None),
+            effect_events=tuple(getattr(report, "effect_events", ()) or ()),
+            **battle_hud_payload(snap),        # 战斗 HUD v2 分项资源行取数
         )
         return pipeline.send_action_batch(batch)
     except Exception:  # noqa: BLE001 - 批量派发异常不向上抛（战斗响应不崩）
@@ -1113,6 +1127,7 @@ def dispatch_round(
             player_action=player_action,
             skill_name=skill_name,
             enemy_action_name=enemy_action_name,
+            hud=battle_hud_payload(snap),      # 战斗 HUD v2 分项资源行取数
         )
         player_outcome = _first_player_outcome(report)
         atype = str(getattr(player_outcome, "action_type", "") or "") if player_outcome else ""

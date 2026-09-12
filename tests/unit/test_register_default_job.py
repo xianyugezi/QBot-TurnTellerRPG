@@ -238,7 +238,10 @@ def test_job_not_found_list_shows_recommended_badge():
     """RUL-03：职业不存在黄提示列表同样带推荐角标（数据型功能标记，纯文本）。"""
     ctx = make_ctx()
     out = cmd_register(parse_command("/注册 阿伟 刺客"), ctx)
-    assert out == "❌ 没有「刺客」这个职业\n可选职业：\n狂战士\n炼金术士（推荐）\n铁匠（推荐）\n渔夫（推荐）"
+    assert out == (
+        "❌ 没有「刺客」这个职业\n可选职业：\n狂战士\n"
+        "炼金术士（推荐）\n铁匠（推荐）\n渔夫（推荐）"
+    )
     assert ctx["registered"] is False and ctx["player"] is None
 
 

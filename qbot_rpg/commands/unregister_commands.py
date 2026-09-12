@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Any, Callable, MutableMapping, Optional
 
-from qbot_rpg.core.templates import DEFAULT_TEMPLATES as _ALL_TPL, tpl_of  # 消息模板配置化（2026-08-31 用户拍板）
+from qbot_rpg.core.templates import DEFAULT_TEMPLATES as _ALL_TPL, tpl_of
 from .router import CommandSpec
 
 UNREGISTER_CMD = "注销"

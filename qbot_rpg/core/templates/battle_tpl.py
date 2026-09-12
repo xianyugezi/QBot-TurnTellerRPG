@@ -18,30 +18,16 @@ from typing import Any, Dict
 
 DEFAULT_TEMPLATES: Dict[str, Any] = {
     # —— battle_commands 壳层（6 TPL 常量 + 6 f-string 迁移）——
-    "battle_no_battle": "❌ 当前没有进行中的战斗",
-    # —— /查看目标（框架 7.6 L1356/L1367：目标属性面板，掉落不显示）——
-    "battle_target_no_battle": "❌ 当前没有进行中的战斗（/锁定 1 开战后可查看目标）",
-    "battle_target_head": "【目标】{name}（第 {round} 行动）",
-    "battle_target_hp": "【生命】{hp}/{max_hp}",
-    "battle_target_attr": "【{attr_name}】{value}",
-    "battle_target_marks": "【印记】{marks}",
-    "battle_target_status": "【状态】{statuses}",
-    "battle_target_weak": "【弱点】{weak}",
-    "battle_target_tail": "查看目标不显示掉落（击破后见战报）",
-    "battle_no_skill": "❌ 没有这个技能",
-    "battle_no_item_arg": "❌ 请指定要使用的道具（/道具 药水）",
-    "battle_no_item": "❌ 没有这个道具",
-    "battle_flee_ok": "✅ 逃跑成功，脱离战斗",
-    "battle_flee_failed": "❌ 逃跑失败，战斗继续",
-    # 道具使用行（P2-4 补白合成文案）
-    "battle_item_used": "✅ 你使用了{item_name}",
-    # 参数为当前地图怪物名 → 开战引导（P2-3；2026-09-04：锁定已实装，
-    # 陈旧「开战功能尚未实装」误导 → 引导 /锁定 怪物名 开战）
-    "battle_no_battle_map_monster": "❌ 当前没有进行中的战斗。可用 锁定 <怪物名> 开战；"
-                                    "进入战斗后使用 攻击 <技能序号或名称> 发动技能。",
-    # 指令返回 message 元数据（非发送正文，逐字迁移）
-    # CTB 口径（收口 2026-09-10）：{turn} 槽位承载 `action_seq`（已结算行动数）——
-    # CTB 无「回合」概念，玩家可见文案统一改「第 N 行动」。
+    # 2026-09-12 消息模板重构·批4 路J：战斗目标面板 + 基础交互 16 键已迁全量模板表
+    # （qbot_rpg/core/templates/template_table.json，fragment b4j）——
+    # battle_no_battle / battle_target_no_battle / battle_target_head / battle_target_hp /
+    # battle_target_attr / battle_target_marks / battle_target_status / battle_target_weak /
+    # battle_no_skill / battle_no_item_arg / battle_no_item / battle_flee_ok /
+    # battle_flee_failed / battle_item_used / battle_no_battle_map_monster（15 键入表）；
+    # battle_target_tail 全仓零引用 → 死键清除（不迁入表）。
+    # 【旧占位说明】目标面板原约定「掉落不显示」（框架 7.6 L1356/L1367）现由
+    # battle_commands.cmd_battle_target 保证：面板只为 enemy_def 白名单字段生成行，
+    # 「查看目标不显示掉落」的旧尾注模板随死键一并清除。
 
     # —— BREP-23 战斗开始 ——
 
@@ -146,22 +132,9 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
 
 PLACEHOLDER_WHITELIST: Dict[str, set] = {
     # —— battle_commands 壳层 ——
-    "battle_no_battle": set(),
-    "battle_target_no_battle": set(),
-    "battle_target_head": {"name", "round"},
-    "battle_target_hp": {"hp", "max_hp"},
-    "battle_target_attr": {"attr_name", "value"},
-    "battle_target_marks": {"marks"},
-    "battle_target_status": {"statuses"},
-    "battle_target_weak": {"weak"},
-    "battle_target_tail": set(),
-    "battle_no_skill": set(),
-    "battle_no_item_arg": set(),
-    "battle_no_item": set(),
-    "battle_flee_ok": set(),
-    "battle_flee_failed": set(),
-    "battle_item_used": {"item_name"},
-    "battle_no_battle_map_monster": set(),
+    # 2026-09-12 批4 路J：本批 15 键已迁全量模板表，白名单由 __init__ 自动派生
+    # （表内文本占位符 = {name}/{round}/{hp}/{max_hp}/{attr_name}/{value}/{marks}/
+    # {statuses}/{weak}/{item_name}）；battle_target_tail 死键清除。
 
     # —— battle_render ——
     # CTB 三入口模板（Agent 5 · DataRender）

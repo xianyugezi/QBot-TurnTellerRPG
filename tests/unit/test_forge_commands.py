@@ -186,7 +186,7 @@ def _parsed(raw: str) -> Any:
 def test_tc09_straight_forge_direct_success() -> None:
     """TC-09：straight_forge=true（缺省），/锻造 铁剑 无预览 → 直锻 1 步原子成功。
 
-    断言：✅ 成功行 + 属性行（攻击 12 | 部位：武器 | 槽位：无 | 品质：普通（固定））；
+    断言：✅ 成功行 + 属性行（每行一字段：攻击 12 / 部位：武器 / 槽位：无 / 品质：普通（固定））；
     扣素材（矿石 3→0）、扣金币（lv1×10=10）、产装（iron_sword 1 件）、
     熟练 +节点等级×2=2；不建立确认窗。
     """
@@ -419,52 +419,52 @@ def test_carry_sec_zero_unlimited() -> None:
 # ---------------------------------------------------------------------------
 
 def test_guard_material_shortfall_direct() -> None:
-    """直锻素材不足（GU-05）：❌ 素材不足 + 缺项（来源）+ /图纸 指引；零副作用。"""
+    """直锻素材不足（GU-05）：❌ 素材不足 + 需要/缺拆行 + 发 图纸 指引；零副作用。"""
     player = _player(forged=[], forge_level=1)
     ctx = _make_ctx({"ore": 1}, player)  # 铁剑需 3
     out = cmd_forge(_parsed("/锻造 铁剑"), ctx)
-    assert "❌ 素材不足：需要 矿石×3；缺：矿石×2" in out
-    assert "→ /图纸" in out
+    assert "❌ 素材不足\n需要：矿石×3\n缺：矿石×2" in out
+    assert "发 图纸 查看全链" in out
     assert ctx["inventory"]["ore"] == 1
     assert player["currencies"]["coins"] == 9999
     assert N_IRON not in player["forged"]
 
 
 def test_guard_parent_not_forged_direct() -> None:
-    """直锻前置未锻（GU-04）：❌ 需先锻造：<前置名> + /图纸 指引；不预扣素材。"""
+    """直锻前置未锻（GU-04）：❌ 需先锻造：<前置名> + 发 图纸 指引；不预扣素材。"""
     player = _player(forged=[], forge_level=2)
     ctx = _make_ctx({"ore": 5}, player)  # 铁剑Ⅰ 需矿石×5
     out = cmd_forge(_parsed("/锻造 铁剑Ⅰ"), ctx)
     assert "❌ 需先锻造：铁剑" in out
-    assert "→ /图纸" in out
+    assert "发 图纸 查看全链" in out
     assert ctx["inventory"]["ore"] == 5
     assert N_IRON_1 not in player["forged"]
 
 
 def test_guard_level_insufficient_direct() -> None:
-    """直锻等级不足（GU-06）：`需要 <档位> 级，当前 <档位>（还差 N 熟练）`；零副作用。"""
+    """直锻等级不足（GU-06）：`❌ 等级不足` + 需要/当前/还差 拆行；零副作用。"""
     player = _player(forged=[], forge_level=0)  # 见习；铁剑 lv1 需 正式
     ctx = _make_ctx({"ore": 3}, player)
     out = cmd_forge(_parsed("/锻造 铁剑"), ctx)
-    assert "需要 正式 级，当前 见习" in out
+    assert "❌ 等级不足" in out and "需要：正式" in out and "当前：见习" in out
     assert "还差 100 熟练" in out
     assert ctx["inventory"]["ore"] == 3
     assert N_IRON not in player["forged"]
 
 
 def test_guard_unknown_node() -> None:
-    """未知节点（GU-03 not_found）：`未找到「<名>」→ /锻造树 查看可锻装备`。"""
+    """未知节点（GU-03 not_found）：`❌ 未找到「<名>」` + 发 锻造树 指引。"""
     ctx = _make_ctx({}, _player(forged=[], forge_level=1))
     out = cmd_forge(_parsed("/锻造 不存在之剑"), ctx)
     assert "未找到「不存在之剑」" in out
-    assert "→ /锻造树" in out
+    assert "发 锻造树 查看可锻装备" in out
 
 
 def test_guard_name_with_space() -> None:
-    """P-01 节点名禁空格：`参数错误：节点名不含空格`；不产生锻造。"""
+    """P-01 节点名禁空格：`❌ 节点名不含空格`；不产生锻造。"""
     ctx = _make_ctx({}, _player(forged=[], forge_level=1))
     out = cmd_forge(_parsed("/锻造 炎剑 Ⅱ"), ctx)
-    assert "参数错误：节点名不含空格" in out
+    assert "❌ 节点名不含空格" in out
 
 
 # ---------------------------------------------------------------------------
@@ -638,7 +638,7 @@ def _forge_engine() -> ForgeTreeEngine:
 
 
 def test_p01_space_rejected() -> None:
-    """P-01：节点名含空格 → P_SPACE（`参数错误：节点名不含空格`）。"""
+    """P-01：节点名含空格 → P_SPACE（`❌ 节点名不含空格`）。"""
     r = parse_forge_target("炎剑 Ⅱ", _forge_engine())
     assert r["ok"] is False
     assert r["error_code"] == ERR_P_SPACE
@@ -717,11 +717,11 @@ def test_p06_multiword_single_argument() -> None:
 
 
 def test_p_unknown_error() -> None:
-    """P_UNKNOWN：未找到节点 → 未找到 + /锻造树 指引。"""
+    """P_UNKNOWN：未找到节点 → 未找到 + 发 锻造树 指引。"""
     r = parse_forge_target("不存在之剑", _forge_engine())
     assert r["ok"] is False
     assert r["error_code"] == ERR_P_UNKNOWN
-    assert "未找到" in r["message"] and "/锻造树" in r["message"]
+    assert "未找到" in r["message"] and "发 锻造树" in r["message"]
     assert r["candidates"] == []
 
 
@@ -733,11 +733,11 @@ def test_p_ambiguous_candidates_listed() -> None:
     cands = r["candidates"]
     assert len(cands) == 4  # 炎剑/炎剑Ⅱ/炎剑Ⅲ/■炎王剑（前缀均以「炎」开头）
     assert N_FLAME in cands and N_FLAME_2 in cands and N_FLAME_3 in cands and N_KING in cands
-    assert "候选多个节点" in r["message"] and "/锻造树" in r["message"]
-    # cmd_forge 出口：歧义候选列表渲染
+    assert "匹配到多个节点" in r["message"] and "发 锻造树" in r["message"]
+    # cmd_forge 出口：歧义候选列表渲染（每行一候选；批3·路I 候选 join 改换行）
     ctx = _make_ctx({}, _player())
     out = cmd_forge(_parsed("/锻造 炎"), ctx)
-    assert "候选多个节点" in out and "炎剑（Lv4）" in out and "→ /锻造树" in out
+    assert "匹配到多个节点" in out and "炎剑（Lv4）" in out and "发 锻造树" in out
 
 
 def test_parse_forge_target_lexer_only_no_engine() -> None:
@@ -756,7 +756,7 @@ def test_batch_three_success() -> None:
     player = _player(forged=[], forge_level=1)
     ctx = _make_ctx({"ore": 9}, player)  # 铁剑每件矿石×3，*3 需 9
     out = cmd_forge(_parsed("/锻造 铁剑*3"), ctx)
-    assert "✅ 铁剑 锻造完成！ ×3" in out
+    assert "✅ 铁剑 锻造完成！×3" in out
     assert ctx["inventory"]["ore"] == 0
     assert ctx["inventory"].get("iron_sword", 0) == 3
     assert player["currencies"]["coins"] == 9999 - 30  # lv1×10 ×3
@@ -766,12 +766,12 @@ def test_batch_three_success() -> None:
 
 
 def test_batch_mid_failure_interrupts() -> None:
-    """批量第 2 次失败中断：`第 2 次失败，已成功 1 次`；已成功结算不回滚。"""
+    """批量第 2 次失败中断：`❌ 第 2 次失败` + `已成功 1 次`；已成功结算不回滚。"""
     configure_proficiency(_load_json(_PROF_JSON), _settings_raw())  # type: ignore[arg-type]
     player = _player(forged=[], forge_level=1)
     ctx = _make_ctx({"ore": 4}, player)  # 只够 1 件（需 3），第 2 件缺 2
     out = cmd_forge(_parsed("/锻造 铁剑*3"), ctx)
-    assert "第 2 次失败，已成功 1 次" in out
+    assert "❌ 第 2 次失败" in out and "已成功 1 次" in out
     assert "素材不足" in out
     assert ctx["inventory"]["ore"] == 1  # 4 - 3 = 1（第 2 件未扣，失败零副作用）
     assert ctx["inventory"].get("iron_sword", 0) == 1

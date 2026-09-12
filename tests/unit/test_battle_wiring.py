@@ -213,7 +213,9 @@ def test_end_one_message_summary() -> None:
     assert len(sender.calls) == 1
     assert sender.calls[0].split("\n") == [
         PREFIX,
-        "战斗结束：胜利｜行动数 5｜输入 /战斗记录 查看明细",
+        "战斗结束：胜利",
+        "行动数 5",
+        "发 战斗记录 查看明细",
     ]
 
 
@@ -228,7 +230,9 @@ def test_end_one_message_with_summary_block() -> None:
     )
     assert len(sender.calls) == 1                     # 汇总+明细同一条
     text = sender.calls[0]
-    assert "战斗结束：胜利｜行动数 5｜输入 /战斗记录 查看明细" in text
+    text_lines = text.split("\n")
+    assert "战斗结束：胜利" in text_lines and "行动数 5" in text_lines
+    assert "发 战斗记录 查看明细" in text_lines
     assert "摘要：总伤害 1220" in text
 
 
@@ -245,10 +249,11 @@ def test_battle_end_flow_summary_and_drops(start_battle) -> None:
     assert res["ok"] is True and res["message"] == "战斗结束（win）"
     assert len(sender.calls) == 2                     # 当轮 1 条 + 结束 1 条（≤2 条，铁律 2）
     round_msg, end_msg = sender.calls
-    assert "✅ 你击败了史莱姆！" in round_msg          # BREP-15 击杀紧跟伤害行
+    assert "✅ 你击败了史莱姆" in round_msg            # BREP-15 击杀紧跟伤害行（批6 去「！」）
     assert "✅ 战斗胜利！" not in round_msg
     assert "您对史莱姆造成了" not in end_msg  # 2026-09-09 击杀去重（叙事句删除）   # 叙事句（用户结算模板）
-    assert "获得经验：100" in end_msg and "获得金币：50" in end_msg        # 经验/金币分行
+    assert "获得经验 100" in end_msg and "获得金币 50" in end_msg          # 经验/金币分行（批6 去全角冒号）
+    assert "【战利品】" in end_msg                                        # 战利品头（批6）
     assert "1.史莱姆粘液×2" in end_msg                                     # 战利品列表
     assert "战斗结束：" not in end_msg               # win 无汇总行（用户模板，2026-08-27）
     assert end_msg.split("\n")[0] == PREFIX

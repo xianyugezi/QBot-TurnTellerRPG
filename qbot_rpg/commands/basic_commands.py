@@ -99,6 +99,7 @@ from qbot_rpg.core.message_format.list_render import (
     resolve_page,
 )
 from qbot_rpg.core.player_attributes import calc_all_final_attributes
+from qbot_rpg.data.gear_stats import GEAR_LABELS_ZH, GEAR_NUMERIC_KEYS, PCT_SUFFIX
 from qbot_rpg.data.item import ItemInstance
 from qbot_rpg.data.logging_utils import get_logger
 from qbot_rpg.data.player import EquipmentSlot, Player, PlayerAttributes
@@ -1023,13 +1024,9 @@ def _render_item_detail(row: Any, ctx: Mapping[str, Any], *, source: str) -> str
         meta_bits.append("绑定")
     if meta_bits:
         lines.append(" ".join(meta_bits))
-    # 装备数值键（atk/def/hp/mp/str/con/agi/foc/spr/lck/spd/mag 等）
-    stat_keys = ("atk", "def", "hp", "mp", "str", "con", "agi", "foc", "spr", "lck", "spd", "mag")
-    stats = []
-    for k in stat_keys:
-        v = d.get(k)
-        if isinstance(v, (int, float)):
-            stats.append(f"{_stat_name_zh(k)} {int(v)}")
+    # 装备数值键（批⑧ 键空间收口：统一取自 data.gear_stats——含 dfn/会心/百分比/
+    # 耳栓等；原手写 12 键缺 dfn/crit/_pct → 卡片不显示核心词条）
+    stats = _item_stat_parts(d)
     if stats:
         lines.append("｜".join(stats))
     # 装备槽位
@@ -1066,6 +1063,27 @@ def _stat_name_zh(key: str) -> str:
           "con": "体魄", "agi": "敏捷", "foc": "专注", "spr": "精神", "lck": "幸运",
           "spd": "速度", "mag": "魔法"}
     return _m.get(key, key)
+
+
+def _item_stat_parts(d: Mapping[str, Any]) -> List[str]:
+    """装备详情词条行（批⑧ 注册表驱动：会心带符号 %、百分比键 +N%、等级键 LvN；
+    0/非数值跳过——旧实现会把饰玉的 dfn:0 渲染成「防御 0」）。"""
+    parts: List[str] = []
+    for k in GEAR_NUMERIC_KEYS:
+        v = d.get(k)
+        if not isinstance(v, (int, float)) or isinstance(v, bool) or v == 0:
+            continue
+        iv = int(v)
+        if k.endswith(PCT_SUFFIX):
+            _base = GEAR_LABELS_ZH.get(k[: -len(PCT_SUFFIX)], k[: -len(PCT_SUFFIX)])
+            parts.append(f"{_base} {'+' if iv > 0 else ''}{iv}%")
+        elif k == "crit":
+            parts.append(f"{GEAR_LABELS_ZH.get(k, k)} {'+' if iv > 0 else ''}{iv}%")
+        elif k in ("earplug", "super_crit_lv", "elem_crit_lv"):
+            parts.append(f"{GEAR_LABELS_ZH.get(k, k)} Lv{iv}")
+        else:
+            parts.append(f"{GEAR_LABELS_ZH.get(k) or _stat_name_zh(k)} {iv}")
+    return parts
 
 
 # ---------------------------------------------------------------------------

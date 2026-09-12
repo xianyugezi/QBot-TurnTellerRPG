@@ -24,6 +24,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, Mapping, MutableMapping, Optional
 
+from qbot_rpg.data.gear_stats import combatant_updates
+
 # ---------------------------------------------------------------------------
 # settings.pvp 段配置（B-3：三态容错，对齐 fishing_cfg）
 # ---------------------------------------------------------------------------
@@ -144,7 +146,9 @@ def _combatant_of(player: Mapping[str, Any]) -> dict:
         tf = tf if isinstance(tf, (int, float)) else 0
         tp = tp if isinstance(tp, (int, float)) else 0
         cf = cf if isinstance(cf, (int, float)) else 0
-        v = (b + bf) * (1 + float(bp or 0)) + tf * (1 + float(tp or 0)) + cf
+        # 批⑧：pct 口径对齐 player_attributes（单位=百分点，5=+5%；原实现
+        # (1+bp) 把百分点当倍数 → dfn_pct 5 会算成 6 倍——接线前修正）
+        v = (b + bf) * (1 + float(bp or 0) / 100.0) + tf * (1 + float(tp or 0) / 100.0) + cf
         return max(1, int(v))
 
     result: Dict[str, Any] = {
@@ -186,6 +190,13 @@ def _combatant_of(player: Mapping[str, Any]) -> dict:
                 continue  # hp/mp 是资源非战斗 stat，保持既有档案血量口径
             if key not in result:
                 result[key] = _attr(key)
+    # 批⑧ 装备战斗桥：聚合 flat 中的战斗键 → combatant 直读字段（会心=百分点、可负；
+    # 耳栓封顶 2 / 超会心·属性会心封顶 3——键空间与封顶口径见 data.gear_stats）。
+    _gbonus = attrs.get("bonus") if isinstance(attrs, Mapping) else None
+    _gflat = _gbonus.get("flat") if isinstance(_gbonus, Mapping) else None
+    if isinstance(_gflat, Mapping):
+        for _gk, _gv in combatant_updates(_gflat).items():
+            result[_gk] = float(_gv) if _gk == "crit_bonus" else int(_gv)
     return result
 
 

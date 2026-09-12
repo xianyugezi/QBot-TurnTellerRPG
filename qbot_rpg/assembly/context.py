@@ -55,13 +55,14 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Dict, List, Mapping, MutableMapping, Optional
 
 from qbot_rpg.core.levelup import LevelUpEngine
-
-_LOGGER = logging.getLogger(__name__)
 from qbot_rpg.core.player_attributes import (
     ConditionalRule,
     calc_all_final_attributes,
 )
 from qbot_rpg.data import Player, PlayerAttributes
+from qbot_rpg.data.gear_stats import extract_bonus
+
+_LOGGER = logging.getLogger(__name__)
 
 __all__ = ["AssemblyDeps", "make_context"]
 
@@ -1115,19 +1116,13 @@ def _inventory_hooks(ctx: MutableMapping[str, Any]) -> dict:
             return False
         key = str(item_id)
         inv[key] = inv.get(key, 0) + c
-        # 装备数值字段 → stats_bonus（仅装备类：def 有 atk/def/hp/mp 数值键）
-        # 2026-09-06 veinborn 断链修复：白名单加 dfn（veinborn stats.json 防御主键——
-        # 原缺 dfn → 防具数值永不转 stats_bonus → 穿装零加成（端到端实测：
-        # 砾甲套 dfn 71 穿上后被打仍 80 伤）。demo 老包 def 键不受影响。
-        stat_keys = ("atk", "def", "dfn", "hp", "mp", "str", "con", "agi", "foc", "spr", "lck", "spd", "mag")
+        # 装备数值字段 → stats_bonus（批⑧ 键空间收口：统一取自 data.gear_stats——
+        # 含 crit 会心 / dfn_pct 等百分比键 / earplug 耳栓 / 超会心·属性会心等级。
+        # 历史：2026-09-06 加 dfn、2026-09-12 补 crit/_pct——原三处手写键表互相漂移
+        # （context 13 键 / shop_tx·详情面板 12 键）是词条悬空的根因，此后单一来源。）
         _item_cfg = ctx.get("items")
         _cfg = _item_cfg.get(key) if isinstance(_item_cfg, Mapping) else None
-        _bonus: Dict[str, float] = {}
-        if isinstance(_cfg, Mapping):
-            for _sk in stat_keys:
-                _v = _cfg.get(_sk)
-                if isinstance(_v, (int, float)) and not isinstance(_v, bool) and _v:
-                    _bonus[_sk] = float(_v)
+        _bonus: Dict[str, float] = extract_bonus(_cfg) if isinstance(_cfg, Mapping) else {}
         # M8 炼金产出实例（quality/traits 关键字）→ 追加实例通道（保留品质/特性落档）
         if kw and (kw.get("quality") is not None or kw.get("traits")) or _bonus:
             insts.append(

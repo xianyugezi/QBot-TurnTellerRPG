@@ -45,6 +45,7 @@ from dataclasses import replace
 from typing import Any, Dict, Mapping, MutableMapping, Optional, Tuple
 
 from qbot_rpg.core.shop import shop_buy
+from qbot_rpg.data.gear_stats import extract_bonus
 from qbot_rpg.data.item import ItemInstance
 from qbot_rpg.data.player import Player
 from qbot_rpg.storage.repository import IdemKey, Repository, RepoTransaction, row_to_player
@@ -173,11 +174,10 @@ def _new_default_instance(item_id: str, count: int, items: Any) -> ItemInstance:
     if isinstance(item_cfg, Mapping):
         name = str(item_cfg.get("name") or "")
         slot_v = str(item_cfg.get("slot") or "") or None
-        # 2026-09-03 装备加成断链修复：def 数值字段 → stats_bonus（穿装聚合读它）
-        for _sk in ("atk", "def", "hp", "mp", "str", "con", "agi", "foc", "spr", "lck", "spd", "mag"):
-            _v = item_cfg.get(_sk)
-            if isinstance(_v, (int, float)) and not isinstance(_v, bool) and _v:
-                sb[_sk] = float(_v)
+        # 2026-09-03 装备加成断链修复 + 2026-09-12 批⑧ 键空间收口：def 数值字段 →
+        # stats_bonus 统一走 data.gear_stats 注册表（原 12 键手写表**缺 dfn**——
+        # 商店购防具（驿站套/幼兽皮套）dfn 加成丢失的根因；一并补齐 crit/_pct/耳栓等）。
+        sb = extract_bonus(item_cfg)
     return ItemInstance(item_id=item_id, name=name, count=count,
                         quality="normal", bound=False, slot=slot_v, stats_bonus=sb)
 

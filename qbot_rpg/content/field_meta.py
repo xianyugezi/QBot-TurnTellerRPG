@@ -39,6 +39,14 @@ from qbot_rpg.content.forge_settings import ITEMS_FORGE_FIELDS, forge_settings_m
 # fishing_models 仅依赖 content.models（零 field_meta import，无循环依赖）；
 # fishing_settings_meta 自包含持有（防 field_meta↔fishing 循环依赖）。
 from qbot_rpg.content.fishing_models import fishing_module_meta, fishing_settings_meta
+# 批⑧ 装备词条键空间唯一源（data 层——G0 依赖矩阵 content→{data}，注册表落 data 层
+# 供 content/core/commands 全层引用）。
+from qbot_rpg.data.gear_stats import (
+    GEAR_COMBAT_KEYS,
+    GEAR_FLAT_KEYS,
+    GEAR_LABELS_ZH,
+    GEAR_PCT_KEYS,
+)
 
 # -------------------------------------------------------------------------------------
 # 命名空间（ID 跨模块唯一，细化_3a §4.2 line 254：效果注册表三表统一 / 行动注册表 / 派生链注册表）
@@ -1066,6 +1074,34 @@ def _module_table() -> Dict[str, ModuleMeta]:
     equipment_fields["foc"] = FieldMeta(type="number", range_min=0, range_max=5000, label="专注")
     equipment_fields["hp"] = FieldMeta(type="number", range_min=0, range_max=99999, label="生命")
     equipment_fields["agi"] = FieldMeta(type="number", range_min=0, range_max=5000, label="敏捷")
+    # 批⑧ 装备词条键空间收口（2026-09-12）：键与中文 label 取自 data.gear_stats 唯一
+    # 注册表——context/shop_tx/详情面板/本表四处曾各持手写键表互相漂移（crit 与 _pct
+    # 键漏转/漏展示）。此后新增词条 = 注册表加一行，本表自动跟进；范围仅提示不拦截
+    # （枚举宽松口径，防误拦既有包）。items_fields 一并收口——veinborn 武器/防具在
+    # items 模块（kind=item）中编辑，同样需要这些词条键。
+    for _fm_target in (items_fields, equipment_fields):
+        for _k in GEAR_FLAT_KEYS:
+            if _k in _fm_target:
+                continue
+            _fm_target[_k] = FieldMeta(
+                type="number", range_min=0,
+                range_max=99999 if _k == "hp" else (9999 if _k == "mp" else 5000),
+                label=GEAR_LABELS_ZH.get(_k, _k))
+        for _k in GEAR_PCT_KEYS:
+            _fm_target[_k] = FieldMeta(
+                type="number", range_min=0, range_max=500,
+                label=GEAR_LABELS_ZH.get(_k, _k))
+        for _k in GEAR_COMBAT_KEYS:
+            if _k == "crit":
+                # 赌狗流负会心（批⑤ 引擎通道）→ 字段级放行负数（R-2 元数据开关）
+                _fm_target[_k] = FieldMeta(
+                    type="number", range_min=-99, range_max=99, allow_negative=True,
+                    label=GEAR_LABELS_ZH.get(_k, _k) + "（可负）")
+            else:
+                _fm_target[_k] = FieldMeta(
+                    type="number", range_min=0,
+                    range_max=2 if _k == "earplug" else 3,
+                    label=GEAR_LABELS_ZH.get(_k, _k))
     traits_fields: Dict[str, FieldMeta] = {
         "id": F_ID, "name": F_NAME, "type": F_TYPE,
         "probability": F_PROBABILITY, "max_stack": F_MAX_STACK,

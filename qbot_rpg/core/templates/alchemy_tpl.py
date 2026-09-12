@@ -10,49 +10,17 @@ join/前缀拼接）不动，仅展示文案入表。
 
 key 命名：alchemy_<用途>。占位符白名单：每类模板允许的占位符；超出白名单渲染时原样
 保留（提示缺失）。渲染零 emoji（仅 ✅/❌ 功能性标记 + 「」排版符，D-5B）。
+
+2026-09-12 消息模板重构（批3·路H）：炼金主流程与材料 28 键（通用错误/守卫、/合成失败、
+面板/触媒/刻度、批量、确认复核差异、缺参用法）迁至全量表 template_table.json（按新规范
+全新重写；新表同名 key 在聚合时覆盖本分区）；本分区仅保留尚未迁移的键（投料/继承/珠与
+合成/深度炼金/图鉴技能/即时调合/资源循环/协力）。
 """
 from __future__ import annotations
 
 from typing import Any, Dict
 
 DEFAULT_TEMPLATES: Dict[str, Any] = {
-    # —— 通用错误/守卫（多指令共用）——
-    "alchemy_level_insufficient": "❌ 等级不足",
-    "alchemy_recipe_not_found": "❌ 配方不存在：{target}",
-    "alchemy_item_not_found": "❌ 道具不存在：{target}",
-    "alchemy_equip_not_found": "❌ 装备不存在：{name}",
-    "alchemy_jewel_not_found": "❌ 装饰珠不存在：{name}",
-    "alchemy_trait_not_found": "❌ 特性不存在：{name}",
-    "alchemy_energy_insufficient": "能量不足",
-    "alchemy_materials_insufficient": "材料不足",
-    "alchemy_materials_insufficient_diff": "材料不足：{diff}",
-    "alchemy_materials_insufficient_mark": "❌ 材料不足",
-    "alchemy_materials_insufficient_mark_diff": "❌ 材料不足：{diff}",
-    "alchemy_battle_blocked": "战斗中使用 /即时调合 <配方>（不进入调合会话）",
-    "alchemy_no_materials": "（无）",
-    "alchemy_shortfall_item": "缺 {name}×{need}",
-    "alchemy_material_entry_plain": "{name}×{count}",
-    "alchemy_material_entry_elem": "{name}×{count}({cn}{val})",
-    "alchemy_pp_used": "PP {used}/{budget}",
-
-    # —— /合成 ——
-    "alchemy_synth_fail": "❌ 合成失败",
-
-    # —— /炼金 面板（M-02）+ 触媒 ——
-    "alchemy_catalyst_invalid": "触媒无效",
-    "alchemy_panel": "{recipe_name}（配方Lv{level}）：材料：{mats}\n"
-                    "属性刻度：{scales} | 特性位 {traits_used}/{traits_max} | "
-                    "PP {pp_used}/{pp_budget} | 投入次数 {units}/{slots}",
-    "alchemy_scale_item": "{cn}≥{th} 显现\"{effect}\"",
-    "alchemy_no_scale": "（无刻度要求）",
-
-    # —— /炼金 批量（BATCH-01~05）——
-    "alchemy_batch_no_output": "❌ 该配方无法批量调合",
-    "alchemy_batch_coins": " + {currency} {coins_need}",
-    "alchemy_batch_output": "✅ {output_name} ×{qty}（批量调合：消耗 {mats_text}"
-                            "{coin_text}）｜平均品质 {score}·{tier}",
-    "alchemy_batch_energy_suffix": "｜{note}",
-
     # —— /投料（M-03 反馈 + 失败透传）——
     "alchemy_feed_elem_score": "{elem_cn}+{main_score}",
     "alchemy_feed_chain": "连锁 {segments} 段",
@@ -86,13 +54,10 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     # —— /确认 /放弃 /调合续 /分解（终态）——
     "alchemy_settle_placement_conflict": "❌ 结算校验：互斥组/repeatable 冲突",
     "alchemy_confirm_already_settled": "已结算",
-    "alchemy_confirm_materials_short": "材料不足，无法确认",
     "alchemy_confirm_fail": "❌ 确认失败",
     "alchemy_abandon_fail": "❌ 放弃失败",
     "alchemy_decompose_body": "✅ {items}",
     "alchemy_decompose_empty": "✅ 分解成功",
-    # 2026-09-05 模拟器审计：裸发「炼金」报「指令不正确」误导——缺参给用法
-    "alchemy_err_usage": "炼金：请输入配方（炼金 <配方>），发 帮助 查看炼金相关指令",
     "alchemy_decompose_gem": " + 宝石×{gem}",
     "alchemy_decompose_rate": "（回收 {pct}%）",
     "alchemy_decompose_fail": "❌ 分解失败",
@@ -200,42 +165,6 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
 }
 
 PLACEHOLDER_WHITELIST: Dict[str, set] = {
-    # —— 通用错误/守卫 ——
-    "alchemy_level_insufficient": set(),
-    "alchemy_recipe_not_found": {"target"},
-    "alchemy_item_not_found": {"target"},
-    "alchemy_equip_not_found": {"name"},
-    "alchemy_jewel_not_found": {"name"},
-    "alchemy_trait_not_found": {"name"},
-    "alchemy_energy_insufficient": set(),
-    "alchemy_materials_insufficient": set(),
-    "alchemy_materials_insufficient_diff": {"diff"},
-    "alchemy_materials_insufficient_mark": set(),
-    "alchemy_materials_insufficient_mark_diff": {"diff"},
-    "alchemy_battle_blocked": set(),
-    "alchemy_no_materials": set(),
-    "alchemy_shortfall_item": {"name", "need"},
-    "alchemy_material_entry_plain": {"name", "count"},
-    "alchemy_material_entry_elem": {"name", "count", "cn", "val"},
-    "alchemy_pp_used": {"used", "budget"},
-
-    # —— /合成 ——
-    "alchemy_synth_fail": set(),
-
-    # —— /炼金 面板 + 触媒 ——
-    "alchemy_catalyst_invalid": set(),
-    "alchemy_panel": {"recipe_name", "level", "mats", "scales", "traits_used",
-                     "traits_max", "pp_used", "pp_budget", "units", "slots"},
-    "alchemy_scale_item": {"cn", "th", "effect"},
-    "alchemy_no_scale": set(),
-
-    # —— /炼金 批量 ——
-    "alchemy_batch_no_output": set(),
-    "alchemy_batch_coins": {"currency", "coins_need"},
-    "alchemy_batch_output": {"output_name", "qty", "mats_text", "coin_text",
-                             "score", "tier"},
-    "alchemy_batch_energy_suffix": {"note"},
-
     # —— /投料 ——
     "alchemy_feed_elem_score": {"elem_cn", "main_score"},
     "alchemy_feed_chain": {"segments"},
@@ -269,7 +198,6 @@ PLACEHOLDER_WHITELIST: Dict[str, set] = {
     # —— /确认 /放弃 /调合续 /分解 ——
     "alchemy_settle_placement_conflict": set(),
     "alchemy_confirm_already_settled": set(),
-    "alchemy_confirm_materials_short": set(),
     "alchemy_confirm_fail": set(),
     "alchemy_abandon_fail": set(),
     "alchemy_decompose_body": {"items"},

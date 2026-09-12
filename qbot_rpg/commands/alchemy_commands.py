@@ -534,16 +534,18 @@ def _shortfall_text(ctx: Mapping[str, Any], shortfall: Any) -> str:
         if need > 0:
             parts.append(tpl_of(ctx, "alchemy_shortfall_item",
                                 {"name": name, "need": need}))
-    return " + ".join(parts)
+    return "\n".join(parts)
 
 
-def _energy_message(energy: Any, player: Mapping[str, Any], n: int = 1) -> str:
+def _energy_message(energy: Any, player: Mapping[str, Any], n: int = 1,
+                    ctx: Optional[Mapping[str, Any]] = None) -> str:
     """能量不足模板（ENG-04/L344）：「能量 0/10，等 30 分钟回 1 格，或 /合成 保底」。
 
-    守卫期已确认不足（current < n），consume(n) 只读返回不足消息（不扣、零副作用）。
+    守卫期已确认不足（current < n），consume(n) 只读返回不足消息（不扣、零副作用）；
+    引擎缺 message 时回落全量表 alchemy_energy_insufficient（批3·路H）。
     """
     res = energy.consume(player, n)
-    return str(res.get("message") or "能量不足")
+    return str(res.get("message") or tpl_of(ctx, "alchemy_energy_insufficient"))
 
 
 def _tier_score(qs: QualitySystem, tier_key: Any) -> int:
@@ -602,7 +604,7 @@ def _recipe_material_text(core: AlchemyCore, recipe: Mapping[str, Any],
         else:
             parts.append(tpl_of(ctx, "alchemy_material_entry_plain",
                                 {"name": name, "count": cnt}))
-    return " ".join(parts) if parts else tpl_of(ctx, "alchemy_no_materials")
+    return _stack_list_text(parts) if parts else tpl_of(ctx, "alchemy_no_materials")
 
 
 def _render_scales(ctx: Mapping[str, Any],
@@ -629,15 +631,25 @@ def _render_scales(ctx: Mapping[str, Any],
         cn = ELEMENT_NAMES_CN.get(elem, elem)
         parts.append(tpl_of(ctx, "alchemy_scale_item",
                             {"cn": cn, "th": best[0], "effect": best[1]}))
-    return " ".join(parts) if parts else tpl_of(ctx, "alchemy_no_scale")
+    return ("\n" + "\n".join(parts)) if parts else tpl_of(ctx, "alchemy_no_scale")
+
+
+def _stack_list_text(parts: list) -> str:
+    """材料/刻度清单多行拼接（批3·路H 拆行口径，对齐批1 explore）：单条随标签同行；
+    ≥2 条标签行独占、条目逐行（"\\n" 引导），防单行超 14 全角。"""
+    if len(parts) >= 2:
+        return "\n" + "\n".join(str(p) for p in parts)
+    return str(parts[0]) if parts else ""
 
 
 def _render_panel(core: AlchemyCore, snap: Mapping[str, Any], ctx: Mapping[str, Any],
                   job_tier_index: int) -> str:
     """开会话面板（M-02 模板结构，**纯文本降级**——全仓 emoji 纪律 test_emoji_discipline 仅
     允许 ✅/❌，📖/⚗️/🔥 等模板标记按「数据型功能图标一律降级纯文本」弃用）：
-    `火焰弹（配方Lv5）：材料：火药×1(火2) 矿石×1 任意×1`
-    `属性刻度：火≥6 显现"范围爆炸" | 特性位 2/3 | PP 5/5 | 投入次数 4`
+    `火焰弹（配方Lv5）`
+    `材料：火药×1(火2)`
+    `属性刻度：火≥6 显现「范围爆炸」`
+    `特性位 2/3` `PP 5/5` `投入次数 4`（批3·路H 六行重排：材料/刻度多条目逐行）
 
     数据全部取自 assemble_panel 渲染结构（element_req_status/pp/traits_inherit）。
     """
@@ -647,11 +659,11 @@ def _render_panel(core: AlchemyCore, snap: Mapping[str, Any], ctx: Mapping[str, 
     level = recipe.get("level", "?") if recipe else "?"
     chain = snap.get("materials") or []
     if chain:
-        mats = " ".join(_material_entry_text(r, ctx) for r in chain if isinstance(r, Mapping))
-        if not mats:
-            mats = "（无）"
+        entries = [_material_entry_text(r, ctx) for r in chain if isinstance(r, Mapping)]
+        mats = _stack_list_text(entries) if entries else tpl_of(ctx, "alchemy_no_materials")
     else:
-        mats = _recipe_material_text(core, recipe, ctx) if recipe else "（无）"
+        mats = (_recipe_material_text(core, recipe, ctx) if recipe
+                else tpl_of(ctx, "alchemy_no_materials"))
     scales = _render_scales(ctx, recipe)
     traits_max = int(panel.get("traits_inherit", 1) or 1)
     traits_used = 0  # 批5 /继承 落位后计（现快照无继承位字段，开会话恒 0）
@@ -867,7 +879,7 @@ async def cmd_alchemy(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 
     # GU-06 能量可查（ENG-04：read 检查不扣；energy_enabled=false 直通，R-08）
     if _energy_enabled(settings) and energy.current_of(player) < 1:
-        return _energy_message(energy, player)
+        return _energy_message(energy, player, ctx=ctx)
 
     # GU-07 会话互斥（MUT-02：单玩家 1 调合会话，sessions.player_qid 主键全局互斥）
     session_mgr = ctx.get("session_mgr")
@@ -963,7 +975,7 @@ def _cmd_alchemy_batch(
     energy_note = ""
     if _energy_enabled(settings):
         if energy.current_of(player) < qty:
-            return _energy_message(energy, player, qty)
+            return _energy_message(energy, player, qty, ctx=ctx)
         energy_note = f"能量 -{qty}"
 
     # BATCH-05 原子校验：材料×N + 金币全量（不足全拒+差异，不部分执行）
@@ -1019,7 +1031,7 @@ def _cmd_alchemy_batch(
     if isinstance(level, int) and not isinstance(level, bool) and level > 0:
         prof_engine.gain_prof_exp(player, ALCHEMY_JOB_ID, level * qty, source="craft")
 
-    mats_text = " + ".join(
+    mats_text = "\n".join(
         tpl_of(ctx, "alchemy_material_entry_plain",
                {"name": _item_name(ctx, mid), "count": ci * qty})
         for mid, ci in need_mats
@@ -1027,6 +1039,8 @@ def _cmd_alchemy_batch(
     coin_text = (tpl_of(ctx, "alchemy_batch_coins",
                         {"coins_need": coins_need, "currency": _cur_name(ctx)})
                  if coins_need else "")
+    if coin_text and mats_text:
+        coin_text = "\n" + coin_text
     output_name = _item_name(ctx, output_id)
     main = tpl_of(ctx, "alchemy_batch_output", {
         "output_name": output_name, "qty": qty,
@@ -2478,7 +2492,7 @@ async def cmd_deep(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
                    or tpl_of(ctx, "alchemy_deep_locked"))
     # GU-21 能量可查（read 不扣；energy_enabled=false 直通，R-08）
     if _energy_enabled(settings) and energy.current_of(player) < 1:
-        return _energy_message(energy, player)
+        return _energy_message(energy, player, ctx=ctx)
     # GU-22 会话互斥（MUT-02 全局互斥；同 cmd_alchemy 口径）
     session_mgr = ctx.get("session_mgr")
     if session_mgr is None:

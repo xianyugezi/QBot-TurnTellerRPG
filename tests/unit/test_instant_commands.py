@@ -247,7 +247,7 @@ async def test_instant_material_shortfall_rejected() -> None:
     """TC-24/GU-53 负例：素材不足 → carry_ok 全拒+差异（ATO-01），快照不写、素材不扣。"""
     ctx = make_ctx(inventory={})  # 配方需 月光草×2，持有 0
     out = await cmd_instant(_pc("/即时调合 火焰弹"), ctx)
-    assert out == "❌ 材料不足：缺 月光草×2"
+    assert out == "❌ 材料不足\n缺 月光草×2"
     assert ctx["battle_snapshot"].get("battle_alchemy_used") is None
     assert ctx["inventory"].get("moon_grass", 0) == 0  # 全拒零扣
 
@@ -370,10 +370,10 @@ async def test_instant_use_fn_missing_fallback_bag() -> None:
 # 其它：配方不存在 / 缺参 TPL-12 / 装配注册
 # ---------------------------------------------------------------------------
 async def test_instant_recipe_not_found() -> None:
-    """配方不存在 → 「❌ 配方不存在：{目标}」。"""
+    """配方不存在 → 「❌ 未找到配方「目标」」。"""
     ctx = make_ctx()
     out = await cmd_instant(_pc("/即时调合 不存在的配方"), ctx)
-    assert out == "❌ 配方不存在：不存在的配方"
+    assert out == "❌ 未找到配方「不存在的配方」"
     assert not ctx["battle_snapshot"]
 
 

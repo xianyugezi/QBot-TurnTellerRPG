@@ -649,6 +649,20 @@
     "fish_reel_success": "✅ 收杆成功\n{kind_cn}｜{rarity_cn}",
     "fish_codex_header": "【鱼图鉴】",
     "fish_codex_summary": "已捕获 {caught} 种\n鱼王讨伐胜利 {king} 次",
-    "fish_codex_empty": "还没有捕获记录\n发 钓鱼 <钓点> 试试手气"
+    "fish_codex_empty": "还没有捕获记录\n发 钓鱼 <钓点> 试试手气",
+    "codex_category_empty": "本册暂无收集记录",
+    "codex_category_header": "【{label}】",
+    "codex_entry_line": "{mark} {name}{kill}{rumor}",
+    "codex_killed_mark": "（已击杀）",
+    "codex_next_tier": "下一档：{tier}%\n还差 {gap}%",
+    "codex_overview_header": "【图鉴】收集总览",
+    "codex_overview_hint": "看分册：发 图鉴 怪物 2\n每页 5 条",
+    "codex_progress_line": "{label}：{pct}%\n已见 {seen}/{total}",
+    "codex_rumor_mark": "（传闻）",
+    "codex_tail_tip": "本册共 {total} 条",
+    "codex_tier_maxed": "已达最高档\n图鉴收藏家 100%",
+    "codex_total_progress": "总完成度：{pct}%\n已见 {seen}/{total}",
+    "codex_unknown_category": "❌ 没有这个图鉴分册\n发 图鉴 查看总览",
+    "codex_unknown_name": "???"
   }
 }

@@ -81,13 +81,16 @@ def test_register_codex_commands_with_make_context() -> None:
 # 总览 / 分册 / ??? 不泄露
 # ---------------------------------------------------------------------------
 def test_codex_overview() -> None:
-    """无参总览：三分册各自完成度 + 总完成度。"""
+    """无参总览：三分册各自完成度 + 总完成度（2026-09-12 批9·路C 新排版）。"""
     ctx = _ctx()
     mark_seen(ctx, "monster", "rock_weasel", "岩鼬")
     reply = cmd_codex(_parsed("/图鉴"), ctx)
-    assert "【图鉴总览】" in reply
+    assert "【图鉴】收集总览" in reply
     assert "怪物图鉴" in reply
     assert "总完成度" in reply
+    # 进度行拆两行：分册名+百分比 / 已见 seen/total（大数值独立行）
+    assert "怪物图鉴：50%" in reply
+    assert "已见 1/2" in reply
     assert "岩鼬" not in reply  # 总览只显示完成度，不列条目
 
 
@@ -116,7 +119,7 @@ def test_codex_unknown_category_falls_back_overview() -> None:
     """未知分册 → 回落总览。"""
     ctx = _ctx()
     reply = cmd_codex(_parsed("/图鉴 化石"), ctx)
-    assert "【图鉴总览】" in reply
+    assert "【图鉴】收集总览" in reply
 
 
 def test_codex_no_emoji() -> None:
@@ -168,18 +171,39 @@ def test_codex_custom_template_unknown_placeholder_kept() -> None:
 
 
 def test_codex_tpl_whitelist_registered() -> None:
-    """占位符白名单：codex_tpl.PLACEHOLDER_WHITELIST 与模板占位符一一对应。"""
-    from qbot_rpg.core.templates.codex_tpl import (
+    """白名单测试：图鉴 14 键已迁全量表（分区默认表清空）——表内文本、派生白名单与占位符一致。
+
+    2026-09-12 批9·路C：分区默认表/白名单清空，断言改走 TABLE_TEMPLATES（对齐
+    test_pvp_commands.test_pvp_tpl_whitelist_registered / test_investigate_commands 同款口径）。
+    """
+    import re
+
+    import qbot_rpg.core.templates.codex_tpl as _codex_partition
+    from qbot_rpg.core.templates import (
         DEFAULT_TEMPLATES,
         PLACEHOLDER_WHITELIST,
+        TABLE_TEMPLATES,
     )
+    # 分区默认表/白名单已清空（14 键全部迁全量表；空壳保留 import 兼容）
+    assert not _codex_partition.DEFAULT_TEMPLATES
+    assert not _codex_partition.PLACEHOLDER_WHITELIST
+    codex_keys = {k for k in TABLE_TEMPLATES if k.startswith("codex_")}
+    assert len(codex_keys) == 14
+    pat = re.compile(r"\{([a-zA-Z0-9_]+)\}")
+    for key in sorted(codex_keys):
+        assert DEFAULT_TEMPLATES[key] == TABLE_TEMPLATES[key], f"聚合未走表：{key}"
+        assert PLACEHOLDER_WHITELIST[key] == set(pat.findall(TABLE_TEMPLATES[key])), (
+            f"白名单不一致：{key}"
+        )
+    # 占位符逐键核对（信息要素不丢字段）
     assert PLACEHOLDER_WHITELIST["codex_progress_line"] == {"label", "pct", "seen", "total"}
     assert PLACEHOLDER_WHITELIST["codex_total_progress"] == {"pct", "seen", "total"}
+    assert PLACEHOLDER_WHITELIST["codex_next_tier"] == {"tier", "gap"}
     assert PLACEHOLDER_WHITELIST["codex_category_header"] == {"label"}
     assert PLACEHOLDER_WHITELIST["codex_entry_line"] == {"mark", "name", "kill", "rumor"}
     assert PLACEHOLDER_WHITELIST["codex_tail_tip"] == {"total"}
     # 无占位符模板：白名单空集
-    assert PLACEHOLDER_WHITELIST["codex_overview_header"] == set()
-    assert PLACEHOLDER_WHITELIST["codex_unknown_category"] == set()
-    # 白名单登记齐全（每 key 都有登记；默认模板每 key 都有条目）
-    assert set(DEFAULT_TEMPLATES) == set(PLACEHOLDER_WHITELIST)
+    for key in ("codex_overview_header", "codex_overview_hint", "codex_tier_maxed",
+                "codex_unknown_category", "codex_category_empty", "codex_killed_mark",
+                "codex_rumor_mark", "codex_unknown_name"):
+        assert PLACEHOLDER_WHITELIST[key] == set(), f"{key} 应无占位符"

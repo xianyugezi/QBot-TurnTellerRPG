@@ -299,7 +299,8 @@ def _render_rest(result: Mapping[str, Any], ctx: Optional[Mapping[str, Any]] = N
     cr = int(result.get("cooldown_reduction", 0) or 0)
     line = tpl_of(ctx, "explore_rest_ok", {"hp": hp, "mp": mp})
     if cr:
-        line += tpl_of(ctx, "explore_rest_cooldown", {"cr": cr})
+        # 批10·路A：冷却行独立成行（新规范「少｜多换行」；模板自身不含前导换行）
+        line += "\n" + tpl_of(ctx, "explore_rest_cooldown", {"cr": cr})
     return line
 
 

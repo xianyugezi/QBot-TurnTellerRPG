@@ -69,6 +69,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Mapping, MutableMapping, Opti
 
 from qbot_rpg.core.alchemy_core import ALCHEMY_JOB_ID, AlchemyCore
 from qbot_rpg.core.quality import ABSOLUTE_QUALITY_MAX, QualitySystem
+from qbot_rpg.core.templates import tpl_of
 
 if TYPE_CHECKING:  # 仅类型注解（proficiency 已落地，保持零运行时耦合）
     from qbot_rpg.core.proficiency import ProficiencyEngine
@@ -483,12 +484,14 @@ class SettleEngine:
             return {
                 "ok": False,
                 "reason": verify.get("reason", "materials_insufficient"),
-                "message": verify.get("message", "材料不足，无法确认"),
+                "message": verify.get(
+                    "message", tpl_of(ctx, "alchemy_engine_materials_short_confirm")),
                 "shortfall": list(verify.get("shortfall") or []),
             }
         recipe = self._find_recipe(snap.get("recipe_id"), ctx)
         if recipe is None:
-            return {"ok": False, "reason": "recipe_not_found", "message": "配方不存在"}
+            return {"ok": False, "reason": "recipe_not_found",
+                    "message": tpl_of(ctx, "alchemy_engine_recipe_missing")}
 
         # ② 品质聚合（QLT-06：材料品质均值四舍五入，TC-02）
         mean = self._quality.aggregate_quality(self._material_scores(ctx, snap))

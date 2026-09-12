@@ -89,6 +89,7 @@ import copy
 from typing import Any, List, Mapping, MutableMapping, Optional, Tuple
 
 from qbot_rpg.core.quality import QualitySystem
+from qbot_rpg.core.templates import tpl_of
 
 __all__ = [
     "ALCHEMY_JOB_ID",
@@ -605,27 +606,30 @@ class HarvestEngine:
         now_ts = int(now) if now is not None else _now_ts()
         # 模块开关 + GU-60 职业 ≥ 正式
         if not self._farming_enabled():
-            return {"ok": False, "reason": "mode_off", "message": "种植系统未开启",
+            return {"ok": False, "reason": "mode_off",
+                    "message": tpl_of(ctx, "alchemy_engine_farming_off"),
                     "seed_id": None, "seed_name": None}
         tier = self._tier_index(player)
         if tier < FORMAL_TIER_INDEX:
             return {"ok": False, "reason": "level_insufficient",
-                    "message": "等级不足：炼金职业需达到 正式（种植解锁）",
+                    "message": tpl_of(ctx, "alchemy_engine_plant_level"),
                     "seed_id": seed_id, "seed_name": None}
         # GU-61a 种子存在且带 seed 标记（H-1）
         if not isinstance(seed_id, str) or not seed_id.strip():
-            return {"ok": False, "reason": "seed_not_found", "message": "种子不存在",
+            return {"ok": False, "reason": "seed_not_found",
+                    "message": tpl_of(ctx, "alchemy_engine_seed_not_found"),
                     "seed_id": None, "seed_name": None}
         sid = seed_id.strip()
         info = self._seed_info(ctx, sid)
         if info is None:
             return {"ok": False, "reason": "seed_not_found",
-                    "message": "种子不存在：未找到带 seed 标记的物品",
+                    "message": tpl_of(ctx, "alchemy_engine_seed_not_marked"),
                     "seed_id": sid, "seed_name": None}
         # 持有校验 + 消耗（FARM-01/H-6）
         if _count_item(ctx, sid) < 1:
             return {"ok": False, "reason": "seed_missing",
-                    "message": f"背包中没有〈{_item_name(sid, ctx)}〉，无法种植",
+                    "message": tpl_of(ctx, "alchemy_engine_seed_missing",
+                                      {"name": _item_name(sid, ctx)}),
                     "seed_id": sid, "seed_name": _item_name(sid, ctx)}
         # GU-61b 空闲地块（H-4）
         plots_max = self._plots_max()
@@ -634,11 +638,13 @@ class HarvestEngine:
             pi = _as_int(plot_index)
             if pi is None or pi < 1 or pi > plots_max:
                 return {"ok": False, "reason": "plot_index_invalid",
-                        "message": f"地块序号非法：需在 1-{plots_max} 之间",
+                        "message": tpl_of(ctx, "alchemy_engine_plot_index_invalid",
+                                          {"max": plots_max}),
                         "seed_id": sid, "seed_name": _item_name(sid, ctx)}
             if str(pi) in plots or pi in plots:
                 return {"ok": False, "reason": "plot_occupied",
-                        "message": f"地块 {pi} 已被占用", "seed_id": sid,
+                        "message": tpl_of(ctx, "alchemy_engine_plot_occupied",
+                                          {"idx": pi}), "seed_id": sid,
                         "seed_name": _item_name(sid, ctx)}
         else:
             occupied = {int(k) for k in plots if isinstance(k, int)} | {
@@ -646,7 +652,8 @@ class HarvestEngine:
             pi = next((i for i in range(1, plots_max + 1) if i not in occupied), None)
             if pi is None:
                 return {"ok": False, "reason": "no_free_plot",
-                        "message": f"没有空闲地块（上限 {plots_max} 块，先收获腾地）",
+                        "message": tpl_of(ctx, "alchemy_engine_no_free_plot",
+                                          {"max": plots_max}),
                         "seed_id": sid, "seed_name": _item_name(sid, ctx)}
         # 定时收获时长（FARM-02：按种植时配置结算）
         harvest_sec = self._harvest_sec(info)
@@ -664,13 +671,14 @@ class HarvestEngine:
         except _Rollback as exc:
             _restore(ctx, player, snap)
             return {"ok": False, "reason": "consume_failed",
-                    "message": f"种植失败：{exc.reason}", "seed_id": sid,
+                    "message": tpl_of(ctx, "alchemy_engine_plant_fail",
+                                      {"reason": exc.reason}), "seed_id": sid,
                     "seed_name": _item_name(sid, ctx)}
         hours, rem = divmod(harvest_sec, 3600)
         if rem == 0:
-            when = f"{hours} 小时后可收获"
+            when = tpl_of(ctx, "alchemy_engine_when_hours", {"hours": hours})
         else:
-            when = f"{harvest_sec} 秒后可收获"
+            when = tpl_of(ctx, "alchemy_engine_when_secs", {"secs": harvest_sec})
         return {
             "ok": True,
             "reason": None,
@@ -680,7 +688,8 @@ class HarvestEngine:
             "planted_at": now_ts,
             "harvest_at": now_ts + harvest_sec,
             "harvest_sec": harvest_sec,
-            "message": f"已种植〈{_item_name(sid, ctx)}〉，{when}",
+            "message": tpl_of(ctx, "alchemy_engine_plant_ok",
+                              {"name": _item_name(sid, ctx), "when": when}),
         }
 
     # ------------------------------------------------------------------
@@ -711,14 +720,16 @@ class HarvestEngine:
         """
         now_ts = int(now) if now is not None else _now_ts()
         if not self._farming_enabled():
-            return {"ok": False, "reason": "mode_off", "message": "种植系统未开启"}
+            return {"ok": False, "reason": "mode_off",
+                    "message": tpl_of(ctx, "alchemy_engine_farming_off")}
         tier = self._tier_index(player)
         if tier < FORMAL_TIER_INDEX:
             return {"ok": False, "reason": "level_insufficient",
-                    "message": "等级不足：炼金职业需达到 正式（收获解锁）"}
+                    "message": tpl_of(ctx, "alchemy_engine_harvest_level")}
         plots = self._plots_read(player)
         if not plots:
-            return {"ok": False, "reason": "no_plots", "message": "还没有种植任何作物"}
+            return {"ok": False, "reason": "no_plots",
+                    "message": tpl_of(ctx, "alchemy_engine_no_plots")}
         cap = self._trait_cap(tier)
         harvested: List[dict] = []
         pending: List[Tuple[Any, Mapping[str, Any], dict]] = []  # (key, plot, seed_info)
@@ -738,8 +749,8 @@ class HarvestEngine:
         if not pending:
             immature = sum(1 for p in plots.values() if isinstance(p, Mapping))
             return {"ok": False, "reason": "no_mature",
-                    "message": f"作物还未成熟（{immature} 个地块未到收获时间，"
-                               f"等 harvest_at 到点再来）"}
+                    "message": tpl_of(ctx, "alchemy_engine_no_mature",
+                                      {"count": immature})}
         # 原子结算：入包 + 清空地块（快照-回滚防双扣）
         snap = _snapshot(ctx, player)
         try:
@@ -774,12 +785,13 @@ class HarvestEngine:
         except _Rollback as exc:
             _restore(ctx, player, snap)
             return {"ok": False, "reason": "add_item_failed",
-                    "message": f"收获失败：{exc.reason}"}
+                    "message": tpl_of(ctx, "alchemy_engine_harvest_fail",
+                                      {"reason": exc.reason})}
         return {
             "ok": True,
             "reason": None,
             "harvested": harvested,
-            "message": self._harvest_message(harvested),
+            "message": self._harvest_message(harvested, ctx),
         }
 
     @staticmethod
@@ -789,24 +801,28 @@ class HarvestEngine:
             return int(key)
         return key
 
-    def _harvest_message(self, harvested: List[dict]) -> str:
+    def _harvest_message(self, harvested: List[dict],
+                         ctx: Mapping[str, Any] | None = None) -> str:
         """收获消息折叠（RATE-05 单条）：「收获〈材料〉×N（品质 精良·继承特性：…）」。
 
-        多条「；」分隔；无继承特性 → 省略「·继承特性」段；有丢弃 → 附「（超出继承上限丢弃：…）」。
+        多条「；」分隔；无继承特性 → 省略「继承特性」段；有丢弃 → 附「丢弃超出上限：…」。
+        文案迁表（专项·引擎文案2）：seg/traits/dropped 三键（ctx 无 templates → 全量表默认值）。
         """
         parts: List[str] = []
         for h in harvested:
             name = h.get("output_name")
             count = h.get("count", 1)
             label = h.get("quality_label")
-            seg = f"收获〈{name}〉×{count}（品质 {label}"
+            seg = tpl_of(ctx, "alchemy_engine_harvest_seg",
+                         {"name": name, "count": count, "label": label})
             traits = h.get("trait_names", [])
             if traits:
-                seg += "·继承特性：" + "、".join(str(t) for t in traits)
-            seg += "）"
+                seg += "\n" + tpl_of(ctx, "alchemy_engine_harvest_traits",
+                                     {"traits": "、".join(str(t) for t in traits)})
             dropped = h.get("dropped_names", [])
             if dropped:
-                seg += f"（超出继承上限丢弃：{'、'.join(str(t) for t in dropped)}）"
+                seg += "\n" + tpl_of(ctx, "alchemy_engine_harvest_dropped",
+                                     {"traits": "、".join(str(t) for t in dropped)})
             parts.append(seg)
         return "；".join(parts)
 
@@ -837,21 +853,24 @@ class HarvestEngine:
         核心：大师解锁（FARM-07）→ 解析种子产出素材 → 原子扣宝石+金币 → 素材入包（滚雪球）。
         """
         if not self._farming_enabled():
-            return {"ok": False, "reason": "mode_off", "message": "种植系统未开启"}
+            return {"ok": False, "reason": "mode_off",
+                    "message": tpl_of(ctx, "alchemy_engine_farming_off")}
         unlock = self._greenhouse_unlock_index()
         tier = self._tier_index(player)
         if tier < unlock:
             name = DEFAULT_TIER_NAMES[unlock]
             return {"ok": False, "reason": "level_insufficient",
-                    "message": f"等级不足：温室需要 {name} 解锁（FARM-07）"}
+                    "message": tpl_of(ctx, "alchemy_engine_greenhouse_level",
+                                      {"tier": name})}
         if not isinstance(seed_id, str) or not seed_id.strip():
-            return {"ok": False, "reason": "seed_not_found", "message": "种子不存在",
+            return {"ok": False, "reason": "seed_not_found",
+                    "message": tpl_of(ctx, "alchemy_engine_seed_not_found"),
                     "material_id": None, "material_name": None}
         sid = seed_id.strip()
         info = self._seed_info(ctx, sid)
         if info is None:
             return {"ok": False, "reason": "seed_not_found",
-                    "message": "种子不存在：未找到带 seed 标记的物品",
+                    "message": tpl_of(ctx, "alchemy_engine_seed_not_marked"),
                     "material_id": sid, "material_name": None}
         material_id = info["output"]
         material_name = _item_name(material_id, ctx)
@@ -861,12 +880,16 @@ class HarvestEngine:
         coins_have = int(currencies.get("coins", 0)) if isinstance(currencies, Mapping) else 0
         if gem_cost > 0 and gem_have < gem_cost:
             return {"ok": False, "reason": "currency_shortfall",
-                    "message": f"温室复制需要 {_gem_cn(ctx)} {gem_cost}，当前只有 {gem_have}",
+                    "message": tpl_of(ctx, "alchemy_engine_greenhouse_short",
+                                      {"cur": _gem_cn(ctx), "need": gem_cost,
+                                       "have": gem_have}),
                     "material_id": material_id, "material_name": material_name,
                     "gem_cost": gem_cost, "coins_cost": coins_cost}
         if coins_cost > 0 and coins_have < coins_cost:
             return {"ok": False, "reason": "currency_shortfall",
-                    "message": f"温室复制需要 {_coin_cn(ctx)} {coins_cost}，当前只有 {coins_have}",
+                    "message": tpl_of(ctx, "alchemy_engine_greenhouse_short",
+                                      {"cur": _coin_cn(ctx), "need": coins_cost,
+                                       "have": coins_have}),
                     "material_id": material_id, "material_name": material_name,
                     "gem_cost": gem_cost, "coins_cost": coins_cost}
         # 原子结算：扣货币 + 素材入包（快照-回滚防双扣；ARB-00 分账，金币账走 coins 键）
@@ -883,14 +906,18 @@ class HarvestEngine:
         except _Rollback as exc:
             _restore(ctx, player, snap)
             return {"ok": False, "reason": "add_item_failed",
-                    "message": f"温室复制失败：{exc.reason}",
+                    "message": tpl_of(ctx, "alchemy_engine_greenhouse_fail",
+                                      {"reason": exc.reason}),
                     "material_id": material_id, "material_name": material_name}
         parts = []
         if gem_cost > 0:
-            parts.append(f"{_gem_cn(ctx)} {gem_cost}")
+            parts.append(tpl_of(ctx, "alchemy_engine_cost_part",
+                                {"cur": _gem_cn(ctx), "amt": gem_cost}))
         if coins_cost > 0:
-            parts.append(f"{_coin_cn(ctx)} {coins_cost}")
-        cost_seg = " + ".join(parts) if parts else "无消耗"
+            parts.append(tpl_of(ctx, "alchemy_engine_cost_part",
+                                {"cur": _coin_cn(ctx), "amt": coins_cost}))
+        cost_seg = (" + ".join(parts) if parts
+                    else tpl_of(ctx, "alchemy_engine_greenhouse_no_cost"))
         return {
             "ok": True,
             "reason": None,
@@ -901,7 +928,8 @@ class HarvestEngine:
             "coins_cost": coins_cost,
             "gem_balance": gem_have - gem_cost,
             "coins_balance": coins_have - coins_cost,
-            "message": f"温室复制〈{material_name}〉×1（消耗 {cost_seg}）",
+            "message": tpl_of(ctx, "alchemy_engine_greenhouse_ok",
+                              {"name": material_name, "cost": cost_seg}),
         }
 
     # ------------------------------------------------------------------

@@ -460,7 +460,7 @@ def _map_reveal_outcome(ctx: MutableMapping[str, Any], map_def: object,
     _consume_quota(ctx, today)
     text = cand.get("desc")
     if not (isinstance(text, str) and text):
-        text = f"发现了一条隐藏通道，通往「{ref}」。"
+        text = tpl_of(ctx, "invest_map_reveal_fallback", {"ref": ref})
     return {
         "kind": "map_reveal",
         "text": _render_text(text, ctx, map_def),
@@ -486,7 +486,7 @@ def _hunt_outcome(ctx: MutableMapping[str, Any], map_def: object,
     _consume_quota(ctx, today)
     text = row.get("desc") or row.get("hint")
     if not (isinstance(text, str) and text):
-        text = f"你察觉到了「{boss}」出没的迹象。"
+        text = tpl_of(ctx, "invest_hunt_fallback", {"boss": boss})
     return {
         "kind": "hunt",
         "text": _render_text(text, ctx, map_def),

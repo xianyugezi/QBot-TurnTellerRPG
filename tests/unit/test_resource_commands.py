@@ -166,7 +166,7 @@ async def test_plant_formal_ok() -> None:
     """
     ctx = make_ctx(prof_level=1, inventory={"tomato_seed": 3})
     out = await cmd_plant(_p("/种植 番茄种子"), ctx)
-    assert out == "已种植〈番茄种子〉，4 小时后可收获"
+    assert out == "✅ 已种植〈番茄种子〉\n4 小时后可收获"
     assert "🌱" not in out
     # F-21 数据落点（player.farm_plots dict）+ FARM-01 消耗 1 种子
     assert ctx["farm_plots"][1] == {
@@ -200,14 +200,14 @@ async def test_plant_seed_not_found_rejected() -> None:
     assert "种子不存在" in out1
     # 存在但无 seed 标记（GU-61：种子存在且带 seed 标记）
     out2 = await cmd_plant(_p("/种植 草药"), ctx)
-    assert "未找到带 seed 标记的物品" in out2
+    assert "种子不存在" in out2
 
 
 async def test_plant_seed_missing_inventory_rejected() -> None:
     """GU-61/H-6 反例：背包无种子道具 → 透传「背包中没有〈番茄种子〉，无法种植」。"""
     ctx = make_ctx(prof_level=1, inventory={})
     out = await cmd_plant(_p("/种植 番茄种子"), ctx)
-    assert "背包中没有〈番茄种子〉，无法种植" in out
+    assert "背包没有〈番茄种子〉" in out
     assert "farm_plots" not in ctx
 
 
@@ -240,8 +240,8 @@ async def test_harvest_ok_quality_floor_and_traits() -> None:
     await cmd_plant(_p("/种植 番茄种子"), ctx)
     ctx["now"] = T0 + DEFAULT_HARVEST_SEC
     out = await cmd_harvest(_p("/收获"), ctx)
-    assert "收获〈番茄〉×1（品质 精良·继承特性：甘甜）" in out
-    assert "超出继承上限丢弃：鲜嫩" in out          # FARM-03 超出丢弃提示
+    assert "收获〈番茄〉×1\n品质 精良\n继承特性：甘甜" in out
+    assert "丢弃超出上限：鲜嫩" in out          # FARM-03 超出丢弃提示
     assert "🌾" not in out                          # M5 纯文本
     # F-21 入包 + 地块清空（FARM-06/10）
     assert ctx["inventory"]["tomato"] == 1
@@ -276,7 +276,7 @@ async def test_helper_proficient_ok() -> None:
     """
     ctx = make_ctx(prof_level=2, inventory={"candy": 1})
     out = await cmd_helper(_p("/代工 小助手 代采=矿石*5,代调=药剂*2"), ctx)
-    assert out == "小助手 开始代采 矿石*5，代调 药剂*2（消耗 糖果×1）"
+    assert out == "小助手\n开始代采 矿石*5，代调 药剂*2\n消耗 糖果×1"
     assert "⚒" not in out and "📦" not in out      # M-22 降级纯文本（B-9）
     assert ctx["inventory"]["candy"] == 0           # GU-63 消耗 糖果×1
     # F-22 状态存档（助手名/配置/启动时间/产出队列）
@@ -317,7 +317,7 @@ async def test_helper_no_task_rejected() -> None:
     """F-22 反例：/代工 小助手 无键值列表 → 透传引擎 no_task「请指定 代采 或 代调 任务…」。"""
     ctx = make_ctx(prof_level=2, inventory={"candy": 1})
     out = await cmd_helper(_p("/代工 小助手"), ctx)
-    assert "请指定 代采 或 代调 任务" in out
+    assert "请指定代采或代调任务" in out
     assert ctx["helpers"] == {} and ctx["inventory"]["candy"] == 1  # 未消耗
 
 
@@ -362,7 +362,7 @@ async def test_tick_then_collect_ok() -> None:
 async def test_collect_empty_queue_rejected() -> None:
     """TC-30 反例：无待收产出 → /收取 透传「当前没有待收取的代工产出」（空队列提示）。"""
     out = await cmd_collect(_p("/收取"), make_ctx(prof_level=2))
-    assert "当前没有待收取的代工产出" in out
+    assert "当前没有待收取产出" in out
 
 
 # ---------------------------------------------------------------------------
@@ -387,4 +387,4 @@ async def test_register_handlers_injectable_ctx() -> None:
     spec = router.get(PLANT_CMD)
     assert spec is not None and spec.handler is not None
     out = await spec.handler(_p("/种植 番茄种子"), ctx=ctx)
-    assert "已种植〈番茄种子〉，4 小时后可收获" in out
+    assert "✅ 已种植〈番茄种子〉\n4 小时后可收获" in out

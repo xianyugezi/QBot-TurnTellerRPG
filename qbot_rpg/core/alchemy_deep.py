@@ -103,6 +103,7 @@ from qbot_rpg.core.alchemy_core import (
 )
 from qbot_rpg.core.alchemy_session import CHALLENGE_SESSION
 from qbot_rpg.core.quality import ABSOLUTE_QUALITY_MAX, QualitySystem
+from qbot_rpg.core.templates import tpl_of
 
 __all__ = [
     "GRANDMASTER_TIER_INDEX",
@@ -365,7 +366,8 @@ class DeepEngine:
             }
         return {"ok": True, "tier_index": tier}
 
-    def deep_snapshot(self, recipe_def: Any, *, job_tier_index: Any) -> dict:
+    def deep_snapshot(self, recipe_def: Any, *, job_tier_index: Any,
+                      ctx: Any = None) -> dict:
         """新建深度会话快照（F-06：深度面板 6 槽/核心槽/3 普通+1 金/刻度/进化线；MUT-07 深度与
         /炼金 会话分离——session_type=challenge_alchemy）。
 
@@ -373,6 +375,7 @@ class DeepEngine:
           - recipe_def：recipe.json 配方 def（master_only/slots/element_req/evolve_to/
             traits_inherit/quality_cap）。
           - job_tier_index：职业档位索引（记录进快照，供深度操作门槛防御判定）。
+          - ctx：可选（模板覆盖；None → 全量表默认值，纯快照构造零副作用）。
         出参：快照 dict——基础字段继承 AlchemyCore.new_snapshot（§7.1：recipe_id/materials/
           chain/element_scores/pool/catalyst/pp/step/version/job_tier_index），叠加深度专属：
           {session_type:"challenge_alchemy", slots(6), core_slot:None, core_cap:0,
@@ -384,7 +387,8 @@ class DeepEngine:
           判门槛再开会话，TC-14）。
         """
         if not isinstance(recipe_def, Mapping):
-            return {"ok": False, "reason": "invalid_recipe", "message": "配方不存在"}
+            return {"ok": False, "reason": "invalid_recipe",
+                    "message": tpl_of(ctx, "alchemy_engine_recipe_missing")}
         base = self._core.new_snapshot(recipe_def, job_tier=job_tier_index)
         snap: Dict[str, Any] = dict(base)
         snap["session_type"] = CHALLENGE_SESSION           # F-06/GU-22/MUT-07 深度会话类型
@@ -536,7 +540,7 @@ class DeepEngine:
             return {
                 "ok": False,
                 "reason": "materials_insufficient",
-                "message": "材料不足",
+                "message": tpl_of(ctx, "alchemy_engine_materials_short"),
                 "shortfall": shortfall,
             }
         gem_cost = self._evolve_gem_cost(recipe_def)

@@ -206,7 +206,7 @@ def test_tc24_auto_use_true_resolve_one_step() -> None:
 
     assert r["ok"] is True
     assert r["auto_use"] is True and r["auto_used"] is True
-    assert r["message"] == "火焰弹 ×1 已即时调合并自动使用"
+    assert r["message"] == "✅ 火焰弹×1\n已调合并使用"
     assert len(calls) == 1 and calls[0][0] == "flame_bomb" and calls[0][1] == 1
     assert r["outcome"] == {"ok": True, "message": "造成 110 伤害", "damage": 110}
     # 产出实例（BA-08 ItemInstance 形态：quality/traits 取物品 def，E-A3）
@@ -238,7 +238,7 @@ def test_tc24_auto_use_false_into_pack() -> None:
 
     assert r["ok"] is True
     assert r["auto_use"] is False and r["auto_used"] is False
-    assert r["message"] == "火焰弹 ×1 已即时调合入包（auto_use 关闭或未自动使用）"
+    assert r["message"] == "✅ 火焰弹×1\n已调合入包"
     assert len(calls) == 0  # use_fn 不被调（BA-07）
     assert produced == [{"item_id": "flame_bomb", "count": 1, "bound": True,
                          "quality": "common", "traits": ("trait_burn_boost",)}]
@@ -271,7 +271,7 @@ def test_tc25_second_use_rejected() -> None:
     # instant_eligible（GU-54）与 resolve（ATO-01 幂等衔接）双拦截
     g = eng.instant_eligible(player, "alchemy", in_battle=True, battle_alchemy_used=1)
     assert g["ok"] is False and g["reason"] == "already_used"
-    assert g["message"] == "本场战斗已使用过即时调合（限 1 次/场）"
+    assert g["message"] == "❌ 本场已用过即时调合\n（限 1 次/场）"
     r = eng.resolve(ctx, recipe, battle_alchemy_used=1, use_fn=_make_use_fn([]))
     assert r["ok"] is False and r["reason"] == "already_used"
     # 拒绝 → 材料零变更、无产出（原子）
@@ -477,7 +477,7 @@ def test_auto_use_true_without_use_fn_keeps_item() -> None:
     assert r["ok"] is True and r["auto_use"] is True and r["auto_used"] is False
     assert r["outcome"] is None
     assert produced and produced[0]["item_id"] == "flame_bomb"  # 入包
-    assert r["message"] == "火焰弹 ×1 已即时调合入包（auto_use 关闭或未自动使用）"
+    assert r["message"] == "✅ 火焰弹×1\n已调合入包"
 
 
 # ---------------------------------------------------------------------------

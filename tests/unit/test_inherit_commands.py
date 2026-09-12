@@ -202,7 +202,8 @@ async def test_inherit_ok_render_and_snapshot() -> None:
     await cmd_alchemy(parse_command("/炼金 火焰弹"), ctx)
     await cmd_feed(parse_command("/投料 火晶石"), ctx)
     out = await cmd_inherit(parse_command("/继承 灼烧强化"), ctx)
-    assert "已继承：灼烧强化" in out
+    assert "已继承：" in out
+    assert "灼烧强化" in out
     assert "特性位 1 普通" in out
     assert "PP 1/5" in out
     snap = ctx["session_mgr"].store["u1"]["payload"]
@@ -218,7 +219,8 @@ async def test_inherit_two_traits_ok_pp2() -> None:
     await cmd_alchemy(parse_command("/炼金 火焰弹"), ctx)
     await cmd_feed(parse_command("/投料 火晶石,毒囊"), ctx)
     out = await cmd_inherit(parse_command("/继承 灼烧强化,剧毒强化"), ctx)
-    assert "已继承：灼烧强化 剧毒强化" in out
+    assert "已继承：" in out
+    assert "灼烧强化" in out and "剧毒强化" in out
     assert "特性位 2 普通" in out
     assert "PP 2/5" in out
     snap = ctx["session_mgr"].store["u1"]["payload"]
@@ -288,7 +290,7 @@ async def test_inherit_super_ok_4th_gold_slot() -> None:
     await cmd_alchemy(parse_command("/炼金 火焰弹"), ctx)
     await cmd_feed(parse_command("/投料 金色余烬"), ctx)
     out = await cmd_inherit_super(parse_command("/继承超 灼烧强化·精"), ctx)
-    assert "第 4 位金色（灼烧强化·精）" in out
+    assert "第 4 位金色：灼烧强化·精" in out
     assert "PP 2/5" in out
     snap = ctx["session_mgr"].store["u1"]["payload"]
     assert snap["gold_slot"] == "trait_fire_15"
@@ -307,12 +309,12 @@ async def test_inherit_super_grandmaster_required() -> None:
 
 
 async def test_inherit_super_single_only() -> None:
-    """P-04 负例：/继承超 传 2 个金色特性 → 「仅支持 1 个金色特性」。"""
+    """P-04 负例：/继承超 传 2 个金色特性 → 「继承超仅限 1 个金色特性」。"""
     ctx = make_ctx(proficiency={"alchemy": _alchemy_node(5)})
     await cmd_alchemy(parse_command("/炼金 火焰弹"), ctx)
     await cmd_feed(parse_command("/投料 金色余烬"), ctx)
     out = await cmd_inherit_super(parse_command("/继承超 灼烧强化·精,灼烧强化·大师"), ctx)
-    assert "仅支持 1 个金色特性" in out
+    assert "继承超仅限 1 个金色特性" in out
 
 
 # ---------------------------------------------------------------------------
@@ -339,4 +341,4 @@ async def test_register_inherit_handler_injectable_ctx() -> None:
     await cmd_alchemy(parse_command("/炼金 火焰弹"), ctx)
     await cmd_feed(parse_command("/投料 火晶石"), ctx)
     out = await spec.handler(parse_command("/继承 灼烧强化"), ctx=ctx)
-    assert "已继承：灼烧强化" in out
+    assert "已继承：" in out and "灼烧强化" in out

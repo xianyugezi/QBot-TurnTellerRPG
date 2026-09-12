@@ -681,8 +681,13 @@ def _render_panel(core: AlchemyCore, snap: Mapping[str, Any], ctx: Mapping[str, 
 def _feed_feedback(core: AlchemyCore, snap: Mapping[str, Any],
                    ctx: Mapping[str, Any]) -> str:
     """投料成功反馈（M-03 模板结构，**纯文本降级**——emoji 纪律同上，⚗️/🔥/✓ 弃用）：
-    `火+7 | 连锁 2 段 | 可继承特性：灼烧强化(PP1) 回复量+5%(PP1)`
-    附：连锁 ≥3 段 → `连锁 N 段 → 效果等级 N`；刻度达标 → `火+42（刻度 30·范围爆炸）`。
+    多行排版（批4·路K）：
+      `火+7`
+      `连锁 2 段`
+      `可继承特性：`
+      `灼烧强化(PP1)`
+      `回复量+5%(PP1)`
+    附：连锁 ≥3 段 → `效果等级 N`；刻度达标 → `刻度达标 火+42` / `刻度 30·范围爆炸`。
     """
     chain = snap.get("chain") or {}
     segments = int(chain.get("segments", 0) or 0)
@@ -719,13 +724,13 @@ def _feed_feedback(core: AlchemyCore, snap: Mapping[str, Any],
               for _tid, name, pp in pool.get("awaken") or []]
     if gold:
         traits.append(tpl_of(ctx, "alchemy_feed_trait_gold",
-                             {"items": " ".join(gold)}))
+                             {"items": "\n".join(gold)}))
     if awaken:
         traits.append(tpl_of(ctx, "alchemy_feed_trait_awaken",
-                             {"items": " ".join(awaken)}))
+                             {"items": "\n".join(awaken)}))
     if traits:
         parts.append(tpl_of(ctx, "alchemy_feed_traits_header",
-                            {"items": " ".join(traits)}))
+                            {"items": "\n".join(traits)}))
     if segments >= 3:
         parts.append(tpl_of(ctx, "alchemy_feed_chain_effect",
                             {"segments": segments,
@@ -744,7 +749,7 @@ def _feed_feedback(core: AlchemyCore, snap: Mapping[str, Any],
                         "th": th, "effect": st.get("met_effect"),
                     })
                 )
-    return " | ".join(parts)
+    return "\n".join(parts)
 
 
 def _feed_error(res: Mapping[str, Any], ctx: Mapping[str, Any]) -> str:
@@ -1218,16 +1223,22 @@ def _inherit_error(res: Mapping[str, Any],
 def _render_inherit_success(ctx: Mapping[str, Any], snap: Mapping[str, Any],
                             res: Mapping[str, Any]) -> str:
     """M-04 成功 → 面板特性位更新（`3 普通 + 第 4 位金色`），**纯文本降级**（emoji 纪律）：
-    `已继承：灼烧强化 回复强化 ｜ 特性位 2 普通 + 第 4 位金色（灼烧强化·精） ｜ PP 3/5`。"""
+    多行排版（批4·路K）：
+      `已继承：`
+      `灼烧强化`
+      `特性位 2 普通`
+      `第 4 位金色：灼烧强化·精`
+      `PP 3/5`
+    """
     parts: list = []
     names = [_trait_name(ctx, t) for t in (res.get("traits") or [])]
     if names:
         parts.append(tpl_of(ctx, "alchemy_inherit_done",
-                            {"names": " ".join(names)}))
+                            {"names": "\n".join(names)}))
     negs = [_trait_name(ctx, n) for n in (res.get("negatives") or [])]
     if negs:
         parts.append(tpl_of(ctx, "alchemy_inherit_negatives",
-                            {"names": " ".join(negs)}))
+                            {"names": "\n".join(negs)}))
     normal_used = len(snap.get("traits") or [])
     gold = snap.get("gold_slot")
     slot_text = tpl_of(ctx, "alchemy_inherit_slot_used",
@@ -1240,7 +1251,7 @@ def _render_inherit_success(ctx: Mapping[str, Any], snap: Mapping[str, Any],
     parts.append(tpl_of(ctx, "alchemy_pp_used",
                         {"used": pp.get("used", 0),
                          "budget": pp.get("budget", 0)}))
-    return " ｜ ".join(parts)
+    return "\n".join(parts)
 
 
 async def _run_inherit(ctx: MutableMapping[str, Any], tokens: list,

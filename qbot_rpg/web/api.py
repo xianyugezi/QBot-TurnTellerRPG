@@ -760,6 +760,8 @@ def help_card(key: str, fm: Optional[FieldMeta],
             "default": "无默认值" if value is not None else "未标注",
             "required": False, "enum": [], "ref_target": None, "unit": "",
             "help": "", "unregistered": True,
+            # 批5.2（V1）：行内提示不再常驻撑高字段行，统一收进说明卡（同一 `_hint` 文案）。
+            "hint": _hint(None),
         }
     default = _default_text(fm.default)
     return {
@@ -776,6 +778,9 @@ def help_card(key: str, fm: Optional[FieldMeta],
         "unit": fm.unit,
         "help": fm.help,
         "unregistered": False,
+        # 批5.2（V1）：`_hint`（必填/候选/引用/范围/0=不限/默认）作为说明卡的一行，
+        # 前端不再在字段值下方常驻渲染 `.hint`（行高与无提示字段一致）。
+        "hint": _hint(fm),
     }
 
 
@@ -925,6 +930,31 @@ def _local_values(subject: object, local_field: str, entry_id: str) -> List[obje
 # =====================================================================================
 # 关联分区（批5）：元数据声明「本模块条目 ↔ 其他模块条目的外键」→ 条目页相关条目分区
 # =====================================================================================
+def _path_field_label(mmeta: Optional[ModuleMeta], path: object) -> str:
+    """字段路径 → 元数据中文名（关联分区副标题「中文（键）」用；查不到返回空串）。
+
+    路径可含列表通配（如 `steps[].to`）：按 `.` / `[]` 切段，逐段沿
+    `FieldMeta.children`（obj）与 `element.children`（list 元素对象）下钻；
+    认不出就如实返回空串，前端回退显示原始键，不凭空造词。
+    """
+    if mmeta is None or not path:
+        return ""
+    parts = [p for p in re.split(r"[.\[\]]+", str(path)) if p]
+    if not parts:
+        return ""
+    fm = mmeta.fields.get(parts[0])
+    for seg in parts[1:]:
+        if fm is None:
+            return ""
+        if fm.children:
+            fm = fm.children.get(seg)
+        elif fm.element is not None and fm.element.children:
+            fm = fm.element.children.get(seg)
+        else:
+            return ""
+    return fm.label if fm is not None and fm.label else ""
+
+
 def _association_sections(pack_dir: Path, manifest: Mapping[str, Any],
                           declared: List[str], entry_id: str, entry_subject: object,
                           mmeta: Optional[ModuleMeta],
@@ -949,7 +979,11 @@ def _association_sections(pack_dir: Path, manifest: Mapping[str, Any],
             "module": a.module,
             "module_label": labels.get(a.module) or a.module,
             "field": a.field,
+            # 批5.2（V9）：副标题/命中行统一「中文（键）」——中文名来自字段元数据，
+            # 查不到则留空，前端回退原始键（不凭空造词）。
+            "field_label": _path_field_label(_module_meta(a.module), a.field),
             "local_field": a.local_field or _ID_FIELD,
+            "local_field_label": _path_field_label(mmeta, a.local_field or _ID_FIELD),
             "editable": bool(a.editable),
             "hint": a.hint,
             "entries": [],

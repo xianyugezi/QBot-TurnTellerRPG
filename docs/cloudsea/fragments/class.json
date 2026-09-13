@@ -1,5 +1,29 @@
 [
  {
+  "key": "$C.CLASS.AFTERIMAGE_TAIL_RATE",
+  "raw": "`0.15`",
+  "value": 0.15,
+  "desc": "盗贼残影·尾段加成率（九期 215B 申报）",
+  "section": "CLASS",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.CLASS.ANCHOR_STEP_BLOCK",
+  "raw": "`0.30`",
+  "value": 0.3,
+  "desc": "战士锚步·拧身格挡率（背面来袭）（九期 215B 申报）",
+  "section": "CLASS",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.CLASS.ANCHOR_STEP_PER_BATTLE",
+  "raw": "`2`",
+  "value": 2,
+  "desc": "战士锚步·每场次数（九期 215B 申报）",
+  "section": "CLASS",
+  "rule": "explicit"
+ },
+ {
   "key": "$C.CLASS.ARCHER.CHARGE_INTERRUPT",
   "raw": "**−1 阶（不清零）**",
   "value": null,
@@ -120,6 +144,30 @@
   "rule": "dotted_fallback"
  },
  {
+  "key": "$C.CLASS.GUARD.SHIELD_DIR",
+  "raw": "`front 0.60／side 0.30／back 失效；灰度先限异相种/蚀潮`",
+  "value": null,
+  "desc": "守卫盾向三档（裁决 #20）",
+  "section": "CLASS",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.CLASS.GUARD.TAUNT_FORCED_LAND",
+  "raw": "`对空目标强制降至 ground（1 拍 air 窗闭合）`",
+  "value": null,
+  "desc": "嘲讽迫降（裁决 #20 援护组）",
+  "section": "CLASS",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.CLASS.NIGHT_TIDE_RADIUS",
+  "raw": "`2`",
+  "value": 2,
+  "desc": "诗人声域定向半径（格）（九期 215B 申报）",
+  "section": "CLASS",
+  "rule": "explicit"
+ },
+ {
   "key": "$C.CLASS.RANGER.VENT_DEEP",
   "raw": "归零 / **2 回合** / **+1 段**（本命 +2）/ 持续 2 回合",
   "value": null,
@@ -148,6 +196,54 @@
   "raw": "归零 / **0 回合** / 无加成 / 本回合段数 **−1**",
   "value": null,
   "desc": "快排",
+  "section": "CLASS",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.CLASS.ROGUE.REAR_CHAIN",
+  "raw": "`背面首段 +0.30／后续 +0.15＋跃刺 D5＋残影分身`",
+  "value": null,
+  "desc": "盗贼背面链（裁决 #19）",
+  "section": "CLASS",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.CLASS.SHIELD_GUARD_BAND",
+  "raw": "`[0.60, 0.30, 0.00]`",
+  "value": [
+   "0.60",
+   "0.30",
+   "0.00"
+  ],
+  "desc": "守卫盾向三档（正面/侧翼/背面减伤率，裁决 #20）（九期 215B 申报）",
+  "section": "CLASS",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.CLASS.SPORE_CLOUD_DENY_TURNS",
+  "raw": "`1`",
+  "value": 1,
+  "desc": "德鲁伊孢子云·side 扇拒止持续（回合）（九期 215B 申报）",
+  "section": "CLASS",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.CLASS.TURRET_GUARD_SECTOR",
+  "raw": "`[front, side, rear]`",
+  "value": [
+   "front",
+   "side",
+   "rear"
+  ],
+  "desc": "机械师炮台守·防守扇位枚举（预案串，裁决 #24）（九期 215B 申报）",
+  "section": "CLASS",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.CLASS.WARRIOR.ANCHOR_STEP",
+  "raw": "`CT≥2·耗1风缆·拧身格挡30%·每场2次`",
+  "value": null,
+  "desc": "战士「锚步」背面补偿（裁决 #17）",
   "section": "CLASS",
   "rule": "dotted_fallback"
  },

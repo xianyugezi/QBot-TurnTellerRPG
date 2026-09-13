@@ -1,0 +1,98 @@
+[
+ {
+  "key": "$C.POS.BACK_BONUS",
+  "raw": "`+0.30`（双向生效）",
+  "value": null,
+  "desc": "背击加成",
+  "section": "POS",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.POS.BACK_EXCEPTIONS",
+  "raw": "`F08 滚转态免疫短路／F09 无面向族玩家→怪方向失效／F11 潜行中全 fail`",
+  "value": null,
+  "desc": "背击例外三例",
+  "section": "POS",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.POS.MARKS_FAMILIES",
+  "raw": "`rolling / clinging / burrowing / decoy / falling_window`",
+  "value": null,
+  "desc": "态类 marks 五族",
+  "section": "POS",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.POS.MICRO_AIR_WINDOW",
+  "raw": "`1` 拍真 air，可被对空截击",
+  "value": null,
+  "desc": "微跃帧",
+  "section": "POS",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.POS.NOCTURNE_DECAY_FAR",
+  "raw": "`0.8 / 0.6`",
+  "value": null,
+  "desc": "夜曲声域衰减 近/远",
+  "section": "POS",
+  "rule": "packed_inherit"
+ },
+ {
+  "key": "$C.POS.NOCTURNE_DECAY_NEAR",
+  "raw": "`0.8 / 0.6`",
+  "value": null,
+  "desc": "夜曲声域衰减 近/远",
+  "section": "POS",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.POS.PULL_ENUM",
+  "raw": "`pull_close / pull_away / lift_air`",
+  "value": null,
+  "desc": "target_pull 扩展枚举",
+  "section": "POS",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.POS.SCHEMA_FIELDS",
+  "raw": "`attack_zone / self_reposition / target_displace / position_rule / position_match`",
+  "value": null,
+  "desc": "统一方位 schema 五字段",
+  "section": "POS",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.POS.SELF_REPOSITION_ENUM",
+  "raw": "`none/dash/lateral/turn/shift/ascend/descend/cling/burrow/rolling`",
+  "value": null,
+  "desc": "自位移原语枚举",
+  "section": "POS",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.POS.SNIPER_EXEMPT",
+  "raw": "`轻弩·对空弹头／机械师·架设对空／重弩·架设态炮台`",
+  "value": null,
+  "desc": "狙击豁免名单",
+  "section": "POS",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.POS.UPWARD_MOD",
+  "raw": "`-0.20`",
+  "value": -0.2,
+  "desc": "仰攻修正",
+  "section": "POS",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.POS.UPWARD_MOD_RANGED",
+  "raw": "`-0.10`",
+  "value": -0.1,
+  "desc": "仰攻远程减半",
+  "section": "POS",
+  "rule": "explicit"
+ }
+]

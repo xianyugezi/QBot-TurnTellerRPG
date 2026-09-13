@@ -96,6 +96,14 @@
   "rule": "citation"
  },
  {
+  "key": "$C.BALANCE.SPEED_NEUTRAL_F",
+  "raw": "`1.0`",
+  "value": 1.0,
+  "desc": "速度流归一系数（九期 211 申报 · 裁决 #2）",
+  "section": "BALANCE",
+  "rule": "fallback"
+ },
+ {
   "key": "$C.BALANCE.SUPPORT_CREDIT_SELF",
   "raw": "`1.00`",
   "value": 1.0,

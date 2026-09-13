@@ -1,5 +1,13 @@
 [
  {
+  "key": "$C.ZONE.ELEVATION",
+  "raw": "`ground / air`",
+  "value": null,
+  "desc": "垂直域二值",
+  "section": "FEAT",
+  "rule": "dotted"
+ },
+ {
   "key": "$C.ZONE.ENABLE_SCOPE",
   "raw": "`异相种 / 蚀潮` 灰度",
   "value": null,

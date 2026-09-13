@@ -39,7 +39,7 @@
   },
   "BALANCE": {
    "file": "balance.json",
-   "keys": 16
+   "keys": 17
   },
   "CUSTODY_EFFICIENCY": {
    "file": "custody_efficiency.json",
@@ -55,7 +55,7 @@
   },
   "CLASS": {
    "file": "class.json",
-   "keys": 20
+   "keys": 31
   },
   "MAIN": {
    "file": "main.json",
@@ -91,7 +91,7 @@
   },
   "ZONE": {
    "file": "zone.json",
-   "keys": 4
+   "keys": 5
   },
   "TIDE": {
    "file": "tide.json",
@@ -156,7 +156,11 @@
   "FORTUNE": {
    "file": "fortune.json",
    "keys": 26
+  },
+  "POS": {
+   "file": "pos.json",
+   "keys": 12
   }
  },
- "total_keys": 561
+ "total_keys": 586
 }

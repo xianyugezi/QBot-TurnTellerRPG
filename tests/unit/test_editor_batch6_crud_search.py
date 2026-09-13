@@ -189,6 +189,10 @@ def test_new_entry_detail_defaults_and_id_separate(pack_root: Path) -> None:
     assert d["field_count"] == len(d["fields"]) and d["group_count"] >= 1
     assert d["id_hint"] and "互相引用" in d["id_hint"]
     assert d["id_rule"]["rule"] == api.ID_RULE_AUTO
+    # 引用字段在新建表单里同样是引用控件（值非法 → 前端黄提示、不红拦）
+    nxt = next(f for f in d["fields"] if f["key"] == "next")
+    assert nxt["control"] == "ref" and nxt["ref_target"] == "widget"
+    assert nxt["ref_valid"] is True
 
 
 def test_new_entry_detail_chinese_name_falls_back_to_seq(pack_root: Path) -> None:
@@ -517,6 +521,20 @@ def test_frontend_new_draft_isolated_from_main_draft() -> None:
     assert "state.newDraft" in dd and "MAIN_CTX.draft = draft" in dd
     rd = _fn_src("renderDetail", "assocPaneHtml")
     assert "MAIN_CTX.draft = draft" in rd and "state.newEntry = null" in rd
+
+
+def test_frontend_mutation_result_survives_reselection() -> None:
+    """新建/删除结果（含被引用者黄提示）切选后仍展示：refreshAfterMutation 回填 keepResult。"""
+    ref = _fn_src("refreshAfterMutation", "openNewEntry")
+    assert "keepResult" in ref and "state.result = keepResult" in ref
+    assert "renderResult(keepResult)" in ref
+    create = _fn_src("createEntry", "deleteEntry")
+    dele = _fn_src("deleteEntry", "selectEntry")
+    assert "refreshAfterMutation(eid, res)" in create
+    assert "refreshAfterMutation(null, res)" in dele
+    # 删空模块时仍要有结果容器，否则黄提示无处显示
+    entries = _fn_src("loadEntries", "renderEntries")
+    assert 'id="result"' in entries
 
 
 def test_frontend_css_tokens_for_batch6() -> None:

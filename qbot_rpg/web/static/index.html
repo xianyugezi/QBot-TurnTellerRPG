@@ -1681,7 +1681,8 @@ function loadEntries() {
         state.backup = null;
         el("backup-note").textContent = "备份：—";
         refreshRollbackButton();
-        el("p-body").innerHTML = '<div class="empty">该模块暂无条目（条目列表为空）。</div>';
+        el("p-body").innerHTML = '<div class="empty">该模块暂无条目（条目列表为空）。</div>'
+          + '<div id="result" hidden></div>';   // 删空模块后仍能展示「被引用者」等结果
         el("p-title").textContent = EMPTY_TEXT; el("p-sub").textContent = ""; el("p-id").textContent = "";
         helpHideDom();
       }
@@ -1752,14 +1753,18 @@ function loadEntryIndex() {
 }
 
 // 新建/删除后的口径一致刷新：左栏计数 + 中栏条数 + 条目索引（页签计数随条目详情重画）
-function refreshAfterMutation(newId) {
+function refreshAfterMutation(newId, keepResult) {
   return loadModules()
     .then(function () { return loadEntries(); })
     .then(function () { return loadEntryIndex(); })
     .then(function () {
       if (newId && (state.entries || []).some(function (e) { return e.id === newId; })) {
-        return selectEntry(newId);
+        return selectEntry(newId);   // 注意：selectEntry 会清 state.result，故结果最后回填
       }
+    })
+    .then(function () {
+      // 新建/删除的结果（含「被引用者」黄提示）在选中切换后回填，不被 selectEntry 清掉
+      if (keepResult) { state.result = keepResult; renderResult(keepResult); }
     });
 }
 
@@ -1961,7 +1966,7 @@ function createEntry() {
         state.newEntry = null; state.newDraft = null;
         MAIN_CTX.isNew = false; MAIN_CTX.draft = draft;
         state.pendingDrafts = {};
-        return refreshAfterMutation(eid);
+        return refreshAfterMutation(eid, res);
       }
       renderResult(res);
     }).catch(function (err) {
@@ -1999,7 +2004,7 @@ function deleteEntry() {
       state.result = res;
       if (res.ok) {
         state.entry = null; state.detail = null;
-        return refreshAfterMutation(null);
+        return refreshAfterMutation(null, res);
       }
       renderResult(res);
     }).catch(function (err) {

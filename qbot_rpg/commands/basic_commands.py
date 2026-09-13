@@ -1864,11 +1864,16 @@ def skill_brief(ctx: Mapping[str, Any], sid: str) -> str:
     """技能简述行（列表用）：内容包 `brief` 自由文本（编辑器「简述」文本框）→ 兜底机制标签。
 
     2026-09-12 用户拍板：标签是**文本类型**，后续由内容作者自定义；本函数只负责取值与兜底。
+    2026-09-13 用户补充：**「简述」不是独立的「标签」门类**——它是自由文本，作者想写标签就写标签、
+    想写别的文本也行，**也可以直接留空**。故取值语义分三档：
+      - `brief` 为**非空文本** → 原样用（内容作者写什么显示什么）
+      - `brief` 为**显式空串/空白** → 作者明确留空 → **不显示简述行**（不再兜底成机制标签）
+      - `brief` **字段缺失**（未填过）→ 机制标签兜底（避免列表出现空白行，作者一填即覆盖）
     """
     defn = _skill_def(ctx, sid)
     brief = _skill_field(defn, "brief", None)
-    if isinstance(brief, str) and brief.strip():
-        return brief.strip()
+    if isinstance(brief, str):
+        return brief.strip()          # 显式留空 → ""（上方 skill_line 不出简述行）
     return "".join(_derived_tags(defn, ctx))
 
 

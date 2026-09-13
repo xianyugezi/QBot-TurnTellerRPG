@@ -898,7 +898,13 @@ def test_derived_tags_all_mechanism_branches():
 
 
 def test_skill_brief_prefers_nonempty_content_brief():
-    """T4：内容包 `brief` 非空 → 原样返回，不落机制兜底；空白 brief 才兜底。"""
+    """T4：`brief` 取值三档（2026-09-13 用户补充口径）。
+
+    「简述」不是独立的「标签」门类 = 自由文本，作者可写标签、可写其他文本、**也可直接留空**：
+      - 非空文本 → 原样返回（不落机制兜底）
+      - **显式空串/空白 → 明确留空 → 返回 ""（不再兜底成机制标签）**
+      - 字段缺失（未填过）→ 机制标签兜底
+    """
     ctx = make_ctx(skills={"s1": {"id": "s1", "name": "剑技", "type": "active",
                                   "power": 100, "brief": "  自由文本简述  "}})
     assert bc.skill_brief(ctx, "s1") == "自由文本简述"
@@ -906,7 +912,12 @@ def test_skill_brief_prefers_nonempty_content_brief():
 
     blank = make_ctx(skills={"s1": {"id": "s1", "name": "剑技", "type": "active",
                                     "power": 100, "brief": "   "}})
-    assert "【伤害】" in bc.skill_brief(blank, "s1")
+    assert bc.skill_brief(blank, "s1") == ""        # 显式留空 → 不出简述行
+    assert "【伤害】" not in bc.skill_brief(blank, "s1")
+
+    absent = make_ctx(skills={"s1": {"id": "s1", "name": "剑技", "type": "active",
+                                     "power": 100}})
+    assert "【伤害】" in bc.skill_brief(absent, "s1")   # 字段缺失 → 机制兜底
 
 
 # ---------------------------------------------------------------------------

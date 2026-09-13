@@ -1,7 +1,8 @@
 """编辑器重写批2 · 控件映射测试（全类型覆盖 + 集中一处 + 通用性护栏）。
 
 覆盖任务书「可编辑控件：按 FieldMeta.type 渲染编辑控件」与不变量「映射集中一处」：
-  · str/int/float/number/bool/enum/ref → 可编辑控件；list/obj/map → 本批只读；
+  · str/int/float/number/bool/enum/ref → 可编辑控件；批次推进后 list → 可增删行表格
+    （listtable；元素为 ref 时升级为 reflist 引用多选），obj/map → 本批只读；
   · multiline 声明/长文本启发式 → textarea；
   · 描述符（entry_detail）逐字段携带 control/editable（前端只认 control）；
   · editor_ops.py 等编辑器代码不得出现任何内容包业务名（换包零改动）。
@@ -29,7 +30,7 @@ EXPECTED_CONTROL = {
     "bool": "bool",
     "enum": "select",
     "ref": "ref",
-    "list": "readonly",
+    "list": "listtable",
     "obj": "readonly",
     "map": "readonly",
     "formula": "text",
@@ -48,7 +49,7 @@ def test_multiline_only_affects_text() -> None:
     assert api.editable_form("str", multiline=True)["control"] == "textarea"
     # 非文本形态不接受 multiline 影响
     assert api.control_of("number", multiline=True) == "number"
-    assert api.control_of("list", multiline=True) == "readonly"
+    assert api.control_of("list", multiline=True) == "listtable"
 
 
 def test_unknown_type_falls_back_to_text() -> None:
@@ -106,7 +107,7 @@ def test_entry_detail_control_per_field(widgets_pack: Path) -> None:
     assert controls["b"] == "bool"
     assert controls["e"] == "select"
     assert controls["r"] == "ref"
-    assert controls["l"] == "readonly" and controls["o"] == "readonly"
+    assert controls["l"] == "listtable" and controls["o"] == "readonly"
     assert controls["m"] == "readonly"
     assert controls["t"] == "textarea"  # 元数据 multiline 声明
 
@@ -115,7 +116,7 @@ def test_entry_detail_editable_flag_and_ref_target(widgets_pack: Path) -> None:
     d = api.entry_detail("pack_w", "widgets", "a", root=widgets_pack)
     by_key = {f["key"]: f for f in d["fields"]}
     assert by_key["s"]["editable"] is True and by_key["e"]["editable"] is True
-    assert by_key["l"]["editable"] is False
+    assert by_key["l"]["editable"] is True
     assert by_key["r"]["ref_target"] == "widgets"
     assert by_key["e"]["enum"] == ["x", "y"]
 
@@ -175,7 +176,8 @@ def test_widget_mapping_is_single_point() -> None:
     root = Path(api.repo_root())
     html = (root / "qbot_rpg" / "web" / "static" / "index.html").read_text(encoding="utf-8")
     assert "switch (f.control)" in html  # 前端只认 control
-    for control in ("text", "textarea", "number", "bool", "select", "ref"):
+    for control in ("text", "textarea", "number", "bool", "select", "ref",
+                    "listtable", "reflist"):
         assert 'case "%s"' % control in html, control
     ops = (root / "qbot_rpg" / "web" / "editor_ops.py").read_text(encoding="utf-8")
     assert "_EDIT_BY_WIDGET" not in ops and "_WIDGET_BY_TYPE" not in ops

@@ -10,7 +10,8 @@
   · 字段分组        ← FieldMeta.group → ModuleMeta.field_groups[key] → 单一默认分组（兜底）
   · 分组页签        ← ModuleMeta.group_order（顺序）/ group_labels（显示名，缺省用组键）/
                        field_groups（成员）；声明了但本条目无字段的组也保留（count=0，前端空态）
-  · 字段类型 → 只读形态 ← _WIDGET_BY_TYPE（本文件唯一映射点；前端只按 widget 渲染）
+  · 字段类型 → 控件形态 ← _WIDGET_BY_TYPE + _EDIT_BY_WIDGET + list_control（本文件唯一映射点；
+>    前端只按 descriptor.control 渲染，不认字段类型）；批4 起 list 可编辑（listtable/reflist）
   · 引用的显示名    ← 引用目标 kind 的名称索引（扫描各模块条目 id→name 构建；命名空间合并）
 
 铁律：本文件不得出现任何内容包的模块名或业务字段名（举例本身就会污染这条判断，故不举例）；
@@ -407,8 +408,9 @@ def readonly_form(field_type: Optional[str]) -> str:
 
 # 控件形态 → (编辑控件, 是否可编辑)：§三 映射表第二级（唯一实现点）。
 # control 取值（前端只认这个，不认字段类型）：
-#   text / textarea / number / bool / select / ref / readonly
-# 批2 范围：标量可编辑；list（批4 可增删行表格）、obj、map 本批只读展示。
+#   text / textarea / number / bool / select / ref / listtable / reflist / readonly
+# 批4 范围：list 升级为可编辑（元素为 obj/标量 → 可增删行表格 listtable；
+# 元素为 ref → 引用多选 reflist）；obj（除列表内联对象）与 map 仍只读展示。
 _EDIT_BY_WIDGET: Dict[str, Tuple[str, bool]] = {
     "text": ("text", True),
     "number": ("number", True),
@@ -416,11 +418,26 @@ _EDIT_BY_WIDGET: Dict[str, Tuple[str, bool]] = {
     "enum": ("select", True),
     "ref": ("ref", True),
     "formula": ("text", True),  # 表达式文本；值实为对象时按值形态纠偏为 obj → 只读
-    "list": ("readonly", False),
+    "list": ("listtable", True),
     "obj": ("readonly", False),
     "map": ("readonly", False),
 }
-EDIT_CONTROLS: Tuple[str, ...] = ("text", "textarea", "number", "bool", "select", "ref", "readonly")
+EDIT_CONTROLS: Tuple[str, ...] = (
+    "text", "textarea", "number", "bool", "select", "ref",
+    "listtable", "reflist", "readonly",
+)
+
+
+def list_control(fm: Optional[FieldMeta]) -> str:
+    """列表字段的控件形态判定（§三 映射表；前端只认 control，不认元素类型）。
+
+    · 元素为引用（`element.type == "ref"`）→ `reflist`（引用多选：可搜、名称显示、逐个清除）；
+    · 其余（元素为 obj / 标量 / 无元数据）→ `listtable`（可增删行表格）。
+    """
+    elem = fm.element if fm is not None else None
+    if elem is not None and elem.type == "ref":
+        return "reflist"
+    return "listtable"
 
 
 def control_of(widget: Optional[str], multiline: bool = False) -> str:
@@ -625,13 +642,56 @@ def _build_name_index(pack_dir: Path, declared: List[str],
 # 只读 API ④：条目全字段 + 分组 + 每字段类型
 # =====================================================================================
 def _column(key: str, fm: Optional[FieldMeta], key_label: Optional[str] = None) -> Dict[str, Any]:
+    """列表表格的一列：列名/类型来自元素字段元数据（缺省按值推断）。
+
+    批4 起列描述同时携带**编辑**所需信息（control/enum/number_step/default），
+    前端按 control 渲染单元格，不认字段类型（映射仍在 api 层唯一实现）。
+    """
+    ftype = fm.type if fm is not None else _infer_type(None)
+    widget = _widget_for_type(fm.type if fm is not None else None)
+    multiline = bool(getattr(fm, "multiline", False)) if fm is not None else False
     return {
         "key": key,
         "label": (fm.label if fm is not None and fm.label else (key_label or key)),
-        "type": fm.type if fm is not None else _infer_type(None),
-        "widget": _widget_for_type(fm.type if fm is not None else None),
+        "type": ftype,
+        "widget": widget,
+        "control": control_of(widget, multiline) if widget != "list" else list_control(fm),
         "ref_target": fm.ref_target if fm is not None else None,
+        "enum": [str(x) for x in fm.enum] if fm is not None and fm.enum else [],
+        "number_step": _number_step(ftype),
+        "default": fm.default if fm is not None else None,
     }
+
+
+def _row_default(elem: Optional[FieldMeta], scalar_element: bool) -> object:
+    """新增行的初始值（元数据 default 驱动；未声明 default 的键不写，保持「未填」）。"""
+    if elem is None:
+        return None
+    if not scalar_element and elem.type == "obj":
+        out: Dict[str, Any] = {}
+        for ck, cfm in (elem.children or {}).items():
+            if cfm.default is not None:
+                out[str(ck)] = cfm.default
+        return out
+    return elem.default
+
+
+def _is_scalar_element(elem: Optional[FieldMeta], rows: List[object]) -> bool:
+    """列表元素是否为标量行（obj 元素 → False；无元数据时按实际行形态推断）。"""
+    if elem is not None:
+        return elem.type != "obj"
+    if rows:
+        return not any(isinstance(r, Mapping) for r in rows)
+    return True
+
+
+def _ref_valid(view: "_PackView", ref_target: Optional[str], value: object) -> bool:
+    """引用值是否存在（空值视为「未填」不算非法；未知目标/找不到名称 → 非法）。"""
+    if value is None or value == "":
+        return True
+    if not isinstance(value, str):
+        return False
+    return view.resolve(ref_target, value) is not None
 
 
 def _list_columns(fm: Optional[FieldMeta], rows: List[object]) -> List[Dict[str, Any]]:
@@ -656,8 +716,7 @@ def _list_columns(fm: Optional[FieldMeta], rows: List[object]) -> List[Dict[str,
             known.add(k)
             cols.append(_column(k, None))
     if not cols:
-        cols.append({"key": "value", "label": "值", "type": "str",
-                     "widget": "text", "ref_target": None})
+        cols.append(_column("value", None, key_label="值"))
     return cols
 
 
@@ -703,7 +762,8 @@ def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
         "label": label,
         "type": ftype,
         "widget": widget,
-        "control": control_of(widget, multiline),
+        "control": (list_control(fm) if widget == "list"
+                    else control_of(widget, multiline)),
         "editable": is_editable_widget(widget),
         "multiline": multiline,
         "group": _resolve_group(key, fm, mmeta),
@@ -718,11 +778,41 @@ def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
         "columns": [],
         "rows": [],
     }
-    if widget == "list" and isinstance(value, list):
-        cols = _list_columns(fm, value)
+    if widget == "ref":
+        # 批4：引用值是否指向存在的目标（空值不算非法）→ 前端黄提示、不红拦。
+        desc["ref_valid"] = _ref_valid(view, fm.ref_target if fm is not None else None, value)
+    if widget == "list":
+        # 值缺失/为 null 也要按元数据出列（空列表仍有列头与「+ 添加一行」的默认值）
+        rows_val: List[object] = value if isinstance(value, list) else []
+        cols = _list_columns(fm, rows_val)
         desc["columns"] = cols
-        desc["rows"] = _table_rows(value, cols, view)
-        desc["row_count"] = len(value)
+        desc["rows"] = _table_rows(rows_val, cols, view)
+        desc["row_count"] = len(rows_val)
+        elem = fm.element if fm is not None else None
+        if elem is not None and elem.type == "ref":
+            desc["ref_target"] = elem.ref_target  # 引用多选的候选目标在元素元数据上
+        scalar_element = _is_scalar_element(elem, rows_val)
+        desc["scalar_element"] = scalar_element
+        desc["row_default"] = _row_default(elem, scalar_element)
+        # 批4：非法引用标记（黄提示、不红拦）——元素是引用 → 收集非法值；
+        # 元素 obj 内引用子字段 → 逐单元格收集（供前端就地把该格标黄）。
+        desc["invalid_refs"] = (
+            [str(v) for v in rows_val if not _ref_valid(view, elem.ref_target, v)]
+            if elem is not None and elem.type == "ref" else []
+        )
+        invalid_cells: List[Dict[str, Any]] = []
+        if elem is not None and elem.type == "obj" and elem.children:
+            for i, row in enumerate(rows_val):
+                if not isinstance(row, Mapping):
+                    continue
+                for ck, cfm in elem.children.items():
+                    if cfm.type != "ref":
+                        continue
+                    rv = row.get(str(ck))
+                    if not _ref_valid(view, cfm.ref_target, rv):
+                        invalid_cells.append(
+                            {"row": i, "key": str(ck), "value": rv})
+        desc["invalid_cells"] = invalid_cells
     elif widget == "obj" and isinstance(value, Mapping):
         desc["children"] = _object_children(fm, value, mmeta, view, depth + 1)
     elif widget == "map" and isinstance(value, Mapping):
@@ -976,6 +1066,7 @@ __all__ = [
     "entry_slot",
     "field_meta_table",
     "is_editable_widget",
+    "list_control",
     "list_entries",
     "list_modules",
     "list_packs",

@@ -214,6 +214,45 @@ select.cin { padding: 1px var(--sp-2); }
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ltable tr:nth-child(even) td { background: var(--surface-zebra); }
 .lmeta { color: var(--text-4); font-size: var(--fs-11); margin: var(--sp-2) 0; }
+
+/* ---------- 可增删行表格（批4 组件04）：行内编辑 + 行尾删除 + 表下「+ 添加一行」 ---------- */
+.ltable-edit td { padding: var(--sp-2) var(--sp-3); }
+.ltable-edit td .cin { padding: 1px var(--sp-3); }
+.ltable th.op, .ltable td.op { width: 84px; text-align: right; border-left: 0; }
+.lcell.warn { border-color: var(--warn); }
+.ldel { display: inline-flex; align-items: center; height: var(--h-ctl-sm); padding: 0 var(--sp-3);
+  font-family: inherit; font-size: var(--fs-11); cursor: pointer; background: transparent;
+  border: var(--bw) solid var(--line-strong); color: var(--text-3); }
+.ldel:hover { border-color: var(--danger); color: var(--danger); }
+.ladd { display: inline-flex; align-items: center; margin-top: var(--sp-4); padding: var(--sp-2) var(--sp-6);
+  font-family: inherit; font-size: var(--fs-12); cursor: pointer; background: transparent;
+  border: var(--bw) dashed var(--line-accent-dash); color: var(--accent); }
+.ladd:hover { background: var(--surface-hover); }
+.lwrap { width: 100%; }
+
+/* ---------- 引用字段选择器（批4 组件03）：可搜索候选 + 已选值 + 非法值黄提示 ---------- */
+.refvals { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-bottom: var(--sp-3); }
+.refval { display: inline-flex; align-items: center; gap: var(--sp-4); border: var(--bw) solid var(--line);
+  padding: var(--sp-2) var(--sp-4); color: var(--text-2); }
+.refval .mono2 { color: var(--accent); }
+.refval.warn { border-color: var(--warn); }
+.refwarn { color: var(--warn); font-size: var(--fs-11); }
+.refnote { display: block; }
+.refsel { width: 100%; border: var(--bw) solid var(--line); margin-top: var(--sp-2); }
+.rf-hd { display: flex; align-items: center; gap: var(--sp-4); height: var(--h-ctl);
+  padding: 0 var(--sp-4); border-bottom: var(--bw) solid var(--line-soft); }
+.rf-hd .q { color: var(--text-4); white-space: nowrap; }
+.rf-hd input { flex: 1 1 auto; height: 18px; border: 0; background: transparent;
+  color: var(--text-value); font-family: inherit; font-size: var(--fs-12); outline: none; }
+.rf-list { padding: var(--sp-2) 0; max-height: 180px; overflow-y: auto; }
+.rf-it { display: flex; align-items: center; gap: var(--sp-5); padding: var(--sp-3) var(--sp-4);
+  color: var(--text-2); cursor: pointer; }
+.rf-it::before { content: "\00b7 "; color: var(--text-6); }
+.rf-it:hover, .rf-it.h { background: var(--surface); color: var(--text-strong); }
+.rf-it:hover::before, .rf-it.h::before { content: "> "; color: var(--accent); }
+.rf-it .id2 { margin-left: auto; color: var(--text-5); font-size: var(--fs-11); }
+.rf-ft { display: flex; gap: var(--sp-8); padding: var(--sp-3) var(--sp-4);
+  border-top: var(--bw) solid var(--line-soft); color: var(--text-5); font-size: var(--fs-11); }
 .empty { color: var(--text-5); padding: var(--sp-10) var(--sp-8); line-height: var(--lh-ex); }
 .vtag { flex: 0 0 auto; height: var(--h-ctl-sm); display: flex; align-items: center;
   padding: 0 var(--sp-8); color: var(--text-5); border-top: var(--bw) solid var(--line-soft); }
@@ -373,6 +412,120 @@ select.cin { padding: 1px var(--sp-2); }
 });
 /* EDITOR_GROUPS_END */
 
+/* 列表字段纯逻辑（批4 · 可增删行表格；无 DOM 依赖，node 下走 module.exports）。
+ * 语义：行 = 元素元数据的实例；增行用元数据 default 初始化；删行/改值都只产出新数组，
+ * 由调用方写回草稿（EditorDraft.set）——绝不直接落盘。 */
+/* EDITOR_LIST_BEGIN */
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) { module.exports = factory(); }
+  else { root.EditorList = factory(); }
+})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+  function clone(v) {
+    if (v == null || typeof v !== "object") { return v; }
+    return JSON.parse(JSON.stringify(v));
+  }
+  function isObjRow(row) {
+    return row !== null && typeof row === "object" && !Array.isArray(row);
+  }
+  // 新增行：obj 元素 → 深拷贝元数据 default 对象（缺省 {}）；
+  // 标量元素 → default 本身（缺省空串，避免 undefined 污染 JSON）。
+  function newRow(rowDefault, scalar) {
+    if (scalar) { return rowDefault == null ? "" : clone(rowDefault); }
+    return isObjRow(rowDefault) ? clone(rowDefault) : {};
+  }
+  function addRow(rows, rowDefault, scalar) {
+    var out = (rows || []).map(clone);
+    out.push(newRow(rowDefault, scalar));
+    return out;
+  }
+  function delRow(rows, index) {
+    var i = Number(index);
+    var list = (rows || []).map(clone);
+    if (!isFinite(i) || i < 0 || i >= list.length) { return list; }
+    list.splice(i, 1);
+    return list;
+  }
+  // 改单元格：obj 行 → row[colKey] = value；标量行 → 整行替换为 value。
+  function setCell(rows, index, colKey, value, scalar) {
+    var out = (rows || []).map(clone);
+    var i = Number(index);
+    if (!isFinite(i) || i < 0 || i >= out.length) { return out; }
+    if (scalar) { out[i] = clone(value); return out; }
+    if (!isObjRow(out[i])) { out[i] = {}; }
+    out[i][String(colKey)] = clone(value);
+    return out;
+  }
+  function cellValue(row, colKey, scalar) {
+    if (scalar) { return colKey === "value" ? row : undefined; }
+    return isObjRow(row) ? row[colKey] : undefined;
+  }
+  return { clone: clone, isObjRow: isObjRow, newRow: newRow, addRow: addRow,
+           delRow: delRow, setCell: setCell, cellValue: cellValue };
+});
+/* EDITOR_LIST_END */
+
+/* 引用字段纯逻辑（批4 · 引用选择器；无 DOM 依赖，node 下走 module.exports）。
+ * 语义：保存的是目标标识；候选用于显示名称与可搜索筛选；值不在候选内只做黄提示（不拦）。 */
+/* EDITOR_REF_BEGIN */
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) { module.exports = factory(); }
+  else { root.EditorRef = factory(); }
+})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+  function norm(options) {
+    return (options || []).map(function (o) {
+      if (o && typeof o === "object") {
+        var oid = o.id == null ? "" : String(o.id);
+        return { id: oid, name: o.name == null ? oid : String(o.name) };
+      }
+      var sid = o == null ? "" : String(o);
+      return { id: sid, name: sid };
+    });
+  }
+  function ids(options) {
+    return norm(options).map(function (o) { return o.id; });
+  }
+  // 黄提示判定：空值 / 尚在加载（known 未定）→ 不标；目标无候选或值不在候选内 → 标黄。
+  function status(value, options, known) {
+    var cur = value == null ? "" : String(value);
+    if (!cur) { return { warn: false, text: "" }; }
+    if (known === undefined || known === null) { return { warn: false, text: "" }; }
+    if (known === false) {
+      return { warn: true, text: "引用目标在本包内暂无候选项（目标模块可能尚未建立）" };
+    }
+    if (ids(options).indexOf(cur) !== -1) { return { warn: false, text: "" }; }
+    return { warn: true, text: "该引用指向的目标不存在：" + cur };
+  }
+  function addRef(values, id) {
+    var cur = id == null ? "" : String(id);
+    var out = (values || []).map(function (x) { return String(x); });
+    if (!cur || out.indexOf(cur) !== -1) { return out; }
+    out.push(cur);
+    return out;
+  }
+  function delRef(values, id) {
+    var cur = id == null ? "" : String(id);
+    return (values || []).map(function (x) { return String(x); })
+      .filter(function (x) { return x !== cur; });
+  }
+  function filter(options, query) {
+    var q = query == null ? "" : String(query).trim().toLowerCase();
+    var rows = norm(options);
+    if (!q) { return rows; }
+    return rows.filter(function (r) {
+      return r.id.toLowerCase().indexOf(q) !== -1 || r.name.toLowerCase().indexOf(q) !== -1;
+    });
+  }
+  // 显示：命中候选 → 「名称（标识）」；未知标识 → 标识本身（供人工辨认）。
+  function label(id, options) {
+    var cur = id == null ? "" : String(id);
+    var hit = norm(options).filter(function (o) { return o.id === cur; })[0];
+    return hit && hit.name !== cur ? (hit.name + "（" + cur + "）") : cur;
+  }
+  return { norm: norm, ids: ids, status: status, addRef: addRef, delRef: delRef,
+           filter: filter, label: label };
+});
+/* EDITOR_REF_END */
+
 // ---------------------------------------------------------------------------
 // 类型显示名（框架级映射，与内容包无关）：FieldMeta.type → 中文
 // ---------------------------------------------------------------------------
@@ -388,7 +541,7 @@ var EMPTY_TEXT = "（空）";
 var state = {
   pack: null, modules: [], module: null, entries: [], entry: null, detail: null,
   filter: "", role: "owner", editable: true, backup: null, fieldIndex: {},
-  refCache: {}, busy: false, tabs: []
+  refCache: {}, refKnown: {}, refQuery: {}, busy: false, tabs: []
 };
 var draft = EditorDraft.newDraft();
 
@@ -520,7 +673,8 @@ function loadPacks() {
     sel.addEventListener("change", function () {
       if (!canLeave()) { sel.value = state.pack; return; }
       discardDraft();
-      state.pack = sel.value; state.module = null; state.entry = null; state.refCache = {};
+      state.pack = sel.value; state.module = null; state.entry = null;
+      state.refCache = {}; state.refKnown = {}; state.refQuery = {};  // 换包后引用候选必须重拉
       loadModules();
     });
   });
@@ -763,7 +917,12 @@ function editControl(f) {
     case "ref":
       return selectHtml(f.key, v, [], "（未选择）",
         ' data-ref="' + esc(f.ref_target || "") + '" data-current="'
-        + esc(v == null ? "" : v) + '"');
+        + esc(v == null ? "" : v) + '"')
+        + '<span class="refnote" data-refnote="' + esc(f.key) + '"></span>';
+    case "listtable":
+      return listTableEdit(f);
+    case "reflist":
+      return refListEdit(f);
     case "text":
     default:
       return '<input class="cin" type="text" data-key="' + esc(f.key) + '" value="'
@@ -818,6 +977,7 @@ function bindControls() {
         var t = inp.parentNode.querySelector(".btxt");
         if (t) { t.textContent = inp.checked ? "是" : "否"; }
       }
+      if (inp.dataset && inp.dataset.ref) { applyScalarRefWarning(inp); }
       markDirty();
     });
   });
@@ -834,15 +994,308 @@ function bindControls() {
         var cur = sel.dataset.current || "";
         sel.innerHTML = selectOptions(cur, opts, "（未选择）");
         sel.value = cur;  // 候选内命中；不在候选时由占位项承载
+        applyScalarRefWarning(sel);
       });
     }).catch(function () { /* 候选拉取失败：保留仅当前值，不阻断编辑 */ });
   });
+  // 批4：列表（可增删行表格）与引用多选（引用列表）的绑定
+  bindListSections(body);
+  bindRefListSections(body);
+  // 引用列表：候选到位后重画一次（黄提示 + 候选列表）；只拉一次，不在重画里递归拉取。
+  var rlByTarget = {};
+  Array.prototype.forEach.call(body.querySelectorAll("[data-rlwrap]"), function (wrap) {
+    var f = state.fieldIndex[wrap.dataset.rlwrap];
+    if (!f) { return; }
+    (rlByTarget[f.ref_target] = rlByTarget[f.ref_target] || []).push({ f: f, wrap: wrap });
+  });
+  Object.keys(rlByTarget).forEach(function (target) {
+    loadRefOptions(target).then(function () {
+      rlByTarget[target].forEach(function (it) { renderRefListField(it.f, it.wrap); });
+    }).catch(function () { /* 候选失败不阻断编辑 */ });
+  });
 }
+
+// ---------------------------------------------------------------------------
+// 批4 · 可增删行表格（列表字段；行内编辑写回草稿，不落盘）
+// ---------------------------------------------------------------------------
+function listTableBody(f) {
+  var rows = currentFieldValue(f);
+  if (!Array.isArray(rows)) { rows = []; }
+  var cols = f.columns || [];
+  var scalar = !!f.scalar_element;
+  var html = '<div class="lmeta">列表字段 · ' + rows.length + " 行 · 列名与类型来自内容包元数据"
+    + " · 改动先进草稿（不落盘）</div>";
+  if (!rows.length) {
+    html += '<div class="ex">（空列表）暂无数据行，用下面的「+ 添加一行」新建。</div>';
+  } else {
+    html += '<table class="ltable ltable-edit"><thead><tr>'
+      + cols.map(function (c) {
+        return "<th>" + fieldLabelHtml(c.label, c.key)
+          + ' <span class="ftype">' + esc(typeZh(c.type)) + "</span></th>";
+      }).join("")
+      + '<th class="op">操作</th></tr></thead><tbody>';
+    rows.forEach(function (row, i) {
+      html += "<tr>" + cols.map(function (c) {
+        return "<td>" + listCell(f, row, c, i, scalar) + "</td>";
+      }).join("")
+        + '<td class="op"><button type="button" class="ldel" data-ldel="' + i
+        + '" title="删除本行（只改草稿）">删除</button></td></tr>';
+    });
+    html += "</tbody></table>";
+  }
+  html += '<button type="button" class="ladd" data-ladd="' + esc(f.key)
+    + '" title="按元素元数据的默认值新建一行（只改草稿）">+ 添加一行</button>';
+  return html;
+}
+
+function listTableEdit(f) {
+  return '<div class="lwrap ltable-wrap" data-lwrap="' + esc(f.key) + '">'
+    + listTableBody(f) + "</div>";
+}
+
+function listCell(f, row, col, i, scalar) {
+  var v = EditorList.cellValue(row, col.key, scalar);
+  var attrs = ' data-lcell="' + esc(f.key) + '" data-lrow="' + i + '" data-lcol="' + esc(col.key) + '"';
+  switch (col.control) {
+    case "number":
+      return '<input class="cin lcell" type="number" step="' + esc(col.number_step || "any") + '"'
+        + attrs + ' value="' + esc(v == null ? "" : v) + '">';
+    case "bool":
+      return '<label class="ctl-bool"><input type="checkbox"' + attrs + (v ? " checked" : "")
+        + '> <span class="btxt">' + (v ? "是" : "否") + "</span></label>";
+    case "select":
+      return '<select class="cin lcell"' + attrs + ">"
+        + selectOptions(v, col.enum || [], "（未选择）") + "</select>";
+    case "ref":
+      return '<select class="cin lcell"' + attrs + ' data-lref="' + esc(col.ref_target || "")
+        + '" data-current="' + esc(v == null ? "" : v) + '">'
+        + selectOptions(v, [], "（未选择）") + "</select>";
+    case "readonly":
+      return '<span class="ro">' + esc(v == null ? "" : JSON.stringify(v)) + "</span>";
+    case "text":
+    case "textarea":
+    default:
+      return '<input class="cin lcell" type="text"' + attrs + ' value="'
+        + esc(v == null ? "" : v) + '">';
+  }
+}
+
+function readCellValue(inp, f) {
+  if (inp.type === "checkbox") { return !!inp.checked; }
+  if (inp.tagName === "SELECT") { return inp.value === "" ? null : inp.value; }
+  if (inp.classList.contains("lcell") && inp.type === "number") {
+    if (inp.value === "") { return null; }
+    var n = Number(inp.value);
+    return isNaN(n) ? inp.value : n;
+  }
+  return inp.value;
+}
+
+function rerenderListField(f, wrap) {
+  if (!wrap || !f) { return; }
+  wrap.innerHTML = listTableBody(f);
+  bindListSections(wrap);
+  markDirty();
+}
+
+function bindListSections(root) {
+  Array.prototype.forEach.call(root.querySelectorAll("[data-lcell]"), function (inp) {
+    var f = state.fieldIndex[inp.dataset.lcell];
+    if (!f) { return; }
+    var ev = (inp.type === "checkbox" || inp.tagName === "SELECT") ? "change" : "input";
+    inp.addEventListener(ev, function () {
+      var rows = currentFieldValue(f);
+      if (!Array.isArray(rows)) { rows = []; }
+      rows = EditorList.setCell(rows, inp.dataset.lrow, inp.dataset.lcol,
+        readCellValue(inp, f), !!f.scalar_element);
+      EditorDraft.set(draft, inp.dataset.lcell, rows, f.value);
+      if (inp.type === "checkbox") {
+        var t = inp.parentNode.querySelector(".btxt");
+        if (t) { t.textContent = inp.checked ? "是" : "否"; }
+      }
+      markDirty();
+    });
+    if (inp.dataset && inp.dataset.lref) { fillRefSelect(inp, inp.dataset.lref); }
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-ldel]"), function (btn) {
+    btn.addEventListener("click", function () {
+      var wrap = btn.closest(".lwrap");
+      var f = wrap ? state.fieldIndex[wrap.dataset.lwrap] : null;
+      if (!f) { return; }
+      var rows = EditorList.delRow(currentFieldValue(f), btn.dataset.ldel);
+      EditorDraft.set(draft, f.key, rows, f.value);
+      rerenderListField(f, wrap);
+    });
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-ladd]"), function (btn) {
+    btn.addEventListener("click", function () {
+      var f = state.fieldIndex[btn.dataset.ladd];
+      if (!f) { return; }
+      var wrap = btn.closest(".lwrap");
+      var rows = EditorList.addRow(currentFieldValue(f), f.row_default, !!f.scalar_element);
+      EditorDraft.set(draft, f.key, rows, f.value);
+      rerenderListField(f, wrap);
+    });
+  });
+}
+
+// 引用下拉（列表单元格 / 标量）：异步填候选；非法值只标黄，不拦编辑。
+function fillRefSelect(sel, target) {
+  if (!target) { return; }
+  loadRefOptions(target).then(function (opts) {
+    var cur = sel.dataset.current || "";
+    sel.innerHTML = selectOptions(cur, opts, "（未选择）");
+    sel.value = cur;
+    markRefWarn(sel, target);
+  }).catch(function () { /* 候选失败不阻断 */ });
+}
+
+function markRefWarn(sel, target) {
+  var opts = state.refCache[target] || [];
+  var st = EditorRef.status(sel.value === "" ? null : sel.value,
+    EditorRef.ids(opts), state.refKnown[target]);
+  sel.classList.toggle("warn", st.warn);
+  sel.title = st.text || "";
+}
+
+function applyScalarRefWarning(sel) {
+  var target = sel.dataset.ref;
+  var opts = state.refCache[target] || [];
+  var st = EditorRef.status(sel.value === "" ? null : sel.value,
+    EditorRef.ids(opts), state.refKnown[target]);
+  var note = sel.parentNode ? sel.parentNode.querySelector(".refnote") : null;
+  if (note) {
+    note.innerHTML = st.warn ? '<span class="refwarn">' + esc(st.text) + "</span>" : "";
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 批4 · 引用选择器（多选 / 引用列表；元素为 ref 的 list）
+// ---------------------------------------------------------------------------
+function refListEdit(f) {
+  return '<div class="lwrap reflist-wrap" data-rlwrap="' + esc(f.key) + '">'
+    + refListBody(f) + "</div>";
+}
+
+function refListBody(f) {
+  var values = currentFieldValue(f);
+  if (!Array.isArray(values)) { values = []; }
+  var target = f.ref_target || "";
+  var opts = state.refCache[target] || [];
+  var known = state.refKnown[target];
+  var html = '<div class="lmeta">引用列表 · 已选 ' + values.length + " 项 · 保存的是目标标识，名称仅用于显示"
+    + "</div>";
+  html += '<div class="refvals" data-rfvals="' + esc(f.key) + '">';
+  html += refValChips(values, opts, known);
+  html += "</div>";
+  html += '<div class="refsel"><div class="rf-hd"><span class="q">搜索</span>'
+    + '<input type="text" class="rf-q" data-refq="' + esc(f.key)
+    + '" placeholder="输入名称或标识筛选候选" value="'
+    + esc(state.refQuery[f.key] || "") + '">'
+    + '<span class="q rf-cnt" data-rfcnt="' + esc(f.key) + '"></span></div>'
+    + '<div class="rf-list" data-reflist="' + esc(f.key) + '"></div>'
+    + '<div class="rf-ft"><span>点候选项加入；再次点「清除」移除。</span><span class="sp2">'
+    + (known === false ? "本包内该引用目标暂无候选" : "") + "</span></div></div>";
+  return html;
+}
+
+function refValChips(values, opts, known) {
+  if (!values.length) { return '<span class="ex">（未选择任何引用）</span>'; }
+  return values.map(function (id) {
+    var st = EditorRef.status(id, opts, known);
+    return '<span class="refval' + (st.warn ? " warn" : "") + '" title="' + esc(st.text) + '">'
+      + '<span class="mono2">' + esc(EditorRef.label(id, opts)) + "</span>"
+      + (st.warn ? '<span class="refwarn">目标不存在</span>' : "")
+      + '<button type="button" class="ldel" data-refdel="' + esc(id) + '">清除</button></span>';
+  }).join("");
+}
+
+function refCandidateList(f) {
+  var target = f.ref_target || "";
+  var opts = state.refCache[target] || [];
+  var rows = EditorRef.filter(opts, state.refQuery[f.key] || "");
+  if (!rows.length) {
+    return '<div class="rf-ft" style="border-top:0"><span>'
+      + (state.refKnown[target] === false
+        ? "本包内该引用目标暂无候选项；可先去目标模块建立条目。"
+        : "没有匹配的候选项；换个关键词试试。")
+      + "</span></div>";
+  }
+  return rows.map(function (o) {
+    return '<div class="rf-it" data-refpick="' + esc(o.id) + '" data-refpickkey="'
+      + esc(f.key) + '" title="加入：' + esc(o.id) + '">' + esc(o.name)
+      + '<span class="id2">' + esc(o.id) + "</span></div>";
+  }).join("");
+}
+
+function renderRefListField(f, wrap) {
+  if (!wrap || !f) { return; }
+  var scroll = wrap.querySelector(".rf-list");
+  var keep = scroll ? scroll.scrollTop : 0;
+  wrap.innerHTML = refListBody(f);
+  var list = wrap.querySelector(".rf-list");
+  if (list) { list.innerHTML = refCandidateList(f); }
+  var cnt = wrap.querySelector(".rf-cnt");
+  if (cnt) { cnt.textContent = (state.refCache[f.ref_target] || []).length + " 条匹配候选"; }
+  if (list) { list.scrollTop = keep; }
+  bindRefListSections(wrap);
+  markDirty();
+}
+
+function bindRefListSections(root) {
+  // 候选列表渲染 + 点选绑定（本函数不做候选拉取，避免 re-render ⇄ load 互相触发）
+  Array.prototype.forEach.call(root.querySelectorAll("[data-reflist]"), function (box) {
+    var f = state.fieldIndex[box.dataset.reflist];
+    if (!f) { return; }
+    var wrap = box.closest(".reflist-wrap");
+    box.innerHTML = refCandidateList(f);
+    var cnt = wrap.querySelector(".rf-cnt");
+    if (cnt) { cnt.textContent = (state.refCache[f.ref_target] || []).length + " 条匹配候选"; }
+    bindRefPicks(box, f, wrap);
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-refq]"), function (inp) {
+    inp.addEventListener("input", function () {
+      var key = inp.dataset.refq;
+      var f = state.fieldIndex[key];
+      if (!f) { return; }
+      state.refQuery[key] = inp.value;
+      var wrap = inp.closest(".reflist-wrap");
+      var box = wrap.querySelector("[data-reflist]");
+      if (box) { box.innerHTML = refCandidateList(f); }
+      bindRefPicks(box, f, wrap);
+    });
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-refdel]"), function (btn) {
+    btn.addEventListener("click", function () {
+      var wrap = btn.closest(".reflist-wrap");
+      var f = wrap ? state.fieldIndex[wrap.dataset.rlwrap] : null;
+      if (!f) { return; }
+      var vals = EditorRef.delRef(currentFieldValue(f), btn.dataset.refdel);
+      EditorDraft.set(draft, f.key, vals, f.value);
+      renderRefListField(f, wrap);
+    });
+  });
+}
+
+function bindRefPicks(box, f, wrap) {
+  if (!box) { return; }
+  Array.prototype.forEach.call(box.querySelectorAll("[data-refpick]"), function (it) {
+    it.addEventListener("click", function () {
+      var vals = EditorRef.addRef(currentFieldValue(f), it.dataset.refpick);
+      EditorDraft.set(draft, f.key, vals, f.value);
+      renderRefListField(f, wrap);
+      var q = wrap ? wrap.querySelector(".rf-q") : null;
+      if (q) { q.focus(); }   // 连续挑选：重画后把光标放回搜索框
+    });
+  });
+}
+
 
 function loadRefOptions(target) {
   if (state.refCache[target]) { return Promise.resolve(state.refCache[target]); }
   return api("/api/pack/" + enc(state.pack) + "/refs/" + enc(target)).then(function (d) {
     state.refCache[target] = d.options || [];
+    state.refKnown[target] = d.known !== false;  // 目标无候选 → false（黄提示，不红拦）
     return state.refCache[target];
   });
 }

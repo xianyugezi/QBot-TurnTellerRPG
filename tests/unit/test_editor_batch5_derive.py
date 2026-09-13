@@ -508,6 +508,11 @@ def test_frontend_association_pane_and_forms() -> None:
     # 关联分区不写死任何内容包模块名（通用性护栏）
     for banned in ('"skill_chains"', '"skills"', '"veinborn"', '"test_demo"'):
         assert banned not in pane, banned
+    # 关联页签 data-g 必须用 forEach 下标（曾误用 a.idx → 渲染成 data-g="NaN"，页签点不开；
+    # 实机 headless 复现后修复，这里钉住防回归）
+    detail = html[html.index("function renderDetail("):html.index("function assocPaneHtml(")]
+    assert "groupTabs.length + ai" in detail
+    assert "a.idx" not in detail
 
 
 def test_frontend_condition_editor_wiring() -> None:

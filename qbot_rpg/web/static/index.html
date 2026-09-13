@@ -1480,8 +1480,8 @@ function renderDetail(d) {
         : '<div class="rows2">' + g.fields.map(fieldRow).join("") + "</div>")
       + "</div>";
   });
-  assoc.forEach(function (a) {
-    var gi = groupTabs.length + a.idx;
+  assoc.forEach(function (a, ai) {
+    var gi = groupTabs.length + ai;
     html += '<div class="gpane"' + (gi === 0 ? "" : " hidden") + ' data-g="' + gi + '">'
       + assocPaneHtml(a) + "</div>";
   });

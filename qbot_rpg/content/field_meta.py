@@ -91,14 +91,18 @@ F_TYPE = FieldMeta(type="str")  # type 枚举由正式元数据表注入（细�
 # 效果引用列表（items/equipment/traits/enemies 通用）
 F_EFFECTS = FieldMeta(type="list", element=FieldMeta(type="ref", ref_target="effect"))
 
-# 常见数值字段（range 仅 Y-1 提示用）
+# 常见数值字段（range 仅 Y-1 提示用）。批4.6：unit = 说明卡「数值 / 比例」判定
+# 用的展示单位（只影响说明文案，不参与任何校验判定）。
 F_PRICE = FieldMeta(type="number", range_min=0, range_max=50000)
-F_ATK = FieldMeta(type="number", range_min=0, range_max=5000)
-F_DEF = FieldMeta(type="number", range_min=0, range_max=5000)
-F_HP = FieldMeta(type="number", range_min=0, range_max=99999)
+F_ATK = FieldMeta(type="number", range_min=0, range_max=5000, unit="点")
+F_DEF = FieldMeta(type="number", range_min=0, range_max=5000, unit="点")
+F_HP = FieldMeta(type="number", range_min=0, range_max=99999, unit="点")
 F_POWER = FieldMeta(type="number", range_min=0, range_max=500)
-F_DURATION = FieldMeta(type="number", range_min=0, range_max=999)
-F_MAX_STACK = FieldMeta(type="int", zero_unlimited=True, range_min=0, range_max=999)
+# 技能倍率（skills.power；按百分比算，100 = 一倍威力）——与 action/effects 的 power 不同，
+# 单列一个常量，避免把「倍率 %」误挂到效果强度/行动威力上（批4.6）。
+F_SKILL_POWER = FieldMeta(type="number", range_min=0, range_max=500, unit="%")
+F_DURATION = FieldMeta(type="number", range_min=0, range_max=999, unit="回合")
+F_MAX_STACK = FieldMeta(type="int", zero_unlimited=True, range_min=0, range_max=999, unit="层")
 F_PROBABILITY = FieldMeta(type="number", probability=True, range_min=0.0, range_max=1.0)
 F_DROP_RATE = FieldMeta(type="number", probability=True, range_min=0.0, range_max=1.0)
 
@@ -117,6 +121,9 @@ ENEMY_STATS_CHILDREN: Dict[str, FieldMeta] = {
     "agi": FieldMeta(type="number", range_min=0, range_max=9999),
     "luk": FieldMeta(type="number", range_min=0, range_max=9999),
 }
+# 九属性单位统一为「点」（批4.6 展示维度；说明卡据此判「数值」而非「比例」）。
+ENEMY_STATS_CHILDREN = {
+    k: replace(v, unit="点") for k, v in ENEMY_STATS_CHILDREN.items()}
 # 双维弱点（1.3 W01-W02；elements 键=元素 ID → 增伤倍率，元素注册表引用检查归 A2 R3）
 WEAKNESS_CHILDREN: Dict[str, FieldMeta] = {
     "types": FieldMeta(type="list", element=FieldMeta(type="str")),
@@ -1071,9 +1078,11 @@ JOBS_FIELD_LABELS: Dict[str, str] = {
 # docs/veinborn/03_schema_修正稿.md、既有 *_FIELD_LABELS、data/gear_stats.GEAR_LABELS_ZH；
 # 术语冲突按 docs/编辑器重写_需求与约束.md §六（mp 法力 / con 体质 / mag 法强 / pv 防护值）。
 def _soft_display(label: str, ftype: str = "str",
-                  children: Optional[Mapping[str, FieldMeta]] = None) -> FieldMeta:
-    """纯展示子字段（soft_label=True → 泛型校验短路、永不红拦；仅供编辑器显示中文名）。"""
-    return FieldMeta(type=ftype, soft_label=True, label=label, children=dict(children or {}))
+                  children: Optional[Mapping[str, FieldMeta]] = None,
+                  help: Optional[str] = None) -> FieldMeta:
+    """纯展示子字段（soft_label=True → 泛型校验短路、永不红拦；仅供编辑器显示中文名/说明）。"""
+    return FieldMeta(type=ftype, soft_label=True, label=label, children=dict(children or {}),
+                     help=(help or ""))
 
 
 def _soft_list(label: str, spec: Mapping[str, Any]) -> FieldMeta:
@@ -1101,22 +1110,46 @@ def _soft_tree(spec: Mapping[str, Any]) -> Dict[str, FieldMeta]:
     return out
 
 
+def _split_help(sub: Any) -> Tuple[Optional[str], Optional[Mapping[str, Any]]]:
+    """从嵌套说明表的一项里拆出（本字段说明, 子字段说明表）。
+
+    · 字符串 → 本字段说明（无子说明）；
+    · 映射   → `_help` 键为本字段说明，其余键为子字段说明（递归同形态）。
+    """
+    if isinstance(sub, str):
+        return (sub or None, None)
+    if isinstance(sub, Mapping):
+        own = sub.get("_help")
+        kids = {k: v for k, v in sub.items() if k != "_help"}
+        return (str(own) if own else None, kids or None)
+    return (None, None)
+
+
 def _decorate_one(fm: FieldMeta, label: Optional[str],
-                  nested: Optional[Mapping[str, Any]]) -> FieldMeta:
-    """对单个字段补 label + 递归装饰 children / element.children（只补展示层）。"""
+                  nested: Optional[Mapping[str, Any]],
+                  help_text: Optional[str] = None,
+                  nested_helps: Optional[Mapping[str, Any]] = None) -> FieldMeta:
+    """对单个字段补 label/help + 递归装饰 children / element.children（只补展示层）。
+
+    批4.6 起同时可补 `help`（人工说明）；说明表**只作用于已声明的 children 键**，
+    不会凭空新建字段节点（未登记键由嵌套中文名表 spec 负责补 soft_label 展示节点）。
+    """
     kw: Dict[str, object] = {}
     if label and not fm.label:
         kw["label"] = label
-    if nested and fm.type == "obj":
-        kids = _decorate_tree(fm.children, nested) if fm.children \
-            else _decorate_tree({}, nested)
+    if help_text and not fm.help:
+        kw["help"] = help_text
+    has_nested = bool(nested) or bool(nested_helps)
+    if has_nested and fm.type == "obj":
+        kids = _decorate_tree(fm.children if fm.children else {},
+                              nested or {}, nested_helps)
         if kids is not None:
             kw["children"] = kids
-    elif nested and fm.type == "list":
+    elif has_nested and fm.type == "list":
         elem = fm.element
         if elem is None or elem.type == "obj":
             base = elem.children if (elem is not None and elem.children) else {}
-            kids = _decorate_tree(base, nested)
+            kids = _decorate_tree(base, nested or {}, nested_helps)
             if kids is not None:
                 kw["element"] = replace(
                     elem if elem is not None else FieldMeta(type="obj"),
@@ -1125,8 +1158,13 @@ def _decorate_one(fm: FieldMeta, label: Optional[str],
 
 
 def _decorate_tree(children: Mapping[str, FieldMeta],
-                   spec: Mapping[str, Any]) -> Optional[Mapping[str, FieldMeta]]:
-    """按嵌套中文名表装饰一层 children；有变化返回新表，无变化返回 None（不传 children=）。"""
+                   spec: Mapping[str, Any],
+                   helps: Optional[Mapping[str, Any]] = None) -> Optional[Mapping[str, FieldMeta]]:
+    """按嵌套中文名表装饰一层 children；有变化返回新表，无变化返回 None（不传 children=）。
+
+    `helps`（批4.6）= 与 spec 平行的嵌套**说明**表；只对已存在的 children 键生效，
+    不新增节点（未登记键的 soft 节点由 spec 负责）。
+    """
     changed = False
     out: Dict[str, FieldMeta] = {}
     for key, fm in children.items():
@@ -1136,19 +1174,24 @@ def _decorate_tree(children: Mapping[str, FieldMeta],
             (sub.label if isinstance(sub, FieldMeta) else None))
         nested = ({k: v for k, v in sub.items() if k != "_label"}
                   if isinstance(sub, Mapping) else None)
-        new_fm = _decorate_one(fm, label, nested)
+        help_text, nested_helps = _split_help(helps.get(key) if helps else None)
+        new_fm = _decorate_one(fm, label, nested, help_text, nested_helps)
         if new_fm is not fm:
             changed = True
         out[key] = new_fm
     for key, sub in spec.items():
         if key in children or key == "_label":
             continue
+        help_text, nested_helps = _split_help(helps.get(key) if helps else None)
         if isinstance(sub, FieldMeta):
-            out[key] = sub if sub.soft_label else replace(sub, soft_label=True)
+            base = sub if sub.soft_label else replace(sub, soft_label=True)
+            out[key] = replace(base, help=help_text) if (help_text and not base.help) else base
         elif isinstance(sub, Mapping):
-            out[key] = _soft_display(str(sub.get("_label", key)), "obj", _soft_tree(sub))
+            label = str(sub.get("_label", key))
+            help_text = help_text or str(sub.get("_help") or "") or None
+            out[key] = _soft_display(label, "obj", _soft_tree(sub), help=help_text)
         else:
-            out[key] = _soft_display(str(sub))
+            out[key] = _soft_display(str(sub), help=help_text)
         changed = True
     return out if changed else None
 
@@ -1556,11 +1599,378 @@ SETTINGS_FIELD_LABELS: Dict[str, str] = {
 CONDITIONAL_FIELD_LABELS: Dict[str, str] = {"conditional": "条件加成"}
 
 
+# =====================================================================================
+# 编辑器重写批4.6：字段**说明**元数据（说明卡「人工补充」部分；只补 FieldMeta.help）
+# =====================================================================================
+# 口径（与 *_FIELD_LABELS 同款，只加展示维度）：
+#   · 只写**有依据**的高频/易错字段：依据 = stats.json / docs/m2_shared_contract /
+#     docs/m3_shared_contract / docs/m13_6a~6c / docs/m8_shared_contract / 各字段定义处注释；
+#     无依据的字段**不瞎写**，缺省（无 help）时编辑器只用自动拼装内容，不报错；
+#   · 一句话说明「这个字段干什么、填多少、是数值还是比例」；用词遵循需求 §六 术语表
+#     （mp 法力 / con 体质 / mag 法强 / pv 防护值），不造词；
+#   · 嵌套字段用 `*_CHILD_HELP`（形态与 *_CHILD_LABELS 平行：str 或
+#     {`_help`: 本节点说明, 子键: …}）；说明只作用于**已声明**的子字段，不新增字段节点；
+#   · 数值单位走 FieldMeta.unit（定义处直接声明），说明卡自动拼装时据此判定「数值 / 比例」。
+# 覆盖模块：skills / enemies / items / equipment / effects / statuses / marks /
+#           skill_chains / action / settings（本批必做 10 个）。
+SKILLS_FIELD_HELP: Dict[str, str] = {
+    "id": "技能的唯一标识；派生链、反击技、怪物技能表都用它引用这个技能。",
+    "name": "技能显示名，出现在技能卡、战报与列表中。",
+    "kind": "技能类别：damage 伤害 / heal 治疗 / status 状态 / control 控制 / utility 功能。",
+    "type": "技能时机：basic 普攻 / active 主动 / passive 被动 / trigger 触发。",
+    "attack_type": "攻击类型（斩 / 打 / 突 / 魔 / 无）；留空表示按武器决定。",
+    "element": "技能元素（八元素之一）；留空或 null 表示按武器元素。",
+    "tag": "连段标签：none 连段外 / combo 可接 / combo_preserve 保持连段 / "
+           "combo_push 推进连段 / interrupt 打断 / armor 霸体。",
+    "armor": "开启后发动期间霸体，不被打断。",
+    "interrupt": "开启后该技能命中可打断对方行动。",
+    "position_rule": "方位命中规则：从哪个方位打才命中、有没有方位加成；由方位系统判定。",
+    "air_policy": "对空中目标的处理策略（能否命中、是否击落等）。",
+    "block_mode": "格挡模式：auto 按默认规则 / normal 正常被格挡 / ignore 无视格挡。",
+    "power": "技能倍率，按百分比算（100 = 一倍威力；常见 10~500）。",
+    "break_power": "破坏力固有值，参与部位破坏计算（建议 0~500）。",
+    "mp_cost": "每次施放消耗的法力点数；普攻通常为 0。",
+    "cooldown": "施放后的冷却回合数；0 表示无冷却。",
+    "hits": "一段行动内独立结算的段数；1 表示只打一下。",
+    "hit_mod": "命中率乘数修正（1 = 不变；大于 1 更容易命中）。",
+    "crit_mod": "会心判定乘数修正（1 = 不变；大于 1 更容易会心）。",
+    "action_time": "发动后占据的行动条时长（反应窗口）；缺省取 ctb 默认值。",
+    "air_extend": "跃空窗口延长的行动条数量；缺省取 ctb 配置。",
+    "recovery": "行动结束后的行动条恢复量；缺省取 ctb.default_recovery。",
+    "stun": "命中积累的气绝值；气绝满会使目标硬直。",
+    "trigger_limit": "触发上限：per_round 每回合最多几次 / per_battle 每场最多几次；0 = 不限。",
+    "level": "升级配置：max 最高等级 / growth 每级倍率列表；留空表示该技能不升级。",
+    "effects": "技能附加效果：可引用已有效果（effect），也可写原子动作（type/…）；可留空。",
+    "chain_refs": "本技能可转入的派生链引用（skill_chains 的标识）。",
+    "consume_marks": "施放时消耗的印记与层数，形如 {印记标识: 层数}；留空表示不消耗。",
+    "job_restrict": "允许使用本技能的职业列表；留空表示所有职业可用。",
+    "job_form": "形态技绑定的形态名（对应职业 transform 的目标形态）；留空 = 非形态技。",
+    "counter_type": "防反 / 闪反姿态标记：parry 防反 / dodge 闪反。",
+    "counter_skill": "姿态成功时派生反击的技能标识。",
+    "revert_form": "还原技标记：处于形态时用它切回原形态。",
+    "derive_only": "开启后该技能只能由派生链进入，不直接出现在可用技能列表里。",
+    "energy_gain": "资源轴（能量）的增减配置；键为资源轴名、值为增减量。",
+    "energy_cost": "资源轴（能量）的消耗配置；键为资源轴名、值为消耗量。",
+    "season": "季节技能组：只在指定季节可用。",
+    "combo_table": "组合表达表：按条件切换不同效果行的配置。",
+    "skill": "旧格式的技能引用（兼容旧内容包）；新内容请用 chain_refs。",
+    "desc": "一句话说明，显示在技能卡、战报与悬浮说明里。",
+    "brief": "简述：可自由写标签文字，也可留空（留空 = 列表里不显示简述行）。",
+    "detail": "详情长文本，编辑器里用大输入框填写。",
+}
+SKILLS_CHILD_HELP: Dict[str, Any] = {
+    "level": {"max": "技能最高等级（1~99）。",
+              "growth": "每级倍率列表，长度应与最高等级一致。",
+              "_help": "技能的升级配置。"},
+    "trigger_limit": {"per_round": "每回合最多触发次数；0 = 不限。",
+                      "per_battle": "每场战斗最多触发次数；0 = 不限。",
+                      "_help": "技能触发的次数上限。"},
+    "effects": {"type": "原子动作类型（damage / mark_add / status_add…）。",
+                "effect": "引用的效果标识（effects 注册表）。",
+                "target": "效果作用对象（self 自身 / enemy 敌方）。",
+                "count": "施加层数或数量。",
+                "pct": "数值是否按百分比解释。",
+                "mark": "关联的印记标识。",
+                "status_id": "关联的状态标识。",
+                "marks_on": "需要目标身上已有的印记。",
+                "polarity": "效果极性（正面 / 负面）。",
+                "overrides": "对引用效果的数值覆盖。",
+                "_help": "技能附加效果的一条（引用效果或原子动作）。"},
+    "consume_marks": {"_help": "施放消耗的 {印记标识: 层数} 表。"},
+}
+
+ENEMIES_FIELD_HELP: Dict[str, str] = {
+    "id": "怪物唯一标识；地图刷怪、掉落与 AI 都用它引用。",
+    "name": "怪物显示名。",
+    "tier": "怪物档位：normal 普通 / elite 精英 / boss 首领 / training 训练木桩。",
+    "type": "怪物类型标记（dummy = 训练木桩）；旧包的 type:monster 仍兼容。",
+    "area": "所属区域名（用于图鉴/叙事分组，不决定刷怪地图）。",
+    "desc": "图鉴里的一句话说明。",
+    "stats": "怪物九属性基础值（生命/法力/力量/智力/体质/精神/专注/敏捷/幸运）；"
+             "留空的属性按默认值处理。",
+    "weakness": "弱点：types 弱点类型 / elements 弱点元素；命中弱点有额外收益。",
+    "resistance": "抗性：immune 免疫的效果 / stun 气绝抗性。",
+    "pv": "防护值（0~500）：击破前本体减伤；训练木桩强制为 0。",
+    "pv_recover": "防护值恢复时机：battle_end 战斗结束时回满 / none 不恢复。",
+    "def_base": "基础防御值（木桩向字段）。",
+    "elem_res": "元素抗性表：元素标识 → 正数减伤 / 负数增伤。",
+    "hp": "旧格式的生命值，保留兼容旧内容包；新内容请写在 stats 段里。",
+    "atk": "旧格式的攻击值，保留兼容旧内容包；新内容请写在 stats 段里。",
+    "def": "旧格式的防御值，保留兼容旧内容包；新内容请写在 stats 段里。",
+    "monster_def_rate": "怪物防御率：1.0 = 与玩家同档；越高越抗打，可填负数（运行时按 0 兜底）。",
+    "drop_rate": "掉落率系数（0~1 的比例，按百分比表示），作为掉落表的整体调整值。",
+    "actions": "普通行动表：每项包含行动引用、权重、概率、条件与冷却。",
+    "special_actions": "特殊行动表：条件触发型行动（触发类型/阈值/时机/触发后状态等）。",
+    "chains": "连招表：一段行动后按概率衔接的后续行动。",
+    "drops": "掉落表：battle 战斗掉落 / special 特殊掉落 / death 死亡掉落。",
+    "lore": "图鉴条目：解锁进度与说明文字。",
+    "effects": "怪物自带效果列表（引用效果注册表）。",
+    "traits": "怪物特性列表（引用特性注册表）。",
+    "skills": "怪物技能表（技能标识列表）。",
+    "parts": "部位破坏表：每个部位的破坏阈值、可达方位、命中优先级与破位行为。",
+    "ai": "AI 行为配置：状态机与状态转移条件。",
+    "phases": "阶段表：按血量阈值切换行动与播报。",
+    "rewards": "讨伐奖励（经验等）。",
+    "zone_change": "换区行为：残血到阈值时切换目标怪物。",
+}
+ENEMIES_CHILD_HELP: Dict[str, Any] = {
+    "stats": {"hp": "生命基础值。", "mp": "法力基础值。", "str": "力量基础值。",
+              "int": "智力基础值。", "con": "体质基础值。", "spr": "精神基础值。",
+              "foc": "专注基础值。", "agi": "敏捷基础值。", "luk": "幸运基础值。"},
+    "weakness": {"types": "弱点类型列表。", "elements": "弱点元素列表。"},
+    "resistance": {"immune": "免疫的效果列表。", "stun": "气绝抗性。"},
+    "actions": {"action": "行动引用（action 注册表）。", "probability": "选择概率（0~1 的比例）。",
+                "weight": "入池权重：越大越容易被选到。", "condition": "选择条件。",
+                "cooldown": "该行动的冷却回合数。", "hungry": "饥饿值消耗。"},
+    "special_actions": {
+        "id": "特殊行动标识。", "action": "引用的行动。", "once": "是否整场只触发一次。",
+        "priority": "多个特殊行动的判定优先级。", "trigger_cooldown": "触发冷却回合数。",
+        "max_triggers": "最多触发次数。", "chain_ref": "触发的连招引用。", "desc": "说明文字。",
+        "trigger": {"type": "触发类型。", "value": "触发阈值。", "timing": "判定时机。",
+                    "action": "参照的行动。", "chance": "触发概率（0~1 的比例）。",
+                    "which": "作用对象。", "side": "方位条件。", "height": "高度条件。",
+                    "mark": "参照的印记。", "min": "印记最少层数。", "absent": "是否需要印记不存在。"},
+        "post_state": {"state": "触发后进入的状态。", "turns": "状态持续回合数。"},
+    },
+    "chains": {"id": "连招标识。",
+               "actions": {"action": "衔接的行动。", "chance": "衔接概率（0~1 的比例）。",
+                           "role": "衔接角色。", "armor": "衔接期间是否霸体。"}},
+    "drops": {"battle": {"_help": "战斗胜利掉落。", "item": "掉落物品。",
+                         "chance": "掉落概率（0~1 的比例）。", "condition": "掉落条件。",
+                         "count": "掉落数量或数量区间。"},
+              "special": {"_help": "特殊掉落。", "item": "掉落物品。",
+                          "chance": "掉落概率（0~1 的比例）。", "condition": "掉落条件。",
+                          "count": "掉落数量或数量区间。"},
+              "death": {"_help": "死亡掉落。", "item": "掉落物品。",
+                        "chance": "掉落概率（0~1 的比例）。", "condition": "掉落条件。",
+                        "count": "掉落数量或数量区间。"}},
+    "lore": {"unlock": "图鉴解锁进度。", "desc": "图鉴说明文字。"},
+    "parts": {"id": "部位标识。", "name": "部位名。", "break_threshold": "破坏阈值（建议 0~99999）。",
+              "target_priority": "被命中优先级。",
+              "positions": {"side": "可达方位。", "height": "可达高度。"},
+              "on_break": {"knockdown": "破位后倒地时长（次行动）。", "marks": "破位施加的印记。",
+                           "effects": "破位触发的效果。"},
+              "_help": "怪物可破坏部位的一条。"},
+    "ai": {"transitions": {"from": "源状态。", "to": "目标状态。", "condition": "切换条件。",
+                           "_help": "AI 状态转移的一条。"}},
+    "phases": {"threshold": "进入本阶段的血量阈值。", "enter_action": "进入阶段时执行的行动。",
+               "broadcast": "进入阶段时的播报文案。",
+               "actions": {"action": "阶段内的行动。", "weight": "入池权重。",
+                           "probability": "选择概率（0~1 的比例）。", "_help": "阶段行动表。"},
+               "_help": "怪物阶段表的一条。"},
+    "rewards": {"exp": "讨伐获得的经验值。"},
+    "zone_change": {"enabled": "是否启用换区。", "hp_threshold": "触发换区的残血阈值。",
+                    "targets": "换区目标怪物。", "timing": "切换时机。"},
+}
+
+ITEMS_FIELD_HELP: Dict[str, str] = {
+    "id": "物品唯一标识；商店、掉落、配方都用它引用。",
+    "name": "物品显示名。",
+    "type": "物品类别（武器 / 防具 / 消耗品 / 素材…）；装备类物品会进入装备模块。",
+    "slot": "装备部位（如 weapon / armor）；普通物品留空。",
+    "bind": "开启后装备或使用即绑定。",
+    "usable": "开启后可以在背包里直接使用。",
+    "quality": "品质档：common 普通 / uncommon 精良 / rare 史诗 / legendary 传说。",
+    "rarity": "素材稀有度：普通 / 稀有 / 金色。",
+    "material_tier": "素材档位（锻造与炼金使用）。",
+    "price": "基础售价（以默认货币计的数量）。",
+    "atk": "攻击加成（白值，单位：点）。",
+    "def": "防御加成（旧键，单位：点）；现行键请用 dfn。",
+    "dfn": "防御加成（白值，单位：点）。",
+    "foc": "专注加成（白值，单位：点）。",
+    "hp": "生命加成（白值，单位：点）。",
+    "agi": "敏捷加成（白值，单位：点）。",
+    "elements": "元素属性值：八元素（地/水/火/风/雷/晶/月/无）的投料累计值。",
+    "base_effects": "基础效果（固定数值，引用效果注册表）；标准珠只有这一套。",
+    "effects": "附加效果列表（引用效果注册表）。",
+    "traits": "特性列表（引用特性注册表）。",
+    "awaken": "觉醒标记：开启表示可作为觉醒素材。",
+    "seed": "种植标记：开启或写收获表表示可种植。",
+    "source": "来源说明（掉落 / 商店 / 合成等）。",
+    "desc": "说明文字。",
+}
+# 装备词条键（GEAR_*）说明按注册表口径批量生成（唯一源 = data/gear_stats.py：
+# FLAT=白值加算、PCT=百分点、COMBAT=战斗直读），不手写、不造词。
+for _k in GEAR_FLAT_KEYS:
+    ITEMS_FIELD_HELP.setdefault(_k, "属性加成（白值加算，单位：点）。")
+for _k in GEAR_PCT_KEYS:
+    ITEMS_FIELD_HELP.setdefault(_k, "百分比加成（单位：百分点，5 = +5%）。")
+ITEMS_FIELD_HELP.setdefault("crit", "会心加成（百分点，可填负数；战斗直读）。")
+ITEMS_FIELD_HELP.setdefault("earplug", "耳栓等级（上限 2；用于反制咆哮）。")
+ITEMS_FIELD_HELP.setdefault("super_crit_lv", "超会心等级（上限 3）。")
+ITEMS_FIELD_HELP.setdefault("elem_crit_lv", "属性会心等级（上限 3）。")
+EQUIPMENT_FIELD_HELP: Dict[str, str] = dict(ITEMS_FIELD_HELP)
+EQUIPMENT_FIELD_HELP["excludes"] = "互斥部位：装备这些部位时不能同时装备本件（成环会被校验拦下）。"
+ITEMS_CHILD_HELP: Dict[str, Any] = {
+    "elements": {el: f"{el}元素累计值。" for el in ALCHEMY_ELEMENTS},
+}
+
+EFFECTS_FIELD_HELP: Dict[str, str] = {
+    "id": "效果唯一标识；技能与状态用它引用这个效果。",
+    "name": "效果显示名。",
+    "type": "效果类别：damage 伤害 / heal 治疗 / status 状态 / control 控制 / utility 功能等。",
+    "power": "效果强度数值（伤害量、治疗量或加成量，含义随类型而定）。",
+    "duration": "效果持续回合数；0 或留空表示即时生效或不限制。",
+    "probability": "触发概率（0~1 的比例，按百分比表示）。",
+    "max_stack": "最大叠加层数；0 = 不限。",
+    "require_status": "生效需要目标已有的状态（引用状态注册表）。",
+    "apply_status": "命中后施加的状态（引用状态注册表）。",
+    "require_mark": "生效需要目标已有的印记（引用印记注册表）。",
+    "apply_mark": "命中后施加的印记（引用印记注册表）。",
+    "patch": "数值补丁：target 目标属性 / value 数值 / pct 是否按百分比。",
+    "actions": "效果附属行动表。",
+    "class": "效果分类。",
+    "control_type": "控制类型（眩晕 / 沉默 / 击退等）。",
+    "count": "层数或次数。",
+    "desc": "说明文字。",
+    "filter": "效果的筛选条件。",
+    "mark": "关联的印记标识。",
+    "marks_on": "需要目标身上已有的印记。",
+    "part_break_per_tick": "每个回合积累的部位破坏值。",
+    "pct": "数值是否按百分比解释。",
+    "polarity": "效果极性（正面 / 负面）。",
+    "skip_turn": "是否让目标跳过回合。",
+    "stat": "作用的属性标识。",
+    "status": "关联的状态标识。",
+    "target": "作用对象（self 自身 / enemy 敌方）。",
+    "tick": "效果的触发时点（每回合 / 进入时 / 失效时）。",
+    "trigger": "触发条件。",
+    "turns": "持续回合数。",
+    "value": "数值。",
+}
+EFFECTS_CHILD_HELP: Dict[str, Any] = {
+    "patch": {"target": "要修改的属性。", "value": "修改数值。", "pct": "是否按百分比修改。"},
+    "actions": {"type": "原子动作类型。", "count": "层数或数量。", "mark": "关联的印记。",
+                "target": "作用对象。"},
+}
+
+STATUSES_FIELD_HELP: Dict[str, str] = {
+    "id": "状态唯一标识；技能和效果用它引用这个状态。",
+    "name": "状态显示名。",
+    "type": "状态类别。",
+    "max_stack": "最大叠加层数；0 = 不限。",
+    "duration": "持续配置：turns 持续回合数 / charges 可消耗次数；-1 = 该维永不自然结束（引擎哨兵）。",
+    "decay": "衰减方式（如 per_turn 每回合递减）。",
+    "effects": "状态附带的效果列表。",
+    "on_enter": "进入状态时触发的效果引用。",
+    "on_tick": "每回合结算时触发的效果引用。",
+    "on_expire": "状态失效时触发的效果引用。",
+    "damage_mult": "受击增伤倍率（例如破位/倒地时提高受到的伤害）。",
+    "desc": "说明文字。",
+    "description": "描述文字（旧键，兼容旧内容包）。",
+    "on_dodge_effects": "闪避成功时触发的效果列表。",
+}
+STATUSES_CHILD_HELP: Dict[str, Any] = {
+    "duration": {"turns": "持续回合数（-1 = 该维永不自然结束）。",
+                 "charges": "可消耗次数（-1 = 该维永不自然结束）。",
+                 "_help": "状态的持续配置。"},
+}
+
+MARKS_FIELD_HELP: Dict[str, str] = {
+    "id": "印记唯一标识；技能和效果用它引用这个印记。",
+    "name": "印记显示名。",
+    "icon": "印记图标。",
+    "type": "固定为 mark（印记）。",
+    "max_stack": "最大层数；0 = 不限。",
+    "appliable_to": "可施加对象，取 self（自身）/ enemy（敌方）的子集。",
+    "polarity": "极性：positive 正面 / negative 负面。",
+    "element": "可选元素引用（八元素之一）；留空表示无元素。",
+    "duration": "持续写「battle」= 整场战斗 /「turns:N」= 持续 N 回合。",
+    "probability": "施加概率（0~1 的比例，按百分比表示）。",
+    "desc": "说明文字。",
+    "description": "描述文字（旧键，兼容旧内容包）。",
+}
+
+SKILL_CHAINS_FIELD_HELP: Dict[str, str] = {
+    "id": "派生链唯一标识；技能的 chain_refs 用它引用。",
+    "name": "派生链显示名。",
+    "type": "派生链类别。",
+    "next": "链上的后继节点标识列表；互相成环会被校验拦下。",
+    "actions": "链节点引用的行动（action 注册表）。",
+    "effects": "链上的效果列表（引用效果注册表）。",
+    "max_combo": "最大连段数。",
+    "max_combo_behavior": "达到满连段后的行为（继续 / 中断等）。",
+    "steps": "派生步骤：from 源技能 → to 目标技能；可带触发条件、优先级、消耗与数值覆盖。",
+    "trigger_skill": "触发这条派生链的技能标识。",
+}
+SKILL_CHAINS_CHILD_HELP: Dict[str, Any] = {
+    "steps": {"from": "源技能标识。", "to": "目标技能标识。", "tag": "步骤标签。",
+              "priority": "多个步骤的判定优先级。", "mode": "派生模式。",
+              "armor": "派生期间是否霸体。", "consume": "派生消耗。",
+              "condition": {"count": "触发所需的计数。", "_help": "触发条件。"},
+              "variant_override": {"power": "覆盖后的威力。", "_help": "数值覆盖。"},
+              "_help": "派生链的一个步骤。"},
+}
+
+ACTION_FIELD_HELP: Dict[str, str] = {
+    "id": "行动唯一标识；怪物行动表、连招与技能都用它引用。",
+    "name": "行动显示名。",
+    "kind": "行动类别：basic 基础 / active 主动 / …（按行动库约定）。",
+    "type": "行动类型（旧键，兼容旧内容包）。",
+    "position_rule": "方位命中规则：从哪个方位打才命中、有没有方位加成。",
+    "break_power": "破坏力固有值，参与部位破坏计算（建议 0~500）。",
+    "air_policy": "对空中目标的处理策略（能否命中、是否击落等）。",
+    "air_drop": "对空击落规则（如 knockdown = 击中空中目标即击落）。",
+    "power": "行动威力。",
+    "attack_type": "攻击类型（斩 / 打 / 突 / 魔 / 无）。",
+    "element": "元素标识（八元素之一）。",
+    "effects": "行动附带的效果列表。",
+    "cost": "消耗（旧键）；现行请用技能的 mp_cost。",
+    "cool": "冷却（旧键）；现行请用 cooldown。",
+    "weight": "入池权重：越大越容易被选到。",
+    "probability": "入池开关/概率（0~1 的比例）：0 = 不选，1 = 必选。",
+    "intent": "意图类型（伤害 / 防御 / 蓄力 / 治疗 / 控制 / buff / debuff / 印记 / 功能），用于意图预告。",
+    "roar": "咆哮等级：1 轻 / 2 大；对应耳栓反制。",
+    "cooldown": "行动冷却回合数；0 表示无冷却。",
+    "recovery": "行动结束后的行动条恢复量。",
+    "hungry": "饥饿值消耗。",
+    "chain": "连锁行动：后续衔接的行动标识列表（旧写法）。",
+    "armor": "开启后发动期间霸体，不被打断。",
+    "interrupt": "开启后命中可打断对方行动。",
+    "tags": "行动标签列表。",
+    "preview": "意图预告的内容。",
+    "preview_chain": "链预告的内容。",
+    "reveal_condition": "预告在什么条件下揭示。",
+    "require_status": "发动需要自身已有的状态。",
+    "apply_status": "命中后施加的状态。",
+    "skill": "关联的技能引用（可指向任意技能）。",
+    "apply_mark": "命中后施加的印记。",
+    "condition": "触发/选择条件（对象或字符串，深结构由专项校验）。",
+    "trigger_limit": "触发上限配置。",
+    "charge_armor": "蓄力期间是否霸体。",
+    "charge_turns": "蓄力回合数。",
+}
+
+SETTINGS_FIELD_HELP: Dict[str, str] = {
+    "default_map": "新存档默认进入的地图标识。",
+    "world_name": "世界/服务器显示名。",
+    "currencies": "货币定义表：每种货币的标识、名称、图标与上限。",
+    "death_penalty": "死亡惩罚：虚弱时长与掉落货币/经验/物品的比例。",
+    "slot_defs": "装备部位定义表：键为部位标识，值为名称、最大件数与占用关系。",
+    "alchemy": "炼金段：模式、品质档位、精力、宝石分解/复制、战斗调合等全局参数。",
+    "forge": "锻造段：费用、合成比例、分解回收率、套装开关与套装部件数。",
+    "fishing": "钓鱼段：鱼种、鱼王、钓点、鱼饵与尺寸/重量区间。",
+    "env_event": "环境事件段。",
+    "log_card": "日志卡片文案段。",
+    "assistant": "助手段配置。",
+    "battle": "战斗参数段。",
+    "command_aliases": "指令别名表。",
+    "contest": "竞技段配置（排期等）。",
+    "ctb": "行动条（CTB）参数：时间尺度、默认行动时间与恢复值等。",
+    "events": "事件文案段。",
+    "exp_curve": "经验曲线：等级 → 升级所需经验。",
+    "level_cap": "等级上限。",
+    "quest_board": "任务板段。",
+}
+
+
 def _decorate_module_meta(mmeta: ModuleMeta, labels: Mapping[str, str] = (),
-                          child_labels: Optional[Mapping[str, Any]] = None) -> ModuleMeta:
+                          child_labels: Optional[Mapping[str, Any]] = None,
+                          helps: Optional[Mapping[str, str]] = None,
+                          child_helps: Optional[Mapping[str, Any]] = None) -> ModuleMeta:
     """模块 ModuleMeta 的 fields 过一遍展示层装饰（helper 工厂模块用；校验语义零变化）。"""
     return replace(mmeta, fields=_decorate_field_meta(
-        mmeta.fields, mmeta.field_groups, labels, child_labels))
+        mmeta.fields, mmeta.field_groups, labels, child_labels, helps, child_helps))
 
 
 def _group_declaration(
@@ -1592,24 +2002,39 @@ def _decorate_field_meta(
     groups: Mapping[str, str],
     labels: Mapping[str, str],
     child_labels: Optional[Mapping[str, Any]] = None,
+    helps: Optional[Mapping[str, str]] = None,
+    child_helps: Optional[Mapping[str, Any]] = None,
 ) -> Dict[str, FieldMeta]:
-    """把模块级分组表/中文名表叠加到字段元数据（字段自带的 group/label 优先）。
+    """把模块级分组表/中文名表/说明表叠加到字段元数据（字段自带的 group/label/help 优先）。
 
     只做展示层补充：type/required/default/enum/ref_target/element/children 原样保留，
     因此对泛型校验器（只读 type 等判定字段）是零行为变化。
     批4.5 起可选 child_labels（嵌套中文名表）递归装饰 children / element.children；
     表里出现、children 未登记的键补 soft_label=True 纯展示子字段（校验短路，语义零变化）。
+    批4.6 起可选 helps（模块顶层人工说明）+ child_helps（嵌套人工说明，形态与 child_labels
+    平行：str 或 {`_help`: 本节点, 子键: …}）；说明**只补 help 展示维度**，不改任何校验契约，
+    缺省（helps 为空 / 字段无说明）时行为与批4.5 完全一致。
     """
     out: Dict[str, FieldMeta] = {}
+    helps = helps or {}
     for key, fm in fields.items():
         kw: Dict[str, object] = {}
         if not fm.group and key in groups:
             kw["group"] = groups[key]
         if not fm.label and key in labels:
             kw["label"] = labels[key]
+        if not fm.help and key in helps:
+            kw["help"] = helps[key]
         spec = child_labels.get(key) if child_labels else None
-        if isinstance(spec, Mapping) and fm.type in ("obj", "list"):
-            new_fm = _decorate_one(fm, None, spec)
+        help_spec = child_helps.get(key) if child_helps else None
+        want_recursive = fm.type in ("obj", "list") and (
+            isinstance(spec, Mapping) or isinstance(help_spec, Mapping))
+        if want_recursive:
+            help_text = help_spec if isinstance(help_spec, str) else None
+            nested_helps = help_spec if isinstance(help_spec, Mapping) else None
+            new_fm = _decorate_one(
+                fm, None, spec if isinstance(spec, Mapping) else None,
+                help_text, nested_helps)
             if new_fm.children is not fm.children:
                 kw["children"] = new_fm.children
             if new_fm.element is not fm.element:
@@ -1761,17 +2186,17 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "attack_type": FieldMeta(type="str"),  # 斩/打/突/魔（枚举判定 A2 路）
         "element": FieldMeta(type="str"),      # 元素 ID（元素注册表引用检查 A2/M2）
         "effects": F_EFFECTS,
-        "cost": FieldMeta(type="number", range_min=0, range_max=9999),  # 旧键
-        "cool": FieldMeta(type="number", range_min=0, range_max=9999),  # 旧键（cooldown 规范名）
+        "cost": FieldMeta(type="number", range_min=0, range_max=9999, unit="点"),  # 旧键
+        "cool": FieldMeta(type="number", range_min=0, range_max=9999, unit="回合"),  # 旧键（cooldown 规范名）
         # ---- AI 字段（怪物侧扩展，T26 / m2 §四；缺省兜底不报错）----
         "weight": FieldMeta(type="number", range_min=0, range_max=100),
         # P2-4 修复：不挂 probability 旗标（Y-2 极值误报——0/1 是入池开关非概率值，
         # 与 enemies.actions[].probability 口径一致，1e S1 语义）
         "probability": FieldMeta(type="number", range_min=0, range_max=1),
         "intent": FieldMeta(type="str"),  # 伤害/防御/蓄力/治疗/控制/buff/debuff/印记/功能（枚举 A2）
-        "roar": FieldMeta(type="number", range_min=0, range_max=2),  # 批⑦A 咆哮等级（1 轻 / 2 大；耳栓反制）
-        "cooldown": FieldMeta(type="number", range_min=0, range_max=999),
-        "recovery": FieldMeta(type="number", range_min=0),  # 批⑥ C10 行动恢复值（总恢复值；缺省=ctb.default_recovery）
+        "roar": FieldMeta(type="number", range_min=0, range_max=2, unit="级"),  # 批⑦A 咆哮等级（1 轻 / 2 大；耳栓反制）
+        "cooldown": FieldMeta(type="number", range_min=0, range_max=999, unit="回合"),
+        "recovery": FieldMeta(type="number", range_min=0, unit="行动条"),  # 批⑥ C10 行动恢复值（总恢复值；缺省=ctb.default_recovery）
         # P2-9 修复：condition 条件权重修正为 obj/string 双形态（1e A03b），
         # str 注册会误拦合法 obj 形态 → 不注册（未知字段默认放行），形态校验留 A2/运行期
         "hungry": FieldMeta(type="number", range_min=0, range_max=999),
@@ -1810,7 +2235,7 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "break_power": FieldMeta(type="number", range_min=0, range_max=500,
                                  label="破坏力固有值"),  # F09（方位 v0.6 §三.4）
         "air_policy": FieldMeta(type="str", label="空中策略"),  # F10（方位 v0.6 §三.6）
-        "power": F_POWER,               # F04 倍率（滑条 10-500%；派生链累计 ≤1.5× 黄提示 V-6 属 A2）
+        "power": F_SKILL_POWER,         # F04 倍率（滑条 10-500%；派生链累计 ≤1.5× 黄提示 V-6 属 A2）
         "attack_type": FieldMeta(type="str"),  # F05 斩/打/突/魔/无（枚举 A2 路；缺省按武器 f4）
         "element": FieldMeta(type="str", soft_label=True),  # F06 8 元素注册表（V-4 引用检查 A2）；null=按武器元素合法
         # F07 effects：条目不登记 element=ref（双形态：引用 {effect,overrides} /
@@ -1819,8 +2244,8 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "effects": FieldMeta(type="list", element=FieldMeta(type="obj")),
         # ---- B 玩家侧扩展 11 字段（F08-F18，细化_6a §1.2-B）----
         "type": FieldMeta(type="str"),   # F08 basic/active/passive/trigger 四类时机（枚举 A2 路）
-        "mp_cost": FieldMeta(type="number", range_min=0, range_max=9999),   # F09 ≥0；basic=0
-        "cooldown": FieldMeta(type="number", range_min=0, range_max=999),   # F10 ≥0 整数；basic=0
+        "mp_cost": FieldMeta(type="number", range_min=0, range_max=9999, unit="点"),   # F09 ≥0；basic=0
+        "cooldown": FieldMeta(type="number", range_min=0, range_max=999, unit="回合"),   # F10 ≥0 整数；basic=0
         "tag": FieldMeta(type="str"),    # F11 none/combo/combo_preserve/combo_push/interrupt/armor（枚举 A2）
         "armor": FieldMeta(type="bool"),         # F12 霸体开关（执行语义快键）
         "interrupt": FieldMeta(type="bool"),     # F13 打断快键（唯一归口 = 效果系统 L0 interrupt，T19）
@@ -1829,14 +2254,14 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "job_restrict": FieldMeta(type="list", element=FieldMeta(type="str")),  # F16 职业限制（V-5）
         "job_form": FieldMeta(type="str", soft_label=True),       # F17 形态技（引用 transform 形态名，V-5 扩展判定 A2）；null=非形态技合法
         "level": FieldMeta(type="obj", soft_label=True, children={
-            "max": FieldMeta(type="int", range_min=1, range_max=99),
+            "max": FieldMeta(type="int", range_min=1, range_max=99, unit="级"),
             "growth": FieldMeta(type="list", element=FieldMeta(type="number")),
         }),  # F18 升级 {max, growth}；growth 长度 = max 且 growth[0]=1 级基准（A2 判定）；null=不升级合法
         # ---- C 全库补充 2 字段（F19-F20，细化_6a §1.2-C）----
-        "hits": FieldMeta(type="int", range_min=1, range_max=99),  # F19 多段次数（1 轮 1 行动，每段独立结算）
+        "hits": FieldMeta(type="int", range_min=1, range_max=99, unit="段"),  # F19 多段次数（1 轮 1 行动，每段独立结算）
         "trigger_limit": FieldMeta(type="obj", children={
-            "per_round": FieldMeta(type="int", range_min=0, zero_unlimited=True),
-            "per_battle": FieldMeta(type="int", range_min=0, zero_unlimited=True),
+            "per_round": FieldMeta(type="int", range_min=0, zero_unlimited=True, unit="次"),
+            "per_battle": FieldMeta(type="int", range_min=0, zero_unlimited=True, unit="次"),
         }),  # F20 触发上限 {per_round, per_battle}；0=不限；技能级 > 库级 defaults > 全局（V-8 引擎强制）
         # ---- D 细化定型 4 字段（F21-F24，细化_6a §1.2-D）----
         "desc": FieldMeta(type="str"),   # F21 一句话说明（技能卡/战报/编辑器悬浮）
@@ -1846,9 +2271,9 @@ def _module_table() -> Dict[str, ModuleMeta]:
         # ---- F25-F26 防反/闪反姿态（2026-09-09 用户拍板标签制：姿态技能配反击类型与反击技）----
         "counter_type": FieldMeta(type="str"),  # F25 parry/dodge（防反/闪反姿态标记）
         "counter_skill": FieldMeta(type="str"),  # F26 姿态成功派生反击技 id（V-2 引用检查）
-        "action_time": FieldMeta(type="number", range_min=0),  # F27 行动时间（反应窗口时长，行动条；缺省=ctb.default_action_time）
-        "air_extend": FieldMeta(type="number", range_min=0),  # F28 空中延长（跃空窗口延长量，行动条；缺省=ctb.air_extend）
-        "recovery": FieldMeta(type="number", range_min=0),  # 批⑥ C10 行动恢复值（总恢复值，行动条；缺省=ctb.default_recovery）
+        "action_time": FieldMeta(type="number", range_min=0, unit="行动条"),  # F27 行动时间（反应窗口时长，行动条；缺省=ctb.default_action_time）
+        "air_extend": FieldMeta(type="number", range_min=0, unit="行动条"),  # F28 空中延长（跃空窗口延长量，行动条；缺省=ctb.air_extend）
+        "recovery": FieldMeta(type="number", range_min=0, unit="行动条"),  # 批⑥ C10 行动恢复值（总恢复值，行动条；缺省=ctb.default_recovery）
         "stun": FieldMeta(type="number", range_min=0),  # 批⑦A 气绝值（打击 × 正方位积累；全隐性）
         # ---- 兼容旧键（enemies[].skills 引用的技能表旧键）----
         "skill": FieldMeta(type="ref", ref_target="skill_or_any"),
@@ -1940,11 +2365,11 @@ def _module_table() -> Dict[str, ModuleMeta]:
     # label 区分（三路实测抓 P2）：def 与 dfn 同义「防御」→ 表单两个「防御」无法区分
     # 填错位置；def 标「(旧键)」供 demo_full 兼容识别，dfn 为现行键保持「防御」。
     equipment_fields["def"] = FieldMeta(type="number", range_min=0, range_max=5000,
-                                        label="防御(def·旧键)")
-    equipment_fields["dfn"] = FieldMeta(type="number", range_min=0, range_max=5000, label="防御")
-    equipment_fields["foc"] = FieldMeta(type="number", range_min=0, range_max=5000, label="专注")
-    equipment_fields["hp"] = FieldMeta(type="number", range_min=0, range_max=99999, label="生命")
-    equipment_fields["agi"] = FieldMeta(type="number", range_min=0, range_max=5000, label="敏捷")
+                                        label="防御(def·旧键)", unit="点")
+    equipment_fields["dfn"] = FieldMeta(type="number", range_min=0, range_max=5000, label="防御", unit="点")
+    equipment_fields["foc"] = FieldMeta(type="number", range_min=0, range_max=5000, label="专注", unit="点")
+    equipment_fields["hp"] = FieldMeta(type="number", range_min=0, range_max=99999, label="生命", unit="点")
+    equipment_fields["agi"] = FieldMeta(type="number", range_min=0, range_max=5000, label="敏捷", unit="点")
     # 批⑧ 装备词条键空间收口（2026-09-12）：键与中文 label 取自 data.gear_stats 唯一
     # 注册表——context/shop_tx/详情面板/本表四处曾各持手写键表互相漂移（crit 与 _pct
     # 键漏转/漏展示）。此后新增词条 = 注册表加一行，本表自动跟进；范围仅提示不拦截
@@ -1957,22 +2382,22 @@ def _module_table() -> Dict[str, ModuleMeta]:
             _fm_target[_k] = FieldMeta(
                 type="number", range_min=0,
                 range_max=99999 if _k == "hp" else (9999 if _k == "mp" else 5000),
-                label=GEAR_LABELS_ZH.get(_k, _k))
+                label=GEAR_LABELS_ZH.get(_k, _k), unit="点")
         for _k in GEAR_PCT_KEYS:
             _fm_target[_k] = FieldMeta(
                 type="number", range_min=0, range_max=500,
-                label=GEAR_LABELS_ZH.get(_k, _k))
+                label=GEAR_LABELS_ZH.get(_k, _k), unit="%")
         for _k in GEAR_COMBAT_KEYS:
             if _k == "crit":
                 # 赌狗流负会心（批⑤ 引擎通道）→ 字段级放行负数（R-2 元数据开关）
                 _fm_target[_k] = FieldMeta(
                     type="number", range_min=-99, range_max=99, allow_negative=True,
-                    label=GEAR_LABELS_ZH.get(_k, _k) + "（可负）")
+                    label=GEAR_LABELS_ZH.get(_k, _k) + "（可负）", unit="%")
             else:
                 _fm_target[_k] = FieldMeta(
                     type="number", range_min=0,
                     range_max=2 if _k == "earplug" else 3,
-                    label=GEAR_LABELS_ZH.get(_k, _k))
+                    label=GEAR_LABELS_ZH.get(_k, _k), unit="级")
     traits_fields: Dict[str, FieldMeta] = {
         "id": F_ID, "name": F_NAME, "type": F_TYPE,
         "probability": F_PROBABILITY, "max_stack": F_MAX_STACK,
@@ -1997,7 +2422,7 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "stats": FieldMeta(type="obj", children=ENEMY_STATS_CHILDREN),
         # ---- 弱点 / PV / 抗性（F08-F11 / 1.3）----
         "weakness": FieldMeta(type="obj", children=WEAKNESS_CHILDREN),
-        "pv": FieldMeta(type="number", range_min=0, range_max=500),  # F09（档区间仅提示；木桩强制 0 A2）
+        "pv": FieldMeta(type="number", range_min=0, range_max=500, unit="点"),  # F09（档区间仅提示；木桩强制 0 A2）
         "pv_recover": FieldMeta(type="enum", enum=("battle_end", "none")),  # F10
         "resistance": FieldMeta(type="obj", children=RESISTANCE_CHILDREN),  # F11
         # ---- 行动表 / 特殊行动 / 连招（F12-F14 / 1.4）----
@@ -2008,7 +2433,7 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "drops": FieldMeta(type="obj", children=DROPS_CHILDREN),  # F15
         "lore": FieldMeta(type="list", element=FieldMeta(type="obj", children=LORE_ENTRY_CHILDREN)),  # F16
         # ---- 木桩向（F17-F18）----
-        "def_base": FieldMeta(type="number", range_min=0, range_max=99999),  # F17（≥0）
+        "def_base": FieldMeta(type="number", range_min=0, range_max=99999, unit="点"),  # F17（≥0）
         "elem_res": FieldMeta(type="obj"),  # F18（元素 ID → 正减伤/负增伤；注册表引用检查 A2）
         # ---- M0 旧键兼容（已废弃，保留注册：测试依赖 R-2/Y-1/Y-2 行为）----
         "hp": F_HP, "atk": F_ATK, "def": F_DEF,
@@ -2203,25 +2628,33 @@ def _module_table() -> Dict[str, ModuleMeta]:
                                         MANIFEST_CHILD_LABELS)),
         "effects": ModuleMeta(entry_type="list",
                               fields=_decorate_field_meta(effects_fields, {}, EFFECTS_FIELD_LABELS,
-                                                          EFFECTS_CHILD_LABELS),
+                                                          EFFECTS_CHILD_LABELS,
+                                                          EFFECTS_FIELD_HELP,
+                                                          EFFECTS_CHILD_HELP),
                               kind="effect", namespace="effect_family"),
         "statuses": ModuleMeta(entry_type="list",
                                fields=_decorate_field_meta(statuses_fields, {}, STATUSES_FIELD_LABELS,
-                                                           STATUSES_CHILD_LABELS),
+                                                           STATUSES_CHILD_LABELS,
+                                                           STATUSES_FIELD_HELP,
+                                                           STATUSES_CHILD_HELP),
                                kind="status", namespace="effect_family"),
         "marks": ModuleMeta(entry_type="list",
                             fields=_decorate_field_meta(marks_fields, {}, MARKS_FIELD_LABELS,
-                                                        MARKS_CHILD_LABELS),
+                                                        MARKS_CHILD_LABELS,
+                                                        MARKS_FIELD_HELP),
                             kind="mark", namespace="effect_family"),
         "skill_chains": ModuleMeta(entry_type="list",
                                    fields=_decorate_field_meta(skill_chains_fields, {},
                                                                SKILL_CHAINS_FIELD_LABELS,
-                                                               SKILL_CHAINS_CHILD_LABELS),
+                                                               SKILL_CHAINS_CHILD_LABELS,
+                                                               SKILL_CHAINS_FIELD_HELP,
+                                                               SKILL_CHAINS_CHILD_HELP),
                                    kind="skill_chain",
                                    namespace="chain_lib", chain_field="next"),
         "action": ModuleMeta(entry_type="list",
                              fields=_decorate_field_meta(action_fields, {}, ACTION_FIELD_LABELS,
-                                                         ACTION_CHILD_LABELS),
+                                                         ACTION_CHILD_LABELS,
+                                                         ACTION_FIELD_HELP),
                              kind="action", namespace="action_lib"),
         # M13 技能库（细化_6a_技能库契约 §1：skills.json 玩家技能库；F01-F24 全字段登记；
         # kind="skill" 与 loader _KIND_FOR_MODULE + DEF_CLASSES 对齐（路1A SkillDef）；
@@ -2229,7 +2662,8 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "skills": ModuleMeta(
             entry_type="list",
             fields=_decorate_field_meta(skills_fields, SKILLS_FIELD_GROUPS, SKILLS_FIELD_LABELS,
-                                        SKILLS_CHILD_LABELS),
+                                        SKILLS_CHILD_LABELS, SKILLS_FIELD_HELP,
+                                        SKILLS_CHILD_HELP),
             kind="skill", namespace="skill_lib",
             field_groups=dict(SKILLS_FIELD_GROUPS),
             group_order=SKILLS_GROUP_ORDER,
@@ -2250,12 +2684,14 @@ def _module_table() -> Dict[str, ModuleMeta]:
                            kind="job", namespace="job_lib"),
         "formula": ModuleMeta(entry_type="map", fields=formula_fields, kind="formula", namespace="formula_lib"),
         "items": ModuleMeta(entry_type="list",
-                            fields=_decorate_field_meta(items_fields, ITEMS_FIELD_GROUPS, ITEMS_FIELD_LABELS),
+                            fields=_decorate_field_meta(items_fields, ITEMS_FIELD_GROUPS, ITEMS_FIELD_LABELS,
+                                                        None, ITEMS_FIELD_HELP, ITEMS_CHILD_HELP),
                             kind="item", namespace="item_lib",
                             field_groups=ITEMS_FIELD_GROUPS, group_order=ITEMS_GROUP_ORDER,
                             group_labels=ITEMS_GROUP_LABEL_MAP),
         "equipment": ModuleMeta(entry_type="list",
-                                fields=_decorate_field_meta(equipment_fields, EQUIPMENT_FIELD_GROUPS, EQUIPMENT_FIELD_LABELS),
+                                fields=_decorate_field_meta(equipment_fields, EQUIPMENT_FIELD_GROUPS, EQUIPMENT_FIELD_LABELS,
+                                                            None, EQUIPMENT_FIELD_HELP, ITEMS_CHILD_HELP),
                                 kind="equipment",
                                 namespace="item_lib", mutex_field="excludes",
                                 field_groups=EQUIPMENT_FIELD_GROUPS, group_order=EQUIPMENT_GROUP_ORDER,
@@ -2293,7 +2729,8 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "enhance": _decorate_module_meta(enhance_module_meta(), (), ENHANCE_CHILD_LABELS),
         "enemies": ModuleMeta(entry_type="list",
                               fields=_decorate_field_meta(enemies_fields, ENEMIES_FIELD_GROUPS,
-                                                          ENEMIES_FIELD_LABELS, ENEMIES_CHILD_LABELS),
+                                                          ENEMIES_FIELD_LABELS, ENEMIES_CHILD_LABELS,
+                                                          ENEMIES_FIELD_HELP, ENEMIES_CHILD_HELP),
                               kind="enemy", namespace="enemy_lib",
                               field_groups=ENEMIES_FIELD_GROUPS, group_order=ENEMIES_GROUP_ORDER,
                               group_labels=ENEMIES_GROUP_LABEL_MAP),
@@ -2348,7 +2785,8 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "settings": ModuleMeta(entry_type="object",
                                fields=_decorate_field_meta(SETTINGS_FIELDS, {},
                                                            SETTINGS_FIELD_LABELS,
-                                                           SETTINGS_CHILD_LABELS)),
+                                                           SETTINGS_CHILD_LABELS,
+                                                           SETTINGS_FIELD_HELP)),
         # M12 批4 路4A 编辑器扩展页视图（5a2 PR-01：editor.json 页表 meta_source 指向；
         # 无独立 json 模块——ai/hidden 是 enemies 条目内嵌视图、env_event/log_card 是
         # settings 段视图；ModuleMeta 仅登记供 /api/meta/{page} 表单元数据，内容包不含
@@ -2434,4 +2872,13 @@ __all__ = [
     "MANIFEST_FIELD_LABELS", "TRAITS_FIELD_LABELS", "RECIPE_FIELD_LABELS",
     "PROFICIENCY_FIELD_LABELS", "SLOTS_FIELD_LABELS", "STATS_FIELD_LABELS",
     "SETTINGS_FIELD_LABELS", "CONDITIONAL_FIELD_LABELS",
+    # 编辑器重写批4.6：字段**说明**元数据（说明卡「人工补充」；自动拼装在 web/api.py）
+    "SKILLS_FIELD_HELP", "SKILLS_CHILD_HELP",
+    "ENEMIES_FIELD_HELP", "ENEMIES_CHILD_HELP",
+    "ITEMS_FIELD_HELP", "ITEMS_CHILD_HELP", "EQUIPMENT_FIELD_HELP",
+    "EFFECTS_FIELD_HELP", "EFFECTS_CHILD_HELP",
+    "STATUSES_FIELD_HELP", "STATUSES_CHILD_HELP",
+    "MARKS_FIELD_HELP", "SKILL_CHAINS_FIELD_HELP", "SKILL_CHAINS_CHILD_HELP",
+    "ACTION_FIELD_HELP", "SETTINGS_FIELD_HELP",
+    "F_SKILL_POWER",
 ]

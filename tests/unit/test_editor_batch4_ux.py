@@ -219,3 +219,42 @@ def test_editable_table_rows_are_wrapped_in_scroll_container(js: Dict[str, Any])
     assert 'ltable-edit' in out
     # 中文名 + 原始键并列（fieldLabelHtml 由元数据 label 驱动）
     assert "甲" in out and "a" in out
+
+
+# =====================================================================================
+# 问题 3 · 单元格统一控件外观 + 空值统一占位符（V3）
+# =====================================================================================
+def test_text_and_number_cells_use_cin_and_empty_placeholder(js: Dict[str, Any]) -> None:
+    for case in ("textEmpty", "numEmpty"):
+        assert 'class="cin lcell"' in js[case], case
+        assert 'placeholder="（空）"' in js[case], case
+    assert 'value="v"' in js["textVal"]
+
+
+def test_select_cells_use_cin_with_placeholder(js: Dict[str, Any]) -> None:
+    assert 'class="cin lcell"' in js["selectEmpty"]
+    assert "（未选择）" in js["selectEmpty"]
+
+
+def test_bool_cell_keeps_checkbox_control(js: Dict[str, Any]) -> None:
+    assert 'class="ctl-bool"' in js["boolCell"] and "checkbox" in js["boolCell"]
+
+
+def test_readonly_and_nested_list_cells_are_bordered_blocks(js: Dict[str, Any]) -> None:
+    assert 'class="ro-cell"' in js["roEmpty"]
+    assert "（空）" in js["roEmpty"]          # 空值统一占位（V3）
+    assert 'class="ro-cell"' in js["roVal"]
+    # 嵌套列表单元格不在行内编辑，按只读有框块展示（不裸奔、不误写成字符串数组）
+    assert 'class="ro-cell"' in js["nestedList"]
+    assert "[{&quot;z&quot;:1}]" in js["nestedList"] or '{"z":1}' in js["nestedList"]
+
+
+def test_frontend_ro_cell_and_cell_surface_tokens() -> None:
+    html = _html()
+    match = re.search(r"\.ro-cell\s*\{([^}]*)\}", html)
+    assert match, "index.html 缺少 .ro-cell 规则"
+    rule = match.group(1)
+    assert "var(--line-soft)" in rule       # 边框
+    assert "var(--surface)" in rule         # 底色
+    assert "var(--text-4)" in rule          # 只读弱化字色
+    assert ".ltable-edit .cin" in html and "background: var(--bg)" in html

@@ -230,6 +230,13 @@ select.cin { padding: 1px var(--sp-2); }
 .ltable th.op, .ltable td.op { width: 84px; min-width: 84px; text-align: right; border-left: 0; }
 .ltable-edit th.op, .ltable-edit td.op { padding-right: var(--sp-5); }
 .lcell.warn { border-color: var(--warn); }
+/* 表格内可编辑单元格（批4 UX）：与 tokens.css 控件同一套边框/底色/聚焦态（.cin 自带聚焦环）；
+   --bg 底让输入框在斑马纹行上仍是清晰的「字段面」，不再与表格底色混成一块。 */
+.ltable-edit .cin, .ltable-edit .cta { background: var(--bg); }
+/* 只读单元格（对象/映射/嵌套列表）：同样有框有底，空值走 EMPTY_TEXT；宽 JSON 自动换行 */
+.ro-cell { display: block; width: 100%; max-width: 260px; min-height: var(--h-ctl);
+  padding: 1px var(--sp-3); border: var(--bw) solid var(--line-soft); background: var(--surface);
+  color: var(--text-4); font-size: var(--fs-11); white-space: pre-wrap; overflow-wrap: anywhere; }
 .ldel { display: inline-flex; align-items: center; height: var(--h-ctl-sm); padding: 0 var(--sp-3);
   font-family: inherit; font-size: var(--fs-11); cursor: pointer; background: transparent;
   border: var(--bw) solid var(--line-strong); color: var(--text-3); }
@@ -1076,8 +1083,9 @@ function listCell(f, row, col, i, scalar) {
   var attrs = ' data-lcell="' + esc(f.key) + '" data-lrow="' + i + '" data-lcol="' + esc(col.key) + '"';
   switch (col.control) {
     case "number":
-      return '<input class="cin lcell" type="number" step="' + esc(col.number_step || "any") + '"'
-        + attrs + ' value="' + esc(v == null ? "" : v) + '">';
+      return '<input class="cin lcell" type="number" step="' + esc(col.number_step || "any")
+        + '" placeholder="' + esc(EMPTY_TEXT) + '"' + attrs
+        + ' value="' + esc(v == null ? "" : v) + '">';
     case "bool":
       return '<label class="ctl-bool"><input type="checkbox"' + attrs + (v ? " checked" : "")
         + '> <span class="btxt">' + (v ? "是" : "否") + "</span></label>";
@@ -1089,11 +1097,18 @@ function listCell(f, row, col, i, scalar) {
         + '" data-current="' + esc(v == null ? "" : v) + '">'
         + selectOptions(v, [], "（未选择）") + "</select>";
     case "readonly":
-      return '<span class="ro">' + esc(v == null ? "" : JSON.stringify(v)) + "</span>";
+    case "listtable":
+      // 对象/映射子字段与嵌套列表：本批不在单元格里内联编辑 → 给统一的有框只读外观，
+      // 空值同样走 EMPTY_TEXT（不再裸露无边框 JSON 深色块）。
+      return '<span class="ro-cell">' + esc(
+        (v == null || v === "") ? EMPTY_TEXT
+          : (typeof v === "object" ? JSON.stringify(v) : String(v))
+      ) + "</span>";
     case "text":
     case "textarea":
     default:
-      return '<input class="cin lcell" type="text"' + attrs + ' value="'
+      return '<input class="cin lcell" type="text"' + attrs
+        + ' placeholder="' + esc(EMPTY_TEXT) + '" value="'
         + esc(v == null ? "" : v) + '">';
   }
 }

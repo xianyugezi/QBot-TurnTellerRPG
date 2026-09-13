@@ -45,8 +45,17 @@
    "cs_t1_037",
    "cs_t1_038"
   ],
-  "exits": {},
-  "exits_note": "拓扑连线归增量二（生态总表无连线数据，零自拟）"
+  "exits": {
+   "next": {
+    "to": "map_t1_02",
+    "mode": "bidirectional"
+   }
+  },
+  "hidden_exits": [],
+  "terrain": {
+   "env": "浮岛群的林冠层",
+   "wall_tag": "F08 撞壁 terrain 标签归增量四"
+  }
  },
  {
   "id": "map_t1_02",
@@ -80,8 +89,21 @@
    "cs_t1_061",
    "cs_t1_062"
   ],
-  "exits": {},
-  "exits_note": "拓扑连线归增量二（生态总表无连线数据，零自拟）"
+  "exits": {
+   "prev": {
+    "to": "map_t1_01",
+    "mode": "bidirectional"
+   },
+   "next": {
+    "to": "map_t1_03",
+    "mode": "bidirectional"
+   }
+  },
+  "hidden_exits": [],
+  "terrain": {
+   "env": "林冠垂落的苔崖壁",
+   "wall_tag": "F08 撞壁 terrain 标签归增量四"
+  }
  },
  {
   "id": "map_t1_03",
@@ -119,8 +141,21 @@
    "cs_t1_089",
    "cs_t1_090"
   ],
-  "exits": {},
-  "exits_note": "拓扑连线归增量二（生态总表无连线数据，零自拟）"
+  "exits": {
+   "prev": {
+    "to": "map_t1_02",
+    "mode": "bidirectional"
+   },
+   "next": {
+    "to": "map_t1_04",
+    "mode": "bidirectional"
+   }
+  },
+  "hidden_exits": [],
+  "terrain": {
+   "env": "浮岛底部的岛根阴影",
+   "wall_tag": "F08 撞壁 terrain 标签归增量四"
+  }
  },
  {
   "id": "map_t1_04",
@@ -145,8 +180,21 @@
    "cs_t1_104",
    "cs_t1_105"
   ],
-  "exits": {},
-  "exits_note": "拓扑连线归增量二（生态总表无连线数据，零自拟）"
+  "exits": {
+   "prev": {
+    "to": "map_t1_03",
+    "mode": "bidirectional"
+   },
+   "next": {
+    "to": "map_t2_01",
+    "mode": "bidirectional"
+   }
+  },
+  "hidden_exits": [],
+  "terrain": {
+   "env": "被新港区取代的旧码头，四十年前的巡游公会就从这里出发",
+   "wall_tag": "F08 撞壁 terrain 标签归增量四"
+  }
  },
  {
   "id": "map_t2_01",
@@ -182,8 +230,21 @@
    "cs_t2_025",
    "cs_t2_026"
   ],
-  "exits": {},
-  "exits_note": "拓扑连线归增量二（生态总表无连线数据，零自拟）"
+  "exits": {
+   "prev": {
+    "to": "map_t1_04",
+    "mode": "bidirectional"
+   },
+   "next": {
+    "to": "map_t2_02",
+    "mode": "bidirectional"
+   }
+  },
+  "hidden_exits": [],
+  "terrain": {
+   "env": "随潮位涨落的礁岛链 · 外围浅滩",
+   "wall_tag": "F08 撞壁 terrain 标签归增量四"
+  }
  },
  {
   "id": "map_t2_02",
@@ -225,8 +286,21 @@
    "cs_t2_057",
    "cs_t2_058"
   ],
-  "exits": {},
-  "exits_note": "拓扑连线归增量二（生态总表无连线数据，零自拟）"
+  "exits": {
+   "prev": {
+    "to": "map_t2_01",
+    "mode": "bidirectional"
+   },
+   "next": {
+    "to": "map_t2_03",
+    "mode": "bidirectional"
+   }
+  },
+  "hidden_exits": [],
+  "terrain": {
+   "env": "随潮位整体升降的岛链",
+   "wall_tag": "F08 撞壁 terrain 标签归增量四"
+  }
  },
  {
   "id": "map_t2_03",
@@ -271,8 +345,21 @@
    "cs_t2_092",
    "cs_t2_093"
   ],
-  "exits": {},
-  "exits_note": "拓扑连线归增量二（生态总表无连线数据，零自拟）"
+  "exits": {
+   "prev": {
+    "to": "map_t2_02",
+    "mode": "bidirectional"
+   },
+   "next": {
+    "to": "map_t3_01",
+    "mode": "bidirectional"
+   }
+  },
+  "hidden_exits": [],
+  "terrain": {
+   "env": "沉入云海的岛渊",
+   "wall_tag": "F08 撞壁 terrain 标签归增量四"
+  }
  },
  {
   "id": "map_t3_01",
@@ -315,8 +402,21 @@
    "cs_t3_032",
    "cs_t3_033"
   ],
-  "exits": {},
-  "exits_note": "拓扑连线归增量二（生态总表无连线数据，零自拟）"
+  "exits": {
+   "prev": {
+    "to": "map_t2_03",
+    "mode": "bidirectional"
+   },
+   "next": {
+    "to": "map_t3_02",
+    "mode": "bidirectional"
+   }
+  },
+  "hidden_exits": [],
+  "terrain": {
+   "env": "乱流涡外围的碎屿",
+   "wall_tag": "F08 撞壁 terrain 标签归增量四"
+  }
  },
  {
   "id": "map_t3_02",
@@ -354,8 +454,21 @@
    "cs_t3_060",
    "cs_t3_061"
   ],
-  "exits": {},
-  "exits_note": "拓扑连线归增量二（生态总表无连线数据，零自拟）"
+  "exits": {
+   "prev": {
+    "to": "map_t3_01",
+    "mode": "bidirectional"
+   },
+   "next": {
+    "to": "map_t3_03",
+    "mode": "bidirectional"
+   }
+  },
+  "hidden_exits": [],
+  "terrain": {
+   "env": "乱流涡的岩廊道",
+   "wall_tag": "F08 撞壁 terrain 标签归增量四"
+  }
  },
  {
   "id": "map_t3_03",
@@ -393,8 +506,21 @@
    "cs_t3_088",
    "cs_t3_089"
   ],
-  "exits": {},
-  "exits_note": "拓扑连线归增量二（生态总表无连线数据，零自拟）"
+  "exits": {
+   "prev": {
+    "to": "map_t3_02",
+    "mode": "bidirectional"
+   },
+   "next": {
+    "to": "map_t4_01",
+    "mode": "bidirectional"
+   }
+  },
+  "hidden_exits": [],
+  "terrain": {
+   "env": "乱流涡的涡心深穴",
+   "wall_tag": "F08 撞壁 terrain 标签归增量四"
+  }
  },
  {
   "id": "map_t4_01",
@@ -433,8 +559,21 @@
    "cs_t4_028",
    "cs_t4_029"
   ],
-  "exits": {},
-  "exits_note": "拓扑连线归增量二（生态总表无连线数据，零自拟）"
+  "exits": {
+   "prev": {
+    "to": "map_t3_03",
+    "mode": "bidirectional"
+   },
+   "next": {
+    "to": "map_t4_02",
+    "mode": "bidirectional"
+   }
+  },
+  "hidden_exits": [],
+  "terrain": {
+   "env": "巨云的浪背浅脊",
+   "wall_tag": "F08 撞壁 terrain 标签归增量四"
+  }
  },
  {
   "id": "map_t4_02",
@@ -469,8 +608,21 @@
    "cs_t4_053",
    "cs_t4_054"
   ],
-  "exits": {},
-  "exits_note": "拓扑连线归增量二（生态总表无连线数据，零自拟）"
+  "exits": {
+   "prev": {
+    "to": "map_t4_01",
+    "mode": "bidirectional"
+   },
+   "next": {
+    "to": "map_t4_03",
+    "mode": "bidirectional"
+   }
+  },
+  "hidden_exits": [],
+  "terrain": {
+   "env": "巨云中层的雷砧台",
+   "wall_tag": "F08 撞壁 terrain 标签归增量四"
+  }
  },
  {
   "id": "map_t4_03",
@@ -505,8 +657,21 @@
    "cs_t4_078",
    "cs_t4_079"
   ],
-  "exits": {},
-  "exits_note": "拓扑连线归增量二（生态总表无连线数据，零自拟）"
+  "exits": {
+   "prev": {
+    "to": "map_t4_02",
+    "mode": "bidirectional"
+   },
+   "next": {
+    "to": "map_t4_04",
+    "mode": "bidirectional"
+   }
+  },
+  "hidden_exits": [],
+  "terrain": {
+   "env": "雷砧顶部的积雷池",
+   "wall_tag": "F08 撞壁 terrain 标签归增量四"
+  }
  },
  {
   "id": "map_t4_04",
@@ -529,8 +694,21 @@
    "cs_t4_091",
    "cs_t4_092"
   ],
-  "exits": {},
-  "exits_note": "拓扑连线归增量二（生态总表无连线数据，零自拟）"
+  "exits": {
+   "prev": {
+    "to": "map_t4_03",
+    "mode": "bidirectional"
+   },
+   "next": {
+    "to": "map_t5_01",
+    "mode": "bidirectional"
+   }
+  },
+  "hidden_exits": [],
+  "terrain": {
+   "env": "落岛之后岛民搭起来的临时营地，账目就贴在营门上",
+   "wall_tag": "F08 撞壁 terrain 标签归增量四"
+  }
  },
  {
   "id": "map_t5_01",
@@ -562,8 +740,21 @@
    "cs_t5_021",
    "cs_t5_022"
   ],
-  "exits": {},
-  "exits_note": "拓扑连线归增量二（生态总表无连线数据，零自拟）"
+  "exits": {
+   "prev": {
+    "to": "map_t4_04",
+    "mode": "bidirectional"
+   },
+   "next": {
+    "to": "map_t5_02",
+    "mode": "bidirectional"
+   }
+  },
+  "hidden_exits": [],
+  "terrain": {
+   "env": "气旋外缘的雨廊",
+   "wall_tag": "F08 撞壁 terrain 标签归增量四"
+  }
  },
  {
   "id": "map_t5_02",
@@ -598,8 +789,21 @@
    "cs_t5_046",
    "cs_t5_047"
   ],
-  "exits": {},
-  "exits_note": "拓扑连线归增量二（生态总表无连线数据，零自拟）"
+  "exits": {
+   "prev": {
+    "to": "map_t5_01",
+    "mode": "bidirectional"
+   },
+   "next": {
+    "to": "map_t5_03",
+    "mode": "bidirectional"
+   }
+  },
+  "hidden_exits": [],
+  "terrain": {
+   "env": "气旋中层的云墙环带",
+   "wall_tag": "F08 撞壁 terrain 标签归增量四"
+  }
  },
  {
   "id": "map_t5_03",
@@ -637,8 +841,21 @@
    "cs_t5_074",
    "cs_t5_075"
   ],
-  "exits": {},
-  "exits_note": "拓扑连线归增量二（生态总表无连线数据，零自拟）"
+  "exits": {
+   "prev": {
+    "to": "map_t5_02",
+    "mode": "bidirectional"
+   },
+   "next": {
+    "to": "map_t5_04",
+    "mode": "bidirectional"
+   }
+  },
+  "hidden_exits": [],
+  "terrain": {
+   "env": "气旋眼心的孤屿",
+   "wall_tag": "F08 撞壁 terrain 标签归增量四"
+  }
  },
  {
   "id": "map_t5_04",
@@ -661,8 +878,21 @@
    "cs_t5_087",
    "cs_t5_088"
   ],
-  "exits": {},
-  "exits_note": "拓扑连线归增量二（生态总表无连线数据，零自拟）"
+  "exits": {
+   "prev": {
+    "to": "map_t5_03",
+    "mode": "bidirectional"
+   },
+   "next": {
+    "to": "map_t6_01",
+    "mode": "bidirectional"
+   }
+  },
+  "hidden_exits": [],
+  "terrain": {
+   "env": "风暴眼里那座孤零零的观测站，设备比驻站的人还老",
+   "wall_tag": "F08 撞壁 terrain 标签归增量四"
+  }
  },
  {
   "id": "map_t6_01",
@@ -697,8 +927,21 @@
    "cs_t6_024",
    "cs_t6_025"
   ],
-  "exits": {},
-  "exits_note": "拓扑连线归增量二（生态总表无连线数据，零自拟）"
+  "exits": {
+   "prev": {
+    "to": "map_t5_04",
+    "mode": "bidirectional"
+   },
+   "next": {
+    "to": "map_t6_02",
+    "mode": "bidirectional"
+   }
+  },
+  "hidden_exits": [],
+  "terrain": {
+   "env": "高空带的薄气云脊",
+   "wall_tag": "F08 撞壁 terrain 标签归增量四"
+  }
  },
  {
   "id": "map_t6_02",
@@ -736,8 +979,21 @@
    "cs_t6_052",
    "cs_t6_053"
   ],
-  "exits": {},
-  "exits_note": "拓扑连线归增量二（生态总表无连线数据，零自拟）"
+  "exits": {
+   "prev": {
+    "to": "map_t6_01",
+    "mode": "bidirectional"
+   },
+   "next": {
+    "to": "map_t6_03",
+    "mode": "bidirectional"
+   }
+  },
+  "hidden_exits": [],
+  "terrain": {
+   "env": "高空带的电离辉带",
+   "wall_tag": "F08 撞壁 terrain 标签归增量四"
+  }
  },
  {
   "id": "map_t6_03",
@@ -772,8 +1028,21 @@
    "cs_t6_077",
    "cs_t6_078"
   ],
-  "exits": {},
-  "exits_note": "拓扑连线归增量二（生态总表无连线数据，零自拟）"
+  "exits": {
+   "prev": {
+    "to": "map_t6_02",
+    "mode": "bidirectional"
+   },
+   "next": {
+    "to": "map_t6_04",
+    "mode": "bidirectional"
+   }
+  },
+  "hidden_exits": [],
+  "terrain": {
+   "env": "高空带尽头的危峰",
+   "wall_tag": "F08 撞壁 terrain 标签归增量四"
+  }
  },
  {
   "id": "map_t6_04",
@@ -796,8 +1065,21 @@
    "cs_t6_090",
    "cs_t6_091"
   ],
-  "exits": {},
-  "exits_note": "拓扑连线归增量二（生态总表无连线数据，零自拟）"
+  "exits": {
+   "prev": {
+    "to": "map_t6_03",
+    "mode": "bidirectional"
+   },
+   "next": {
+    "to": "map_t6_05",
+    "mode": "bidirectional"
+   }
+  },
+  "hidden_exits": [],
+  "terrain": {
+   "env": "晖环号最后一次出港的泊位，缆桩上还留着断缆",
+   "wall_tag": "F08 撞壁 terrain 标签归增量四"
+  }
  },
  {
   "id": "map_t6_05",
@@ -820,8 +1102,21 @@
    "cs_t6_103",
    "cs_t6_104"
   ],
-  "exits": {},
-  "exits_note": "拓扑连线归增量二（生态总表无连线数据，零自拟）"
+  "exits": {
+   "prev": {
+    "to": "map_t6_04",
+    "mode": "bidirectional"
+   },
+   "next": {
+    "to": "map_t7_01",
+    "mode": "bidirectional"
+   }
+  },
+  "hidden_exits": [],
+  "terrain": {
+   "env": "晖环号残骸被拖到的浅滩，一半泡在云里",
+   "wall_tag": "F08 撞壁 terrain 标签归增量四"
+  }
  },
  {
   "id": "map_t7_01",
@@ -875,8 +1170,21 @@
    "cs_t7_144",
    "cs_t7_145"
   ],
-  "exits": {},
-  "exits_note": "拓扑连线归增量二（生态总表无连线数据，零自拟）"
+  "exits": {
+   "prev": {
+    "to": "map_t6_05",
+    "mode": "bidirectional"
+   },
+   "next": {
+    "to": "map_t7_02",
+    "mode": "bidirectional"
+   }
+  },
+  "hidden_exits": [],
+  "terrain": {
+   "env": "蚀潮区的外缘",
+   "wall_tag": "F08 撞壁 terrain 标签归增量四"
+  }
  },
  {
   "id": "map_t7_02",
@@ -925,8 +1233,21 @@
    "cs_t7_100",
    "cs_t7_101"
   ],
-  "exits": {},
-  "exits_note": "拓扑连线归增量二（生态总表无连线数据，零自拟）"
+  "exits": {
+   "prev": {
+    "to": "map_t7_01",
+    "mode": "bidirectional"
+   },
+   "next": {
+    "to": "map_t7_03",
+    "mode": "bidirectional"
+   }
+  },
+  "hidden_exits": [],
+  "terrain": {
+   "env": "被蚀潮打穿的穹裂过渡带",
+   "wall_tag": "F08 撞壁 terrain 标签归增量四"
+  }
  },
  {
   "id": "map_t7_03",
@@ -977,8 +1298,21 @@
    "cs_t7_061",
    "cs_t7_062"
   ],
-  "exits": {},
-  "exits_note": "拓扑连线归增量二（生态总表无连线数据，零自拟）"
+  "exits": {
+   "prev": {
+    "to": "map_t7_02",
+    "mode": "bidirectional"
+   },
+   "next": {
+    "to": "map_t7_04",
+    "mode": "bidirectional"
+   }
+  },
+  "hidden_exits": [],
+  "terrain": {
+   "env": "蚀潮区的渊喉廊道",
+   "wall_tag": "F08 撞壁 terrain 标签归增量四"
+  }
  },
  {
   "id": "map_t7_04",
@@ -1032,8 +1366,21 @@
    "cs_t7_188",
    "cs_t7_189"
   ],
-  "exits": {},
-  "exits_note": "拓扑连线归增量二（生态总表无连线数据，零自拟）"
+  "exits": {
+   "prev": {
+    "to": "map_t7_03",
+    "mode": "bidirectional"
+   },
+   "next": {
+    "to": "map_t7_05",
+    "mode": "bidirectional"
+   }
+  },
+  "hidden_exits": [],
+  "terrain": {
+   "env": "渊心 · 坠落的文明遗迹",
+   "wall_tag": "F08 撞壁 terrain 标签归增量四"
+  }
  },
  {
   "id": "map_t7_05",
@@ -1064,7 +1411,16 @@
    "cs_t7_020",
    "cs_t7_021"
   ],
-  "exits": {},
-  "exits_note": "拓扑连线归增量二（生态总表无连线数据，零自拟）"
+  "exits": {
+   "prev": {
+    "to": "map_t7_04",
+    "mode": "bidirectional"
+   }
+  },
+  "hidden_exits": [],
+  "terrain": {
+   "env": "渊喉壁上人工凿出的平台，用来放大三十年前的求救信号",
+   "wall_tag": "F08 撞壁 terrain 标签归增量四"
+  }
  }
 ]

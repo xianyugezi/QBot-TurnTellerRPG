@@ -18,6 +18,7 @@ CH = os.path.join(DS, "15_主线章节与任务")
 OUT_Q = os.path.join(TTR, "content", "cloudsea", "quest.json")
 OUT_M = os.path.join(TTR, "content", "cloudsea", "maps.json")
 MANI = os.path.join(TTR, "docs", "cloudsea", "quests_maps_manifest.json")
+ECO = os.path.join(DS, "17_世界内容与生态")
 
 CHAPTERS = [
     ("01", "01_第1章_云海之下.md"), ("02", "02_第2章_霜脊之径.md"),
@@ -65,10 +66,30 @@ def parse_chapter(path, ch):
     return quests, ch_name
 
 
-def parse_maps(enemies):
-    """28 生态节点：来自生态总表行序；monsters=enemies.json 按 area 回链。"""
+def parse_env():
+    """生态册项目表「环境」行 → 生态名→环境描述。"""
+    env = {}
+    for dirpath in sorted(os.listdir(ECO)):
+        d2 = os.path.join(ECO, dirpath)
+        if not (os.path.isdir(d2) and dirpath.startswith("阶段")):
+            continue
+        for f2 in sorted(os.listdir(d2)):
+            if not (re.match(r"[0-9]", f2) and f2.endswith(".md")):
+                continue
+            txt = read(os.path.join(d2, f2))
+            m = re.search(r"^\| 环境 \| (.+?) \|$", txt, re.M)
+            nm = re.search(r"^# (.+?)（", txt, re.M)
+            if m and nm:
+                env[nm.group(1).strip()] = m.group(1).strip()
+    return env
+
+
+def parse_maps(enemies, env):
+    """28 生态节点：来自生态总表行序；monsters=enemies.json 按 area 回链。
+    增量三：terrain=生态册「环境」行；exits=线性主链缺省拓扑（同簇相邻双向＋簇间末/首
+    节点串联，七簇线性串联 documented 工程收敛——分支支线拓扑归增量四/230）。"""
     txt = read(os.path.join(DS, "17_世界内容与生态", "01_生态总表_28生态.md"))
-    nodes, seq = [], 0
+    nodes = []
     tide_no = {"一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7}
     for ln in txt.split("\n"):
         if not ln.startswith("|"):
@@ -79,7 +100,6 @@ def parse_maps(enemies):
         m = re.match(r"\[([^\]]+)\]", cells[2])
         if not m or cells[1][:1] not in tide_no:
             continue
-        seq += 1
         eco = m.group(1)
         tide = tide_no[cells[1][:1]]
         mons = sorted(e["id"] for e in enemies if e["area"] == eco)
@@ -88,10 +108,21 @@ def parse_maps(enemies):
                                                if n["cluster"] == tide) + 1)),
             ("name", eco), ("cluster", tide), ("tide_name", cells[1]),
             ("star_band", cells[3]),
+            ("terrain_env", env.get(eco, "")),
             ("monsters", mons),
             ("exits", {}),
-            ("exits_note", "拓扑连线归增量二（生态总表无连线数据，零自拟）"),
         ]))
+    # 增量三：线性主链缺省拓扑——同簇相邻节点双向连通＋簇间末/首节点串联（工程收敛，
+    # 分支支线拓扑归增量四/230）；hidden_exits 保留位＝隐藏 Boss 窗口（258 产物后填充）
+    for i, n in enumerate(nodes):
+        exits = {}
+        if i > 0:
+            exits["prev"] = {"to": nodes[i - 1]["id"], "mode": "bidirectional"}
+        if i < len(nodes) - 1:
+            exits["next"] = {"to": nodes[i + 1]["id"], "mode": "bidirectional"}
+        n["exits"] = exits
+        n["hidden_exits"] = []  # hidden_boss 窗口保留位（名单归 258，机制沿 exits.condition DSL）
+        n["terrain"] = {"env": n.pop("terrain_env", ""), "wall_tag": "F08 撞壁 terrain 标签归增量四"}
     return nodes
 
 
@@ -159,7 +190,8 @@ def main():
     quests = [q for q in quests if q["main"]] + side_out
     n_main = sum(1 for q in quests if q["main"])
     n_side = sum(1 for q in quests if not q["main"])
-    maps = parse_maps(enemies)
+    env = parse_env()
+    maps = parse_maps(enemies, env)
 
     io.open(OUT_Q, "w", encoding="utf-8", newline="\n").write(
         json.dumps(quests, ensure_ascii=False, indent=1) + "\n")

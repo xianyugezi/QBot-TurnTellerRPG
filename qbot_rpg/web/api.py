@@ -438,6 +438,17 @@ def is_editable_control(control: Optional[str]) -> bool:
     return (control or "") not in _READONLY_CONTROLS
 
 
+# 批5.1：控件形态 → 该列的值是否承载**嵌套结构**（对象 / 映射 / 条件 / 嵌套列表）。
+# 列表元素只要含这类子字段，前端就改「块状换行」布局：标量列横排成块首行，嵌套字段各自
+# 成块、占满容器宽度（不再把条件编辑器/键值表格塞进单元格、不再横向滚动 9 列宽表）。
+# 判定只依据 control（§三 映射表的产物），不认任何业务字段名——换包/换模块零改动。
+_NESTED_CONTROLS: Tuple[str, ...] = ("condition", "maptable", "readonly", "listtable")
+
+
+def is_nested_control(control: Optional[str]) -> bool:
+    """控件形态是否承载嵌套结构（对象/映射/条件/嵌套列表）→ 列表需块状布局。"""
+    return (control or "") in _NESTED_CONTROLS
+
 
 def list_control(fm: Optional[FieldMeta]) -> str:
     """列表字段的控件形态判定（§三 映射表；前端只认 control，不认元素类型）。
@@ -1091,6 +1102,8 @@ def _column(key: str, fm: Optional[FieldMeta], key_label: Optional[str] = None,
         "type": ftype,
         "widget": widget,
         "control": control,
+        # 批5.1：本列是否嵌套结构（对象/映射/条件/嵌套列表）→ 列表块状布局的判定依据。
+        "nested": is_nested_control(control),
         "ref_target": fm.ref_target if fm is not None else None,
         "enum": [str(x) for x in fm.enum] if fm is not None and fm.enum else [],
         "number_step": _number_step(ftype),
@@ -1260,6 +1273,9 @@ def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
         rows_val: List[object] = value if isinstance(value, list) else []
         cols = _list_columns(fm, rows_val)
         desc["columns"] = cols
+        # 批5.1：任一列是嵌套结构 → 前端改「块状换行」布局（标量成块首行、嵌套各自成块）。
+        # 纯标量列表（如全部是引用/数字/文本的 actions）仍用可增删行表格，不走块布局。
+        desc["block_layout"] = any(bool(c.get("nested")) for c in cols)
         desc["rows"] = _table_rows(rows_val, cols, view)
         desc["row_count"] = len(rows_val)
         elem = fm.element if fm is not None else None

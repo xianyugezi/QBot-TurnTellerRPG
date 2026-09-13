@@ -115,6 +115,42 @@ class ValidationReport:
 
 
 @dataclass(frozen=True)
+class ConditionSubject:
+    """条件行编辑器的一个「主体/来源」声明（条件结构里的一个键 → 展示语义）。
+
+    编辑器重写批5：派生条件这类结构（`{主体: {比较符: 值}}` / `{主体: {二级键: {比较符: 值}}}`）
+    的**键名不写死**——由内容包元数据用本结构声明「有哪些主体、各自怎么显示、键/值引用什么」。
+    缺省（空表）时编辑器按实际值形态推断结构并如实标注「元数据未声明」。
+    只影响展示与控件选择，不参与任何校验判定。
+    """
+
+    label: str = ""                        # 主体显示名（缺省用主体键本身）
+    key_ref: Optional[str] = None          # 二级键（如印记 ID）的引用目标 kind
+    value_ref: Optional[str] = None        # 值的引用目标 kind（如状态 ID）
+    ops: Tuple[str, ...] = ()              # 该主体支持的比较符（缺省由全表/实际值推断）
+    combine: bool = False                  # 该主体是逻辑组合（值为子条件列表，如 and/or）
+
+
+@dataclass(frozen=True)
+class AssociationMeta:
+    """编辑器重写批5：「关联分区」声明（本模块条目 ↔ 其他模块条目的外键关系）。
+
+    条目页据本声明渲染相关条目分区：在 `module` 的条目里，`field` 路径的取值等于本条目
+    `local_field`（缺省 id）时，即为一条相关条目。`field` 支持点路径与列表通配
+    （`steps[].to` 表示该模块每个条目的 steps 列表里每个元素的 to 键）。
+    编辑器只按声明渲染，不写死任何模块名/字段名（换包/换模块零改动）；
+    `editable` 为真时条目页可就地编辑相关条目（落盘仍走该模块自己的校验 + 原子写链路）。
+    """
+
+    module: str = ""                       # 相关条目所在模块
+    field: str = ""                        # 该模块里指向本模块条目的外键字段路径
+    label: str = ""                        # 分区显示名（缺省用「模块显示名 · 字段显示名」）
+    local_field: str = "id"                # 本模块条目用于匹配的字段（缺省 id）
+    editable: bool = True                  # 是否在条目页就地编辑相关条目
+    hint: str = ""                         # 分区说明（面向非技术用户的一句话）
+
+
+@dataclass(frozen=True)
 class FieldMeta:
     """单字段元数据：类型/必填/默认/引用目标/枚举/常见区间/概率/上限 0=不限/软标注。
 
@@ -162,6 +198,20 @@ class FieldMeta:
     # 尾部默认值，既有 FieldMeta 构造零改动、泛型校验行为零变化。
     help: str = ""
     unit: str = ""
+    # 编辑器重写批5：显式控件声明（覆盖 type → 控件的默认映射的唯一数据入口）。
+    #   editor = ""         → 按 type 走默认映射（既有行为，零变化）；
+    #   editor = "condition" → 条件行编辑器（条件结构：主体/比较符/值 + 两级嵌套）；
+    #   editor = "maptable"  → 键值对表格（可增删行；如数值覆盖补丁 / 印记消耗表）。
+    # 只影响界面控件，不改 type/required/enum/children/校验规则；尾部默认值，
+    # 既有 FieldMeta 构造零改动、泛型校验行为零变化。
+    editor: str = ""
+    # 映射型字段（editor="maptable"）的键/值引用目标：键是引用（如印记 ID）时给候选选择器，
+    # 非引用留空（纯文本/数字键）；值同理。只影响编辑控件，不参与校验。
+    key_ref: str = ""
+    value_ref: str = ""
+    # 条件行编辑器的主体声明（键名 → 展示名/引用目标/比较符）——键名不写死；缺省空表
+    # 时编辑器按实际值形态推断结构并如实标注「元数据未声明」。只影响展示，不参与校验。
+    condition_subjects: Mapping[str, "ConditionSubject"] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -188,6 +238,12 @@ class ModuleMeta:
     # 分组键可以是稳定机器键（如 base/stats），界面文案由本表声明——编辑器不写死任何分组词。
     # 只影响界面展示，不参与校验（校验器只读 fields，不读本项）。
     group_labels: Mapping[str, str] = field(default_factory=dict)
+    # 编辑器重写批5：模块级「关联分区」声明（本模块条目与其他模块条目的外键关系）。
+    # 条目页据此渲染「相关条目」分区（如技能页的「派生」分区列出引用该技能的派生链），
+    # 并在声明 editable 时就地编辑（落盘走相关模块自己的校验 + 原子写链路）。
+    # 缺省空 = 本模块无关联声明 → 条目页不出现关联分区（编辑器不写死任何模块/字段名）。
+    # 只影响界面展示，不参与校验（校验器只读 fields，不读本项）。
+    associations: Tuple["AssociationMeta", ...] = ()
 
 
 @dataclass(frozen=True)

@@ -29,7 +29,13 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Any, Dict, Mapping, Optional, Tuple
 
-from qbot_rpg.content.models import FieldMeta, FieldMetaTable, ModuleMeta
+from qbot_rpg.content.models import (
+    AssociationMeta,
+    ConditionSubject,
+    FieldMeta,
+    FieldMetaTable,
+    ModuleMeta,
+)
 # M9 锻造（m9_shared_contract）：forge 模块 ModuleMeta + items 材料类扩展 +
 # settings.forge 段。forge_models/forge_settings 仅依赖 content.models（零 field_meta
 # import，无循环依赖）；字段定义自包含持有，本表单向 import（防 G0 反向依赖）。
@@ -1316,6 +1322,31 @@ SKILL_CHAINS_CHILD_LABELS: Dict[str, Any] = {
               "variant_override": {"power": "威力"}},
 }
 
+# ---- 派生条件的主体声明（批5 条件行编辑器；键名不写死，缺省按实际值推断）----
+# 条件结构 = {主体: {比较符: 值}} 或 {主体: {二级键: {比较符: 值}}}；and/or 为逻辑组合主体。
+CHAIN_CONDITION_SUBJECTS: Dict[str, ConditionSubject] = {
+    "count": ConditionSubject(label="连段计数", ops=("eq", "min", "max")),
+    "self_marks": ConditionSubject(label="自身印记", key_ref="mark", ops=("eq", "min", "max")),
+    "target_marks": ConditionSubject(label="目标印记", key_ref="mark", ops=("eq", "min", "max")),
+    "self_status": ConditionSubject(label="自身状态", value_ref="status", ops=("has",)),
+    "target_hp_pct": ConditionSubject(label="目标生命百分比", ops=("min", "max")),
+    "and": ConditionSubject(label="且（全部满足）", combine=True),
+    "or": ConditionSubject(label="或（任一满足）", combine=True),
+}
+
+# ---- 技能模块的「关联分区」声明（批5 派生界面；编辑器只按声明渲染，不写死模块/字段名）----
+SKILLS_ASSOCIATIONS: Tuple[AssociationMeta, ...] = (
+    AssociationMeta(
+        module="skill_chains", field="trigger_skill",
+        label="派生 · 本技能触发的链",
+        hint="以下派生链以本技能为触发技；可逐步骤改派生条件、派生技能、派生消耗、"
+             "数值覆盖、优先级、模式、霸体。保存写入派生链模块（校验 + 原子写 + 备份）。"),
+    AssociationMeta(
+        module="skill_chains", field="steps[].to",
+        label="派生 · 本技能为派生目标", editable=False,
+        hint="以下派生链的某个步骤以本技能为派生目标（只读摘要；点「打开」到派生链条目编辑）。"),
+)
+
 # ---- action（AI 字段里的条件/触发上限补充；deeper 由 ACTION_FIELD_LABELS 覆盖）----
 ACTION_CHILD_LABELS: Dict[str, Any] = {}
 
@@ -2487,18 +2518,25 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "max_combo_behavior": FieldMeta(type="str", label="满连段行为"),
         "steps": FieldMeta(type="list",
                            element=FieldMeta(type="obj", children={
-                               "from": FieldMeta(type="str", label="源技能"),
-                               "to": FieldMeta(type="str", label="目标技能"),
+                               "from": FieldMeta(type="ref", ref_target="skill", label="源技能"),
+                               "to": FieldMeta(type="ref", ref_target="skill", label="目标技能"),
                                "tag": FieldMeta(type="str", label="标签"),
                                "condition": FieldMeta(type="obj", children={},
-                                                      soft_label=True, label="触发条件"),
+                                                      soft_label=True, label="触发条件",
+                                                      editor="condition",
+                                                      condition_subjects=dict(
+                                                          CHAIN_CONDITION_SUBJECTS)),
                                "priority": FieldMeta(type="int", label="优先级"),
                                "mode": FieldMeta(type="str", label="模式"),
                                "armor": FieldMeta(type="bool", label="霸体"),
                                "consume": FieldMeta(type="int", label="消耗"),
+                               # 批5：数值覆盖补丁（{键: 数值}）→ 键值对表格（可增删行）
+                               "variant_override": FieldMeta(type="obj", children={},
+                                                             soft_label=True, label="数值覆盖",
+                                                             editor="maptable"),
                            }),
                            soft_label=True, label="连段步骤"),
-        "trigger_skill": FieldMeta(type="str", label="触发技能"),
+        "trigger_skill": FieldMeta(type="ref", ref_target="skill", label="触发技能"),
     }
     action_fields: Dict[str, FieldMeta] = {
         # ---- ActionCore 基础（T24-T26 / m2_shared_contract §四）----
@@ -2578,7 +2616,8 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "armor": FieldMeta(type="bool"),         # F12 霸体开关（执行语义快键）
         "interrupt": FieldMeta(type="bool"),     # F13 打断快键（唯一归口 = 效果系统 L0 interrupt，T19）
         "chain_refs": FieldMeta(type="list", element=FieldMeta(type="str")),  # F14 派生链引用 skill_chains.json（V-2）
-        "consume_marks": FieldMeta(type="obj"),  # F15 {mark_id: count} 消耗印记（V-3 键存在/上限 A2）
+        "consume_marks": FieldMeta(type="obj", label="消耗印记", editor="maptable",
+                                   key_ref="mark"),  # F15 {mark_id: count} 消耗印记（V-3 键存在/上限 A2）
         "job_restrict": FieldMeta(type="list", element=FieldMeta(type="str")),  # F16 职业限制（V-5）
         "job_form": FieldMeta(type="str", soft_label=True),       # F17 形态技（引用 transform 形态名，V-5 扩展判定 A2）；null=非形态技合法
         "level": FieldMeta(type="obj", soft_label=True, children={
@@ -2995,6 +3034,8 @@ def _module_table() -> Dict[str, ModuleMeta]:
             kind="skill", namespace="skill_lib",
             field_groups=dict(SKILLS_FIELD_GROUPS),
             group_order=SKILLS_GROUP_ORDER,
+            # 批5：技能条目页的「派生」关联分区（声明驱动；编辑器不写死模块/字段名）。
+            associations=SKILLS_ASSOCIATIONS,
         ),
         # M13 职业库（细化_6b_职业库与变换引擎契约 §1.1~1.4：jobs.json 职业注册表；
         # kind="job" 与 loader _KIND_FOR_MODULE + DEF_CLASSES 对齐（批4 路4A/4B JobDef）；
@@ -3218,5 +3259,7 @@ __all__ = [
     "SETTINGS_CHILD_HELP", "MAPS_FIELD_HELP", "MAPS_CHILD_HELP",
     "QUEST_FIELD_HELP", "QUEST_CHILD_HELP", "JOBS_FIELD_HELP", "JOBS_CHILD_HELP",
     "NPC_FIELD_HELP", "NPC_CHILD_HELP", "SHOP_FIELD_HELP", "SHOP_CHILD_HELP",
+    # 编辑器重写批5：条件主体声明 + 技能模块关联分区声明（派生界面；编辑器只按声明渲染）
+    "CHAIN_CONDITION_SUBJECTS", "SKILLS_ASSOCIATIONS",
     "F_SKILL_POWER",
 ]

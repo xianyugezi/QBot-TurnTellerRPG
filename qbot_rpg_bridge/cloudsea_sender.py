@@ -62,8 +62,11 @@ class CloudseaSender:
     def _default_tpl(key: str, ctx: Mapping[str, Any]) -> str:
         defaults = {
             "battle_merge_summary": "▫ 已合并 {n} 条战报（{window_sec} 秒窗）",
+            "battle_mention_line": "{mention} {text}",
         }
-        return defaults.get(key, "").format(**ctx)
+        if key not in defaults:
+            raise KeyError(key)  # 未知 key → 调用侧回退原文（模板缺 key 行为）
+        return defaults[key].format(**ctx)
 
     def _emit(self, text: str) -> None:
         if self._emoji is not None:

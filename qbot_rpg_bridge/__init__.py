@@ -135,17 +135,38 @@ async def run_bridge(
 # 循环 import（run_bridge 已定义后触发安全）。**必须相对 import**（.plugin）：NoneBot
 # 加载的是 plugins.qbot_rpg_bridge，绝对 import 会解析到 sys.path 仓库副本 → 双实例、
 # on_message 不注册。无 NoneBot 环境 import 安全（HAS_NONEBOT=False 跳过注册）。
-with open("/tmp/qbot_rpg_bridge_debug.log", "a", encoding="utf-8") as _dbg:  # noqa: PTH123 —— 部署诊断
-    _dbg.write("DEBUG __init__: import plugin 前\n")
+
+# 九期215（部署诊断日志平台回退）：/tmp 系 Linux 部署假设，Windows/macOS 无该
+# 目录时回退仓库 logs/（不可用则静默跳过）——日志落点不变语义，纯跨平台回退。
+import os as _os
+
+
+def _bridge_debug_path() -> Optional[str]:
+    for cand in ("/tmp", _os.path.join(_os.path.dirname(__file__), "..", "logs")):
+        try:
+            if _os.path.isdir(cand):
+                return _os.path.join(cand, "qbot_rpg_bridge_debug.log")
+        except Exception:  # noqa: BLE001
+            continue
+    return None
+
+
+_BRIDGE_DEBUG = _bridge_debug_path()
+
+if _BRIDGE_DEBUG:
+    with open(_BRIDGE_DEBUG, "a", encoding="utf-8") as _dbg:  # noqa: PTH123 —— 部署诊断
+        _dbg.write("DEBUG __init__: import plugin 前\n")
 try:
     from . import plugin as _plugin  # noqa: E402,F401 —— 触发 on_message 注册
 
-    with open("/tmp/qbot_rpg_bridge_debug.log", "a", encoding="utf-8") as _dbg:  # noqa: PTH123
-        _dbg.write("DEBUG __init__: import plugin 完成\n")
+    if _BRIDGE_DEBUG:
+        with open(_BRIDGE_DEBUG, "a", encoding="utf-8") as _dbg:  # noqa: PTH123
+            _dbg.write("DEBUG __init__: import plugin 完成\n")
 except Exception as _e:  # noqa: BLE001 —— 部署诊断
     import traceback
 
-    with open("/tmp/qbot_rpg_bridge_debug.log", "a", encoding="utf-8") as _dbg:  # noqa: PTH123
-        _dbg.write(f"DEBUG __init__: import plugin 异常 {type(_e).__name__}: {_e}\n")
-        traceback.print_exc(file=_dbg)
+    if _BRIDGE_DEBUG:
+        with open(_BRIDGE_DEBUG, "a", encoding="utf-8") as _dbg:  # noqa: PTH123
+            _dbg.write(f"DEBUG __init__: import plugin 异常 {type(_e).__name__}: {_e}\n")
+            traceback.print_exc(file=_dbg)
     raise

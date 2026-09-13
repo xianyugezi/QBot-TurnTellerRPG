@@ -19,9 +19,11 @@ __all__ = ["register_emoji_whitelist", "validate_emoji_use", "registered_emoji"]
 #: 恒放行的功能性标记（D-5B 既有口径，不依赖注册）
 FUNCTIONAL_MARKS: FrozenSet[str] = frozenset({"✅", "❌"})
 
-#: emoji/符号粗扫模式：非 ASCII、非常用中文标点的单码位（含 variation selector）
+#: emoji/符号粗扫模式：基码位可选跟随 variation selector（U+FE0F）——
+#: 组合序列整匹配（「⚗️」= U+2697+U+FE0F 不拆分，白名单按整串注册）
 _EMOJI_RE = re.compile(
-    "[\U0001F000-\U0001FAFF\u2600-\u27BF\u2B00-\u2BFF\uFE0F\u2190-\u21FF\u25A0-\u25FF]"
+    "(?:[\U0001F000-\U0001FAFF\u2600-\u27BF\u2B00-\u2BFF\u25A0-\u25FF\u2190-\u21FF]\uFE0F?"
+    "|[\uFE0F])"
 )
 
 _WHITELIST: Optional[FrozenSet[str]] = None

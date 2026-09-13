@@ -171,15 +171,31 @@ def register_plugin() -> None:
 
 if HAS_NONEBOT:
     # NoneBot 插件加载即注册（模块级执行；无 nonebot 环境跳过，import 安全）
-    with open("/tmp/qbot_rpg_bridge_debug.log", "a", encoding="utf-8") as _dbg:  # noqa: PTH123
-        _dbg.write("DEBUG plugin.py: register_plugin 执行开始\n")
+    # 九期215（部署诊断日志平台回退，同 __init__ 口径）：/tmp 不可用回退 logs/，不可用则静默。
+    import os as _os
+
+    def _bridge_dbg() -> Optional[str]:
+        for _cand in ("/tmp", _os.path.join(_os.path.dirname(__file__), "..", "logs")):
+            try:
+                if _os.path.isdir(_cand):
+                    return _os.path.join(_cand, "qbot_rpg_bridge_debug.log")
+            except Exception:  # noqa: BLE001
+                continue
+        return None
+
+    _BD = _bridge_dbg()
+    if _BD:
+        with open(_BD, "a", encoding="utf-8") as _dbg:  # noqa: PTH123
+            _dbg.write("DEBUG plugin.py: register_plugin 执行开始\n")
     try:
         register_plugin()
-        with open("/tmp/qbot_rpg_bridge_debug.log", "a", encoding="utf-8") as _dbg:  # noqa: PTH123
-            _dbg.write("DEBUG plugin.py: register_plugin 执行完成\n")
+        if _BD:
+            with open(_BD, "a", encoding="utf-8") as _dbg:  # noqa: PTH123
+                _dbg.write("DEBUG plugin.py: register_plugin 执行完成\n")
     except Exception as e:  # noqa: BLE001 —— 部署诊断
         import traceback
 
-        with open("/tmp/qbot_rpg_bridge_debug.log", "a", encoding="utf-8") as _dbg:  # noqa: PTH123
-            _dbg.write(f"DEBUG plugin.py: register_plugin 异常 {type(e).__name__}: {e}\n")
-            traceback.print_exc(file=_dbg)
+        if _BD:
+            with open(_BD, "a", encoding="utf-8") as _dbg:  # noqa: PTH123
+                _dbg.write(f"DEBUG plugin.py: register_plugin 异常 {type(e).__name__}: {e}\n")
+                traceback.print_exc(file=_dbg)

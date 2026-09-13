@@ -179,6 +179,8 @@ body {
 .ftype { color: var(--accent-dim); }
 .ftype::before { content: "<"; color: var(--text-6); }
 .ftype::after { content: ">"; color: var(--text-6); }
+/* 字段原始键名（批3.5）：中文名为主、键名为辅——弱化色 + 更小字号，不抢主标签 */
+.fkey { color: var(--text-5); font-size: var(--fs-11); font-weight: 400; }
 .rval { min-width: 0; align-self: start; }
 .inp { color: var(--text-value); white-space: pre-wrap; overflow-wrap: anywhere; }
 .inp.mono { color: var(--accent); white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -397,6 +399,21 @@ function esc(v) {
 }
 function enc(v) { return encodeURIComponent(v); }
 function typeZh(t) { return TYPE_ZH[t] || t || "文本"; }
+
+/* EDITOR_FIELD_LABEL_BEGIN */
+// 字段标签渲染（批3.5）：中文名为主 + 原始键名为辅。
+//   · 元数据给了中文名（label !== 原始键）→「中文名 + 弱化键名」并列；
+//   · 无中文名（label 与键相同 / 键缺失）→ 只显示原始键（现状，不凭空造词）；
+//   · 通用：任何模块、任何字段都走这一个函数，框架不认任何业务字段名。
+function fieldLabelHtml(label, key) {
+  var l = label == null ? "" : String(label);
+  var k = key == null ? "" : String(key);
+  if (k && l && l !== k) {
+    return esc(l) + ' <span class="fkey">' + esc(k) + "</span>";
+  }
+  return esc(l || k);
+}
+/* EDITOR_FIELD_LABEL_END */
 function el(id) { return document.getElementById(id); }
 
 function api(path) {
@@ -692,7 +709,7 @@ function bindTabs() {
 
 function fieldRow(f) {
   return '<div class="row" data-field="' + esc(f.key) + '" data-present="'
-    + (f.present ? "true" : "false") + '"><div class="rlab">' + esc(f.label)
+    + (f.present ? "true" : "false") + '"><div class="rlab">' + fieldLabelHtml(f.label, f.key)
     + ' <span class="ftype">' + esc(typeZh(f.type)) + "</span></div>"
     + '<div class="rval">' + fieldBody(f) + fieldHint(f) + "</div></div>";
 }
@@ -754,6 +771,7 @@ function editControl(f) {
   }
 }
 
+/* EDITOR_SELECT_OPTIONS_BEGIN */
 function selectOptions(value, options, placeholder) {
   var cur = value == null ? "" : String(value);
   var has = options.some(function (o) { return String(o.id) === cur; });
@@ -768,6 +786,7 @@ function selectOptions(value, options, placeholder) {
   });
   return html;
 }
+/* EDITOR_SELECT_OPTIONS_END */
 
 function selectHtml(key, value, options, placeholder, extraAttrs) {
   return '<select class="cin" data-key="' + esc(key) + '"' + (extraAttrs || "") + ">"
@@ -941,7 +960,7 @@ function listTable(f) {
   if (!f.value || !f.value.length) { return '<div class="ex">（空列表）</div>'; }
   var cols = f.columns || [];
   var head = "<tr>" + cols.map(function (c) {
-    return "<th>" + esc(c.label) + ' <span class="ftype">' + esc(typeZh(c.type)) + "</span></th>";
+    return "<th>" + fieldLabelHtml(c.label, c.key) + ' <span class="ftype">' + esc(typeZh(c.type)) + "</span></th>";
   }).join("") + "</tr>";
   var body = (f.rows || []).map(function (row) {
     return "<tr>" + cols.map(function (c) {
@@ -969,7 +988,7 @@ function objTable(f) {
     return '<div class="ta">' + esc(JSON.stringify(f.value, null, 2)) + "</div>";
   }
   return kids.map(function (c) {
-    return '<div class="row nest"><div class="rlab">' + esc(c.label)
+    return '<div class="row nest"><div class="rlab">' + fieldLabelHtml(c.label, c.key)
       + ' <span class="ftype">' + esc(typeZh(c.type)) + "</span></div>"
       + '<div class="rval">' + fieldValue(c) + "</div></div>";
   }).join("");

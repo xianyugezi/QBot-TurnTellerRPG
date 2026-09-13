@@ -933,6 +933,108 @@ QUEST_GROUP_LABELS: Dict[str, str] = {
 }
 
 
+# -------------------------------------------------------------------------------------
+# 编辑器重写批3.5：各模块**字段**中文名（显示层唯一来源，与 SKILLS_FIELD_LABELS 同款）
+# -------------------------------------------------------------------------------------
+# 口径：
+#   · 只影响展示（`FieldMeta.label` 仅编辑器只读/表单渲染消费），不参与任何校验判定；
+#     _decorate_field_meta 只补 label/group，type/required/default/enum/children 全部原样保留。
+#   · 字段自带 label 优先（例如装备词条 label 来自 data/gear_stats.GEAR_LABELS_ZH），
+#     本表只填空缺键，不覆盖既有 label。
+#   · 命名一律取游戏内既有文案：stats.json（hp 生命 / mp 灵能 / agi 敏捷 / foc 专注 /
+#     spr 精神 / lck 幸运 / atk 攻击 / dfn 防御）、怪物模块设计定稿（pv 防护值）、
+#     m12_UX 方案（弱点/PV/抗性）。未在既有文案中出现的键，取值理由见报批记录。
+#   · 键名并排由前端统一渲染（中文名为主 + 弱化键名为辅），本表只提供中文名。
+ENEMIES_FIELD_LABELS: Dict[str, str] = {
+    # 基本
+    "id": "标识", "name": "名称", "tier": "怪物档位", "type": "类型",
+    "area": "区域", "desc": "说明",
+    # 数值与抗性
+    "stats": "属性", "weakness": "弱点", "pv": "防护值", "pv_recover": "防护值恢复",
+    "resistance": "抗性", "def_base": "基础防御", "elem_res": "元素抗性",
+    "hp": "生命", "atk": "攻击", "def": "防御",
+    "monster_def_rate": "怪物防御率", "drop_rate": "掉落率",
+    # 行动与效果
+    "actions": "行动表", "special_actions": "特殊行动", "chains": "连招",
+    "effects": "效果", "traits": "特性", "skills": "技能",
+    # 掉落与图鉴
+    "drops": "掉落", "lore": "图鉴",
+}
+
+ITEMS_FIELD_LABELS: Dict[str, str] = {
+    "id": "标识", "name": "名称", "type": "类型", "price": "价格",
+    "atk": "攻击", "def": "防御", "effects": "效果", "slot": "部位",
+    "bind": "绑定", "usable": "可使用", "quality": "品质", "rarity": "稀有度",
+    "material_tier": "素材档位", "elements": "元素", "base_effects": "基础效果",
+    "traits": "特性", "awaken": "觉醒", "seed": "种子", "source": "来源",
+}
+# equipment 与 items 同类（共享 items_fields + excludes）：字段名表复用 items，
+# 装备独有的 excludes 单补一个归属（否则该键在中/英文之间没有中文名）。
+EQUIPMENT_FIELD_LABELS: Dict[str, str] = dict(ITEMS_FIELD_LABELS)
+EQUIPMENT_FIELD_LABELS["excludes"] = "互斥部位"
+
+MAPS_FIELD_LABELS: Dict[str, str] = {
+    "id": "标识", "name": "名称", "enemy_pool": "敌人池",
+    "battle": "战斗地图", "revert": "回退标记", "safe_zone": "安全区",
+    "min": "最小值", "max": "最大值", "lower": "下限", "upper": "上限",
+    "reset": "重置", "respawn_point": "复活点",
+}
+
+# quest 字段的 label 早已随 M12 字段表（见 QUEST_FIELDS）逐字登记；此处保留同款字段名表，
+# 供 decoration 单一入口消费（fm.label 优先，本表实际只兜底未来新增/漏标键，不覆盖既有值）。
+QUEST_FIELD_LABELS: Dict[str, str] = {
+    "id": "任务 ID", "name": "名称", "desc": "描述", "type": "类型",
+    "main": "主线标记", "zone": "区域", "consume": "消耗", "repeatable": "可重复",
+    "conditions": "解锁条件", "reward": "奖励（支持 货币/物品/多形态）", "board": "任务板",
+    "timed": "限时", "unlock_chain": "解锁链（前驱任务 ID）", "filter": "筛选",
+    "bonus": "加成", "npc": "NPC 关联", "daily": "每日",
+}
+
+# ---- 批3.5 余量补全：技能族与行动/职业库的字段名表（同样只补空缺 label）----
+EFFECTS_FIELD_LABELS: Dict[str, str] = {
+    "id": "标识", "name": "名称", "type": "类型", "power": "威力",
+    "duration": "持续", "probability": "概率", "max_stack": "最大层数",
+    "require_status": "需求状态", "apply_status": "施加状态",
+    "require_mark": "需求印记", "apply_mark": "施加印记", "patch": "数值补丁",
+}
+
+STATUSES_FIELD_LABELS: Dict[str, str] = {
+    "id": "标识", "name": "名称", "type": "类型", "max_stack": "最大层数",
+    "duration": "持续", "decay": "衰减", "effects": "效果列表",
+    "on_enter": "进入时", "on_tick": "每回合", "on_expire": "失效时",
+}
+
+MARKS_FIELD_LABELS: Dict[str, str] = {
+    "id": "标识", "name": "名称", "icon": "图标", "type": "类型",
+    "max_stack": "最大层数", "appliable_to": "可施加对象", "polarity": "极性",
+    "element": "元素", "duration": "持续", "desc": "说明", "probability": "概率",
+}
+
+SKILL_CHAINS_FIELD_LABELS: Dict[str, str] = {
+    "id": "标识", "name": "名称", "type": "类型", "next": "下一节点",
+    "actions": "行动引用", "effects": "效果列表",
+}
+
+ACTION_FIELD_LABELS: Dict[str, str] = {
+    "id": "标识", "name": "名称", "kind": "类别", "type": "类型",
+    "position_rule": "方位命中规则", "power": "威力", "attack_type": "攻击类型",
+    "element": "元素", "effects": "效果列表", "cost": "消耗",
+    "cool": "冷却（旧键）", "weight": "权重", "probability": "概率",
+    "intent": "意图", "roar": "咆哮等级", "cooldown": "冷却",
+    "recovery": "行动恢复", "hungry": "饥饿值", "chain": "连锁行动",
+    "armor": "霸体", "interrupt": "打断", "tags": "标签",
+    "preview": "意图预告", "preview_chain": "链预告", "reveal_condition": "揭示条件",
+    "require_status": "需求状态", "apply_status": "施加状态", "skill": "技能引用",
+}
+
+JOBS_FIELD_LABELS: Dict[str, str] = {
+    "id": "标识", "name": "名称", "difficulty": "难度", "playstyle": "玩法",
+    "recommended_newbie": "推荐新手", "resource_axes": "资源轴",
+    "mechanic_tags": "机制标签", "weapon_types": "可用武器类型",
+    "growth": "成长率", "transform": "形态切换", "description": "职业介绍",
+}
+
+
 def _group_declaration(
     defs: Tuple[Tuple[str, Tuple[str, ...]], ...],
     labels: Mapping[str, str],
@@ -1488,12 +1590,22 @@ def _module_table() -> Dict[str, ModuleMeta]:
 
     return {
         "manifest": ModuleMeta(entry_type="object", fields=manifest_fields),
-        "effects": ModuleMeta(entry_type="list", fields=effects_fields, kind="effect", namespace="effect_family"),
-        "statuses": ModuleMeta(entry_type="list", fields=statuses_fields, kind="status", namespace="effect_family"),
-        "marks": ModuleMeta(entry_type="list", fields=marks_fields, kind="mark", namespace="effect_family"),
-        "skill_chains": ModuleMeta(entry_type="list", fields=skill_chains_fields, kind="skill_chain",
+        "effects": ModuleMeta(entry_type="list",
+                              fields=_decorate_field_meta(effects_fields, {}, EFFECTS_FIELD_LABELS),
+                              kind="effect", namespace="effect_family"),
+        "statuses": ModuleMeta(entry_type="list",
+                               fields=_decorate_field_meta(statuses_fields, {}, STATUSES_FIELD_LABELS),
+                               kind="status", namespace="effect_family"),
+        "marks": ModuleMeta(entry_type="list",
+                            fields=_decorate_field_meta(marks_fields, {}, MARKS_FIELD_LABELS),
+                            kind="mark", namespace="effect_family"),
+        "skill_chains": ModuleMeta(entry_type="list",
+                                   fields=_decorate_field_meta(skill_chains_fields, {}, SKILL_CHAINS_FIELD_LABELS),
+                                   kind="skill_chain",
                                    namespace="chain_lib", chain_field="next"),
-        "action": ModuleMeta(entry_type="list", fields=action_fields, kind="action", namespace="action_lib"),
+        "action": ModuleMeta(entry_type="list",
+                             fields=_decorate_field_meta(action_fields, {}, ACTION_FIELD_LABELS),
+                             kind="action", namespace="action_lib"),
         # M13 技能库（细化_6a_技能库契约 §1：skills.json 玩家技能库；F01-F24 全字段登记；
         # kind="skill" 与 loader _KIND_FOR_MODULE + DEF_CLASSES 对齐（路1A SkillDef）；
         # 命名空间 skill_lib 独立于 action_lib——V-10 跨库重名仅黄提示）
@@ -1514,15 +1626,17 @@ def _module_table() -> Dict[str, ModuleMeta]:
         # 枚举 {clear, keep}（§1.4）随契约登记，枚举外值 → 泛型 R-1 红拦（V5 判定基底）；
         # growth 九键缺省 0 不设 required（§1.2）。深结构/引用校验（V1~V8 专项）归批4 路4B
         # job_models.validate_jobs 全权（对齐 skills 专项校验器口径），本表登记字段口径。
-        "jobs": ModuleMeta(entry_type="list", fields=jobs_fields, kind="job", namespace="job_lib"),
+        "jobs": ModuleMeta(entry_type="list",
+                           fields=_decorate_field_meta(jobs_fields, {}, JOBS_FIELD_LABELS),
+                           kind="job", namespace="job_lib"),
         "formula": ModuleMeta(entry_type="map", fields=formula_fields, kind="formula", namespace="formula_lib"),
         "items": ModuleMeta(entry_type="list",
-                            fields=_decorate_field_meta(items_fields, ITEMS_FIELD_GROUPS, ITEMS_GROUP_LABELS),
+                            fields=_decorate_field_meta(items_fields, ITEMS_FIELD_GROUPS, ITEMS_FIELD_LABELS),
                             kind="item", namespace="item_lib",
                             field_groups=ITEMS_FIELD_GROUPS, group_order=ITEMS_GROUP_ORDER,
                             group_labels=ITEMS_GROUP_LABEL_MAP),
         "equipment": ModuleMeta(entry_type="list",
-                                fields=_decorate_field_meta(equipment_fields, EQUIPMENT_FIELD_GROUPS, ITEMS_GROUP_LABELS),
+                                fields=_decorate_field_meta(equipment_fields, EQUIPMENT_FIELD_GROUPS, EQUIPMENT_FIELD_LABELS),
                                 kind="equipment",
                                 namespace="item_lib", mutex_field="excludes",
                                 field_groups=EQUIPMENT_FIELD_GROUPS, group_order=EQUIPMENT_GROUP_ORDER,
@@ -1549,12 +1663,12 @@ def _module_table() -> Dict[str, ModuleMeta]:
         # validate_enhance 专项全权（V1~V7），泛型只做顶层形态（对齐 forge/fishing）
         "enhance": enhance_module_meta(),
         "enemies": ModuleMeta(entry_type="list",
-                              fields=_decorate_field_meta(enemies_fields, ENEMIES_FIELD_GROUPS, ENEMIES_GROUP_LABELS),
+                              fields=_decorate_field_meta(enemies_fields, ENEMIES_FIELD_GROUPS, ENEMIES_FIELD_LABELS),
                               kind="enemy", namespace="enemy_lib",
                               field_groups=ENEMIES_FIELD_GROUPS, group_order=ENEMIES_GROUP_ORDER,
                               group_labels=ENEMIES_GROUP_LABEL_MAP),
         "maps": ModuleMeta(entry_type="list",
-                           fields=_decorate_field_meta(maps_fields, MAPS_FIELD_GROUPS, MAPS_GROUP_LABELS),
+                           fields=_decorate_field_meta(maps_fields, MAPS_FIELD_GROUPS, MAPS_FIELD_LABELS),
                            kind="map", namespace="map_lib",
                            field_groups=MAPS_FIELD_GROUPS, group_order=MAPS_GROUP_ORDER,
                            group_labels=MAPS_GROUP_LABEL_MAP),
@@ -1571,7 +1685,7 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "npc": ModuleMeta(entry_type="list", fields=NPC_FIELDS, kind="npc", namespace="npc_lib"),
         "shop": ModuleMeta(entry_type="list", fields=SHOP_FIELDS, kind="shop", namespace="shop_lib"),
         "quest": ModuleMeta(entry_type="list",
-                            fields=_decorate_field_meta(QUEST_FIELDS, QUEST_FIELD_GROUPS, QUEST_GROUP_LABELS),
+                            fields=_decorate_field_meta(QUEST_FIELDS, QUEST_FIELD_GROUPS, QUEST_FIELD_LABELS),
                             kind="quest", namespace="quest_lib",
                             field_groups=QUEST_FIELD_GROUPS, group_order=QUEST_GROUP_ORDER,
                             group_labels=QUEST_GROUP_LABEL_MAP),
@@ -1652,4 +1766,9 @@ __all__ = [
     "EQUIPMENT_FIELD_GROUPS", "EQUIPMENT_GROUP_ORDER",
     "MAPS_GROUP_DEFS", "MAPS_FIELD_GROUPS", "MAPS_GROUP_ORDER", "MAPS_GROUP_LABELS",
     "QUEST_GROUP_DEFS", "QUEST_FIELD_GROUPS", "QUEST_GROUP_ORDER", "QUEST_GROUP_LABELS",
+    # 编辑器重写批3.5：模块**字段**中文名（显示层；前端「中文名 + 原始键」并列渲染的数据源）
+    "ENEMIES_FIELD_LABELS", "ITEMS_FIELD_LABELS", "EQUIPMENT_FIELD_LABELS",
+    "MAPS_FIELD_LABELS", "QUEST_FIELD_LABELS",
+    "EFFECTS_FIELD_LABELS", "STATUSES_FIELD_LABELS", "MARKS_FIELD_LABELS",
+    "SKILL_CHAINS_FIELD_LABELS", "ACTION_FIELD_LABELS", "JOBS_FIELD_LABELS",
 ]

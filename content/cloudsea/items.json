@@ -187,5 +187,266 @@
   "effects": [],
   "usable": false,
   "desc": "[锚面：炼金材料（`19_/01_配方总表` §二·补2 C-01）]"
+ },
+ {
+  "id": "cs_mat_022",
+  "name": "余烬矿",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[矿石/金属｜精炼矿石·遗迹中层（`06_` §一 #4）]"
+ },
+ {
+  "id": "cs_mat_023",
+  "name": "磐心矿",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[矿石/金属｜精炼矿石·遗迹中层（`06_` §一 #4）]"
+ },
+ {
+  "id": "cs_mat_024",
+  "name": "霜髓矿",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[矿石/金属｜精炼矿石·遗迹中层（`06_` §一 #4）]"
+ },
+ {
+  "id": "cs_mat_025",
+  "name": "曦辉矿",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[矿石/金属｜精炼矿石·遗迹深层（`06_` §一 #4）]"
+ },
+ {
+  "id": "cs_mat_026",
+  "name": "雷纹矿",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[矿石/金属｜精炼矿石·遗迹深层（`06_` §一 #4）]"
+ },
+ {
+  "id": "cs_mat_027",
+  "name": "幽影矿",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[矿石/金属｜精炼矿石·遗迹深层（`06_` §一 #4）]"
+ },
+ {
+  "id": "cs_mat_028",
+  "name": "风息矿",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[矿石/金属｜精炼矿石·遗迹深层（`06_` §一 #4）]"
+ },
+ {
+  "id": "cs_mat_029",
+  "name": "渊眠潮髓",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[液体｜潮髓系稀有料·档A（九期 235D，`06_` §二·5）]"
+ },
+ {
+  "id": "cs_mat_030",
+  "name": "淬风潮髓",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[液体｜潮髓系稀有料·档A（九期 235D）]"
+ },
+ {
+  "id": "cs_mat_031",
+  "name": "裂晶潮髓",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[液体｜潮髓系稀有料·档A（九期 235D）]"
+ },
+ {
+  "id": "cs_mat_032",
+  "name": "磐凝潮髓",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[液体｜潮髓系稀有料·档A（九期 235D）]"
+ },
+ {
+  "id": "cs_mat_033",
+  "name": "蚀萃潮髓",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[液体｜潮髓系稀有料·档A（九期 235D）]"
+ },
+ {
+  "id": "cs_mat_034",
+  "name": "灵酿潮髓",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[液体｜潮髓系稀有料·档A（九期 235D）]"
+ },
+ {
+  "id": "cs_mat_035",
+  "name": "渊眠凝粹",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[液体｜潮髓系稀有料·档B 凝粹（九期 235D）]"
+ },
+ {
+  "id": "cs_mat_036",
+  "name": "淬风凝粹",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[液体｜潮髓系稀有料·档B 凝粹（九期 235D）]"
+ },
+ {
+  "id": "cs_mat_037",
+  "name": "裂晶凝粹",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[液体｜潮髓系稀有料·档B 凝粹（九期 235D）]"
+ },
+ {
+  "id": "cs_mat_038",
+  "name": "磐凝凝粹",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[液体｜潮髓系稀有料·档B 凝粹（九期 235D）]"
+ },
+ {
+  "id": "cs_mat_039",
+  "name": "蚀萃凝粹",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[液体｜潮髓系稀有料·档B 凝粹（九期 235D）]"
+ },
+ {
+  "id": "cs_mat_040",
+  "name": "灵酿凝粹",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[液体｜潮髓系稀有料·档B 凝粹（九期 235D）]"
+ },
+ {
+  "id": "cs_mat_041",
+  "name": "甲鳞",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[鳞片/皮革｜防具本主产出（`06_` §一 #6 素材本注）]"
+ },
+ {
+  "id": "cs_mat_042",
+  "name": "织云革",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[鳞片/皮革｜防具本主产出（`06_` §一 #6 素材本注）]"
+ },
+ {
+  "id": "cs_mat_043",
+  "name": "空兽硬骨",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[骸骨｜武器本主产出（`06_` §一 #10 素材本注）]"
+ },
+ {
+  "id": "cs_mat_044",
+  "name": "符文碎屑",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[粉末｜符文活化料（`05` §M5.2 契约；`06_` §一 #8）]"
+ },
+ {
+  "id": "cs_mat_045",
+  "name": "觉醒结晶",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[粉末｜符文觉醒料（`05` §M5.2：结晶×3＋同系硬核×1）]"
+ },
+ {
+  "id": "cs_mat_046",
+  "name": "风核晶粉",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[粉末｜丰饶符溢出转换（速查 §六 低频三出口）]"
+ },
+ {
+  "id": "cs_mat_047",
+  "name": "封印核",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[宝石/水晶｜遗械解封 pity（`06_` §一 #1；42 个）]"
+ },
+ {
+  "id": "cs_mat_048",
+  "name": "蚀潮晶核",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[宝石/水晶｜晶核系（`06_` §一 #4）]"
+ },
+ {
+  "id": "cs_mat_049",
+  "name": "异相种遗核",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[宝石/水晶｜晶核系（`06_` §一 #4）]"
+ },
+ {
+  "id": "cs_mat_050",
+  "name": "遗械残片",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[零件/半成品｜遗械解封材料（`06_` §一 #1：残片×8＋封印核×3＋金币120,000）]"
  }
 ]

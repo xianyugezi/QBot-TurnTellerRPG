@@ -254,6 +254,41 @@ select.cin { padding: 1px var(--sp-2); }
 .ladd:hover { background: var(--surface-hover); }
 .lwrap { width: 100%; }
 
+/* ---------- 块状换行布局（批5.1）：列表元素含嵌套结构化子字段时，逐条成块 ----------
+   一张 N 列宽表在窄面板里必然横向滚动（V14），条件/键值编辑器塞进单元格又把行高撑高、
+   同行其它列基线错位（V13）。规则：元素只要含嵌套子字段（列描述 nested=true，判定依据是
+   控件形态而非业务字段名），该列表改为「逐条成块」——块首行横排标量列（尽量占满一行），
+   嵌套字段各自换行成块、占满容器宽度（不再有单元格右侧空白）。
+   分隔沿用 tokens：外层细边框 + 左侧色条（--line-accent-dash），嵌套块之间用最弱分隔线。 */
+.lblocks { display: flex; flex-direction: column; gap: var(--sp-6); }
+.lblock { border: var(--bw) solid var(--line-strong);
+  border-left: var(--bw-accent) solid var(--line-accent-dash); }
+.lb-head { display: flex; align-items: flex-start; gap: var(--sp-5); flex-wrap: wrap;
+  padding: var(--sp-5) var(--sp-6); }
+.lb-head > .ldel { margin-left: auto; }
+.lb-no { color: var(--text-5); font-size: var(--fs-11); min-height: var(--h-ctl);
+  display: inline-flex; align-items: center; }
+.lb-scalars { flex: 1 1 auto; min-width: 0; display: flex; flex-wrap: wrap; gap: var(--sp-5); }
+.lb-scalar { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0;
+  flex: 1 1 170px; }
+.lb-scalar.num { flex: 0 1 120px; }
+.lb-scalar.bool { flex: 0 1 140px; }
+.lb-scalar.ref { flex: 2 1 230px; }
+.lb-scalar.wide { flex: 1 1 100%; }
+.lb-k { color: var(--text-4); font-size: var(--fs-11); display: flex; align-items: center;
+  gap: var(--sp-3); flex-wrap: wrap; min-height: 16px; }
+.lb-scalar .cin, .lb-scalar .cta { width: 100%; }
+.lb-nests { display: flex; flex-direction: column; border-top: var(--bw) solid var(--line-soft); }
+.lb-nest { padding: var(--sp-5) var(--sp-6); border-top: var(--bw) solid var(--line-faint); }
+.lb-nest:first-child { border-top: 0; }
+.lb-nest-h { color: var(--text-4); display: flex; align-items: center; gap: var(--sp-3);
+  flex-wrap: wrap; margin-bottom: var(--sp-3); }
+.lb-nest-h::before { content: "> "; color: var(--line-mute); }
+.lb-nest-b { width: 100%; min-width: 0; }
+/* 嵌套块里的表格/只读块占满宽度：取消单元格 260px 上限与固定表格布局造成的右侧空白 */
+.lb-nest-b .ro-cell { max-width: none; }
+.lb-nest-b .ltable-scroll, .lb-nest-b .ltable-edit, .lb-nest-b .ltable-ro { width: 100%; }
+
 /* ---------- 引用字段选择器（批4 组件03）：可搜索候选 + 已选值 + 非法值黄提示 ---------- */
 .refvals { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-bottom: var(--sp-3); }
 .refval { display: inline-flex; align-items: center; gap: var(--sp-4); border: var(--bw) solid var(--line);
@@ -1770,6 +1805,13 @@ function listTableBody(f) {
   if (!Array.isArray(rows)) { rows = []; }
   var cols = f.columns || [];
   var scalar = !!f.scalar_element;
+  // 批5.1：元素含嵌套结构化子字段（列描述 nested=true；判定依据是控件形态，不是字段名）→
+  // 块状换行布局；纯标量列表（列全是引用/数值/文本，无嵌套结构）仍用可增删行表格。
+  var nestedCol = false;
+  for (var ci = 0; ci < cols.length; ci++) {
+    if (cols[ci] && cols[ci].nested) { nestedCol = true; break; }
+  }
+  if (f.block_layout || nestedCol) { return listBlockBody(f, rows, cols, scalar); }
   var html = '<div class="lmeta">列表字段 · ' + rows.length + " 行 · 列名与类型来自内容包元数据"
     + " · 改动先进草稿（不落盘）</div>";
   if (!cols.length) {
@@ -1806,6 +1848,75 @@ function listTableBody(f) {
 function listTableEdit(f) {
   return '<div class="lwrap ltable-wrap" data-lwrap="' + esc(f.key) + '">'
     + listTableBody(f) + "</div>";
+}
+
+// ---------------------------------------------------------------------------
+// 批5.1 · 块状换行布局（列表元素含嵌套结构化子字段时）
+// 逐条成块：块首行 = 该元素的标量列（横向排布、尽量占满一行），随后换行把嵌套字段
+// （条件 / 键值对 / 对象 / 嵌套列表）各自成块、占满容器宽度。列的分类来自后端列描述
+// 的 nested 标志（由控件形态判定），前端不认任何业务字段名。
+// 增删行/引用候选/条件与键值编辑仍走原有 [data-ladd]/[data-ldel]/[data-lcell]/
+// [data-condcell]/[data-mapcell] 接线，保存链零改动。
+// ---------------------------------------------------------------------------
+function listBlockBody(f, rows, cols, scalar) {
+  var scalars = cols.filter(function (c) { return c && !c.nested; });
+  var nests = cols.filter(function (c) { return c && c.nested; });
+  var html = '<div class="lmeta">列表字段 · ' + rows.length + " 行 · 块状换行布局"
+    + "（元素含嵌套子字段：标量列横排成块首行，嵌套字段各自成块、占满容器宽度）"
+    + " · 改动先进草稿（不落盘）</div>";
+  if (!cols.length) {
+    // 元素声明为对象但元数据没给子字段：如实提示、不臆造列名（与表格路径同一口径）。
+    html += '<div class="ex">该列表元素的字段未在内容包元数据中声明，'
+      + (rows.length ? "" : "且当前没有数据行可供推断列；")
+      + "请先在元数据里声明元素子字段，再回来编辑。</div>";
+  }
+  if (!rows.length) {
+    html += '<div class="ex">（空列表）暂无数据行，用下面的「+ 添加一行」新建。</div>';
+  } else if (cols.length) {
+    html += '<div class="lblocks">';
+    rows.forEach(function (row, i) {
+      html += listBlockHtml(f, row, i, scalar, scalars, nests);
+    });
+    html += "</div>";
+  }
+  html += '<button type="button" class="ladd" data-ladd="' + esc(f.key)
+    + '" title="按元素元数据的默认值新建一行（只改草稿）">+ 添加一行</button>';
+  return html;
+}
+
+function listBlockHtml(f, row, i, scalar, scalars, nests) {
+  var html = '<div class="lblock" data-lblock="' + i + '"><div class="lb-head">'
+    + '<span class="lb-no">#' + (i + 1) + "</span>";
+  if (scalars.length) {
+    html += '<div class="lb-scalars">' + scalars.map(function (c) {
+      return '<div class="lb-scalar ' + esc(scalarCssClass(c.control)) + '" data-lscalar="'
+        + esc(c.key) + '"><span class="lb-k">'
+        + helpTriggerHtml(c, fieldLabelHtml(c.label, c.key))
+        + ' <span class="ftype">' + esc(typeZh(c.type)) + "</span></span>"
+        + listCell(f, row, c, i, scalar) + "</div>";
+    }).join("") + "</div>";
+  }
+  html += '<button type="button" class="ldel" data-ldel="' + i
+    + '" title="删除本行（只改草稿）">删除</button></div>';
+  if (nests.length) {
+    html += '<div class="lb-nests">' + nests.map(function (c) {
+      return '<div class="lb-nest" data-lnest="' + esc(c.key) + '"><div class="lb-nest-h">'
+        + helpTriggerHtml(c, fieldLabelHtml(c.label, c.key))
+        + ' <span class="ftype">' + esc(typeZh(c.type)) + "</span></div>"
+        + '<div class="lb-nest-b">' + listCell(f, row, c, i, scalar) + "</div></div>";
+    }).join("") + "</div>";
+  }
+  return html + "</div>";
+}
+
+// 标量列的宽度档（只按控件形态，不认字段名）：引用/文本给足宽（V12 下拉文本不再被裁），
+// 数字/布尔窄档，多行文本整行。
+function scalarCssClass(control) {
+  if (control === "number") { return "num"; }
+  if (control === "bool") { return "bool"; }
+  if (control === "ref") { return "ref"; }
+  if (control === "textarea") { return "wide"; }
+  return "";
 }
 
 function listCell(f, row, col, i, scalar) {
@@ -2583,6 +2694,12 @@ function textValue(f) {
 function listTable(f) {
   if (!f.value || !f.value.length) { return '<div class="ex">（空列表）</div>'; }
   var cols = f.columns || [];
+  // 批5.1：只读视图同样按 nested 标志走块状换行布局（与可编辑视图同一判定）。
+  var nestedCol = false;
+  for (var ci = 0; ci < cols.length; ci++) {
+    if (cols[ci] && cols[ci].nested) { nestedCol = true; break; }
+  }
+  if (f.block_layout || nestedCol) { return listBlockTable(f, cols); }
   var head = "<tr>" + cols.map(function (c) {
     return "<th>" + helpTriggerHtml(c, fieldLabelHtml(c.label, c.key))
       + ' <span class="ftype">' + esc(typeZh(c.type)) + "</span></th>";
@@ -2597,6 +2714,45 @@ function listTable(f) {
     + " · 列名与类型来自内容包元数据</div>";
   return note + '<div class="ltable-scroll"><table class="ltable ltable-ro">'
     + "<thead>" + head + "</thead><tbody>" + body + "</tbody></table></div>";
+}
+
+// 只读块状换行布局（批5.1，与可编辑视图同一判定）：标量列横排成块首行，嵌套列各自成块。
+function listBlockTable(f, cols) {
+  var scalars = cols.filter(function (c) { return c && !c.nested; });
+  var nests = cols.filter(function (c) { return c && c.nested; });
+  var cells = f.rows || [];
+  var note = '<div class="lmeta">列表字段 · ' + f.row_count + " 行 · 块状换行布局"
+    + "（元素含嵌套子字段：标量列横排成块首行，嵌套字段各自成块、占满容器宽度）"
+    + (cells.length < f.row_count ? "（只读视图最多显示 " + cells.length + " 行）" : "") + "</div>";
+  var html = note + '<div class="lblocks">';
+  cells.forEach(function (row, i) {
+    html += '<div class="lblock" data-lblock="' + i + '"><div class="lb-head">'
+      + '<span class="lb-no">#' + (i + 1) + "</span>";
+    if (scalars.length) {
+      html += '<div class="lb-scalars">' + scalars.map(function (c) {
+        return '<div class="lb-scalar ' + esc(scalarCssClass(c.control)) + '"><span class="lb-k">'
+          + helpTriggerHtml(c, fieldLabelHtml(c.label, c.key))
+          + ' <span class="ftype">' + esc(typeZh(c.type)) + "</span></span>"
+          + '<div class="inp">' + esc(roCellText(row[c.key])) + "</div></div>";
+      }).join("") + "</div>";
+    }
+    html += "</div>";
+    if (nests.length) {
+      html += '<div class="lb-nests">' + nests.map(function (c) {
+        return '<div class="lb-nest"><div class="lb-nest-h">'
+          + helpTriggerHtml(c, fieldLabelHtml(c.label, c.key))
+          + ' <span class="ftype">' + esc(typeZh(c.type)) + "</span></div>"
+          + '<div class="lb-nest-b"><div class="inp">' + esc(roCellText(row[c.key]))
+          + "</div></div></div>";
+      }).join("") + "</div>";
+    }
+    html += "</div>";
+  });
+  return html + "</div>";
+}
+
+function roCellText(v) {
+  return (v == null || v === "") ? EMPTY_TEXT : String(v);
 }
 
 function kvTable(f) {

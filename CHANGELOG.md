@@ -48,3 +48,5 @@
      （Keep a Changelog；D7 CHG-01）。M0-M5 各条目日期 = 记录.md 对应里程碑段落完成日
      （D7 CHG-02；M1 记录.md「更早」节无日期，已核对 git 提交日期 2026-08-19 属实——
      M1 定稿落地 42443a5/补测修复 bf83742 等均 2026-08-19，批7B 审查 P1-1 核销）。 -->
+
+- 九期适配（content/cloudsea）：G0–G7 收官——引擎 hook 面 12 组件（性能三修复/押注钩子/段级 effect/period 周期器/冷却统一/boss_state/九态积蓄/资源轴/战术四件套/阶段状态机/异步底盘/战报模板）＋数据包 22 模块（含 enemies 760/statuses 九态/effects 36/skills 253/items 3613/quest 598/npc 21）＋新指令九（深度炼成/合成/战斗调和/港 档/港 鉴/勘察/晨报/预案/GM 十）＋单机 web 壳与整机交付 zip。详见 `docs/cloudsea/` 与设计稿仓库 `生产日志/九期/`。

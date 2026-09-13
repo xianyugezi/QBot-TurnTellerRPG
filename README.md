@@ -31,3 +31,29 @@ python scripts/run_all_tests.py   # 全量回归 + M0 门禁
 ## 文档入口
 - 新接手先读 `docs/实现层启动手册.md`，再按 `docs/细化规划总索引.md` 定位细化契约
 - 实现依据：`docs/细化/`（76 份契约）+ `/root/docs_archive/RPG框架项目/`（39 份定稿）
+
+
+---
+
+## 云海猎团内容包（九期适配 · content/cloudsea）
+
+QBot-TurnTellerRPG 的单机可部署第一形态内容包（九期 56 批适配，`docs/cloudsea/` 三件：转化映射表／接入可行性报告／设计稿索引与数值速查）。
+
+### 单机三步启动（236 web 壳）
+```bash
+pip install -r requirements.txt
+python scripts/web_shell.py --pack content/cloudsea --db data/cloudsea.db
+# 浏览器 http://127.0.0.1:8010/  发 `注册` 开始
+```
+
+### 交付自检（238/239）
+```bash
+python scripts/verify_cloudsea.py      # 三段探针（包/数据/契约）
+python scripts/package_standalone.py --smoke   # 整机交付 zip＋解包自检
+python scripts/deploy_smoke.py         # 全流程逐指令冒烟
+```
+
+### 九期批次账本
+- 状态表与任务书：设计稿仓库 `15_主线章节与任务/生产排期_适配期_九期.md`（§四 状态表 11 组全✅）
+- 断言留档：设计稿仓库 `生产日志/九期/`（批次NN_断言.py＋.out.txt 成对）
+- 框架 hook 台账：`docs/cloudsea/云海转化映射表.md` §五/§七–§十三（九期各批逐项锚点与行数）

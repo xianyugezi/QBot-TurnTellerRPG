@@ -317,6 +317,60 @@ select.cin { padding: 1px var(--sp-2); }
 .help-card .hc-k { color: var(--text-5); }
 .help-card .hc-v { color: var(--text-value); white-space: pre-wrap;
   overflow-wrap: anywhere; word-break: break-word; }
+
+/* ---------- 关联分区（批5 · 派生分区）：相关条目卡片 + 就地编辑 + 跳转 ---------- */
+.assoc { display: flex; flex-direction: column; gap: var(--sp-6); }
+.ac-hint { color: var(--text-3); font-size: var(--fs-12); line-height: var(--lh-ex);
+  border-left: 2px solid var(--line-accent-dash); padding-left: var(--sp-5); }
+.assoc-card { border: var(--bw) solid var(--line-strong); background: var(--surface); }
+.assoc-card > .rows2 { padding: var(--sp-5) var(--sp-6) 0; }
+.ac-head { display: flex; align-items: center; gap: var(--sp-5); flex-wrap: wrap;
+  padding: var(--sp-4) var(--sp-6); border-bottom: var(--bw) solid var(--line-soft); }
+.ac-head b { color: var(--text-strong); }
+.ac-head .id2 { color: var(--text-5); font-size: var(--fs-11); font-family: var(--font-mono); }
+.ac-rel { color: var(--text-5); font-size: var(--fs-11); }
+.ac-sub { color: var(--text-5); font-size: var(--fs-11); padding: var(--sp-3) var(--sp-6) 0; }
+.ac-foot { display: flex; align-items: center; gap: var(--sp-5); flex-wrap: wrap;
+  padding: var(--sp-5) var(--sp-6); }
+.ac-note { color: var(--text-5); font-size: var(--fs-11); }
+.assoc-card.ro .ac-head { border-bottom: 0; }
+.ajump, .asave { display: inline-flex; align-items: center; height: var(--h-ctl);
+  padding: 0 var(--sp-8); font-family: inherit; font-size: var(--fs-12); cursor: pointer;
+  background: transparent; border: var(--bw) solid var(--line-strong); color: var(--accent); }
+.ajump:hover, .asave:hover { background: var(--surface-hover); }
+.asave:disabled { color: var(--text-6); border-color: var(--line-soft); cursor: not-allowed; }
+
+/* ---------- 条件行编辑器（批5）：主体 / 比较符 / 值 + 两级嵌套 + 增删行 ---------- */
+.cond-edit { width: 100%; }
+.cond-edit .cmeta, .map-edit .cmeta { color: var(--text-4); font-size: var(--fs-11);
+  margin: var(--sp-2) 0 var(--sp-3); }
+.crows { display: flex; flex-direction: column; gap: var(--sp-3); }
+.crow { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap;
+  border: var(--bw) solid var(--line-soft); background: var(--surface); padding: var(--sp-3); }
+.crow.combine { flex-direction: column; align-items: stretch; }
+.crow .chead { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; }
+.crow .cin { min-width: 92px; }
+.crow .csubject { min-width: 120px; }
+.crow .cvalue { min-width: 110px; }
+.crow .cnote { color: var(--text-5); font-size: var(--fs-11); }
+.cchildren { display: flex; flex-direction: column; gap: var(--sp-3); margin-top: var(--sp-3); }
+.cgroup { border-left: 2px solid var(--line-accent-dash); padding-left: var(--sp-5);
+  display: flex; flex-direction: column; gap: var(--sp-3); }
+.cglab { color: var(--text-5); font-size: var(--fs-11); }
+.cadd, .cdel { display: inline-flex; align-items: center; height: var(--h-ctl-sm);
+  padding: 0 var(--sp-4); font-family: inherit; font-size: var(--fs-11); cursor: pointer;
+  background: transparent; border: var(--bw) solid var(--line-strong); color: var(--text-3); }
+.cadd { color: var(--accent); border-style: dashed; }
+.cadd:hover { background: var(--surface-hover); }
+.cdel:hover { border-color: var(--danger); color: var(--danger); }
+
+/* ---------- 键值对表格（批5 数值覆盖 / 印记消耗）：键值行 + 增删 ---------- */
+.map-edit { width: 100%; }
+.mrows { display: flex; flex-direction: column; gap: var(--sp-3); }
+.mrow { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap;
+  border: var(--bw) solid var(--line-soft); background: var(--surface); padding: var(--sp-3); }
+.mrow .mkey { min-width: 140px; }
+.mrow .mval { min-width: 110px; }
 </style>
 </head>
 <body>
@@ -590,6 +644,212 @@ select.cin { padding: 1px var(--sp-2); }
 });
 /* EDITOR_REF_END */
 
+/* 条件行纯逻辑（批5 · 无 DOM 依赖；浏览器挂 globalThis.EditorCondition，node 走 module.exports）。
+ * 语义：条件值 ⇄ 条件行模型（与后端 api.condition_rows / condition_value 同构）。
+ *   · 键名不写死：结构完全按实际值形态推断（一级 {主体:{比较符:值}}；两级 {主体:{键:{比较符:值}}}；
+ *     列表值 = 逻辑组合 {组合:[{条件},…]}）；元数据只提供展示名与引用目标，不决定结构；
+ *   · 缺元数据（meta.declared=false）时仍可渲染/增删行，前端如实提示「按实际值推断」。 */
+/* EDITOR_CONDITION_BEGIN */
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) { module.exports = factory(); }
+  else { root.EditorCondition = factory(); }
+})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+  function isObj(v) { return !!v && typeof v === "object" && !Array.isArray(v); }
+  function emptyRow() { return { kind: "cmp", subject: "", key: "", op: "", value: "" }; }
+  function cmpGroup(v) {
+    if (!isObj(v)) { return false; }
+    var ks = Object.keys(v);
+    return ks.length > 0 && ks.every(function (k) { return !isObj(v[k]); });
+  }
+  function entryRows(subject, val) {
+    if (Array.isArray(val)) {
+      return [{ kind: "combine", subject: subject,
+                children: val.map(function (el) { return parse(el); }) }];
+    }
+    if (isObj(val)) {
+      var out = [];
+      if (cmpGroup(val)) {
+        Object.keys(val).forEach(function (op) {
+          out.push({ kind: "cmp", subject: subject, key: "", op: String(op), value: val[op] });
+        });
+        return out;
+      }
+      Object.keys(val).forEach(function (subKey) {
+        var sv = val[subKey];
+        if (isObj(sv) && cmpGroup(sv)) {
+          Object.keys(sv).forEach(function (op) {
+            out.push({ kind: "cmp", subject: subject, key: String(subKey),
+                       op: String(op), value: sv[op] });
+          });
+        } else if (isObj(sv)) {
+          out.push({ kind: "cmp", subject: subject, key: String(subKey), op: "",
+                     value: sv, complex: true });
+        } else {
+          out.push({ kind: "cmp", subject: subject, key: "", op: String(subKey), value: sv });
+        }
+      });
+      return out;
+    }
+    return [{ kind: "cmp", subject: subject, key: "", op: "", value: val }];
+  }
+  function parse(value) {
+    if (!isObj(value)) {
+      return value == null ? [] : [{ kind: "cmp", subject: "", key: "", op: "", value: value }];
+    }
+    var rows = [];
+    Object.keys(value).forEach(function (k) { rows = rows.concat(entryRows(String(k), value[k])); });
+    return rows;
+  }
+  function serialize(rows) {
+    var out = {};
+    (Array.isArray(rows) ? rows : []).forEach(function (row) {
+      if (!isObj(row)) { return; }
+      var subject = String(row.subject == null ? "" : row.subject);
+      if (!subject) { return; }
+      if (row.kind === "combine") {
+        var groups = Array.isArray(row.children) ? row.children : [];
+        out[subject] = groups.map(function (g) { return serialize(g); });
+        return;
+      }
+      var key = String(row.key == null ? "" : row.key);
+      var op = String(row.op == null ? "" : row.op);
+      var value = row.value;
+      if (key) {
+        if (!isObj(out[subject])) { out[subject] = {}; }
+        if (op === "") { out[subject][key] = value; }
+        else {
+          if (!isObj(out[subject][key])) { out[subject][key] = {}; }
+          out[subject][key][op] = value;
+        }
+      } else if (op === "") { out[subject] = value; }
+      else {
+        if (!isObj(out[subject])) { out[subject] = {}; }
+        out[subject][op] = value;
+      }
+    });
+    return out;
+  }
+  function rowAt(rows, path) {
+    var list = rows;
+    var row = null;
+    (path || []).forEach(function (idx, k) {
+      if (k % 2 === 0) { row = list ? list[idx] : null; }
+      else { list = row && Array.isArray(row.children) ? row.children[idx] : []; }
+    });
+    return row;
+  }
+  function containerAt(rows, path) {
+    var list = rows;
+    var i = 0;
+    while (i < (path || []).length - 1) {
+      var row = list[path[i]];
+      list = row && Array.isArray(row.children) ? row.children[path[i + 1]] : [];
+      i += 2;
+    }
+    return list;
+  }
+  function setField(rows, path, part, value) {
+    var row = rowAt(rows, path);
+    if (row) { row[part] = value; }
+    return rows;
+  }
+  function addRow(rows, parentPath, groupIndex) {
+    if (!parentPath || !parentPath.length) { rows.push(emptyRow()); return rows; }
+    var row = rowAt(rows, parentPath);
+    if (!row) { return rows; }
+    if (!Array.isArray(row.children)) { row.children = []; }
+    if (!row.children.length) { row.children.push([]); }
+    var gi = (groupIndex == null) ? row.children.length - 1 : groupIndex;
+    if (!row.children[gi]) { row.children[gi] = []; }
+    row.children[gi].push(emptyRow());
+    return rows;
+  }
+  function addBranch(rows, parentPath) {
+    var row = rowAt(rows, parentPath);
+    if (row) {
+      if (!Array.isArray(row.children)) { row.children = []; }
+      row.children.push([emptyRow()]);
+    }
+    return rows;
+  }
+  function delBranch(rows, parentPath, groupIndex) {
+    var row = rowAt(rows, parentPath);
+    if (row && Array.isArray(row.children)) { row.children.splice(groupIndex, 1); }
+    return rows;
+  }
+  function delRow(rows, path) {
+    var list = containerAt(rows, path);
+    if (list && path.length) { list.splice(path[path.length - 1], 1); }
+    return rows;
+  }
+  function subjectList(meta) {
+    var declared = (meta && meta.subjects) || [];
+    return declared.map(function (s) {
+      return { key: String(s.key), label: s.label || String(s.key),
+               key_ref: s.key_ref || "", value_ref: s.value_ref || "",
+               ops: s.ops || [], combine: !!s.combine };
+    });
+  }
+  function subjectInfo(meta, key) {
+    var cur = String(key == null ? "" : key);
+    var hit = subjectList(meta).filter(function (s) { return s.key === cur; })[0];
+    return hit || null;
+  }
+  function subjectOptions(meta, rows) {
+    var opts = subjectList(meta).map(function (s) { return s.key; });
+    var seen = {};
+    opts.forEach(function (k) { seen[k] = true; });
+    (rows || []).forEach(function (r) {
+      if (r && r.subject && !seen[String(r.subject)]) { seen[String(r.subject)] = true; opts.push(String(r.subject)); }
+    });
+    return opts;
+  }
+  function opOptions(meta) {
+    var ops = (meta && meta.ops) || [];
+    return ops.length ? ops.slice() : ["eq", "min", "max"];
+  }
+  function keyRefFor(meta, subject) { var s = subjectInfo(meta, subject); return s ? s.key_ref : ""; }
+  function valueRefFor(meta, subject) { var s = subjectInfo(meta, subject); return s ? s.value_ref : ""; }
+  function isCombine(meta, subject) { var s = subjectInfo(meta, subject); return !!(s && s.combine); }
+  return { parse: parse, serialize: serialize, rowAt: rowAt, containerAt: containerAt,
+           setField: setField, addRow: addRow, addBranch: addBranch, delBranch: delBranch,
+           delRow: delRow, subjectList: subjectList, subjectInfo: subjectInfo,
+           subjectOptions: subjectOptions, opOptions: opOptions,
+           keyRefFor: keyRefFor, valueRefFor: valueRefFor, isCombine: isCombine,
+           emptyRow: emptyRow };
+});
+/* EDITOR_CONDITION_END */
+
+/* 键值对表格纯逻辑（批5 · 无 DOM 依赖；浏览器挂 globalThis.EditorMap，node 走 module.exports）。
+ * 语义：映射值 ⇄ [{key, value}] 行模型（可增删行；键/值类型按实际值形态保留）。 */
+/* EDITOR_MAP_BEGIN */
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) { module.exports = factory(); }
+  else { root.EditorMap = factory(); }
+})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+  function rows(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) { return []; }
+    return Object.keys(value).map(function (k) { return { key: String(k), value: value[k] }; });
+  }
+  function value(rowsArr) {
+    var out = {};
+    (Array.isArray(rowsArr) ? rowsArr : []).forEach(function (r) {
+      if (!r) { return; }
+      var k = String(r.key == null ? "" : r.key);
+      if (k === "") { return; }
+      out[k] = r.value;
+    });
+    return out;
+  }
+  function setKey(rowsArr, i, k) { if (rowsArr[i]) { rowsArr[i].key = k; } return rowsArr; }
+  function setValue(rowsArr, i, v) { if (rowsArr[i]) { rowsArr[i].value = v; } return rowsArr; }
+  function addRow(rowsArr) { rowsArr.push({ key: "", value: "" }); return rowsArr; }
+  function delRow(rowsArr, i) { rowsArr.splice(i, 1); return rowsArr; }
+  return { rows: rows, value: value, setKey: setKey, setValue: setValue,
+           addRow: addRow, delRow: delRow };
+});
+/* EDITOR_MAP_END */
+
 // ---------------------------------------------------------------------------
 // 类型显示名（框架级映射，与内容包无关）：FieldMeta.type → 中文
 // ---------------------------------------------------------------------------
@@ -605,9 +865,54 @@ var EMPTY_TEXT = "（空）";
 var state = {
   pack: null, modules: [], module: null, entries: [], entry: null, detail: null,
   filter: "", role: "owner", editable: true, backup: null, fieldIndex: {},
-  refCache: {}, refKnown: {}, refQuery: {}, busy: false, tabs: []
+  refCache: {}, refKnown: {}, refQuery: {}, busy: false, tabs: [], forms: {},
+  pendingDrafts: {}
 };
 var draft = EditorDraft.newDraft();
+
+// ---------------------------------------------------------------------------
+// 表单上下文（批5）：主表单 + 每个「关联分区」条目各持一份草稿与字段索引。
+// 控件读写一律经上下文（DOM 上最近 [data-fctx] 元素），框架不认任何业务模块/字段名；
+// 保存时按上下文的 module/entry 走同一条校验 + 原子写链路（batch2）。
+// ---------------------------------------------------------------------------
+var MAIN_CTX = { key: "main", isMain: true, module: null, entry: null,
+                 fields: [], fieldIndex: {}, draft: draft, detail: null };
+var renderCtx = MAIN_CTX;   // 渲染 HTML 字符串时指向「当前正在渲染的表单上下文」
+
+function hasOwn(obj, k) { return Object.prototype.hasOwnProperty.call(obj, k); }
+function syncMainCtx(detail) {
+  MAIN_CTX.module = state.module; MAIN_CTX.entry = state.entry;
+  MAIN_CTX.fields = (detail && detail.fields) || [];
+  MAIN_CTX.fieldIndex = state.fieldIndex; MAIN_CTX.detail = detail;
+  return MAIN_CTX;
+}
+function allForms() {
+  var out = [MAIN_CTX];
+  Object.keys(state.forms).forEach(function (k) { out.push(state.forms[k]); });
+  return out;
+}
+function ctxFromNode(node) {
+  var box = node && node.closest ? node.closest("[data-fctx]") : null;
+  var key = box ? box.dataset.fctx : "main";
+  if (key === "main") { return MAIN_CTX; }
+  return state.forms[key] || MAIN_CTX;
+}
+function formBox(ctx) {
+  if (!ctx || ctx.isMain) { return el("p-body"); }
+  return el("p-body").querySelector('[data-fctx="' + ctx.key + '"]');
+}
+function registerForm(key, module, entry, detail) {
+  var ctx = { key: key, isMain: false, module: module, entry: entry,
+              fields: (detail && detail.fields) || [], fieldIndex: {},
+              draft: EditorDraft.newDraft(), detail: detail };
+  ctx.fields.forEach(function (f) { ctx.fieldIndex[f.key] = f; });
+  // 重画前保留的其他上下文草稿：按上下文键回填（保存一处不丢别处未保存改动）
+  if (state.pendingDrafts && state.pendingDrafts[key]) {
+    ctx.draft.changes = state.pendingDrafts[key];
+  }
+  state.forms[key] = ctx;
+  return ctx;
+}
 
 function esc(v) {
   return String(v == null ? "" : v)
@@ -900,7 +1205,11 @@ function fail(where, err) {
 // ---------------------------------------------------------------------------
 // 草稿态：未保存计数 / 取消 / 离开守卫（不静默丢失）
 // ---------------------------------------------------------------------------
-function draftCount() { return EditorDraft.count(draft); }
+function draftCount() {
+  var n = 0;
+  allForms().forEach(function (ctx) { n += EditorDraft.count(ctx.draft); });
+  return n;
+}
 
 function markDirty() {
   var n = draftCount();
@@ -911,19 +1220,29 @@ function markDirty() {
   el("btn-save").disabled = !has || !state.editable || state.busy;
   el("btn-cancel").disabled = !has || state.busy;
   el("btn-validate").disabled = !has || state.busy;
-  Array.prototype.forEach.call(document.querySelectorAll(".row[data-field]"), function (row) {
-    row.classList.toggle("dirty", Object.prototype.hasOwnProperty.call(draft.changes, row.dataset.field));
+  // 每个表单上下文各自标脏（主表单 + 关联分区条目；字段键只在各自上下文里比对）
+  allForms().forEach(function (ctx) {
+    var box = formBox(ctx);
+    if (!box) { return; }
+    Array.prototype.forEach.call(box.querySelectorAll(".row[data-field]"), function (row) {
+      row.classList.toggle("dirty", hasOwn(ctx.draft.changes, row.dataset.field));
+    });
   });
   Array.prototype.forEach.call(document.querySelectorAll(".item[data-id]"), function (it) {
     it.classList.toggle("dirty", n > 0 && it.dataset.id === state.entry);
   });
 }
 
-function discardDraft() { EditorDraft.discard(draft); markDirty(); }
+function discardDraft() {
+  allForms().forEach(function (ctx) { EditorDraft.discard(ctx.draft); });
+  state.pendingDrafts = {};
+  markDirty();
+}
 
 function canLeave() {
-  if (!EditorDraft.dirty(draft)) { return true; }
-  return window.confirm("当前条目有 " + draftCount() + " 项未保存改动；离开将丢弃这些改动。确定离开吗？");
+  var n = draftCount();
+  if (!n) { return true; }
+  return window.confirm("当前有 " + n + " 项未保存改动；离开将丢弃这些改动。确定离开吗？");
 }
 
 // ---------------------------------------------------------------------------
@@ -1113,6 +1432,9 @@ function renderDetail(d) {
   el("p-sub").textContent = (d.module_label || d.module) + " · 字段由元数据渲染";
   el("p-id").textContent = d.id;
   resetHelpCards();   // 说明卡注册表随渲染重建（字段行构建时注册 help id）
+  syncMainCtx(d);
+  state.forms = {};   // 关联分区各条目的草稿随条目详情重建（切换条目已有 canLeave 守卫）
+  renderCtx = MAIN_CTX;
 
   var html = '<div class="meta"><span class="mk">元数据驱动</span>'
     + "本页字段由内容包元数据生成 · " + d.field_count + " 个字段 · " + d.group_count + " 个分组"
@@ -1120,36 +1442,130 @@ function renderDetail(d) {
     + '<span class="src">' + esc(d.meta_source) + "</span></div>";
   html += '<div id="result" hidden></div>';
 
-  var tabs = EditorGroups.view(d.groups || [], d.fields || []);
+  var groupTabs = EditorGroups.view(d.groups || [], d.fields || []);
+  var assoc = d.associations || [];
+  // 页签 = 元数据声明的分组 + 元数据声明的关联分区（标签/说明都来自声明，框架不写死）
+  var tabs = groupTabs.map(function (g, i) {
+    return { kind: "group", idx: i, label: g.label, count: g.count, group: g };
+  });
+  assoc.forEach(function (a, ai) {
+    tabs.push({ kind: "assoc", idx: ai, label: a.label, count: a.count, assoc: a });
+  });
+  state.tabs = tabs;
+
   if (!tabs.length) {
-    state.tabs = tabs;
     el("p-body").innerHTML = html + '<div class="empty">该条目没有可渲染字段。</div>';
     helpHideDom();
     markDirty();
     return;
   }
-  state.tabs = tabs;
   var tbar = '<div class="gtabs">';
-  tabs.forEach(function (g, i) {
+  groupTabs.forEach(function (g, i) {
     tbar += '<button class="gtab' + (i === 0 ? " on" : "") + '" data-g="' + i
       + '" title="' + esc("分组键：" + g.name) + '">'
       + esc(g.label) + " <b>" + g.count + "</b></button>";
   });
+  assoc.forEach(function (a, ai) {
+    var i = groupTabs.length + ai;
+    tbar += '<button class="gtab' + (i === 0 ? " on" : "") + '" data-g="' + i + '" title="'
+      + esc(a.hint || a.label) + '">' + esc(a.label) + " <b>" + a.count + "</b></button>";
+  });
   tbar += "</div>";
   html += tbar;
-  tabs.forEach(function (g, i) {
+
+  groupTabs.forEach(function (g, i) {
     html += '<div class="gpane"' + (i === 0 ? "" : " hidden") + ' data-g="' + i + '">'
       + (g.empty
         ? '<div class="gempty">该分组暂无字段（元数据声明了此分组，本条目里没有字段落在其中）。</div>'
         : '<div class="rows2">' + g.fields.map(fieldRow).join("") + "</div>")
       + "</div>";
   });
+  assoc.forEach(function (a, ai) {
+    var gi = groupTabs.length + ai;
+    html += '<div class="gpane"' + (gi === 0 ? "" : " hidden") + ' data-g="' + gi + '">'
+      + assocPaneHtml(a) + "</div>";
+  });
+
   el("p-body").innerHTML = html;
+  el("p-body").dataset.fctx = "main";
+  renderCtx = MAIN_CTX;
   bindTabs();
   bindControls();
+  bindAssocSections();
   bindHelp();
+  state.pendingDrafts = {};   // 已消费（registerForm 回填完毕）
   if (state.result) { renderResult(state.result); }
   markDirty();
+}
+
+// ---------------------------------------------------------------------------
+// 关联分区（批5）：按元数据声明列出「引用本条目」的相关条目；声明可编辑时就地编辑。
+// 每个相关条目 = 一个独立表单上下文（自己的草稿）；保存走该模块的校验 + 原子写链路。
+// ---------------------------------------------------------------------------
+function assocPaneHtml(a) {
+  var html = '<div class="assoc">';
+  if (a.hint) { html += '<div class="ac-hint">' + esc(a.hint) + "</div>"; }
+  if (a.note) { html += '<div class="ex">' + esc(a.note) + "</div>"; }
+  if (!a.entries || !a.entries.length) {
+    html += '<div class="ex">（暂无相关条目：' + esc(a.module_label) + " 里还没有条目的 "
+      + esc(a.field) + " 指向本条目（" + esc(a.local_field) + "）。）</div></div>";
+    return html;
+  }
+  a.entries.forEach(function (e) {
+    var paths = (e.matches || []).map(function (m) { return m.path; }).join("、");
+    if (!a.editable) {
+      html += '<div class="assoc-card ro" data-amod="' + esc(a.module) + '" data-aentry="'
+        + esc(e.id) + '"><div class="ac-head"><b>' + esc(e.name) + '</b>'
+        + '<span class="id2">' + esc(e.id) + "</span>"
+        + '<span class="ac-rel">命中：' + esc(paths) + "</span>"
+        + '<button type="button" class="ajump" data-ajump="' + esc(a.module) + "|"
+        + esc(e.id) + '">打开</button></div></div>';
+      return;
+    }
+    var key = "assoc:" + a.key + ":" + e.id;
+    var ctx = registerForm(key, a.module, e.id, e);
+    var prev = renderCtx;
+    renderCtx = ctx;
+    html += '<section class="assoc-card" data-fctx="' + esc(key) + '" data-amod="' + esc(a.module)
+      + '" data-aentry="' + esc(e.id) + '"><div class="ac-head"><b>' + esc(e.name) + "</b>"
+      + '<span class="id2">' + esc(e.id) + "</span>"
+      + '<span class="ac-rel">命中：' + esc(paths) + "</span></div>"
+      + '<div class="ac-sub">来自模块 ' + esc(a.module_label) + " · 保存写入 "
+      + esc(a.module) + ".json（校验 + 原子写 + 备份）</div>"
+      + '<div class="rows2">' + (e.fields || []).map(fieldRow).join("") + "</div>"
+      + '<div class="ac-foot"><button type="button" class="asave" data-asave="' + esc(key) + '"'
+      + (state.editable ? "" : " disabled") + ">保存这条</button>"
+      + '<span class="ac-note">改动先进本条草稿，不落盘</span></div></section>';
+    renderCtx = prev;
+  });
+  return html + "</div>";
+}
+
+function bindAssocSections() {
+  Array.prototype.forEach.call(el("p-body").querySelectorAll(".ajump"), function (b) {
+    b.addEventListener("click", function () {
+      var parts = String(b.dataset.ajump).split("|");
+      jumpTo(parts[0], parts[1]);
+    });
+  });
+  Array.prototype.forEach.call(el("p-body").querySelectorAll(".asave"), function (b) {
+    b.addEventListener("click", function () { saveForm(b.dataset.asave); });
+  });
+}
+
+function jumpTo(mod, entry) {
+  if (!canLeave()) { return; }
+  discardDraft();
+  state.result = null;
+  state.module = mod; state.entry = null;
+  renderModules();
+  var pos = findModule(mod);
+  el("list-title").textContent = pos ? pos.label : mod;
+  return loadEntries().then(function () {
+    if ((state.entries || []).some(function (e) { return e.id === entry; })) {
+      return selectEntry(entry);
+    }
+  });
 }
 
 function bindTabs() {
@@ -1173,7 +1589,8 @@ function bindTabs() {
 function fieldRow(f) {
   // 列表型控件（可增删行表格 / 引用列表）标记为跨列：宽字段独占整行，避免多列表格
   // 被挤在双列网格的右缘（批4 UX）。只按后端 control 判定，框架不认业务字段名。
-  var wide = (f.control === "listtable" || f.control === "reflist") ? " wide" : "";
+  var wide = (f.control === "listtable" || f.control === "reflist"
+    || f.control === "condition" || f.control === "maptable") ? " wide" : "";
   return '<div class="row' + wide + '" data-field="' + esc(f.key) + '" data-present="'
     + (f.present ? "true" : "false") + '"><div class="rlab">'
     + helpTriggerHtml(f, fieldLabelHtml(f.label, f.key))
@@ -1210,7 +1627,14 @@ function readonlyValue(f) {
 // 编辑控件（只按后端 control 渲染，不认字段类型）
 // ---------------------------------------------------------------------------
 function currentFieldValue(f) {
-  return Object.prototype.hasOwnProperty.call(draft.changes, f.key) ? draft.changes[f.key] : f.value;
+  var ctx = renderCtx || MAIN_CTX;
+  return hasOwn(ctx.draft.changes, f.key) ? ctx.draft.changes[f.key] : f.value;
+}
+
+// 事件处理里按「上下文的草稿」取值（不能用 renderCtx：事件触发时渲染上下文已复位）
+function ctxFieldValue(ctx, f) {
+  var c = ctx || MAIN_CTX;
+  return hasOwn(c.draft.changes, f.key) ? c.draft.changes[f.key] : f.value;
 }
 
 function editControl(f) {
@@ -1236,6 +1660,12 @@ function editControl(f) {
       return listTableEdit(f);
     case "reflist":
       return refListEdit(f);
+    case "condition":
+      return '<div class="cond-edit" data-condfield="' + esc(f.key) + '">'
+        + condFieldInner(f, v) + "</div>";
+    case "maptable":
+      return '<div class="map-edit" data-mapfield="' + esc(f.key) + '">'
+        + mapFieldInner(f, v) + "</div>";
     case "text":
     default:
       return '<input class="cin" type="text" data-key="' + esc(f.key) + '" value="'
@@ -1280,12 +1710,13 @@ function bindControls() {
   var body = el("p-body");
   Array.prototype.forEach.call(body.querySelectorAll("[data-key]"), function (inp) {
     var key = inp.dataset.key;
-    var f = state.fieldIndex[key];
+    var ctx = ctxFromNode(inp);
+    var f = ctx.fieldIndex[key];
     if (!f) { return; }
     var ev = (inp.type === "checkbox" || inp.tagName === "SELECT") ? "change" : "input";
     inp.addEventListener(ev, function () {
       var val = readControl(inp, f);
-      EditorDraft.set(draft, key, val, f.value);
+      EditorDraft.set(ctx.draft, key, val, f.value);
       if (inp.type === "checkbox") {
         var t = inp.parentNode.querySelector(".btxt");
         if (t) { t.textContent = inp.checked ? "是" : "否"; }
@@ -1314,10 +1745,13 @@ function bindControls() {
   // 批4：列表（可增删行表格）与引用多选（引用列表）的绑定
   bindListSections(body);
   bindRefListSections(body);
+  // 批5：条件行编辑器 / 键值对表格的绑定（列表单元格内 & 顶层字段）
+  bindConditionSections(body);
+  bindMapSections(body);
   // 引用列表：候选到位后重画一次（黄提示 + 候选列表）；只拉一次，不在重画里递归拉取。
   var rlByTarget = {};
   Array.prototype.forEach.call(body.querySelectorAll("[data-rlwrap]"), function (wrap) {
-    var f = state.fieldIndex[wrap.dataset.rlwrap];
+    var f = ctxFromNode(wrap).fieldIndex[wrap.dataset.rlwrap];
     if (!f) { return; }
     (rlByTarget[f.ref_target] = rlByTarget[f.ref_target] || []).push({ f: f, wrap: wrap });
   });
@@ -1400,6 +1834,14 @@ function listCell(f, row, col, i, scalar) {
         (v == null || v === "") ? EMPTY_TEXT
           : (typeof v === "object" ? JSON.stringify(v) : String(v))
       ) + "</span>";
+    case "condition":
+      return '<div class="cond-edit" data-condcell="' + esc(f.key) + '" data-condrow="' + i
+        + '" data-condcol="' + esc(col.key) + '">'
+        + condBodyHtml(EditorCondition.parse(v), col.condition || {}) + "</div>";
+    case "maptable":
+      return '<div class="map-edit" data-mapcell="' + esc(f.key) + '" data-maprow="' + i
+        + '" data-mapcol="' + esc(col.key) + '">'
+        + mapBodyHtml(EditorMap.rows(v), col) + "</div>";
     case "text":
     case "textarea":
     default:
@@ -1422,22 +1864,29 @@ function readCellValue(inp, f) {
 
 function rerenderListField(f, wrap) {
   if (!wrap || !f) { return; }
+  var ctx = ctxFromNode(wrap);
+  var prev = renderCtx;
+  renderCtx = ctx;
   wrap.innerHTML = listTableBody(f);
+  renderCtx = prev;
   bindListSections(wrap);
+  bindConditionSections(wrap);
+  bindMapSections(wrap);
   markDirty();
 }
 
 function bindListSections(root) {
   Array.prototype.forEach.call(root.querySelectorAll("[data-lcell]"), function (inp) {
-    var f = state.fieldIndex[inp.dataset.lcell];
+    var ctx = ctxFromNode(inp);
+    var f = ctx.fieldIndex[inp.dataset.lcell];
     if (!f) { return; }
     var ev = (inp.type === "checkbox" || inp.tagName === "SELECT") ? "change" : "input";
     inp.addEventListener(ev, function () {
-      var rows = currentFieldValue(f);
+      var rows = ctxFieldValue(ctx, f);
       if (!Array.isArray(rows)) { rows = []; }
       rows = EditorList.setCell(rows, inp.dataset.lrow, inp.dataset.lcol,
         readCellValue(inp, f), !!f.scalar_element);
-      EditorDraft.set(draft, inp.dataset.lcell, rows, f.value);
+      EditorDraft.set(ctx.draft, inp.dataset.lcell, rows, f.value);
       if (inp.type === "checkbox") {
         var t = inp.parentNode.querySelector(".btxt");
         if (t) { t.textContent = inp.checked ? "是" : "否"; }
@@ -1449,22 +1898,386 @@ function bindListSections(root) {
   Array.prototype.forEach.call(root.querySelectorAll("[data-ldel]"), function (btn) {
     btn.addEventListener("click", function () {
       var wrap = btn.closest(".lwrap");
-      var f = wrap ? state.fieldIndex[wrap.dataset.lwrap] : null;
+      var ctx = ctxFromNode(btn);
+      var f = wrap ? ctx.fieldIndex[wrap.dataset.lwrap] : null;
       if (!f) { return; }
-      var rows = EditorList.delRow(currentFieldValue(f), btn.dataset.ldel);
-      EditorDraft.set(draft, f.key, rows, f.value);
+      var rows = EditorList.delRow(ctxFieldValue(ctx, f), btn.dataset.ldel);
+      EditorDraft.set(ctx.draft, f.key, rows, f.value);
       rerenderListField(f, wrap);
     });
   });
   Array.prototype.forEach.call(root.querySelectorAll("[data-ladd]"), function (btn) {
     btn.addEventListener("click", function () {
-      var f = state.fieldIndex[btn.dataset.ladd];
+      var ctx = ctxFromNode(btn);
+      var f = ctx.fieldIndex[btn.dataset.ladd];
       if (!f) { return; }
       var wrap = btn.closest(".lwrap");
-      var rows = EditorList.addRow(currentFieldValue(f), f.row_default, !!f.scalar_element);
-      EditorDraft.set(draft, f.key, rows, f.value);
+      var rows = EditorList.addRow(ctxFieldValue(ctx, f), f.row_default, !!f.scalar_element);
+      EditorDraft.set(ctx.draft, f.key, rows, f.value);
       rerenderListField(f, wrap);
     });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// 批5 · 条件行编辑器（通用控件；键名不写死、两级嵌套、可增删行）
+// 数据面 = EditorCondition（与后端 api.condition_rows/condition_value 同构）。
+// 单元格内与顶层字段共用同一套渲染/绑定；改动写回草稿，不落盘。
+// ---------------------------------------------------------------------------
+function condBodyHtml(rows, meta) {
+  var declared = !!(meta && meta.declared);
+  var html = '<div class="cmeta">条件行 · ' + rows.length + " 行 · 主体/比较符/值"
+    + (declared ? "（主体声明来自内容包元数据）" : "（元数据未声明主体，按实际值形态推断）")
+    + "</div>";
+  html += '<div class="crows">' + condRowsHtml(rows, meta, []) + "</div>";
+  html += '<button type="button" class="cadd" data-cadd="">+ 条件</button>';
+  return html;
+}
+
+function condRowsHtml(rows, meta, parentPath) {
+  if (!rows || !rows.length) { return '<div class="ex">（无条件）用下面「+ 条件」新建一行。</div>'; }
+  return rows.map(function (r, i) {
+    return condRowHtml(r, meta, parentPath.concat([i]));
+  }).join("");
+}
+
+function condRowHtml(r, meta, path) {
+  var p = path.join(".");
+  if (r.kind === "combine") {
+    var groups = (r.children && r.children.length) ? r.children : [[]];
+    var inner = groups.map(function (g, gi) {
+      return '<div class="cgroup"><span class="cglab">分支 ' + (gi + 1) + "</span>"
+        + condRowsHtml(g, meta, path.concat([gi]))
+        + '<button type="button" class="cadd" data-cadd="' + esc(p + "|" + gi) + '">+ 条件</button>'
+        + (groups.length > 1
+          ? '<button type="button" class="cdel" data-cdelbranch="' + esc(p + "|" + gi) + '">删分支</button>'
+          : "")
+        + "</div>";
+    }).join("");
+    return '<div class="crow combine" data-cpath="' + esc(p) + '">'
+      + '<div class="chead">' + condSubjectHtml(r.subject, meta, p) + " 组合"
+      + '<button type="button" class="cadd" data-caddbranch="' + esc(p) + '">+ 分支</button>'
+      + '<button type="button" class="cdel" data-cdel="' + esc(p) + '">删除</button></div>'
+      + '<div class="cchildren">' + inner + "</div></div>";
+  }
+  var info = EditorCondition.subjectInfo(meta, r.subject);
+  var isComplex = !!r.complex;
+  var hasKey = !!(r.key || (info && info.key_ref));
+  var html = '<div class="crow' + (isComplex ? " cplx" : "") + '" data-cpath="' + esc(p) + '">'
+    + condSubjectHtml(r.subject, meta, p)
+    + (hasKey ? condKeyHtml(r, info, p) : "")
+    + (isComplex ? condRawHtml(r, p) : condOpHtml(r, meta, p) + condValueHtml(r, info, p))
+    + '<button type="button" class="cdel" data-cdel="' + esc(p) + '">删除</button></div>';
+  return html;
+}
+
+function condSubjectHtml(value, meta, path) {
+  var cur = value == null ? "" : String(value);
+  var subs = EditorCondition.subjectList(meta);
+  var attrs = ' data-cpart="subject" data-cpath="' + esc(path) + '"';
+  if (!subs.length) {
+    return '<input class="cin csubject" type="text" placeholder="主体（如 count）"'
+      + attrs + ' value="' + esc(cur) + '">';
+  }
+  var opts = subs.map(function (s) { return { id: s.key, name: s.label }; });
+  return '<select class="cin csubject"' + attrs + ">"
+    + selectOptions(cur, opts, "（选择主体）") + "</select>";
+}
+
+function condKeyHtml(r, info, path) {
+  var cur = r.key == null ? "" : String(r.key);
+  var attrs = ' data-cpart="key" data-cpath="' + esc(path) + '"';
+  var target = info ? info.key_ref : "";
+  if (target) {
+    return '<select class="cin ckey"' + attrs + ' data-lref="' + esc(target)
+      + '" data-current="' + esc(cur) + '">' + selectOptions(cur, [], "（选择键）") + "</select>";
+  }
+  return '<input class="cin ckey" type="text" placeholder="二级键"'
+    + attrs + ' value="' + esc(cur) + '">';
+}
+
+function condOpHtml(r, meta, path) {
+  var cur = r.op == null ? "" : String(r.op);
+  var ops = EditorCondition.opOptions(meta);
+  var attrs = ' data-cpart="op" data-cpath="' + esc(path) + '"';
+  return '<select class="cin cop"' + attrs + ">"
+    + selectOptions(cur, ops, "（比较符）") + "</select>";
+}
+
+function condValueHtml(r, info, path) {
+  var v = r.value;
+  var isList = Array.isArray(v);
+  var cur = isList ? (v.length ? v[0] : "") : (v == null ? "" : v);
+  var attrs = ' data-cpart="value" data-cpath="' + esc(path) + '"'
+    + (isList ? ' data-clist="1"' : "");
+  var target = info ? info.value_ref : "";
+  if (target) {
+    return '<select class="cin cvalue"' + attrs + ' data-lref="' + esc(target)
+      + '" data-current="' + esc(cur) + '">' + selectOptions(cur, [], "（选择值）") + "</select>";
+  }
+  if (typeof v === "number" && !isList) {
+    return '<input class="cin cvalue" type="number" step="any"' + attrs
+      + ' value="' + esc(v) + '">';
+  }
+  return '<input class="cin cvalue" type="text" placeholder="值"' + attrs
+    + ' value="' + esc(cur) + '">';
+}
+
+function condRawHtml(r, path) {
+  return '<span class="ro-cell">' + esc(JSON.stringify(r.value)) + "</span>"
+    + '<span class="cnote">深于两级的结构，本控件只读保留</span>';
+}
+
+function condFieldInner(f, value) {
+  return condBodyHtml(EditorCondition.parse(value), f.condition || {});
+}
+
+function condPathToArray(p) {
+  return String(p || "").split(".").filter(function (x) { return x !== ""; })
+    .map(function (x) { return Number(x); });
+}
+
+function condReadPart(el) {
+  var part = el.dataset.cpart;
+  if (part === "value" && el.dataset.clist === "1") {
+    return el.value === "" ? [] : [el.value];
+  }
+  if (el.tagName === "SELECT" || el.type === "number") {
+    if (el.value === "") { return part === "value" ? "" : ""; }
+    if (el.type === "number") { var n = Number(el.value); return isNaN(n) ? el.value : n; }
+    return el.value;
+  }
+  return el.value;
+}
+
+function conditionBoxCtx(box) {
+  var ctx = ctxFromNode(box);
+  if (box.dataset.condcell != null) {
+    var f = ctx.fieldIndex[box.dataset.condcell];
+    return { ctx: ctx, f: f, cell: true };
+  }
+  var g = ctx.fieldIndex[box.dataset.condfield];
+  return { ctx: ctx, f: g, cell: false };
+}
+
+function condCurrentValue(ref) {
+  if (!ref.f) { return undefined; }
+  if (!ref.cell) { return ctxFieldValue(ref.ctx, ref.f); }
+  var rows = ctxFieldValue(ref.ctx, ref.f);
+  if (!Array.isArray(rows)) { rows = []; }
+  // EditorList.cellValue 取「单行 + 列键」（不是整表 + 行号）：先按行号取行再取列
+  return EditorList.cellValue(rows[Number(box0row(ref))], box0col(ref),
+    !!ref.f.scalar_element);
+}
+function box0row(ref) { return ref.box.dataset.condrow; }
+function box0col(ref) { return ref.box.dataset.condcol; }
+
+function initCondBox(box) {
+  if (box.__rows) { return; }
+  var ref = conditionBoxCtx(box); ref.box = box;
+  box.__ref = ref;
+  box.__meta = ref.cell ? ((ref.f && ref.f.columns || []).filter(function (c) {
+    return c.key === box.dataset.condcol; })[0] || {}).condition || {}
+    : ((ref.f && ref.f.condition) || {});
+  box.__rows = EditorCondition.parse(condCurrentValue(ref));
+}
+
+function commitCond(box) {
+  var ref = box.__ref || conditionBoxCtx(box); ref.box = box;
+  var value = EditorCondition.serialize(box.__rows);
+  if (!ref.f) { return; }
+  if (!ref.cell) {
+    EditorDraft.set(ref.ctx.draft, ref.f.key, value, ref.f.value);
+  } else {
+    var rows = ctxFieldValue(ref.ctx, ref.f);
+    if (!Array.isArray(rows)) { rows = []; }
+    rows = EditorList.setCell(rows, box.dataset.condrow, box.dataset.condcol,
+      value, !!ref.f.scalar_element);
+    EditorDraft.set(ref.ctx.draft, ref.f.key, rows, ref.f.value);
+  }
+  markDirty();
+}
+
+function redrawCond(box) {
+  box.innerHTML = condBodyHtml(box.__rows, box.__meta);
+  bindCondOne(box);
+}
+
+function bindCondOne(box) {
+  Array.prototype.forEach.call(box.querySelectorAll("[data-cpart]"), function (el) {
+    var ev = (el.tagName === "SELECT") ? "change" : "input";
+    el.addEventListener(ev, function () {
+      EditorCondition.setField(box.__rows, condPathToArray(el.dataset.cpath),
+        el.dataset.cpart, condReadPart(el));
+      commitCond(box);
+    });
+    if (el.dataset && el.dataset.lref) { fillRefSelect(el, el.dataset.lref); }
+  });
+  Array.prototype.forEach.call(box.querySelectorAll("[data-cadd]"), function (btn) {
+    btn.addEventListener("click", function () {
+      var raw = btn.dataset.cadd;
+      if (!raw) { EditorCondition.addRow(box.__rows, null); }
+      else {
+        var parts = String(raw).split("|");
+        EditorCondition.addRow(box.__rows, condPathToArray(parts[0]), Number(parts[1]));
+      }
+      commitCond(box); redrawCond(box);
+    });
+  });
+  Array.prototype.forEach.call(box.querySelectorAll("[data-caddbranch]"), function (btn) {
+    btn.addEventListener("click", function () {
+      EditorCondition.addBranch(box.__rows, condPathToArray(btn.dataset.caddbranch));
+      commitCond(box); redrawCond(box);
+    });
+  });
+  Array.prototype.forEach.call(box.querySelectorAll("[data-cdelbranch]"), function (btn) {
+    btn.addEventListener("click", function () {
+      var parts = String(btn.dataset.cdelbranch).split("|");
+      EditorCondition.delBranch(box.__rows, condPathToArray(parts[0]), Number(parts[1]));
+      commitCond(box); redrawCond(box);
+    });
+  });
+  Array.prototype.forEach.call(box.querySelectorAll("[data-cdel]"), function (btn) {
+    btn.addEventListener("click", function () {
+      EditorCondition.delRow(box.__rows, condPathToArray(btn.dataset.cdel));
+      commitCond(box); redrawCond(box);
+    });
+  });
+}
+
+function bindConditionSections(root) {
+  Array.prototype.forEach.call(root.querySelectorAll(".cond-edit"), function (box) {
+    initCondBox(box);
+    bindCondOne(box);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// 批5 · 键值对表格（map 的可编辑形态；键/值可声明引用目标 → 引用选择器）
+// ---------------------------------------------------------------------------
+function mapBodyHtml(rows, col) {
+  var kr = (col && col.key_ref) || "";
+  var html = '<div class="cmeta">键值对 · ' + rows.length + " 行 · 改动先进草稿（不落盘）</div>";
+  html += '<div class="mrows">';
+  if (!rows.length) { html += '<div class="ex">（暂无键值）用下面「+ 键值」新建一行。</div>'; }
+  rows.forEach(function (r, i) {
+    html += '<div class="mrow" data-mpath="' + i + '">'
+      + mapKeyHtml(r.key, kr)
+      + mapValueHtml(r.value)
+      + '<button type="button" class="cdel" data-mdel="' + i + '">删除</button></div>';
+  });
+  html += '</div><button type="button" class="cadd" data-madd="1">+ 键值</button>';
+  return html;
+}
+
+function mapKeyHtml(key, target) {
+  var cur = key == null ? "" : String(key);
+  if (target) {
+    return '<select class="cin mkey" data-mpart="key" data-lref="' + esc(target)
+      + '" data-current="' + esc(cur) + '">' + selectOptions(cur, [], "（选择键）") + "</select>";
+  }
+  return '<input class="cin mkey" type="text" placeholder="键" data-mpart="key" value="'
+    + esc(cur) + '">';
+}
+
+function mapValueHtml(value) {
+  if (typeof value === "number") {
+    return '<input class="cin mval" type="number" step="any" data-mpart="value" value="'
+      + esc(value) + '">';
+  }
+  if (value && typeof value === "object") {
+    return '<span class="ro-cell">' + esc(JSON.stringify(value)) + "</span>";
+  }
+  return '<input class="cin mval" type="text" placeholder="值" data-mpart="value" value="'
+    + esc(value == null ? "" : value) + '">';
+}
+
+function mapFieldInner(f, value) {
+  return mapBodyHtml(EditorMap.rows(value), f);
+}
+
+function mapBoxCtx(box) {
+  var ctx = ctxFromNode(box);
+  if (box.dataset.mapcell != null) {
+    var f = ctx.fieldIndex[box.dataset.mapcell];
+    var col = ((f && f.columns) || []).filter(function (c) {
+      return c.key === box.dataset.mapcol; })[0] || {};
+    return { ctx: ctx, f: f, cell: true, meta: col };
+  }
+  return { ctx: ctx, f: ctx.fieldIndex[box.dataset.mapfield], cell: false, meta: null };
+}
+
+function mapCurrentValue(ref) {
+  if (!ref.f) { return undefined; }
+  if (!ref.cell) { return ctxFieldValue(ref.ctx, ref.f); }
+  var rows = ctxFieldValue(ref.ctx, ref.f);
+  if (!Array.isArray(rows)) { rows = []; }
+  return EditorList.cellValue(rows[Number(ref.box.dataset.maprow)], ref.box.dataset.mapcol,
+    !!ref.f.scalar_element);
+}
+
+function initMapBox(box) {
+  if (box.__rows) { return; }
+  var ref = mapBoxCtx(box); ref.box = box;
+  box.__ref = ref;
+  box.__rows = EditorMap.rows(mapCurrentValue(ref));
+}
+
+function commitMap(box) {
+  var ref = box.__ref || mapBoxCtx(box); ref.box = box;
+  var value = EditorMap.value(box.__rows);
+  if (!ref.f) { return; }
+  if (!ref.cell) {
+    EditorDraft.set(ref.ctx.draft, ref.f.key, value, ref.f.value);
+  } else {
+    var rows = ctxFieldValue(ref.ctx, ref.f);
+    if (!Array.isArray(rows)) { rows = []; }
+    rows = EditorList.setCell(rows, box.dataset.maprow, box.dataset.mapcol, value,
+      !!ref.f.scalar_element);
+    EditorDraft.set(ref.ctx.draft, ref.f.key, rows, ref.f.value);
+  }
+  markDirty();
+}
+
+function redrawMap(box) {
+  box.innerHTML = mapBodyHtml(box.__rows, box.__ref ? box.__ref.meta : null);
+  bindMapOne(box);
+}
+
+function bindMapOne(box) {
+  Array.prototype.forEach.call(box.querySelectorAll("[data-mpart]"), function (el) {
+    var ev = (el.tagName === "SELECT") ? "change" : "input";
+    el.addEventListener(ev, function () {
+      var i = Number(el.closest(".mrow").dataset.mpath);
+      var part = el.dataset.mpart;
+      var val = el.value;
+      if (part === "value" && el.type === "number" && val !== "") {
+        var n = Number(val); if (!isNaN(n)) { val = n; }
+      }
+      if (part === "key") { EditorMap.setKey(box.__rows, i, val); }
+      else { EditorMap.setValue(box.__rows, i, val); }
+      commitMap(box);
+    });
+    if (el.dataset && el.dataset.lref) { fillRefSelect(el, el.dataset.lref); }
+  });
+  Array.prototype.forEach.call(box.querySelectorAll("[data-mdel]"), function (btn) {
+    btn.addEventListener("click", function () {
+      EditorMap.delRow(box.__rows, Number(btn.dataset.mdel));
+      commitMap(box); redrawMap(box);
+    });
+  });
+  Array.prototype.forEach.call(box.querySelectorAll("[data-madd]"), function (btn) {
+    btn.addEventListener("click", function () {
+      EditorMap.addRow(box.__rows);
+      commitMap(box); redrawMap(box);
+    });
+  });
+}
+
+function bindMapSections(root) {
+  Array.prototype.forEach.call(root.querySelectorAll(".map-edit"), function (box) {
+    initMapBox(box);
+    bindMapOne(box);
   });
 }
 
@@ -1559,9 +2372,13 @@ function refCandidateList(f) {
 
 function renderRefListField(f, wrap) {
   if (!wrap || !f) { return; }
+  var ctx = ctxFromNode(wrap);
+  var prev = renderCtx;
+  renderCtx = ctx;
   var scroll = wrap.querySelector(".rf-list");
   var keep = scroll ? scroll.scrollTop : 0;
   wrap.innerHTML = refListBody(f);
+  renderCtx = prev;
   var list = wrap.querySelector(".rf-list");
   if (list) { list.innerHTML = refCandidateList(f); }
   var cnt = wrap.querySelector(".rf-cnt");
@@ -1574,7 +2391,7 @@ function renderRefListField(f, wrap) {
 function bindRefListSections(root) {
   // 候选列表渲染 + 点选绑定（本函数不做候选拉取，避免 re-render ⇄ load 互相触发）
   Array.prototype.forEach.call(root.querySelectorAll("[data-reflist]"), function (box) {
-    var f = state.fieldIndex[box.dataset.reflist];
+    var f = ctxFromNode(box).fieldIndex[box.dataset.reflist];
     if (!f) { return; }
     var wrap = box.closest(".reflist-wrap");
     box.innerHTML = refCandidateList(f);
@@ -1585,7 +2402,7 @@ function bindRefListSections(root) {
   Array.prototype.forEach.call(root.querySelectorAll("[data-refq]"), function (inp) {
     inp.addEventListener("input", function () {
       var key = inp.dataset.refq;
-      var f = state.fieldIndex[key];
+      var f = ctxFromNode(inp).fieldIndex[key];
       if (!f) { return; }
       state.refQuery[key] = inp.value;
       var wrap = inp.closest(".reflist-wrap");
@@ -1597,10 +2414,11 @@ function bindRefListSections(root) {
   Array.prototype.forEach.call(root.querySelectorAll("[data-refdel]"), function (btn) {
     btn.addEventListener("click", function () {
       var wrap = btn.closest(".reflist-wrap");
-      var f = wrap ? state.fieldIndex[wrap.dataset.rlwrap] : null;
+      var ctx = ctxFromNode(btn);
+      var f = wrap ? ctx.fieldIndex[wrap.dataset.rlwrap] : null;
       if (!f) { return; }
-      var vals = EditorRef.delRef(currentFieldValue(f), btn.dataset.refdel);
-      EditorDraft.set(draft, f.key, vals, f.value);
+      var vals = EditorRef.delRef(ctxFieldValue(ctx, f), btn.dataset.refdel);
+      EditorDraft.set(ctx.draft, f.key, vals, f.value);
       renderRefListField(f, wrap);
     });
   });
@@ -1608,10 +2426,11 @@ function bindRefListSections(root) {
 
 function bindRefPicks(box, f, wrap) {
   if (!box) { return; }
+  var ctx = ctxFromNode(box);
   Array.prototype.forEach.call(box.querySelectorAll("[data-refpick]"), function (it) {
     it.addEventListener("click", function () {
-      var vals = EditorRef.addRef(currentFieldValue(f), it.dataset.refpick);
-      EditorDraft.set(draft, f.key, vals, f.value);
+      var vals = EditorRef.addRef(ctxFieldValue(ctx, f), it.dataset.refpick);
+      EditorDraft.set(ctx.draft, f.key, vals, f.value);
       renderRefListField(f, wrap);
       var q = wrap ? wrap.querySelector(".rf-q") : null;
       if (q) { q.focus(); }   // 连续挑选：重画后把光标放回搜索框
@@ -1641,10 +2460,25 @@ function readControl(inp, f) {
 }
 
 // ---------------------------------------------------------------------------
-// 校验 / 保存 / 取消 / 回退
+// 校验 / 保存 / 取消 / 回退（主表单 + 关联分区条目共用同一条后端链路）
 // ---------------------------------------------------------------------------
-function entryURL(suffix) {
-  return "/api/pack/" + enc(state.pack) + "/entry/" + enc(state.module) + "/" + enc(state.entry) + suffix;
+function formURL(ctx, suffix) {
+  return "/api/pack/" + enc(state.pack) + "/entry/" + enc(ctx.module) + "/"
+    + enc(ctx.entry) + suffix;
+}
+
+function entryURL(suffix) { return formURL(MAIN_CTX, suffix); }
+
+// 其他表单上下文里未保存的改动（重画后按上下文键回填，避免保存一处丢掉别处的草稿）
+function snapshotOtherDrafts(exceptKey) {
+  var keep = {};
+  Object.keys(state.forms).forEach(function (k) {
+    if (k === exceptKey) { return; }
+    if (EditorDraft.dirty(state.forms[k].draft)) {
+      keep[k] = state.forms[k].draft.changes;
+    }
+  });
+  return keep;
 }
 
 function setBusy(on) {
@@ -1653,30 +2487,27 @@ function setBusy(on) {
   el("btn-rollback").disabled = state.busy || !(state.backup && state.backup.exists && state.editable);
 }
 
-function runValidate() {
-  var p = EditorDraft.patch(draft);
-  if (!Object.keys(p).length) { return Promise.resolve(); }
+function postForm(ctx, suffix) {
+  var patch = EditorDraft.patch(ctx.draft);
+  if (!Object.keys(patch).length) { return Promise.resolve(); }
   setBusy(true);
-  return postJSON(entryURL("/validate"), { patch: p }).then(function (res) {
+  return postJSON(formURL(ctx, suffix), { patch: patch }).then(function (res) {
     state.result = res; renderResult(res);
+    if (res.ok && suffix === "/save") {
+      state.pendingDrafts = snapshotOtherDrafts(ctx.key);
+      EditorDraft.discard(ctx.draft);
+      return reloadDetail();
+    }
   }).catch(function (err) {
-    state.result = { ok: false, message: "校验请求失败：" + err.message, errors: [] };
+    state.result = { ok: false, message: "请求失败：" + err.message, errors: [] };
     renderResult(state.result);
   }).then(function () { setBusy(false); });
 }
 
-function runSave() {
-  var p = EditorDraft.patch(draft);
-  if (!Object.keys(p).length) { return Promise.resolve(); }
-  setBusy(true);
-  return postJSON(entryURL("/save"), { patch: p }).then(function (res) {
-    state.result = res; renderResult(res);
-    if (res.ok) { discardDraft(); return reloadDetail(); }
-  }).catch(function (err) {
-    state.result = { ok: false, message: "保存请求失败：" + err.message, errors: [] };
-    renderResult(state.result);
-  }).then(function () { setBusy(false); });
-}
+function runValidate() { return postForm(MAIN_CTX, "/validate"); }
+function runSave() { return postForm(MAIN_CTX, "/save"); }
+function validateForm(key) { return postForm(state.forms[key] || MAIN_CTX, "/validate"); }
+function saveForm(key) { return postForm(state.forms[key] || MAIN_CTX, "/save"); }
 
 function runRollback() {
   if (!state.backup || !state.backup.exists) { return Promise.resolve(); }

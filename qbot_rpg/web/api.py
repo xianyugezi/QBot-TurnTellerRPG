@@ -409,8 +409,11 @@ def readonly_form(field_type: Optional[str]) -> str:
 # 控件形态 → (编辑控件, 是否可编辑)：§三 映射表第二级（唯一实现点）。
 # control 取值（前端只认这个，不认字段类型）：
 #   text / textarea / number / bool / select / ref / listtable / reflist / readonly
+#   condition（条件行编辑器）/ maptable（键值对表格）
 # 批4 范围：list 升级为可编辑（元素为 obj/标量 → 可增删行表格 listtable；
 # 元素为 ref → 引用多选 reflist）；obj（除列表内联对象）与 map 仍只读展示。
+# 批5：字段可用 FieldMeta.editor 显式声明控件（condition / maptable），覆盖默认映射；
+# 未声明时行为与批4 完全一致（type → widget → control）。
 _EDIT_BY_WIDGET: Dict[str, Tuple[str, bool]] = {
     "text": ("text", True),
     "number": ("number", True),
@@ -424,8 +427,16 @@ _EDIT_BY_WIDGET: Dict[str, Tuple[str, bool]] = {
 }
 EDIT_CONTROLS: Tuple[str, ...] = (
     "text", "textarea", "number", "bool", "select", "ref",
-    "listtable", "reflist", "readonly",
+    "listtable", "reflist", "readonly", "condition", "maptable",
 )
+# 批次可编辑控件集：显式声明的 condition / maptable 归为可编辑（前端按 control 渲染）。
+_READONLY_CONTROLS: Tuple[str, ...] = ("readonly",)
+
+
+def is_editable_control(control: Optional[str]) -> bool:
+    """控件形态是否可编辑（只读形态 = readonly；批5 起按最终 control 判定）。"""
+    return (control or "") not in _READONLY_CONTROLS
+
 
 
 def list_control(fm: Optional[FieldMeta]) -> str:
@@ -451,6 +462,20 @@ def control_of(widget: Optional[str], multiline: bool = False) -> str:
 def is_editable_widget(widget: Optional[str]) -> bool:
     """控件形态是否本批可编辑（只读形态 = list/obj/map）。"""
     return _EDIT_BY_WIDGET.get(widget or "", ("text", True))[1]
+
+
+def control_for(fm: Optional[FieldMeta], widget: str, multiline: bool = False) -> str:
+    """字段最终编辑控件（§三 映射表唯一实现点；批5 起支持 FieldMeta.editor 显式覆盖）。
+
+    优先序：显式 editor 声明（**必须在已知控件集内**，否则忽略、回退类型映射）→
+    list 元素分流（listtable/reflist）→ 类型默认映射。
+    只影响界面控件，不改 type/required/enum/children/校验规则。
+    """
+    if fm is not None and fm.editor and fm.editor in EDIT_CONTROLS:
+        return fm.editor
+    if widget == "list":
+        return list_control(fm)
+    return control_of(widget, multiline)
 
 
 def editable_form(field_type: Optional[str], *, multiline: bool = False) -> Dict[str, Any]:
@@ -743,6 +768,220 @@ def help_card(key: str, fm: Optional[FieldMeta],
     }
 
 
+# =====================================================================================
+# 条件结构（批5）：条件行编辑器数据面 + 关联分区路径匹配
+# =====================================================================================
+# 条件值的通用形态（**键名不写死**）：
+#   {"<主体>": {"<比较符>": 值}}                一级（如 {主体:{eq:3}}）
+#   {"<主体>": {"<二级键>": {"<比较符>": 值}}}   两级（如 {自身印记:{印记ID:{min:5}}}）
+#   {"<组合>": [{条件}, {条件}]}               逻辑组合（and/or，键名由元数据声明）
+# 本段提供解析（condition_rows）与序列化（condition_value）的参考实现，
+# 前端 JS（EditorCondition）与之同构（node 测试逐条比对）；元数据缺省
+# （condition_subjects 为空）时完全按实际值形态推断，spec 里如实标注 declared=False。
+def condition_spec(fm: Optional[FieldMeta]) -> Dict[str, Any]:
+    """条件行编辑器的主体/比较符声明（来自元数据；缺省 declared=False 如实标注）。"""
+    declared = fm.condition_subjects if fm is not None else {}
+    subjects: List[Dict[str, Any]] = []
+    ops: List[str] = []
+    for key, sub in declared.items():
+        subjects.append({
+            "key": str(key),
+            "label": sub.label or str(key),
+            "key_ref": sub.key_ref or "",
+            "value_ref": sub.value_ref or "",
+            "ops": [str(o) for o in sub.ops],
+            "combine": bool(sub.combine),
+        })
+        for op in sub.ops:
+            if str(op) not in ops:
+                ops.append(str(op))
+    return {"subjects": subjects, "ops": ops, "declared": bool(declared)}
+
+
+def _is_comparator_group(value: Mapping[str, Any]) -> bool:
+    """二级映射是否「比较符 → 标量/列表」（True=一级条件；False=还有更深的二级键）。"""
+    vals = list(value.values())
+    return bool(vals) and all(not isinstance(v, Mapping) for v in vals)
+
+
+def _condition_entry_rows(subject: str, val: object) -> List[Dict[str, Any]]:
+    if isinstance(val, list):
+        groups = [condition_rows(elem) for elem in val]
+        return [{"kind": "combine", "subject": subject, "children": groups}]
+    if isinstance(val, Mapping):
+        if _is_comparator_group(val):
+            return [{"kind": "cmp", "subject": subject, "key": "", "op": str(op),
+                     "value": v} for op, v in val.items()]
+        out: List[Dict[str, Any]] = []
+        for sub_key, sub_val in val.items():
+            if isinstance(sub_val, Mapping) and _is_comparator_group(sub_val):
+                out.extend({"kind": "cmp", "subject": subject, "key": str(sub_key),
+                            "op": str(op), "value": v} for op, v in sub_val.items())
+            elif isinstance(sub_val, Mapping):
+                # 超过两级的深结构：整体保留为只读值，不丢数据
+                out.append({"kind": "cmp", "subject": subject, "key": str(sub_key),
+                            "op": "", "value": dict(sub_val), "complex": True})
+            else:
+                out.append({"kind": "cmp", "subject": subject, "key": "",
+                            "op": str(sub_key), "value": sub_val})
+        return out
+    return [{"kind": "cmp", "subject": subject, "key": "", "op": "", "value": val}]
+
+
+def condition_rows(value: object) -> List[Dict[str, Any]]:
+    """条件值 → 条件行模型（参考实现；前端 EditorCondition.parse 与之同构）。"""
+    if not isinstance(value, Mapping):
+        return [] if value is None else [
+            {"kind": "cmp", "subject": "", "key": "", "op": "", "value": value}]
+    rows: List[Dict[str, Any]] = []
+    for key, val in value.items():
+        rows.extend(_condition_entry_rows(str(key), val))
+    return rows
+
+
+def condition_value(rows: object) -> Dict[str, Any]:
+    """条件行模型 → 条件值（参考实现；前端 EditorCondition.serialize 与之同构）。"""
+    out: Dict[str, Any] = {}
+    for row in rows if isinstance(rows, list) else []:
+        if not isinstance(row, Mapping):
+            continue
+        subject = str(row.get("subject") or "")
+        if not subject:
+            continue
+        if row.get("kind") == "combine":
+            groups = row.get("children") if isinstance(row.get("children"), list) else []
+            out[subject] = [condition_value(g) for g in groups]
+            continue
+        key = str(row.get("key") or "")
+        op = str(row.get("op") or "")
+        value = row.get("value")
+        if key:
+            bucket = out.setdefault(subject, {})
+            if not isinstance(bucket, dict):
+                continue
+            if op == "":
+                bucket[key] = value
+            else:
+                inner = bucket.setdefault(key, {})
+                if isinstance(inner, dict):
+                    inner[op] = value
+        elif op == "":
+            out[subject] = value
+        else:
+            bucket = out.setdefault(subject, {})
+            if isinstance(bucket, dict):
+                bucket[op] = value
+    return out
+
+
+def _walk_path(subject: object, path: str) -> List[Tuple[str, object]]:
+    """按字段路径取值（支持点路径与列表通配 `a[].b`）：→ [(实际路径, 值)]。
+
+    编辑器「关联分区」据此在相关模块条目里找外键（含列表内通配，如 `steps[].to`）；
+    路径不写死任何业务键（键名来自包元数据的关联声明）。
+    """
+    if not path:
+        return []
+    cur: List[Tuple[str, object]] = [("", subject)]
+    for token in str(path).split("."):
+        is_list = token.endswith("[]")
+        key = token[:-2] if is_list else token
+        nxt: List[Tuple[str, object]] = []
+        for prefix, val in cur:
+            if not isinstance(val, Mapping) or key not in val:
+                continue
+            child = val[key]
+            p = f"{prefix}.{key}" if prefix else key
+            if is_list:
+                if isinstance(child, list):
+                    for i, elem in enumerate(child):
+                        nxt.append((f"{p}[{i}]", elem))
+            else:
+                nxt.append((p, child))
+        cur = nxt
+    return cur
+
+
+def _local_values(subject: object, local_field: str, entry_id: str) -> List[object]:
+    """本条目用于与关联外键比较的取值（缺省 id；兼容简单路径声明）。"""
+    field = local_field or _ID_FIELD
+    vals = [v for _p, v in _walk_path(subject, field)]
+    if vals:
+        return vals
+    return [entry_id]
+
+
+# =====================================================================================
+# 关联分区（批5）：元数据声明「本模块条目 ↔ 其他模块条目的外键」→ 条目页相关条目分区
+# =====================================================================================
+def _association_sections(pack_dir: Path, manifest: Mapping[str, Any],
+                          declared: List[str], entry_id: str, entry_subject: object,
+                          mmeta: Optional[ModuleMeta],
+                          view: "_PackView") -> List[Dict[str, Any]]:
+    """条目页「关联分区」数据（全部来自 ModuleMeta.associations 声明）。
+
+    · 可编辑分区：相关条目按该模块自己的字段元数据出完整表单（前端就地编辑，
+      保存仍走该模块的校验 + 原子写链路）；
+    · 只读分区（editable=False）：只出摘要（id/名称/命中路径）+ 跳转。
+    编辑器本段不写死任何模块名/字段名（换包/换模块零改动）。
+    """
+    if mmeta is None or not mmeta.associations:
+        return []
+    labels = _display_labels(manifest, declared)
+    sections: List[Dict[str, Any]] = []
+    for idx, a in enumerate(mmeta.associations):
+        if not isinstance(a.module, str) or not a.module or not a.field:
+            continue
+        section: Dict[str, Any] = {
+            "key": f"assoc:{idx}:{a.module}:{a.field}",
+            "label": a.label or (labels.get(a.module) or a.module),
+            "module": a.module,
+            "module_label": labels.get(a.module) or a.module,
+            "field": a.field,
+            "local_field": a.local_field or _ID_FIELD,
+            "editable": bool(a.editable),
+            "hint": a.hint,
+            "entries": [],
+            "count": 0,
+            "declared": a.module in declared,
+        }
+        if a.module not in declared:
+            section["note"] = f"关联模块未在包 manifest 中声明：{a.module}"
+            sections.append(section)
+            continue
+        rel_data = _read_json(pack_dir / f"{a.module}.json")
+        rel_mmeta = _module_meta(a.module)
+        rel_etype = (rel_mmeta.entry_type if rel_mmeta is not None
+                     else _infer_entry_type(rel_data))
+        local_vals = _local_values(entry_subject, a.local_field or _ID_FIELD, entry_id)
+        entries: List[Dict[str, Any]] = []
+        for eid, name, subject in _entry_rows(rel_data, rel_mmeta):
+            matched = [(p, v) for p, v in _walk_path(subject, a.field)
+                       if any(v == lv for lv in local_vals)]
+            if not matched:
+                continue
+            entry: Dict[str, Any] = {
+                "id": eid, "name": name,
+                "matches": [{"path": p, "value": _json_text(v)} for p, v in matched],
+            }
+            if a.editable:
+                base = _entry_base(rel_mmeta, rel_etype, eid, subject)
+                fields = _build_fields(base, subject, rel_mmeta, view, 0)
+                entry.update({
+                    "module": a.module,
+                    "module_label": section["module_label"],
+                    "fields": fields,
+                    "field_count": len(fields),
+                    "groups": _group_summary(fields, rel_mmeta),
+                })
+            entries.append(entry)
+        entries.sort(key=lambda e: (str(e["name"]), str(e["id"])))
+        section["entries"] = entries
+        section["count"] = len(entries)
+        sections.append(section)
+    return sections
+
+
 def _resolve_group(key: str, fm: Optional[FieldMeta], mmeta: Optional[ModuleMeta]) -> str:
     """分组解析（缺省兜底）：FieldMeta.group → 模块分组表 → 单一默认分组。"""
     if fm is not None and fm.group:
@@ -845,12 +1084,13 @@ def _column(key: str, fm: Optional[FieldMeta], key_label: Optional[str] = None,
         ftype = _KIND_TO_FTYPE.get(_infer_value_kind(value) or "", "") or _infer_type(value)
     widget = _effective_widget(fm, value)
     multiline = bool(getattr(fm, "multiline", False)) if fm is not None else False
-    return {
+    control = control_for(fm, widget, multiline)
+    col: Dict[str, Any] = {
         "key": key,
         "label": (fm.label if fm is not None and fm.label else (key_label or key)),
         "type": ftype,
         "widget": widget,
-        "control": control_of(widget, multiline) if widget != "list" else list_control(fm),
+        "control": control,
         "ref_target": fm.ref_target if fm is not None else None,
         "enum": [str(x) for x in fm.enum] if fm is not None and fm.enum else [],
         "number_step": _number_step(ftype),
@@ -860,6 +1100,13 @@ def _column(key: str, fm: Optional[FieldMeta], key_label: Optional[str] = None,
         "help": fm.help if fm is not None else "",
         "help_card": help_card(key, fm, value),
     }
+    # 批5：条件行 / 键值对表格单元格的额外声明（主体/比较符/引用目标）
+    if control == "condition":
+        col["condition"] = condition_spec(fm)
+    elif control == "maptable":
+        col["key_ref"] = fm.key_ref if fm is not None else ""
+        col["value_ref"] = fm.value_ref if fm is not None else ""
+    return col
 
 
 def _row_default(elem: Optional[FieldMeta], scalar_element: bool) -> object:
@@ -974,14 +1221,14 @@ def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
     multiline = bool(getattr(fm, "multiline", False)) if fm is not None else False
     if not multiline and widget == "text":
         multiline = _is_long_text(value)  # 元数据未声明时的兜底（长文本仍给多行控件）
+    control = control_for(fm, widget, multiline)
     desc: Dict[str, Any] = {
         "key": key,
         "label": label,
         "type": ftype,
         "widget": widget,
-        "control": (list_control(fm) if widget == "list"
-                    else control_of(widget, multiline)),
-        "editable": is_editable_widget(widget),
+        "control": control,
+        "editable": is_editable_control(control),
         "multiline": multiline,
         "group": _resolve_group(key, fm, mmeta),
         "required": bool(fm.required) if fm is not None else False,
@@ -999,6 +1246,12 @@ def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
         "columns": [],
         "rows": [],
     }
+    # 批5：条件行 / 键值对表格字段的额外声明（主体/比较符/引用目标；前端据 control 渲染）
+    if control == "condition":
+        desc["condition"] = condition_spec(fm)
+    elif control == "maptable":
+        desc["key_ref"] = fm.key_ref if fm is not None else ""
+        desc["value_ref"] = fm.value_ref if fm is not None else ""
     if widget == "ref":
         # 批4：引用值是否指向存在的目标（空值不算非法）→ 前端黄提示、不红拦。
         desc["ref_valid"] = _ref_valid(view, fm.ref_target if fm is not None else None, value)
@@ -1151,6 +1404,8 @@ def entry_detail(pack: object, module: object, entry_id: object,
     base = _entry_base(mmeta, etype, entry_id, subject)
     fields = _build_fields(base, subject, mmeta, view, 0)
     groups = _group_summary(fields, mmeta)
+    associations = _association_sections(pack_dir, manifest, declared, entry_id,
+                                         subject, mmeta, view)
     labels = _display_labels(manifest, declared)
     return {
         "pack": str(pack),
@@ -1162,6 +1417,8 @@ def entry_detail(pack: object, module: object, entry_id: object,
         "name": entry_name,
         "fields": fields,
         "groups": groups,
+        "associations": associations,
+        "association_count": len(associations),
         "field_count": len(fields),
         "group_count": len(groups),
         "meta_source": META_SOURCE,
@@ -1280,12 +1537,17 @@ __all__ = [
     "Forbidden",
     "NotFound",
     "content_root",
+    "condition_rows",
+    "condition_spec",
+    "condition_value",
+    "control_for",
     "control_of",
     "declared_module",
     "editable_form",
     "entry_detail",
     "entry_slot",
     "field_meta_table",
+    "is_editable_control",
     "is_editable_widget",
     "list_control",
     "list_entries",

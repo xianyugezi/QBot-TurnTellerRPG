@@ -64,6 +64,8 @@ for ln in rd(WN / "01_基础与专械.md").splitlines():
             index["基础域"].append(_mk(re.sub(r"^[^\w一-龥]+", "", cells[1]), e, "01_基础与专械.md"))
             continue
         if in_artifact:
+            if cells[1] in ("专械",) or set(cells[1]) <= set("-— "):
+                continue  # 表头/分隔行
             # 流派专械：不绑武器类型（00 §一 → 通用微特性「执中」）
             index["基础域"].append({"name": cells[1], "type": "专械", "trait": "执中",
                                     "file": "01_基础与专械.md"})

@@ -89,6 +89,19 @@ def _kv(view: Mapping[str, Any], key: str) -> str:
     return str(v) if v not in (None, "") else "—"
 
 
+def _arg_tail(parsed: Any, ctx: Mapping[str, Any]) -> str:
+    """参数串读取：parsed.args（parse_command token 化）优先，ctx["args"] 注入兜底。"""
+    args = getattr(parsed, "args", None)
+    if isinstance(args, (list, tuple)) and args:
+        return " ".join(str(a) for a in args).strip()
+    a2 = ctx.get("args")
+    if isinstance(a2, (list, tuple)) and a2:
+        return " ".join(str(x) for x in a2).strip()
+    if isinstance(a2, str) and a2.strip():
+        return a2.strip()
+    return ""
+
+
 # ---------------------------------------------------------------- 港 档
 def cmd_port_archive(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     """`港 档`：云枢浮港个人档案聚合（进度/收集/羁绊/资产 概览）。"""
@@ -131,10 +144,7 @@ def cmd_port_codex(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     g = _gated(ctx)
     if g:
         return g
-    kw = ""
-    args = getattr(parsed, "args", None)
-    if isinstance(args, (list, tuple)) and args:
-        kw = str(args[0]).strip()
+    kw = _arg_tail(parsed, ctx)
     if not kw:
         return "🔍 港 鉴 <关键词>：查怪/武器/素材条目 · 例：`港 鉴 岩犀`（支持名称片段）"
     rows = _codex_sources(ctx)
@@ -168,10 +178,7 @@ def cmd_survey(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     g = _gated(ctx)
     if g:
         return g
-    eco = ""
-    args = getattr(parsed, "args", None)
-    if isinstance(args, (list, tuple)) and args:
-        eco = str(args[0]).strip()
+    eco = _arg_tail(parsed, ctx)
     day, day_label = _game_day(ctx)
     rotation = "素材本轮换：D%7 = {} → 第 {} 类".format(day % 7, day % 7 + 1)
     if not eco:
@@ -227,10 +234,7 @@ def cmd_preset(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     g = _gated(ctx)
     if g:
         return g
-    args = getattr(parsed, "args", None)
-    tail = ""
-    if isinstance(args, (list, tuple)) and args:
-        tail = " ".join(str(a) for a in args).strip()
+    tail = _arg_tail(parsed, ctx)
     store = ctx.get("preset_store")
     current = ""
     if isinstance(store, Mapping):
@@ -265,19 +269,28 @@ def cmd_preset(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 
 # ---------------------------------------------------------------- 装配
 def register_cloudsea_extra_commands(router: Any, *, make_context: Optional[Callable[[], MutableMapping[str, Any]]] = None) -> int:
-    """装配入口（显式调用；未调用 → 五指令不生效）。返回注册条数。"""
-    table = {
-        PORT_ARCHIVE_CMD: cmd_port_archive,
-        PORT_CODEX_CMD: cmd_port_codex,
-        SURVEY_CMD: cmd_survey,
-        MORNING_CMD: cmd_morning,
-        PRESET_CMD: cmd_preset,
-    }
+    """装配入口（显式调用；未调用 → 五指令不生效）。返回注册条数。
+
+    注册形态＝CommandSpec（router.register(spec)）；路由匹配/优先级与
+    `港` 本体（231 接线批）的子命令分派归 231 消费——本文件只保证五词面
+    可独立注册、handler 契约 (parsed, ctx) -> str。
+    """
+    try:
+        from qbot_rpg.commands.router import CommandSpec  # noqa: PLC0415
+    except Exception:  # noqa: BLE001 测试/文档环境无 router → 零注册
+        return 0
+    specs = [
+        CommandSpec(PORT_ARCHIVE_CMD, handler=cmd_port_archive),
+        CommandSpec(PORT_CODEX_CMD, handler=cmd_port_codex),
+        CommandSpec(SURVEY_CMD, handler=cmd_survey),
+        CommandSpec(MORNING_CMD, handler=cmd_morning),
+        CommandSpec(PRESET_CMD, handler=cmd_preset),
+    ]
     n = 0
-    for word, fn in table.items():
+    for spec in specs:
         try:
-            router.register(word, fn, make_context=make_context)  # type: ignore[attr-defined]
+            router.register(spec)  # type: ignore[attr-defined]
             n += 1
-        except Exception:  # noqa: BLE001 router 形态差异 → 逐条隔离
+        except Exception:  # noqa: BLE001 同名已注册（231 接线冲突）→ 逐条隔离
             continue
     return n

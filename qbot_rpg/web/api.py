@@ -467,10 +467,11 @@ def is_editable_widget(widget: Optional[str]) -> bool:
 def control_for(fm: Optional[FieldMeta], widget: str, multiline: bool = False) -> str:
     """字段最终编辑控件（§三 映射表唯一实现点；批5 起支持 FieldMeta.editor 显式覆盖）。
 
-    优先序：显式 editor 声明 → list 元素分流（listtable/reflist）→ 类型默认映射。
+    优先序：显式 editor 声明（**必须在已知控件集内**，否则忽略、回退类型映射）→
+    list 元素分流（listtable/reflist）→ 类型默认映射。
     只影响界面控件，不改 type/required/enum/children/校验规则。
     """
-    if fm is not None and fm.editor:
+    if fm is not None and fm.editor and fm.editor in EDIT_CONTROLS:
         return fm.editor
     if widget == "list":
         return list_control(fm)

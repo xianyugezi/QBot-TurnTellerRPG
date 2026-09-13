@@ -179,6 +179,8 @@ def test_control_for_honors_explicit_editor() -> None:
     assert api.control_for(FieldMeta(type="obj", editor="condition"), "obj") == "condition"
     assert api.control_for(FieldMeta(type="obj", editor="maptable"), "obj") == "maptable"
     assert api.control_for(FieldMeta(type="obj"), "obj") == "readonly"
+    # 未知 editor 声明 → 忽略并回退类型映射（不让元数据笔误把字段变成文本输入）
+    assert api.control_for(FieldMeta(type="str", editor="no_such_widget"), "text") == "text"
     assert api.is_editable_control("condition") is True
     assert api.is_editable_control("maptable") is True
     assert api.is_editable_control("readonly") is False

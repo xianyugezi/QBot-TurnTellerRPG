@@ -56,6 +56,12 @@ class NotFound(EditorError):
     status_code = 404
 
 
+class Forbidden(EditorError):
+    """当前身份只读、拒绝写入（403）。"""
+
+    status_code = 403
+
+
 # =====================================================================================
 # 路径与文件读取（含 mtime 缓存；只读，不写盘）
 # =====================================================================================
@@ -397,6 +403,61 @@ def readonly_form(field_type: Optional[str]) -> str:
     return _widget_for_type(field_type)
 
 
+# 控件形态 → (编辑控件, 是否可编辑)：§三 映射表第二级（唯一实现点）。
+# control 取值（前端只认这个，不认字段类型）：
+#   text / textarea / number / bool / select / ref / readonly
+# 批2 范围：标量可编辑；list（批4 可增删行表格）、obj、map 本批只读展示。
+_EDIT_BY_WIDGET: Dict[str, Tuple[str, bool]] = {
+    "text": ("text", True),
+    "number": ("number", True),
+    "bool": ("bool", True),
+    "enum": ("select", True),
+    "ref": ("ref", True),
+    "formula": ("text", True),  # 表达式文本；值实为对象时按值形态纠偏为 obj → 只读
+    "list": ("readonly", False),
+    "obj": ("readonly", False),
+    "map": ("readonly", False),
+}
+EDIT_CONTROLS: Tuple[str, ...] = ("text", "textarea", "number", "bool", "select", "ref", "readonly")
+
+
+def control_of(widget: Optional[str], multiline: bool = False) -> str:
+    """控件形态 → 编辑控件（multiline 仅对文本生效：text → textarea）。"""
+    control, _editable = _EDIT_BY_WIDGET.get(widget or "", ("text", True))
+    if control == "text" and multiline:
+        return "textarea"
+    return control
+
+
+def is_editable_widget(widget: Optional[str]) -> bool:
+    """控件形态是否本批可编辑（只读形态 = list/obj/map）。"""
+    return _EDIT_BY_WIDGET.get(widget or "", ("text", True))[1]
+
+
+def editable_form(field_type: Optional[str], *, multiline: bool = False) -> Dict[str, Any]:
+    """FieldMeta.type → {widget, control, editable}（§三 映射表唯一实现点）。
+
+    编辑器（只读渲染与编辑控件）一律经本函数 + control_of 取形态；
+    业务模块不得新增映射特例（判断标准见 docs/编辑器重写_需求与约束.md 第〇节）。
+    """
+    widget = _widget_for_type(field_type)
+    return {
+        "widget": widget,
+        "control": control_of(widget, multiline),
+        "editable": is_editable_widget(widget),
+    }
+
+
+def _is_long_text(value: object) -> bool:
+    """长文本启发式（元数据未声明 multiline 时的兜底）：含换行或超长 → 多行控件。"""
+    return isinstance(value, str) and ("\n" in value or len(value) > 80)
+
+
+def _number_step(ftype: str) -> str:
+    """数字控件的步进（int 整数步进 / float·number 任意小数），仅作前端提示不硬拦。"""
+    return "1" if ftype == "int" else "any"
+
+
 def _infer_type(value: object) -> str:
     if isinstance(value, bool):
         return "bool"
@@ -632,11 +693,17 @@ def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
     widget = _effective_widget(fm, value)
     ftype = fm.type if fm is not None else _infer_type(value)
     label = fm.label if fm is not None and fm.label else (key or ftype)
+    multiline = bool(getattr(fm, "multiline", False)) if fm is not None else False
+    if not multiline and widget == "text":
+        multiline = _is_long_text(value)  # 元数据未声明时的兜底（长文本仍给多行控件）
     desc: Dict[str, Any] = {
         "key": key,
         "label": label,
         "type": ftype,
         "widget": widget,
+        "control": control_of(widget, multiline),
+        "editable": is_editable_widget(widget),
+        "multiline": multiline,
         "group": _resolve_group(key, fm, mmeta),
         "required": bool(fm.required) if fm is not None else False,
         "present": present,
@@ -644,6 +711,7 @@ def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
         "display": _scalar_display(value, widget, view, fm.ref_target if fm is not None else None),
         "ref_target": fm.ref_target if fm is not None else None,
         "enum": [str(x) for x in fm.enum] if fm is not None and fm.enum else [],
+        "number_step": _number_step(ftype),
         "hint": _hint(fm),
         "columns": [],
         "rows": [],
@@ -766,18 +834,130 @@ def entry_detail(pack: object, module: object, entry_id: object,
     }
 
 
+# =====================================================================================
+# 只读 API ⑤：写链路数据源（保存前定位条目 / 读整包 / 引用候选）
+# =====================================================================================
+def declared_module(pack: object, module: object, root: Optional[object] = None) -> str:
+    """校验模块已在包 manifest 中声明（否则 NotFound），返回规范化模块名。"""
+    pack_dir = _pack_dir(pack, root)
+    manifest = _manifest(pack_dir)
+    mod = _check_component(module, "模块名")
+    if mod not in _declared_modules(manifest):
+        raise NotFound(f"模块未在包 manifest 中声明：{mod}")
+    return mod
+
+
+def load_pack_modules(pack: object, root: Optional[object] = None) -> Tuple[Path, Dict[str, Any]]:
+    """整包模块原始数据（写链路 + 校验的数据源；只读）。
+
+    出参 (包目录, {模块名: parsed JSON})。只收 manifest 已声明且文件存在的模块；
+    读盘经 mtime 缓存，写盘后 mtime 变化自动失效 → 保存后回读即最新。
+    """
+    pack_dir = _pack_dir(pack, root)
+    manifest = _manifest(pack_dir)
+    modules: Dict[str, Any] = {}
+    for mod in _declared_modules(manifest):
+        data = _read_json(pack_dir / f"{mod}.json")
+        if data is not None:
+            modules[mod] = data
+    return pack_dir, modules
+
+
+def entry_slot(pack: object, module: object, entry_id: object,
+               root: Optional[object] = None) -> Dict[str, Any]:
+    """定位条目在模块数据中的槽位（编辑链路用；只读）。
+
+    出参含：pack_dir / manifest / module / entry_type / data（模块原数据）/
+    slot（list=下标 int，map·object=键 str）/ subject（条目原值）/ base（字段元数据基表）。
+    条目不存在 → NotFound；模块未声明 → NotFound；包非法 → BadRequest。
+    """
+    pack_dir = _pack_dir(pack, root)
+    manifest = _manifest(pack_dir)
+    declared = _declared_modules(manifest)
+    mod = _check_component(module, "模块名")
+    if mod not in declared:
+        raise NotFound(f"模块未在包 manifest 中声明：{mod}")
+    if not isinstance(entry_id, str):
+        raise BadRequest(f"非法条目标识：{entry_id!r}")
+    data = _read_json(pack_dir / f"{mod}.json")
+    mmeta = _module_meta(mod)
+    rows = _entry_rows(data, mmeta)
+    pos = next((i for i, row in enumerate(rows) if row[0] == entry_id), None)
+    if pos is None:
+        raise NotFound(f"条目不存在：{mod}/{entry_id}")
+    _eid, entry_name, subject = rows[pos]
+    etype = mmeta.entry_type if mmeta is not None else _infer_entry_type(data)
+    if isinstance(data, list):
+        slot: object = pos
+    elif isinstance(data, Mapping):
+        slot = entry_id
+    else:
+        slot = None
+    return {
+        "pack_dir": pack_dir,
+        "manifest": manifest,
+        "declared": declared,
+        "module": mod,
+        "entry_type": etype,
+        "data": data,
+        "slot": slot,
+        "entry_id": entry_id,
+        "name": entry_name,
+        "subject": subject,
+        "base": _entry_base(mmeta, etype, entry_id, subject),
+        "mmeta": mmeta,
+    }
+
+
+def ref_options(pack: object, target: object, root: Optional[object] = None,
+                query: Optional[object] = None, limit: int = 500) -> Dict[str, Any]:
+    """引用字段候选（`/api/pack/{pack}/refs/{target}`）：目标 kind → [{id, name}]。
+
+    名称索引与只读视图同一构建逻辑（含命名空间合并、`_or_any` 后缀兼容）；
+    未知 target 返回空候选 + known=false（前端据此提示「该引用目标暂无候选」）。
+    排序按名称（同名前缀一致），可按 id/名称模糊过滤（query），超出 limit 截断并标注。
+    """
+    pack_dir = _pack_dir(pack, root)
+    manifest = _manifest(pack_dir)
+    tgt = str(target or "")
+    index = _PackView(pack_dir, manifest).name_index()
+    table = index.get(tgt)
+    if table is None and tgt.endswith("_or_any"):
+        table = index.get(tgt[: -len("_or_any")])
+    if not table:
+        return {"pack": str(pack), "target": tgt, "options": [], "total": 0,
+                "truncated": False, "known": False}
+    rows = [{"id": str(k), "name": str(v)} for k, v in table.items()]
+    rows.sort(key=lambda r: (r["name"], r["id"]))
+    q = str(query or "").strip().lower()
+    if q:
+        rows = [r for r in rows if q in r["id"].lower() or q in r["name"].lower()]
+    total = len(rows)
+    return {"pack": str(pack), "target": tgt, "options": rows[:limit],
+            "total": total, "truncated": total > limit, "known": True}
+
+
 __all__ = [
     "DEFAULT_GROUP",
+    "EDIT_CONTROLS",
     "META_SOURCE",
     "BadRequest",
     "EditorError",
+    "Forbidden",
     "NotFound",
     "content_root",
+    "control_of",
+    "declared_module",
+    "editable_form",
     "entry_detail",
+    "entry_slot",
     "field_meta_table",
+    "is_editable_widget",
     "list_entries",
     "list_modules",
     "list_packs",
+    "load_pack_modules",
     "readonly_form",
+    "ref_options",
     "repo_root",
 ]

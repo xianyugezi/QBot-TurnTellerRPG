@@ -150,6 +150,10 @@ class FieldMeta:
     # 仍无声明 → 编辑器用单一默认分组（见 qbot_rpg/web/api.py DEFAULT_GROUP）。
     # 尾部默认值，既有 FieldMeta 构造零改动、校验器行为零变化。
     group: str = ""
+    # 编辑器重写批2：长文本声明（编辑控件用多行文本框 textarea；缺省 False = 单行输入）。
+    # 与 group 同属「编辑器显示维度」：只影响界面控件，不影响校验器判定；尾部默认值，
+    # 既有 FieldMeta 构造零改动。
+    multiline: bool = False
 
 
 @dataclass(frozen=True)

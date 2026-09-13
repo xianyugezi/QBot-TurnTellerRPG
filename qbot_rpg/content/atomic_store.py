@@ -299,6 +299,109 @@ def write_modules(
 
 
 # =============================================================================
+# 写前备份 / 回退（编辑器重写批2：.bak + 原子恢复；仍属本层唯一文件 IO 落点）
+# =============================================================================
+
+def backup_status(content_dir: Path, module: str) -> Dict[str, Any]:
+    """备份状态（回退入口的可见性数据；不读内容，只 stat）。
+
+    出参：{module, path（相对内容包的备份文件名）, exists, size, mtime_ns}。
+    模块名非法 → {exists: False, error}（不抛，供界面显示「无备份」）。
+    """
+    try:
+        safe = _safe_module_name(module)
+    except ValueError as exc:
+        return {"module": str(module), "path": "", "exists": False,
+                "size": 0, "mtime_ns": 0, "error": str(exc)}
+    filename = _module_filename(safe)
+    bak = Path(content_dir) / f"{filename}.bak"
+    try:
+        st = bak.stat()
+    except OSError:
+        return {"module": safe, "path": f"{filename}.bak", "exists": False,
+                "size": 0, "mtime_ns": 0}
+    return {"module": safe, "path": f"{filename}.bak", "exists": True,
+            "size": st.st_size, "mtime_ns": st.st_mtime_ns}
+
+
+def backup_modules(content_dir: Path, modules: Sequence[str]) -> Result:
+    """写前自动备份（编辑器重写批2）：把当前 {module}.json 复制为 {module}.json.bak。
+
+    语义：
+      · 覆盖式备份——同一模块多次保存时，.bak 恒为「上一份已落盘内容」；
+      · 目标文件不存在（全新模块）→ 跳过（无旧内容可备份，不算失败）；
+      · 备份文件经 _write_one_atomic 原子落盘（不留半截 .bak）；
+      · 任一备份失败 → 返回 ok:false（调用方据此取消本次写入，不落半套）。
+    出参：{ok: true, backups: [备份文件名...], skipped: [模块名...]}。
+    """
+    content_dir = Path(content_dir)
+    backups: List[str] = []
+    skipped: List[str] = []
+    for module in modules:
+        try:
+            safe = _safe_module_name(module)
+        except ValueError as exc:
+            return {"ok": False, "errors": [{
+                "level": "red", "code": "invalid_module", "message": str(exc)}]}
+        filename = _module_filename(safe)
+        src = content_dir / filename
+        if not src.is_file():
+            skipped.append(safe)
+            continue
+        try:
+            text = src.read_text(encoding="utf-8")
+            _write_one_atomic(content_dir / f"{filename}.bak", text)
+        except (OSError, UnicodeDecodeError) as exc:
+            return {"ok": False, "errors": [{
+                "level": "red", "code": "backup_failed",
+                "message": f"备份模块「{safe}」失败：{type(exc).__name__}（已取消写入）",
+            }]}
+        backups.append(f"{filename}.bak")
+    return {"ok": True, "backups": backups, "skipped": skipped}
+
+
+def restore_modules_from_backup(content_dir: Path, modules: Sequence[str]) -> Result:
+    """从 .bak 回退（编辑器重写批2）：{module}.json.bak → {module}.json（原子写）。
+
+    · 无备份的模块进 missing（不算整体失败，除非全部缺失）；
+    · 恢复本身经 _write_one_atomic（原子替换，读方不会看到半截文件）；
+    · .bak 恢复后保留（可重复回退）；写入失败返回 ok:false + 人话错误。
+    出参：{ok: true, restored: [模块名...], missing: [模块名...]}。
+    """
+    content_dir = Path(content_dir)
+    restored: List[str] = []
+    missing: List[str] = []
+    errors: List[dict] = []
+    for module in modules:
+        try:
+            safe = _safe_module_name(module)
+        except ValueError as exc:
+            errors.append({"level": "red", "code": "invalid_module", "message": str(exc)})
+            continue
+        filename = _module_filename(safe)
+        bak = content_dir / f"{filename}.bak"
+        if not bak.is_file():
+            missing.append(safe)
+            continue
+        try:
+            text = bak.read_text(encoding="utf-8")
+            _write_one_atomic(content_dir / filename, text)
+        except (OSError, UnicodeDecodeError) as exc:
+            errors.append({"level": "red", "code": "restore_failed",
+                           "message": f"从备份恢复模块「{safe}」失败：{type(exc).__name__}"})
+            continue
+        restored.append(safe)
+    if errors:
+        return {"ok": False, "errors": errors}
+    if not restored:
+        return {"ok": False, "errors": [{
+            "level": "red", "code": "no_backup",
+            "message": "没有可回退的备份：" + "、".join(missing or [str(m) for m in modules]),
+        }]}
+    return {"ok": True, "restored": restored, "missing": missing}
+
+
+# =============================================================================
 # 快照回退（SV-07：内存保留上一份校验通过的 registry 快照；失败回退 + 人话提示）
 # =============================================================================
 
@@ -449,27 +552,43 @@ def _rollback_result(
     )
 
 
-def _humanize_errors(errors: Sequence[Any]) -> List[dict]:
-    """PackError 结构化 detail → 人话 errors（细化_5a L183 包络 errors[] 形态）。
+def _humanize(items: Sequence[Any], *, level: str, verb: str) -> List[dict]:
+    """PackError/PackWarning 结构化 detail → 人话条目（细化_5a L183 包络 errors[] 形态）。
 
     人话模板对齐细化_5a SV-05（报错含模块/条目名可读信息；规则 ⑤ 模板 L165-168）；
     校验器 PackError.detail 为结构化参数（D-06：validator 不拼用户体验文案，翻译归本层）。
+    红拦（PackError）与黄提示（PackWarning）结构同形，仅 level/verb 不同，故共用本函数。
     """
     out: List[dict] = []
-    for e in errors:
+    for e in items:
         module = getattr(e, "module", "")
         field = getattr(e, "field", "")
         detail = dict(getattr(e, "detail", {}) or {})
-        message = str(detail.get("message") or detail.get("error") or detail.get("rule")
-                      or getattr(e, "kind", "") or "配置不合法")
+        message = str(detail.get("message") or detail.get("error") or detail.get("msg")
+                      or detail.get("rule") or getattr(e, "kind", "") or "配置不合法")
         out.append({
-            "level": "red",
+            "level": level,
             "code": str(getattr(e, "kind", "") or "validation"),
+            "module": str(module),
             "field": str(field),
-            "message": f"模块「{module}」配置校验未通过：{message}"
+            "message": f"模块「{module}」{verb}：{message}"
                       + (f"（位置：{field}）" if field else ""),
         })
     return out
+
+
+def humanize_errors(errors: Sequence[Any]) -> List[dict]:
+    """红拦人话条目（编辑器/命令层展示用；level=red）。"""
+    return _humanize(errors, level="red", verb="配置校验未通过")
+
+
+def humanize_warnings(warnings: Sequence[Any]) -> List[dict]:
+    """黄提示人话条目（编辑器展示用；level=yellow，不阻断保存）。"""
+    return _humanize(warnings, level="yellow", verb="有需要注意的取值")
+
+
+# 兼容内部旧名（v1 私有翻译入口；对外请用 humanize_errors）。
+_humanize_errors = humanize_errors
 
 
 def _reload_via_watcher(
@@ -507,8 +626,13 @@ def check_pack_errors_human(modules_raw: Mapping[str, Any]) -> List[dict]:
 __all__ = [
     "apply_module_changes",
     "apply_removed_to_entries",
+    "backup_modules",
+    "backup_status",
     "check_pack_errors_human",
+    "humanize_errors",
+    "humanize_warnings",
     "reload_and_rollback",
+    "restore_modules_from_backup",
     "restore_registry",
     "snapshot_registry",
     "write_modules",

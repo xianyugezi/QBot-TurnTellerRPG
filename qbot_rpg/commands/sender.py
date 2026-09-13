@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from time import sleep as _time_sleep
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, List, Mapping, Optional
 
 # 同包兄弟模块（commands/errors.py）内的相对导入：唯一文案源 TPL-12/13/14（3d D-04）。
 # 不用绝对导入 `qbot_rpg.commands.errors`——G0 架构门禁（test_g0_architecture
@@ -83,26 +83,47 @@ def segment_by_length(
     return [text[i:i + budget] for i in range(0, len(text), budget)]
 
 
-def format_tpl12(fragment: str) -> str:
+def _err_tpl(ctx: Any, key: str, fallback: str) -> str:
+    """九期 233「TPL 开键」：内容包 templates.json 可覆盖错误文案键（err_*）。
+
+    ctx 未注入/无 templates/键未覆盖 → 回落 errors.py 常量（D-04 唯一源不变，
+    缺省零行为变化）；键存在即用覆盖值（cloudsea 包 21 条云海文案通道同构）。
+    """
+    tpls = ctx.get("templates") if isinstance(ctx, Mapping) else None
+    if isinstance(tpls, Mapping):
+        v = tpls.get(key)
+        if isinstance(v, str) and v:
+            return v
+    return fallback
+
+
+def format_tpl12(fragment: str, ctx: Any = None) -> str:
     """TPL-12 指令出错（3d §5.1）：``❌ 指令不正确：{原指令片段}。输入 /帮助 查看可用指令。``
 
-    原指令片段截取前 20 字符，超过截断加 ``…``（3d §5.1 防刷屏）。文案唯一源 errors.py（D-04）。
+    原指令片段截取前 20 字符，超过截断加 ``…``（3d §5.1 防刷屏）。文案唯一源 errors.py（D-04）；
+    九期 233 起支持内容包 templates.json 覆盖键 ``err_bad_command``（ctx 可选参，缺省零行为变化）。
     """
     clipped = fragment[:20] + ("…" if len(fragment) > 20 else "")
-    return TPL_ERR_BAD_COMMAND.format(fragment=clipped)
+    return _err_tpl(ctx, "err_bad_command", TPL_ERR_BAD_COMMAND).format(fragment=clipped)
 
 
-def format_tpl13(name: str, current: object, required: object) -> str:
-    """TPL-13 条件不满足（3d §5.2）：``❌ 条件不满足：{条件名}（当前 {当前值}，需要 {需求值}）``。"""
-    return TPL_ERR_CONDITION.format(name=name, current=current, required=required)
+def format_tpl13(name: str, current: object, required: object, ctx: Any = None) -> str:
+    """TPL-13 条件不满足（3d §5.2）：``❌ 条件不满足：{条件名}（当前 {当前值}，需要 {需求值}）``。
+
+    九期 233：覆盖键 ``err_condition``（ctx 可选参）。
+    """
+    return _err_tpl(ctx, "err_condition", TPL_ERR_CONDITION).format(
+        name=name, current=current, required=required)
 
 
-def format_tpl14(resource: str, amount: object, current: object) -> str:
+def format_tpl14(resource: str, amount: object, current: object, ctx: Any = None) -> str:
     """TPL-14 资源不足（3d §5.3）：``❌ 资源不足：需要 {资源}{数量}，当前 {当前值}``。
 
     失败无副作用（不扣款不消耗，3d §5.3）；同动作多资源只报第一个不满足（配置声明顺序）。
+    九期 233：覆盖键 ``err_lack_resource``（ctx 可选参）。
     """
-    return TPL_ERR_LACK_RESOURCE.format(resource=resource, amount=amount, current=current)
+    return _err_tpl(ctx, "err_lack_resource", TPL_ERR_LACK_RESOURCE).format(
+        resource=resource, amount=amount, current=current)
 
 
 def page_error_tpl12(fragment: str, command: str, total_pages: int, total: int) -> str:

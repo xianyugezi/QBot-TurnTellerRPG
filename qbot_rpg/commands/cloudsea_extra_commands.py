@@ -39,7 +39,7 @@ MORNING_CMD = "晨报"
 PRESET_CMD = "预案"
 
 # ---------------------------------------------------------------- 数据缺省（presets.json 未装配时的兜底）
-SIDE_ENUM = ["front", "left", "right", "back"]
+SIDE_ENUM = ["front", "side", "rear"]  # 炮台守扇位＝12 §L TURRET_GUARD_SECTOR（215B 申报，裁决 #24）
 HEIGHT_ENUM = ["ground", "air"]
 REPOSITION_ENUM = ["dash", "lateral", "turn", "shift", "ascend", "descend", "cling", "burrow", "rolling"]
 TIDE_NAMES = ["微澜", "潮涌", "湍流", "怒涛", "风暴", "狂岚", "浩劫"]

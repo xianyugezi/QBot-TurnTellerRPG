@@ -1,19 +1,114 @@
 {
- "_comment": "九期批次 232 新指令五件数据面：预案串模板/方位枚举（22号§十一 schema 同源）/晨报槽位/素材本七类轮换。装配层注入 ctx[cloudsea_pkg] 消费；未装配时实现在 cloudsea_extra_commands.PRESET_FALLBACK 兜底。",
- "side_enum": ["front", "left", "right", "back"],
- "height_enum": ["ground", "air"],
- "self_reposition_enum": ["dash", "lateral", "turn", "shift", "ascend", "descend", "cling", "burrow", "rolling"],
- "templates": [
-  {"id": "standard", "name": "标准预案", "body": "灵:标背脊→喂爆燃→抗沉眠｜兽:支援→守护", "tags": ["通用"]},
-  {"id": "gunner_turret_l", "name": "炮台守·左翼", "body": "架设→炮台守 side:left→齐射×2→撤架", "tags": ["机械师", "方位"]},
-  {"id": "gunner_turret_r", "name": "炮台守·右翼", "body": "架设→炮台守 side:right→齐射×2→撤架", "tags": ["机械师", "方位"]},
-  {"id": "guard_hold", "name": "守卫镇场", "body": "盾防→释能 等破招→剑连击", "tags": ["守卫"]},
-  {"id": "duelist_roll", "name": "剑客滚链", "body": "连段→踏风斩→回旋·终", "tags": ["剑客"]},
-  {"id": "druid_pollinate", "name": "德鲁伊孢线", "body": "杖击标记→孢爆→滞空→俯冲", "tags": ["德鲁伊"]},
-  {"id": "bard_score", "name": "诗人谱面", "body": "谱曲→演奏→重奏→收束", "tags": ["诗人"]},
-  {"id": "ranger_vent", "name": "游侠排气窗", "body": "速射→速射→常规排气→速射(强化)", "tags": ["游侠"]}
+ "_comment": "九期批次 232 新指令五件数据面：预案串模板/方位枚举（22号§十一 schema 同源）/晨报槽位/素材本七类轮换。装配层注入 ctx[cloudsea_pkg] 消费；未装配时实现在 cloudsea_extra_commands.PRESET_FALLBACK 兜底。；turret_side_enum＝12 §L $C.CLASS.TURRET_GUARD_SECTOR 同源（215B 申报，预案串炮台守扇位）；side_enum 系 §十一 通用侧翼四值参考。",
+ "side_enum": [
+  "front",
+  "left",
+  "right",
+  "back"
  ],
- "morning_slots": ["丰饶符", "素材本", "巨兽窗", "待收", "计量条"],
- "material_rotation": ["微光", "矿石", "草药", "果实", "鳞革", "残械", "杂类"],
- "survey_note": "勘察 [生态] 数据源=生态总表 28 生态（17_/01_生态总表_28生态.md 转译面）；晨报槽位=215H 游戏日模型（D/W 轴）"
+ "height_enum": [
+  "ground",
+  "air"
+ ],
+ "self_reposition_enum": [
+  "dash",
+  "lateral",
+  "turn",
+  "shift",
+  "ascend",
+  "descend",
+  "cling",
+  "burrow",
+  "rolling"
+ ],
+ "templates": [
+  {
+   "id": "standard",
+   "name": "标准预案",
+   "body": "灵:标背脊→喂爆燃→抗沉眠｜兽:支援→守护",
+   "tags": [
+    "通用"
+   ]
+  },
+  {
+   "id": "gunner_turret_l",
+   "name": "炮台守·左翼",
+   "body": "架设→炮台守 side:left→齐射×2→撤架",
+   "tags": [
+    "机械师",
+    "方位"
+   ]
+  },
+  {
+   "id": "gunner_turret_r",
+   "name": "炮台守·右翼",
+   "body": "架设→炮台守 side:right→齐射×2→撤架",
+   "tags": [
+    "机械师",
+    "方位"
+   ]
+  },
+  {
+   "id": "guard_hold",
+   "name": "守卫镇场",
+   "body": "盾防→释能 等破招→剑连击",
+   "tags": [
+    "守卫"
+   ]
+  },
+  {
+   "id": "duelist_roll",
+   "name": "剑客滚链",
+   "body": "连段→踏风斩→回旋·终",
+   "tags": [
+    "剑客"
+   ]
+  },
+  {
+   "id": "druid_pollinate",
+   "name": "德鲁伊孢线",
+   "body": "杖击标记→孢爆→滞空→俯冲",
+   "tags": [
+    "德鲁伊"
+   ]
+  },
+  {
+   "id": "bard_score",
+   "name": "诗人谱面",
+   "body": "谱曲→演奏→重奏→收束",
+   "tags": [
+    "诗人"
+   ]
+  },
+  {
+   "id": "ranger_vent",
+   "name": "游侠排气窗",
+   "body": "速射→速射→常规排气→速射(强化)",
+   "tags": [
+    "游侠"
+   ]
+  }
+ ],
+ "morning_slots": [
+  "丰饶符",
+  "素材本",
+  "巨兽窗",
+  "待收",
+  "计量条"
+ ],
+ "material_rotation": [
+  "微光",
+  "矿石",
+  "草药",
+  "果实",
+  "鳞革",
+  "残械",
+  "杂类"
+ ],
+ "survey_note": "勘察 [生态] 数据源=生态总表 28 生态（17_/01_生态总表_28生态.md 转译面）；晨报槽位=215H 游戏日模型（D/W 轴）",
+ "turret_side_enum": [
+  "front",
+  "side",
+  "rear"
+ ]
 }

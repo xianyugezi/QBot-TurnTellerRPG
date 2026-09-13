@@ -229,7 +229,8 @@ def register_cloudsea_commands(
     router.register(CommandSpec(PRESET_CMD, handler=_wrap(cmd_preset)))
     router.register(CommandSpec(SITUATION_CMD, handler=_wrap(cmd_situation)))
     router.register(CommandSpec(HANG_CMD, handler=_wrap(cmd_hang)))
-    router.register(CommandSpec(RETREAT_CMD, handler=_wrap(cmd_retreat)))
+    # 233 对齐设计稿词面：08 §M8.2 撤退指令＝「弃」（「撤」系 231 接线词面，双词面并存）
+    router.register(CommandSpec(RETREAT_CMD, aliases=["弃"], handler=_wrap(cmd_retreat)))
     for digit in DIGIT_BINDINGS:
         router.register(CommandSpec(digit, handler=_wrap(cmd_digit)))
 

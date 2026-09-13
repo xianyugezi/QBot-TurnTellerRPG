@@ -1,0 +1,27 @@
+{
+  "_meta": {
+    "batch": "九期批次 233 错误文案体系",
+    "note": "云海 21 条错误与边界返回文案（08_错误文案表.md 逐字零改写：§M8.12 七条＋§M8.13 六条＋§M8.15 八条）。注入通道＝内容包 templates.json（tpl_of 覆盖层同构，新键注入）；文案内 $C.* 键引用经 core/templates/cloudsea_err_tpl.expand_consts 字面替换（常量表由调用方注入，235H 落包后接通）。三条铁律：①一律带下一步指向②不甩公式③冻结不撕票。"
+  },
+  "err_unknown_subword": "❓ 未识别子指令「{sub}」· 发 `帮` 看速查，或 `港` 回总面板",
+  "err_wind_lack": "⚡ 风缆不足（需 {need} · 现有 {cur}）· 这回合可改按 3 守势，行动已按待机结算",
+  "err_ult_not_full": "✦ 绝技未满（{cur}/{full}）· 继续堆或按 1/2/3/4 正常出招",
+  "err_long_sleep_frozen": "😴 巡游已长眠冻结（≥7 游戏日无结算）· 档案长期保留 · 发 `局面` 回归续打",
+  "err_not_your_turn": "⏳ 还没轮到你（当前 R{round} · {actor}行动中）· 轮到你才 @，先去倒杯水",
+  "err_delegate_busy": "🤖 本单已交托管 AI（效率 $C.CUSTODY_EFFICIENCY）· 结束后 `收` 一键领",
+  "err_bound_slot": "⛓️ 该指令位本序列被束缚锁住 · 改按 1/2/3，或下序列前发 `3 净化` 解除（玩家侧四态见 `04 §M4.8`）",
+  "err_recipe_locked": "📜 尚未获得配方「{name}」· 发 `合成` 看已获配方；对应任务/掉落授予后自动解锁",
+  "err_recipe_unknown": "❓ 未识别配方「{name}」· 发 `合成` 看序号表，或 `帮` 看速查",
+  "err_material_lack": "⚗️ 材料不足（缺 {mat} ×{n}）· 发 `本` 或 `遗迹 焰` 补料；也可先制其余配方",
+  "err_mix_not_turn": "⏳ 还没轮到你 · 轮到你时可发 `战斗调和 {n}`（占用本回合、守势达标）",
+  "err_mix_delegated": "🤖 本单已交托管 AI（效率 $C.CUSTODY_EFFICIENCY）· 托管回合不触发调和，按预案行动",
+  "err_deep_gate_or_material": "⚗️ 深度炼成需材料 ×$C.ALCHEMY.DEEP_COST_MULT（现缺 {mat} ×{n}）· 先 `合成 {n}` 稳产练熟练，补料后再试",
+  "err_synth_in_battle": "⚔️ 战斗中不可 `合成` · 本回合可 `3` 守势，或 `战斗调和 {n}` 即制即用（视同守势达标，$C.ALCHEMY.MIX_POSTURE_CREDIT）｜战后再稳产",
+  "err_deep_gate_material_ok": "📓 熟练不够（门槛 Lv{need} · 现Lv{cur}）· 先 `合成 {n}` 稳产练熟练（每次 +$C.ALCHEMY.MASTERY_PER_CRAFT），达标自动点亮",
+  "err_mix_recipe_missing": "📜 随身库存没有「{name}」配方 · 调和只认已获配方（$C.ALCHEMY.RECIPE_TOTAL 池内获一枚亮一枚）；获得后战内即可调和",
+  "err_mix_already": "⏱ 本回合已调和过了（替换主行动 · 守势折算 $C.ALCHEMY.MIX_POSTURE_CREDIT 每回合至多一次）· 下回合可再调和，或照常 `1/2/3/4`",
+  "err_deep_not_mixable": "🚫 深度产物不进战斗调和池（$C.ALCHEMY.DEEP_TOTAL 条目统一战外用）· 战前配置携带，或 `战斗调和 {n}` 用常规配方",
+  "err_name_ambiguous": "❓ 「{name}」命中多配方 · 发更完整名称或序号（`合成` 看一览，$C.ALCHEMY.RECIPE_TOTAL 池内检索）",
+  "err_delegate_alchemy": "🤖 本单已交托管 AI（效率 $C.CUSTODY_EFFICIENCY）· 深度炼成为战外指令，`收` 结算后再发",
+  "err_deep_list_empty": "📜 暂无已达门槛的深度配方 · 门槛＝可制 Lv＋$C.ALCHEMY.DEEP_RANK_STEP，先 `合成` 练熟练，点亮后此处出一览"
+}

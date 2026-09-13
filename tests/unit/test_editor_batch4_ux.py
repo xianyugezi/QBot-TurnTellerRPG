@@ -75,6 +75,8 @@ global.EditorList = {
     return (row !== null && typeof row === "object") ? row[colKey] : undefined;
   }
 };
+global.fieldBody = function () { return "BODY"; };
+global.fieldHint = function () { return ""; };
 eval(fs.readFileSync(process.argv[1], "utf8"));
 const out = {};
 // ---- 问题1：空列表 / 无列列表都要出「+ 添加一行」，已建空行可删 ----
@@ -99,6 +101,10 @@ out.roEmpty = listCell({ key: "x" }, { a: null }, { key: "a", control: "readonly
 out.roVal = listCell({ key: "x" }, { a: { k: 1 } }, { key: "a", control: "readonly" }, 0, false);
 out.nestedList = listCell(
   { key: "x" }, { a: [{ z: 1 }] }, { key: "a", control: "listtable" }, 0, false);
+// ---- 问题4：宽字段跨列 ----
+out.rowWide = fieldRow({ key: "x", label: "X", type: "list", control: "listtable", present: true });
+out.rowRef = fieldRow({ key: "r", label: "R", type: "list", control: "reflist", present: true });
+out.rowNarrow = fieldRow({ key: "y", label: "Y", type: "str", control: "text", present: true });
 process.stdout.write(JSON.stringify(out));
 """
 
@@ -108,6 +114,7 @@ def js(tmp_path_factory: pytest.TempPathFactory) -> Dict[str, Any]:
     if NODE is None:
         pytest.skip("本机无 node，跳过批4 UX 前端语义执行")
     src = _fn_src("listTableBody", "listTableEdit") + "\n" + _fn_src("listCell", "readCellValue")
+    src += "\n" + _fn_src("fieldRow", "hintBits")
     harness = tmp_path_factory.mktemp("batch4ux") / "batch4_ux_harness.js"
     harness.write_text(src, encoding="utf-8")
     proc = subprocess.run([NODE, "-e", _JS_HARNESS, str(harness)],
@@ -207,7 +214,12 @@ def test_frontend_wide_table_scroll_and_min_width() -> None:
     # 表格按内容定列宽 + 最小列宽，不再被 fixed 压窄
     auto = re.search(r"\.ltable-edit,\s*\.ltable-ro\s*\{([^}]*)\}", html)
     assert auto and "table-layout: auto" in auto.group(1)
+    # 不用 max-content：否则列恒取最长内容宽、表头换行也压不窄；宽度交给容器 + 最小列宽
+    assert "width: max-content" not in html
     assert "min-width: 96px" in html
+    # 表头换行而不是裁切（overflow:visible + white-space:normal）
+    th = re.search(r"\.ltable-edit th\s*\{([^}]*)\}", html)
+    assert th and "white-space: normal" in th.group(1) and "overflow: visible" in th.group(1)
     # 两处列表渲染都进滚动容器
     assert '<div class="ltable-scroll"><table class="ltable ltable-edit">' in html
     assert '<div class="ltable-scroll"><table class="ltable ltable-ro">' in html
@@ -258,3 +270,33 @@ def test_frontend_ro_cell_and_cell_surface_tokens() -> None:
     assert "var(--surface)" in rule         # 底色
     assert "var(--text-4)" in rule          # 只读弱化字色
     assert ".ltable-edit .cin" in html and "background: var(--bg)" in html
+
+
+# =====================================================================================
+# 问题 4 · 列宽策略（等宽双列 + 宽字段跨列）+ 不贴边/不裁切
+# =====================================================================================
+def test_wide_fields_span_both_columns(js: Dict[str, Any]) -> None:
+    assert 'class="row wide"' in js["rowWide"]
+    assert 'class="row wide"' in js["rowRef"]
+    assert 'class="row"' in js["rowNarrow"] and "row wide" not in js["rowNarrow"]
+
+
+def test_frontend_grid_columns_are_shrinkable_and_equal() -> None:
+    html = _html()
+    rows2 = re.search(r"\.rows2\s*\{([^}]*)\}", html)
+    assert rows2 and "minmax(0, 1fr) minmax(0, 1fr)" in rows2.group(1)
+    row = re.search(r"\.row\s*\{([^}]*)\}", html)
+    assert row and "132px minmax(0, 1fr)" in row.group(1)
+    wide = re.search(r"\.rows2 > \.row\.wide\s*\{([^}]*)\}", html)
+    assert wide and "grid-column: 1 / -1" in wide.group(1)
+
+
+def test_frontend_op_column_has_inset_padding() -> None:
+    html = _html()
+    assert ".ltable-edit th.op, .ltable-edit td.op { padding-right: var(--sp-5); }" in html
+
+
+def test_footer_status_bar_uses_batch4_wording() -> None:
+    html = _html()
+    assert "批4 · 列表/引用字段" in html
+    assert "批3 · 分区页签" not in html

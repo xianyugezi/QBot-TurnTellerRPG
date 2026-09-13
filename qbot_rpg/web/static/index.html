@@ -168,9 +168,12 @@ body {
      因此两列的标签与首行控件始终落在同一条线上；长提示只向下撑高本行 .rval，
      不会把标签改成垂直居中（用户验收反馈：长提示把整行撑歪）；
    · .rows2 默认 stretch → 同一网格行的两列等高、底线对齐。 */
-.rows2 { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--sp-11); align-items: stretch; }
-.row { display: grid; grid-template-columns: 132px 1fr; gap: var(--sp-5); align-items: start;
+.rows2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: var(--sp-11); align-items: stretch; }
+.row { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: var(--sp-5); align-items: start;
   padding: var(--sp-4) 0; border-bottom: var(--bw) solid var(--line-faint); min-width: 0; }
+/* 宽字段（列表/引用列表，批4 UX）：跨双列独占一行——多列表格拿整幅面板宽度，
+   列不再被挤到面板右缘；仍放不下时由 .ltable-scroll 横向滚动兜底。 */
+.rows2 > .row.wide { grid-column: 1 / -1; }
 .row > .rlab { color: var(--text-4); display: flex; align-items: center; gap: var(--sp-3);
   flex-wrap: wrap; min-height: var(--h-ctl); min-width: 0; }
 .row > .rlab::before { content: "> "; color: var(--line-mute); }
@@ -223,8 +226,12 @@ select.cin { padding: 1px var(--sp-2); }
 .ltable-scroll::-webkit-scrollbar-track { background: transparent; }
 .ltable-scroll::-webkit-scrollbar-thumb { background: var(--sb-thumb); border-radius: var(--radius-sb); }
 .ltable-scroll::-webkit-scrollbar-thumb:hover { background: var(--sb-thumb-hover); }
-.ltable-edit, .ltable-ro { table-layout: auto; width: max-content; min-width: 100%; }
-.ltable-edit th, .ltable-ro th { min-width: 96px; overflow: visible; }
+/* 表格宽度 = 容器宽（列按可用空间分配）；内容确实放不下时按最小内容宽溢出，
+   由 .ltable-scroll 横向滚动兜底。不用 width:max-content —— 否则列恒取最长内容宽，
+   表头换行也压不窄列。 */
+.ltable-edit, .ltable-ro { table-layout: auto; width: 100%; }
+.ltable-edit th { min-width: 96px; overflow: visible; white-space: normal; }
+.ltable-ro th { min-width: 96px; overflow: visible; }
 .ltable-edit td { padding: var(--sp-2) var(--sp-3); }
 .ltable-edit td .cin { padding: 1px var(--sp-3); }
 .ltable th.op, .ltable td.op { width: 84px; min-width: 84px; text-align: right; border-left: 0; }
@@ -334,7 +341,7 @@ select.cin { padding: 1px var(--sp-2); }
       <div class="panel-body" id="p-body">
         <div class="empty">从左侧选择模块与条目。字段按内容包元数据渲染；改动先进草稿，保存时才校验并落盘。</div>
       </div>
-      <div class="panel-ft"><span>批3 · 分区页签（分组顺序/名称来自元数据 · 默认首组 · 切组保草稿）</span></div>
+      <div class="panel-ft"><span>批4 · 列表/引用字段（可增删行表格 · 引用选择器 · 改动先进草稿）</span></div>
     </section>
 
   </div>
@@ -879,7 +886,10 @@ function bindTabs() {
 }
 
 function fieldRow(f) {
-  return '<div class="row" data-field="' + esc(f.key) + '" data-present="'
+  // 列表型控件（可增删行表格 / 引用列表）标记为跨列：宽字段独占整行，避免多列表格
+  // 被挤在双列网格的右缘（批4 UX）。只按后端 control 判定，框架不认业务字段名。
+  var wide = (f.control === "listtable" || f.control === "reflist") ? " wide" : "";
+  return '<div class="row' + wide + '" data-field="' + esc(f.key) + '" data-present="'
     + (f.present ? "true" : "false") + '"><div class="rlab">' + fieldLabelHtml(f.label, f.key)
     + ' <span class="ftype">' + esc(typeZh(f.type)) + "</span></div>"
     + '<div class="rval">' + fieldBody(f) + fieldHint(f) + "</div></div>";

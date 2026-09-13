@@ -1,0 +1,2845 @@
+[
+ {
+  "id": "cs_t1_001",
+  "name": "裂冠鹿 · 针冠",
+  "tier": "常规巨兽",
+  "area": "云顶针叶林",
+  "skeleton": "F02",
+  "bio_class": "避潮",
+  "hp": 13590,
+  "layer_coef": 0.75,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "ind_258",
+   "ind_259",
+   "ind_260",
+   "ind_261",
+   "ind_262",
+   "ind_263",
+   "ind_264",
+   "ind_265"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "—",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "鹿角",
+    "move": "针冠·抵刺"
+   },
+   {
+    "part": "鹿角",
+    "move": "针冠·挑霜"
+   },
+   {
+    "part": "鹿角",
+    "move": "针冠·甩缨"
+   },
+   {
+    "part": "前蹄",
+    "move": "蹄铃·踏雪"
+   }
+  ],
+  "mech": "**顶冠冲撞**：低头以枝角状鹿角冲撞顶飞参战者；破坏鹿角解除冲撞"
+ },
+ {
+  "id": "cs_t1_002",
+  "name": "掘松野猪 · 长喙",
+  "tier": "常规巨兽",
+  "area": "云顶针叶林",
+  "skeleton": "F02",
+  "bio_class": "避潮",
+  "hp": 13590,
+  "layer_coef": 0.75,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "dif_004",
+   "dif_005",
+   "dif_006"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_181`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "鼻甲",
+    "move": "长喙·拱掀"
+   },
+   {
+    "part": "鼻甲",
+    "move": "松屑·爆拱"
+   }
+  ],
+  "mech": "**掘根拱地**：拱翻地表掀起土石波及周身；破坏鼻甲停止掘地"
+ },
+ {
+  "id": "cs_t1_003",
+  "name": "树脂巨貘 · 沁脂",
+  "tier": "常规巨兽",
+  "area": "云顶针叶林",
+  "skeleton": "F01",
+  "bio_class": "避潮",
+  "hp": 13590,
+  "layer_coef": 0.75,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "dif_007",
+   "dif_008",
+   "dif_009"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_181`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "脂壳",
+    "move": "脂壳·凝腻"
+   }
+  ],
+  "mech": "**树脂喷吐**：喷吐黏稠树脂减速走位；烧除脂壳转为易伤"
+ },
+ {
+  "id": "cs_t1_004",
+  "name": "苔背巨龟 · 苔甲",
+  "tier": "常规巨兽",
+  "area": "云顶针叶林",
+  "skeleton": "F01",
+  "bio_class": "潮适",
+  "hp": 13590,
+  "layer_coef": 0.75,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "dif_010",
+   "dif_011",
+   "dif_012"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_181`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "苔壳",
+    "move": "苔壳·撞抵"
+   }
+  ],
+  "mech": "**缩壳硬化**：缩入壳内硬化减伤；压制头部迫其出壳"
+ },
+ {
+  "id": "cs_t1_005",
+  "name": "松果掷兽 · 落果",
+  "tier": "常规巨兽",
+  "area": "云顶针叶林",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 13590,
+  "layer_coef": 0.75,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "dif_013",
+   "dif_014",
+   "dif_015"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_181`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "前肢",
+    "move": "落果·抛砸"
+   }
+  ],
+  "mech": "**落果投掷**：自林冠掷落硬松果砸击；破坏前肢停止投掷"
+ },
+ {
+  "id": "cs_t1_006",
+  "name": "针尾狸 · 帚尾",
+  "tier": "常规巨兽",
+  "area": "云顶针叶林",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 13590,
+  "layer_coef": 0.75,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "dif_016",
+   "dif_017",
+   "dif_018"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_181`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "尾针",
+    "move": "帚尾·横抽"
+   }
+  ],
+  "mech": "**针尾横扫**：扫击周身逼退近战；破坏尾针解除横扫"
+ },
+ {
+  "id": "cs_t1_007",
+  "name": "震木熊 · 抱树",
+  "tier": "常规巨兽",
+  "area": "云顶针叶林",
+  "skeleton": "F01",
+  "bio_class": "避潮",
+  "hp": 13590,
+  "layer_coef": 0.75,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "dif_019",
+   "dif_020",
+   "dif_021"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_181`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "前肢",
+    "move": "断枝·压落"
+   },
+   {
+    "part": "前肢",
+    "move": "抱树·撼枝"
+   }
+  ],
+  "mech": "**抱树震落**：摇晃树干震落断枝压人；破坏前肢解除震落"
+ },
+ {
+  "id": "cs_t1_008",
+  "name": "叩壳巨鸟 · 叩木",
+  "tier": "常规巨兽",
+  "area": "云顶针叶林",
+  "skeleton": "F03",
+  "bio_class": "避潮",
+  "hp": 13590,
+  "layer_coef": 0.75,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "dif_022",
+   "dif_023",
+   "dif_024"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_181`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "喙甲",
+    "move": "叩木·连啄"
+   }
+  ],
+  "mech": "**叩壳硬化**：反复叩击硬化喙甲提防；破坏喙甲后可处决"
+ },
+ {
+  "id": "cs_t1_009",
+  "name": "雾吼驼鹿 · 引雾",
+  "tier": "常规巨兽",
+  "area": "云顶针叶林",
+  "skeleton": "F02",
+  "bio_class": "避潮",
+  "hp": 13590,
+  "layer_coef": 0.75,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "dif_025",
+   "dif_026",
+   "dif_027"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_181`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "喉囊",
+    "move": "引雾·慑吼"
+   }
+  ],
+  "mech": "**低吼慑敌**：吼声压制参战者行动 1 个出手序列；破坏喉囊解除压制"
+ },
+ {
+  "id": "cs_t1_010",
+  "name": "崩岭岩犀 · 灰岗",
+  "tier": "终盘巨兽",
+  "area": "云顶针叶林",
+  "skeleton": "F01",
+  "bio_class": "避潮",
+  "hp": 12000,
+  "layer_coef": 1.0,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "腐蚀": "0.5",
+   "麻痹": "1.0",
+   "沉眠": "**1.5**",
+   "爆燃": "**1.5**",
+   "风蚀": "1.0",
+   "泥陷": "**1.5**",
+   "霜缚": "1.0",
+   "雷殛": "1.0",
+   "风暴": "0.25"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "ind_001",
+   "ind_002",
+   "ind_003",
+   "ind_004",
+   "ind_005",
+   "ind_006",
+   "ind_007",
+   "ind_008",
+   "ind_009",
+   "ind_010"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "—",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "犀角",
+    "move": "岩角·挑霾"
+   },
+   {
+    "part": "犀角",
+    "move": "岩角·裂地冲"
+   },
+   {
+    "part": "尾盾",
+    "move": "尾盾·横摆"
+   }
+  ],
+  "mech": "**部件破坏教学**：首杀必触发一次破坏或压制；部位／阶段／素材全表见 `03` §M3.11"
+ },
+ {
+  "id": "cs_t1_011",
+  "name": "针羽雀",
+  "tier": "空兽",
+  "area": "云顶针叶林",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_001"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=shift｜target_displace=none｜position_rule=eligible:front／back｜marks=decoy（族画像：游击互换(残影)）",
+  "break_bindings": [],
+  "mech": "羽如细针扎手；扫落飞羽后可捕捉"
+ },
+ {
+  "id": "cs_t1_012",
+  "name": "松球鼠",
+  "tier": "空兽",
+  "area": "云顶针叶林",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_002"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=none｜self_reposition=shift｜target_displace=none｜position_rule=eligible:front／back｜marks=decoy（族画像：游击互换(残影)）",
+  "break_bindings": [],
+  "mech": "抱松球滚逃；拦截可逼停"
+ },
+ {
+  "id": "cs_t1_013",
+  "name": "林梢鼯",
+  "tier": "空兽",
+  "area": "云顶针叶林",
+  "skeleton": "F05",
+  "bio_class": "避潮",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_003"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=none｜self_reposition=dash+turn｜target_displace=none｜position_rule=eligible:front｜marks=none（族画像：打完就走）",
+  "break_bindings": [],
+  "mech": "展膜滑翔位移频繁；风缆可预判落点"
+ },
+ {
+  "id": "cs_t1_014",
+  "name": "苔翅蜓",
+  "tier": "空兽",
+  "area": "云顶针叶林",
+  "skeleton": "F04",
+  "bio_class": "潮适",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "",
+  "break_bindings": [],
+  "mech": "贴苔面低飞难瞄准；待其停落时出手"
+ },
+ {
+  "id": "cs_t1_015",
+  "name": "啄果鸦",
+  "tier": "空兽",
+  "area": "云顶针叶林",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "",
+  "break_bindings": [],
+  "mech": "啄食松果干扰采集；驱赶即散"
+ },
+ {
+  "id": "cs_t1_016",
+  "name": "垂枝猴",
+  "tier": "空兽",
+  "area": "云顶针叶林",
+  "skeleton": "F03",
+  "bio_class": "避潮",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_004"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=front｜self_reposition=none｜target_displace=pull_close｜position_rule=eligible:front｜marks=none（族画像：正面封锁+拉近）",
+  "break_bindings": [],
+  "mech": "倒挂枝头抛掷枝条；压制可击落"
+ },
+ {
+  "id": "cs_t1_017",
+  "name": "雾隐貂",
+  "tier": "空兽",
+  "area": "云顶针叶林",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_005"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=none｜self_reposition=shift｜target_displace=none｜position_rule=eligible:front／back｜marks=decoy（族画像：游击互换(残影)）",
+  "break_bindings": [],
+  "mech": "雾中隐身窜逃；守住出口堵截"
+ },
+ {
+  "id": "cs_t1_018",
+  "name": "冠层枭",
+  "tier": "空兽",
+  "area": "云顶针叶林",
+  "skeleton": "F05",
+  "bio_class": "避潮",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_006"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=front｜self_reposition=dash+turn｜target_displace=none｜position_rule=eligible:front｜marks=none（族画像：打完就走）",
+  "break_bindings": [],
+  "mech": "自林冠俯冲惊吓；灯光可驱离"
+ },
+ {
+  "id": "cs_t1_019",
+  "name": "树脂蛾",
+  "tier": "空兽",
+  "area": "云顶针叶林",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_007"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": [],
+  "mech": "鳞粉黏翅减速通行；焰属性可烧除"
+ },
+ {
+  "id": "cs_t1_020",
+  "name": "松针猬",
+  "tier": "空兽",
+  "area": "云顶针叶林",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_008"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=shift｜target_displace=none｜position_rule=eligible:front／back｜marks=decoy（族画像：游击互换(残影)）",
+  "break_bindings": [],
+  "mech": "蜷身针刺反弹小伤害；翻面露腹可处决"
+ },
+ {
+  "id": "cs_t1_021",
+  "name": "枝头螳",
+  "tier": "空兽",
+  "area": "云顶针叶林",
+  "skeleton": "F03",
+  "bio_class": "避潮",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_009",
+   "uq_010"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=front｜self_reposition=none｜target_displace=pull_close｜position_rule=eligible:front｜marks=none（族画像：正面封锁+拉近）",
+  "break_bindings": [],
+  "mech": "伪装枯枝伏击路过者；格挡首击后反击"
+ },
+ {
+  "id": "cs_t1_022",
+  "name": "苔藓蜗牛",
+  "tier": "空兽",
+  "area": "云顶针叶林",
+  "skeleton": "F08",
+  "bio_class": "潮适",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "",
+  "break_bindings": [],
+  "mech": "背苔拟石；踩踏打滑"
+ },
+ {
+  "id": "cs_t1_023",
+  "name": "云雀哨兵",
+  "tier": "空兽",
+  "area": "云顶针叶林",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_011"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=front｜self_reposition=none｜target_displace=none｜position_rule=ground／air｜marks=none（族画像：立体机动(落地窗)）",
+  "break_bindings": [],
+  "mech": "高鸣示警召来援群；先手压制可阻止"
+ },
+ {
+  "id": "cs_t1_024",
+  "name": "藤蔓蟒",
+  "tier": "空兽",
+  "area": "云顶针叶林",
+  "skeleton": "F06",
+  "bio_class": "避潮",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_012",
+   "uq_013"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=front｜self_reposition=lateral｜target_displace=none｜position_rule=ignore_side｜marks=none（族画像：缠缚滑行）",
+  "break_bindings": [],
+  "mech": "缠绕定身一名参战者；破坏藤蔓解除"
+ },
+ {
+  "id": "cs_t1_025",
+  "name": "露水蛙",
+  "tier": "空兽",
+  "area": "云顶针叶林",
+  "skeleton": "F12",
+  "bio_class": "潮适",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "",
+  "break_bindings": [],
+  "mech": "弹跳闪避；雨天敏捷、晴天迟缓"
+ },
+ {
+  "id": "cs_t1_026",
+  "name": "啄木匠鸟",
+  "tier": "空兽",
+  "area": "云顶针叶林",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "",
+  "break_bindings": [],
+  "mech": "派生自叩壳巨鸟；敲击声干扰听判定"
+ },
+ {
+  "id": "cs_t1_027",
+  "name": "针叶鼠群",
+  "tier": "杂兽",
+  "area": "云顶针叶林",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 2718,
+  "layer_coef": 0.15,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_014"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=shift｜target_displace=none｜position_rule=eligible:front／back｜marks=decoy（族画像：游击互换(残影)）",
+  "break_bindings": [],
+  "mech": "成群窜扰纠缠脚跟"
+ },
+ {
+  "id": "cs_t1_028",
+  "name": "松脂虫",
+  "tier": "杂兽",
+  "area": "云顶针叶林",
+  "skeleton": "F07",
+  "bio_class": "避潮",
+  "hp": 2718,
+  "layer_coef": 0.15,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "",
+  "break_bindings": [],
+  "mech": "分泌松脂黏慢走位"
+ },
+ {
+  "id": "cs_t1_029",
+  "name": "苔皮蟹",
+  "tier": "杂兽",
+  "area": "云顶针叶林",
+  "skeleton": "F08",
+  "bio_class": "潮适",
+  "hp": 2718,
+  "layer_coef": 0.15,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_015"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=front｜self_reposition=rolling｜target_displace=push[1]｜position_rule=eligible:front｜marks=rolling（族画像：轨迹压迫(滚转)）",
+  "break_bindings": [],
+  "mech": "甲壳硬化；翻面可制"
+ },
+ {
+  "id": "cs_t1_030",
+  "name": "果壳甲虫",
+  "tier": "杂兽",
+  "area": "云顶针叶林",
+  "skeleton": "F08",
+  "bio_class": "避潮",
+  "hp": 2718,
+  "layer_coef": 0.15,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "",
+  "break_bindings": [],
+  "mech": "弹射撞人；壳硬刃钝"
+ },
+ {
+  "id": "cs_t1_031",
+  "name": "掘林蚓",
+  "tier": "杂兽",
+  "area": "云顶针叶林",
+  "skeleton": "F11",
+  "bio_class": "潮适",
+  "hp": 2718,
+  "layer_coef": 0.15,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_016"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=back｜self_reposition=burrow｜target_displace=none｜position_rule=back_window｜marks=burrowing（族画像：地遁突袭(土痕)）",
+  "break_bindings": [],
+  "mech": "钻地偷袭脚踝"
+ },
+ {
+  "id": "cs_t1_032",
+  "name": "冠羽雉",
+  "tier": "杂兽",
+  "area": "云顶针叶林",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 2718,
+  "layer_coef": 0.15,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "",
+  "break_bindings": [],
+  "mech": "啄击干扰采集"
+ },
+ {
+  "id": "cs_t1_033",
+  "name": "雾纹蛾",
+  "tier": "杂兽",
+  "area": "云顶针叶林",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 2718,
+  "layer_coef": 0.15,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "",
+  "break_bindings": [],
+  "mech": "鳞粉遮蔽视野"
+ },
+ {
+  "id": "cs_t1_034",
+  "name": "黏舌树蛙",
+  "tier": "杂兽",
+  "area": "云顶针叶林",
+  "skeleton": "F12",
+  "bio_class": "潮适",
+  "hp": 2718,
+  "layer_coef": 0.15,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "",
+  "break_bindings": [],
+  "mech": "黏舌拉拽手中道具"
+ },
+ {
+  "id": "cs_t1_035",
+  "name": "针猬雏",
+  "tier": "杂兽",
+  "area": "云顶针叶林",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 2718,
+  "layer_coef": 0.15,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_017"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=shift｜target_displace=none｜position_rule=eligible:front／back｜marks=decoy（族画像：游击互换(残影)）",
+  "break_bindings": [],
+  "mech": "滚动误扎靠近者"
+ },
+ {
+  "id": "cs_t1_036",
+  "name": "枯枝蛇",
+  "tier": "杂兽",
+  "area": "云顶针叶林",
+  "skeleton": "F06",
+  "bio_class": "避潮",
+  "hp": 2718,
+  "layer_coef": 0.15,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_018",
+   "uq_019"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=front｜self_reposition=lateral｜target_displace=none｜position_rule=ignore_side｜marks=none（族画像：缠缚滑行）",
+  "break_bindings": [],
+  "mech": "伪装断枝突袭"
+ },
+ {
+  "id": "cs_t1_037",
+  "name": "松果狸",
+  "tier": "杂兽",
+  "area": "云顶针叶林",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 2718,
+  "layer_coef": 0.15,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "",
+  "break_bindings": [],
+  "mech": "派生自松球鼠；偷搬掉落素材"
+ },
+ {
+  "id": "cs_t1_038",
+  "name": "震颤虫",
+  "tier": "杂兽",
+  "area": "云顶针叶林",
+  "skeleton": "F07",
+  "bio_class": "潮适",
+  "hp": 2718,
+  "layer_coef": 0.15,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "",
+  "break_bindings": [],
+  "mech": "抖动枝干干扰平衡判定"
+ },
+ {
+  "id": "cs_t1_039",
+  "name": "溯游鲑王 · 跃瀑",
+  "tier": "常规巨兽",
+  "area": "悬瀑苔崖",
+  "skeleton": "F12",
+  "bio_class": "潮适",
+  "hp": 13590,
+  "layer_coef": 0.75,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "ind_266",
+   "ind_267",
+   "ind_268",
+   "ind_269",
+   "ind_270",
+   "ind_271",
+   "ind_272",
+   "ind_273"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "—",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "尾鳍",
+    "move": "跃瀑·冲天"
+   },
+   {
+    "part": "背鳞",
+    "move": "鳞刃·回削"
+   },
+   {
+    "part": "背鳞",
+    "move": "逆鳞·拱水"
+   }
+  ],
+  "mech": "**跃瀑冲顶**：借瀑流跃起俯冲砸击；落崖硬直时可处决"
+ },
+ {
+  "id": "cs_t1_040",
+  "name": "苔甲蟾 · 湿岩",
+  "tier": "常规巨兽",
+  "area": "悬瀑苔崖",
+  "skeleton": "F01",
+  "bio_class": "潮适",
+  "hp": 13590,
+  "layer_coef": 0.75,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "dif_031",
+   "dif_032",
+   "dif_033"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_181`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "苔壳",
+    "move": "吞苔·鼓胀"
+   }
+  ],
+  "mech": "**吞苔鼓胀**：吞湿苔鼓起硬化减伤；破开苔壳转为易伤"
+ },
+ {
+  "id": "cs_t1_041",
+  "name": "悬藤猿 · 荡枝",
+  "tier": "常规巨兽",
+  "area": "悬瀑苔崖",
+  "skeleton": "F03",
+  "bio_class": "避潮",
+  "hp": 13590,
+  "layer_coef": 0.75,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "dif_034",
+   "dif_035",
+   "dif_036"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_181`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "握藤",
+    "move": "藤鞭·抽卷"
+   }
+  ],
+  "mech": "**藤荡换位**：荡藤快速换位难以锁定；割断藤条坠地硬直"
+ },
+ {
+  "id": "cs_t1_042",
+  "name": "水磨砚兽 · 碾苔",
+  "tier": "常规巨兽",
+  "area": "悬瀑苔崖",
+  "skeleton": "F08",
+  "bio_class": "潮适",
+  "hp": 13590,
+  "layer_coef": 0.75,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "dif_037",
+   "dif_038",
+   "dif_039"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_181`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "磨盘鳍",
+    "move": "磨盘·横碾"
+   }
+  ],
+  "mech": "**水磨横碾**：沿崖壁横碾推开近战；破坏磨盘鳍解除"
+ },
+ {
+  "id": "cs_t1_043",
+  "name": "雾帘蜥 · 垂涎",
+  "tier": "常规巨兽",
+  "area": "悬瀑苔崖",
+  "skeleton": "F02",
+  "bio_class": "潮适",
+  "hp": 13590,
+  "layer_coef": 0.75,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "dif_040",
+   "dif_041",
+   "dif_042"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_181`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "涎腺",
+    "move": "垂涎·喷雾"
+   }
+  ],
+  "mech": "**涎雾障目**：吐涎雾干扰视野判定；风缆吹散后可压制"
+ },
+ {
+  "id": "cs_t1_044",
+  "name": "苔瀑巨螈 · 崖主",
+  "tier": "终盘巨兽",
+  "area": "悬瀑苔崖",
+  "skeleton": "F01",
+  "bio_class": "潮适",
+  "hp": 18120,
+  "layer_coef": 1.0,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "ind_161",
+   "ind_162",
+   "ind_163",
+   "ind_164",
+   "ind_165",
+   "ind_166"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "—",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "苔甲",
+    "move": "苔甲翻覆"
+   }
+  ],
+  "mech": "**翻苔护体**：受击翻起湿苔硬化减伤；连续压制翻开苔甲后可处决"
+ },
+ {
+  "id": "cs_t1_045",
+  "name": "沉潭钟龟 · 撞钟",
+  "tier": "终盘巨兽",
+  "area": "悬瀑苔崖",
+  "skeleton": "F08",
+  "bio_class": "潮适",
+  "hp": 18120,
+  "layer_coef": 1.0,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "ind_167",
+   "ind_168",
+   "ind_169",
+   "ind_170",
+   "ind_171",
+   "ind_172"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "—",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "钟甲",
+    "move": "钟身坠击"
+   }
+  ],
+  "mech": "**坠身如钟**：跃起砸落震晕周身并掀起潭浪；破坏钟甲解除震荡"
+ },
+ {
+  "id": "cs_t1_046",
+  "name": "瀑帘燕",
+  "tier": "空兽",
+  "area": "悬瀑苔崖",
+  "skeleton": "F05",
+  "bio_class": "潮适",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_020"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=none｜self_reposition=dash+turn｜target_displace=none｜position_rule=eligible:front｜marks=none（族画像：打完就走）",
+  "break_bindings": [],
+  "mech": "穿帘疾飞难瞄准；守帘口落点出手"
+ },
+ {
+  "id": "cs_t1_047",
+  "name": "湿苔龟",
+  "tier": "空兽",
+  "area": "悬瀑苔崖",
+  "skeleton": "F08",
+  "bio_class": "潮适",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_021"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=none｜self_reposition=rolling｜target_displace=none｜position_rule=eligible:front｜marks=rolling（族画像：轨迹压迫(滚转)）",
+  "break_bindings": [],
+  "mech": "缩壳顺水滑逃；拦截可逼停"
+ },
+ {
+  "id": "cs_t1_048",
+  "name": "潭面水黾",
+  "tier": "空兽",
+  "area": "悬瀑苔崖",
+  "skeleton": "F07",
+  "bio_class": "潮适",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_022"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=none｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
+  "break_bindings": [],
+  "mech": "潭面疾走轨迹难测；风缆可预判"
+ },
+ {
+  "id": "cs_t1_049",
+  "name": "崖缝蜈",
+  "tier": "空兽",
+  "area": "悬瀑苔崖",
+  "skeleton": "F07",
+  "bio_class": "避潮",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_023"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
+  "break_bindings": [],
+  "mech": "钻缝偷袭脚踝；烟熏驱出可处决"
+ },
+ {
+  "id": "cs_t1_050",
+  "name": "垂藤蝠",
+  "tier": "空兽",
+  "area": "悬瀑苔崖",
+  "skeleton": "F05",
+  "bio_class": "避潮",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_024"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=front｜self_reposition=dash+turn｜target_displace=none｜position_rule=eligible:front｜marks=none（族画像：打完就走）",
+  "break_bindings": [],
+  "mech": "倒挂藤下突袭；割藤坠地"
+ },
+ {
+  "id": "cs_t1_051",
+  "name": "泡沫螺",
+  "tier": "空兽",
+  "area": "悬瀑苔崖",
+  "skeleton": "F09",
+  "bio_class": "潮适",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "",
+  "break_bindings": [],
+  "mech": "吐泡悬浮难够；戳泡坠地"
+ },
+ {
+  "id": "cs_t1_052",
+  "name": "溅水鸫",
+  "tier": "空兽",
+  "area": "悬瀑苔崖",
+  "skeleton": "F04",
+  "bio_class": "潮适",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_025"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": [],
+  "mech": "溅水干扰视野判定；待其停歇"
+ },
+ {
+  "id": "cs_t1_053",
+  "name": "苔背蜥",
+  "tier": "空兽",
+  "area": "悬瀑苔崖",
+  "skeleton": "F02",
+  "bio_class": "潮适",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "",
+  "break_bindings": [],
+  "mech": "伏于苔面难辨形；移动时露形"
+ },
+ {
+  "id": "cs_t1_054",
+  "name": "虹鳞鱼鹰",
+  "tier": "空兽",
+  "area": "悬瀑苔崖",
+  "skeleton": "F05",
+  "bio_class": "潮适",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_026"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=none｜self_reposition=dash+turn｜target_displace=none｜position_rule=eligible:front｜marks=none（族画像：打完就走）",
+  "break_bindings": [],
+  "mech": "衔走剥取素材；驱赶即走"
+ },
+ {
+  "id": "cs_t1_055",
+  "name": "雾角鹿",
+  "tier": "空兽",
+  "area": "悬瀑苔崖",
+  "skeleton": "F02",
+  "bio_class": "避潮",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_027"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=turn｜target_displace=pull_close｜position_rule=eligible:front／back｜marks=none（族画像：绕后拉扯）",
+  "break_bindings": [],
+  "mech": "雾中鸣角惑向；压制可止"
+ },
+ {
+  "id": "cs_t1_056",
+  "name": "湿苔蜗",
+  "tier": "杂兽",
+  "area": "悬瀑苔崖",
+  "skeleton": "F08",
+  "bio_class": "潮适",
+  "hp": 2718,
+  "layer_coef": 0.15,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "",
+  "break_bindings": [],
+  "mech": "迟缓无威胁；壳体可作临时屏障"
+ },
+ {
+  "id": "cs_t1_057",
+  "name": "吸壁蛭",
+  "tier": "杂兽",
+  "area": "悬瀑苔崖",
+  "skeleton": "F09",
+  "bio_class": "潮适",
+  "hp": 2718,
+  "layer_coef": 0.15,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_028"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=all｜self_reposition=none｜target_displace=pull_away｜position_rule=ignore_side｜marks=no_face（族画像：全向控场+强制拉拽）",
+  "break_bindings": [],
+  "mech": "吸附腿足减速；焰灼可除"
+ },
+ {
+  "id": "cs_t1_058",
+  "name": "瀑虾",
+  "tier": "杂兽",
+  "area": "悬瀑苔崖",
+  "skeleton": "F07",
+  "bio_class": "潮适",
+  "hp": 2718,
+  "layer_coef": 0.15,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_029"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
+  "break_bindings": [],
+  "mech": "弹射水珠干扰瞄准"
+ },
+ {
+  "id": "cs_t1_059",
+  "name": "苔甲蟹",
+  "tier": "杂兽",
+  "area": "悬瀑苔崖",
+  "skeleton": "F08",
+  "bio_class": "潮适",
+  "hp": 2718,
+  "layer_coef": 0.15,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_030"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=front｜self_reposition=rolling｜target_displace=push[1]｜position_rule=eligible:front｜marks=rolling（族画像：轨迹压迫(滚转)）",
+  "break_bindings": [],
+  "mech": "派生自苔甲蟾；甲壳碎片反弹小伤害"
+ },
+ {
+  "id": "cs_t1_060",
+  "name": "垂根须虫",
+  "tier": "杂兽",
+  "area": "悬瀑苔崖",
+  "skeleton": "F09",
+  "bio_class": "潮适",
+  "hp": 2718,
+  "layer_coef": 0.15,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_031"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=all｜self_reposition=none｜target_displace=pull_away｜position_rule=ignore_side｜marks=no_face（族画像：全向控场+强制拉拽）",
+  "break_bindings": [],
+  "mech": "垂须绊足定身"
+ },
+ {
+  "id": "cs_t1_061",
+  "name": "石燕雏",
+  "tier": "杂兽",
+  "area": "悬瀑苔崖",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 2718,
+  "layer_coef": 0.15,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "",
+  "break_bindings": [],
+  "mech": "坠巢扑棱干扰"
+ },
+ {
+  "id": "cs_t1_062",
+  "name": "潭泥鳅",
+  "tier": "杂兽",
+  "area": "悬瀑苔崖",
+  "skeleton": "F06",
+  "bio_class": "潮适",
+  "hp": 2718,
+  "layer_coef": 0.15,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "",
+  "break_bindings": [],
+  "mech": "淤泥中滑脱难抓"
+ },
+ {
+  "id": "cs_t1_063",
+  "name": "垂根树懒 · 倒悬",
+  "tier": "常规巨兽",
+  "area": "岛根垂荫",
+  "skeleton": "F07",
+  "bio_class": "避潮",
+  "hp": 13590,
+  "layer_coef": 0.75,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "dif_043",
+   "dif_044",
+   "dif_045"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_181`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "前肢",
+    "move": "巨爪·勾扫"
+   }
+  ],
+  "mech": "**倒悬坚守**：倒挂岛根垂甲硬防；压制头部迫其翻身"
+ },
+ {
+  "id": "cs_t1_064",
+  "name": "影窟狼 · 窜荫",
+  "tier": "常规巨兽",
+  "area": "岛根垂荫",
+  "skeleton": "F02",
+  "bio_class": "避潮",
+  "hp": 13590,
+  "layer_coef": 0.75,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "dif_046",
+   "dif_047",
+   "dif_048"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_181`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "影皮裘",
+    "move": "影隙·潜行"
+   }
+  ],
+  "mech": "**荫影突袭**：借阴影换位扑击；火把照荫可破其隐"
+ },
+ {
+  "id": "cs_t1_065",
+  "name": "啃根巨獭 · 盘根",
+  "tier": "常规巨兽",
+  "area": "岛根垂荫",
+  "skeleton": "F11",
+  "bio_class": "潮适",
+  "hp": 13590,
+  "layer_coef": 0.75,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "dif_049",
+   "dif_050",
+   "dif_051"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_181`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "门牙",
+    "move": "盘根·啃掘"
+   }
+  ],
+  "mech": "**啃根掘穴**：啃挖岛根震落碎石；破坏门牙停止掘穴"
+ },
+ {
+  "id": "cs_t1_066",
+  "name": "霜纹貂 · 结霜",
+  "tier": "常规巨兽",
+  "area": "岛根垂荫",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 13590,
+  "layer_coef": 0.75,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "dif_052",
+   "dif_053",
+   "dif_054"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_181`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "霜尾",
+    "move": "霜尾·横拂"
+   }
+  ],
+  "mech": "**结霜爪击**：爪击附加霜冻减速；焰属性可融霜"
+ },
+ {
+  "id": "cs_t1_067",
+  "name": "垂晶蝠 · 悬晶",
+  "tier": "常规巨兽",
+  "area": "岛根垂荫",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 13590,
+  "layer_coef": 0.75,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "dif_055",
+   "dif_056",
+   "dif_057"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_181`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "晶角",
+    "move": "悬晶·超声"
+   }
+  ],
+  "mech": "**晶鸣震慑**：超声震慑压制 1 个出手序列；破坏晶角解除"
+ },
+ {
+  "id": "cs_t1_068",
+  "name": "霜脉犁兽 · 白垩",
+  "tier": "终盘巨兽",
+  "area": "岛根垂荫",
+  "skeleton": "F01",
+  "bio_class": "避潮",
+  "hp": 18120,
+  "layer_coef": 1.0,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "腐蚀": "1.0",
+   "麻痹": "0.25",
+   "沉眠": "1.0",
+   "爆燃": "**1.5**",
+   "风蚀": "1.0",
+   "泥陷": "1.0",
+   "霜缚": "**免疫**",
+   "雷殛": "1.0",
+   "风暴": "1.0"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "ind_081",
+   "ind_082",
+   "ind_083",
+   "ind_084",
+   "ind_085",
+   "ind_086",
+   "ind_087",
+   "ind_088",
+   "ind_089",
+   "ind_090"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "—",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "犁兽颚",
+    "move": "霜颚·犁地"
+   },
+   {
+    "part": "颈鬃",
+    "move": "鬃霜·倒竖"
+   }
+  ],
+  "mech": "**结霜再生**：结霜再生＋寒潮场＋**融霜窗口**——仅焰属性在融霜回合命中才算永久破坏（机制压缩自 §M4 链表）"
+ },
+ {
+  "id": "cs_t1_069",
+  "name": "荫底巨枭 · 岛根",
+  "tier": "终盘巨兽",
+  "area": "岛根垂荫",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 18120,
+  "layer_coef": 1.0,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "—",
+  "duyou_pos": "",
+  "break_bindings": [],
+  "mech": "**无声俯袭**：自阴影俯袭压制；破坏翼羽解除"
+ },
+ {
+  "id": "cs_t1_070",
+  "name": "盘根岩蜥 · 错节",
+  "tier": "终盘巨兽",
+  "area": "岛根垂荫",
+  "skeleton": "F02",
+  "bio_class": "潮适",
+  "hp": 18120,
+  "layer_coef": 1.0,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "—",
+  "duyou_pos": "",
+  "break_bindings": [],
+  "mech": "**缠根固守**：缠根硬化减伤；破坏根瘤后可处决"
+ },
+ {
+  "id": "cs_t1_071",
+  "name": "影蛾",
+  "tier": "空兽",
+  "area": "岛根垂荫",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "",
+  "break_bindings": [],
+  "mech": "趋暗避光难捕；照明后易擒"
+ },
+ {
+  "id": "cs_t1_072",
+  "name": "垂须螈",
+  "tier": "空兽",
+  "area": "岛根垂荫",
+  "skeleton": "F09",
+  "bio_class": "潮适",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_032"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=all｜self_reposition=none｜target_displace=pull_away｜position_rule=ignore_side｜marks=no_face（族画像：全向控场+强制拉拽）",
+  "break_bindings": [],
+  "mech": "垂须探地预警；切断须端即逃"
+ },
+ {
+  "id": "cs_t1_073",
+  "name": "根窟鼠",
+  "tier": "空兽",
+  "area": "岛根垂荫",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "",
+  "break_bindings": [],
+  "mech": "窜根偷搬素材；堵穴可擒"
+ },
+ {
+  "id": "cs_t1_074",
+  "name": "霜翼蝶",
+  "tier": "空兽",
+  "area": "岛根垂荫",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_033"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": [],
+  "mech": "触之结霜减速；焰可融除"
+ },
+ {
+  "id": "cs_t1_075",
+  "name": "荫底鲶",
+  "tier": "空兽",
+  "area": "岛根垂荫",
+  "skeleton": "F06",
+  "bio_class": "潮适",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_034"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=front｜self_reposition=lateral｜target_displace=none｜position_rule=ignore_side｜marks=none（族画像：缠缚滑行）",
+  "break_bindings": [],
+  "mech": "悬浮阴面难瞄；风缆可拽落"
+ },
+ {
+  "id": "cs_t1_076",
+  "name": "倒挂枭猴",
+  "tier": "空兽",
+  "area": "岛根垂荫",
+  "skeleton": "F03",
+  "bio_class": "避潮",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_035"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=front｜self_reposition=none｜target_displace=pull_close｜position_rule=eligible:front｜marks=none（族画像：正面封锁+拉近）",
+  "break_bindings": [],
+  "mech": "倒挂投掷果壳；压制可击落"
+ },
+ {
+  "id": "cs_t1_077",
+  "name": "碎晶鸟",
+  "tier": "空兽",
+  "area": "岛根垂荫",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_036"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": [],
+  "mech": "衔晶屑扑面致盲"
+ },
+ {
+  "id": "cs_t1_078",
+  "name": "荫壁守蛛",
+  "tier": "空兽",
+  "area": "岛根垂荫",
+  "skeleton": "F07",
+  "bio_class": "避潮",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_037",
+   "uq_038"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
+  "break_bindings": [],
+  "mech": "结网拦路；烧网通行"
+ },
+ {
+  "id": "cs_t1_079",
+  "name": "寒岩貉",
+  "tier": "空兽",
+  "area": "岛根垂荫",
+  "skeleton": "F02",
+  "bio_class": "避潮",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_039",
+   "uq_040"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=turn｜target_displace=pull_close｜position_rule=eligible:front／back｜marks=none（族画像：绕后拉扯）",
+  "break_bindings": [],
+  "mech": "假死诱敌近身；翻查即起"
+ },
+ {
+  "id": "cs_t1_080",
+  "name": "垂冰锥虫",
+  "tier": "空兽",
+  "area": "岛根垂荫",
+  "skeleton": "F10",
+  "bio_class": "潮适",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_041"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=air｜self_reposition=ascend｜target_displace=lift_air｜position_rule=requires_height:air｜marks=none（族画像：常驻空域(落地窗)）",
+  "break_bindings": [],
+  "mech": "坠落冰锥扎人"
+ },
+ {
+  "id": "cs_t1_081",
+  "name": "影游鳝",
+  "tier": "空兽",
+  "area": "岛根垂荫",
+  "skeleton": "F06",
+  "bio_class": "潮适",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "",
+  "break_bindings": [],
+  "mech": "穿影游走难锁定"
+ },
+ {
+  "id": "cs_t1_082",
+  "name": "根瘤寄虫",
+  "tier": "空兽",
+  "area": "岛根垂荫",
+  "skeleton": "F07",
+  "bio_class": "潮适",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "",
+  "break_bindings": [],
+  "mech": "寄生根瘤干扰部位锁定"
+ },
+ {
+  "id": "cs_t1_083",
+  "name": "影蚤",
+  "tier": "杂兽",
+  "area": "岛根垂荫",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 2718,
+  "layer_coef": 0.15,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_042"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=shift｜target_displace=none｜position_rule=eligible:front／back｜marks=decoy（族画像：游击互换(残影)）",
+  "break_bindings": [],
+  "mech": "叮咬干扰行动"
+ },
+ {
+  "id": "cs_t1_084",
+  "name": "霜屑虫",
+  "tier": "杂兽",
+  "area": "岛根垂荫",
+  "skeleton": "F07",
+  "bio_class": "避潮",
+  "hp": 2718,
+  "layer_coef": 0.15,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "",
+  "break_bindings": [],
+  "mech": "撒霜屑减速"
+ },
+ {
+  "id": "cs_t1_085",
+  "name": "垂荫螽",
+  "tier": "杂兽",
+  "area": "岛根垂荫",
+  "skeleton": "F03",
+  "bio_class": "避潮",
+  "hp": 2718,
+  "layer_coef": 0.15,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_043"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=front｜self_reposition=none｜target_displace=none｜position_rule=eligible:front｜marks=none（族画像：正面封锁+拉近）",
+  "break_bindings": [],
+  "mech": "鸣声惑向"
+ },
+ {
+  "id": "cs_t1_086",
+  "name": "根须蠕虫",
+  "tier": "杂兽",
+  "area": "岛根垂荫",
+  "skeleton": "F09",
+  "bio_class": "潮适",
+  "hp": 2718,
+  "layer_coef": 0.15,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_044"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=all｜self_reposition=none｜target_displace=pull_away｜position_rule=ignore_side｜marks=no_face（族画像：全向控场+强制拉拽）",
+  "break_bindings": [],
+  "mech": "缠足定身"
+ },
+ {
+  "id": "cs_t1_087",
+  "name": "荫壁蜗牛",
+  "tier": "杂兽",
+  "area": "岛根垂荫",
+  "skeleton": "F08",
+  "bio_class": "潮适",
+  "hp": 2718,
+  "layer_coef": 0.15,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "",
+  "break_bindings": [],
+  "mech": "迟缓无威胁；壳体可作临时屏障"
+ },
+ {
+  "id": "cs_t1_088",
+  "name": "白垩幼犁",
+  "tier": "杂兽",
+  "area": "岛根垂荫",
+  "skeleton": "F02",
+  "bio_class": "避潮",
+  "hp": 2718,
+  "layer_coef": 0.15,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_045"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=turn｜target_displace=pull_close｜position_rule=eligible:front／back｜marks=none（族画像：绕后拉扯）",
+  "break_bindings": [],
+  "mech": "派生自霜脉犁兽；幼体掘雪偷袭"
+ },
+ {
+  "id": "cs_t1_089",
+  "name": "碎冰蟹",
+  "tier": "杂兽",
+  "area": "岛根垂荫",
+  "skeleton": "F08",
+  "bio_class": "潮适",
+  "hp": 2718,
+  "layer_coef": 0.15,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "",
+  "break_bindings": [],
+  "mech": "甲壳碎冰反弹小伤害"
+ },
+ {
+  "id": "cs_t1_090",
+  "name": "影蛾幼",
+  "tier": "杂兽",
+  "area": "岛根垂荫",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 2718,
+  "layer_coef": 0.15,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "",
+  "break_bindings": [],
+  "mech": "派生自影蛾；群聚趋光"
+ },
+ {
+  "id": "cs_t1_091",
+  "name": "锈锚重兽 · 旧港",
+  "tier": "常规巨兽",
+  "area": "灰岗旧港",
+  "skeleton": "F01",
+  "bio_class": "潮适",
+  "hp": 13590,
+  "layer_coef": 0.75,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "dif_058",
+   "dif_059",
+   "dif_060"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_181`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "锚爪",
+    "move": "锈锚·抛落"
+   }
+  ],
+  "mech": "**抛锚定身**：每 3×1,000 行动值钉住 1 名参战者位移；破坏锚爪解除"
+ },
+ {
+  "id": "cs_t1_092",
+  "name": "缆桩踞兽 · 系留",
+  "tier": "常规巨兽",
+  "area": "灰岗旧港",
+  "skeleton": "F03",
+  "bio_class": "潮适",
+  "hp": 13590,
+  "layer_coef": 0.75,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "dif_061",
+   "dif_062",
+   "dif_063"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_181`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "缆桩",
+    "move": "系留·缆拽"
+   }
+  ],
+  "mech": "**缆绳牵拉**：强制位移目标；破坏缆桩转为易伤 +0.20"
+ },
+ {
+  "id": "cs_t1_093",
+  "name": "仓廪蚀鼠 · 陈粮",
+  "tier": "常规巨兽",
+  "area": "灰岗旧港",
+  "skeleton": "F11",
+  "bio_class": "蚀依",
+  "hp": 13590,
+  "layer_coef": 0.75,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "dif_064",
+   "dif_065",
+   "dif_066"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_181`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "门牙",
+    "move": "陈粮·啮断"
+   }
+  ],
+  "mech": "**啃食补给**：破坏后玩家携带道具失效 1 个出手序列"
+ },
+ {
+  "id": "cs_t1_094",
+  "name": "潮痕石獭 · 退泊",
+  "tier": "常规巨兽",
+  "area": "灰岗旧港",
+  "skeleton": "F02",
+  "bio_class": "潮适",
+  "hp": 13590,
+  "layer_coef": 0.75,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "dif_067",
+   "dif_068",
+   "dif_069"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_181`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "潮壳",
+    "move": "退泊·翻壳"
+   }
+  ],
+  "mech": "**壳随潮涨落**：高／低回合数交替切换易伤窗口"
+ },
+ {
+  "id": "cs_t1_095",
+  "name": "缆间走兽 · 灰港",
+  "tier": "空兽",
+  "area": "灰岗旧港",
+  "skeleton": "F07",
+  "bio_class": "避潮",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_046"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=none｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
+  "break_bindings": [],
+  "mech": "位移频繁；风缆可预判落点"
+ },
+ {
+  "id": "cs_t1_096",
+  "name": "仓顶栖隼 · 旧檐",
+  "tier": "空兽",
+  "area": "灰岗旧港",
+  "skeleton": "F05",
+  "bio_class": "避潮",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_047"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=front｜self_reposition=dash+turn｜target_displace=none｜position_rule=eligible:front｜marks=none（族画像：打完就走）",
+  "break_bindings": [],
+  "mech": "高处俯冲；压制可击落"
+ },
+ {
+  "id": "cs_t1_097",
+  "name": "锚链游鱼 · 浅锈",
+  "tier": "空兽",
+  "area": "灰岗旧港",
+  "skeleton": "F06",
+  "bio_class": "潮适",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_048"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=front｜self_reposition=lateral｜target_displace=none｜position_rule=ignore_side｜marks=none（族画像：缠缚滑行）",
+  "break_bindings": [],
+  "mech": "潮位上升时强化；退潮期可处决"
+ },
+ {
+  "id": "cs_t1_098",
+  "name": "货箱伏兽 · 空箱",
+  "tier": "空兽",
+  "area": "灰岗旧港",
+  "skeleton": "F03",
+  "bio_class": "避潮",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_049"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=front｜self_reposition=none｜target_displace=pull_close｜position_rule=eligible:front｜marks=none（族画像：正面封锁+拉近）",
+  "break_bindings": [],
+  "mech": "伪装货箱伏击；接近特定箱体触发"
+ },
+ {
+  "id": "cs_t1_099",
+  "name": "港灯趋兽 · 夜巡",
+  "tier": "空兽",
+  "area": "灰岗旧港",
+  "skeleton": "F05",
+  "bio_class": "避潮",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_050"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=front｜self_reposition=dash+turn｜target_displace=none｜position_rule=eligible:front｜marks=none（族画像：打完就走）",
+  "break_bindings": [],
+  "mech": "派生自仓顶栖隼；趋光，灯光环境强化"
+ },
+ {
+  "id": "cs_t1_100",
+  "name": "锈须鲶兽 · 泊底",
+  "tier": "空兽",
+  "area": "灰岗旧港",
+  "skeleton": "F06",
+  "bio_class": "潮适",
+  "hp": 6342,
+  "layer_coef": 0.35,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_051"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=front｜self_reposition=lateral｜target_displace=none｜position_rule=ignore_side｜marks=none（族画像：缠缚滑行）",
+  "break_bindings": [],
+  "mech": "底栖；淤泥减速，风缆可脱离"
+ },
+ {
+  "id": "cs_t1_101",
+  "name": "缆绳鼠群",
+  "tier": "杂兽",
+  "area": "灰岗旧港",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 2718,
+  "layer_coef": 0.15,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [
+   "uq_052"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=shift｜target_displace=none｜position_rule=eligible:front／back｜marks=decoy（族画像：游击互换(残影)）",
+  "break_bindings": [],
+  "mech": "成群干扰"
+ },
+ {
+  "id": "cs_t1_102",
+  "name": "仓蠹虫",
+  "tier": "杂兽",
+  "area": "灰岗旧港",
+  "skeleton": "F07",
+  "bio_class": "避潮",
+  "hp": 2718,
+  "layer_coef": 0.15,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "",
+  "break_bindings": [],
+  "mech": "啃食，破坏携带素材"
+ },
+ {
+  "id": "cs_t1_103",
+  "name": "港阶苔蜗",
+  "tier": "杂兽",
+  "area": "灰岗旧港",
+  "skeleton": "F08",
+  "bio_class": "潮适",
+  "hp": 2718,
+  "layer_coef": 0.15,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "",
+  "break_bindings": [],
+  "mech": "迟缓，可作临时屏障"
+ },
+ {
+  "id": "cs_t1_104",
+  "name": "锈屑蟹",
+  "tier": "杂兽",
+  "area": "灰岗旧港",
+  "skeleton": "F08",
+  "bio_class": "潮适",
+  "hp": 2718,
+  "layer_coef": 0.15,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "",
+  "break_bindings": [],
+  "mech": "派生自潮痕石獭；甲壳碎片反弹小伤害"
+ },
+ {
+  "id": "cs_t1_105",
+  "name": "泊灯蛾",
+  "tier": "杂兽",
+  "area": "灰岗旧港",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 2718,
+  "layer_coef": 0.15,
+  "weakness": {
+   "rule_gen": true
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量二"
+  },
+  "pv_rule": "$C.BREAK.BASE_UNIT×部位阈值（归219 部位全量）",
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_188`",
+  "duyou_pos": "",
+  "break_bindings": [],
+  "mech": "趋光，干扰视野判定"
+ }
+]

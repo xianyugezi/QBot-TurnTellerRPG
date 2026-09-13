@@ -1,0 +1,13 @@
+{
+ "tide": 1,
+ "total": 105,
+ "by_tier": {
+  "终盘巨兽": 6,
+  "常规巨兽": 23,
+  "空兽": 44,
+  "杂兽": 32
+ },
+ "unresolved_moves": [],
+ "resist_named_hits": 2,
+ "break_bound": 27
+}

@@ -299,14 +299,24 @@ select.cin { padding: 1px var(--sp-2); }
 .help-card::-webkit-scrollbar-track { background: transparent; }
 .help-card::-webkit-scrollbar-thumb { background: var(--sb-thumb); border-radius: var(--radius-sb); }
 .help-card::-webkit-scrollbar-thumb:hover { background: var(--sb-thumb-hover); }
+.help-card .hc-close { position: absolute; top: var(--sp-3); right: var(--sp-3);
+  width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;
+  padding: 0; background: transparent; border: var(--bw) solid transparent; cursor: pointer;
+  color: var(--text-5); font-family: inherit; font-size: var(--fs-14); line-height: 1; }
+.help-card .hc-close:hover { color: var(--text-strong); border-color: var(--line-strong); }
+.help-card .hc-close:focus-visible { color: var(--text-strong);
+  outline: none; box-shadow: 0 0 0 var(--focus-offset) var(--focus); }
 .help-card .hc-hd { color: var(--text-strong); margin-bottom: var(--sp-4);
   padding-bottom: var(--sp-3); border-bottom: var(--bw) solid var(--line-soft);
+  padding-right: var(--sp-10);
   display: flex; align-items: center; gap: var(--sp-5); flex-wrap: wrap; }
+.help-card .hc-t { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
 .help-card .hc-tag { color: var(--warn); font-size: var(--fs-10); }
 .help-card .hc-row { display: grid; grid-template-columns: 68px minmax(0, 1fr);
   gap: var(--sp-5); padding: var(--sp-1) 0; }
 .help-card .hc-k { color: var(--text-5); }
-.help-card .hc-v { color: var(--text-value); white-space: pre-wrap; }
+.help-card .hc-v { color: var(--text-value); white-space: pre-wrap;
+  overflow-wrap: anywhere; word-break: break-word; }
 </style>
 </head>
 <body>
@@ -671,7 +681,8 @@ function helpCardHtml(card) {
     return '<div class="hc-row"><span class="hc-k">' + esc(r.k) + "</span>"
       + '<span class="hc-v">' + esc(r.v) + "</span></div>";
   }).join("");
-  return '<div class="hc-hd"><span class="hc-t">' + esc(helpTitle(card)) + "</span>"
+  return '<button type="button" class="hc-close" aria-label="关闭说明" title="关闭说明（Esc）">×</button>'
+    + '<div class="hc-hd"><span class="hc-t">' + esc(helpTitle(card)) + "</span>"
     + (card.unregistered ? '<span class="hc-tag">元数据未登记</span>' : "")
     + "</div>" + rows;
 }
@@ -701,8 +712,9 @@ function helpVisible(state, id) {
   return !!(state && state.open && state.id === id);
 }
 
-// 定位：优先字段行下方 → 上方 → 右侧 → 左侧；都不完全放得下时退回「下方」候选并水平
-// 收进视口。各候选都不与 avoid（正在编辑的字段矩形）重叠；窄窗口自动避让。
+// 定位：**优先避让被编辑字段**——先试上方，再侧向（右/左），空间实在不足才向下；
+// 四个候选都不与 avoid（正在编辑的字段行矩形）重叠，保证不遮住当前输入框。
+// 视口内放不下时选「可见面积最大且不压字段行」的候选（水平收进视口）；极端才退回上方。
 // 矩形统一 {left, top, right, bottom}。
 function helpPlace(anchor, size, viewport, avoid, gap) {
   gap = (gap == null) ? 6 : gap;
@@ -714,10 +726,10 @@ function helpPlace(anchor, size, viewport, avoid, gap) {
              right: left + w, bottom: top + h };
   }
   var cands = [
-    rect("below", anchor.left, avoid.bottom + gap),
     rect("above", anchor.left, avoid.top - h - gap),
     rect("right", avoid.right + gap, avoid.top),
-    rect("left", avoid.left - w - gap, avoid.top)
+    rect("left", avoid.left - w - gap, avoid.top),
+    rect("below", anchor.left, avoid.bottom + gap)
   ];
   function fits(c) {
     return c.left >= margin && c.top >= margin
@@ -726,10 +738,23 @@ function helpPlace(anchor, size, viewport, avoid, gap) {
   for (var i = 0; i < cands.length; i++) {
     if (fits(cands[i])) { return cands[i]; }
   }
-  var best = rect("below", anchor.left, avoid.bottom + gap);
-  best.left = Math.max(margin, Math.min(best.left, viewport.w - w - margin));
-  best.right = best.left + w;
-  return best;
+  // 视口放不下：逐候选水平收进视口，取可见面积最大者；压到字段行的一律淘汰。
+  var best = null, bestArea = -1;
+  for (var j = 0; j < cands.length; j++) {
+    var c = cands[j];
+    c.left = Math.max(margin, Math.min(c.left, viewport.w - w - margin));
+    c.right = c.left + w;
+    if (helpOverlaps(c, avoid)) { continue; }
+    var visW = Math.max(0, Math.min(c.right, viewport.w - margin) - Math.max(c.left, margin));
+    var visH = Math.max(0, Math.min(c.bottom, viewport.h - margin) - Math.max(c.top, margin));
+    var area = visW * visH;
+    if (area > bestArea) { bestArea = area; best = c; }
+  }
+  if (best) { return best; }
+  var fallback = rect("above", anchor.left, Math.max(margin, avoid.top - h - gap));
+  fallback.left = Math.max(margin, Math.min(fallback.left, viewport.w - w - margin));
+  fallback.right = fallback.left + w;
+  return fallback;
 }
 
 function helpOverlaps(a, b) {
@@ -825,6 +850,14 @@ function bindHelp() {
   box.addEventListener("mouseleave", function () {
     if (helpDom.state.pinned) { return; }
     helpApply(helpUnhover(helpDom.state));
+  });
+  // 卡片右上角关闭按钮（×）：点击即关（在卡片内，document 的「点空白关闭」不会接管）。
+  box.addEventListener("click", function (ev) {
+    var t = ev.target;
+    if (t && t.closest && t.closest(".hc-close")) {
+      ev.preventDefault();
+      helpApply(helpStateClosed());
+    }
   });
   document.addEventListener("click", function (ev) {
     if (!helpDom.state.open) { return; }

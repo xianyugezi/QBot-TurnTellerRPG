@@ -484,6 +484,24 @@ def test_frontend_help_css_uses_tokens_and_scroll() -> None:
     assert "position: fixed" in rule
 
 
+def test_frontend_help_card_has_close_button_and_overflow_guard() -> None:
+    """实机问题③：卡片右上角可见关闭按钮（×）+ 长文案/长键名不溢出（换行/省略）。"""
+    html = _html()
+    # 关闭按钮：渲染 + 事件接线（卡片内点击不被 document「点空白关闭」接管）
+    assert "hc-close" in html
+    assert 'aria-label="关闭说明"' in html
+    assert 't.closest(".hc-close")' in html or "closest('.hc-close')" in html
+    # 关闭按钮样式走令牌（细边/焦点环）且绝对定位在卡片内
+    close = re.search(r"\.help-card\s+\.hc-close\s*\{([^}]*)\}", html)
+    assert close, "index.html 缺少 .hc-close 样式"
+    assert "position: absolute" in close.group(1)
+    # 长标题/长文案换行，不溢出卡片
+    assert re.search(r"\.help-card\s+\.hc-t\s*\{[^}]*overflow-wrap", html)
+    assert re.search(r"\.help-card\s+\.hc-v\s*\{[^}]*overflow-wrap", html)
+    # 关闭方式仍保留：Esc + 点空白
+    assert 'ev.key === "Escape"' in html or '"Escape"' in html
+
+
 # =====================================================================================
 # 五、node 直接执行 EDITOR_HELP 纯逻辑（状态机 / 拼装 / 定位 / 转义）
 # =====================================================================================
@@ -562,6 +580,12 @@ const avoid = { left: 16, top: 96, right: 900, bottom: 130 };
 const size = { w: 260, h: 180 };
 out.below = helpPlace(anchor, size, { w: 1000, h: 700 }, avoid, 6);
 out.belowOverlap = helpOverlaps(out.below, avoid);
+// 优先避让被编辑字段：字段在视口中部、上方放得下 → 选上方（不再默认向下）
+const anchorMid = { left: 300, top: 300, right: 360, bottom: 320 };
+const avoidMid = { left: 16, top: 296, right: 900, bottom: 330 };
+out.above = helpPlace(anchorMid, size, { w: 1000, h: 700 }, avoidMid, 6);
+out.aboveOverlap = helpOverlaps(out.above, avoidMid);
+out.closeHtml = helpCardHtml(card);
 // 下方放不下（字段靠近视口底部）→ 翻到上方（仍不遮字段）
 const anchor2 = { left: 300, top: 400, right: 360, bottom: 420 };
 const avoid2 = { left: 16, top: 396, right: 900, bottom: 430 };
@@ -629,11 +653,15 @@ def test_help_js_semantics(tmp_path: Path) -> None:
     assert out["keyEsc"] == {"open": False, "pinned": False, "id": None}
     assert out["visible"] is True and out["visibleOther"] is False
 
-    # ---- 定位：不遮住正在编辑的字段；放不下会翻面；窄窗口收进视口 ----
+    # ---- 定位：优先上方避让被编辑字段；放不下会翻面；窄窗口收进视口 ----
+    assert out["above"]["placement"] == "above" and out["aboveOverlap"] is False
     assert out["below"]["placement"] == "below"
     assert out["belowOverlap"] is False
     assert out["tall"]["placement"] == "above" and out["tallOverlap"] is False
     assert out["narrowInView"] is True
+    # ---- 关闭按钮（×）：卡片右上角可见、带无障碍标签 ----
+    assert 'class="hc-close"' in out["closeHtml"]
+    assert 'aria-label="关闭说明"' in out["closeHtml"]
 
     # ---- 触发器：注册说明卡 + 键盘可达标注 ----
     assert 'class="flabel helpable"' in out["trig"]

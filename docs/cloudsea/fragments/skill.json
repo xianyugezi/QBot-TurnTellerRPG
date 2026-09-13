@@ -1,0 +1,125 @@
+[
+ {
+  "key": "$C.SKILL.FEED_LUCKY_RATE",
+  "raw": "`0.10`",
+  "value": 0.1,
+  "desc": "同行兽喂食「对胃口」翻倍率",
+  "section": "SKILL",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.SKILL.RESIDUAL_PAGE_RATE",
+  "raw": "`0.15`（生态调查）",
+  "value": null,
+  "desc": "兽技残页掉率",
+  "section": "SKILL",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.SKILL.RESIDUAL_PAGE_RATIO",
+  "raw": "`2:1` 自选",
+  "value": null,
+  "desc": "残页定向合成比",
+  "section": "SKILL",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.SKILL.SKILL.BOND_BREAKPOINTS",
+  "raw": "`2/4/6/8` 件",
+  "value": null,
+  "desc": "系羁绊四阶断点",
+  "section": "SKILL",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.SKILL.SKILL.BOND_COUNTER_SLOTS",
+  "raw": "`8` 位",
+  "value": null,
+  "desc": "系羁绊计数口径",
+  "section": "SKILL",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.SKILL.SKILL.BOND_TIERS",
+  "raw": "`4`",
+  "value": 4,
+  "desc": "系羁绊阶梯数",
+  "section": "SKILL",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.SKILL.SKILL.EMBLEM_CHARM_COUNT",
+  "raw": "`4`",
+  "value": 4,
+  "desc": "系纹章护符数",
+  "section": "SKILL",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.SKILL.SKILL.GEAR_TIER_MAX",
+  "raw": "`3`",
+  "value": 3,
+  "desc": "装备技能档位上限",
+  "section": "SKILL",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.SKILL.SKILL.LINE_COUNT",
+  "raw": "`6`",
+  "value": 6,
+  "desc": "技能线数",
+  "section": "SKILL",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.SKILL.SKILL.SET_STACK_CAP",
+  "raw": "`3` 档",
+  "value": null,
+  "desc": "套装效果同名全身叠加上限",
+  "section": "SKILL",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.SKILL.SKILL.TIDE_CONFLUENCE_BREAKS",
+  "raw": "`3/5/7` 点",
+  "value": null,
+  "desc": "潮汇断点",
+  "section": "SKILL",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.SKILL.SKILL.TIDE_CONFLUENCE_POINTS",
+  "raw": "`1/2/3/4` 点",
+  "value": null,
+  "desc": "潮汇计点表",
+  "section": "SKILL",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.SKILL.SKILL.WEAPON_STANCE_STATES",
+  "raw": "`3`",
+  "value": 3,
+  "desc": "武器技法三态",
+  "section": "SKILL",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.SKILL.SKILL.WEAPON_TRAIT_MINOR_BAND",
+  "raw": "`[0.04, 0.08]`",
+  "value": [
+   "0.04",
+   "0.08"
+  ],
+  "desc": "武器微特性值域带（十期 259 申报）",
+  "section": "SKILL",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.SKILL.SKILL.WEAPON_TRAIT_MOTIF_CAP",
+  "raw": "`0.08`",
+  "value": 0.08,
+  "desc": "武器母题特性顶（十期 259 申报）",
+  "section": "SKILL",
+  "rule": "dotted_fallback"
+ }
+]

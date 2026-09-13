@@ -1,0 +1,18 @@
+[
+ {
+  "key": "$C.PINNED.ROUNDS",
+  "raw": "`2`",
+  "value": 2,
+  "desc": "钉位触发回合",
+  "section": "SURGE",
+  "rule": "dotted"
+ },
+ {
+  "key": "$C.PINNED.SURGE_GAIN",
+  "raw": "`+1`",
+  "value": null,
+  "desc": "钉位潮压增益",
+  "section": "SURGE",
+  "rule": "dotted"
+ }
+]

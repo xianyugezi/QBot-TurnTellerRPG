@@ -1,0 +1,210 @@
+[
+ {
+  "key": "$C.FORTUNE.ACCRUE_IN_LUCK",
+  "raw": "`0`",
+  "value": 0,
+  "desc": "窗内厄运积累系数",
+  "section": "FORTUNE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.FORTUNE.BLESS_MINOR",
+  "raw": "`−2` / `−4` / `−6`",
+  "value": null,
+  "desc": "喜事消除 小/中/大",
+  "section": "FORTUNE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.FORTUNE.CAP",
+  "raw": "`100`",
+  "value": 100,
+  "desc": "账户容量",
+  "section": "FORTUNE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.FORTUNE.DISCLOSE_CLASS",
+  "raw": "`EC-X 隐性期望偏置类`",
+  "value": null,
+  "desc": "登记类",
+  "section": "FORTUNE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.FORTUNE.DRAIN_PER_JUDGMENT",
+  "raw": "`5`",
+  "value": 5,
+  "desc": "窗内每判定消耗",
+  "section": "FORTUNE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.FORTUNE.EXPIRY_DAILY_CAP",
+  "raw": "`2` 次/D 日",
+  "value": null,
+  "desc": "委托过期计厄上限",
+  "section": "FORTUNE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.FORTUNE.LUCK_INTEL_RUMOR_P",
+  "raw": "`0.30`",
+  "value": 0.3,
+  "desc": "情报卡「风闻」附行率",
+  "section": "FORTUNE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.FORTUNE.LUCK_INTRUDE_GAP_WEIGHT",
+  "raw": "`4`（×3→×4）",
+  "value": null,
+  "desc": "窗内图鉴缺口权重",
+  "section": "FORTUNE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.FORTUNE.LUCK_INTRUDE_MULT",
+  "raw": "`2.0`（0.03→0.06）",
+  "value": null,
+  "desc": "窗内乱入倍率",
+  "section": "FORTUNE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.FORTUNE.LUCK_LIMITED_COMMISSION_WEIGHT",
+  "raw": "`2.0`",
+  "value": 2.0,
+  "desc": "窗内限时委托出现权重",
+  "section": "FORTUNE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.FORTUNE.LUCK_METER_INJECT",
+  "raw": "`20` 点（单 D 日上限 60）",
+  "value": null,
+  "desc": "计量注入/蚀潮场",
+  "section": "FORTUNE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.FORTUNE.LUCK_RELIC_CAP_MULT",
+  "raw": "`2.0`",
+  "value": 2.0,
+  "desc": "双补上限",
+  "section": "FORTUNE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.FORTUNE.LUCK_REROLL_ALLCOMMON",
+  "raw": "`true`",
+  "value": null,
+  "desc": "全 COMMON 场补掷",
+  "section": "FORTUNE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.FORTUNE.LUCK_REROLL_EMPTY",
+  "raw": "`true`",
+  "value": null,
+  "desc": "空手位重掷",
+  "section": "FORTUNE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.FORTUNE.LUCK_RESCUE_BONUS_PP",
+  "raw": "`+0.15`（0.35→0.50）",
+  "value": null,
+  "desc": "T1 补救线加成",
+  "section": "FORTUNE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.FORTUNE.LUCK_TIDE_MARKET_THIRD",
+  "raw": "`always`",
+  "value": null,
+  "desc": "窗内旬集第三格",
+  "section": "FORTUNE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.FORTUNE.LUCK_TIERUP_RARE_RELIC",
+  "raw": "`0.05`/位（窗内合并 +≈0.3 RELIC/窗）",
+  "value": null,
+  "desc": "RARE→RELIC 升档率",
+  "section": "FORTUNE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.FORTUNE.MISFORTUNE_DAY_ESCALATE",
+  "raw": "`3`（第 3 次小厄升大厄，每日至多 1 次）",
+  "value": null,
+  "desc": "坏运会话升格阈值",
+  "section": "FORTUNE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.FORTUNE.MISFORTUNE_MINOR",
+  "raw": "`+4` / `+8` / `+12`",
+  "value": null,
+  "desc": "厄运积累 小/中/大",
+  "section": "FORTUNE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.FORTUNE.RESCUE_LINE_BASE_P",
+  "raw": "`0.35`",
+  "value": 0.35,
+  "desc": "T1 补救线基率",
+  "section": "FORTUNE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.FORTUNE.TRIGGER_ANCHOR",
+  "raw": "`NEXT_DROP_JUDGMENT`",
+  "value": null,
+  "desc": "开窗锚",
+  "section": "FORTUNE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.FORTUNE.ZERO_TOUCH_FACES",
+  "raw": "`强化/淬火/突破；峰章叙事；战斗内 DDA；MYTH 偏置；回响重铸；丰饶符；牌组调度序`",
+  "value": null,
+  "desc": "不入表面清单",
+  "section": "FORTUNE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.FORTUNE._MAJOR",
+  "raw": "`+4` / `+8` / `+12`",
+  "value": null,
+  "desc": "厄运积累 小/中/大",
+  "section": "FORTUNE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.FORTUNE._MAJOR",
+  "raw": "`−2` / `−4` / `−6`",
+  "value": null,
+  "desc": "喜事消除 小/中/大",
+  "section": "FORTUNE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.FORTUNE._MID",
+  "raw": "`+4` / `+8` / `+12`",
+  "value": null,
+  "desc": "厄运积累 小/中/大",
+  "section": "FORTUNE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.FORTUNE._MID",
+  "raw": "`−2` / `−4` / `−6`",
+  "value": null,
+  "desc": "喜事消除 小/中/大",
+  "section": "FORTUNE",
+  "rule": "explicit"
+ }
+]

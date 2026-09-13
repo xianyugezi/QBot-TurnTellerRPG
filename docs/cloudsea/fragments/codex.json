@@ -1,0 +1,130 @@
+[
+ {
+  "key": "$C.CODEX.ATK_BAND",
+  "raw": "`2.60`",
+  "value": 2.6,
+  "desc": "顶点攻击带",
+  "section": "CODEX",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.CODEX.CHAIN_COVER",
+  "raw": "`31`",
+  "value": 31,
+  "desc": "链覆盖",
+  "section": "CODEX",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.CODEX.CHAIN_TASK_FLOOR",
+  "raw": "`39`",
+  "value": 39,
+  "desc": "域链任务量下沿红线",
+  "section": "CODEX",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.CODEX.CORE_PER_ITEM",
+  "raw": "`1`",
+  "value": 1,
+  "desc": "每件绑定核心把数",
+  "section": "CODEX",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.CODEX.CRAFT_GOLD",
+  "raw": "`200000`",
+  "value": 200000,
+  "desc": "典录打造费",
+  "section": "CODEX",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.CODEX.DOMAINS",
+  "raw": "`31`",
+  "value": 31,
+  "desc": "神话域数",
+  "section": "CODEX",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.CODEX.GXT_BAND",
+  "raw": "`2.45`",
+  "value": 2.45,
+  "desc": "顶点 G×T 带",
+  "section": "CODEX",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.CODEX.LINE_ORDER_RULES",
+  "raw": "`5`",
+  "value": 5,
+  "desc": "定序规则数",
+  "section": "CODEX",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.CODEX.RECIPE_PER_END",
+  "raw": "`2`",
+  "value": 2,
+  "desc": "段尾配方件数",
+  "section": "CODEX",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.CODEX.SEG_PER_DOMAIN",
+  "raw": "`7`",
+  "value": 7,
+  "desc": "每域链段数（v2 段化）",
+  "section": "CODEX",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.CODEX.SERIES_LINES",
+  "raw": "`14`",
+  "value": 14,
+  "desc": "武器系列线数（线视图）",
+  "section": "CODEX",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.CODEX.SNAPSHOT_DEPTH",
+  "raw": "`3`",
+  "value": 3,
+  "desc": "武器快照漂移判定窗",
+  "section": "CODEX",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.CODEX.TASKS_BASE",
+  "raw": "`51`",
+  "value": 51,
+  "desc": "域链任务量基准",
+  "section": "CODEX",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.CODEX.TASKS_SPREAD",
+  "raw": "`12`",
+  "value": 12,
+  "desc": "域链任务量离散幅",
+  "section": "CODEX",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.CODEX.TOTAL",
+  "raw": "`434`",
+  "value": 434,
+  "desc": "典录装备总件数",
+  "section": "CODEX",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.CODEX.TYPES",
+  "raw": "`14`",
+  "value": 14,
+  "desc": "每域类型数",
+  "section": "CODEX",
+  "rule": "explicit"
+ }
+]

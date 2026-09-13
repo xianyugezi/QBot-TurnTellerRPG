@@ -1,0 +1,122 @@
+[
+ {
+  "key": "$C.ASPECT.ASPECT.COMBO_MAX",
+  "raw": "`2`",
+  "value": 2,
+  "desc": "一只怪可挂人格数",
+  "section": "ASPECT",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.ASPECT.ASPECT.COUNT",
+  "raw": "`7`",
+  "value": 7,
+  "desc": "人格数量",
+  "section": "ASPECT",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.ASPECT.ASPECT.EMBER_DOT",
+  "raw": "`0.015` EHP / 回合，持续 `3` 回合",
+  "value": null,
+  "desc": "余烬真伤",
+  "section": "ASPECT",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.ASPECT.ASPECT.FROST_REGROW",
+  "raw": "`3`",
+  "value": 3,
+  "desc": "结霜复原回合",
+  "section": "ASPECT",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.ASPECT.ASPECT.HARDEN_FULL",
+  "raw": "`3`",
+  "value": 3,
+  "desc": "硬化轨满值",
+  "section": "ASPECT",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.ASPECT.ASPECT.PRISM_ROUNDS",
+  "raw": "`2`",
+  "value": 2,
+  "desc": "棱镜判定窗口",
+  "section": "ASPECT",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.ASPECT.ASPECT.THUNDER_FULL",
+  "raw": "`5`",
+  "value": 5,
+  "desc": "蓄电轨满值",
+  "section": "ASPECT",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.ASPECT.属性",
+  "raw": "核心规则",
+  "value": null,
+  "desc": "人格名",
+  "section": "ASPECT",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ASPECT.岩",
+  "raw": "硬化轨达 `3` 级完全硬化——免疫所有状态、无视超过坚韧值的伤害",
+  "value": null,
+  "desc": "**硬化**",
+  "section": "ASPECT",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ASPECT.幽",
+  "raw": "向玩家战前预案注入 1 个废指令位（显示 `▨污染`）；净化可清除",
+  "value": null,
+  "desc": "**污染**",
+  "section": "ASPECT",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ASPECT.焰",
+  "raw": "命中附加持续真伤（回合末 −1.5% EHP，3 回合）；**攻击它加速潮压**（部件破坏 +1）",
+  "value": null,
+  "desc": "**余烬**",
+  "section": "ASPECT",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ASPECT.辉",
+  "raw": "玩家**连续 2 回合使用同一指令位** → 触发折射反击",
+  "value": null,
+  "desc": "**棱镜**",
+  "section": "ASPECT",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ASPECT.雷",
+  "raw": "蓄电轨每回合 +1，满 `5` 释放终攻；**雷殛打断即清空**",
+  "value": null,
+  "desc": "**蓄电**",
+  "section": "ASPECT",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ASPECT.霜",
+  "raw": "部位破坏后 3 回合结霜复原（易伤 −0.15）；叠 2 层冻结**锁死 1 个指令位** 1 回合",
+  "value": null,
+  "desc": "**凝滞**",
+  "section": "ASPECT",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ASPECT.风",
+  "raw": "玩家每次位移后追加一次追击；免疫泥陷",
+  "value": null,
+  "desc": "**疾风**",
+  "section": "ASPECT",
+  "rule": "fallback"
+ }
+]

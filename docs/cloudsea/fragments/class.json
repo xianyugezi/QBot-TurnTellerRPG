@@ -1,0 +1,154 @@
+[
+ {
+  "key": "$C.CLASS.ARCHER.CHARGE_INTERRUPT",
+  "raw": "**−1 阶（不清零）**",
+  "value": null,
+  "desc": "蓄力被打断",
+  "section": "CLASS",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.CLASS.ARCHER.RANGED_SEG_BONUS",
+  "raw": "`1.4` RU/段",
+  "value": null,
+  "desc": "远程段位蓄力增益",
+  "section": "CLASS",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.CLASS.ARCHER.SNIPE_M",
+  "raw": "`0.70` / `1.40` / `2.10`",
+  "value": null,
+  "desc": "狙击倍率（阶 1/2/3）",
+  "section": "CLASS",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.CLASS.ARCHER.SNIPE_M_MAX",
+  "raw": "`2.80`（绝技档保留 `3.00`）",
+  "value": null,
+  "desc": "坠星箭（满阶）",
+  "section": "CLASS",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.CLASS.ARTI.DEPLOY_DMG",
+  "raw": "`+40%`（本命 **+55%**）/ `×1.8`",
+  "value": null,
+  "desc": "架设态增伤 / 破坏",
+  "section": "CLASS",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.CLASS.ARTI.DEPLOY_MAX_TURNS",
+  "raw": "`3` 回合，超时自动撤架（机械过热）",
+  "value": null,
+  "desc": "架设态**维持上限**",
+  "section": "CLASS",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.CLASS.ARTI.VOLLEY_HITS",
+  "raw": "`1` – `2`（按装填数）",
+  "value": null,
+  "desc": "齐射命中次数",
+  "section": "CLASS",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.CLASS.ARTI.VOLLEY_M",
+  "raw": "`1.65`",
+  "value": 1.65,
+  "desc": "齐射**单发**倍率",
+  "section": "CLASS",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.CLASS.BALANCE.SUPPORT_CREDIT_RATE",
+  "raw": "`0.55`",
+  "value": 0.55,
+  "desc": "团队增益折算率（**已废弃**）",
+  "section": "CLASS",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.CLASS.BARD.CODA_FLAT",
+  "raw": "`700`",
+  "value": 700,
+  "desc": "收束尾伤基数",
+  "section": "CLASS",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.CLASS.BARD.RHYTHM_ATK_MULT",
+  "raw": "`1.10`",
+  "value": 1.1,
+  "desc": "诗人职业被动「韵律共鸣」ATK 倍率",
+  "section": "CLASS",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.CLASS.BERSERK.BLADE_M",
+  "raw": "`1.15`（2 段）",
+  "value": null,
+  "desc": "狂战士剑形态**每段**倍率",
+  "section": "CLASS",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.CLASS.DRUID.BURST_M",
+  "raw": "见 `C.BREAK.SYMBIONT_BURST_M` 2.20",
+  "value": null,
+  "desc": "孢爆倍率",
+  "section": "CLASS",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.CLASS.DRUID.RANGED_SEG_BONUS",
+  "raw": "`1.4` RU/段",
+  "value": null,
+  "desc": "远程段位孢子增益",
+  "section": "CLASS",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.CLASS.RANGER.VENT_DEEP",
+  "raw": "归零 / **2 回合** / **+1 段**（本命 +2）/ 持续 2 回合",
+  "value": null,
+  "desc": "深排",
+  "section": "CLASS",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.CLASS.RANGER.VENT_MOVE_RELIEF",
+  "raw": "`−10` 压力",
+  "value": null,
+  "desc": "位移泄压",
+  "section": "CLASS",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.CLASS.RANGER.VENT_NORMAL",
+  "raw": "归零 / **1 回合** / **+1 段**（本命 +2）/ 持续 1 回合",
+  "value": null,
+  "desc": "常规排气",
+  "section": "CLASS",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.CLASS.RANGER.VENT_QUICK",
+  "raw": "归零 / **0 回合** / 无加成 / 本回合段数 **−1**",
+  "value": null,
+  "desc": "快排",
+  "section": "CLASS",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.CLASS.WARRIOR.CHARGE_INTERRUPT",
+  "raw": "**清零**",
+  "value": null,
+  "desc": "蓄力被打断",
+  "section": "CLASS",
+  "rule": "dotted_fallback"
+ }
+]

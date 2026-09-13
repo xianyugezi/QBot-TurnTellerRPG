@@ -1,0 +1,42 @@
+[
+ {
+  "key": "$C.FIELD.HYPOXIA_BAND",
+  "raw": "`[3,4]`（60/40）",
+  "value": null,
+  "desc": "薄气缺氧阈值带",
+  "section": "FIELD",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.FIELD.OVERLOAD_TICK_BAND",
+  "raw": "`[0.018,0.022]`（均值 0.02）",
+  "value": null,
+  "desc": "辉带过载 tick 带",
+  "section": "FIELD",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.FIELD.STILL_PRESS_BAND",
+  "raw": "`[0.20,0.25,0.30]` 等权（封顶 ×2.00 不动）",
+  "value": null,
+  "desc": "静压场递增三值带",
+  "section": "FIELD",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.FIELD.SYNC_WINDOW",
+  "raw": "`2` 回合（**钉死**）",
+  "value": null,
+  "desc": "封印三枢座同步判定窗",
+  "section": "FIELD",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.FIELD.WEATHER_WINDOW_BAND",
+  "raw": "`[3,4,5]` 等权 30/40/30",
+  "value": null,
+  "desc": "气象窗开合周期带",
+  "section": "FIELD",
+  "rule": "explicit"
+ }
+]

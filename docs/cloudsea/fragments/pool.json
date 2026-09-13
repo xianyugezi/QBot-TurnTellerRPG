@@ -1,0 +1,66 @@
+[
+ {
+  "key": "$C.POOL.BEAST_MIN",
+  "raw": "`3`",
+  "value": 3,
+  "desc": "普通巨兽独有招下限",
+  "section": "POOL",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.POOL.CHAINS_MIN",
+  "raw": "`5`",
+  "value": 5,
+  "desc": "每怪连段链数下限",
+  "section": "POOL",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.POOL.CHAIN_MAX",
+  "raw": "`4`",
+  "value": 4,
+  "desc": "连段链长上限",
+  "section": "POOL",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.POOL.CONFIG_ROWS",
+  "raw": "`760`",
+  "value": 760,
+  "desc": "怪挂配置行数",
+  "section": "POOL",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.POOL.FAMILIES",
+  "raw": "`12`",
+  "value": 12,
+  "desc": "骨架族数",
+  "section": "POOL",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.POOL.INDIV_MAX",
+  "raw": "`15`",
+  "value": 15,
+  "desc": "个体池招数上限",
+  "section": "POOL",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.POOL.SHARED_DEPTH",
+  "raw": "`12`",
+  "value": 12,
+  "desc": "族共享池深上限",
+  "section": "POOL",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.POOL.WEIGHT_MAX",
+  "raw": "`100`",
+  "value": 100,
+  "desc": "权重表权重上限",
+  "section": "POOL",
+  "rule": "explicit"
+ }
+]

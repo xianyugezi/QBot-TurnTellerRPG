@@ -1,0 +1,162 @@
+{
+ "source_doc": "12_全局常量表.md（设计稿仓库）",
+ "fragments": {
+  "BATTLE": {
+   "file": "battle.json",
+   "keys": 22
+  },
+  "ARCANA_MULT_MIN": {
+   "file": "arcana_mult_min.json",
+   "keys": 1
+  },
+  "AILMENT": {
+   "file": "ailment.json",
+   "keys": 31
+  },
+  "SPEED": {
+   "file": "speed.json",
+   "keys": 8
+  },
+  "RES": {
+   "file": "res.json",
+   "keys": 21
+  },
+  "BREAK": {
+   "file": "break.json",
+   "keys": 29
+  },
+  "RIPOSTE": {
+   "file": "riposte.json",
+   "keys": 12
+  },
+  "ECON": {
+   "file": "econ.json",
+   "keys": 114
+  },
+  "GROWTH": {
+   "file": "growth.json",
+   "keys": 11
+  },
+  "BALANCE": {
+   "file": "balance.json",
+   "keys": 16
+  },
+  "CUSTODY_EFFICIENCY": {
+   "file": "custody_efficiency.json",
+   "keys": 1
+  },
+  "ASYNC": {
+   "file": "async.json",
+   "keys": 10
+  },
+  "COMP": {
+   "file": "comp.json",
+   "keys": 5
+  },
+  "CLASS": {
+   "file": "class.json",
+   "keys": 19
+  },
+  "MAIN": {
+   "file": "main.json",
+   "keys": 18
+  },
+  "SURGE": {
+   "file": "surge.json",
+   "keys": 10
+  },
+  "POSTURE": {
+   "file": "posture.json",
+   "keys": 3
+  },
+  "PINNED": {
+   "file": "pinned.json",
+   "keys": 2
+  },
+  "SLOT": {
+   "file": "slot.json",
+   "keys": 6
+  },
+  "ASPECT": {
+   "file": "aspect.json",
+   "keys": 15
+  },
+  "FEAT": {
+   "file": "feat.json",
+   "keys": 5
+  },
+  "TERRAIN": {
+   "file": "terrain.json",
+   "keys": 6
+  },
+  "ZONE": {
+   "file": "zone.json",
+   "keys": 4
+  },
+  "TIDE": {
+   "file": "tide.json",
+   "keys": 12
+  },
+  "CONTENT": {
+   "file": "content.json",
+   "keys": 15
+  },
+  "NPC": {
+   "file": "npc.json",
+   "keys": 2
+  },
+  "CHAIN": {
+   "file": "chain.json",
+   "keys": 8
+  },
+  "RUNE": {
+   "file": "rune.json",
+   "keys": 9
+  },
+  "SKILL": {
+   "file": "skill.json",
+   "keys": 15
+  },
+  "FIELD": {
+   "file": "field.json",
+   "keys": 5
+  },
+  "ANODE": {
+   "file": "anode.json",
+   "keys": 17
+  },
+  "CODEX": {
+   "file": "codex.json",
+   "keys": 16
+  },
+  "ALCHEMY": {
+   "file": "alchemy.json",
+   "keys": 30
+  },
+  "DECK": {
+   "file": "deck.json",
+   "keys": 10
+  },
+  "STAMINA": {
+   "file": "stamina.json",
+   "keys": 7
+  },
+  "AILMENT_P": {
+   "file": "ailment_p.json",
+   "keys": 9
+  },
+  "BIO": {
+   "file": "bio.json",
+   "keys": 3
+  },
+  "POOL": {
+   "file": "pool.json",
+   "keys": 8
+  },
+  "FORTUNE": {
+   "file": "fortune.json",
+   "keys": 26
+  }
+ },
+ "total_keys": 561
+}

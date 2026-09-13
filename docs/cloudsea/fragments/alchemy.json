@@ -1,0 +1,252 @@
+[
+ {
+  "key": "$C.ALCHEMY.CARRY_CAP_CONSUME",
+  "raw": "`9`",
+  "value": 9,
+  "desc": "深度消耗品战前配置携带组数上限（批次 235F 申报）",
+  "section": "ALCHEMY",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ALCHEMY.CARRY_CAP_GEAR",
+  "raw": "`4`",
+  "value": 4,
+  "desc": "装备强化品（涂剂）携带件数上限（批次 235F 申报）",
+  "section": "ALCHEMY",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ALCHEMY.CARRY_CAP_PERMA",
+  "raw": "`2`",
+  "value": 2,
+  "desc": "永续品种类激活位上限（批次 235F 申报）",
+  "section": "ALCHEMY",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ALCHEMY.DEEP2_PREMIUM_CAP",
+  "raw": "`1.9`",
+  "value": 1.9,
+  "desc": "深度二段效果相对原配方上限倍率（R1 带顶键，批次 235C 申报）",
+  "section": "ALCHEMY",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ALCHEMY.DEEP2_TOTAL",
+  "raw": "`14`",
+  "value": 14,
+  "desc": "深度二段产物条目总数（批次 235C 增补）",
+  "section": "ALCHEMY",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ALCHEMY.DEEP_COST_MULT",
+  "raw": "`2`",
+  "value": 2,
+  "desc": "深度炼成材料消耗倍率",
+  "section": "ALCHEMY",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ALCHEMY.DEEP_CRAFT_QC_RANGE",
+  "raw": "`[1.00,1.10]`；熟练 Lv≥8 下沿抬 `1.05`",
+  "value": null,
+  "desc": "深度产物成色带",
+  "section": "ALCHEMY",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ALCHEMY.DEEP_FEE_BASE",
+  "raw": "`300`",
+  "value": 300,
+  "desc": "深度炼成附加费基准（批次 59 增补；R2 降档由九期 235B 落）",
+  "section": "ALCHEMY",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ALCHEMY.DEEP_PREMIUM_CAP",
+  "raw": "`1.5`",
+  "value": 1.5,
+  "desc": "深度产物效果相对原配方上限倍率",
+  "section": "ALCHEMY",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ALCHEMY.DEEP_RANK_STEP",
+  "raw": "`2`",
+  "value": 2,
+  "desc": "深度门槛相对配方可制等级步长（批次 59 增补）",
+  "section": "ALCHEMY",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ALCHEMY.DEEP_TOTAL",
+  "raw": "`42`",
+  "value": 42,
+  "desc": "深度产物独立条目总数（批次 59 增补，108 号改值）",
+  "section": "ALCHEMY",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ALCHEMY.EFF_CEIL",
+  "raw": "`1.10`",
+  "value": 1.1,
+  "desc": "调和效果带上限（Lv10）",
+  "section": "ALCHEMY",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ALCHEMY.EFF_FLOOR",
+  "raw": "`0.60`",
+  "value": 0.6,
+  "desc": "调和效果带下限（Lv1）",
+  "section": "ALCHEMY",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ALCHEMY.EFF_STEP_EARLY",
+  "raw": "`0.05`",
+  "value": 0.05,
+  "desc": "效果率步长（Lv1–5 段）",
+  "section": "ALCHEMY",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ALCHEMY.EFF_STEP_LATE",
+  "raw": "`0.06`",
+  "value": 0.06,
+  "desc": "效果率步长（Lv6–10 段）",
+  "section": "ALCHEMY",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ALCHEMY.EFF_TIER_SPLIT",
+  "raw": "`5`",
+  "value": 5,
+  "desc": "带宽分段断点",
+  "section": "ALCHEMY",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ALCHEMY.FEE_DAILY_SHARE_CAP",
+  "raw": "`0.20`",
+  "value": 0.2,
+  "desc": "炼金附加费占制作口日均上限（批次 59 增补）",
+  "section": "ALCHEMY",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ALCHEMY.FEE_QUALITY_MULT",
+  "raw": "`[1,2,3]`",
+  "value": [
+   "1",
+   "2",
+   "3"
+  ],
+  "desc": "品质档附加费乘数（批次 59 增补）",
+  "section": "ALCHEMY",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ALCHEMY.LEVEL_MAX",
+  "raw": "`10`",
+  "value": 10,
+  "desc": "熟练度等级上限",
+  "section": "ALCHEMY",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ALCHEMY.MASTERY_PER_CRAFT",
+  "raw": "`1`",
+  "value": 1,
+  "desc": "合成/战斗调和平熟练点",
+  "section": "ALCHEMY",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ALCHEMY.MASTERY_PER_DEEP",
+  "raw": "`2`",
+  "value": 2,
+  "desc": "深度炼成熟练点",
+  "section": "ALCHEMY",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ALCHEMY.MATERIAL_CLASSES",
+  "raw": "`14`",
+  "value": 14,
+  "desc": "炼金原料类别数",
+  "section": "ALCHEMY",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ALCHEMY.MIX_POSTURE_CREDIT",
+  "raw": "`1`",
+  "value": 1,
+  "desc": "战斗调和守势态势达标折算",
+  "section": "ALCHEMY",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ALCHEMY.RANKUP_STEP",
+  "raw": "`5`",
+  "value": 5,
+  "desc": "升级门槛步长",
+  "section": "ALCHEMY",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ALCHEMY.RECIPE_TOTAL",
+  "raw": "`86`",
+  "value": 86,
+  "desc": "配方总数（批次 59 增补，108/163 号改值）",
+  "section": "ALCHEMY",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ALCHEMY.RENOWN_BLUEPRINT_CRAFT_GATE",
+  "raw": "`5`",
+  "value": 5,
+  "desc": "图纸解锁的挂靠 AD1 制造次数行为锚（批次 235E 申报）",
+  "section": "ALCHEMY",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ALCHEMY.RENOWN_PER_DEEP1",
+  "raw": "`1`",
+  "value": 1,
+  "desc": "AD1 成功制造造诣点（批次 235E 申报）",
+  "section": "ALCHEMY",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ALCHEMY.RENOWN_PER_DEEP2",
+  "raw": "`3`",
+  "value": 3,
+  "desc": "AD2 成功制造造诣点（批次 235E 申报）",
+  "section": "ALCHEMY",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ALCHEMY.RENOWN_TIERS",
+  "raw": "`[0, 30, 90, 200, 400]`",
+  "value": [
+   "0",
+   "30",
+   "90",
+   "200",
+   "400"
+  ],
+  "desc": "造诣五阶阈值（批次 235E 申报）",
+  "section": "ALCHEMY",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ALCHEMY.SYNTH_FEE_BASE",
+  "raw": "`60`",
+  "value": 60,
+  "desc": "合成附加费基准（批次 59 增补；R2 降档由九期 235B 落）",
+  "section": "ALCHEMY",
+  "rule": "explicit"
+ }
+]

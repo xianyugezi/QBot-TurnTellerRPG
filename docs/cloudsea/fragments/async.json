@@ -1,0 +1,82 @@
+[
+ {
+  "key": "$C.ASYNC.COMMAND_CHOICES",
+  "raw": "`4`（`1`/`2`/`3`/`4`；D-31 四选一：`1` 主战技／`2` 绝技／`3` 守势／`4` 机动，默认裁决 6 追认，二期批次 33 滞后回填）",
+  "value": null,
+  "desc": "每回合选项数",
+  "section": "ASYNC",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ASYNC.CROSS_DAY",
+  "raw": "`true`（局状态云端快照）",
+  "value": null,
+  "desc": "跨天保留",
+  "section": "ASYNC",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ASYNC.CUSTODY_AFTER_TURNS",
+  "raw": "`2` 回合",
+  "value": null,
+  "desc": "连续无响应转代打",
+  "section": "ASYNC",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ASYNC.CUSTODY_SLOW_RATE",
+  "raw": "`0.95`（结算质量）/ `2.0`（耗时×2）",
+  "value": null,
+  "desc": "守拙档（慢但足额）",
+  "section": "ASYNC",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ASYNC.CUSTODY_SLOW_TIME_MULT",
+  "raw": "`0.95`（结算质量）/ `2.0`（耗时×2）",
+  "value": null,
+  "desc": "守拙档（慢但足额）",
+  "section": "ASYNC",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ASYNC.DECISION_SECONDS",
+  "raw": "`≤30` 秒",
+  "value": null,
+  "desc": "单次决策时长",
+  "section": "ASYNC",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ASYNC.DECISION_TIMEOUT",
+  "raw": "`30` 分钟 → 战前预案 ①（常规回合二段；分场景表见 `08` §M8.1）",
+  "value": null,
+  "desc": "超时阈值",
+  "section": "ASYNC",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ASYNC.ONBOARD_SECONDS",
+  "raw": "`≤60` 秒",
+  "value": null,
+  "desc": "进群到开打",
+  "section": "ASYNC",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ASYNC.PRESET_SLOTS",
+  "raw": "`3`",
+  "value": 3,
+  "desc": "预设套数",
+  "section": "ASYNC",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ASYNC.REPORT_LINES",
+  "raw": "见 §M8.6 不刷屏约定",
+  "value": null,
+  "desc": "战报行数上限",
+  "section": "ASYNC",
+  "rule": "fallback"
+ }
+]

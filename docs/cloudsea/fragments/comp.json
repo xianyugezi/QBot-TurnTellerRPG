@@ -1,0 +1,42 @@
+[
+ {
+  "key": "$C.COMP.AILMENT.EHP_SCALE",
+  "raw": "由 `X_VULN_MAX` 与直伤占比推导，**运行时算，不落表**",
+  "value": null,
+  "desc": "拆除异常后 EHP 缩放",
+  "section": "COMP",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.COMP.COMPANION.EHP_SCALE",
+  "raw": "`1.10 / 1.60 = 0.6875`",
+  "value": null,
+  "desc": "拆除同行兽后 EHP 缩放",
+  "section": "COMP",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.COMP.DROP.DIRECT_GRANT_RATE",
+  "raw": "由目标养成曲线反推",
+  "value": null,
+  "desc": "拆除掉落后直给率",
+  "section": "COMP",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.COMP.OVERRIDE.CHARGE_COMP",
+  "raw": "`1.50`",
+  "value": 1.5,
+  "desc": "拆除压制后绝技充能补偿",
+  "section": "COMP",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.COMP.PHASE.SINGLE_TTK_CAP",
+  "raw": "`12` 回合",
+  "value": null,
+  "desc": "拆除阶段机后 TTK 上限",
+  "section": "COMP",
+  "rule": "dotted_fallback"
+ }
+]

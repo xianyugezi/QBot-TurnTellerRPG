@@ -1,0 +1,74 @@
+[
+ {
+  "key": "$C.RUNE.AWAKEN_CORE",
+  "raw": "结晶 `×3` ＋ 同系硬核 `×1`",
+  "value": null,
+  "desc": "觉醒消耗",
+  "section": "RUNE",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.RUNE.MAIN_BONUS_ADV",
+  "raw": "`0.10` / `0.15`",
+  "value": null,
+  "desc": "符文主属性基础值",
+  "section": "RUNE",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.RUNE.RUNE.ATTUNE_COST_STEPS",
+  "raw": "`[15, 15, 20, 25, 30]`（Σ105）",
+  "value": null,
+  "desc": "活化碎屑费阶梯",
+  "section": "RUNE",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.RUNE.RUNE.ATTUNE_MAX_LEVEL",
+  "raw": "`5`",
+  "value": 5,
+  "desc": "活化层数上限",
+  "section": "RUNE",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.RUNE.RUNE.ATTUNE_STEP_BONUS",
+  "raw": "`[0.04, 0.04, 0.04, 0.05, 0.05]`（满 +22%）/ 绝技类 `[0.03, 0.03, 0.03, 0.04, 0.04]`（满 +17%）",
+  "value": null,
+  "desc": "活化逐级收益阶梯",
+  "section": "RUNE",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.RUNE.RUNE.AWAKEN_CRYSTAL",
+  "raw": "结晶 `×3` ＋ 同系硬核 `×1`",
+  "value": null,
+  "desc": "觉醒消耗",
+  "section": "RUNE",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.RUNE.RUNE.MAIN_BONUS_COMMON",
+  "raw": "`0.10` / `0.15`",
+  "value": null,
+  "desc": "符文主属性基础值",
+  "section": "RUNE",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.RUNE.RUNE.REFINE_A_BONUS",
+  "raw": "`0.08`",
+  "value": 0.08,
+  "desc": "精炼 A 主属性追加",
+  "section": "RUNE",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.RUNE._TECH",
+  "raw": "`[0.04, 0.04, 0.04, 0.05, 0.05]`（满 +22%）/ 绝技类 `[0.03, 0.03, 0.03, 0.04, 0.04]`（满 +17%）",
+  "value": null,
+  "desc": "活化逐级收益阶梯",
+  "section": "RUNE",
+  "rule": "fallback"
+ }
+]

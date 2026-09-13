@@ -1,0 +1,170 @@
+[
+ {
+  "key": "$C.RES.ARCANA_FULL",
+  "raw": "`100`",
+  "value": 100,
+  "desc": "绝技槽满值",
+  "section": "RES",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.RES.ARCANA_ON_BREAK",
+  "raw": "`15`",
+  "value": 15,
+  "desc": "部件破坏充能",
+  "section": "RES",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.RES.ARCANA_ON_COMPANION",
+  "raw": "`5`",
+  "value": 5,
+  "desc": "同行兽支援充能",
+  "section": "RES",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.RES.ARCANA_ON_OVERRIDE",
+  "raw": "`20`",
+  "value": 20,
+  "desc": "压制成功充能",
+  "section": "RES",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.RES.ARCANA_ON_RIPOSTE",
+  "raw": "`25`",
+  "value": 25,
+  "desc": "瞬御成功充能",
+  "section": "RES",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.RES.ARCANA_OVERFLOW_KEEP",
+  "raw": "`0.40`",
+  "value": 0.4,
+  "desc": "满槽后溢出保留率",
+  "section": "RES",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.RES.ARCANA_PER_DMG",
+  "raw": "`6`",
+  "value": 6,
+  "desc": "伤害充能",
+  "section": "RES",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.RES.ARCANA_PER_TAKEN",
+  "raw": "`4`",
+  "value": 4,
+  "desc": "承伤充能",
+  "section": "RES",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.RES.ARCANA_PER_TURN",
+  "raw": "`3`",
+  "value": 3,
+  "desc": "自然充能",
+  "section": "RES",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.RES.ARCANA_WINDOW_GAIN",
+  "raw": "`0.45`",
+  "value": 0.45,
+  "desc": "等窗口 vs 满即放期望差",
+  "section": "RES",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.RES.RU_FULL",
+  "raw": "`100`",
+  "value": 100,
+  "desc": "资源单位满值",
+  "section": "RES",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.RES.WIND_AIR_HARDNESS_BONUS",
+  "raw": "`0.20`",
+  "value": 0.2,
+  "desc": "滞空硬度加成",
+  "section": "RES",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.RES.WIND_AIR_OVERRIDE_MULT",
+  "raw": "`1.5`",
+  "value": 1.5,
+  "desc": "滞空压制倍率",
+  "section": "RES",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.RES.WIND_AIR_TAKEN_BONUS",
+  "raw": "`0.20`",
+  "value": 0.2,
+  "desc": "滞空受击加成",
+  "section": "RES",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.RES.WIND_CAP",
+  "raw": "`3`",
+  "value": 3,
+  "desc": "风缆上限",
+  "section": "RES",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.RES.WIND_CAP_GALE",
+  "raw": "`4`",
+  "value": 4,
+  "desc": "御风流风缆上限",
+  "section": "RES",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.RES.WIND_COST_AIR",
+  "raw": "`1`",
+  "value": 1,
+  "desc": "滞空进入/维持",
+  "section": "RES",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.RES.WIND_COST_MOVE",
+  "raw": "`1`",
+  "value": 1,
+  "desc": "位移消耗",
+  "section": "RES",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.RES.WIND_COST_RETREAT",
+  "raw": "`2`",
+  "value": 2,
+  "desc": "撤离消耗",
+  "section": "RES",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.RES.WIND_PER_TURN",
+  "raw": "`2`",
+  "value": 2,
+  "desc": "风缆每回合恢复",
+  "section": "RES",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.RES.WIND_ZERO_PENALTY",
+  "raw": "`0.20`",
+  "value": 0.2,
+  "desc": "归零被 🌀 命中加成",
+  "section": "RES",
+  "rule": "citation"
+ }
+]

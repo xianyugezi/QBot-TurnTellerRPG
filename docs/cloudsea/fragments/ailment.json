@@ -1,0 +1,258 @@
+[
+ {
+  "key": "$C.AILMENT.FRENZY_CC_DURATION_MULT",
+  "raw": "`0.50`",
+  "value": 0.5,
+  "desc": "狂澜控制时长",
+  "section": "AILMENT",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.AILMENT.IMMUNE",
+  "raw": "`1.5 / 1.0 / 0.5 / 0.25 / 0 / −1`",
+  "value": null,
+  "desc": "抗性档位",
+  "section": "AILMENT",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.AILMENT.NORMAL",
+  "raw": "`1.5 / 1.0 / 0.5 / 0.25 / 0 / −1`",
+  "value": null,
+  "desc": "抗性档位",
+  "section": "AILMENT",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.AILMENT.PHASE_INHERIT",
+  "raw": "`0.50`",
+  "value": 0.5,
+  "desc": "阶段转换保留比",
+  "section": "AILMENT",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.AILMENT.PHASE_T_UP_ANGRY",
+  "raw": "`0.15`",
+  "value": 0.15,
+  "desc": "激怒阶段 T 提升",
+  "section": "AILMENT",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.AILMENT.PHASE_T_UP_FRENZY",
+  "raw": "`0.30`",
+  "value": 0.3,
+  "desc": "狂澜阶段 T 提升",
+  "section": "AILMENT",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.AILMENT.REFLECT",
+  "raw": "`1.5 / 1.0 / 0.5 / 0.25 / 0 / −1`",
+  "value": null,
+  "desc": "抗性档位",
+  "section": "AILMENT",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.AILMENT.REFLECT_DAMAGE",
+  "raw": "`积蓄 ×0.6`",
+  "value": null,
+  "desc": "反弹对施加者伤害",
+  "section": "AILMENT",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.AILMENT.REFLECT_SHIELD_CAP",
+  "raw": "`8000`",
+  "value": 8000,
+  "desc": "反弹护盾上限",
+  "section": "AILMENT",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.AILMENT.REFLECT_TO_SHIELD",
+  "raw": "`0.50`",
+  "value": 0.5,
+  "desc": "反弹转护盾比",
+  "section": "AILMENT",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.AILMENT.RESIST",
+  "raw": "`1.5 / 1.0 / 0.5 / 0.25 / 0 / −1`",
+  "value": null,
+  "desc": "抗性档位",
+  "section": "AILMENT",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.AILMENT.RESIST_WEAK",
+  "raw": "`1.5 / 1.0 / 0.5 / 0.25 / 0 / −1`",
+  "value": null,
+  "desc": "抗性档位",
+  "section": "AILMENT",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.AILMENT.SCALE_ABERRANT",
+  "raw": "",
+  "value": null,
+  "desc": "`1.30`",
+  "section": "AILMENT",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.AILMENT.SCALE_BEAST",
+  "raw": "",
+  "value": null,
+  "desc": "`1.00`",
+  "section": "AILMENT",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.AILMENT.SCALE_COMMON",
+  "raw": "",
+  "value": null,
+  "desc": "`0.60`",
+  "section": "AILMENT",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.AILMENT.SCALE_MINION",
+  "raw": "",
+  "value": null,
+  "desc": "`0.35`",
+  "section": "AILMENT",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.AILMENT.SCALE_TAINTED",
+  "raw": "",
+  "value": null,
+  "desc": "`1.80`",
+  "section": "AILMENT",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.AILMENT.STRONG",
+  "raw": "`1.5 / 1.0 / 0.5 / 0.25 / 0 / −1`",
+  "value": null,
+  "desc": "抗性档位",
+  "section": "AILMENT",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.AILMENT.TIDE_MULT",
+  "raw": "`[1.00, 1.10, 1.26, 1.39, 1.56, 1.75, 1.95]`",
+  "value": [
+   "1.00",
+   "1.10",
+   "1.26",
+   "1.39",
+   "1.56",
+   "1.75",
+   "1.95"
+  ],
+  "desc": "积蓄阈值潮位乘数",
+  "section": "AILMENT",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.AILMENT.TRIGGER_INC_CAP",
+  "raw": "`×3.0` 基准",
+  "value": null,
+  "desc": "阈值递增封顶",
+  "section": "AILMENT",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.AILMENT.X_VULN_MIN",
+  "raw": "`1.00` / `1.60`",
+  "value": null,
+  "desc": "异常易伤区间",
+  "section": "BATTLE",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.AILMENT.异常",
+  "raw": "T",
+  "value": null,
+  "desc": "枚举",
+  "section": "AILMENT",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.AILMENT.沉眠",
+  "raw": "340",
+  "value": 340,
+  "desc": "`AIL.SLEEP`",
+  "section": "AILMENT",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.AILMENT.泥陷",
+  "raw": "200",
+  "value": 200,
+  "desc": "`AIL.MIRE`",
+  "section": "AILMENT",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.AILMENT.溃甲",
+  "raw": "240",
+  "value": 240,
+  "desc": "`AIL.ARMOR_BREAK`",
+  "section": "AILMENT",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.AILMENT.爆燃",
+  "raw": "260",
+  "value": 260,
+  "desc": "`AIL.BLAST`",
+  "section": "AILMENT",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.AILMENT.腐蚀",
+  "raw": "220",
+  "value": 220,
+  "desc": "`AIL.CORROSION`",
+  "section": "AILMENT",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.AILMENT.雷殛",
+  "raw": "180",
+  "value": 180,
+  "desc": "`AIL.THUNDERSTRIKE`",
+  "section": "AILMENT",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.AILMENT.霜缚",
+  "raw": "280",
+  "value": 280,
+  "desc": "`AIL.FROSTBIND`",
+  "section": "AILMENT",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.AILMENT.风蚀",
+  "raw": "210",
+  "value": 210,
+  "desc": "`AIL.WINDEROSION`",
+  "section": "AILMENT",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.AILMENT.麻痹",
+  "raw": "300",
+  "value": 300,
+  "desc": "`AIL.PARALYSIS`",
+  "section": "AILMENT",
+  "rule": "fallback"
+ }
+]

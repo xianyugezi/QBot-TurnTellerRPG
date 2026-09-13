@@ -1,0 +1,122 @@
+[
+ {
+  "key": "$C.CONTENT.ARMOR_PIECE",
+  "raw": "`504` 套 / `3024` 件",
+  "value": null,
+  "desc": "防具套装总数/总件数",
+  "section": "TIDE",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.CONTENT.ARMOR_SET_FULL",
+  "raw": "`504` 套 / `3024` 件",
+  "value": null,
+  "desc": "防具套装总数/总件数",
+  "section": "TIDE",
+  "rule": "dotted"
+ },
+ {
+  "key": "$C.CONTENT.CHAPTERS",
+  "raw": "`18`",
+  "value": 18,
+  "desc": "主线章数",
+  "section": "TIDE",
+  "rule": "dotted"
+ },
+ {
+  "key": "$C.CONTENT.CHARM_AFFIX_POOL",
+  "raw": "`26`",
+  "value": 26,
+  "desc": "护符词条池规模",
+  "section": "TIDE",
+  "rule": "dotted"
+ },
+ {
+  "key": "$C.CONTENT.CODEXQUESTS",
+  "raw": "`1408`",
+  "value": 1408,
+  "desc": "K 线典录链任务总量",
+  "section": "TIDE",
+  "rule": "dotted"
+ },
+ {
+  "key": "$C.CONTENT.PQUESTS",
+  "raw": "`160`",
+  "value": 160,
+  "desc": "P 线 NPC 个人线任务总量",
+  "section": "TIDE",
+  "rule": "dotted"
+ },
+ {
+  "key": "$C.CONTENT.QUESTS",
+  "raw": "`544`",
+  "value": 544,
+  "desc": "任务总量",
+  "section": "TIDE",
+  "rule": "dotted"
+ },
+ {
+  "key": "$C.CONTENT.SET_CLOUD_COUNT",
+  "raw": "`6` / `22`",
+  "value": null,
+  "desc": "云兽数/商店套等级档数",
+  "section": "TIDE",
+  "rule": "dotted"
+ },
+ {
+  "key": "$C.CONTENT.SET_FILL_SERIES",
+  "raw": "`1/2/3`（按★1–3/4–6/7–9）/ `3`（2–4 取中）/ `4`",
+  "value": null,
+  "desc": "巨兽系套率/王骸套率/填充套数",
+  "section": "TIDE",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.CONTENT.SET_GREAT_RATE",
+  "raw": "`1/2/3`（按★1–3/4–6/7–9）/ `3`（2–4 取中）/ `4`",
+  "value": null,
+  "desc": "巨兽系套率/王骸套率/填充套数",
+  "section": "TIDE",
+  "rule": "dotted"
+ },
+ {
+  "key": "$C.CONTENT.SET_KING_RATE",
+  "raw": "`1/2/3`（按★1–3/4–6/7–9）/ `3`（2–4 取中）/ `4`",
+  "value": null,
+  "desc": "巨兽系套率/王骸套率/填充套数",
+  "section": "TIDE",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.CONTENT.SET_SHOP_TIERS",
+  "raw": "`6` / `22`",
+  "value": null,
+  "desc": "云兽数/商店套等级档数",
+  "section": "TIDE",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.CONTENT.TARGETS",
+  "raw": "`760`",
+  "value": 760,
+  "desc": "可打目标",
+  "section": "TIDE",
+  "rule": "dotted"
+ },
+ {
+  "key": "$C.CONTENT.VQUESTS",
+  "raw": "`2139`",
+  "value": 2139,
+  "desc": "V 线变化任务总量",
+  "section": "TIDE",
+  "rule": "dotted"
+ },
+ {
+  "key": "$C.CONTENT.WEAPON_TOTAL",
+  "raw": "`3179`",
+  "value": 3179,
+  "desc": "武器总条目",
+  "section": "TIDE",
+  "rule": "dotted"
+ }
+]

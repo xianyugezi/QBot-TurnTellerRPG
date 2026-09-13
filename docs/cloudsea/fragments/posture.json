@@ -1,0 +1,26 @@
+[
+ {
+  "key": "$C.POSTURE.REVEAL_LEAD",
+  "raw": "`1` 回合",
+  "value": null,
+  "desc": "态势预告提前量",
+  "section": "SURGE",
+  "rule": "dotted"
+ },
+ {
+  "key": "$C.POSTURE.RIPOSTE_MULT",
+  "raw": "`0.35`",
+  "value": 0.35,
+  "desc": "反扑伤害系数",
+  "section": "SURGE",
+  "rule": "dotted"
+ },
+ {
+  "key": "$C.POSTURE.VALUE_RANGE",
+  "raw": "`0` – `3`",
+  "value": null,
+  "desc": "态势需求值域",
+  "section": "SURGE",
+  "rule": "dotted"
+ }
+]

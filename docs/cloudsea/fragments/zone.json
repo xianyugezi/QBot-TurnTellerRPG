@@ -1,0 +1,34 @@
+[
+ {
+  "key": "$C.ZONE.ENABLE_SCOPE",
+  "raw": "`异相种 / 蚀潮` 灰度",
+  "value": null,
+  "desc": "启用范围",
+  "section": "FEAT",
+  "rule": "dotted"
+ },
+ {
+  "key": "$C.ZONE.MOVE_COST",
+  "raw": "`1` 风缆",
+  "value": null,
+  "desc": "扇区间移动",
+  "section": "FEAT",
+  "rule": "dotted"
+ },
+ {
+  "key": "$C.ZONE.REAR_BONUS",
+  "raw": "`+0.30`",
+  "value": null,
+  "desc": "背面易伤",
+  "section": "FEAT",
+  "rule": "dotted"
+ },
+ {
+  "key": "$C.ZONE.SECTORS",
+  "raw": "`正面 / 侧翼 / 背面`",
+  "value": null,
+  "desc": "扇区",
+  "section": "FEAT",
+  "rule": "dotted"
+ }
+]

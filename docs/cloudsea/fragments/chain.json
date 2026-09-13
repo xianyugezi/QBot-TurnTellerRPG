@@ -1,0 +1,66 @@
+[
+ {
+  "key": "$C.CHAIN.EDGE_MAX",
+  "raw": "`150`",
+  "value": 150,
+  "desc": "跨链影响边数上限",
+  "section": "TIDE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.CHAIN.ENDING_COUNT",
+  "raw": "`3`",
+  "value": 3,
+  "desc": "长链结尾枚举数",
+  "section": "TIDE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.CHAIN.LEN_LONG_MIN",
+  "raw": "`18`",
+  "value": 18,
+  "desc": "长链条目下限",
+  "section": "TIDE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.CHAIN.LEN_MID_MAX",
+  "raw": "`17`",
+  "value": 17,
+  "desc": "中链条目上限",
+  "section": "TIDE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.CHAIN.LEN_MID_MIN",
+  "raw": "`9`",
+  "value": 9,
+  "desc": "中链条目下限",
+  "section": "TIDE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.CHAIN.LEN_SHORT_MAX",
+  "raw": "`8`",
+  "value": 8,
+  "desc": "短链条目上限",
+  "section": "TIDE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.CHAIN.LONG_M_MIN",
+  "raw": "`3`",
+  "value": 3,
+  "desc": "长链 M 节点下限",
+  "section": "TIDE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.CHAIN.MID_M_MIN",
+  "raw": "`2`",
+  "value": 2,
+  "desc": "中链 M 节点下限",
+  "section": "TIDE",
+  "rule": "explicit"
+ }
+]

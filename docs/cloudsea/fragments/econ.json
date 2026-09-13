@@ -1,0 +1,956 @@
+[
+ {
+  "key": "$C.ECON.2",
+  "raw": "1 枚 `×2` / 2 枚 `×3` / 3 枚 `×5`",
+  "value": null,
+  "desc": "档位倍率",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.3",
+  "raw": "1 枚 `×2` / 2 枚 `×3` / 3 枚 `×5`",
+  "value": null,
+  "desc": "档位倍率",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.ACT_ASSET_TU2",
+  "raw": "`20`/`10`/`30`/`40`",
+  "value": null,
+  "desc": "活动资产点（港务）",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.ACT_HONOR_FE1",
+  "raw": "`45`/`50`/`65`/`75`/`90`/`100`/`150`",
+  "value": null,
+  "desc": "赛季活动勋梯·风狂浩",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.ACT_HONOR_TU1",
+  "raw": "`20`/`20`/`30`/`55`/`35`",
+  "value": null,
+  "desc": "赛季活动勋梯·湍怒",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.APPRAISAL_FEE",
+  "raw": "`500` 金/次（日限 10）",
+  "value": null,
+  "desc": "回响重铸鉴定费",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.ARMOR_CRAFT_GOLD_DAILY",
+  "raw": "`34000` / `7000` / `5000` / `2000`，合计＝`GOLD_DAILY_COST 48000`（批次 146 改判 E2 基准日平账，原 `18000/12000/10000/6000` 合计 `46000`；18_/06 §三·2 明细重排归 147 批）",
+  "value": null,
+  "desc": "金币消耗侧日均四口",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.BEAST_ADV_RUNE_RATE",
+  "raw": "`0.05`/场（首破必出 ×1 另计）",
+  "value": null,
+  "desc": "蚀潮巨兽窗上级符文掉率",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.BOSS_FIRSTBREAK_GOLD_BASE",
+  "raw": "`500`",
+  "value": 500,
+  "desc": "Boss 首破追加金基数",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.BREAK_GOLD_DAILY",
+  "raw": "`34000` / `7000` / `5000` / `2000`，合计＝`GOLD_DAILY_COST 48000`（批次 146 改判 E2 基准日平账，原 `18000/12000/10000/6000` 合计 `46000`；18_/06 §三·2 明细重排归 147 批）",
+  "value": null,
+  "desc": "金币消耗侧日均四口",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.CHAPTER_MILESTONE_GOLD",
+  "raw": "`[2500, 4000, 6000]`",
+  "value": [
+   "2500",
+   "4000",
+   "6000"
+  ],
+  "desc": "章节里程碑金",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.CODEX_PAGE_MONTHLY",
+  "raw": "`3` 页/月",
+  "value": null,
+  "desc": "图鉴 90% 档月供残页",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.CRAFT_GOLD_DAILY",
+  "raw": "`34000` / `7000` / `5000` / `2000`，合计＝`GOLD_DAILY_COST 48000`（批次 146 改判 E2 基准日平账，原 `18000/12000/10000/6000` 合计 `46000`；18_/06 §三·2 明细重排归 147 批）",
+  "value": null,
+  "desc": "金币消耗侧日均四口",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.DROP_TIDE_MULT_UNCOMMON",
+  "raw": "`[1.00, 1.12, 1.20, 1.32]` / `[1.00, 1.125, 1.375, 1.50]` / `[1.00, 1.00, 1.25, 1.50]`",
+  "value": [
+   "1.00",
+   "1.12",
+   "1.20",
+   "1.32]` / `[1.00",
+   "1.125",
+   "1.375",
+   "1.50]` / `[1.00",
+   "1.00",
+   "1.25",
+   "1.50"
+  ],
+  "desc": "掉率带潮位分层乘区",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.DROP_T_COMMON",
+  "raw": "`0.60` / `0.25` / `0.08` / `0.02`（18_/06 分册 §一，批次 45 落表）",
+  "value": null,
+  "desc": "素材四档掉率带",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.DROP_T_RARE",
+  "raw": "`0.60` / `0.25` / `0.08` / `0.02`（18_/06 分册 §一，批次 45 落表）",
+  "value": null,
+  "desc": "素材四档掉率带",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.DROP_T_RELIC",
+  "raw": "`0.60` / `0.25` / `0.08` / `0.02`（18_/06 分册 §一，批次 45 落表）",
+  "value": null,
+  "desc": "素材四档掉率带",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.DROP_T_UNCOMMON",
+  "raw": "`0.60` / `0.25` / `0.08` / `0.02`（18_/06 分册 §一，批次 45 落表）",
+  "value": null,
+  "desc": "素材四档掉率带",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.EC_TAG_TARGET",
+  "raw": "`1.00`（〔EC-S〕／〔EC-R〕全库奖励行打标，批次 150 断言 c 族收口）",
+  "value": null,
+  "desc": "EC 标签覆盖目标",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.EQUIV_BEAST",
+  "raw": "`1.5`",
+  "value": 1.5,
+  "desc": "巨兽单场当量",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.EQUIV_MATERIAL_STAGE",
+  "raw": "`0.6`",
+  "value": 0.6,
+  "desc": "素材本当量",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.EQUIV_RUIN_DEEP",
+  "raw": "`1.0`",
+  "value": 1.0,
+  "desc": "遗迹深层当量",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.EXP_NO_MULTIPLY",
+  "raw": "`true`",
+  "value": null,
+  "desc": "经验不吃丰饶符",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.FE2",
+  "raw": "`45`/`50`/`65`/`75`/`90`/`100`/`150`",
+  "value": null,
+  "desc": "赛季活动勋梯·风狂浩",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.FE3",
+  "raw": "`45`/`50`/`65`/`75`/`90`/`100`/`150`",
+  "value": null,
+  "desc": "赛季活动勋梯·风狂浩",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.FORGE_CAP_QUENCH_FEE",
+  "raw": "`1350`",
+  "value": 1350,
+  "desc": "封顶淬火费",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.FORGE_COST_BASE",
+  "raw": "`60 ＋ 30 × 当前等级`（**2026-09-12 调整二提案1 断点化改判**：旧 `150＋30×当前等级` 留档；Lv0→60 Σ＝62,100 逐分守恒，四口摊销零改动）",
+  "value": null,
+  "desc": "单次强化费",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.FORGE_COST_PER_LEVEL",
+  "raw": "`60 ＋ 30 × 当前等级`（**2026-09-12 调整二提案1 断点化改判**：旧 `150＋30×当前等级` 留档；Lv0→60 Σ＝62,100 逐分守恒，四口摊销零改动）",
+  "value": null,
+  "desc": "单次强化费",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.FORGE_GOLD_DAILY",
+  "raw": "`34000` / `7000` / `5000` / `2000`，合计＝`GOLD_DAILY_COST 48000`（批次 146 改判 E2 基准日平账，原 `18000/12000/10000/6000` 合计 `46000`；18_/06 §三·2 明细重排归 147 批）",
+  "value": null,
+  "desc": "金币消耗侧日均四口",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.GINI_TARGET",
+  "raw": "`≤0.35`（`0.40` 警戒）",
+  "value": null,
+  "desc": "全服基尼目标",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.GOLDEN_COMMISSION_DURATION_DAYS",
+  "raw": "任务金 `×2.5`（E2＝3,000〔EC-S〕）；存续 `5` 天（vs 常规 3）",
+  "value": null,
+  "desc": "行商大单",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.GOLDEN_COMMISSION_MULT",
+  "raw": "任务金 `×2.5`（E2＝3,000〔EC-S〕）；存续 `5` 天（vs 常规 3）",
+  "value": null,
+  "desc": "行商大单",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.GOLD_BALANCE_ALERT",
+  "raw": "`0.15`",
+  "value": 0.15,
+  "desc": "余额周增速警戒",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.GOLD_BALANCE_ALERT_CARRIER",
+  "raw": "`潮集弹性补架`",
+  "value": null,
+  "desc": "余额警戒执行载体",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.GOLD_DAILY_COST",
+  "raw": "`48000`（批次 146 改判 E2 基准日平账，原 `46000` 留档）",
+  "value": null,
+  "desc": "金币日消耗",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.GOLD_DAILY_INCOME",
+  "raw": "`48000`（批次 146 改判 E2 基准日，原 `42000` 留档裁决 9）",
+  "value": null,
+  "desc": "金币日产出",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.GOLD_NO_MULTIPLY",
+  "raw": "`true`",
+  "value": null,
+  "desc": "金币不吃丰饶符",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.GOLD_RATIO_TARGET",
+  "raw": "`+15%`～`+35%`（改判注：原文「产耗比目标 `1 : 1.10` – `1 : 1.20`（轻微通缩）」保留留档；通缩口径让位于净余率口径，`14` 号 §十 #4 登记，裁决 9）",
+  "value": null,
+  "desc": "净余率目标（原「产耗比目标」）",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.GUIDE_QUEST_GOLD",
+  "raw": "`7200` 金（走既有委托板任务口零新发放机制，补新手剥取弱势；裁决 9，`06` §M6.7）",
+  "value": null,
+  "desc": "E1 引导任务口",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.GUILD_ADV_RUNE_PRICE",
+  "raw": "`300` 勋/枚；每版本限 `3` 枚",
+  "value": null,
+  "desc": "公会勋·限定上级符文",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.GUILD_ADV_RUNE_QUOTA",
+  "raw": "`300` 勋/枚；每版本限 `3` 枚",
+  "value": null,
+  "desc": "公会勋·限定上级符文",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.GUILD_AWAKEN_CRYSTAL_PRICE",
+  "raw": "`100` 勋/枚（周限 2，觉醒仍需硬核 ×1）/ `40` 勋/箱（周限 3，碎屑×20＋食材×2）",
+  "value": null,
+  "desc": "公会勋·觉醒结晶/潮息补给箱",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.GUILD_DISPLAY_SLOT_PRICE",
+  "raw": "`120` 勋/式（季轮换 2 式）/ `400` 勋（一次性）/ `150` 勋/格（共 6 格）",
+  "value": null,
+  "desc": "公会勋·涂装/鎏金木牌/陈列格",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.GUILD_ORE_PRICE",
+  "raw": "`60` 勋/枚；`80` 勋/枚（残片周限 **3→5**，2026-09-12 调整二提案四：149 改软口径＝每周补架 5 片，解封真闸在封印核 pity 不破闸）",
+  "value": null,
+  "desc": "公会勋·精炼矿石/遗械残片",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.GUILD_PAINT_PRICE",
+  "raw": "`120` 勋/式（季轮换 2 式）/ `400` 勋（一次性）/ `150` 勋/格（共 6 格）",
+  "value": null,
+  "desc": "公会勋·涂装/鎏金木牌/陈列格",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.GUILD_PLAQUE_PRICE",
+  "raw": "`120` 勋/式（季轮换 2 式）/ `400` 勋（一次性）/ `150` 勋/格（共 6 格）",
+  "value": null,
+  "desc": "公会勋·涂装/鎏金木牌/陈列格",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.GUILD_SHARD_PRICE",
+  "raw": "`60` 勋/枚；`80` 勋/枚（残片周限 **3→5**，2026-09-12 调整二提案四：149 改软口径＝每周补架 5 片，解封真闸在封印核 pity 不破闸）",
+  "value": null,
+  "desc": "公会勋·精炼矿石/遗械残片",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.GUILD_SUPPLY_BOX_PRICE",
+  "raw": "`100` 勋/枚（周限 2，觉醒仍需硬核 ×1）/ `40` 勋/箱（周限 3，碎屑×20＋食材×2）",
+  "value": null,
+  "desc": "公会勋·觉醒结晶/潮息补给箱",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.HA1",
+  "raw": "`45`/`50`/`65`/`75`/`90`/`100`/`150`",
+  "value": null,
+  "desc": "赛季活动勋梯·风狂浩",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.HA2",
+  "raw": "`45`/`50`/`65`/`75`/`90`/`100`/`150`",
+  "value": null,
+  "desc": "赛季活动勋梯·风狂浩",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.HARVEST_BASE",
+  "raw": "`3`（部件破坏另必掉 1，`03` §M3.1）",
+  "value": null,
+  "desc": "每次讨伐剥取保底次数",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.HARVEST_PARTY_BONUS",
+  "raw": "`+1`（≥2 人剥取位 3→4）",
+  "value": null,
+  "desc": "多人剥取位加成",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.HARVEST_SKILL_CHANCE",
+  "raw": "`{部件≥2处:0.40, <2处:0.20}`",
+  "value": null,
+  "desc": "追加剥取掷率",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.KU1",
+  "raw": "`45`/`50`/`65`/`75`/`90`/`100`/`150`",
+  "value": null,
+  "desc": "赛季活动勋梯·风狂浩",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.KU2",
+  "raw": "`45`/`50`/`65`/`75`/`90`/`100`/`150`",
+  "value": null,
+  "desc": "赛季活动勋梯·风狂浩",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.METER_TIER1_GOLD",
+  "raw": "`800` / `1000` / `2400`（100% 档 **1800→2400**，2026-09-12 调整二提案3 大跳；30/60% 档不动）",
+  "value": null,
+  "desc": "蚀潮计量条 30/60/100% 档金币",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.METER_TIER1_GUILD_FIRST",
+  "raw": "`5`",
+  "value": 5,
+  "desc": "计量条 30% 档首达勋",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.METER_TIER2_GOLD",
+  "raw": "`800` / `1000` / `2400`（100% 档 **1800→2400**，2026-09-12 调整二提案3 大跳；30/60% 档不动）",
+  "value": null,
+  "desc": "蚀潮计量条 30/60/100% 档金币",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.METER_TIER2_GUILD",
+  "raw": "`20` / `60`（100% 档 **50→60**，调整二提案3；60% 档不动）",
+  "value": null,
+  "desc": "计量条 60/100% 档公会勋",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.METER_TIER3_GOLD",
+  "raw": "`800` / `1000` / `2400`（100% 档 **1800→2400**，2026-09-12 调整二提案3 大跳；30/60% 档不动）",
+  "value": null,
+  "desc": "蚀潮计量条 30/60/100% 档金币",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.METER_TIER3_GUILD",
+  "raw": "`20` / `60`（100% 档 **50→60**，调整二提案3；60% 档不动）",
+  "value": null,
+  "desc": "计量条 60/100% 档公会勋",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.METER_WEEKLY_FIRST_BONUS",
+  "raw": "丰饶符 `×2` ＋遗械残片 `×1`",
+  "value": null,
+  "desc": "计量条周首仪式奖",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.NU1",
+  "raw": "`20`/`20`/`30`/`55`/`35`",
+  "value": null,
+  "desc": "赛季活动勋梯·湍怒",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.NU2",
+  "raw": "`20`/`20`/`30`/`55`/`35`",
+  "value": null,
+  "desc": "赛季活动勋梯·湍怒",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.NU3",
+  "raw": "`20`/`20`/`30`/`55`/`35`",
+  "value": null,
+  "desc": "赛季活动勋梯·湍怒",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.PARTY_DROP_ROLL_BONUS",
+  "raw": "`1` 次（≥2 人即得、不随人数增减）/ `{杂兽:COMMON, 常规:COMMON, 巨兽:UNCOMMON, 异相种:RARE, 蚀潮:RARE}`",
+  "value": null,
+  "desc": "多人固定加骰",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.PARTY_DROP_TIER_MAP",
+  "raw": "`1` 次（≥2 人即得、不随人数增减）/ `{杂兽:COMMON, 常规:COMMON, 巨兽:UNCOMMON, 异相种:RARE, 蚀潮:RARE}`",
+  "value": null,
+  "desc": "多人固定加骰",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.PITY_SHAPE_SEAL",
+  "raw": "封印核＝递进三阶（基率 0.02、第 10 空轮起 0.04、第 20 空轮起 0.06、硬保底 30）/ 觉醒硬核＝软提升 `p(k)=0.02×(1+0.10×(k−1))`＋硬保底 30 / 典录域引信物＝硬保底 **18**＋域链第 1 环后 10 场掉率 ×2",
+  "value": null,
+  "desc": "RELIC 三系保底形态",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.POOL_SHARD_BONUS",
+  "raw": "`0.25`（异相种每场保底 1 之外的第 2 片概率）",
+  "value": null,
+  "desc": "轮替池遗械残片追加率",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.RECAST_DESTROY",
+  "raw": "`0.20`",
+  "value": 0.2,
+  "desc": "重铸净毁率",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.RELIC_CORE_FACTOR",
+  "raw": "`1.5`（`05` §M5.4 契约值转正）",
+  "value": null,
+  "desc": "蚀潮晶核遗械超限折算倍率",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.RUIN_ORE_DEEP",
+  "raw": "`0.15` / `0.40`（`06` 号 §M6.1 契约值转正）",
+  "value": null,
+  "desc": "遗迹中层/深层精炼矿石率",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.RUIN_ORE_MID",
+  "raw": "`0.15` / `0.40`（`06` 号 §M6.1 契约值转正）",
+  "value": null,
+  "desc": "遗迹中层/深层精炼矿石率",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.R_FLOOR_GOLD",
+  "raw": "`432`（递减三不破此底，裁决 10）",
+  "value": null,
+  "desc": "R 类单场保底金当量",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.SAFE_K_ONE",
+  "raw": "`1.5`（Σ奖励 ≥ 通行消耗 120–360 金/场 × 此值；裁决 10，`06` §M6.6①）",
+  "value": null,
+  "desc": "单次类净余安全系数",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.SAFE_K_REP",
+  "raw": "`1.2`（裁决 10，`06` §M6.6①）",
+  "value": null,
+  "desc": "可重复类净余安全系数",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.SALVAGE_DESTROY",
+  "raw": "`0.30`",
+  "value": 0.3,
+  "desc": "分解净毁率",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.SALVAGE_GOLD_DAILY",
+  "raw": "`30000` / `6000` / `2000`，加计量条 `METER_*_GOLD` 期望 4000——**数值零改动、语义改 E2 基准**，合计口径翻 `GOLD_DAILY_INCOME 48000`（批次 146 改判，原合计 `42000` 留档；存量三口重排归 147 批，18_/06 §三·1）",
+  "value": null,
+  "desc": "金币收入侧日均三口",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.SALVAGE_SELL_DAILY",
+  "raw": "`30000` / `6000` / `2000`，加计量条 `METER_*_GOLD` 期望 4000——**数值零改动、语义改 E2 基准**，合计口径翻 `GOLD_DAILY_INCOME 48000`（批次 146 改判，原合计 `42000` 留档；存量三口重排归 147 批，18_/06 §三·1）",
+  "value": null,
+  "desc": "金币收入侧日均三口",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.SHOP_DUAL_CURRENCY_GOLD_SHARE",
+  "raw": "金 `0.70` ＋勋 `[200,220,250,270,290,300]`（590/660/740/820/910/999 六档）",
+  "value": null,
+  "desc": "珍品档双币价",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.SHOP_DUAL_CURRENCY_GUILD",
+  "raw": "金 `0.70` ＋勋 `[200,220,250,270,290,300]`（590/660/740/820/910/999 六档）",
+  "value": null,
+  "desc": "珍品档双币价",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.SHOP_SET_PRICE_PER_TIER",
+  "raw": "整套价＝等级档 × `400` × `SHOP_SHELF_COEF[档段]`（18_/06 §四）",
+  "value": null,
+  "desc": "商店套价格曲线系数",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.SHOP_SHELF_COEF",
+  "raw": "`[1.00, 1.15, 1.35, 1.50]`",
+  "value": [
+   "1.00",
+   "1.15",
+   "1.35",
+   "1.50"
+  ],
+  "desc": "商店四段门槛系数",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.SIGIL_BASE_YIELD",
+  "raw": "`×1`（无限刷）",
+  "value": null,
+  "desc": "用尽后收益",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.SIGIL_CAP",
+  "raw": "`24` 枚",
+  "value": null,
+  "desc": "囤积上限",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.SIGIL_DAILY",
+  "raw": "`6` 枚（04:00 重置，离线也发）",
+  "value": null,
+  "desc": "丰饶符每日发放",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.SIGIL_DAILY_EQUIV",
+  "raw": "`+8.0` 基准当量",
+  "value": null,
+  "desc": "日加成产出当量",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.SIGIL_MARGINAL",
+  "raw": "`1.00 / 1.00 / 1.33`",
+  "value": null,
+  "desc": "每枚净增",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.SIGIL_OUTLET_AWAKEN_COST",
+  "raw": "`2` 符/场（醒神符阵：素材/结晶类结算质量 75%→90%）/ `8` 符→潮息补给箱（周限 1）/ 周上限 `12` 粉（溢出 1:1 转风核晶粉）",
+  "value": null,
+  "desc": "丰饶符低频三出口",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.SIGIL_OVERFLOW_POWDER_CAP",
+  "raw": "`2` 符/场（醒神符阵：素材/结晶类结算质量 75%→90%）/ `8` 符→潮息补给箱（周限 1）/ 周上限 `12` 粉（溢出 1:1 转风核晶粉）",
+  "value": null,
+  "desc": "丰饶符低频三出口",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.SIGIL_TIER_1",
+  "raw": "1 枚 `×2` / 2 枚 `×3` / 3 枚 `×5`",
+  "value": null,
+  "desc": "档位倍率",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.STAGE_GOLD_DAILY",
+  "raw": "`30000` / `6000` / `2000`，加计量条 `METER_*_GOLD` 期望 4000——**数值零改动、语义改 E2 基准**，合计口径翻 `GOLD_DAILY_INCOME 48000`（批次 146 改判，原合计 `42000` 留档；存量三口重排归 147 批，18_/06 §三·1）",
+  "value": null,
+  "desc": "金币收入侧日均三口",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.STAGE_INCOME_MULT",
+  "raw": "`0.80 / 1.00 / 1.25 / 1.5625`（公比 1.25 与 `TIDE.BASE_EHP` 同源；裁决 9，`06` §M6.7）",
+  "value": null,
+  "desc": "四阶段收入系数（E1–E4）",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.STAGE_NET_RATE_TARGET",
+  "raw": "`0.268 / 0.250 / 0.299 / 0.299`（全落 `GOLD_RATIO_TARGET` +15%~35% 带内；147）",
+  "value": null,
+  "desc": "四阶段目标净余率（E1–E4）",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.STORY_QUEST_GOLD",
+  "raw": "`1200`（二期批次 25 首报、26–31 沿用，批次 45 落表；32 篇统一键引用）",
+  "value": null,
+  "desc": "剧情线一次性任务金币基准",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.TIDE_MARKET_BUY_LIMIT",
+  "raw": "`10` 游戏日/旬；每旬限购 `1` 件〔EC-R〕",
+  "value": null,
+  "desc": "潮集旬周期/限购",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.TIDE_MARKET_INTERVAL",
+  "raw": "`10` 游戏日/旬；每旬限购 `1` 件〔EC-R〕",
+  "value": null,
+  "desc": "潮集旬周期/限购",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.TIDE_MARKET_SKU_MASTER",
+  "raw": "`12000` 金（名匠券：下次突破费 −30%）/ `24000` 金（潮汐淬匣：碎屑×30＋结晶×1(50%)）",
+  "value": null,
+  "desc": "潮集大额 SKU",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.TIDE_MARKET_SKU_QUENCH",
+  "raw": "`12000` 金（名匠券：下次突破费 −30%）/ `24000` 金（潮汐淬匣：碎屑×30＋结晶×1(50%)）",
+  "value": null,
+  "desc": "潮集大额 SKU",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.TU2",
+  "raw": "`20`/`20`/`30`/`55`/`35`",
+  "value": null,
+  "desc": "赛季活动勋梯·湍怒",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.VOUCHER_RARE_FACE",
+  "raw": "`1`（任选 1 枚 RARE 0.08 带素材）",
+  "value": null,
+  "desc": "稀有素材自选券面额",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.WEAPON_PRICE_FACTOR",
+  "raw": "售价＝基础攻击 × `6`（铁匠铺，18_/06 §四）",
+  "value": null,
+  "desc": "基础武器售价系数",
+  "section": "ECON",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.WIND_DROP_MULT_FAVOR",
+  "raw": "`1.05`",
+  "value": 1.05,
+  "desc": "顺潮掉率带乘区",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.WIND_METER_MULT",
+  "raw": "`{逆:1.10, 平:1.00, 顺:0.90}`",
+  "value": null,
+  "desc": "风势计量注入系数",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.WIND_STATE_STREAK_HALVE",
+  "raw": "`2`",
+  "value": 2,
+  "desc": "风势连出减半阈值",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON.WIND_STATE_WEIGHTS",
+  "raw": "`顺/平/逆 = 30/40/30`",
+  "value": null,
+  "desc": "风势三档权重",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON._AWAKEN",
+  "raw": "封印核＝递进三阶（基率 0.02、第 10 空轮起 0.04、第 20 空轮起 0.06、硬保底 30）/ 觉醒硬核＝软提升 `p(k)=0.02×(1+0.10×(k−1))`＋硬保底 30 / 典录域引信物＝硬保底 **18**＋域链第 1 环后 10 场掉率 ×2",
+  "value": null,
+  "desc": "RELIC 三系保底形态",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON._CODEX",
+  "raw": "封印核＝递进三阶（基率 0.02、第 10 空轮起 0.04、第 20 空轮起 0.06、硬保底 30）/ 觉醒硬核＝软提升 `p(k)=0.02×(1+0.10×(k−1))`＋硬保底 30 / 典录域引信物＝硬保底 **18**＋域链第 1 环后 10 场掉率 ×2",
+  "value": null,
+  "desc": "RELIC 三系保底形态",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON._FE2",
+  "raw": "`20`/`10`/`30`/`40`",
+  "value": null,
+  "desc": "活动资产点（港务）",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON._FE3",
+  "raw": "`20`/`10`/`30`/`40`",
+  "value": null,
+  "desc": "活动资产点（港务）",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON._HA2",
+  "raw": "`20`/`10`/`30`/`40`",
+  "value": null,
+  "desc": "活动资产点（港务）",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON._RARE",
+  "raw": "`[1.00, 1.12, 1.20, 1.32]` / `[1.00, 1.125, 1.375, 1.50]` / `[1.00, 1.00, 1.25, 1.50]`",
+  "value": [
+   "1.00",
+   "1.12",
+   "1.20",
+   "1.32]` / `[1.00",
+   "1.125",
+   "1.375",
+   "1.50]` / `[1.00",
+   "1.00",
+   "1.25",
+   "1.50"
+  ],
+  "desc": "掉率带潮位分层乘区",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON._RELIC",
+  "raw": "`[1.00, 1.12, 1.20, 1.32]` / `[1.00, 1.125, 1.375, 1.50]` / `[1.00, 1.00, 1.25, 1.50]`",
+  "value": [
+   "1.00",
+   "1.12",
+   "1.20",
+   "1.32]` / `[1.00",
+   "1.125",
+   "1.375",
+   "1.50]` / `[1.00",
+   "1.00",
+   "1.25",
+   "1.50"
+  ],
+  "desc": "掉率带潮位分层乘区",
+  "section": "ECON",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ECON._WEEKLY_BOX",
+  "raw": "`2` 符/场（醒神符阵：素材/结晶类结算质量 75%→90%）/ `8` 符→潮息补给箱（周限 1）/ 周上限 `12` 粉（溢出 1:1 转风核晶粉）",
+  "value": null,
+  "desc": "丰饶符低频三出口",
+  "section": "ECON",
+  "rule": "fallback"
+ }
+]

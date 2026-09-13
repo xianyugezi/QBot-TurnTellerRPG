@@ -1,0 +1,10 @@
+[
+ {
+  "key": "$C.CUSTODY_EFFICIENCY",
+  "raw": "`0.75`（在线 1.00）",
+  "value": null,
+  "desc": "托管效率",
+  "section": "BALANCE",
+  "rule": "citation_majority"
+ }
+]

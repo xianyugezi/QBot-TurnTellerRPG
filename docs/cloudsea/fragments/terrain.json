@@ -1,0 +1,50 @@
+[
+ {
+  "key": "$C.TERRAIN.ANCHOR_REGEN",
+  "raw": "`+1%` HP / 回合",
+  "value": null,
+  "desc": "锚脉回复",
+  "section": "FEAT",
+  "rule": "dotted"
+ },
+ {
+  "key": "$C.TERRAIN.BLIGHT_DOT",
+  "raw": "`+10%`",
+  "value": null,
+  "desc": "蚀斑承伤",
+  "section": "FEAT",
+  "rule": "dotted"
+ },
+ {
+  "key": "$C.TERRAIN.CRYSTAL_BONUS",
+  "raw": "`+15%` 最终伤害",
+  "value": null,
+  "desc": "晶簇增伤",
+  "section": "FEAT",
+  "rule": "dotted"
+ },
+ {
+  "key": "$C.TERRAIN.RIFT_KD",
+  "raw": "倒地 `1` 回合，每场限 `1` 次",
+  "value": null,
+  "desc": "裂隙推入",
+  "section": "FEAT",
+  "rule": "dotted"
+ },
+ {
+  "key": "$C.TERRAIN.TYPES",
+  "raw": "`晶簇 / 云涡 / 蚀斑 / 裂隙 / 锚脉 / 灌丛`",
+  "value": null,
+  "desc": "地形类型",
+  "section": "FEAT",
+  "rule": "dotted"
+ },
+ {
+  "key": "$C.TERRAIN.VORTEX_SURGE",
+  "raw": "`−1` 潮压",
+  "value": null,
+  "desc": "云涡泄压",
+  "section": "FEAT",
+  "rule": "dotted"
+ }
+]

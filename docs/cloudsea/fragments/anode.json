@@ -1,0 +1,138 @@
+[
+ {
+  "key": "$C.ANODE.CHAIN_COUNT",
+  "raw": "`3`",
+  "value": 3,
+  "desc": "异节链门控数",
+  "section": "ANODE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ANODE.DISTRIB_TOTAL",
+  "raw": "`1512`",
+  "value": 1512,
+  "desc": "分配位总数",
+  "section": "ANODE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ANODE.EXCLUSIVE_COUNT",
+  "raw": "`72`",
+  "value": 72,
+  "desc": "专属异节实落条数",
+  "section": "ANODE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ANODE.EXCLUSIVE_MIN",
+  "raw": "`60`",
+  "value": 60,
+  "desc": "专属异节条数下限",
+  "section": "ANODE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ANODE.PER_SET_SLOTS",
+  "raw": "`3`",
+  "value": 3,
+  "desc": "每套固定分配异节数",
+  "section": "ANODE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ANODE.POOL2_EFFECT_ROWS",
+  "raw": "`36`",
+  "value": 36,
+  "desc": "二辑效果行总数",
+  "section": "ANODE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ANODE.POOL2_SIZE",
+  "raw": "`12`",
+  "value": 12,
+  "desc": "通用异节二辑种数（批次 118 增补）",
+  "section": "ANODE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ANODE.POOL2_TIERS",
+  "raw": "`3`",
+  "value": 3,
+  "desc": "二辑档位数",
+  "section": "ANODE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ANODE.POOL_EFFECT_ROWS",
+  "raw": "`54`",
+  "value": 54,
+  "desc": "池效果行总数",
+  "section": "ANODE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ANODE.POOL_MIN_USES",
+  "raw": "`60`",
+  "value": 60,
+  "desc": "池均衡覆盖下限",
+  "section": "ANODE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ANODE.POOL_SIZE",
+  "raw": "`18`",
+  "value": 18,
+  "desc": "通用异节池种数",
+  "section": "ANODE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ANODE.POOL_TIERS",
+  "raw": "`3`",
+  "value": 3,
+  "desc": "通用异节档位数",
+  "section": "ANODE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ANODE.REVERSE_COST",
+  "raw": "`2`",
+  "value": 2,
+  "desc": "反转／反反转单次消耗",
+  "section": "ANODE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ANODE.REVERSE_DROP_TIER",
+  "raw": "`RELIC`",
+  "value": null,
+  "desc": "反转异节掉落档",
+  "section": "ANODE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ANODE.REVERSE_FAMILIES",
+  "raw": "`3`",
+  "value": 3,
+  "desc": "反转异节族数",
+  "section": "ANODE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ANODE.REVERSE_TABOO_MIN",
+  "raw": "`6`",
+  "value": 6,
+  "desc": "反转组合禁例下限",
+  "section": "ANODE",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.ANODE.SYNTAX_TYPES",
+  "raw": "`3`",
+  "value": 3,
+  "desc": "效果语法类数",
+  "section": "ANODE",
+  "rule": "explicit"
+ }
+]

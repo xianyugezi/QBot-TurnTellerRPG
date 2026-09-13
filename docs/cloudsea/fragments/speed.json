@@ -1,0 +1,66 @@
+[
+ {
+  "key": "$C.SPEED.ACTION_VALUE_FULL",
+  "raw": "`1000`",
+  "value": 1000,
+  "desc": "满行动值",
+  "section": "SPEED",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.SPEED.FREQ_EXPONENT",
+  "raw": "`0.55`",
+  "value": 0.55,
+  "desc": "频率指数",
+  "section": "SPEED",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.SPEED.PREVIEW_SLOTS",
+  "raw": "`3`",
+  "value": 3,
+  "desc": "行动条预览位",
+  "section": "SPEED",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.SPEED.RATIO_CAP",
+  "raw": "`1.6`",
+  "value": 1.6,
+  "desc": "出手次数比上限",
+  "section": "SPEED",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.SPEED.SPD_MAX",
+  "raw": "`70` / `220`",
+  "value": null,
+  "desc": "速度区间",
+  "section": "SPEED",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.SPEED.SPD_MIN",
+  "raw": "`70` / `220`",
+  "value": null,
+  "desc": "速度区间",
+  "section": "SPEED",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.SPEED.SPD_OVER_CAP",
+  "raw": "`200`",
+  "value": 200,
+  "desc": "超速阈值",
+  "section": "SPEED",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.SPEED.SPD_OVER_FACTOR",
+  "raw": "`0.4`",
+  "value": 0.4,
+  "desc": "超速折算",
+  "section": "SPEED",
+  "rule": "fallback"
+ }
+]

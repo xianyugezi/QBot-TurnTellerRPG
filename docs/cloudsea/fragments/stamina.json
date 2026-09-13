@@ -1,0 +1,58 @@
+[
+ {
+  "key": "$C.STAMINA.COST_ANGER_ULT",
+  "raw": "`2`",
+  "value": 2,
+  "desc": "激怒期大招 / 蓄电终攻单价",
+  "section": "STAMINA",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.STAMINA.COST_FRENZY_ULT",
+  "raw": "`3`",
+  "value": 3,
+  "desc": "狂澜期全场大招单价",
+  "section": "STAMINA",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.STAMINA.ENABLE_SCOPE",
+  "raw": "`常规空兽及以上`",
+  "value": null,
+  "desc": "启用范围",
+  "section": "STAMINA",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.STAMINA.FATIGUE_EXTEND",
+  "raw": "`+2`",
+  "value": null,
+  "desc": "气力尽路径的疲态时长加值",
+  "section": "STAMINA",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.STAMINA.FRENZY_INTERVAL_TIRED",
+  "raw": "`4`（×1,000 行动值）",
+  "value": null,
+  "desc": "气力尽后的狂澜大招间隔",
+  "section": "STAMINA",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.STAMINA.MAX_BASE",
+  "raw": "`8`",
+  "value": 8,
+  "desc": "气力基准上限（巨兽档）",
+  "section": "STAMINA",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.STAMINA.SCALE_BY_TIER",
+  "raw": "`{杂兽0.35, 常规0.60, 巨兽1.00, 异相种1.30, 蚀潮1.80}`（向下取整、下限 1）",
+  "value": null,
+  "desc": "威胁等级缩放",
+  "section": "STAMINA",
+  "rule": "explicit"
+ }
+]

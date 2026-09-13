@@ -1,0 +1,26 @@
+[
+ {
+  "key": "$C.BIO.BIO.ANATOMY_NOTE",
+  "raw": "`1`",
+  "value": 1,
+  "desc": "部位理由字段启用位",
+  "section": "BIO",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.BIO.BIO.DEPTH_LEVELS",
+  "raw": "`3`",
+  "value": 3,
+  "desc": "现实度分级数",
+  "section": "BIO",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.BIO.BIO.ELEMENTS",
+  "raw": "`9`",
+  "value": 9,
+  "desc": "生物感九要素数",
+  "section": "BIO",
+  "rule": "dotted_fallback"
+ }
+]

@@ -1,0 +1,74 @@
+[
+ {
+  "key": "$C.AILMENT_P.COUNT",
+  "raw": "`4`",
+  "value": 4,
+  "desc": "玩家侧状态态数",
+  "section": "AILMENT_P",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.AILMENT_P.DUR_BIND",
+  "raw": "`1` 个出手序列",
+  "value": null,
+  "desc": "束缚持续",
+  "section": "AILMENT_P",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.AILMENT_P.DUR_POISON",
+  "raw": "`3` 个出手序列",
+  "value": null,
+  "desc": "中毒持续",
+  "section": "AILMENT_P",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.AILMENT_P.DUR_SLACK",
+  "raw": "`2` 个出手序列",
+  "value": null,
+  "desc": "沉滞持续",
+  "section": "AILMENT_P",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.AILMENT_P.DUR_TIDE_MARK",
+  "raw": "`2` 个出手序列",
+  "value": null,
+  "desc": "蚀印持续",
+  "section": "AILMENT_P",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.AILMENT_P.POISON_HP_PCT",
+  "raw": "`0.02` 最大 HP",
+  "value": null,
+  "desc": "中毒每序列扣血",
+  "section": "AILMENT_P",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.AILMENT_P.RESIST_DURATION_CUT",
+  "raw": "`1` 序列/来源",
+  "value": null,
+  "desc": "被动抗性时长减免",
+  "section": "AILMENT_P",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.AILMENT_P.SYMBIONT_WARD_PER_BATTLE",
+  "raw": "`1`",
+  "value": 1,
+  "desc": "`灵 抗 <态>` 每场每态次数",
+  "section": "AILMENT_P",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.AILMENT_P.TIDE_MARK_MULT",
+  "raw": "`1.15`",
+  "value": 1.15,
+  "desc": "蚀印独立乘子",
+  "section": "AILMENT_P",
+  "rule": "explicit"
+ }
+]

@@ -1,0 +1,90 @@
+[
+ {
+  "key": "$C.GROWTH.2",
+  "raw": "`5000` / `17000` / `56000`（**2026-09-12 调整二提案1 断点化改判**，每跳 ≈×3.4；旧 `8000`/`20000`/`50000` 留档；Σ＝78,000 逐分守恒，`BREAK_GOLD_DAILY 7000` 摊销零改动）",
+  "value": null,
+  "desc": "突破费",
+  "section": "GROWTH",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.GROWTH.3",
+  "raw": "`5000` / `17000` / `56000`（**2026-09-12 调整二提案1 断点化改判**，每跳 ≈×3.4；旧 `8000`/`20000`/`50000` 留档；Σ＝78,000 逐分守恒，`BREAK_GOLD_DAILY 7000` 摊销零改动）",
+  "value": null,
+  "desc": "突破费",
+  "section": "GROWTH",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.GROWTH.ARMOR_ENHANCE_MAX",
+  "raw": "`10`（批次 37 申报，38/41 全库引用；「技能无用则无需强化」轻量化取舍下少用满）",
+  "value": null,
+  "desc": "防具强化上限",
+  "section": "GROWTH",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.GROWTH.ASCENSION_LAYERS",
+  "raw": "见 §M5.5",
+  "value": null,
+  "desc": "超限层数",
+  "section": "GROWTH",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.GROWTH.BUILD_COUNT",
+  "raw": "`≈11760`",
+  "value": null,
+  "desc": "总构筑数",
+  "section": "GROWTH",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.GROWTH.CLASS_COUNT",
+  "raw": "`14`",
+  "value": 14,
+  "desc": "职业数",
+  "section": "GROWTH",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.GROWTH.COMBO_COUNT",
+  "raw": "`196`",
+  "value": 196,
+  "desc": "职业×武器组合",
+  "section": "GROWTH",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.GROWTH.ENHANCE_COST_1",
+  "raw": "`5000` / `17000` / `56000`（**2026-09-12 调整二提案1 断点化改判**，每跳 ≈×3.4；旧 `8000`/`20000`/`50000` 留档；Σ＝78,000 逐分守恒，`BREAK_GOLD_DAILY 7000` 摊销零改动）",
+  "value": null,
+  "desc": "突破费",
+  "section": "GROWTH",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.GROWTH.ENHANCE_MAX_LEVEL",
+  "raw": "见第五章（四层）",
+  "value": null,
+  "desc": "武器强化上限",
+  "section": "GROWTH",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.GROWTH.STYLE_COUNT",
+  "raw": "`5`",
+  "value": 5,
+  "desc": "流派数",
+  "section": "GROWTH",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.GROWTH.WEAPON_COUNT",
+  "raw": "`14`",
+  "value": 14,
+  "desc": "武器类型数",
+  "section": "GROWTH",
+  "rule": "citation"
+ }
+]

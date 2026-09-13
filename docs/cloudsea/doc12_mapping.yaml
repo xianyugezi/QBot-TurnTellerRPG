@@ -1,0 +1,33 @@
+# doc12_mapping.yaml —— 九期批次 208 · 12 号键 → 框架片段映射规则
+# 节主域由 12 号节头 `C.X` 令牌自取（首令牌为主域），本文件只登记：
+#   dotted_routes  点分行键的域路由（head 与节主域不同头者须显式登记；同头自动 $C.<主域>.<键>）
+#   key_overrides  逐键覆盖（裸名 → 域.键；以设计稿全库 $C.* 引称语料为 canonical 依据）
+#   exclusions     排除行（节表头伪键等，出片不计）
+# 歧义裸键解析序：override → 引称唯一 → 引称多数 → 主域回退（旗标 fallback，报告可查）
+
+dotted_routes:
+  CONTENT: CONTENT      # §T 双域节（主域 TIDE）：CONTENT.QUESTS → $C.CONTENT.QUESTS
+  NPC: NPC              # §T：NPC.LINES_NEW → $C.NPC.LINES_NEW（未引称，回退旗标同形）
+  PINNED: PINNED        # §N 双域节（主域 SURGE）：PINNED.ROUNDS → $C.PINNED.ROUNDS（引称 3）
+  POSTURE: POSTURE      # §N：POSTURE.* → $C.POSTURE.*
+  TERRAIN: TERRAIN      # §Q 双域节（主域 FEAT）
+  ZONE: ZONE            # §Q：ZONE.SECTORS → $C.ZONE.SECTORS（引称 362）
+
+key_overrides:
+  # §E 共生灵族——全库引称以 $C.BREAK.SYMBIONT_* 为 canonical（$C.E.* 引称系笔误变体，随报告计数）
+  SYMBIONT_MARK_HARDNESS: BREAK.SYMBIONT_MARK_HARDNESS
+  SYMBIONT_MARK_BREAK: BREAK.SYMBIONT_MARK_BREAK
+  SYMBIONT_MARK_ACC: BREAK.SYMBIONT_MARK_ACC
+  SYMBIONT_MARK_DURATION: BREAK.SYMBIONT_MARK_DURATION
+  SYMBIONT_SWAP_DELAY: BREAK.SYMBIONT_SWAP_DELAY
+  SYMBIONT_GATHER_INTERVAL: BREAK.SYMBIONT_GATHER_INTERVAL
+  SYMBIONT_CAPACITY: BREAK.SYMBIONT_CAPACITY
+  SYMBIONT_FEED_ACCUM: BREAK.SYMBIONT_FEED_ACCUM
+  SYMBIONT_RESIST_BUFF: BREAK.SYMBIONT_RESIST_BUFF
+  SYMBIONT_EQUIVALENT: BREAK.SYMBIONT_EQUIVALENT
+  SYMBIONT_BURST_M: BREAK.SYMBIONT_BURST_M
+  SYMBIONT_BURST_COST: BREAK.SYMBIONT_BURST_COST
+  SYMBIONT_BURST_BREAK_MULT: BREAK.SYMBIONT_BURST_BREAK_MULT
+
+exclusions:
+  - ID                   # §E/§N/§Q/§T 节表伪键（值格＝「值」的表头行双重拦截）

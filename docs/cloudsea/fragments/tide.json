@@ -1,0 +1,127 @@
+[
+ {
+  "key": "$C.TIDE.TIDE.BASE_EHP",
+  "raw": "`[12000, 14500, 19000, 23100, 29300, 36600, 45800]`",
+  "value": [
+   "12000",
+   "14500",
+   "19000",
+   "23100",
+   "29300",
+   "36600",
+   "45800"
+  ],
+  "desc": "七潮位基准 EHP",
+  "section": "TIDE",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.TIDE.TIDE.EHP_FORMULA",
+  "raw": "`EHP(潮位, 星s) = BASE_EHP[潮位] × STAR_COEF[s]`",
+  "value": null,
+  "desc": "强度公式",
+  "section": "TIDE",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.TIDE.TIDE.LAYER",
+  "raw": "`{终盘:1.00, 常规:0.75, 空兽:0.35, 杂兽:0.15}`",
+  "value": null,
+  "desc": "层级系数",
+  "section": "TIDE",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.TIDE.TIDE.NAMES",
+  "raw": "`[微澜, 潮涌, 湍流, 怒涛, 风暴, 狂岚, 浩劫]`",
+  "value": [
+   "微澜",
+   "潮涌",
+   "湍流",
+   "怒涛",
+   "风暴",
+   "狂岚",
+   "浩劫"
+  ],
+  "desc": "潮位名序列",
+  "section": "TIDE",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.TIDE.TIDE.PARTY_SCALE",
+  "raw": "`[1.000, 0.750, 0.660, 0.580]`",
+  "value": [
+   "1.000",
+   "0.750",
+   "0.660",
+   "0.580"
+  ],
+  "desc": "组队系数",
+  "section": "TIDE",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.TIDE.TIDE.PARTY_TIER_MOD",
+  "raw": "`{常规及以下:1.00, 异相种:1.03, 蚀潮:1.05}`",
+  "value": null,
+  "desc": "组队威胁档调制",
+  "section": "TIDE",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.TIDE.TIDE.ROUND_BASE",
+  "raw": "`22.5`",
+  "value": 22.5,
+  "desc": "回合数模型基数",
+  "section": "TIDE",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.TIDE.TIDE.ROUND_TIDE_BEAT",
+  "raw": "`[0.99, 0.96, 1.06, 0.95, 1.03, 1.01, 1.00]`",
+  "value": [
+   "0.99",
+   "0.96",
+   "1.06",
+   "0.95",
+   "1.03",
+   "1.01",
+   "1.00"
+  ],
+  "desc": "回合数潮位拍号",
+  "section": "TIDE",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.TIDE.TIDE.SIDE_COEF",
+  "raw": "`{轻:0.80, 标准:0.85, 重:0.92}`",
+  "value": null,
+  "desc": "支线难度系数",
+  "section": "TIDE",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.TIDE.TIDE.STAR_COEF",
+  "raw": "`{1:1.40, 2:1.51, 3:1.63, 4:1.80, 5:1.86, 6:1.92, 7:1.97, 8:2.03, 9:2.09, 10:2.18}`",
+  "value": null,
+  "desc": "星段系数 f(s)",
+  "section": "TIDE",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.TIDE.TIDE.TIDE_COUNT",
+  "raw": "`7`",
+  "value": 7,
+  "desc": "潮位数量",
+  "section": "TIDE",
+  "rule": "dotted_fallback"
+ },
+ {
+  "key": "$C.TIDE.TIDE.WAVE_DROP",
+  "raw": "`−15.8% ～ −22.4%（均值 −19.7%）`",
+  "value": null,
+  "desc": "跨潮位回落区间",
+  "section": "TIDE",
+  "rule": "dotted_fallback"
+ }
+]

@@ -1,0 +1,10 @@
+[
+ {
+  "key": "$C.ARCANA_MULT_MIN",
+  "raw": "`2.8` / `3.6`",
+  "value": null,
+  "desc": "**绝技**倍率区间",
+  "section": "BATTLE",
+  "rule": "citation"
+ }
+]

@@ -1,0 +1,18 @@
+[
+ {
+  "key": "$C.NPC.INTERTXT_MIN",
+  "raw": "`6`",
+  "value": 6,
+  "desc": "NPC 线互文逐字锚下限",
+  "section": "TIDE",
+  "rule": "dotted"
+ },
+ {
+  "key": "$C.NPC.LINES_NEW",
+  "raw": "`12`",
+  "value": 12,
+  "desc": "NPC 新增个人线数",
+  "section": "TIDE",
+  "rule": "dotted"
+ }
+]

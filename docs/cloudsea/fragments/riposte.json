@@ -1,0 +1,98 @@
+[
+ {
+  "key": "$C.RIPOSTE.COUNTER_MULT",
+  "raw": "`0.8`（按最软部位计）",
+  "value": null,
+  "desc": "反击倍率",
+  "section": "RIPOSTE",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.RIPOSTE.FAIL_DAMAGE_MULT",
+  "raw": "`1.30`，行动条 −50",
+  "value": null,
+  "desc": "押中但失败受伤",
+  "section": "RIPOSTE",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.RIPOSTE.GALE_INSTANT_COST",
+  "raw": "`1` 风缆，成功率 `+0.20`",
+  "value": null,
+  "desc": "瞬御流瞬闪消耗",
+  "section": "RIPOSTE",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.RIPOSTE.INTENT_LEVEL_PENALTY",
+  "raw": "`0.05` / 级",
+  "value": null,
+  "desc": "意图等级惩罚",
+  "section": "RIPOSTE",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.RIPOSTE.MAX",
+  "raw": "`0.55` / `0.85`",
+  "value": null,
+  "desc": "成功率区间",
+  "section": "RIPOSTE",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.RIPOSTE.MAX",
+  "raw": "`0.45` / `0.55`",
+  "value": null,
+  "desc": "常规防御受伤",
+  "section": "RIPOSTE",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.RIPOSTE.NORMAL_GUARD_MIN",
+  "raw": "`0.45` / `0.55`",
+  "value": null,
+  "desc": "常规防御受伤",
+  "section": "RIPOSTE",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.RIPOSTE.REACTION_MAX",
+  "raw": "`0.35`",
+  "value": 0.35,
+  "desc": "反应值上限",
+  "section": "RIPOSTE",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.RIPOSTE.STREAK_PENALTY",
+  "raw": "连续成功 2 次后第 3 次 `−0.15`",
+  "value": null,
+  "desc": "连胜惩罚",
+  "section": "RIPOSTE",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.RIPOSTE.SUCCESS_BASE",
+  "raw": "`0.55`",
+  "value": 0.55,
+  "desc": "判定基础成功率",
+  "section": "RIPOSTE",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.RIPOSTE.SUCCESS_MIN",
+  "raw": "`0.55` / `0.85`",
+  "value": null,
+  "desc": "成功率区间",
+  "section": "RIPOSTE",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.RIPOSTE.WRONG_DAMAGE_MULT",
+  "raw": "`1.00` 且本回合空过",
+  "value": null,
+  "desc": "押错受伤",
+  "section": "RIPOSTE",
+  "rule": "fallback"
+ }
+]

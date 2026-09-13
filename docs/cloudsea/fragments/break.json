@@ -1,0 +1,234 @@
+[
+ {
+  "key": "$C.BREAK",
+  "raw": "`+40%`（本命 **+55%**）/ `×1.8`",
+  "value": null,
+  "desc": "架设态增伤 / 破坏",
+  "section": "CLASS",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.BREAK.BASE_UNIT",
+  "raw": "`30`",
+  "value": 30,
+  "desc": "单次命中基础破坏值",
+  "section": "BREAK",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.BREAK.BEHAVIOR_PART_MAX",
+  "raw": "`2`",
+  "value": 2,
+  "desc": "每兽行为性破坏部位上限",
+  "section": "BREAK",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.BREAK.BEHAVIOR_TYPES",
+  "raw": "`remove / derate`（删招／降档）",
+  "value": null,
+  "desc": "行为性后果类型枚举",
+  "section": "BREAK",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.BREAK.BREAK.SYMBIONT_BURST_BREAK_MULT",
+  "raw": "`×1.5`",
+  "value": null,
+  "desc": "孢爆对**标记态**部位破坏槽",
+  "section": "BREAK",
+  "rule": "override"
+ },
+ {
+  "key": "$C.BREAK.BREAK.SYMBIONT_BURST_COST",
+  "raw": "`1` 孢子（**非清空**）",
+  "value": null,
+  "desc": "孢爆消耗",
+  "section": "BREAK",
+  "rule": "override"
+ },
+ {
+  "key": "$C.BREAK.BREAK.SYMBIONT_BURST_M",
+  "raw": "`2.20`",
+  "value": 2.2,
+  "desc": "**孢爆**倍率",
+  "section": "BREAK",
+  "rule": "override"
+ },
+ {
+  "key": "$C.BREAK.BREAK.SYMBIONT_CAPACITY",
+  "raw": "`3`（Lv1 2 → Lv5 4）",
+  "value": null,
+  "desc": "孢子容量",
+  "section": "BREAK",
+  "rule": "override"
+ },
+ {
+  "key": "$C.BREAK.BREAK.SYMBIONT_EQUIVALENT",
+  "raw": "`0.1`",
+  "value": 0.1,
+  "desc": "共生灵队伍当量",
+  "section": "BREAK",
+  "rule": "override"
+ },
+ {
+  "key": "$C.BREAK.BREAK.SYMBIONT_FEED_ACCUM",
+  "raw": "`80`（Lv1 60 → Lv5 110）",
+  "value": null,
+  "desc": "投喂积蓄",
+  "section": "BREAK",
+  "rule": "override"
+ },
+ {
+  "key": "$C.BREAK.BREAK.SYMBIONT_GATHER_INTERVAL",
+  "raw": "`2` 回合（Lv1 3 → Lv5 1）",
+  "value": null,
+  "desc": "采集间隔",
+  "section": "BREAK",
+  "rule": "override"
+ },
+ {
+  "key": "$C.BREAK.BREAK.SYMBIONT_MARK_ACC",
+  "raw": "`0.10`",
+  "value": 0.1,
+  "desc": "全队命中加成",
+  "section": "BREAK",
+  "rule": "override"
+ },
+ {
+  "key": "$C.BREAK.BREAK.SYMBIONT_MARK_BREAK",
+  "raw": "`0.25`",
+  "value": 0.25,
+  "desc": "破坏槽加成",
+  "section": "BREAK",
+  "rule": "override"
+ },
+ {
+  "key": "$C.BREAK.BREAK.SYMBIONT_MARK_DURATION",
+  "raw": "`3` 回合",
+  "value": null,
+  "desc": "标记持续",
+  "section": "BREAK",
+  "rule": "override"
+ },
+ {
+  "key": "$C.BREAK.BREAK.SYMBIONT_MARK_HARDNESS",
+  "raw": "`−0.20`（等效 **H +0.20**，本命 **+0.25**）",
+  "value": null,
+  "desc": "共生灵标记 **硬度抗性削减**",
+  "section": "BREAK",
+  "rule": "override"
+ },
+ {
+  "key": "$C.BREAK.BREAK.SYMBIONT_RESIST_BUFF",
+  "raw": "`0.50`，3 回合",
+  "value": null,
+  "desc": "投喂抗性",
+  "section": "BREAK",
+  "rule": "override"
+ },
+ {
+  "key": "$C.BREAK.BREAK.SYMBIONT_SWAP_DELAY",
+  "raw": "`1` 回合",
+  "value": null,
+  "desc": "换目标延迟",
+  "section": "BREAK",
+  "rule": "override"
+ },
+ {
+  "key": "$C.BREAK.BREAK_DOWN_COUNT",
+  "raw": "`2` 处，或破坏主肢",
+  "value": null,
+  "desc": "失衡所需破坏数",
+  "section": "BREAK",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.BREAK.BREAK_ELEM_CONVERT",
+  "raw": "`0.5 + 0.5×E`",
+  "value": null,
+  "desc": "属性部分折算",
+  "section": "BREAK",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.BREAK.BREAK_HARDNESS_GAIN",
+  "raw": "`+0.25` – `+0.45`（封顶 1.80）",
+  "value": null,
+  "desc": "破坏后 H 提升",
+  "section": "BREAK",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.BREAK.BREAK_HP_RATIO",
+  "raw": "`0.02` – `0.04`",
+  "value": null,
+  "desc": "破坏槽占本体 HP",
+  "section": "BREAK",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.BREAK.BREAK_MATERIAL_MIN",
+  "raw": "`1` / `2`",
+  "value": null,
+  "desc": "额外素材",
+  "section": "BREAK",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.BREAK.DERATE_STEP",
+  "raw": "`1`",
+  "value": 1,
+  "desc": "降档步长（前摇/目标/范围/附加，恒 1 步）",
+  "section": "BREAK",
+  "rule": "explicit"
+ },
+ {
+  "key": "$C.BREAK.DOWN_DMG_SHORT",
+  "raw": "`×1.5` / `×1.8`",
+  "value": null,
+  "desc": "倒地受伤",
+  "section": "BREAK",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.BREAK.DOWN_WINDOW_TURNS",
+  "raw": "`2` 回合",
+  "value": null,
+  "desc": "倒地窗口",
+  "section": "BREAK",
+  "rule": "citation"
+ },
+ {
+  "key": "$C.BREAK.LONG",
+  "raw": "`×1.5` / `×1.8`",
+  "value": null,
+  "desc": "倒地受伤",
+  "section": "BREAK",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.BREAK.MAX",
+  "raw": "`1` / `2`",
+  "value": null,
+  "desc": "额外素材",
+  "section": "BREAK",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.BREAK.OVERRIDE_CHARGE_COMP",
+  "raw": "`1.50`",
+  "value": 1.5,
+  "desc": "压制拆除后绝技充能补偿",
+  "section": "BREAK",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.BREAK.PHASE_BREAK_THRESHOLD_UP",
+  "raw": "`0.30`",
+  "value": 0.3,
+  "desc": "狂澜/蚀化阶段阈值提升",
+  "section": "BREAK",
+  "rule": "citation"
+ }
+]

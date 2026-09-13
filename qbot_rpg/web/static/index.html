@@ -35,7 +35,8 @@ body {
 .pkgsel .lb, .rolesel .lb { color: var(--text-4); flex: 0 0 auto; }
 .pkgsel select, .rolesel select { font-family: inherit; font-size: var(--fs-12); color: var(--accent);
   background: var(--bg); border: 0; outline: none; padding: 1px 2px; max-width: 280px; min-width: 0; }
-.pkgsel select { flex: 0 1 auto; text-overflow: ellipsis; }
+.pkgsel select { flex: 0 1 auto; min-width: 0; overflow: hidden; white-space: nowrap;
+  text-overflow: ellipsis; }
 .pkgsel .from { color: var(--text-6); flex: 0 0 auto; }
 .saved { color: var(--accent); flex: 0 1 auto; min-width: 0;
   overflow: hidden; text-overflow: ellipsis; }
@@ -52,6 +53,12 @@ body {
   .topbar { gap: var(--sp-5); padding: 0 var(--sp-5); }
   .pkgsel .from { display: none; }        /* 窄窗口先舍来源标注，包名与状态保省略号 */
   .brand { letter-spacing: 0; }
+}
+/* 批5.2（V2）：更窄时先舍品牌字样，把宽度让给包名/状态；身份切换固定宽不参与收缩。
+   包名/状态可收缩 + 省略号，完整信息由 title 悬停给出（syncPackTitle）。 */
+@media (max-width: 760px) {
+  .brand { display: none; }
+  .pkgsel { max-width: 56vw; }
 }
 
 .body { flex: 1 1 auto; display: flex; min-height: 0; }
@@ -124,17 +131,25 @@ body {
 .btn:hover { border-color: var(--accent); color: var(--accent); }
 .btn.primary { border-color: var(--accent); color: var(--accent); }
 .btn.danger:hover { border-color: var(--danger); color: var(--danger); }
-.btn:disabled { color: var(--text-disabled); border-color: var(--line); cursor: not-allowed; }
+.btn:disabled { color: var(--text-disabled); border-color: var(--line); cursor: not-allowed;
+  background: transparent; }
 .btn:disabled:hover { color: var(--text-disabled); border-color: var(--line); }
+/* 批5.2（V4）：危险按钮（回退）无备份时必须呈现真禁用——灰边灰字，不受 danger:hover 影响。 */
+.btn.danger:disabled, .btn.danger:disabled:hover {
+  border-color: var(--line); color: var(--text-disabled); background: transparent; }
 .tbnote { color: var(--text-5); font-size: var(--fs-11); }
 
 .meta { display: flex; align-items: center; gap: var(--sp-5); margin: 0 0 var(--sp-6);
   padding: var(--sp-3) var(--sp-5); border: var(--bw) solid var(--line); border-left: var(--bw-accent) solid var(--accent);
-  color: var(--text-2); }
-.meta .mk { color: var(--accent); }
+  color: var(--text-2); flex-wrap: nowrap; overflow: hidden; min-width: 0; }
+.meta .mk { color: var(--accent); flex: 0 0 auto; }
 .meta .mk::before { content: "["; color: var(--text-5); }
 .meta .mk::after { content: "]"; color: var(--text-5); }
-.meta .src { margin-left: auto; color: var(--text-4); }
+/* 批5.2（V5）：主信息分段固定，来源路径可收缩 + 省略号，窄屏不折行（悬停 title 看全文）。 */
+.meta .mi { color: var(--text-3); flex: 0 0 auto; white-space: nowrap; }
+.meta .mi + .mi::before { content: "· "; color: var(--text-6); }
+.meta .src { margin-left: auto; min-width: 0; color: var(--text-4);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* 校验结果（红拦/黄提示；人话：哪一项 / 为什么 / 怎么改） */
 .vbox { margin: 0 0 var(--sp-6); border: var(--bw) solid var(--line);
@@ -193,8 +208,6 @@ body {
 .ta { width: 100%; border: var(--bw) solid var(--line); background: transparent; color: var(--text);
   font-family: inherit; font-size: var(--fs-12); line-height: var(--lh-text); padding: var(--sp-4) var(--sp-5);
   white-space: pre-wrap; overflow-wrap: anywhere; }
-.hint { color: var(--text-5); font-size: var(--fs-11); margin-top: var(--sp-2);
-  overflow-wrap: anywhere; }
 .ex { color: var(--text-5); }
 .ro { color: var(--text-5); font-size: var(--fs-10); }
 .nest { border-bottom: 0; padding: var(--sp-2) 0; grid-template-columns: 110px 1fr; }
@@ -205,7 +218,8 @@ body {
   padding: 2px var(--sp-4); outline: none; }
 .cta { line-height: var(--lh-text); padding: var(--sp-4) var(--sp-5); resize: vertical; }
 .cin:focus, .cta:focus { border-color: var(--focus); box-shadow: 0 0 0 var(--focus-offset) var(--focus); }
-select.cin { padding: 1px var(--sp-2); }
+/* 批5.2（V10）：下拉框右侧预留原生箭头区，箭头不遮住被选文本。 */
+select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
 .ctl-bool { display: inline-flex; align-items: center; gap: var(--sp-3); cursor: pointer; color: var(--text-value); }
 .ctl-bool input { accent-color: var(--accent); width: 13px; height: 13px; }
 
@@ -232,8 +246,12 @@ select.cin { padding: 1px var(--sp-2); }
 .ltable-edit, .ltable-ro { table-layout: auto; width: 100%; }
 .ltable-edit th { min-width: 96px; overflow: visible; white-space: normal; }
 .ltable-ro th { min-width: 96px; overflow: visible; }
+/* 批5.2（V10）：引用列加宽档（类名由控件形态 scalarCssClass 给出），下拉文本不再被裁。 */
+.ltable-edit th.ref, .ltable-ro th.ref { min-width: 170px; }
 .ltable-edit td { padding: var(--sp-2) var(--sp-3); }
 .ltable-edit td .cin { padding: 1px var(--sp-3); }
+/* V10：表格单元格里的下拉同样预留箭头区（覆盖上面的紧凑内边距）。 */
+.ltable-edit td select.cin { padding-right: var(--sp-9); }
 .ltable th.op, .ltable td.op { width: 84px; min-width: 84px; text-align: right; border-left: 0; }
 .ltable-edit th.op, .ltable-edit td.op { padding-right: var(--sp-5); }
 .lcell.warn { border-color: var(--warn); }
@@ -292,8 +310,10 @@ select.cin { padding: 1px var(--sp-2); }
 /* ---------- 引用字段选择器（批4 组件03）：可搜索候选 + 已选值 + 非法值黄提示 ---------- */
 .refvals { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-bottom: var(--sp-3); }
 .refval { display: inline-flex; align-items: center; gap: var(--sp-4); border: var(--bw) solid var(--line);
-  padding: var(--sp-2) var(--sp-4); color: var(--text-2); }
-.refval .mono2 { color: var(--accent); }
+  padding: var(--sp-2) var(--sp-4); color: var(--text-2); max-width: 100%; min-width: 0; }
+/* 批5.2（V10）：chip 名称过长时省略号收尾（悬停 title 给全文），不再硬裁到看不清。 */
+.refval .mono2 { color: var(--accent); min-width: 0; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; }
 .refval.warn { border-color: var(--warn); }
 .refwarn { color: var(--warn); font-size: var(--fs-11); }
 .refnote { display: block; }
@@ -896,6 +916,10 @@ var TYPE_ZH = {
 
 // 空值文案唯一来源（批3 统一：此前空值有两种写法，现全部走本常量）。
 var EMPTY_TEXT = "（空）";
+// 批5.2（V3）：空值口径拆两类——**输入类**统一占位符 `INPUT_EMPTY`，
+// **只读/列表类**统一 `EMPTY_TEXT`；下拉未选另用「（未选择）」。
+// 此前输入框纯空白、只读文案各写各的，全编辑器口径不一。
+var INPUT_EMPTY = "未填写";
 
 var state = {
   pack: null, modules: [], module: null, entries: [], entry: null, detail: null,
@@ -957,6 +981,82 @@ function esc(v) {
 function enc(v) { return encodeURIComponent(v); }
 function typeZh(t) { return TYPE_ZH[t] || t || "文本"; }
 
+/* EDITOR_HEADER_LABEL_BEGIN */
+// 列表表头/块标签（批5.2 · V11）：只显示「中文名」+ 类型，原始键名缩为悬停 tooltip。
+// 旧形态「中文 键 <类型>」在窄栏里折成三行、行高偏高；键名仍可通过悬停查看（且说明卡
+// 里同样带「中文（键）」）。无中文名时退回键名本身，不凭空造词；通用、不认业务字段名。
+function headerLabelHtml(label, key) {
+  var l = label == null ? "" : String(label);
+  var k = key == null ? "" : String(key);
+  var text = l || k;
+  var title = (k && l && l !== k) ? (l + "（" + k + "）") : (l || k);
+  return '<span class="hkey"' + (title ? ' title="' + esc(title) + '"' : "") + ">"
+    + esc(text) + "</span>";
+}
+/* EDITOR_HEADER_LABEL_END */
+
+/* EDITOR_LABELED_KEY_BEGIN */
+// 「中文（键）」并列（批5.2 · V9）：区块副标题/空态里不再裸露原始键；有中文名时
+// 显示「中文名（键名）」，无中文名时只显示键名（不凭空造词）。通用、不认业务字段名。
+function labeledKey(label, key) {
+  var l = label == null ? "" : String(label);
+  var k = key == null ? "" : String(key);
+  if (l && k && l !== k) { return esc(l) + "（" + esc(k) + "）"; }
+  return esc(l || k);
+}
+/* EDITOR_LABELED_KEY_END */
+
+/* EDITOR_COUNT_LABEL_BEGIN */
+// 模块计数口径（批5.2 · V6）：左栏模块计数含子项，中栏条目列表是本模块条数——口径不同
+// 却同样显示一个裸数字，容易误会。此处统一给「含子项」标注 + 悬停明细；叶子模块（无子项）
+// 计数等于本模块条数，不加后缀，口径天然一致。通用：只按 own_count/count/children 判定。
+function moduleCountLabel(n) {
+  var node = n || {};
+  var total = node.count == null ? 0 : Number(node.count);
+  var own = node.own_count == null ? total : Number(node.own_count);
+  var hasKids = !!(node.children && node.children.length) || own !== total;
+  var text = String(total) + (hasKids ? "（含子项）" : "");
+  var title = hasKids
+    ? ("含子项合计 " + total + "：本模块 " + own + " + 子项 " + (total - own))
+    : ("本模块条目数 " + total);
+  return { text: text, title: title };
+}
+/* EDITOR_COUNT_LABEL_END */
+
+/* EDITOR_TOPBAR_LABEL_BEGIN */
+// 顶栏内容包显示（批5.2 · V2）：窄窗口下包名/标识会被省略（曾截成 `(veinbo..`）——可见文本
+// 保持紧凑，完整信息（名称/标识/版本/模块数）挂 `title`，悬停可见；宽度分配交给 CSS
+// （可收缩项省略号、身份切换固定宽）。通用：字段缺失按实际值回退。
+function packOptionText(p) {
+  var pack = p || {};
+  var name = pack.name == null ? "" : String(pack.name);
+  var id = pack.id == null ? "" : String(pack.id);
+  var count = pack.module_count == null ? 0 : pack.module_count;
+  return (name || id) + "  (" + id + " · " + count + " 模块)";
+}
+
+function packOptionTitle(p) {
+  var pack = p || {};
+  var name = pack.name == null ? "" : String(pack.name);
+  var id = pack.id == null ? "" : String(pack.id);
+  var parts = [(name || id) + (id && name && name !== id ? "（" + id + "）" : "")];
+  if (pack.version) { parts.push("版本 " + pack.version); }
+  parts.push((pack.module_count == null ? 0 : pack.module_count) + " 个模块");
+  parts.push("来源 manifest.json");
+  return parts.join(" · ");
+}
+/* EDITOR_TOPBAR_LABEL_END */
+
+/* EDITOR_ROLLBACK_BEGIN */
+// 回退按钮可用性（批5.2 · V4）：无备份（或只读 / 请求中）时必须真禁用——旧实现只在
+// 成功回读备份状态时写 `disabled`，切到空模块/备份接口失败会沿用上一模块的可用态。
+// 判定集中在这里，`refreshBackup`/`setBusy`/切换模块统一调用；视觉走 tokens 的
+// `.btn:disabled`（灰边灰字）。
+function rollbackDisabled(backup, editable, busy) {
+  return !!busy || !editable || !(backup && backup.exists);
+}
+/* EDITOR_ROLLBACK_END */
+
 /* EDITOR_FIELD_LABEL_BEGIN */
 // 字段标签渲染（批3.5）：中文名为主 + 原始键名为辅。
 //   · 元数据给了中文名（label !== 原始键）→「中文名 + 弱化键名」并列；
@@ -991,10 +1091,14 @@ function helpRegister(card) {
 }
 
 // 卡片行（有序）：人工「说明」优先，其后是自动拼装项；空项不出现。
+// 批5.2（V1）：行内提示不再常驻撑高字段行——`hint`（必填/候选/引用/范围/0=不限/默认）
+// 与 `view_note`（当前视图说明，如本批只读）都收进本卡片，字段网格行高因此一致。
 function helpLines(card) {
   if (!card) { return []; }
   var out = [];
   if (card.help) { out.push({ k: "说明", v: card.help }); }
+  if (card.hint) { out.push({ k: "提示", v: card.hint }); }
+  if (card.view_note) { out.push({ k: "当前视图", v: card.view_note }); }
   var typeText = card.type || "未标注";
   if (card.type_source) { typeText += " · " + card.type_source; }
   out.push({ k: "类型", v: typeText });
@@ -1103,9 +1207,17 @@ function helpOverlaps(a, b) {
 }
 
 // 字段标签包装：可出说明卡时加键盘可达的触发器（tabindex/role/aria-expanded）。
+// 批5.2（V1）：`f.view_note`（当前视图说明）并入说明卡内容；无 view_note 时原样注册
+// `f.help_card`（保持既有调用零行为变化）。
 function helpTriggerHtml(f, inner) {
   if (!f || !f.help_card) { return inner; }
-  var id = helpRegister(f.help_card);
+  var card = f.help_card;
+  if (f.view_note) {
+    card = {};
+    for (var ck in f.help_card) { card[ck] = f.help_card[ck]; }
+    card.view_note = f.view_note;
+  }
+  var id = helpRegister(card);
   return '<span class="flabel helpable" data-help="' + esc(id) + '" tabindex="0"'
     + ' role="button" aria-expanded="false" aria-label="字段说明：'
     + esc(f.label || f.key || "") + '">' + inner + "</span>";
@@ -1303,6 +1415,7 @@ function renderRoleTag() {
   tag.textContent = state.editable ? "可编辑" : "只读预览";
   tag.className = "role" + (state.editable ? "" : " ro");
   markDirty();
+  refreshRollbackButton();   // V4：只读身份切换后回退按钮同步禁用
 }
 
 function switchRole(role) {
@@ -1323,19 +1436,34 @@ function loadPacks() {
     (data.packs || []).forEach(function (p) {
       var o = document.createElement("option");
       o.value = p.id;
-      o.textContent = p.name + "  (" + p.id + " · " + p.module_count + " 模块)";
+      // V2：可见文本紧凑 + 完整信息（名称/标识/版本/模块数）挂 title，悬停可见。
+      o.textContent = packOptionText(p);
+      o.title = packOptionTitle(p);
       sel.appendChild(o);
     });
     state.pack = data.default || (data.packs[0] && data.packs[0].id) || null;
     if (state.pack) { sel.value = state.pack; }
+    syncPackTitle();
     sel.addEventListener("change", function () {
       if (!canLeave()) { sel.value = state.pack; return; }
       discardDraft();
       state.pack = sel.value; state.module = null; state.entry = null;
       state.refCache = {}; state.refKnown = {}; state.refQuery = {};  // 换包后引用候选必须重拉
+      syncPackTitle();
       loadModules();
     });
   });
+}
+
+// 顶栏包名被省略时，悬停出完整信息（V2）；`label` 与 `select` 都挂 title。
+function syncPackTitle() {
+  var sel = el("packs");
+  if (!sel) { return; }
+  var opt = sel.options[sel.selectedIndex];
+  var title = (opt && opt.title) || (opt ? opt.textContent : "");
+  sel.title = title;
+  var box = sel.closest ? sel.closest(".pkgsel") : null;
+  if (box) { box.title = title; }
 }
 
 // ---------------------------------------------------------------------------
@@ -1349,7 +1477,10 @@ function renderModules() {
     d.className = "mod" + (n.children && n.children.length ? " grp" : "") + (depth > 0 ? " sub" : "")
       + (n.module === state.module ? " on" : "");
     d.dataset.module = n.module;
-    d.innerHTML = esc(n.label) + '<span class="ct">' + esc(n.count) + "</span>";
+    // V6：计数统一标注口径（含子项时明示 + 悬停明细；叶子模块为本模块条数）。
+    var cl = moduleCountLabel(n);
+    d.innerHTML = esc(n.label) + '<span class="ct" title="' + esc(cl.title) + '">'
+      + esc(cl.text) + "</span>";
     d.addEventListener("click", function () { selectModule(n.module); });
     nav.appendChild(d);
     (n.children || []).forEach(function (c) { node(c, depth + 1); });
@@ -1362,7 +1493,9 @@ function loadModules() {
   return api("/api/pack/" + enc(state.pack) + "/modules").then(function (data) {
     state.modules = data.modules || [];
     var flat = data.flat ? "平铺" : "层级声明";
-    el("mod-src").textContent = "manifest.modules · " + state.modules.length + " · " + flat;
+    // V6：层级包在栏头明示计数口径；平铺包每个模块计数即本模块条数，无需标注。
+    el("mod-src").textContent = "manifest.modules · " + state.modules.length + " · " + flat
+      + (data.flat ? "" : " · 计数含子项");
     var first = state.modules[0];
     if (!state.module && first) { selectModule(first.module); } else { renderModules(); }
   });
@@ -1376,6 +1509,10 @@ function selectModule(mod) {
   discardDraft();
   state.result = null;
   state.module = mod; state.entry = null; state.filter = ""; el("filter").value = "";
+  // V4：切模块先清空备份状态 → 回退按钮立即禁用，不沿用上一模块的可用外观。
+  state.backup = null;
+  el("backup-note").textContent = "备份：—";
+  refreshRollbackButton();
   renderModules();
   var pos = findModule(mod);
   el("list-title").textContent = pos ? pos.label : mod;
@@ -1402,6 +1539,10 @@ function loadEntries() {
       renderEntries();
       if (state.entries.length) { selectEntry(state.entries[0].id); }
       else {
+        // 空模块没有条目 → 没有备份状态可读：回退按钮保持禁用（V4）。
+        state.backup = null;
+        el("backup-note").textContent = "备份：—";
+        refreshRollbackButton();
         el("p-body").innerHTML = '<div class="empty">该模块暂无条目（条目列表为空）。</div>';
         el("p-title").textContent = EMPTY_TEXT; el("p-sub").textContent = ""; el("p-id").textContent = "";
         helpHideDom();
@@ -1458,8 +1599,17 @@ function refreshBackup() {
       state.backup = b;
       el("backup-note").textContent = b.exists
         ? ("备份：" + b.path + " · " + b.size + " 字节") : "备份：暂无（保存一次后生成）";
-      el("btn-rollback").disabled = !b.exists || !state.editable || state.busy;
-    }).catch(function () { /* 备份状态失败不阻断编辑 */ });
+      refreshRollbackButton();
+    }).catch(function () {
+      // 备份状态失败不阻断编辑，但按钮必须回到禁用态（V4：不留上一模块的可用外观）。
+      state.backup = null;
+      refreshRollbackButton();
+    });
+}
+
+// V4：回退按钮可用性唯一出口——无备份 / 只读 / 请求中 → 真禁用（tokens `.btn:disabled`）。
+function refreshRollbackButton() {
+  el("btn-rollback").disabled = rollbackDisabled(state.backup, state.editable, state.busy);
 }
 
 function renderDetail(d) {
@@ -1471,10 +1621,14 @@ function renderDetail(d) {
   state.forms = {};   // 关联分区各条目的草稿随条目详情重建（切换条目已有 canLeave 守卫）
   renderCtx = MAIN_CTX;
 
+  // 批5.2（V5）：元数据横幅分段——主信息一行（字数/分组数/可编辑），来源路径收进
+  // 右侧小字并挂 title（悬停可见全文），窄屏以省略号收尾而不是折成三行。
   var html = '<div class="meta"><span class="mk">元数据驱动</span>'
-    + "本页字段由内容包元数据生成 · " + d.field_count + " 个字段 · " + d.group_count + " 个分组"
-    + (state.editable ? " · 可编辑" : " · 只读预览")
-    + '<span class="src">' + esc(d.meta_source) + "</span></div>";
+    + '<span class="mi">' + d.field_count + " 个字段</span>"
+    + '<span class="mi">' + d.group_count + " 个分组</span>"
+    + '<span class="mi">' + (state.editable ? "可编辑" : "只读预览") + "</span>"
+    + '<span class="src" title="元数据来源：' + esc(d.meta_source) + '">'
+    + esc(d.meta_source) + "</span></div>";
   html += '<div id="result" hidden></div>';
 
   var groupTabs = EditorGroups.view(d.groups || [], d.fields || []);
@@ -1542,8 +1696,9 @@ function assocPaneHtml(a) {
   if (a.hint) { html += '<div class="ac-hint">' + esc(a.hint) + "</div>"; }
   if (a.note) { html += '<div class="ex">' + esc(a.note) + "</div>"; }
   if (!a.entries || !a.entries.length) {
-    html += '<div class="ex">（暂无相关条目：' + esc(a.module_label) + " 里还没有条目的 "
-      + esc(a.field) + " 指向本条目（" + esc(a.local_field) + "）。）</div></div>";
+    html += '<div class="ex">（暂无相关条目：' + labeledKey(a.module_label, a.module)
+      + " 里还没有条目的 " + labeledKey(a.field_label, a.field) + " 指向本条目（"
+      + labeledKey(a.local_field_label, a.local_field) + "）。）</div></div>";
     return html;
   }
   a.entries.forEach(function (e) {
@@ -1565,7 +1720,7 @@ function assocPaneHtml(a) {
       + '" data-aentry="' + esc(e.id) + '"><div class="ac-head"><b>' + esc(e.name) + "</b>"
       + '<span class="id2">' + esc(e.id) + "</span>"
       + '<span class="ac-rel">命中：' + esc(paths) + "</span></div>"
-      + '<div class="ac-sub">来自模块 ' + esc(a.module_label) + " · 保存写入 "
+      + '<div class="ac-sub">来自模块 ' + labeledKey(a.module_label, a.module) + " · 保存写入 "
       + esc(a.module) + ".json（校验 + 原子写 + 备份）</div>"
       + '<div class="rows2">' + (e.fields || []).map(fieldRow).join("") + "</div>"
       + '<div class="ac-foot"><button type="button" class="asave" data-asave="' + esc(key) + '"'
@@ -1626,24 +1781,18 @@ function fieldRow(f) {
   // 被挤在双列网格的右缘（批4 UX）。只按后端 control 判定，框架不认业务字段名。
   var wide = (f.control === "listtable" || f.control === "reflist"
     || f.control === "condition" || f.control === "maptable") ? " wide" : "";
+  // 批5.2（V1）：行内提示不再常驻渲染（旧 `.hint` 撑高整行 → 纵向节奏忽松忽紧）。
+  // `f.hint` 由后端并入说明卡；只读视图说明经 `view_note` 一并进卡。
+  var note = (typeof state !== "undefined" && state.editable && f.editable === false)
+    ? "本批只读展示（编辑见后续批次）" : "";
+  var trig = note
+    ? { label: f.label, key: f.key, help_card: f.help_card, view_note: note }
+    : f;
   return '<div class="row' + wide + '" data-field="' + esc(f.key) + '" data-present="'
     + (f.present ? "true" : "false") + '"><div class="rlab">'
-    + helpTriggerHtml(f, fieldLabelHtml(f.label, f.key))
+    + helpTriggerHtml(trig, fieldLabelHtml(f.label, f.key))
     + ' <span class="ftype">' + esc(typeZh(f.type)) + "</span></div>"
-    + '<div class="rval">' + fieldBody(f) + fieldHint(f) + "</div></div>";
-}
-
-function hintBits(f) {
-  // 空值措辞统一走 EMPTY_TEXT，不再另造第二种写法
-  // （字段是否写过由 value 的空态与 data-present 表达）。
-  var bits = [];
-  if (f.hint) { bits.push(esc(f.hint)); }
-  return bits;
-}
-
-function fieldHint(f) {
-  var bits = hintBits(f);
-  return bits.length ? '<div class="hint">' + bits.join(" · ") + "</div>" : "";
+    + '<div class="rval">' + fieldBody(f) + "</div></div>";
 }
 
 function fieldBody(f) {
@@ -1652,10 +1801,8 @@ function fieldBody(f) {
 }
 
 function readonlyValue(f) {
-  var html = fieldValue(f);
-  if (!state.editable) { return html; }
-  if (!f.editable) { return html + '<div class="hint"><span class="ro">本批只读展示（编辑见后续批次）</span></div>'; }
-  return html;
+  // 批5.2（V1）：只读说明不再以 `.hint` 常驻字段下方（见 fieldRow 的 view_note）。
+  return fieldValue(f);
 }
 
 // ---------------------------------------------------------------------------
@@ -1676,11 +1823,13 @@ function editControl(f) {
   var v = currentFieldValue(f);
   switch (f.control) {
     case "textarea":
-      return '<textarea class="cta" rows="4" data-key="' + esc(f.key) + '">'
+      return '<textarea class="cta" rows="4" data-key="' + esc(f.key)
+        + '" placeholder="' + esc(INPUT_EMPTY) + '">'
         + esc(v == null ? "" : v) + "</textarea>";
     case "number":
       return '<input class="cin" type="number" step="' + esc(f.number_step || "any")
-        + '" data-key="' + esc(f.key) + '" value="' + esc(v == null ? "" : v) + '">';
+        + '" data-key="' + esc(f.key) + '" placeholder="' + esc(INPUT_EMPTY)
+        + '" value="' + esc(v == null ? "" : v) + '">';
     case "bool":
       return '<label class="ctl-bool"><input type="checkbox" data-key="' + esc(f.key) + '"'
         + (v ? " checked" : "") + '> <span class="btxt">' + (v ? "是" : "否") + "</span></label>";
@@ -1703,7 +1852,8 @@ function editControl(f) {
         + mapFieldInner(f, v) + "</div>";
     case "text":
     default:
-      return '<input class="cin" type="text" data-key="' + esc(f.key) + '" value="'
+      return '<input class="cin" type="text" data-key="' + esc(f.key)
+        + '" placeholder="' + esc(INPUT_EMPTY) + '" value="'
         + esc(v == null ? "" : v) + '">';
   }
 }
@@ -1827,7 +1977,10 @@ function listTableBody(f) {
   } else {
     html += '<div class="ltable-scroll"><table class="ltable ltable-edit"><thead><tr>'
       + cols.map(function (c) {
-        return "<th>" + helpTriggerHtml(c, fieldLabelHtml(c.label, c.key))
+        // V11：表头只留「中文 + 类型」，键名缩为悬停 tooltip（不再折三行）。
+        // V10：给引用列加宽档（scalarCssClass 只按控件形态），下拉文本不被裁。
+        return '<th class="' + esc(scalarCssClass(c.control)) + '">'
+          + helpTriggerHtml(c, headerLabelHtml(c.label, c.key))
           + ' <span class="ftype">' + esc(typeZh(c.type)) + "</span></th>";
       }).join("")
       + '<th class="op">操作</th></tr></thead><tbody>';
@@ -1891,7 +2044,7 @@ function listBlockHtml(f, row, i, scalar, scalars, nests) {
     html += '<div class="lb-scalars">' + scalars.map(function (c) {
       return '<div class="lb-scalar ' + esc(scalarCssClass(c.control)) + '" data-lscalar="'
         + esc(c.key) + '"><span class="lb-k">'
-        + helpTriggerHtml(c, fieldLabelHtml(c.label, c.key))
+        + helpTriggerHtml(c, headerLabelHtml(c.label, c.key))
         + ' <span class="ftype">' + esc(typeZh(c.type)) + "</span></span>"
         + listCell(f, row, c, i, scalar) + "</div>";
     }).join("") + "</div>";
@@ -1901,7 +2054,7 @@ function listBlockHtml(f, row, i, scalar, scalars, nests) {
   if (nests.length) {
     html += '<div class="lb-nests">' + nests.map(function (c) {
       return '<div class="lb-nest" data-lnest="' + esc(c.key) + '"><div class="lb-nest-h">'
-        + helpTriggerHtml(c, fieldLabelHtml(c.label, c.key))
+        + helpTriggerHtml(c, headerLabelHtml(c.label, c.key))
         + ' <span class="ftype">' + esc(typeZh(c.type)) + "</span></div>"
         + '<div class="lb-nest-b">' + listCell(f, row, c, i, scalar) + "</div></div>";
     }).join("") + "</div>";
@@ -1925,7 +2078,7 @@ function listCell(f, row, col, i, scalar) {
   switch (col.control) {
     case "number":
       return '<input class="cin lcell" type="number" step="' + esc(col.number_step || "any")
-        + '" placeholder="' + esc(EMPTY_TEXT) + '"' + attrs
+        + '" placeholder="' + esc(INPUT_EMPTY) + '"' + attrs
         + ' value="' + esc(v == null ? "" : v) + '">';
     case "bool":
       return '<label class="ctl-bool"><input type="checkbox"' + attrs + (v ? " checked" : "")
@@ -1957,7 +2110,7 @@ function listCell(f, row, col, i, scalar) {
     case "textarea":
     default:
       return '<input class="cin lcell" type="text"' + attrs
-        + ' placeholder="' + esc(EMPTY_TEXT) + '" value="'
+        + ' placeholder="' + esc(INPUT_EMPTY) + '" value="'
         + esc(v == null ? "" : v) + '">';
   }
 }
@@ -2403,19 +2556,27 @@ function fillRefSelect(sel, target) {
   }).catch(function () { /* 候选失败不阻断 */ });
 }
 
-function markRefWarn(sel, target) {
+function refSelectTitle(sel, target) {
+  // V10：引用下拉被裁剪时，悬停给「当前：名称（标识）」全文 + 非法提示。
   var opts = state.refCache[target] || [];
-  var st = EditorRef.status(sel.value === "" ? null : sel.value,
-    EditorRef.ids(opts), state.refKnown[target]);
+  var cur = sel.value === "" ? null : sel.value;
+  var st = EditorRef.status(cur, EditorRef.ids(opts), state.refKnown[target]);
+  var label = cur == null ? "" : EditorRef.label(cur, opts);
+  var parts = [];
+  if (label) { parts.push("当前：" + label); }
+  if (st.warn && st.text) { parts.push(st.text); }
+  sel.title = parts.join(" · ");
+  return st;
+}
+
+function markRefWarn(sel, target) {
+  var st = refSelectTitle(sel, target);
   sel.classList.toggle("warn", st.warn);
-  sel.title = st.text || "";
 }
 
 function applyScalarRefWarning(sel) {
   var target = sel.dataset.ref;
-  var opts = state.refCache[target] || [];
-  var st = EditorRef.status(sel.value === "" ? null : sel.value,
-    EditorRef.ids(opts), state.refKnown[target]);
+  var st = refSelectTitle(sel, target);
   var note = sel.parentNode ? sel.parentNode.querySelector(".refnote") : null;
   if (note) {
     note.innerHTML = st.warn ? '<span class="refwarn">' + esc(st.text) + "</span>" : "";
@@ -2456,8 +2617,12 @@ function refValChips(values, opts, known) {
   if (!values.length) { return '<span class="ex">（未选择任何引用）</span>'; }
   return values.map(function (id) {
     var st = EditorRef.status(id, opts, known);
-    return '<span class="refval' + (st.warn ? " warn" : "") + '" title="' + esc(st.text) + '">'
-      + '<span class="mono2">' + esc(EditorRef.label(id, opts)) + "</span>"
+    // V10：chip 文本被窄栏裁切时，悬停 title 给全文（名称（标识）+ 非法提示）；
+    // 此前合法值 title 为空，裁了也看不到全文。
+    var label = EditorRef.label(id, opts);
+    var title = label + (st.warn && st.text ? " · " + st.text : "");
+    return '<span class="refval' + (st.warn ? " warn" : "") + '" title="' + esc(title) + '">'
+      + '<span class="mono2">' + esc(label) + "</span>"
       + (st.warn ? '<span class="refwarn">目标不存在</span>' : "")
       + '<button type="button" class="ldel" data-refdel="' + esc(id) + '">清除</button></span>';
   }).join("");
@@ -2595,7 +2760,7 @@ function snapshotOtherDrafts(exceptKey) {
 function setBusy(on) {
   state.busy = !!on;
   markDirty();
-  el("btn-rollback").disabled = state.busy || !(state.backup && state.backup.exists && state.editable);
+  refreshRollbackButton();
 }
 
 function postForm(ctx, suffix) {
@@ -2701,12 +2866,16 @@ function listTable(f) {
   }
   if (f.block_layout || nestedCol) { return listBlockTable(f, cols); }
   var head = "<tr>" + cols.map(function (c) {
-    return "<th>" + helpTriggerHtml(c, fieldLabelHtml(c.label, c.key))
+    // V11：只读表头同样只留「中文 + 类型」，键名缩为悬停 tooltip。
+    return '<th class="' + esc(scalarCssClass(c.control)) + '">'
+      + helpTriggerHtml(c, headerLabelHtml(c.label, c.key))
       + ' <span class="ftype">' + esc(typeZh(c.type)) + "</span></th>";
   }).join("") + "</tr>";
   var body = (f.rows || []).map(function (row) {
     return "<tr>" + cols.map(function (c) {
-      return "<td>" + esc(row[c.key] == null ? "" : row[c.key]) + "</td>";
+      // V10：只读单元格省略号 + title 全文（悬停可见完整值）。
+      var txt = row[c.key] == null ? "" : String(row[c.key]);
+      return '<td title="' + esc(txt) + '">' + esc(txt) + "</td>";
     }).join("") + "</tr>";
   }).join("");
   var note = '<div class="lmeta">列表字段 · ' + f.row_count + " 行"
@@ -2731,7 +2900,7 @@ function listBlockTable(f, cols) {
     if (scalars.length) {
       html += '<div class="lb-scalars">' + scalars.map(function (c) {
         return '<div class="lb-scalar ' + esc(scalarCssClass(c.control)) + '"><span class="lb-k">'
-          + helpTriggerHtml(c, fieldLabelHtml(c.label, c.key))
+          + helpTriggerHtml(c, headerLabelHtml(c.label, c.key))
           + ' <span class="ftype">' + esc(typeZh(c.type)) + "</span></span>"
           + '<div class="inp">' + esc(roCellText(row[c.key])) + "</div></div>";
       }).join("") + "</div>";
@@ -2740,7 +2909,7 @@ function listBlockTable(f, cols) {
     if (nests.length) {
       html += '<div class="lb-nests">' + nests.map(function (c) {
         return '<div class="lb-nest"><div class="lb-nest-h">'
-          + helpTriggerHtml(c, fieldLabelHtml(c.label, c.key))
+          + helpTriggerHtml(c, headerLabelHtml(c.label, c.key))
           + ' <span class="ftype">' + esc(typeZh(c.type)) + "</span></div>"
           + '<div class="lb-nest-b"><div class="inp">' + esc(roCellText(row[c.key]))
           + "</div></div></div>";

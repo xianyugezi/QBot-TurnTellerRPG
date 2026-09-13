@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>内容编辑器 · 批1 只读骨架</title>
+<link rel="stylesheet" href="/static/tokens.css">
+<style>
+/* 终端极简风（令牌全部来自 tokens.css；此处只写骨架与组件布局，零 CDN、零外链字体） */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; height: 100%; }
+body {
+  font-family: var(--font-mono);
+  font-size: var(--fs-12);
+  line-height: var(--lh-tight);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+.app { width: 100%; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+/* ---------- 顶栏：内容包选择器 + 只读状态 + 身份 ---------- */
+.topbar { height: var(--h-topbar); flex: 0 0 var(--h-topbar); display: flex; align-items: center;
+  gap: var(--sp-7); padding: 0 var(--sp-8); border-bottom: var(--bw) solid var(--line-strong); }
+.brand { color: var(--text-strong); font-weight: 700; letter-spacing: .04em; }
+.brand .mark { color: var(--accent); }
+.pkgsel { display: inline-flex; align-items: center; gap: var(--sp-3); border: var(--bw) solid var(--line-strong); padding: 2px var(--sp-4); }
+.pkgsel .lb { color: var(--text-4); }
+.pkgsel select { font-family: inherit; font-size: var(--fs-12); color: var(--accent);
+  background: var(--bg); border: 0; outline: none; padding: 1px 2px; max-width: 280px; }
+.pkgsel .from { color: var(--text-6); }
+.saved { color: var(--accent); }
+.saved::before { content: "["; color: var(--text-6); }
+.saved::after { content: "]"; color: var(--text-6); }
+.topright { margin-left: auto; display: flex; align-items: center; gap: var(--sp-6); color: var(--text-3); }
+.who b { color: var(--text-value); font-weight: 700; }
+.role { border: var(--bw) solid var(--accent); color: var(--accent); padding: 0 var(--sp-2); }
+
+.body { flex: 1 1 auto; display: flex; min-height: 0; }
+
+/* ---------- 三栏骨架：①模块分类 ②条目列表 ③大编辑面板 ---------- */
+.col-mod { width: var(--w-mod); flex: 0 0 var(--w-mod); border-right: var(--bw) solid var(--line-strong);
+  display: flex; flex-direction: column; min-height: 0; }
+.col-list { width: var(--w-list); flex: 0 0 var(--w-list); border-right: var(--bw) solid var(--line-strong);
+  display: flex; flex-direction: column; min-height: 0; }
+.col-hd { height: var(--h-bar); flex: 0 0 var(--h-bar); display: flex; align-items: center;
+  padding: 0 var(--sp-6); border-bottom: var(--bw) solid var(--line-soft);
+  color: var(--text-5); letter-spacing: .08em; }
+.col-hd .src { margin-left: auto; color: var(--text-6); font-size: var(--fs-10); letter-spacing: 0; }
+.mods { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: var(--sp-2) 0; }
+.mod { display: flex; align-items: center; gap: 2px; padding: var(--sp-2) var(--sp-6);
+  color: var(--text-2); white-space: nowrap; cursor: pointer; }
+.mod::before { content: "\00b7 "; color: var(--text-6); }
+.mod.grp::before { content: "\25be "; color: var(--text-4); }
+.mod.sub { padding-left: calc(var(--sp-6) + var(--ind-lv)); }
+.mod.sub::before { content: "\2514 "; color: var(--text-6); }
+.mod:hover { background: var(--surface-hover); }
+.mod.on { background: var(--surface-sel); color: var(--text-strong); border-left: var(--bw) solid var(--accent); }
+.mod.on::before { content: "> "; color: var(--accent); }
+.mod.sub.on::before { content: "\2514 "; color: var(--accent); }
+.mod .ct { margin-left: auto; color: var(--text-4); }
+.mod.on .ct { color: var(--accent); }
+
+.list-hd { height: var(--h-bar); flex: 0 0 var(--h-bar); display: flex; align-items: center;
+  padding: 0 var(--sp-6); border-bottom: var(--bw) solid var(--line-soft); }
+.list-title { color: var(--text-strong); font-weight: 700; }
+.list-count { margin-left: var(--sp-5); color: var(--text-5); font-size: var(--fs-11); font-weight: 400; }
+.list-tools { display: flex; align-items: center; padding: var(--sp-3) var(--sp-6); border-bottom: var(--bw) solid var(--line-soft); }
+.search { display: flex; align-items: center; border: var(--bw) solid var(--line-strong); padding: 2px var(--sp-4); width: 100%; }
+.search input { border: 0; background: transparent; outline: none; color: var(--text-value);
+  font-family: inherit; font-size: var(--fs-12); width: 100%; }
+.rows { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: var(--sp-2) 0; }
+.item { display: block; padding: var(--sp-3) var(--sp-6); color: var(--text-2); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.item::before { content: "\00b7 "; color: var(--text-6); }
+.item:hover { background: var(--surface-hover); }
+.item.on { background: var(--surface-sel); color: var(--text-strong); border-left: var(--bw) solid var(--accent); }
+.item.on::before { content: "> "; color: var(--accent); }
+.list-ft { margin-top: auto; padding: var(--sp-4) var(--sp-6); border-top: var(--bw) solid var(--line-strong);
+  color: var(--text-4); display: flex; align-items: center; gap: var(--sp-5); }
+.sp { margin-left: auto; }
+
+/* ---------- 细滚动条：6px、低对比、悬停略亮 ---------- */
+.mods::-webkit-scrollbar, .rows::-webkit-scrollbar, .panel-body::-webkit-scrollbar { width: var(--sb-size); height: var(--sb-size); }
+.mods::-webkit-scrollbar-track, .rows::-webkit-scrollbar-track, .panel-body::-webkit-scrollbar-track { background: transparent; }
+.mods::-webkit-scrollbar-thumb, .rows::-webkit-scrollbar-thumb, .panel-body::-webkit-scrollbar-thumb { background: var(--sb-thumb); border-radius: var(--radius-sb); }
+.mods::-webkit-scrollbar-thumb:hover, .rows::-webkit-scrollbar-thumb:hover, .panel-body::-webkit-scrollbar-thumb:hover { background: var(--sb-thumb-hover); }
+
+/* ---------- 大编辑面板（占其余全部宽度） ---------- */
+.panel { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
+.panel-hd { flex: 0 0 auto; padding: var(--sp-5) var(--sp-8); border-bottom: var(--bw) solid var(--line-soft);
+  display: flex; align-items: center; gap: var(--sp-6); }
+.panel-title { color: var(--text-strong); font-weight: 700; }
+.panel-title::before { content: "> "; color: var(--accent); }
+.panel-sub { color: var(--text-4); }
+.panel-id { margin-left: auto; color: var(--text-4); }
+.panel-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: var(--sp-6) var(--sp-8); }
+.panel-ft { flex: 0 0 auto; display: flex; align-items: center; gap: var(--sp-5);
+  padding: var(--sp-5) var(--sp-8); border-top: var(--bw) solid var(--line-strong); color: var(--text-5); }
+
+.meta { display: flex; align-items: center; gap: var(--sp-5); margin: 0 0 var(--sp-6);
+  padding: var(--sp-3) var(--sp-5); border: var(--bw) solid var(--line); border-left: var(--bw-accent) solid var(--accent);
+  color: var(--text-2); }
+.meta .mk { color: var(--accent); }
+.meta .mk::before { content: "["; color: var(--text-5); }
+.meta .mk::after { content: "]"; color: var(--text-5); }
+.meta .src { margin-left: auto; color: var(--text-4); }
+
+.gtabs { display: flex; align-items: center; gap: var(--sp-3); margin: 0 0 var(--sp-6);
+  padding-bottom: var(--sp-4); border-bottom: var(--bw) solid var(--line-soft); flex-wrap: wrap; }
+.gtab { font-family: inherit; font-size: var(--fs-12); cursor: pointer; color: var(--text-3);
+  border: var(--bw) solid var(--line); background: transparent; padding: 2px var(--sp-5); }
+.gtab b { margin-left: var(--sp-2); color: var(--text-5); font-weight: 400; }
+.gtab.on { color: var(--accent); border-color: var(--accent); }
+.gtab.on b { color: var(--accent); }
+
+.rows2 { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--sp-11); }
+.row { display: grid; grid-template-columns: 132px 1fr; gap: var(--sp-5); align-items: start;
+  padding: var(--sp-4) 0; border-bottom: var(--bw) solid var(--line-faint); min-width: 0; }
+.row > .rlab { color: var(--text-4); display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; }
+.row > .rlab::before { content: "> "; color: var(--line-mute); }
+.ftype { color: var(--accent-dim); }
+.ftype::before { content: "<"; color: var(--text-6); }
+.ftype::after { content: ">"; color: var(--text-6); }
+.rval { min-width: 0; }
+.inp { color: var(--text-value); white-space: pre-wrap; overflow-wrap: anywhere; }
+.inp.mono { color: var(--accent); white-space: pre-wrap; overflow-wrap: anywhere; }
+.inp.bool { display: flex; align-items: center; gap: var(--sp-3); color: var(--text-value); }
+.box { display: inline-block; width: 11px; height: 11px; border: var(--bw) solid var(--line-strong); }
+.box.on { border-color: var(--accent); background: var(--accent); }
+.ta { width: 100%; border: var(--bw) solid var(--line); background: transparent; color: var(--text);
+  font-family: inherit; font-size: var(--fs-12); line-height: var(--lh-text); padding: var(--sp-4) var(--sp-5);
+  white-space: pre-wrap; overflow-wrap: anywhere; }
+.hint { color: var(--text-5); font-size: var(--fs-11); margin-top: var(--sp-2); }
+.ex { color: var(--text-5); }
+.nest { border-bottom: 0; padding: var(--sp-2) 0; grid-template-columns: 110px 1fr; }
+
+.ltable { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.ltable th { text-align: left; font-weight: 400; color: var(--text-3); border: var(--bw) solid var(--line);
+  background: var(--surface-th); padding: var(--sp-3) var(--sp-4); white-space: nowrap; overflow: hidden; }
+.ltable th .ftype { margin-left: var(--sp-2); }
+.ltable td { border: var(--bw) solid var(--line-soft); padding: var(--sp-3) var(--sp-4); color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ltable tr:nth-child(even) td { background: var(--surface-zebra); }
+.lmeta { color: var(--text-4); font-size: var(--fs-11); margin: var(--sp-2) 0; }
+.empty { color: var(--text-5); padding: var(--sp-10) var(--sp-8); line-height: var(--lh-ex); }
+.vtag { flex: 0 0 auto; height: var(--h-ctl-sm); display: flex; align-items: center;
+  padding: 0 var(--sp-8); color: var(--text-5); border-top: var(--bw) solid var(--line-soft); }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="topbar">
+    <span class="brand"><span class="mark">▚</span> 内容编辑器 :: 只读骨架</span>
+    <label class="pkgsel">
+      <span class="lb">pkg=</span>
+      <select id="packs" aria-label="内容包选择器"></select>
+      <span class="from">manifest.json</span>
+    </label>
+    <span class="saved" id="mode">只读 · 未接线保存</span>
+    <div class="topright">
+      <span class="who">owner=<b>机主</b></span>
+      <span class="role">只读</span>
+    </div>
+  </header>
+
+  <div class="body">
+
+    <!-- 栏①：模块分类栏（模块与层级来自 manifest 声明；父子缩进表达） -->
+    <aside class="col-mod">
+      <div class="col-hd">模块<span class="src" id="mod-src">manifest.modules</span></div>
+      <nav class="mods" id="mods"></nav>
+    </aside>
+
+    <!-- 栏②：条目列表栏（只名字 · 细滚动条 · 无翻页器） -->
+    <aside class="col-list">
+      <div class="list-hd">
+        <span class="list-title" id="list-title">条目</span>
+        <span class="list-count" id="list-count"></span>
+      </div>
+      <div class="list-tools">
+        <div class="search"><input id="filter" placeholder="过滤当前列表（本地）" aria-label="过滤当前列表"></div>
+      </div>
+      <div class="rows" id="rows"></div>
+      <div class="list-ft"><span>无翻页 · 滚动查看</span><span class="sp" id="list-ft">共 0 条</span></div>
+    </aside>
+
+    <!-- 栏③：大编辑面板（占其余全部宽度；批1 只读渲染） -->
+    <section class="panel">
+      <div class="panel-hd">
+        <span class="panel-title" id="p-title">未选择条目</span>
+        <span class="panel-sub" id="p-sub"></span>
+        <span class="panel-id" id="p-id"></span>
+      </div>
+      <div class="panel-body" id="p-body">
+        <div class="empty">从左侧选择模块与条目。本批只读：字段按内容包元数据渲染，不写盘。</div>
+      </div>
+      <div class="panel-ft"><span>批1 · 只读骨架（编辑 / 保存 / 校验见后续批次）</span></div>
+    </section>
+
+  </div>
+
+  <div class="vtag" id="vtag">终端极简风 · 元数据驱动 · 零 CDN</div>
+</div>
+
+<script>
+"use strict";
+
+// ---------------------------------------------------------------------------
+// 类型显示名（框架级映射，与内容包无关）：FieldMeta.type → 中文
+// ---------------------------------------------------------------------------
+var TYPE_ZH = {
+  str: "文本", text: "文本", int: "数字", float: "数字", number: "数字",
+  bool: "布尔", enum: "枚举", ref: "引用", list: "列表", obj: "对象",
+  map: "映射", formula: "公式"
+};
+
+var state = { pack: null, modules: [], module: null, entries: [], entry: null, detail: null, filter: "" };
+
+function esc(v) {
+  return String(v == null ? "" : v)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+function typeZh(t) { return TYPE_ZH[t] || t || "文本"; }
+
+function api(path) {
+  return fetch(path, { headers: { "Accept": "application/json" } }).then(function (r) {
+    return r.json().then(function (data) {
+      if (!r.ok) { throw new Error((data && data.error) || ("HTTP " + r.status)); }
+      return data;
+    });
+  });
+}
+
+function el(id) { return document.getElementById(id); }
+function fail(where, err) {
+  el("p-body").innerHTML = '<div class="empty">' + esc(where + " 失败：" + err.message) + "</div>";
+}
+
+// ---------------------------------------------------------------------------
+// 内容包选择器
+// ---------------------------------------------------------------------------
+function loadPacks() {
+  return api("/api/packs").then(function (data) {
+    var sel = el("packs");
+    sel.innerHTML = "";
+    (data.packs || []).forEach(function (p) {
+      var o = document.createElement("option");
+      o.value = p.id;
+      o.textContent = p.name + "  (" + p.id + " · " + p.module_count + " 模块)";
+      sel.appendChild(o);
+    });
+    state.pack = data.default || (data.packs[0] && data.packs[0].id) || null;
+    if (state.pack) { sel.value = state.pack; }
+    sel.addEventListener("change", function () {
+      state.pack = sel.value; state.module = null; state.entry = null;
+      loadModules();
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// 栏①：模块分类（层级来自包元数据；item.children 递归渲染）
+// ---------------------------------------------------------------------------
+function renderModules() {
+  var nav = el("mods");
+  nav.innerHTML = "";
+  function node(n, depth) {
+    var d = document.createElement("div");
+    d.className = "mod" + (n.children && n.children.length ? " grp" : "") + (depth > 0 ? " sub" : "")
+      + (n.module === state.module ? " on" : "");
+    d.dataset.module = n.module;
+    d.innerHTML = esc(n.label) + '<span class="ct">' + esc(n.count) + "</span>";
+    d.addEventListener("click", function () { selectModule(n.module); });
+    nav.appendChild(d);
+    (n.children || []).forEach(function (c) { node(c, depth + 1); });
+  }
+  (state.modules || []).forEach(function (m) { node(m, 0); });
+}
+
+function loadModules() {
+  if (!state.pack) { return Promise.resolve(); }
+  el("mod-src").textContent = "manifest.modules";
+  return api("/api/pack/" + encodeURIComponent(state.pack) + "/modules").then(function (data) {
+    state.modules = data.modules || [];
+    var flat = data.flat ? "平铺" : "层级声明";
+    el("mod-src").textContent = "manifest.modules · " + state.modules.length + " · " + flat;
+    var first = state.modules[0];
+    if (!state.module && first) { selectModule(first.module); } else { renderModules(); }
+  });
+}
+
+// ---------------------------------------------------------------------------
+// 栏②：条目列表（只名字；无翻页）
+// ---------------------------------------------------------------------------
+function selectModule(mod) {
+  state.module = mod; state.entry = null; state.filter = ""; el("filter").value = "";
+  renderModules();
+  var pos = findModule(mod);
+  el("list-title").textContent = pos ? pos.label : mod;
+  return loadEntries();
+}
+
+function findModule(mod) {
+  var found = null;
+  (function walk(list) {
+    (list || []).forEach(function (n) {
+      if (n.module === mod) { found = n; }
+      if (n.children) { walk(n.children); }
+    });
+  })(state.modules);
+  return found;
+}
+
+function loadEntries() {
+  if (!state.pack || !state.module) { return Promise.resolve(); }
+  return api("/api/pack/" + encodeURIComponent(state.pack) + "/module/"
+    + encodeURIComponent(state.module) + "/entries").then(function (data) {
+    state.entries = data.entries || [];
+    el("list-count").textContent = state.entries.length + " 条";
+    renderEntries();
+    if (state.entries.length) { selectEntry(state.entries[0].id); }
+    else {
+      el("p-body").innerHTML = '<div class="empty">该模块暂无条目（条目列表为空）。</div>';
+      el("p-title").textContent = "（空）"; el("p-sub").textContent = ""; el("p-id").textContent = "";
+    }
+  });
+}
+
+function renderEntries() {
+  var box = el("rows");
+  box.innerHTML = "";
+  var q = state.filter.toLowerCase();
+  var shown = state.entries.filter(function (e) { return !q || e.name.toLowerCase().indexOf(q) >= 0; });
+  shown.forEach(function (e) {
+    var d = document.createElement("div");
+    d.className = "item" + (e.id === state.entry ? " on" : "");
+    d.textContent = e.name;
+    d.title = e.name + "  [" + e.id + "]";
+    d.addEventListener("click", function () { selectEntry(e.id); });
+    box.appendChild(d);
+  });
+  el("list-ft").textContent = "共 " + shown.length + " 条"
+    + (shown.length !== state.entries.length ? "（已过滤 / 全部 " + state.entries.length + "）" : "");
+}
+
+// ---------------------------------------------------------------------------
+// 栏③：条目只读详情（字段由元数据生成；分组页签）
+// ---------------------------------------------------------------------------
+function selectEntry(id) {
+  state.entry = id;
+  renderEntries();
+  return api("/api/pack/" + encodeURIComponent(state.pack) + "/entry/"
+    + encodeURIComponent(state.module) + "/" + encodeURIComponent(id)).then(function (data) {
+    state.detail = data;
+    renderDetail(data);
+  }).catch(function (err) { fail("读取条目", err); });
+}
+
+function renderDetail(d) {
+  el("p-title").textContent = d.name;
+  el("p-sub").textContent = (d.module_label || d.module) + " · 字段由元数据渲染";
+  el("p-id").textContent = d.id;
+
+  var html = '<div class="meta"><span class="mk">元数据驱动</span>'
+    + "本页字段由内容包元数据生成 · " + d.field_count + " 个字段 · " + d.group_count + " 个分组"
+    + '<span class="src">' + esc(d.meta_source) + "</span></div>";
+
+  var groups = d.groups || [];
+  if (!groups.length) {
+    el("p-body").innerHTML = html + '<div class="empty">该条目没有可渲染字段。</div>';
+    return;
+  }
+  var byGroup = {};
+  (d.fields || []).forEach(function (f) {
+    (byGroup[f.group] = byGroup[f.group] || []).push(f);
+  });
+  var tabs = '<div class="gtabs">';
+  groups.forEach(function (g, i) {
+    tabs += '<button class="gtab' + (i === 0 ? " on" : "") + '" data-g="' + i + '">'
+      + esc(g.name) + " <b>" + g.count + "</b></button>";
+  });
+  tabs += "</div>";
+  html += tabs;
+  groups.forEach(function (g, i) {
+    var fields = byGroup[g.name] || [];
+    html += '<div class="gpane"' + (i === 0 ? "" : " hidden") + ' data-g="' + i + '">'
+      + '<div class="rows2">' + fields.map(fieldRow).join("") + "</div></div>";
+  });
+  el("p-body").innerHTML = html;
+  Array.prototype.forEach.call(el("p-body").querySelectorAll(".gtab"), function (btn) {
+    btn.addEventListener("click", function () {
+      var idx = btn.dataset.g;
+      Array.prototype.forEach.call(el("p-body").querySelectorAll(".gtab"), function (b) {
+        b.classList.toggle("on", b === btn);
+      });
+      Array.prototype.forEach.call(el("p-body").querySelectorAll(".gpane"), function (p) {
+        p.hidden = p.dataset.g !== idx;
+      });
+    });
+  });
+}
+
+function fieldRow(f) {
+  return '<div class="row"><div class="rlab">' + esc(f.label)
+    + ' <span class="ftype">' + esc(typeZh(f.type)) + "</span></div>"
+    + '<div class="rval">' + fieldValue(f) + fieldHint(f) + "</div></div>";
+}
+
+function fieldHint(f) {
+  var bits = [];
+  if (f.hint) { bits.push(esc(f.hint)); }
+  if (!f.present) { bits.push("（该条目未写此字段）"); }
+  return bits.length ? '<div class="hint">' + bits.join(" · ") + "</div>" : "";
+}
+
+function fieldValue(f) {
+  switch (f.widget) {
+    case "bool":
+      return '<div class="inp bool"><span class="box' + (f.value ? " on" : "") + '"></span>'
+        + (f.value ? "是" : "否") + "</div>";
+    case "number":
+      return '<div class="inp mono">' + esc(f.display || "0") + "</div>";
+    case "formula":
+      return '<div class="inp mono">' + esc(f.display || "") + "</div>";
+    case "ref":
+      return '<div class="inp mono">' + esc(f.display || "（空）") + "</div>";
+    case "enum":
+      return '<div class="inp">' + esc(f.display || "（空）") + "</div>";
+    case "list":
+      return listTable(f);
+    case "map":
+      return kvTable(f);
+    case "obj":
+      return objTable(f);
+    case "text":
+    default:
+      return textValue(f);
+  }
+}
+
+function textValue(f) {
+  var v = f.display == null ? "" : f.display;
+  if (String(v).length > 80 || String(v).indexOf("\n") >= 0) {
+    return '<div class="ta">' + esc(v || "（空）") + "</div>";
+  }
+  return '<div class="inp">' + esc(v || "（空）") + "</div>";
+}
+
+function listTable(f) {
+  if (!f.value || !f.value.length) { return '<div class="ex">（空列表）</div>'; }
+  var cols = f.columns || [];
+  var head = "<tr>" + cols.map(function (c) {
+    return "<th>" + esc(c.label) + ' <span class="ftype">' + esc(typeZh(c.type)) + "</span></th>";
+  }).join("") + "</tr>";
+  var body = (f.rows || []).map(function (row) {
+    return "<tr>" + cols.map(function (c) {
+      return "<td>" + esc(row[c.key] == null ? "" : row[c.key]) + "</td>";
+    }).join("") + "</tr>";
+  }).join("");
+  var note = '<div class="lmeta">列表字段 · ' + f.row_count + " 行"
+    + (f.rows && f.rows.length < f.row_count ? "（只读视图最多显示 " + f.rows.length + " 行）" : "")
+    + " · 列名与类型来自内容包元数据</div>";
+  return note + '<table class="ltable"><thead>' + head + "</thead><tbody>" + body + "</tbody></table>";
+}
+
+function kvTable(f) {
+  if (!f.value || !Object.keys(f.value).length) { return '<div class="ex">（空映射）</div>'; }
+  var body = (f.rows || []).map(function (r) {
+    return "<tr><td>" + esc(r.key) + "</td><td>" + esc(r.display == null ? "" : r.display) + "</td></tr>";
+  }).join("");
+  return '<table class="ltable"><thead><tr><th>键</th><th>值</th></tr></thead>'
+    + "<tbody>" + body + "</tbody></table>";
+}
+
+function objTable(f) {
+  var kids = f.children || [];
+  if (!kids.length) {
+    return '<div class="ta">' + esc(JSON.stringify(f.value, null, 2)) + "</div>";
+  }
+  return kids.map(function (c) {
+    return '<div class="row nest"><div class="rlab">' + esc(c.label)
+      + ' <span class="ftype">' + esc(typeZh(c.type)) + "</span></div>"
+      + '<div class="rval">' + fieldValue(c) + "</div></div>";
+  }).join("");
+}
+
+// ---------------------------------------------------------------------------
+// 启动
+// ---------------------------------------------------------------------------
+loadPacks().then(loadModules).catch(function (err) { fail("初始化", err); });
+el("filter").addEventListener("input", function (e) {
+  state.filter = e.target.value; renderEntries();
+});
+</script>
+</body>
+</html>

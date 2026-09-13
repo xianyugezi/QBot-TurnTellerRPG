@@ -15,6 +15,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**顶冠冲撞**：低头以枝角状鹿角冲撞顶飞参战者；破坏鹿角解除冲撞",
   "actions_ref": [
    "ind_258",
    "ind_259",
@@ -112,6 +113,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**掘根拱地**：拱翻地表掀起土石波及周身；破坏鼻甲停止掘地",
   "actions_ref": [
    "dif_004",
    "dif_005",
@@ -173,6 +175,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**树脂喷吐**：喷吐黏稠树脂减速走位；烧除脂壳转为易伤",
   "actions_ref": [
    "dif_007",
    "dif_008",
@@ -224,6 +227,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**缩壳硬化**：缩入壳内硬化减伤；压制头部迫其出壳",
   "actions_ref": [
    "dif_010",
    "dif_011",
@@ -275,6 +279,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**落果投掷**：自林冠掷落硬松果砸击；破坏前肢停止投掷",
   "actions_ref": [
    "dif_013",
    "dif_014",
@@ -326,6 +331,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**针尾横扫**：扫击周身逼退近战；破坏尾针解除横扫",
   "actions_ref": [
    "dif_016",
    "dif_017",
@@ -377,6 +383,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**抱树震落**：摇晃树干震落断枝压人；破坏前肢解除震落",
   "actions_ref": [
    "dif_019",
    "dif_020",
@@ -438,6 +445,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**叩壳硬化**：反复叩击硬化喙甲提防；破坏喙甲后可处决",
   "actions_ref": [
    "dif_022",
    "dif_023",
@@ -489,6 +497,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**低吼慑敌**：吼声压制参战者行动 1 个出手序列；破坏喉囊解除压制",
   "actions_ref": [
    "dif_025",
    "dif_026",
@@ -548,6 +557,7 @@
    "雷殛": "1.0",
    "风暴": "0.25"
   },
+  "mech": "**部件破坏教学**：首杀必触发一次破坏或压制；部位／阶段／素材全表见 `03` §M3.11",
   "actions_ref": [
    "ind_001",
    "ind_002",
@@ -637,6 +647,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "羽如细针扎手；扫落飞羽后可捕捉",
   "actions_ref": [
    "uq_001"
   ],
@@ -661,6 +672,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "抱松球滚逃；拦截可逼停",
   "actions_ref": [
    "uq_002"
   ],
@@ -685,6 +697,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "展膜滑翔位移频繁；风缆可预判落点",
   "actions_ref": [
    "uq_003"
   ],
@@ -709,7 +722,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "贴苔面低飞难瞄准；待其停落时出手",
+  "actions_ref": [
+   "ska_034"
+  ],
   "moves_unresolved": [],
   "weight_tune": "`独有招_188`",
   "duyou_pos": "",
@@ -731,7 +747,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "啄食松果干扰采集；驱赶即散",
+  "actions_ref": [
+   "ska_034"
+  ],
   "moves_unresolved": [],
   "weight_tune": "`独有招_188`",
   "duyou_pos": "",
@@ -753,6 +772,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "倒挂枝头抛掷枝条；压制可击落",
   "actions_ref": [
    "uq_004"
   ],
@@ -777,6 +797,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "雾中隐身窜逃；守住出口堵截",
   "actions_ref": [
    "uq_005"
   ],
@@ -801,6 +822,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "自林冠俯冲惊吓；灯光可驱离",
   "actions_ref": [
    "uq_006"
   ],
@@ -825,6 +847,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "鳞粉黏翅减速通行；焰属性可烧除",
   "actions_ref": [
    "uq_007"
   ],
@@ -849,6 +872,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "蜷身针刺反弹小伤害；翻面露腹可处决",
   "actions_ref": [
    "uq_008"
   ],
@@ -873,6 +897,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "伪装枯枝伏击路过者；格挡首击后反击",
   "actions_ref": [
    "uq_009",
    "uq_010"
@@ -898,7 +923,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "背苔拟石；踩踏打滑",
+  "actions_ref": [
+   "skb_012"
+  ],
   "moves_unresolved": [],
   "weight_tune": "`独有招_188`",
   "duyou_pos": "",
@@ -920,6 +948,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "高鸣示警召来援群；先手压制可阻止",
   "actions_ref": [
    "uq_011"
   ],
@@ -944,6 +973,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "缠绕定身一名参战者；破坏藤蔓解除",
   "actions_ref": [
    "uq_012",
    "uq_013"
@@ -969,7 +999,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "弹跳闪避；雨天敏捷、晴天迟缓",
+  "actions_ref": [
+   "skb_052"
+  ],
   "moves_unresolved": [],
   "weight_tune": "`独有招_188`",
   "duyou_pos": "",
@@ -991,7 +1024,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "派生自叩壳巨鸟；敲击声干扰听判定",
+  "actions_ref": [
+   "ska_034"
+  ],
   "moves_unresolved": [],
   "weight_tune": "`独有招_188`",
   "duyou_pos": "",
@@ -1013,6 +1049,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "成群窜扰纠缠脚跟",
   "actions_ref": [
    "uq_014"
   ],
@@ -1037,7 +1074,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "分泌松脂黏慢走位",
+  "actions_ref": [
+   "skb_001"
+  ],
   "moves_unresolved": [],
   "weight_tune": "`独有招_188`",
   "duyou_pos": "",
@@ -1059,6 +1099,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "甲壳硬化；翻面可制",
   "actions_ref": [
    "uq_015"
   ],
@@ -1083,7 +1124,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "弹射撞人；壳硬刃钝",
+  "actions_ref": [
+   "skb_012"
+  ],
   "moves_unresolved": [],
   "weight_tune": "`独有招_188`",
   "duyou_pos": "",
@@ -1105,6 +1149,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "钻地偷袭脚踝",
   "actions_ref": [
    "uq_016"
   ],
@@ -1129,7 +1174,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "啄击干扰采集",
+  "actions_ref": [
+   "ska_034"
+  ],
   "moves_unresolved": [],
   "weight_tune": "`独有招_188`",
   "duyou_pos": "",
@@ -1151,7 +1199,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "鳞粉遮蔽视野",
+  "actions_ref": [
+   "ska_034"
+  ],
   "moves_unresolved": [],
   "weight_tune": "`独有招_188`",
   "duyou_pos": "",
@@ -1173,7 +1224,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "黏舌拉拽手中道具",
+  "actions_ref": [
+   "skb_052"
+  ],
   "moves_unresolved": [],
   "weight_tune": "`独有招_188`",
   "duyou_pos": "",
@@ -1195,6 +1249,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "滚动误扎靠近者",
   "actions_ref": [
    "uq_017"
   ],
@@ -1219,6 +1274,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "伪装断枝突袭",
   "actions_ref": [
    "uq_018",
    "uq_019"
@@ -1244,7 +1300,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "派生自松球鼠；偷搬掉落素材",
+  "actions_ref": [
+   "skb_052"
+  ],
   "moves_unresolved": [],
   "weight_tune": "`独有招_188`",
   "duyou_pos": "",
@@ -1266,7 +1325,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "抖动枝干干扰平衡判定",
+  "actions_ref": [
+   "skb_001"
+  ],
   "moves_unresolved": [],
   "weight_tune": "`独有招_188`",
   "duyou_pos": "",
@@ -1288,6 +1350,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**跃瀑冲顶**：借瀑流跃起俯冲砸击；落崖硬直时可处决",
   "actions_ref": [
    "ind_266",
    "ind_267",
@@ -1375,6 +1438,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**吞苔鼓胀**：吞湿苔鼓起硬化减伤；破开苔壳转为易伤",
   "actions_ref": [
    "dif_031",
    "dif_032",
@@ -1426,6 +1490,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**藤荡换位**：荡藤快速换位难以锁定；割断藤条坠地硬直",
   "actions_ref": [
    "dif_034",
    "dif_035",
@@ -1477,6 +1542,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**水磨横碾**：沿崖壁横碾推开近战；破坏磨盘鳍解除",
   "actions_ref": [
    "dif_037",
    "dif_038",
@@ -1528,6 +1594,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**涎雾障目**：吐涎雾干扰视野判定；风缆吹散后可压制",
   "actions_ref": [
    "dif_040",
    "dif_041",
@@ -1587,6 +1654,7 @@
    "雷殛": "1.0",
    "风暴": "0.5"
   },
+  "mech": "**翻苔护体**：受击翻起湿苔硬化减伤；连续压制翻开苔甲后可处决",
   "actions_ref": [
    "ind_161",
    "ind_162",
@@ -1649,6 +1717,7 @@
    "雷殛": "1.0",
    "风暴": "1.0"
   },
+  "mech": "**坠身如钟**：跃起砸落震晕周身并掀起潭浪；破坏钟甲解除震荡",
   "actions_ref": [
    "ind_167",
    "ind_168",
@@ -1703,6 +1772,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "穿帘疾飞难瞄准；守帘口落点出手",
   "actions_ref": [
    "uq_020"
   ],
@@ -1727,6 +1797,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "缩壳顺水滑逃；拦截可逼停",
   "actions_ref": [
    "uq_021"
   ],
@@ -1751,6 +1822,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "潭面疾走轨迹难测；风缆可预判",
   "actions_ref": [
    "uq_022"
   ],
@@ -1775,6 +1847,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "钻缝偷袭脚踝；烟熏驱出可处决",
   "actions_ref": [
    "uq_023"
   ],
@@ -1799,6 +1872,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "倒挂藤下突袭；割藤坠地",
   "actions_ref": [
    "uq_024"
   ],
@@ -1823,7 +1897,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "吐泡悬浮难够；戳泡坠地",
+  "actions_ref": [
+   "skb_021"
+  ],
   "moves_unresolved": [],
   "weight_tune": "`独有招_188`",
   "duyou_pos": "",
@@ -1845,6 +1922,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "溅水干扰视野判定；待其停歇",
   "actions_ref": [
    "uq_025"
   ],
@@ -1869,7 +1947,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "伏于苔面难辨形；移动时露形",
+  "actions_ref": [
+   "ska_012"
+  ],
   "moves_unresolved": [],
   "weight_tune": "`独有招_188`",
   "duyou_pos": "",
@@ -1891,6 +1972,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "衔走剥取素材；驱赶即走",
   "actions_ref": [
    "uq_026"
   ],
@@ -1915,6 +1997,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "雾中鸣角惑向；压制可止",
   "actions_ref": [
    "uq_027"
   ],
@@ -1939,7 +2022,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "迟缓无威胁；壳体可作临时屏障",
+  "actions_ref": [
+   "skb_012"
+  ],
   "moves_unresolved": [],
   "weight_tune": "`独有招_188`",
   "duyou_pos": "",
@@ -1961,6 +2047,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "吸附腿足减速；焰灼可除",
   "actions_ref": [
    "uq_028"
   ],
@@ -1985,6 +2072,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "弹射水珠干扰瞄准",
   "actions_ref": [
    "uq_029"
   ],
@@ -2009,6 +2097,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "派生自苔甲蟾；甲壳碎片反弹小伤害",
   "actions_ref": [
    "uq_030"
   ],
@@ -2033,6 +2122,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "垂须绊足定身",
   "actions_ref": [
    "uq_031"
   ],
@@ -2057,7 +2147,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "坠巢扑棱干扰",
+  "actions_ref": [
+   "ska_034"
+  ],
   "moves_unresolved": [],
   "weight_tune": "`独有招_188`",
   "duyou_pos": "",
@@ -2079,7 +2172,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "淤泥中滑脱难抓",
+  "actions_ref": [
+   "ska_057"
+  ],
   "moves_unresolved": [],
   "weight_tune": "`独有招_188`",
   "duyou_pos": "",
@@ -2101,6 +2197,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**倒悬坚守**：倒挂岛根垂甲硬防；压制头部迫其翻身",
   "actions_ref": [
    "dif_043",
    "dif_044",
@@ -2152,6 +2249,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**荫影突袭**：借阴影换位扑击；火把照荫可破其隐",
   "actions_ref": [
    "dif_046",
    "dif_047",
@@ -2203,6 +2301,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**啃根掘穴**：啃挖岛根震落碎石；破坏门牙停止掘穴",
   "actions_ref": [
    "dif_049",
    "dif_050",
@@ -2254,6 +2353,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**结霜爪击**：爪击附加霜冻减速；焰属性可融霜",
   "actions_ref": [
    "dif_052",
    "dif_053",
@@ -2305,6 +2405,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**晶鸣震慑**：超声震慑压制 1 个出手序列；破坏晶角解除",
   "actions_ref": [
    "dif_055",
    "dif_056",
@@ -2364,6 +2465,7 @@
    "雷殛": "1.0",
    "风暴": "1.0"
   },
+  "mech": "**结霜再生**：结霜再生＋寒潮场＋**融霜窗口**——仅焰属性在融霜回合命中才算永久破坏（机制压缩自 §M4 链表）",
   "actions_ref": [
    "ind_081",
    "ind_082",
@@ -2443,7 +2545,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "**无声俯袭**：自阴影俯袭压制；破坏翼羽解除",
+  "actions_ref": [
+   "ska_034"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "",
@@ -2465,7 +2570,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "**缠根固守**：缠根硬化减伤；破坏根瘤后可处决",
+  "actions_ref": [
+   "ska_012"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "",
@@ -2487,7 +2595,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "趋暗避光难捕；照明后易擒",
+  "actions_ref": [
+   "ska_034"
+  ],
   "moves_unresolved": [],
   "weight_tune": "`独有招_188`",
   "duyou_pos": "",
@@ -2509,6 +2620,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "垂须探地预警；切断须端即逃",
   "actions_ref": [
    "uq_032"
   ],
@@ -2533,7 +2645,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "窜根偷搬素材；堵穴可擒",
+  "actions_ref": [
+   "skb_052"
+  ],
   "moves_unresolved": [],
   "weight_tune": "`独有招_188`",
   "duyou_pos": "",
@@ -2555,6 +2670,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "触之结霜减速；焰可融除",
   "actions_ref": [
    "uq_033"
   ],
@@ -2579,6 +2695,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "悬浮阴面难瞄；风缆可拽落",
   "actions_ref": [
    "uq_034"
   ],
@@ -2603,6 +2720,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "倒挂投掷果壳；压制可击落",
   "actions_ref": [
    "uq_035"
   ],
@@ -2627,6 +2745,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "衔晶屑扑面致盲",
   "actions_ref": [
    "uq_036"
   ],
@@ -2651,6 +2770,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "结网拦路；烧网通行",
   "actions_ref": [
    "uq_037",
    "uq_038"
@@ -2676,6 +2796,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "假死诱敌近身；翻查即起",
   "actions_ref": [
    "uq_039",
    "uq_040"
@@ -2701,6 +2822,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "坠落冰锥扎人",
   "actions_ref": [
    "uq_041"
   ],
@@ -2725,7 +2847,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "穿影游走难锁定",
+  "actions_ref": [
+   "ska_057"
+  ],
   "moves_unresolved": [],
   "weight_tune": "`独有招_188`",
   "duyou_pos": "",
@@ -2747,7 +2872,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "寄生根瘤干扰部位锁定",
+  "actions_ref": [
+   "skb_001"
+  ],
   "moves_unresolved": [],
   "weight_tune": "`独有招_188`",
   "duyou_pos": "",
@@ -2769,6 +2897,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "叮咬干扰行动",
   "actions_ref": [
    "uq_042"
   ],
@@ -2793,7 +2922,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "撒霜屑减速",
+  "actions_ref": [
+   "skb_001"
+  ],
   "moves_unresolved": [],
   "weight_tune": "`独有招_188`",
   "duyou_pos": "",
@@ -2815,6 +2947,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "鸣声惑向",
   "actions_ref": [
    "uq_043"
   ],
@@ -2839,6 +2972,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "缠足定身",
   "actions_ref": [
    "uq_044"
   ],
@@ -2863,7 +2997,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "迟缓无威胁；壳体可作临时屏障",
+  "actions_ref": [
+   "skb_012"
+  ],
   "moves_unresolved": [],
   "weight_tune": "`独有招_188`",
   "duyou_pos": "",
@@ -2885,6 +3022,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "派生自霜脉犁兽；幼体掘雪偷袭",
   "actions_ref": [
    "uq_045"
   ],
@@ -2909,7 +3047,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "甲壳碎冰反弹小伤害",
+  "actions_ref": [
+   "skb_012"
+  ],
   "moves_unresolved": [],
   "weight_tune": "`独有招_188`",
   "duyou_pos": "",
@@ -2931,7 +3072,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "派生自影蛾；群聚趋光",
+  "actions_ref": [
+   "ska_034"
+  ],
   "moves_unresolved": [],
   "weight_tune": "`独有招_188`",
   "duyou_pos": "",
@@ -2961,6 +3105,7 @@
    "雷殛": "1.0",
    "风暴": "1.0"
   },
+  "mech": "**抛锚定身**：每 3×1,000 行动值钉住 1 名参战者位移；破坏锚爪解除",
   "actions_ref": [
    "dif_058",
    "dif_059",
@@ -3012,6 +3157,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**缆绳牵拉**：强制位移目标；破坏缆桩转为易伤 +0.20",
   "actions_ref": [
    "dif_061",
    "dif_062",
@@ -3063,6 +3209,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**啃食补给**：破坏后玩家携带道具失效 1 个出手序列",
   "actions_ref": [
    "dif_064",
    "dif_065",
@@ -3114,6 +3261,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**壳随潮涨落**：高／低回合数交替切换易伤窗口",
   "actions_ref": [
    "dif_067",
    "dif_068",
@@ -3165,6 +3313,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "位移频繁；风缆可预判落点",
   "actions_ref": [
    "uq_046"
   ],
@@ -3189,6 +3338,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "高处俯冲；压制可击落",
   "actions_ref": [
    "uq_047"
   ],
@@ -3213,6 +3363,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "潮位上升时强化；退潮期可处决",
   "actions_ref": [
    "uq_048"
   ],
@@ -3237,6 +3388,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "伪装货箱伏击；接近特定箱体触发",
   "actions_ref": [
    "uq_049"
   ],
@@ -3261,6 +3413,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "派生自仓顶栖隼；趋光，灯光环境强化",
   "actions_ref": [
    "uq_050"
   ],
@@ -3285,6 +3438,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "底栖；淤泥减速，风缆可脱离",
   "actions_ref": [
    "uq_051"
   ],
@@ -3317,6 +3471,7 @@
    "雷殛": "1.0",
    "风暴": "0.5"
   },
+  "mech": "成群干扰",
   "actions_ref": [
    "uq_052"
   ],
@@ -3341,7 +3496,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "啃食，破坏携带素材",
+  "actions_ref": [
+   "skb_001"
+  ],
   "moves_unresolved": [],
   "weight_tune": "`独有招_188`",
   "duyou_pos": "",
@@ -3363,7 +3521,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "迟缓，可作临时屏障",
+  "actions_ref": [
+   "skb_012"
+  ],
   "moves_unresolved": [],
   "weight_tune": "`独有招_188`",
   "duyou_pos": "",
@@ -3385,7 +3546,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "派生自潮痕石獭；甲壳碎片反弹小伤害",
+  "actions_ref": [
+   "skb_012"
+  ],
   "moves_unresolved": [],
   "weight_tune": "`独有招_188`",
   "duyou_pos": "",
@@ -3407,7 +3571,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "趋光，干扰视野判定",
+  "actions_ref": [
+   "ska_034"
+  ],
   "moves_unresolved": [],
   "weight_tune": "`独有招_188`",
   "duyou_pos": "",

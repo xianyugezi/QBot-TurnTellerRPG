@@ -15,6 +15,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**犁滩掀浪**：吻锯犁起浪墙横扫浅滩，涨潮时浪墙加宽一格；破坏吻锯令其掀不动浪、露出背腮",
   "actions_ref": [
    "ind_274",
    "ind_275",
@@ -102,6 +103,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**吸潮鼓身**：吸潮水鼓成弹球滚压，鼓身期近战反被刺毛刮伤；刺破气孔放气瘫软",
   "actions_ref": [
    "dif_070",
    "dif_071",
@@ -153,6 +155,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**垒贝为墙**：堆贝壳成墙挡住部位，夹碎贝壳投掷；拆墙断粮逼其硬直觅食",
   "actions_ref": [
    "dif_073",
    "dif_074",
@@ -204,6 +207,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**吸礁锁身**：涨潮吸死礁面免伤，退潮才松动觅食；卡潮位差打输出窗，破坏足垫可提前拔起",
   "actions_ref": [
    "dif_076",
    "dif_077",
@@ -255,6 +259,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**浅影突啄**：伏低伪装成滩影，啄击前水面泛纹可预读；啄空自硬直，压制可打断连啄",
   "actions_ref": [
    "dif_079",
    "dif_080",
@@ -306,6 +311,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**喷沙迷障**：喷沙致盲后蓄力重拍，沙障可借风缆横移甩开；拍地失手翻倒露背腺",
   "actions_ref": [
    "dif_082",
    "dif_083",
@@ -365,6 +371,7 @@
    "雷殛": "反弹",
    "风暴": "1.5"
   },
+  "mech": "**潮汐控场**：呼吸间推拉全场潮位，涨潮淹半场逼上礁顶、退潮翻壳露腹；破坏浮囊骨令其控不住潮、全场回落",
   "actions_ref": [
    "ind_173",
    "ind_174",
@@ -429,6 +436,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "沿潮坑点水啄食，起飞溅水遮视野；落定啄食时才好打",
   "actions_ref": [
    "uq_053"
   ],
@@ -453,6 +461,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "乘涨潮贴礁滑翔冲撞，退潮滞空变弱；退潮窗口可处决",
   "actions_ref": [
    "uq_054",
    "uq_055"
@@ -478,6 +487,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "成群掠过退潮滩拾食，受惊群体俯冲；驱散一轮即散",
   "actions_ref": [
    "uq_056"
   ],
@@ -502,7 +512,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "跃出潮面滑翔，落点先起飞沫；看沫走位或空中截击",
+  "actions_ref": [
+   "skb_052"
+  ],
   "moves_unresolved": [],
   "weight_tune": "188册微调",
   "duyou_pos": "",
@@ -524,6 +537,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "夜间磷光成群如滩上火线，趋光可诱集；诱到明处围杀",
   "actions_ref": [
    "uq_057"
   ],
@@ -548,6 +562,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "借潮风逆飞急袭，转向前有风纹；逆其盘向走位",
   "actions_ref": [
    "uq_058"
   ],
@@ -572,6 +587,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "背潮壳护身飞撞，壳碎即怯逃；先碎壳再追击",
   "actions_ref": [
    "uq_059"
   ],
@@ -596,7 +612,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "悬停潮线上空标记涨落，涨潮前群飞示警；生态观察点，可打可不打",
+  "actions_ref": [
+   "ska_034"
+  ],
   "moves_unresolved": [],
   "weight_tune": "188册微调",
   "duyou_pos": "",
@@ -618,7 +637,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "清晨俯饮雾潮增重低飞，饮饱后笨拙；饮饱时段即输出窗",
+  "actions_ref": [
+   "ska_034"
+  ],
   "moves_unresolved": [],
   "weight_tune": "188册微调",
   "duyou_pos": "",
@@ -640,6 +662,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "浅巡露出背鳍直线冲撞，变向前甩尾可预读；冲空搁浅时处决",
   "actions_ref": [
    "uq_060"
   ],
@@ -664,7 +687,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "涨潮时跃过礁门回流，半空滞留好打；退潮躲回深潭",
+  "actions_ref": [
+   "skb_052"
+  ],
   "moves_unresolved": [],
   "weight_tune": "188册微调",
   "duyou_pos": "",
@@ -686,6 +712,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "满滩张壳吐水，踩上去喷水滑脚",
   "actions_ref": [
    "uq_061"
   ],
@@ -710,7 +737,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "舔食礁藓，受惊缩壳硬挺；可踢开当临时路障",
+  "actions_ref": [
+   "skb_012"
+  ],
   "moves_unresolved": [],
   "weight_tune": "188册微调",
   "duyou_pos": "",
@@ -732,6 +762,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "受惊弹射乱跳，撞人小硬直",
   "actions_ref": [
    "uq_062"
   ],
@@ -756,6 +787,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "吐沙泡裹身，戳破喷沙迷眼",
   "actions_ref": [
    "uq_063"
   ],
@@ -780,7 +812,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "跟在成鸟身后学啄，惊飞扑人一脸水花",
+  "actions_ref": [
+   "ska_034"
+  ],
   "moves_unresolved": [],
   "weight_tune": "188册微调",
   "duyou_pos": "",
@@ -802,7 +837,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "附着礁石硬壳不动，剥取素材点",
+  "actions_ref": [
+   "skb_012"
+  ],
   "moves_unresolved": [],
   "weight_tune": "188册微调",
   "duyou_pos": "",
@@ -824,6 +862,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "涨潮翻出觅食，退潮装死；翻面即破防",
   "actions_ref": [
    "uq_064"
   ],
@@ -848,7 +887,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "捡巨兽掉落鳞片筑窝，追打掉素材；逃进礁缝需引出",
+  "actions_ref": [
+   "skb_052"
+  ],
   "moves_unresolved": [],
   "weight_tune": "188册微调",
   "duyou_pos": "",
@@ -870,6 +912,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**钟波浮岛**：敲击背甲巨钟令所在岛段整体上浮，钟波震退近战；卡敲钟间隙输出，破坏钟槌尾椎废钟",
   "actions_ref": [
    "ind_282",
    "ind_283",
@@ -947,6 +990,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**绞缆升降**：转动壳塔绞放岛链缆索控制岛段升降，绞紧时地面倾斜难站；破坏绞盘令该段失速下坠",
   "actions_ref": [
    "dif_085",
    "dif_086",
@@ -998,6 +1042,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**碎桩重拳**：弹射重拳砸岛桩把整岛砸沉半格，冲击波贴地扩散；风缆拉起可躲，收拳硬直长",
   "actions_ref": [
    "dif_088",
    "dif_089",
@@ -1049,6 +1094,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**衔岛筑巢**：叼走小块浮岛去筑巢，巢材堆积处暴露巢址；夺回浮岛引它追击落地",
   "actions_ref": [
    "dif_091",
    "dif_092",
@@ -1100,6 +1146,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**压舱配重**：停驻岛侧当活配重令岛面倾斜甩人，起飞时岛面回弹抛射碎石；破坏翼骨令其失衡坠海",
   "actions_ref": [
    "dif_094",
    "dif_095",
@@ -1151,6 +1198,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**喷气顶升**：喷孔充气把身下浮石顶成高低台制造落差，喷气间歇瘪降；破坏喷孔令其泄气搁浅",
   "actions_ref": [
    "dif_097",
    "dif_098",
@@ -1223,6 +1271,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**汐闸吞吐**：以身堵闸吞放潮水调节全链升降，放水时全岛急升站不稳；破坏闸须令潮水乱灌、升降失序",
   "actions_ref": [
    "dif_100",
    "dif_101",
@@ -1282,6 +1331,7 @@
    "雷殛": "1.0",
    "风暴": "0.5"
   },
+  "mech": "**双相轮转**：辉／幽相每 4×1,000 行动值切换，当前相吸收该属性伤害，切换当回合现相位裂缝为唯一爆发窗；鳞粉附随机异常，月蚀后提速但裂缝更长",
   "actions_ref": [
    "ind_091",
    "ind_092",
@@ -1361,6 +1411,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**千钧坠链**：盘缠主岛缆索以自重压链下潜，松身瞬间全链弹升洗牌战场；斩断缠身缆令它坠回渊底",
   "actions_ref": [
    "dif_103",
    "dif_104",
@@ -1412,6 +1463,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "乘岛屿上升气流柱盘旋，柱内弹道乱飘；贴柱外沿打",
   "actions_ref": [
    "uq_065"
   ],
@@ -1436,7 +1488,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "沿悬缆巡飞驱赶靠近者，停缆歇脚时暴露；借风缆贴近处决",
+  "actions_ref": [
+   "ska_046"
+  ],
   "moves_unresolved": [],
   "weight_tune": "188册微调",
   "duyou_pos": "",
@@ -1458,6 +1513,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "听钟声归巢，钟响群起飞撞；钟声间隙落巢，逐个点名",
   "actions_ref": [
    "uq_066"
   ],
@@ -1482,6 +1538,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "附在岛底吸汁，岛下沉时整片外露；翻岛窗口集中打",
   "actions_ref": [
    "uq_067"
   ],
@@ -1506,7 +1563,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "跟成鳐学滑翔常失速，坠地前有泡影预警；按预警走位即可",
+  "actions_ref": [
+   "ska_046"
+  ],
   "moves_unresolved": [],
   "weight_tune": "188册微调",
   "duyou_pos": "",
@@ -1528,7 +1588,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "在即将升降的岛面点水产卵为记，见标即离岛；跟它进退可避开升降陷阱",
+  "actions_ref": [
+   "ska_034"
+  ],
   "moves_unresolved": [],
   "weight_tune": "188册微调",
   "duyou_pos": "",
@@ -1550,6 +1613,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "岛链升降前低飞咕鸣示警，无攻击性；活体预警点",
   "actions_ref": [
    "uq_068"
   ],
@@ -1574,6 +1638,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "啄松缆索线头，被啄缆段易提前断落；赶走它防岛提前下沉",
   "actions_ref": [
    "uq_069"
   ],
@@ -1598,6 +1663,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "张翼膜当帆横渡岛间风口，顺风难命中；等风歇贴岛掠过时打",
   "actions_ref": [
    "uq_070"
   ],
@@ -1622,7 +1688,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "专偷岛上巢材，追击沿路掉素材；只啄一下就跑",
+  "actions_ref": [
+   "ska_034"
+  ],
   "moves_unresolved": [],
   "weight_tune": "188册微调",
   "duyou_pos": "",
@@ -1644,7 +1713,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "沿岛链绕大圈巡逻，成群时挡弹道；驱散出缺口即穿",
+  "actions_ref": [
+   "ska_034"
+  ],
   "moves_unresolved": [],
   "weight_tune": "188册微调",
   "duyou_pos": "",
@@ -1666,6 +1738,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "在潮面滑行拖出涟漪干扰弹道判断；先打碎浮巢逼它起飞",
   "actions_ref": [
    "uq_071"
   ],
@@ -1690,6 +1763,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "白日假寐实则盯人，靠近才睁眼扑击；假寐时绕后可抢先手",
   "actions_ref": [
    "uq_072",
    "uq_073"
@@ -1715,6 +1789,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "吞雾胀喉再鸣叫，鸣波震落低飞目标；喉胀到最大前打断",
   "actions_ref": [
    "uq_074"
   ],
@@ -1739,6 +1814,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "风飘缠人视线，撕开即散",
   "actions_ref": [
    "uq_075"
   ],
@@ -1763,7 +1839,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "岛段升降前集体搬家乱窜，撞脚干扰",
+  "actions_ref": [
+   "skb_052"
+  ],
   "moves_unresolved": [],
   "weight_tune": "188册微调",
   "duyou_pos": "",
@@ -1785,6 +1864,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "蛀食巨钟锈层，敲钟声发闷；掉钟锈素材",
   "actions_ref": [
    "uq_076"
   ],
@@ -1809,6 +1889,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "藏岛体缝隙探尾蜇人；盖回缝板即安",
   "actions_ref": [
    "uq_077"
   ],
@@ -1833,7 +1914,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "吞潮沫鼓成泡浮在水坑，戳破溅一身黏液",
+  "actions_ref": [
+   "skb_052"
+  ],
   "moves_unresolved": [],
   "weight_tune": "188册微调",
   "duyou_pos": "",
@@ -1855,7 +1939,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "壳纹如小铃，风过叮当作响；收集型素材点",
+  "actions_ref": [
+   "skb_012"
+  ],
   "moves_unresolved": [],
   "weight_tune": "188册微调",
   "duyou_pos": "",
@@ -1877,6 +1964,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "搬运缆屑排成长线，沿线能找到断缆口；咬人成串发痒",
   "actions_ref": [
    "uq_078"
   ],
@@ -1901,6 +1989,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "岛土翻出扭动绊脚；钓饵素材",
   "actions_ref": [
    "uq_079"
   ],
@@ -1925,7 +2014,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "岛降时张翅晾羽不动，可贴近剥取羽料；碰它才啄",
+  "actions_ref": [
+   "ska_034"
+  ],
   "moves_unresolved": [],
   "weight_tune": "188册微调",
   "duyou_pos": "",
@@ -1947,6 +2039,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**倒悬突坠**：倒吸渊壁爬行，脱壁坠落砸压落点全场；破坏吸盘阵令其提前坠落自伤",
   "actions_ref": [
    "dif_106",
    "dif_107",
@@ -1993,6 +2086,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**沉钟声呐**：发出下沉声波标记猎物位置，被标记者遭渊流群兽围攻；破坏鳔室废掉声呐",
   "actions_ref": [
    "dif_109",
    "dif_110",
@@ -2056,6 +2150,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**拖拽深压**：咬住目标往深层拖，越深它伤害越高；风缆锚点上浮反向拉扯脱身",
   "actions_ref": [
    "dif_112",
    "dif_113",
@@ -2102,6 +2197,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**蚀鳞再生**：受损部位覆蚀鳞缓慢自愈，再生期破坏无效；蜕鳞间歇才能永久破坏",
   "actions_ref": [
    "dif_115",
    "dif_116",
@@ -2148,6 +2244,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**灯饵诱猎**：垂发光拟饵诱近再合颚，识破拟饵即可预读；远程点破灯球反客为主",
   "actions_ref": [
    "dif_118",
    "dif_119",
@@ -2211,6 +2308,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**自沉碾压**：吸气增重直坠砸压，坠前石壳泛白可预读；闪开后它翻壳难起，露腹输出",
   "actions_ref": [
    "dif_121",
    "dif_122",
@@ -2257,6 +2355,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**引潮改道**：巡游牵起小股渊流改弯弹道，顺流位弹道最直；卡它转向的甩尾硬直",
   "actions_ref": [
    "dif_124",
    "dif_125",
@@ -2311,6 +2410,7 @@
    "雷殛": "1.5",
    "风暴": "1.0"
   },
+  "mech": "**潮位吐纳**：首只**蚀潮巨兽**，每 3×1,000 行动值全场 🌀 潮涌且范围逐次扩格，逼风缆撤离；吐纳换气的沉吸间隙是输出窗",
   "actions_ref": [
    "ind_011",
    "ind_012",
@@ -2381,6 +2481,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**吞岛沉底**：整吞小浮岛增重下潜撞渊底震场，吞满翻腹消化时是唯一窗口；打断吞咬逼它吐岛重来",
   "actions_ref": [
    "dif_127",
    "dif_128",
@@ -2435,6 +2536,7 @@
    "雷殛": "1.0",
    "风暴": "反弹"
   },
+  "mech": "**熄光领域**：吸散全场光源令弹道预判失效，只能循它体表微光定位；破坏光腺后漆黑反噬，趋光群会围攻它",
   "actions_ref": [
    "ind_179",
    "ind_180",
@@ -2484,7 +2586,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "聚散指示安全水层，骤散处有巨兽逼近；跟着萤走，不打它",
+  "actions_ref": [
+   "skb_033"
+  ],
   "moves_unresolved": [],
   "weight_tune": "188册微调",
   "duyou_pos": "",
@@ -2506,6 +2611,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "喷水失衡乱漂，撞人卸力；戳翻它反露口足",
   "actions_ref": [
    "uq_080"
   ],
@@ -2530,6 +2636,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "贴渊壁逆向游动甩鳞削人；等它换气停顿再近身",
   "actions_ref": [
    "uq_081"
   ],
@@ -2554,6 +2661,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "无光层靠回声夜航，鸣声暴露位置；投光弹扰其声呐迫降",
   "actions_ref": [
    "uq_082"
   ],
@@ -2578,6 +2686,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "持戟须守渊缝领地，须直即攻击前摇；绕缝背刺",
   "actions_ref": [
    "uq_083"
   ],
@@ -2602,6 +2711,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "成群跃渊面如银雨砸落，落点有鳞光预警；按预警走位即可",
   "actions_ref": [
    "uq_084"
   ],
@@ -2626,6 +2736,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "在渊层间学啼练声，啼声震颤扰瞄准；无母看护，随打",
   "actions_ref": [
    "uq_085"
   ],
@@ -2650,6 +2761,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "顺渊流直线穿浪冲刺，冲线前背旗出水；横移半步让它冲过头",
   "actions_ref": [
    "uq_086"
   ],
@@ -2674,7 +2786,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "背小礁壳慢飘挡弹道；绕背打软足",
+  "actions_ref": [
+   "skb_012"
+  ],
   "moves_unresolved": [],
   "weight_tune": "188册微调",
   "duyou_pos": "",
@@ -2696,6 +2811,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "无光层退化视觉靠侧线感波突袭；停手静立它就找不到你",
   "actions_ref": [
    "uq_087"
   ],
@@ -2720,6 +2836,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "在沉岛钟壳里产卵，护卵群起攻；掏卵前先震晕钟壳成鱼",
   "actions_ref": [
    "uq_088"
   ],
@@ -2744,7 +2861,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "单足立渊滩打盹，惊醒速啄；打盹时可剥取羽料",
+  "actions_ref": [
+   "skb_052"
+  ],
   "moves_unresolved": [],
   "weight_tune": "188册微调",
   "duyou_pos": "",
@@ -2766,6 +2886,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "专抢猎人渔获，抢完俯冲进渊流；护紧背包它无从下手",
   "actions_ref": [
    "uq_089"
   ],
@@ -2790,7 +2911,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "群聚成碎镜映出上方岛影，映像骗弹道；打散群落即穿",
+  "actions_ref": [
+   "skb_033"
+  ],
   "moves_unresolved": [],
   "weight_tune": "188册微调",
   "duyou_pos": "",
@@ -2812,6 +2936,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "扭团漂浮缠缆减速；撕团即散",
   "actions_ref": [
    "uq_090"
   ],
@@ -2836,7 +2961,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "蛀食沉木，敲木掉素材",
+  "actions_ref": [
+   "skb_001"
+  ],
   "moves_unresolved": [],
   "weight_tune": "188册微调",
   "duyou_pos": "",
@@ -2858,6 +2986,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "无光层成群弹跳，炸锅式乱蹦撞人",
   "actions_ref": [
    "uq_091"
   ],
@@ -2882,6 +3011,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "钻泥搅浑水遮视野；浑水里先撞人的就是它",
   "actions_ref": [
    "uq_092"
   ],
@@ -2906,6 +3036,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "受惊喷墨致盲；背光位打它看不见你",
   "actions_ref": [
    "uq_093"
   ],
@@ -2930,7 +3061,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "吐泡裹身浮起，泡破坠渊；别站它正下方",
+  "actions_ref": [
+   "skb_021"
+  ],
   "moves_unresolved": [],
   "weight_tune": "188册微调",
   "duyou_pos": "",
@@ -2952,7 +3086,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "吐丝裹石成茧挂渊壁；摘茧取丝要快",
+  "actions_ref": [
+   "skb_001"
+  ],
   "moves_unresolved": [],
   "weight_tune": "188册微调",
   "duyou_pos": "",
@@ -2974,7 +3111,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "循渊母微光聚群，光灭四散",
+  "actions_ref": [
+   "skb_033"
+  ],
   "moves_unresolved": [],
   "weight_tune": "188册微调",
   "duyou_pos": "",
@@ -2996,6 +3136,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "鸣叫回声定位，吵闹干扰听声辨位；打停即静",
   "actions_ref": [
    "uq_094"
   ],
@@ -3020,6 +3161,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "缝里窜出咬脚踝，附身需队友拍落",
   "actions_ref": [
    "uq_095"
   ],
@@ -3044,6 +3186,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "翻渊泥找食拱出素材泡；跟在后面捡漏",
   "actions_ref": [
    "uq_096"
   ],

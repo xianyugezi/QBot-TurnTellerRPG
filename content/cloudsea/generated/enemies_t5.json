@@ -15,6 +15,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**雨帘蔽体**：喷吐水汽织成雨帘遮蔽部位，帘破前部位不可选；破坏喷孔散帘",
   "actions_ref": [
    "ind_322",
    "ind_323",
@@ -71,6 +72,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**御风盘旋**：沿气旋外缘盘旋滞空，远程难锁；逼入廊内低空后落地硬直",
   "actions_ref": [
    "dif_244",
    "dif_245",
@@ -130,6 +132,7 @@
    "雷殛": "1.0",
    "风暴": "1.0"
   },
+  "mech": "**静电蓄鳞**：雨天蓄电加速，蓄满放逸全场麻痹；破坏背鳞中断蓄电",
   "actions_ref": [
    "ind_215",
    "ind_216",
@@ -184,6 +187,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**蜷珠冲撞**：蜷身成球借湿滑地形长距冲撞；破坏尾环令其失控卡檐",
   "actions_ref": [
    "dif_247",
    "dif_248",
@@ -235,6 +239,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**雨帘悬丝**：织水丝悬于廊顶走位，近战够不着；烧断悬丝坠地露破绽",
   "actions_ref": [
    "dif_250",
    "dif_251",
@@ -286,6 +291,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**外缘环流**：绕廊心游动牵起切风带，逆风站位减速；破坏背鳍使环流消散",
   "actions_ref": [
    "dif_253",
    "dif_254",
@@ -337,7 +343,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "斜风漂移，直射弹道易落空",
+  "actions_ref": [
+   "ska_034"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
@@ -359,6 +368,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "水汽凝泡护体，泡破溅水灭火",
   "actions_ref": [
    "uq_137",
    "uq_138"
@@ -384,7 +394,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "雨幕中近乎隐身，静止时才可辨",
+  "actions_ref": [
+   "ska_034"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
@@ -406,7 +419,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "壳内储气悬浮，击破泄气坠落",
+  "actions_ref": [
+   "skb_033"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=air｜self_reposition=ascend｜target_displace=lift_air｜position_rule=requires_height:air｜marks=none（族画像：常驻空域(落地窗)）",
@@ -436,7 +452,10 @@
    "雷殛": "1.5",
    "风暴": "免疫"
   },
-  "actions_ref": [],
+  "mech": "沿雨带俯冲，冲线前有落点标记",
+  "actions_ref": [
+   "ska_046"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front｜self_reposition=dash+turn｜target_displace=none｜position_rule=eligible:front｜marks=none（族画像：打完就走）",
@@ -458,7 +477,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "羽吸水变重，起飞砸地生波；烤干后长时间离场",
+  "actions_ref": [
+   "ska_034"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
@@ -480,6 +502,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "吸雷蓄电的小型个体，聚在巨兽旁替其分雷",
   "actions_ref": [
    "uq_139"
   ],
@@ -504,7 +527,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "鸣声搅出小范围乱流，打断读条",
+  "actions_ref": [
+   "ska_046"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front｜self_reposition=dash+turn｜target_displace=none｜position_rule=eligible:front｜marks=none（族画像：打完就走）",
@@ -526,6 +552,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "乘雨下坠的浮空水母，破裂成酸雨滴群",
   "actions_ref": [
    "uq_140"
   ],
@@ -550,7 +577,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "躲雨成群，受惊乱窜撞人",
+  "actions_ref": [
+   "skb_052"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front／back｜self_reposition=shift｜target_displace=none｜position_rule=eligible:front／back｜marks=decoy（族画像：游击互换(残影)）",
@@ -572,7 +602,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "湿岩爬行，黏液滑脚",
+  "actions_ref": [
+   "skb_001"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front／back｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
@@ -594,7 +627,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "倒挂檐下滴水成滩，滩中打滑",
+  "actions_ref": [
+   "skb_001"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front／back｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
@@ -616,7 +652,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "坠巢雏鸟扑棱干扰",
+  "actions_ref": [
+   "skb_052"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front／back｜self_reposition=shift｜target_displace=none｜position_rule=eligible:front／back｜marks=decoy（族画像：游击互换(残影)）",
@@ -638,7 +677,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "甲壳带雨锈，坚硬遇焰变酥",
+  "actions_ref": [
+   "skb_001"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front／back｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
@@ -660,7 +702,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "吐泡护身，戳破反向溅水",
+  "actions_ref": [
+   "skb_052"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front／back｜self_reposition=shift｜target_displace=none｜position_rule=eligible:front／back｜marks=decoy（族画像：游击互换(残影)）",
@@ -682,7 +727,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "雨天体表导电，群聚织成短路网",
+  "actions_ref": [
+   "ska_057"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front｜self_reposition=lateral｜target_displace=none｜position_rule=ignore_side｜marks=none（族画像：缠缚滑行）",
@@ -704,6 +752,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**风剪巡墙**：沿云墙裂隙高速穿巡，冲线即斩；预读巡墙路线卡位反击",
   "actions_ref": [
    "ind_330",
    "ind_331",
@@ -760,6 +809,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**锚须钉云**：锚须钉入云层固定自身再甩身横扫；断须使其失控漂移",
   "actions_ref": [
    "dif_256",
    "dif_257",
@@ -811,6 +861,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**引雷甲胄**：角部主动引雷覆甲，带电时近战弹刀；破坏引雷角断充能",
   "actions_ref": [
    "dif_259",
    "dif_260",
@@ -862,6 +913,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**压差吞吸**：张口制造压差把人吸向墙心；破坏颚阀反向喷出爆风",
   "actions_ref": [
    "dif_262",
    "dif_263",
@@ -913,6 +965,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**二重俯冲**：借墙反弹二次俯冲，第二段才见真轨迹",
   "actions_ref": [
    "dif_265",
    "dif_266",
@@ -972,6 +1025,7 @@
    "雷殛": "1.5",
    "风暴": "0.25"
   },
+  "mech": "**气象窗**：驱动定速旋转的气旋墙，开合处即攻击窗口；风暴观测仪可预读开合（**第 8 章章节 Boss** · 详设见 `03`）",
   "actions_ref": [
    "ind_111",
    "ind_112",
@@ -1005,6 +1059,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**涡流舵面**：以身作舵微调整面墙流，逼全队走位重排；破坏舵鳍令墙流紊乱自伤",
   "actions_ref": [
    "dif_268",
    "dif_269",
@@ -1056,6 +1111,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**蓄水倾泻**：体内蓄积雨云，阶段转换全场倾泻；倾泻后的搁浅期是最大窗口",
   "actions_ref": [
    "dif_271",
    "dif_272",
@@ -1107,7 +1163,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "紧贴墙面飞行，直射难中",
+  "actions_ref": [
+   "ska_034"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
@@ -1129,6 +1188,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "雷囊满则自爆；打断后可缴获雷囊",
   "actions_ref": [
    "uq_141",
    "uq_142"
@@ -1154,6 +1214,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "蜷团随风滚撞，撞后反弹硬直",
   "actions_ref": [
    "uq_143"
   ],
@@ -1178,7 +1239,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "附墙吸湿而肥，剥壳取凝云料",
+  "actions_ref": [
+   "skb_001"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front／back｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
@@ -1200,6 +1264,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "双翅振出残影错位，辨真身方可命中",
   "actions_ref": [
    "uq_144",
    "uq_145"
@@ -1225,7 +1290,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "沿闪电路径穿行，雷击瞬间无敌",
+  "actions_ref": [
+   "ska_034"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
@@ -1247,6 +1315,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "低频鸣叫推高潮压；静音打断可回稳",
   "actions_ref": [
    "uq_146"
   ],
@@ -1271,7 +1340,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "群翅扇出乱流，弹道整体偏移",
+  "actions_ref": [
+   "ska_034"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
@@ -1293,6 +1365,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "向墙隙吐雾藏怪，使预警失效",
   "actions_ref": [
    "uq_147"
   ],
@@ -1317,6 +1390,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "蹬墙借力跃袭，墙面形同平地",
   "actions_ref": [
    "uq_148",
    "uq_149"
@@ -1342,7 +1416,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "成群附墙，受击剥落坠物",
+  "actions_ref": [
+   "skb_001"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front／back｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
@@ -1364,6 +1441,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "发射硬化雨钉，雨天射速更快",
   "actions_ref": [
    "uq_150"
   ],
@@ -1388,6 +1466,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "壳口喷乱流，掀翻站位",
   "actions_ref": [
    "uq_151"
   ],
@@ -1412,7 +1491,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "首尾相连成电网，绕行强制",
+  "actions_ref": [
+   "ska_057"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front｜self_reposition=lateral｜target_displace=none｜position_rule=ignore_side｜marks=none（族画像：缠缚滑行）",
@@ -1434,7 +1516,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "叮咬积雨鲸鲵吸血，掉落云脂",
+  "actions_ref": [
+   "skb_001"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front／back｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
@@ -1456,7 +1541,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "拾战场落羽补巢，顺走素材",
+  "actions_ref": [
+   "ska_034"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
@@ -1478,7 +1566,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "吸附压差区膨胀，爆裂伤及近身",
+  "actions_ref": [
+   "skb_021"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=all｜self_reposition=none｜target_displace=pull_away｜position_rule=ignore_side｜marks=no_face（族画像：全向控场+强制拉拽）",
@@ -1500,6 +1591,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**假静水面**：背甲托起可踏的「静水」，踏上即陷；破甲泄水现真身",
   "actions_ref": [
    "dif_274",
    "dif_275",
@@ -1551,6 +1643,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**消音翎**：飞行动静全消，机制提示音失效；拔落翎羽复原声场",
   "actions_ref": [
    "dif_277",
    "dif_278",
@@ -1602,6 +1695,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**环眼低扫**：沿眼壁内缘巡飞低扫，逼全员卧倒；破坏翼骨坠入眼泊",
   "actions_ref": [
    "dif_280",
    "dif_281",
@@ -1653,6 +1747,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**旧锚压击**：背负三十年前沉船遗锚压击，锚击附锈蚀；锚体可剥取（补给船遗物）",
   "actions_ref": [
    "dif_283",
    "dif_284",
@@ -1704,6 +1799,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**倒影拟态**：鳞面映出我方上回合动作的镜像预演；破鳞后预演失效",
   "actions_ref": [
    "dif_286",
    "dif_287",
@@ -1755,6 +1851,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**静默领域**：周身静默场令指令生效延迟一拍；破坏喉囊解除",
   "actions_ref": [
    "dif_289",
    "dif_290",
@@ -1814,6 +1911,7 @@
    "雷殛": "1.5",
    "风暴": "0.5"
   },
+  "mech": "**静压场**：眼心内攻击间隔拉长、单次命中伤害递增，逼「慢而准」（**第 8.5 章章节 Boss** · 详设见 `03`）",
   "actions_ref": [
    "ind_121",
    "ind_122",
@@ -1872,6 +1970,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**汽笛压舱**：以旧站汽笛发声压稳眼心气流，笛声即阶段预告；毁笛则静压场紊乱外溢",
   "actions_ref": [
    "dif_292",
    "dif_293",
@@ -1923,6 +2022,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**洄游蓄纹**：绕眼心洄游积蓄蚀纹，蓄满向外环突围；截断洄游线令蚀纹反噬自身",
   "actions_ref": [
    "dif_295",
    "dif_296",
@@ -1974,7 +2074,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "眼心无风仍悬浮，靠体表微气流；破气流即坠",
+  "actions_ref": [
+   "ska_034"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
@@ -1996,7 +2099,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "倒悬眼心上空，坠物偷袭",
+  "actions_ref": [
+   "ska_034"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
@@ -2018,6 +2124,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "伞膜映出假怪影惑敌",
   "actions_ref": [
    "uq_155"
   ],
@@ -2042,7 +2149,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "气压异动前先行鸣叫，可当预警信号",
+  "actions_ref": [
+   "ska_034"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
@@ -2064,6 +2174,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "拖小锚残骸滑翔，回身甩锚",
   "actions_ref": [
    "uq_173",
    "uq_174"
@@ -2089,7 +2200,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "群飞无声，遮蔽环境音提示",
+  "actions_ref": [
+   "ska_034"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
@@ -2111,7 +2225,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "背负旧帆残片滑翔，帆骨可剥（补给船遗物）",
+  "actions_ref": [
+   "ska_046"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front｜self_reposition=dash+turn｜target_displace=none｜position_rule=eligible:front｜marks=none（族画像：打完就走）",
@@ -2133,7 +2250,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "点水产卵的波纹会暴露隐身单位",
+  "actions_ref": [
+   "ska_034"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
@@ -2155,7 +2275,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "终年不离屿识路，跟随可绕开静默区",
+  "actions_ref": [
+   "ska_034"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
@@ -2177,6 +2300,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "叩观测塔铁构件磨喙，震落锈件伤人",
   "actions_ref": [
    "uq_156"
   ],
@@ -2201,7 +2325,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "以震动「听」声，脚步愈重亮得愈快（暴露站位）",
+  "actions_ref": [
+   "skb_033"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=air｜self_reposition=ascend｜target_displace=lift_air｜position_rule=requires_height:air｜marks=none（族画像：常驻空域(落地窗)）",
@@ -2223,7 +2350,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "附身吸血无提示，需主动检查",
+  "actions_ref": [
+   "skb_021"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=all｜self_reposition=none｜target_displace=pull_away｜position_rule=ignore_side｜marks=no_face（族画像：全向控场+强制拉拽）",
@@ -2245,7 +2375,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "啃食沉船铁器，甲含锈铁料",
+  "actions_ref": [
+   "skb_001"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front／back｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
@@ -2267,7 +2400,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "聚成尘柱冒充巨兽轮廓",
+  "actions_ref": [
+   "ska_034"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
@@ -2289,6 +2425,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "成群映影惑敌",
   "actions_ref": [
    "uq_152"
   ],
@@ -2313,7 +2450,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "壳藏静水，踩碎滑倒",
+  "actions_ref": [
+   "skb_001"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front／back｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
@@ -2335,6 +2475,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "结网于塔缆之间，缠停风缆位移",
   "actions_ref": [
    "uq_153"
   ],
@@ -2359,7 +2500,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "食屿土成空穴，踏之塌陷",
+  "actions_ref": [
+   "skb_041"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=back｜self_reposition=burrow｜target_displace=none｜position_rule=back_window｜marks=burrowing（族画像：地遁突袭(土痕)）",
@@ -2381,7 +2525,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "模仿汽笛乱鸣，扰乱阶段判断",
+  "actions_ref": [
+   "ska_034"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
@@ -2403,6 +2550,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**读风预读**：复制玩家上回合指令的 50% 作为先制",
   "actions_ref": [
    "dif_298",
    "dif_299",
@@ -2471,6 +2619,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**气压累积**：满值全场爆发；破坏排气阀泄压",
   "actions_ref": [
    "dif_301",
    "dif_302",
@@ -2528,6 +2677,7 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
+  "mech": "**吞食记录**：被吞食的机制提示本场不再显示",
   "actions_ref": [
    "dif_304",
    "dif_305",
@@ -2596,7 +2746,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "导电；雷电伤害沿其传导",
+  "actions_ref": [
+   "ska_023"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front｜self_reposition=none｜target_displace=pull_close｜position_rule=eligible:front｜marks=none（族画像：正面封锁+拉近）",
@@ -2618,7 +2771,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "凝视标记玩家，被标记者受击加成",
+  "actions_ref": [
+   "ska_023"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front｜self_reposition=none｜target_displace=pull_close｜position_rule=eligible:front｜marks=none（族画像：正面封锁+拉近）",
@@ -2640,7 +2796,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "液态；形态随气压变化",
+  "actions_ref": [
+   "skb_033"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=air｜self_reposition=ascend｜target_displace=lift_air｜position_rule=requires_height:air｜marks=none（族画像：常驻空域(落地窗)）",
@@ -2662,7 +2821,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "派生自记录匣兽；撕碎记录干扰机制提示",
+  "actions_ref": [
+   "ska_034"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
@@ -2692,6 +2854,7 @@
    "雷殛": "1.0",
    "风暴": "1.5"
   },
+  "mech": "悬浮；常规攻击落空率↑，需压制",
   "actions_ref": [
    "uq_154"
   ],
@@ -2724,7 +2887,10 @@
    "雷殛": "1.0",
    "风暴": "1.0"
   },
-  "actions_ref": [],
+  "mech": "成群干扰",
+  "actions_ref": [
+   "skb_001"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front／back｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
@@ -2746,7 +2912,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "液态滑移，难以锁定",
+  "actions_ref": [
+   "skb_033"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=air｜self_reposition=ascend｜target_displace=lift_air｜position_rule=requires_height:air｜marks=none（族画像：常驻空域(落地窗)）",
@@ -2768,7 +2937,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "成群导电",
+  "actions_ref": [
+   "ska_034"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
@@ -2790,7 +2962,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "派生自记录纸蛾",
+  "actions_ref": [
+   "ska_034"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
@@ -2812,7 +2987,10 @@
   "resistance": {
    "rule_gen": "五规则默认归增量三"
   },
-  "actions_ref": [],
+  "mech": "读条，可提前预警气压爆发",
+  "actions_ref": [
+   "ska_023"
+  ],
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "attack_zone=front｜self_reposition=none｜target_displace=pull_close｜position_rule=eligible:front｜marks=none（族画像：正面封锁+拉近）",

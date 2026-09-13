@@ -7594,7 +7594,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N10",
   "seq": "P-10-01",
-  "npc": "N10",
+  "npc": {
+   "id": "N10",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -7609,7 +7613,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N10",
   "seq": "P-10-02",
-  "npc": "N10",
+  "npc": {
+   "id": "N10",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -7630,7 +7638,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N10",
   "seq": "P-10-03",
-  "npc": "N10",
+  "npc": {
+   "id": "N10",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "矿石/金属类素材 ×2（`$C.ECON.DROP_T_UNCOMMON` 档）〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -7651,7 +7663,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N10",
   "seq": "P-10-04",
-  "npc": "N10",
+  "npc": {
+   "id": "N10",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -7672,7 +7688,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N10",
   "seq": "P-10-05",
-  "npc": "N10",
+  "npc": {
+   "id": "N10",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "骸骨类素材 ×2（`$C.ECON.DROP_T_RARE` 档）〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -7693,7 +7713,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N11",
   "seq": "P-11-01",
-  "npc": "N11",
+  "npc": {
+   "id": "N11",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -7708,7 +7732,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N11",
   "seq": "P-11-02",
-  "npc": "N11",
+  "npc": {
+   "id": "N11",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -7729,7 +7757,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N11",
   "seq": "P-11-03",
-  "npc": "N11",
+  "npc": {
+   "id": "N11",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "骸骨类素材 ×2（`$C.ECON.DROP_T_RARE` 档）〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -7750,7 +7782,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N11",
   "seq": "P-11-04",
-  "npc": "N11",
+  "npc": {
+   "id": "N11",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -7771,7 +7807,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N11",
   "seq": "P-11-05",
-  "npc": "N11",
+  "npc": {
+   "id": "N11",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "草药类素材 ×3（`$C.ECON.DROP_T_COMMON` 档）〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -7792,7 +7832,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N12",
   "seq": "P-12-01",
-  "npc": "N12",
+  "npc": {
+   "id": "N12",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -7807,7 +7851,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N12",
   "seq": "P-12-02",
-  "npc": "N12",
+  "npc": {
+   "id": "N12",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -7828,7 +7876,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N12",
   "seq": "P-12-03",
-  "npc": "N12",
+  "npc": {
+   "id": "N12",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "矿石/金属类素材 ×2（`$C.ECON.DROP_T_UNCOMMON` 档）〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -7849,7 +7901,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N12",
   "seq": "P-12-04",
-  "npc": "N12",
+  "npc": {
+   "id": "N12",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -7870,7 +7926,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N12",
   "seq": "P-12-05",
-  "npc": "N12",
+  "npc": {
+   "id": "N12",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "骸骨类素材 ×2（`$C.ECON.DROP_T_RARE` 档）〔EC-S〕",
   "source_sys": "定向副本",
   "freq": "一次性",
@@ -7891,7 +7951,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N13",
   "seq": "P-13-01",
-  "npc": "N13",
+  "npc": {
+   "id": "N13",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -7906,7 +7970,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N13",
   "seq": "P-13-02",
-  "npc": "N13",
+  "npc": {
+   "id": "N13",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -7927,7 +7995,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N13",
   "seq": "P-13-03",
-  "npc": "N13",
+  "npc": {
+   "id": "N13",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "草药类素材 ×3（`$C.ECON.DROP_T_COMMON` 档）〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -7948,7 +8020,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N13",
   "seq": "P-13-04",
-  "npc": "N13",
+  "npc": {
+   "id": "N13",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -7969,7 +8045,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N13",
   "seq": "P-13-05",
-  "npc": "N13",
+  "npc": {
+   "id": "N13",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "骸骨类素材 ×2（`$C.ECON.DROP_T_RARE` 档）〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -7990,7 +8070,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N14",
   "seq": "P-14-01",
-  "npc": "N14",
+  "npc": {
+   "id": "N14",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8005,7 +8089,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N14",
   "seq": "P-14-02",
-  "npc": "N14",
+  "npc": {
+   "id": "N14",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "草药类素材 ×2（`$C.ECON.DROP_T_COMMON` 档） 〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8026,7 +8114,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N14",
   "seq": "P-14-03",
-  "npc": "N14",
+  "npc": {
+   "id": "N14",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "草药类素材 ×2（`$C.ECON.DROP_T_COMMON` 档） 〔EC-S〕",
   "source_sys": "剥取委托",
   "freq": "一次性",
@@ -8047,7 +8139,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N14",
   "seq": "P-14-04",
-  "npc": "N14",
+  "npc": {
+   "id": "N14",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8068,7 +8164,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N14",
   "seq": "P-14-05",
-  "npc": "N14",
+  "npc": {
+   "id": "N14",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "粉末类素材 ×1（`$C.ECON.DROP_T_UNCOMMON` 档） 〔EC-S〕",
   "source_sys": "定向副本",
   "freq": "一次性",
@@ -8089,7 +8189,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N15",
   "seq": "P-15-01",
-  "npc": "N15",
+  "npc": {
+   "id": "N15",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8104,7 +8208,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N15",
   "seq": "P-15-02",
-  "npc": "N15",
+  "npc": {
+   "id": "N15",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "矿石/金属类素材 ×2（`$C.ECON.DROP_T_COMMON` 档） 〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8125,7 +8233,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N15",
   "seq": "P-15-03",
-  "npc": "N15",
+  "npc": {
+   "id": "N15",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "骸骨类素材 ×1（`$C.ECON.DROP_T_UNCOMMON` 档） 〔EC-S〕",
   "source_sys": "定向副本",
   "freq": "一次性",
@@ -8146,7 +8258,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N15",
   "seq": "P-15-04",
-  "npc": "N15",
+  "npc": {
+   "id": "N15",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8167,7 +8283,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N15",
   "seq": "P-15-05",
-  "npc": "N15",
+  "npc": {
+   "id": "N15",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "矿石/金属类素材 ×2（`$C.ECON.DROP_T_COMMON` 档） 〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8188,7 +8308,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N16",
   "seq": "P-16-01",
-  "npc": "N16",
+  "npc": {
+   "id": "N16",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8203,7 +8327,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N16",
   "seq": "P-16-02",
-  "npc": "N16",
+  "npc": {
+   "id": "N16",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "鳞片/皮革类素材 ×2（`$C.ECON.DROP_T_COMMON` 档） 〔EC-S〕",
   "source_sys": "定向副本",
   "freq": "一次性",
@@ -8224,7 +8352,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N16",
   "seq": "P-16-03",
-  "npc": "N16",
+  "npc": {
+   "id": "N16",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "木材类素材 ×2（`$C.ECON.DROP_T_COMMON` 档） 〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8245,7 +8377,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N16",
   "seq": "P-16-04",
-  "npc": "N16",
+  "npc": {
+   "id": "N16",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "果实类素材 ×2（`$C.ECON.DROP_T_COMMON` 档） 〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8266,7 +8402,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N16",
   "seq": "P-16-05",
-  "npc": "N16",
+  "npc": {
+   "id": "N16",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "果实类素材 ×1（`$C.ECON.DROP_T_UNCOMMON` 档） 〔EC-S〕",
   "source_sys": "定向副本",
   "freq": "一次性",
@@ -8287,7 +8427,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N17",
   "seq": "P-17-01",
-  "npc": "N17",
+  "npc": {
+   "id": "N17",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8302,7 +8446,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N17",
   "seq": "P-17-02",
-  "npc": "N17",
+  "npc": {
+   "id": "N17",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8323,7 +8471,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N17",
   "seq": "P-17-03",
-  "npc": "N17",
+  "npc": {
+   "id": "N17",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "矿石/金属类素材 ×2（`$C.ECON.DROP_T_UNCOMMON` 档）〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8344,7 +8496,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N17",
   "seq": "P-17-04",
-  "npc": "N17",
+  "npc": {
+   "id": "N17",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8365,7 +8521,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N17",
   "seq": "P-17-05",
-  "npc": "N17",
+  "npc": {
+   "id": "N17",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8386,7 +8546,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N17",
   "seq": "P-17-19",
-  "npc": "N17",
+  "npc": {
+   "id": "N17",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` ＋ 「托付」对话解锁（专属②） 〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8407,7 +8571,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N17",
   "seq": "P-17-20",
-  "npc": "N17",
+  "npc": {
+   "id": "N17",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` ＋ 后传 A 篇解锁（专属③） 〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8428,7 +8596,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N18",
   "seq": "P-18-01",
-  "npc": "N18",
+  "npc": {
+   "id": "N18",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD`×`$C.TIDE.SIDE_COEF`〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8443,7 +8615,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N18",
   "seq": "P-18-02",
-  "npc": "N18",
+  "npc": {
+   "id": "N18",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD`×`$C.TIDE.SIDE_COEF`〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8464,7 +8640,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N18",
   "seq": "P-18-03",
-  "npc": "N18",
+  "npc": {
+   "id": "N18",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD`×`$C.TIDE.SIDE_COEF`〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8485,7 +8665,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N18",
   "seq": "P-18-04",
-  "npc": "N18",
+  "npc": {
+   "id": "N18",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD`×`$C.TIDE.SIDE_COEF`〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8506,7 +8690,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N18",
   "seq": "P-18-05",
-  "npc": "N18",
+  "npc": {
+   "id": "N18",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD`×`$C.TIDE.SIDE_COEF`〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8527,7 +8715,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N19",
   "seq": "P-19-01",
-  "npc": "N19",
+  "npc": {
+   "id": "N19",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD`×`$C.TIDE.SIDE_COEF`〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8542,7 +8734,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N19",
   "seq": "P-19-02",
-  "npc": "N19",
+  "npc": {
+   "id": "N19",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD`×`$C.TIDE.SIDE_COEF`〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8563,7 +8759,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N19",
   "seq": "P-19-03",
-  "npc": "N19",
+  "npc": {
+   "id": "N19",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD`×`$C.TIDE.SIDE_COEF`〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8584,7 +8784,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N19",
   "seq": "P-19-04",
-  "npc": "N19",
+  "npc": {
+   "id": "N19",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD`×`$C.TIDE.SIDE_COEF`〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8605,7 +8809,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N19",
   "seq": "P-19-05",
-  "npc": "N19",
+  "npc": {
+   "id": "N19",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD`×`$C.TIDE.SIDE_COEF`〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8626,7 +8834,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N20",
   "seq": "P-20-01",
-  "npc": "N20",
+  "npc": {
+   "id": "N20",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD`×`$C.TIDE.SIDE_COEF`〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8641,7 +8853,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N20",
   "seq": "P-20-02",
-  "npc": "N20",
+  "npc": {
+   "id": "N20",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD`×`$C.TIDE.SIDE_COEF`〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8662,7 +8878,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N20",
   "seq": "P-20-03",
-  "npc": "N20",
+  "npc": {
+   "id": "N20",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD`×`$C.TIDE.SIDE_COEF`〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8683,7 +8903,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N20",
   "seq": "P-20-04",
-  "npc": "N20",
+  "npc": {
+   "id": "N20",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD`×`$C.TIDE.SIDE_COEF`〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8704,7 +8928,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N20",
   "seq": "P-20-05",
-  "npc": "N20",
+  "npc": {
+   "id": "N20",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD`×`$C.TIDE.SIDE_COEF`〔EC-S〕",
   "source_sys": "定向副本",
   "freq": "一次性",
@@ -8725,7 +8953,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N21",
   "seq": "P-21-01",
-  "npc": "N21",
+  "npc": {
+   "id": "N21",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8740,7 +8972,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N21",
   "seq": "P-21-02",
-  "npc": "N21",
+  "npc": {
+   "id": "N21",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8761,7 +8997,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N21",
   "seq": "P-21-03",
-  "npc": "N21",
+  "npc": {
+   "id": "N21",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "矿石/金属类素材 ×2（`$C.ECON.DROP_T_UNCOMMON` 档）〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8782,7 +9022,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N21",
   "seq": "P-21-04",
-  "npc": "N21",
+  "npc": {
+   "id": "N21",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8803,7 +9047,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N21",
   "seq": "P-21-05",
-  "npc": "N21",
+  "npc": {
+   "id": "N21",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8824,7 +9072,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N21",
   "seq": "P-21-19",
-  "npc": "N21",
+  "npc": {
+   "id": "N21",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` ＋ 「托付」对话解锁（专属②） 〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",
@@ -8845,7 +9097,11 @@
   "chapter": "NPC",
   "chapter_name": "NPC 线 N21",
   "seq": "P-21-20",
-  "npc": "N21",
+  "npc": {
+   "id": "N21",
+   "conditions": [],
+   "priority": 0
+  },
   "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` ＋ 后传 A 篇解锁（专属③） 〔EC-S〕",
   "source_sys": "委托板",
   "freq": "一次性",

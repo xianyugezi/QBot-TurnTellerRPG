@@ -76,6 +76,26 @@ def main():
         per[t] = len(rows)
         for e in rows:
             actions = [{"action": aid, "weight": 50} for aid in e.get("actions_ref", [])]
+            # R16 契约形转换（242 增量）：设计面 parts（part/cls/threshold/positions_default/
+            # break_behavior）→ validator 面（id/name/positions{side[],height[]}/break_threshold；
+            # cls/break_behavior 白名单放行）
+            parts_out = []
+            for p0 in e.get("parts", []):
+                pd = p0.get("positions_default") or {}
+                sd = pd.get("side", "front")
+                ht = pd.get("height", "ground")
+                # 复合值拆分（如 ground／air → [ground, air]；全角／半角都认）
+                # 219 模板约定映射：side="side"(壁面族)→[left,right]、side="all"(全向族)→四向
+                SD_MAP = {"side": ["left", "right"], "all": ["front", "back", "left", "right"]}
+                sd_l = SD_MAP.get(sd, [x.strip() for x in re.split(r"[／/]", sd) if x.strip()])
+                ht_l = [x.strip() for x in re.split(r"[／/]", ht) if x.strip()]
+                parts_out.append(OrderedDict([
+                    ("id", p0.get("part")), ("name", p0.get("part")),
+                    ("cls", p0.get("cls", "")),
+                    ("positions", {"side": sd_l, "height": ht_l}),
+                    ("break_threshold", p0.get("threshold")),
+                    ("break_behavior", p0.get("break_behavior", [])),
+                ]))
             out.append(OrderedDict([
                 ("id", e["id"]), ("name", e["name"]),
                 ("tier", {"常规巨兽": "normal", "空兽": "normal", "杂兽": "normal",
@@ -87,7 +107,7 @@ def main():
                 ("weakness", e.get("weakness", {"rule_gen": True})),
                 ("resistance", e.get("resistance", {})),
                 ("pv", e.get("parts_total_threshold")),
-                ("parts", e.get("parts", [])),
+                ("parts", parts_out),
                 ("actions", actions),
                 ("drops", {"rule_gen": "素材面归增量二（18_/06 十四类挂口）"}),
                 ("lore", [{"unlock": 10, "desc": lore.get(e["name"], e.get("mech", ""))[:80]}]),

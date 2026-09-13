@@ -217,15 +217,26 @@ def build():
             if nm in NAMED_EHP:
                 ehp = NAMED_EHP[nm]
             moves = [x.strip() for x in re.split("／", g["moves_raw"]) if x.strip() and x.strip() != "—"]
+            skel = g["skeleton"]
+            # 增量三（R8 空 actions 回填）：无独有招怪挂骨架族缺省攻击动作（骨架池共享面，
+            # 首个本族攻击型动作；同族同缺省＝权重面 50 起步，与 22 号共享池挂载口径一致）
+            if not moves and skel:
+                fam = next((a for a in acts
+                            if a.get("source") in ("骨架族池_上", "骨架族池_下")
+                            and a.get("owner") == skel and a.get("ctype") == "攻击"), None)
+                if fam:
+                    moves = [fam["name"]]
             mids = [name2id[m] for m in moves if m in name2id]
             unres += [m for m in moves if m not in name2id]
+            mech = all_tiers.get(nm, {}).get("mech", "")
             rows.append(OrderedDict([
                 ("id", "cs_t%d_%03d" % (tide, len(rows) + 1)), ("name", nm),
                 ("tide", tide_i), ("area", eco_name), ("tier", tier),
-                ("skeleton", g["skeleton"]), ("bio_class", g["bio"]),
+                ("skeleton", skel), ("bio_class", g["bio"]),
                 ("hp", round(ehp)), ("ehp_named", nm in NAMED_EHP),
                 ("weakness", {"rule_gen": "三级默认归增量三"}),
                 ("resistance", resist.get(nm, {"rule_gen": "五规则默认归增量三"})),
+                ("mech", mech),
                 ("actions_ref", mids),
                 ("moves_unresolved", [m for m in moves if m not in name2id]),
                 ("weight_tune", g["weight_tune"]),

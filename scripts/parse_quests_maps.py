@@ -109,18 +109,20 @@ def parse_maps(enemies, env):
             ("name", eco), ("cluster", tide), ("tide_name", cells[1]),
             ("star_band", cells[3]),
             ("terrain_env", env.get(eco, "")),
-            ("monsters", mons),
+            ("monsters_ref", mons),
             ("exits", {}),
         ]))
     # 增量三：线性主链缺省拓扑——同簇相邻节点双向连通＋簇间末/首节点串联（工程收敛，
     # 分支支线拓扑归增量四/230）；hidden_exits 保留位＝隐藏 Boss 窗口（258 产物后填充）
+    # 契约适配（242 v5）：exits 方向键 ∈ up/down/left/right；monsters = spawn 对象行
     for i, n in enumerate(nodes):
         exits = {}
         if i > 0:
-            exits["prev"] = {"to": nodes[i - 1]["id"], "mode": "bidirectional"}
+            exits["left"] = {"to": nodes[i - 1]["id"], "mode": "bidirectional"}
         if i < len(nodes) - 1:
-            exits["next"] = {"to": nodes[i + 1]["id"], "mode": "bidirectional"}
+            exits["right"] = {"to": nodes[i + 1]["id"], "mode": "bidirectional"}
         n["exits"] = exits
+        n["monsters"] = [{"enemy": mid, "count": 1, "respawn_minutes": 60} for mid in n.pop("monsters_ref", [])]
         n["hidden_exits"] = []  # hidden_boss 窗口保留位（名单归 258，机制沿 exits.condition DSL）
         n["terrain"] = {"env": n.pop("terrain_env", ""), "wall_tag": "F08 撞壁 terrain 标签归增量四"}
     return nodes
@@ -193,6 +195,15 @@ def main():
                 ("desc", q["desc"]), ("reward_raw", q["reward_raw"]),
                 ("conditions", []),
             ]))
+    # 增量四（story 段规范化，230 面增量修正）：npc 字符串 → 对象 {id: str}；
+    # conditions 剔除空条目（quest 116 红拦清零）
+    for q in prev_story:
+        npc = q.get("npc")
+        if isinstance(npc, str) and npc.strip():
+            q["npc"] = {"id": npc.strip()}
+        conds = q.get("conditions")
+        if isinstance(conds, list):
+            q["conditions"] = [c for c in conds if c]
     quests = [q for q in quests if q["main"]] + side_out + prev_story
     n_main = sum(1 for q in quests if q.get("main") is True)
     n_side = sum(1 for q in quests if q.get("id", "").startswith(("q_v_", "q_s_")))

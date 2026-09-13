@@ -1,0 +1,4638 @@
+[
+ {
+  "id": "cs_t7_001",
+  "name": "回声壁兽 · 复诵",
+  "tide": 7,
+  "area": "渊喉回声台",
+  "tier": "常规巨兽",
+  "skeleton": "F01",
+  "bio_class": "避潮",
+  "hp": 74883,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "腐蚀": "1.0",
+   "麻痹": "1.0",
+   "沉眠": "0.5",
+   "爆燃": "1.0",
+   "风蚀": "1.0",
+   "泥陷": "1.0",
+   "霜缚": "1.0",
+   "雷殛": "**1.5**",
+   "风暴": "1.0"
+  },
+  "actions_ref": [
+   "dif_517",
+   "dif_518",
+   "dif_519"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "复诵腔",
+    "move": "复诵·照搬"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_002",
+  "name": "凿台石兽 · 手凿",
+  "tide": 7,
+  "area": "渊喉回声台",
+  "tier": "常规巨兽",
+  "skeleton": "F01",
+  "bio_class": "避潮",
+  "hp": 74883,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_520",
+   "dif_521",
+   "dif_522"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "凿爪",
+    "move": "手凿·敲台"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_003",
+  "name": "渊喉浮兽 · 悬壁",
+  "tide": 7,
+  "area": "渊喉回声台",
+  "tier": "常规巨兽",
+  "skeleton": "F10",
+  "bio_class": "潮适",
+  "hp": 74883,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_523",
+   "dif_524",
+   "dif_525"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "贴壁浮囊",
+    "move": "悬壁·贴浮"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_004",
+  "name": "信号匣兽 · 未发",
+  "tide": 7,
+  "area": "渊喉回声台",
+  "tier": "常规巨兽",
+  "skeleton": "F03",
+  "bio_class": "避潮",
+  "hp": 74883,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_526",
+   "dif_527",
+   "dif_528"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "信号匣",
+    "move": "未发·匣鸣"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_005",
+  "name": "深潜探兽 · 回声",
+  "tide": 7,
+  "area": "渊喉回声台",
+  "tier": "常规巨兽",
+  "skeleton": "F06",
+  "bio_class": "避潮",
+  "hp": 74883,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_529",
+   "dif_530",
+   "dif_531"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "定位音窝",
+    "move": "回声·标定"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_006",
+  "name": "渊喉回声者 · 三十年前",
+  "tide": 7,
+  "area": "渊喉回声台",
+  "tier": "终盘巨兽",
+  "skeleton": "F10",
+  "bio_class": "潮适",
+  "hp": 99844,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "腐蚀": "**1.5**",
+   "麻痹": "1.0",
+   "沉眠": "**免疫**",
+   "爆燃": "0.5",
+   "风蚀": "1.0",
+   "泥陷": "1.0",
+   "霜缚": "1.0",
+   "雷殛": "1.0",
+   "风暴": "1.0"
+  },
+  "actions_ref": [
+   "dif_532",
+   "dif_533",
+   "dif_534"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "回放核心",
+    "move": "三十年前·重放"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_007",
+  "name": "壁龛栖兽 · 凿窝",
+  "tide": 7,
+  "area": "渊喉回声台",
+  "tier": "空兽",
+  "skeleton": "F07",
+  "bio_class": "避潮",
+  "hp": 34945,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_008",
+  "name": "回声蝠群 · 复声",
+  "tide": 7,
+  "area": "渊喉回声台",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 34945,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_009",
+  "name": "喉底游兽 · 暗流",
+  "tide": 7,
+  "area": "渊喉回声台",
+  "tier": "空兽",
+  "skeleton": "F06",
+  "bio_class": "避潮",
+  "hp": 34945,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=lateral｜target_displace=none｜position_rule=ignore_side｜marks=none（族画像：缠缚滑行）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_010",
+  "name": "铁架攀兽 · 锈梯",
+  "tide": 7,
+  "area": "渊喉回声台",
+  "tier": "空兽",
+  "skeleton": "F07",
+  "bio_class": "避潮",
+  "hp": 34945,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_011",
+  "name": "信号线兽 · 缠线",
+  "tide": 7,
+  "area": "渊喉回声台",
+  "tier": "空兽",
+  "skeleton": "F09",
+  "bio_class": "避潮",
+  "hp": 34945,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=all｜self_reposition=none｜target_displace=pull_away｜position_rule=ignore_side｜marks=no_face（族画像：全向控场+强制拉拽）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_012",
+  "name": "深渊灯兽 · 微光",
+  "tide": 7,
+  "area": "渊喉回声台",
+  "tier": "空兽",
+  "skeleton": "F10",
+  "bio_class": "潮适",
+  "hp": 34945,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=air｜self_reposition=ascend｜target_displace=lift_air｜position_rule=requires_height:air｜marks=none（族画像：常驻空域(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_013",
+  "name": "回音螺兽 · 蓄声",
+  "tide": 7,
+  "area": "渊喉回声台",
+  "tier": "空兽",
+  "skeleton": "F10",
+  "bio_class": "避潮",
+  "hp": 34945,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=air｜self_reposition=ascend｜target_displace=lift_air｜position_rule=requires_height:air｜marks=none（族画像：常驻空域(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_014",
+  "name": "凿痕蜗兽 · 慢行",
+  "tide": 7,
+  "area": "渊喉回声台",
+  "tier": "空兽",
+  "skeleton": "F08",
+  "bio_class": "避潮",
+  "hp": 34945,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=rolling｜target_displace=push[1]｜position_rule=eligible:front｜marks=rolling（族画像：轨迹压迫(滚转)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_015",
+  "name": "壁虱群",
+  "tide": 7,
+  "area": "渊喉回声台",
+  "tier": "杂兽",
+  "skeleton": "F07",
+  "bio_class": "避潮",
+  "hp": 14977,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_016",
+  "name": "铁屑蛾",
+  "tide": 7,
+  "area": "渊喉回声台",
+  "tier": "杂兽",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 14977,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_017",
+  "name": "深喉小鱼群",
+  "tide": 7,
+  "area": "渊喉回声台",
+  "tier": "杂兽",
+  "skeleton": "F06",
+  "bio_class": "避潮",
+  "hp": 14977,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=lateral｜target_displace=none｜position_rule=ignore_side｜marks=none（族画像：缠缚滑行）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_018",
+  "name": "回声蚊群",
+  "tide": 7,
+  "area": "渊喉回声台",
+  "tier": "杂兽",
+  "skeleton": "F10",
+  "bio_class": "避潮",
+  "hp": 14977,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=air｜self_reposition=ascend｜target_displace=lift_air｜position_rule=requires_height:air｜marks=none（族画像：常驻空域(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_019",
+  "name": "锈钉虫",
+  "tide": 7,
+  "area": "渊喉回声台",
+  "tier": "杂兽",
+  "skeleton": "F07",
+  "bio_class": "避潮",
+  "hp": 14977,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_020",
+  "name": "苔斑蜗",
+  "tide": 7,
+  "area": "渊喉回声台",
+  "tier": "杂兽",
+  "skeleton": "F08",
+  "bio_class": "避潮",
+  "hp": 14977,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=rolling｜target_displace=push[1]｜position_rule=eligible:front｜marks=rolling（族画像：轨迹压迫(滚转)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_021",
+  "name": "碎岩蟹",
+  "tide": 7,
+  "area": "渊喉回声台",
+  "tier": "杂兽",
+  "skeleton": "F07",
+  "bio_class": "避潮",
+  "hp": 14977,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_022",
+  "name": "鸣廊巨犀 · 撞壁",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "常规巨兽",
+  "skeleton": "F02",
+  "bio_class": "避潮",
+  "hp": 67670,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_442",
+   "dif_443",
+   "dif_444"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "独角",
+    "move": "撞壁·激震"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_023",
+  "name": "涡鬃巨狼 · 引流",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "常规巨兽",
+  "skeleton": "F02",
+  "bio_class": "潮适",
+  "hp": 67670,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_445",
+   "dif_446",
+   "dif_447"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "啸喉",
+    "move": "引流·驱涡"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_024",
+  "name": "垂鳞蟒 · 谷喉",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "常规巨兽",
+  "skeleton": "F06",
+  "bio_class": "避潮",
+  "hp": 67670,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_448",
+   "dif_449",
+   "dif_450"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "鳞帘",
+    "move": "谷喉·音墙"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_025",
+  "name": "叠甲蜥 · 反震",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "常规巨兽",
+  "skeleton": "F01",
+  "bio_class": "避潮",
+  "hp": 67670,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_451",
+   "dif_452",
+   "dif_453"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "叠甲",
+    "move": "反震·回弹"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_026",
+  "name": "蚀喉鲸 · 滞响",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "常规巨兽",
+  "skeleton": "F06",
+  "bio_class": "蚀依",
+  "hp": 67670,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_454",
+   "dif_455",
+   "dif_456"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "喉窍",
+    "move": "滞响·吐团"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_027",
+  "name": "听穴蝠王 · 倾听",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "常规巨兽",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 67670,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_457",
+   "dif_458",
+   "dif_459"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "耳廓",
+    "move": "倾听·锁影"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_028",
+  "name": "蚀纹蚺 · 缠柱",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "常规巨兽",
+  "skeleton": "F06",
+  "bio_class": "蚀依",
+  "hp": 67670,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_460",
+   "dif_461",
+   "dif_462"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "缠绕肌节",
+    "move": "缠柱·绞柱"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_029",
+  "name": "空腔巨蛙 · 吞声",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "常规巨兽",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 67670,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_463",
+   "dif_464",
+   "dif_465"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "声囊",
+    "move": "吞声·静域"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_030",
+  "name": "涡鳍鲨 · 溯游",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "常规巨兽",
+  "skeleton": "F06",
+  "bio_class": "潮适",
+  "hp": 67670,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_466",
+   "dif_467",
+   "dif_468"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "背鳍",
+    "move": "溯游·逆冲"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_031",
+  "name": "守道石像 · 廊卫",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "常规巨兽",
+  "skeleton": "F03",
+  "bio_class": "避潮",
+  "hp": 67670,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_469",
+   "dif_470",
+   "dif_471"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "胸前符文",
+    "move": "廊卫·踏步"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_032",
+  "name": "渊喉之主 · 回响",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "终盘巨兽",
+  "skeleton": "F02",
+  "bio_class": "潮适",
+  "hp": 90226,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "腐蚀": "1.0",
+   "麻痹": "1.0",
+   "沉眠": "**免疫**",
+   "爆燃": "**1.5**",
+   "风蚀": "1.0",
+   "泥陷": "0.5",
+   "霜缚": "0.5",
+   "雷殛": "1.0",
+   "风暴": "**反弹**"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "—",
+  "duyou_pos": "",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_033",
+  "name": "蚀涡巨蟹 · 旋廊",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "终盘巨兽",
+  "skeleton": "F02",
+  "bio_class": "蚀依",
+  "hp": 90226,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "腐蚀": "1.0",
+   "麻痹": "1.0",
+   "沉眠": "1.0",
+   "爆燃": "1.0",
+   "风蚀": "0.5",
+   "泥陷": "**反弹**",
+   "霜缚": "**1.5**",
+   "雷殛": "1.0",
+   "风暴": "**免疫**"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "—",
+  "duyou_pos": "",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_034",
+  "name": "千喉螟 · 合鸣",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "终盘巨兽",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 90226,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_472",
+   "dif_473",
+   "dif_474"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "鸣孔群",
+    "move": "合鸣·叠浪"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_035",
+  "name": "回声燕群 · 复音",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 31579,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_036",
+  "name": "涡羽鹫 · 盘涡",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "空兽",
+  "skeleton": "F05",
+  "bio_class": "潮适",
+  "hp": 31579,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=dash+turn｜target_displace=none｜position_rule=eligible:front｜marks=none（族画像：打完就走）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_037",
+  "name": "薄翼蝠 · 掠水",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "潮适",
+  "hp": 31579,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_038",
+  "name": "鸣囊蜓 · 鼓喉",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 31579,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_039",
+  "name": "拖音鹤 · 残响",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 31579,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_040",
+  "name": "钓喉蠹 · 悬丝",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "空兽",
+  "skeleton": "F07",
+  "bio_class": "避潮",
+  "hp": 31579,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_041",
+  "name": "涡膜水母 · 载涡",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "空兽",
+  "skeleton": "F10",
+  "bio_class": "潮适",
+  "hp": 31579,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=air｜self_reposition=ascend｜target_displace=lift_air｜position_rule=requires_height:air｜marks=none（族画像：常驻空域(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_042",
+  "name": "石鸣雀 · 衔砾",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "空兽",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 31579,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=shift｜target_displace=none｜position_rule=eligible:front／back｜marks=decoy（族画像：游击互换(残影)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_043",
+  "name": "盲眼鸮 · 听风",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 31579,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_044",
+  "name": "蚀鳞蝠群 · 蚀雾",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "蚀依",
+  "hp": 31579,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_045",
+  "name": "长鸣隼 · 传讯",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "空兽",
+  "skeleton": "F05",
+  "bio_class": "避潮",
+  "hp": 31579,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=dash+turn｜target_displace=none｜position_rule=eligible:front｜marks=none（族画像：打完就走）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_046",
+  "name": "涡尾雨燕 · 截涡",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "潮适",
+  "hp": 31579,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_047",
+  "name": "拾遗鹫 · 翻骸",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 31579,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_048",
+  "name": "聒噪蠓群 · 绕柱",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "空兽",
+  "skeleton": "F10",
+  "bio_class": "避潮",
+  "hp": 31579,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=air｜self_reposition=ascend｜target_displace=lift_air｜position_rule=requires_height:air｜marks=none（族画像：常驻空域(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_049",
+  "name": "晶喉蜂鸟 · 悬吸",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "空兽",
+  "skeleton": "F10",
+  "bio_class": "避潮",
+  "hp": 31579,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=air｜self_reposition=ascend｜target_displace=lift_air｜position_rule=requires_height:air｜marks=none（族画像：常驻空域(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_050",
+  "name": "拟石蝠 · 倒挂",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "空兽",
+  "skeleton": "F10",
+  "bio_class": "避潮",
+  "hp": 31579,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=air｜self_reposition=ascend｜target_displace=lift_air｜position_rule=requires_height:air｜marks=none（族画像：常驻空域(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_051",
+  "name": "淤泥鳅",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "杂兽",
+  "skeleton": "F06",
+  "bio_class": "避潮",
+  "hp": 13534,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=lateral｜target_displace=none｜position_rule=ignore_side｜marks=none（族画像：缠缚滑行）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_052",
+  "name": "廊壁鼠",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "杂兽",
+  "skeleton": "F11",
+  "bio_class": "避潮",
+  "hp": 13534,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=back｜self_reposition=burrow｜target_displace=none｜position_rule=back_window｜marks=burrowing（族画像：地遁突袭(土痕)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_053",
+  "name": "叠声蟋",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "杂兽",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 13534,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=shift｜target_displace=none｜position_rule=eligible:front／back｜marks=decoy（族画像：游击互换(残影)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_054",
+  "name": "蚀涎蜗",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "杂兽",
+  "skeleton": "F08",
+  "bio_class": "蚀依",
+  "hp": 13534,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=rolling｜target_displace=push[1]｜position_rule=eligible:front｜marks=rolling（族画像：轨迹压迫(滚转)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_055",
+  "name": "砾石燕",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "杂兽",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 13534,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=shift｜target_displace=none｜position_rule=eligible:front／back｜marks=decoy（族画像：游击互换(残影)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_056",
+  "name": "石缝虱",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "杂兽",
+  "skeleton": "F07",
+  "bio_class": "避潮",
+  "hp": 13534,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_057",
+  "name": "暗水蚴",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "杂兽",
+  "skeleton": "F06",
+  "bio_class": "潮适",
+  "hp": 13534,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=lateral｜target_displace=none｜position_rule=ignore_side｜marks=none（族画像：缠缚滑行）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_058",
+  "name": "鸣囊蛙",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "杂兽",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 13534,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=shift｜target_displace=none｜position_rule=eligible:front／back｜marks=decoy（族画像：游击互换(残影)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_059",
+  "name": "拦道蛛",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "杂兽",
+  "skeleton": "F07",
+  "bio_class": "避潮",
+  "hp": 13534,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_060",
+  "name": "噬鳞虫",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "杂兽",
+  "skeleton": "F07",
+  "bio_class": "避潮",
+  "hp": 13534,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_061",
+  "name": "涡藻蚤",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "杂兽",
+  "skeleton": "F12",
+  "bio_class": "潮适",
+  "hp": 13534,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=shift｜target_displace=none｜position_rule=eligible:front／back｜marks=decoy（族画像：游击互换(残影)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_062",
+  "name": "窸窣貂",
+  "tide": 7,
+  "area": "渊喉涡廊",
+  "tier": "杂兽",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 13534,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=shift｜target_displace=none｜position_rule=eligible:front／back｜marks=decoy（族画像：游击互换(残影)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_063",
+  "name": "驮骸蟹 · 拾骨",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "常规巨兽",
+  "skeleton": "F07",
+  "bio_class": "避潮",
+  "hp": 61830,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_409",
+   "dif_410",
+   "dif_411"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "护甲壳片",
+    "move": "拾骨·负甲"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_064",
+  "name": "裂穹鹫 · 巡缝",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "常规巨兽",
+  "skeleton": "F05",
+  "bio_class": "避潮",
+  "hp": 61830,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_412",
+   "dif_413",
+   "dif_414"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "翼",
+    "move": "巡缝·借流"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_065",
+  "name": "悬石巨龟 · 坠锚",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "常规巨兽",
+  "skeleton": "F01",
+  "bio_class": "避潮",
+  "hp": 61830,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_415",
+   "dif_416",
+   "dif_417"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "悬岩",
+    "move": "坠锚·甩石"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_066",
+  "name": "锈塔守蜥 · 盘塔",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "常规巨兽",
+  "skeleton": "F07",
+  "bio_class": "避潮",
+  "hp": 61830,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_418",
+   "dif_419",
+   "dif_420"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "趾钩",
+    "move": "盘塔·踹砖"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_067",
+  "name": "衔简鸦 · 投书",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "常规巨兽",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 61830,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_421",
+   "dif_422",
+   "dif_423"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "衔简喙",
+    "move": "投书·掷简"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_068",
+  "name": "双头裂兽 · 分歧",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "常规巨兽",
+  "skeleton": "F02",
+  "bio_class": "避潮",
+  "hp": 61830,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_424",
+   "dif_425",
+   "dif_426"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "一侧头颈",
+    "move": "分歧·双咬"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_069",
+  "name": "巨翼膜兽 · 遮穹",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "常规巨兽",
+  "skeleton": "F04",
+  "bio_class": "潮适",
+  "hp": 61830,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_427",
+   "dif_428",
+   "dif_429"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "翼膜",
+    "move": "遮穹·风墙"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_070",
+  "name": "残旗狮 · 守营",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "常规巨兽",
+  "skeleton": "F01",
+  "bio_class": "避潮",
+  "hp": 61830,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_430",
+   "dif_431",
+   "dif_432"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "鬃甲",
+    "move": "守营·压鬃"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_071",
+  "name": "沉舟蜥 · 翻底",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "常规巨兽",
+  "skeleton": "F01",
+  "bio_class": "避潮",
+  "hp": 61830,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_433",
+   "dif_434",
+   "dif_435"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "拱背脊棘",
+    "move": "翻底·拱舟"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_072",
+  "name": "裂穹之影 · 垂眸",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "终盘巨兽",
+  "skeleton": "F02",
+  "bio_class": "避潮",
+  "hp": 82440,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "腐蚀": "**免疫**",
+   "麻痹": "**反弹**",
+   "沉眠": "1.0",
+   "爆燃": "0.5",
+   "风蚀": "**1.5**",
+   "泥陷": "1.0",
+   "霜缚": "1.0",
+   "雷殛": "1.0",
+   "风暴": "0.5"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "—",
+  "duyou_pos": "",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_073",
+  "name": "坠骸堆主 · 千钧",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "终盘巨兽",
+  "skeleton": "F09",
+  "bio_class": "避潮",
+  "hp": 82440,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_436",
+   "dif_437",
+   "dif_438"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "堆垒触须",
+    "move": "千钧·堆垒"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_074",
+  "name": "蚀潮先登 · 破穹",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "终盘巨兽",
+  "skeleton": "F06",
+  "bio_class": "蚀依",
+  "hp": 82440,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_439",
+   "dif_440",
+   "dif_441"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "额角逆鳞",
+    "move": "破穹·掀浪"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_075",
+  "name": "裂缝雨燕 · 掠缝",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 28854,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_076",
+  "name": "浮骸鹫 · 抛骸",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "潮适",
+  "hp": 28854,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_077",
+  "name": "穹膜巨水母 · 充浮",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "空兽",
+  "skeleton": "F10",
+  "bio_class": "潮适",
+  "hp": 28854,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=air｜self_reposition=ascend｜target_displace=lift_air｜position_rule=requires_height:air｜marks=none（族画像：常驻空域(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_078",
+  "name": "断帆飞蜥 · 撑翼",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 28854,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_079",
+  "name": "锈羽铁鸢 · 失灵",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 28854,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_080",
+  "name": "萤羽飘螈 · 亮腹",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "空兽",
+  "skeleton": "F10",
+  "bio_class": "潮适",
+  "hp": 28854,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=air｜self_reposition=ascend｜target_displace=lift_air｜position_rule=requires_height:air｜marks=none（族画像：常驻空域(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_081",
+  "name": "风筏蟹 · 借帆",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "空兽",
+  "skeleton": "F07",
+  "bio_class": "避潮",
+  "hp": 28854,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_082",
+  "name": "蚀晶蜓 · 迷光",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "蚀依",
+  "hp": 28854,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_083",
+  "name": "噪喉巨隼 · 震翅",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "空兽",
+  "skeleton": "F05",
+  "bio_class": "避潮",
+  "hp": 28854,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=dash+turn｜target_displace=none｜position_rule=eligible:front｜marks=none（族画像：打完就走）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_084",
+  "name": "残页鸟 · 撕页",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "空兽",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 28854,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=shift｜target_displace=none｜position_rule=eligible:front／back｜marks=decoy（族画像：游击互换(残影)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_085",
+  "name": "穹隙守蜂 · 蜇哨",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "空兽",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 28854,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=shift｜target_displace=none｜position_rule=eligible:front／back｜marks=decoy（族画像：游击互换(残影)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_086",
+  "name": "哑翼鸮 · 掩声",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 28854,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_087",
+  "name": "垂晶禽 · 滴晶",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 28854,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_088",
+  "name": "垒骨巨蛾 · 粉翼",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 28854,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_089",
+  "name": "空啸鸦 · 折返",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "空兽",
+  "skeleton": "F05",
+  "bio_class": "避潮",
+  "hp": 28854,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=dash+turn｜target_displace=none｜position_rule=eligible:front｜marks=none（族画像：打完就走）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_090",
+  "name": "残骸鼠",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "杂兽",
+  "skeleton": "F11",
+  "bio_class": "避潮",
+  "hp": 12366,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=back｜self_reposition=burrow｜target_displace=none｜position_rule=back_window｜marks=burrowing（族画像：地遁突袭(土痕)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_091",
+  "name": "锈壳蟹",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "杂兽",
+  "skeleton": "F07",
+  "bio_class": "避潮",
+  "hp": 12366,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_092",
+  "name": "碎晶蛛",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "杂兽",
+  "skeleton": "F07",
+  "bio_class": "避潮",
+  "hp": 12366,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_093",
+  "name": "裂岩雀",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "杂兽",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 12366,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=shift｜target_displace=none｜position_rule=eligible:front／back｜marks=decoy（族画像：游击互换(残影)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_094",
+  "name": "书简虫",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "杂兽",
+  "skeleton": "F07",
+  "bio_class": "避潮",
+  "hp": 12366,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_095",
+  "name": "旗面蛾",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "杂兽",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 12366,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_096",
+  "name": "灰跳蛛",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "杂兽",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 12366,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=shift｜target_displace=none｜position_rule=eligible:front／back｜marks=decoy（族画像：游击互换(残影)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_097",
+  "name": "吞锈虫",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "杂兽",
+  "skeleton": "F07",
+  "bio_class": "避潮",
+  "hp": 12366,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_098",
+  "name": "缝栖蜥",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "杂兽",
+  "skeleton": "F11",
+  "bio_class": "避潮",
+  "hp": 12366,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=back｜self_reposition=burrow｜target_displace=none｜position_rule=back_window｜marks=burrowing（族画像：地遁突袭(土痕)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_099",
+  "name": "浮尘虫",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "杂兽",
+  "skeleton": "F10",
+  "bio_class": "潮适",
+  "hp": 12366,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=air｜self_reposition=ascend｜target_displace=lift_air｜position_rule=requires_height:air｜marks=none（族画像：常驻空域(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_100",
+  "name": "锈鸣鼩",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "杂兽",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 12366,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=shift｜target_displace=none｜position_rule=eligible:front／back｜marks=decoy（族画像：游击互换(残影)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_101",
+  "name": "窃屑貂",
+  "tide": 7,
+  "area": "穹裂残骸",
+  "tier": "杂兽",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 12366,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=shift｜target_displace=none｜position_rule=eligible:front／back｜marks=decoy（族画像：游击互换(残影)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_102",
+  "name": "犁荒兽 · 蚀原",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "常规巨兽",
+  "skeleton": "F11",
+  "bio_class": "蚀依",
+  "hp": 51868,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_370",
+   "dif_371",
+   "dif_372"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_103",
+  "name": "蚀纹犀 · 亮角",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "常规巨兽",
+  "skeleton": "F02",
+  "bio_class": "蚀依",
+  "hp": 51868,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_373",
+   "dif_374",
+   "dif_375"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_104",
+  "name": "灰喙巨鸦 · 界碑",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "常规巨兽",
+  "skeleton": "F05",
+  "bio_class": "避潮",
+  "hp": 51868,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_376",
+   "dif_377",
+   "dif_378"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_105",
+  "name": "垂尾巨蜥 · 曳尘",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "常规巨兽",
+  "skeleton": "F02",
+  "bio_class": "避潮",
+  "hp": 51868,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_379",
+   "dif_380",
+   "dif_381"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_106",
+  "name": "蚀云螺 · 堵途",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "常规巨兽",
+  "skeleton": "F08",
+  "bio_class": "蚀依",
+  "hp": 51868,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_382",
+   "dif_383",
+   "dif_384"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_107",
+  "name": "锈鬃野猪 · 冲栅",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "常规巨兽",
+  "skeleton": "F02",
+  "bio_class": "避潮",
+  "hp": 51868,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_385",
+   "dif_386",
+   "dif_387"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_108",
+  "name": "双颚掘兽 · 掘壕",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "常规巨兽",
+  "skeleton": "F11",
+  "bio_class": "避潮",
+  "hp": 51868,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_388",
+   "dif_389",
+   "dif_390"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_109",
+  "name": "负岩龟 · 镇坡",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "常规巨兽",
+  "skeleton": "F01",
+  "bio_class": "避潮",
+  "hp": 51868,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_391",
+   "dif_392",
+   "dif_393"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_110",
+  "name": "界崖地龙 · 蜕甲",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "常规巨兽",
+  "skeleton": "F06",
+  "bio_class": "避潮",
+  "hp": 51868,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_394",
+   "dif_395",
+   "dif_396"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_111",
+  "name": "啸空鹫 · 巡界",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "常规巨兽",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 51868,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_397",
+   "dif_398",
+   "dif_399"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_112",
+  "name": "蚀纹地蛛 · 织瘴",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "常规巨兽",
+  "skeleton": "F07",
+  "bio_class": "蚀依",
+  "hp": 51868,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_400",
+   "dif_401",
+   "dif_402"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_113",
+  "name": "吞云蟒 · 蚀云口",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "终盘巨兽",
+  "skeleton": "F06",
+  "bio_class": "蚀依",
+  "hp": 69158,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_403",
+   "dif_404",
+   "dif_405"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_114",
+  "name": "断界蜈 · 千足",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "终盘巨兽",
+  "skeleton": "F07",
+  "bio_class": "避潮",
+  "hp": 69158,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_406",
+   "dif_407",
+   "dif_408"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_115",
+  "name": "荒原巡主 · 蚀瞳",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "终盘巨兽",
+  "skeleton": "F02",
+  "bio_class": "蚀依",
+  "hp": 69158,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "腐蚀": "1.0",
+   "麻痹": "1.0",
+   "沉眠": "1.0",
+   "爆燃": "**1.5**",
+   "风蚀": "0.5",
+   "泥陷": "**免疫**",
+   "霜缚": "1.0",
+   "雷殛": "**反弹**",
+   "风暴": "0.5"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "—",
+  "duyou_pos": "",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_116",
+  "name": "灰雨燕群 · 穿云",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 24205,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_117",
+  "name": "灰絮蜓 · 拟雾",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "潮适",
+  "hp": 24205,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_118",
+  "name": "断缆鸢 · 拾缆",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 24205,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_119",
+  "name": "雾噬鹫 · 吞雾",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "空兽",
+  "skeleton": "F05",
+  "bio_class": "潮适",
+  "hp": 24205,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=dash+turn｜target_displace=none｜position_rule=eligible:front｜marks=none（族画像：打完就走）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_120",
+  "name": "蚀斑蝠群 · 遮天",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "蚀依",
+  "hp": 24205,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_121",
+  "name": "拾荒鹫 · 盘垣",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 24205,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_122",
+  "name": "绒羽飘兽 · 乘风",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "空兽",
+  "skeleton": "F10",
+  "bio_class": "避潮",
+  "hp": 24205,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=air｜self_reposition=ascend｜target_displace=lift_air｜position_rule=requires_height:air｜marks=none（族画像：常驻空域(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_123",
+  "name": "灰膜水母 · 垂降",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "空兽",
+  "skeleton": "F10",
+  "bio_class": "潮适",
+  "hp": 24205,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=air｜self_reposition=ascend｜target_displace=lift_air｜position_rule=requires_height:air｜marks=none（族画像：常驻空域(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_124",
+  "name": "哨鸣隼 · 报讯",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "空兽",
+  "skeleton": "F05",
+  "bio_class": "避潮",
+  "hp": 24205,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=dash+turn｜target_displace=none｜position_rule=eligible:front｜marks=none（族画像：打完就走）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_125",
+  "name": "蚀鳞飞蛇 · 曳影",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "空兽",
+  "skeleton": "F06",
+  "bio_class": "蚀依",
+  "hp": 24205,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=lateral｜target_displace=none｜position_rule=ignore_side｜marks=none（族画像：缠缚滑行）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_126",
+  "name": "灯垂蛾 · 引光",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 24205,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_127",
+  "name": "蚀羽鹤 · 拖翎",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "蚀依",
+  "hp": 24205,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_128",
+  "name": "界崖雨燕 · 贴崖",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 24205,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_129",
+  "name": "云底蛛群 · 垂丝",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "空兽",
+  "skeleton": "F07",
+  "bio_class": "避潮",
+  "hp": 24205,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_130",
+  "name": "风蚀岩鸮 · 拟石",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "蚀依",
+  "hp": 24205,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_131",
+  "name": "巨颚蜻 · 截道",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 24205,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_132",
+  "name": "绒角飘蝠 · 倒吊",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "空兽",
+  "skeleton": "F10",
+  "bio_class": "避潮",
+  "hp": 24205,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=air｜self_reposition=ascend｜target_displace=lift_air｜position_rule=requires_height:air｜marks=none（族画像：常驻空域(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_133",
+  "name": "蚀土鼠",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "杂兽",
+  "skeleton": "F11",
+  "bio_class": "蚀依",
+  "hp": 10374,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=back｜self_reposition=burrow｜target_displace=none｜position_rule=back_window｜marks=burrowing（族画像：地遁突袭(土痕)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_134",
+  "name": "尘羽雀",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "杂兽",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 10374,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=shift｜target_displace=none｜position_rule=eligible:front／back｜marks=decoy（族画像：游击互换(残影)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_135",
+  "name": "蚀草螽",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "杂兽",
+  "skeleton": "F12",
+  "bio_class": "蚀依",
+  "hp": 10374,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=shift｜target_displace=none｜position_rule=eligible:front／back｜marks=decoy（族画像：游击互换(残影)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_136",
+  "name": "锈甲螨",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "杂兽",
+  "skeleton": "F07",
+  "bio_class": "避潮",
+  "hp": 10374,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_137",
+  "name": "拓荒犬",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "杂兽",
+  "skeleton": "F02",
+  "bio_class": "避潮",
+  "hp": 10374,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=turn｜target_displace=pull_close｜position_rule=eligible:front／back｜marks=none（族画像：绕后拉扯）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_138",
+  "name": "碑座蜥",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "杂兽",
+  "skeleton": "F07",
+  "bio_class": "避潮",
+  "hp": 10374,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_139",
+  "name": "灰雾蛞蝓",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "杂兽",
+  "skeleton": "F09",
+  "bio_class": "潮适",
+  "hp": 10374,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=all｜self_reposition=none｜target_displace=pull_away｜position_rule=ignore_side｜marks=no_face（族画像：全向控场+强制拉拽）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_140",
+  "name": "蚀纹瓢虫",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "杂兽",
+  "skeleton": "F08",
+  "bio_class": "蚀依",
+  "hp": 10374,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=rolling｜target_displace=push[1]｜position_rule=eligible:front｜marks=rolling（族画像：轨迹压迫(滚转)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_141",
+  "name": "拾穗鸦",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "杂兽",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 10374,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=shift｜target_displace=none｜position_rule=eligible:front／back｜marks=decoy（族画像：游击互换(残影)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_142",
+  "name": "荒原兔",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "杂兽",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 10374,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=shift｜target_displace=none｜position_rule=eligible:front／back｜marks=decoy（族画像：游击互换(残影)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_143",
+  "name": "灰壳蜈",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "杂兽",
+  "skeleton": "F07",
+  "bio_class": "避潮",
+  "hp": 10374,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_144",
+  "name": "驮铃雀",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "杂兽",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 10374,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=shift｜target_displace=none｜position_rule=eligible:front／back｜marks=decoy（族画像：游击互换(残影)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_145",
+  "name": "蒙尘蛙",
+  "tide": 7,
+  "area": "蚀云外缘",
+  "tier": "杂兽",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 10374,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=shift｜target_displace=none｜position_rule=eligible:front／back｜marks=decoy（族画像：游击互换(残影)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_146",
+  "name": "坠城戍卫 · 断阶",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "常规巨兽",
+  "skeleton": "F03",
+  "bio_class": "避潮",
+  "hp": 74883,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_475",
+   "dif_476",
+   "dif_477"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "膝部符文",
+    "move": "断阶·踏击"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_147",
+  "name": "倾碑巨像 · 推碑",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "常规巨兽",
+  "skeleton": "F03",
+  "bio_class": "避潮",
+  "hp": 74883,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_478",
+   "dif_479",
+   "dif_480"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "推臂",
+    "move": "推碑·倒碑"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_148",
+  "name": "垂钟兽 · 晚祷",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "常规巨兽",
+  "skeleton": "F10",
+  "bio_class": "避潮",
+  "hp": 74883,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_481",
+   "dif_482",
+   "dif_483"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "垂耳",
+    "move": "晚祷·钟波"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_149",
+  "name": "蚀铠犀 · 顶门",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "常规巨兽",
+  "skeleton": "F02",
+  "bio_class": "蚀依",
+  "hp": 74883,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_484",
+   "dif_485",
+   "dif_486"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "城门残板",
+    "move": "顶门·门撞"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_150",
+  "name": "灯柱蠹 · 熄灯",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "常规巨兽",
+  "skeleton": "F07",
+  "bio_class": "避潮",
+  "hp": 74883,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_487",
+   "dif_488",
+   "dif_489"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "口器",
+    "move": "熄灯·吞光"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_151",
+  "name": "王座守蜥 · 盘阶",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "常规巨兽",
+  "skeleton": "F01",
+  "bio_class": "避潮",
+  "hp": 74883,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_490",
+   "dif_491",
+   "dif_492"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "攀阶爪钩",
+    "move": "盘阶·反推"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_152",
+  "name": "鞭碑蜥 · 拓印",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "常规巨兽",
+  "skeleton": "F06",
+  "bio_class": "避潮",
+  "hp": 74883,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_493",
+   "dif_494",
+   "dif_495"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "尾鞭",
+    "move": "拓印·鞭碑"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_153",
+  "name": "驮城龟 · 承重",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "常规巨兽",
+  "skeleton": "F01",
+  "bio_class": "避潮",
+  "hp": 74883,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_496",
+   "dif_497",
+   "dif_498"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "驮砖甲",
+    "move": "承重·掀砖"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_154",
+  "name": "怨歌妖 · 绕梁",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "常规巨兽",
+  "skeleton": "F10",
+  "bio_class": "避潮",
+  "hp": 74883,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_499",
+   "dif_500",
+   "dif_501"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "喉部共鸣缝",
+    "move": "绕梁·泣鸣"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_155",
+  "name": "嵌核装甲兽 · 蚀髓",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "常规巨兽",
+  "skeleton": "F01",
+  "bio_class": "蚀依",
+  "hp": 74883,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_502",
+   "dif_503",
+   "dif_504"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "核槽",
+    "move": "蚀髓·核冲"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_156",
+  "name": "匿垣猎蜥 · 化影",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "常规巨兽",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 74883,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_505",
+   "dif_506",
+   "dif_507"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "隐光鳞",
+    "move": "化影·匿影"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_157",
+  "name": "渊心潮根 · 未竟",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "终盘巨兽",
+  "skeleton": "F09",
+  "bio_class": "潮适",
+  "hp": 99844,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_508",
+   "dif_509",
+   "dif_510"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "根须丛",
+    "move": "未竟·钻城"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_158",
+  "name": "终局蚀核 · 沉钟",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "终盘巨兽",
+  "skeleton": "F10",
+  "bio_class": "蚀依",
+  "hp": 99844,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_511",
+   "dif_512",
+   "dif_513"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "钟壳",
+    "move": "沉钟·驱偶"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_159",
+  "name": "终局蚀核 · 启门",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "终盘巨兽",
+  "skeleton": "F08",
+  "bio_class": "蚀依",
+  "hp": 99844,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [
+   "dif_514",
+   "dif_515",
+   "dif_516"
+  ],
+  "moves_unresolved": [],
+  "weight_tune": "`巨兽差异_187`",
+  "duyou_pos": "",
+  "break_bindings": [
+   {
+    "part": "门枢",
+    "move": "启门·枢转"
+   }
+  ]
+ },
+ {
+  "id": "cs_t7_160",
+  "name": "拾旗鹫 · 衔幡",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 34945,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_161",
+  "name": "钟楼燕 · 借声",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 34945,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_162",
+  "name": "石灯蛾 · 扑光",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 34945,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_163",
+  "name": "蚀幕蝠群 · 遮星",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "蚀依",
+  "hp": 34945,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_164",
+  "name": "垂目枭 · 守夜",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 34945,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_165",
+  "name": "蛀梁蠹 · 断梁",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "空兽",
+  "skeleton": "F07",
+  "bio_class": "避潮",
+  "hp": 34945,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_166",
+  "name": "浮砖鸢 · 踏空",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "潮适",
+  "hp": 34945,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_167",
+  "name": "渊灯水母 · 引渊",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "空兽",
+  "skeleton": "F10",
+  "bio_class": "潮适",
+  "hp": 34945,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=air｜self_reposition=ascend｜target_displace=lift_air｜position_rule=requires_height:air｜marks=none（族画像：常驻空域(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_168",
+  "name": "纹翼蟌 · 临碑",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 34945,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_169",
+  "name": "哨垣隼 · 沿城",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "空兽",
+  "skeleton": "F05",
+  "bio_class": "避潮",
+  "hp": 34945,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=dash+turn｜target_displace=none｜position_rule=eligible:front｜marks=none（族画像：打完就走）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_170",
+  "name": "炱灰雀 · 喷炱",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 34945,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_171",
+  "name": "摆链魟 · 断链",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "空兽",
+  "skeleton": "F06",
+  "bio_class": "避潮",
+  "hp": 34945,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=lateral｜target_displace=none｜position_rule=ignore_side｜marks=none（族画像：缠缚滑行）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_172",
+  "name": "悬听蜓 · 哑钟",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "空兽",
+  "skeleton": "F10",
+  "bio_class": "避潮",
+  "hp": 34945,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=air｜self_reposition=ascend｜target_displace=lift_air｜position_rule=requires_height:air｜marks=none（族画像：常驻空域(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_173",
+  "name": "塌檐蝠群 · 倒悬",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "空兽",
+  "skeleton": "F10",
+  "bio_class": "避潮",
+  "hp": 34945,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=air｜self_reposition=ascend｜target_displace=lift_air｜position_rule=requires_height:air｜marks=none（族画像：常驻空域(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_174",
+  "name": "晶屑蜂 · 酿晶",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 34945,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_175",
+  "name": "王旗鸦 · 踏幡",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "空兽",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 34945,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=shift｜target_displace=none｜position_rule=eligible:front／back｜marks=decoy（族画像：游击互换(残影)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_176",
+  "name": "换岗枭群 · 夜巡",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "空兽",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 34945,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_177",
+  "name": "城砖蟹",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "杂兽",
+  "skeleton": "F07",
+  "bio_class": "避潮",
+  "hp": 14977,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_178",
+  "name": "碑文蠹",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "杂兽",
+  "skeleton": "F07",
+  "bio_class": "避潮",
+  "hp": 14977,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_179",
+  "name": "灯油虫",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "杂兽",
+  "skeleton": "F07",
+  "bio_class": "避潮",
+  "hp": 14977,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_180",
+  "name": "垣痕蜗",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "杂兽",
+  "skeleton": "F08",
+  "bio_class": "避潮",
+  "hp": 14977,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=rolling｜target_displace=push[1]｜position_rule=eligible:front｜marks=rolling（族画像：轨迹压迫(滚转)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_181",
+  "name": "钟舌鼠",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "杂兽",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 14977,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=shift｜target_displace=none｜position_rule=eligible:front／back｜marks=decoy（族画像：游击互换(残影)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_182",
+  "name": "蚀尘蚋",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "杂兽",
+  "skeleton": "F10",
+  "bio_class": "蚀依",
+  "hp": 14977,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=air｜self_reposition=ascend｜target_displace=lift_air｜position_rule=requires_height:air｜marks=none（族画像：常驻空域(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_183",
+  "name": "阶苔蜥",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "杂兽",
+  "skeleton": "F07",
+  "bio_class": "避潮",
+  "hp": 14977,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_184",
+  "name": "幡面蛾",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "杂兽",
+  "skeleton": "F04",
+  "bio_class": "避潮",
+  "hp": 14977,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front｜self_reposition=ascend／descend｜target_displace=none｜position_rule=ground／air｜marks=falling_window（族画像：立体机动(落地窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_185",
+  "name": "链缝蚤",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "杂兽",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 14977,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=shift｜target_displace=none｜position_rule=eligible:front／back｜marks=decoy（族画像：游击互换(残影)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_186",
+  "name": "井鸣蟾",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "杂兽",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 14977,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=shift｜target_displace=none｜position_rule=eligible:front／back｜marks=decoy（族画像：游击互换(残影)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_187",
+  "name": "影窜鼠",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "杂兽",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 14977,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=shift｜target_displace=none｜position_rule=eligible:front／back｜marks=decoy（族画像：游击互换(残影)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_188",
+  "name": "晶屑螨",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "杂兽",
+  "skeleton": "F07",
+  "bio_class": "避潮",
+  "hp": 14977,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=cling｜target_displace=none｜position_rule=back_window｜marks=clinging（族画像：壁面绕行(背击窗)）",
+  "break_bindings": []
+ },
+ {
+  "id": "cs_t7_189",
+  "name": "塌巢雏",
+  "tide": 7,
+  "area": "蚀渊坠城",
+  "tier": "杂兽",
+  "skeleton": "F12",
+  "bio_class": "避潮",
+  "hp": 14977,
+  "ehp_named": false,
+  "weakness": {
+   "rule_gen": "三级默认归增量三"
+  },
+  "resistance": {
+   "rule_gen": "五规则默认归增量三"
+  },
+  "actions_ref": [],
+  "moves_unresolved": [],
+  "weight_tune": "`独有招_191`",
+  "duyou_pos": "attack_zone=front／back｜self_reposition=shift｜target_displace=none｜position_rule=eligible:front／back｜marks=decoy（族画像：游击互换(残影)）",
+  "break_bindings": []
+ }
+]

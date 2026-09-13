@@ -379,6 +379,9 @@ class _Checker:
         self._ns_registered: Dict[str, Dict[str, str]] = {}
         # 元素注册表（懒构建缓存：包内 formula.json `elements` 段 ∪ 缺省 8 元素）
         self._element_reg: Optional[frozenset] = None
+        # 九期207 性能修复①：skill_or_any 引用校验并集惰性缓存（注册即失效，
+        # 见 _register_id / _check_ref；同 _element_reg 先例）。
+        self._all_ref_ids_cache: Optional[set] = None
 
     # ---- 报告构建 ----
     def _err(self, module: str, field: str, kind: str, **detail: object) -> None:
@@ -437,6 +440,7 @@ class _Checker:
 
     def _register_id(self, kind: str, namespace: str, eid: str, module_name: str) -> None:
         self._id_space.setdefault(kind, {}).setdefault(eid, module_name)
+        self._all_ref_ids_cache = None  # 九期207：注册面变化 → 并集缓存失效
         if eid in self._ns_registered.setdefault(namespace, {}):
             prev = self._ns_registered[namespace][eid]
             self._err(
@@ -1955,7 +1959,11 @@ class _Checker:
             return
         if target == "skill_or_any":
             # 兼容宽松引用：命中任一注册 kind 即通过（M0 无技能库模块场景）
-            all_reg = {e for ids in self._id_space.values() for e in ids}
+            # 九期207 性能修复①：并集惰性缓存（原实现每次全量重建 O(全库 id)，
+            # 12MB 包逐条目引用校验热路径放大；_register_id 写面即失效）。
+            if self._all_ref_ids_cache is None:
+                self._all_ref_ids_cache = {e for ids in self._id_space.values() for e in ids}
+            all_reg = self._all_ref_ids_cache
             if ref_id not in all_reg:
                 self._err(module_name, path, "R-4", rule="ref_missing", ref=ref_id,
                           ref_target=target)
@@ -1982,6 +1990,12 @@ class _Checker:
             nxt = entry_map.get(mmeta.chain_field)  # type: ignore[arg-type]
             if isinstance(nxt, list):
                 adj.setdefault(eid, []).extend(x for x in nxt if isinstance(x, str))
+        # 九期207：链长校验（$C.POOL.CHAIN_MAX=4 同源上限）——链 next 列表超长
+        # Y-8 黄提示不红拦（八期池契约链长 2–4，超长多为配置笔误）。
+        for _eid, _nxt in adj.items():
+            if len(_nxt) > 4:
+                self._warn(module_name, f"{module_name}.{_eid}.{mmeta.chain_field}", "Y-8",
+                           rule="chain_length_exceeded", length=len(_nxt), max=4)
         # 环检测（有向）DFS
         WHITE, GRAY, BLACK = 0, 1, 2
         color: Dict[str, int] = {n: WHITE for n in id_set}

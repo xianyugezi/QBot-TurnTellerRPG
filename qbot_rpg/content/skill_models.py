@@ -385,7 +385,23 @@ class SkillDef(BaseDef):
 # 字段拒绝依据）。本文件零登记、零 import 兄弟模块（并发同仓纪律，补白 9）。
 
 
+_SKILLS_FIELDS_CACHE: Optional[Dict[str, FieldMeta]] = None
+
+
 def skills_fields() -> Dict[str, FieldMeta]:
+    """skills_fields 模块级缓存入口（九期207 性能修复②）。
+
+    原实现每次调用重建 24 个 FieldMeta（V-11 逐条目字段校验热路径放大）；
+    首次构建后缓存复用。登记表视为只读（调用方 set(keys()) 拷贝使用，既有
+    调用面零改动）。
+    """
+    global _SKILLS_FIELDS_CACHE
+    if _SKILLS_FIELDS_CACHE is None:
+        _SKILLS_FIELDS_CACHE = _build_skills_fields()
+    return _SKILLS_FIELDS_CACHE
+
+
+def _build_skills_fields() -> Dict[str, FieldMeta]:
     """skills.json 条目 24 字段 FieldMeta 注册表（细化_6a §1.2 全字段）。
 
     与 action_fields（ActionCore 7 字段）逐字段同构、逐约束同源（§2.2）；

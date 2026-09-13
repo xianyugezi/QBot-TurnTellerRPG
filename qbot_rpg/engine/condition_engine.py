@@ -897,3 +897,53 @@ def validate_condition(cond: object, report: object) -> None:
         return
     _emit(report, "condition", "condition", "CND", rule="condition_empty",
           msg="条件表达式缺 var 或 any/all/not 键")
+
+
+# ---------------------------------------------------------------- 九期207
+#: 权重 clamp 上下界（上界与 $C.POOL.WEIGHT_MAX=100 同源；下界 1 防零权塌陷）
+WEIGHT_MIN = 1
+WEIGHT_MAX = 100
+
+
+def clamp_weight(value: object) -> int:
+    """九期207：权重 clamp 取整至 [WEIGHT_MIN, WEIGHT_MAX]。
+
+    浮点权重（连乘产物/配置小数）四舍五入取整后截断；非法输入落 WEIGHT_MIN。
+    纯函数。消费方＝condition_weight_product／212 条件权重项。
+    """
+    try:
+        w = int(round(float(value)))  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return WEIGHT_MIN
+    return max(WEIGHT_MIN, min(WEIGHT_MAX, w))
+
+
+def condition_weight_product(items: object, ctx: object,
+                             evaluate: Optional[object] = None) -> int:
+    """九期207：条件数组连乘——AND 门控 × 权重强度合成。
+
+    items 形态 [ {…条件…, "weight": 2.5}, … ]：逐项求布尔（evaluate(cond, ctx)，
+    缺省用本模块 eval_condition；鸭子类型兼容注入式求值器）；任一项不成立 →
+    返回 0（门控失败）；全部成立 → 各项 weight（缺省 1.0）连乘后 clamp 取整
+    [WEIGHT_MIN, WEIGHT_MAX]。非 list/tuple 输入或空表 → 0。纯函数零副作用；
+    消费方＝212（态势达标/气力尽条件权重项）。
+    """
+    if not isinstance(items, (list, tuple)) or not items:
+        return 0
+    ev = evaluate if callable(evaluate) else eval_condition
+    product = 1.0
+    for item in items:
+        if not isinstance(item, Mapping):
+            return 0
+        cond = {k: v for k, v in item.items() if k != "weight"}
+        try:
+            ok = bool(ev(cond, ctx))
+        except Exception:
+            ok = False
+        if not ok:
+            return 0
+        try:
+            product *= float(item.get("weight", 1.0))
+        except (TypeError, ValueError):
+            product *= 1.0
+    return clamp_weight(product)

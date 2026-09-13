@@ -64,6 +64,32 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Mapping, MutableMapping, Optional, Sequence, Tuple
 
+
+def unified_cooldown_turns(n: int, *, raw: bool = False) -> int:
+    """九期207·G1B增量（冷却口径换算·统一函数）。
+
+    设计稿口径「施放后 N 回合不可用」→ 引擎存储 N+1（end_turn 逐回合递减、
+    施放当回合不减；见 M13 批17 路17C 冷却表）。raw=True＝生成器已写偏移值
+    （怪 JSON 按 215D 口径直填 N+1）→ 原样入库，避免双重偏移。既有调用面
+    （cooldown 未标 cooldown_raw）语义零变化。
+    """
+    n = int(n)
+    return n if raw else n + 1
+
+
+#: 九期207（押注判定钩子 TRIGGER_PROC_HOOK）：内容包/装配层可注册的触发判定
+#: 钩子表。签名 hook(kind, ctx) -> Optional[Mapping]——返回 proc dict 即经
+#: execute_proc_action 执行（押注判定/玩家僵直 player_stagger 自动 proc 等走
+#: kind="round_head"；215/221 批消费），返回 None = 本钩子不处理。注册表空
+#: → 派发零循环、既有结算行为零变化（§三承诺：不改既有行为）。
+TRIGGER_PROC_HOOKS: List[Callable[[str, Mapping[str, Any]], Optional[Mapping[str, Any]]]] = []
+
+
+def register_trigger_proc_hook(hook: Callable[[str, Mapping[str, Any]], Optional[Mapping[str, Any]]]) -> None:
+    """注册 TRIGGER_PROC_HOOK（幂等：重复注册同一可调用对象只保留一份）。"""
+    if callable(hook) and hook not in TRIGGER_PROC_HOOKS:
+        TRIGGER_PROC_HOOKS.append(hook)
+
 from qbot_rpg.core.damage import (
     DamageFormulaParams,
     apply_derived_cap,
@@ -1863,6 +1889,10 @@ class BattleEngine:
         # 收编前保留既有 dot 结算；无配置 → [] 零行为变化）
         self._dispatch_event("turn_start", "player")
         self._dispatch_event("turn_start", "enemy")
+        # 九期207（押注判定钩子/TRIGGER_PROC_HOOK 派发·round_head）：玩家僵直
+        # player_stagger 自动 proc（215F/221 注册）等回合头判定；注册表空 →
+        # 零循环零行为变化（见 _dispatch_trigger_procs）。
+        self._dispatch_trigger_procs("round_head")
 
         # ① 回合开始 dot（tick=turn_start）经拦截链扣血
         rt = self._new_runtime()
@@ -2187,6 +2217,16 @@ class BattleEngine:
         _hits = int(sd.get("hits", 1) or 1)
         if _hits > 1 and "segments" not in ca:
             ca["segments"] = [{"hit": True, "mult": 1.0} for _ in range(_hits)]
+        # 九期207·G1B增量（段级 effect hook，battle.py L2185 增量锚）：hits>1
+        # 且 skill def 显式 per_segment_effects=true 时，每段携带同一 effects
+        # 列表——积蓄类效果逐段累加（缺省 effects 只在上游 _resolve_combo_action
+        # 整招执行一次，既有行为零变化）。消费点＝结算循环段内 extend。
+        if (_hits > 1 and ca.get("segments")
+                and sd.get("per_segment_effects")
+                and isinstance(sd.get("effects"), list)):
+            for _seg in ca["segments"]:
+                if isinstance(_seg, dict) and "effects" not in _seg:
+                    _seg["effects"] = list(sd["effects"])
 
         def _marks_lookup(kind: str, which: str, rule: Mapping[str, Any], mark_id: Optional[str] = None) -> bool:
             # D1 定稿对照修复：combo 印记条件子句全量转接 MarksManager.evaluate（1d §3.1 唯一正确实现）
@@ -2364,7 +2404,10 @@ class BattleEngine:
                 _cdm[attacker] = _cds
             _sid = str(ca.get("skill_id") or "")
             if _sid:
-                _cds[_sid] = max(int(_cds.get(_sid, 0) or 0), _cd + 1)
+                # 九期207·G1B增量：冷却口径统一函数（玩家 N/怪 N+1；def 标
+                # cooldown_raw=true = 生成器已写偏移值，原样入库）。
+                _cds[_sid] = max(int(_cds.get(_sid, 0) or 0),
+                                 unified_cooldown_turns(_cd, raw=bool(sd.get("cooldown_raw"))))
 
         # ---- M13 批15 路15A：transform 触发技（transform_skill）战斗接线 ----
         # 细化_6b §2.1 F1：触发技（如狂暴/rage_burst）成功结算后触发变换——
@@ -2903,6 +2946,15 @@ class BattleEngine:
                     {"ch_phys": 0, "ch_elem": 0, "final": 0}, self._phase,
                 )
                 continue
+            # 九期207·G1B增量（段级 effect hook 消费点）：显式携带段级 effects
+            # 的段（per_segment_effects，见 _resolve_combo_action 段展开）逐段
+            # 并入 all_effects——积蓄类效果按段累加；0 倍率段（上方 continue）不触发。
+            _seg_effects = seg.get("effects")
+            if isinstance(_seg_effects, list) and _seg_effects:
+                all_effects.extend(
+                    dict(e, per_segment=True, segment=idx)
+                    for e in _seg_effects if isinstance(e, Mapping)
+                )
             # P1-01 修复（dsh 批2 P1-01）：每段结算前刷新防御行——战斗中新施加的
             # 反射/吸收/减伤状态（status_actions 折叠）次击即可进 defenses 生效
             # （F-21 prepare_defense 归一化，docstring 自述「每次结算前刷新」）。
@@ -3387,6 +3439,9 @@ class BattleEngine:
             ResourceLifecycle(self._resource_registry).tick_round_end(self._snap)
         except Exception:  # noqa: BLE001 装配层未注入资源注册表 → 零操作降级
             pass
+        # 九期207·G1B增量（period 周期器）：环境场每 N 回合触发（寒潮 3×1,000
+        # 等）——field_periods due → period_events（键缺失 → 零操作，见方法注）。
+        self._tick_field_periods()
 
         # M13 6c（细化_6c §2.3 F-R2 ③ 结算边界）：换季 tick——回合结束 tick 之后、
         # 下一回合开始之前（⑥⑦ 之间挂点）。懒重读当前季节 → 差异则待结算 →
@@ -3524,6 +3579,90 @@ class BattleEngine:
 
     # ------------------------- 快照续战（1g3） -------------------------
 
+    def boss_state(self) -> Dict[str, Any]:
+        """九期207：boss_state 视图/初始化（break_slots/stamina/ailment_buildup）。
+
+        云海 Boss 侧快照继承约定键——_snap["boss_state"] 三键（随 to/from_snapshot
+        全量携带，快照续战不丢）；214 阶段状态机与 211 九态积蓄写入本视图，
+        键缺省嵌套空 dict（monster_phases.inherit_boss_state 为其阶段切换继承器）。
+        """
+        bs = self._snap.setdefault("boss_state", {})
+        if isinstance(bs, dict):
+            for _k in ("break_slots", "stamina", "ailment_buildup"):
+                bs.setdefault(_k, {})
+            return bs
+        return {}
+
+    def _dispatch_trigger_procs(self, kind: str) -> int:
+        """九期207（押注判定钩子 TRIGGER_PROC_HOOK 派发）。
+
+        遍历模块级 TRIGGER_PROC_HOOKS：钩子 (kind, ctx) -> Optional[Mapping]；
+        返回 proc dict → execute_proc_action 执行（DamageCtx 零伤容器，沿
+        _fire_season_event 同款 runner 形态）；None/异常 → 跳过不阻断。注册表
+        空 → 零循环零行为变化。返回实触发数（测试观察面）。
+        """
+        hooks = [h for h in TRIGGER_PROC_HOOKS if callable(h)]
+        if not hooks:
+            return 0
+        fired = 0
+        for _h in hooks:
+            try:
+                proc = _h(kind, {"snapshot": self._snap, "engine": self})
+            except Exception:  # noqa: BLE001 钩子异常不阻断战斗
+                continue
+            if isinstance(proc, Mapping) and proc:
+                try:
+                    from qbot_rpg.core.effects import execute_proc_action  # noqa: PLC0415
+
+                    rt = self._new_runtime()
+                    ctx = DamageCtx(
+                        raw_damage=0, attack_type="proc", attacker="player",
+                        target="enemy", snapshot=self._snap,
+                        variables=self._base_variables("player", "enemy"),
+                    )
+                    execute_proc_action(proc, ctx, rt)
+                    self._absorb_runtime(rt)
+                    fired += 1
+                except Exception:  # noqa: BLE001 proc 执行失败不阻断战斗
+                    continue
+        return fired
+
+    def _tick_field_periods(self) -> None:
+        """九期207·G1B增量（period 周期器）：环境场每 N 回合触发。
+
+        _snap["field_periods"] = {key: {"every": n, "next": turn, "meta": {...}}}
+        回合末 tick：turn >= next → 追加 _snap["period_events"]（{"key","turn",
+        "meta"}）并 next += every。键缺失/形态不合法 → 零操作（既有行为零变化；
+        消费方＝216 数据/232 指令层/战报）。
+        """
+        fps = self._snap.get("field_periods")
+        if not isinstance(fps, dict) or not fps:
+            return
+        turn = int(self._snap.get("turn", 0) or 0)
+        events = self._snap.get("period_events")
+        if not isinstance(events, list):
+            events = []
+            self._snap["period_events"] = events
+        for key, cfg in fps.items():
+            if not isinstance(cfg, dict):
+                continue
+            try:
+                every = int(cfg.get("every", 0) or 0)
+            except Exception:  # noqa: BLE001 防御
+                continue
+            if every <= 0:
+                continue
+            try:
+                nxt = int(cfg.get("next", every) or every)
+            except Exception:  # noqa: BLE001 防御
+                nxt = every
+            if turn < nxt:
+                continue
+            meta = cfg.get("meta")
+            events.append({"key": str(key), "turn": turn,
+                           "meta": meta if isinstance(meta, dict) else {}})
+            cfg["next"] = nxt + every
+
     def to_snapshot(self, boundary: Optional[str] = None) -> Dict[str, Any]:
         """战斗快照序列化（1g3 §1.2 字段级：schema_version/snapshot_at/context/
         units/ai_state/combo_state/turn/stats_collector）。全量 JSON 可序列化。
@@ -3538,7 +3677,12 @@ class BattleEngine:
         if self._state == STATE_ACT and self._turn_acted.get("player", False) and not self._finished:
             # 玩家已行动、未到回合结束 tick：属于回合内（TC-05 回合内不落快照）
             raise BattleStateError("回合内不落快照（玩家已行动未到 tick 边界，1g3 S0/TC-05）")
-        snap = copy.deepcopy(self._snap)
+        snap = copy.copy(self._snap)  # 九期207 性能修复③：快照浅拷贝（见下注）
+        # 九期207 性能修复③（Q1 12MB 启动前置）：_snap 顶层浅复制替代 deepcopy——
+        # 大子树（units/enemy defs 等静态结构）零拷贝共享。不变式：快照只落回合
+        # 边界（上方已断言），调用方即落 JSON 序列化（battle_commands suspend
+        # 流）后才继续演进战斗；from_snapshot 全量重建不读原 _snap；本函数随后
+        # 只在 snap 顶层赋值新增键（schema_version 等），不触共享子树。
         snap["schema_version"] = 1
         snap["snapshot_id"] = str(uuid.uuid4())
         snap["saved_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())

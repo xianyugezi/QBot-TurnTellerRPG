@@ -203,8 +203,11 @@ def test_frontend_field_render_uses_label_helper() -> None:
                   "fieldLabelHtml(c.label, c.key)",
                   "function fieldLabelHtml(label, key)"):
         assert token in html, token
-    # 三处字段标签渲染（主表单行 / 列表表头 / 对象子字段）都走同一函数
-    assert html.count("fieldLabelHtml(") >= 4
+    # 主表单行 / 对象子字段走 fieldLabelHtml（中文 + 弱化键名）。
+    assert html.count("fieldLabelHtml(") >= 3
+    # 列表表头/块标签走 headerLabelHtml（批5.2 · V11：只留中文 + 类型，键名缩为悬停 tooltip）。
+    assert "function headerLabelHtml(label, key)" in html
+    assert html.count("headerLabelHtml(") >= 4
 
 
 def test_frontend_fkey_style_is_weaker_and_smaller() -> None:

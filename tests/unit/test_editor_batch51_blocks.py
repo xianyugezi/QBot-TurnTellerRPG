@@ -245,12 +245,19 @@ global.esc = function (v) {
     .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 };
 global.EMPTY_TEXT = "（空）";
+global.INPUT_EMPTY = "未填写";
 global.typeZh = function (t) { return t || "文本"; };
 global.fieldLabelHtml = function (label, key) {
   var l = label == null ? "" : String(label);
   var k = key == null ? "" : String(key);
   if (k && l && l !== k) { return esc(l) + ' <span class="fkey">' + esc(k) + "</span>"; }
   return esc(l || k);
+};
+// V11：表头/块标签改走 headerLabelHtml（键名缩为悬停 tooltip，只留中文）。
+global.headerLabelHtml = function (label, key) {
+  var l = label == null ? "" : String(label);
+  var k = key == null ? "" : String(key);
+  return '<span class="hkey">' + esc(l || k) + "</span>";
 };
 global.helpTriggerHtml = function (f, inner) { return inner; };
 global.selectOptions = function (value, options, placeholder) {

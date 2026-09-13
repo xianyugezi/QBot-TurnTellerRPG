@@ -58,11 +58,18 @@ global.esc = function (v) {
     .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 };
 global.EMPTY_TEXT = "（空）";
+global.INPUT_EMPTY = "未填写";
 global.typeZh = function (t) { return t || "文本"; };
 global.fieldLabelHtml = function (label, key) {
   var l = label == null ? "" : String(label);
   var k = key == null ? "" : String(key);
   if (k && l && l !== k) { return esc(l) + ' <span class="fkey">' + esc(k) + "</span>"; }
+  return esc(l || k);
+};
+// V11：表头标签改走 headerLabelHtml（键名缩为 tooltip）；本批只验证控件，原样透传标签文本。
+global.headerLabelHtml = function (label, key) {
+  var l = label == null ? "" : String(label);
+  var k = key == null ? "" : String(key);
   return esc(l || k);
 };
 global.currentFieldValue = function (f) { return f.value; };
@@ -117,7 +124,8 @@ def js(tmp_path_factory: pytest.TempPathFactory) -> Dict[str, Any]:
     if NODE is None:
         pytest.skip("本机无 node，跳过批4 UX 前端语义执行")
     src = _fn_src("listTableBody", "listTableEdit") + "\n" + _fn_src("listCell", "readCellValue")
-    src += "\n" + _fn_src("fieldRow", "hintBits")
+    src += "\n" + _fn_src("scalarCssClass", "listCell")
+    src += "\n" + _fn_src("fieldRow", "fieldBody")
     harness = tmp_path_factory.mktemp("batch4ux") / "batch4_ux_harness.js"
     harness.write_text(src, encoding="utf-8")
     proc = subprocess.run([NODE, "-e", _JS_HARNESS, str(harness)],
@@ -242,7 +250,7 @@ def test_editable_table_rows_are_wrapped_in_scroll_container(js: Dict[str, Any])
 def test_text_and_number_cells_use_cin_and_empty_placeholder(js: Dict[str, Any]) -> None:
     for case in ("textEmpty", "numEmpty"):
         assert 'class="cin lcell"' in js[case], case
-        assert 'placeholder="（空）"' in js[case], case
+        assert 'placeholder="未填写"' in js[case], case
     assert 'value="v"' in js["textVal"]
 
 

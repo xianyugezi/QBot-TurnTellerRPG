@@ -72,4 +72,5 @@ def test_frontend_three_columns_and_no_pager(client: TestClient) -> None:
     for cls in ("col-mod", "col-list", "panel-body"):
         assert cls in html
     assert "无翻页" in html
-    assert "本页字段由内容包元数据生成" in html  # 面板顶部元数据来源标注
+    # 面板顶部元数据来源标注（批5.2 · V5：主信息分段 + 来源路径入 title）。
+    assert "个字段" in html and "个分组" in html and "元数据来源：" in html

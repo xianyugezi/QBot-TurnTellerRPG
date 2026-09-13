@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>内容编辑器 · 批2 编辑与保存</title>
+<title>内容编辑器 · 批3 分区页签</title>
 <link rel="stylesheet" href="/static/tokens.css">
 <style>
 /* 终端极简风（令牌全部来自 tokens.css；此处只写骨架与组件布局，零 CDN、零外链字体） */
@@ -19,26 +19,40 @@ body {
 }
 .app { width: 100%; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-/* ---------- 顶栏：内容包选择器 + 保存状态 + 身份/权限开关 ---------- */
+/* ---------- 顶栏：内容包选择器 + 保存状态 + 身份/权限开关 ----------
+   窄窗口约束：三段信息不换行、不互相挤压——可收缩项（包名/保存状态）用省略号，
+   身份切换与权限角标固定宽度（用户两批验收反馈：窄窗口顶栏被挤到换行）。 */
 .topbar { height: var(--h-topbar); flex: 0 0 var(--h-topbar); display: flex; align-items: center;
-  gap: var(--sp-7); padding: 0 var(--sp-8); border-bottom: var(--bw) solid var(--line-strong); }
-.brand { color: var(--text-strong); font-weight: 700; letter-spacing: .04em; }
+  gap: var(--sp-7); padding: 0 var(--sp-8); border-bottom: var(--bw) solid var(--line-strong);
+  white-space: nowrap; overflow: hidden; }
+.brand { color: var(--text-strong); font-weight: 700; letter-spacing: .04em;
+  flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .brand .mark { color: var(--accent); }
 .pkgsel, .rolesel { display: inline-flex; align-items: center; gap: var(--sp-3);
-  border: var(--bw) solid var(--line-strong); padding: 2px var(--sp-4); }
-.pkgsel .lb, .rolesel .lb { color: var(--text-4); }
+  border: var(--bw) solid var(--line-strong); padding: 2px var(--sp-4); min-width: 0; }
+.pkgsel { flex: 0 1 auto; max-width: 42vw; }
+.rolesel { flex: 0 0 auto; }
+.pkgsel .lb, .rolesel .lb { color: var(--text-4); flex: 0 0 auto; }
 .pkgsel select, .rolesel select { font-family: inherit; font-size: var(--fs-12); color: var(--accent);
-  background: var(--bg); border: 0; outline: none; padding: 1px 2px; max-width: 280px; }
-.pkgsel .from { color: var(--text-6); }
-.saved { color: var(--accent); }
+  background: var(--bg); border: 0; outline: none; padding: 1px 2px; max-width: 280px; min-width: 0; }
+.pkgsel select { flex: 0 1 auto; text-overflow: ellipsis; }
+.pkgsel .from { color: var(--text-6); flex: 0 0 auto; }
+.saved { color: var(--accent); flex: 0 1 auto; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; }
 .saved::before { content: "["; color: var(--text-6); }
 .saved::after { content: "]"; color: var(--text-6); }
 .saved.dirty { color: var(--warn); }
 .saved.err { color: var(--danger); }
-.topright { margin-left: auto; display: flex; align-items: center; gap: var(--sp-6); color: var(--text-3); }
+.topright { margin-left: auto; display: flex; align-items: center; gap: var(--sp-6); color: var(--text-3);
+  flex: 0 0 auto; white-space: nowrap; }
 .who b { color: var(--text-value); font-weight: 700; }
 .role { border: var(--bw) solid var(--accent); color: var(--accent); padding: 0 var(--sp-2); }
 .role.ro { border-color: var(--warn); color: var(--warn); }
+@media (max-width: 900px) {
+  .topbar { gap: var(--sp-5); padding: 0 var(--sp-5); }
+  .pkgsel .from { display: none; }        /* 窄窗口先舍来源标注，包名与状态保省略号 */
+  .brand { letter-spacing: 0; }
+}
 
 .body { flex: 1 1 auto; display: flex; min-height: 0; }
 
@@ -136,25 +150,36 @@ body {
 .vrow.yellow b { color: var(--warn); }
 .vrow .vfix { color: var(--text-5); display: block; }
 
+/* 分组页签（终端极简风 06 组件）：名称 + 字段计数徽标；名称来自元数据 group_labels */
 .gtabs { display: flex; align-items: center; gap: var(--sp-3); margin: 0 0 var(--sp-6);
   padding-bottom: var(--sp-4); border-bottom: var(--bw) solid var(--line-soft); flex-wrap: wrap; }
-.gtab { font-family: inherit; font-size: var(--fs-12); cursor: pointer; color: var(--text-3);
-  border: var(--bw) solid var(--line); background: transparent; padding: 2px var(--sp-5); }
+.gtab { display: inline-flex; align-items: center; height: var(--h-ctl); font-family: inherit;
+  font-size: var(--fs-12); cursor: pointer; color: var(--text-3);
+  border: var(--bw) solid var(--line); background: transparent; padding: 0 var(--sp-5); }
 .gtab b { margin-left: var(--sp-2); color: var(--text-5); font-weight: 400; }
+.gtab:hover { border-color: var(--line-strong); color: var(--text-value); }
 .gtab.on { color: var(--accent); border-color: var(--accent); }
 .gtab.on b { color: var(--accent); }
+.gpane[hidden] { display: none; }
+.gempty { color: var(--text-5); padding: var(--sp-8) var(--sp-6); line-height: var(--lh-ex); }
 
-.rows2 { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--sp-11); }
+/* 双列字段网格：同一行的两列基线对齐。要点：
+   · .row 内容顶部对齐（align-items:start），标签固定为「单行控件高度」的盒子并居中，
+     因此两列的标签与首行控件始终落在同一条线上；长提示只向下撑高本行 .rval，
+     不会把标签改成垂直居中（用户验收反馈：长提示把整行撑歪）；
+   · .rows2 默认 stretch → 同一网格行的两列等高、底线对齐。 */
+.rows2 { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--sp-11); align-items: stretch; }
 .row { display: grid; grid-template-columns: 132px 1fr; gap: var(--sp-5); align-items: start;
   padding: var(--sp-4) 0; border-bottom: var(--bw) solid var(--line-faint); min-width: 0; }
-.row > .rlab { color: var(--text-4); display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; }
+.row > .rlab { color: var(--text-4); display: flex; align-items: center; gap: var(--sp-3);
+  flex-wrap: wrap; min-height: var(--h-ctl); min-width: 0; }
 .row > .rlab::before { content: "> "; color: var(--line-mute); }
 .row.dirty > .rlab { color: var(--warn); }
 .row.dirty > .rlab::after { content: " ● 已改动"; color: var(--warn); font-size: var(--fs-10); }
 .ftype { color: var(--accent-dim); }
 .ftype::before { content: "<"; color: var(--text-6); }
 .ftype::after { content: ">"; color: var(--text-6); }
-.rval { min-width: 0; }
+.rval { min-width: 0; align-self: start; }
 .inp { color: var(--text-value); white-space: pre-wrap; overflow-wrap: anywhere; }
 .inp.mono { color: var(--accent); white-space: pre-wrap; overflow-wrap: anywhere; }
 .inp.bool { display: flex; align-items: center; gap: var(--sp-3); color: var(--text-value); }
@@ -163,7 +188,8 @@ body {
 .ta { width: 100%; border: var(--bw) solid var(--line); background: transparent; color: var(--text);
   font-family: inherit; font-size: var(--fs-12); line-height: var(--lh-text); padding: var(--sp-4) var(--sp-5);
   white-space: pre-wrap; overflow-wrap: anywhere; }
-.hint { color: var(--text-5); font-size: var(--fs-11); margin-top: var(--sp-2); }
+.hint { color: var(--text-5); font-size: var(--fs-11); margin-top: var(--sp-2);
+  overflow-wrap: anywhere; }
 .ex { color: var(--text-5); }
 .ro { color: var(--text-5); font-size: var(--fs-10); }
 .nest { border-bottom: 0; padding: var(--sp-2) 0; grid-template-columns: 110px 1fr; }
@@ -195,7 +221,7 @@ select.cin { padding: 1px var(--sp-2); }
 <div class="app">
 
   <header class="topbar">
-    <span class="brand"><span class="mark">▚</span> 内容编辑器 :: 编辑与保存</span>
+    <span class="brand"><span class="mark">▚</span> 内容编辑器 :: 分区页签</span>
     <label class="pkgsel">
       <span class="lb">pkg=</span>
       <select id="packs" aria-label="内容包选择器"></select>
@@ -250,7 +276,7 @@ select.cin { padding: 1px var(--sp-2); }
       <div class="panel-body" id="p-body">
         <div class="empty">从左侧选择模块与条目。字段按内容包元数据渲染；改动先进草稿，保存时才校验并落盘。</div>
       </div>
-      <div class="panel-ft"><span>批2 · 编辑与保存（写前校验 + 自动备份 + 原子落盘 + 回退）</span></div>
+      <div class="panel-ft"><span>批3 · 分区页签（分组顺序/名称来自元数据 · 默认首组 · 切组保草稿）</span></div>
     </section>
 
   </div>
@@ -294,6 +320,57 @@ select.cin { padding: 1px var(--sp-2); }
 });
 /* EDITOR_DRAFT_END */
 
+/* 分组页签纯逻辑（无 DOM 依赖；浏览器挂 globalThis.EditorGroups，node 下走 module.exports）。
+ * 语义：页签 = 后端元数据声明的分组（顺序/显示名/计数都来自元数据，
+ * 但声明了却没有字段落进去的组也保留 → empty=true 走空态文案）。
+ * 切组只改「当前视图索引」，**绝不触碰草稿**：草稿按字段键持有，跨组编辑不丢。 */
+/* EDITOR_GROUPS_BEGIN */
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) { module.exports = factory(); }
+  else { root.EditorGroups = factory(); }
+})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+  function labelOf(g) {
+    var name = g && g.name != null ? String(g.name) : "";
+    var label = g && g.label ? String(g.label) : "";
+    return label || name;
+  }
+  function view(groups, fields) {
+    var byName = {};
+    (fields || []).forEach(function (f) {
+      var n = String((f && f.group) || "");
+      (byName[n] = byName[n] || []).push(f);
+    });
+    var seen = {};
+    var out = [];
+    (groups || []).forEach(function (g) {
+      var name = g && g.name != null ? String(g.name) : "";
+      if (!name || seen[name]) { return; }
+      seen[name] = true;
+      var fs = byName[name] || [];
+      out.push({ name: name, label: labelOf(g), fields: fs,
+                 count: typeof g.count === "number" ? g.count : fs.length,
+                 empty: fs.length === 0 });
+    });
+    Object.keys(byName).forEach(function (name) {
+      if (seen[name] || !name) { return; }
+      seen[name] = true;
+      out.push({ name: name, label: name, fields: byName[name],
+                 count: byName[name].length, empty: false });
+    });
+    out.active = 0;
+    return out;
+  }
+  function switchGroup(v, index) {
+    var i = Number(index);
+    if (!isFinite(i) || i < 0 || i >= v.length) { i = 0; }
+    v.active = i;
+    return v;
+  }
+  function activeFields(v) { return (v[v.active || 0] || { fields: [] }).fields || []; }
+  return { view: view, switchGroup: switchGroup, activeFields: activeFields };
+});
+/* EDITOR_GROUPS_END */
+
 // ---------------------------------------------------------------------------
 // 类型显示名（框架级映射，与内容包无关）：FieldMeta.type → 中文
 // ---------------------------------------------------------------------------
@@ -303,10 +380,13 @@ var TYPE_ZH = {
   map: "映射", formula: "公式"
 };
 
+// 空值文案唯一来源（批3 统一：此前空值有两种写法，现全部走本常量）。
+var EMPTY_TEXT = "（空）";
+
 var state = {
   pack: null, modules: [], module: null, entries: [], entry: null, detail: null,
   filter: "", role: "owner", editable: true, backup: null, fieldIndex: {},
-  refCache: {}, busy: false
+  refCache: {}, busy: false, tabs: []
 };
 var draft = EditorDraft.newDraft();
 
@@ -494,7 +574,7 @@ function loadEntries() {
       if (state.entries.length) { selectEntry(state.entries[0].id); }
       else {
         el("p-body").innerHTML = '<div class="empty">该模块暂无条目（条目列表为空）。</div>';
-        el("p-title").textContent = "（空）"; el("p-sub").textContent = ""; el("p-id").textContent = "";
+        el("p-title").textContent = EMPTY_TEXT; el("p-sub").textContent = ""; el("p-id").textContent = "";
       }
     });
 }
@@ -563,27 +643,28 @@ function renderDetail(d) {
     + '<span class="src">' + esc(d.meta_source) + "</span></div>";
   html += '<div id="result" hidden></div>';
 
-  var groups = d.groups || [];
-  if (!groups.length) {
+  var tabs = EditorGroups.view(d.groups || [], d.fields || []);
+  if (!tabs.length) {
+    state.tabs = tabs;
     el("p-body").innerHTML = html + '<div class="empty">该条目没有可渲染字段。</div>';
     markDirty();
     return;
   }
-  var byGroup = {};
-  (d.fields || []).forEach(function (f) {
-    (byGroup[f.group] = byGroup[f.group] || []).push(f);
+  state.tabs = tabs;
+  var tbar = '<div class="gtabs">';
+  tabs.forEach(function (g, i) {
+    tbar += '<button class="gtab' + (i === 0 ? " on" : "") + '" data-g="' + i
+      + '" title="' + esc("分组键：" + g.name) + '">'
+      + esc(g.label) + " <b>" + g.count + "</b></button>";
   });
-  var tabs = '<div class="gtabs">';
-  groups.forEach(function (g, i) {
-    tabs += '<button class="gtab' + (i === 0 ? " on" : "") + '" data-g="' + i + '">'
-      + esc(g.name) + " <b>" + g.count + "</b></button>";
-  });
-  tabs += "</div>";
-  html += tabs;
-  groups.forEach(function (g, i) {
-    var fields = byGroup[g.name] || [];
+  tbar += "</div>";
+  html += tbar;
+  tabs.forEach(function (g, i) {
     html += '<div class="gpane"' + (i === 0 ? "" : " hidden") + ' data-g="' + i + '">'
-      + '<div class="rows2">' + fields.map(fieldRow).join("") + "</div></div>";
+      + (g.empty
+        ? '<div class="gempty">该分组暂无字段（元数据声明了此分组，本条目里没有字段落在其中）。</div>'
+        : '<div class="rows2">' + g.fields.map(fieldRow).join("") + "</div>")
+      + "</div>";
   });
   el("p-body").innerHTML = html;
   bindTabs();
@@ -593,29 +674,34 @@ function renderDetail(d) {
 }
 
 function bindTabs() {
+  var tabs = state.tabs || [];
   Array.prototype.forEach.call(el("p-body").querySelectorAll(".gtab"), function (btn) {
     btn.addEventListener("click", function () {
-      var idx = btn.dataset.g;
+      var idx = Number(btn.dataset.g);
+      EditorGroups.switchGroup(tabs, idx);   // 纯视图索引：草稿（按字段键持有）不受影响
       Array.prototype.forEach.call(el("p-body").querySelectorAll(".gtab"), function (b) {
         b.classList.toggle("on", b === btn);
       });
       Array.prototype.forEach.call(el("p-body").querySelectorAll(".gpane"), function (p) {
-        p.hidden = p.dataset.g !== idx;
+        p.hidden = Number(p.dataset.g) !== idx;
       });
+      markDirty();  // 跨组编辑过的字段仍标脏、未保存计数不变
     });
   });
 }
 
 function fieldRow(f) {
-  return '<div class="row" data-field="' + esc(f.key) + '"><div class="rlab">' + esc(f.label)
+  return '<div class="row" data-field="' + esc(f.key) + '" data-present="'
+    + (f.present ? "true" : "false") + '"><div class="rlab">' + esc(f.label)
     + ' <span class="ftype">' + esc(typeZh(f.type)) + "</span></div>"
     + '<div class="rval">' + fieldBody(f) + fieldHint(f) + "</div></div>";
 }
 
 function hintBits(f) {
+  // 空值措辞统一走 EMPTY_TEXT，不再另造第二种写法
+  // （字段是否写过由 value 的空态与 data-present 表达）。
   var bits = [];
   if (f.hint) { bits.push(esc(f.hint)); }
-  if (!f.present) { bits.push("（该条目未写此字段）"); }
   return bits;
 }
 
@@ -828,9 +914,9 @@ function fieldValue(f) {
     case "number":
     case "formula":
     case "ref":
-      return '<div class="inp mono">' + esc(f.display || "（空）") + "</div>";
+      return '<div class="inp mono">' + esc(f.display || EMPTY_TEXT) + "</div>";
     case "enum":
-      return '<div class="inp">' + esc(f.display || "（空）") + "</div>";
+      return '<div class="inp">' + esc(f.display || EMPTY_TEXT) + "</div>";
     case "list":
       return listTable(f);
     case "map":
@@ -846,9 +932,9 @@ function fieldValue(f) {
 function textValue(f) {
   var v = f.display == null ? "" : f.display;
   if (String(v).length > 80 || String(v).indexOf("\n") >= 0) {
-    return '<div class="ta">' + esc(v || "（空）") + "</div>";
+    return '<div class="ta">' + esc(v || EMPTY_TEXT) + "</div>";
   }
-  return '<div class="inp">' + esc(v || "（空）") + "</div>";
+  return '<div class="inp">' + esc(v || EMPTY_TEXT) + "</div>";
 }
 
 function listTable(f) {

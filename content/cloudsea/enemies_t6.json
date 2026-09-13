@@ -23,7 +23,44 @@
   "moves_unresolved": [],
   "weight_tune": "186册特化",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "肋腔",
+    "cls": "核心件",
+    "threshold": 12435,
+    "positions_default": {
+     "side": "back",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "肋腔·压爆",
+      "op": "—",
+      "src": "254"
+     }
+    ]
+   },
+   {
+    "part": "咬颌",
+    "cls": "末端件",
+    "threshold": 6217,
+    "positions_default": {
+     "side": "back",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "咬颌·钳咬",
+      "op": "前摇+1",
+      "src": "254"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 18652
  },
  {
   "id": "cs_t6_002",
@@ -49,7 +86,27 @@
   "moves_unresolved": [],
   "weight_tune": "186册特化",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "气囊",
+    "cls": "机动件",
+    "threshold": 8290,
+    "positions_default": {
+     "side": "all",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "气囊·悬停",
+      "op": "—",
+      "src": "254"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 8290
  },
  {
   "id": "cs_t6_003",
@@ -75,7 +132,27 @@
   "moves_unresolved": [],
   "weight_tune": "186册特化",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "鹤喙",
+    "cls": "末端件",
+    "threshold": 6217,
+    "positions_default": {
+     "side": "front",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "鹤喙·点啄",
+      "op": "前摇+1",
+      "src": "254"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 6217
  },
  {
   "id": "cs_t6_004",
@@ -112,7 +189,44 @@
   "moves_unresolved": [],
   "weight_tune": "199–204 承接",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "涎腺",
+    "cls": "末端件",
+    "threshold": 6217,
+    "positions_default": {
+     "side": "all",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "粘涎封沾",
+      "op": "剥离附加:封沾",
+      "src": "254"
+     }
+    ]
+   },
+   {
+    "part": "岩壳",
+    "cls": "末端件",
+    "threshold": 6217,
+    "positions_default": {
+     "side": "all",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "骤然爆起",
+      "op": "前摇+1",
+      "src": "254"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 12434
  },
  {
   "id": "cs_t6_005",
@@ -138,7 +252,27 @@
   "moves_unresolved": [],
   "weight_tune": "186册特化",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "犬齿",
+    "cls": "末端件",
+    "threshold": 6217,
+    "positions_default": {
+     "side": "back",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "结群·围咬",
+      "op": "前摇+1",
+      "src": "254"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 6217
  },
  {
   "id": "cs_t6_006",
@@ -179,7 +313,50 @@
   "moves_unresolved": [],
   "weight_tune": "199–204 承接",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "断帆残骨",
+    "cls": "末端件",
+    "threshold": 8290,
+    "positions_default": {
+     "side": "front",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "帆击横扫",
+      "op": "—",
+      "src": "254"
+     },
+     {
+      "tier": "derate",
+      "move": "帆骨·叩击",
+      "op": "前摇+1",
+      "src": "254"
+     }
+    ]
+   },
+   {
+    "part": "储气鳔",
+    "cls": "机动件",
+    "threshold": 11053,
+    "positions_default": {
+     "side": "front",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "鳔鸣·低震",
+      "op": "前摇+1",
+      "src": "254"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 19343
  },
  {
   "id": "cs_t6_007",
@@ -628,7 +805,44 @@
   "moves_unresolved": [],
   "weight_tune": "186册特化",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "电鳞",
+    "cls": "末端件",
+    "threshold": 7659,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "电鳞·释流",
+      "op": "—",
+      "src": "254"
+     }
+    ]
+   },
+   {
+    "part": "尾鳍",
+    "cls": "末端件",
+    "threshold": 7659,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "辉刃·回切",
+      "op": "前摇+1",
+      "src": "254"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 15318
  },
  {
   "id": "cs_t6_027",
@@ -654,7 +868,27 @@
   "moves_unresolved": [],
   "weight_tune": "186册特化",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "颈辉腺",
+    "cls": "末端件",
+    "threshold": 7659,
+    "positions_default": {
+     "side": "back",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "泄辉·电掣",
+      "op": "前摇+1",
+      "src": "254"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 7659
  },
  {
   "id": "cs_t6_028",
@@ -680,7 +914,27 @@
   "moves_unresolved": [],
   "weight_tune": "186册特化",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "缆身",
+    "cls": "末端件",
+    "threshold": 7659,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "缆身·放电",
+      "op": "前摇+1",
+      "src": "254"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 7659
  },
  {
   "id": "cs_t6_029",
@@ -706,7 +960,27 @@
   "moves_unresolved": [],
   "weight_tune": "186册特化",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "荧壳",
+    "cls": "末端件",
+    "threshold": 7659,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "荧盾·偏折",
+      "op": "前摇+1",
+      "src": "254"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 7659
  },
  {
   "id": "cs_t6_030",
@@ -732,7 +1006,27 @@
   "moves_unresolved": [],
   "weight_tune": "186册特化",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "翼羽",
+    "cls": "机动件",
+    "threshold": 10211,
+    "positions_default": {
+     "side": "front",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "谐振·俯贯",
+      "op": "前摇+1",
+      "src": "254"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 10211
  },
  {
   "id": "cs_t6_031",
@@ -758,7 +1052,27 @@
   "moves_unresolved": [],
   "weight_tune": "186册特化",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "触腕",
+    "cls": "末端件",
+    "threshold": 7659,
+    "positions_default": {
+     "side": "all",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "触腕·缠曳",
+      "op": "—",
+      "src": "254"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 7659
  },
  {
   "id": "cs_t6_032",
@@ -799,7 +1113,44 @@
   "moves_unresolved": [],
   "weight_tune": "199–204 承接",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "残光尾",
+    "cls": "末端件",
+    "threshold": 10211,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "满溢甩尾",
+      "op": "—",
+      "src": "254"
+     }
+    ]
+   },
+   {
+    "part": "背鳞",
+    "cls": "末端件",
+    "threshold": 10211,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "蓄电·引雷",
+      "op": "前摇+1",
+      "src": "254"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 20422
  },
  {
   "id": "cs_t6_033",
@@ -1308,7 +1659,27 @@
   "moves_unresolved": [],
   "weight_tune": "186册特化",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "掠爪",
+    "cls": "末端件",
+    "threshold": 8359,
+    "positions_default": {
+     "side": "front",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "虚影·掠爪",
+      "op": "前摇+1",
+      "src": "254"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 8359
  },
  {
   "id": "cs_t6_055",
@@ -1334,7 +1705,27 @@
   "moves_unresolved": [],
   "weight_tune": "186册特化",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "背甲",
+    "cls": "末端件",
+    "threshold": 8359,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "坠鳞·砸击",
+      "op": "前摇+1",
+      "src": "254"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 8359
  },
  {
   "id": "cs_t6_056",
@@ -1360,7 +1751,27 @@
   "moves_unresolved": [],
   "weight_tune": "186册特化",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "风翎",
+    "cls": "机动件",
+    "threshold": 11145,
+    "positions_default": {
+     "side": "front",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "风翎·剪击",
+      "op": "前摇+1",
+      "src": "254"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 11145
  },
  {
   "id": "cs_t6_057",
@@ -1386,7 +1797,27 @@
   "moves_unresolved": [],
   "weight_tune": "186册特化",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "石碑",
+    "cls": "末端件",
+    "threshold": 8359,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "驮碑·吸蚀",
+      "op": "前摇+1",
+      "src": "254"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 8359
  },
  {
   "id": "cs_t6_058",
@@ -1412,7 +1843,27 @@
   "moves_unresolved": [],
   "weight_tune": "186册特化",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "前肩",
+    "cls": "机动件",
+    "threshold": 11145,
+    "positions_default": {
+     "side": "back",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "先行·开道",
+      "op": "前摇+1",
+      "src": "254"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 11145
  },
  {
   "id": "cs_t6_059",
@@ -1453,7 +1904,50 @@
   "moves_unresolved": [],
   "weight_tune": "199–204 承接",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "潮根触腕",
+    "cls": "末端件",
+    "threshold": 11145,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "潮涌拍击",
+      "op": "前摇+1",
+      "src": "254"
+     },
+     {
+      "tier": "derate",
+      "move": "潮根·盘拽",
+      "op": "前摇+1",
+      "src": "254"
+     }
+    ]
+   },
+   {
+    "part": "枢体",
+    "cls": "核心件",
+    "threshold": 22289,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "枢光·巡射",
+      "op": "前摇+1",
+      "src": "254"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 33434
  },
  {
   "id": "cs_t6_060",
@@ -1934,7 +2428,44 @@
   "moves_unresolved": [],
   "weight_tune": "186册特化",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "缆尾",
+    "cls": "末端件",
+    "threshold": 8976,
+    "positions_default": {
+     "side": "all",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "缆尾·横抡",
+      "op": "—",
+      "src": "254"
+     }
+    ]
+   },
+   {
+    "part": "环身缆肌",
+    "cls": "机动件",
+    "threshold": 11968,
+    "positions_default": {
+     "side": "all",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "未系·缠绞",
+      "op": "前摇+1",
+      "src": "254"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 20944
  },
  {
   "id": "cs_t6_081",
@@ -1968,7 +2499,27 @@
   "moves_unresolved": [],
   "weight_tune": "186册特化",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "桩臂",
+    "cls": "末端件",
+    "threshold": 8976,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "桩臂·横拦",
+      "op": "前摇+1",
+      "src": "254"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 8976
  },
  {
   "id": "cs_t6_082",
@@ -1994,7 +2545,27 @@
   "moves_unresolved": [],
   "weight_tune": "186册特化",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "锚体",
+    "cls": "末端件",
+    "threshold": 8976,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "留缆·定锚",
+      "op": "—",
+      "src": "254"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 8976
  },
  {
   "id": "cs_t6_083",
@@ -2228,7 +2799,27 @@
   "moves_unresolved": [],
   "weight_tune": "186册特化",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "掀肢",
+    "cls": "机动件",
+    "threshold": 11968,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "舱板·掀踢",
+      "op": "前摇+1",
+      "src": "254"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 11968
  },
  {
   "id": "cs_t6_093",
@@ -2254,7 +2845,27 @@
   "moves_unresolved": [],
   "weight_tune": "186册特化",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "拢肢",
+    "cls": "机动件",
+    "threshold": 11968,
+    "positions_default": {
+     "side": "back",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "骸堆·掀泼",
+      "op": "前摇+1",
+      "src": "254"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 11968
  },
  {
   "id": "cs_t6_094",
@@ -2288,7 +2899,27 @@
   "moves_unresolved": [],
   "weight_tune": "186册特化",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "尾鳍",
+    "cls": "末端件",
+    "threshold": 8976,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "滩尾·扫浪",
+      "op": "前摇+1",
+      "src": "254"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 8976
  },
  {
   "id": "cs_t6_095",

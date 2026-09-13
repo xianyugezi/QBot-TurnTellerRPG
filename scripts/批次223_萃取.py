@@ -40,9 +40,53 @@ def scan(path, domain_label, beast_col=None, domain_override=None):
                 "file": path.name, "boss": boss,
             })
 
-# 1) 基础域四分册（01 基础与专械 33／02 云兽 24／03 商店 308／04 填充 14）
-for fn in ("01_基础与专械.md", "02_云兽武器.md", "03_商店武器.md", "04_填充武器.md"):
-    scan(WN / fn, "基础域")
+# 1) 基础域四分册（01 基础与专械 33／02 云兽 24／03 商店 308／04 填充 14）——列形态各异，per-file 适配
+EMOJI_TYPE = {"🗡️": "巨剑", "⚡": "长刀", "🧰": "剑盾", "⚔": "双刃", "🔨": "战锤", "🎺": "号角",
+              "🔱": "长枪", "💥": "晶铳", "🪓": "战斧", "🛡": "战盾", "🌿": "法杖", "🎯": "轻弩",
+              "🧨": "重弩", "🏹": "长弓"}
+
+def _mk(name, typ, label):
+    return {"name": name, "type": typ, "trait": pool[typ], "file": label}
+
+# 01：| 武器(emoji名) | 技法 | 模式 | …——类型由行首 emoji 定（14 基础＋14 遗械＋5 专械）
+in_artifact = False
+for ln in rd(WN / "01_基础与专械.md").splitlines():
+    if ln.startswith("## §三"):
+        in_artifact = True
+        continue
+    if ln.startswith("## "):
+        in_artifact = False
+        continue
+    cells = [c.strip() for c in ln.split("|")]
+    if len(cells) >= 3 and cells[1] and "遗械名" not in cells[1] and "武器" not in cells[1][:4]:
+        e = next((t for em, t in EMOJI_TYPE.items() if cells[1].startswith(em)), None)
+        if e:
+            index["基础域"].append(_mk(re.sub(r"^[^\w一-龥]+", "", cells[1]), e, "01_基础与专械.md"))
+            continue
+        if in_artifact:
+            # 流派专械：不绑武器类型（00 §一 → 通用微特性「执中」）
+            index["基础域"].append({"name": cells[1], "type": "专械", "trait": "执中",
+                                    "file": "01_基础与专械.md"})
+            continue
+        # 遗械行：名不带 emoji，类型取行内首个 emoji 单元（遗械＝原型武器列）
+        er = next((t for c in cells[2:] for em, t in EMOJI_TYPE.items() if em in c), None)
+        if er:
+            index["基础域"].append(_mk(cells[1], er, "01_基础与专械.md"))
+# 02：| 武器名 | 技法 | 技系 | 武器类型 | …
+for ln in rd(WN / "02_云兽武器.md").splitlines():
+    cells = [c.strip() for c in ln.split("|")]
+    if len(cells) >= 5 and cells[4] in TYPES and cells[1] and "武器名" not in cells[1]:
+        index["基础域"].append(_mk(cells[1], cells[4], "02_云兽武器.md"))
+# 03：| 档位 | 武器名 | 技法 | 武器类型 | …
+for ln in rd(WN / "03_商店武器.md").splitlines():
+    cells = [c.strip() for c in ln.split("|")]
+    if len(cells) >= 5 and cells[4] in TYPES and cells[2] and "武器名" not in cells[2]:
+        index["基础域"].append(_mk(cells[2], cells[4], "03_商店武器.md"))
+# 04：| 武器名 | 技法 | 武器类型 | …
+for ln in rd(WN / "04_填充武器.md").splitlines():
+    cells = [c.strip() for c in ln.split("|")]
+    if len(cells) >= 4 and cells[3] in TYPES and cells[1] and "武器名" not in cells[1]:
+        index["基础域"].append(_mk(cells[1], cells[3], "04_填充武器.md"))
 # 2) 巨兽派生（22 文件；cells[1]=类型、cells[5]=来源巨兽——260 批形态）
 for p in sorted((WN / "巨兽派生").glob("*.md")):
     for ln in rd(p).splitlines():

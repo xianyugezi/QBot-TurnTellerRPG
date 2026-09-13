@@ -41,7 +41,27 @@
     "part": "翼膜",
     "move": "翼浪·扇压"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "翼膜",
+    "cls": "机动件",
+    "threshold": 3284,
+    "positions_default": {
+     "side": "front",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "翼浪·扇压",
+      "op": "前摇+1",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 3284
  },
  {
   "id": "cs_t2_002",
@@ -72,7 +92,27 @@
     "part": "气孔",
     "move": "气孔·泄瘪"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "气孔",
+    "cls": "末端件",
+    "threshold": 2463,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "气孔·泄瘪",
+      "op": "—",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 2463
  },
  {
   "id": "cs_t2_003",
@@ -103,7 +143,27 @@
     "part": "螯",
     "move": "螯夹·投掷"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "螯",
+    "cls": "末端件",
+    "threshold": 2463,
+    "positions_default": {
+     "side": "side",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "螯夹·投掷",
+      "op": "前摇+1",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 2463
  },
  {
   "id": "cs_t2_004",
@@ -134,7 +194,27 @@
     "part": "足垫",
     "move": "足垫·松扒"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "足垫",
+    "cls": "机动件",
+    "threshold": 3284,
+    "positions_default": {
+     "side": "side",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "足垫·松扒",
+      "op": "前摇+1",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 3284
  },
  {
   "id": "cs_t2_005",
@@ -165,7 +245,27 @@
     "part": "喙甲",
     "move": "浅影·伏啄"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "喙甲",
+    "cls": "末端件",
+    "threshold": 2463,
+    "positions_default": {
+     "side": "front",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "浅影·伏啄",
+      "op": "—",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 2463
  },
  {
   "id": "cs_t2_006",
@@ -196,7 +296,27 @@
     "part": "前掌",
     "move": "蟾掌·蓄拍"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "前掌",
+    "cls": "机动件",
+    "threshold": 3284,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "蟾掌·蓄拍",
+      "op": "前摇+1",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 3284
  },
  {
   "id": "cs_t2_007",
@@ -723,7 +843,44 @@
     "part": "前肢",
     "move": "坠甲·震波"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "甲壳",
+    "cls": "末端件",
+    "threshold": 3034,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "岛钟·撞压",
+      "op": "前摇+1",
+      "src": "批次251"
+     }
+    ]
+   },
+   {
+    "part": "前肢",
+    "cls": "机动件",
+    "threshold": 4046,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "坠甲·震波",
+      "op": "前摇+1",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 7080
  },
  {
   "id": "cs_t2_028",
@@ -754,7 +911,27 @@
     "part": "绞盘",
     "move": "黏缆·甩抽"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "绞盘",
+    "cls": "末端件",
+    "threshold": 3034,
+    "positions_default": {
+     "side": "all",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "黏缆·甩抽",
+      "op": "前摇+1",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 3034
  },
  {
   "id": "cs_t2_029",
@@ -785,7 +962,27 @@
     "part": "锤肢",
     "move": "锤肢·弹射"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "锤肢",
+    "cls": "机动件",
+    "threshold": 4046,
+    "positions_default": {
+     "side": "side",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "锤肢·弹射",
+      "op": "前摇+1",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 4046
  },
  {
   "id": "cs_t2_030",
@@ -816,7 +1013,27 @@
     "part": "衔颚",
     "move": "衔岛·疾搬"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "衔颚",
+    "cls": "末端件",
+    "threshold": 3034,
+    "positions_default": {
+     "side": "back",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "衔岛·疾搬",
+      "op": "前摇+1",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 3034
  },
  {
   "id": "cs_t2_031",
@@ -847,7 +1064,27 @@
     "part": "翼骨",
     "move": "翼缘·拍浪"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "翼骨",
+    "cls": "末端件",
+    "threshold": 3034,
+    "positions_default": {
+     "side": "front",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "翼缘·拍浪",
+      "op": "—",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 3034
  },
  {
   "id": "cs_t2_032",
@@ -882,7 +1119,44 @@
     "part": "尾鳍",
     "move": "鲸摆·扫云"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "喷孔",
+    "cls": "末端件",
+    "threshold": 3034,
+    "positions_default": {
+     "side": "all",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "喷孔·顶升",
+      "op": "—",
+      "src": "批次251"
+     }
+    ]
+   },
+   {
+    "part": "尾鳍",
+    "cls": "末端件",
+    "threshold": 3034,
+    "positions_default": {
+     "side": "all",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "鲸摆·扫云",
+      "op": "前摇+1",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 6068
  },
  {
   "id": "cs_t2_033",
@@ -913,7 +1187,27 @@
     "part": "闸须",
     "move": "闸须·扫流"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "闸须",
+    "cls": "末端件",
+    "threshold": 3034,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "闸须·扫流",
+      "op": "—",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 3034
  },
  {
   "id": "cs_t2_034",
@@ -963,7 +1257,44 @@
     "part": "月翅",
     "move": "月翅·遮辉"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "翅粉腺",
+    "cls": "末端件",
+    "threshold": 4046,
+    "positions_default": {
+     "side": "front",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "鳞粉·散布",
+      "op": "—",
+      "src": "批次251"
+     }
+    ]
+   },
+   {
+    "part": "月翅",
+    "cls": "机动件",
+    "threshold": 5394,
+    "positions_default": {
+     "side": "front",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "月翅·遮辉",
+      "op": "前摇+1",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 9440
  },
  {
   "id": "cs_t2_035",
@@ -994,7 +1325,27 @@
     "part": "缠身环肌",
     "move": "千钧·坠链"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "缠身环肌",
+    "cls": "机动件",
+    "threshold": 5394,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "千钧·坠链",
+      "op": "—",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 5394
  },
  {
   "id": "cs_t2_036",
@@ -1555,7 +1906,27 @@
   "moves_unresolved": [],
   "weight_tune": "182册特化",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "吸盘阵",
+    "cls": "机动件",
+    "threshold": 4415,
+    "positions_default": {
+     "side": "side",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "倒悬·爬壁",
+      "op": "—",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 4415
  },
  {
   "id": "cs_t2_060",
@@ -1581,7 +1952,44 @@
   "moves_unresolved": [],
   "weight_tune": "182册特化",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "鳔室",
+    "cls": "核心件",
+    "threshold": 6623,
+    "positions_default": {
+     "side": "front",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "沉钟·声呐",
+      "op": "—",
+      "src": "252"
+     }
+    ]
+   },
+   {
+    "part": "颌部",
+    "cls": "末端件",
+    "threshold": 3311,
+    "positions_default": {
+     "side": "front",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "鲛掠·斜袭",
+      "op": "前摇+1",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 9934
  },
  {
   "id": "cs_t2_061",
@@ -1607,7 +2015,27 @@
   "moves_unresolved": [],
   "weight_tune": "182册特化",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "颌部",
+    "cls": "末端件",
+    "threshold": 3311,
+    "positions_default": {
+     "side": "front",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "沉拖·入深",
+      "op": "前摇+1",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 3311
  },
  {
   "id": "cs_t2_062",
@@ -1633,7 +2061,27 @@
   "moves_unresolved": [],
   "weight_tune": "182册特化",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "尾部",
+    "cls": "末端件",
+    "threshold": 3311,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "螈尾·绞澜",
+      "op": "前摇+1",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 3311
  },
  {
   "id": "cs_t2_063",
@@ -1659,7 +2107,44 @@
   "moves_unresolved": [],
   "weight_tune": "182册特化",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "灯球",
+    "cls": "末端件",
+    "threshold": 3311,
+    "positions_default": {
+     "side": "front",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "灯饵·垂诱",
+      "op": "—",
+      "src": "252"
+     }
+    ]
+   },
+   {
+    "part": "颚部",
+    "cls": "末端件",
+    "threshold": 3311,
+    "positions_default": {
+     "side": "front",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "合颚·咬合",
+      "op": "前摇+1",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 6622
  },
  {
   "id": "cs_t2_064",
@@ -1685,7 +2170,27 @@
   "moves_unresolved": [],
   "weight_tune": "182册特化",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "石壳",
+    "cls": "属性壳",
+    "threshold": 6181,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "自沉·增坠",
+      "op": "前摇+1",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 6181
  },
  {
   "id": "cs_t2_065",
@@ -1711,7 +2216,27 @@
   "moves_unresolved": [],
   "weight_tune": "182册特化",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "尾部",
+    "cls": "末端件",
+    "threshold": 3311,
+    "positions_default": {
+     "side": "front",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "梭尾·甩击",
+      "op": "前摇+1",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 3311
  },
  {
   "id": "cs_t2_066",
@@ -1752,7 +2277,44 @@
   "moves_unresolved": [],
   "weight_tune": "199–204 承接",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "潮喉",
+    "cls": "核心件",
+    "threshold": 8830,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "潮喉·吞涡",
+      "op": "—",
+      "src": "252"
+     }
+    ]
+   },
+   {
+    "part": "鲸须",
+    "cls": "末端件",
+    "threshold": 4415,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "鲸须·滤潮",
+      "op": "前摇+1",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 13245
  },
  {
   "id": "cs_t2_067",
@@ -1778,7 +2340,27 @@
   "moves_unresolved": [],
   "weight_tune": "182册特化",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "巨颚",
+    "cls": "末端件",
+    "threshold": 4415,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "吞岛·增沉",
+      "op": "前摇+1",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 4415
  },
  {
   "id": "cs_t2_068",
@@ -1815,7 +2397,27 @@
   "moves_unresolved": [],
   "weight_tune": "199–204 承接",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "光腺",
+    "cls": "核心件",
+    "threshold": 8830,
+    "positions_default": {
+     "side": "all",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "熄光吞明",
+      "op": "—",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 8830
  },
  {
   "id": "cs_t2_069",

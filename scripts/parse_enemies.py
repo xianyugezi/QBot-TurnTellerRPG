@@ -184,6 +184,17 @@ def build():
             for f2 in sorted(os.listdir(d2)):
                 if re.match(r"[0-9]", f2) and f2.endswith(".md"):
                     all_tiers.update(parse_eco_tiers(os.path.join(d2, f2)))
+    _p219 = None
+    for cand in (os.path.join(OUTDIR, "generated", "parts_219.json"),
+                 os.path.join(DS, "content", "cloudsea", "generated", "parts_219.json")):
+        if os.path.exists(cand):
+            _p219 = cand
+            break
+    parts219 = json.load(io.open(_p219, encoding="utf-8"))
+    parts_by_boss = {}
+    for pe in parts219["parts"]:
+        parts_by_boss.setdefault(pe["boss"], []).append(pe)
+    templates = parts219.get("phase_templates", {})
     resist = parse_resists()
     breaks = parse_breaks()
     dyb = parse_duyou()
@@ -221,6 +232,27 @@ def build():
                 ("duyou_pos", dyb.get(nm, {}).get("pos", "")),
                 ("break_bindings", breaks.get(nm, [])),
             ]))
+            rec = rows[-1]
+            # 增量三（219 交接「绝对值归 217」）：部位阈值 = ehp × threshold_ratio；
+            # positions_default 沿 phase_templates[骨架族_T潮位]
+            my_parts = parts_by_boss.get(nm, [])
+            if my_parts:
+                tpl = templates.get("%s_T%d" % (g["skeleton"], tide_i), {})
+                pd = tpl.get("positions_default", {})
+                pr = tpl.get("part_ratio", {})
+                parts_out = []
+                for pe in my_parts:
+                    ratio = pe.get("threshold_ratio")
+                    if ratio is None:
+                        ratio = pr.get(pe.get("cls"), 0.15)
+                    parts_out.append(OrderedDict([
+                        ("part", pe["part"]), ("cls", pe["cls"]),
+                        ("threshold", round(ehp * float(ratio))),
+                        ("positions_default", pd),
+                        ("break_behavior", pe.get("break_behavior", [])),
+                    ]))
+                rec["parts"] = parts_out
+                rec["parts_total_threshold"] = sum(x["threshold"] for x in parts_out)
             if nm in seen_names:
                 # 跨册交叉引用去重（如潮五「风暴段章节 Boss」节复列潮四正典 Boss）——保首现
                 rows.pop()

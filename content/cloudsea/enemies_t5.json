@@ -33,7 +33,27 @@
     "part": "喷孔",
     "move": "雾膜·张幔"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "喷孔",
+    "cls": "核心件",
+    "threshold": 9955,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "雾膜·张幔",
+      "op": "—",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 9955
  },
  {
   "id": "cs_t5_002",
@@ -64,7 +84,27 @@
     "part": "风羽",
     "move": "外缘·盘旋"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "风羽",
+    "cls": "机动件",
+    "threshold": 6636,
+    "positions_default": {
+     "side": "front",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "外缘·盘旋",
+      "op": "—",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 6636
  },
  {
   "id": "cs_t5_003",
@@ -106,7 +146,27 @@
     "part": "背鳞",
     "move": "放逸雷场"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "背鳞",
+    "cls": "属性壳",
+    "threshold": 9291,
+    "positions_default": {
+     "side": "front",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "放逸雷场",
+      "op": "—",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 9291
  },
  {
   "id": "cs_t5_004",
@@ -137,7 +197,27 @@
     "part": "尾环",
     "move": "檐珠·蜷球"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "尾环",
+    "cls": "末端件",
+    "threshold": 4977,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "檐珠·蜷球",
+      "op": "锁定−1",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 4977
  },
  {
   "id": "cs_t5_005",
@@ -168,7 +248,27 @@
     "part": "悬丝",
     "move": "织水·悬丝"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "悬丝",
+    "cls": "机动件",
+    "threshold": 6636,
+    "positions_default": {
+     "side": "all",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "织水·悬丝",
+      "op": "—",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 6636
  },
  {
   "id": "cs_t5_006",
@@ -199,7 +299,27 @@
     "part": "背鳍",
     "move": "环流·牵风"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "背鳍",
+    "cls": "核心件",
+    "threshold": 13273,
+    "positions_default": {
+     "side": "back",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "环流·牵风",
+      "op": "—",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 13273
  },
  {
   "id": "cs_t5_007",
@@ -602,7 +722,27 @@
     "part": "镰鳍",
     "move": "镰鳍·切风"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "镰鳍",
+    "cls": "末端件",
+    "threshold": 6131,
+    "positions_default": {
+     "side": "front",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "镰鳍·切风",
+      "op": "范围−1格",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 6131
  },
  {
   "id": "cs_t5_024",
@@ -633,7 +773,27 @@
     "part": "锚须",
     "move": "沉锚·甩扫"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "锚须",
+    "cls": "机动件",
+    "threshold": 8175,
+    "positions_default": {
+     "side": "all",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "沉锚·甩扫",
+      "op": "锁定−1",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 8175
  },
  {
   "id": "cs_t5_025",
@@ -664,7 +824,27 @@
     "part": "引雷角",
     "move": "引雷·覆甲"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "引雷角",
+    "cls": "核心件",
+    "threshold": 12262,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "引雷·覆甲",
+      "op": "—",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 12262
  },
  {
   "id": "cs_t5_026",
@@ -695,7 +875,27 @@
     "part": "颚阀",
     "move": "气闸·吞吸"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "颚阀",
+    "cls": "核心件",
+    "threshold": 12262,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "气闸·吞吸",
+      "op": "—",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 12262
  },
  {
   "id": "cs_t5_027",
@@ -726,7 +926,27 @@
     "part": "折袭翼羽",
     "move": "二重·折袭"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "折袭翼羽",
+    "cls": "机动件",
+    "threshold": 8175,
+    "positions_default": {
+     "side": "front",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "二重·折袭",
+      "op": "—",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 8175
  },
  {
   "id": "cs_t5_028",
@@ -798,7 +1018,27 @@
     "part": "舵鳍",
     "move": "舵面·慢旋"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "舵鳍",
+    "cls": "核心件",
+    "threshold": 16349,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "舵面·慢旋",
+      "op": "—",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 16349
  },
  {
   "id": "cs_t5_030",
@@ -829,7 +1069,27 @@
     "part": "储水囊",
     "move": "满载·倾泻"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "储水囊",
+    "cls": "核心件",
+    "threshold": 16349,
+    "positions_default": {
+     "side": "all",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "满载·倾泻",
+      "op": "—",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 16349
  },
  {
   "id": "cs_t5_031",
@@ -1253,7 +1513,27 @@
     "part": "背甲",
     "move": "静水·铺面"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "背甲",
+    "cls": "属性壳",
+    "threshold": 12491,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "静水·铺面",
+      "op": "—",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 12491
  },
  {
   "id": "cs_t5_049",
@@ -1284,7 +1564,27 @@
     "part": "息羽",
     "move": "息羽·消音"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "息羽",
+    "cls": "属性壳",
+    "threshold": 12491,
+    "positions_default": {
+     "side": "front",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "息羽·消音",
+      "op": "—",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 12491
  },
  {
   "id": "cs_t5_050",
@@ -1315,7 +1615,27 @@
     "part": "翼骨",
     "move": "环巡·低扫"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "翼骨",
+    "cls": "机动件",
+    "threshold": 8922,
+    "positions_default": {
+     "side": "front",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "环巡·低扫",
+      "op": "锁定−1",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 8922
  },
  {
   "id": "cs_t5_051",
@@ -1346,7 +1666,27 @@
     "part": "遗锚",
     "move": "旧锚·压击"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "遗锚",
+    "cls": "末端件",
+    "threshold": 6691,
+    "positions_default": {
+     "side": "side",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "旧锚·压击",
+      "op": "—",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 6691
  },
  {
   "id": "cs_t5_052",
@@ -1377,7 +1717,27 @@
     "part": "镜鳞",
     "move": "倒影·拟态"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "镜鳞",
+    "cls": "属性壳",
+    "threshold": 12491,
+    "positions_default": {
+     "side": "front",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "倒影·拟态",
+      "op": "—",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 12491
  },
  {
   "id": "cs_t5_053",
@@ -1408,7 +1768,27 @@
     "part": "喉囊",
     "move": "静默·领域"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "喉囊",
+    "cls": "核心件",
+    "threshold": 13383,
+    "positions_default": {
+     "side": "back",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "静默·领域",
+      "op": "—",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 13383
  },
  {
   "id": "cs_t5_054",
@@ -1454,7 +1834,27 @@
     "part": "静压核",
     "move": "静压·蓄场"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "静压核",
+    "cls": "核心件",
+    "threshold": 17844,
+    "positions_default": {
+     "side": "all",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "静压·蓄场",
+      "op": "剥离附加:静压场",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 17844
  },
  {
   "id": "cs_t5_055",
@@ -1485,7 +1885,27 @@
     "part": "铜喉汽笛",
     "move": "铜喉·汽笛"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "铜喉汽笛",
+    "cls": "核心件",
+    "threshold": 17844,
+    "positions_default": {
+     "side": "all",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "铜喉·汽笛",
+      "op": "—",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 17844
  },
  {
   "id": "cs_t5_056",
@@ -1516,7 +1936,27 @@
     "part": "蚀纹脊线",
     "move": "洄游·蓄纹"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "蚀纹脊线",
+    "cls": "末端件",
+    "threshold": 8922,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "洄游·蓄纹",
+      "op": "剥离附加:蚀纹积蓄",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 8922
  },
  {
   "id": "cs_t5_057",
@@ -1976,7 +2416,44 @@
     "part": "测风仪翼",
     "move": "读风·先制"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "测风仪翼",
+    "cls": "核心件",
+    "threshold": 13383,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "读风·先制",
+      "op": "—",
+      "src": "批次253"
+     }
+    ]
+   },
+   {
+    "part": "仪臂",
+    "cls": "末端件",
+    "threshold": 6691,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "仪臂·横架",
+      "op": "前摇+1",
+      "src": "254"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 20074
  },
  {
   "id": "cs_t5_077",
@@ -2007,7 +2484,33 @@
     "part": "排气阀",
     "move": "核振·爆发"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "排气阀",
+    "cls": "核心件",
+    "threshold": 13383,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "核振·爆发",
+      "op": "—",
+      "src": "批次253"
+     },
+     {
+      "tier": "remove",
+      "move": "浮压·挪核",
+      "op": "—",
+      "src": "254"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 13383
  },
  {
   "id": "cs_t5_078",
@@ -2038,7 +2541,44 @@
     "part": "记录匣",
     "move": "吞页·噤声"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "记录匣",
+    "cls": "核心件",
+    "threshold": 13383,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "吞页·噤声",
+      "op": "—",
+      "src": "批次253"
+     }
+    ]
+   },
+   {
+    "part": "匣舌",
+    "cls": "末端件",
+    "threshold": 6691,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "匣舌·卷扫",
+      "op": "前摇+1",
+      "src": "254"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 20074
  },
  {
   "id": "cs_t5_079",

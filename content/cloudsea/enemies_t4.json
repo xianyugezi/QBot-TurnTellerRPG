@@ -28,7 +28,44 @@
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "双翼鳍",
+    "cls": "机动件",
+    "threshold": 5232,
+    "positions_default": {
+     "side": "front",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "逐沫·剪俯",
+      "op": "—",
+      "src": "252"
+     }
+    ]
+   },
+   {
+    "part": "尾刺",
+    "cls": "末端件",
+    "threshold": 3924,
+    "positions_default": {
+     "side": "front",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "尾刺·示警",
+      "op": "前摇+1",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 9156
  },
  {
   "id": "cs_t4_002",
@@ -54,7 +91,27 @@
   "moves_unresolved": [],
   "weight_tune": "`巨兽差异_184`",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "冠囊",
+    "cls": "核心件",
+    "threshold": 7848,
+    "positions_default": {
+     "side": "all",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "鼓浪·反震",
+      "op": "—",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 7848
  },
  {
   "id": "cs_t4_003",
@@ -80,7 +137,27 @@
   "moves_unresolved": [],
   "weight_tune": "`巨兽差异_184`",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "借壳壳层",
+    "cls": "属性壳",
+    "threshold": 7325,
+    "positions_default": {
+     "side": "back",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "借壳·覆甲",
+      "op": "前摇+1",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 7325
  },
  {
   "id": "cs_t4_004",
@@ -106,7 +183,27 @@
   "moves_unresolved": [],
   "weight_tune": "`巨兽差异_184`",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "嗅囊",
+    "cls": "核心件",
+    "threshold": 7848,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "追痕·锁嗅",
+      "op": "—",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 7848
  },
  {
   "id": "cs_t4_005",
@@ -132,7 +229,27 @@
   "moves_unresolved": [],
   "weight_tune": "`巨兽差异_184`",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "拟浪皮纹",
+    "cls": "属性壳",
+    "threshold": 7325,
+    "positions_default": {
+     "side": "all",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "隐纹·拟浪",
+      "op": "剥离附加:拟浪隐身",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 7325
  },
  {
   "id": "cs_t4_006",
@@ -158,7 +275,27 @@
   "moves_unresolved": [],
   "weight_tune": "`巨兽差异_184`",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "壳缝",
+    "cls": "末端件",
+    "threshold": 3924,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "驮碑·缩礁",
+      "op": "剥离附加:礁甲硬化",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 3924
  },
  {
   "id": "cs_t4_007",
@@ -184,7 +321,27 @@
   "moves_unresolved": [],
   "weight_tune": "`巨兽差异_184`",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "背鳍",
+    "cls": "机动件",
+    "threshold": 5232,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "立鳍·割浪",
+      "op": "前摇+1",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 5232
  },
  {
   "id": "cs_t4_008",
@@ -225,7 +382,44 @@
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "背鳍",
+    "cls": "机动件",
+    "threshold": 6976,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "鳍刃·掠斩",
+      "op": "前摇+1",
+      "src": "252"
+     }
+    ]
+   },
+   {
+    "part": "尾睫",
+    "cls": "末端件",
+    "threshold": 5232,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "尾睫·扫雾",
+      "op": "前摇+1",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 12208
  },
  {
   "id": "cs_t4_009",
@@ -749,7 +943,27 @@
     "part": "背砧",
     "move": "背砧引雷"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "背砧",
+    "cls": "核心件",
+    "threshold": 9667,
+    "positions_default": {
+     "side": "back",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "背砧引雷",
+      "op": "—",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 9667
  },
  {
   "id": "cs_t4_031",
@@ -780,7 +994,27 @@
     "part": "风缆",
     "move": "循缆·窜行"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "风缆",
+    "cls": "机动件",
+    "threshold": 6445,
+    "positions_default": {
+     "side": "side",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "循缆·窜行",
+      "op": "—",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 6445
  },
  {
   "id": "cs_t4_032",
@@ -811,7 +1045,27 @@
     "part": "震鳞",
     "move": "震鳞·共鸣"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "震鳞",
+    "cls": "核心件",
+    "threshold": 9667,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "震鳞·共鸣",
+      "op": "—",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 9667
  },
  {
   "id": "cs_t4_033",
@@ -842,7 +1096,27 @@
     "part": "假饵",
     "move": "假饵·麻电"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "假饵",
+    "cls": "末端件",
+    "threshold": 4834,
+    "positions_default": {
+     "side": "all",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "假饵·麻电",
+      "op": "—",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 4834
  },
  {
   "id": "cs_t4_034",
@@ -873,7 +1147,27 @@
     "part": "翼翎",
     "move": "蓄雷·盘旋"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "翼翎",
+    "cls": "机动件",
+    "threshold": 6445,
+    "positions_default": {
+     "side": "front",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "蓄雷·盘旋",
+      "op": "—",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 6445
  },
  {
   "id": "cs_t4_035",
@@ -919,7 +1213,27 @@
     "part": "舷炮",
     "move": "舷炮·哑火"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "舷炮",
+    "cls": "核心件",
+    "threshold": 12890,
+    "positions_default": {
+     "side": "all",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "舷炮·哑火",
+      "op": "—",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 12890
  },
  {
   "id": "cs_t4_036",
@@ -961,7 +1275,27 @@
     "part": "铭甲",
     "move": "甲纹亮痕"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "铭甲",
+    "cls": "属性壳",
+    "threshold": 12030,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "甲纹亮痕",
+      "op": "—",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 12030
  },
  {
   "id": "cs_t4_037",
@@ -1411,7 +1745,27 @@
     "part": "雷腹",
     "move": "雷腹·嗡鸣"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "雷腹",
+    "cls": "核心件",
+    "threshold": 10551,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "雷腹·嗡鸣",
+      "op": "剥离附加:卧池蓄雷",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 10551
  },
  {
   "id": "cs_t4_056",
@@ -1442,7 +1796,27 @@
     "part": "雷颚",
     "move": "不松·咬雷"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "雷颚",
+    "cls": "核心件",
+    "threshold": 10551,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "不松·咬雷",
+      "op": "剥离附加:吞能叠层",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 10551
  },
  {
   "id": "cs_t4_057",
@@ -1473,7 +1847,27 @@
     "part": "踏雷足垫",
     "move": "踏雷·瞬步"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "踏雷足垫",
+    "cls": "机动件",
+    "threshold": 7034,
+    "positions_default": {
+     "side": "side",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "踏雷·瞬步",
+      "op": "—",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 7034
  },
  {
   "id": "cs_t4_058",
@@ -1504,7 +1898,27 @@
     "part": "雷晶盾",
     "move": "举盾·盾反"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "雷晶盾",
+    "cls": "末端件",
+    "threshold": 5275,
+    "positions_default": {
+     "side": "side",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "举盾·盾反",
+      "op": "—",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 5275
  },
  {
   "id": "cs_t4_059",
@@ -1535,7 +1949,27 @@
     "part": "腹鳞",
     "move": "翻池·重列"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "腹鳞",
+    "cls": "核心件",
+    "threshold": 10551,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "翻池·重列",
+      "op": "锁定−1",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 10551
  },
  {
   "id": "cs_t4_060",
@@ -1567,7 +2001,27 @@
     "part": "锚身",
     "move": "岩锚·定震"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "锚身",
+    "cls": "核心件",
+    "threshold": 14068,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "岩锚·定震",
+      "op": "剥离附加:凝岩自愈",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 14068
  },
  {
   "id": "cs_t4_061",
@@ -1598,7 +2052,27 @@
     "part": "引风啸孔",
     "move": "风暴枢·旋壁"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "引风啸孔",
+    "cls": "核心件",
+    "threshold": 14068,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "风暴枢·旋壁",
+      "op": "范围−1格",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 14068
  },
  {
   "id": "cs_t4_062",
@@ -1629,7 +2103,27 @@
     "part": "核瞳",
     "move": "核瞳·明灭"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "核瞳",
+    "cls": "核心件",
+    "threshold": 14068,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "核瞳·明灭",
+      "op": "剥离附加:核心闭锁",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 14068
  },
  {
   "id": "cs_t4_063",
@@ -2036,7 +2530,27 @@
     "part": "激怒腺",
     "move": "失巢·躁冲"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "激怒腺",
+    "cls": "核心件",
+    "threshold": 9979,
+    "positions_default": {
+     "side": "back",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "失巢·躁冲",
+      "op": "剥离附加:狂躁递增",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 9979
  },
  {
   "id": "cs_t4_081",
@@ -2067,7 +2581,27 @@
     "part": "泥壳",
     "move": "漫堤·重压"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "泥壳",
+    "cls": "属性壳",
+    "threshold": 9314,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "漫堤·重压",
+      "op": "剥离附加:汛期强化",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 9314
  },
  {
   "id": "cs_t4_082",
@@ -2098,7 +2632,27 @@
     "part": "撞角",
     "move": "求入·撞门"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "撞角",
+    "cls": "末端件",
+    "threshold": 4990,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "求入·撞门",
+      "op": "—",
+      "src": "批次253"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 4990
  },
  {
   "id": "cs_t4_083",

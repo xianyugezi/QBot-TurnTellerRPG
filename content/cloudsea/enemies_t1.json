@@ -45,7 +45,27 @@
     "part": "前蹄",
     "move": "蹄铃·踏雪"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "前蹄",
+    "cls": "机动件",
+    "threshold": 2718,
+    "positions_default": {
+     "side": "back",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "蹄铃·踏雪",
+      "op": "前摇+1",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 2718
  },
  {
   "id": "cs_t1_002",
@@ -111,7 +131,27 @@
     "part": "脂壳",
     "move": "脂壳·凝腻"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "脂壳",
+    "cls": "末端件",
+    "threshold": 2038,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "脂壳·凝腻",
+      "op": "前摇+1",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 2038
  },
  {
   "id": "cs_t1_004",
@@ -142,7 +182,27 @@
     "part": "苔壳",
     "move": "苔壳·撞抵"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "苔壳",
+    "cls": "末端件",
+    "threshold": 2038,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "苔壳·撞抵",
+      "op": "前摇+1",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 2038
  },
  {
   "id": "cs_t1_005",
@@ -173,7 +233,27 @@
     "part": "前肢",
     "move": "落果·抛砸"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "前肢",
+    "cls": "机动件",
+    "threshold": 2718,
+    "positions_default": {
+     "side": "side",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "落果·抛砸",
+      "op": "前摇+1",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 2718
  },
  {
   "id": "cs_t1_006",
@@ -204,7 +284,27 @@
     "part": "尾针",
     "move": "帚尾·横抽"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "尾针",
+    "cls": "末端件",
+    "threshold": 2038,
+    "positions_default": {
+     "side": "side",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "帚尾·横抽",
+      "op": "—",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 2038
  },
  {
   "id": "cs_t1_007",
@@ -270,7 +370,27 @@
     "part": "喙甲",
     "move": "叩木·连啄"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "喙甲",
+    "cls": "末端件",
+    "threshold": 2038,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "叩木·连啄",
+      "op": "前摇+1",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 2038
  },
  {
   "id": "cs_t1_009",
@@ -301,7 +421,27 @@
     "part": "喉囊",
     "move": "引雾·慑吼"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "喉囊",
+    "cls": "末端件",
+    "threshold": 2038,
+    "positions_default": {
+     "side": "back",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "引雾·慑吼",
+      "op": "前摇+1",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 2038
  },
  {
   "id": "cs_t1_010",
@@ -355,7 +495,27 @@
     "part": "尾盾",
     "move": "尾盾·横摆"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "尾盾",
+    "cls": "末端件",
+    "threshold": 1800,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "尾盾·横摆",
+      "op": "范围−1格",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 1800
  },
  {
   "id": "cs_t1_011",
@@ -1050,7 +1210,27 @@
     "part": "背鳞",
     "move": "逆鳞·拱水"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "尾鳍",
+    "cls": "末端件",
+    "threshold": 2511,
+    "positions_default": {
+     "side": "side",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "跃瀑·冲天",
+      "op": "—",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 2511
  },
  {
   "id": "cs_t1_040",
@@ -1081,7 +1261,27 @@
     "part": "苔壳",
     "move": "吞苔·鼓胀"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "苔壳",
+    "cls": "末端件",
+    "threshold": 2511,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "吞苔·鼓胀",
+      "op": "前摇+1",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 2511
  },
  {
   "id": "cs_t1_041",
@@ -1112,7 +1312,27 @@
     "part": "握藤",
     "move": "藤鞭·抽卷"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "握藤",
+    "cls": "末端件",
+    "threshold": 2511,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "藤鞭·抽卷",
+      "op": "—",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 2511
  },
  {
   "id": "cs_t1_042",
@@ -1143,7 +1363,27 @@
     "part": "磨盘鳍",
     "move": "磨盘·横碾"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "磨盘鳍",
+    "cls": "末端件",
+    "threshold": 2511,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "磨盘·横碾",
+      "op": "前摇+1",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 2511
  },
  {
   "id": "cs_t1_043",
@@ -1174,7 +1414,27 @@
     "part": "涎腺",
     "move": "垂涎·喷雾"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "涎腺",
+    "cls": "末端件",
+    "threshold": 2511,
+    "positions_default": {
+     "side": "back",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "垂涎·喷雾",
+      "op": "剥离附加:视野干扰",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 2511
  },
  {
   "id": "cs_t1_044",
@@ -1216,7 +1476,27 @@
     "part": "苔甲",
     "move": "苔甲翻覆"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "苔甲",
+    "cls": "末端件",
+    "threshold": 3348,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "苔甲翻覆",
+      "op": "剥离附加:硬化减伤",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 3348
  },
  {
   "id": "cs_t1_045",
@@ -1258,7 +1538,27 @@
     "part": "钟甲",
     "move": "钟身坠击"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "钟甲",
+    "cls": "末端件",
+    "threshold": 3348,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "钟身坠击",
+      "op": "—",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 3348
  },
  {
   "id": "cs_t1_046",
@@ -1687,7 +1987,27 @@
     "part": "前肢",
     "move": "巨爪·勾扫"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "前肢",
+    "cls": "机动件",
+    "threshold": 3654,
+    "positions_default": {
+     "side": "side",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "巨爪·勾扫",
+      "op": "前摇+1",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 3654
  },
  {
   "id": "cs_t1_064",
@@ -1718,7 +2038,27 @@
     "part": "影皮裘",
     "move": "影隙·潜行"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "影皮裘",
+    "cls": "末端件",
+    "threshold": 2740,
+    "positions_default": {
+     "side": "back",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "影隙·潜行",
+      "op": "—",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 2740
  },
  {
   "id": "cs_t1_065",
@@ -1749,7 +2089,27 @@
     "part": "门牙",
     "move": "盘根·啃掘"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "门牙",
+    "cls": "末端件",
+    "threshold": 2740,
+    "positions_default": {
+     "side": "back",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "盘根·啃掘",
+      "op": "前摇+1",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 2740
  },
  {
   "id": "cs_t1_066",
@@ -1780,7 +2140,27 @@
     "part": "霜尾",
     "move": "霜尾·横拂"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "霜尾",
+    "cls": "末端件",
+    "threshold": 2740,
+    "positions_default": {
+     "side": "side",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "霜尾·横拂",
+      "op": "—",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 2740
  },
  {
   "id": "cs_t1_067",
@@ -1811,7 +2191,27 @@
     "part": "晶角",
     "move": "悬晶·超声"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "晶角",
+    "cls": "末端件",
+    "threshold": 2740,
+    "positions_default": {
+     "side": "front",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "悬晶·超声",
+      "op": "前摇+1",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 2740
  },
  {
   "id": "cs_t1_068",
@@ -1861,7 +2261,44 @@
     "part": "颈鬃",
     "move": "鬃霜·倒竖"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "犁兽颚",
+    "cls": "末端件",
+    "threshold": 3654,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "霜颚·犁地",
+      "op": "—",
+      "src": "批次251"
+     }
+    ]
+   },
+   {
+    "part": "颈鬃",
+    "cls": "末端件",
+    "threshold": 3654,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "鬃霜·倒竖",
+      "op": "前摇+1",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 7308
  },
  {
   "id": "cs_t1_069",
@@ -2410,7 +2847,27 @@
     "part": "锚爪",
     "move": "锈锚·抛落"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "锚爪",
+    "cls": "末端件",
+    "threshold": 2038,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "锈锚·抛落",
+      "op": "—",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 2038
  },
  {
   "id": "cs_t1_092",
@@ -2441,7 +2898,27 @@
     "part": "缆桩",
     "move": "系留·缆拽"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "缆桩",
+    "cls": "末端件",
+    "threshold": 2038,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "系留·缆拽",
+      "op": "前摇+1",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 2038
  },
  {
   "id": "cs_t1_093",
@@ -2472,7 +2949,27 @@
     "part": "门牙",
     "move": "陈粮·啮断"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "门牙",
+    "cls": "末端件",
+    "threshold": 2038,
+    "positions_default": {
+     "side": "back",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "陈粮·啮断",
+      "op": "—",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 2038
  },
  {
   "id": "cs_t1_094",
@@ -2503,7 +3000,27 @@
     "part": "潮壳",
     "move": "退泊·翻壳"
    }
-  ]
+  ],
+  "parts": [
+   {
+    "part": "潮壳",
+    "cls": "末端件",
+    "threshold": 2038,
+    "positions_default": {
+     "side": "back",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "退泊·翻壳",
+      "op": "前摇+1",
+      "src": "批次251"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 2038
  },
  {
   "id": "cs_t1_095",

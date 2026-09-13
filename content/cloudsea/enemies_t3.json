@@ -23,7 +23,44 @@
   "moves_unresolved": [],
   "weight_tune": "`巨兽差异_183`",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "岩甲",
+    "cls": "属性壳",
+    "threshold": 6025,
+    "positions_default": {
+     "side": "back",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "碎坪·叠甲",
+      "op": "剥离附加:叠层硬化",
+      "src": "252"
+     }
+    ]
+   },
+   {
+    "part": "颌部",
+    "cls": "末端件",
+    "threshold": 3228,
+    "positions_default": {
+     "side": "back",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "裂牙·剪切",
+      "op": "前摇+1",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 9253
  },
  {
   "id": "cs_t3_002",
@@ -49,7 +86,27 @@
   "moves_unresolved": [],
   "weight_tune": "`巨兽差异_183`",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "锚背浮石",
+    "cls": "末端件",
+    "threshold": 3228,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "锚背·压泊",
+      "op": "前摇+1",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 3228
  },
  {
   "id": "cs_t3_003",
@@ -75,7 +132,27 @@
   "moves_unresolved": [],
   "weight_tune": "`巨兽差异_183`",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "翼膜",
+    "cls": "机动件",
+    "threshold": 4304,
+    "positions_default": {
+     "side": "front",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "栖顶·俯冲",
+      "op": "前摇+1",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 4304
  },
  {
   "id": "cs_t3_004",
@@ -101,7 +178,27 @@
   "moves_unresolved": [],
   "weight_tune": "`巨兽差异_183`",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "沫腺",
+    "cls": "核心件",
+    "threshold": 6455,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "吹泡·鼓防",
+      "op": "—",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 6455
  },
  {
   "id": "cs_t3_005",
@@ -127,7 +224,27 @@
   "moves_unresolved": [],
   "weight_tune": "`巨兽差异_183`",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "甲环",
+    "cls": "末端件",
+    "threshold": 3228,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "滚坡·蜷撞",
+      "op": "前摇+1",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 3228
  },
  {
   "id": "cs_t3_006",
@@ -153,7 +270,27 @@
   "moves_unresolved": [],
   "weight_tune": "`巨兽差异_183`",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "喉囊",
+    "cls": "核心件",
+    "threshold": 6455,
+    "positions_default": {
+     "side": "back",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "长嗥·聚群",
+      "op": "—",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 6455
  },
  {
   "id": "cs_t3_007",
@@ -179,7 +316,27 @@
   "moves_unresolved": [],
   "weight_tune": "`巨兽差异_183`",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "尾椎",
+    "cls": "末端件",
+    "threshold": 3228,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "缠柱·绞勒",
+      "op": "—",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 3228
  },
  {
   "id": "cs_t3_008",
@@ -205,7 +362,27 @@
   "moves_unresolved": [],
   "weight_tune": "`巨兽差异_183`",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "鸣管",
+    "cls": "核心件",
+    "threshold": 6455,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "警哨·尖啸",
+      "op": "—",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 6455
  },
  {
   "id": "cs_t3_009",
@@ -246,7 +423,44 @@
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "蚀核",
+    "cls": "核心件",
+    "threshold": 8607,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "蚀核·搏动",
+      "op": "—",
+      "src": "252"
+     }
+    ]
+   },
+   {
+    "part": "锚首",
+    "cls": "末端件",
+    "threshold": 4304,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "坠锚·天贯",
+      "op": "前摇+1",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 12911
  },
  {
   "id": "cs_t3_010",
@@ -818,7 +1032,44 @@
   "moves_unresolved": [],
   "weight_tune": "`巨兽差异_183`",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "掘肢",
+    "cls": "机动件",
+    "threshold": 5301,
+    "positions_default": {
+     "side": "back",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "掘崩·塌方",
+      "op": "—",
+      "src": "252"
+     }
+    ]
+   },
+   {
+    "part": "凿爪",
+    "cls": "末端件",
+    "threshold": 3976,
+    "positions_default": {
+     "side": "back",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "凿爪·连刨",
+      "op": "前摇+1",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 9277
  },
  {
   "id": "cs_t3_035",
@@ -844,7 +1095,27 @@
   "moves_unresolved": [],
   "weight_tune": "`巨兽差异_183`",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "锚爪",
+    "cls": "机动件",
+    "threshold": 5301,
+    "positions_default": {
+     "side": "side",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "挂壁·锚扣",
+      "op": "—",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 5301
  },
  {
   "id": "cs_t3_036",
@@ -870,7 +1141,27 @@
   "moves_unresolved": [],
   "weight_tune": "`巨兽差异_183`",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "蚀膜",
+    "cls": "属性壳",
+    "threshold": 7421,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "蚀膜·泛涌",
+      "op": "剥离附加:蚀液膜再生",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 7421
  },
  {
   "id": "cs_t3_037",
@@ -896,7 +1187,27 @@
   "moves_unresolved": [],
   "weight_tune": "`巨兽差异_183`",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "缆结",
+    "cls": "末端件",
+    "threshold": 3976,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "绕柱·紧缠",
+      "op": "—",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 3976
  },
  {
   "id": "cs_t3_038",
@@ -922,7 +1233,27 @@
   "moves_unresolved": [],
   "weight_tune": "`巨兽差异_183`",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "喉囊",
+    "cls": "核心件",
+    "threshold": 7952,
+    "positions_default": {
+     "side": "front",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "震廊·超声",
+      "op": "—",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 7952
  },
  {
   "id": "cs_t3_039",
@@ -948,7 +1279,27 @@
   "moves_unresolved": [],
   "weight_tune": "`巨兽差异_183`",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "磨盘纹",
+    "cls": "属性壳",
+    "threshold": 7421,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "碾道·旋磨",
+      "op": "前摇+1",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 7421
  },
  {
   "id": "cs_t3_040",
@@ -989,7 +1340,44 @@
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "蚀须",
+    "cls": "末端件",
+    "threshold": 5301,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "蚀须·缠凿",
+      "op": "—",
+      "src": "252"
+     }
+    ]
+   },
+   {
+    "part": "持凿臂",
+    "cls": "机动件",
+    "threshold": 7068,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "凿锋·点脉",
+      "op": "前摇+1",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 12369
  },
  {
   "id": "cs_t3_041",
@@ -1463,7 +1851,27 @@
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "悬鳍",
+    "cls": "机动件",
+    "threshold": 7068,
+    "positions_default": {
+     "side": "all",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "气腔·鼓胀",
+      "op": "—",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 7068
  },
  {
   "id": "cs_t3_062",
@@ -1489,7 +1897,27 @@
   "moves_unresolved": [],
   "weight_tune": "`巨兽差异_183`",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "涡身",
+    "cls": "机动件",
+    "threshold": 5785,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "涡身·绞缠",
+      "op": "—",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 5785
  },
  {
   "id": "cs_t3_063",
@@ -1515,7 +1943,27 @@
   "moves_unresolved": [],
   "weight_tune": "`巨兽差异_183`",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "蚀核",
+    "cls": "核心件",
+    "threshold": 8678,
+    "positions_default": {
+     "side": "side",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "蓄爆·滚冲",
+      "op": "—",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 8678
  },
  {
   "id": "cs_t3_064",
@@ -1541,7 +1989,27 @@
   "moves_unresolved": [],
   "weight_tune": "`巨兽差异_183`",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "巨颚",
+    "cls": "末端件",
+    "threshold": 4339,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "伏渊·吞咬",
+      "op": "前摇+1",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 4339
  },
  {
   "id": "cs_t3_065",
@@ -1567,7 +2035,27 @@
   "moves_unresolved": [],
   "weight_tune": "`巨兽差异_183`",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "吸盘",
+    "cls": "机动件",
+    "threshold": 5785,
+    "positions_default": {
+     "side": "all",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "附骨·吸缠",
+      "op": "前摇+1",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 5785
  },
  {
   "id": "cs_t3_066",
@@ -1593,7 +2081,27 @@
   "moves_unresolved": [],
   "weight_tune": "`巨兽差异_183`",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "口器",
+    "cls": "末端件",
+    "threshold": 4339,
+    "positions_default": {
+     "side": "side",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "剥蚀·群咬",
+      "op": "前摇+1",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 4339
  },
  {
   "id": "cs_t3_067",
@@ -1634,7 +2142,44 @@
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "根须",
+    "cls": "核心件",
+    "threshold": 11571,
+    "positions_default": {
+     "side": "all",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "根须·攫地",
+      "op": "—",
+      "src": "252"
+     }
+    ]
+   },
+   {
+    "part": "垂枝",
+    "cls": "末端件",
+    "threshold": 5785,
+    "positions_default": {
+     "side": "all",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "垂枝·鞭笞",
+      "op": "前摇+1",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 17356
  },
  {
   "id": "cs_t3_068",
@@ -2119,7 +2664,27 @@
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "背鳍",
+    "cls": "机动件",
+    "threshold": 5785,
+    "positions_default": {
+     "side": "front",
+     "height": "air"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "背鳍潜行",
+      "op": "—",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 5785
  },
  {
   "id": "cs_t3_088",
@@ -2141,7 +2706,27 @@
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "四角镇石",
+    "cls": "场设",
+    "threshold": 7714,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "remove",
+      "move": "团身·起旋",
+      "op": "—",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 7714
  },
  {
   "id": "cs_t3_089",
@@ -2163,6 +2748,26 @@
   "moves_unresolved": [],
   "weight_tune": "—",
   "duyou_pos": "",
-  "break_bindings": []
+  "break_bindings": [],
+  "parts": [
+   {
+    "part": "窃纹甲",
+    "cls": "属性壳",
+    "threshold": 10800,
+    "positions_default": {
+     "side": "front",
+     "height": "ground"
+    },
+    "break_behavior": [
+     {
+      "tier": "derate",
+      "move": "绞缠·锁缚",
+      "op": "剥离附加:窃纹增甲",
+      "src": "252"
+     }
+    ]
+   }
+  ],
+  "parts_total_threshold": 10800
  }
 ]

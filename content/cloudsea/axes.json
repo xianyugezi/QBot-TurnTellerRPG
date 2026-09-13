@@ -1,0 +1,222 @@
+{
+  "_meta": {
+    "batch": "九期批次 212 资源轴注册",
+    "note": "云海 21 轴注册数据（玩家 17＋怪 4）。本文件为 axes 独立注册段——210 内容包骨架收尾时并 manifest 加载面（stats.json stats 段或本文件直载，归 210 口径）。全部数值键引设计稿 12_全局常量表.md 与 13_职业数值卡 逐卡资源节，零自拟；tick_per_round/tick_floor/on_full 为九期 212 opt-in 扩展字段（缺省零行为）。condition_engine 承载＝var=resource 既有四键条件（[我方资源:ID]/[对方资源:ID]），态势达标（POSTURE.VALUE_RANGE 0-3 全队共享）/气力尽（cs_stamina<=0）零引擎改动纯数据。",
+    "total": 21,
+    "player": 17,
+    "enemy": 4
+  },
+  "cs_charge_wt": {
+    "name": "蓄力阶（战士）",
+    "type": "rage",
+    "icon": "⚔",
+    "base": 0,
+    "max": 3,
+    "reset": "battle",
+    "display": "status_line",
+    "_job": "战士 Warrior"
+  },
+  "cs_chain": {
+    "name": "链值（剑客）",
+    "type": "rage",
+    "icon": "🔗",
+    "base": 0,
+    "max": 5,
+    "reset": "battle",
+    "display": "status_line",
+    "_job": "剑客 Duelist"
+  },
+  "cs_satchel": {
+    "name": "携行包（圣骑士）",
+    "type": "rage",
+    "icon": "🎒",
+    "base": 0,
+    "max": 3,
+    "reset": "battle",
+    "display": "status_line",
+    "_job": "圣骑士 Paladin"
+  },
+  "cs_edge": {
+    "name": "锋锐值（盗贼）",
+    "type": "rage",
+    "icon": "🗡",
+    "base": 0,
+    "max": 100,
+    "reset": "battle",
+    "display": "status_line",
+    "_job": "盗贼 Rogue"
+  },
+  "cs_movement": {
+    "name": "乐章值（诗人）",
+    "type": "rage",
+    "icon": "🎼",
+    "base": 0,
+    "max": 3,
+    "reset": "battle",
+    "display": "status_line",
+    "_job": "吟游诗人 Bard；本命号角 max_mod +1（0-4）"
+  },
+  "cs_recoil": {
+    "name": "反冲槽（骑士）",
+    "type": "rage",
+    "icon": "🛡",
+    "base": 0,
+    "max": 4,
+    "reset": "battle",
+    "display": "status_line",
+    "_job": "骑士 Knight"
+  },
+  "cs_shell": {
+    "name": "晶能弹（枪手）",
+    "type": "rage",
+    "icon": "🔵",
+    "base": 0,
+    "max": 6,
+    "reset": "battle",
+    "display": "status_line",
+    "_job": "枪手 Gunner（双轴之一）"
+  },
+  "cs_heat": {
+    "name": "过热带（枪手）",
+    "type": "rage",
+    "icon": "🔥",
+    "base": 0,
+    "max": 3,
+    "reset": "battle",
+    "display": "status_line",
+    "_job": "枪手 Gunner（节流器；双轴之二）"
+  },
+  "cs_fury": {
+    "name": "形态值（狂战士）",
+    "type": "rage",
+    "icon": "😤",
+    "base": 0,
+    "max": 100,
+    "reset": "battle",
+    "display": "status_line",
+    "_job": "狂战士 Berserker（框架 transform 先例并行）"
+  },
+  "cs_core": {
+    "name": "充能核（守卫）",
+    "type": "rage",
+    "icon": "🔋",
+    "base": 0,
+    "max": 5,
+    "reset": "battle",
+    "display": "status_line",
+    "_job": "守卫 Guardian"
+  },
+  "cs_spore": {
+    "name": "孢子（德鲁伊）",
+    "type": "rage",
+    "icon": "🌿",
+    "base": 0,
+    "max": 3,
+    "reset": "battle",
+    "display": "status_line",
+    "_job": "德鲁伊 Druid；共生杖战技 max_mod +2（0-5）"
+  },
+  "cs_steam": {
+    "name": "蒸汽压力（游侠）",
+    "type": "rage",
+    "icon": "♨",
+    "base": 0,
+    "max": 100,
+    "reset": "battle",
+    "display": "status_line",
+    "_job": "游侠 Ranger"
+  },
+  "cs_deploy": {
+    "name": "架设态（机械师）",
+    "type": "rage",
+    "icon": "🏗",
+    "base": 0,
+    "max": 1,
+    "reset": "battle",
+    "display": "status_line",
+    "_job": "机械师 Artificer（双段资源之一）"
+  },
+  "cs_load": {
+    "name": "装填（机械师）",
+    "type": "rage",
+    "icon": "📦",
+    "base": 0,
+    "max": 2,
+    "reset": "battle",
+    "display": "status_line",
+    "_job": "机械师 Artificer（双段资源之二）"
+  },
+  "cs_charge_arch": {
+    "name": "蓄力阶（弓手）",
+    "type": "rage",
+    "icon": "🏹",
+    "base": 0,
+    "max": 3,
+    "reset": "battle",
+    "display": "status_line",
+    "_job": "弓手 Archer；与战士同名异轴（W-13 行为契约三分界）"
+  },
+  "cs_wind": {
+    "name": "风缆",
+    "type": "rage",
+    "icon": "🪁",
+    "base": 0,
+    "max": 3,
+    "reset": "battle",
+    "display": "status_line",
+    "tick_per_round": 2,
+    "_job": "玩家公共轴；$C.WIND_PER_TURN=2 每回合恢复（tick 自然增长场景）/ $C.WIND_CAP=3 上限 / 御风流 WIND_CAP_GALE=4（max_mod）"
+  },
+  "cs_arcana": {
+    "name": "绝技槽",
+    "type": "rage",
+    "icon": "✨",
+    "base": 0,
+    "max": 100,
+    "reset": "battle",
+    "display": "status_line",
+    "_job": "玩家公共轴；$C.ARCANA_FULL=100 每槽独立 / ARCANA_PER_DMG=6 / ARCANA_PER_TAKEN=4 / ARCANA_ON_BREAK=15 / ARCANA_ON_OVERRIDE=20（215F 绝技 arcana 资源门控）"
+  },
+  "cs_surge": {
+    "name": "潮压",
+    "type": "rage",
+    "icon": "🌊",
+    "base": 0,
+    "max": 20,
+    "reset": "battle",
+    "display": "status_line",
+    "tick_per_round": 2,
+    "on_full": "surge_burst",
+    "_job": "怪侧承载；$C.SURGE.GAIN_PER_ROUND=+2 自然增长（tick）/ THRESHOLD_BASE=20（max_mod=SCALE_BY_TIER 威胁缩放×ELEM_FIRE_COMP 1.15）/ RESET_RATIO=0.30 涌潮后重置"
+  },
+  "cs_stamina": {
+    "name": "气力",
+    "type": "rage",
+    "icon": "😮‍💨",
+    "base": 8,
+    "max": 8,
+    "reset": "battle",
+    "display": "status_line",
+    "_job": "怪侧承载（03 §M3.2B 怪物自身资源轴）；$C.STAMINA.MAX_BASE=8 / SCALE_BY_TIER 五档（max_mod）/ 只出不进（负向增减场景：大招落地扣减、clamp 下限 0）/ 气力尽＝condition [对方资源:cs_stamina]<=0 纯数据"
+  },
+  "cs_override": {
+    "name": "压制量表",
+    "type": "rage",
+    "icon": "🪢",
+    "base": 0,
+    "max": 120,
+    "reset": "battle",
+    "display": "status_line",
+    "_job": "怪侧承载（01 §M1.8 玩家→怪物压力轴，战报样例「压制 96/120」）；压制倒地＝量表满（on_full 场景由装配层裁定）"
+  },
+  "cs_concussion": {
+    "name": "晕眩积蓄（斗士）",
+    "type": "rage",
+    "icon": "💢",
+    "base": 0,
+    "max": 100,
+    "reset": "battle",
+    "display": "status_line",
+    "_job": "怪侧承载、职业归属斗士（13 卡 05：挂在敌方身上的独立硬控槽 0-100）"
+  }
+}

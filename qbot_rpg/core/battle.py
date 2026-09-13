@@ -3666,6 +3666,30 @@ class BattleEngine:
                            "meta": meta if isinstance(meta, dict) else {}})
             cfg["next"] = nxt + every
 
+    def _tick_cloudsea_ailments(self) -> None:
+        """九期211（衰减/递增封顶 hook）：九态积蓄全局回合末衰减。
+
+        statuses 装配面＝content/cloudsea/statuses.json 经引擎内容装配注入
+        _snap["cloudsea_statuses"]（{id: 条目}）；衰减事件流写
+        _snap["ailment_events"]。任一键缺失/形态不合法 → 零操作（可选加载，
+        映射表 §7 登记面；触发/递增数值核在
+        qbot_rpg.core.cloudsea_ailment.CloudseaAilmentState）。
+        """
+        statuses = self._snap.get("cloudsea_statuses")
+        if not isinstance(statuses, dict) or not statuses:
+            return
+        try:
+            from qbot_rpg.core.cloudsea_ailment import tick_from_snapshot  # noqa: PLC0415
+        except Exception:  # noqa: BLE001 模块未装配 → 零操作降级
+            return
+        events = tick_from_snapshot(self._snap, statuses)
+        if events:
+            sink = self._snap.get("ailment_events")
+            if not isinstance(sink, list):
+                sink = []
+                self._snap["ailment_events"] = sink
+            sink.extend(events)
+
     def to_snapshot(self, boundary: Optional[str] = None) -> Dict[str, Any]:
         """战斗快照序列化（1g3 §1.2 字段级：schema_version/snapshot_at/context/
         units/ai_state/combo_state/turn/stats_collector）。全量 JSON 可序列化。

@@ -278,6 +278,8 @@ class ResourceLifecycle:
         nxt = cur + n
         if cap > 0 and nxt > cap:
             nxt = cap  # 封顶：超出部分不累计，不回滚
+        if nxt < 0:
+            nxt = 0  # 九期 212「负向增减」下限：负向变化不破 0（气力/潮压等只出不进口径）
         side_state[axis_id] = nxt
 
     def _gain_pool(
@@ -294,6 +296,8 @@ class ResourceLifecycle:
         nxt = cur + n
         if cap > 0 and nxt > cap:
             nxt = cap  # 每池封顶：超出不累计，不回滚
+        if nxt < 0:
+            nxt = 0  # 九期 212：池级负向变化同下限口径
         pools_state[pool] = nxt
 
     # ------------------------- 施放前检查与消耗（F-R1 施放前段） -------------------------
@@ -454,26 +458,88 @@ class ResourceLifecycle:
         self,
         battle_state: MutableMapping[str, Any],
         axes: Optional[Sequence[str]] = None,
+        frozen_sides: Optional[Sequence[str]] = None,
     ) -> Dict[str, Any]:
-        """回合结束结清（F-R1 回合边界）。
+        """回合结束结清（F-R1 回合边界；九期 212 实装 tick 自然增长）。
 
-        当前契约（细化_6c §1.3）未定义任何「每回合自动变化」字段（无
-        每回合衰减/回复配置项）——本引擎的每回合资源变化只来自 proc 时点
-        （on_turn_start 等，批8B 接线）与被控保留；故本方法现行为 = 保留
-        （零增减，纯幂等钩子）。提供 axes 参数与返回侧状态，供契约后续
-        扩展每回合变化时挂载（保持签名稳定）。返回各侧 resource_state
-        （就地读取，无写入）。
+        九期批次 212 前实现在：契约无「每回合自动变化」字段，本方法为
+        零增减纯幂等钩子。212 起：注册段携带 opt-in 字段 `tick_per_round`
+        （正=增长 / 负=衰减）的轴在回合末按值结清——
+
+        - clamp 区间 [tick_floor, effective_max]（衰减不破 tick_floor、
+          增长不破 max；0=不限轴只 clamp 下限）；
+        - `frozen_sides`（被控侧集合，装配层按 S4「被控不增不减」传入）
+          整侧跳过——被控保留契约不受 tick 破坏；
+        - 满槽检测：注册段带 `on_full` proc 引用且结清后达 effective max
+          的轴收集事件，返回值新增 "on_full_fired" 键（列表，元素
+          {"side"/"axis"/"proc"}），本引擎只收集不执行（零 engine 交叉
+          import），装配层按 M13 season_events/proc 同款消费；
+        - 无 tick_per_round 字段的轴与缺省注册表行为不变（幂等零增减，
+          既有包零影响——opt-in 红线）。
+        返回 {player: state, enemy: state, "on_full_fired": [...]}（就地改写）。
         """
-        del axes  # 预留参数（契约扩展位）；现契约无每回合变化，无操作
+        del axes  # 预留参数（契约扩展位）
+        frozen = {str(s) for s in (frozen_sides or ())}
         if not isinstance(battle_state, Mapping):
             return {}
         rs = battle_state.get(RESOURCE_STATE_KEY)
         if not isinstance(rs, Mapping):
             return {}
         out: Dict[str, Any] = {}
+        fired: List[Dict[str, str]] = []
         for side in ("player", "enemy"):
             side_state = rs.get(side)
-            out[side] = side_state if isinstance(side_state, MutableMapping) else {}
+            if not isinstance(side_state, MutableMapping):
+                out[side] = side_state if isinstance(side_state, Mapping) else {}
+                continue
+            if side in frozen:
+                out[side] = dict(side_state)  # 被控保留（S4）：不增不减
+                continue
+            for axis_id in self._iter_axis_ids():
+                tick = self._tick_of(axis_id)
+                if tick == 0:
+                    continue  # 未配置 tick → 行为不变（幂等）
+                floor = self._tick_floor_of(axis_id)
+                if self.is_pool_axis(axis_id):
+                    pools_state = side_state.get(axis_id)
+                    if not isinstance(pools_state, MutableMapping):
+                        continue  # 未初始化 → 降级跳过（RS-5 精神）
+                    cap = self._pool_max_of(axis_id)
+                    for pool in self.pools_of(axis_id):
+                        cur = self._int_or_none(pools_state.get(pool)) or 0
+                        nxt = cur + tick
+                        if cap > 0 and nxt > cap:
+                            nxt = cap
+                        if nxt < floor:
+                            nxt = floor
+                        pools_state[pool] = nxt
+                else:
+                    cur = self._int_or_none(side_state.get(axis_id)) or 0
+                    cap = self._max_of(axis_id)
+                    nxt = cur + tick
+                    if cap > 0 and nxt > cap:
+                        nxt = cap
+                    if nxt < floor:
+                        nxt = floor
+                    side_state[axis_id] = nxt
+                # 满槽检测（on_full 非空 + 结清后达生效上限）
+                proc = self._on_full_of(axis_id)
+                if proc and self.effective_max(axis_id) > 0:
+                    cur_now = self._int_or_none(
+                        side_state.get(axis_id)
+                        if not self.is_pool_axis(axis_id)
+                        else sum(
+                            self._int_or_none(
+                                (side_state.get(axis_id) or {}).get(p)
+                            )
+                            or 0
+                            for p in self.pools_of(axis_id)
+                        )
+                    )
+                    if cur_now is not None and cur_now >= self.effective_max(axis_id):
+                        fired.append({"side": side, "axis": axis_id, "proc": proc})
+            out[side] = dict(side_state)
+        out["on_full_fired"] = fired
         return out
 
     # ------------------------- 战斗结束清零/保留（F-R1 终段） -------------------------

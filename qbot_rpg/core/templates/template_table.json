@@ -592,6 +592,7 @@
     "battle_hud_tail": "→ {tail}",
     "battle_hud_state_air": "跃空",
     "battle_hud_state_part_broken": "{name}破坏",
+    "battle_hud_state_sep": "丨",
     "basic_skill_brief": "{brief}",
     "basic_skill_sep": "————",
     "investigate_register_gate": "❌ 请先注册角色\n发 注册 <名字> <职业>",

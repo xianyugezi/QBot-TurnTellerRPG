@@ -184,12 +184,11 @@ def _args_string(parsed: Any) -> str:
 def _gate(ctx: Mapping[str, Any]) -> Optional[str]:
     """RUL-08 注册门槛（2026-08-31 QA 修复：/对话 此前缺门槛）。
 
-    本地导入避免跨包循环；ctx["registered"] is False → 拦截文案；缺省视为已注册。
+    R4（2026-09-12）：走 tpl_of(ctx, "basic_register_gate")（内容包可覆盖同键）；
+    ctx["registered"] is False → 拦截文案；缺省视为已注册。
     """
     if ctx.get("registered", True) is False:
-        from .basic_commands import TPL_REGISTER_GATE  # noqa: PLC0415
-
-        return TPL_REGISTER_GATE
+        return tpl_of(ctx, "basic_register_gate")
     return None
 
 

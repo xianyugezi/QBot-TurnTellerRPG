@@ -4,14 +4,15 @@
 终态分区文件删除后这些守卫统一作废 → 本文件以**一条**门禁覆盖同样的防护：
 
   ① 分区文件已删除：core/templates/ 下只剩 __init__.py / base.py / template_table.json
-  ② 表内每个 key 的占位符 ⊆ 聚合白名单（防内容包拼错 key 导致占位符不替换）
+  ② 表内每个 key 的占位符 ⊆ **手工冻结的允许名集**（T6：原自动派生白名单恒真，已弃用）
   ③ 聚合默认表包含全部表内 key（表为唯一存储 → 聚合必须完备）
   ④ base.py 核心键仍在（非迁移范围，不得被误删）
-  ⑤ test_demo 内容包无「表外键」（收敛为仅有意差异：包内 key 必须存在于表内）
+  ⑤ 全部 content/*/templates.json 内容包无「表外键」（T8：原只查 test_demo）
 """
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import pathlib
 import re
@@ -25,6 +26,12 @@ from qbot_rpg.core.templates import (
 _TPL_DIR = pathlib.Path(__file__).resolve().parents[2] / "qbot_rpg" / "core" / "templates"
 _REPO = _TPL_DIR.parents[2]
 _PLACEHOLDER_RE = re.compile(r"\{([a-zA-Z0-9_]+)\}")
+
+# T6 复核修复：手工冻结占位符允许名（独立于表值的对照，见 _template_frozen_sets.py）。
+_FROZEN_PATH = _REPO / "tests" / "unit" / "_template_frozen_sets.py"
+_spec_frozen = importlib.util.spec_from_file_location("template_frozen_sets", _FROZEN_PATH)
+_frozen = importlib.util.module_from_spec(_spec_frozen)  # type: ignore[arg-type]
+_spec_frozen.loader.exec_module(_frozen)  # type: ignore[union-attr]
 
 #: 迁移期 22 个分区文件（终态必须全部删除）
 _MIGRATED_PARTITIONS = (
@@ -44,10 +51,22 @@ def test_partitions_removed() -> None:
 
 
 def test_table_placeholders_covered_by_whitelist() -> None:
-    """② 表内模板块占位符必须在白名单内（否则渲染时不被替换）。"""
+    """② 表内占位符必须落在**手工冻结**的允许名集内（T6：原断言恒真）。
+
+    原 `found ⊆ PLACEHOLDER_WHITELIST[key]` 中右侧由同一份表值自动派生 → 恒真。
+    现改为对照 `_template_frozen_sets.FROZEN_PLACEHOLDERS`：双向相等（表内不得有
+    未登记占位符名；冻结集不得残留表内已不用的名字）。
+    """
+    used: set = set()
     for key, tpl in TABLE_TEMPLATES.items():
         found = set(_PLACEHOLDER_RE.findall(tpl))
-        assert found <= PLACEHOLDER_WHITELIST.get(key, set()), f"{key} 占位符未登记白名单"
+        extra = set(PLACEHOLDER_WHITELIST.get(key, set())) - _frozen.FROZEN_PLACEHOLDERS
+        assert not extra, f"{key} 自动派生白名单含未登记占位符：{extra}"
+        used |= found
+    assert used == set(_frozen.FROZEN_PLACEHOLDERS), (
+        f"表内占位符名漂移：未登记 {sorted(used - set(_frozen.FROZEN_PLACEHOLDERS))} / "
+        f"冻结集陈旧 {sorted(set(_frozen.FROZEN_PLACEHOLDERS) - used)}"
+    )
 
 
 def test_aggregate_contains_all_table_keys() -> None:
@@ -61,11 +80,30 @@ def test_base_templates_still_present() -> None:
     assert DEFAULT_TEMPLATES.get("register_gate"), "base 核心键丢失"
 
 
-def test_test_demo_pack_has_no_unknown_keys() -> None:
-    """⑤ test_demo 内容包无表外键（收敛为仅有意差异）。"""
-    pack = json.loads((_REPO / "content" / "test_demo" / "templates.json").read_text())
-    extra = sorted(k for k in pack if k not in TABLE_TEMPLATES)
-    assert extra == [], f"内容包含表外旧键（应删除或补表）: {extra[:10]}"
+def test_all_content_packs_have_no_unknown_keys() -> None:
+    """⑤ T8：**全部** content/*/templates.json 无表外键（原只查 test_demo）。
+
+    内容包拼错/表删键时，`resolve_templates` 会静默丢弃（L2 已加 warning），本门禁
+    遍历所有内容包把该问题前移到测试期；并顺手断言 `resolve_templates(strict=True)`
+    对表外包抛错（校验脚本可用）。
+    """
+    from qbot_rpg.core.templates import resolve_templates
+
+    packs = sorted((_REPO / "content").glob("*/templates.json"))
+    assert packs, "未发现任何 content/*/templates.json（路径/布局变动？）"
+    problems: dict[str, list[str]] = {}
+    for path in packs:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        tpl_raw = doc.get("templates") if isinstance(doc, dict) else None
+        pack = tpl_raw if isinstance(tpl_raw, dict) else {}
+        try:
+            resolve_templates(pack, strict=True)     # 表外键 → ValueError（校验脚本口径）
+        except ValueError as exc:
+            problems[path.parent.name] = [str(exc)]
+        extra = sorted(k for k in pack if k not in TABLE_TEMPLATES)
+        if extra:
+            problems.setdefault(path.parent.name, []).extend(extra[:10])
+    assert problems == {}, f"内容包含表外旧键（应删除或补表）: {problems}"
 
 
 def test_table_key_count_not_regressed() -> None:

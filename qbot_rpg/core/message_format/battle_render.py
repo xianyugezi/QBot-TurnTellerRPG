@@ -473,7 +473,11 @@ def render_action_hint(
     # 「状态全量显示不会影响玩家阅读效果，不需要换行」；本行不受 14 全角结构化行约束）
     _states = [str(s) for s in (target_states or ()) if str(s)]
     if _states:
-        line = tpl_of(ctx, "battle_hud_enemy_status", {"status": "丨".join(_states)})
+        # L4 复核修复（2026-09-12）：连接符由表键承载（原硬编码 `丨`，内容包无法改）。
+        _sep = tpl_of(ctx, "battle_hud_state_sep")
+        if not _sep:
+            _sep = "丨"
+        line = tpl_of(ctx, "battle_hud_enemy_status", {"status": str(_sep).join(_states)})
         if line:
             lines.append(line)
     # ⑧ 尾行（`→ 攻击 或 攻击 <技能名>`）：战斗结束时置底——本块不出，由结束消息末尾补

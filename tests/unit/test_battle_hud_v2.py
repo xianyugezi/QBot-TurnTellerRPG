@@ -24,6 +24,7 @@ from qbot_rpg.core.message_format.battle_render import (
     _fmt_pct,
     _render_effect_lines,
     _render_action_hint_from_report,
+    _status_display_name,
     render_action_hint,
 )
 
@@ -206,6 +207,56 @@ def test_effect_lines_unknown_status_falls_back_to_id() -> None:
 
 
 # ---------------------------------------------------------------------------
+# ⑥ T5：`_status_display_name` 的 ctx["statuses"] 分支
+# ---------------------------------------------------------------------------
+
+def test_status_display_name_ctx_statuses_mapping() -> None:
+    """T5：事件无 name → 查 ctx["statuses"]（映射/字符串/缺 name 三种回落）。"""
+    ctx_mapping = {"statuses": {"burn": {"name": "燃烧"}}}
+    assert _status_display_name({"type": "dot_damage", "status": "burn"}, ctx_mapping) == "燃烧"
+    # 字符串形态：直接作为展示名
+    assert _status_display_name({"status": "burn"}, {"statuses": {"burn": "灼烧"}}) == "灼烧"
+    # Mapping 缺 name → 回落 id
+    assert _status_display_name({"status": "burn"}, {"statuses": {"burn": {}}}) == "burn"
+    # 无 statuses / 非 Mapping ctx → 回落 id
+    assert _status_display_name({"status": "burn"}, {}) == "burn"
+    assert _status_display_name({"status": "burn"}, None) == "burn"
+    # 事件自带 name 优先于 ctx 查表
+    assert _status_display_name(
+        {"status": "burn", "name": "事件名"}, ctx_mapping) == "事件名"
+
+
+def test_effect_lines_use_ctx_statuses_name() -> None:
+    """T5 端到端：ctx["statuses"] 提供展示名 → effect 行出中文名（事件不带 name）。"""
+    src = SimpleNamespace(effect_events=(
+        {"type": "dot_damage", "side": "player", "status": "burn", "value": 4},
+        {"type": "status_expired", "side": "enemy", "status": "rage"},
+    ))
+    lines = _render_effect_lines(src, ctx={
+        "statuses": {"burn": {"name": "燃烧"}, "rage": "狂暴"},
+    })
+    assert lines == [
+        "【持续效果】燃烧 生效，你受到 4 伤害。",
+        "【效果失效】狂暴 效果时间结束。",
+    ]
+
+
+# ---------------------------------------------------------------------------
+# T1：defer_tail（终局尾提示置底）——HUD 块不出尾行
+# ---------------------------------------------------------------------------
+
+def test_hud_defer_tail_omits_tail_line() -> None:
+    """T1：defer_tail=True → HUD 块不出「→ 攻击…」尾行（改由结束消息末尾补）。"""
+    base = dict(player=21, enemy=7, player_max_hp=30, enemy_max_hp=25, enemy_name="史莱姆")
+    with_tail = _render_action_hint_from_report(SimpleNamespace(**base, defer_tail=False))
+    assert "→ 攻击" in with_tail
+    deferred = _render_action_hint_from_report(SimpleNamespace(**base, defer_tail=True))
+    assert "→ 攻击" not in deferred
+    # 其余 HUD 行不受影响
+    assert "剩余生命：21/30" in deferred and "怪物生命：7/25" in deferred
+
+
+# ---------------------------------------------------------------------------
 # 接线层取数（battle_hud_payload）
 # ---------------------------------------------------------------------------
 
@@ -251,3 +302,53 @@ def test_effect_events_flow_from_report() -> None:
     assert enriched.effect_events == evs
     lines: List[str] = _render_effect_lines(enriched)
     assert lines == ["【持续效果】流血 生效，你受到 1 伤害。"]
+
+
+# ---------------------------------------------------------------------------
+# T9（复核修复 2026-09-12）：battle_hud_payload 对**真实** battle_state() 键名取数
+# ---------------------------------------------------------------------------
+
+def test_battle_hud_payload_from_real_engine_snapshot(seed: int) -> None:
+    """T9：真实 BattleEngine 跑一回合 → battle_state() → payload 真键名命中。
+
+    原测试用手造 snap，`battle_state()` 一旦改键名（如 mp→mana / shield 结构变动）
+    不会被发现。本测试先断言真快照含 payload 读取的键路径，再断言取值一致；
+    最后对真快照做部位破坏/跃空/护盾变异，验证载荷映射（真键 → HUD 原始数据）。
+    """
+    from qbot_rpg.commands.battle_commands import battle_hud_payload
+    from qbot_rpg.core.battle import BattleEngine
+
+    player = {"max_hp": 500, "hp": 500, "max_mp": 100, "mp": 100,
+              "atk": 100, "dfn": 50, "mag": 50, "spd": 50, "name": "阿伟"}
+    enemy = {"max_hp": 400, "hp": 400, "atk": 80, "dfn": 40, "mag": 30, "spd": 40,
+             "name": "脊冢幼兽",
+             "parts": [{"id": "p1", "name": "左翼"}, {"id": "p2", "name": "尾部"}]}
+    eng = BattleEngine().start(dict(player), dict(enemy), random_seed=seed)
+    eng.player_act({"type": "normal"})
+    snap = eng.battle_state()
+
+    # ① 真快照键路径（payload 消费点）
+    assert snap["player"]["mp"] == 100 and snap["player"]["max_mp"] == 100
+    assert "shield" in snap["player"]["defenses"]
+    assert "shield" in snap["enemy"]["defenses"]
+    assert snap["combat_position"]["enemy"]["height"] == "ground"
+    assert [p["id"] for p in snap["enemy"]["parts"]] == ["p1", "p2"]
+    assert snap["parts_state"]["p1"]["broken"] is False
+
+    hud = battle_hud_payload(snap)
+    assert hud["player_mp"] == snap["player"]["mp"]
+    assert hud["player_mp_max"] == snap["player"]["max_mp"]
+    assert hud["player_shield"] == snap["player"]["defenses"]["shield"]["remaining"]
+    assert hud["enemy_broken_parts"] == ()
+    assert hud["enemy_air"] is False
+
+    # ② 变异真快照（真实键路径）→ 部位破坏展示名 / 跃空 / 护盾剩余
+    snap["parts_state"]["p1"]["broken"] = True
+    snap["parts_state"]["p2"]["broken"] = True
+    snap["combat_position"]["enemy"]["height"] = "air"
+    snap["player"]["defenses"]["shield"]["remaining"] = 7
+    snap["player"]["defenses"]["shield"]["turns"] = 2
+    hud2 = battle_hud_payload(snap)
+    assert hud2["enemy_broken_parts"] == ("左翼", "尾部")
+    assert hud2["enemy_air"] is True
+    assert hud2["player_shield"] == 7 and hud2["player_shield_turns"] == 2

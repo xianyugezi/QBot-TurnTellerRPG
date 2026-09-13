@@ -421,7 +421,12 @@ def test_codex_category_page_rumor_mark_after_unlock() -> None:
 # 2026-09-12 专项·引擎文案1：中性文本池/泛化缺省 模板表驱动
 # ---------------------------------------------------------------------------
 def test_neutral_pool_table_driven_and_content_override() -> None:
-    """零暗示池主路径走模板表 env_neutral_pool_1..4；ctx["templates"] 覆盖生效。"""
+    """零暗示池主路径走模板表 env_neutral_pool_1..4；ctx["templates"] 覆盖生效。
+
+    L1 复核修复（2026-09-12）：局部覆盖 dict 的**缺 key** 回落默认表（不再整池静默
+    塌缩为空串）；只有显式置空串才算「该条为空」，四键全清空才触发本地常量兜底。
+    """
+    from qbot_rpg.core.environment_lore import _NEUTRAL_POOL_KEYS
     from qbot_rpg.core.templates import DEFAULT_TEMPLATES
 
     # 无 templates（裸 ctx）+ 无 rng → 全量表池首条（不再是模块内硬编码）
@@ -429,8 +434,11 @@ def test_neutral_pool_table_driven_and_content_override() -> None:
     # 内容包覆盖 → 覆盖值优先（池化随机语义不变：单条池取该条）
     assert ambient_context({"templates": {"env_neutral_pool_1": "【覆盖】池首句。"}}, None) \
         == "【覆盖】池首句。"
-    # 兜底链：表缺键（内容包只给空串）→ 本地常量元组
+    # L1 契约：局部覆盖（仅 key1 显式空）→ 其余键回落默认表 → 池 = 表 2..4，取首条
     assert ambient_context({"templates": {"env_neutral_pool_1": ""}}, None) \
+        == DEFAULT_TEMPLATES["env_neutral_pool_2"]
+    # 兜底链：四键全显式空串 → 表驱动池为空 → 本地常量元组（绝不为空，TC-09）
+    assert ambient_context({"templates": {k: "" for k in _NEUTRAL_POOL_KEYS}}, None) \
         == DEFAULT_TEMPLATES["env_neutral_pool_1"]
 
 

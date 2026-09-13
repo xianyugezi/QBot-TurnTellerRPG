@@ -156,7 +156,9 @@ UNEQUIP_CMD = "卸下"
 
 # RUL-08 注册门槛（4f §1.4 / TC-05；/帮助 豁免见 B6；模板配置化：basic_register_gate 可内容包覆盖）
 # 批5·路O（2026-09-12）：文案与新规范统一（免斜杠、拆两行），模板 key = basic_register_gate
-TPL_REGISTER_GATE = "❌ 请先创建角色\n发 注册 名字 职业"
+# R4 复核修复（2026-09-12）：常量不再写死字面量，而是**取表默认值**（唯一源=全量表）——
+# 10 个兄弟模块的 _gate 已统一改走 tpl_of(ctx, "basic_register_gate")（内容包可覆盖）。
+TPL_REGISTER_GATE = tpl_of(None, "basic_register_gate")
 
 # /背包 空背包（4f §3.4 边界：对齐 L1353 反向兜底；模板配置化：basic_empty_bag）
 TPL_EMPTY_BAG = "❌ 背包空空如也"

@@ -20,7 +20,7 @@ import json
 import logging
 import re
 from pathlib import Path
-from typing import Any, Dict, Mapping, Optional
+from typing import Any, Dict, List, Mapping, Optional
 
 from qbot_rpg.core.templates.base import DEFAULT_TEMPLATES as _BASE_TEMPLATES
 from qbot_rpg.core.templates.base import PLACEHOLDER_WHITELIST as _BASE_WHITELIST
@@ -83,24 +83,44 @@ def _safe_format(template: str, data: Mapping[str, Any]) -> str:
     return _PLACEHOLDER_RE.sub(_sub, template)
 
 
-def resolve_templates(content_overrides: Any = None) -> Dict[str, Any]:
+def resolve_templates(content_overrides: Any = None, *, strict: bool = False) -> Dict[str, Any]:
     """内容包 templates.json 覆盖默认模板（深合并，未写 key 用默认）。
 
     content_overrides: Registry templates_raw / dict / None。仅接受 dict 且仅合并
-    已存在 key（未知 key 忽略，防内容包拼错引入渲染异常）。
+    已存在 key（未知 key 跳过，防内容包拼错引入渲染异常）。
+
+    L2 复核修复（2026-09-12）：未知 key 不再**静默**忽略——逐键记 warning（内容包
+    拼错/表删键可见）；`strict=True` 时改为抛 `ValueError`，供内容包校验脚本当门禁用
+    （运行时调用保持 strict=False，绝不因内容包多写键而中断）。
     """
     merged = dict(DEFAULT_TEMPLATES)
+    unknown: List[str] = []
     if isinstance(content_overrides, Mapping):
         for key, val in content_overrides.items():
-            if key in merged and isinstance(val, str):
-                merged[key] = val
+            if key in merged:
+                if isinstance(val, str):
+                    merged[key] = val
+            else:
+                unknown.append(str(key))
+    if unknown:
+        if strict:
+            raise ValueError(f"内容包模板键不在表内（拼错/已删？）：{sorted(unknown)[:20]}")
+        for key in unknown:
+            _LOGGER.warning("内容包模板键不在表内，已忽略：%s", key)
     return merged
 
 
 def render_template(templates: Mapping[str, Any], key: str,
                     data: Mapping[str, Any]) -> str:
-    """按 key 渲染模板（缺失 key/模板 → 返回空串不崩）。"""
+    """按 key 渲染模板（缺失 key/模板 → 回落内置默认表；仍缺 → 空串不崩）。
+
+    L1 复核修复（2026-09-12）：`templates` 为**局部覆盖 dict**（或缺 key）时，原实现
+    直接返回空串 → 整行/整块静默消失。现回落 `DEFAULT_TEMPLATES.get(key)`；仅当默认表
+    也没有该 key 时才返回空串。内容包显式置空串（`""`）仍按覆盖生效（不回退）。
+    """
     tpl = templates.get(key)
+    if not isinstance(tpl, str):
+        tpl = DEFAULT_TEMPLATES.get(key)
     if not isinstance(tpl, str):
         return ""
     return _safe_format(tpl, data)

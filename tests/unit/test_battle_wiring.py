@@ -460,3 +460,32 @@ def test_batch_alone_still_renders_effect_events(start_battle) -> None:
     pipeline = bc.BattlePipeline.from_ctx(ctx)
     sent = bc.dispatch_batch(eng, report, pipeline, ctx)   # 默认 render_effect_events=True
     assert any("【效果失效】" in seg for seg in sent), sent
+
+
+# ---------------------------------------------------------------------------
+# T1：defer_tail 全链路（终局尾提示置底）
+# ---------------------------------------------------------------------------
+
+def test_run_battle_action_passes_defer_tail_on_terminal(start_battle, monkeypatch) -> None:
+    """T1 全链路：`_run_battle_action` 终局（report.ended）→ `_without_npc_outcomes`
+    收到 `defer_tail=True`（尾提示由结束消息置底，战斗段 HUD 不再出尾行）。"""
+    sender = RecordingSender()
+    eng = start_battle(enemy=WEAK_ENEMY)               # 一击必杀 → 本拍 ended
+    ctx = make_ctx(sender, engine=eng)
+    seen: dict = {}
+    real = bc._without_npc_outcomes
+
+    def spy(report, **kw):
+        seen.update(kw)
+        return real(report, **kw)
+
+    monkeypatch.setattr(bc, "_without_npc_outcomes", spy)
+    res = bc._run_battle_action(ctx, {"type": "normal"})
+    assert res["ok"] is True
+    assert seen, "_without_npc_outcomes 未被调用（测试驱动路径不对）"
+    assert seen.get("defer_tail") is True
+    # 尾提示只出现在**结束消息**（最后一段）末尾；战斗段 HUD 均不出尾行
+    assert sender.calls, "终局应至少发送一段"
+    assert sender.calls[-1].split("\n")[-1] == "→ 攻击 或 攻击 <技能名>", sender.calls[-1]
+    for seg in sender.calls[:-1]:
+        assert "→ 攻击" not in seg, f"非结束段不应出尾行：{seg!r}"

@@ -367,3 +367,25 @@ def test_player_act_keeps_pre_ready_effect_events(monkeypatch) -> None:
     assert calls["n"] >= 1
     assert any(ev.get("type") == "status_expired" for ev in report.effect_events), \
         "玩家拍前 NPC 连锁的 effect_events 被清空时序吞掉"
+
+
+# ---------------------------------------------------------------------------
+# R2（复核修复 2026-09-12）：status_expired 事件随 turn_end_log 存档/回灌保真
+# ---------------------------------------------------------------------------
+
+def test_status_expired_turn_end_log_survives_snapshot_roundtrip(seed) -> None:
+    """R2：`turn_end_log` 新增事件类型 status_expired 可 JSON 存档并 from_snapshot 回灌。
+
+    tick_turn_end 会把归零状态写成 status_expired 追加进 `_snap["turn_end_log"]`；
+    该键随快照深拷贝携带。本测试锁定「存档体积/旧读方类型假设」不破坏往返保真。
+    """
+    import json
+
+    eng = BattleEngine().start(dict(PLAYER), dict(ENEMY), random_seed=seed)
+    eng.player_act("normal")
+    entry = {"type": "status_expired", "side": "enemy", "status": "rage", "name": "狂暴"}
+    eng._snap.setdefault("turn_end_log", []).append(entry)
+
+    archived = json.loads(json.dumps(eng.to_snapshot(), ensure_ascii=False))
+    restored = BattleEngine.from_snapshot(archived)
+    assert restored.battle_state().get("turn_end_log") == [entry]

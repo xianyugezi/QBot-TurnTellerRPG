@@ -136,7 +136,7 @@ def _gate(ctx: Mapping[str, Any]) -> Optional[str]:
     2026-08-31 QA 修复：/商店 /购买 /出售 此前缺门槛，未注册玩家可直接浏览/交易。
     """
     if ctx.get("registered", True) is False:
-        return TPL_REGISTER_GATE
+        return tpl_of(ctx, "basic_register_gate")
     return None
 
 

@@ -13,8 +13,11 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import logging
 import pathlib
 import re
+
+import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 TABLE = REPO / "qbot_rpg" / "core" / "templates" / "template_table.json"
@@ -22,6 +25,12 @@ _CHECK = REPO / "scripts" / "check_template_width.py"
 _spec = importlib.util.spec_from_file_location("check_template_width_mod", _CHECK)
 _mod = importlib.util.module_from_spec(_spec)  # type: ignore[arg-type]
 _spec.loader.exec_module(_mod)  # type: ignore[union-attr]
+
+# T6/T7 复核修复：手工冻结集合（独立于表值的第三方对照，见该文件说明）。
+_FROZEN_PATH = REPO / "tests" / "unit" / "_template_frozen_sets.py"
+_spec_frozen = importlib.util.spec_from_file_location("template_frozen_sets", _FROZEN_PATH)
+_frozen = importlib.util.module_from_spec(_spec_frozen)  # type: ignore[arg-type]
+_spec_frozen.loader.exec_module(_frozen)  # type: ignore[union-attr]
 
 
 def _doc():
@@ -58,22 +67,52 @@ def test_content_pack_can_cover_table_key():
     assert merged[key] == "覆盖样例"
 
 
-def test_whitelist_derived():
-    """白名单派生：表 key 在白名单内，且登记集合 ⊇ 文本占位符。"""
+def test_whitelist_matches_frozen_allowlist():
+    """T6：占位符名必须等于**手工冻结**的期望集合（原「⊆ 自动派生白名单」恒真）。
+
+    表值占位符（全局并集）与 ``_template_frozen_sets.FROZEN_PLACEHOLDERS`` 双向相等：
+      - 表内出现未登记占位符名（拼错/新机制）→ 失败，必须在冻结集显式登记；
+      - 冻结集有表内已不用的名字（陈旧）→ 失败，鞭策同步清理。
+    逐键再断言自动派生白名单只含冻结名（派生白名单不得超出允许名集）。
+    """
     from qbot_rpg.core.templates import PLACEHOLDER_WHITELIST
 
+    used: set = set()
     for key, text in _doc()["templates"].items():
-        assert key in PLACEHOLDER_WHITELIST, f"缺白名单：{key}"
         phs = set(re.findall(r"\{([a-zA-Z0-9_]+)\}", text))
-        assert phs <= set(PLACEHOLDER_WHITELIST[key]), f"白名单不一致：{key}"
+        used |= phs
+        extra = set(PLACEHOLDER_WHITELIST[key]) - _frozen.FROZEN_PLACEHOLDERS
+        assert not extra, f"{key} 白名单含未登记占位符：{extra}"
+    assert used == set(_frozen.FROZEN_PLACEHOLDERS), (
+        f"占位符名集合漂移：新增 {sorted(used - set(_frozen.FROZEN_PLACEHOLDERS))} / "
+        f"冻结集陈旧 {sorted(set(_frozen.FROZEN_PLACEHOLDERS) - used)}"
+    )
 
 
 def test_width_no_fail():
-    """宽度校验：表内 0 FAIL（14 全角封顶；WARN 为提示，各批人工核大数值场景）。"""
+    """宽度校验：表内 0 FAIL（14 全角封顶；WARN 由独立冻结清单门禁，见下条）。"""
     fails, _warns = _mod.scan(TABLE)
     assert not fails, "宽度 FAIL：\n" + "\n".join(
         f"{r['key']} L{r['line_no']} {r['half']}/28 {r['line']!r}" for r in fails[:20]
     )
+
+
+def test_width_warn_matches_frozen_allowlist():
+    """T7：WARN 集合 == 显式冻结豁免清单 → 新增 WARN 直接失败。
+
+    新增 WARN 的正确处理：改窄该行，或在 template_table.json 的 ``meta.prose_keys``
+    显式登记豁免（登记后扫描器整键跳过、不再产生 WARN）。此处同时断言 WARN 键未被
+    prose 豁免（二者口径不得重叠）。
+    """
+    _fails, warns = _mod.scan(TABLE)
+    actual = {(r["key"], r["line_no"], r["half_est"]) for r in warns}
+    expected = set(_frozen.WIDTH_WARN_ALLOWLIST)
+    assert actual == expected, (
+        f"宽度 WARN 漂移：新增 {sorted(actual - expected)} / 已消除未删登记 "
+        f"{sorted(expected - actual)}；新增 WARN 须改窄或登记 meta.prose_keys"
+    )
+    prose = set((_doc().get("meta") or {}).get("prose_keys") or {})
+    assert not (prose & {r["key"] for r in warns}), "WARN 键不应同时登记 prose_keys 豁免"
 
 
 def test_derived_line_registered_as_intentional_exemption():
@@ -125,3 +164,41 @@ def test_hud_lines_registered_as_intentional_exemption():
     warned = {r["key"] for r in warns}
     assert not (warned & {"battle_hud_player_hp", "battle_hud_player_mp",
                           "battle_hud_enemy_hp"})
+
+
+# ---------------------------------------------------------------------------
+# L1/L2（复核修复 2026-09-12）：缺 key 回落默认表 + 未知键 warning/strict
+# ---------------------------------------------------------------------------
+
+
+def test_render_template_falls_back_to_default_for_partial_map():
+    """L1：局部覆盖 templates 缺 key → 回落 DEFAULT_TEMPLATES（不再静默返空串）。
+
+    契约边界：
+      - 覆盖 dict 缺 key → 默认表值；
+      - 覆盖 dict 显式置空串 → 仍按覆盖生效（空行语义，不回退）；
+      - 默认表也没有的 key → 空串。
+    """
+    from qbot_rpg.core.templates import DEFAULT_TEMPLATES, render_template, tpl_of
+
+    key = "basic_register_gate"
+    assert render_template({}, key, {}) == DEFAULT_TEMPLATES[key]
+    assert tpl_of({"templates": {"unrelated_key": "x"}}, key) == DEFAULT_TEMPLATES[key]
+    assert tpl_of({"templates": {key: "自定义门槛"}}, key) == "自定义门槛"
+    assert tpl_of({"templates": {key: ""}}, key) == ""
+    assert render_template({}, "definitely_not_a_key_xyz", {}) == ""
+
+
+def test_resolve_templates_warns_on_unknown_key(caplog):
+    """L2：内容包未知 key 记 warning（不再静默）；strict=True 抛错供校验脚本用。"""
+    from qbot_rpg.core.templates import resolve_templates
+
+    with caplog.at_level(logging.WARNING, logger="qbot_rpg.core.templates"):
+        merged = resolve_templates({"no_such_tpl_key_xyz": "拼错", "basic_register_gate": "覆盖"})
+    assert merged["basic_register_gate"] == "覆盖"
+    assert "no_such_tpl_key_xyz" not in merged
+    assert any("no_such_tpl_key_xyz" in r.getMessage() for r in caplog.records), \
+        "未知 key 未记 warning"
+
+    with pytest.raises(ValueError, match="不在表内"):
+        resolve_templates({"no_such_tpl_key_xyz": "拼错"}, strict=True)

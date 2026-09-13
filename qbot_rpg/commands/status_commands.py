@@ -44,7 +44,8 @@ ctx 消费契约（装配层 make_context 注入；未注入字段按缺省兜�
   3) 满级判定：level ≥ level_cap 或 exp_next == 0（LVL-11 口径）→ 【已满级】。
   4) 效果行格式 `{名} {剩余}/{持续}（来源：{来源}）`：remaining 必填；duration/total 缺省
      时仅显 `{剩余}回合`；source 缺省时省略「（来源：…）」；>5 个追加 `还有 N 个状态`。
-  5) 未注册拦截走 RUL-08 门槛（STT-05 ④，非豁免）：复用 basic_commands.TPL_REGISTER_GATE。
+  5) 未注册拦截走 RUL-08 门槛（STT-05 ④，非豁免）：走 basic_register_gate 表键
+     （R4 收敛，内容包可覆盖）。
 """
 
 from __future__ import annotations
@@ -57,7 +58,6 @@ from qbot_rpg.data.player import PlayerAttributes
 
 # 同包兄弟模块：相对导入（G0 架构门禁不产生 `qbot_rpg.commands` 前缀反向依赖边；
 # 同层兄弟引用架构合规，与 sender.py 同口径）。
-from .basic_commands import TPL_REGISTER_GATE
 from .basic_commands import _stat_name, _stat_order  # 属性全量渲染 helper（对齐 /角色 口径）
 # M12.5/veinborn 收口：装备区复用 basic_commands 槽位/装备 helper（8 槽自定义支持）
 from .basic_commands import _equipment_map, _slot_order, equip_line
@@ -110,7 +110,7 @@ def _gate(ctx: Mapping[str, Any]) -> Optional[str]:
     """RUL-08 注册门槛（STT-05 ④ 非豁免）：ctx["registered"] is False → 拦截文案；
     缺省视为已注册（对齐 basic_commands 工程补白 7）。"""
     if ctx.get("registered", True) is False:
-        return TPL_REGISTER_GATE
+        return tpl_of(ctx, "basic_register_gate")
     return None
 
 

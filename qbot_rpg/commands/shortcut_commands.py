@@ -35,7 +35,7 @@ ctx 消费契约（装配层 make_context 注入；未注入字段按缺省兜�
   3) 列表尾段用 CakeGame 式（render_cake_tail：当前页 + Tip），对齐 /背包 /角色 等列表尾段
      统一口径（2026-08-27 用户拍板），不再自造 TPL-08 页脚。
   4) 未注册拦截走 RUL-08 门槛（RUL-08：任何游玩指令；/帮助 豁免 B6，快捷指令非豁免）：
-     复用 basic_commands.TPL_REGISTER_GATE。
+     复用 basic_register_gate 表键（R4 收敛，内容包可覆盖）。
 """
 
 from __future__ import annotations
@@ -52,7 +52,6 @@ from qbot_rpg.core.templates import tpl_of  # 消息模板配置化（2026-08-31
 
 # 同包兄弟模块：相对导入（G0 架构门禁不产生 `qbot_rpg.commands` 前缀反向依赖边；
 # 同层兄弟引用架构合规，与 sender.py 同口径）。
-from .basic_commands import TPL_REGISTER_GATE
 from .parsers import parse_int
 from .router import CommandSpec
 from .sender import format_tpl12
@@ -97,7 +96,7 @@ def _gate(ctx: Mapping[str, Any]) -> Optional[str]:
     """RUL-08 注册门槛（工程补白 4）：ctx["registered"] is False → 拦截文案；
     缺省视为已注册（对齐 basic_commands 工程补白 7）。"""
     if ctx.get("registered", True) is False:
-        return TPL_REGISTER_GATE
+        return tpl_of(ctx, "basic_register_gate")
     return None
 
 

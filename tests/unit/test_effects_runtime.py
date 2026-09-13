@@ -246,6 +246,45 @@ def test_c9_dual_duration_dimensions():
     assert rt.find_status("enemy", "e") is not None  # -1 维永不被清
 
 
+# ---------------- T10（复核修复 2026-09-12）：tick_turns 返回值 + status_expired 事件 ----
+
+
+def test_tick_turns_returns_only_zeroed_and_skips_permanent_dims():
+    """T10：tick_turns 只返回**因 turns 归零被移除**的实例；turns==-1/0 不返回也不清。"""
+    rt = eff_rt(
+        two=sdef("two", "两回合", duration={"turns": 2, "charges": 0}),
+        forever=sdef("forever", "永续", duration={"turns": -1, "charges": 0}),
+    )
+    rt.apply_status("two", "enemy", source="two", attacker="player", force=True)
+    rt.apply_status("forever", "enemy", source="forever", attacker="player", force=True)
+    # turns==0（无限维）：apply_status 会把 0 归一为 1，故直接挂原始实例锁定该分支；
+    # name 字段用于 HUD 失效行展示名（同 _new_instance 形态）。
+    rt.status_state["enemy"].append(
+        {"status_id": "zero", "name": "零维", "turns": 0, "charges": 0})
+
+    assert rt.tick_turns("enemy") == []                       # two 2 → 1，未归零不返回
+    removed = rt.tick_turns("enemy")
+    assert [i["status_id"] for i in removed] == ["two"]       # 1 → 0 移除并返回
+    assert "name" in removed[0]                               # 带展示名（HUD 失效行数据源）
+    for _ in range(5):
+        assert rt.tick_turns("enemy") == []                   # -1/0 维反复 tick 都不返回
+    assert rt.find_status("enemy", "forever") is not None
+    assert any(i.get("status_id") == "zero" for i in rt.status_instances("enemy"))
+
+
+def test_tick_turn_end_emits_status_expired_with_side_and_name():
+    """T10：tick_turn_end 把 tick_turns 归零实例转成 status_expired（带 side/name）。"""
+    rt = eff_rt(one=sdef("one", "瞬时 buff", duration={"turns": 1, "charges": 0}))
+    rt.apply_status("one", "enemy", source="a", attacker="player", force=True)
+
+    log = tick_turn_end(base_snapshot(), rt)
+    expired = [e for e in log if e.get("type") == "status_expired"]
+    assert expired, f"未产出 status_expired：{log}"
+    assert expired[0]["side"] == "enemy"
+    assert expired[0]["status"] == "one"
+    assert expired[0]["name"] == "瞬时 buff"
+
+
 def test_c10_hit_rate_and_resist():
     rt = eff_rt(weak=sdef("weak", "虚弱", hit_rate=100))
     rt.apply_status("weak", "enemy", source="a", attacker="player",

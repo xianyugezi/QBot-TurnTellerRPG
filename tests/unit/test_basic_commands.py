@@ -856,3 +856,92 @@ def test_demo_combo_variant_skills_get_fallback_tags():
     ctx = make_ctx()
     assert "【推进】" in bc._derived_tags(by_id["blade_dance"], ctx)
     assert "【保留】" in bc._derived_tags(by_id["calm_fury"], ctx)
+
+
+# ---------------------------------------------------------------------------
+# T4（复核修复 2026-09-12）：`_derived_tags` 全分支 + brief 非空不落兜底
+# ---------------------------------------------------------------------------
+
+def test_derived_tags_all_mechanism_branches():
+    """T4：逐个机制分支断言（标签文案经表键取，避免写死中文）。"""
+    from qbot_rpg.core.templates import tpl_of
+
+    def label(tid: str) -> str:
+        return tpl_of(None, bc._SKILL_TAG_KEYS[tid])
+
+    def tags(defn):
+        return bc._derived_tags(defn, make_ctx())
+
+    assert tags({}) == []                                   # 无机制 → 无标签
+    assert tags({"kind": "damage"}) == [label("damage")]
+    assert tags({"power": 100}) == [label("damage")]        # power 亦触发伤害
+    assert label("cost") in tags({"mp_cost": 5})
+    assert label("cost") in tags({"consume_marks": ["m1"]})
+    assert label("cost") in tags({"energy_cost": {"focus": 1}})
+    assert tags({"tag": "combo"}) == [label("combo")]
+    assert tags({"tag": "combo_preserve"}) == [label("combo_preserve")]
+    assert tags({"tag": "combo_push"}) == [label("combo_push")]
+    assert tags({"tag": "none"}) == []
+    assert label("derive") in tags({"chain_refs": ["c1"]})
+    assert label("air") in tags({"air_policy": "jump"})
+    assert label("dodge") in tags({"counter_type": "dodge"})
+    assert label("parry") in tags({"counter_type": "parry"})
+    assert label("move") in tags({"effects": [{"type": "reposition"}]})
+    assert label("move") in tags({"effects": [{"effect": "reposition"}]})
+    assert label("part") in tags({"break_power": 10})
+    assert label("multi") in tags({"hits": 2})
+    assert label("armor") in tags({"armor": True})
+    assert label("interrupt") in tags({"interrupt": True})
+    # 组合分支：有序（_SKILL_TAG_ORDER 决定顺序）
+    combo = tags({"power": 100, "tag": "combo_push", "hits": 3, "armor": True})
+    assert combo == [label("damage"), label("combo_push"), label("multi"), label("armor")]
+
+
+def test_skill_brief_prefers_nonempty_content_brief():
+    """T4：内容包 `brief` 非空 → 原样返回，不落机制兜底；空白 brief 才兜底。"""
+    ctx = make_ctx(skills={"s1": {"id": "s1", "name": "剑技", "type": "active",
+                                  "power": 100, "brief": "  自由文本简述  "}})
+    assert bc.skill_brief(ctx, "s1") == "自由文本简述"
+    assert "【伤害】" not in bc.skill_brief(ctx, "s1")
+
+    blank = make_ctx(skills={"s1": {"id": "s1", "name": "剑技", "type": "active",
+                                    "power": 100, "brief": "   "}})
+    assert "【伤害】" in bc.skill_brief(blank, "s1")
+
+
+# ---------------------------------------------------------------------------
+# R5（复核修复 2026-09-12）：技能列表页高断言（5 条/页 × 3 行 + 头 + 尾 ≤ 17）
+# ---------------------------------------------------------------------------
+
+def test_skill_page_height_bounded():
+    """R5：一页 5 技能（行+简述+分隔线 = 3 行/条）→ 页高有界。
+
+    口径：头 1 行 + 5×3=15 行 + 尾 2 行（`当前页 x/y` + Tip 翻页提示）= 18 行为上限；
+    本测试即**满页最坏形态**，断言恰好 18 行（新增第 4 行/条或页脚增行都会失败）。
+    """
+    skills = {
+        f"s{i}": {"id": f"s{i}", "name": f"技能{i}", "type": "active",
+                  "mp_cost": i, "power": 10, "brief": f"简述{i}"}
+        for i in range(1, 11)                 # 10 条 → 每页 5 条，两页
+    }
+    ctx = make_ctx(skills=skills)
+    out = cmd_skill(parse("/技能"), ctx)
+    lines = out.splitlines()
+    assert lines[0] == "【技能列表】"
+    assert sum(1 for ln in lines if ln == "————") == 5, "每页 5 条技能各带分隔线"
+    assert "当前页：1/2" in lines
+    assert len(lines) == 18, f"技能列表满页页高漂移：{len(lines)} 行\n{out}"
+
+
+def test_skill_page_height_bounded_real_pack():
+    """R5 回归：test_demo 真实技能列表页高也不超契约（防内容包简述撑高）。"""
+    import json
+    import pathlib
+
+    repo = pathlib.Path(__file__).resolve().parents[2]
+    rows = json.loads(
+        (repo / "content" / "test_demo" / "skills.json").read_text(encoding="utf-8"))
+    skills = {s["id"]: s for s in rows if isinstance(s, dict) and s.get("id")}
+    ctx = make_ctx(skills=skills, jobs={"berserker": {"name": "狂战士"}}, job_id="berserker")
+    out = cmd_skill(parse("/技能"), ctx)
+    assert len(out.splitlines()) <= 18, out

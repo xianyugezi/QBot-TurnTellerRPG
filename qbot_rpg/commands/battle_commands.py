@@ -194,7 +194,7 @@ class EnrichedTurnReport:
     CTB（2026-09-10 Agent 4）：
       - `turn` 为 **action_seq 兼容镜像**（审计/旧读方过渡，不参与计算）。
       - `action_seq` / `battle_time` 为 **CTB 权威双计数**（引擎 TurnReport 真实字段，
-        由 `from_report` / `enrich_round_report` 透传）：展示层/审计应读这两个字段。
+        由 `enrich_round_report` 透传）：展示层/审计应读这两个字段。
       - `phases` 保留为普通字段仅为**形态兼容**（旧读方仍可 getattr 取值，恒为 tuple）；
         CTB 下引擎已将其改为只读 property（底层 `_phase_label`），本层恒透传空元组
         ——render 层对 phases 只做 tuple 消费，空值不影响渲染。新读方勿依赖。
@@ -231,64 +231,6 @@ class EnrichedTurnReport:
     enemy_air: bool = False                        # 怪物跃空（「怪物状态：跃空丨…」首项）
     enemy_broken_parts: Tuple[str, ...] = ()        # 已破坏部位中文名序列
     effect_events: Tuple[Mapping[str, Any], ...] = ()   # 本行动持续效果事件（DOT 生效/失效）
-
-    @classmethod
-    def from_report(
-        cls,
-        report: Any,
-        *,
-        enemy_name: str = "怪物",
-        player_max_hp: Optional[int] = None,
-        enemy_max_hp: Optional[int] = None,
-        exp: int = 0,
-        gold: int = 0,
-        drops: Sequence[Any] = (),
-        status_changes: Sequence[Any] = (),
-        hud: Optional[Mapping[str, Any]] = None,
-    ) -> "EnrichedTurnReport":
-        """TurnReport → EnrichedTurnReport（补齐接线层字段，其余字段透传）。
-
-        :param report: 引擎 TurnReport（或同形对象）；读取 turn/phases/player/enemy/
-            ended/status/log/outcomes/action_seq/battle_time（缺字段走默认值）。
-        :param enemy_name: 怪物展示名（BREP-09/15/18）。
-        :param player_max_hp: 玩家最大 HP（BREP-09 操作提示行）。
-        :param enemy_max_hp: 怪物最大 HP（BREP-09 操作提示行）。
-        :param exp: 结算经验（仅战斗结束消息输出一次，军规5）。
-        :param gold: 结算金币。
-        :param drops: 战利品序列。
-        :param status_changes: BREP-08 状态资源差分序列。
-        :param hud: 战斗 HUD v2 分项资源数据（battle_hud_payload 产出；None → 全缺省）。
-        :return: EnrichedTurnReport（冻结 dataclass）。
-        """
-        _hud: Mapping[str, Any] = hud or {}
-        return cls(
-            turn=int(getattr(report, "turn", 0)),
-            phases=tuple(getattr(report, "phases", ()) or ()),
-            player=int(getattr(report, "player", 0)),
-            enemy=int(getattr(report, "enemy", 0)),
-            ended=bool(getattr(report, "ended", False)),
-            status=getattr(report, "status", None),
-            log=tuple(getattr(report, "log", ()) or ()),
-            outcomes=tuple(getattr(report, "outcomes", ()) or ()),
-            enemy_name=str(enemy_name or "怪物"),
-            player_max_hp=player_max_hp,
-            enemy_max_hp=enemy_max_hp,
-            exp=int(exp or 0),
-            gold=int(gold or 0),
-            drops=tuple(drops or ()),
-            status_changes=tuple(status_changes or ()),
-            action_seq=int(getattr(report, "action_seq", 0) or 0),
-            battle_time=float(getattr(report, "battle_time", 0.0) or 0.0),
-            player_mp=_hud.get("player_mp"),
-            player_mp_max=_hud.get("player_mp_max"),
-            player_shield=int(_hud.get("player_shield") or 0),
-            player_shield_turns=int(_hud.get("player_shield_turns") or 0),
-            enemy_shield=int(_hud.get("enemy_shield") or 0),
-            enemy_shield_turns=int(_hud.get("enemy_shield_turns") or 0),
-            enemy_air=bool(_hud.get("enemy_air")),
-            enemy_broken_parts=tuple(_hud.get("enemy_broken_parts") or ()),
-            effect_events=tuple(getattr(report, "effect_events", ()) or ()),
-        )
 
 
 def enrich_round_report(
@@ -1311,9 +1253,7 @@ def _gate(ctx: Mapping[str, Any]) -> Optional[str]:
     本地导入避免跨包循环；ctx["registered"] is False → 拦截文案；缺省视为已注册。
     """
     if ctx.get("registered", True) is False:
-        from .basic_commands import TPL_REGISTER_GATE  # noqa: PLC0415
-
-        return TPL_REGISTER_GATE
+        return tpl_of(ctx, "basic_register_gate")
     return None
 
 

@@ -17,7 +17,7 @@ from __future__ import annotations
 import importlib
 from typing import Any, Callable, Mapping, MutableMapping, Optional
 
-from .basic_commands import TPL_REGISTER_GATE, _equip_engine
+from .basic_commands import _equip_engine
 from .router import CommandSpec
 from qbot_rpg.core.templates import tpl_of  # 消息模板配置化（2026-08-31 用户拍板）
 from qbot_rpg.data.player import Player
@@ -163,18 +163,18 @@ def cmd_use(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     """使用 指令壳：序号/名称 → 装备穿戴或消耗使用（统一承载）。
 
     入参 parsed: ParsedCommand（args 消费）；ctx: 玩家上下文。出参 str——回复正文。
-    核心逻辑: 未注册 → TPL_REGISTER_GATE；战斗中 → use_in_battle；缺参 → use_no_arg；
+    核心逻辑: 未注册 → basic_register_gate；战斗中 → use_in_battle；缺参 → use_no_arg；
     解析目标（_resolve_row）→ 装备类（ItemInstance.slot 或 item_def.slot）
     → _equip_engine.equip_wear（序号）→ 消耗类（usable/type=consumable）→ _use_consumable
     → 其他 → use_cannot_use（均 tpl_of 渲染，内容包可覆盖）。
     """
     if not bool(ctx.get("registered")):
-        return TPL_REGISTER_GATE
+        return tpl_of(ctx, "basic_register_gate")
     if ctx.get("battle_session"):
         return tpl_of(ctx, "use_in_battle")
     player = _resolve_player(ctx)  # 兼容 Player dataclass + dict（写回 ctx）
     if player is None:
-        return TPL_REGISTER_GATE
+        return tpl_of(ctx, "basic_register_gate")
     args = list(getattr(parsed, "args", None) or [])
     if not args:
         return tpl_of(ctx, "use_no_arg")

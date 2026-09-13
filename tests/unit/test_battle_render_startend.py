@@ -365,6 +365,17 @@ def test_render_battle_end_tail_counted_in_16_line_budget() -> None:
     assert lines[-1] == tail                    # 尾提示仍置底
 
 
+def test_render_battle_end_tail_is_last_line() -> None:
+    """T1：`render_battle_end(tail=...)` 尾提示必须**置底**（末行 == tail，2026-09-12 拍板）。"""
+    for status in ("win", "lose"):
+        text = render_battle_end(_party(), _enemy(turns=3), status,
+                                 tail="→ 攻击 或 攻击 <技能名>")
+        assert text.split("\n")[-1] == "→ 攻击 或 攻击 <技能名>", (status, text)
+    # 空/纯空白 tail 不追加空行
+    clean = render_battle_end(_party(), _enemy(turns=3), "win", tail="   ")
+    assert not clean.endswith("\n")
+
+
 def test_fold_message_lines_hard_cap_multiline_elements() -> None:
     """M3/T11：单个多行元素不得击穿 16 行硬上限（含多行 tail / 多行首元素）。"""
     big_tail = "\n".join(f"尾{i}" for i in range(20))

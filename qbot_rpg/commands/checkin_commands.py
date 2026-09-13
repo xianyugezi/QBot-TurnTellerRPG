@@ -170,7 +170,7 @@ def _gate(ctx: Mapping[str, Any]) -> Optional[str]:
     2026-08-31 QA 修复：此前 /签到 缺注册门槛，未注册玩家可直接签到（疑似无主发奖）。
     """
     if ctx.get("registered", True) is False:
-        return TPL_REGISTER_GATE
+        return tpl_of(ctx, "basic_register_gate")
     return None
 
 

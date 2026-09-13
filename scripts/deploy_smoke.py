@@ -10,8 +10,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # 仓库根
 
-os.environ["QBotRPG_PACK_DIR"] = "/root/QBot-TurnTellerRPG/content/demo_full"
-os.environ["QBotRPG_DB_PATH"] = "/root/QBot-TurnTellerRPG/data/rpg_full_test.db"
+# 九期239 路径参数化：环境变量未设时缺省仓库相对路径（交付 zip 形态可在任意机器跑）
+_ROOT = Path(__file__).resolve().parent.parent
+os.environ.setdefault("QBotRPG_PACK_DIR", str(_ROOT / "content" / "cloudsea"))
+os.environ.setdefault("QBotRPG_DB_PATH", str(_ROOT / "data" / "deploy_smoke.db"))
 
 from qbot_rpg_bridge.assemble import build_app_deps
 from qbot_rpg.assembly import runner as R

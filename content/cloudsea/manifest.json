@@ -1,0 +1,30 @@
+{
+  "name": "云海猎团 Cloudsea Hunting Corps（内容包）",
+  "version": "0.1.0",
+  "schema_version": 1,
+  "author": "yunhai-design",
+  "modules": [
+    "settings",
+    "stats",
+    "formula",
+    "effects",
+    "statuses",
+    "marks",
+    "skill_chains",
+    "action",
+    "skills",
+    "jobs",
+    "enemies",
+    "maps",
+    "items",
+    "equipment",
+    "shop",
+    "quest",
+    "npc",
+    "enhance",
+    "forge",
+    "proficiency",
+    "templates",
+    "checkin"
+  ]
+}

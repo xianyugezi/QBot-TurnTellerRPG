@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "pages": [
+    {
+      "page_id": "formula",
+      "title": "公式",
+      "icon": "🧮",
+      "module_file": "formula.json",
+      "meta_source": "meta/formula",
+      "enabled": true,
+      "validator": "formula"
+    },
+    {
+      "page_id": "statuses",
+      "title": "状态",
+      "icon": "💠",
+      "module_file": "statuses.json",
+      "meta_source": "meta/statuses",
+      "enabled": true,
+      "validator": "statuses"
+    },
+    {
+      "page_id": "effects",
+      "title": "效果",
+      "icon": "✨",
+      "module_file": "effects.json",
+      "meta_source": "meta/effects",
+      "enabled": true,
+      "validator": "effects"
+    },
+    {
+      "page_id": "stats",
+      "title": "属性表",
+      "icon": "📊",
+      "module_file": "stats.json",
+      "meta_source": "meta/stats",
+      "enabled": true,
+      "validator": "stats"
+    },
+    {
+      "page_id": "settings",
+      "title": "世界设置",
+      "icon": "🌍",
+      "module_file": "settings.json",
+      "meta_source": "meta/settings",
+      "enabled": true,
+      "validator": "settings"
+    },
+    {
+      "page_id": "monster",
+      "title": "怪物",
+      "icon": "👹",
+      "module_file": "enemies.json",
+      "meta_source": "meta/monster",
+      "enabled": false,
+      "validator": "monster"
+    },
+    {
+      "page_id": "action",
+      "title": "行动",
+      "icon": "🎯",
+      "module_file": "action.json",
+      "meta_source": "meta/action",
+      "enabled": false,
+      "validator": "action"
+    }
+  ]
+}

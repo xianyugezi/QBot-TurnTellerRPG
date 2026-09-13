@@ -139,6 +139,15 @@ DEFAULT_TEMPLATES: Dict[str, Any] = {
     "battle_summary_header": "摘要：总伤害 {total}｜最大单段 {max_hit}｜会心 {crits} 次"
                              "｜格挡 {blocks} 次",
     "battle_summary_item": "{index}. {source} {damage}（{pct}%）",
+
+    # —— 九期215 战报八段终案：五新 key（云海扩展槽位，G1B 接口）——
+    # 渲染零 emoji 铁律对既有键不变；本组 ◈/❓/🌀/▫ 系 D-01 内容包 emoji
+    # 白名单登记位（content/cloudsea 装配时经 cloudsea_emoji 校验）。
+    "battle_stage_shift_line": "◈ {monster_name} 进入「{stage_name}」形态",
+    "battle_windup_unknown": "❓ {monster_name} 有不明动作（{progress}）……",
+    "battle_windup_ready": "🌀 {monster_name} 的{name}蓄势待发，下回合发动{tier_note}",
+    "battle_merge_summary": "▫ 已合并 {n} 条战报（{window_sec} 秒窗）",
+    "battle_mention_line": "{mention} {text}",
 }
 
 PLACEHOLDER_WHITELIST: Dict[str, set] = {
@@ -219,4 +228,10 @@ PLACEHOLDER_WHITELIST: Dict[str, set] = {
     "battle_combo_remark_waste": set(),
     "battle_summary_header": {"total", "max_hit", "crits", "blocks"},
     "battle_summary_item": {"index", "source", "damage", "pct"},
+    # —— 九期215 五新 key 占位符白名单（与 DEFAULT_TEMPLATES 同步追加）——
+    "battle_stage_shift_line": {"monster_name", "stage_name"},
+    "battle_windup_unknown": {"monster_name", "progress"},
+    "battle_windup_ready": {"monster_name", "name", "tier_note"},
+    "battle_merge_summary": {"n", "window_sec"},
+    "battle_mention_line": {"mention", "text"},
 }

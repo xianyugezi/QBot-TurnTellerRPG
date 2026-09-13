@@ -1,0 +1,52 @@
+{
+  "_meta": {
+    "批次": "九期 214 阶段状态机（内容线1 · 2026-09-13）",
+    "定位": "phases 阈值直落首册——03 §M3.11 灰岗四阶段全链路样例；bulk 阶段模板归 219 phase_templates",
+    "schema": {
+      "monsters.<怪名>.phases[]": "条目键：no（阶段号，1 基，必配）／name／threshold（HP% 上界，HP 触发）／enter_when（非 HP 触发条件，dict 或 list=OR；可用内建 seq_count/damage_taken/stamina_empty/hp_below/pv_broken/turn_count/phase_changed）／from（enter_when 的源阶段白名单）／latch（缺省 true：非 HP 阶段驻留）／enter_action／broadcast／inherit_rules（stack_retain/control_mult，207 inherit_boss_state 消费）／weakness（阶段动态弱点换装，异相种动态弱点机制；示例形 {\"岩\": 1.9}，非在册数据）／mods（阶段数值面数据契约 dmg_mult/def_mod/spd/core_hardness/unbreakable…→ai_state.phase_mods，211 公式侧消费）",
+      "解析序": "config 序 last-match；enter_when 阶段 latch 驻留；纯阈值旧配置走 PhaseTable 原路径零变化"
+    },
+    "消费方": "monster_ai 阶段写端（本批）／211 公式（phase_mods）／215 战报（broadcast）／238 探针"
+  },
+  "monsters": {
+    "崩岭岩犀·灰岗": {
+      "source": "03 §M3.11（第 1 章章节 Boss · EHP 12000/DEF 380/SPD 85）",
+      "phases": [
+        {
+          "no": 1,
+          "name": "常态·踏岛",
+          "threshold": 100,
+          "mods": {"dmg_mult": 1.0, "def_mod": 0, "spd": 85}
+        },
+        {
+          "no": 2,
+          "name": "激怒·崩岭",
+          "threshold": 70,
+          "enter_action": "崩解践踏蓄势",
+          "broadcast": "{monster} 目眦欲裂——岩甲缝隙里透出地脉的红光！",
+          "mods": {"dmg_mult": 1.25, "def_mod": 80, "spd": 105}
+        },
+        {
+          "no": 3,
+          "name": "疲态·露核",
+          "enter_when": [
+            {"type": "seq_count", "value": 8},
+            {"type": "pv_broken"}
+          ],
+          "from": [2],
+          "broadcast": "{monster} 喘息粗重——背脊地脉核外露，绝技爆发期！",
+          "mods": {"dmg_mult": 0.8, "def_mod": -120, "core_hardness": 0.45},
+          "inherit_rules": {"stack_retain": 0.5, "control_mult": 0.5}
+        },
+        {
+          "no": 4,
+          "name": "狂澜·蚀涌",
+          "threshold": 35,
+          "broadcast": "{monster} 背脊晶核齐鸣——地脉喷涌，狂澜蚀涌！",
+          "mods": {"dmg_mult": 1.5, "def_mod": 150, "unbreakable": true},
+          "inherit_rules": {"stack_retain": 0.5, "control_mult": 0.5}
+        }
+      ]
+    }
+  }
+}

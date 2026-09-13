@@ -1,0 +1,21 @@
+{
+  "world_name": "云海猎团·云海之上",
+  "level_cap": 10,
+  "currencies": [
+    {
+      "id": "gold",
+      "name": "金标",
+      "icon": "🪙"
+    },
+    {
+      "id": "honor",
+      "name": "公会勋",
+      "icon": "🏅"
+    },
+    {
+      "id": "ticket",
+      "name": "航券",
+      "icon": "🎟️"
+    }
+  ]
+}

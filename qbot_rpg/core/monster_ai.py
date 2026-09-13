@@ -185,41 +185,44 @@ class MonsterAI:
                 prev = int(ai.get("phase") or 1)
                 entries = phases_cfg if isinstance(phases_cfg, list) else []
                 extended = any(
-                    isinstance(p, Mapping) and p.get("enter_when") is not None
+                    isinstance(p, Mapping) and p.get("no") is not None
                     for p in entries
                 )
-                entry = None
                 if extended:
                     new_phase, entry = self._resolve_phases_extended(
                         entries, eh, em, prev, battle_state)
                     changed = new_phase != prev
+                    if changed:
+                        ai["phase"] = new_phase
+                        ai["boss_phase"] = ai["phase"]  # 兼容键（battle.py L487 读）
+                        ai["seq_count"] = 0  # 阶段内计数语义（「激怒满 8」）
+                        ea = entry.get("enter_action") if isinstance(entry, Mapping) else None
+                        if ea:
+                            ai["forced_queue"].append(
+                                ea.get("action") if isinstance(ea, Mapping) else ea)
+                        # 207 hook 消费：boss_state 三键按新阶段 inherit_rules 携带
+                        rules = entry.get("inherit_rules") if isinstance(entry, Mapping) else None
+                        battle_state["boss_state"] = inherit_boss_state(
+                            battle_state.get("boss_state"), rules)
+                        # 阶段动态弱点（异相种用）：weakness 键换装；原值仅首切备份
+                        wk = entry.get("weakness") if isinstance(entry, Mapping) else None
+                        if isinstance(wk, Mapping):
+                            if "weakness_base" not in ai:
+                                ai["weakness_base"] = enemy.get("weakness")
+                            enemy["weakness"] = dict(wk)
+                        # 阶段数值面（数据契约：ai_state.phase_mods；211 消费，本批只写不读）
+                        mods = entry.get("mods") if isinstance(entry, Mapping) else None
+                        ai["phase_mods"] = dict(mods) if isinstance(mods, Mapping) else {}
                 else:
                     trans = PhaseTable(phases_cfg).detect_transition(
                         eh, em, prev_phase=prev)
                     new_phase = int(trans.get("phase") or 1)
-                    changed = bool(trans.get("changed"))
-                    entry = self._phase_entry(entries, new_phase)
-                if changed:
-                    ai["phase"] = new_phase
-                    ai["boss_phase"] = ai["phase"]  # 兼容键（battle.py L487 读）
-                    ai["seq_count"] = 0  # 阶段内计数语义（「激怒满 8」）
-                    ea = entry.get("enter_action") if isinstance(entry, Mapping) else None
-                    if ea:
-                        ai["forced_queue"].append(
-                            ea.get("action") if isinstance(ea, Mapping) else ea)
-                    # 207 hook 消费：boss_state 三键按新阶段 inherit_rules 携带
-                    rules = entry.get("inherit_rules") if isinstance(entry, Mapping) else None
-                    battle_state["boss_state"] = inherit_boss_state(
-                        battle_state.get("boss_state"), rules)
-                    # 阶段动态弱点（异相种用）：weakness 键换装；原值仅首切备份
-                    wk = entry.get("weakness") if isinstance(entry, Mapping) else None
-                    if isinstance(wk, Mapping):
-                        if "weakness_base" not in ai:
-                            ai["weakness_base"] = enemy.get("weakness")
-                        enemy["weakness"] = dict(wk)
-                    # 阶段数值面（数据契约：ai_state.phase_mods；211 消费，本批只写不读）
-                    mods = entry.get("mods") if isinstance(entry, Mapping) else None
-                    ai["phase_mods"] = dict(mods) if isinstance(mods, Mapping) else {}
+                    if new_phase != prev:
+                        ai["phase"] = new_phase
+                        ai["boss_phase"] = ai["phase"]  # 兼容键（battle.py L487 读）
+                        ea = trans.get("enter_action")
+                        if ea:
+                            ai["forced_queue"].append(ea)
             except Exception:  # phases 配置解析失败不阻断决策（工程兜底）
                 pass
 
@@ -713,6 +716,10 @@ class MonsterAI:
 
         内建最小集：hp_below（value=HP 百分比阈值，严格小于）/ pv_broken /
         turn_count（op 默认 >=）/ phase_changed（value=阶段号，phase>=value 即成立）。
+        九期214 增三内建：seq_count（阶段内出手机会计数，阶段切换清零）／
+        damage_taken（mode=count 受击段数（缺省）｜amount 累计受伤量）／
+        stamina_empty（气力轴空：enemy.stamina 数值 ≤0 或 boss_state.stamina
+        全键 ≤0；轴面缺数据 → False，与 212 数据面解耦）。
         注册表 handler 优先；未注册未知类型 → False（B2 路 register_condition_handler
         填充 13 类全量）。"""
         if not isinstance(cond, Mapping):
@@ -739,7 +746,113 @@ class MonsterAI:
                 return False
             ai = battle_state["ai_state"]
             return int(ai.get("phase", 1)) >= int(val)
+        if ctype == "seq_count":
+            ai = battle_state.get("ai_state") or {}
+            return self._cmp_num(ai.get("seq_count", 0), cond.get("value", 0),
+                                 cond.get("op", ">="))
+        if ctype == "damage_taken":
+            ai = battle_state.get("ai_state") or {}
+            mode = str(cond.get("mode") or "count")
+            cur = (int(ai.get("damage_taken_events", 0)) if mode == "count"
+                   else float(ai.get("damage_taken_amount", 0.0)))
+            return self._cmp_num(cur, cond.get("value", 0), cond.get("op", ">="))
+        if ctype == "stamina_empty":
+            enemy = battle_state.get("enemy") or {}
+            bs = battle_state.get("boss_state") or {}
+            st = enemy.get("stamina", bs.get("stamina"))
+            if isinstance(st, Mapping):
+                vals = [float(v) for v in st.values()
+                        if isinstance(v, (int, float)) and not isinstance(v, bool)]
+                return bool(vals) and max(vals) <= 0
+            if isinstance(st, (int, float)) and not isinstance(st, bool):
+                return float(st) <= 0
+            return False
         return False
+
+    @staticmethod
+    def _cmp_num(cur: Any, val: Any, op: str = ">=") -> bool:
+        """数值比较（214 条件面通用；op 缺省 >=）。"""
+        try:
+            c, v = float(cur), float(val)
+        except (TypeError, ValueError):
+            return False
+        return {"<": c < v, "<=": c <= v, ">": c > v,
+                ">=": c >= v, "==": c == v}.get(str(op), False)
+
+    # ================================================================ 九期214 阶段扩展
+
+    def _phase_entry(self, entries: Any, no: int) -> Optional[Dict[str, Any]]:
+        """阶段号 → 条目（phases 列表内 no 键；未配 no 的纯阈值表返回 None——
+        该形态走 PhaseTable 原路径的 trans 输出，不经此函数取条目）。"""
+        for p in entries if isinstance(entries, list) else []:
+            if isinstance(p, Mapping):
+                try:
+                    if int(p.get("no") or 0) == int(no):
+                        return dict(p)
+                except (TypeError, ValueError):
+                    continue
+        return None
+
+    def _resolve_phases_extended(
+        self, entries: Any, eh: float, em: float, prev: int, battle_state: dict
+    ) -> "tuple[int, Optional[Mapping[str, Any]]]":
+        """214 扩展阶段解析（config 序 last-match；03 §M3.11 灰岗形态）。
+
+        条目匹配＝(threshold 缺省或 HP%≤threshold) 且 (enter_when 满足)；enter_when
+        ＝dict 或 list（OR）；from＝源阶段白名单（prev∈from）；latch 缺省 True——
+        非 HP 阶段 prev==no 即视为满足（驻留，防回落重算倒退）。HP 百分比换算
+        与 PhaseTable 工程收敛 3 同口径。无匹配 → 维持 prev。
+        """
+        try:
+            m = float(em)
+            pct = (float(eh) / m * 100.0) if m > 0 else float(eh)
+        except (TypeError, ValueError):
+            pct = 0.0
+        picked = None
+        picked_no = prev
+        for p in entries if isinstance(entries, list) else []:
+            if not isinstance(p, Mapping):
+                continue
+            try:
+                no = int(p.get("no") or 0)
+            except (TypeError, ValueError):
+                continue
+            if no <= 0:
+                continue
+            thr = p.get("threshold")
+            if thr is None:
+                hp_ok = True
+            else:
+                try:
+                    hp_ok = pct <= float(thr)
+                except (TypeError, ValueError):
+                    hp_ok = True
+            ew = p.get("enter_when")
+            if ew is None:
+                ew_ok = True
+            elif p.get("latch", True) and no == prev:
+                ew_ok = True
+            else:
+                frm = p.get("from")
+                if isinstance(frm, (list, tuple)):
+                    try:
+                        in_from = prev in [int(x) for x in frm]
+                    except (TypeError, ValueError):
+                        in_from = False
+                    if not in_from:
+                        ew_ok = False
+                    else:
+                        conds = ew if isinstance(ew, list) else [ew]
+                        ew_ok = any(self._eval_condition(c, battle_state)
+                                    for c in conds if isinstance(c, Mapping))
+                else:
+                    conds = ew if isinstance(ew, list) else [ew]
+                    ew_ok = any(self._eval_condition(c, battle_state)
+                                for c in conds if isinstance(c, Mapping))
+            if hp_ok and ew_ok:
+                picked = p
+                picked_no = no
+        return picked_no, picked
 
     def _hp_ratio(self, battle_state: dict) -> float:
         """敌方 HP 百分比（0-100；hp_below 阈值口径，1f TC-01 49%<50 成立）。"""

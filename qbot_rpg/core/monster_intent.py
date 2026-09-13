@@ -61,6 +61,11 @@ def build_intent(
     action_def: Optional[Mapping[str, Any]],
     ai_state: Mapping[str, Any],
     codex_state: Optional[Mapping[str, Any]] = None,
+    *,
+    stage_shift: Any = None,
+    windup: Any = None,
+    target_ref: Any = None,
+    damage_tier: Any = None,
 ) -> dict:
     """意图预告生成器（1f ③3.1 运行时结构 / contract §五 intent_for 返回值）。
 
@@ -110,7 +115,7 @@ def build_intent(
     else:
         level = 0  # 无任何可预告内容（调用方可不渲染）
 
-    return {
+    intent = {
         "level": level,
         "category": category,
         "action_id": action_id,
@@ -118,6 +123,18 @@ def build_intent(
         "chain_preview": chain_preview,
         "progress": progress,
     }
+    # 九期215（战报八段终案·G1B 接口）：四扩展字段追加——缺省 None 不入
+    # dict＝既有调用形态零变化（现有测试断言不受影响）。
+    ext = {
+        "stage_shift": stage_shift if stage_shift is not None else adef.get("stage_shift"),
+        "windup": windup if windup is not None else adef.get("windup"),
+        "target_ref": target_ref if target_ref is not None else adef.get("target_ref"),
+        "damage_tier": damage_tier if damage_tier is not None else adef.get("damage_tier"),
+    }
+    for k, v in ext.items():
+        if v is not None:
+            intent[k] = v
+    return intent
 
 
 def reveal_satisfied(

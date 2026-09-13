@@ -99,7 +99,10 @@ def test_existing_modules_counts_stable() -> None:
     # + 行动时间 1 + 空中延长 1（2026-09-11 增补 v1 §一/§四）
     # + 行动恢复 1（2026-09-12 批⑥ C10：recovery 行动恢复值）
     # + 气绝 1（2026-09-12 批⑦A：stun 气绝值）
-    assert len(t.modules["skills"].fields) == 34
+    # 编辑器重写批1：补齐 skills.json 真实在用、原缺登记的 8 键
+    # （brief/detail/revert_form/derive_only/energy_gain/energy_cost/season/combo_table，
+    #  与 skill_models.skills_fields() 对齐；软标注零新增拦截）→ 34 + 8 = 42
+    assert len(t.modules["skills"].fields) == 42
     assert len(t.modules["jobs"].fields) == 11
     assert len(t.modules["enemies"].fields) == 27  # 26 + parts 部位段（方位 v0.6 §三.3）
     assert len(t.modules["maps"].fields) == 12

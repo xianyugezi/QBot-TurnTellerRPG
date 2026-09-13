@@ -26,6 +26,7 @@ number|[min,max]）不注册、走 §2.3 默认放行，防泛型校验器 R-1 �
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any, Dict, Mapping, Tuple
 
 from qbot_rpg.content.models import FieldMeta, FieldMetaTable, ModuleMeta
@@ -838,6 +839,50 @@ SKILLS_FIELD_GROUPS: Dict[str, str] = {
 }
 SKILLS_GROUP_ORDER: Tuple[str, ...] = tuple(_g for _g, _ in SKILLS_GROUP_DEFS)
 
+# skills 字段中文名（显示层唯一来源；用户 2026-09-13 需求 §一.4「字段名一律中文显示」+
+# 样式稿 s3 的字段列头）。label 只进显示层，不动数据层、不参与任何校验判定。
+SKILLS_FIELD_LABELS: Dict[str, str] = {
+    # 基本
+    "id": "标识", "name": "名称", "kind": "类别", "type": "类型",
+    "attack_type": "攻击类型", "element": "元素", "tag": "标签", "armor": "霸体",
+    "interrupt": "打断", "position_rule": "方位命中规则", "air_policy": "空中策略",
+    "block_mode": "格挡模式", "job_restrict": "职业限制", "job_form": "形态",
+    "counter_type": "反击类型", "counter_skill": "反击技能", "revert_form": "还原形态",
+    "derive_only": "仅派生可用", "skill": "技能引用",
+    # 数值
+    "power": "威力", "break_power": "破坏力固有值", "mp_cost": "消耗量", "cooldown": "冷却",
+    "hits": "段数", "level": "等级", "trigger_limit": "触发上限", "hit_mod": "命中修正",
+    "crit_mod": "会心修正", "action_time": "行动时间", "air_extend": "空中延长",
+    "recovery": "行动恢复", "stun": "气绝值",
+    # 效果列表
+    "effects": "附加效果", "chain_refs": "派生链引用", "consume_marks": "消耗印记",
+    "energy_gain": "资源轴增减", "energy_cost": "资源轴消耗", "combo_table": "组合表达",
+    "season": "季节",
+    # 文本
+    "desc": "说明", "brief": "简述", "detail": "详情",
+}
+
+
+def _decorate_field_meta(
+    fields: Mapping[str, FieldMeta],
+    groups: Mapping[str, str],
+    labels: Mapping[str, str],
+) -> Dict[str, FieldMeta]:
+    """把模块级分组表/中文名表叠加到字段元数据（字段自带的 group/label 优先）。
+
+    只做展示层补充：type/required/default/enum/ref_target/element/children 全部原样保留，
+    因此对泛型校验器（只读 type 等判定字段）是零行为变化。
+    """
+    out: Dict[str, FieldMeta] = {}
+    for key, fm in fields.items():
+        kw: Dict[str, object] = {}
+        if not fm.group and key in groups:
+            kw["group"] = groups[key]
+        if not fm.label and key in labels:
+            kw["label"] = labels[key]
+        out[key] = replace(fm, **kw) if kw else fm
+    return out
+
 
 # -------------------------------------------------------------------------------------
 # 模块元数据
@@ -1040,6 +1085,20 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "stun": FieldMeta(type="number", range_min=0),  # 批⑦A 气绝值（打击 × 正方位积累；全隐性）
         # ---- 兼容旧键（enemies[].skills 引用的技能表旧键）----
         "skill": FieldMeta(type="ref", ref_target="skill_or_any"),
+        # ---- 编辑器重写批1：补齐 skills.json 真实在用、但本表原缺登记 8 键 ----
+        # 依据：真实内容包实测（veinborn/test_demo 均出现 revert_form/derive_only/
+        # energy_gain/energy_cost/brief；skill_models.skills_fields() 早已登记 F29/F30
+        # 展示文本与 6b/6c 挂点，本表滞后 → 编辑器「文本」分区拿不到简述/详情）。
+        # 一律软标注（soft_label=永不红拦）：补齐前这些键走「未知字段默认放行」，
+        # 补齐后仍零新增拦截，泛型校验行为不变（type 仅供参考/渲染）。
+        "brief": FieldMeta(type="str", soft_label=True),      # F29 简述（可空）
+        "detail": FieldMeta(type="str", soft_label=True),     # F30 详情（可空）
+        "revert_form": FieldMeta(type="bool", soft_label=True),    # 6b 还原技标记
+        "derive_only": FieldMeta(type="bool", soft_label=True),    # 6b 仅派生可用
+        "energy_gain": FieldMeta(type="obj", soft_label=True),     # 6c 资源轴增减
+        "energy_cost": FieldMeta(type="obj", soft_label=True),     # 6c 资源轴消耗
+        "season": FieldMeta(type="str", soft_label=True),          # 6c 季节技能组
+        "combo_table": FieldMeta(type="list", element=FieldMeta(type="obj"), soft_label=True),
     }
     jobs_fields: Dict[str, FieldMeta] = {
         # ---- M13 职业库（细化_6b_职业库与变换引擎契约 §1.1：顶层 11 字段）----
@@ -1342,9 +1401,13 @@ def _module_table() -> Dict[str, ModuleMeta]:
         # M13 技能库（细化_6a_技能库契约 §1：skills.json 玩家技能库；F01-F24 全字段登记；
         # kind="skill" 与 loader _KIND_FOR_MODULE + DEF_CLASSES 对齐（路1A SkillDef）；
         # 命名空间 skill_lib 独立于 action_lib——V-10 跨库重名仅黄提示）
-        "skills": ModuleMeta(entry_type="list", fields=skills_fields, kind="skill", namespace="skill_lib",
-                             field_groups=dict(SKILLS_FIELD_GROUPS),
-                             group_order=SKILLS_GROUP_ORDER),
+        "skills": ModuleMeta(
+            entry_type="list",
+            fields=_decorate_field_meta(skills_fields, SKILLS_FIELD_GROUPS, SKILLS_FIELD_LABELS),
+            kind="skill", namespace="skill_lib",
+            field_groups=dict(SKILLS_FIELD_GROUPS),
+            group_order=SKILLS_GROUP_ORDER,
+        ),
         # M13 职业库（细化_6b_职业库与变换引擎契约 §1.1~1.4：jobs.json 职业注册表；
         # kind="job" 与 loader _KIND_FOR_MODULE + DEF_CLASSES 对齐（批4 路4A/4B JobDef）；
         # 命名空间 job_lib 独立于 skills/action——职业 ID 为存档引用键 + 快照冗余键，
@@ -1466,5 +1529,5 @@ __all__ = [
     # M12.5 批1 路1C：C 类宽松注入表（dungeon/achievements 编辑器表单数据源）
     "DUNGEON_FIELDS", "ACHIEVEMENT_FIELDS",
     # 编辑器重写批1：skills 模块级分组表（页签顺序 = 元数据声明，编辑器零写死）
-    "SKILLS_GROUP_DEFS", "SKILLS_FIELD_GROUPS", "SKILLS_GROUP_ORDER",
+    "SKILLS_GROUP_DEFS", "SKILLS_FIELD_GROUPS", "SKILLS_GROUP_ORDER", "SKILLS_FIELD_LABELS",
 ]

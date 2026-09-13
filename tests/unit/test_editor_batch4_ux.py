@@ -309,8 +309,9 @@ def test_frontend_op_column_has_inset_padding() -> None:
 
 def test_footer_status_bar_uses_current_batch_wording() -> None:
     html = _html()
-    # 页脚标注「当前批次」（批5.2 视觉细则清零起）；旧批次的字串不得残留（回归防线）。
-    assert "批5.2 · 视觉细则清零" in html
+    # 页脚标注「当前批次」（批6 起为新增/删除条目 + 检索）；旧批次的字串不得残留（回归防线）。
+    assert "批6 · 新增/删除条目 + 检索" in html
+    assert "批5.2 · 视觉细则清零" not in html
     assert "批4.6 · 字段说明气泡" not in html
     assert "批3 · 分区页签" not in html
     # 批4 的列宽/滚动视觉仍在（本批未回退）

@@ -806,6 +806,40 @@ DEFAULT_CURRENCY_IDS: Tuple[str, ...] = ("coins", "diamond")
 
 
 # -------------------------------------------------------------------------------------
+# 编辑器重写批1：模块级字段分组表（编辑器页签 = 元数据声明的分组，编辑器不写死业务分组）
+# -------------------------------------------------------------------------------------
+# 口径：
+#   · 分组唯一来源 = 元数据（本表 / FieldMeta.group）；编辑器只按它渲染页签。
+#   · 只给 skills 模块落地 4 个分组（用户 2026-09-13 拍板：基本/数值/效果列表/文本）；
+#     其余模块不给声明 → 编辑器用单一默认分组兜底（缺省兜底，不误伤任何模块）。
+#   · 表里允许出现「fields 尚未登记、但真实内容包条目里存在」的键（brief/derive_only/
+#     energy_gain/energy_cost/revert_form 等）——这类键照样落进正确分区，不掉进兜底组。
+#   · 仅影响界面展示：校验器只读 fields，本表不参与校验（零新增拦截，基线不受影响）。
+SKILLS_GROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
+    ("基本", (
+        "id", "name", "kind", "type", "attack_type", "element", "tag", "armor",
+        "interrupt", "position_rule", "air_policy", "block_mode", "job_restrict",
+        "job_form", "counter_type", "counter_skill", "revert_form", "derive_only",
+        "skill",
+    )),
+    ("数值", (
+        "power", "break_power", "mp_cost", "cooldown", "hits", "level",
+        "trigger_limit", "hit_mod", "crit_mod", "action_time", "air_extend",
+        "recovery", "stun",
+    )),
+    ("效果列表", (
+        "effects", "chain_refs", "consume_marks", "energy_gain", "energy_cost",
+        "combo_table", "season",
+    )),
+    ("文本", ("desc", "brief", "detail")),
+)
+SKILLS_FIELD_GROUPS: Dict[str, str] = {
+    _k: _g for _g, _keys in SKILLS_GROUP_DEFS for _k in _keys
+}
+SKILLS_GROUP_ORDER: Tuple[str, ...] = tuple(_g for _g, _ in SKILLS_GROUP_DEFS)
+
+
+# -------------------------------------------------------------------------------------
 # 模块元数据
 # -------------------------------------------------------------------------------------
 def _module_table() -> Dict[str, ModuleMeta]:
@@ -815,6 +849,13 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "schema_version": FieldMeta(type="int", required=True),
         "author": FieldMeta(type="str"),
         "modules": FieldMeta(type="list", required=True, element=FieldMeta(type="str")),
+        # 编辑器重写批1：模块层级/显示名（均为可选声明；缺省 → 编辑器平铺显示、用模块键名）。
+        # 包用它们声明「物品 ▸ 装备」这类父子关系与中文名，编辑器不写死任何归并关系。
+        "module_tree": FieldMeta(type="list", element=FieldMeta(type="obj", children={}),
+                                 soft_label=True, label="模块层级声明"),
+        "module_groups": FieldMeta(type="list", element=FieldMeta(type="obj", children={}),
+                                   soft_label=True, label="模块层级声明（module_tree 别名）"),
+        "module_labels": FieldMeta(type="obj", children={}, soft_label=True, label="模块显示名"),
     }
     effects_fields: Dict[str, FieldMeta] = {
         "id": F_ID, "name": F_NAME, "type": F_TYPE,
@@ -1301,7 +1342,9 @@ def _module_table() -> Dict[str, ModuleMeta]:
         # M13 技能库（细化_6a_技能库契约 §1：skills.json 玩家技能库；F01-F24 全字段登记；
         # kind="skill" 与 loader _KIND_FOR_MODULE + DEF_CLASSES 对齐（路1A SkillDef）；
         # 命名空间 skill_lib 独立于 action_lib——V-10 跨库重名仅黄提示）
-        "skills": ModuleMeta(entry_type="list", fields=skills_fields, kind="skill", namespace="skill_lib"),
+        "skills": ModuleMeta(entry_type="list", fields=skills_fields, kind="skill", namespace="skill_lib",
+                             field_groups=dict(SKILLS_FIELD_GROUPS),
+                             group_order=SKILLS_GROUP_ORDER),
         # M13 职业库（细化_6b_职业库与变换引擎契约 §1.1~1.4：jobs.json 职业注册表；
         # kind="job" 与 loader _KIND_FOR_MODULE + DEF_CLASSES 对齐（批4 路4A/4B JobDef）；
         # 命名空间 job_lib 独立于 skills/action——职业 ID 为存档引用键 + 快照冗余键，
@@ -1422,4 +1465,6 @@ __all__ = [
     "DEFAULT_CURRENCY_IDS",
     # M12.5 批1 路1C：C 类宽松注入表（dungeon/achievements 编辑器表单数据源）
     "DUNGEON_FIELDS", "ACHIEVEMENT_FIELDS",
+    # 编辑器重写批1：skills 模块级分组表（页签顺序 = 元数据声明，编辑器零写死）
+    "SKILLS_GROUP_DEFS", "SKILLS_FIELD_GROUPS", "SKILLS_GROUP_ORDER",
 ]

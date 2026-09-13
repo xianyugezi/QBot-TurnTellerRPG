@@ -26,5 +26,37 @@
   "proficiency",
   "templates",
   "checkin"
+ ],
+ "module_labels": {
+  "settings": "设置",
+  "stats": "属性",
+  "formula": "公式",
+  "effects": "效果",
+  "statuses": "状态",
+  "marks": "印记",
+  "skill_chains": "派生链",
+  "action": "行动",
+  "skills": "技能",
+  "jobs": "职业",
+  "enemies": "怪物",
+  "maps": "地图",
+  "items": "物品",
+  "equipment": "装备",
+  "shop": "商店",
+  "quest": "任务",
+  "npc": "NPC",
+  "enhance": "强化",
+  "forge": "锻造",
+  "proficiency": "熟练度",
+  "templates": "模板",
+  "checkin": "签到"
+ },
+ "module_tree": [
+  {
+   "module": "items",
+   "children": [
+    "equipment"
+   ]
+  }
  ]
 }

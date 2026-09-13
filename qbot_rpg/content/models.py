@@ -145,6 +145,11 @@ class FieldMeta:
     # label = 字段中文名（编辑器表单/CSV 列头/JSON Schema 共用；缺省空 = 未注入，
     # 表单渲染回退字段名本身）。加在尾部带默认值，560 处既有构造零改动。
     label: str = ""
+    # 编辑器重写批1：字段「分组/分区」声明（元数据驱动页签，禁止编辑器写死业务分组）。
+    # 缺省空 = 本字段未声明 → 由所属模块的 ModuleMeta.field_groups 兜底，
+    # 仍无声明 → 编辑器用单一默认分组（见 qbot_rpg/web/api.py DEFAULT_GROUP）。
+    # 尾部默认值，既有 FieldMeta 构造零改动、校验器行为零变化。
+    group: str = ""
 
 
 @dataclass(frozen=True)
@@ -160,6 +165,13 @@ class ModuleMeta:
     mutex_field: Optional[str] = None  # 条目内部位互斥列表字段（互斥成环 R-5，equipment 等）
     key_regex: Optional[str] = None  # map 形态模块的键命名约束（stats 小写 snake_case）
     value_meta: Optional["FieldMeta"] = None  # map 形态模块的值字段元数据（stats 值对象 / formula 公式）
+    # 编辑器重写批1：模块级「分组表」——字段键 → 分组名。可覆盖 fields 里没登记的键
+    # （真实内容包常见：字段未登记但条目里存在 → 仍能落进正确分区，而不是掉进兜底组）。
+    # 缺省空表 = 本模块无分组声明 → 全字段用单一默认分组（缺省兜底，编辑器零写入）。
+    field_groups: Mapping[str, str] = field(default_factory=dict)
+    # 分组的显示顺序（元数据决定；缺省空 → 按字段声明中首次出现的顺序）。仅影响界面顺序，
+    # 不影响校验（校验器只读 fields，不读本项）。
+    group_order: Tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

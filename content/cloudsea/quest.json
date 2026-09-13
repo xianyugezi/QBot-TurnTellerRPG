@@ -7584,5 +7584,1277 @@
   "desc": "替留守队把本周的信件送下峰（薄天鲲·背峰 搭乘点）",
   "reward_raw": "信使谢礼 ／ 结晶",
   "conditions": []
+ },
+ {
+  "id": "q_story_10_01",
+  "name": "分号盘账",
+  "kind": "story",
+  "type": "story",
+  "desc": "随贾维清点商行账目，录残账 ×3 笔（无战斗）",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N10",
+  "seq": "P-10-01",
+  "npc": "N10",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": []
+ },
+ {
+  "id": "q_story_10_02",
+  "name": "潮损清册",
+  "kind": "story",
+  "type": "story",
+  "desc": "登记微澜港潮损商铺 ×3 家并拍照留档（无战斗）",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N10",
+  "seq": "P-10-02",
+  "npc": "N10",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_10_01",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_10_03",
+  "name": "赊账上门",
+  "kind": "story",
+  "type": "story",
+  "desc": "押送赊账物资至潮损商铺 ×2（护送，战 ×1：完整击杀 **乱涡掠者**…",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N10",
+  "seq": "P-10-03",
+  "npc": "N10",
+  "reward_raw": "矿石/金属类素材 ×2（`$C.ECON.DROP_T_UNCOMMON` 档）〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_10_02",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_10_04",
+  "name": "按账说话",
+  "kind": "story",
+  "type": "story",
+  "desc": "代贾维向赖账者宣读账条 ×3 份（无战斗）",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N10",
+  "seq": "P-10-04",
+  "npc": "N10",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_10_03",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_10_05",
+  "name": "账房塌角",
+  "kind": "story",
+  "type": "story",
+  "desc": "清理账房塌角并抢录湿账 ×5（战 ×1：完整击杀 **潮蠹** ×3）",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N10",
+  "seq": "P-10-05",
+  "npc": "N10",
+  "reward_raw": "骸骨类素材 ×2（`$C.ECON.DROP_T_RARE` 档）〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_10_04",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_11_01",
+  "name": "酒馆常客",
+  "kind": "story",
+  "type": "story",
+  "desc": "记录常客偏好 ×5 位入册（无战斗）",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N11",
+  "seq": "P-11-01",
+  "npc": "N11",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": []
+ },
+ {
+  "id": "q_story_11_02",
+  "name": "墙角风声",
+  "kind": "story",
+  "type": "story",
+  "desc": "整理墙角听来的三条线索（无战斗）",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N11",
+  "seq": "P-11-02",
+  "npc": "N11",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_11_01",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_11_03",
+  "name": "无回名单",
+  "kind": "story",
+  "type": "story",
+  "desc": "核对有去无回名单 ×3 人最后行踪（战 ×1：完整击杀 **雾岩守** …",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N11",
+  "seq": "P-11-03",
+  "npc": "N11",
+  "reward_raw": "骸骨类素材 ×2（`$C.ECON.DROP_T_RARE` 档）〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_11_02",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_11_04",
+  "name": "空杯记账",
+  "kind": "story",
+  "type": "story",
+  "desc": "为失踪者保留空杯位并记账 ×3 杯（无战斗）",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N11",
+  "seq": "P-11-04",
+  "npc": "N11",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_11_03",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_11_05",
+  "name": "雾里寻踪",
+  "kind": "story",
+  "type": "story",
+  "desc": "沿最后行踪搜雾区 ×2 处（战 ×1：完整击杀 **汐獭** ×3）",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N11",
+  "seq": "P-11-05",
+  "npc": "N11",
+  "reward_raw": "草药类素材 ×3（`$C.ECON.DROP_T_COMMON` 档）〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_11_04",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_12_01",
+  "name": "哑巴活",
+  "kind": "story",
+  "type": "story",
+  "desc": "整理工坊积压待修件 ×5（无战斗）",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N12",
+  "seq": "P-12-01",
+  "npc": "N12",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": []
+ },
+ {
+  "id": "q_story_12_02",
+  "name": "残械传闻",
+  "kind": "story",
+  "type": "story",
+  "desc": "录湍流残械目击 ×2 处（无战斗）",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N12",
+  "seq": "P-12-02",
+  "npc": "N12",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_12_01",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_12_03",
+  "name": "出土护卫",
+  "kind": "story",
+  "type": "story",
+  "desc": "护卫考古式起吊残械躯干（战 ×1：完整击杀 **碎屿伏蟹** ×3）",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N12",
+  "seq": "P-12-03",
+  "npc": "N12",
+  "reward_raw": "矿石/金属类素材 ×2（`$C.ECON.DROP_T_UNCOMMON` 档）〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_12_02",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_12_04",
+  "name": "拆开才知道",
+  "kind": "story",
+  "type": "story",
+  "desc": "依格罗手势拆解残械外壳 ×3 层（无战斗）",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N12",
+  "seq": "P-12-04",
+  "npc": "N12",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_12_03",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_12_05",
+  "name": "核膛惊雷",
+  "kind": "story",
+  "type": "story",
+  "desc": "残械核膛失控护卫（战 ×1：完整击杀 **失控残械** ×1）",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N12",
+  "seq": "P-12-05",
+  "npc": "N12",
+  "reward_raw": "骸骨类素材 ×2（`$C.ECON.DROP_T_RARE` 档）〔EC-S〕",
+  "source_sys": "定向副本",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_12_04",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_13_01",
+  "name": "栏位清册",
+  "kind": "story",
+  "type": "story",
+  "desc": "清点兽栏栏位与伤兽 ×5 只（无战斗）",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N13",
+  "seq": "P-13-01",
+  "npc": "N13",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": []
+ },
+ {
+  "id": "q_story_13_02",
+  "name": "潮涌寻踪",
+  "kind": "story",
+  "type": "story",
+  "desc": "寻受伤同行兽踪迹 ×2 处（无战斗）",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N13",
+  "seq": "P-13-02",
+  "npc": "N13",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_13_01",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_13_03",
+  "name": "伤兽接引",
+  "kind": "story",
+  "type": "story",
+  "desc": "接引重伤同行兽回栏（战 ×1：完整击杀 **掠翼贼鸥** ×3）",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N13",
+  "seq": "P-13-03",
+  "npc": "N13",
+  "reward_raw": "草药类素材 ×3（`$C.ECON.DROP_T_COMMON` 档）〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_13_02",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_13_04",
+  "name": "慢些，它在听",
+  "kind": "story",
+  "type": "story",
+  "desc": "依米尔手势轻声处置伤肢 ×3 处（无战斗）",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N13",
+  "seq": "P-13-04",
+  "npc": "N13",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_13_03",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_13_05",
+  "name": "药浴夜",
+  "kind": "story",
+  "type": "story",
+  "desc": "守药浴并驱水面袭扰（战 ×1：完整击杀 **浅礁水蛭** ×4）",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N13",
+  "seq": "P-13-05",
+  "npc": "N13",
+  "reward_raw": "骸骨类素材 ×2（`$C.ECON.DROP_T_RARE` 档）〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_13_04",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_14_01",
+  "name": "拜席登记",
+  "kind": "story",
+  "type": "story",
+  "desc": "赴研习社登记学徒名并答三问",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N14",
+  "seq": "P-14-01",
+  "npc": "N14",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": []
+ },
+ {
+  "id": "q_story_14_02",
+  "name": "识药三味",
+  "kind": "story",
+  "type": "story",
+  "desc": "辨识草药类/粉末类/宝石水晶类药柜各一格并归位",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N14",
+  "seq": "P-14-02",
+  "npc": "N14",
+  "reward_raw": "草药类素材 ×2（`$C.ECON.DROP_T_COMMON` 档） 〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_14_01",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_14_03",
+  "name": "采药初课",
+  "kind": "story",
+  "type": "story",
+  "desc": "于悬瀑苔崖完整击杀守道石像 · 廊卫 ×1 并剥取 `$C.ECON.H…",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N14",
+  "seq": "P-14-03",
+  "npc": "N14",
+  "reward_raw": "草药类素材 ×2（`$C.ECON.DROP_T_COMMON` 档） 〔EC-S〕",
+  "source_sys": "剥取委托",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_14_02",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_14_04",
+  "name": "残页古方",
+  "kind": "story",
+  "type": "story",
+  "desc": "誊录残页缺味清单并答「缺哪三味」",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N14",
+  "seq": "P-14-04",
+  "npc": "N14",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_14_03",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_14_05",
+  "name": "倒推配伍",
+  "kind": "story",
+  "type": "story",
+  "desc": "按药性倒推补方一份交芮珂批阅",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N14",
+  "seq": "P-14-05",
+  "npc": "N14",
+  "reward_raw": "粉末类素材 ×1（`$C.ECON.DROP_T_UNCOMMON` 档） 〔EC-S〕",
+  "source_sys": "定向副本",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_14_04",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_15_01",
+  "name": "揭封条",
+  "kind": "story",
+  "type": "story",
+  "desc": "见证旧营地开封并领取勘验任务单",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N15",
+  "seq": "P-15-01",
+  "npc": "N15",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": []
+ },
+ {
+  "id": "q_story_15_02",
+  "name": "营房清勘",
+  "kind": "story",
+  "type": "story",
+  "desc": "清勘营房三间并编号封存遗物",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N15",
+  "seq": "P-15-02",
+  "npc": "N15",
+  "reward_raw": "矿石/金属类素材 ×2（`$C.ECON.DROP_T_COMMON` 档） 〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_15_01",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_15_03",
+  "name": "外围肃清",
+  "kind": "story",
+  "type": "story",
+  "desc": "完整歼灭营区外围 蚀羽鸦 · 掠空 ×3（防扰勘验）",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N15",
+  "seq": "P-15-03",
+  "npc": "N15",
+  "reward_raw": "骸骨类素材 ×1（`$C.ECON.DROP_T_UNCOMMON` 档） 〔EC-S〕",
+  "source_sys": "定向副本",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_15_02",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_15_04",
+  "name": "潮渍名册",
+  "kind": "story",
+  "type": "story",
+  "desc": "辨识名册可辨名字并抄录造册",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N15",
+  "seq": "P-15-04",
+  "npc": "N15",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_15_03",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_15_05",
+  "name": "遗物对号",
+  "kind": "story",
+  "type": "story",
+  "desc": "以遗物对号十人并登记归档",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N15",
+  "seq": "P-15-05",
+  "npc": "N15",
+  "reward_raw": "矿石/金属类素材 ×2（`$C.ECON.DROP_T_COMMON` 档） 〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_15_04",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_16_01",
+  "name": "营门登记",
+  "kind": "story",
+  "type": "story",
+  "desc": "营门登记并参与一次点名",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N16",
+  "seq": "P-16-01",
+  "npc": "N16",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": []
+ },
+ {
+  "id": "q_story_16_02",
+  "name": "营防巡夜",
+  "kind": "story",
+  "type": "story",
+  "desc": "巡夜并完整歼灭袭扰营区 蚀羽鸦 · 掠空 ×2",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N16",
+  "seq": "P-16-02",
+  "npc": "N16",
+  "reward_raw": "鳞片/皮革类素材 ×2（`$C.ECON.DROP_T_COMMON` 档） 〔EC-S〕",
+  "source_sys": "定向副本",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_16_01",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_16_03",
+  "name": "棚区加固",
+  "kind": "story",
+  "type": "story",
+  "desc": "为十座棚加固桩索并登记",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N16",
+  "seq": "P-16-03",
+  "npc": "N16",
+  "reward_raw": "木材类素材 ×2（`$C.ECON.DROP_T_COMMON` 档） 〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_16_02",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_16_04",
+  "name": "逐户问站",
+  "kind": "story",
+  "type": "story",
+  "desc": "走访三户登记「下一站」意向",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N16",
+  "seq": "P-16-04",
+  "npc": "N16",
+  "reward_raw": "果实类素材 ×2（`$C.ECON.DROP_T_COMMON` 档） 〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_16_03",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_16_05",
+  "name": "阿婆回岛护送",
+  "kind": "story",
+  "type": "story",
+  "desc": "护送阿婆返岛根旧居，完整歼灭途袭 岩背走兽 · 惊群 ×1 群",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N16",
+  "seq": "P-16-05",
+  "npc": "N16",
+  "reward_raw": "果实类素材 ×1（`$C.ECON.DROP_T_UNCOMMON` 档） 〔EC-S〕",
+  "source_sys": "定向副本",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_16_04",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_17_01",
+  "name": "旧例开卷",
+  "kind": "story",
+  "type": "story",
+  "desc": "随奥伯巡老港埠头，录旧例条目 ×3 条（无战斗）",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N17",
+  "seq": "P-17-01",
+  "npc": "N17",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": []
+ },
+ {
+  "id": "q_story_17_02",
+  "name": "埠册核名",
+  "kind": "story",
+  "type": "story",
+  "desc": "核对埠头商户旧册 ×5 户并补签押（无战斗）",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N17",
+  "seq": "P-17-02",
+  "npc": "N17",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_17_01",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_17_03",
+  "name": "清道验埠",
+  "kind": "story",
+  "type": "story",
+  "desc": "清剿埠外浅滩扰潮兽群（战 ×1：完整击杀 **裂岩蜥 · 碎坪** ×2）",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N17",
+  "seq": "P-17-03",
+  "npc": "N17",
+  "reward_raw": "矿石/金属类素材 ×2（`$C.ECON.DROP_T_UNCOMMON` 档）〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_17_02",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_17_04",
+  "name": "按老港规矩",
+  "kind": "story",
+  "type": "story",
+  "desc": "代奥伯宣读接班旧例 ×1 卷（无战斗）",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N17",
+  "seq": "P-17-04",
+  "npc": "N17",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_17_03",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_17_05",
+  "name": "名单之辩",
+  "kind": "story",
+  "type": "story",
+  "desc": "集议接班人名单，录两派陈词 ×4 份（无战斗）",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N17",
+  "seq": "P-17-05",
+  "npc": "N17",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_17_04",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_17_19",
+  "name": "放行远航",
+  "kind": "story",
+  "type": "story",
+  "desc": "**E2 放行收束**：为奥伯备远航船票并送行 ×1（无战斗）",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N17",
+  "seq": "P-17-19",
+  "npc": "N17",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` ＋ 「托付」对话解锁（专属②） 〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_17_05",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_17_20",
+  "name": "憾别守潮",
+  "kind": "story",
+  "type": "story",
+  "desc": "**E3 憾别收束**：陪奥伯守末班潮，录憾别辞 ×1（无战斗）",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N17",
+  "seq": "P-17-20",
+  "npc": "N17",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` ＋ 后传 A 篇解锁（专属③） 〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_17_19",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_18_01",
+  "name": "哑钟台初勘",
+  "kind": "story",
+  "type": "story",
+  "desc": "勘验哑钟台旧钟停摆位，录钟锤落点偏差 ×3 处；战斗标注——非战",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N18",
+  "seq": "P-18-01",
+  "npc": "N18",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD`×`$C.TIDE.SIDE_COEF`〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": []
+ },
+ {
+  "id": "q_story_18_02",
+  "name": "钟绳清涡",
+  "kind": "story",
+  "type": "story",
+  "desc": "完整击杀 **渊涡鳗 · 缠柱** ×1——它缠住了钟绳坠锤，断其缠势收…",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N18",
+  "seq": "P-18-02",
+  "npc": "N18",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD`×`$C.TIDE.SIDE_COEF`〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_18_01",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_18_03",
+  "name": "校钟勘验",
+  "kind": "story",
+  "type": "story",
+  "desc": "按校钟勘验单逐格复核音叉位与铜序，登记锈位 ×5；战斗标注——非战",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N18",
+  "seq": "P-18-03",
+  "npc": "N18",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD`×`$C.TIDE.SIDE_COEF`〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_18_02",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_18_04",
+  "name": "旧钟档查误",
+  "kind": "story",
+  "type": "story",
+  "desc": "调旧钟档对雾夜误序记录，苔丝首次允许旁人碰钟档；战斗标注——**M2 插…",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N18",
+  "seq": "P-18-04",
+  "npc": "N18",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD`×`$C.TIDE.SIDE_COEF`〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_18_03",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_18_05",
+  "name": "雾夜听声",
+  "kind": "story",
+  "type": "story",
+  "desc": "完整击杀 **蚀核甲虫 · 滚熔** ×2——哑钟台雾夜袭扰源清剿；战斗…",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N18",
+  "seq": "P-18-05",
+  "npc": "N18",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD`×`$C.TIDE.SIDE_COEF`〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_18_04",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_19_01",
+  "name": "沉件初报",
+  "kind": "story",
+  "type": "story",
+  "desc": "核沉件湾无名大件的目击报 ×2 份，录方位；战斗标注——非战",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N19",
+  "seq": "P-19-01",
+  "npc": "N19",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD`×`$C.TIDE.SIDE_COEF`〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": []
+ },
+ {
+  "id": "q_story_19_02",
+  "name": "浅脊开道",
+  "kind": "story",
+  "type": "story",
+  "desc": "完整击杀 **滑浪鲼 · 逐沫** ×1——破坏双翼鳍使其坠浪，打开下潜…",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N19",
+  "seq": "P-19-02",
+  "npc": "N19",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD`×`$C.TIDE.SIDE_COEF`〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_19_01",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_19_03",
+  "name": "打捞名录核",
+  "kind": "story",
+  "type": "story",
+  "desc": "对打捞名录核大件制式，登记缺项 ×3；战斗标注——非战",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N19",
+  "seq": "P-19-03",
+  "npc": "N19",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD`×`$C.TIDE.SIDE_COEF`〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_19_02",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_19_04",
+  "name": "折人旧案",
+  "kind": "story",
+  "type": "story",
+  "desc": "重提三年前折人旧案的工牌账，巴洛首次当队里念完整份名册；战斗标注——**…",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N19",
+  "seq": "P-19-04",
+  "npc": "N19",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD`×`$C.TIDE.SIDE_COEF`〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_19_03",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_19_05",
+  "name": "鼓泡断缆",
+  "kind": "story",
+  "type": "story",
+  "desc": "完整击杀 **沫冠河豚 · 鼓浪** ×1——刺破冠囊泄气，收回被缠吊缆…",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N19",
+  "seq": "P-19-05",
+  "npc": "N19",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD`×`$C.TIDE.SIDE_COEF`〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_19_04",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_20_01",
+  "name": "散档点收",
+  "kind": "story",
+  "type": "story",
+  "desc": "点收旋缘雨廊散档箱 ×6，登记水渍损档 ×11 页；战斗标注——非战",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N20",
+  "seq": "P-20-01",
+  "npc": "N20",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD`×`$C.TIDE.SIDE_COEF`〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": []
+ },
+ {
+  "id": "q_story_20_02",
+  "name": "廊道护运",
+  "kind": "story",
+  "type": "story",
+  "desc": "完整击杀 **卷云鹫 · 外缘** ×1——逼其落地，护档箱过外缘风道；…",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N20",
+  "seq": "P-20-02",
+  "npc": "N20",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD`×`$C.TIDE.SIDE_COEF`〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_20_01",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_20_03",
+  "name": "编目规程",
+  "kind": "story",
+  "type": "story",
+  "desc": "按编目规程立散档总目骨架，编目 ×30 条；战斗标注——非战",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N20",
+  "seq": "P-20-03",
+  "npc": "N20",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD`×`$C.TIDE.SIDE_COEF`〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_20_02",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_20_04",
+  "name": "缺角之页",
+  "kind": "story",
+  "type": "story",
+  "desc": "发现关键页缺角系人为裁切，黛拉接受猎团协查而非独查；战斗标注——**M2…",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N20",
+  "seq": "P-20-04",
+  "npc": "N20",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD`×`$C.TIDE.SIDE_COEF`〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_20_03",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_20_05",
+  "name": "雨帘取档",
+  "kind": "story",
+  "type": "story",
+  "desc": "完整击杀 **雨幕鲸鲵 · 廊檐** ×1——破坏喷孔散帘，取回帘后湿档…",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N20",
+  "seq": "P-20-05",
+  "npc": "N20",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD`×`$C.TIDE.SIDE_COEF`〔EC-S〕",
+  "source_sys": "定向副本",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_20_04",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_21_01",
+  "name": "开笔立目",
+  "kind": "story",
+  "type": "story",
+  "desc": "随穆恩拟记志篇目 ×10 目（无战斗）",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N21",
+  "seq": "P-21-01",
+  "npc": "N21",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": []
+ },
+ {
+  "id": "q_story_21_02",
+  "name": "纸墨备料",
+  "kind": "story",
+  "type": "story",
+  "desc": "备记志纸墨 ×3 套（无战斗）",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N21",
+  "seq": "P-21-02",
+  "npc": "N21",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_21_01",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_21_03",
+  "name": "采访开路",
+  "kind": "story",
+  "type": "story",
+  "desc": "护送穆恩往蚀云外缘采访（战 ×1：完整击杀 **犁荒兽 · 蚀原** ×2）",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N21",
+  "seq": "P-21-03",
+  "npc": "N21",
+  "reward_raw": "矿石/金属类素材 ×2（`$C.ECON.DROP_T_UNCOMMON` 档）〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_21_02",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_21_04",
+  "name": "记下了改不了",
+  "kind": "story",
+  "type": "story",
+  "desc": "代穆恩宣读记志凡例 ×1 卷（无战斗）",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N21",
+  "seq": "P-21-04",
+  "npc": "N21",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_21_03",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_21_05",
+  "name": "一代人口录",
+  "kind": "story",
+  "type": "story",
+  "desc": "录一代人口述 ×3 段（老锚/副官/守望者各一）（无战斗）",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N21",
+  "seq": "P-21-05",
+  "npc": "N21",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` 〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_21_04",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_21_19",
+  "name": "放行刊行",
+  "kind": "story",
+  "type": "story",
+  "desc": "**E2 放行收束**：护刊行本出海分发 ×3 端（无战斗）",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N21",
+  "seq": "P-21-19",
+  "npc": "N21",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` ＋ 「托付」对话解锁（专属②） 〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_21_05",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
+ },
+ {
+  "id": "q_story_21_20",
+  "name": "封卷憾别",
+  "kind": "story",
+  "type": "story",
+  "desc": "**E3 憾别收束**：助穆恩封存书稿，录憾别辞 ×1（无战斗）",
+  "chapter": "NPC",
+  "chapter_name": "NPC 线 N21",
+  "seq": "P-21-20",
+  "npc": "N21",
+  "reward_raw": "金币 `$C.ECON.STORY_QUEST_GOLD × $C.TIDE.SIDE_COEF` ＋ 后传 A 篇解锁（专属③） 〔EC-S〕",
+  "source_sys": "委托板",
+  "freq": "一次性",
+  "conditions": [
+   {
+    "op": "quest_done",
+    "value": "q_story_21_19",
+    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+   }
+  ]
  }
 ]

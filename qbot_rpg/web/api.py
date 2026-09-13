@@ -554,6 +554,108 @@ def _hint(fm: Optional[FieldMeta]) -> str:
     return "；".join(bits)
 
 
+# =====================================================================================
+# 字段说明卡（批4.6）：自动拼装（全部来自既有元数据）+ 人工 help（qbot_rpg/content/field_meta）
+# =====================================================================================
+# 分工（用户原话：「点击中文名/鼠标悬停显示这个字段的详细解释」）：
+#   · **自动拼装**（本段，一定能出，换包零改动）：字段名（中文+原始键）、类型语义、
+#     数值还是比例/百分比、建议范围、默认值、是否必填、枚举候选、引用目标；
+#   · **人工补充**：`FieldMeta.help`（元数据层撰写的一句话说明）——可选，缺省不报错。
+# 本段只做展示拼装，不触碰任何校验判定（type/required/default/enum/range 均只读）。
+_TYPE_SEMANTIC: Dict[str, str] = {
+    "str": "文本", "text": "文本",
+    "int": "数字", "float": "数字", "number": "数字",
+    "bool": "布尔", "enum": "枚举", "ref": "引用",
+    "list": "列表", "obj": "对象", "map": "映射", "formula": "公式",
+}
+_NUMERIC_TYPES: Tuple[str, ...] = ("int", "float", "number")
+
+
+def _type_semantic(ftype: Optional[str]) -> str:
+    """FieldMeta.type → 中文类型语义（未登记类型如实说「未标注」，不猜）。"""
+    return _TYPE_SEMANTIC.get(ftype or "", "未标注")
+
+
+def _scale_semantic(fm: Optional[FieldMeta]) -> str:
+    """「是数值还是比例/百分比」判定。
+
+    依据优先序：probability 旗标 → unit（`%` 为百分比、其余为带单位数值）→
+    数值型且区间恰为 0~1（推断可能是比例）→ 其余数值「未标注单位」→ 非数值「不适用」。
+    判不出来的如实说「未标注」/「未标注单位」，不臆造。
+    """
+    if fm is None:
+        return "未标注"
+    if fm.probability:
+        return "比例（0~1，按百分比表示概率）"
+    if fm.unit == "%":
+        return "百分比（数值自带 % 单位）"
+    if fm.unit:
+        return f"数值（单位：{fm.unit}）"
+    if fm.type in _NUMERIC_TYPES:
+        if fm.range_min == 0 and fm.range_max == 1:
+            return "比例（0~1；元数据未标注百分比单位）"
+        return "数值（未标注单位）"
+    return "不适用（非数值字段）"
+
+
+def _range_semantic(fm: Optional[FieldMeta]) -> str:
+    """建议范围人话（range_min~range_max；zero_unlimited 写明「0 = 不限」）。"""
+    if fm is None or (fm.range_min is None and fm.range_max is None):
+        return "未标注"
+    if fm.range_min is None:
+        text = f"建议 ≤ {fm.range_max:g}"
+    elif fm.range_max is None:
+        text = f"建议 ≥ {fm.range_min:g}"
+    else:
+        text = f"建议 {fm.range_min:g} ~ {fm.range_max:g}"
+    if fm.zero_unlimited:
+        text += "；0 = 不限"
+    return text
+
+
+def _default_text(value: object) -> str:
+    """默认值的人话展示（布尔用是/否；复合值转紧凑 JSON）。"""
+    if value is None:
+        return ""
+    if isinstance(value, bool):
+        return "是" if value else "否"
+    if isinstance(value, (list, tuple)):
+        return "、".join(str(x) for x in value) if value else "（空列表）"
+    if isinstance(value, Mapping):
+        return _json_text(value)
+    return str(value)
+
+
+def help_card(key: str, fm: Optional[FieldMeta]) -> Dict[str, Any]:
+    """字段说明卡数据（自动拼装 + 人工 help）；全部是可直接展示的中文短语。
+
+    前端只按本结构渲染，不认字段类型、不认任何业务字段名（保持元数据驱动）。
+    元数据未登记（fm=None）→ unregistered=True，自动拼装如实标注「未登记」。
+    """
+    if fm is None:
+        return {
+            "key": key, "label": key, "type": "未登记", "scale": "未标注",
+            "range": "未标注", "default": "未标注", "required": False,
+            "enum": [], "ref_target": None, "unit": "", "help": "",
+            "unregistered": True,
+        }
+    default = _default_text(fm.default)
+    return {
+        "key": key,
+        "label": fm.label or key,
+        "type": _type_semantic(fm.type),
+        "scale": _scale_semantic(fm),
+        "range": _range_semantic(fm),
+        "default": default or "无默认值",
+        "required": bool(fm.required),
+        "enum": [str(x) for x in fm.enum],
+        "ref_target": fm.ref_target,
+        "unit": fm.unit,
+        "help": fm.help,
+        "unregistered": False,
+    }
+
+
 def _resolve_group(key: str, fm: Optional[FieldMeta], mmeta: Optional[ModuleMeta]) -> str:
     """分组解析（缺省兜底）：FieldMeta.group → 模块分组表 → 单一默认分组。"""
     if fm is not None and fm.group:
@@ -660,6 +762,10 @@ def _column(key: str, fm: Optional[FieldMeta], key_label: Optional[str] = None) 
         "enum": [str(x) for x in fm.enum] if fm is not None and fm.enum else [],
         "number_step": _number_step(ftype),
         "default": fm.default if fm is not None else None,
+        # 批4.6：列头也可出说明卡（自动拼装 + 人工 help），与主表单同源。
+        "unit": fm.unit if fm is not None else "",
+        "help": fm.help if fm is not None else "",
+        "help_card": help_card(key, fm),
     }
 
 
@@ -779,6 +885,10 @@ def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
         "enum": [str(x) for x in fm.enum] if fm is not None and fm.enum else [],
         "number_step": _number_step(ftype),
         "hint": _hint(fm),
+        # 批4.6：说明卡（自动拼装 + 人工 help）——前端悬停/点击中文名时展示。
+        "unit": fm.unit if fm is not None else "",
+        "help": fm.help if fm is not None else "",
+        "help_card": help_card(key, fm),
         "columns": [],
         "rows": [],
     }

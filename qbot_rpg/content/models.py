@@ -244,6 +244,16 @@ class ModuleMeta:
     # 缺省空 = 本模块无关联声明 → 条目页不出现关联分区（编辑器不写死任何模块/字段名）。
     # 只影响界面展示，不参与校验（校验器只读 fields，不读本项）。
     associations: Tuple["AssociationMeta", ...] = ()
+    # 编辑器重写批6：新增条目时的「ID 建议规则」声明（元数据有规则就依它，缺省走自动规则）。
+    #   id_rule = ""           → 自动：名称转 slug（英文小写+下划线）优先；取不出 slug 时
+    #                            用「前缀 + 递增序号」（前缀见 id_prefix / kind / 模块名）。
+    #   id_rule = "slug"       → 名称转 slug 优先（无 slug 时仍回退前缀+序号）。
+    #   id_rule = "prefix_seq" → 一律「前缀 + 递增序号」。
+    # id_prefix = 序号/前缀规则的前缀（缺省用 kind，再缺省用模块名；字符串会 slug 归一）。
+    # 只影响「建议 ID」的生成与展示（用户仍可编辑）；不参与校验——ID 合法性/唯一性
+    # 仍由既有校验器（R-5 命名空间唯一 + key_regex）裁定，本层不新写规则。
+    id_rule: str = ""
+    id_prefix: str = ""
 
 
 @dataclass(frozen=True)

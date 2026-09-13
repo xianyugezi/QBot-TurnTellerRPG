@@ -25,7 +25,7 @@
 from __future__ import annotations
 
 import copy
-from typing import Any, Dict, List, Mapping, Optional, Sequence
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence
 
 from qbot_rpg.content import atomic_store
 from qbot_rpg.content.models import FieldMeta, FieldMetaTable
@@ -266,6 +266,23 @@ def _split_report(report: Any, slot: Mapping[str, Any]) -> Any:
     return reds, yellows
 
 
+def _related_to_slot(items: Sequence[Mapping[str, Any]], slot: Mapping[str, Any],
+                     module: str) -> List[Dict[str, Any]]:
+    """把「已装饰」的提示再收敛到目标槽位：条目级（`模块.<槽位>.*`）或模块级（`模块`）。
+
+    `_decorate` 的 related 判定含 module_related（`field.startswith(模块 + ".")`），会把
+    **同模块其他条目**的提示也算成相关；新增/删除时那会造成一串与本次操作无关的黄提示。
+    本过滤只保留目标槽位自身与真正的模块级提示（不改变任何校验规则）。
+    """
+    prefix = _scope_prefix(slot)
+    out: List[Dict[str, Any]] = []
+    for it in items:
+        field = str(it.get("field") or "")
+        if field == module or field == prefix or field.startswith(prefix + "."):
+            out.append(dict(it))
+    return out
+
+
 # =====================================================================================
 # 校验（不落盘）
 # =====================================================================================
@@ -292,9 +309,15 @@ def validate_entry(pack: object, module: object, entry_id: object, patch: object
 # 落盘（备份 → 原子写 → 回读复核）
 # =====================================================================================
 def _verify_after_write(pack: object, ground_slot: Mapping[str, Any],
-                        root: Optional[object], meta: Optional[FieldMetaTable]
+                        root: Optional[object], meta: Optional[FieldMetaTable],
+                        tolerate: Optional[Callable[[Any], bool]] = None
                         ) -> Optional[List[Dict[str, Any]]]:
-    """回读落盘结果 + 整包复校：通过 → None；不通过 → 人话红拦（用于触发自动回退）。"""
+    """回读落盘结果 + 整包复校：通过 → None；不通过 → 人话红拦（用于触发自动回退）。
+
+    `tolerate`：可选的「容忍判定」——返回 True 的红拦不计入复核失败。
+    仅供「删除被引用条目」这类**产品明确允许**的场景使用（见 delete_entry）；默认 None
+    = 一律不容忍，批2 保存链语义零变化。
+    """
     try:
         _pack_dir, modules = api.load_pack_modules(pack, root=root)
         report = check_pack(modules, meta)
@@ -304,10 +327,14 @@ def _verify_after_write(pack: object, ground_slot: Mapping[str, Any],
                  "field_key": "", "field_label": "（整包）", "related": True,
                  "message": f"写入后回读复核失败：{type(exc).__name__}",
                  "how_to_fix": "请检查磁盘状态后重试；必要时用「回退」恢复上一份备份。"}]
-    if report.ok:
+    raw_errors = list(report.errors)
+    if tolerate is not None:
+        raw_errors = [e for e in raw_errors if not tolerate(e)]
+    if not raw_errors:
         return None
-    reds, _ = _split_report(report, ground_slot)
-    return reds
+    prefix = _scope_prefix(ground_slot)
+    return _decorate(atomic_store.humanize_errors(raw_errors), ground_slot, prefix,
+                     related_only=False)
 
 
 def save_entry(pack: object, module: object, entry_id: object, patch: object, *,
@@ -362,6 +389,227 @@ def save_entry(pack: object, module: object, entry_id: object, patch: object, *,
         written=list(written.get("written") or []),
         backup=atomic_store.backup_status(pack_dir, mod),
         message=("已保存（含黄提示，可继续修改）。" if yellows else "已保存。"),
+    )
+    return env
+
+
+# =====================================================================================
+# 批6：新增条目（模块级）——建议 ID 唯一性 → 元数据默认值 → 批2 同一落盘链路
+# =====================================================================================
+def _plan_create(pack: object, module: object, entry_id: str, patch: object,
+                 root: Optional[object], meta: Optional[FieldMetaTable]) -> Any:
+    """新增条目的纯计算规划：定位模块 → 补默认值/补丁 → 生成整包视图 → 跑校验器。"""
+    if not isinstance(patch, Mapping):
+        raise api.BadRequest("改动内容形态非法（应为「字段 → 值」对象）。")
+    info = api.new_entry_slot(pack, module, entry_id, root=root)
+    etype = str(info["entry_type"])
+    id_field = str(info["id_field"])
+    allowed = [str(k) for k in info["base"]]
+    if etype == "list":
+        allowed.append(id_field)
+    subject = _apply_patch(info["subject"], patch, allowed)
+    subject = dict(subject) if isinstance(subject, Mapping) else {}
+    if etype == "list":
+        subject[id_field] = entry_id
+    data = info["data"]
+    content: object
+    if etype == "list":
+        content = list(data) if isinstance(data, list) else []
+        content.append(subject)
+    elif isinstance(data, Mapping):
+        content = copy.deepcopy(dict(data))
+        content[entry_id] = subject
+    else:
+        content = {entry_id: subject}
+    _pack_dir, modules_raw = api.load_pack_modules(pack, root=root)
+    new_modules = _modules_with(modules_raw, str(info["module"]), content)
+    report = check_pack(new_modules, meta)
+    return info, content, report
+
+
+def create_entry(pack: object, module: object, entry_id: object, patch: object, *,
+                 root: Optional[object] = None, role: object = ROLE_OWNER,
+                 meta: Optional[FieldMetaTable] = None) -> Dict[str, Any]:
+    """新增条目唯一入口：ID 唯一性红拦 → 校验 → 备份 → 原子写 → 回读复核（同批2 链路）。
+
+    · ID 为空/非法/同模块或同命名空间重复 → ok=false 且零文件改动（红拦）；
+    · 其余字段按元数据 default 初始化后再叠加 patch（未登记字段 BadRequest，不写脏键）；
+    · 校验红拦不落盘；通过则备份 .bak → 原子写 → 回读复核，失败自动回退。
+    """
+    require_edit(role)
+    eid = str(entry_id or "").strip()
+    check = api.check_entry_id(pack, module, eid, root=root, meta=meta)
+    env = _envelope(phase="create", pack=str(pack), module=str(module), entry_id=eid,
+                    changed_fields=sorted(str(k) for k in (patch or {})))
+    if not check.get("ok"):
+        env.update(level="red", message=str(check.get("message") or "ID 校验未通过。"))
+        env["errors"] = [{
+            "level": "red", "code": "id_invalid", "module": str(module),
+            "field": "", "entry_id": eid, "field_key": "", "field_label": "（条目 ID）",
+            "related": True, "message": str(check.get("message") or ""),
+            "how_to_fix": str(check.get("how_to_fix") or ""),
+        }]
+        env["id_check"] = check
+        return env
+
+    info, content, report = _plan_create(pack, module, eid, patch, root, meta)
+    reds, yellows = _split_report(report, info)
+    # 黄提示只留新条目自身（同模块其他条目的黄提示与本次新增无关）
+    yellows = _related_to_slot(yellows, info, str(info["module"]))
+    env = _envelope(phase="create", pack=str(pack), module=str(info["module"]),
+                    entry_id=eid, errors=reds, warnings=yellows,
+                    changed_fields=sorted(str(k) for k in (patch or {})))
+    if not report.ok:
+        env.update(level="red", message="校验未通过：本次未新增任何内容（红拦）。")
+        return env
+
+    pack_dir = info["pack_dir"]
+    mod = str(info["module"])
+    backup = atomic_store.backup_modules(pack_dir, [mod])
+    if not backup.get("ok"):
+        env.update(level="red", message="备份失败，已取消本次新增（内容包未被改动）。")
+        env["errors"] = list(backup.get("errors") or []) + env["errors"]
+        return env
+
+    written = atomic_store.write_modules(pack_dir, {mod: content})
+    if not written.get("ok"):
+        env.update(level="red", message="写入失败：文件未改动（原子写未完成）。")
+        env["errors"] = list(written.get("errors") or []) + env["errors"]
+        return env
+
+    verify_errors = _verify_after_write(pack, info, root, meta)
+    if verify_errors is not None:
+        rolled = atomic_store.restore_modules_from_backup(pack_dir, [mod])
+        env.update(level="red", rolled_back=bool(rolled.get("ok")))
+        env["errors"] = verify_errors + env["errors"]
+        env["message"] = ("写入后复核未通过，已自动回退到上一份备份（本次新增未生效）。"
+                          if rolled.get("ok") else
+                          "写入后复核未通过，且自动回退失败：请立即用「回退」或手动检查备份。")
+        return env
+
+    env.update(
+        ok=True, level=("yellow" if yellows else "ok"),
+        written=list(written.get("written") or []),
+        backup=atomic_store.backup_status(pack_dir, mod),
+        message=f"已新增条目「{eid}」。",
+    )
+    return env
+
+
+# =====================================================================================
+# 批6：删除条目（含「被引用检查」；引用者默认黄提示、不拦）
+# =====================================================================================
+def _remove_entry(data: object, slot: object, entry_id: object) -> object:
+    """从模块数据里移除条目（深拷贝；list 按下标，map/object 按键）。"""
+    if isinstance(data, list) and isinstance(slot, int):
+        out = copy.deepcopy(data)
+        if 0 <= slot < len(out):
+            del out[slot]
+        return out
+    if isinstance(data, Mapping):
+        out = copy.deepcopy(dict(data))
+        out.pop(str(entry_id), None)
+        return out
+    return copy.deepcopy(data)
+
+
+def _is_dangling_to(entry_id: object) -> Callable[[Any], bool]:
+    """容忍判定：仅「指向被删条目的 R-4 引用缺失」不算复核失败。
+
+    产品语义（需求 §三/批6）：删除被引用条目默认不拦、只黄提示 → 删除后遗留的悬空引用
+    不是本次写入的失败；其余任何红拦仍照常阻断/回退。
+    """
+    tgt = str(entry_id)
+
+    def _pred(error: Any) -> bool:
+        kind = str(getattr(error, "kind", "") or "")
+        detail = dict(getattr(error, "detail", {}) or {})
+        return kind == "R-4" and str(detail.get("ref") or "") == tgt
+
+    return _pred
+
+
+def reference_warnings(referrers: Sequence[Mapping[str, Any]]) -> List[Dict[str, Any]]:
+    """引用者 → 界面黄提示条目（人话：谁、哪个字段引用了它）。"""
+    out: List[Dict[str, Any]] = []
+    for r in referrers:
+        label = str(r.get("field_label") or r.get("field") or "")
+        out.append({
+            "level": "yellow", "code": "entry_referenced",
+            "module": str(r.get("module") or ""), "field": str(r.get("field") or ""),
+            "entry_id": str(r.get("entry_id") or ""), "field_key": str(r.get("field") or ""),
+            "field_label": label, "related": True,
+            "message": (f"{r.get('module_label') or r.get('module')}「{r.get('entry_name')}」的"
+                        f"「{label}」引用了它（值 = {r.get('value')}）。"),
+            "how_to_fix": ("如需保持引用完整，请先修改或删除这些引用者；"
+                           "也可用「回退到上一份备份」撤销本次删除。"),
+        })
+    return out
+
+
+def delete_entry(pack: object, module: object, entry_id: object, *,
+                 root: Optional[object] = None, role: object = ROLE_OWNER,
+                 meta: Optional[FieldMetaTable] = None) -> Dict[str, Any]:
+    """删除条目唯一入口：被引用检查（黄提示）→ 校验 → 备份 → 原子写 → 回读复核。
+
+    · 先扫描「谁引用了它」并作为黄提示返回（默认**不拦**）；
+    · 仅「指向被删条目的引用缺失（R-4）」被容忍；其余红拦一律不落盘；
+    · 删除前自动备份 .bak，落盘失败/复核失败自动回退（可再用「回退」恢复）。
+    """
+    require_edit(role)
+    slot = api.entry_slot(pack, module, entry_id, root=root)
+    mod = str(slot["module"])
+    referrers = api.reference_scan(pack, mod, entry_id, root=root, meta=meta)
+    new_content = _remove_entry(slot["data"], slot["slot"], entry_id)
+    _pack_dir, modules_raw = api.load_pack_modules(pack, root=root)
+    new_modules = _modules_with(modules_raw, mod, new_content)
+    report = check_pack(new_modules, meta)
+    tolerate = _is_dangling_to(entry_id)
+    blocking = [e for e in report.errors if not tolerate(e)]
+    prefix = _scope_prefix(slot)
+    ref_warnings = reference_warnings(referrers)
+    yellows = _decorate(atomic_store.humanize_warnings(report.warnings), slot, prefix,
+                        related_only=True)
+    yellows = _related_to_slot(yellows, slot, mod)
+    env = _envelope(phase="delete", pack=str(pack), module=mod, entry_id=str(entry_id),
+                    warnings=ref_warnings + yellows, referrers=referrers)
+    if blocking:
+        env.update(level="red", message="删除后整包校验出现新的红拦：本次未写入任何文件。")
+        env["errors"] = _decorate(atomic_store.humanize_errors(blocking), slot, prefix,
+                                  related_only=False)
+        return env
+
+    pack_dir = slot["pack_dir"]
+    backup = atomic_store.backup_modules(pack_dir, [mod])
+    if not backup.get("ok"):
+        env.update(level="red", message="备份失败，已取消本次删除（内容包未被改动）。")
+        env["errors"] = list(backup.get("errors") or []) + env["errors"]
+        return env
+
+    written = atomic_store.write_modules(pack_dir, {mod: new_content})
+    if not written.get("ok"):
+        env.update(level="red", message="写入失败：文件未改动（原子写未完成）。")
+        env["errors"] = list(written.get("errors") or []) + env["errors"]
+        return env
+
+    verify_errors = _verify_after_write(pack, slot, root, meta, tolerate=tolerate)
+    if verify_errors is not None:
+        rolled = atomic_store.restore_modules_from_backup(pack_dir, [mod])
+        env.update(level="red", rolled_back=bool(rolled.get("ok")))
+        env["errors"] = verify_errors + env["errors"]
+        env["message"] = ("删除后回读复核未通过，已自动回退到上一份备份（本次删除未生效）。"
+                          if rolled.get("ok") else
+                          "删除后复核未通过，且自动回退失败：请立即用「回退」或手动检查备份。")
+        return env
+
+    msg = f"已删除条目「{entry_id}」。"
+    if referrers:
+        msg += f" 有 {len(referrers)} 个条目仍引用它（黄提示，未拦截）。"
+    env.update(
+        ok=True, level=("yellow" if (ref_warnings or yellows) else "ok"),
+        written=list(written.get("written") or []),
+        backup=atomic_store.backup_status(pack_dir, mod),
+        message=msg,
     )
     return env
 
@@ -423,9 +671,12 @@ __all__ = [
     "EDITABLE_ROLES",
     "ROLE_GM",
     "ROLE_OWNER",
+    "create_entry",
+    "delete_entry",
     "is_editable",
     "module_backup",
     "normalize_role",
+    "reference_warnings",
     "require_edit",
     "rollback_module",
     "save_entry",

@@ -20,6 +20,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 import re
 from functools import lru_cache
@@ -95,8 +96,8 @@ def _pack_dir(pack: object, root: Optional[object]) -> Path:
     return d
 
 
-@lru_cache(maxsize=1024)
-def _read_json_cached(path_str: str, mtime_ns: int) -> Optional[object]:
+@lru_cache(maxsize=2048)
+def _read_json_cached(path_str: str, mtime_ns: int, size: int, ino: int) -> Optional[object]:
     try:
         with Path(path_str).open("r", encoding="utf-8") as fh:
             return json.load(fh)
@@ -107,12 +108,17 @@ def _read_json_cached(path_str: str, mtime_ns: int) -> Optional[object]:
 
 
 def _read_json(path: Path) -> Optional[object]:
-    """读 JSON（文件不存在 → None；mtime 变化自动失效缓存）。"""
+    """读 JSON（文件不存在 → None；mtime/size/inode 变化自动失效缓存）。
+
+    批6：缓存键补 `size` + `st_ino`——原子写（os.replace 新临时文件）在同一时间戳刻度内
+    可能产生与上一版相同的 `st_mtime_ns`，仅按 mtime 作键会把「刚写的新内容」读成旧内容
+    （删除后回退复核曾因此假阴性）。inode/size 一起进键后，同刻度重写不再串味。
+    """
     try:
         st = path.stat()
     except OSError:
         return None
-    return _read_json_cached(str(path), st.st_mtime_ns)
+    return _read_json_cached(str(path), st.st_mtime_ns, st.st_size, st.st_ino)
 
 
 def _manifest(pack_dir: Path) -> Dict[str, Any]:
@@ -940,6 +946,7 @@ def _path_field_label(mmeta: Optional[ModuleMeta], path: object) -> str:
     if mmeta is None or not path:
         return ""
     parts = [p for p in re.split(r"[.\[\]]+", str(path)) if p]
+    parts = [p for p in parts if not p.isdigit()]  # 列表下标段（steps[0]）不参与下钻
     if not parts:
         return ""
     fm = mmeta.fields.get(parts[0])
@@ -1578,14 +1585,438 @@ def ref_options(pack: object, target: object, root: Optional[object] = None,
             "total": total, "truncated": total > limit, "known": True}
 
 
+# =====================================================================================
+# 批6：新增/删除条目 + ID 生成 + 检索（通用：规则/默认值/引用全部来自元数据）
+# =====================================================================================
+# ID 建议规则的元数据词表（ModuleMeta.id_rule）：缺省自动，声明了就依声明。
+ID_RULE_AUTO = ""              # 自动：名称 slug 优先；取不出 slug → 前缀 + 递增序号
+ID_RULE_SLUG = "slug"          # 名称 → 英文小写 + 下划线
+ID_RULE_PREFIX_SEQ = "prefix_seq"  # 前缀 + 递增序号
+ID_RULES: Tuple[str, ...] = (ID_RULE_AUTO, ID_RULE_SLUG, ID_RULE_PREFIX_SEQ)
+# 新建条目时给非技术用户的人话说明（框架级文案，不含任何业务字段名）。
+ID_HINT = ("ID 是内容之间互相引用的名字，建议用英文小写 + 下划线（如 sword_aura）；"
+           "它在同模块内必须唯一，建好后尽量不要改。")
+# ID 形态底线（建议而非硬规则）：非空、无空白、无路径分隔符、长度可控。
+_ID_SAFE = re.compile(r"^[^\s/\\]{1,128}$")
+
+
+def slugify(text: object) -> str:
+    """名称 → 英文小写 + 下划线 slug（取不出 ASCII 字符时返回空串，**不臆造拼音**）。"""
+    parts = re.findall(r"[A-Za-z0-9]+", str(text or ""))
+    return "_".join(p.lower() for p in parts)
+
+
+def _module_prefix(module: str, mmeta: Optional[ModuleMeta]) -> str:
+    """ID 前缀（元数据 id_prefix → kind → 模块名，逐级兜底并 slug 归一）。"""
+    if mmeta is not None and mmeta.id_prefix:
+        return slugify(mmeta.id_prefix) or str(mmeta.id_prefix)
+    if mmeta is not None and mmeta.kind:
+        return slugify(mmeta.kind) or str(mmeta.kind)
+    return slugify(module) or str(module)
+
+
+def id_rule_spec(module: str, mmeta: Optional[ModuleMeta]) -> Dict[str, Any]:
+    """ID 建议规则（界面展示 + 生成用；未声明/不识别 → 自动规则）。"""
+    raw = str(mmeta.id_rule).strip() if mmeta is not None else ""
+    rule = raw if raw in ID_RULES else ID_RULE_AUTO
+    return {
+        "rule": rule,
+        "declared": bool(raw),
+        "prefix": _module_prefix(module, mmeta),
+        "rules": list(ID_RULES),
+    }
+
+
+def suggest_entry_id(module: str, mmeta: Optional[ModuleMeta], name: object,
+                     existing_ids: object = ()) -> str:
+    """按规则生成建议 ID（同模块/同命名空间内保证不重复）。
+
+    · rule=prefix_seq（或名称取不出 slug）→ `<前缀>_<递增序号>`；
+    · rule=slug / auto 且名称有 slug → `<slug>`；重复则追加 `_2`、`_3`…
+    生成只依赖元数据与「现有 ID 集合」，不写死任何业务模块/字段名。
+    """
+    spec = id_rule_spec(module, mmeta)
+    used = {str(x) for x in (existing_ids or ()) if str(x)}
+    prefix = spec["prefix"] or "entry"
+
+    def seq() -> str:
+        n = 1
+        while f"{prefix}_{n}" in used:
+            n += 1
+        return f"{prefix}_{n}"
+
+    def uniq(base: str) -> str:
+        if base and base not in used:
+            return base
+        n = 2
+        while f"{base}_{n}" in used:
+            n += 1
+        return f"{base}_{n}"
+
+    if spec["rule"] == ID_RULE_PREFIX_SEQ:
+        return seq()
+    slug = slugify(name)
+    if not slug:
+        return seq()
+    return uniq(slug)
+
+
+def _id_scope_modules(module: str, mmeta: Optional[ModuleMeta],
+                      declared: List[str], table: FieldMetaTable) -> List[str]:
+    """ID 唯一性作用域：本模块 + 同命名空间兄弟模块（与校验器 R-5 口径一致）。"""
+    mods = [module]
+    if mmeta is not None and mmeta.namespace:
+        for m in table.namespaces.get(mmeta.namespace, ()):  # 命名空间成员（元数据声明）
+            if m in declared and m not in mods:
+                mods.append(m)
+    return mods
+
+
+def _id_entries(pack_dir: Path, manifest: Mapping[str, Any], module: str,
+                mmeta: Optional[ModuleMeta], table: FieldMetaTable
+                ) -> List[Tuple[str, str, str]]:
+    """作用域内已有条目 → [(模块, ID, 名称)]（唯一性即时校验的数据源，只读）。"""
+    declared = _declared_modules(manifest)
+    out: List[Tuple[str, str, str]] = []
+    for m in _id_scope_modules(module, mmeta, declared, table):
+        data = _read_json(pack_dir / f"{m}.json")
+        mm = table.module(m)
+        for eid, name, _val in _entry_rows(data, mm):
+            out.append((m, eid, name))
+    return out
+
+
+def suggest_id(pack: object, module: object, root: Optional[object] = None,
+               name: object = None) -> Dict[str, Any]:
+    """建议 ID（`/…/suggest_id?name=…`）：名称 → 规则 → 不重复的建议 ID。"""
+    pack_dir = _pack_dir(pack, root)
+    manifest = _manifest(pack_dir)
+    mod = declared_module(pack, module, root=root)
+    table = field_meta_table()
+    mmeta = table.module(mod)
+    existing = {eid for _m, eid, _n in _id_entries(pack_dir, manifest, mod, mmeta, table)}
+    return {
+        "pack": str(pack), "module": mod,
+        "suggested_id": suggest_entry_id(mod, mmeta, name, existing),
+        "id_rule": id_rule_spec(mod, mmeta),
+        "id_hint": ID_HINT,
+        "existing_count": len(existing),
+    }
+
+
+def check_entry_id(pack: object, module: object, entry_id: object,
+                   root: Optional[object] = None,
+                   meta: Optional[FieldMetaTable] = None) -> Dict[str, Any]:
+    """新增条目的 ID 即时校验（只读）：空/非法 → 红；同模块或同命名空间重复 → 红。"""
+    table = meta if meta is not None else field_meta_table()
+    pack_dir = _pack_dir(pack, root)
+    manifest = _manifest(pack_dir)
+    mod = declared_module(pack, module, root=root)
+    mmeta = table.module(mod)
+    eid = str(entry_id or "").strip()
+    labels = _display_labels(manifest, _declared_modules(manifest))
+
+    def _out(ok: bool, level: str, message: str, how: str,
+             conflicts: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+        return {"pack": str(pack), "module": mod, "entry_id": eid, "ok": ok,
+                "level": level, "status": "red" if not ok else "ok",
+                "conflicts": conflicts or [], "message": message,
+                "how_to_fix": how, "id_hint": ID_HINT}
+
+    if not eid:
+        return _out(False, "red", "ID 不能为空：请填写一个本模块内唯一的标识。",
+                    "建议用英文小写 + 下划线（如 sword_aura）；点「按名称生成」可自动取一个。")
+    if not _ID_SAFE.match(eid):
+        return _out(False, "red", f"ID「{eid}」含空格、斜杠或超长字符，不能用作条目标识。",
+                    "请改用不含空格与斜杠的短标识（建议英文小写 + 下划线）。")
+    conflicts = [
+        {"module": m, "module_label": labels.get(m) or m, "id": e, "name": n}
+        for m, e, n in _id_entries(pack_dir, manifest, mod, mmeta, table) if e == eid
+    ]
+    if conflicts:
+        where = "、".join(
+            f"{c['module_label']}「{c['name']}」" if c["module"] != mod
+            else f"本模块「{c['name']}」" for c in conflicts)
+        return _out(
+            False, "red", f"ID「{eid}」已被占用（{where}），同模块/同命名空间内不能重复。",
+            "换一个 ID，或点「按名称生成」让编辑器按规则取一个不重复的。", conflicts)
+    return _out(True, "ok", f"ID「{eid}」可用。", "")
+
+
+def entry_index(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
+    """全包条目索引（跨模块检索 + ID 即时唯一性校验的数据源；只读）。
+
+    出参按模块分组：{module, label, entry_type, namespace, count, entries:[{id,name}]}。
+    编辑器据此在前端本地过滤（纯前端检索，不逐键请求后端）。
+    """
+    pack_dir = _pack_dir(pack, root)
+    manifest = _manifest(pack_dir)
+    declared = _declared_modules(manifest)
+    labels = _display_labels(manifest, declared)
+    table = field_meta_table()
+    modules: List[Dict[str, Any]] = []
+    total = 0
+    for mod in declared:
+        data = _read_json(pack_dir / f"{mod}.json")
+        mmeta = table.module(mod)
+        etype = mmeta.entry_type if mmeta is not None else _infer_entry_type(data)
+        ns = (mmeta.namespace if mmeta is not None and mmeta.namespace else mod)
+        entries = [{"id": eid, "name": name} for eid, name, _v in _entry_rows(data, mmeta)]
+        total += len(entries)
+        modules.append({
+            "module": mod, "label": labels.get(mod) or mod, "entry_type": etype,
+            "namespace": ns, "count": len(entries), "entries": entries,
+        })
+    return {"pack": str(pack), "pack_name": str(manifest.get("name", "") or pack),
+            "modules": modules, "total": total, "meta_source": META_SOURCE}
+
+
+def _new_entry_base(mmeta: Optional[ModuleMeta], etype: str, entry_id: str,
+                    id_field: str) -> Mapping[str, FieldMeta]:
+    """新建条目的可编辑字段基表（list 排除 ID 键：ID 在新建界面单独渲染）。"""
+    base = _entry_base(mmeta, etype, entry_id, None)
+    if etype == "list":
+        return {k: v for k, v in base.items() if str(k) != id_field}
+    return base
+
+
+def _new_entry_defaults(mmeta: Optional[ModuleMeta], etype: str, entry_id: str,
+                        id_field: str) -> Dict[str, Any]:
+    """新条目初始值：其余字段按元数据 default 初始化（缺省无 default → 不写该键）。"""
+    out: Dict[str, Any] = {}
+    if mmeta is None:
+        return out
+    if etype == "list":
+        for k, fm in mmeta.fields.items():
+            if str(k) == id_field:
+                continue
+            if fm.default is not None:
+                out[str(k)] = copy.deepcopy(fm.default)
+        out[id_field] = entry_id
+    else:
+        kids: Mapping[str, FieldMeta] = {}
+        if etype == "map" and mmeta.value_meta is not None and mmeta.value_meta.children:
+            kids = mmeta.value_meta.children
+        elif etype == "object":
+            fm = mmeta.fields.get(entry_id)
+            if fm is not None and fm.children:
+                kids = fm.children
+        for k, cfm in kids.items():
+            if cfm.default is not None:
+                out[str(k)] = copy.deepcopy(cfm.default)
+    return out
+
+
+def new_entry_slot(pack: object, module: object, entry_id: object = "",
+                   root: Optional[object] = None) -> Dict[str, Any]:
+    """新建条目的定位/默认值/字段基表（写链路与新建界面共用；只读）。"""
+    pack_dir = _pack_dir(pack, root)
+    manifest = _manifest(pack_dir)
+    mod = declared_module(pack, module, root=root)
+    data = _read_json(pack_dir / f"{mod}.json")
+    table = field_meta_table()
+    mmeta = table.module(mod)
+    etype = mmeta.entry_type if mmeta is not None else _infer_entry_type(data)
+    id_field = (mmeta.id_field if mmeta is not None and mmeta.id_field else _ID_FIELD)
+    eid = str(entry_id or "").strip()
+    if not eid and etype == "object":
+        present = {str(k) for k in data} if isinstance(data, Mapping) else set()
+        declared_fields = mmeta.fields if mmeta is not None else {}
+        remaining = [str(k) for k in declared_fields if k not in present]
+        eid = remaining[0] if remaining else ""
+    base = _new_entry_base(mmeta, etype, eid, id_field)
+    # 新条目在模块里的「槽位」：list=追加后的下标，map/object=键。写链路据此把
+    # 校验红拦/黄提示的作用域收敛到新条目自身（否则 list 模块会把全模块其他条目的黄提示
+    # 都算成「相关」——批2 的 _scope_prefix 语义）。
+    if etype == "list":
+        slot: object = len(data) if isinstance(data, list) else None
+    elif etype in ("map", "object"):
+        slot = eid
+    else:
+        slot = None
+    return {
+        "pack_dir": pack_dir, "manifest": manifest, "module": mod,
+        "entry_type": etype, "data": data, "mmeta": mmeta,
+        "id_field": id_field, "entry_id": eid, "base": base, "slot": slot,
+        "subject": _new_entry_defaults(mmeta, etype, eid, id_field),
+    }
+
+
+def new_entry_detail(pack: object, module: object, root: Optional[object] = None,
+                     name: object = None, entry_id: object = None) -> Dict[str, Any]:
+    """新建条目界面数据（`/…/module/{m}/new`）：建议 ID + 默认值字段 + 分组。"""
+    pack_dir = _pack_dir(pack, root)
+    manifest = _manifest(pack_dir)
+    declared = _declared_modules(manifest)
+    table = field_meta_table()
+    info = new_entry_slot(pack, module, entry_id or "", root=root)
+    mod = info["module"]
+    mmeta: Optional[ModuleMeta] = info["mmeta"]
+    etype = info["entry_type"]
+    id_field = info["id_field"]
+    prefill = str(info["entry_id"] or "")
+    existing = {eid for _m, eid, _n in _id_entries(pack_dir, manifest, mod, mmeta, table)}
+    suggested = str(entry_id or "").strip() or prefill or suggest_entry_id(
+        mod, mmeta, name, existing)
+    base = info["base"]
+    subject = dict(info["subject"])
+    subject.pop(id_field, None)  # ID 单独渲染，不混进字段网格
+    view = _PackView(pack_dir, manifest)
+    fields = _build_fields(base, subject, mmeta, view, 0)
+    groups = _group_summary(fields, mmeta)
+    labels = _display_labels(manifest, declared)
+    id_fm = None
+    if mmeta is not None:
+        id_fm = mmeta.fields.get(id_field)
+    return {
+        "pack": str(pack),
+        "pack_name": str(manifest.get("name", "") or pack),
+        "module": mod,
+        "module_label": labels.get(mod) or mod,
+        "entry_type": etype,
+        "is_new": True,
+        "id_field": id_field,
+        "id_field_label": (id_fm.label if id_fm is not None and id_fm.label else id_field),
+        "suggested_id": suggested,
+        "id_rule": id_rule_spec(mod, mmeta),
+        "id_hint": ID_HINT,
+        "can_create": bool(suggested) or etype in ("list", "map"),
+        "name_field": _NAME_FIELD,
+        "fields": fields,
+        "groups": groups,
+        "field_count": len(fields),
+        "group_count": len(groups),
+        "associations": [],
+        "association_count": 0,
+        "meta_source": META_SOURCE,
+    }
+
+
+def _ref_kind_matches(ref_target: object, kinds: set) -> bool:
+    """引用目标的 kind 是否指向被删模块（未标注目标也算：字段类型是 ref 即视为引用）。"""
+    t = str(ref_target or "")
+    if not t:
+        return True
+    if t in kinds:
+        return True
+    if t.endswith("_or_any") and t[: -len("_or_any")] in kinds:
+        return True
+    return False
+
+
+def _collect_ref_hits(value: object, fm: Optional[FieldMeta], path: str,
+                      target_id: str, kinds: set,
+                      out: List[Dict[str, Any]]) -> None:
+    """沿字段元数据递归找「值 == target_id 的引用字段」（键名不写死，全按元数据下钻）。"""
+    if fm is None:
+        if isinstance(value, Mapping):
+            for k, v in value.items():
+                _collect_ref_hits(v, None, f"{path}.{k}" if path else str(k), target_id, kinds, out)
+        elif isinstance(value, list):
+            for i, v in enumerate(value):
+                _collect_ref_hits(v, None, f"{path}[{i}]", target_id, kinds, out)
+        return
+    if fm.type == "ref":
+        if str(value) == target_id and _ref_kind_matches(fm.ref_target, kinds):
+            out.append({"path": path, "value": value, "ref_target": fm.ref_target or ""})
+        return
+    if fm.type == "list":
+        if isinstance(value, list):
+            for i, v in enumerate(value):
+                _collect_ref_hits(v, fm.element, f"{path}[{i}]", target_id, kinds, out)
+        return
+    if fm.type == "obj":
+        if isinstance(value, Mapping):
+            for k, v in value.items():
+                child = fm.children.get(str(k)) if fm.children else None
+                _collect_ref_hits(v, child, f"{path}.{k}" if path else str(k),
+                                  target_id, kinds, out)
+        return
+    if fm.type == "map":
+        if isinstance(value, Mapping):
+            for k, v in value.items():
+                _collect_ref_hits(v, fm.element, f"{path}.{k}" if path else str(k),
+                                  target_id, kinds, out)
+
+
+def reference_scan(pack: object, module: object, entry_id: object,
+                   root: Optional[object] = None,
+                   meta: Optional[FieldMetaTable] = None) -> List[Dict[str, Any]]:
+    """「谁引用了这个条目」扫描（删除前人话列出引用者；只读，不写盘）。
+
+    两个数据源都来自元数据声明，编辑器不写死模块/字段名：
+      ① 各模块字段元数据里 type=ref 的字段（含列表/对象/映射内递归）；
+      ② 各模块 ModuleMeta.associations 声明指向本模块的外键路径（含列表通配）。
+    """
+    table = meta if meta is not None else field_meta_table()
+    pack_dir = _pack_dir(pack, root)
+    manifest = _manifest(pack_dir)
+    declared = _declared_modules(manifest)
+    mod = declared_module(pack, module, root=root)
+    target_mmeta = table.module(mod)
+    kinds = {mod}
+    if target_mmeta is not None:
+        if target_mmeta.kind:
+            kinds.add(str(target_mmeta.kind))
+        if target_mmeta.namespace:
+            kinds.add(str(target_mmeta.namespace))
+    labels = _display_labels(manifest, declared)
+    tgt = str(entry_id)
+    out: List[Dict[str, Any]] = []
+    seen: set = set()
+
+    for rel_mod in declared:
+        rel_mmeta = table.module(rel_mod)
+        rel_data = _read_json(pack_dir / f"{rel_mod}.json")
+        rel_etype = rel_mmeta.entry_type if rel_mmeta is not None else _infer_entry_type(rel_data)
+        for eid, ename, subject in _entry_rows(rel_data, rel_mmeta):
+            local: List[Dict[str, Any]] = []
+            base = _entry_base(rel_mmeta, rel_etype, eid, subject)
+            if isinstance(subject, Mapping):
+                for k, v in subject.items():
+                    _collect_ref_hits(v, base.get(str(k)), str(k), tgt, kinds, local)
+            # 声明式外键路径（可能不是 ref 类型字段）：按关联声明再扫一遍
+            if rel_mmeta is not None:
+                for a in rel_mmeta.associations:
+                    if a.module != mod or not a.field:
+                        continue
+                    for p, v in _walk_path(subject, a.field):
+                        if str(v) == tgt:
+                            local.append({"path": p, "value": v, "ref_target": ""})
+            for h in local:
+                path = str(h.get("path") or "")
+                key = (rel_mod, eid, path)
+                if key in seen:
+                    continue
+                seen.add(key)
+                out.append({
+                    "module": rel_mod,
+                    "module_label": labels.get(rel_mod) or rel_mod,
+                    "entry_id": eid,
+                    "entry_name": ename,
+                    "field": path,
+                    "field_label": _path_field_label(rel_mmeta, path),
+                    "value": str(h.get("value")),
+                })
+    out.sort(key=lambda r: (str(r["module"]), str(r["entry_name"]), str(r["entry_id"]),
+                            str(r["field"])))
+    return out
+
+
 __all__ = [
     "DEFAULT_GROUP",
     "EDIT_CONTROLS",
+    "ID_HINT",
+    "ID_RULES",
+    "ID_RULE_AUTO",
+    "ID_RULE_PREFIX_SEQ",
+    "ID_RULE_SLUG",
     "META_SOURCE",
     "BadRequest",
     "EditorError",
     "Forbidden",
     "NotFound",
+    "check_entry_id",
     "content_root",
     "condition_rows",
     "condition_spec",
@@ -1595,8 +2026,10 @@ __all__ = [
     "declared_module",
     "editable_form",
     "entry_detail",
+    "entry_index",
     "entry_slot",
     "field_meta_table",
+    "id_rule_spec",
     "is_editable_control",
     "is_editable_widget",
     "list_control",
@@ -1604,7 +2037,13 @@ __all__ = [
     "list_modules",
     "list_packs",
     "load_pack_modules",
+    "new_entry_detail",
+    "new_entry_slot",
     "readonly_form",
     "ref_options",
+    "reference_scan",
     "repo_root",
+    "slugify",
+    "suggest_entry_id",
+    "suggest_id",
 ]

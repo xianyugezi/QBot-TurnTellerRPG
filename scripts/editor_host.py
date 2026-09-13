@@ -100,6 +100,24 @@ def create_app(pack: Optional[str] = None, root: Optional[str] = None,
     def api_refs(pack_id: str, target: str, q: Optional[str] = None):  # type: ignore[no-untyped-def]
         return api.ref_options(pack_id, target, root=content_root, query=q)
 
+    # -------- 批6 只读：全包条目索引（全局检索）/ 新建界面 / 建议 ID / 被引用扫描 --------
+    @app.get("/api/pack/{pack_id}/entry-index")
+    def api_entry_index(pack_id: str):  # type: ignore[no-untyped-def]
+        return api.entry_index(pack_id, root=content_root)
+
+    @app.get("/api/pack/{pack_id}/module/{module}/new")
+    def api_new_entry(pack_id: str, module: str, name: Optional[str] = None):  # type: ignore[no-untyped-def]
+        return api.new_entry_detail(pack_id, module, root=content_root, name=name)
+
+    @app.get("/api/pack/{pack_id}/module/{module}/suggest_id")
+    def api_suggest_id(pack_id: str, module: str, name: Optional[str] = None):  # type: ignore[no-untyped-def]
+        return api.suggest_id(pack_id, module, root=content_root, name=name)
+
+    @app.get("/api/pack/{pack_id}/entry/{module}/{entry_id}/refs")
+    def api_entry_refs(pack_id: str, module: str, entry_id: str):  # type: ignore[no-untyped-def]
+        return {"pack": pack_id, "module": module, "entry_id": entry_id,
+                "referrers": api.reference_scan(pack_id, module, entry_id, root=content_root)}
+
     # -------- 校验 / 保存 / 回退（批2） --------
     @app.post("/api/pack/{pack_id}/entry/{module}/{entry_id}/validate")
     def api_validate(pack_id: str, module: str, entry_id: str,
@@ -116,6 +134,26 @@ def create_app(pack: Optional[str] = None, root: Optional[str] = None,
         return editor_ops.save_entry(
             pack_id, module, entry_id, body.get("patch") or {},
             root=content_root, role=app.state.role)
+
+    # -------- 批6 写入：新增条目 / 删除条目 / ID 即时校验 --------
+    @app.post("/api/pack/{pack_id}/module/{module}/entry")
+    def api_create_entry(pack_id: str, module: str,
+                         payload: Optional[Dict[str, Any]] = Body(default=None)):  # type: ignore[no-untyped-def]
+        body = payload or {}
+        return editor_ops.create_entry(
+            pack_id, module, body.get("entry_id"), body.get("patch") or {},
+            root=content_root, role=app.state.role)
+
+    @app.post("/api/pack/{pack_id}/module/{module}/id_check")
+    def api_check_id(pack_id: str, module: str,
+                     payload: Optional[Dict[str, Any]] = Body(default=None)):  # type: ignore[no-untyped-def]
+        body = payload or {}
+        return api.check_entry_id(pack_id, module, body.get("entry_id"), root=content_root)
+
+    @app.post("/api/pack/{pack_id}/entry/{module}/{entry_id}/delete")
+    def api_delete_entry(pack_id: str, module: str, entry_id: str):  # type: ignore[no-untyped-def]
+        return editor_ops.delete_entry(
+            pack_id, module, entry_id, root=content_root, role=app.state.role)
 
     @app.get("/api/pack/{pack_id}/module/{module}/backup")
     def api_backup(pack_id: str, module: str):  # type: ignore[no-untyped-def]

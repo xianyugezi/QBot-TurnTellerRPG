@@ -7,7 +7,7 @@
     "max": 99999
   },
   "mp": {
-    "name": "灵能",
+    "name": "法力",
     "type": "resource",
     "base": 30,
     "max": 9999

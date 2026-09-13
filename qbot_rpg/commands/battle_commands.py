@@ -1726,7 +1726,7 @@ def cmd_battle_target(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     skip = {"name", "hp", "max_hp", "mp", "max_mp", "id", "dead_mark",
             "skip_turn", "defenses", "skills", "is_boss", "elem_atk",
             "elem_res", "str", "spr", "int", "luk", "agi", "con"}
-    attr_names = {"atk": "攻击", "dfn": "防御", "mag": "魔力", "spd": "速度",
+    attr_names = {"atk": "攻击", "dfn": "防御", "mag": "法强", "spd": "速度",
                   "foc": "专注", "lck": "幸运"}
     for k, v in enemy.items():
         if k in skip or not isinstance(v, (int, float)) or isinstance(v, bool):

@@ -82,7 +82,7 @@ def test_tc_reg_01_first_register_success():
     assert "✅ 注册成功！\n欢迎来到「艾泽拉」世界" in out
     assert "职业：战士（推荐新手）\n位置：新手村" in out              # 2026-09-12 批1：欢迎/职业/位置逐行（14全角规范）
     # 意见一同步：初始属性每项独立一行（生命/魔力/攻击/防御各一行）
-    assert "初始属性：\n生命 100/100\n魔力 30/30\n攻击 12\n防御 10" in out
+    assert "初始属性：\n生命 100/100\n法力 30/30\n攻击 12\n防御 10" in out
     assert "下一步：\n发 帮助 查看全部指令\n发 锁定 1 与地图怪物开战" in out
     # 建号状态写 ctx（REG-04/05）
     assert ctx["registered"] is True
@@ -380,7 +380,7 @@ def test_register_rem_tpl_default_when_no_ctx_templates():
         "位置：新手村\n"
         "初始属性：\n"
         "生命 100/100\n"
-        "魔力 30/30\n"
+        "法力 30/30\n"
         "攻击 12\n"
         "防御 10\n"
         "智力 10\n"

@@ -184,7 +184,7 @@ QUALITY_LABELS: Mapping[str, str] = {
 # 本表仅在未配置 brief 时按机制兜底生成，供玩家先看到像样的标签行）。
 # 资源/精力键展示名（消耗行）：内容包 `energy_cost` 键 → 中文（自由文本 brief 之外仍可覆盖）
 _ENERGY_LABELS: Mapping[str, str] = {
-    "focus": "聚焦", "stamina": "精力", "mp": "灵能", "sp": "SP",
+    "focus": "聚焦", "stamina": "精力", "mp": "法力", "sp": "SP",
 }
 
 _SKILL_TAG_ORDER: Tuple[str, ...] = (
@@ -245,7 +245,7 @@ DEFAULT_SLOT_ORDER: tuple = (
 
 # 属性名兜底（stats.json name 缺失时；4f RUL-12 全中文）
 _DEFAULT_STAT_NAMES: Mapping[str, str] = {
-    "hp": "生命", "mp": "魔力", "str": "力量", "int": "智力", "con": "体质",
+    "hp": "生命", "mp": "法力", "str": "力量", "int": "智力", "con": "体质",
     "spr": "精神", "foc": "专注", "agi": "敏捷", "lck": "幸运",
 }
 
@@ -1094,9 +1094,9 @@ def _render_item_detail(row: Any, ctx: Mapping[str, Any], *, source: str) -> str
 
 def _stat_name_zh(key: str) -> str:
     """属性键 → 中文名（详情面板用；stats.json 配置优先？——缺省表兜底）。"""
-    _m = {"atk": "攻击", "def": "防御", "hp": "生命", "mp": "魔力", "str": "力量",
-          "con": "体魄", "agi": "敏捷", "foc": "专注", "spr": "精神", "lck": "幸运",
-          "spd": "速度", "mag": "魔法"}
+    _m = {"atk": "攻击", "def": "防御", "hp": "生命", "mp": "法力", "str": "力量",
+          "con": "体质", "agi": "敏捷", "foc": "专注", "spr": "精神", "lck": "幸运",
+          "spd": "速度", "mag": "法强"}
     return _m.get(key, key)
 
 
@@ -2082,7 +2082,7 @@ def _render_skill_info(ctx: Mapping[str, Any], sid: str) -> str:
     """技能详情面板（2026-09-12 CTB 重写；模板 skill_info_* 可内容包覆盖）。
 
     CTB 口径（去回合制残留）：
-      - 消耗：灵能 / 精力 / 印记（剑势·剑印等按定义名）+ 冷却（N 次行动）；
+      - 消耗：法力 / 精力 / 印记（剑势·剑印等按定义名）+ 冷却（N 次行动）；
         **不再输出旧回合式的「每次行动限 N 次」**（trigger_limit 是引擎护栏，非玩家消耗）
       - 效果：威力 / 段数 / 破坏值 / 霸体 / 打断
       - **行动恢复**（recovery，CTB 核心数值：越大＝下一次行动来得越晚）
@@ -2106,12 +2106,12 @@ def _render_skill_info(ctx: Mapping[str, Any], sid: str) -> str:
     brief = skill_brief(ctx, sid)
     if brief:
         lines.append(tpl_of(ctx, "skill_info_line", {"k": "标签", "v": brief}))
-    # 消耗（CTB：灵能 / 精力 / 印记 / 冷却行动数）
+    # 消耗（CTB：法力 / 精力 / 印记 / 冷却行动数）
     costs: List[str] = []
     try:
         mp = int(_skill_field(defn, "mp_cost", 0))
         if mp > 0:
-            costs.append(f"{mp} 灵能")
+            costs.append(f"{mp} 法力")
     except (TypeError, ValueError):
         pass
     _energy = _skill_field(defn, "energy_cost", None)

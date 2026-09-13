@@ -941,7 +941,7 @@ QUEST_GROUP_LABELS: Dict[str, str] = {
 #     _decorate_field_meta 只补 label/group，type/required/default/enum/children 全部原样保留。
 #   · 字段自带 label 优先（例如装备词条 label 来自 data/gear_stats.GEAR_LABELS_ZH），
 #     本表只填空缺键，不覆盖既有 label。
-#   · 命名一律取游戏内既有文案：stats.json（hp 生命 / mp 灵能 / agi 敏捷 / foc 专注 /
+#   · 命名一律取游戏内既有文案：stats.json（hp 生命 / mp 法力 / agi 敏捷 / foc 专注 /
 #     spr 精神 / lck 幸运 / atk 攻击 / dfn 防御）、怪物模块设计定稿（pv 防护值）、
 #     m12_UX 方案（弱点/PV/抗性）。未在既有文案中出现的键，取值理由见报批记录。
 #   · 键名并排由前端统一渲染（中文名为主 + 弱化键名为辅），本表只提供中文名。

@@ -54,7 +54,7 @@
     "register_success_attr_plain": "{attr_name} {value}",
     "register_success_attr_resource": "{attr_name} {cur}/{max}",
     "register_success_hp": "生命 {hp}/{hp}",
-    "register_success_mp": "魔力 {mp}/{mp}",
+    "register_success_mp": "法力 {mp}/{mp}",
     "register_success_atk": "攻击 {atk}",
     "register_success_dfn": "防御 {dfn}",
     "register_success_next": "下一步：\n发 帮助 查看全部指令\n发 锁定 1 与地图怪物开战",

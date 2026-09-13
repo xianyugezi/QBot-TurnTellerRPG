@@ -63,10 +63,10 @@ COMBAT_TO_COMBATANT: Tuple[Tuple[str, str, Any], ...] = (
 
 # 中文 label（展示 / 编辑器共用）
 GEAR_LABELS_ZH: Dict[str, str] = {
-    "atk": "攻击", "def": "防御", "dfn": "防御", "hp": "生命", "mp": "魔力",
-    "str": "力量", "con": "体魄", "agi": "敏捷", "foc": "专注", "spr": "精神",
-    "lck": "幸运", "spd": "速度", "mag": "魔法",
-    "atk_pct": "攻击%", "dfn_pct": "防御%", "hp_pct": "生命%", "mp_pct": "魔力%",
+    "atk": "攻击", "def": "防御", "dfn": "防御", "hp": "生命", "mp": "法力",
+    "str": "力量", "con": "体质", "agi": "敏捷", "foc": "专注", "spr": "精神",
+    "lck": "幸运", "spd": "速度", "mag": "法强",
+    "atk_pct": "攻击%", "dfn_pct": "防御%", "hp_pct": "生命%", "mp_pct": "法力%",
     "crit": "会心", "earplug": "耳栓", "super_crit_lv": "超会心", "elem_crit_lv": "属性会心",
 }
 

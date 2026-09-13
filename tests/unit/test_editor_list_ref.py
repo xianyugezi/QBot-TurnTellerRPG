@@ -46,6 +46,9 @@ META = FieldMetaTable(modules={
         })),
         # 无元素元数据（列按值推断）
         "loose": FieldMeta(type="list", label="自由行"),
+        # 元素声明为 obj 但未声明子字段（列只能按值推断；无值则不出列）
+        "blobs": FieldMeta(type="list", label="未声明子字段的对象列表",
+                            element=FieldMeta(type="obj")),
     }),
 })
 
@@ -56,6 +59,7 @@ ORIGINAL = [
         "members": ["a", "b"],
         "steps": [{"kind": "a", "amt": 1, "ref": "a"}],
         "loose": [{"p": 1, "q": "z"}],
+        "blobs": [{"k": 1}],
     },
     {"id": "b", "name": "乙", "owner": "b"},
     {
@@ -162,6 +166,14 @@ def test_row_default_from_element_metadata(pack_root: Path) -> None:
     # 标量元素未声明 default / 无元数据 → 无默认（前端按空值处理）
     assert f["tags"]["row_default"] is None
     assert f["loose"]["row_default"] is None
+
+
+def test_obj_element_without_declared_children_columns(pack_root: Path) -> None:
+    # 有数据行 → 列按值推断（现状兜底）
+    assert [c["key"] for c in _fields(pack_root, "a")["blobs"]["columns"]] == ["k"]
+    # 无数据行且未声明子字段 → 不出列（前端提示补元数据），不臆造 value 键
+    f = _fields(pack_root, "b")["blobs"]
+    assert f["control"] == "listtable" and f["columns"] == []
 
 
 # =====================================================================================
@@ -297,6 +309,8 @@ def test_frontend_list_and_ref_wiring() -> None:
         assert cls in html, cls
     # 空列表空态
     assert "（空列表）" in html
+    # 元素未声明子字段且无行可推断 → 如实提示（不臆造列名）
+    assert "该列表元素的字段未在内容包元数据中声明" in html
 
 
 def test_new_frontend_blocks_have_no_business_field_names() -> None:

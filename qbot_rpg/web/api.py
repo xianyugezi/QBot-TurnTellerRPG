@@ -716,6 +716,10 @@ def _list_columns(fm: Optional[FieldMeta], rows: List[object]) -> List[Dict[str,
             known.add(k)
             cols.append(_column(k, None))
     if not cols:
+        # 元素声明为 obj 但没有子字段、也没有数据行可推断键 → 不出列（前端提示补元数据），
+        # 不臆造「value」键（否则会把对象行改写成 {"value": …} 破坏原形态）。
+        if elem is not None and elem.type == "obj":
+            return []
         cols.append(_column("value", None, key_label="值"))
     return cols
 

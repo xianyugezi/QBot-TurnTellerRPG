@@ -143,6 +143,7 @@ global.esc = function (v) {
 const fs = require("fs");
 // 标记块是浏览器内联的普通函数声明（非 UMD 模块）→ 直接 eval 到当前作用域
 eval(fs.readFileSync(process.argv[1], "utf8"));
+eval(fs.readFileSync(process.argv[2], "utf8"));
 const out = {};
 out.juxt = fieldLabelHtml("标识", "id");
 out.same = fieldLabelHtml("id", "id");
@@ -150,17 +151,28 @@ out.noLabel = fieldLabelHtml("", "ghost");
 out.noKey = fieldLabelHtml("名称", "");
 out.bothMissing = fieldLabelHtml("", "");
 out.escaped = fieldLabelHtml("<b>", "a&b");
+// V8：枚举候选（纯字符串）+ 当前值在候选内 → 不得出现「不在候选内」
+out.enumIn = selectOptions("boss", ["normal", "elite", "boss", "training"], "（未选择）");
+// 当前值不在候选内 → 仍要有显式占位项
+out.enumOut = selectOptions("mythic", ["normal", "elite"], "（未选择）");
+// 引用候选（对象）→ 名称（标识）形态保持
+out.refOpts = selectOptions("r1", [{ id: "r1", name: "赤刃" }], "（未选择）");
+out.enumEmpty = selectOptions(null, ["a"], "（未选择）");
 process.stdout.write(JSON.stringify(out));
 """
 
 
-@pytest.mark.skipif(NODE is None, reason="本机无 node，跳过纯 JS 标签语义执行")
-def test_field_label_js_semantics(tmp_path: Path) -> None:
+@pytest.mark.skipif(NODE is None, reason="本机无 node，跳过纯 JS 标签/V8 语义执行")
+def test_field_label_and_select_option_js_semantics(tmp_path: Path) -> None:
     label_src = tmp_path / "field_label.js"
     label_src.write_text(
         _marked_block("/* EDITOR_FIELD_LABEL_BEGIN */", "/* EDITOR_FIELD_LABEL_END */"),
         encoding="utf-8")
-    proc = subprocess.run([NODE, "-e", _FRONTEND_HARNESS, str(label_src)],
+    opt_src = tmp_path / "select_options.js"
+    opt_src.write_text(
+        _marked_block("/* EDITOR_SELECT_OPTIONS_BEGIN */", "/* EDITOR_SELECT_OPTIONS_END */"),
+        encoding="utf-8")
+    proc = subprocess.run([NODE, "-e", _FRONTEND_HARNESS, str(label_src), str(opt_src)],
                           capture_output=True, text=True, timeout=60)
     assert proc.returncode == 0, proc.stderr
     out: Dict[str, Any] = json.loads(proc.stdout)
@@ -173,6 +185,16 @@ def test_field_label_js_semantics(tmp_path: Path) -> None:
     assert out["noKey"] == "名称"
     assert out["bothMissing"] == ""
     assert out["escaped"] == '&lt;b&gt; <span class="fkey">a&amp;b</span>'
+
+    # V8：候选内 → 无「不在候选内」，且实际值被选中
+    assert "不在候选内" not in out["enumIn"]
+    assert 'value="boss" selected' in out["enumIn"]
+    assert 'value="training"' in out["enumIn"]
+    # 候选外 → 显式占位项保留
+    assert "（当前值·不在候选内）" in out["enumOut"]
+    # 引用候选仍显示「名称（标识）」；空值走占位
+    assert "赤刃（r1）" in out["refOpts"]
+    assert "不在候选内" not in out["enumEmpty"]
 
 
 def test_frontend_field_render_uses_label_helper() -> None:

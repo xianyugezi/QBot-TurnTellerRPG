@@ -774,15 +774,26 @@ function editControl(f) {
 /* EDITOR_SELECT_OPTIONS_BEGIN */
 function selectOptions(value, options, placeholder) {
   var cur = value == null ? "" : String(value);
-  var has = options.some(function (o) { return String(o.id) === cur; });
+  // 候选形态规整（V8 修复）：枚举候选是纯字符串（FieldMeta.enum → ["boss", …]），
+  // 引用候选是对象（{id, name}）。此前一律按对象取 o.id/o.name，字符串候选被读成
+  // undefined → 候选渲染成空、当前值恒判「不在候选内」。此处按形态归一：
+  //   字符串 → 只显示值本身；对象 → 显示「名称（标识）」。
+  var rows = (options || []).map(function (o) {
+    if (o && typeof o === "object") {
+      var oid = o.id == null ? "" : String(o.id);
+      return { id: oid, text: (o.name == null ? oid : String(o.name)) + "（" + oid + "）" };
+    }
+    var sid = o == null ? "" : String(o);
+    return { id: sid, text: sid };
+  });
+  var has = rows.some(function (o) { return o.id === cur; });
   var html = '<option value="">' + esc(placeholder) + "</option>";
   if (cur && !has) {
     html += '<option value="' + esc(cur) + '" selected>' + esc(cur) + "（当前值·不在候选内）</option>";
   }
-  options.forEach(function (o) {
-    var selected = String(o.id) === cur ? " selected" : "";
-    html += '<option value="' + esc(o.id) + '"' + selected + ">" + esc(o.name)
-      + "（" + esc(o.id) + "）</option>";
+  rows.forEach(function (o) {
+    var selected = o.id === cur ? " selected" : "";
+    html += '<option value="' + esc(o.id) + '"' + selected + ">" + esc(o.text) + "</option>";
   });
   return html;
 }

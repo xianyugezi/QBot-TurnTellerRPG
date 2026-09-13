@@ -1,21 +1,37 @@
 {
-  "world_name": "云海猎团·云海之上",
-  "level_cap": 10,
-  "currencies": [
-    {
-      "id": "gold",
-      "name": "金标",
-      "icon": "🪙"
-    },
-    {
-      "id": "honor",
-      "name": "公会勋",
-      "icon": "🏅"
-    },
-    {
-      "id": "ticket",
-      "name": "航券",
-      "icon": "🎟️"
-    }
-  ]
+ "world_name": "云海猎团·云海之上",
+ "level_cap": 10,
+ "currencies": [
+  {
+   "id": "gold",
+   "name": "金标",
+   "icon": "🪙"
+  },
+  {
+   "id": "honor",
+   "name": "公会勋",
+   "icon": "🏅"
+  },
+  {
+   "id": "ticket",
+   "name": "航券",
+   "icon": "🎟️"
+  }
+ ],
+ "alchemy_ledger": {
+  "batch": "九期批次 235H 并账显式化",
+  "formula": "RECIPE_TOTAL(86) + DEEP_TOTAL(42) + DEEP2_TOTAL(14) = 142",
+  "keys": {
+   "RECIPE_TOTAL": 86,
+   "DEEP_TOTAL": 42,
+   "DEEP2_TOTAL": 14
+  },
+  "note": "并账数式闭合（235H 判据）：设计稿 01_配方总表.md 逐字直载（recipes.json 235 落）；任务书预估 126→128→+AD2 系历史时点值，实库口径 86+42+14=142 按实库登记"
+ },
+ "proficiency_axis": {
+  "axis": "alchemy_mastery",
+  "note": "熟练轴 settings（235H）：Lv1-10 带宽沿 $C.ALCHEMY.EFF_*（§四 效果带宽表）；资源轴注册面归 212 axes.json（cs_* 域）；造诣段 R3 声望线不涨效果只解锁（235E）",
+  "mastery_per_craft": 1,
+  "mastery_per_deep": 2
+ }
 }

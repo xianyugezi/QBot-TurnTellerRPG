@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -23,6 +24,7 @@ from typing import Any, Dict
 
 import pytest
 
+from qbot_rpg.content import field_meta as fm_mod
 from qbot_rpg.web import api
 
 NODE = shutil.which("node")
@@ -82,6 +84,10 @@ out.emptyWithCols = listTableBody({
   columns: [{ key: "a", label: "甲", type: "str", control: "text" }], scalar_element: false
 });
 out.rowsNoCols = listTableBody({ key: "x", value: [{}], columns: [], scalar_element: false });
+out.rowsWithCols = listTableBody({
+  key: "x", value: [{ a: "v" }],
+  columns: [{ key: "a", label: "甲", type: "str", control: "text" }], scalar_element: false
+});
 // ---- 问题3：单元格控件外观 / 空值占位 ----
 out.textEmpty = listCell({ key: "x" }, { a: "" }, { key: "a", control: "text" }, 0, false);
 out.textVal = listCell({ key: "x" }, { a: "v" }, { key: "a", control: "text" }, 0, false);
@@ -139,3 +145,77 @@ def test_empty_nocols_branch_has_no_early_return() -> None:
     src = _fn_src("listTableBody", "listTableEdit")
     assert "return html +" not in src
     assert src.count("return html;") == 1
+
+
+# =====================================================================================
+# 问题 2 · 嵌套子字段中文名 + 表头不被挤成缩写
+# =====================================================================================
+def test_nested_child_metadata_all_have_chinese_labels() -> None:
+    groups = {
+        "actions": (fm_mod.ACTION_ENTRY_CHILDREN,
+                    {"action", "probability", "weight", "condition", "cooldown", "hungry"}),
+        "special_actions": (fm_mod.SPECIAL_ACTION_CHILDREN,
+                            {"id", "action", "trigger", "once", "priority", "trigger_cooldown",
+                             "max_triggers", "post_state", "chain_ref", "desc"}),
+        "special_actions.trigger": (fm_mod.SPECIAL_ACTION_TRIGGER_CHILDREN,
+                                    {"type", "value", "timing", "action", "chance", "which",
+                                     "side", "height"}),
+        "special_actions.post_state": (fm_mod.SPECIAL_ACTION_CHILDREN["post_state"].children,
+                                       {"state", "turns"}),
+        "chains": (fm_mod.CHAIN_ENTRY_CHILDREN, {"id", "actions"}),
+        "chains.actions": (fm_mod.CHAIN_NODE_CHILDREN, {"action", "chance", "role", "armor"}),
+    }
+    for where, (children, keys) in groups.items():
+        assert children is not None, where
+        missing = [k for k in keys if not children[k].label or children[k].label == k]
+        assert not missing, (where, missing)
+
+
+def test_enemy_list_columns_carry_chinese_labels() -> None:
+    d = api.entry_detail("demo_full", "enemies", "rock_weasel", root=CONTENT)
+    by = {f["key"]: f for f in d["fields"]}
+    actions = {c["key"]: c for c in by["actions"]["columns"]}
+    assert actions["action"]["label"] == "行动"
+    assert actions["probability"]["label"] == "概率"
+    assert actions["weight"]["label"] == "权重"
+    assert actions["condition"]["label"] == "条件"
+    assert actions["cooldown"]["label"] == "冷却"
+    assert actions["hungry"]["label"] == "饥饿值"
+    special = {c["key"]: c for c in by["special_actions"]["columns"]}
+    assert special["id"]["label"] == "标识"
+    assert special["trigger"]["label"] == "触发条件"
+    assert special["once"]["label"] == "仅触发一次"
+    assert special["priority"]["label"] == "优先级"
+    assert special["trigger_cooldown"]["label"] == "触发冷却"
+    assert special["max_triggers"]["label"] == "最大触发次数"
+    assert special["post_state"]["label"] == "触发后状态"
+    assert special["chain_ref"]["label"] == "连招引用"
+    assert special["desc"]["label"] == "说明"
+    chains = {c["key"]: c for c in by["chains"]["columns"]}
+    assert chains["id"]["label"] == "标识"
+    assert chains["actions"]["label"] == "行动节点"
+
+
+def test_frontend_wide_table_scroll_and_min_width() -> None:
+    html = _html()
+    # 容器横向滚动走细滚动条令牌
+    match = re.search(r"\.ltable-scroll\s*\{([^}]*)\}", html)
+    assert match, "index.html 缺少 .ltable-scroll 规则"
+    rule = match.group(1)
+    assert "overflow-x: auto" in rule and "max-width: 100%" in rule
+    assert "var(--sb-size)" in html and "var(--sb-thumb)" in html
+    # 表格按内容定列宽 + 最小列宽，不再被 fixed 压窄
+    auto = re.search(r"\.ltable-edit,\s*\.ltable-ro\s*\{([^}]*)\}", html)
+    assert auto and "table-layout: auto" in auto.group(1)
+    assert "min-width: 96px" in html
+    # 两处列表渲染都进滚动容器
+    assert '<div class="ltable-scroll"><table class="ltable ltable-edit">' in html
+    assert '<div class="ltable-scroll"><table class="ltable ltable-ro">' in html
+
+
+def test_editable_table_rows_are_wrapped_in_scroll_container(js: Dict[str, Any]) -> None:
+    out = js["rowsWithCols"]
+    assert '<div class="ltable-scroll">' in out
+    assert 'ltable-edit' in out
+    # 中文名 + 原始键并列（fieldLabelHtml 由元数据 label 驱动）
+    assert "甲" in out and "a" in out

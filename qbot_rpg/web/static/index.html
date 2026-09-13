@@ -216,9 +216,19 @@ select.cin { padding: 1px var(--sp-2); }
 .lmeta { color: var(--text-4); font-size: var(--fs-11); margin: var(--sp-2) 0; }
 
 /* ---------- 可增删行表格（批4 组件04）：行内编辑 + 行尾删除 + 表下「+ 添加一行」 ---------- */
+/* 宽表不缩写（批4 UX）：列宽按内容自适应 + 最小列宽，容器横向滚动（细滚动条令牌）；
+   表格不再被 table-layout:fixed 压窄，列头不会退化成 act/pro/wei 这类截断缩写。 */
+.ltable-scroll { max-width: 100%; overflow-x: auto; }
+.ltable-scroll::-webkit-scrollbar { height: var(--sb-size); }
+.ltable-scroll::-webkit-scrollbar-track { background: transparent; }
+.ltable-scroll::-webkit-scrollbar-thumb { background: var(--sb-thumb); border-radius: var(--radius-sb); }
+.ltable-scroll::-webkit-scrollbar-thumb:hover { background: var(--sb-thumb-hover); }
+.ltable-edit, .ltable-ro { table-layout: auto; width: max-content; min-width: 100%; }
+.ltable-edit th, .ltable-ro th { min-width: 96px; overflow: visible; }
 .ltable-edit td { padding: var(--sp-2) var(--sp-3); }
 .ltable-edit td .cin { padding: 1px var(--sp-3); }
-.ltable th.op, .ltable td.op { width: 84px; text-align: right; border-left: 0; }
+.ltable th.op, .ltable td.op { width: 84px; min-width: 84px; text-align: right; border-left: 0; }
+.ltable-edit th.op, .ltable-edit td.op { padding-right: var(--sp-5); }
 .lcell.warn { border-color: var(--warn); }
 .ldel { display: inline-flex; align-items: center; height: var(--h-ctl-sm); padding: 0 var(--sp-3);
   font-family: inherit; font-size: var(--fs-11); cursor: pointer; background: transparent;
@@ -1036,7 +1046,7 @@ function listTableBody(f) {
   if (!rows.length) {
     html += '<div class="ex">（空列表）暂无数据行，用下面的「+ 添加一行」新建。</div>';
   } else {
-    html += '<table class="ltable ltable-edit"><thead><tr>'
+    html += '<div class="ltable-scroll"><table class="ltable ltable-edit"><thead><tr>'
       + cols.map(function (c) {
         return "<th>" + fieldLabelHtml(c.label, c.key)
           + ' <span class="ftype">' + esc(typeZh(c.type)) + "</span></th>";
@@ -1049,7 +1059,7 @@ function listTableBody(f) {
         + '<td class="op"><button type="button" class="ldel" data-ldel="' + i
         + '" title="删除本行（只改草稿）">删除</button></td></tr>';
     });
-    html += "</tbody></table>";
+    html += "</tbody></table></div>";
   }
   html += '<button type="button" class="ladd" data-ladd="' + esc(f.key)
     + '" title="按元素元数据的默认值新建一行（只改草稿）">+ 添加一行</button>';
@@ -1442,7 +1452,8 @@ function listTable(f) {
   var note = '<div class="lmeta">列表字段 · ' + f.row_count + " 行"
     + (f.rows && f.rows.length < f.row_count ? "（只读视图最多显示 " + f.rows.length + " 行）" : "")
     + " · 列名与类型来自内容包元数据</div>";
-  return note + '<table class="ltable"><thead>' + head + "</thead><tbody>" + body + "</tbody></table>";
+  return note + '<div class="ltable-scroll"><table class="ltable ltable-ro">'
+    + "<thead>" + head + "</thead><tbody>" + body + "</tbody></table></div>";
 }
 
 function kvTable(f) {

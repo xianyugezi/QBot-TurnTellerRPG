@@ -127,52 +127,57 @@ RESISTANCE_CHILDREN: Dict[str, FieldMeta] = {
     "immune": FieldMeta(type="list", element=FieldMeta(type="str")),
 }
 # actions[] 条目（1.4 A01-A03d；probability 纯入池开关 0/1 → 不挂 probability 旗标防 Y-2 噪音）
+# 批4 UX：补展示层中文名（label 只影响编辑器列头/表单显示，不参与任何校验判定）。
 ACTION_ENTRY_CHILDREN: Dict[str, FieldMeta] = {
-    "action": FieldMeta(type="ref", ref_target="action", required=True),
-    "probability": FieldMeta(type="number", range_min=0, range_max=1),
-    "weight": FieldMeta(type="number", range_min=0, range_max=100),
-    "condition": FieldMeta(type="str"),  # 条件权重修正（obj 形态 A2 放宽）
-    "cooldown": FieldMeta(type="number", range_min=0, range_max=999),
-    "hungry": FieldMeta(type="number", range_min=0, range_max=999),
+    "action": FieldMeta(type="ref", ref_target="action", required=True, label="行动"),
+    "probability": FieldMeta(type="number", range_min=0, range_max=1, label="概率"),
+    "weight": FieldMeta(type="number", range_min=0, range_max=100, label="权重"),
+    "condition": FieldMeta(type="str", label="条件"),  # 条件权重修正（obj 形态 A2 放宽）
+    "cooldown": FieldMeta(type="number", range_min=0, range_max=999, label="冷却"),
+    "hungry": FieldMeta(type="number", range_min=0, range_max=999, label="饥饿值"),
 }
 # special_actions[].trigger（1.4 A06-A09；type 13 类枚举 + x_ 前缀 → str，A2 R2/R11/R12）
 SPECIAL_ACTION_TRIGGER_CHILDREN: Dict[str, FieldMeta] = {
-    "type": FieldMeta(type="str"),
-    "value": FieldMeta(type="number"),
-    "timing": FieldMeta(type="str"),  # current_turn/next_turn/first_turn（A2）
-    "action": FieldMeta(type="str"),
-    "chance": FieldMeta(type="number", range_min=0, range_max=100),
+    "type": FieldMeta(type="str", label="类型"),
+    "value": FieldMeta(type="number", label="数值"),
+    "timing": FieldMeta(type="str", label="时机"),  # current_turn/next_turn/first_turn（A2）
+    "action": FieldMeta(type="str", label="行动"),
+    "chance": FieldMeta(type="number", range_min=0, range_max=100, label="概率"),
     # position_match 方位触发参数（方位 v0.6 §三.2/附录 A Step 1；枚举校验 A2 路）
-    "which": FieldMeta(type="str"),  # self=怪物自己 / player=玩家
-    "side": FieldMeta(type="list", element=FieldMeta(type="str")),
-    "height": FieldMeta(type="list", element=FieldMeta(type="str")),
+    "which": FieldMeta(type="str", label="对象"),  # self=怪物自己 / player=玩家
+    "side": FieldMeta(type="list", element=FieldMeta(type="str"), label="方位"),
+    "height": FieldMeta(type="list", element=FieldMeta(type="str"), label="高度"),
 }
 # special_actions[] 条目（1.4 A04-A15）
 SPECIAL_ACTION_CHILDREN: Dict[str, FieldMeta] = {
-    "id": FieldMeta(type="str"),
-    "action": FieldMeta(type="ref", ref_target="action", required=True),
-    "trigger": FieldMeta(type="obj", children=SPECIAL_ACTION_TRIGGER_CHILDREN),
-    "once": FieldMeta(type="bool"),
-    "priority": FieldMeta(type="number"),
-    "trigger_cooldown": FieldMeta(type="number", range_min=0, range_max=999),
-    "max_triggers": FieldMeta(type="number", range_min=0, range_max=999),
-    "post_state": FieldMeta(type="obj", children={
-        "state": FieldMeta(type="str"),
-        "turns": FieldMeta(type="number"),
+    "id": FieldMeta(type="str", label="标识"),
+    "action": FieldMeta(type="ref", ref_target="action", required=True, label="行动"),
+    "trigger": FieldMeta(type="obj", children=SPECIAL_ACTION_TRIGGER_CHILDREN, label="触发条件"),
+    "once": FieldMeta(type="bool", label="仅触发一次"),
+    "priority": FieldMeta(type="number", label="优先级"),
+    "trigger_cooldown": FieldMeta(type="number", range_min=0, range_max=999, label="触发冷却"),
+    "max_triggers": FieldMeta(type="number", range_min=0, range_max=999, label="最大触发次数"),
+    "post_state": FieldMeta(type="obj", label="触发后状态", children={
+        "state": FieldMeta(type="str", label="状态"),
+        "turns": FieldMeta(type="number", label="持续回合"),
     }),
-    "chain_ref": FieldMeta(type="str"),  # → chains[].id（引用存在 A2 R15）
+    "chain_ref": FieldMeta(type="str", label="连招引用"),  # → chains[].id（引用存在 A2 R15）
+    # 说明文案（veinborn 实测在数据里出现；原为未登记键 → 编辑器列头只能显示原始键）
+    "desc": FieldMeta(type="str", label="说明"),
 }
 # chains[].actions[] 节点（1.4 F14 / AI 定稿 §八：{action, chance 0-1, role, armor}）
 CHAIN_NODE_CHILDREN: Dict[str, FieldMeta] = {
-    "action": FieldMeta(type="ref", ref_target="action", required=True),
-    "chance": FieldMeta(type="number", range_min=0.0, range_max=1.0),
-    "role": FieldMeta(type="enum", enum=("chain", "finisher")),
-    "armor": FieldMeta(type="bool"),  # 霸体免疫打断
+    "action": FieldMeta(type="ref", ref_target="action", required=True, label="行动"),
+    "chance": FieldMeta(type="number", range_min=0.0, range_max=1.0, label="概率"),
+    "role": FieldMeta(type="enum", enum=("chain", "finisher"), label="角色"),
+    "armor": FieldMeta(type="bool", label="霸体"),  # 霸体免疫打断
 }
 # chains[] 条目（F14）
 CHAIN_ENTRY_CHILDREN: Dict[str, FieldMeta] = {
-    "id": FieldMeta(type="str"),
-    "actions": FieldMeta(type="list", element=FieldMeta(type="obj", children=CHAIN_NODE_CHILDREN)),
+    "id": FieldMeta(type="str", label="标识"),
+    "actions": FieldMeta(type="list",
+                         element=FieldMeta(type="obj", children=CHAIN_NODE_CHILDREN),
+                         label="行动节点"),
 }
 # drops 三类容器条目（1.5 D01-D04；count 联合形态 number|[min,max] → 不注册默认放行，A2 R13）
 DROP_ENTRY_CHILDREN: Dict[str, FieldMeta] = {

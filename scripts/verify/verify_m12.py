@@ -3,18 +3,15 @@
 
 依据：
   - docs/m12_启动包.md §五（验收门禁：5a 18 TC + 5a2 18 TC + 5b 34 TC + DELAYED 登记）
-  - docs/细化/细化_5a_编辑器契约.md（18 TC）/ 细化_5a2_编辑器扩展页.md（18 TC）/
-    细化_5b_GM指令契约.md（34 TC）
+  - docs/细化/细化_5b_GM指令契约.md（34 TC）
+  - 注：5a/5a2（编辑器壳/扩展页）TC 已随 2026-09-13「编辑器移除」清理
+    （代码/测试/契约文档一并删除），
+    本脚本保留 5b GM + field_meta + event_log 三门，覆盖矩阵只列仍有效条目。
   - docs/细化/细化_5d_测试体系总纲.md §2.1/§3.2（里程碑 verify 门禁模式：COVERAGE 逐条
     TC 声明承载位置；脚本断言 + pytest 承载 + DELAYED 诚实化登记；exit 0/1）
   - 先例：scripts/verify/verify_m11.py（本文件结构完全照抄）
 
-COVERAGE 统计：
-  5a 编辑器壳 18 TC：后端语义（认证/CRUD/原子写/回退/ID 生成/引用/409/校验）→ pytest
-  承载（test_web_auth / test_pages_crud / test_atomic_store / test_web_api /
-  test_editor_registry）；前端交互 TC（P-01~P-08 固定视口/表格/抽屉等）→ 批4B 最小壳
-  PARTIAL（editor.html 登录/列表/meta 表单/保存），完整交互 DELAYED（后续迭代）。
-  5a2 扩展页 18 TC：editor.json 注册/启停/extends → PASS；NPC/签到/AI/隐藏/环境/日志
+后端语义（认证/CRUD/原子写/回退/ID 生成/引用/409/校验）→ pytest
   字段元数据 → PASS（4A field_meta 注入）；事件写入（5 结算点 bump_event + event_log
   环形 300）→ PASS（3B）；前端标签渲染/日历预览断签模拟 → DELAYED（前端迭代）。
   5b GM 34 TC：权限三级/静默/审计/禁绑/前缀 → PASS（gm_commands + test_gm_commands*）；
@@ -26,9 +23,7 @@ COVERAGE 统计：
   a. GM 9 条清单：GM_COMMANDS 含备份/恢复/存档导出/封禁列表（3A 接线）
   b. GmBackend.backup_content 真实 zip 可用（tmp 目录）
   c. field_meta 注入：quest/shop/npc/checkin 字段非空 + label（4A）
-  d. web/api.py 15 端点可枚举（create_app + iter_routes）
   e. event_bus.read_event_log 倒序读（3B）
-  f. editor_registry 页表自动生成（M12.5 auto 语义；原「默认六页兜底」已由 B 方案取代）
 
 退出码：0 = M12 门禁通过（打印「M12 OK」）；1 = 有失败。
 DELAYED/PARTIAL 为诚实登记（不判失败），但须在输出统计中可见。
@@ -50,44 +45,7 @@ sys.path.insert(0, str(_REPO))  # 供 import qbot_rpg
 # "DELAYED:说明"（诚实登记）
 # ---------------------------------------------------------------------------
 COVERAGE: Dict[str, str] = {
-    # —— 5a 编辑器壳 18 TC ——
-    "5a-TC-01": "pytest:tests/unit/test_pages_crud.py",          # 技能页新建 skill_0001
-    "5a-TC-02": "pytest:tests/unit/test_pages_crud.py",          # 引用芯片改名联动（name 解析）
-    "5a-TC-03": "pytest:tests/unit/test_pages_crud.py",          # 引用不存在红拦
-    "5a-TC-04": "pytest:tests/unit/test_web_api.py",             # meta 字段表单数据源
-    "5a-TC-05": "pytest:tests/unit/test_web_api.py",             # 列表分页搜索
-    "5a-TC-06": "PARTIAL:前端交互壳最小可用（editor.html 列表+表单+保存）；完整交互后续迭代",
-    "5a-TC-07": "PARTIAL:同上（meta 驱动表单已渲染，控件 7 类仅 text/number/select/textarea）",
-    "5a-TC-08": "pytest:tests/unit/test_web_auth.py",            # 认证全链
-    "5a-TC-09": "pytest:tests/unit/test_web_auth.py",            # 互踢/5 次锁 15 分钟
-    "5a-TC-10": "pytest:tests/unit/test_atomic_store.py",        # 原子写盘
-    "5a-TC-11": "pytest:tests/unit/test_atomic_store.py",        # 非法 JSON 回退不崩
-    "5a-TC-12": "pytest:tests/unit/test_atomic_store.py",        # 快照回退 SV-07
-    "5a-TC-13": "pytest:tests/unit/test_web_api.py",             # reload 端点
-    "5a-TC-14": "pytest:tests/unit/test_atomic_store.py",        # 原子写与回退
-    "5a-TC-15": "pytest:tests/unit/test_pages_crud.py",          # 级联删除
-    "5a-TC-16": "pytest:tests/unit/test_pages_crud.py",          # 版本冲突 409
-    "5a-TC-17": "pytest:tests/unit/test_pages_crud.py",          # validate 红黄
-    "5a-TC-18": "pytest:tests/unit/test_editor_registry.py",     # editor.json 启停
     # —— 5a2 扩展页 18 TC ——
-    "5a2-TC-01": "pytest:tests/unit/test_editor_registry.py",    # editor.json 页表
-    "5a2-TC-02": "pytest:tests/unit/test_editor_registry.py",    # extends 宿主解析
-    "5a2-TC-03": "pytest:tests/unit/test_field_meta_inject.py",  # NPC 字段注入
-    "5a2-TC-04": "pytest:tests/unit/test_field_meta_inject.py",  # 签到字段注入
-    "5a2-TC-05": "pytest:tests/unit/test_field_meta_inject.py",  # AI 6 子页视图
-    "5a2-TC-06": "pytest:tests/unit/test_field_meta_inject.py",  # 隐藏 3 子页视图
-    "5a2-TC-07": "pytest:tests/unit/test_field_meta_inject.py",  # 环境事件视图
-    "5a2-TC-08": "pytest:tests/unit/test_field_meta_inject.py",  # 日志卡片视图
-    "5a2-TC-09": "DELAYED:扩展页六页外 CRUD（pages_crud PAGE_MODULE 硬编码六页，归批 5/后续）",
-    "5a2-TC-10": "pytest:tests/unit/test_event_bus.py",          # 事件写入（bump_event）
-    "5a2-TC-11": "pytest:tests/unit/test_event_bus.py",          # event_log 环形 300
-    "5a2-TC-12": "assert",                                        # read_event_log 倒序
-    "5a2-TC-13": "pytest:tests/unit/test_web_api.py",            # /api/meta/{page} 字段
-    "5a2-TC-14": "pytest:tests/unit/test_web_api.py",            # /api/editor/pages 页清单
-    "5a2-TC-15": "DELAYED:前端日历预览/断签模拟（纯前端交互，后续迭代）",
-    "5a2-TC-16": "DELAYED:前端 NPC 10 标签渲染（字段已注入，UI 后续迭代）",
-    "5a2-TC-17": "PARTIAL:/商店 列表 SM-01~05 已有（shop_list）；SM-04 余额/SM-06 紧凑待补",
-    "5a2-TC-18": "pytest:tests/unit/test_event_bus.py",
     # 5 结算点事件（quest/checkin/battle/levelup/dungeon）
     # —— 5b GM 34 TC ——
     "5b-TC-01": "pytest:tests/unit/test_gm_commands.py",         # 权限三级 admin>gm>player
@@ -126,7 +84,8 @@ COVERAGE: Dict[str, str] = {
     "5b-TC-34": "pytest:tests/unit/test_audit_store.py",         # 审计 hmac 预留
 }
 
-_TC_COUNT = {"5a": 18, "5a2": 18, "5b": 34}
+# 2026-09-13：5a/5a2（编辑器壳/扩展页）TC 已随编辑器移除清理 → 只保留 5b（GM 指令契约）。
+_TC_COUNT = {"5b": 34}
 
 
 def t_coverage_self_consistent() -> bool:
@@ -152,7 +111,8 @@ def t_coverage_self_consistent() -> bool:
             stats["DELAYED"] += 1
         else:
             stats["PASS"] += 1
-    print(f"  COVERAGE 70 TC：PASS {stats['PASS']} / PARTIAL {stats['PARTIAL']}"
+    _tot = sum(_TC_COUNT.values())
+    print(f"  COVERAGE {_tot} TC（5b）：PASS {stats['PASS']} / PARTIAL {stats['PARTIAL']}"
           f" / DELAYED {stats['DELAYED']}")
     delayed = [k for k, v in COVERAGE.items() if v.startswith("DELAYED")]
     if delayed:
@@ -233,34 +193,6 @@ def t_field_meta_injected() -> bool:
             return False
     print("  PASS field_meta 注入（quest/shop/npc/checkin + 4 视图模块）")
     return True
-
-
-def t_web_api_endpoints() -> bool:
-    """web/api.py 15+ 端点可枚举（create_app + iter_routes）。"""
-    from types import SimpleNamespace
-
-    from qbot_rpg.content.registry import Registry
-    from qbot_rpg.web.api import create_app, iter_routes
-    from qbot_rpg.web.auth import AuthStore
-
-    auth = AuthStore(owner_qq_id="o1", gm_qq_ids=set())
-    reg = Registry(pack_id="t", generation=1, tables={}, names={}, modules_raw={})
-    state = SimpleNamespace(auth_store=auth, registry=reg,
-                            content_dir=pathlib.Path("/tmp"), editor=None,
-                            permission_store=None, audit_store=None)
-    routes = iter_routes(create_app(state))
-    api_paths = {r["path"] for r in routes if r["path"].startswith("/api")}
-    need = {"/api/auth/setup", "/api/auth/login", "/api/auth/logout", "/api/auth/me",
-            "/api/meta/{page}", "/api/refs/{target}", "/api/pages/{page}",
-            "/api/pages/{page}/{item_id}", "/api/pages/{page}/validate",
-            "/api/reload", "/api/packs", "/api/packs/active", "/api/editor/pages"}
-    if not need <= api_paths:
-        print(f"  FAIL 端点缺：{need - api_paths}")
-        return False
-    print(f"  PASS web/api.py 端点（{len(api_paths)} 个 /api path）")
-    return True
-
-
 def t_event_log_read() -> bool:
     """event_bus.read_event_log 倒序读取（3B）。"""
     from qbot_rpg.core.event_bus import bump_event, read_event_log
@@ -275,48 +207,17 @@ def t_event_log_read() -> bool:
         return False
     print("  PASS read_event_log 倒序读取（3B）")
     return True
-
-
-def t_editor_registry_default() -> bool:
-    """editor_registry 页表自动生成（M12.5 B 方案 auto 语义）。
-
-    2026-09-11 编辑器恢复同步（原「恒六页兜底」检查为 M12 旧语义，B 方案取代后
-    已过期）：无 editor.json 内容包 → 按实际模块自动出页；空 modules → 空页表
-    （防空幽灵页，方案 B §3.4 定稿语义）。
-    """
-    from qbot_rpg.content.editor_registry import load_editor_registry
-    from qbot_rpg.content.registry import Registry
-
-    reg = Registry(pack_id="t", generation=1, tables={}, names={}, modules_raw={
-        "skills": [], "jobs": [], "enemies": [], "maps": [], "quest": [], "shop": [],
-    })
-    editor = load_editor_registry(reg)
-    ids = [p.page_id for p in editor.pages]
-    if not {"skill", "job", "monster", "map", "quest", "shop"} <= set(ids):
-        print(f"  FAIL 页表自动生成（六类模块）：{ids}")
-        return False
-    blank = load_editor_registry(Registry(pack_id="blank", generation=1,
-                                          tables={}, names={}, modules_raw={}))
-    if blank.pages:
-        print(f"  FAIL 空包页表应为空：{[pg.page_id for pg in blank.pages]}")
-        return False
-    print("  PASS editor_registry 页表自动生成（auto 语义 + 空包防空）")
-    return True
-
-
 # ---------------------------------------------------------------------------
 # 主入口
 # ---------------------------------------------------------------------------
 def main() -> int:
     print("=== M12 里程碑门禁 ===")
     checks = [
-        ("COVERAGE 自洽（5a 18 + 5a2 18 + 5b 34）", t_coverage_self_consistent),
+        ("COVERAGE 自洽（5b 34 + 保留项）", t_coverage_self_consistent),
         ("GM 9 条清单接线", t_gm_commands_wired),
         ("GmBackend 真实备份", t_gm_backend_real),
         ("field_meta 注入", t_field_meta_injected),
-        ("web/api 15+ 端点", t_web_api_endpoints),
         ("event_log 读取", t_event_log_read),
-        ("editor_registry 页表自动生成", t_editor_registry_default),
     ]
     ok = True
     for name, fn in checks:

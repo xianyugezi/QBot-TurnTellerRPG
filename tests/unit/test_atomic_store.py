@@ -41,7 +41,7 @@ from qbot_rpg.content.registry import Registry, RegistrySnapshot
 # =============================================================================
 
 def make_modules_raw() -> Dict[str, Any]:
-    """六页模块假数据（与 test_pages_crud.make_ctx 同构；enemies/maps/skills/jobs/quest/shop）。"""
+    """六页模块假数据（enemies/maps/skills/jobs/quest/shop 形态）。"""
     return {
         "enemies": [
             {"id": "gust_wolf", "name": "风狼", "hp": 90, "atk": 12},

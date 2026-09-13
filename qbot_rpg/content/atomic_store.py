@@ -6,7 +6,7 @@
 功能描述（对齐 docs/细化/细化_5a_编辑器契约.md 四、保存链路 SV-01~08）：
   - apply_module_changes(modules_raw, module_changes, changed_modules) -> {ok, modules}：
     把「待写变更」（{module, entries} 列表 or {module, item_id, removed}）应用到
-    modules_raw 的深拷贝副本（纯逻辑，不碰磁盘；pages_crud 批1 返回形态直接消费）
+    modules_raw 的深拷贝副本（纯逻辑，不碰磁盘；返回形态见本模块变更条目规范）
   - apply_removed_to_entries(module, entries, removed_ids) -> {ok, entries}：
     单模块移除清单 → 过滤后的新 entries（供删除落盘前合并级联模块）
   - write_modules(content_dir, module_files) -> {ok, written[]}：
@@ -59,7 +59,7 @@ from qbot_rpg.data.logging_utils import get_logger
 
 _logger = get_logger("content.atomic_store")
 
-# 变更条目规范形状（pages_crud 批1 交付形态）：
+# 变更条目规范形状：
 #   - {module, entries}：整模块最终 entries（新建/更新/删除的条目数组替换）
 #   - {module, item_id, removed}：从模块移除指定条目（删除）
 Change = Mapping[str, Any]
@@ -118,7 +118,7 @@ def apply_module_changes(
 ) -> Result:
     """把「待写变更」应用到 modules_raw 的深拷贝副本（纯逻辑，零 IO）。
 
-    变更形态（pages_crud 批1 交付，{module, entries} 或 {module, item_id, removed}）：
+    变更形态（{module, entries} 或 {module, item_id, removed}）：
       - {"module": "enemies", "entries": [...]}：整模块 entries 替换（新增/更新）
       - {"module": "enemies", "item_id": "gust_wolf", "removed": true}：单条目移除
 
@@ -162,7 +162,7 @@ def apply_removed_to_entries(
 ) -> Result:
     """单模块移除清单 → 过滤后的新 entries（删除落盘前合并级联模块用，纯逻辑）。
 
-    与 apply_delete_to_entries（pages_crud）的差异：本函数不依赖 ctx/页面映射，
+    与页面级删除的差异：本函数不依赖 ctx/页面映射，
     直接对「模块 entries 数组」做 id 白名单过滤，供级联模块（maps/dungeon/skills）
     在写盘前就地剔除引用条目。条目缺失 → ok:true 原样返回（幂等，不报错）。
     出参：{ok: true, entries: [...]}（统一包络 L183）。

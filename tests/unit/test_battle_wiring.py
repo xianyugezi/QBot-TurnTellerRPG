@@ -260,10 +260,10 @@ def test_battle_end_flow_summary_and_drops(start_battle) -> None:
     assert "【战利品】" in end_msg                                        # 战利品头（批6）
     assert "1.史莱姆粘液×2" in end_msg                                     # 战利品列表
     assert "战斗结束：" not in end_msg               # win 无汇总行（用户模板，2026-08-27）
-    # 2026-09-12 用户拍板：两段合并为同一条消息 → 前缀只在最顶（行动段）；结束段不再重复，
-    # 且 HUD 尾提示「→ 攻击 或 …」从行动段移到结束段末尾（置底）
+    # 2026-09-12 用户拍板：两段合并为同一条消息 → 前缀只在最顶（行动段），结束段不再重复。
+    # 2026-09-13 用户拍板（L7）：战斗已结束 → 整条消息不出「→ 攻击 或 …」尾提示。
     assert end_msg.split("\n")[0] != PREFIX
-    assert end_msg.split("\n")[-1] == "→ 攻击 或 攻击 <技能名>"
+    assert "→ 攻击" not in end_msg
     assert "→ 攻击" not in round_msg
     assert round_msg.split("\n")[0] == PREFIX
     _assert_no_banned_emoji(round_msg)
@@ -468,7 +468,8 @@ def test_batch_alone_still_renders_effect_events(start_battle) -> None:
 
 def test_run_battle_action_passes_defer_tail_on_terminal(start_battle, monkeypatch) -> None:
     """T1 全链路：`_run_battle_action` 终局（report.ended）→ `_without_npc_outcomes`
-    收到 `defer_tail=True`（尾提示由结束消息置底，战斗段 HUD 不再出尾行）。"""
+    收到 `defer_tail=True`，且**整条消息不出尾提示**（2026-09-13 用户拍板 L7：
+    战斗已结束 → 「→ 攻击 或 攻击 <技能名>」冗余，丢弃；行动段的置底口径只在未终局时生效）。"""
     sender = RecordingSender()
     eng = start_battle(enemy=WEAK_ENEMY)               # 一击必杀 → 本拍 ended
     ctx = make_ctx(sender, engine=eng)
@@ -484,8 +485,7 @@ def test_run_battle_action_passes_defer_tail_on_terminal(start_battle, monkeypat
     assert res["ok"] is True
     assert seen, "_without_npc_outcomes 未被调用（测试驱动路径不对）"
     assert seen.get("defer_tail") is True
-    # 尾提示只出现在**结束消息**（最后一段）末尾；战斗段 HUD 均不出尾行
+    # 2026-09-13 用户拍板 L7：终局整条消息都不出尾提示（战斗段 defer + 结束段丢弃）
     assert sender.calls, "终局应至少发送一段"
-    assert sender.calls[-1].split("\n")[-1] == "→ 攻击 或 攻击 <技能名>", sender.calls[-1]
-    for seg in sender.calls[:-1]:
-        assert "→ 攻击" not in seg, f"非结束段不应出尾行：{seg!r}"
+    for seg in sender.calls:
+        assert "→ 攻击" not in seg, f"终局消息不应出尾行：{seg!r}"

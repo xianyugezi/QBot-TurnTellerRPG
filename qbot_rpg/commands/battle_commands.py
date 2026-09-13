@@ -1149,10 +1149,11 @@ def dispatch_round(
 
 
 def _hud_tail_line(ctx: Mapping[str, Any]) -> str:
-    """HUD 尾提示行（`→ 攻击 或 攻击 <技能名>`）——战斗结束时**置底**用。
+    """HUD 尾提示行（`→ 攻击 或 攻击 <技能名>`）取数（battle_hud_tail + battle_action_hint_tail）。
 
-    2026-09-12 用户拍板：「这个提示应该置底」——终局消息里 HUD 块不出尾行，改由战斗结束
-    消息末尾输出（模板 battle_hud_tail + battle_action_hint_tail，内容包可覆盖）。
+    历史：2026-09-12「置底」拍板时曾由战斗结束消息末尾输出；**2026-09-13 用户拍板改为
+    结束消息不再输出**（L7 复核项：战斗已结束、无可行行动 → 冗余）。当前保留本函数供
+    行动段的置底口径复用/内容包调整，结束消息路径不再调用。
     """
     inner = tpl_of(ctx, "battle_action_hint_tail")
     if not inner:
@@ -1238,7 +1239,9 @@ def _dispatch_battle_end(
         final_damage=last_pd,
         enemy_name=e_name,          # _prefix_free_ns 剥离 dict name，显式注入
         leveled=ctx.get("battle_leveled"),  # 2026-09-03 击杀升级信息
-        tail=_hud_tail_line(ctx),   # 尾提示置底（用户 2026-09-12 拍板）
+        # 2026-09-13 用户拍板（L7）：战斗已结束 → 不再输出「→ 攻击 或 攻击 <技能名>」
+        # （结束消息里该提示无可行行动，属冗余；行动段仍按 2026-09-12「置底」口径在
+        #  HUD 块末尾输出——见 defer_tail 分支）
         prefix=not suppress_prefix,  # 与行动段合并为同一条消息 → 前缀只在最顶行
     )
 

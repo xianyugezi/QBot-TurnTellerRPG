@@ -1,72 +1,87 @@
 {
- "name": "测试任务链 demo",
- "version": "1.0.0",
- "schema_version": 1,
- "author": "test-demo-content",
- "modules": [
-  "settings",
-  "stats",
-  "formula",
-  "effects",
-  "statuses",
-  "marks",
-  "skill_chains",
-  "items",
-  "equipment",
-  "action",
-  "skills",
-  "jobs",
-  "enemies",
-  "maps",
-  "dungeon",
-  "npc",
-  "shop",
-  "quest",
-  "checkin",
-  "traits",
-  "recipe",
-  "proficiency",
-  "slots",
-  "forge",
-  "fishing",
-  "achievements",
-  "templates"
- ],
- "module_labels": {
-  "settings": "设置",
-  "stats": "属性",
-  "formula": "公式",
-  "effects": "效果",
-  "statuses": "状态",
-  "marks": "印记",
-  "skill_chains": "派生链",
-  "items": "物品",
-  "equipment": "装备",
-  "action": "行动",
-  "skills": "技能",
-  "jobs": "职业",
-  "enemies": "怪物",
-  "maps": "地图",
-  "dungeon": "副本",
-  "npc": "NPC",
-  "shop": "商店",
-  "quest": "任务",
-  "checkin": "签到",
-  "traits": "特性",
-  "recipe": "配方",
-  "proficiency": "熟练度",
-  "slots": "插槽",
-  "forge": "锻造",
-  "fishing": "钓鱼",
-  "achievements": "成就",
-  "templates": "模板"
- },
- "module_tree": [
-  {
-   "module": "items",
-   "children": [
-    "equipment"
-   ]
-  }
- ]
+  "name": "测试任务链 demo",
+  "version": "1.0.0",
+  "schema_version": 1,
+  "author": "test-demo-content",
+  "modules": [
+    "settings",
+    "stats",
+    "formula",
+    "effects",
+    "statuses",
+    "marks",
+    "skill_chains",
+    "items",
+    "equipment",
+    "action",
+    "skills",
+    "jobs",
+    "enemies",
+    "maps",
+    "dungeon",
+    "npc",
+    "shop",
+    "quest",
+    "checkin",
+    "traits",
+    "recipe",
+    "proficiency",
+    "slots",
+    "forge",
+    "fishing",
+    "achievements",
+    "templates"
+  ],
+  "module_labels": {
+    "settings": "设置",
+    "stats": "属性",
+    "formula": "公式",
+    "effects": "效果",
+    "statuses": "状态",
+    "marks": "印记",
+    "skill_chains": "派生链",
+    "items": "物品",
+    "equipment": "装备",
+    "action": "行动",
+    "skills": "技能",
+    "jobs": "职业",
+    "enemies": "怪物",
+    "maps": "地图",
+    "dungeon": "副本",
+    "npc": "NPC",
+    "shop": "商店",
+    "quest": "任务",
+    "checkin": "签到",
+    "traits": "特性",
+    "recipe": "配方",
+    "proficiency": "熟练度",
+    "slots": "插槽",
+    "forge": "锻造",
+    "fishing": "钓鱼",
+    "achievements": "成就",
+    "templates": "模板"
+  },
+  "module_tree": [
+    {
+      "module": "skills",
+      "children": [
+        "effects",
+        "statuses",
+        "marks",
+        "skill_chains"
+      ]
+    },
+    {
+      "module": "items",
+      "children": [
+        "equipment"
+      ]
+    },
+    {
+      "module": "enemies",
+      "children": [
+        "action"
+      ]
+    }
+  ]
 }

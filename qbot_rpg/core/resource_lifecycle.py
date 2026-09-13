@@ -478,7 +478,6 @@ class ResourceLifecycle:
           既有包零影响——opt-in 红线）。
         返回 {player: state, enemy: state, "on_full_fired": [...]}（就地改写）。
         """
-        del axes  # 预留参数（契约扩展位）
         frozen = {str(s) for s in (frozen_sides or ())}
         if not isinstance(battle_state, Mapping):
             return {}
@@ -495,7 +494,7 @@ class ResourceLifecycle:
             if side in frozen:
                 out[side] = dict(side_state)  # 被控保留（S4）：不增不减
                 continue
-            for axis_id in self._iter_axis_ids():
+            for axis_id in self._iter_axis_ids(axes):
                 tick = self._tick_of(axis_id)
                 if tick == 0:
                     continue  # 未配置 tick → 行为不变（幂等）

@@ -98,12 +98,14 @@ def test_def_type_normalize_resource_custom() -> None:
     assert d.is_pooled is True
 
 
-def test_def_fields_table_10_keys() -> None:
-    """resource_axis_fields() 恰好 10 键（M1 注册段）。"""
+def test_def_fields_table_13_keys() -> None:
+    """resource_axis_fields() 恰好 13 键（M1 注册段 10 键＋九期 212 扩展 3 键 opt-in）。"""
     f = resource_axis_fields()
     assert set(f.keys()) == {
         "name", "type", "icon", "base", "max", "reset",
         "display", "max_per_pool", "pools", "pool_icons",
+        # 九期 212 扩展（tick 自然增长 / 衰减下限 / 满槽 proc 引用）
+        "tick_per_round", "tick_floor", "on_full",
     }
 
 

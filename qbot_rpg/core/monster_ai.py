@@ -150,24 +150,76 @@ class MonsterAI:
 
         # ── 套间评估 L1-L7（优先级总则：L2-L7 逐级短路；L1 例外——产出流入 L2 不停止） ──
 
+        # 九期214·行为计数器（seq_count/damage_taken 条件数据面）：出手机会每次 decide +1
+        # （阶段切换清零——「激怒满 8 个出手序列」为阶段内计数）；受击以快照 HP 回落检测，
+        # 事件数与累计量双记（粒度＝怪物决策间隔内的受击段）。
+        enemy = battle_state.get("enemy") or {}
+        ai["seq_count"] = int(ai.get("seq_count", 0)) + 1
+        try:
+            cur_hp = float(enemy.get("hp", 0) or 0)
+        except (TypeError, ValueError):
+            cur_hp = 0.0
+        last_hp = ai.get("last_hp")
+        if last_hp is not None:
+            drop = float(last_hp) - cur_hp
+            if drop > 0:
+                ai["damage_taken_events"] = int(ai.get("damage_taken_events", 0)) + 1
+                ai["damage_taken_amount"] = float(ai.get("damage_taken_amount", 0.0)) + drop
+        ai["last_hp"] = cur_hp
+
         # M2 审查 P1-1：阶段写端（HP→phase 换算 + phase_changed 联动，TC-04 驱动口径）。
         # phases 配置时每套间更新 ai_state.phase/boss_phase，enter_action 入强制队列；
         # phase_changed 条件行动（L3）读 ai_state.phase（monster_ai._eval_condition）自然成立。
+        # 九期214 扩展（03 §M3.11 灰岗四阶段全链路直落）：条目支持 no/enter_when（非 HP
+        #  触发，dict 或 list=OR）/from（源阶段白名单）/latch（缺省 True：非 HP 阶段驻留）/
+        #  weakness（阶段动态弱点换装，异相种用）/mods（阶段数值面→ai_state.phase_mods
+        #  数据契约，211 公式侧消费，本批只写不读）；changed 时经 inherit_boss_state
+        #  携带 boss_state（207 hook，本批为其设计消费方）。纯阈值旧配置走 PhaseTable
+        #  原路径（既有行为零变化）。
         phases_cfg = self._def.get("phases")
         if phases_cfg:
             try:
-                from qbot_rpg.core.monster_phases import PhaseTable
-                enemy = battle_state.get("enemy") or {}
+                from qbot_rpg.core.monster_phases import PhaseTable, inherit_boss_state
                 eh = float(enemy.get("hp", 0) or 0)
                 em = float(enemy.get("max_hp", 0) or 0)
-                trans = PhaseTable(phases_cfg).detect_transition(
-                    eh, em, prev_phase=int(ai.get("phase") or 1))
-                if trans.get("changed"):
-                    ai["phase"] = int(trans.get("phase") or 1)
+                prev = int(ai.get("phase") or 1)
+                entries = phases_cfg if isinstance(phases_cfg, list) else []
+                extended = any(
+                    isinstance(p, Mapping) and p.get("enter_when") is not None
+                    for p in entries
+                )
+                entry = None
+                if extended:
+                    new_phase, entry = self._resolve_phases_extended(
+                        entries, eh, em, prev, battle_state)
+                    changed = new_phase != prev
+                else:
+                    trans = PhaseTable(phases_cfg).detect_transition(
+                        eh, em, prev_phase=prev)
+                    new_phase = int(trans.get("phase") or 1)
+                    changed = bool(trans.get("changed"))
+                    entry = self._phase_entry(entries, new_phase)
+                if changed:
+                    ai["phase"] = new_phase
                     ai["boss_phase"] = ai["phase"]  # 兼容键（battle.py L487 读）
-                    ea = trans.get("enter_action")
+                    ai["seq_count"] = 0  # 阶段内计数语义（「激怒满 8」）
+                    ea = entry.get("enter_action") if isinstance(entry, Mapping) else None
                     if ea:
-                        ai["forced_queue"].append(ea)
+                        ai["forced_queue"].append(
+                            ea.get("action") if isinstance(ea, Mapping) else ea)
+                    # 207 hook 消费：boss_state 三键按新阶段 inherit_rules 携带
+                    rules = entry.get("inherit_rules") if isinstance(entry, Mapping) else None
+                    battle_state["boss_state"] = inherit_boss_state(
+                        battle_state.get("boss_state"), rules)
+                    # 阶段动态弱点（异相种用）：weakness 键换装；原值仅首切备份
+                    wk = entry.get("weakness") if isinstance(entry, Mapping) else None
+                    if isinstance(wk, Mapping):
+                        if "weakness_base" not in ai:
+                            ai["weakness_base"] = enemy.get("weakness")
+                        enemy["weakness"] = dict(wk)
+                    # 阶段数值面（数据契约：ai_state.phase_mods；211 消费，本批只写不读）
+                    mods = entry.get("mods") if isinstance(entry, Mapping) else None
+                    ai["phase_mods"] = dict(mods) if isinstance(mods, Mapping) else {}
             except Exception:  # phases 配置解析失败不阻断决策（工程兜底）
                 pass
 

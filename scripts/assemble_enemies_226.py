@@ -8,7 +8,7 @@ actions＝actions_ref→{action, weight:50 缺省}（权重特化细表归 217 �
 lore＝生态册猎获档案（217 tiers 已载 mech，本器补猎获列）；drops＝flag（素材面归增量二）。
 对账：I–III 287 恰尽（105/93/89）；id 唯一；actions id 100% 在 actions.json；power/pv 不变式。
 """
-import io, json, os, sys
+import io, json, os, re, sys
 from collections import OrderedDict
 
 sys.stdout.reconfigure(encoding="utf-8")
@@ -50,7 +50,6 @@ def parse_lore():
 
 
 def main():
-    import re
     acts = json.load(io.open(os.path.join(CLOUD, "actions.json"), encoding="utf-8"))
     valid_ids = {e["id"] for e in acts}
     lore = parse_lore()

@@ -104,8 +104,12 @@ def test_existing_modules_counts_stable() -> None:
     #  与 skill_models.skills_fields() 对齐；软标注零新增拦截）→ 34 + 8 = 42
     assert len(t.modules["skills"].fields) == 42
     assert len(t.modules["jobs"].fields) == 11
-    assert len(t.modules["enemies"].fields) == 27  # 26 + parts 部位段（方位 v0.6 §三.3）
-    assert len(t.modules["maps"].fields) == 12
+    # 编辑器重写批4.5：enemies 补 AI 引擎依赖段 ai/phases/rewards/zone_change（真实内容包
+    # 实有、原缺登记；soft_label=True 纯展示宽字段，泛型校验零新增拦截）→ 27 + 4 = 31
+    assert len(t.modules["enemies"].fields) == 31
+    # 编辑器重写批4.5：maps 补真实地图段 desc/camp/camp_name/npcs/monsters/exits/mechanics/
+    # gate_guard/gather_points/dungeon_entrances（同上，纯展示宽字段）→ 12 + 10 = 22
+    assert len(t.modules["maps"].fields) == 22
 
 
 def test_test_demo_pack_still_loads() -> None:

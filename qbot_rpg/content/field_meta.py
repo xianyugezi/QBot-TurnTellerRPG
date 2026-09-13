@@ -27,7 +27,7 @@ number|[min,max]）不注册、走 §2.3 默认放行，防泛型校验器 R-1 �
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import Any, Dict, Mapping, Tuple
+from typing import Any, Dict, Mapping, Optional, Tuple
 
 from qbot_rpg.content.models import FieldMeta, FieldMetaTable, ModuleMeta
 # M9 锻造（m9_shared_contract）：forge 模块 ModuleMeta + items 材料类扩展 +
@@ -367,6 +367,8 @@ NPC_FIELDS: Dict[str, FieldMeta] = {
     "tutorials": FieldMeta(type="list", element=FieldMeta(type="str"), label="教学"),
     "shop_refs": FieldMeta(type="list", element=FieldMeta(type="obj", children={}),
                            soft_label=True, label="商店引用"),
+    # 批4.5：实测顶层键（原表未登记 → 纯展示宽字段）
+    "intel_refs": FieldMeta(type="list", soft_label=True, label="情报引用"),
 }
 
 # ---- checkin（CheckinDef 顶层 7+bonus；period.start/end 仅 activity 必填不设 required）----
@@ -885,6 +887,7 @@ ENEMIES_GROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
     ("stats", (
         "hp", "atk", "def", "def_base", "monster_def_rate", "drop_rate",
         "stats", "weakness", "resistance", "elem_res", "pv", "pv_recover", "phases",
+        "zone_change",
     )),
     ("actions", ("actions", "special_actions", "chains", "skills", "traits", "effects", "parts", "ai")),
     ("drops", ("drops", "lore", "rewards")),
@@ -918,9 +921,10 @@ EQUIPMENT_FIELD_GROUPS["excludes"] = "base"
 EQUIPMENT_GROUP_ORDER: Tuple[str, ...] = tuple(_g for _g, _ in ITEMS_GROUP_DEFS)
 
 MAPS_GROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
-    ("base", ("id", "name", "battle", "revert", "safe_zone")),
+    ("base", ("id", "name", "battle", "revert", "safe_zone", "camp", "camp_name")),
     ("ranges", ("min", "max", "lower", "upper", "reset", "mechanics")),
-    ("refs", ("enemy_pool", "monsters", "exits", "respawn_point")),
+    ("refs", ("enemy_pool", "monsters", "exits", "respawn_point", "npcs",
+              "gate_guard", "gather_points", "dungeon_entrances")),
     ("text", ("desc",)),
 )
 MAPS_GROUP_LABELS: Dict[str, str] = {
@@ -972,6 +976,7 @@ ITEMS_FIELD_LABELS: Dict[str, str] = {
     "bind": "绑定", "usable": "可使用", "quality": "品质", "rarity": "稀有度",
     "material_tier": "素材档位", "elements": "元素", "base_effects": "基础效果",
     "traits": "特性", "awaken": "觉醒", "seed": "种子", "source": "来源",
+    "desc": "说明",
 }
 # equipment 与 items 同类（共享 items_fields + excludes）：字段名表复用 items，
 # 装备独有的 excludes 单补一个归属（否则该键在中/英文之间没有中文名）。
@@ -1001,18 +1006,26 @@ EFFECTS_FIELD_LABELS: Dict[str, str] = {
     "duration": "持续", "probability": "概率", "max_stack": "最大层数",
     "require_status": "需求状态", "apply_status": "施加状态",
     "require_mark": "需求印记", "apply_mark": "施加印记", "patch": "数值补丁",
+    # 批4.5：真实内容包实有顶层键（纯展示宽字段的中文名）
+    "actions": "行动表", "class": "类别", "control_type": "控制类型", "count": "层数",
+    "desc": "说明", "filter": "筛选", "mark": "印记", "marks_on": "所需印记",
+    "part_break_per_tick": "每回合破坏值", "pct": "百分比", "polarity": "极性",
+    "skip_turn": "跳过回合", "stat": "属性", "status": "状态", "target": "目标",
+    "tick": "触发时点", "trigger": "触发条件", "turns": "持续回合", "value": "数值",
 }
 
 STATUSES_FIELD_LABELS: Dict[str, str] = {
     "id": "标识", "name": "名称", "type": "类型", "max_stack": "最大层数",
     "duration": "持续", "decay": "衰减", "effects": "效果列表",
     "on_enter": "进入时", "on_tick": "每回合", "on_expire": "失效时",
+    "desc": "说明", "description": "描述", "on_dodge_effects": "闪避时效果",
 }
 
 MARKS_FIELD_LABELS: Dict[str, str] = {
     "id": "标识", "name": "名称", "icon": "图标", "type": "类型",
     "max_stack": "最大层数", "appliable_to": "可施加对象", "polarity": "极性",
     "element": "元素", "duration": "持续", "desc": "说明", "probability": "概率",
+    "description": "描述",
 }
 
 SKILL_CHAINS_FIELD_LABELS: Dict[str, str] = {
@@ -1030,6 +1043,8 @@ ACTION_FIELD_LABELS: Dict[str, str] = {
     "armor": "霸体", "interrupt": "打断", "tags": "标签",
     "preview": "意图预告", "preview_chain": "链预告", "reveal_condition": "揭示条件",
     "require_status": "需求状态", "apply_status": "施加状态", "skill": "技能引用",
+    "apply_mark": "施加印记", "condition": "条件", "trigger_limit": "触发上限",
+    "charge_armor": "蓄力霸体", "charge_turns": "蓄力回合",
 }
 
 JOBS_FIELD_LABELS: Dict[str, str] = {
@@ -1038,6 +1053,514 @@ JOBS_FIELD_LABELS: Dict[str, str] = {
     "mechanic_tags": "机制标签", "weapon_types": "可用武器类型",
     "growth": "成长率", "transform": "形态切换", "description": "职业介绍",
 }
+
+
+# =====================================================================================
+# 编辑器重写批4.5：嵌套子字段中文名（递归；含 element.children）
+# =====================================================================================
+# 与模块级 *_FIELD_LABELS 同款：只补**展示层** label，不参与任何校验判定。
+#   · 表形态 {子键: 中文名 | {孙键: ...}}，递归到任意深度；list 元素对象的 children 同样覆盖；
+#   · children 里**已声明**的键 → 只补 label（type/required/enum/children 原样保留）；
+#   · 真实内容包出现、children **未登记**的键 → 补一个 soft_label=True 的「纯展示子字段」
+#     （validator 对 soft_label 立即 return → 校验语义零变化），避免界面留裸键；
+#   · **动态键空间**（键名由内容定义：ai.states.<状态名> / settings.slot_defs.<部位> /
+#     consume_marks.<印记> / element_req.<元素> / job_tier_map.<档位> 等）**不猜键名**，
+#     保持原始键显示，登记于批报「待确认清单」。
+# 命名依据：stats.json（hp 生命/mp 法力/…）、docs/m2_shared_contract（enemies 八段 + AI）、
+# docs/m3_shared_contract（zone_change）、docs/m13_6a~6c（skills/jobs/skill_chains）、
+# docs/veinborn/03_schema_修正稿.md、既有 *_FIELD_LABELS、data/gear_stats.GEAR_LABELS_ZH；
+# 术语冲突按 docs/编辑器重写_需求与约束.md §六（mp 法力 / con 体质 / mag 法强 / pv 防护值）。
+def _soft_display(label: str, ftype: str = "str",
+                  children: Optional[Mapping[str, FieldMeta]] = None) -> FieldMeta:
+    """纯展示子字段（soft_label=True → 泛型校验短路、永不红拦；仅供编辑器显示中文名）。"""
+    return FieldMeta(type=ftype, soft_label=True, label=label, children=dict(children or {}))
+
+
+def _soft_list(label: str, spec: Mapping[str, Any]) -> FieldMeta:
+    """纯展示的 list-of-obj 子字段（元素 children 由嵌套中文名表展开）。"""
+    return FieldMeta(type="list", soft_label=True, label=label,
+                     element=FieldMeta(type="obj", children=_soft_tree(spec)))
+
+
+def _soft_tree(spec: Mapping[str, Any]) -> Dict[str, FieldMeta]:
+    """把嵌套中文名表展开成纯展示子字段表（未登记键的兜底；FieldMeta 值原样收编）。
+
+    容器自身中文名用保留键 `_label` 表达：{"_label": "珠同名递减", "n": "次数", ...}。
+    """
+    out: Dict[str, FieldMeta] = {}
+    for key, sub in spec.items():
+        if key == "_label":
+            continue
+        if isinstance(sub, FieldMeta):
+            out[key] = sub if sub.soft_label else replace(sub, soft_label=True)
+        elif isinstance(sub, Mapping):
+            out[key] = _soft_display(str(sub.get("_label", key)), "obj",
+                                     _soft_tree(sub))
+        else:
+            out[key] = _soft_display(str(sub))
+    return out
+
+
+def _decorate_one(fm: FieldMeta, label: Optional[str],
+                  nested: Optional[Mapping[str, Any]]) -> FieldMeta:
+    """对单个字段补 label + 递归装饰 children / element.children（只补展示层）。"""
+    kw: Dict[str, object] = {}
+    if label and not fm.label:
+        kw["label"] = label
+    if nested and fm.type == "obj":
+        kids = _decorate_tree(fm.children, nested) if fm.children \
+            else _decorate_tree({}, nested)
+        if kids is not None:
+            kw["children"] = kids
+    elif nested and fm.type == "list":
+        elem = fm.element
+        if elem is None or elem.type == "obj":
+            base = elem.children if (elem is not None and elem.children) else {}
+            kids = _decorate_tree(base, nested)
+            if kids is not None:
+                kw["element"] = replace(
+                    elem if elem is not None else FieldMeta(type="obj"),
+                    type="obj", children=kids)
+    return replace(fm, **kw) if kw else fm
+
+
+def _decorate_tree(children: Mapping[str, FieldMeta],
+                   spec: Mapping[str, Any]) -> Optional[Mapping[str, FieldMeta]]:
+    """按嵌套中文名表装饰一层 children；有变化返回新表，无变化返回 None（不传 children=）。"""
+    changed = False
+    out: Dict[str, FieldMeta] = {}
+    for key, fm in children.items():
+        sub = spec.get(key)
+        label = sub if isinstance(sub, str) else (
+            sub.get("_label") if isinstance(sub, Mapping) else
+            (sub.label if isinstance(sub, FieldMeta) else None))
+        nested = ({k: v for k, v in sub.items() if k != "_label"}
+                  if isinstance(sub, Mapping) else None)
+        new_fm = _decorate_one(fm, label, nested)
+        if new_fm is not fm:
+            changed = True
+        out[key] = new_fm
+    for key, sub in spec.items():
+        if key in children or key == "_label":
+            continue
+        if isinstance(sub, FieldMeta):
+            out[key] = sub if sub.soft_label else replace(sub, soft_label=True)
+        elif isinstance(sub, Mapping):
+            out[key] = _soft_display(str(sub.get("_label", key)), "obj", _soft_tree(sub))
+        else:
+            out[key] = _soft_display(str(sub))
+        changed = True
+    return out if changed else None
+
+
+# ---- enemies（八段嵌套；依据 m2_shared_contract 第一节 + veinborn/test_demo 实测）----
+ENEMIES_CHILD_LABELS: Dict[str, Any] = {
+    "stats": {"hp": "生命", "mp": "法力", "str": "力量", "int": "智力", "con": "体质",
+              "spr": "精神", "foc": "专注", "agi": "敏捷", "luk": "幸运"},
+    "weakness": {"types": "弱点类型", "elements": "弱点元素"},
+    "resistance": {"immune": "免疫效果", "stun": "气绝抗性"},
+    "actions": {"action": "行动", "probability": "概率", "weight": "权重",
+                "condition": "条件", "cooldown": "冷却", "hungry": "饥饿值"},
+    "special_actions": {
+        "id": "标识", "action": "行动", "once": "仅触发一次", "priority": "优先级",
+        "trigger_cooldown": "触发冷却", "max_triggers": "最大触发次数",
+        "chain_ref": "连招引用", "desc": "说明",
+        "trigger": {"type": "触发类型", "value": "数值", "timing": "时机", "action": "行动",
+                    "chance": "概率", "which": "对象", "side": "方位", "height": "高度",
+                    "mark": "印记", "min": "最小层数", "absent": "印记不存在"},
+        "post_state": {"state": "状态", "turns": "持续回合"},
+    },
+    "chains": {"id": "标识",
+               "actions": {"action": "行动", "chance": "概率", "role": "角色", "armor": "霸体"}},
+    "drops": {
+        "battle": {"_label": "战斗掉落", "item": "掉落物品", "chance": "掉落概率",
+                   "condition": "掉落条件", "count": "数量"},
+        "special": {"_label": "特殊掉落", "item": "掉落物品", "chance": "掉落概率",
+                    "condition": "掉落条件", "count": "数量"},
+        "death": {"_label": "死亡掉落", "item": "掉落物品", "chance": "掉落概率",
+                  "condition": "掉落条件", "count": "数量"},
+    },
+    "lore": {"unlock": "解锁进度", "desc": "说明"},
+    "parts": {
+        "id": "部位 ID", "name": "部位名", "break_threshold": "破坏阈值",
+        "target_priority": "命中优先级",
+        "positions": {"side": "可达方位", "height": "可达高度"},
+        "on_break": {"knockdown": "倒地时长", "marks": "破位印记", "effects": "破位效果"},
+    },
+    # ai.states 的键 = 内容自定义状态名（动态键空间）→ 只登记静态的 transitions
+    "ai": {"transitions": _soft_list("状态转移", {
+        "from": "源状态", "to": "目标状态", "condition": "切换条件"})},
+    "phases": {
+        "threshold": "触发阈值", "enter_action": "进入行动", "broadcast": "播报",
+        "actions": _soft_list("行动表", {"action": "行动", "weight": "权重", "probability": "概率"}),
+    },
+    "rewards": {"exp": "经验"},
+    "zone_change": {"enabled": "启用", "hp_threshold": "残血阈值",
+                    "targets": "目标怪物", "timing": "切换时机"},
+}
+
+# ---- skills（M13 6a；level/trigger_limit/effects/energy 轴）----
+SKILLS_CHILD_LABELS: Dict[str, Any] = {
+    "level": {"max": "最大等级", "growth": "成长曲线"},
+    "trigger_limit": {"per_round": "每回合上限", "per_battle": "每场上限"},
+    "effects": {"type": "效果类型", "effect": "效果引用", "target": "目标", "count": "层数",
+                "pct": "百分比", "mark": "印记", "status_id": "状态 ID", "marks_on": "所需印记",
+                "polarity": "极性", "overrides": "数值覆盖"},
+    "consume_marks": {},
+}
+
+# ---- jobs（M13 6b：transform 形态切换 + growth 九属性）----
+JOBS_CHILD_LABELS: Dict[str, Any] = {
+    # growth 契约 = 九属性（m13_6b §1.2）；veinborn 另出现 atk/dfn（超出契约、真实包独有）→
+    # 不并入契约键集（job_lib 硬计数门禁要求恰好 9 键），保持原始键显示并记入批报。
+    "growth": {"str": "力量", "int": "智力", "con": "体质", "spr": "精神", "foc": "专注",
+               "agi": "敏捷", "lck": "幸运", "hp": "生命", "mp": "法力"},
+    "transform": {
+        "transform_skill": "触发技能", "transform_to": "目标形态", "duration": "持续类型",
+        "turns": "持续回合", "revert": "结束后还原", "cooldown": "形态冷却",
+        "dispel_reverts": "被驱散还原", "skill_set": "形态技能组",
+        "equip_restrict": "形态装备限制", "derive_chains": "形态派生链",
+        "state_policy": {"_label": "状态策略", "combo": "连段", "marks": "印记", "buff": "增益"},
+    },
+}
+
+# ---- maps（整图编辑；maps_fields 缺登记的地图段一并补展示层）----
+MAPS_CHILD_LABELS: Dict[str, Any] = {
+    "monsters": {"enemy": "怪物引用", "count": "同时在场上限",
+                 "respawn_minutes": "刷新间隔(分钟)", "name": "展示名",
+                 "hidden_boss": "隐藏首领", "intro": "出场台词", "signal": "信号词"},
+    "exits": {
+        "up": {"to": "目标地图", "mode": "通行模式", "condition": "解锁条件"},
+        "down": {"to": "目标地图", "mode": "通行模式", "condition": "解锁条件"},
+        "left": {"to": "目标地图", "mode": "通行模式", "condition": "解锁条件"},
+        "right": {"to": "目标地图", "mode": "通行模式", "condition": "解锁条件"},
+    },
+    "mechanics": {"id": "标识", "desc": "说明",
+                  "on_step": {"type": "类型", "damage": "伤害"}},
+    "gather_points": {"id": "标识", "item": "物品引用", "rarity": "稀有度", "rate": "概率"},
+    "dungeon_entrances": {"dungeon": "副本引用", "name": "名称"},
+    "camp": {"name": "名称", "safe": "安全区", "unlock": "解锁方式"},
+}
+
+# ---- quest（conditions 条件行 / reward 多形态 / npc 关联）----
+QUEST_CHILD_LABELS: Dict[str, Any] = {
+    "conditions": {"var": "变量", "op": "运算符", "value": "目标值", "param": "参数"},
+    "npc": {"id": "标识"},
+    "reward": {"coins": "金币", "gem": "宝石", "exp": "经验", "rep": "声望",
+               "prof": "熟练度", "item": "物品引用", "count": "数量"},
+}
+
+# ---- effects / statuses / marks（技能族：效果词条 + 状态桶 + 印记）----
+EFFECTS_CHILD_LABELS: Dict[str, Any] = {
+    "patch": {"target": "目标", "value": "数值", "pct": "百分比"},
+    "actions": {"type": "类型", "count": "层数", "mark": "印记", "target": "目标"},
+}
+STATUSES_CHILD_LABELS: Dict[str, Any] = {
+    "duration": {"turns": "持续回合", "charges": "层数"},
+}
+MARKS_CHILD_LABELS: Dict[str, Any] = {}
+
+# ---- skill_chains（M13 6a steps 派生链）----
+SKILL_CHAINS_CHILD_LABELS: Dict[str, Any] = {
+    "steps": {"from": "源技能", "to": "目标技能", "tag": "标签", "priority": "优先级",
+              "mode": "模式", "armor": "霸体", "consume": "消耗",
+              "condition": {"count": "计数"},
+              "variant_override": {"power": "威力"}},
+}
+
+# ---- action（AI 字段里的条件/触发上限补充；deeper 由 ACTION_FIELD_LABELS 覆盖）----
+ACTION_CHILD_LABELS: Dict[str, Any] = {}
+
+# ---- npc（交互动作 15 键 + 对话选项）----
+NPC_CHILD_LABELS: Dict[str, Any] = {
+    "dialogues": {
+        "greeting": {},
+        "options": {"text": "选项文本", "next": "下一对话", "action": "选项动作",
+                    "quests": "任务", "shop_refs": "商店引用", "intel_refs": "情报引用",
+                    "tutorials": "教学", "heal": "治疗", "cost": "消耗"},
+    },
+    "interactions": {
+        "action": "交互动作", "text": "文本", "repeat": "可重复", "turns": "持续回合",
+        "map": "地图挂点", "items": "物品", "effects": "效果",
+        "quests": {"quest_id": "任务 ID"},
+        "condition": {"var": "变量", "op": "运算符", "value": "数值", "param": "参数"},
+        "cost": {"coins": "金币"},
+        "heal": {"hp": "生命", "mp": "法力"},
+    },
+    "quests": {"quest_id": "任务 ID"},
+}
+
+# ---- shop（商品条目 + 刷新规则）----
+SHOP_CHILD_LABELS: Dict[str, Any] = {
+    "items": {"sold_out_once": "售罄后下架"},
+    "refresh": {},
+    "pool": {},
+}
+
+# ---- checkin（奖励条目里的 items[]）----
+CHECKIN_CHILD_LABELS: Dict[str, Any] = {
+    "rewards": {
+        "daily": {"items": {"id": "物品 ID", "count": "数量"}},
+        "streak": {"items": {"id": "物品 ID", "count": "数量"}},
+        "monthly_total": {"items": {"id": "物品 ID", "count": "数量"}},
+    },
+    "period": {},
+}
+
+# ---- dungeon（掉落/首通已带 label；此处兜底）----
+DUNGEON_CHILD_LABELS: Dict[str, Any] = {
+    "drops": {},
+    "entry_limit": {},
+}
+
+# ---- achievements（条件/奖励/hidden 已带 label）----
+ACHIEVEMENT_CHILD_LABELS: Dict[str, Any] = {
+    "conditions": {},
+    "reward": {},
+    "hidden": {},
+}
+
+# ---- traits / recipe / proficiency / slots（M8 炼金 + 特性）----
+TRAITS_CHILD_LABELS: Dict[str, Any] = {}
+RECIPE_CHILD_LABELS: Dict[str, Any] = {
+    "materials": {"id": "物品 ID", "item": "物品引用", "count": "数量"},
+    "inputs": {"item": "物品引用", "count": "数量"},
+    "output": {"item": "物品引用", "count": "数量"},
+    "cost": {"coins": "金币", "gem": "宝石"},
+    "evolve_to": {"id": "目标物品",
+                  "condition": {"_label": "进化条件", "count": "数量", "source": "来源"}},
+}
+PROFICIENCY_CHILD_LABELS: Dict[str, Any] = {
+    "sp_panel": {"id": "标识", "name": "名称", "cost": "消耗", "repeatable": "可重复",
+                 "max_repeat": "最大次数", "desc": "说明"},
+    "energy": {"enabled": "启用", "max_by_tier": "各档上限", "regen_sec": "恢复秒数"},
+    "titles": {"id": "标识", "name": "名称", "icon": "图标", "source": "来源", "desc": "说明"},
+}
+SLOTS_CHILD_LABELS: Dict[str, Any] = {
+    "slots": {"slot_level": "槽位等级"},
+}
+
+# ---- conditional（细化_3b 条件加成）----
+CONDITIONAL_CHILD_LABELS: Dict[str, Any] = {
+    "conditional": {"id": "标识", "name": "名称", "source": "来源属性",
+                    "target": "产出属性", "per_point": "每点产出", "note": "备注"},
+}
+
+# ---- manifest（包清单；模块层级声明的子结构 label）----
+MANIFEST_CHILD_LABELS: Dict[str, Any] = {
+    "module_tree": {"module": "模块", "label": "显示名", "children": "子模块"},
+    "module_groups": {"module": "模块", "label": "显示名", "children": "子模块"},
+}
+
+# ---- settings（世界设置；段子结构兜底 —— alchemy/forge/fishing 深表见各段模块）----
+SETTINGS_CHILD_LABELS: Dict[str, Any] = {
+    "currencies": {"id": "标识", "name": "名称", "icon": "图标",
+                   "cap": "上限", "note": "备注"},
+    "death_penalty": {
+        "weak_duration_sec": "虚弱时长(秒)",
+        "drop_currency": {"_label": "掉落货币", "currency": "货币", "ratio": "比例"},
+        "drop_exp": {"_label": "掉落经验", "enabled": "启用", "percent": "百分比"},
+        "drop_items": {"_label": "掉落物品", "enabled": "启用", "count": "数量"},
+    },
+    "alchemy": {
+        "mode": "模式", "quality_tiers": "品质档位数", "quality_coef": "品质系数",
+        "chain_map": "连锁映射",
+        "pp_cost": {"_label": "点数消耗", "normal": "普通消耗", "super": "超级消耗"},
+        "pp_refresh": "点数刷新时机", "energy_enabled": "启用精力",
+        "energy_max": "精力上限", "energy_regen_sec": "精力恢复秒数",
+        "energy_regen_sec_safe": "安全区精力恢复秒数", "decompose_rate": "分解回收率",
+        "catalyst_unlock_tier": "触媒解锁档位", "catalyst_consume": "消耗触媒",
+        "gem.分解": "宝石分解", "gem.复制": "宝石复制", "gem.成品合成": "成品合成",
+        "gem.配方合成": "配方合成", "gem.特性合成": "特性合成", "gem.珠升阶": "珠升阶",
+        "gem.复制额外": "复制额外消耗", "copy_extra_cost": "复制额外消耗(别名)",
+        "gem.decompose_formula": "宝石分解公式",
+        "gem_diminish": {"_label": "珠同名递减", "n": "同名次数", "mult": "递减倍率"},
+        "synth_exp": "合成经验", "sp_per_level": "每级技能点",
+        "sp_panel": {"_label": "技能面板", "id": "标识", "name": "名称", "cost": "消耗",
+                     "repeatable": "可重复", "max_repeat": "最大次数", "desc": "说明"},
+        "战斗道具": {"_label": "战斗道具", "强度公式": "强度公式", "珠触发上限": "珠触发上限"},
+        "战斗即时调合": {"_label": "战斗即时调合", "auto_use": "自动使用",
+                   "per_battle_limit": "每场上限",
+                   "proficiency_multiplier": {"_label": "熟练度乘区", "min": "下限",
+                                              "max": "上限", "curve": "曲线形态"}},
+        "max_qty": "数量上限", "job_tier_map": "职业档位映射",
+        "farming": {"_label": "种植", "enabled": "启用种植", "harvest_sec": "收获秒数",
+                    "plots_max": "最大田块数", "trait_inherit": "特性继承",
+                    "greenhouse": {"_label": "温室", "copy_cost": {"_label": "复制消耗",
+                                                                   "coins": "金币",
+                                                                   "gem": "宝石"},
+                                   "copy_slot": "复制槽位",
+                                   "unlock_tier": "解锁档位"}},
+    },
+    "forge": {"forge_fee": "锻造费", "synth_ratio_3to1": "三合一合成比例",
+              "straight_forge": "直接锻造", "decompose_rate": "分解回收率",
+              "exp_per_forge": "每次锻造经验", "sets_enabled": "启用套装",
+              "augments_enabled": "启用客制强化", "set_piece_counts": "套装部件数",
+              "set_tier_exact": "套装档位精确匹配"},
+    "fishing": {
+        "mode": "模式", "bait_ids": "鱼饵引用", "daily_limit": "每日上限",
+        "wait_sec": {"_label": "等待秒数", "min": "最小等待秒数", "max": "最大等待秒数"},
+        "energy": {"_label": "精力", "enabled": "启用精力"},
+        "bait_bonus": {"_label": "鱼饵加成", "gold": "金色鱼饵加成", "rare": "稀有鱼饵加成"},
+        "rod_full_bonus": {"_label": "满竿加成", "gold": "金色满竿加成",
+                           "rare": "稀有满竿加成"},
+        "crown_thresholds": {"_label": "冠级阈值", "reverse": "倒扣阈值",
+                             "silver": "银冠阈值", "gold": "金冠阈值"},
+        "king_event": {"_label": "鱼王事件", "enabled": "启用鱼王事件",
+                       "window_daily": "每日窗口", "chance": "概率"},
+    },
+    "assistant": {
+        "enabled": "启用", "energy_items": "精力道具", "unlock_tier": "解锁档位",
+        "helpers": _soft_list("助手列表", {
+            "id": "标识", "name": "名称", "desc": "说明", "tier": "档位",
+            "gather_rate": "采集速率", "quality_bonus": "品质加成",
+            "trait_bonus": "特性加成"}),
+        "queue": {"_label": "队列", "max_slots": "最大槽位", "tick_sec": "结算秒数"},
+    },
+    # battle 段 = 战斗数值动态化（M12.5 战斗数值方案）实测键并集；命名取引擎既有术语
+    "battle": {
+        "enrage_damage_mult": "狂暴伤害倍率", "enrage_recovery_mult": "狂暴恢复倍率",
+        "fatigue_recovery_mult": "疲劳恢复倍率",
+        "fatigue_stagger_chance": "疲劳踉跄概率",
+        "rage_cool_actions": "怒气冷却行动数", "rage_per_damage": "每次受伤怒气",
+        "roar_combo_clear": "咆哮清连段", "roar_heavy_delay": "重咆哮延迟",
+        "roar_light_delay": "轻咆哮延迟", "stamina_drain_blunt": "打击精力消耗",
+        "stamina_max": "精力上限", "stamina_regen_per_action": "每行动精力恢复",
+        "stun_back_mult": "气绝反制倍率", "stun_base_threshold": "气绝基础阈值",
+        "stun_decay_per_action": "每行动气绝衰减", "stun_escalation": "气绝递增",
+        "stun_hint_at": "气绝提示阈值", "stun_ko_skip": "气绝跳过回合",
+        "stun_ko_window": "气绝窗口", "stun_side_mult": "方位气绝倍率",
+    },
+    "command_aliases": {},
+    "contest": {
+        "enabled": "启用",
+        "reward": {"_label": "奖励", "gem": "宝石", "title": "称号",
+                   "reputation": {"_label": "声望", "submit": "提交", "win": "获胜"}},
+        # 注：contest 下的排期子段键名（含 M43① 零定时器扫描词）不在本表登记，
+        # 保留原始键显示并列入批报「待确认清单」（不猜中文名，避免触发全仓定时器门禁）。
+        "score_weights": {"_label": "评分权重", "awaken": "觉醒", "potential": "潜力",
+                          "quality": "品质", "trait": "特性"},
+    },
+    "ctb": {"enabled": "启用", "default_recovery": "默认行动恢复"},
+    "events": {},
+    "exp_curve": {},
+    "level_cap": "等级上限",
+    "quest_board": {
+        "enabled": "启用", "refresh_days": "刷新天数", "penalty": "惩罚",
+        "active_limit": "同时接取上限", "daily_limit": "每日上限",
+        "rep_levels": "声望等级", "grade_bonus": {"_label": "评级加成",
+                                                "S": "S 级", "A": "A 级", "B": "B 级"},
+        "tiers": _soft_list("任务板档位", {
+            "id": "标识", "name": "名称", "desc": "说明",
+            "job_level": "职业等级", "rep_base": "基础声望", "rep_min": "最低声望",
+            "star": "星级", "reward": "奖励",
+            "require": {"_label": "需求", "count": "数量", "item": "物品",
+                        "quality": "品质"}}),
+    },
+}
+
+# ---- forge / fishing / enhance（深结构展示层；宽容器 soft_label 语义保持）----
+FORGE_CHILD_LABELS: Dict[str, Any] = {
+    "trees": {
+        "id": "标识", "name": "名称", "type": "类型", "roots": "根节点",
+        "nodes": {"id": "标识", "name": "名称", "item": "物品", "output_item": "产出物品",
+                  "type": "类型", "level": "等级", "parent": "前置节点", "branch": "分支",
+                  "stats": "属性", "slots": {"level": "等级"},
+                  "materials": {"item": "物品", "count": "数量", "tier": "档位",
+                                "source_override": "来源覆盖"},
+                  "cost": {}, "rarity": "稀有度", "monster_source": "怪物来源",
+                  "final": "终点", "augmentable": "可强化", "king_only": "王级专属",
+                  "final_tier": "终段"},
+    },
+    "sets": {
+        "id": "标识", "name": "名称", "variant": "变体", "pieces": "部件",
+        "skills": {"piece_count": "部件数", "skill": "技能", "level": "等级",
+                   "effect_ref": "效果引用"},
+        "desc": "说明", "enabled": "启用", "codex_group": "图鉴分组",
+    },
+    "augments": {
+        "augments": {"id": "标识", "name": "名称", "kind": "类别", "effect": "效果",
+                     "stat_key": "属性键", "value": "数值",
+                     "cost": {"item": "物品", "count": "数量"},
+                     "repeatable": "可重复", "max_repeat": "最大次数",
+                     "slot_level": "槽位等级", "disabled": "禁用", "trace": "追溯"},
+        "limit_by_rarity": {"quality": "品质", "times": "次数", "final_only": "仅终段"},
+    },
+    "settings": {},
+}
+FISHING_CHILD_LABELS: Dict[str, Any] = {
+    "species": {
+        "id": "标识", "name": "名称", "rarity": "稀有度", "king": "鱼王",
+        "hours": "出没钟点", "periods": "时段", "seasons": "季节", "spots": "钓点",
+        "preferred_bait": "偏好鱼饵", "size_min": "最小尺寸", "size_max": "最大尺寸",
+        "weight_min": "最小重量", "weight_max": "最大重量",
+        "codex_text": {"best_mask": "最佳尺寸掩码", "desc": "说明", "unit": "单位"},
+    },
+    "king": {"id": "标识", "enabled": "启用", "chance": "概率", "hint": "提示",
+             "enemy_id": "怪物引用", "species_id": "鱼种引用", "window_daily": "每日窗口"},
+}
+ENHANCE_CHILD_LABELS: Dict[str, Any] = {
+    "cost": {"coin_per_level": "每级金币", "stones_per_level": "每级石头",
+             "stone_tiers": {"item": "物品", "levels": "等级区间", "tier": "档位"}},
+    "settings": {
+        "fail_tier_split": "失败档位拆分", "level_gated": "等级门槛",
+        "luck_affects": "幸运影响", "shatter_mode": "碎裂模式",
+        "transfer_allowed": "允许转移",
+        "max_by_rarity": {"normal": "普通", "fine": "精良", "epic": "史诗",
+                          "legendary": "传说"},
+    },
+    "success_curve": {"rate": "成功率", "to": "目标等级"},
+    "values": {
+        "weapon_atk_per_level": {"stat_key": "属性键", "type": "类型", "value": "数值"},
+        "armor_def_per_level": {"stat_key": "属性键", "type": "类型", "value": "数值"},
+    },
+}
+
+# ---- 尚未覆盖模块的**顶层**字段中文名（与既有 *_FIELD_LABELS 同款）----
+MANIFEST_FIELD_LABELS: Dict[str, str] = {
+    "name": "内容包名", "version": "版本", "schema_version": "结构版本", "author": "作者",
+    "modules": "模块清单", "module_tree": "模块层级声明",
+    "module_groups": "模块层级声明（别名）", "module_labels": "模块显示名",
+}
+TRAITS_FIELD_LABELS: Dict[str, str] = {
+    "id": "标识", "name": "名称", "type": "类型", "probability": "概率",
+    "max_stack": "最大层数", "effects": "效果列表", "require_status": "需求状态",
+    "apply_status": "施加状态", "rarity": "稀有度", "group": "互斥组",
+    "repeatable": "可重复继承", "source": "可继承池分类",
+}
+RECIPE_FIELD_LABELS: Dict[str, str] = {
+    "id": "标识", "name": "名称", "kind": "配方类别", "level": "准入等级",
+    "synth_allowed": "允许合成", "master_only": "大师独占", "materials": "材料",
+    "inputs": "投入材料", "output": "产出", "cost": "消耗", "slots": "槽位数",
+    "element_req": "元素需求", "effects": "效果列表", "traits_inherit": "可继承特性数",
+    "catalyst": "触媒", "combine_from": "合成来源", "evolve_to": "进化线",
+    "pp_budget": "熟练点预算",
+}
+PROFICIENCY_FIELD_LABELS: Dict[str, str] = {
+    "id": "标识", "tier_names": "档位名称", "job_rank_levels": "职业等级门槛",
+    "exp_sources": "经验来源", "sp_per_level": "每级技能点", "sp_panel": "技能面板",
+    "energy": "精力", "job_tier_map": "职业档位映射", "titles": "称号",
+}
+SLOTS_FIELD_LABELS: Dict[str, str] = {
+    "equip_id": "装备引用", "slots": "插槽",
+}
+STATS_FIELD_LABELS: Dict[str, str] = {
+    "name": "名称", "type": "属性类型", "base": "基础值", "growth": "成长值",
+    "max": "上限", "min": "下限", "display": "显示方式",
+}
+SETTINGS_FIELD_LABELS: Dict[str, str] = {
+    "default_map": "默认地图", "world_name": "世界名称", "currencies": "货币",
+    "death_penalty": "死亡惩罚", "slot_defs": "装备槽位", "alchemy": "炼金",
+    "forge": "锻造", "fishing": "钓鱼", "env_event": "环境事件", "log_card": "日志卡片",
+}
+CONDITIONAL_FIELD_LABELS: Dict[str, str] = {"conditional": "条件加成"}
+
+
+def _decorate_module_meta(mmeta: ModuleMeta, labels: Mapping[str, str] = (),
+                          child_labels: Optional[Mapping[str, Any]] = None) -> ModuleMeta:
+    """模块 ModuleMeta 的 fields 过一遍展示层装饰（helper 工厂模块用；校验语义零变化）。"""
+    return replace(mmeta, fields=_decorate_field_meta(
+        mmeta.fields, mmeta.field_groups, labels, child_labels))
 
 
 def _group_declaration(
@@ -1068,11 +1591,14 @@ def _decorate_field_meta(
     fields: Mapping[str, FieldMeta],
     groups: Mapping[str, str],
     labels: Mapping[str, str],
+    child_labels: Optional[Mapping[str, Any]] = None,
 ) -> Dict[str, FieldMeta]:
     """把模块级分组表/中文名表叠加到字段元数据（字段自带的 group/label 优先）。
 
-    只做展示层补充：type/required/default/enum/ref_target/element/children 全部原样保留，
+    只做展示层补充：type/required/default/enum/ref_target/element/children 原样保留，
     因此对泛型校验器（只读 type 等判定字段）是零行为变化。
+    批4.5 起可选 child_labels（嵌套中文名表）递归装饰 children / element.children；
+    表里出现、children 未登记的键补 soft_label=True 纯展示子字段（校验短路，语义零变化）。
     """
     out: Dict[str, FieldMeta] = {}
     for key, fm in fields.items():
@@ -1081,6 +1607,13 @@ def _decorate_field_meta(
             kw["group"] = groups[key]
         if not fm.label and key in labels:
             kw["label"] = labels[key]
+        spec = child_labels.get(key) if child_labels else None
+        if isinstance(spec, Mapping) and fm.type in ("obj", "list"):
+            new_fm = _decorate_one(fm, None, spec)
+            if new_fm.children is not fm.children:
+                kw["children"] = new_fm.children
+            if new_fm.element is not fm.element:
+                kw["element"] = new_fm.element
         out[key] = replace(fm, **kw) if kw else fm
     return out
 
@@ -1115,6 +1648,27 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "patch": FieldMeta(type="obj", children={"target": FieldMeta(type="str"),
                                                  "value": FieldMeta(type="number"),
                                                  "pct": FieldMeta(type="bool")}),
+        # 批4.5：veinborn/test_demo 实有、原表未登记的顶层键 → 纯展示宽字段（soft_label
+        # 短路泛型校验；editor 表单/子字段可读，校验语义零变化）
+        "actions": _soft_display("行动表", "list"),
+        "class": _soft_display("类别"),
+        "control_type": _soft_display("控制类型"),
+        "count": _soft_display("层数", "int"),
+        "desc": _soft_display("说明"),
+        "filter": _soft_display("筛选"),
+        "mark": _soft_display("印记"),
+        "marks_on": _soft_display("所需印记"),
+        "part_break_per_tick": _soft_display("每回合破坏值", "int"),
+        "pct": _soft_display("百分比", "bool"),
+        "polarity": _soft_display("极性"),
+        "skip_turn": _soft_display("跳过回合", "number"),
+        "stat": _soft_display("属性"),
+        "status": _soft_display("状态"),
+        "target": _soft_display("目标"),
+        "tick": _soft_display("触发时点"),
+        "trigger": _soft_display("触发条件"),
+        "turns": _soft_display("持续回合", "int"),
+        "value": _soft_display("数值"),
     }
     statuses_fields: Dict[str, FieldMeta] = {
         "id": F_ID, "name": F_NAME, "type": F_TYPE,
@@ -1138,6 +1692,10 @@ def _module_table() -> Dict[str, ModuleMeta]:
         # 受击增伤乘区（方位 v0.6 §五：knockdown 等状态 def 挂 damage_mult；引擎破位乘区消费）
         "damage_mult": FieldMeta(type="number", range_min=0, range_max=10,
                                  label="受击增伤倍率"),
+        # 批4.5：实测顶层键（原表未登记 → 纯展示宽字段，soft_label 零校验变化）
+        "desc": _soft_display("说明"),
+        "description": _soft_display("描述"),
+        "on_dodge_effects": _soft_display("闪避时效果", "list"),
     }
     marks_fields: Dict[str, FieldMeta] = {
         # 印记定稿 §八 数据结构汇总（2026-08-19 定稿对照 P0-1 **部分**修复——5 字段已补；
@@ -1157,6 +1715,7 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "duration": FieldMeta(type="str"),
         "desc": FieldMeta(type="str"),
         "probability": F_PROBABILITY,            # mark_add 概率 proc（AT-10）
+        "description": _soft_display("描述"),     # 批4.5 实测顶层键（纯展示）
     }
     skill_chains_fields: Dict[str, FieldMeta] = {
         "id": F_ID, "name": F_NAME, "type": F_TYPE,
@@ -1228,6 +1787,13 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "require_status": FieldMeta(type="ref", ref_target="status"),
         "apply_status": FieldMeta(type="ref", ref_target="status"),
         "skill": FieldMeta(type="ref", ref_target="skill_or_any"),
+        # 批4.5：实测顶层键（原表未登记 → 纯展示宽字段；soft_label 短路泛型校验，
+        # 不新开 ref 校验路径，校验语义零变化）
+        "apply_mark": _soft_display("施加印记"),
+        "condition": _soft_display("条件", "obj"),
+        "trigger_limit": _soft_display("触发上限", "obj"),
+        "charge_armor": _soft_display("蓄力霸体", "bool"),
+        "charge_turns": _soft_display("蓄力回合", "int"),
     }
     skills_fields: Dict[str, FieldMeta] = {
         # ---- M13 技能库（细化_6a_技能库契约 §1.2：A 共用核心 7 字段 F01-F07）----
@@ -1361,6 +1927,8 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "slot": FieldMeta(type="str"),  # 装备部位（正式表可注入 ref_target=slot）
         "bind": FieldMeta(type="bool"),
         "usable": FieldMeta(type="bool"),
+        # 批4.5：items/equipment 实测顶层 desc（原表未登记 → 纯展示宽字段）
+        "desc": _soft_display("说明"),
     }
     equipment_fields: Dict[str, FieldMeta] = dict(items_fields)
     # 部位互斥：entry.slot 与 entry.excludes 列表内部位互斥成环 → R-5（equipment 专项，§5.2 + L167）
@@ -1474,6 +2042,13 @@ def _module_table() -> Dict[str, ModuleMeta]:
                                      label="破位效果"),
             }, label="破位行为"),
         }), label="部位列表"),
+        # 批4.5：AI 引擎依赖段（m2_shared_contract 第一节）实测存在于真实包，原表未登记 →
+        # 纯展示宽字段（soft_label 短路泛型校验，零新增拦截）；children 由
+        # ENEMIES_CHILD_LABELS 递归补中文名。
+        "ai": _soft_display("AI 行为态", "obj"),
+        "phases": _soft_display("阶段表", "list"),
+        "rewards": _soft_display("奖励", "obj"),
+        "zone_change": _soft_display("换区", "obj"),
     }
     maps_fields: Dict[str, FieldMeta] = {
         "id": F_ID, "name": F_NAME,
@@ -1487,6 +2062,20 @@ def _module_table() -> Dict[str, ModuleMeta]:
         # respawn_point=复活点指向（引用已注册地图 id，泛型 R-4 存在性检查）
         "safe_zone": FieldMeta(type="bool"),
         "respawn_point": FieldMeta(type="ref", ref_target="map"),
+        # 批4.5：真实包 maps.json 实有、原表未登记的地图段（→ 纯展示宽字段，soft_label
+        # 短路泛型校验；children 由 MAPS_CHILD_LABELS 递归补中文名）。DUNGEON_MAP_ELEM_CHILDREN
+        # 早已为「maps 页整图编辑」预留这些键，本批把它接到 maps 模块。
+        "desc": _soft_display("说明"),
+        "camp": _soft_display("营地", "obj"),
+        "camp_name": _soft_display("营地名"),
+        "npcs": FieldMeta(type="list", element=FieldMeta(type="str"),
+                          soft_label=True, label="NPC 列表"),
+        "monsters": _soft_display("刷怪行", "list"),
+        "exits": _soft_display("通道出口", "obj"),
+        "mechanics": _soft_display("地图机制", "list"),
+        "gate_guard": _soft_display("门卫"),
+        "gather_points": _soft_display("采集点", "list"),
+        "dungeon_entrances": _soft_display("副本入口", "list"),
     }
     stats_fields: Dict[str, FieldMeta] = {}
     # M12.5 需求1 批D：formula 模块 stat_map 段字段口径（FORMULA_FIELDS 模块级常量，
@@ -1592,31 +2181,55 @@ def _module_table() -> Dict[str, ModuleMeta]:
     # M10 钓鱼（m10_shared_contract §一）：settings.fishing 段（fishing_settings_meta
     # 自包含持有，防 field_meta↔fishing 循环依赖）
     SETTINGS_FIELDS["fishing"] = fishing_settings_meta()
+    # 批4.5：settings.json 真实包实有、原表未登记的顶层段（→ 纯展示宽字段，soft_label
+    # 短路泛型校验；children 由 SETTINGS_CHILD_LABELS 递归补中文名）。
+    # 依据：content/{veinborn,test_demo,demo_full}/settings.json 实测键并集。
+    SETTINGS_FIELDS.update({
+        "assistant": _soft_display("助手", "obj"),
+        "battle": _soft_display("战斗参数", "obj"),
+        "command_aliases": _soft_display("指令别名", "obj"),
+        "contest": _soft_display("竞技", "obj"),
+        "ctb": _soft_display("行动条", "obj"),
+        "events": _soft_display("事件文案", "obj"),
+        "exp_curve": _soft_display("经验曲线", "obj"),
+        "level_cap": _soft_display("等级上限", "int"),
+        "quest_board": _soft_display("任务板", "obj"),
+    })
 
     return {
-        "manifest": ModuleMeta(entry_type="object", fields=manifest_fields),
+        "manifest": ModuleMeta(
+            entry_type="object",
+            fields=_decorate_field_meta(manifest_fields, {}, MANIFEST_FIELD_LABELS,
+                                        MANIFEST_CHILD_LABELS)),
         "effects": ModuleMeta(entry_type="list",
-                              fields=_decorate_field_meta(effects_fields, {}, EFFECTS_FIELD_LABELS),
+                              fields=_decorate_field_meta(effects_fields, {}, EFFECTS_FIELD_LABELS,
+                                                          EFFECTS_CHILD_LABELS),
                               kind="effect", namespace="effect_family"),
         "statuses": ModuleMeta(entry_type="list",
-                               fields=_decorate_field_meta(statuses_fields, {}, STATUSES_FIELD_LABELS),
+                               fields=_decorate_field_meta(statuses_fields, {}, STATUSES_FIELD_LABELS,
+                                                           STATUSES_CHILD_LABELS),
                                kind="status", namespace="effect_family"),
         "marks": ModuleMeta(entry_type="list",
-                            fields=_decorate_field_meta(marks_fields, {}, MARKS_FIELD_LABELS),
+                            fields=_decorate_field_meta(marks_fields, {}, MARKS_FIELD_LABELS,
+                                                        MARKS_CHILD_LABELS),
                             kind="mark", namespace="effect_family"),
         "skill_chains": ModuleMeta(entry_type="list",
-                                   fields=_decorate_field_meta(skill_chains_fields, {}, SKILL_CHAINS_FIELD_LABELS),
+                                   fields=_decorate_field_meta(skill_chains_fields, {},
+                                                               SKILL_CHAINS_FIELD_LABELS,
+                                                               SKILL_CHAINS_CHILD_LABELS),
                                    kind="skill_chain",
                                    namespace="chain_lib", chain_field="next"),
         "action": ModuleMeta(entry_type="list",
-                             fields=_decorate_field_meta(action_fields, {}, ACTION_FIELD_LABELS),
+                             fields=_decorate_field_meta(action_fields, {}, ACTION_FIELD_LABELS,
+                                                         ACTION_CHILD_LABELS),
                              kind="action", namespace="action_lib"),
         # M13 技能库（细化_6a_技能库契约 §1：skills.json 玩家技能库；F01-F24 全字段登记；
         # kind="skill" 与 loader _KIND_FOR_MODULE + DEF_CLASSES 对齐（路1A SkillDef）；
         # 命名空间 skill_lib 独立于 action_lib——V-10 跨库重名仅黄提示）
         "skills": ModuleMeta(
             entry_type="list",
-            fields=_decorate_field_meta(skills_fields, SKILLS_FIELD_GROUPS, SKILLS_FIELD_LABELS),
+            fields=_decorate_field_meta(skills_fields, SKILLS_FIELD_GROUPS, SKILLS_FIELD_LABELS,
+                                        SKILLS_CHILD_LABELS),
             kind="skill", namespace="skill_lib",
             field_groups=dict(SKILLS_FIELD_GROUPS),
             group_order=SKILLS_GROUP_ORDER,
@@ -1632,7 +2245,8 @@ def _module_table() -> Dict[str, ModuleMeta]:
         # growth 九键缺省 0 不设 required（§1.2）。深结构/引用校验（V1~V8 专项）归批4 路4B
         # job_models.validate_jobs 全权（对齐 skills 专项校验器口径），本表登记字段口径。
         "jobs": ModuleMeta(entry_type="list",
-                           fields=_decorate_field_meta(jobs_fields, {}, JOBS_FIELD_LABELS),
+                           fields=_decorate_field_meta(jobs_fields, {}, JOBS_FIELD_LABELS,
+                                                       JOBS_CHILD_LABELS),
                            kind="job", namespace="job_lib"),
         "formula": ModuleMeta(entry_type="map", fields=formula_fields, kind="formula", namespace="formula_lib"),
         "items": ModuleMeta(entry_type="list",
@@ -1646,66 +2260,95 @@ def _module_table() -> Dict[str, ModuleMeta]:
                                 namespace="item_lib", mutex_field="excludes",
                                 field_groups=EQUIPMENT_FIELD_GROUPS, group_order=EQUIPMENT_GROUP_ORDER,
                                 group_labels=ITEMS_GROUP_LABEL_MAP),
-        "traits": ModuleMeta(entry_type="list", fields=traits_fields, kind="trait", namespace="trait_lib"),
+        "traits": ModuleMeta(entry_type="list",
+                             fields=_decorate_field_meta(traits_fields, {}, TRAITS_FIELD_LABELS,
+                                                         TRAITS_CHILD_LABELS),
+                             kind="trait", namespace="trait_lib"),
         # M8 炼金（m8_contract_数据与校验 §一/§三/§四 4.2）：recipe/proficiency 新增登记四件套；
         # slots 由 alchemy_settings.slots_module_meta() 提供（kind=slots，与 loader 注册表同名）
-        "recipe": ModuleMeta(entry_type="list", fields=recipe_fields, kind="recipe", namespace="recipe_lib"),
-        "proficiency": ModuleMeta(entry_type="list", fields=proficiency_fields,
+        "recipe": ModuleMeta(entry_type="list",
+                             fields=_decorate_field_meta(recipe_fields, {}, RECIPE_FIELD_LABELS,
+                                                         RECIPE_CHILD_LABELS),
+                             kind="recipe", namespace="recipe_lib"),
+        "proficiency": ModuleMeta(entry_type="list",
+                                  fields=_decorate_field_meta(proficiency_fields, {},
+                                                              PROFICIENCY_FIELD_LABELS,
+                                                              PROFICIENCY_CHILD_LABELS),
                                   kind="proficiency", namespace="proficiency_lib"),
-        "slots": slots_module_meta(),
+        "slots": _decorate_module_meta(slots_module_meta(), SLOTS_FIELD_LABELS,
+                                       SLOTS_CHILD_LABELS),
         # M9 锻造（m9_shared_contract §〇~§六）：forge.json 顶层 obj——模块级 ModuleMeta
         # 由 forge_module_meta() 提供（entry_type=object）；M12.5 批3 路3A 注入段级
         # 字段表 FORGE_TOP_FIELD_DEFS（schema_version 精确 + trees/sets/augments/
         # settings 四宽容器 soft_label——泛型零新增拦截）；深结构校验由
         # validate_forge 专项全权（V1-V15/W + 2c2d V1-V8/W1-W4），泛型只做顶层形态
-        "forge": forge_module_meta(),
+        "forge": _decorate_module_meta(forge_module_meta(), (), FORGE_CHILD_LABELS),
         # M10 钓鱼（m10_shared_contract §三）：fishing.json 顶层 obj——模块级 ModuleMeta
         # 由 fishing_module_meta() 提供（entry_type=object）；深结构校验由
         # validate_fishing 专项全权（V1-V6/W1），泛型只做顶层形态（对齐 forge/dungeon）
-        "fishing": fishing_module_meta(),
+        "fishing": _decorate_module_meta(fishing_module_meta(), (), FISHING_CHILD_LABELS),
         # M12.5 强化（2c3a/2c3b）：enhance.json 顶层 obj——模块级 ModuleMeta 由
         # enhance_module_meta() 提供（entry_type=object）；深结构校验由
         # validate_enhance 专项全权（V1~V7），泛型只做顶层形态（对齐 forge/fishing）
-        "enhance": enhance_module_meta(),
+        "enhance": _decorate_module_meta(enhance_module_meta(), (), ENHANCE_CHILD_LABELS),
         "enemies": ModuleMeta(entry_type="list",
-                              fields=_decorate_field_meta(enemies_fields, ENEMIES_FIELD_GROUPS, ENEMIES_FIELD_LABELS),
+                              fields=_decorate_field_meta(enemies_fields, ENEMIES_FIELD_GROUPS,
+                                                          ENEMIES_FIELD_LABELS, ENEMIES_CHILD_LABELS),
                               kind="enemy", namespace="enemy_lib",
                               field_groups=ENEMIES_FIELD_GROUPS, group_order=ENEMIES_GROUP_ORDER,
                               group_labels=ENEMIES_GROUP_LABEL_MAP),
         "maps": ModuleMeta(entry_type="list",
-                           fields=_decorate_field_meta(maps_fields, MAPS_FIELD_GROUPS, MAPS_FIELD_LABELS),
+                           fields=_decorate_field_meta(maps_fields, MAPS_FIELD_GROUPS,
+                                                       MAPS_FIELD_LABELS, MAPS_CHILD_LABELS),
                            kind="map", namespace="map_lib",
                            field_groups=MAPS_FIELD_GROUPS, group_order=MAPS_GROUP_ORDER,
                            group_labels=MAPS_GROUP_LABEL_MAP),
         # M3 副本（m3_shared_contract §4）：新结构由 dungeon_models.validate_dungeons 专项全权。
         # M12.5 批1 路1C：宽松字段表注入（仅 id required + 宽容器 + 闭合枚举，
         # 泛型零新增拦截——专项校验仍全权深结构）
-        "dungeon": ModuleMeta(entry_type="list", fields=DUNGEON_FIELDS, kind="dungeon",
-                              namespace="dungeon_lib"),
+        "dungeon": ModuleMeta(entry_type="list",
+                              fields=_decorate_field_meta(DUNGEON_FIELDS, {}, {},
+                                                          DUNGEON_CHILD_LABELS),
+                              kind="dungeon", namespace="dungeon_lib"),
         "stats": ModuleMeta(entry_type="map", fields=stats_fields, kind="stat", namespace="stat_lib",
                             key_regex=r"[a-z][a-z0-9_]*"),
         # M4 交互系统（m4_shared_contract §3.1~3.4）：npc/shop/quest/checkin 专项校验器
         # 全权深结构（R-1~R-5/Y-1~Y-8 专项判定）；M12 批4 路4A 注入正式字段表（宽松登记：
         # 仅 id required + 宽 obj 容器 + 闭合枚举——编辑器表单数据源 P-07，泛型并行零新增拦截）
-        "npc": ModuleMeta(entry_type="list", fields=NPC_FIELDS, kind="npc", namespace="npc_lib"),
-        "shop": ModuleMeta(entry_type="list", fields=SHOP_FIELDS, kind="shop", namespace="shop_lib"),
+        "npc": ModuleMeta(entry_type="list",
+                          fields=_decorate_field_meta(NPC_FIELDS, {}, {}, NPC_CHILD_LABELS),
+                          kind="npc", namespace="npc_lib"),
+        "shop": ModuleMeta(entry_type="list",
+                           fields=_decorate_field_meta(SHOP_FIELDS, {}, {}, SHOP_CHILD_LABELS),
+                           kind="shop", namespace="shop_lib"),
         "quest": ModuleMeta(entry_type="list",
-                            fields=_decorate_field_meta(QUEST_FIELDS, QUEST_FIELD_GROUPS, QUEST_FIELD_LABELS),
+                            fields=_decorate_field_meta(QUEST_FIELDS, QUEST_FIELD_GROUPS,
+                                                        QUEST_FIELD_LABELS, QUEST_CHILD_LABELS),
                             kind="quest", namespace="quest_lib",
                             field_groups=QUEST_FIELD_GROUPS, group_order=QUEST_GROUP_ORDER,
                             group_labels=QUEST_GROUP_LABEL_MAP),
-        "checkin": ModuleMeta(entry_type="list", fields=CHECKIN_FIELDS, kind="checkin",
-                              namespace="checkin_lib"),
+        "checkin": ModuleMeta(entry_type="list",
+                              fields=_decorate_field_meta(CHECKIN_FIELDS, {}, {},
+                                                          CHECKIN_CHILD_LABELS),
+                              kind="checkin", namespace="checkin_lib"),
         # M11 成就（4c §1.5）：顶层 list；M12.5 批1 路1C 宽松字段表注入
         # （专项校验器 achievements_models ACH01-13 仍全权深结构，泛型零新增拦截）
-        "achievements": ModuleMeta(entry_type="list", fields=ACHIEVEMENT_FIELDS,
+        "achievements": ModuleMeta(entry_type="list",
+                                   fields=_decorate_field_meta(ACHIEVEMENT_FIELDS, {}, {},
+                                                               ACHIEVEMENT_CHILD_LABELS),
                                    kind="achievement", namespace="achievement_lib"),
         # 条件加成（细化_3b §3.2；环 + 引用存在性专项校验见 validator._check_conditional）
-        "conditional": ModuleMeta(entry_type="object", fields=conditional_fields,
+        "conditional": ModuleMeta(entry_type="object",
+                                  fields=_decorate_field_meta(conditional_fields, {},
+                                                              CONDITIONAL_FIELD_LABELS,
+                                                              CONDITIONAL_CHILD_LABELS),
                                   kind="conditional", namespace="cond_lib"),
         # 通用设置（细化_1g4 §6.1 death_penalty + currencies 段；其余段由 3h 路登记缺省放行）。
         # 注意：settings.json 为常驻模块（3h D-01），本表仅登记字段口径；loader 常驻加载归 3h/M 接线。
-        "settings": ModuleMeta(entry_type="object", fields=SETTINGS_FIELDS),
+        "settings": ModuleMeta(entry_type="object",
+                               fields=_decorate_field_meta(SETTINGS_FIELDS, {},
+                                                           SETTINGS_FIELD_LABELS,
+                                                           SETTINGS_CHILD_LABELS)),
         # M12 批4 路4A 编辑器扩展页视图（5a2 PR-01：editor.json 页表 meta_source 指向；
         # 无独立 json 模块——ai/hidden 是 enemies 条目内嵌视图、env_event/log_card 是
         # settings 段视图；ModuleMeta 仅登记供 /api/meta/{page} 表单元数据，内容包不含
@@ -1740,7 +2383,9 @@ def default_field_meta_table() -> FieldMetaTable:
         kind="stat",
         namespace="stat_lib",
         key_regex=r"[a-z][a-z0-9_]*",
-        value_meta=FieldMeta(type="obj", children=STAT_CHILDREN),
+        value_meta=FieldMeta(type="obj",
+                             children=_decorate_field_meta(STAT_CHILDREN, {},
+                                                           STATS_FIELD_LABELS)),
     )
     # formula：键=公式名，值为公式字符串或 {formula: 表达式}（长度>4KB / AST 黑名单 → 红拦，§3.3）；
     # M12.5 需求1 批D：fields 注入 formula_fields（stat_map 段口径，编辑器 meta 可编）；
@@ -1776,4 +2421,17 @@ __all__ = [
     "MAPS_FIELD_LABELS", "QUEST_FIELD_LABELS",
     "EFFECTS_FIELD_LABELS", "STATUSES_FIELD_LABELS", "MARKS_FIELD_LABELS",
     "SKILL_CHAINS_FIELD_LABELS", "ACTION_FIELD_LABELS", "JOBS_FIELD_LABELS",
+    # 编辑器重写批4.5：嵌套子字段中文名（递归；含 element.children）+ 余量模块字段名
+    "ENEMIES_CHILD_LABELS", "SKILLS_CHILD_LABELS", "JOBS_CHILD_LABELS",
+    "MAPS_CHILD_LABELS", "QUEST_CHILD_LABELS", "EFFECTS_CHILD_LABELS",
+    "STATUSES_CHILD_LABELS", "MARKS_CHILD_LABELS", "SKILL_CHAINS_CHILD_LABELS",
+    "ACTION_CHILD_LABELS", "NPC_CHILD_LABELS", "SHOP_CHILD_LABELS",
+    "CHECKIN_CHILD_LABELS", "DUNGEON_CHILD_LABELS", "ACHIEVEMENT_CHILD_LABELS",
+    "TRAITS_CHILD_LABELS", "RECIPE_CHILD_LABELS", "PROFICIENCY_CHILD_LABELS",
+    "SLOTS_CHILD_LABELS", "CONDITIONAL_CHILD_LABELS", "MANIFEST_CHILD_LABELS",
+    "SETTINGS_CHILD_LABELS", "FORGE_CHILD_LABELS", "FISHING_CHILD_LABELS",
+    "ENHANCE_CHILD_LABELS",
+    "MANIFEST_FIELD_LABELS", "TRAITS_FIELD_LABELS", "RECIPE_FIELD_LABELS",
+    "PROFICIENCY_FIELD_LABELS", "SLOTS_FIELD_LABELS", "STATS_FIELD_LABELS",
+    "SETTINGS_FIELD_LABELS", "CONDITIONAL_FIELD_LABELS",
 ]

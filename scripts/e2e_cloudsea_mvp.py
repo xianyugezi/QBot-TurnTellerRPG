@@ -24,8 +24,8 @@ from qbot_rpg.assembly import runner as R
 FLOW = [
     "/注册",
     "/状态",
-    "帮",                      # 云海速查（231 cloudsea_commands）
-    "锁定 崩岭岩犀 · 灰岗",     # 微澜段灰岗（enemies_t1）
+    "进入 云顶针叶林",          # 进图（微澜段第一章地图，灰岗所在）
+    "锁定 1",                  # 活动怪物序号锁定（云顶针叶林怪）
     "开战",
     "攻击",                    # 基础攻击
     "局面",                    # 231 局面聚合
@@ -63,6 +63,13 @@ async def main() -> int:
     for msg in FLOW:
         r = await say(msg)
         transcript.append(f">>> {msg}\n{(r or '(无回复/静默)')[:400]}\n---")
+
+    # 灰岗闭环：循环攻击直到击败（上限 200 回合防挂死）
+    for i in range(200):
+        r = await say("攻击")
+        transcript.append(f">>> 攻击#{i+1}\n{(r or '(无回复/静默)')[:400]}\n---")
+        if "击败" in (r or "") or "战斗结束" in (r or ""):
+            break
 
     full = "\n".join(transcript)
     out_path = Path(__file__).resolve().parent / "e2e_cloudsea_mvp_out.txt"

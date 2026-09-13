@@ -3,7 +3,7 @@
  "trees": [
   {
    "id": "tree_cloudsea_weapon",
-   "name": "云海·武器锻造树（M10 结构锚；根＝淬云纹锻位，节点全量展开归增量五）",
+   "name": "云海·武器锻造树（M10 结构锚；根＝淬云纹锻位）",
    "type": "weapon",
    "roots": [
     "node_cs_weapon_root"
@@ -31,104 +31,19 @@
    ]
   }
  ],
- "sets": [
-  {
-   "id": "set_m4_starter",
-   "name": "新手套（M4）",
-   "variant": "alpha",
-   "pieces": [
-    "node_cs_armor_head_root",
-    "node_cs_armor_body_root",
-    "node_cs_armor_hand_root",
-    "node_cs_armor_leg_root",
-    "node_cs_armor_foot_root"
-   ],
-   "skills": [],
-   "desc": "仅 1 套，引导任务奖励（速查 §二 M4）；散件系数 @1",
-   "enabled": true,
-   "codex_group": "M4"
-  },
-  {
-   "id": "set_m5_shop",
-   "name": "商店套（M5 · 22 档）",
-   "variant": "alpha",
-   "pieces": [
-    "node_cs_armor_head_root",
-    "node_cs_armor_body_root",
-    "node_cs_armor_hand_root",
-    "node_cs_armor_leg_root",
-    "node_cs_armor_foot_root"
-   ],
-   "skills": [],
-   "desc": "22 档（5→999）整套价＝档×400×SHOP_SHELF_COEF；走量档 15 档@0／高阶档 7 档@1（03 册 §三·1）",
-   "enabled": true,
-   "codex_group": "M5"
-  },
-  {
-   "id": "set_m6_basic",
-   "name": "基础套（M6 · 四系）",
-   "variant": "alpha",
-   "pieces": [
-    "node_cs_armor_head_root",
-    "node_cs_armor_body_root",
-    "node_cs_armor_hand_root",
-    "node_cs_armor_leg_root",
-    "node_cs_armor_foot_root"
-   ],
-   "skills": [],
-   "desc": "矿石/鳞革/骸骨/羽丝四系（有进阶型＝云兽数二次打造；无进阶型填充位）；基础散件 10 件 @1",
-   "enabled": true,
-   "codex_group": "M6"
-  },
-  {
-   "id": "set_m7_adv",
-   "name": "进阶套（M7 · 云兽/巨兽）",
-   "variant": "alpha",
-   "pieces": [
-    "node_cs_armor_head_root",
-    "node_cs_armor_body_root",
-    "node_cs_armor_hand_root",
-    "node_cs_armor_leg_root",
-    "node_cs_armor_foot_root"
-   ],
-   "skills": [],
-   "desc": "云兽系甲/乙双方向＋巨兽三方向（★1–3×1、★4–6×2、★7–9×3 套率）；进阶散件 16 件 @1；方向面归逐套展开",
-   "enabled": true,
-   "codex_group": "M7"
-  },
-  {
-   "id": "set_m8_king",
-   "name": "王骸套（M8 · 153 套）",
-   "variant": "alpha",
-   "pieces": [
-    "node_cs_armor_head_root",
-    "node_cs_armor_body_root",
-    "node_cs_armor_hand_root",
-    "node_cs_armor_leg_root",
-    "node_cs_armor_foot_root"
-   ],
-   "skills": [],
-   "desc": "终盘 51 只×3 方向＝153 套（破军/守御/蚀异；7 部位并存口径含饰品/护符位，pieces 五树骨架＋两软位归逐套展开）；王骸散件 @0/@1/@2 按来源生态；★7–9 小套装 0 套现势（启用归 258）",
-   "enabled": true,
-   "codex_group": "M8"
-  },
-  {
-   "id": "set_m9_scatter",
-   "name": "散件（M9 · 生态系数制）",
-   "variant": "alpha",
-   "pieces": [],
-   "skills": [],
-   "desc": "504 套＝120@0＋264@1＋120@2（Σ=504 守恒 M9 改制）；逐套系数＝来源组×生态带位/终盘密度/档位法则；每套摊 1 件",
-   "enabled": true,
-   "codex_group": "M9"
-  }
- ],
+ "sets": [],
  "augments": [],
  "settings": {
   "forge_fee": "$C.GROWTH.ENHANCE（强化费断点见 05 §M5.4）",
   "straight_forge": true,
   "exp_per_forge": "",
-  "sets_enabled": true,
-  "augments_enabled": false
- }
+  "sets_enabled": false,
+  "augments_enabled": false,
+  "set_piece_counts": [
+   2,
+   3,
+   5
+  ]
+ },
+ "_sets_contract_note": "forge sets 逐套面（504 套）依赖 2c2d 契约三要素：variant alpha/beta、pieces＝防具五部位节点、skills 逐套效果行（piece_count∈{2,3,5}）——成套效果数值＝07 词面域（禁读面）需随 223 增量六/词面协同批以 $C.SKILL.* 精化后注入；王骸小套装 0 套现势（03 册 §二，启用归十期 258）；M2–M9 六家族口径已登记生产日志/九期/批次223_断言.out.txt"
 }

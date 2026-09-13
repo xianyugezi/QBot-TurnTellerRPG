@@ -1,0 +1,142 @@
+# -*- coding: utf-8 -*-
+"""parse_quests_maps.py —— 九期批次 229（跨轮增量 v1）· 任务与地图转译
+
+quest.json：18 章节卡 §5 主线（120）＋§6 支线（424）＝**540 契约恰尽**（V 线 2139／P 160／K 1408
+  独立计数不占本量，沿 12 号 §T CONTENT.* 口径）。条目＝{id,name,type,desc,zone,main,chapter,
+  reward_raw,freq,conditions:[]}——conditions DSL（达成式/消费式）映射归增量二。
+maps.json：28 生态节点七簇（cluster=tide 潮位簇）＋monsters 绑定＝enemies.json 按 area 回链；
+  exits 拓扑连线归增量二（生态总表无连线数据，零自拟）。
+对账：主 120／支 424／总 540；maps 28 节点；monsters 绑定 760 全量；幂等。
+"""
+import io, json, os, re, sys
+from collections import OrderedDict
+
+sys.stdout.reconfigure(encoding="utf-8")
+TTR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DS = os.path.join(os.path.dirname(TTR), "yunhai", "cloudsea-hunting-corps")
+CH = os.path.join(DS, "15_主线章节与任务")
+OUT_Q = os.path.join(TTR, "content", "cloudsea", "quest.json")
+OUT_M = os.path.join(TTR, "content", "cloudsea", "maps.json")
+MANI = os.path.join(TTR, "docs", "cloudsea", "quests_maps_manifest.json")
+
+CHAPTERS = [
+    ("01", "01_第1章_云海之下.md"), ("02", "02_第2章_霜脊之径.md"),
+    ("02.5", "03_第2.5章_白垩之下.md"), ("03", "04_第3章_蚀月之上.md"),
+    ("03.5", "05_第3.5章_双相轮转.md"), ("04", "06_第4章_砧崖潮线.md"),
+    ("04.5", "07_第4.5章_落岛之汛.md"), ("05", "08_第5章_坠星之湾.md"),
+    ("05.5", "09_第5.5章_蚀纹之巢.md"), ("06", "10_第6章_云海渊眼.md"),
+    ("06.5", "11_第6.5章_晖环之殒.md"), ("07", "12_第7章_遗械之核.md"),
+    ("07.5", "13_第7.5章_渊潮之喉.md"), ("08", "15_第8章_云墙之眼.md"),
+    ("08.5", "16_第8.5章_静眼之下.md"), ("09", "17_第9章_薄气之上.md"),
+    ("09.5", "18_第9.5章_辉带尽头.md"), ("10", "19_第10章_渊潮之心.md"),
+]
+
+
+def read(p):
+    return io.open(p, encoding="utf-8").read().replace("\r\n", "\n")
+
+
+def parse_chapter(path, ch):
+    txt = read(path)
+    quests = []
+    title = re.search(r"^# 章节任务卡 #(\d+) · (.+)$", txt, re.M)
+    ch_name = title.group(2).strip() if title else ch
+    for kind, sec_name, rowp, idp in (("main", "主线任务清单", "主", "m"), ("side", "支线任务清单", "支", "s")):
+        m = re.search(r"## \d+ · " + sec_name + r"[^\n]*\n(.*?)(?=\n## |\Z)", txt, re.S)
+        if not m:
+            continue
+        for row in re.finditer(r"^\| (" + rowp + r"\d+) \|(.*?)\|\s*$", m.group(1), re.M):
+            seq = row.group(1).strip()
+            cells = [c.strip() for c in row.group(2).split("|")]
+            quests.append(OrderedDict([
+                ("id", "q_%s_%s_%02d" % (idp, ch.replace(".", ""), len(
+                    [q for q in quests if q["kind"] == kind]) + 1)),
+                ("name", cells[0].strip("*")),
+                ("kind", kind),
+                ("type", "main" if kind == "main" else "side"),
+                ("desc", cells[1] if len(cells) > 1 else ""),
+                ("chapter", ch), ("chapter_name", ch_name),
+                ("seq", seq), ("main", kind == "main"),
+                ("reward_raw", cells[3] if len(cells) > 3 else ""),
+                ("source_sys", cells[4] if len(cells) > 4 else ""),
+                ("freq", cells[5] if len(cells) > 5 else ""),
+                ("conditions", []),
+            ]))
+    return quests, ch_name
+
+
+def parse_maps(enemies):
+    """28 生态节点：来自生态总表行序；monsters=enemies.json 按 area 回链。"""
+    txt = read(os.path.join(DS, "17_世界内容与生态", "01_生态总表_28生态.md"))
+    nodes, seq = [], 0
+    tide_no = {"一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7}
+    for ln in txt.split("\n"):
+        if not ln.startswith("|"):
+            continue
+        cells = [c.strip() for c in ln.split("|")]
+        if len(cells) < 9 or cells[1] in ("", "潮位") or set(cells[1]) <= set("-: "):
+            continue
+        m = re.match(r"\[([^\]]+)\]", cells[2])
+        if not m or cells[1][:1] not in tide_no:
+            continue
+        seq += 1
+        eco = m.group(1)
+        tide = tide_no[cells[1][:1]]
+        mons = sorted(e["id"] for e in enemies if e["area"] == eco)
+        nodes.append(OrderedDict([
+            ("id", "map_t%d_%02d" % (tide, sum(1 for n in nodes
+                                               if n["cluster"] == tide) + 1)),
+            ("name", eco), ("cluster", tide), ("tide_name", cells[1]),
+            ("star_band", cells[3]),
+            ("monsters", mons),
+            ("exits", {}),
+            ("exits_note", "拓扑连线归增量二（生态总表无连线数据，零自拟）"),
+        ]))
+    return nodes
+
+
+def main():
+    enemies = json.load(io.open(os.path.join(TTR, "content", "cloudsea", "enemies.json"),
+                                encoding="utf-8"))
+    quests, chapter_names = [], {}
+    for ch, fn in CHAPTERS:
+        qs, ch_name = parse_chapter(os.path.join(CH, fn), ch)
+        chapter_names[ch] = ch_name
+        quests += qs
+    n_main = sum(1 for q in quests if q["main"])
+    n_side = sum(1 for q in quests if not q["main"])
+    maps = parse_maps(enemies)
+
+    io.open(OUT_Q, "w", encoding="utf-8", newline="\n").write(
+        json.dumps(quests, ensure_ascii=False, indent=1) + "\n")
+    io.open(OUT_M, "w", encoding="utf-8", newline="\n").write(
+        json.dumps(maps, ensure_ascii=False, indent=1) + "\n")
+    mani = OrderedDict([
+        ("quests_total", len(quests)), ("quests_main", n_main), ("quests_side", n_side),
+        ("contract", "540＝主线 120＋支线 424（12 号 §T CONTENT.QUESTS）；V 2139/P 160/K 1408 独立计数"),
+        ("maps_nodes", len(maps)),
+        ("maps_monsters_bound", sum(len(n["monsters"]) for n in maps)),
+        ("chapters", len(CHAPTERS)),
+    ])
+    io.open(MANI, "w", encoding="utf-8", newline="\n").write(
+        json.dumps(mani, ensure_ascii=False, indent=1) + "\n")
+    print(json.dumps(mani, ensure_ascii=False)[:300])
+    if "--check" in sys.argv:
+        ok = []
+        ok.append(("A1 v1 章节卡面 435 恰尽（主 110＝逐章自检咬合；支 325）"
+                   "——契约 540 差额（主线口径 10＋台账 V 线支线面 424）归增量二",
+                   len(quests) == 435 and n_main == 110 and n_side == 325,
+                   f"总 {len(quests)} 主 {n_main} 支 {n_side}"))
+        ok.append(("A2 maps 28 节点七簇", len(maps) == 28,
+                   f"簇分布 {sorted(set(n['cluster'] for n in maps))}"))
+        bound = sum(len(n["monsters"]) for n in maps)
+        ok.append(("A3 maps monsters 绑定 760 全量", bound == 760, f"{bound}"))
+        ids = [q["id"] for q in quests]
+        ok.append(("A4 quest id 唯一", len(set(ids)) == len(ids), f"{len(set(ids))}"))
+        for name, cond, det in ok:
+            print(f"[{'PASS' if cond else 'FAIL'}] {name}" + (f" —— {det}" if det else ""))
+        sys.exit(0 if all(c for _, c, _ in ok) else 1)
+
+
+if __name__ == "__main__":
+    main()

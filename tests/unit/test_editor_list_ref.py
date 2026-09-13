@@ -156,7 +156,11 @@ def test_scalar_element_yields_single_value_column(pack_root: Path) -> None:
 def test_columns_without_metadata_inferred_from_values(pack_root: Path) -> None:
     cols = {c["key"]: c for c in _fields(pack_root)["loose"]["columns"]}
     assert set(cols) == {"p", "q"}          # 列按实际行的键推断（现状兜底）
-    assert cols["p"]["control"] == "text" and cols["q"]["control"] == "text"
+    # 批4.6 补：无元数据列也按实际值推断控件（p=1 数值 → number；q="z" 文本 → text）
+    assert cols["p"]["control"] == "number" and cols["q"]["control"] == "text"
+    assert cols["p"]["type"] == "int" and cols["q"]["type"] == "str"
+    assert cols["p"]["help_card"]["type"] == "数值（整数）"
+    assert cols["q"]["help_card"]["type"] == "文本"
 
 
 def test_row_default_from_element_metadata(pack_root: Path) -> None:

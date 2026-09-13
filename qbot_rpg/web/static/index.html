@@ -645,7 +645,9 @@ function helpLines(card) {
   if (!card) { return []; }
   var out = [];
   if (card.help) { out.push({ k: "说明", v: card.help }); }
-  out.push({ k: "类型", v: card.type || "未标注" });
+  var typeText = card.type || "未标注";
+  if (card.type_source) { typeText += " · " + card.type_source; }
+  out.push({ k: "类型", v: typeText });
   out.push({ k: "数值/比例", v: card.scale || "未标注" });
   out.push({ k: "建议范围", v: card.range || "未标注" });
   out.push({ k: "默认值", v: card.default || "无默认值" });

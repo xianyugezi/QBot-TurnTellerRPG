@@ -1077,10 +1077,15 @@ JOBS_FIELD_LABELS: Dict[str, str] = {
 # docs/m3_shared_contract（zone_change）、docs/m13_6a~6c（skills/jobs/skill_chains）、
 # docs/veinborn/03_schema_修正稿.md、既有 *_FIELD_LABELS、data/gear_stats.GEAR_LABELS_ZH；
 # 术语冲突按 docs/编辑器重写_需求与约束.md §六（mp 法力 / con 体质 / mag 法强 / pv 防护值）。
-def _soft_display(label: str, ftype: str = "str",
+def _soft_display(label: str, ftype: str = "",
                   children: Optional[Mapping[str, FieldMeta]] = None,
                   help: Optional[str] = None) -> FieldMeta:
-    """纯展示子字段（soft_label=True → 泛型校验短路、永不红拦；仅供编辑器显示中文名/说明）。"""
+    """纯展示子字段（soft_label=True → 泛型校验短路、永不红拦；仅供编辑器显示中文名/说明）。
+
+    批4.6 补：默认 type 留空（=「类型未登记」）而非 "str"——只有中文名、没有类型依据的
+    节点不得声称是文本，说明卡/表单据此改用**实际值**推断真实类型（实机问题①根因）。
+    显式传 ftype 的调用（如 _soft_display("每回合破坏值", "int")）不受影响。
+    """
     return FieldMeta(type=ftype, soft_label=True, label=label, children=dict(children or {}),
                      help=(help or ""))
 

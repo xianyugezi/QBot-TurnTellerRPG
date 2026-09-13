@@ -187,6 +187,86 @@ def test_scale_semantic_unregistered_is_honest() -> None:
     assert api._scale_semantic(None) == "未标注"
 
 
+# =====================================================================================
+# 二·补（实机问题①）：元数据未登记类型时按实际值推断，不得把数值说成文本
+# =====================================================================================
+@pytest.mark.parametrize("value,kind", [
+    (True, "bool"), (False, "bool"),
+    (60, "int"), (0, "int"), (60.0, "int"),
+    (1.15, "float"), (0.12, "float"),
+    ("x", "str"), ([], "list"), ({"a": 1}, "obj"), (None, None),
+])
+def test_infer_value_kind(value: object, kind: object) -> None:
+    assert api._infer_value_kind(value) == kind
+
+
+@pytest.mark.parametrize("value,expected", [
+    (60, "数值（整数）"), (0.12, "数值（小数）"), (1.15, "数值（小数）"),
+    (True, "布尔"), ("x", "文本"), ([], "列表"), ({"a": 1}, "对象"), (None, "未标注"),
+])
+def test_resolve_type_inferred_from_value(value: object, expected: str) -> None:
+    text, source = api._resolve_type(None, value)
+    assert text == expected
+    assert source == ("" if value is None else "元数据未登记，按实际值推断")
+
+
+def test_resolve_type_registered_wins_over_value() -> None:
+    text, source = api._resolve_type(FieldMeta(type="str"), 1.15)
+    assert text == "文本" and source == ""
+
+
+@pytest.mark.parametrize("value,expected", [
+    (1.15, "数值（未标注单位）"),
+    (0.12, "疑似比例（当前值在 0~1；元数据未标注单位）"),
+    ("x", "不适用（非数值字段）"),
+    (True, "不适用（非数值字段）"),
+    (None, "未标注"),
+])
+def test_scale_semantic_unregistered_uses_value(value: object, expected: str) -> None:
+    """未登记类型的数值字段：判得出比例依据就给依据，判不出说「未标注单位」。"""
+    assert api._scale_semantic(None, value) == expected
+
+
+def test_help_card_infers_type_and_source_from_value() -> None:
+    """实机样本：只有中文名的 battle 占位节点 → 卡片按 1.15 推断「数值（小数）」+ 来源。"""
+    placeholder = FieldMeta(type="", label="狂暴伤害倍率")
+    card = api.help_card("enrage_damage_mult", placeholder, 1.15)
+    assert card["type"] == "数值（小数）"
+    assert card["type_source"] == "元数据未登记，按实际值推断"
+    assert card["scale"] == "数值（未标注单位）"
+    assert card["unregistered"] is False  # 有中文名元数据，只是没登记类型
+
+
+def test_help_card_unregistered_key_infers_from_value() -> None:
+    card = api.help_card("ghost", None, 3)
+    assert card["type"] == "数值（整数）"
+    assert card["type_source"] == "元数据未登记，按实际值推断"
+    assert card["scale"] == "数值（未标注单位）"
+    assert card["unregistered"] is True
+    # 无值可推断 → 仍如实「未登记」
+    assert api.help_card("ghost", None)["type"] == "未登记"
+
+
+def test_soft_display_does_not_claim_text_type() -> None:
+    """_soft_display 默认不再声称 type=str；显式类型调用不受影响。"""
+    assert fm_mod._soft_display("说明").type == ""
+    assert fm_mod._soft_display("每回合破坏值", "int").type == "int"
+
+
+def test_settings_battle_real_machine_inference() -> None:
+    """实机复现：settings.battle 的数值/布尔字段不再被标成文本/不适用。"""
+    d = api.entry_detail("veinborn", "settings", "battle", root=CONTENT)
+    by = {f["key"]: f for f in d["fields"]}
+    mult = by["enrage_damage_mult"]
+    assert mult["type"] == "number"                       # 表单 chip 也纠偏
+    assert mult["help_card"]["type"] == "数值（小数）"
+    assert mult["help_card"]["type_source"] == "元数据未登记，按实际值推断"
+    chance = by["fatigue_stagger_chance"]["help_card"]
+    assert chance["scale"] == "疑似比例（当前值在 0~1；元数据未标注单位）"
+    assert by["stun_ko_skip"]["help_card"]["type"] == "布尔"
+    assert by["stun_ko_skip"]["help_card"]["scale"] == "不适用（非数值字段）"
+
+
 @pytest.mark.parametrize("fm,expected", [
     (FieldMeta(type="int", range_min=0, range_max=999), "建议 0 ~ 999"),
     (FieldMeta(type="int", range_min=0, range_max=999, zero_unlimited=True),
@@ -361,6 +441,13 @@ out.auto = helpLines({
   key: "k", label: "k", type: "文本", scale: "不适用（非数值字段）",
   range: "未标注", default: "无默认值", required: false, enum: [], ref_target: null, help: ""
 });
+// 推断来源（批4.6 补·实机问题①）：类型行显式带出「按实际值推断」
+out.inferred = helpLines({
+  key: "enrage_damage_mult", label: "狂暴伤害倍率", type: "数值（小数）",
+  type_source: "元数据未登记，按实际值推断", scale: "数值（未标注单位）",
+  range: "未标注", default: "无默认值", required: false, enum: [],
+  ref_target: null, help: ""
+});
 // 候选值 / 引用目标 / 必填
 out.enumRef = helpLines({
   key: "r", label: "引用", type: "引用", scale: "不适用（非数值字段）",
@@ -440,6 +527,9 @@ def test_help_js_semantics(tmp_path: Path) -> None:
     # 无人工 help → 没有「说明」行，但自动项照常
     assert "说明" not in [r["k"] for r in out["auto"]]
     assert any(r["k"] == "类型" for r in out["auto"])
+    # 元数据未登记类型 → 类型行显式标注推断来源
+    inferred_type = {r["k"]: r["v"] for r in out["inferred"]}["类型"]
+    assert inferred_type == "数值（小数） · 元数据未登记，按实际值推断"
     # 枚举候选 / 引用目标 / 必填
     enum_ref = {r["k"]: r["v"] for r in out["enumRef"]}
     assert enum_ref["候选值"] == "a / b"

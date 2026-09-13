@@ -491,6 +491,37 @@ def _infer_type(value: object) -> str:
     return "str"
 
 
+# 实际值形态 → 字段类型口径（元数据未登记类型时的唯一推断入口）。
+# 与 _infer_type 分开：数值再细分为 int / float（整数 / 小数），说明卡据此标注。
+_KIND_TO_FTYPE: Dict[str, str] = {
+    "int": "int", "float": "float", "bool": "bool", "str": "str",
+    "list": "list", "obj": "obj",
+}
+
+
+def _infer_value_kind(value: object) -> Optional[str]:
+    """实际值 → int/float/bool/str/list/obj；判不出（None/未知）返回 None。
+
+    布尔必须先于 int 判定（Python 里 bool 是 int 子类）；浮点整值（如 20.0）
+    按「整数」呈现，与 _scalar_display 的 20.0→"20" 展示口径一致。
+    """
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return "bool"
+    if isinstance(value, int):
+        return "int"
+    if isinstance(value, float):
+        return "int" if float(value).is_integer() else "float"
+    if isinstance(value, str):
+        return "str"
+    if isinstance(value, list):
+        return "list"
+    if isinstance(value, Mapping):
+        return "obj"
+    return None
+
+
 def _effective_widget(fm: Optional[FieldMeta], value: object) -> str:
     """元数据类型 + 实际值形态 → 只读控件形态（元数据优先，值形态纠偏防渲染崩）。"""
     base = _widget_for_type(fm.type if fm is not None else None)
@@ -571,31 +602,77 @@ _TYPE_SEMANTIC: Dict[str, str] = {
 _NUMERIC_TYPES: Tuple[str, ...] = ("int", "float", "number")
 
 
+def _registered_type(fm: Optional[FieldMeta]) -> Optional[str]:
+    """元数据**真实登记**的字段类型；未登记（fm=None 或 type="" 占位）返回 None。
+
+    批4.5 起「只有中文名、没有类型」的纯展示节点由 _soft_display 生成（type=""），
+    这里必须把它当「未登记」——否则说明卡会把数值字段说成文本（实机问题①根因）。
+    """
+    ftype = fm.type if fm is not None else None
+    return ftype if ftype in _TYPE_SEMANTIC else None
+
+
 def _type_semantic(ftype: Optional[str]) -> str:
     """FieldMeta.type → 中文类型语义（未登记类型如实说「未标注」，不猜）。"""
     return _TYPE_SEMANTIC.get(ftype or "", "未标注")
 
 
-def _scale_semantic(fm: Optional[FieldMeta]) -> str:
+# 实际值推断出的类型语义（数值细分整数/小数；登记类型仍走 _type_semantic）。
+_INFERRED_TYPE_SEMANTIC: Dict[str, str] = {
+    "int": "数值（整数）", "float": "数值（小数）",
+    "bool": "布尔", "str": "文本", "list": "列表", "obj": "对象",
+}
+
+
+def _resolve_type(fm: Optional[FieldMeta],
+                  value: object = None) -> Tuple[str, str]:
+    """类型语义 + 推断来源：登记类型优先；未登记则按实际值真实类型推断。
+
+    → (类型文案, 来源文案)。来源文案仅在实际值推断时非空，供卡片显式标注
+    （如「数值（整数）· 元数据未登记，按实际值推断」）。
+    """
+    reg = _registered_type(fm)
+    if reg:
+        # 登记为 int/float 时也细分整数/小数（说明卡更具体；语义不变）。
+        if reg == "int":
+            return ("数值（整数）", "")
+        if reg == "float":
+            return ("数值（小数）", "")
+        return (_type_semantic(reg), "")
+    kind = _infer_value_kind(value)
+    if kind is None:
+        return ("未标注", "")
+    return (_INFERRED_TYPE_SEMANTIC.get(kind, "未标注"), "元数据未登记，按实际值推断")
+
+
+def _scale_semantic(fm: Optional[FieldMeta], value: object = None) -> str:
     """「是数值还是比例/百分比」判定。
 
     依据优先序：probability 旗标 → unit（`%` 为百分比、其余为带单位数值）→
-    数值型且区间恰为 0~1（推断可能是比例）→ 其余数值「未标注单位」→ 非数值「不适用」。
-    判不出来的如实说「未标注」/「未标注单位」，不臆造。
+    数值型且区间恰为 0~1（推断可能是比例）→ 当前值落在 0~1（疑似比例）→
+    其余数值「未标注单位」→ 非数值「不适用」→ 类型/值都判不出「未标注」。
+    数值类型可来自元数据登记，也可由实际值推断（问题①修复）；判不出来如实说。
     """
-    if fm is None:
-        return "未标注"
-    if fm.probability:
+    reg = _registered_type(fm)
+    kind = _infer_value_kind(value)
+    numeric = reg in _NUMERIC_TYPES or kind in ("int", "float")
+    if not numeric:
+        if reg is None and kind is None:
+            return "未标注"          # 类型未登记且没有值可推断 → 不臆造
+        return "不适用（非数值字段）"
+    if fm is not None and fm.probability:
         return "比例（0~1，按百分比表示概率）"
-    if fm.unit == "%":
+    if fm is not None and fm.unit == "%":
         return "百分比（数值自带 % 单位）"
-    if fm.unit:
+    if fm is not None and fm.unit:
         return f"数值（单位：{fm.unit}）"
-    if fm.type in _NUMERIC_TYPES:
-        if fm.range_min == 0 and fm.range_max == 1:
-            return "比例（0~1；元数据未标注百分比单位）"
-        return "数值（未标注单位）"
-    return "不适用（非数值字段）"
+    if fm is not None and fm.range_min == 0 and fm.range_max == 1:
+        return "比例（0~1；元数据未标注百分比单位）"
+    if (fm is None or (fm.range_min is None and fm.range_max is None)) \
+            and kind in ("int", "float") \
+            and 0 <= float(value) <= 1:  # type: ignore[arg-type]
+        return "疑似比例（当前值在 0~1；元数据未标注单位）"
+    return "数值（未标注单位）"
 
 
 def _range_semantic(fm: Optional[FieldMeta]) -> str:
@@ -626,25 +703,35 @@ def _default_text(value: object) -> str:
     return str(value)
 
 
-def help_card(key: str, fm: Optional[FieldMeta]) -> Dict[str, Any]:
+def help_card(key: str, fm: Optional[FieldMeta],
+              value: object = None) -> Dict[str, Any]:
     """字段说明卡数据（自动拼装 + 人工 help）；全部是可直接展示的中文短语。
 
     前端只按本结构渲染，不认字段类型、不认任何业务字段名（保持元数据驱动）。
-    元数据未登记（fm=None）→ unregistered=True，自动拼装如实标注「未登记」。
+    · 类型：元数据登记优先；未登记（fm=None 或 type 占位为空）→ 按 `value` 实际值
+      推断（数值细分整数/小数），并在 `type_source` 显式标注来源；
+    · 数值/比例：元数据 unit/probability/0~1 区间优先，未登记时按实际值推断
+      （0~1 → 疑似比例），判不出来如实「未标注」，不说「不适用」；
+    · 元数据完全未登记（fm=None）且无值可推断 → unregistered=True，如实标「未登记」。
     """
+    type_text, type_source = _resolve_type(fm, value)
     if fm is None:
+        if value is None:
+            type_text, type_source = "未登记", ""
         return {
-            "key": key, "label": key, "type": "未登记", "scale": "未标注",
-            "range": "未标注", "default": "未标注", "required": False,
-            "enum": [], "ref_target": None, "unit": "", "help": "",
-            "unregistered": True,
+            "key": key, "label": key, "type": type_text, "type_source": type_source,
+            "scale": _scale_semantic(None, value), "range": "未标注",
+            "default": "无默认值" if value is not None else "未标注",
+            "required": False, "enum": [], "ref_target": None, "unit": "",
+            "help": "", "unregistered": True,
         }
     default = _default_text(fm.default)
     return {
         "key": key,
         "label": fm.label or key,
-        "type": _type_semantic(fm.type),
-        "scale": _scale_semantic(fm),
+        "type": type_text,
+        "type_source": type_source,
+        "scale": _scale_semantic(fm, value),
         "range": _range_semantic(fm),
         "default": default or "无默认值",
         "required": bool(fm.required),
@@ -743,14 +830,20 @@ def _build_name_index(pack_dir: Path, declared: List[str],
 # =====================================================================================
 # 只读 API ④：条目全字段 + 分组 + 每字段类型
 # =====================================================================================
-def _column(key: str, fm: Optional[FieldMeta], key_label: Optional[str] = None) -> Dict[str, Any]:
+def _column(key: str, fm: Optional[FieldMeta], key_label: Optional[str] = None,
+            value: object = None) -> Dict[str, Any]:
     """列表表格的一列：列名/类型来自元素字段元数据（缺省按值推断）。
 
     批4 起列描述同时携带**编辑**所需信息（control/enum/number_step/default），
     前端按 control 渲染单元格，不认字段类型（映射仍在 api 层唯一实现）。
+    批4.6 补：`value`（该列的实际样本值）供类型未登记时推断，说明卡不再误判文本。
     """
-    ftype = fm.type if fm is not None else _infer_type(None)
-    widget = _widget_for_type(fm.type if fm is not None else None)
+    reg = _registered_type(fm)
+    if reg:
+        ftype = reg
+    else:
+        ftype = _KIND_TO_FTYPE.get(_infer_value_kind(value) or "", "") or _infer_type(value)
+    widget = _effective_widget(fm, value)
     multiline = bool(getattr(fm, "multiline", False)) if fm is not None else False
     return {
         "key": key,
@@ -765,7 +858,7 @@ def _column(key: str, fm: Optional[FieldMeta], key_label: Optional[str] = None) 
         # 批4.6：列头也可出说明卡（自动拼装 + 人工 help），与主表单同源。
         "unit": fm.unit if fm is not None else "",
         "help": fm.help if fm is not None else "",
-        "help_card": help_card(key, fm),
+        "help_card": help_card(key, fm, value),
     }
 
 
@@ -801,18 +894,30 @@ def _ref_valid(view: "_PackView", ref_target: Optional[str], value: object) -> b
 
 
 def _list_columns(fm: Optional[FieldMeta], rows: List[object]) -> List[Dict[str, Any]]:
-    """列表字段的只读表列：元素元数据声明优先；实际行里多出的键按值推断补列。"""
+    """列表字段的只读表列：元素元数据声明优先；实际行里多出的键按值推断补列。
+
+    批4.6：每列取一个实际样本值（首行出现该键的值），供类型未登记时推断——
+    行内 soft 纯展示子字段（只有中文名、无 type）不再被说明卡误判成文本。
+    """
     elem = fm.element if fm is not None else None
     cols: List[Dict[str, Any]] = []
     known: set = set()
+
+    def sample(column: str) -> object:
+        for row in rows:
+            if isinstance(row, Mapping) and column in row:
+                return row[column]
+        return None
+
     if elem is not None and elem.type == "obj" and elem.children:
         for ck, cfm in elem.children.items():
-            cols.append(_column(str(ck), cfm))
+            cols.append(_column(str(ck), cfm, value=sample(str(ck))))
         known = set(str(k) for k in elem.children)
     elif elem is not None and elem.type in (
         "ref", "str", "number", "int", "float", "bool", "enum"
     ):
-        cols.append(_column("value", elem, key_label="值"))
+        cols.append(_column("value", elem, key_label="值",
+                            value=(rows[0] if rows else None)))
     for row in rows:
         if not isinstance(row, Mapping):
             continue
@@ -820,7 +925,7 @@ def _list_columns(fm: Optional[FieldMeta], rows: List[object]) -> List[Dict[str,
             if not isinstance(k, str) or k in known:
                 continue
             known.add(k)
-            cols.append(_column(k, None))
+            cols.append(_column(k, None, value=sample(k)))
     if not cols:
         # 元素声明为 obj 但没有子字段、也没有数据行可推断键 → 不出列（前端提示补元数据），
         # 不臆造「value」键（否则会把对象行改写成 {"value": …} 破坏原形态）。
@@ -862,7 +967,9 @@ def _object_children(fm: Optional[FieldMeta], value: Mapping[str, Any],
 def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
                 mmeta: Optional[ModuleMeta], view: "_PackView", depth: int) -> Dict[str, Any]:
     widget = _effective_widget(fm, value)
-    ftype = fm.type if fm is not None else _infer_type(value)
+    # 批4.6 补：元数据未登记类型（fm=None 或 type 占位为空）→ 按实际值推断，
+    # 表单类型 chip 与说明卡同源，不再把数值字段显示成「文本」。
+    ftype = fm.type if fm is not None and fm.type else _infer_type(value)
     label = fm.label if fm is not None and fm.label else (key or ftype)
     multiline = bool(getattr(fm, "multiline", False)) if fm is not None else False
     if not multiline and widget == "text":
@@ -888,7 +995,7 @@ def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
         # 批4.6：说明卡（自动拼装 + 人工 help）——前端悬停/点击中文名时展示。
         "unit": fm.unit if fm is not None else "",
         "help": fm.help if fm is not None else "",
-        "help_card": help_card(key, fm),
+        "help_card": help_card(key, fm, value),
         "columns": [],
         "rows": [],
     }

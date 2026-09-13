@@ -362,6 +362,12 @@ global.markDirty = function () {};
 global.fillRefSelect = function () {};
 global.bindHelp = function () {};
 global.EditorDraft = { set: function () {}, discard: function () {} };
+// 表单上下文桩：initCondBox 用 ctxFromNode/ctxFieldValue 定位并读取当前值
+global.ctxFromNode = function () { return global.__ctx; };
+global.ctxFieldValue = function (ctx, f) {
+  return Object.prototype.hasOwnProperty.call(ctx.draft.changes, f.key)
+    ? ctx.draft.changes[f.key] : f.value;
+};
 eval(fs.readFileSync(process.argv[2], "utf8"));
 const out = {};
 const meta = JSON.parse(fs.readFileSync(process.argv[3], "utf8"));
@@ -388,6 +394,22 @@ var comb = EditorCondition.parse({ or: [{ a: { eq: 1 } }] });
 EditorCondition.addBranch(comb, [0]);
 EditorCondition.addRow(comb, [0], 1);
 out.afterBranch = EditorCondition.serialize(comb);
+// initCondBox：列表单元格里的条件按「行号 → 行 → 列键」读取（曾把整表当行传 cellValue → __rows 空）
+global.__ctx = { draft: { changes: {} }, fieldIndex: { steps: {
+  key: "steps", value: [{ condition: { count: { eq: 3 } } }],
+  columns: [{ key: "condition", condition: meta }], scalar_element: false } } };
+var cellBox = { dataset: { condcell: "steps", condrow: "0", condcol: "condition" } };
+initCondBox(cellBox);
+out.cellRows = JSON.parse(JSON.stringify(cellBox.__rows));
+out.cellMetaDeclared = !!(cellBox.__meta && cellBox.__meta.declared);
+out.cellSerialized = EditorCondition.serialize(cellBox.__rows);
+// 顶层条件字段
+global.__ctx = { draft: { changes: {} }, fieldIndex: { cond: {
+  key: "cond", value: { self_marks: { sword_seal: { min: 3 } } }, condition: meta } } };
+var fieldBox = { dataset: { condfield: "cond" } };
+initCondBox(fieldBox);
+out.fieldRows = JSON.parse(JSON.stringify(fieldBox.__rows));
+out.fieldSerialized = EditorCondition.serialize(fieldBox.__rows);
 process.stdout.write(JSON.stringify(out));
 """
 
@@ -399,10 +421,13 @@ def js_out(tmp_path_factory: pytest.TempPathFactory) -> Dict[str, Any]:
     script = tmp_path_factory.mktemp("b5js") / "cond.js"
     cond_src = _js_block("EDITOR_CONDITION")
     map_src = _js_block("EDITOR_MAP")
+    list_src = _js_block("EDITOR_LIST")
     fn_src = ("\n" + _fn_src("condBodyHtml", "bindConditionSections")
               + "\n" + _fn_src("mapBodyHtml", "bindMapSections"))
     script.write_text(
-        "var module={exports:{}};\n" + cond_src
+        "var module={exports:{}};\n" + list_src
+        + "\nvar EditorList=module.exports;\n"
+        + "module={exports:{}};\n" + cond_src
         + "\nvar EditorCondition=module.exports;\n"
         + "module={exports:{}};\n" + map_src
         + "\nvar EditorMap=module.exports;\n" + fn_src, encoding="utf-8")
@@ -483,6 +508,15 @@ def test_js_map_table_renders_and_refs(js_out: Dict[str, Any]) -> None:
     assert "键值对" in js_out["mapField"] and 'data-mpart="key"' in js_out["mapField"]
     assert "320" in js_out["mapField"]
     assert 'data-lref="mark"' in js_out["mapMark"]   # 消耗印记的键是引用选择器
+
+
+def test_js_init_cond_box_reads_cell_and_field(js_out: Dict[str, Any]) -> None:
+    """initCondBox 从草稿/值里读出条件：列表单元格（行号→行→列键）与顶层字段都要对。"""
+    assert js_out["cellRows"] == [{"kind": "cmp", "subject": "count", "key": "",
+                                   "op": "eq", "value": 3}]
+    assert js_out["cellMetaDeclared"] is True
+    assert js_out["cellSerialized"] == {"count": {"eq": 3}}
+    assert js_out["fieldSerialized"] == {"self_marks": {"sword_seal": {"min": 3}}}
 
 
 # ---------------------------------------------------------------------------

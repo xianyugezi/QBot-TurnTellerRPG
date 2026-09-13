@@ -2065,7 +2065,9 @@ function condCurrentValue(ref) {
   if (!ref.cell) { return ctxFieldValue(ref.ctx, ref.f); }
   var rows = ctxFieldValue(ref.ctx, ref.f);
   if (!Array.isArray(rows)) { rows = []; }
-  return EditorList.cellValue(rows, box0row(ref), box0col(ref), !!ref.f.scalar_element);
+  // EditorList.cellValue 取「单行 + 列键」（不是整表 + 行号）：先按行号取行再取列
+  return EditorList.cellValue(rows[Number(box0row(ref))], box0col(ref),
+    !!ref.f.scalar_element);
 }
 function box0row(ref) { return ref.box.dataset.condrow; }
 function box0col(ref) { return ref.box.dataset.condcol; }
@@ -2210,7 +2212,7 @@ function mapCurrentValue(ref) {
   if (!ref.cell) { return ctxFieldValue(ref.ctx, ref.f); }
   var rows = ctxFieldValue(ref.ctx, ref.f);
   if (!Array.isArray(rows)) { rows = []; }
-  return EditorList.cellValue(rows, ref.box.dataset.maprow, ref.box.dataset.mapcol,
+  return EditorList.cellValue(rows[Number(ref.box.dataset.maprow)], ref.box.dataset.mapcol,
     !!ref.f.scalar_element);
 }
 

@@ -1,0 +1,114 @@
+[
+  {
+    "id": "warrior",
+    "name": "战士",
+    "weapon_types": [
+      "greatsword"
+    ],
+    "playstyle": "重装爆发 · 前排"
+  },
+  {
+    "id": "duelist",
+    "name": "剑客",
+    "weapon_types": [
+      "longblade"
+    ],
+    "playstyle": ""
+  },
+  {
+    "id": "paladin",
+    "name": "圣骑士",
+    "weapon_types": [
+      "swordshield"
+    ],
+    "playstyle": "剑盾灵活 · 游击"
+  },
+  {
+    "id": "rogue",
+    "name": "盗贼",
+    "weapon_types": [
+      "dualblades"
+    ],
+    "playstyle": ""
+  },
+  {
+    "id": "brawler",
+    "name": "斗士",
+    "weapon_types": [
+      "warhammer"
+    ],
+    "playstyle": ""
+  },
+  {
+    "id": "bard",
+    "name": "吟游诗人",
+    "weapon_types": [
+      "horn"
+    ],
+    "playstyle": "演奏增益 · 后排"
+  },
+  {
+    "id": "knight",
+    "name": "骑士",
+    "weapon_types": [
+      "lance"
+    ],
+    "playstyle": ""
+  },
+  {
+    "id": "gunner",
+    "name": "枪手",
+    "weapon_types": [
+      "crystalgun"
+    ],
+    "playstyle": ""
+  },
+  {
+    "id": "berserker",
+    "name": "狂战士",
+    "weapon_types": [
+      "waraxe"
+    ],
+    "playstyle": ""
+  },
+  {
+    "id": "guardian",
+    "name": "守卫",
+    "weapon_types": [
+      "wardshield"
+    ],
+    "playstyle": ""
+  },
+  {
+    "id": "druid",
+    "name": "德鲁伊",
+    "weapon_types": [
+      "staff"
+    ],
+    "playstyle": ""
+  },
+  {
+    "id": "ranger",
+    "name": "游侠",
+    "weapon_types": [
+      "lightbow"
+    ],
+    "playstyle": ""
+  },
+  {
+    "id": "artificer",
+    "name": "机械师",
+    "weapon_types": [
+      "heavybow"
+    ],
+    "playstyle": ""
+  },
+  {
+    "id": "archer",
+    "name": "弓手",
+    "weapon_types": [
+      "longbow"
+    ],
+    "playstyle": ""
+  }
+]

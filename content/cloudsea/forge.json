@@ -3,7 +3,7 @@
  "trees": [
   {
    "id": "tree_cloudsea_weapon",
-   "name": "云海·武器锻造树（M10 结构锚；根＝王鳞坯料锚，节点全量展开归增量五）",
+   "name": "云海·武器锻造树（M10 结构锚；根＝淬云纹锻位，节点全量展开归增量五）",
    "type": "weapon",
    "roots": [
     "node_cs_weapon_root"
@@ -11,9 +11,9 @@
    "nodes": [
     {
      "id": "node_cs_weapon_root",
-     "name": "云海武器锻造·根（王鳞坯料锚）",
-     "item": "cs_mat_001",
-     "type": "material",
+     "name": "云海武器锻造·根（淬云纹锻位）",
+     "item": "cs_forge_blank",
+     "type": "weapon",
      "level": 1,
      "parent": null,
      "branch": [],

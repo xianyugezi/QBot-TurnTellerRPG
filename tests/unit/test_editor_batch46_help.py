@@ -33,7 +33,7 @@ REPO = Path(api.repo_root())
 CONTENT = REPO / "content"
 HTML = REPO / "qbot_rpg" / "web" / "static" / "index.html"
 
-# 本批必做的 10 个模块 → 顶层人工说明表
+# 本批必做的 10 个模块 → 顶层人工说明表；批4.6 补追加 maps/quest/jobs/npc/shop
 HELP_TABLES = {
     "skills": fm_mod.SKILLS_FIELD_HELP,
     "enemies": fm_mod.ENEMIES_FIELD_HELP,
@@ -45,6 +45,11 @@ HELP_TABLES = {
     "skill_chains": fm_mod.SKILL_CHAINS_FIELD_HELP,
     "action": fm_mod.ACTION_FIELD_HELP,
     "settings": fm_mod.SETTINGS_FIELD_HELP,
+    "maps": fm_mod.MAPS_FIELD_HELP,
+    "quest": fm_mod.QUEST_FIELD_HELP,
+    "jobs": fm_mod.JOBS_FIELD_HELP,
+    "npc": fm_mod.NPC_FIELD_HELP,
+    "shop": fm_mod.SHOP_FIELD_HELP,
 }
 CHILD_HELP_TABLES = {
     "skills": fm_mod.SKILLS_CHILD_HELP,
@@ -53,6 +58,12 @@ CHILD_HELP_TABLES = {
     "statuses": fm_mod.STATUSES_CHILD_HELP,
     "effects": fm_mod.EFFECTS_CHILD_HELP,
     "skill_chains": fm_mod.SKILL_CHAINS_CHILD_HELP,
+    "settings": fm_mod.SETTINGS_CHILD_HELP,
+    "maps": fm_mod.MAPS_CHILD_HELP,
+    "quest": fm_mod.QUEST_CHILD_HELP,
+    "jobs": fm_mod.JOBS_CHILD_HELP,
+    "npc": fm_mod.NPC_CHILD_HELP,
+    "shop": fm_mod.SHOP_CHILD_HELP,
 }
 
 
@@ -112,6 +123,70 @@ def test_child_help_only_targets_declared_children() -> None:
     assert per_round.help and per_round.unit == "次"
 
 
+def _walk_help_table(spec: Any) -> Any:
+    """展平嵌套说明表，产出所有 (键, 文案)（含 `_help` 节点说明）。"""
+    if isinstance(spec, str):
+        yield spec
+    elif isinstance(spec, dict):
+        for key, sub in spec.items():
+            yield key
+            yield from _walk_help_table(sub)
+
+
+@pytest.mark.parametrize("mod", list(CHILD_HELP_TABLES))
+def test_child_help_tables_are_wellformed(mod: str) -> None:
+    """嵌套说明表：文案非空单行；`_help` 是节点说明而非子键。"""
+    for item in _walk_help_table(CHILD_HELP_TABLES[mod]):
+        if item == "_help":
+            continue
+        assert isinstance(item, str) and item.strip(), (mod, item)
+        assert "\n" not in item and "\r" not in item, (mod, item)
+
+
+def test_settings_child_help_covers_key_segments() -> None:
+    """settings 各段（战斗/任务板/炼金/经济/行动条）的高频键都有中文说明。"""
+    table = api.field_meta_table().module("settings")
+    assert table is not None
+    battle = table.fields["battle"].children
+    for key in ("enrage_damage_mult", "fatigue_stagger_chance", "stun_enabled",
+                "stun_escalation", "backstab_bonus"):
+        assert battle[key].help, key
+    quest_board = table.fields["quest_board"].children
+    for key in ("enabled", "refresh_days", "penalty", "active_limit", "daily_limit"):
+        assert quest_board[key].help, key
+    alchemy = table.fields["alchemy"].children
+    for key in ("mode", "quality_tiers", "energy_enabled", "decompose_rate"):
+        assert alchemy[key].help, key
+    currencies = table.fields["currencies"].element.children
+    assert currencies["id"].help and currencies["cap"].help
+    assert table.fields["ctb"].children["enabled"].help
+    assert table.fields["ctb"].children["default_recovery"].help
+
+
+def test_new_module_help_reaches_descriptors() -> None:
+    """maps/quest/jobs/npc/shop 的顶层 + 嵌套中文说明经装饰层进入描述符。"""
+    for mod, entry_key, child_key in (
+        ("maps", "monsters", "enemy"),
+        ("quest", "reward", "coins"),
+        ("jobs", "growth", "mp"),
+        ("npc", "interactions", "action"),
+        ("shop", "refresh", "mode"),
+    ):
+        fm = api.field_meta_table().module(mod).fields[entry_key]
+        assert fm.help, (mod, entry_key)
+        kids = fm.children or {}
+        if not kids and fm.element is not None:
+            kids = fm.element.children or {}
+        assert kids[child_key].help, (mod, entry_key, child_key)
+    # 真实包反查：maps 刷怪行列出 enemy 列且带人工说明
+    entries = api.list_entries("veinborn", "maps", root=CONTENT)["entries"]
+    d = api.entry_detail("veinborn", "maps", str(entries[0]["id"]), root=CONTENT)
+    by = {f["key"]: f for f in d["fields"]}
+    if by["monsters"].get("columns"):
+        cols = {c["key"]: c for c in by["monsters"]["columns"]}
+        assert cols["enemy"]["help"] and cols["enemy"]["help_card"]["help"]
+
+
 def test_decoration_adds_help_but_keeps_validation_contract() -> None:
     """_decorate_field_meta 补 help 时，type/required/default/enum/children 原样。"""
     import dataclasses
@@ -135,9 +210,9 @@ def test_decoration_adds_help_but_keeps_validation_contract() -> None:
 def test_missing_help_falls_back_silently() -> None:
     """help 可选：未撰写说明的模块/字段照常可用、无异常（缺省回退）。"""
     table = api.field_meta_table()
-    maps = table.module("maps")
-    assert maps is not None
-    assert any(f.help == "" for f in maps.fields.values())  # maps 本批未写说明
+    dungeon = table.module("dungeon")
+    assert dungeon is not None
+    assert any(f.help == "" for f in dungeon.fields.values())  # dungeon 本批未写说明
     # 全表实例化不报错 + help 一律是字符串
     for meta in table.modules.values():
         for f in meta.fields.values():
@@ -343,8 +418,8 @@ def test_enemy_list_column_carries_help_card() -> None:
 
 
 def test_module_without_help_still_serializes() -> None:
-    """未写说明的模块（maps）照常出描述符，help 为空、help_card 自动拼装齐全。"""
-    d = api.entry_detail("veinborn", "maps", _first_entry("maps"), root=CONTENT)
+    """未写说明的模块（checkin）照常出描述符，help 为空、help_card 自动拼装齐全。"""
+    d = api.entry_detail("veinborn", "checkin", _first_entry("checkin"), root=CONTENT)
     by = {f["key"]: f for f in d["fields"]}
     name = by["name"]
     assert name["help"] == ""

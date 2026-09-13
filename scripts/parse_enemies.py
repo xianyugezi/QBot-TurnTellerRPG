@@ -125,7 +125,7 @@ def parse_resists():
         cells = [c.strip() for c in ln.split("|")]
         if len(cells) < 11 or not cells[1] or set(cells[1]) <= set("-: "):
             continue
-        vals = {c: cells[i + 2] for i, c in enumerate(ANOM)}
+        vals = {c: cells[i + 2].strip("*") for i, c in enumerate(ANOM)}
         if not any(vals.values()):
             continue
         nm = re.sub(r"^\d+(?:\.\d+)? · ", "", cells[1])

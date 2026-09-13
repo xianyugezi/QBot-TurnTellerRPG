@@ -1,16 +1,17 @@
 {
- "batch": "226",
+ "batch": "226/227",
  "tides": [
-  1,
-  2,
-  3
+  4,
+  5
  ],
- "total": 287,
+ "total": 467,
  "per_tide": {
   "1": 105,
   "2": 93,
-  "3": 89
+  "3": 89,
+  "4": 92,
+  "5": 88
  },
- "actions_resolved": 440,
+ "actions_resolved": 696,
  "lore_filled": 287
 }

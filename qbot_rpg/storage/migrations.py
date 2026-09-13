@@ -27,13 +27,14 @@ from qbot_rpg.storage.schema import CREATE_INDEXES, CREATE_TABLE_META, SCHEMA_TA
 
 # ---------------------------------------------------------------------------
 # 存档结构版本常量（初始 1；未来结构变更时递增并追加 MIGRATION_STEPS）
+# 九期237：v2＝players 增 cloudsea_state 列（内容包状态独立列，G5 装配面）。
 # ---------------------------------------------------------------------------
-DB_SCHEMA_VERSION: int = 1
+DB_SCHEMA_VERSION: int = 2
 META_KEY: str = "global"
 
 # 迁移步注册表：[(from_version, to_version, coro_fn)]，from < to。
-# v1 为初始版本，无迁移步；后续结构变更（如新增列）在此追加步，形如：
-#   (1, 2, migrate_v1_to_v2)
+# v1→v2（九期237）：players 补 cloudsea_state 列（add_column_if_missing 缺补默认，
+#   MIG-1）；注册表本体在 migrate_v1_to_v2 定义之后赋值（函数须先定义）。
 MIGRATION_STEPS: List[Tuple[int, int, Callable[..., Any]]] = []
 
 BACKUP_DIR_MODE: int = 0o700
@@ -174,6 +175,25 @@ async def append_migration_log(
 # ---------------------------------------------------------------------------
 # 迁移管线（F5 / D-06 / MIG-5）
 # ---------------------------------------------------------------------------
+async def migrate_v1_to_v2(tx: "Transaction", db: "Database", now: Optional[str] = None) -> None:
+    """九期237：v1→v2——players 补 cloudsea_state 列（内容包状态独立列，缺省 '{}'）。
+
+    MIG-1 缺补默认：旧库 ALTER ADD COLUMN DEFAULT '{}'；新库 CREATE TABLE 已
+    直接携带（read 路径 row_to_player 缺补忽略天然兼容）。G5 内容包装配面
+    （cloudsea_commands/recipes/proficiency 等状态）自 v2 起落独立列。
+    """
+    await add_column_if_missing(
+        tx, "players", "cloudsea_state",
+        "TEXT NOT NULL DEFAULT '{}'",
+    )
+
+
+# 注册表赋值须在迁移函数定义之后（模块级求值顺序）
+MIGRATION_STEPS: List[Tuple[int, int, Callable[..., Any]]] = [
+    (1, 2, migrate_v1_to_v2),
+]
+
+
 async def migrate_database(
     db: Database,
     *,

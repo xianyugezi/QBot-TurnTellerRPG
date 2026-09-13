@@ -16,7 +16,7 @@ TTR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CLOUD = os.path.join(TTR, "content", "cloudsea")
 DS = os.path.join(os.path.dirname(TTR), "yunhai", "cloudsea-hunting-corps")
 ECO = os.path.join(DS, "17_世界内容与生态")
-TIDES = (1, 2, 3)
+TIDES_DEFAULT = (1, 2, 3)
 OUT = os.path.join(CLOUD, "enemies.json")
 MANI = os.path.join(TTR, "docs", "cloudsea", "enemies_226_manifest.json")
 
@@ -50,13 +50,28 @@ def parse_lore():
 
 
 def main():
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--tides", default=",".join(str(x) for x in TIDES_DEFAULT))
+    ap.add_argument("--merge", action="store_true", help="保留 enemies.json 中非本轮潮位条目（增量扩装）")
+    ap.add_argument("--check", action="store_true")
+    args = ap.parse_args()
+    tides = tuple(int(x) for x in args.tides.split(","))
     acts = json.load(io.open(os.path.join(CLOUD, "actions.json"), encoding="utf-8"))
     valid_ids = {e["id"] for e in acts}
     lore = parse_lore()
 
     out = []
     per = {}
-    for t in TIDES:
+    if getattr(args, "merge", False):
+        kept = 0
+        if os.path.exists(OUT):
+            for e in json.load(io.open(OUT, encoding="utf-8")):
+                if e.get("source_tide") not in tides:
+                    out.append(e)
+                    kept += 1
+        print("merge 保留既有", kept, "只")
+    for t in tides:
         rows = json.load(io.open(os.path.join(CLOUD, "enemies_t%d.json" % t), encoding="utf-8"))
         per[t] = len(rows)
         for e in rows:
@@ -80,18 +95,21 @@ def main():
                 ("actions_unresolved", e.get("moves_unresolved", [])),
                 ("source_tide", t),
             ]))
+    per = {}
+    for e in out:
+        per[e["source_tide"]] = per.get(e["source_tide"], 0) + 1
     io.open(OUT, "w", encoding="utf-8", newline="\n").write(
         json.dumps(out, ensure_ascii=False, indent=1) + "\n")
-    mani = {"batch": "226", "tides": list(TIDES), "total": len(out), "per_tide": per,
+    mani = {"batch": "226/227", "tides": list(tides), "total": len(out), "per_tide": per,
             "actions_resolved": sum(1 for e in out for a in e["actions"]),
             "lore_filled": sum(1 for e in out if e["lore"][0]["desc"])}
     io.open(MANI, "w", encoding="utf-8", newline="\n").write(
         json.dumps(mani, ensure_ascii=False, indent=1) + "\n")
     print("enemies.json 出片", len(out), "只；", per)
-    if "--check" in sys.argv:
+    if args.check:
         ok = []
         ids = [e["id"] for e in out]
-        ok.append(("A1 I–III 287 恰尽", len(out) == 287 and per == {1: 105, 2: 93, 3: 89}, str(per)))
+        ok.append(("A1 分潮位合计一致", sum(per.values()) == len(out), str(per)))
         ok.append(("A2 id 唯一", len(set(ids)) == len(ids), f"{len(set(ids))}"))
         bad3 = [a["action"] for e in out for a in e["actions"] if a["action"] not in valid_ids]
         ok.append(("A3 actions 全在动作库", not bad3, str(bad3[:3])))

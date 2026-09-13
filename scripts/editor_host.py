@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""内容编辑器宿主（编辑器重写批2 · 编辑与保存）。
+"""内容编辑器宿主（编辑器重写批3 · 分区页签）。
 
 职责：只做 HTTP 宿主 —— 起 FastAPI/uvicorn、托管静态页、把 `qbot_rpg/web/api.py`
 （只读元数据层）与 `qbot_rpg/web/editor_ops.py`（编辑保存层）暴露为 JSON API。
@@ -51,7 +51,7 @@ def create_app(pack: Optional[str] = None, root: Optional[str] = None,
     content_root = str(root) if root else str(api.content_root())
     _ROLE_INPUTS = {editor_ops.ROLE_OWNER, editor_ops.ROLE_GM, "admin", "manager"}
     app = FastAPI(
-        title="QBot-TurnTellerRPG 内容编辑器（批2 · 编辑与保存）",
+        title="QBot-TurnTellerRPG 内容编辑器（批3 · 分区页签）",
         docs_url=None,
         redoc_url=None,
     )
@@ -135,7 +135,7 @@ def create_app(pack: Optional[str] = None, root: Optional[str] = None,
 
 
 def _parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="内容编辑器宿主（批2 · 编辑与保存）")
+    parser = argparse.ArgumentParser(description="内容编辑器宿主（批3 · 分区页签）")
     parser.add_argument("--pack", default=None, help="默认内容包（缺省取内容目录下第一个）")
     parser.add_argument("--role", default="owner", choices=["owner", "gm"],
                         help="权限位：owner 可编辑（默认）/ gm 只读预览")

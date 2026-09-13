@@ -863,6 +863,99 @@ SKILLS_FIELD_LABELS: Dict[str, str] = {
 }
 
 
+# -------------------------------------------------------------------------------------
+# 编辑器重写批3：把「分组」声明扩到更多模块（页签 = 元数据分组；顺序 + 显示名均来自元数据）
+# -------------------------------------------------------------------------------------
+# 口径与 skills 完全一致，只加**展示层元数据**：
+#   · 分组键（group key）用稳定机器键（base/stats/...），界面显示名走 ModuleMeta.group_labels
+#     （缺省回退分组键本身，见 qbot_rpg/web/api.py::_group_summary）；
+#   · 分组顺序 = group_order（元数据声明；缺省按首次出现顺序，兜底逻辑在 api 层）；
+#   · 每模块 2~4 个分组；覆盖该模块 fields 的键 + 真实内容包里常见的未登记键
+#     （desc/monsters/exits/ai/phases/rewards 等）——未登记键照样落进正确分区；
+#   · **零新增业务字段**、零新增校验拦截（校验器只读 fields，本段不参与任何判定）。
+# 新增模块 = 本段加一组常量 + 在 _module_table() 里挂到对应 ModuleMeta，编辑器零改动。
+ENEMIES_GROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
+    ("base", (
+        "id", "name", "tier", "type", "area", "desc",
+        "hp", "atk", "def", "def_base", "monster_def_rate", "drop_rate",
+    )),
+    ("stats", ("stats", "weakness", "resistance", "elem_res", "pv", "pv_recover", "phases")),
+    ("actions", ("actions", "special_actions", "chains", "skills", "traits", "effects", "parts", "ai")),
+    ("drops", ("drops", "lore", "rewards")),
+)
+ENEMIES_GROUP_LABELS: Dict[str, str] = {
+    "base": "基本", "stats": "数值与抗性", "actions": "行动与效果", "drops": "掉落与图鉴",
+}
+
+ITEMS_GROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
+    ("base", (
+        "id", "name", "type", "slot", "bind", "usable",
+        "quality", "rarity", "material_tier", "source", "awaken", "seed",
+    )),
+    ("stats", (
+        "price", "atk", "def", "dfn", "foc", "hp", "agi", "mp",
+        "elements", "base_effects",
+        *GEAR_FLAT_KEYS, *GEAR_PCT_KEYS, *GEAR_COMBAT_KEYS,
+    )),
+    ("effects", ("effects", "traits")),
+    ("text", ("desc", "brief", "detail")),
+)
+ITEMS_GROUP_LABELS: Dict[str, str] = {
+    "base": "基本", "stats": "数值与属性", "effects": "效果", "text": "文本",
+}
+# equipment 是 items 的「同类」模块（共享 items_fields + excludes）：分组表复用 items，
+# 只为装备独有的 excludes 补一个归属（否则会掉进兜底组）。
+EQUIPMENT_FIELD_GROUPS: Dict[str, str] = {
+    _k: _g for _g, _keys in ITEMS_GROUP_DEFS for _k in _keys
+}
+EQUIPMENT_FIELD_GROUPS["excludes"] = "base"
+EQUIPMENT_GROUP_ORDER: Tuple[str, ...] = tuple(_g for _g, _ in ITEMS_GROUP_DEFS)
+
+MAPS_GROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
+    ("base", ("id", "name", "battle", "revert", "safe_zone")),
+    ("ranges", ("min", "max", "lower", "upper", "reset", "mechanics")),
+    ("refs", ("enemy_pool", "monsters", "exits", "respawn_point")),
+    ("text", ("desc",)),
+)
+MAPS_GROUP_LABELS: Dict[str, str] = {
+    "base": "基本", "ranges": "数值与区间", "refs": "关联", "text": "文本",
+}
+
+QUEST_GROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
+    ("base", ("id", "name", "type", "main", "zone", "repeatable", "desc")),
+    ("conditions", ("conditions", "unlock_chain", "consume", "filter")),
+    ("reward", ("reward", "bonus", "daily", "board", "timed")),
+    ("refs", ("npc",)),
+)
+QUEST_GROUP_LABELS: Dict[str, str] = {
+    "base": "基本", "conditions": "条件", "reward": "奖励", "refs": "关联",
+}
+
+
+def _group_declaration(
+    defs: Tuple[Tuple[str, Tuple[str, ...]], ...],
+    labels: Mapping[str, str],
+) -> Tuple[Dict[str, str], Tuple[str, ...], Dict[str, str]]:
+    """(分组键→组, 分组顺序, 组→显示名) 三元组；供 ModuleMeta 直接挂载。"""
+    groups: Dict[str, str] = {}
+    order: Tuple[str, ...] = ()
+    for group, keys in defs:
+        order = order + (group,)
+        for key in keys:
+            groups.setdefault(key, group)
+    return groups, order, dict(labels)
+
+
+ENEMIES_FIELD_GROUPS, ENEMIES_GROUP_ORDER, ENEMIES_GROUP_LABEL_MAP = \
+    _group_declaration(ENEMIES_GROUP_DEFS, ENEMIES_GROUP_LABELS)
+ITEMS_FIELD_GROUPS, ITEMS_GROUP_ORDER, ITEMS_GROUP_LABEL_MAP = \
+    _group_declaration(ITEMS_GROUP_DEFS, ITEMS_GROUP_LABELS)
+MAPS_FIELD_GROUPS, MAPS_GROUP_ORDER, MAPS_GROUP_LABEL_MAP = \
+    _group_declaration(MAPS_GROUP_DEFS, MAPS_GROUP_LABELS)
+QUEST_FIELD_GROUPS, QUEST_GROUP_ORDER, QUEST_GROUP_LABEL_MAP = \
+    _group_declaration(QUEST_GROUP_DEFS, QUEST_GROUP_LABELS)
+
+
 def _decorate_field_meta(
     fields: Mapping[str, FieldMeta],
     groups: Mapping[str, str],
@@ -1422,9 +1515,13 @@ def _module_table() -> Dict[str, ModuleMeta]:
         # job_models.validate_jobs 全权（对齐 skills 专项校验器口径），本表登记字段口径。
         "jobs": ModuleMeta(entry_type="list", fields=jobs_fields, kind="job", namespace="job_lib"),
         "formula": ModuleMeta(entry_type="map", fields=formula_fields, kind="formula", namespace="formula_lib"),
-        "items": ModuleMeta(entry_type="list", fields=items_fields, kind="item", namespace="item_lib"),
+        "items": ModuleMeta(entry_type="list", fields=items_fields, kind="item", namespace="item_lib",
+                            field_groups=ITEMS_FIELD_GROUPS, group_order=ITEMS_GROUP_ORDER,
+                            group_labels=ITEMS_GROUP_LABEL_MAP),
         "equipment": ModuleMeta(entry_type="list", fields=equipment_fields, kind="equipment",
-                                namespace="item_lib", mutex_field="excludes"),
+                                namespace="item_lib", mutex_field="excludes",
+                                field_groups=EQUIPMENT_FIELD_GROUPS, group_order=EQUIPMENT_GROUP_ORDER,
+                                group_labels=ITEMS_GROUP_LABEL_MAP),
         "traits": ModuleMeta(entry_type="list", fields=traits_fields, kind="trait", namespace="trait_lib"),
         # M8 炼金（m8_contract_数据与校验 §一/§三/§四 4.2）：recipe/proficiency 新增登记四件套；
         # slots 由 alchemy_settings.slots_module_meta() 提供（kind=slots，与 loader 注册表同名）
@@ -1446,8 +1543,12 @@ def _module_table() -> Dict[str, ModuleMeta]:
         # enhance_module_meta() 提供（entry_type=object）；深结构校验由
         # validate_enhance 专项全权（V1~V7），泛型只做顶层形态（对齐 forge/fishing）
         "enhance": enhance_module_meta(),
-        "enemies": ModuleMeta(entry_type="list", fields=enemies_fields, kind="enemy", namespace="enemy_lib"),
-        "maps": ModuleMeta(entry_type="list", fields=maps_fields, kind="map", namespace="map_lib"),
+        "enemies": ModuleMeta(entry_type="list", fields=enemies_fields, kind="enemy", namespace="enemy_lib",
+                              field_groups=ENEMIES_FIELD_GROUPS, group_order=ENEMIES_GROUP_ORDER,
+                              group_labels=ENEMIES_GROUP_LABEL_MAP),
+        "maps": ModuleMeta(entry_type="list", fields=maps_fields, kind="map", namespace="map_lib",
+                           field_groups=MAPS_FIELD_GROUPS, group_order=MAPS_GROUP_ORDER,
+                           group_labels=MAPS_GROUP_LABEL_MAP),
         # M3 副本（m3_shared_contract §4）：新结构由 dungeon_models.validate_dungeons 专项全权。
         # M12.5 批1 路1C：宽松字段表注入（仅 id required + 宽容器 + 闭合枚举，
         # 泛型零新增拦截——专项校验仍全权深结构）
@@ -1460,7 +1561,9 @@ def _module_table() -> Dict[str, ModuleMeta]:
         # 仅 id required + 宽 obj 容器 + 闭合枚举——编辑器表单数据源 P-07，泛型并行零新增拦截）
         "npc": ModuleMeta(entry_type="list", fields=NPC_FIELDS, kind="npc", namespace="npc_lib"),
         "shop": ModuleMeta(entry_type="list", fields=SHOP_FIELDS, kind="shop", namespace="shop_lib"),
-        "quest": ModuleMeta(entry_type="list", fields=QUEST_FIELDS, kind="quest", namespace="quest_lib"),
+        "quest": ModuleMeta(entry_type="list", fields=QUEST_FIELDS, kind="quest", namespace="quest_lib",
+                            field_groups=QUEST_FIELD_GROUPS, group_order=QUEST_GROUP_ORDER,
+                            group_labels=QUEST_GROUP_LABEL_MAP),
         "checkin": ModuleMeta(entry_type="list", fields=CHECKIN_FIELDS, kind="checkin",
                               namespace="checkin_lib"),
         # M11 成就（4c §1.5）：顶层 list；M12.5 批1 路1C 宽松字段表注入
@@ -1532,4 +1635,10 @@ __all__ = [
     "DUNGEON_FIELDS", "ACHIEVEMENT_FIELDS",
     # 编辑器重写批1：skills 模块级分组表（页签顺序 = 元数据声明，编辑器零写死）
     "SKILLS_GROUP_DEFS", "SKILLS_FIELD_GROUPS", "SKILLS_GROUP_ORDER", "SKILLS_FIELD_LABELS",
+    # 编辑器重写批3：enemies/items/equipment/maps/quest 分组声明（顺序 + 显示名）
+    "ENEMIES_GROUP_DEFS", "ENEMIES_FIELD_GROUPS", "ENEMIES_GROUP_ORDER", "ENEMIES_GROUP_LABELS",
+    "ITEMS_GROUP_DEFS", "ITEMS_FIELD_GROUPS", "ITEMS_GROUP_ORDER", "ITEMS_GROUP_LABELS",
+    "EQUIPMENT_FIELD_GROUPS", "EQUIPMENT_GROUP_ORDER",
+    "MAPS_GROUP_DEFS", "MAPS_FIELD_GROUPS", "MAPS_GROUP_ORDER", "MAPS_GROUP_LABELS",
+    "QUEST_GROUP_DEFS", "QUEST_FIELD_GROUPS", "QUEST_GROUP_ORDER", "QUEST_GROUP_LABELS",
 ]

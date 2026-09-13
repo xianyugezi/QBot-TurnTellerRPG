@@ -8,6 +8,8 @@
   · 字段清单        ← default_field_meta_table() 的 ModuleMeta.fields
                       （FieldMeta.type / label / required / enum / ref_target / range）
   · 字段分组        ← FieldMeta.group → ModuleMeta.field_groups[key] → 单一默认分组（兜底）
+  · 分组页签        ← ModuleMeta.group_order（顺序）/ group_labels（显示名，缺省用组键）/
+                       field_groups（成员）；声明了但本条目无字段的组也保留（count=0，前端空态）
   · 字段类型 → 只读形态 ← _WIDGET_BY_TYPE（本文件唯一映射点；前端只按 widget 渲染）
   · 引用的显示名    ← 引用目标 kind 的名称索引（扫描各模块条目 id→name 构建；命名空间合并）
 
@@ -779,19 +781,40 @@ def _entry_base(mmeta: Optional[ModuleMeta], etype: str, entry_id: str,
 
 def _group_summary(fields: List[Dict[str, Any]],
                    mmeta: Optional[ModuleMeta]) -> List[Dict[str, Any]]:
+    """分组摘要（页签数据源）：顺序 + 显示名 + 计数，全部来自元数据。
+
+    · 顺序：ModuleMeta.group_order 优先；再按 field_groups（声明顺序）→ group_labels →
+      字段中首次出现的顺序补齐。缺省（模块无声明）→ 只有字段兜底组。
+    · 显示名：group_labels[组] → 缺省用组键本身（编辑器不写死任何分组词）。
+    · **元数据声明了但本条目没有字段落进去的组也保留**（count=0）→ 前端渲染空态文案。
+    """
     counts: Dict[str, int] = {}
     for f in fields:
         g = str(f["group"])
         counts[g] = counts.get(g, 0) + 1
-    order: List[str] = []
+    declared: List[str] = []
+
+    def _declare(g: str) -> None:
+        if g and g not in declared:
+            declared.append(g)
+
+    labels: Mapping[str, str] = {}
     if mmeta is not None:
         for g in mmeta.group_order:
-            if g in counts and g not in order:
-                order.append(g)
+            _declare(str(g))
+        for g in mmeta.field_groups.values():
+            _declare(str(g))
+        labels = mmeta.group_labels
+        for g in labels:
+            _declare(str(g))
+    order: List[str] = list(declared)
     for g in counts:
         if g not in order:
             order.append(g)
-    return [{"name": g, "count": counts[g]} for g in order]
+    return [
+        {"name": g, "label": str(labels.get(g, g)), "count": counts.get(g, 0)}
+        for g in order
+    ]
 
 
 def entry_detail(pack: object, module: object, entry_id: object,

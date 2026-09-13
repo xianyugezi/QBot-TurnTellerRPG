@@ -176,6 +176,10 @@ class ModuleMeta:
     # 分组的显示顺序（元数据决定；缺省空 → 按字段声明中首次出现的顺序）。仅影响界面顺序，
     # 不影响校验（校验器只读 fields，不读本项）。
     group_order: Tuple[str, ...] = ()
+    # 编辑器重写批3：分组「显示名」表（分组键 → 界面显示名）。缺省空 → 显示名即分组键本身。
+    # 分组键可以是稳定机器键（如 base/stats），界面文案由本表声明——编辑器不写死任何分组词。
+    # 只影响界面展示，不参与校验（校验器只读 fields，不读本项）。
+    group_labels: Mapping[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

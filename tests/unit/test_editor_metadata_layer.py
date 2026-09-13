@@ -116,9 +116,9 @@ def test_skills_entry_yields_four_groups() -> None:
 
 
 def test_group_default_fallback_for_module_without_declaration() -> None:
-    meta = api.field_meta_table().module("items")
+    meta = api.field_meta_table().module("effects")
     assert meta is not None and not meta.field_groups
-    d = api.entry_detail("veinborn", "items", "pulse_potion", root=CONTENT)
+    d = api.entry_detail("veinborn", "effects", "guard_up", root=CONTENT)
     assert d["group_count"] == 1
     assert d["groups"][0]["name"] == api.DEFAULT_GROUP
 
@@ -129,7 +129,7 @@ def test_group_resolution_priority_per_field_then_module_then_default() -> None:
     # 模块分组表覆盖未登记键 → 不落兜底组
     assert api._resolve_group("brief", None, meta) == "文本"
     # 模块无声明 → 兜底组
-    assert api._resolve_group("whatever", None, api.field_meta_table().module("items")) \
+    assert api._resolve_group("whatever", None, api.field_meta_table().module("effects")) \
         == api.DEFAULT_GROUP
 
 

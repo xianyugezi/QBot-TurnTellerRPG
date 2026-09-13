@@ -77,6 +77,9 @@ global.EditorList = {
 };
 global.fieldBody = function () { return "BODY"; };
 global.fieldHint = function () { return ""; };
+// 批4.6：字段标签外层多了说明气泡触发器（helpTriggerHtml）；本批只验证标签/控件，
+// 故此处原样透传（说明气泡的悬停/点击行为由 tests/unit/test_editor_batch46_help.py 覆盖）。
+global.helpTriggerHtml = function (f, inner) { return inner; };
 eval(fs.readFileSync(process.argv[1], "utf8"));
 const out = {};
 // ---- 问题1：空列表 / 无列列表都要出「+ 添加一行」，已建空行可删 ----
@@ -298,5 +301,8 @@ def test_frontend_op_column_has_inset_padding() -> None:
 
 def test_footer_status_bar_uses_batch4_wording() -> None:
     html = _html()
-    assert "批4 · 列表/引用字段" in html
+    # 批4.6 起页脚标注当前批次（说明气泡）；批4 的关键词仍在（继承未回退）。
+    assert "批4.6 · 字段说明气泡" in html
     assert "批3 · 分区页签" not in html
+    # 批4 的列宽/滚动视觉仍在（本批未回退）
+    assert ".ltable-scroll" in html and "data-ladd" in html

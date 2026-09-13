@@ -280,6 +280,33 @@ select.cin { padding: 1px var(--sp-2); }
 .empty { color: var(--text-5); padding: var(--sp-10) var(--sp-8); line-height: var(--lh-ex); }
 .vtag { flex: 0 0 auto; height: var(--h-ctl-sm); display: flex; align-items: center;
   padding: 0 var(--sp-8); color: var(--text-5); border-top: var(--bw) solid var(--line-soft); }
+
+/* ---------- 字段说明气泡（批4.6）：悬停中文名出现 · 点击固定 · Esc/点空白关闭 ----------
+   视觉按 tokens.css 终端极简风：深底、细边框、等宽感、直角；细滚动条令牌承载长文。
+   定位交给纯逻辑 helpPlace（优先字段行下方/上方，避让正在编辑的字段，窄窗口贴边）。 */
+.flabel.helpable { cursor: help; border-bottom: var(--bw) dotted var(--line-mute);
+  outline: none; }
+.flabel.helpable:hover, .flabel.helpable:focus-visible { color: var(--text-strong);
+  border-bottom-color: var(--accent); }
+.flabel.helpable:focus-visible { box-shadow: 0 0 0 var(--focus-offset) var(--focus); }
+.help-card { position: fixed; z-index: 50; max-width: min(420px, 92vw); max-height: 45vh;
+  overflow: auto; background: var(--bg); border: var(--bw) solid var(--line-strong);
+  padding: var(--sp-6) var(--sp-7); color: var(--text-2); font-family: var(--font-mono);
+  font-size: var(--fs-11); line-height: var(--lh-ex); box-shadow: 0 6px 22px rgba(0, 0, 0, .5);
+  overflow-wrap: anywhere; }
+.help-card[hidden] { display: none; }
+.help-card::-webkit-scrollbar { width: var(--sb-size); }
+.help-card::-webkit-scrollbar-track { background: transparent; }
+.help-card::-webkit-scrollbar-thumb { background: var(--sb-thumb); border-radius: var(--radius-sb); }
+.help-card::-webkit-scrollbar-thumb:hover { background: var(--sb-thumb-hover); }
+.help-card .hc-hd { color: var(--text-strong); margin-bottom: var(--sp-4);
+  padding-bottom: var(--sp-3); border-bottom: var(--bw) solid var(--line-soft);
+  display: flex; align-items: center; gap: var(--sp-5); flex-wrap: wrap; }
+.help-card .hc-tag { color: var(--warn); font-size: var(--fs-10); }
+.help-card .hc-row { display: grid; grid-template-columns: 68px minmax(0, 1fr);
+  gap: var(--sp-5); padding: var(--sp-1) 0; }
+.help-card .hc-k { color: var(--text-5); }
+.help-card .hc-v { color: var(--text-value); white-space: pre-wrap; }
 </style>
 </head>
 <body>
@@ -341,13 +368,16 @@ select.cin { padding: 1px var(--sp-2); }
       <div class="panel-body" id="p-body">
         <div class="empty">从左侧选择模块与条目。字段按内容包元数据渲染；改动先进草稿，保存时才校验并落盘。</div>
       </div>
-      <div class="panel-ft"><span>批4 · 列表/引用字段（可增删行表格 · 引用选择器 · 改动先进草稿）</span></div>
+      <div class="panel-ft"><span>批4.6 · 字段说明气泡（悬停/点击中文名看解释 · 改动先进草稿）</span></div>
     </section>
 
   </div>
 
   <div class="vtag" id="vtag">终端极简风 · 元数据驱动 · 零 CDN</div>
 </div>
+
+<!-- 字段说明气泡（批4.6）：内容由后端 help_card 自动拼装 + 元数据人工 help 填充 -->
+<div id="help-card" class="help-card" role="tooltip" hidden></div>
 
 <script>
 "use strict";
@@ -593,6 +623,221 @@ function fieldLabelHtml(label, key) {
 /* EDITOR_FIELD_LABEL_END */
 function el(id) { return document.getElementById(id); }
 
+/* EDITOR_HELP_BEGIN */
+// 字段说明气泡（批4.6）：纯逻辑部分（可 node 直接执行；DOM 接线在本模块下方）。
+//   · 卡片内容 = 后端 help_card（自动拼装：类型/数值还是比例/建议范围/默认值/必填/
+//     候选值/引用目标 + 人工 help）；前端只按结构渲染，不认字段类型、不认业务字段名。
+//   · 状态机：悬停开（未固定）· 点击固定/再点关闭 · Esc 或点空白关闭 · 键盘可达。
+var HELP_CARDS = {};   // 说明 id → help_card（每次渲染重建，见 resetHelpCards）
+var HELP_SEQ = 0;
+
+function resetHelpCards() { HELP_CARDS = {}; HELP_SEQ = 0; }
+
+function helpRegister(card) {
+  if (!card) { return ""; }
+  var id = "h" + (++HELP_SEQ);
+  HELP_CARDS[id] = card;
+  return id;
+}
+
+// 卡片行（有序）：人工「说明」优先，其后是自动拼装项；空项不出现。
+function helpLines(card) {
+  if (!card) { return []; }
+  var out = [];
+  if (card.help) { out.push({ k: "说明", v: card.help }); }
+  out.push({ k: "类型", v: card.type || "未标注" });
+  out.push({ k: "数值/比例", v: card.scale || "未标注" });
+  out.push({ k: "建议范围", v: card.range || "未标注" });
+  out.push({ k: "默认值", v: card.default || "无默认值" });
+  out.push({ k: "填写要求", v: card.required ? "必填" : "选填" });
+  if (card.enum && card.enum.length) { out.push({ k: "候选值", v: card.enum.join(" / ") }); }
+  if (card.ref_target) { out.push({ k: "引用目标", v: String(card.ref_target) }); }
+  return out;
+}
+
+// 卡片标题：中文名（原始键）——与字段标签同一口径。
+function helpTitle(card) {
+  if (!card) { return ""; }
+  var label = card.label || card.key || "";
+  if (card.key && label && card.key !== label) { return label + "（" + card.key + "）"; }
+  return label || card.key || "";
+}
+
+function helpCardHtml(card) {
+  if (!card) { return ""; }
+  var rows = helpLines(card).map(function (r) {
+    return '<div class="hc-row"><span class="hc-k">' + esc(r.k) + "</span>"
+      + '<span class="hc-v">' + esc(r.v) + "</span></div>";
+  }).join("");
+  return '<div class="hc-hd"><span class="hc-t">' + esc(helpTitle(card)) + "</span>"
+    + (card.unregistered ? '<span class="hc-tag">元数据未登记</span>' : "")
+    + "</div>" + rows;
+}
+
+// 状态机（纯函数，便于 node 断言）：{open, pinned, id}
+function helpStateClosed() { return { open: false, pinned: false, id: null }; }
+function helpHover(state, id) {
+  if (state && state.pinned) { return state; }
+  return { open: true, pinned: false, id: id };
+}
+function helpUnhover(state) {
+  if (state && state.pinned) { return state; }
+  return helpStateClosed();
+}
+function helpClick(state, id) {
+  if (state && state.open && state.pinned && state.id === id) { return helpStateClosed(); }
+  return { open: true, pinned: true, id: id };
+}
+function helpKey(state, id, keyName) {
+  if (keyName === "Escape" || keyName === "Esc") { return helpStateClosed(); }
+  if (keyName === "Enter" || keyName === " " || keyName === "Spacebar") {
+    return helpClick(state, id);
+  }
+  return state || helpStateClosed();
+}
+function helpVisible(state, id) {
+  return !!(state && state.open && state.id === id);
+}
+
+// 定位：优先字段行下方 → 上方 → 右侧 → 左侧；都不完全放得下时退回「下方」候选并水平
+// 收进视口。各候选都不与 avoid（正在编辑的字段矩形）重叠；窄窗口自动避让。
+// 矩形统一 {left, top, right, bottom}。
+function helpPlace(anchor, size, viewport, avoid, gap) {
+  gap = (gap == null) ? 6 : gap;
+  var margin = 4;
+  avoid = avoid || anchor;
+  var w = size.w || 0, h = size.h || 0;
+  function rect(placement, left, top) {
+    return { placement: placement, left: left, top: top,
+             right: left + w, bottom: top + h };
+  }
+  var cands = [
+    rect("below", anchor.left, avoid.bottom + gap),
+    rect("above", anchor.left, avoid.top - h - gap),
+    rect("right", avoid.right + gap, avoid.top),
+    rect("left", avoid.left - w - gap, avoid.top)
+  ];
+  function fits(c) {
+    return c.left >= margin && c.top >= margin
+      && c.right <= viewport.w - margin && c.bottom <= viewport.h - margin;
+  }
+  for (var i = 0; i < cands.length; i++) {
+    if (fits(cands[i])) { return cands[i]; }
+  }
+  var best = rect("below", anchor.left, avoid.bottom + gap);
+  best.left = Math.max(margin, Math.min(best.left, viewport.w - w - margin));
+  best.right = best.left + w;
+  return best;
+}
+
+function helpOverlaps(a, b) {
+  return !(a.right <= b.left || b.right <= a.left
+    || a.bottom <= b.top || b.bottom <= a.top);
+}
+
+// 字段标签包装：可出说明卡时加键盘可达的触发器（tabindex/role/aria-expanded）。
+function helpTriggerHtml(f, inner) {
+  if (!f || !f.help_card) { return inner; }
+  var id = helpRegister(f.help_card);
+  return '<span class="flabel helpable" data-help="' + esc(id) + '" tabindex="0"'
+    + ' role="button" aria-expanded="false" aria-label="字段说明：'
+    + esc(f.label || f.key || "") + '">' + inner + "</span>";
+}
+/* EDITOR_HELP_END */
+
+// ---- 说明气泡 DOM 接线（纯逻辑状态机见上；此处只做事件/定位/显隐）----
+var helpDom = { state: helpStateClosed(), timer: null };
+
+function helpCardBox() { return el("help-card"); }
+function helpCancelClose() {
+  if (helpDom.timer) { clearTimeout(helpDom.timer); helpDom.timer = null; }
+}
+
+function helpHideDom() {
+  helpDom.state = helpStateClosed();
+  var box = helpCardBox();
+  if (box) { box.hidden = true; }
+  Array.prototype.forEach.call(document.querySelectorAll(".flabel.helpable"), function (t) {
+    t.setAttribute("aria-expanded", "false");
+  });
+}
+
+function helpRenderDom(id) {
+  var card = HELP_CARDS[id];
+  var box = helpCardBox();
+  if (!card || !box) { helpHideDom(); return; }
+  box.innerHTML = helpCardHtml(card);
+  box.hidden = false;
+  var trig = document.querySelector('.flabel.helpable[data-help="' + id + '"]');
+  var anchor = trig ? trig.getBoundingClientRect()
+    : { left: 8, top: 8, right: 8, bottom: 8 };
+  var row = (trig && trig.closest) ? trig.closest(".row") : null;
+  var avoid = (row && row.getBoundingClientRect) ? row.getBoundingClientRect() : anchor;
+  var pos = helpPlace(
+    { left: anchor.left, top: anchor.top, right: anchor.right, bottom: anchor.bottom },
+    { w: box.offsetWidth, h: box.offsetHeight },
+    { w: window.innerWidth || 1024, h: window.innerHeight || 768 },
+    { left: avoid.left, top: avoid.top, right: avoid.right, bottom: avoid.bottom }, 6);
+  box.style.left = pos.left + "px";
+  box.style.top = pos.top + "px";
+  Array.prototype.forEach.call(document.querySelectorAll(".flabel.helpable"), function (t) {
+    t.setAttribute("aria-expanded", t === trig ? "true" : "false");
+  });
+}
+
+function helpApply(state) {
+  helpDom.state = state;
+  if (state && state.open) { helpRenderDom(state.id); } else { helpHideDom(); }
+}
+
+function bindHelp() {
+  helpHideDom();
+  Array.prototype.forEach.call(document.querySelectorAll(".flabel.helpable"), function (trig) {
+    var id = trig.dataset.help;
+    trig.addEventListener("mouseenter", function () {
+      helpCancelClose();
+      helpApply(helpHover(helpDom.state, id));
+    });
+    trig.addEventListener("mouseleave", function () {
+      if (helpDom.state.pinned) { return; }
+      helpCancelClose();
+      helpDom.timer = setTimeout(function () { helpApply(helpUnhover(helpDom.state)); }, 140);
+    });
+    trig.addEventListener("click", function (ev) {
+      ev.preventDefault();
+      helpCancelClose();
+      helpApply(helpClick(helpDom.state, id));
+    });
+    trig.addEventListener("keydown", function (ev) {
+      var next = helpKey(helpDom.state, id, ev.key);
+      if (next === helpDom.state) { return; }
+      ev.preventDefault();
+      helpCancelClose();
+      helpApply(next);
+    });
+  });
+  var box = helpCardBox();
+  if (!box || box.dataset.bound) { return; }
+  box.dataset.bound = "1";
+  box.addEventListener("mouseenter", helpCancelClose);
+  box.addEventListener("mouseleave", function () {
+    if (helpDom.state.pinned) { return; }
+    helpApply(helpUnhover(helpDom.state));
+  });
+  document.addEventListener("click", function (ev) {
+    if (!helpDom.state.open) { return; }
+    var t = ev.target;
+    if (t && t.closest && (t.closest(".help-card") || t.closest(".flabel.helpable"))) { return; }
+    helpApply(helpStateClosed());
+  });
+  document.addEventListener("keydown", function (ev) {
+    if (ev.key === "Escape" && helpDom.state.open) { helpApply(helpStateClosed()); }
+  });
+  window.addEventListener("resize", function () {
+    if (helpDom.state.open) { helpRenderDom(helpDom.state.id); }
+  });
+}
+
 function api(path) {
   return fetch(path, { headers: { "Accept": "application/json" } }).then(function (r) {
     return r.json().then(function (data) {
@@ -770,6 +1015,7 @@ function loadEntries() {
       else {
         el("p-body").innerHTML = '<div class="empty">该模块暂无条目（条目列表为空）。</div>';
         el("p-title").textContent = EMPTY_TEXT; el("p-sub").textContent = ""; el("p-id").textContent = "";
+        helpHideDom();
       }
     });
 }
@@ -831,6 +1077,7 @@ function renderDetail(d) {
   el("p-title").textContent = d.name;
   el("p-sub").textContent = (d.module_label || d.module) + " · 字段由元数据渲染";
   el("p-id").textContent = d.id;
+  resetHelpCards();   // 说明卡注册表随渲染重建（字段行构建时注册 help id）
 
   var html = '<div class="meta"><span class="mk">元数据驱动</span>'
     + "本页字段由内容包元数据生成 · " + d.field_count + " 个字段 · " + d.group_count + " 个分组"
@@ -842,6 +1089,7 @@ function renderDetail(d) {
   if (!tabs.length) {
     state.tabs = tabs;
     el("p-body").innerHTML = html + '<div class="empty">该条目没有可渲染字段。</div>';
+    helpHideDom();
     markDirty();
     return;
   }
@@ -864,6 +1112,7 @@ function renderDetail(d) {
   el("p-body").innerHTML = html;
   bindTabs();
   bindControls();
+  bindHelp();
   if (state.result) { renderResult(state.result); }
   markDirty();
 }
@@ -880,6 +1129,7 @@ function bindTabs() {
       Array.prototype.forEach.call(el("p-body").querySelectorAll(".gpane"), function (p) {
         p.hidden = Number(p.dataset.g) !== idx;
       });
+      helpHideDom();  // 切组后原字段可能不可见：关掉说明卡，避免悬空
       markDirty();  // 跨组编辑过的字段仍标脏、未保存计数不变
     });
   });
@@ -890,7 +1140,8 @@ function fieldRow(f) {
   // 被挤在双列网格的右缘（批4 UX）。只按后端 control 判定，框架不认业务字段名。
   var wide = (f.control === "listtable" || f.control === "reflist") ? " wide" : "";
   return '<div class="row' + wide + '" data-field="' + esc(f.key) + '" data-present="'
-    + (f.present ? "true" : "false") + '"><div class="rlab">' + fieldLabelHtml(f.label, f.key)
+    + (f.present ? "true" : "false") + '"><div class="rlab">'
+    + helpTriggerHtml(f, fieldLabelHtml(f.label, f.key))
     + ' <span class="ftype">' + esc(typeZh(f.type)) + "</span></div>"
     + '<div class="rval">' + fieldBody(f) + fieldHint(f) + "</div></div>";
 }
@@ -1065,7 +1316,7 @@ function listTableBody(f) {
   } else {
     html += '<div class="ltable-scroll"><table class="ltable ltable-edit"><thead><tr>'
       + cols.map(function (c) {
-        return "<th>" + fieldLabelHtml(c.label, c.key)
+        return "<th>" + helpTriggerHtml(c, fieldLabelHtml(c.label, c.key))
           + ' <span class="ftype">' + esc(typeZh(c.type)) + "</span></th>";
       }).join("")
       + '<th class="op">操作</th></tr></thead><tbody>';
@@ -1467,7 +1718,8 @@ function listTable(f) {
   if (!f.value || !f.value.length) { return '<div class="ex">（空列表）</div>'; }
   var cols = f.columns || [];
   var head = "<tr>" + cols.map(function (c) {
-    return "<th>" + fieldLabelHtml(c.label, c.key) + ' <span class="ftype">' + esc(typeZh(c.type)) + "</span></th>";
+    return "<th>" + helpTriggerHtml(c, fieldLabelHtml(c.label, c.key))
+      + ' <span class="ftype">' + esc(typeZh(c.type)) + "</span></th>";
   }).join("") + "</tr>";
   var body = (f.rows || []).map(function (row) {
     return "<tr>" + cols.map(function (c) {
@@ -1496,7 +1748,8 @@ function objTable(f) {
     return '<div class="ta">' + esc(JSON.stringify(f.value, null, 2)) + "</div>";
   }
   return kids.map(function (c) {
-    return '<div class="row nest"><div class="rlab">' + fieldLabelHtml(c.label, c.key)
+    return '<div class="row nest"><div class="rlab">'
+      + helpTriggerHtml(c, fieldLabelHtml(c.label, c.key))
       + ' <span class="ftype">' + esc(typeZh(c.type)) + "</span></div>"
       + '<div class="rval">' + fieldValue(c) + "</div></div>";
   }).join("");

@@ -83,7 +83,9 @@ def parse_guazhi_names(path):
     for ln in read(path).split("\n"):
         m = re.match(r"^## (.+?)（", ln)
         if m:
-            cur_eco = m.group(1).strip()
+            h = m.group(1).strip()
+            # 整潮位单节头（如「潮位二 · 潮涌（93 行）」）不携带生态——生态由名册映射兜底
+            cur_eco = None if h.startswith("潮位") else h
             continue
         if not ln.startswith("|"):
             continue
@@ -188,12 +190,15 @@ def build():
 
     all_out, manifests = [], {}
     unres = sorted(set())
+    seen_names = set()
+    dup_dropped = []
     for tide in range(1, 8):
         gz = parse_guazhi_names(os.path.join(POOL, "怪挂配置_潮位%s.md" % CN[tide]))
         rows = []
         for g in gz:
             nm = g["name"]
-            eco_meta = ecos.get(g["eco"], {})
+            eco_name = g["eco"] or all_tiers.get(nm, {}).get("eco", "")
+            eco_meta = ecos.get(eco_name, {"tide": tide, "star_mid": 2})
             tide_i = eco_meta.get("tide", tide)
             smid = eco_meta.get("star_mid", 2)
             tier = all_tiers.get(nm, {}).get("tier", "常规巨兽")
@@ -205,7 +210,7 @@ def build():
             unres += [m for m in moves if m not in name2id]
             rows.append(OrderedDict([
                 ("id", "cs_t%d_%03d" % (tide, len(rows) + 1)), ("name", nm),
-                ("tide", tide_i), ("area", g["eco"]), ("tier", tier),
+                ("tide", tide_i), ("area", eco_name), ("tier", tier),
                 ("skeleton", g["skeleton"]), ("bio_class", g["bio"]),
                 ("hp", round(ehp)), ("ehp_named", nm in NAMED_EHP),
                 ("weakness", {"rule_gen": "三级默认归增量三"}),
@@ -216,13 +221,26 @@ def build():
                 ("duyou_pos", dyb.get(nm, {}).get("pos", "")),
                 ("break_bindings", breaks.get(nm, [])),
             ]))
+            if nm in seen_names:
+                # 跨册交叉引用去重（如潮五「风暴段章节 Boss」节复列潮四正典 Boss）——保首现
+                rows.pop()
+                dup_dropped.append(nm)
+                continue
+            seen_names.add(nm)
             all_out.append(rows[-1])
-        path = os.path.join(OUTDIR, "enemies_t%d.json" % tide)
+    # 跨潮位章节 Boss 重归片：按生态册正典潮位分组重排序号（如潮五配置内的潮六章节 Boss）
+    by_tide = {t: [] for t in range(1, 8)}
+    for r in all_out:
+        by_tide[r["tide"]].append(r)
+    for t, rs in sorted(by_tide.items()):
+        for i, r in enumerate(rs, 1):
+            r["id"] = "cs_t%d_%03d" % (t, i)
+        path = os.path.join(OUTDIR, "enemies_t%d.json" % t)
         io.open(path, "w", encoding="utf-8", newline="\n").write(
-            json.dumps(rows, ensure_ascii=False, indent=1) + "\n")
-        manifests[tide] = {"total": len(rows),
-                           "ecos": {eco: {"count": None, "exp": ecos[eco]["exp"]}
-                                    for eco in per_tide[tide]}}
+            json.dumps(rs, ensure_ascii=False, indent=1) + "\n")
+        manifests[t] = {"total": len(rs),
+                        "ecos": {eco: {"count": None, "exp": ecos[eco]["exp"]}
+                                 for eco in per_tide[t]}}
     # 层级对账：每生态 tier 实数 == 总表行
     mism = []
     for tide in range(1, 8):
@@ -235,11 +253,15 @@ def build():
         for eco, info in manifests[tide]["ecos"].items():
             got = cnt.get(eco, {})
             exp = info["exp"]
-            for k in ("常规巨兽", "空兽", "杂兽"):
+            for k in ("常规巨兽", "终盘巨兽", "空兽", "杂兽"):
                 if got.get(k, 0) != exp[k]:
                     mism.append((eco, k, got.get(k, 0), exp[k]))
             info["count"] = sum(got.values())
     return all_out, manifests, mism, unres
+
+
+def _dummy_dup():
+    return "dup_dropped"
 
 
 def main():

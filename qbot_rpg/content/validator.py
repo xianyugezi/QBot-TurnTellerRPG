@@ -861,6 +861,11 @@ class _Checker:
                                       rule="R16_part_onbreak_unknown_key", key=k,
                                       msg="on_break 未知键 %r（仅 knockdown/marks/effects）" % (k,))
             for k in part:
+                # 九期238：白名单放行云海两键——cls（件型标注）与 break_behavior
+                # （03 §M3.1B 部位破坏绑定面，251–255/219 产出；破坏行为结算
+                # 走 cloudsea 增量 hook 面，非 combo/effects/marks 既有行为改动）
+                if k in ("cls", "break_behavior"):
+                    continue
                 if k not in ("id", "name", "positions", "break_threshold",
                              "target_priority", "on_break"):
                     self._err(module_name, f"{pth}.{k}", "R-5",

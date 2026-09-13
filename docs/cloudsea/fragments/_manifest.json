@@ -47,7 +47,7 @@
   },
   "ASYNC": {
    "file": "async.json",
-   "keys": 10
+   "keys": 12
   },
   "COMP": {
    "file": "comp.json",
@@ -162,5 +162,5 @@
    "keys": 12
   }
  },
- "total_keys": 586
+ "total_keys": 588
 }

@@ -56,10 +56,26 @@
   "rule": "citation"
  },
  {
+  "key": "$C.ASYNC.LONGSLEEP_DAYS",
+  "raw": "`7` 游戏日",
+  "value": null,
+  "desc": "长眠判定阈值（九期 234 申报 · 215H 参数化）",
+  "section": "ASYNC",
+  "rule": "fallback"
+ },
+ {
   "key": "$C.ASYNC.ONBOARD_SECONDS",
   "raw": "`≤60` 秒",
   "value": null,
   "desc": "进群到开打",
+  "section": "ASYNC",
+  "rule": "fallback"
+ },
+ {
+  "key": "$C.ASYNC.OUTBOX_BATCH_TURNS",
+  "raw": "`1` 回合",
+  "value": null,
+  "desc": "战报 outbox 合并批（九期 234 申报）",
   "section": "ASYNC",
   "rule": "fallback"
  },

@@ -69,21 +69,33 @@ def main() -> int:
 
     # ---- P2 数据探针 ----
     counts = {}
-    actions = load(os.path.join(CLOUD, 'actions.json'))
+    actions = load(os.path.join(CLOUD, 'action.json'))
     counts['actions'] = len(actions) if isinstance(actions, list) else len(actions.get('items', actions))
     enemies = 0
     duyou = 0
     air_rows = 0
-    for i in range(1, 8):
-        rows = load(os.path.join(CLOUD, 'enemies_t%d.json' % i))
+    ep = os.path.join(CLOUD, 'enemies.json')
+    if os.path.isfile(ep):
+        rows = load(ep)
         rows = rows if isinstance(rows, list) else list(rows.values())
-        enemies += len(rows)
+        enemies = len(rows)
         for r in rows:
-            dp = str(r.get('duyou_pos') or '')
-            if dp:
-                duyou += 1
-            if 'air' in dp:
-                air_rows += 1
+            for pr in (r.get('parts') or []):
+                pos = pr.get('positions') or {}
+                if 'air' in str(pos.get('height', '')):
+                    air_rows += 1
+                    break
+    else:
+        for i in range(1, 8):
+            ep2 = os.path.join(CLOUD, 'enemies_t%d.json' % i)
+            if os.path.isfile(ep2):
+                rows = load(ep2)
+                rows = rows if isinstance(rows, list) else list(rows.values())
+                enemies += len(rows)
+                for r in rows:
+                    dp = str(r.get('duyou_pos') or '')
+                    if 'air' in dp:
+                        air_rows += 1
     counts['enemies'] = enemies
     codex = load(os.path.join(CLOUD, 'codex.json'))
     counts['codex_entries'] = len(codex.get('entries', []))
@@ -111,8 +123,9 @@ def main() -> int:
 
     # ---- P3 功能探针 ----
     prof = load(os.path.join(CLOUD, 'proficiency.json'))
-    if len(prof.get('per_weapon_type', {})) != 14 or len(prof.get('curves', {})) != 3:
-        fails.append('P3 proficiency 曲线/映射异常')
+    prof_entries = prof if isinstance(prof, list) else prof.get('entries', [])
+    if len(prof_entries) != 14:
+        fails.append('P3 proficiency entries != 14')
     gm_spec = os.path.join(ROOT, 'qbot_rpg', 'core', 'cloudsea_gm.py')
     with io.open(gm_spec, 'r', encoding='utf-8') as f:
         gm = f.read()

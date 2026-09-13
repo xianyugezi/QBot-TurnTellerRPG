@@ -1,8 +1,8 @@
 {
- "quests_total": 435,
+ "quests_total": 534,
  "quests_main": 110,
- "quests_side": 325,
- "contract": "540＝主线 120＋支线 424（12 号 §T CONTENT.QUESTS）；V 2139/P 160/K 1408 独立计数",
+ "quests_side": 424,
+ "contract": "契约 540＝主线 120＋支线 424（12 号 §T CONTENT.QUESTS）；本面＝主线 110（章节卡逐章自检咬合，口径差 10 登记）＋支线 424（台账正典面）；V 2139/P 160/K 1408 独立计数",
  "maps_nodes": 28,
  "maps_monsters_bound": 760,
  "chapters": 18

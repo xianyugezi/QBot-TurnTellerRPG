@@ -31,13 +31,104 @@
    ]
   }
  ],
- "sets": [],
+ "sets": [
+  {
+   "id": "set_m4_starter",
+   "name": "新手套（M4）",
+   "variant": "alpha",
+   "pieces": [
+    "node_cs_armor_head_root",
+    "node_cs_armor_body_root",
+    "node_cs_armor_hand_root",
+    "node_cs_armor_leg_root",
+    "node_cs_armor_foot_root"
+   ],
+   "skills": [],
+   "desc": "仅 1 套，引导任务奖励（速查 §二 M4）；散件系数 @1",
+   "enabled": true,
+   "codex_group": "M4"
+  },
+  {
+   "id": "set_m5_shop",
+   "name": "商店套（M5 · 22 档）",
+   "variant": "alpha",
+   "pieces": [
+    "node_cs_armor_head_root",
+    "node_cs_armor_body_root",
+    "node_cs_armor_hand_root",
+    "node_cs_armor_leg_root",
+    "node_cs_armor_foot_root"
+   ],
+   "skills": [],
+   "desc": "22 档（5→999）整套价＝档×400×SHOP_SHELF_COEF；走量档 15 档@0／高阶档 7 档@1（03 册 §三·1）",
+   "enabled": true,
+   "codex_group": "M5"
+  },
+  {
+   "id": "set_m6_basic",
+   "name": "基础套（M6 · 四系）",
+   "variant": "alpha",
+   "pieces": [
+    "node_cs_armor_head_root",
+    "node_cs_armor_body_root",
+    "node_cs_armor_hand_root",
+    "node_cs_armor_leg_root",
+    "node_cs_armor_foot_root"
+   ],
+   "skills": [],
+   "desc": "矿石/鳞革/骸骨/羽丝四系（有进阶型＝云兽数二次打造；无进阶型填充位）；基础散件 10 件 @1",
+   "enabled": true,
+   "codex_group": "M6"
+  },
+  {
+   "id": "set_m7_adv",
+   "name": "进阶套（M7 · 云兽/巨兽）",
+   "variant": "alpha",
+   "pieces": [
+    "node_cs_armor_head_root",
+    "node_cs_armor_body_root",
+    "node_cs_armor_hand_root",
+    "node_cs_armor_leg_root",
+    "node_cs_armor_foot_root"
+   ],
+   "skills": [],
+   "desc": "云兽系甲/乙双方向＋巨兽三方向（★1–3×1、★4–6×2、★7–9×3 套率）；进阶散件 16 件 @1；方向面归逐套展开",
+   "enabled": true,
+   "codex_group": "M7"
+  },
+  {
+   "id": "set_m8_king",
+   "name": "王骸套（M8 · 153 套）",
+   "variant": "alpha",
+   "pieces": [
+    "node_cs_armor_head_root",
+    "node_cs_armor_body_root",
+    "node_cs_armor_hand_root",
+    "node_cs_armor_leg_root",
+    "node_cs_armor_foot_root"
+   ],
+   "skills": [],
+   "desc": "终盘 51 只×3 方向＝153 套（破军/守御/蚀异；7 部位并存口径含饰品/护符位，pieces 五树骨架＋两软位归逐套展开）；王骸散件 @0/@1/@2 按来源生态；★7–9 小套装 0 套现势（启用归 258）",
+   "enabled": true,
+   "codex_group": "M8"
+  },
+  {
+   "id": "set_m9_scatter",
+   "name": "散件（M9 · 生态系数制）",
+   "variant": "alpha",
+   "pieces": [],
+   "skills": [],
+   "desc": "504 套＝120@0＋264@1＋120@2（Σ=504 守恒 M9 改制）；逐套系数＝来源组×生态带位/终盘密度/档位法则；每套摊 1 件",
+   "enabled": true,
+   "codex_group": "M9"
+  }
+ ],
  "augments": [],
  "settings": {
   "forge_fee": "$C.GROWTH.ENHANCE（强化费断点见 05 §M5.4）",
   "straight_forge": true,
   "exp_per_forge": "",
-  "sets_enabled": false,
+  "sets_enabled": true,
   "augments_enabled": false
  }
 }

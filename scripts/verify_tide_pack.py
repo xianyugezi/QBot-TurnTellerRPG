@@ -57,7 +57,7 @@ def total_table():
 
 def main():
     ecos = total_table()
-    acts = json.load(io.open(os.path.join(CLOUD, "actions.json"), encoding="utf-8"))
+    acts = json.load(io.open(os.path.join(CLOUD, "action.json"), encoding="utf-8"))
     valid_ids = {e["id"] for e in acts}
     ens_all = json.load(io.open(os.path.join(CLOUD, "enemies.json"), encoding="utf-8"))
     ids_all = Counter = {}
@@ -67,7 +67,7 @@ def main():
     grand = 0
     for tide in range(1, 8):
         failures = []
-        rows = json.load(io.open(os.path.join(CLOUD, "enemies_t%d.json" % tide),
+        rows = json.load(io.open(os.path.join(CLOUD, "generated", "enemies_t%d.json" % tide),
                                  encoding="utf-8"))
         exp_by_eco = {}
         for eco, meta in ecos.items():

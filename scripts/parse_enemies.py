@@ -174,7 +174,7 @@ def parse_duyou():
 def build():
     ecos, per_tide = parse_total_table()
     name2id = {}
-    acts = json.load(io.open(os.path.join(OUTDIR, "actions.json"), encoding="utf-8"))
+    acts = json.load(io.open(os.path.join(OUTDIR, "action.json"), encoding="utf-8"))
     for e in acts:
         name2id.setdefault(e["name"], e["id"])
     all_tiers = {}
@@ -267,7 +267,7 @@ def build():
     for t, rs in sorted(by_tide.items()):
         for i, r in enumerate(rs, 1):
             r["id"] = "cs_t%d_%03d" % (t, i)
-        path = os.path.join(OUTDIR, "enemies_t%d.json" % t)
+        path = os.path.join(OUTDIR, "generated", "enemies_t%d.json" % t)
         io.open(path, "w", encoding="utf-8", newline="\n").write(
             json.dumps(rs, ensure_ascii=False, indent=1) + "\n")
         manifests[t] = {"total": len(rs),
@@ -276,7 +276,7 @@ def build():
     # 层级对账：每生态 tier 实数 == 总表行
     mism = []
     for tide in range(1, 8):
-        path = os.path.join(OUTDIR, "enemies_t%d.json" % tide)
+        path = os.path.join(OUTDIR, "generated", "enemies_t%d.json" % tide)
         rows = json.load(io.open(path, encoding="utf-8"))
         cnt = {}
         for r in rows:

@@ -22,7 +22,7 @@ from collections import OrderedDict
 sys.stdout.reconfigure(encoding="utf-8")
 TTR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 POOL = os.path.join(os.path.dirname(TTR), "yunhai", "cloudsea-hunting-corps", "17_", "动作池")
-OUT = os.path.join(TTR, "content", "cloudsea", "actions.json")
+OUT = os.path.join(TTR, "content", "cloudsea", "action.json")  # manifest 模块名 action（242 v5 契约改名）
 MANI = os.path.join(TTR, "docs", "cloudsea", "actions_manifest.json")
 
 POS_KEYS = ("attack_zone", "self_reposition", "target_displace", "position_rule", "marks")

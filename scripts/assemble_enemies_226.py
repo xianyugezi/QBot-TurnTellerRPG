@@ -57,7 +57,7 @@ def main():
     ap.add_argument("--check", action="store_true")
     args = ap.parse_args()
     tides = tuple(int(x) for x in args.tides.split(","))
-    acts = json.load(io.open(os.path.join(CLOUD, "actions.json"), encoding="utf-8"))
+    acts = json.load(io.open(os.path.join(CLOUD, "action.json"), encoding="utf-8"))
     valid_ids = {e["id"] for e in acts}
     lore = parse_lore()
 
@@ -72,7 +72,7 @@ def main():
                     kept += 1
         print("merge 保留既有", kept, "只")
     for t in tides:
-        rows = json.load(io.open(os.path.join(CLOUD, "enemies_t%d.json" % t), encoding="utf-8"))
+        rows = json.load(io.open(os.path.join(CLOUD, "generated", "enemies_t%d.json" % t), encoding="utf-8"))
         per[t] = len(rows)
         for e in rows:
             actions = [{"action": aid, "weight": 50} for aid in e.get("actions_ref", [])]

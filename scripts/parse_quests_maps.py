@@ -147,6 +147,12 @@ def parse_taizhang():
 def main():
     enemies = json.load(io.open(os.path.join(TTR, "content", "cloudsea", "enemies.json"),
                                 encoding="utf-8"))
+    # 他批段保留（230 story 64 条等）：重生成只重建本管线面（章节卡+台账），既有他批段原样回填
+    prev_story = []
+    if os.path.exists(OUT_Q):
+        for e in json.load(io.open(OUT_Q, encoding="utf-8")):
+            if e.get("id", "").startswith("q_story_"):
+                prev_story.append(e)
     quests, chapter_names = [], {}
     for ch, fn in CHAPTERS:
         qs, ch_name = parse_chapter(os.path.join(CH, fn), ch)
@@ -187,9 +193,9 @@ def main():
                 ("desc", q["desc"]), ("reward_raw", q["reward_raw"]),
                 ("conditions", []),
             ]))
-    quests = [q for q in quests if q["main"]] + side_out
-    n_main = sum(1 for q in quests if q["main"])
-    n_side = sum(1 for q in quests if not q["main"])
+    quests = [q for q in quests if q["main"]] + side_out + prev_story
+    n_main = sum(1 for q in quests if q.get("main") is True)
+    n_side = sum(1 for q in quests if q.get("id", "").startswith(("q_v_", "q_s_")))
     env = parse_env()
     maps = parse_maps(enemies, env)
 

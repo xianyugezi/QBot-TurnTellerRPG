@@ -875,11 +875,12 @@ SKILLS_FIELD_LABELS: Dict[str, str] = {
 #   · **零新增业务字段**、零新增校验拦截（校验器只读 fields，本段不参与任何判定）。
 # 新增模块 = 本段加一组常量 + 在 _module_table() 里挂到对应 ModuleMeta，编辑器零改动。
 ENEMIES_GROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
-    ("base", (
-        "id", "name", "tier", "type", "area", "desc",
+    # 2026-09-13 用户拍板：HP/ATK/DEF 这类数值**单独一页**，不再塞进「基本」。
+    ("base", ("id", "name", "tier", "type", "area", "desc")),
+    ("stats", (
         "hp", "atk", "def", "def_base", "monster_def_rate", "drop_rate",
+        "stats", "weakness", "resistance", "elem_res", "pv", "pv_recover", "phases",
     )),
-    ("stats", ("stats", "weakness", "resistance", "elem_res", "pv", "pv_recover", "phases")),
     ("actions", ("actions", "special_actions", "chains", "skills", "traits", "effects", "parts", "ai")),
     ("drops", ("drops", "lore", "rewards")),
 )

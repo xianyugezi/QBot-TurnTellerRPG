@@ -196,14 +196,27 @@ def main():
                 ("conditions", []),
             ]))
     # 增量四（story 段规范化，230 面增量修正）：npc 字符串 → 对象 {id: str}；
-    # conditions 剔除空条目（quest 116 红拦清零）
+    # conditions 剔除空条目；链门控 quest_done → 框架原生 var=quest_completed 形
     for q in prev_story:
         npc = q.get("npc")
         if isinstance(npc, str) and npc.strip():
             q["npc"] = {"id": npc.strip()}
+        elif isinstance(npc, dict) and isinstance(npc.get("id"), str):
+            m2 = re.fullmatch(r"N(\d{1,2})", npc["id"].strip())
+            if m2:
+                npc["id"] = "npc_n%02d" % int(m2.group(1))
         conds = q.get("conditions")
         if isinstance(conds, list):
-            q["conditions"] = [c for c in conds if c]
+            norm = []
+            for c0 in conds:
+                if not c0:
+                    continue
+                if isinstance(c0, dict) and c0.get("op") == "quest_done":
+                    norm.append({"var": "quest_completed", "op": "eq",
+                                 "param": c0.get("value")})
+                else:
+                    norm.append(c0)
+            q["conditions"] = norm
     quests = [q for q in quests if q["main"]] + side_out + prev_story
     n_main = sum(1 for q in quests if q.get("main") is True)
     n_side = sum(1 for q in quests if q.get("id", "").startswith(("q_v_", "q_s_")))

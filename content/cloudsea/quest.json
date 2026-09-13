@@ -7595,7 +7595,7 @@
   "chapter_name": "NPC 线 N10",
   "seq": "P-10-01",
   "npc": {
-   "id": "N10",
+   "id": "npc_n10",
    "conditions": [],
    "priority": 0
   },
@@ -7614,7 +7614,7 @@
   "chapter_name": "NPC 线 N10",
   "seq": "P-10-02",
   "npc": {
-   "id": "N10",
+   "id": "npc_n10",
    "conditions": [],
    "priority": 0
   },
@@ -7623,9 +7623,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_10_01",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_10_01"
    }
   ]
  },
@@ -7639,7 +7639,7 @@
   "chapter_name": "NPC 线 N10",
   "seq": "P-10-03",
   "npc": {
-   "id": "N10",
+   "id": "npc_n10",
    "conditions": [],
    "priority": 0
   },
@@ -7648,9 +7648,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_10_02",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_10_02"
    }
   ]
  },
@@ -7664,7 +7664,7 @@
   "chapter_name": "NPC 线 N10",
   "seq": "P-10-04",
   "npc": {
-   "id": "N10",
+   "id": "npc_n10",
    "conditions": [],
    "priority": 0
   },
@@ -7673,9 +7673,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_10_03",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_10_03"
    }
   ]
  },
@@ -7689,7 +7689,7 @@
   "chapter_name": "NPC 线 N10",
   "seq": "P-10-05",
   "npc": {
-   "id": "N10",
+   "id": "npc_n10",
    "conditions": [],
    "priority": 0
   },
@@ -7698,9 +7698,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_10_04",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_10_04"
    }
   ]
  },
@@ -7714,7 +7714,7 @@
   "chapter_name": "NPC 线 N11",
   "seq": "P-11-01",
   "npc": {
-   "id": "N11",
+   "id": "npc_n11",
    "conditions": [],
    "priority": 0
   },
@@ -7733,7 +7733,7 @@
   "chapter_name": "NPC 线 N11",
   "seq": "P-11-02",
   "npc": {
-   "id": "N11",
+   "id": "npc_n11",
    "conditions": [],
    "priority": 0
   },
@@ -7742,9 +7742,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_11_01",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_11_01"
    }
   ]
  },
@@ -7758,7 +7758,7 @@
   "chapter_name": "NPC 线 N11",
   "seq": "P-11-03",
   "npc": {
-   "id": "N11",
+   "id": "npc_n11",
    "conditions": [],
    "priority": 0
   },
@@ -7767,9 +7767,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_11_02",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_11_02"
    }
   ]
  },
@@ -7783,7 +7783,7 @@
   "chapter_name": "NPC 线 N11",
   "seq": "P-11-04",
   "npc": {
-   "id": "N11",
+   "id": "npc_n11",
    "conditions": [],
    "priority": 0
   },
@@ -7792,9 +7792,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_11_03",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_11_03"
    }
   ]
  },
@@ -7808,7 +7808,7 @@
   "chapter_name": "NPC 线 N11",
   "seq": "P-11-05",
   "npc": {
-   "id": "N11",
+   "id": "npc_n11",
    "conditions": [],
    "priority": 0
   },
@@ -7817,9 +7817,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_11_04",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_11_04"
    }
   ]
  },
@@ -7833,7 +7833,7 @@
   "chapter_name": "NPC 线 N12",
   "seq": "P-12-01",
   "npc": {
-   "id": "N12",
+   "id": "npc_n12",
    "conditions": [],
    "priority": 0
   },
@@ -7852,7 +7852,7 @@
   "chapter_name": "NPC 线 N12",
   "seq": "P-12-02",
   "npc": {
-   "id": "N12",
+   "id": "npc_n12",
    "conditions": [],
    "priority": 0
   },
@@ -7861,9 +7861,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_12_01",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_12_01"
    }
   ]
  },
@@ -7877,7 +7877,7 @@
   "chapter_name": "NPC 线 N12",
   "seq": "P-12-03",
   "npc": {
-   "id": "N12",
+   "id": "npc_n12",
    "conditions": [],
    "priority": 0
   },
@@ -7886,9 +7886,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_12_02",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_12_02"
    }
   ]
  },
@@ -7902,7 +7902,7 @@
   "chapter_name": "NPC 线 N12",
   "seq": "P-12-04",
   "npc": {
-   "id": "N12",
+   "id": "npc_n12",
    "conditions": [],
    "priority": 0
   },
@@ -7911,9 +7911,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_12_03",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_12_03"
    }
   ]
  },
@@ -7927,7 +7927,7 @@
   "chapter_name": "NPC 线 N12",
   "seq": "P-12-05",
   "npc": {
-   "id": "N12",
+   "id": "npc_n12",
    "conditions": [],
    "priority": 0
   },
@@ -7936,9 +7936,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_12_04",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_12_04"
    }
   ]
  },
@@ -7952,7 +7952,7 @@
   "chapter_name": "NPC 线 N13",
   "seq": "P-13-01",
   "npc": {
-   "id": "N13",
+   "id": "npc_n13",
    "conditions": [],
    "priority": 0
   },
@@ -7971,7 +7971,7 @@
   "chapter_name": "NPC 线 N13",
   "seq": "P-13-02",
   "npc": {
-   "id": "N13",
+   "id": "npc_n13",
    "conditions": [],
    "priority": 0
   },
@@ -7980,9 +7980,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_13_01",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_13_01"
    }
   ]
  },
@@ -7996,7 +7996,7 @@
   "chapter_name": "NPC 线 N13",
   "seq": "P-13-03",
   "npc": {
-   "id": "N13",
+   "id": "npc_n13",
    "conditions": [],
    "priority": 0
   },
@@ -8005,9 +8005,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_13_02",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_13_02"
    }
   ]
  },
@@ -8021,7 +8021,7 @@
   "chapter_name": "NPC 线 N13",
   "seq": "P-13-04",
   "npc": {
-   "id": "N13",
+   "id": "npc_n13",
    "conditions": [],
    "priority": 0
   },
@@ -8030,9 +8030,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_13_03",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_13_03"
    }
   ]
  },
@@ -8046,7 +8046,7 @@
   "chapter_name": "NPC 线 N13",
   "seq": "P-13-05",
   "npc": {
-   "id": "N13",
+   "id": "npc_n13",
    "conditions": [],
    "priority": 0
   },
@@ -8055,9 +8055,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_13_04",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_13_04"
    }
   ]
  },
@@ -8071,7 +8071,7 @@
   "chapter_name": "NPC 线 N14",
   "seq": "P-14-01",
   "npc": {
-   "id": "N14",
+   "id": "npc_n14",
    "conditions": [],
    "priority": 0
   },
@@ -8090,7 +8090,7 @@
   "chapter_name": "NPC 线 N14",
   "seq": "P-14-02",
   "npc": {
-   "id": "N14",
+   "id": "npc_n14",
    "conditions": [],
    "priority": 0
   },
@@ -8099,9 +8099,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_14_01",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_14_01"
    }
   ]
  },
@@ -8115,7 +8115,7 @@
   "chapter_name": "NPC 线 N14",
   "seq": "P-14-03",
   "npc": {
-   "id": "N14",
+   "id": "npc_n14",
    "conditions": [],
    "priority": 0
   },
@@ -8124,9 +8124,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_14_02",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_14_02"
    }
   ]
  },
@@ -8140,7 +8140,7 @@
   "chapter_name": "NPC 线 N14",
   "seq": "P-14-04",
   "npc": {
-   "id": "N14",
+   "id": "npc_n14",
    "conditions": [],
    "priority": 0
   },
@@ -8149,9 +8149,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_14_03",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_14_03"
    }
   ]
  },
@@ -8165,7 +8165,7 @@
   "chapter_name": "NPC 线 N14",
   "seq": "P-14-05",
   "npc": {
-   "id": "N14",
+   "id": "npc_n14",
    "conditions": [],
    "priority": 0
   },
@@ -8174,9 +8174,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_14_04",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_14_04"
    }
   ]
  },
@@ -8190,7 +8190,7 @@
   "chapter_name": "NPC 线 N15",
   "seq": "P-15-01",
   "npc": {
-   "id": "N15",
+   "id": "npc_n15",
    "conditions": [],
    "priority": 0
   },
@@ -8209,7 +8209,7 @@
   "chapter_name": "NPC 线 N15",
   "seq": "P-15-02",
   "npc": {
-   "id": "N15",
+   "id": "npc_n15",
    "conditions": [],
    "priority": 0
   },
@@ -8218,9 +8218,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_15_01",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_15_01"
    }
   ]
  },
@@ -8234,7 +8234,7 @@
   "chapter_name": "NPC 线 N15",
   "seq": "P-15-03",
   "npc": {
-   "id": "N15",
+   "id": "npc_n15",
    "conditions": [],
    "priority": 0
   },
@@ -8243,9 +8243,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_15_02",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_15_02"
    }
   ]
  },
@@ -8259,7 +8259,7 @@
   "chapter_name": "NPC 线 N15",
   "seq": "P-15-04",
   "npc": {
-   "id": "N15",
+   "id": "npc_n15",
    "conditions": [],
    "priority": 0
   },
@@ -8268,9 +8268,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_15_03",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_15_03"
    }
   ]
  },
@@ -8284,7 +8284,7 @@
   "chapter_name": "NPC 线 N15",
   "seq": "P-15-05",
   "npc": {
-   "id": "N15",
+   "id": "npc_n15",
    "conditions": [],
    "priority": 0
   },
@@ -8293,9 +8293,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_15_04",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_15_04"
    }
   ]
  },
@@ -8309,7 +8309,7 @@
   "chapter_name": "NPC 线 N16",
   "seq": "P-16-01",
   "npc": {
-   "id": "N16",
+   "id": "npc_n16",
    "conditions": [],
    "priority": 0
   },
@@ -8328,7 +8328,7 @@
   "chapter_name": "NPC 线 N16",
   "seq": "P-16-02",
   "npc": {
-   "id": "N16",
+   "id": "npc_n16",
    "conditions": [],
    "priority": 0
   },
@@ -8337,9 +8337,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_16_01",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_16_01"
    }
   ]
  },
@@ -8353,7 +8353,7 @@
   "chapter_name": "NPC 线 N16",
   "seq": "P-16-03",
   "npc": {
-   "id": "N16",
+   "id": "npc_n16",
    "conditions": [],
    "priority": 0
   },
@@ -8362,9 +8362,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_16_02",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_16_02"
    }
   ]
  },
@@ -8378,7 +8378,7 @@
   "chapter_name": "NPC 线 N16",
   "seq": "P-16-04",
   "npc": {
-   "id": "N16",
+   "id": "npc_n16",
    "conditions": [],
    "priority": 0
   },
@@ -8387,9 +8387,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_16_03",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_16_03"
    }
   ]
  },
@@ -8403,7 +8403,7 @@
   "chapter_name": "NPC 线 N16",
   "seq": "P-16-05",
   "npc": {
-   "id": "N16",
+   "id": "npc_n16",
    "conditions": [],
    "priority": 0
   },
@@ -8412,9 +8412,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_16_04",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_16_04"
    }
   ]
  },
@@ -8428,7 +8428,7 @@
   "chapter_name": "NPC 线 N17",
   "seq": "P-17-01",
   "npc": {
-   "id": "N17",
+   "id": "npc_n17",
    "conditions": [],
    "priority": 0
   },
@@ -8447,7 +8447,7 @@
   "chapter_name": "NPC 线 N17",
   "seq": "P-17-02",
   "npc": {
-   "id": "N17",
+   "id": "npc_n17",
    "conditions": [],
    "priority": 0
   },
@@ -8456,9 +8456,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_17_01",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_17_01"
    }
   ]
  },
@@ -8472,7 +8472,7 @@
   "chapter_name": "NPC 线 N17",
   "seq": "P-17-03",
   "npc": {
-   "id": "N17",
+   "id": "npc_n17",
    "conditions": [],
    "priority": 0
   },
@@ -8481,9 +8481,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_17_02",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_17_02"
    }
   ]
  },
@@ -8497,7 +8497,7 @@
   "chapter_name": "NPC 线 N17",
   "seq": "P-17-04",
   "npc": {
-   "id": "N17",
+   "id": "npc_n17",
    "conditions": [],
    "priority": 0
   },
@@ -8506,9 +8506,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_17_03",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_17_03"
    }
   ]
  },
@@ -8522,7 +8522,7 @@
   "chapter_name": "NPC 线 N17",
   "seq": "P-17-05",
   "npc": {
-   "id": "N17",
+   "id": "npc_n17",
    "conditions": [],
    "priority": 0
   },
@@ -8531,9 +8531,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_17_04",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_17_04"
    }
   ]
  },
@@ -8547,7 +8547,7 @@
   "chapter_name": "NPC 线 N17",
   "seq": "P-17-19",
   "npc": {
-   "id": "N17",
+   "id": "npc_n17",
    "conditions": [],
    "priority": 0
   },
@@ -8556,9 +8556,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_17_05",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_17_05"
    }
   ]
  },
@@ -8572,7 +8572,7 @@
   "chapter_name": "NPC 线 N17",
   "seq": "P-17-20",
   "npc": {
-   "id": "N17",
+   "id": "npc_n17",
    "conditions": [],
    "priority": 0
   },
@@ -8581,9 +8581,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_17_19",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_17_19"
    }
   ]
  },
@@ -8597,7 +8597,7 @@
   "chapter_name": "NPC 线 N18",
   "seq": "P-18-01",
   "npc": {
-   "id": "N18",
+   "id": "npc_n18",
    "conditions": [],
    "priority": 0
   },
@@ -8616,7 +8616,7 @@
   "chapter_name": "NPC 线 N18",
   "seq": "P-18-02",
   "npc": {
-   "id": "N18",
+   "id": "npc_n18",
    "conditions": [],
    "priority": 0
   },
@@ -8625,9 +8625,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_18_01",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_18_01"
    }
   ]
  },
@@ -8641,7 +8641,7 @@
   "chapter_name": "NPC 线 N18",
   "seq": "P-18-03",
   "npc": {
-   "id": "N18",
+   "id": "npc_n18",
    "conditions": [],
    "priority": 0
   },
@@ -8650,9 +8650,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_18_02",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_18_02"
    }
   ]
  },
@@ -8666,7 +8666,7 @@
   "chapter_name": "NPC 线 N18",
   "seq": "P-18-04",
   "npc": {
-   "id": "N18",
+   "id": "npc_n18",
    "conditions": [],
    "priority": 0
   },
@@ -8675,9 +8675,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_18_03",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_18_03"
    }
   ]
  },
@@ -8691,7 +8691,7 @@
   "chapter_name": "NPC 线 N18",
   "seq": "P-18-05",
   "npc": {
-   "id": "N18",
+   "id": "npc_n18",
    "conditions": [],
    "priority": 0
   },
@@ -8700,9 +8700,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_18_04",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_18_04"
    }
   ]
  },
@@ -8716,7 +8716,7 @@
   "chapter_name": "NPC 线 N19",
   "seq": "P-19-01",
   "npc": {
-   "id": "N19",
+   "id": "npc_n19",
    "conditions": [],
    "priority": 0
   },
@@ -8735,7 +8735,7 @@
   "chapter_name": "NPC 线 N19",
   "seq": "P-19-02",
   "npc": {
-   "id": "N19",
+   "id": "npc_n19",
    "conditions": [],
    "priority": 0
   },
@@ -8744,9 +8744,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_19_01",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_19_01"
    }
   ]
  },
@@ -8760,7 +8760,7 @@
   "chapter_name": "NPC 线 N19",
   "seq": "P-19-03",
   "npc": {
-   "id": "N19",
+   "id": "npc_n19",
    "conditions": [],
    "priority": 0
   },
@@ -8769,9 +8769,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_19_02",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_19_02"
    }
   ]
  },
@@ -8785,7 +8785,7 @@
   "chapter_name": "NPC 线 N19",
   "seq": "P-19-04",
   "npc": {
-   "id": "N19",
+   "id": "npc_n19",
    "conditions": [],
    "priority": 0
   },
@@ -8794,9 +8794,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_19_03",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_19_03"
    }
   ]
  },
@@ -8810,7 +8810,7 @@
   "chapter_name": "NPC 线 N19",
   "seq": "P-19-05",
   "npc": {
-   "id": "N19",
+   "id": "npc_n19",
    "conditions": [],
    "priority": 0
   },
@@ -8819,9 +8819,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_19_04",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_19_04"
    }
   ]
  },
@@ -8835,7 +8835,7 @@
   "chapter_name": "NPC 线 N20",
   "seq": "P-20-01",
   "npc": {
-   "id": "N20",
+   "id": "npc_n20",
    "conditions": [],
    "priority": 0
   },
@@ -8854,7 +8854,7 @@
   "chapter_name": "NPC 线 N20",
   "seq": "P-20-02",
   "npc": {
-   "id": "N20",
+   "id": "npc_n20",
    "conditions": [],
    "priority": 0
   },
@@ -8863,9 +8863,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_20_01",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_20_01"
    }
   ]
  },
@@ -8879,7 +8879,7 @@
   "chapter_name": "NPC 线 N20",
   "seq": "P-20-03",
   "npc": {
-   "id": "N20",
+   "id": "npc_n20",
    "conditions": [],
    "priority": 0
   },
@@ -8888,9 +8888,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_20_02",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_20_02"
    }
   ]
  },
@@ -8904,7 +8904,7 @@
   "chapter_name": "NPC 线 N20",
   "seq": "P-20-04",
   "npc": {
-   "id": "N20",
+   "id": "npc_n20",
    "conditions": [],
    "priority": 0
   },
@@ -8913,9 +8913,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_20_03",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_20_03"
    }
   ]
  },
@@ -8929,7 +8929,7 @@
   "chapter_name": "NPC 线 N20",
   "seq": "P-20-05",
   "npc": {
-   "id": "N20",
+   "id": "npc_n20",
    "conditions": [],
    "priority": 0
   },
@@ -8938,9 +8938,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_20_04",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_20_04"
    }
   ]
  },
@@ -8954,7 +8954,7 @@
   "chapter_name": "NPC 线 N21",
   "seq": "P-21-01",
   "npc": {
-   "id": "N21",
+   "id": "npc_n21",
    "conditions": [],
    "priority": 0
   },
@@ -8973,7 +8973,7 @@
   "chapter_name": "NPC 线 N21",
   "seq": "P-21-02",
   "npc": {
-   "id": "N21",
+   "id": "npc_n21",
    "conditions": [],
    "priority": 0
   },
@@ -8982,9 +8982,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_21_01",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_21_01"
    }
   ]
  },
@@ -8998,7 +8998,7 @@
   "chapter_name": "NPC 线 N21",
   "seq": "P-21-03",
   "npc": {
-   "id": "N21",
+   "id": "npc_n21",
    "conditions": [],
    "priority": 0
   },
@@ -9007,9 +9007,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_21_02",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_21_02"
    }
   ]
  },
@@ -9023,7 +9023,7 @@
   "chapter_name": "NPC 线 N21",
   "seq": "P-21-04",
   "npc": {
-   "id": "N21",
+   "id": "npc_n21",
    "conditions": [],
    "priority": 0
   },
@@ -9032,9 +9032,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_21_03",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_21_03"
    }
   ]
  },
@@ -9048,7 +9048,7 @@
   "chapter_name": "NPC 线 N21",
   "seq": "P-21-05",
   "npc": {
-   "id": "N21",
+   "id": "npc_n21",
    "conditions": [],
    "priority": 0
   },
@@ -9057,9 +9057,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_21_04",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_21_04"
    }
   ]
  },
@@ -9073,7 +9073,7 @@
   "chapter_name": "NPC 线 N21",
   "seq": "P-21-19",
   "npc": {
-   "id": "N21",
+   "id": "npc_n21",
    "conditions": [],
    "priority": 0
   },
@@ -9082,9 +9082,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_21_05",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_21_05"
    }
   ]
  },
@@ -9098,7 +9098,7 @@
   "chapter_name": "NPC 线 N21",
   "seq": "P-21-20",
   "npc": {
-   "id": "N21",
+   "id": "npc_n21",
    "conditions": [],
    "priority": 0
   },
@@ -9107,9 +9107,9 @@
   "freq": "一次性",
   "conditions": [
    {
-    "op": "quest_done",
-    "value": "q_story_21_19",
-    "note": "链门控：前置节点完成方可接（过期分支数据驱动，零引擎 hook）"
+    "var": "quest_completed",
+    "op": "eq",
+    "param": "q_story_21_19"
    }
   ]
  }

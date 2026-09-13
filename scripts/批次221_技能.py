@@ -67,6 +67,24 @@ for card in sorted(CARDS.glob("[0-1][0-9]_*.md")):
     jid = JOB_IDS.get(name, card.stem.split("_")[-1].lower())
     n0 = len(skills)
     k = 0  # 战技序（确定性 id）
+    # §3 基础动作表：首行＝普攻（V-7 每职业恰 1 条 basic）
+    basic_rows = rows_of(section(txt, "基础动作表"))
+    if basic_rows:
+        b = basic_rows[0]
+        bname = b[0].strip("**").strip()
+        BM = parse_m(b)
+        skills.append({
+            "id": f"{jid}_basic", "name": bname, "type": "basic",
+            "kind": "damage" if BM > 0 else "utility",
+            "power": int(round(BM * 100)) or 100, "attack_type": "slash", "element": None,
+            "effects": [], "mp_cost": 0, "cooldown": 0, "tag": "none",
+            "armor": False, "interrupt": False, "chain_refs": [], "consume_marks": {},
+            "job_restrict": [jid], "job_form": None, "level": None, "hits": 1,
+            "trigger_limit": {"per_round": 10, "per_battle": 99},
+            "desc": ("基础动作（普攻锚）：" + "｜".join(b[:4]))[:200],
+            "hit_mod": 1.0, "crit_mod": 1.0, "block_mode": "auto",
+        })
+        seen[bname] = True
     # §4 战技表：主/副＝职业专属；保底＝通用池（去重）
     for cells in rows_of(section(txt, "战技表")):
         if len(cells) < 4:

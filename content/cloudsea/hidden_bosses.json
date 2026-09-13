@@ -1,0 +1,145 @@
+{
+ "meta": {
+  "batch": "十期 258 隐藏 Boss 定义（内容线1 · 2026-09-14）",
+  "口径": "隐藏 Boss＝终盘巨兽子集，不占常规遭遇位；出现需满足 hidden_condition。王骸掉落沿 $C.TIDE.SET_KING_RATE(3)。",
+  "消费方": "maps.json hidden_exits／238 验收探针"
+ },
+ "hidden_bosses": [
+  {
+   "cs_id": "cs_t1_069",
+   "name": "荫底巨枭 · 岛根",
+   "tide": 1,
+   "area": "岛根垂荫",
+   "condition": {
+    "type": "quest_done",
+    "param": "q_story_01_04"
+   },
+   "window": "常驻"
+  },
+  {
+   "cs_id": "cs_t2_068",
+   "name": "无光渊母 · 静水",
+   "tide": 2,
+   "area": "沉岛云渊",
+   "condition": {
+    "type": "time_window",
+    "param": "night"
+   },
+   "window": "夜窗限定"
+  },
+  {
+   "cs_id": "cs_t2_007",
+   "name": "汐王龟 · 满潮座",
+   "tide": 2,
+   "area": "浮滩浅礁",
+   "condition": {
+    "type": "kill_count",
+    "param": "支持怪",
+    "value": 8
+   },
+   "window": "击杀8只支持怪"
+  },
+  {
+   "cs_id": "cs_t3_088",
+   "name": "涡眼守渊者 · 沉锚",
+   "tide": 3,
+   "area": "乱涡深穴",
+   "condition": {
+    "type": "quest_done",
+    "param": "q_story_03_03"
+   },
+   "window": "常驻"
+  },
+  {
+   "cs_id": "cs_t4_008",
+   "name": "渊眼守望者 · 黯鳍",
+   "tide": 4,
+   "area": "云浪浅脊",
+   "condition": {
+    "type": "kill_count",
+    "param": "空兽",
+    "value": 12
+   },
+   "window": "击杀12只空兽"
+  },
+  {
+   "cs_id": "cs_t4_062",
+   "name": "定潮枢 · 幽核",
+   "tide": 4,
+   "area": "砧顶雷池",
+   "condition": {
+    "type": "time_window",
+    "param": "storm"
+   },
+   "window": "暴风天气限定"
+  },
+  {
+   "cs_id": "cs_t5_054",
+   "name": "静眼之底 · 未记录者",
+   "tide": 5,
+   "area": "静眼孤屿",
+   "condition": {
+    "type": "quest_done",
+    "param": "q_story_05_05"
+   },
+   "window": "常驻"
+  },
+  {
+   "cs_id": "cs_t5_056",
+   "name": "蚀纹洄游者 · 归眼",
+   "tide": 5,
+   "area": "静眼孤屿",
+   "condition": {
+    "type": "kill_count",
+    "param": "蚀纹系",
+    "value": 6
+   },
+   "window": "累计6只蚀纹系"
+  },
+  {
+   "cs_id": "cs_t6_079",
+   "name": "晖环末守 · 不归",
+   "tide": 6,
+   "area": "晖环残泊",
+   "condition": {
+    "type": "quest_done",
+    "param": "q_story_06_04"
+   },
+   "window": "常驻"
+  },
+  {
+   "cs_id": "cs_t6_007",
+   "name": "云脊老鼍 · 望乡",
+   "tide": 6,
+   "area": "薄气云脊",
+   "condition": {
+    "type": "time_window",
+    "param": "dawn"
+   },
+   "window": "晨窗限定"
+  },
+  {
+   "cs_id": "cs_t7_006",
+   "name": "渊喉回声者 · 三十年前",
+   "tide": 7,
+   "area": "渊喉回声台",
+   "condition": {
+    "type": "quest_done",
+    "param": "q_story_10_03"
+   },
+   "window": "常驻"
+  },
+  {
+   "cs_id": "cs_t7_157",
+   "name": "渊心潮根 · 未竟",
+   "tide": 7,
+   "area": "蚀渊坠城",
+   "condition": {
+    "type": "kill_count",
+    "param": "深渊系",
+    "value": 15
+   },
+   "window": "累计15只深渊系"
+  }
+ ]
+}

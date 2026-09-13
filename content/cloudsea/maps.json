@@ -511,7 +511,17 @@
     "respawn_minutes": 60
    }
   ],
-  "hidden_exits": [],
+  "hidden_exits": [
+   {
+    "to": "cs_t1_069",
+    "mode": "hidden",
+    "condition": {
+     "var": "quest_completed",
+     "op": "eq",
+     "param": "q_story_01_04"
+    }
+   }
+  ],
   "terrain": {
    "env": "浮岛底部的岛根阴影",
    "wall_tag": "F08 撞壁 terrain 标签归增量四"
@@ -764,7 +774,17 @@
     "respawn_minutes": 60
    }
   ],
-  "hidden_exits": [],
+  "hidden_exits": [
+   {
+    "to": "cs_t2_007",
+    "mode": "hidden",
+    "condition": {
+     "var": "kill_支持怪",
+     "op": "ge",
+     "param": "支持怪"
+    }
+   }
+  ],
   "terrain": {
    "env": "随潮位涨落的礁岛链 · 外围浅滩",
    "wall_tag": "F08 撞壁 terrain 标签归增量四"
@@ -1147,7 +1167,17 @@
     "respawn_minutes": 60
    }
   ],
-  "hidden_exits": [],
+  "hidden_exits": [
+   {
+    "to": "cs_t2_068",
+    "mode": "hidden",
+    "condition": {
+     "var": "kill_night",
+     "op": "ge",
+     "param": "night"
+    }
+   }
+  ],
   "terrain": {
    "env": "沉入云海的岛渊",
    "wall_tag": "F08 撞壁 terrain 标签归增量四"
@@ -1664,7 +1694,17 @@
     "respawn_minutes": 60
    }
   ],
-  "hidden_exits": [],
+  "hidden_exits": [
+   {
+    "to": "cs_t3_088",
+    "mode": "hidden",
+    "condition": {
+     "var": "quest_completed",
+     "op": "eq",
+     "param": "q_story_03_03"
+    }
+   }
+  ],
   "terrain": {
    "env": "乱流涡的涡心深穴",
    "wall_tag": "F08 撞壁 terrain 标签归增量四"
@@ -1833,7 +1873,17 @@
     "respawn_minutes": 60
    }
   ],
-  "hidden_exits": [],
+  "hidden_exits": [
+   {
+    "to": "cs_t4_008",
+    "mode": "hidden",
+    "condition": {
+     "var": "kill_空兽",
+     "op": "ge",
+     "param": "空兽"
+    }
+   }
+  ],
   "terrain": {
    "env": "巨云的浪背浅脊",
    "wall_tag": "F08 撞壁 terrain 标签归增量四"
@@ -2131,7 +2181,17 @@
     "respawn_minutes": 60
    }
   ],
-  "hidden_exits": [],
+  "hidden_exits": [
+   {
+    "to": "cs_t4_062",
+    "mode": "hidden",
+    "condition": {
+     "var": "kill_storm",
+     "op": "ge",
+     "param": "storm"
+    }
+   }
+  ],
   "terrain": {
    "env": "雷砧顶部的积雷池",
    "wall_tag": "F08 撞壁 terrain 标签归增量四"
@@ -2667,7 +2727,26 @@
     "respawn_minutes": 60
    }
   ],
-  "hidden_exits": [],
+  "hidden_exits": [
+   {
+    "to": "cs_t5_054",
+    "mode": "hidden",
+    "condition": {
+     "var": "quest_completed",
+     "op": "eq",
+     "param": "q_story_05_05"
+    }
+   },
+   {
+    "to": "cs_t5_056",
+    "mode": "hidden",
+    "condition": {
+     "var": "kill_蚀纹系",
+     "op": "ge",
+     "param": "蚀纹系"
+    }
+   }
+  ],
   "terrain": {
    "env": "气旋眼心的孤屿",
    "wall_tag": "F08 撞壁 terrain 标签归增量四"
@@ -2905,7 +2984,17 @@
     "respawn_minutes": 60
    }
   ],
-  "hidden_exits": [],
+  "hidden_exits": [
+   {
+    "to": "cs_t6_007",
+    "mode": "hidden",
+    "condition": {
+     "var": "kill_dawn",
+     "op": "ge",
+     "param": "dawn"
+    }
+   }
+  ],
   "terrain": {
    "env": "高空带的薄气云脊",
    "wall_tag": "F08 撞壁 terrain 标签归增量四"
@@ -3307,7 +3396,17 @@
     "respawn_minutes": 60
    }
   ],
-  "hidden_exits": [],
+  "hidden_exits": [
+   {
+    "to": "cs_t6_079",
+    "mode": "hidden",
+    "condition": {
+     "var": "quest_completed",
+     "op": "eq",
+     "param": "q_story_06_04"
+    }
+   }
+  ],
   "terrain": {
    "env": "晖环号最后一次出港的泊位，缆桩上还留着断缆",
    "wall_tag": "F08 撞壁 terrain 标签归增量四"
@@ -4332,7 +4431,17 @@
     "respawn_minutes": 60
    }
   ],
-  "hidden_exits": [],
+  "hidden_exits": [
+   {
+    "to": "cs_t7_157",
+    "mode": "hidden",
+    "condition": {
+     "var": "kill_深渊系",
+     "op": "ge",
+     "param": "深渊系"
+    }
+   }
+  ],
   "terrain": {
    "env": "渊心 · 坠落的文明遗迹",
    "wall_tag": "F08 撞壁 terrain 标签归增量四"
@@ -4457,7 +4566,17 @@
     "respawn_minutes": 60
    }
   ],
-  "hidden_exits": [],
+  "hidden_exits": [
+   {
+    "to": "cs_t7_006",
+    "mode": "hidden",
+    "condition": {
+     "var": "quest_completed",
+     "op": "eq",
+     "param": "q_story_10_03"
+    }
+   }
+  ],
   "terrain": {
    "env": "渊喉壁上人工凿出的平台，用来放大三十年前的求救信号",
    "wall_tag": "F08 撞壁 terrain 标签归增量四"

@@ -1092,7 +1092,9 @@ def _module_table() -> Dict[str, ModuleMeta]:
         # 一律软标注（soft_label=永不红拦）：补齐前这些键走「未知字段默认放行」，
         # 补齐后仍零新增拦截，泛型校验行为不变（type 仅供参考/渲染）。
         "brief": FieldMeta(type="str", soft_label=True),      # F29 简述（可空）
-        "detail": FieldMeta(type="str", soft_label=True),     # F30 详情（可空）
+        # 编辑器重写批2：详情 = 长文本 → 声明 multiline，编辑控件给多行输入框
+        # （纯显示维度，不影响任何校验判定；见 models.FieldMeta.multiline）。
+        "detail": FieldMeta(type="str", soft_label=True, multiline=True),  # F30 详情（可空）
         "revert_form": FieldMeta(type="bool", soft_label=True),    # 6b 还原技标记
         "derive_only": FieldMeta(type="bool", soft_label=True),    # 6b 仅派生可用
         "energy_gain": FieldMeta(type="obj", soft_label=True),     # 6c 资源轴增减

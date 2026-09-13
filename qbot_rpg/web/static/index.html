@@ -360,6 +360,9 @@ function markDirty() {
   Array.prototype.forEach.call(document.querySelectorAll(".row[data-field]"), function (row) {
     row.classList.toggle("dirty", Object.prototype.hasOwnProperty.call(draft.changes, row.dataset.field));
   });
+  Array.prototype.forEach.call(document.querySelectorAll(".item[data-id]"), function (it) {
+    it.classList.toggle("dirty", n > 0 && it.dataset.id === state.entry);
+  });
 }
 
 function discardDraft() { EditorDraft.discard(draft); markDirty(); }
@@ -504,6 +507,7 @@ function renderEntries() {
   shown.forEach(function (e) {
     var d = document.createElement("div");
     d.className = "item" + (e.id === state.entry ? " on" : "");
+    d.dataset.id = e.id;
     d.textContent = e.name;
     d.title = e.name + "  [" + e.id + "]";
     d.addEventListener("click", function () { selectEntry(e.id); });
@@ -635,8 +639,12 @@ function readonlyValue(f) {
 // ---------------------------------------------------------------------------
 // 编辑控件（只按后端 control 渲染，不认字段类型）
 // ---------------------------------------------------------------------------
+function currentFieldValue(f) {
+  return Object.prototype.hasOwnProperty.call(draft.changes, f.key) ? draft.changes[f.key] : f.value;
+}
+
 function editControl(f) {
-  var v = f.value;
+  var v = currentFieldValue(f);
   switch (f.control) {
     case "textarea":
       return '<textarea class="cta" rows="4" data-key="' + esc(f.key) + '">'
@@ -648,10 +656,11 @@ function editControl(f) {
       return '<label class="ctl-bool"><input type="checkbox" data-key="' + esc(f.key) + '"'
         + (v ? " checked" : "") + '> <span class="btxt">' + (v ? "是" : "否") + "</span></label>";
     case "select":
-      return selectHtml(f, f.enum || [], "（未选择）");
+      return selectHtml(f.key, v, f.enum || [], "（未选择）", "");
     case "ref":
-      return '<select class="cin" data-key="' + esc(f.key) + '" data-ref="' + esc(f.ref_target || "")
-        + '"><option value="">（未选择）</option></select>';
+      return selectHtml(f.key, v, [], "（未选择）",
+        ' data-ref="' + esc(f.ref_target || "") + '" data-current="'
+        + esc(v == null ? "" : v) + '"');
     case "text":
     default:
       return '<input class="cin" type="text" data-key="' + esc(f.key) + '" value="'
@@ -659,18 +668,24 @@ function editControl(f) {
   }
 }
 
-function selectHtml(f, options, placeholder) {
-  var cur = f.value == null ? "" : String(f.value);
+function selectOptions(value, options, placeholder) {
+  var cur = value == null ? "" : String(value);
   var has = options.some(function (o) { return String(o.id) === cur; });
-  var html = '<select class="cin" data-key="' + esc(f.key) + '"><option value="">'
-    + esc(placeholder) + "</option>";
+  var html = '<option value="">' + esc(placeholder) + "</option>";
   if (cur && !has) {
-    html += '<option value="' + esc(cur) + '">' + esc(cur) + "（当前值·不在候选内）</option>";
+    html += '<option value="' + esc(cur) + '" selected>' + esc(cur) + "（当前值·不在候选内）</option>";
   }
   options.forEach(function (o) {
-    html += '<option value="' + esc(o.id) + '">' + esc(o.name) + "（" + esc(o.id) + "）</option>";
+    var selected = String(o.id) === cur ? " selected" : "";
+    html += '<option value="' + esc(o.id) + '"' + selected + ">" + esc(o.name)
+      + "（" + esc(o.id) + "）</option>";
   });
-  return html + "</select>";
+  return html;
+}
+
+function selectHtml(key, value, options, placeholder, extraAttrs) {
+  return '<select class="cin" data-key="' + esc(key) + '"' + (extraAttrs || "") + ">"
+    + selectOptions(value, options, placeholder) + "</select>";
 }
 
 function bindControls() {
@@ -700,9 +715,9 @@ function bindControls() {
   Object.keys(byTarget).forEach(function (target) {
     loadRefOptions(target).then(function (opts) {
       byTarget[target].forEach(function (sel) {
-        var cur = sel.value;
-        sel.innerHTML = selectHtml({ value: cur, key: sel.dataset.key }, opts, "（未选择）")
-          .replace(/^<select[^>]*>/, "").replace(/<\/select>$/, "");
+        var cur = sel.dataset.current || "";
+        sel.innerHTML = selectOptions(cur, opts, "（未选择）");
+        sel.value = cur;  // 候选内命中；不在候选时由占位项承载
       });
     }).catch(function () { /* 候选拉取失败：保留仅当前值，不阻断编辑 */ });
   });

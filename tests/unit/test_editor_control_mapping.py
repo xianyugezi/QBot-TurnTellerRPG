@@ -17,6 +17,8 @@ import pytest
 from qbot_rpg.content.models import FieldMeta, FieldMetaTable, ModuleMeta
 from qbot_rpg.web import api
 
+CONTENT = Path(api.repo_root()) / "content"
+
 # FieldMeta.type → 期望编辑控件（唯一映射的口径断言）
 EXPECTED_CONTROL = {
     "str": "text",
@@ -116,6 +118,17 @@ def test_entry_detail_editable_flag_and_ref_target(widgets_pack: Path) -> None:
     assert by_key["l"]["editable"] is False
     assert by_key["r"]["ref_target"] == "widgets"
     assert by_key["e"]["enum"] == ["x", "y"]
+
+
+def test_real_pack_declared_multiline_renders_textarea() -> None:
+    """真实内容包中「详情」类字段由元数据声明 multiline → 编辑控件 textarea（非启发式）。"""
+    meta = api.field_meta_table().module("skills")
+    detail_meta = meta.fields["detail"]
+    assert detail_meta.multiline is True
+    eid = api.list_entries("test_demo", "skills", root=CONTENT)["entries"][0]["id"]
+    d = api.entry_detail("test_demo", "skills", eid, root=CONTENT)
+    field = next(f for f in d["fields"] if f["key"] == "detail")
+    assert field["control"] == "textarea" and field["editable"] is True
 
 
 def test_long_text_heuristic_gives_textarea(tmp_path: Path) -> None:

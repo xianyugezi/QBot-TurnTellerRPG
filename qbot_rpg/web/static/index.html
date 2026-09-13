@@ -426,6 +426,33 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
   border: var(--bw) solid var(--line-soft); background: var(--surface); padding: var(--sp-3); }
 .mrow .mkey { min-width: 140px; }
 .mrow .mval { min-width: 110px; }
+
+/* ---------- 批6：新建条目 / 删除条目 / 全局检索 ---------- */
+/* 新建入口在中栏列表上方（与搜索同区），只读身份下置灰不可用 */
+.list-tools.lt-new { padding-bottom: var(--sp-2); }
+.newbtn { width: 100%; justify-content: center; }
+.newbtn:disabled { color: var(--text-disabled); border-color: var(--line-soft); cursor: not-allowed; }
+/* 全局检索结果按模块分组：粘性分组头 + 条目行（点击跳转并切模块） */
+.gsec { padding: var(--sp-3) var(--sp-6); color: var(--text-5); font-size: var(--fs-11);
+  border-bottom: var(--bw) solid var(--line-soft); position: sticky; top: 0;
+  background: var(--bg); z-index: 1; }
+.gsec .gt { color: var(--text-3); }
+.item .idtag { color: var(--text-5); font-size: var(--fs-11); margin-left: var(--sp-4); }
+/* 新建条目的 ID 区：人话说明 + 建议 ID + 按名称生成 + 即时唯一性状态 */
+.newid { border: var(--bw) solid var(--line-strong); background: var(--surface);
+  padding: var(--sp-4) var(--sp-5); margin: var(--sp-4) var(--sp-6);
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); }
+.newid .nidlab { color: var(--text-3); }
+.newid input { flex: 1 1 180px; }
+.newid .nid-rule { color: var(--text-5); font-size: var(--fs-11); }
+.newid .nid-st { font-size: var(--fs-11); }
+.newid .nid-st.red { color: var(--danger); }
+.newid .nid-st.ok { color: var(--text-4); }
+.newid .nid-hint { flex-basis: 100%; color: var(--text-4); font-size: var(--fs-11);
+  line-height: var(--lh-ex); }
+.newfoot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3);
+  margin: var(--sp-4) var(--sp-6); }
+.newfoot .nfn { color: var(--text-5); font-size: var(--fs-11); }
 </style>
 </head>
 <body>
@@ -462,8 +489,15 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
         <span class="list-title" id="list-title">条目</span>
         <span class="list-count" id="list-count"></span>
       </div>
+      <div class="list-tools lt-new">
+        <button class="ladd newbtn" id="btn-new" type="button"
+          title="在当前模块新建一个条目：先给一个可编辑的建议 ID（即时校验唯一性），其余字段按元数据默认值初始化；创建走校验 + 原子写 + 自动备份">+ 新建条目</button>
+      </div>
       <div class="list-tools">
-        <div class="search"><input id="filter" placeholder="过滤当前列表（本地）" aria-label="过滤当前列表"></div>
+        <div class="search"><input id="filter" placeholder="过滤当前模块（按名称/ID）" aria-label="过滤当前模块（本地，按名称或 ID）"></div>
+      </div>
+      <div class="list-tools lt-g">
+        <div class="search"><input id="gfilter" placeholder="全局检索（跨模块 · 按名称/ID）" aria-label="全局检索（跨模块，按名称或 ID）"></div>
       </div>
       <div class="rows" id="rows"></div>
       <div class="list-ft"><span>无翻页 · 滚动查看</span><span class="sp" id="list-ft">共 0 条</span></div>
@@ -480,6 +514,8 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
         <button class="btn" id="btn-validate" disabled>校验</button>
         <button class="btn primary" id="btn-save" disabled>保存</button>
         <button class="btn" id="btn-cancel" disabled>取消</button>
+        <button class="btn danger" id="btn-delete" disabled
+          title="删除当前条目（二次确认；删除前自动备份，可用右侧「回退到上一份备份」恢复）">删除条目</button>
         <span class="sp"></span>
         <span class="tbnote" id="backup-note">备份：—</span>
         <button class="btn danger" id="btn-rollback" disabled>回退到上一份备份</button>
@@ -487,7 +523,7 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
       <div class="panel-body" id="p-body">
         <div class="empty">从左侧选择模块与条目。字段按内容包元数据渲染；改动先进草稿，保存时才校验并落盘。</div>
       </div>
-      <div class="panel-ft"><span>批5.2 · 视觉细则清零（行高/空值/横幅/计数口径/表头紧凑 · 悬停中文名看字段解释 · 改动先进草稿）</span></div>
+      <div class="panel-ft"><span>批6 · 新增/删除条目 + 检索（建议 ID 即时唯一性 · 删除二次确认 + 被引用黄提示 · 跨模块全局检索 · 改动先进草稿）</span></div>
     </section>
 
   </div>
@@ -905,6 +941,92 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
 });
 /* EDITOR_MAP_END */
 
+/* 批6 纯逻辑（无 DOM；浏览器挂 globalThis.EditorEntry，node 下走 module.exports）：
+ *  · 检索：按名称/ID 过滤当前模块条目；跨模块检索按模块分组（全局检索的数据源是
+ *    后端 entry-index，前端只在本地过滤，不逐键请求）。
+ *  · ID 即时校验：同模块 / 同命名空间（模块元数据声明）内重复 → 红；空/含空格斜杠 → 红。
+ *  · 人话文案：ID 规则说明、引用者「谁引用了它」。
+ * 键名与业务无关：作用域来自后端索引里的 namespace，前端不认任何业务模块/字段名。 */
+/* EDITOR_ENTRY_BEGIN */
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) { module.exports = factory(); }
+  else { root.EditorEntry = factory(); }
+})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+  function norm(v) { return v == null ? "" : String(v); }
+  function match(row, q) {
+    var e = row || {};
+    return norm(e.name).toLowerCase().indexOf(q) >= 0
+      || norm(e.id).toLowerCase().indexOf(q) >= 0;
+  }
+  // 当前模块内过滤（名称/ID 任一命中；空查询 = 原样返回）
+  function filterEntries(entries, query) {
+    var rows = entries || [];
+    var q = norm(query).trim().toLowerCase();
+    if (!q) { return rows.slice(); }
+    return rows.filter(function (e) { return match(e, q); });
+  }
+  // 跨模块检索：结果按模块分组（空查询 / 无索引 → 空）
+  function searchIndex(index, query) {
+    var q = norm(query).trim().toLowerCase();
+    if (!q) { return []; }
+    var out = [];
+    (((index || {}).modules) || []).forEach(function (m) {
+      var hits = (m.entries || []).filter(function (e) { return match(e, q); });
+      if (hits.length) { out.push({ module: m.module, label: m.label || m.module, entries: hits }); }
+    });
+    return out;
+  }
+  function searchCount(groups) {
+    return (groups || []).reduce(function (n, g) { return n + ((g.entries || []).length); }, 0);
+  }
+  function namespaceOf(index, module) {
+    var hit = ((((index || {}).modules) || []).filter(function (m) {
+      return m.module === module; })[0]);
+    return hit ? hit.namespace : null;
+  }
+  // 即时唯一性：同模块 / 同命名空间重复 → 红；空 / 含空白或斜杠 → 红。
+  function idStatus(entryId, module, index) {
+    var id = norm(entryId).trim();
+    if (!id) { return { ok: false, level: "red", message: "ID 不能为空。" }; }
+    if (/\s|\//.test(id)) {
+      return { ok: false, level: "red", message: "ID 不能含空格或斜杠。" };
+    }
+    var ns = namespaceOf(index, module);
+    var conflicts = [];
+    (((index || {}).modules) || []).forEach(function (m) {
+      (m.entries || []).forEach(function (e) {
+        if (norm(e.id) !== id) { return; }
+        if (m.module === module || (ns != null && m.namespace === ns)) {
+          conflicts.push(m.label || m.module);
+        }
+      });
+    });
+    if (conflicts.length) {
+      return { ok: false, level: "red",
+               message: "ID「" + id + "」已被占用（" + conflicts.join("、") + "）。" };
+    }
+    return { ok: true, level: "ok", message: "ID「" + id + "」可用。" };
+  }
+  // ID 规则的人话说明（规则词来自元数据；框架只在展示层做映射）
+  function ruleText(rule, prefix) {
+    var r = norm(rule);
+    var p = prefix || "前缀";
+    if (r === "slug") { return "名称转 slug（英文小写 + 下划线）"; }
+    if (r === "prefix_seq") { return "前缀 + 递增序号（如 " + p + "_1）"; }
+    return "自动：名称转 slug；取不出英文则「" + p + " + 序号」";
+  }
+  // 引用者人话：「<模块显示名>「<条目名>」的「<字段中文名>」引用了它」
+  function referrerText(r) {
+    var row = r || {};
+    var who = norm(row.module_label || row.module) + "「" + norm(row.entry_name || row.entry_id) + "」";
+    return who + "的「" + norm(row.field_label || row.field) + "」引用了它";
+  }
+  return { match: match, filterEntries: filterEntries, searchIndex: searchIndex,
+           searchCount: searchCount, idStatus: idStatus, ruleText: ruleText,
+           referrerText: referrerText };
+});
+/* EDITOR_ENTRY_END */
+
 // ---------------------------------------------------------------------------
 // 类型显示名（框架级映射，与内容包无关）：FieldMeta.type → 中文
 // ---------------------------------------------------------------------------
@@ -923,9 +1045,9 @@ var INPUT_EMPTY = "未填写";
 
 var state = {
   pack: null, modules: [], module: null, entries: [], entry: null, detail: null,
-  filter: "", role: "owner", editable: true, backup: null, fieldIndex: {},
+  filter: "", gquery: "", role: "owner", editable: true, backup: null, fieldIndex: {},
   refCache: {}, refKnown: {}, refQuery: {}, busy: false, tabs: [], forms: {},
-  pendingDrafts: {}
+  pendingDrafts: {}, entryIndex: null, newEntry: null, newDraft: null, newIdTouched: false
 };
 var draft = EditorDraft.newDraft();
 
@@ -1364,9 +1486,16 @@ function markDirty() {
   tag.textContent = n ? ("未保存改动 " + n + " 项") : "已保存";
   tag.className = "saved" + (n ? " dirty" : "");
   var has = n > 0;
-  el("btn-save").disabled = !has || !state.editable || state.busy;
-  el("btn-cancel").disabled = !has || state.busy;
-  el("btn-validate").disabled = !has || state.busy;
+  var isNew = !!state.newEntry;
+  // 新建态：主表单的校验/保存不适用（走新建面板的「创建」按钮），置灰避免误点
+  el("btn-save").disabled = !has || !state.editable || state.busy || isNew;
+  el("btn-cancel").disabled = (!has && !isNew) || state.busy;
+  el("btn-validate").disabled = !has || state.busy || isNew;
+  // 删除入口：有选中条目 + 可编辑 + 非请求中 + 非新建态
+  el("btn-delete").disabled = !state.entry || !state.editable || state.busy || isNew;
+  // 新建入口：只读身份 / 未选模块 / 请求中不可用（与批2 权限位一致）
+  el("btn-new").disabled = !state.module || !state.editable || state.busy;
+  refreshCreateButton();
   // 每个表单上下文各自标脏（主表单 + 关联分区条目；字段键只在各自上下文里比对）
   allForms().forEach(function (ctx) {
     var box = formBox(ctx);
@@ -1382,6 +1511,10 @@ function markDirty() {
 
 function discardDraft() {
   allForms().forEach(function (ctx) { EditorDraft.discard(ctx.draft); });
+  if (state.newDraft) { EditorDraft.discard(state.newDraft); }
+  // 退出新建态：主表单草稿指针还原（新建草稿已丢弃）
+  MAIN_CTX.draft = draft; MAIN_CTX.isNew = false;
+  state.newEntry = null; state.newDraft = null; state.newIdTouched = false;
   state.pendingDrafts = {};
   markDirty();
 }
@@ -1449,8 +1582,11 @@ function loadPacks() {
       discardDraft();
       state.pack = sel.value; state.module = null; state.entry = null;
       state.refCache = {}; state.refKnown = {}; state.refQuery = {};  // 换包后引用候选必须重拉
+      state.entryIndex = null; state.gquery = "";
+      el("gfilter").value = "";   // 换包后全局检索结果作废
       syncPackTitle();
       loadModules();
+      loadEntryIndex();
     });
   });
 }
@@ -1509,6 +1645,8 @@ function selectModule(mod) {
   discardDraft();
   state.result = null;
   state.module = mod; state.entry = null; state.filter = ""; el("filter").value = "";
+  // 切模块 → 全局检索范围回到「当前模块」，本地过滤也清空（避免两处查询串味）
+  state.gquery = ""; el("gfilter").value = "";
   // V4：切模块先清空备份状态 → 回退按钮立即禁用，不沿用上一模块的可用外观。
   state.backup = null;
   el("backup-note").textContent = "备份：—";
@@ -1551,10 +1689,12 @@ function loadEntries() {
 }
 
 function renderEntries() {
+  // 全局检索优先：有跨模块查询时，中栏列「按模块分组」的命中结果（点击跳转+切模块）
+  if (state.gquery) { return renderGlobalResults(); }
   var box = el("rows");
   box.innerHTML = "";
-  var q = state.filter.toLowerCase();
-  var shown = state.entries.filter(function (e) { return !q || e.name.toLowerCase().indexOf(q) >= 0; });
+  // 中栏过滤作用域写清：当前模块内，按名称或 ID 过滤（EditorEntry 纯逻辑）
+  var shown = EditorEntry.filterEntries(state.entries, state.filter);
   shown.forEach(function (e) {
     var d = document.createElement("div");
     d.className = "item" + (e.id === state.entry ? " on" : "");
@@ -1564,8 +1704,308 @@ function renderEntries() {
     d.addEventListener("click", function () { selectEntry(e.id); });
     box.appendChild(d);
   });
+  if (state.filter && !shown.length) {
+    box.innerHTML = '<div class="ex" style="padding:var(--sp-5) var(--sp-6)">'
+      + "本模块没有匹配「" + esc(state.filter) + "」的名称或 ID。</div>";
+  }
   el("list-ft").textContent = "共 " + shown.length + " 条"
     + (shown.length !== state.entries.length ? "（已过滤 / 全部 " + state.entries.length + "）" : "");
+}
+
+// 全局检索结果（跨模块；结果按模块分组，点击跳转并切换模块）
+function renderGlobalResults() {
+  var box = el("rows");
+  box.innerHTML = "";
+  var groups = EditorEntry.searchIndex(state.entryIndex, state.gquery);
+  var total = EditorEntry.searchCount(groups);
+  if (!groups.length) {
+    box.innerHTML = '<div class="ex" style="padding:var(--sp-5) var(--sp-6)">'
+      + "整包范围没有匹配「" + esc(state.gquery) + "」的名称或 ID"
+      + (state.entryIndex ? "" : "（条目索引尚未加载）") + "。</div>";
+  }
+  groups.forEach(function (g) {
+    var h = document.createElement("div");
+    h.className = "gsec";
+    h.innerHTML = '<span class="gt">' + esc(g.label) + "</span> · " + g.entries.length + " 条";
+    box.appendChild(h);
+    g.entries.forEach(function (e) {
+      var d = document.createElement("div");
+      d.className = "item" + (g.module === state.module && e.id === state.entry ? " on" : "");
+      d.dataset.id = e.id;
+      d.innerHTML = esc(e.name) + '<span class="idtag">' + esc(e.id) + "</span>";
+      d.title = (g.label ? g.label + " · " : "") + e.name + "  [" + e.id + "]（点击跳转到该模块）";
+      d.addEventListener("click", function () { jumpTo(g.module, e.id); });
+      box.appendChild(d);
+    });
+  });
+  el("list-ft").textContent = "全局命中 " + total + " 条 · 跨 " + groups.length + " 个模块";
+}
+
+// 全包条目索引（跨模块全局检索 + ID 即时唯一性校验的数据源；一次拉取，前端本地过滤）
+function loadEntryIndex() {
+  if (!state.pack) { return Promise.resolve(); }
+  return api("/api/pack/" + enc(state.pack) + "/entry-index").then(function (d) {
+    state.entryIndex = d;
+    if (state.gquery) { renderGlobalResults(); }
+    return d;
+  }).catch(function () { state.entryIndex = null; });
+}
+
+// 新建/删除后的口径一致刷新：左栏计数 + 中栏条数 + 条目索引（页签计数随条目详情重画）
+function refreshAfterMutation(newId) {
+  return loadModules()
+    .then(function () { return loadEntries(); })
+    .then(function () { return loadEntryIndex(); })
+    .then(function () {
+      if (newId && (state.entries || []).some(function (e) { return e.id === newId; })) {
+        return selectEntry(newId);
+      }
+    });
+}
+
+// ---------------------------------------------------------------------------
+// 批6 · 新建条目（模块级）：建议 ID（可编辑）+ 即时唯一性 + 元数据默认值 + 创建
+// 只读身份不可用；创建走批2 同一落盘链路（校验 → 原子写 → 自动备份 → 回退）。
+// ---------------------------------------------------------------------------
+function openNewEntry() {
+  if (!state.module) { return Promise.resolve(); }
+  if (!state.editable) {
+    window.alert("当前身份为只读预览，不能新增条目；请切换为可编辑身份后重试。");
+    return Promise.resolve();
+  }
+  if (!canLeave()) { return Promise.resolve(); }
+  discardDraft();
+  state.result = null;
+  return api("/api/pack/" + enc(state.pack) + "/module/" + enc(state.module) + "/new")
+    .then(function (d) { renderNewEntry(d); })
+    .catch(function (err) { fail("读取新建表单", err); });
+}
+
+function newIdentHtml(d) {
+  var rule = EditorEntry.ruleText((d.id_rule || {}).rule, (d.id_rule || {}).prefix);
+  return '<div class="newid">'
+    + '<span class="nidlab">条目 ' + esc(d.id_field_label || d.id_field) + "（ID）</span>"
+    + '<input class="cin" id="new-id" type="text" autocomplete="off" spellcheck="false"'
+    + ' value="' + esc(d.suggested_id || "") + '" placeholder="英文小写 + 下划线（如 sword_aura）">'
+    + '<button type="button" class="ladd" id="btn-suggest"'
+    + ' title="按元数据的 ID 规则，用当前名称生成一个不重复的建议 ID">按名称生成</button>'
+    + '<span class="nid-st" id="new-id-st"></span>'
+    + '<div class="nid-hint">' + esc(d.id_hint || "") + " 当前规则：" + esc(rule)
+    + "（建议 ID 可自由修改）。</div></div>";
+}
+
+function renderNewEntry(d) {
+  state.newEntry = d;
+  state.newDraft = EditorDraft.newDraft();
+  state.newIdTouched = false;
+  el("p-title").textContent = "新建条目 · " + (d.module_label || d.module);
+  el("p-sub").textContent = "字段按元数据默认值初始化 · 保存写入 " + d.module
+    + ".json（校验 + 原子写 + 自动备份）";
+  el("p-id").textContent = "（未保存）";
+  resetHelpCards();
+  MAIN_CTX.isNew = true;
+  MAIN_CTX.module = state.module; MAIN_CTX.entry = null;
+  MAIN_CTX.fields = d.fields || [];
+  MAIN_CTX.fieldIndex = {};
+  (d.fields || []).forEach(function (f) { MAIN_CTX.fieldIndex[f.key] = f; });
+  MAIN_CTX.draft = state.newDraft; MAIN_CTX.detail = d;
+  renderCtx = MAIN_CTX;
+  state.forms = {};
+
+  var html = '<div class="meta"><span class="mk">新建条目</span>'
+    + '<span class="mi">' + (d.field_count || 0) + " 个可初始化字段</span>"
+    + '<span class="mi">' + (d.group_count || 0) + " 个分组</span>"
+    + '<span class="mi">' + (state.editable ? "可编辑" : "只读预览") + "</span>"
+    + '<span class="src" title="元数据来源：' + esc(d.meta_source) + '">'
+    + esc(d.meta_source) + "</span></div>"
+    + '<div id="result" hidden></div>';
+  html += newIdentHtml(d);
+  html += '<div class="newfoot"><button type="button" class="btn primary" id="btn-create">创建条目</button>'
+    + '<button type="button" class="btn" id="btn-new-cancel">放弃并关闭</button>'
+    + '<span class="nfn">创建后写入该模块文件；可随时用「回退到上一份备份」撤销。</span></div>';
+
+  var groupTabs = EditorGroups.view(d.groups || [], d.fields || []);
+  state.tabs = groupTabs.map(function (g, i) {
+    return { kind: "group", idx: i, label: g.label, count: g.count, group: g };
+  });
+  if (!groupTabs.length) {
+    html += '<div class="empty">该模块没有额外字段需要初始化（按元数据只填 ID 即可创建）。</div>';
+  } else {
+    var tbar = '<div class="gtabs">';
+    groupTabs.forEach(function (g, i) {
+      tbar += '<button class="gtab' + (i === 0 ? " on" : "") + '" data-g="' + i
+        + '" title="' + esc("分组键：" + g.name) + '">' + esc(g.label)
+        + " <b>" + g.count + "</b></button>";
+    });
+    tbar += "</div>";
+    html += tbar;
+    groupTabs.forEach(function (g, i) {
+      html += '<div class="gpane"' + (i === 0 ? "" : " hidden") + ' data-g="' + i + '">'
+        + (g.empty
+          ? '<div class="gempty">该分组暂无字段（元数据声明了此分组，新建条目里没有字段落在其中）。</div>'
+          : '<div class="rows2">' + g.fields.map(fieldRow).join("") + "</div>")
+        + "</div>";
+    });
+  }
+
+  el("p-body").innerHTML = html;
+  el("p-body").dataset.fctx = "main";
+  renderCtx = MAIN_CTX;
+  bindTabs();
+  bindControls();
+  bindNewIdent();
+  bindHelp();
+  state.pendingDrafts = {};
+  markDirty();
+}
+
+function bindNewIdent() {
+  var inp = el("new-id");
+  if (inp) {
+    inp.addEventListener("input", function () {
+      state.newIdTouched = true;   // 用户手动改过 ID：不再自动跟随名称
+      updateNewIdStatus();
+    });
+  }
+  var sg = el("btn-suggest");
+  if (sg) { sg.addEventListener("click", function () { suggestIdFromName(); }); }
+  var cancel = el("btn-new-cancel");
+  if (cancel) {
+    cancel.addEventListener("click", function () {
+      if (draftCount() && !window.confirm("放弃这次新建的未保存内容并关闭吗？")) { return; }
+      discardDraft();
+      return closeNewEntry();
+    });
+  }
+  var create = el("btn-create");
+  if (create) { create.addEventListener("click", function () { createEntry(); }); }
+  // 名称字段：ID 未被手动改过时，跟随名称自动重取建议 ID（可发现、不用背规则）
+  if (state.newEntry && state.newEntry.name_field) {
+    var nf = el("p-body").querySelector('[data-key="' + state.newEntry.name_field + '"]');
+    if (nf) {
+      nf.addEventListener("input", function () {
+        if (!state.newIdTouched) { suggestIdFromName(); }
+      });
+    }
+  }
+  updateNewIdStatus();
+}
+
+function currentNewId() {
+  var inp = el("new-id");
+  var v = inp ? String(inp.value || "").trim() : "";
+  if (v) { return v; }
+  return state.newEntry ? String(state.newEntry.suggested_id || "") : "";
+}
+
+function newIdStatusNow() {
+  return EditorEntry.idStatus(currentNewId(), state.module, state.entryIndex);
+}
+
+function updateNewIdStatus() {
+  var st = newIdStatusNow();
+  var box = el("new-id-st");
+  if (box) {
+    box.textContent = st.message;
+    box.className = "nid-st " + st.level;
+  }
+  refreshCreateButton();
+  return st;
+}
+
+function refreshCreateButton() {
+  var btn = el("btn-create");
+  if (!btn) { return; }
+  var st = state.newEntry ? newIdStatusNow() : { ok: false };
+  btn.disabled = !state.editable || state.busy || !st.ok;
+}
+
+function suggestIdFromName() {
+  if (!state.newEntry) { return Promise.resolve(); }
+  var nameField = state.newEntry.name_field;
+  var nf = nameField ? el("p-body").querySelector('[data-key="' + nameField + '"]') : null;
+  var name = nf ? nf.value : "";
+  return api("/api/pack/" + enc(state.pack) + "/module/" + enc(state.module)
+    + "/suggest_id?name=" + enc(name))
+    .then(function (d) {
+      var inp = el("new-id");
+      if (inp) { inp.value = d.suggested_id || ""; }
+      state.newIdTouched = false;
+      updateNewIdStatus();
+    }).catch(function () { /* 建议失败不阻断：用户可手填 ID */ });
+}
+
+function closeNewEntry() {
+  state.newEntry = null; state.newDraft = null; state.newIdTouched = false;
+  MAIN_CTX.isNew = false; MAIN_CTX.draft = draft;
+  state.pendingDrafts = {};
+  if (state.entry) { return reloadDetail(); }
+  el("p-body").innerHTML = '<div class="empty">从左侧选择模块与条目，或用「+ 新建条目」新建一个。</div>';
+  el("p-title").textContent = "未选择条目"; el("p-sub").textContent = ""; el("p-id").textContent = "";
+  markDirty();
+  return Promise.resolve();
+}
+
+function createEntry() {
+  if (!state.newEntry || !state.editable || state.busy) { return Promise.resolve(); }
+  var st = updateNewIdStatus();
+  if (!st.ok) { window.alert(st.message); return Promise.resolve(); }
+  var eid = currentNewId();
+  var patch = EditorDraft.patch(state.newDraft);
+  setBusy(true);
+  return postJSON("/api/pack/" + enc(state.pack) + "/module/" + enc(state.module) + "/entry",
+    { entry_id: eid, patch: patch })
+    .then(function (res) {
+      state.result = res;
+      if (res.ok) {
+        state.newEntry = null; state.newDraft = null;
+        MAIN_CTX.isNew = false; MAIN_CTX.draft = draft;
+        state.pendingDrafts = {};
+        return refreshAfterMutation(eid);
+      }
+      renderResult(res);
+    }).catch(function (err) {
+      state.result = { ok: false, message: "新建请求失败：" + err.message, errors: [] };
+      renderResult(state.result);
+    }).then(function () { setBusy(false); });
+}
+
+// ---------------------------------------------------------------------------
+// 批6 · 删除条目：二次确认（人话：删哪个 / 不可撤销 / 可回退）+ 被引用检查（黄提示）
+// ---------------------------------------------------------------------------
+function deleteEntry() {
+  if (!state.entry || !state.editable || state.busy) { return Promise.resolve(); }
+  var mod = state.module, eid = state.entry;
+  var name = (state.detail && state.detail.name) || eid;
+  setBusy(true);
+  return api("/api/pack/" + enc(state.pack) + "/entry/" + enc(mod) + "/" + enc(eid) + "/refs")
+    .then(function (r) {
+      var refs = (r && r.referrers) || [];
+      var lines = refs.map(function (x) { return "· " + EditorEntry.referrerText(x); });
+      var msg = "确定删除条目「" + name + "」（" + eid + "）吗？\n\n"
+        + "删除不可撤销（内容包文件会被改写）；删除前会自动备份，"
+        + "可用「回退到上一份备份」恢复。";
+      if (refs.length) {
+        msg += "\n\n注意：有 " + refs.length + " 个条目引用了它，删除后这些引用会指向"
+          + "不存在的条目（黄提示、不拦截）：\n" + lines.slice(0, 10).join("\n")
+          + (lines.length > 10 ? "\n… 其余 " + (lines.length - 10) + " 条见删除结果" : "");
+      }
+      if (!window.confirm(msg)) { return null; }
+      return postJSON("/api/pack/" + enc(state.pack) + "/entry/" + enc(mod) + "/" + enc(eid)
+        + "/delete", {});
+    })
+    .then(function (res) {
+      if (!res) { return; }
+      state.result = res;
+      if (res.ok) {
+        state.entry = null; state.detail = null;
+        return refreshAfterMutation(null);
+      }
+      renderResult(res);
+    }).catch(function (err) {
+      state.result = { ok: false, message: "删除请求失败：" + err.message, errors: [] };
+      renderResult(state.result);
+    }).then(function () { setBusy(false); });
 }
 
 // ---------------------------------------------------------------------------
@@ -1613,6 +2053,9 @@ function refreshRollbackButton() {
 }
 
 function renderDetail(d) {
+  // 退出新建态：主表单草稿指针还原（新建草稿由 discardDraft 负责清空）
+  state.newEntry = null; state.newDraft = null; state.newIdTouched = false;
+  MAIN_CTX.isNew = false; MAIN_CTX.draft = draft;
   el("p-title").textContent = d.name;
   el("p-sub").textContent = (d.module_label || d.module) + " · 字段由元数据渲染";
   el("p-id").textContent = d.id;
@@ -1747,6 +2190,8 @@ function jumpTo(mod, entry) {
   if (!canLeave()) { return; }
   discardDraft();
   state.result = null;
+  // 从全局检索结果跳转：清掉跨模块查询，回到「当前模块」的中栏语义
+  state.gquery = ""; if (el("gfilter")) { el("gfilter").value = ""; }
   state.module = mod; state.entry = null;
   renderModules();
   var pos = findModule(mod);
@@ -2952,21 +3397,31 @@ function objTable(f) {
 el("btn-validate").addEventListener("click", runValidate);
 el("btn-save").addEventListener("click", runSave);
 el("btn-cancel").addEventListener("click", function () {
+  if (state.newEntry) {   // 新建态：取消 = 放弃并关闭（有未保存内容时二次确认）
+    if (draftCount() && !window.confirm("放弃这次新建的未保存内容并关闭吗？")) { return; }
+    discardDraft(); closeNewEntry(); return;
+  }
   if (!draftCount()) { return; }
   state.result = null; renderResult(null); discardDraft(); reloadDetail();
 });
 el("btn-rollback").addEventListener("click", runRollback);
+el("btn-delete").addEventListener("click", deleteEntry);
+el("btn-new").addEventListener("click", openNewEntry);
 el("role").addEventListener("change", function (e) { switchRole(e.target.value); });
 el("filter").addEventListener("input", function (e) {
   state.filter = e.target.value; renderEntries();
 });
+el("gfilter").addEventListener("input", function (e) {
+  state.gquery = e.target.value; renderEntries();
+});
 window.addEventListener("beforeunload", function (e) {
-  if (EditorDraft.dirty(draft)) { e.preventDefault(); e.returnValue = ""; }
+  if (draftCount() > 0) { e.preventDefault(); e.returnValue = ""; }
 });
 
 loadSession()
   .then(loadPacks)
-  .then(loadModules)
+  .then(function () { return loadModules(); })
+  .then(function () { return loadEntryIndex(); })
   .catch(function (err) { fail("初始化", err); });
 </script>
 </body>

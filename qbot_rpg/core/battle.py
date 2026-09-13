@@ -3442,6 +3442,9 @@ class BattleEngine:
         # 九期207·G1B增量（period 周期器）：环境场每 N 回合触发（寒潮 3×1,000
         # 等）——field_periods due → period_events（键缺失 → 零操作，见方法注）。
         self._tick_field_periods()
+        # 九期211（衰减/递增封顶 hook）：九态积蓄全局回合末衰减 A -= D——
+        # statuses 未装配/键缺失 → 零操作（映射表 §7 登记面）。
+        self._tick_cloudsea_ailments()
 
         # M13 6c（细化_6c §2.3 F-R2 ③ 结算边界）：换季 tick——回合结束 tick 之后、
         # 下一回合开始之前（⑥⑦ 之间挂点）。懒重读当前季节 → 差异则待结算 →

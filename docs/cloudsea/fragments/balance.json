@@ -1,11 +1,27 @@
 [
  {
+  "key": "$C.BALANCE.COMPANION_EQUIV_MAX",
+  "raw": "`0.5` / `0.7`",
+  "value": null,
+  "desc": "同行兽当量",
+  "section": "BALANCE",
+  "rule": "packed_inherit"
+ },
+ {
   "key": "$C.BALANCE.COMPANION_EQUIV_MIN",
   "raw": "`0.5` / `0.7`",
   "value": null,
   "desc": "同行兽当量",
   "section": "BALANCE",
   "rule": "citation"
+ },
+ {
+  "key": "$C.BALANCE.DPR_BAND_MAX",
+  "raw": "`0.92` / `1.08`",
+  "value": null,
+  "desc": "职业 DPR 带",
+  "section": "BALANCE",
+  "rule": "packed_inherit"
  },
  {
   "key": "$C.BALANCE.DPR_BAND_MIN",
@@ -32,38 +48,6 @@
   "rule": "fallback"
  },
  {
-  "key": "$C.BALANCE.MAX",
-  "raw": "`0.92` / `1.08`",
-  "value": null,
-  "desc": "职业 DPR 带",
-  "section": "BALANCE",
-  "rule": "fallback"
- },
- {
-  "key": "$C.BALANCE.MAX",
-  "raw": "`0.04` / `0.18`（14 职业均分 `0.0714`）",
-  "value": null,
-  "desc": "登场率",
-  "section": "BALANCE",
-  "rule": "fallback"
- },
- {
-  "key": "$C.BALANCE.MAX",
-  "raw": "`0.45` / `0.70`",
-  "value": null,
-  "desc": "本命组使用率",
-  "section": "BALANCE",
-  "rule": "fallback"
- },
- {
-  "key": "$C.BALANCE.MAX",
-  "raw": "`0.5` / `0.7`",
-  "value": null,
-  "desc": "同行兽当量",
-  "section": "BALANCE",
-  "rule": "fallback"
- },
- {
   "key": "$C.BALANCE.NEW_EVENT_TURNS",
   "raw": "`5` 回合",
   "value": null,
@@ -80,12 +64,28 @@
   "rule": "citation"
  },
  {
+  "key": "$C.BALANCE.PICK_RATE_MAX",
+  "raw": "`0.04` / `0.18`（14 职业均分 `0.0714`）",
+  "value": null,
+  "desc": "登场率",
+  "section": "BALANCE",
+  "rule": "packed_inherit"
+ },
+ {
   "key": "$C.BALANCE.PICK_RATE_MIN",
   "raw": "`0.04` / `0.18`（14 职业均分 `0.0714`）",
   "value": null,
   "desc": "登场率",
   "section": "BALANCE",
   "rule": "citation"
+ },
+ {
+  "key": "$C.BALANCE.PREFERRED_SHARE_MAX",
+  "raw": "`0.45` / `0.70`",
+  "value": null,
+  "desc": "本命组使用率",
+  "section": "BALANCE",
+  "rule": "packed_inherit"
  },
  {
   "key": "$C.BALANCE.PREFERRED_SHARE_MIN",

@@ -32,20 +32,12 @@
   "rule": "fallback"
  },
  {
-  "key": "$C.RIPOSTE.MAX",
-  "raw": "`0.55` / `0.85`",
-  "value": null,
-  "desc": "成功率区间",
-  "section": "RIPOSTE",
-  "rule": "fallback"
- },
- {
-  "key": "$C.RIPOSTE.MAX",
+  "key": "$C.RIPOSTE.NORMAL_GUARD_MAX",
   "raw": "`0.45` / `0.55`",
   "value": null,
   "desc": "常规防御受伤",
   "section": "RIPOSTE",
-  "rule": "fallback"
+  "rule": "packed_inherit"
  },
  {
   "key": "$C.RIPOSTE.NORMAL_GUARD_MIN",
@@ -78,6 +70,14 @@
   "desc": "判定基础成功率",
   "section": "RIPOSTE",
   "rule": "fallback"
+ },
+ {
+  "key": "$C.RIPOSTE.SUCCESS_MAX",
+  "raw": "`0.55` / `0.85`",
+  "value": null,
+  "desc": "成功率区间",
+  "section": "RIPOSTE",
+  "rule": "packed_inherit"
  },
  {
   "key": "$C.RIPOSTE.SUCCESS_MIN",

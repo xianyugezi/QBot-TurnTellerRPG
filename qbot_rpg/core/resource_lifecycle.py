@@ -132,6 +132,44 @@ class ResourceLifecycle:
         except (TypeError, ValueError):
             return DEFAULT_MAX
 
+    # ------------------------- 九期 212 扩展（opt-in 三缺口） -------------------------
+
+    def effective_max(self, axis_id: str, mod: int = 0) -> int:
+        """生效上限 = 注册 max + 运行时修正（九期 212「max_mod」缺口承载）。
+
+        mod 为装配层按增益/本命等运行时口径传入的加值（如诗人本命号角
+        乐章 3→4、德鲁伊共生杖孢子 3→5——`13_职业数值卡` 资源节）；
+        注册 max=0（不限）语义优先，mod 不生效。仅本方法消费 mod，
+        clamp/cap 计算不隐式读取任何全局修正（零隐藏状态）。
+        """
+        base = self._max_of(axis_id)
+        if base <= 0:
+            return base  # 0=不限：mod 不生效（保持不限语义）
+        try:
+            m = int(mod)
+        except (TypeError, ValueError):
+            m = 0
+        return max(0, base + m)
+
+    def _tick_of(self, axis_id: str) -> int:
+        """每回合自然增长值（九期 212；缺省 0=零行为；负=衰减）。"""
+        try:
+            return int(self.axis_def(axis_id).get("tick_per_round", 0))
+        except (TypeError, ValueError):
+            return 0
+
+    def _tick_floor_of(self, axis_id: str) -> int:
+        """tick 下限（衰减不破此值；缺省 0）。"""
+        try:
+            return int(self.axis_def(axis_id).get("tick_floor", 0))
+        except (TypeError, ValueError):
+            return 0
+
+    def _on_full_of(self, axis_id: str) -> str:
+        """满槽 proc 引用（缺省 ""=无满槽行为；九期 212）。"""
+        v = self.axis_def(axis_id).get("on_full")
+        return str(v) if isinstance(v, str) else ""
+
     def _pool_max_of(self, axis_id: str) -> int:
         """子池型每池上限（缺省 1；0 = 不限）。"""
         try:

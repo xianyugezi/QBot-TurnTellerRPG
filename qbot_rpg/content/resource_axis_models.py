@@ -52,6 +52,11 @@ DEFAULT_MAX: int = 100
 DEFAULT_RESET: str = RESET_BATTLE
 DEFAULT_MAX_PER_POOL: int = 3
 
+# 九期 212 扩展字段缺省（opt-in：缺省零行为）
+DEFAULT_TICK_PER_ROUND: int = 0
+DEFAULT_TICK_FLOOR: int = 0
+DEFAULT_ON_FULL: str = ""
+
 
 # =====================================================================================
 # ResourceAxisDef
@@ -140,13 +145,43 @@ class ResourceAxisDef:
         """子池型：pools 非空（D-01：数值型单值 / 子池型池级展开）。"""
         return bool(self.pools)
 
+    # ---- 九期 212 扩展字段（opt-in：缺省零行为，既有包零影响）----
+    @property
+    def tick_per_round(self) -> int:
+        """每回合自然增长（正=增长 / 负=衰减；缺省 0=零行为）。
+
+        九期批次 212「tick 自然增长」缺口承载：云海轴注册段按需携带，
+        ResourceLifecycle.tick_round_end 按本值应用（clamp [tick_floor, max]）。
+        契约依据：九期排期 §零.6（勘察 ≈21 轴三缺口之一）。
+        """
+        v = self._raw.get("tick_per_round")
+        return v if isinstance(v, int) and not isinstance(v, bool) else DEFAULT_TICK_PER_ROUND
+
+    @property
+    def tick_floor(self) -> int:
+        """tick 下限（衰减不破此值；缺省 0）。九期 212 opt-in 字段。"""
+        v = self._raw.get("tick_floor")
+        return v if isinstance(v, int) and not isinstance(v, bool) else DEFAULT_TICK_FLOOR
+
+    @property
+    def on_full(self) -> str:
+        """满槽 proc 引用（缺省 ""=无满槽行为）。
+
+        九期批次 212「满槽 on_full」缺口承载：tick/apply_gain 后达到
+        effective max 时收集 (side, axis_id, proc_id) 事件，由装配层按
+        M13 season_events/proc 同款消费；本引擎只收集不执行（零 engine
+        交叉 import）。
+        """
+        v = self._raw.get("on_full")
+        return v if isinstance(v, str) else DEFAULT_ON_FULL
+
 
 # =====================================================================================
 # 登记表（供 field_meta/校验器）
 # =====================================================================================
 
 def resource_axis_fields() -> Dict[str, FieldMeta]:
-    """M1 注册段 10 键 FieldMeta 登记表（stats.json 子条目 children 用）。"""
+    """M1 注册段 10 键＋九期 212 扩展 3 键 FieldMeta 登记表（stats.json 子条目 children 用）。"""
     return {
         "name": FieldMeta(type="str"),
         "type": FieldMeta(type="enum", enum=AXIS_TYPES, default="resource"),
@@ -158,6 +193,10 @@ def resource_axis_fields() -> Dict[str, FieldMeta]:
         "max_per_pool": FieldMeta(type="number", range_min=0, default=DEFAULT_MAX_PER_POOL),
         "pools": FieldMeta(type="list", element=FieldMeta(type="str"), soft_label=True),
         "pool_icons": FieldMeta(type="obj", soft_label=True),
+        # 九期 212 扩展（opt-in）
+        "tick_per_round": FieldMeta(type="number", default=DEFAULT_TICK_PER_ROUND),
+        "tick_floor": FieldMeta(type="number", default=DEFAULT_TICK_FLOOR),
+        "on_full": FieldMeta(type="str", soft_label=True),
     }
 
 
@@ -165,5 +204,6 @@ __all__ = [
     "AXIS_TYPES", "AXIS_TYPES_NUMERIC", "AXIS_TYPES_POOLED",
     "RESET_BATTLE", "RESET_KEEP", "RESET_BATTLE_START", "RESET_VALUES",
     "DEFAULT_BASE", "DEFAULT_MAX", "DEFAULT_RESET", "DEFAULT_MAX_PER_POOL",
+    "DEFAULT_TICK_PER_ROUND", "DEFAULT_TICK_FLOOR", "DEFAULT_ON_FULL",
     "ResourceAxisDef", "resource_axis_fields",
 ]

@@ -129,31 +129,35 @@ def resolve(rows, sections, mapping, corpus_idx):
         base = None
         for tok in toks:
             if tok.startswith("$C."):
-                base, first_full = tok, True
+                base = tok
                 break
-        prefix = ""
-        if base:
-            prefix = base[: base.rfind(".") + 1] if "." in base[3:] else "$C."
+        prefix = ("$C.%s." % primary) if not base else base[: base.rfind(".") + 1]
         prev_tail = None
         for i, tok in enumerate(toks):
             t = tok.strip()
-            if i > 0 and not t.startswith("$C.") and not t.startswith("_") and "_" in t:
+            if t.startswith("$C."):
+                prev_tail = t[3:] if "." not in t[3:] else t[3:][t[3:].rfind(".") + 1:]
+                full, rule = self_resolve(t, primary, overrides, corpus_idx, dotted_routes)
+            elif i > 0 and "_" in t and not t.startswith("_"):
                 # 独立全名续段（如 GOAL_GAP_TIERS / GOAL_STALL_BATTLES）——走自身解析
-                prev_tail = t
-                full, rule = self_resolve(t, primary, overrides, corpus_idx)
-            elif i > 0 and base:
+                prev_tail = t.split(".")[-1]
+                full, rule = self_resolve(t, primary, overrides, corpus_idx, dotted_routes)
+            elif i > 0:
+                # 打包续段：_前缀接共享词干；无下划线短尾替换父词尾段
                 if t.startswith("_"):
                     stem = prev_tail[: prev_tail.rfind("_") + 1] if prev_tail and "_" in prev_tail else (prev_tail or "")
                     tail = stem + t[1:]
                 elif prev_tail and "_" in prev_tail:
                     tail = prev_tail[: prev_tail.rfind("_") + 1] + t
                 else:
-                    tail = (prev_tail + "_" + t) if prev_tail else t
+                    tail = t
                 prev_tail = tail
                 full, rule = prefix + tail, "packed_inherit"
             else:
-                prev_tail = t.split(".")[-1] if "." in t else t
-                full, rule = self_resolve(t, primary, overrides, corpus_idx)
+                prev_tail = t.split(".")[-1]
+                full, rule = self_resolve(t, primary, overrides, corpus_idx, dotted_routes)
+            if rule == "fallback":
+                fallbacks.append(full)
             if full is None:
                 skipped.append((t, "键形不合法"))
                 continue
@@ -162,16 +166,21 @@ def resolve(rows, sections, mapping, corpus_idx):
     return keys, {"skipped": skipped, "fallbacks": fallbacks}
 
 
-def self_resolve(t, primary, overrides, corpus_idx):
-    """单 token 解析：显式/点分/覆盖/引称/主域回退"""
+def self_resolve(t, primary, overrides, corpus_idx, dotted_routes):
+    """单 token 解析：显式/点分（含路由）/覆盖/引称/主域回退"""
     if t.startswith("$C."):
         return (t if KEY_RE.match(t) else None), "explicit"
     if "." in t:
         head = t.split(".", 1)[0]
+        route = dotted_routes.get(head)
+        if head == primary or route == head:
+            return "$C." + t, "dotted"
+        if route is not None:
+            return "$C.%s.%s" % (route, t), "dotted"
         return "$C.%s.%s" % (primary, t), "dotted_fallback"
     ov = overrides.get(t)
     if ov:
-        return (ov if ov.startswith("$C.") else "$C.%s.%s" % (primary, ov)), "override"
+        return (ov if ov.startswith("$C.") else "$C." + ov), "override"
     cands = {k: v for k, v in corpus_idx.items() if k.endswith("." + t)}
     if len(cands) == 1:
         return next(iter(cands)), "citation"
@@ -228,7 +237,7 @@ def check(frags, keys, report, out_dir):
     keyset = set(k["full"] for k in keys)
     bad4 = [f["key"] for dom in frags.values() for f in dom if f["key"] not in keyset]
     a("A4 反向无造（片段键 ⊆ 解析键）", not bad4, str(bad4[:5]))
-    n_rules = sum(1 for k in keys if k["rule"] in ("explicit", "dotted", "dotted_fallback", "override", "citation", "citation_majority", "fallback"))
+    n_rules = sum(1 for k in keys if k["rule"] in ("explicit", "dotted", "dotted_fallback", "override", "citation", "citation_majority", "fallback", "packed_inherit"))
     a("A5 覆盖完备（每键恰一规则；回退 {} 未引称已旗标）".format(len(report["fallbacks"])),
       n_rules == len(keys), "rules {} / keys {}".format(n_rules, len(keys)))
     snap1 = json.dumps({d: sorted(f["key"] + "=" + f["raw"] for f in v) for d, v in frags.items()},

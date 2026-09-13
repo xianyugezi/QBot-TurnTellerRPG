@@ -1,50 +1,50 @@
 [
  {
-  "key": "$C.SLOT.SLOT.COUNT",
+  "key": "$C.SLOT.COUNT",
   "raw": "`3`",
   "value": 3,
   "desc": "槽位数",
   "section": "SLOT",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.SLOT.SLOT.INTENT_SPLIT",
+  "key": "$C.SLOT.INTENT_SPLIT",
   "raw": "意图管 2 前摇大招与阶段转换；槽管 1 前摇中小招",
   "value": null,
   "desc": "与意图预告分工",
   "section": "SLOT",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.SLOT.SLOT.REFILL",
+  "key": "$C.SLOT.REFILL",
   "raw": "牌库顶补 1 张，响应类型立即公开",
   "value": null,
   "desc": "补槽",
   "section": "SLOT",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.SLOT.SLOT.REVEAL_ON",
+  "key": "$C.SLOT.REVEAL_ON",
   "raw": "`trigger`",
   "value": null,
   "desc": "揭示时机",
   "section": "SLOT",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.SLOT.SLOT.TRIGGER_MAP",
+  "key": "$C.SLOT.TRIGGER_MAP",
   "raw": "`{攻:打出攻击类, 守:打出防御或净化, 移:位移或换目标, 部:命中指定部位, 末:本回合末自动}`",
   "value": null,
   "desc": "触发条件",
   "section": "SLOT",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.SLOT.SLOT.TRIGGER_TYPES",
+  "key": "$C.SLOT.TRIGGER_TYPES",
   "raw": "`攻 / 守 / 移 / 部 / 末`",
   "value": null,
   "desc": "响应类型枚举",
   "section": "SLOT",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  }
 ]

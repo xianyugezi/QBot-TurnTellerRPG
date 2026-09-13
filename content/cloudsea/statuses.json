@@ -1,0 +1,174 @@
+[
+ {
+  "id": "ail_corrosion",
+  "name": "腐蚀",
+  "icon": "☠️",
+  "type": "ailment",
+  "appliable_to": "enemy",
+  "polarity": "negative",
+  "threshold_T": 220,
+  "decay_D": 12,
+  "duration_turns": 6,
+  "growth_mult": 1.3,
+  "max_per_battle": 4,
+  "effect_ids": [
+   "dot_corrosion"
+  ],
+  "transpile": "DOT 每回合末 −2.0% EHP 真伤（不吃 H/E/DEF/护盾，01 §M1.6 第8步）",
+  "source": "04 §M4.1（T/D/递增/上限逐字）；出手序列≡回合（209 §六换算律）"
+ },
+ {
+  "id": "ail_paralysis",
+  "name": "麻痹",
+  "icon": "💫",
+  "type": "ailment",
+  "appliable_to": "enemy",
+  "polarity": "negative",
+  "threshold_T": 300,
+  "decay_D": 20,
+  "duration_turns": 1,
+  "growth_mult": 1.4,
+  "max_per_battle": 3,
+  "effect_ids": [
+   "paralysis_skip"
+  ],
+  "transpile": "跳过 1 次主招（控制结算归 213 战术接线）",
+  "source": "04 §M4.1（T/D/递增/上限逐字）；出手序列≡回合（209 §六换算律）"
+ },
+ {
+  "id": "ail_sleep",
+  "name": "沉眠",
+  "icon": "💤",
+  "type": "ailment",
+  "appliable_to": "enemy",
+  "polarity": "negative",
+  "threshold_T": 340,
+  "decay_D": 25,
+  "duration_turns": 2,
+  "growth_mult": 1.45,
+  "max_per_battle": 2,
+  "effect_ids": [
+   "sleep_force",
+   "sleep_wake_on_hit",
+   "mult_sleepwake"
+  ],
+  "transpile": "休眠 2 回合；醒击 ×1.60 一次；受击即醒",
+  "source": "04 §M4.1（T/D/递增/上限逐字）；出手序列≡回合（209 §六换算律）"
+ },
+ {
+  "id": "ail_detonate",
+  "name": "爆燃",
+  "icon": "💥",
+  "type": "ailment",
+  "appliable_to": "enemy",
+  "polarity": "negative",
+  "threshold_T": 260,
+  "decay_D": 15,
+  "duration_turns": 0,
+  "growth_mult": 1.25,
+  "max_per_battle": 5,
+  "effect_ids": [
+   "burst_detonate"
+  ],
+  "transpile": "瞬发 −8.0% EHP＋破坏槽 +30%；不进 Xa 加法",
+  "source": "04 §M4.1（T/D/递增/上限逐字）；出手序列≡回合（209 §六换算律）"
+ },
+ {
+  "id": "ail_armorbreak",
+  "name": "溃甲",
+  "icon": "🔓",
+  "type": "ailment",
+  "appliable_to": "enemy",
+  "polarity": "negative",
+  "threshold_T": 240,
+  "decay_D": 18,
+  "duration_turns": 5,
+  "growth_mult": 1.3,
+  "max_per_battle": 3,
+  "effect_ids": [
+   "armorbreak_def",
+   "xa_from_armorbreak"
+  ],
+  "transpile": "DEF −35%（数值 −200）＋Xa +0.25",
+  "source": "04 §M4.1（T/D/递增/上限逐字）；出手序列≡回合（209 §六换算律）"
+ },
+ {
+  "id": "ail_mire",
+  "name": "泥陷",
+  "icon": "🟤",
+  "type": "ailment",
+  "appliable_to": "enemy",
+  "polarity": "negative",
+  "threshold_T": 200,
+  "decay_D": 10,
+  "duration_turns": 4,
+  "growth_mult": 1.25,
+  "max_per_battle": 3,
+  "effect_ids": [
+   "mire_slow",
+   "xa_from_mire"
+  ],
+  "transpile": "行动降频（转译 pending 归 213）＋Xa +0.10；位移失效＝风缆消耗 +1",
+  "source": "04 §M4.1（T/D/递增/上限逐字）；出手序列≡回合（209 §六换算律）"
+ },
+ {
+  "id": "ail_frost",
+  "name": "霜缚",
+  "icon": "🧊",
+  "type": "ailment",
+  "appliable_to": "enemy",
+  "polarity": "negative",
+  "threshold_T": 280,
+  "decay_D": 22,
+  "duration_turns": 3,
+  "growth_mult": 1.35,
+  "max_per_battle": 2,
+  "effect_ids": [
+   "frost_spd",
+   "frost_freeze",
+   "xa_from_frostfreeze"
+  ],
+  "transpile": "SPD −40% 转译 pending；叠 2 层→冻结 1 回合＋Xa +0.20",
+  "source": "04 §M4.1（T/D/递增/上限逐字）；出手序列≡回合（209 §六换算律）"
+ },
+ {
+  "id": "ail_thunderstrike",
+  "name": "雷殛",
+  "icon": "🌩️",
+  "type": "ailment",
+  "appliable_to": "enemy",
+  "polarity": "negative",
+  "threshold_T": 180,
+  "decay_D": 30,
+  "duration_turns": 0,
+  "growth_mult": 1.2,
+  "max_per_battle": 4,
+  "effect_ids": [
+   "thunder_interrupt",
+   "xa_from_thunderstrike"
+  ],
+  "transpile": "作废当前前摇＋承伤 +10%＋Xa +0.10；瞬发",
+  "source": "04 §M4.1（T/D/递增/上限逐字）；出手序列≡回合（209 §六换算律）"
+ },
+ {
+  "id": "ail_winderosion",
+  "name": "风蚀",
+  "icon": "🌪️",
+  "type": "ailment",
+  "appliable_to": "enemy",
+  "polarity": "negative",
+  "threshold_T": 210,
+  "decay_D": 14,
+  "duration_turns": 4,
+  "growth_mult": 1.25,
+  "max_per_battle": 4,
+  "effect_ids": [
+   "winderoise_hit",
+   "winderoise_purge",
+   "winderoise_shield",
+   "xa_from_winderosion"
+  ],
+  "transpile": "命中 −25%＋驱散 1 层增益＋对护盾 ×1.5＋Xa +0.05",
+  "source": "04 §M4.1（T/D/递增/上限逐字）；出手序列≡回合（209 §六换算律）"
+ }
+]

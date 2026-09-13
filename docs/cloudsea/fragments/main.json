@@ -1,6 +1,6 @@
 [
  {
-  "key": "$C.MAIN.MAIN.CALIBRATION_TTK_TIER",
+  "key": "$C.MAIN.CALIBRATION_TTK_TIER",
   "raw": "`[20, 16, 13]`",
   "value": [
    "20",
@@ -9,34 +9,34 @@
   ],
   "desc": "潮根校准三段 TTK",
   "section": "MAIN",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.MAIN.MAIN.CHAPTER_BEAT",
+  "key": "$C.MAIN.CHAPTER_BEAT",
   "raw": "`{上章:0.98, 下章:1.00, 收尾章:1.02}`",
   "value": null,
   "desc": "章型拍号",
   "section": "MAIN",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.MAIN.MAIN.CHAPTER_COUNT",
+  "key": "$C.MAIN.CHAPTER_COUNT",
   "raw": "`7`",
   "value": 7,
   "desc": "主线章数",
   "section": "MAIN",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.MAIN.MAIN.CHAPTER_DPR_GROWTH",
+  "key": "$C.MAIN.CHAPTER_DPR_GROWTH",
   "raw": "`1.08`",
   "value": 1.08,
   "desc": "每章参考 DPR 成长",
   "section": "MAIN",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.MAIN.MAIN.CLEAR_STAR",
+  "key": "$C.MAIN.CLEAR_STAR",
   "raw": "`[1,4,7, 1,4,7, 1,4,7, 1,4,7, 10]`",
   "value": [
    "1",
@@ -55,66 +55,66 @@
   ],
   "desc": "各章首通星",
   "section": "MAIN",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.MAIN.MAIN.CORRIDOR_ENDLESS_START",
+  "key": "$C.MAIN.CORRIDOR_ENDLESS_START",
   "raw": "`73`",
   "value": 73,
   "desc": "蚀潮回廊无尽段起点",
   "section": "MAIN",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.MAIN.MAIN.ECHO_AFFIX_INTERVAL",
+  "key": "$C.MAIN.ECHO_AFFIX_INTERVAL",
   "raw": "`10`",
   "value": 10,
   "desc": "回响词条间隔层数",
   "section": "MAIN",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.MAIN.MAIN.FINAL_EHP",
+  "key": "$C.MAIN.FINAL_EHP",
   "raw": "`55200`",
   "value": 55200,
   "desc": "终局战 EHP",
   "section": "MAIN",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.MAIN.MAIN.MARK_MAX",
+  "key": "$C.MAIN.MARK_MAX",
   "raw": "`3`",
   "value": 3,
   "desc": "浮岛印记上限",
   "section": "MAIN",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.MAIN.MAIN.REVISIT_ENABLED",
+  "key": "$C.MAIN.REVISIT_ENABLED",
   "raw": "`true`",
   "value": null,
   "desc": "回访开关",
   "section": "MAIN",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.MAIN.MAIN.SECTION_COUNT",
+  "key": "$C.MAIN.SECTION_COUNT",
   "raw": "`13`",
   "value": 13,
   "desc": "章节节点数",
   "section": "MAIN",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.MAIN.MAIN.SIGIL_BY_BAND",
+  "key": "$C.MAIN.SIGIL_BY_BAND",
   "raw": "`{潮下:0, 潮平:1, 潮涌:2, 渊眼:3}`",
   "value": null,
   "desc": "各星段蚀纹条数",
   "section": "MAIN",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.MAIN.MAIN.SIGNATURE_BATTLES",
+  "key": "$C.MAIN.SIGNATURE_BATTLES",
   "raw": "`[6.5送别战, 第10章终战, 卡14主10潮根残响首次]`",
   "value": [
    "6.5送别战",
@@ -123,10 +123,10 @@
   ],
   "desc": "签名局清单",
   "section": "MAIN",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.MAIN.MAIN.STAGE_BASE_EHP",
+  "key": "$C.MAIN.STAGE_BASE_EHP",
   "raw": "`[12000, 17000, 24000, 34000, 46000]`",
   "value": [
    "12000",
@@ -137,18 +137,18 @@
   ],
   "desc": "五潮位基准 EHP",
   "section": "MAIN",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.MAIN.MAIN.STAGE_COUNT",
+  "key": "$C.MAIN.STAGE_COUNT",
   "raw": "`5`",
   "value": 5,
   "desc": "潮位（难度阶段）数量",
   "section": "MAIN",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.MAIN.MAIN.STAR_BANDS",
+  "key": "$C.MAIN.STAR_BANDS",
   "raw": "`[[1,3,\"潮下\"],[4,6,\"潮平\"],[7,10,\"潮涌\"]]`",
   "value": [
    "[1",
@@ -163,22 +163,22 @@
   ],
   "desc": "星段定义",
   "section": "MAIN",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.MAIN.MAIN.STAR_MAX",
+  "key": "$C.MAIN.STAR_MAX",
   "raw": "`10`",
   "value": 10,
   "desc": "星级上限",
   "section": "MAIN",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.MAIN.MAIN.STAR_STEP",
+  "key": "$C.MAIN.STAR_STEP",
   "raw": "`0.05`",
   "value": 0.05,
   "desc": "每星数值增量",
   "section": "MAIN",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  }
 ]

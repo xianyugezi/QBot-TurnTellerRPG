@@ -1,82 +1,82 @@
 [
  {
-  "key": "$C.SURGE.SURGE.BOOST_COST",
+  "key": "$C.SURGE.BOOST_COST",
   "raw": "`4`",
   "value": 4,
   "desc": "怪物消耗潮压强化",
   "section": "SURGE",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.SURGE.SURGE.BURST_MULT",
+  "key": "$C.SURGE.BURST_MULT",
   "raw": "`1.50`",
   "value": 1.5,
   "desc": "涌潮伤害倍率",
   "section": "SURGE",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.SURGE.SURGE.DECK_EXHAUST_GAIN",
+  "key": "$C.SURGE.DECK_EXHAUST_GAIN",
   "raw": "`+3`",
   "value": null,
   "desc": "招式牌库耗尽",
   "section": "SURGE",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.SURGE.SURGE.ELEM_FIRE_COMP",
+  "key": "$C.SURGE.ELEM_FIRE_COMP",
   "raw": "`1.15`",
   "value": 1.15,
   "desc": "焰属性人格补偿",
   "section": "SURGE",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.SURGE.SURGE.GAIN_PER_ROUND",
+  "key": "$C.SURGE.GAIN_PER_ROUND",
   "raw": "`+2`",
   "value": null,
   "desc": "自然增长",
   "section": "SURGE",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.SURGE.SURGE.PLAYER_GAIN",
+  "key": "$C.SURGE.PLAYER_GAIN",
   "raw": "`{绝技:+1, 蓄力:+1, 部件破坏:+1}`",
   "value": null,
   "desc": "玩家推高",
   "section": "SURGE",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.SURGE.SURGE.PLAYER_RELIEF",
+  "key": "$C.SURGE.PLAYER_RELIEF",
   "raw": "`{防御:-1, 净化:-1, 打断:-2, 倒地:-3}`",
   "value": null,
   "desc": "玩家泄压",
   "section": "SURGE",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.SURGE.SURGE.RESET_RATIO",
+  "key": "$C.SURGE.RESET_RATIO",
   "raw": "`0.30`",
   "value": 0.3,
   "desc": "涌潮后重置比例",
   "section": "SURGE",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.SURGE.SURGE.SCALE_BY_TIER",
+  "key": "$C.SURGE.SCALE_BY_TIER",
   "raw": "`{杂兽:0.35, 常规:0.60, 巨兽:1.00, 异相种:1.30, 蚀潮:1.80}`",
   "value": null,
   "desc": "威胁等级缩放",
   "section": "SURGE",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.SURGE.SURGE.THRESHOLD_BASE",
+  "key": "$C.SURGE.THRESHOLD_BASE",
   "raw": "`20`",
   "value": 20,
   "desc": "基准阈值",
   "section": "SURGE",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  }
 ]

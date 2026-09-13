@@ -1,0 +1,384 @@
+[
+ {
+  "id": "xa_singleton_rule",
+  "name": "X 单例合成规则",
+  "type": "rule",
+  "body": "多源易伤加法进同一 Xa 乘区：封顶 +0.60；Xa 上限 1.60；爆燃/腐蚀不加成；与倒地乘子相乘（上限 2.88）",
+  "source": "04 §M4.3"
+ },
+ {
+  "id": "xa_from_armorbreak",
+  "name": "溃甲易伤分量",
+  "type": "xa_add",
+  "body": {
+   "value": 0.25
+  },
+  "source": "04 §M4.3 表"
+ },
+ {
+  "id": "xa_from_frostfreeze",
+  "name": "霜缚冻结易伤分量",
+  "type": "xa_add",
+  "body": {
+   "value": 0.2
+  },
+  "source": "04 §M4.3 表"
+ },
+ {
+  "id": "xa_from_mire",
+  "name": "泥陷易伤分量",
+  "type": "xa_add",
+  "body": {
+   "value": 0.1
+  },
+  "source": "04 §M4.3 表"
+ },
+ {
+  "id": "xa_from_thunderstrike",
+  "name": "雷殛易伤分量",
+  "type": "xa_add",
+  "body": {
+   "value": 0.1
+  },
+  "source": "04 §M4.3 表"
+ },
+ {
+  "id": "xa_from_winderosion",
+  "name": "风蚀易伤分量",
+  "type": "xa_add",
+  "body": {
+   "value": 0.05
+  },
+  "source": "04 §M4.3 表"
+ },
+ {
+  "id": "mult_prone_short",
+  "name": "压制短倒地",
+  "type": "independent_mult",
+  "body": {
+   "value": 1.5
+  },
+  "source": "04 §M4.3（独立乘子）"
+ },
+ {
+  "id": "mult_prone_long",
+  "name": "长倒地",
+  "type": "independent_mult",
+  "body": {
+   "value": 1.8
+  },
+  "source": "04 §M4.3（受伤 ×1.8，意图为空）"
+ },
+ {
+  "id": "mult_sleepwake",
+  "name": "沉眠醒击",
+  "type": "independent_mult",
+  "body": {
+   "value": 1.6,
+   "once": true
+  },
+  "source": "04 §M4.3/§M4.1（只作用一次）"
+ },
+ {
+  "id": "dot_corrosion",
+  "name": "腐蚀 DOT",
+  "type": "dot",
+  "body": {
+   "pct_ehp_per_turn": 2.0,
+   "true_damage": true
+  },
+  "source": "04 §M4.1（每回合末，无视 DEF/护盾）"
+ },
+ {
+  "id": "burst_detonate",
+  "name": "爆燃瞬发",
+  "type": "burst",
+  "body": {
+   "pct_ehp": 8.0,
+   "break_slot_bonus": 0.3
+  },
+  "source": "04 §M4.1（触发即结算）"
+ },
+ {
+  "id": "armorbreak_def",
+  "name": "溃甲破防",
+  "type": "stat_down",
+  "body": {
+   "def_pct": 0.35,
+   "def_flat": 200,
+   "duration": 5
+  },
+  "source": "04 §M4.1"
+ },
+ {
+  "id": "mire_slow",
+  "name": "泥陷降频",
+  "type": "control_pending",
+  "body": {
+   "cadence": "行动条 −30%、位移失效（风缆消耗 +1）",
+   "wire_to": "213"
+  },
+  "source": "04 §M4.1；框架频率轴不搬运（209 §六）"
+ },
+ {
+  "id": "frost_spd",
+  "name": "霜缚减速",
+  "type": "control_pending",
+  "body": {
+   "cadence": "SPD −40% ≡ 出手间隔转译",
+   "wire_to": "213"
+  },
+  "source": "04 §M4.1"
+ },
+ {
+  "id": "frost_freeze",
+  "name": "霜缚冻结",
+  "type": "control",
+  "body": {
+   "stacks": 2,
+   "stun_turns": 1,
+   "taken_mult": 1.2
+  },
+  "source": "04 §M4.1（硬直态取更长不叠加）"
+ },
+ {
+  "id": "thunder_interrupt",
+  "name": "雷殛打断",
+  "type": "interrupt",
+  "body": {
+   "cancel_windup": true,
+   "taken_add": 0.1
+  },
+  "source": "04 §M4.1（瞬发）"
+ },
+ {
+  "id": "winderoise_hit",
+  "name": "风蚀削命中",
+  "type": "stat_down",
+  "body": {
+   "hit_pct": 0.25,
+   "duration": 4
+  },
+  "source": "04 §M4.1"
+ },
+ {
+  "id": "winderoise_purge",
+  "name": "风蚀驱散",
+  "type": "dispel",
+  "body": {
+   "buff_layers": 1
+  },
+  "source": "04 §M4.1"
+ },
+ {
+  "id": "winderoise_shield",
+  "name": "风蚀破盾",
+  "type": "shield_mult",
+  "body": {
+   "value": 1.5
+  },
+  "source": "04 §M4.1"
+ },
+ {
+  "id": "sleep_force",
+  "name": "沉眠强制休眠",
+  "type": "control",
+  "body": {
+   "sleep_turns": 2
+  },
+  "source": "04 §M4.1"
+ },
+ {
+  "id": "sleep_wake_on_hit",
+  "name": "沉眠受击即醒",
+  "type": "wake",
+  "body": {
+   "once": true
+  },
+  "source": "04 §M4.1"
+ },
+ {
+  "id": "paralysis_skip",
+  "name": "麻痹跳过主招",
+  "type": "control",
+  "body": {
+   "skip_main": 1,
+   "counter_exempt": true
+  },
+  "source": "04 §M4.1（反击不跳）"
+ },
+ {
+  "id": "p_poison",
+  "name": "中毒（玩家侧）",
+  "type": "dot_player",
+  "body": {
+   "pct_maxhp_per_turn": 0.02,
+   "true_damage": true,
+   "duration": 3
+  },
+  "source": "04 §M4.8 表A/12 §Z POISON_HP_PCT"
+ },
+ {
+  "id": "p_bind",
+  "name": "束缚（玩家侧）",
+  "type": "control_player",
+  "body": {
+   "lock_slots": 1,
+   "duration": 1
+  },
+  "source": "04 §M4.8 表A DUR_BIND"
+ },
+ {
+  "id": "p_slack",
+  "name": "沉滞（玩家侧）",
+  "type": "resource_player",
+  "body": {
+   "cable_cap": -1,
+   "duration": 2,
+   "floor": 0
+  },
+  "source": "04 §M4.8 表A DUR_SLACK/R-C4"
+ },
+ {
+  "id": "p_tidemark",
+  "name": "蚀印（玩家侧）",
+  "type": "independent_mult",
+  "body": {
+   "value": 1.15,
+   "duration": 2,
+   "domain": "蚀潮伤"
+  },
+  "source": "04 §M4.8 表A TIDE_MARK_MULT"
+ },
+ {
+  "id": "sym_mark",
+  "name": "共生灵标记",
+  "type": "symbiont",
+  "body": {
+   "h_equiv": 0.2,
+   "break_slot": 0.25,
+   "team_hit": 0.1,
+   "duration": 3
+  },
+  "source": "04 §M4.5（等效 H+0.20 更好打，W-03 方向性）"
+ },
+ {
+  "id": "sym_feed",
+  "name": "灵喂投喂",
+  "type": "symbiont",
+  "body": {
+   "buildup": 80,
+   "bypass_low_tier": true
+  },
+  "source": "04 §M4.5（每枚 1 次）"
+ },
+ {
+  "id": "sym_ward",
+  "name": "灵抗守式",
+  "type": "symbiont",
+  "body": {
+   "resist": 0.5,
+   "duration": 3,
+   "per_battle": 1
+  },
+  "source": "04 §M4.5/12 §Z SYMBIONT_WARD_PER_BATTLE"
+ },
+ {
+  "id": "sym_collect",
+  "name": "灵采孢子",
+  "type": "symbiont",
+  "body": {
+   "interval_turns": 2,
+   "capacity": 3
+  },
+  "source": "04 §M4.5（局末清空不入掉落池）"
+ },
+ {
+  "id": "sym_growth",
+  "name": "共生灵养成 Lv1–5",
+  "type": "symbiont",
+  "body": {
+   "interval": [
+    3,
+    1
+   ],
+   "capacity": [
+    2,
+    4
+   ],
+   "feed": [
+    60,
+    110
+   ],
+   "mark_h": [
+    0.15,
+    0.3
+   ]
+  },
+  "source": "04 §M4.5 养成段"
+ },
+ {
+  "id": "ailment_t_growth",
+  "name": "阈值递增封顶",
+  "type": "rule",
+  "body": {
+   "per_state_mult": {
+    "腐蚀": 1.3,
+    "麻痹": 1.4,
+    "沉眠": 1.45,
+    "爆燃": 1.25,
+    "溃甲": 1.3,
+    "泥陷": 1.25,
+    "霜缚": 1.35,
+    "雷殛": 1.2,
+    "风蚀": 1.25
+   },
+   "cap": 3.0
+  },
+  "source": "04 §M4.2 律2"
+ },
+ {
+  "id": "ailment_saturate",
+  "name": "饱和态",
+  "type": "rule",
+  "body": {
+   "note": "达每场上限后只结算伤害类（腐蚀/爆燃），不结算控制类"
+  },
+  "source": "04 §M4.2 律2"
+ },
+ {
+  "id": "phase_retain",
+  "name": "阶段转换积蓄遗产",
+  "type": "rule",
+  "body": {
+   "retain": 0.5,
+   "t_add": {
+    "激怒": 0.15,
+    "狂澜": 0.3
+   },
+   "control_cut_enraged": 0.5
+  },
+  "source": "04 §M4.2 律3（挂 214 phase_changed）"
+ },
+ {
+  "id": "tide_mult_gate",
+  "name": "阈值潮位乘数挂点",
+  "type": "rule",
+  "body": {
+   "key": "$C.AILMENT.TIDE_MULT",
+   "def": "√(BASE_EHP[潮]/BASE_EHP[1])",
+   "verdict": "裁决9改判 2026-09-12"
+  },
+  "source": "04 §M4.6/12 §D"
+ },
+ {
+  "id": "decay_global_turnend",
+  "name": "全局回合末衰减",
+  "type": "rule",
+  "body": {
+   "point": "tick_round_end 统一时点（211 增量裁决）；A −= D",
+   "hook": "cloudsea_ailment.py"
+  },
+  "source": "G1B 增量联动/映射表 §6.2"
+ }
+]

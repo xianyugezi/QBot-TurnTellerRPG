@@ -96,6 +96,14 @@
   "rule": "dotted_fallback"
  },
  {
+  "key": "$C.CLASS.DEPLOY_BREAK",
+  "raw": "`+40%`（本命 **+55%**）/ `×1.8`",
+  "value": null,
+  "desc": "架设态增伤 / 破坏",
+  "section": "CLASS",
+  "rule": "packed_inherit"
+ },
+ {
   "key": "$C.CLASS.DRUID.BURST_M",
   "raw": "见 `C.BREAK.SYMBIONT_BURST_M` 2.20",
   "value": null,

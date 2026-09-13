@@ -1,21 +1,5 @@
 [
  {
-  "key": "$C.GROWTH.2",
-  "raw": "`5000` / `17000` / `56000`（**2026-09-12 调整二提案1 断点化改判**，每跳 ≈×3.4；旧 `8000`/`20000`/`50000` 留档；Σ＝78,000 逐分守恒，`BREAK_GOLD_DAILY 7000` 摊销零改动）",
-  "value": null,
-  "desc": "突破费",
-  "section": "GROWTH",
-  "rule": "fallback"
- },
- {
-  "key": "$C.GROWTH.3",
-  "raw": "`5000` / `17000` / `56000`（**2026-09-12 调整二提案1 断点化改判**，每跳 ≈×3.4；旧 `8000`/`20000`/`50000` 留档；Σ＝78,000 逐分守恒，`BREAK_GOLD_DAILY 7000` 摊销零改动）",
-  "value": null,
-  "desc": "突破费",
-  "section": "GROWTH",
-  "rule": "fallback"
- },
- {
   "key": "$C.GROWTH.ARMOR_ENHANCE_MAX",
   "raw": "`10`（批次 37 申报，38/41 全库引用；「技能无用则无需强化」轻量化取舍下少用满）",
   "value": null,
@@ -62,6 +46,22 @@
   "desc": "突破费",
   "section": "GROWTH",
   "rule": "citation"
+ },
+ {
+  "key": "$C.GROWTH.ENHANCE_COST_2",
+  "raw": "`5000` / `17000` / `56000`（**2026-09-12 调整二提案1 断点化改判**，每跳 ≈×3.4；旧 `8000`/`20000`/`50000` 留档；Σ＝78,000 逐分守恒，`BREAK_GOLD_DAILY 7000` 摊销零改动）",
+  "value": null,
+  "desc": "突破费",
+  "section": "GROWTH",
+  "rule": "packed_inherit"
+ },
+ {
+  "key": "$C.GROWTH.ENHANCE_COST_3",
+  "raw": "`5000` / `17000` / `56000`（**2026-09-12 调整二提案1 断点化改判**，每跳 ≈×3.4；旧 `8000`/`20000`/`50000` 留档；Σ＝78,000 逐分守恒，`BREAK_GOLD_DAILY 7000` 摊销零改动）",
+  "value": null,
+  "desc": "突破费",
+  "section": "GROWTH",
+  "rule": "packed_inherit"
  },
  {
   "key": "$C.GROWTH.ENHANCE_MAX_LEVEL",

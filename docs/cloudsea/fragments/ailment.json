@@ -8,22 +8,6 @@
   "rule": "citation"
  },
  {
-  "key": "$C.AILMENT.IMMUNE",
-  "raw": "`1.5 / 1.0 / 0.5 / 0.25 / 0 / −1`",
-  "value": null,
-  "desc": "抗性档位",
-  "section": "AILMENT",
-  "rule": "fallback"
- },
- {
-  "key": "$C.AILMENT.NORMAL",
-  "raw": "`1.5 / 1.0 / 0.5 / 0.25 / 0 / −1`",
-  "value": null,
-  "desc": "抗性档位",
-  "section": "AILMENT",
-  "rule": "fallback"
- },
- {
   "key": "$C.AILMENT.PHASE_INHERIT",
   "raw": "`0.50`",
   "value": 0.5,
@@ -44,14 +28,6 @@
   "raw": "`0.30`",
   "value": 0.3,
   "desc": "狂澜阶段 T 提升",
-  "section": "AILMENT",
-  "rule": "fallback"
- },
- {
-  "key": "$C.AILMENT.REFLECT",
-  "raw": "`1.5 / 1.0 / 0.5 / 0.25 / 0 / −1`",
-  "value": null,
-  "desc": "抗性档位",
   "section": "AILMENT",
   "rule": "fallback"
  },
@@ -80,12 +56,44 @@
   "rule": "fallback"
  },
  {
-  "key": "$C.AILMENT.RESIST",
+  "key": "$C.AILMENT.RESIST_IMMUNE",
   "raw": "`1.5 / 1.0 / 0.5 / 0.25 / 0 / −1`",
   "value": null,
   "desc": "抗性档位",
   "section": "AILMENT",
-  "rule": "fallback"
+  "rule": "packed_inherit"
+ },
+ {
+  "key": "$C.AILMENT.RESIST_NORMAL",
+  "raw": "`1.5 / 1.0 / 0.5 / 0.25 / 0 / −1`",
+  "value": null,
+  "desc": "抗性档位",
+  "section": "AILMENT",
+  "rule": "packed_inherit"
+ },
+ {
+  "key": "$C.AILMENT.RESIST_REFLECT",
+  "raw": "`1.5 / 1.0 / 0.5 / 0.25 / 0 / −1`",
+  "value": null,
+  "desc": "抗性档位",
+  "section": "AILMENT",
+  "rule": "packed_inherit"
+ },
+ {
+  "key": "$C.AILMENT.RESIST_RESIST",
+  "raw": "`1.5 / 1.0 / 0.5 / 0.25 / 0 / −1`",
+  "value": null,
+  "desc": "抗性档位",
+  "section": "AILMENT",
+  "rule": "packed_inherit"
+ },
+ {
+  "key": "$C.AILMENT.RESIST_STRONG",
+  "raw": "`1.5 / 1.0 / 0.5 / 0.25 / 0 / −1`",
+  "value": null,
+  "desc": "抗性档位",
+  "section": "AILMENT",
+  "rule": "packed_inherit"
  },
  {
   "key": "$C.AILMENT.RESIST_WEAK",
@@ -134,14 +142,6 @@
   "desc": "`1.80`",
   "section": "AILMENT",
   "rule": "citation"
- },
- {
-  "key": "$C.AILMENT.STRONG",
-  "raw": "`1.5 / 1.0 / 0.5 / 0.25 / 0 / −1`",
-  "value": null,
-  "desc": "抗性档位",
-  "section": "AILMENT",
-  "rule": "fallback"
  },
  {
   "key": "$C.AILMENT.TIDE_MULT",

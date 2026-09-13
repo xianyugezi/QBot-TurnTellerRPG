@@ -1,42 +1,42 @@
 [
  {
-  "key": "$C.FEAT.FEAT.COUNT_PER_BATTLE",
+  "key": "$C.FEAT.COUNT_PER_BATTLE",
   "raw": "`1`",
   "value": 1,
   "desc": "每局战功数",
   "section": "FEAT",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.FEAT.FEAT.PENALTY",
+  "key": "$C.FEAT.PENALTY",
   "raw": "`0`",
   "value": 0,
   "desc": "未达成惩罚",
   "section": "FEAT",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.FEAT.FEAT.REWARD_GOLD",
+  "key": "$C.FEAT.REWARD_GOLD",
   "raw": "`+30%`",
   "value": null,
   "desc": "达成金标",
   "section": "FEAT",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.FEAT.FEAT.REWARD_MAT",
+  "key": "$C.FEAT.REWARD_MAT",
   "raw": "`×2`",
   "value": null,
   "desc": "达成素材",
   "section": "FEAT",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.FEAT.FEAT.REWARD_METER",
+  "key": "$C.FEAT.REWARD_METER",
   "raw": "`+120`",
   "value": null,
   "desc": "达成计量条",
   "section": "FEAT",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  }
 ]

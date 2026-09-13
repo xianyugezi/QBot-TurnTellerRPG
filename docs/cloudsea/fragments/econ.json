@@ -1,19 +1,27 @@
 [
  {
-  "key": "$C.ECON.2",
-  "raw": "1 枚 `×2` / 2 枚 `×3` / 3 枚 `×5`",
+  "key": "$C.ECON.ACT_ASSET_FE2",
+  "raw": "`20`/`10`/`30`/`40`",
   "value": null,
-  "desc": "档位倍率",
+  "desc": "活动资产点（港务）",
   "section": "ECON",
-  "rule": "fallback"
+  "rule": "packed_inherit"
  },
  {
-  "key": "$C.ECON.3",
-  "raw": "1 枚 `×2` / 2 枚 `×3` / 3 枚 `×5`",
+  "key": "$C.ECON.ACT_ASSET_FE3",
+  "raw": "`20`/`10`/`30`/`40`",
   "value": null,
-  "desc": "档位倍率",
+  "desc": "活动资产点（港务）",
   "section": "ECON",
-  "rule": "fallback"
+  "rule": "packed_inherit"
+ },
+ {
+  "key": "$C.ECON.ACT_ASSET_HA2",
+  "raw": "`20`/`10`/`30`/`40`",
+  "value": null,
+  "desc": "活动资产点（港务）",
+  "section": "ECON",
+  "rule": "packed_inherit"
  },
  {
   "key": "$C.ECON.ACT_ASSET_TU2",
@@ -32,12 +40,92 @@
   "rule": "citation"
  },
  {
+  "key": "$C.ECON.ACT_HONOR_FE2",
+  "raw": "`45`/`50`/`65`/`75`/`90`/`100`/`150`",
+  "value": null,
+  "desc": "赛季活动勋梯·风狂浩",
+  "section": "ECON",
+  "rule": "packed_inherit"
+ },
+ {
+  "key": "$C.ECON.ACT_HONOR_FE3",
+  "raw": "`45`/`50`/`65`/`75`/`90`/`100`/`150`",
+  "value": null,
+  "desc": "赛季活动勋梯·风狂浩",
+  "section": "ECON",
+  "rule": "packed_inherit"
+ },
+ {
+  "key": "$C.ECON.ACT_HONOR_HA1",
+  "raw": "`45`/`50`/`65`/`75`/`90`/`100`/`150`",
+  "value": null,
+  "desc": "赛季活动勋梯·风狂浩",
+  "section": "ECON",
+  "rule": "packed_inherit"
+ },
+ {
+  "key": "$C.ECON.ACT_HONOR_HA2",
+  "raw": "`45`/`50`/`65`/`75`/`90`/`100`/`150`",
+  "value": null,
+  "desc": "赛季活动勋梯·风狂浩",
+  "section": "ECON",
+  "rule": "packed_inherit"
+ },
+ {
+  "key": "$C.ECON.ACT_HONOR_KU1",
+  "raw": "`45`/`50`/`65`/`75`/`90`/`100`/`150`",
+  "value": null,
+  "desc": "赛季活动勋梯·风狂浩",
+  "section": "ECON",
+  "rule": "packed_inherit"
+ },
+ {
+  "key": "$C.ECON.ACT_HONOR_KU2",
+  "raw": "`45`/`50`/`65`/`75`/`90`/`100`/`150`",
+  "value": null,
+  "desc": "赛季活动勋梯·风狂浩",
+  "section": "ECON",
+  "rule": "packed_inherit"
+ },
+ {
+  "key": "$C.ECON.ACT_HONOR_NU1",
+  "raw": "`20`/`20`/`30`/`55`/`35`",
+  "value": null,
+  "desc": "赛季活动勋梯·湍怒",
+  "section": "ECON",
+  "rule": "packed_inherit"
+ },
+ {
+  "key": "$C.ECON.ACT_HONOR_NU2",
+  "raw": "`20`/`20`/`30`/`55`/`35`",
+  "value": null,
+  "desc": "赛季活动勋梯·湍怒",
+  "section": "ECON",
+  "rule": "packed_inherit"
+ },
+ {
+  "key": "$C.ECON.ACT_HONOR_NU3",
+  "raw": "`20`/`20`/`30`/`55`/`35`",
+  "value": null,
+  "desc": "赛季活动勋梯·湍怒",
+  "section": "ECON",
+  "rule": "packed_inherit"
+ },
+ {
   "key": "$C.ECON.ACT_HONOR_TU1",
   "raw": "`20`/`20`/`30`/`55`/`35`",
   "value": null,
   "desc": "赛季活动勋梯·湍怒",
   "section": "ECON",
   "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.ACT_HONOR_TU2",
+  "raw": "`20`/`20`/`30`/`55`/`35`",
+  "value": null,
+  "desc": "赛季活动勋梯·湍怒",
+  "section": "ECON",
+  "rule": "packed_inherit"
  },
  {
   "key": "$C.ECON.APPRAISAL_FEE",
@@ -106,6 +194,44 @@
   "desc": "金币消耗侧日均四口",
   "section": "ECON",
   "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.DROP_TIDE_MULT_RARE",
+  "raw": "`[1.00, 1.12, 1.20, 1.32]` / `[1.00, 1.125, 1.375, 1.50]` / `[1.00, 1.00, 1.25, 1.50]`",
+  "value": [
+   "1.00",
+   "1.12",
+   "1.20",
+   "1.32]` / `[1.00",
+   "1.125",
+   "1.375",
+   "1.50]` / `[1.00",
+   "1.00",
+   "1.25",
+   "1.50"
+  ],
+  "desc": "掉率带潮位分层乘区",
+  "section": "ECON",
+  "rule": "packed_inherit"
+ },
+ {
+  "key": "$C.ECON.DROP_TIDE_MULT_RELIC",
+  "raw": "`[1.00, 1.12, 1.20, 1.32]` / `[1.00, 1.125, 1.375, 1.50]` / `[1.00, 1.00, 1.25, 1.50]`",
+  "value": [
+   "1.00",
+   "1.12",
+   "1.20",
+   "1.32]` / `[1.00",
+   "1.125",
+   "1.375",
+   "1.50]` / `[1.00",
+   "1.00",
+   "1.25",
+   "1.50"
+  ],
+  "desc": "掉率带潮位分层乘区",
+  "section": "ECON",
+  "rule": "packed_inherit"
  },
  {
   "key": "$C.ECON.DROP_TIDE_MULT_UNCOMMON",
@@ -197,22 +323,6 @@
   "desc": "经验不吃丰饶符",
   "section": "ECON",
   "rule": "citation"
- },
- {
-  "key": "$C.ECON.FE2",
-  "raw": "`45`/`50`/`65`/`75`/`90`/`100`/`150`",
-  "value": null,
-  "desc": "赛季活动勋梯·风狂浩",
-  "section": "ECON",
-  "rule": "fallback"
- },
- {
-  "key": "$C.ECON.FE3",
-  "raw": "`45`/`50`/`65`/`75`/`90`/`100`/`150`",
-  "value": null,
-  "desc": "赛季活动勋梯·风狂浩",
-  "section": "ECON",
-  "rule": "fallback"
  },
  {
   "key": "$C.ECON.FORGE_CAP_QUENCH_FEE",
@@ -399,22 +509,6 @@
   "rule": "citation"
  },
  {
-  "key": "$C.ECON.HA1",
-  "raw": "`45`/`50`/`65`/`75`/`90`/`100`/`150`",
-  "value": null,
-  "desc": "赛季活动勋梯·风狂浩",
-  "section": "ECON",
-  "rule": "fallback"
- },
- {
-  "key": "$C.ECON.HA2",
-  "raw": "`45`/`50`/`65`/`75`/`90`/`100`/`150`",
-  "value": null,
-  "desc": "赛季活动勋梯·风狂浩",
-  "section": "ECON",
-  "rule": "fallback"
- },
- {
   "key": "$C.ECON.HARVEST_BASE",
   "raw": "`3`（部件破坏另必掉 1，`03` §M3.1）",
   "value": null,
@@ -435,22 +529,6 @@
   "raw": "`{部件≥2处:0.40, <2处:0.20}`",
   "value": null,
   "desc": "追加剥取掷率",
-  "section": "ECON",
-  "rule": "fallback"
- },
- {
-  "key": "$C.ECON.KU1",
-  "raw": "`45`/`50`/`65`/`75`/`90`/`100`/`150`",
-  "value": null,
-  "desc": "赛季活动勋梯·风狂浩",
-  "section": "ECON",
-  "rule": "fallback"
- },
- {
-  "key": "$C.ECON.KU2",
-  "raw": "`45`/`50`/`65`/`75`/`90`/`100`/`150`",
-  "value": null,
-  "desc": "赛季活动勋梯·风狂浩",
   "section": "ECON",
   "rule": "fallback"
  },
@@ -511,30 +589,6 @@
   "rule": "fallback"
  },
  {
-  "key": "$C.ECON.NU1",
-  "raw": "`20`/`20`/`30`/`55`/`35`",
-  "value": null,
-  "desc": "赛季活动勋梯·湍怒",
-  "section": "ECON",
-  "rule": "fallback"
- },
- {
-  "key": "$C.ECON.NU2",
-  "raw": "`20`/`20`/`30`/`55`/`35`",
-  "value": null,
-  "desc": "赛季活动勋梯·湍怒",
-  "section": "ECON",
-  "rule": "fallback"
- },
- {
-  "key": "$C.ECON.NU3",
-  "raw": "`20`/`20`/`30`/`55`/`35`",
-  "value": null,
-  "desc": "赛季活动勋梯·湍怒",
-  "section": "ECON",
-  "rule": "fallback"
- },
- {
   "key": "$C.ECON.PARTY_DROP_ROLL_BONUS",
   "raw": "`1` 次（≥2 人即得、不随人数增减）/ `{杂兽:COMMON, 常规:COMMON, 巨兽:UNCOMMON, 异相种:RARE, 蚀潮:RARE}`",
   "value": null,
@@ -549,6 +603,22 @@
   "desc": "多人固定加骰",
   "section": "ECON",
   "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.PITY_SHAPE_AWAKEN",
+  "raw": "封印核＝递进三阶（基率 0.02、第 10 空轮起 0.04、第 20 空轮起 0.06、硬保底 30）/ 觉醒硬核＝软提升 `p(k)=0.02×(1+0.10×(k−1))`＋硬保底 30 / 典录域引信物＝硬保底 **18**＋域链第 1 环后 10 场掉率 ×2",
+  "value": null,
+  "desc": "RELIC 三系保底形态",
+  "section": "ECON",
+  "rule": "packed_inherit"
+ },
+ {
+  "key": "$C.ECON.PITY_SHAPE_CODEX",
+  "raw": "封印核＝递进三阶（基率 0.02、第 10 空轮起 0.04、第 20 空轮起 0.06、硬保底 30）/ 觉醒硬核＝软提升 `p(k)=0.02×(1+0.10×(k−1))`＋硬保底 30 / 典录域引信物＝硬保底 **18**＋域链第 1 环后 10 场掉率 ×2",
+  "value": null,
+  "desc": "RELIC 三系保底形态",
+  "section": "ECON",
+  "rule": "packed_inherit"
  },
  {
   "key": "$C.ECON.PITY_SHAPE_SEAL",
@@ -732,6 +802,14 @@
   "rule": "fallback"
  },
  {
+  "key": "$C.ECON.SIGIL_OUTLET_AWAKEN_WEEKLY_BOX",
+  "raw": "`2` 符/场（醒神符阵：素材/结晶类结算质量 75%→90%）/ `8` 符→潮息补给箱（周限 1）/ 周上限 `12` 粉（溢出 1:1 转风核晶粉）",
+  "value": null,
+  "desc": "丰饶符低频三出口",
+  "section": "ECON",
+  "rule": "packed_inherit"
+ },
+ {
   "key": "$C.ECON.SIGIL_OVERFLOW_POWDER_CAP",
   "raw": "`2` 符/场（醒神符阵：素材/结晶类结算质量 75%→90%）/ `8` 符→潮息补给箱（周限 1）/ 周上限 `12` 粉（溢出 1:1 转风核晶粉）",
   "value": null,
@@ -746,6 +824,22 @@
   "desc": "档位倍率",
   "section": "ECON",
   "rule": "citation"
+ },
+ {
+  "key": "$C.ECON.SIGIL_TIER_2",
+  "raw": "1 枚 `×2` / 2 枚 `×3` / 3 枚 `×5`",
+  "value": null,
+  "desc": "档位倍率",
+  "section": "ECON",
+  "rule": "packed_inherit"
+ },
+ {
+  "key": "$C.ECON.SIGIL_TIER_3",
+  "raw": "1 枚 `×2` / 2 枚 `×3` / 3 枚 `×5`",
+  "value": null,
+  "desc": "档位倍率",
+  "section": "ECON",
+  "rule": "packed_inherit"
  },
  {
   "key": "$C.ECON.STAGE_GOLD_DAILY",
@@ -812,14 +906,6 @@
   "rule": "fallback"
  },
  {
-  "key": "$C.ECON.TU2",
-  "raw": "`20`/`20`/`30`/`55`/`35`",
-  "value": null,
-  "desc": "赛季活动勋梯·湍怒",
-  "section": "ECON",
-  "rule": "fallback"
- },
- {
   "key": "$C.ECON.VOUCHER_RARE_FACE",
   "raw": "`1`（任选 1 枚 RARE 0.08 带素材）",
   "value": null,
@@ -864,92 +950,6 @@
   "raw": "`顺/平/逆 = 30/40/30`",
   "value": null,
   "desc": "风势三档权重",
-  "section": "ECON",
-  "rule": "fallback"
- },
- {
-  "key": "$C.ECON._AWAKEN",
-  "raw": "封印核＝递进三阶（基率 0.02、第 10 空轮起 0.04、第 20 空轮起 0.06、硬保底 30）/ 觉醒硬核＝软提升 `p(k)=0.02×(1+0.10×(k−1))`＋硬保底 30 / 典录域引信物＝硬保底 **18**＋域链第 1 环后 10 场掉率 ×2",
-  "value": null,
-  "desc": "RELIC 三系保底形态",
-  "section": "ECON",
-  "rule": "fallback"
- },
- {
-  "key": "$C.ECON._CODEX",
-  "raw": "封印核＝递进三阶（基率 0.02、第 10 空轮起 0.04、第 20 空轮起 0.06、硬保底 30）/ 觉醒硬核＝软提升 `p(k)=0.02×(1+0.10×(k−1))`＋硬保底 30 / 典录域引信物＝硬保底 **18**＋域链第 1 环后 10 场掉率 ×2",
-  "value": null,
-  "desc": "RELIC 三系保底形态",
-  "section": "ECON",
-  "rule": "fallback"
- },
- {
-  "key": "$C.ECON._FE2",
-  "raw": "`20`/`10`/`30`/`40`",
-  "value": null,
-  "desc": "活动资产点（港务）",
-  "section": "ECON",
-  "rule": "fallback"
- },
- {
-  "key": "$C.ECON._FE3",
-  "raw": "`20`/`10`/`30`/`40`",
-  "value": null,
-  "desc": "活动资产点（港务）",
-  "section": "ECON",
-  "rule": "fallback"
- },
- {
-  "key": "$C.ECON._HA2",
-  "raw": "`20`/`10`/`30`/`40`",
-  "value": null,
-  "desc": "活动资产点（港务）",
-  "section": "ECON",
-  "rule": "fallback"
- },
- {
-  "key": "$C.ECON._RARE",
-  "raw": "`[1.00, 1.12, 1.20, 1.32]` / `[1.00, 1.125, 1.375, 1.50]` / `[1.00, 1.00, 1.25, 1.50]`",
-  "value": [
-   "1.00",
-   "1.12",
-   "1.20",
-   "1.32]` / `[1.00",
-   "1.125",
-   "1.375",
-   "1.50]` / `[1.00",
-   "1.00",
-   "1.25",
-   "1.50"
-  ],
-  "desc": "掉率带潮位分层乘区",
-  "section": "ECON",
-  "rule": "fallback"
- },
- {
-  "key": "$C.ECON._RELIC",
-  "raw": "`[1.00, 1.12, 1.20, 1.32]` / `[1.00, 1.125, 1.375, 1.50]` / `[1.00, 1.00, 1.25, 1.50]`",
-  "value": [
-   "1.00",
-   "1.12",
-   "1.20",
-   "1.32]` / `[1.00",
-   "1.125",
-   "1.375",
-   "1.50]` / `[1.00",
-   "1.00",
-   "1.25",
-   "1.50"
-  ],
-  "desc": "掉率带潮位分层乘区",
-  "section": "ECON",
-  "rule": "fallback"
- },
- {
-  "key": "$C.ECON._WEEKLY_BOX",
-  "raw": "`2` 符/场（醒神符阵：素材/结晶类结算质量 75%→90%）/ `8` 符→潮息补给箱（周限 1）/ 周上限 `12` 粉（溢出 1:1 转风核晶粉）",
-  "value": null,
-  "desc": "丰饶符低频三出口",
   "section": "ECON",
   "rule": "fallback"
  }

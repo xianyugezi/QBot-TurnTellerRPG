@@ -8,6 +8,22 @@
   "rule": "explicit"
  },
  {
+  "key": "$C.FORTUNE.BLESS_MAJOR",
+  "raw": "`−2` / `−4` / `−6`",
+  "value": null,
+  "desc": "喜事消除 小/中/大",
+  "section": "FORTUNE",
+  "rule": "packed_inherit"
+ },
+ {
+  "key": "$C.FORTUNE.BLESS_MID",
+  "raw": "`−2` / `−4` / `−6`",
+  "value": null,
+  "desc": "喜事消除 小/中/大",
+  "section": "FORTUNE",
+  "rule": "packed_inherit"
+ },
+ {
   "key": "$C.FORTUNE.BLESS_MINOR",
   "raw": "`−2` / `−4` / `−6`",
   "value": null,
@@ -144,6 +160,22 @@
   "rule": "explicit"
  },
  {
+  "key": "$C.FORTUNE.MISFORTUNE_MAJOR",
+  "raw": "`+4` / `+8` / `+12`",
+  "value": null,
+  "desc": "厄运积累 小/中/大",
+  "section": "FORTUNE",
+  "rule": "packed_inherit"
+ },
+ {
+  "key": "$C.FORTUNE.MISFORTUNE_MID",
+  "raw": "`+4` / `+8` / `+12`",
+  "value": null,
+  "desc": "厄运积累 小/中/大",
+  "section": "FORTUNE",
+  "rule": "packed_inherit"
+ },
+ {
   "key": "$C.FORTUNE.MISFORTUNE_MINOR",
   "raw": "`+4` / `+8` / `+12`",
   "value": null,
@@ -172,38 +204,6 @@
   "raw": "`强化/淬火/突破；峰章叙事；战斗内 DDA；MYTH 偏置；回响重铸；丰饶符；牌组调度序`",
   "value": null,
   "desc": "不入表面清单",
-  "section": "FORTUNE",
-  "rule": "explicit"
- },
- {
-  "key": "$C.FORTUNE._MAJOR",
-  "raw": "`+4` / `+8` / `+12`",
-  "value": null,
-  "desc": "厄运积累 小/中/大",
-  "section": "FORTUNE",
-  "rule": "explicit"
- },
- {
-  "key": "$C.FORTUNE._MAJOR",
-  "raw": "`−2` / `−4` / `−6`",
-  "value": null,
-  "desc": "喜事消除 小/中/大",
-  "section": "FORTUNE",
-  "rule": "explicit"
- },
- {
-  "key": "$C.FORTUNE._MID",
-  "raw": "`+4` / `+8` / `+12`",
-  "value": null,
-  "desc": "厄运积累 小/中/大",
-  "section": "FORTUNE",
-  "rule": "explicit"
- },
- {
-  "key": "$C.FORTUNE._MID",
-  "raw": "`−2` / `−4` / `−6`",
-  "value": null,
-  "desc": "喜事消除 小/中/大",
   "section": "FORTUNE",
   "rule": "explicit"
  }

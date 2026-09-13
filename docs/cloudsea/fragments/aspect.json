@@ -1,59 +1,59 @@
 [
  {
-  "key": "$C.ASPECT.ASPECT.COMBO_MAX",
+  "key": "$C.ASPECT.COMBO_MAX",
   "raw": "`2`",
   "value": 2,
   "desc": "一只怪可挂人格数",
   "section": "ASPECT",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.ASPECT.ASPECT.COUNT",
+  "key": "$C.ASPECT.COUNT",
   "raw": "`7`",
   "value": 7,
   "desc": "人格数量",
   "section": "ASPECT",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.ASPECT.ASPECT.EMBER_DOT",
+  "key": "$C.ASPECT.EMBER_DOT",
   "raw": "`0.015` EHP / 回合，持续 `3` 回合",
   "value": null,
   "desc": "余烬真伤",
   "section": "ASPECT",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.ASPECT.ASPECT.FROST_REGROW",
+  "key": "$C.ASPECT.FROST_REGROW",
   "raw": "`3`",
   "value": 3,
   "desc": "结霜复原回合",
   "section": "ASPECT",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.ASPECT.ASPECT.HARDEN_FULL",
+  "key": "$C.ASPECT.HARDEN_FULL",
   "raw": "`3`",
   "value": 3,
   "desc": "硬化轨满值",
   "section": "ASPECT",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.ASPECT.ASPECT.PRISM_ROUNDS",
+  "key": "$C.ASPECT.PRISM_ROUNDS",
   "raw": "`2`",
   "value": 2,
   "desc": "棱镜判定窗口",
   "section": "ASPECT",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
-  "key": "$C.ASPECT.ASPECT.THUNDER_FULL",
+  "key": "$C.ASPECT.THUNDER_FULL",
   "raw": "`5`",
   "value": 5,
   "desc": "蓄电轨满值",
   "section": "ASPECT",
-  "rule": "dotted_fallback"
+  "rule": "dotted"
  },
  {
   "key": "$C.ASPECT.属性",

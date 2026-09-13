@@ -37,7 +37,7 @@
   "value": null,
   "desc": "目标插顶判定",
   "section": "DECK",
-  "rule": "explicit"
+  "rule": "citation"
  },
  {
   "key": "$C.DECK.GUIDE_TOP_ONCE",

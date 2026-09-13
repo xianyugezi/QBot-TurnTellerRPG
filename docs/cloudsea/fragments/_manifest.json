@@ -23,7 +23,7 @@
   },
   "BREAK": {
    "file": "break.json",
-   "keys": 29
+   "keys": 28
   },
   "RIPOSTE": {
    "file": "riposte.json",
@@ -55,7 +55,7 @@
   },
   "CLASS": {
    "file": "class.json",
-   "keys": 19
+   "keys": 20
   },
   "MAIN": {
    "file": "main.json",

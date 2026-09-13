@@ -1,0 +1,35 @@
+{
+ "_meta": {
+  "batch": "九期批次 235 经济配置直载",
+  "note": "丰饶符结算乘区/计量条个人化/巨兽窗日窗——全部键引 12 号既有键零新值；消费面归 238 验收探针与运行时装配（0 引擎 hook）。"
+ },
+ "sigil_mult": {
+  "note": "丰饶符只乘产出三口子结算（06 §M6.2.3：制造不是产出结算，炼金不吃符）",
+  "applies_to": [
+   "$C.ECON.SALVAGE_GOLD_DAILY",
+   "$C.ECON.STAGE_GOLD_DAILY",
+   "$C.ECON.SALVAGE_SELL_DAILY"
+  ],
+  "key": "$C.ECON.SIGIL_MULT"
+ },
+ "sigil_daily": {
+  "grant_per_game_day": 6,
+  "miss_refill_next_day": true,
+  "note": "215H 游戏日改写：丰饶符每游戏日 6 枚、漏发次日补"
+ },
+ "meter_personal": {
+  "note": "计量条个人化（G5 任务书；$C.METER.* 键域 12 §G）",
+  "key_domain": "$C.METER"
+ },
+ "beast_window": {
+  "windows_per_day": 1,
+  "note": "215H：巨兽三窗收敛每日 1 窗；窗＝游戏日全天（每窗 120 分钟语料删）"
+ },
+ "material_daily_rotation": {
+  "formula": "D % 7",
+  "note": "215H：素材本 D%7 轮换（D＝游戏日号，游戏日模型归 215H/合成时钟）"
+ },
+ "feeding_per_game_day": 3,
+ "fragment_per_game_week": 3,
+ "anomaly_per_game_week": 2
+}

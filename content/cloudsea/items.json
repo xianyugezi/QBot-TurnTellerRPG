@@ -1,0 +1,191 @@
+[
+ {
+  "id": "cs_mat_001",
+  "name": "王鳞",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[锚面：王骸线料（`06_` §二·王骸料规则；典录/王骸素材锚）]"
+ },
+ {
+  "id": "cs_mat_002",
+  "name": "王髓",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[锚面：王骸线料（`06_` §二·王骸料规则）]"
+ },
+ {
+  "id": "cs_mat_003",
+  "name": "王核",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[锚面：王骸线料（`06_` §二·王骸料规则）]"
+ },
+ {
+  "id": "cs_mat_004",
+  "name": "月蚀晶核",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[锚面：流派专械素材（`01_基础与专械` §三）]"
+ },
+ {
+  "id": "cs_mat_005",
+  "name": "熔焰果",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[锚面：炼金主原料·温性（`19_/01_配方总表` §一）]"
+ },
+ {
+  "id": "cs_mat_006",
+  "name": "垂荫蕈",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[锚面：炼金草药（`19_/01_配方总表` §一）]"
+ },
+ {
+  "id": "cs_mat_007",
+  "name": "露水芹",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[锚面：炼金草药（`19_/01_配方总表` §一）]"
+ },
+ {
+  "id": "cs_mat_008",
+  "name": "澄露花",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[锚面：炼金草药（`19_/01_配方总表` §一）]"
+ },
+ {
+  "id": "cs_mat_009",
+  "name": "岩薯",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[锚面：喂食食材/炼金主原料（`19_/01_配方总表` §一）]"
+ },
+ {
+  "id": "cs_mat_010",
+  "name": "霞浆果",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[锚面：喂食食材/炼金主原料（`19_/01_配方总表` §一）]"
+ },
+ {
+  "id": "cs_mat_011",
+  "name": "云英米",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[锚面：喂食食材/炼金主原料（`19_/01_配方总表` §一）]"
+ },
+ {
+  "id": "cs_mat_012",
+  "name": "烬壳果",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[锚面：喂食食材/炼金主原料（`19_/01_配方总表` §一）]"
+ },
+ {
+  "id": "cs_mat_013",
+  "name": "风核果",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[锚面：喂食食材/炼金主原料（`19_/01_配方总表` §一）]"
+ },
+ {
+  "id": "cs_mat_014",
+  "name": "银穗米",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[锚面：喂食食材/炼金主原料（`19_/01_配方总表` §一）]"
+ },
+ {
+  "id": "cs_mat_015",
+  "name": "晶麦",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[锚面：喂食食材/炼金主原料（`19_/01_配方总表` §一）]"
+ },
+ {
+  "id": "cs_mat_016",
+  "name": "雾蔗",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[锚面：喂食食材/炼金主原料（`19_/01_配方总表` §一）]"
+ },
+ {
+  "id": "cs_mat_017",
+  "name": "清灵露",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[锚面：炼金溶剂·载体（`19_/01_配方总表` §一）]"
+ },
+ {
+  "id": "cs_mat_018",
+  "name": "潮澄清液",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[锚面：炼金潮性载体（`19_/01_配方总表` §一）]"
+ },
+ {
+  "id": "cs_mat_019",
+  "name": "腺凝液",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[锚面：炼金腺质载体（`19_/01_配方总表` §一）]"
+ },
+ {
+  "id": "cs_mat_020",
+  "name": "凝风液",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[锚面：炼金材料（`19_/01_配方总表` §二·补2 C-02）]"
+ },
+ {
+  "id": "cs_mat_021",
+  "name": "骨粉",
+  "type": "material",
+  "price": 0,
+  "effects": [],
+  "usable": false,
+  "desc": "[锚面：炼金材料（`19_/01_配方总表` §二·补2 C-01）]"
+ }
+]

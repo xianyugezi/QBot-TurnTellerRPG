@@ -1,0 +1,1812 @@
+{
+ "_meta": {
+  "batch": "九期批次 235 炼金与经济配置",
+  "source": "19_炼金系统/01_配方总表.md（逐字直载零自拟）",
+  "counts": {
+   "recipes": 86,
+   "depth1": 42,
+   "depth2": 14
+  },
+  "note": "任务书预估 126 条，实库 142（R 86＋C 2＋AD 42＋AD2 14）按实库直载登记；键引用 $C.ALCHEMY.* 沿 12 号 §W（233 expand_consts 消费）。"
+ },
+ "recipes": [
+  {
+   "id": "R-01",
+   "name": "焰愈药剂",
+   "tier": "Ⅰ",
+   "craft_lv": 3,
+   "materials": "熔焰果×2＋清灵露×1",
+   "effect": "回复 600",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "任",
+   "deep_ref": "AD-001"
+  },
+  {
+   "id": "R-02",
+   "name": "澄露饮",
+   "tier": "Ⅰ",
+   "craft_lv": 1,
+   "materials": "澄露花×1＋清灵露×1",
+   "effect": "回复 250",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "任（引导）",
+   "deep_ref": null
+  },
+  {
+   "id": "R-03",
+   "name": "蕈露膏",
+   "tier": "Ⅰ",
+   "craft_lv": 1,
+   "materials": "垂荫蕈×2＋清灵露×1",
+   "effect": "回复 300",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "任",
+   "deep_ref": null
+  },
+  {
+   "id": "R-04",
+   "name": "霞浆蜜饮",
+   "tier": "Ⅰ",
+   "craft_lv": 2,
+   "materials": "霞浆果×2＋潮澄清液×1",
+   "effect": "回复 350",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "任",
+   "deep_ref": "AD-002"
+  },
+  {
+   "id": "R-05",
+   "name": "云英米露",
+   "tier": "Ⅰ",
+   "craft_lv": 2,
+   "materials": "云英米×2＋腺凝液×1",
+   "effect": "回复 400",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "掉",
+   "deep_ref": null
+  },
+  {
+   "id": "R-06",
+   "name": "浓愈合剂",
+   "tier": "Ⅱ",
+   "craft_lv": 4,
+   "materials": "熔焰果×3＋清灵露×1＋蒸馏柴×1",
+   "effect": "回复 700",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "掉",
+   "deep_ref": null
+  },
+  {
+   "id": "R-07",
+   "name": "云腴复原汤",
+   "tier": "Ⅱ",
+   "craft_lv": 4,
+   "materials": "云腴肉×2＋潮澄清液×1＋垂荫蕈×1",
+   "effect": "回复 650",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "任",
+   "deep_ref": "AD-003"
+  },
+  {
+   "id": "R-08",
+   "name": "岩髓固元膏",
+   "tier": "Ⅱ",
+   "craft_lv": 5,
+   "materials": "岩薯×2＋骨粉×1＋熔浆露×1",
+   "effect": "回复 750",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "掉",
+   "deep_ref": null
+  },
+  {
+   "id": "R-09",
+   "name": "风核回春露",
+   "tier": "Ⅱ",
+   "craft_lv": 5,
+   "materials": "风核果×2＋凝风液×1",
+   "effect": "回复 800",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "掉",
+   "deep_ref": "AD-004"
+  },
+  {
+   "id": "R-10",
+   "name": "霜纹再生剂",
+   "tier": "Ⅲ",
+   "craft_lv": 8,
+   "materials": "霜纹肉×1＋潮澄清液×1＋催化晶种×1",
+   "effect": "回复 1,200",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "典",
+   "deep_ref": "AD-005"
+  },
+  {
+   "id": "R-11",
+   "name": "晶麦全愈剂",
+   "tier": "Ⅲ",
+   "craft_lv": 8,
+   "materials": "晶麦×3＋清灵露×2＋滤羽×1",
+   "effect": "回复 1,100",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "掉",
+   "deep_ref": "AD-006"
+  },
+  {
+   "id": "R-12",
+   "name": "银穗续命露",
+   "tier": "Ⅲ",
+   "craft_lv": 9,
+   "materials": "银穗米×3＋腺凝液×2＋催化晶种×1",
+   "effect": "回复 1,400",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "典",
+   "deep_ref": null
+  },
+  {
+   "id": "R-13",
+   "name": "风缆露",
+   "tier": "Ⅰ",
+   "craft_lv": 2,
+   "materials": "露水芹×1＋凝风液×1",
+   "effect": "风缆 +1",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "任",
+   "deep_ref": null
+  },
+  {
+   "id": "R-14",
+   "name": "云汽饮",
+   "tier": "Ⅰ",
+   "craft_lv": 2,
+   "materials": "雾蔗×1＋凝风液×1",
+   "effect": "风缆 +1",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "任",
+   "deep_ref": null
+  },
+  {
+   "id": "R-15",
+   "name": "双缆合剂",
+   "tier": "Ⅱ",
+   "craft_lv": 4,
+   "materials": "风核果×2＋凝风液×1",
+   "effect": "风缆 +2",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "掉",
+   "deep_ref": "AD-007"
+  },
+  {
+   "id": "R-16",
+   "name": "缆池扩充剂",
+   "tier": "Ⅱ",
+   "craft_lv": 5,
+   "materials": "风核果×2＋潮澄清液×1＋坩埚坯×1",
+   "effect": "风缆上限 +1（当战）",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "掉",
+   "deep_ref": "AD-008"
+  },
+  {
+   "id": "R-17",
+   "name": "回缆蜜露",
+   "tier": "Ⅱ",
+   "craft_lv": 4,
+   "materials": "霞浆果×2＋腺凝液×1",
+   "effect": "风缆 +1＋命中回缆 +1",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "任",
+   "deep_ref": null
+  },
+  {
+   "id": "R-18",
+   "name": "潮能补给露",
+   "tier": "Ⅱ",
+   "craft_lv": 4,
+   "materials": "岩腱肉×1＋清灵露×1",
+   "effect": "风缆 +2＋回复 300",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "掉",
+   "deep_ref": "AD-009"
+  },
+  {
+   "id": "R-19",
+   "name": "云帆汽剂",
+   "tier": "Ⅱ",
+   "craft_lv": 5,
+   "materials": "凝风液×2＋风核果×1",
+   "effect": "风缆 +2",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "任",
+   "deep_ref": null
+  },
+  {
+   "id": "R-20",
+   "name": "长航合剂",
+   "tier": "Ⅲ",
+   "craft_lv": 7,
+   "materials": "风核果×3＋凝风液×2＋蜜蜡封膜×1",
+   "effect": "风缆 +3",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "典",
+   "deep_ref": "AD-010"
+  },
+  {
+   "id": "R-21",
+   "name": "破锭剂",
+   "tier": "Ⅰ",
+   "craft_lv": 2,
+   "materials": "烬壳果×2＋骨粉×1",
+   "effect": "部位破坏蓄积 +40",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "任",
+   "deep_ref": null
+  },
+  {
+   "id": "R-22",
+   "name": "压锚剂",
+   "tier": "Ⅰ",
+   "craft_lv": 2,
+   "materials": "岩薯×1＋骨粉×1",
+   "effect": "压制积蓄 +40",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "任",
+   "deep_ref": null
+  },
+  {
+   "id": "R-23",
+   "name": "裂隙引信",
+   "tier": "Ⅰ",
+   "craft_lv": 3,
+   "materials": "烬壳果×1＋风核晶粉×1",
+   "effect": "部位破坏蓄积 +50",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "掉",
+   "deep_ref": null
+  },
+  {
+   "id": "R-24",
+   "name": "绝能引",
+   "tier": "Ⅰ",
+   "craft_lv": 3,
+   "materials": "霞浆果×1＋风核晶粉×1",
+   "effect": "绝技充能 +15",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "任",
+   "deep_ref": null
+  },
+  {
+   "id": "R-25",
+   "name": "碎甲蚀剂",
+   "tier": "Ⅱ",
+   "craft_lv": 4,
+   "materials": "熔焰果×2＋骨粉×1＋蜜蜡封膜×1",
+   "effect": "部位破坏蓄积 +80",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "掉",
+   "deep_ref": "AD-011"
+  },
+  {
+   "id": "R-26",
+   "name": "重锚压浆",
+   "tier": "Ⅱ",
+   "craft_lv": 5,
+   "materials": "岩腱肉×2＋骨粉×1",
+   "effect": "压制积蓄 +75",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "掉",
+   "deep_ref": "AD-012"
+  },
+  {
+   "id": "R-27",
+   "name": "绝焰触媒",
+   "tier": "Ⅱ",
+   "craft_lv": 4,
+   "materials": "熔焰果×2＋风核晶粉×1",
+   "effect": "绝技充能 +25",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "任",
+   "deep_ref": "AD-013"
+  },
+  {
+   "id": "R-28",
+   "name": "破竹浸剂",
+   "tier": "Ⅱ",
+   "craft_lv": 5,
+   "materials": "雷脊肉×1＋烬壳果×2",
+   "effect": "部位破坏蓄积 +85",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "掉",
+   "deep_ref": null
+  },
+  {
+   "id": "R-29",
+   "name": "崩锤浓缩剂",
+   "tier": "Ⅲ",
+   "craft_lv": 7,
+   "materials": "岩腱肉×2＋骨粉×2＋催化晶种×1",
+   "effect": "压制积蓄 +110",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "典",
+   "deep_ref": "AD-014"
+  },
+  {
+   "id": "R-30",
+   "name": "天雷引信",
+   "tier": "Ⅲ",
+   "craft_lv": 8,
+   "materials": "雷脊肉×1＋凝风液×2＋催化晶种×1",
+   "effect": "绝技充能 +40",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "典",
+   "deep_ref": "AD-015"
+  },
+  {
+   "id": "R-31",
+   "name": "磐盾饮",
+   "tier": "Ⅰ",
+   "craft_lv": 1,
+   "materials": "岩薯×1＋清灵露×1",
+   "effect": "减伤 +4%",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "任（引导）",
+   "deep_ref": null
+  },
+  {
+   "id": "R-32",
+   "name": "潮压泄露",
+   "tier": "Ⅰ",
+   "craft_lv": 2,
+   "materials": "露水芹×1＋潮澄清液×1",
+   "effect": "潮压 −2",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "任",
+   "deep_ref": null
+  },
+  {
+   "id": "R-33",
+   "name": "骨筑膏",
+   "tier": "Ⅰ",
+   "craft_lv": 3,
+   "materials": "垂荫蕈×1＋骨粉×1",
+   "effect": "减伤 +5%",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "掉",
+   "deep_ref": null
+  },
+  {
+   "id": "R-34",
+   "name": "抗涌剂",
+   "tier": "Ⅰ",
+   "craft_lv": 3,
+   "materials": "雾蔗×1＋潮澄清液×1",
+   "effect": "潮压 −2＋减伤 +3%",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "任",
+   "deep_ref": null
+  },
+  {
+   "id": "R-35",
+   "name": "岩肤浓剂",
+   "tier": "Ⅱ",
+   "craft_lv": 4,
+   "materials": "岩薯×2＋骨粉×1＋熔浆露×1",
+   "effect": "减伤 +7%",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "掉",
+   "deep_ref": "AD-016"
+  },
+  {
+   "id": "R-36",
+   "name": "深锚静剂",
+   "tier": "Ⅱ",
+   "craft_lv": 5,
+   "materials": "腺凝液×2＋骨粉×1",
+   "effect": "潮压 −3",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "掉",
+   "deep_ref": "AD-017"
+  },
+  {
+   "id": "R-37",
+   "name": "壁垒合剂",
+   "tier": "Ⅱ",
+   "craft_lv": 5,
+   "materials": "岩腱肉×1＋垂荫蕈×2",
+   "effect": "减伤 +8%＋潮压 −2",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "任",
+   "deep_ref": "AD-018"
+  },
+  {
+   "id": "R-38",
+   "name": "沸血御剂",
+   "tier": "Ⅱ",
+   "craft_lv": 6,
+   "materials": "熔焰果×2＋清灵露×1＋蜜蜡封膜×1",
+   "effect": "减伤 +6%＋回复 400",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "掉",
+   "deep_ref": null
+  },
+  {
+   "id": "R-39",
+   "name": "磐岳浓剂",
+   "tier": "Ⅲ",
+   "craft_lv": 7,
+   "materials": "岩薯×3＋骨粉×2＋催化晶种×1",
+   "effect": "减伤 +10%",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "掉",
+   "deep_ref": "AD-019"
+  },
+  {
+   "id": "R-40",
+   "name": "渊宁静剂",
+   "tier": "Ⅲ",
+   "craft_lv": 8,
+   "materials": "潮澄清液×2＋腺凝液×1＋催化晶种×1",
+   "effect": "潮压 −5＋减伤 +5%",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "典",
+   "deep_ref": "AD-020"
+  },
+  {
+   "id": "R-41",
+   "name": "蚀露引导剂",
+   "tier": "Ⅰ",
+   "craft_lv": 2,
+   "materials": "露水芹×1＋潮澄清液×1",
+   "effect": "异常积蓄 +30（任意一条）",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "任",
+   "deep_ref": null
+  },
+  {
+   "id": "R-42",
+   "name": "腺毒煎剂",
+   "tier": "Ⅰ",
+   "craft_lv": 2,
+   "materials": "垂荫蕈×1＋腺凝液×1",
+   "effect": "毒积蓄 +40",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "掉",
+   "deep_ref": null
+  },
+  {
+   "id": "R-43",
+   "name": "麻滞散",
+   "tier": "Ⅰ",
+   "craft_lv": 3,
+   "materials": "岩薯×1＋风核晶粉×1",
+   "effect": "麻积蓄 +40",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "任",
+   "deep_ref": null
+  },
+  {
+   "id": "R-44",
+   "name": "眠雾香",
+   "tier": "Ⅰ",
+   "craft_lv": 3,
+   "materials": "澄露花×2＋清灵露×1",
+   "effect": "眠积蓄 +40",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "掉",
+   "deep_ref": null
+  },
+  {
+   "id": "R-45",
+   "name": "蚀纹催化露",
+   "tier": "Ⅱ",
+   "craft_lv": 4,
+   "materials": "熔焰果×1＋潮澄清液×1＋风核晶粉×1",
+   "effect": "蚀纹积蓄 +50",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "掉",
+   "deep_ref": "AD-021"
+  },
+  {
+   "id": "R-46",
+   "name": "五抗合剂",
+   "tier": "Ⅱ",
+   "craft_lv": 4,
+   "materials": "垂荫蕈×2＋骨粉×1＋蜜蜡封膜×1",
+   "effect": "异常抗性 +9%",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "任",
+   "deep_ref": "AD-022"
+  },
+  {
+   "id": "R-47",
+   "name": "涤瘴露",
+   "tier": "Ⅱ",
+   "craft_lv": 4,
+   "materials": "澄露花×2＋清灵露×2",
+   "effect": "解除异常 ×1",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "任",
+   "deep_ref": "AD-023"
+  },
+  {
+   "id": "R-48",
+   "name": "百毒清",
+   "tier": "Ⅱ",
+   "craft_lv": 5,
+   "materials": "露水芹×2＋腺凝液×1＋骨粉×1",
+   "effect": "毒/蚀抗性 +12%",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "掉",
+   "deep_ref": "AD-024"
+  },
+  {
+   "id": "R-49",
+   "name": "醒神针剂",
+   "tier": "Ⅱ",
+   "craft_lv": 5,
+   "materials": "霞浆果×2＋滤羽×1＋潮澄清液×1",
+   "effect": "眠/麻抗性 +12%＋解除眠 ×1",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "掉",
+   "deep_ref": null
+  },
+  {
+   "id": "R-50",
+   "name": "万蚀浓剂",
+   "tier": "Ⅲ",
+   "craft_lv": 7,
+   "materials": "熔焰果×2＋潮澄清液×2＋坩埚坯×1",
+   "effect": "异常积蓄 +80",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "掉",
+   "deep_ref": "AD-025"
+  },
+  {
+   "id": "R-51",
+   "name": "澄心全净剂",
+   "tier": "Ⅲ",
+   "craft_lv": 8,
+   "materials": "澄露花×3＋清灵露×2＋滤羽×1",
+   "effect": "解除异常 ×2＋异常抗性 +12%",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "典",
+   "deep_ref": "AD-026"
+  },
+  {
+   "id": "R-52",
+   "name": "雾隐抗剂",
+   "tier": "Ⅲ",
+   "craft_lv": 9,
+   "materials": "雾蔗×2＋腺凝液×2＋催化晶种×1",
+   "effect": "异常抗性 +12%＋眠积蓄 +40",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "掉",
+   "deep_ref": null
+  },
+  {
+   "id": "R-53",
+   "name": "兽护膏",
+   "tier": "Ⅰ",
+   "craft_lv": 1,
+   "materials": "岩薯×1＋垂荫蕈×1",
+   "effect": "同行兽回复 ♥1",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "任",
+   "deep_ref": null
+  },
+  {
+   "id": "R-54",
+   "name": "兽勇煎剂",
+   "tier": "Ⅰ",
+   "craft_lv": 2,
+   "materials": "烬壳果×1＋云腴肉×1",
+   "effect": "同行兽支援蓄积 +30",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "任",
+   "deep_ref": null
+  },
+  {
+   "id": "R-55",
+   "name": "兽愈浓汤",
+   "tier": "Ⅱ",
+   "craft_lv": 4,
+   "materials": "云腴肉×2＋清灵露×1＋垂荫蕈×1",
+   "effect": "同行兽回复 ♥2",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "掉",
+   "deep_ref": null
+  },
+  {
+   "id": "R-56",
+   "name": "奔兽合剂",
+   "tier": "Ⅱ",
+   "craft_lv": 5,
+   "materials": "岩腱肉×2＋烬壳果×2",
+   "effect": "同行兽支援蓄积 +60",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "掉",
+   "deep_ref": "AD-027"
+  },
+  {
+   "id": "R-57",
+   "name": "兽铠涂剂",
+   "tier": "Ⅱ",
+   "craft_lv": 4,
+   "materials": "骨粉×2＋蜜蜡封膜×1",
+   "effect": "同行兽减伤 +6%",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "任",
+   "deep_ref": "AD-028"
+  },
+  {
+   "id": "R-58",
+   "name": "灵润共济剂",
+   "tier": "Ⅲ",
+   "craft_lv": 7,
+   "materials": "霜纹肉×1＋澄露花×2＋蜜蜡封膜×1",
+   "effect": "同行兽回复 ♥2＋兽减伤 +8%",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "掉",
+   "deep_ref": null
+  },
+  {
+   "id": "R-59",
+   "name": "同袍热血剂",
+   "tier": "Ⅲ",
+   "craft_lv": 8,
+   "materials": "雷脊肉×2＋催化晶种×1",
+   "effect": "同行兽支援蓄积 +100",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "掉",
+   "deep_ref": "AD-029"
+  },
+  {
+   "id": "R-60",
+   "name": "百兽守护浓剂",
+   "tier": "Ⅲ",
+   "craft_lv": 9,
+   "materials": "霜纹肉×2＋骨粉×2＋催化晶种×1",
+   "effect": "兽减伤 +10%＋兽回复 ♥1",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "典",
+   "deep_ref": "AD-030"
+  },
+  {
+   "id": "R-61",
+   "name": "磐砂饮",
+   "tier": "Ⅰ",
+   "craft_lv": 1,
+   "materials": "铁鬃矿砂×1＋清灵露×1",
+   "effect": "减伤 +4%",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "任",
+   "deep_ref": null
+  },
+  {
+   "id": "R-62",
+   "name": "岩浆贴膏",
+   "tier": "Ⅰ",
+   "craft_lv": 2,
+   "materials": "铁鬃矿砂×1＋熔浆露×1",
+   "effect": "减伤 +5%",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "掉",
+   "deep_ref": null
+  },
+  {
+   "id": "R-63",
+   "name": "蚀甲喷剂",
+   "tier": "Ⅰ",
+   "craft_lv": 2,
+   "materials": "铁鬃矿砂×1＋烬壳果×1",
+   "effect": "部位破坏蓄积 +45",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "任",
+   "deep_ref": null
+  },
+  {
+   "id": "R-64",
+   "name": "磐心矿酿",
+   "tier": "Ⅱ",
+   "craft_lv": 4,
+   "materials": "磐心矿×1＋潮澄清液×1＋坩埚坯×1",
+   "effect": "减伤 +8%",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "掉",
+   "deep_ref": "AD-031"
+  },
+  {
+   "id": "R-65",
+   "name": "沉星护体液",
+   "tier": "Ⅱ",
+   "craft_lv": 5,
+   "materials": "沉星锭屑×2＋清灵露×1",
+   "effect": "减伤 +7%＋潮压 −2",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "掉",
+   "deep_ref": "AD-032"
+  },
+  {
+   "id": "R-66",
+   "name": "裂石剂",
+   "tier": "Ⅱ",
+   "craft_lv": 4,
+   "materials": "铁鬃矿砂×2＋骨粉×1＋蒸馏柴×1",
+   "effect": "部位破坏蓄积 +80",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "任",
+   "deep_ref": null
+  },
+  {
+   "id": "R-67",
+   "name": "矿火熔剂",
+   "tier": "Ⅱ",
+   "craft_lv": 5,
+   "materials": "萤焰熔剂×1＋熔焰果×2",
+   "effect": "部位破坏蓄积 +70＋压制积蓄 +30",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "任",
+   "deep_ref": "AD-033"
+  },
+  {
+   "id": "R-68",
+   "name": "云鳞矿饮",
+   "tier": "Ⅱ",
+   "craft_lv": 5,
+   "materials": "沉星锭屑×1＋腺凝液×1＋风核晶粉×1",
+   "effect": "减伤 +6%＋回复 350",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "掉",
+   "deep_ref": "AD-034"
+  },
+  {
+   "id": "R-69",
+   "name": "磐岳糊",
+   "tier": "Ⅲ",
+   "craft_lv": 7,
+   "materials": "磐心矿×2＋骨粉×2＋坩埚坯×1",
+   "effect": "减伤 +10%＋潮压 −2",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "典",
+   "deep_ref": "AD-035"
+  },
+  {
+   "id": "R-70",
+   "name": "蚀渊矿毒",
+   "tier": "Ⅲ",
+   "craft_lv": 8,
+   "materials": "风息矿×1＋潮澄清液×2＋催化晶种×1",
+   "effect": "异常积蓄 +70＋减伤 +4%",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "典",
+   "deep_ref": null
+  },
+  {
+   "id": "R-71",
+   "name": "大地脉动饮",
+   "tier": "Ⅲ",
+   "craft_lv": 8,
+   "materials": "沉星锭屑×3＋熔浆露×2＋催化晶种×1",
+   "effect": "回复 1,300",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "掉",
+   "deep_ref": "AD-036"
+  },
+  {
+   "id": "R-72",
+   "name": "矿心全固剂",
+   "tier": "Ⅲ",
+   "craft_lv": 9,
+   "materials": "磐心矿×2＋萤焰熔剂×1＋催化晶种×1",
+   "effect": "减伤 +10%＋潮压 −3",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "典",
+   "deep_ref": null
+  },
+  {
+   "id": "R-73",
+   "name": "残片引信",
+   "tier": "Ⅰ",
+   "craft_lv": 2,
+   "materials": "遗械残片×1＋风核晶粉×1",
+   "effect": "绝技充能 +18",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "任",
+   "deep_ref": null
+  },
+  {
+   "id": "R-74",
+   "name": "簧枢润滑剂",
+   "tier": "Ⅰ",
+   "craft_lv": 2,
+   "materials": "蚀机簧枢×1＋腺凝液×1",
+   "effect": "风缆 +1",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "任",
+   "deep_ref": null
+  },
+  {
+   "id": "R-75",
+   "name": "锚机压浆",
+   "tier": "Ⅰ",
+   "craft_lv": 3,
+   "materials": "蚀机簧枢×1＋骨粉×1",
+   "effect": "压制积蓄 +45",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "掉",
+   "deep_ref": null
+  },
+  {
+   "id": "R-76",
+   "name": "残械复原露",
+   "tier": "Ⅱ",
+   "craft_lv": 4,
+   "materials": "遗械残片×1＋清灵露×2",
+   "effect": "回复 550",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "任",
+   "deep_ref": "AD-037"
+  },
+  {
+   "id": "R-77",
+   "name": "枢轴共振剂",
+   "tier": "Ⅱ",
+   "craft_lv": 5,
+   "materials": "蚀机簧枢×2＋雷纹矿×1",
+   "effect": "绝技充能 +30",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "掉",
+   "deep_ref": "AD-038"
+  },
+  {
+   "id": "R-78",
+   "name": "械心封能饮",
+   "tier": "Ⅱ",
+   "craft_lv": 5,
+   "materials": "封印核粉×1＋潮澄清液×1＋风核晶粉×1",
+   "effect": "绝技充能 +20＋风缆 +2",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "任",
+   "deep_ref": "AD-039"
+  },
+  {
+   "id": "R-79",
+   "name": "蚀机破浆",
+   "tier": "Ⅱ",
+   "craft_lv": 5,
+   "materials": "遗械残片×2＋熔焰果×1＋骨粉×1",
+   "effect": "部位破坏蓄积 +90",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "掉",
+   "deep_ref": null
+  },
+  {
+   "id": "R-80",
+   "name": "遗械静滞剂",
+   "tier": "Ⅱ",
+   "craft_lv": 6,
+   "materials": "蚀机簧枢×1＋腺凝液×2",
+   "effect": "压制积蓄 +80＋潮压 −2",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "掉",
+   "deep_ref": "AD-040"
+  },
+  {
+   "id": "R-81",
+   "name": "械核过载引",
+   "tier": "Ⅲ",
+   "craft_lv": 7,
+   "materials": "封印核粉×2＋雷纹矿×1＋催化晶种×1",
+   "effect": "绝技充能 +45",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "典",
+   "deep_ref": "AD-041"
+  },
+  {
+   "id": "R-82",
+   "name": "残骸重铸浆",
+   "tier": "Ⅲ",
+   "craft_lv": 8,
+   "materials": "遗械残片×3＋骨粉×1＋熔浆露×1",
+   "effect": "压制积蓄 +120",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "掉",
+   "deep_ref": null
+  },
+  {
+   "id": "R-83",
+   "name": "万械归原剂",
+   "tier": "Ⅲ",
+   "craft_lv": 9,
+   "materials": "遗械残片×2＋封印核粉×1＋风息矿×1",
+   "effect": "压制积蓄 +60＋异常积蓄 +60",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "典",
+   "deep_ref": null
+  },
+  {
+   "id": "R-84",
+   "name": "终焉械心饮",
+   "tier": "Ⅲ",
+   "craft_lv": 10,
+   "materials": "封印核粉×2＋雷纹矿×1＋风息矿×1",
+   "effect": "回复 900＋绝技充能 +30",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": true
+   },
+   "channel": "掉",
+   "deep_ref": "AD-042"
+  },
+  {
+   "id": "C-01",
+   "name": "解缚散",
+   "tier": "Ⅰ",
+   "craft_lv": 2,
+   "materials": "垂荫蕈×1＋骨粉×1",
+   "effect": "解除束缚 ×1＋缚抗 1 来源（时长 −1，R-C2 口径见 `04 §M4.8`）",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "任",
+   "deep_ref": null
+  },
+  {
+   "id": "C-02",
+   "name": "疏缆饮",
+   "tier": "Ⅰ",
+   "craft_lv": 2,
+   "materials": "露水芹×1＋凝风液×1",
+   "effect": "解除沉滞 ×1＋风缆 +1",
+   "modes": {
+    "synth": true,
+    "mix": true,
+    "deep": false
+   },
+   "channel": "任",
+   "deep_ref": null
+  }
+ ],
+ "depth1": [
+  {
+   "id": "AD-001",
+   "name": "焰愈药剂·渊煮",
+   "base_ref": "R-01",
+   "gate_lv": 5,
+   "effect": "回复 900",
+   "coef": 1.5,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-002",
+   "name": "霞浆蜜饮·渊煮",
+   "base_ref": "R-04",
+   "gate_lv": 4,
+   "effect": "回复 490",
+   "coef": 1.4,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-003",
+   "name": "云腴复原汤·渊煮",
+   "base_ref": "R-07",
+   "gate_lv": 6,
+   "effect": "回复 910",
+   "coef": 1.4,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-004",
+   "name": "风核回春露·渊煮",
+   "base_ref": "R-09",
+   "gate_lv": 7,
+   "effect": "回复 1,160",
+   "coef": 1.45,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-005",
+   "name": "霜纹再生剂·渊煮",
+   "base_ref": "R-10",
+   "gate_lv": 10,
+   "effect": "回复 1,800",
+   "coef": 1.5,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-006",
+   "name": "晶麦全愈剂·渊煮",
+   "base_ref": "R-11",
+   "gate_lv": 10,
+   "effect": "回复 1,650",
+   "coef": 1.5,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-007",
+   "name": "双缆合剂·风淬",
+   "base_ref": "R-15",
+   "gate_lv": 6,
+   "effect": "风缆 +3",
+   "coef": 1.5,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-008",
+   "name": "缆池扩充剂·风淬",
+   "base_ref": "R-16",
+   "gate_lv": 7,
+   "effect": "风缆上限 +1＋风缆 +2",
+   "coef": null,
+   "coef_note": "复合申报"
+  },
+  {
+   "id": "AD-009",
+   "name": "潮能补给露·风淬",
+   "base_ref": "R-18",
+   "gate_lv": 6,
+   "effect": "风缆 +3＋回复 450",
+   "coef": 1.5,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-010",
+   "name": "长航合剂·风淬",
+   "base_ref": "R-20",
+   "gate_lv": 9,
+   "effect": "风缆 +4",
+   "coef": 1.33,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-011",
+   "name": "碎甲蚀剂·裂炼",
+   "base_ref": "R-25",
+   "gate_lv": 6,
+   "effect": "部位破坏蓄积 +120",
+   "coef": 1.5,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-012",
+   "name": "重锚压浆·裂炼",
+   "base_ref": "R-26",
+   "gate_lv": 7,
+   "effect": "压制积蓄 +110",
+   "coef": 1.47,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-013",
+   "name": "绝焰触媒·裂炼",
+   "base_ref": "R-27",
+   "gate_lv": 6,
+   "effect": "绝技充能 +37",
+   "coef": 1.48,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-014",
+   "name": "崩锤浓缩剂·裂炼",
+   "base_ref": "R-29",
+   "gate_lv": 9,
+   "effect": "压制积蓄 +165",
+   "coef": 1.5,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-015",
+   "name": "天雷引信·裂炼",
+   "base_ref": "R-30",
+   "gate_lv": 10,
+   "effect": "绝技充能 +58",
+   "coef": 1.45,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-016",
+   "name": "岩肤浓剂·磐凝",
+   "base_ref": "R-35",
+   "gate_lv": 6,
+   "effect": "减伤 +10%",
+   "coef": 1.43,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-017",
+   "name": "深锚静剂·磐凝",
+   "base_ref": "R-36",
+   "gate_lv": 7,
+   "effect": "潮压 −4",
+   "coef": 1.33,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-018",
+   "name": "壁垒合剂·磐凝",
+   "base_ref": "R-37",
+   "gate_lv": 7,
+   "effect": "减伤 +12%＋潮压 −3",
+   "coef": 1.5,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-019",
+   "name": "磐岳浓剂·磐凝",
+   "base_ref": "R-39",
+   "gate_lv": 9,
+   "effect": "减伤 +15%",
+   "coef": 1.5,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-020",
+   "name": "渊宁静剂·磐凝",
+   "base_ref": "R-40",
+   "gate_lv": 10,
+   "effect": "潮压 −7＋减伤 +7%",
+   "coef": 1.4,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-021",
+   "name": "蚀纹催化露·蚀萃",
+   "base_ref": "R-45",
+   "gate_lv": 6,
+   "effect": "蚀纹积蓄 +75",
+   "coef": 1.5,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-022",
+   "name": "五抗合剂·蚀萃",
+   "base_ref": "R-46",
+   "gate_lv": 6,
+   "effect": "异常抗性 +13%",
+   "coef": 1.44,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-023",
+   "name": "涤瘴露·蚀萃",
+   "base_ref": "R-47",
+   "gate_lv": 6,
+   "effect": "解除异常 ×1＋异常抗性 +6%",
+   "coef": null,
+   "coef_note": "复合申报"
+  },
+  {
+   "id": "AD-024",
+   "name": "百毒清·蚀萃",
+   "base_ref": "R-48",
+   "gate_lv": 7,
+   "effect": "毒/蚀抗性 +18%",
+   "coef": 1.5,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-025",
+   "name": "万蚀浓剂·蚀萃",
+   "base_ref": "R-50",
+   "gate_lv": 9,
+   "effect": "异常积蓄 +120",
+   "coef": 1.5,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-026",
+   "name": "澄心全净剂·蚀萃",
+   "base_ref": "R-51",
+   "gate_lv": 10,
+   "effect": "解除异常 ×3＋异常抗性 +15%",
+   "coef": null,
+   "coef_note": "复合申报"
+  },
+  {
+   "id": "AD-027",
+   "name": "奔兽合剂·灵酿",
+   "base_ref": "R-56",
+   "gate_lv": 7,
+   "effect": "同行兽支援蓄积 +90",
+   "coef": 1.5,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-028",
+   "name": "兽铠涂剂·灵酿",
+   "base_ref": "R-57",
+   "gate_lv": 6,
+   "effect": "同行兽减伤 +9%",
+   "coef": 1.5,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-029",
+   "name": "同袍热血剂·灵酿",
+   "base_ref": "R-59",
+   "gate_lv": 10,
+   "effect": "同行兽支援蓄积 +150",
+   "coef": 1.5,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-030",
+   "name": "百兽守护浓剂·灵酿",
+   "base_ref": "R-60",
+   "gate_lv": 10,
+   "effect": "兽减伤 +15%＋兽回复 ♥1",
+   "coef": 1.5,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-031",
+   "name": "磐心矿酿·磐凝",
+   "base_ref": "R-64",
+   "gate_lv": 6,
+   "effect": "减伤 +12%",
+   "coef": 1.5,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-032",
+   "name": "沉星护体液·磐凝",
+   "base_ref": "R-65",
+   "gate_lv": 7,
+   "effect": "减伤 +10%＋潮压 −3",
+   "coef": 1.43,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-033",
+   "name": "矿火熔剂·裂炼",
+   "base_ref": "R-67",
+   "gate_lv": 7,
+   "effect": "部位破坏蓄积 +105＋压制积蓄 +45",
+   "coef": 1.5,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-034",
+   "name": "云鳞矿饮·磐凝",
+   "base_ref": "R-68",
+   "gate_lv": 7,
+   "effect": "减伤 +9%＋回复 525",
+   "coef": 1.5,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-035",
+   "name": "磐岳糊·磐凝",
+   "base_ref": "R-69",
+   "gate_lv": 9,
+   "effect": "减伤 +15%＋潮压 −3",
+   "coef": 1.5,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-036",
+   "name": "大地脉动饮·渊煮",
+   "base_ref": "R-71",
+   "gate_lv": 10,
+   "effect": "回复 1,950",
+   "coef": 1.5,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-037",
+   "name": "残械复原露·渊煮",
+   "base_ref": "R-76",
+   "gate_lv": 6,
+   "effect": "回复 825",
+   "coef": 1.5,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-038",
+   "name": "枢轴共振剂·裂炼",
+   "base_ref": "R-77",
+   "gate_lv": 7,
+   "effect": "绝技充能 +45",
+   "coef": 1.5,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-039",
+   "name": "械心封能饮·风淬",
+   "base_ref": "R-78",
+   "gate_lv": 7,
+   "effect": "绝技充能 +30＋风缆 +3",
+   "coef": 1.5,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-040",
+   "name": "遗械静滞剂·裂炼",
+   "base_ref": "R-80",
+   "gate_lv": 8,
+   "effect": "压制积蓄 +120＋潮压 −3",
+   "coef": 1.5,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-041",
+   "name": "械核过载引·裂炼",
+   "base_ref": "R-81",
+   "gate_lv": 9,
+   "effect": "绝技充能 +67",
+   "coef": 1.49,
+   "coef_note": ""
+  },
+  {
+   "id": "AD-042",
+   "name": "终焉械心饮·渊煮",
+   "base_ref": "R-84",
+   "gate_lv": 10,
+   "effect": "回复 1,350＋绝技充能 +45",
+   "coef": 1.5,
+   "coef_note": ""
+  }
+ ],
+ "depth2": [
+  {
+   "id": "AD2-001",
+   "name": "焰愈药剂·渊煮·真",
+   "base_ref": "AD-001",
+   "gate_lv": 7,
+   "effect": "回复 1,140",
+   "coef": 1.9,
+   "coef_note": ""
+  },
+  {
+   "id": "AD2-002",
+   "name": "霜纹再生剂·渊煮·真",
+   "base_ref": "AD-005",
+   "gate_lv": 10,
+   "effect": "回复 2,280",
+   "coef": 1.9,
+   "coef_note": ""
+  },
+  {
+   "id": "AD2-003",
+   "name": "大地脉动饮·渊煮·真",
+   "base_ref": "AD-036",
+   "gate_lv": 10,
+   "effect": "回复 2,470",
+   "coef": 1.9,
+   "coef_note": ""
+  },
+  {
+   "id": "AD2-004",
+   "name": "双缆合剂·风淬·真",
+   "base_ref": "AD-007",
+   "gate_lv": 8,
+   "effect": "风缆 +3＋回复 300",
+   "coef": 1.5,
+   "coef_note": ""
+  },
+  {
+   "id": "AD2-005",
+   "name": "长航合剂·风淬·真",
+   "base_ref": "AD-010",
+   "gate_lv": 10,
+   "effect": "风缆 +5",
+   "coef": 1.67,
+   "coef_note": ""
+  },
+  {
+   "id": "AD2-006",
+   "name": "碎甲蚀剂·裂炼·真",
+   "base_ref": "AD-011",
+   "gate_lv": 8,
+   "effect": "部位破坏蓄积 +150",
+   "coef": 1.875,
+   "coef_note": ""
+  },
+  {
+   "id": "AD2-007",
+   "name": "崩锤浓缩剂·裂炼·真",
+   "base_ref": "AD-014",
+   "gate_lv": 10,
+   "effect": "压制积蓄 +205",
+   "coef": 1.86,
+   "coef_note": ""
+  },
+  {
+   "id": "AD2-008",
+   "name": "天雷引信·裂炼·真",
+   "base_ref": "AD-015",
+   "gate_lv": 10,
+   "effect": "绝技充能 +75",
+   "coef": 1.875,
+   "coef_note": ""
+  },
+  {
+   "id": "AD2-009",
+   "name": "械核过载引·裂炼·真",
+   "base_ref": "AD-041",
+   "gate_lv": 10,
+   "effect": "绝技充能 +85",
+   "coef": 1.89,
+   "coef_note": ""
+  },
+  {
+   "id": "AD2-010",
+   "name": "磐岳浓剂·磐凝·真",
+   "base_ref": "AD-019",
+   "gate_lv": 10,
+   "effect": "减伤 +15%＋潮压 −4",
+   "coef": 1.5,
+   "coef_note": ""
+  },
+  {
+   "id": "AD2-011",
+   "name": "渊宁静剂·磐凝·真",
+   "base_ref": "AD-020",
+   "gate_lv": 10,
+   "effect": "潮压 −9＋减伤 +9%",
+   "coef": 1.8,
+   "coef_note": ""
+  },
+  {
+   "id": "AD2-012",
+   "name": "遗械静滞剂·裂炼·真",
+   "base_ref": "AD-040",
+   "gate_lv": 10,
+   "effect": "压制积蓄 +150＋潮压 −3",
+   "coef": 1.875,
+   "coef_note": ""
+  },
+  {
+   "id": "AD2-013",
+   "name": "万蚀浓剂·蚀萃·真",
+   "base_ref": "AD-025",
+   "gate_lv": 10,
+   "effect": "异常积蓄 +150",
+   "coef": 1.875,
+   "coef_note": ""
+  },
+  {
+   "id": "AD2-014",
+   "name": "同袍热血剂·灵酿·真",
+   "base_ref": "AD-029",
+   "gate_lv": 10,
+   "effect": "同行兽支援蓄积 +190",
+   "coef": 1.9,
+   "coef_note": ""
+  }
+ ]
+}

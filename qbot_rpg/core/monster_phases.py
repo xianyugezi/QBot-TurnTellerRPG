@@ -252,3 +252,43 @@ def _to_pct(hp_pct: float, max_hp: Optional[float]) -> float:
         if m > 0:
             return v / m * 100.0
     return v
+
+
+def inherit_boss_state(prev: Optional[Mapping[str, Any]],
+                       rules: Optional[Mapping[str, Any]] = None) -> Dict[str, Any]:
+    """云海九期（cloudsea-pack）207·G1B增量（phase_changed 继承 hook）：
+    阶段切换 boss_state 结算携带。
+
+    prev ＝ 上一阶段 boss_state（break_slots/stamina/ailment_buildup 三键约定，
+    见 battle.BattleEngine.boss_state）；rules 可选键：
+      - stack_retain（缺省 None）：积蓄类数值键乘该比例（九态积蓄保留 50%，
+        211 批数据化）；
+      - control_mult（缺省 None）：控制时长类键乘该比例（×0.5）。
+    rules 缺省/None 或比例键缺失 → 对应键原值透传（既有语义零变化）；阈值
+    T+15%–30% 属阶段阈值侧（214 批），不在此处。深拷贝返回、零副作用；
+    prev 非 Mapping → 返回空骨架。消费方＝214 阶段状态机（detect_transition
+    changed 时调用）＋ dungeon_boss phase_changed 结算点。
+    """
+    skeleton: Dict[str, Any] = {"break_slots": {}, "stamina": {}, "ailment_buildup": {}}
+    if not isinstance(prev, Mapping):
+        return skeleton
+    out: Dict[str, Any] = {k: (dict(v) if isinstance(v, Mapping) else v)
+                           for k, v in prev.items()}
+    for k in skeleton:
+        out.setdefault(k, {})
+    retain = rules.get("stack_retain") if isinstance(rules, Mapping) else None
+    ctrl = rules.get("control_mult") if isinstance(rules, Mapping) else None
+
+    def _scale(section: Any, ratio: float) -> None:
+        if not isinstance(section, Mapping) or not isinstance(ratio, (int, float)):
+            return
+        for key, val in section.items():
+            if isinstance(val, (int, float)) and not isinstance(val, bool):
+                section[key] = val * ratio  # type: ignore[index]
+
+    if isinstance(retain, (int, float)):
+        _scale(out.get("ailment_buildup"), retain)
+        _scale(out.get("stamina"), retain)
+    if isinstance(ctrl, (int, float)):
+        _scale(out.get("break_slots"), ctrl)
+    return out

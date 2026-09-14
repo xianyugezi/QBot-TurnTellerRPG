@@ -28,6 +28,7 @@ from qbot_rpg.core.monster_intent import (
 )
 from qbot_rpg.core.monster_phases import (
     PhaseTable,
+    inherit_boss_state,
     phase_changed_event,
     resolve_phase,
 )
@@ -206,3 +207,88 @@ def test_resume_broadcast():
     assert resume_broadcast({"chain_pos": 1, "chain_queue": ["a"]}) == "连招 【a】（1/1 段）", \
         "缺省 action_lib: 回退显示 id"
     assert resume_broadcast({"chain_pos": 0, "chain_queue": []}) == "", "无在途链 → 空串"
+
+
+# ================================================================== 7. inherit_boss_state
+# 云海九期（cloudsea-pack）207 移植：阶段切换 boss_state（break_slots/stamina/
+# ailment_buildup 三键）携带纯函数。以下定向断言规则缺省透传/比例携带/边界四类。
+
+BOSS_STATE = {
+    "ailment_buildup": {"mark_a": 4.0, "mark_b": 3},
+    "stamina": {"wing": 8.0},
+    "break_slots": {"horn": 2.0},
+}
+
+
+def test_inherit_boss_state_default_passthrough():
+    """rules 缺省 / None / 无比例键 → 三键原值透传，且不改动入参。"""
+    before = {
+        "ailment_buildup": {"mark_a": 4.0, "mark_b": 3},
+        "stamina": {"wing": 8.0},
+        "break_slots": {"horn": 2.0},
+    }
+    for rules in (None, {}, {"unrelated": 0.1}):
+        out = inherit_boss_state(BOSS_STATE, rules) if rules is not None \
+            else inherit_boss_state(BOSS_STATE)
+        assert out["ailment_buildup"] == {"mark_a": 4.0, "mark_b": 3}, out
+        assert out["stamina"] == {"wing": 8.0}, out
+        assert out["break_slots"] == {"horn": 2.0}, out
+    assert BOSS_STATE == before, "原值透传路径零副作用"
+
+
+def test_inherit_boss_state_returns_copy():
+    """返回值为深一层副本：改 out 不影响入参 prev。"""
+    out = inherit_boss_state(BOSS_STATE, {"stack_retain": 0.5})
+    out["ailment_buildup"]["mark_a"] = 99.0
+    out["stamina"]["wing"] = 99.0
+    assert BOSS_STATE["ailment_buildup"]["mark_a"] == 4.0
+    assert BOSS_STATE["stamina"]["wing"] == 8.0
+
+
+def test_inherit_boss_state_skeleton_keys_added():
+    """三键约定缺省的键补空 dict（骨架齐备）。"""
+    out = inherit_boss_state({"ailment_buildup": {"x": 1}})
+    assert out["stamina"] == {} and out["break_slots"] == {}
+    assert out["ailment_buildup"] == {"x": 1}
+
+
+def test_inherit_boss_state_ratio_carry():
+    """stack_retain 作用于积蓄/耐力，control_mult 作用于部位槽。"""
+    out = inherit_boss_state(BOSS_STATE, {"stack_retain": 0.5, "control_mult": 0.5})
+    assert out["ailment_buildup"] == {"mark_a": 2.0, "mark_b": 1.5}
+    assert out["stamina"] == {"wing": 4.0}
+    assert out["break_slots"] == {"horn": 1.0}
+    # 单给一路比例时另一路原值
+    only_stack = inherit_boss_state(BOSS_STATE, {"stack_retain": 0.5})
+    assert only_stack["break_slots"] == {"horn": 2.0}
+    only_ctrl = inherit_boss_state(BOSS_STATE, {"control_mult": 0.5})
+    assert only_ctrl["ailment_buildup"] == {"mark_a": 4.0, "mark_b": 3}
+    assert only_ctrl["break_slots"] == {"horn": 1.0}
+
+
+def test_inherit_boss_state_bounds():
+    """边界：0 → 清零；1 → 原值；超界 >1 → 按比例放大（不夹取）。"""
+    zero = inherit_boss_state(BOSS_STATE, {"stack_retain": 0, "control_mult": 0})
+    assert zero["ailment_buildup"] == {"mark_a": 0.0, "mark_b": 0}
+    assert zero["stamina"] == {"wing": 0.0}
+    assert zero["break_slots"] == {"horn": 0.0}
+    one = inherit_boss_state(BOSS_STATE, {"stack_retain": 1, "control_mult": 1})
+    assert one["ailment_buildup"] == {"mark_a": 4.0, "mark_b": 3}
+    over = inherit_boss_state(BOSS_STATE, {"stack_retain": 3, "control_mult": 4})
+    assert over["ailment_buildup"] == {"mark_a": 12.0, "mark_b": 9}
+    assert over["stamina"] == {"wing": 24.0}
+    assert over["break_slots"] == {"horn": 8.0}
+
+
+def test_inherit_boss_state_invalid_inputs():
+    """非法比例/非法 prev/非数值叶：原值或空骨架，不抛异常。"""
+    assert inherit_boss_state({"ailment_buildup": {"a": 4.0}}, {"stack_retain": "0.5"})[
+        "ailment_buildup"] == {"a": 4.0}, "非数值比例忽略"
+    assert inherit_boss_state({"ailment_buildup": {"a": "keep"}},
+                              {"stack_retain": 0.5})["ailment_buildup"] == {"a": "keep"}
+    assert inherit_boss_state({"ailment_buildup": {"a": True}},
+                              {"stack_retain": 0.5})["ailment_buildup"] == {"a": True}, \
+        "bool 不参与缩放"
+    for bad in (None, "x", 3, ["a"]):
+        assert inherit_boss_state(bad) == {
+            "break_slots": {}, "stamina": {}, "ailment_buildup": {}}, bad

@@ -61,7 +61,6 @@ EXT_API_VERSION = "1"
 
 class ExtApiError(Exception):
     """扩展 API 层的可预期错误基类（包代码可抛出 / 捕获；装载层也会兜底）。"""
-    """扩展 API 层的可预期错误基类。"""
 
 
 class ExtApiUnavailable(ExtApiError):

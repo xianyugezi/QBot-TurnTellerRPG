@@ -27,8 +27,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import uvicorn
-from fastapi import Body, FastAPI
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi import Body, FastAPI, Request
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -46,6 +46,7 @@ def create_app(pack: Optional[str] = None, root: Optional[str] = None,
     _ensure_repo_on_path()
     from qbot_rpg.web import api  # noqa: E402  （路径注入后导入，避免 E402）
     from qbot_rpg.web import editor_ops  # noqa: E402
+    from qbot_rpg.content import pack_transfer  # noqa: E402  （导入体积上限的单一出处）
 
     static_dir = Path(api.__file__).resolve().parent / "static"
     content_root = str(root) if root else str(api.content_root())
@@ -185,6 +186,41 @@ def create_app(pack: Optional[str] = None, root: Optional[str] = None,
     def api_manifest_rollback(pack_id: str):  # type: ignore[no-untyped-def]
         return editor_ops.rollback_module_config(
             pack_id, root=content_root, role=app.state.role)
+
+    # -------- 批11 内容包导出 / 导入（分享给别的作者） --------
+    @app.get("/api/pack/{pack_id}/export")
+    def api_export_pack(pack_id: str):  # type: ignore[no-untyped-def]
+        """导出此包 → 浏览器下载 `.ttrpack`（只读；GM 只读身份也允许）。"""
+        res = editor_ops.export_pack(pack_id, root=content_root)
+        if not res.get("ok"):
+            raise api.BadRequest(str(res.get("message") or "导出失败。"))
+        filename = str(res["filename"])
+        return Response(
+            content=res["data"], media_type="application/zip",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+                "X-Pack-Filename": filename,
+            })
+
+    @app.post("/api/pack/import")
+    async def api_import_pack(request: Request, on_conflict: str = "",
+                              new_id: str = ""):  # type: ignore[no-untyped-def]
+        """导入分享来的 `.ttrpack`（请求体 = 文件原始字节；无需 multipart 依赖）。
+
+        校验顺序与安全防护全在 `qbot_rpg/content/pack_transfer.py`：zip 结构安全 →
+        export_meta/manifest 合法 → 内容校验器（红拦不落盘）→ 包 id 冲突（改名 / 覆盖且先备份）。
+        GM 只读身份 → 403（`editor_ops.require_edit`）。
+        """
+        # 先按 Content-Length 挡超大请求（避免把超大文件读进内存）
+        raw_len = request.headers.get("content-length") or ""
+        if raw_len.isdigit() and int(raw_len) > pack_transfer.DEFAULT_LIMITS.max_archive_bytes:
+            raise api.BadRequest(
+                "导入文件超过体积上限（上限 "
+                f"{pack_transfer.DEFAULT_LIMITS.max_archive_bytes // (1024 * 1024)} MB）。")
+        body = await request.body()
+        return editor_ops.import_pack(
+            body, root=content_root, role=app.state.role,
+            on_conflict=str(on_conflict or ""), new_id=(new_id or None))
 
     @app.get("/")
     def index():  # type: ignore[no-untyped-def]

@@ -29,6 +29,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence
 
 from qbot_rpg.content import atomic_store
+from qbot_rpg.content import pack_transfer
 from qbot_rpg.content.models import FieldMeta, FieldMetaTable
 from qbot_rpg.content.permission_store import (
     ROLE_ADMIN_OUT,
@@ -905,6 +906,52 @@ def rollback_module_config(pack: object, *, root: Optional[object] = None,
 
 
 # =====================================================================================
+# 批11：内容包导出 / 导入（分享给别的作者）——导出只读可用；导入必须可编辑身份
+# =====================================================================================
+def export_pack(pack: object, *, root: Optional[object] = None,
+                now: Optional[object] = None) -> Dict[str, Any]:
+    """导出当前内容包 → `.ttrpack`（zip 字节流 + export_meta.json）。**只读，不写内容包。**
+
+    权限：**GM 只读身份也允许导出**（导出是读操作，需求「导出可允许」）。
+    出参含 `data`（bytes，供宿主直接作为下载响应体）与 `filename`。
+    """
+    pack_dir = api._pack_dir(pack, root)  # 不存在 → NotFound(404)（人话）
+    res = pack_transfer.export_pack_dir(pack_dir, pack_id=pack_dir.name, now=now)
+    if not res.get("ok"):
+        return res
+    return {
+        "ok": True, "phase": "export", "pack": pack_dir.name, "pack_id": res["pack_id"],
+        "pack_name": res["pack_name"], "filename": res["filename"], "data": res["data"],
+        "meta": res["meta"], "files": res["files"],
+        "errors": [], "warnings": [], "message": res["message"],
+    }
+
+
+def import_pack(data: object, *, root: Optional[object] = None, role: object = ROLE_OWNER,
+                on_conflict: str = "", new_id: Optional[object] = None,
+                now: Optional[object] = None) -> Dict[str, Any]:
+    """导入一个 `.ttrpack` 字节流（别人分享来的文件）→ 校验 → 落盘为新包。
+
+    · 权限：导入必须**可编辑身份**（owner）；GM 只读 → `Forbidden(403)`，不写盘。
+    · 校验顺序与安全防护全在 `pack_transfer.import_archive`（zip 安全 → 元信息 →
+      内容校验器 → 冲突处理），失败**不留半成品目录**；覆盖前自动备份旧包。
+    """
+    require_edit(role)
+    res = pack_transfer.import_archive(data, api.content_root(root),
+                                       on_conflict=on_conflict, new_id=new_id, now=now)
+    env = _envelope(
+        phase="import", pack=str(res.get("pack_id") or ""),
+        ok=bool(res.get("ok")), level=("ok" if res.get("ok") else "red"),
+        errors=list(res.get("errors") or []), warnings=list(res.get("warnings") or []),
+        message=str(res.get("message") or ""))
+    for key in ("pack_id", "original_pack_id", "pack_name", "written", "file_count",
+                "overwritten", "backup", "meta", "conflict", "existing"):
+        if key in res:
+            env[key] = res[key]
+    return env
+
+
+# =====================================================================================
 # 备份可见性 / 回退
 # =====================================================================================
 def module_backup(pack: object, module: object, *,
@@ -963,6 +1010,8 @@ __all__ = [
     "ROLE_OWNER",
     "create_entry",
     "delete_entry",
+    "export_pack",
+    "import_pack",
     "is_editable",
     "module_backup",
     "module_config_backup",

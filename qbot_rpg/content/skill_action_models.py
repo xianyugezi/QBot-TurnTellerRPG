@@ -112,6 +112,11 @@ AIR_POLICY_VALUES: Tuple[str, ...] = ("preserve", "land", "preserve_height")
 # 【工程补白 P-4】既有内容包中文旧值（斩/打/突/魔 读兼容，摸底 §8-4）
 ATTACK_TYPE_LEGACY_VALUES: Tuple[str, ...] = ("斩", "打", "突", "魔")
 
+AIR_DROP_VALUES: Tuple[str, ...] = ("knockdown",)
+"""air_drop 一枚举（跃空风险闭环批③实装）：knockdown=对空必杀——命中空中玩家即击落
+（立即落地 + 倒地（可被追击）+ 行动条硬直）；缺省 None=柔和档（窗口缩短）。
+引擎消费点：battle._apply_air_hit_consequences（敌→玩家命中路径）。"""
+
 ELEMENT_VALUES: Tuple[str, ...] = (
     "earth", "fire", "water", "wind", "thunder", "crystal", "moon", "void",
 )
@@ -131,16 +136,17 @@ PROBABILITY_VALUES: Tuple[int, ...] = (0, 1)
 """入池开关 G02 枚举（契约：0=锚点行动 / 1=参与随机池；必须 ∈ {0,1}）。"""
 
 DEFAULT_TRIGGER_LIMIT: Dict[str, int] = {"per_round": 10, "per_battle": 99}
-"""G07 trigger_limit 默认值（契约「同 F20」[L208]：每回合 10 / 每场 99，0=不限）。"""
+"""G07 trigger_limit 默认值（契约「同 F20」[L208]：每次行动 10 / 每场 99，0=不限）。"""
 
 # 行动库全字段注册表（V-11 判定依据：字段 ∈ 本表 + charge_* 前缀登记键）
 # 登记口径：ActionCore 7 + G01-G07 + G08-G16 AI 登记接口 + desc（P-1）+ 读兼容旧键
 # （type/cost/cool/apply_status/apply_mark/require_status/skill——field_meta action_fields
 #  既有键，6a 契约未禁，宽松登记防误拦既有内容包）
 ACTION_FIELD_REGISTRY: Tuple[str, ...] = (
-    # ---- ActionCore 7 + 方位扩展 F08/F09/F10（契约 §2.2 / 方位 v0.6 §三.2/§三.4/§三.6）----
+    # ---- ActionCore 7 + 方位扩展 F08/F09/F10 + 对空击落（批③）（契约 §2.2 /
+    # 方位 v0.6 §三.2/§三.4/§三.6 / 跃空风险闭环 2026-09-11）----
     "id", "name", "kind", "power", "attack_type", "element", "effects",
-    "position_rule", "break_power", "air_policy",
+    "position_rule", "break_power", "air_policy", "air_drop",
     # ---- 怪物侧扩展 G01-G05 + 目标 G06 + 触发上限 G07（契约 §2.3）----
     "weight", "probability", "intent", "chain", "cooldown",
     "target", "trigger_limit",
@@ -254,7 +260,7 @@ class ActionDef(BaseDef):
 
     @property
     def cooldown(self) -> Optional[float]:
-        """冷却回合（G05：≥0 整数；默认 0）。"""
+        """冷却时长（次行动；G05：≥0 整数，默认 0）。"""
         return self._num("cooldown")
 
     @property
@@ -275,7 +281,7 @@ class ActionDef(BaseDef):
 
     @property
     def hungry(self) -> Optional[float]:
-        """饥饿保底（G09：连续 N 回合未选中则强制选，默认 0=关）。"""
+        """饥饿保底（G09：连续 N 次行动未选中则强制选，默认 0=关）。"""
         return self._num("hungry")
 
     @property
@@ -552,6 +558,19 @@ def _check_entry(report: object, entry: object, idx: int, seen_ids: Set[str]) ->
                  node_id=aid, value=ap, allowed=list(AIR_POLICY_VALUES),
                  msg="行动 air_policy %r 不在三枚举（F10：preserve/land/preserve_height）" % (ap,))
 
+    # ---- air_drop 一枚举（跃空风险闭环批③：knockdown=对空必杀——命中空中玩家即
+    # 击落；缺省 None=柔和档（窗口缩短）；枚举外值红拦）----
+    ad = entry.get("air_drop")
+    if ad is not None:
+        if not isinstance(ad, str):
+            _err(report, f"{base}.air_drop", "R-1", rule="air_drop_type",
+                 node_id=aid, got=type(ad).__name__,
+                 msg="行动 air_drop 需字符串（批③，knockdown）")
+        elif ad not in AIR_DROP_VALUES:
+            _err(report, f"{base}.air_drop", "R-5", rule="air_drop_enum",
+                 node_id=aid, value=ad, allowed=list(AIR_DROP_VALUES),
+                 msg="行动 air_drop %r 不在枚举（批③：knockdown）" % (ad,))
+
     # ---- V-9 概率语义：probability ∈ {0,1}（红拦，契约 [L101/L112/L209]）----
     prob = entry.get("probability")
     if prob is not None and (not isinstance(prob, (int, float)) or isinstance(prob, bool)):
@@ -700,6 +719,7 @@ __all__ = [
     "ACTION_KIND_VALUES",
     "ATTACK_TYPE_VALUES",
     "AIR_POLICY_VALUES",
+    "AIR_DROP_VALUES",
     "ELEMENT_VALUES",
     "TARGET_VALUES",
     "INTENT_VALUES",

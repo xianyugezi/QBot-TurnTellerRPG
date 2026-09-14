@@ -151,7 +151,7 @@ class ResourceAxisDef:
         """每回合自然增长（正=增长 / 负=衰减；缺省 0=零行为）。
 
         九期批次 212「tick 自然增长」缺口承载：云海轴注册段按需携带，
-        ResourceLifecycle.tick_round_end 按本值应用（clamp [tick_floor, max]）。
+        ResourceLifecycle.settle_round_tick 按本值应用（212 回合边界 tick，opt-in）（clamp [tick_floor, max]）。
         契约依据：九期排期 §零.6（勘察 ≈21 轴三缺口之一）。
         """
         v = self._raw.get("tick_per_round")

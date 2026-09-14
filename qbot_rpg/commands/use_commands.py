@@ -1,10 +1,14 @@
 """使用指令接线 use_commands.py（2026-08-28 用户拍板：装备穿戴统一用「使用」）。
 
-依据：用户拍板「用使用」（装备穿戴 + 背包道具统一走 /使用）；白名单 parsers.py 已有
+依据：用户拍板「用使用」（装备穿戴 + 背包道具统一走 使用）；白名单 parsers.py 已有
 「使用」（DEFAULT_WHITELIST + DEFAULT_QUANTITY_COMMANDS）；设计契约见 记录.md 需求池。
-职责：/使用 <序号> 或 <物品名> 统一承载——装备类（ItemInstance.slot 非空）→ 穿戴
+职责：使用 <序号> 或 <物品名> 统一承载——装备类（ItemInstance.slot 非空）→ 穿戴
 （复用 basic_commands._equip_engine 适配器）；消耗类（物品 def usable/type=consumable +
 effects 含 heal）→ 扣减 + 回血；其他 → 不可直接使用。战斗内拒绝。
+
+2026-09-12 消息模板重构·批11 路B：本模块 6 键（use_in_battle/use_no_arg/use_no_item/
+use_cannot_use/use_bound/use_ok）文案唯一源 = 全量模板表
+qbot_rpg/core/templates/template_table.json，use_tpl 分区已清空。
 
 零 IO、零 NoneBot、纯函数确定性（引擎注入/懒加载；读 ctx 快照）。零装饰 emoji。
 """
@@ -13,7 +17,7 @@ from __future__ import annotations
 import importlib
 from typing import Any, Callable, Mapping, MutableMapping, Optional
 
-from .basic_commands import TPL_REGISTER_GATE, _equip_engine
+from .basic_commands import _equip_engine
 from .router import CommandSpec
 from qbot_rpg.core.templates import tpl_of  # 消息模板配置化（2026-08-31 用户拍板）
 from qbot_rpg.data.player import Player
@@ -156,21 +160,21 @@ def _use_consumable(
 
 
 def cmd_use(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
-    """/使用 指令壳：序号/名称 → 装备穿戴或消耗使用（统一承载）。
+    """使用 指令壳：序号/名称 → 装备穿戴或消耗使用（统一承载）。
 
     入参 parsed: ParsedCommand（args 消费）；ctx: 玩家上下文。出参 str——回复正文。
-    核心逻辑: 未注册 → TPL_REGISTER_GATE；战斗中 → use_in_battle；缺参 → use_no_arg；
+    核心逻辑: 未注册 → basic_register_gate；战斗中 → use_in_battle；缺参 → use_no_arg；
     解析目标（_resolve_row）→ 装备类（ItemInstance.slot 或 item_def.slot）
     → _equip_engine.equip_wear（序号）→ 消耗类（usable/type=consumable）→ _use_consumable
     → 其他 → use_cannot_use（均 tpl_of 渲染，内容包可覆盖）。
     """
     if not bool(ctx.get("registered")):
-        return TPL_REGISTER_GATE
+        return tpl_of(ctx, "basic_register_gate")
     if ctx.get("battle_session"):
         return tpl_of(ctx, "use_in_battle")
     player = _resolve_player(ctx)  # 兼容 Player dataclass + dict（写回 ctx）
     if player is None:
-        return TPL_REGISTER_GATE
+        return tpl_of(ctx, "basic_register_gate")
     args = list(getattr(parsed, "args", None) or [])
     if not args:
         return tpl_of(ctx, "use_no_arg")
@@ -199,7 +203,7 @@ def cmd_use(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 def register_use_commands(
     router: Any, *, make_context: Optional[Callable[[Any], dict]] = None
 ) -> Any:
-    """把 /使用 注册进 Router（同 register_commands 模式；make_context 由装配层注入）。"""
+    """把 使用 注册进 Router（同 register_commands 模式；make_context 由装配层注入）。"""
     def _ctx(parsed: Any) -> dict:
         if make_context is None:
             raise RuntimeError(

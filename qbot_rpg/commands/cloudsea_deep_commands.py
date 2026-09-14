@@ -24,7 +24,7 @@ from typing import Any, List, Mapping, MutableMapping, Optional
 
 from qbot_rpg.commands.router import CommandSpec
 from qbot_rpg.commands.sender import format_tpl12
-from qbot_rpg.core.templates.cloudsea_err_tpl import expand_consts
+from qbot_rpg.core.cloudsea_err import expand_consts
 
 DEEP_CMD_CLOUDSEA = "深度炼成"   # R5：与框架 DEEP_CMD=「深度炼金」异词零撞
 

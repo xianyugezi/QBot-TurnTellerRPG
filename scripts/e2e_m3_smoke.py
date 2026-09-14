@@ -11,7 +11,7 @@
     一场战斗；两型共用同一组地图、入口区分、进度独立）
 
 装配：真实模块（qbot_rpg.core.dungeon / dungeon_boss / dungeon_subquest、qbot_rpg.world
-movement / chase / chase_resume、qbot_rpg.engine.worldtime）；maps/dungeons/enemies 数据
+movement / chase / chase_resume、qbot_rpg.core.worldtime）；maps/dungeons/enemies 数据
 读取自 tests/fixtures/packs/legal/；worldtime 注入固定 now（2026-08-16 00:00 UTC+8，纪元
 锚点公式手算值对齐 test_worldtime_changes：season_idx=1 夏 / period_idx=1 午 /
 weather_tick=233376）保证确定性；追击候选区抽签注入固定种子 rng。零 NoneBot import。
@@ -63,7 +63,7 @@ from qbot_rpg.core.dungeon import (
 )
 from qbot_rpg.core.dungeon_boss import SESSION_GATE_GUARDS_KEY, BossFlow
 from qbot_rpg.core.dungeon_subquest import ProgressTracker
-from qbot_rpg.engine.worldtime import DEFAULT_POOL, WorldTime
+from qbot_rpg.core.worldtime import DEFAULT_POOL, WorldTime
 from qbot_rpg.world.chase import SESSION_CHASING_KEY, chase_trigger, pursue
 from qbot_rpg.world.chase_resume import exit_dungeon_reset, prepare_resume_battle
 from qbot_rpg.world.movement import resolve_move

@@ -19,7 +19,7 @@
   2) skill_in_season(skill, season) 判定（EFF-5 核心）：技能 season ∈
      {当前季, 通用} → 可用；其余 → 不可用。
   3) 行动校验（EFF-5 唯一入口）：validate_skill_action() 施放前检查——
-     非当季技能 → 被拒不耗回合（复用 rejected 管道语义：能量/怒气不变、
+     非当季技能 → 被拒不消耗行动（复用 rejected 管道语义：能量/怒气不变、
      连段不变、可反复尝试【狂战士 L76-77】），返回结构化判定
      {ok, reason, code, skill_id, season}；当前季/通用技能 → ok。
      reason 语义键 season_mismatch + code REJECT_SEASON_MISMATCH，供接线
@@ -32,7 +32,7 @@
      - 方法委托模块级纯函数，不引入可变全局状态；
      - 幂等注入：构造器注入挂 ctx 仅缺省键不覆盖调用方显式注入。
   5) 懒重读支持（EFF-2/EFF-5 引用语义）：current_season(ctx) 从 ctx 读取
-     当前季节（战斗会话内每回合开始懒重读，worldtime.season_now 由装配层
+     当前季节（战斗会话内每次行动开始懒重读，worldtime.season_now 由装配层
      注入 ctx["season_now"]），ctx 缺键 → 回落通用（无季节环境 = 全部技能
      可用，确定性兜底，零空窗）。
 
@@ -41,8 +41,8 @@
     §2.1（SE1 season 字段 schema：spring/summer/autumn/winter 四枚举，
     缺省=通用【四时 L63】）；
     §2.2 EFF-2（进战懒加载）/ EFF-5（行动校验唯一入口：技能 ∈ 当前季节组
-    ∪ 通用组，不在 → 拒绝并提示；引用在回合开始懒重读时更新）；
-    §2.3 SC-2（引擎零新状态机：当前季节组引用回合开始懒重读更新）；
+    ∪ 通用组，不在 → 拒绝并提示；引用在行动开始懒重读时更新）；
+    §2.3 SC-2（引擎零新状态机：当前季节组引用行动开始懒重读更新）；
     §0.3 D-05（换季待结算期按旧组校验——旧组校验即「当前生效组」口径，
     本引擎只做当季判定，待结算标记/切换归 10B 换季边界）；
     §六 TC-09（春季选夏季技能 → 行动校验拒绝）。
@@ -63,7 +63,7 @@
        对缺省/未知值统一回落 SEASON_ANY。展示层对「通用」的文案渲染（如
        「全年」）由消费方映射，本引擎只出语义键。
   P-2  引擎零状态机（SC-2）：本文件不持有任何可变状态、不缓存季节——
-       current_season 每次从 ctx 现读（懒重读语义由装配层在回合开始刷新
+       current_season 每次从 ctx 现读（懒重读语义由装配层在行动开始刷新
        ctx["season_now"] 实现，worldtime 联动归 10B）；纯函数确定性。
   P-3  ctx 缺季节键 → 回落 SEASON_ANY：无季节环境（未注入 worldtime）时
        全部技能可用（EFF-5 的「缺省=通用」精神延伸到环境侧，确定性兜底
@@ -103,7 +103,7 @@ DEFAULT_SEASON: str = SEASON_ANY
 # ctx 当前季节键（worldtime.season_now 由装配层注入；P-2 懒重读数据源）
 SEASON_CTX_KEY: str = "season_now"
 
-# 拒绝语义码（EFF-5：非当季 → 被拒不耗回合；对齐 rejected 管道可机读码）
+# 拒绝语义码（EFF-5：非当季 → 被拒不消耗行动；对齐 rejected 管道可机读码）
 REJECT_SEASON_MISMATCH: str = "season_mismatch"
 
 # 判定结果键（结构化返回形态，P-4）
@@ -157,7 +157,7 @@ def season_of(skill: Any) -> str:
 
 
 def current_season(ctx: Mapping[str, Any]) -> str:
-    """从 ctx 读取当前世界季节（战斗会话内每回合开始懒重读，EFF-2/EFF-5）。
+    """从 ctx 读取当前世界季节（战斗会话内每次行动开始懒重读，EFF-2/EFF-5）。
 
     入参：ctx —— 运行上下文 Mapping（读取 ctx[SEASON_CTX_KEY]，即
       ctx["season_now"]，worldtime.season_now 由装配层注入）。
@@ -187,7 +187,7 @@ def skill_in_season(skill: Any, season: str) -> bool:
 
 
 # =====================================================================================
-# 行动校验（EFF-5 唯一入口：施放前检查，非当季 → 被拒不耗回合）
+# 行动校验（EFF-5 唯一入口：施放前检查，非当季 → 被拒不消耗行动）
 # =====================================================================================
 
 
@@ -199,9 +199,9 @@ def validate_skill_action(skill: Any, season: str) -> Dict[str, Any]:
       season —— 当前季节（四枚举之一或 SEASON_ANY）。
     出参：判定 dict {ok, reason, code, skill_id, season}（P-4）：
       - ok=True：技能 ∈ 当前季节组 ∪ 通用组，可正常施放（reason/code 空）；
-      - ok=False：非当季 → 被拒不耗回合（reason="season_mismatch"，
+      - ok=False：非当季 → 被拒不消耗行动（reason="season_mismatch"，
         code=REJECT_SEASON_MISMATCH）；接线方（battle 层）复用 rejected
-        管道语义：不耗回合、连段不变、可反复尝试，并映射「此术式与当前
+        管道语义：不消耗行动、连段不变、可反复尝试，并映射「此术式与当前
         时节不合」提示文案（EFF-3/EFF-5 文案归展示层模板，本引擎零模板）。
     """
     sid = _skill_id(skill)
@@ -245,7 +245,7 @@ class SeasonSkillEngine:
 
     方法委托模块级纯函数（校验前将注入挂 ctx），不引入可变全局状态（P-2）：
       current_season(ctx)      —— 当前季节（override > 注入 > ctx 兜底）；
-      check(ctx, skill, side)  —— 行动校验（EFF-5：非当季 → 被拒不耗回合）；
+      check(ctx, skill, side)  —— 行动校验（EFF-5：非当季 → 被拒不消耗行动）；
       usable(ctx, skill, side) —— 布尔快捷（check ok）。
     """
 
@@ -277,7 +277,7 @@ class SeasonSkillEngine:
         skill: Any,
         side: str = "player",
     ) -> Dict[str, Any]:
-        """技能行动施放前季节校验（EFF-5 唯一入口；非当季 → 被拒不耗回合）。
+        """技能行动施放前季节校验（EFF-5 唯一入口；非当季 → 被拒不消耗行动）。
 
         入参：
           ctx   —— 运行上下文 MutableMapping（缺季节键时构造器注入兜底）；

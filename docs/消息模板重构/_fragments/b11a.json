@@ -1,0 +1,31 @@
+{
+  "rail": "b11a",
+  "scope": "批11·路A：职业 8 键（job_tpl.py 全量迁移）+ 对话框壳层 3 键（dialog_tpl.py 全量迁移），按手机QQ 14 全角规范重写",
+  "templates": {
+    "job_list": "当前可转职业：\n{list}",
+    "job_list_tip": "发 转职 <序号 或 名称>\n发 职业详情 <序号 或 名称>",
+    "job_not_found": "❌ 没有「{job}」这个职业\n可用职业：\n{list}",
+    "job_switch_success": "✅ 转职成功\n当前职业：{job}{rec}",
+    "job_detail_usage": "发 职业详情 <序号 或 名称>\n示例：发 职业详情 1",
+    "job_detail_header": "【{name}】",
+    "job_detail_rec": "（推荐新手）",
+    "job_detail_line": "{k}：{v}",
+    "dialog_menu_head": "{npc_name}：",
+    "dialog_dispatch_error": "❌ 动作执行异常",
+    "dialog_dispatch_bad_return": "❌ 动作返回异常"
+  },
+  "prose_keys": {},
+  "notes": {
+    "job_list": "列表段头：段头独立行 + {list} 行体（render_cake_tail 尾段另拼）。结构模板保留——壳层 job_commands._job_list_render 取 tpl_of(ctx,\"job_list\",{\"list\":\"\"}).rstrip(\"\\n\") 作为标题行（空 list 时回退字面量），故必须保「段头 + \\n{list}」形态；段头 14 半角已达标；占位符 list 不变",
+    "job_list_tip": "尾段 Tip 重写：两条动作各占一行（首行承接 render_cake_tail 的「Tip:」前缀，第二行续行），免斜杠（旧「发 转职 <序号|名称> 转职；发 职业详情 <序号|名称> 看详情」单行远超 28 半角且用 ｜）；参数多选一改「或」→ <序号 或 名称>（对齐表内 <序号 或 店名>/<部位 或 序号> 口径）；无占位符（<> 内为字面示例文本，白名单为空）",
+    "job_not_found": "错误行 ❌ + 原因 + 可用清单：两事件要素（未知职业名 + 可选项列表）不丢；占位符 job/list 不变；test_job_commands::test_job_not_found 断言「可用」子串——新文案「可用职业：」满足（旧「，可用：」为旧排版）",
+    "job_switch_success": "成功行拆两行：✅ 转职成功 / 当前职业：{job}{rec}（旧单行「✅ 转职成功！当前职业：{job}{rec}」静态 23 半角 + 占位估算 31 超 WARN 线）；占位符 job/rec 不变（rec 为「（推荐）」角标，紧贴职业名保留）",
+    "job_detail_usage": "用法提示重写：动作行 + 示例行（对齐表内「示例：发 背包 查看 1」house 形态）；旧文「职业详情：发 职业详情 <序号|名称>（如 职业详情 1 / 职业详情 脊剑士）」单行超宽且含斜杠，重做去斜杠、去 ｜、去括号挤宽；无占位符",
+    "job_detail_header": "详情面板段头：结构模板保留【{name}】（【】为既有排版符号口径，职业名 3~4 字，静态 4 半角 + 占位估算 12，远低于预算）；占位符 name 不变",
+    "job_detail_rec": "推荐角标字形锚点保留「（推荐新手）」——M5 裁决（tests/unit/test_register_default_job.py 注释：推荐角标为纯文本「（推荐）/（推荐新手）」）且列表侧「（推荐）」同族；全角括号为既有标记口径，非可重排文案；无占位符",
+    "job_detail_line": "详情面板字段行结构模板保留「{k}：{v}」（键值分行呈现，键为中文短标签如 难度/玩法/标签/武器/资源/成长/形态，静态 2 半角 + 占位估算 14）；占位符 k/v 不变",
+    "dialog_menu_head": "菜单/会话重显头行：结构模板保留「{npc_name}：」（NPC 名 + 全角冒号，壳层 _handle_menu_rerender 经 tpl_of 取头行后前置菜单行；14 全角内）；占位符 npc_name 不变",
+    "dialog_dispatch_error": "引擎动作执行异常兜底（_dispatch_entry except 分支）：补错误行标记 ❌ + 原因（对齐表内 explore_enter_engine_error「❌ 进入失败（引擎异常）」/ explore_rest_engine_error「❌ 休息失败\\n引擎返回异常」house 口径，旧文「动作执行异常」无 ❌ 标记）；无占位符",
+    "dialog_dispatch_bad_return": "引擎动作返回体非 Mapping 兜底（_dispatch_entry 非 Mapping 分支）：同补 ❌ + 原因（旧文「动作返回异常」无标记）；玩家可见安全失败文案；无占位符"
+  }
+}

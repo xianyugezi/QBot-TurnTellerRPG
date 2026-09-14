@@ -49,7 +49,9 @@ def _render_rows(ctx: MutableMapping[str, Any], view: dict) -> str:
     lines: list = []
     for r in rows:
         if r.get("visible"):
-            star = "★" * int(r.get("star", 1))
+            # M5 裁决（登记表 §一.3）：★(U+2605) 落 emoji 扫描范围，降级为
+            # 几何图形符号 ◆(U+25C6，U+25xx 区段，非 emoji、不触扫描也不被剥离)
+            star = "◆" * int(r.get("star", 1))
             lines.append(
                 f"{r['index']}. {r['name']} {star}｜{r['require_txt']}"
                 f"｜声望+{r.get('rep_base', 10)}")

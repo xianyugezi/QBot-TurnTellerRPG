@@ -1,0 +1,42 @@
+{
+  "rail": "b8c",
+  "scope": "批8·路C：成就/称号 16 键（achievement_commands 渲染壳；qbot_rpg/core/templates/achievement_tpl.py 全量迁移）",
+  "templates": {
+    "ach_empty": "【成就】暂无成就\n继续冒险即可解锁",
+    "ach_list_header": "【成就】第 {page}/{pages} 页\n已达成 {done}/{total}",
+    "ach_list_line": "{index}. {name} {state}",
+    "ach_list_locked": "{index}. ？？？",
+    "ach_list_tail": "共 {total} 项成就\n详情：发 成就信息 <序号>",
+    "ach_reveal_card": "【隐藏成就】{name}\n{reveal_text}",
+    "ach_title_empty": "【称号】暂无称号",
+    "ach_title_equip_fail": "❌ 没有称号：{title_id}\n发 称号 查看 已有称号",
+    "ach_title_equip_ok": "✅ 已佩戴称号「{title_id}」",
+    "ach_title_header": "【称号】当前佩戴\n{current}",
+    "ach_title_help": "用法：发 称号 查看\n发 称号 佩戴 <序号>",
+    "ach_title_line": "{index}. {title_id}",
+    "ach_view_desc": "描述：{desc}",
+    "ach_view_header": "【成就】{name}",
+    "ach_view_hidden": "？？？\n该成就尚未解锁",
+    "ach_view_not_found": "❌ 没有这个成就：{aid}\n发 成就 查看全部成就"
+  },
+  "prose_keys": {
+    "ach_view_desc": "介绍类：内嵌成就描述文本，允许自然折行（结构化前缀「描述：」保留）"
+  },
+  "notes": {
+    "ach_list_header": "分页头拆两行（【成就】第 x/y 页 / 已达成 n/m）；占位符 4 个不变",
+    "ach_list_line": "序号+名称+状态单行；去 ｜ 改空格分隔（并列短字段）；占位符 index/name/state 不变",
+    "ach_list_locked": "锁定行保留「？？？」占位（引擎语义，测试锚点）；占位 index 不变",
+    "ach_list_tail": "尾行拆两行；免斜杠「发 成就信息 <序号>」；占位 total 不变",
+    "ach_reveal_card": "段头【隐藏成就】+ 名称 / reveal_text 独立行（叙事行允许自然折行）；占位不变",
+    "ach_title_equip_fail": "❌ + 原因 + 下一步；同一模板覆盖「序号越界」与「参数非数字」两场景（title_id 原样回显）；占位不变",
+    "ach_title_equip_ok": "✅ 短句 + 「」引号；占位 title_id 不变",
+    "ach_title_header": "拆两行：段头「【称号】当前佩戴」+ current 独立行；占位 current 不变",
+    "ach_title_help": "用法两行、免斜杠；无占位符",
+    "ach_title_line": "序号 + 称号 ID 单行；占位 index/title_id 不变",
+    "ach_view_header": "段头【成就】+ 名称；占位 name 不变",
+    "ach_view_hidden": "首行「？？？」（引擎锁定语义，测试锚点）+ 第二行原因；无占位符",
+    "ach_view_not_found": "❌ + 原因 + 下一步（免斜杠）；占位 aid 不变（覆盖缺参/非数字/越界三场景）",
+    "ach_empty": "空态两行：标题 + 一句引导；无占位符",
+    "ach_title_empty": "保留「暂无称号」（指令壳测试锚点 test_title_empty）；无占位符"
+  }
+}

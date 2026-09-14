@@ -1,7 +1,7 @@
 {
   "_meta": {
     "batch": "九期批次 233 错误文案体系",
-    "note": "云海 21 条错误与边界返回文案（08_错误文案表.md 逐字零改写：§M8.12 七条＋§M8.13 六条＋§M8.15 八条）。注入通道＝内容包 templates.json（tpl_of 覆盖层同构，新键注入）；文案内 $C.* 键引用经 core/templates/cloudsea_err_tpl.expand_consts 字面替换（常量表由调用方注入，235H 落包后接通）。三条铁律：①一律带下一步指向②不甩公式③冻结不撕票。"
+    "note": "云海 21 条错误与边界返回文案（08_错误文案表.md 逐字零改写：§M8.12 七条＋§M8.13 六条＋§M8.15 八条）。注入通道＝内容包 templates.json（tpl_of 覆盖层同构，新键注入）；文案内 $C.* 键引用经 core/cloudsea_err.expand_consts 字面替换（常量表由调用方注入，235H 落包后接通；原 templates/cloudsea_err_tpl.py 因作者终态 templates/ 无 *_tpl.py 分区迁此）。三条铁律：①一律带下一步指向②不甩公式③冻结不撕票。"
   },
   "err_unknown_subword": "❓ 未识别子指令「{sub}」· 发 `帮` 看速查，或 `港` 回总面板",
   "err_wind_lack": "⚡ 风缆不足（需 {need} · 现有 {cur}）· 这回合可改按 3 守势，行动已按待机结算",

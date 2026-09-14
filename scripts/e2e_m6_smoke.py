@@ -6,8 +6,14 @@
     + §二 SMK-06~11（四步逐步断言矩阵：注册门槛→锁定→攻击→结算）
     + §三 SMK-12~15（validator 四件套矩阵：legal/badref/missing_mod/old_schema）
   - scripts/e2e_m4_smoke.py（形态范本：Smoke 收集器/固定 now+seed/确定性重放/全绿行）
-  - verify_m1.py L194-224（回合时序/快照往返/random_seed 续接）
+  - verify_m1.py L194-224（行动时序/快照往返/random_seed 续接）
   - verify_m5.py L497-513（一轮一条合并）
+
+【CTB 化】2026-09-10 收口：引擎已重写为 CTB（无「回合」），本脚本相应改造——
+  - 启动断言：`turn=1` → `action_seq≥1` + `battle_time>0`（顶层 turn 仅兼容镜像）；
+  - 结算循环：三段式 `do_action→enemy_act→end_turn`（后两者已为 NotImplementedError 壳）
+    → `player_act` 单调用（内含玩家行动 + NPC 连锁自动推进）；
+  - 快照往返：`turn` → `action_seq` 一致性。
 
 【铁律】零 NoneBot import；装配全部真实模块（core/battle、world/battle_boundary、
 commands/battle_commands、commands/basic_commands、commands/register_commands、
@@ -185,13 +191,15 @@ def step_lock(s: Smoke) -> None:
     s.check(att2.acquired is False, "锁定·有锁拒绝")
     s.check(att2.lock is not None and att2.lock.holder_qid == "player_a",
             "锁定·拒绝时暴露现存锁 holder")
-    # (b) BattleEngine.start 装配（D4 SMK-08b：state=act/turn=1/combatant 来自 legal 包）
+    # (b) BattleEngine.start 装配（D4 SMK-08b：state=act/CTB 时间轴/combatant 来自 legal 包）
     eng = BattleEngine()
     eng._rng = _FixedRng()  # type: ignore[assignment]
     eng.start(dict(SMOKE_PLAYER), _enemy_combatant(), random_seed=SEED)
     s.check(eng.state == "act", "锁定·start 后 state=act")
     bs = eng.battle_state()
-    s.check(int(bs.get("turn", 0)) == 1, "锁定·start 后 turn=1")
+    # CTB 化：turn 仅为兼容镜像，不再推进；改断言逻辑时间与已结算行动数
+    s.check(int(bs.get("action_seq", 0)) >= 1, "锁定·start 后 action_seq≥1（CTB 已结算行动）")
+    s.check(float(bs.get("battle_time", 0.0)) > 0.0, "锁定·start 后 battle_time>0（CTB 逻辑时间推进）")
     s.check(bs["enemy"]["name"] == "岩皮鼬", "锁定·combatant 来自内容包（岩皮鼬）")
     s.check_eq(int(bs["enemy"]["hp"]), 120, "锁定·combatant 数值来自 demo_lv15（hp=120）")  # P2-5
 
@@ -228,33 +236,33 @@ def step_attack(s: Smoke) -> None:
 
 
 def step_settle(s: Smoke) -> None:
-    """④ 结算：敌方 hp≤0 终局 → victory 文案 + 掉落 + 回合数 + 快照 round-trip。"""
+    """④ 结算：敌方 hp≤0 终局 → victory 文案 + 掉落 + 行动数 + 快照 round-trip。"""
     eng = BattleEngine()
     eng._rng = _FixedRng()  # type: ignore[assignment]
     eng.start(dict(SMOKE_PLAYER), _enemy_combatant(), random_seed=SEED)
-    # 轰到敌方 hp≤0 → 引擎终局结算（eng.finished；完整回合时序 do_action→enemy_act→end_turn）
+    # CTB 化（收口 2026-09-10）：旧三段式 do_action→enemy_act→end_turn 已删除
+    # （enemy_act/end_turn 为 NotImplementedError 壳）。CTB 下 `player_act` 单次调用
+    # 即完成「玩家行动 + 调度器自动推进的 NPC 连锁」，循环轰到敌方 hp≤0 终局。
     for _ in range(50):
         if eng.finished:
             break
-        eng.do_action("player", {"type": "normal", "mult": 100.0})
-        if not eng.finished:
-            eng.enemy_act()
-            eng.end_turn()
+        eng.player_act({"type": "normal", "mult": 100.0})
     state = eng.battle_state()
     s.check(eng.finished or int(state["enemy"]["hp"]) <= 0, "结算·敌方 hp≤0 终局")
     # P2-4 修复（M6 批4 审查 / SMK-11）：victory 标志断言（result.flag == win）
     flag = (state.get("result") or {}).get("flag")
     s.check_eq(str(flag or ""), "win", "结算·victory 标志（result.flag=win）")
-    # 回合数（BREP-24 口径：D4 偏离声明——win 模板不含「回合数 N」行，改断言引擎 turn）
-    turn = int(state.get("turn", 0))
-    s.check(turn >= 1, f"结算·回合数 N≥1（实得 {turn}）")
+    # 行动数（BREP-24 口径：D4 偏离声明——win 模板不含「行动数 N」行，改断言引擎 action_seq）
+    seq = int(state.get("action_seq", 0) or 0)
+    s.check(seq >= 1, f"结算·行动数 N≥1（实得 {seq}）")
     # 快照 round-trip（D4 SMK-11：to_snapshot → from_snapshot → 核心战斗字段一致；
-    # 只比 turn/hp/action_record，不比 snapshot 元数据如 snapshot_id/saved_at——恢复时清理）
+    # 只比 action_seq/hp/action_record，不比 snapshot 元数据如 snapshot_id/saved_at——恢复时清理）
     snap = eng.to_snapshot()
     eng2 = BattleEngine.from_snapshot(snap)
     for eng_a, eng_b in ((eng, eng2),):
         b1, b2 = eng_a.battle_state(), eng_b.battle_state()
-        s.check_eq(int(b2["turn"]), int(b1["turn"]), "结算·快照 round-trip turn 一致")
+        s.check_eq(int(b2.get("action_seq", 0)), int(b1.get("action_seq", 0)),
+                   "结算·快照 round-trip action_seq 一致")
         s.check_eq(b2["enemy"]["hp"], b1["enemy"]["hp"], "结算·快照 round-trip 敌方 HP 一致")
         s.check_eq(len(b2.get("action_record", [])), len(b1.get("action_record", [])),
                    "结算·快照 round-trip 行动记录条数一致")

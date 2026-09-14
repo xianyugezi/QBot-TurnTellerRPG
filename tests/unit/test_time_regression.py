@@ -22,7 +22,7 @@ from pathlib import Path
 
 import pytest
 
-from qbot_rpg.engine.worldtime import DEFAULT_POOL, ANCHOR, WorldTime
+from qbot_rpg.core.worldtime import DEFAULT_POOL, ANCHOR, WorldTime
 
 _TZ_UTC8 = datetime.timezone(datetime.timedelta(hours=8))
 
@@ -50,10 +50,14 @@ def default_cfg() -> dict:
 
 
 def _engine_sources() -> list:
-    """glob 扫 qbot_rpg/engine/{worldtime,time_query}.py；文件缺失时探针大声失败。"""
+    """glob 扫 qbot_rpg/core/{worldtime,time_query}.py；文件缺失时探针大声失败。
+
+    路径变更（2026-09-10 架构违规修复）：引擎源码原在 qbot_rpg/engine/，契约 §2.3
+    要求「原 engine/ 更名 core/」——已迁入 qbot_rpg/core/，本探针同步改扫新路径。
+    """
     files = []
     for pattern in ("worldtime.py", "time_query.py"):
-        hits = sorted(glob.glob(str(_REPO_ROOT / "qbot_rpg" / "engine" / pattern)))
+        hits = sorted(glob.glob(str(_REPO_ROOT / "qbot_rpg" / "core" / pattern)))
         assert hits, f"M43①: 引擎源码缺失 {pattern}（glob 未命中）"
         files.extend(hits)
     return files

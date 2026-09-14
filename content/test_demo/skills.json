@@ -314,7 +314,7 @@
       "per_round": 3,
       "per_battle": 10
     },
-    "desc": "烈焰爆发：受击触发，消耗火印（每回合限 3 次）",
+    "desc": "烈焰爆发：受击触发，消耗火印（每次行动限 3 次）",
     "hit_mod": 1.0,
     "crit_mod": 1.0,
     "block_mode": "auto"
@@ -672,7 +672,7 @@
       "per_round": 10,
       "per_battle": 99
     },
-    "desc": "平息战意：主动还原形态（revert_form），回复 25%lost + 减伤 10%（2 回合）",
+    "desc": "平息战意：主动还原形态（revert_form），回复 25%lost + 减伤 10%（2 次行动）",
     "hit_mod": 1.0,
     "crit_mod": 1.0,
     "block_mode": "auto"
@@ -711,7 +711,7 @@
       "per_round": 10,
       "per_battle": 99
     },
-    "desc": "战意沸腾：形态被动，回合开始回复 3 MP",
+    "desc": "战意沸腾：形态被动，行动开始回复 3 MP",
     "hit_mod": 1.0,
     "crit_mod": 1.0,
     "block_mode": "auto"
@@ -742,7 +742,7 @@
       "per_round": 10,
       "per_battle": 99
     },
-    "desc": "怒意：常态被动，回合开始怒气 +6（proc on_turn_start，energy_gain 随 6c 批8 接线）",
+    "desc": "怒意：常态被动，行动开始怒气 +6（proc on_turn_start，energy_gain 随 6c 批8 接线）",
     "hit_mod": 1.0,
     "crit_mod": 1.0,
     "block_mode": "auto",
@@ -776,7 +776,7 @@
       "per_round": 2,
       "per_battle": 10
     },
-    "desc": "血怒：受击触发，怒气 +10（每回合上限 2 次，energy_gain 随 6c 批8 接线）",
+    "desc": "血怒：受击触发，怒气 +10（每次行动上限 2 次，energy_gain 随 6c 批8 接线）",
     "hit_mod": 1.0,
     "crit_mod": 1.0,
     "block_mode": "auto",

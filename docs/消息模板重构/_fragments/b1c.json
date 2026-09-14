@@ -1,0 +1,44 @@
+{
+  "rail": "b1c",
+  "templates": {
+    "explore_enter_ok": "✅ 你来到了「{name}」",
+    "explore_map_desc": "地图介绍：{desc}",
+    "explore_monster_line": "活动怪物：{items}",
+    "explore_monster_row": "{i}.{nm}×{cnt}",
+    "explore_monster_overflow": " …",
+    "explore_channel_row": "{dir}：{name}",
+    "explore_tip": "Tip:发 位置 查看当前地图",
+    "explore_enter_dungeon": "✅ 你进入了「{name}」副本",
+    "explore_enter_fail": "❌ {reason}",
+    "explore_enter_fail_reason": "无法进入",
+    "explore_enter_noarg": "❌ 发 进入 上/下/左/右\n或 副本入口 <序号 或 名称>",
+    "explore_enter_not_wired": "❌ 进入不可用（引擎未加载）",
+    "explore_enter_engine_error": "❌ 进入失败（引擎异常）",
+    "explore_leave_battle_ok": "（离开怪物地图，战斗解除）",
+    "explore_position_unknown": "❌ 位置未知：{loc}\n发 地图 查看可去地点",
+    "explore_position_unknown_none": "未记录",
+    "explore_register_gate": "❌ 请先创建角色\n发 注册 名字 职业"
+  },
+  "prose_keys": {
+    "explore_map_desc": "介绍类：内嵌地图描述文本，允许自然折行"
+  },
+  "notes": {
+    "explore_enter_ok": "到达首行（样例口径）；占位 name 不变",
+    "explore_map_desc": "介绍类：保留「地图介绍：」前缀+原文（不折行/不裁剪）；登记 prose_keys 豁免",
+    "explore_monster_line": "怪物块前缀；≥2 只时 items 以换行接续（拆行拼接移至 _monster_line）",
+    "explore_monster_row": "怪物条目行 i.名称×数量；免空格 join（旧单行 join 超宽）",
+    "explore_monster_overflow": ">5 只折叠尾标；3 半角，附于末条目行尾",
+    "explore_channel_row": "通道行形状保留（方向：目标名）；6 全角长地图名仍 ≤14 全角",
+    "explore_tip": "尾行 Tip 免斜杠：发 位置 查看当前地图",
+    "explore_enter_dungeon": "副本到达；旧「（副本）」括号后缀改为「副本」直缀以压宽（27 半角 ≤28）",
+    "explore_enter_fail": "错误行壳：❌ + 原因（reason 注入）",
+    "explore_enter_fail_reason": "进入失败兜底原因（引擎无 reason 时）",
+    "explore_enter_noarg": "无参用法两层行：方向枚举 + 副本入口；免斜杠、拆两行",
+    "explore_enter_not_wired": "引擎未加载拦截；原「未接线」改玩家口径「不可用」",
+    "explore_enter_engine_error": "引擎返回异常兜底；「引擎返回异常」精简为「引擎异常」",
+    "explore_leave_battle_ok": "离开怪物地图战斗解除附句；压至 26 半角防边界",
+    "explore_position_unknown": "位置未知兜底：原因行 + 下一步（发 地图）；免斜杠、拆两行",
+    "explore_position_unknown_none": "loc 缺省值「未记录」（替换旧值「无」，语义更明确）",
+    "explore_register_gate": "RUL-08 注册门槛：与 base 注册门槛统一文案（❌ 请先创建角色 / 发 注册 名字 职业）；免斜杠、两行"
+  }
+}

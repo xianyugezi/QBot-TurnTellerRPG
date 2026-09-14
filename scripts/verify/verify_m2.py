@@ -64,7 +64,7 @@ COVERAGE: dict = {
     "1f-TC-12 中断恢复": "DELAYED：依赖 M6（图鉴）+ M3（spawn）——中断恢复含预演消息渲染；机制部分（ai_state 全字段快照往返，chain_pos/chain_queue/charge/intent 不丢）已由 test_monster_ai_battle.py::test_ai_state_snapshot_roundtrip 承载",
     "1f-TC-13 权重归一化": "脚本断言:t_1f_tc13_tc02（L6 池 40/20/10 → ≈57.1%/28.6%/14.3%）+ pytest:test_monster_ai.py（B1 路 pytest 已落盘纳入）",
     "1f-TC-14 锚点开关": "脚本断言:t_1f_tc14_tc09_anchor_and_l7（p=0 不入池/全 0 空池→纯脚本 BOSS）+ pytest:test_enemies_schema.py::test_tc07（数据级池成员资格）+ pytest:test_monster_ai.py（B1 路 pytest 已落盘纳入）",
-    "1f-TC-15 hungry 保底": "pytest:test_monster_ai_battle.py::test_tc15_hungry_forced_pick（连续 3 回合第 3 回合强制选）+ pytest:test_monster_ai.py（B1 路 pytest 已落盘纳入）",
+    "1f-TC-15 hungry 保底": "pytest:test_monster_ai_battle.py::test_tc15_hungry_forced_pick（连续 3 次行动第 3 次行动强制选）+ pytest:test_monster_ai.py（B1 路 pytest 已落盘纳入）",
     "1f-TC-16 chain C roll": "pytest:test_monster_ai_battle.py::test_tc16_chain_roll_success + test_tc16_chain_roll_fail_breaks（成功必接/失败断链+链冷却）+ pytest:test_monster_conditions_chains.py（B2 路 pytest 已落盘纳入）",
     "1f-TC-17 打断=套完结": "pytest:test_monster_ai_battle.py::test_tc17_interrupt_breaks_chain（清在途队列/链冷却/combo_broken 标记/不续原套）",
     "1f-TC-18 蓄力跨回合": "pytest:test_monster_ai_battle.py::test_tc18_charge_cross_rounds（蓄力期不评估/释放大伤害）",

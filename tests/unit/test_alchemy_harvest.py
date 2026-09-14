@@ -143,7 +143,7 @@ def test_tc29_formal_player_plant_ok() -> None:
     assert r["planted_at"] == now
     assert r["harvest_at"] == now + DEFAULT_HARVEST_SEC
     # M-21 纯文本（M5 无 emoji）+ 4 小时提示
-    assert r["message"] == "已种植〈番茄种子〉，4 小时后可收获"
+    assert r["message"] == "✅ 已种植〈番茄种子〉\n4 小时后可收获"
     assert "🌱" not in r["message"]
     # 地块存档（F-21 数据落点 + FARM-10）
     assert player["farm_plots"][1] == {
@@ -184,7 +184,7 @@ def test_plant_seed_missing_inventory_rejected() -> None:
     eng = _engine()
     r = eng.plant(_player(), make_ctx(inventory={}), "tomato_seed", now=100)
     assert r["ok"] is False and r["reason"] == "seed_missing"
-    assert "背包中没有" in r["message"]
+    assert "背包没有" in r["message"]
     assert "farm_plots" not in _player()  # 玩家未被写入地块
 
 
@@ -260,8 +260,8 @@ def test_tc29_harvest_ok_quality_floor_and_traits() -> None:
     assert h["traits"] == ["trait_sweet"]     # 正式继承 1 项
     assert h["trait_names"] == ["甘甜"]
     assert h["dropped"] == ["trait_fresh"]    # 超出丢弃（FARM-03）
-    assert "收获〈番茄〉×1（品质 精良·继承特性：甘甜）" in r["message"]
-    assert "超出继承上限丢弃：鲜嫩" in r["message"]   # FARM-03 提示
+    assert "收获〈番茄〉×1\n品质 精良\n继承特性：甘甜" in r["message"]
+    assert "丢弃超出上限：鲜嫩" in r["message"]   # FARM-03 提示
     assert "🌾" not in r["message"]            # M5 纯文本
     # 入包 + 地块清空（FARM-06/F-21）
     assert ctx["inventory"]["tomato"] == 1
@@ -305,7 +305,7 @@ def test_harvest_sec_configurable() -> None:
     # 全局 7200 → 番茄种子 2 小时
     r1 = eng.plant(player, ctx, "tomato_seed", now=now)
     assert r1["harvest_at"] == now + 7200
-    assert r1["message"] == "已种植〈番茄种子〉，2 小时后可收获"
+    assert r1["message"] == "✅ 已种植〈番茄种子〉\n2 小时后可收获"
     # 单种子覆盖 7200 == 全局，取 iron_seed 也 7200（覆盖值生效）
     r2 = eng.plant(player, ctx, "iron_seed", now=now)
     assert r2["harvest_at"] == now + 7200
@@ -326,7 +326,7 @@ def test_harvest_seed_per_output_count() -> None:
     assert h["output"] == "iron_ore" and h["count"] == 2
     assert h["quality_label"] == "普通"  # quality_floor "common"
     assert ctx["inventory"]["iron_ore"] == 2
-    assert "收获〈铁矿〉×2（品质 普通）" in r["message"]
+    assert "收获〈铁矿〉×2\n品质 普通" in r["message"]
 
 
 def test_trait_cap_by_tier() -> None:
@@ -390,7 +390,7 @@ def test_tc29_greenhouse_copy_ok() -> None:
     assert r["gem_balance"] == 10 and r["coins_balance"] == 1000  # ARB-00 分账
     assert ctx["currencies"]["gem"] == 10 and ctx["currencies"]["coins"] == 1000
     assert ctx["inventory"]["tomato"] == 1  # 素材入包（滚雪球可再投复制/合成）
-    assert r["message"] == "温室复制〈番茄〉×1（消耗 宝石 10 + 金币 1000）"
+    assert r["message"] == "✅ 温室复制〈番茄〉\n消耗 宝石 10 + 金币 1000"
 
 
 def test_tc29_greenhouse_insufficient_rejected() -> None:
@@ -526,4 +526,6 @@ def test_messages_plain_text_no_emoji() -> None:
     samples.append(eng.harvest(player, ctx, now=100 + DEFAULT_HARVEST_SEC)["message"])
     samples.append(eng.greenhouse(_player(tier=4), make_ctx(), "tomato_seed", now=100)["message"])
     for msg in samples:
-        assert not _EMOJI.search(msg), f"消息含 emoji/装饰符号: {msg!r}"
+        # ✅/❌ 为全表允许的功能性标记（emoji 纪律只禁装饰符号）→ 先剔除再判
+        _stripped = msg.replace("✅", "").replace("❌", "")
+        assert not _EMOJI.search(_stripped), f"消息含 emoji/装饰符号: {msg!r}"

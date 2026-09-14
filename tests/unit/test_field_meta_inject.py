@@ -95,10 +95,21 @@ def test_settings_env_and_logcard_segments() -> None:
 def test_existing_modules_counts_stable() -> None:
     """既有完备模块计数硬断言（M13 硬计数连锁：改动会破坏 test_m13_hard_counts）。"""
     t = _table()
-    assert len(t.modules["skills"].fields) == 30  # 25 + 方位 F08/F09/F10 + 防反/闪反 counter 2（2026-09-09）
+    # 25 + 方位 F08/F09/F10 + 防反/闪反 counter 2（2026-09-09）
+    # + 行动时间 1 + 空中延长 1（2026-09-11 增补 v1 §一/§四）
+    # + 行动恢复 1（2026-09-12 批⑥ C10：recovery 行动恢复值）
+    # + 气绝 1（2026-09-12 批⑦A：stun 气绝值）
+    # 编辑器重写批1：补齐 skills.json 真实在用、原缺登记的 8 键
+    # （brief/detail/revert_form/derive_only/energy_gain/energy_cost/season/combo_table，
+    #  与 skill_models.skills_fields() 对齐；软标注零新增拦截）→ 34 + 8 = 42
+    assert len(t.modules["skills"].fields) == 42
     assert len(t.modules["jobs"].fields) == 11
-    assert len(t.modules["enemies"].fields) == 27  # 26 + parts 部位段（方位 v0.6 §三.3）
-    assert len(t.modules["maps"].fields) == 12
+    # 编辑器重写批4.5：enemies 补 AI 引擎依赖段 ai/phases/rewards/zone_change（真实内容包
+    # 实有、原缺登记；soft_label=True 纯展示宽字段，泛型校验零新增拦截）→ 27 + 4 = 31
+    assert len(t.modules["enemies"].fields) == 31
+    # 编辑器重写批4.5：maps 补真实地图段 desc/camp/camp_name/npcs/monsters/exits/mechanics/
+    # gate_guard/gather_points/dungeon_entrances（同上，纯展示宽字段）→ 12 + 10 = 22
+    assert len(t.modules["maps"].fields) == 22
 
 
 def test_test_demo_pack_still_loads() -> None:

@@ -9,7 +9,7 @@
     含休息次数）
   - 规划_路2a_地图副本.md M24（安全区=入口区 + safe_zone 配置区域，缺省=[入口区]；/休息 可用性
     判定=当前位置∈安全区 且 非战斗 且 非 BOSS 房）+ M25（HP/MP 部分恢复默认各 20% 可配；冷却
-    缩减 −N 回合；次数限制 rest_per_dungeon 每副本上限可配 0=不限；rest_auto 进入自动结算一次
+    缩减 −N 次行动；次数限制 rest_per_dungeon 每副本上限可配 0=不限；rest_auto 进入自动结算一次
     默认关）+ M26（休息不改变位置、不退出副本、不触发重置；副本进度/BOSS 血量/快照
     ai_state+combo_state 全程保留）
   - 衔接细化_2a1c_地图副本衔接 R3（入口区缺省即安全区）/ 细化_2a1d_地图字段扩展（maps 节点
@@ -18,13 +18,13 @@
 职责（world 层纯逻辑：零 NoneBot import、零 IO、纯函数，返回数据不落库、不改入参）：
   is_safe_zone           M24：当前地图是否安全区（入口区 / safe_zone 配置 / maps 节点标记）
   rest_in_dungeon        M25：/休息 副本内语义——HP/MP 恢复（全满或按百分比，缺省各 20%）、
-                        技能/特效冷却缩减（−N 回合，缺省 1）、次数限制（rest_limit 每副本上限，
+                        技能/特效冷却缩减（−N 次行动，缺省 1）、次数限制（rest_limit 每副本上限，
                         超限拒绝「休息次数已用完」）；rest_count 递增；仅安全区可休息
   rest_is_not_exit       M26：休息 ≠ 离开——保留位置/BOSS 血量/子任务进度/换区上下文
                         （chase_ctx 保留），不触发副本重置（与 M15 离开重置互斥）
 
 工程补白（定稿/契约未明示处，显式标注，不冒充定稿）：
-  1. 冷却缩减缺省值：规划 M25 定稿「当前冷却中技能/特效冷却 −N 回合默认 3」+ 验收
+  1. 冷却缩减缺省值：规划 M25 定稿「当前冷却中技能/特效冷却 −N 次行动默认 3」+ 验收
      TC-2a3-15（副本定稿 §2.1「默认 3」）→ 本模块 DEFAULT_COOLDOWN_REDUCTION = 3
      （审查_M3_批次4 P2-8 修复：此前取 1 偏离仓内唯一权威默认 3，可配
      cfg.cooldown_reduction 覆盖）。
@@ -46,7 +46,7 @@
   6. rest_in_dungeon 只做语义计算（纯函数，返回恢复/缩减/计数结果与消息），不接线状态机
      M15 迁移（core.dungeon 的 rest 迁移已含 rest_count+1、状态不变），落库/状态机迁移由
      指令层接线；本路 rest_count 字段为投影值（成功=原值+1）。
-  7. 冷却表读取源（1b 效果系统 effect_cooldowns: {effect_id: 剩余回合}）：player_ctx.battle_state
+  7. 冷却表读取源（1b 效果系统 effect_cooldowns: {effect_id: 剩余行动数}）：player_ctx.battle_state
      .effect_cooldowns → player_ctx.effect_cooldowns → player.effect_cooldowns / player.cooldowns；
      纯函数返回缩减后新 dict（值向下取整到 0），不改入参。
   8. rest_in_dungeon 的 maps 入参经 cfg.maps 透传（签名固定无 maps 形参）；安全区信息亦可
@@ -80,7 +80,7 @@ __all__ = [
 #: HP/MP 部分恢复比例缺省值（M25：各 20% 可配倾向百分比）。
 DEFAULT_HP_MP_PCT: float = 0.2
 
-#: 冷却缩减量缺省值（−N 回合；【补白 1】：M25 / TC-2a3-15 定稿默认 3，可配）。
+#: 冷却缩减量缺省值（−N 次行动；【补白 1】：M25 / TC-2a3-15 定稿默认 3，可配）。
 DEFAULT_COOLDOWN_REDUCTION: int = 3
 
 #: 每副本休息次数上限缺省值（rest_per_dungeon 对齐；0=不限；【补白 2】：副本定稿缺省=null 不限）。
@@ -102,7 +102,7 @@ MESSAGE_REST_LIMIT: str = "休息次数已用完"
 #: 非安全区拒绝文案（2a3 R16 / TC-2a3-15：安全区 /休息 ≠ 离开）。
 MESSAGE_REST_NOT_SAFE: str = "❌ 当前不在安全区，无法休息（回营地/安全地点再休息）"
 
-#: 冷却登记表键（1b 效果系统；BattleSnapshot.effect_cooldowns = {effect_id: 剩余回合}）。
+#: 冷却登记表键（1b 效果系统；BattleSnapshot.effect_cooldowns = {effect_id: 剩余行动数}）。
 _COOLDOWN_KEYS: Tuple[str, ...] = ("effect_cooldowns", "cooldowns")
 
 
@@ -348,7 +348,7 @@ def _restore_amounts(player_ctx: Mapping[str, Any],
 
 
 def _read_cooldowns(player_ctx: Mapping[str, Any]) -> Optional[Dict[str, int]]:
-    """冷却登记表（1b effect_cooldowns: {effect_id: 剩余回合}）读取（【补白 7】优先级）。"""
+    """冷却登记表（1b effect_cooldowns: {effect_id: 剩余行动数}）读取（【补白 7】优先级）。"""
     bs = player_ctx.get("battle_state")
     if isinstance(bs, Mapping):
         for k in _COOLDOWN_KEYS:
@@ -370,7 +370,7 @@ def _read_cooldowns(player_ctx: Mapping[str, Any]) -> Optional[Dict[str, int]]:
 
 def _reduce_cooldowns(player_ctx: Mapping[str, Any], cfg: Mapping[str, Any],
                       reduction: int) -> Tuple[Tuple[str, ...], Dict[str, int]]:
-    """冷却缩减（−N 回合）：对冷却表中剩余回合 > 0 的条目统一减 N，向下取整到 0。
+    """冷却缩减（−N 次行动）：对冷却表中剩余行动数 > 0 的条目统一减 N，向下取整到 0。
 
     返回 (受影响的 effect_id 元组, 缩减后新表 dict)。纯函数：不改入参（返回新 dict）。
     """

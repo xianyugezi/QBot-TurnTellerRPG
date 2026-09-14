@@ -17,7 +17,7 @@
 语义边界（与定稿对应）：
   - 玩家技能 position_rule 的消费点是「部位命中资格」（附录 A Step 2 part resolve），
     Step 1 只登记/校验不消费；怪物行动 position_rule 的消费点 = 玩家位置 miss 检查
-    （够不着，§四 height check，Step 1 接线于 battle._resolve_combo_action）。
+    （未命中，§四 height check，Step 1 接线于 battle._resolve_combo_action）。
   - 位置轴永远「只建议不限制」的校验口径：枚举外值红拦，范围/组合不拦。
 
 纯函数，零 NoneBot import；确定性；防御性（非法输入 fail-safe 不抛错）。

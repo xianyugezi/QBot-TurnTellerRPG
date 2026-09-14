@@ -72,7 +72,7 @@ def test_unreg_confirm_in_args_success() -> None:
 
 def test_unreg_again_template_defined() -> None:
     """重复注销模板存在（装配层并发竞态触发路径）。"""
-    assert "你没有可注销的角色" in TPL_UNREG_AGAIN
+    assert TPL_UNREG_AGAIN == "❌ 没有可注销的角色"
 
 
 def test_unreg_no_decorative_emoji() -> None:

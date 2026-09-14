@@ -1,101 +1,73 @@
-"""
-消息模板注册表（2026-08-31 用户拍板：消息模板配置化，不写死代码）。
+"""消息模板注册表（终态：**全量表为唯一存储**）。
 
-设计：
-- 每类面板/消息 = 一段模板字符串（key → 带 {占位符} 的模板）
-- 占位符白名单：每类暴露哪些占位符由各分区 PLACEHOLDER_WHITELIST 登记；用户只能在白名单内
-  调位置/换行/加字，超出白名单的占位符渲染时原样保留（不替换，提示缺失）
-- 内容包覆盖：content/templates.json 覆盖同 key（深合并），未写 key 用框架内置默认 → 零配置零破坏
-- 占位符语法 {name} / {attr_name}；渲染 = 占位符替换（_safe_format 缺键保留原文，不抛异常）
+设计（终态 · 2026-09-12 消息模板重构收口）：
+- 全部玩家可见消息模板集中在**单一全量表** `template_table.json`（key → 带 {占位符} 的模板串）。
+- 占位符白名单：由表内 key 的占位符自动派生（渲染时缺键原样保留，不替换、不抛异常）。
+- 内容包覆盖：`content/<pack>/templates.json` 覆盖同 key（深合并），未写 key 用表默认
+  → 零配置零破坏。
+- 占位符语法 {name} / {attr_name}；渲染 = 正则替换（_safe_format）。
 
-分区：base.py（核心 8 类）+ use_tpl/shortcut_tpl/log_tpl/codex_tpl/dialog_tpl/explore_tpl/
-quest_tpl/checkin_tpl/investigate_tpl/battle_tpl/forge_tpl/alchemy_tpl/basic_rem_tpl/
-register_rem_tpl/pvp_tpl（各命令模块剩余模板，子 agent 分区独占，避免并行冲突）。
+历史：迁移期曾有 22 个 `*_tpl.py` 分区文件与本表并存（迁移期同名 key 由本表覆盖）；
+2026-09-12 全部分区迁移归零后分区文件统一删除，仅保留 `base.py`（核心 8 类基础模板，
+非消息面板类）与本表。
 
-铁律：纯函数、零 NoneBot import、不硬编码路径。模板字符串全部集中在各分区默认表 +
-内容包 templates.json；渲染器不再内嵌面板格式字符串（只保留逻辑与占位符组装）。
+铁律：纯函数、零 NoneBot import、不硬编码路径；渲染器只做逻辑与占位符组装，不内嵌文案。
+排版规范见 docs/消息模板重构/00_方案与规范_v1.md；宽度校验 scripts/check_template_width.py。
 """
 from __future__ import annotations
 
+import json
+import logging
 import re
-from typing import Any, Dict, Mapping, Optional
+from pathlib import Path
+from typing import Any, Dict, List, Mapping, Optional
 
 from qbot_rpg.core.templates.base import DEFAULT_TEMPLATES as _BASE_TEMPLATES
 from qbot_rpg.core.templates.base import PLACEHOLDER_WHITELIST as _BASE_WHITELIST
-from qbot_rpg.core.templates.achievement_tpl import DEFAULT_TEMPLATES as _ACHIEVEMENT
-from qbot_rpg.core.templates.achievement_tpl import PLACEHOLDER_WHITELIST as _ACHIEVEMENT_WH
-from qbot_rpg.core.templates.alchemy_tpl import DEFAULT_TEMPLATES as _ALCHEMY
-from qbot_rpg.core.templates.alchemy_tpl import PLACEHOLDER_WHITELIST as _ALCHEMY_WH
-from qbot_rpg.core.templates.basic_rem_tpl import DEFAULT_TEMPLATES as _BASIC_REM
-from qbot_rpg.core.templates.basic_rem_tpl import PLACEHOLDER_WHITELIST as _BASIC_REM_WH
-from qbot_rpg.core.templates.battle_tpl import DEFAULT_TEMPLATES as _BATTLE
-from qbot_rpg.core.templates.battle_tpl import PLACEHOLDER_WHITELIST as _BATTLE_WH
-from qbot_rpg.core.templates.checkin_tpl import DEFAULT_TEMPLATES as _CHECKIN
-from qbot_rpg.core.templates.checkin_tpl import PLACEHOLDER_WHITELIST as _CHECKIN_WH
-from qbot_rpg.core.templates.codex_tpl import DEFAULT_TEMPLATES as _CODEX
-from qbot_rpg.core.templates.codex_tpl import PLACEHOLDER_WHITELIST as _CODEX_WH
-from qbot_rpg.core.templates.dialog_tpl import DEFAULT_TEMPLATES as _DIALOG
-from qbot_rpg.core.templates.dialog_tpl import PLACEHOLDER_WHITELIST as _DIALOG_WH
-from qbot_rpg.core.templates.dummy_tpl import DEFAULT_TEMPLATES as _DUMMY
-from qbot_rpg.core.templates.dummy_tpl import PLACEHOLDER_WHITELIST as _DUMMY_WH
-from qbot_rpg.core.templates.enhance_tpl import DEFAULT_TEMPLATES as _ENHANCE
-from qbot_rpg.core.templates.enhance_tpl import PLACEHOLDER_WHITELIST as _ENHANCE_WH
-from qbot_rpg.core.templates.explore_tpl import DEFAULT_TEMPLATES as _EXPLORE
-from qbot_rpg.core.templates.explore_tpl import PLACEHOLDER_WHITELIST as _EXPLORE_WH
-from qbot_rpg.core.templates.forge_tpl import DEFAULT_TEMPLATES as _FORGE
-from qbot_rpg.core.templates.forge_tpl import PLACEHOLDER_WHITELIST as _FORGE_WH
-from qbot_rpg.core.templates.fishing_tpl import DEFAULT_TEMPLATES as _FISHING
-from qbot_rpg.core.templates.gift_tpl import DEFAULT_TEMPLATES as _GIFT
-from qbot_rpg.core.templates.gift_tpl import PLACEHOLDER_WHITELIST as _GIFT_WH
-from qbot_rpg.core.templates.fishing_tpl import PLACEHOLDER_WHITELIST as _FISHING_WH
-from qbot_rpg.core.templates.investigate_tpl import DEFAULT_TEMPLATES as _INVESTIGATE
-from qbot_rpg.core.templates.investigate_tpl import PLACEHOLDER_WHITELIST as _INVESTIGATE_WH
-from qbot_rpg.core.templates.log_tpl import DEFAULT_TEMPLATES as _LOG
-from qbot_rpg.core.templates.log_tpl import PLACEHOLDER_WHITELIST as _LOG_WH
-from qbot_rpg.core.templates.pvp_tpl import DEFAULT_TEMPLATES as _PVP
-from qbot_rpg.core.templates.pvp_tpl import PLACEHOLDER_WHITELIST as _PVP_WH
-from qbot_rpg.core.templates.quest_tpl import DEFAULT_TEMPLATES as _QUEST
-from qbot_rpg.core.templates.quest_tpl import PLACEHOLDER_WHITELIST as _QUEST_WH
-from qbot_rpg.core.templates.register_rem_tpl import DEFAULT_TEMPLATES as _REG_REM
-from qbot_rpg.core.templates.register_rem_tpl import PLACEHOLDER_WHITELIST as _REG_REM_WH
-from qbot_rpg.core.templates.shortcut_tpl import DEFAULT_TEMPLATES as _SHORTCUT
-from qbot_rpg.core.templates.shortcut_tpl import PLACEHOLDER_WHITELIST as _SHORTCUT_WH
-from qbot_rpg.core.templates.use_tpl import DEFAULT_TEMPLATES as _USE
-from qbot_rpg.core.templates.use_tpl import PLACEHOLDER_WHITELIST as _USE_WH
-from qbot_rpg.core.templates.job_tpl import DEFAULT_TEMPLATES as _JOB
-from qbot_rpg.core.templates.job_tpl import PLACEHOLDER_WHITELIST as _JOB_WH
 
 __all__ = [
     "DEFAULT_TEMPLATES",
     "PLACEHOLDER_WHITELIST",
+    "TABLE_TEMPLATES",
     "resolve_templates",
     "render_template",
     "tpl_of",
 ]
 
-# 汇总全部分区（同名 key 后者覆盖前者；base 优先兜底，分区具体覆盖）
-_ALL_TABLES: list = [
-    _BASE_TEMPLATES, _USE, _SHORTCUT, _LOG, _CODEX, _DIALOG, _EXPLORE,
-    _QUEST, _CHECKIN, _INVESTIGATE, _BATTLE, _FORGE, _ALCHEMY,
-    _BASIC_REM, _REG_REM, _FISHING, _ACHIEVEMENT, _PVP, _JOB, _ENHANCE,
-    _DUMMY, _GIFT,
-]
-_ALL_WHITELISTS: list = [
-    _BASE_WHITELIST, _USE_WH, _SHORTCUT_WH, _LOG_WH, _CODEX_WH, _DIALOG_WH,
-    _EXPLORE_WH, _QUEST_WH, _CHECKIN_WH, _INVESTIGATE_WH, _BATTLE_WH,
-    _FORGE_WH, _ALCHEMY_WH, _BASIC_REM_WH, _REG_REM_WH, _FISHING_WH,
-    _ACHIEVEMENT_WH, _PVP_WH, _JOB_WH, _ENHANCE_WH, _DUMMY_WH, _GIFT_WH,
-]
-
-DEFAULT_TEMPLATES: Dict[str, Any] = {}
-for _t in _ALL_TABLES:
-    DEFAULT_TEMPLATES.update(_t)
-
-PLACEHOLDER_WHITELIST: Dict[str, set] = {}
-for _w in _ALL_WHITELISTS:
-    PLACEHOLDER_WHITELIST.update(_w)
+DEFAULT_TEMPLATES: Dict[str, Any] = dict(_BASE_TEMPLATES)
+PLACEHOLDER_WHITELIST: Dict[str, set] = dict(_BASE_WHITELIST)
 
 _PLACEHOLDER_RE = re.compile(r"\{([a-zA-Z0-9_]+)\}")
+
+_LOGGER = logging.getLogger(__name__)
+
+
+def _load_table(path: Path) -> Dict[str, str]:
+    """读取全量模板表（唯一存储）；不可读 → 空 dict（绝不让 import 崩）。
+
+    M4 复核修复（2026-09-12）：兼容路径必须同时兜住 **OSError 族**（文件缺失/权限/IO）
+    与 **ValueError 族**（`json.JSONDecodeError` 截断、`UnicodeDecodeError` 编码损坏）——
+    原实现只捕 OSError，表损坏时 import 直接抛异常、整包不可用，与注释承诺不符。
+    抽出独立函数便于单测（临时文件注入损坏内容）。
+    """
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        tpl_raw = doc.get("templates") if isinstance(doc, dict) else None
+        if isinstance(tpl_raw, dict):
+            return {k: v for k, v in tpl_raw.items() if isinstance(v, str)}
+    except (OSError, ValueError) as exc:
+        _LOGGER.warning("模板表不可读（回落 base 默认）：%s（%s）", path, exc)
+    return {}
+
+
+# —— 全量模板表（唯一存储）——
+_TABLE_PATH = Path(__file__).with_name("template_table.json")
+TABLE_TEMPLATES: Dict[str, str] = _load_table(_TABLE_PATH)
+DEFAULT_TEMPLATES.update(TABLE_TEMPLATES)
+
+# 表内 key 的占位符白名单自动派生（与旧分区手工登记同语义；测试锚定同款）。
+for _k, _v in TABLE_TEMPLATES.items():
+    PLACEHOLDER_WHITELIST.setdefault(_k, set(_PLACEHOLDER_RE.findall(_v)))
 
 
 def _safe_format(template: str, data: Mapping[str, Any]) -> str:
@@ -111,24 +83,44 @@ def _safe_format(template: str, data: Mapping[str, Any]) -> str:
     return _PLACEHOLDER_RE.sub(_sub, template)
 
 
-def resolve_templates(content_overrides: Any = None) -> Dict[str, Any]:
+def resolve_templates(content_overrides: Any = None, *, strict: bool = False) -> Dict[str, Any]:
     """内容包 templates.json 覆盖默认模板（深合并，未写 key 用默认）。
 
     content_overrides: Registry templates_raw / dict / None。仅接受 dict 且仅合并
-    白名单内 key（未知 key 忽略，防内容包拼错引入渲染异常）。
+    已存在 key（未知 key 跳过，防内容包拼错引入渲染异常）。
+
+    L2 复核修复（2026-09-12）：未知 key 不再**静默**忽略——逐键记 warning（内容包
+    拼错/表删键可见）；`strict=True` 时改为抛 `ValueError`，供内容包校验脚本当门禁用
+    （运行时调用保持 strict=False，绝不因内容包多写键而中断）。
     """
     merged = dict(DEFAULT_TEMPLATES)
+    unknown: List[str] = []
     if isinstance(content_overrides, Mapping):
         for key, val in content_overrides.items():
-            if key in merged and isinstance(val, str):
-                merged[key] = val
+            if key in merged:
+                if isinstance(val, str):
+                    merged[key] = val
+            else:
+                unknown.append(str(key))
+    if unknown:
+        if strict:
+            raise ValueError(f"内容包模板键不在表内（拼错/已删？）：{sorted(unknown)[:20]}")
+        for key in unknown:
+            _LOGGER.warning("内容包模板键不在表内，已忽略：%s", key)
     return merged
 
 
 def render_template(templates: Mapping[str, Any], key: str,
                     data: Mapping[str, Any]) -> str:
-    """按 key 渲染模板（缺失 key/模板 → 原样 data 兜底空串不崩）。"""
+    """按 key 渲染模板（缺失 key/模板 → 回落内置默认表；仍缺 → 空串不崩）。
+
+    L1 复核修复（2026-09-12）：`templates` 为**局部覆盖 dict**（或缺 key）时，原实现
+    直接返回空串 → 整行/整块静默消失。现回落 `DEFAULT_TEMPLATES.get(key)`；仅当默认表
+    也没有该 key 时才返回空串。内容包显式置空串（`""`）仍按覆盖生效（不回退）。
+    """
     tpl = templates.get(key)
+    if not isinstance(tpl, str):
+        tpl = DEFAULT_TEMPLATES.get(key)
     if not isinstance(tpl, str):
         return ""
     return _safe_format(tpl, data)

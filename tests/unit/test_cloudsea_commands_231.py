@@ -70,7 +70,7 @@ def test_help_panel_and_lookup():
     row = cc.cmd_help_cloudsea(_parsed("帮", ["挂"]), _ctx())
     assert "挂" in row
     miss = cc.cmd_help_cloudsea(_parsed("帮", ["无关词"]), _ctx())
-    assert "❓" in miss or "/" in miss
+    assert "指令不正确" in miss and "发 帮助" in miss  # 免斜杠（M8）＋errors 唯一源文案（作者线）
 
 
 # ---------------------------------------------------------------- 预

@@ -435,7 +435,7 @@ def test_reload_missing_arg_tpl12():
     res = handle_gm_command(p("/重载"), ctx)
     assert not res.ok and not res.silent
     assert res.message == format_tpl12("/重载")
-    assert "❌" in res.message and "/帮助" in res.message
+    assert "❌" in res.message and "发 帮助" in res.message
     assert res.audit["result"] == "failed"
     assert "缺参" in res.audit["detail"]
 
@@ -537,7 +537,7 @@ def test_log_gm_view_default_page():
     body = res.message
     assert "[12:00:00] G1 /重载" in body and "success by 10001" in body
     assert body.count("内容包X") == LOG_PAGE_SIZE  # 5 条/页
-    assert "— 第 1/3 页 · 共 12 条 · 输入 /日志 页码 翻页 —" in body
+    assert "— 第 1/3 页 · 共 12 条 · 发 日志 页码 翻页 —" in body
     assert "系统日志" in res.audit["detail"]  # /日志 自身也写审计（5b §2）
 
 
@@ -545,7 +545,7 @@ def test_log_page_2():
     ctx = make_ctx(role="gm", gm_backend=_backend(_events(12)))
     res = handle_gm_command(p("/日志 2"), ctx)
     assert res.ok
-    assert "— 第 2/3 页 · 共 12 条 · 输入 /日志 页码 翻页 —" in res.message
+    assert "— 第 2/3 页 · 共 12 条 · 发 日志 页码 翻页 —" in res.message
 
 
 def test_log_window_kv_default_and_max():
@@ -788,10 +788,10 @@ def test_permission_store_injection():
 # ===========================================================================
 
 def test_log_page_footer_exact():
-    """页脚固定 TPL-08 逐字：— 第 X/Y 页 · 共 N 条 · 输入 /日志 页码 翻页 —（禁止自造）。"""
+    """页脚固定 TPL-08 逐字：— 第 X/Y 页 · 共 N 条 · 发 日志 页码 翻页 —（禁止自造）。"""
     ctx = make_ctx(role="gm", gm_backend=_backend(_events(12)))
     body = handle_gm_command(p("/日志"), ctx).message
-    assert "— 第 1/3 页 · 共 12 条 · 输入 /日志 页码 翻页 —" in body
+    assert "— 第 1/3 页 · 共 12 条 · 发 日志 页码 翻页 —" in body
     # 单页（≤5 条）无页脚（3d D-02 防刷屏）
     ctx1 = make_ctx(role="gm", gm_backend=_backend(_events(3)))
     body1 = handle_gm_command(p("/日志"), ctx1).message
@@ -815,5 +815,5 @@ def test_render_log_page_plain_helpers():
     """渲染纯函数：render_log_line / render_log_page 可直接单测。"""
     events = _events(6)
     page = render_log_page(events, 1)
-    assert "内容包X" in page and "— 第 1/2 页 · 共 6 条 · 输入 /日志 页码 翻页 —" in page
+    assert "内容包X" in page and "— 第 1/2 页 · 共 6 条 · 发 日志 页码 翻页 —" in page
     assert render_log_page([], 1) == "（暂无系统日志）"

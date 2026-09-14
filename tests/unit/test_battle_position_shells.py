@@ -60,7 +60,7 @@ class TestPositionSnapshotShells:
         assert cp["enemy"]["relative_to"] == "player"
 
     def test_turn_boundary_snapshot_carries_sections(self) -> None:
-        """回合边界快照（to_snapshot）随 _snap 深拷贝携带三段（不落新键于边界外）。"""
+        """行动边界快照（to_snapshot）随 _snap 深拷贝携带三段（不落新键于边界外）。"""
         snap = _fresh_engine().to_snapshot()
         assert snap["combat_position"] == _POSITION_DEFAULTS
         assert snap["parts_state"] == {}
@@ -91,7 +91,7 @@ class TestPositionSnapshotRoundtrip:
         assert state["battle_resources"] == {"materials": {}, "battle_alchemy_used": 0}
 
     def test_sections_survive_multiple_boundary_snapshots(self) -> None:
-        """连续多回合（多次回合边界快照）后三段仍在（续战长链不丢字段）。"""
+        """连续多次行动（多次行动边界快照）后三段仍在（续战长链不丢字段）。"""
         eng = _fresh_engine()
         for _ in range(3):
             snap = eng.to_snapshot()  # turn_start 边界（玩家未行动）

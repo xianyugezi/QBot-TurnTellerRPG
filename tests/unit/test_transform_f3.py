@@ -230,7 +230,7 @@ def test_snapshot_write_form_null_forces_remaining_zero() -> None:
             "job_id": "berserker",
             "form": None,
             "form_name": "",
-            "remaining": 5,  # 常态携带剩余回合 → 归一为 0
+            "remaining": 5,  # 常态携带剩余行动数 → 归一为 0
             "cooldown_remaining": 0,
             "form_status_id": None,
             "active_skill_set": "",
@@ -268,14 +268,14 @@ def test_restore_interrupt_resume_form_context() -> None:
     """中断恢复还原形态（TC-14）：form/remaining/active_skill_set 逐值恢复。"""
     restored = snapshot_restore({"transform_state": _full_state()})
     assert restored["form"] == "berserker_form"   # ② 形态指针
-    assert restored["remaining"] == 2             # ④ 剩余回合（递减继续归 F2）
+    assert restored["remaining"] == 2             # ④ 剩余行动数（递减继续归 F2）
     assert restored["active_skill_set"] == "transform_skills"  # ③ 技能位恢复基准
     assert restored["form_status_id"] == "rage_form"
     assert restored["job_id"] == "berserker"      # T1 冗余
 
 
 def test_restore_remaining_continues_after_resume() -> None:
-    """续战后剩余回合递减继续（TC-14）：恢复 remaining=2，F2 tick 递减口径不变。"""
+    """续战后剩余行动递减继续（TC-14）：恢复 remaining=2，F2 tick 递减口径不变。"""
     restored = snapshot_restore({"transform_state": _full_state()})
     assert restored["remaining"] == 2
     # F2 tick 递减（归 transform_revert.py，本层只保证恢复上下文供递减消费）：

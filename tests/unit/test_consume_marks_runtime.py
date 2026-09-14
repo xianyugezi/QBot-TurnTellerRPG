@@ -2,7 +2,7 @@
 
 覆盖：
   1. 有足够印记 → 施放成功 + 印记扣除
-  2. 印记不足 → 被拒不耗回合（S-01：不耗 MP/不改连段/印记不清）
+  2. 印记不足 → 被拒不消耗行动（S-01：不耗 MP/不改连段/印记不清）
   3. 同技能 mark_add 自产自销被拒（D-01 / AT-17：先于结算判定）
   4. 无 consume_marks 技能零变化
 
@@ -78,7 +78,7 @@ def test_consume_success_deducts_marks() -> None:
 
 
 def test_consume_insufficient_rejected_free() -> None:
-    """印记不足（0 层 < 需求 1）→ 被拒不耗回合（S-01：完全免费）。"""
+    """印记不足（0 层 < 需求 1）→ 被拒不消耗行动（S-01：完全免费）。"""
     eng = BattleEngine(defs=_skills())
     eng.start(_player(mp=0), _enemy())
     # 不预置任何印记 → 不足
@@ -87,7 +87,7 @@ def test_consume_insufficient_rejected_free() -> None:
     assert "印记不足" in out.message
     # 零副作用：印记不清、连段不改、可再行动（state 仍 act）
     assert _count(eng, "player", "fire_mark") == 0, "印记不应被清（S-01）"
-    assert eng.state == "act", "被拒不耗回合（state 应仍 act）"
+    assert eng.state == "act", "被拒不消耗行动（state 应仍 act）"
 
 
 def test_consume_self_produced_rejected_before_settle() -> None:

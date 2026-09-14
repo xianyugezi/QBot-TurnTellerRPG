@@ -1,0 +1,16 @@
+[
+  {
+    "id": "zz_probe_gadget_alpha",
+    "name": "探针装置甲",
+    "power": 3,
+    "zone": "试验场",
+    "labels": {
+      "kind": "probe"
+    }
+  },
+  {
+    "id": "zz_probe_gadget_beta",
+    "name": "探针装置乙",
+    "power": 5
+  }
+]

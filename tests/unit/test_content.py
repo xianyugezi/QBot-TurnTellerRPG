@@ -172,6 +172,19 @@ def test_negative_red(tmp_path: Path) -> None:
     assert "R-2" in kinds, f"应为 R-2，实际 {kinds}"
 
 
+def test_status_turns_minus_one_sentinel_allowed(tmp_path: Path) -> None:
+    """duration.turns=-1 =「永不被清」哨兵（细化_1b §4.2 D6；跃空姿态行动条窗口
+    载体 2026-09-11 实装）→ 不红拦（负值放行走 allow_negative；越界仅黄提示）。"""
+    p = _write_pack(
+        tmp_path, _manifest(["statuses"]),
+        {"statuses": [{"id": "air_x", "name": "空中态", "max_stack": 1,
+                       "duration": {"turns": -1, "charges": 0}, "decay": "none",
+                       "effects": [], "desc": "测试哨兵"}]},
+    )
+    pack, _ = build_pack(p)
+    assert pack.report.ok, f"哨兵 -1 不应红拦：{pack.report.errors}"
+
+
 def test_nan_red(tmp_path: Path) -> None:
     """细化_3e#TC-04：NaN → R-3 not_a_number。"""
     p = _write_pack(

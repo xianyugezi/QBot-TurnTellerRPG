@@ -147,7 +147,7 @@ def test_skill_mp_cost_deducted_on_cast() -> None:
 
 
 def test_skill_mp_not_deducted_when_rejected() -> None:
-    """MP 不足 → 被拒 → 不扣费不耗回合。"""
+    """MP 不足 → 被拒 → 不扣费不消耗行动。"""
     eng = _battle_engine(mp=5)
     out = eng.do_action("player", {"type": "skill", "skill_id": "power_strike"})
     assert out.ok is False, f"MP 不足应被拒，got {out}"

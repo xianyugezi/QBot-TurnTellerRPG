@@ -167,3 +167,17 @@ def test_register():
     assert "成就" in names
     assert "成就信息" in names
     assert "称号" in names
+
+
+# ---------------------------------------------------------------------------
+# 2026-09-12 专项·引擎文案1：列表尾段 Tip 模板表驱动
+# ---------------------------------------------------------------------------
+def test_list_tail_tip_table_driven():
+    """列表尾行 Tip 走 ach_list_tail_tip（免斜杠），ctx["templates"] 可覆盖。"""
+    from qbot_rpg.core.templates import DEFAULT_TEMPLATES
+
+    out = cmd_achievements(_P(), _ctx(_entries()))
+    assert f"Tip:{DEFAULT_TEMPLATES['ach_list_tail_tip']}" in out
+    assert "输入 /成就信息" not in out  # 旧硬编码（带斜杠）已撤除
+    out2 = cmd_achievements(_P(), _ctx(_entries(), templates={"ach_list_tail_tip": "【覆盖】尾行"}))
+    assert "Tip:【覆盖】尾行" in out2

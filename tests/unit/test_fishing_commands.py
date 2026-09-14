@@ -185,27 +185,39 @@ def test_tc01_no_arg_lists_spots_with_fields() -> None:
 
 
 def test_tc01_no_arg_intent_ref_three_keywords_verbatim() -> None:
-    """TC-01：鱼讯参考说明三组关键词逐字（微动=小鱼 / 拉扯=中鱼 / 猛烈=大鱼或鱼王！）。"""
-    assert FISH_INTENT_REF == "微动=小鱼 / 拉扯=中鱼 / 猛烈=大鱼或鱼王！"
+    """TC-01：鱼讯参考对照三组关键词逐条（2026-09-12 批9·路B 新排版：段头 + 三行映射）。"""
+    ref = "【鱼讯对照】\n微动 → 小鱼\n拉扯 → 中鱼\n猛烈 → 大鱼或鱼王"
+    assert FISH_INTENT_REF == ref
     ctx = _ctx(location="gloom_forest", season="spring", period="dawn")
     out = _run("/钓鱼", ctx)
-    assert "微动=小鱼 / 拉扯=中鱼 / 猛烈=大鱼或鱼王！" in out
+    assert ref in out
+    for word in ("微动", "拉扯", "猛烈", "小鱼", "中鱼", "鱼王"):
+        assert word in out
 
 
 def test_no_arg_period_preference_union_cn() -> None:
-    """无参：时段偏好 = 候选鱼种 periods 并集中文（银鳞鲤 晨/午/昏 + 金鳞鲤 全天）。"""
+    """无参：时段偏好 = 候选鱼种 periods 并集中文（银鳞鲤 晨/午/昏 + 金鳞鲤 全天）。
+
+    2026-09-12 批9·路B：钓点行拆为三行（- 钓点 / 时段： / 稀有度：），字段断言
+    定位到钓点行的下一行。
+    """
     ctx = _ctx(location="gloom_forest", season="spring", period="dawn")
     out = _run("/钓鱼", ctx)
-    line = next((ln for ln in out.splitlines() if "gp_moon_grass" in ln), "")
-    assert "晨/午/昏" in line
+    lines = out.splitlines()
+    i = next((n for n, ln in enumerate(lines) if "gp_moon_grass" in ln), -1)
+    assert i >= 0
+    assert "时段：" in lines[i + 1]
+    assert "晨/午/昏" in lines[i + 1]
 
 
 def test_no_arg_all_day_period_when_empty() -> None:
     """无参：候选鱼种 periods 全空（芦丛鲫 全年全天）→ 时段偏好 全天。"""
     ctx = _ctx(location="gloom_forest", season="winter", period="night")
     out = _run("/钓鱼", ctx)
-    line = next((ln for ln in out.splitlines() if "gp_reed_bank" in ln), "")
-    assert "全天" in line
+    lines = out.splitlines()
+    i = next((n for n, ln in enumerate(lines) if "gp_reed_bank" in ln), -1)
+    assert i >= 0
+    assert "全天" in lines[i + 1]
 
 
 def test_no_arg_rarity_marker_normal_when_only_normal_candidates() -> None:
@@ -214,16 +226,20 @@ def test_no_arg_rarity_marker_normal_when_only_normal_candidates() -> None:
     species = {"silver_carp": _FISH_TABLE["silver_carp"]}
     ctx = _ctx(location="gloom_forest", season="spring", period="dawn", species=species)
     out = _run("/钓鱼", ctx)
-    line = next((ln for ln in out.splitlines() if "gp_moon_grass" in ln), "")
-    assert "稀有度：普通" in line
+    lines = out.splitlines()
+    i = next((n for n, ln in enumerate(lines) if "gp_moon_grass" in ln), -1)
+    assert i >= 0
+    assert "稀有度：普通" in lines[i + 2]
 
 
 def test_no_arg_rarity_marker_rare_from_rare_candidate() -> None:
     """无参：稀有度标记 rare（赤纹泥鳅 稀有）→ 稀有。"""
     ctx = _ctx(location="abandoned_mine", season="summer", period="night")
     out = _run("/钓鱼", ctx)
-    line = next((ln for ln in out.splitlines() if "gp_star_iron" in ln), "")
-    assert "稀有度：稀有" in line
+    lines = out.splitlines()
+    i = next((n for n, ln in enumerate(lines) if "gp_star_iron" in ln), -1)
+    assert i >= 0
+    assert "稀有度：稀有" in lines[i + 2]
 
 
 def test_no_arg_spot_order_follows_gather_points() -> None:

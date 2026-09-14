@@ -20,7 +20,7 @@ from typing import List
 
 import pytest
 
-from qbot_rpg.engine.worldtime import (
+from qbot_rpg.core.worldtime import (
     DEFAULT_POOL,
     WorldTime,
     validate_weather_pool,

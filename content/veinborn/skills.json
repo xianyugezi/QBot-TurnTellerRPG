@@ -34,6 +34,7 @@
   "type": "basic",
   "kind": "damage",
   "power": 120,
+  "recovery": 40,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -75,6 +76,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 36,
   "attack_type": "none",
   "element": null,
   "effects": [],
@@ -109,7 +111,8 @@
   "break_power": 30,
   "type": "active",
   "kind": "damage",
-  "power": 200,
+  "power": 160,
+  "recovery": 78,
   "attack_type": "pierce",
   "element": null,
   "effects": [],
@@ -144,6 +147,7 @@
   "type": "basic",
   "kind": "damage",
   "power": 100,
+  "recovery": 37,
   "attack_type": "none",
   "element": null,
   "effects": [],
@@ -173,6 +177,8 @@
   "type": "basic",
   "kind": "damage",
   "power": 130,
+  "recovery": 41,
+  "stun": 10,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -215,6 +221,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 36,
   "attack_type": "none",
   "element": null,
   "effects": [
@@ -252,12 +259,15 @@
   "name": "蓄势",
   "desc": "蓄·蓄势：轻击蓄力，蓄力 +1，减伤 20%（蓄满 3 层后碎颅变崩山）",
   "counter_type": "parry",
-  "counter_skill": "vc_charge_counter"
+  "counter_skill": "vc_charge_counter",
+  "action_time": 400
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 200,
+  "recovery": 68,
+  "stun": 13,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -305,6 +315,8 @@
   "type": "active",
   "kind": "damage",
   "power": 150,
+  "recovery": 62,
+  "stun": 11,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -348,6 +360,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 38,
   "attack_type": "none",
   "element": null,
   "effects": [],
@@ -382,6 +395,8 @@
   "type": "active",
   "kind": "damage",
   "power": 230,
+  "recovery": 72,
+  "stun": 14,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -427,7 +442,9 @@
  {
   "type": "active",
   "kind": "damage",
-  "power": 420,
+  "power": 336,
+  "recovery": 130,
+  "stun": 18,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -468,6 +485,8 @@
   "type": "active",
   "kind": "damage",
   "power": 260,
+  "recovery": 104,
+  "stun": 14,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -524,6 +543,8 @@
   "type": "active",
   "kind": "damage",
   "power": 230,
+  "recovery": 73,
+  "stun": 15,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -567,12 +588,14 @@
   "energy_cost": {
    "stamina": 2
   },
-  "desc": "颅裂·失魂：满锤痕重击 230%，清 5 锤痕并使目标失衡 2 回合"
+  "desc": "颅裂·失魂：满锤痕重击 230%，清 5 锤痕并使目标失衡 2 次行动"
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 90,
+  "recovery": 65,
+  "stun": 7,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -615,6 +638,7 @@
   "type": "basic",
   "kind": "damage",
   "power": 110,
+  "recovery": 38,
   "attack_type": "slash",
   "element": null,
   "effects": [],
@@ -639,6 +663,7 @@
   "crit_mod": 1.0,
   "block_mode": "auto",
   "id": "rb_slash",
+  "brief": "【伤害】",
   "name": "脊斩",
   "break_power": 15,
   "energy_gain": {
@@ -650,6 +675,7 @@
   "type": "active",
   "kind": "utility",
   "power": 80,
+  "recovery": 41,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -681,18 +707,22 @@
   "crit_mod": 1.0,
   "block_mode": "auto",
   "id": "rb_charge",
+  "brief": "【防反】【架势】",
   "name": "蓄刃",
   "energy_gain": {
    "focus": 1
   },
   "desc": "蓄·蓄刃：蓄力轻挥，蓄刃 +1 减伤 15%（大剑蓄力架势——满 3 刃出终结）",
   "counter_type": "parry",
-  "counter_skill": "rb_charge_counter"
+  "counter_skill": "rb_charge_counter",
+  "action_time": 400
  },
  {
   "type": "active",
   "kind": "damage",
-  "power": 90,
+  "power": 72,
+  "recovery": 52,
+  "stun": 8,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -721,6 +751,7 @@
   "crit_mod": 1.0,
   "block_mode": "auto",
   "id": "rb_tackle",
+  "brief": "【伤害】【机动】【霸体】",
   "name": "脊靠",
   "energy_gain": {
    "stamina": 1
@@ -731,6 +762,7 @@
   "type": "active",
   "kind": "damage",
   "power": 130,
+  "recovery": 43,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -761,6 +793,7 @@
   "crit_mod": 1.0,
   "block_mode": "auto",
   "id": "rb_sweep",
+  "brief": "【伤害】【连段】",
   "name": "脊扫",
   "air_policy": "land",
   "energy_cost": {
@@ -772,6 +805,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 36,
   "attack_type": "none",
   "element": null,
   "effects": [],
@@ -796,6 +830,7 @@
   "crit_mod": 1.0,
   "block_mode": "auto",
   "id": "rb_mastery",
+  "brief": "【增益】【消耗】",
   "name": "猎势·拔脊",
   "energy_cost": {
    "focus": 4
@@ -806,6 +841,7 @@
   "type": "active",
   "kind": "damage",
   "power": 150,
+  "recovery": 63,
   "attack_type": "slash",
   "element": null,
   "effects": [],
@@ -841,7 +877,8 @@
  {
   "type": "active",
   "kind": "damage",
-  "power": 320,
+  "power": 256,
+  "recovery": 118,
   "attack_type": "slash",
   "element": null,
   "effects": [],
@@ -874,7 +911,8 @@
  {
   "type": "active",
   "kind": "damage",
-  "power": 300,
+  "power": 240,
+  "recovery": 114,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -914,12 +952,13 @@
   "energy_cost": {
    "stamina": 2
   },
-  "desc": "满蓄·裂脊斩：蓄刃满 3 的纵斩真蓄爆发 300%，清蓄刃（霸体）；斩后 1 回合窗口可接裂脊·极"
+  "desc": "满蓄·裂脊斩：蓄刃满 3 的纵斩真蓄爆发 300%，清蓄刃（霸体）；斩后 1 次行动窗口可接裂脊·极"
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 60,
+  "recovery": 39,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -953,6 +992,7 @@
   "crit_mod": 1.0,
   "block_mode": "auto",
   "id": "rb_core_strike",
+  "brief": "【伤害】【部位】【派生】",
   "name": "贯核击",
   "energy_cost": {
    "stamina": 1
@@ -966,6 +1006,7 @@
   "type": "active",
   "kind": "damage",
   "power": 55,
+  "recovery": 39,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -999,6 +1040,7 @@
   "crit_mod": 1.0,
   "block_mode": "auto",
   "id": "rb_tail_strike",
+  "brief": "【伤害】【部位】【派生】",
   "name": "断脊击",
   "energy_cost": {
    "stamina": 1
@@ -1011,7 +1053,8 @@
  {
   "type": "active",
   "kind": "damage",
-  "power": 200,
+  "power": 160,
+  "recovery": 78,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -1050,12 +1093,13 @@
   "id": "vb_core_breaker",
   "name": "破脉核",
   "derive_only": true,
-  "desc": "破技·破脉核：破坏值满派生，挂脉核已破印记，清破坏值；破核后 1 回合窗口贯核击可接断脉·极"
+  "desc": "破技·破脉核：破坏值满派生，挂脉核已破印记，清破坏值；破核后 1 次行动窗口贯核击可接断脉·极"
  },
  {
   "type": "active",
   "kind": "damage",
-  "power": 180,
+  "power": 144,
+  "recovery": 76,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -1095,6 +1139,7 @@
   "type": "active",
   "kind": "status",
   "power": 0,
+  "recovery": 40,
   "attack_type": "none",
   "element": null,
   "effects": [
@@ -1123,18 +1168,21 @@
   "crit_mod": 1.0,
   "block_mode": "auto",
   "id": "rb_guard",
+  "brief": "【防反】【架势】",
   "name": "脊格",
   "energy_gain": {
    "stamina": 1
   },
-  "desc": "格·脊格：举脊格挡，本回减伤 40%，回 1 精力（大剑防御——收招慢但能挡）",
+  "desc": "格·脊格：举脊格挡，本次行动减伤 40%，回 1 精力（大剑防御——收招慢但能挡）",
   "counter_type": "parry",
-  "counter_skill": "rb_guard_counter"
+  "counter_skill": "rb_guard_counter",
+  "action_time": 400
  },
  {
   "type": "basic",
   "kind": "damage",
   "power": 110,
+  "recovery": 38,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -1174,6 +1222,7 @@
   "type": "active",
   "kind": "damage",
   "power": 130,
+  "recovery": 45,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -1215,6 +1264,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 46,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -1228,7 +1278,7 @@
   "mp_cost": 0,
   "cooldown": 0,
   "tag": "none",
-  "armor": false,
+  "armor": true,
   "interrupt": false,
   "chain_refs": [],
   "consume_marks": {},
@@ -1251,14 +1301,16 @@
    "stamina": 1
   },
   "energy_gain": {},
-  "desc": "冲·冲脉斩：霸体突进，本回减伤 30%，刃力 +1",
+  "desc": "冲·冲脉斩：霸体突进，本次行动减伤 30%，刃力 +1",
   "counter_type": "parry",
-  "counter_skill": "vs_dash_counter"
+  "counter_skill": "vs_dash_counter",
+  "action_time": 400
  },
  {
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 36,
   "attack_type": "none",
   "element": null,
   "effects": [
@@ -1294,12 +1346,13 @@
   "name": "脉变·入剑",
   "energy_cost": {},
   "energy_gain": {},
-  "desc": "变·脉变入剑：耗 4 刃力变形进剑（剑形态限时 6 回合）"
+  "desc": "变·脉变入剑：耗 4 刃力变形进剑（剑形态限时 6 次行动）"
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 130,
+  "recovery": 45,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -1344,6 +1397,7 @@
   "type": "active",
   "kind": "damage",
   "power": 160,
+  "recovery": 63,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -1389,6 +1443,7 @@
   "type": "active",
   "kind": "damage",
   "power": 140,
+  "recovery": 43,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -1436,6 +1491,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 36,
   "attack_type": "none",
   "element": null,
   "effects": [
@@ -1475,7 +1531,8 @@
  {
   "type": "active",
   "kind": "damage",
-  "power": 320,
+  "power": 256,
+  "recovery": 116,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -1523,6 +1580,7 @@
   "type": "active",
   "kind": "damage",
   "power": 170,
+  "recovery": 64,
   "attack_type": "slash",
   "element": null,
   "effects": [],
@@ -1558,6 +1616,7 @@
   "type": "active",
   "kind": "damage",
   "power": 150,
+  "recovery": 63,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -1601,6 +1660,7 @@
   "type": "active",
   "kind": "damage",
   "power": 130,
+  "recovery": 44,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -1645,6 +1705,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 38,
   "attack_type": "none",
   "element": null,
   "effects": [
@@ -1684,14 +1745,16 @@
   "name": "填弹·盾构",
   "energy_cost": {},
   "energy_gain": {},
-  "desc": "填·填弹盾构：清零弹耗（回满弹匣），本回减伤 40%（换弹窗口）；填弹后 1 回合窗口",
+  "desc": "填·填弹盾构：清零弹耗（回满弹匣），本次行动减伤 40%（换弹窗口）；填弹后 1 次行动窗口",
   "counter_type": "parry",
-  "counter_skill": "va_reload_counter"
+  "counter_skill": "va_reload_counter",
+  "action_time": 400
  },
  {
   "type": "active",
   "kind": "damage",
-  "power": 280,
+  "power": 224,
+  "recovery": 112,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -1730,13 +1793,14 @@
   "air_policy": "land",
   "energy_cost": {},
   "energy_gain": {},
-  "desc": "炮·贯脉炮：龙击弹爆发 280%，清贯能，霸体贯穿（贯能满自动变）；炮后 1 回合窗口",
+  "desc": "炮·贯脉炮：龙击弹爆发 280%，清贯能，霸体贯穿（贯能满自动变）；炮后 1 次行动窗口",
   "derive_only": true
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 180,
+  "recovery": 66,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -1770,13 +1834,14 @@
   "name": "弹雨",
   "energy_cost": {},
   "energy_gain": {},
-  "desc": "雨·弹雨：散射风暴 180%（散射连用 2 次）；雨后 1 回合窗口",
+  "desc": "雨·弹雨：散射风暴 180%（散射连用 2 次）；雨后 1 次行动窗口",
   "derive_only": true
  },
  {
   "type": "basic",
   "kind": "damage",
   "power": 110,
+  "recovery": 38,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -1822,6 +1887,7 @@
   "type": "active",
   "kind": "damage",
   "power": 150,
+  "recovery": 62,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -1863,6 +1929,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 38,
   "attack_type": "none",
   "element": null,
   "effects": [
@@ -1907,12 +1974,13 @@
    "stamina": 1
   },
   "energy_gain": {},
-  "desc": "约·蚀约放账：给敌挂盾 350（护盾目标侧接线审计）+自账期+1 敌脉账+1；放账后 1 回合窗口：复利滚息自动派生复利·追息"
+  "desc": "约·蚀约放账：给敌挂盾 350（护盾目标侧接线审计）+自账期+1 敌脉账+1；放账后 1 次行动窗口：复利滚息自动派生复利·追息"
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 130,
+  "recovery": 44,
   "attack_type": "magic",
   "element": "void",
   "effects": [
@@ -1949,12 +2017,13 @@
    "stamina": 1
   },
   "energy_gain": {},
-  "desc": "息·活期蚀息：130% 必暴（crit 3.0）+暗蚀 dot 6%×3 回合+敌脉账+1"
+  "desc": "息·活期蚀息：130% 必暴（crit 3.0）+暗蚀 dot 6%×3 次行动+敌脉账+1"
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 220,
+  "recovery": 71,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -1996,6 +2065,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 38,
   "attack_type": "none",
   "element": null,
   "effects": [
@@ -2037,12 +2107,13 @@
    "stamina": 1
   },
   "energy_gain": {},
-  "desc": "率·高息率：CD3+自挂高息 2 回合+自盾 150+账期+1（冷却×状态复合）；高息后 1 回合窗口：活期蚀息自动派生高息·活期"
+  "desc": "率·高息率：CD3+自挂高息 2 次行动+自盾 150+账期+1（冷却×状态复合）；高息后 1 次行动窗口：活期蚀息自动派生高息·活期"
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 120,
+  "recovery": 44,
   "attack_type": "magic",
   "element": "void",
   "effects": [
@@ -2082,6 +2153,7 @@
   "type": "active",
   "kind": "damage",
   "power": 90,
+  "recovery": 41,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -2124,6 +2196,7 @@
   "type": "active",
   "kind": "damage",
   "power": 250,
+  "recovery": 100,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -2166,7 +2239,8 @@
  {
   "type": "active",
   "kind": "damage",
-  "power": 400,
+  "power": 320,
+  "recovery": 126,
   "attack_type": "magic",
   "element": "void",
   "effects": [
@@ -2209,13 +2283,14 @@
   "name": "清算·封息",
   "energy_cost": {},
   "energy_gain": {},
-  "desc": "清·清算封息：400% 大招+清账期清脉账+失衡（账期满 5 自动变——派生）；清算后 1 回合收账窗口：刺账自动派生收账·终息",
+  "desc": "清·清算封息：400% 大招+清账期清脉账+失衡（账期满 5 自动变——派生）；清算后 1 次行动收账窗口：刺账自动派生收账·终息",
   "derive_only": true
  },
  {
   "type": "basic",
   "kind": "damage",
   "power": 110,
+  "recovery": 38,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -2260,6 +2335,8 @@
   "type": "active",
   "kind": "damage",
   "power": 200,
+  "recovery": 70,
+  "stun": 11,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -2306,6 +2383,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 36,
   "attack_type": "none",
   "element": null,
   "effects": [
@@ -2350,6 +2428,7 @@
   "type": "active",
   "kind": "damage",
   "power": 130,
+  "recovery": 44,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -2389,6 +2468,7 @@
   "type": "active",
   "kind": "damage",
   "power": 180,
+  "recovery": 67,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -2425,12 +2505,13 @@
    "stamina": 1
   },
   "energy_gain": {},
-  "desc": "截·碎闸截脉：180% 打断+减伤20%（X2 打断×霸体窗口审计）"
+  "desc": "截·碎闸截脉：180% 打断+减伤20%"
  },
  {
   "type": "active",
   "kind": "status",
   "power": 0,
+  "recovery": 51,
   "attack_type": "none",
   "element": null,
   "effects": [
@@ -2464,14 +2545,16 @@
    "stamina": 1
   },
   "energy_gain": {},
-  "desc": "铁·铁闸挡：霸体+减伤20% 当回（X2 霸体窗口真免疫打断）",
+  "desc": "铁·铁闸挡：霸体+减伤20% 当回",
   "counter_type": "parry",
-  "counter_skill": "vg_iron_counter"
+  "counter_skill": "vg_iron_counter",
+  "action_time": 400
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 150,
+  "recovery": 62,
   "attack_type": "magic",
   "element": "void",
   "effects": [],
@@ -2507,6 +2590,8 @@
   "type": "active",
   "kind": "damage",
   "power": 260,
+  "recovery": 102,
+  "stun": 16,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -2546,13 +2631,15 @@
   "name": "爆锁·满闸",
   "energy_cost": {},
   "energy_gain": {},
-  "desc": "爆·爆锁满闸：260%（derive 变体——充能闸满 4 自动变）；爆锁后 1 回合窗口可派生：锁后·连闸",
+  "desc": "爆·爆锁满闸：260%（derive 变体——充能闸满 4 自动变）；爆锁后 1 次行动窗口可派生：锁后·连闸",
   "derive_only": true
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 220,
+  "recovery": 73,
+  "stun": 12,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -2589,13 +2676,14 @@
   "name": "破核·闸击",
   "energy_cost": {},
   "energy_gain": {},
-  "desc": "破·破核闸击：220%（派生——浊痕满 6 自动变破闸爆发）；破核后 1 回合窗口可派生：破闸·极",
+  "desc": "破·破核闸击：220%（派生——浊痕满 6 自动变破闸爆发）；破核后 1 次行动窗口可派生：破闸·极",
   "derive_only": true
  },
  {
   "type": "basic",
   "kind": "damage",
   "power": 110,
+  "recovery": 38,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -2638,6 +2726,7 @@
   "type": "active",
   "kind": "damage",
   "power": 120,
+  "recovery": 42,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -2679,6 +2768,7 @@
   "type": "active",
   "kind": "damage",
   "power": 260,
+  "recovery": 101,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -2715,13 +2805,14 @@
   "name": "斩杀·噬心",
   "energy_cost": {},
   "energy_gain": {},
-  "desc": "噬·斩杀噬心：260% 斩杀派生（HP≤50%）+清脉灼；此后 1 回合窗口可接噬心·连",
+  "desc": "噬·斩杀噬心：260% 斩杀派生（HP≤50%）+清脉灼；此后 1 次行动窗口可接噬心·连",
   "derive_only": true
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 100,
+  "recovery": 41,
   "attack_type": "magic",
   "element": "void",
   "effects": [
@@ -2763,6 +2854,7 @@
   "type": "active",
   "kind": "damage",
   "power": 300,
+  "recovery": 106,
   "attack_type": "magic",
   "element": "void",
   "effects": [
@@ -2801,6 +2893,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 36,
   "attack_type": "none",
   "element": null,
   "effects": [
@@ -2839,12 +2932,13 @@
    "stamina": 1
   },
   "energy_gain": {},
-  "desc": "冻·脉冻：控制 1 回合（skip_turn——目标被控期间 dot 照跳审计）；脉冻后 1 回合窗口可接冻裂·贯"
+  "desc": "冻·脉冻：控制 1 次行动（skip_turn——目标被控期间 dot 照跳审计）；脉冻后 1 次行动窗口可接冻裂·贯"
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 130,
+  "recovery": 44,
   "attack_type": "magic",
   "element": "void",
   "effects": [
@@ -2878,12 +2972,13 @@
    "stamina": 1
   },
   "energy_gain": {},
-  "desc": "灼·灼脉矢：130%+dot 5%×3——dot 跨血量门审计（dot 打进 50% 当回合链触发？）"
+  "desc": "灼·灼脉矢：130%+dot 5%×3——dot 跨血量门审计（dot 打进 50% 时链触发？）"
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 140,
+  "recovery": 44,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -2925,6 +3020,7 @@
   "type": "active",
   "kind": "damage",
   "power": 220,
+  "recovery": 72,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -2961,13 +3057,14 @@
   "name": "双生连斩",
   "energy_cost": {},
   "energy_gain": {},
-  "desc": "双·双生连斩：220% 复合派生（HP≤60% AND 脉灼≥3）+脉灼+1；此后 1 回合窗口可接双生·极",
+  "desc": "双·双生连斩：220% 复合派生（HP≤60% AND 脉灼≥3）+脉灼+1；此后 1 次行动窗口可接双生·极",
   "derive_only": true
  },
  {
   "type": "basic",
   "kind": "damage",
   "power": 110,
+  "recovery": 39,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -3010,6 +3107,8 @@
   "type": "active",
   "kind": "damage",
   "power": 170,
+  "recovery": 66,
+  "stun": 10,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -3053,6 +3152,8 @@
   "type": "active",
   "kind": "damage",
   "power": 300,
+  "recovery": 106,
+  "stun": 16,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -3089,13 +3190,14 @@
   "name": "过载·轮爆",
   "energy_cost": {},
   "energy_gain": {},
-  "desc": "爆·过载轮爆：300% 掣能满爆发（派生——形态激活期才可派生？）；轮爆后 1 回合内进入轮爆之势（可派生轮爆·二段）",
+  "desc": "爆·过载轮爆：300% 掣能满爆发（派生——形态激活期才可派生？）；轮爆后 1 次行动内进入轮爆之势（可派生轮爆·二段）",
   "derive_only": true
  },
  {
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 35,
   "attack_type": "none",
   "element": null,
   "effects": [],
@@ -3125,12 +3227,13 @@
    "focus": 4
   },
   "energy_gain": {},
-  "desc": "转·轮转袭脉：聚焦 4 翻面进袭脉形态（限时 4 回合——X8 形态冷却审计）"
+  "desc": "转·轮转袭脉：聚焦 4 翻面进袭脉形态（限时 4 次行动——X8 形态冷却审计）"
  },
  {
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 36,
   "attack_type": "none",
   "element": null,
   "effects": [
@@ -3166,13 +3269,14 @@
    "stamina": 1
   },
   "energy_gain": {},
-  "desc": "归·轮转归位：即时还原形态（revert_form——还原起形态冷却空窗）；归位后 1 回合内进入归位之势（轻旋可派生归位·重旋）",
+  "desc": "归·轮转归位：即时还原形态（revert_form——还原起形态冷却空窗）；归位后 1 次行动内进入归位之势（轻旋可派生归位·重旋）",
   "revert_form": true
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 140,
+  "recovery": 45,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -3214,6 +3318,8 @@
   "type": "active",
   "kind": "damage",
   "power": 260,
+  "recovery": 100,
+  "stun": 15,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -3255,6 +3361,8 @@
   "type": "active",
   "kind": "damage",
   "power": 320,
+  "recovery": 106,
+  "stun": 18,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -3294,7 +3402,7 @@
   "name": "袭脉·蚀爆",
   "energy_cost": {},
   "energy_gain": {},
-  "desc": "蚀·蚀爆：320%（形态技派生——掣能满 5 形态内爆发）；蚀爆后 1 回合内进入蚀爆之势（可派生蚀爆·余蚀）",
+  "desc": "蚀·蚀爆：320%（形态技派生——掣能满 5 形态内爆发）；蚀爆后 1 次行动内进入蚀爆之势（可派生蚀爆·余蚀）",
   "derive_only": true
  },
  {
@@ -3332,6 +3440,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 36,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -3339,6 +3448,11 @@
     "type": "reposition",
     "target": "self",
     "height": "air"
+   },
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "rb_vault_air"
    }
   ],
   "mp_cost": 0,
@@ -3362,6 +3476,7 @@
   "crit_mod": 1.0,
   "block_mode": "auto",
   "id": "rb_vault",
+  "brief": "【机动】【跃空】",
   "name": "跃空",
   "energy_gain": {},
   "desc": "机动·跃空：纵身跃上空中——甲壳怪的背壳只在空中够得到；行动后保持空中"
@@ -3370,6 +3485,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 35,
   "attack_type": "none",
   "element": null,
   "effects": [
@@ -3383,6 +3499,11 @@
     "target": "self",
     "mark": "charge_mark",
     "count": 1
+   },
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "vc_vault_air"
    }
   ],
   "mp_cost": 0,
@@ -3414,6 +3535,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 35,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -3457,6 +3579,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 34,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -3494,12 +3617,13 @@
   "id": "va_hover",
   "name": "空降悬停",
   "energy_gain": {},
-  "desc": "机动·空降悬停：脉翼展开悬停上空——甲壳怪背壳只在空中够得到；行动后保持空中；悬停后 1 回合窗口"
+  "desc": "机动·空降悬停：脉翼展开悬停上空——甲壳怪背壳只在空中够得到；行动后保持空中；悬停后 1 次行动窗口"
  },
  {
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 35,
   "attack_type": "none",
   "element": null,
   "effects": [
@@ -3507,6 +3631,11 @@
     "type": "reposition",
     "target": "self",
     "height": "air"
+   },
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "po_vault_air"
    }
   ],
   "mp_cost": 0,
@@ -3541,6 +3670,7 @@
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 36,
   "attack_type": "none",
   "element": null,
   "effects": [
@@ -3581,12 +3711,13 @@
    "stamina": 1
   },
   "energy_gain": {},
-  "desc": "绕·绕闸：绕背机动（自身方位→back，height 轴不动；CD1）——【压测面：reposition 只改 side 轴、height 轴保持不变（side:back 绕背）】；绕后之势窗口（1 回合未用消失）"
+  "desc": "绕·绕闸：绕背机动（自身方位→back，height 轴不动；CD1）——【压测面：reposition 只改 side 轴、height 轴保持不变（side:back 绕背）】；绕后之势窗口（1 次行动未用消失）"
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 110,
+  "recovery": 107,
   "attack_type": "pierce",
   "element": null,
   "effects": [],
@@ -3623,6 +3754,8 @@
   "type": "active",
   "kind": "damage",
   "power": 120,
+  "recovery": 35,
+  "stun": 8,
   "attack_type": "blunt",
   "element": null,
   "effects": [],
@@ -3665,6 +3798,8 @@
   "type": "active",
   "kind": "damage",
   "power": 170,
+  "recovery": 66,
+  "stun": 10,
   "attack_type": "blunt",
   "element": null,
   "effects": [],
@@ -3704,6 +3839,7 @@
   "type": "basic",
   "kind": "damage",
   "power": 110,
+  "recovery": 39,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -3741,6 +3877,7 @@
   "crit_mod": 1.0,
   "block_mode": "auto",
   "id": "sw_slash",
+  "brief": "【伤害】",
   "name": "御剑·斩",
   "energy_gain": {
    "focus": 1
@@ -3751,6 +3888,7 @@
   "type": "active",
   "kind": "damage",
   "power": 45,
+  "recovery": 65,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -3791,6 +3929,7 @@
   "type": "active",
   "kind": "damage",
   "power": 150,
+  "recovery": 62,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -3832,6 +3971,7 @@
   "crit_mod": 1.0,
   "block_mode": "auto",
   "id": "sw_thrust",
+  "brief": "【伤害】【消耗】【连段】【派生】",
   "name": "御剑·突",
   "desc": "式·御剑突：突剑一击 150%，耗剑势 50（命中灌注 +15）；连用每次 +10%（连势印）；1/2/3 剑印时自动派生穿锋/双锋/四象（耗 1/2/3 印，派生系解锁后可不耗印施放）"
  },
@@ -3839,6 +3979,7 @@
   "type": "active",
   "kind": "damage",
   "power": 165,
+  "recovery": 64,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -3892,6 +4033,7 @@
   "type": "active",
   "kind": "damage",
   "power": 180,
+  "recovery": 67,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -3939,6 +4081,7 @@
   "type": "active",
   "kind": "damage",
   "power": 195,
+  "recovery": 67,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -3992,6 +4135,7 @@
   "type": "active",
   "kind": "damage",
   "power": 210,
+  "recovery": 70,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -4039,6 +4183,7 @@
   "type": "active",
   "kind": "damage",
   "power": 225,
+  "recovery": 73,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -4092,6 +4237,7 @@
   "type": "active",
   "kind": "damage",
   "power": 190,
+  "recovery": 68,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -4137,13 +4283,14 @@
   "block_mode": "auto",
   "id": "sw_pierce",
   "name": "御剑·穿锋",
-  "desc": "御剑·穿锋：御剑·突的印系派生形态（不可主动施放）——穿锋剑气单点部位穿透 190%，耗 1 剑印；解锁穿锋诀，1 回合内可接穿锋·极",
+  "desc": "御剑·穿锋：御剑·突的印系派生形态（不可主动施放）——穿锋剑气单点部位穿透 190%，耗 1 剑印；解锁穿锋诀，1 次行动内可接穿锋·极",
   "derive_only": true
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 200,
+  "recovery": 115,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -4189,13 +4336,14 @@
   "block_mode": "auto",
   "id": "sw_flank",
   "name": "御剑·双锋",
-  "desc": "御剑·双锋：御剑·突的印系派生形态（不可主动施放）——剑气分袭两侧部位 200%（两段各向破位），耗 2 剑印；解锁双锋诀，1 回合内可接双锋·极",
+  "desc": "御剑·双锋：御剑·突的印系派生形态（不可主动施放）——剑气分袭两侧部位 200%（两段各向破位），耗 2 剑印；解锁双锋诀，1 次行动内可接双锋·极",
   "derive_only": true
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 210,
+  "recovery": 121,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -4241,13 +4389,14 @@
   "block_mode": "auto",
   "id": "sw_omni",
   "name": "御剑·四象",
-  "desc": "御剑·四象：御剑·突的印系派生形态（不可主动施放）——剑化四象分袭四向部位 210%（四段各向破位），耗 3 剑印；解锁四象诀，1 回合内可接四象·极",
+  "desc": "御剑·四象：御剑·突的印系派生形态（不可主动施放）——剑化四象分袭四向部位 210%（四段各向破位），耗 3 剑印；解锁四象诀，1 次行动内可接四象·极",
   "derive_only": true
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 155,
+  "recovery": 62,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -4286,12 +4435,13 @@
   "id": "sw_pierce_f",
   "name": "御剑·穿锋·诀",
   "derive_only": true,
-  "desc": "穿锋诀（无印常驻）：穿锋剑式无印版 155%，命中部位穿透；1 回合内可接穿锋·极"
+  "desc": "穿锋诀（无印常驻）：穿锋剑式无印版 155%，命中部位穿透；1 次行动内可接穿锋·极"
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 175,
+  "recovery": 109,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -4330,12 +4480,13 @@
   "id": "sw_flank_f",
   "name": "御剑·双锋·诀",
   "derive_only": true,
-  "desc": "双锋诀（无印常驻）：双锋剑式无印版 175% 两段；1 回合内可接双锋·极"
+  "desc": "双锋诀（无印常驻）：双锋剑式无印版 175% 两段；1 次行动内可接双锋·极"
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 190,
+  "recovery": 120,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -4374,12 +4525,13 @@
   "id": "sw_omni_f",
   "name": "御剑·四象·诀",
   "derive_only": true,
-  "desc": "四象诀（无印常驻）：四象剑式无印版 190% 四段；1 回合内可接四象·极"
+  "desc": "四象诀（无印常驻）：四象剑式无印版 190% 四段；1 次行动内可接四象·极"
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 240,
+  "recovery": 101,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -4414,12 +4566,13 @@
   "name": "御剑·穿锋·极",
   "derive_only": true,
   "air_policy": "land",
-  "desc": "穿锋·极：更高穿透 240% 单点部位；跃空施放落地（仅 1 回合窗口，未用消失）"
+  "desc": "穿锋·极：更高穿透 240% 单点部位；跃空施放落地（仅 1 次行动窗口，未用消失）"
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 250,
+  "recovery": 122,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -4457,12 +4610,13 @@
   "name": "御剑·双锋·极",
   "derive_only": true,
   "air_policy": "land",
-  "desc": "双锋·极：两侧 250% 两段，残响 2 回合持续两侧伤害；跃空施放落地（1 回合窗口）"
+  "desc": "双锋·极：两侧 250% 两段，残响 2 次行动持续两侧伤害；跃空施放落地（1 次行动窗口）"
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 270,
+  "recovery": 122,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -4500,12 +4654,13 @@
   "name": "御剑·四象·极",
   "derive_only": true,
   "air_policy": "land",
-  "desc": "四象·极：四向 270% 四段，残响 2 回合持续四向伤害；跃空施放落地（1 回合窗口）"
+  "desc": "四象·极：四向 270% 四段，残响 2 次行动持续四向伤害；跃空施放落地（1 次行动窗口）"
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 150,
+  "recovery": 62,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -4547,15 +4702,18 @@
   "crit_mod": 1.0,
   "block_mode": "auto",
   "id": "sw_vault",
+  "brief": "【伤害】【跃空】【闪反】",
   "name": "御剑·腾空",
-  "desc": "空·御剑腾空：跃空俯击——腾空斩向当前方位 150%（命中灌注剑势+15），空中地面技够不着（天然闪反）；闪避成功回剑势 30",
+  "desc": "空·御剑腾空：跃空俯击——腾空斩向当前方位 150%（命中灌注剑势+15），空中地面技未命中（天然闪反）；闪避成功回剑势 30",
   "counter_type": "dodge",
-  "counter_skill": "sw_vault_counter"
+  "counter_skill": "sw_vault_counter",
+  "action_time": 400
  },
  {
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 37,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -4589,15 +4747,18 @@
   "crit_mod": 1.0,
   "block_mode": "auto",
   "id": "sw_circle",
+  "brief": "【机动】【闪反】",
   "name": "御剑·回环",
-  "desc": "机动·回环：侧移闪反——横掠右侧并起回环架势（本回减伤 30%）",
+  "desc": "机动·回环：侧移闪反——横掠右侧并起回环架势（本次行动减伤 30%）",
   "counter_type": "dodge",
-  "counter_skill": "sw_circle_counter"
+  "counter_skill": "sw_circle_counter",
+  "action_time": 400
  },
  {
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 38,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -4637,15 +4798,18 @@
   "crit_mod": 1.0,
   "block_mode": "auto",
   "id": "sw_recall",
+  "brief": "【机动】【回收】",
   "name": "御剑·回收",
-  "desc": "机动·回收：收剑归鞘侧撤——回收飞剑余势 +30 剑势，回收架势本回减伤 20%",
+  "desc": "机动·回收：收剑归鞘侧撤——回收飞剑余势 +30 剑势，回收架势本次行动减伤 20%",
   "counter_type": "dodge",
-  "counter_skill": "sw_recall_counter"
+  "counter_skill": "sw_recall_counter",
+  "action_time": 400
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 160,
+  "recovery": 63,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -4677,6 +4841,7 @@
   "crit_mod": 1.0,
   "block_mode": "auto",
   "id": "sw_drop",
+  "brief": "【伤害】【跃空】",
   "name": "御剑·落",
   "air_policy": "land",
   "desc": "空·御剑落：空中驭剑坠击 160% 并落地（空中收势技，落地后回常态）"
@@ -4685,6 +4850,7 @@
   "type": "active",
   "kind": "status",
   "power": 0,
+  "recovery": 41,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -4719,15 +4885,18 @@
   "crit_mod": 1.0,
   "block_mode": "auto",
   "id": "sw_guard",
+  "brief": "【防反】【架势】",
   "name": "御剑·守势",
-  "desc": "守·御剑守势：举剑护体本回减伤 40%（防反架势），凝 1 剑印保底；冷却 2",
+  "desc": "守·御剑守势：举剑护体本次行动减伤 40%（防反架势），凝 1 剑印保底；冷却 2",
   "counter_type": "parry",
-  "counter_skill": "sw_guard_counter"
+  "counter_skill": "sw_guard_counter",
+  "action_time": 400
  },
  {
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 36,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -4758,13 +4927,15 @@
   "crit_mod": 1.0,
   "block_mode": "auto",
   "id": "sw_aura_blade",
+  "brief": "【消耗】【护盾】",
   "name": "御剑·剑罡",
-  "desc": "罡·剑罡化盾：耗 100 剑势化 300 剑罡护盾 2 回合；冷却 3"
+  "desc": "罡·剑罡化盾：耗 100 剑势化 300 剑罡护盾 2 次行动；冷却 3"
  },
  {
   "type": "active",
   "kind": "damage",
-  "power": 360,
+  "power": 288,
+  "recovery": 123,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -4800,12 +4971,13 @@
   "energy_cost": {
    "stamina": 2
   },
-  "desc": "窗口·裂脊极：裂脊斩后 1 回合窗口，脊扫自动化为纵斩再起 360%，清蓄刃（霸体）"
+  "desc": "窗口·裂脊极：裂脊斩后 1 次行动窗口，脊扫自动化为纵斩再起 360%，清蓄刃（霸体）"
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 320,
+  "recovery": 111,
   "attack_type": "pierce",
   "element": null,
   "effects": [],
@@ -4832,12 +5004,13 @@
   "id": "rb_core_x",
   "name": "断脉·极",
   "derive_only": true,
-  "desc": "追击·断脉极：破脉核后 1 回合窗口，贯核击自动化为破核追击 320%"
+  "desc": "追击·断脉极：破脉核后 1 次行动窗口，贯核击自动化为破核追击 320%"
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 145,
+  "recovery": 45,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -4881,6 +5054,7 @@
   "type": "active",
   "kind": "damage",
   "power": 250,
+  "recovery": 100,
   "attack_type": "slash",
   "element": null,
   "effects": [],
@@ -4905,6 +5079,7 @@
   "crit_mod": 1.0,
   "block_mode": "auto",
   "id": "rb_drop",
+  "brief": "【伤害】【跃空】【部位】",
   "name": "御脊·空坠",
   "break_power": 25,
   "air_policy": "land",
@@ -4917,6 +5092,8 @@
   "type": "active",
   "kind": "damage",
   "power": 170,
+  "recovery": 64,
+  "stun": 10,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -4963,6 +5140,8 @@
   "type": "active",
   "kind": "damage",
   "power": 230,
+  "recovery": 73,
+  "stun": 15,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -5009,6 +5188,8 @@
   "type": "active",
   "kind": "damage",
   "power": 380,
+  "recovery": 115,
+  "stun": 18,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -5046,12 +5227,14 @@
   },
   "derive_only": true,
   "break_power": 40,
-  "desc": "碎甲·极：破壳追击 380%+晕骸 1（仅破壳后 1 回合窗口，未用消失）"
+  "desc": "碎甲·极：破壳追击 380%+晕骸 1（仅破壳后 1 次行动窗口，未用消失）"
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 260,
+  "recovery": 102,
+  "stun": 15,
   "attack_type": "blunt",
   "element": null,
   "effects": [],
@@ -5088,6 +5271,7 @@
   "type": "active",
   "kind": "status",
   "power": 0,
+  "recovery": 39,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -5117,14 +5301,16 @@
   "block_mode": "auto",
   "id": "vc_guard",
   "name": "举锤架势",
-  "desc": "守·举锤架势：横锤护体本回减伤 40%（防反架势）；冷却 2",
+  "desc": "守·举锤架势：横锤护体本次行动减伤 40%（防反架势）；冷却 2",
   "counter_type": "parry",
-  "counter_skill": "vc_guard_counter"
+  "counter_skill": "vc_guard_counter",
+  "action_time": 400
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 260,
+  "recovery": 101,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -5163,6 +5349,7 @@
   "type": "active",
   "kind": "damage",
   "power": 170,
+  "recovery": 64,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -5201,6 +5388,7 @@
   "type": "active",
   "kind": "damage",
   "power": 200,
+  "recovery": 114,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -5233,12 +5421,13 @@
   "id": "vs_combo_x",
   "name": "入剑·疾",
   "derive_only": true,
-  "desc": "入剑·疾：入剑首击疾斩 200% 两段（仅入剑后 1 回合窗口，未用消失）"
+  "desc": "入剑·疾：入剑首击疾斩 200% 两段（仅入剑后 1 次行动窗口，未用消失）"
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 250,
+  "recovery": 100,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -5269,12 +5458,13 @@
   "id": "vs_axe_x",
   "name": "归斧·斩",
   "derive_only": true,
-  "desc": "归斧·斩：归斧首斩 250%+刃力 2（仅归斧后 1 回合窗口，未用消失）"
+  "desc": "归斧·斩：归斧首斩 250%+刃力 2（仅归斧后 1 次行动窗口，未用消失）"
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 240,
+  "recovery": 123,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -5308,12 +5498,13 @@
   "name": "空连·极",
   "derive_only": true,
   "air_policy": "land",
-  "desc": "空连·极：空中连刃收势 240% 两段并落地（仅跃空后 1 回合窗口，未用消失）"
+  "desc": "空连·极：空中连刃收势 240% 两段并落地（仅跃空后 1 次行动窗口，未用消失）"
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 170,
+  "recovery": 66,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -5358,6 +5549,7 @@
   "type": "active",
   "kind": "damage",
   "power": 210,
+  "recovery": 69,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -5402,6 +5594,7 @@
   "type": "active",
   "kind": "damage",
   "power": 200,
+  "recovery": 116,
   "attack_type": "pierce",
   "element": null,
   "effects": [],
@@ -5432,13 +5625,14 @@
    "stamina": 1
   },
   "energy_gain": {},
-  "desc": "雨后·追射：弹雨后追击 200% 两段（仅弹雨后 1 回合窗口，未用消失）",
+  "desc": "雨后·追射：弹雨后追击 200% 两段（仅弹雨后 1 次行动窗口，未用消失）",
   "derive_only": true
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 230,
+  "recovery": 73,
   "attack_type": "pierce",
   "element": null,
   "effects": [],
@@ -5469,13 +5663,14 @@
    "stamina": 1
   },
   "energy_gain": {},
-  "desc": "悬停狙击：空中悬停狙击 230% 破壳（仅悬停后 1 回合窗口，未用消失）",
+  "desc": "悬停狙击：空中悬停狙击 230% 破壳（仅悬停后 1 次行动窗口，未用消失）",
   "derive_only": true
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 140,
+  "recovery": 45,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -5510,13 +5705,15 @@
    "stamina": 1
   },
   "energy_gain": {},
-  "desc": "填弹·速射：填弹后首射 140%+过充 1（仅填弹后 1 回合窗口，未用消失）",
+  "desc": "填弹·速射：填弹后首射 140%+过充 1（仅填弹后 1 次行动窗口，未用消失）",
   "derive_only": true
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 160,
+  "recovery": 64,
+  "stun": 11,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -5550,13 +5747,15 @@
    "stamina": 1
   },
   "energy_gain": {},
-  "desc": "锁后·连闸：爆锁后快速铺闸 160%+闸 1（仅爆锁后 1 回合窗口）——【压测面：爆锁清闸后的资源回补窗口】",
+  "desc": "锁后·连闸：爆锁后快速铺闸 160%+闸 1（仅爆锁后 1 次行动窗口）——【压测面：爆锁清闸后的资源回补窗口】",
   "derive_only": true
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 300,
+  "recovery": 108,
+  "stun": 16,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -5590,13 +5789,15 @@
    "stamina": 1
   },
   "energy_gain": {},
-  "desc": "破闸·极：破核后闸击极式 300%+蚀印 2（仅破核后 1 回合窗口）——【压测面：target_marks 满值触发后窗口极式链】",
+  "desc": "破闸·极：破核后闸击极式 300%+蚀印 2（仅破核后 1 次行动窗口）——【压测面：target_marks 满值触发后窗口极式链】",
   "derive_only": true
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 240,
+  "recovery": 75,
+  "stun": 13,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -5633,13 +5834,14 @@
    "stamina": 1
   },
   "energy_gain": {},
-  "desc": "背闸·双扣：绕后双扣 240%+蚀印 2（仅绕闸后 1 回合窗口）——【压测面：reposition side 与派生窗口联动】",
+  "desc": "背闸·双扣：绕后双扣 240%+蚀印 2（仅绕闸后 1 次行动窗口）——【压测面：reposition side 与派生窗口联动】",
   "derive_only": true
  },
  {
   "type": "active",
   "kind": "utility",
   "power": 0,
+  "recovery": 35,
   "attack_type": "none",
   "element": null,
   "effects": [
@@ -5685,6 +5887,7 @@
   "type": "active",
   "kind": "damage",
   "power": 160,
+  "recovery": 64,
   "attack_type": "magic",
   "element": "void",
   "effects": [],
@@ -5719,6 +5922,7 @@
   "type": "active",
   "kind": "damage",
   "power": 220,
+  "recovery": 71,
   "attack_type": "magic",
   "element": "void",
   "effects": [],
@@ -5753,6 +5957,7 @@
   "type": "active",
   "kind": "damage",
   "power": 300,
+  "recovery": 106,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -5784,13 +5989,14 @@
   "name": "噬心·连",
   "energy_cost": {},
   "energy_gain": {},
-  "desc": "噬心·连：斩杀后追击 300%+灼印 1（仅噬心后 1 回合窗口）——【压测面：斩杀窗口极式】",
+  "desc": "噬心·连：斩杀后追击 300%+灼印 1（仅噬心后 1 次行动窗口）——【压测面：斩杀窗口极式】",
   "derive_only": true
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 280,
+  "recovery": 122,
   "attack_type": "slash",
   "element": null,
   "effects": [],
@@ -5818,13 +6024,14 @@
   "name": "双生·极",
   "energy_cost": {},
   "energy_gain": {},
-  "desc": "双生·极：双生极式 280% 两段（仅双生斩后 1 回合窗口）——【压测面：窗口极式多段】",
+  "desc": "双生·极：双生极式 280% 两段（仅双生斩后 1 次行动窗口）——【压测面：窗口极式多段】",
   "derive_only": true
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 240,
+  "recovery": 121,
   "attack_type": "pierce",
   "element": null,
   "effects": [],
@@ -5854,7 +6061,7 @@
    "stamina": 1
   },
   "energy_gain": {},
-  "desc": "冻裂·贯：脉冻后贯壳 240% 破壳 30（仅脉冻后 1 回合窗口）——【压测面：窗口极式+破位复合】",
+  "desc": "冻裂·贯：脉冻后贯壳 240% 破壳 30（仅脉冻后 1 次行动窗口）——【压测面：窗口极式+破位复合】",
   "break_power": 30,
   "derive_only": true
  },
@@ -5862,6 +6069,7 @@
   "type": "active",
   "kind": "damage",
   "power": 280,
+  "recovery": 103,
   "attack_type": "slash",
   "element": null,
   "effects": [],
@@ -5896,6 +6104,7 @@
   "type": "active",
   "kind": "damage",
   "power": 180,
+  "recovery": 67,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -5932,13 +6141,14 @@
    "stamina": 1
   },
   "energy_gain": {},
-  "desc": "收账·终息：清算后收账起新息 180%+账期 1（仅清算后 1 回合窗口）——【压测面：窗口极式与资源重新累积】",
+  "desc": "收账·终息：清算后收账起新息 180%+账期 1（仅清算后 1 次行动窗口）——【压测面：窗口极式与资源重新累积】",
   "derive_only": true
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 200,
+  "recovery": 69,
   "attack_type": "magic",
   "element": "void",
   "effects": [
@@ -5975,13 +6185,14 @@
    "stamina": 1
   },
   "energy_gain": {},
-  "desc": "高息·活期：高息后活期放贷 200%+蚀息+债务 1（仅高息率后 1 回合窗口）——【压测面：窗口极式带 dot 复合】",
+  "desc": "高息·活期：高息后活期放贷 200%+蚀息+债务 1（仅高息率后 1 次行动窗口）——【压测面：窗口极式带 dot 复合】",
   "derive_only": true
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 220,
+  "recovery": 71,
   "attack_type": "pierce",
   "element": null,
   "effects": [
@@ -6015,13 +6226,15 @@
    "stamina": 1
   },
   "energy_gain": {},
-  "desc": "复利·追息：放账后滚息 220% 破防（仅放账后 1 回合窗口）——【压测面：窗口极式+穿透复合】",
+  "desc": "复利·追息：放账后滚息 220% 破防（仅放账后 1 次行动窗口）——【压测面：窗口极式+穿透复合】",
   "derive_only": true
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 200,
+  "recovery": 68,
+  "stun": 13,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -6060,6 +6273,8 @@
   "type": "active",
   "kind": "damage",
   "power": 240,
+  "recovery": 75,
+  "stun": 15,
   "attack_type": "blunt",
   "element": null,
   "effects": [
@@ -6098,6 +6313,8 @@
   "type": "active",
   "kind": "damage",
   "power": 320,
+  "recovery": 106,
+  "stun": 18,
   "attack_type": "blunt",
   "element": null,
   "effects": [],
@@ -6125,13 +6342,14 @@
   "energy_gain": {},
   "id": "vd_over_x",
   "name": "轮爆·二段",
-  "desc": "轮爆·二段：轮爆后追压 320%（仅轮爆后 1 回合窗口）——【压测面：窗口极式接清资源爆发】",
+  "desc": "轮爆·二段：轮爆后追压 320%（仅轮爆后 1 次行动窗口）——【压测面：窗口极式接清资源爆发】",
   "derive_only": true
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 300,
+  "recovery": 121,
   "attack_type": "slash",
   "element": null,
   "effects": [],
@@ -6159,13 +6377,14 @@
   "energy_gain": {},
   "id": "vd_erode_x",
   "name": "蚀爆·余蚀",
-  "desc": "蚀爆·余蚀：蚀爆后余蚀连斩 300% 两段（仅蚀爆后 1 回合窗口）——【压测面：窗口极式多段接怪身印清零】",
+  "desc": "蚀爆·余蚀：蚀爆后余蚀连斩 300% 两段（仅蚀爆后 1 次行动窗口）——【压测面：窗口极式多段接怪身印清零】",
   "derive_only": true
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 160,
+  "recovery": 62,
   "attack_type": "slash",
   "element": null,
   "effects": [
@@ -6197,13 +6416,14 @@
   "energy_gain": {},
   "id": "vd_swing_x",
   "name": "归位·重旋",
-  "desc": "归位·重旋：归位后重旋 160%+握力 2（仅归位后 1 回合窗口）——【压测面：形态归位窗口接常态资源】",
+  "desc": "归位·重旋：归位后重旋 160%+握力 2（仅归位后 1 次行动窗口）——【压测面：形态归位窗口接常态资源】",
   "derive_only": true
  },
  {
   "type": "active",
   "kind": "damage",
   "power": 250,
+  "recovery": 71,
   "attack_type": "slash",
   "element": null,
   "effects": [],
@@ -6236,6 +6456,7 @@
   "type": "active",
   "kind": "damage",
   "power": 250,
+  "recovery": 70,
   "attack_type": "slash",
   "element": null,
   "effects": [],
@@ -6268,6 +6489,7 @@
   "type": "active",
   "kind": "damage",
   "power": 250,
+  "recovery": 72,
   "attack_type": "slash",
   "element": null,
   "effects": [],
@@ -6300,6 +6522,7 @@
   "type": "active",
   "kind": "damage",
   "power": 250,
+  "recovery": 70,
   "attack_type": "slash",
   "element": null,
   "effects": [],
@@ -6332,6 +6555,8 @@
   "type": "active",
   "kind": "damage",
   "power": 250,
+  "recovery": 73,
+  "stun": 14,
   "attack_type": "blunt",
   "element": null,
   "effects": [],
@@ -6364,6 +6589,7 @@
   "type": "active",
   "kind": "damage",
   "power": 250,
+  "recovery": 71,
   "attack_type": "pierce",
   "element": null,
   "effects": [],
@@ -6396,6 +6622,7 @@
   "type": "active",
   "kind": "damage",
   "power": 250,
+  "recovery": 72,
   "attack_type": "slash",
   "element": null,
   "effects": [],
@@ -6428,6 +6655,7 @@
   "type": "active",
   "kind": "damage",
   "power": 250,
+  "recovery": 71,
   "attack_type": "slash",
   "element": null,
   "effects": [],
@@ -6460,6 +6688,7 @@
   "type": "active",
   "kind": "damage",
   "power": 250,
+  "recovery": 72,
   "attack_type": "slash",
   "element": null,
   "effects": [],
@@ -6492,6 +6721,7 @@
   "type": "active",
   "kind": "damage",
   "power": 250,
+  "recovery": 70,
   "attack_type": "slash",
   "element": null,
   "effects": [],
@@ -6524,6 +6754,8 @@
   "type": "active",
   "kind": "damage",
   "power": 250,
+  "recovery": 73,
+  "stun": 14,
   "attack_type": "blunt",
   "element": null,
   "effects": [],

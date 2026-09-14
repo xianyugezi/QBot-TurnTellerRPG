@@ -57,6 +57,7 @@ from typing import Any, Dict, List, Mapping, MutableMapping, Optional, Sequence,
 from dataclasses import replace as _dcreplace
 
 from qbot_rpg.core.player_attributes import calc_all_final_attributes
+from qbot_rpg.data.gear_stats import route_bonus_into
 from qbot_rpg.data.item import ItemInstance
 from qbot_rpg.data.player import EquipmentSlot, PlayerAttributes
 
@@ -506,11 +507,10 @@ class EquipmentEngine:
                         else getattr(worn, "stats_bonus", None)
                     )
                     if isinstance(bonus, Mapping):
-                        for k, v in bonus.items():
-                            try:
-                                flat[str(k)] = flat.get(str(k), 0.0) + float(v)
-                            except (TypeError, ValueError):
-                                continue
+                        # 批⑧：键 "..._pct" 拆进 pct 层（单位=百分点），其余进 flat
+                        # （data.gear_stats.route_bonus_into；旧实例无 _pct 键时与
+                        # 原逐键求和行为一致）
+                        route_bonus_into(bonus, flat, pct)
                     pct_map = getattr(worn, "stats_pct", None)  # 钩子（ItemInstance 暂无该字段）
                     if isinstance(pct_map, Mapping):
                         for k, v in pct_map.items():

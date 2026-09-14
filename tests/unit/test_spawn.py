@@ -15,7 +15,7 @@ from __future__ import annotations
 import pytest
 
 from qbot_rpg.content.map_models import SpawnDef
-from qbot_rpg.engine.worldtime import ANCHOR, WorldTime
+from qbot_rpg.core.worldtime import ANCHOR, WorldTime
 from qbot_rpg.world.spawn import SpawnManager
 
 # ---------------------------------------------------------------------------

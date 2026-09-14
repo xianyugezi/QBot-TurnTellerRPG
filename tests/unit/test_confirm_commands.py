@@ -11,7 +11,7 @@
     message_id 缺失保守不落键 / 无会话模板 / 战斗拦截 / 互斥组冲突复核拒绝；
   - /放弃（SettleEngine.abandon 终态，材料不结算）：成功 / 重复放弃幂等 / 无会话 / 战斗拦截；
   - /调合续（GU-18 恢复挂起(战斗)）：成功渲染面板 / 已有活跃拒绝 / 无挂起拒绝；
-  - /分解（gem_wallet 鸭子类型消费）：成功两段式 / 标准版拒绝透传 / 回收减半透传 /
+  - /分解（gem_wallet 鸭子类型消费）：成功多段式（逐行） / 标准版拒绝透传 / 回收减半透传 /
     道具不存在 / 缺参 TPL-12 / *数量解析 / async 钱包兼容；
   - 装配：register_alchemy_commands 注册 4 终态指令 + ctx 注入 handler。
 
@@ -410,11 +410,11 @@ async def test_confirm_non_alchemy_session_rejected() -> None:
 
 
 async def test_confirm_battle_intercept() -> None:
-    """GU-10/MUT-04 负例：战斗中 /确认 → 「战斗中使用 /即时调合 <配方>」（L295）。"""
+    """GU-10/MUT-04 负例：战斗中 /确认 → 「❌ 战斗中不可调合」（L295）。"""
     ctx = make_ctx(in_battle=True)
     ctx["session_mgr"].store["u1"] = {"session_type": "battle", "payload": {}, "version": 1}
     out = await cmd_confirm(parse_command("/确认", whitelist=W), ctx)
-    assert "战斗中使用 /即时调合 <配方>" in out
+    assert "❌ 战斗中不可调合" in out
 
 
 # ---------------------------------------------------------------------------
@@ -472,7 +472,7 @@ async def test_abandon_battle_intercept() -> None:
     ctx = make_ctx(in_battle=True)
     ctx["session_mgr"].store["u1"] = {"session_type": "battle", "payload": {}, "version": 1}
     out = await cmd_abandon(parse_command("/放弃", whitelist=W), ctx)
-    assert "战斗中使用 /即时调合 <配方>" in out
+    assert "❌ 战斗中不可调合" in out
 
 
 # ---------------------------------------------------------------------------
@@ -517,11 +517,11 @@ async def test_resume_no_session_rejected() -> None:
 
 
 # ---------------------------------------------------------------------------
-# /分解：F-10/GEM-15 两段式消息（gem_wallet 鸭子类型消费）
+# /分解：F-10/GEM-15 多段式消息（逐行；gem_wallet 鸭子类型消费）
 # ---------------------------------------------------------------------------
 async def test_decompose_success_two_segment() -> None:
-    """F-10/M-10/GEM-15 正例：两段式消息 `✅ 火晶石×2 + 宝石×3（回收 60%）`——
-    材料回收段 + 宝石段；宝石 = 精良平铺基础值 3（拍板① 不乘回收率）。"""
+    """F-10/M-10/GEM-15 正例：多段式消息（批6·路Q 改逐行）`✅ 火晶石×2 / 宝石×3 / 回收 60%`——
+    材料回收段 + 宝石段 + 回收率段（各占一行）；宝石 = 精良平铺基础值 3（拍板① 不乘回收率）。"""
     ctx = make_ctx()
     ctx["wallet"] = FakeWallet(result={
         "ok": True,
@@ -531,7 +531,7 @@ async def test_decompose_success_two_segment() -> None:
         "message": "",
     }, rate=0.6)
     out = await cmd_decompose(parse_command("/分解 火晶石", whitelist=W), ctx)
-    assert out == "✅ 火晶石×2 + 宝石×3（回收 60%）"
+    assert out == "✅ 火晶石×2\n宝石×3\n回收 60%"
     assert "火晶石×2" in out and "宝石×3" in out
 
 
@@ -560,14 +560,14 @@ async def test_decompose_standard_diminish_half_recovery() -> None:
     out = await cmd_decompose(parse_command("/分解 火晶石", whitelist=W), ctx)
     assert "火晶石×1" in out
     assert "宝石×1" in out
-    assert "（回收 30%）" in out
+    assert "回收 30%" in out
 
 
 async def test_decompose_item_not_found() -> None:
-    """GU-33 负例：道具不存在 → 「❌ 道具不存在：xxx」。"""
+    """GU-33 负例：道具不存在 → 「❌ 未找到道具…」。"""
     ctx = make_ctx()
     out = await cmd_decompose(parse_command("/分解 不存在的东西", whitelist=W), ctx)
-    assert "道具不存在" in out
+    assert "未找到道具" in out
     assert out.startswith("❌")
 
 

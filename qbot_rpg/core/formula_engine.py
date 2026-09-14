@@ -126,7 +126,7 @@ class EvaluatorCtx:
 
     attacker: 我方（self）快照映射 —— [我方X]/[我方已损失X]/战斗状态/印记/连段/长线进度等。
     target:   对方（enemy）快照映射 —— [对方X]/[对方已损失X]/[对方PV]/[怪物意图] 等。
-    battle:   战斗情境/事件映射 —— [当前回合数]/[本次伤害值]/[本次暴击]/[本次命中]/[本场击杀数] 等。
+    battle:   战斗情境/事件映射 —— [当前行动数]/[本次伤害值]/[本次暴击]/[本次命中]/[本场击杀数] 等。
     rng_state: 可选随机种子；传入则 Math.random 为确定性 PRNG（同一结算内复用 → 预览/结算一致，F-5）。
               None 时使用宿主真随机。
 
@@ -191,7 +191,7 @@ _FIXED_PLACEHOLDERS: Dict[str, Tuple[str, str]] = {
     "[我方能量]": ("attacker", "energy"),
     "[我方怒气]": ("attacker", "rage"),
     "[我方剑气]": ("attacker", "sword_qi"),
-    "[我方本回合受击次数]": ("attacker", "hit_taken_this_round"),
+    "[我方本次行动受击次数]": ("attacker", "hit_taken_this_round"),
     "[我方累计伤害]": ("attacker", "dmg_total"),
     "[我方累计受击]": ("attacker", "dmg_taken_total"),
     "[我方连续命中]": ("attacker", "hit_streak"),
@@ -200,7 +200,7 @@ _FIXED_PLACEHOLDERS: Dict[str, Tuple[str, str]] = {
     "[我方上次暴击]": ("attacker", "last_crit"),
     "[我方超会心等级]": ("attacker", "super_crit_lv"),
     # ③ 战斗情境/事件类（定稿 §二③）
-    "[当前回合数]": ("battle", "round"),
+    "[当前行动数]": ("battle", "round"),
     "[本场击杀数]": ("battle", "kills"),
     "[本次伤害值]": ("battle", "this_damage"),
     "[本次暴击]": ("battle", "this_crit"),
@@ -237,7 +237,7 @@ _PARAM_RULES: Tuple[Tuple[str, str, str], ...] = (
     ("对方印记:", "target", "marks"),
     ("我方状态:", "attacker", "statuses"),
     ("对方状态:", "target", "statuses"),
-    ("状态剩余回合:", "attacker", "status_remain_round"),
+    ("状态剩余时长:", "attacker", "status_remain_round"),
     ("状态剩余次数:", "attacker", "status_remain_times"),
     ("技能冷却:", "attacker", "skill_cooldown"),
     ("技能就绪:", "attacker", "skill_ready"),

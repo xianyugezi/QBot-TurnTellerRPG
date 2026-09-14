@@ -11,10 +11,11 @@
 
 覆盖矩阵（每条正例 + 负例，断言精确文本/数值/快照字段/引擎调用记录；asyncio_mode=auto 直接 await）：
   TC-24 正例：战斗中+大师+素材齐 → 一步出结果：resolve 收到 battle_alchemy_used=0/cooldown=3
-    （炸弹 3 回合）→ use_fn 被调（auto_use=true）→ 渲染 M-17 伤害行「火焰弹！造成 58 伤害」
+    （炸弹 3 次行动）→ use_fn 被调（auto_use=true）→ 渲染 M-17 伤害行「✅ 火焰弹 命中」+
+    「造成 58 伤害」（批7·路T 拆两行）
     （M5 无 emoji 纯文本）→ battle_alchemy_used 写回 1
-  TC-24 负例：素材不足 → carry_ok 全拒差异「❌ 材料不足：缺 月光草×2」+ 快照不写
-  TC-25 负例：同场第 2 次（battle_alchemy_used=1）→ 「本场战斗已使用过即时调合（限 1 次/场）」
+  TC-24 负例：素材不足 → carry_ok 全拒差异「❌ 材料不足」+「缺 月光草×2」+ 快照不写
+  TC-25 负例：同场第 2 次（battle_alchemy_used=1）→ 「❌ 本场已用过即时调合」+「每场限 1 次」
   TC-25 正例：新场次（快照无该键）→ 清零可再用，battle_alchemy_used 置 1
   非战斗拒绝（GU-50）／非大师拒绝（GU-51）／能量不足（enabled 时，GU-52）／能量关闭直通（R-08）
   auto_use=false 入包（BA-07：use_fn 不被调，渲染「已入包」）／use_fn 缺失 → auto_use 回退入包
@@ -89,7 +90,7 @@ class FakeBattleAlchemyEngine:
 
     - carry_ok：真查 ctx["inventory"] 对 recipe.materials 全量持有（不足全拒+shortfall 差异）；
     - consume_energy：委托真实 EnergyBar.consume(player, 1)（energy_enabled 关闭 → bypassed 直通）；
-    - cooldown_of：炸弹 3 回合（BA-06），返回 self.cooldown（默认 3）；
+    - cooldown_of：炸弹 3 次行动（BA-06），返回 self.cooldown（默认 3）；
     - resolve：真扣素材 → auto_use+use_fn → 调 use_fn 返回 ActionOutcome 同型 dict；
       auto_use=false 或 use_fn 缺失 → 入包（ctx["inventory"] 加产出）返回包行数据。
     调用记录 self.calls 供断言（GU-53/54/F-17 时序）。
@@ -228,10 +229,12 @@ async def test_instant_one_step_auto_use_true() -> None:
     use_fn, used_calls = make_use_fn()
     ctx = make_ctx(battle_alchemy_engine=engine, use_battle_item=use_fn)
     out = await cmd_instant(_pc("/即时调合 火焰弹"), ctx)
-    # M-17 一行（M5 无 emoji 纯文本）：「火焰弹！造成 58 伤害」
-    assert out == "火焰弹！造成 58 伤害"
+    # M-17 伤害行（M5 无 emoji 纯文本）：「✅ 火焰弹 命中」+「造成 58 伤害」（批7·路T 拆两行）
+    lines = out.split("\n")
+    assert lines[0] == "✅ 火焰弹 命中"
+    assert lines[1] == "造成 58 伤害"
     assert "🔥" not in out
-    # resolve 调用签名：battle_alchemy_used=0（首用）、auto_use=True、cooldown=3（炸弹 3 回合）
+    # resolve 调用签名：battle_alchemy_used=0（首用）、auto_use=True、cooldown=3（炸弹 3 次行动）
     resolve_call = engine.calls[-1]
     assert resolve_call[0] == "resolve" and resolve_call[1] == 0
     assert resolve_call[2] is True and resolve_call[3] == 3
@@ -247,7 +250,7 @@ async def test_instant_material_shortfall_rejected() -> None:
     """TC-24/GU-53 负例：素材不足 → carry_ok 全拒+差异（ATO-01），快照不写、素材不扣。"""
     ctx = make_ctx(inventory={})  # 配方需 月光草×2，持有 0
     out = await cmd_instant(_pc("/即时调合 火焰弹"), ctx)
-    assert out == "❌ 材料不足：缺 月光草×2"
+    assert out == "❌ 材料不足\n缺 月光草×2"
     assert ctx["battle_snapshot"].get("battle_alchemy_used") is None
     assert ctx["inventory"].get("moon_grass", 0) == 0  # 全拒零扣
 
@@ -256,11 +259,14 @@ async def test_instant_material_shortfall_rejected() -> None:
 # TC-25：限次（GU-54）——同场第 2 次拒绝 / 新场次清零可再用
 # ---------------------------------------------------------------------------
 async def test_instant_second_use_same_battle_rejected() -> None:
-    """TC-25/GU-54 负例：battle_alchemy_used=1 ≥ per_battle_limit=1 → 「限 1 次/场」拒绝。"""
+    """TC-25/GU-54 负例：battle_alchemy_used=1 ≥ per_battle_limit=1 → 「❌ 本场已用过即时调合」
+    +「每场限 1 次」拒绝。"""
     engine = FakeBattleAlchemyEngine()
     ctx = make_ctx(battle_alchemy_engine=engine, battle_snapshot={"battle_alchemy_used": 1})
     out = await cmd_instant(_pc("/即时调合 火焰弹"), ctx)
-    assert out == "本场战斗已使用过即时调合（限 1 次/场）"
+    lines = out.split("\n")
+    assert lines[0] == "❌ 本场已用过即时调合"
+    assert lines[1] == "每场限 1 次"
     # 限次拒绝（GU-54 合同末位守卫）：素材校验已过（GU-53 先于 GU-54），但 resolve 不进入
     assert not any(c[0] == "resolve" for c in engine.calls)
     assert ctx["battle_snapshot"].get("battle_alchemy_used") == 1  # 不变
@@ -281,11 +287,13 @@ async def test_instant_new_battle_cleared_ok() -> None:
 # GU-50 战斗中 / GU-51 大师
 # ---------------------------------------------------------------------------
 async def test_instant_not_in_battle_rejected() -> None:
-    """GU-50 负例：非战斗 → 「即时调合仅限战斗中」；不触引擎、不写快照。"""
+    """GU-50 负例：非战斗 → 「❌ 即时调合仅限战斗中」+ 下一步；不触引擎、不写快照。"""
     engine = FakeBattleAlchemyEngine()
     ctx = make_ctx(battle_alchemy_engine=engine, in_battle=False)
     out = await cmd_instant(_pc("/即时调合 火焰弹"), ctx)
-    assert out == "即时调合仅限战斗中"
+    lines = out.split("\n")
+    assert lines[0] == "❌ 即时调合仅限战斗中"
+    assert lines[1] == "战斗内发 即时调合 <配方>"
     assert not engine.calls
     assert not ctx["battle_snapshot"]
 
@@ -370,10 +378,10 @@ async def test_instant_use_fn_missing_fallback_bag() -> None:
 # 其它：配方不存在 / 缺参 TPL-12 / 装配注册
 # ---------------------------------------------------------------------------
 async def test_instant_recipe_not_found() -> None:
-    """配方不存在 → 「❌ 配方不存在：{目标}」。"""
+    """配方不存在 → 「❌ 未找到配方「目标」」。"""
     ctx = make_ctx()
     out = await cmd_instant(_pc("/即时调合 不存在的配方"), ctx)
-    assert out == "❌ 配方不存在：不存在的配方"
+    assert out == "❌ 未找到配方「不存在的配方」"
     assert not ctx["battle_snapshot"]
 
 

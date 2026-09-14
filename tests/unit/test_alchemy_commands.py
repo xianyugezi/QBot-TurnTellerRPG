@@ -186,7 +186,8 @@ async def test_alchemy_open_session_panel_ok() -> None:
     out = await cmd_alchemy(parse_command("/炼金 火焰弹"), ctx)
     assert "火焰弹（配方Lv5）" in out
     assert "材料：月光草×2" in out
-    assert '属性刻度：火≥6 显现"范围爆炸"' in out
+    assert "属性刻度：" in out
+    assert "火≥6 显现「范围爆炸」" in out
     assert "特性位 0/2" in out
     assert "PP 0/5" in out
     assert "投入次数 0/5" in out
@@ -201,10 +202,10 @@ async def test_alchemy_open_session_panel_ok() -> None:
 
 
 async def test_alchemy_recipe_not_found() -> None:
-    """负例：配方不存在 → 「❌ 配方不存在：xxx」。"""
+    """负例：配方不存在 → 「❌ 未找到配方「xxx」」。"""
     ctx = make_ctx()
     out = await cmd_alchemy(parse_command("/炼金 不存在配方"), ctx)
-    assert "配方不存在" in out
+    assert out == "❌ 未找到配方「不存在配方」"
 
 
 async def test_alchemy_missing_arg_tpl12() -> None:
@@ -415,11 +416,11 @@ async def test_feed_no_session_rejected() -> None:
 
 
 async def test_feed_battle_intercept() -> None:
-    """GU-10/MUT-04 负例：战斗中发 /投料 → 「战斗中使用 /即时调合 <配方>」（L295）。"""
+    """GU-10/MUT-04 负例：战斗中发 /投料 → 「❌ 战斗中不可调合」（L295）。"""
     ctx = make_ctx(in_battle=True)
     ctx["session_mgr"].store["u1"] = {"session_type": "battle", "payload": {}, "version": 1}
     out = await cmd_feed(parse_command("/投料 火晶石"), ctx)
-    assert "战斗中使用 /即时调合 <配方>" in out
+    assert out == "❌ 战斗中不可调合\n发 即时调合 <配方>\n（不进入调合会话）"
 
 
 async def test_feed_non_alchemy_session_rejected() -> None:
@@ -441,13 +442,14 @@ async def test_feed_missing_arg_tpl12() -> None:
 # /投料：F-03 链式投料成功（M-03 反馈）
 # ---------------------------------------------------------------------------
 async def test_feed_ok_chain_and_inherit_feedback() -> None:
-    """F-03/M-03 正例：投 火晶石,火晶石 → 「⚗️ 火+8 | 连锁 1 段 | 可继承特性：灼烧强化(PP1)」。"""
+    """F-03/M-03 正例：投 火晶石,火晶石 → 多行反馈
+    「火+8 / 连锁 1 段 / 可继承特性：\n灼烧强化(PP1)」。"""
     ctx = make_ctx()
     await cmd_alchemy(parse_command("/炼金 火焰弹"), ctx)
     out = await cmd_feed(parse_command("/投料 火晶石,火晶石"), ctx)
     assert "火+8" in out
     assert "连锁 1 段" in out
-    assert "可继承特性：灼烧强化(PP1)" in out
+    assert "可继承特性：" in out and "灼烧强化(PP1)" in out
     # 快照持久化（suspend 后 version 递增：acquire=1 → feed 后=2）
     snap = ctx["session_mgr"].store["u1"]["payload"]
     assert [r["item"] for r in snap["materials"]] == ["fire_crystal", "fire_crystal"]
@@ -478,12 +480,12 @@ async def test_feed_quantity_parse() -> None:
 
 
 async def test_feed_slots_overflow() -> None:
-    """GU-11/FEED-04 负例：投满 5 槽再追加 → 「投料超槽位」（L344）。"""
+    """GU-11/FEED-04 负例：投满 5 槽再追加 → 「❌ 投料超出槽位」（L344）。"""
     ctx = make_ctx()
     await cmd_alchemy(parse_command("/炼金 火焰弹"), ctx)  # slots=5
     await cmd_feed(parse_command("/投料 火晶石*5"), ctx)
     out = await cmd_feed(parse_command("/投料 追加 冰晶"), ctx)
-    assert "投料超槽位" in out
+    assert "投料超出槽位" in out
     # 拒绝不改快照（原子）
     snap = ctx["session_mgr"].store["u1"]["payload"]
     assert len(snap["materials"]) == 1 and snap["materials"][0]["count"] == 5
@@ -558,7 +560,7 @@ async def test_alchemy_templates_override_via_ctx() -> None:
     out = await cmd_alchemy(parse_command("/炼金 火焰弹"), ctx)
     # 面板用自定义模板（含占位符替换）
     assert out.startswith("（自定义）火焰弹 Lv5｜材料：月光草×2｜")
-    assert "刻度：火≥6 显现" in out and "范围爆炸" in out
+    assert "火≥6 显现「范围爆炸」" in out
     # 守卫用自定义模板（无占位符）
     ctx2 = make_ctx(templates=tpls, proficiency={})
     out2 = await cmd_alchemy(parse_command("/炼金 火焰弹"), ctx2)
@@ -571,39 +573,20 @@ async def test_alchemy_templates_override_via_ctx() -> None:
 
 
 async def test_alchemy_templates_default_when_no_ctx_templates() -> None:
-    """无 ctx['templates'] → tpl_of 回落内置默认（逐字对齐既有输出）。"""
+    """无 ctx['templates'] → tpl_of 回落全量表默认（批3·路H 新排版）。"""
     ctx = make_ctx()
     out = await cmd_alchemy(parse_command("/炼金 火焰弹"), ctx)
-    assert "火焰弹（配方Lv5）：材料：月光草×2" in out
-    assert "属性刻度：火≥6 显现" in out
+    assert "火焰弹（配方Lv5）\n材料：月光草×2" in out
+    assert "属性刻度：\n火≥6 显现「范围爆炸」" in out
     assert "特性位 0/2" in out and "PP 0/5" in out and "投入次数 0/5" in out
     ctx2 = make_ctx(proficiency={})
     out2 = await cmd_alchemy(parse_command("/炼金 火焰弹"), ctx2)
     assert out2 == "❌ 等级不足"
-
-
-def test_alchemy_tpl_placeholder_whitelist_coverage() -> None:
-    """alchemy_tpl 白名单：默认模板占位符 ⊆ 白名单（防内容包拼错 key 引入缺键不替换）。"""
-    import re
-
-    from qbot_rpg.core.templates.alchemy_tpl import (
-        DEFAULT_TEMPLATES as _ACH_TPL,
-        PLACEHOLDER_WHITELIST as _ACH_WH,
-    )
-    pat = re.compile(r"\{([a-zA-Z0-9_]+)\}")
-    assert _ACH_TPL, "alchemy_tpl 默认模板表非空"
-    for key, tpl in _ACH_TPL.items():
-        used = set(pat.findall(str(tpl)))
-        assert used <= _ACH_WH.get(key, set()), (
-            f"{key}: 占位符 {used} 超出白名单 {_ACH_WH.get(key, set())}"
-        )
-
-
 def test_alchemy_tpl_renders_default_match_baseline() -> None:
-    """默认模板逐字一致性：tpl_of 无 ctx.templates 渲染结果与既有输出面板一致。
+    """默认模板逐字一致性：tpl_of 无 ctx.templates 渲染结果等于全量表默认面板（批3·路H 六行）。
 
-    用最小 ctx（仅 templates 缺省）渲染面板模板，断言默认字符串逐字等于迁移前的
-    硬编码输出（占位符全填后不含任何残留 { 占位符）。
+    用最小 ctx（仅 templates 缺省）渲染面板模板，断言默认字符串逐字等于表内新模板
+    （占位符全填后不含任何残留 { 占位符）。
     """
     from qbot_rpg.core.templates import tpl_of
 
@@ -614,8 +597,8 @@ def test_alchemy_tpl_renders_default_match_baseline() -> None:
         "pp_used": 0, "pp_budget": 5, "units": 0, "slots": 5,
     })
     assert panel == (
-        "火焰弹（配方Lv5）：材料：月光草×2\n"
-        '属性刻度：火≥6 显现"范围爆炸" | 特性位 0/2 | PP 0/5 | 投入次数 0/5'
+        "火焰弹（配方Lv5）\n材料：月光草×2\n"
+        '属性刻度：火≥6 显现"范围爆炸"\n特性位 0/2\nPP 0/5\n投入次数 0/5'
     )
     assert "{" not in panel  # 无未替换占位符
     # 白名单外占位符：templates 含未登记占位符 → 渲染原样保留不崩

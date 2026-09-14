@@ -534,16 +534,18 @@ def _shortfall_text(ctx: Mapping[str, Any], shortfall: Any) -> str:
         if need > 0:
             parts.append(tpl_of(ctx, "alchemy_shortfall_item",
                                 {"name": name, "need": need}))
-    return " + ".join(parts)
+    return "\n".join(parts)
 
 
-def _energy_message(energy: Any, player: Mapping[str, Any], n: int = 1) -> str:
+def _energy_message(energy: Any, player: Mapping[str, Any], n: int = 1,
+                    ctx: Optional[Mapping[str, Any]] = None) -> str:
     """能量不足模板（ENG-04/L344）：「能量 0/10，等 30 分钟回 1 格，或 /合成 保底」。
 
-    守卫期已确认不足（current < n），consume(n) 只读返回不足消息（不扣、零副作用）。
+    守卫期已确认不足（current < n），consume(n) 只读返回不足消息（不扣、零副作用）；
+    引擎缺 message 时回落全量表 alchemy_energy_insufficient（批3·路H）。
     """
     res = energy.consume(player, n)
-    return str(res.get("message") or "能量不足")
+    return str(res.get("message") or tpl_of(ctx, "alchemy_energy_insufficient"))
 
 
 def _tier_score(qs: QualitySystem, tier_key: Any) -> int:
@@ -602,7 +604,7 @@ def _recipe_material_text(core: AlchemyCore, recipe: Mapping[str, Any],
         else:
             parts.append(tpl_of(ctx, "alchemy_material_entry_plain",
                                 {"name": name, "count": cnt}))
-    return " ".join(parts) if parts else tpl_of(ctx, "alchemy_no_materials")
+    return _stack_list_text(parts) if parts else tpl_of(ctx, "alchemy_no_materials")
 
 
 def _render_scales(ctx: Mapping[str, Any],
@@ -629,15 +631,25 @@ def _render_scales(ctx: Mapping[str, Any],
         cn = ELEMENT_NAMES_CN.get(elem, elem)
         parts.append(tpl_of(ctx, "alchemy_scale_item",
                             {"cn": cn, "th": best[0], "effect": best[1]}))
-    return " ".join(parts) if parts else tpl_of(ctx, "alchemy_no_scale")
+    return ("\n" + "\n".join(parts)) if parts else tpl_of(ctx, "alchemy_no_scale")
+
+
+def _stack_list_text(parts: list) -> str:
+    """材料/刻度清单多行拼接（批3·路H 拆行口径，对齐批1 explore）：单条随标签同行；
+    ≥2 条标签行独占、条目逐行（"\\n" 引导），防单行超 14 全角。"""
+    if len(parts) >= 2:
+        return "\n" + "\n".join(str(p) for p in parts)
+    return str(parts[0]) if parts else ""
 
 
 def _render_panel(core: AlchemyCore, snap: Mapping[str, Any], ctx: Mapping[str, Any],
                   job_tier_index: int) -> str:
     """开会话面板（M-02 模板结构，**纯文本降级**——全仓 emoji 纪律 test_emoji_discipline 仅
     允许 ✅/❌，📖/⚗️/🔥 等模板标记按「数据型功能图标一律降级纯文本」弃用）：
-    `火焰弹（配方Lv5）：材料：火药×1(火2) 矿石×1 任意×1`
-    `属性刻度：火≥6 显现"范围爆炸" | 特性位 2/3 | PP 5/5 | 投入次数 4`
+    `火焰弹（配方Lv5）`
+    `材料：火药×1(火2)`
+    `属性刻度：火≥6 显现「范围爆炸」`
+    `特性位 2/3` `PP 5/5` `投入次数 4`（批3·路H 六行重排：材料/刻度多条目逐行）
 
     数据全部取自 assemble_panel 渲染结构（element_req_status/pp/traits_inherit）。
     """
@@ -647,11 +659,11 @@ def _render_panel(core: AlchemyCore, snap: Mapping[str, Any], ctx: Mapping[str, 
     level = recipe.get("level", "?") if recipe else "?"
     chain = snap.get("materials") or []
     if chain:
-        mats = " ".join(_material_entry_text(r, ctx) for r in chain if isinstance(r, Mapping))
-        if not mats:
-            mats = "（无）"
+        entries = [_material_entry_text(r, ctx) for r in chain if isinstance(r, Mapping)]
+        mats = _stack_list_text(entries) if entries else tpl_of(ctx, "alchemy_no_materials")
     else:
-        mats = _recipe_material_text(core, recipe, ctx) if recipe else "（无）"
+        mats = (_recipe_material_text(core, recipe, ctx) if recipe
+                else tpl_of(ctx, "alchemy_no_materials"))
     scales = _render_scales(ctx, recipe)
     traits_max = int(panel.get("traits_inherit", 1) or 1)
     traits_used = 0  # 批5 /继承 落位后计（现快照无继承位字段，开会话恒 0）
@@ -669,8 +681,13 @@ def _render_panel(core: AlchemyCore, snap: Mapping[str, Any], ctx: Mapping[str, 
 def _feed_feedback(core: AlchemyCore, snap: Mapping[str, Any],
                    ctx: Mapping[str, Any]) -> str:
     """投料成功反馈（M-03 模板结构，**纯文本降级**——emoji 纪律同上，⚗️/🔥/✓ 弃用）：
-    `火+7 | 连锁 2 段 | 可继承特性：灼烧强化(PP1) 回复量+5%(PP1)`
-    附：连锁 ≥3 段 → `连锁 N 段 → 效果等级 N`；刻度达标 → `火+42（刻度 30·范围爆炸）`。
+    多行排版（批4·路K）：
+      `火+7`
+      `连锁 2 段`
+      `可继承特性：`
+      `灼烧强化(PP1)`
+      `回复量+5%(PP1)`
+    附：连锁 ≥3 段 → `效果等级 N`；刻度达标 → `刻度达标 火+42` / `刻度 30·范围爆炸`。
     """
     chain = snap.get("chain") or {}
     segments = int(chain.get("segments", 0) or 0)
@@ -707,13 +724,13 @@ def _feed_feedback(core: AlchemyCore, snap: Mapping[str, Any],
               for _tid, name, pp in pool.get("awaken") or []]
     if gold:
         traits.append(tpl_of(ctx, "alchemy_feed_trait_gold",
-                             {"items": " ".join(gold)}))
+                             {"items": "\n".join(gold)}))
     if awaken:
         traits.append(tpl_of(ctx, "alchemy_feed_trait_awaken",
-                             {"items": " ".join(awaken)}))
+                             {"items": "\n".join(awaken)}))
     if traits:
         parts.append(tpl_of(ctx, "alchemy_feed_traits_header",
-                            {"items": " ".join(traits)}))
+                            {"items": "\n".join(traits)}))
     if segments >= 3:
         parts.append(tpl_of(ctx, "alchemy_feed_chain_effect",
                             {"segments": segments,
@@ -732,7 +749,7 @@ def _feed_feedback(core: AlchemyCore, snap: Mapping[str, Any],
                         "th": th, "effect": st.get("met_effect"),
                     })
                 )
-    return " | ".join(parts)
+    return "\n".join(parts)
 
 
 def _feed_error(res: Mapping[str, Any], ctx: Mapping[str, Any]) -> str:
@@ -867,7 +884,7 @@ async def cmd_alchemy(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 
     # GU-06 能量可查（ENG-04：read 检查不扣；energy_enabled=false 直通，R-08）
     if _energy_enabled(settings) and energy.current_of(player) < 1:
-        return _energy_message(energy, player)
+        return _energy_message(energy, player, ctx=ctx)
 
     # GU-07 会话互斥（MUT-02：单玩家 1 调合会话，sessions.player_qid 主键全局互斥）
     session_mgr = ctx.get("session_mgr")
@@ -963,7 +980,7 @@ def _cmd_alchemy_batch(
     energy_note = ""
     if _energy_enabled(settings):
         if energy.current_of(player) < qty:
-            return _energy_message(energy, player, qty)
+            return _energy_message(energy, player, qty, ctx=ctx)
         energy_note = f"能量 -{qty}"
 
     # BATCH-05 原子校验：材料×N + 金币全量（不足全拒+差异，不部分执行）
@@ -1019,7 +1036,7 @@ def _cmd_alchemy_batch(
     if isinstance(level, int) and not isinstance(level, bool) and level > 0:
         prof_engine.gain_prof_exp(player, ALCHEMY_JOB_ID, level * qty, source="craft")
 
-    mats_text = " + ".join(
+    mats_text = "\n".join(
         tpl_of(ctx, "alchemy_material_entry_plain",
                {"name": _item_name(ctx, mid), "count": ci * qty})
         for mid, ci in need_mats
@@ -1027,6 +1044,8 @@ def _cmd_alchemy_batch(
     coin_text = (tpl_of(ctx, "alchemy_batch_coins",
                         {"coins_need": coins_need, "currency": _cur_name(ctx)})
                  if coins_need else "")
+    if coin_text and mats_text:
+        coin_text = "\n" + coin_text
     output_name = _item_name(ctx, output_id)
     main = tpl_of(ctx, "alchemy_batch_output", {
         "output_name": output_name, "qty": qty,
@@ -1204,16 +1223,22 @@ def _inherit_error(res: Mapping[str, Any],
 def _render_inherit_success(ctx: Mapping[str, Any], snap: Mapping[str, Any],
                             res: Mapping[str, Any]) -> str:
     """M-04 成功 → 面板特性位更新（`3 普通 + 第 4 位金色`），**纯文本降级**（emoji 纪律）：
-    `已继承：灼烧强化 回复强化 ｜ 特性位 2 普通 + 第 4 位金色（灼烧强化·精） ｜ PP 3/5`。"""
+    多行排版（批4·路K）：
+      `已继承：`
+      `灼烧强化`
+      `特性位 2 普通`
+      `第 4 位金色：灼烧强化·精`
+      `PP 3/5`
+    """
     parts: list = []
     names = [_trait_name(ctx, t) for t in (res.get("traits") or [])]
     if names:
         parts.append(tpl_of(ctx, "alchemy_inherit_done",
-                            {"names": " ".join(names)}))
+                            {"names": "\n".join(names)}))
     negs = [_trait_name(ctx, n) for n in (res.get("negatives") or [])]
     if negs:
         parts.append(tpl_of(ctx, "alchemy_inherit_negatives",
-                            {"names": " ".join(negs)}))
+                            {"names": "\n".join(negs)}))
     normal_used = len(snap.get("traits") or [])
     gold = snap.get("gold_slot")
     slot_text = tpl_of(ctx, "alchemy_inherit_slot_used",
@@ -1226,7 +1251,7 @@ def _render_inherit_success(ctx: Mapping[str, Any], snap: Mapping[str, Any],
     parts.append(tpl_of(ctx, "alchemy_pp_used",
                         {"used": pp.get("used", 0),
                          "budget": pp.get("budget", 0)}))
-    return " ｜ ".join(parts)
+    return "\n".join(parts)
 
 
 async def _run_inherit(ctx: MutableMapping[str, Any], tokens: list,
@@ -1372,9 +1397,15 @@ def _confirm_error(res: Mapping[str, Any], ctx: Mapping[str, Any]) -> str:
 def _render_decompose(
     res: Mapping[str, Any], ctx: Mapping[str, Any], *, rate: Optional[float] = None
 ) -> str:
-    """两段式消息渲染（M-10 / GEM-15：材料回收段 + 宝石段，纯文本无装饰 emoji）：
+    """多段式消息渲染（M-10 / GEM-15：材料回收段 + 宝石段 + 回收率段，纯文本无装饰 emoji；
+    2026-09-12 批6·路Q 改逐行——材料逐行、宝石/回收率各占一行，避免多材料/长数挤行折行）：
 
-    `✅ 火晶石×2 月光草×1 + 宝石×3（回收 60%）`——宝石 = 平铺基础值不乘回收率（拍板①，
+    逐行示例：
+    `✅ 火晶石×2`
+    `月光草×1`
+    `宝石×3`
+    `回收 60%`
+    宝石 = 平铺基础值不乘回收率（拍板①，
     普通1/精良3/史诗8/传说20，可配 gem.分解）。rate 为回收率小数（None → 不显示）。
     入参：res（gem_wallet.decompose 成功输出 {materials, gem, ...}）、ctx（物品名解析）、
       rate（decompose_rate，可选）。出参：成功正文 str。
@@ -1391,7 +1422,7 @@ def _render_decompose(
             cnt = 1
         parts.append(tpl_of(ctx, "alchemy_material_entry_plain",
                             {"name": name, "count": cnt}))
-    body = (tpl_of(ctx, "alchemy_decompose_body", {"items": " ".join(parts)})
+    body = (tpl_of(ctx, "alchemy_decompose_body", {"items": "\n".join(parts)})
             if parts else tpl_of(ctx, "alchemy_decompose_empty"))
     gem = 0
     try:
@@ -2262,10 +2293,18 @@ def _evolve_error(res: Mapping[str, Any], ctx: Mapping[str, Any]) -> str:
 def _render_deep_panel(core: AlchemyCore, snap: Mapping[str, Any],
                        ctx: Mapping[str, Any], job_tier_index: int) -> str:
     """深度会话面板（F-06/M-06：6 槽/核心槽/3 普通+1 金/刻度/进化线；**纯文本降级**——emoji
-    纪律同 _render_panel，M-06 深度面板模板结构）：
-    `炼狱爆弹·深度（配方Lv40）深度调合：材料：火晶石×2(火8)`
-    `属性刻度：火≥5 显现"burn" | 槽位 0/6 | 核心槽：空 | 特性位 0/3 普通+1金 | PP 0/5`
-    `进化线：炼金产出 0/5 → /进化 解锁 烈焰弹·改配方`
+    纪律同 _render_panel，M-06 深度面板模板结构；2026-09-12 批5·路N 改逐字段拆行）：
+    `炼狱爆弹·深度（配方Lv40）`
+    `深度调合`
+    `材料：火晶石×2(火8)`
+    `属性刻度：火≥5 显现「burn」`
+    `槽位 0/6`
+    `核心槽：空`
+    `特性位 0/3 普通`
+    `第 4 位金色`（金位独占时才有此行）
+    `PP 0/5`
+    `进化线：炼金产出 0/5`
+    `解锁：发 进化 烈焰弹·改配方`
     """
     panel = core.assemble_panel(snap, ctx, job_tier_index=job_tier_index)
     recipe = _find_recipe(ctx, snap.get("recipe_id"))
@@ -2275,9 +2314,10 @@ def _render_deep_panel(core: AlchemyCore, snap: Mapping[str, Any],
     if chain:
         mats = " ".join(_material_entry_text(r, ctx) for r in chain if isinstance(r, Mapping))
         if not mats:
-            mats = "（无）"
+            mats = tpl_of(ctx, "alchemy_no_materials")
     else:
-        mats = _recipe_material_text(core, recipe, ctx) if recipe else "（无）"
+        mats = (_recipe_material_text(core, recipe, ctx) if recipe
+                else tpl_of(ctx, "alchemy_no_materials"))
     scales = _render_scales(ctx, recipe)
     try:
         slots = max(2, int(snap.get("slots", 6)))
@@ -2374,7 +2414,11 @@ def _render_challenge_panel(ctx: Mapping[str, Any], snap: Mapping[str, Any],
 def _render_sp_panel(ctx: Mapping[str, Any],
                      view: Mapping[str, Any]) -> str:
     """技能面板渲染（F-19/M-19；**纯文本降级**——✨ 弃用）：
-    `SP 3 点可用：品质上限+10（已 2 次）/投入次数+1/解锁复制`。"""
+    标题 + 每项一行（批7·路T：`alchemy_sp_panel` 拆行 + 面板项 join 改换行）：
+    `SP 3 点可用`
+    `品质上限+10（已 2 次）`
+    `投入次数+1`
+    `解锁复制`"""
     try:
         sp = max(0, int(view.get("sp_available", 0)))
     except (TypeError, ValueError):
@@ -2395,7 +2439,7 @@ def _render_sp_panel(ctx: Mapping[str, Any],
             parts.append(str(name))
     if parts:
         return tpl_of(ctx, "alchemy_sp_panel",
-                      {"sp": sp, "items": "/".join(parts)})
+                      {"sp": sp, "items": "\n".join(parts)})
     return tpl_of(ctx, "alchemy_sp_panel_empty", {"sp": sp})
 
 
@@ -2440,7 +2484,7 @@ def _render_announcement(meta: AlchemyMeta, tier_index: int,
         preview = m.get("preview") if isinstance(m, Mapping) else None
         parts.append(tpl_of(ctx, "alchemy_announce_item",
                             {"name": name, "preview": preview}))
-    return " | ".join(parts)
+    return "\n".join(parts)
 
 
 async def cmd_deep(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
@@ -2478,7 +2522,7 @@ async def cmd_deep(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
                    or tpl_of(ctx, "alchemy_deep_locked"))
     # GU-21 能量可查（read 不扣；energy_enabled=false 直通，R-08）
     if _energy_enabled(settings) and energy.current_of(player) < 1:
-        return _energy_message(energy, player)
+        return _energy_message(energy, player, ctx=ctx)
     # GU-22 会话互斥（MUT-02 全局互斥；同 cmd_alchemy 口径）
     session_mgr = ctx.get("session_mgr")
     if session_mgr is None:
@@ -2493,7 +2537,7 @@ async def cmd_deep(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
             return TEMPLATE_MESSAGES[TEMPLATE_IN_PROGRESS]
         return TEMPLATE_MESSAGES[TEMPLATE_ALREADY_ACTIVE]
     # DeepEngine.deep_snapshot（F-06：6 槽/核心槽/3 普通+1 金/刻度/进化线；MUT-07 分型）
-    snap = deep.deep_snapshot(recipe, job_tier_index=tier_index)
+    snap = deep.deep_snapshot(recipe, job_tier_index=tier_index, ctx=ctx)
     if not isinstance(snap, Mapping) or snap.get("ok") is False:
         msg = snap.get("message") if isinstance(snap, Mapping) else None
         return str(msg or tpl_of(ctx, "alchemy_deep_open_fail"))
@@ -2714,7 +2758,9 @@ def render_alchemy_codex(ctx: MutableMapping[str, Any]) -> str:
     无门槛（只读+成长奖励幂等领取）：AlchemyMeta.codex_summary（进度 lit/total/all_lit）+
       codex_reward（点亮 N 格 → 经验/新配方，L210，idempotent）→ king_eligible（全亮 → 炼金王
       称号，TTL-01）渲染；M5 无 emoji 渲染纯文本：
-      `炼金图鉴：已点亮 23/40（点亮 40 → 炼金王称号）`。
+      `炼金图鉴：点亮 23/40`
+      `全点亮 → 「炼金王」称号`
+      （批7·路T：`alchemy_codex_line` 精简 + `alchemy_codex_king_hint` 换行独占一行）
     入参：ctx（codex_state/registry/prof_engine）。出参：回复正文 str。
     """
     settings = _settings_of(ctx)
@@ -2757,7 +2803,7 @@ async def cmd_skill_panel(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     """`/技能面板 [解锁=<面板项>]`（P-19/SEP-19 查看态 + 工程补白解锁子词，GU-58/F-19/M-19/
     SP-02~05/TC-27）。
 
-    无门槛：AlchemyMeta.skill_panel_view 渲染「SP 3 点可用：品质上限+10（已 2 次）/…」；
+    无门槛：AlchemyMeta.skill_panel_view 渲染「SP 3 点可用」+ 面板项逐行；
     可选 `解锁=<面板项>`（工程补白：SP-04/05 自选解锁子词 → skill_panel_unlock，SP 不足拒绝）。
     入参：parsed、ctx（prof_engine）。出参：回复正文 str。
     """
@@ -2957,7 +3003,7 @@ async def cmd_instant(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     上下文（战斗快照即过程态），无 投料/继承/确认 链。
 
     守卫链（合同顺序 GU-50→51→52→53→54）：
-      - GU-50 战斗中（ctx.in_battle，非战斗 → 「即时调合仅限战斗中」）；
+      - GU-50 战斗中（ctx.in_battle，非战斗 → 「❌ 即时调合仅限战斗中」+ 下一步）；
       - GU-51 炼金职业 ≥ 大师（proficiency.alchemy level ≥ 4，L425）；
       - GU-52 能量 ≥1 格（energy_enabled=true 时 engine.consume_energy，不足拒；R-08 关闭直通）；
       - GU-53 素材全量校验（engine.carry_ok，不足全拒+差异）；
@@ -2966,7 +3012,7 @@ async def cmd_instant(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 
     一步出结果（F-17/BA-07/08）：auto_use 默认 true（settings 战斗即时调合.auto_use）→
     注入 use_fn（ctx[\"use_battle_item\"]）走战斗道具行动入口当场结算；false → 入包本场不可再用；
-    use_fn 缺失 → auto_use 回退入包（【工程补白】）。吃冷却（engine.cooldown_of，炸弹 3 回合）
+    use_fn 缺失 → auto_use 回退入包（【工程补白】）。吃冷却（engine.cooldown_of，炸弹 3 次行动）
     传 resolve。渲染 M-17 一行 → 记 battle_alchemy_used+1（写回注入战斗快照 dict 顶层键）。
 
     入参：parsed（ParsedCommand）、ctx（in_battle/battle_snapshot/battle_alchemy_engine/
@@ -3020,7 +3066,7 @@ async def cmd_instant(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     use_fn = ctx.get("use_battle_item")
     if auto_use and use_fn is None:
         auto_use = False  # 【工程补白】无战斗道具行动入口 → 回退入包
-    cooldown = engine.cooldown_of(recipe)  # 吃冷却（BA-06：炸弹 3 回合）
+    cooldown = engine.cooldown_of(recipe)  # 吃冷却（BA-06：炸弹 3 次行动）
     res = engine.resolve(
         ctx, recipe,
         battle_alchemy_used=used, auto_use=auto_use,
@@ -3189,7 +3235,7 @@ async def cmd_helper(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     gather: Any = None
     craft: Any = None
     if spec:
-        parsed_spec = parse_task_spec(spec)
+        parsed_spec = parse_task_spec(spec, ctx)
         if not parsed_spec.get("ok"):
             return str(parsed_spec.get("message")
                        or tpl_of(ctx, "alchemy_helper_task_invalid"))
@@ -3238,7 +3284,7 @@ async def cmd_assist(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
       会话 version 可复现【工程补白】）→ 写会话快照 assist_bonus 字段（F-15 加持当前会话
       后续结算；/确认 结算叠加落点见报告给批11-2）→ suspend 持久化（version 递增）。
     渲染（M-15 纯文本降级，装饰性 emoji 禁用——对齐 cmd_plant M-21 口径）：
-      「协力调和：〈玩家名〉加入，获得随机加成：〈加成描述〉」。
+      「协力调和：〈玩家名〉 加入」+「随机加成：〈加成描述〉」（批7·路T 拆两行）。
     入参：parsed（ParsedCommand，args[0]=被邀请玩家纯 QQ 号，@ 已由消息层剥离）、
       ctx（session_mgr/proficiency/items/recipe/inventory + resolve_player_name/same_group hook）。
     出参：回复正文 str。

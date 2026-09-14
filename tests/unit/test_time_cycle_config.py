@@ -16,7 +16,7 @@ from typing import List
 
 import pytest
 
-from qbot_rpg.engine.worldtime import (
+from qbot_rpg.core.worldtime import (
     ANCHOR,
     DEFAULT_POOL,
     PERIODS,
@@ -395,7 +395,7 @@ def test_time_cycle_invalid_via_check_pack() -> None:
 # ================================================================== 枚举开放可配（用户拍板 2026-08-26 / 设计审查批次3 P1-1）
 def test_custom_season_enum_effective() -> None:
     """自定义 season.enum（内容包扩展）：cycle_tick 用 len(custom)，season_now 返回自定义键。"""
-    from qbot_rpg.engine.worldtime import WorldTime
+    from qbot_rpg.core.worldtime import WorldTime
 
     cfg = {"time_cycle": {"season": {"season_days": 7, "enum": ["s1", "s2", "s3"]},
                           "period": {"period_minutes": 60}}}
@@ -410,7 +410,7 @@ def test_custom_season_enum_effective() -> None:
 
 def test_custom_period_enum_effective() -> None:
     """自定义 period.enum：period_now 返回自定义键。"""
-    from qbot_rpg.engine.worldtime import WorldTime
+    from qbot_rpg.core.worldtime import WorldTime
 
     cfg = {"time_cycle": {"period": {"period_minutes": 60, "enum": ["p1", "p2"]}}}
     wt = WorldTime(cfg)
@@ -446,7 +446,7 @@ def test_season_enum_invalid_red() -> None:
 
 def test_custom_enum_condition_keys() -> None:
     """条件键三键随枚举可配：ctx 注入 season_keys 后自定义键可命中。"""
-    from qbot_rpg.engine.weather_conditions import eval_condition
+    from qbot_rpg.core.weather_conditions import eval_condition
 
     ctx = {"season_now": "s2", "season_keys": ("s1", "s2", "s3")}
     assert eval_condition({"var": "season", "op": "eq", "param": "s2"}, ctx) is True
@@ -458,7 +458,7 @@ def test_custom_enum_condition_keys() -> None:
 # =====================================================================================
 def test_default_pool_object_form_clean_keys() -> None:
     """P1-4：default_pool() 对 {key,name,emoji} 对象形态返回干净键（非 str(dict) 垃圾键）。"""
-    from qbot_rpg.engine.worldtime import WorldTime
+    from qbot_rpg.core.worldtime import WorldTime
 
     cfg = {"time_cycle": {"weather": {"default_pool": [
         {"key": "clear", "name": "晴"}, {"key": "rain", "name": "雨"}]}}}

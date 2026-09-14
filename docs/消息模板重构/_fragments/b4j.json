@@ -1,0 +1,39 @@
+{
+  "rail": "b4j",
+  "templates": {
+    "battle_no_battle": "❌ 当前没有进行中的战斗\n发 锁定 <序号> 开战",
+    "battle_target_no_battle": "❌ 当前没有进行中的战斗\n开战后可查看目标",
+    "battle_target_head": "【目标】{name}\n【行动数】{round}",
+    "battle_target_hp": "【生命】{hp}/{max_hp}",
+    "battle_target_attr": "【{attr_name}】{value}",
+    "battle_target_marks": "【印记】\n{marks}",
+    "battle_target_status": "【状态】\n{statuses}",
+    "battle_target_weak": "【弱点】\n{weak}",
+    "battle_no_skill": "❌ 没有这个技能\n发 技能 查看可用技能",
+    "battle_no_item_arg": "❌ 请指定要使用的道具",
+    "battle_no_item": "❌ 没有这个道具\n发 背包 查看道具",
+    "battle_flee_ok": "✅ 逃跑成功，脱离战斗",
+    "battle_flee_failed": "❌ 逃跑失败，战斗继续",
+    "battle_item_used": "✅ 你使用了「{item_name}」",
+    "battle_no_battle_map_monster": "❌ 当前没有进行中的战斗\n发 锁定 <序号> 开战\n战斗中发 攻击 <技能名>"
+  },
+  "prose_keys": {},
+  "notes": {
+    "battle_no_battle": "重做：保留原首行（对齐 test_battle_wiring 前缀断言），补「下一步」引导 锁定 开战（指令免斜杠；参数按 battle_launch 帮助口径写 <序号>）。",
+    "battle_target_no_battle": "重做：去旧「（/锁定 1 开战后可查看目标）」裸斜杠+括号，改为「开战后可查看目标」第二行；避免与 battle_no_battle 重复开战引导。",
+    "battle_target_head": "重做：原「【目标】{name}（第 {round} 行动）」→ 每行一字段拆两行；行动数对齐批1 status_target 的【行动数】口径（CTB 无「回合」，勿用「回合」）。占位符 name/round 不变。",
+    "battle_target_hp": "维持：【生命】{hp}/{max_hp} 合规（无 ｜/裸斜杠，静态宽 7/28，估算 23/28）。与批1 status_attr_resource 同标签口径。",
+    "battle_target_attr": "维持：【{attr_name}】{value} 合规（静态 4/28，估算 16/28）；与批1 status_attr 同形态（每属性一行）。",
+    "battle_target_marks": "重做：打印记区改为「标题行 + 每印记一行」（少｜多换行）；battle_commands.py 拼接由「 ｜ 」改为换行（防多印记叠层爆宽）。",
+    "battle_target_status": "重做：同印记——标题行 + 每状态一行；拼接分隔由「 ｜ 」改换行（上限仍取前 6 条）。",
+    "battle_target_weak": "重做：同——标题行 + 每弱点一行；拼接分隔由「 ｜ 」改换行（types/elements 分段各自成行）。",
+    "battle_target_tail": "死键清除：全仓零引用（仅 battle_tpl.py 定义；grep 全仓 .py/.json/.md 无渲染调用）——按任务书 §3[9] 判死键，不迁入新表、直接从 battle_tpl.py 删除并记录。",
+    "battle_no_skill": "重做：保留原因首行，补「下一步」发 技能 查看可用技能（技能指令为既有指令，未发明）。",
+    "battle_no_item_arg": "重做：去旧「（/道具 药水）」示例——该 /道具 指令为旧文案残留（战斗道具入口已于 2026-08-31 拍板删除，parsers 白名单无「道具」指令）；战斗内道具经引擎注入路径，不再给会误导的指令示例，仅保留错误原因。",
+    "battle_no_item": "重做：保留原因首行，补「下一步」发 背包 查看道具（背包为既有只读指令）。",
+    "battle_flee_ok": "维持：✅ 逃跑成功，脱离战斗（10.5 全角，合规；语义完整无 ｜/裸斜杠）。",
+    "battle_flee_failed": "维持：❌ 逃跑失败，战斗继续（合规；与 core/battle.py 事件标签口径一致）。",
+    "battle_item_used": "重做：道具名加「」引用（对齐批1 explore「✅ 你来到了「{name}」」风格）；占位符 item_name 不变，估算 22/28。",
+    "battle_no_battle_map_monster": "重做（最高优先，旧 48 全角）：原三句含「；」串行 → 拆三行（原因 + 锁定开战 + 攻击技能）；指令免斜杠、参数 <…>；保留两处信息要素（锁定开战 / 攻击发动技能）。"
+  }
+}

@@ -2,9 +2,9 @@
 """九期215：战报八段终案测试（intent 四字段 / tpl 五新 key / D-01 emoji / sender 频控）。"""
 import pytest
 
+from qbot_rpg.core import cloudsea_emoji as ce
 from qbot_rpg.core.monster_intent import build_intent
-from qbot_rpg.core.templates import battle_tpl
-from qbot_rpg.core.templates import cloudsea_emoji as ce
+from qbot_rpg.core.templates import DEFAULT_TEMPLATES, PLACEHOLDER_WHITELIST
 from qbot_rpg_bridge.cloudsea_sender import CloudseaSender, MENTION_CLASSES
 
 
@@ -40,14 +40,14 @@ def test_intent_ext_explicit_params_override():
     assert it["windup"] == 3 and it["target_ref"] == "player.main"
 
 
-# ---- battle_tpl 五新 key ----
+# ---- 战报五新 key（template_table.json 全量表；白名单由表占位符自动派生）----
 
 def test_tpl_five_new_keys_and_whitelist_sync():
     for key in ("battle_stage_shift_line", "battle_windup_unknown", "battle_windup_ready",
                 "battle_merge_summary", "battle_mention_line"):
-        assert key in battle_tpl.DEFAULT_TEMPLATES, key
-        assert key in battle_tpl.PLACEHOLDER_WHITELIST, key
-    text = battle_tpl.DEFAULT_TEMPLATES["battle_merge_summary"].format(n=3, window_sec=30)
+        assert key in DEFAULT_TEMPLATES, key
+        assert key in PLACEHOLDER_WHITELIST, key
+    text = DEFAULT_TEMPLATES["battle_merge_summary"].format(n=3, window_sec=30)
     assert "3" in text and "30" in text
 
 

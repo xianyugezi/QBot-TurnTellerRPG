@@ -16,7 +16,7 @@
      深拷贝防外部改写；None → 常态骨架；协议对象/raw dict 双形态输入，G0 注入）
   3) snapshot_restore(snap)  F3 恢复接口：中断续战按快照还原形态上下文——
      ② form 恢复形态指针 / ③ active_skill_set 恢复技能位重排基准 /
-     ④ remaining 恢复剩余回合计数（回合结束 tick 递减继续，递减推进归 F2 tick 引擎）/
+     ④ remaining 恢复剩余行动计数（行动收尾 tick 递减继续，递减推进归 F2 tick 引擎）/
      ⑤ T6 交叉校验（form_status_id 与 status_state 双写一致，不一致以较早者为准
      + audit 审计日志，§4.2⑤【细化补充】）/ SN-3 删除降级（状态本体缺失 →
      降级 form_status_id=None，形态保留、技能位按 active_skill_set 清偿，
@@ -38,9 +38,9 @@
   - docs/细化/细化_6b_职业库与变换引擎.md（409 行 v1.0）：
     §4.1 battle_state 中 transform 字段（7 字段 JSONC 示例 L274-285 + 字段表
     T1~T7 L287-295：job_id 冗余 OLD-2 / form null=常态 / form_name 展示冗余 /
-    remaining 含当回合 S3>0 / cooldown_remaining S5>0 / form_status_id 双轨持久化 /
+    remaining 含当次行动 S3>0 / cooldown_remaining S5>0 / form_status_id 双轨持久化 /
     active_skill_set 洗牌恢复基准）；
-    §4.2 快照写入与恢复时序（流程 F3 ①~⑥：回合边界同批落快照 / 中断恢复
+    §4.2 快照写入与恢复时序（流程 F3 ①~⑥：行动边界同批落快照 / 中断恢复
     还原形态 / active_skill_set 技能位恢复 / remaining 恢复 / T6 双写交叉校验
     【细化补充】/ 战斗结束全段清零回常态【狂战士 L135】）；
     §4.3 边界与一致性规则（SN-1 快照只落回合边界 / SN-2 旧局旧配置 ID+名称冗余 /
@@ -68,7 +68,7 @@
   F3-3  归一化不变量：form=null（常态 S1/S5）时 remaining 强制 0（§4.1 T4
         「非 S3 时 0」）；cooldown_remaining 独立保留（S5 冷却期 form=null 且
         cooldown>0 是合法状态，T5，不可随 form 清空）。
-  F3-4  remaining 的回合递减（D-03 回合结束 tick 推进）归 F2 还原引擎
+  F3-4  remaining 的行动递减（D-03 行动收尾 tick 推进）归 F2 还原引擎
         （transform_revert.py，6B）；本文件只做快照写/读与恢复上下文，
         不实现 tick 递减（避免与兄弟路重叠）。
   F3-5  模块级函数均为纯函数（同刻同参必同值）；TransformSnapshotEngine
@@ -94,7 +94,7 @@ TRANSFORM_STATE_FIELDS: Tuple[str, ...] = (
     "job_id",               # T1 职业 ID 冗余（防热重载失效，3e2 OLD-2）
     "form",                 # T2 当前形态 ID；null=常态（S1/S5）
     "form_name",            # T3 形态显示名冗余（1g3 展示用，防配置删除后悬空）
-    "remaining",            # T4 形态剩余回合（含当回合；S3 时 >0，非 S3 时 0）
+    "remaining",            # T4 形态剩余行动数（含当次行动；S3 时 >0，非 S3 时 0）
     "cooldown_remaining",   # T5 形态冷却剩余（S5 时 >0；S1/S3 时 0）
     "form_status_id",       # T6 形态标记状态引用（联动 dispel_reverts，双轨持久化）
     "active_skill_set",     # T7 当前技能位方案 ID（技能位重排的恢复基准）
@@ -176,7 +176,7 @@ def normalize_transform_state(
     out["form_status_id"] = _norm_opt_str(raw.get("form_status_id"))
     out["active_skill_set"] = _norm_str(raw.get("active_skill_set"))
     if out["form"] is None:
-        out["remaining"] = 0  # 常态无剩余回合（§4.1 T4）
+        out["remaining"] = 0  # 常态无剩余行动数（§4.1 T4）
     return out
 
 
@@ -209,7 +209,7 @@ class TransformStateKind:
 
     @property
     def remaining(self) -> int:
-        """T4 形态剩余回合（含当回合；缺省 0）。"""
+        """T4 形态剩余行动数（含当次行动；缺省 0）。"""
         return 0
 
     @property
@@ -295,7 +295,7 @@ def snapshot_write(state: Any = None) -> Dict[str, Any]:
     出参：7 字段归一 dict（含缺省键全字段形态），调用方挂
     battle_state[TRANSFORM_STATE_KEY]。
 
-    F3 ① 落点：回合结束 tick 后（形态递减已发生，递减归 F2）transform_state
+    F3 ① 落点：行动收尾 tick 后（形态递减已发生，递减归 F2）transform_state
     与 resource_state/combo_state/status_state 同批落快照【狂战士 L427】【1g3 S0】；
     to_snapshot 深拷贝自动携带本段（battle.py L1774 copy.deepcopy(self._snap)），
     本接口产出即段内容。
@@ -361,7 +361,7 @@ def snapshot_restore(
     时序（细化_6b §4.2）：
       ② 读 transform_state：form 非空 → 恢复形态上下文（无需重新触发）；
       ③ active_skill_set 恢复技能位重排（形态技能组直接可用，T7）；
-      ④ remaining 恢复剩余回合计数（回合结束 tick 递减继续，递减归 F2）；
+      ④ remaining 恢复剩余行动计数（行动收尾 tick 递减继续，递减归 F2）；
       ⑤ T6 交叉校验：form_status_id 与 status_state 双写一致，不一致以较早者
          为准 + audit 审计日志（F3-1 实现口径）。
     降级（§4.3）：
@@ -378,7 +378,7 @@ def snapshot_restore(
       side:         状态挂侧（缺省 "player"；PVP 敌方侧接线时传 "enemy"）。
       audit:        审计日志回调（F3 ⑤ 双写不一致 / SN-3 降级时调用，可空）。
     出参：恢复后的 transform_state dict（7 字段全量，可直接挂回 battle_state /
-    供接线方消费技能位/剩余回合/形态指针）。
+    供接线方消费技能位/剩余行动数/形态指针）。
 
     T6 校验数据源约定：status_state 为可选注入（接线方提供战斗的
     status_state 段时执行交叉校验/降级；缺省 None → 原样恢复不做校验，

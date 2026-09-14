@@ -1,6 +1,6 @@
 # QBot-TurnTellerRPG
 
-QQ 回合制 RPG 框架 = 平台无关核心包 `qbot_rpg`（core/world/storage/content/data 零 NoneBot）+ 壳层 `commands`（唯一适配器）+ `web`（编辑器外壳）。
+QQ 回合制 RPG 框架 = 平台无关核心包 `qbot_rpg`（core/world/storage/content/data 零 NoneBot）+ 壳层 `commands`（唯一适配器）（`web` 内容编辑器已于 2026-09-13 按用户拍板移除）。
 
 ## 目录结构
 

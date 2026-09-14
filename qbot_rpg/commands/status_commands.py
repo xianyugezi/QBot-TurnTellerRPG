@@ -38,13 +38,14 @@ ctx 消费契约（装配层 make_context 注入；未注入字段按缺省兜�
   1) 首行 = 前缀行 `Lv{等级}.{玩家名} -{称号}-`（对齐 TPL-4F-02/03 与 STT-01「前缀行」；
      与 basic_commands /角色 的「LV 行固定头部」同模式——handler 直出可纯函数单测；
      装配层 message_prefix 是否叠加由批次7 装配裁决，本层不重复注入）。
-  2) 属性行固定四值（4f RUL-12 模板：生命/魔力/攻击/防御，全中文）：生命=hp、魔力=mp
+  2) 属性行固定四值（4f RUL-12 模板：生命/魔力/攻击/防御，全中文）：生命=hp、法力=mp
      （当前/最终上限），攻击=str（力量）、防御=con（体质）——映射采用框架战斗数值口径
      （damage 公式 atk 出自力量、防御系数出自有效体质），统计表属性名为「力量/体质」。
   3) 满级判定：level ≥ level_cap 或 exp_next == 0（LVL-11 口径）→ 【已满级】。
   4) 效果行格式 `{名} {剩余}/{持续}（来源：{来源}）`：remaining 必填；duration/total 缺省
      时仅显 `{剩余}回合`；source 缺省时省略「（来源：…）」；>5 个追加 `还有 N 个状态`。
-  5) 未注册拦截走 RUL-08 门槛（STT-05 ④，非豁免）：复用 basic_commands.TPL_REGISTER_GATE。
+  5) 未注册拦截走 RUL-08 门槛（STT-05 ④，非豁免）：走 basic_register_gate 表键
+     （R4 收敛，内容包可覆盖）。
 """
 
 from __future__ import annotations
@@ -57,7 +58,6 @@ from qbot_rpg.data.player import PlayerAttributes
 
 # 同包兄弟模块：相对导入（G0 架构门禁不产生 `qbot_rpg.commands` 前缀反向依赖边；
 # 同层兄弟引用架构合规，与 sender.py 同口径）。
-from .basic_commands import TPL_REGISTER_GATE
 from .basic_commands import _stat_name, _stat_order  # 属性全量渲染 helper（对齐 /角色 口径）
 # M12.5/veinborn 收口：装备区复用 basic_commands 槽位/装备 helper（8 槽自定义支持）
 from .basic_commands import _equipment_map, _slot_order, equip_line
@@ -110,7 +110,7 @@ def _gate(ctx: Mapping[str, Any]) -> Optional[str]:
     """RUL-08 注册门槛（STT-05 ④ 非豁免）：ctx["registered"] is False → 拦截文案；
     缺省视为已注册（对齐 basic_commands 工程补白 7）。"""
     if ctx.get("registered", True) is False:
-        return TPL_REGISTER_GATE
+        return tpl_of(ctx, "basic_register_gate")
     return None
 
 
@@ -256,7 +256,7 @@ def level_line(ctx: Mapping[str, Any]) -> str:
 
 def attr_line(ctx: Mapping[str, Any]) -> str:
     """③ 属性行（RUL-12/STT-03，最终层数值，全中文，意见一同步：每项独立一行）。
-    2026-08-31 修复：此前硬编码仅渲染 生命/魔力/攻击/防御 四值（漏掉 stats.json 其余
+    2026-08-31 修复：此前硬编码仅渲染 生命/法力/攻击/防御 四值（漏掉 stats.json 其余
     属性），改为遍历 stats.json 全部属性（对齐 /角色 _stat_order 口径），每项一行；
     resource 型（hp/mp）显示 `当前/上限`。"""
     final = _final_attrs(ctx)
@@ -324,7 +324,7 @@ def _effect_text(e: Mapping[str, Any]) -> Optional[str]:
         if total is not None:
             seg += f" {remaining}/{total}"
         else:
-            seg += f" {remaining}回合"
+            seg += f" {remaining}次行动"
     src = e.get("source")
     if src:
         seg += f"（来源：{src}）"
@@ -346,7 +346,7 @@ def effects_line(ctx: Mapping[str, Any]) -> str:
         parts.append(f"还有 {len(effects) - EFFECTS_SHOWN} 个状态")
     if not parts:
         return tpl_of(ctx, "status_effects", {"effects": "无"})
-    return tpl_of(ctx, "status_effects", {"effects": " ｜ ".join(parts)})
+    return tpl_of(ctx, "status_effects", {"effects": "、".join(parts)})
 
 
 def imprints_line(ctx: Mapping[str, Any]) -> Optional[str]:
@@ -369,20 +369,24 @@ def imprints_line(ctx: Mapping[str, Any]) -> Optional[str]:
         segs.append(seg)
     if not segs:
         return None
-    return tpl_of(ctx, "status_imprints", {"imprints": " ｜ ".join(segs)})
+    return tpl_of(ctx, "status_imprints", {"imprints": "、".join(segs)})
 
 
 def target_line(ctx: Mapping[str, Any]) -> Optional[str]:
-    """战斗内【目标】行（RUL-15/STT-04）：`【目标】史莱姆 18/30（第 3 回合）`；
+    """战斗内【目标】行（RUL-15/STT-04）：`【目标】史莱姆 18/30（第 3 行动）`；
     ctx["target"] 缺省或字段不全（hp/max_hp/turn 任一 None）→ 整行降级 None（P2-9 修复，
-    防 `【目标】xx None/None（第 None 回合）`）。"""
+    防 `【目标】xx None/None（第 None 行动）`）。
+
+    CTB 口径（2026-09-10 收口）：`{round}` 槽位承载 `action_seq`（已结算行动数）——
+    优先读 `action_seq`，缺失回落 `turn`（兼容镜像键，世界层快照仍写）。
+    """
     t = ctx.get("target")
     if not isinstance(t, Mapping):
         return None
     name = str(t.get("name") or "?")
     hp = t.get("hp")
     mx = t.get("max_hp")
-    turn = t.get("turn")
+    turn = t.get("action_seq", t.get("turn"))
     if hp is None or mx is None or turn is None:
         return None
     return tpl_of(ctx, "status_target", {"name": name, "hp_cur": hp, "hp_max": mx, "round": turn})

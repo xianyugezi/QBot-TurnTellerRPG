@@ -10,7 +10,7 @@
   ],
   "polarity": "negative",
   "duration": "battle",
-  "desc": "蚀脉怒意积累：敌方每回合自挂1层，玩家机动牌可移除1层；满6层触发宣泄"
+  "desc": "蚀脉怒意积累：敌方每次行动自挂1层，玩家机动牌可移除1层；满6层触发宣泄"
  },
  {
   "id": "vulnerable",
@@ -23,7 +23,7 @@
   ],
   "polarity": "negative",
   "duration": "turns:1",
-  "desc": "官方易伤：该回合怪物下一次受伤翻倍；不可叠加"
+  "desc": "官方易伤：怪物下一次受伤翻倍；不可叠加"
  },
  {
   "id": "break_vein_core",

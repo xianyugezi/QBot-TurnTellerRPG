@@ -60,16 +60,31 @@ def _enriched(oc: ActionOutcome, **extra: Any) -> SimpleNamespace:
 
 def _round(**kw: Any) -> SimpleNamespace:
     """接线层形态 round_result：TurnReport 真实字段 + 注入字段
-    （enemy_name/exp/gold/drops 等，TurnReport dataclass 不承载，M5-08 注入）。"""
-    std = {"turn", "phases", "player", "enemy", "ended", "status", "log", "outcomes"}
+    （enemy_name/exp/gold/drops 等，TurnReport dataclass 不承载，M5-08 注入）。
+
+    CTB 迁移（2026-09-10 · Agent 4）：字段集契约改为 `action_seq` 权威 ——
+    `phases` 已由 dataclass 字段改为只读 property（底层 `_phase_label`），
+    构造器不再接受 `phases` 实参；进度字段改以 `action_seq`（int）+
+    `battle_time`（float）承载，顶层 `turn` 仅为 `action_seq` 兼容镜像。
+    契约自检沿用 TurnReport.fields()（`'action_seq' in fields` 且
+    `'phases' not in fields`，见 core/battle.py TurnReport.fields docstring）。
+    """
+    tr_fields = set(TurnReport(
+        turn=1, action_seq=1, battle_time=0.0, player=21, enemy=0,
+        ended=False, status=None, log=(), outcomes=(),
+    ).fields())
+    # 契约锚点（CTB 硬约束）：phases 不再是字段，action_seq 是
+    assert "action_seq" in tr_fields and "battle_time" in tr_fields
+    assert "phases" not in tr_fields
     defaults: Dict[str, Any] = {
-        "turn": 1, "phases": ("player_action",), "player": 21, "enemy": 0,
+        "turn": 1, "action_seq": 1, "battle_time": 0.0, "player": 21, "enemy": 0,
         "ended": False, "status": None, "log": (), "outcomes": (),
     }
-    merged = {**defaults, **{k: v for k, v in kw.items() if k in std}}
+    merged = {**defaults, **{k: v for k, v in kw.items() if k in tr_fields}}
     tr = TurnReport(**merged)
-    extra = {k: v for k, v in kw.items() if k not in std}
-    return SimpleNamespace(**{**tr.__dict__, **extra})
+    extra = {k: v for k, v in kw.items() if k not in tr_fields}
+    # dict(tr.__dict__) 含 phases（property 不回填 __dict__，安全）+ _phase_label（下划线）
+    return SimpleNamespace(**{**dict(tr.__dict__), **extra})
 
 
 def _combo(segments: list, target_hp: int, **extra: Any) -> SimpleNamespace:
@@ -101,8 +116,8 @@ def _assert_no_banned_emoji(text: str) -> None:
 
 
 def test_tc16_kill_line_exact() -> None:
-    """BREP-15 逐字：`✅ 你击败了史莱姆！`。"""
-    assert _render_kill_line(_outcome(target="史莱姆")) == "✅ 你击败了史莱姆！"
+    """BREP-15 逐字：`✅ 你击败了史莱姆`（批6 路P：去句尾「！」，零装饰口径）。"""
+    assert _render_kill_line(_outcome(target="史莱姆")) == "✅ 你击败了史莱姆"
 
 
 def test_tc16_kill_line_right_after_damage_line() -> None:
@@ -115,8 +130,8 @@ def test_tc16_kill_line_right_after_damage_line() -> None:
         exp=42, gold=25, drops=[("史莱姆凝胶", 2)],
     ))
     lines = text.split("\n")
-    assert lines[0] == "✅ 你攻击，造成 25 伤害（史莱姆 0/25）"
-    assert lines[1] == "✅ 你击败了史莱姆！"      # 击杀行紧跟伤害行
+    assert lines[0] == "✅ 你攻击，造成 25 伤害。"
+    assert lines[1] == "✅ 你击败了史莱姆"        # 批4：目标血量行已砍；批6：去「！」
     assert "✅ 战斗胜利！" not in text            # 结算已移结束消息（P1-1）
     end = render_battle_end(
         SimpleNamespace(), SimpleNamespace(name="史莱姆", turn=1), "win",
@@ -125,7 +140,8 @@ def test_tc16_kill_line_right_after_damage_line() -> None:
     # 2026-09-09 击杀去重：结算消息不再含叙事句（攻击行已含伤害/击败行已报击杀）
     assert "您对史莱姆造成了" not in end
     assert end.lstrip().startswith("获得经验")
-    assert "获得经验：42" in end and "获得金币：25" in end              # 分行
+    assert "获得经验：42" in end and "获得金币：25" in end              # 分行 + 不空格（用户 2026-09-12 拍板）
+    assert "【战利品】" in end                                          # 战利品头（批6）
     assert "1.史莱姆凝胶×2" in end                                       # 战利品列表
 
 
@@ -135,14 +151,15 @@ def test_tc16_kill_line_right_after_damage_line() -> None:
 
 
 def test_tc17_player_dead_line() -> None:
-    """TC-17：回合开始 dot 杀死玩家 → `❌ 你倒下了…`（BREP-16）→ 失败标记（BREP-18）。"""
+    """TC-17：行动开始 dot 杀死玩家 → `❌ 你倒下了…`（BREP-16）→ 失败标记（BREP-18）。"""
     text = render_battle_end(
         SimpleNamespace(), SimpleNamespace(name="史莱姆", turn=1), "lose",
         status="lose", enemy_name="史莱姆",
     )
     lines = text.split("\n")
     assert lines[0] == "❌ 你倒下了…"                       # BREP-16
-    assert lines[1] == "❌ 战斗失败：你被史莱姆击败了"       # BREP-18
+    assert lines[1] == "❌ 战斗失败"                        # BREP-18（批6 拆两行）
+    assert lines[2] == "你被史莱姆击败了"
     assert "战斗结束：失败" in text                          # BREP-24 汇总同消息（P1-1）
 
 
@@ -152,7 +169,7 @@ def test_tc20_player_death_no_victory_no_drop() -> None:
         SimpleNamespace(), SimpleNamespace(name="史莱姆", turn=1), "lose",
         status="lose", enemy_name="史莱姆", exp=42, gold=25, drops=[("史莱姆凝胶", 2)],
     )
-    assert "❌ 战斗失败：你被史莱姆击败了" in text
+    assert "❌ 战斗失败" in text and "你被史莱姆击败了" in text
     assert "战斗胜利" not in text
     assert "获得" not in text
 
@@ -171,19 +188,20 @@ def test_tc18_victory_full_message_with_drops_once() -> None:
         status="win", enemy_name="史莱姆", exp=42, gold=25, drops=[("史莱姆凝胶", 2)], final_damage=25,
     )
     assert "您对史莱姆造成了" not in text
-    assert "获得经验：42" in text and "获得金币：25" in text            # 分行
+    assert "获得经验：42" in text and "获得金币：25" in text            # 分行 + 不空格
+    assert "【战利品】" in text                                         # 战利品头（批6）
     assert "1.史莱姆凝胶×2" in text                                      # 战利品列表
     assert "战斗结束：" not in text                                      # win 无汇总行
     assert text.count("史莱姆凝胶×2") == 1        # 掉落只在结束消息输出一次（军规5）
 
 
 def test_reward_line_exact_and_multi_drop() -> None:
-    """BREP-20 逐字；多素材以 `、` 分隔。"""
+    """BREP-20 逐字；批6 路P：奖励头 + 逐行字段（多素材换行，不挤单行）。"""
     assert _render_reward_line(42, 25, [("史莱姆凝胶", 2)]) == (
-        "✅ 获得 经验 42、金币 25、史莱姆凝胶×2"
+        "✅ 获得奖励\n经验 42\n金币 25\n史莱姆凝胶×2"
     )
     assert _render_reward_line(10, 5, [("甲", 1), ("乙", 3)]) == (
-        "✅ 获得 经验 10、金币 5、甲×1、乙×3"
+        "✅ 获得奖励\n经验 10\n金币 5\n甲×1\n乙×3"
     )
 
 
@@ -193,12 +211,13 @@ def test_reward_line_exact_and_multi_drop() -> None:
 
 
 def test_tc19_mutual_kill_draw() -> None:
-    """TC-19：同回合互杀默认 draw → `双方同归于尽，战斗以平局结束`（BREP-19）。"""
+    """TC-19：同一次行动互杀默认 draw → `双方同归于尽` / `战斗以平局结束`（BREP-19 两行）。"""
     text = render_battle_end(
         SimpleNamespace(), SimpleNamespace(name="史莱姆", turn=1), "draw",
         status="draw",
     )
-    assert text.split("\n")[0] == "双方同归于尽，战斗以平局结束"  # BREP-19
+    assert text.split("\n")[0] == "双方同归于尽"                  # BREP-19（批6 拆两行）
+    assert text.split("\n")[1] == "战斗以平局结束"
     assert "战斗结束：平局" in text                                # BREP-24 同消息
 
 
@@ -208,7 +227,7 @@ def test_tc19_mutual_kill_player_loss_config() -> None:
         SimpleNamespace(), SimpleNamespace(name="史莱姆", turn=1), "lose",
         status="lose", enemy_name="史莱姆",
     )
-    assert "❌ 战斗失败：你被史莱姆击败了" in text
+    assert "❌ 战斗失败" in text and "你被史莱姆击败了" in text
     assert "同归于尽" not in text
 
 
@@ -233,10 +252,10 @@ def test_tc21_combo_four_segments_continuous() -> None:
     oc = _combo(segs, target_hp=1)
     lines = render_battle_round(_round(outcomes=(oc,))).split("\n")
     assert lines == [
-        "第 1 段：突刺 造成 6 伤害（史莱姆 19/25）",
-        "第 2 段：突刺 造成 6 伤害（史莱姆 13/25）",
-        "第 3 段：突刺 造成 6 伤害（史莱姆 7/25）",
-        "第 4 段：突刺 造成 6 伤害（史莱姆 1/25）",
+        "第 1 段：突刺", "造成 6 伤害", "史莱姆 19/25",
+        "第 2 段：突刺", "造成 6 伤害", "史莱姆 13/25",
+        "第 3 段：突刺", "造成 6 伤害", "史莱姆 7/25",
+        "第 4 段：突刺", "造成 6 伤害", "史莱姆 1/25",
         "连段 4 段已结算",
     ]
 
@@ -253,7 +272,7 @@ def test_tc21_combo_seg_crit_note() -> None:
     ]
     oc = _combo(segs, target_hp=2)
     lines = _render_combo_segments(oc)
-    assert lines[2] == "第 3 段：突刺 造成 11 伤害（会心·中阶 ×1.7）（史莱姆 2/25）"
+    assert lines[2] == "第 3 段：突刺\n造成 11 伤害（会心·中阶 ×1.7）\n史莱姆 2/25"
 
 
 # ---------------------------------------------------------------------------
@@ -263,7 +282,7 @@ def test_tc21_combo_seg_crit_note() -> None:
 
 def test_tc22_third_seg_kills_fourth_still_renders() -> None:
     """TC-22：连段第 3 段击杀普通怪 —— 击杀行紧跟第 3 段伤害行，
-    第 4 段照常渲染（鞭尸）→ BREP-22 备注「目标已倒下，下一回合退出战场」。"""
+    第 4 段照常渲染（鞭尸）→ BREP-22 备注独立两行「目标已倒下」/「该段连式为无效消耗」。"""
     segs = [
         {"seg": 1, "action": "你挥动铁剑攻击史莱姆", "final_damage": 8,
          "target_hp": 17, "target_max_hp": 25, "target": "史莱姆"},
@@ -276,12 +295,15 @@ def test_tc22_third_seg_kills_fourth_still_renders() -> None:
     ]
     oc = _combo(segs, target_hp=0)
     lines = render_battle_round(_round(outcomes=(oc,))).split("\n")
-    # 段行模板（§1.4 BREP-21 / 任务口径）：`第 {N} 段：{动作} 造成 {伤害} 伤害`——无逗号
-    assert lines[0] == "第 1 段：你挥动铁剑攻击史莱姆 造成 8 伤害（史莱姆 17/25）"
-    assert lines[2] == "第 3 段：你挥动铁剑攻击史莱姆 造成 10 伤害（史莱姆 0/25）"
-    assert lines[3] == "✅ 你击败了史莱姆！"       # 击杀行紧跟第 3 段伤害行（L54）
-    assert lines[4] == "第 4 段：你挥动铁剑攻击史莱姆 造成 9 伤害（史莱姆 0/25）"
-    assert lines[5] == "连段 4 段已结算（目标已倒下，下一回合退出战场）"
+    # 段行模板（§1.4 BREP-21 / 任务口径）：三段行——`第 {N} 段：{动作}` / `造成 {伤害} 伤害` / `{目标} {HP}/{最大}`
+    assert lines == [
+        "第 1 段：你挥动铁剑攻击史莱姆", "造成 8 伤害", "史莱姆 17/25",
+        "第 2 段：你挥动铁剑攻击史莱姆", "造成 8 伤害", "史莱姆 9/25",
+        "第 3 段：你挥动铁剑攻击史莱姆", "造成 10 伤害", "史莱姆 0/25",
+        "✅ 你击败了史莱姆",
+        "第 4 段：你挥动铁剑攻击史莱姆", "造成 9 伤害", "史莱姆 0/25",
+        "连段 4 段已结算", "目标已倒下", "该段连式为无效消耗",
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -291,7 +313,7 @@ def test_tc22_third_seg_kills_fourth_still_renders() -> None:
 
 def test_tc23_boss_early_end_subsequent_segments_dropped() -> None:
     """TC-23：连段击杀 BOSS → 击杀行后立即进入结束结算，
-    后续段数作废不渲染（BREP-22 备注「BOSS 已倒下，战斗结束，后续段数作废」）。"""
+    后续段数作废不渲染（BREP-22 备注独立两行「BOSS 已倒下」/「后续段数作废」）。"""
     segs = [
         {"seg": 1, "action": "突刺", "final_damage": 6, "target_hp": 19,
          "target_max_hp": 25, "target": "史莱姆王"},
@@ -308,16 +330,17 @@ def test_tc23_boss_early_end_subsequent_segments_dropped() -> None:
         exp=120, gold=60, drops=[("史莱姆王冠", 1)],
     ))
     lines = text.split("\n")
-    assert "✅ 你击败了史莱姆王！" in lines
+    assert "✅ 你击败了史莱姆王" in lines
     assert "第 4 段" not in text                     # 后续段作废不渲染（L57/L69）
-    assert "连段 3 段已结算（BOSS 已倒下，战斗结束，后续段数作废）" in lines
+    assert "连段 3 段已结算" in lines                 # BREP-22（批6：备注独立两行）
+    assert "BOSS 已倒下" in lines and "后续段数作废" in lines
     assert "✅ 战斗胜利！" not in text                # 结算已移结束消息（P1-1）
     end = render_battle_end(
         SimpleNamespace(), SimpleNamespace(name="史莱姆王", turn=1), "win",
         status="win", enemy_name="史莱姆王", exp=120, gold=60, drops=[("史莱姆王冠", 1)], final_damage=13,
     )
     assert "您对史莱姆王造成了" not in end
-    assert "获得经验：120" in end and "获得金币：60" in end              # 分行
+    assert "获得经验：120" in end and "获得金币：60" in end             # 分行 + 不空格
     assert "1.史莱姆王冠×1" in end                                       # 战利品列表
 
 
@@ -331,20 +354,21 @@ def test_tc23_derived_cap_note_on_segment_line() -> None:
     ]
     oc = _combo(segs, target_hp=11)
     text = render_battle_round(_round(outcomes=(oc,)))
-    assert "第 2 段：突刺 造成 8 伤害（史莱姆 11/25）（派生倍率已达上限 1.5×）" in text
+    assert "第 2 段：突刺\n造成 8 伤害\n史莱姆 11/25（派生倍率已达上限 1.5×）" in text
 
 
 def test_combo_settle_line_variants() -> None:
-    """BREP-22 备注四态：正常完结（无备注）/ 鞭尸 / BOSS 提前结束 / 派生封顶。"""
+    """BREP-22 备注四态：正常完结（无备注）/ 鞭尸 / BOSS 提前结束 / 派生封顶。
+    批6 路P：备注改前导换行独立行（battle_combo_settle_suffix），不再与结算行同排。"""
     assert _render_combo_settle_line(3) == "连段 3 段已结算"
-    assert _render_combo_settle_line(4, "目标已倒下，下一回合退出战场") == (
-        "连段 4 段已结算（目标已倒下，下一回合退出战场）"
+    assert _render_combo_settle_line(4, "目标已倒下，该段连式为无效消耗") == (
+        "连段 4 段已结算\n目标已倒下，该段连式为无效消耗"
     )
     assert _render_combo_settle_line(3, "BOSS 已倒下，战斗结束，后续段数作废") == (
-        "连段 3 段已结算（BOSS 已倒下，战斗结束，后续段数作废）"
+        "连段 3 段已结算\nBOSS 已倒下，战斗结束，后续段数作废"
     )
     assert _render_combo_settle_line(3, "派生倍率已达上限 1.5×") == (
-        "连段 3 段已结算（派生倍率已达上限 1.5×）"
+        "连段 3 段已结算\n派生倍率已达上限 1.5×"
     )
 
 
@@ -364,7 +388,7 @@ def test_settlement_rendered_once_only_when_ended() -> None:
         status="win", enemy_name="史莱姆", exp=42, gold=25, drops=[("史莱姆凝胶", 2)], final_damage=25,
     )
     assert "您对史莱姆造成了" not in text  # 2026-09-09 击杀去重（叙事句删除）
-    assert "获得经验：42" in text and "获得金币：25" in text   # 分行
+    assert "获得经验：42" in text and "获得金币：25" in text     # 分行 + 不空格
     assert "1.史莱姆凝胶×2" in text                            # 战利品列表恰一次
 
 
@@ -390,7 +414,7 @@ def test_no_banned_emoji_in_settlement_templates() -> None:
         _render_settlement(SimpleNamespace(ended=True, status="lose",
                                            enemy_name="史莱姆")),
         _render_settlement(SimpleNamespace(ended=True, status="draw")),
-        _render_combo_settle_line(4, "目标已倒下，下一回合退出战场"),
+        _render_combo_settle_line(4, "目标已倒下，该段连式为无效消耗"),
         _render_combo_settle_line(3, "BOSS 已倒下，战斗结束，后续段数作废"),
         _render_combo_settle_line(3, "派生倍率已达上限 1.5×"),
     ]

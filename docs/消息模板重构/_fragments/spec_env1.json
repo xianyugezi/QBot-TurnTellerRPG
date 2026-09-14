@@ -1,0 +1,29 @@
+{
+  "rail": "spec_env1",
+  "scope": "专项·引擎层直出文案第一批：中性文本池 4（env_neutral_pool_1..4）+ 泛化缺省 2（env_ambient_default / env_investigate_generic）+ 去重确认 1（env_investigate_confirm）+ 成就尾行 Tip 1（ach_list_tail_tip）= 8 键",
+  "templates": {
+    "env_neutral_pool_1": "四周一片寂静，并没有特别的发现。",
+    "env_neutral_pool_2": "风穿过原野，带起一阵沙沙声，别无他物。",
+    "env_neutral_pool_3": "眼前的景象一如既往，并无异常。",
+    "env_neutral_pool_4": "你仔细环顾四周，一切如常。",
+    "env_ambient_default": "四周一片寂静，并没有特别的发现。",
+    "env_investigate_generic": "四周一片寂静，并没有特别的发现。",
+    "env_investigate_confirm": "这里没有新的发现。",
+    "ach_list_tail_tip": "发 成就信息 <序号> 查看详情"
+  },
+  "prose_keys": {
+    "env_neutral_pool_1": "介绍类：环境泛暗示零暗示池第 1 条（R-07/TC-09，非结构化行）——允许自然折行",
+    "env_neutral_pool_2": "介绍类：环境泛暗示零暗示池第 2 条（同上）——允许自然折行",
+    "env_neutral_pool_3": "介绍类：环境泛暗示零暗示池第 3 条（同上）——允许自然折行",
+    "env_neutral_pool_4": "介绍类：环境泛暗示零暗示池第 4 条（同上）——允许自然折行",
+    "env_ambient_default": "介绍类：环境泛暗示缺省兜底句（environment_lore.DEFAULT_AMBIENT_TEXT 迁表）——允许自然折行",
+    "env_investigate_generic": "介绍类：/调查 泛化环境缺省文本（investigate.DEFAULT_GENERIC_TEXT 迁表）——允许自然折行"
+  },
+  "notes": {
+    "env_neutral_pool_1..4": "池化文案保留「多条随机」语义：键名后缀 _1.._4，随机选择逻辑不变（rng.randrange(len(pool))）；无 rng → 池首条。原 4 条零暗示措辞（绝无「此处有隐藏」，TC-09）逐字保留。",
+    "env_ambient_default": "旧硬编码 environment_lore.DEFAULT_AMBIENT_TEXT（L88）；常量保留为 ctx 不可用时的兜底，主路径改读本键。",
+    "env_investigate_generic": "旧硬编码 investigate.DEFAULT_GENERIC_TEXT（L93）；常量保留为兜底，主路径改读本键。",
+    "env_investigate_confirm": "旧硬编码 investigate.DEFAULT_CONFIRM_TEXT（L96，R-11 one_shot 去重简短确认）；结构行 18 半角 ≤28，无需拆行。",
+    "ach_list_tail_tip": "成就列表尾行 Tip 改表驱动：旧硬编码 tip=\"输入 /成就信息 <N> 查看详情\"（仍带斜杠）→ 免斜杠「发 成就信息 <序号> 查看详情」（27 半角 ≤28）；由 render_cake_tail 拼为 Tip: 行，Tip: 前缀仍由 list_render 负责。既有 ach_list_tail 键本批未接线，仍列批18 死键清扫裁决。"
+  }
+}

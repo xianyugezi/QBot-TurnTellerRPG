@@ -549,7 +549,7 @@ def _check_v11_event_registry(
     """V11 事件枚举登记（红拦）：proc/effect trigger 名 ∈ 事件枚举登记表。
 
     P-6：PROC_TRIGGER_EVENTS（SEASON_EVENTS 本地镜像 + 1b proc 通用事件）。
-    触发上限字段合法（默认每回合 10/每场 99，非负）——上限非负校验：
+    触发上限字段合法（默认每次行动 10/每场 99，非负）——上限非负校验：
     trigger_limit 段 per_round/per_battle 非负。
     """
     effects = entry.get("effects")

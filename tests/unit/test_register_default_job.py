@@ -165,7 +165,7 @@ def test_register_without_job_uses_default_job():
     ctx = make_ctx()
     out = cmd_register(parse_command("/注册 小明"), ctx)
     assert "✅ 注册成功！" in out
-    assert "职业：炼金术士（推荐新手） ｜ 位置：新手村" in out
+    assert "职业：炼金术士（推荐新手）\n位置：新手村" in out
     assert ctx["registered"] is True
     assert ctx["player"]["job_id"] == "alchemy"
 
@@ -189,7 +189,7 @@ def test_register_default_falls_to_first_job():
         settings={"default_map": "新手村", "world_name": "艾泽拉"},
     )
     out = cmd_register(parse_command("/注册 小明"), ctx)
-    assert "职业：狂战士 ｜ 位置：新手村" in out
+    assert "职业：狂战士\n位置：新手村" in out
     assert "（推荐新手）" not in out
     assert ctx["player"]["job_id"] == "berserker"
 
@@ -198,7 +198,7 @@ def test_register_default_when_jobs_absent_falls_to_novice():
     """/注册 无参 + ctx 无 jobs 表 → 兜底「新手」职业（RUL-04 降级，不硬崩）。"""
     ctx = make_ctx(jobs=None)
     out = cmd_register(parse_command("/注册 小明"), ctx)
-    assert "职业：新手 ｜ 位置：新手村" in out
+    assert "职业：新手\n位置：新手村" in out
     assert ctx["player"]["job_id"] == "novice"
 
 
@@ -206,7 +206,7 @@ def test_register_explicit_job_beats_default():
     """/注册 带显式职业参数 → 显式职业优先于 B7 缺省链（RUL-03）。"""
     ctx = make_ctx()
     out = cmd_register(parse_command("/注册 小明 狂战士"), ctx)
-    assert "职业：狂战士 ｜ 位置：新手村" in out
+    assert "职业：狂战士\n位置：新手村" in out
     assert ctx["player"]["job_id"] == "berserker"
 
 
@@ -238,7 +238,10 @@ def test_job_not_found_list_shows_recommended_badge():
     """RUL-03：职业不存在黄提示列表同样带推荐角标（数据型功能标记，纯文本）。"""
     ctx = make_ctx()
     out = cmd_register(parse_command("/注册 阿伟 刺客"), ctx)
-    assert out == "❌ 没有『刺客』这个职业，可用：狂战士 炼金术士（推荐） 铁匠（推荐） 渔夫（推荐）"
+    assert out == (
+        "❌ 没有「刺客」这个职业\n可选职业：\n狂战士\n"
+        "炼金术士（推荐）\n铁匠（推荐）\n渔夫（推荐）"
+    )
     assert ctx["registered"] is False and ctx["player"] is None
 
 

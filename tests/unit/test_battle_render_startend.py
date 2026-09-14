@@ -5,12 +5,12 @@
      + TC-24~27 + 铁律 2（开始/结束各 1 条）/铁律 11（结算一次性 + 16 行折叠
      TPL-09，3d D-03/L184）+ 细化_3d_消息模板规范 §2（5 条/页 + TPL-08 页脚）+ m5_batch_plan M5-07。
 
-覆盖：TC-24 战斗开始（BREP-23 + 弱点情报行）/ TC-25 结束汇总含回合数与明细入口
+覆盖：TC-24 战斗开始（BREP-23 + 弱点情报行）/ TC-25 结束汇总含行动数与明细入口
 （BREP-24）/ TC-26 木桩明细 5 条/页 + 页脚 TPL-08（BREP-25 分页，第 1/2 页）/
 TC-27 普通战斗默认不展示明细 / TC-06 单条消息 ≤16 行超限折叠 TPL-09 /
 emoji 纪律（仅 ✅/❌ + 排版符号豁免 D-5B）。
 
-说明：{怪物} 展示名 / HP / 回合数 / 收集器聚合（total/max_hit/crits/blocks/items）
+说明：{怪物} 展示名 / HP / 行动数 / 收集器聚合（total/max_hit/crits/blocks/items）
 非 ActionOutcome 字段（shared_contract §5.1 字段清单无），由接线层（M5-08）注入
 ——集成断言经 SimpleNamespace / dict 承载（对齐 test_battle_render_settlement.py
 的注入形态）。军规5：胜负横幅/掉落（BREP-17~20）由 render_battle_round 结算一次
@@ -75,14 +75,15 @@ def _assert_no_banned_emoji(text: str) -> None:
 
 def test_tc24_start_exact_with_hint() -> None:
     """TC-24：`/攻击 史莱姆` 战斗开始 —— 独立消息逐字断言（意见一同步：无前缀行）：
-    `与史莱姆的战斗开始！史莱姆 25/25`（BREP-23）+ 弱点情报行 `弱点：火（×1.3）`；
+    `与史莱姆的战斗开始！\n史莱姆 25/25`（BREP-23）+ 弱点情报行 `弱点：火（×1.3）`；
     战斗开始消息不再渲染前缀首行（去 `Lv35.阿伟` 前缀）。"""
     text = render_battle_start(
         _party(), _enemy(), hint="弱点：火（×1.3）",
     )
     _assert_no_banned_emoji(text)
     assert text.split("\n") == [
-        "与史莱姆的战斗开始！史莱姆 25/25",
+        "与史莱姆的战斗开始！",
+        "史莱姆 25/25",
         "弱点：火（×1.3）",
     ]
 
@@ -91,62 +92,62 @@ def test_tc24_start_hint_none_omits_hint_line() -> None:
     """hint=None 时弱点/意图情报行省略：仅 BREP-23 一行（无 hint 行，5e §6.1；无前缀行）。"""
     text = render_battle_start(_party(), _enemy())
     assert text.split("\n") == [
-        "与史莱姆的战斗开始！史莱姆 25/25",
+        "与史莱姆的战斗开始！",
+        "史莱姆 25/25",
     ]
 
 
 def test_tc24_start_fallback_name_and_no_prefix() -> None:
     """缺省回落：玩家信息缺失 → 无前缀；怪物名缺失 → 「怪物」；max_hp 缺省回落当前 HP。"""
     text = render_battle_start(SimpleNamespace(), SimpleNamespace(hp=30))
-    assert text.split("\n") == ["与怪物的战斗开始！怪物 30/30"]
+    assert text.split("\n") == ["与怪物的战斗开始！", "怪物 30/30"]
 
 
 # ---------------------------------------------------------------------------
-# TC-25 战斗结束汇总（BREP-24：含回合数与明细入口）
+# TC-25 战斗结束汇总（BREP-24：含行动数与明细入口）
 # ---------------------------------------------------------------------------
 
 
 def test_tc25_end_summary_line_exact_with_turns() -> None:
-    """TC-25：BOSS 战胜利结束 —— BREP-24 汇总行逐字含回合数与明细入口指令：
-    `战斗结束：胜利｜回合数 5｜输入 /战斗记录 查看明细`（回合数对照斩杀基准，
+    """TC-25：BOSS 战胜利结束 —— BREP-24 汇总三行（批6 路P：免斜杠 + 少｜多换行）：
+    `战斗结束：胜利` / `行动数 5` / `发 战斗记录 查看明细`（行动数对照斩杀基准，
     5e §6.2 L147；无 summary → 不展示明细，TC-27）。"""
     text = render_battle_end(_party(), _enemy(turns=5), "win")
     _assert_no_banned_emoji(text)
     assert text.split("\n") == [
         "Lv35.阿伟 -斩龙者-",
-        "战斗结束：胜利｜回合数 5｜输入 /战斗记录 查看明细",
+        "战斗结束：胜利",
+        "行动数 5",
+        "发 战斗记录 查看明细",
     ]
 
 
 def test_tc25_winner_labels_win_lose_draw() -> None:
     """BREP-24 {胜负结果}：win/lose/draw → 胜利/失败/平局（5e §4.2）；中文透传。"""
-    assert "战斗结束：失败｜回合数 7" in render_battle_end(
-        SimpleNamespace(), _enemy(turns=7), "lose",
-    )
-    assert "战斗结束：平局｜回合数 3" in render_battle_end(
-        SimpleNamespace(), _enemy(turns=3), "draw",
-    )
-    assert "战斗结束：失败｜回合数 1" in render_battle_end(
-        SimpleNamespace(), _enemy(turns=1), "失败",
-    )
+    text = render_battle_end(SimpleNamespace(), _enemy(turns=7), "lose")
+    assert "战斗结束：失败" in text and "行动数 7" in text
+    text = render_battle_end(SimpleNamespace(), _enemy(turns=3), "draw")
+    assert "战斗结束：平局" in text and "行动数 3" in text
+    text = render_battle_end(SimpleNamespace(), _enemy(turns=1), "失败")
+    assert "战斗结束：失败" in text and "行动数 1" in text
 
 
 def test_tc25_turns_fallback_player_then_summary_then_zero() -> None:
-    """回合数 N 回落链：enemy.turns → player.turns → summary.turns → 0。"""
+    """行动数 N 回落链：enemy.turns → player.turns → summary.turns → 0。"""
     # enemy.turns 优先
-    assert "回合数 5" in render_battle_end(
+    assert "行动数 5" in render_battle_end(
         SimpleNamespace(), _enemy(turns=5), "win",
     )
     # 无 enemy → 回落 player.turns
-    assert "回合数 4" in render_battle_end(
+    assert "行动数 4" in render_battle_end(
         SimpleNamespace(turns=4), SimpleNamespace(), "win",
     )
     # 无 enemy/player → 回落 summary.turns
-    assert "回合数 2" in render_battle_end(
+    assert "行动数 2" in render_battle_end(
         SimpleNamespace(), SimpleNamespace(), "win", {"turns": 2},
     )
     # 全缺省 → 0
-    assert "回合数 0" in render_battle_end(
+    assert "行动数 0" in render_battle_end(
         SimpleNamespace(), SimpleNamespace(), "win",
     )
 
@@ -165,18 +166,21 @@ _TC26_SUMMARY: Dict[str, Any] = {
 
 
 def test_tc26_summary_page1_5_items_plus_footer() -> None:
-    """TC-26：`/木桩` 战后明细（来源 8 项）第 1 页 —— 摘要行 + 前 5 条条目
-    + 页脚 TPL-08 `— 第 1/2 页 · 共 8 条 · 输入 /木桩 页码 翻页 —`；条目占比降序。"""
+    """TC-26：`/木桩` 战后明细（来源 8 项）第 1 页 —— 摘要四行（批6 拆行）+ 前 5 条条目
+    + 页脚 TPL-08 `— 第 1/2 页 · 共 8 条 · 发 木桩 页码 翻页 —`；条目占比降序。"""
     text = render_battle_summary(_TC26_SUMMARY, page=1)
     _assert_no_banned_emoji(text)
     assert text.split("\n") == [
-        "摘要：总伤害 1220｜最大单段 180｜会心 4 次｜格挡 2 次",
+        "摘要：总伤害 1220",
+        "最大单段 180",
+        "会心 4 次",
+        "格挡 2 次",
         "1. 火球术 520（43%）",
         "2. 普攻 310（25%）",
         "3. 灼烧 210（17%）",
         "4. 突刺 90（7%）",
         "5. 追击 40（3%）",
-        "— 第 1/2 页 · 共 8 条 · 输入 /木桩 页码 翻页 —",
+        "— 第 1/2 页 · 共 8 条 · 发 木桩 页码 翻页 —",
     ]
 
 
@@ -185,21 +189,28 @@ def test_tc26_summary_page2_3_items_footer() -> None:
     text = render_battle_summary(_TC26_SUMMARY, page=2)
     _assert_no_banned_emoji(text)
     assert text.split("\n") == [
-        "摘要：总伤害 1220｜最大单段 180｜会心 4 次｜格挡 2 次",
+        "摘要：总伤害 1220",
+        "最大单段 180",
+        "会心 4 次",
+        "格挡 2 次",
         "1. 反击 30（2%）",
         "2. 反弹 15（1%）",
         "3. dot 5（0%）",
-        "— 第 2/2 页 · 共 8 条 · 输入 /木桩 页码 翻页 —",
+        "— 第 2/2 页 · 共 8 条 · 发 木桩 页码 翻页 —",
     ]
 
 
 def test_tc26_single_page_no_footer() -> None:
-    """3 条来源单页 —— 无页脚（3d §2.3 D-02：单页无页脚）；条目逐字 `{来源} {总伤害}（{占比}%）`。"""
+    """3 条来源单页 —— 无页脚（3d §2.3 D-02：单页无页脚）；摘要四行 + 条目逐字
+    `{序号}. {来源} {总伤害}（{占比}%）`。"""
     s = {"total": 300, "max_hit": 120, "crits": 1, "blocks": 0,
          "items": [("火球术", 120), ("普攻", 110), ("灼烧", 70)]}
     text = render_battle_summary(s, page=1)
     assert text.split("\n") == [
-        "摘要：总伤害 300｜最大单段 120｜会心 1 次｜格挡 0 次",
+        "摘要：总伤害 300",
+        "最大单段 120",
+        "会心 1 次",
+        "格挡 0 次",
         "1. 火球术 120（40%）",
         "2. 普攻 110（37%）",
         "3. 灼烧 70（23%）",
@@ -227,7 +238,9 @@ def test_tc27_normal_battle_no_detail_by_default() -> None:
     lines = text.split("\n")
     assert lines == [
         "Lv35.阿伟 -斩龙者-",
-        "战斗结束：胜利｜回合数 3｜输入 /战斗记录 查看明细",
+        "战斗结束：胜利",
+        "行动数 3",
+        "发 战斗记录 查看明细",
     ]
     assert "摘要：" not in text
     assert "（%" not in text
@@ -240,9 +253,14 @@ def test_tc27_end_with_summary_appends_detail_block() -> None:
     )
     lines = text.split("\n")
     assert lines[0] == "Lv35.阿伟 -斩龙者-"
-    assert lines[1] == "战斗结束：胜利｜回合数 8｜输入 /战斗记录 查看明细"
-    assert lines[2] == "摘要：总伤害 1220｜最大单段 180｜会心 4 次｜格挡 2 次"
-    assert len(lines) == 2 + 1 + 8                      # 前缀+BREP-24 + 摘要 + 8 条目
+    assert lines[1] == "战斗结束：胜利"
+    assert lines[2] == "行动数 8"
+    assert lines[3] == "发 战斗记录 查看明细"
+    assert lines[4] == "摘要：总伤害 1220"
+    assert lines[5] == "最大单段 180"
+    assert lines[6] == "会心 4 次"
+    assert lines[7] == "格挡 2 次"
+    assert len(lines) == 1 + 3 + 4 + 8                   # 前缀 + BREP-24（三行）+ 摘要（四行）+ 8 条目
     _assert_no_banned_emoji(text)
 
 
@@ -253,7 +271,8 @@ def test_tc27_end_with_summary_appends_detail_block() -> None:
 
 def test_tc06_fold_over_16_lines() -> None:
     """TC-06：明细条目超限 → 单条消息 ≤16 行，按正文尾部折叠 TPL-09
-    `…（其余 {N} 条已折叠，输入 /战斗记录 {page} 查看）`（折叠行亦计入 16 行）。"""
+    `…（其余 {N} 条已折叠）` / `发 战斗记录 {page} 查看`（折叠两行亦计入 16 行；
+    批6 起 BREP-24 三行 + 摘要四行均计入预算）。"""
     s20: Dict[str, Any] = {
         "total": 5000, "max_hit": 300, "crits": 5, "blocks": 2,
         "items": [("来源%02d" % i, 5000 - i * 200) for i in range(1, 21)],
@@ -263,11 +282,17 @@ def test_tc06_fold_over_16_lines() -> None:
     _assert_no_banned_emoji(text)
     assert len(lines) <= 16                              # 超限折叠（3d D-03）
     assert lines[0] == "Lv35.阿伟 -斩龙者-"
-    assert lines[1] == "战斗结束：胜利｜回合数 45｜输入 /战斗记录 查看明细"
-    assert lines[2] == "摘要：总伤害 5000｜最大单段 300｜会心 5 次｜格挡 2 次"
-    # 折叠行 TPL-09：保留头部 12 条，折叠 8 条（keep=16-2-2=12），被折叠内容在第 3 页
-    assert lines[-1] == "…（其余 8 条已折叠，输入 /战斗记录 3 查看）"
-    assert len(lines) == 16                              # 前缀+BREP-24+摘要+12 条+TPL-09
+    assert lines[1] == "战斗结束：胜利"
+    assert lines[2] == "行动数 45"
+    assert lines[3] == "发 战斗记录 查看明细"
+    assert lines[4] == "摘要：总伤害 5000"
+    assert lines[5] == "最大单段 300"
+    assert lines[6] == "会心 5 次"
+    assert lines[7] == "格挡 2 次"
+    # 折叠行 TPL-09（两行）：保留头部 6 条，折叠 14 条（keep=16-4-4-2=6），被折叠内容在第 2 页
+    assert lines[-2] == "…（其余 14 条已折叠）"
+    assert lines[-1] == "发 战斗记录 2 查看"
+    assert len(lines) == 16                              # 前缀+BREP-24 三行+摘要 四行+6 条+TPL-09 两行
 
 
 def test_tc06_no_fold_within_limit() -> None:
@@ -280,7 +305,7 @@ def test_tc06_no_fold_within_limit() -> None:
     lines = text.split("\n")
     assert len(lines) <= 16
     assert "已折叠" not in text
-    assert len(lines) == 2 + 1 + 6                       # 前缀+BREP-24 + 摘要 + 6 条
+    assert len(lines) == 1 + 3 + 4 + 6                   # 前缀 + BREP-24（三行）+ 摘要（四行）+ 6 条
 
 
 # ---------------------------------------------------------------------------
@@ -316,7 +341,53 @@ def test_render_battle_round_folds_over16() -> None:
     seg_lines = br._render_combo_segments(out)
     assert len(seg_lines) == 20                      # 段行 20 行（未折叠）
     folded = br._fold_message_lines(seg_lines, max_lines=16)
-    assert len(folded) == 16
-    assert "第 1 段" in folded[0]              # 保留首段
-    assert "…（其余 5 行已折叠）" in folded     # 折叠中间 5 段（head1 + tail14 + fold1）
+    assert len(folded) == 6
+    assert "第 1 段" in folded[0]              # 保留首段（3 物理行）
+    assert "…（其余 45 行已折叠）" in folded   # 折叠中间 15 段=45 物理行（head1+tail4+fold1）
     assert "第 20 段" in folded[-1]            # 保留末段
+
+
+# ---------------------------------------------------------------------------
+# M2/M3（2026-09-12 复核修复）：16 行硬上限按物理行统一计算，不被击穿
+# ---------------------------------------------------------------------------
+
+
+def test_render_battle_end_tail_counted_in_16_line_budget() -> None:
+    """M2：终局尾提示（defer_tail 置底）计入 16 行物理行预算，总行数不超限。"""
+    s20: Dict[str, Any] = {
+        "total": 5000, "max_hit": 300, "crits": 5, "blocks": 2,
+        "items": [("来源%02d" % i, 5000 - i * 200) for i in range(1, 21)],
+    }
+    tail = "→ 攻击 或 攻击 <技能名>"
+    text = render_battle_end(_party(), _enemy(turns=45), "win", s20, tail=tail)
+    lines = text.split("\n")
+    assert len(lines) <= 16, text
+    assert lines[-1] == tail                    # 尾提示仍置底
+
+
+def test_render_battle_end_tail_is_last_line() -> None:
+    """T1：`render_battle_end(tail=...)` 尾提示必须**置底**（末行 == tail，2026-09-12 拍板）。"""
+    for status in ("win", "lose"):
+        text = render_battle_end(_party(), _enemy(turns=3), status,
+                                 tail="→ 攻击 或 攻击 <技能名>")
+        assert text.split("\n")[-1] == "→ 攻击 或 攻击 <技能名>", (status, text)
+    # 空/纯空白 tail 不追加空行
+    clean = render_battle_end(_party(), _enemy(turns=3), "win", tail="   ")
+    assert not clean.endswith("\n")
+
+
+def test_fold_message_lines_hard_cap_multiline_elements() -> None:
+    """M3/T11：单个多行元素不得击穿 16 行硬上限（含多行 tail / 多行首元素）。"""
+    big_tail = "\n".join(f"尾{i}" for i in range(20))
+    folded = br._fold_message_lines(["头", "中", big_tail], max_lines=16)
+    assert len("\n".join(folded).split("\n")) <= 16
+
+    first_big = "\n".join(f"首{i}" for i in range(15))
+    folded2 = br._fold_message_lines([first_big, "尾1", "尾2"], max_lines=16)
+    assert len("\n".join(folded2).split("\n")) <= 16
+
+    # 多行元素可完整容纳时保留原始元素形态（不碎化为逐行元素）
+    three = "\n".join(f"段{i}" for i in range(3))
+    folded3 = br._fold_message_lines([three] + [f"行{i}" for i in range(20)], max_lines=16)
+    assert len("\n".join(folded3).split("\n")) <= 16
+    assert folded3[0] == three

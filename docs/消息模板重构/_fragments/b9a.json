@@ -1,0 +1,44 @@
+{
+  "rail": "b9a",
+  "scope": "木桩靶场 16 键（全部在 qbot_rpg/core/templates/dummy_tpl.py）：注册门槛 1 / 系统开关 1 / 战斗锁 1 / 档位列表 4（header/row/tail/empty）/ 未找到 1 / 开战 1 / 调整面板 4（ok/reset/missing/usage）/ 退出 3（no_battle/not_dummy/ok）。本路无死键清除（dummy_adjust_usage 全仓无消费方，按审计表登记留待批18 复核；本路按信息要素等价重做）。",
+  "templates": {
+    "dummy_register_gate": "❌ 请先创建角色\n发 注册 名字 职业",
+    "dummy_system_disabled": "❌ 木桩训练未启用\n内容包未配置训练木桩",
+    "dummy_battle_lock": "❌ 你已经在战斗中\n先结束当前战斗",
+    "dummy_list_header": "【训练木桩】可挑战档位：",
+    "dummy_list_row": "{idx}. {name}\nHP {hp}\n防御 {dfn}",
+    "dummy_list_tail": "发 木桩 <序号或名称> 进入\n发 调整木桩 <怪物名>\n覆盖面板（无参=重置）",
+    "dummy_list_empty": "当前内容包没有训练木桩\nenemies.json\n配置 tier=training",
+    "dummy_not_found": "❌ 未找到木桩\n「{name}」\n发 木桩 查看档位",
+    "dummy_start": "【训练战开始】{name}\nHP {hp}\n木桩不反击，胜利无掉落\n发 攻击 出战",
+    "dummy_adjust_ok": "✅ 已套用面板「{name}」\n防御/抗性已替换\nHP 仍为木桩值",
+    "dummy_adjust_reset": "✅ 已重置木桩面板\n恢复默认档位",
+    "dummy_adjust_missing": "❌ 怪物「{name}」不存在\n请核对 enemies.json",
+    "dummy_adjust_usage": "调整木桩\n发 调整木桩 <怪物名>\n覆盖面板\n无参：重置",
+    "dummy_exit_no_battle": "❌ 没有进行中的训练战\n发 木桩 <档位> 进入",
+    "dummy_exit_not_dummy": "❌ 当前不是训练木桩\n普通战斗无法退出",
+    "dummy_exit_ok": "✅ 已退出训练木桩\n本次训练未结算\n发 木桩 <档位> 可重进"
+  },
+  "prose_keys": {},
+  "notes": {
+    "dummy_register_gate": "重做——旧「❌ 请先 /注册 创建角色（/注册 名字 职业）」带斜杠且括注挤宽 38 半角；对齐全表 register_gate/pvp_registered_gate 口径「❌ 请先创建角色」+ 免斜杠下一步独立行。保留「请先创建角色」识别子串（测试锚点更新）",
+    "dummy_system_disabled": "重做——旧「❌ 木桩训练未启用（内容包未配置训练木桩）」单行 40 半角；❌ 原因 + 独立说明行（原因措辞保留）",
+    "dummy_battle_lock": "重做——旧「❌ 你已经在战斗中了（先结束当前战斗）」括注改独立行，免斜杠；保留「已经在战斗中」识别子串（测试锚点不变）",
+    "dummy_list_header": "重做——旧「【训练木桩】可挑战档位：」静态 22 半角已合规；按新规范去逗号式叙述，保留【】段头 + 冒号引导（档位列表头行）",
+    "dummy_list_row": "重做——旧「{idx}. {name}（HP {hp}｜防御 {dfn}）」一行三字段 38+ 半角；按拆行优先序①「每行一字段」拆三行（序号+.+名字 / HP / 防御），去掉 ｜ 与括注，大数值下各自独立行不挤宽",
+    "dummy_list_tail": "重做——旧「发送 /木桩 <序号或名称> 进入训练；/调整木桩 <怪物名> 覆盖面板」46 半角且带斜杠；改两条免斜杠指令行 + 覆盖面板说明行（无参=重置，覆盖 dummy_adjust_usage 的语义要素）",
+    "dummy_list_empty": "重做——旧「当前内容包没有训练木桩（enemies.json 配 tier=training）」44 半角；拆三行（结论 / 文件名 / 配置项），保留 tier=training 信息要素",
+    "dummy_not_found": "重做——旧「未找到木桩「{name}」，发送 /木桩 查看档位」带斜杠长句；改 ❌ 原因 + 名字独立行 + 免斜杠下一步（对齐 pvp_lock_not_found 口径）",
+    "dummy_start": "重做——旧「与 {name}（HP {hp}）的训练战开始！发 攻击 出战（木桩不反击，胜利无掉落）。」52 半角；改【训练战开始】段头 + 名字 + HP 独立行 + 规则说明行 + 免斜杠出战行；信息要素（名字/HP/不反击/无掉落/发 攻击）全保留",
+    "dummy_adjust_ok": "重做——旧「✅ 已把木桩面板调整为「{name}」的防御/抗性（HP 仍为木桩值）」44 半角；按每行一要素拆三行（套用结果 / 已替换项 / HP 说明）",
+    "dummy_adjust_reset": "重做——旧「✅ 已重置木桩面板为默认档位」22 半角合规但长定语；拆两行（重置对象 / 结果），保留「重置」识别子串（测试锚点不变）",
+    "dummy_adjust_missing": "重做——旧「怪物「{name}」不存在（enemies.json 里找）」括注口语化；改 ❌ 原因 + 下一步「请核对 enemies.json」；保留「不存在」识别子串（测试锚点不变）",
+    "dummy_adjust_usage": "重做——旧「调整木桩：/调整木桩 <怪物名> 覆盖面板（无参=重置）」带斜杠 42 半角；改标题行 + 免斜杠指令行 + 功能行 + 参数行（本键全仓无消费方，按信息要素等价重做）",
+    "dummy_exit_no_battle": "重做——旧「当前没有进行中的训练战（/木桩 <档位> 进入）」带斜杠；改 ❌ 原因 + 免斜杠下一步；保留「没有进行中的训练战」识别子串（测试锚点不变）",
+    "dummy_exit_not_dummy": "重做——旧「当前是普通战斗，不是训练木桩（木桩战才能 /木桩 退出）」50 半角带斜杠；改 ❌ 原因 + 说明行（保留「不是训练木桩」识别子串，测试锚点不变）",
+    "dummy_exit_ok": "重做——旧「已退出训练木桩（本次训练未结算；/木桩 <档位> 可重新进入）」带斜杠；改 ✅ 结果行 + 未结算说明 + 免斜杠重进行；保留「已退出训练木桩」识别子串（测试锚点不变）"
+  },
+  "overwrite_keys": [
+    "dummy_exit_not_dummy"
+  ]
+}

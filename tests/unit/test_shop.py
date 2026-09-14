@@ -751,7 +751,11 @@ def test_shop_list_rows_and_gate_markers():
     guild = next(row for row in r["rows"] if row["id"] == "guild")
     assert any("需要 信赖" == m for m in guild["markers"])
     assert guild["greyed"] is True
-    assert r["tip"] == "/商店 序号 切换商店"
+    # 2026-09-12 专项·尾行 Tip 统一：一览尾行 Tip 改全量表键 shop_list_tail_tip
+    # （免斜杠「发 商店进入 <序号> 进店」；旧硬编码「/商店 序号 切换商店」）
+    from qbot_rpg.core.templates import tpl_of
+
+    assert r["tip"] == tpl_of(None, "shop_list_tail_tip") == "发 商店进入 <序号> 进店"
 
 
 def test_constants():

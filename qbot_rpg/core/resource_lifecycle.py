@@ -1,4 +1,4 @@
-"""6c 资源轴回合结清与生命周期引擎（M13 批8·路8C）——F-R1 各时点增减·保留·清零。
+"""6c 资源轴行动结清与生命周期引擎（M13 批8·路8C）——F-R1 各时点增减·保留·清零。
 
 文件：qbot_rpg/core/resource_lifecycle.py
 创建：2026-09-02
@@ -7,15 +7,15 @@
 功能：按《细化_6c_资源轴与职业机制.md》§1.3 机制 M3 · 流程 F-R1 实现资源轴
       战斗生命周期纯函数引擎：
   - tick_round_end：回合结束结清（当前契约仅保留——本引擎零定时器/零睡眠，
-    契约未定义任何「每回合自动衰减」字段，故回合结束不增减任何资源；提供
-    钩子签名以便契约后续扩展每回合变化时挂载，现行为=保留）
+    契约未定义任何「每次行动自动衰减」字段，故行动结束不增减任何资源；提供
+    钩子签名以便契约后续扩展每次行动变化时挂载，现行为=保留）
   - battle_end_reset：战斗结束按 reset 策略三枚举清零/保留（battle→清零 /
     keep→跨战斗保留 / battle_start→下次战斗开始重置为 base）
   - battle_start_init：战斗开始初始化（数值型置 base；子池型各池置 base）
   - apply_gain：成功结算后 energy_gain 追加（与 mark_add 同拍：命中判定后/
     结算末尾），追加后封顶（数值型 ≤ max / 子池型每池 ≤ max_per_pool，
     超出部分不累计、不回滚）——0 值无操作（D-06）
-  - try_apply_cost：施放前 energy_cost 检查并消耗（不足 → 被拒不耗回合：
+  - try_apply_cost：施放前 energy_cost 检查并消耗（不足 → 被拒不消耗行动：
     不增减、返回 False 可反复尝试；0 值无操作 D-06）
   - is_controlled_preserved：被控 skip_turn 保留判定（被控期间资源不增不减
     天然保留，本引擎显式声明该契约行为并返回 True）
@@ -81,7 +81,7 @@ _RESOURCE_CUSTOM_ALIAS: Tuple[str, ...] = ("resource", "resource_custom")
 
 
 class ResourceLifecycle:
-    """6c 资源轴回合结清与生命周期引擎（细化_6c §1.3 机制 M3 · 流程 F-R1）。
+    """6c 资源轴行动结清与生命周期引擎（细化_6c §1.3 机制 M3 · 流程 F-R1）。
 
     构造器注入注册表（stats.json 资源轴注册段：轴 ID → 注册 dict），
     缺省 {} 兜底（无注册 → 所有方法零操作降级）。操作对象为战斗快照
@@ -308,7 +308,7 @@ class ResourceLifecycle:
         side: str,
         costs: Mapping[str, Any],
     ) -> bool:
-        """energy_cost 施放前检查并消耗（不足 → 被拒不耗回合：不增减、返回 False）。
+        """energy_cost 施放前检查并消耗（不足 → 被拒不消耗行动：不增减、返回 False）。
 
         - 数值型键：axis_id → 当前值 ≥ n 才扣；
         - 子池型键：pool 名 → 该池 ≥ n 才扣；`any` 键 = 总量门（D-02）：
@@ -334,7 +334,7 @@ class ResourceLifecycle:
             else:
                 cur = self._current_of(side_state, axis_id, pool)
                 if cur < n:
-                    return False  # 不足 → 被拒不耗回合（F-R1 / S4）
+                    return False  # 不足 → 被拒不消耗行动（F-R1 / S4）
                 plan.append((axis_id, pool, n))
         # 全量校验通过 → 实际扣减（先匹配后消耗，CM-2 精神）
         for axis_id, pool, n in plan:
@@ -452,19 +452,51 @@ class ResourceLifecycle:
         """
         return True
 
-    # ------------------------- 回合结束结清（F-R1 tick） -------------------------
+    # ------------------------- 行动结束结清（F-R1 tick） -------------------------
 
     def tick_round_end(
         self,
         battle_state: MutableMapping[str, Any],
         axes: Optional[Sequence[str]] = None,
+    ) -> Dict[str, Any]:
+        """行动结束结清（F-R1 行动边界）。
+
+        当前契约（细化_6c §1.3）未定义任何「每次行动自动变化」字段（无
+        每次行动衰减/回复配置项）——本引擎的每次行动资源变化只来自 proc 时点
+        （on_turn_start 等，批8B 接线）与被控保留；故本方法现行为 = 保留
+        （零增减，纯幂等钩子）。提供 axes 参数与返回侧状态，供契约后续
+        扩展每次行动变化时挂载（保持签名稳定）。返回各侧 resource_state
+        （就地读取，无写入）。
+
+        （云海九期 212 的回合边界 tick 结清已正交拆分至 settle_round_tick
+        ——opt-in 字段 tick_per_round/tick_floor/on_full 的承载方。）
+        """
+        del axes  # 预留参数（契约扩展位）；现契约无每次行动变化，无操作
+        if not isinstance(battle_state, Mapping):
+            return {}
+        rs = battle_state.get(RESOURCE_STATE_KEY)
+        if not isinstance(rs, Mapping):
+            return {}
+        out: Dict[str, Any] = {}
+        for side in ("player", "enemy"):
+            side_state = rs.get(side)
+            out[side] = side_state if isinstance(side_state, MutableMapping) else {}
+        return out
+
+    # ------------------------- 回合结束结清（F-R1 回合边界 tick · 云海九期 212） -------------------------
+
+    def settle_round_tick(
+        self,
+        battle_state: MutableMapping[str, Any],
+        axes: Optional[Sequence[str]] = None,
         frozen_sides: Optional[Sequence[str]] = None,
     ) -> Dict[str, Any]:
-        """回合结束结清（F-R1 回合边界；九期 212 实装 tick 自然增长）。
+        """回合边界 tick 结清（云海九期 212 实装 tick 自然增长）。
 
-        九期批次 212 前实现在：契约无「每回合自动变化」字段，本方法为
-        零增减纯幂等钩子。212 起：注册段携带 opt-in 字段 `tick_per_round`
-        （正=增长 / 负=衰减）的轴在回合末按值结清——
+        云海九期 212 回合边界 tick（opt-in：tick_per_round/tick_floor/on_full），
+        与行动边界结清（tick_round_end，幂等保留语义）正交；调用方＝回合边界
+        装配层。注册段携带 opt-in 字段 `tick_per_round`（正=增长 / 负=衰减）
+        的轴在回合末按值结清——
 
         - clamp 区间 [tick_floor, effective_max]（衰减不破 tick_floor、
           增长不破 max；0=不限轴只 clamp 下限）；
@@ -581,7 +613,7 @@ class ResourceLifecycle:
     def snapshot_resource_state(
         self, battle_state: Mapping[str, Any]
     ) -> Dict[str, Any]:
-        """快照导出（RS-1 回合边界写入 / RS-6 池级原子性）：深拷贝 resource_state。
+        """快照导出（RS-1 行动边界写入 / RS-6 池级原子性）：深拷贝 resource_state。
 
         数值型=单键当前值；子池型=池级展开 {axis: {pool: v}}（D-04）。
         无 resource_state 段 → 返回 per-side 空骨架（结构稳定）。

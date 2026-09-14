@@ -18,7 +18,7 @@
   - TC-11  预览后不 /确认（超时）→ 无锻造、无扣款、无经验（窗口作废）
   - TC-12  预览后 /确认 → 重跑守卫再扣素材发经验 → ✅ 锻造完成
   - TC-13  straight_forge=false（深度模式）→ 全部 /锻造 强制预览（前台无直锻入口）
-  - TC-14  无进行中预览时 /确认 → 拒绝「当前无可确认的锻造预览」
+  - TC-14  无进行中预览时 /确认 → 拒绝「❌ 当前无待确认预览」
   - 3.3 边界：同一玩家仅 1 个待确认窗（新预览不覆盖）；carry_sec=0 不限时；
     确认失败（素材不足）零副作用；/图纸 不覆盖既有窗（注册断言）。
   - 装配：register_forge_commands 注册 /锻造 /确认（CommandSpec 白名单标记）。
@@ -63,7 +63,6 @@ from qbot_rpg.commands.forge_commands import (
     PREVIEW_WINDOW_KEY,
     SETS_CMD,
     SETS_EMPTY,
-    SETS_LOCKED_MSG,
     SETS_UNLOCK_ID,
     TREE_CMD,
     TREE_EMPTY_PAGE,
@@ -186,7 +185,7 @@ def _parsed(raw: str) -> Any:
 def test_tc09_straight_forge_direct_success() -> None:
     """TC-09：straight_forge=true（缺省），/锻造 铁剑 无预览 → 直锻 1 步原子成功。
 
-    断言：✅ 成功行 + 属性行（攻击 12 | 部位：武器 | 槽位：无 | 品质：普通（固定））；
+    断言：✅ 成功行 + 属性行（每行一字段：攻击 12 / 部位：武器 / 槽位：无 / 品质：普通（固定））；
     扣素材（矿石 3→0）、扣金币（lv1×10=10）、产装（iron_sword 1 件）、
     熟练 +节点等级×2=2；不建立确认窗。
     """
@@ -214,11 +213,11 @@ def test_tc09_straight_forge_direct_success() -> None:
 def test_tc10_preview_card_fields() -> None:
     """TC-10：/锻造 炎剑Ⅱ 预览 → 📖 卡片字段（标题/素材行/孔位/可继续锻造）。
 
-    断言（2c2b §3.2 字段接线，真实 test_demo 数据）：
+    断言（2c2b §3.2 字段接线，真实 test_demo 数据；2026-09-12 批6·路R：字段改换行）：
       - 标题：`炎剑Ⅱ（火属性+8）`（节点名 + 属性摘要，element=fire→火 +8）；
-      - 素材行：`素材：炎剑 + 火龙鳞×5 + 火晶石×2 | 需求：铸造 宗师 级`
+      - 素材行：`素材：炎剑 + 火龙鳞×5 + 火晶石×2` + `需求：铸造 宗师 级`
         （前置节点名 炎剑 + 各行素材 + 需求档位；lv5 → tier index 5=宗师）；
-      - 孔位/后续：`孔位：1 级槽 ×1 | 2 级槽 ×1 | 可继续锻造：炎剑Ⅲ → ■炎王剑`
+      - 孔位/后续：`孔位：1级槽×1 | 2级槽×1` / `可继续锻造：炎剑Ⅲ` / `终点：■炎王剑`
         （slots 1/2 + 主线 child 炎剑Ⅲ → line_endpoint ■炎王剑）。
     预览不扣任何资源（inventory/金币/经验/forged 全不变）。
     """
@@ -229,8 +228,11 @@ def test_tc10_preview_card_fields() -> None:
     out = cmd_forge(_parsed("/锻造 炎剑Ⅱ 预览"), ctx)
     lines = out.split("\n")
     assert lines[0] == "炎剑Ⅱ（火属性+8）"
-    assert lines[1] == "素材：炎剑 + 火龙鳞×5 + 火晶石×2 | 需求：铸造 宗师 级"
-    assert lines[2] == "孔位：1 级槽 ×1 | 2 级槽 ×1 | 可继续锻造：炎剑Ⅲ → ■炎王剑"
+    assert lines[1] == "素材：炎剑 + 火龙鳞×5 + 火晶石×2"
+    assert lines[2] == "需求：铸造 宗师 级"
+    assert lines[3] == "孔位：1级槽×1 | 2级槽×1"
+    assert lines[4] == "可继续锻造：炎剑Ⅲ"
+    assert lines[5] == "终点：■炎王剑"
     # 预览 0 资源副作用
     assert ctx["inventory"]["fire_dragon_scale"] == 5
     assert ctx["inventory"]["alch_ember_crystal"] == 2
@@ -248,9 +250,12 @@ def test_tc10_preview_card_no_slots_branch() -> None:
     out = cmd_forge(_parsed("/锻造 铁剑Ⅰ 预览"), ctx)
     lines = out.split("\n")
     assert lines[0] == "铁剑Ⅰ（攻击+18）"
-    assert lines[1] == "素材：铁剑 + 矿石×5 | 需求：铸造 精通 级"
-    # 铁剑Ⅰ 无孔位，但主线仍有后续 → 「可继续锻造：铁剑Ⅱ → ■炎王剑」行存在（2c2b §3.2 后续段）
+    assert lines[1] == "素材：铁剑 + 矿石×5"
+    assert lines[2] == "需求：铸造 精通 级"
+    # 铁剑Ⅰ 无孔位，但主线仍有后续 → 「可继续锻造：铁剑Ⅱ」+
+    # 「终点：■炎王剑」行存在（2c2b §3.2 后续段）
     assert any("可继续锻造" in ln for ln in lines)
+    assert any(ln == "终点：■炎王剑" for ln in lines)
 
 
 # ---------------------------------------------------------------------------
@@ -286,7 +291,7 @@ def test_tc11_timeout_invalidates_window() -> None:
     # 超时后 /确认 → 拒绝 + 窗口作废
     ctx["now"] = 1000.0 + 91
     out = cmd_confirm(_parsed("/确认"), ctx)
-    assert "预览已过期" in out and "重新 /锻造" in out
+    assert "预览已过期" in out and "发 锻造" in out
     assert PREVIEW_WINDOW_KEY not in ctx or "u1" not in ctx[PREVIEW_WINDOW_KEY]
     # 零副作用
     assert ctx["inventory"]["fire_dragon_scale"] == 5
@@ -374,11 +379,11 @@ def test_tc13_straight_forge_false_force_preview() -> None:
 # ---------------------------------------------------------------------------
 
 def test_tc14_confirm_without_preview_rejected() -> None:
-    """TC-14：无任何进行中预览时 /确认 → 拒绝「当前无可确认的锻造预览」。"""
+    """TC-14：无任何进行中预览时 /确认 → 拒绝「❌ 当前无待确认预览」。"""
     player = _player(forged=[], forge_level=1)
     ctx = _make_ctx({"ore": 3}, player)
     out = cmd_confirm(_parsed("/确认"), ctx)
-    assert out == "当前无可确认的锻造预览"
+    assert out == "❌ 当前无待确认预览"
     assert ctx["inventory"]["ore"] == 3  # 无锻造
 
 
@@ -395,7 +400,7 @@ def test_single_window_no_overwrite() -> None:
     assert ctx[PREVIEW_WINDOW_KEY]["u1"]["node_id"] == N_IRON_1
     # 再预览 铁剑（同玩家）→ 不覆盖既有窗，返回提示 + 原卡片
     out2 = cmd_forge(_parsed("/锻造 铁剑 预览"), ctx)
-    assert "已有待确认的锻造预览" in out2
+    assert "❌ 已有待确认的预览" in out2
     assert ctx[PREVIEW_WINDOW_KEY]["u1"]["node_id"] == N_IRON_1  # 保持原窗
 
 
@@ -419,52 +424,52 @@ def test_carry_sec_zero_unlimited() -> None:
 # ---------------------------------------------------------------------------
 
 def test_guard_material_shortfall_direct() -> None:
-    """直锻素材不足（GU-05）：❌ 素材不足 + 缺项（来源）+ /图纸 指引；零副作用。"""
+    """直锻素材不足（GU-05）：❌ 素材不足 + 需要/缺拆行 + 发 图纸 指引；零副作用。"""
     player = _player(forged=[], forge_level=1)
     ctx = _make_ctx({"ore": 1}, player)  # 铁剑需 3
     out = cmd_forge(_parsed("/锻造 铁剑"), ctx)
-    assert "❌ 素材不足：需要 矿石×3；缺：矿石×2" in out
-    assert "→ /图纸" in out
+    assert "❌ 素材不足\n需要：矿石×3\n缺：矿石×2" in out
+    assert "发 图纸 查看全链" in out
     assert ctx["inventory"]["ore"] == 1
     assert player["currencies"]["coins"] == 9999
     assert N_IRON not in player["forged"]
 
 
 def test_guard_parent_not_forged_direct() -> None:
-    """直锻前置未锻（GU-04）：❌ 需先锻造：<前置名> + /图纸 指引；不预扣素材。"""
+    """直锻前置未锻（GU-04）：❌ 需先锻造：<前置名> + 发 图纸 指引；不预扣素材。"""
     player = _player(forged=[], forge_level=2)
     ctx = _make_ctx({"ore": 5}, player)  # 铁剑Ⅰ 需矿石×5
     out = cmd_forge(_parsed("/锻造 铁剑Ⅰ"), ctx)
     assert "❌ 需先锻造：铁剑" in out
-    assert "→ /图纸" in out
+    assert "发 图纸 查看全链" in out
     assert ctx["inventory"]["ore"] == 5
     assert N_IRON_1 not in player["forged"]
 
 
 def test_guard_level_insufficient_direct() -> None:
-    """直锻等级不足（GU-06）：`需要 <档位> 级，当前 <档位>（还差 N 熟练）`；零副作用。"""
+    """直锻等级不足（GU-06）：`❌ 等级不足` + 需要/当前/还差 拆行；零副作用。"""
     player = _player(forged=[], forge_level=0)  # 见习；铁剑 lv1 需 正式
     ctx = _make_ctx({"ore": 3}, player)
     out = cmd_forge(_parsed("/锻造 铁剑"), ctx)
-    assert "需要 正式 级，当前 见习" in out
+    assert "❌ 等级不足" in out and "需要：正式" in out and "当前：见习" in out
     assert "还差 100 熟练" in out
     assert ctx["inventory"]["ore"] == 3
     assert N_IRON not in player["forged"]
 
 
 def test_guard_unknown_node() -> None:
-    """未知节点（GU-03 not_found）：`未找到「<名>」→ /锻造树 查看可锻装备`。"""
+    """未知节点（GU-03 not_found）：`❌ 未找到「<名>」` + 发 锻造树 指引。"""
     ctx = _make_ctx({}, _player(forged=[], forge_level=1))
     out = cmd_forge(_parsed("/锻造 不存在之剑"), ctx)
     assert "未找到「不存在之剑」" in out
-    assert "→ /锻造树" in out
+    assert "发 锻造树 查看可锻装备" in out
 
 
 def test_guard_name_with_space() -> None:
-    """P-01 节点名禁空格：`参数错误：节点名不含空格`；不产生锻造。"""
+    """P-01 节点名禁空格：`❌ 节点名不含空格`；不产生锻造。"""
     ctx = _make_ctx({}, _player(forged=[], forge_level=1))
     out = cmd_forge(_parsed("/锻造 炎剑 Ⅱ"), ctx)
-    assert "参数错误：节点名不含空格" in out
+    assert "❌ 节点名不含空格" in out
 
 
 # ---------------------------------------------------------------------------
@@ -638,7 +643,7 @@ def _forge_engine() -> ForgeTreeEngine:
 
 
 def test_p01_space_rejected() -> None:
-    """P-01：节点名含空格 → P_SPACE（`参数错误：节点名不含空格`）。"""
+    """P-01：节点名含空格 → P_SPACE（`❌ 节点名不含空格`）。"""
     r = parse_forge_target("炎剑 Ⅱ", _forge_engine())
     assert r["ok"] is False
     assert r["error_code"] == ERR_P_SPACE
@@ -717,11 +722,11 @@ def test_p06_multiword_single_argument() -> None:
 
 
 def test_p_unknown_error() -> None:
-    """P_UNKNOWN：未找到节点 → 未找到 + /锻造树 指引。"""
+    """P_UNKNOWN：未找到节点 → 未找到 + 发 锻造树 指引。"""
     r = parse_forge_target("不存在之剑", _forge_engine())
     assert r["ok"] is False
     assert r["error_code"] == ERR_P_UNKNOWN
-    assert "未找到" in r["message"] and "/锻造树" in r["message"]
+    assert "未找到" in r["message"] and "发 锻造树" in r["message"]
     assert r["candidates"] == []
 
 
@@ -733,11 +738,11 @@ def test_p_ambiguous_candidates_listed() -> None:
     cands = r["candidates"]
     assert len(cands) == 4  # 炎剑/炎剑Ⅱ/炎剑Ⅲ/■炎王剑（前缀均以「炎」开头）
     assert N_FLAME in cands and N_FLAME_2 in cands and N_FLAME_3 in cands and N_KING in cands
-    assert "候选多个节点" in r["message"] and "/锻造树" in r["message"]
-    # cmd_forge 出口：歧义候选列表渲染
+    assert "匹配到多个节点" in r["message"] and "发 锻造树" in r["message"]
+    # cmd_forge 出口：歧义候选列表渲染（每行一候选；批3·路I 候选 join 改换行）
     ctx = _make_ctx({}, _player())
     out = cmd_forge(_parsed("/锻造 炎"), ctx)
-    assert "候选多个节点" in out and "炎剑（Lv4）" in out and "→ /锻造树" in out
+    assert "匹配到多个节点" in out and "炎剑（Lv4）" in out and "发 锻造树" in out
 
 
 def test_parse_forge_target_lexer_only_no_engine() -> None:
@@ -756,7 +761,7 @@ def test_batch_three_success() -> None:
     player = _player(forged=[], forge_level=1)
     ctx = _make_ctx({"ore": 9}, player)  # 铁剑每件矿石×3，*3 需 9
     out = cmd_forge(_parsed("/锻造 铁剑*3"), ctx)
-    assert "✅ 铁剑 锻造完成！ ×3" in out
+    assert "✅ 铁剑 锻造完成！×3" in out
     assert ctx["inventory"]["ore"] == 0
     assert ctx["inventory"].get("iron_sword", 0) == 3
     assert player["currencies"]["coins"] == 9999 - 30  # lv1×10 ×3
@@ -766,12 +771,12 @@ def test_batch_three_success() -> None:
 
 
 def test_batch_mid_failure_interrupts() -> None:
-    """批量第 2 次失败中断：`第 2 次失败，已成功 1 次`；已成功结算不回滚。"""
+    """批量第 2 次失败中断：`❌ 第 2 次失败` + `已成功 1 次`；已成功结算不回滚。"""
     configure_proficiency(_load_json(_PROF_JSON), _settings_raw())  # type: ignore[arg-type]
     player = _player(forged=[], forge_level=1)
     ctx = _make_ctx({"ore": 4}, player)  # 只够 1 件（需 3），第 2 件缺 2
     out = cmd_forge(_parsed("/锻造 铁剑*3"), ctx)
-    assert "第 2 次失败，已成功 1 次" in out
+    assert "❌ 第 2 次失败" in out and "已成功 1 次" in out
     assert "素材不足" in out
     assert ctx["inventory"]["ore"] == 1  # 4 - 3 = 1（第 2 件未扣，失败零副作用）
     assert ctx["inventory"].get("iron_sword", 0) == 1
@@ -1156,18 +1161,3 @@ def test_forge_tpl_override_via_ctx() -> None:
     # 无论套装是否为空，覆盖后的行格式不应出现默认「（X/Y 件）」；空态用 forge_sets_empty
     assert " 件）" not in out or SETS_EMPTY in out
     assert ctx2["templates"]["forge_sets_seg"] == "{name}[{have}/{total}]"
-
-
-def test_forge_tpl_whitelist_coverage() -> None:
-    """白名单完整性：forge 分区模板占位符 ⊆ 白名单，且登记 key 与模板表一一对应。"""
-    from qbot_rpg.core.templates.forge_tpl import (
-        DEFAULT_TEMPLATES as FT,
-        PLACEHOLDER_WHITELIST as FW,
-    )
-    import re
-
-    assert set(FT) == set(FW)
-    for key, tpl in FT.items():
-        ph = set(re.findall(r"\{([a-zA-Z0-9_]+)\}", str(tpl)))
-        assert ph <= FW[key], f"{key}: {ph - FW[key]} 不在白名单"
-

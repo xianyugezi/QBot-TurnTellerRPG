@@ -447,7 +447,7 @@ def _check_v11_field_registry(
         if k not in known:
             _err(report, f"{base}.{k}", "R-5", rule="skill_field_unregistered",
                  node_id=sid, field_name=k,
-                 msg=f"技能字段 {k} 未登记（V-11：须在 skills_fields 24 键内）")
+                 msg=f"技能字段 {k} 未登记（V-11：须在 skills_fields 登记表内）")
 
 
 def _check_v14_position_rule(

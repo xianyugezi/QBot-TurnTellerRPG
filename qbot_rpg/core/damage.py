@@ -19,7 +19,7 @@ battle.py + core/effects.DamagePipeline）import。零 NoneBot import（细化_3
     的 3b 派生属性口径（返回百分数值，如 5.0 = 5%，hit.k 默认 1）不同——
     1a 战斗数值层口径（hit.k=0.2，细化_1a §2.1 数值表）为战斗权威口径，
     本模块独立实现参数化版本，**不修改 core/player_attributes.py**。
-  - **cap 型参数沿用 formula.json 百分数值**（crit.cap=95 / block.cap=40，
+  - **cap 型参数沿用 formula.json 百分数值**（crit.cap=100 / block.cap=40，
     细化_1a §2.1），函数内部 ÷100 转小数；**加成类参数沿用 formula.json 小数值**
     （type_affinity.slash_crit=0.05 / crit_bonus，细化_1a §2.1），与输出同单位。
     该“混合单位”忠实映射 formula.json 原始数据（§5.1 结构本身即此口径）。
@@ -139,17 +139,22 @@ class CritParams:
     """会心参数（细化_1a §1.4/§1.5 / 数值层 L188-193 ``crit`` 段）。
 
     - p_coef: P = √幸运 × p_coef ÷ 100（幸运 100 → P=0.05 小数 = 5%）
-    - cap:    P 封顶 95（百分数值 → 上限 0.95）
+    - cap:    P 封顶（百分数值 → 上限 cap/100）；默认 100＝允许满会心
+              （2026-09-11 增补 v1 §五 放开；cap=0 = 不限）
     - tiers:  三档倍率 2.2/1.7/1.3
     - tier_p: 档位阈值倍数 [1, 3]：r≤P×1 高级 / r≤P×3 中级
     - crit_mult_up: 超会心 Lv1-3 加成
+    - negative_crit: 负会心倍率（怪猎采纳 E19；0=关；负率=min(100%, −会心率)）
+    - elem_crit_step: 属性会心每级步进（怪猎采纳 E21；天赋 Lv1-3 → +5%/10%/15%）
     """
 
     p_coef: float = 0.5
-    cap: float = 95.0
+    cap: float = 100.0
     tiers: CritTiers = field(default_factory=CritTiers)
     tier_p: Tuple[int, int] = (1, 3)
     crit_mult_up: CritMultUp = field(default_factory=CritMultUp)
+    negative_crit: float = 0.75   # 负会心倍率（E19；0=关；负率=min(100%,−会心率)）
+    elem_crit_step: float = 0.05  # 属性会心每级步进（E21；Lv1-3 → +5%/10%/15%）
 
 
 @dataclass(frozen=True)
@@ -339,7 +344,7 @@ def crit_prob(
     *,
     p_coef: float = 0.5,
     crit_bonus: float = 0.0,
-    cap: float = 95.0,
+    cap: float = 100.0,
     slash_crit: float = 0.0,
 ) -> float:
     """会心判定概率（小数，[0, cap/100]）。
@@ -350,9 +355,11 @@ def crit_prob(
       - √幸运 × p_coef ÷ 100：属性驱动基础（幸运 100 → 0.05 = 5%）
       - crit_bonus：装备/技能/效果会心加成（小数；效果系统挂载，3b §5.1 同源）
       - slash_crit：斩击类型会心加成（type_affinity.slash_crit=0.05，数值层 L92/L216）
-      - cap：formula.json 百分数值（默认 95 → 上限 0.95）；P 判定前统一
+      - cap：formula.json 百分数值（默认 100 → 上限 1.0，允许满会心——
+        2026-09-11 增补 v1 §五 放开；cap=0 = 不限）；P 判定前统一
         min(P, cap) 含斩击加成后（细化_1a §5-⑦ 采纳）
     负数幸运按 0（细化_1a §3-C：负值运行期按 0）。
+    P 可为负（负会心来源，怪猎采纳 E19）——cap 只封顶不封底。
     """
     if lck < 0.0:
         lck = 0.0
@@ -372,6 +379,7 @@ def crit_roll(
     tier_p: Tuple[int, int] = (1, 3),
     super_crit_level: int = 0,
     p_override: Optional[float] = None,  # G1：注入有效 P（类型加成+cap 判定前）；None=内部 √幸运
+    negative_crit: float = 0.75,  # E19：负会心倍率（0=关；负率=min(1,−P)）
 ) -> Tuple[str, float]:
     """会心档位判定，返回 (档位 id, 倍率小数)。
 
@@ -383,6 +391,8 @@ def crit_roll(
       - r > 3P → "low"
     r 与 P 同单位（小数 / r∈[0,1]），由调用方注入（固定种子可复现）。
     超会心：三档均 + 0.05 × level（level 1/2/3 → +0.05/0.10/0.15，细化_1a §1.4/L193）。
+    负会心（怪猎采纳 E19）：P<0 → 负率=min(1, −P)；r 落在负率内 → "negative" 档
+    （缺省 ×0.75，可配 negative_crit，0=关）。负档不吃超会心加成，其余照常判低档。
     物理+元素通道共用一次本判定（数值层 L24）。
     """
     if lck < 0.0:
@@ -390,10 +400,14 @@ def crit_roll(
     if tiers is None:
         tiers = CritTiers()
     # G1 定稿对照修复：p_override 允许注入「已算好的有效 P」（含 type_affinity.slash_crit
-    # 加成 + cap 95，cap 应用在判定前——细化_1a §5-⑦/数值层 L92/L216）；缺省按内部 √幸运。
+    # 加成 + cap（CritParams.cap，默认 100），cap 应用在判定前——细化_1a §5-⑦/数值层 L92/L216）；缺省按内部 √幸运。
     p = p_override if p_override is not None else (math.sqrt(lck) * p_coef / 100.0)
     t1, t3 = max(1, int(tier_p[0])), max(1, int(tier_p[1]))
     boost = CritMultUp().boost(int(super_crit_level))
+    # 负会心（怪猎采纳 E19）：P<0 → 负率=min(1, −P)；r 落在负率内 → 负会心档
+    # （缺省 ×0.75；negative_crit≤0 视为关）。不吃超会心加成；其余照常判低档。
+    if p < 0 and negative_crit > 0 and r <= min(1.0, -p):
+        return ("negative", float(negative_crit))
     if r <= p * t1:
         return ("high", tiers.high + boost)
     if r <= p * t3:

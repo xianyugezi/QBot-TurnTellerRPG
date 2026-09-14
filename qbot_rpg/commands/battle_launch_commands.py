@@ -385,8 +385,29 @@ async def launch_pve_battle(
         eng._resource_registry = _resource_registry_of(ctx)
         # 方位 v0.6（附录 A Step 5）：携带素材冻结进战斗快照 battle_resources.materials
         # （配方材料并集 ∩ 背包；N5 白名单随试点包定）。即时调合查询/扣减以容器为权威。
-        eng.start(p_comb, e_comb, random_seed=None,
-                  config={"battle_materials": _battle_materials_of(ctx)})
+        # CTB 口径（Agent 4 · Wave B）：开战 = 初始化行动条（调度器 start 注入 initiative）。
+        # **无需 rule_version 分派**——CTB 是唯一实现（引擎内部固定走 CTBScheduler）；
+        # 玩家行动经 BattleEngine.player_act 单入口（见 battle_commands 派发层），
+        # 不再有先手/后手对（enemy_act / end_turn / action_order 已删除）。
+        # ctb 配置管道接通（2026-09-11 增补 v1）：settings.json 的 "ctb" 段（隐性标准
+        # time_unit / air_time / air_extend / turn_cost 等）→ 引擎调度器规则（可调）。
+        _start_cfg: Dict[str, Any] = {"battle_materials": _battle_materials_of(ctx)}
+        try:
+            from qbot_rpg.core.ctb_config import resolve_ctb_settings  # noqa: PLC0415
+
+            _start_cfg["ctb"] = resolve_ctb_settings(
+                ctx.get("settings") if isinstance(ctx, Mapping) else None)
+        except Exception:  # noqa: BLE001 - 配置接通失败回落默认（不阻断开战）
+            pass
+        # 战斗规则配置管道（批④）：settings["battle"] 段（背击加成等）→ 引擎战斗配置
+        try:
+            from qbot_rpg.core.battle_config import resolve_battle_settings  # noqa: PLC0415
+
+            _start_cfg.update(resolve_battle_settings(
+                ctx.get("settings") if isinstance(ctx, Mapping) else None))
+        except Exception:  # noqa: BLE001 - 配置接通失败回落默认（不阻断开战）
+            pass
+        eng.start(p_comb, e_comb, random_seed=None, config=_start_cfg)
         # 2026-09-09：MonsterAI 注入（装配缺口修复——怪行动 defs 自此启用：
         # 行动方位规则 position_rule 生效 + 蓄力/召唤/防御/范围技可被 AI 选用。
         # 注入须在 start 后（rng 由 start 初始化；start 前 rng=None → decide 异常
@@ -418,7 +439,8 @@ async def launch_pve_battle(
 
     e_name = str(e_comb.get("name") or "怪物")
     e_hp = int(e_comb.get("max_hp", 0))
-    msg = f"⚔️ 与 {e_name}（HP {e_hp}）的战斗开始！发 攻击 出战。"
+    # M5 裁决（登记表 §一.3）：删除装饰性 ⚔️（非 ✅/❌ 一律不渲染）
+    msg = f"与 {e_name}（HP {e_hp}）的战斗开始！发 攻击 出战。"
     # 2026-09-09 战后自动续战记忆（zerc 拍板：玩家未解锁/未离开地图不解除锁定目标）
     try:
         _pl = ctx.get("player")

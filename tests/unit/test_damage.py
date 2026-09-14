@@ -54,7 +54,10 @@ def test_t07_slash_crit_bonus():
 
 
 def test_t10_crit_cap():
-    assert crit_prob(100000, cap=95) == 0.95  # 封顶 95%
+    assert crit_prob(100000, cap=95) == 0.95   # 显式封顶 95%
+    assert crit_prob(100000, cap=100) == 1.0   # 满会心放开（增补 v1 §五，2026-09-11）
+    assert crit_prob(100000) == 1.0            # 默认 cap=100 → 满会心可达
+    assert crit_prob(100000, cap=0) > 1.0      # cap=0 不封顶（维持原口径）
 
 
 # ---------------- B 会心倍率（T08-T09） ----------------
@@ -139,7 +142,7 @@ def test_formula_params_fixture_matches_segments(formula_params):
     assert p.base_attack_mult == 1.0
     assert p.rng == (0.9, 1.1)
     assert p.hit.k == 1.0 and p.hit.cap_min == 10 and p.hit.cap_max == 95
-    assert p.crit.cap == 95 and p.crit.p_coef == 0.5
+    assert p.crit.cap == 95 and p.crit.p_coef == 0.5  # fixture 显式值读取对照（默认已放开 100）
     assert p.crit.tiers.high == 2.2 and p.crit.tiers.mid == 1.7 and p.crit.tiers.low == 1.3
     assert p.crit.tier_p == (1, 3)
     assert p.crit.crit_mult_up.lv1 == 0.05 and p.crit.crit_mult_up.lv3 == 0.15

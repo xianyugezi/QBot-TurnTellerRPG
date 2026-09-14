@@ -270,7 +270,7 @@ async def test_checkin_status_panel_and_idempotent() -> None:
     # ① 状态面板（签到前：今日已签=否，连签/本月累计可见）
     s0 = await run_command(make_event(message="/签到 状态", message_id="m-cs0"), env["deps"])
     assert "✅ 签到状态" in s0, s0
-    assert "━━ 每日签到（常驻循环） ━━" in s0, f"状态面板缺表段头: {s0}"
+    assert "【每日签到（常驻循环）】" in s0, f"状态面板缺表段头: {s0}"
     assert "连签天数：0 天" in s0, f"状态面板缺连签天数: {s0}"
     assert "本月累计：0 天" in s0, f"状态面板缺本月累计: {s0}"
     assert "今日已签：否" in s0, f"状态面板今日已签应是否: {s0}"
@@ -284,7 +284,8 @@ async def test_checkin_status_panel_and_idempotent() -> None:
 
     # ③ 同日重复 /签到 → 幂等文案 + 不重复发奖（仍附进度）
     r2 = await run_command(make_event(message="/签到", message_id="m-c2"), env["deps"])
-    assert "今天已签到（重复指令，未重复发放）" in r2, f"重复签到缺幂等文案: {r2}"
+    assert "今天已签到" in r2, f"重复签到缺幂等文案: {r2}"
+    assert "未重复发放奖励" in r2, f"重复签到缺幂等文案: {r2}"
     assert "今日奖励：" not in r2, f"重复签到不应再发奖: {r2}"
     assert "今天已签到（不重复发奖）" in r2, f"重复签到缺各表幂等行: {r2}"
     assert "连签天数：1 天" in r2, f"重复签到应仍附进度: {r2}"

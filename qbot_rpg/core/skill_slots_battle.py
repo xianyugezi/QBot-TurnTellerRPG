@@ -47,7 +47,7 @@
        None 占位不丢弃（战斗层可提示缺普攻）。
   P-2  未装配拒绝判定 = is_slot_equipped（装配快照内技能才可施放；契约
        §1.5「每次进战斗按装配快照生成可用技能列表」）。非装配内技能 →
-       战斗外被拒（不耗回合）；被动/触发槽技能不在行动位 → 不可直接施放
+       战斗外被拒（不消耗行动）；被动/触发槽技能不在行动位 → 不可直接施放
        （is_slot_equipped 对 passive/trigger 槽返回 False，见 P-3）。
   P-3  passive/trigger 槽技能不可主动施放：行动位 = basic + active（§1.4
        表：passive/trigger 不占行动位 [L64-65]）。is_slot_equipped 仅对
@@ -55,7 +55,7 @@
        区分槽类型（不把 passive/trigger 槽当行动位技能放行）。
   P-4  passive/trigger 被动生效挂点：本文件登记 hook 接口
        （PASSIVE_PROC_HOOK/TRIGGER_PROC_HOOK 键名常量），由战斗/效果层在
-       既有触发引擎挂载点（回合开始/受击/行动后，1f/1e 承接）经
+       既有触发引擎挂载点（行动开始/受击/行动后，1f/1e 承接）经
        ctx[hook] 注入执行 proc 容器；本文件不实现条件判定引擎（trigger
        条件 13 类枚举归 1e/1f 触发引擎），仅保证装配快照 → 可用列表链路
        完整（被动/触发槽技能在 available_skills 中可见、有挂点可执行）。

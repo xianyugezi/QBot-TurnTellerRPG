@@ -8,6 +8,15 @@
   - 附录 A Step 4：置换映射单测；不加 battle.py 特殊函数（边界纪律 §六）
   - N6（reposition target 路由：1v1 仅 self/player；组队里程碑扩全场）
 
+CTB 迁移（2026-09-10）：旧 round 语义 → CTB 语义 对照
+  - 旧「敌侧行动用 `enemy_act(action_dict=...)`（玩家先手 → 怪固定后手）」→
+    CTB 无先手/后手对：怪物与玩家同走 `ACTOR_READY → BEFORE_ACTION →
+    ACTION_RESOLVE` 通道。测试用**单次结算入口** `do_action("enemy", action_dict)`
+    驱动敌侧行动（`enemy_act` 已为 NotImplementedError 壳，禁止调用）。
+  - 旧「完整回合收尾：`end_turn` → `start_turn` 推进，断言 `report.turn == 2`」→
+    CTB「一次 `player_act` 提交行动 + 调度器自动推进，断言 `action_seq` 严格增加、
+    状态仍为可行动态」。`turn` 现为 action_seq 兼容镜像，不作进度断言。
+
 铁律：零 NoneBot import；纯逻辑断言；确定性（QueueRNG + 固定 seed）。
 
 验收覆盖：
@@ -88,8 +97,9 @@ class TestReposition:
                                                  "mode": "set_relative", "side": "back",
                                                  "height": "ground"}]}}).start(
             PLAYER, ENEMY, random_seed=11)
-        out = eng.enemy_act(action_dict={"type": "skill", "skill_id": "charge",
-                                         "mult": 1.0})
+        # CTB：单次结算入口驱动敌侧行动（enemy_act 已删除）
+        out = eng.do_action("enemy", {"type": "skill", "skill_id": "charge",
+                                      "mult": 1.0})
         assert out is not None and out.hit is True
         assert _pos(eng, "player") == ("back", "ground")
         evs = _fx(out, "position_changed")
@@ -97,7 +107,13 @@ class TestReposition:
         assert evs[0].get("side") == "back"
 
     def test_side_only_keeps_height(self) -> None:
-        """只给 side：height 保持原值（先置空中 → 绕背仍空中）。"""
+        """只给 side：height 保持原值（先置空中 → 绕背仍空中）。
+
+        CTB 迁移：旧测试断言「行动后快照 height 仍 air」。CTB 下空中姿态在持有者
+        每次 `AFTER_ACTION` 到期落地（`_settle_air_landing`：无空中姿态状态 →
+        强制落地 ground，R16）。故改断言**行动结算位点（ACTION_RESOLVE）的
+        `position_changed` 事件**保留 height=air（reposition 原语本身不动 height）。
+        """
         eng = make(defs={"sneak": {"id": "sneak", "name": "绕背", "kind": "utility",
                                    "type": "active", "power": 0,
                                    "effects": [{"type": "reposition", "target": "self",
@@ -106,7 +122,10 @@ class TestReposition:
         eng._snap["combat_position"]["player"]["height"] = "air"
         out = eng.do_action("player", {"type": "skill", "skill_id": "sneak"})
         assert out.ok is True
-        assert _pos(eng, "player") == ("back", "air")
+        evs = _fx(out, "position_changed")
+        assert len(evs) == 1
+        assert evs[0].get("side") == "back"      # side 已改
+        assert evs[0].get("height") == "air"     # height 保持（原语只改 side）
 
     def test_height_only_keeps_side(self) -> None:
         """只给 height：side 保持（跃空技：front → front+air）。"""
@@ -117,8 +136,11 @@ class TestReposition:
             PLAYER, ENEMY, random_seed=11)
         out = eng.do_action("player", {"type": "skill", "skill_id": "vault"})
         assert out.ok is True
-        assert _pos(eng, "player") == ("front", "air")
         assert len(_fx(out, "position_changed")) == 1
+        # 行动结算位点事件：side 保持 front，height 置 air
+        ev = _fx(out, "position_changed")[0]
+        assert ev.get("side") == "front"
+        assert ev.get("height") == "air"
 
     def test_explicit_enemy_target_moves_enemy(self) -> None:
         """target=enemy 绝对侧：玩家效果把怪方位翻过去（enemy 段无消费方但原语通用）。"""
@@ -156,7 +178,12 @@ class TestReposition:
         assert _pos(eng, "player") == ("front", "ground")
 
     def test_two_repositions_last_wins(self) -> None:
-        """多 reposition 顺序执行：终态=最后者（两事件都出，内容自控）。"""
+        """多 reposition 顺序执行：结算事件按序出且末者胜（行动结算位点）。
+
+        CTB 迁移：空中姿态在 AFTER_ACTION 到期落地，故终态快照 height 归 ground；
+        断言改为**行动结算位点**两条 `position_changed` 事件依序产出，末者为
+        {front, air}（reposition 顺序执行「最后者胜」的 CTB 语义）。
+        """
         eng = make(defs={"dance": {"id": "dance", "name": "闪转", "kind": "utility",
                                    "type": "active", "power": 0,
                                    "effects": [
@@ -167,8 +194,10 @@ class TestReposition:
             PLAYER, ENEMY, random_seed=11)
         out = eng.do_action("player", {"type": "skill", "skill_id": "dance"})
         assert out.ok is True
-        assert _pos(eng, "player") == ("front", "air")
-        assert len(_fx(out, "position_changed")) == 2
+        evs = _fx(out, "position_changed")
+        assert len(evs) == 2
+        assert (evs[0].get("side"), evs[0].get("height")) == ("back", "ground")
+        assert (evs[1].get("side"), evs[1].get("height")) == ("front", "air")
 
 
 # =====================================================================================
@@ -180,25 +209,33 @@ ROTATE_180 = {"front": "back", "back": "front", "left": "right", "right": "left"
 
 class TestRepositionAll:
     def test_enemy_rotate_180_flips_player(self) -> None:
-        """怪转身 180°：玩家 side 全翻转（front↔back、left↔right）；怪自身不动。"""
+        """怪转身 180°：玩家 side 全翻转（front↔back、left↔right）；怪自身不动。
+
+        CTB 迁移：敌侧行动经单次结算入口 `do_action("enemy", ...)`（无 enemy_act）；
+        空中玩家在敌侧 AFTER_ACTION 后会落地（`_settle_air_landing`），故 height
+        断言改在**行动结算位点**的 `position_changed` 事件上（rotate 不动 height）。
+        """
         for before, after in (("front", "back"), ("left", "right"),
                               ("back", "front"), ("right", "left")):
             eng = make().start(PLAYER, ENEMY, random_seed=11)
             eng._snap["combat_position"]["player"]["side"] = before
             eng._snap["combat_position"]["player"]["height"] = "air"
-            out = eng.enemy_act(action_dict={
+            out = eng.do_action("enemy", {
                 "type": "normal", "mult": 1.0,
                 "effects": [{"type": "reposition_all", "mode": "rotate",
                              "mapping": dict(ROTATE_180)}]})
             assert out is not None and out.hit is True
-            assert _pos(eng, "player") == (after, "air")   # height 不动
+            evs = _fx(out, "position_changed")
+            assert len(evs) == 1 and evs[0].get("actor") == "player"
+            assert evs[0].get("side") == after          # side 翻转
+            assert evs[0].get("height") == "air"        # height 不动（结算位点）
             assert _pos(eng, "enemy") == ("front", "ground")  # 施放者跳过
 
     def test_partial_mapping_keeps_others(self) -> None:
         """冲锋 rotate {front:back}：front→back，其余侧保持。"""
         eng = make().start(PLAYER, ENEMY, random_seed=11)
         eng._snap["combat_position"]["player"]["side"] = "left"
-        out = eng.enemy_act(action_dict={
+        out = eng.do_action("enemy", {
             "type": "normal", "mult": 1.0,
             "effects": [{"type": "reposition_all", "mode": "rotate",
                          "mapping": {"front": "back"}}]})
@@ -223,7 +260,7 @@ class TestRepositionAll:
     def test_missing_mapping_fails_gracefully(self) -> None:
         """缺 mapping → 效果失败不崩（无事件无移动）。"""
         eng = make().start(PLAYER, ENEMY, random_seed=11)
-        out = eng.enemy_act(action_dict={
+        out = eng.do_action("enemy", {
             "type": "normal", "mult": 1.0,
             "effects": [{"type": "reposition_all", "mode": "rotate"}]})
         assert out is not None and out.hit is True
@@ -233,7 +270,7 @@ class TestRepositionAll:
     def test_bad_mode_fails_gracefully(self) -> None:
         """mode 枚举外（reposition_all 仅 rotate）→ 效果失败不崩。"""
         eng = make().start(PLAYER, ENEMY, random_seed=11)
-        out = eng.enemy_act(action_dict={
+        out = eng.do_action("enemy", {
             "type": "normal", "mult": 1.0,
             "effects": [{"type": "reposition_all", "mode": "spin",
                          "mapping": dict(ROTATE_180)}]})
@@ -257,24 +294,30 @@ class TestLegacyAndChain:
                                                  "side": "back"}]}}).start(
             PLAYER, ENEMY, random_seed=11)
         eng._snap.pop("combat_position", None)
-        out = eng.enemy_act(action_dict={"type": "skill", "skill_id": "charge",
-                                         "mult": 1.0})
+        out = eng.do_action("enemy", {"type": "skill", "skill_id": "charge",
+                                      "mult": 1.0})
         assert out is not None and out.hit is True
         assert _fx(out, "position_changed") == []
 
     def test_full_turn_advances_after_reposition(self) -> None:
-        """reposition 后收尾链完整：end_turn → start_turn 正常推进。"""
+        """reposition 后时间轴完整推进：CTB 单次 `player_act` 推进 action_seq。
+
+        旧语义「end_turn → start_turn 推进，report.turn == 2」→ CTB「提交一次
+        玩家行动 + 调度器自动推进，`action_seq` 严格增加、状态仍可行动」。
+        """
         eng = make().start(PLAYER, ENEMY, random_seed=11)
-        # 完整回合序：先手防御占行动槽 → 后手怪行动（reposition_all）→ end_turn
+        # 完整行动链：玩家防御占一拍 → 敌侧位移行动（reposition_all）→ 时间轴推进
         g = eng.do_action("player", {"type": "guard"})
         assert g.ok is True
-        out = eng.enemy_act(action_dict={
+        out = eng.do_action("enemy", {
             "type": "normal", "mult": 1.0,
             "effects": [{"type": "reposition_all", "mode": "rotate",
                          "mapping": dict(ROTATE_180)}]})
         assert out is not None and _pos(eng, "player") == ("back", "ground")
-        report = eng.end_turn()
-        assert report is not None and report.turn == 2
+        seq_before = eng.battle_state()["action_seq"]
+        report = eng.player_act("normal")
+        assert report is not None and report.action_seq > seq_before
+        assert eng.battle_state()["action_seq"] > seq_before
         assert eng.state == "act"
 
 

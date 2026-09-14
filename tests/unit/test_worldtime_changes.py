@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import datetime
 
-from qbot_rpg.engine.worldtime import ANCHOR, DEFAULT_POOL, WorldTime
+from qbot_rpg.core.worldtime import ANCHOR, DEFAULT_POOL, WorldTime
 
 _TZ_UTC8 = datetime.timezone(datetime.timedelta(hours=8))
 

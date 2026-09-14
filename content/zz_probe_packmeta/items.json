@@ -1,0 +1,24 @@
+[
+  {
+    "id": "zz_probe_item_alpha",
+    "name": "探针物资甲",
+    "type": "probe_alpha",
+    "price": 7,
+    "effects": [
+      "zz_probe_effect"
+    ],
+    "elements": {
+      "火": 2,
+      "水": 1
+    },
+    "desc": "第一件探针物资（仅验证展示元数据）。",
+    "bind": false
+  },
+  {
+    "id": "zz_probe_item_beta",
+    "name": "探针物资乙",
+    "type": "probe_beta",
+    "price": 13,
+    "zz_probe_undeclared_key": "数据里有、包内未命名的键"
+  }
+]

@@ -8,7 +8,7 @@
      passive/trigger 槽不占行动位不可直接施放；未装配/畸形快照拒绝）
   4) battle_equipped_skills：可用技能 id → def 映射（ctx["skills"] 同源）
   5) equipped_slot_kind：槽类型审计
-  6) 战斗闭环：装配快照 → 引擎施放 active 技能成功 / 未装配技能被拒不耗回合
+  6) 战斗闭环：装配快照 → 引擎施放 active 技能成功 / 未装配技能被拒不消耗行动
   7) 指令层装配过滤：/攻击 装配内技能放行、未装配技能被拒（battle_commands）
 
 测试目标：qbot_rpg.core.skill_slots_battle（引擎层）+ qbot_rpg.commands.
@@ -237,7 +237,7 @@ def test_equipped_slot_kind() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 6) 战斗闭环：装配快照 → 引擎施放（装配内放行 / 未装配被拒不耗回合）
+# 6) 战斗闭环：装配快照 → 引擎施放（装配内放行 / 未装配被拒不消耗行动）
 # ---------------------------------------------------------------------------
 
 
@@ -253,7 +253,7 @@ def test_battle_cast_equipped_skill_ok() -> None:
 
 
 def test_battle_unequipped_rejected_no_turn_cost() -> None:
-    """未装配技能经装配过滤在指令层被拒：不生成行动、不耗回合（TC-05 语义）。"""
+    """未装配技能经装配过滤在指令层被拒：不生成行动、不消耗行动（TC-05 语义）。"""
     action, err = _attack_action(_Parsed(["火球术"]), _ctx())
     assert action is None and err and "技能" in str(err)
     # 被拒不进入引擎 → 无行动副作用（turn 保持 0，可直接验证下一轮正常行动）

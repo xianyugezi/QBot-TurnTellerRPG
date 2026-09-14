@@ -9,10 +9,12 @@
   - m4_shared_contract §2.2（列表 5 条/页 + CakeGame 式尾段 + 裁决② 夹取）
   - 【规范】6.6（快捷表 {快捷名: 完整指令串} 每玩家独立、随存档持久化，RUL-31）
 
-职责（细化_3a §1.3 壳层职责 · 唯一指令执行壳）：把 /快捷解绑 /快捷列表 从 Router 接到玩家
-快捷表（ctx["shortcuts"] 可变 dict）——解绑（SHC-01：不存在 `❌ 没有绑定『xx』`；成功
-`✅ 已解绑『xx』`，就地改写 ctx["shortcuts"]）、列表（SHC-02：头部 `【快捷（N/20）】` +
+职责（细化_3a §1.3 壳层职责 · 唯一指令执行壳）：把 快捷解绑 快捷列表 从 Router 接到玩家
+快捷表（ctx["shortcuts"] 可变 dict）——解绑（SHC-01：不存在 `❌ 未绑定快捷「xx」`；成功
+`✅ 已解绑快捷「xx」`，就地改写 ctx["shortcuts"]）、列表（SHC-02：头部 `【快捷 N/20】` +
 每行 `快捷名 → 指令串`，5 条/页 + CakeGame 式尾段 + 裁决② 夹取；空表引导文案）。
+（2026-09-12 消息模板重构·批11 路B：本 6 键文案唯一源 = 全量模板表
+qbot_rpg/core/templates/template_table.json，shortcut_tpl 分区已清空。）
 快捷绑定/冲突检测/覆盖重绑机制归 router.check_shortcut_binding（3c §4，既有），本层不重定义
 （SHC-01 后半）；持久化落点归 4a 存储层 + 装配层 make_context（SHC-03，本层零 IO）。
 
@@ -26,14 +28,14 @@ ctx 消费契约（装配层 make_context 注入；未注入字段按缺省兜�
 --------------------------------------------------------------------------------
 
 【工程补白 · 显式标注】
-  1) /快捷解绑 语法 = `快捷解绑 <自定义快捷名>`（CMD-07，恰好 1 参数）；0 参/超参/解析错误
+  1) 快捷解绑 语法 = `快捷解绑 <自定义快捷名>`（CMD-07，恰好 1 参数）；0 参/超参/解析错误
      → TPL-12（格式错误统一）。
-  2) /快捷列表 支持可选页码 `快捷列表 [页码]`（m4 §2.2 列表 5 条/页横切；SHC-02 契约仅定
+  2) 快捷列表 支持可选页码 `快捷列表 [页码]`（m4 §2.2 列表 5 条/页横切；SHC-02 契约仅定
      无参形态，翻页为工程补白扩展）；页码 0/负数/非数字 → TPL-12；超页夹取（裁决②）。
   3) 列表尾段用 CakeGame 式（render_cake_tail：当前页 + Tip），对齐 /背包 /角色 等列表尾段
      统一口径（2026-08-27 用户拍板），不再自造 TPL-08 页脚。
   4) 未注册拦截走 RUL-08 门槛（RUL-08：任何游玩指令；/帮助 豁免 B6，快捷指令非豁免）：
-     复用 basic_commands.TPL_REGISTER_GATE。
+     复用 basic_register_gate 表键（R4 收敛，内容包可覆盖）。
 """
 
 from __future__ import annotations
@@ -50,7 +52,6 @@ from qbot_rpg.core.templates import tpl_of  # 消息模板配置化（2026-08-31
 
 # 同包兄弟模块：相对导入（G0 架构门禁不产生 `qbot_rpg.commands` 前缀反向依赖边；
 # 同层兄弟引用架构合规，与 sender.py 同口径）。
-from .basic_commands import TPL_REGISTER_GATE
 from .parsers import parse_int
 from .router import CommandSpec
 from .sender import format_tpl12
@@ -95,7 +96,7 @@ def _gate(ctx: Mapping[str, Any]) -> Optional[str]:
     """RUL-08 注册门槛（工程补白 4）：ctx["registered"] is False → 拦截文案；
     缺省视为已注册（对齐 basic_commands 工程补白 7）。"""
     if ctx.get("registered", True) is False:
-        return TPL_REGISTER_GATE
+        return tpl_of(ctx, "basic_register_gate")
     return None
 
 
@@ -133,11 +134,11 @@ def _shortcut_max(ctx: Mapping[str, Any]) -> Optional[int]:
 # ---------------------------------------------------------------------------
 
 def cmd_shortcut_unbind(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
-    """/快捷解绑 <自定义快捷名>（CMD-07 / SHC-01 / TPL-4F-10）：
+    """快捷解绑 <自定义快捷名>（CMD-07 / SHC-01 / TPL-4F-10）：
 
       语法（CMD-07）  恰好 1 参数；0 参/超参/解析错误 → TPL-12（工程补白 1）
-      不存在（SHC-01） `❌ 没有绑定『xx』`
-      成功（SHC-01）   `✅ 已解绑『xx』`，就地改写 ctx["shortcuts"]（落档归装配层 SHC-03）
+      不存在（SHC-01） `❌ 未绑定快捷「xx」`
+      成功（SHC-01）   `✅ 已解绑快捷「xx」`，就地改写 ctx["shortcuts"]（落档归装配层 SHC-03）
     """
     g = _gate(ctx)
     if g is not None:
@@ -156,10 +157,10 @@ def cmd_shortcut_unbind(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 
 
 def cmd_shortcut_list(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
-    """/快捷列表 [页码]（CMD-08 / SHC-02 / TPL-4F-11）：
+    """快捷列表 [页码]（CMD-08 / SHC-02 / TPL-4F-11）：
 
-      无参        → 第 1 页；每行 `快捷名 → 指令串`，头部 `【快捷（N/20）】`
-      空表（SHC-02） → `❌ 还没有快捷绑定，试试 /快捷绑定 1 攻击`
+      无参        → 第 1 页；每行 `快捷名 → 指令串`，头部 `【快捷 N/20】`
+      空表（SHC-02） → `❌ 还没有快捷绑定` + `发 快捷绑定 名字 指令`（两行）
       页码（补白 2） → 5 条/页 + CakeGame 式尾段 + 裁决② 夹取；0/负数/非数字 → TPL-12
     """
     g = _gate(ctx)
@@ -215,7 +216,7 @@ def cmd_shortcut_list(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 def register_shortcut_commands(
     router: Any, *, make_context: Optional[Callable[[Any], dict]] = None
 ) -> Any:
-    """把 /快捷解绑 /快捷列表 注册进 Router（CommandSpec.handler 消费 ParsedCommand；SHC-05 ①）。
+    """把 快捷解绑 快捷列表 注册进 Router（CommandSpec.handler 消费 ParsedCommand；SHC-05 ①）。
 
     :param make_context: ParsedCommand → 玩家 ctx dict（shortcuts 可变表/shortcut_max 等，
         见本模块各函数消费契约；持久化落档归装配层 SHC-03）。None 时 handler 调用抛

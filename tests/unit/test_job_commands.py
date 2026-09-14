@@ -15,7 +15,6 @@ from __future__ import annotations
 from typing import Any, Dict
 
 from qbot_rpg.commands.job_commands import cmd_job
-from qbot_rpg.core.templates import PLACEHOLDER_WHITELIST
 
 
 def _jobs() -> Dict[str, Dict[str, Any]]:
@@ -90,17 +89,6 @@ def test_switch_saves_slot_snapshot() -> None:
     cmd_job(_Parsed(["锻造师"]), ctx)
     assert ctx.get("skill_slots") is not None, "转职应产出新装配快照"
     assert "job_slots" in ctx["persistent_state"], "转职快照段应落档"
-
-
-def test_templates_registered() -> None:
-    """job_* 模板已注册 + 占位符白名单。"""
-    from qbot_rpg.core.templates import DEFAULT_TEMPLATES
-
-    for key in ("job_list", "job_not_found", "job_switch_success"):
-        assert key in DEFAULT_TEMPLATES, f"模板 {key} 应注册"
-    assert "job_list" in PLACEHOLDER_WHITELIST
-
-
 def test_job_list_empty() -> None:
     """jobs 表空 → 提示。"""
     out = cmd_job(_Parsed([]), _ctx(jobs={}))

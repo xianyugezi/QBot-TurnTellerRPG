@@ -7,7 +7,7 @@
 依据：
   - docs/细化/细化_3f_单机向体验.md R-17~R-20（分册/完成度/???/里程碑联动）/ E-04 codex 结构
   - docs/细化/细化_4d_图鉴系统.md（COD-08：展示取整、条件未取整；总册=等权分册均值）
-  - qbot_rpg/engine/condition_engine.py（L531-532：var=="codex" 读 ctx["codex"] 标量）
+  - qbot_rpg/core/condition_engine.py（L531-532：var=="codex" 读 ctx["codex"] 标量）
   - qbot_rpg/core/adventure_log.py（log_codex_new：图鉴新增日志）
 
 【工程补白 · 显式标注】

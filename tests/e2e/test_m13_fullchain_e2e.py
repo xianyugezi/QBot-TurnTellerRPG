@@ -85,9 +85,14 @@ def _engine(**over: Any) -> BattleEngine:
 
 
 def _full_turn(eng: BattleEngine, action: Dict[str, Any]) -> Any:
-    eng.do_action("player", action)
-    eng.enemy_act()
-    return eng.end_turn()
+    """提交一次玩家行动（CTB：`player_act` 内含调度器自动推进 NPC 连锁）。
+
+    CTB 迁移（2026-09-10 Wave C · C-6）：旧「do_action(player) → enemy_act() →
+    end_turn()」三段式已被删除（`enemy_act`/`end_turn` 为 NotImplementedError 壳）。
+    CTB 下一拍 = 一次 `player_act`：玩家行动结算后调度器自动推到下一个 ready
+    （NPC 行动连锁自动走完、玩家 ready 暂停），签名零改动。
+    """
+    return eng.player_act(action)
 
 
 # ---------------------------------------------------------------------------
@@ -150,13 +155,13 @@ def test_e2e_battle_attack_unequipped_rejected() -> None:
 # 变换链路
 # ---------------------------------------------------------------------------
 def test_e2e_transform_full_cycle() -> None:
-    """满怒狂暴 → 形态切换 → 回合 tick → 自然还原 → 冷却。"""
+    """满怒狂暴 → 形态切换 → 行动 tick → 自然还原 → 冷却。"""
     eng = _engine()
     eng._snap["resource_state"] = {"player": {"rage": 100}, "enemy": {}}
     _full_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
     ts = eng.battle_state()["transform_state"]
     assert ts["form"] == "berserker_form", f"应切换形态，got {ts}"
-    # 触发当回合 remaining=4，_full_turn 的 end_turn tick 已递减 → 3
+    # 触发当次行动 remaining=4，_full_turn 的 end_turn tick 已递减 → 3
     assert ts["remaining"] == 3, f"remaining 应=3（4-1 tick），got {ts}"
     # 形态技能怒涛斩可用
     out = eng.do_action("player", {"type": "skill", "skill_id": "fury_slash"})

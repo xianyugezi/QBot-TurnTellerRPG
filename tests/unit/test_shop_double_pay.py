@@ -376,7 +376,8 @@ async def test_regress_p1_1_multi_instance_inventory_count_conserved():
 
     ctx 背包为 {item_id: count} 扁平计数，`_inventory_from_player` 合并 A(2)+B(3)=5；
     回写 `_ctx_inventory_to_player` 若保留 pool[1:] 原计数 + 合并总量 → 5+3=8 膨胀。
-    修复后总量归并到首实例、其余移除 → 5（总量守恒，无静默数据损坏）。"""
+    2026-09-11 P0 修复：由「合并到首实例（其余移除）」改为「多品质行保真」——
+    总量守恒前提下各行保留（原实现会吞掉附加品质行，见 test_inventory_quality_rows.py）。"""
     from qbot_rpg.commands.shop_tx import _ctx_inventory_to_player, _inventory_from_player
     from qbot_rpg.data.item import ItemInstance
 
@@ -389,9 +390,10 @@ async def test_regress_p1_1_multi_instance_inventory_count_conserved():
     out = _ctx_inventory_to_player({"potion": 5}, old, {})
     total = sum(int(i.count) for i in out)
     assert total == 5                       # 总量守恒（不得 2+3+5=8）
-    assert len(out) == 1                    # 合并到首实例（其余移除）
-    assert out[0].count == 5
-    assert out[0].quality == "normal"       # 保留首实例字段
+    # 2026-09-11 P0：多品质行保真（不再合并首实例；无净变化 → 两行原样）
+    assert len(out) == 2
+    assert sorted((i.quality, int(i.count)) for i in out) == [
+        ("normal", 2), ("rare", 3)]
 
 
 @pytest.mark.asyncio

@@ -485,7 +485,7 @@ async def test_materials_insufficient_full_reject_with_diff() -> None:
     r = await eng.confirm(ctx, snap, qid="u1", job_tier_index=3)
     assert r["ok"] is False
     assert r["reason"] == "materials_insufficient"
-    assert r["message"] == "材料不足，无法确认"
+    assert r["message"] == "❌ 材料不足\n无法确认"
     assert any(s.get("item") == "mat_q70" and s.get("have") == 1 for s in r["shortfall"])
     assert ctx["inventory"].get("mat_q70", 0) == 1  # 不部分扣减
     assert ctx["inventory"].get("mat_q80", 0) == 1

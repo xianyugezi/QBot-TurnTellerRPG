@@ -112,7 +112,7 @@ async def _on_message(bot: Any, event: Any) -> None:
         reply = format_tpl12(str(getattr(event, "message", "") or ""))
     # G3 战斗正文补发（2026-09-03 实机修复）：BattlePipeline 经 deps.sender
     # （Sender 实例）发送的战斗正文只进 delivered 收集、未达群——run_command
-    # 返回的 reply 仅是 handler 元数据（「第 N 回合结算」）。此处把 Sender
+    # 返回的 reply 仅是 handler 元数据（「第 N 行动结算」）。此处把 Sender
     # delivered 中 pipeline 实际发送的正文一并 bot.send（reply 为空/为标题时
     # 以 delivered 正文为主，避免战斗只有标题行）。
     try:

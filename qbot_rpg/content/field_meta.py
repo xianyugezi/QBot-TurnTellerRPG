@@ -26,9 +26,16 @@ number|[min,max]）不注册、走 §2.3 默认放行，防泛型校验器 R-1 �
 
 from __future__ import annotations
 
-from typing import Any, Dict, Mapping, Tuple
+from dataclasses import replace
+from typing import Any, Dict, Mapping, Optional, Tuple
 
-from qbot_rpg.content.models import FieldMeta, FieldMetaTable, ModuleMeta
+from qbot_rpg.content.models import (
+    AssociationMeta,
+    ConditionSubject,
+    FieldMeta,
+    FieldMetaTable,
+    ModuleMeta,
+)
 # M9 锻造（m9_shared_contract）：forge 模块 ModuleMeta + items 材料类扩展 +
 # settings.forge 段。forge_models/forge_settings 仅依赖 content.models（零 field_meta
 # import，无循环依赖）；字段定义自包含持有，本表单向 import（防 G0 反向依赖）。
@@ -39,6 +46,17 @@ from qbot_rpg.content.forge_settings import ITEMS_FORGE_FIELDS, forge_settings_m
 # fishing_models 仅依赖 content.models（零 field_meta import，无循环依赖）；
 # fishing_settings_meta 自包含持有（防 field_meta↔fishing 循环依赖）。
 from qbot_rpg.content.fishing_models import fishing_module_meta, fishing_settings_meta
+# 批⑧ 装备词条键空间唯一源（data 层——G0 依赖矩阵 content→{data}，注册表落 data 层
+# 供 content/core/commands 全层引用）。
+from qbot_rpg.data.gear_stats import (
+    GEAR_COMBAT_KEYS,
+    GEAR_FLAT_KEYS,
+    GEAR_LABELS_ZH,
+    GEAR_PCT_KEYS,
+)
+# 批B：包展示元数据下放——框架只保留子字段**结构**（无中文名/说明），展示文案在各包
+# `content/<包>/field_meta.json`。结构模块由 scripts/migrate_pack_field_meta.py 生成。
+from qbot_rpg.content.field_meta_child_structure import CHILD_SPEC
 
 # -------------------------------------------------------------------------------------
 # 命名空间（ID 跨模块唯一，细化_3a §4.2 line 254：效果注册表三表统一 / 行动注册表 / 派生链注册表）
@@ -82,14 +100,18 @@ F_TYPE = FieldMeta(type="str")  # type 枚举由正式元数据表注入（细�
 # 效果引用列表（items/equipment/traits/enemies 通用）
 F_EFFECTS = FieldMeta(type="list", element=FieldMeta(type="ref", ref_target="effect"))
 
-# 常见数值字段（range 仅 Y-1 提示用）
+# 常见数值字段（range 仅 Y-1 提示用）。批4.6：unit = 说明卡「数值 / 比例」判定
+# 用的展示单位（只影响说明文案，不参与任何校验判定）。
 F_PRICE = FieldMeta(type="number", range_min=0, range_max=50000)
-F_ATK = FieldMeta(type="number", range_min=0, range_max=5000)
-F_DEF = FieldMeta(type="number", range_min=0, range_max=5000)
-F_HP = FieldMeta(type="number", range_min=0, range_max=99999)
+F_ATK = FieldMeta(type="number", range_min=0, range_max=5000, unit="点")
+F_DEF = FieldMeta(type="number", range_min=0, range_max=5000, unit="点")
+F_HP = FieldMeta(type="number", range_min=0, range_max=99999, unit="点")
 F_POWER = FieldMeta(type="number", range_min=0, range_max=500)
-F_DURATION = FieldMeta(type="number", range_min=0, range_max=999)
-F_MAX_STACK = FieldMeta(type="int", zero_unlimited=True, range_min=0, range_max=999)
+# 技能倍率（skills.power；按百分比算，100 = 一倍威力）——与 action/effects 的 power 不同，
+# 单列一个常量，避免把「倍率 %」误挂到效果强度/行动威力上（批4.6）。
+F_SKILL_POWER = FieldMeta(type="number", range_min=0, range_max=500, unit="%")
+F_DURATION = FieldMeta(type="number", range_min=0, range_max=999, unit="回合")
+F_MAX_STACK = FieldMeta(type="int", zero_unlimited=True, range_min=0, range_max=999, unit="层")
 F_PROBABILITY = FieldMeta(type="number", probability=True, range_min=0.0, range_max=1.0)
 F_DROP_RATE = FieldMeta(type="number", probability=True, range_min=0.0, range_max=1.0)
 
@@ -108,6 +130,9 @@ ENEMY_STATS_CHILDREN: Dict[str, FieldMeta] = {
     "agi": FieldMeta(type="number", range_min=0, range_max=9999),
     "luk": FieldMeta(type="number", range_min=0, range_max=9999),
 }
+# 九属性单位统一为「点」（批4.6 展示维度；说明卡据此判「数值」而非「比例」）。
+ENEMY_STATS_CHILDREN = {
+    k: replace(v, unit="点") for k, v in ENEMY_STATS_CHILDREN.items()}
 # 双维弱点（1.3 W01-W02；elements 键=元素 ID → 增伤倍率，元素注册表引用检查归 A2 R3）
 WEAKNESS_CHILDREN: Dict[str, FieldMeta] = {
     "types": FieldMeta(type="list", element=FieldMeta(type="str")),
@@ -118,52 +143,57 @@ RESISTANCE_CHILDREN: Dict[str, FieldMeta] = {
     "immune": FieldMeta(type="list", element=FieldMeta(type="str")),
 }
 # actions[] 条目（1.4 A01-A03d；probability 纯入池开关 0/1 → 不挂 probability 旗标防 Y-2 噪音）
+# 批4 UX：补展示层中文名（label 只影响编辑器列头/表单显示，不参与任何校验判定）。
 ACTION_ENTRY_CHILDREN: Dict[str, FieldMeta] = {
-    "action": FieldMeta(type="ref", ref_target="action", required=True),
-    "probability": FieldMeta(type="number", range_min=0, range_max=1),
-    "weight": FieldMeta(type="number", range_min=0, range_max=100),
-    "condition": FieldMeta(type="str"),  # 条件权重修正（obj 形态 A2 放宽）
-    "cooldown": FieldMeta(type="number", range_min=0, range_max=999),
-    "hungry": FieldMeta(type="number", range_min=0, range_max=999),
+    "action": FieldMeta(type="ref", ref_target="action", required=True, label="行动"),
+    "probability": FieldMeta(type="number", range_min=0, range_max=1, label="概率"),
+    "weight": FieldMeta(type="number", range_min=0, range_max=100, label="权重"),
+    "condition": FieldMeta(type="str", label="条件"),  # 条件权重修正（obj 形态 A2 放宽）
+    "cooldown": FieldMeta(type="number", range_min=0, range_max=999, label="冷却"),
+    "hungry": FieldMeta(type="number", range_min=0, range_max=999, label="饥饿值"),
 }
 # special_actions[].trigger（1.4 A06-A09；type 13 类枚举 + x_ 前缀 → str，A2 R2/R11/R12）
 SPECIAL_ACTION_TRIGGER_CHILDREN: Dict[str, FieldMeta] = {
-    "type": FieldMeta(type="str"),
-    "value": FieldMeta(type="number"),
-    "timing": FieldMeta(type="str"),  # current_turn/next_turn/first_turn（A2）
-    "action": FieldMeta(type="str"),
-    "chance": FieldMeta(type="number", range_min=0, range_max=100),
+    "type": FieldMeta(type="str", label="类型"),
+    "value": FieldMeta(type="number", label="数值"),
+    "timing": FieldMeta(type="str", label="时机"),  # current_turn/next_turn/first_turn（A2）
+    "action": FieldMeta(type="str", label="行动"),
+    "chance": FieldMeta(type="number", range_min=0, range_max=100, label="概率"),
     # position_match 方位触发参数（方位 v0.6 §三.2/附录 A Step 1；枚举校验 A2 路）
-    "which": FieldMeta(type="str"),  # self=怪物自己 / player=玩家
-    "side": FieldMeta(type="list", element=FieldMeta(type="str")),
-    "height": FieldMeta(type="list", element=FieldMeta(type="str")),
+    "which": FieldMeta(type="str", label="对象"),  # self=怪物自己 / player=玩家
+    "side": FieldMeta(type="list", element=FieldMeta(type="str"), label="方位"),
+    "height": FieldMeta(type="list", element=FieldMeta(type="str"), label="高度"),
 }
 # special_actions[] 条目（1.4 A04-A15）
 SPECIAL_ACTION_CHILDREN: Dict[str, FieldMeta] = {
-    "id": FieldMeta(type="str"),
-    "action": FieldMeta(type="ref", ref_target="action", required=True),
-    "trigger": FieldMeta(type="obj", children=SPECIAL_ACTION_TRIGGER_CHILDREN),
-    "once": FieldMeta(type="bool"),
-    "priority": FieldMeta(type="number"),
-    "trigger_cooldown": FieldMeta(type="number", range_min=0, range_max=999),
-    "max_triggers": FieldMeta(type="number", range_min=0, range_max=999),
-    "post_state": FieldMeta(type="obj", children={
-        "state": FieldMeta(type="str"),
-        "turns": FieldMeta(type="number"),
+    "id": FieldMeta(type="str", label="标识"),
+    "action": FieldMeta(type="ref", ref_target="action", required=True, label="行动"),
+    "trigger": FieldMeta(type="obj", children=SPECIAL_ACTION_TRIGGER_CHILDREN, label="触发条件"),
+    "once": FieldMeta(type="bool", label="仅触发一次"),
+    "priority": FieldMeta(type="number", label="优先级"),
+    "trigger_cooldown": FieldMeta(type="number", range_min=0, range_max=999, label="触发冷却"),
+    "max_triggers": FieldMeta(type="number", range_min=0, range_max=999, label="最大触发次数"),
+    "post_state": FieldMeta(type="obj", label="触发后状态", children={
+        "state": FieldMeta(type="str", label="状态"),
+        "turns": FieldMeta(type="number", label="持续回合"),
     }),
-    "chain_ref": FieldMeta(type="str"),  # → chains[].id（引用存在 A2 R15）
+    "chain_ref": FieldMeta(type="str", label="连招引用"),  # → chains[].id（引用存在 A2 R15）
+    # 说明文案（veinborn 实测在数据里出现；原为未登记键 → 编辑器列头只能显示原始键）
+    "desc": FieldMeta(type="str", label="说明"),
 }
 # chains[].actions[] 节点（1.4 F14 / AI 定稿 §八：{action, chance 0-1, role, armor}）
 CHAIN_NODE_CHILDREN: Dict[str, FieldMeta] = {
-    "action": FieldMeta(type="ref", ref_target="action", required=True),
-    "chance": FieldMeta(type="number", range_min=0.0, range_max=1.0),
-    "role": FieldMeta(type="enum", enum=("chain", "finisher")),
-    "armor": FieldMeta(type="bool"),  # 霸体免疫打断
+    "action": FieldMeta(type="ref", ref_target="action", required=True, label="行动"),
+    "chance": FieldMeta(type="number", range_min=0.0, range_max=1.0, label="概率"),
+    "role": FieldMeta(type="enum", enum=("chain", "finisher"), label="角色"),
+    "armor": FieldMeta(type="bool", label="霸体"),  # 霸体免疫打断
 }
 # chains[] 条目（F14）
 CHAIN_ENTRY_CHILDREN: Dict[str, FieldMeta] = {
-    "id": FieldMeta(type="str"),
-    "actions": FieldMeta(type="list", element=FieldMeta(type="obj", children=CHAIN_NODE_CHILDREN)),
+    "id": FieldMeta(type="str", label="标识"),
+    "actions": FieldMeta(type="list",
+                         element=FieldMeta(type="obj", children=CHAIN_NODE_CHILDREN),
+                         label="行动节点"),
 }
 # drops 三类容器条目（1.5 D01-D04；count 联合形态 number|[min,max] → 不注册默认放行，A2 R13）
 DROP_ENTRY_CHILDREN: Dict[str, FieldMeta] = {
@@ -353,6 +383,8 @@ NPC_FIELDS: Dict[str, FieldMeta] = {
     "tutorials": FieldMeta(type="list", element=FieldMeta(type="str"), label="教学"),
     "shop_refs": FieldMeta(type="list", element=FieldMeta(type="obj", children={}),
                            soft_label=True, label="商店引用"),
+    # 批4.5：实测顶层键（原表未登记 → 纯展示宽字段）
+    "intel_refs": FieldMeta(type="list", soft_label=True, label="情报引用"),
 }
 
 # ---- checkin（CheckinDef 顶层 7+bonus；period.start/end 仅 activity 必填不设 required）----
@@ -798,6 +830,359 @@ DEFAULT_CURRENCY_IDS: Tuple[str, ...] = ("coins", "diamond")
 
 
 # -------------------------------------------------------------------------------------
+# 编辑器重写批1：模块级字段分组表（编辑器页签 = 元数据声明的分组，编辑器不写死业务分组）
+# -------------------------------------------------------------------------------------
+# 口径：
+#   · 分组唯一来源 = 元数据（本表 / FieldMeta.group）；编辑器只按它渲染页签。
+#   · 只给 skills 模块落地 4 个分组（用户 2026-09-13 拍板：基本/数值/效果列表/文本）；
+#     其余模块不给声明 → 编辑器用单一默认分组兜底（缺省兜底，不误伤任何模块）。
+#   · 表里允许出现「fields 尚未登记、但真实内容包条目里存在」的键（brief/derive_only/
+#     energy_gain/energy_cost/revert_form 等）——这类键照样落进正确分区，不掉进兜底组。
+#   · 仅影响界面展示：校验器只读 fields，本表不参与校验（零新增拦截，基线不受影响）。
+SKILLS_GROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
+    ("基本", (
+        "id", "name", "kind", "type", "attack_type", "element", "tag", "armor",
+        "interrupt", "position_rule", "air_policy", "block_mode", "job_restrict",
+        "job_form", "counter_type", "counter_skill", "revert_form", "derive_only",
+        "skill",
+    )),
+    ("数值", (
+        "power", "break_power", "mp_cost", "cooldown", "hits", "level",
+        "trigger_limit", "hit_mod", "crit_mod", "action_time", "air_extend",
+        "recovery", "stun",
+    )),
+    ("效果列表", (
+        "effects", "chain_refs", "consume_marks", "energy_gain", "energy_cost",
+        "combo_table", "season",
+    )),
+    ("文本", ("desc", "brief", "detail")),
+)
+SKILLS_FIELD_GROUPS: Dict[str, str] = {
+    _k: _g for _g, _keys in SKILLS_GROUP_DEFS for _k in _keys
+}
+SKILLS_GROUP_ORDER: Tuple[str, ...] = tuple(_g for _g, _ in SKILLS_GROUP_DEFS)
+
+# =====================================================================================
+# 子字段结构由 CHILD_SPEC 提供（批B）；中文名/说明由包 field_meta.json 覆盖。
+#   · 表形态 {子键: 中文名 | {孙键: ...}}，递归到任意深度；list 元素对象的 children 同样覆盖；
+#   · children 里**已声明**的键 → 只补 label（type/required/enum/children 原样保留）；
+#   · 真实内容包出现、children **未登记**的键 → 补一个 soft_label=True 的「纯展示子字段」
+#     （validator 对 soft_label 立即 return → 校验语义零变化），避免界面留裸键；
+#   · **动态键空间**（键名由内容定义：ai.states.<状态名> / settings.slot_defs.<部位> /
+#     consume_marks.<印记> / element_req.<元素> / job_tier_map.<档位> 等）**不猜键名**，
+#     保持原始键显示，登记于批报「待确认清单」。
+# 命名依据：stats.json（hp 生命/mp 法力/…）、docs/m2_shared_contract（enemies 八段 + AI）、
+# docs/m3_shared_contract（zone_change）、docs/m13_6a~6c（skills/jobs/skill_chains）、
+# docs/veinborn/03_schema_修正稿.md、data/gear_stats.GEAR_LABELS_ZH；
+# 术语冲突按 docs/编辑器重写_需求与约束.md §六（mp 法力 / con 体质 / mag 法强 / pv 防护值）。
+def _soft_display(label: str, ftype: str = "",
+                  children: Optional[Mapping[str, FieldMeta]] = None,
+                  help: Optional[str] = None) -> FieldMeta:
+    """纯展示子字段（soft_label=True → 泛型校验短路、永不红拦；仅供编辑器显示中文名/说明）。
+
+    批4.6 补：默认 type 留空（=「类型未登记」）而非 "str"——只有中文名、没有类型依据的
+    节点不得声称是文本，说明卡/表单据此改用**实际值**推断真实类型（实机问题①根因）。
+    显式传 ftype 的调用（如 _soft_display("每回合破坏值", "int")）不受影响。
+    """
+    return FieldMeta(type=ftype, soft_label=True, label=label, children=dict(children or {}),
+                     help=(help or ""))
+
+
+def _soft_list(label: str, spec: Mapping[str, Any]) -> FieldMeta:
+    """纯展示的 list-of-obj 子字段（元素 children 由嵌套中文名表展开）。"""
+    return FieldMeta(type="list", soft_label=True, label=label,
+                     element=FieldMeta(type="obj", children=_soft_tree(spec)))
+
+
+def _soft_tree(spec: Mapping[str, Any]) -> Dict[str, FieldMeta]:
+    """把嵌套中文名表展开成纯展示子字段表（未登记键的兜底；FieldMeta 值原样收编）。
+
+    容器自身中文名用保留键 `_label` 表达：{"_label": "珠同名递减", "n": "次数", ...}。
+    """
+    out: Dict[str, FieldMeta] = {}
+    for key, sub in spec.items():
+        if key == "_label":
+            continue
+        if isinstance(sub, FieldMeta):
+            out[key] = sub if sub.soft_label else replace(sub, soft_label=True)
+        elif isinstance(sub, Mapping):
+            out[key] = _soft_display(str(sub.get("_label", key)), "obj",
+                                     _soft_tree(sub))
+        else:
+            out[key] = _soft_display(str(sub))
+    return out
+
+
+def _from_child_spec(spec: Any) -> Any:
+    """结构 spec → 装饰器认的「空文案」子结构表（批B：中文名已下放到包声明）。
+
+    spec 表示法：`None` 叶子 / 嵌套 dict 容器 / `{"__list__": …}` list-of-obj 容器。
+    """
+    if spec is None:
+        return ""
+    if isinstance(spec, Mapping):
+        if "__list__" in spec:
+            return _soft_list("", {k: _from_child_spec(v)
+                                   for k, v in spec["__list__"].items()})
+        return {k: _from_child_spec(v) for k, v in spec.items()}
+    return ""
+
+
+def _child_spec(module: str) -> Optional[Mapping[str, Any]]:
+    """模块子字段结构表（框架只保留结构；展示文案由包 `field_meta.json` 覆盖）。"""
+    spec = CHILD_SPEC.get(module)
+    return _from_child_spec(spec) if spec is not None else None
+
+
+def _split_help(sub: Any) -> Tuple[Optional[str], Optional[Mapping[str, Any]]]:
+    """从嵌套说明表的一项里拆出（本字段说明, 子字段说明表）。
+
+    · 字符串 → 本字段说明（无子说明）；
+    · 映射   → `_help` 键为本字段说明，其余键为子字段说明（递归同形态）。
+    """
+    if isinstance(sub, str):
+        return (sub or None, None)
+    if isinstance(sub, Mapping):
+        own = sub.get("_help")
+        kids = {k: v for k, v in sub.items() if k != "_help"}
+        return (str(own) if own else None, kids or None)
+    return (None, None)
+
+
+def _decorate_one(fm: FieldMeta, label: Optional[str],
+                  nested: Optional[Mapping[str, Any]],
+                  help_text: Optional[str] = None,
+                  nested_helps: Optional[Mapping[str, Any]] = None) -> FieldMeta:
+    """对单个字段补 label/help + 递归装饰 children / element.children（只补展示层）。
+
+    批4.6 起同时可补 `help`（人工说明）；说明表**只作用于已声明的 children 键**，
+    不会凭空新建字段节点（未登记键由嵌套中文名表 spec 负责补 soft_label 展示节点）。
+    """
+    kw: Dict[str, object] = {}
+    if label and not fm.label:
+        kw["label"] = label
+    if help_text and not fm.help:
+        kw["help"] = help_text
+    has_nested = bool(nested) or bool(nested_helps)
+    if has_nested and fm.type == "obj":
+        kids = _decorate_tree(fm.children if fm.children else {},
+                              nested or {}, nested_helps)
+        if kids is not None:
+            kw["children"] = kids
+    elif has_nested and fm.type == "list":
+        elem = fm.element
+        if elem is None or elem.type == "obj":
+            base = elem.children if (elem is not None and elem.children) else {}
+            kids = _decorate_tree(base, nested or {}, nested_helps)
+            if kids is not None:
+                kw["element"] = replace(
+                    elem if elem is not None else FieldMeta(type="obj"),
+                    type="obj", children=kids)
+    return replace(fm, **kw) if kw else fm
+
+
+def _decorate_tree(children: Mapping[str, FieldMeta],
+                   spec: Mapping[str, Any],
+                   helps: Optional[Mapping[str, Any]] = None) -> Optional[Mapping[str, FieldMeta]]:
+    """按嵌套中文名表装饰一层 children；有变化返回新表，无变化返回 None（不传 children=）。
+
+    `helps`（批4.6）= 与 spec 平行的嵌套**说明**表；只对已存在的 children 键生效，
+    不新增节点（未登记键的 soft 节点由 spec 负责）。
+    """
+    changed = False
+    out: Dict[str, FieldMeta] = {}
+    for key, fm in children.items():
+        sub = spec.get(key)
+        label = sub if isinstance(sub, str) else (
+            sub.get("_label") if isinstance(sub, Mapping) else
+            (sub.label if isinstance(sub, FieldMeta) else None))
+        nested = ({k: v for k, v in sub.items() if k != "_label"}
+                  if isinstance(sub, Mapping) else None)
+        help_text, nested_helps = _split_help(helps.get(key) if helps else None)
+        new_fm = _decorate_one(fm, label, nested, help_text, nested_helps)
+        if new_fm is not fm:
+            changed = True
+        out[key] = new_fm
+    for key, sub in spec.items():
+        if key in children or key == "_label":
+            continue
+        help_text, nested_helps = _split_help(helps.get(key) if helps else None)
+        if isinstance(sub, FieldMeta):
+            base = sub if sub.soft_label else replace(sub, soft_label=True)
+            out[key] = replace(base, help=help_text) if (help_text and not base.help) else base
+        elif isinstance(sub, Mapping):
+            label = str(sub.get("_label", key))
+            help_text = help_text or str(sub.get("_help") or "") or None
+            out[key] = _soft_display(label, "obj", _soft_tree(sub), help=help_text)
+        else:
+            out[key] = _soft_display(str(sub), help=help_text)
+        changed = True
+    return out if changed else None
+
+
+
+
+def _decorate_module_meta(mmeta: ModuleMeta, labels: Mapping[str, str] = (),
+                          child_labels: Optional[Mapping[str, Any]] = None,
+                          helps: Optional[Mapping[str, str]] = None,
+                          child_helps: Optional[Mapping[str, Any]] = None) -> ModuleMeta:
+    """模块 ModuleMeta 的 fields 过一遍展示层装饰（helper 工厂模块用；校验语义零变化）。"""
+    return replace(mmeta, fields=_decorate_field_meta(
+        mmeta.fields, mmeta.field_groups, labels, child_labels, helps, child_helps))
+
+
+def _group_declaration(
+    defs: Tuple[Tuple[str, Tuple[str, ...]], ...],
+    labels: Mapping[str, str],
+) -> Tuple[Dict[str, str], Tuple[str, ...]]:
+    """(分组键→组, 分组顺序) 二元组；组显示名已在批B 下放到包 `field_meta.json`。
+
+    `labels` 参数保留（批B 之前传入组显示名表），此处不再使用。
+    """
+    groups: Dict[str, str] = {}
+    order: Tuple[str, ...] = ()
+    for group, keys in defs:
+        order = order + (group,)
+        for key in keys:
+            groups.setdefault(key, group)
+    return groups, order
+
+
+# 批B：模块**分组结构**（分组键→组 + 顺序）仍归框架；组显示名已下放到包
+# content/<包>/field_meta.json 的 group_labels。
+ENEMIES_GROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
+    # 2026-09-13 用户拍板：HP/ATK/DEF 这类数值**单独一页**，不再塞进「基本」。
+    ("base", ("id", "name", "tier", "type", "area", "desc")),
+    ("stats", (
+        "hp", "atk", "def", "def_base", "monster_def_rate", "drop_rate",
+        "stats", "weakness", "resistance", "elem_res", "pv", "pv_recover", "phases",
+        "zone_change",
+    )),
+    ("actions", ("actions", "special_actions", "chains", "skills", "traits", "effects", "parts", "ai")),
+    ("drops", ("drops", "lore", "rewards")),
+)
+
+ITEMS_GROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
+    ("base", (
+        "id", "name", "type", "slot", "bind", "usable",
+        "quality", "rarity", "material_tier", "source", "awaken", "seed",
+    )),
+    ("stats", (
+        "price", "atk", "def", "dfn", "foc", "hp", "agi", "mp",
+        "elements", "base_effects",
+        *GEAR_FLAT_KEYS, *GEAR_PCT_KEYS, *GEAR_COMBAT_KEYS,
+    )),
+    ("effects", ("effects", "traits")),
+    ("text", ("desc", "brief", "detail")),
+)
+
+EQUIPMENT_FIELD_GROUPS: Dict[str, str] = {
+    _k: _g for _g, _keys in ITEMS_GROUP_DEFS for _k in _keys
+}
+EQUIPMENT_FIELD_GROUPS["excludes"] = "base"
+EQUIPMENT_GROUP_ORDER: Tuple[str, ...] = tuple(_g for _g, _ in ITEMS_GROUP_DEFS)
+
+MAPS_GROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
+    ("base", ("id", "name", "battle", "revert", "safe_zone", "camp", "camp_name")),
+    ("ranges", ("min", "max", "lower", "upper", "reset", "mechanics")),
+    ("refs", ("enemy_pool", "monsters", "exits", "respawn_point", "npcs",
+              "gate_guard", "gather_points", "dungeon_entrances")),
+    ("text", ("desc",)),
+)
+
+QUEST_GROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
+    ("base", ("id", "name", "type", "main", "zone", "repeatable", "desc")),
+    ("conditions", ("conditions", "unlock_chain", "consume", "filter")),
+    ("reward", ("reward", "bonus", "daily", "board", "timed")),
+    ("refs", ("npc",)),
+)
+
+
+ENEMIES_FIELD_GROUPS, ENEMIES_GROUP_ORDER = \
+    _group_declaration(ENEMIES_GROUP_DEFS, {})
+ITEMS_FIELD_GROUPS, ITEMS_GROUP_ORDER = \
+    _group_declaration(ITEMS_GROUP_DEFS, {})
+MAPS_FIELD_GROUPS, MAPS_GROUP_ORDER = \
+    _group_declaration(MAPS_GROUP_DEFS, {})
+QUEST_FIELD_GROUPS, QUEST_GROUP_ORDER = \
+    _group_declaration(QUEST_GROUP_DEFS, {})
+
+
+# ---- 派生条件的主体声明（批5 条件行编辑器；键名不写死，缺省按实际值推断）----
+# 条件结构 = {主体: {比较符: 值}} 或 {主体: {二级键: {比较符: 值}}}；and/or 为逻辑组合主体。
+CHAIN_CONDITION_SUBJECTS: Dict[str, ConditionSubject] = {
+    "count": ConditionSubject(label="连段计数", ops=("eq", "min", "max")),
+    "self_marks": ConditionSubject(label="自身印记", key_ref="mark", ops=("eq", "min", "max")),
+    "target_marks": ConditionSubject(label="目标印记", key_ref="mark", ops=("eq", "min", "max")),
+    "self_status": ConditionSubject(label="自身状态", value_ref="status", ops=("has",)),
+    "target_hp_pct": ConditionSubject(label="目标生命百分比", ops=("min", "max")),
+    "and": ConditionSubject(label="且（全部满足）", combine=True),
+    "or": ConditionSubject(label="或（任一满足）", combine=True),
+}
+
+# ---- 技能模块的「关联分区」声明（批5 派生界面；编辑器只按声明渲染，不写死模块/字段名）----
+SKILLS_ASSOCIATIONS: Tuple[AssociationMeta, ...] = (
+    AssociationMeta(
+        module="skill_chains", field="trigger_skill",
+        label="派生 · 本技能触发的链",
+        hint="以下派生链以本技能为触发技；可逐步骤改派生条件、派生技能、派生消耗、"
+             "数值覆盖、优先级、模式、霸体。保存写入派生链模块（校验 + 原子写 + 备份）。"),
+    AssociationMeta(
+        module="skill_chains", field="steps[].to",
+        label="派生 · 本技能为派生目标", editable=False,
+        hint="以下派生链的某个步骤以本技能为派生目标（只读摘要；点「打开」到派生链条目编辑）。"),
+)
+
+# ---- action（AI 字段里的条件/触发上限补充；deeper 由包声明覆盖）----
+
+
+def _decorate_field_meta(
+    fields: Mapping[str, FieldMeta],
+    groups: Mapping[str, str],
+    labels: Mapping[str, str],
+    child_labels: Optional[Mapping[str, Any]] = None,
+    helps: Optional[Mapping[str, str]] = None,
+    child_helps: Optional[Mapping[str, Any]] = None,
+) -> Dict[str, FieldMeta]:
+    """把模块级分组表/中文名表/说明表叠加到字段元数据（字段自带的 group/label/help 优先）。
+
+    只做展示层补充：type/required/default/enum/ref_target/element/children 原样保留，
+    因此对泛型校验器（只读 type 等判定字段）是零行为变化。
+    批4.5 起可选 child_labels（嵌套中文名表）递归装饰 children / element.children；
+    表里出现、children 未登记的键补 soft_label=True 纯展示子字段（校验短路，语义零变化）。
+    批4.6 起可选 helps（模块顶层人工说明）+ child_helps（嵌套人工说明，形态与 child_labels
+    平行：str 或 {`_help`: 本节点, 子键: …}）；说明**只补 help 展示维度**，不改任何校验契约，
+    缺省（helps 为空 / 字段无说明）时行为与批4.5 完全一致。
+    """
+    out: Dict[str, FieldMeta] = {}
+    helps = helps or {}
+    for key, fm in fields.items():
+        kw: Dict[str, object] = {}
+        if not fm.group and key in groups:
+            kw["group"] = groups[key]
+        if not fm.label and key in labels:
+            kw["label"] = labels[key]
+        if not fm.help and key in helps:
+            kw["help"] = helps[key]
+        spec = child_labels.get(key) if child_labels else None
+        help_spec = child_helps.get(key) if child_helps else None
+        want_recursive = fm.type in ("obj", "list") and (
+            isinstance(spec, Mapping) or isinstance(help_spec, Mapping))
+        if want_recursive:
+            help_text = help_spec if isinstance(help_spec, str) else None
+            nested_helps = help_spec if isinstance(help_spec, Mapping) else None
+            new_fm = _decorate_one(
+                fm, None, spec if isinstance(spec, Mapping) else None,
+                help_text, nested_helps)
+            if new_fm.children is not fm.children:
+                kw["children"] = new_fm.children
+            if new_fm.element is not fm.element:
+                kw["element"] = new_fm.element
+        out[key] = replace(fm, **kw) if kw else fm
+    return out
+
+
+# -------------------------------------------------------------------------------------
 # 模块元数据
 # -------------------------------------------------------------------------------------
 def _module_table() -> Dict[str, ModuleMeta]:
@@ -807,6 +1192,13 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "schema_version": FieldMeta(type="int", required=True),
         "author": FieldMeta(type="str"),
         "modules": FieldMeta(type="list", required=True, element=FieldMeta(type="str")),
+        # 编辑器重写批1：模块层级/显示名（均为可选声明；缺省 → 编辑器平铺显示、用模块键名）。
+        # 包用它们声明「物品 ▸ 装备」这类父子关系与中文名，编辑器不写死任何归并关系。
+        "module_tree": FieldMeta(type="list", element=FieldMeta(type="obj", children={}),
+                                 soft_label=True, label="模块层级声明"),
+        "module_groups": FieldMeta(type="list", element=FieldMeta(type="obj", children={}),
+                                   soft_label=True, label="模块层级声明（module_tree 别名）"),
+        "module_labels": FieldMeta(type="obj", children={}, soft_label=True, label="模块显示名"),
     }
     effects_fields: Dict[str, FieldMeta] = {
         "id": F_ID, "name": F_NAME, "type": F_TYPE,
@@ -820,6 +1212,27 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "patch": FieldMeta(type="obj", children={"target": FieldMeta(type="str"),
                                                  "value": FieldMeta(type="number"),
                                                  "pct": FieldMeta(type="bool")}),
+        # 批4.5：veinborn/test_demo 实有、原表未登记的顶层键 → 纯展示宽字段（soft_label
+        # 短路泛型校验；editor 表单/子字段可读，校验语义零变化）
+        "actions": _soft_display("行动表", "list"),
+        "class": _soft_display("类别"),
+        "control_type": _soft_display("控制类型"),
+        "count": _soft_display("层数", "int"),
+        "desc": _soft_display("说明"),
+        "filter": _soft_display("筛选"),
+        "mark": _soft_display("印记"),
+        "marks_on": _soft_display("所需印记"),
+        "part_break_per_tick": _soft_display("每回合破坏值", "int"),
+        "pct": _soft_display("百分比", "bool"),
+        "polarity": _soft_display("极性"),
+        "skip_turn": _soft_display("跳过回合", "number"),
+        "stat": _soft_display("属性"),
+        "status": _soft_display("状态"),
+        "target": _soft_display("目标"),
+        "tick": _soft_display("触发时点"),
+        "trigger": _soft_display("触发条件"),
+        "turns": _soft_display("持续回合", "int"),
+        "value": _soft_display("数值"),
     }
     statuses_fields: Dict[str, FieldMeta] = {
         "id": F_ID, "name": F_NAME, "type": F_TYPE,
@@ -827,8 +1240,13 @@ def _module_table() -> Dict[str, ModuleMeta]:
         # duration 权威形态 = 对象 {turns:int, charges:int}（细化_1b §1.2 字段9/子结构 2a）
         # —— 不再用 F_DURATION(number)，否则合法 {turns,charges} 会被 R-1 误拦
         "duration": FieldMeta(type="obj", children={
-            "turns": FieldMeta(type="int", range_min=0, range_max=9999),
-            "charges": FieldMeta(type="int", range_min=0, range_max=9999),
+            # allow_negative：-1 = 该维「永不被清」引擎哨兵（细化_1b §4.2 D6 口径；
+            # 跃空姿态等「行动条窗口管理、不走行动次数递减」的时间型持续用）；负数
+            # 仅黄提示（Y-1 越界）不红拦——与 base/growth 负数口径一致。
+            "turns": FieldMeta(type="int", range_min=0, range_max=9999,
+                               allow_negative=True),
+            "charges": FieldMeta(type="int", range_min=0, range_max=9999,
+                                 allow_negative=True),
         }),
         "decay": FieldMeta(type="str"),  # 枚举（per_turn…）由正式表注入
         "effects": F_EFFECTS,
@@ -838,6 +1256,10 @@ def _module_table() -> Dict[str, ModuleMeta]:
         # 受击增伤乘区（方位 v0.6 §五：knockdown 等状态 def 挂 damage_mult；引擎破位乘区消费）
         "damage_mult": FieldMeta(type="number", range_min=0, range_max=10,
                                  label="受击增伤倍率"),
+        # 批4.5：实测顶层键（原表未登记 → 纯展示宽字段，soft_label 零校验变化）
+        "desc": _soft_display("说明"),
+        "description": _soft_display("描述"),
+        "on_dodge_effects": _soft_display("闪避时效果", "list"),
     }
     marks_fields: Dict[str, FieldMeta] = {
         # 印记定稿 §八 数据结构汇总（2026-08-19 定稿对照 P0-1 **部分**修复——5 字段已补；
@@ -857,6 +1279,7 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "duration": FieldMeta(type="str"),
         "desc": FieldMeta(type="str"),
         "probability": F_PROBABILITY,            # mark_add 概率 proc（AT-10）
+        "description": _soft_display("描述"),     # 批4.5 实测顶层键（纯展示）
     }
     skill_chains_fields: Dict[str, FieldMeta] = {
         "id": F_ID, "name": F_NAME, "type": F_TYPE,
@@ -875,18 +1298,25 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "max_combo_behavior": FieldMeta(type="str", label="满连段行为"),
         "steps": FieldMeta(type="list",
                            element=FieldMeta(type="obj", children={
-                               "from": FieldMeta(type="str", label="源技能"),
-                               "to": FieldMeta(type="str", label="目标技能"),
+                               "from": FieldMeta(type="ref", ref_target="skill", label="源技能"),
+                               "to": FieldMeta(type="ref", ref_target="skill", label="目标技能"),
                                "tag": FieldMeta(type="str", label="标签"),
                                "condition": FieldMeta(type="obj", children={},
-                                                      soft_label=True, label="触发条件"),
+                                                      soft_label=True, label="触发条件",
+                                                      editor="condition",
+                                                      condition_subjects=dict(
+                                                          CHAIN_CONDITION_SUBJECTS)),
                                "priority": FieldMeta(type="int", label="优先级"),
                                "mode": FieldMeta(type="str", label="模式"),
                                "armor": FieldMeta(type="bool", label="霸体"),
                                "consume": FieldMeta(type="int", label="消耗"),
+                               # 批5：数值覆盖补丁（{键: 数值}）→ 键值对表格（可增删行）
+                               "variant_override": FieldMeta(type="obj", children={},
+                                                             soft_label=True, label="数值覆盖",
+                                                             editor="maptable"),
                            }),
                            soft_label=True, label="连段步骤"),
-        "trigger_skill": FieldMeta(type="str", label="触发技能"),
+        "trigger_skill": FieldMeta(type="ref", ref_target="skill", label="触发技能"),
     }
     action_fields: Dict[str, FieldMeta] = {
         # ---- ActionCore 基础（T24-T26 / m2_shared_contract §四）----
@@ -897,19 +1327,22 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "break_power": FieldMeta(type="number", range_min=0, range_max=500,
                                  label="破坏力固有值"),  # F09（方位 v0.6 §三.4）
         "air_policy": FieldMeta(type="str", label="空中策略"),  # F10（方位 v0.6 §三.6）
+        "air_drop": FieldMeta(type="str", label="对空击落"),  # 跃空风险闭环批③（knockdown=击中空中玩家即击落）
         "power": F_POWER,
         "attack_type": FieldMeta(type="str"),  # 斩/打/突/魔（枚举判定 A2 路）
         "element": FieldMeta(type="str"),      # 元素 ID（元素注册表引用检查 A2/M2）
         "effects": F_EFFECTS,
-        "cost": FieldMeta(type="number", range_min=0, range_max=9999),  # 旧键
-        "cool": FieldMeta(type="number", range_min=0, range_max=9999),  # 旧键（cooldown 规范名）
+        "cost": FieldMeta(type="number", range_min=0, range_max=9999, unit="点"),  # 旧键
+        "cool": FieldMeta(type="number", range_min=0, range_max=9999, unit="回合"),  # 旧键（cooldown 规范名）
         # ---- AI 字段（怪物侧扩展，T26 / m2 §四；缺省兜底不报错）----
         "weight": FieldMeta(type="number", range_min=0, range_max=100),
         # P2-4 修复：不挂 probability 旗标（Y-2 极值误报——0/1 是入池开关非概率值，
         # 与 enemies.actions[].probability 口径一致，1e S1 语义）
         "probability": FieldMeta(type="number", range_min=0, range_max=1),
         "intent": FieldMeta(type="str"),  # 伤害/防御/蓄力/治疗/控制/buff/debuff/印记/功能（枚举 A2）
-        "cooldown": FieldMeta(type="number", range_min=0, range_max=999),
+        "roar": FieldMeta(type="number", range_min=0, range_max=2, unit="级"),  # 批⑦A 咆哮等级（1 轻 / 2 大；耳栓反制）
+        "cooldown": FieldMeta(type="number", range_min=0, range_max=999, unit="回合"),
+        "recovery": FieldMeta(type="number", range_min=0, unit="行动条"),  # 批⑥ C10 行动恢复值（总恢复值；缺省=ctb.default_recovery）
         # P2-9 修复：condition 条件权重修正为 obj/string 双形态（1e A03b），
         # str 注册会误拦合法 obj 形态 → 不注册（未知字段默认放行），形态校验留 A2/运行期
         "hungry": FieldMeta(type="number", range_min=0, range_max=999),
@@ -925,6 +1358,13 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "require_status": FieldMeta(type="ref", ref_target="status"),
         "apply_status": FieldMeta(type="ref", ref_target="status"),
         "skill": FieldMeta(type="ref", ref_target="skill_or_any"),
+        # 批4.5：实测顶层键（原表未登记 → 纯展示宽字段；soft_label 短路泛型校验，
+        # 不新开 ref 校验路径，校验语义零变化）
+        "apply_mark": _soft_display("施加印记"),
+        "condition": _soft_display("条件", "obj"),
+        "trigger_limit": _soft_display("触发上限", "obj"),
+        "charge_armor": _soft_display("蓄力霸体", "bool"),
+        "charge_turns": _soft_display("蓄力回合", "int"),
     }
     skills_fields: Dict[str, FieldMeta] = {
         # ---- M13 技能库（细化_6a_技能库契约 §1.2：A 共用核心 7 字段 F01-F07）----
@@ -941,7 +1381,7 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "break_power": FieldMeta(type="number", range_min=0, range_max=500,
                                  label="破坏力固有值"),  # F09（方位 v0.6 §三.4）
         "air_policy": FieldMeta(type="str", label="空中策略"),  # F10（方位 v0.6 §三.6）
-        "power": F_POWER,               # F04 倍率（滑条 10-500%；派生链累计 ≤1.5× 黄提示 V-6 属 A2）
+        "power": F_SKILL_POWER,         # F04 倍率（滑条 10-500%；派生链累计 ≤1.5× 黄提示 V-6 属 A2）
         "attack_type": FieldMeta(type="str"),  # F05 斩/打/突/魔/无（枚举 A2 路；缺省按武器 f4）
         "element": FieldMeta(type="str", soft_label=True),  # F06 8 元素注册表（V-4 引用检查 A2）；null=按武器元素合法
         # F07 effects：条目不登记 element=ref（双形态：引用 {effect,overrides} /
@@ -950,24 +1390,25 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "effects": FieldMeta(type="list", element=FieldMeta(type="obj")),
         # ---- B 玩家侧扩展 11 字段（F08-F18，细化_6a §1.2-B）----
         "type": FieldMeta(type="str"),   # F08 basic/active/passive/trigger 四类时机（枚举 A2 路）
-        "mp_cost": FieldMeta(type="number", range_min=0, range_max=9999),   # F09 ≥0；basic=0
-        "cooldown": FieldMeta(type="number", range_min=0, range_max=999),   # F10 ≥0 整数；basic=0
+        "mp_cost": FieldMeta(type="number", range_min=0, range_max=9999, unit="点"),   # F09 ≥0；basic=0
+        "cooldown": FieldMeta(type="number", range_min=0, range_max=999, unit="回合"),   # F10 ≥0 整数；basic=0
         "tag": FieldMeta(type="str"),    # F11 none/combo/combo_preserve/combo_push/interrupt/armor（枚举 A2）
         "armor": FieldMeta(type="bool"),         # F12 霸体开关（执行语义快键）
         "interrupt": FieldMeta(type="bool"),     # F13 打断快键（唯一归口 = 效果系统 L0 interrupt，T19）
         "chain_refs": FieldMeta(type="list", element=FieldMeta(type="str")),  # F14 派生链引用 skill_chains.json（V-2）
-        "consume_marks": FieldMeta(type="obj"),  # F15 {mark_id: count} 消耗印记（V-3 键存在/上限 A2）
+        "consume_marks": FieldMeta(type="obj", label="消耗印记", editor="maptable",
+                                   key_ref="mark"),  # F15 {mark_id: count} 消耗印记（V-3 键存在/上限 A2）
         "job_restrict": FieldMeta(type="list", element=FieldMeta(type="str")),  # F16 职业限制（V-5）
         "job_form": FieldMeta(type="str", soft_label=True),       # F17 形态技（引用 transform 形态名，V-5 扩展判定 A2）；null=非形态技合法
         "level": FieldMeta(type="obj", soft_label=True, children={
-            "max": FieldMeta(type="int", range_min=1, range_max=99),
+            "max": FieldMeta(type="int", range_min=1, range_max=99, unit="级"),
             "growth": FieldMeta(type="list", element=FieldMeta(type="number")),
         }),  # F18 升级 {max, growth}；growth 长度 = max 且 growth[0]=1 级基准（A2 判定）；null=不升级合法
         # ---- C 全库补充 2 字段（F19-F20，细化_6a §1.2-C）----
-        "hits": FieldMeta(type="int", range_min=1, range_max=99),  # F19 多段次数（1 轮 1 行动，每段独立结算）
+        "hits": FieldMeta(type="int", range_min=1, range_max=99, unit="段"),  # F19 多段次数（1 轮 1 行动，每段独立结算）
         "trigger_limit": FieldMeta(type="obj", children={
-            "per_round": FieldMeta(type="int", range_min=0, zero_unlimited=True),
-            "per_battle": FieldMeta(type="int", range_min=0, zero_unlimited=True),
+            "per_round": FieldMeta(type="int", range_min=0, zero_unlimited=True, unit="次"),
+            "per_battle": FieldMeta(type="int", range_min=0, zero_unlimited=True, unit="次"),
         }),  # F20 触发上限 {per_round, per_battle}；0=不限；技能级 > 库级 defaults > 全局（V-8 引擎强制）
         # ---- D 细化定型 4 字段（F21-F24，细化_6a §1.2-D）----
         "desc": FieldMeta(type="str"),   # F21 一句话说明（技能卡/战报/编辑器悬浮）
@@ -977,8 +1418,28 @@ def _module_table() -> Dict[str, ModuleMeta]:
         # ---- F25-F26 防反/闪反姿态（2026-09-09 用户拍板标签制：姿态技能配反击类型与反击技）----
         "counter_type": FieldMeta(type="str"),  # F25 parry/dodge（防反/闪反姿态标记）
         "counter_skill": FieldMeta(type="str"),  # F26 姿态成功派生反击技 id（V-2 引用检查）
+        "action_time": FieldMeta(type="number", range_min=0, unit="行动条"),  # F27 行动时间（反应窗口时长，行动条；缺省=ctb.default_action_time）
+        "air_extend": FieldMeta(type="number", range_min=0, unit="行动条"),  # F28 空中延长（跃空窗口延长量，行动条；缺省=ctb.air_extend）
+        "recovery": FieldMeta(type="number", range_min=0, unit="行动条"),  # 批⑥ C10 行动恢复值（总恢复值，行动条；缺省=ctb.default_recovery）
+        "stun": FieldMeta(type="number", range_min=0),  # 批⑦A 气绝值（打击 × 正方位积累；全隐性）
         # ---- 兼容旧键（enemies[].skills 引用的技能表旧键）----
         "skill": FieldMeta(type="ref", ref_target="skill_or_any"),
+        # ---- 编辑器重写批1：补齐 skills.json 真实在用、但本表原缺登记 8 键 ----
+        # 依据：真实内容包实测（veinborn/test_demo 均出现 revert_form/derive_only/
+        # energy_gain/energy_cost/brief；skill_models.skills_fields() 早已登记 F29/F30
+        # 展示文本与 6b/6c 挂点，本表滞后 → 编辑器「文本」分区拿不到简述/详情）。
+        # 一律软标注（soft_label=永不红拦）：补齐前这些键走「未知字段默认放行」，
+        # 补齐后仍零新增拦截，泛型校验行为不变（type 仅供参考/渲染）。
+        "brief": FieldMeta(type="str", soft_label=True),      # F29 简述（可空）
+        # 编辑器重写批2：详情 = 长文本 → 声明 multiline，编辑控件给多行输入框
+        # （纯显示维度，不影响任何校验判定；见 models.FieldMeta.multiline）。
+        "detail": FieldMeta(type="str", soft_label=True, multiline=True),  # F30 详情（可空）
+        "revert_form": FieldMeta(type="bool", soft_label=True),    # 6b 还原技标记
+        "derive_only": FieldMeta(type="bool", soft_label=True),    # 6b 仅派生可用
+        "energy_gain": FieldMeta(type="obj", soft_label=True),     # 6c 资源轴增减
+        "energy_cost": FieldMeta(type="obj", soft_label=True),     # 6c 资源轴消耗
+        "season": FieldMeta(type="str", soft_label=True),          # 6c 季节技能组
+        "combo_table": FieldMeta(type="list", element=FieldMeta(type="obj"), soft_label=True),
     }
     jobs_fields: Dict[str, FieldMeta] = {
         # ---- M13 职业库（细化_6b_职业库与变换引擎契约 §1.1：顶层 11 字段）----
@@ -1038,6 +1499,8 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "slot": FieldMeta(type="str"),  # 装备部位（正式表可注入 ref_target=slot）
         "bind": FieldMeta(type="bool"),
         "usable": FieldMeta(type="bool"),
+        # 批4.5：items/equipment 实测顶层 desc（原表未登记 → 纯展示宽字段）
+        "desc": _soft_display("说明"),
     }
     equipment_fields: Dict[str, FieldMeta] = dict(items_fields)
     # 部位互斥：entry.slot 与 entry.excludes 列表内部位互斥成环 → R-5（equipment 专项，§5.2 + L167）
@@ -1049,11 +1512,39 @@ def _module_table() -> Dict[str, ModuleMeta]:
     # label 区分（三路实测抓 P2）：def 与 dfn 同义「防御」→ 表单两个「防御」无法区分
     # 填错位置；def 标「(旧键)」供 demo_full 兼容识别，dfn 为现行键保持「防御」。
     equipment_fields["def"] = FieldMeta(type="number", range_min=0, range_max=5000,
-                                        label="防御(def·旧键)")
-    equipment_fields["dfn"] = FieldMeta(type="number", range_min=0, range_max=5000, label="防御")
-    equipment_fields["foc"] = FieldMeta(type="number", range_min=0, range_max=5000, label="专注")
-    equipment_fields["hp"] = FieldMeta(type="number", range_min=0, range_max=99999, label="生命")
-    equipment_fields["agi"] = FieldMeta(type="number", range_min=0, range_max=5000, label="敏捷")
+                                        label="防御(def·旧键)", unit="点")
+    equipment_fields["dfn"] = FieldMeta(type="number", range_min=0, range_max=5000, label="防御", unit="点")
+    equipment_fields["foc"] = FieldMeta(type="number", range_min=0, range_max=5000, label="专注", unit="点")
+    equipment_fields["hp"] = FieldMeta(type="number", range_min=0, range_max=99999, label="生命", unit="点")
+    equipment_fields["agi"] = FieldMeta(type="number", range_min=0, range_max=5000, label="敏捷", unit="点")
+    # 批⑧ 装备词条键空间收口（2026-09-12）：键与中文 label 取自 data.gear_stats 唯一
+    # 注册表——context/shop_tx/详情面板/本表四处曾各持手写键表互相漂移（crit 与 _pct
+    # 键漏转/漏展示）。此后新增词条 = 注册表加一行，本表自动跟进；范围仅提示不拦截
+    # （枚举宽松口径，防误拦既有包）。items_fields 一并收口——veinborn 武器/防具在
+    # items 模块（kind=item）中编辑，同样需要这些词条键。
+    for _fm_target in (items_fields, equipment_fields):
+        for _k in GEAR_FLAT_KEYS:
+            if _k in _fm_target:
+                continue
+            _fm_target[_k] = FieldMeta(
+                type="number", range_min=0,
+                range_max=99999 if _k == "hp" else (9999 if _k == "mp" else 5000),
+                label=GEAR_LABELS_ZH.get(_k, _k), unit="点")
+        for _k in GEAR_PCT_KEYS:
+            _fm_target[_k] = FieldMeta(
+                type="number", range_min=0, range_max=500,
+                label=GEAR_LABELS_ZH.get(_k, _k), unit="%")
+        for _k in GEAR_COMBAT_KEYS:
+            if _k == "crit":
+                # 赌狗流负会心（批⑤ 引擎通道）→ 字段级放行负数（R-2 元数据开关）
+                _fm_target[_k] = FieldMeta(
+                    type="number", range_min=-99, range_max=99, allow_negative=True,
+                    label=GEAR_LABELS_ZH.get(_k, _k) + "（可负）", unit="%")
+            else:
+                _fm_target[_k] = FieldMeta(
+                    type="number", range_min=0,
+                    range_max=2 if _k == "earplug" else 3,
+                    label=GEAR_LABELS_ZH.get(_k, _k), unit="级")
     traits_fields: Dict[str, FieldMeta] = {
         "id": F_ID, "name": F_NAME, "type": F_TYPE,
         "probability": F_PROBABILITY, "max_stack": F_MAX_STACK,
@@ -1078,7 +1569,7 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "stats": FieldMeta(type="obj", children=ENEMY_STATS_CHILDREN),
         # ---- 弱点 / PV / 抗性（F08-F11 / 1.3）----
         "weakness": FieldMeta(type="obj", children=WEAKNESS_CHILDREN),
-        "pv": FieldMeta(type="number", range_min=0, range_max=500),  # F09（档区间仅提示；木桩强制 0 A2）
+        "pv": FieldMeta(type="number", range_min=0, range_max=500, unit="点"),  # F09（档区间仅提示；木桩强制 0 A2）
         "pv_recover": FieldMeta(type="enum", enum=("battle_end", "none")),  # F10
         "resistance": FieldMeta(type="obj", children=RESISTANCE_CHILDREN),  # F11
         # ---- 行动表 / 特殊行动 / 连招（F12-F14 / 1.4）----
@@ -1089,7 +1580,7 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "drops": FieldMeta(type="obj", children=DROPS_CHILDREN),  # F15
         "lore": FieldMeta(type="list", element=FieldMeta(type="obj", children=LORE_ENTRY_CHILDREN)),  # F16
         # ---- 木桩向（F17-F18）----
-        "def_base": FieldMeta(type="number", range_min=0, range_max=99999),  # F17（≥0）
+        "def_base": FieldMeta(type="number", range_min=0, range_max=99999, unit="点"),  # F17（≥0）
         "elem_res": FieldMeta(type="obj"),  # F18（元素 ID → 正减伤/负增伤；注册表引用检查 A2）
         # ---- M0 旧键兼容（已废弃，保留注册：测试依赖 R-2/Y-1/Y-2 行为）----
         "hp": F_HP, "atk": F_ATK, "def": F_DEF,
@@ -1116,13 +1607,20 @@ def _module_table() -> Dict[str, ModuleMeta]:
                                          label="命中优先级"),
             "on_break": FieldMeta(type="obj", children={
                 "knockdown": FieldMeta(type="number", range_min=0, range_max=99,
-                                       label="倒地回合"),
+                                       label="倒地时长（次行动）"),
                 "marks": FieldMeta(type="list", element=FieldMeta(type="str"),
                                    label="破位印记"),
                 "effects": FieldMeta(type="list", element=FieldMeta(type="obj"),
                                      label="破位效果"),
             }, label="破位行为"),
         }), label="部位列表"),
+        # 批4.5：AI 引擎依赖段（m2_shared_contract 第一节）实测存在于真实包，原表未登记 →
+        # 纯展示宽字段（soft_label 短路泛型校验，零新增拦截）；children 由
+        # 子结构由 CHILD_SPEC 递归补（无文案）。
+        "ai": _soft_display("AI 行为态", "obj"),
+        "phases": _soft_display("阶段表", "list"),
+        "rewards": _soft_display("奖励", "obj"),
+        "zone_change": _soft_display("换区", "obj"),
     }
     maps_fields: Dict[str, FieldMeta] = {
         "id": F_ID, "name": F_NAME,
@@ -1136,6 +1634,20 @@ def _module_table() -> Dict[str, ModuleMeta]:
         # respawn_point=复活点指向（引用已注册地图 id，泛型 R-4 存在性检查）
         "safe_zone": FieldMeta(type="bool"),
         "respawn_point": FieldMeta(type="ref", ref_target="map"),
+        # 批4.5：真实包 maps.json 实有、原表未登记的地图段（→ 纯展示宽字段，soft_label
+        # 短路泛型校验；children 由 CHILD_SPEC 递归补结构）。DUNGEON_MAP_ELEM_CHILDREN
+        # 早已为「maps 页整图编辑」预留这些键，本批把它接到 maps 模块。
+        "desc": _soft_display("说明"),
+        "camp": _soft_display("营地", "obj"),
+        "camp_name": _soft_display("营地名"),
+        "npcs": FieldMeta(type="list", element=FieldMeta(type="str"),
+                          soft_label=True, label="NPC 列表"),
+        "monsters": _soft_display("刷怪行", "list"),
+        "exits": _soft_display("通道出口", "obj"),
+        "mechanics": _soft_display("地图机制", "list"),
+        "gate_guard": _soft_display("门卫"),
+        "gather_points": _soft_display("采集点", "list"),
+        "dungeon_entrances": _soft_display("副本入口", "list"),
     }
     stats_fields: Dict[str, FieldMeta] = {}
     # M12.5 需求1 批D：formula 模块 stat_map 段字段口径（FORMULA_FIELDS 模块级常量，
@@ -1241,19 +1753,70 @@ def _module_table() -> Dict[str, ModuleMeta]:
     # M10 钓鱼（m10_shared_contract §一）：settings.fishing 段（fishing_settings_meta
     # 自包含持有，防 field_meta↔fishing 循环依赖）
     SETTINGS_FIELDS["fishing"] = fishing_settings_meta()
+    # 批4.5：settings.json 真实包实有、原表未登记的顶层段（→ 纯展示宽字段，soft_label
+    # 短路泛型校验；children 由 CHILD_SPEC 递归补结构）。
+    # 依据：content/{veinborn,test_demo,demo_full}/settings.json 实测键并集。
+    SETTINGS_FIELDS.update({
+        "assistant": _soft_display("助手", "obj"),
+        "battle": _soft_display("战斗参数", "obj"),
+        "command_aliases": _soft_display("指令别名", "obj"),
+        "contest": _soft_display("竞技", "obj"),
+        "ctb": _soft_display("行动条", "obj"),
+        "events": _soft_display("事件文案", "obj"),
+        "exp_curve": _soft_display("经验曲线", "obj"),
+        "level_cap": _soft_display("等级上限", "int"),
+        "quest_board": _soft_display("任务板", "obj"),
+    })
 
     return {
-        "manifest": ModuleMeta(entry_type="object", fields=manifest_fields),
-        "effects": ModuleMeta(entry_type="list", fields=effects_fields, kind="effect", namespace="effect_family"),
-        "statuses": ModuleMeta(entry_type="list", fields=statuses_fields, kind="status", namespace="effect_family"),
-        "marks": ModuleMeta(entry_type="list", fields=marks_fields, kind="mark", namespace="effect_family"),
-        "skill_chains": ModuleMeta(entry_type="list", fields=skill_chains_fields, kind="skill_chain",
+        "manifest": ModuleMeta(
+            entry_type="object",
+            fields=_decorate_field_meta(manifest_fields, {}, {},
+                                        _child_spec("manifest"))),
+        "effects": ModuleMeta(entry_type="list",
+                              fields=_decorate_field_meta(effects_fields, {}, {},
+                                                          _child_spec("effects"),
+                                                          None,
+                                                          None),
+                              kind="effect", namespace="effect_family"),
+        "statuses": ModuleMeta(entry_type="list",
+                               fields=_decorate_field_meta(statuses_fields, {}, {},
+                                                           _child_spec("statuses"),
+                                                           None,
+                                                           None),
+                               kind="status", namespace="effect_family"),
+        "marks": ModuleMeta(entry_type="list",
+                            fields=_decorate_field_meta(marks_fields, {}, {},
+                                                        _child_spec("marks"),
+                                                        None),
+                            kind="mark", namespace="effect_family"),
+        "skill_chains": ModuleMeta(entry_type="list",
+                                   fields=_decorate_field_meta(skill_chains_fields, {},
+                                                               {},
+                                                               _child_spec("skill_chains"),
+                                                               None,
+                                                               None),
+                                   kind="skill_chain",
                                    namespace="chain_lib", chain_field="next"),
-        "action": ModuleMeta(entry_type="list", fields=action_fields, kind="action", namespace="action_lib"),
+        "action": ModuleMeta(entry_type="list",
+                             fields=_decorate_field_meta(action_fields, {}, {},
+                                                         _child_spec("action"),
+                                                         None),
+                             kind="action", namespace="action_lib"),
         # M13 技能库（细化_6a_技能库契约 §1：skills.json 玩家技能库；F01-F24 全字段登记；
         # kind="skill" 与 loader _KIND_FOR_MODULE + DEF_CLASSES 对齐（路1A SkillDef）；
         # 命名空间 skill_lib 独立于 action_lib——V-10 跨库重名仅黄提示）
-        "skills": ModuleMeta(entry_type="list", fields=skills_fields, kind="skill", namespace="skill_lib"),
+        "skills": ModuleMeta(
+            entry_type="list",
+            fields=_decorate_field_meta(skills_fields, SKILLS_FIELD_GROUPS, {},
+                                        _child_spec("skills"), None,
+                                        None),
+            kind="skill", namespace="skill_lib",
+            field_groups=dict(SKILLS_FIELD_GROUPS),
+            group_order=SKILLS_GROUP_ORDER,
+            # 批5：技能条目页的「派生」关联分区（声明驱动；编辑器不写死模块/字段名）。
+            associations=SKILLS_ASSOCIATIONS,
+        ),
         # M13 职业库（细化_6b_职业库与变换引擎契约 §1.1~1.4：jobs.json 职业注册表；
         # kind="job" 与 loader _KIND_FOR_MODULE + DEF_CLASSES 对齐（批4 路4A/4B JobDef）；
         # 命名空间 job_lib 独立于 skills/action——职业 ID 为存档引用键 + 快照冗余键，
@@ -1264,59 +1827,121 @@ def _module_table() -> Dict[str, ModuleMeta]:
         # 枚举 {clear, keep}（§1.4）随契约登记，枚举外值 → 泛型 R-1 红拦（V5 判定基底）；
         # growth 九键缺省 0 不设 required（§1.2）。深结构/引用校验（V1~V8 专项）归批4 路4B
         # job_models.validate_jobs 全权（对齐 skills 专项校验器口径），本表登记字段口径。
-        "jobs": ModuleMeta(entry_type="list", fields=jobs_fields, kind="job", namespace="job_lib"),
+        "jobs": ModuleMeta(entry_type="list",
+                           fields=_decorate_field_meta(jobs_fields, {}, {},
+                                                       _child_spec("jobs"), None,
+                                                       None),
+                           kind="job", namespace="job_lib"),
         "formula": ModuleMeta(entry_type="map", fields=formula_fields, kind="formula", namespace="formula_lib"),
-        "items": ModuleMeta(entry_type="list", fields=items_fields, kind="item", namespace="item_lib"),
-        "equipment": ModuleMeta(entry_type="list", fields=equipment_fields, kind="equipment",
-                                namespace="item_lib", mutex_field="excludes"),
-        "traits": ModuleMeta(entry_type="list", fields=traits_fields, kind="trait", namespace="trait_lib"),
+        "items": ModuleMeta(entry_type="list",
+                            fields=_decorate_field_meta(items_fields, ITEMS_FIELD_GROUPS, {},
+                                                        None, None, None),
+                            kind="item", namespace="item_lib",
+                            field_groups=ITEMS_FIELD_GROUPS, group_order=ITEMS_GROUP_ORDER,
+                            group_labels={}),
+        "equipment": ModuleMeta(entry_type="list",
+                                fields=_decorate_field_meta(equipment_fields, EQUIPMENT_FIELD_GROUPS, {},
+                                                            None, None, None),
+                                kind="equipment",
+                                namespace="item_lib", mutex_field="excludes",
+                                field_groups=EQUIPMENT_FIELD_GROUPS, group_order=EQUIPMENT_GROUP_ORDER,
+                                group_labels={}),
+        "traits": ModuleMeta(entry_type="list",
+                             fields=_decorate_field_meta(traits_fields, {}, {},
+                                                         _child_spec("traits")),
+                             kind="trait", namespace="trait_lib"),
         # M8 炼金（m8_contract_数据与校验 §一/§三/§四 4.2）：recipe/proficiency 新增登记四件套；
         # slots 由 alchemy_settings.slots_module_meta() 提供（kind=slots，与 loader 注册表同名）
-        "recipe": ModuleMeta(entry_type="list", fields=recipe_fields, kind="recipe", namespace="recipe_lib"),
-        "proficiency": ModuleMeta(entry_type="list", fields=proficiency_fields,
+        "recipe": ModuleMeta(entry_type="list",
+                             fields=_decorate_field_meta(recipe_fields, {}, {},
+                                                         _child_spec("recipe")),
+                             kind="recipe", namespace="recipe_lib"),
+        "proficiency": ModuleMeta(entry_type="list",
+                                  fields=_decorate_field_meta(proficiency_fields, {},
+                                                              {},
+                                                              _child_spec("proficiency")),
                                   kind="proficiency", namespace="proficiency_lib"),
-        "slots": slots_module_meta(),
+        "slots": _decorate_module_meta(slots_module_meta(), {},
+                                       _child_spec("slots")),
         # M9 锻造（m9_shared_contract §〇~§六）：forge.json 顶层 obj——模块级 ModuleMeta
         # 由 forge_module_meta() 提供（entry_type=object）；M12.5 批3 路3A 注入段级
         # 字段表 FORGE_TOP_FIELD_DEFS（schema_version 精确 + trees/sets/augments/
         # settings 四宽容器 soft_label——泛型零新增拦截）；深结构校验由
         # validate_forge 专项全权（V1-V15/W + 2c2d V1-V8/W1-W4），泛型只做顶层形态
-        "forge": forge_module_meta(),
+        "forge": _decorate_module_meta(forge_module_meta(), (), _child_spec("forge")),
         # M10 钓鱼（m10_shared_contract §三）：fishing.json 顶层 obj——模块级 ModuleMeta
         # 由 fishing_module_meta() 提供（entry_type=object）；深结构校验由
         # validate_fishing 专项全权（V1-V6/W1），泛型只做顶层形态（对齐 forge/dungeon）
-        "fishing": fishing_module_meta(),
+        "fishing": _decorate_module_meta(fishing_module_meta(), (), _child_spec("fishing")),
         # M12.5 强化（2c3a/2c3b）：enhance.json 顶层 obj——模块级 ModuleMeta 由
         # enhance_module_meta() 提供（entry_type=object）；深结构校验由
         # validate_enhance 专项全权（V1~V7），泛型只做顶层形态（对齐 forge/fishing）
-        "enhance": enhance_module_meta(),
-        "enemies": ModuleMeta(entry_type="list", fields=enemies_fields, kind="enemy", namespace="enemy_lib"),
-        "maps": ModuleMeta(entry_type="list", fields=maps_fields, kind="map", namespace="map_lib"),
+        "enhance": _decorate_module_meta(enhance_module_meta(), (), _child_spec("enhance")),
+        "enemies": ModuleMeta(entry_type="list",
+                              fields=_decorate_field_meta(enemies_fields, ENEMIES_FIELD_GROUPS,
+                                                          {}, _child_spec("enemies"),
+                                                          None, None),
+                              kind="enemy", namespace="enemy_lib",
+                              field_groups=ENEMIES_FIELD_GROUPS, group_order=ENEMIES_GROUP_ORDER,
+                              group_labels={}),
+        "maps": ModuleMeta(entry_type="list",
+                           fields=_decorate_field_meta(maps_fields, MAPS_FIELD_GROUPS,
+                                                       {}, _child_spec("maps"),
+                                                       None, None),
+                           kind="map", namespace="map_lib",
+                           field_groups=MAPS_FIELD_GROUPS, group_order=MAPS_GROUP_ORDER,
+                           group_labels={}),
         # M3 副本（m3_shared_contract §4）：新结构由 dungeon_models.validate_dungeons 专项全权。
         # M12.5 批1 路1C：宽松字段表注入（仅 id required + 宽容器 + 闭合枚举，
         # 泛型零新增拦截——专项校验仍全权深结构）
-        "dungeon": ModuleMeta(entry_type="list", fields=DUNGEON_FIELDS, kind="dungeon",
-                              namespace="dungeon_lib"),
+        "dungeon": ModuleMeta(entry_type="list",
+                              fields=_decorate_field_meta(DUNGEON_FIELDS, {}, {},
+                                                          _child_spec("dungeon")),
+                              kind="dungeon", namespace="dungeon_lib"),
         "stats": ModuleMeta(entry_type="map", fields=stats_fields, kind="stat", namespace="stat_lib",
                             key_regex=r"[a-z][a-z0-9_]*"),
         # M4 交互系统（m4_shared_contract §3.1~3.4）：npc/shop/quest/checkin 专项校验器
         # 全权深结构（R-1~R-5/Y-1~Y-8 专项判定）；M12 批4 路4A 注入正式字段表（宽松登记：
         # 仅 id required + 宽 obj 容器 + 闭合枚举——编辑器表单数据源 P-07，泛型并行零新增拦截）
-        "npc": ModuleMeta(entry_type="list", fields=NPC_FIELDS, kind="npc", namespace="npc_lib"),
-        "shop": ModuleMeta(entry_type="list", fields=SHOP_FIELDS, kind="shop", namespace="shop_lib"),
-        "quest": ModuleMeta(entry_type="list", fields=QUEST_FIELDS, kind="quest", namespace="quest_lib"),
-        "checkin": ModuleMeta(entry_type="list", fields=CHECKIN_FIELDS, kind="checkin",
-                              namespace="checkin_lib"),
+        "npc": ModuleMeta(entry_type="list",
+                          fields=_decorate_field_meta(NPC_FIELDS, {}, {}, _child_spec("npc"),
+                                                      None, None),
+                          kind="npc", namespace="npc_lib"),
+        "shop": ModuleMeta(entry_type="list",
+                           fields=_decorate_field_meta(SHOP_FIELDS, {}, {}, _child_spec("shop"),
+                                                       None, None),
+                           kind="shop", namespace="shop_lib"),
+        "quest": ModuleMeta(entry_type="list",
+                            fields=_decorate_field_meta(QUEST_FIELDS, QUEST_FIELD_GROUPS,
+                                                        {}, _child_spec("quest"),
+                                                        None, None),
+                            kind="quest", namespace="quest_lib",
+                            field_groups=QUEST_FIELD_GROUPS, group_order=QUEST_GROUP_ORDER,
+                            group_labels={}),
+        "checkin": ModuleMeta(entry_type="list",
+                              fields=_decorate_field_meta(CHECKIN_FIELDS, {}, {},
+                                                          _child_spec("checkin")),
+                              kind="checkin", namespace="checkin_lib"),
         # M11 成就（4c §1.5）：顶层 list；M12.5 批1 路1C 宽松字段表注入
         # （专项校验器 achievements_models ACH01-13 仍全权深结构，泛型零新增拦截）
-        "achievements": ModuleMeta(entry_type="list", fields=ACHIEVEMENT_FIELDS,
+        "achievements": ModuleMeta(entry_type="list",
+                                   fields=_decorate_field_meta(ACHIEVEMENT_FIELDS, {}, {},
+                                                               _child_spec("achievements")),
                                    kind="achievement", namespace="achievement_lib"),
         # 条件加成（细化_3b §3.2；环 + 引用存在性专项校验见 validator._check_conditional）
-        "conditional": ModuleMeta(entry_type="object", fields=conditional_fields,
+        "conditional": ModuleMeta(entry_type="object",
+                                  fields=_decorate_field_meta(conditional_fields, {},
+                                                              {},
+                                                              _child_spec("conditional")),
                                   kind="conditional", namespace="cond_lib"),
         # 通用设置（细化_1g4 §6.1 death_penalty + currencies 段；其余段由 3h 路登记缺省放行）。
         # 注意：settings.json 为常驻模块（3h D-01），本表仅登记字段口径；loader 常驻加载归 3h/M 接线。
-        "settings": ModuleMeta(entry_type="object", fields=SETTINGS_FIELDS),
+        "settings": ModuleMeta(entry_type="object",
+                               fields=_decorate_field_meta(SETTINGS_FIELDS, {},
+                                                           {},
+                                                           _child_spec("settings"),
+                                                           None,
+                                                           None)),
         # M12 批4 路4A 编辑器扩展页视图（5a2 PR-01：editor.json 页表 meta_source 指向；
         # 无独立 json 模块——ai/hidden 是 enemies 条目内嵌视图、env_event/log_card 是
         # settings 段视图；ModuleMeta 仅登记供 /api/meta/{page} 表单元数据，内容包不含
@@ -1329,9 +1954,9 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "log_card": ModuleMeta(entry_type="object", fields=LOG_CARD_FIELDS,
                                kind="log_card", namespace="settings_lib"),
         # M12.5 批1/2：editor.json 页面注册表模块（M12 起内容包实文件即存在；
-        # manifest 声明后才进 modules_raw → editor_registry 动态页表才生效）。
+        # manifest 声明后才进 modules_raw → 动态页表才生效）。
         # 宽松 obj 登记：仅 schema_version/pages 两键宽容器（编辑器注册表语义，
-        # 深结构由 editor_registry.load_editor_registry 解析全权）
+        # 深结构由内容包 manifest 全权声明）。
         "editor": ModuleMeta(entry_type="object", fields={
             "schema_version": FieldMeta(type="int", label="页表 schema 版本"),
             "pages": FieldMeta(type="list",
@@ -1351,7 +1976,9 @@ def default_field_meta_table() -> FieldMetaTable:
         kind="stat",
         namespace="stat_lib",
         key_regex=r"[a-z][a-z0-9_]*",
-        value_meta=FieldMeta(type="obj", children=STAT_CHILDREN),
+        value_meta=FieldMeta(type="obj",
+                             children=_decorate_field_meta(STAT_CHILDREN, {},
+                                                           {})),
     )
     # formula：键=公式名，值为公式字符串或 {formula: 表达式}（长度>4KB / AST 黑名单 → 红拦，§3.3）；
     # M12.5 需求1 批D：fields 注入 formula_fields（stat_map 段口径，编辑器 meta 可编）；
@@ -1368,10 +1995,34 @@ def default_field_meta_table() -> FieldMetaTable:
 
 
 __all__ = [
-    "default_field_meta_table", "FieldMeta", "ModuleMeta", "FieldMetaTable",
-    # 1g4 世界边界（细化_1g4 §6；settings 段 + maps F-05/F-06 字段口径）
-    "DEATH_PENALTY_CHILDREN", "CURRENCY_ENTRY_CHILDREN", "SETTINGS_FIELDS",
+    "default_field_meta_table",
+    "FieldMeta",
+    "ModuleMeta",
+    "FieldMetaTable",
+    "DEATH_PENALTY_CHILDREN",
+    "CURRENCY_ENTRY_CHILDREN",
+    "SETTINGS_FIELDS",
     "DEFAULT_CURRENCY_IDS",
-    # M12.5 批1 路1C：C 类宽松注入表（dungeon/achievements 编辑器表单数据源）
-    "DUNGEON_FIELDS", "ACHIEVEMENT_FIELDS",
+    "DUNGEON_FIELDS",
+    "ACHIEVEMENT_FIELDS",
+    "SKILLS_GROUP_DEFS",
+    "SKILLS_FIELD_GROUPS",
+    "SKILLS_GROUP_ORDER",
+    "ENEMIES_GROUP_DEFS",
+    "ENEMIES_FIELD_GROUPS",
+    "ENEMIES_GROUP_ORDER",
+    "ITEMS_GROUP_DEFS",
+    "ITEMS_FIELD_GROUPS",
+    "ITEMS_GROUP_ORDER",
+    "EQUIPMENT_FIELD_GROUPS",
+    "EQUIPMENT_GROUP_ORDER",
+    "MAPS_GROUP_DEFS",
+    "MAPS_FIELD_GROUPS",
+    "MAPS_GROUP_ORDER",
+    "QUEST_GROUP_DEFS",
+    "QUEST_FIELD_GROUPS",
+    "QUEST_GROUP_ORDER",
+    "CHAIN_CONDITION_SUBJECTS",
+    "SKILLS_ASSOCIATIONS",
+    "F_SKILL_POWER",
 ]

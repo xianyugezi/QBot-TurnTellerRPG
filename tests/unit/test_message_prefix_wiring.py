@@ -188,15 +188,17 @@ def test_disabled_no_prefix_whatsoever() -> None:
 def test_prefix_only_first_line_of_multiline() -> None:
     """战斗轮内多行回复：前缀只出现在消息首行，后续每行无前缀（TC-23）。"""
     body = (
-        "✅ 你施放火球术，造成 18 伤害（史莱姆 7/25）\n"
-        "❌ 史莱姆反击，你受到 4 伤害（HP 21/30）\n"
-        "你 21/30 | 史莱姆 7/25 → /攻击 /防御"
+        "✅ 你施放火球术\n"
+        "造成 18 伤害\n"
+        "史莱姆 7/25\n"
+        "❌ 史莱姆反击，你受到 4 伤害（HP 21/30）"
     )
     res = apply_message_prefix(body, level=LV, name=NAME, title=TITLE)
     lines = res.text.split("\n")
     assert lines[0] == "Lv35.阿伟 -斩龙者-"
-    assert lines[1] == "✅ 你施放火球术，造成 18 伤害（史莱姆 7/25）"
-    assert lines[2] == "❌ 史莱姆反击，你受到 4 伤害（HP 21/30）"
+    assert lines[1] == "✅ 你施放火球术"
+    assert lines[3] == "史莱姆 7/25"
+    assert lines[4] == "❌ 史莱姆反击，你受到 4 伤害（HP 21/30）"
     assert not any("Lv35" in ln for ln in lines[1:])  # 仅首行带前缀
 
 

@@ -108,7 +108,8 @@ SKILLS_FIELDS_MIN: int = 30
 # 6b：顶层 11 + growth 9 + transform 11 + state_policy 3 = 34（M13 合写产物）
 JOBS_FIELDS_MIN: int = 34
 # 6a：定稿 10 + 细化增补 3 = 13 条（§3.1/§3.2）
-SKILL_RULES: int = 15  # V-1~V-13 + V-14/V-15（2026-09-08 方位 v0.6：F08 position_rule 形状、F10 air_policy 枚举红拦）
+# V-1~V-13 + V-14/V-15（2026-09-08 方位 v0.6：F08 position_rule 形状、F10 air_policy 枚举红拦）
+SKILL_RULES: int = 15
 # 6b：V1~V8（§五）恰 8 条
 JOB_RULES: int = 8
 # 6c：V1~V11（§五）恰 11 条
@@ -149,6 +150,9 @@ TRANSFORM_STATE_FIELDS_EXPECTED: Tuple[str, ...] = (
 RESOURCE_AXIS_FIELDS_EXPECTED: Tuple[str, ...] = (
     "name", "type", "icon", "base", "max", "reset", "display",
     "max_per_pool", "pools", "pool_icons",
+    # 云海九期 212 opt-in 三字段（tick 自然增长缺口承载；缺省 0=零行为）——
+    # 合并适配（cloudsea-pack）追加，键序＝resource_axis_fields() 登记序。
+    "tick_per_round", "tick_floor", "on_full",
 )
 
 
@@ -280,8 +284,13 @@ def test_6a_skills_fields_contract_core_24() -> None:
     assert contract_core <= fields
     assert len(contract_core) == 24
     # 登记表总键数 = 24 契约 + 6 挂点 + 3 方位扩展 F08/F09/F10
-    # + 2 防反/闪反姿态 counter_type/counter_skill = 35（2026-09-09 用户拍板标签制）
-    assert len(fields) == 35
+    # + 2 防反/闪反姿态 counter_type/counter_skill（2026-09-09 用户拍板标签制）
+    # + 1 行动时间 action_time（2026-09-11 增补 v1 §一 实装）
+    # + 1 空中延长 air_extend（2026-09-11 增补 v1 §四 实装）
+    # + 1 行动恢复 recovery（2026-09-12 批⑥ C10 实装）
+    # + 1 气绝 stun（2026-09-12 批⑦A 气绝 KO 实装）
+    # + 2 展示文本 brief/detail（2026-09-12 用户拍板：编辑器两个文本框，技能列表简述行/详情）= 41
+    assert len(fields) == 41
 
 
 # ---------------------------------------------------------------------------
@@ -408,7 +417,7 @@ def test_6c_resource_axis_fields_10() -> None:
     任务书口径：注册段 10 字段。直连 resource_axis_fields() 逐键。
     """
     fields = resource_axis_fields()
-    assert len(fields) == 10
+    assert len(fields) == 13  # 契约 10 + 云海 212 opt-in 3（tick_per_round/tick_floor/on_full）
     assert set(fields) == set(RESOURCE_AXIS_FIELDS_EXPECTED)
     assert tuple(fields) == RESOURCE_AXIS_FIELDS_EXPECTED  # 键序与契约字段表一致
 
@@ -493,7 +502,7 @@ def test_docs_overview_counts_reconcile() -> None:
     # 6c 24 字段 = 注册段 10 + 技能扩展 4 + 组合行 7 + 快照 3
     combo_row_7 = {"combo", "name", "kind", "power", "element", "hits", "effects"}
     snapshot_3 = {"player", "enemy", "subpool_expand"}
-    assert len(RESOURCE_AXIS_FIELDS_EXPECTED) == 10
+    assert len(RESOURCE_AXIS_FIELDS_EXPECTED) == 13
     assert len(combo_row_7) == 7 and len(snapshot_3) == 3
     assert 10 + 4 + 7 + 3 == 24
     # 规则/用例计数与实现直连常量一致

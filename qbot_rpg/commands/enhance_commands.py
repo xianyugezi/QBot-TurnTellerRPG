@@ -76,9 +76,9 @@ ENHANCE_INFO_CMD = "强化信息"
 ENHANCE_PROTECT_CMD = "强化保护"
 
 _ATTR_CN = {
-    "atk": "攻击", "def": "防御", "hp": "生命", "mp": "魔力",
+    "atk": "攻击", "def": "防御", "hp": "生命", "mp": "法力",
     "str": "力量", "con": "体质", "agi": "敏捷", "foc": "专注",
-    "spr": "精神", "lck": "幸运", "spd": "速度", "mag": "魔法",
+    "spr": "精神", "lck": "幸运", "spd": "速度", "mag": "法强",
 }
 _WEAPON_STAT = "atk"
 _ARMOR_STAT = "def"

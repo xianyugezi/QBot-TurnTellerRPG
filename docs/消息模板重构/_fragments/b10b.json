@@ -1,0 +1,35 @@
+{
+  "rail": "b10b",
+  "scope": "批10·路B：赠礼 13 键（qbot_rpg/core/templates/gift_tpl.py 全量迁移）",
+  "templates": {
+    "gift_register_gate": "❌ 请先注册角色\n发 注册 名字 职业",
+    "gift_err_empty": "❌ 缺少参数\n发 赠送 <物品>*<数量> <玩家>",
+    "gift_err_qty": "❌ 数量须为正整数\n发 赠送 <物品>*<数量> <玩家>",
+    "gift_err_missing_player": "❌ 缺少接收玩家\n发 赠送 <物品>*<数量> <玩家>",
+    "gift_not_found": "❌ 未找到物品「{name}」",
+    "gift_bound": "❌ 绑定物品不可赠送\n签到与任务奖励默认绑定",
+    "gift_self": "❌ 不能赠送给自己",
+    "gift_no_item": "❌ 数量不足\n「{name}」持有 {have}",
+    "gift_no_system": "❌ 赠送功能未启用",
+    "gift_target_not_found": "❌ 玩家不存在或未注册\n{target}",
+    "gift_ok": "✅ 已赠送 {name}×{qty}\n给 {target}\n你剩余 {remain}",
+    "gift_receive": "{target_name} 收到赠礼\n{name}×{qty}",
+    "gift_system_disabled": "❌ 赠送功能未开放\n本服暂不支持赠送"
+  },
+  "prose_keys": {},
+  "notes": {
+    "gift_register_gate": "注册门槛错误行重写为「❌ 原因 + 下一步」两行；免斜杠（旧「/注册 创建角色（/注册 名字 职业）」去除前缀与括号挤宽）。占位符空集不变。测试锚点 test_gift_commands::test_gift_register_gate 由「请先 /注册」更新为「请先注册」",
+    "gift_err_empty": "缺参错误行重写：❌ 缺少参数 / 发 赠送 <物品>*<数量> <玩家>（免斜杠；旧「参数错误：」前缀精简为 ❌ 标记；语法行 28 半角当量 = 上限内）。占位符空集不变；test_gift_missing_args 断言「参数错误」→「缺少参数」",
+    "gift_err_qty": "数量非法错误行重写：❌ 数量须为正整数 / 同一语法行（旧「参数错误：数量须为正整数（示例：…）」括号内示例与斜杠前缀去除）。占位符空集不变",
+    "gift_err_missing_player": "缺接收者错误行重写：❌ 缺少接收玩家 / 语法行（保留「接收玩家」语义锚点，test_gift_missing_args 该断言不变）。占位符空集不变",
+    "gift_not_found": "物品查找失败错误行重写：❌ 未找到物品「{name}」（旧「未找到「{name}」」加物品限定词，语义等价）；占位符 name 不变",
+    "gift_bound": "绑定禁赠错误行两行：❌ 绑定物品不可赠送 / 签到与任务奖励默认绑定（旧全角括号说明改独立行；斜杠改「与」，对齐免斜杠全局口径）。占位符空集不变",
+    "gift_self": "自赠错误行重写：❌ 不能赠送给自己（单行 15 全角当量内，语义与 test 锚点「自己」不变）。占位符空集不变",
+    "gift_no_item": "持有不足错误行拆两行：❌ 数量不足 / 「{name}」持有 {have}（旧「背包里没有「{name}」或数量不足（持有 {have}）」去「或」冗余与括号挤宽；「数量不足」「足」语义保留）。占位符 name/have 不变",
+    "gift_no_system": "系统未接入错误行重写：❌ 赠送功能未启用（旧「❌ 赠送未启用」补「功能」；test_gift_no_repo_ctx 锚点「未启用」不变）。占位符空集不变",
+    "gift_target_not_found": "目标不存在错误行拆两行：❌ 玩家不存在或未注册 / {target}（旧「❌ 接收玩家不存在或未注册：{target}」冒号挤宽改换行；test_gift_target_missing 锚点「不存在」不变）。占位符 target 不变",
+    "gift_ok": "赠送成功行拆三行：✅ 已赠送 {name}×{qty} / 给 {target} / 你剩余 {remain}（旧「✅ 已赠送 {name}×{qty} 给 {target}（你剩余 {remain}）」去括号挤宽，每行一字段；test 锚点「已赠送」「小美」不变）。占位符 name/qty/target/remain 全保留",
+    "gift_receive": "接收侧通知行重写：{target_name} 收到赠礼 / {name}×{qty}（旧「（{target_name} 收到 {name}×{qty}）」括号内三字段挤宽 → 两行；保留收到 + 物品×数量全部信息要素）。占位符 target_name/name/qty 全保留",
+    "gift_system_disabled": "功能关闭错误行拆两行：❌ 赠送功能未开放 / 本服暂不支持赠送（旧「❌ 赠送未开放」补「功能」并加原因行；与 gift_no_system「未启用」区分语义：本键=本服策略关闭）。占位符空集不变"
+  }
+}

@@ -232,5 +232,9 @@
       "window_daily": 2,
       "chance": 0.3
     }
+  },
+  "ctb": {
+    "enabled": true,
+    "default_recovery": 100
   }
 }

@@ -151,6 +151,12 @@ DEFAULT_ATTACK_TYPE: str = "none"
 # F21 desc 缺省（§1.2-D F21：无；空串兜底，非空建议归 V-13 黄提示）
 DEFAULT_DESC: str = ""
 
+# F29/F30 展示文本缺省（2026-09-12 用户拍板：编辑器两个文本框「简述」「详情」）
+#  - brief  = 技能列表的简述行（自由文本标签串，如「【伤害】【消耗】【连段】【派生】」）
+#  - detail = 技能详情面板尾部详情文本（CTB 口径；空 → 展示层回落 desc）
+DEFAULT_BRIEF: str = ""
+DEFAULT_DETAIL: str = ""
+
 # 默认伤害/治疗数值字段（field_meta F_* 系列同源，供 FieldMeta 注册表复用）
 _F_NUMBER: FieldMeta = FieldMeta(type="number", range_min=0)
 _F_INT: FieldMeta = FieldMeta(type="int", range_min=0)
@@ -258,7 +264,8 @@ class SkillDef(BaseDef):
 
     @property
     def cooldown(self) -> float:
-        """F10 冷却回合（缺省 0；basic=0 无冷却 [L62]；负值钳制 0；计数由引擎 1g2 管理）。"""
+        """F10 冷却时长（次行动，缺省 0；basic=0 无冷却 [L62]；负值钳制 0；
+        计数由引擎 1g2 管理）。"""
         v = self._num("cooldown")
         v = v if v is not None else DEFAULT_COOLDOWN
         return max(v, 0.0)
@@ -360,6 +367,18 @@ class SkillDef(BaseDef):
         return v if v is not None else DEFAULT_DESC
 
     @property
+    def brief(self) -> str:
+        """F29 技能简述（缺省空串；技能列表简述行 = 自由文本标签串，内容作者自定）。"""
+        v = self._str("brief")
+        return v if v is not None else DEFAULT_BRIEF
+
+    @property
+    def detail(self) -> str:
+        """F30 技能详情文本（缺省空串；技能详情面板尾部；空则展示层回落 desc）。"""
+        v = self._str("detail")
+        return v if v is not None else DEFAULT_DETAIL
+
+    @property
     def hit_mod(self) -> float:
         """F22 命中率修正乘数（缺省 1.0；>0，命中公式 [数 L21-22]）。"""
         v = self._num("hit_mod")
@@ -449,7 +468,7 @@ def _build_skills_fields() -> Dict[str, FieldMeta]:
         # （细化_6c V1~V3/V7，resource_axis_validator.py），本表仅登记放行
         "energy_cost": FieldMeta(type="obj", soft_label=True),
         # 6c 资源轴消耗（细化_6c §1.2 E2，M2）：{axis_id: {key: amount}}；不足
-        # → 被拒不耗回合（F-R1 施放前段）；键空间归资源轴校验器（V1/V2/V7）
+        # → 被拒不消耗行动（F-R1 施放前段）；键空间归资源轴校验器（V1/V2/V7）
         "season": FieldMeta(type="str", soft_label=True),
         # 6c 季节技能组（细化_6c §2.1 SE1）：spring/summer/autumn/winter（缺省
         # =通用）；枚举校验归资源轴校验器（V9）
@@ -462,10 +481,24 @@ def _build_skills_fields() -> Dict[str, FieldMeta]:
         "trigger_limit": FieldMeta(type="obj"),  # {per_round, per_battle}，0=不限
         # ---- D. 细化定型 4（§1.2-D）----
         "desc": FieldMeta(type="str", default=DEFAULT_DESC),
+        # ---- F29/F30 展示文本（2026-09-12 用户拍板：编辑器「简述」「详情」两个文本框）----
+        "brief": FieldMeta(type="str", default=DEFAULT_BRIEF, label="简述"),
+        "detail": FieldMeta(type="str", default=DEFAULT_DETAIL, label="详情"),
         "hit_mod": FieldMeta(type="number", range_min=0, default=DEFAULT_HIT_MOD),
         "crit_mod": FieldMeta(type="number", range_min=0, default=DEFAULT_CRIT_MOD),
         "block_mode": FieldMeta(type="enum", enum=BLOCK_MODES, default=DEFAULT_BLOCK_MODE),
         # ---- E. 防反/闪反姿态（2026-09-09 用户拍板标签制）----
         "counter_type": FieldMeta(type="str"),   # parry/dodge（姿态标记；无=非姿态技能）
         "counter_skill": FieldMeta(type="str"),  # 成功派生反击技 id
+        # F27 行动时间（反应窗口时长，行动条；缺省 = 规则 default_action_time）。
+        # 窗口口径：增补 v1 §一（2026-09-11 实装）——[写入时刻, 写入时刻+本值)。
+        "action_time": FieldMeta(type="number", range_min=0),
+        # F28 空中延长（跃空窗口延长量，行动条；正数=技能自带大幅延长，缺省走
+        # 规则 ctb.air_extend）。窗口口径：增补 v1 §四（2026-09-11 实装）。
+        "air_extend": FieldMeta(type="number", range_min=0),
+        # 批⑥ C10 行动恢复值（总行动恢复值，行动条；缺省 =
+        # 规则 ctb.default_recovery）。口径：增补 v1 附·怪猎对照 C10（2026-09-12 实装）。
+        "recovery": FieldMeta(type="number", range_min=0),
+        # 批⑦A 气绝值（打击 × 正方位积累 KO 槽；缺省 0=不积累，全隐性）
+        "stun": FieldMeta(type="number", range_min=0),
     }

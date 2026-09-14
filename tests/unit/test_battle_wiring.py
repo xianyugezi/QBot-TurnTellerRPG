@@ -5,7 +5,7 @@
 1 条/开始 1 条/结束 1 条）+ docs/m5_shared_contract.md §二/§五（铁律 2/7/9：一轮=1 条
 （玩家行动+怪物反击合并）/ 战斗开始=1 条 / 战斗结束=1 条 / 单次操作 ≤1-2 条、发送走统一
 出口 Sender、P2-8 不直接复用引擎 message）+ 细化_3d §3.1 承接表 + 细化_5e（军规1 前缀只加
-首行 / 军规3 单回合单条 / 军规5 结算一次性：经验/掉落只在战斗结束消息输出一次）。
+首行 / 军规3 单行动单条 / 军规5 结算一次性：经验/掉落只在战斗结束消息输出一次）。
 
 覆盖（M5-08 验收）：
   - 一轮 1 条（玩家行动+怪物反击合并；mock Sender 断言调用次数）
@@ -132,22 +132,43 @@ def _run_attack(*args, **kwargs):
 
 
 def test_round_one_message_attack_merged(start_battle) -> None:
-    """/攻击 一轮 = 1 条：玩家行动 + 怪物反击合并进 render_battle_round 单条
-    （军规3 / 铁律 2）；真实 Sender 仅 1 次调用。"""
+    """/攻击 单次操作 = 2 条（NPC 连锁段 1 条 + 玩家行动段 1 条；铁律 2）。
+
+    CTB 重写（Agent 4 · Wave B）：无「回合」——一次玩家操作 = 一次玩家行动 + 调度器
+    自动推进的 NPC 连锁（`dispatch_batch` 批量 NPC 段 1 条，无 NPC 行动则静默不发）。
+
+    CTB 迁移（2026-09-10 Wave C · C-6）：Wave B 时引擎 NPC 行动通道未补齐，
+    `dispatch_batch` **恒静默退化**（`04_wave_b_integration.md` L122/L173-175 登记的
+    遗留事实：「战斗实机为玩家单方面输出、怪不反击」）→ 当时恰 1 条。**引擎侧现已
+    补齐**（`_npc_outcomes` 汇总进 `report.outcomes`，Wave B 遗留风险 1 收口）→
+    `dispatch_batch` 契约自动生效：本场景玩家 spd 50 / 敌 spd 40，玩家行动后时间轴
+    推进使怪物 ready 并出手 → **NPC 连锁段 1 条 + 玩家行动段 1 条 = 2 条**（≤2 军规内）。
+    这正是台账预告的「引擎补齐后接线层自动生效、无需再改」。
+    """
     sender = RecordingSender()
     eng = start_battle()
     res = _run_attack(parse_command("/攻击"), make_ctx(sender, engine=eng))
     assert res["ok"] is True
-    assert len(res["sent"]) == 1
-    assert len(sender.calls) == 1                     # 一轮 1 条
-    text = sender.calls[0]
-    _assert_no_banned_emoji(text)
-    lines = text.split("\n")
-    assert lines[0] == PREFIX                      # 前缀只加首行
-    assert any("✅ 你攻击" in ln for ln in lines)   # 玩家行动行（BREP-02）
-    assert any("史莱姆" in ln and "你受到" in ln for ln in lines) or \
-        any("史莱姆的攻击" in ln for ln in lines)   # 怪物反击行（BREP-10/11）
-    assert any("史莱姆 2" in ln for ln in lines) or any("→ 攻击" in ln for ln in lines)  # 提示行（BREP-09）
+    assert len(res["sent"]) == 2                      # NPC 连锁段 + 玩家行动段
+    assert len(sender.calls) == 2
+    texts = [c for c in sender.calls]
+    for text in texts:
+        _assert_no_banned_emoji(text)
+    # NPC 连锁段（先发）：怪出手行 + 前缀
+    npc_text = next(c for c in texts if "❌" in c or "史莱姆攻击" in c)
+    assert npc_text.split("\n")[0] == PREFIX            # 前缀只加首行
+    assert any("史莱姆" in ln for ln in npc_text.split("\n"))
+    # 玩家行动段（后发）：玩家攻击行 + 提示行（BREP-02/09）
+    player_text = next(c for c in texts if "✅ 你攻击" in c)
+    plines = player_text.split("\n")
+    assert any("✅ 你攻击" in ln for ln in plines)      # 玩家行动行（BREP-02）
+    assert any("怪物生命" in ln for ln in plines)       # HUD v2：怪物行（无目标名，用户样稿口径）
+    assert any("→ 攻击" in ln for ln in plines)         # 提示行（BREP-09）
+    # 2026-09-12 用户拍板：两段会被桥接层合并为**一条**消息 → 整条消息只在最顶部
+    # 保留一个玩家前缀；后发段不再重复前缀行（防「玩家名/等级出现两次」）
+    assert not player_text.split("\n")[0].startswith("Lv"), "后发段不应再带前缀行"
+    _joined = "\n".join(texts)
+    assert _joined.count(PREFIX) == 1, "合并消息只能有一个玩家前缀行"
 
 
 def test_round_one_message_mock_sender_call_count(start_battle) -> None:
@@ -183,12 +204,12 @@ def test_start_one_message_with_hint() -> None:
     assert len(delivered) == 1
     assert len(sender.calls) == 1
     lines = sender.calls[0].split("\n")
-    assert lines == ["与史莱姆的战斗开始！史莱姆 25/25", "弱点：火（×1.3）"]
+    assert lines == ["与史莱姆的战斗开始！", "史莱姆 25/25", "弱点：火（×1.3）"]
     _assert_no_banned_emoji(sender.calls[0])
 
 
 def test_end_one_message_summary() -> None:
-    """战斗结束独立 1 条（TC-25）：BREP-24 汇总含回合数与明细入口；前缀首行。"""
+    """战斗结束独立 1 条（TC-25）：BREP-24 汇总含行动数与明细入口；前缀首行。"""
     sender = RecordingSender()
     pipeline = bc.BattlePipeline(sender, level=LV, name=NAME, title=TITLE, to="g1")
     delivered = pipeline.send_end(SimpleNamespace(), SimpleNamespace(name="史莱姆", turn=5), "win")
@@ -196,7 +217,9 @@ def test_end_one_message_summary() -> None:
     assert len(sender.calls) == 1
     assert sender.calls[0].split("\n") == [
         PREFIX,
-        "战斗结束：胜利｜回合数 5｜输入 /战斗记录 查看明细",
+        "战斗结束：胜利",
+        "行动数 5",
+        "发 战斗记录 查看明细",
     ]
 
 
@@ -211,7 +234,9 @@ def test_end_one_message_with_summary_block() -> None:
     )
     assert len(sender.calls) == 1                     # 汇总+明细同一条
     text = sender.calls[0]
-    assert "战斗结束：胜利｜回合数 5｜输入 /战斗记录 查看明细" in text
+    text_lines = text.split("\n")
+    assert "战斗结束：胜利" in text_lines and "行动数 5" in text_lines
+    assert "发 战斗记录 查看明细" in text_lines
     assert "摘要：总伤害 1220" in text
 
 
@@ -228,13 +253,19 @@ def test_battle_end_flow_summary_and_drops(start_battle) -> None:
     assert res["ok"] is True and res["message"] == "战斗结束（win）"
     assert len(sender.calls) == 2                     # 当轮 1 条 + 结束 1 条（≤2 条，铁律 2）
     round_msg, end_msg = sender.calls
-    assert "✅ 你击败了史莱姆！" in round_msg          # BREP-15 击杀紧跟伤害行
+    assert "✅ 你击败了史莱姆" in round_msg            # BREP-15 击杀紧跟伤害行（批6 去「！」）
     assert "✅ 战斗胜利！" not in round_msg
     assert "您对史莱姆造成了" not in end_msg  # 2026-09-09 击杀去重（叙事句删除）   # 叙事句（用户结算模板）
-    assert "获得经验：100" in end_msg and "获得金币：50" in end_msg        # 经验/金币分行
+    assert "获得经验：100" in end_msg and "获得金币：50" in end_msg        # 分行 + 不空格（用户 2026-09-12 拍板）
+    assert "【战利品】" in end_msg                                        # 战利品头（批6）
     assert "1.史莱姆粘液×2" in end_msg                                     # 战利品列表
     assert "战斗结束：" not in end_msg               # win 无汇总行（用户模板，2026-08-27）
-    assert end_msg.split("\n")[0] == PREFIX
+    # 2026-09-12 用户拍板：两段合并为同一条消息 → 前缀只在最顶（行动段），结束段不再重复。
+    # 2026-09-13 用户拍板（L7）：战斗已结束 → 整条消息不出「→ 攻击 或 …」尾提示。
+    assert end_msg.split("\n")[0] != PREFIX
+    assert "→ 攻击" not in end_msg
+    assert "→ 攻击" not in round_msg
+    assert round_msg.split("\n")[0] == PREFIX
     _assert_no_banned_emoji(round_msg)
     _assert_no_banned_emoji(end_msg)
 
@@ -265,13 +296,19 @@ def test_no_battle_clean_error_not_affect_others() -> None:
 
 
 def test_prefix_disabled_no_prefix(start_battle) -> None:
-    """enabled=false（M5-01 总开关）→ 战斗消息无前缀（【前缀】L42）。"""
+    """enabled=false（M5-01 总开关）→ 战斗消息无前缀（【前缀】L42）。
+
+    CTB 迁移（2026-09-10 Wave C · C-6）：引擎 NPC 行动通道补齐后一次操作 2 条
+    （NPC 连锁段 + 玩家行动段），故任意一条消息的首行都应是正文（无前缀）。
+    """
     sender = RecordingSender()
     settings = dict(DEFAULT_MESSAGE_PREFIX_SETTINGS, enabled=False)
     eng = start_battle()
     _run_attack(parse_command("/攻击"), make_ctx(sender, engine=eng,
-                                                          prefix_settings=settings))
-    assert sender.calls[0].split("\n")[0].startswith("✅ 你攻击")   # 无前缀首行
+                                                 prefix_settings=settings))
+    assert sender.calls, "应产出战斗消息"
+    player_text = next((c for c in sender.calls if "✅ 你攻击" in c), sender.calls[0])
+    assert player_text.split("\n")[0].startswith("✅ 你攻击")   # 无前缀首行
 
 
 def test_register_battle_commands_routes_attack() -> None:
@@ -311,7 +348,7 @@ def test_enrich_injects_display_names(start_battle) -> None:
 
 def test_apply_battle_prefix_delegates_m5_01() -> None:
     """apply_battle_prefix = M5-01 apply_message_prefix 委托（铁律 1 前缀只加首行）。"""
-    body = "✅ 你攻击，造成 10 伤害（史莱姆 390/400）\n你 500/500 | 史莱姆 390/400 → 攻击 或 攻击 技能名"
+    body = "✅ 你攻击\n造成 10 伤害\n史莱姆 390/400\n你 500/500\n史莱姆 390/400\n→ 攻击 或 攻击 <技能名>"
     res = apply_message_prefix(body, level=LV, name=NAME, title=TITLE,
                                settings=DEFAULT_MESSAGE_PREFIX_SETTINGS)
     assert res.text == f"{PREFIX}\n{body}"
@@ -341,23 +378,24 @@ def test_battle_rewards_from_fn_and_ctx(start_battle) -> None:
 def test_combo_segments_injection_renders_seg_lines() -> None:
     """P1-3：snap action_record >1 段 → 注入 segments → 战报含「第 N 段」段行。
 
-    段号 = 收集器累计 index（action_record 位置，5e §5.1）；单段不注入（走聚合 BREP-02）。
+    段号 = 本次行动内相对 index；单段不注入（走聚合 BREP-02）。
+    CTB（Agent 4 · Wave B）：过滤键 = action_seq（本夹具仅写 turn → _entry_progress 回退命中）。
     """
     snap = {
         "action_record": [
-            {"turn": 1, "actor": "player", "action": "连斩", "target": "enemy",
+            {"action_seq": 1, "turn": 1, "actor": "player", "action": "连斩", "target": "enemy",
              "rating": {"crit": "low", "blocked": False}, "damage": {"final": 5}},
-            {"turn": 2, "actor": "player", "action": "连斩", "target": "enemy",
+            {"action_seq": 2, "turn": 2, "actor": "player", "action": "连斩", "target": "enemy",
              "rating": {"crit": "mid", "blocked": False}, "damage": {"final": 6}},
-            {"turn": 2, "actor": "player", "action": "连斩", "target": "enemy",
+            {"action_seq": 2, "turn": 2, "actor": "player", "action": "连斩", "target": "enemy",
              "rating": {"crit": "low", "blocked": False}, "damage": {"final": 7}},
         ],
     }
-    segs = bc._build_segments(snap, turn=2)
-    assert len(segs) == 2                       # 本轮玩家两段 → 注入
-    # 2026-09-09：段号改为本轮行动内相对（原收集器累计号）
+    segs = bc._build_segments(snap, action_seq=2)
+    assert len(segs) == 2                       # 本次行动玩家两段 → 注入
+    # 2026-09-09：段号改为本次行动内相对（原收集器累计号）
     assert segs[0]["seg"] == 1 and segs[1]["seg"] == 2
-    assert bc._build_segments(snap, turn=1) == []        # 单段 → 不注入
+    assert bc._build_segments(snap, action_seq=1) == []        # 单段 → 不注入
 
     report = SimpleNamespace(
         turn=2, phases=(), player=30, enemy=25, ended=False, status=None, log=(),
@@ -371,7 +409,83 @@ def test_combo_segments_injection_renders_seg_lines() -> None:
         report, enemy_name="史莱姆", player_max_hp=30, enemy_max_hp=40, segments=segs,
     )
     text = br.render_battle_round(enriched)
-    assert "第 1 段：连斩 造成 6 伤害" in text
-    assert "第 2 段：连斩 造成 7 伤害" in text
-    assert "（史莱姆 18/40）" in text          # target_hp 聚合末值近似 + 展示名
-    assert "（会心·中阶 ×1.7）" in text       # 段内会心附注（第 2 段 crit=mid）
+    assert "第 1 段：连斩" in text and "造成 6 伤害（会心·中阶 ×1.7）" in text
+    assert "第 2 段：连斩" in text and "造成 7 伤害" in text
+    assert "史莱姆 18/40" in text              # target_hp 聚合末值近似 + 展示名
+    assert "（会心·中阶 ×1.7）" in text       # 段内会心附注（第 1 段 crit=mid）
+
+
+# ---------------------------------------------------------------------------
+# H1（2026-09-12 复核修复）：effect_events 单次渲染（owner = 玩家段）
+# ---------------------------------------------------------------------------
+
+def test_effect_events_single_render_in_merged_message(start_battle) -> None:
+    """H1：合并消息里【持续效果】/【效果失效】各只出现一次（批量段不再重复渲染）。
+
+    真实引擎跑一拍（含 NPC 连锁）→ 注入同一批 effect_events → 走 `_dispatch_merged_action`；
+    桥接层把「NPC 连锁段 + 玩家段」join 成一条消息后，效果行必须各只出现一次
+    （修前：两段各渲染一次 → 各 2 次）。
+    """
+    import dataclasses
+
+    sender = RecordingSender()
+    eng = start_battle()
+    ctx = make_ctx(sender, engine=eng)
+    report = eng.player_act({"type": "normal"})
+    assert any(getattr(oc, "actor", "") != "player" for oc in report.outcomes), \
+        "本场景需存在 NPC 连锁（否则批量段不发送，测不到重复）"
+    evs = (
+        {"type": "dot_damage", "side": "player", "status": "bleed", "name": "流血", "value": 7},
+        {"type": "status_expired", "side": "enemy", "status": "rage", "name": "狂暴"},
+    )
+    report = dataclasses.replace(report, effect_events=evs)
+    sent = bc._dispatch_merged_action(
+        eng, report, bc.BattlePipeline.from_ctx(ctx), ctx, {"type": "normal"})
+    joined = "\n".join(sent)
+    assert len(sent) == 2, "NPC 连锁段 + 玩家段各一条"
+    assert joined.count("【持续效果】") == 1, joined
+    assert joined.count("【效果失效】") == 1, joined
+
+
+def test_batch_alone_still_renders_effect_events(start_battle) -> None:
+    """H1 边界：批量段**单独发送**（无玩家段跟随）时仍要出效果行（不丢事件）。"""
+    import dataclasses
+
+    sender = RecordingSender()
+    eng = start_battle()
+    ctx = make_ctx(sender, engine=eng)
+    report = eng.player_act({"type": "normal"})
+    evs = ({"type": "status_expired", "side": "enemy", "status": "rage", "name": "狂暴"},)
+    report = dataclasses.replace(report, effect_events=evs)
+    pipeline = bc.BattlePipeline.from_ctx(ctx)
+    sent = bc.dispatch_batch(eng, report, pipeline, ctx)   # 默认 render_effect_events=True
+    assert any("【效果失效】" in seg for seg in sent), sent
+
+
+# ---------------------------------------------------------------------------
+# T1：defer_tail 全链路（终局尾提示置底）
+# ---------------------------------------------------------------------------
+
+def test_run_battle_action_passes_defer_tail_on_terminal(start_battle, monkeypatch) -> None:
+    """T1 全链路：`_run_battle_action` 终局（report.ended）→ `_without_npc_outcomes`
+    收到 `defer_tail=True`，且**整条消息不出尾提示**（2026-09-13 用户拍板 L7：
+    战斗已结束 → 「→ 攻击 或 攻击 <技能名>」冗余，丢弃；行动段的置底口径只在未终局时生效）。"""
+    sender = RecordingSender()
+    eng = start_battle(enemy=WEAK_ENEMY)               # 一击必杀 → 本拍 ended
+    ctx = make_ctx(sender, engine=eng)
+    seen: dict = {}
+    real = bc._without_npc_outcomes
+
+    def spy(report, **kw):
+        seen.update(kw)
+        return real(report, **kw)
+
+    monkeypatch.setattr(bc, "_without_npc_outcomes", spy)
+    res = bc._run_battle_action(ctx, {"type": "normal"})
+    assert res["ok"] is True
+    assert seen, "_without_npc_outcomes 未被调用（测试驱动路径不对）"
+    assert seen.get("defer_tail") is True
+    # 2026-09-13 用户拍板 L7：终局整条消息都不出尾提示（战斗段 defer + 结束段丢弃）
+    assert sender.calls, "终局应至少发送一段"
+    for seg in sender.calls:
+        assert "→ 攻击" not in seg, f"终局消息不应出尾行：{seg!r}"

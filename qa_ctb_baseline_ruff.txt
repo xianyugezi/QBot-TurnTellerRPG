@@ -1,0 +1,65 @@
+qbot_rpg/assembly/context.py:60:1: E402 Module level import not at top of file
+qbot_rpg/assembly/context.py:64:1: E402 Module level import not at top of file
+qbot_rpg/assembly/context.py:1122:101: E501 Line too long (109 > 100)
+qbot_rpg/assembly/router_setup.py:103:85: E501 Line too long (114 > 100)
+qbot_rpg/assembly/runner.py:399:101: E501 Line too long (101 > 100)
+qbot_rpg/commands/battle_launch_commands.py:317:101: E501 Line too long (118 > 100)
+qbot_rpg/commands/battle_launch_commands.py:326:101: E501 Line too long (101 > 100)
+qbot_rpg/commands/battle_launch_commands.py:351:77: E501 Line too long (112 > 100)
+qbot_rpg/commands/battle_launch_commands.py:357:92: E501 Line too long (109 > 100)
+qbot_rpg/commands/job_commands.py:119:98: E501 Line too long (109 > 100)
+qbot_rpg/commands/job_commands.py:196:101: E501 Line too long (102 > 100)
+qbot_rpg/commands/job_commands.py:329:45: F401 [*] `qbot_rpg.core.templates.tpl_of` imported but unused
+qbot_rpg/core/condition_engine.py:73:25: F401 [*] `typing.Iterable` imported but unused
+qbot_rpg/core/condition_engine.py:125:72: E501 Line too long (103 > 100)
+qbot_rpg/core/condition_engine.py:255:70: E501 Line too long (101 > 100)
+qbot_rpg/core/condition_engine.py:266:101: E501 Line too long (105 > 100)
+qbot_rpg/core/condition_engine.py:270:77: E501 Line too long (102 > 100)
+qbot_rpg/core/condition_engine.py:271:63: E501 Line too long (109 > 100)
+qbot_rpg/core/effect_types.py:8:96: E501 Line too long (104 > 100)
+qbot_rpg/core/effects.py:36:8: F401 [*] `math` imported but unused
+qbot_rpg/core/effects.py:39:36: F401 [*] `dataclasses.field` imported but unused
+qbot_rpg/core/templates/basic_rem_tpl.py:41:72: E501 Line too long (110 > 100)
+qbot_rpg/core/templates/forge_tpl.py:104:64: E501 Line too long (107 > 100)
+qbot_rpg/core/templates/quest_tpl.py:34:73: E501 Line too long (111 > 100)
+qbot_rpg/core/weather_conditions.py:108:74: E501 Line too long (105 > 100)
+qbot_rpg/core/weather_consumers.py:44:51: F401 [*] `typing.Union` imported but unused
+qbot_rpg/core/worldtime.py:5:87: E501 Line too long (103 > 100)
+qbot_rpg/core/worldtime.py:14:88: E501 Line too long (101 > 100)
+qbot_rpg/core/worldtime.py:15:86: E501 Line too long (112 > 100)
+qbot_rpg/core/worldtime.py:79:101: E501 Line too long (134 > 100)
+qbot_rpg/core/worldtime.py:102:101: E501 Line too long (101 > 100)
+qbot_rpg/core/worldtime.py:117:92: E501 Line too long (101 > 100)
+qbot_rpg/core/worldtime.py:143:79: E501 Line too long (101 > 100)
+qbot_rpg/core/worldtime.py:154:75: E501 Line too long (103 > 100)
+qbot_rpg/core/worldtime.py:203:94: E501 Line too long (110 > 100)
+qbot_rpg/core/worldtime.py:249:77: E501 Line too long (106 > 100)
+qbot_rpg/core/worldtime.py:269:86: E501 Line too long (102 > 100)
+qbot_rpg/core/worldtime.py:347:74: E501 Line too long (101 > 100)
+qbot_rpg/core/worldtime.py:366:86: E501 Line too long (103 > 100)
+qbot_rpg/core/worldtime.py:420:58: E501 Line too long (101 > 100)
+qbot_rpg/core/worldtime.py:449:86: E501 Line too long (106 > 100)
+qbot_rpg/core/worldtime.py:474:95: E501 Line too long (106 > 100)
+qbot_rpg/core/worldtime.py:551:82: E501 Line too long (106 > 100)
+scripts/veinborn_e2e_probe.py:4:8: F401 [*] `re` imported but unused
+scripts/veinborn_e2e_probe.py:56:93: E501 Line too long (111 > 100)
+scripts/veinborn_g3_debug.py:56:101: E501 Line too long (156 > 100)
+scripts/veinborn_player_probe.py:7:8: F401 [*] `json` imported but unused
+scripts/veinborn_player_probe.py:19:57: F401 [*] `qbot_rpg.commands.battle_launch_commands` imported but unused
+scripts/veinborn_player_probe.py:153:87: E501 Line too long (105 > 100)
+scripts/veinborn_player_probe.py:187:5: F841 Local variable `bugs` is assigned to but never used
+scripts/veinborn_player_probe.py:187:19: E741 Ambiguous variable name: `l`
+scripts/veinborn_player_probe.py:188:23: E741 Ambiguous variable name: `l`
+scripts/veinborn_player_probe.py:189:53: E741 Ambiguous variable name: `l`
+scripts/veinborn_player_probe.py:189:94: E501 Line too long (146 > 100)
+scripts/veinborn_player_probe.py:189:103: E741 Ambiguous variable name: `l`
+scripts/veinborn_test_api.py:18:8: F401 [*] `re` imported but unused
+scripts/verify_veinborn_probe.py:6:98: E501 Line too long (114 > 100)
+scripts/verify_veinborn_probe.py:9:8: F401 [*] `json` imported but unused
+scripts/verify_veinborn_probe.py:80:88: E501 Line too long (108 > 100)
+tests/unit/test_consume_marks_runtime.py:71:86: E501 Line too long (102 > 100)
+tests/unit/test_field_meta_inject.py:98:94: E501 Line too long (109 > 100)
+tests/unit/test_forge_commands.py:66:5: F401 [*] `qbot_rpg.commands.forge_commands.SETS_LOCKED_MSG` imported but unused
+tests/unit/test_m13_hard_counts.py:111:94: E501 Line too long (118 > 100)
+Found 63 errors.
+[*] 11 fixable with the `--fix` option (1 hidden fix can be enabled with the `--unsafe-fixes` option).

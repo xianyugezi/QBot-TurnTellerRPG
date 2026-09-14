@@ -25,8 +25,8 @@ chance(0-100) 在内部折算小数与 rng 比较（铁律 5 口径）。随机�
   3. ai_state 扩展键（14 键快照之外，跨模块契约 additive，battle 快照整体透传）：
        trigger_used_once: list   # once 已触发条目键
        trigger_counts:    dict   # {key: 已触发次数}
-       trigger_cooldowns: dict   # contract 既有键 {special_action_id: 剩余回合}
-       post_state:        dict   # 最近生效 {state, turns, until}（过期由 C1 回合边界处理，
+       trigger_cooldowns: dict   # contract 既有键 {special_action_id: 剩余行动数}
+       post_state:        dict   # 最近生效 {state, turns, until}（过期由 C1 行动边界处理，
                                  #   本模块只登记生效不管理过期）
   4. timing 口径：first_turn → 仅 turn<=1 匹配；current_turn/next_turn → 不设门
      （执行时机由 C1/battle 侧决定，本模块不调度——A08 timing 语义）。
@@ -197,7 +197,7 @@ def _eval_pv_broken(trig, bs, ai, rng) -> bool:
 
 
 def _eval_get_up(trig, bs, ai, rng) -> bool:
-    """get_up：起身后触发（TC-05：downed → 起身 → 下一回合套间评估 get_up 条件行动）。
+    """get_up：起身后触发（TC-05：downed → 起身 → 下次行动套间评估 get_up 条件行动）。
     匹配窗口：battle_state["downed"]=True 或 ai_state.exec_state == "downed"
     （C1 侧在起身动画后、L3 评估前保留标记一回合）。"""
     if bs.get("downed"):
@@ -358,7 +358,7 @@ def _eval_player_hp_below(trig, bs, ai, rng) -> bool:
 
 
 def _eval_turn_count(trig, bs, ai, rng) -> bool:
-    """turn_count：回合数比较（op 默认 >=；B1 内建口径）。battle_state["turn"]。"""
+    """turn_count：行动数比较（op 默认 >=；B1 内建口径）。battle_state["turn"]。"""
     op = trig.get("op", ">=")
     cur = int(bs.get("turn", 0))
     val = float(trig.get("value", 0))
@@ -407,7 +407,7 @@ def _eval_ally_dead(trig, bs, ai, rng) -> bool:
 
 
 def _eval_combo_broken(trig, bs, ai, rng) -> bool:
-    """combo_broken：本回合连招被打断（玩家 interrupt 命中 → 断链，contract §六接线；
+    """combo_broken：本次行动连招被打断（玩家 interrupt 命中 → 断链，contract §六接线；
     C1 在打断时置 battle_state["combo_broken"]=True）。"""
     return bool(bs.get("combo_broken"))
 
@@ -484,7 +484,7 @@ def _mark_triggered(ai: Dict[str, Any], sa: Mapping[str, Any], key: str,
 def _apply_post_state(ai: Dict[str, Any], sa: Mapping[str, Any],
                       bs: Mapping[str, Any]) -> None:
     """post_state 生效：ai_state.state 切到 post_state.state；turns 记入扩展键 post_state
-    {state, turns, until}（until = 当前回合 + turns，过期处理归 C1 回合边界）。"""
+    {state, turns, until}（until = 当前回合 + turns，过期处理归 C1 行动边界）。"""
     ps = sa.get("post_state")
     if not isinstance(ps, Mapping) or not ps.get("state"):
         return

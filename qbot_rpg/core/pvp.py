@@ -24,6 +24,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, Mapping, MutableMapping, Optional
 
+from qbot_rpg.data.gear_stats import combatant_updates
+
 # ---------------------------------------------------------------------------
 # settings.pvp 段配置（B-3：三态容错，对齐 fishing_cfg）
 # ---------------------------------------------------------------------------
@@ -144,7 +146,9 @@ def _combatant_of(player: Mapping[str, Any]) -> dict:
         tf = tf if isinstance(tf, (int, float)) else 0
         tp = tp if isinstance(tp, (int, float)) else 0
         cf = cf if isinstance(cf, (int, float)) else 0
-        v = (b + bf) * (1 + float(bp or 0)) + tf * (1 + float(tp or 0)) + cf
+        # 批⑧：pct 口径对齐 player_attributes（单位=百分点，5=+5%；原实现
+        # (1+bp) 把百分点当倍数 → dfn_pct 5 会算成 6 倍——接线前修正）
+        v = (b + bf) * (1 + float(bp or 0) / 100.0) + tf * (1 + float(tp or 0) / 100.0) + cf
         return max(1, int(v))
 
     result: Dict[str, Any] = {
@@ -186,6 +190,13 @@ def _combatant_of(player: Mapping[str, Any]) -> dict:
                 continue  # hp/mp 是资源非战斗 stat，保持既有档案血量口径
             if key not in result:
                 result[key] = _attr(key)
+    # 批⑧ 装备战斗桥：聚合 flat 中的战斗键 → combatant 直读字段（会心=百分点、可负；
+    # 耳栓封顶 2 / 超会心·属性会心封顶 3——键空间与封顶口径见 data.gear_stats）。
+    _gbonus = attrs.get("bonus") if isinstance(attrs, Mapping) else None
+    _gflat = _gbonus.get("flat") if isinstance(_gbonus, Mapping) else None
+    if isinstance(_gflat, Mapping):
+        for _gk, _gv in combatant_updates(_gflat).items():
+            result[_gk] = float(_gv) if _gk == "crit_bonus" else int(_gv)
     return result
 
 
@@ -300,7 +311,7 @@ def pvp_attack(ctx: MutableMapping[str, Any], skill_id: str) -> dict:
     """攻击锁定玩家（/攻击玩家 <技能序号>）。
 
     出参 dict: {ok, message, result?}——result 含 name/damage/hp/max_hp/ended 等
-    （回合结算或整场结算摘要）。
+    （行动结算或整场结算摘要）。
     流程：锁定目标解析 → 偷袭判定（战斗中可偷袭）→ 双方 combatant →
     BattleEngine.start(battle_type="pvp") → 回合制轮流 / 非回合制防守方一直防御 →
     pvp_settle（胜负结算 + 防刷）。
@@ -345,13 +356,13 @@ def pvp_attack(ctx: MutableMapping[str, Any], skill_id: str) -> dict:
     mode = cfg.get("mode", "turn_based")
     try:
         if mode == "free":
-            # 非回合制：进攻方连续输出，防守方本回合防御（在 player_act 之后注入）
+            # 非回合制：进攻方连续输出，防守方持续防御（在 player_act 之后注入）
             r = battle.player_act(action, params=ctx.get("params"))
             battle.enemy_act({"type": "guard"})
         else:
             r = battle.player_act(action, params=ctx.get("params"))
     except Exception:
-        return {"ok": False, "message": "回合结算失败"}
+        return {"ok": False, "message": "战斗结算失败"}
 
     return pvp_settle(ctx, battle, r, target, sneak=sneak)
 

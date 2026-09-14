@@ -109,7 +109,7 @@ _SKILLS = {
     "heavy_smash": {"id": "heavy_smash", "name": "重击", "type": "active", "mp_cost": 8,
                     "desc": "重击地面目标", "chain_refs": ["chain_heavy"]},
     "battle_qi": {"id": "battle_qi", "name": "战意", "type": "passive", "mp_cost": 0,
-                  "desc": "每回合回复少量 HP"},
+                  "desc": "每次行动回复少量 HP"},
     "counter": {"id": "counter", "name": "反击", "type": "trigger", "mp_cost": 0,
                 "desc": "受击时反击"},
     "mage_only": {"id": "mage_only", "name": "奥术弹", "type": "active", "mp_cost": 10,
@@ -214,8 +214,8 @@ def test_view_noarg_page1():
 def test_view_detail_three_layers():
     """/角色详细 → 完整三层明细（白值/加成/临时，2026-08-27 用户拍板 /角色详细 才显示）。"""
     out = cmd_view_detail(parse("/角色详细"), make_ctx())
-    assert "【力量】29（白值 15 ｜ 加成 +5·+10% ｜ 临时 +3·+20%）" in out
-    assert "【生命】30/100（白值 100 ｜ 加成 0 ｜ 临时 0）" in out
+    assert "【力量】29\n白值15，加成+5·+10%，临时+3·+20%" in out
+    assert "【生命】30/100\n白值100，加成0，临时0" in out
     assert "当前页" not in out  # 全量展示，无分页尾段
 
 
@@ -241,7 +241,7 @@ def test_view_clamp_last_page():
 def test_view_invalid_tpl12(raw):
     """裁决② + 3d §5.1：0/负数/非数字/超参 → TPL-12。"""
     out = cmd_view(parse(raw), make_ctx())
-    assert out == f"❌ 指令不正确：{raw}。输入 /帮助 查看可用指令。"
+    assert out == f"❌ 指令不正确：{str(raw).lstrip('/')}\n发 帮助 查看可用指令"
 
 
 def test_view_noarg_equiv_page1():
@@ -260,8 +260,8 @@ def test_attr_line_pure():
     attrs = bc._to_attributes(make_ctx())
     assert attr_line("str", "力量", 29, attrs) == "【力量】29"                       # 默认简洁版
     assert attr_line("hp", "生命", 100, attrs, current=30) == "【生命】30/100"
-    assert attr_line("str", "力量", 29, attrs, detail=True) == "【力量】29（白值 15 ｜ 加成 +5·+10% ｜ 临时 +3·+20%）"
-    assert attr_line("hp", "生命", 100, attrs, current=30, detail=True) == "【生命】30/100（白值 100 ｜ 加成 0 ｜ 临时 0）"
+    assert attr_line("str", "力量", 29, attrs, detail=True) == "【力量】29\n白值15，加成+5·+10%，临时+3·+20%"
+    assert attr_line("hp", "生命", 100, attrs, current=30, detail=True) == "【生命】30/100\n白值100，加成0，临时0"
 
 
 # ---------------------------------------------------------------------------
@@ -299,7 +299,7 @@ def test_bag_clamp_last_page():
 def test_bag_invalid_tpl12(raw):
     """裁决②：0/负数/非数字/超参 → TPL-12。"""
     out = cmd_bag(parse(raw), make_ctx())
-    assert out == f"❌ 指令不正确：{raw}。输入 /帮助 查看可用指令。"
+    assert out == f"❌ 指令不正确：{str(raw).lstrip('/')}\n发 帮助 查看可用指令"
 
 
 def test_bag_empty():
@@ -349,7 +349,9 @@ def test_equip_view_page1():
     assert "头部" not in out and "手部" not in out
     assert "腿部" not in out and "脚部" not in out
     assert "当前页" not in out         # 不加翻页
-    assert lines[-1] == "Tip:发送'使用 序号'穿戴装备，如'使用 1'"
+    # 2026-09-12 专项·尾行 Tip 统一：表键 tip_equip（免斜杠「发 使用 <序号> 穿戴装备」）
+    assert lines[-1] == "Tip:发 使用 <序号> 穿戴装备"
+    assert "发送'" not in out
 
 
 def test_equip_view_page2():
@@ -377,11 +379,11 @@ def test_equip_invalid_page_tpl12(raw):
 
 @pytest.mark.parametrize("raw", ["/装备 abc", "/装备 铁剑"])
 def test_equip_name_form_friendly_hint(raw):
-    """P2-11 QA：名称形式（非数字非子词，如 铁剑/abc）→ 友好提示引导 /装备 穿 <序号>
-    （命令合法，不走 TPL-12 泛化拒绝）。"""
+    """P2-11 QA：名称形式（非数字非子词，如 铁剑/abc）→ 友好提示引导 使用 <序号>
+    （命令合法，不走 TPL-12 泛化拒绝；批4·路L 免斜杠重做）。"""
     out = cmd_equip(parse(raw), make_ctx())
     assert out == bc.TPL_EQUIP_NAME_HINT
-    assert "/使用 <序号>" in out
+    assert "使用 <序号>" in out
 
 
 def test_equip_wear():
@@ -391,11 +393,11 @@ def test_equip_wear():
 
 
 def test_equip_wear_compact():
-    """/装备穿3（紧凑）→ 解析器 args[0]="穿3" → 非数字名称形态 → 友好提示引导 /装备 穿 <序号>
+    """/装备穿3（紧凑）→ 解析器 args[0]="穿3" → 非数字名称形态 → 友好提示引导 使用 <序号>
     （P2-11 QA：紧凑子词+序号需空格，给友好提示而非 TPL-12 泛化拒绝）。"""
     out = cmd_equip(parse("/装备穿3"), make_ctx())
     assert out == bc.TPL_EQUIP_NAME_HINT
-    assert "/使用" in out
+    assert "使用 <序号>" in out
 
 
 @pytest.mark.parametrize("raw", ["/装备 穿", "/装备 穿 abc", "/装备 穿 0"])
@@ -476,42 +478,78 @@ def test_equip_line_pure():
 # ---------------------------------------------------------------------------
 
 def test_skill_page1():
-    """/技能 → LV 行固定头部 + 技能行（类型/MP/描述/派生指向）+ 5 条/页 + TPL-08。"""
+    """/技能 → 头部「【技能列表】」+ 技能块（`{序号}. {名称}（{类型}）` + 简述 + 分隔线）
+    + 5 条/页 + TPL-08（2026-09-12 用户样稿：普攻不出现在列表）。"""
     out = cmd_skill(parse("/技能"), make_ctx())
     lines = out.splitlines()
-    assert lines[0] == "【技能】Lv3.阿伟（战士）"
-    assert lines[1] == "技能 6 项"
-    assert "1. 攻击（普攻） ｜ 对目标发起普通攻击" in out            # basic 固定第 1 位；MP 0 不显示
-    assert "2. 火球术（主动） 12 MP ｜ 对目标造成火焰伤害 ｜ 可派生成：陨星落" in out
-    assert "3. 重击（主动） 8 MP ｜ 重击地面目标 ｜ 可派生成：陨星落" in out
-    assert "4. 陨星落（主动） 30 MP ｜ 跃空重击倒地目标" in out        # 无派生链 → 无指向
-    assert "5. 战意（被动） ｜ 每回合回复少量 HP" in out
+    assert lines[0] == "【技能列表】"
+    assert "1. 攻击（普攻）" not in out                     # 普攻不入列表（用户 2026-09-12 拍板）
+    assert "2. 火球术（主动）" in out
+    assert "3. 重击（主动）" in out
+    assert "4. 陨星落（主动）" in out
+    assert "5. 战意（被动）" in out
+    assert "————" in out                                   # 条目分隔线（样稿形态）
     assert "当前页：1/2" in out
+    # 简述行：内容包 brief 优先，缺省机制兜底标签（火球术：耗灵能 + 有派生链）
+    assert "【消耗】【派生】" in out
 
 
 def test_skill_page2():
     """/技能 2 → 第 2 页（反击·触发）。"""
     out = cmd_skill(parse("/技能 2"), make_ctx())
-    assert "6. 反击（触发） ｜ 受击时反击" in out
+    assert "6. 反击（触发）" in out                          # 序号沿用完整列表（普攻占 1）
     assert "当前页：2/2" in out
 
 
 def test_skill_job_filter():
-    """/技能 职业过滤：job_restrict=['mage'] 的技能对战士不可见（技能 6 项，无 奥术弹）。"""
+    """/技能 职业过滤：job_restrict=['mage'] 的技能对战士不可见（列表无 奥术弹）。"""
     out = cmd_skill(parse("/技能"), make_ctx())
     assert "奥术弹" not in out
-    assert "技能 6 项" in out
-    # 法师可见 奥术弹（技能 7 项：basic/active×4/被动/触发/法师专属）
+    # 法师可见 奥术弹（完整列表第 7 位：basic/active×4/被动/触发/法师专属）
     out_mage = cmd_skill(parse("/技能"), make_ctx(job_id="mage", job_name="法师"))
-    assert "奥术弹（主动） 10 MP ｜ 法师专属" in out_mage
-    assert "技能 7 项" in out_mage
+    assert "4. 奥术弹（主动）" in out_mage      # 法师完整列表内序号（active 按 id 排序）
 
 
-def test_skill_derived_names_pure():
-    """skill_line 派生指向：chain_refs → steps[].to 技能名（可派生成：XX）。"""
+def test_skill_derived_names_in_detail():
+    """派生指向：列表不再带派生行 → 改为详情面板输出（发 技能派生 查看条件）。
+
+    2026-09-12 收尾（遗留 #37）：派生行整行全量显示、不折行（同「怪物状态」行口径）——
+    文案走 `skill_info_derived`（有意豁免，登记于表 meta.prose_keys）。
+    """
+    from qbot_rpg.commands.basic_commands import _render_skill_info
+
     ctx = make_ctx()
-    assert "可派生成：陨星落" in skill_line(2, "fireball", ctx)
-    assert "可派生成：" not in skill_line(4, "meteor", ctx)  # 无 chain_refs
+    fireball = _render_skill_info(ctx, "fireball")
+    assert "陨星落" in fireball
+    assert "派生：陨星落（发 技能派生 查看条件）" in fireball.splitlines()
+    assert "派生" not in _render_skill_info(ctx, "meteor")    # 无 chain_refs → 无派生行
+    assert "————" not in skill_line(2, "fireball", ctx).split("\n")[1]   # 第 2 行是简述不是分隔
+
+
+def test_skill_derived_line_full_display_no_wrap():
+    """遗留 #37 有意豁免：派生行整行全量显示、不折行（9 个派生名约 50 字仍单行）。
+
+    口径来源：2026-09-12 用户拍板（同「怪物状态」行）。渲染层不做折行/精简，
+    窄屏自然折行由手机端承担；键 `skill_info_derived` 登记于表 meta.prose_keys。
+    """
+    from qbot_rpg.commands.basic_commands import _render_skill_info
+
+    import unicodedata
+
+    names = [f"派生技{i}" for i in range(1, 10)]
+    skills = {f"d{i}": {"id": f"d{i}", "name": n, "type": "active"}
+              for i, n in enumerate(names, 1)}
+    skills["root"] = {"id": "root", "name": "根技", "type": "active", "chain_refs": ["c"]}
+    steps = [{"from": "root", "to": f"d{i}"} for i in range(1, 10)]
+    ctx = make_ctx(skills=skills, skill_chains={"c": {"id": "c", "steps": steps}})
+    derived_lines = [ln for ln in _render_skill_info(ctx, "root").splitlines()
+                     if ln.startswith("派生：")]
+    assert len(derived_lines) == 1
+    line = derived_lines[0]
+    assert line == "派生：" + "、".join(names) + "（发 技能派生 查看条件）"
+    assert "\n" not in line                                  # 渲染层不折行（整行全量）
+    half = sum(2 if unicodedata.east_asian_width(ch) in ("W", "F") else 1 for ch in line)
+    assert half > 28                                          # 确超 28 半角而行不拆（有意豁免）
 
 
 def test_skill_rows_order():
@@ -525,13 +563,13 @@ def test_skill_rows_order():
 def test_skill_invalid_tpl12(raw):
     """裁决②：0/负数/非数字/超参 → TPL-12。"""
     out = cmd_skill(parse(raw), make_ctx())
-    assert out == f"❌ 指令不正确：{raw}。输入 /帮助 查看可用指令。"
+    assert out == f"❌ 指令不正确：{str(raw).lstrip('/')}\n发 帮助 查看可用指令"
 
 
 def test_skill_empty():
-    """/技能 无技能 → 仅 LV 行固定头部（技能 0 项），无页脚。"""
+    """/技能 无技能 → 仅头部「【技能列表】」，无页脚。"""
     out = cmd_skill(parse("/技能"), make_ctx(skills={}))
-    assert out == "【技能】Lv3.阿伟（战士）\n技能 0 项"
+    assert out == "【技能列表】"
 
 
 # ---------------------------------------------------------------------------
@@ -588,7 +626,7 @@ def test_help_group_compact_page():
     out = cmd_help(parse("帮助冒险2"), make_ctx())
     assert "6. 背包筛选 —— 按类型筛选背包" in out
     assert "当前页：2/4" in out
-    assert "帮助<组名><页数>" in out  # 组页尾 Tip 教紧凑翻页
+    assert "发 帮助 <组名> <页数> 翻页" in out  # 组页尾 Tip（免斜杠 + 翻页提示）
 
 
 def test_help_dir_compact_page_gm():
@@ -596,7 +634,7 @@ def test_help_dir_compact_page_gm():
     out = cmd_help(parse("帮助2"), make_ctx(is_gm=True))
     assert "GM" in out
     assert "当前页：2/2" in out
-    assert "帮助<页数>" in out  # 目录尾 Tip 教紧凑翻页
+    assert "发 帮助 <页数> 翻页" in out  # 目录尾 Tip 教紧凑翻页（免斜杠口径）
 
 
 def test_help_group_compact_bad_suffix_tpl12():
@@ -617,7 +655,7 @@ def test_help_group_single_page_no_footer():
 def test_help_unknown_group_tpl12():
     """/帮助 不存在组 → TPL-12。"""
     out = cmd_help(parse("/帮助 不存在"), make_ctx())
-    assert out == "❌ 指令不正确：/帮助 不存在。输入 /帮助 查看可用指令。"
+    assert out == "❌ 指令不正确：帮助 不存在\n发 帮助 查看可用指令"
 
 
 @pytest.mark.parametrize("raw", ["/帮助 0", "/帮助 -1", "/帮助 abc", "/帮助 冒险 0", "/帮助 冒险 abc"])
@@ -637,14 +675,17 @@ def test_help_directory_clamp_normal():
 def test_help_unregistered_guide():
     """/帮助 未注册 → 注册引导版（B6 豁免；注册/状态/背包 三项，4f B6 裁决原文）。"""
     out = cmd_help(parse("/帮助"), make_ctx(registered=False))
-    assert "【新手引导】发 注册 名字 职业 创建角色" in out
-    assert "注册 —— 创建角色（未注册必需）" in out
-    assert "状态 —— 查看角色状态面板" in out
-    assert "背包 —— 查看背包物品" in out
+    # 批5·路O：basic_register_guide 重做（免斜杠、去「——」装饰、标题独立行）
+    assert "【新手引导】" in out
+    assert "发 注册 名字 职业" in out
+    assert "注册：创建角色（必需）" in out
+    assert "状态：查看角色状态面板" in out
+    assert "背包：查看背包物品" in out
+    assert "发 帮助 查看完整列表" in out
     # P2-6：未注册玩家任意 /帮助（含解析错误）均返回引导版（B6 豁免前置）
     out2 = cmd_help(parse("/帮助 xx!"), make_ctx(registered=False))
     assert "【新手引导】" in out2
-    assert "状态 —— 查看角色状态面板" in out2   # 引导版为 注册/状态/背包（非 角色）
+    assert "状态：查看角色状态面板" in out2   # 引导版为 注册/状态/背包（非 角色）
 
 
 def test_help_groups_constants():
@@ -737,7 +778,7 @@ def test_footer_tpl08_exact():
     assert "当前页：1/2(全部)" in cmd_bag(parse("/背包"), ctx)       # /背包 自定义模板
     # Tip 随机轮换（2026-09-06 用户拍板：每次随机一条）→ 只断言 Tip 行存在
     assert any("Tip:" in ln for ln in cmd_bag(parse("/背包"), ctx).splitlines())
-    assert "Tip:发送'使用 序号'穿戴装备，如'使用 1'" in cmd_equip(parse("/装备"), ctx)   # 意见一：不加翻页
+    assert "Tip:发 使用 <序号> 穿戴装备" in cmd_equip(parse("/装备"), ctx)   # 意见一：不加翻页（tip_equip）
     assert "当前页：1/2" in cmd_skill(parse("/技能"), ctx)
     assert "当前页：1/4" in cmd_help(parse("/帮助 冒险"), ctx)  # 2026-09-06 冒险 16 条 4 页
 
@@ -775,3 +816,143 @@ def test_pure_helpers_no_nonebot():
     for name in ("attr_line", "bag_line", "equip_line", "skill_line", "group_page_line",
                  "resolve_equip_slot", "parse_page_arg", "view_header", "skill_rows"):
         assert callable(getattr(bc, name)), name
+
+
+# ---------------------------------------------------------------------------
+# 技能标签兜底：combo 三变体 + 文案迁表（M5/M7 复核修复 2026-09-12）
+# ---------------------------------------------------------------------------
+
+def test_derived_tags_combo_variants():
+    """M5：combo/combo_preserve/combo_push 三变体各自出标签（brief 为空时的机制兜底）。"""
+    ctx = make_ctx()
+    assert "【连段】" in bc._derived_tags({"tag": "combo"}, ctx)
+    assert "【保留】" in bc._derived_tags({"tag": "combo_preserve"}, ctx)
+    assert "【推进】" in bc._derived_tags({"tag": "combo_push"}, ctx)
+    assert bc._derived_tags({"tag": "none"}, ctx) == []
+
+
+def test_skill_tag_labels_migrated_to_table():
+    """M7：标签文案来自全量表键（skill_tag_*），代码零中文字面量 + 内容包可覆盖。"""
+    from qbot_rpg.core.templates import DEFAULT_TEMPLATES
+
+    for tid, key in bc._SKILL_TAG_KEYS.items():
+        assert key in DEFAULT_TEMPLATES, f"{tid} 缺表键 {key}"
+        assert DEFAULT_TEMPLATES[key] == bc.tpl_of(None, key)
+
+    over = make_ctx(templates={"skill_tag_combo_push": "《推》", "skill_tag_damage": "《伤》"})
+    tags = bc._derived_tags({"tag": "combo_push", "power": 100}, over)
+    assert "《推》" in tags and "《伤》" in tags and "【伤害】" not in tags
+
+
+def test_demo_combo_variant_skills_get_fallback_tags():
+    """M5 实机内容：剑舞(combo_push)/平息战意(combo_preserve) brief 为空 → 兜底标签不缺失。"""
+    import json
+    import pathlib
+
+    repo = pathlib.Path(__file__).resolve().parents[2]
+    rows = json.loads(
+        (repo / "content" / "test_demo" / "skills.json").read_text(encoding="utf-8"))
+    by_id = {s.get("id"): s for s in rows if isinstance(s, dict)}
+    ctx = make_ctx()
+    assert "【推进】" in bc._derived_tags(by_id["blade_dance"], ctx)
+    assert "【保留】" in bc._derived_tags(by_id["calm_fury"], ctx)
+
+
+# ---------------------------------------------------------------------------
+# T4（复核修复 2026-09-12）：`_derived_tags` 全分支 + brief 非空不落兜底
+# ---------------------------------------------------------------------------
+
+def test_derived_tags_all_mechanism_branches():
+    """T4：逐个机制分支断言（标签文案经表键取，避免写死中文）。"""
+    from qbot_rpg.core.templates import tpl_of
+
+    def label(tid: str) -> str:
+        return tpl_of(None, bc._SKILL_TAG_KEYS[tid])
+
+    def tags(defn):
+        return bc._derived_tags(defn, make_ctx())
+
+    assert tags({}) == []                                   # 无机制 → 无标签
+    assert tags({"kind": "damage"}) == [label("damage")]
+    assert tags({"power": 100}) == [label("damage")]        # power 亦触发伤害
+    assert label("cost") in tags({"mp_cost": 5})
+    assert label("cost") in tags({"consume_marks": ["m1"]})
+    assert label("cost") in tags({"energy_cost": {"focus": 1}})
+    assert tags({"tag": "combo"}) == [label("combo")]
+    assert tags({"tag": "combo_preserve"}) == [label("combo_preserve")]
+    assert tags({"tag": "combo_push"}) == [label("combo_push")]
+    assert tags({"tag": "none"}) == []
+    assert label("derive") in tags({"chain_refs": ["c1"]})
+    assert label("air") in tags({"air_policy": "jump"})
+    assert label("dodge") in tags({"counter_type": "dodge"})
+    assert label("parry") in tags({"counter_type": "parry"})
+    assert label("move") in tags({"effects": [{"type": "reposition"}]})
+    assert label("move") in tags({"effects": [{"effect": "reposition"}]})
+    assert label("part") in tags({"break_power": 10})
+    assert label("multi") in tags({"hits": 2})
+    assert label("armor") in tags({"armor": True})
+    assert label("interrupt") in tags({"interrupt": True})
+    # 组合分支：有序（_SKILL_TAG_ORDER 决定顺序）
+    combo = tags({"power": 100, "tag": "combo_push", "hits": 3, "armor": True})
+    assert combo == [label("damage"), label("combo_push"), label("multi"), label("armor")]
+
+
+def test_skill_brief_prefers_nonempty_content_brief():
+    """T4：`brief` 取值三档（2026-09-13 用户补充口径）。
+
+    「简述」不是独立的「标签」门类 = 自由文本，作者可写标签、可写其他文本、**也可直接留空**：
+      - 非空文本 → 原样返回（不落机制兜底）
+      - **显式空串/空白 → 明确留空 → 返回 ""（不再兜底成机制标签）**
+      - 字段缺失（未填过）→ 机制标签兜底
+    """
+    ctx = make_ctx(skills={"s1": {"id": "s1", "name": "剑技", "type": "active",
+                                  "power": 100, "brief": "  自由文本简述  "}})
+    assert bc.skill_brief(ctx, "s1") == "自由文本简述"
+    assert "【伤害】" not in bc.skill_brief(ctx, "s1")
+
+    blank = make_ctx(skills={"s1": {"id": "s1", "name": "剑技", "type": "active",
+                                    "power": 100, "brief": "   "}})
+    assert bc.skill_brief(blank, "s1") == ""        # 显式留空 → 不出简述行
+    assert "【伤害】" not in bc.skill_brief(blank, "s1")
+
+    absent = make_ctx(skills={"s1": {"id": "s1", "name": "剑技", "type": "active",
+                                     "power": 100}})
+    assert "【伤害】" in bc.skill_brief(absent, "s1")   # 字段缺失 → 机制兜底
+
+
+# ---------------------------------------------------------------------------
+# R5（复核修复 2026-09-12）：技能列表页高断言（5 条/页 × 3 行 + 头 + 尾 ≤ 17）
+# ---------------------------------------------------------------------------
+
+def test_skill_page_height_bounded():
+    """R5：一页 5 技能（行+简述+分隔线 = 3 行/条）→ 页高有界。
+
+    口径：头 1 行 + 5×3=15 行 + 尾 2 行（`当前页 x/y` + Tip 翻页提示）= 18 行为上限；
+    本测试即**满页最坏形态**，断言恰好 18 行（新增第 4 行/条或页脚增行都会失败）。
+    """
+    skills = {
+        f"s{i}": {"id": f"s{i}", "name": f"技能{i}", "type": "active",
+                  "mp_cost": i, "power": 10, "brief": f"简述{i}"}
+        for i in range(1, 11)                 # 10 条 → 每页 5 条，两页
+    }
+    ctx = make_ctx(skills=skills)
+    out = cmd_skill(parse("/技能"), ctx)
+    lines = out.splitlines()
+    assert lines[0] == "【技能列表】"
+    assert sum(1 for ln in lines if ln == "————") == 5, "每页 5 条技能各带分隔线"
+    assert "当前页：1/2" in lines
+    assert len(lines) == 18, f"技能列表满页页高漂移：{len(lines)} 行\n{out}"
+
+
+def test_skill_page_height_bounded_real_pack():
+    """R5 回归：test_demo 真实技能列表页高也不超契约（防内容包简述撑高）。"""
+    import json
+    import pathlib
+
+    repo = pathlib.Path(__file__).resolve().parents[2]
+    rows = json.loads(
+        (repo / "content" / "test_demo" / "skills.json").read_text(encoding="utf-8"))
+    skills = {s["id"]: s for s in rows if isinstance(s, dict) and s.get("id")}
+    ctx = make_ctx(skills=skills, jobs={"berserker": {"name": "狂战士"}}, job_id="berserker")
+    out = cmd_skill(parse("/技能"), ctx)
+    assert len(out.splitlines()) <= 18, out

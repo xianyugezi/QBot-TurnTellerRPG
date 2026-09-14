@@ -32,7 +32,8 @@ PVP 语义（用户 2026-08-28 + 2026-09-01 拍板）：
        ctx[\"skills\"] 配置序，名称/id 亦可；不加 `*`（与 /攻击 语义一致）。
   F-4  错误模板 4 类（CMD-R05）：缺参（pvp_err_missing）/ 超参（pvp_err_too_many）/
        未知分隔符（pvp_err_unknown_sep）/ 保留字符（pvp_err_reserved，黄提示不拦截）
-       ——对齐 parsers.ERR_* 常量；渲染统一 tpl_of（pvp_tpl 分区，内容包可覆盖）。
+       ——对齐 parsers.ERR_* 常量；渲染统一 tpl_of（模板全量表
+       qbot_rpg/core/templates/template_table.json，内容包可覆盖）。
   F-5  对方状态展示：引擎返回 target 映射（level/job/hp/max_hp/equipment）→
        pvp_lock_status_* 模板逐行渲染；字段缺省整行降级（对齐 status_commands
        target_line P2-9 口径，防 None 拼接）。装备摘要 = equipment 映射按槽位
@@ -50,7 +51,8 @@ PVP 语义（用户 2026-08-28 + 2026-09-01 拍板）：
        CommandSpec whitelisted=True 注册，无 GM 标记。
 
 铁律：零 NoneBot import；纯函数确定性；渲染输出无 emoji（仅 ✅/❌ + 排版符号）；
-模板配置化（tpl_of + pvp_tpl 分区）；错误模板文案唯一源 = pvp_tpl。
+模板配置化（tpl_of + 模板全量表）；错误模板文案唯一源 = 模板全量表
+（qbot_rpg/core/templates/template_table.json，pvp_* 20 键）。
 """
 
 from __future__ import annotations

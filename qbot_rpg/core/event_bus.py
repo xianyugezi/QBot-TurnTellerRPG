@@ -8,7 +8,7 @@
   - docs/细化/细化_M7_NPC对话接线.md N-03（RN-09~RN-10：6 预置事件 + 双表+实例日志三路）
   - docs/细化/细化_M7_交互补全总纲.md ADR-05（bump_event 双表 + event_log 环形）
   - docs/细化/细化_3f_单机向体验.md（E-01 事件实例模型 / D-01 零新存储：persistent_state）
-  - qbot_rpg/engine/condition_engine.py（event_counts 消费：nested {key:{target:count}} 与
+  - qbot_rpg/core/condition_engine.py（event_counts 消费：nested {key:{target:count}} 与
     flat {key:count} 双形态，L366-391 _read_counter；[事件:副本通关:熔岩洞窟] rsplit 拆 param）
 
 【工程补白 · 显式标注】

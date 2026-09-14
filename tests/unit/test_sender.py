@@ -100,17 +100,17 @@ def test_cq_escape_idempotent_safe():
 
 def test_tpl12_exact_text():
     """TC-20 对应：指令出错统一文案逐字。"""
-    assert format_tpl12("/攻撃") == "❌ 指令不正确：/攻撃。输入 /帮助 查看可用指令。"
+    assert format_tpl12("/攻撃") == "❌ 指令不正确：攻撃\n发 帮助 查看可用指令"
     # 文案与唯一源常量一致（未自造变体）
     assert format_tpl12("x") == TPL_ERR_BAD_COMMAND.format(fragment="x")
 
 
 def test_tpl12_truncate_20_chars():
-    """3d §5.1：原指令片段截取前 20 字符，超过加 …。"""
+    """3d §5.1：原指令片段剥前导斜杠后截取前 20 字符，超过加 …（M8 免斜杠）。"""
     long_frag = "/" + "长" * 30
     out = format_tpl12(long_frag)
-    assert out == TPL_ERR_BAD_COMMAND.format(fragment="/" + "长" * 19 + "…")
-    assert "长" * 20 not in out
+    assert out == TPL_ERR_BAD_COMMAND.format(fragment="长" * 20 + "…")
+    assert "长" * 21 not in out
 
 
 def test_tpl13_exact_text():
@@ -130,14 +130,14 @@ def test_tpl14_exact_text():
 def test_page_error_tpl12_invalid_page():
     """裁决②：0/负数/非数字页码 → TPL-12 统一报错 + 页脚 TPL-08 指引（不静默兜底页）。"""
     out = page_error_tpl12("/背包 0", "背包", 3, 14)
-    assert "❌ 指令不正确：/背包 0。输入 /帮助 查看可用指令。" in out
-    assert out.split("\n")[-1] == "— 第 1/3 页 · 共 14 条 · 输入 /背包 页码 翻页 —"
+    assert "❌ 指令不正确：背包 0\n发 帮助 查看可用指令" in out
+    assert out.split("\n")[-1] == "— 第 1/3 页 · 共 14 条 · 发 背包 页码 翻页 —"
 
 
 def test_page_error_tpl12_uses_canonical_source():
     """页码报错文案来自唯一源 errors.py 常量（3d D-04），非本模块自造。"""
     assert page_error_tpl12("/商店 abc", "商店", 2, 9).startswith(
-        TPL_ERR_BAD_COMMAND.format(fragment="/商店 abc")
+        TPL_ERR_BAD_COMMAND.format(fragment="商店 abc")
     )
 
 

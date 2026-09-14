@@ -38,7 +38,7 @@ def test_rsm_02_start_snapshot_default_zero_without_registry():
 
 
 def test_rsm_02_turn_boundary_snapshot_carries_generation():
-    """回合边界/中断快照沿用 registry_generation（to_snapshot 深拷贝 _snap 保留世代）。"""
+    """行动边界/中断快照沿用 registry_generation（to_snapshot 深拷贝 _snap 保留世代）。"""
     eng = BattleEngine(registry=_stub_registry(3)).start(PLAYER, ENEMY, random_seed=12)
     assert eng.to_snapshot().get("registry_generation") == 3  # start 后任意快照均带世代
 

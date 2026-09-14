@@ -11,7 +11,7 @@ D-01 契约（设计稿 08 号战报面）：
 - @白名单 4 类：``boss_first``（Boss 首破）／``urgent``（紧急事件）／
   ``personal``（个人战报）／``system``（系统公告）——白名单类**不合并、
   即时直发**并可携带 mention；
-- emoji 放行经 ``qbot_rpg.core.templates.cloudsea_emoji`` 校验（D-01）。
+- emoji 放行经 ``qbot_rpg.core.cloudsea_emoji`` 校验（D-01）。
 """
 from __future__ import annotations
 

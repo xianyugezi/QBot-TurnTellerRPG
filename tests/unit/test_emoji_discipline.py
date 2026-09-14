@@ -25,7 +25,16 @@ _ALLOWED = {"\u2705", "\u274c"}  # ✅ ❌
 # 豁免名单（文件:子串）：描述性/刻意保留的非渲染字符串；每项需注明理由
 WHITELIST: dict[str, list[str]] = {
     # strip_icon_emoji 的 emoji 字符范围定义（检测/剥离代码本身，非渲染输出；data/emoji_sanitize.py 为 M5-10 迁移后的实现位置）
-    "data/emoji_sanitize.py": ["⌀-⏿⬀-⯿🀀-🫿☀-✄✆-❋❍-➿"],
+    "data\emoji_sanitize.py": ["⌀-⏿⬀-⯿🀀-🫿☀-✄✆-❋❍-➿︀-️‍"],  # 尾段 ︀-️‍（VS16/ZWJ）系云海适配追加（fe0f/200d 剥离覆盖）；key 反斜杠＝Windows rel 匹配
+    # —— 云海猎团内容包（cloudsea-pack）命令/文案层：D-01 内容包 emoji 白名单自管
+    # （cloudsea_emoji.py 校验同源，框架渲染层铁律不含游戏包命令文案）——
+    # 合并适配（十期批次 158 复核）按文件登记在用 emoji 集合；每项理由＝内容包
+    # 战报八段/命令反馈的既成视觉语汇，非框架渲染输出。
+    "commands\cloudsea_commands.py": ["‍", "⚠", "⚡", "❓", "❤", "🌊", "🎯", "🏃", "💨", "📜", "😮", "🤖", "️"],
+    "commands\cloudsea_deep_commands.py": ["⚗", "❓", "️", "📓", "📜"],
+    "commands\cloudsea_extra_commands.py": ["⚠", "️", "🌅", "📋", "📜", "🔍", "🧭"],
+    # cloudsea_emoji 的 emoji 字符范围定义（检测/剥离代码本身，同 emoji_sanitize 先例）
+    "core\cloudsea_emoji.py": ["☀", "✅", "❌", "➿", "️", "🀀", "🫿"],
 }
 
 REPO = pathlib.Path(__file__).resolve().parents[2] / "qbot_rpg"
@@ -134,3 +143,24 @@ def test_strip_icon_emoji_registry_contract():
     assert strip_icon_emoji("💰 钱袋") == " 钱袋"
     # 非字符串容错
     assert strip_icon_emoji(None) == ""
+
+
+def test_template_table_no_emoji():
+    """全量模板表（template_table.json）值零非白名单 emoji（2026-09-12 消息模板重构）。"""
+    import json
+
+    table = REPO / "core" / "templates" / "template_table.json"
+    if not table.exists():
+        return
+    doc = json.loads(table.read_text(encoding="utf-8"))
+    # 云海九期 215 战报八段 D-01 内容包白名单登记位（❓ 不明动作 / 🌀 蓄势待发，
+    # 与 content/cloudsea 装配经 cloudsea_emoji 校验同源）——批次 158 合并适配。
+    allowed = _ALLOWED | {"❓", "🌀"}
+    bad = []
+    for key, value in (doc.get("templates") or {}).items():
+        for ch in set(value):
+            if ch in allowed:
+                continue
+            if _EMOJI.match(ch):
+                bad.append((key, ch))
+    assert not bad, f"模板表含非白名单 emoji：{bad[:10]}"

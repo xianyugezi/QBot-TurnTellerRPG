@@ -1,5 +1,16 @@
 """战斗指令接线 battle_commands.py（M5-08 · 战斗接线 + 消息合并 · qbot_rpg/commands/battle_commands.py）。
 
+归属：Agent 4 · 接线集成（Integration），CTB 重写 Wave B（P0-4）。
+CTB 变更（2026-09-10）：
+  - 「一轮」语义退役——CTB 下无回合边界。一次用户操作 = 一次玩家行动 + 调度器自动推进的
+    NPC 连锁；两者合并为 1 条消息（铁律 2「一轮 1 条」在 CTB 下读作「一次操作 1-2 条」）。
+  - `dispatch_round` 保留为**薄兼容外壳**（`__all__` 导出符号 + 既有测试引用），
+    内部委托 `dispatch_batch`（NPC 连锁批量）与玩家单行动渲染路径。
+  - 连段段行（BREP-21）过滤键由 `turn` 改为 `action_seq`（CTB 权威行动计数；
+    `turn` 仅作次要回退键）。详见 `_build_segments` docstring。
+硬约束：commands 层允许 import core/world（G0 矩阵合规）；M43 零定时器词表避让；
+异常一律兜底不向上抛（渲染/发送失败降级不崩）。
+
 依据：
   - docs/m5_shared_contract.md §二/§五（铁律 2/7/9：一轮=1 条 / 战斗开始=1 条 /
     战斗结束=1 条 / 单次操作 ≤1-2 条、发送走统一出口 Sender、渲染顺序对齐判定顺序）
@@ -9,7 +20,7 @@
     apply_message_prefix；无裸 send；验收：一轮 1 条/开始 1 条/结束 1 条）
   - docs/细化/细化_3d_消息模板规范.md §3.1（消息合并策略承接表：战斗一轮 1 条
     （玩家行动+怪物反击合并）/ 战斗开始 1 条 / 战斗结束 1 条；单次操作最多 1-2 条）
-  - docs/细化/细化_5e_战斗战报格式.md（军规1 前缀只加合并消息首行 / 军规3 单回合单条 /
+  - docs/细化/细化_5e_战斗战报格式.md（军规1 前缀只加合并消息首行 / 军规3 单行动单条 /
     军规5 结算一次性：经验/掉落只在战斗结束消息输出一次）
   - qbot_rpg/core/battle.py（引擎 1841 行：start/player_act → TurnReport(outcomes)，
     rewards 由世界层 1g4 消费 result 后统一结算——_settle 注释）
@@ -68,6 +79,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import Any, Callable, List, Mapping, MutableMapping, Optional, Sequence, Tuple, cast
@@ -84,12 +96,16 @@ from .sender import format_tpl12
 
 # core 层消费（commands → core 正向依赖，G0 矩阵合规）
 from qbot_rpg.core.message_format.battle_render import (
+    render_battle_action_batch,
     render_battle_end,
     render_battle_round,
     render_battle_start,
 )
-from qbot_rpg.core.templates import tpl_of  # 消息模板配置化（2026-08-31 用户拍板）
-from qbot_rpg.core.templates.battle_tpl import DEFAULT_TEMPLATES as _BATTLE_TPL  # 兼容导出默认文案
+# 全量表（迁移期聚合入口）+ tpl_of：批4 路J 起 mock 目标面板/基础交互文案已入表，
+# 兼容导出常量改读聚合表（对齐 checkin/forge 已迁键口径）。
+from qbot_rpg.core.templates import DEFAULT_TEMPLATES as _ALL_TPL, tpl_of  # 消息模板配置化
+
+_LOGGER = logging.getLogger(__name__)
 
 __all__ = [
     # 指令名
@@ -98,12 +114,12 @@ __all__ = [
     "TPL_NO_BATTLE", "TPL_NO_SKILL",
     "TPL_NO_ITEM_ARG", "TPL_NO_ITEM",
     "TPL_FLEE_OK", "TPL_FLEE_FAILED",
-    # 回合数据增强
+    # 行动数据增强
     "EnrichedTurnReport", "enrich_round_report",
     # 前缀装配 / 发送管线
     "apply_battle_prefix", "BattlePipeline",
-    # 一轮派发（合并策略落地）
-    "dispatch_round",
+    # CTB 派发（NPC 连锁批量 + 玩家单行动薄壳）
+    "dispatch_batch", "dispatch_round",
     # 指令处理器（parsed + ctx → {"ok","sent","message"}）
     "cmd_battle_attack",
     "cmd_battle_target",
@@ -150,37 +166,46 @@ _TPL_NO_BATTLE_MAP_MONSTER_KEY = "battle_no_battle_map_monster"
 _TPL_RESULT_END_KEY = "battle_result_end"
 _TPL_RESULT_ROUND_KEY = "battle_result_round"
 
-# 向后兼容导出（= battle_tpl 默认文案；渲染一律 tpl_of(ctx, _KEY)，内容包可覆盖）
-TPL_NO_BATTLE = _BATTLE_TPL[_TPL_NO_BATTLE_KEY]
-TPL_NO_SKILL = _BATTLE_TPL[_TPL_NO_SKILL_KEY]
-TPL_NO_ITEM_ARG = _BATTLE_TPL[_TPL_NO_ITEM_ARG_KEY]
-TPL_NO_ITEM = _BATTLE_TPL[_TPL_NO_ITEM_KEY]
-TPL_FLEE_OK = _BATTLE_TPL[_TPL_FLEE_OK_KEY]
-TPL_FLEE_FAILED = _BATTLE_TPL[_TPL_FLEE_FAILED_KEY]
+# 向后兼容导出（= 全量表默认文案；渲染一律 tpl_of(ctx, _KEY)，内容包可覆盖）
+TPL_NO_BATTLE = _ALL_TPL[_TPL_NO_BATTLE_KEY]
+TPL_NO_SKILL = _ALL_TPL[_TPL_NO_SKILL_KEY]
+TPL_NO_ITEM_ARG = _ALL_TPL[_TPL_NO_ITEM_ARG_KEY]
+TPL_NO_ITEM = _ALL_TPL[_TPL_NO_ITEM_KEY]
+TPL_FLEE_OK = _ALL_TPL[_TPL_FLEE_OK_KEY]
+TPL_FLEE_FAILED = _ALL_TPL[_TPL_FLEE_FAILED_KEY]
 
 
 # ---------------------------------------------------------------------------
-# 回合数据增强（TurnReport → 渲染用 EnrichedTurnReport）
+# 行动数据增强（TurnReport → 渲染用 EnrichedTurnReport）
 # ---------------------------------------------------------------------------
 
 @dataclass(frozen=True)
 class EnrichedTurnReport:
     """TurnReport + 接线层注入字段（battle_render 消费；shared_contract §5.1/§5.2）。
 
-    引擎 TurnReport 承载 turn/phases/player/enemy/ended/status/log/outcomes；
-    接线层补：enemy_name（BREP-09/15/18 怪物展示名）、player_max_hp/enemy_max_hp
-    （BREP-09 操作提示行）、exp/gold/drops（BREP-20 经验与掉落，军规5 只在战斗
-    结束消息输出一次）、status_changes（BREP-08 状态资源差分行，D-5D）。
+    引擎 TurnReport 承载 turn/player/enemy/ended/status/log/outcomes/action_seq/
+    battle_time；接线层补：enemy_name（BREP-09/15/18 怪物展示名）、
+    player_max_hp/enemy_max_hp（BREP-09 操作提示行）、exp/gold/drops（BREP-20
+    经验与掉落，军规5 只在战斗结束消息输出一次）、status_changes（BREP-08 状态
+    资源差分行，D-5D）。
     **不含 level/name/title**——前缀由 apply_message_prefix 统一装配（M5-01，
     铁律 1 前缀只加首行，防双前缀，工程补白 4）。
+
+    CTB（2026-09-10 Agent 4）：
+      - `turn` 为 **action_seq 兼容镜像**（审计/旧读方过渡，不参与计算）。
+      - `action_seq` / `battle_time` 为 **CTB 权威双计数**（引擎 TurnReport 真实字段，
+        由 `enrich_round_report` 透传）：展示层/审计应读这两个字段。
+      - `phases` 保留为普通字段仅为**形态兼容**（旧读方仍可 getattr 取值，恒为 tuple）；
+        CTB 下引擎已将其改为只读 property（底层 `_phase_label`），本层恒透传空元组
+        ——render 层对 phases 只做 tuple 消费，空值不影响渲染。新读方勿依赖。
     """
 
     turn: int
-    phases: Tuple[str, ...]
-    player: int
-    enemy: int
-    ended: bool
-    status: Optional[str]
+    enemy: int = 0
+    ended: bool = False
+    status: Optional[str] = None
+    phases: Tuple[str, ...] = ()
+    player: int = 0
     log: Tuple[Mapping[str, Any], ...] = ()
     outcomes: Tuple[Any, ...] = ()
     enemy_name: str = "怪物"
@@ -192,38 +217,20 @@ class EnrichedTurnReport:
     gold: int = 0
     drops: Tuple[Any, ...] = ()
     status_changes: Tuple[Any, ...] = ()
-
-    @classmethod
-    def from_report(
-        cls,
-        report: Any,
-        *,
-        enemy_name: str = "怪物",
-        player_max_hp: Optional[int] = None,
-        enemy_max_hp: Optional[int] = None,
-        exp: int = 0,
-        gold: int = 0,
-        drops: Sequence[Any] = (),
-        status_changes: Sequence[Any] = (),
-    ) -> "EnrichedTurnReport":
-        """TurnReport → EnrichedTurnReport（补齐接线层字段，其余字段透传）。"""
-        return cls(
-            turn=int(getattr(report, "turn", 0)),
-            phases=tuple(getattr(report, "phases", ()) or ()),
-            player=int(getattr(report, "player", 0)),
-            enemy=int(getattr(report, "enemy", 0)),
-            ended=bool(getattr(report, "ended", False)),
-            status=getattr(report, "status", None),
-            log=tuple(getattr(report, "log", ()) or ()),
-            outcomes=tuple(getattr(report, "outcomes", ()) or ()),
-            enemy_name=str(enemy_name or "怪物"),
-            player_max_hp=player_max_hp,
-            enemy_max_hp=enemy_max_hp,
-            exp=int(exp or 0),
-            gold=int(gold or 0),
-            drops=tuple(drops or ()),
-            status_changes=tuple(status_changes or ()),
-        )
+    # CTB 双计数（默认值保证旧构造点零破坏，且不移动既有字段位置）
+    action_seq: int = 0
+    battle_time: float = 0.0
+    # 战斗 HUD v2（2026-09-12）：分项资源行数据——None/0/空序列 → 渲染层不输出对应行
+    # （用户口径：没有护盾/法力等资源则不显示这些资源，持续效果同样）
+    player_mp: Optional[int] = None
+    player_mp_max: Optional[int] = None
+    player_shield: int = 0
+    player_shield_turns: int = 0
+    enemy_shield: int = 0
+    enemy_shield_turns: int = 0
+    enemy_air: bool = False                        # 怪物跃空（「怪物状态：跃空丨…」首项）
+    enemy_broken_parts: Tuple[str, ...] = ()        # 已破坏部位中文名序列
+    effect_events: Tuple[Mapping[str, Any], ...] = ()   # 本行动持续效果事件（DOT 生效/失效）
 
 
 def enrich_round_report(
@@ -240,14 +247,34 @@ def enrich_round_report(
     player_action: Optional[Mapping[str, Any]] = None,
     skill_name: Optional[str] = None,
     enemy_action_name: Optional[str] = None,
+    hud: Optional[Mapping[str, Any]] = None,
 ) -> EnrichedTurnReport:
     """TurnReport → EnrichedTurnReport（纯函数，测试/装配可直接消费）。
 
     outcomes 经 _inject_display_outcomes 注入展示字段（怪物展示名/最大 HP——
     ActionOutcome.target 为战斗侧 "enemy"，非展示名，5e §2.1/§3.1 由接线层注入）；
-    segments（P1-3）：本轮玩家多段行动段记录，>1 段注入连段段行（BREP-21）。
+    segments（P1-3）：本次玩家多段行动段记录，>1 段注入连段段行（BREP-21）。
     skill_name（M13 6a 路3C）：技能行动的战报技能名，注入玩家 skill outcome。
+
+    CTB：`phases` 与 `turn` 原样透传（`turn` 仅作 action_seq 镜像过渡）；
+    `action_seq` / `battle_time` 从 report 透传（权威进度计量）。
+
+    :param report: 引擎 TurnReport（player_act 返回）。
+    :param enemy_name: 怪物展示名。
+    :param player_max_hp: 玩家最大 HP。
+    :param enemy_max_hp: 怪物最大 HP。
+    :param exp: 结算经验。
+    :param gold: 结算金币。
+    :param drops: 战利品序列。
+    :param status_changes: BREP-08 状态资源差分序列。
+    :param segments: 本次玩家行动段记录（>1 段触发 BREP-21）。
+    :param player_action: 玩家行动 dict（技能名派生显示用）。
+    :param skill_name: 技能展示名（注入 player skill outcome）。
+    :param enemy_action_name: 怪物行动展示名（注入 enemy outcome）。
+    :param hud: 战斗 HUD v2 分项资源数据（battle_hud_payload 产出）。
+    :return: EnrichedTurnReport。
     """
+    _hud: Mapping[str, Any] = hud or {}
     outcomes = _inject_display_outcomes(
         getattr(report, "outcomes", ()) or (),
         enemy_name=enemy_name,
@@ -276,7 +303,78 @@ def enrich_round_report(
         gold=int(gold or 0),
         drops=tuple(drops or ()),
         status_changes=tuple(status_changes or ()),
+        action_seq=int(getattr(report, "action_seq", 0) or 0),
+        battle_time=float(getattr(report, "battle_time", 0.0) or 0.0),
+        player_mp=_hud.get("player_mp"),
+        player_mp_max=_hud.get("player_mp_max"),
+        player_shield=int(_hud.get("player_shield") or 0),
+        player_shield_turns=int(_hud.get("player_shield_turns") or 0),
+        enemy_shield=int(_hud.get("enemy_shield") or 0),
+        enemy_shield_turns=int(_hud.get("enemy_shield_turns") or 0),
+        enemy_air=bool(_hud.get("enemy_air")),
+        enemy_broken_parts=tuple(_hud.get("enemy_broken_parts") or ()),
+        effect_events=tuple(getattr(report, "effect_events", ()) or ()),
     )
+
+
+def battle_hud_payload(snap: Mapping[str, Any]) -> dict[str, Any]:
+    """战斗 HUD v2 取数（2026-09-12）：engine.battle_state() → 分项资源行原始数据。
+
+    用户口径：**没有护盾/法力等资源则不显示这些资源**（渲染层据缺省判空）。
+    产出键（原始数据，中文文案一律由渲染层模板产出，本层零硬编码）：
+      player_mp / player_mp_max        玩家法力当前/上限（缺失 → None）
+      player_shield / _turns           玩家护盾剩余值 / 剩余行动数（combatant.defenses.shield）
+      enemy_shield / _turns            怪物护盾（同上；怪物无护盾 → 0/0）
+      enemy_air                        怪物跃空中（combat_position.enemy.height == "air"）
+      enemy_broken_parts               已破坏部位**展示名**序列（parts_state.broken × parts[].name）
+    """
+    out: dict[str, Any] = {
+        "player_mp": None, "player_mp_max": None,
+        "player_shield": 0, "player_shield_turns": 0,
+        "enemy_shield": 0, "enemy_shield_turns": 0,
+        "enemy_air": False, "enemy_broken_parts": (),
+    }
+    if not isinstance(snap, Mapping):
+        return out
+    p = snap.get("player")
+    e = snap.get("enemy")
+    p = p if isinstance(p, Mapping) else {}
+    e = e if isinstance(e, Mapping) else {}
+
+    def _mp(c: Mapping[str, Any], cur_key: str, max_key: str,
+            src_cur: str, src_max: str) -> None:
+        if c.get(src_cur) is not None:
+            out[cur_key] = int(c.get(src_cur) or 0)
+        if c.get(src_max) is not None:
+            out[max_key] = int(c.get(src_max) or 0)
+
+    def _shield(c: Mapping[str, Any]) -> Tuple[int, int]:
+        d = c.get("defenses")
+        s = d.get("shield") if isinstance(d, Mapping) else None
+        if not isinstance(s, Mapping):
+            return 0, 0
+        return int(s.get("remaining") or 0), int(s.get("turns") or 0)
+
+    _mp(p, "player_mp", "player_mp_max", "mp", "max_mp")
+    out["player_shield"], out["player_shield_turns"] = _shield(p)
+    out["enemy_shield"], out["enemy_shield_turns"] = _shield(e)
+    # 怪物跃空：方位快照 height == "air"
+    cp = snap.get("combat_position")
+    ent = cp.get("enemy") if isinstance(cp, Mapping) else None
+    out["enemy_air"] = bool(isinstance(ent, Mapping) and str(ent.get("height") or "") == "air")
+    # 已破坏部位：parts_state[pid].broken → parts[].name（内容包展示名，缺失回落 id）
+    ps = snap.get("parts_state")
+    names: dict[str, str] = {}
+    parts = e.get("parts")
+    for pd in parts if isinstance(parts, list) else ():
+        if isinstance(pd, Mapping) and pd.get("id"):
+            names[str(pd["id"])] = str(pd.get("name") or pd["id"])
+    broken: list[str] = []
+    for pid, st in (ps.items() if isinstance(ps, Mapping) else ()):
+        if isinstance(st, Mapping) and st.get("broken"):
+            broken.append(names.get(str(pid), str(pid)))
+    out["enemy_broken_parts"] = tuple(broken)
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -310,7 +408,7 @@ def _enemy_ns(enemy: Any, *, turn: Optional[int] = None) -> SimpleNamespace:
     """怪物形态 → SimpleNamespace（render 取数：name/hp/max_hp/turn）；剥离前缀键。"""
     ns = _prefix_free_ns(enemy)
     if turn is not None and not hasattr(ns, "turn") and not hasattr(ns, "turns"):
-        ns.turn = turn  # SimpleNamespace 允许动态属性（BREP-24 回合数，TC-25）
+        ns.turn = turn  # SimpleNamespace 允许动态属性（BREP-24 行动数，TC-25）
     return ns
 
 
@@ -378,23 +476,80 @@ def _battle_rewards(
     }
 
 
-def _without_player_outcomes(report: EnrichedTurnReport) -> SimpleNamespace:
-    """剥离玩家行动 outcome 的报告（道具回合：只渲染怪物反击/结算/提示段）。"""
+def _without_player_outcomes(report: EnrichedTurnReport, *,
+                             suppress_prefix: bool = False,
+                             defer_tail: bool = False) -> SimpleNamespace:
+    """剥离玩家行动 outcome 的报告（道具回合：只渲染怪物反击/结算/提示段）。
+
+    :param suppress_prefix: 本段正文与已发批量段合并为同一条消息 → 不再渲染前缀行。
+    :param defer_tail: 终局时尾提示行改由结算消息末尾输出（置底）。
+
+    CTB：透传 `action_seq` / `battle_time`（权威进度计量；`turn` 仅作镜像回退），
+    不再写 `phases`（CTB 下 `EnrichedTurnReport.phases` 恒为空元组，render 层对
+    phases 只做 tuple 消费，省略不影响渲染）。
+    """
     return SimpleNamespace(
-        turn=report.turn, phases=report.phases, player=report.player, enemy=report.enemy,
+        turn=report.turn, action_seq=report.action_seq, battle_time=report.battle_time,
+        player=report.player, enemy=report.enemy,
         ended=report.ended, status=report.status, log=report.log,
         outcomes=tuple(o for o in report.outcomes if getattr(o, "actor", "") != "player"),
         enemy_name=report.enemy_name, player_max_hp=report.player_max_hp,
         enemy_max_hp=report.enemy_max_hp, exp=report.exp, gold=report.gold,
         drops=report.drops, status_changes=report.status_changes,
+        player_pos=report.player_pos, enemy_pos=report.enemy_pos,  # 方位 HUD 透传（2026-09-10 修复）
+        suppress_prefix=suppress_prefix,
+        defer_tail=defer_tail,
+        # 战斗 HUD v2（2026-09-12）：分项资源行 + 持续效果事件随投影透传
+        player_mp=report.player_mp, player_mp_max=report.player_mp_max,
+        player_shield=report.player_shield, player_shield_turns=report.player_shield_turns,
+        enemy_shield=report.enemy_shield, enemy_shield_turns=report.enemy_shield_turns,
+        enemy_air=report.enemy_air, enemy_broken_parts=report.enemy_broken_parts,
+        effect_events=report.effect_events,
     )
 
 
-# ActionOutcome 全字段清单（frozen dataclass 复制用，shared_contract §5.1/§5.2）
+def _without_npc_outcomes(report: EnrichedTurnReport, *, suppress_prefix: bool = False,
+                          defer_tail: bool = False) -> SimpleNamespace:
+    """剥离非玩家（NPC）outcome 的报告（玩家单行动渲染：只出玩家自身行动段）。
+
+    :param suppress_prefix: 本段正文会与已发的批量段合并为同一条消息 → 不再渲染前缀行
+        （2026-09-12 用户拍板：一条消息只保留最顶部一个玩家前缀）。
+    :param defer_tail: 本行动同时触发终局结算 → HUD 块的尾提示行不出，由结算消息末尾补
+        （用户拍板：「→ 攻击 或 攻击 <技能名> 这个提示应该置底」）。
+    
+
+    CTB（2026-09-10 · NPC 行动执行打通后）：`player_act` 返回的 `outcomes` 现同时含
+    玩家行动与调度器自动推进的 NPC 连锁行动。NPC 连锁由 `dispatch_batch` 单独批量
+    渲染（`render_battle_action_batch`），故 `dispatch_round` 的玩家单行动渲染须
+    **只保留玩家 outcome**——否则同一 NPC 行动行会被 batch 与 round 各渲染一次
+    （重复行）。
+    """
+    return SimpleNamespace(
+        turn=report.turn, action_seq=report.action_seq, battle_time=report.battle_time,
+        player=report.player, enemy=report.enemy,
+        ended=report.ended, status=report.status, log=report.log,
+        outcomes=tuple(o for o in report.outcomes if getattr(o, "actor", "") == "player"),
+        enemy_name=report.enemy_name, player_max_hp=report.player_max_hp,
+        enemy_max_hp=report.enemy_max_hp, exp=report.exp, gold=report.gold,
+        drops=report.drops, status_changes=report.status_changes,
+        player_pos=report.player_pos, enemy_pos=report.enemy_pos,  # 方位 HUD 透传（2026-09-10 修复）
+        # 战斗 HUD v2（2026-09-12）：分项资源行 + 持续效果事件随投影透传
+        player_mp=report.player_mp, player_mp_max=report.player_mp_max,
+        player_shield=report.player_shield, player_shield_turns=report.player_shield_turns,
+        enemy_shield=report.enemy_shield, enemy_shield_turns=report.enemy_shield_turns,
+        enemy_air=report.enemy_air, enemy_broken_parts=report.enemy_broken_parts,
+        effect_events=report.effect_events,
+        suppress_prefix=suppress_prefix,   # 末段合并进同一条消息 → 前缀只在最顶行
+        defer_tail=defer_tail,             # 终局时尾提示改由结算消息末尾输出（置底）
+    )
+
+
+# ActionOutcome 渲染取数字段清单（frozen dataclass 复制用，shared_contract §5.1/§5.2）
+# 批④ 背击：backstab 附注字段随 copy 透传（渲染「（背击）」；combo_result 渲染层不消费不入表）
 _OUTCOME_FIELDS: Tuple[str, ...] = (
     "ok", "seq", "actor", "action_type", "target", "hit", "crit", "blocked",
     "raw_damage", "final_damage", "target_hp", "side_effects", "message",
-    "battle_ended", "status",
+    "battle_ended", "status", "backstab",
 )
 
 
@@ -467,35 +622,111 @@ def _inject_display_outcomes(
     return tuple(injected)
 
 
-def _build_segments(snap: Mapping[str, Any], turn: int) -> List[Mapping[str, Any]]:
-    """从引擎快照 action_record 构造本轮玩家行动段记录（P1-3 连段段行生产可达）。
+def _entry_progress(entry: Mapping[str, Any]) -> Optional[int]:
+    """action_record 条目的 CTB 进度键（action_seq 优先，turn 次要回退）。
 
-    action_record 每段（battle.py L602-612）：seq/turn/phase/actor/action/target/
-    rating/damage/ts；段号 = 收集器 seg（累计 index，5e §5.1）。过滤本轮玩家行动，
-    段数 >1（连段/多段技能）才返回段记录序列（单段走聚合 BREP-02 单行）。target_hp
-    未导出 → 由 _inject_display_outcomes 用聚合末值近似填充。
+    :param entry: action_record 单条（Mapping）。
+    :return: action_seq 整数值；两键皆缺/非法 → None。
     """
-    ar = snap.get("action_record") or ()
+    for key in ("action_seq", "turn"):
+        try:
+            v = entry.get(key)
+        except Exception:  # noqa: BLE001 - 畸形条目防御
+            continue
+        if isinstance(v, bool) or not isinstance(v, (int, float)):
+            continue
+        return int(v)
+    return None
+
+
+def _build_segments(snap: Mapping[str, Any], action_seq: int) -> List[Mapping[str, Any]]:
+    """从引擎快照 action_record 构造本次玩家行动段记录（P1-3 连段段行生产可达）。
+
+    **CTB 口径（2026-09-10 Agent 4，R-A 修复）**：`action_record` 每段（core/battle.py
+    `_record_action`）写入的键为 `seq` / `action_seq` / `battle_time` / `turn`
+    （= action_seq 镜像）/ `phase` / `actor` / `action` / `name` / `target` /
+    `rating` / `damage` / `ts`。旧实现按 `entry["turn"] != turn` 过滤——CTB 下
+    `turn` 已退化为镜像、语义错位（且一旦镜像键移除即静默失配 → 连段段行消失）。
+    现改为 **按 `action_seq` 匹配**，`turn` 仅作次要回退键（`_entry_progress`），
+    保证 CTB 权威计数与旧读方形态都能命中。
+
+    过滤本次玩家行动（actor=="player"）；段数 >1（连段/多段技能）才返回段记录
+    序列（单段走聚合 BREP-02 单行）。target_hp 未导出 → 由
+    `_inject_display_outcomes` 用聚合末值近似填充。
+
+    :param snap: engine.battle_state() 快照（读 action_record）。
+    :param action_seq: 本次玩家行动的 action_seq（CTB 权威行动计数）。
+    :return: 段记录列表（≤1 段 → 空列表）。
+    """
+    try:
+        ar = snap.get("action_record") or ()
+    except Exception:  # noqa: BLE001 - 畸形快照防御
+        return []
     segs: List[Mapping[str, Any]] = []
-    for i, entry in enumerate(ar):
+    for entry in ar:
         if not isinstance(entry, Mapping):
             continue
-        if entry.get("turn") != turn or entry.get("actor") != "player":
+        if _entry_progress(entry) != action_seq or entry.get("actor") != "player":
             continue
-        dmg = entry.get("damage") if isinstance(entry.get("damage"), Mapping) else {}
-        rating = entry.get("rating") if isinstance(entry.get("rating"), Mapping) else {}
+        _dmg = entry.get("damage")
+        dmg: Mapping[str, Any] = _dmg if isinstance(_dmg, Mapping) else {}
+        _rating = entry.get("rating")
+        rating: Mapping[str, Any] = _rating if isinstance(_rating, Mapping) else {}
         segs.append({
-            "seg": len(segs) + 1,                           # 2026-09-09：本轮行动内相对段号
+            "seg": len(segs) + 1,                           # 2026-09-09：本次行动内相对段号
             "action": str(entry.get("name") or entry.get("action") or ""),
-            "final_damage": int(dmg.get("final", 0) or 0),  # type: ignore[union-attr]
+            "final_damage": int(dmg.get("final", 0) or 0),
             "target_hp": None,                              # 聚合末值由注入侧填充
             "target_max_hp": None,
             "target": str(entry.get("target") or ""),
-            "crit": str(rating.get("crit", "low") or "low"),  # type: ignore[union-attr]
-            "blocked": bool(rating.get("blocked", False)),  # type: ignore[union-attr]
+            "crit": str(rating.get("crit", "low") or "low"),
+            "crit_mult": rating.get("crit_mult"),
+            "blocked": bool(rating.get("blocked", False)),
             "derived_capped": False,
         })
     return segs if len(segs) > 1 else []
+
+
+def _latest_player_action_seq(snap: Mapping[str, Any]) -> int:
+    """取 action_record 中最后一次玩家行动的 action_seq（段行过滤键）。
+
+    :param snap: engine.battle_state() 快照。
+    :return: 最后一条玩家行动记录的 action_seq（无玩家记录 → 0）。
+    """
+    try:
+        ar = snap.get("action_record") or ()
+    except Exception:  # noqa: BLE001 - 畸形快照防御
+        return 0
+    last = 0
+    for entry in ar:
+        if not isinstance(entry, Mapping) or str(entry.get("actor") or "") != "player":
+            continue
+        progress = _entry_progress(entry)
+        if progress is not None:
+            last = progress
+    return last
+
+
+def _enemy_action_name_of(snap: Mapping[str, Any]) -> Optional[str]:
+    """取最近一条 enemy 行动记录的展示名（skill 类如「幼兽扑咬」；normal 回落 None）。
+
+    :param snap: engine.battle_state() 快照（读 action_record）。
+    :return: 「使出{名}」展示串；无有效名 / normal 类 → None。
+    """
+    try:
+        ar = snap.get("action_record") or ()
+    except Exception:  # noqa: BLE001 - 畸形快照防御
+        return None
+    for entry in reversed(tuple(ar)):
+        if not isinstance(entry, Mapping):
+            continue
+        if str(entry.get("actor") or "") != "enemy":
+            continue
+        name = str(entry.get("name") or "")
+        if name and name not in ("normal", "attack", "skill"):
+            return f"使出{name}"
+        return None
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -634,36 +865,56 @@ class BattlePipeline:
                                    hint=hint, ctx=self._ctx)
         return self.send(body, to=to, prefix=False)
 
-    def send_round(self, report: Any, *, to: Any = None) -> List[str]:
-        """一轮独立 1 条（玩家行动+怪物反击合并，render_battle_round；军规3/铁律 9）。
+    def send_round(self, report: Any, *, to: Any = None, prefix: bool = True) -> List[str]:
+        """玩家单行动 1 条（CTB：`render_battle_round` 渲染玩家行动积木；军规3/铁律 9）。
 
-        输入为 EnrichedTurnReport（enrich_round_report 产出，承载接线层字段）。
+        **语义更新（CTB）**：历史命名 "round"（回合）——CTB 下无回合，本方法实际渲染
+        **一次玩家行动**（EnrichedTurnReport 承载接线层字段）。保留方法名与签名兼容
+        既有调用方。
+
+        :param prefix: False = 不注入前缀行（本段将与先发的批量段合并为同一条消息 →
+            前缀只在最顶部保留一个，2026-09-12 用户拍板）。
         """
-        return self.send(render_battle_round(report, ctx=self._ctx), to=to)
+        return self.send(render_battle_round(report, ctx=self._ctx), to=to, prefix=prefix)
+
+    def send_action_batch(self, report: Any, *, to: Any = None) -> List[str]:
+        """NPC 连锁批量行动 1 条（CTB 新增；`render_battle_action_batch`）。
+
+        CTB 下调度器自动推进 NPC 连锁直到下一个玩家 ready / 终局；本方法把该批 NPC
+        行动**合并为同一条消息**（对齐 3d S4 单轮单条 / 铁律 9 合并策略）。
+
+        :param report: 批量上报载体——ActionBatchReport 或其 to_dict()/含 entries 的
+            Mapping；亦兼容 outcomes 序列（单 actor 多次行动）。
+        :param to: 发送目标（缺省 self._to）。
+        :return: 实际发送段列表。
+        """
+        return self.send(render_battle_action_batch(report, ctx=self._ctx), to=to)
 
     def send_end(self, player: Any, enemy: Any, winner: str, *,
                  summary: Any = None, to: Any = None,
                  status: Optional[str] = None, exp: int = 0, gold: int = 0,
                  drops: Any = None, enemy_name: Optional[str] = None,
                  final_damage: int = 0,
-                 leveled: Optional[Mapping[str, Any]] = None) -> List[str]:
+                 leveled: Optional[Mapping[str, Any]] = None,
+                 tail: Optional[str] = None,
+                 prefix: bool = True) -> List[str]:
         """战斗结束独立 1 条（用户 2026-08-27 拍板结算模板 + BREP-24/25；TC-18/25，铁律 11）。
 
-        **M5 裁决（用户拍板）**：win 结束消息 = 用户结算模板（叙事句回顾最后一击
-        `您对{怪物}造成了{伤害}点伤害！{怪物}已死亡。` + 获得经验/金币分行 + 战利品
-        列表），不含 `✅ 战斗胜利！` 横幅与 BREP-24 汇总行；军规5 掉落只输出一次；
-        当轮消息只出行动+击杀。lose/draw 保留 BREP-16/18/19 + BREP-24 汇总行。
-        final_damage（最后行动伤害，供叙事句）由 dispatch_round 从 report 取末注入。
+        **M5 裁决（用户拍板；2026-09-09 击杀去重修订）**：win 结束消息 = 奖励结算块
+        （`获得经验 {exp}` + `获得{货币} {gold}` + `【战利品】` + 战利品 `{序号}.{名称}×{数量}`
+        逐行；叙事句模板已死键清除），不含 `✅ 战斗胜利！` 横幅与 BREP-24 汇总行；
+        军规5 掉落只输出一次；当轮消息只出行动+击杀。lose/draw 保留 BREP-16/18/19 +
+        BREP-24 汇总行。final_damage（最后行动伤害）由 dispatch_round 从 report 取末注入。
         leveled（2026-09-03 奖励结算：击杀经验触发升级信息）非 None 时战斗结束
-        消息附升级行（模板 battle_settle_levelup*，battle_tpl 分区）。
+        消息附升级行（模板 battle_settle_levelup*，全量模板表）。
         """
         body = render_battle_end(
             _prefix_free_ns(player), _enemy_ns(enemy), winner, summary=summary,
             status=status, exp=exp, gold=gold, drops=drops,
             enemy_name=enemy_name or (getattr(enemy, "name", "") if enemy else None),
-            final_damage=final_damage, leveled=leveled, ctx=self._ctx,
+            final_damage=final_damage, leveled=leveled, tail=tail, ctx=self._ctx,
         )
-        return self.send(body, to=to)
+        return self.send(body, to=to, prefix=prefix)
 
     def send_flee(self, *, ok: bool, to: Any = None) -> List[str]:
         """逃跑结果 1 条（无 BREP 模板，本层合成；工程补白 2）。"""
@@ -672,24 +923,130 @@ class BattlePipeline:
 
 
 # ---------------------------------------------------------------------------
-# 一轮派发（合并策略落地：行动+反击合并 1 条；结束追加汇总 1 条）
+# CTB 派发（NPC 连锁批量 + 玩家单行动；结束追加汇总 1 条）
 # ---------------------------------------------------------------------------
 
 def _send_item_round(
     pipeline: BattlePipeline,
     report: EnrichedTurnReport,
     item_name: str,
+    *,
+    suppress_prefix: bool = False,
+    defer_tail: bool = False,
 ) -> List[str]:
-    """道具回合（无 BREP 行动模板，本层合成；工程补白 2）：
+    """道具行动（无 BREP 行动模板，本层合成；工程补白 2）：
 
-    道具使用行 + 怪物反击（复用 render_battle_round 渲染敌段）合并 1 条。
+    道具使用行 + 后续 NPC 连锁（复用 render_battle_round 渲染敌段）合并 1 条。
     道具使用行模板 battle_item_used（battle_tpl 分区，内容包可覆盖）。
+
+    CTB：命名保留（历史 "round"），语义 = 一次道具行动；NPC 连锁段经
+    `_without_player_outcomes` 剥离玩家 outcome 后并入同条消息。
+
+    :param pipeline: 统一出口（前缀 + Sender）。
+    :param report: EnrichedTurnReport（含本次玩家道具行动 + NPC 连锁 outcome）。
+    :param item_name: 道具展示名。
+    :return: 实际发送段列表。
     """
     body = tpl_of(pipeline._ctx, _TPL_ITEM_USED_KEY, {"item_name": item_name})
-    counter = render_battle_round(_without_player_outcomes(report), ctx=pipeline._ctx)
+    counter = render_battle_round(
+        _without_player_outcomes(report, suppress_prefix=suppress_prefix,
+                                 defer_tail=defer_tail), ctx=pipeline._ctx)
     if counter:
         body = f"{body}\n{counter}"
-    return pipeline.send(body)
+    return pipeline.send(body, prefix=not suppress_prefix)
+
+
+def _skill_name_of(
+    ctx: Mapping[str, Any],
+    report: Any,
+    player_action: Optional[Mapping[str, Any]],
+) -> Optional[str]:
+    """技能展示名解析（M13 6a 路3C）：派生技名优先于源技能名。
+
+    player_action 含 skill_id → ctx["skills"] 查名；玩家侧 outcome 带
+    combo_result.form_id（派生/自动替换后的实际技能，如「崩山/裂脊斩」）→ 优先用
+    派生技名；无派生 → 源技能名。
+
+    :param ctx: 战斗 ctx（读 "skills" 表）。
+    :param report: 引擎行动报告（读首个玩家 outcome 的 combo_result.form_id）。
+    :param player_action: 玩家行动 dict（type/skill_id）。
+    :return: 技能展示名；非技能行动 / 查不到 → None。
+    """
+    if not player_action or str(player_action.get("type") or "") != "skill":
+        return None
+    sid = str(player_action.get("skill_id") or "")
+    _oc = _first_player_outcome(report)
+    if _oc is not None:
+        _cr = getattr(_oc, "combo_result", None)
+        if isinstance(_cr, Mapping):
+            _fid = str(_cr.get("form_id") or "")
+            if _fid:
+                sid = _fid
+    skills = ctx.get("skills")
+    if isinstance(skills, Mapping):
+        d = skills.get(sid)
+        if isinstance(d, Mapping):
+            return str(d.get("name") or "") or None
+    return None
+
+
+def dispatch_batch(
+    engine: Any,
+    report: Any,
+    pipeline: BattlePipeline,
+    ctx: Mapping[str, Any],
+    *,
+    player_action: Optional[Mapping[str, Any]] = None,
+    render_effect_events: bool = True,
+) -> List[str]:
+    """NPC 连锁批量行动派发（CTB 新增；职责 1/2 拆分）。
+
+    处理 `report` 内**除玩家自身行动外**的 NPC 行动（`player_act` 一次调用 = 玩家行动
+    + 调度器自动推进的 NPC 连锁），渲染为**批量行动消息**（`render_battle_action_batch`）。
+
+    **静默契约**：`report` 内无 NPC 行动 → 返回空列表、**不发送**（绝不发空消息）。
+
+    :param engine: BattleEngine（battle_state 取双方 HP/最大 HP/展示名）。
+    :param report: 引擎 player_act 返回的 TurnReport。
+    :param pipeline: 统一出口（前缀 + Sender）。
+    :param ctx: 战斗 ctx（状态差分/展示名注入）。
+    :param player_action: 玩家行动 dict（保留参数；批量渲染只出 NPC 段）。
+    :param render_effect_events: 是否在批量段渲染本次 `effect_events`。默认 True——
+        **批量段单独发送**时仍要出效果行（不丢事件）。`_dispatch_merged_action`
+        紧随玩家段时传 False：本次行动 owner = 玩家段，同一批事件两段各渲染一次
+        会造成重复（H1 复核 · 2026-09-12）。
+    :return: 实际发送段列表（无 NPC 行动 → []）。
+    """
+    try:
+        snap = engine.battle_state()
+        p: Mapping[str, Any] = snap.get("player") or {}
+        e: Mapping[str, Any] = snap.get("enemy") or {}
+        e_name = str(e.get("name") or "怪物")
+        npc_outcomes = [
+            oc for oc in (getattr(report, "outcomes", ()) or ())
+            if str(getattr(oc, "actor", "") or "") != "player"
+        ]
+        if not npc_outcomes:
+            return []   # 无 NPC 行动 → 不发空消息（静默契约）
+        batch = SimpleNamespace(
+            entries=_inject_display_outcomes(
+                npc_outcomes,
+                enemy_name=e_name,
+                player_max_hp=p.get("max_hp"),
+                enemy_max_hp=e.get("max_hp"),
+                enemy_action_name=_enemy_action_name_of(snap),
+            ),
+            status_changes=ctx.get("battle_status_changes") or (),
+            start_time=getattr(report, "battle_time", None),
+            end_time=getattr(report, "battle_time", None),
+            effect_events=(tuple(getattr(report, "effect_events", ()) or ())
+                           if render_effect_events else ()),
+            **battle_hud_payload(snap),        # 战斗 HUD v2 分项资源行取数
+        )
+        return pipeline.send_action_batch(batch)
+    except Exception:  # noqa: BLE001 - 批量派发异常不向上抛（战斗响应不崩）
+        _LOGGER.exception("dispatch_batch 失败：NPC 连锁批量渲染降级为空")
+        return []
 
 
 def dispatch_round(
@@ -699,156 +1056,194 @@ def dispatch_round(
     ctx: Mapping[str, Any],
     *,
     player_action: Optional[Mapping[str, Any]] = None,
+    suppress_prefix: bool = False,
+    defer_tail: bool = False,
 ) -> List[str]:
-    """一轮消息派发（铁律 2/7/9 合并策略落地）：
+    """单次行动派发（**薄兼容外壳**；"round" 是历史命名，CTB 下无「回合」）。
 
-      - 常规行动（攻击/技能/防御）→ 行动+反击合并 1 条（render_battle_round）；
-      - 逃跑 → 本层合成逃跑结果 1 条（无 BREP 模板）；
-      - 道具 → 道具使用行 + 怪物反击合并 1 条（本层合成 + render 敌段）；
+    CTB 语义（2026-09-10 Agent 4）：一次用户操作 = 一次玩家行动 + 调度器自动推进的
+    NPC 连锁。本函数保留为 `__all__` 导出符号 + 既有测试引用的兼容入口，内部只做
+    **玩家单行动渲染**（逃跑/道具分支）与终局收尾；NPC 连锁批量渲染由 `dispatch_batch`
+    承担（`_run_battle_action` 按「先批量、后玩家」顺序合并为 ≤1-2 条消息）。
+
+      - 逃跑 → 本层合成逃跑结果 1 条（无 BREP 模板）；失败则并入 NPC 连锁段；
+      - 道具 → 道具使用行 + NPC 连锁合并 1 条（本层合成 + render 敌段）；
+      - 其余（攻击/技能/防御）→ 玩家行动 1 条（render_battle_round）；
       - 战斗结束（report.ended）→ 追加战斗结束汇总 1 条（render_battle_end，
-        BREP-24；军规5 掉落已当轮结算一次）。
-    单次操作 ≤1-2 条；全部消息经 pipeline（无裸 send，铁律 7）。
+        BREP-24；军规5 掉落已当次结算一次）。
 
-    :param engine: BattleEngine（battle_state 取双方 HP/最大 HP/展示名）
-    :param report: 引擎 player_act 返回的 TurnReport
-    :param pipeline: 统一出口（前缀 + Sender）
-    :param ctx: 战斗 ctx（奖励/状态差分/结束明细注入）
+    :param engine: BattleEngine（battle_state 取双方 HP/最大 HP/展示名）。
+    :param report: 引擎 player_act 返回的 TurnReport。
+    :param pipeline: 统一出口（前缀 + Sender）。
+    :param ctx: 战斗 ctx（奖励/状态差分/结束明细注入）。
+    :param player_action: 玩家行动 dict（技能名/道具名注入）。
     :return: 已发送段列表。
     """
-    snap = engine.battle_state()
-    p: Mapping[str, Any] = snap.get("player") or {}
-    e: Mapping[str, Any] = snap.get("enemy") or {}
-    e_name = str(e.get("name") or "怪物")
-    reward = _battle_rewards(ctx, engine, report)
-    segments = _build_segments(snap, int(getattr(report, "turn", 0)))
-    # 技能名注入（M13 6a 路3C）：player_action 含 skill_id → ctx["skills"] 查名。
-    # 2026-09-07 派生显示修复：玩家侧 outcome 带 combo_result.form_id（派生/自动
-    # 替换后的实际技能）→ 优先用派生技名（崩山/裂脊斩）；无派生 → 源技能名。
-    skill_name = None
-    if player_action and str(player_action.get("type") or "") == "skill":
-        sid = str(player_action.get("skill_id") or "")
-        _oc = _first_player_outcome(report)
-        if _oc is not None:
-            _cr = getattr(_oc, "combo_result", None)
-            if isinstance(_cr, Mapping):
-                _fid = str(_cr.get("form_id") or "")
-                if _fid:
-                    sid = _fid
-        skills = ctx.get("skills")
-        if isinstance(skills, Mapping):
-            d = skills.get(sid)
-            if isinstance(d, Mapping):
-                skill_name = str(d.get("name") or "") or None
-    # 怪行动名（2026-09-09）：本轮 enemy 行动 record name（skill 类行动如「幼兽扑咬」；
-    # normal/普攻类回落渲染「攻击」不注入）
-    enemy_action_name = None
-    _ar = snap.get("action_record") or ()
-    for _e2 in reversed(_ar):
-        if not isinstance(_e2, Mapping):
-            continue
-        if str(_e2.get("actor") or "") != "enemy":
-            continue
-        _n2 = str(_e2.get("name") or "")
-        if _n2 and _n2 not in ("normal", "attack", "skill"):
-            enemy_action_name = f"使出{_n2}"
-        break
-    enriched = enrich_round_report(
-        report,
-        enemy_name=e_name,
-        player_max_hp=p.get("max_hp"),
-        enemy_max_hp=e.get("max_hp"),
-        exp=reward["exp"],
-        gold=reward["gold"],
-        drops=reward["drops"],
-        status_changes=ctx.get("battle_status_changes") or (),
-        segments=segments,
-        player_action=player_action,
-        skill_name=skill_name,
-        enemy_action_name=enemy_action_name,
-    )
-    player_outcome = _first_player_outcome(report)
-    atype = str(getattr(player_outcome, "action_type", "") or "") if player_outcome else ""
-
-    delivered: List[str] = []
-    if atype == "flee":
-        ok = bool(getattr(player_outcome, "ok", False))
-        if ok:
-            delivered.extend(pipeline.send_flee(ok=True))          # 逃跑成功：战斗结束，1 条
-        else:
-            # 逃跑失败：战斗继续 → 逃跑结果 + 怪物反击合并 1 条（铁律 2/军规3）
-            body = tpl_of(ctx, _TPL_FLEE_FAILED_KEY)
-            counter = render_battle_round(_without_player_outcomes(enriched), ctx=ctx)
-            if counter:
-                body = f"{body}\n{counter}"
-            delivered.extend(pipeline.send(body))
-    elif atype == "item":
-        item_name = str((player_action or {}).get("item_name") or "道具")
-        delivered.extend(_send_item_round(pipeline, enriched, item_name))
-    else:
-        delivered.extend(pipeline.send_round(enriched))
-
-    if report.ended:
-        winner = report.status or "draw"
-        # M7 N-03 + 3f R-02：怪物击杀接线（battle 引擎无 ctx，落指令层结算点）
-        #   - N-03 预置 [事件:怪物击杀] flat（条件引擎读取源；tag=event 不混入 R-02 六类分组）
-        #   - 3f R-02 first_kill 首杀（[事件:首杀] nested 按怪物，首见 first_seen=true）
-        if winner == "win":
-            try:
-                from qbot_rpg.core.adventure_log import log_first_kill
-                from qbot_rpg.core.event_bus import bump_event, resolve_event_key
-
-                bump_event(
-                    cast(MutableMapping, ctx),
-                    resolve_event_key(ctx, "怪物击杀"),
-                    instance={"tag": "event"},
-                )
-                # 击杀累计计数（kill_count）由 settle_battle_rewards 统一写
-                # （battle_reward.py ④ 段，Player 实例/ctx 就地 bump；此处不写防双计）
-                log_first_kill(
-                    cast(MutableMapping, ctx), e_name,
-                    monster_id=str(e.get("id") or e.get("monster_id") or e_name),
-                )
-            except Exception:
-                pass
-            # M11 批2 路2C（4d G-8）：monster 册首杀点亮——mark_seen(killed=True)；
-            # try/except 防图鉴异常吞战斗结算；不新增 send（图鉴为辅助钩子）
-            try:
-                from qbot_rpg.core.codex import mark_seen as _codex_mark_seen
-
-                mid = str(e.get("id") or e.get("monster_id") or e_name)
-                _codex_mark_seen(cast(MutableMapping, ctx), "monster", mid, e_name,
-                                 killed=True)
-            except Exception:
-                pass
-            # M11 批2 路2C（4d D-06）：图鉴点亮结算点 → 里程碑阶梯检查（幂等已授不重授）
-            try:
-                from qbot_rpg.core.codex_milestones import check_milestones
-
-                check_milestones(cast(MutableMapping, ctx))
-            except Exception:
-                pass
-        # 叙事句伤害 = 本轮最后一个玩家行动 outcome 的 final_damage（用户结算模板回顾最后一击）
-        last_pd = 0
-        for _oc in reversed(tuple(getattr(report, "outcomes", ()) or ())):
-            if str(getattr(_oc, "actor", "") or "") == "player":
-                last_pd = int(getattr(_oc, "final_damage", 0) or 0)
-                break
-        delivered.extend(
-            pipeline.send_end(
-                SimpleNamespace(),
-                _enemy_ns(e, turn=report.turn),
-                winner,
-                summary=ctx.get("battle_summary"),
-                status=report.status,
-                exp=reward["exp"],
-                gold=reward["gold"],
-                drops=reward["drops"],
-                final_damage=last_pd,
-                enemy_name=e_name,          # _prefix_free_ns 剥离 dict name，显式注入
-                leveled=ctx.get("battle_leveled"),  # 2026-09-03 击杀升级信息
-            )
+    try:
+        snap = engine.battle_state()
+        p: Mapping[str, Any] = snap.get("player") or {}
+        e: Mapping[str, Any] = snap.get("enemy") or {}
+        e_name = str(e.get("name") or "怪物")
+        reward = _battle_rewards(ctx, engine, report)
+        # CTB：段行过滤键 = 本次玩家行动的 action_seq（`turn` 仅次要回退，见 _build_segments）
+        action_seq = int(getattr(report, "action_seq", 0) or 0) or _latest_player_action_seq(snap)
+        segments = _build_segments(snap, action_seq)
+        skill_name = _skill_name_of(ctx, report, player_action)
+        enemy_action_name = _enemy_action_name_of(snap)
+        enriched = enrich_round_report(
+            report,
+            enemy_name=e_name,
+            player_max_hp=p.get("max_hp"),
+            enemy_max_hp=e.get("max_hp"),
+            exp=reward["exp"],
+            gold=reward["gold"],
+            drops=reward["drops"],
+            status_changes=ctx.get("battle_status_changes") or (),
+            segments=segments,
+            player_action=player_action,
+            skill_name=skill_name,
+            enemy_action_name=enemy_action_name,
+            hud=battle_hud_payload(snap),      # 战斗 HUD v2 分项资源行取数
         )
-    return delivered
+        player_outcome = _first_player_outcome(report)
+        atype = str(getattr(player_outcome, "action_type", "") or "") if player_outcome else ""
+
+        delivered: List[str] = []
+        if atype == "flee":
+            ok = bool(getattr(player_outcome, "ok", False))
+            if ok:
+                delivered.extend(pipeline.send_flee(ok=True))      # 逃跑成功：战斗结束，1 条
+            else:
+                # 逃跑失败：战斗继续 → 逃跑结果 + NPC 连锁合并 1 条（铁律 2/军规3）
+                body = tpl_of(ctx, _TPL_FLEE_FAILED_KEY)
+                counter = render_battle_round(
+                    _without_player_outcomes(enriched, suppress_prefix=suppress_prefix,
+                                             defer_tail=defer_tail), ctx=ctx)
+                if counter:
+                    body = f"{body}\n{counter}"
+                delivered.extend(pipeline.send(body, prefix=not suppress_prefix))
+        elif atype == "item":
+            item_name = str((player_action or {}).get("item_name") or "道具")
+            delivered.extend(_send_item_round(pipeline, enriched, item_name,
+                                               suppress_prefix=suppress_prefix,
+                                               defer_tail=defer_tail))
+        else:
+            # CTB：玩家单行动只渲染玩家自身 outcome——NPC 连锁行已由 dispatch_batch
+            # 批量渲染，此处剥离以防同一 NPC 行动行重复出现。
+            delivered.extend(pipeline.send_round(
+                _without_npc_outcomes(enriched, suppress_prefix=suppress_prefix,
+                                      defer_tail=defer_tail),
+                prefix=not suppress_prefix,
+            ))
+
+        if getattr(report, "ended", False):
+            delivered.extend(
+                # 本段已带前缀（行动段）→ 结束消息不再重复前缀（一条消息只留最顶一个）
+                _dispatch_battle_end(engine, report, pipeline, ctx, e, e_name, reward,
+                                     suppress_prefix=bool(delivered))
+            )
+        return delivered
+    except Exception:  # noqa: BLE001 - 派发异常不向上抛（战斗响应不崩，兜底返回已发送段）
+        _LOGGER.exception("dispatch_round 失败：降级为空发送")
+        return []
+
+
+def _hud_tail_line(ctx: Mapping[str, Any]) -> str:
+    """HUD 尾提示行（`→ 攻击 或 攻击 <技能名>`）取数（battle_hud_tail + battle_action_hint_tail）。
+
+    历史：2026-09-12「置底」拍板时曾由战斗结束消息末尾输出；**2026-09-13 用户拍板改为
+    结束消息不再输出**（L7 复核项：战斗已结束、无可行行动 → 冗余）。当前保留本函数供
+    行动段的置底口径复用/内容包调整，结束消息路径不再调用。
+    """
+    inner = tpl_of(ctx, "battle_action_hint_tail")
+    if not inner:
+        return ""
+    return str(tpl_of(ctx, "battle_hud_tail", {"tail": str(inner)}) or "")
+
+
+def _dispatch_battle_end(
+    engine: Any,
+    report: Any,
+    pipeline: BattlePipeline,
+    ctx: Mapping[str, Any],
+    e: Mapping[str, Any],
+    e_name: str,
+    reward: Mapping[str, Any],
+    *,
+    suppress_prefix: bool = False,
+) -> List[str]:
+    """终局收尾 1 条（战斗结束汇总 + 击杀接线；军规5 掉落只输出一次）。
+
+    M7 N-03 + 3f R-02：怪物击杀接线（battle 引擎无 ctx，落指令层结算点）——
+    预置 [事件:怪物击杀] flat + first_kill 首杀 + codex 图鉴点亮 + 里程碑检查。
+
+    :param engine: BattleEngine（保留参数：终局快照读取点）。
+    :param report: 引擎行动报告（ended/status/outcomes）。
+    :param pipeline: 统一出口。
+    :param ctx: 战斗 ctx。
+    :param e: 敌方 combatant 快照（id/name 取用）。
+    :param e_name: 怪物展示名。
+    :param reward: 结算奖励 dict（exp/gold/drops）。
+    :return: 实际发送段列表。
+    """
+    winner = str(getattr(report, "status", "") or "draw")
+    if winner == "win":
+        try:
+            from qbot_rpg.core.adventure_log import log_first_kill
+            from qbot_rpg.core.event_bus import bump_event, resolve_event_key
+
+            bump_event(
+                cast(MutableMapping, ctx),
+                resolve_event_key(ctx, "怪物击杀"),
+                instance={"tag": "event"},
+            )
+            # 击杀累计计数（kill_count）由 settle_battle_rewards 统一写
+            # （battle_reward.py ④ 段，Player 实例/ctx 就地 bump；此处不写防双计）
+            log_first_kill(
+                cast(MutableMapping, ctx), e_name,
+                monster_id=str(e.get("id") or e.get("monster_id") or e_name),
+            )
+        except Exception:  # noqa: BLE001 - 事件/首杀异常不阻断终局消息
+            _LOGGER.exception("终局击杀事件接线失败（不阻断结算消息）")
+        # M11 批2 路2C（4d G-8）：monster 册首杀点亮——mark_seen(killed=True)；
+        # try/except 防图鉴异常吞战斗结算；不新增 send（图鉴为辅助钩子）
+        try:
+            from qbot_rpg.core.codex import mark_seen as _codex_mark_seen
+
+            mid = str(e.get("id") or e.get("monster_id") or e_name)
+            _codex_mark_seen(cast(MutableMapping, ctx), "monster", mid, e_name, killed=True)
+        except Exception:  # noqa: BLE001 - 图鉴异常不阻断结算
+            _LOGGER.exception("图鉴首杀点亮失败（不阻断结算消息）")
+        # M11 批2 路2C（4d D-06）：图鉴点亮结算点 → 里程碑阶梯检查（幂等已授不重授）
+        try:
+            from qbot_rpg.core.codex_milestones import check_milestones
+
+            check_milestones(cast(MutableMapping, ctx))
+        except Exception:  # noqa: BLE001 - 里程碑异常不阻断结算
+            _LOGGER.exception("里程碑检查失败（不阻断结算消息）")
+    # 叙事句伤害 = 本次最后一个玩家行动 outcome 的 final_damage（用户结算模板回顾最后一击）
+    last_pd = 0
+    for _oc in reversed(tuple(getattr(report, "outcomes", ()) or ())):
+        if str(getattr(_oc, "actor", "") or "") == "player":
+            last_pd = int(getattr(_oc, "final_damage", 0) or 0)
+            break
+    return pipeline.send_end(
+        SimpleNamespace(),
+        _enemy_ns(e, turn=int(getattr(report, "action_seq", 0) or 0)),
+        winner,
+        summary=ctx.get("battle_summary"),
+        status=getattr(report, "status", None),
+        exp=reward.get("exp", 0),
+        gold=reward.get("gold", 0),
+        drops=reward.get("drops", ()),
+        final_damage=last_pd,
+        enemy_name=e_name,          # _prefix_free_ns 剥离 dict name，显式注入
+        leveled=ctx.get("battle_leveled"),  # 2026-09-03 击杀升级信息
+        # 2026-09-13 用户拍板（L7）：战斗已结束 → 不再输出「→ 攻击 或 攻击 <技能名>」
+        # （结束消息里该提示无可行行动，属冗余；行动段仍按 2026-09-12「置底」口径在
+        #  HUD 块末尾输出——见 defer_tail 分支）
+        prefix=not suppress_prefix,  # 与行动段合并为同一条消息 → 前缀只在最顶行
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -861,9 +1256,7 @@ def _gate(ctx: Mapping[str, Any]) -> Optional[str]:
     本地导入避免跨包循环；ctx["registered"] is False → 拦截文案；缺省视为已注册。
     """
     if ctx.get("registered", True) is False:
-        from .basic_commands import TPL_REGISTER_GATE  # noqa: PLC0415
-
-        return TPL_REGISTER_GATE
+        return tpl_of(ctx, "basic_register_gate")
     return None
 
 
@@ -978,16 +1371,16 @@ def _apply_death_penalty(ctx: Mapping[str, Any], engine: Any) -> None:
             cur["hp"] = 0
             exp = int(cur.get("exp", 0) or 0)
             cur["exp"] = max(0, int(exp - (exp * drop_pct / 100.0)))
-            ps = cur.get("persistent_state")
-            if isinstance(ps, MutableMapping):
+            _ps = cur.get("persistent_state")
+            if isinstance(_ps, MutableMapping):
                 if respawn:
-                    ps["location"] = respawn
+                    _ps["location"] = respawn
                 if weak_sec > 0:
                     from datetime import datetime, timedelta  # noqa: PLC0415
 
                     try:
                         _until = datetime.fromisoformat(now_iso.replace("Z", "+00:00")) + timedelta(seconds=weak_sec)
-                        ps["weak_until"] = _until.strftime("%Y-%m-%dT%H:%M:%S+00:00")
+                        _ps["weak_until"] = _until.strftime("%Y-%m-%dT%H:%M:%S+00:00")
                     except (ValueError, TypeError):
                         pass
             elif isinstance(cur, MutableMapping):
@@ -996,6 +1389,61 @@ def _apply_death_penalty(ctx: Mapping[str, Any], engine: Any) -> None:
             ctx["hp"] = 0
     except Exception:  # noqa: BLE001 - 死亡惩罚异常不阻断战斗响应
         return
+
+
+def _effect_events_owned_by_player_segment(report: Any) -> bool:
+    """本拍 `effect_events` 是否由玩家段渲染（H1 归属原则）。
+
+    一次玩家操作用同一条合并消息承载「NPC 连锁段 + 玩家段」；两段若都渲染同一批
+    `effect_events`，`【持续效果】/【效果失效】` 会在桥接合并后的消息里各出现两次。
+    归属原则（2026-09-12 复核修复）：**本次行动 owner = 玩家段**，批量段不再渲染。
+
+    唯一例外：逃跑成功走固定文案 `send_flee`（不渲染 HUD 行）→ 由批量段承载，
+    避免丢事件。其余路径（攻击/技能/道具/逃跑失败）玩家段都会经
+    `render_battle_round` 渲染 effect 行。
+    """
+    oc = _first_player_outcome(report)
+    if oc is None:
+        return True
+    atype = str(getattr(oc, "action_type", "") or "")
+    return not (atype == "flee" and bool(getattr(oc, "ok", False)))
+
+
+def _dispatch_merged_action(
+    engine: Any,
+    report: Any,
+    pipeline: BattlePipeline,
+    ctx: Mapping[str, Any],
+    player_action: Optional[Mapping[str, Any]],
+    *,
+    defer_tail: bool = False,
+) -> List[str]:
+    """单次玩家操作派发（CTB 合并模型）。
+
+    CTB 一次 `player_act` = 玩家行动 + 调度器自动推进的 NPC 连锁（2026-09-10 打通
+    NPC 行动执行后，`report.outcomes` 同时含玩家与 NPC 行动）。
+
+    - **NPC 连锁**：由 `dispatch_batch` 批量渲染 1 条（无 NPC 行动则静默 `[]`，
+      绝不发空消息）。
+    - **玩家行动 / 逃跑 / 道具 / 终局**：由 `dispatch_round` 渲染 1 条。玩家单行动
+      渲染时**剥离 NPC outcome**（`_without_npc_outcomes`），避免与 batch 重复渲染
+      同一 NPC 行动行。
+    合计 ≤2 条（铁律 2「单次操作 ≤1-2 条」）。
+
+    effect 行归属：本次行动 owner = 玩家段（见 `_effect_events_owned_by_player_segment`）；
+    仅逃跑成功等玩家段不出 effect 行的路径交给批量段，两段绝不重复渲染同一批事件（H1）。
+
+    :return: 实际发送段列表。
+    """
+    sent: List[str] = []
+    _batch = dispatch_batch(engine, report, pipeline, ctx, player_action=player_action,
+                            render_effect_events=not _effect_events_owned_by_player_segment(report))
+    sent.extend(_batch)
+    # 2026-09-12 用户拍板：批量段（怪行动）已带前缀 → 玩家段压掉自己的前缀行，
+    # 桥接层把两段合并为一条消息时**只在最顶部保留一个**「Lv{n}.{玩家名}」。
+    sent.extend(dispatch_round(engine, report, pipeline, ctx, player_action=player_action,
+                               suppress_prefix=bool(_batch), defer_tail=defer_tail))
+    return sent
 
 
 def _run_battle_action(ctx: Mapping[str, Any], action: Mapping[str, Any]) -> dict:
@@ -1023,15 +1471,22 @@ def _run_battle_action(ctx: Mapping[str, Any], action: Mapping[str, Any]) -> dic
         # 死亡惩罚（lose=玩家死）：掉经验 + 虚弱 + 回安全区（settings.death_penalty
         # 配置 + default_map 兜底；副本/PVP 界别由装配层后续扩展，此处仅野图语义）
         _apply_death_penalty(ctx, engine)
-    sent = dispatch_round(engine, report, pipeline, ctx, player_action=action)
+    # CTB 合并模型（2026-09-10 修订）：一次玩家操作 = 玩家行动 + 调度器自动推进的
+    # NPC 连锁。**同一条**消息里先 NPC 连锁段、再玩家行动段（`dispatch_batch` 批量
+    # + `dispatch_round` 玩家单行动），合并后一次发送（铁律 2：单次操作恰 1 条）。
+    # 逃跑/道具/终局等特殊路径仍走 `dispatch_round`（自行发送，不再额外合并）。
+    _sent: List[str] = _dispatch_merged_action(
+        engine, report, pipeline, ctx, action,
+        defer_tail=bool(getattr(report, "ended", False)),
+    )
     if report.ended:
         message = tpl_of(ctx, _TPL_RESULT_END_KEY, {"status": report.status})
     else:
         message = tpl_of(ctx, _TPL_RESULT_ROUND_KEY, {"turn": report.turn})
-    # send:False —— 正文已由 dispatch_round/pipeline 发送（一轮 1 条铁律）；
-    # 阻止 runner sender 闭包重复发送 message（processing L202 send 开关，2026-09-02
-    # 实机双发修复：此前 runner 再发一遍「第 N 回合结算」造成重复消息）。
-    return {"ok": True, "sent": sent, "message": message, "send": False}
+    # send:False —— 正文已由 dispatch_batch/dispatch_round 经 pipeline 发送（一轮 1 条
+    # 铁律）；阻止 runner sender 闭包重复发送 message（processing L202 send 开关，
+    # 2026-09-02 实机双发修复：此前 runner 再发一遍「第 N 次行动结算」造成重复消息）。
+    return {"ok": True, "sent": _sent, "message": message, "send": False}
 
 
 def _resolve_skill(ctx: Mapping[str, Any], text: str) -> Optional[str]:
@@ -1254,7 +1709,10 @@ def cmd_battle_target(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     enemy = state.get("enemy")
     if not isinstance(enemy, Mapping) or not enemy.get("name"):
         return tpl_of(ctx, "battle_target_no_battle")
-    turn = int(state.get("turn", 0) or 0)
+    # CTB 口径（收口）：`{round}` 槽位供【行动数】行（批4 路J 对齐 status_target 口径，
+    # CTB 无「回合」）——取 action_seq（已结算行动数），而非顶层 turn（兼容镜像、
+    # CTB 下不推进）。缺 action_seq 时回退 turn 兜底。
+    turn = int(state.get("action_seq", state.get("turn", 0)) or 0)
     lines: List[str] = [tpl_of(ctx, "battle_target_head",
                                {"name": str(enemy.get("name") or "?"),
                                 "round": turn})]
@@ -1268,7 +1726,7 @@ def cmd_battle_target(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     skip = {"name", "hp", "max_hp", "mp", "max_mp", "id", "dead_mark",
             "skip_turn", "defenses", "skills", "is_boss", "elem_atk",
             "elem_res", "str", "spr", "int", "luk", "agi", "con"}
-    attr_names = {"atk": "攻击", "dfn": "防御", "mag": "魔力", "spd": "速度",
+    attr_names = {"atk": "攻击", "dfn": "防御", "mag": "法强", "spd": "速度",
                   "foc": "专注", "lck": "幸运"}
     for k, v in enemy.items():
         if k in skip or not isinstance(v, (int, float)) or isinstance(v, bool):
@@ -1293,8 +1751,9 @@ def cmd_battle_target(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
                         _cnt = 0
                     m_names.append(str(mn) if _cnt <= 1 else f"{mn}×{_cnt}")
         if m_names:
+            # 批4 路J：多值改「每值一行」（少｜多换行，防多印记叠层爆宽）
             lines.append(tpl_of(ctx, "battle_target_marks",
-                                {"marks": " ｜ ".join(m_names)}))
+                                {"marks": "\n".join(m_names)}))
     # 状态（status_state enemy — 简化：形态名/效果名）
     ss = state.get("status_state") or {}
     s_enemy = ss.get("enemy") if isinstance(ss, Mapping) else None
@@ -1306,8 +1765,9 @@ def cmd_battle_target(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
                 if sn:
                     s_names.append(str(sn))
         if s_names:
+            # 批4 路J：多值改「每值一行」（少｜多换行）
             lines.append(tpl_of(ctx, "battle_target_status",
-                                {"statuses": " ｜ ".join(s_names[:6])}))
+                                {"statuses": "\n".join(s_names[:6])}))
     # 弱点（enemy_def weakness 配置；不显示掉落）
     ed = getattr(engine, "_enemy_def", None)
     if isinstance(ed, Mapping):
@@ -1327,8 +1787,9 @@ def cmd_battle_target(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
                 elif isinstance(vv, list) and vv:
                     segs.append(f"{kk}：" + "/".join(str(x) for x in vv))
             if segs:
+                # 批4 路J：多值改「每值一行」（少｜多换行）
                 lines.append(tpl_of(ctx, "battle_target_weak",
-                                    {"weak": " ｜ ".join(segs)}))
+                                    {"weak": "\n".join(segs)}))
     return "\n".join(lines)
 
 

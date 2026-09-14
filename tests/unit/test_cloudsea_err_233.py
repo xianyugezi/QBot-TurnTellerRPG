@@ -10,7 +10,7 @@ from qbot_rpg.commands.errors import (
     TPL_ERR_CONDITION,
     TPL_ERR_LACK_RESOURCE,
 )
-from qbot_rpg.core.templates.cloudsea_err_tpl import (
+from qbot_rpg.core.cloudsea_err import (
     CLOUDSEA_ERR_KEYS,
     expand_consts,
 )
@@ -25,7 +25,7 @@ _TPL_PATH = os.path.join(
 
 def test_tpl12_default_unchanged():
     """ctx 缺省 → errors.py 常量（D-04 唯一源，零行为变化）。"""
-    assert format_tpl12("/港 菜") == TPL_ERR_BAD_COMMAND.format(fragment="/港 菜")
+    assert format_tpl12("/港 菜") == TPL_ERR_BAD_COMMAND.format(fragment="港 菜")  # 免斜杠（M8）：前导 / 剥除
     assert format_tpl13("破甲", 1, 3) == TPL_ERR_CONDITION.format(
         name="破甲", current=1, required=3)
     assert format_tpl14("风缆", 2, 0) == TPL_ERR_LACK_RESOURCE.format(
@@ -51,7 +51,7 @@ def test_tpl13_14_ctx_override():
 
 def test_tpl_override_ignores_bad_shapes():
     ctx = {"templates": {"err_bad_command": 123, "err_condition": "", "err_lack_resource": None}}
-    assert format_tpl12("/a", ctx) == TPL_ERR_BAD_COMMAND.format(fragment="/a")
+    assert format_tpl12("/a", ctx) == TPL_ERR_BAD_COMMAND.format(fragment="a")  # 免斜杠剥除后覆盖通道仍不生效（非法形状回落）
     assert format_tpl13("x", 1, 2, ctx) == TPL_ERR_CONDITION.format(name="x", current=1, required=2)
     assert format_tpl14("r", 1, 0, ctx) == TPL_ERR_LACK_RESOURCE.format(
         resource="r", amount=1, current=0)

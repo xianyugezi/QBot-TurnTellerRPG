@@ -229,21 +229,60 @@ def test_c9_dual_duration_dimensions():
     rt.apply_status("c", "enemy", source="a", attacker="player", force=True)
     for _ in range(10):
         rt.tick_trigger("enemy", "c")
-    assert rt.find_status("enemy", "c") is None  # 回合0+次数10 → 触发10次消失
+    assert rt.find_status("enemy", "c") is None  # turns=0+次数10 → 触发10次消失
 
-    rt = eff_rt(t=sdef("t", "回合限", duration={"turns": 10, "charges": 0}))
+    rt = eff_rt(t=sdef("t", "行动限", duration={"turns": 10, "charges": 0}))
     rt.apply_status("t", "enemy", source="a", attacker="player", force=True)
     for _ in range(5):
         rt.tick_trigger("enemy", "t")  # 次数0 → 触发不扣
     still = rt.find_status("enemy", "t")
     for _ in range(10):
         rt.tick_turns("enemy")
-    assert still is not None and rt.find_status("enemy", "t") is None  # 回合10 → 回合末10次后消失
+    assert still is not None and rt.find_status("enemy", "t") is None  # turns=10 → 行动收尾10次后消失
 
     rt = eff_rt(e=sdef("e", "永续", duration={"turns": -1, "charges": 0}))
     rt.apply_status("e", "enemy", source="a", attacker="player", force=True)
     rt.clear_safe_zone("enemy")
     assert rt.find_status("enemy", "e") is not None  # -1 维永不被清
+
+
+# ---------------- T10（复核修复 2026-09-12）：tick_turns 返回值 + status_expired 事件 ----
+
+
+def test_tick_turns_returns_only_zeroed_and_skips_permanent_dims():
+    """T10：tick_turns 只返回**因 turns 归零被移除**的实例；turns==-1/0 不返回也不清。"""
+    rt = eff_rt(
+        two=sdef("two", "两回合", duration={"turns": 2, "charges": 0}),
+        forever=sdef("forever", "永续", duration={"turns": -1, "charges": 0}),
+    )
+    rt.apply_status("two", "enemy", source="two", attacker="player", force=True)
+    rt.apply_status("forever", "enemy", source="forever", attacker="player", force=True)
+    # turns==0（无限维）：apply_status 会把 0 归一为 1，故直接挂原始实例锁定该分支；
+    # name 字段用于 HUD 失效行展示名（同 _new_instance 形态）。
+    rt.status_state["enemy"].append(
+        {"status_id": "zero", "name": "零维", "turns": 0, "charges": 0})
+
+    assert rt.tick_turns("enemy") == []                       # two 2 → 1，未归零不返回
+    removed = rt.tick_turns("enemy")
+    assert [i["status_id"] for i in removed] == ["two"]       # 1 → 0 移除并返回
+    assert "name" in removed[0]                               # 带展示名（HUD 失效行数据源）
+    for _ in range(5):
+        assert rt.tick_turns("enemy") == []                   # -1/0 维反复 tick 都不返回
+    assert rt.find_status("enemy", "forever") is not None
+    assert any(i.get("status_id") == "zero" for i in rt.status_instances("enemy"))
+
+
+def test_tick_turn_end_emits_status_expired_with_side_and_name():
+    """T10：tick_turn_end 把 tick_turns 归零实例转成 status_expired（带 side/name）。"""
+    rt = eff_rt(one=sdef("one", "瞬时 buff", duration={"turns": 1, "charges": 0}))
+    rt.apply_status("one", "enemy", source="a", attacker="player", force=True)
+
+    log = tick_turn_end(base_snapshot(), rt)
+    expired = [e for e in log if e.get("type") == "status_expired"]
+    assert expired, f"未产出 status_expired：{log}"
+    assert expired[0]["side"] == "enemy"
+    assert expired[0]["status"] == "one"
+    assert expired[0]["name"] == "瞬时 buff"
 
 
 def test_c10_hit_rate_and_resist():
@@ -353,7 +392,7 @@ def test_l0_proc_per_turn_limit(ctx):
     for _ in range(12):
         if execute_proc_action(proc, ctx(snap, 0), rtp).ok:
             okc += 1
-    assert okc == 10  # 每回合上限 10（E-8）
+    assert okc == 10  # 每次行动上限 10（E-8）
 
 
 def test_l0_interrupt_clears_combo(ctx):

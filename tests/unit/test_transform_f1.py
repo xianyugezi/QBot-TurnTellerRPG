@@ -8,15 +8,15 @@
 
 测试目标：qbot_rpg.core.transform（F1 变换触发 + 5 态状态机框架）：
   - 5 态状态机：常量 / 迁移表 / resolve_transition / state_of_transform_state
-    常态三分（S1/S3/S5）/ 瞬态集合（S2/S4 不落快照不占回合，D-03）；
+    常态三分（S1/S3/S5）/ 瞬态集合（S2/S4 不落快照不占用行动，D-03）；
   - 触发闸 C1~C4：形态激活期拒绝（TC-03）/ 冷却中拒绝（TC-03）/ 被控拒绝
     （TC-04）/ 资源不足拒绝（TC-02）/ 全部满足放行；
   - F1 主流程 trigger_transform：
     - TC-01 四动作同拍：效果先结算（resolve_hook 先于变换，TRF-1）→
-      变换（不额外耗回合 TRF-2，action_used 语义）→ 技能位重排（SH-1~5）→
+      变换（不额外消耗行动 TRF-2，action_used 语义）→ 技能位重排（SH-1~5）→
       state_policy 处理（默认清连段/印记 keep/buff keep）→ 形态状态挂载
       （D-02 双轨：transform_state.form + form_status_id 双写）→
-      remaining=turns 含变身当回合；
+      remaining=turns 含变身当次行动；
     - C2/C3/C4 拒绝路径幂等（不写 transform_state / 不重结算）；
     - resolve 失败 → 变换不触发；
     - duration=battle → remaining=-1 哨兵（整场不还原）；
@@ -26,12 +26,12 @@
     - TransformEngine 引擎注入模式（钩子挂 ctx + audit 观察口）。
 
 依据：docs/细化/细化_6b_职业库与变换引擎.md：
-  - §2.1 流程 F1（①~⑥ 时序 + TRF-1~6：效果先结算 / 零额外回合 / 不重结算 /
+  - §2.1 流程 F1（①~⑥ 时序 + TRF-1~6：效果先结算 / 零额外行动 / 不重结算 /
     触发技标签显式 combo_preserve / 怒气沉没 / 形态代价可配）；
   - §3.1 状态集（S1~S5 五态 + 进入/退出语义）；§3.2 状态图；
   - §3.3 触发条件 C1~C4 / 持续时间 / 洗牌 SH-1~5；
   - §1.4 state_policy 三键（combo/marks/buff clear|keep，默认 clear/keep/keep）；
-  - §0.3 ADR（D-02 双轨 / D-03 计时挂回合 tick）；
+  - §0.3 ADR（D-02 双轨 / D-03 计时挂行动 tick）；
   - §六 TC-01~04（变换触发 4 例）。
 
 铁律：零 NoneBot import；纯函数确定性；零定时器/零睡眠（不引入实时计时调用）；
@@ -248,7 +248,7 @@ def test_five_states_constants_exact() -> None:
 
 
 def test_transient_states_not_snapshotted() -> None:
-    """瞬态集合（D-03）：S2/S4 不落快照、不占回合——恰为 TRANSFORMING/REVERTING。"""
+    """瞬态集合（D-03）：S2/S4 不落快照、不占用行动——恰为 TRANSFORMING/REVERTING。"""
     assert TRANSIENT_STATES == (STATE_TRANSFORMING, STATE_REVERTING)
     assert STATE_TRANSFORMING in TRANSIENT_STATES
     assert STATE_REVERTING in TRANSIENT_STATES
@@ -386,7 +386,7 @@ def test_can_transform_default_gates_allow() -> None:
 
 def test_trigger_full_success_tc01_four_actions() -> None:
     """TC-01 变换触发四动作同拍：效果先结算 / job_form 切换 / 技能位重排 /
-    state_policy / 形态状态挂载（D-02 双轨）/ remaining=turns 含变身当回合。"""
+    state_policy / 形态状态挂载（D-02 双轨）/ remaining=turns 含变身当次行动。"""
     events: List[str] = []
     ctx = _ctx(combo_count=3, combo_chain="chain_normal")
 
@@ -407,7 +407,7 @@ def test_trigger_full_success_tc01_four_actions() -> None:
     assert events[1] == f"status:{FORM_ID}"
     committed = [e for e in result["side_effects"] if e.get("type") == "transform_committed"]
     assert len(committed) == 1
-    # ② 变换不额外耗回合（TRF-2）：action_used=True（行动权已由触发技消耗）
+    # ② 变换不额外消耗行动（TRF-2）：action_used=True（行动权已由触发技消耗）
     assert result["action_used"] is True
     # ④b job_form 切换（D-02 引擎轨）
     ts = _cast_dict(result["transform_state"])
@@ -417,7 +417,7 @@ def test_trigger_full_success_tc01_four_actions() -> None:
     # ④a 形态状态挂载（D-02 效果轨双写）：form_status_id 登记 T6
     assert ts["form_status_id"] == FORM_STATUS_ID
     assert any(e.get("type") == "form_status_applied" for e in result["side_effects"])
-    # ⑥ remaining=turns 含变身当回合（TC-01④）+ cooldown 从触发起算（REV-6）
+    # ⑥ remaining=turns 含变身当次行动（TC-01④）+ cooldown 从触发起算（REV-6）
     assert ts["remaining"] == 4
     assert ts["cooldown_remaining"] == 5
     # ④c 技能位重排（SH-1~5）产物
@@ -455,7 +455,7 @@ def test_trigger_resolve_failure_aborts_transform() -> None:
 
 
 def test_trigger_rejected_when_form_active_tc03() -> None:
-    """C1 形态激活期再施放触发技 → 拒绝（TC-03 路径一）：不写段、不耗额外回合。"""
+    """C1 形态激活期再施放触发技 → 拒绝（TC-03 路径一）：不写段、不消耗额外行动。"""
     ctx = _ctx(transform_state={"form": FORM_ID, "remaining": 3})
     result = trigger_transform(ctx)
     assert result["ok"] is False
@@ -466,7 +466,7 @@ def test_trigger_rejected_when_form_active_tc03() -> None:
 
 
 def test_trigger_rejected_when_cooldown_tc03() -> None:
-    """C3 冷却期施放触发技 → 拒绝（TC-03 路径二）：不写段、不耗回合。"""
+    """C3 冷却期施放触发技 → 拒绝（TC-03 路径二）：不写段、不消耗行动。"""
     ctx = _ctx(transform_state={"form": None, "cooldown_remaining": 2})
     result = trigger_transform(ctx)
     assert result["ok"] is False
@@ -477,7 +477,7 @@ def test_trigger_rejected_when_cooldown_tc03() -> None:
 
 
 def test_trigger_rejected_when_skipped_tc04() -> None:
-    """C4 被控回合内尝试变身 → 拒绝（TC-04）：不触发变换。"""
+    """C4 被控行动内尝试变身 → 拒绝（TC-04）：不触发变换。"""
     ctx = _ctx()
     ctx["skip_check"] = lambda c: True
     result = trigger_transform(ctx)

@@ -1,785 +1,2207 @@
-"""Web 编辑器外壳 API（M12 批3 路3C · 15 端点总装）。
+"""只读元数据读取层：把「内容包元数据」翻译成编辑器可直接渲染的 JSON。
 
-职责（细化_3a D-05 / §2.1 + 细化_5a §6）：FastAPI 编辑器外壳——读写 content 包
-（原子写盘+热重载）、认证会话、六页 CRUD+校验、数据包管理。依赖方向
-web → {content, core, storage, data}，任何层不得反向依赖 web；零 NoneBot import。
+编辑器重写批1（docs/编辑器重写_实现方案.md §三）唯一实现点：
 
-15 端点（细化_5a §6.1-6.4）：
-  - 认证 4：POST /api/auth/setup|login|logout、GET /api/auth/me（L160-163）
-  - 元数据引用 2：GET /api/meta/{page}、GET /api/refs/{target}（§6.2）
-  - 六页 CRUD+校验 6：GET/POST /api/pages/{page}、GET/PUT/DELETE
-    /api/pages/{page}/{id}、POST /api/pages/{page}/validate（§6.3 L176-181）
-  - 热重载+数据包 3：POST /api/reload、GET /api/packs、PUT /api/packs/active（§6.4）
+  · 模块列表        ← manifest.modules（包数据）
+  · 模块显示名      ← manifest.module_labels / module_tree 节点的 label（缺省用模块键名）；
+                       包内 field_meta.json 的 module_labels / module_tree 声明优先（批A）
+  · 模块层级（父子）← manifest.module_tree（别名 module_groups）；**包不声明就平铺**；
+                       包内 field_meta.json 若声明 module_tree 则以其为准
+  · 字段清单        ← default_field_meta_table() 的 ModuleMeta.fields，经包内 field_meta.json
+                       （field_labels / field_help / group_labels）合并（包声明优先，框架兜底）
+                      （FieldMeta.type / label / required / enum / ref_target / range）
+  · 字段分组        ← FieldMeta.group → ModuleMeta.field_groups[key] → 单一默认分组（兜底）
+  · 分组页签        ← ModuleMeta.group_order（顺序）/ group_labels（显示名，缺省用组键）/
+                       field_groups（成员）；声明了但本条目无字段的组也保留（count=0，前端空态）
+  · 字段类型 → 控件形态 ← _WIDGET_BY_TYPE + _EDIT_BY_WIDGET + list_control（本文件唯一映射点；
+>    前端只按 descriptor.control 渲染，不认字段类型）；批4 起 list 可编辑（listtable/reflist）
+  · 引用的显示名    ← 引用目标 kind 的名称索引（扫描各模块条目 id→name 构建；命名空间合并）
 
-统一响应包络（L183）：{ok: true, data} / {ok: false, errors: [...]}。
-
-【工程补白 · 显式标注】
-  1) fastapi 惰性 import（既有模式）：requirements 已加 fastapi/uvicorn；
-     缺 fastapi 时 create_app 抛可读错误（核心层测试不触碰 web 路由）。
-  2) state 注入：create_app(state) 携带 {registry, auth_store, content_dir,
-     editor, permission_store, audit_store}；缺省 → 503 编辑器未装配。
-  3) 写端点流程（SV-06/07）：pages_crud 产出变更 → atomic_store 原子写盘 →
-     reload 校验；校验红拦不阻断保存（SV-02），返回 warnings。
-  4) 认证：除 /api/auth/setup 与 /api/auth/login 外全部要求 Bearer token。
-  5) >50ms 操作（文件 IO）应 asyncio.to_thread——当前端点同步实现，宿主
-     uvicorn 单 worker 下文件 IO 量小可接受；大包写盘批 5 优化。
-
-铁律：零 NoneBot import；web → content/core/storage/data 正向依赖；全中文注释。
+铁律：本文件不得出现任何内容包的模块名或业务字段名（举例本身就会污染这条判断，故不举例）；
+换一个内容包，本层零改动可用（判断标准见 docs/编辑器重写_需求与约束.md 第〇节）。
 """
 
 from __future__ import annotations
 
-from typing import Any, Dict, Mapping, MutableMapping, Optional
+import copy
+import json
+import re
+from functools import lru_cache
+from pathlib import Path
+from typing import Any, Dict, List, Mapping, Optional, Tuple
 
-try:  # M12 运行时依赖（requirements 已加 fastapi/uvicorn）；缺失降级占位
-    from fastapi import APIRouter, FastAPI, Header, HTTPException
-    _HAS_FASTAPI = True
-except ImportError:  # pragma: no cover - 核心层测试不触碰 web 路由
-    FastAPI = None  # type: ignore
-    APIRouter = None  # type: ignore
-    Header = None  # type: ignore
-    HTTPException = None  # type: ignore
-    _HAS_FASTAPI = False
+from qbot_rpg.content import field_meta_pack as pack_meta
+from qbot_rpg.content.field_meta import default_field_meta_table
+from qbot_rpg.content.models import FieldMeta, FieldMetaTable, ModuleMeta
+from qbot_rpg.content.module_catalog import (
+    FRAMEWORK_MODULE_CATALOG,
+    MODULE_PANEL_HINT,
+    ModuleCatalogEntry,
+    catalog_entry,
+)
 
-# 类型收窄：装饰器函数内 raise HTTPException 时它可能 None（惰性 import）。
-# 统一别名标注 Any（create_app 已先判 _HAS_FASTAPI，运行期恒非 None）。
-_HTTPException: Any = HTTPException
-_Header: Any = Header
-
-__all__ = ["create_app", "iter_routes", "FastAPI", "APIRouter"]
-
-# =============================================================================
-# M12.5 批1 路1B：/api/refs/{target} 引用候选别名表（审计点 17 单源；m125_启动包
-# §2.1「refs 候选覆盖全部 kind」）。target 字符串小写 → 模块键（field_meta 表键 /
-# Registry.modules_raw 键，二者同键——loader 按模块文件去 .json 登记同名键）。
-# 解析优先：field_meta 表键命中直查（含全部已登记 list/obj 模块）→ 未命中走本
-# 别名表（注册表 kind 或前端 ref_target 常见叫法：enemy→enemies、chain→
-# skill_chains 等）；仍无 → None（调用方 404/空列表）。
-# =============================================================================
-REFS_TARGET_ALIASES: Dict[str, str] = {
-    # 语义 kind（field_meta ref_target 全部集合 9 种，见下方组注释）
-    "monster": "enemies",   # 前端/页面页名 monster → enemies 表
-    "enemy": "enemies",
-    "item": "items",
-    "skill": "skills",
-    # skill_or_any：宽松引用 kind（validator R-4 兼容：命中任一注册 kind 即通过）。
-    # 归一为"任一技能/行动库" —— refs 候选语义最接近 skills 表（skill 字段无歧义时
-    # 直查 skills 已覆盖；本行兜底保证 ref_target 全集可解析、宁全勿漏）
-    "skill_or_any": "skills",
-    "job": "jobs",
-    "map": "maps",
-    "quest": "quest",
-    "shop": "shop",
-    "npc": "npc",
-    "effect": "effects",
-    "status": "statuses",
-    "mark": "marks",
-    "trait": "traits",
-    "action": "action",
-    "recipe": "recipe",
-    "equipment": "equipment",
-    "slot": "slots",
-    "chain": "skill_chains",
-}
+# 无任何分组声明时的单一默认分组（缺省兜底；编辑器不因包缺元数据而空白）。
+DEFAULT_GROUP = "默认"
+# 面板顶部「元数据来源」标注（前端展示；来源 = 字段元数据表）。
+META_SOURCE = "qbot_rpg/content/field_meta.py · FieldMetaTable"
+# loader/BaseDef 的框架级约定字段（不是业务字段名）：显示名 / 标识。
+_NAME_FIELD = "name"
+_ID_FIELD = "id"
+_SAFE_COMPONENT = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.\-]*$")
+_MAX_DEPTH = 3  # 只读视图嵌套深度上限（防递归爆栈/响应过大）
+_MAX_TABLE_ROWS = 200  # 列表字段只读表格最多渲染行数（超出截断并标注 row_count）
 
 
-def _refs_module_for_target(target: str, table: Any) -> Optional[str]:
-    """/api/refs/{target} target → 模块键解析（审计点 17 统一解析器）。
+class EditorError(Exception):
+    """编辑器读取层领域异常基类（宿主 scripts/editor_host.py 映射为 HTTP JSON）。"""
 
-    口径：target 小写 → ①field_meta 表键命中直查（表键即模块键，含全部已登记
-    list 模块与 C/D 类扩展）；②未命中 → REFS_TARGET_ALIASES 别名表 → 模块键；
-    ③仍无 → None（调用方 404/空列表）。表对象惰性传入（fastapi 惰性 import，
-    表构造可能昂贵——只在确实需要时由调用方构建）。
-    """
-    key = str(target).lower()
-    if table is not None and getattr(table, "modules", None) is not None:
-        if key in table.modules:
-            return key
-    return REFS_TARGET_ALIASES.get(key)
+    status_code = 500
 
 
-# M12.5 中文显示：缺 label 字段的自动中文词典（编辑器表单显示层兜底——
-# field_meta 未注入 label 的通用键名在此补中文；未命中保留英文名回退。
-# 词典只服务显示，不影响校验/数据。字段专属名优先在 field_meta 手动注入。
-_FIELD_LABEL_ZH: Dict[str, str] = {
-    # 通用
-    "id": "ID", "name": "名称", "type": "类型", "desc": "描述",
-    "icon": "图标", "kind": "类别", "level": "等级", "max": "上限",
-    "growth": "成长", "tags": "标签", "note": "备注", "title": "标题",
-    "text": "文本", "value": "值", "count": "数量", "chance": "概率",
-    "rate": "比率", "ratio": "比率", "amount": "数量", "total": "总量",
-    "price": "价格", "cost": "消耗", "cooldown": "冷却", "slot": "槽位",
-    "bind": "绑定", "usable": "可使用", "stack": "堆叠", "max_stack": "最大堆叠",
-    "rarity": "稀有度", "grade": "品级", "weight": "重量", "size": "体型",
-    # 战斗数值
-    "hp": "生命", "mp": "魔力", "atk": "攻击", "def": "防御",
-    "str": "力量", "int": "智力", "con": "体质", "spr": "精神",
-    "foc": "专注", "agi": "敏捷", "lck": "幸运",
-    "power": "威力", "duration": "持续", "turns": "回合",
-    "probability": "概率", "damage": "伤害", "heal": "治疗",
-    "element": "属性", "elements": "属性", "attack_type": "攻击类型",
-    "interrupt": "打断", "armor": "护甲", "penetration": "穿透",
-    "crit": "暴击", "evasion": "闪避", "accuracy": "命中",
-    "revert": "回复", "resistance": "抗性", "weakness": "弱点",
-    # 结构引用
-    "effects": "效果", "actions": "行动", "conditions": "条件",
-    "condition": "条件", "reward": "奖励", "rewards": "奖励",
-    "require_status": "需要状态", "apply_status": "附加状态",
-    "require_mark": "需要印记", "apply_mark": "附加印记",
-    "target": "目标", "targets": "目标",
-    "buffs": "增益", "debuffs": "减益", "marks": "印记",
-    "skills": "技能", "items": "物品", "enemies": "敌人",
-    "monsters": "怪物", "npcs": "NPC", "drops": "掉落",
-    "quests": "任务", "maps": "地图", "chains": "链",
-    # 技能/任务
-    "skill": "技能", "sp": "技能点", "mp_cost": "魔力消耗",
-    "unlock": "解锁", "unlock_chain": "解锁链", "repeatable": "可重复",
-    "main": "主线", "zone": "区域", "board": "任务板", "timed": "限时",
-    "bonus": "加成", "consume": "消耗", "filter": "筛选",
-    # 其它
-    "state": "状态", "status": "状态", "phase": "阶段",
-    "trigger": "触发", "once": "仅一次", "order": "顺序",
-    "prefix": "前缀", "suffix": "后缀", "format": "格式",
-    # 模块专属高频（forge/fishing/装备/副本/成就等）
-    "alchemy": "炼金", "forge": "锻造", "fishing": "钓鱼",
-    "bait_ids": "鱼饵", "crown_thresholds": "冠级阈值",
-    "energy": "体力", "energy_max": "体力上限", "energy_enabled": "启用体力",
-    "energy_regen_sec": "体力恢复(秒)", "energy_regen_sec_safe": "安全区恢复(秒)",
-    "bait_bonus": "鱼饵加成", "augments_enabled": "启用客制强化",
-    "exp_per_forge": "锻造经验", "exp_sources": "经验来源",
-    "forge_fee": "锻造费用", "decompose_rate": "分解率",
-    "catalyst": "催化剂", "catalyst_consume": "催化剂消耗",
-    "catalyst_unlock_tier": "催化解锁阶", "combine_from": "由...合成",
-    "equip_id": "装备 ID", "equip_restrict": "装备限制",
-    "excludes": "互斥部位", "slot_defs": "槽位定义", "enabled": "启用",
-    "coins": "金币", "gem": "宝石", "exp": "经验", "rep": "声望",
-    "prof": "熟练度", "daily_limit": "每日上限", "difficulty": "难度",
-    "area": "区域", "author": "作者", "version": "版本",
-    "schema_version": "结构版本", "modules": "模块", "awaken": "觉醒",
-    "evolve_to": "进化到", "charges": "充能", "decay": "衰减",
-    "death": "死亡", "battle": "战斗", "drop_rate": "掉落率",
-    "drop_items": "掉落物品", "drop_exp": "掉落经验", "drop_currency": "掉落货币",
-    "enemy_pool": "敌池",
-    "description": "描述", "appliable_to": "可应用目标",
-    "conditional": "条件式", "consume_marks": "消耗印记",
-    "dispel_reverts": "驱散还原", "elem_res": "属性抗性",
-    "element_req": "属性需求", "base_effects": "基础效果",
-    "chain": "链", "chain_map": "链映射", "chain_refs": "链引用",
-    "crit_mod": "暴击修正", "def_base": "基础防御",
-    "block_mode": "格挡模式", "cool": "冷却", "copy_extra_cost": "复制额外消耗",
-    "derive_chains": "派生链",
-}
+class BadRequest(EditorError):
+    """请求参数非法（400）。"""
+
+    status_code = 400
 
 
-def _require_state(state: Any, name: str) -> Any:
-    """取装配件；缺失抛 HTTPException 503（编辑器未装配）。"""
-    if state is None or not hasattr(state, name) or getattr(state, name) is None:
-        raise _HTTPException(
-            status_code=503, detail={"ok": False, "errors": [{
-                "level": "red", "code": "not_assembled",
-                "message": f"编辑器未装配（{name} 缺失）"}]})
-    return getattr(state, name)
+class NotFound(EditorError):
+    """内容包/模块/条目不存在（404）。"""
+
+    status_code = 404
 
 
-def _bearer_token(authorization: Optional[str]) -> Optional[str]:
-    """Authorization: Bearer <token> → token（缺/格式错 → None）。"""
-    if not authorization:
+class Forbidden(EditorError):
+    """当前身份只读、拒绝写入（403）。"""
+
+    status_code = 403
+
+
+# =====================================================================================
+# 路径与文件读取（含 mtime 缓存；只读，不写盘）
+# =====================================================================================
+def repo_root() -> Path:
+    """仓库根目录（本文件位于 <root>/qbot_rpg/web/api.py）。"""
+    return Path(__file__).resolve().parents[2]
+
+
+def content_root(root: Optional[object] = None) -> Path:
+    """内容包根目录：显式传入则用之，否则默认 <仓库根>/content。"""
+    if root is None:
+        return repo_root() / "content"
+    return Path(str(root))
+
+
+def _check_component(name: object, what: str) -> str:
+    """校验包名/模块名（防路径穿越；只用它们拼文件路径）。"""
+    if not isinstance(name, str) or not _SAFE_COMPONENT.match(name):
+        raise BadRequest(f"非法{what}：{name!r}")
+    return name
+
+
+def _pack_dir(pack: object, root: Optional[object]) -> Path:
+    pid = _check_component(pack, "内容包名")
+    d = content_root(root) / pid
+    if not (d / "manifest.json").is_file():
+        raise NotFound(f"内容包不存在或缺少 manifest.json：{pid}")
+    return d
+
+
+@lru_cache(maxsize=2048)
+def _read_json_cached(path_str: str, mtime_ns: int, size: int, ino: int) -> Optional[object]:
+    try:
+        with Path(path_str).open("r", encoding="utf-8") as fh:
+            return json.load(fh)
+    except FileNotFoundError:
         return None
-    parts = str(authorization).split(" ", 1)
-    if len(parts) == 2 and parts[0].lower() == "bearer":
-        return parts[1].strip()
+    except (OSError, ValueError) as exc:  # 坏 JSON 不炸宿主，转领域异常
+        raise EditorError(f"读取/解析 JSON 失败：{path_str}（{exc}）") from exc
+
+
+def _read_json(path: Path) -> Optional[object]:
+    """读 JSON（文件不存在 → None；mtime/size/inode 变化自动失效缓存）。
+
+    批6：缓存键补 `size` + `st_ino`——原子写（os.replace 新临时文件）在同一时间戳刻度内
+    可能产生与上一版相同的 `st_mtime_ns`，仅按 mtime 作键会把「刚写的新内容」读成旧内容
+    （删除后回退复核曾因此假阴性）。inode/size 一起进键后，同刻度重写不再串味。
+    """
+    try:
+        st = path.stat()
+    except OSError:
+        return None
+    return _read_json_cached(str(path), st.st_mtime_ns, st.st_size, st.st_ino)
+
+
+def _manifest(pack_dir: Path) -> Dict[str, Any]:
+    raw = _read_json(pack_dir / "manifest.json")
+    if not isinstance(raw, Mapping):
+        raise EditorError(f"manifest 形态非法（应为对象）：{pack_dir.name}")
+    return dict(raw)
+
+
+# =====================================================================================
+# 元数据表（进程内单例，只读）
+# =====================================================================================
+_META_TABLE: Optional[FieldMetaTable] = None
+
+
+def field_meta_table() -> FieldMetaTable:
+    """缺省字段元数据表单例（只读；全部字段/分组/类型的唯一来源）。"""
+    global _META_TABLE
+    if _META_TABLE is None:
+        _META_TABLE = default_field_meta_table()
+    return _META_TABLE
+
+
+# 包声明合并表缓存：键 = (field_meta.json 路径, mtime_ns, size, ino)（内容变化自动失效；
+# 与 _read_json 同一失效口径——原子写换 inode 也能识别）。
+_MERGED_TABLES: Dict[Tuple[str, int, int, int], FieldMetaTable] = {}
+
+
+def _pack_declaration(pack_dir: Path) -> Optional[pack_meta.PackFieldMeta]:
+    """读包展示元数据声明（无文件 → None；形态非法 → 人话 EditorError）。"""
+    try:
+        return pack_meta.load_field_meta(pack_dir)
+    except pack_meta.PackFieldMetaError as exc:
+        raise EditorError(str(exc)) from exc
+
+
+def _pack_meta_table(pack_dir: Path) -> FieldMetaTable:
+    """该包的字段元数据表：读包声明与框架表合并（包声明优先）；未声明 → 框架表单例。"""
+    decl_path = pack_dir / pack_meta.FIELD_META_FILENAME
+    try:
+        st = decl_path.stat()
+    except OSError:
+        return field_meta_table()
+    key = (str(decl_path), st.st_mtime_ns, st.st_size, st.st_ino)
+    cached = _MERGED_TABLES.get(key)
+    if cached is not None:
+        return cached
+    decl = _pack_declaration(pack_dir)
+    if decl is None:
+        return field_meta_table()
+    table = pack_meta.merge_field_meta_table(field_meta_table(), decl)
+    if len(_MERGED_TABLES) > 256:  # 只读进程内缓存，防长期运行累积（多包反复切换）
+        _MERGED_TABLES.clear()
+    _MERGED_TABLES[key] = table
+    return table
+
+
+def _module_meta(module: str, pack_dir: Optional[Path] = None) -> Optional[ModuleMeta]:
+    """模块元数据：给了包目录 → 包声明合并表；否则框架表单例。"""
+    table = _pack_meta_table(pack_dir) if pack_dir is not None else field_meta_table()
+    return table.module(module)
+
+
+# =====================================================================================
+# manifest 读取（模块清单 / 显示名 / 层级声明）
+# =====================================================================================
+def _declared_modules(manifest: Mapping[str, Any]) -> List[str]:
+    raw = manifest.get("modules")
+    out: List[str] = []
+    for m in raw if isinstance(raw, list) else []:
+        if isinstance(m, str) and m and m not in out:
+            out.append(m)
+    return out
+
+
+def _module_labels(manifest: Mapping[str, Any]) -> Dict[str, str]:
+    raw = manifest.get("module_labels")
+    out: Dict[str, str] = {}
+    if isinstance(raw, Mapping):
+        for k, v in raw.items():
+            if isinstance(k, str) and isinstance(v, str) and v:
+                out[k] = v
+    return out
+
+
+# module_tree 取值哨兵：区分「调用方已给出有效声明」与「回落到 manifest」。
+_TREE_UNSET = object()
+
+
+def _declared_tree_spec(decl: Optional[pack_meta.PackFieldMeta]) -> object:
+    """包声明里的 module_tree（未声明 → 哨兵，回落到 manifest 的 module_tree/module_groups）。"""
+    if decl is not None and decl.module_tree is not None:
+        return decl.module_tree
+    return _TREE_UNSET
+
+
+def _resolve_tree(
+    manifest: Mapping[str, Any], declared: List[str], spec: object = _TREE_UNSET
+) -> Tuple[Dict[str, List[str]], Dict[str, str], List[str]]:
+    """读包的模块层级声明 → (children_map, node_labels, notes)。
+
+    声明键 `module_tree`（别名 `module_groups`），节点形态三种：
+      1) 字符串                 → 顶层模块（无子）
+      2) {"module": p, "label": "...", "children": ["c", {...}]}
+      3) {"p": ["c1", "c2"]}    映射形态（父: 子列表）
+    非法/未声明/自环/重复引用一律忽略并记 note（包声明有瑕疵也不让编辑器崩）。
+    `spec` 显式给出时以其为准（批A：包内 field_meta.json 的 module_tree 优先于 manifest）。
+    """
+    declared_set = set(declared)
+    children: Dict[str, List[str]] = {}
+    labels: Dict[str, str] = {}
+    notes: List[str] = []
+    seen_child: set = set()
+    if spec is _TREE_UNSET:
+        spec = manifest.get("module_tree")
+        if spec is None:
+            spec = manifest.get("module_groups")
+
+    def walk(node: object, path: List[str]) -> Optional[str]:
+        if isinstance(node, str):
+            if node not in declared_set:
+                notes.append(f"层级声明引用未声明模块：{node}")
+                return None
+            return node
+        if not isinstance(node, Mapping):
+            notes.append(f"层级声明非法节点：{node!r}")
+            return None
+        mod = node.get("module") or node.get("id") or node.get("name")
+        if not isinstance(mod, str) or mod not in declared_set:
+            notes.append(f"层级声明节点缺少合法 module：{dict(node)!r}")
+            return None
+        lbl = node.get("label")
+        if isinstance(lbl, str) and lbl:
+            labels[mod] = lbl
+        kids = node.get("children")
+        if kids is None:
+            kids = node.get("modules")
+        for child in kids if isinstance(kids, list) else []:
+            cid = walk(child, path + [mod])
+            if not cid:
+                continue
+            if cid == mod or cid in path or cid in (path + [mod]):
+                notes.append(f"层级声明忽略自环/回环：{mod} ▸ {cid}")
+                continue
+            if cid in seen_child:
+                notes.append(f"层级声明重复子项（忽略）：{cid}")
+                continue
+            children.setdefault(mod, []).append(cid)
+            seen_child.add(cid)
+        return mod
+
+    if isinstance(spec, list):
+        for node in spec:
+            walk(node, [])
+    elif isinstance(spec, Mapping):
+        for parent, kid_spec in spec.items():
+            if not isinstance(parent, str) or parent not in declared_set:
+                notes.append(f"层级声明引用未声明模块：{parent!r}")
+                continue
+            body = dict(kid_spec) if isinstance(kid_spec, Mapping) else {"children": kid_spec}
+            walk({"module": parent, **body}, [])
+    elif spec is not None:
+        notes.append("module_tree 形态非法（应为数组/对象），已按平铺处理")
+    return children, labels, notes
+
+
+def _display_labels(manifest: Mapping[str, Any], declared: List[str],
+                    pack_dir: Optional[Path] = None) -> Dict[str, str]:
+    """模块显示名（优先级：manifest → field_meta.json.module_labels → module_tree 节点 label）。"""
+    decl = _pack_declaration(pack_dir) if pack_dir is not None else None
+    labels = _module_labels(manifest)
+    if decl is not None:
+        labels.update(decl.module_labels)
+    _children, tree_labels, _notes = _resolve_tree(manifest, declared, _declared_tree_spec(decl))
+    labels.update(tree_labels)
+    return labels
+
+
+# =====================================================================================
+# 只读 API ①：内容包发现
+# =====================================================================================
+def list_packs(root: Optional[object] = None, preferred: Optional[str] = None) -> Dict[str, Any]:
+    """可用内容包清单（`/api/packs`）。preferred 命中时作为 default 返回。"""
+    base = content_root(root)
+    packs: List[Dict[str, Any]] = []
+    if base.is_dir():
+        for entry in sorted(base.iterdir(), key=lambda p: p.name):
+            if not entry.is_dir():
+                continue
+            man = _read_json(entry / "manifest.json")
+            if not isinstance(man, Mapping):
+                continue
+            packs.append({
+                "id": entry.name,
+                "name": str(man.get("name", "") or entry.name),
+                "version": str(man.get("version", "") or ""),
+                "module_count": len(_declared_modules(man)),
+            })
+    ids = [p["id"] for p in packs]
+    if isinstance(preferred, str) and preferred in ids:
+        default = preferred
+    else:
+        default = ids[0] if ids else ""
+    return {"packs": packs, "default": default}
+
+
+# =====================================================================================
+# 只读 API ②：模块层级（父子；包不声明即平铺）
+# =====================================================================================
+def _entry_count(data: object) -> int:
+    if isinstance(data, list):
+        return len(data)
+    if isinstance(data, Mapping):
+        return len(data)
+    return 0
+
+
+def list_modules(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
+    """模块分类树（`/api/pack/{pack}/modules`）。
+
+    返回项：{module, label, count(含后代合计), own_count, children[]}。
+    `flat=True` 表示包未声明任何层级（平铺）。
+    """
+    pack_dir = _pack_dir(pack, root)
+    manifest = _manifest(pack_dir)
+    declared = _declared_modules(manifest)
+    decl = _pack_declaration(pack_dir)
+    children_map, tree_labels, notes = _resolve_tree(manifest, declared, _declared_tree_spec(decl))
+    labels = _module_labels(manifest)
+    if decl is not None:
+        labels.update(decl.module_labels)
+    labels.update(tree_labels)
+    counts = {m: _entry_count(_read_json(pack_dir / f"{m}.json")) for m in declared}
+    child_set = {c for kids in children_map.values() for c in kids}
+
+    def node(mod: str, stack: List[str]) -> Dict[str, Any]:
+        kids = [node(c, stack + [c]) for c in children_map.get(mod, []) if c not in stack]
+        own = counts.get(mod, 0)
+        return {
+            "module": mod,
+            "label": labels.get(mod) or mod,
+            "count": own + sum(k["count"] for k in kids),
+            "own_count": own,
+            "children": kids,
+        }
+
+    modules = [node(m, [m]) for m in declared if m not in child_set]
+    return {
+        "pack": str(pack),
+        "pack_name": str(manifest.get("name", "") or pack),
+        "modules": modules,
+        "flat": not children_map,
+        "notes": notes,
+    }
+
+
+# =====================================================================================
+# 只读 API ③：模块条目列表（id + 名称，只名字）
+# =====================================================================================
+def _entry_rows(data: object, mmeta: Optional[ModuleMeta]) -> List[Tuple[str, str, object]]:
+    """条目三元组 (id, 名称, 原始值)。
+
+    list 模块 → 每个元素一条；map 模块 → 每个键一条；object 模块 → 每个顶层段一条
+    （名取字段元数据 label，缺省用键名）。无 id 的元素回退 `#i`（不因缺键丢条目）。
+    """
+    id_field = (mmeta.id_field if mmeta is not None and mmeta.id_field else _ID_FIELD)
+    etype = mmeta.entry_type if mmeta is not None else None
+    out: List[Tuple[str, str, object]] = []
+    if isinstance(data, list):
+        for i, elem in enumerate(data):
+            if isinstance(elem, Mapping):
+                eid = elem.get(id_field)
+                if not isinstance(eid, str) or not eid:
+                    eid = elem.get(_ID_FIELD)
+                eid = eid if isinstance(eid, str) and eid else f"#{i}"
+                nm = elem.get(_NAME_FIELD)
+                name = nm if isinstance(nm, str) and nm else eid
+            else:
+                eid, name = f"#{i}", str(elem)
+            out.append((eid, name, elem))
+        return out
+    if isinstance(data, Mapping):
+        for key, val in data.items():
+            k = str(key)
+            if etype == "object":
+                fm = mmeta.fields.get(k) if mmeta is not None else None
+                name = fm.label if fm is not None and fm.label else k
+            else:
+                nm = val.get(_NAME_FIELD) if isinstance(val, Mapping) else None
+                name = nm if isinstance(nm, str) and nm else k
+            out.append((k, name, val))
+    return out
+
+
+def list_entries(pack: object, module: object, root: Optional[object] = None) -> Dict[str, Any]:
+    """当前模块的条目列表（`/api/pack/{pack}/module/{mod}/entries`；只 id + 名称）。"""
+    pack_dir = _pack_dir(pack, root)
+    manifest = _manifest(pack_dir)
+    declared = _declared_modules(manifest)
+    mod = _check_component(module, "模块名")
+    if mod not in declared:
+        raise NotFound(f"模块未在包 manifest 中声明：{mod}")
+    data = _read_json(pack_dir / f"{mod}.json")
+    mmeta = _module_meta(mod, pack_dir)
+    rows = _entry_rows(data, mmeta)
+    etype = _entry_type(mmeta, data)
+    labels = _display_labels(manifest, declared, pack_dir)
+    return {
+        "pack": str(pack),
+        "module": mod,
+        "label": labels.get(mod) or mod,
+        "entry_type": etype,
+        "count": len(rows),
+        "entries": [{"id": eid, "name": name} for eid, name, _val in rows],
+    }
+
+
+def _infer_entry_type(data: object) -> str:
+    if isinstance(data, list):
+        return "list"
+    if isinstance(data, Mapping):
+        return "map"
+    return "scalar"
+
+
+def _entry_type(mmeta: Optional[ModuleMeta], data: object) -> str:
+    """条目形态：元数据声明优先；未登记 / 纯展示壳（entry_type 空）→ 按实际数据推断。"""
+    if mmeta is not None and mmeta.entry_type:
+        return mmeta.entry_type
+    return _infer_entry_type(data)
+
+
+# =====================================================================================
+# 批8：模块开关（可启用模块清单）——框架通用目录 + 包声明优先
+# =====================================================================================
+def _entry_type_for_module(pack_dir: Path, module: str) -> str:
+    """模块的骨架形态：框架 ModuleMeta 优先 → 框架通用目录 → 已存在数据文件的实际形态。
+
+    只用于「启用时创建什么形态的最小骨架」（list → []；map/object → {}），
+    以及面板展示；不参与任何校验判定（校验规则仍由校验器裁定）。
+    """
+    mmeta = _module_meta(module, pack_dir)
+    if mmeta is not None and mmeta.entry_type:
+        return mmeta.entry_type
+    ce = catalog_entry(module)
+    if ce is not None and ce.entry_type:
+        return ce.entry_type
+    data = _read_json(pack_dir / f"{module}.json")
+    if data is not None:
+        return _infer_entry_type(data)
+    return "list"
+
+
+def catalog_module_names() -> List[str]:
+    """框架通用目录里的模块键（面板基础清单；包声明只做增补与中文名覆盖）。"""
+    return [entry.module for entry in FRAMEWORK_MODULE_CATALOG]
+
+
+def is_enableable_module(module: object) -> bool:
+    """模块键是否在框架「可启用模块」通用目录内（写入层用它做白名单）。"""
+    return catalog_entry(module) is not None
+
+
+def module_catalog(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
+    """该包「可启用模块」清单（顶栏 ⚙ 模块开关面板的数据源）。
+
+    清单 = **框架通用目录**（各模块键 + 通用中文默认名 + 一句话用途 + 骨架形态 + 前置模块）
+    ∪ **该包 manifest 已声明但目录未登记的模块**（如包自定义模块）。
+    逐行给出：中文名（**包声明优先**：field_meta.json / manifest / module_tree 节点 label；
+    未声明才用框架通用默认名）、模块键、用途、entry_type、是否已启用、缺失的前置模块。
+
+    「不是从当前包已有声明反推」：空白包也有一份完整候选（框架目录），这正是本 API 的意义。
+    """
+    pack_dir = _pack_dir(pack, root)
+    manifest = _manifest(pack_dir)
+    declared = _declared_modules(manifest)
+    enabled = set(declared)
+    pack_labels = _display_labels(manifest, declared, pack_dir)
+
+    def label_of(module: str) -> str:
+        ce = catalog_entry(module)
+        return pack_labels.get(module) or (ce.label if ce is not None else module)
+
+    keys = [entry.module for entry in FRAMEWORK_MODULE_CATALOG]
+    keys += [m for m in declared if catalog_entry(m) is None]
+
+    rows: List[Dict[str, Any]] = []
+    for mod in keys:
+        ce: Optional[ModuleCatalogEntry] = catalog_entry(mod)
+        requires = list(ce.requires) if ce is not None else []
+        rows.append({
+            "module": mod,
+            "label": label_of(mod),
+            "label_source": ("pack" if mod in pack_labels else
+                             ("framework" if ce is not None else "key")),
+            "purpose": ce.purpose if ce is not None else "",
+            "entry_type": _entry_type_for_module(pack_dir, mod),
+            "enabled": mod in enabled,
+            "in_catalog": ce is not None,
+            "requires": requires,
+            "requires_labels": [label_of(r) for r in requires],
+            "missing_requires": [r for r in requires if r not in enabled],
+        })
+
+    bak = pack_dir / "manifest.json.bak"
+    return {
+        "pack": str(pack),
+        "pack_name": str(manifest.get("name", "") or pack),
+        "hint": MODULE_PANEL_HINT,
+        "modules": rows,
+        "total": len(rows),
+        "enabled_count": sum(1 for r in rows if r["enabled"]),
+        "manifest_backup": {"path": "manifest.json.bak", "exists": bak.is_file()},
+    }
+
+
+
+# =====================================================================================
+# 字段类型 → 只读形态（唯一映射点；前端只按 widget 渲染）
+# =====================================================================================
+_WIDGET_BY_TYPE: Dict[str, str] = {
+    "str": "text", "text": "text",
+    "int": "number", "float": "number", "number": "number",
+    "bool": "bool",
+    "enum": "enum",
+    "ref": "ref",
+    "list": "list",
+    "obj": "obj",
+    "map": "map",
+    "formula": "formula",
+}
+
+
+def _widget_for_type(ftype: Optional[str]) -> str:
+    return _WIDGET_BY_TYPE.get(ftype or "", "text")
+
+
+def readonly_form(field_type: Optional[str]) -> str:
+    """FieldMeta.type → 只读控件形态（§三 映射表唯一实现点；前端只按返回值渲染）。"""
+    return _widget_for_type(field_type)
+
+
+# 控件形态 → (编辑控件, 是否可编辑)：§三 映射表第二级（唯一实现点）。
+# control 取值（前端只认这个，不认字段类型）：
+#   text / textarea / number / bool / select / ref / listtable / reflist / readonly
+#   condition（条件行编辑器）/ maptable（键值对表格）
+# 批4 范围：list 升级为可编辑（元素为 obj/标量 → 可增删行表格 listtable；
+# 元素为 ref → 引用多选 reflist）；obj（除列表内联对象）与 map 仍只读展示。
+# 批5：字段可用 FieldMeta.editor 显式声明控件（condition / maptable），覆盖默认映射；
+# 未声明时行为与批4 完全一致（type → widget → control）。
+_EDIT_BY_WIDGET: Dict[str, Tuple[str, bool]] = {
+    "text": ("text", True),
+    "number": ("number", True),
+    "bool": ("bool", True),
+    "enum": ("select", True),
+    "ref": ("ref", True),
+    "formula": ("text", True),  # 表达式文本；值实为对象时按值形态纠偏为 obj → 只读
+    "list": ("listtable", True),
+    "obj": ("readonly", False),
+    "map": ("readonly", False),
+}
+EDIT_CONTROLS: Tuple[str, ...] = (
+    "text", "textarea", "number", "bool", "select", "ref",
+    "listtable", "reflist", "readonly", "condition", "maptable",
+)
+# 批次可编辑控件集：显式声明的 condition / maptable 归为可编辑（前端按 control 渲染）。
+_READONLY_CONTROLS: Tuple[str, ...] = ("readonly",)
+
+
+def is_editable_control(control: Optional[str]) -> bool:
+    """控件形态是否可编辑（只读形态 = readonly；批5 起按最终 control 判定）。"""
+    return (control or "") not in _READONLY_CONTROLS
+
+
+# 批5.1：控件形态 → 该列的值是否承载**嵌套结构**（对象 / 映射 / 条件 / 嵌套列表）。
+# 列表元素只要含这类子字段，前端就改「块状换行」布局：标量列横排成块首行，嵌套字段各自
+# 成块、占满容器宽度（不再把条件编辑器/键值表格塞进单元格、不再横向滚动 9 列宽表）。
+# 判定只依据 control（§三 映射表的产物），不认任何业务字段名——换包/换模块零改动。
+_NESTED_CONTROLS: Tuple[str, ...] = ("condition", "maptable", "readonly", "listtable")
+
+
+def is_nested_control(control: Optional[str]) -> bool:
+    """控件形态是否承载嵌套结构（对象/映射/条件/嵌套列表）→ 列表需块状布局。"""
+    return (control or "") in _NESTED_CONTROLS
+
+
+def list_control(fm: Optional[FieldMeta]) -> str:
+    """列表字段的控件形态判定（§三 映射表；前端只认 control，不认元素类型）。
+
+    · 元素为引用（`element.type == "ref"`）→ `reflist`（引用多选：可搜、名称显示、逐个清除）；
+    · 其余（元素为 obj / 标量 / 无元数据）→ `listtable`（可增删行表格）。
+    """
+    elem = fm.element if fm is not None else None
+    if elem is not None and elem.type == "ref":
+        return "reflist"
+    return "listtable"
+
+
+def control_of(widget: Optional[str], multiline: bool = False) -> str:
+    """控件形态 → 编辑控件（multiline 仅对文本生效：text → textarea）。"""
+    control, _editable = _EDIT_BY_WIDGET.get(widget or "", ("text", True))
+    if control == "text" and multiline:
+        return "textarea"
+    return control
+
+
+def is_editable_widget(widget: Optional[str]) -> bool:
+    """控件形态是否本批可编辑（只读形态 = list/obj/map）。"""
+    return _EDIT_BY_WIDGET.get(widget or "", ("text", True))[1]
+
+
+def control_for(fm: Optional[FieldMeta], widget: str, multiline: bool = False) -> str:
+    """字段最终编辑控件（§三 映射表唯一实现点；批5 起支持 FieldMeta.editor 显式覆盖）。
+
+    优先序：显式 editor 声明（**必须在已知控件集内**，否则忽略、回退类型映射）→
+    list 元素分流（listtable/reflist）→ 类型默认映射。
+    只影响界面控件，不改 type/required/enum/children/校验规则。
+    """
+    if fm is not None and fm.editor and fm.editor in EDIT_CONTROLS:
+        return fm.editor
+    if widget == "list":
+        return list_control(fm)
+    return control_of(widget, multiline)
+
+
+def editable_form(field_type: Optional[str], *, multiline: bool = False) -> Dict[str, Any]:
+    """FieldMeta.type → {widget, control, editable}（§三 映射表唯一实现点）。
+
+    编辑器（只读渲染与编辑控件）一律经本函数 + control_of 取形态；
+    业务模块不得新增映射特例（判断标准见 docs/编辑器重写_需求与约束.md 第〇节）。
+    """
+    widget = _widget_for_type(field_type)
+    return {
+        "widget": widget,
+        "control": control_of(widget, multiline),
+        "editable": is_editable_widget(widget),
+    }
+
+
+def _is_long_text(value: object) -> bool:
+    """长文本启发式（元数据未声明 multiline 时的兜底）：含换行或超长 → 多行控件。"""
+    return isinstance(value, str) and ("\n" in value or len(value) > 80)
+
+
+def _number_step(ftype: str) -> str:
+    """数字控件的步进（int 整数步进 / float·number 任意小数），仅作前端提示不硬拦。"""
+    return "1" if ftype == "int" else "any"
+
+
+def _infer_type(value: object) -> str:
+    if isinstance(value, bool):
+        return "bool"
+    if isinstance(value, (int, float)):
+        return "number"
+    if isinstance(value, str):
+        return "str"
+    if isinstance(value, list):
+        return "list"
+    if isinstance(value, Mapping):
+        return "obj"
+    return "str"
+
+
+# 实际值形态 → 字段类型口径（元数据未登记类型时的唯一推断入口）。
+# 与 _infer_type 分开：数值再细分为 int / float（整数 / 小数），说明卡据此标注。
+_KIND_TO_FTYPE: Dict[str, str] = {
+    "int": "int", "float": "float", "bool": "bool", "str": "str",
+    "list": "list", "obj": "obj",
+}
+
+
+def _infer_value_kind(value: object) -> Optional[str]:
+    """实际值 → int/float/bool/str/list/obj；判不出（None/未知）返回 None。
+
+    布尔必须先于 int 判定（Python 里 bool 是 int 子类）；浮点整值（如 20.0）
+    按「整数」呈现，与 _scalar_display 的 20.0→"20" 展示口径一致。
+    """
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return "bool"
+    if isinstance(value, int):
+        return "int"
+    if isinstance(value, float):
+        return "int" if float(value).is_integer() else "float"
+    if isinstance(value, str):
+        return "str"
+    if isinstance(value, list):
+        return "list"
+    if isinstance(value, Mapping):
+        return "obj"
     return None
 
 
-def _require_auth(state: Any, authorization: Optional[str]) -> Dict[str, Any]:
-    """认证依赖：token → me 信息；未认证 401。"""
-    auth = _require_state(state, "auth_store")
-    token = _bearer_token(authorization)
-    if not token:
-        raise _HTTPException(
-            status_code=401, detail={"ok": False, "errors": [{
-                "level": "red", "code": "unauthorized",
-                "message": "未认证（需要 Authorization: Bearer <token>）"}]})
-    me = auth.me(token)
-    if not me.get("ok"):
-        raise _HTTPException(
-            status_code=401, detail={"ok": False, "errors": [{
-                "level": "red", "code": "unauthorized",
-                "message": str(me.get("reason") or "登录已失效")}]})
-    return me
+def _effective_widget(fm: Optional[FieldMeta], value: object) -> str:
+    """元数据类型 + 实际值形态 → 只读控件形态（元数据优先，值形态纠偏防渲染崩）。"""
+    base = _widget_for_type(fm.type if fm is not None else None)
+    if value is None:
+        return base
+    if isinstance(value, bool):
+        return "bool"
+    if isinstance(value, (int, float)):
+        return "number" if base in ("text", "number") else base
+    if isinstance(value, str):
+        return "text" if base in ("bool", "number", "list", "obj", "map") else base
+    if isinstance(value, list):
+        return "list"
+    if isinstance(value, Mapping):
+        return "obj" if base == "obj" else "map"
+    return base
 
 
-def _me_to_user(me: Mapping[str, Any]) -> Dict[str, Any]:
-    """me 信息 → 用户视图。"""
-    return {
-        "qq_id": str(me.get("owner_id") or ""),
-        "role": str(me.get("role") or "player"),
-    }
+def _scalar_display(value: object, widget: str, view: "_PackView",
+                    ref_target: Optional[str] = None) -> str:
+    if value is None:
+        return ""
+    if widget == "bool":
+        return "是" if value else "否"
+    if widget == "ref" and isinstance(value, str):
+        name = view.resolve(ref_target, value)
+        if name and name != value:
+            return f"{name}（{value}）"
+        return name or value
+    if widget == "number" and isinstance(value, (int, float)) and not isinstance(value, bool):
+        return str(int(value)) if float(value).is_integer() else str(value)
+    if isinstance(value, (str, int, float, bool)):
+        return str(value)
+    return ""
 
 
-def _ctx_of(state: Any) -> MutableMapping[str, Any]:
-    """CRUD ctx（modules_raw + _page_versions 长活版本簿挂 state）。"""
-    reg = _require_state(state, "registry")
-    if not hasattr(state, "_page_versions"):
-        state._page_versions = {}
-    return {
-        "modules_raw": reg.modules_raw,
-        "_page_versions": state._page_versions,
-    }
+def _hint(fm: Optional[FieldMeta]) -> str:
+    """字段元数据的人话提示（面向非技术用户；无声明时如实标注）。"""
+    if fm is None:
+        return "内容包里有这个键、元数据未登记（类型按实际值推断）"
+    bits: List[str] = []
+    if fm.required:
+        bits.append("必填")
+    if fm.enum:
+        bits.append("可选：" + " / ".join(str(x) for x in fm.enum))
+    if fm.ref_target:
+        bits.append(f"引用：{fm.ref_target}")
+    if fm.range_min is not None or fm.range_max is not None:
+        lo = "" if fm.range_min is None else f"{fm.range_min:g}"
+        hi = "" if fm.range_max is None else f"{fm.range_max:g}"
+        if lo and hi:
+            bits.append(f"建议范围 {lo}~{hi}")
+        elif lo:
+            bits.append(f"建议 ≥{lo}")
+        else:
+            bits.append(f"建议 ≤{hi}")
+    if fm.zero_unlimited:
+        bits.append("0 = 不限")
+    if fm.default is not None:
+        bits.append(f"默认 {fm.default}")
+    return "；".join(bits)
 
 
-def _save_pipeline(
-    state: Any,
-    page: str,
-    new_item: Mapping[str, Any],
-    item_id: Optional[str] = None,
-    *,
-    create: bool = False,
-    base_version: Optional[int] = None,
-) -> Dict[str, Any]:
-    """CRUD 写端点统一流水线：pages_crud 变更 → atomic_store 原子写盘。"""
-    reg = _require_state(state, "registry")
-    content_dir = _require_state(state, "content_dir")
-    from qbot_rpg.content import atomic_store
-    from qbot_rpg.web import pages_crud
-
-    ctx = _ctx_of(state)
-    # M12.5 全量测试抓 P1：原查 pages_crud.PAGE_MODULE（六页兜底常量）→ 扩展页
-    # （items/effects 等 editor.json 登记页）create/update 全 404。改走 page_module_of
-    # 动态页表解析（与 list/get 同源，editor 页表优先 + 六页兜底兼容）。
-    module = pages_crud.page_module_of(ctx, page)
-    if module is None:
-        return {"ok": False, "errors": [{
-            "level": "red", "code": "not_found", "field": "page",
-            "message": f"页面不存在：{page}"}]}
-    if create:
-        res = pages_crud.create_page_item(page, new_item, ctx)
-    else:
-        res = pages_crud.update_page_item(page, item_id or "", new_item,
-                                          base_version, ctx)
-    if not res.get("ok"):
-        errs = res.get("errors") or []
-        if res.get("code") == 409:
-            return {"ok": False, "code": 409, "errors": errs}
-        return {"ok": False, "errors": errs}
-    item = res["item"]
-    # 变更应用：替换同 id + 追加（写盘层）
-    entries = [e for e in (reg.modules_raw.get(module) or [])
-               if not (isinstance(e, Mapping)
-                       and str(e.get("id") or "") == str(item.get("id") or ""))]
-    entries.append(dict(item))
-    wr = atomic_store.write_modules(content_dir, {module: entries})
-    if not wr.get("ok"):
-        return {"ok": False, "errors": wr.get("errors") or [{
-            "level": "red", "code": "write_failed", "message": "写盘失败"}]}
-    # M12.5 全量测试抓 P0：写盘成功后内存数据源不同步 → 列表/搜索仍显示旧快照，
-    # 且后续基于旧内存的再保存会覆盖磁盘新值（丢改）。同步回 reg.modules_raw。
-    reg.modules_raw[module] = entries
-    return {"ok": True, "data": {"item": item, "saved": True}}
+# =====================================================================================
+# 字段说明卡（批4.6）：自动拼装（全部来自既有元数据）+ 人工 help（qbot_rpg/content/field_meta）
+# =====================================================================================
+# 分工（用户原话：「点击中文名/鼠标悬停显示这个字段的详细解释」）：
+#   · **自动拼装**（本段，一定能出，换包零改动）：字段名（中文+原始键）、类型语义、
+#     数值还是比例/百分比、建议范围、默认值、是否必填、枚举候选、引用目标；
+#   · **人工补充**：`FieldMeta.help`（元数据层撰写的一句话说明）——可选，缺省不报错。
+# 本段只做展示拼装，不触碰任何校验判定（type/required/default/enum/range 均只读）。
+_TYPE_SEMANTIC: Dict[str, str] = {
+    "str": "文本", "text": "文本",
+    "int": "数字", "float": "数字", "number": "数字",
+    "bool": "布尔", "enum": "枚举", "ref": "引用",
+    "list": "列表", "obj": "对象", "map": "映射", "formula": "公式",
+}
+_NUMERIC_TYPES: Tuple[str, ...] = ("int", "float", "number")
 
 
-def create_app(state: Optional[Any] = None) -> Any:
-    """M12 实装：构造 FastAPI 应用（15 端点；D-05 编辑器外壳）。
+def _registered_type(fm: Optional[FieldMeta]) -> Optional[str]:
+    """元数据**真实登记**的字段类型；未登记（fm=None 或 type="" 占位）返回 None。
 
-    state：装配件容器（见模块头 state 键说明）。缺 fastapi → RuntimeError。
+    批4.5 起「只有中文名、没有类型」的纯展示节点由 _soft_display 生成（type=""），
+    这里必须把它当「未登记」——否则说明卡会把数值字段说成文本（实机问题①根因）。
     """
-    if not _HAS_FASTAPI or FastAPI is None or APIRouter is None:
-        raise RuntimeError(
-            "fastapi 未安装（M12 编辑器运行时依赖：.venv/bin/python -m pip "
-            "install 'fastapi>=0.115' 'uvicorn>=0.34'）")
-    app = FastAPI(title="QBot RPG 内容编辑器", docs_url=None, redoc_url=None)
-    router = APIRouter(prefix="/api")
+    ftype = fm.type if fm is not None else None
+    return ftype if ftype in _TYPE_SEMANTIC else None
 
-    # ---- 前端壳（M12 批4 路4B：/ → editor.html 单文件最小可用壳）----
-    from pathlib import Path as _Path
 
-    _EDITOR_HTML = _Path(__file__).parent / "static" / "editor.html"
+def _type_semantic(ftype: Optional[str]) -> str:
+    """FieldMeta.type → 中文类型语义（未登记类型如实说「未标注」，不猜）。"""
+    return _TYPE_SEMANTIC.get(ftype or "", "未标注")
 
-    @app.get("/", include_in_schema=False)
-    def editor_root() -> Any:
-        """编辑器首页（单文件 HTML 壳）。"""
-        if _EDITOR_HTML.exists():
-            from fastapi.responses import FileResponse
-            return FileResponse(str(_EDITOR_HTML))
-        return {"ok": False, "errors": [{
-            "level": "red", "code": "not_found",
-            "message": "editor.html 缺失（web/static/editor.html）"}]}
 
-    @app.get("/healthz", include_in_schema=False)
-    def healthz() -> Dict[str, Any]:
-        """健康检查（宿主拉起后探测用）。"""
-        return {"ok": True, "service": "qbot-editor"}
+# 实际值推断出的类型语义（数值细分整数/小数；登记类型仍走 _type_semantic）。
+_INFERRED_TYPE_SEMANTIC: Dict[str, str] = {
+    "int": "数值（整数）", "float": "数值（小数）",
+    "bool": "布尔", "str": "文本", "list": "列表", "obj": "对象",
+}
 
-    # ---- 认证 4（§6.1）----
-    @router.post("/auth/setup")
-    def auth_setup(body: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """首次设密（仅未设置可用；弱密码 400；已设置 409）。"""
-        auth = _require_state(state, "auth_store")
-        owner = str((body or {}).get("qq_id") or "")
-        password = str((body or {}).get("password") or "")
-        if not owner or not password:
-            raise _HTTPException(status_code=400, detail={"ok": False, "errors": [{
-                "level": "red", "code": "missing_field",
-                "message": "qq_id 与 password 必填"}]})
-        r = auth.setup_password(owner, password)
-        if not r.get("ok"):
-            reason = str(r.get("reason") or "")
-            code = 409 if reason == "already_set" else 400
-            raise _HTTPException(status_code=code, detail={"ok": False, "errors": [{
-                "level": "red", "code": reason,
-                "message": str(r.get("message") or "设置失败")}]})
-        return {"ok": True, "data": {"message": "密码已设置"}}
 
-    @router.post("/auth/login")
-    def auth_login(body: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """登录（token + 过期）；失败计数 5 次锁 15 分钟（423）。"""
-        auth = _require_state(state, "auth_store")
-        owner = str((body or {}).get("qq_id") or "")
-        password = str((body or {}).get("password") or "")
-        r = auth.login(owner, password)
-        if not r.get("ok"):
-            reason = str(r.get("reason") or "")
-            # not_setup：428（前端识别后自动转 setup 引导；区别于密码错 401）
-            code = 428 if reason == "not_setup" else (423 if reason == "locked" else 401)
-            detail: Dict[str, Any] = {"ok": False, "errors": [{
-                "level": "red", "code": reason,
-                "message": str(r.get("message") or "登录失败")}]}
-            if r.get("lock_until"):
-                detail["lock_until"] = r["lock_until"]
-            raise _HTTPException(status_code=code, detail=detail)
-        return {"ok": True, "data": {"token": r["token"],
-                                     "expires_at": r.get("expires_at")}}
+def _resolve_type(fm: Optional[FieldMeta],
+                  value: object = None) -> Tuple[str, str]:
+    """类型语义 + 推断来源：登记类型优先；未登记则按实际值真实类型推断。
 
-    @router.post("/auth/logout")
-    def auth_logout(authorization: Optional[str] = _Header(default=None)) -> Dict[str, Any]:
-        """登出（token 失效；幂等 200）。"""
-        auth = _require_state(state, "auth_store")
-        token = _bearer_token(authorization) or ""
-        auth.logout(token)
-        return {"ok": True, "data": {"message": "已登出"}}
+    → (类型文案, 来源文案)。来源文案仅在实际值推断时非空，供卡片显式标注
+    （如「数值（整数）· 元数据未登记，按实际值推断」）。
+    """
+    reg = _registered_type(fm)
+    if reg:
+        # 登记为 int/float 时也细分整数/小数（说明卡更具体；语义不变）。
+        if reg == "int":
+            return ("数值（整数）", "")
+        if reg == "float":
+            return ("数值（小数）", "")
+        return (_type_semantic(reg), "")
+    kind = _infer_value_kind(value)
+    if kind is None:
+        return ("未标注", "")
+    return (_INFERRED_TYPE_SEMANTIC.get(kind, "未标注"), "元数据未登记，按实际值推断")
 
-    @router.get("/auth/me")
-    def auth_me(authorization: Optional[str] = _Header(default=None)) -> Dict[str, Any]:
-        """当前会话（机主/GM 身份）；未认证 401。"""
-        me = _require_auth(state, authorization)
-        return {"ok": True, "data": {"user": _me_to_user(me)}}
 
-    # ---- 元数据引用 2（§6.2）----
-    @router.get("/meta/{page}")
-    def meta_page(page: str) -> Dict[str, Any]:
-        """该页字段元数据（表单渲染源，P-07 唯一数据源）。"""
-        editor = getattr(state, "editor", None)
-        meta_src: Optional[str] = None
-        page_kind: Optional[str] = None
-        ep = None
-        if editor is not None and hasattr(editor, "get_page"):
-            ep = editor.get_page(page)
-            if ep is not None:
-                meta_src = ep.meta_source
-                # M12.5 路1B：page_kind 透传（editor.json 登记值；缺省 None =
-                # 上层按 field_meta entry_type / extends 宿主推导）
-                page_kind = getattr(ep, "page_kind", None)
-        from qbot_rpg.content.field_meta import default_field_meta_table
-        table = default_field_meta_table()
-        # M12.5 路1B：删写死 8 键 dict（审计点 16）——editor.json 登记页的
-        # module_file 去 .json 后缀 = field_meta 表键（loader 同口径登记），
-        # 如 npc.json→npc / skills.json→skills / settings.json→settings；
-        # 页未登记（editor 无该页/未装配）→ 回退别名表解析（skill→skills、
-        # monster→enemies 等）；表查无 → 404（保持现语义）
-        module = ""
-        if ep is not None:
-            module = str(getattr(ep, "module_file", "") or "").removesuffix(".json")
-        if not module:
-            module = _refs_module_for_target(page, table) or ""
-        mm = table.modules.get(module) if module else None
-        if mm is None:
-            raise _HTTPException(status_code=404, detail={"ok": False, "errors": [{
-                "level": "red", "code": "not_found", "field": "page",
-                "message": f"页面不存在：{page}"}]})
-        fields = []
-        for fname, fmeta in (mm.fields or {}).items():
-            fields.append({
-                "name": fname,
-                "type": fmeta.type,
-                # M12.5 中文显示：label 优先级 = 表注入 label → 通用词典 → 键名
-                # （词典兜底让未注入的通用键名也显示中文，用户无需看懂英文）
-                "label": (getattr(fmeta, "label", "") or
-                          _FIELD_LABEL_ZH.get(fname) or fname),
-                "required": fmeta.required,
-                "ref_target": fmeta.ref_target,
-                "enum": list(fmeta.enum or ()),
-            })
-        # page_kind 透传：显式登记值优先；缺省 None → 按 field_meta entry_type
-        # 推导（entry_type=list|object|map）。meta 响应 data 增 page_kind/
-        # entry_type 供前端批4 特化渲染分支使用；缺省 list（现行为默认形态）。
-        eff_kind = page_kind or mm.entry_type or "list"
-        return {"ok": True, "data": {"page": page, "meta_source": meta_src,
-                                     "page_kind": eff_kind,
-                                     "entry_type": mm.entry_type or "list",
-                                     "fields": fields}}
+def _scale_semantic(fm: Optional[FieldMeta], value: object = None) -> str:
+    """「是数值还是比例/百分比」判定。
 
-    @router.get("/refs/{target}")
-    def refs_target(target: str) -> Dict[str, Any]:
-        """引用控件候选列表（动态 enum；target ∈ 怪物/物品/技能/职业/...）。
+    依据优先序：probability 旗标 → unit（`%` 为百分比、其余为带单位数值）→
+    数值型且区间恰为 0~1（推断可能是比例）→ 当前值落在 0~1（疑似比例）→
+    其余数值「未标注单位」→ 非数值「不适用」→ 类型/值都判不出「未标注」。
+    数值类型可来自元数据登记，也可由实际值推断（问题①修复）；判不出来如实说。
+    """
+    reg = _registered_type(fm)
+    kind = _infer_value_kind(value)
+    numeric = reg in _NUMERIC_TYPES or kind in ("int", "float")
+    if not numeric:
+        if reg is None and kind is None:
+            return "未标注"          # 类型未登记且没有值可推断 → 不臆造
+        return "不适用（非数值字段）"
+    if fm is not None and fm.probability:
+        return "比例（0~1，按百分比表示概率）"
+    if fm is not None and fm.unit == "%":
+        return "百分比（数值自带 % 单位）"
+    if fm is not None and fm.unit:
+        return f"数值（单位：{fm.unit}）"
+    if fm is not None and fm.range_min == 0 and fm.range_max == 1:
+        return "比例（0~1；元数据未标注百分比单位）"
+    if (fm is None or (fm.range_min is None and fm.range_max is None)) \
+            and kind in ("int", "float") \
+            and 0 <= float(value) <= 1:  # type: ignore[arg-type]
+        return "疑似比例（当前值在 0~1；元数据未标注单位）"
+    return "数值（未标注单位）"
 
-        契约（M12.5 批2 路2C 审计点 24：前端表单 ref_target → 引用控件）：
-          data.target = 请求原串（前端回显）
-          data.kind   = target 归一后的 kind（表键/别名键原样小写；表键直查命中
-                        = 表键本身，别名命中 = 别名键，即 field_meta ref_target 全集）
-          data.items  = [{id, name}]（module 原始 list 顺序）
-          data.total  = len(items)
-        """
-        reg = _require_state(state, "registry")
-        # M12.5 路1B：删写死 12 键 dict（审计点 17）——统一别名表解析：
-        # field_meta 表键命中直查（含 C/D 类已登记 list 模块）→ 未命中走
-        # REFS_TARGET_ALIASES 别名表（单源，模块级常量）
-        from qbot_rpg.content.field_meta import default_field_meta_table
-        module = _refs_module_for_target(target, default_field_meta_table())
-        data = reg.modules_raw.get(module) if (module and hasattr(reg, "modules_raw")) else None
-        items = []
-        if isinstance(data, list):
-            for e in data:
-                if isinstance(e, Mapping):
-                    items.append({"id": str(e.get("id") or ""),
-                                  "name": str(e.get("name") or "")})
-        return {"ok": True, "data": {"target": target,
-                                     "kind": str(target).lower(),
-                                     "items": items,
-                                     "total": len(items)}}
 
-    @router.get("/editor/pages")
-    def editor_pages() -> Dict[str, Any]:
-        """编辑器页清单（前端侧边栏数据源；editor_registry 页表，含启停语义）。"""
-        reg = _require_state(state, "registry")
-        from qbot_rpg.content.editor_registry import load_editor_registry
-        editor = load_editor_registry(reg)
-        pages = []
-        for p in editor.pages:
-            pages.append({
-                "page_id": p.page_id,
-                "title": p.title,
-                "icon": p.icon,
-                "module_file": p.module_file,
-                "meta_source": p.meta_source,
-                "tabs": list(p.tabs or ()),
-                "enabled": bool(p.enabled),
-                "extends": p.extends,
-                # M12.5 路1B：透传 EditorPage 全字段（审计点 18 漏 validator 修复
-                # + 扩展三字段）——id_prefix/group/page_kind 缺省 None（既有内容包
-                # editor.json 未登记 → null，前端按缺省语义处理）
-                "validator": p.validator,
-                "id_prefix": p.id_prefix,
-                "group": p.group,
-                "page_kind": p.page_kind,
-            })
-        return {"ok": True, "data": {"pages": pages}}
+def _range_semantic(fm: Optional[FieldMeta]) -> str:
+    """建议范围人话（range_min~range_max；zero_unlimited 写明「0 = 不限」）。"""
+    if fm is None or (fm.range_min is None and fm.range_max is None):
+        return "未标注"
+    if fm.range_min is None:
+        text = f"建议 ≤ {fm.range_max:g}"
+    elif fm.range_max is None:
+        text = f"建议 ≥ {fm.range_min:g}"
+    else:
+        text = f"建议 {fm.range_min:g} ~ {fm.range_max:g}"
+    if fm.zero_unlimited:
+        text += "；0 = 不限"
+    return text
 
-    # ---- M12.5 批3 路3B：钓鱼 obj 页专属端点（复用 fishing_editor_service
-    #      纯函数层，零写盘——编辑写盘仍走 obj 页 CRUD/原始 JSON）----
-    @router.get("/editor/fishing/schema")
-    def fishing_schema(authorization: str = _Header(default=None)) -> Dict[str, Any]:
-        """钓鱼卡片表单 schema（settings.fishing 九键字段定义，T19 服务层）。"""
-        _require_auth(state, authorization)
-        from qbot_rpg.editor.fishing_editor_service import fish_card_schema
-        return {"ok": True, "data": {"schema": fish_card_schema()}}
 
-    @router.post("/editor/fishing/csv/validate")
-    def fishing_csv_validate(body: Optional[Dict[str, Any]] = None,
-                             authorization: str = _Header(default=None)) -> Dict[str, Any]:
-        """鱼种 CSV 导入预检（解析 + 逐行聚合 {ok,rows,errors,warnings}）。"""
-        _require_auth(state, authorization)
-        from qbot_rpg.editor.fishing_editor_service import (
-            fish_csv_import, fish_csv_validate as _csv_validate,
-        )
-        text = str((body or {}).get("text") or "")
-        try:
-            rows = fish_csv_import(text)
-        except Exception as exc:  # noqa: BLE001 - 解析异常聚合为错误返回
-            return {"ok": False, "errors": [{
-                "level": "red", "code": "csv_parse_error",
-                "message": f"CSV 解析失败：{exc}"}]}
-        out = _csv_validate(rows)
-        return {"ok": True, "data": {
-            "rows": rows, "errors": out.get("errors", []),
-            "warnings": out.get("warnings", []),
-            "total": len(rows)}}
+def _default_text(value: object) -> str:
+    """默认值的人话展示（布尔用是/否；复合值转紧凑 JSON）。"""
+    if value is None:
+        return ""
+    if isinstance(value, bool):
+        return "是" if value else "否"
+    if isinstance(value, (list, tuple)):
+        return "、".join(str(x) for x in value) if value else "（空列表）"
+    if isinstance(value, Mapping):
+        return _json_text(value)
+    return str(value)
 
-    @router.get("/editor/fishing/crown_preview")
-    def fishing_crown_preview(size: float = 50, weight: float = 50,
-                              authorization: str = _Header(default=None)) -> Dict[str, Any]:
-        """冠级阈值滑条预览（百分位 → 档位 + 中文标签）。"""
-        _require_auth(state, authorization)
-        from qbot_rpg.editor.fishing_editor_service import crown_preview
-        return {"ok": True, "data": crown_preview(size, weight)}
 
-    @router.post("/editor/fishing/simulate")
-    def fishing_simulate(body: Optional[Dict[str, Any]] = None,
-                         authorization: str = _Header(default=None)) -> Dict[str, Any]:
-        """图鉴模拟（种子化确定性：species 池 n 次捕捞 → 冠级分布）。"""
-        _require_auth(state, authorization)
-        from qbot_rpg.editor.fishing_editor_service import simulate_catches
-        b = body or {}
-        species = b.get("species")
-        if not isinstance(species, list):
-            raise _HTTPException(status_code=422, detail={"ok": False, "errors": [{
-                "level": "red", "code": "missing_field", "field": "species",
-                "message": "species 必填（鱼种对象数组）"}]})
-        n = int(b.get("n") or 100)
-        seed = b.get("seed", 42)
-        return {"ok": True, "data": simulate_catches(species, n, seed=seed)}
+def help_card(key: str, fm: Optional[FieldMeta],
+              value: object = None) -> Dict[str, Any]:
+    """字段说明卡数据（自动拼装 + 人工 help）；全部是可直接展示的中文短语。
 
-    # ---- 六页 CRUD+校验 6（§6.3）----
-    # ---- M12.5 批4：obj/map 形态读写（settings/forge/fishing 整对象 +
-    #      stats/formula 键值表）----
-    @router.get("/pages/{page}/whole")
-    def pages_whole_get(page: str,
-                        authorization: Optional[str] = _Header(default=None)) -> Dict[str, Any]:
-        """obj/map 页整模块读取（data = 顶层 obj dict / map dict）。"""
-        _require_auth(state, authorization)
-        reg = _require_state(state, "registry")
-        from qbot_rpg.web import pages_crud
-        ctx = {"modules_raw": reg.modules_raw}
-        out = pages_crud.get_whole_module(page, ctx)
-        if not out.get("ok"):
-            raise _HTTPException(status_code=404, detail=out)
-        return {"ok": True, "data": out}
-
-    @router.put("/pages/{page}/whole")
-    def pages_whole_put(page: str, body: Optional[Dict[str, Any]] = None,
-                        authorization: Optional[str] = _Header(default=None)) -> Dict[str, Any]:
-        """obj/map 页整模块保存（顶层 dict 覆盖合并 + 原子写盘）。"""
-        _require_auth(state, authorization)
-        content_dir = _require_state(state, "content_dir")
-        from qbot_rpg.content import atomic_store
-        from qbot_rpg.web import pages_crud
-        ctx = _ctx_of(state)
-        out = pages_crud.update_whole_module(page, dict(body or {}), ctx)
-        if not out.get("ok"):
-            code = out.get("code") or 422
-            raise _HTTPException(status_code=code, detail=out)
-        module = out["module"]
-        wr = atomic_store.write_modules(content_dir, {module: out["data"]})
-        if not wr.get("ok"):
-            raise _HTTPException(status_code=500, detail=wr)
-        return {"ok": True, "data": out}
-
-    @router.get("/pages/{page}/map/{key}")
-    def pages_map_get(page: str, key: str,
-                      authorization: Optional[str] = _Header(default=None)) -> Dict[str, Any]:
-        """map 页单键读取（stats/formula 键 → 值）。"""
-        _require_auth(state, authorization)
-        reg = _require_state(state, "registry")
-        from qbot_rpg.web import pages_crud
-        ctx = {"modules_raw": reg.modules_raw}
-        out = pages_crud.get_map_key(page, key, ctx)
-        if not out.get("ok"):
-            code = out.get("code") or 404
-            raise _HTTPException(status_code=code, detail=out)
-        return {"ok": True, "data": out}
-
-    @router.put("/pages/{page}/map/{key}")
-    def pages_map_put(page: str, key: str, body: Optional[Dict[str, Any]] = None,
-                      authorization: Optional[str] = _Header(default=None)) -> Dict[str, Any]:
-        """map 页单键写入（新建/覆盖 + 原子写盘）。"""
-        _require_auth(state, authorization)
-        content_dir = _require_state(state, "content_dir")
-        from qbot_rpg.content import atomic_store
-        from qbot_rpg.web import pages_crud
-        ctx = _ctx_of(state)
-        value = (body or {}).get("value")
-        out = pages_crud.put_map_key(page, key, value, ctx)
-        if not out.get("ok"):
-            code = out.get("code") or 422
-            raise _HTTPException(status_code=code, detail=out)
-        module = out["module"]
-        wr = atomic_store.write_modules(content_dir, {module: ctx["modules_raw"][module]})
-        if not wr.get("ok"):
-            raise _HTTPException(status_code=500, detail=wr)
-        return {"ok": True, "data": out}
-
-    @router.delete("/pages/{page}/map/{key}")
-    def pages_map_delete(page: str, key: str,
-                         authorization: Optional[str] = _Header(default=None)) -> Dict[str, Any]:
-        """map 页单键删除 + 原子写盘。"""
-        _require_auth(state, authorization)
-        content_dir = _require_state(state, "content_dir")
-        from qbot_rpg.content import atomic_store
-        from qbot_rpg.web import pages_crud
-        ctx = _ctx_of(state)
-        out = pages_crud.delete_map_key(page, key, ctx)
-        if not out.get("ok"):
-            code = out.get("code") or 404
-            raise _HTTPException(status_code=code, detail=out)
-        module = pages_crud.page_module_of(ctx, page)
-        if module is None:
-            raise _HTTPException(status_code=404, detail={"ok": False, "errors": [{
-                "level": "red", "code": "not_found", "field": "page",
-                "message": f"页面不存在：{page}"}]})
-        wr = atomic_store.write_modules(content_dir, {module: ctx["modules_raw"][module]})
-        if not wr.get("ok"):
-            raise _HTTPException(status_code=500, detail=wr)
-        return {"ok": True, "data": out}
-
-    @router.get("/pages/{page}")
-    def pages_list(page: str, page_no: int = 1, size: int = 50,
-                   q: str = "", sort: str = "",
-                   authorization: Optional[str] = _Header(default=None)) -> Dict[str, Any]:
-        """列表：分页/搜索/排序。"""
-        _require_auth(state, authorization)
-        reg = _require_state(state, "registry")
-        from qbot_rpg.web import pages_crud
-        ctx = {"modules_raw": reg.modules_raw}
-        out = pages_crud.list_page_items(page, ctx, page_no=page_no,
-                                         size=size, q=q, sort=sort)
-        if not out.get("ok"):
-            raise _HTTPException(status_code=404, detail=out)
-        return {"ok": True, "data": out}
-
-    @router.get("/pages/{page}/{item_id}")
-    def pages_get(page: str, item_id: str,
-                  authorization: Optional[str] = _Header(default=None)) -> Dict[str, Any]:
-        """单条详情（含引用中文名）。"""
-        _require_auth(state, authorization)
-        reg = _require_state(state, "registry")
-        from qbot_rpg.web import pages_crud
-        ctx = {"modules_raw": reg.modules_raw}
-        out = pages_crud.get_page_item(page, item_id, ctx)
-        if not out.get("ok"):
-            raise _HTTPException(status_code=404, detail=out)
-        return {"ok": True, "data": out}
-
-    @router.post("/pages/{page}")
-    def pages_create(page: str, body: Optional[Dict[str, Any]] = None,
-                     authorization: Optional[str] = _Header(default=None)) -> Dict[str, Any]:
-        """新建（ID 自动生成 类型_序号）。"""
-        _require_auth(state, authorization)
-        out = _save_pipeline(state, page, dict(body or {}), create=True)
-        if not out.get("ok"):
-            code = out.get("code") or 422
-            raise _HTTPException(status_code=code, detail=out)
-        return {"ok": True, "data": out.get("data", {})}
-
-    @router.put("/pages/{page}/{item_id}")
-    def pages_update(page: str, item_id: str, body: Optional[Dict[str, Any]] = None,
-                     authorization: Optional[str] = _Header(default=None)) -> Dict[str, Any]:
-        """更新（base_version 冲突 409）。"""
-        _require_auth(state, authorization)
-        bv = (body or {}).get("base_version")
-        out = _save_pipeline(state, page, dict(body or {}), item_id=item_id,
-                             base_version=bv)
-        if not out.get("ok"):
-            code = out.get("code") or 422
-            raise _HTTPException(status_code=code, detail=out)
-        return {"ok": True, "data": out.get("data", {})}
-
-    @router.delete("/pages/{page}/{item_id}")
-    def pages_delete(page: str, item_id: str,
-                     authorization: Optional[str] = _Header(default=None)) -> Dict[str, Any]:
-        """删除（级联清理）。"""
-        _require_auth(state, authorization)
-        content_dir = _require_state(state, "content_dir")
-        from qbot_rpg.content import atomic_store
-        from qbot_rpg.web import pages_crud
-        ctx = _ctx_of(state)
-        del_res = pages_crud.delete_page_item(page, item_id, ctx)
-        if not del_res.get("ok"):
-            raise _HTTPException(status_code=404, detail=del_res)
-        apply_res = pages_crud.apply_delete_to_entries(page, item_id, ctx)
-        if not apply_res.get("ok"):
-            raise _HTTPException(status_code=404, detail=apply_res)
-        # 级联模块（maps/dungeon 等被 delete_page_item 原地改过）→ 一起原子写盘
-        # （UI 检查修复 2026-09-03：原实现只写当前模块 → 删怪物后 maps 残留悬空
-        # 引用 → 内容包重载红拦阻断）
-        module_files: Dict[str, Any] = {apply_res["module"]: apply_res["entries"]}
-        for c in del_res.get("cascades", []):
-            cm = c.get("module")
-            if cm and cm != apply_res["module"] and cm not in module_files:
-                raw_list = ctx.get("modules_raw", {}).get(cm)
-                if isinstance(raw_list, list):
-                    module_files[cm] = raw_list
-        wr = atomic_store.write_modules(content_dir, module_files)
-        if not wr.get("ok"):
-            return {"ok": False, "errors": wr.get("errors") or [{
-                "level": "red", "code": "write_failed", "message": "写盘失败"}]}
-        # 级联模块写盘后同步回内存（2026-09-05 修复：原 delete 只同步当前模块，
-        # maps 等被级联清理的模块内存残留旧引用 → 后续再保存基于旧内存覆盖磁盘
-        # 新值，把已删引用「复活」；对齐 _save_pipeline 的 modules_raw 同步语义。
-        # ctx.modules_raw 即 reg.modules_raw（_ctx_of 直传同一对象））
-        raw_mods = ctx.get("modules_raw")
-        if isinstance(raw_mods, MutableMapping):
-            for mod_name, mod_entries in module_files.items():
-                raw_mods[mod_name] = mod_entries
-        return {"ok": True, "data": {"id": item_id,
-                                     "cascades": del_res.get("cascades", [])}}
-
-    @router.post("/pages/{page}/validate")
-    def pages_validate(page: str, body: Optional[Dict[str, Any]] = None,
-                       authorization: Optional[str] = _Header(default=None)) -> Dict[str, Any]:
-        """草稿校验：红/黄清单（不落盘，200）。"""
-        _require_auth(state, authorization)
-        reg = _require_state(state, "registry")
-        from qbot_rpg.web import pages_crud
-        ctx = {"modules_raw": reg.modules_raw}
-        out = pages_crud.validate_page_item(page, dict(body or {}), ctx)
-        if not out.get("ok"):
-            raise _HTTPException(status_code=404, detail=out)
-        return {"ok": True, "data": {"red": out.get("red", []),
-                                     "yellow": out.get("yellow", [])}}
-
-    # ---- 热重载 + 数据包 3（§6.4）----
-    @router.post("/reload")
-    def api_reload(authorization: Optional[str] = _Header(default=None)) -> Dict[str, Any]:
-        """手动热重载（对应 QQ /重载）；成功换新/失败回退旧快照。"""
-        _require_auth(state, authorization)
-        reg = _require_state(state, "registry")
-        from qbot_rpg.content import atomic_store
-        try:
-            out = atomic_store.reload_and_rollback(reg, reg.modules_raw)
-        except Exception as exc:  # noqa: BLE001 - 重载异常不崩
-            return {"ok": False, "errors": [{
-                "level": "red", "code": "reload_failed",
-                "message": f"热重载异常：{exc}"}]}
-        return {"ok": bool(getattr(out, "ok", False)),
-                "data": {"generation": getattr(reg, "generation", None),
-                         "restored": bool(getattr(out, "restored", False)),
-                         "note": getattr(out, "note", "")}}
-
-    @router.get("/packs")
-    def packs_list(authorization: Optional[str] = _Header(default=None)) -> Dict[str, Any]:
-        """数据包管理：全部内容包 + 启用状态。"""
-        _require_auth(state, authorization)
-        reg = _require_state(state, "registry")
-        info = {
-            # pack_id 在 Registry.pack_id（目录名）；manifest 只含 name/version——
-            # UI 检查修复 2026-09-03：原读 manifest.pack_id 恒 null
-            "pack_id": getattr(reg, "pack_id", None) or "",
-            "version": getattr(reg.manifest, "version", None) if reg.manifest else None,
-            "name": getattr(reg.manifest, "name", None) if reg.manifest else None,
+    前端只按本结构渲染，不认字段类型、不认任何业务字段名（保持元数据驱动）。
+    · 类型：元数据登记优先；未登记（fm=None 或 type 占位为空）→ 按 `value` 实际值
+      推断（数值细分整数/小数），并在 `type_source` 显式标注来源；
+    · 数值/比例：元数据 unit/probability/0~1 区间优先，未登记时按实际值推断
+      （0~1 → 疑似比例），判不出来如实「未标注」，不说「不适用」；
+    · 元数据完全未登记（fm=None）且无值可推断 → unregistered=True，如实标「未登记」。
+    """
+    type_text, type_source = _resolve_type(fm, value)
+    if fm is None:
+        if value is None:
+            type_text, type_source = "未登记", ""
+        return {
+            "key": key, "label": key, "type": type_text, "type_source": type_source,
+            "scale": _scale_semantic(None, value), "range": "未标注",
+            "default": "无默认值" if value is not None else "未标注",
+            "required": False, "enum": [], "ref_target": None, "unit": "",
+            "help": "", "unregistered": True,
+            # 批5.2（V1）：行内提示不再常驻撑高字段行，统一收进说明卡（同一 `_hint` 文案）。
+            "hint": _hint(None),
         }
-        return {"ok": True, "data": {"active": info,
-                                     "generation": getattr(reg, "generation", None)}}
+    default = _default_text(fm.default)
+    return {
+        "key": key,
+        "label": fm.label or key,
+        "type": type_text,
+        "type_source": type_source,
+        "scale": _scale_semantic(fm, value),
+        "range": _range_semantic(fm),
+        "default": default or "无默认值",
+        "required": bool(fm.required),
+        "enum": [str(x) for x in fm.enum],
+        "ref_target": fm.ref_target,
+        "unit": fm.unit,
+        "help": fm.help,
+        "unregistered": False,
+        # 批5.2（V1）：`_hint`（必填/候选/引用/范围/0=不限/默认）作为说明卡的一行，
+        # 前端不再在字段值下方常驻渲染 `.hint`（行高与无提示字段一致）。
+        "hint": _hint(fm),
+    }
 
-    @router.put("/packs/active")
-    def packs_active(body: Optional[Dict[str, Any]] = None,
-                     authorization: Optional[str] = _Header(default=None)) -> Dict[str, Any]:
-        """切换启用数据包（插件只能启用一个；切换即时生效——装配层职责，占位）。"""
-        _require_auth(state, authorization)
-        pack_id = str((body or {}).get("pack_id") or "")
-        if not pack_id:
-            raise _HTTPException(status_code=422, detail={"ok": False, "errors": [{
-                "level": "red", "code": "missing_field", "field": "pack_id",
-                "message": "pack_id 必填"}]})
-        return {"ok": True, "data": {"requested_pack": pack_id,
-                                     "note": "切换由宿主装配层执行（批 5）"}}
 
-    app.include_router(router)
-    return app
+# =====================================================================================
+# 条件结构（批5）：条件行编辑器数据面 + 关联分区路径匹配
+# =====================================================================================
+# 条件值的通用形态（**键名不写死**）：
+#   {"<主体>": {"<比较符>": 值}}                一级（如 {主体:{eq:3}}）
+#   {"<主体>": {"<二级键>": {"<比较符>": 值}}}   两级（如 {自身印记:{印记ID:{min:5}}}）
+#   {"<组合>": [{条件}, {条件}]}               逻辑组合（and/or，键名由元数据声明）
+# 本段提供解析（condition_rows）与序列化（condition_value）的参考实现，
+# 前端 JS（EditorCondition）与之同构（node 测试逐条比对）；元数据缺省
+# （condition_subjects 为空）时完全按实际值形态推断，spec 里如实标注 declared=False。
+def condition_spec(fm: Optional[FieldMeta]) -> Dict[str, Any]:
+    """条件行编辑器的主体/比较符声明（来自元数据；缺省 declared=False 如实标注）。"""
+    declared = fm.condition_subjects if fm is not None else {}
+    subjects: List[Dict[str, Any]] = []
+    ops: List[str] = []
+    for key, sub in declared.items():
+        subjects.append({
+            "key": str(key),
+            "label": sub.label or str(key),
+            "key_ref": sub.key_ref or "",
+            "value_ref": sub.value_ref or "",
+            "ops": [str(o) for o in sub.ops],
+            "combine": bool(sub.combine),
+        })
+        for op in sub.ops:
+            if str(op) not in ops:
+                ops.append(str(op))
+    return {"subjects": subjects, "ops": ops, "declared": bool(declared)}
 
 
-def iter_routes(app: Any) -> Any:
-    """M12 实装：遍历注册路由（供插件入口拉起子进程后健康检查/日志）。"""
-    routes = []
-    for r in getattr(app, "routes", []):
-        methods = ",".join(sorted(getattr(r, "methods", []) or []))
-        routes.append({"path": getattr(r, "path", ""), "methods": methods})
-    return routes
+def _is_comparator_group(value: Mapping[str, Any]) -> bool:
+    """二级映射是否「比较符 → 标量/列表」（True=一级条件；False=还有更深的二级键）。"""
+    vals = list(value.values())
+    return bool(vals) and all(not isinstance(v, Mapping) for v in vals)
+
+
+def _condition_entry_rows(subject: str, val: object) -> List[Dict[str, Any]]:
+    if isinstance(val, list):
+        groups = [condition_rows(elem) for elem in val]
+        return [{"kind": "combine", "subject": subject, "children": groups}]
+    if isinstance(val, Mapping):
+        if _is_comparator_group(val):
+            return [{"kind": "cmp", "subject": subject, "key": "", "op": str(op),
+                     "value": v} for op, v in val.items()]
+        out: List[Dict[str, Any]] = []
+        for sub_key, sub_val in val.items():
+            if isinstance(sub_val, Mapping) and _is_comparator_group(sub_val):
+                out.extend({"kind": "cmp", "subject": subject, "key": str(sub_key),
+                            "op": str(op), "value": v} for op, v in sub_val.items())
+            elif isinstance(sub_val, Mapping):
+                # 超过两级的深结构：整体保留为只读值，不丢数据
+                out.append({"kind": "cmp", "subject": subject, "key": str(sub_key),
+                            "op": "", "value": dict(sub_val), "complex": True})
+            else:
+                out.append({"kind": "cmp", "subject": subject, "key": "",
+                            "op": str(sub_key), "value": sub_val})
+        return out
+    return [{"kind": "cmp", "subject": subject, "key": "", "op": "", "value": val}]
+
+
+def condition_rows(value: object) -> List[Dict[str, Any]]:
+    """条件值 → 条件行模型（参考实现；前端 EditorCondition.parse 与之同构）。"""
+    if not isinstance(value, Mapping):
+        return [] if value is None else [
+            {"kind": "cmp", "subject": "", "key": "", "op": "", "value": value}]
+    rows: List[Dict[str, Any]] = []
+    for key, val in value.items():
+        rows.extend(_condition_entry_rows(str(key), val))
+    return rows
+
+
+def condition_value(rows: object) -> Dict[str, Any]:
+    """条件行模型 → 条件值（参考实现；前端 EditorCondition.serialize 与之同构）。"""
+    out: Dict[str, Any] = {}
+    for row in rows if isinstance(rows, list) else []:
+        if not isinstance(row, Mapping):
+            continue
+        subject = str(row.get("subject") or "")
+        if not subject:
+            continue
+        if row.get("kind") == "combine":
+            groups = row.get("children") if isinstance(row.get("children"), list) else []
+            out[subject] = [condition_value(g) for g in groups]
+            continue
+        key = str(row.get("key") or "")
+        op = str(row.get("op") or "")
+        value = row.get("value")
+        if key:
+            bucket = out.setdefault(subject, {})
+            if not isinstance(bucket, dict):
+                continue
+            if op == "":
+                bucket[key] = value
+            else:
+                inner = bucket.setdefault(key, {})
+                if isinstance(inner, dict):
+                    inner[op] = value
+        elif op == "":
+            out[subject] = value
+        else:
+            bucket = out.setdefault(subject, {})
+            if isinstance(bucket, dict):
+                bucket[op] = value
+    return out
+
+
+def _walk_path(subject: object, path: str) -> List[Tuple[str, object]]:
+    """按字段路径取值（支持点路径与列表通配 `a[].b`）：→ [(实际路径, 值)]。
+
+    编辑器「关联分区」据此在相关模块条目里找外键（含列表内通配，如 `steps[].to`）；
+    路径不写死任何业务键（键名来自包元数据的关联声明）。
+    """
+    if not path:
+        return []
+    cur: List[Tuple[str, object]] = [("", subject)]
+    for token in str(path).split("."):
+        is_list = token.endswith("[]")
+        key = token[:-2] if is_list else token
+        nxt: List[Tuple[str, object]] = []
+        for prefix, val in cur:
+            if not isinstance(val, Mapping) or key not in val:
+                continue
+            child = val[key]
+            p = f"{prefix}.{key}" if prefix else key
+            if is_list:
+                if isinstance(child, list):
+                    for i, elem in enumerate(child):
+                        nxt.append((f"{p}[{i}]", elem))
+            else:
+                nxt.append((p, child))
+        cur = nxt
+    return cur
+
+
+def _local_values(subject: object, local_field: str, entry_id: str) -> List[object]:
+    """本条目用于与关联外键比较的取值（缺省 id；兼容简单路径声明）。"""
+    field = local_field or _ID_FIELD
+    vals = [v for _p, v in _walk_path(subject, field)]
+    if vals:
+        return vals
+    return [entry_id]
+
+
+# =====================================================================================
+# 关联分区（批5）：元数据声明「本模块条目 ↔ 其他模块条目的外键」→ 条目页相关条目分区
+# =====================================================================================
+def _path_field_label(mmeta: Optional[ModuleMeta], path: object) -> str:
+    """字段路径 → 元数据中文名（关联分区副标题「中文（键）」用；查不到返回空串）。
+
+    路径可含列表通配（如 `steps[].to`）：按 `.` / `[]` 切段，逐段沿
+    `FieldMeta.children`（obj）与 `element.children`（list 元素对象）下钻；
+    认不出就如实返回空串，前端回退显示原始键，不凭空造词。
+    """
+    if mmeta is None or not path:
+        return ""
+    parts = [p for p in re.split(r"[.\[\]]+", str(path)) if p]
+    parts = [p for p in parts if not p.isdigit()]  # 列表下标段（steps[0]）不参与下钻
+    if not parts:
+        return ""
+    fm = mmeta.fields.get(parts[0])
+    for seg in parts[1:]:
+        if fm is None:
+            return ""
+        if fm.children:
+            fm = fm.children.get(seg)
+        elif fm.element is not None and fm.element.children:
+            fm = fm.element.children.get(seg)
+        else:
+            return ""
+    return fm.label if fm is not None and fm.label else ""
+
+
+def _association_sections(pack_dir: Path, manifest: Mapping[str, Any],
+                          declared: List[str], entry_id: str, entry_subject: object,
+                          mmeta: Optional[ModuleMeta],
+                          view: "_PackView") -> List[Dict[str, Any]]:
+    """条目页「关联分区」数据（全部来自 ModuleMeta.associations 声明）。
+
+    · 可编辑分区：相关条目按该模块自己的字段元数据出完整表单（前端就地编辑，
+      保存仍走该模块的校验 + 原子写链路）；
+    · 只读分区（editable=False）：只出摘要（id/名称/命中路径）+ 跳转。
+    编辑器本段不写死任何模块名/字段名（换包/换模块零改动）。
+    """
+    if mmeta is None or not mmeta.associations:
+        return []
+    labels = _display_labels(manifest, declared, pack_dir)
+    sections: List[Dict[str, Any]] = []
+    for idx, a in enumerate(mmeta.associations):
+        if not isinstance(a.module, str) or not a.module or not a.field:
+            continue
+        section: Dict[str, Any] = {
+            "key": f"assoc:{idx}:{a.module}:{a.field}",
+            "label": a.label or (labels.get(a.module) or a.module),
+            "module": a.module,
+            "module_label": labels.get(a.module) or a.module,
+            "field": a.field,
+            # 批5.2（V9）：副标题/命中行统一「中文（键）」——中文名来自字段元数据，
+            # 查不到则留空，前端回退原始键（不凭空造词）。
+            "field_label": _path_field_label(_module_meta(a.module, pack_dir), a.field),
+            "local_field": a.local_field or _ID_FIELD,
+            "local_field_label": _path_field_label(mmeta, a.local_field or _ID_FIELD),
+            "editable": bool(a.editable),
+            "hint": a.hint,
+            "entries": [],
+            "count": 0,
+            "declared": a.module in declared,
+        }
+        if a.module not in declared:
+            section["note"] = f"关联模块未在包 manifest 中声明：{a.module}"
+            sections.append(section)
+            continue
+        rel_data = _read_json(pack_dir / f"{a.module}.json")
+        rel_mmeta = _module_meta(a.module, pack_dir)
+        rel_etype = _entry_type(rel_mmeta, rel_data)
+        local_vals = _local_values(entry_subject, a.local_field or _ID_FIELD, entry_id)
+        entries: List[Dict[str, Any]] = []
+        for eid, name, subject in _entry_rows(rel_data, rel_mmeta):
+            matched = [(p, v) for p, v in _walk_path(subject, a.field)
+                       if any(v == lv for lv in local_vals)]
+            if not matched:
+                continue
+            entry: Dict[str, Any] = {
+                "id": eid, "name": name,
+                "matches": [{"path": p, "value": _json_text(v)} for p, v in matched],
+            }
+            if a.editable:
+                base = _entry_base(rel_mmeta, rel_etype, eid, subject)
+                fields = _build_fields(base, subject, rel_mmeta, view, 0)
+                entry.update({
+                    "module": a.module,
+                    "module_label": section["module_label"],
+                    "fields": fields,
+                    "field_count": len(fields),
+                    "groups": _group_summary(fields, rel_mmeta),
+                })
+            entries.append(entry)
+        entries.sort(key=lambda e: (str(e["name"]), str(e["id"])))
+        section["entries"] = entries
+        section["count"] = len(entries)
+        sections.append(section)
+    return sections
+
+
+def _resolve_group(key: str, fm: Optional[FieldMeta], mmeta: Optional[ModuleMeta]) -> str:
+    """分组解析（缺省兜底）：FieldMeta.group → 模块分组表 → 单一默认分组。"""
+    if fm is not None and fm.group:
+        return fm.group
+    if mmeta is not None and key in mmeta.field_groups:
+        return mmeta.field_groups[key]
+    return DEFAULT_GROUP
+
+
+def _json_text(value: object) -> str:
+    try:
+        return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+    except (TypeError, ValueError):
+        return str(value)
+
+
+# =====================================================================================
+# 引用名称解析（ref_target kind → {id: 名称}）
+# =====================================================================================
+class _PackView:
+    """一次读取的内容包视图：模块元数据 + 引用名称索引（惰性构建）。"""
+
+    def __init__(self, pack_dir: Path, manifest: Mapping[str, Any]) -> None:
+        self.dir = pack_dir
+        self.manifest = manifest
+        self.declared = _declared_modules(manifest)
+        self._names: Optional[Dict[str, Dict[str, str]]] = None
+
+    def name_index(self) -> Dict[str, Dict[str, str]]:
+        if self._names is None:
+            self._names = _build_name_index(self.dir, self.declared, _pack_meta_table(self.dir))
+        return self._names
+
+    def resolve(self, ref_target: Optional[str], value: object) -> Optional[str]:
+        if not isinstance(ref_target, str) or not isinstance(value, str):
+            return None
+        idx = self.name_index()
+        table = idx.get(ref_target)
+        if table is None and ref_target.endswith("_or_any"):
+            table = idx.get(ref_target[: -len("_or_any")])
+        if table is None:
+            return None
+        return table.get(value)
+
+
+def _build_name_index(pack_dir: Path, declared: List[str],
+                      meta: FieldMetaTable) -> Dict[str, Dict[str, str]]:
+    collected: Dict[str, Dict[str, str]] = {}
+    kinds: Dict[str, str] = {}
+    for mod in declared:
+        mm = meta.module(mod)
+        kinds[mod] = mm.kind if mm is not None and mm.kind else mod
+        data = _read_json(pack_dir / f"{mod}.json")
+        table: Dict[str, str] = {}
+        if isinstance(data, list):
+            for i, elem in enumerate(data):
+                if not isinstance(elem, Mapping):
+                    continue
+                eid = elem.get(_ID_FIELD)
+                eid = eid if isinstance(eid, str) and eid else f"#{i}"
+                nm = elem.get(_NAME_FIELD)
+                table[eid] = nm if isinstance(nm, str) and nm else eid
+        elif isinstance(data, Mapping):
+            for key, val in data.items():
+                nm = val.get(_NAME_FIELD) if isinstance(val, Mapping) else None
+                table[str(key)] = nm if isinstance(nm, str) and nm else str(key)
+        collected[mod] = table
+    index: Dict[str, Dict[str, str]] = {}
+    for mod in declared:
+        index.setdefault(kinds[mod], {}).update(collected[mod])
+        index.setdefault(mod, {}).update(collected[mod])
+    # 命名空间（跨模块 ID 空间）合并：如共享同一 namespace 的多个模块互相可解析。
+    for _ns, mods in (meta.namespaces or {}).items():
+        members = [m for m in mods if m in collected]
+        if len(members) < 2:
+            continue
+        merged: Dict[str, str] = {}
+        for mod in members:
+            merged.update(collected[mod])
+        for mod in members:
+            index.setdefault(kinds[mod], {}).update(merged)
+    return index
+
+
+# =====================================================================================
+# 只读 API ④：条目全字段 + 分组 + 每字段类型
+# =====================================================================================
+def _column(key: str, fm: Optional[FieldMeta], key_label: Optional[str] = None,
+            value: object = None) -> Dict[str, Any]:
+    """列表表格的一列：列名/类型来自元素字段元数据（缺省按值推断）。
+
+    批4 起列描述同时携带**编辑**所需信息（control/enum/number_step/default），
+    前端按 control 渲染单元格，不认字段类型（映射仍在 api 层唯一实现）。
+    批4.6 补：`value`（该列的实际样本值）供类型未登记时推断，说明卡不再误判文本。
+    """
+    reg = _registered_type(fm)
+    if reg:
+        ftype = reg
+    else:
+        ftype = _KIND_TO_FTYPE.get(_infer_value_kind(value) or "", "") or _infer_type(value)
+    widget = _effective_widget(fm, value)
+    multiline = bool(getattr(fm, "multiline", False)) if fm is not None else False
+    control = control_for(fm, widget, multiline)
+    col: Dict[str, Any] = {
+        "key": key,
+        "label": (fm.label if fm is not None and fm.label else (key_label or key)),
+        "type": ftype,
+        "widget": widget,
+        "control": control,
+        # 批5.1：本列是否嵌套结构（对象/映射/条件/嵌套列表）→ 列表块状布局的判定依据。
+        "nested": is_nested_control(control),
+        "ref_target": fm.ref_target if fm is not None else None,
+        "enum": [str(x) for x in fm.enum] if fm is not None and fm.enum else [],
+        "number_step": _number_step(ftype),
+        "default": fm.default if fm is not None else None,
+        # 批4.6：列头也可出说明卡（自动拼装 + 人工 help），与主表单同源。
+        "unit": fm.unit if fm is not None else "",
+        "help": fm.help if fm is not None else "",
+        "help_card": help_card(key, fm, value),
+    }
+    # 批5：条件行 / 键值对表格单元格的额外声明（主体/比较符/引用目标）
+    if control == "condition":
+        col["condition"] = condition_spec(fm)
+    elif control == "maptable":
+        col["key_ref"] = fm.key_ref if fm is not None else ""
+        col["value_ref"] = fm.value_ref if fm is not None else ""
+    return col
+
+
+def _row_default(elem: Optional[FieldMeta], scalar_element: bool) -> object:
+    """新增行的初始值（元数据 default 驱动；未声明 default 的键不写，保持「未填」）。"""
+    if elem is None:
+        return None
+    if not scalar_element and elem.type == "obj":
+        out: Dict[str, Any] = {}
+        for ck, cfm in (elem.children or {}).items():
+            if cfm.default is not None:
+                out[str(ck)] = cfm.default
+        return out
+    return elem.default
+
+
+def _is_scalar_element(elem: Optional[FieldMeta], rows: List[object]) -> bool:
+    """列表元素是否为标量行（obj 元素 → False；无元数据时按实际行形态推断）。"""
+    if elem is not None:
+        return elem.type != "obj"
+    if rows:
+        return not any(isinstance(r, Mapping) for r in rows)
+    return True
+
+
+def _ref_valid(view: "_PackView", ref_target: Optional[str], value: object) -> bool:
+    """引用值是否存在（空值视为「未填」不算非法；未知目标/找不到名称 → 非法）。"""
+    if value is None or value == "":
+        return True
+    if not isinstance(value, str):
+        return False
+    return view.resolve(ref_target, value) is not None
+
+
+def _list_columns(fm: Optional[FieldMeta], rows: List[object]) -> List[Dict[str, Any]]:
+    """列表字段的只读表列：元素元数据声明优先；实际行里多出的键按值推断补列。
+
+    批4.6：每列取一个实际样本值（首行出现该键的值），供类型未登记时推断——
+    行内 soft 纯展示子字段（只有中文名、无 type）不再被说明卡误判成文本。
+    """
+    elem = fm.element if fm is not None else None
+    cols: List[Dict[str, Any]] = []
+    known: set = set()
+
+    def sample(column: str) -> object:
+        for row in rows:
+            if isinstance(row, Mapping) and column in row:
+                return row[column]
+        return None
+
+    if elem is not None and elem.type == "obj" and elem.children:
+        for ck, cfm in elem.children.items():
+            cols.append(_column(str(ck), cfm, value=sample(str(ck))))
+        known = set(str(k) for k in elem.children)
+    elif elem is not None and elem.type in (
+        "ref", "str", "number", "int", "float", "bool", "enum"
+    ):
+        cols.append(_column("value", elem, key_label="值",
+                            value=(rows[0] if rows else None)))
+    for row in rows:
+        if not isinstance(row, Mapping):
+            continue
+        for k in row:
+            if not isinstance(k, str) or k in known:
+                continue
+            known.add(k)
+            cols.append(_column(k, None, value=sample(k)))
+    if not cols:
+        # 元素声明为 obj 但没有子字段、也没有数据行可推断键 → 不出列（前端提示补元数据），
+        # 不臆造「value」键（否则会把对象行改写成 {"value": …} 破坏原形态）。
+        if elem is not None and elem.type == "obj":
+            return []
+        cols.append(_column("value", None, key_label="值"))
+    return cols
+
+
+def _table_rows(rows: List[object], cols: List[Dict[str, Any]],
+                view: "_PackView") -> List[Dict[str, str]]:
+    out: List[Dict[str, str]] = []
+    for row in rows[:_MAX_TABLE_ROWS]:
+        cells: Dict[str, str] = {}
+        for col in cols:
+            if isinstance(row, Mapping):
+                raw = row.get(col["key"])
+            elif col is cols[0]:
+                raw = row
+            else:
+                raw = None
+            if isinstance(raw, (Mapping, list)):
+                cells[col["key"]] = _json_text(raw)
+            else:
+                cells[col["key"]] = _scalar_display(raw, col["widget"], view, col["ref_target"])
+        out.append(cells)
+    return out
+
+
+def _object_children(fm: Optional[FieldMeta], value: Mapping[str, Any],
+                     mmeta: Optional[ModuleMeta], view: "_PackView",
+                     depth: int) -> List[Dict[str, Any]]:
+    if depth >= _MAX_DEPTH:
+        return []
+    base = dict(fm.children) if fm is not None and fm.children else {}
+    return _build_fields(base, value, mmeta, view, depth)
+
+
+def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
+                mmeta: Optional[ModuleMeta], view: "_PackView", depth: int) -> Dict[str, Any]:
+    widget = _effective_widget(fm, value)
+    # 批4.6 补：元数据未登记类型（fm=None 或 type 占位为空）→ 按实际值推断，
+    # 表单类型 chip 与说明卡同源，不再把数值字段显示成「文本」。
+    ftype = fm.type if fm is not None and fm.type else _infer_type(value)
+    label = fm.label if fm is not None and fm.label else (key or ftype)
+    multiline = bool(getattr(fm, "multiline", False)) if fm is not None else False
+    if not multiline and widget == "text":
+        multiline = _is_long_text(value)  # 元数据未声明时的兜底（长文本仍给多行控件）
+    control = control_for(fm, widget, multiline)
+    desc: Dict[str, Any] = {
+        "key": key,
+        "label": label,
+        "type": ftype,
+        "widget": widget,
+        "control": control,
+        "editable": is_editable_control(control),
+        "multiline": multiline,
+        "group": _resolve_group(key, fm, mmeta),
+        "required": bool(fm.required) if fm is not None else False,
+        "present": present,
+        "value": value,
+        "display": _scalar_display(value, widget, view, fm.ref_target if fm is not None else None),
+        "ref_target": fm.ref_target if fm is not None else None,
+        "enum": [str(x) for x in fm.enum] if fm is not None and fm.enum else [],
+        "number_step": _number_step(ftype),
+        "hint": _hint(fm),
+        # 批4.6：说明卡（自动拼装 + 人工 help）——前端悬停/点击中文名时展示。
+        "unit": fm.unit if fm is not None else "",
+        "help": fm.help if fm is not None else "",
+        "help_card": help_card(key, fm, value),
+        "columns": [],
+        "rows": [],
+    }
+    # 批5：条件行 / 键值对表格字段的额外声明（主体/比较符/引用目标；前端据 control 渲染）
+    if control == "condition":
+        desc["condition"] = condition_spec(fm)
+    elif control == "maptable":
+        desc["key_ref"] = fm.key_ref if fm is not None else ""
+        desc["value_ref"] = fm.value_ref if fm is not None else ""
+    if widget == "ref":
+        # 批4：引用值是否指向存在的目标（空值不算非法）→ 前端黄提示、不红拦。
+        desc["ref_valid"] = _ref_valid(view, fm.ref_target if fm is not None else None, value)
+    if widget == "list":
+        # 值缺失/为 null 也要按元数据出列（空列表仍有列头与「+ 添加一行」的默认值）
+        rows_val: List[object] = value if isinstance(value, list) else []
+        cols = _list_columns(fm, rows_val)
+        desc["columns"] = cols
+        # 批5.1：任一列是嵌套结构 → 前端改「块状换行」布局（标量成块首行、嵌套各自成块）。
+        # 纯标量列表（如全部是引用/数字/文本的 actions）仍用可增删行表格，不走块布局。
+        desc["block_layout"] = any(bool(c.get("nested")) for c in cols)
+        desc["rows"] = _table_rows(rows_val, cols, view)
+        desc["row_count"] = len(rows_val)
+        elem = fm.element if fm is not None else None
+        if elem is not None and elem.type == "ref":
+            desc["ref_target"] = elem.ref_target  # 引用多选的候选目标在元素元数据上
+        scalar_element = _is_scalar_element(elem, rows_val)
+        desc["scalar_element"] = scalar_element
+        desc["row_default"] = _row_default(elem, scalar_element)
+        # 批4：非法引用标记（黄提示、不红拦）——元素是引用 → 收集非法值；
+        # 元素 obj 内引用子字段 → 逐单元格收集（供前端就地把该格标黄）。
+        desc["invalid_refs"] = (
+            [str(v) for v in rows_val if not _ref_valid(view, elem.ref_target, v)]
+            if elem is not None and elem.type == "ref" else []
+        )
+        invalid_cells: List[Dict[str, Any]] = []
+        if elem is not None and elem.type == "obj" and elem.children:
+            for i, row in enumerate(rows_val):
+                if not isinstance(row, Mapping):
+                    continue
+                for ck, cfm in elem.children.items():
+                    if cfm.type != "ref":
+                        continue
+                    rv = row.get(str(ck))
+                    if not _ref_valid(view, cfm.ref_target, rv):
+                        invalid_cells.append(
+                            {"row": i, "key": str(ck), "value": rv})
+        desc["invalid_cells"] = invalid_cells
+    elif widget == "obj" and isinstance(value, Mapping):
+        desc["children"] = _object_children(fm, value, mmeta, view, depth + 1)
+    elif widget == "map" and isinstance(value, Mapping):
+        desc["rows"] = [
+            {"key": str(k), "value": v,
+             "display": _scalar_display(v, _effective_widget(None, v), view)}
+            for k, v in value.items()
+        ]
+        desc["row_count"] = len(value)
+    return desc
+
+
+def _build_fields(base: Mapping[str, FieldMeta], subject: object,
+                  mmeta: Optional[ModuleMeta], view: "_PackView",
+                  depth: int) -> List[Dict[str, Any]]:
+    """按声明顺序出字段（缺失也出，标 present=False）；再补实际值里多出的键。"""
+    if not isinstance(subject, Mapping):
+        if base:
+            key, fm = next(iter(base.items()))
+        else:
+            key, fm = "", None
+        return [_descriptor(str(key), fm, subject, True, mmeta, view, depth)]
+    fields: List[Dict[str, Any]] = []
+    seen: set = set()
+    for key, fm in base.items():
+        present = key in subject
+        fields.append(_descriptor(str(key), fm, subject.get(key) if present else None,
+                                  present, mmeta, view, depth))
+        seen.add(key)
+    for key, val in subject.items():
+        if not isinstance(key, str) or key in seen:
+            continue
+        fields.append(_descriptor(key, None, val, True, mmeta, view, depth))
+    return fields
+
+
+def _entry_base(mmeta: Optional[ModuleMeta], etype: str, entry_id: str,
+                subject: object) -> Mapping[str, FieldMeta]:
+    """条目值的「字段元数据基表」：list 模块=条目顶层字段，map/object=值字段或段子字段。"""
+    if mmeta is None:
+        return {}
+    if etype == "list":
+        return mmeta.fields
+    if etype == "map":
+        vm = mmeta.value_meta
+        if vm is not None and vm.type == "obj" and vm.children:
+            return vm.children
+        return {entry_id: vm} if vm is not None else {}
+    fm = mmeta.fields.get(entry_id)
+    if fm is not None and fm.type == "obj" and fm.children:
+        return fm.children
+    if isinstance(subject, Mapping) and (fm is None or fm.type == "obj"):
+        return {}
+    return {entry_id: fm} if fm is not None else {}
+
+
+def _group_summary(fields: List[Dict[str, Any]],
+                   mmeta: Optional[ModuleMeta]) -> List[Dict[str, Any]]:
+    """分组摘要（页签数据源）：顺序 + 显示名 + 计数，全部来自元数据。
+
+    · 顺序：ModuleMeta.group_order 优先；再按 field_groups（声明顺序）→ group_labels →
+      字段中首次出现的顺序补齐。缺省（模块无声明）→ 只有字段兜底组。
+    · 显示名：group_labels[组] → 缺省用组键本身（编辑器不写死任何分组词）。
+    · **元数据声明了但本条目没有字段落进去的组也保留**（count=0）→ 前端渲染空态文案。
+    """
+    counts: Dict[str, int] = {}
+    for f in fields:
+        g = str(f["group"])
+        counts[g] = counts.get(g, 0) + 1
+    declared: List[str] = []
+
+    def _declare(g: str) -> None:
+        if g and g not in declared:
+            declared.append(g)
+
+    labels: Mapping[str, str] = {}
+    if mmeta is not None:
+        for g in mmeta.group_order:
+            _declare(str(g))
+        for g in mmeta.field_groups.values():
+            _declare(str(g))
+        labels = mmeta.group_labels
+        for g in labels:
+            _declare(str(g))
+    order: List[str] = list(declared)
+    for g in counts:
+        if g not in order:
+            order.append(g)
+    return [
+        {"name": g, "label": str(labels.get(g, g)), "count": counts.get(g, 0)}
+        for g in order
+    ]
+
+
+def entry_detail(pack: object, module: object, entry_id: object,
+                 root: Optional[object] = None) -> Dict[str, Any]:
+    """条目只读详情（`/api/pack/{pack}/entry/{mod}/{id}`）：全字段 + 分组 + 每字段类型。"""
+    pack_dir = _pack_dir(pack, root)
+    manifest = _manifest(pack_dir)
+    declared = _declared_modules(manifest)
+    mod = _check_component(module, "模块名")
+    if mod not in declared:
+        raise NotFound(f"模块未在包 manifest 中声明：{mod}")
+    if not isinstance(entry_id, str):
+        raise BadRequest(f"非法条目标识：{entry_id!r}")
+    data = _read_json(pack_dir / f"{mod}.json")
+    mmeta = _module_meta(mod, pack_dir)
+    rows = _entry_rows(data, mmeta)
+    match = next((row for row in rows if row[0] == entry_id), None)
+    if match is None:
+        raise NotFound(f"条目不存在：{mod}/{entry_id}")
+    _eid, entry_name, subject = match
+    etype = _entry_type(mmeta, data)
+    view = _PackView(pack_dir, manifest)
+    base = _entry_base(mmeta, etype, entry_id, subject)
+    fields = _build_fields(base, subject, mmeta, view, 0)
+    groups = _group_summary(fields, mmeta)
+    associations = _association_sections(pack_dir, manifest, declared, entry_id,
+                                         subject, mmeta, view)
+    labels = _display_labels(manifest, declared, pack_dir)
+    return {
+        "pack": str(pack),
+        "pack_name": str(manifest.get("name", "") or pack),
+        "module": mod,
+        "module_label": labels.get(mod) or mod,
+        "entry_type": etype,
+        "id": entry_id,
+        "name": entry_name,
+        "fields": fields,
+        "groups": groups,
+        "associations": associations,
+        "association_count": len(associations),
+        "field_count": len(fields),
+        "group_count": len(groups),
+        "meta_source": META_SOURCE,
+    }
+
+
+# =====================================================================================
+# 只读 API ⑤：写链路数据源（保存前定位条目 / 读整包 / 引用候选）
+# =====================================================================================
+def declared_module(pack: object, module: object, root: Optional[object] = None) -> str:
+    """校验模块已在包 manifest 中声明（否则 NotFound），返回规范化模块名。"""
+    pack_dir = _pack_dir(pack, root)
+    manifest = _manifest(pack_dir)
+    mod = _check_component(module, "模块名")
+    if mod not in _declared_modules(manifest):
+        raise NotFound(f"模块未在包 manifest 中声明：{mod}")
+    return mod
+
+
+def load_pack_modules(pack: object, root: Optional[object] = None) -> Tuple[Path, Dict[str, Any]]:
+    """整包模块原始数据（写链路 + 校验的数据源；只读）。
+
+    出参 (包目录, {模块名: parsed JSON})。只收 manifest 已声明且文件存在的模块；
+    读盘经 mtime 缓存，写盘后 mtime 变化自动失效 → 保存后回读即最新。
+    """
+    pack_dir = _pack_dir(pack, root)
+    manifest = _manifest(pack_dir)
+    modules: Dict[str, Any] = {}
+    for mod in _declared_modules(manifest):
+        data = _read_json(pack_dir / f"{mod}.json")
+        if data is not None:
+            modules[mod] = data
+    return pack_dir, modules
+
+
+def entry_slot(pack: object, module: object, entry_id: object,
+               root: Optional[object] = None) -> Dict[str, Any]:
+    """定位条目在模块数据中的槽位（编辑链路用；只读）。
+
+    出参含：pack_dir / manifest / module / entry_type / data（模块原数据）/
+    slot（list=下标 int，map·object=键 str）/ subject（条目原值）/ base（字段元数据基表）。
+    条目不存在 → NotFound；模块未声明 → NotFound；包非法 → BadRequest。
+    """
+    pack_dir = _pack_dir(pack, root)
+    manifest = _manifest(pack_dir)
+    declared = _declared_modules(manifest)
+    mod = _check_component(module, "模块名")
+    if mod not in declared:
+        raise NotFound(f"模块未在包 manifest 中声明：{mod}")
+    if not isinstance(entry_id, str):
+        raise BadRequest(f"非法条目标识：{entry_id!r}")
+    data = _read_json(pack_dir / f"{mod}.json")
+    mmeta = _module_meta(mod, pack_dir)
+    rows = _entry_rows(data, mmeta)
+    pos = next((i for i, row in enumerate(rows) if row[0] == entry_id), None)
+    if pos is None:
+        raise NotFound(f"条目不存在：{mod}/{entry_id}")
+    _eid, entry_name, subject = rows[pos]
+    etype = _entry_type(mmeta, data)
+    if isinstance(data, list):
+        slot: object = pos
+    elif isinstance(data, Mapping):
+        slot = entry_id
+    else:
+        slot = None
+    return {
+        "pack_dir": pack_dir,
+        "manifest": manifest,
+        "declared": declared,
+        "module": mod,
+        "entry_type": etype,
+        "data": data,
+        "slot": slot,
+        "entry_id": entry_id,
+        "name": entry_name,
+        "subject": subject,
+        "base": _entry_base(mmeta, etype, entry_id, subject),
+        "mmeta": mmeta,
+    }
+
+
+def ref_options(pack: object, target: object, root: Optional[object] = None,
+                query: Optional[object] = None, limit: int = 500) -> Dict[str, Any]:
+    """引用字段候选（`/api/pack/{pack}/refs/{target}`）：目标 kind → [{id, name}]。
+
+    名称索引与只读视图同一构建逻辑（含命名空间合并、`_or_any` 后缀兼容）；
+    未知 target 返回空候选 + known=false（前端据此提示「该引用目标暂无候选」）。
+    排序按名称（同名前缀一致），可按 id/名称模糊过滤（query），超出 limit 截断并标注。
+    """
+    pack_dir = _pack_dir(pack, root)
+    manifest = _manifest(pack_dir)
+    tgt = str(target or "")
+    index = _PackView(pack_dir, manifest).name_index()
+    table = index.get(tgt)
+    if table is None and tgt.endswith("_or_any"):
+        table = index.get(tgt[: -len("_or_any")])
+    if not table:
+        return {"pack": str(pack), "target": tgt, "options": [], "total": 0,
+                "truncated": False, "known": False}
+    rows = [{"id": str(k), "name": str(v)} for k, v in table.items()]
+    rows.sort(key=lambda r: (r["name"], r["id"]))
+    q = str(query or "").strip().lower()
+    if q:
+        rows = [r for r in rows if q in r["id"].lower() or q in r["name"].lower()]
+    total = len(rows)
+    return {"pack": str(pack), "target": tgt, "options": rows[:limit],
+            "total": total, "truncated": total > limit, "known": True}
+
+
+# =====================================================================================
+# 批6：新增/删除条目 + ID 生成 + 检索（通用：规则/默认值/引用全部来自元数据）
+# =====================================================================================
+# ID 建议规则的元数据词表（ModuleMeta.id_rule）：缺省自动，声明了就依声明。
+ID_RULE_AUTO = ""              # 自动：名称 slug 优先；取不出 slug → 前缀 + 递增序号
+ID_RULE_SLUG = "slug"          # 名称 → 英文小写 + 下划线
+ID_RULE_PREFIX_SEQ = "prefix_seq"  # 前缀 + 递增序号
+ID_RULES: Tuple[str, ...] = (ID_RULE_AUTO, ID_RULE_SLUG, ID_RULE_PREFIX_SEQ)
+# 新建条目时给非技术用户的人话说明（框架级文案，不含任何业务字段名）。
+ID_HINT = ("ID 是内容之间互相引用的名字，建议用英文小写 + 下划线（如 sword_aura）；"
+           "它在同模块内必须唯一，建好后尽量不要改。")
+# ID 形态底线（建议而非硬规则）：非空、无空白、无路径分隔符、长度可控。
+_ID_SAFE = re.compile(r"^[^\s/\\]{1,128}$")
+
+
+def slugify(text: object) -> str:
+    """名称 → 英文小写 + 下划线 slug（取不出 ASCII 字符时返回空串，**不臆造拼音**）。"""
+    parts = re.findall(r"[A-Za-z0-9]+", str(text or ""))
+    return "_".join(p.lower() for p in parts)
+
+
+def _module_prefix(module: str, mmeta: Optional[ModuleMeta]) -> str:
+    """ID 前缀（元数据 id_prefix → kind → 模块名，逐级兜底并 slug 归一）。"""
+    if mmeta is not None and mmeta.id_prefix:
+        return slugify(mmeta.id_prefix) or str(mmeta.id_prefix)
+    if mmeta is not None and mmeta.kind:
+        return slugify(mmeta.kind) or str(mmeta.kind)
+    return slugify(module) or str(module)
+
+
+def id_rule_spec(module: str, mmeta: Optional[ModuleMeta]) -> Dict[str, Any]:
+    """ID 建议规则（界面展示 + 生成用；未声明/不识别 → 自动规则）。"""
+    raw = str(mmeta.id_rule).strip() if mmeta is not None else ""
+    rule = raw if raw in ID_RULES else ID_RULE_AUTO
+    return {
+        "rule": rule,
+        "declared": bool(raw),
+        "prefix": _module_prefix(module, mmeta),
+        "rules": list(ID_RULES),
+    }
+
+
+def suggest_entry_id(module: str, mmeta: Optional[ModuleMeta], name: object,
+                     existing_ids: object = ()) -> str:
+    """按规则生成建议 ID（同模块/同命名空间内保证不重复）。
+
+    · rule=prefix_seq（或名称取不出 slug）→ `<前缀>_<递增序号>`；
+    · rule=slug / auto 且名称有 slug → `<slug>`；重复则追加 `_2`、`_3`…
+    生成只依赖元数据与「现有 ID 集合」，不写死任何业务模块/字段名。
+    """
+    spec = id_rule_spec(module, mmeta)
+    used = {str(x) for x in (existing_ids or ()) if str(x)}
+    prefix = spec["prefix"] or "entry"
+
+    def seq() -> str:
+        n = 1
+        while f"{prefix}_{n}" in used:
+            n += 1
+        return f"{prefix}_{n}"
+
+    def uniq(base: str) -> str:
+        if base and base not in used:
+            return base
+        n = 2
+        while f"{base}_{n}" in used:
+            n += 1
+        return f"{base}_{n}"
+
+    if spec["rule"] == ID_RULE_PREFIX_SEQ:
+        return seq()
+    slug = slugify(name)
+    if not slug:
+        return seq()
+    return uniq(slug)
+
+
+def _id_scope_modules(module: str, mmeta: Optional[ModuleMeta],
+                      declared: List[str], table: FieldMetaTable) -> List[str]:
+    """ID 唯一性作用域：本模块 + 同命名空间兄弟模块（与校验器 R-5 口径一致）。"""
+    mods = [module]
+    if mmeta is not None and mmeta.namespace:
+        for m in table.namespaces.get(mmeta.namespace, ()):  # 命名空间成员（元数据声明）
+            if m in declared and m not in mods:
+                mods.append(m)
+    return mods
+
+
+def _id_entries(pack_dir: Path, manifest: Mapping[str, Any], module: str,
+                mmeta: Optional[ModuleMeta], table: FieldMetaTable
+                ) -> List[Tuple[str, str, str]]:
+    """作用域内已有条目 → [(模块, ID, 名称)]（唯一性即时校验的数据源，只读）。"""
+    declared = _declared_modules(manifest)
+    out: List[Tuple[str, str, str]] = []
+    for m in _id_scope_modules(module, mmeta, declared, table):
+        data = _read_json(pack_dir / f"{m}.json")
+        mm = table.module(m)
+        for eid, name, _val in _entry_rows(data, mm):
+            out.append((m, eid, name))
+    return out
+
+
+def suggest_id(pack: object, module: object, root: Optional[object] = None,
+               name: object = None) -> Dict[str, Any]:
+    """建议 ID（`/…/suggest_id?name=…`）：名称 → 规则 → 不重复的建议 ID。"""
+    pack_dir = _pack_dir(pack, root)
+    manifest = _manifest(pack_dir)
+    mod = declared_module(pack, module, root=root)
+    table = _pack_meta_table(pack_dir)
+    mmeta = table.module(mod)
+    existing = {eid for _m, eid, _n in _id_entries(pack_dir, manifest, mod, mmeta, table)}
+    return {
+        "pack": str(pack), "module": mod,
+        "suggested_id": suggest_entry_id(mod, mmeta, name, existing),
+        "id_rule": id_rule_spec(mod, mmeta),
+        "id_hint": ID_HINT,
+        "existing_count": len(existing),
+    }
+
+
+def check_entry_id(pack: object, module: object, entry_id: object,
+                   root: Optional[object] = None,
+                   meta: Optional[FieldMetaTable] = None) -> Dict[str, Any]:
+    """新增条目的 ID 即时校验（只读）：空/非法 → 红；同模块或同命名空间重复 → 红。"""
+    pack_dir = _pack_dir(pack, root)
+    manifest = _manifest(pack_dir)
+    table = meta if meta is not None else _pack_meta_table(pack_dir)
+    mod = declared_module(pack, module, root=root)
+    mmeta = table.module(mod)
+    eid = str(entry_id or "").strip()
+    labels = _display_labels(manifest, _declared_modules(manifest), pack_dir)
+
+    def _out(ok: bool, level: str, message: str, how: str,
+             conflicts: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+        return {"pack": str(pack), "module": mod, "entry_id": eid, "ok": ok,
+                "level": level, "status": "red" if not ok else "ok",
+                "conflicts": conflicts or [], "message": message,
+                "how_to_fix": how, "id_hint": ID_HINT}
+
+    if not eid:
+        return _out(False, "red", "ID 不能为空：请填写一个本模块内唯一的标识。",
+                    "建议用英文小写 + 下划线（如 sword_aura）；点「按名称生成」可自动取一个。")
+    if not _ID_SAFE.match(eid):
+        return _out(False, "red", f"ID「{eid}」含空格、斜杠或超长字符，不能用作条目标识。",
+                    "请改用不含空格与斜杠的短标识（建议英文小写 + 下划线）。")
+    conflicts = [
+        {"module": m, "module_label": labels.get(m) or m, "id": e, "name": n}
+        for m, e, n in _id_entries(pack_dir, manifest, mod, mmeta, table) if e == eid
+    ]
+    if conflicts:
+        where = "、".join(
+            f"{c['module_label']}「{c['name']}」" if c["module"] != mod
+            else f"本模块「{c['name']}」" for c in conflicts)
+        return _out(
+            False, "red", f"ID「{eid}」已被占用（{where}），同模块/同命名空间内不能重复。",
+            "换一个 ID，或点「按名称生成」让编辑器按规则取一个不重复的。", conflicts)
+    return _out(True, "ok", f"ID「{eid}」可用。", "")
+
+
+def entry_index(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
+    """全包条目索引（跨模块检索 + ID 即时唯一性校验的数据源；只读）。
+
+    出参按模块分组：{module, label, entry_type, namespace, count, entries:[{id,name}]}。
+    编辑器据此在前端本地过滤（纯前端检索，不逐键请求后端）。
+    """
+    pack_dir = _pack_dir(pack, root)
+    manifest = _manifest(pack_dir)
+    declared = _declared_modules(manifest)
+    labels = _display_labels(manifest, declared, pack_dir)
+    table = _pack_meta_table(pack_dir)
+    modules: List[Dict[str, Any]] = []
+    total = 0
+    for mod in declared:
+        data = _read_json(pack_dir / f"{mod}.json")
+        mmeta = table.module(mod)
+        etype = _entry_type(mmeta, data)
+        ns = (mmeta.namespace if mmeta is not None and mmeta.namespace else mod)
+        entries = [{"id": eid, "name": name} for eid, name, _v in _entry_rows(data, mmeta)]
+        total += len(entries)
+        modules.append({
+            "module": mod, "label": labels.get(mod) or mod, "entry_type": etype,
+            "namespace": ns, "count": len(entries), "entries": entries,
+        })
+    return {"pack": str(pack), "pack_name": str(manifest.get("name", "") or pack),
+            "modules": modules, "total": total, "meta_source": META_SOURCE}
+
+
+def _new_entry_base(mmeta: Optional[ModuleMeta], etype: str, entry_id: str,
+                    id_field: str) -> Mapping[str, FieldMeta]:
+    """新建条目的可编辑字段基表（list 排除 ID 键：ID 在新建界面单独渲染）。"""
+    base = _entry_base(mmeta, etype, entry_id, None)
+    if etype == "list":
+        return {k: v for k, v in base.items() if str(k) != id_field}
+    return base
+
+
+def _new_entry_defaults(mmeta: Optional[ModuleMeta], etype: str, entry_id: str,
+                        id_field: str) -> Dict[str, Any]:
+    """新条目初始值：其余字段按元数据 default 初始化（缺省无 default → 不写该键）。"""
+    out: Dict[str, Any] = {}
+    if mmeta is None:
+        return out
+    if etype == "list":
+        for k, fm in mmeta.fields.items():
+            if str(k) == id_field:
+                continue
+            if fm.default is not None:
+                out[str(k)] = copy.deepcopy(fm.default)
+        out[id_field] = entry_id
+    else:
+        kids: Mapping[str, FieldMeta] = {}
+        if etype == "map" and mmeta.value_meta is not None and mmeta.value_meta.children:
+            kids = mmeta.value_meta.children
+        elif etype == "object":
+            fm = mmeta.fields.get(entry_id)
+            if fm is not None and fm.children:
+                kids = fm.children
+        for k, cfm in kids.items():
+            if cfm.default is not None:
+                out[str(k)] = copy.deepcopy(cfm.default)
+    return out
+
+
+def new_entry_slot(pack: object, module: object, entry_id: object = "",
+                   root: Optional[object] = None) -> Dict[str, Any]:
+    """新建条目的定位/默认值/字段基表（写链路与新建界面共用；只读）。"""
+    pack_dir = _pack_dir(pack, root)
+    manifest = _manifest(pack_dir)
+    mod = declared_module(pack, module, root=root)
+    data = _read_json(pack_dir / f"{mod}.json")
+    table = _pack_meta_table(pack_dir)
+    mmeta = table.module(mod)
+    etype = _entry_type(mmeta, data)
+    id_field = (mmeta.id_field if mmeta is not None and mmeta.id_field else _ID_FIELD)
+    eid = str(entry_id or "").strip()
+    if not eid and etype == "object":
+        present = {str(k) for k in data} if isinstance(data, Mapping) else set()
+        declared_fields = mmeta.fields if mmeta is not None else {}
+        remaining = [str(k) for k in declared_fields if k not in present]
+        eid = remaining[0] if remaining else ""
+    base = _new_entry_base(mmeta, etype, eid, id_field)
+    # 新条目在模块里的「槽位」：list=追加后的下标，map/object=键。写链路据此把
+    # 校验红拦/黄提示的作用域收敛到新条目自身（否则 list 模块会把全模块其他条目的黄提示
+    # 都算成「相关」——批2 的 _scope_prefix 语义）。
+    if etype == "list":
+        slot: object = len(data) if isinstance(data, list) else None
+    elif etype in ("map", "object"):
+        slot = eid
+    else:
+        slot = None
+    return {
+        "pack_dir": pack_dir, "manifest": manifest, "module": mod,
+        "entry_type": etype, "data": data, "mmeta": mmeta,
+        "id_field": id_field, "entry_id": eid, "base": base, "slot": slot,
+        "subject": _new_entry_defaults(mmeta, etype, eid, id_field),
+    }
+
+
+def new_entry_detail(pack: object, module: object, root: Optional[object] = None,
+                     name: object = None, entry_id: object = None) -> Dict[str, Any]:
+    """新建条目界面数据（`/…/module/{m}/new`）：建议 ID + 默认值字段 + 分组。"""
+    pack_dir = _pack_dir(pack, root)
+    manifest = _manifest(pack_dir)
+    declared = _declared_modules(manifest)
+    table = _pack_meta_table(pack_dir)
+    info = new_entry_slot(pack, module, entry_id or "", root=root)
+    mod = info["module"]
+    mmeta: Optional[ModuleMeta] = info["mmeta"]
+    etype = info["entry_type"]
+    id_field = info["id_field"]
+    prefill = str(info["entry_id"] or "")
+    existing = {eid for _m, eid, _n in _id_entries(pack_dir, manifest, mod, mmeta, table)}
+    suggested = str(entry_id or "").strip() or prefill or suggest_entry_id(
+        mod, mmeta, name, existing)
+    base = info["base"]
+    subject = dict(info["subject"])
+    subject.pop(id_field, None)  # ID 单独渲染，不混进字段网格
+    view = _PackView(pack_dir, manifest)
+    fields = _build_fields(base, subject, mmeta, view, 0)
+    groups = _group_summary(fields, mmeta)
+    labels = _display_labels(manifest, declared, pack_dir)
+    id_fm = None
+    if mmeta is not None:
+        id_fm = mmeta.fields.get(id_field)
+    return {
+        "pack": str(pack),
+        "pack_name": str(manifest.get("name", "") or pack),
+        "module": mod,
+        "module_label": labels.get(mod) or mod,
+        "entry_type": etype,
+        "is_new": True,
+        "id_field": id_field,
+        "id_field_label": (id_fm.label if id_fm is not None and id_fm.label else id_field),
+        "suggested_id": suggested,
+        "id_rule": id_rule_spec(mod, mmeta),
+        "id_hint": ID_HINT,
+        "can_create": bool(suggested) or etype in ("list", "map"),
+        "name_field": _NAME_FIELD,
+        "fields": fields,
+        "groups": groups,
+        "field_count": len(fields),
+        "group_count": len(groups),
+        "associations": [],
+        "association_count": 0,
+        "meta_source": META_SOURCE,
+    }
+
+
+def _ref_kind_matches(ref_target: object, kinds: set) -> bool:
+    """引用目标的 kind 是否指向被删模块（未标注目标也算：字段类型是 ref 即视为引用）。"""
+    t = str(ref_target or "")
+    if not t:
+        return True
+    if t in kinds:
+        return True
+    if t.endswith("_or_any") and t[: -len("_or_any")] in kinds:
+        return True
+    return False
+
+
+def _collect_ref_hits(value: object, fm: Optional[FieldMeta], path: str,
+                      target_id: str, kinds: set,
+                      out: List[Dict[str, Any]]) -> None:
+    """沿字段元数据递归找「值 == target_id 的引用字段」（键名不写死，全按元数据下钻）。"""
+    if fm is None:
+        if isinstance(value, Mapping):
+            for k, v in value.items():
+                _collect_ref_hits(v, None, f"{path}.{k}" if path else str(k), target_id, kinds, out)
+        elif isinstance(value, list):
+            for i, v in enumerate(value):
+                _collect_ref_hits(v, None, f"{path}[{i}]", target_id, kinds, out)
+        return
+    if fm.type == "ref":
+        if str(value) == target_id and _ref_kind_matches(fm.ref_target, kinds):
+            out.append({"path": path, "value": value, "ref_target": fm.ref_target or ""})
+        return
+    if fm.type == "list":
+        if isinstance(value, list):
+            for i, v in enumerate(value):
+                _collect_ref_hits(v, fm.element, f"{path}[{i}]", target_id, kinds, out)
+        return
+    if fm.type == "obj":
+        if isinstance(value, Mapping):
+            for k, v in value.items():
+                child = fm.children.get(str(k)) if fm.children else None
+                _collect_ref_hits(v, child, f"{path}.{k}" if path else str(k),
+                                  target_id, kinds, out)
+        return
+    if fm.type == "map":
+        if isinstance(value, Mapping):
+            for k, v in value.items():
+                _collect_ref_hits(v, fm.element, f"{path}.{k}" if path else str(k),
+                                  target_id, kinds, out)
+
+
+def reference_scan(pack: object, module: object, entry_id: object,
+                   root: Optional[object] = None,
+                   meta: Optional[FieldMetaTable] = None) -> List[Dict[str, Any]]:
+    """「谁引用了这个条目」扫描（删除前人话列出引用者；只读，不写盘）。
+
+    两个数据源都来自元数据声明，编辑器不写死模块/字段名：
+      ① 各模块字段元数据里 type=ref 的字段（含列表/对象/映射内递归）；
+      ② 各模块 ModuleMeta.associations 声明指向本模块的外键路径（含列表通配）。
+    """
+    pack_dir = _pack_dir(pack, root)
+    manifest = _manifest(pack_dir)
+    table = meta if meta is not None else _pack_meta_table(pack_dir)
+    declared = _declared_modules(manifest)
+    mod = declared_module(pack, module, root=root)
+    target_mmeta = table.module(mod)
+    kinds = {mod}
+    if target_mmeta is not None:
+        if target_mmeta.kind:
+            kinds.add(str(target_mmeta.kind))
+        if target_mmeta.namespace:
+            kinds.add(str(target_mmeta.namespace))
+    labels = _display_labels(manifest, declared, pack_dir)
+    tgt = str(entry_id)
+    out: List[Dict[str, Any]] = []
+    seen: set = set()
+
+    for rel_mod in declared:
+        rel_mmeta = table.module(rel_mod)
+        rel_data = _read_json(pack_dir / f"{rel_mod}.json")
+        rel_etype = _entry_type(rel_mmeta, rel_data)
+        for eid, ename, subject in _entry_rows(rel_data, rel_mmeta):
+            local: List[Dict[str, Any]] = []
+            base = _entry_base(rel_mmeta, rel_etype, eid, subject)
+            if isinstance(subject, Mapping):
+                for k, v in subject.items():
+                    _collect_ref_hits(v, base.get(str(k)), str(k), tgt, kinds, local)
+            # 声明式外键路径（可能不是 ref 类型字段）：按关联声明再扫一遍
+            if rel_mmeta is not None:
+                for a in rel_mmeta.associations:
+                    if a.module != mod or not a.field:
+                        continue
+                    for p, v in _walk_path(subject, a.field):
+                        if str(v) == tgt:
+                            local.append({"path": p, "value": v, "ref_target": ""})
+            for h in local:
+                path = str(h.get("path") or "")
+                key = (rel_mod, eid, path)
+                if key in seen:
+                    continue
+                seen.add(key)
+                out.append({
+                    "module": rel_mod,
+                    "module_label": labels.get(rel_mod) or rel_mod,
+                    "entry_id": eid,
+                    "entry_name": ename,
+                    "field": path,
+                    "field_label": _path_field_label(rel_mmeta, path),
+                    "value": str(h.get("value")),
+                })
+    out.sort(key=lambda r: (str(r["module"]), str(r["entry_name"]), str(r["entry_id"]),
+                            str(r["field"])))
+    return out
+
+
+__all__ = [
+    "DEFAULT_GROUP",
+    "EDIT_CONTROLS",
+    "ID_HINT",
+    "ID_RULES",
+    "ID_RULE_AUTO",
+    "ID_RULE_PREFIX_SEQ",
+    "ID_RULE_SLUG",
+    "META_SOURCE",
+    "BadRequest",
+    "EditorError",
+    "Forbidden",
+    "NotFound",
+    "check_entry_id",
+    "content_root",
+    "condition_rows",
+    "condition_spec",
+    "condition_value",
+    "control_for",
+    "control_of",
+    "declared_module",
+    "editable_form",
+    "entry_detail",
+    "entry_index",
+    "entry_slot",
+    "field_meta_table",
+    "id_rule_spec",
+    "is_editable_control",
+    "is_editable_widget",
+    "list_control",
+    "list_entries",
+    "list_modules",
+    "list_packs",
+    "load_pack_modules",
+    "new_entry_detail",
+    "new_entry_slot",
+    "readonly_form",
+    "ref_options",
+    "reference_scan",
+    "repo_root",
+    "slugify",
+    "suggest_entry_id",
+    "suggest_id",
+]

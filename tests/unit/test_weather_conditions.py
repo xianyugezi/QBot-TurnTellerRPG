@@ -1,4 +1,4 @@
-"""M3 批次2·路H（M40）：条件键三键注册求值测试 —— qbot_rpg.engine.weather_conditions。
+"""M3 批次2·路H（M40）：条件键三键注册求值测试 —— qbot_rpg.core.weather_conditions。
 
 依据：细化_2a4b §4/§5（[天气:X] R28~R32）+ 细化_2a4c §2（条件键接入：注册/求值接线/V6）
       + m3_shared_contract §5.4（条件键三键）+/§6.2 V6（消费方枚举引用红拦）
@@ -16,14 +16,14 @@ import pytest
 
 from qbot_rpg.content.field_meta import default_field_meta_table
 from qbot_rpg.content.validator import _Checker
-from qbot_rpg.engine.weather_conditions import (
+from qbot_rpg.core.weather_conditions import (
     PERIOD_KEYS,
     REGISTERED_KEYS,
     SEASON_KEYS,
     eval_condition,
     validate_condition_keys,
 )
-from qbot_rpg.engine.worldtime import ANCHOR, WorldTime
+from qbot_rpg.core.worldtime import ANCHOR, WorldTime
 
 
 # ---------------------------------------------------------------------------

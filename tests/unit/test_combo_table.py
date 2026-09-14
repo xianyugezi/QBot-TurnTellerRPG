@@ -318,7 +318,7 @@ def test_gate_total_sufficient_and_insufficient():
     r2 = gate_total(ctx2, _burst(), ELEMENT_ID)
     assert r2["ok"] is False
     assert r2["reason"] == REASON_TOTAL_INSUFFICIENT
-    assert r2["need"] == 2 and r2["have"] == 1  # 被拒不耗回合
+    assert r2["need"] == 2 and r2["have"] == 1  # 被拒不消耗行动
 
 
 def test_gate_total_named_keys_sum():

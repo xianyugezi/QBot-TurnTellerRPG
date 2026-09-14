@@ -3,8 +3,10 @@
 承接 use_commands.py：注册门槛/战斗内拒绝/缺参/无物品/装备穿戴/消耗回血/不可使用。
 风格照 test_register_commands.py（make_ctx + parse_command + BANNED_EMOJI 扫描）。
 
-2026-08-31 模板配置化：文案断言改用 use_tpl 默认模板 key（不再依赖 use_commands 的
+2026-08-31 模板配置化：文案断言改用模板 key（不再依赖 use_commands 的
 TPL_* 常量）；新增内容包覆盖 + 白名单外占位符原样保留测试。
+2026-09-12 消息模板重构·批11 路B：use_* 6 键迁全量模板表（use_tpl 分区清空），
+文案锚点改走 qbot_rpg.core.templates.DEFAULT_TEMPLATES（表源）。
 """
 from __future__ import annotations
 
@@ -14,11 +16,13 @@ from typing import Any
 from qbot_rpg.commands.parsers import parse_command, ParsedCommand
 from qbot_rpg.commands.router import Router
 from qbot_rpg.commands.use_commands import cmd_use, register_use_commands
-from qbot_rpg.core.templates.use_tpl import DEFAULT_TEMPLATES as USE_TPL
+# 本路（批11·路B）已迁表：use_* 6 键唯一源 = 全量模板表（use_tpl 分区清空）；
+# 文案锚点走聚合默认表（表源），不再 import use_tpl 的分区默认。
+from qbot_rpg.core.templates import DEFAULT_TEMPLATES as USE_TPL
 
 BANNED_EMOJI = set("🔥🟢💥⚔️🛡️✨⭐🌟🎉🎊💎🏆❤️💖⚠️🚫📜🗡️🛒🧪⏰📅➡️🔹🔸▸")
 
-# 本模块全部 use_* 模板 key（文案唯一源 use_tpl.py；渲染走 tpl_of）
+# 本模块全部 use_* 模板 key（文案唯一源 = 全量模板表；渲染走 tpl_of）
 USE_TPL_KEYS = (
     "use_in_battle", "use_no_arg", "use_no_item", "use_cannot_use", "use_bound", "use_ok",
 )
@@ -76,7 +80,8 @@ def parse(raw: str) -> ParsedCommand:
 def test_use_not_registered_gate() -> None:
     """未注册 → TPL_REGISTER_GATE。"""
     ctx = make_ctx(registered=False, player=None)
-    assert cmd_use(parse("/使用 1"), ctx) == "❌ 请先 /注册 创建角色（/注册 名字 职业）"
+    # 批5·路O：RUL-08 门槛文案与全表统一（免斜杠、拆两行）
+    assert cmd_use(parse("/使用 1"), ctx) == "❌ 请先创建角色\n发 注册 名字 职业"
 
 
 def test_use_in_battle_rejected() -> None:

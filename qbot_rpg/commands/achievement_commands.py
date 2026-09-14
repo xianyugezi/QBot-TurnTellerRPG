@@ -19,6 +19,17 @@
   F-2  揭示卡片（隐藏成就达成瞬间）由引擎 check_achievements 返回 reveals 字段，
        壳层渲染走 ach_reveal_card 模板；正常指令流不主动触发。
   F-3  /称号 无参默认即查看（对齐契约「/称号」与「/称号 查看」双写）。
+
+2026-09-12 消息模板重构（批8·路C）：本模块消费的 16 键（ach_*）已迁全量表
+`qbot_rpg/core/templates/template_table.json` 并按手机QQ 14 全角新规范重写
+（段头【成就】/【称号】、多字段拆行、免斜杠、❌ + 原因 + 下一步）；渲染调用点与
+占位符名不变。分布：列表 4 / 详情 4 / 揭示 1 / 称号 6 / 空态 1。
+2026-09-12 专项·引擎文案1（引擎层直出文案第一批）：列表尾段 Tip 改模板表驱动——新键
+`ach_list_tail_tip`（免斜杠「发 成就信息 <序号> 查看详情」），原硬编码
+`tip="输入 /成就信息 <N> 查看详情"` 撤除；`Tip:` 前缀仍由 list_render.render_cake_tail 负责。
+（已知：ach_list_tail / ach_reveal_card 在代码中仍无 tpl_of 调用点——ach_list_tail 与本批
+新键 ach_list_tail_tip 语义重叠、逻辑上被替代，留表待批18 死键清扫统一裁决；
+ach_reveal_card 属引擎 reveals 侧，同前。）
 """
 
 from __future__ import annotations
@@ -37,9 +48,10 @@ CMD_ACH = "成就"
 CMD_ACH_INFO = "成就信息"
 CMD_TITLE = "称号"
 
-# 占位兜底（tpl_of 缺省走 achievement_tpl 分区，此处为兼容旧测试/裸 ctx）
-_DEF_EMPTY = "【成就】暂无成就"
-_DEF_VIEW_NOT_FOUND = "❌ 成就不存在：{aid}"
+# 占位兜底（tpl_of 缺省走全量表 achievement 16 键，此处为兼容旧测试/裸 ctx）
+# 2026-09-12 批8·路C：随 16 键重做同步（免斜杠/❌+下一步）；两常量当前无调用点，待批18 死键清扫裁决
+_DEF_EMPTY = "【成就】暂无成就\n继续冒险即可解锁"
+_DEF_VIEW_NOT_FOUND = "❌ 没有这个成就：{aid}\n发 成就 查看全部成就"
 
 
 def _gate(ctx: Mapping[str, Any]) -> Optional[str]:
@@ -138,11 +150,12 @@ def cmd_achievements(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         if e.get("locked") and not e.get("unlocked"):
             lines.append(tpl_of(ctx, "ach_list_locked", {"index": i}))
         else:
-            state = "✅" if e.get("unlocked") else "未达成"
+            state = (tpl_of(ctx, "ach_state_done") if e.get("unlocked")
+                     else tpl_of(ctx, "ach_state_undone"))
             lines.append(tpl_of(ctx, "ach_list_line", {
                 "index": i, "name": e.get("name", "？"), "state": state}))
     lines.append(render_cake_tail(page, res.total_pages, category_word="成就",
-                                  tip="输入 /成就信息 <N> 查看详情"))
+                                  tip=tpl_of(ctx, "ach_list_tail_tip")))
     return "\n".join(lines)
 
 
@@ -176,7 +189,9 @@ def cmd_achievement_info(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     lines = [tpl_of(ctx, "ach_view_header", {"name": name})]
     if desc:
         lines.append(tpl_of(ctx, "ach_view_desc", {"desc": desc}))
-    lines.append("状态：" + ("✅ 已达成" if e.get("unlocked") else "未达成"))
+    state = (tpl_of(ctx, "ach_state_done") if e.get("unlocked")
+             else tpl_of(ctx, "ach_state_undone"))
+    lines.append(tpl_of(ctx, "ach_status_line", {"state": state}))
     return "\n".join(lines)
 
 

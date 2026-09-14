@@ -40,7 +40,7 @@ from qbot_rpg.core import quest as quest_mod
 from qbot_rpg.core.npc import is_delivered
 from qbot_rpg.core.shop import resolve_shop_arg
 from qbot_rpg.data import Player, PlayerAttributes
-from qbot_rpg.engine.condition_engine import eval_condition
+from qbot_rpg.core.condition_engine import eval_condition
 
 
 # ---------------------------------------------------------------------------

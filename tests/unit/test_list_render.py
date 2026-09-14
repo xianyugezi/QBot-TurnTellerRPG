@@ -40,7 +40,7 @@ ITEMS14 = [f"物品{i}" for i in range(1, 15)]  # 14 条 → 3 页
 
 def test_footer_tpl08_exact():
     """TC-12：页脚逐字 = TPL-08，无自造变体；{页码} 为固定「页码」字样。"""
-    assert render_footer(2, 3, 14, "背包") == "— 第 2/3 页 · 共 14 条 · 输入 /背包 页码 翻页 —"
+    assert render_footer(2, 3, 14, "背包") == "— 第 2/3 页 · 共 14 条 · 发 背包 页码 翻页 —"
 
 
 def test_footer_single_page_empty():
@@ -51,7 +51,7 @@ def test_footer_single_page_empty():
 
 def test_footer_uses_command_verbatim():
     """页脚指令名透传调用方指令（如 /商店）。"""
-    assert "输入 /商店 页码 翻页" in render_footer(1, 2, 9, "商店")
+    assert "发 商店 页码 翻页" in render_footer(1, 2, 9, "商店")
 
 
 # ---------------------------------------------------------------------------
@@ -144,7 +144,7 @@ def test_render_list_page_first_page():
     assert len(lp.lines) == 5
     assert lp.lines[0] == "1. 物品1" and lp.lines[-1] == "5. 物品5"
     assert lp.hint == "" and lp.clamped is False
-    assert lp.footer == "— 第 1/3 页 · 共 14 条 · 输入 /背包 页码 翻页 —"
+    assert lp.footer == "— 第 1/3 页 · 共 14 条 · 发 背包 页码 翻页 —"
 
 
 def test_render_list_page_clamped_with_hint():
@@ -153,17 +153,17 @@ def test_render_list_page_clamped_with_hint():
     assert lp.clamped is True and lp.page == 3
     assert lp.hint == LAST_PAGE_HINT == "（已到最后一页）"
     assert lp.lines[0] == "1. 物品11"
-    assert lp.footer == "— 第 3/3 页 · 共 14 条 · 输入 /背包 页码 翻页 —"
+    assert lp.footer == "— 第 3/3 页 · 共 14 条 · 发 背包 页码 翻页 —"
 
 
 def test_render_list_page_text_composition():
     text = render_list_page_text(ITEMS14, 1, "商店")
     lines = text.split("\n")
     assert len(lines) == 6  # 5 条 + 页脚
-    assert lines[-1] == "— 第 1/3 页 · 共 14 条 · 输入 /商店 页码 翻页 —"
+    assert lines[-1] == "— 第 1/3 页 · 共 14 条 · 发 商店 页码 翻页 —"
     # 夹取时：条目行 + 提示 + 页脚
     clamped = render_list_page_text(ITEMS14, 99, "商店").split("\n")
-    assert clamped[-2] == "（已到最后一页）" and clamped[-1] == "— 第 3/3 页 · 共 14 条 · 输入 /商店 页码 翻页 —"
+    assert clamped[-2] == "（已到最后一页）" and clamped[-1] == "— 第 3/3 页 · 共 14 条 · 发 商店 页码 翻页 —"
 
 
 def test_render_list_page_single_page_no_footer():

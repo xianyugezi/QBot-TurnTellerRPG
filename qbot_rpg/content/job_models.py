@@ -558,7 +558,7 @@ class TransformDef(BaseDef):
 
     @property
     def turns(self) -> int:
-        """#24 形态持续回合数（条件必填：duration=turns 时 >0；0=未配置哨兵，P-2）。"""
+        """#24 形态持续行动数（条件必填：duration=turns 时 >0；0=未配置哨兵，P-2）。"""
         v = self._int("turns")
         return v if v is not None and v >= 1 else DEFAULT_TURNS
 
@@ -650,7 +650,7 @@ def transform_fields() -> Dict[str, FieldMeta]:
             type="enum", enum=TRANSFORM_DURATION_VALUES,
             required=True, default=DEFAULT_DURATION,
         ),
-        # #24 形态持续回合（条件必填：duration=turns 时 >0；0=哨兵，P-2）
+        # #24 形态持续行动数（条件必填：duration=turns 时 >0；0=哨兵，P-2）
         "turns": FieldMeta(type="int", range_min=1, default=DEFAULT_TURNS),
         # #25 结束后是否还原（battle+true 矛盾红拦 V4 归专项）
         "revert": FieldMeta(type="bool", required=True, default=DEFAULT_REVERT),

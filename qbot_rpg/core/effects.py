@@ -39,12 +39,18 @@ import warnings
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
+from qbot_rpg.core.effect_types import DamageCtx, chance_roll
 from qbot_rpg.core.marks import (
     AddMark,
     ClearMarks,
     MarksManager,
     RemoveMark,
 )
+
+# 2026-09-10 环打破：DamageCtx + chance_roll 已下沉 qbot_rpg/core/effect_types.py
+# （原 effects ↔ event_dispatcher 循环 import 的消除，详见该模块 docstring）。
+# 本文件保留 `_chance_roll` 别名，兼容既有调用点与测试对私有名的引用。
+_chance_roll = chance_roll
 
 # 效果引用归一 / 效果条件化（功能二《框架_功能二_效果引用归一与条件化_设计.md》§2）：
 # 执行链入口常量，纯配置可写（skill effects 条目 / statuses actions / proc actions 内嵌）。
@@ -105,7 +111,7 @@ DEFAULT_PIPELINE_ORDER: Tuple[str, ...] = (
 
 _DEFAULT_CONFIG: Dict[str, Any] = {
     "chain_depth": 3,              # 特效链深度上限（细化_1b §1.1 字段 12 / 定稿 §2.4）
-    "max_triggers_per_turn": 10,   # 每回合触发上限（细化_1b §1.1 字段 10）
+    "max_triggers_per_turn": 10,   # 每次行动触发上限（细化_1b §1.1 字段 10）
     "max_triggers_per_battle": 99,  # 每场触发上限（细化_1b §1.1 字段 11）
     "fatal_guard_max": 3,          # 免死类每场上限 1-3（细化_1b §4.4 I7，默认 3；0=不限）
     "allow_dual_fatal_guard": False,  # 同类型互斥默认（I7 可配）
@@ -136,26 +142,10 @@ def _deep_mapping_of(value: Optional[Mapping[str, Any]]) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-@dataclass(frozen=True)
-class DamageCtx:
-    """单次受击上下文（细化_1b §2 接口签名【细化】：raw_damage/attack_type/attacker/
-    target/snapshot/variables）。
-
-    - attack_type: basic/skill/status/crit/element（普攻/技能/异常/暴击/属性分型，
-      细化_1b §2 阶段① scope 参数化依据）。
-    - snapshot: 战斗快照 Map（数据形态同 data/battle.BattleSnapshot 字段，**须为可变
-      工作拷贝**——pipeline 会写 hp/status_state/defenses 等，见模块 docstring 补白①），
-      必含每侧 combatant（hp/max_hp/...）与五块快照键。
-    - variables: {region,rng,luck,eval_formula,pipeline,is_reflect_damage,stat_map,...}
-      运行期变量（M12.5 需求1：stat_map 由战斗层注入，L0 取数语义键可配）。
-    """
-
-    raw_damage: int
-    attack_type: str = "basic"
-    attacker: str = "player"
-    target: str = "enemy"
-    snapshot: Mapping[str, Any] = field(default_factory=dict)
-    variables: Mapping[str, Any] = field(default_factory=dict)
+# DamageCtx（单次受击上下文 dataclass）2026-09-10 下沉至 qbot_rpg/core/effect_types.py：
+# 该类型被 event_dispatcher 反向引用，留在本文件会构成 effects ↔ event_dispatcher 环。
+# 本文件经顶部 `from qbot_rpg.core.effect_types import DamageCtx` 引入，对外语义不变
+# （__all__ 仍导出 DamageCtx，调用方零改动）。
 
 
 @dataclass(frozen=True)
@@ -372,7 +362,7 @@ class EffectRuntime:
         return per_turn, per_battle
 
     def reset_turn_triggers(self, side: str) -> None:
-        """回合结束重置每回合触发计数（定稿 §2.4 / 细化_1b §0 结算时点）。"""
+        """行动结束重置每次行动触发计数（定稿 §2.4 / 细化_1b §0 结算时点）。"""
         self.ensure_actor(side)
         self.effect_triggers[side]["per_turn"] = {}
 
@@ -675,7 +665,7 @@ class EffectRuntime:
         source: str,
         category: str = "other",
     ) -> Dict[str, Any]:
-        """新建状态实例（细化_1b §1.4 status_state：层数/等级/剩余回合/剩余次数/衰减值）。"""
+        """新建状态实例（细化_1b §1.4 status_state：层数/等级/剩余行动数/剩余次数/衰减值）。"""
         return {
             "status_id": status_id,
             "name": name,
@@ -760,8 +750,8 @@ class EffectRuntime:
         """D4 trigger 衰减 + D6 次数触发时扣减（细化_1b §4.1 P0-3 / §4.2 D4/D6）。
 
         返回被移除的实例（None=仍存活）。次数维：charges>0 每次触发 -1，归零即消失
-        （回合0+次数10 = 触发 10 次后消失，C-9）；charges==0 视作「该维无限」
-        （回合10+次数0 = 10 回合内无限触发）；turns==-1 维永不被清（D6 行）。
+        （turns=0+次数10 = 触发 10 次后消失，C-9）；charges==0 视作「该维无限」
+        （turns=10+次数0 = 10 次行动内无限触发）；turns==-1 维永不被清（D6 行）。
         """
         inst = self.find_status(side, status_id)
         if inst is None:
@@ -777,12 +767,16 @@ class EffectRuntime:
                 return inst
         return None
 
-    def tick_turns(self, side: str) -> None:
-        """D6 持续回合回合结束 tick 扣减（细化_1b §4.1 P0-3：回合=回合结束扣）。
+    def tick_turns(self, side: str) -> List[Dict[str, Any]]:
+        """D6 持续行动数——行动收尾 tick 扣减（细化_1b §4.1 P0-3：在行动收尾扣）。
 
         turns>0 → -1 后归零移除；turns==-1 → 永不被清（D6 行：-1 维不被清除）；
-        turns==0 → 回合维无限（配合 回合0+次数N 语义，C-9）。
+        turns==0 → turns 维无限（配合 turns=0+次数N 语义，C-9）。
+
+        返回：本次因 turns 归零被移除的状态实例序列（2026-09-12 HUD v2
+        `【效果失效】` 行数据源；旧调用方忽略返回值 → 零破坏）。
         """
+        removed: List[Dict[str, Any]] = []
         lst = self.status_instances(side)
         for inst in list(lst):
             t = int(inst.get("turns", 0))
@@ -790,6 +784,8 @@ class EffectRuntime:
                 inst["turns"] = t - 1
                 if inst["turns"] == 0:
                     self._remove_status(side, inst)
+                    removed.append(dict(inst))
+        return removed
 
     def clear_safe_zone(self, side: str) -> None:
         """安全区清除增减益：任一维 -1 永不被清（细化_1b §4.1 §4.2 D6 / 定稿 §4.1）。"""
@@ -1233,20 +1229,20 @@ class DamagePipeline:
 
 
 def tick_turn_end(snapshot: Mapping[str, Any], runtime: EffectRuntime) -> List[Dict[str, Any]]:
-    """回合结束 tick（细化_1b §0 结算时点：回合结束 tick 持续回合扣减 + 四路回复结算）：
+    """行动收尾 tick（细化_1b §0 结算时点：行动收尾 tick 持续行动数扣减 + 四路回复结算）：
 
-    ① 伤害吸收回合末回复（④ 记录实伤，定稿 §7.2 时点矩阵「受伤害后回合末」）
+    ① 伤害吸收行动收尾回复（④ 记录实伤，定稿 §7.2 时点矩阵「受伤害后行动收尾」）
     ② dot 持续伤害（定稿 §4.3 伤害类 / 细化_1b §3.1 dot 动作 tick）
-    ③ 再生 regen 回复（tpl_regen 回合末）
+    ③ 再生 regen 回复（tpl_regen 行动收尾）
     ④ 持续双维·回合扣减（D6）+ 限时印记 remaining_turns 扣减（细化_1d §三）
-    ⑤ 每回合触发计数重置（定稿 §2.4）
+    ⑤ 每次行动触发计数重置（定稿 §2.4）
     """
     log: List[Dict[str, Any]] = []
     for side in BATTLE_SIDES:
         c = snapshot.get(side)
         if not isinstance(c, dict):
             continue
-        # ① 伤害吸收回合末回复
+        # ① 伤害吸收行动收尾回复
         defs = c.get("defenses")
         if isinstance(defs, dict):
             absb = defs.get("absorb")
@@ -1267,7 +1263,8 @@ def tick_turn_end(snapshot: Mapping[str, Any], runtime: EffectRuntime) -> List[D
                     value = int(dot.get("value", 0))
                     hp = int(c.get("hp", 0))
                     c["hp"] = max(0, hp - value)
-                    log.append({"type": "dot_damage", "side": side, "status": dot.get("status_id", dot_id), "value": value})
+                    log.append({"type": "dot_damage", "side": side, "status": dot.get("status_id", dot_id),
+                                "value": value, "name": str(dot.get("name") or "")})
                     # dot 破位（2026-09-09 御剑二阶残响：dot 每跳造成部位破坏值；
                     # part_break_per_tick 仅作用于未破部位；部位破值入 parts_state）
                     _pb = dot.get("part_break_per_tick")
@@ -1293,7 +1290,7 @@ def tick_turn_end(snapshot: Mapping[str, Any], runtime: EffectRuntime) -> List[D
                         dot["turns"] = rt - 1
                     if dot.get("turns", 0) == 0:
                         dots.pop(dot_id, None)
-        # ③ 再生 regen（tpl_regen 回合末）
+        # ③ 再生 regen（tpl_regen 行动收尾）
         regen = defs.get("regen") if isinstance(defs, dict) else None
         if isinstance(regen, dict):
             v = int(regen.get("value", 0))
@@ -1303,9 +1300,13 @@ def tick_turn_end(snapshot: Mapping[str, Any], runtime: EffectRuntime) -> List[D
             log.append({"type": "regen", "side": side, "heal": v})
         # ④ 持续双维·回合扣减 + 限时印记扣减（细化_1d §2.2/§三：remaining_turns 统一
         #    tick 扣减、归零移除入快照 —— 委托 MarksManager.tick_turn 唯一实现）
-        runtime.tick_turns(side)
+        for _exp in runtime.tick_turns(side):
+            # HUD v2：效果失效事件（`【效果失效】{名} 效果时间结束。` 行数据源）
+            log.append({"type": "status_expired", "side": side,
+                        "status": str(_exp.get("status_id") or ""),
+                        "name": str(_exp.get("name") or "")})
         runtime.marks_manager().tick_turn(side)
-        # ⑤ 每回合触发计数重置
+        # ⑤ 每次行动触发计数重置
         runtime.reset_turn_triggers(side)
         runtime.tick_cooldowns(side)
     return log
@@ -1655,36 +1656,35 @@ def _resolve_value(
     return 0
 
 
-def _chance_roll(
-    chance: Any,
-    ctx: DamageCtx,
-    attacker_luck: int = 0,
-    target_luck: int = 0,
-) -> bool:
-    """概率三态判定（细化_1b §1.1 chance / 定稿 §2.1）。
+# _chance_roll 2026-09-10 下沉至 qbot_rpg/core/effect_types.py（公开名 chance_roll）：
+# 本文件顶部以 `_chance_roll = chance_roll` 保留私有别名，既有调用点/测试零改动。
 
-    -1 = 必定；0~100 固定；+0~100 幸运修正 =（√我方幸运−√对方幸运+概率）%，
-    为负或超 100 均截断（变量定稿「只建议不限制」精神，【工程补白】截断）。
-    可经 ctx.variables["rng"] 注入随机源（确定性测试）。
+
+# ---------------------------------------------------------------------------
+# 状态事件分派回调注册点（2026-09-10 环打破 · 依赖注入）
+#
+# 背景：execute_action 在 status_apply 成功 / dispel 移除后需触发事件分派
+# （status_gain / status_lose），而事件分派器本身要调 execute_action 执行候选效果——
+# 双向引用构成 effects ↔ event_dispatcher 环（契约 R3 禁止）。
+#
+# 解法（控制反转）：本模块只声明「面向接口」的回调槽，不 import 分派器；
+# event_dispatcher 在模块加载末尾调用 register_event_dispatcher(dispatch_event)
+# 完成注册（其 → effects 为单向依赖，环消除）。
+# 依赖方向：event_dispatcher → effects（注册）＋ → effect_types，单向。
+# 未注册（如单测只 import effects）→ 状态事件静默跳过，与既有「无 resolver 则 []」
+# 的安全失败语义一致，不影响主流程。
+# ---------------------------------------------------------------------------
+
+_STATUS_EVENT_DISPATCHER: Optional[Callable[..., List[Dict[str, Any]]]] = None
+
+
+def register_event_dispatcher(fn: Callable[..., List[Dict[str, Any]]]) -> None:
+    """注册状态事件分派回调（event_dispatcher 模块加载时调用，见上注）。
+
+    幂等：重复注册以最后一次为准（热重载场景下模块重入安全）。
     """
-    if chance is None:
-        return True
-    mode = chance.get("mode", "-1") if isinstance(chance, dict) else "-1"
-    value = float(chance.get("value", -1)) if isinstance(chance, dict) else -1.0
-    rng_ = ctx.variables.get("rng")
-    roll = rng_.random() if rng_ is not None else random.random()
-    mode_s = str(mode).strip()
-    if mode_s in ("-1", "always"):
-        return True
-    # P1-4 修复：识别字面 "lucky"（细化_1b A-3：mode=lucky, value=20 =>
-    #（√我方幸运−√对方幸运+value）%）；"+" 前缀与 "lucky" 同走幸运修正分支
-    if mode_s.isdigit() or mode_s.lstrip("+").isdigit() or mode_s == "lucky":
-        if mode_s.isdigit() and not mode_s.startswith("+"):
-            return (roll * 100.0) <= value  # 固定概率（不幸运修正）
-        lucky = (math.sqrt(max(0, attacker_luck)) - math.sqrt(max(0, target_luck)) + value) / 100.0
-        lucky = max(0.0, min(1.0, lucky))
-        return roll < lucky
-    return False
+    global _STATUS_EVENT_DISPATCHER
+    _STATUS_EVENT_DISPATCHER = fn
 
 
 def _dispatch_status_event(event: str, status_id: str, side: str,
@@ -1695,7 +1695,13 @@ def _dispatch_status_event(event: str, status_id: str, side: str,
     registry（resolve 同形，all_ids 空——dispatch 对 status_id 精确查不需要全扫），
     在 execute_action 的 status_apply 成功 / dispel 移除后触发状态 on_gain/on_lose
     效果。无 resolver / 异常 → [] 安全失败（不阻断主动作）。
+
+    2026-09-10：分派器经 register_event_dispatcher 注入（原 lazy import 消除，破环），
+    未注册 → [] （安全失败）。
     """
+    dispatch_event = _STATUS_EVENT_DISPATCHER
+    if dispatch_event is None:
+        return []
     try:
         resolver = getattr(runtime, "_resolver", None)
         if not callable(resolver):
@@ -1708,8 +1714,6 @@ def _dispatch_status_event(event: str, status_id: str, side: str,
 
             def all_ids(self, kind: str) -> tuple:
                 return ()
-
-        from qbot_rpg.core.event_dispatcher import dispatch_event  # lazy：防环
 
         return dispatch_event(
             event, side, ctx.snapshot, _ResolverRegistry(),
@@ -1732,7 +1736,7 @@ def execute_action(
       interrupt / aoe / proc / reposition / reposition_all（后两者=方位 v0.6 §三.5
       置换原语，怪物冲锋/转身 effects 载体）；
     - 3 结算修正器：lifesteal / pierce / mitigation（挂伤害管线自动生效，本入口亦可直达）；
-    - proc 容器：chance/cooldown/actions + 每回合 10 / 每场 99 / 链深 3 上限
+    - proc 容器：chance/cooldown/actions + 每次行动 10 / 每场 99 / 链深 3 上限
       （细化_1b §1.1 字段 10-12 / 定稿 §2.4）。
 
     功能二（《框架_功能二_效果引用归一与条件化_设计.md》§2）入口扩展：
@@ -1823,7 +1827,7 @@ def execute_action(
                 c[key] = min(cap, cur + v)
             side_effects.append({"type": "heal", "target": target, "stat": stat, "value": v})
         else:
-            # 回合末/on_turn_start/on_turn_end 登记
+            # 行动收尾/on_turn_start/on_turn_end 登记
             c = ctx.snapshot.get(target)
             if isinstance(c, dict):
                 pool = c.setdefault("heal_pool", [])
@@ -1856,6 +1860,9 @@ def execute_action(
             pool = c.setdefault("dot_pool", {})
             inst: Dict[str, Any] = {"status_id": status_id, "value": max(0, value),
                                     "tick": tick, "turns": turns, "source": attacker}
+            _dot_name = str(action.get("name") or action.get("status_name") or "")
+            if _dot_name:
+                inst["name"] = _dot_name   # HUD v2：DOT 生效行展示名（缺失由渲染层按 id 查表）
             _pb = action.get("part_break_per_tick")
             if _pb:
                 inst["part_break_per_tick"] = int(_pb)
@@ -2067,7 +2074,7 @@ def execute_proc_action(
 ) -> ActionResult:
     """proc 触发容器（细化_1b §2.5 / §1.1 字段 10-12，定稿 §2.5）：
 
-    - 每回合上限（默认 10）+ 每场上限（默认 99）双重封顶（E-8 / G-2）；
+    - 每次行动上限（默认 10）+ 每场上限（默认 99）双重封顶（E-8 / G-2）；
     - 链深度上限（默认 3，防递归无限）；
     - chance 概率三态 + cooldown 冷却；
     - 触发时按序执行子动作（E-1 追击→偷取可链）。
@@ -2088,7 +2095,7 @@ def execute_proc_action(
     per_turn, per_battle = runtime.trigger_counts(actor, proc_id)
     if per_turn >= int(runtime.config.get("max_triggers_per_turn", 10)):
         side_effects.append({"type": "proc_blocked", "reason": "per_turn_limit"})
-        return ActionResult(False, side_effects, "每回合触发上限")
+        return ActionResult(False, side_effects, "每次行动触发上限")
     if per_battle >= int(runtime.config.get("max_triggers_per_battle", 99)):
         side_effects.append({"type": "proc_blocked", "reason": "per_battle_limit"})
         return ActionResult(False, side_effects, "每场触发上限")

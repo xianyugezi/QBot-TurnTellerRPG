@@ -124,7 +124,7 @@
     "mechanics": [
       {
         "id": "trap_fogfall",
-        "desc": "每隔数回合落石。",
+        "desc": "落石不时坠下。",
         "on_step": {
           "type": "trap",
           "damage": 15

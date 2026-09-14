@@ -49,9 +49,15 @@ def _parsed(raw: str) -> Any:
 # 白名单与注册
 # ---------------------------------------------------------------------------
 def test_codex_in_whitelist_and_prefix_required() -> None:
-    """「图鉴」入白名单 + 需 / 前缀（对话/调查同款接缝）。"""
+    """「图鉴」入白名单；前缀口径同步 2026-09-03 裁决（全指令免 / 前缀）。
+
+    原断言「图鉴 ∈ DEFAULT_PREFIX_REQUIRED」随 068bcd4 裁决作废——parsers.py
+    L186-193 注释：原非 GM 需前缀指令（调查/图鉴/成就/对话等）全部放行免前缀，
+    DEFAULT_PREFIX_REQUIRED 收敛为空集（GM 类由 gm_commands 独立强制 '/'）。
+    """
     assert CODEX_CMD in DEFAULT_WHITELIST
-    assert CODEX_CMD in DEFAULT_PREFIX_REQUIRED
+    assert DEFAULT_PREFIX_REQUIRED == frozenset()
+    assert CODEX_CMD not in DEFAULT_PREFIX_REQUIRED
 
 
 def test_register_codex_commands_no_make_context_registers() -> None:
@@ -75,13 +81,16 @@ def test_register_codex_commands_with_make_context() -> None:
 # 总览 / 分册 / ??? 不泄露
 # ---------------------------------------------------------------------------
 def test_codex_overview() -> None:
-    """无参总览：三分册各自完成度 + 总完成度。"""
+    """无参总览：三分册各自完成度 + 总完成度（2026-09-12 批9·路C 新排版）。"""
     ctx = _ctx()
     mark_seen(ctx, "monster", "rock_weasel", "岩鼬")
     reply = cmd_codex(_parsed("/图鉴"), ctx)
-    assert "【图鉴总览】" in reply
+    assert "【图鉴】收集总览" in reply
     assert "怪物图鉴" in reply
     assert "总完成度" in reply
+    # 进度行拆两行：分册名+百分比 / 已见 seen/total（大数值独立行）
+    assert "怪物图鉴：50%" in reply
+    assert "已见 1/2" in reply
     assert "岩鼬" not in reply  # 总览只显示完成度，不列条目
 
 
@@ -110,7 +119,7 @@ def test_codex_unknown_category_falls_back_overview() -> None:
     """未知分册 → 回落总览。"""
     ctx = _ctx()
     reply = cmd_codex(_parsed("/图鉴 化石"), ctx)
-    assert "【图鉴总览】" in reply
+    assert "【图鉴】收集总览" in reply
 
 
 def test_codex_no_emoji() -> None:
@@ -159,21 +168,3 @@ def test_codex_custom_template_unknown_placeholder_kept() -> None:
     })
     reply = cmd_codex(_parsed("/图鉴"), ctx)
     assert "怪物图鉴：0%（0/2）{bonus}" in reply
-
-
-def test_codex_tpl_whitelist_registered() -> None:
-    """占位符白名单：codex_tpl.PLACEHOLDER_WHITELIST 与模板占位符一一对应。"""
-    from qbot_rpg.core.templates.codex_tpl import (
-        DEFAULT_TEMPLATES,
-        PLACEHOLDER_WHITELIST,
-    )
-    assert PLACEHOLDER_WHITELIST["codex_progress_line"] == {"label", "pct", "seen", "total"}
-    assert PLACEHOLDER_WHITELIST["codex_total_progress"] == {"pct", "seen", "total"}
-    assert PLACEHOLDER_WHITELIST["codex_category_header"] == {"label"}
-    assert PLACEHOLDER_WHITELIST["codex_entry_line"] == {"mark", "name", "kill", "rumor"}
-    assert PLACEHOLDER_WHITELIST["codex_tail_tip"] == {"total"}
-    # 无占位符模板：白名单空集
-    assert PLACEHOLDER_WHITELIST["codex_overview_header"] == set()
-    assert PLACEHOLDER_WHITELIST["codex_unknown_category"] == set()
-    # 白名单登记齐全（每 key 都有登记；默认模板每 key 都有条目）
-    assert set(DEFAULT_TEMPLATES) == set(PLACEHOLDER_WHITELIST)

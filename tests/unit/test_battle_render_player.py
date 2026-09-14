@@ -48,9 +48,14 @@ def _outcome(**kw: Any) -> ActionOutcome:
 
 
 def _report(*outcomes: Any, **kw: Any) -> TurnReport:
-    """构造 TurnReport（真实字段；player/enemy 为 HP 快照，outcomes 流水）。"""
+    """构造 TurnReport（CTB 真实字段；player/enemy 为 HP 快照，outcomes 流水）。
+
+    CTB 迁移（2026-09-10 · Agent 4）：`phases` 已由 dataclass 字段改为只读 property
+    （底层 `_phase_label`），构造器不再接受 `phases` 实参；CTB 进度以 `action_seq`
+    （int）+ `battle_time`（float）为准，顶层 `turn` 仅为 `action_seq` 兼容镜像。
+    """
     defaults: Dict[str, Any] = {
-        "turn": 1, "phases": ("player_action", "enemy_action"),
+        "turn": 1, "action_seq": 1, "battle_time": 100.0,
         "player": 21, "enemy": 7, "ended": False, "status": None,
         "log": (), "outcomes": tuple(outcomes),
     }
@@ -75,19 +80,19 @@ def _assert_no_banned_emoji(text: str) -> None:
 # ---------------------------------------------------------------------------
 
 def test_tc07_player_hit_exact() -> None:
-    """TC-07：命中逐字 `✅ 你施放火球术，造成 18 伤害（史莱姆 7/25）`；HP 后缀保留。"""
+    """TC-07：命中逐字 `✅ 你施放火球术\n造成 18 伤害`（批4 拍板：目标血量只留 HUD 行）。"""
     oc = _outcome(action_type="skill", raw_damage=18, final_damage=18, target_hp=7)
     line = _render_player_hit(oc, action_phrase="施放火球术", target_max_hp=25)
-    assert line == "✅ 你施放火球术，造成 18 伤害（史莱姆 7/25）"
-    assert "（史莱姆 7/25）" in line                 # HP 后缀必须保留（P0-2 锚点）
+    assert line == "✅ 你施放火球术，造成 18 伤害。"
+    assert "\n史莱姆" not in line                  # 批4：结果行不再重复目标血量（HUD 行保留）
     assert oc.message not in line                    # 不直接复用引擎 message（5e P2-8）
 
 
 def test_tc07_hit_with_target_phrase() -> None:
-    """5e §2.1 示例：动作短语含目标 → `✅ 你挥动铁剑攻击史莱姆，造成 12 伤害（史莱姆 18/25）`。"""
+    """5e §2.1 示例：动作短语含目标 → `✅ 你挥动铁剑攻击史莱姆\n造成 12 伤害\n史莱姆 18/25`。"""
     oc = _outcome(raw_damage=12, final_damage=12, target_hp=18)
     line = _render_player_hit(oc, action_phrase="挥动铁剑攻击史莱姆", target_max_hp=25)
-    assert line == "✅ 你挥动铁剑攻击史莱姆，造成 12 伤害（史莱姆 18/25）"
+    assert line == "✅ 你挥动铁剑攻击史莱姆，造成 12 伤害。"
 
 
 # ---------------------------------------------------------------------------
@@ -98,7 +103,7 @@ def test_tc08_player_miss_exact() -> None:
     """TC-08 未命中行逐字（模板兜底——roll miss 已移除，渲染层仍按模板输出）。"""
     oc = _outcome(hit=False, crit="low", blocked=False, raw_damage=0, final_damage=0, target_hp=25)
     line = _render_player_miss(oc, action_phrase="攻击", target_max_hp=25)
-    assert line == "❌ 未命中：史莱姆 闪过了你的攻击（史莱姆 25/25）"
+    assert line == "❌ 未命中\n史莱姆 闪过了你的攻击"
 
 
 # ---------------------------------------------------------------------------
@@ -119,7 +124,7 @@ def test_tc09_crit_note_position_before_hp_suffix() -> None:
     """5e §2.1 示例 L150：会心附注拼在伤害值与 HP 后缀之间。"""
     oc = _outcome(crit="high", blocked=False, final_damage=27, target_hp=1)
     line = _render_player_hit(oc, action_phrase="施放火球术攻击史莱姆", target_max_hp=25)
-    assert line == "✅ 你施放火球术攻击史莱姆，造成 27 伤害（会心·高阶 ×2.2）（史莱姆 1/25）"
+    assert line == "✅ 你施放火球术攻击史莱姆，造成 27 伤害（会心·高阶 ×2.2）。"
 
 
 def test_tc09_crit_low_renders_when_include_low() -> None:
@@ -149,18 +154,18 @@ def test_tc09_no_note_when_plain() -> None:
 # ---------------------------------------------------------------------------
 
 def test_tc10_defend_enter_exact() -> None:
-    """TC-10：`✅ 你进入防御姿态（本回合受到伤害减半）`（BREP-05）。"""
+    """TC-10：`✅ 你进入防御姿态\n本次行动受到伤害减半`（BREP-05）。"""
     oc = _outcome(action_type="guard", hit=True, raw_damage=0, final_damage=0, target_hp=7)
-    assert _render_player_defend(oc) == "✅ 你进入防御姿态（本回合受到伤害减半）"
+    assert _render_player_defend(oc) == "✅ 你进入防御姿态\n本次行动受到伤害减半"
 
 
 def test_tc10_defend_hit_exact() -> None:
-    """TC-10：防御受击逐字 `✅ 你防御了史莱姆的撞击，受到 2 伤害（HP 19/30）`（BREP-06）。"""
+    """TC-10：防御受击逐字 `✅ 你防御了史莱姆的撞击\n受到 2 伤害`（BREP-06；批4：血量只留 HUD 行）。"""
     oc = _outcome(actor="enemy", action_type="normal", target="player",
                   raw_damage=4, final_damage=2, target_hp=19)   # ×0.5 生效后 2 伤
     line = _render_player_defend_hit(oc, attacker_name="史莱姆", action_phrase="撞击",
                                      player_max_hp=30)
-    assert line == "✅ 你防御了史莱姆的撞击，受到 2 伤害（HP 19/30）"
+    assert line == "✅ 你防御了史莱姆的撞击\n受到 2 伤害"
 
 
 # ---------------------------------------------------------------------------
@@ -169,25 +174,27 @@ def test_tc10_defend_hit_exact() -> None:
 
 def test_render_round_player_action_first() -> None:
     """render_battle_round：接线层形态 outcome（真实字段+展示名/最大 HP）→ 先手行输出。"""
-    oc = _enriched(_outcome(action_type="skill"), action_name="施放火球术", target_max_hp=25)
+    oc = _enriched(_outcome(action_type="skill"), action_name="火球术", target_max_hp=25)
     text = render_battle_round(_report(oc))
-    assert text == "✅ 你施放火球术，造成 18 伤害（史莱姆 7/25）"
+    # HUD v2：技能行动展示「发动技能 {技能名}」（用户样稿格式）
+    assert text == "✅ 你发动技能 火球术，造成 18 伤害。"
 
 
 def test_render_round_default_phrase_normal_attack() -> None:
     """render_battle_round：真实 ActionOutcome（普攻，无展示名）→ 缺省动作短语「攻击」。"""
     text = render_battle_round(_report(_outcome()))
-    assert text == "✅ 你攻击，造成 18 伤害（史莱姆 7/7）"   # 最大 HP 未接 → 回落当前 HP
+    assert text == "✅ 你攻击，造成 18 伤害。"   # 批4：血量行已砍；HUD v2：整句（含句号）
 
 
 def test_render_round_prefix_first_line_when_info() -> None:
     """BREP-01：round_result 携带玩家信息（接线层 M5-08 形态）→ 前缀为首行、仅首行。"""
-    oc = _enriched(_outcome(action_type="skill"), action_name="施放火球术", target_max_hp=25)
+    oc = _enriched(_outcome(action_type="skill"), action_name="火球术", target_max_hp=25)
     tr = _report(oc)
     ctx = SimpleNamespace(**tr.__dict__, level=35, name="阿伟", title="斩龙者")
     lines = render_battle_round(ctx).split("\n")
     assert lines[0] == "Lv35.阿伟 -斩龙者-"
-    assert lines[1] == "✅ 你施放火球术，造成 18 伤害（史莱姆 7/25）"
+    assert lines[1] == "✅ 你发动技能 火球术，造成 18 伤害。"
+    assert len(lines) == 2                              # 批4：血量行已砍（只留 HUD）
     assert not any("Lv35" in ln for ln in lines[1:])   # 前缀仅首行（【前缀】L34/L82）
 
 
@@ -195,7 +202,8 @@ def test_render_round_miss_via_round() -> None:
     """render_battle_round：未命中走 BREP-03；并行路钩子（M5-05/06）未落地优雅跳过。"""
     oc = _outcome(hit=False, raw_damage=0, final_damage=0, target_hp=25)
     text = render_battle_round(_report(oc))
-    assert text == "❌ 未命中：史莱姆 闪过了你的攻击（史莱姆 25/25）"  # 模板兜底（roll miss 已移除）
+    # 模板兜底（roll miss 已移除）
+    assert text == "❌ 未命中\n史莱姆 闪过了你的攻击"
 
 
 def test_render_round_hint_when_max_known() -> None:
@@ -205,7 +213,32 @@ def test_render_round_hint_when_max_known() -> None:
     ctx = SimpleNamespace(**tr.__dict__, player_max_hp=30, enemy_max_hp=25,
                           enemy_name="史莱姆", level=35, name="阿伟", title="斩龙者")
     lines = render_battle_round(ctx).split("\n")
-    assert lines[-1] == "你 21/30 | 史莱姆 7/25 → 攻击 或 攻击 技能名"
+    # HUD v2：分项资源行 + 百分比（用户样稿「剩余生命：484/523（92.5%）」）
+    assert lines[-3] == "剩余生命：21/30（70%）"
+    assert lines[-2] == "怪物生命：7/25（28%）"
+    assert lines[-1] == "→ 攻击 或 攻击 <技能名>"
+
+
+def test_render_round_hint_player_position() -> None:
+    """HUD v2（2026-09-12 用户拍板）：方位只报「玩家站位：{方位}」且不带【】；
+    **怪物没有朝向**——不再渲染敌方位格（覆盖批4「方位【】」口径）。"""
+    oc = _enriched(_outcome(action_type="skill"), action_name="施放火球术", target_max_hp=25)
+    tr = _report(oc, player=21, enemy=7)
+    d = dict(tr.__dict__)
+    d.update(player_max_hp=30, enemy_max_hp=25, enemy_name="史莱姆",
+             player_pos=("front", "ground"), enemy_pos=("back", "ground"))
+    lines = render_battle_round(SimpleNamespace(**d)).split("\n")
+    assert "玩家站位：正面" in lines
+    assert "剩余生命：21/30（70%）" in lines
+    assert not any("【" in ln for ln in lines)          # 无方括号（HUD v2 口径）
+    assert not any("背后" in ln for ln in lines)        # 怪物无朝向（eno_pos 不渲染）
+    # 无方位 → 整行省略（不留空行）
+    d2 = dict(tr.__dict__)
+    d2.update(player_max_hp=30, enemy_max_hp=25, enemy_name="史莱姆",
+              player_pos=None, enemy_pos=None)
+    lines2 = render_battle_round(SimpleNamespace(**d2)).split("\n")
+    assert not any("玩家站位" in ln for ln in lines2)
+    assert not any("【" in ln for ln in lines2)
 
 
 # ---------------------------------------------------------------------------

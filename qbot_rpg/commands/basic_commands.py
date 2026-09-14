@@ -48,10 +48,12 @@ TPL-12（sender.format_tpl12，文案唯一源 errors.py D-04）。
      /帮助 目录/组页 全部按 m4 §2.2 5 条/页；尾段统一 CakeGame 式「当前页 + Tip 尾行」
      （render_cake_tail，2026-08-27 用户拍板，替代 TPL-08 页脚）：当前页恒显示 + 各指令定制
      Tip（/角色=查看当前装备、/装备=穿戴、/技能=技能说明、/帮助=翻页查看指令；/背包/背包筛选
-     带货币行 + 类型词）。
+     带货币行 + 类型词）。2026-09-12 专项·尾行 Tip 统一后，各 Tip 均为全量表键
+     （tip_bag / tip_bag_view / tip_consume / tip_equip / tip_view / tip_skill /
+     tip_help / tip_help_dir / tip_help_group，免斜杠口径；内容包可覆盖），本层零文案常量。
   2) **4f TPL-4F-06 目录页脚「输入 /帮助 组名 翻页」归一**：2026-08-27 用户拍板后基础指令组
      列表尾段不再用 TPL-08，统一 CakeGame 式（当前页 + Tip）；/帮助 目录/组页 Tip =
-     「发送'帮助 组名'翻页查看指令」。
+     「发 帮助 <页数> 翻页」（表键 tip_help_dir；单页回落 tip_help「发 帮助 <组名> 组内指令」）。
   3) **/角色 = 玩家属性面板（B4 裁决承接）**：4f /状态 面板五区中「前缀行/位置行/效果区」由装配层
      prefix_render 与后续批次承接；本路 /角色 聚焦任务口径「LV 行固定头部 + 属性三层结构
      （白值/加成/临时）」，9 项属性 5 条/页 = 2 页 + CakeGame 尾段（当前页 + Tip）+ 裁决② 夹取。resource 型（生命/魔力）
@@ -68,7 +70,8 @@ TPL-12（sender.format_tpl12，文案唯一源 errors.py D-04）。
      普通玩家 5 组单页；GM 6 组 2 页（带 CakeGame 尾段）；组内指令列表 5 条/页。未注册玩家返回注册引导版
      （B6 豁免）。GM 判定读 ctx["is_gm"]（缺省 False=普通玩家，对齐 RUL-25 静默隐藏）。
   7) **注册门槛（RUL-08）**：/角色 /背包 /装备 /技能 在 ctx["registered"] is False 时统一返回
-     「❌ 请先 /注册 创建角色（/注册 名字 职业）」；/帮助 豁免（B6）。ctx 缺省 registered=True
+     「❌ 请先创建角色 / 发 注册 名字 职业」（批5·路O 新规范：免斜杠、拆两行）；/帮助 豁免（B6）。
+     ctx 缺省 registered=True
      （未注入时不拦截，保持既有命令壳纯函数可测）。
   8) **/背包 数据源**：ctx["inventory"]（ItemInstance 或 dict 行均可，兼容 4a 存档行形态）优先，
      ctx["player"].inventory 兜底；排序 = acquired_at 倒序（INV-07/RUL-17），无时间字段保持存储序
@@ -99,6 +102,7 @@ from qbot_rpg.core.message_format.list_render import (
     resolve_page,
 )
 from qbot_rpg.core.player_attributes import calc_all_final_attributes
+from qbot_rpg.data.gear_stats import GEAR_LABELS_ZH, GEAR_NUMERIC_KEYS, PCT_SUFFIX
 from qbot_rpg.data.item import ItemInstance
 from qbot_rpg.data.logging_utils import get_logger
 from qbot_rpg.data.player import EquipmentSlot, Player, PlayerAttributes
@@ -151,7 +155,10 @@ SUB_REMOVE = "卸"
 UNEQUIP_CMD = "卸下"
 
 # RUL-08 注册门槛（4f §1.4 / TC-05；/帮助 豁免见 B6；模板配置化：basic_register_gate 可内容包覆盖）
-TPL_REGISTER_GATE = "❌ 请先 /注册 创建角色（/注册 名字 职业）"
+# 批5·路O（2026-09-12）：文案与新规范统一（免斜杠、拆两行），模板 key = basic_register_gate
+# R4 复核修复（2026-09-12）：常量不再写死字面量，而是**取表默认值**（唯一源=全量表）——
+# 10 个兄弟模块的 _gate 已统一改走 tpl_of(ctx, "basic_register_gate")（内容包可覆盖）。
+TPL_REGISTER_GATE = tpl_of(None, "basic_register_gate")
 
 # /背包 空背包（4f §3.4 边界：对齐 L1353 反向兜底；模板配置化：basic_empty_bag）
 TPL_EMPTY_BAG = "❌ 背包空空如也"
@@ -162,7 +169,7 @@ TPL_NO_SLOT = "❌ 没有这个装备槽位"
 # /装备 名称形式（如 /装备 铁剑）→ 友好提示引导序号用法（P2-11 QA：名称被泛化
 # 拒绝回「❌ 指令不正确」，应提示 /装备 <序号>；命令合法，不走 TPL-12，对齐 TPL_NO_SLOT；
 # 模板配置化：basic_equip_name_hint）
-TPL_EQUIP_NAME_HINT = "❌ 装备指令：穿戴请用 /使用 <序号>（序号见 /背包），如 /使用 1"
+TPL_EQUIP_NAME_HINT = "❌ 穿戴请用 使用 <序号>\n序号见 背包 列表\n示例：发 使用 1"
 
 # 品质四档（4b GRD-x 唯一注册表；RUL-19：仅非 normal 档标注）
 QUALITY_LABELS: Mapping[str, str] = {
@@ -173,6 +180,38 @@ QUALITY_LABELS: Mapping[str, str] = {
 }
 
 # 技能 type 四类中文（6a §1.4）
+# 技能标签兜底（2026-09-12 用户拍板：标签=**自由文本**，内容包 `brief` 字段为准；
+# 本表仅在未配置 brief 时按机制兜底生成，供玩家先看到像样的标签行）。
+# 资源/精力键展示名（消耗行）：内容包 `energy_cost` 键 → 中文（自由文本 brief 之外仍可覆盖）
+_ENERGY_LABELS: Mapping[str, str] = {
+    "focus": "聚焦", "stamina": "精力", "mp": "法力", "sp": "SP",
+}
+
+_SKILL_TAG_ORDER: Tuple[str, ...] = (
+    "damage", "cost", "combo", "combo_preserve", "combo_push", "derive", "air",
+    "dodge", "parry", "move", "part", "multi", "armor", "interrupt",
+)
+# 标签 id → 模板表 key（M7 复核修复 2026-09-12：原 _SKILL_TAG_LABELS 的玩家可见中文
+# 迁入全量表，内容包可按同键覆盖；代码只留 id→键名映射，零中文文案）。
+# combo 变体语义（细化_1c1c L81-82 / 细化_1c2 L74-75）：combo=结算 +1；
+# combo_preserve=+0 不清零（喘息技）；combo_push=+N 不清零（推进技）→ 各自独立标签。
+_SKILL_TAG_KEYS: Mapping[str, str] = {
+    "damage": "skill_tag_damage",
+    "cost": "skill_tag_cost",
+    "combo": "skill_tag_combo",
+    "combo_preserve": "skill_tag_combo_preserve",
+    "combo_push": "skill_tag_combo_push",
+    "derive": "skill_tag_derive",
+    "air": "skill_tag_air",
+    "dodge": "skill_tag_dodge",
+    "parry": "skill_tag_parry",
+    "move": "skill_tag_move",
+    "part": "skill_tag_part",
+    "multi": "skill_tag_multi",
+    "armor": "skill_tag_armor",
+    "interrupt": "skill_tag_interrupt",
+}
+
 TYPE_LABELS: Mapping[str, str] = {
     "basic": "普攻",
     "active": "主动",
@@ -206,7 +245,7 @@ DEFAULT_SLOT_ORDER: tuple = (
 
 # 属性名兜底（stats.json name 缺失时；4f RUL-12 全中文）
 _DEFAULT_STAT_NAMES: Mapping[str, str] = {
-    "hp": "生命", "mp": "魔力", "str": "力量", "int": "智力", "con": "体质",
+    "hp": "生命", "mp": "法力", "str": "力量", "int": "智力", "con": "体质",
     "spr": "精神", "foc": "专注", "agi": "敏捷", "lck": "幸运",
 }
 
@@ -351,14 +390,8 @@ GM_HELP_GROUP: Tuple[str, Tuple[Tuple[str, str], ...]] = (
 # 分组名常量（目录页/组页引用）
 GROUP_ORDER: Tuple[str, ...] = tuple(g[0] for g in HELP_GROUPS) + (GM_HELP_GROUP[0],)
 
-# /帮助 注册引导版（B6：仅分组目录+注册/状态/背包 三项引导，4f B6 裁决原文；单页无页脚）
-_REGISTER_GUIDE: str = "\n".join([
-    "【新手引导】发 注册 名字 职业 创建角色",
-    "注册 —— 创建角色（未注册必需）",
-    "状态 —— 查看角色状态面板",
-    "背包 —— 查看背包物品",
-    "装备/技能 等更多指令注册后可用，发 帮助 查看完整列表",
-])
+# 批5·路O（2026-09-12）：原硬编码 _REGISTER_GUIDE 已删（全仓零引用；注册引导统一走
+# basic_register_guide 模板，见 cmd_help 未注册分支）。
 
 # 目录头（4f TPL-4F-06；2026-08-31 用户拍板：标题只留【指令总览】，翻页提示由尾段 Tip 承担）
 _DIRECTORY_TITLE = "【指令总览】"
@@ -797,17 +830,19 @@ def _currency_lines(ctx: Mapping[str, Any]) -> List[str]:
             for k, v in cur.items()]
 
 
-# CakeGame 式尾段 Tip 内容（`Tip:` 之后部分，2026-08-27 用户拍板统一列表尾段；无斜杠指令名）
-_BAG_TAIL_TIP = "发送'使用+物品名'即可使用物品"      # /背包（含货币行 + 类型词）
-_VIEW_TAIL_TIP = "发送'装备'查看当前装备"           # /角色（属性面板下一步）
-_EQUIP_TAIL_TIP = "发送'使用 序号'穿戴装备，如'使用 1'"  # /装备（穿戴引导；2026-09-05 用户拍板穿戴统一走 使用——「使用 N」实测可穿，勿教「装备 穿」）
-_SKILL_TAIL_TIP = "发送'技能 页码'翻页查看，如'技能 2'"  # /技能（技能列表翻页；2026-09-05 模拟器审计：原「帮助 技能」不可解析）
-_HELP_TAIL_TIP = "发送'帮助 组名'翻页查看指令"      # /帮助 目录/组页（旧通用文案）
-# 2026-09-05 实机反馈：帮助翻页提示不明确 + 紧凑形态「帮助2」「帮助冒险2」不可用。
-# 拆分目录/组页两个 Tip，教紧凑页码翻页（对应 cmd_help 已支持的 帮助<数字> 目录页 /
-# 帮助<组名><数字> 组页——紧凑粘合拆分 2026-09-05 新增）：
-_HELP_DIR_TAIL_TIP = "发送'帮助<页数>'翻页，如'帮助2'"          # /帮助 目录（GM 6 组 2 页）
-_HELP_GROUP_TAIL_TIP = "发送'帮助<组名><页数>'翻页，如'帮助冒险2'"  # /帮助 <组名> 组页
+# CakeGame 式尾段 Tip 内容（`Tip:` 之后部分，2026-08-27 用户拍板统一列表尾段）。
+# 2026-09-12 专项·尾行 Tip 统一：文案常量全部撤除 → 全量表键（免斜杠「发 <指令> <参数>」写法；
+# 内容包 templates.json 可覆盖同键）；本层只留键名，渲染统一走 tpl_of(ctx, key)。
+#   tip_bag        /背包     兜底（含货币行 + 类型词）
+#   tip_bag_view   /背包     轮换池①：物品详情发现性引导
+#   tip_consume    /背包     轮换池②（有装备时追加）：消耗品直发物品名
+#   tip_equip      /装备     穿戴引导 + /背包 轮换池②（2026-09-05 用户拍板穿戴统一走 使用——
+#                            「使用 N」实测可穿，勿教「装备 穿」）
+#   tip_view       /角色     属性面板下一步（留表；旧常量亦零调用点，待批18 死键清扫裁决）
+#   tip_skill      /技能     技能列表翻页（2026-09-05 模拟器审计：原「帮助 技能」不可解析）
+#   tip_help       /帮助 组页 单页引导（2026-09-05 实机反馈：单页教翻页 = 空转引导，改教组内指令）
+#   tip_help_dir   /帮助 目录 多页翻页（GM 6 组 2 页；紧凑形态「帮助2」解析层仍双认）
+#   tip_help_group /帮助 <组名> 组页 多页翻页（紧凑形态「帮助冒险2」解析层仍双认）
 
 
 def _cake_tail(page: int, total_pages: int, *, category_word: Optional[str] = None,
@@ -877,11 +912,11 @@ def _bag_tail_lines(page: int, total_pages: int, total: int, clamped: bool,
 
     （类型词 = 当前筛选的物品类型，用户 2026-08-27 拍板：/背包 → 全部，/背包筛选
     装备 → 装备、/背包筛选药剂 → 药剂 等；原「共 N 条」改显示筛选类型。
-    tip 空 → 默认 _BAG_TAIL_TIP（2026-09-05 模拟器审计：背包含装备时 Tip 教
+    tip 空 → 默认 tip_bag 表键（2026-09-05 模拟器审计：背包含装备时 Tip 教
     「使用 物品名」与装备实际穿戴路径「装备 穿 序号」矛盾——调用方按内容传 tip）"""
     lines: List[str] = list(_currency_lines(ctx))
     lines.append(_cake_tail(page, total_pages, category_word=category_word,
-                            tip=tip or _BAG_TAIL_TIP, clamped=clamped,
+                            tip=tip or tpl_of(ctx, "tip_bag"), clamped=clamped,
                             templates=ctx.get("templates")))
     return lines
 
@@ -906,10 +941,11 @@ def _render_bag_page(ctx: Mapping[str, Any], page: int) -> str:
     # 2026-09-06 实机反馈：玩家想查看物品详情连试「查看1/物品详情1」全静默——
     # 详情正确形态是「背包 查看 <序号|名|部位>」，Tip 必须教（发现性引导）
     # 2026-09-06 用户拍板：Tip 太长 → 每次随机出现其中一条（轮换引导）
-    _tip_pool = ["发送'背包 查看 <序号>'看物品详情",
-                 "发送'使用 序号'穿戴装备"]
+    # 2026-09-12 专项·尾行 Tip 统一：池内文案 → 全量表键（免斜杠，内容包可覆盖）
+    _tip_pool = [tpl_of(ctx, "tip_bag_view"),
+                 tpl_of(ctx, "tip_equip")]
     if _bag_has_equip(rows, ctx):
-        _tip_pool.append("消耗品直接'使用 物品名'")
+        _tip_pool.append(tpl_of(ctx, "tip_consume"))
     # 2026-09-06 用户拍板「每次随机出现其中一条」：ctx rng 每指令同 seed 重播种
     # （确定性设计）→ randrange 恒取序列首值 → 无法轮换。Tip 为展示层装饰
     # （非游戏数值，无公平性要求），按当前时间秒级轮换（每指令变化、无状态、
@@ -1023,13 +1059,9 @@ def _render_item_detail(row: Any, ctx: Mapping[str, Any], *, source: str) -> str
         meta_bits.append("绑定")
     if meta_bits:
         lines.append(" ".join(meta_bits))
-    # 装备数值键（atk/def/hp/mp/str/con/agi/foc/spr/lck/spd/mag 等）
-    stat_keys = ("atk", "def", "hp", "mp", "str", "con", "agi", "foc", "spr", "lck", "spd", "mag")
-    stats = []
-    for k in stat_keys:
-        v = d.get(k)
-        if isinstance(v, (int, float)):
-            stats.append(f"{_stat_name_zh(k)} {int(v)}")
+    # 装备数值键（批⑧ 键空间收口：统一取自 data.gear_stats——含 dfn/会心/百分比/
+    # 耳栓等；原手写 12 键缺 dfn/crit/_pct → 卡片不显示核心词条）
+    stats = _item_stat_parts(d)
     if stats:
         lines.append("｜".join(stats))
     # 装备槽位
@@ -1062,10 +1094,31 @@ def _render_item_detail(row: Any, ctx: Mapping[str, Any], *, source: str) -> str
 
 def _stat_name_zh(key: str) -> str:
     """属性键 → 中文名（详情面板用；stats.json 配置优先？——缺省表兜底）。"""
-    _m = {"atk": "攻击", "def": "防御", "hp": "生命", "mp": "魔力", "str": "力量",
-          "con": "体魄", "agi": "敏捷", "foc": "专注", "spr": "精神", "lck": "幸运",
-          "spd": "速度", "mag": "魔法"}
+    _m = {"atk": "攻击", "def": "防御", "hp": "生命", "mp": "法力", "str": "力量",
+          "con": "体质", "agi": "敏捷", "foc": "专注", "spr": "精神", "lck": "幸运",
+          "spd": "速度", "mag": "法强"}
     return _m.get(key, key)
+
+
+def _item_stat_parts(d: Mapping[str, Any]) -> List[str]:
+    """装备详情词条行（批⑧ 注册表驱动：会心带符号 %、百分比键 +N%、等级键 LvN；
+    0/非数值跳过——旧实现会把饰玉的 dfn:0 渲染成「防御 0」）。"""
+    parts: List[str] = []
+    for k in GEAR_NUMERIC_KEYS:
+        v = d.get(k)
+        if not isinstance(v, (int, float)) or isinstance(v, bool) or v == 0:
+            continue
+        iv = int(v)
+        if k.endswith(PCT_SUFFIX):
+            _base = GEAR_LABELS_ZH.get(k[: -len(PCT_SUFFIX)], k[: -len(PCT_SUFFIX)])
+            parts.append(f"{_base} {'+' if iv > 0 else ''}{iv}%")
+        elif k == "crit":
+            parts.append(f"{GEAR_LABELS_ZH.get(k, k)} {'+' if iv > 0 else ''}{iv}%")
+        elif k in ("earplug", "super_crit_lv", "elem_crit_lv"):
+            parts.append(f"{GEAR_LABELS_ZH.get(k, k)} Lv{iv}")
+        else:
+            parts.append(f"{GEAR_LABELS_ZH.get(k) or _stat_name_zh(k)} {iv}")
+    return parts
 
 
 # ---------------------------------------------------------------------------
@@ -1370,7 +1423,7 @@ def _render_equip_page(ctx: Mapping[str, Any], page: int = 1) -> str:
         ln = equip_line(sid, eq.get(sid), ctx)
         if ln:
             lines.append(ln)
-    lines.append(f"Tip:{_EQUIP_TAIL_TIP}")
+    lines.append(f"Tip:{tpl_of(ctx, 'tip_equip')}")
     return "\n".join(lines)
 
 
@@ -1763,31 +1816,89 @@ def _derived_names(ctx: Mapping[str, Any], sid: str, chain_refs: Sequence[Any]) 
     return out
 
 
+def _derived_tags(defn: Any, ctx: Any = None) -> List[str]:
+    """按技能机制推导标签（**仅兜底**：内容包 `brief` 为空时使用；自由文本以 brief 为准）。
+
+    M7（2026-09-12）：标签文案迁全量表键（`_SKILL_TAG_KEYS`），本函数只做机制判定 +
+    `tpl_of` 取文（内容包可覆盖）。
+    M5（2026-09-12）：`tag` 的 combo 三变体（combo/combo_preserve/combo_push）各自出标签，
+    原实现只认 `== "combo"` → combo_push（剑舞）/combo_preserve（平息战意）在 brief 为空时
+    整项缺失。
+    """
+    tags: List[str] = []
+    kind = str(_skill_field(defn, "kind", "") or "")
+    if kind == "damage" or _skill_field(defn, "power", 0):
+        tags.append("damage")
+    if (int(_skill_field(defn, "mp_cost", 0) or 0) > 0
+            or bool(_skill_field(defn, "consume_marks", None))
+            or bool(_skill_field(defn, "energy_cost", None))):
+        tags.append("cost")
+    _tag = str(_skill_field(defn, "tag", "") or "")
+    if _tag in ("combo", "combo_preserve", "combo_push"):
+        tags.append(_tag)
+    if _skill_field(defn, "chain_refs", None):
+        tags.append("derive")
+    if _skill_field(defn, "air_policy", None):
+        tags.append("air")
+    _ctr = str(_skill_field(defn, "counter_type", "") or "")
+    if _ctr == "dodge":
+        tags.append("dodge")
+    elif _ctr == "parry":
+        tags.append("parry")
+    _eff = [str((e.get("type") or e.get("effect")) or "")
+            for e in (_skill_field(defn, "effects", None) or ()) if isinstance(e, Mapping)]
+    if "reposition" in _eff:
+        tags.append("move")
+    if _skill_field(defn, "break_power", None):
+        tags.append("part")
+    if int(_skill_field(defn, "hits", 1) or 1) > 1:
+        tags.append("multi")
+    if _skill_field(defn, "armor", False):
+        tags.append("armor")
+    if _skill_field(defn, "interrupt", False):
+        tags.append("interrupt")
+    return [tpl_of(ctx, _SKILL_TAG_KEYS[t]) for t in _SKILL_TAG_ORDER if t in tags]
+
+
+def skill_brief(ctx: Mapping[str, Any], sid: str) -> str:
+    """技能简述行（列表用）：内容包 `brief` 自由文本（编辑器「简述」文本框）→ 兜底机制标签。
+
+    2026-09-12 用户拍板：标签是**文本类型**，后续由内容作者自定义；本函数只负责取值与兜底。
+    2026-09-13 用户补充：**「简述」不是独立的「标签」门类**——它是自由文本，作者想写标签就写标签、
+    想写别的文本也行，**也可以直接留空**。故取值语义分三档：
+      - `brief` 为**非空文本** → 原样用（内容作者写什么显示什么）
+      - `brief` 为**显式空串/空白** → 作者明确留空 → **不显示简述行**（不再兜底成机制标签）
+      - `brief` **字段缺失**（未填过）→ 机制标签兜底（避免列表出现空白行，作者一填即覆盖）
+    """
+    defn = _skill_def(ctx, sid)
+    brief = _skill_field(defn, "brief", None)
+    if isinstance(brief, str):
+        return brief.strip()          # 显式留空 → ""（上方 skill_line 不出简述行）
+    return "".join(_derived_tags(defn, ctx))
+
+
 def skill_line(index: int, sid: str, ctx: Mapping[str, Any]) -> str:
-    """技能行：`{序号}. {名称}（{类型}）{MP} MP ｜ {描述} ｜ 可派生成：XX`（M2 技能卡派生指向）。
-    MP 仅 >0 显示；无描述不输出描述段；无派生链不输出指向（工程补白 5）。模板配置化
-    2026-08-31：basic_skill_row / basic_skill_mp / basic_skill_chain 可内容包覆盖。"""
+    """技能行（2026-09-12 用户样稿）：`{序号}. {名称}（{类型}）` + 简述行 + 分隔线。
+
+    样稿形态：
+        6. 御剑·回收（主动）
+        【机动】【回收】
+        ————
+    简述 = 内容包 `brief`（自由文本）；缺省按机制兜底标签。模板：
+    basic_skill_row / basic_skill_brief / basic_skill_sep（内容包可覆盖）。
+    """
     defn = _skill_def(ctx, sid)
     name = _skill_name(ctx, sid)
     type_label = TYPE_LABELS.get(str(_skill_field(defn, "type", "active")), "主动")
     parts: List[str] = [tpl_of(ctx, "basic_skill_row",
                                {"idx": index, "name": name, "type": type_label})]
-    mp = _skill_field(defn, "mp_cost", 0)
-    try:
-        mp = int(mp)
-    except (TypeError, ValueError):
-        mp = 0
-    if mp > 0:
-        parts[0] += tpl_of(ctx, "basic_skill_mp", {"mp": mp})
-    desc = _skill_field(defn, "desc")
-    if isinstance(desc, str) and desc:
-        parts.append(desc)
-    chain_refs = _skill_field(defn, "chain_refs")
-    if isinstance(chain_refs, (list, tuple)) and chain_refs:
-        derived = _derived_names(ctx, sid, chain_refs)
-        if derived:
-            parts.append(tpl_of(ctx, "basic_skill_chain", {"names": "、".join(derived)}))
-    return " ｜ ".join(parts)
+    brief = skill_brief(ctx, sid)
+    if brief:
+        parts.append(tpl_of(ctx, "basic_skill_brief", {"brief": brief}))
+    sep = tpl_of(ctx, "basic_skill_sep")
+    if sep:
+        parts.append(sep)
+    return "\n".join(parts)
 
 
 def _job_visible(ctx: Mapping[str, Any], sid: str) -> bool:
@@ -1865,12 +1976,16 @@ def _render_skill_page(ctx: Mapping[str, Any], page: int) -> str:
     lines: List[str] = [
         tpl_of(ctx, "basic_skill_header",
                {"level": f["level"], "name": f["name"], "job": job}),
-        tpl_of(ctx, "basic_skill_count", {"count": len(sids)}),
     ]
+    # 2026-09-12 用户拍板：**普攻（type=basic）不出现在技能列表**——行内跳过，
+    # 但分页与序号仍按完整列表计（技能详情 <序号> / 攻击 <序号> 口径不变）。
     for i, sid in enumerate(slice_ids):
+        if str(_skill_field(_skill_def(ctx, sid), "type", "active")) == "basic":
+            continue
         lines.append(skill_line(start + i + 1, sid, ctx))
     if sids:
-        lines.append(_cake_tail(res.page, res.total_pages, tip=_SKILL_TAIL_TIP, clamped=res.clamped,
+        lines.append(_cake_tail(res.page, res.total_pages, tip=tpl_of(ctx, "tip_skill"),
+                                clamped=res.clamped,
                                 templates=ctx.get("templates")))
     return "\n".join(lines)
 
@@ -1951,36 +2066,78 @@ def cmd_skill_chain(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     return _render_skill_chain(ctx, sid)
 
 
+def _mark_display_name(ctx: Mapping[str, Any], mid: str) -> str:
+    """印记展示名（消耗行）：ctx["marks"] 定义 name → 回落 id（不臆造）。"""
+    marks = ctx.get("marks")
+    if isinstance(marks, Mapping):
+        d = marks.get(mid)
+        if isinstance(d, Mapping):
+            return str(d.get("name") or mid)
+        if d is not None:
+            return str(d)
+    return mid
+
+
 def _render_skill_info(ctx: Mapping[str, Any], sid: str) -> str:
-    """技能详情面板（模板 basic_rem_tpl skill_info_* 可内容包覆盖）。"""
+    """技能详情面板（2026-09-12 CTB 重写；模板 skill_info_* 可内容包覆盖）。
+
+    CTB 口径（去回合制残留）：
+      - 消耗：法力 / 精力 / 印记（剑势·剑印等按定义名）+ 冷却（N 次行动）；
+        **不再输出旧回合式的「每次行动限 N 次」**（trigger_limit 是引擎护栏，非玩家消耗）
+      - 效果：威力 / 段数 / 破坏值 / 霸体 / 打断
+      - **行动恢复**（recovery，CTB 核心数值：越大＝下一次行动来得越晚）
+      - 派生指向（发 技能派生 查看条件）
+      - 面板尾部文本 = 技能 def `detail`（编辑器「详情」文本框）→ 回落 `desc`
+    行宽口径：结构化行 ≤14 全角；详情文本属介绍类，允许自然折行。
+    **派生行有意豁免（遗留 #37，2026-09-12 用户拍板）**：派生名整行全量显示、不折行
+    （同「怪物状态」行口径）——派生名数量由 chain_refs 内容决定（最多 9 个），
+    拆行/精简会丢失或割裂信息；登记 `skill_info_derived` 于表 meta.prose_keys（有意豁免）。
+    """
     defn = _skill_def(ctx, sid)
     name = _skill_name(ctx, sid)
     lines = [tpl_of(ctx, "skill_info_header", {"name": name})]
     if defn is None:
         lines.append(tpl_of(ctx, "skill_info_not_found", {"name": sid}))
         return "\n".join(lines)
-    # 类型/标签
+    # 类型
     t = str(_skill_field(defn, "type", "active"))
     lines.append(tpl_of(ctx, "skill_info_line", {"k": "类型", "v": TYPE_LABELS.get(t, t)}))
-    # 消耗（MP + 冷却 + trigger_limit）
+    # 标签（简述行同源：内容包 brief 自由文本 → 机制兜底）
+    brief = skill_brief(ctx, sid)
+    if brief:
+        lines.append(tpl_of(ctx, "skill_info_line", {"k": "标签", "v": brief}))
+    # 消耗（CTB：法力 / 精力 / 印记 / 冷却行动数）
     costs: List[str] = []
     try:
         mp = int(_skill_field(defn, "mp_cost", 0))
         if mp > 0:
-            costs.append(f"{mp} 灵能")
+            costs.append(f"{mp} 法力")
     except (TypeError, ValueError):
         pass
+    _energy = _skill_field(defn, "energy_cost", None)
+    if isinstance(_energy, Mapping):
+        for k, v in _energy.items():
+            try:
+                n = int(v)
+            except (TypeError, ValueError):
+                continue
+            if n > 0:
+                costs.append(f"{_ENERGY_LABELS.get(str(k), str(k))} {n}")
+    _consume = _skill_field(defn, "consume_marks", None)
+    if isinstance(_consume, Mapping):
+        for k, v in _consume.items():
+            try:
+                n = int(v)
+            except (TypeError, ValueError):
+                continue
+            if n > 0:
+                costs.append(f"{_mark_display_name(ctx, str(k))} {n}")
     cd = _skill_field(defn, "cooldown", 0)
     if cd:
-        costs.append(f"冷却 {cd} 回合")
-    tl = _skill_field(defn, "trigger_limit")
-    if isinstance(tl, Mapping):
-        pr = tl.get("per_round")
-        if pr:
-            costs.append(f"每回合限 {pr} 次")
+        costs.append(f"冷却 {cd} 次行动")
     if costs:
         lines.append(tpl_of(ctx, "skill_info_line", {"k": "消耗", "v": "、".join(costs)}))
-    # 效果（kind/power/命中/暴击/霸体/打断/段数）
+    # 效果（kind/power/段数/破坏值/霸体/打断）
     effs: List[str] = []
     kd = str(_skill_field(defn, "kind", ""))
     if kd:
@@ -1989,23 +2146,32 @@ def _render_skill_info(ctx: Mapping[str, Any], sid: str) -> str:
     hits = _skill_field(defn, "hits", 1)
     if hits and int(hits) > 1:
         effs.append(f"{hits} 段")
+    bp = _skill_field(defn, "break_power", None)
+    if bp:
+        effs.append(f"破坏值 {bp}")
     if _skill_field(defn, "armor"):
         effs.append("霸体")
     if _skill_field(defn, "interrupt"):
         effs.append("打断")
     if effs:
         lines.append(tpl_of(ctx, "skill_info_line", {"k": "效果", "v": "、".join(str(e) for e in effs)}))
-    # 派生指向
+    # 行动恢复（CTB 核心：下一次行动的时间代价）
+    rec = _skill_field(defn, "recovery", None)
+    if rec:
+        lines.append(tpl_of(ctx, "skill_info_line", {"k": "行动恢复", "v": rec}))
+    # 派生指向（整行全量显示、不折行——有意豁免，见 docstring；文案走 skill_info_derived）
     chain_refs = _skill_field(defn, "chain_refs")
     if isinstance(chain_refs, (list, tuple)) and chain_refs:
         derived = _derived_names(ctx, sid, chain_refs)
         if derived:
-            lines.append(tpl_of(ctx, "skill_info_line",
-                                {"k": "派生", "v": "、".join(derived) + "（发 技能派生 查看条件）"}))
-    # 描述
-    desc = _skill_field(defn, "desc")
-    if isinstance(desc, str) and desc:
-        lines.append(desc)
+            lines.append(tpl_of(ctx, "skill_info_derived",
+                                {"names": "、".join(derived)}))
+    # 详情文本（编辑器「详情」文本框 → 回落 desc）
+    detail = _skill_field(defn, "detail", None)
+    if not (isinstance(detail, str) and detail.strip()):
+        detail = _skill_field(defn, "desc", None)
+    if isinstance(detail, str) and detail:
+        lines.append(detail)
     return "\n".join(lines)
 
 
@@ -2203,12 +2369,12 @@ def _render_help_directory(ctx: Mapping[str, Any], page: int) -> str:
         lines.append(_group_summary(ctx, g))
     if groups:
         # 2026-09-05 模拟器审计：目录仅 1 页时教「帮助2 翻页」是无效引导（普通玩家
-        # 5 组 1 页；GM 6 组 2 页才需要）——单页渲染「发 帮助 <组名> 看组内指令」
+        # 5 组 1 页；GM 6 组 2 页才需要）——单页渲染「发 帮助 <组名> 组内指令」
         # 引导（新手不知道组页存在，A 路审计）；多页才教翻页
         if (res.total_pages or 1) > 1:
-            _dir_tip = _HELP_DIR_TAIL_TIP
+            _dir_tip = tpl_of(ctx, "tip_help_dir")
         else:
-            _dir_tip = "发送'帮助 组名'查看组内指令，如'帮助 冒险'"
+            _dir_tip = tpl_of(ctx, "tip_help")
         lines.append(_cake_tail(res.page, res.total_pages, tip=_dir_tip, clamped=res.clamped,
                                 templates=ctx.get("templates")))
     return "\n".join(lines)
@@ -2242,7 +2408,7 @@ def _render_help_group(ctx: Mapping[str, Any], group_name: str, page: int) -> st
     if cmds:
         # 2026-09-05 模拟器审计：组页单页（≤5 条）教「帮助<组名><页数>」翻页是
         # 空转引导（无处可翻）——仅多页组渲染翻页 Tip
-        _g_tip = _HELP_GROUP_TAIL_TIP if (res.total_pages or 1) > 1 else ""
+        _g_tip = tpl_of(ctx, "tip_help_group") if (res.total_pages or 1) > 1 else ""
         lines.append(_cake_tail(res.page, res.total_pages, tip=_g_tip, clamped=res.clamped,
                                 templates=ctx.get("templates")))
     return "\n".join(lines)

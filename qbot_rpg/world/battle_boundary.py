@@ -76,7 +76,7 @@ __all__ = [
 # =====================================================================================
 
 # 判定链输出（细化_1g4 §1.1；字符串常量 JSON 友好，不引入 enum 依赖）
-LOST_RESOLVE_NORMAL = "resolve_normal"          # ① 目标仍在场 → 正常结算本回合（回 1g1a 主循环）
+LOST_RESOLVE_NORMAL = "resolve_normal"          # ① 目标仍在场 → 正常结算本次行动（回 1g1a 主循环）
 LOST_ENTER_PENDING = "enter_lost_pending"       # ② 目标不在场 → 提示「怪物丢失」+ 写入 lost_pending（F-08）
 LOST_WAIT_REFRESH = "wait_refresh"              # ③ 有刷新行未到刷新时刻 → 继续挂起（无时限 LOST-01）
 LOST_RESPAWNED = "respawned_continue"           # ③ 目标已刷新 → 新实例满血 + 「战斗继续」（LOST-03/J-03）
@@ -173,7 +173,7 @@ def decide_lost(
         spawn_row_exists and can_respawn→ LOST_WAIT_REFRESH（等刷新，无时限 LOST-01）
         否则                            → LOST_EXIT_NO_RESPAWN（LOST-04/05 按退出）
       未挂起：
-        target_present                  → LOST_RESOLVE_NORMAL（正常结算本回合）
+        target_present                  → LOST_RESOLVE_NORMAL（正常结算本次行动）
         否则                            → LOST_ENTER_PENDING（提示丢失 + 写入 lost_pending）
     """
     if player_exited:
@@ -755,12 +755,14 @@ def assert_no_battle_timeout(settings: Mapping[str, object]) -> Tuple[str, ...]:
 
 
 def assert_turn_no_timeout() -> None:
-    """② 回合等待无超时断言（TIME-01/02）：空实现，声明语义。
+    """② 玩家等待无超时断言（TIME-01/02）：空实现，声明语义。
 
-    玩家回合无任何时限约束——不自动跳过/不代打/不踢出；无倒计时、无催促（TIME-07
-    等待即静默，J-04）；固定玩家先手（框架 L114），玩家不操作 → 战斗自然静止在玩家
-    回合，无 AI 空转/无后台自动过回合（TIME-02）。本函数为接线锚点（调用即校验无
-    计时器接入），不执行任何动作。
+    玩家等待无任何时限约束——不自动跳过/不代打/不踢出；无倒计时、无催促（TIME-07
+    等待即静默，J-04）。**CTB 口径（Agent 4 · Wave B）**：无「回合」概念——玩家在
+    `actor_ready` 边界暂停等待输入（`CTBScheduler.paused`），战斗自然静止于该边界，
+    无 AI 空转、无后台自动推进（NPC 连锁仅在玩家提交行动后由调度器一次性走完，不
+    依赖任何时钟）。本函数为接线锚点（调用即校验无计时器接入），不执行任何动作；
+    函数名保留历史命名（"turn"），语义已对齐 CTB。
     """
 
 

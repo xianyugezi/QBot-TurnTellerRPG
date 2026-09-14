@@ -554,41 +554,23 @@ def test_normalize_dialog_result_shape() -> None:
 # ---------------------------------------------------------------------------
 # 模板配置化（dialog_tpl 分区 · 2026-08-31）
 # ---------------------------------------------------------------------------
-
-def test_dialog_tpl_placeholder_whitelist_coverage() -> None:
-    """白名单测试：dialog_tpl 默认模板占位符 ⊆ 白名单 + 登记齐全（防内容包拼错 key）。"""
-    import re
-
-    from qbot_rpg.core.templates.dialog_tpl import (
-        DEFAULT_TEMPLATES as _DLG_TPL,
-        PLACEHOLDER_WHITELIST as _DLG_WH,
-    )
-    pat = re.compile(r"\{([a-zA-Z0-9_]+)\}")
-    # 登记齐全：默认模板每 key 都进白名单
-    assert set(_DLG_TPL) == set(_DLG_WH)
-    # 占位符不越白名单
-    for key, tpl in _DLG_TPL.items():
-        used = set(pat.findall(str(tpl)))
-        assert used <= _DLG_WH.get(key, set()), f"{key}: 占位符 {used} 超出白名单"
-
-
 def test_dialog_tpl_keys_covered_by_module() -> None:
-    """覆盖测试：dialog_tpl 每 key 均在 dialog_commands.py 经 tpl_of 引用（防死 key）。"""
+    """覆盖测试：dialog 每 key 均在 dialog_commands.py 经 tpl_of 引用（防死 key）。"""
     from pathlib import Path
 
-    from qbot_rpg.core.templates.dialog_tpl import DEFAULT_TEMPLATES as _DLG_TPL
+    from qbot_rpg.core.templates import TABLE_TEMPLATES
     src = Path(__file__).resolve().parents[2] / "qbot_rpg" / "commands" / "dialog_commands.py"
     text = src.read_text(encoding="utf-8")
-    for key in _DLG_TPL:
+    for key in sorted(k for k in TABLE_TEMPLATES if k.startswith("dialog_")):
         assert f'tpl_of(ctx, "{key}"' in text, f"{key} 未在 dialog_commands.py 经 tpl_of 渲染"
 
 
 def test_dialog_tpl_default_render_byte_identical() -> None:
-    """覆盖测试：默认模板经 tpl_of 渲染与迁移前逐字一致（现有测试断言锚点）。"""
+    """覆盖测试：默认模板经 tpl_of 渲染逐字锚点（批11·路A 手机QQ 新排版）。"""
     ctx = _fresh_ctx()  # 无 templates → 内置默认
     assert tpl_of(ctx, "dialog_menu_head", {"npc_name": "铁匠·老周"}) == "铁匠·老周："
-    assert tpl_of(ctx, "dialog_dispatch_error") == "动作执行异常"
-    assert tpl_of(ctx, "dialog_dispatch_bad_return") == "动作返回异常"
+    assert tpl_of(ctx, "dialog_dispatch_error") == "❌ 动作执行异常"
+    assert tpl_of(ctx, "dialog_dispatch_bad_return") == "❌ 动作返回异常"
     # 内容包覆盖同 key：非白名单占位符缺键原样保留
     from qbot_rpg.core.templates import resolve_templates
     overridden = resolve_templates({"dialog_menu_head": "【{npc_name}】你好"})

@@ -291,14 +291,14 @@ def calc_all_final_attributes(
 def crit_rate(
     final_luck: float,
     crit_bonus: float = 0.0,
-    cap: float = 95.0,
+    cap: float = 100.0,
 ) -> float:
     """会心率 %（细化_3b §5.1 / L41-45）。
 
     formula = min(cap, √最终幸运 × 0.5 + crit_bonus)
       - √幸运×0.5%：属性驱动基础（借绮谭必杀率口径）
       - crit_bonus：装备/技能/效果提供的会心加成（效果系统挂载）
-      - cap 默认 95%，cap=0 = 不限（L217）
+      - cap 默认 100%（允许满会心——2026-09-11 增补 v1 §五 放开；cap=0 = 不限）
     返回值即为百分比数值（幸运 100 → 5.0，即 5%）。双通道共用一次会心判定（L44）。
 
     2026-08-24 M0 复查收敛：唯一实现在 core/damage.crit_prob（1a 参数化版，
@@ -361,7 +361,7 @@ def block_rate(final_focus: float, k: float = 150.0, cap: float = 40.0) -> float
     """格挡率 %（细化_3b §5.3 / L90-92）。
 
     min(40%, 最终专注 / (最终专注 + 150))。格挡 = 会心后最终伤害减半（L91）。
-    （当回合格挡率减半、1v1 单次不消费等为战斗状态机职责，见细化_1g / M1。）
+    （当次行动格挡率减半、1v1 单次不消费等为战斗状态机职责，见细化_1g / M1。）
 
     2026-08-24 M0 复查收敛：唯一实现在 core/damage.block_rate（参数化版，
     k/cap 经 formula.json 可配），本函数为 3b 语义薄封装（% 对外口径）。

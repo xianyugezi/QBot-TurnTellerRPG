@@ -11,7 +11,7 @@
          追加不改写批4 内容；与路5A 主链段共存，主链/分支渲染归路5A）
       —— 批5 路5C 扩展作者：Hermes 子agent-5C（/锻造树 分页视图 + 四指令路由收口：
          /锻造 /确认 /图纸 /锻造树 全部注册 + 白名单登记，追加不改写批4/路5B/路5A 内容）
-         —— 依据：细化_2c2b §5.3（/锻造树（无参）查看当前可锻装备树（分页））+ 列表模板统一
+         —— 依据：细化_2c2b §5.3（/锻造树（无参）查看当前可锻装备树（分页）+ 列表模板统一
             （core/message_format/list_render：5 条/页 + CakeGame 尾段，2026-08-27 用户拍板）
       —— 批5 路5A 扩展作者：Hermes 子agent-5A（/图纸 主链+分支+持有进度渲染 cmd_blueprint +
          /图纸 CommandSpec 注册；消费 5B forge_node_suffix/forge_progress_segment，
@@ -49,7 +49,7 @@
        → 上下文作废，无锻造无扣款无经验（TC-11）；
      - 同一玩家同时仅 1 个待确认窗；新 /锻造 或 /图纸 不覆盖既有窗（保持可感知）；
      - **边界**：超短期一次性引导，非框架 3.18 会话（不持久化、不可跨指令续接）；
-     - 无进行中预览时 /确认 → 拒绝「当前无可确认的锻造预览」（TC-14）。
+     - 无进行中预览时 /确认 → 拒绝「❌ 当前无待确认预览」（TC-14）。
   ④ register_forge_commands 追加 /确认 CommandSpec（白名单标记）。
   ⑤ 路4A 原子流程（_forge_atomic）：守卫 GU-01~06 顺序链（系统注册/参数/节点存在可锻/
      前置已锻/素材足够/等级足够）+ 成功路径（扣素材/扣金币/实例化入包/发经验原子写）+
@@ -171,8 +171,8 @@ from qbot_rpg.core.message_format.list_render import (
     render_cake_tail,
     render_item_line,
 )
+from qbot_rpg.core.templates import DEFAULT_TEMPLATES as _ALL_TPL  # 消息模板配置化（2026-08-31）
 from qbot_rpg.core.templates import tpl_of  # 消息模板配置化（2026-08-31 用户拍板）
-from qbot_rpg.core.templates.forge_tpl import DEFAULT_TEMPLATES as _FORGE_TPL  # 兼容导出默认文案
 
 # 同包兄弟模块：相对导入（G0 架构门禁，与 alchemy_commands/shop_commands 同口径）
 from .parsers import parse_int
@@ -255,12 +255,13 @@ PREVIEW_WINDOW_KEY: str = "forge_preview"
 TREE_PAGE_SIZE: int = DEFAULT_PAGE_SIZE
 # 越界页空态提示（细化 2c2b §5.3：/锻造树（无参）分页；越界页 → 空态提示，
 #   输出「该页暂无锻造装备」+ 总页数引导，对齐 /背包 空态口径；文本唯一源 =
-#   forge_tpl 分区 forge_tree_empty_page，渲染 tpl_of，内容包可覆盖）
-TREE_EMPTY_PAGE: str = _FORGE_TPL["forge_tree_empty_page"]
+#   全量模板表 forge_tree_empty_page（2026-09-12 批6·路R 迁移；常量改表别名，
+#   渲染 tpl_of，内容包可覆盖）
+TREE_EMPTY_PAGE: str = _ALL_TPL["forge_tree_empty_page"]
 # /锻造树 Tip 尾行（列表模板统一 CakeGame 式「当前页 + Tip」，2026-08-27 用户拍板；
-#   引导锻造入口，对齐 /背包 _BAG_TAIL_TIP 口径；文本唯一源 = forge_tpl 分区
-#   forge_tree_tail_tip，渲染 tpl_of，内容包可覆盖）
-TREE_TAIL_TIP: str = _FORGE_TPL["forge_tree_tail_tip"]
+#   引导锻造入口，对齐 /背包 _BAG_TAIL_TIP 口径；文本唯一源 = 全量模板表
+#   forge_tree_tail_tip（2026-09-12 批6·路R 迁移；常量改表别名，渲染 tpl_of）
+TREE_TAIL_TIP: str = _ALL_TPL["forge_tree_tail_tip"]
 
 # /套装（批7 路7C：查询指令骨架，细化_2c2d §1.5 / 定稿 L236「/套装 <套装名>（P1，无门槛）」）
 SETS_CMD: str = "套装"
@@ -270,13 +271,14 @@ AUGMENTS_CMD: str = "客制"
 SETS_UNLOCK_ID: str = "unlock_sets"
 AUGMENT_UNLOCK_ID: str = "unlock_augment"
 # SP-F4/F5 未解锁拒绝文案（2c2b §4.3：未解锁 → 对应指令直接拒绝；文本唯一源 =
-#   forge_tpl 分区 forge_sets_locked / forge_augments_locked，渲染 tpl_of）
-SETS_LOCKED_MSG: str = _FORGE_TPL["forge_sets_locked"]
-AUGMENTS_LOCKED_MSG: str = _FORGE_TPL["forge_augments_locked"]
-# 空态（P1 查询骨架：无套装数据 / 无可用客制项；文本唯一源 = forge_tpl 分区
-#   forge_sets_empty / forge_augments_empty，渲染 tpl_of）
-SETS_EMPTY: str = _FORGE_TPL["forge_sets_empty"]
-AUGMENTS_EMPTY: str = _FORGE_TPL["forge_augments_empty"]
+#   全量模板表 forge_sets_locked / forge_augments_locked（2026-09-12 批6·路R 迁移；
+#   常量改表别名，渲染 tpl_of）
+SETS_LOCKED_MSG: str = _ALL_TPL["forge_sets_locked"]
+AUGMENTS_LOCKED_MSG: str = _ALL_TPL["forge_augments_locked"]
+# 空态（P1 查询骨架：无套装数据 / 无可用客制项；文本唯一源 = 全量模板表
+#   forge_sets_empty / forge_augments_empty（2026-09-12 批6·路R 迁移；常量改表别名）
+SETS_EMPTY: str = _ALL_TPL["forge_sets_empty"]
+AUGMENTS_EMPTY: str = _ALL_TPL["forge_augments_empty"]
 
 # 品质四档中文（F-5：normal→普通 / fine→精良 / epic→史诗 / legendary→传说）
 _RARITY_CN: Mapping[str, str] = {
@@ -644,14 +646,14 @@ def _resolve_with_roman(eng: ForgeTreeEngine, key: str) -> Tuple[str, dict]:
 
 def _ambiguous_message(ctx: Optional[Mapping[str, Any]], eng: ForgeTreeEngine,
                        candidates: List[str]) -> str:
-    """歧义候选渲染（§5.2 ③：候选名（LvN）+ /锻造树 指引）。"""
+    """歧义候选渲染（§5.2 ③：候选名（LvN）逐行 + 发 锻造树 指引）。"""
     lines = []
     for nid in candidates:
         nd = eng.node(nid)
         nm = nd.name if nd is not None else nid
         lv = nd.level if nd is not None else 0
         lines.append(tpl_of(ctx, "forge_ambiguous_item", {"name": nm, "level": lv}))
-    return tpl_of(ctx, "forge_ambiguous", {"candidates": " | ".join(lines)})
+    return tpl_of(ctx, "forge_ambiguous", {"candidates": "\n".join(lines)})
 
 
 def parse_forge_target(fragment: str, eng: Optional[ForgeTreeEngine] = None,
@@ -813,7 +815,7 @@ def _forge_once(ctx: MutableMapping[str, Any], key: object, *, preview: bool) ->
     if not isinstance(key, str) or not key.strip():
         return format_tpl12(_fragment_fallback(key))
     if any(ch.isspace() for ch in key):
-        return "参数错误：节点名不含空格"
+        return tpl_of(ctx, "forge_err_space")  # 硬编码迁表（批3·路I：对齐 forge_atomic 同款）
 
     # GU-03 节点存在 & 可锻（resolve：精确→唯一前缀→歧义列表，2c2b §5.2）
     res = eng.resolve_node(key)
@@ -900,8 +902,9 @@ def _fragment_fallback(key: object) -> str:
 def _render_preview(ctx: Mapping[str, Any], node: Any) -> str:
     """预览卡片（2c2b §3.2 / TC-10；F-1 无 emoji 纯文本）。
 
-    三行：`<节点名>（<属性摘要>）` / `素材：<前置 + 素材行> | <需求档位级>` /
-    `孔位：<slots> | 可继续锻造：<主线 child → ■终结>`（孔位/后续为空段略去）。
+    三行：`<节点名>（<属性摘要>）` / `素材：<前置 + 素材行>` + `<需求档位级>` /
+    `孔位：<slots>` + 后续行（2026-09-12 批6·路R：字段改换行拼接，少｜多换行；
+    孔位/后续为空段略去）。
     """
     name = node.name if hasattr(node, "name") and node.name else (node.get("name") or "")
     stats = node.stats if hasattr(node, "stats") else (node.get("stats") or {})
@@ -924,7 +927,8 @@ def _render_preview(ctx: Mapping[str, Any], node: Any) -> str:
     if cont:
         tail.append(cont)
     if tail:
-        lines.append(" | ".join(tail))
+        # 2026-09-12 批6·路R：孔位段 / 后续段改换行拼接（少｜多换行；对齐预览卡片字段拆行）
+        lines.append("\n".join(tail))
     return "\n".join(lines)
 
 
@@ -1221,8 +1225,8 @@ def _append_instance(
 def _success_line(ctx: Mapping[str, Any], node: Any) -> str:
     """成功行（2c2b §1.2 / 定稿 L78：`✅ <节点名> 锻造完成！` + 属性行）。
 
-    属性行：`攻击 N | 部位：武器 | 槽位：无 | 品质：<四档>（固定）`；
-    带孔装备 槽位 显示 `1 级槽 ×1`（2c2a N-09 / 定稿 L190）。
+    属性行（每行一字段，批3·路I）：`攻击 N` / `部位：武器` / `槽位：无` /
+    `品质：<四档>（固定）`；带孔装备 槽位 显示 `1 级槽 ×1`（2c2a N-09 / 定稿 L190）。
     """
     name = node.name if hasattr(node, "name") and node.name else (node.get("name") or "")
     stats = node.stats if hasattr(node, "stats") else (node.get("stats") or {})
@@ -1242,7 +1246,8 @@ def _success_line(ctx: Mapping[str, Any], node: Any) -> str:
     fields.append(tpl_of(ctx, "forge_success_slot", {"slot": slot_cn}))
     fields.append(tpl_of(ctx, "forge_success_slot_text", {"slot": slot_text}))
     fields.append(tpl_of(ctx, "forge_success_quality", {"quality": rarity_cn}))
-    return tpl_of(ctx, "forge_success", {"name": name, "fields": " | ".join(fields)})
+    # 2026-09-12 批3·路I：字段改每行一条（少｜多换行；对齐批1 注册面板风格）
+    return tpl_of(ctx, "forge_success", {"name": name, "fields": "\n".join(fields)})
 
 
 # ---------------------------------------------------------------------------
@@ -1306,7 +1311,7 @@ def cmd_confirm(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     """/确认（2c2b §3.3 / TC-12~14）：预览 → /确认 一次性窗口终态。
 
     流程：
-      ① 无进行中预览（qid 无窗 / 窗已超时作废）→ 拒绝「当前无可确认的锻造预览」
+      ① 无进行中预览（qid 无窗 / 窗已超时作废）→ 拒绝「❌ 当前无待确认预览」
          （TC-14；无锻造、无扣款、无经验）；
       ② 有未过期窗 → 取 node_id，作废窗口（一次性），重跑 GU-03~06 守卫再扣素材发经验
          （复用 forge_atomic 执行路径）→ `✅ <节点> 锻造完成！`（TC-12）；
@@ -1373,10 +1378,11 @@ def _target_of(parsed: Any) -> str:
 # ---------------------------------------------------------------------------
 
 # 失效标注文案（2c2b §2.4 / 定稿 L296）：红名节点 /图纸 行尾追加「（已失效：物品已删除）」；
-# 与 /锻造 拒绝文案「❌ 已失效：物品已删除」（批4-1 已落地）同源——本段只做 /图纸 侧行尾
-# 追加，不改写批4 拒绝文案（F-12）。文本唯一源 = forge_tpl 分区 forge_redflag_suffix，
-# 渲染 tpl_of，内容包可覆盖。
-FORGE_REDFLAG_SUFFIX: str = _FORGE_TPL["forge_redflag_suffix"]
+# 与 /锻造 拒绝文案 forge_redflag_reject（批4-1 已落地）同源——本段只做 /图纸 侧行尾
+# 追加，不改写批4 拒绝文案（F-12）。文本唯一源 = 全量模板表 template_table.json
+#（2026-09-12 批3·路I 迁移；常量改表别名，保住测试导入与 import 兼容），渲染 tpl_of，
+# 内容包可覆盖。
+FORGE_REDFLAG_SUFFIX: str = _ALL_TPL["forge_redflag_suffix"]
 # ✓ 态标注（批2 F-1 / M5-10 emoji 纪律：✅ 渲染契约 ✓ 态，U+2713 非白名单不可用）
 FORGE_DONE_MARK: str = "✅"
 
@@ -1554,7 +1560,7 @@ def cmd_blueprint(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
       ① 参数提取（对齐 cmd_forge：tokens[1:] 优先，args 兜底）；空参 → TPL-12；
          多参（节点名含空格，P-01）→ 参数错误；
       ② 词法+匹配（复用 parse_forge_target：P-01~06；未知节点 → TC-19 空态
-         `未找到「<名>」相关锻造链`；歧义/词法错误 → 复用解析 message）；
+         `❌ 未找到「<名>」/ 该名暂无锻造链`；歧义/词法错误 → 复用解析 message）；
       ③ 主链渲染（_blueprint_main_chain + _node_display_name：根 → … → ■最终强化，
          终结点 ■ + 元素标注 + 红名失效标注）；
       ④ 分支行（SP-F1 未解锁 → 折叠只显主干）；
@@ -1585,7 +1591,8 @@ def cmd_blueprint(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 
     res = parse_forge_target(fragment, eng=eng, ctx=ctx)
     if not res.get("ok"):
-        # 未知节点 → /图纸 空态（TC-19：未找到「<名>」相关锻造链）；歧义/词法 → 解析 message
+        # 未知节点 → /图纸 空态（TC-19：❌ 未找到「<名>」+ 该名暂无锻造链）；
+        # 歧义/词法 → 解析 message
         if res.get("error_code") == ERR_P_UNKNOWN:
             return tpl_of(ctx, "forge_blueprint_not_found", {"name": fragment})
         return res.get("message") or format_tpl12(_fragment(parsed))
@@ -1654,7 +1661,8 @@ def _tree_row_line(
     ■最终强化显示标记，P-04）；档位名 = forge_job._tier_name(node.level)（对齐 _req_text
     口径，等级越界钳末档）。可锻状态（对齐 GU-04/06）：已锻 → ✅（FORGE_DONE_MARK）；
     前置未锻（parent_forged=False）→ 需前置；等级不足（node_level_met=False）→ 需等级；
-    其余 → 可锻。纯函数确定性，不改写入参。
+    其余 → 可锻（三态文案走全量表表键 forge_tree_status_*，2026-09-12 批6·路R 迁表）。
+    纯函数确定性，不改写入参。
     """
     node = eng.node(nid)
     name = node.name if node is not None else nid
@@ -1669,11 +1677,11 @@ def _tree_row_line(
     if eng.already_forged(player, nid):
         status = FORGE_DONE_MARK
     elif not eng.parent_forged(player, nid):
-        status = "需前置"
+        status = tpl_of(ctx, "forge_tree_status_prereq")
     elif not eng.node_level_met(player, nid):
-        status = "需等级"
+        status = tpl_of(ctx, "forge_tree_status_level")
     else:
-        status = "可锻"
+        status = tpl_of(ctx, "forge_tree_status_ok")
     return render_item_line(index, seg, status)
 
 
@@ -1686,7 +1694,7 @@ def cmd_forge_tree(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 
     流程：
       ① 页码解析（body = tokens[1:] 或 args；无参 → 第 1 页）；
-      ② 引擎加载（load_trees 空 → `❌ 锻造系统未启用（内容包 forge.json 未注册）`）；
+      ② 引擎加载（load_trees 空 → `❌ 锻造系统未启用`，模板化）；
       ③ 全部节点按派生树文件序（eng.nodes()）→ 终结点集合（final_of 跨树并集）；
       ④ TREE_PAGE_SIZE（5）条/页切片 + 单行渲染（等级/档位 + 可锻状态）；
       ⑤ 尾段 render_cake_tail（当前页：X/Y + Tip 尾行，列表模板统一）。
@@ -1705,13 +1713,13 @@ def cmd_forge_tree(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 
     eng = _engine(ctx)
     if not eng.load_trees():
-        return "❌ 锻造系统未启用（内容包 forge.json 未注册）"
+        return tpl_of(ctx, "forge_system_disabled")
 
     nids = [n.id for n in eng.nodes() if n.id]
     total = len(nids)
     total_pages = (total + TREE_PAGE_SIZE - 1) // TREE_PAGE_SIZE if total else 1
     if page > total_pages:
-        return TREE_EMPTY_PAGE.format(total_pages=total_pages)
+        return tpl_of(ctx, "forge_tree_empty_page", {"total_pages": total_pages})
 
     finals: set = set()
     for t in eng.load_trees():
@@ -1724,7 +1732,7 @@ def cmd_forge_tree(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         _tree_row_line(ctx, eng, player, nid, start + i + 1, finals)
         for i, nid in enumerate(page_nids)
     ]
-    tail = render_cake_tail(page, total_pages, tip=TREE_TAIL_TIP)
+    tail = render_cake_tail(page, total_pages, tip=tpl_of(ctx, "forge_tree_tail_tip"))
     return "\n".join(lines + [tail])
 
 
@@ -1749,7 +1757,7 @@ def cmd_sets(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     流程：
       ① SP-F4（unlock_sets）未解锁 → 拒绝 SETS_LOCKED_MSG（2c2b §4.3：未解锁 →
          /套装 直接拒绝）；
-      ② 引擎加载（load_trees 空 → `❌ 锻造系统未启用（内容包 forge.json 未注册）`）；
+      ② 引擎加载（load_trees 空 → `❌ 锻造系统未启用`，模板化）；
       ③ 解析 sets 段（forge_sets.parse_sets，无 sets 数据 → 空态 SETS_EMPTY）；
       ④ 玩家可组成套装查询（forge_sets.set_lookup：只查已有装配件可组成哪几套，
          不激活）→ 逐套渲染 `N. 套装名（pieces_have/pieces_total 件）：件名...`；
@@ -1843,7 +1851,7 @@ def cmd_augments(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     流程：
       ① SP-F5（unlock_augment）未解锁 → 拒绝 AUGMENTS_LOCKED_MSG（GU-A1：未解锁 →
          /客制 直接拒绝）；
-      ② 引擎加载（load_trees 空 → `❌ 锻造系统未启用（内容包 forge.json 未注册）`）；
+      ② 引擎加载（load_trees 空 → `❌ 锻造系统未启用`，模板化）；
       ③ 解析客制项（forge_augments.parse_augments，缺段/空段 → 空态 AUGMENTS_EMPTY）；
       ④ disabled/trace 项过滤（AUG-11/12：不出 /客制 面板）→ 逐项渲染
          `N. 客制名（kind 中文：effect 摘要）`；无可用项 → 空态；
@@ -1857,7 +1865,7 @@ def cmd_augments(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 
     eng = _engine(ctx)
     if not eng.load_trees():
-        return "❌ 锻造系统未启用（内容包 forge.json 未注册）"
+        return tpl_of(ctx, "forge_system_disabled")
 
     rows = parse_augments({"forge": _forge_raw(ctx)})
     visible = [r for r in rows if not r.disabled and not r.trace]

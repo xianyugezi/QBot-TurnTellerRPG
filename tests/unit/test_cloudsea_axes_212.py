@@ -69,7 +69,7 @@ def test_tick_growth_and_cap():
     reg = {"a": {"max": 10, "tick_per_round": 3}}
     lc = ResourceLifecycle(reg)
     st = _state(player={"a": 8}, enemy={})
-    out = lc.tick_round_end(st)
+    out = lc.settle_round_tick(st)
     assert st["resource_state"]["player"]["a"] == 10  # 8+3 → cap 10
     assert out["on_full_fired"] == []
 
@@ -78,7 +78,7 @@ def test_tick_decay_floor():
     reg = {"a": {"max": 10, "tick_per_round": -4, "tick_floor": 2}}
     lc = ResourceLifecycle(reg)
     st = _state(player={"a": 5}, enemy={})
-    lc.tick_round_end(st)
+    lc.settle_round_tick(st)
     assert st["resource_state"]["player"]["a"] == 2  # 5-4 → floor 2（衰减不破下限）
 
 
@@ -87,7 +87,7 @@ def test_tick_zero_optin_untouched():
     reg = {"legacy": {"max": 10}}
     lc = ResourceLifecycle(reg)
     st = _state(player={"legacy": 7}, enemy={})
-    lc.tick_round_end(st)
+    lc.settle_round_tick(st)
     assert st["resource_state"]["player"]["legacy"] == 7
 
 
@@ -96,7 +96,7 @@ def test_tick_frozen_side_skipped():
     reg = {"a": {"max": 10, "tick_per_round": 5}}
     lc = ResourceLifecycle(reg)
     st = _state(player={"a": 1}, enemy={"a": 1})
-    lc.tick_round_end(st, frozen_sides=["player"])
+    lc.settle_round_tick(st, frozen_sides=["player"])
     assert st["resource_state"]["player"]["a"] == 1  # 冻结
     assert st["resource_state"]["enemy"]["a"] == 6  # 正常 tick
 
@@ -105,7 +105,7 @@ def test_tick_on_full_fired():
     reg = {"a": {"max": 10, "tick_per_round": 2, "on_full": "surge_burst"}}
     lc = ResourceLifecycle(reg)
     st = _state(player={}, enemy={"a": 9})
-    out = lc.tick_round_end(st)
+    out = lc.settle_round_tick(st)
     assert st["resource_state"]["enemy"]["a"] == 10
     assert out["on_full_fired"] == [
         {"side": "enemy", "axis": "a", "proc": "surge_burst"}
@@ -116,7 +116,7 @@ def test_tick_no_on_full_below_max():
     reg = {"a": {"max": 10, "tick_per_round": 2, "on_full": "p"}}
     lc = ResourceLifecycle(reg)
     st = _state(player={}, enemy={"a": 5})
-    out = lc.tick_round_end(st)
+    out = lc.settle_round_tick(st)
     assert out["on_full_fired"] == []  # 7 < 10 不触发
 
 
@@ -165,11 +165,11 @@ def test_movement_wind_spore_mods_from_axes():
 def test_tick_empty_registry_noop():
     lc = ResourceLifecycle({})
     st = _state(player={"x": 1}, enemy={})
-    out = lc.tick_round_end(st)
+    out = lc.settle_round_tick(st)
     assert out["player"] == {"x": 1}
 
 
 def test_tick_bad_state_safe():
     lc = ResourceLifecycle({"a": {"max": 5, "tick_per_round": 1}})
-    assert lc.tick_round_end({}) == {}
-    assert lc.tick_round_end({"resource_state": {}})["on_full_fired"] == []
+    assert lc.settle_round_tick({}) == {}
+    assert lc.settle_round_tick({"resource_state": {}})["on_full_fired"] == []

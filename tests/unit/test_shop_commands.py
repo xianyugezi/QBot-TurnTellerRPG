@@ -15,6 +15,8 @@
 
 from __future__ import annotations
 
+import unicodedata
+
 import pytest
 
 from qbot_rpg.commands.parsers import parse_command
@@ -183,7 +185,7 @@ def test_shop_integer_clamp_last_page():
 def test_shop_invalid_input_tpl12(raw, fragment):
     """裁决② + 3d §5.1：0/负数/未命名商店 → TPL-12 统一报错。"""
     out = cmd_shop(parse(raw), make_ctx())
-    assert out == f"❌ 指令不正确：{fragment}。输入 /帮助 查看可用指令。"
+    assert out == f"❌ 指令不正确：{str(fragment).lstrip('/')}\n发 帮助 查看可用指令"
 
 
 def test_shop_name_with_page_arg():
@@ -194,30 +196,33 @@ def test_shop_name_with_page_arg():
 
 
 # ---------------------------------------------------------------------------
-# /商店 列表（补缺漏）：可用商店一览
+# /商店 列表（补缺漏）：【商店】可用商店一览（2026-09-12 批10·路C 新排版）
 # ---------------------------------------------------------------------------
 
 def test_shop_list_overview_page1():
-    """补缺漏 /商店 列表：类型徽标 + 门槛标记（置灰不隐藏）+ 5 条/页 + TPL-08 页脚。"""
+    """补缺漏 /商店 列表：类型徽标 + 门槛标记（置灰不隐藏）+ 5 条/页 + TPL-08 页脚。
+
+    2026-09-12 收尾（遗留 #47）：一览行拆「头行 / 描述行 / 门槛行」，不再空格拼单行。
+    """
     out = cmd_shop(parse("/商店 列表"), make_ctx())
-    assert out.startswith("可用商店一览")
-    assert "1. 杂货铺 [普通商店] 新手村杂货铺" in out
-    assert "3. 冒险者公会商店 [声望商店] 公会专属 需要 熟悉" in out
-    assert "5. 神秘商人 [黑市] 深夜黑市" in out
+    assert out.startswith("【商店】可用商店一览")
+    assert "1. 杂货铺 [普通商店]\n新手村杂货铺" in out
+    assert "3. 冒险者公会商店 [声望商店]\n公会专属\n需要 熟悉" in out
+    assert "5. 神秘商人 [黑市]\n深夜黑市" in out
     assert "当前页：1/2" in out
 
 
 def test_shop_list_overview_page2():
     """列表第 2 页（第 6 家 + 门槛标记）。"""
     out = cmd_shop(parse("/商店 列表 2"), make_ctx())
-    assert "6. 炼金工坊 [普通商店] 炼金材料 需要 LV10" in out
+    assert "6. 炼金工坊 [普通商店]\n炼金材料\n需要 LV10" in out
     assert "当前页：2/2" in out
 
 
 def test_shop_list_clamp_last_page():
     """裁决②：/商店 列表 9 超总页数 → 夹取最后一页 + （已到最后一页）。"""
     out = cmd_shop(parse("/商店 列表 9"), make_ctx())
-    assert "6. 炼金工坊 [普通商店] 炼金材料 需要 LV10" in out
+    assert "6. 炼金工坊 [普通商店]\n炼金材料\n需要 LV10" in out
     assert "（已到最后一页）" in out
 
 
@@ -225,7 +230,7 @@ def test_shop_list_clamp_last_page():
 def test_shop_list_invalid_page_tpl12(raw):
     """裁决② + 3d §5.1：列表页码 0/非数字 → TPL-12。"""
     out = cmd_shop(parse(raw), make_ctx())
-    assert out.startswith("❌ 指令不正确：/商店 列表 ")
+    assert out.startswith("❌ 指令不正确：商店 列表 ")
 
 
 def test_shop_list_single_page_no_footer():
@@ -235,10 +240,38 @@ def test_shop_list_single_page_no_footer():
         {"id": "b", "name": "乙店", "type": "npc", "icon": "", "desc": "", "markers": []},
     ]
     out = render_shops_overview(rows, 1)
-    assert out.startswith("可用商店一览")
+    assert out.startswith("【商店】可用商店一览")
     assert "1. 甲店 [普通商店]" in out
     assert "2. 乙店 [NPC 商店]" in out
     assert "翻页" not in out
+
+
+def _half_width(s: str) -> int:
+    """半角当量（全角/宽 = 2；对齐 scripts/check_template_width.py）。"""
+    return sum(2 if unicodedata.east_asian_width(ch) in ("W", "F") else 1 for ch in s)
+
+
+def test_shop_overview_structured_lines_within_budget():
+    """遗留 #47 收尾：一览**结构化行 ≤28 半角**（头行 = 序号+名+徽标；门槛行）。
+
+    描述行属内容数据（介绍类），允许自然折行，不计入结构化行预算。
+    """
+    import re
+
+    out = cmd_shop(parse("/商店 列表"), make_ctx())
+    structured = [
+        ln for ln in out.splitlines()
+        if re.match(r"^\d+\. |^需要 |^已售罄|^全服|^.+限购", ln)
+    ]
+    # 头行逐条 ≤28；门槛标记行（需要…）≤28
+    for ln in structured:
+        assert _half_width(ln) <= 28, f"一览结构化行超宽（{_half_width(ln)}）：{ln!r}"
+    # 描述独立成行（介绍类），不再与头行/门槛挤在同一行
+    assert "1. 杂货铺 [普通商店]" in out.splitlines()
+    assert "新手村杂货铺" in out.splitlines()
+    assert "3. 冒险者公会商店 [声望商店]" in out.splitlines()
+    assert "公会专属" in out.splitlines()
+    assert "需要 熟悉" in out.splitlines()
 
 
 # ---------------------------------------------------------------------------
@@ -321,7 +354,7 @@ def test_buy_mixed_payment():
 
 def test_buy_missing_target_tpl12():
     """缺参 → TPL-12。"""
-    assert cmd_buy(parse("/购买"), make_ctx()) == "❌ 指令不正确：/购买。输入 /帮助 查看可用指令。"
+    assert cmd_buy(parse("/购买"), make_ctx()) == "❌ 指令不正确：购买\n发 帮助 查看可用指令"
 
 
 def test_buy_shortname_prefix_match():
@@ -398,7 +431,7 @@ def test_sell_item_missing():
 
 def test_sell_missing_target_tpl12():
     """缺参 → TPL-12。"""
-    assert cmd_sell(parse("/出售"), make_ctx()) == "❌ 指令不正确：/出售。输入 /帮助 查看可用指令。"
+    assert cmd_sell(parse("/出售"), make_ctx()) == "❌ 指令不正确：出售\n发 帮助 查看可用指令"
 
 
 # ---------------------------------------------------------------------------
@@ -516,7 +549,7 @@ def test_shop_rem_tpl_override_via_ctx():
     ctx = make_ctx(templates=templates)
     out = cmd_shop(parse("/商店 列表"), ctx)
     assert out.startswith("自定义商店一览")
-    assert "【1】杂货铺 [普通商店] 新手村杂货铺" in out
+    assert "【1】杂货铺 [普通商店]\n新手村杂货铺" in out
     # 无当前商店且无默认 normal → no_shop 覆盖
     ctx2 = make_ctx(shops={}, templates=templates)
     assert cmd_shop(parse("/商店"), ctx2) == "❌ 自定义无此商店"
@@ -527,23 +560,24 @@ def test_shop_rem_tpl_override_via_ctx():
 
 
 def test_shop_rem_tpl_default_when_no_ctx_templates():
-    """无 ctx['templates'] → tpl_of 回落内置默认（逐字对齐既有输出）。"""
+    """无 ctx['templates'] → tpl_of 回落全量模板表（批10·路C 新排版）。"""
     out = cmd_shop(parse("/商店 列表"), make_ctx())
-    assert out.startswith("可用商店一览")
-    assert "1. 杂货铺 [普通商店] 新手村杂货铺" in out
+    assert out.startswith("【商店】可用商店一览")
+    assert "1. 杂货铺 [普通商店]\n新手村杂货铺" in out
 
 
-def test_shop_rem_tpl_placeholder_whitelist_coverage():
-    """register_rem_tpl shop_* 白名单：默认模板占位符 ⊆ 白名单（防内容包拼错 key 缺键不替换）。"""
-    import re
+def test_shop_b10c_new_copy_anchors():
+    """批10·路C 新排版锚点：无店两行（❌+下一步）/ 尾段 Tip 免斜杠 / 进店用法与未命中两行。"""
+    from qbot_rpg.core.templates import tpl_of
 
-    from qbot_rpg.core.templates.register_rem_tpl import (
-        DEFAULT_TEMPLATES as _RR_TPL,
-        PLACEHOLDER_WHITELIST as _RR_WH,
+    # 无店兜底：❌ + 原因 + 下一步（两行；旧版单行「❌ 商店不存在」）
+    assert cmd_shop(parse("/商店"), make_ctx(shops={})) == "❌ 商店不存在\n发 商店列表 查看可用商店"
+    # 尾段 Tip 免单引号（旧「发送'购买 序号'即可购买物品。」）
+    out = cmd_shop(parse("/商店"), make_ctx())
+    assert "Tip:发 购买 <序号> 即可买下" in out
+    assert "'" not in out.split("Tip:")[-1]
+    # 进店用法 / 未命中：免斜杠 +「或」替代旧「|」+ 下一步独立行
+    assert tpl_of(None, "shop_enter_usage") == "发 商店进入 <序号 或 店名>\n序号见 商店列表"
+    assert tpl_of(None, "shop_enter_not_found", {"name": "幽灵店"}) == (
+        "❌ 找不到商店「幽灵店」\n发 商店列表 查看可用商店"
     )
-    pat = re.compile(r"\{([a-zA-Z0-9_]+)\}")
-    shop_keys = {k for k in _RR_TPL if k.startswith("shop_")}
-    assert shop_keys, "register_rem_tpl 应含 shop_* 分区 key"
-    for key in shop_keys:
-        used = set(pat.findall(str(_RR_TPL[key])))
-        assert used <= _RR_WH.get(key, set()), f"{key}: 占位符 {used} 超出白名单"

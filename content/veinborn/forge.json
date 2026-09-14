@@ -6,7 +6,7 @@
    "name": "武器锻造树",
    "type": "weapon",
    "roots": [
-    "node_shijing_blade_a_mid",
+    "node_shijing_short_blade",
     "node_yuanmai_blade_2",
     "node_wasteland_lord_fang",
     "node_gravelcrown_cleaver",
@@ -194,7 +194,9 @@
      "type": "weapon",
      "level": 4,
      "parent": "node_guji_blade_b",
-     "branch": [],
+     "branch": [
+      "node_guji_blade_frenzy"
+     ],
      "stats": {
       "atk": 253
      },
@@ -238,6 +240,31 @@
      "final": false
     },
     {
+     "id": "node_guji_blade_frenzy",
+     "name": "狂乱裂脊",
+     "item": "guji_blade_frenzy",
+     "type": "weapon",
+     "level": 5,
+     "parent": "node_guji_blade_c",
+     "branch": [],
+     "stats": {
+      "atk": 273
+     },
+     "slots": [],
+     "materials": [
+      {
+       "item": "mantis_crystal_blade",
+       "count": 6
+      },
+      {
+       "item": "shadow_leopard_fang",
+       "count": 6
+      }
+     ],
+     "rarity": "fine",
+     "final": true
+    },
+    {
      "id": "node_guji_blade_d",
      "name": "龙骨噬脊刃",
      "item": "guji_blade_d",
@@ -263,12 +290,35 @@
      "final": true
     },
     {
+     "id": "node_shijing_short_blade",
+     "name": "蚀晶短刃",
+     "item": "shijing_short_blade",
+     "type": "weapon",
+     "level": 1,
+     "parent": null,
+     "branch": [
+      "node_shijing_blade_a_mid"
+     ],
+     "materials": [
+      {
+       "item": "vein_shard",
+       "count": 3
+      }
+     ],
+     "stats": {
+      "atk": 17
+     },
+     "slots": [],
+     "rarity": "normal",
+     "final": false
+    },
+    {
      "id": "node_shijing_blade_a_mid",
      "name": "脉晶长锋",
      "item": "shijing_blade_a_mid",
      "type": "weapon",
      "level": 2,
-     "parent": null,
+     "parent": "node_shijing_short_blade",
      "branch": [],
      "stats": {
       "atk": 83
@@ -864,7 +914,8 @@
     "node_gushou_helm",
     "node_haozhu_helm",
     "node_anzhu_helm",
-    "node_junwang_helm"
+    "node_junwang_helm",
+    "node_shijing_crown"
    ],
    "nodes": [
     {
@@ -1214,6 +1265,31 @@
        "count": 2
       }
      ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_shijing_crown",
+     "name": "蚀晶额冠",
+     "item": "shijing_crown",
+     "type": "armor_head",
+     "level": 4,
+     "parent": null,
+     "branch": [],
+     "materials": [
+      {
+       "item": "mantis_crystal_blade",
+       "count": 2
+      },
+      {
+       "item": "vein_shard",
+       "count": 5
+      }
+     ],
+     "stats": {
+      "dfn": 18
+     },
+     "slots": [],
      "rarity": "epic",
      "final": true
     }
@@ -1610,7 +1686,8 @@
     "node_gushou_hand",
     "node_haozhu_hand",
     "node_anzhu_hand",
-    "node_junwang_hand"
+    "node_junwang_hand",
+    "node_yuanmai_bracer"
    ],
    "nodes": [
     {
@@ -1960,6 +2037,31 @@
        "count": 1
       }
      ],
+     "rarity": "epic",
+     "final": true
+    },
+    {
+     "id": "node_yuanmai_bracer",
+     "name": "渊脉腕轮",
+     "item": "yuanmai_bracer",
+     "type": "armor_hand",
+     "level": 5,
+     "parent": null,
+     "branch": [],
+     "materials": [
+      {
+       "item": "ancient_beast_shell",
+       "count": 2
+      },
+      {
+       "item": "vein_shard",
+       "count": 5
+      }
+     ],
+     "stats": {
+      "dfn": 30
+     },
+     "slots": [],
      "rarity": "epic",
      "final": true
     }

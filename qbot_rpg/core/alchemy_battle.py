@@ -16,7 +16,7 @@
   ④ 强度公式 intensity（BA-10：技能×(1+0.4×冷却数)，settings 战斗道具.强度公式 可配；
      方位 v0.6 修正 #8/N2：resolve 强度再乘熟练度乘区 proficiency_mult——settings 战斗
      即时调合.proficiency_multiplier {min,max,curve} 配置，缺段=1.0 无乘区）→
-  ⑤ 冷却 cooldown_of（BA-06：吃冷却对齐 /道具 冷却配置，炸弹 3 回合冷却）→
+  ⑤ 冷却 cooldown_of（BA-06：吃冷却对齐 /道具 冷却配置，炸弹 3 次行动冷却）→
   ⑥ 能量 consume_energy（GU-52/R-08：energy_enabled=true 时 EnergyBar.consume(1)，关则直通）。
 
 依据：
@@ -53,7 +53,7 @@
        ctx["currencies"]["gem"]（全量校验、全拒+差异，ATO-01）；金币 cost.coins 不扣
        （F-17 仅「素材+能量 1 格」+ 宝石口径，即时调合不消耗金币——定稿未言，保守不扣）。
   E-A5  冷却读取顺序（BA-06）：recipe_def.cooldown > recipe_def.output.cooldown >
-       默认 3（炸弹 3 回合冷却）。物品级冷却配置（/道具 冷却配置）由壳层解析 items def 后
+       默认 3（炸弹 3 次行动冷却）。物品级冷却配置（/道具 冷却配置）由壳层解析 items def 后
        并入配方 cooldown 字段，或经 resolve(cooldown=...) 显式传入——本签名 cooldown_of
        (recipe_def) 无 ctx，不从 items 注册表解析。
   E-A6  强度公式基准（BA-10「技能×(1+0.4×冷却数)」）：「技能」基准值取 recipe_def.skill
@@ -80,6 +80,7 @@ from typing import Any, Dict, List, Mapping, MutableMapping, Optional, Tuple, ca
 from qbot_rpg.core.alchemy_core import ALCHEMY_JOB_ID
 from qbot_rpg.core.energy_bar import EnergyBar
 from qbot_rpg.core.proficiency import ProficiencyEngine
+from qbot_rpg.core.templates import tpl_of
 
 __all__ = [
     "BATTLE_ALCHEMY_USED_KEY",
@@ -103,7 +104,7 @@ BATTLE_ALCHEMY_USED_KEY: str = "battle_alchemy_used"
 DEFAULT_PER_BATTLE_LIMIT: int = 1
 # BA-07：auto_use 默认 true（当场自动使用；settings 战斗即时调合.auto_use 可配）
 DEFAULT_AUTO_USE: bool = True
-# BA-06：炸弹 3 回合冷却（对齐 /道具 冷却配置）
+# BA-06：炸弹 3 次行动冷却（对齐 /道具 冷却配置）
 DEFAULT_BOMB_COOLDOWN: int = 3
 # BA-10：道具强度公式 技能×(1+0.4×冷却数)（settings 战斗道具.强度公式 可配）
 DEFAULT_INTENSITY_COEF: float = 0.4
@@ -199,10 +200,10 @@ class BattleAlchemyEngine:
     # ------------------------------------------------------------------
     @staticmethod
     def cooldown_of(recipe_def: Any) -> int:
-        """冷却回合数（BA-06/E-A5）：配方 cooldown > 配方 output.cooldown > 默认 3。
+        """冷却时长（次行动；BA-06/E-A5）：配方 cooldown > 配方 output.cooldown > 默认 3。
 
         入参：recipe_def（配方 def，可带 cooldown 字段或 output.cooldown）。
-        出参：冷却回合数 int（非负；非法/缺失 → 默认 3 炸弹冷却）。
+        出参：冷却时长（次行动）int（非负；非法/缺失 → 默认 3 炸弹冷却）。
         核心：对齐 /道具 冷却配置——物品级冷却由壳层解析 items def 后并入配方 cooldown 或
               经 resolve(cooldown=...) 显式传入（本签名无 ctx，不从 items 注册表解析）。
         """
@@ -224,7 +225,7 @@ class BattleAlchemyEngine:
     def intensity(self, recipe_def: Any, *, cooldown: Any) -> float:
         """道具强度公式（BA-10/E-A6）：强度 = 技能 × (1 + 系数 × 冷却数)。
 
-        入参：recipe_def（配方 def，skill 字段为「技能」基准值）；cooldown 冷却回合数。
+        入参：recipe_def（配方 def，skill 字段为「技能」基准值）；cooldown 冷却时长（次行动）。
         出参：强度 float（技能缺省 1.0；系数 settings 战斗道具.强度公式，缺省 0.4）。
         核心：技能基准缺省 1.0，强度参与伤害链结算由战斗层消费。
         """
@@ -287,6 +288,7 @@ class BattleAlchemyEngine:
         *,
         in_battle: bool,
         battle_alchemy_used: Any,
+        ctx: Any = None,
     ) -> dict:
         """前置守卫（GU-50~52/54，按 GU 顺序判定）：{ok} 或 {ok:False, reason}。
 
@@ -302,20 +304,21 @@ class BattleAlchemyEngine:
         # GU-50 战斗中（战斗会话上下文内）
         if not in_battle:
             return {"ok": False, "reason": "not_in_battle",
-                    "message": "仅战斗中可使用 /即时调合 <配方>"}
+                    "message": tpl_of(ctx, "alchemy_engine_battle_not_in_battle")}
         # GU-51 炼金职业 ≥ 大师（E-A9：档位索引 ≥ 大师档位索引）
         if not self._master_ok(player, job_id):
             return {"ok": False, "reason": "tier_too_low",
-                    "message": "炼金职业需达到大师方可即时调合"}
+                    "message": tpl_of(ctx, "alchemy_engine_battle_master_required")}
         # GU-52 能量 ≥1 格（R-08 默认关；开启时才校验）
         if self.energy_enabled():
             if not isinstance(player, Mapping) or self._energy.current_of(player) < 1:
-                return {"ok": False, "reason": "energy", "message": "能量不足，无法即时调合"}
+                return {"ok": False, "reason": "energy",
+                        "message": tpl_of(ctx, "alchemy_engine_battle_energy_short")}
         # GU-54 battle_alchemy_used < per_battle_limit（限 1 次/场；第 2 次拒绝）
         used = self._norm_used(battle_alchemy_used)
         if used >= self._per_battle_limit():
             return {"ok": False, "reason": "already_used",
-                    "message": "本场战斗已使用过即时调合（限 1 次/场）"}
+                    "message": tpl_of(ctx, "alchemy_engine_battle_already_used")}
         return {"ok": True, "battle_alchemy_used": used,
                 "per_battle_limit": self._per_battle_limit()}
 
@@ -413,9 +416,11 @@ class BattleAlchemyEngine:
         核心：逐材料 need vs have；任一不足 → 全拒（严禁部分执行，ATO-01）+ 差异清单。
         """
         if not isinstance(ctx, Mapping):
-            return {"ok": False, "reason": "invalid_ctx", "message": "上下文非法"}
+            return {"ok": False, "reason": "invalid_ctx",
+                    "message": tpl_of(ctx, "alchemy_engine_ctx_invalid")}
         if not isinstance(recipe_def, Mapping):
-            return {"ok": False, "reason": "recipe_invalid", "message": "配方非法"}
+            return {"ok": False, "reason": "recipe_invalid",
+                    "message": tpl_of(ctx, "alchemy_engine_recipe_invalid")}
         needs = self._materials(recipe_def)
         shortfall: List[dict] = []
         for rec in needs:
@@ -430,7 +435,7 @@ class BattleAlchemyEngine:
                 })
         if shortfall:
             return {"ok": False, "reason": "materials_insufficient",
-                    "message": "携带素材不足，无法即时调合",
+                    "message": tpl_of(ctx, "alchemy_engine_battle_carry_short"),
                     "shortfall": shortfall}
         return {"ok": True, "materials": needs}
 
@@ -457,7 +462,7 @@ class BattleAlchemyEngine:
             ctx["battle_snapshot"] 经 read_used 读取，E-A1）。
           - auto_use：当场自动使用开关（None → settings 战斗即时调合.auto_use，默认 true，
             BA-07）。
-          - cooldown：本次产出冷却回合数（0/None → cooldown_of(recipe_def) 兜底，BA-06）。
+          - cooldown：本次产出冷却时长（次行动）（0/None → cooldown_of(recipe_def) 兜底，BA-06）。
           - use_fn：道具行动入口回调 use_fn(item_id, count, produced)（战斗层注入
             _resolve_item_action 鸭子，BA-07；返回 outcome 或 None）。
         出参：
@@ -471,9 +476,11 @@ class BattleAlchemyEngine:
           计数自增并回写（E-A1）。
         """
         if not isinstance(ctx, Mapping):
-            return {"ok": False, "reason": "invalid_ctx", "message": "上下文非法"}
+            return {"ok": False, "reason": "invalid_ctx",
+                    "message": tpl_of(ctx, "alchemy_engine_ctx_invalid")}
         if not isinstance(recipe_def, Mapping):
-            return {"ok": False, "reason": "recipe_invalid", "message": "配方非法"}
+            return {"ok": False, "reason": "recipe_invalid",
+                    "message": tpl_of(ctx, "alchemy_engine_recipe_invalid")}
         # ctx 为可变容器（回滚/扣减就地改写），经 isinstance 收窄后显式 cast（对齐 mypy 收窄）
         ctx_mut = cast(MutableMapping[str, Any], ctx)
 
@@ -486,7 +493,7 @@ class BattleAlchemyEngine:
         # GU-54 限次防御拦截（ATO-01 幂等衔接：resolve 也拦一次，防壳层漏守卫）
         if used >= self._per_battle_limit():
             return {"ok": False, "reason": "already_used",
-                    "message": "本场战斗已使用过即时调合（限 1 次/场）"}
+                    "message": tpl_of(ctx, "alchemy_engine_battle_already_used")}
 
         # BA-07 auto_use 解析；BA-06 冷却；BA-10 强度
         use = self._auto_use_default() if auto_use is None else bool(auto_use)
@@ -521,7 +528,7 @@ class BattleAlchemyEngine:
         if gem_cost > 0:
             if not isinstance(currencies, MutableMapping):
                 return {"ok": False, "reason": "currencies_missing",
-                        "message": "无法结算宝石"}
+                        "message": tpl_of(ctx, "alchemy_engine_battle_gem_settle_fail")}
             have_gem = self._gem_of(currencies)
             if have_gem < gem_cost:
                 shortfall.append({
@@ -531,7 +538,7 @@ class BattleAlchemyEngine:
                 })
         if shortfall:
             return {"ok": False, "reason": "materials_insufficient",
-                    "message": "携带素材或宝石不足，无法即时调合",
+                    "message": tpl_of(ctx, "alchemy_engine_battle_carry_gem_short"),
                     "shortfall": shortfall}
 
         # 快照（E-A8：currencies/inventory/玩家 persistent_state 原子防双扣）
@@ -542,7 +549,8 @@ class BattleAlchemyEngine:
         if not en.get("ok"):
             self._restore(ctx_mut, snap)
             return {"ok": False, "reason": "energy",
-                    "message": en.get("message", "能量不足，无法即时调合"),
+                    "message": en.get(
+                        "message", tpl_of(ctx, "alchemy_engine_battle_energy_short")),
                     "energy": en}
 
         # 材料原子扣减（BA-08：走 ctx remove_item，战斗携带素材，E-A2）
@@ -550,7 +558,7 @@ class BattleAlchemyEngine:
             if not self._remove_item(ctx_mut, rec["item_id"], rec["count"]):
                 self._restore(ctx_mut, snap)
                 return {"ok": False, "reason": "materials_remove_failed",
-                        "message": "材料扣除失败，已回滚"}
+                        "message": tpl_of(ctx, "alchemy_engine_battle_deduct_rollback")}
 
         # 宝石原子扣减（BA-08/E-A4：cost.gem > 0 时扣减）
         if gem_cost > 0:
@@ -560,7 +568,8 @@ class BattleAlchemyEngine:
         produced = self._produce_record(ctx, recipe_def)
         if produced is None:
             self._restore(ctx_mut, snap)
-            return {"ok": False, "reason": "produce_failed", "message": "产出实例构造失败"}
+            return {"ok": False, "reason": "produce_failed",
+                    "message": tpl_of(ctx, "alchemy_engine_battle_produce_fail")}
 
         # auto_use 结算或入包（BA-07：二选一——当场自动使用走 use_fn；否则产出入包）
         auto_used = False
@@ -573,7 +582,8 @@ class BattleAlchemyEngine:
             # 入包（BA-07 auto_use=false 或 E-A7：未注入/失败 use_fn → 不丢产出按入包）
             if not self._into_pack(ctx_mut, produced):
                 self._restore(ctx_mut, snap)
-                return {"ok": False, "reason": "add_item_failed", "message": "产出入包失败"}
+                return {"ok": False, "reason": "add_item_failed",
+                        "message": tpl_of(ctx, "alchemy_engine_battle_add_fail")}
 
         # 计数自增（GU-54）并回写注入的战斗快照 dict（E-A1）
         new_used = used + 1
@@ -582,7 +592,7 @@ class BattleAlchemyEngine:
 
         return {
             "ok": True,
-            "message": self._success_message(produced, auto_used, use),
+            "message": self._success_message(produced, auto_used, use, ctx),
             "produced": produced,
             "auto_use": use,
             "auto_used": auto_used,
@@ -606,7 +616,8 @@ class BattleAlchemyEngine:
         if player is None and isinstance(ctx, Mapping):
             player = ctx.get("player")
         if not isinstance(player, MutableMapping):
-            return {"ok": False, "reason": "invalid_player", "message": "玩家状态非法"}
+            return {"ok": False, "reason": "invalid_player",
+                    "message": tpl_of(ctx, "alchemy_engine_player_invalid")}
         return self._energy.consume(player, 1)
 
     # ------------------------------------------------------------------
@@ -817,13 +828,19 @@ class BattleAlchemyEngine:
             return None
 
     @staticmethod
-    def _success_message(produced: Mapping[str, Any], auto_used: bool, use: bool) -> str:
-        """成功消息（M-17 纯文本模板，无 emoji；BA-09 一行渲染归批9B）。"""
+    def _success_message(produced: Mapping[str, Any], auto_used: bool, use: bool,
+                         ctx: Any = None) -> str:
+        """成功消息（M-17 纯文本模板，无 emoji；BA-09 一行渲染归批9B）。
+
+        文案迁表（专项·引擎文案2）：used_auto/used_bag 两键；ctx 无 templates 时走全量表默认值。
+        """
         name = produced.get("name") or produced.get("item_id")
         count = produced.get("count", 1)
         if use and auto_used:
-            return f"{name} ×{count} 已即时调合并自动使用"
-        return f"{name} ×{count} 已即时调合入包（auto_use 关闭或未自动使用）"
+            return tpl_of(ctx, "alchemy_engine_battle_used_auto",
+                          {"name": name, "count": count})
+        return tpl_of(ctx, "alchemy_engine_battle_used_bag",
+                      {"name": name, "count": count})
 
     @staticmethod
     def _snapshot(ctx: Mapping[str, Any]) -> dict:

@@ -367,7 +367,7 @@ def t_preview_confirm() -> None:
     # e4 无进行中预览 /确认 → 拒绝
     ctx = fresh_ctx(modules, {"ore": 3}, player, now=1000.0)
     out_txt = cmd_confirm(parsed("/确认"), ctx)
-    assert "当前无可确认的锻造预览" in out_txt, out_txt
+    assert "❌ 当前无待确认预览" in out_txt, out_txt
 
 
 def t_blueprint() -> None:
@@ -394,7 +394,7 @@ def t_blueprint() -> None:
 
     # f3 未知节点 → 空态
     out_txt = cmd_blueprint(parsed("/图纸 不存在之剑"), ctx)
-    assert "未找到「不存在之剑」相关锻造链" in out_txt, out_txt
+    assert "❌ 未找到「不存在之剑」" in out_txt, out_txt
 
 
 def t_forge_tree() -> None:

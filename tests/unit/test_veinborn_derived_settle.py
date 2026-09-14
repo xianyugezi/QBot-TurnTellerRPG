@@ -274,11 +274,20 @@ def _engine_power(power: float, cond: Any = None) -> BattleEngine:
     return eng
 
 
-def _last_multi(eng: BattleEngine) -> float:
-    """读最近一条 action_record 的 rating.multi（伤害倍率结算值）。"""
+def _last_player_multi(eng: BattleEngine) -> float:
+    """读玩家侧最近一条 action_record 的 rating.multi（伤害倍率结算值）。
+
+    CTB 迁移（2026-09-10）：`do_action` 只结算单次行动，不再自带「敌后手」——
+    但本夹具直接调 `do_action("player", ...)` 后，调度器不替 NPC 补行动，
+    record 尾部即玩家条目。此处仍**显式按 actor=="player" 反查**，使断言不受
+    未来调度器是否自动补 NPC 记录的影响（CTB 下 record 是双方混排的行动流水）。
+    """
     recs = eng.battle_state().get("action_record", [])
     assert recs, "应有 action_record"
-    return float(recs[-1].get("rating", {}).get("multi", 0.0))
+    for rec in reversed(recs):
+        if rec.get("actor") == "player":
+            return float(rec.get("rating", {}).get("multi", 0.0))
+    raise AssertionError(f"action_record 中无玩家条目：{recs}")
 
 
 def test_p11_derived_ult_full_mult_not_capped_to_1_5() -> None:
@@ -290,7 +299,7 @@ def test_p11_derived_ult_full_mult_not_capped_to_1_5() -> None:
     assert out.ok is True, f"派生施放应成功，got {out}"
     assert out.combo_result and out.combo_result.get("form_id") == "big_ult", \
         f"应派生 big_ult，got {out.combo_result}"
-    multi = _last_multi(eng)
+    multi = _last_player_multi(eng)
     assert multi == 2.0, f"派生大招 mult 应 2.0×（power 200/100），got {multi}（cap 1.5 缺陷=1.5）"
     dmg = hp0 - _enemy_hp(eng)
     assert dmg > 170, f"派生大招 2.0× 应≈200，got {dmg}"
@@ -302,7 +311,7 @@ def test_p11_derived_300_pct_full_mult() -> None:
     hp0 = _enemy_hp(eng)
     out = eng.do_action("player", {"type": "skill", "skill_id": "rb_core_strike"})
     assert out.ok is True, f"派生施放应成功，got {out}"
-    multi = _last_multi(eng)
+    multi = _last_player_multi(eng)
     assert multi == 3.0, f"派生大招 mult 应 3.0×（power 300/100），got {multi}（cap 1.5 缺陷=1.5）"
     dmg = hp0 - _enemy_hp(eng)
     assert dmg > 260, f"派生大招 3.0× 应≈300，got {dmg}"

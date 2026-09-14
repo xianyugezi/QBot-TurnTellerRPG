@@ -86,9 +86,14 @@ def _parsed(raw: str) -> Any:
 # 注册与白名单
 # ---------------------------------------------------------------------------
 def test_investigate_in_whitelist_and_prefix_required() -> None:
-    """「调查」入白名单 + 需 / 前缀（M4 对话接缝：可快捷绑定不可免前缀直发）。"""
+    """「调查」入白名单；前缀口径同步 2026-09-03 裁决（全指令免 / 前缀）。
+
+    原断言「调查 ∈ DEFAULT_PREFIX_REQUIRED」随 068bcd4 裁决作废——parsers.py
+    L186-193 注释：调查等原需前缀指令全部放行免前缀（GM 类独立强制 '/'）。
+    """
     assert INVESTIGATE_CMD in DEFAULT_WHITELIST
-    assert INVESTIGATE_CMD in DEFAULT_PREFIX_REQUIRED
+    assert DEFAULT_PREFIX_REQUIRED == frozenset()
+    assert INVESTIGATE_CMD not in DEFAULT_PREFIX_REQUIRED
 
 
 def test_register_investigate_commands_no_make_context_registers() -> None:
@@ -293,17 +298,5 @@ def test_investigate_templates_default_when_no_ctx_templates() -> None:
     ctx = _base_ctx()
     ctx["map_def"] = None
     ctx["location"] = None
-    assert cmd_investigate(_parsed("/调查"), ctx) == "❌ 无法确定当前位置，无法调查。"
-
-
-def test_investigate_tpl_placeholder_whitelist_coverage() -> None:
-    """investigate_tpl 白名单：默认模板占位符 ⊆ 白名单（防内容包拼错 key 引入缺键不替换）。"""
-    import re
-    from qbot_rpg.core.templates.investigate_tpl import (
-        DEFAULT_TEMPLATES as _INV_TPL,
-        PLACEHOLDER_WHITELIST as _INV_WH,
-    )
-    pat = re.compile(r"\{([a-zA-Z0-9_]+)\}")
-    for key, tpl in _INV_TPL.items():
-        used = set(pat.findall(str(tpl)))
-        assert used <= _INV_WH.get(key, set()), f"{key}: 占位符 {used} 超出白名单"
+    # 2026-09-12 批8·路B：investigate_no_map 重做（❌ 原因 + 免斜杠下一步两行）
+    assert cmd_investigate(_parsed("/调查"), ctx) == "❌ 无法确定当前位置\n发 位置 查看所在地"

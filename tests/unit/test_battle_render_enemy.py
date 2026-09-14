@@ -5,7 +5,7 @@
      + docs/m5_batch_plan.md M5-05 + 细化_5e §1.4/§3.1~§3.4（BREP-10~14 + TC-12~15
      + D-5E 意图预告固定句式 + 数值层 L58-61 先手击杀不反击写死、L38/L240 拦截链）。
 
-覆盖：TC-12 反击命中逐字（`❌ 史莱姆反击，你受到 4 伤害（HP 21/30）`）/ BREP-11
+覆盖：TC-12 反击命中逐字（`❌ 史莱姆反击\n你受到 4 伤害`；批5 去 HP 括注）/ BREP-11
 未命中逐字 / TC-13 先手击杀不渲染反击行 / TC-14 意图预告逐字（固定句式 D-5E，无 emoji）
 / TC-15 特殊行动逐字（狂暴/召唤/印记，效果纯文字）/ BREP-14 拦截链三行（吸收/反弹/免疫）
 / 玩家防御中受击分发 BREP-06 / _render_enemy_action 多行拼接 / 缺接线属性回落 /
@@ -52,9 +52,14 @@ def _outcome(**kw: Any) -> ActionOutcome:
 
 
 def _report(*outcomes: Any, **kw: Any) -> TurnReport:
-    """构造 TurnReport（真实字段；player/enemy 为 HP 快照，outcomes 流水）。"""
+    """构造 TurnReport（CTB 真实字段；player/enemy 为 HP 快照，outcomes 流水）。
+
+    CTB 迁移（2026-09-10 · Agent 4）：`phases` 已由 dataclass 字段改为只读 property
+    （底层 `_phase_label`），构造器不再接受 `phases` 实参；CTB 进度以 `action_seq`
+    （int）+ `battle_time`（float）为准，顶层 `turn` 仅为 `action_seq` 兼容镜像。
+    """
     defaults: Dict[str, Any] = {
-        "turn": 1, "phases": ("player_action", "enemy_action"),
+        "turn": 1, "action_seq": 1, "battle_time": 100.0,
         "player": 21, "enemy": 7, "ended": False, "status": None,
         "log": (), "outcomes": tuple(outcomes),
     }
@@ -94,34 +99,34 @@ def _assert_emoji_discipline(text: str) -> None:
 
 
 def test_tc12_enemy_hit_exact() -> None:
-    """TC-12：反击命中逐字 `❌ 史莱姆反击，你受到 4 伤害（HP 21/30）`（BREP-10）。"""
+    """TC-12：反击命中逐字 `❌ 史莱姆反击\n你受到 4 伤害`（BREP-10；批5 去 HP 括注）。"""
     oc = _outcome()
     line = _render_enemy_hit(
         _enriched(oc, attacker_name="史莱姆", action_name="反击", player_max_hp=30),
     )
-    assert line == "❌ 史莱姆反击，你受到 4 伤害（HP 21/30）"
+    assert line == "❌ 史莱姆反击，你受到 4 伤害。"
     assert oc.message not in line                    # 不直接复用引擎 message（5e P2-8）
 
 
 def test_tc12_enemy_action_dispatcher() -> None:
     """TC-12：_render_enemy_action 命中分支 → BREP-10（接线层展示属性经 outcome 注入）。"""
     oc = _enriched(_outcome(), attacker_name="史莱姆", action_name="反击", player_max_hp=30)
-    assert _render_enemy_action(oc) == "❌ 史莱姆反击，你受到 4 伤害（HP 21/30）"
+    assert _render_enemy_action(oc) == "❌ 史莱姆反击，你受到 4 伤害。"
 
 
 def test_tc12_render_round_enemy_counter() -> None:
     """TC-12：render_battle_round 先手行动+怪物反击合并 1 条消息（军规3，同条换行）。"""
     player = _enriched(
-        _outcome(actor="player", seq=1, target="史莱姆", raw_damage=18,
-                 final_damage=18, target_hp=7),
-        action_name="施放火球术", target_max_hp=25,
+        _outcome(actor="player", seq=1, action_type="skill", target="史莱姆",
+                 raw_damage=18, final_damage=18, target_hp=7),
+        action_name="火球术", target_max_hp=25,
     )
     enemy = _enriched(_outcome(seq=2), attacker_name="史莱姆", action_name="反击",
                       player_max_hp=30)
     text = render_battle_round(_report(player, enemy))
     assert text == (
-        "✅ 你施放火球术，造成 18 伤害（史莱姆 7/25）\n"
-        "❌ 史莱姆反击，你受到 4 伤害（HP 21/30）"
+        "✅ 你发动技能 火球术，造成 18 伤害。\n"
+        "❌ 史莱姆反击，你受到 4 伤害。"
     )
 
 
@@ -131,10 +136,10 @@ def test_tc12_render_round_enemy_counter() -> None:
 
 
 def test_enemy_miss_exact() -> None:
-    """BREP-11：未命中逐字 `✅ 史莱姆的攻击被你躲开（HP 21/30）`；miss 不扣血（L24）。"""
+    """BREP-11：未命中逐字 `✅ 史莱姆的攻击被你躲开`（批5 去 HP 括注）；miss 不扣血（L24）。"""
     oc = _outcome(hit=False, raw_damage=0, final_damage=0, target_hp=21)
     line = _render_enemy_miss(_enriched(oc, attacker_name="史莱姆", player_max_hp=30))
-    assert line == "✅ 史莱姆的攻击被你躲开（HP 21/30）"  # 模板兜底（roll miss 已移除）
+    assert line == "✅ 史莱姆的攻击被你躲开"  # 模板兜底（roll miss 已移除）
 
 
 def test_enemy_action_miss_branch() -> None:
@@ -143,7 +148,7 @@ def test_enemy_action_miss_branch() -> None:
         _outcome(hit=False, raw_damage=0, final_damage=0, target_hp=21),
         attacker_name="史莱姆", player_max_hp=30,
     )
-    assert _render_enemy_action(oc) == "✅ 史莱姆的攻击被你躲开（HP 21/30）"  # 模板兜底
+    assert _render_enemy_action(oc) == "✅ 史莱姆的攻击被你躲开"  # 模板兜底
 
 
 # ---------------------------------------------------------------------------
@@ -159,7 +164,7 @@ def test_tc13_killed_enemy_no_counter() -> None:
         action_name="攻击", target_max_hp=25,
     )
     text = render_battle_round(_report(player))      # 无 enemy outcome
-    assert "✅ 你攻击，造成 25 伤害（史莱姆 0/25）" in text
+    assert "✅ 你攻击，造成 25 伤害。" in text
     assert "反击" not in text
     assert "你受到" not in text
 
@@ -170,19 +175,19 @@ def test_tc13_killed_enemy_no_counter() -> None:
 
 
 def test_tc14_intent_exact() -> None:
-    """TC-14：意图预告逐字 `史莱姆王 蓄力中（下回合发动「毒雾吐息」）`（BREP-12）。"""
+    """TC-14：意图预告逐字 `史莱姆王 蓄力中\n下次行动发动「毒雾吐息」`（BREP-12；批5 拆行）。"""
     oc = _outcome(action_type="charge")
     line = _render_enemy_intent(
         _enriched(oc, attacker_name="史莱姆王", intent_skill="毒雾吐息"),
     )
-    assert line == "史莱姆王 蓄力中（下回合发动「毒雾吐息」）"
+    assert line == "史莱姆王 蓄力中\n下次行动发动「毒雾吐息」"
 
 
 def test_tc14_intent_via_dispatcher() -> None:
     """TC-14：action_type=charge（蓄力/读招归类）→ BREP-12 分支。"""
     oc = _enriched(_outcome(action_type="charge"), attacker_name="史莱姆王",
                    intent_skill="毒雾吐息")
-    assert _render_enemy_action(oc) == "史莱姆王 蓄力中（下回合发动「毒雾吐息」）"
+    assert _render_enemy_action(oc) == "史莱姆王 蓄力中\n下次行动发动「毒雾吐息」"
 
 
 def test_tc14_intent_missing_skill_returns_none() -> None:
@@ -255,7 +260,7 @@ def test_brep14_appended_after_hit_line() -> None:
         attacker_name="史莱姆", action_name="反击", player_max_hp=30,
     )
     text = _render_enemy_action(oc)
-    assert text == "❌ 史莱姆反击，你受到 4 伤害（HP 21/30）\n冰霜结界 吸收了 5 点伤害"
+    assert text == "❌ 史莱姆反击，你受到 4 伤害。\n冰霜结界 吸收了 5 点伤害"
 
 
 def test_brep14_render_round_with_interception() -> None:
@@ -270,7 +275,7 @@ def test_brep14_render_round_with_interception() -> None:
         attacker_name="史莱姆", action_name="反击", player_max_hp=30,
     )
     text = render_battle_round(_report(player, enemy))
-    assert "❌ 史莱姆反击，你受到 4 伤害（HP 21/30）\n冰霜结界 吸收了 5 点伤害" in text
+    assert "❌ 史莱姆反击，你受到 4 伤害。\n冰霜结界 吸收了 5 点伤害" in text
 
 
 def test_brep14_unknown_effect_skipped() -> None:
@@ -292,12 +297,12 @@ def test_enemy_action_defend_dispatch_brep06() -> None:
         player_guarding=True,
     )
     text = _render_enemy_action(oc)
-    assert text == "✅ 你防御了史莱姆的撞击，受到 2 伤害（HP 19/30）"
+    assert text == "✅ 你防御了史莱姆的撞击\n受到 2 伤害"
 
 
 def test_enemy_action_fallback_defaults() -> None:
     """缺接线属性（真实 ActionOutcome）→ 缺省回落：怪物名「怪物」、普攻「攻击」、最大 HP=当前。"""
-    assert _render_enemy_action(_outcome()) == "❌ 怪物攻击，你受到 4 伤害（HP 21/21）"
+    assert _render_enemy_action(_outcome()) == "❌ 怪物攻击，你受到 4 伤害。"
 
 
 # ---------------------------------------------------------------------------

@@ -108,8 +108,9 @@ TYPE_BADGES: Mapping[str, str] = {
 }
 
 # 商店不存在（引擎校验链① 口径，no_shop 分支；未开门分支由引擎 gate message 透传）
-# 渲染走 register_rem_tpl 分区 shop_no_shop（2026-08-31 模板配置化；本常量保留为 API/测试锚点）
-TPL_NO_SHOP = "❌ 商店不存在"
+# 渲染走全量模板表 shop_no_shop（2026-09-12 消息模板重构·批10·路C：迁 template_table.json；
+# 新排版 = ❌ + 原因 + 下一步两行）；register_rem_tpl 分区已空壳化；本常量保留为 API/测试锚点。
+TPL_NO_SHOP = "❌ 商店不存在\n发 商店列表 查看可用商店"
 
 # 商店条目行分隔线（2b3 TC-05：条目间 `---------------` 分隔）
 _ROW_SEPARATOR = "---------------"
@@ -135,7 +136,7 @@ def _gate(ctx: Mapping[str, Any]) -> Optional[str]:
     2026-08-31 QA 修复：/商店 /购买 /出售 此前缺门槛，未注册玩家可直接浏览/交易。
     """
     if ctx.get("registered", True) is False:
-        return TPL_REGISTER_GATE
+        return tpl_of(ctx, "basic_register_gate")
     return None
 
 
@@ -160,7 +161,7 @@ def _fragment(parsed: Any) -> str:
 def _price_text(price: object, ctx: Mapping[str, Any]) -> str:
     """商品单价文本：single → 「100(金币)」；mixed → 「50(金币)+5(宝石)」（2b3 TC-05/TC-19）。
 
-    模板化：shop_price_single / shop_price_part（register_rem_tpl 分区，内容包可覆盖）。
+    模板化：shop_price_single / shop_price_part（2026-09-12 批10·路C 迁全量模板表，内容包可覆盖）。
     """
     if not isinstance(price, Mapping):
         return "?"
@@ -293,32 +294,44 @@ def render_shop_items(shop: Mapping[str, Any], rows: list, page: object,
 
 
 def _shop_row(index: int, row: Mapping[str, Any], ctx: Optional[Mapping[str, Any]] = None) -> str:
-    """商店一览行（定稿 L42/L367-370）：`序号. {icon}{name} {类型徽标} {desc} {门槛标记}`。
+    """商店一览行（定稿 L42/L367-370；2026-09-12 收尾·行宽重排 = 遗留 #47）：
 
-    序号前缀模板化：shop_overview_row_prefix（register_rem_tpl 分区，内容包可覆盖）。
+    行结构（每行一字段；结构化行 ≤28 半角，长描述属介绍类 → 独立成行允许自然折行）：
+      ① 头行：`{index}. {icon}{name} {类型徽标}`（`shop_overview_row_prefix` + 数据徽标）
+      ② 描述（可选；店 def 内容数据，介绍类自由文本）
+      ③ 门槛标记（可选；引擎 markers 逐项拼接，结构化短字段）
+    旧版把 ①②③ 空格拼成**单行**，实渲染可达 33+ 半角（如
+    「1. 杂货铺 [普通商店] 新手村杂货铺」=33）→ 本收尾拆行消除。
+
+    序号前缀模板化：shop_overview_row_prefix（2026-09-12 批10·路C 迁全量模板表，内容包可覆盖）；
+    描述/门槛标记为引擎数据（非硬编码文案），头行徽标沿用 TYPE_BADGES 数据映射（豁免）。
     """
     # P2-6：icon 与店名分隔同上（一览行）
     _icon = strip_icon_emoji(row.get("icon", ""))
     name = f"{_icon} {row.get('name', '')}" if _icon else str(row.get("name", ""))
-    parts: List[str] = [tpl_of(ctx, "shop_overview_row_prefix",
-                               {"index": index, "name": name or "?"})]
+    head_parts: List[str] = [tpl_of(ctx, "shop_overview_row_prefix",
+                                    {"index": index, "name": name or "?"})]
     t = row.get("type", "normal")
     if t in TYPE_BADGES:
-        parts.append(TYPE_BADGES[t])
+        head_parts.append(TYPE_BADGES[t])
+    lines: List[str] = [" ".join(head_parts)]
     if row.get("desc"):
-        parts.append(str(row["desc"]))
-    line = " ".join(parts)
+        lines.append(str(row["desc"]))
     markers = list(row.get("markers", []) or [])
     if markers:
-        line += " " + " ".join(str(m) for m in markers)
-    return line
+        lines.append(" ".join(str(m) for m in markers))
+    return "\n".join(lines)
 
 
 def render_shops_overview(rows: list, page: object, *,
                           ctx: Optional[Mapping[str, Any]] = None,
                           per_page: int = DEFAULT_PAGE_SIZE) -> str:
-    """`/商店 列表`：可用商店一览（类型图标/门槛标记，置灰不隐藏）+ 5 条/页 + CakeGame 式尾段
-    （当前页 + Tip）+ 裁决② 夹取。标题/尾段 Tip 模板化：shop_list_title / shop_list_tail_tip。"""
+    """`/商店 列表`：【商店】可用商店一览 + 5 条/页 + CakeGame 式尾段（当前页 + Tip）+ 裁决② 夹取。
+
+    类型图标/门槛标记置灰不隐藏；标题/尾段 Tip 模板化：shop_list_title / shop_list_tail_tip
+    （2026-09-12 批10·路C 新排版：尾段 Tip 免斜杠「发 商店进入 <序号> 进店」）。
+    2026-09-12 收尾（遗留 #47）：单条行改「头行 + 描述行 + 门槛行」多行（`_shop_row`），
+    结构化头行 ≤28 半角；描述独立成行（介绍类自然折行）。"""
     sl, pg, pgs, total, clamped = _paginate(rows, page, per_page)
     lines: List[str] = [tpl_of(ctx, "shop_list_title")]
     start = (pg - 1) * per_page
@@ -346,7 +359,7 @@ def cmd_shop_browse(parsed: Any, ctx: MutableMapping[str, Any], shop_id: Optiona
 
 
 def cmd_shop_list(parsed: Any, ctx: MutableMapping[str, Any], page: object) -> str:
-    """`/商店 列表`：可用商店一览（页码 0/负数/非数字 → TPL-12；超页 → 夹取最后一页）。"""
+    """`/商店 列表`：【商店】可用商店一览（页码 0/负数/非数字 → TPL-12；超页 → 夹取最后一页）。"""
     rows, meta = _all_shop_rows(ctx)
     if meta is None or not meta.get("ok"):
         return tpl_of(ctx, "shop_no_shop")
@@ -357,7 +370,7 @@ def cmd_shop(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     """.../商店 [参数] 主入口：
 
       无参        → 当前商店（地图级）商品列表第 1 页；无则全局默认 normal 兜底（D-06/TC-01）
-      列表 [页码] → 可用商店一览（5 条/页 + CakeGame 式尾段 + 裁决② 夹取）
+      列表 [页码] → 【商店】可用商店一览（5 条/页 + CakeGame 式尾段 + 裁决② 夹取）
       <名称>     → 名称精确切换商店 → 浏览其商品（TC-02；可带页码，3d §2.2 最后整数=页码）
       <整数>     → 页码优先（m4 §2.2 翻页）→ 超页命中商店序号则切店（TC-02）→ 否则夹取（裁决②）
     """
@@ -442,7 +455,9 @@ def cmd_buy(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     target = _target_of(parsed)
     qty = parsed.qty if parsed.qty is not None else 1
     shop_id = resolve_shop_arg(None, ctx)
-    res = shop_buy(shop_id, target, qty, ctx)  # None=无商店→校验链① no_shop
+    if shop_id is None:  # 无商店 → 校验链① no_shop（不进入 shop_buy）
+        return str(tpl_of(ctx, "shop_buy_fail"))
+    res = shop_buy(shop_id, target, qty, ctx)
     return str(res.get("message") or tpl_of(ctx, "shop_buy_fail"))
 
 

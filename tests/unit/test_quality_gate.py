@@ -24,11 +24,14 @@ sys.modules["run_all_tests_mod"] = _mod
 _spec.loader.exec_module(_mod)
 
 
-def _fake_cov(core: float, engine: float, content: float, *, zero_dir: str | None = None) -> dict:
-    """构造指定目录百分比的假 coverage json（files 按目录随机摊 statements）。"""
+def _fake_cov(core: float, content: float, *, zero_dir: str | None = None) -> dict:
+    """构造指定目录百分比的假 coverage json（files 按目录随机摊 statements）。
+
+    2026-09-10 架构违规修复：原 engine/ 按契约 §2.3 更名 core/（源码已迁入 core），
+    覆盖率口径目录由「core + engine + content」三目录收敛为「core + content」两目录。
+    """
     files: dict[str, dict] = {}
-    for d, pct in (("qbot_rpg/core", core), ("qbot_rpg/engine", engine),
-                   ("qbot_rpg/content", content)):
+    for d, pct in (("qbot_rpg/core", core), ("qbot_rpg/content", content)):
         if d == zero_dir:
             continue  # 目录缺失（无文件）
         st = 100
@@ -38,28 +41,27 @@ def _fake_cov(core: float, engine: float, content: float, *, zero_dir: str | Non
 
 
 def test_aggregate_cov_all_pass():
-    """双向验证①：三目录全部 ≥80% → ok=True + percent 正确。"""
-    ok, out = _mod._aggregate_cov(_fake_cov(90.0, 85.0, 82.0))
+    """双向验证①：两目录全部 ≥80% → ok=True + percent 正确。"""
+    ok, out = _mod._aggregate_cov(_fake_cov(90.0, 82.0))
     assert ok is True
     assert out["qbot_rpg/core"]["percent"] == 90.0
-    assert out["qbot_rpg/engine"]["percent"] == 85.0
     assert out["qbot_rpg/content"]["percent"] == 82.0
 
 
 def test_aggregate_cov_below_threshold_blocked():
     """双向验证②：任一目录 <80% → ok=False（79.99% 边界拦截）。"""
-    ok, _ = _mod._aggregate_cov(_fake_cov(79.99, 90.0, 85.0))
+    ok, _ = _mod._aggregate_cov(_fake_cov(79.99, 90.0))
     assert ok is False
-    ok2, _ = _mod._aggregate_cov(_fake_cov(90.0, 80.01, 85.0))  # 80.01% 通过
+    ok2, _ = _mod._aggregate_cov(_fake_cov(90.0, 80.01))  # 80.01% 通过
     assert ok2 is True
 
 
 def test_aggregate_cov_zero_statement_dir_fails():
     """双向验证③：目录零语句（测量异常）→ ok=False，不静默放行。"""
-    ok, out = _mod._aggregate_cov(_fake_cov(90.0, 85.0, 82.0, zero_dir="qbot_rpg/engine"))
+    ok, out = _mod._aggregate_cov(_fake_cov(90.0, 82.0, zero_dir="qbot_rpg/content"))
     assert ok is False
-    assert out["qbot_rpg/engine"]["statements"] == 0
-    assert out["qbot_rpg/engine"]["percent"] == 0.0
+    assert out["qbot_rpg/content"]["statements"] == 0
+    assert out["qbot_rpg/content"]["percent"] == 0.0
 
 
 def test_aggregate_cov_empty_files_fails():
@@ -69,9 +71,9 @@ def test_aggregate_cov_empty_files_fails():
 
 
 def test_write_coverage_archive_shape(tmp_path, monkeypatch):
-    """双向验证⑤：归档格式断言（TC-COV-05 形状：表头/三目录行/门禁结论行）。"""
+    """双向验证⑤：归档格式断言（TC-COV-05 形状：表头/各目录行/门禁结论行）。"""
     monkeypatch.setattr(_mod, "COV_ARCHIVE", tmp_path / "coverage_latest.txt")
-    ok, cov = _mod._aggregate_cov(_fake_cov(90.0, 85.0, 82.0))
+    ok, cov = _mod._aggregate_cov(_fake_cov(90.0, 82.0))
     _mod._write_coverage_archive(ok, cov)
     text = (tmp_path / "coverage_latest.txt").read_text(encoding="utf-8")
     assert "| 目录 | statements | missing | 行覆盖 % | 门禁（≥80%） |" in text

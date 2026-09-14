@@ -6,7 +6,7 @@
   - m3_shared_contract §4.4（/休息 副本内语义（恢复/冷却缩减/次数限制）；≠ 离开副本
     （不重置、快照保留）；safe_zone 缺省=入口区）
   - 规划_路2a_地图副本.md M24（安全区=入口区 + safe_zone 配置，缺省=[入口区]；/休息 可用性
-    判定=当前位置∈安全区 且 非战斗 且 非 BOSS 房）+ M25（HP/MP 各 20% 恢复可配；冷却 −N 回合；
+    判定=当前位置∈安全区 且 非战斗 且 非 BOSS 房）+ M25（HP/MP 各 20% 恢复可配；冷却 −N 次行动；
     rest_per_dungeon 每副本上限 0=不限；验收：20% 恢复正确、冷却 −3 生效、第 4 次被拦、
     rest_per_dungeon=1 同副本第 2 次被拦）+ M26（休息不改变位置/不退出/不重置，进度/BOSS
     血量/快照保留）
@@ -229,7 +229,7 @@ class TestRestInDungeon:
         assert out2["mp_restored"] == 200                    # 17 floor(500×1.0) 封顶 200
 
     def test_cooldown_reduction_default(self) -> None:
-        """冷却缩减缺省 −3 回合（M25/TC-2a3-15 定稿默认 3；1b effect_cooldowns 表）。"""
+        """冷却缩减缺省 −3 次行动（M25/TC-2a3-15 定稿默认 3；1b effect_cooldowns 表）。"""
         out = rest_in_dungeon(_session(), _player_ctx())
         assert out["cooldown_reduction"] == DEFAULT_COOLDOWN_REDUCTION  # 18 默认 3
         assert out["cooldown_reduction"] == 3                # 19
@@ -238,7 +238,7 @@ class TestRestInDungeon:
                                           "passive_heal": 0}  # 21 缩减后（−3 全清零，min 0）
 
     def test_cooldown_reduction_config(self) -> None:
-        """冷却缩减量可配（M25：−N 回合）：N=3 全清零。"""
+        """冷却缩减量可配（M25：−N 次行动）：N=3 全清零。"""
         out = rest_in_dungeon(_session(), _player_ctx(), cfg={"cooldown_reduction": 3})
         assert out["cooldown_reduction"] == 3                # 22 配置 N=3
         assert out["cooldowns_after"] == {"flame_burst": 0, "frost_aura": 0,

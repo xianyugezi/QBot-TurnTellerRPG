@@ -175,9 +175,16 @@ def test_rsm_snapshot_resume_degrades_not_crash():
 # P1-RSM-01 补测：resume_from_snapshot 端到端世代重绑定（TC-RSM-02/03）
 # ---------------------------------------------------------------------------
 def _snap_dict(registry_generation: int = 0, **over):
-    """完整战斗快照替身（ai_state/combo_state/turn 齐全 + registry_generation 覆盖）。"""
+    """完整战斗快照替身（CTB V2：ai_state/combo_state/action_seq 齐全 + registry_generation）。
+
+    CTB 重写（Agent 4 · Wave B）：schema_version=2 满足 `resume_from_snapshot` 的 V2 门禁；
+    顶层 turn 仅为 action_seq 兼容镜像。
+    """
     base = {
+        "schema_version": 2,
+        "rule_version": "battle_ctb_v1",
         "turn": 12,
+        "action_seq": 12,
         "ai_state": {"ai_memory": []},
         "combo_state": {"combo_count": 0},
         "registry_generation": registry_generation,

@@ -146,8 +146,14 @@ def test_jobs_39_contract_field_count() -> None:
     assert skills_meta is not None
     sf = skills_meta.fields
     assert "job_form" in sf and "job_restrict" in sf, "6a skills_fields 应已登记 F16/F17"
-    assert "revert_form" not in sf and "derive_only" not in sf, (
-        "revert_form/derive_only 归 6a 路收口（当前未登记属预期缺口）"
+    # 2026-09-13（编辑器重写·批1）：原断言「revert_form/derive_only 未登记属预期缺口」已过时——
+    # 两者早已在 skill_models.skills_fields() 登记（F16/F17 同批），且真实内容包普遍出现；
+    # 批1 为编辑器/校验器补齐元数据时一并登记（soft_label=True → 永不红拦）。改为断言「已登记且不红拦」。
+    assert "revert_form" in sf and "derive_only" in sf, (
+        "revert_form/derive_only 应已登记（skill_models 与真实内容包均出现）"
+    )
+    assert sf["revert_form"].soft_label and sf["derive_only"].soft_label, (
+        "revert_form/derive_only 必须 soft_label（不参与红拦）"
     )
     chains_meta = default_field_meta_table().module("skill_chains")
     assert chains_meta is not None

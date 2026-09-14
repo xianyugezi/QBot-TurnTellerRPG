@@ -16,7 +16,7 @@
   注册：三指令 CommandSpec 注册（白名单标记）。
 
 风格对齐 tests/unit/test_use_commands.py（make_ctx + parse_command + 指令壳直调）。
-文案断言用 enhance_tpl 默认模板（渲染走 tpl_of——ctx 无 templates 时回退默认表）。
+文案断言走 tpl_of 默认模板表（enhance 键已迁全量表；ctx 无 templates 时回退默认表）。
 """
 from __future__ import annotations
 
@@ -203,7 +203,7 @@ def test_enhance_fail_low_tier_tc03() -> None:
     p["inventory"][0]["enhance_level"] = 2
     p["inventory"][0]["stats_bonus"]["atk"] = 12.0 + 2 * 5
     out = cmd_enhance(parse("/强化 铁剑+2"), ctx)
-    assert "强化失败，装备保持不变" in out
+    assert "装备保持不变" in out
     assert _equip_state(ctx)["slot_level"] == 2
     assert _inv_count(ctx, "stone_low") == 96  # 99-3
     assert p["currencies"]["coins"] == 49700  # 50000-300
@@ -218,7 +218,7 @@ def test_enhance_fail_high_tier_tc04() -> None:
     p["inventory"][0]["quality"] = "fine"
     p["inventory"][0]["stats_bonus"]["atk"] = 12.0 + 5 * 5
     out = cmd_enhance(parse("/强化 铁剑+5"), ctx)
-    assert "强化等级 -1" in out
+    assert "等级 -1" in out
     assert "铁剑+5 → 铁剑+4" in out
     assert _equip_state(ctx)["slot_level"] == 4
     assert _inv_count(ctx, "stone_mid") == 93  # 99-6
@@ -291,7 +291,7 @@ def test_enhance_protect_fail_low_no_stone_tc12() -> None:
     p["equipment"]["weapon"]["slot_level"] = 2
     p["inventory"][0]["enhance_level"] = 2
     out = cmd_enhance_protect(parse("/强化保护 铁剑+2"), ctx)
-    assert "强化失败，装备保持不变" in out
+    assert "装备保持不变" in out
     assert _inv_count(ctx, "protect_stone") == 1  # 不耗
     assert _equip_state(ctx)["slot_level"] == 2
 
@@ -347,12 +347,16 @@ def test_enhance_batch_rejected_tc21() -> None:
 
 
 def test_enhance_bad_mark_tc22() -> None:
-    """TC-22：非法标记族 → 参数错误、零副作用。"""
+    """TC-22：非法标记族 → 拒绝（❌+原因）、零副作用。"""
     ctx = make_ctx()
-    for raw in ("/强化 铁剑+", "/强化 铁剑+abc", "/强化 铁剑++2"):
+    for raw, expect in (
+        ("/强化 铁剑+", "等级标记"),
+        ("/强化 铁剑+abc", "等级标记"),
+        ("/强化 铁剑++2", "装备名不含"),
+    ):
         before = (_inv_count(ctx, "stone_low"), ctx["player"]["currencies"]["coins"])
         out = cmd_enhance(parse(raw), ctx)
-        assert "参数错误" in out, raw
+        assert expect in out, raw
         after = (_inv_count(ctx, "stone_low"), ctx["player"]["currencies"]["coins"])
         assert before == after, raw
 

@@ -23,7 +23,8 @@ from qbot_rpg.commands.shortcut_commands import (
     cmd_shortcut_unbind,
     register_shortcut_commands,
 )
-from qbot_rpg.core.templates.shortcut_tpl import DEFAULT_TEMPLATES as SHORTCUT_TPL
+# 本路（批11·路B）已迁表：shortcut_* 6 键唯一源 = 全量模板表（shortcut_tpl 分区清空）
+from qbot_rpg.core.templates import DEFAULT_TEMPLATES as SHORTCUT_TPL
 
 # 3d §4.2 装饰性 emoji 禁用清单（渲染输出扫描锚点）
 BANNED_EMOJI = set("🔥🟢💥⚔️🛡️✨⭐🌟🎉🎊💎🏆❤️💖⚠️🚫📜🗡️🛒🧪⏰📅➡️🔹🔸▸")
@@ -50,26 +51,26 @@ def parse(raw: str) -> ParsedCommand:
 # ---------------------------------------------------------------------------
 
 def test_tc_shc_01_unbind_ok():
-    """TC-SHC-01：`快捷解绑 1`（已绑定）→ ✅ 已解绑『1』，就地改写 ctx["shortcuts"]。"""
+    """TC-SHC-01：`快捷解绑 1`（已绑定）→ ✅ 已解绑快捷「1」，就地改写 ctx["shortcuts"]。"""
     ctx = make_ctx()
     out = cmd_shortcut_unbind(parse("/快捷解绑 1"), ctx)
-    assert out == "✅ 已解绑『1』"
+    assert out == "✅ 已解绑快捷「1」"
     assert ctx["shortcuts"] == {"火球": "攻击3"}          # 就地改写（装配层落档 SHC-03）
 
 
 def test_tc_shc_01_unbind_missing():
-    """TC-SHC-01：`快捷解绑 不存在` → ❌ 没有绑定『不存在』，表不变。"""
+    """TC-SHC-01：`快捷解绑 不存在` → ❌ 未绑定快捷「不存在」，表不变。"""
     ctx = make_ctx()
     out = cmd_shortcut_unbind(parse("/快捷解绑 不存在"), ctx)
-    assert out == "❌ 没有绑定『不存在』"
+    assert out == "❌ 未绑定快捷「不存在」"
     assert ctx["shortcuts"] == {"1": "攻击", "火球": "攻击3"}
 
 
 def test_shc_unbind_syntax_tpl12():
     """工程补白 1：解绑必须恰好 1 参数；0 参/超参/解析错误 → TPL-12。"""
     ctx = make_ctx()
-    assert cmd_shortcut_unbind(parse("/快捷解绑"), ctx).startswith("❌ 指令不正确：/快捷解绑")
-    assert cmd_shortcut_unbind(parse("/快捷解绑 1 2"), ctx).startswith("❌ 指令不正确：/快捷解绑 1 2")
+    assert cmd_shortcut_unbind(parse("/快捷解绑"), ctx).startswith("❌ 指令不正确：快捷解绑")
+    assert cmd_shortcut_unbind(parse("/快捷解绑 1 2"), ctx).startswith("❌ 指令不正确：快捷解绑 1 2")
 
 
 def test_shc_unbind_unregistered_gate():
@@ -83,17 +84,17 @@ def test_shc_unbind_unregistered_gate():
 # ---------------------------------------------------------------------------
 
 def test_tc_shc_02_list():
-    """TC-SHC-02：`快捷列表` → 头部【快捷（N/20）】+ 每行 `快捷名 → 指令串`。"""
+    """TC-SHC-02：`快捷列表` → 头部【快捷 N/20】+ 每行 `快捷名 → 指令串`。"""
     ctx = make_ctx()
     out = cmd_shortcut_list(parse("/快捷列表"), ctx)
     lines = out.splitlines()
-    assert lines[0] == "【快捷（2/20）】"
+    assert lines[0] == "【快捷 2/20】"
     assert "1 → 攻击" in lines
     assert "火球 → 攻击3" in lines
 
 
 def test_tc_shc_02_list_empty():
-    """TC-SHC-02：空表 → ❌ 还没有快捷绑定，试试 /快捷绑定 1 攻击（shortcut_empty 模板）。"""
+    """TC-SHC-02：空表 → ❌ 还没有快捷绑定 + 发 快捷绑定 名字 指令（shortcut_empty 模板）。"""
     ctx = make_ctx(shortcuts={})
     assert cmd_shortcut_list(parse("/快捷列表"), ctx) == SHORTCUT_TPL["shortcut_empty"]
 
@@ -106,7 +107,7 @@ def test_shc_list_persist_in_ctx():
     # 「重启后」：装配层以持久化表重建 ctx["shortcuts"]，内容应与解绑后一致
     ctx2 = make_ctx(shortcuts=dict(ctx["shortcuts"]))
     out = cmd_shortcut_list(parse("/快捷列表"), ctx2)
-    assert "【快捷（1/20）】" in out
+    assert "【快捷 1/20】" in out
     assert "火球" not in out
 
 
@@ -119,8 +120,8 @@ def test_shc_list_paging_clamp():
     assert "s6 → 攻击6" in out2 and "s1 → 攻击1" not in out2      # 第 2 页 2 条
     out3 = cmd_shortcut_list(parse("/快捷列表 99"), ctx)          # 夹取最后一页
     assert "s6 → 攻击6" in out3
-    assert cmd_shortcut_list(parse("/快捷列表 0"), ctx).startswith("❌ 指令不正确：/快捷列表 0")
-    assert cmd_shortcut_list(parse("/快捷列表 abc"), ctx).startswith("❌ 指令不正确：/快捷列表 abc")
+    assert cmd_shortcut_list(parse("/快捷列表 0"), ctx).startswith("❌ 指令不正确：快捷列表 0")
+    assert cmd_shortcut_list(parse("/快捷列表 abc"), ctx).startswith("❌ 指令不正确：快捷列表 abc")
 
 
 def test_shc_list_no_decorative_emoji():
@@ -195,9 +196,9 @@ def test_router_parse_integration():
     ctx = make_ctx()
     register_shortcut_commands(router, make_context=lambda p: ctx)
     out = router.get(SHORTCUT_UNBIND_CMD).handler(parse("/快捷解绑 1"))
-    assert out == "✅ 已解绑『1』"
+    assert out == "✅ 已解绑快捷「1」"
     out2 = router.get(SHORTCUT_LIST_CMD).handler(parse("/快捷列表"))
-    assert "【快捷（1/20）】" in out2
+    assert "【快捷 1/20】" in out2
 
 
 def test_regress_p2_5_list_fixed_subword_tpl12():
@@ -205,14 +206,14 @@ def test_regress_p2_5_list_fixed_subword_tpl12():
     不静默渲染第 1 页。"""
     ctx = make_ctx()
     out = cmd_shortcut_list(parse("/快捷列表 自动"), ctx)
-    assert out.startswith("❌ 指令不正确：/快捷列表 自动")
+    assert out.startswith("❌ 指令不正确：快捷列表 自动")
 
 
 def test_regress_p2_4_shortcut_max_zero_unlimited():
     """P2-4 回归（M6 批1B 审查）：shortcut_max=0（不限，RUL-26）→ 列表头分母「不限」。"""
     ctx = make_ctx(shortcut_max=0)
     out = cmd_shortcut_list(parse("/快捷列表"), ctx)
-    assert "【快捷（2/不限）】" in out
+    assert "【快捷 2/不限】" in out
 
 
 # ---------------------------------------------------------------------------

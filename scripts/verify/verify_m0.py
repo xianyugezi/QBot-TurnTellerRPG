@@ -48,8 +48,10 @@ SEGMENT_CMDS = {
 # ---- M6 批7·路A（细化_M6_质量门禁 D7 · COV 组）----
 # COV-02/03：口径 = qbot_rpg/core + engine + content 三目录各自 ≥80% 行覆盖，禁合计稀释
 # （总纲 ADR-04；批6B P1-2；D7 §1.4「合计稀释拦截」）；M0-M5 简版口径登记 = 细化_5d §7.4 决策记录 D5
-COV_SOURCES = "qbot_rpg/core,qbot_rpg/engine,qbot_rpg/content"
-COV_DIRS: tuple[str, ...] = ("qbot_rpg/core", "qbot_rpg/engine", "qbot_rpg/content")
+# 2026-09-10 架构违规修复：原 engine/ 按契约 §2.3 更名 core/（源码已迁入 core），
+# 覆盖率口径目录收敛为 core + content 两目录。
+COV_SOURCES = "qbot_rpg/core,qbot_rpg/content"
+COV_DIRS: tuple[str, ...] = ("qbot_rpg/core", "qbot_rpg/content")
 COV_THRESHOLD = 80.0
 
 

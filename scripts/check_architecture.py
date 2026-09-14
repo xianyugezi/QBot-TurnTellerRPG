@@ -31,16 +31,18 @@ ZERO_NB_LAYERS: Tuple[str, ...] = ("core", "world", "storage", "content", "data"
 ALLOWED_DEP: Dict[str, Set[str]] = {
     "commands": {"core", "world", "storage", "content", "data"},
     "web": {"content", "core", "storage", "data"},
-    "core": {"data", "content", "world", "storage", "engine"},
-    # core 允许依赖 engine：M4 A2 统一条件引擎（condition_engine，纯逻辑层仅依赖 data）——
-    # 任务/NPC/商店/签到全系统复用（m4_shared_contract §1 A2），core/npc.py 为首批消费方。
+    "core": {"data", "content", "world", "storage"},
+    # core 依赖面（细化_3a §1.4 原文）：data、content（registry 只读）、world（写世界状态）、
+    # storage（经 repository 接口）。2026-09-10 架构违规修复：原 ALLOWED_DEP 私设第 8 层
+    # "engine"（契约 §1.4 只有 7 层），违反 §2.3「原 engine/ 更名 core/」的收敛要求——
+    # 已将 qbot_rpg/engine/{condition_engine,time_query,weather_conditions,
+    # weather_consumers,worldtime}.py 迁入 qbot_rpg/core/，engine 层撤销。
     "world": {"data", "storage", "content"},
     "storage": {"data"},
     "content": {"data"},
-    "engine": {"data"},  # M3 时间/天气引擎（纯逻辑层；仅允许依赖 data）
     "data": set(),
     # M7 装配层（顶层）：组装 commands 指令组 + 全业务层接线，方向放行（见 TC-03 slayer 豁免）
-    "assembly": {"commands", "core", "world", "storage", "content", "data", "engine"},
+    "assembly": {"commands", "core", "world", "storage", "content", "data"},
     "root": set(),  # qbot_rpg/__init__.py 包元信息；不参与方向约束（M0 无业务 import）
 }
 # TC-04 五类（细化_3a §3.2 / D-03）
@@ -238,13 +240,45 @@ def _resolve_submodule(module_parts: Sequence[str], name: str, repo_root: str) -
     return _resolve_module(list(module_parts) + [name], repo_root)
 
 
+def _type_checking_nodes(tree: ast.Module) -> Set[int]:
+    """收集 ``if TYPE_CHECKING:`` 块的子孙节点 id（这些 import 运行时不存在，不产生真实依赖边）。
+
+    2026-09-10 修复「循环 import 误报」：content/models.py 用
+    ``if TYPE_CHECKING: from qbot_rpg.content.registry import Registry`` 做前向引用
+    （避免 content 层内部成环），运行时该分支不执行、不 import——TC-03 契约「禁止循环
+    import」的语义是**运行时依赖图**，故 TYPE_CHECKING 分支必须排除。
+    与 walk_live 的「字面量常假分支」不同：TYPE_CHECKING 是 typing 常量（值为 False），
+    ast 层面无法按常量求值，需按名字显式识别。
+    """
+    out: Set[int] = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.If):
+            continue
+        test = node.test
+        is_tc = (
+            (isinstance(test, ast.Name) and test.id == "TYPE_CHECKING")
+            or (isinstance(test, ast.Attribute) and test.attr == "TYPE_CHECKING")
+        )
+        if is_tc:
+            for child in ast.walk(node):
+                if isinstance(child, (ast.Import, ast.ImportFrom)):
+                    out.add(id(child))
+    return out
+
+
 def collect_import_edges(tree: ast.Module, file: str, repo_root: str) -> List[str]:
-    """返回该文件 import 的 intra-qbot_rpg 目标文件路径列表（含相对 import 解析）。"""
+    """返回该文件 import 的 intra-qbot_rpg 目标文件路径列表（含相对 import 解析）。
+
+    TYPE_CHECKING 块内的 import 不计（前向引用，运行时无依赖边 → 不参与环判定）。
+    """
     pkg_depth = file.replace(repo_root, "").lstrip(os.sep).split(os.sep)
     cur_pkg = pkg_depth[:-1]  # 文件所在包（不含文件名）
     # 例如 qbot_rpg/core/player_attributes.py → ["qbot_rpg","core"]
     edges: List[str] = []
+    tc_skips = _type_checking_nodes(tree)
     for node in walk_live(tree):
+        if id(node) in tc_skips:
+            continue
         if isinstance(node, ast.Import):
             for alias in node.names:
                 t = _resolve_module(alias.name.split("."), repo_root)

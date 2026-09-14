@@ -343,12 +343,18 @@ def t_augments() -> None:
 
 
 def t_sets_augments_commands() -> None:
-    """c. /套装 /客制：SP-F4/F5 未解锁拒绝；解锁后查询渲染。"""
-    # c1 SP 未解锁 → 拒绝文案
+    """c. /套装 /客制：2026-09-09 裁决后 /套装 查询去门槛；/客制 仍受 SP-F5 拒绝。
+
+    语义变更依据：forge_commands.py L1762-1763「2026-09-09 用户拍板：套装效果全员
+    可看——/套装 查询不再受 SP-F4（unlock_sets）解锁门槛（SP-F4 保留给后续套装
+    激活 ACT 通道；查询只读展示全开放）」。故 c1 只保留 /客制 拒绝断言，
+    /套装 改为「未解锁也放行」正向断言。
+    """
+    # c1 SP 未解锁：/客制 拒绝；/套装 放行（2026-09-09 拍板去门槛）
     locked = make_player(forge_level=1, sp=0)
     ctx = fresh_ctx({}, locked)
-    assert cmd_sets(parsed("/套装"), ctx) == SETS_LOCKED_MSG
     assert cmd_augments(parsed("/客制"), ctx) == AUGMENTS_LOCKED_MSG
+    assert cmd_sets(parsed("/套装"), ctx) != SETS_LOCKED_MSG, cmd_sets(parsed("/套装"), ctx)
 
     # c2 真实 test_demo 无 sets 数据：/套装 解锁后 → 空态
     player_sets = make_player(forge_level=1, unlocks={"unlock_sets": 1})

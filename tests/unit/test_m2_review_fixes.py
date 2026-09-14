@@ -143,7 +143,7 @@ def test_chain_cooldown_not_reset_on_repeat():
     cd1 = bs["ai_state"]["chain_cooldowns"].get("molten", 0)
     assert cd1 >= 3, f"断链应登记冷却，实际 {cd1}"
     # 冷却中同链重触发：不缩短冷却（max 保留），不重置
-    bs["ai_state"]["chain_cooldowns"]["molten"] = 4  # 模拟已有 4 回合冷却
+    bs["ai_state"]["chain_cooldowns"]["molten"] = 4  # 模拟已有 4 次行动冷却
     bs["ai_state"]["forced_queue"] = [{"action": "fireball", "chain_ref": "molten"}]
     ai.decide(bs)
     cd2 = bs["ai_state"]["chain_cooldowns"].get("molten", 0)
@@ -219,10 +219,17 @@ def test_combo_broken_cleared_after_decision():
     # 模拟打断：置 combo_broken（_interrupt_enemy_ai 的行为）
     eng._snap["combo_broken"] = True
     eng._snap["ai_state"] = {"state": "normal", "exec_state": "idle"}
-    # 怪物决策（本轮反击）后 combo_broken 应被清除
-    eng.enemy_act(None)
+    # CTB：一次 player_act = 玩家行动 + 调度器自动推进的 NPC 连锁（怪物决策/执行）。
+    # 怪物决策（本轮反击，_ai_action_dict）后 combo_broken 应被清除。
+    eng.player_act("normal")
     assert eng._snap.get("combo_broken") is None, "决策后 combo_broken 应清除（一次性标记）"
-    # 下一回合决策不再命中（标记已清）
+    # 再次置位 → 下一次怪物决策同样清除（跨行动轮不残留；推进到怪再动一次）
+    eng._snap["combo_broken"] = True
     eng._snap["ai_state"] = {"state": "normal", "exec_state": "idle"}
-    eng.enemy_act(None)
-    assert eng._snap.get("combo_broken") is None, "跨回合不残留 combo_broken"
+    enemy_acts = sum(1 for r in eng.battle_state()["action_record"] if r.get("actor") == "enemy")
+    for _ in range(6):
+        eng.player_act("normal")
+        if sum(1 for r in eng.battle_state()["action_record"]
+               if r.get("actor") == "enemy") > enemy_acts:
+            break
+    assert eng._snap.get("combo_broken") is None, "跨行动轮不残留 combo_broken"

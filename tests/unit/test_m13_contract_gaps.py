@@ -124,11 +124,11 @@ def test_6b_tests_exist() -> None:
 # ③ 6c 资源轴
 # ---------------------------------------------------------------------------
 def test_6c_fields_addressable() -> None:
-    """resource_axis_fields() 恰 10 键。"""
+    """resource_axis_fields() 恰 13 键（契约 10 + 云海 212 opt-in 3）。"""
     from qbot_rpg.content.resource_axis_models import resource_axis_fields
 
     f = resource_axis_fields()
-    assert len(f) == 10, f"resource_axis_fields 应恰 10 键，got {len(f)}"
+    assert len(f) == 13, f"resource_axis_fields 应恰 13 键，got {len(f)}"
 
 
 def test_6c_validator_addressable() -> None:

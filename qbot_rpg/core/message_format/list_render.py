@@ -136,14 +136,15 @@ def render_item_line(index: int, name: str, value: str = "") -> str:
 
 
 def render_footer(page: int, total_pages: int, total: int, command: str) -> str:
-    """页脚 TPL-08：``— 第 {X}/{Y} 页 · 共 {N} 条 · 输入 /{指令} 页码 翻页 —``。
+    """页脚 TPL-08：``— 第 {X}/{Y} 页 · 共 {N} 条 · 发 {指令} 页码 翻页 —``。
 
     单页（total_pages<=1）或无指令不输出（3d §2.3 D-02 防刷屏）；页码为固定「页码」字样
     （引导输入，非具体数字，3d §2.3）。禁止各系统自造页脚（D-02/D-05）。
+    免斜杠（M8 复核修复 2026-09-12）：原「输入 /{指令} 页码 翻页」→「发 {指令} 页码 翻页」。
     """
     if total_pages <= 1 or not command:
         return ""
-    return f"— 第 {page}/{total_pages} 页 · 共 {total} 条 · 输入 /{command} 页码 翻页 —"
+    return f"— 第 {page}/{total_pages} 页 · 共 {total} 条 · 发 {command} 页码 翻页 —"
 
 
 def render_cake_tail(

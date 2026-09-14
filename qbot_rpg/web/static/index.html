@@ -3,8 +3,75 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>内容编辑器 · 批3 分区页签</title>
+<title>内容编辑器 · 批9 配色切换</title>
 <link rel="stylesheet" href="/static/tokens.css">
+<script>
+/* 配色切换纯逻辑（批9 · 无 DOM 依赖；浏览器挂 globalThis.EditorTheme，node 下走 module.exports）。
+ * 三套主题：dark（默认·终端极简风）/ light / contrast（无障碍增强）。
+ * 记忆：显式选择写 localStorage（键 qbot.editor.theme）；无存储时跟随系统 prefers-color-scheme。
+ * applyTheme 只改 <html data-theme>，不触碰草稿/未保存改动；尺寸/字体/间距令牌不随主题变化。 */
+/* EDITOR_THEME_BEGIN */
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) { module.exports = factory(); }
+  else { root.EditorTheme = factory(); }
+})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+  var STORE_KEY = "qbot.editor.theme";
+  var DEFAULT_THEME = "dark";
+  var THEMES = ["dark", "light", "contrast"];
+  var LABELS = { dark: "暗色", light: "浅色", contrast: "高对比" };
+  var CHOICES = [
+    { theme: "dark", label: "暗色", hint: "终端极简风（默认）" },
+    { theme: "light", label: "浅色", hint: "浅底深字，明亮环境更清楚" },
+    { theme: "contrast", label: "高对比",
+      hint: "无障碍增强：纯黑底 + 亮色文字/线；红黄提示与禁用态另有形状区分（正文与警示色尽量达 WCAG AA）" }
+  ];
+  function isTheme(t) { return THEMES.indexOf(String(t)) >= 0; }
+  function normalize(t) { return isTheme(t) ? String(t) : DEFAULT_THEME; }
+  function systemTheme(prefersLight) { return prefersLight ? "light" : DEFAULT_THEME; }
+  function resolveInitialTheme(stored, prefersLight) {
+    return isTheme(stored) ? String(stored) : systemTheme(prefersLight);
+  }
+  function hasStored(storage) {
+    try { return isTheme(storage && storage.getItem(STORE_KEY)); } catch (e) { return false; }
+  }
+  function loadTheme(storage, prefersLight) {
+    var raw = null;
+    try { raw = storage && storage.getItem(STORE_KEY); } catch (e) { raw = null; }
+    return resolveInitialTheme(raw, prefersLight);
+  }
+  function saveTheme(storage, theme) {
+    try { storage && storage.setItem(STORE_KEY, normalize(theme)); return true; }
+    catch (e) { return false; }
+  }
+  function clearTheme(storage) {
+    try { storage && storage.removeItem(STORE_KEY); return true; } catch (e) { return false; }
+  }
+  function applyTheme(docEl, theme) {
+    var t = normalize(theme);
+    if (docEl && docEl.setAttribute) { docEl.setAttribute("data-theme", t); }
+    return t;
+  }
+  function labelOf(theme) { return LABELS[normalize(theme)] || LABELS[DEFAULT_THEME]; }
+  return { STORE_KEY: STORE_KEY, DEFAULT_THEME: DEFAULT_THEME, THEMES: THEMES,
+           LABELS: LABELS, CHOICES: CHOICES, isTheme: isTheme, normalize: normalize,
+           systemTheme: systemTheme, resolveInitialTheme: resolveInitialTheme,
+           hasStored: hasStored, loadTheme: loadTheme, saveTheme: saveTheme,
+           clearTheme: clearTheme, applyTheme: applyTheme, labelOf: labelOf };
+});
+/* EDITOR_THEME_END */
+/* 首次绘制前应用初始主题（有存储用存储，无存储跟随系统），避免暗色闪一下再变浅色。 */
+(function () {
+  try {
+    var mq = window.matchMedia ? window.matchMedia("(prefers-color-scheme: light)") : null;
+    var store = null;
+    try { store = window.localStorage; } catch (e) { store = null; }
+    EditorTheme.applyTheme(document.documentElement,
+      EditorTheme.loadTheme(store, !!(mq && mq.matches)));
+  } catch (e) {
+    try { document.documentElement.setAttribute("data-theme", "dark"); } catch (e2) {}
+  }
+})();
+</script>
 <style>
 /* 终端极简风（令牌全部来自 tokens.css；此处只写骨架与组件布局，零 CDN、零外链字体） */
 * { box-sizing: border-box; }
@@ -60,6 +127,34 @@ body {
   .brand { display: none; }
   .pkgsel { max-width: 56vw; }
 }
+
+/* ---------- 批9 · 顶栏配色切换（按钮组，令牌驱动；Tab 可达 + Enter/Space 生效） ---------- */
+.themeseg { display: inline-flex; align-items: center; gap: var(--sp-3); flex: 0 0 auto; }
+.themeseg .lb { color: var(--text-4); }
+.themeseg .tb { font-family: inherit; font-size: var(--fs-12); cursor: pointer;
+  color: var(--text-3); background: transparent; border: var(--bw) solid var(--line);
+  padding: 1px var(--sp-4); line-height: var(--h-ctl-sm); }
+.themeseg .tb:hover { color: var(--text-value); border-color: var(--line-strong); }
+.themeseg .tb.on { color: var(--accent); border-color: var(--accent); }
+.themeseg .tb:focus-visible { outline: none; box-shadow: 0 0 0 var(--focus-offset) var(--focus); }
+@media (max-width: 900px) { .themeseg .lb { display: none; } }  /* 窄屏先舍「配色：」字样，按钮保留 */
+
+/* 批9 · 高对比主题：红/黄提示与禁用态不单靠色相——加边框形状（双线/虚线/点线）与符号。 */
+html[data-theme="contrast"] .vbox.red { border-left: calc(var(--bw-accent) * 2) double var(--danger); }
+html[data-theme="contrast"] .vbox.warn { border-left: calc(var(--bw-accent) * 2) dashed var(--warn); }
+html[data-theme="contrast"] .vbox.red .vhead::before { content: "\25a0 "; }
+html[data-theme="contrast"] .vbox.warn .vhead::before { content: "\25b2 "; }
+html[data-theme="contrast"] .mp-msg.red { border-left: calc(var(--bw-accent) * 2) double var(--danger); }
+html[data-theme="contrast"] .mp-msg.yellow { border-left: calc(var(--bw-accent) * 2) dashed var(--warn); }
+html[data-theme="contrast"] .mp-msg.red::before { content: "\25a0 "; }
+html[data-theme="contrast"] .mp-msg.yellow::before { content: "\25b2 "; }
+html[data-theme="contrast"] .newid .nid-st.red::before { content: "\25a0 "; }
+html[data-theme="contrast"] .saved.dirty::before { content: "[\25b2"; }
+html[data-theme="contrast"] .saved.err::before { content: "[\25a0"; }
+html[data-theme="contrast"] .refval.warn, html[data-theme="contrast"] .lcell.warn { border-style: dashed; }
+html[data-theme="contrast"] .row.dirty > .rlab::after { content: " \25b2 已改动"; }
+html[data-theme="contrast"] .btn:disabled, html[data-theme="contrast"] .newbtn:disabled,
+html[data-theme="contrast"] .asave:disabled { border-style: dotted; opacity: .6; }
 
 .body { flex: 1 1 auto; display: flex; min-height: 0; }
 
@@ -347,7 +442,7 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
 .help-card { position: fixed; z-index: 50; max-width: min(420px, 92vw); max-height: 45vh;
   overflow: auto; background: var(--bg); border: var(--bw) solid var(--line-strong);
   padding: var(--sp-6) var(--sp-7); color: var(--text-2); font-family: var(--font-mono);
-  font-size: var(--fs-11); line-height: var(--lh-ex); box-shadow: 0 6px 22px rgba(0, 0, 0, .5);
+  font-size: var(--fs-11); line-height: var(--lh-ex); box-shadow: var(--shadow);
   overflow-wrap: anywhere; }
 .help-card[hidden] { display: none; }
 .help-card::-webkit-scrollbar { width: var(--sb-size); }
@@ -457,11 +552,11 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
 /* ---------- 批8 · 顶栏「模块开关」⚙ 面板（令牌驱动；终端极简风） ---------- */
 .gear { flex: 0 0 auto; }
 .mp-overlay { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-start;
-  justify-content: center; padding: 8vh var(--sp-8) 0; background: rgba(0, 0, 0, .55); }
+  justify-content: center; padding: 8vh var(--sp-8) 0; background: var(--overlay); }
 .mp-overlay[hidden] { display: none; }
 .mp { width: min(680px, 96vw); max-height: 80vh; display: flex; flex-direction: column;
   background: var(--bg); border: var(--bw) solid var(--line-strong);
-  box-shadow: 0 6px 22px rgba(0, 0, 0, .5); }
+  box-shadow: var(--shadow); }
 .mp-hd { display: flex; align-items: center; gap: var(--sp-5);
   padding: var(--sp-5) var(--sp-8); border-bottom: var(--bw) solid var(--line-strong); }
 .mp-t { color: var(--text-strong); font-weight: 700; letter-spacing: .04em; }
@@ -509,7 +604,7 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
 <div class="app">
 
   <header class="topbar">
-    <span class="brand"><span class="mark">▚</span> 内容编辑器 :: 分区页签</span>
+    <span class="brand"><span class="mark">▚</span> 内容编辑器 :: 配色</span>
     <label class="pkgsel">
       <span class="lb">pkg=</span>
       <select id="packs" aria-label="内容包选择器"></select>
@@ -517,6 +612,16 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
     </label>
     <span class="saved" id="dirty">已保存</span>
     <div class="topright">
+      <!-- 批9 · 配色切换：暗色（默认）/ 浅色 / 高对比；立即生效并记住选择（Tab + Enter/Space） -->
+      <div class="themeseg" id="theme-seg" role="group" aria-label="配色主题（暗色 / 浅色 / 高对比）">
+        <span class="lb">配色：</span>
+        <button class="tb" type="button" data-theme-choice="dark" aria-pressed="true"
+          aria-label="配色：暗色" title="暗色（默认）：终端极简风">暗色</button>
+        <button class="tb" type="button" data-theme-choice="light" aria-pressed="false"
+          aria-label="配色：浅色" title="浅色：浅底深字，明亮环境更清楚">浅色</button>
+        <button class="tb" type="button" data-theme-choice="contrast" aria-pressed="false"
+          aria-label="配色：高对比" title="高对比：纯黑底 + 亮色文字/线；红黄提示与禁用态另有形状区分（正文与警示色尽量达 WCAG AA）">高对比</button>
+      </div>
       <button class="btn gear" id="btn-settings" type="button"
         title="模块开关：勾选要做的内容类型（如角色、道具、场景…）；停用只移除声明，数据文件保留；落盘走校验 + 原子写 + 自动备份">⚙ 模块</button>
       <label class="rolesel">
@@ -575,12 +680,12 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
       <div class="panel-body" id="p-body">
         <div class="empty">从左侧选择模块与条目。字段按内容包元数据渲染；改动先进草稿，保存时才校验并落盘。</div>
       </div>
-      <div class="panel-ft"><span>批6 · 新增/删除条目 + 检索（建议 ID 即时唯一性 · 删除二次确认 + 被引用黄提示 · 跨模块全局检索 · 改动先进草稿）</span></div>
+      <div class="panel-ft"><span>批9 · 配色切换（暗色 / 浅色 / 高对比 · 令牌层换肤，尺寸/字体/间距不变 · localStorage 记忆 + 首次跟随系统 · 立即生效不丢草稿）</span></div>
     </section>
 
   </div>
 
-  <div class="vtag" id="vtag">终端极简风 · 元数据驱动 · 零 CDN</div>
+  <div class="vtag" id="vtag">终端极简风 · 三套配色（暗色/浅色/高对比） · 元数据驱动 · 零 CDN</div>
 </div>
 
 <!-- 字段说明气泡（批4.6）：内容由后端 help_card 自动拼装 + 元数据人工 help 填充 -->
@@ -1119,7 +1224,8 @@ var state = {
   pack: null, modules: [], module: null, entries: [], entry: null, detail: null,
   filter: "", gquery: "", role: "owner", editable: true, backup: null, fieldIndex: {},
   refCache: {}, refKnown: {}, refQuery: {}, busy: false, tabs: [], forms: {},
-  pendingDrafts: {}, entryIndex: null, newEntry: null, newDraft: null, newIdTouched: false
+  pendingDrafts: {}, entryIndex: null, newEntry: null, newDraft: null, newIdTouched: false,
+  theme: null
 };
 var draft = EditorDraft.newDraft();
 
@@ -1716,6 +1822,53 @@ function syncPackTitle() {
   sel.title = title;
   var box = sel.closest ? sel.closest(".pkgsel") : null;
   if (box) { box.title = title; }
+}
+
+// ---------------------------------------------------------------------------
+// 顶栏配色切换（批9）：纯逻辑在 <head> 的 EditorTheme；此处只做 DOM 接线。
+// 立即生效（只改 <html data-theme>），不刷新、不触碰草稿与未保存改动；
+// 显式选择写 localStorage 记忆，从没选过时跟随系统 prefers-color-scheme。
+// ---------------------------------------------------------------------------
+function themeStore() {
+  try { return window.localStorage; } catch (e) { return null; }
+}
+function renderThemeSeg() {
+  var seg = el("theme-seg");
+  if (!seg) { return; }
+  var cur = EditorTheme.normalize(state.theme);
+  (EditorTheme.CHOICES || []).forEach(function (c) {
+    var b = seg.querySelector('[data-theme-choice="' + c.theme + '"]');
+    if (!b) { return; }
+    var on = c.theme === cur;
+    b.className = "tb" + (on ? " on" : "");
+    b.setAttribute("aria-pressed", on ? "true" : "false");
+  });
+}
+function setTheme(theme, persist) {
+  state.theme = EditorTheme.applyTheme(document.documentElement, theme);
+  renderThemeSeg();
+  var tag = el("vtag");
+  if (tag) { tag.title = "当前配色：" + EditorTheme.labelOf(state.theme); }
+  if (persist) { EditorTheme.saveTheme(themeStore(), state.theme); }
+  return state.theme;
+}
+function initTheme() {
+  state.theme = EditorTheme.normalize(document.documentElement.getAttribute("data-theme"));
+  renderThemeSeg();
+  var seg = el("theme-seg");
+  if (seg) {
+    seg.addEventListener("click", function (e) {
+      var b = e.target && e.target.closest ? e.target.closest("[data-theme-choice]") : null;
+      if (b) { setTheme(b.dataset.themeChoice, true); }
+    });
+  }
+  var mq = window.matchMedia ? window.matchMedia("(prefers-color-scheme: light)") : null;
+  if (mq && mq.addEventListener) {
+    mq.addEventListener("change", function (e) {
+      if (EditorTheme.hasStored(themeStore())) { return; }  // 用户显式选过 → 不跟随系统
+      setTheme(EditorTheme.systemTheme(e.matches), false);
+    });
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -3692,6 +3845,8 @@ window.addEventListener("beforeunload", function (e) {
   if (draftCount() > 0) { e.preventDefault(); e.returnValue = ""; }
 });
 
+// 批9 · 顶栏配色切换：读 <html data-theme>（<head> 已按存储/系统设好）→ 同步按钮态 + 接线
+initTheme();
 loadSession()
   .then(loadPacks)
   .then(function () { return loadModules(); })

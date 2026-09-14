@@ -1820,7 +1820,7 @@ def cmd_sets(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
             return tpl_of(ctx, "forge_sets_ambiguous", {"candidates": "\n".join(names)})
         # 档位集合配置化（settings.forge.set_piece_counts，缺省 {2,3,5}）
         piece_counts = {"settings": ctx.get("settings")}
-        return _render_set_detail(ctx, eng, recs, player, piece_counts)
+        return _render_set_detail(ctx, eng, recs, player, piece_counts, match_name(key))
 
     rows = set_lookup(player, sets)
     # 2026-09-09 全员可看（用户拍板）：玩家无持有件也列出全套装目录（含效果/件名）
@@ -2004,13 +2004,15 @@ def _render_set_detail(
     recs: Sequence[Any],
     player: Any,
     piece_counts: Any,
+    norm: str = "",
 ) -> str:
     """单套明细渲染（2c2d §1.5 样例；📖 图标按本仓 emoji 纪律降级纯文本，见 F-1）。
 
-    行：名称（variant）｜αβ 取舍 / 部位 / 套装技能档位 / 穿戴 N/总（逐件 ✓）+ 生效技能 /
-    缺件（节点 + 素材）/ α/β 孔位对照（缺 β 记录不渲染）。纯读不改写 player。
+    行：名称（variant）｜αβ 取舍 / 部位 / 套装技能档位 / 穿戴 N/总（逐件 ✓ 态）+ 生效技能 /
+    缺件（节点 + 素材）/ α/β 孔位对照（缺 β 记录不渲染）。norm = 用户输入归一（精确命中
+    某变体名时展示该变体；否则 alpha 优先）。纯读不改写 player。
     """
-    record = _pick_set_record(recs)
+    record = _pick_set_record(recs, norm)
     variant = getattr(record, "variant", None) or ""
     name = getattr(record, "name", None) or getattr(record, "id", "") or ""
     lines: List[str] = [tpl_of(ctx, "forge_sets_detail_head", {

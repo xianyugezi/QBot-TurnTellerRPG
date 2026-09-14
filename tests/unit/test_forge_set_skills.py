@@ -404,6 +404,14 @@ def test_cmd_sets_prefix_and_ambiguous_and_not_found() -> None:
     assert out_miss.startswith("❌ 未找到「不存在」")
 
 
+def test_cmd_sets_exact_beta_name_shows_beta() -> None:
+    """精确命中变体名 → 展示该变体（β），但仍渲染 α/β 对照。"""
+    ctx = _ctx(player={"equipped": ["n_head_b", "n_body_b"]})
+    out = cmd_sets(_Parsed("龙骑士套装β"), ctx)
+    assert out.split("\n")[0] == "龙骑士套装β（β）｜技能 少 · 孔 多"
+    assert "α/β 对照" in out
+
+
 def test_cmd_sets_no_arg_full_list_compat() -> None:
     """无参仍返回全量列表（兼容既有 =set_lookup 逐套行）。"""
     ctx = _ctx(player={"equipped": ["n_head_a", "n_body_a"]})

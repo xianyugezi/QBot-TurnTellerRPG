@@ -453,6 +453,56 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
 .newfoot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3);
   margin: var(--sp-4) var(--sp-6); }
 .newfoot .nfn { color: var(--text-5); font-size: var(--fs-11); }
+
+/* ---------- 批8 · 顶栏「模块开关」⚙ 面板（令牌驱动；终端极简风） ---------- */
+.gear { flex: 0 0 auto; }
+.mp-overlay { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-start;
+  justify-content: center; padding: 8vh var(--sp-8) 0; background: rgba(0, 0, 0, .55); }
+.mp-overlay[hidden] { display: none; }
+.mp { width: min(680px, 96vw); max-height: 80vh; display: flex; flex-direction: column;
+  background: var(--bg); border: var(--bw) solid var(--line-strong);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, .5); }
+.mp-hd { display: flex; align-items: center; gap: var(--sp-5);
+  padding: var(--sp-5) var(--sp-8); border-bottom: var(--bw) solid var(--line-strong); }
+.mp-t { color: var(--text-strong); font-weight: 700; letter-spacing: .04em; }
+.mp-x { margin-left: auto; font-family: inherit; cursor: pointer; color: var(--text-3);
+  background: var(--bg); border: var(--bw) solid var(--line); padding: 0 var(--sp-3);
+  line-height: var(--h-ctl-sm); }
+.mp-x:hover { color: var(--accent); border-color: var(--accent); }
+.mp-hint { padding: var(--sp-5) var(--sp-8) var(--sp-3); color: var(--text-4);
+  line-height: var(--lh-ex); }
+.mp-msg { margin: 0 var(--sp-8) var(--sp-3); padding: var(--sp-4) var(--sp-5);
+  border: var(--bw) solid var(--line); border-left: var(--bw-accent) solid var(--info);
+  color: var(--text-2); white-space: pre-line; line-height: var(--lh-ex);
+  max-height: 22vh; overflow: auto; }
+.mp-msg.yellow { border-left-color: var(--warn); }
+.mp-msg.red { border-left-color: var(--danger); }
+.mp-msg.ok { border-left-color: var(--accent); }
+.mp-list { overflow: auto; padding: var(--sp-2) var(--sp-8) var(--sp-5);
+  border-top: var(--bw) solid var(--line-soft); }
+.mp-row { display: grid; grid-template-columns: auto minmax(64px, 1fr) minmax(90px, auto);
+  align-items: baseline; gap: var(--sp-2) var(--sp-5); cursor: pointer;
+  padding: var(--sp-3) var(--sp-2); border-bottom: var(--bw) solid var(--line-faint); }
+.mp-row:hover { background: var(--surface-hover); }
+.mp-row.on { background: var(--surface); }
+.mp-row.ro { cursor: not-allowed; }
+.mp-cb { accent-color: var(--accent); align-self: center; }
+.mp-cb:disabled { cursor: not-allowed; }
+.mp-row .nm { color: var(--text-value); }
+.mp-row.ro .nm { color: var(--text-disabled); }
+.mp-row .key { color: var(--text-5); font-size: var(--fs-11); }
+.mp-row .st { color: var(--text-4); font-size: var(--fs-11); }
+.mp-row.on .st { color: var(--accent); }
+.mp-row .purpose { grid-column: 2 / -1; color: var(--text-4); font-size: var(--fs-11);
+  line-height: var(--lh-ex); }
+.mp-row .dep { grid-column: 2 / -1; color: var(--warn); font-size: var(--fs-11);
+  line-height: var(--lh-ex); }
+.mp-ft { display: flex; align-items: center; gap: var(--sp-5);
+  padding: var(--sp-5) var(--sp-8); border-top: var(--bw) solid var(--line-strong); }
+.mp-note { color: var(--text-5); font-size: var(--fs-11); line-height: var(--lh-ex); }
+.mempty { padding: var(--sp-10) var(--sp-8); color: var(--text-4); line-height: var(--lh-ex); }
+.mempty .me-t { color: var(--text-strong); font-size: var(--fs-14); margin-bottom: var(--sp-4); }
+.mempty .me-d { margin-bottom: var(--sp-6); }
 </style>
 </head>
 <body>
@@ -467,6 +517,8 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
     </label>
     <span class="saved" id="dirty">已保存</span>
     <div class="topright">
+      <button class="btn gear" id="btn-settings" type="button"
+        title="模块开关：勾选要做的内容类型（技能、物品、地图…）；停用只移除声明，数据文件保留；落盘走校验 + 原子写 + 自动备份">⚙ 模块</button>
       <label class="rolesel">
         <span class="lb">身份=</span>
         <select id="role" aria-label="权限位切换"></select>
@@ -533,6 +585,26 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
 
 <!-- 字段说明气泡（批4.6）：内容由后端 help_card 自动拼装 + 元数据人工 help 填充 -->
 <div id="help-card" class="help-card" role="tooltip" hidden></div>
+
+<!-- 批8 · 顶栏 ⚙ 模块开关：勾选该包要启用的内容类型（写入 manifest.modules + 骨架数据文件） -->
+<div id="modpanel" class="mp-overlay" hidden>
+  <div class="mp" role="dialog" aria-modal="true" aria-label="模块开关">
+    <div class="mp-hd">
+      <span class="mp-t">⚙ 模块开关</span>
+      <button class="mp-x" id="mp-close" type="button" aria-label="关闭模块开关">×</button>
+    </div>
+    <div class="mp-hint" id="mp-hint"></div>
+    <div class="mp-msg" id="mp-msg" hidden></div>
+    <div class="mp-list" id="mp-list"></div>
+    <div class="mp-ft">
+      <span class="mp-note" id="mp-note"></span>
+      <span class="sp"></span>
+      <button class="btn danger" id="mp-rollback" type="button" disabled
+        title="回退最近一次模块变更：只复原 manifest，所有数据文件保留">回退最近一次模块变更</button>
+      <button class="btn" id="mp-done" type="button">完成</button>
+    </div>
+  </div>
+</div>
 
 <script>
 "use strict";
@@ -1145,6 +1217,48 @@ function moduleCountLabel(n) {
 }
 /* EDITOR_COUNT_LABEL_END */
 
+/* EDITOR_MODULES_BEGIN */
+// 批8 顶栏「模块开关」纯逻辑：清单行渲染 + 依赖黄提示 + 空包空态 + 只读说明。
+// 只按后端 descriptor 字段（module / label / purpose / enabled / missing_requires /
+// requires_labels）渲染，不认任何具体模块名 —— 换包零改动。
+function moduleDepHint(row) {
+  var r = row || {};
+  var miss = r.missing_requires || [];
+  if (!miss.length) { return ""; }
+  var names = r.requires_labels || [];
+  var text = (names.length === miss.length) ? names.join("、") : miss.join("、");
+  return "建议同时启用：" + text;
+}
+function moduleRowHtml(row, editable) {
+  var r = row || {};
+  var label = r.label || r.module || "";
+  var dep = moduleDepHint(r);
+  var dis = editable ? "" : " disabled";
+  var st = r.enabled ? "已启用" : "未启用";
+  return '<label class="mp-row' + (r.enabled ? " on" : "") + (editable ? "" : " ro") + '">'
+    + '<input type="checkbox" class="mp-cb" data-module="' + esc(r.module || "") + '"'
+    + (r.enabled ? " checked" : "") + dis + ' aria-label="' + esc(label) + '">'
+    + '<span class="nm">' + esc(label) + "</span>"
+    + '<span class="key">' + esc(r.module || "") + "</span>"
+    + '<span class="st">' + esc(st) + "</span>"
+    + '<span class="purpose">' + esc(r.purpose || "") + "</span>"
+    + (dep ? '<span class="dep">⚠ ' + esc(dep) + "</span>" : "")
+    + "</label>";
+}
+function moduleEmptyHtml() {
+  return '<div class="mempty">'
+    + '<div class="me-t">这个包还没启用任何模块</div>'
+    + '<div class="me-d">点右上角 <b>⚙ 模块</b>，勾选你要做的内容类型'
+    + '（技能、物品、地图…）。勾选后左侧会出现对应模块，就可以开始写内容了。</div>'
+    + '<button class="btn primary" type="button" data-open-modules>打开模块开关</button>'
+    + "</div>";
+}
+function moduleReadonlyNote(editable) {
+  return editable ? "" : "当前身份为只读预览：可以查看模块清单，但不能勾选启用 / 停用；"
+    + "请切换为可编辑身份。";
+}
+/* EDITOR_MODULES_END */
+
 /* EDITOR_TOPBAR_LABEL_BEGIN */
 // 顶栏内容包显示（批5.2 · V2）：窄窗口下包名/标识会被省略（曾截成 `(veinbo..`）——可见文本
 // 保持紧凑，完整信息（名称/标识/版本/模块数）挂 `title`，悬停可见；宽度分配交给 CSS
@@ -1555,7 +1669,9 @@ function switchRole(role) {
   return postJSON("/api/session/role", { role: role }).then(function (s) {
     state.role = s.role; state.editable = !!s.editable;
     renderRoleTag();
-    return reloadDetail();  // 只读/可编辑切换后重画控件
+    // 批8：身份切换后模块开关面板的勾选可用性同步（GM 只读 → 禁用 + 说明）
+    var modRefresh = el("modpanel").hidden ? null : fetchModulePanel();
+    return reloadDetail().then(function () { return modRefresh; });
   });
 }
 
@@ -1632,8 +1748,16 @@ function loadModules() {
     // V6：层级包在栏头明示计数口径；平铺包每个模块计数即本模块条数，无需标注。
     el("mod-src").textContent = "manifest.modules · " + state.modules.length + " · " + flat
       + (data.flat ? "" : " · 计数含子项");
+    // 批8：该包未启用任何模块 → 空态引导（点右上角 ⚙ 选择内容类型），不给用户空白迷茫。
+    if (!state.modules.length) {
+      state.module = null; state.entry = null;
+      renderModules();
+      renderEmptyPack();
+      return;
+    }
     var first = state.modules[0];
-    if (!state.module && first) { selectModule(first.module); } else { renderModules(); }
+    if (!state.module && first) { return selectModule(first.module); }
+    renderModules();
   });
 }
 
@@ -1766,6 +1890,136 @@ function refreshAfterMutation(newId, keepResult) {
       // 新建/删除的结果（含「被引用者」黄提示）在选中切换后回填，不被 selectEntry 清掉
       if (keepResult) { state.result = keepResult; renderResult(keepResult); }
     });
+}
+
+// ---------------------------------------------------------------------------
+// 批8 · 顶栏「模块开关」⚙：空包空态 + 勾选启用/停用（落盘走批2 链路）
+// 启停后复用批6 一致性刷新（左栏模块树 / 中栏条目 / 页签计数 / 条目索引）。
+// ---------------------------------------------------------------------------
+var MODULE_PANEL = { data: null, busy: false };
+
+function renderEmptyPack() {
+  el("rows").innerHTML = "";
+  el("list-title").textContent = "条目";
+  el("list-count").textContent = "0 条";
+  el("list-ft").textContent = "共 0 条";
+  el("p-title").textContent = EMPTY_TEXT;
+  el("p-sub").textContent = "";
+  el("p-id").textContent = "";
+  state.backup = null;
+  el("backup-note").textContent = "备份：—";
+  refreshRollbackButton();
+  el("p-body").innerHTML = moduleEmptyHtml() + '<div id="result" hidden></div>';
+  helpHideDom();
+}
+
+function refreshAfterModuleChange() {
+  return loadModules().then(function () {
+    if (!(state.modules || []).length) { return loadEntryIndex(); }   // 空包：空态已渲染
+    if (!state.module || !findModule(state.module)) {
+      return selectModule(state.modules[0].module);   // 当前模块刚被停用 → 回落到第一个
+    }
+    return loadEntries().then(function () { return loadEntryIndex(); });
+  }).then(function () {
+    if (state.gquery) { renderGlobalResults(); }
+  });
+}
+
+function openModulePanel() {
+  if (!state.pack) { return Promise.resolve(); }
+  return fetchModulePanel().then(function () {
+    el("modpanel").hidden = false;
+  });
+}
+
+function closeModulePanel() { el("modpanel").hidden = true; }
+
+function fetchModulePanel() {
+  return api("/api/pack/" + enc(state.pack) + "/module-catalog").then(function (d) {
+    MODULE_PANEL.data = d;
+    renderModulePanel();
+    return d;
+  });
+}
+
+function renderModulePanel() {
+  var d = MODULE_PANEL.data || { modules: [] };
+  el("mp-hint").textContent = d.hint || "";
+  var note = "共 " + (d.total || 0) + " 个模块 · 已启用 " + (d.enabled_count || 0) + " 个。";
+  var roNote = moduleReadonlyNote(state.editable);
+  if (roNote) { note += " " + roNote; }
+  el("mp-note").textContent = note;
+  el("mp-list").innerHTML = (d.modules || []).map(function (r) {
+    return moduleRowHtml(r, state.editable);
+  }).join("");
+  Array.prototype.forEach.call(el("mp-list").querySelectorAll("input.mp-cb"), function (cb) {
+    cb.addEventListener("change", function () { onModuleToggle(cb); });
+  });
+  var canRollback = state.editable && !!((d.manifest_backup || {}).exists) && !MODULE_PANEL.busy;
+  el("mp-rollback").disabled = !canRollback;
+}
+
+function panelMessage(level, msg) {
+  var box = el("mp-msg");
+  box.className = "mp-msg " + (level || "");
+  box.textContent = msg || "";
+  box.hidden = !msg;
+}
+
+function toggleResultText(res) {
+  var lines = [];
+  (res.errors || []).forEach(function (e) { lines.push("✗ " + (e.message || "")); });
+  (res.warnings || []).forEach(function (w) { lines.push("⚠ " + (w.message || "")); });
+  return (res.message || (res.ok ? "已更新。" : "未更新。"))
+    + (lines.length ? "\n" + lines.join("\n") : "");
+}
+
+function onModuleToggle(cb) {
+  var module = cb.dataset.module;
+  var want = !!cb.checked;
+  if (!state.editable) {   // GM 只读：勾选不可用（给说明，不回写）
+    cb.checked = !want;
+    panelMessage("yellow", moduleReadonlyNote(false));
+    return;
+  }
+  if (!canLeave()) { cb.checked = !want; return; }   // 有未保存改动 → 先让用户决定
+  discardDraft();
+  MODULE_PANEL.busy = true;
+  el("mp-rollback").disabled = true;
+  postJSON("/api/pack/" + enc(state.pack) + "/module/" + enc(module) + "/toggle",
+           { enabled: want })
+    .then(function (res) {
+      panelMessage(res.ok ? ((res.warnings || []).length ? "yellow" : "ok") : "red",
+                   toggleResultText(res));
+      if (res && res.ok) { return fetchModulePanel().then(refreshAfterModuleChange); }
+      cb.checked = !want;   // 未成功 → 勾选状态回滚到实际
+      return null;
+    })
+    .catch(function (err) {
+      cb.checked = !want;
+      panelMessage("red", "模块" + (want ? "启用" : "停用") + "失败：" + err.message);
+    })
+    .then(function () {
+      MODULE_PANEL.busy = false;
+      if (MODULE_PANEL.data) { renderModulePanel(); }
+    });
+}
+
+function onModuleRollback() {
+  if (!state.editable) { return; }
+  if (!window.confirm("回退到上一次模块变更前的状态？"
+    + "（只复原 manifest；所有数据文件都会保留）")) { return; }
+  MODULE_PANEL.busy = true;
+  postJSON("/api/pack/" + enc(state.pack) + "/manifest/rollback", {}).then(function (res) {
+    panelMessage(res.ok ? "ok" : "red", toggleResultText(res));
+    if (res && res.ok) { return fetchModulePanel().then(refreshAfterModuleChange); }
+    return null;
+  }).catch(function (err) {
+    panelMessage("red", "回退失败：" + err.message);
+  }).then(function () {
+    MODULE_PANEL.busy = false;
+    if (MODULE_PANEL.data) { renderModulePanel(); }
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -3413,6 +3667,21 @@ el("btn-rollback").addEventListener("click", runRollback);
 el("btn-delete").addEventListener("click", deleteEntry);
 el("btn-new").addEventListener("click", openNewEntry);
 el("role").addEventListener("change", function (e) { switchRole(e.target.value); });
+// 批8 · 顶栏 ⚙ 模块开关：打开 / 关闭 / 回退；点遮罩或 Esc 关闭
+el("btn-settings").addEventListener("click", openModulePanel);
+el("mp-close").addEventListener("click", closeModulePanel);
+el("mp-done").addEventListener("click", closeModulePanel);
+el("mp-rollback").addEventListener("click", onModuleRollback);
+el("modpanel").addEventListener("click", function (e) {
+  if (e.target === el("modpanel")) { closeModulePanel(); }
+});
+document.addEventListener("keydown", function (e) {
+  if (e.key === "Escape" && !el("modpanel").hidden) { closeModulePanel(); }
+});
+document.addEventListener("click", function (e) {
+  var btn = e.target && e.target.closest ? e.target.closest("[data-open-modules]") : null;
+  if (btn) { openModulePanel(); }
+});
 el("filter").addEventListener("input", function (e) {
   state.filter = e.target.value; renderEntries();
 });

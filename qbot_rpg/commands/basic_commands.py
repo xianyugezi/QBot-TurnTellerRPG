@@ -1578,6 +1578,7 @@ class EquipmentEngineAdapter:
         ]
         res = self._engine.equip(player, item, item.slot)
         if res.get("ok"):
+            _sync_set_activation(ctx, player)  # ACT-05：穿戴触发套装重算
             msg = tpl_of(ctx, "basic_equip_ok", {"name": item.name})
             if res.get("replaced"):
                 msg += tpl_of(ctx, "basic_equip_replaced")
@@ -1595,6 +1596,7 @@ class EquipmentEngineAdapter:
             old = equipment.get(slot_id)
         res = self._engine.unequip(player, slot_id)
         if res.get("ok"):
+            _sync_set_activation(ctx, player)  # ACT-05：脱卸触发套装重算
             old_name = ""
             if old is not None:
                 old_name = str(getattr(old, "name", "") or "")
@@ -1620,6 +1622,80 @@ class EquipmentEngineAdapter:
 
 
 _logger = get_logger("basic_commands.equip")
+
+
+def _equipped_node_ids_from_equipment(ctx: Mapping[str, Any], player: Mapping[str, Any]) -> list:
+    """穿戴槽位 item_id → forge 节点 id 列表（ACT-05 重算输入；无匹配 → 空列表）。
+
+    扫描 ctx["forge"].trees[].nodes[] 建 item_id → 节点 id 反查表（首见优先），
+    对 player["equipment"] 各槽 item_id 取节点 id（保序去重）。纯读不改写，确定性。
+    """
+    forge = ctx.get("forge")
+    trees = forge.get("trees") if isinstance(forge, Mapping) else None
+    item_to_node: Dict[str, str] = {}
+    if isinstance(trees, (list, tuple)):
+        for tree in trees:
+            nodes = tree.get("nodes") if isinstance(tree, Mapping) else None
+            if not isinstance(nodes, (list, tuple)):
+                continue
+            for node in nodes:
+                if not isinstance(node, Mapping):
+                    continue
+                nid = node.get("id")
+                iid = node.get("item")
+                if isinstance(nid, str) and nid and isinstance(iid, str) and iid:
+                    item_to_node.setdefault(iid, nid)
+    equipment = player.get("equipment")
+    out: list = []
+    if isinstance(equipment, Mapping):
+        for _slot, slot_obj in equipment.items():
+            iid = slot_obj.get("item_id") if isinstance(slot_obj, Mapping) \
+                else getattr(slot_obj, "item_id", None)
+            nid = item_to_node.get(iid) if isinstance(iid, str) else None
+            if nid and nid not in out:
+                out.append(nid)
+    return out
+
+
+def _sync_set_activation(ctx: Mapping[str, Any], player: MutableMapping[str, Any]) -> None:
+    """ACT-05：穿/脱/换装后重算套装件数与激活技能（2c2d §1.3）。
+
+    从 ctx["forge"] 解析 sets（无 sets 数据 → 不动）；由当前穿戴槽位 item_id 反查
+    forge 节点 id（_equipped_node_ids_from_equipment）构造重算输入 → forge_set_skills.
+    sync_set_skills 写 player["set_tracker"]/["set_skills"]；同步 ctx["set_tracker"]/
+    ["set_skills"]（skill_slots_battle 经 ctx["set_skills"] 并入可用技能集）。
+    **战斗内冻结**：sync → recompute_set_tracker 在 player["in_battle"] is True 时
+    不重算（EQP-R06）；本函数整体 try 兜底，校验/数据缺失不阻断穿脱主流程。
+    """
+    try:
+        from qbot_rpg.core.forge_set_skills import (  # noqa: PLC0415
+            SET_SKILLS_KEY,
+            SET_TRACKER_KEY,
+            sync_set_skills,
+        )
+        from qbot_rpg.core.forge_sets import parse_sets  # noqa: PLC0415
+    except Exception:  # pragma: no cover - 模块缺失不阻断穿脱
+        return
+    forge = ctx.get("forge")
+    if not isinstance(forge, Mapping):
+        return
+    try:
+        sets = parse_sets({"forge": forge})
+        if not sets:
+            return
+        view: Dict[str, Any] = dict(player)
+        view["equipped"] = _equipped_node_ids_from_equipment(ctx, player)
+        settings = ctx.get("settings")
+        piece_counts = {"settings": settings} if isinstance(settings, Mapping) else None
+        skills = sync_set_skills(view, sets, piece_counts=piece_counts)
+        tracker = view.get(SET_TRACKER_KEY)
+        player[SET_TRACKER_KEY] = dict(tracker) if isinstance(tracker, Mapping) else {}
+        player[SET_SKILLS_KEY] = dict(skills)
+        if isinstance(ctx, MutableMapping):
+            ctx[SET_TRACKER_KEY] = dict(player[SET_TRACKER_KEY])
+            ctx[SET_SKILLS_KEY] = dict(skills)
+    except Exception as exc:  # pragma: no cover - 结算失败不阻断穿脱
+        _logger.exception("套装激活结算失败（穿脱已生效）: %s", exc)
 
 
 def _equip_engine(ctx: Mapping[str, Any]) -> Any:

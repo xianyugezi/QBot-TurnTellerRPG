@@ -729,6 +729,22 @@ class AliasTable:
     def alias_names(self) -> set:
         return set(self._by_alias)
 
+    def add(self, entry: AliasEntry) -> None:
+        """追加一条别名（内容包扩展注册用；冲突预检由调用方负责，本方法不校验）。
+
+        ``_by_command`` 取先到者（供显示层 A05 反查）；同指令多条别名时后者只在
+        ``alias_for`` 生效。
+        """
+        self._by_alias[entry.alias] = entry
+        self._by_command.setdefault(entry.command, entry)
+
+    def remove(self, alias: str) -> Optional[AliasEntry]:
+        """移除一条别名并返回被移除条目（不存在 → None）；注册回滚用。"""
+        entry = self._by_alias.pop(alias, None)
+        if entry is not None and self._by_command.get(entry.command) is entry:
+            self._by_command.pop(entry.command, None)
+        return entry
+
     def commands(self) -> set:
         return set(self._by_command)
 

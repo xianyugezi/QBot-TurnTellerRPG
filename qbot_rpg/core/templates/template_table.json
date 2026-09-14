@@ -243,6 +243,7 @@
     "alchemy_err_usage": "❌ 请输入配方\n发 炼金 <配方> 开始调合\n发 帮助 查看炼金相关指令",
     "alchemy_no_session": "当前没有调合会话\n先发 炼金 <配方> 开始",
     "err_bad_command": "❌ 指令不正确：{fragment}\n发 帮助 查看可用指令",
+    "ext_command_unavailable": "❌ 功能暂不可用",
     "alchemy_confirm_materials_short": "❌ 材料不足\n无法确认",
     "forge_system_disabled": "❌ 锻造系统未启用",
     "forge_tree_no_root": "❌ 锻造树缺少根节点\n内容包 forge.json 异常",

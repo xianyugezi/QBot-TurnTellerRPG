@@ -22,14 +22,16 @@ NoneBot 接线：register_startup() 在插件加载时注册 on_startup → buil
 
 from __future__ import annotations
 
+import argparse
 import asyncio
 import json
 import os
 from pathlib import Path
-from typing import Any, Mapping, Optional
+from typing import Any, Mapping, Optional, Sequence
 
 from qbot_rpg.assembly.bootstrap import bootstrap
 from qbot_rpg.assembly.context import AssemblyDeps
+from qbot_rpg.assembly.pack_ext import load_pack_extensions
 from qbot_rpg.assembly.router_setup import build_router
 from qbot_rpg.commands.processing import PerPlayerQueue
 from qbot_rpg.core.worldtime import WorldTime
@@ -39,6 +41,7 @@ from qbot_rpg.storage.repository import Repository
 __all__ = [
     "DEFAULT_PACK_NAME",
     "build_app_deps",
+    "main",
     "register_startup",
     "resolve_pack_dir",
     "resolve_db_path",
@@ -132,13 +135,19 @@ async def build_app_deps(
     pack_dir: Optional[str] = None,
     db_path: Optional[str] = None,
     settings: Optional[Mapping[str, Any]] = None,
+    enable_pack_ext: Optional[bool] = None,
 ) -> Any:
     """完整装配：bootstrap → AssembledApp → AssemblyDeps + router + 鸭式字段 → set_deps。
 
-    入参 pack_dir/db_path: 内容包目录与数据库路径（见 resolve_*）；settings: 覆盖。
+    入参 pack_dir/db_path: 内容包目录与数据库路径（见 resolve_*）；settings: 覆盖；
+    enable_pack_ext: 内容包扩展第二闸——``None``（缺省）= 读启动参数 ``--enable-pack-ext``
+    或环境变量 ``QBotRPG_ENABLE_PACK_EXT``；显式 bool 供 CLI/测试注入。**第一闸**
+    ``settings.ext.enabled`` 缺省 false；两闸同时为真才装载包内扩展（见
+    ``qbot_rpg/assembly/pack_ext.py``）。
     出参 deps: AssemblyDeps（含 router/queue/permission_store 等，run_command 消费）；
     并注入 qbot_rpg_bridge.plugin.set_deps（on_message 处理器读取）。
-    核心逻辑: Database→Repository→bootstrap→AssemblyDeps→build_router→鸭式字段→set_deps。
+    核心逻辑: Database→Repository→bootstrap→AssemblyDeps→build_router→内容包扩展装载→
+    鸭式字段→set_deps。扩展装载失败不影响装配（内部降级，见 ``deps.pack_ext_result``）。
     """
     pd = resolve_pack_dir(pack_dir)
     dpath = resolve_db_path(db_path)
@@ -166,6 +175,10 @@ async def build_app_deps(
     )
     # 鸭式字段（run_command 消费；GM 后端归 M12，permission/audit 暂 None）
     deps.router = build_router(deps)  # type: ignore[attr-defined]
+    # 内容包扩展装载（E1 · 通用装载器 + 双闸安全；失败隔离：结果落在 deps，绝不抛）
+    deps.pack_ext_result = load_pack_extensions(  # type: ignore[attr-defined]
+        deps.router, pack_dir=pd, settings=settings_map, cli=enable_pack_ext,
+    )
     deps.permission_store = None  # type: ignore[attr-defined]
     deps.audit_store = None  # type: ignore[attr-defined]
     deps.audit_hmac_key = None  # type: ignore[attr-defined]
@@ -201,8 +214,38 @@ def register_startup() -> None:
         await build_app_deps()
 
 
-if __name__ == "__main__":
-    asyncio.run(build_app_deps())
+def _parse_cli(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
+    """CLI 参数（CLI 侧第二闸通道；NoneBot 侧等价通道 = 环境变量）。
+
+    ``--enable-pack-ext`` 缺省 ``None``（不是 False）：未显式给出时不覆盖环境变量
+    ``QBotRPG_ENABLE_PACK_EXT``（见 ``qbot_rpg.assembly.pack_ext.resolve_cli_enabled``）。
+    """
+    ap = argparse.ArgumentParser(
+        prog="python -m qbot_rpg_bridge.assemble",
+        description="QBot-TurnTellerRPG 装配（bootstrap → build_router → set_deps）",
+    )
+    ap.add_argument("--pack-dir", default=None,
+                    help="内容包目录（缺省 QBotRPG_PACK_DIR 或 demo_lv15）")
+    ap.add_argument("--db", dest="db_path", default=None,
+                    help="存档 SQLite 路径（缺省 QBotRPG_DB_PATH）")
+    ap.add_argument(
+        "--enable-pack-ext", action="store_true", default=None,
+        help="启用内容包指令扩展（还需 settings.ext.enabled=true；见 docs/内容包扩展_指令.md）",
+    )
+    return ap.parse_args(argv)
+
+
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    """CLI 入口：``python -m qbot_rpg_bridge.assemble [--enable-pack-ext]``。"""
+    args = _parse_cli(argv)
+    asyncio.run(build_app_deps(
+        pack_dir=args.pack_dir, db_path=args.db_path, enable_pack_ext=args.enable_pack_ext,
+    ))
     print("装配完成：build_app_deps() 已注入 qbot_rpg_bridge.plugin")
+    return 0
+
+
+if __name__ == "__main__":
+    main()
     # Database 读连接池线程为非 daemon（部署时进程常驻 OK）；CLI 冒烟强制退出
     os._exit(0)  # noqa: PLR1722

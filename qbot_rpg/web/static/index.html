@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>内容编辑器 · 批9 配色切换</title>
+<title>内容编辑器</title>
 <link rel="stylesheet" href="/static/tokens.css">
 <script>
 /* 配色切换纯逻辑（批9 · 无 DOM 依赖；浏览器挂 globalThis.EditorTheme，node 下走 module.exports）。
@@ -93,7 +93,7 @@ body {
   gap: var(--sp-7); padding: 0 var(--sp-8); border-bottom: var(--bw) solid var(--line-strong);
   white-space: nowrap; overflow: hidden; }
 .brand { color: var(--text-strong); font-weight: 700; letter-spacing: .04em;
-  flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  flex: 0 0 auto; white-space: nowrap; }
 .brand .mark { color: var(--accent); }
 .pkgsel, .rolesel { display: inline-flex; align-items: center; gap: var(--sp-3);
   border: var(--bw) solid var(--line-strong); padding: 2px var(--sp-4); min-width: 0; }
@@ -116,9 +116,15 @@ body {
 .who b { color: var(--text-value); font-weight: 700; }
 .role { border: var(--bw) solid var(--accent); color: var(--accent); padding: 0 var(--sp-2); }
 .role.ro { border-color: var(--warn); color: var(--warn); }
+/* 批9.2：来源标注（manifest.json）在空间变窄时**整段隐藏**，绝不留下半个字符（曾出现只剩
+   单个 `m`：`.from` 是 `flex:0 0 auto` 不收缩，父级 `.pkgsel` 被顶栏挤窄后它在右端被
+   `overflow:hidden` 裁掉）。1100px 起直接隐藏；更宽时完整显示（实测 1280 有富余）。
+   包名/状态仍走省略号 + title 全文（syncPackTitle），身份切换固定宽不参与收缩。 */
+@media (max-width: 1100px) {
+  .pkgsel .from { display: none; }
+}
 @media (max-width: 900px) {
   .topbar { gap: var(--sp-5); padding: 0 var(--sp-5); }
-  .pkgsel .from { display: none; }        /* 窄窗口先舍来源标注，包名与状态保省略号 */
   .brand { letter-spacing: 0; }
 }
 /* 批5.2（V2）：更窄时先舍品牌字样，把宽度让给包名/状态；身份切换固定宽不参与收缩。
@@ -163,10 +169,19 @@ html[data-theme="contrast"] .asave:disabled { border-style: dotted; opacity: .6;
   display: flex; flex-direction: column; min-height: 0; }
 .col-list { width: var(--w-list); flex: 0 0 var(--w-list); border-right: var(--bw) solid var(--line-strong);
   display: flex; flex-direction: column; min-height: 0; }
-.col-hd { height: var(--h-bar); flex: 0 0 var(--h-bar); display: flex; align-items: center;
-  padding: 0 var(--sp-6); border-bottom: var(--bw) solid var(--line-soft);
-  color: var(--text-5); letter-spacing: .08em; }
-.col-hd .src { margin-left: auto; color: var(--text-6); font-size: var(--fs-10); letter-spacing: 0; }
+/* 批9.2：三栏栏头统一两层——第一层标题（flex:0 0 auto，字形绝不参与收缩），
+   第二层来源/计数/副标题（小字、min-width:0 + overflow:hidden + text-overflow:ellipsis，
+   宽度够显示完整、不够整段省略并挂 title 全文）。V6 的「计数含子项」信息保留在第二层，
+   不再与标题抢同一行把栏头撑爆（实测 159px 栏宽曾把「模块 + 122px 来源」压成一团）。 */
+.col-hd, .list-hd, .panel-hd { display: flex; flex-direction: column; justify-content: center;
+  gap: 1px; min-height: var(--h-bar); flex: 0 0 auto; padding: var(--sp-2) var(--sp-6);
+  border-bottom: var(--bw) solid var(--line-soft); min-width: 0; }
+.col-hd, .list-hd { letter-spacing: .08em; }
+.col-hd { color: var(--text-5); }
+.hd-t { display: flex; align-items: center; gap: var(--sp-5); min-width: 0; }
+.hd-t .ttl { flex: 0 0 auto; white-space: nowrap; }
+.hd-n { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; color: var(--text-6); font-size: var(--fs-10); letter-spacing: 0; }
 .mods { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: var(--sp-2) 0; }
 .mod { display: flex; align-items: center; gap: 2px; padding: var(--sp-2) var(--sp-6);
   color: var(--text-2); white-space: nowrap; cursor: pointer; }
@@ -181,10 +196,9 @@ html[data-theme="contrast"] .asave:disabled { border-style: dotted; opacity: .6;
 .mod .ct { margin-left: auto; color: var(--text-4); }
 .mod.on .ct { color: var(--accent); }
 
-.list-hd { height: var(--h-bar); flex: 0 0 var(--h-bar); display: flex; align-items: center;
-  padding: 0 var(--sp-6); border-bottom: var(--bw) solid var(--line-soft); }
+.list-hd { border-bottom: var(--bw) solid var(--line-soft); }
 .list-title { color: var(--text-strong); font-weight: 700; }
-.list-count { margin-left: var(--sp-5); color: var(--text-5); font-size: var(--fs-11); font-weight: 400; }
+.list-count { font-weight: 400; }
 .list-tools { display: flex; align-items: center; padding: var(--sp-3) var(--sp-6); border-bottom: var(--bw) solid var(--line-soft); }
 .search { display: flex; align-items: center; border: var(--bw) solid var(--line-strong); padding: 2px var(--sp-4); width: 100%; }
 .search input { border: 0; background: transparent; outline: none; color: var(--text-value);
@@ -209,12 +223,12 @@ html[data-theme="contrast"] .asave:disabled { border-style: dotted; opacity: .6;
 
 /* ---------- 大编辑面板（占其余全部宽度） ---------- */
 .panel { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
-.panel-hd { flex: 0 0 auto; padding: var(--sp-5) var(--sp-8); border-bottom: var(--bw) solid var(--line-soft);
-  display: flex; align-items: center; gap: var(--sp-6); }
+.panel-hd { padding: var(--sp-2) var(--sp-8); }
 .panel-title { color: var(--text-strong); font-weight: 700; }
 .panel-title::before { content: "> "; color: var(--accent); }
 .panel-sub { color: var(--text-4); }
-.panel-id { margin-left: auto; color: var(--text-4); }
+.panel-id { margin-left: auto; color: var(--text-4); flex: 0 1 auto; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .toolbar { flex: 0 0 auto; display: flex; align-items: center; gap: var(--sp-5); flex-wrap: wrap;
   padding: var(--sp-4) var(--sp-8); border-bottom: var(--bw) solid var(--line-soft); color: var(--text-4); }
 .panel-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: var(--sp-6) var(--sp-8); }
@@ -604,7 +618,7 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
 <div class="app">
 
   <header class="topbar">
-    <span class="brand"><span class="mark">▚</span> 内容编辑器 :: 配色</span>
+    <span class="brand"><span class="mark">▚</span> 内容编辑器</span>
     <label class="pkgsel">
       <span class="lb">pkg=</span>
       <select id="packs" aria-label="内容包选择器"></select>
@@ -636,15 +650,18 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
 
     <!-- 栏①：模块分类栏（模块与层级来自 manifest 声明；父子缩进表达） -->
     <aside class="col-mod">
-      <div class="col-hd">模块<span class="src" id="mod-src">manifest.modules</span></div>
+      <div class="col-hd">
+        <div class="hd-t"><span class="ttl">模块</span></div>
+        <div class="hd-n src" id="mod-src" title="manifest.modules">manifest.modules</div>
+      </div>
       <nav class="mods" id="mods"></nav>
     </aside>
 
     <!-- 栏②：条目列表栏（只名字 · 细滚动条 · 无翻页器） -->
     <aside class="col-list">
       <div class="list-hd">
-        <span class="list-title" id="list-title">条目</span>
-        <span class="list-count" id="list-count"></span>
+        <div class="hd-t"><span class="list-title ttl" id="list-title">条目</span></div>
+        <div class="hd-n list-count" id="list-count"></div>
       </div>
       <div class="list-tools lt-new">
         <button class="ladd newbtn" id="btn-new" type="button"
@@ -663,9 +680,11 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
     <!-- 栏③：大编辑面板（占其余全部宽度；批2 可编辑 + 草稿态 + 校验/保存/回退） -->
     <section class="panel">
       <div class="panel-hd">
-        <span class="panel-title" id="p-title">未选择条目</span>
-        <span class="panel-sub" id="p-sub"></span>
-        <span class="panel-id" id="p-id"></span>
+        <div class="hd-t">
+          <span class="panel-title ttl" id="p-title">未选择条目</span>
+          <span class="panel-id" id="p-id"></span>
+        </div>
+        <div class="hd-n panel-sub" id="p-sub"></div>
       </div>
       <div class="toolbar" id="toolbar">
         <button class="btn" id="btn-validate" disabled>校验</button>
@@ -1323,6 +1342,15 @@ function moduleCountLabel(n) {
 }
 /* EDITOR_COUNT_LABEL_END */
 
+/* EDITOR_HDR_NOTE_BEGIN */
+// 栏头第二层说明（批9.2）：来源/计数/副标题的文本与悬停 title 同源，避免「显示的」与
+// 「悬停看到的」两处漂移；是否折行/省略交给 CSS（.hd-n）。通用：不认任何业务字段名。
+function hdrNote(text) {
+  var t = text == null ? "" : String(text);
+  return { text: t, title: t };
+}
+/* EDITOR_HDR_NOTE_END */
+
 /* EDITOR_MODULES_BEGIN */
 // 批8 顶栏「模块开关」纯逻辑：清单行渲染 + 依赖黄提示 + 空包空态 + 只读说明。
 // 只按后端 descriptor 字段（module / label / purpose / enabled / missing_requires /
@@ -1414,6 +1442,14 @@ function fieldLabelHtml(label, key) {
 }
 /* EDITOR_FIELD_LABEL_END */
 function el(id) { return document.getElementById(id); }
+// 批9.2：写栏头第二层说明——文本与 title 同源（hdrNote），省略号与 min-width:0 由 .hd-n 负责。
+function setHdrNote(id, text) {
+  var n = el(id);
+  if (!n) { return; }
+  var r = hdrNote(text);
+  n.textContent = r.text;
+  n.title = r.title;
+}
 
 /* EDITOR_HELP_BEGIN */
 // 字段说明气泡（批4.6）：纯逻辑部分（可 node 直接执行；DOM 接线在本模块下方）。
@@ -1898,9 +1934,10 @@ function loadModules() {
   return api("/api/pack/" + enc(state.pack) + "/modules").then(function (data) {
     state.modules = data.modules || [];
     var flat = data.flat ? "平铺" : "层级声明";
-    // V6：层级包在栏头明示计数口径；平铺包每个模块计数即本模块条数，无需标注。
-    el("mod-src").textContent = "manifest.modules · " + state.modules.length + " · " + flat
-      + (data.flat ? "" : " · 计数含子项");
+    // V6：层级包在栏头第二层明示计数口径；平铺包每个模块计数即本模块条数，无需标注。
+    // 批9.2：说明走第二层小字（可省略），文本与 title 同源，不与「模块」标题挤同一行。
+    setHdrNote("mod-src", "manifest.modules · " + state.modules.length + " · " + flat
+      + (data.flat ? "" : " · 计数含子项"));
     // 批8：该包未启用任何模块 → 空态引导（点右上角 ⚙ 选择内容类型），不给用户空白迷茫。
     if (!state.modules.length) {
       state.module = null; state.entry = null;
@@ -1950,7 +1987,7 @@ function loadEntries() {
   return api("/api/pack/" + enc(state.pack) + "/module/" + enc(state.module) + "/entries")
     .then(function (data) {
       state.entries = data.entries || [];
-      el("list-count").textContent = state.entries.length + " 条";
+      setHdrNote("list-count", state.entries.length + " 条");
       renderEntries();
       if (state.entries.length) { selectEntry(state.entries[0].id); }
       else {
@@ -1960,7 +1997,8 @@ function loadEntries() {
         refreshRollbackButton();
         el("p-body").innerHTML = '<div class="empty">该模块暂无条目（条目列表为空）。</div>'
           + '<div id="result" hidden></div>';   // 删空模块后仍能展示「被引用者」等结果
-        el("p-title").textContent = EMPTY_TEXT; el("p-sub").textContent = ""; el("p-id").textContent = "";
+        el("p-title").textContent = EMPTY_TEXT; setHdrNote("p-sub", "");
+        el("p-id").textContent = ""; el("p-id").title = "";
         helpHideDom();
       }
     });
@@ -2054,11 +2092,11 @@ var MODULE_PANEL = { data: null, busy: false };
 function renderEmptyPack() {
   el("rows").innerHTML = "";
   el("list-title").textContent = "条目";
-  el("list-count").textContent = "0 条";
+  setHdrNote("list-count", "0 条");
   el("list-ft").textContent = "共 0 条";
   el("p-title").textContent = EMPTY_TEXT;
-  el("p-sub").textContent = "";
-  el("p-id").textContent = "";
+  setHdrNote("p-sub", "");
+  el("p-id").textContent = ""; el("p-id").title = "";
   state.backup = null;
   el("backup-note").textContent = "备份：—";
   refreshRollbackButton();
@@ -2211,9 +2249,9 @@ function renderNewEntry(d) {
   state.newDraft = EditorDraft.newDraft();
   state.newIdTouched = false;
   el("p-title").textContent = "新建条目 · " + (d.module_label || d.module);
-  el("p-sub").textContent = "字段按元数据默认值初始化 · 保存写入 " + d.module
-    + ".json（校验 + 原子写 + 自动备份）";
-  el("p-id").textContent = "（未保存）";
+  setHdrNote("p-sub", "字段按元数据默认值初始化 · 保存写入 " + d.module
+    + ".json（校验 + 原子写 + 自动备份）");
+  el("p-id").textContent = "（未保存）"; el("p-id").title = "（未保存）";
   resetHelpCards();
   MAIN_CTX.isNew = true;
   MAIN_CTX.module = state.module; MAIN_CTX.entry = null;
@@ -2353,7 +2391,8 @@ function closeNewEntry() {
   state.pendingDrafts = {};
   if (state.entry) { return reloadDetail(); }
   el("p-body").innerHTML = '<div class="empty">从左侧选择模块与条目，或用「+ 新建条目」新建一个。</div>';
-  el("p-title").textContent = "未选择条目"; el("p-sub").textContent = ""; el("p-id").textContent = "";
+  el("p-title").textContent = "未选择条目"; setHdrNote("p-sub", "");
+  el("p-id").textContent = ""; el("p-id").title = "";
   markDirty();
   return Promise.resolve();
 }
@@ -2469,8 +2508,8 @@ function renderDetail(d) {
   state.newEntry = null; state.newDraft = null; state.newIdTouched = false;
   MAIN_CTX.isNew = false; MAIN_CTX.draft = draft;
   el("p-title").textContent = d.name;
-  el("p-sub").textContent = (d.module_label || d.module) + " · 字段由元数据渲染";
-  el("p-id").textContent = d.id;
+  setHdrNote("p-sub", (d.module_label || d.module) + " · 字段由元数据渲染");
+  el("p-id").textContent = d.id; el("p-id").title = d.id;
   resetHelpCards();   // 说明卡注册表随渲染重建（字段行构建时注册 help id）
   syncMainCtx(d);
   state.forms = {};   // 关联分区各条目的草稿随条目详情重建（切换条目已有 canLeave 守卫）

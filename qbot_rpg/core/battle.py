@@ -291,6 +291,13 @@ _BATTLE_DEFAULT_CONFIG: Dict[str, Any] = {
     # 时触发 combatant.crit_bonus_cond 的 low_hp 加成项（缺省 0.3=30%）；可经
     # settings["battle"] 段覆盖（battle_config.resolve_battle_settings）。
     "crit_cond_low_hp": 0.3,
+    # 最低伤害保底（2026-09-14 用户拍板）：单次「命中并产生伤害」实例的最终伤害
+    # （所有增伤/减伤/防御结算之后）若低于本值 → 抬到本值；0 = 关闭（默认，零行为
+    # 变化）。仅命中实例适用：闪避/未命中/无伤害实例（没有伤害对象）不因此产生
+    # 伤害；DoT/反弹等派生伤害实例不走本保底（非命中的独立链入口）。
+    # 作用点 = 拦截链①减伤之后、②护盾吸收之前（先取保底、再走护盾/吸收）。
+    # 口径见 docs/细化/细化_3h_settings通用设置.md §十四「settings.battle 扩展段」。
+    "min_damage": 0,
 }
 
 # combatant 缺失字段兜底（细化_1g1c §1.2 双方单位 + 1a 公式所需属性）
@@ -4496,6 +4503,14 @@ class BattleEngine:
             # ---- ⑥⑦⑧ 拦截链（1b §2：减伤→护盾→反弹→吸收→免疫→续行→扣血→死亡判定）----
             vars_ = self._base_variables(attacker, target)
             vars_["damage_dealt"] = seg_total
+            # 保底伤害（2026-09-14 用户拍板）：本段是「命中并产生伤害」的实例——把
+            # settings.battle.min_damage 注入拦截链，由 DamagePipeline 在 ①减伤 结算后、
+            # ②护盾 之前取保底（先取保底、再走护盾吸收）。0 = 关闭、不注入（零行为变化）；
+            # 非命中实例（闪避/未命中/无伤害段）不经过本行、DoT/反弹（非命中链入口）不带
+            # 本变量 → 保底不为其凭空造伤。
+            _min_dmg = self._cfg_int("min_damage", 0)
+            if _min_dmg > 0:
+                vars_["min_damage"] = _min_dmg
             res = self.resolve_damage(attacker, target, raw, str(seg.get("attack_type") or atk_type),
                                       snapshot=self._snap, runtime=rt, variables=vars_)
             self._absorb_runtime(rt)

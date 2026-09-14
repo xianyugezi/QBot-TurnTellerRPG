@@ -1758,7 +1758,15 @@ def _module_table() -> Dict[str, ModuleMeta]:
     # 依据：content/{veinborn,test_demo,demo_full}/settings.json 实测键并集。
     SETTINGS_FIELDS.update({
         "assistant": _soft_display("助手", "obj"),
-        "battle": _soft_display("战斗参数", "obj"),
+        # settings.battle 段（引擎战斗参数；battle_config.resolve_battle_settings 白名单消费）。
+        # min_damage（2026-09-14 用户拍板）：最低伤害保底 int ≥ 0、缺省 0 = 关闭。
+        # 软标注（soft_label → 泛型校验短路、永不红拦；中文名/说明可被包 field_meta.json 覆盖）。
+        "battle": _soft_display("战斗参数", "obj", {
+            "min_damage": FieldMeta(
+                type="int", default=0, soft_label=True, label="最低伤害保底",
+                help="单次命中伤害的最终下限（所有增伤/减伤/防御后、护盾吸收前）；"
+                     "低于该值抬到该值，0 = 关闭。"),
+        }),
         "command_aliases": _soft_display("指令别名", "obj"),
         "contest": _soft_display("竞技", "obj"),
         "ctb": _soft_display("行动条", "obj"),

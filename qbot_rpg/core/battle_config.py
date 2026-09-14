@@ -12,6 +12,9 @@
     非数值 / 布尔 / 负数 → 忽略（回落引擎默认，绝不因配置失误关掉或放大机制）。
   - crit_cond_low_hp: (0, 1] —— 条件型会心「逆境」阈值（E20 批⑤；缺省 0.3）。
     非数值 / 布尔 / 越界 → 忽略（回落默认）。
+  - min_damage: int ≥ 0 —— 最低伤害保底（2026-09-14 用户拍板）：单次命中实例的
+    最终伤害（所有增伤/减伤/防御后、护盾吸收前）低于本值 → 抬到本值；0 = 关闭
+    （缺省 0，零行为变化）。非整数 / 布尔 / 负数 → 忽略（回落引擎默认）。
   - stun_* / roar_* 批⑦A（2026-09-12）气绝 KO 与咆哮参数；各自区间校验，
     越界/坏值 → 忽略（回落引擎默认）。
 
@@ -38,6 +41,8 @@ _logger = logging.getLogger(__name__)
 #: settings["battle"] 段可透传键白名单（新增键须同步 battle.py 默认表 + 本表）。
 BATTLE_SETTINGS_KEYS = (
     "backstab_bonus", "crit_cond_low_hp",
+    # 最低伤害保底（2026-09-14 用户拍板）：settings.battle.min_damage，通用键名
+    "min_damage",
     # 批⑦A 气绝 KO（怪猎采纳 #3）：打击×正方位积累 → 满值倒地
     "stun_enabled", "stun_base_threshold", "stun_escalation",
     "stun_decay_per_action", "stun_ko_window", "stun_ko_skip",
@@ -114,6 +119,8 @@ def resolve_battle_settings(settings: Any = None) -> Dict[str, Any]:
         _num("roar_light_delay", 0.0, 100000.0)
         _num("roar_heavy_delay", 0.0, 100000.0)
         _bool("roar_combo_clear")
+        # ---- 最低伤害保底（2026-09-14 用户拍板）：通用键名 min_damage；0=关 ----
+        _int("min_damage", 0, 1000000)
         # ---- 批⑦B：怒·三态 / 疲劳参数（同一白名单口径）----
         _num("rage_per_damage", 0.0, 100.0)
         _int("rage_cool_actions", 1, 1000)

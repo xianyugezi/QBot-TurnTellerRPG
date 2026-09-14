@@ -33,10 +33,9 @@
 from __future__ import annotations
 
 import json
-import math
 import random
 import warnings
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from qbot_rpg.core.effect_types import DamageCtx, chance_roll
@@ -887,6 +886,10 @@ class DamagePipeline:
     阶段（定稿 §3.4）：①减伤/减免 → ②护盾先扣 → ③反弹 → ④伤害吸收 → ⑤致命/非致命免疫
     → ⑥战斗续行 → ⑦扣血 → ⑧死亡判定。阶段间以伤害值递减传递（细化_1b §2 伪代码）。
 
+    保底伤害（2026-09-14 用户拍板）：在 ①减伤 结算后、②护盾 之前，对携带
+    `ctx.variables["min_damage"]` 的实例取最终伤害保底（floor）；仅命中实例注入该
+    变量（battle.py 命中路径），故不改变闪避/未命中/无伤害实例与 DoT/反弹派生伤害。
+
     与战斗层接线（拦截链接线历史教训——每一函数必须有调用方）：
       battle.py 组装 ctx（快照可变工作拷贝 + combatan.defenses 归一化）+ EffectRuntime，
       调用 damage_pipeline(ctx, runtime)；反射等派生伤害回注时经 ctx.variables
@@ -1075,7 +1078,14 @@ class DamagePipeline:
     # ---------------- 阶段实现 ----------------
 
     def _stage_mitigation(self, ctx: DamageCtx, runtime: EffectRuntime, se: list, d: int) -> int:
-        """① 减伤/减免（细化_1b §2 阶段①，定稿 §3.4① / §7.2② 生存模板二）。"""
+        """① 减伤/减免（细化_1b §2 阶段①，定稿 §3.4① / §7.2② 生存模板二）。
+
+        保底伤害（2026-09-14 用户拍板）：本阶段是「减伤之后、护盾之前」的天然落点
+        ——在此取最终伤害保底 `ctx.variables["min_damage"]`（仅命中实例由 battle.py
+        命中路径注入；闪避/未命中/无伤害实例与 DoT/反弹派生伤害不带该变量）。语义：
+        floor 而非 set（只抬不压），且不触碰会心/命中/格挡等既有判定；②护盾随后照常
+        吸收（护盾可以先吃掉保底伤害）。0/缺省 = 关闭、零行为变化。
+        """
         defs = self._defense(ctx, ctx.target)
         total = 0.0
         for m in defs.get("mitigation", []):
@@ -1086,6 +1096,17 @@ class DamagePipeline:
         out = max(0, round(d * (1 - total)))
         if total > 0:
             se.append({"type": "mitigation", "target": ctx.target, "reduced": d - out, "pct": total * 100})
+        # 保底伤害：入链有伤害对象（d>0）才取保底——减伤后即使为 0 也抬到 min_damage。
+        _floor = ctx.variables.get("min_damage", 0)
+        if d > 0 and _floor:
+            try:
+                _f = int(_floor)
+            except (TypeError, ValueError):
+                _f = 0
+            if _f > out:
+                se.append({"type": "min_damage", "target": ctx.target,
+                           "from": out, "to": _f})
+                out = _f
         return out
 
     def _stage_shield(self, ctx: DamageCtx, runtime: EffectRuntime, se: list, d: int) -> int:

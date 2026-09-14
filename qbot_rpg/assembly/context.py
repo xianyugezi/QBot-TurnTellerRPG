@@ -1471,6 +1471,11 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
                 # save/load（persistent_state["skill_slots"] 惰性挂回 _ps_init）。
                 "skill_slots": _skill_slots_interface(ctx, ps),
                 "skill_slots_state": _ps_init(ps, "skill_slots", {}),
+                # M9 套装档位（2026-09-14）：ACT-01 件数计数（4b EQP-03）+ ACT-02~05
+                # 激活结算键（forge_set_skills.sync_set_skills 产出）落 persistent_state；
+                # ctx["set_skills"] 由 skill_slots_battle 并入战斗可用技能集（唯一路径）。
+                "set_tracker": _ps_init(ps, "set_tracker", {}),
+                "set_skills": _ps_init(ps, "set_skills", {}),
             }
         )
         # 2026-09-06 营地 heal 收口：max_hp/max_mp 装配补键（npc heal N% 解析依赖

@@ -62,6 +62,16 @@
   P-5  ctx 键读口径：available_skills/is_slot_equipped 读 ctx["skill_slots_state"]
        （批13 落盘键，_ps_init 绑 ps 恒存在）；缺省/畸形 → 确定性兜底
        （空列表/False），不抛异常（对齐 load_slots_from_state 防御口径）。
+  P-6  套装激活技能并入口径（2026-09-14 套装档位批）：ctx[SET_SKILLS_STATE_KEY]
+       （"set_skills" = forge_set_skills.resolve_set_skills 产出的 {技能 id: 等级}）
+       经 with_set_skills 追加为装配槽行（slot 见 P-7）→ available_skills /
+       battle_equipped_skills 自然包含；同 skill_id 已在装配快照内则不重复追加
+       （装配行优先）。这是套装技能「进入玩家可用技能集」的唯一路径，不另开旁路。
+  P-7  套装技能槽类型：技能表 ctx["skills"][skill_id] 的 type（basic/active/passive/
+       trigger）可用则以该 type 入槽（尊重 6a 技能时机）；技能表缺该技能/缺 type →
+       默认 passive（套装技能常驻生效、不占行动位）。因此套装技能的**等级**随行
+       携带（"level" 键），可用性判定与装配技能同源（is_slot_equipped 只放行
+       basic/active 行动位）。
 
 铁律：零 NoneBot import（G0 门禁）；core 层只依赖 data（技能数据经 ctx 注入，
 零 import content）；纯函数确定性（同刻同参必同值）；完整类型标注（typing
@@ -86,6 +96,14 @@ SLOT_BASIC: str = "basic"
 SLOT_ACTIVE: str = "active"
 SLOT_PASSIVE: str = "passive"
 SLOT_TRIGGER: str = "trigger"
+
+# 套装激活技能结算键（ACT-02~05：forge_set_skills.sync_set_skills 产出的
+# {技能 id: 等级}；本文件经 with_set_skills 并入装配快照 → 可用技能集，P-6）
+SET_SKILLS_STATE_KEY: str = "set_skills"
+
+# 套装激活技能缺省槽类型（§1.4：套装技能常驻生效，默认 passive 不占行动位；
+# 技能表给出 type 时以其为准，P-7）
+_SET_SKILL_DEFAULT_SLOT: str = SLOT_PASSIVE
 
 # 行动位槽类型（§1.4：basic+active 占行动位；passive/trigger 不占行动位 [L64-65]）
 _ACTION_SLOTS: Tuple[str, ...] = (SLOT_BASIC, SLOT_ACTIVE)
@@ -114,11 +132,91 @@ _EMPTY_SNAPSHOT: Dict[str, Any] = {
 
 
 def _snapshot_of(ctx: Mapping[str, Any]) -> Mapping[str, Any]:
-    """ctx 装配快照读取（P-5：缺省/畸形 → 空骨架，不抛异常）。"""
+    """ctx 装配快照读取（P-5：缺省/畸形 → 空骨架，不抛异常）。
+
+    P-6：读取后并入 ctx[SET_SKILLS_STATE_KEY] 的套装激活技能（with_set_skills），
+    使 available_skills / battle_equipped_skills / is_slot_equipped / equipped_slot_kind
+    全部经同一路径消费套装技能（技能表 ctx["skills"] 提供 type 时用其时机，P-7）。
+    """
     raw = ctx.get(SKILL_SLOTS_STATE_KEY)
+    snapshot = raw if isinstance(raw, Mapping) else _EMPTY_SNAPSHOT
+    return with_set_skills(snapshot, ctx.get(SET_SKILLS_STATE_KEY), ctx.get("skills"))
+
+
+def set_skill_rows(set_skills: object, skill_table: object = None) -> List[Dict[str, Any]]:
+    """套装激活技能表 → 装配槽行（P-6/P-7）。
+
+    入参 set_skills: {技能 id: 等级}（非 Mapping → []）；
+              skill_table: ctx["skills"]（可选，提供技能的 6a type）；
+    出参 list[dict]: {"slot": <basic|active|passive|trigger>, "skill_id": str,
+    "level": int}；技能 id 非空、等级为 ≥1 的非 bool int 才收；按技能 id 升序确定。
+    """
+    if not isinstance(set_skills, Mapping):
+        return []
+    rows: List[Dict[str, Any]] = []
+    for sid in sorted(k for k in set_skills if isinstance(k, str) and k):
+        lv = set_skills[sid]
+        if not isinstance(lv, int) or isinstance(lv, bool) or lv < 1:
+            continue
+        rows.append({
+            "slot": _set_skill_slot(sid, skill_table),
+            "skill_id": sid,
+            "level": lv,
+        })
+    return rows
+
+
+def _set_skill_slot(skill_id: str, skill_table: object) -> str:
+    """套装技能槽类型（P-7）：技能表 type ∈ 四类 → 用之；否则 passive 缺省。"""
+    if isinstance(skill_table, Mapping):
+        row = skill_table.get(skill_id)
+        kind: object = None
+        if isinstance(row, Mapping):
+            kind = row.get("type")
+        else:
+            kind = getattr(row, "type", None)
+        if isinstance(kind, str) and kind in _SLOT_KIND_ORDER:
+            return kind
+    return _SET_SKILL_DEFAULT_SLOT
+
+
+def with_set_skills(
+    snapshot: Mapping[str, Any],
+    set_skills: object,
+    skill_table: object = None,
+) -> Dict[str, Any]:
+    """装配快照 + 套装激活技能 → 合并快照（P-6；不改入参，返回新 dict）。
+
+    基础槽行取 slots_from_snapshot(snapshot)（含 slots 优先 / active_order+passive+
+    trigger 老存档回退），套装技能行去重追加（同 skill_id 已在装配内 → 装配行优先），
+    结果统一写回 "slots"。set_skills 缺省/畸形 → 原快照确定性归一。
+    """
+    base: Dict[str, Any] = dict(snapshot) if isinstance(snapshot, Mapping) else {}
+    rows = slots_from_snapshot(base)
+    have = {r.get("skill_id") for r in rows if r.get("skill_id")}
+    for row in set_skill_rows(set_skills, skill_table):
+        if row["skill_id"] in have:
+            continue
+        rows.append(row)
+        have.add(row["skill_id"])
+    base["slots"] = rows
+    return base
+
+
+def set_skill_levels(ctx: Mapping[str, Any]) -> Dict[str, int]:
+    """ctx[SET_SKILLS_STATE_KEY] → {技能 id: 等级}（清洗后的套装激活等级表）。
+
+    展示/审计用（六级战斗结算读 level 消费此表）；缺省/畸形 → {}（确定性兜底）。
+    """
+    raw = ctx.get(SET_SKILLS_STATE_KEY)
     if not isinstance(raw, Mapping):
-        return _EMPTY_SNAPSHOT
-    return raw
+        return {}
+    out: Dict[str, int] = {}
+    for sid, lv in raw.items():
+        if isinstance(sid, str) and sid and isinstance(lv, int) \
+                and not isinstance(lv, bool) and lv >= 1:
+            out[sid] = lv
+    return out
 
 
 def slots_from_snapshot(snapshot: Mapping[str, Any]) -> List[Dict[str, Any]]:
@@ -131,7 +229,8 @@ def slots_from_snapshot(snapshot: Mapping[str, Any]) -> List[Dict[str, Any]]:
       - slots 缺省/畸形 → 回退 active_order + passive + trigger 三键并集
         （老存档兼容，P-1）；
       - basic 槽 skill_id=None（缺普攻占位）→ 保留占位条目（P-1）；
-      - 条目防御性清洗（slot 类型非法/非 Mapping → 跳过），纯函数不抛异常。
+      - 条目防御性清洗（slot 类型非法/非 Mapping → 跳过），纯函数不抛异常；
+      - 行内含合法 "level"（非 bool int）→ 保留（套装技能行携带等级，P-7）。
     """
     if not isinstance(snapshot, Mapping):
         return []
@@ -144,9 +243,13 @@ def slots_from_snapshot(snapshot: Mapping[str, Any]) -> List[Dict[str, Any]]:
             kind = item.get("slot")
             sid = item.get("skill_id")
             if isinstance(kind, str) and kind in _SLOT_KIND_ORDER:
-                cleaned.append(
-                    {"slot": kind, "skill_id": sid if isinstance(sid, str) else None}
-                )
+                row: Dict[str, Any] = {
+                    "slot": kind, "skill_id": sid if isinstance(sid, str) else None,
+                }
+                lv = item.get("level")
+                if isinstance(lv, int) and not isinstance(lv, bool):
+                    row["level"] = lv
+                cleaned.append(row)
         return cleaned
     # 回退：active_order + passive + trigger 三键并集（老存档兼容，P-1）
     fallback: List[Dict[str, Any]] = []
@@ -227,12 +330,16 @@ def equipped_slot_kind(ctx: Mapping[str, Any], skill_id: str) -> Optional[str]:
 
 __all__ = [
     "SKILL_SLOTS_STATE_KEY",
+    "SET_SKILLS_STATE_KEY",
     "SLOT_BASIC",
     "SLOT_ACTIVE",
     "SLOT_PASSIVE",
     "SLOT_TRIGGER",
     "PASSIVE_PROC_HOOK",
     "TRIGGER_PROC_HOOK",
+    "set_skill_rows",
+    "with_set_skills",
+    "set_skill_levels",
     "slots_from_snapshot",
     "available_skills",
     "is_slot_equipped",

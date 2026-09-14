@@ -287,6 +287,7 @@
   "exp_per_forge": "节点等级×15",
   "sets_enabled": false,
   "augments_enabled": false,
+  "set_piece_counts": [2, 3, 5],
   "carry_sec": 90
  }
 }

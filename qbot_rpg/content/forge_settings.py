@@ -68,6 +68,9 @@ FORGE_SETTINGS_DEFAULTS: Dict[str, object] = {
     "augments_enabled": True,           # 2c2d 补白键（P2 客制开关）
     "set_piece_counts": [2, 3, 5],  # P1-1 裁决：套装档位集合可配（默认 2/3/5）
     "set_tier_exact": True,         # P1-1 裁决：达到档位才激活；false=未达也可激活低档
+    # 2026-09-14：满套/件数上限可选显式配置；None = 未配置（由 forge_sets.
+    # derive_set_max_pieces 从 settings.slot_defs 防具部位推导），正整数 = 显式上限
+    "set_max_pieces": None,
 }
 
 # settings.forge 段可解析键（read_forge_settings 遍历顺序，照共享契约 §八 settings.json 形态）
@@ -81,6 +84,10 @@ FORGE_SETTINGS_KEYS: tuple = (
     "augments_enabled",
     "set_piece_counts",
     "set_tier_exact",
+    # 2026-09-14 用户拍板「套装档位不要硬编码数量」：满套/件数上限可选显式配置；
+    # 默认 None（未配置）→ forge_sets.derive_set_max_pieces 从 settings.slot_defs
+    # 防具部位推导（推导不出=不设上限）
+    "set_max_pieces",
 )
 
 # 素材档位两档（细化_2c2c TIER-03a：normal/rare；与装备品质四档 TIER-03b 不混用）
@@ -126,6 +133,9 @@ FORGE_SETTINGS_FIELD_DEFS: Dict[str, FieldMeta] = {
     "set_piece_counts": FieldMeta(type="list", element=FieldMeta(type="int")),
     # P1-1 裁决：激活语义（true=达到档位才激活；false=未达到也能激活低档）
     "set_tier_exact": FieldMeta(type="bool", default=True),
+    # 2026-09-14 用户拍板：满套/件数上限可选显式配置（正整数；缺省由
+    # forge_sets.derive_set_max_pieces 从 settings.slot_defs 防具部位推导）
+    "set_max_pieces": FieldMeta(type="int", range_min=1),
 }
 
 
@@ -211,6 +221,12 @@ def read_forge_settings(settings_raw: object) -> Dict[str, object]:
     # ---- P1-1 裁决：set_tier_exact 激活语义（仅 bool 生效）----
     if isinstance(forge.get("set_tier_exact"), bool):
         out["set_tier_exact"] = forge["set_tier_exact"]
+
+    # ---- 2026-09-14：set_max_pieces 满套/件数上限显式配置（仅正整数生效；
+    #      未配置保持默认 None，由 forge_sets.derive_set_max_pieces 从 slot_defs 推导）----
+    smp = forge.get("set_max_pieces")
+    if _is_int(smp) and smp >= 1:
+        out["set_max_pieces"] = smp
 
     return out
 

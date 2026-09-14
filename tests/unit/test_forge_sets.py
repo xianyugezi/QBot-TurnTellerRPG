@@ -29,9 +29,10 @@ from pathlib import Path
 from typing import Dict, List, Mapping, cast
 
 from qbot_rpg.core.forge_sets import (
-    FULL_SET_PIECES,
-    MIN_ACTIVATE_PIECES,
+    derive_set_max_pieces,
+    min_activate_pieces,
     parse_sets,
+    resolve_piece_counts,
     set_effects_contract,
     set_lookup,
     validate_sets,
@@ -96,8 +97,14 @@ def _beta_set(**over: object) -> Dict[str, object]:
 
 def _modules(sets: List[Dict[str, object]] | None = None, *,
              trees: List[Dict[str, object]] | None = None,
-             settings: Mapping[str, object] | None = None) -> Dict[str, object]:
-    """构造 modules dict（forge 顶层 obj；trees 缺省=五部位防具树）。"""
+             settings: Mapping[str, object] | None = None,
+             top_settings: Mapping[str, object] | None = None) -> Dict[str, object]:
+    """构造 modules dict（forge 顶层 obj；trees 缺省=五部位防具树）。
+
+    settings: 放进 forge["settings"]（批0 forge 段内配置，如 sets_enabled）；
+    top_settings: 放进 modules["settings"]（内容包 settings.json 段——档位集合
+      set_piece_counts 与 slot_defs 部位声明的读取位置，见 forge_sets F-8）。
+    """
     forge: Dict[str, object] = {"schema_version": "1.0"}
     if trees is not None:
         forge["trees"] = trees
@@ -106,7 +113,20 @@ def _modules(sets: List[Dict[str, object]] | None = None, *,
     forge["sets"] = sets if sets is not None else []
     if settings is not None:
         forge["settings"] = settings
-    return {"forge": forge}
+    modules: Dict[str, object] = {"forge": forge}
+    if top_settings is not None:
+        modules["settings"] = top_settings
+    return modules
+
+
+def _armor_slot_defs(count: int) -> Dict[str, object]:
+    """防具部位声明（kind="armor"，count 个；键名对齐五部位短名 + 兜底序号）。"""
+    names = ["head", "body", "hand", "leg", "foot", "arm", "waist"]
+    out: Dict[str, object] = {"weapon": {"name": "武器", "max": 1, "kind": "weapon"}}
+    for i in range(count):
+        key = names[i] if i < len(names) else "armor_%d" % i
+        out[key] = {"name": "防具%d" % i, "max": 1, "kind": "armor"}
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -193,11 +213,15 @@ def test_validate_v1_duplicate_combo() -> None:
 
 
 def test_validate_v2_pieces_too_many() -> None:
-    """负例 V2：件数范围——pieces 超 5 项 → 硬错误。"""
+    """负例 V2：件数范围——pieces 超派生上限（防具 5 部位）→ 硬错误。"""
     bad = _alpha_set(pieces=["n_head_a", "n_body_a", "n_hand_a", "n_leg_a", "n_foot_a", "n_extra"])
-    res = validate_sets(_modules([bad]))
+    res = validate_sets(_modules([bad], top_settings={"slot_defs": _armor_slot_defs(5)}))
     assert res["ok"] is False
+    assert res["set_max_pieces"] == 5
     assert "set_pieces_too_many" in _rules(res, "errors")
+    too_many = [e for e in cast(List[Dict[str, object]], res["errors"])
+                if e.get("rule") == "set_pieces_too_many"]
+    assert too_many and "≤5" in str(too_many[0]["msg"])
 
 
 def test_validate_v2_pieces_required() -> None:
@@ -263,15 +287,34 @@ def test_validate_structure_fallback_without_trees() -> None:
     assert dup and dup[0]["source"] == "route7a"
 
 
-def test_validate_w1_pieces_under_5() -> None:
-    """黄 W1：件数不足建议——pieces 3 件无法达成 5 件满配档 → 黄不拦。"""
+def test_validate_w1_pieces_under_max() -> None:
+    """黄 W1：件数不足建议——pieces 3 件 < 派生上限 5（防具 5 部位）→ 黄不拦，文案数字随上限。"""
     bad = _alpha_set(pieces=["n_head_a", "n_body_a", "n_hand_a"])
-    res = validate_sets(_modules([bad]))
+    res = validate_sets(_modules([bad], top_settings={"slot_defs": _armor_slot_defs(5)}))
     assert res["ok"] is True
-    assert "set_pieces_under_5" in _rules(res, "warnings")
+    assert "set_pieces_under_max" in _rules(res, "warnings")
     w1 = [w for w in cast(List[Dict[str, object]], res["warnings"])
-          if w.get("rule") == "set_pieces_under_5"]
+          if w.get("rule") == "set_pieces_under_max"]
     assert w1 and w1[0]["level"] == "W1"
+    assert "无法达成 5 件满配档" in str(w1[0]["msg"])
+
+
+def test_validate_w1_follows_derived_max() -> None:
+    """W1 文案数字跟随派生上限：防具 4 部位包 → 提示 4 件满配（不残留写死 5）。"""
+    bad = _alpha_set(pieces=["n_head_a", "n_body_a", "n_hand_a", "n_leg_a", "n_foot_a"])
+    res = validate_sets(_modules([bad], top_settings={"slot_defs": _armor_slot_defs(4)}))
+    assert res["set_max_pieces"] == 4
+    assert "set_pieces_too_many" in _rules(res, "errors")  # 5 件 > 上限 4
+    w1 = [w for w in cast(List[Dict[str, object]], res["warnings"])
+          if w.get("rule") == "set_pieces_under_max"]
+    # 3 件套餐在 4 部位包里应提示「无法达成 4 件满配档」
+    under = validate_sets(_modules(
+        [_alpha_set(pieces=["n_head_a", "n_body_a", "n_hand_a"])],
+        top_settings={"slot_defs": _armor_slot_defs(4)}))
+    under_w1 = [w for w in cast(List[Dict[str, object]], under["warnings"])
+                if w.get("rule") == "set_pieces_under_max"]
+    assert under_w1 and "无法达成 4 件满配档" in str(under_w1[0]["msg"])
+    assert w1 == []  # 5 件套餐已达上限，不出 W1
 
 
 def test_validate_w2_effect_ref_missing() -> None:
@@ -327,9 +370,9 @@ def test_lookup_ready_two_pieces() -> None:
     assert alpha["set_id"] == "set_dk"
     assert alpha["family_id"] == "set_dk"
     assert alpha["pieces_have"] == 2
-    assert alpha["pieces_total"] == FULL_SET_PIECES
+    assert alpha["pieces_total"] == 5
     assert alpha["ready"] is True
-    assert MIN_ACTIVATE_PIECES == 2
+    assert min_activate_pieces(None) == 2  # 缺省档位 {2,3,5} 的最小值
 
 
 def test_lookup_not_ready_one_piece() -> None:
@@ -425,3 +468,102 @@ def test_contract_invalid_set() -> None:
         c = set_effects_contract(bad)
         assert c["ok"] is False
         assert c["skills"] == []
+
+
+# ---------------------------------------------------------------------------
+# E F-8 数量来源：配置档位集合最小值（ready/激活同源）+ 满套上限派生（换数量）
+# ---------------------------------------------------------------------------
+def _cfg(piece_counts: object = None, *, set_max: object = None) -> Dict[str, object]:
+    """构造内容包 settings 段（forge 档位/上限 + slot_defs 部位声明）。"""
+    forge: Dict[str, object] = {}
+    if piece_counts is not None:
+        forge["set_piece_counts"] = piece_counts
+    if set_max is not None:
+        forge["set_max_pieces"] = set_max
+    return {"forge": forge, "slot_defs": _armor_slot_defs(5)}
+
+
+def test_lookup_ready_follows_configured_min_activate() -> None:
+    """换档位数量：配置 {3,5} → 2 件不 ready、3 件 ready（不再写死 2）。"""
+    sets = parse_sets(_modules([_alpha_set(), _beta_set()]))
+    cfg = {"settings": _cfg([3, 5])}
+    two = set_lookup({"equipped": ["n_head_a", "n_body_a"]}, sets, piece_counts=cfg)
+    assert all(r["ready"] is False for r in two), two
+    three = set_lookup(
+        {"equipped": ["n_head_a", "n_body_a", "n_hand_a"]}, sets, piece_counts=cfg)
+    assert all(r["ready"] is True for r in three), three
+
+
+def test_lookup_ready_single_tier_two() -> None:
+    """换档位数量：单档 {2} → 2 件即 ready，阈值随配置为 2。"""
+    sets = parse_sets(_modules([_alpha_set()]))
+    cfg = {"settings": _cfg([2])}
+    assert min_activate_pieces(cfg) == 2
+    two = set_lookup({"equipped": ["n_head_a", "n_body_a"]}, sets, piece_counts=cfg)
+    assert two[0]["ready"] is True
+    one = set_lookup({"equipped": ["n_head_a"]}, sets, piece_counts=cfg)
+    assert one[0]["ready"] is False
+
+
+def test_min_activate_empty_tiers_means_inactive() -> None:
+    """空档位集合 → 无档位/不激活（ready 恒 False）；行为写入 docstring。"""
+    sets = parse_sets(_modules([_alpha_set()]))
+    assert resolve_piece_counts({"settings": {"forge": {"set_piece_counts": []}}}) == ()
+    assert min_activate_pieces([]) is None
+    rows = set_lookup(
+        {"equipped": ["n_head_a", "n_body_a", "n_hand_a", "n_leg_a", "n_foot_a"]},
+        sets, piece_counts={"settings": {"forge": {"set_piece_counts": []}}})
+    assert rows[0]["ready"] is False
+
+
+def test_derive_max_pieces_from_armor_slots() -> None:
+    """上限派生：4 防具部位包 → 上限 4（不是写死 5）；kind 与部位键名两种声明都认。"""
+    keys_only = {"head": {"name": "头"}, "body": {"name": "身"},
+                 "hand": {"name": "手"}, "leg": {"name": "腿"},
+                 "weapon": {"name": "武器"}}
+    assert derive_set_max_pieces({"settings": {"slot_defs": keys_only}}) == 4
+    kinds = _armor_slot_defs(4)
+    assert derive_set_max_pieces({"settings": {"slot_defs": kinds}}) == 4
+    # 显式 kind 非防具（即使键名像部位）不计入
+    explicit_weapon = {"head": {"name": "头", "kind": "weapon"},
+                       "body": {"name": "身", "kind": "armor"}}
+    assert derive_set_max_pieces({"settings": {"slot_defs": explicit_weapon}}) == 1
+
+
+def test_derive_max_pieces_prefers_explicit_config() -> None:
+    """显式 settings.forge.set_max_pieces 优先于部位推导。"""
+    mods = {"settings": {"forge": {"set_max_pieces": 3}, "slot_defs": _armor_slot_defs(5)}}
+    assert derive_set_max_pieces(mods) == 3
+    res = validate_sets(_modules([], top_settings=mods["settings"]))
+    assert res["set_max_pieces"] == 3
+    assert res["set_max_pieces_source"] == "settings.forge.set_max_pieces"
+
+
+def test_derive_max_pieces_unbounded_without_slot_defs() -> None:
+    """缺 slot_defs/推导不出 → 不设上限（None，不崩、不误报、不回退写死 5）。"""
+    for mods in ({}, {"settings": {}}, {"settings": {"slot_defs": {}}},
+                 {"settings": {"slot_defs": {"weapon": {"name": "武器", "kind": "weapon"}}}}):
+        assert derive_set_max_pieces(mods) is None
+    bad = _alpha_set(pieces=["n_head_a", "n_body_a", "n_hand_a", "n_leg_a", "n_foot_a", "n_x"])
+    res = validate_sets(_modules([bad]))  # 无 settings → 无上限
+    assert res["set_max_pieces"] is None
+    assert res["set_max_pieces_source"] == "unbounded"
+    assert "set_pieces_too_many" not in _rules(res, "errors")
+    assert "set_pieces_under_max" not in _rules(res, "warnings")
+
+
+def test_veinborn_equivalence_derived_five() -> None:
+    """回归：veinborn（防具 5 部位）行为与修前一致——上限 5、W1 提示 5、越界报 ≤5。"""
+    vein = _load_json(_REPO_ROOT / "content" / "veinborn" / "settings.json")
+    assert isinstance(vein, Mapping)
+    assert vein["forge"]["set_piece_counts"] == [2, 3, 5]  # 数量落在包声明里
+    assert derive_set_max_pieces({"settings": vein}) == 5
+    assert min_activate_pieces({"settings": vein}) == 2
+    res = validate_sets(_modules([_alpha_set()], top_settings=vein))
+    assert res["set_max_pieces"] == 5 and res["set_max_pieces_source"] == "settings.slot_defs"
+    over = validate_sets(_modules(
+        [_alpha_set(pieces=["n_head_a", "n_body_a", "n_hand_a", "n_leg_a", "n_foot_a", "n_x"])],
+        top_settings=vein))
+    too = [e for e in cast(List[Dict[str, object]], over["errors"])
+           if e.get("rule") == "set_pieces_too_many"]
+    assert too and "≤5" in str(too[0]["msg"])

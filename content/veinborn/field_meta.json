@@ -693,11 +693,12 @@
         }
       },
       "forge": {
-        "_help": "锻造段：费用、合成比例、分解回收率、套装开关与套装部件数。",
+        "_help": "锻造段：费用、合成比例、分解回收率、套装开关、套装部件数与件数上限。",
         "augments_enabled": "是否启用客制强化。",
         "decompose_rate": "分解回收率。",
         "exp_per_forge": "每次锻造获得的经验（整数或公式文本）。",
         "forge_fee": "锻造费用（金币整数或按节点等级计算的公式文本）。",
+        "set_max_pieces": "套装件数上限（正整数；留空则按装备部位表的防具部位数推导，推导不出不设上限）。",
         "set_piece_counts": "各套装的部件数要求。",
         "set_tier_exact": "套装档位是否要求精确匹配。",
         "sets_enabled": "是否启用套装效果。",
@@ -1622,6 +1623,7 @@
         "decompose_rate": "分解回收率",
         "exp_per_forge": "每次锻造经验",
         "forge_fee": "锻造费",
+        "set_max_pieces": "套装件数上限",
         "set_piece_counts": "套装部件数",
         "set_tier_exact": "套装档位精确匹配",
         "sets_enabled": "启用套装",

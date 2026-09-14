@@ -1,4 +1,7 @@
 {
+  "ext": {
+    "enabled": true
+  },
   "currencies": [
     {
       "id": "coins",

@@ -104,7 +104,7 @@ def _player_view(player: Any) -> Optional[Mapping]:
 def rng(*parts: Any) -> random.Random:
     """确定性随机源：以 ``parts`` 为种子构造 ``random.Random``（同参同序列）。
 
-    用法：同一玩家同一局可复现（如 ``ext_api.rng(ctx.pack_id, ctx.player_id, "潮汐")``）。
+    用法：同一玩家同一局可复现（如 ``ext_api.rng(ctx.pack_id, ctx.player_id, "用途标签")``）。
     传不同 ``parts`` 得到独立序列；禁止用时间/系统随机做种子（破坏可复现）。
     """
     seed = "\x00".join(str(p) for p in parts)

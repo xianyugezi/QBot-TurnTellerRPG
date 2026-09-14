@@ -379,6 +379,9 @@ class _Checker:
         self._ns_registered: Dict[str, Dict[str, str]] = {}
         # 元素注册表（懒构建缓存：包内 formula.json `elements` 段 ∪ 缺省 8 元素）
         self._element_reg: Optional[frozenset] = None
+        # 云海九期（cloudsea-pack）207 性能修复①：skill_or_any 引用校验并集惰性缓存
+        # （注册即失效，见 _register_id / _check_ref；同 _element_reg 先例）。
+        self._all_ref_ids_cache: Optional[set] = None
 
     # ---- 报告构建 ----
     def _err(self, module: str, field: str, kind: str, **detail: object) -> None:
@@ -437,6 +440,7 @@ class _Checker:
 
     def _register_id(self, kind: str, namespace: str, eid: str, module_name: str) -> None:
         self._id_space.setdefault(kind, {}).setdefault(eid, module_name)
+        self._all_ref_ids_cache = None  # 云海九期（cloudsea-pack）207：注册面变化 → 并集缓存失效
         if eid in self._ns_registered.setdefault(namespace, {}):
             prev = self._ns_registered[namespace][eid]
             self._err(
@@ -857,6 +861,11 @@ class _Checker:
                                       rule="R16_part_onbreak_unknown_key", key=k,
                                       msg="on_break 未知键 %r（仅 knockdown/marks/effects）" % (k,))
             for k in part:
+                # 云海九期（cloudsea-pack）238：白名单放行云海两键——cls（件型标注）与 break_behavior
+                # （03 §M3.1B 部位破坏绑定面，251–255/219 产出；破坏行为结算
+                # 走 cloudsea 增量 hook 面，非 combo/effects/marks 既有行为改动）
+                if k in ("cls", "break_behavior"):
+                    continue
                 if k not in ("id", "name", "positions", "break_threshold",
                              "target_priority", "on_break"):
                     self._err(module_name, f"{pth}.{k}", "R-5",
@@ -1955,7 +1964,11 @@ class _Checker:
             return
         if target == "skill_or_any":
             # 兼容宽松引用：命中任一注册 kind 即通过（M0 无技能库模块场景）
-            all_reg = {e for ids in self._id_space.values() for e in ids}
+            # 云海九期（cloudsea-pack）207 性能修复①：并集惰性缓存（原实现每次全量重建
+            # O(全库 id)，12MB 包逐条目引用校验热路径放大；_register_id 写面即失效）。
+            if self._all_ref_ids_cache is None:
+                self._all_ref_ids_cache = {e for ids in self._id_space.values() for e in ids}
+            all_reg = self._all_ref_ids_cache
             if ref_id not in all_reg:
                 self._err(module_name, path, "R-4", rule="ref_missing", ref=ref_id,
                           ref_target=target)

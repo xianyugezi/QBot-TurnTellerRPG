@@ -17,6 +17,7 @@ from typing import Dict
 
 from qbot_rpg.content.field_meta import _module_table, default_field_meta_table
 from qbot_rpg.content.loader import _KIND_FOR_MODULE, build_pack
+from qbot_rpg.content.models import FieldMeta
 from qbot_rpg.content.validator import _Checker
 
 REPO = Path(__file__).resolve().parents[2]
@@ -98,3 +99,36 @@ def test_build_pack_test_demo_loads_skills() -> None:
     assert len(pack.registry.all_ids("skill")) >= 4, \
         f"skills 应至少 4 条，got {pack.registry.all_ids('skill')}"
     # 零红拦由 build_pack 成功本身证明（红拦会抛 PackLoadError）
+
+
+# ---------------------------------------------------------------------------
+# skill_or_any 引用校验并集惰性缓存（云海九期（cloudsea-pack）207 移植）
+# ---------------------------------------------------------------------------
+def _ref_missing(checker: _Checker, ref_id: str) -> bool:
+    """调用 skill_or_any 引用校验，返回本次是否新增 ref_missing 红拦。"""
+    before = len(checker.errors)
+    checker._check_ref("skills", f"skills.{ref_id}.ref", "effect", ref_id,
+                       FieldMeta(type="ref", ref_target="skill_or_any"))
+    return len(checker.errors) > before
+
+
+def test_skill_or_any_cache_reused_and_invalidated() -> None:
+    """并集缓存：两次读复用同一对象；_register_id 后失效并纳入新 id。"""
+    checker = _Checker({}, default_field_meta_table())
+    assert checker._all_ref_ids_cache is None, "初始为未构建"
+
+    assert _ref_missing(checker, "alpha") is True, "空库 → R-4"
+    first = checker._all_ref_ids_cache
+    assert first == set()
+    assert _ref_missing(checker, "beta") is True
+    assert checker._all_ref_ids_cache is first, "无注册变化 → 复用同一缓存对象"
+
+    checker._register_id("skill", "skill_lib", "alpha", "skills")
+    assert checker._all_ref_ids_cache is None, "写面注册 → 缓存失效"
+    assert _ref_missing(checker, "alpha") is False, "失效重建后并集含新 id"
+
+    checker._register_id("effect", "effect_lib", "beta", "effects")
+    assert _ref_missing(checker, "beta") is False, "跨 kind 并集同样命中"
+    assert _ref_missing(checker, "gamma") is True, "未注册 id 仍红拦"
+    rebuilt = checker._all_ref_ids_cache
+    assert rebuilt is not None and {"alpha", "beta"} <= rebuilt

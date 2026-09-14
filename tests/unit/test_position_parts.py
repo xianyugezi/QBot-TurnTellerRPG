@@ -151,6 +151,22 @@ class TestPartsSchema:
                 "R16_part_threshold_negative", "R16_part_unknown_key",
                 "R16_part_onbreak_unknown_key"} <= rules
 
+    def test_extension_keys_cls_break_behavior_allowed(self) -> None:
+        """云海九期（cloudsea-pack）238：白名单放行 cls/break_behavior；
+        未列白名单的未知键仍红拦。"""
+        ok_part = dict(SHELL_PART, cls="hard", break_behavior="shatter")
+        rep = check_pack({"action": _load("action"), "effects": _load("effects"),
+                          "statuses": _load("statuses"), "items": _load("items"),
+                          "enemies": [_base_enemy(parts=[ok_part])]})
+        assert _errs(rep) == [], f"放行 cls/break_behavior 应零红，got {_errs(rep)}"
+
+        bad_part = dict(SHELL_PART, cls="hard", break_behavior="shatter", mystery=1)
+        rep2 = check_pack({"action": _load("action"), "effects": _load("effects"),
+                           "statuses": _load("statuses"), "items": _load("items"),
+                           "enemies": [_base_enemy(parts=[bad_part])]})
+        unknown = _errs(rep2, "R16_part_unknown_key")
+        assert [e.detail.get("key") for e in unknown] == ["mystery"], unknown
+
 
 # =====================================================================================
 # 2. start 实例化 + 快照透传

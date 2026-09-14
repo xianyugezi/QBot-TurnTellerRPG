@@ -17,11 +17,12 @@
      W4 同族单记录（缺 α 或 β 对照）——V1~V3 委托/包装批0 validate_forge 的 2c2d
      sets 段（trees 合法时含节点引用/部位/αβ 孔位交叉校验），本路仅补纯结构兜底
      （无树也可验）与 W1~W4 结构黄（批0 未覆盖项）。
-  3) set_lookup(player, sets)：玩家当前装配可激活套装查询（P1 预留：只查已有装配件
-     可组成哪几套；标 {set_id, family_id, pieces_have, pieces_total, ready}；
-     ready=False 不激活；族级合并件数按 VAR-03 α/β 混穿口径）。
+  3) set_lookup(player, sets)：玩家当前装配可组成套装查询（只查已有装配件可组成哪几套；
+     标 {set_id, family_id, pieces_have, pieces_total, ready}；ready=False 不激活；
+     族级合并件数按 VAR-03 α/β 混穿口径）。**技能激活结算**（ACT-01~06 执行）见
+     qbot_rpg/core/forge_set_skills.py（2026-09-14 套装档位批补齐；本模块只做件数级查询）。
   4) set_effects_contract(set)：套装技能契约（SetSkill 展开：skill_id/描述/触发段；
-     仅数据契约不含执行——激活/结算归 M12 编辑器或后续）。
+     仅数据契约不含执行——激活判定/结算在 forge_set_skills.resolve_set_skills）。
   纯函数确定性（同刻同参必同值），零 IO 零 NoneBot；构造器配置注入 + 缺省兜底。
 
 依据：
@@ -33,8 +34,11 @@
     §六（2c2d 校验 V1-V8/W1-W4）、§七（validate_forge(modules, report) 接口签名）。
   - qbot_rpg/content/forge_models.py（批0）：ForgeSet/SetSkill Def 类 + validate_forge
     已含 2c2d V1~V8/W1~W4——本文件复用校验器，不重写其语义。
-  - 边界声明：本路仅「结构 + 校验 + 查询 + 契约」，套装技能激活/结算执行归 M12
-    编辑器或后续批次（ACT-05 动态重算 / ACT-06 混搭进 equip_snapshot 不在本路）。
+  - 边界声明：本模块 =「结构 + 校验 + 件数级查询 + 契约」；套装技能**激活/结算执行**
+    （ACT-01~06：档位判定 / 动态重算 / 战斗冻结）已于 2026-09-14 套装档位批落地在
+    qbot_rpg/core/forge_set_skills.py —— 复用本模块 _set_tracker/_equipped_node_ids/
+    _configured_piece_counts/_coerce_set 口径，不另造第二套统计；ACT-06 混搭的散件
+    属性进 equip_snapshot 仍归 4b 装备层（本模块不读散件属性）。
 
 【工程补白 · 显式标注】（契约/细化未显式定义处的实现口径，标 F-x；不得新增定稿外机制行为）：
   F-1  beta 引用 alpha：VAR-01「两条记录 skills 档位默认共享」→ parse_sets 对 variant=
@@ -523,7 +527,7 @@ def _emit_like(report: object, method: str, field: str, kind: str, **detail: obj
 
 
 # =====================================================================================
-# set_lookup：玩家当前装配可激活套装查询（P1 预留；F-4）
+# set_lookup：玩家当前装配可组成套装查询（F-4；技能结算见 forge_set_skills）
 # =====================================================================================
 def _equipped_node_ids(player: Mapping[str, object]) -> set:
     """装配节点 id 集（F-4：equipped/equip_nodes/equip_snapshot，str 或含 node_id/id 条目）。"""
@@ -556,7 +560,7 @@ def _set_tracker(player: Mapping[str, object]) -> Dict[str, int]:
 
 
 def set_lookup(player: object, sets: Sequence[object]) -> List[Dict[str, object]]:
-    """玩家当前装配可激活套装查询（P1 预留：只查已有装配件可组成哪几套，不激活）。
+    """玩家当前装配可组成套装查询（只查已有装配件可组成哪几套，不激活）。
 
     入参 player: 玩家状态（Mapping：set_tracker 优先，回退 equipped/equip_nodes/
       equip_snapshot 装配节点集；非 Mapping → 空装配确定性兜底）；
@@ -566,9 +570,10 @@ def set_lookup(player: object, sets: Sequence[object]) -> List[Dict[str, object]
        family_pieces_have, family_pieces_total}。
       - pieces_have / pieces_total: 记录级（仅本 variant 装配件数 / 该记录件数）。
       - family_pieces_have / family_pieces_total: 族级（VAR-03 α/β 混穿合并计数）。
-      - ready: 族级件数 ≥2（ACT-02 最低 2 件激活档；ready=False 不激活，激活执行归后续）。
+      - ready: 族级件数 ≥2（ACT-02 最低 2 件激活档）。
     核心逻辑: 记录级件数 = |pieces ∩ 装配节点|（或 set_tracker[族id]）；族级件数 =
-      同族全部记录 pieces 并集 ∩ 装配节点（混穿合并）。P1 不做技能结算（ACT-05 归后续）。
+      同族全部记录 pieces 并集 ∩ 装配节点（混穿合并）。技能激活/结算（ACT-01~06）
+      在 forge_set_skills.resolve_set_skills（本函数只做件数级查询）。
     """
     if not isinstance(player, Mapping):
         player = {}

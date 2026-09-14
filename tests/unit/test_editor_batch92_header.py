@@ -31,8 +31,8 @@ NODE = shutil.which("node")
 REPO = Path(api.repo_root())
 HTML = REPO / "qbot_rpg" / "web" / "static" / "index.html"
 
-# 页脚批次串 = 批次信息的唯一出处（批9 起）；旧批次字串不得残留。
-BATCH_NOTE = "批9 · 配色切换"
+# 页脚批次串 = 批次信息的唯一出处（批10 起）；旧批次字串不得残留。
+BATCH_NOTE = "批10 · 配色按钮化 + 自定义背景图"
 
 
 def _html() -> str:

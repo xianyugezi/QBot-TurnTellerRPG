@@ -84,7 +84,18 @@ body {
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
 }
-.app { width: 100%; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+.app { width: 100%; height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+  position: relative; z-index: 0; }
+
+/* ---------- 批10 · 自定义背景图（页面底层 + 主题兜底层） ----------
+   层序（由下到上）：body 底色(--bg) → .bgimg 背景图（用户透明度 0–100%）
+   → .bgbase 主题兜底层(--bg-scrim，压暗保证三套主题下正文可读) → .app 内容。
+   图片数据只存在浏览器本地，绝不进内容包、也不上传服务器。 */
+.bgimg { position: fixed; inset: 0; z-index: -2; background-repeat: no-repeat;
+  background-position: center center; background-size: cover; background-attachment: fixed;
+  opacity: 0; pointer-events: none; }
+.bgimg[hidden] { display: none; }
+.bgbase { position: fixed; inset: 0; z-index: -1; background: var(--bg-scrim); pointer-events: none; }
 
 /* ---------- 顶栏：内容包选择器 + 保存状态 + 身份/权限开关 ----------
    窄窗口约束：三段信息不换行、不互相挤压——可收缩项（包名/保存状态）用省略号，
@@ -134,16 +145,13 @@ body {
   .pkgsel { max-width: 56vw; }
 }
 
-/* ---------- 批9 · 顶栏配色切换（按钮组，令牌驱动；Tab 可达 + Enter/Space 生效） ---------- */
-.themeseg { display: inline-flex; align-items: center; gap: var(--sp-3); flex: 0 0 auto; }
-.themeseg .lb { color: var(--text-4); }
-.themeseg .tb { font-family: inherit; font-size: var(--fs-12); cursor: pointer;
-  color: var(--text-3); background: transparent; border: var(--bw) solid var(--line);
-  padding: 1px var(--sp-4); line-height: var(--h-ctl-sm); }
-.themeseg .tb:hover { color: var(--text-value); border-color: var(--line-strong); }
-.themeseg .tb.on { color: var(--accent); border-color: var(--accent); }
-.themeseg .tb:focus-visible { outline: none; box-shadow: 0 0 0 var(--focus-offset) var(--focus); }
-@media (max-width: 900px) { .themeseg .lb { display: none; } }  /* 窄屏先舍「配色：」字样，按钮保留 */
+/* ---------- 批10 · 顶栏「🎨 配色」按钮 + 共用弹层的键盘焦点环（令牌驱动） ----------
+   批9 的三个配色按钮已按用户要求收进「🎨 配色」面板（与 ⚙ 模块同款位置与交互）；
+   顶栏只留一个按钮，面板与 ⚙ 共用 .mp-* 弹层样式与 EditorModal 实现。
+   键盘可达：原生 button/input；焦点环统一走 --focus（Tab 与 Shift+Tab 都看得见）。 */
+.btn:focus-visible, .mp-x:focus-visible, .mp-search:focus-visible,
+.bg-file:focus-visible, .bg-op:focus-visible {
+  outline: none; box-shadow: 0 0 0 var(--focus-offset) var(--focus); }
 
 /* 批9 · 高对比主题：红/黄提示与禁用态不单靠色相——加边框形状（双线/虚线/点线）与符号。 */
 html[data-theme="contrast"] .vbox.red { border-left: calc(var(--bw-accent) * 2) double var(--danger); }
@@ -563,12 +571,14 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
   margin: var(--sp-4) var(--sp-6); }
 .newfoot .nfn { color: var(--text-5); font-size: var(--fs-11); }
 
-/* ---------- 批8 · 顶栏「模块开关」⚙ 面板（令牌驱动；终端极简风） ---------- */
+/* ---------- 批8/批10 · 共用弹层组件（.mp-*）：⚙ 模块 与 🎨 配色 同一套样式 ----------
+   V16：面板**居中 + 轻量遮罩**（点遮罩关闭）；V15：列表**细滚动条 + 关键词筛选**。
+   两个面板只共享这套 class 与 EditorModal 实现，不各写一份。 */
 .gear { flex: 0 0 auto; }
-.mp-overlay { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-start;
-  justify-content: center; padding: 8vh var(--sp-8) 0; background: var(--overlay); }
+.mp-overlay { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center;
+  justify-content: center; padding: var(--sp-8); background: var(--overlay); }
 .mp-overlay[hidden] { display: none; }
-.mp { width: min(680px, 96vw); max-height: 80vh; display: flex; flex-direction: column;
+.mp { width: min(680px, 96vw); max-height: 84vh; display: flex; flex-direction: column;
   background: var(--bg); border: var(--bw) solid var(--line-strong);
   box-shadow: var(--shadow); }
 .mp-hd { display: flex; align-items: center; gap: var(--sp-5);
@@ -587,11 +597,26 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
 .mp-msg.yellow { border-left-color: var(--warn); }
 .mp-msg.red { border-left-color: var(--danger); }
 .mp-msg.ok { border-left-color: var(--accent); }
+/* V15：关键词筛选框（与列表页同款；模块多时不用纯靠滚动找） */
+.mp-tools { padding: var(--sp-3) var(--sp-8); border-top: var(--bw) solid var(--line-soft); }
+.mp-search { width: 100%; font-family: inherit; font-size: var(--fs-12); color: var(--text-value);
+  background: var(--bg); border: var(--bw) solid var(--line); padding: var(--sp-3) var(--sp-4); }
+.mp-search::placeholder { color: var(--text-5); }
 .mp-list { overflow: auto; padding: var(--sp-2) var(--sp-8) var(--sp-5);
   border-top: var(--bw) solid var(--line-soft); }
+.mp-tools + .mp-list { border-top: 0; }
+/* V15：细滚动条（沿用 --sb-* 令牌；不抢视线，与左/中栏一致） */
+.mp-list::-webkit-scrollbar, .mp-msg::-webkit-scrollbar {
+  width: var(--sb-size); height: var(--sb-size); }
+.mp-list::-webkit-scrollbar-track, .mp-msg::-webkit-scrollbar-track { background: transparent; }
+.mp-list::-webkit-scrollbar-thumb, .mp-msg::-webkit-scrollbar-thumb {
+  background: var(--sb-thumb); border-radius: var(--radius-sb); }
+.mp-list::-webkit-scrollbar-thumb:hover, .mp-msg::-webkit-scrollbar-thumb:hover {
+  background: var(--sb-thumb-hover); }
 .mp-row { display: grid; grid-template-columns: auto minmax(64px, 1fr) minmax(90px, auto);
   align-items: baseline; gap: var(--sp-2) var(--sp-5); cursor: pointer;
   padding: var(--sp-3) var(--sp-2); border-bottom: var(--bw) solid var(--line-faint); }
+.mp-row[hidden] { display: none; }   /* 筛掉的行必须真隐藏（.mp-row 的 grid 会盖掉 [hidden]） */
 .mp-row:hover { background: var(--surface-hover); }
 .mp-row.on { background: var(--surface); }
 .mp-row.ro { cursor: not-allowed; }
@@ -612,9 +637,35 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
 .mempty { padding: var(--sp-10) var(--sp-8); color: var(--text-4); line-height: var(--lh-ex); }
 .mempty .me-t { color: var(--text-strong); font-size: var(--fs-14); margin-bottom: var(--sp-4); }
 .mempty .me-d { margin-bottom: var(--sp-6); }
+
+/* ---------- 批10 · 🎨 配色面板：主题单选 + 自定义背景图（令牌驱动） ---------- */
+.mp-sec { border-top: var(--bw) solid var(--line-soft); padding: var(--sp-5) var(--sp-8); }
+.mp-sec-t { color: var(--text-strong); margin-bottom: var(--sp-3); }
+.mp-sub { color: var(--text-5); font-size: var(--fs-11); line-height: var(--lh-ex);
+  margin-bottom: var(--sp-4); }
+.bg-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-4);
+  margin-bottom: var(--sp-4); }
+.bg-file { font-family: inherit; font-size: var(--fs-11); color: var(--text-2); max-width: 100%; }
+.bg-url { flex: 1 1 220px; min-width: 0; font-family: inherit; font-size: var(--fs-12);
+  color: var(--text-value); background: var(--bg); border: var(--bw) solid var(--line);
+  padding: var(--sp-3) var(--sp-4); }
+.bg-url::placeholder { color: var(--text-5); }
+.bg-lab { color: var(--text-4); font-size: var(--fs-11); }
+.bg-op { flex: 1 1 160px; min-width: 120px; accent-color: var(--accent); }
+.bg-prev-wrap { display: flex; align-items: center; gap: var(--sp-5); margin: var(--sp-3) 0 var(--sp-4); }
+.bg-prev { position: relative; width: 132px; height: 74px; flex: 0 0 132px; overflow: hidden;
+  background: var(--bg); border: var(--bw) solid var(--line); }
+.bg-prev-img { position: absolute; inset: 0; background-repeat: no-repeat;
+  background-position: center center; background-size: cover; opacity: 0; }
+.bg-prev-note { color: var(--text-5); font-size: var(--fs-11); line-height: var(--lh-ex); }
+.bg-acts { display: flex; align-items: center; gap: var(--sp-5); flex-wrap: wrap; }
 </style>
 </head>
 <body>
+<!-- 批10 · 自定义背景图：页面最底层图片 + 内容与图片之间的主题兜底层（--bg-scrim，保证可读） -->
+<div class="bgimg" id="bgimg" aria-hidden="true" hidden></div>
+<div class="bgbase" id="bgbase" aria-hidden="true"></div>
+
 <div class="app">
 
   <header class="topbar">
@@ -626,16 +677,10 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
     </label>
     <span class="saved" id="dirty">已保存</span>
     <div class="topright">
-      <!-- 批9 · 配色切换：暗色（默认）/ 浅色 / 高对比；立即生效并记住选择（Tab + Enter/Space） -->
-      <div class="themeseg" id="theme-seg" role="group" aria-label="配色主题（暗色 / 浅色 / 高对比）">
-        <span class="lb">配色：</span>
-        <button class="tb" type="button" data-theme-choice="dark" aria-pressed="true"
-          aria-label="配色：暗色" title="暗色（默认）：终端极简风">暗色</button>
-        <button class="tb" type="button" data-theme-choice="light" aria-pressed="false"
-          aria-label="配色：浅色" title="浅色：浅底深字，明亮环境更清楚">浅色</button>
-        <button class="tb" type="button" data-theme-choice="contrast" aria-pressed="false"
-          aria-label="配色：高对比" title="高对比：纯黑底 + 亮色文字/线；红黄提示与禁用态另有形状区分（正文与警示色尽量达 WCAG AA）">高对比</button>
-      </div>
+      <!-- 批10 · 配色按钮（与 ⚙ 模块同款位置/交互）：点开面板 = 三套主题单选 + 自定义背景图 -->
+      <button class="btn gear" id="btn-theme" type="button" aria-haspopup="dialog"
+        aria-label="配色与背景图"
+        title="配色与背景图：三套主题单选 + 自定义背景图（透明度可调）；只存在本机浏览器，不上传服务器">🎨 配色</button>
       <button class="btn gear" id="btn-settings" type="button"
         title="模块开关：勾选要做的内容类型（如角色、道具、场景…）；停用只移除声明，数据文件保留；落盘走校验 + 原子写 + 自动备份">⚙ 模块</button>
       <label class="rolesel">
@@ -699,7 +744,7 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
       <div class="panel-body" id="p-body">
         <div class="empty">从左侧选择模块与条目。字段按内容包元数据渲染；改动先进草稿，保存时才校验并落盘。</div>
       </div>
-      <div class="panel-ft"><span>批9 · 配色切换（暗色 / 浅色 / 高对比 · 令牌层换肤，尺寸/字体/间距不变 · localStorage 记忆 + 首次跟随系统 · 立即生效不丢草稿）</span></div>
+      <div class="panel-ft"><span>批10 · 配色按钮化 + 自定义背景图（🎨 配色面板：三套主题单选 · 本地图片/URL 背景图 · 透明度 0–100% · 只存浏览器本机不上传 · ⚙ 与 🎨 共用弹层组件）</span></div>
     </section>
 
   </div>
@@ -710,22 +755,75 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
 <!-- 字段说明气泡（批4.6）：内容由后端 help_card 自动拼装 + 元数据人工 help 填充 -->
 <div id="help-card" class="help-card" role="tooltip" hidden></div>
 
-<!-- 批8 · 顶栏 ⚙ 模块开关：勾选该包要启用的内容类型（写入 manifest.modules + 骨架数据文件） -->
-<div id="modpanel" class="mp-overlay" hidden>
+<!-- 批8/批10 · 顶栏 ⚙ 模块开关（与 🎨 配色共用 .mp-* 弹层组件：居中 + 遮罩 + 细滚动条 + 筛选） -->
+<div id="modpanel" class="mp-overlay" data-modal="modpanel" hidden>
   <div class="mp" role="dialog" aria-modal="true" aria-label="模块开关">
     <div class="mp-hd">
       <span class="mp-t">⚙ 模块开关</span>
-      <button class="mp-x" id="mp-close" type="button" aria-label="关闭模块开关">×</button>
+      <button class="mp-x" id="mp-close" data-modal-close type="button"
+        aria-label="关闭模块开关">×</button>
     </div>
     <div class="mp-hint" id="mp-hint"></div>
     <div class="mp-msg" id="mp-msg" hidden></div>
+    <div class="mp-tools">
+      <input class="mp-search" id="mp-search" data-modal-search type="text" autocomplete="off"
+        spellcheck="false" placeholder="筛选模块（按名称 / 模块键 / 用途）"
+        aria-label="筛选模块列表">
+    </div>
     <div class="mp-list" id="mp-list"></div>
     <div class="mp-ft">
       <span class="mp-note" id="mp-note"></span>
       <span class="sp"></span>
       <button class="btn danger" id="mp-rollback" type="button" disabled
         title="回退最近一次模块变更：只复原 manifest，所有数据文件保留">回退最近一次模块变更</button>
-      <button class="btn" id="mp-done" type="button">完成</button>
+      <button class="btn" id="mp-done" data-modal-close type="button">完成</button>
+    </div>
+  </div>
+</div>
+
+<!-- 批10 · 顶栏 🎨 配色：三套主题单选（立即生效）+ 自定义背景图（本地图片/URL · 透明度可调） -->
+<div id="themepanel" class="mp-overlay" data-modal="themepanel" hidden>
+  <div class="mp" role="dialog" aria-modal="true" aria-label="配色与背景图">
+    <div class="mp-hd">
+      <span class="mp-t">🎨 配色</span>
+      <button class="mp-x" id="tp-close" data-modal-close type="button"
+        aria-label="关闭配色面板">×</button>
+    </div>
+    <div class="mp-hint" id="tp-hint"></div>
+    <div class="mp-list" id="tp-list" role="radiogroup" aria-label="配色主题（单选）"></div>
+    <div class="mp-sec" id="bg-sec">
+      <div class="mp-sec-t">背景图（可调透明度）</div>
+      <div class="mp-sub">支持本地图片或图片 URL；只保存在你自己的浏览器里，不上传服务器，
+        也不写入任何内容包文件。清除后恢复默认底色。</div>
+      <div class="bg-row">
+        <input class="bg-file" id="bg-file" type="file" accept="image/*"
+          aria-label="选择本地图片">
+        <input class="bg-url" id="bg-url" type="text" autocomplete="off" spellcheck="false"
+          placeholder="或粘贴图片 URL（http/https 开头）" aria-label="图片 URL">
+        <button class="btn" id="bg-url-apply" type="button">应用 URL</button>
+      </div>
+      <div class="bg-row">
+        <span class="bg-lab">透明度</span>
+        <input class="bg-op" id="bg-op" type="range" min="0" max="100" step="1" value="60"
+          aria-label="背景图透明度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="60">
+        <span class="bg-lab" id="bg-op-v">60%</span>
+      </div>
+      <div class="bg-prev-wrap">
+        <div class="bg-prev" aria-hidden="true">
+          <span class="bg-prev-img" id="bg-prev-img"></span>
+        </div>
+        <span class="bg-prev-note" id="bg-prev-note"></span>
+      </div>
+      <div class="mp-msg" id="bg-msg" hidden></div>
+      <div class="bg-acts">
+        <button class="btn danger" id="bg-clear" type="button"
+          title="清除背景图并恢复默认底色（本机记录一并删除）">清除背景图</button>
+      </div>
+    </div>
+    <div class="mp-ft">
+      <span class="mp-note" id="tp-note"></span>
+      <span class="sp"></span>
+      <button class="btn" id="tp-done" data-modal-close type="button">完成</button>
     </div>
   </div>
 </div>
@@ -1369,7 +1467,7 @@ function moduleRowHtml(row, editable) {
   var dep = moduleDepHint(r);
   var dis = editable ? "" : " disabled";
   var st = r.enabled ? "已启用" : "未启用";
-  return '<label class="mp-row' + (r.enabled ? " on" : "") + (editable ? "" : " ro") + '">'
+  return '<label class="mp-row' + (r.enabled ? " on" : "") + (editable ? "" : " ro") + '" data-modal-row>'
     + '<input type="checkbox" class="mp-cb" data-module="' + esc(r.module || "") + '"'
     + (r.enabled ? " checked" : "") + dis + ' aria-label="' + esc(label) + '">'
     + '<span class="nm">' + esc(label) + "</span>"
@@ -1392,6 +1490,248 @@ function moduleReadonlyNote(editable) {
     + "请切换为可编辑身份。";
 }
 /* EDITOR_MODULES_END */
+
+/* EDITOR_MODAL_BEGIN */
+// 批10 · 共用弹层组件：⚙ 模块（#modpanel）与 🎨 配色（#themepanel）走**同一套**实现与样式。
+// 职责：打开/关闭、记住并回还触发按钮焦点（无障碍）、Esc 关闭、Tab 焦点环、
+// 点遮罩关闭、关键词筛选（V15）。纯逻辑部分不认任何具体面板内容，node 可直接执行。
+var MODAL_IDS = [];
+var MODAL_TRIGGERS = {};
+
+function modalEl(id) { return el(id); }
+function modalRegister(id) { if (MODAL_IDS.indexOf(id) < 0) { MODAL_IDS.push(id); } }
+function modalActive() {
+  for (var i = 0; i < MODAL_IDS.length; i++) {
+    var r = modalEl(MODAL_IDS[i]);
+    if (r && !r.hidden) { return MODAL_IDS[i]; }
+  }
+  return "";
+}
+function modalIsOpen(id) { var r = modalEl(id); return !!(r && !r.hidden); }
+function modalFocusables(root) {
+  if (!root || !root.querySelectorAll) { return []; }
+  var sel = "button:not([disabled]), [href], input:not([disabled]),"
+    + " select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex=\"-1\"])";
+  return Array.prototype.slice.call(root.querySelectorAll(sel));
+}
+function modalOpen(id, trigger) {
+  var root = modalEl(id);
+  if (!root) { return false; }
+  modalRegister(id);
+  MODAL_TRIGGERS[id] = trigger || (typeof document !== "undefined" ? document.activeElement : null);
+  root.hidden = false;
+  var first = root.querySelector("[data-modal-autofocus]") || modalFocusables(root)[0];
+  if (first && first.focus) { try { first.focus(); } catch (e) {} }
+  return true;
+}
+function modalClose(id) {
+  var root = modalEl(id);
+  if (!root || root.hidden) { return false; }
+  root.hidden = true;
+  var t = MODAL_TRIGGERS[id];
+  if (t && t.focus) { try { t.focus(); } catch (e) {} }
+  return true;
+}
+function modalOverlayClick(e, id) {
+  if (e && e.target === modalEl(id)) { return modalClose(id); }
+  return false;
+}
+function modalEsc(e) {
+  if (!e || e.key !== "Escape") { return false; }
+  var id = modalActive();
+  return id ? modalClose(id) : false;
+}
+function modalTrap(e) {
+  if (!e || e.key !== "Tab") { return false; }
+  var id = modalActive();
+  if (!id) { return false; }
+  var f = modalFocusables(modalEl(id));
+  if (!f.length) { return false; }
+  var first = f[0], last = f[f.length - 1];
+  var active = (typeof document !== "undefined") ? document.activeElement : null;
+  if (e.shiftKey && active === first) { e.preventDefault(); last.focus(); return true; }
+  if (!e.shiftKey && active === last) { e.preventDefault(); first.focus(); return true; }
+  return false;
+}
+function modalFilter(root, query, rowSel) {
+  if (!root) { return 0; }
+  var q = String(query == null ? "" : query).trim().toLowerCase();
+  var rows = root.querySelectorAll(rowSel || "[data-modal-row]");
+  var shown = 0;
+  Array.prototype.forEach.call(rows, function (row) {
+    var hit = !q || String(row.textContent || "").toLowerCase().indexOf(q) >= 0;
+    row.hidden = !hit;
+    if (hit) { shown += 1; }
+  });
+  return shown;
+}
+function modalBind(id, opts) {
+  var root = modalEl(id);
+  if (!root) { return false; }
+  modalRegister(id);
+  var o = opts || {};
+  Array.prototype.forEach.call(root.querySelectorAll("[data-modal-close]"), function (b) {
+    if (b.dataset && b.dataset.modalCloseBound) { return; }
+    if (b.dataset) { b.dataset.modalCloseBound = "1"; }
+    b.addEventListener("click", function () { modalClose(id); });
+  });
+  if (!root.dataset || !root.dataset.modalBound) {
+    if (root.dataset) { root.dataset.modalBound = "1"; }
+    root.addEventListener("click", function (e) { modalOverlayClick(e, id); });   // 点遮罩关闭
+  }
+  if (o.searchInput && o.list) {
+    var input = el(o.searchInput), list = el(o.list);
+    if (input && list && !(input.dataset && input.dataset.modalSearchBound)) {
+      if (input.dataset) { input.dataset.modalSearchBound = "1"; }
+      input.addEventListener("input", function () {
+        modalFilter(list, input.value, o.rowSel || "[data-modal-row]");
+      });
+    }
+  }
+  return true;
+}
+/* EDITOR_MODAL_END */
+
+/* EDITOR_BG_BEGIN */
+// 批10 · 自定义背景图纯逻辑（无 DOM 依赖；浏览器挂 EditorBg，node 走 module.exports）。
+// 存储策略：**浏览器本地，绝不上传服务器**（无鉴权面、零服务端改动，也不写任何内容包文件）。
+//   · 首选 localStorage：qbot.editor.bg.image（dataURL / URL）+ qbot.editor.bg.opacity；
+//   · 图片过大导致 localStorage 配额超限 → 退 IndexedDB（库 qbot.editor.bg / 记录 image）；
+//   · 两者都不可用（隐私模式）→ 本次会话内存态，如实提示，不影响编辑器使用。
+// 通用：不认任何内容包模块/业务字段名。
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) { module.exports = factory(); }
+  else { root.EditorBg = factory(); }
+})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+  var IMAGE_KEY = "qbot.editor.bg.image";
+  var OPACITY_KEY = "qbot.editor.bg.opacity";
+  var DEFAULT_OPACITY = 60;
+  var MAX_BYTES = 4 * 1024 * 1024;      // 单张上限 4MB（超过先提示压缩，避免拖垮浏览器）
+  var IDB_NAME = "qbot.editor.bg";
+  var IDB_STORE = "kv";
+
+  function clampOpacity(v) {
+    if (v === null || v === undefined || v === "") { return DEFAULT_OPACITY; }
+    var n = Number(v);
+    if (!isFinite(n)) { return DEFAULT_OPACITY; }
+    n = Math.round(n);
+    if (n < 0) { return 0; }
+    if (n > 100) { return 100; }
+    return n;
+  }
+  function isDataImage(url) { return typeof url === "string" && /^data:image\//i.test(url); }
+  function isHttpUrl(url) { return typeof url === "string" && /^https?:\/\//i.test(url); }
+  function classify(url) {
+    if (!url) { return "none"; }
+    if (isDataImage(url)) { return "data"; }
+    if (isHttpUrl(url)) { return "http"; }
+    return "invalid";
+  }
+  function sourceLabel(src) {
+    if (src === "data") { return "本地图片"; }
+    if (src === "http") { return "图片 URL"; }
+    return "";
+  }
+  function sizeText(n) {
+    var b = Number(n) || 0;
+    if (b >= 1024 * 1024) { return (Math.round(b / (1024 * 1024) * 10) / 10) + "MB"; }
+    return Math.max(1, Math.round(b / 1024)) + "KB";
+  }
+  function fileError(file, maxBytes) {
+    if (!file) { return "没有选到文件，请重新选择图片。"; }
+    var type = String(file.type || "");
+    if (type.indexOf("image/") !== 0) {
+      return "「" + String(file.name || "该文件") + "」不是图片（" + (type || "未知类型")
+        + "），请选 PNG / JPG / WebP / GIF 等图片文件。";
+    }
+    var limit = Number(maxBytes || MAX_BYTES);
+    if (Number(file.size || 0) > limit) {
+      return "「" + String(file.name || "该文件") + "」有 " + sizeText(file.size)
+        + "，超过单张 " + sizeText(limit) + " 上限；请先压缩或换小一点的图片。";
+    }
+    return "";
+  }
+  function urlError(url) {
+    var s = String(url == null ? "" : url).trim();
+    if (!s) { return "请先填写图片 URL。"; }
+    if (!isHttpUrl(s)) { return "URL 需以 http 或 https 开头；也可以改用「选择本地图片」。"; }
+    return "";
+  }
+  function loadLocal(storage) {
+    var img = null, op = DEFAULT_OPACITY;
+    try { img = storage ? storage.getItem(IMAGE_KEY) : null; } catch (e) { img = null; }
+    try {
+      var raw = storage ? storage.getItem(OPACITY_KEY) : null;
+      if (raw !== null && raw !== "" && raw !== undefined) { op = clampOpacity(raw); }
+    } catch (e2) { op = DEFAULT_OPACITY; }
+    var src = classify(img);
+    if (src === "invalid") { img = null; src = "none"; }   // 坏存储值丢掉，不崩
+    return { image: img || null, opacity: op, source: src };
+  }
+  function idbReady(idb) { return !!(idb && typeof idb.put === "function"); }
+  function idbPut(idb, value) {
+    if (!idbReady(idb)) { return Promise.resolve(false); }
+    try {
+      return Promise.resolve(idb.put(value)).then(function () { return true; },
+        function () { return false; });
+    } catch (e) { return Promise.resolve(false); }
+  }
+  function idbGet(idb) {
+    if (!idb || typeof idb.get !== "function") { return Promise.resolve(null); }
+    try {
+      return Promise.resolve(idb.get()).then(function (v) { return v || null; },
+        function () { return null; });
+    } catch (e) { return Promise.resolve(null); }
+  }
+  function idbDel(idb) {
+    if (!idb || typeof idb.del !== "function") { return Promise.resolve(false); }
+    try {
+      return Promise.resolve(idb.del()).then(function () { return true; },
+        function () { return false; });
+    } catch (e) { return Promise.resolve(false); }
+  }
+  function save(storage, idb, bg) {
+    var img = bg && bg.image ? String(bg.image) : "";
+    var op = clampOpacity(bg && bg.opacity);
+    try {
+      if (!storage) { throw new Error("浏览器本地存储不可用"); }
+      storage.setItem(OPACITY_KEY, String(op));
+      if (img) { storage.setItem(IMAGE_KEY, img); } else { storage.removeItem(IMAGE_KEY); }
+      return Promise.resolve({ ok: true, where: "local", opacity: op, reason: "" });
+    } catch (e) {
+      // localStorage 多半是配额超限（大图）→ IndexedDB 兜底
+      return idbPut(idb, img).then(function (okIdb) {
+        if (!okIdb) {
+          return { ok: false, where: "none", opacity: op,
+            reason: "图片太大，浏览器本地存储放不下（" + String((e && e.message) || "配额超限")
+              + "）。可以先压缩图片，或改用图片 URL。" };
+        }
+        return { ok: true, where: "indexeddb", opacity: op, reason: "" };
+      });
+    }
+  }
+  function saveOpacity(storage, v) {
+    var op = clampOpacity(v);
+    try {
+      if (storage) { storage.setItem(OPACITY_KEY, String(op)); }
+      return { ok: !!storage, opacity: op };
+    } catch (e) { return { ok: false, opacity: op }; }
+  }
+  function clear(storage, idb) {
+    try {
+      if (storage) { storage.removeItem(IMAGE_KEY); storage.removeItem(OPACITY_KEY); }
+    } catch (e) { /* 清不掉也不影响继续用编辑器 */ }
+    return idbDel(idb).then(function () { return { ok: true }; });
+  }
+  return { IMAGE_KEY: IMAGE_KEY, OPACITY_KEY: OPACITY_KEY, DEFAULT_OPACITY: DEFAULT_OPACITY,
+    MAX_BYTES: MAX_BYTES, IDB_NAME: IDB_NAME, IDB_STORE: IDB_STORE,
+    clampOpacity: clampOpacity, isDataImage: isDataImage, isHttpUrl: isHttpUrl,
+    classify: classify, sourceLabel: sourceLabel, sizeText: sizeText,
+    fileError: fileError, urlError: urlError, loadLocal: loadLocal,
+    idbReady: idbReady, idbPut: idbPut, idbGet: idbGet, idbDel: idbDel,
+    save: save, saveOpacity: saveOpacity, clear: clear };
+});
+/* EDITOR_BG_END */
 
 /* EDITOR_TOPBAR_LABEL_BEGIN */
 // 顶栏内容包显示（批5.2 · V2）：窄窗口下包名/标识会被省略（曾截成 `(veinbo..`）——可见文本
@@ -1861,41 +2201,67 @@ function syncPackTitle() {
 }
 
 // ---------------------------------------------------------------------------
-// 顶栏配色切换（批9）：纯逻辑在 <head> 的 EditorTheme；此处只做 DOM 接线。
-// 立即生效（只改 <html data-theme>），不刷新、不触碰草稿与未保存改动；
-// 显式选择写 localStorage 记忆，从没选过时跟随系统 prefers-color-scheme。
+// 顶栏配色（批9 → 批10）：纯逻辑在 <head> 的 EditorTheme。
+// 批10 按用户要求把三个按钮收成一个「🎨 配色」按钮（与 ⚙ 模块同款位置/交互），
+// 点开与 ⚙ 共用的弹层：三套主题**单选列表**（显示当前选中态 + 一句说明）+ 自定义背景图。
+// 立即生效（只改 <html data-theme>），不刷新、不触碰草稿与未保存改动；选完**保留面板**
+// （用户可在面板里一边看主题一边调背景图透明度，满意后点「完成」），显式选择写 localStorage。
 // ---------------------------------------------------------------------------
 function themeStore() {
   try { return window.localStorage; } catch (e) { return null; }
 }
-function renderThemeSeg() {
-  var seg = el("theme-seg");
-  if (!seg) { return; }
+function themeChoiceHtml(c, current) {
+  var on = c.theme === current;
+  return '<label class="mp-row tp-row' + (on ? " on" : "") + '" data-modal-row>'
+    + '<input type="radio" class="mp-cb" name="theme-choice" data-theme-choice="'
+    + esc(c.theme) + '"' + (on ? " checked" : "") + ' aria-label="配色：' + esc(c.label) + '">'
+    + '<span class="nm">' + esc(c.label) + "</span>"
+    + '<span class="key">' + esc(c.theme) + "</span>"
+    + '<span class="st">' + (on ? "当前" : "选择") + "</span>"
+    + '<span class="purpose">' + esc(c.hint || "") + "</span>"
+    + "</label>";
+}
+function syncThemeChoices() {
+  var list = el("tp-list");
+  if (!list) { return; }
   var cur = EditorTheme.normalize(state.theme);
-  (EditorTheme.CHOICES || []).forEach(function (c) {
-    var b = seg.querySelector('[data-theme-choice="' + c.theme + '"]');
-    if (!b) { return; }
-    var on = c.theme === cur;
-    b.className = "tb" + (on ? " on" : "");
-    b.setAttribute("aria-pressed", on ? "true" : "false");
+  Array.prototype.forEach.call(list.querySelectorAll("[data-theme-choice]"), function (r) {
+    var on = r.dataset.themeChoice === cur;
+    r.checked = on;
+    var row = r.closest ? r.closest(".mp-row") : null;
+    if (!row) { return; }
+    row.className = "mp-row tp-row" + (on ? " on" : "");
+    var st = row.querySelector(".st");
+    if (st) { st.textContent = on ? "当前" : "选择"; }
   });
+}
+function renderThemeSeg() {
+  var b = el("btn-theme");
+  if (b) {
+    var name = EditorTheme.labelOf(state.theme);
+    b.textContent = "🎨 配色：" + name;
+    b.setAttribute("aria-label", "配色与背景图（当前：" + name + "）");
+    b.title = "配色与背景图：当前 " + name
+      + "。点开可换主题、设置自定义背景图（透明度可调）；只存在本机浏览器，不上传服务器。";
+  }
+  syncThemeChoices();
+  var tag = el("vtag");
+  if (tag) { tag.title = "当前配色：" + EditorTheme.labelOf(state.theme); }
 }
 function setTheme(theme, persist) {
   state.theme = EditorTheme.applyTheme(document.documentElement, theme);
   renderThemeSeg();
-  var tag = el("vtag");
-  if (tag) { tag.title = "当前配色：" + EditorTheme.labelOf(state.theme); }
   if (persist) { EditorTheme.saveTheme(themeStore(), state.theme); }
   return state.theme;
 }
 function initTheme() {
   state.theme = EditorTheme.normalize(document.documentElement.getAttribute("data-theme"));
   renderThemeSeg();
-  var seg = el("theme-seg");
-  if (seg) {
-    seg.addEventListener("click", function (e) {
-      var b = e.target && e.target.closest ? e.target.closest("[data-theme-choice]") : null;
-      if (b) { setTheme(b.dataset.themeChoice, true); }
+  var list = el("tp-list");
+  if (list) {
+    list.addEventListener("change", function (e) {
+      var r = e.target && e.target.closest ? e.target.closest("[data-theme-choice]") : null;
+      if (r) { setTheme(r.dataset.themeChoice, true); }   // 立即生效并记忆；面板保留
     });
   }
   var mq = window.matchMedia ? window.matchMedia("(prefers-color-scheme: light)") : null;
@@ -1906,6 +2272,200 @@ function initTheme() {
     });
   }
 }
+
+// --- 🎨 配色面板：主题单选列表 + 背景图区（与 ⚙ 共用 EditorModal 打开/关闭/筛选） ---
+function renderThemePanel() {
+  var hint = el("tp-hint");
+  if (hint) {
+    hint.textContent = "选一套配色，立即生效（会记住这个选择）。背景图只保存在你自己的浏览器里，"
+      + "不会上传服务器，也不写入任何内容包文件。";
+  }
+  var list = el("tp-list");
+  if (list) {
+    list.innerHTML = (EditorTheme.CHOICES || []).map(function (c) {
+      return themeChoiceHtml(c, EditorTheme.normalize(state.theme));
+    }).join("");
+  }
+  var note = el("tp-note");
+  if (note) {
+    note.textContent = "当前配色：" + EditorTheme.labelOf(state.theme)
+      + "。换肤不改尺寸与字段，也不清空未保存的改动。";
+  }
+}
+function openThemePanel() {
+  renderThemePanel();
+  renderBgPanel();
+  return modalOpen("themepanel", el("btn-theme"));
+}
+
+// --- 背景图 DOM 接线（批10）：层 = .bgimg（图片，用户透明度）+ .bgbase（主题兜底 --bg-scrim） ---
+var BG = { image: null, opacity: EditorBg.DEFAULT_OPACITY, source: "none",
+           where: "local", idb: null };
+function bgStore() { return themeStore(); }   // 同一 localStorage（隐私模式返回 null）
+function bgCssUrl(url) {
+  return 'url("' + String(url).replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '")';
+}
+function bgIdbAdapter() {
+  if (!window.indexedDB) { return null; }
+  function openDb() {
+    return new Promise(function (res, rej) {
+      var req = window.indexedDB.open(EditorBg.IDB_NAME, 1);
+      req.onupgradeneeded = function () {
+        var db = req.result;
+        if (db.objectStoreNames && !db.objectStoreNames.contains(EditorBg.IDB_STORE)) {
+          db.createObjectStore(EditorBg.IDB_STORE);
+        }
+      };
+      req.onsuccess = function () { res(req.result); };
+      req.onerror = function () { rej(req.error); };
+    });
+  }
+  function run(mode, fn) {
+    return openDb().then(function (db) {
+      return new Promise(function (res, rej) {
+        var tx = db.transaction(EditorBg.IDB_STORE, mode);
+        var req = fn(tx.objectStore(EditorBg.IDB_STORE));
+        tx.oncomplete = function () { res(req && req.result !== undefined ? req.result : null); };
+        tx.onerror = function () { rej(tx.error); };
+      });
+    });
+  }
+  return {
+    put: function (v) { return run("readwrite", function (s) { return s.put(v, "image"); }); },
+    get: function () { return run("readonly", function (s) { return s.get("image"); }); },
+    del: function () { return run("readwrite", function (s) { return s.delete("image"); }); }
+  };
+}
+function bgMsg(level, text) {
+  var box = el("bg-msg");
+  if (!box) { return; }
+  box.className = "mp-msg " + (level || "");
+  box.textContent = text || "";
+  box.hidden = !text;
+}
+function bgApply() {
+  var layer = el("bgimg"), prev = el("bg-prev-img");
+  var url = BG.image || "";
+  var op = EditorBg.clampOpacity(BG.opacity);
+  if (layer) {
+    layer.hidden = !url;
+    layer.style.backgroundImage = url ? bgCssUrl(url) : "none";
+    layer.style.opacity = String(op / 100);
+  }
+  if (prev) {
+    prev.style.backgroundImage = url ? bgCssUrl(url) : "none";
+    prev.style.opacity = String(op / 100);
+  }
+  var note = el("bg-prev-note");
+  if (note) {
+    note.textContent = url
+      ? ("当前背景：" + EditorBg.sourceLabel(BG.source) + " · 透明度 " + op + "%"
+         + (BG.where === "indexeddb" ? " · 大图存于 IndexedDB" : ""))
+      : "暂无背景图；可「选择本地图片」或粘贴图片 URL。";
+  }
+  var opv = el("bg-op-v");
+  if (opv) { opv.textContent = op + "%"; }
+}
+function renderBgPanel() {
+  var op = el("bg-op");
+  var v = EditorBg.clampOpacity(BG.opacity);
+  if (op) { op.value = String(v); op.setAttribute("aria-valuenow", String(v)); }
+  bgApply();
+}
+function bgCommit(image, source) {
+  BG.image = image || null;
+  BG.source = source || EditorBg.classify(BG.image);
+  BG.where = "local";
+  return EditorBg.save(bgStore(), BG.idb, { image: BG.image, opacity: BG.opacity })
+    .then(function (res) {
+      BG.where = res.where;
+      if (!res.ok) { bgMsg("red", res.reason); }
+      else if (!BG.image) { bgMsg("ok", "已清除背景图，恢复默认底色。"); }
+      else if (res.where === "indexeddb") {
+        bgMsg("yellow", "图片较大，已存到浏览器的 IndexedDB（仍在本机，不上传服务器）。");
+      } else { bgMsg("ok", "已应用并记住这张背景图（本机，不上传服务器）。"); }
+      bgApply();
+      return res;
+    });
+}
+function bgDoClear() {
+  BG.image = null; BG.source = "none"; BG.where = "local";
+  var f = el("bg-file"); if (f) { f.value = ""; }
+  var u = el("bg-url"); if (u) { u.value = ""; }
+  return EditorBg.clear(bgStore(), BG.idb).then(function () {
+    renderBgPanel();
+    bgMsg("ok", "已清除背景图，恢复默认底色（本机记录也已删除）。");
+  });
+}
+function bgOnFile(file) {
+  var err = EditorBg.fileError(file, EditorBg.MAX_BYTES);
+  if (err) {
+    bgMsg("red", err);
+    var f = el("bg-file"); if (f) { f.value = ""; }
+    return;
+  }
+  var reader = new FileReader();   // FileReader → dataURL（本地读取，不经过服务器）
+  reader.onload = function () {
+    var data = String(reader.result || "");
+    if (EditorBg.classify(data) !== "data") {
+      bgMsg("red", "这个文件读出来不是图片，可能已损坏；换一张试试。");
+      return;
+    }
+    bgCommit(data, "data");
+  };
+  reader.onerror = function () {
+    bgMsg("red", "读取图片失败（文件可能已损坏或被占用）；不影响编辑器继续使用。");
+  };
+  reader.readAsDataURL(file);
+}
+function bgOnUrl() {
+  var input = el("bg-url");
+  var url = String(input ? input.value : "").trim();
+  var err = EditorBg.urlError(url);
+  if (err) { bgMsg("red", err); return; }
+  var probe = new Image();   // 先探一张：拉不到就给人话提示，不写坏状态
+  probe.onload = function () { bgCommit(url, "http"); };
+  probe.onerror = function () {
+    bgMsg("red", "这个 URL 拉不到图片（可能写错、需要登录或被防盗链拦住）。"
+      + "编辑器不受影响；也可以改用「选择本地图片」。");
+  };
+  probe.src = url;
+}
+function initBg() {
+  BG.idb = bgIdbAdapter();
+  var local = EditorBg.loadLocal(bgStore());
+  BG.image = local.image; BG.opacity = local.opacity; BG.source = local.source;
+  renderBgPanel();
+  if (!BG.image) {   // 本地没有 → 看 IndexedDB 兜底里有没有大图
+    EditorBg.idbGet(BG.idb).then(function (img) {
+      if (!img) { return; }
+      BG.image = img; BG.source = EditorBg.classify(img); BG.where = "indexeddb";
+      renderBgPanel();
+    });
+  }
+  var file = el("bg-file");
+  if (file) {
+    file.addEventListener("change", function () { bgOnFile(file.files && file.files[0]); });
+  }
+  var apply = el("bg-url-apply");
+  if (apply) { apply.addEventListener("click", bgOnUrl); }
+  var url = el("bg-url");
+  if (url) {
+    url.addEventListener("keydown", function (e) { if (e.key === "Enter") { bgOnUrl(); } });
+  }
+  var op = el("bg-op");
+  if (op) {
+    op.addEventListener("input", function () {
+      BG.opacity = EditorBg.clampOpacity(op.value);
+      op.setAttribute("aria-valuenow", String(BG.opacity));
+      bgApply();
+      EditorBg.saveOpacity(bgStore(), BG.opacity);
+    });
+  }
+  var clr = el("bg-clear");
+  if (clr) { clr.addEventListener("click", bgDoClear); }
+}
+
 
 // ---------------------------------------------------------------------------
 // 栏①：模块分类（层级来自包元数据；item.children 递归渲染）
@@ -2119,11 +2679,12 @@ function refreshAfterModuleChange() {
 function openModulePanel() {
   if (!state.pack) { return Promise.resolve(); }
   return fetchModulePanel().then(function () {
-    el("modpanel").hidden = false;
+    var s = el("mp-search");   // 每次打开重置筛选，避免带着上次的关键词「看着像少了模块」
+    if (s) { s.value = ""; }
+    modalFilter(el("mp-list"), "", "[data-modal-row]");
+    modalOpen("modpanel", el("btn-settings"));
   });
 }
-
-function closeModulePanel() { el("modpanel").hidden = true; }
 
 function fetchModulePanel() {
   return api("/api/pack/" + enc(state.pack) + "/module-catalog").then(function (d) {
@@ -2143,6 +2704,8 @@ function renderModulePanel() {
   el("mp-list").innerHTML = (d.modules || []).map(function (r) {
     return moduleRowHtml(r, state.editable);
   }).join("");
+  var search = el("mp-search");   // 重画后把当前关键词再筛一遍（V15）
+  if (search) { modalFilter(el("mp-list"), search.value, "[data-modal-row]"); }
   Array.prototype.forEach.call(el("mp-list").querySelectorAll("input.mp-cb"), function (cb) {
     cb.addEventListener("change", function () { onModuleToggle(cb); });
   });
@@ -3859,16 +4422,15 @@ el("btn-rollback").addEventListener("click", runRollback);
 el("btn-delete").addEventListener("click", deleteEntry);
 el("btn-new").addEventListener("click", openNewEntry);
 el("role").addEventListener("change", function (e) { switchRole(e.target.value); });
-// 批8 · 顶栏 ⚙ 模块开关：打开 / 关闭 / 回退；点遮罩或 Esc 关闭
+// 批10 · ⚙ 模块 与 🎨 配色**共用弹层组件** EditorModal：关闭按钮/点遮罩关闭/Esc/焦点环/筛选
+modalBind("modpanel", { searchInput: "mp-search", list: "mp-list", rowSel: "[data-modal-row]" });
+modalBind("themepanel", {});
 el("btn-settings").addEventListener("click", openModulePanel);
-el("mp-close").addEventListener("click", closeModulePanel);
-el("mp-done").addEventListener("click", closeModulePanel);
+el("btn-theme").addEventListener("click", openThemePanel);
 el("mp-rollback").addEventListener("click", onModuleRollback);
-el("modpanel").addEventListener("click", function (e) {
-  if (e.target === el("modpanel")) { closeModulePanel(); }
-});
 document.addEventListener("keydown", function (e) {
-  if (e.key === "Escape" && !el("modpanel").hidden) { closeModulePanel(); }
+  if (modalEsc(e)) { return; }   // Esc 关闭当前弹层并把焦点还给触发按钮
+  modalTrap(e);                  // Tab 在弹层内循环（不跑到底层页面）
 });
 document.addEventListener("click", function (e) {
   var btn = e.target && e.target.closest ? e.target.closest("[data-open-modules]") : null;
@@ -3884,8 +4446,9 @@ window.addEventListener("beforeunload", function (e) {
   if (draftCount() > 0) { e.preventDefault(); e.returnValue = ""; }
 });
 
-// 批9 · 顶栏配色切换：读 <html data-theme>（<head> 已按存储/系统设好）→ 同步按钮态 + 接线
+// 批9/批10 · 配色（读 <html data-theme>，<head> 已按存储/系统设好）+ 背景图（本机存储）
 initTheme();
+initBg();
 loadSession()
   .then(loadPacks)
   .then(function () { return loadModules(); })

@@ -414,17 +414,24 @@ def test_design_components_inlines_same_tokens() -> None:
 # G. 前端接线 + 无障碍 + 通用性
 # =====================================================================================
 def test_frontend_theme_control_markup_and_aria() -> None:
+    """批10：批9 的三个按钮按用户要求收进「🎨 配色」按钮 + 面板内单选列表。
+
+    本用例只改「交互形态」断言；三套主题的令牌/切换/持久化/AA 断言全部照旧（见上）。
+    """
     html = _html()
-    for token in ('id="theme-seg"', 'role="group"', 'aria-label="配色主题',
-                  'data-theme-choice="dark"', 'data-theme-choice="light"',
-                  'data-theme-choice="contrast"', 'aria-pressed="true"',
-                  'aria-pressed="false"', "配色：", "暗色", "浅色", "高对比"):
+    for token in ('id="btn-theme"', 'aria-haspopup="dialog"', "🎨 配色",
+                  'id="themepanel"', 'id="tp-list"', 'role="radiogroup"',
+                  'aria-label="配色主题（单选）"', "themeChoiceHtml",
+                  'name="theme-choice"', "EditorTheme.CHOICES", 'data-theme-choice'):
         assert token in html, token
-    # 键盘可达：原生按钮 Tab + Enter/Space；视觉焦点环走 --focus
-    assert ".themeseg .tb:focus-visible" in html and "var(--focus)" in html
-    # 不换行、窄屏先舍「配色：」字样
-    assert "flex: 0 0 auto" in html
-    assert "@media (max-width: 900px) { .themeseg .lb { display: none; } }" in html
+    # 三套主题的人话名仍在（来自 EditorTheme.CHOICES；暗色 / 浅色 / 高对比）
+    for label in ("暗色", "浅色", "高对比"):
+        assert label in html, label
+    # 键盘可达：原生 button/radio Tab 可达；焦点环走 --focus（面板与顶栏共用）
+    assert ".btn:focus-visible" in html and "var(--focus)" in html
+    assert "modalFocusables" in html
+    # 顶栏配色不再是与「配色：暗色/浅色/高对比」并列的按钮组
+    assert 'id="theme-seg"' not in html and ".themeseg" not in html
 
 
 def test_frontend_theme_wiring_is_live_and_keeps_draft() -> None:
@@ -445,7 +452,8 @@ def test_frontend_theme_wiring_is_live_and_keeps_draft() -> None:
 
 def test_footer_batch_string_is_current() -> None:
     html = _html()
-    assert "批9 · 配色切换" in html
+    assert "批10 · 配色按钮化 + 自定义背景图" in html
+    assert "批9 · 配色切换" not in html
     assert "批6 · 新增/删除条目 + 检索" not in html
     assert "批3 分区页签" not in html
     assert "三套配色（暗色/浅色/高对比）" in html

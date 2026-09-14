@@ -20,6 +20,10 @@ enter_action / broadcast 占位替换、detect_transition、phase_changed 联动
 """
 from __future__ import annotations
 
+from typing import Any
+
+import pytest
+
 from qbot_rpg.core.monster_intent import (
     build_intent,
     chain_preview_text,
@@ -292,3 +296,64 @@ def test_inherit_boss_state_invalid_inputs():
     for bad in (None, "x", 3, ["a"]):
         assert inherit_boss_state(bad) == {
             "break_slots": {}, "stamina": {}, "ailment_buildup": {}}, bad
+
+
+# ================================================================== 8. build_intent 扩展字段
+# 云海九期（cloudsea-pack）215 移植：stage_shift/windup/target_ref/damage_tier
+# 四关键字扩展——缺省 None 不入 dict，既有调用形态零变化。
+
+EXT_KEYS = ("stage_shift", "windup", "target_ref", "damage_tier")
+
+
+def test_build_intent_ext_default_absent():
+    """action_def 无四键且未传 kwarg → 四键均不入 dict（向后兼容）。"""
+    r = build_intent("fire_ball", ACTION_LIB["fire_ball"], ai_idle)
+    for k in EXT_KEYS:
+        assert k not in r, (k, r)
+
+
+def test_build_intent_ext_from_action_def():
+    """action_def 携带四键 → 落入 intent（缺省 kwarg 走 action_def 回退）。"""
+    adef = dict(ACTION_LIB["fire_ball"], stage_shift=2, windup="windup_a",
+                target_ref="player", damage_tier=3)
+    r = build_intent("fire_ball", adef, ai_idle)
+    assert r["stage_shift"] == 2
+    assert r["windup"] == "windup_a"
+    assert r["target_ref"] == "player"
+    assert r["damage_tier"] == 3
+
+
+def test_build_intent_ext_kwarg_override():
+    """显式 kwarg 覆盖 action_def 同名键。"""
+    adef = dict(ACTION_LIB["fire_ball"], stage_shift=2, damage_tier=1)
+    r = build_intent("fire_ball", adef, ai_idle, stage_shift=9, damage_tier=8)
+    assert r["stage_shift"] == 9
+    assert r["damage_tier"] == 8
+    assert "windup" not in r, "action_def 无且 kwarg 缺省 → 仍不入"
+
+
+def test_build_intent_ext_none_not_entered():
+    """action_def 显式 None 或 kwarg 显式 None → 键不入 dict（判据是 None，非真值）。"""
+    adef = dict(ACTION_LIB["fire_ball"], stage_shift=None, windup="w")
+    r = build_intent("fire_ball", adef, ai_idle, target_ref=None)
+    assert "stage_shift" not in r
+    assert "target_ref" not in r
+    assert r["windup"] == "w"
+
+
+def test_build_intent_ext_falsy_non_none_kept():
+    """0 / "" / False 非 None → 照常入 dict（避免真值判断误吞合法值）。"""
+    adef = dict(ACTION_LIB["fire_ball"], stage_shift=0, target_ref="", damage_tier=False)
+    r = build_intent("fire_ball", adef, ai_idle)
+    assert r["stage_shift"] == 0
+    assert r["target_ref"] == ""
+    assert r["damage_tier"] is False
+
+
+def test_build_intent_ext_keyword_only():
+    """四扩展字段为 keyword-only：既有 4 位置参数调用不受影响，第 5 位置参数报错。"""
+    basis = build_intent("fire_ball", ACTION_LIB["fire_ball"], ai_idle, {"codex": 5})
+    assert basis["level"] == 2
+    flexible: Any = build_intent
+    with pytest.raises(TypeError):
+        flexible("fire_ball", ACTION_LIB["fire_ball"], ai_idle, None, 1)

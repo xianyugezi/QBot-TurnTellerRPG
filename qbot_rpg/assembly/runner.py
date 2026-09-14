@@ -66,6 +66,7 @@ from qbot_rpg.commands.router import (
     PERM_OWNER,
     ROUTE_HIDDEN,
     ROUTE_SESSION,
+    AliasTable,
     CommandSpec,
     Router,
     RouteResult,
@@ -159,10 +160,18 @@ async def _routing_context(
         if isinstance(p, Mapping):
             ps = p
     qid = str(event.get("qq_id") or event.get("user_id") or "")
+    # 别名取装配级 AliasTable（build_router 已由 settings.command_aliases 构造，并含
+    # 内容包扩展别名——E1）；router 未挂别名表（裸 Router 测试）→ 回落 settings 配置。
+    _router_aliases = getattr(router, "aliases", None)
+    _aliases_cfg = (
+        _router_aliases
+        if isinstance(_router_aliases, AliasTable)
+        else settings.get("command_aliases")
+    )
     return RoutingContext({
         "registry": router,
         "shortcuts": ps.get("shortcuts") or {},
-        "aliases": settings.get("command_aliases"),
+        "aliases": _aliases_cfg,
         "dialog_active": bool(ps.get("dialog_active", False)),
         "battle_active": await _battle_active(deps, qid),
         "command_mode": settings.get("command_mode") or "global_shortcut",
@@ -397,7 +406,9 @@ def _player_from_dict(d: Mapping[str, Any], qid: str) -> Player:
             def _sub(m: Any, key: str, subkey: str) -> Dict[str, float]:
                 node = m.get(key) if isinstance(m, Mapping) else None
                 sub = node.get(subkey) if isinstance(node, Mapping) else None
-                return {str(k): float(v) for k, v in sub.items()} if isinstance(sub, Mapping) else {}
+                if not isinstance(sub, Mapping):
+                    return {}
+                return {str(k): float(v) for k, v in sub.items()}
 
             _b = attrs.get("base")
             attributes = PlayerAttributes(

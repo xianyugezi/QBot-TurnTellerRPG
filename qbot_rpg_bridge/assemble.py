@@ -32,6 +32,7 @@ from typing import Any, Mapping, Optional, Sequence
 from qbot_rpg.assembly.bootstrap import bootstrap
 from qbot_rpg.assembly.context import AssemblyDeps
 from qbot_rpg.assembly.pack_ext import load_pack_extensions
+from qbot_rpg.assembly.pack_render import load_pack_render_hook
 from qbot_rpg.assembly.router_setup import build_router
 from qbot_rpg.commands.processing import PerPlayerQueue
 from qbot_rpg.core.worldtime import WorldTime
@@ -146,8 +147,9 @@ async def build_app_deps(
     ``qbot_rpg/assembly/pack_ext.py``）。
     出参 deps: AssemblyDeps（含 router/queue/permission_store 等，run_command 消费）；
     并注入 qbot_rpg_bridge.plugin.set_deps（on_message 处理器读取）。
-    核心逻辑: Database→Repository→bootstrap→AssemblyDeps→build_router→内容包扩展装载→
-    鸭式字段→set_deps。扩展装载失败不影响装配（内部降级，见 ``deps.pack_ext_result``）。
+    核心逻辑: Database→Repository→bootstrap→AssemblyDeps→build_router→内容包扩展装载
+    （E1 指令 + E2 渲染钩子）→鸭式字段→set_deps。扩展装载失败不影响装配（内部降级，
+    见 ``deps.pack_ext_result`` / ``deps.pack_render_result``）。
     """
     pd = resolve_pack_dir(pack_dir)
     dpath = resolve_db_path(db_path)
@@ -179,6 +181,11 @@ async def build_app_deps(
     deps.pack_ext_result = load_pack_extensions(  # type: ignore[attr-defined]
         deps.router, pack_dir=pd, settings=settings_map, cli=enable_pack_ext,
     )
+    # 内容包渲染钩子装载（E2 · ext/render.py；同一双闸 + 同一失败隔离口径）
+    deps.pack_render_result = load_pack_render_hook(  # type: ignore[attr-defined]
+        pd, settings=settings_map, cli=enable_pack_ext,
+    )
+    deps.pack_render_hook = deps.pack_render_result.hook  # type: ignore[attr-defined]
     deps.permission_store = None  # type: ignore[attr-defined]
     deps.audit_store = None  # type: ignore[attr-defined]
     deps.audit_hmac_key = None  # type: ignore[attr-defined]

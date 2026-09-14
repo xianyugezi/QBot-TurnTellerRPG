@@ -11,8 +11,8 @@
       ④ process_message(repo, queue, *, message_id, group_id, player_qid, command,
          handler, sender)（qbot_rpg/commands/processing.py L252 真实签名，async）——
          幂等键三元组 + per-player 队列 + 同事务
-      ⑤ sender 闭包：apply_message_prefix（M5 前缀注入）→ Sender.send（CQ 转义 /
-         4000 分片 / 重试）
+      ⑤ sender 闭包：apply_message_prefix（M5 前缀注入）→ 内容包渲染钩子（E2，
+         命中才改写正文）→ Sender.send（CQ 转义 / 4000 分片 / 重试）
   - RA-10 / ADR-08 收口：
       · 权限校验：process_message 前按 RouteResult.spec.permission 检查
         （deps.permission_store 提供 is_gm 判定）；GM 指令走 GmResult 分发
@@ -52,6 +52,12 @@ import inspect
 from typing import Any, Dict, Mapping, MutableMapping, Optional
 
 from qbot_rpg.assembly.context import make_context
+from qbot_rpg.assembly.pack_render import (
+    EVENT_BATTLE_ROUND,
+    EVENT_COMMAND_REPLY,
+    RenderSender,
+    build_render_data,
+)
 from qbot_rpg.commands.gm_commands import (
     ROLE_ADMIN,
     ROLE_MANAGER,
@@ -561,16 +567,28 @@ def _make_handler(spec: Any, parsed: ParsedCommand, ctx: MutableMapping[str, Any
 # =============================================================================
 # sender 闭包（RA-08 ⑤ / RA-09：前缀注入 → Sender.send）
 # =============================================================================
-def _make_sender(deps: Any, ctx: Mapping[str, Any]):
-    """构造发送出口闭包（apply_message_prefix → Sender.send；记录已发送文本）。
+def _make_sender(deps: Any, ctx: Mapping[str, Any], *, command: str = ""):
+    """构造发送出口闭包（E2 渲染钩子 → apply_message_prefix → Sender.send；记录已发送文本）。
 
-    入参 deps: AssemblyDeps（sender 传输层，缺省 Sender() 收集 delivered）；
-    ctx: 玩家上下文（level/name/title/channel/settings/group_name/to 读取源）。
+    入参 deps: AssemblyDeps（sender 传输层，缺省 Sender() 收集 delivered；
+    ``pack_render_hook`` = E2 渲染钩子，缺省 None = 不装钩子，行为与修前**逐字节一致**）；
+    ctx: 玩家上下文（level/name/title/channel/settings/group_name/to 读取源）；
+    command: 命中指令名（渲染钩子 ``data["command"]``；缺省空串）。
     出参 (sender, state)：sender 为 processing Sender 契约闭包
     `async sender(result) -> None`；state[\"sent\"] 记录最近一次发送的完整文本
-    （含前缀，供 run_command 返回）。
-    核心逻辑: 仅注册玩家注入前缀（未注册无 level/name，前缀无意义，直发正文）；
-    前缀渲染（M5 7 字段）→ prefixed.text 非空 → sender.send（CQ 转义/分片/重试）。
+    （含前缀 + 钩子改写，供 run_command 返回）。
+
+    **渲染钩子接入点与顺序（E2 · 单一出口，别散落）**：
+      ① 注册玩家前缀（未注册无 level/name，前缀无意义，直发正文）；
+      ② 前缀渲染（M5 7 字段）→ prefixed.text；
+      ③ **内容包渲染钩子**（``ext/render.py``，事件 ``command.reply``）——位置 = 前缀
+         注入**之后**、``Sender.send`` **之前**，拿到的是框架渲染好的**最终文本**，
+         返回 str 替换 / None/空 用默认；
+      ④ ``Sender.send``（CQ 转义 / 分片 / 重试）。
+    对**所有玩家可见文本**同一出口生效（指令返回、列表、面板…）。战斗管线经
+    ``ctx["sender"]`` 直发的正文（事件 ``battle.round``）也套同一钩子面——仅当钩子
+    声明了该事件时才代理 ``ctx["sender"]``，否则它仍是原 Sender 实例（零改动）。
+    钩子只许替换文本：异常/超时/非 str 由 ``RenderHook.apply`` 兜底为默认文本（不崩）。
     """
     sender_obj = getattr(deps, "sender", None) or Sender()
     # G3 实机补发（2026-09-03）：sender 实例挂回 deps，供桥接层（plugin._on_message）
@@ -580,11 +598,19 @@ def _make_sender(deps: Any, ctx: Mapping[str, Any]):
             deps.sender = sender_obj
     except Exception:  # noqa: BLE001 - 挂载失败不影响（收集路径仍工作）
         pass
+    # E2 渲染钩子（双闸未开 / 包无 ext/render.py → None，本函数行为与修前一致）
+    hook = getattr(deps, "pack_render_hook", None)
     # M5-08 战斗 ctx 契约：ctx["sender"] = Sender 统一出口（battle_commands._sender_of
     # 消费；批次7 待接线遗留 → 实机修复 2026-08-30：装配时注入 Sender 实例）。
+    # E2：钩子声明了 battle.round 时才套只读渲染代理（同一钩子面，不改 Sender 语义）。
+    ctx_sender: Any = sender_obj
+    if hook is not None and hook.applies(EVENT_BATTLE_ROUND):
+        ctx_sender = RenderSender(
+            sender_obj, hook, event=EVENT_BATTLE_ROUND, ctx=ctx, command=command
+        )
     # ctx 为 MutableMapping（run_command 构建）→ 就地挂 sender；不可变映射跳过。
     if isinstance(ctx, MutableMapping):
-        ctx["sender"] = sender_obj
+        ctx["sender"] = ctx_sender
     state: Dict[str, Any] = {"sent": None}
     channel = str(ctx.get("channel") or CHANNEL_GROUP)
 
@@ -625,6 +651,19 @@ def _make_sender(deps: Any, ctx: Mapping[str, Any]):
             out_text = prefixed.text
         else:
             out_text = str(text)
+        # ③ E2 渲染钩子：前缀注入后、Sender.send 前（只换文本；未装钩子零改动）
+        if out_text and hook is not None:
+            out_text = hook.apply(
+                EVENT_COMMAND_REPLY,
+                build_render_data(
+                    event=EVENT_COMMAND_REPLY,
+                    pack_id=hook.pack_id,
+                    command=command,
+                    ctx=ctx,
+                    outcome={"ok": bool(result.get("ok"))},
+                ),
+                out_text,
+            )
         if out_text:
             sender_obj.send(out_text, to=ctx.get("to"))
             state["sent"] = out_text
@@ -729,7 +768,7 @@ async def _run_command_inner(event: Mapping, deps: Any, raw: str) -> str:
         ctx = await make_context(event, deps)
         parsed = _parsed_from_route(route, raw)
         handler = _make_handler(_sess_spec, parsed, ctx)
-        sender, send_state = _make_sender(deps, ctx)
+        sender, send_state = _make_sender(deps, ctx, command=route.text or "_session")
         timeout = getattr(deps, "queue_timeout", None)
         outcome = await _drive_process(
             repo, queue,
@@ -768,8 +807,8 @@ async def _run_command_inner(event: Mapping, deps: Any, raw: str) -> str:
     parsed = _parsed_from_route(route, raw)
     handler = _make_handler(spec, parsed, ctx)
 
-    # -- ⑤ sender 闭包（前缀注入 → Sender.send） ---------------------------------
-    sender, send_state = _make_sender(deps, ctx)
+    # -- ⑤ sender 闭包（前缀注入 → 渲染钩子 → Sender.send） ----------------------
+    sender, send_state = _make_sender(deps, ctx, command=spec.name)
 
     # -- ④ process_message（幂等键三元组 + per-player 队列 + 同事务 + 超时包层）---
     timeout = getattr(deps, "queue_timeout", None)
@@ -802,7 +841,8 @@ async def run_command(event: Mapping, deps: Any) -> str:
       ② make_context(event, deps)（async）→ ctx；
       ③ handler = 指令组 handler 闭包（捕获 ctx + 事务内业务写，适配 processing）；
       ④ process_message（幂等键三元组 + per-player 队列 + 同事务，IDEM-1~6）；
-      ⑤ sender 闭包：apply_message_prefix → Sender.send（CQ 转义/分片/重试）。
+      ⑤ sender 闭包：apply_message_prefix → 内容包渲染钩子（E2，命中才改写）→
+         Sender.send（CQ 转义/分片/重试）。
       权限/超时/清理/错误兜底按 RA-10 / ADR-08 收口（见模块 docstring）。
 
     错误兜底: 未预期异常（路由/make_context/process_message 外层）→ 记日志 +

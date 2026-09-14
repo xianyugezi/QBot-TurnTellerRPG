@@ -60,6 +60,8 @@ __all__ = [
     "resolve_cli_enabled",
     "settings_enabled",
     "pack_ext_enabled",
+    "resolve_ext_file",
+    "import_ext_module",
     "load_pack_extensions",
 ]
 
@@ -209,6 +211,15 @@ def _resolve_within(pack_root: Path, *parts: str) -> Path:
             f"路径 {candidate} 解析到包目录之外（{resolved} ∉ {root}），拒绝加载"
         ) from exc
     return resolved
+
+
+def resolve_ext_file(pack_root: Any, *parts: str) -> Path:
+    """包内固定扩展文件的路径解析（公开包装；供 E2 渲染装载器复用同一路径约束）。
+
+    入参 pack_root: 包目录；parts: 相对固定文件名片段。出参 Path（绝对）。
+    核心逻辑: 委托 :func:`_resolve_within` —— 禁 ``..`` / 符号链接 / 逃逸包目录。
+    """
+    return _resolve_within(Path(pack_root), *parts)
 
 
 # ---------------------------------------------------------------------------
@@ -380,14 +391,17 @@ def _check_conflicts(
 # ---------------------------------------------------------------------------
 # 动态 import（只从包目录内）
 # ---------------------------------------------------------------------------
-def _import_ext_impl(impl_path: Path, pack_id: str) -> Any:
+def _import_ext_impl(impl_path: Path, pack_id: str, kind: str = "ext") -> Any:
     """从包内文件路径动态加载实现模块；失败 → :class:`PackExtError`。
 
     模块名含包 id（便于测试断言「未启用时从未 import」）+ 自增后缀（重复装载不命中
-    旧模块）。装载失败会清掉半成品 sys.modules 条目，避免污染后续 import。
+    旧模块）。``kind`` 区分扩展种类（E1 指令 ``ext`` / E2 渲染 ``ext_render``），
+    缺省 ``ext`` 与 E1 模块名逐字一致。装载失败会清掉半成品 sys.modules 条目，
+    避免污染后续 import。
     """
     seq = next(_LOAD_SEQ)
-    mod_name = f"qbot_rpg_content_ext_{_MOD_RE.sub('_', pack_id) or 'pack'}_{seq}"
+    clean_kind = _MOD_RE.sub("_", kind) or "ext"
+    mod_name = f"qbot_rpg_content_{clean_kind}_{_MOD_RE.sub('_', pack_id) or 'pack'}_{seq}"
     spec = importlib.util.spec_from_file_location(mod_name, impl_path)
     if spec is None or spec.loader is None:
         raise PackExtError(f"无法为 {impl_path} 构造 import spec（文件形态异常）")
@@ -402,6 +416,15 @@ def _import_ext_impl(impl_path: Path, pack_id: str) -> Any:
             f"{type(exc).__name__}: {exc}"
         ) from exc
     return module
+
+
+def import_ext_module(impl_path: Any, pack_id: str, kind: str = "ext") -> Any:
+    """动态 import 包内扩展模块（公开包装；供 E2 渲染装载器复用同一隔离 import）。
+
+    入参 impl_path: 包内已解析的 .py 路径；pack_id: 包 id；kind: 扩展种类标识。
+    出参 模块对象；失败 → :class:`PackExtError`（装载层会降级，不炸装配）。
+    """
+    return _import_ext_impl(Path(impl_path), pack_id, kind=kind)
 
 
 def _make_handler(

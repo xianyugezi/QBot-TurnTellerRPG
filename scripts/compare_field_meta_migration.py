@@ -8,7 +8,13 @@
   1. 用 `git worktree` 检出基线（默认 `995e91b`），在基线树里跑
      `scripts/editor_readonly_snapshot.py`（`qbot_rpg` 走 PYTHONPATH 指向基线）；
   2. 在当前工作树跑同一脚本；
-  3. 递归对拍两份 JSON，输出差异报告；**0 差异 → 退出码 0**，否则 1。
+  3. 递归对拍两份 JSON，输出差异报告；**既有键的修改/删除 = 0 → 退出码 0**，否则 1。
+
+增量容忍（2026-09-14，settings.battle.min_damage 实装）：
+  批B 门禁的硬约束是「迁移不得修改/删除既有键」。后续批次**新增**字段（如
+  settings.battle.min_damage）是合法演进，只应报告、不应冒充迁移差异。故对拍分两桶：
+  hard=修改/删除（必须 0）、soft=新增（允许，列出）。列表元素带唯一 key/id/name 时逐键
+  对齐，确保「既有元素被改」仍被 hard 抓住（不会因长度变化被整体跳过）。
 
 用法（仓库根执行）：
 
@@ -79,27 +85,74 @@ class _Baseline:
                 pass
 
 
-def _diff(a: Any, b: Any, path: str, out: List[str], cap: int = 200) -> None:
-    if len(out) >= cap:
+def _list_key(items: Any) -> Optional[dict]:
+    """list-of-dict 的**逐键对齐**索引（元素带唯一 key/id/name 时返回 {键: 元素}）。
+
+    用于把「新增字段」与「既有字段被改/被删」区分开：批B 门禁必须抓住后者，而后续
+    批次合法新增的字段只应算「新增」、不算差异（见本文件顶注「增量容忍」）。
+    非 list、或元素缺统一唯一键、或键重复 → None（回退到定长下标对拍）。
+    """
+    if not isinstance(items, list) or not items:
+        return None
+    for id_key in ("key", "id", "name"):
+        if all(isinstance(x, dict) and id_key in x for x in items):
+            keys = [str(x[id_key]) for x in items]
+            if len(set(keys)) == len(keys):
+                return {str(x[id_key]): x for x in items}
+    return None
+
+
+#: 模块详情里的**派生计数**键：其值由 fields/groups 列表推导，列表已逐键对齐，
+#: 计数本身只随合法新增而变 → 不计差异（避免「加一个字段」被计成 3 条差异）。
+_DERIVED_COUNT_KEYS = frozenset({"field_count", "group_count", "association_count"})
+#: 分组描述符键集（同集合的 dict 视作 group 描述符，其 count 为派生值，跳过）。
+_GROUP_KEYS = frozenset({"name", "label", "count"})
+
+
+def _diff(a: Any, b: Any, path: str, hard: List[str], soft: List[str],
+          cap: int = 200) -> None:
+    """递归对拍：hard = 修改/删除（必须为 0）；soft = 合法新增（允许，仅报告）。
+
+    对拍口径（2026-09-14 增量容忍修正）：批B 硬门禁 = 迁移不得**修改或删除**既有
+    键/字段/分组；后续战斗/设置批次**新增**字段（如 settings.battle.min_damage）属
+    合法演进 → 记入 soft，不再冒充迁移差异。列表元素带唯一 key/id/name 时逐键对齐，
+    因此「既有元素被改」仍会被 hard 抓住，不会因长度变化被整体跳过。
+    """
+    if len(hard) >= cap:
         return
     if isinstance(a, dict) and isinstance(b, dict):
-        for key in sorted(set(a) | set(b)):
+        keys = set(a) | set(b)
+        if keys and keys <= _GROUP_KEYS:
+            keys = keys - {"count"}
+        for key in sorted(keys):
+            if key in _DERIVED_COUNT_KEYS:
+                continue
             if key not in a:
-                out.append(f"{path}.{key}: 仅迁移后有")
+                hard.append(f"{path}.{key}: 仅迁移前有（删除）")
             elif key not in b:
-                out.append(f"{path}.{key}: 仅迁移前有")
+                soft.append(f"{path}.{key}: 仅迁移后有（新增）")
             else:
-                _diff(a[key], b[key], f"{path}.{key}", out, cap)
+                _diff(a[key], b[key], f"{path}.{key}", hard, soft, cap)
         return
     if isinstance(a, list) and isinstance(b, list):
+        ka, kb = _list_key(a), _list_key(b)
+        if ka is not None and kb is not None:
+            for key in sorted(set(ka) | set(kb)):
+                if key not in ka:
+                    hard.append(f"{path}[{key}]: 仅迁移前有（删除）")
+                elif key not in kb:
+                    soft.append(f"{path}[{key}]: 仅迁移后有（新增）")
+                else:
+                    _diff(ka[key], kb[key], f"{path}[{key}]", hard, soft, cap)
+            return
         if len(a) != len(b):
-            out.append(f"{path}: 数组长度 {len(b)} → {len(a)}")
+            hard.append(f"{path}: 数组长度 {len(b)} → {len(a)}")
             return
         for i, (x, y) in enumerate(zip(a, b)):
-            _diff(x, y, f"{path}[{i}]", out, cap)
+            _diff(x, y, f"{path}[{i}]", hard, soft, cap)
         return
     if a != b:
-        out.append(f"{path}: {b!r} → {a!r}")
+        hard.append(f"{path}: {b!r} → {a!r}")
 
 
 def main(argv: Optional[List[str]] = None) -> int:
@@ -120,18 +173,23 @@ def main(argv: Optional[List[str]] = None) -> int:
         baseline.close()
 
     diffs: List[str] = []
+    added: List[str] = []
     for pack in packs:
-        _diff(after.get(pack), before.get(pack), pack, diffs, args.max_diffs)
+        _diff(after.get(pack), before.get(pack), pack, diffs, added, args.max_diffs)
 
     print("批B 等价性对拍（迁移前 ↔ 迁移后）")
     print(f"  基线：{args.baseline_root or args.baseline_ref} · 包：{', '.join(packs)}")
-    print(f"  差异条数：{len(diffs)}")
+    print(f"  差异条数：{len(diffs)}（修改/删除 = 硬差异，必须 0）")
+    print(f"  新增条目：{len(added)}（后续批次合法新增，允许）")
+    for line in added[:args.max_diffs]:
+        print("   +", line)
     for line in diffs:
         print("   -", line)
     if diffs:
-        print("对拍失败：存在差异")
+        print("对拍失败：存在修改/删除差异")
         return 1
-    print("对拍通过：diff = 0（键集合 / label / help / group / module_tree 逐字段一致）")
+    print("对拍通过：既有键集合 / label / help / group / module_tree 逐字段一致"
+          "（修改/删除 = 0；新增条目已列出、不算差异）")
     return 0
 
 

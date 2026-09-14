@@ -1,4 +1,10 @@
 {
+  "entry_merge": {
+    "settings": [
+      "stats",
+      "formula"
+    ]
+  },
   "field_help": {
     "action": {
       "air_drop": "对空击落规则（如 knockdown = 击中空中目标即击落）。",
@@ -1818,7 +1824,7 @@
     "npc": "NPC",
     "proficiency": "熟练度",
     "quest": "任务",
-    "settings": "设置",
+    "settings": "基础",
     "shop": "商店",
     "skill_chains": "派生链",
     "skills": "技能",

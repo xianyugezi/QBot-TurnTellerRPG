@@ -308,6 +308,61 @@ def _display_labels(manifest: Mapping[str, Any], declared: List[str],
 
 
 # =====================================================================================
+# 批12 #1：条目聚合展示声明（`field_meta.json.entry_merge`，通用、包声明驱动）
+# =====================================================================================
+def _entry_merge_map(
+    manifest: Mapping[str, Any], declared: List[str], pack_dir: Path
+) -> Tuple[Dict[str, Dict[str, Tuple[str, ...]]], List[str]]:
+    """读包声明 `entry_merge` → (聚合表, notes)；不写死任何模块名。
+
+    出参 `{目标模块: {"sources": (...), "keep_top_level": (...)}}`，只保留：
+      · 目标与来源都在本包 manifest 声明；（未声明 → note，忽略）
+      · 来源不重复并入多个目标（首个声明生效，其余 note）；
+      · 目标自身不再作为来源被并入别的目标（防链式/环）。
+    **数据文件 / 模块 id / 加载与校验路径全部不动**——本表只驱动展示层聚合。
+    """
+    decl = _pack_declaration(pack_dir)
+    notes: List[str] = []
+    out: Dict[str, Dict[str, Tuple[str, ...]]] = {}
+    if decl is None or not decl.entry_merge:
+        return out, notes
+    declared_set = set(declared)
+    claimed: Dict[str, str] = {}
+    for target, spec in decl.entry_merge.items():
+        if target not in declared_set:
+            notes.append(f"entry_merge 目标模块未在 manifest 声明：{target}")
+            continue
+        srcs: List[str] = []
+        for src in spec.get("sources", ()):  # 解析层已归一为元组
+            if src not in declared_set:
+                notes.append(f"entry_merge 来源模块未在 manifest 声明：{src}")
+                continue
+            if src == target:
+                notes.append(f"entry_merge 忽略把 {src} 并入自身")
+                continue
+            if src in claimed:
+                notes.append(
+                    f"entry_merge 来源模块 {src} 已并入 {claimed[src]}（忽略重复声明：{target}）")
+                continue
+            claimed[src] = target
+            srcs.append(src)
+        if not srcs:
+            continue
+        keep = tuple(m for m in spec.get("keep_top_level", ()) if m in srcs)
+        out[target] = {"sources": tuple(srcs), "keep_top_level": keep}
+    # 目标自身又被并入了别的模块 → 忽略该目标声明（防链式聚合 / 环）
+    for target in list(out):
+        if target in claimed:
+            notes.append(
+                f"entry_merge 目标模块 {target} 同时被并入 {claimed[target]}（忽略其目标声明）")
+            for src in out[target]["sources"]:
+                if claimed.get(src) == target:
+                    claimed.pop(src, None)
+            out.pop(target)
+    return out, notes
+
+
+# =====================================================================================
 # 只读 API ①：内容包发现
 # =====================================================================================
 def list_packs(root: Optional[object] = None, preferred: Optional[str] = None) -> Dict[str, Any]:
@@ -363,16 +418,62 @@ def list_modules(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
     labels.update(tree_labels)
     counts = {m: _entry_count(_read_json(pack_dir / f"{m}.json")) for m in declared}
     child_set = {c for kids in children_map.values() for c in kids}
+    merge_map, merge_notes = _entry_merge_map(manifest, declared, pack_dir)
+    notes.extend(merge_notes)
+    # 被并入的来源模块：标记 merged_into（前端默认不在左栏单列）；keep_top_level 的仍单列。
+    merged_into: Dict[str, str] = {}
+    merged_sources: Dict[str, List[Tuple[str, bool]]] = {}
+    keep_sources: set = set()
+    for target, spec in merge_map.items():
+        for src in spec["sources"]:
+            merged_into[src] = target
+            keep = src in spec["keep_top_level"]
+            if keep:
+                keep_sources.add(src)
+            merged_sources.setdefault(target, []).append((src, keep))
+
+    def in_subtree(root: str, node_: str, stack: List[str]) -> bool:
+        for kid in children_map.get(root, []):
+            if kid == node_:
+                return True
+            if kid not in stack and in_subtree(kid, node_, stack + [kid]):
+                return True
+        return False
+
+    def agg(mod: str, stack: List[str]) -> int:
+        """含后代合计（verify 口径：count = own + Σ子 count）。"""
+        return counts.get(mod, 0) + sum(
+            agg(c, stack + [c]) for c in children_map.get(mod, []) if c not in stack)
 
     def node(mod: str, stack: List[str]) -> Dict[str, Any]:
         kids = [node(c, stack + [c]) for c in children_map.get(mod, []) if c not in stack]
         own = counts.get(mod, 0)
+        count = agg(mod, [mod])
+        info: List[Dict[str, Any]] = []
+        for src, keep in merged_sources.get(mod, []):
+            already = in_subtree(mod, src, [mod])
+            info.append({
+                "module": src,
+                "label": labels.get(src) or src,
+                "count": agg(src, [src]),
+                "keep_top_level": keep,
+                "already_child": already,
+            })
+        merged_count = sum(x["count"] for x in info)
+        # 左栏/中栏统一口径：total_count = 本模块 + 子模块 + 并入条目（已是子模块的不重复计）。
+        total_count = count + sum(x["count"] for x in info if not x["already_child"])
         return {
             "module": mod,
             "label": labels.get(mod) or mod,
-            "count": own + sum(k["count"] for k in kids),
+            "count": count,
             "own_count": own,
             "children": kids,
+            # 批12 #1：聚合展示声明（通用；未声明 entry_merge 的包这些字段为空/0，行为与现状一致）
+            "merged": info,
+            "merged_count": merged_count,
+            "total_count": total_count,
+            "merged_into": merged_into.get(mod),
+            "keep_top_level": (mod in merged_into) and (mod in keep_sources),
         }
 
     modules = [node(m, [m]) for m in declared if m not in child_set]
@@ -436,6 +537,25 @@ def list_entries(pack: object, module: object, root: Optional[object] = None) ->
     rows = _entry_rows(data, mmeta)
     etype = _entry_type(mmeta, data)
     labels = _display_labels(manifest, declared, pack_dir)
+    # 批12 #1：若本模块声明为「聚合目标」，把来源模块的条目按来源分小节一并返回（只读；
+    # 编辑/保存仍由前端按 section.module 路由回各自模块，数据文件与校验路径不变）。
+    merge_map, _merge_notes = _entry_merge_map(manifest, declared, pack_dir)
+    spec = merge_map.get(mod)
+    sections: List[Dict[str, Any]] = []
+    if spec:
+        for src in spec["sources"]:
+            sdata = _read_json(pack_dir / f"{src}.json")
+            smeta = _module_meta(src, pack_dir)
+            srows = _entry_rows(sdata, smeta)
+            sections.append({
+                "module": src,
+                "label": labels.get(src) or src,
+                "entry_type": _entry_type(smeta, sdata),
+                "count": len(srows),
+                "keep_top_level": src in spec["keep_top_level"],
+                "entries": [{"id": eid, "name": name} for eid, name, _v in srows],
+            })
+    merged_count = sum(s["count"] for s in sections)
     return {
         "pack": str(pack),
         "module": mod,
@@ -443,6 +563,10 @@ def list_entries(pack: object, module: object, root: Optional[object] = None) ->
         "entry_type": etype,
         "count": len(rows),
         "entries": [{"id": eid, "name": name} for eid, name, _val in rows],
+        # 批12 #1：聚合视图（无声明时 = 空列表 / total_count == count，行为与现状一致）
+        "merge_sections": sections,
+        "merged_count": merged_count,
+        "total_count": len(rows) + merged_count,
     }
 
 

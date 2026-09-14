@@ -1397,7 +1397,9 @@ var state = {
   filter: "", gquery: "", role: "owner", editable: true, backup: null, fieldIndex: {},
   refCache: {}, refKnown: {}, refQuery: {}, busy: false, tabs: [], forms: {},
   pendingDrafts: {}, entryIndex: null, newEntry: null, newDraft: null, newIdTouched: false,
-  theme: null
+  theme: null,
+  // 批12 #1：中栏聚合展示（被并入模块的条目按来源分小节）+ 当前条目所属模块（保存路由）
+  mergeSections: [], entryModule: null, listLabel: "", fontSize: null
 };
 var draft = EditorDraft.newDraft();
 
@@ -1412,7 +1414,10 @@ var renderCtx = MAIN_CTX;   // 渲染 HTML 字符串时指向「当前正在渲�
 
 function hasOwn(obj, k) { return Object.prototype.hasOwnProperty.call(obj, k); }
 function syncMainCtx(detail) {
-  MAIN_CTX.module = state.module; MAIN_CTX.entry = state.entry;
+  // 批12 #1：主表单的保存路由以**条目所属模块**为准（聚合视图里点开的 stats/formula 条目
+  // 保存时仍写回各自模块），而不是左栏当前选中的聚合模块。
+  MAIN_CTX.module = (detail && detail.module) || state.entryModule || state.module;
+  MAIN_CTX.entry = state.entry;
   MAIN_CTX.fields = (detail && detail.fields) || [];
   MAIN_CTX.fieldIndex = state.fieldIndex; MAIN_CTX.detail = detail;
   return MAIN_CTX;
@@ -1482,18 +1487,80 @@ function labeledKey(label, key) {
 // 模块计数口径（批5.2 · V6）：左栏模块计数含子项，中栏条目列表是本模块条数——口径不同
 // 却同样显示一个裸数字，容易误会。此处统一给「含子项」标注 + 悬停明细；叶子模块（无子项）
 // 计数等于本模块条数，不加后缀，口径天然一致。通用：只按 own_count/count/children 判定。
+// 批12 #1：若模块声明了 entry_merge（后端给 merged/total_count），显示口径改为
+// 「本模块 + 子项 + 并入」并在悬停里逐项列出并入来源；无声明时行为与批5.2 完全一致。
 function moduleCountLabel(n) {
   var node = n || {};
-  var total = node.count == null ? 0 : Number(node.count);
-  var own = node.own_count == null ? total : Number(node.own_count);
-  var hasKids = !!(node.children && node.children.length) || own !== total;
-  var text = String(total) + (hasKids ? "（含子项）" : "");
-  var title = hasKids
-    ? ("含子项合计 " + total + "：本模块 " + own + " + 子项 " + (total - own))
-    : ("本模块条目数 " + total);
-  return { text: text, title: title };
+  var kids = (node.children || []).filter(function (c) {
+    return !(c && c.merged_into === node.module);
+  });
+  var merged = node.merged || [];
+  var own = node.own_count == null ? Number(node.count || 0) : Number(node.own_count);
+  var cnt = Number(node.count || 0);
+  var disp = node.total_count == null ? cnt : Number(node.total_count);
+  // 「含子项」判定沿用批5.2 口径：有子节点 **或** count ≠ own（声明了子项但 own==count 的退化也算）
+  var hasKids = kids.length > 0 || own !== cnt;
+  var hasMerged = merged.length > 0;
+  var suffix = (hasKids && hasMerged) ? "（含子项与并入）"
+    : (hasKids ? "（含子项）" : (hasMerged ? "（含并入）" : ""));
+  var bits = ["本模块 " + own];
+  if (hasKids) { bits.push("子项 " + (cnt - own)); }
+  if (hasMerged) {
+    bits.push("并入 " + merged.map(function (m) {
+      return (m.label || m.module) + " " + m.count;
+    }).join("、"));
+  }
+  var title = (hasKids || hasMerged)
+    ? ("合计 " + disp + "：" + bits.join(" + "))
+    : ("本模块条目数 " + disp);
+  return { text: String(disp) + suffix, title: title };
 }
 /* EDITOR_COUNT_LABEL_END */
+
+/* EDITOR_MERGE_BEGIN */
+// 批12 #1 · 条目聚合展示声明（`field_meta.json.entry_merge`）的纯逻辑：
+//   · hidden(node)        被并入且未保留单列的模块 → 左栏不再单列；
+//   · visibleModules()    左栏可见模块（其余层级原样保留）；
+//   · sectionPlan()       中栏条目列表按「来源模块」分小节（本模块 + 各并入来源）；
+//   · filterPlan()        过滤按小节作用（复用 EditorEntry.match）；
+//   · planCount()         小节合计条数。
+// 通用：只按后端给的 merged_into / keep_top_level / merge_sections 判定，不认任何模块名。
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) { module.exports = factory(); }
+  else { root.EditorMerge = factory(); }
+})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+  function hidden(node) {
+    return !!(node && node.merged_into) && !node.keep_top_level;
+  }
+  function visibleModules(modules) {
+    return (modules || []).filter(function (n) { return !hidden(n); });
+  }
+  function sectionPlan(ownEntries, mergeSections, ownModule, ownLabel) {
+    var secs = [{ module: ownModule, label: ownLabel || ownModule,
+                  entries: ownEntries || [], own: true }];
+    (mergeSections || []).forEach(function (s) {
+      secs.push({ module: s.module, label: s.label || s.module,
+                  entries: s.entries || [], own: false,
+                  keep_top_level: !!s.keep_top_level });
+    });
+    return secs;
+  }
+  function filterPlan(plan, query, matchFn) {
+    var q = (query == null ? "" : String(query)).trim();
+    return (plan || []).map(function (s) {
+      var all = s.entries || [];
+      var hit = q ? all.filter(function (e) { return matchFn(e, q); }) : all;
+      return { module: s.module, label: s.label, entries: hit, own: s.own,
+               keep_top_level: s.keep_top_level, total: all.length };
+    });
+  }
+  function planCount(plan) {
+    return (plan || []).reduce(function (n, s) { return n + (s.entries || []).length; }, 0);
+  }
+  return { hidden: hidden, visibleModules: visibleModules, sectionPlan: sectionPlan,
+           filterPlan: filterPlan, planCount: planCount };
+});
+/* EDITOR_MERGE_END */
 
 /* EDITOR_HDR_NOTE_BEGIN */
 // 栏头第二层说明（批9.2）：来源/计数/副标题的文本与悬停 title 同源，避免「显示的」与
@@ -2604,9 +2671,12 @@ function renderModules() {
       + esc(cl.text) + "</span>";
     d.addEventListener("click", function () { selectModule(n.module); });
     nav.appendChild(d);
-    (n.children || []).forEach(function (c) { node(c, depth + 1); });
+    // 批12 #1：被并入且未保留单列的子模块不再单列（聚合视图里按来源分小节展示）
+    (n.children || []).filter(function (c) { return !EditorMerge.hidden(c); })
+      .forEach(function (c) { node(c, depth + 1); });
   }
-  (state.modules || []).forEach(function (m) { node(m, 0); });
+  // 批12 #1：被并入的模块默认不在左栏单列（有 entry_merge 声明的包）；无声明 → 原样。
+  EditorMerge.visibleModules(state.modules).forEach(function (m) { node(m, 0); });
 }
 
 function loadModules() {
@@ -2638,7 +2708,9 @@ function selectModule(mod) {
   if (!canLeave()) { return; }
   discardDraft();
   state.result = null;
-  state.module = mod; state.entry = null; state.filter = ""; el("filter").value = "";
+  state.module = mod; state.entry = null; state.entryModule = null;
+  state.mergeSections = [];
+  state.filter = ""; el("filter").value = "";
   // 切模块 → 全局检索范围回到「当前模块」，本地过滤也清空（避免两处查询串味）
   state.gquery = ""; el("gfilter").value = "";
   // V4：切模块先清空备份状态 → 回退按钮立即禁用，不沿用上一模块的可用外观。
@@ -2667,9 +2739,23 @@ function loadEntries() {
   return api("/api/pack/" + enc(state.pack) + "/module/" + enc(state.module) + "/entries")
     .then(function (data) {
       state.entries = data.entries || [];
-      setHdrNote("list-count", state.entries.length + " 条");
+      // 批12 #1：聚合视图（被并入模块的条目按来源分小节；无声明时为 []）
+      state.mergeSections = data.merge_sections || [];
+      state.listLabel = data.label || state.module;
+      var mc = data.merged_count || 0;
+      var total = (data.total_count == null) ? state.entries.length : data.total_count;
+      setHdrNote("list-count", total + " 条" + (mc ? "（含并入 " + mc + "）" : ""));
       renderEntries();
-      if (state.entries.length) { selectEntry(state.entries[0].id); }
+      if (state.entries.length) {
+        state.entryModule = state.module;
+        selectEntry(state.entries[0].id);
+      }
+      else if ((state.mergeSections.length) && (state.mergeSections[0].entries || []).length) {
+        // 本模块暂无条目、但有并入来源：默认选中并入来源的第一条（聚合视图口径）
+        var s0 = state.mergeSections[0];
+        state.entryModule = s0.module;
+        selectEntry(s0.entries[0].id);
+      }
       else {
         // 空模块没有条目 → 没有备份状态可读：回退按钮保持禁用（V4）。
         state.backup = null;
@@ -2690,22 +2776,40 @@ function renderEntries() {
   var box = el("rows");
   box.innerHTML = "";
   // 中栏过滤作用域写清：当前模块内，按名称或 ID 过滤（EditorEntry 纯逻辑）
-  var shown = EditorEntry.filterEntries(state.entries, state.filter);
-  shown.forEach(function (e) {
-    var d = document.createElement("div");
-    d.className = "item" + (e.id === state.entry ? " on" : "");
-    d.dataset.id = e.id;
-    d.textContent = e.name;
-    d.title = e.name + "  [" + e.id + "]";
-    d.addEventListener("click", function () { selectEntry(e.id); });
-    box.appendChild(d);
+  // 批12 #1：聚合视图按「来源模块」分小节（本模块 + 各并入来源），过滤在小节内生效。
+  var grouped = (state.mergeSections || []).length > 0;
+  var plan = EditorMerge.filterPlan(
+    EditorMerge.sectionPlan(state.entries, state.mergeSections, state.module, state.listLabel),
+    state.filter, EditorEntry.match);
+  var cur = state.entryModule || state.module;
+  plan.forEach(function (s) {
+    if (grouped) {
+      var h = document.createElement("div");
+      h.className = "gsec";
+      h.innerHTML = '<span class="gt">' + esc(s.label)
+        + "</span> · " + s.entries.length + " 条"
+        + (s.keep_top_level ? ' <span class="idtag">也单列</span>' : "");
+      box.appendChild(h);
+    }
+    s.entries.forEach(function (e) {
+      var d = document.createElement("div");
+      d.className = "item" + ((e.id === state.entry && s.module === cur) ? " on" : "");
+      d.dataset.id = e.id;
+      d.dataset.mod = s.module;
+      d.textContent = e.name;
+      d.title = e.name + "  [" + e.id + "]" + (grouped ? "（来源：" + s.label + "）" : "");
+      d.addEventListener("click", function () { selectEntry(e.id, s.module); });
+      box.appendChild(d);
+    });
   });
-  if (state.filter && !shown.length) {
+  var shown = EditorMerge.planCount(plan);
+  var all = plan.reduce(function (n, s) { return n + (s.total == null ? s.entries.length : s.total); }, 0);
+  if (state.filter && !shown) {
     box.innerHTML = '<div class="ex" style="padding:var(--sp-5) var(--sp-6)">'
       + "本模块没有匹配「" + esc(state.filter) + "」的名称或 ID。</div>";
   }
-  el("list-ft").textContent = "共 " + shown.length + " 条"
-    + (shown.length !== state.entries.length ? "（已过滤 / 全部 " + state.entries.length + "）" : "");
+  el("list-ft").textContent = "共 " + shown + " 条"
+    + (shown !== all ? "（已过滤 / 全部 " + all + "）" : "");
 }
 
 // 全局检索结果（跨模块；结果按模块分组，点击跳转并切换模块）
@@ -2726,7 +2830,7 @@ function renderGlobalResults() {
     box.appendChild(h);
     g.entries.forEach(function (e) {
       var d = document.createElement("div");
-      d.className = "item" + (g.module === state.module && e.id === state.entry ? " on" : "");
+      d.className = "item" + (g.module === (state.entryModule || state.module) && e.id === state.entry ? " on" : "");
       d.dataset.id = e.id;
       d.innerHTML = esc(e.name) + '<span class="idtag">' + esc(e.id) + "</span>";
       d.title = (g.label ? g.label + " · " : "") + e.name + "  [" + e.id + "]（点击跳转到该模块）";
@@ -3109,7 +3213,7 @@ function createEntry() {
 // ---------------------------------------------------------------------------
 function deleteEntry() {
   if (!state.entry || !state.editable || state.busy) { return Promise.resolve(); }
-  var mod = state.module, eid = state.entry;
+  var mod = state.entryModule || state.module, eid = state.entry;
   var name = (state.detail && state.detail.name) || eid;
   setBusy(true);
   return api("/api/pack/" + enc(state.pack) + "/entry/" + enc(mod) + "/" + enc(eid) + "/refs")
@@ -3145,20 +3249,24 @@ function deleteEntry() {
 // ---------------------------------------------------------------------------
 // 栏③：条目详情（字段由元数据生成；控件由后端 control 决定）
 // ---------------------------------------------------------------------------
-function selectEntry(id) {
+function selectEntry(id, mod) {
   if (!canLeave()) { return; }
   discardDraft();
   state.result = null;
   state.entry = id;
+  // 批12 #1：记录条目所属模块（聚合视图里点开的并入条目 → 编辑/保存路由回其所属模块）
+  state.entryModule = mod || state.entryModule || state.module;
   renderEntries();
   return reloadDetail();
 }
 
 function reloadDetail() {
-  if (!state.pack || !state.module || !state.entry) { return Promise.resolve(); }
-  return api("/api/pack/" + enc(state.pack) + "/entry/" + enc(state.module) + "/" + enc(state.entry))
+  var mod = state.entryModule || state.module;
+  if (!state.pack || !mod || !state.entry) { return Promise.resolve(); }
+  return api("/api/pack/" + enc(state.pack) + "/entry/" + enc(mod) + "/" + enc(state.entry))
     .then(function (data) {
       state.detail = data;
+      state.entryModule = data.module || mod;
       state.fieldIndex = {};
       (data.fields || []).forEach(function (f) { state.fieldIndex[f.key] = f; });
       renderDetail(data);
@@ -3167,8 +3275,9 @@ function reloadDetail() {
 }
 
 function refreshBackup() {
-  if (!state.pack || !state.module) { return Promise.resolve(); }
-  return api("/api/pack/" + enc(state.pack) + "/module/" + enc(state.module) + "/backup")
+  var mod = state.entryModule || state.module;
+  if (!state.pack || !mod) { return Promise.resolve(); }
+  return api("/api/pack/" + enc(state.pack) + "/module/" + enc(mod) + "/backup")
     .then(function (b) {
       state.backup = b;
       el("backup-note").textContent = b.exists
@@ -3326,15 +3435,33 @@ function jumpTo(mod, entry) {
   state.result = null;
   // 从全局检索结果跳转：清掉跨模块查询，回到「当前模块」的中栏语义
   state.gquery = ""; if (el("gfilter")) { el("gfilter").value = ""; }
-  state.module = mod; state.entry = null;
+  // 批12 #1：目标模块若被并入且未保留单列 → 落到聚合它的模块上，再打开该条目（仍路由回原模块）
+  var dest = mergeParent(mod) || mod;
+  state.module = dest; state.entry = null; state.entryModule = mod;
   renderModules();
-  var pos = findModule(mod);
-  el("list-title").textContent = pos ? pos.label : mod;
+  var pos = findModule(dest);
+  el("list-title").textContent = pos ? pos.label : dest;
   return loadEntries().then(function () {
-    if ((state.entries || []).some(function (e) { return e.id === entry; })) {
-      return selectEntry(entry);
-    }
+    var inOwn = (state.entries || []).some(function (e) { return e.id === entry; });
+    var inMerged = (state.mergeSections || []).some(function (s) {
+      return s.module === mod && (s.entries || []).some(function (e) { return e.id === entry; });
+    });
+    if (inOwn || inMerged) { return selectEntry(entry, mod); }
   });
+}
+
+// 批12 #1：被并入模块 → 聚合它的父模块（按后端 merged 声明；未声明/未隐藏返回 null）
+function mergeParent(mod) {
+  var found = null;
+  (function walk(list) {
+    (list || []).forEach(function (n) {
+      (n.merged || []).forEach(function (m) {
+        if (m.module === mod && !m.keep_top_level) { found = n.module; }
+      });
+      if (n.children) { walk(n.children); }
+    });
+  })(state.modules);
+  return found;
 }
 
 function bindTabs() {
@@ -4368,7 +4495,8 @@ function runRollback() {
   if (!state.backup || !state.backup.exists) { return Promise.resolve(); }
   if (!window.confirm("确定回退到上一份备份吗？当前文件内容会被备份覆盖。")) { return Promise.resolve(); }
   setBusy(true);
-  return postJSON("/api/pack/" + enc(state.pack) + "/module/" + enc(state.module) + "/rollback", {})
+  var mod = state.entryModule || state.module;
+  return postJSON("/api/pack/" + enc(state.pack) + "/module/" + enc(mod) + "/rollback", {})
     .then(function (res) {
       state.result = res; renderResult(res);
       if (res.ok) { discardDraft(); return reloadDetail(); }

@@ -17,7 +17,8 @@
                                    "level": {"_label": "等级", "max": "最大等级"}}},
       "field_help":    {"skills": {"power": "技能倍率，按百分比算。",
                                    "effects": {"_help": "效果表", "type": "类型"}}},
-      "group_labels":  {"enemies": {"base": "基本"}}
+      "group_labels":  {"enemies": {"base": "基本"}},
+      "entry_merge":   {"settings": ["stats", "formula"]}
     }
 
 `field_labels` / `field_help` 的值可为**非空字符串**（叶子）或**嵌套对象**（含 `_label`/`_help`
@@ -29,7 +30,15 @@
     `module_tree` 整体替换 manifest 的 `module_tree`/`module_groups`）；
   · `field_labels` / `field_help` / `group_labels` 属**模块级**声明：覆盖框架表同模块同键值，
     未声明键保持框架现状；包为框架未登记的字段声明标签/说明时，补一个 `soft_label`
-    纯展示字段（泛型校验短路，零行为变化），声明未覆盖到的字段仍走原兜底。
+    纯展示字段（泛型校验短路，零行为变化），声明未覆盖到的字段仍走原兜底；
+  · `entry_merge` 属**展示层聚合**声明（批12 #1）：把来源模块的**条目列表**并入目标模块的
+    条目列表展示（中栏按来源模块分小节），来源模块默认不再左栏单列。形态：
+    `{"<目标模块>": ["<来源模块>", ...]}`（简写，来源不保留单列）或
+    `{"<目标模块>": {"sources": [...], "keep_top_level": [...]}}`（保留单列的来源同时出现在
+    左栏与聚合视图）。**数据文件 / 模块 id / 加载与校验路径全部不动**——被并入条目的
+    编辑与保存仍路由回其所属模块（校验 / 原子写 / 回备用各自的模块链路）。
+    被并入模块仍出现在模块树（带 `merged_into` 标记），左栏是否单列由前端按 `keep_top_level`
+    决定，`editor_verify_packs.py` 的「模块树 / 条目索引 / 包列表」三处口径保持不变。
 
 本模块只依赖 `qbot_rpg.content.models`（零 web 依赖，框架可独立使用）；解析严格、
 合并纯函数（不改动传入的框架表），读取按文件 mtime/size/inode 缓存。
@@ -38,7 +47,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, Mapping, Optional, Tuple
@@ -57,6 +66,7 @@ TOP_LEVEL_KEYS: Tuple[str, ...] = (
     "field_labels",
     "field_help",
     "group_labels",
+    "entry_merge",
 )
 
 
@@ -74,6 +84,9 @@ class PackFieldMeta:
     field_labels: Mapping[str, Any]   # 值 = str | 嵌套对象（含 _label / 子键）
     field_help: Mapping[str, Any]     # 值 = str | 嵌套对象（含 _help / 子键）
     group_labels: Mapping[str, Mapping[str, str]]
+    # entry_merge（批12 #1，展示层聚合）：目标模块 → {"sources": [...], "keep_top_level": [...]}。
+    # 语义 = 把 sources 的条目并入目标的条目列表展示；数据/模块 id/校验路径不变。
+    entry_merge: Mapping[str, Mapping[str, Tuple[str, ...]]] = field(default_factory=dict)
 
 
 # -------------------------------------------------------------------------------------
@@ -207,6 +220,59 @@ def _validate_module_tree(value: object, pack: str, key: str) -> Any:
                 f"形态非法：应为数组或对象（父: 子项），实际是{_type_name(value)}")
 
 
+def _str_list(value: object, pack: str, key: str) -> Tuple[str, ...]:
+    """校验「非空字符串数组（元素互不重复）」。"""
+    if not isinstance(value, list):
+        raise _fail(pack, key, f"应为字符串数组，实际是{_type_name(value)}")
+    out: list = []
+    for item in value:
+        if not isinstance(item, str) or not item:
+            raise _fail(pack, key, f"元素应为非空字符串，实际是{item!r}")
+        if item in out:
+            raise _fail(pack, key, f"元素重复：{item}")
+        out.append(item)
+    return tuple(out)
+
+
+def _validate_entry_merge(value: object, pack: str, key: str
+                          ) -> Dict[str, Dict[str, Tuple[str, ...]]]:
+    """entry_merge 形态校验并归一化（批12 #1）。
+
+    允许两种写法（形态归一后统一为 `{"sources": (…), "keep_top_level": (…)}`）：
+      · 简写：`{"<目标>": ["<来源>", …]}`（来源默认不保留单列）；
+      · 完整：`{"<目标>": {"sources": [...], "keep_top_level": [...]}}`。
+    约束：目标/来源必须是非空字符串且互不相同（目标不能并入自身）；`keep_top_level`
+    必须是 `sources` 的子集；只允许 `sources` / `keep_top_level` 两个键（防写法漂移）。
+    这里只校验**形态**；「模块是否在 manifest 声明」由编辑器读取层按包实际声明过滤。
+    """
+    raw = _require_map(value, pack, key)
+    out: Dict[str, Dict[str, Tuple[str, ...]]] = {}
+    for target, spec in raw.items():
+        if not isinstance(target, str) or not target:
+            raise _fail(pack, key, f"含非法目标模块名（应为非空字符串）：{target!r}")
+        if isinstance(spec, Mapping):
+            unknown = [str(k) for k in spec if k not in ("sources", "keep_top_level")]
+            if unknown:
+                raise _fail(pack, f"{key}.{target}",
+                            f"含未知键：{'、'.join(unknown)}；只允许 sources / keep_top_level")
+            if "sources" not in spec:
+                raise _fail(pack, f"{key}.{target}", "缺少 sources（应为来源模块数组）")
+            sources = _str_list(spec["sources"], pack, f"{key}.{target}.sources")
+            keep = _str_list(spec.get("keep_top_level", []), pack,
+                             f"{key}.{target}.keep_top_level")
+        else:
+            sources = _str_list(spec, pack, f"{key}.{target}")
+            keep = ()
+        if target in sources:
+            raise _fail(pack, f"{key}.{target}", "目标模块不能并入自身")
+        for k in keep:
+            if k not in sources:
+                raise _fail(pack, f"{key}.{target}.keep_top_level",
+                            f"元素 {k} 不在 sources 内（保留单列的模块必须先被并入）")
+        out[target] = {"sources": sources, "keep_top_level": keep}
+    return out
+
+
 def _validate_schema_version(value: object, pack: str, key: str) -> int:
     if value is None:
         raise _fail(pack, key, f"缺失：应为整数 {SCHEMA_VERSION}")
@@ -241,6 +307,8 @@ def parse_field_meta(raw: object, pack: str) -> PackFieldMeta:
                   if "field_help" in raw else {})
     group_labels = (_nested_str_map(raw["group_labels"], pack, "group_labels")
                     if "group_labels" in raw else {})
+    entry_merge = (_validate_entry_merge(raw["entry_merge"], pack, "entry_merge")
+                   if "entry_merge" in raw else {})
     return PackFieldMeta(
         pack=pack,
         module_labels=module_labels,
@@ -248,6 +316,7 @@ def parse_field_meta(raw: object, pack: str) -> PackFieldMeta:
         field_labels=field_labels,
         field_help=field_help,
         group_labels=group_labels,
+        entry_merge=entry_merge,
     )
 
 

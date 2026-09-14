@@ -1,0 +1,14 @@
+[
+  {
+    "id": "zz_probe_gear_alpha",
+    "name": "探针装具甲",
+    "type": "probe_gear",
+    "price": 21,
+    "effects": [
+      "zz_probe_effect"
+    ],
+    "excludes": [
+      "zz_probe_gear_beta"
+    ]
+  }
+]

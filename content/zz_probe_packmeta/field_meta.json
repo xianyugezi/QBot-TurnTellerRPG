@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "module_labels": {
+    "items": "物资",
+    "equipment": "装具",
+    "zz_probe_gadgets": "小装置"
+  },
+  "module_tree": [
+    {
+      "module": "items",
+      "children": [
+        "equipment"
+      ]
+    },
+    {
+      "module": "zz_probe_gadgets"
+    }
+  ],
+  "field_labels": {
+    "items": {
+      "id": "编号",
+      "name": "名称",
+      "type": "种类",
+      "price": "售价",
+      "effects": "效果引用",
+      "elements": {
+        "_label": "元素亲和",
+        "火": "火焰",
+        "水": "水流"
+      },
+      "desc": "描述",
+      "zz_probe_ext": "扩展说明"
+    },
+    "equipment": {
+      "id": "编号",
+      "name": "名称",
+      "price": "售价",
+      "effects": "效果引用",
+      "excludes": "互斥装具"
+    },
+    "zz_probe_gadgets": {
+      "id": "编号",
+      "name": "名称",
+      "power": "强度",
+      "zone": "试验区域",
+      "labels": {
+        "_label": "标签集",
+        "kind": "类别"
+      }
+    }
+  },
+  "field_help": {
+    "items": {
+      "price": "探针标价（仅用于验证展示元数据来自包内声明）。",
+      "elements": {
+        "_help": "各元素亲和值。",
+        "火": "火焰亲和值。"
+      }
+    },
+    "zz_probe_gadgets": {
+      "power": "装置强度（探针用，非真实业务字段）。"
+    }
+  },
+  "group_labels": {
+    "items": {
+      "base": "基础",
+      "stats": "数值",
+      "effects": "效果",
+      "text": "文本"
+    },
+    "equipment": {
+      "base": "基础",
+      "stats": "数值",
+      "effects": "效果",
+      "text": "文本"
+    },
+    "zz_probe_gadgets": {
+      "默认": "基础"
+    }
+  }
+}

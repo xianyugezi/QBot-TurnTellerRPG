@@ -1,0 +1,14 @@
+{
+  "name": "展示元数据探针包（验证用）",
+  "version": "0.0.1",
+  "schema_version": 1,
+  "author": "editor-verify",
+  "modules": [
+    "items",
+    "equipment",
+    "zz_probe_gadgets"
+  ],
+  "module_labels": {
+    "items": "（manifest 占位名：应由 field_meta.json 覆盖）"
+  }
+}

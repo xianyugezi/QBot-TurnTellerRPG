@@ -518,7 +518,7 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
     <span class="saved" id="dirty">已保存</span>
     <div class="topright">
       <button class="btn gear" id="btn-settings" type="button"
-        title="模块开关：勾选要做的内容类型（技能、物品、地图…）；停用只移除声明，数据文件保留；落盘走校验 + 原子写 + 自动备份">⚙ 模块</button>
+        title="模块开关：勾选要做的内容类型（如角色、道具、场景…）；停用只移除声明，数据文件保留；落盘走校验 + 原子写 + 自动备份">⚙ 模块</button>
       <label class="rolesel">
         <span class="lb">身份=</span>
         <select id="role" aria-label="权限位切换"></select>
@@ -1249,7 +1249,7 @@ function moduleEmptyHtml() {
   return '<div class="mempty">'
     + '<div class="me-t">这个包还没启用任何模块</div>'
     + '<div class="me-d">点右上角 <b>⚙ 模块</b>，勾选你要做的内容类型'
-    + '（技能、物品、地图…）。勾选后左侧会出现对应模块，就可以开始写内容了。</div>'
+    + '（如角色、道具、场景…）。勾选后左侧会出现对应模块，就可以开始写内容了。</div>'
     + '<button class="btn primary" type="button" data-open-modules>打开模块开关</button>'
     + "</div>";
 }

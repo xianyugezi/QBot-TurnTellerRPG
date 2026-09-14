@@ -660,7 +660,7 @@ def _tolerate_empty_modules(modules: Mapping[str, Any]) -> Optional[Callable[[An
     """容忍判定：只容忍「当前仍是空骨架」的模块自身的红拦（模块开关语义：先启用后填写）。
 
     供「回退 manifest」复核复用——回退后的 manifest 可能重新声明了空骨架模块，
-    其深结构校验红拦（如技能库无普攻）不应把回退判成失败。无空骨架模块 → None（严格）。
+    其深结构校验红拦（空模块尚未填写）不应把回退判成失败。无空骨架模块 → None（严格）。
     """
     empty = {mod for mod, data in modules.items() if _is_empty_skeleton(data)}
     if not empty:
@@ -696,7 +696,7 @@ def _dep_warning(module: str, message: str) -> Dict[str, Any]:
         "level": "yellow", "code": "module_dependency", "module": module, "field": "",
         "entry_id": "", "field_key": "", "field_label": "（模块依赖）", "related": True,
         "message": message,
-        "how_to_fix": "在 ⚙ 模块开关里同时启用相关模块；本提示不阻断操作。",
+        "how_to_fix": "在「模块开关」里同时启用相关模块；本提示不阻断操作。",
     }
 
 

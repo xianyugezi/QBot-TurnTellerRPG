@@ -164,6 +164,28 @@ def create_app(pack: Optional[str] = None, root: Optional[str] = None,
         return editor_ops.rollback_module(
             pack_id, module, root=content_root, role=app.state.role)
 
+    # -------- 批8 模块开关：可启用清单 / 启用停用 / manifest 回退 --------
+    @app.get("/api/pack/{pack_id}/module-catalog")
+    def api_module_catalog(pack_id: str):  # type: ignore[no-untyped-def]
+        return api.module_catalog(pack_id, root=content_root)
+
+    @app.post("/api/pack/{pack_id}/module/{module}/toggle")
+    def api_toggle_module(pack_id: str, module: str,
+                          payload: Optional[Dict[str, Any]] = Body(default=None)):  # type: ignore[no-untyped-def]
+        body = payload or {}
+        return editor_ops.set_module_enabled(
+            pack_id, module, bool(body.get("enabled")),
+            root=content_root, role=app.state.role)
+
+    @app.get("/api/pack/{pack_id}/manifest/backup")
+    def api_manifest_backup(pack_id: str):  # type: ignore[no-untyped-def]
+        return editor_ops.module_config_backup(pack_id, root=content_root)
+
+    @app.post("/api/pack/{pack_id}/manifest/rollback")
+    def api_manifest_rollback(pack_id: str):  # type: ignore[no-untyped-def]
+        return editor_ops.rollback_module_config(
+            pack_id, root=content_root, role=app.state.role)
+
     @app.get("/")
     def index():  # type: ignore[no-untyped-def]
         return FileResponse(str(static_dir / "index.html"))

@@ -25,6 +25,7 @@
 from __future__ import annotations
 
 import copy
+from pathlib import Path
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence
 
 from qbot_rpg.content import atomic_store
@@ -615,6 +616,295 @@ def delete_entry(pack: object, module: object, entry_id: object, *,
 
 
 # =====================================================================================
+# 批8：模块开关（启用 / 停用模块）——写 manifest.modules + 骨架数据文件；批2 同一链路
+# =====================================================================================
+def _skeleton_for(entry_type: object) -> object:
+    """按 entry_type 生成最小骨架：list → []；map / object（及其它）→ {}。"""
+    return [] if str(entry_type or "") == "list" else {}
+
+
+def _is_empty_skeleton(value: object) -> bool:
+    """值是否为「空骨架」（空 list / 空 dict）——空模块尚未填写，深校验红拦只提示不阻断。"""
+    return (isinstance(value, list) and not value) or (isinstance(value, Mapping) and not value)
+
+
+def _collect_module_ids(data: object) -> set:
+    """从模块数据里收集条目 ID（list 取条目 id；map/object 取键）——供停用时悬空引用容忍。"""
+    ids: set = set()
+    if isinstance(data, list):
+        for elem in data:
+            if isinstance(elem, Mapping):
+                eid = elem.get("id")
+                if isinstance(eid, str) and eid:
+                    ids.add(eid)
+    elif isinstance(data, Mapping):
+        for key in data:
+            if isinstance(key, str) and key:
+                ids.add(key)
+    return ids
+
+
+def _any_of(*preds: Optional[Callable[[Any], bool]]) -> Optional[Callable[[Any], bool]]:
+    """把若干容忍判定合并为一个（全部为 None → None = 严格不放行）。"""
+    live = [p for p in preds if p is not None]
+    if not live:
+        return None
+
+    def _pred(error: Any) -> bool:
+        return any(p(error) for p in live)
+
+    return _pred
+
+
+def _tolerate_empty_modules(modules: Mapping[str, Any]) -> Optional[Callable[[Any], bool]]:
+    """容忍判定：只容忍「当前仍是空骨架」的模块自身的红拦（模块开关语义：先启用后填写）。
+
+    供「回退 manifest」复核复用——回退后的 manifest 可能重新声明了空骨架模块，
+    其深结构校验红拦（空模块尚未填写）不应把回退判成失败。无空骨架模块 → None（严格）。
+    """
+    empty = {mod for mod, data in modules.items() if _is_empty_skeleton(data)}
+    if not empty:
+        return None
+
+    def _pred(error: Any) -> bool:
+        return str(getattr(error, "module", "") or "") in empty
+
+    return _pred
+
+
+def _tolerate_dangling_to(ids: set) -> Callable[[Any], bool]:
+    """停用模块时的容忍判定：只容忍指向被停用模块条目的 R-4 悬空引用。
+
+    停用只移除声明、保留数据文件，产品语义允许「暂时摘下」（重新勾选即恢复）；
+    其余红拦（包括其它模块自身的数据问题）照常阻断落盘。
+    """
+    def _pred(error: Any) -> bool:
+        kind = str(getattr(error, "kind", "") or "")
+        detail = dict(getattr(error, "detail", {}) or {})
+        return kind == "R-4" and str(detail.get("ref") or "") in ids
+
+    return _pred
+
+
+def _module_label(module: str, labels: Mapping[str, str]) -> str:
+    ce = api.catalog_entry(module)
+    return labels.get(module) or (ce.label if ce is not None else module)
+
+
+def _dep_warning(module: str, message: str) -> Dict[str, Any]:
+    return {
+        "level": "yellow", "code": "module_dependency", "module": module, "field": "",
+        "entry_id": "", "field_key": "", "field_label": "（模块依赖）", "related": True,
+        "message": message,
+        "how_to_fix": "在「模块开关」里同时启用相关模块；本提示不阻断操作。",
+    }
+
+
+def _module_dependency_warnings(pack_dir: Path, manifest: Mapping[str, Any],
+                                declared: Sequence[str], module: str,
+                                enabled: bool) -> List[Dict[str, Any]]:
+    """依赖黄提示（不硬拦）：启用时缺前置 → 建议同时启用；停用时被别人依赖 → 提醒影响。"""
+    labels = api._display_labels(manifest, list(declared), pack_dir)
+    out: List[Dict[str, Any]] = []
+    ce = api.catalog_entry(module)
+    if enabled and ce is not None:
+        for req in ce.requires:
+            if req not in declared:
+                out.append(_dep_warning(
+                    module,
+                    f"「{_module_label(module, labels)}」通常需要"
+                    f"「{_module_label(req, labels)}」；建议同时在模块开关里勾选它。"))
+    if not enabled:
+        for other in declared:
+            oce = api.catalog_entry(other)
+            if oce is not None and module in oce.requires:
+                out.append(_dep_warning(
+                    other,
+                    f"「{_module_label(other, labels)}」依赖「{_module_label(module, labels)}」；"
+                    f"停用后它可能无法正常工作（数据文件已保留，重新勾选即可恢复）。"))
+    return out
+
+
+def _humanize_tolerated(errors: Sequence[Any]) -> List[Dict[str, Any]]:
+    """被容忍的红拦 → 界面黄提示（如实告诉用户「为什么这次放行」）。"""
+    out: List[Dict[str, Any]] = []
+    for item in atomic_store.humanize_errors(list(errors)):
+        item = dict(item)
+        item["level"] = "yellow"
+        item["code"] = "module_tolerated_" + str(item.get("code") or "")
+        item["message"] = "模块开关放行（空骨架 / 暂时摘下）：" + str(item.get("message") or "")
+        out.append(item)
+    return out
+
+
+def set_module_enabled(pack: object, module: object, enabled: object, *,
+                       root: Optional[object] = None, role: object = ROLE_OWNER,
+                       meta: Optional[FieldMetaTable] = None) -> Dict[str, Any]:
+    """启用 / 停用一个模块（顶栏 ⚙ 模块开关的唯一写入入口）。
+
+    · 启用：把模块写入 `manifest.json` 的 `modules`；该模块数据文件不存在 → 按 entry_type
+      创建最小骨架（list → `[]`；map/object → `{}`），文件已存在 → 保留原数据不覆盖。
+    · 停用：**只从 `manifest.modules` 移除声明，保留数据文件**（重新勾选即恢复）。
+    · 落盘复用批2 同一链路：整包校验 → 备份 `manifest.json.bak` → 原子写 → 回读复核；
+      任一步失败自动回退/复原，绝不半套写入。
+    · 校验容忍（不绕过校验器，仅圈定作用域）：启用新空骨架时只容忍「归属该模块自身」的红拦
+      （尚未填写）；停用时只容忍指向该模块条目的 R-4 悬空引用（暂时摘下）。被容忍项以黄提示
+      如实返回；其余任何红拦一律阻断落盘。
+    """
+    require_edit(role)
+    pack_dir = api._pack_dir(pack, root)
+    manifest = api._manifest(pack_dir)
+    mod = api._check_component(module, "模块名")
+    declared = api._declared_modules(manifest)
+    env = _envelope(phase="module_toggle", pack=str(pack), module=mod)
+    if mod not in declared and not api.is_enableable_module(mod):
+        raise api.BadRequest(f"未知模块（不在框架可启用清单，也未在包内声明）：{mod}")
+
+    if enabled and mod in declared:
+        env.update(ok=True, level="ok", message=f"模块「{mod}」已是启用状态。")
+        return env
+    if not enabled and mod not in declared:
+        env.update(ok=True, level="ok", message=f"模块「{mod}」当前未启用。")
+        return env
+
+    data_path = pack_dir / f"{mod}.json"
+    existing = api._read_json(data_path)  # 不存在 → None；解析失败 → EditorError（人话）
+    entry_type = api._entry_type_for_module(pack_dir, mod)
+    skeleton = _skeleton_for(entry_type)
+
+    new_manifest = copy.deepcopy(manifest)
+    new_list = list(declared)
+    if enabled:
+        new_list.append(mod)
+    else:
+        new_list = [m for m in new_list if m != mod]
+    new_manifest["modules"] = new_list
+
+    _pack_dir, modules_raw = api.load_pack_modules(pack, root=root)
+    new_modules = copy.deepcopy(modules_raw)
+    extra_tolerate: Optional[Callable[[Any], bool]] = None
+    if enabled:
+        new_modules[mod] = existing if existing is not None else skeleton
+    else:
+        new_modules.pop(mod, None)
+        extra_tolerate = _tolerate_dangling_to(_collect_module_ids(existing))
+    # 空骨架模块（含本次新建的、以及包内其它还没填的）自身的深结构红拦：模块开关语义
+    # 是「先启用、后填写」，这些只提示不阻断；停用时的悬空引用单独容忍。
+    tolerate = _any_of(_tolerate_empty_modules(new_modules), extra_tolerate)
+
+    report = check_pack(new_modules, meta)
+    blocked = list(report.errors)
+    tolerated: List[Any] = []
+    if tolerate is not None:
+        tolerated = [e for e in blocked if tolerate(e)]
+        blocked = [e for e in blocked if not tolerate(e)]
+
+    slot = {"module": mod, "entry_id": "", "base": {}}
+    warnings = _module_dependency_warnings(pack_dir, manifest, declared, mod, bool(enabled))
+    warnings += _humanize_tolerated(tolerated)
+    warnings += _related_to_slot(
+        _decorate(atomic_store.humanize_warnings(report.warnings), slot, mod,
+                  related_only=False),
+        slot, mod)
+    env.update(
+        warnings=warnings,
+        errors=_decorate(atomic_store.humanize_errors(blocked), slot, mod, related_only=False),
+        changed_fields=[mod],
+    )
+    if blocked:
+        env.update(level="red", message="模块变更未通过整包校验：本次未写入任何文件（红拦）。")
+        return env
+
+    backup = atomic_store.backup_modules(pack_dir, ["manifest"])
+    if not backup.get("ok"):
+        env.update(level="red", message="备份失败，已取消本次模块变更（内容包未被改动）。")
+        env["errors"] = list(backup.get("errors") or []) + env["errors"]
+        return env
+
+    files: Dict[str, Any] = {"manifest": new_manifest}
+    if enabled and existing is None:
+        files[mod] = skeleton
+    written = atomic_store.write_modules(pack_dir, files)
+    if not written.get("ok"):
+        atomic_store.restore_modules_from_backup(pack_dir, ["manifest"])  # 写失败复原 manifest
+        env.update(level="red", message="写入失败：已复原 manifest（原子写未完成）。")
+        env["errors"] = list(written.get("errors") or []) + env["errors"]
+        return env
+
+    verify_errors = _verify_after_write(pack, slot, root, meta, tolerate=tolerate)
+    if verify_errors is not None:
+        rolled = atomic_store.restore_modules_from_backup(pack_dir, ["manifest"])
+        env.update(level="red", rolled_back=bool(rolled.get("ok")))
+        env["errors"] = verify_errors + env["errors"]
+        env["message"] = ("写入后复核未通过，已自动回退 manifest（本次模块变更未生效）。"
+                          if rolled.get("ok") else
+                          "写入后复核未通过，且自动回退失败：请检查备份后重试。")
+        return env
+
+    verb = "启用" if enabled else "停用"
+    env.update(
+        ok=True, level=("yellow" if warnings else "ok"),
+        written=list(written.get("written") or []),
+        backup=atomic_store.backup_status(pack_dir, "manifest"),
+        message=(f"已{verb}模块「{mod}」。"
+                 + ("" if enabled else " 数据文件已保留，重新勾选即可恢复。")),
+    )
+    return env
+
+
+def module_config_backup(pack: object, *, root: Optional[object] = None) -> Dict[str, Any]:
+    """模块开关的备份状态（manifest.json.bak 是否存在；面板回退按钮可见性）。只读。"""
+    pack_dir = api._pack_dir(pack, root)
+    status = atomic_store.backup_status(pack_dir, "manifest")
+    return {"pack": str(pack), "module": "manifest", **status}
+
+
+def rollback_module_config(pack: object, *, root: Optional[object] = None,
+                           role: object = ROLE_OWNER,
+                           meta: Optional[FieldMetaTable] = None) -> Dict[str, Any]:
+    """回退最近一次模块开关变更（manifest.json.bak → 原子恢复 → 复核）；只读身份拒绝。
+
+    只复原 `manifest.json`；数据文件一律保留（与「停用保留文件」同一语义）。
+    """
+    require_edit(role)
+    pack_dir = api._pack_dir(pack, root)
+    status = atomic_store.backup_status(pack_dir, "manifest")
+    env = _envelope(phase="module_rollback", pack=str(pack), module="manifest")
+    if not status.get("exists"):
+        env.update(level="red", message="没有可回退的模块变更备份。")
+        env["errors"] = [{
+            "level": "red", "code": "no_backup", "module": "manifest", "field": "",
+            "entry_id": "", "field_key": "", "field_label": "（模块开关）", "related": True,
+            "message": "还没有模块开关的备份（manifest.json.bak 不存在）。",
+            "how_to_fix": "先启用或停用一个模块，之后就能回退。",
+        }]
+        return env
+
+    restored_result = atomic_store.restore_modules_from_backup(pack_dir, ["manifest"])
+    if not restored_result.get("ok"):
+        env.update(level="red", message="回退失败：manifest 未被改动。")
+        env["errors"] = list(restored_result.get("errors") or [])
+        return env
+
+    _p, restored_modules = api.load_pack_modules(pack, root=root)
+    tolerate = _tolerate_empty_modules(restored_modules)
+    verify_errors = _verify_after_write(pack, {"module": "", "entry_id": ""}, root, meta,
+                                        tolerate=tolerate)
+    if verify_errors is not None:
+        env.update(level="red", message="回退后的 manifest 未通过校验，请检查备份。")
+        env["errors"] = verify_errors
+        return env
+
+    env.update(
+        ok=True, level="ok", rolled_back=True,
+        restored=list(restored_result.get("restored") or []),
+        backup=atomic_store.backup_status(pack_dir, "manifest"),
+        message="已回退到上一次模块变更前的状态（数据文件全部保留）。",
+    )
+    return env
+
+
+# =====================================================================================
 # 备份可见性 / 回退
 # =====================================================================================
 def module_backup(pack: object, module: object, *,
@@ -675,11 +965,14 @@ __all__ = [
     "delete_entry",
     "is_editable",
     "module_backup",
+    "module_config_backup",
     "normalize_role",
     "reference_warnings",
     "require_edit",
     "rollback_module",
+    "rollback_module_config",
     "save_entry",
     "session_info",
+    "set_module_enabled",
     "validate_entry",
 ]

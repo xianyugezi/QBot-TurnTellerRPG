@@ -33,6 +33,12 @@ from typing import Any, Dict, List, Mapping, Optional, Tuple
 from qbot_rpg.content import field_meta_pack as pack_meta
 from qbot_rpg.content.field_meta import default_field_meta_table
 from qbot_rpg.content.models import FieldMeta, FieldMetaTable, ModuleMeta
+from qbot_rpg.content.module_catalog import (
+    FRAMEWORK_MODULE_CATALOG,
+    MODULE_PANEL_HINT,
+    ModuleCatalogEntry,
+    catalog_entry,
+)
 
 # 无任何分组声明时的单一默认分组（缺省兜底；编辑器不因包缺元数据而空白）。
 DEFAULT_GROUP = "默认"
@@ -453,6 +459,91 @@ def _entry_type(mmeta: Optional[ModuleMeta], data: object) -> str:
     if mmeta is not None and mmeta.entry_type:
         return mmeta.entry_type
     return _infer_entry_type(data)
+
+
+# =====================================================================================
+# 批8：模块开关（可启用模块清单）——框架通用目录 + 包声明优先
+# =====================================================================================
+def _entry_type_for_module(pack_dir: Path, module: str) -> str:
+    """模块的骨架形态：框架 ModuleMeta 优先 → 框架通用目录 → 已存在数据文件的实际形态。
+
+    只用于「启用时创建什么形态的最小骨架」（list → []；map/object → {}），
+    以及面板展示；不参与任何校验判定（校验规则仍由校验器裁定）。
+    """
+    mmeta = _module_meta(module, pack_dir)
+    if mmeta is not None and mmeta.entry_type:
+        return mmeta.entry_type
+    ce = catalog_entry(module)
+    if ce is not None and ce.entry_type:
+        return ce.entry_type
+    data = _read_json(pack_dir / f"{module}.json")
+    if data is not None:
+        return _infer_entry_type(data)
+    return "list"
+
+
+def catalog_module_names() -> List[str]:
+    """框架通用目录里的模块键（面板基础清单；包声明只做增补与中文名覆盖）。"""
+    return [entry.module for entry in FRAMEWORK_MODULE_CATALOG]
+
+
+def is_enableable_module(module: object) -> bool:
+    """模块键是否在框架「可启用模块」通用目录内（写入层用它做白名单）。"""
+    return catalog_entry(module) is not None
+
+
+def module_catalog(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
+    """该包「可启用模块」清单（顶栏 ⚙ 模块开关面板的数据源）。
+
+    清单 = **框架通用目录**（各模块键 + 通用中文默认名 + 一句话用途 + 骨架形态 + 前置模块）
+    ∪ **该包 manifest 已声明但目录未登记的模块**（如包自定义模块）。
+    逐行给出：中文名（**包声明优先**：field_meta.json / manifest / module_tree 节点 label；
+    未声明才用框架通用默认名）、模块键、用途、entry_type、是否已启用、缺失的前置模块。
+
+    「不是从当前包已有声明反推」：空白包也有一份完整候选（框架目录），这正是本 API 的意义。
+    """
+    pack_dir = _pack_dir(pack, root)
+    manifest = _manifest(pack_dir)
+    declared = _declared_modules(manifest)
+    enabled = set(declared)
+    pack_labels = _display_labels(manifest, declared, pack_dir)
+
+    def label_of(module: str) -> str:
+        ce = catalog_entry(module)
+        return pack_labels.get(module) or (ce.label if ce is not None else module)
+
+    keys = [entry.module for entry in FRAMEWORK_MODULE_CATALOG]
+    keys += [m for m in declared if catalog_entry(m) is None]
+
+    rows: List[Dict[str, Any]] = []
+    for mod in keys:
+        ce: Optional[ModuleCatalogEntry] = catalog_entry(mod)
+        requires = list(ce.requires) if ce is not None else []
+        rows.append({
+            "module": mod,
+            "label": label_of(mod),
+            "label_source": ("pack" if mod in pack_labels else
+                             ("framework" if ce is not None else "key")),
+            "purpose": ce.purpose if ce is not None else "",
+            "entry_type": _entry_type_for_module(pack_dir, mod),
+            "enabled": mod in enabled,
+            "in_catalog": ce is not None,
+            "requires": requires,
+            "requires_labels": [label_of(r) for r in requires],
+            "missing_requires": [r for r in requires if r not in enabled],
+        })
+
+    bak = pack_dir / "manifest.json.bak"
+    return {
+        "pack": str(pack),
+        "pack_name": str(manifest.get("name", "") or pack),
+        "hint": MODULE_PANEL_HINT,
+        "modules": rows,
+        "total": len(rows),
+        "enabled_count": sum(1 for r in rows if r["enabled"]),
+        "manifest_backup": {"path": "manifest.json.bak", "exists": bak.is_file()},
+    }
+
 
 
 # =====================================================================================

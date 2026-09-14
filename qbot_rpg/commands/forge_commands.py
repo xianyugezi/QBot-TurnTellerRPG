@@ -2039,7 +2039,8 @@ def _render_set_detail(
         have = tracker[fid]
         worn = list(record.pieces)[:max(0, min(have, len(record.pieces)))]
     fam_total = max((len(r.pieces) for r in recs), default=0)
-    worn_names = ["%s ✓" % (_node_short_label(eng, pid) or _node_name_of(eng, pid))
+    # ✓ 态渲染为 ✅（批2 F-1 / F-12：U+2713 非白名单，✅ 渲染契约 ✓ 态）
+    worn_names = ["%s ✅" % (_node_short_label(eng, pid) or _node_name_of(eng, pid))
                   for pid in worn]
     worn_seg = tpl_of(ctx, "forge_sets_detail_worn", {
         "have": have, "total": fam_total,

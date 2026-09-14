@@ -149,7 +149,18 @@ from __future__ import annotations
 
 import re
 import time
-from typing import Any, Callable, Dict, List, Mapping, MutableMapping, Optional, Tuple
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Mapping,
+    MutableMapping,
+    Optional,
+    Sequence,
+    Tuple,
+    cast,
+)
 
 from qbot_rpg.core.alchemy_core import ELEMENT_NAMES_CN
 from qbot_rpg.core.codex import mark_seen
@@ -163,9 +174,16 @@ from qbot_rpg.core.forge_job import (
     level_gate_met,
 )
 from qbot_rpg.core.forge_progress import material_holdings, progress_line, shortfall
+from qbot_rpg.core.forge_set_skills import (
+    equipped_piece_ids,
+    family_piece_counts,
+    group_families,
+    resolve_set_skills,
+    set_tracker_of,
+)
 from qbot_rpg.core.forge_sets import parse_sets, set_lookup
 from qbot_rpg.core.forge_sp import sp_locked
-from qbot_rpg.core.forge_tree import ForgeTreeEngine
+from qbot_rpg.core.forge_tree import ForgeTreeEngine, match_name
 from qbot_rpg.core.message_format.list_render import (
     DEFAULT_PAGE_SIZE,
     render_cake_tail,
@@ -295,6 +313,17 @@ _SLOT_CN: Mapping[str, str] = {
     "armor_hand": "手部",
     "armor_leg": "腿部",
     "armor_foot": "脚部",
+}
+# 套装 variant 展示（SET-03）+ α/β 取舍摘要（VAR-02：α=技能多孔少 / β=技能少孔多）
+_SET_VARIANT_CN: Mapping[str, str] = {"alpha": "α", "beta": "β"}
+_SET_VARIANT_TRAIT: Mapping[str, str] = {
+    "alpha": "技能 多 · 孔 少",
+    "beta": "技能 少 · 孔 多",
+}
+# 防具部位简称（SET-04 五部位；节点 type → 单字，/套装 明细部位行用）
+_SET_PART_SHORT: Mapping[str, str] = {
+    "armor_head": "头", "armor_body": "身", "armor_hand": "手",
+    "armor_leg": "腿", "armor_foot": "脚",
 }
 
 # ---------------------------------------------------------------------------
@@ -1752,21 +1781,22 @@ def cmd_forge_tree(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 
 def cmd_sets(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
-    """/套装 查询（批7 路7C：P1 查询骨架，细化_2c2d §1.5 / 定稿 L236）。
+    """/套装 [套装名] 查询（细化_2c2d §1.5 / 定稿 L236）。
 
     流程：
-      ① SP-F4（unlock_sets）未解锁 → 拒绝 SETS_LOCKED_MSG（2c2b §4.3：未解锁 →
-         /套装 直接拒绝）；
-      ② 引擎加载（load_trees 空 → `❌ 锻造系统未启用`，模板化）；
-      ③ 解析 sets 段（forge_sets.parse_sets，无 sets 数据 → 空态 SETS_EMPTY）；
-      ④ 玩家可组成套装查询（forge_sets.set_lookup：只查已有装配件可组成哪几套，
-         不激活）→ 逐套渲染 `N. 套装名（pieces_have/pieces_total 件）：件名...`；
-         ready 套（族级件数 ≥2，ACT-02）行首标记 ✅；
-      ⑤ 参数忽略（P1 骨架：无参全量；带参也返回全量——单套明细/匹配归后续）。
+      ① 引擎加载（load_trees 空 → `❌ 锻造系统未启用`，模板化）；
+      ② 解析 sets 段（forge_sets.parse_sets，无 sets 数据 → 空态 SETS_EMPTY）；
+      ③ 无参：全量列表（forge_sets.set_lookup 逐套 `N. 套装名（have/total 件）：件名...`，
+         ready 套（族级件数 ≥2，ACT-02）行首 ✅）——保持既有兼容；
+         带参：单套明细（§1.5 样例：名称（variant）/ 部位 / 套装技能档位 / 穿戴逐件 ✓ +
+         生效技能 / 缺件 / α/β 对照），匹配算法 精确 → 唯一前缀 → 歧义列表；
+         未命中 → 既有 forge_not_found 文案；歧义 → 候选套餐名列表。
 
-    无铸造等级门槛（§1.5「无」）；纯读渲染不覆盖既有确认窗；不执行套装激活（P1 预留）。
+    明细行「套装技能档位」与「生效技能」消费 forge_set_skills（ACT-02~04）；
+    α/β 混穿件数与生效等级同源（ACT-01/VAR-03）。无铸造等级门槛（§1.5「无」）；
+    纯读渲染不改写 player（重算归穿脱事件 ACT-05）。
     """
-    player = _player_of(ctx)
+    player = _set_player_view(ctx)
     # 2026-09-09 用户拍板：套装效果全员可看——/套装 查询不再受 SP-F4（unlock_sets）
     # 解锁门槛（SP-F4 保留给后续套装激活 ACT 通道；查询只读展示全开放）
 
@@ -1777,6 +1807,20 @@ def cmd_sets(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     sets = parse_sets({"forge": _forge_raw(ctx)})
     if not sets:
         return SETS_EMPTY
+
+    args = list(getattr(parsed, "args", None) or [])
+    key = "".join(str(a) for a in args).strip()
+    if key:
+        status, _fid, recs, cands = _match_set_family(sets, key)
+        if status == "not_found":
+            return tpl_of(ctx, "forge_not_found", {"name": key})
+        if status == "ambiguous":
+            families = group_families(sets)
+            names = [(_pick_set_record(families[f]).name or f) for f in cands]
+            return tpl_of(ctx, "forge_sets_ambiguous", {"candidates": "\n".join(names)})
+        # 档位集合配置化（settings.forge.set_piece_counts，缺省 {2,3,5}）
+        piece_counts = {"settings": ctx.get("settings")}
+        return _render_set_detail(ctx, eng, recs, player, piece_counts)
 
     rows = set_lookup(player, sets)
     # 2026-09-09 全员可看（用户拍板）：玩家无持有件也列出全套装目录（含效果/件名）
@@ -1798,6 +1842,238 @@ def cmd_sets(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         # 行格式 `N. 套装名（2/3 件）：铁剑Ⅰ + 炎剑Ⅱ + 炎剑Ⅲ`（2c2d §1.5 面板行）
         value = "：".join([seg, " + ".join(piece_names)]) if piece_names else seg
         lines.append(tpl_of(ctx, "forge_sets_row", {"index": i, "value": value}))
+    return "\n".join(lines)
+
+
+def _set_player_view(ctx: Mapping[str, Any]) -> Any:
+    """套装读取用玩家视图：ctx["player"]（缺省 ctx）+ ctx 顶层 set_tracker/set_skills 叠加。
+
+    ACT-01 源（4b EQP-03）与生效接入键（set_skills）在装配层经 _ps_init 挂 ctx 顶层，
+    而 _player_of(ctx) 优先 ctx["player"]——此处叠加两层来源，保证 cmd 读到同一份状态；
+    player 已是 Mapping 时返回浅拷贝（纯读不写回）。
+    """
+    player = _player_of(cast(MutableMapping[str, Any], ctx))
+    if not isinstance(player, Mapping):
+        return player
+    out: Dict[str, Any] = dict(player)
+    for k in ("set_tracker", "set_skills"):
+        if k not in out and isinstance(ctx.get(k), Mapping):
+            out[k] = ctx[k]
+    return out
+
+
+def _pick_set_record(recs: Sequence[Any], norm: str = "") -> Any:
+    """族内展示记录：norm 命中名优先 → alpha variant → 首条（确定性）。"""
+    if norm:
+        for r in recs:
+            if match_name(getattr(r, "name", "") or "") == norm:
+                return r
+    for r in recs:
+        if getattr(r, "variant", None) == "alpha":
+            return r
+    return recs[0]
+
+
+def _match_set_family(
+    sets: Sequence[Any], key: str
+) -> Tuple[str, Optional[str], List[Any], List[str]]:
+    """套装匹配（2c2b §5.2 同构）：精确 → 唯一前缀 → 歧义列表。
+
+    精确 = 族 id 原文命中或任一变体 name 归一命中；前缀 = 族 id / 变体 name 归一
+    startswith；多族命中 → ambiguous（返回族 id 有序候选）。匹配仅用 name/id，
+    不写死任何套装名。
+    出参 (status, family_id, records, candidate_family_ids)，status ∈
+      exact / prefix / ambiguous / not_found。
+    """
+    norm = match_name(key)
+    if not norm:
+        return "not_found", None, [], []
+    families = group_families(sets)
+    for fid, recs in families.items():
+        if fid == key or any(match_name(getattr(r, "name", "") or "") == norm for r in recs):
+            return "exact", fid, recs, []
+    hits: List[str] = []
+    for fid, recs in families.items():
+        if fid.startswith(norm) or any(
+            match_name(getattr(r, "name", "") or "").startswith(norm) for r in recs
+        ):
+            hits.append(fid)
+    if len(hits) == 1:
+        return "prefix", hits[0], families[hits[0]], []
+    if len(hits) > 1:
+        return "ambiguous", None, [], hits
+    return "not_found", None, [], []
+
+
+def _node_short_label(eng: ForgeTreeEngine, pid: str) -> str:
+    """部位简称（节点 type → 单字；未知 type → 空串）。"""
+    node = eng.node(pid)
+    ptype = getattr(node, "node_type", None)
+    return _SET_PART_SHORT.get(ptype or "", "")
+
+
+def _node_name_of(eng: ForgeTreeEngine, pid: str) -> str:
+    """节点显示名（缺省回退节点 id，对齐 _set_row_piece_names 口径）。"""
+    node = eng.node(pid)
+    nm = getattr(node, "name", None)
+    return nm if isinstance(nm, str) and nm else pid
+
+
+def _skill_display_name(ctx: Mapping[str, Any], skill_id: str) -> str:
+    """技能显示名（ctx["skills"] 表 name；缺表/缺项回退 skill id）。"""
+    table = ctx.get("skills")
+    if isinstance(table, Mapping):
+        row = table.get(skill_id)
+        nm = row.get("name") if isinstance(row, Mapping) else getattr(row, "name", None)
+        if isinstance(nm, str) and nm:
+            return nm
+    return skill_id
+
+
+def _set_skill_tier_segs(ctx: Mapping[str, Any], record: Any) -> List[str]:
+    """套装技能档位段（SET-05/SK-01~03）：`技能名 Lv1（2件）/ Lv2（3件）/ Lv3（5件）`。
+
+    按 skill 分组（同技能多档并列一次名字），档位升序；纯展示不判激活。
+    """
+    groups: List[Tuple[str, List[Tuple[int, int]]]] = []
+    index: Dict[str, int] = {}
+    for sk in record.skill_defs():
+        sid = sk.skill or ""
+        if not sid:
+            continue
+        pc = sk.piece_count
+        lv = sk.level
+        if not isinstance(pc, int) or isinstance(pc, bool):
+            continue
+        if not isinstance(lv, int) or isinstance(lv, bool):
+            continue
+        if sid not in index:
+            index[sid] = len(groups)
+            groups.append((sid, []))
+        groups[index[sid]][1].append((pc, lv))
+    segs: List[str] = []
+    for sid, tiers in groups:
+        tiers.sort()
+        name = _skill_display_name(ctx, sid)
+        tiers_seg = " / ".join("Lv%d（%d件）" % (lv, pc) for pc, lv in tiers)
+        segs.append("%s %s" % (name, tiers_seg))
+    return segs
+
+
+def _set_missing_entry(ctx: Mapping[str, Any], eng: ForgeTreeEngine, pid: str) -> str:
+    """缺件条目（§1.5 `缺件` 行）：`手（可锻造：龙骑腕 ← 龙骑身 + 秘银×5）`。
+
+    部位简称 + 节点名 + 父节点名（有则）+ 首行素材（item 名×数量，有则）。纯函数确定性。
+    """
+    name = _node_name_of(eng, pid)
+    short = _node_short_label(eng, pid)
+    node = eng.node(pid)
+    body = name
+    parent = getattr(node, "parent", None) if node is not None else None
+    if isinstance(parent, str) and parent:
+        body += " ← %s" % _node_name_of(eng, parent)
+    raw = getattr(node, "raw", None) if node is not None else None
+    mats = raw.get("materials") if isinstance(raw, Mapping) else None
+    if isinstance(mats, list):
+        for m in mats:
+            if not (isinstance(m, Mapping) and isinstance(m.get("item"), str)):
+                continue
+            cnt = m.get("count")
+            if isinstance(cnt, int) and not isinstance(cnt, bool):
+                body += " + %s×%d" % (_item_name(ctx, m["item"]), cnt)
+            else:
+                body += " + %s" % _item_name(ctx, m["item"])
+            break
+    return "%s（可锻造：%s）" % (short, body) if short else "（可锻造：%s）" % body
+
+
+def _set_slot_total(eng: ForgeTreeEngine, record: Any) -> int:
+    """记录 pieces 节点槽位总数（VAR-02 α/β 孔位对照；节点缺 slots → 0）。"""
+    total = 0
+    for pid in record.pieces:
+        node = eng.node(pid)
+        slots = getattr(node, "slots", ()) if node is not None else ()
+        if isinstance(slots, (list, tuple)):
+            total += len(slots)
+    return total
+
+
+def _render_set_detail(
+    ctx: Mapping[str, Any],
+    eng: ForgeTreeEngine,
+    recs: Sequence[Any],
+    player: Any,
+    piece_counts: Any,
+) -> str:
+    """单套明细渲染（2c2d §1.5 样例；📖 图标按本仓 emoji 纪律降级纯文本，见 F-1）。
+
+    行：名称（variant）｜αβ 取舍 / 部位 / 套装技能档位 / 穿戴 N/总（逐件 ✓）+ 生效技能 /
+    缺件（节点 + 素材）/ α/β 孔位对照（缺 β 记录不渲染）。纯读不改写 player。
+    """
+    record = _pick_set_record(recs)
+    variant = getattr(record, "variant", None) or ""
+    name = getattr(record, "name", None) or getattr(record, "id", "") or ""
+    lines: List[str] = [tpl_of(ctx, "forge_sets_detail_head", {
+        "name": name,
+        "var": _SET_VARIANT_CN.get(variant, variant),
+        "summary": _SET_VARIANT_TRAIT.get(variant, ""),
+    })]
+
+    part_segs: List[str] = []
+    for pid in record.pieces:
+        short = _node_short_label(eng, pid)
+        nm = _node_name_of(eng, pid)
+        part_segs.append("%s·%s" % (short, nm) if short else nm)
+    lines.append(tpl_of(ctx, "forge_sets_detail_parts", {"part": " / ".join(part_segs)}))
+
+    tier_segs = _set_skill_tier_segs(ctx, record)
+    if tier_segs:
+        lines.append(tpl_of(ctx, "forge_sets_detail_skills", {"seg": " / ".join(tier_segs)}))
+
+    fid = getattr(record, "id", "") or ""
+    equipped = equipped_piece_ids(player)
+    tracker = set_tracker_of(player)
+    have = family_piece_counts(player, recs).get(fid, 0)
+    worn = [pid for pid in record.pieces if pid in equipped]
+    if not equipped and fid in tracker:
+        have = tracker[fid]
+        worn = list(record.pieces)[:max(0, min(have, len(record.pieces)))]
+    fam_total = max((len(r.pieces) for r in recs), default=0)
+    worn_names = ["%s ✓" % (_node_short_label(eng, pid) or _node_name_of(eng, pid))
+                  for pid in worn]
+    worn_seg = tpl_of(ctx, "forge_sets_detail_worn", {
+        "have": have, "total": fam_total,
+        "names": " · ".join(worn_names) if worn_names else "未穿戴",
+    })
+    active = resolve_set_skills(player, recs, piece_counts=piece_counts)
+    if active:
+        act_segs = [
+            tpl_of(ctx, "forge_sets_detail_active", {
+                "skill": _skill_display_name(ctx, sid), "level": lv,
+            })
+            for sid, lv in active.items()
+        ]
+        worn_seg += " " + "、".join(act_segs)
+    lines.append(worn_seg)
+
+    worn_set = set(worn)
+    missing = [pid for pid in record.pieces if pid not in worn_set]
+    entries = ([_set_missing_entry(ctx, eng, pid) for pid in missing]
+               if missing else ["无"])
+    lines.append(tpl_of(ctx, "forge_sets_detail_missing", {"missing": "｜".join(entries)}))
+
+    alpha = next((r for r in recs if getattr(r, "variant", None) == "alpha"), None)
+    beta = next((r for r in recs if getattr(r, "variant", None) == "beta"), None)
+    if alpha is not None and beta is not None:
+        a_slots = _set_slot_total(eng, alpha)
+        b_slots = _set_slot_total(eng, beta)
+        if b_slots > a_slots:
+            cmp_text = "β 版孔位 %d > α 版孔位 %d（配珠取舍）" % (b_slots, a_slots)
+        elif b_slots < a_slots:
+            cmp_text = "α 版孔位 %d > β 版孔位 %d" % (a_slots, b_slots)
+        else:
+            cmp_text = "α/β 版孔位均为 %d" % a_slots
+        lines.append(tpl_of(ctx, "forge_sets_detail_cmp", {"text": cmp_text}))
     return "\n".join(lines)
 
 

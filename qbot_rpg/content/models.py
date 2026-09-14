@@ -212,6 +212,13 @@ class FieldMeta:
     # 条件行编辑器的主体声明（键名 → 展示名/引用目标/比较符）——键名不写死；缺省空表
     # 时编辑器按实际值形态推断结构并如实标注「元数据未声明」。只影响展示，不参与校验。
     condition_subjects: Mapping[str, "ConditionSubject"] = field(default_factory=dict)
+    # 编辑器重写批12（#3）：字段的**展示层引用候选来源**（只影响控件，不参与任何校验判定）。
+    #   与 ref_target 的区别：ref_target 是「注册表 kind」，会被校验器用于 R-4 引用存在性判定；
+    #   options_ref 只声明「编辑器用引用选择器渲染本字段，候选从哪个引用命名空间取」——
+    #   用于框架内部键空间（如某模块下的列表/映射字段，目标写成 `<模块>.<字段>`），
+    #   此时字段本身的 type/required/校验口径**完全不变**（避免未注册 kind 被泛型 R-4 误拦）。
+    # 缺省空 = 不用（行为与既有完全一致）；尾部默认值，既有 FieldMeta 构造零改动。
+    options_ref: str = ""
 
 
 @dataclass(frozen=True)

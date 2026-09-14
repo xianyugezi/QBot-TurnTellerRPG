@@ -238,8 +238,11 @@ DEATH_PENALTY_CHILDREN: Dict[str, FieldMeta] = {
     "weak_duration_sec": FieldMeta(type="int", range_min=0, range_max=86400),
     # F-02 掉落货币清单 [{currency, ratio}]；空=不掉【框架 L287】；currency 引用存在性 +
     # ratio∈(0,1] 硬拦归 _check_settings_1g4（ref 目标为 settings 内部键空间，非注册表 kind）
+    # 批12 #3：`currency` 用**展示层引用**（options_ref）出下拉——候选来自本模块
+    # `currencies` 列表的 id（编辑器唯一的「内部键空间」通用机制）；字段 type 仍为 str，
+    # F-02 存在性硬拦仍由 _check_settings_1g4 判定（校验语义零变化）。
     "drop_currency": FieldMeta(type="list", element=FieldMeta(type="obj", children={
-        "currency": FieldMeta(type="str"),
+        "currency": FieldMeta(type="str", options_ref="settings.currencies"),
         "ratio": FieldMeta(type="number", range_min=0.0, range_max=1.0),
     })),
     # F-03 掉落经验 {enabled, percent}【框架 L288】；enabled=false 时 percent 惰性不校验（6.3）

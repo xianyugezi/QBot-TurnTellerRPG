@@ -849,6 +849,10 @@ def _infer_value_kind(value: object) -> Optional[str]:
 
 def _effective_widget(fm: Optional[FieldMeta], value: object) -> str:
     """元数据类型 + 实际值形态 → 只读控件形态（元数据优先，值形态纠偏防渲染崩）。"""
+    # 批12 #3：字段声明了展示层引用候选来源（options_ref）→ 一律按引用选择器渲染
+    # （字段 type/校验口径不变；候选来自 options_ref 指定的内部引用命名空间）。
+    if fm is not None and fm.options_ref:
+        return "ref"
     base = _widget_for_type(fm.type if fm is not None else None)
     if value is None:
         return base
@@ -892,8 +896,9 @@ def _hint(fm: Optional[FieldMeta]) -> str:
         bits.append("必填")
     if fm.enum:
         bits.append("可选：" + " / ".join(str(x) for x in fm.enum))
-    if fm.ref_target:
-        bits.append(f"引用：{fm.ref_target}")
+    rt = _ref_target_of(fm)
+    if rt:
+        bits.append(f"引用：{rt}")
     if fm.range_min is not None or fm.range_max is not None:
         lo = "" if fm.range_min is None else f"{fm.range_min:g}"
         hi = "" if fm.range_max is None else f"{fm.range_max:g}"
@@ -932,9 +937,19 @@ def _registered_type(fm: Optional[FieldMeta]) -> Optional[str]:
 
     批4.5 起「只有中文名、没有类型」的纯展示节点由 _soft_display 生成（type=""），
     这里必须把它当「未登记」——否则说明卡会把数值字段说成文本（实机问题①根因）。
+    批12 #3：声明了 options_ref 的字段，展示类型按引用呈现（控件/说明卡一致）。
     """
+    if fm is not None and fm.options_ref:
+        return "ref"
     ftype = fm.type if fm is not None else None
     return ftype if ftype in _TYPE_SEMANTIC else None
+
+
+def _ref_target_of(fm: Optional[FieldMeta]) -> Optional[str]:
+    """字段在**展示层**的引用候选目标：options_ref（内部键空间，纯展示）优先于 ref_target。"""
+    if fm is None:
+        return None
+    return fm.options_ref or fm.ref_target
 
 
 def _type_semantic(ftype: Optional[str]) -> str:
@@ -1063,7 +1078,7 @@ def help_card(key: str, fm: Optional[FieldMeta],
         "default": default or "无默认值",
         "required": bool(fm.required),
         "enum": [str(x) for x in fm.enum],
-        "ref_target": fm.ref_target,
+        "ref_target": _ref_target_of(fm),
         "unit": fm.unit,
         "help": fm.help,
         "unregistered": False,
@@ -1387,6 +1402,21 @@ def _build_name_index(pack_dir: Path, declared: List[str],
     for mod in declared:
         index.setdefault(kinds[mod], {}).update(collected[mod])
         index.setdefault(mod, {}).update(collected[mod])
+    # 批12 #3：模块内**列表/映射字段**的条目登记成 `<模块>.<字段>` 引用命名空间
+    # （供 options_ref 声明的展示层引用选择器取候选；通用，不认任何业务字段名）。
+    for mod in declared:
+        mm = meta.module(mod)
+        if mm is None or not mm.fields:
+            continue
+        data = _read_json(pack_dir / f"{mod}.json")
+        if not isinstance(data, Mapping):
+            continue
+        for fkey, fm in mm.fields.items():
+            if fm is None or fm.type not in ("list", "map"):
+                continue
+            table = _nested_entry_index(data.get(str(fkey)))
+            if table:
+                index.setdefault(f"{mod}.{fkey}", {}).update(table)
     # 命名空间（跨模块 ID 空间）合并：如共享同一 namespace 的多个模块互相可解析。
     for _ns, mods in (meta.namespaces or {}).items():
         members = [m for m in mods if m in collected]
@@ -1398,6 +1428,26 @@ def _build_name_index(pack_dir: Path, declared: List[str],
         for mod in members:
             index.setdefault(kinds[mod], {}).update(merged)
     return index
+
+
+def _nested_entry_index(value: object) -> Dict[str, str]:
+    """把「列表/映射字段的值」登记为 {条目 id: 名称}（批12 #3 通用；空/非条目 → {}）。"""
+    table: Dict[str, str] = {}
+    if isinstance(value, list):
+        for i, elem in enumerate(value):
+            if not isinstance(elem, Mapping):
+                continue
+            eid = elem.get(_ID_FIELD)
+            eid = eid if isinstance(eid, str) and eid else f"#{i}"
+            nm = elem.get(_NAME_FIELD)
+            table[eid] = nm if isinstance(nm, str) and nm else eid
+    elif isinstance(value, Mapping):
+        for key, val in value.items():
+            if not isinstance(key, str) or not key:
+                continue
+            nm = val.get(_NAME_FIELD) if isinstance(val, Mapping) else None
+            table[str(key)] = nm if isinstance(nm, str) and nm else str(key)
+    return table
 
 
 # =====================================================================================
@@ -1427,7 +1477,7 @@ def _column(key: str, fm: Optional[FieldMeta], key_label: Optional[str] = None,
         "control": control,
         # 批5.1：本列是否嵌套结构（对象/映射/条件/嵌套列表）→ 列表块状布局的判定依据。
         "nested": is_nested_control(control),
-        "ref_target": fm.ref_target if fm is not None else None,
+        "ref_target": _ref_target_of(fm),
         "enum": [str(x) for x in fm.enum] if fm is not None and fm.enum else [],
         "number_step": _number_step(ftype),
         "default": fm.default if fm is not None else None,
@@ -1570,8 +1620,8 @@ def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
         "required": bool(fm.required) if fm is not None else False,
         "present": present,
         "value": value,
-        "display": _scalar_display(value, widget, view, fm.ref_target if fm is not None else None),
-        "ref_target": fm.ref_target if fm is not None else None,
+        "display": _scalar_display(value, widget, view, _ref_target_of(fm)),
+        "ref_target": _ref_target_of(fm),
         "enum": [str(x) for x in fm.enum] if fm is not None and fm.enum else [],
         "number_step": _number_step(ftype),
         "hint": _hint(fm),
@@ -1590,7 +1640,7 @@ def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
         desc["value_ref"] = fm.value_ref if fm is not None else ""
     if widget == "ref":
         # 批4：引用值是否指向存在的目标（空值不算非法）→ 前端黄提示、不红拦。
-        desc["ref_valid"] = _ref_valid(view, fm.ref_target if fm is not None else None, value)
+        desc["ref_valid"] = _ref_valid(view, _ref_target_of(fm), value)
     if widget == "list":
         # 值缺失/为 null 也要按元数据出列（空列表仍有列头与「+ 添加一行」的默认值）
         rows_val: List[object] = value if isinstance(value, list) else []
@@ -1602,16 +1652,16 @@ def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
         desc["rows"] = _table_rows(rows_val, cols, view)
         desc["row_count"] = len(rows_val)
         elem = fm.element if fm is not None else None
-        if elem is not None and elem.type == "ref":
-            desc["ref_target"] = elem.ref_target  # 引用多选的候选目标在元素元数据上
+        if elem is not None and (elem.type == "ref" or elem.options_ref):
+            desc["ref_target"] = _ref_target_of(elem)  # 引用多选的候选目标在元素元数据上
         scalar_element = _is_scalar_element(elem, rows_val)
         desc["scalar_element"] = scalar_element
         desc["row_default"] = _row_default(elem, scalar_element)
         # 批4：非法引用标记（黄提示、不红拦）——元素是引用 → 收集非法值；
         # 元素 obj 内引用子字段 → 逐单元格收集（供前端就地把该格标黄）。
         desc["invalid_refs"] = (
-            [str(v) for v in rows_val if not _ref_valid(view, elem.ref_target, v)]
-            if elem is not None and elem.type == "ref" else []
+            [str(v) for v in rows_val if not _ref_valid(view, _ref_target_of(elem), v)]
+            if elem is not None and (elem.type == "ref" or elem.options_ref) else []
         )
         invalid_cells: List[Dict[str, Any]] = []
         if elem is not None and elem.type == "obj" and elem.children:
@@ -1619,10 +1669,10 @@ def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
                 if not isinstance(row, Mapping):
                     continue
                 for ck, cfm in elem.children.items():
-                    if cfm.type != "ref":
+                    if cfm.type != "ref" and not cfm.options_ref:
                         continue
                     rv = row.get(str(ck))
-                    if not _ref_valid(view, cfm.ref_target, rv):
+                    if not _ref_valid(view, _ref_target_of(cfm), rv):
                         invalid_cells.append(
                             {"row": i, "key": str(ck), "value": rv})
         desc["invalid_cells"] = invalid_cells
@@ -2199,8 +2249,8 @@ def _collect_ref_hits(value: object, fm: Optional[FieldMeta], path: str,
                 _collect_ref_hits(v, None, f"{path}[{i}]", target_id, kinds, out)
         return
     if fm.type == "ref":
-        if str(value) == target_id and _ref_kind_matches(fm.ref_target, kinds):
-            out.append({"path": path, "value": value, "ref_target": fm.ref_target or ""})
+        if str(value) == target_id and _ref_kind_matches(_ref_target_of(fm) or "", kinds):
+            out.append({"path": path, "value": value, "ref_target": _ref_target_of(fm) or ""})
         return
     if fm.type == "list":
         if isinstance(value, list):

@@ -19,7 +19,8 @@
   "enrage_damage_mult": 1.15,
   "enrage_recovery_mult": 0.8,
   "fatigue_recovery_mult": 1.25,
-  "fatigue_stagger_chance": 0.12
+  "fatigue_stagger_chance": 0.12,
+  "min_damage": 0
  },
  "default_map": "bone_station",
  "level_cap": 35,

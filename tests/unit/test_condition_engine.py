@@ -22,6 +22,10 @@ from qbot_rpg.core.condition_engine import (
     OP_SYMBOL_ALIASES,
     REGISTERED_VARS,
     VAR_ALIASES,
+    WEIGHT_MAX,
+    WEIGHT_MIN,
+    clamp_weight,
+    condition_weight_product,
     eval_condition,
     normalize_op,
     normalize_var,
@@ -607,3 +611,95 @@ def test_validate_condition_nested_and_bad_shape() -> None:
     rep3 = _Report()
     validate_condition({}, rep3)
     assert "condition_empty" in _rules(rep3)
+
+
+# ================================================================== 权重 clamp / 连乘合成
+# 云海九期（cloudsea-pack）207 移植：clamp_weight + condition_weight_product 两个
+# 纯函数——clamp 边界 / 连乘取整 / 非法输入三类定向断言。
+
+
+def _ev_all_true(cond, ctx):
+    return True
+
+
+def _ev_ok_key(cond, ctx):
+    return bool(cond.get("ok"))
+
+
+def test_clamp_weight_boundaries() -> None:
+    """clamp 边界：下界 1 / 上界 100 / 0 与超界截断 / 四舍五入取整。"""
+    assert WEIGHT_MIN == 1 and WEIGHT_MAX == 100
+    assert clamp_weight(1) == 1
+    assert clamp_weight(100) == 100
+    assert clamp_weight(0) == WEIGHT_MIN
+    assert clamp_weight(-7) == WEIGHT_MIN
+    assert clamp_weight(101) == WEIGHT_MAX
+    assert clamp_weight(9999) == WEIGHT_MAX
+    assert clamp_weight(2.4) == 2
+    assert clamp_weight(2.6) == 3
+    assert clamp_weight(99.6) == 100
+    assert clamp_weight(100.4) == 100
+
+
+def test_clamp_weight_invalid() -> None:
+    """非法输入落 WEIGHT_MIN（不抛异常）。"""
+    bad_inputs: list = [None, "abc", [], {}, object()]
+    for bad in bad_inputs:
+        assert clamp_weight(bad) == WEIGHT_MIN, bad
+
+
+def test_condition_weight_product_gate_and_product() -> None:
+    """AND 门控：任一项不成立 → 0；全成立 → 权重连乘取整。"""
+    assert condition_weight_product(
+        [{"ok": True, "weight": 2.5}, {"ok": True, "weight": 2.0}], {}, _ev_ok_key) == 5
+    assert condition_weight_product(
+        [{"ok": True, "weight": 2.5}, {"ok": False, "weight": 9.0}], {}, _ev_ok_key) == 0
+    assert condition_weight_product([{"ok": True}], {}, _ev_ok_key) == 1, "weight 缺省 1.0"
+
+
+def test_condition_weight_product_rounding_and_clamp() -> None:
+    """连乘取整 + clamp：1.68→2；0.01→0→夹 1；2500→夹 100；round 半偶。"""
+    assert condition_weight_product([{"weight": 1.2}, {"weight": 1.4}], {},
+                                    _ev_all_true) == 2
+    assert condition_weight_product([{"weight": 0.1}, {"weight": 0.1}], {},
+                                    _ev_all_true) == WEIGHT_MIN
+    assert condition_weight_product([{"weight": 50}, {"weight": 50}], {},
+                                    _ev_all_true) == WEIGHT_MAX
+    assert condition_weight_product([{"weight": 2.5}], {}, _ev_all_true) == 2
+    assert condition_weight_product([{"weight": 3.5}], {}, _ev_all_true) == 4
+
+
+def test_condition_weight_product_invalid() -> None:
+    """非 list/tuple、空表、非 Mapping 项、非法 weight → 0 或按 1.0 处理。"""
+    bad_inputs: list = [None, "x", 3, [], ()]
+    for bad in bad_inputs:
+        assert condition_weight_product(bad, {}, _ev_all_true) == 0, bad
+    assert condition_weight_product([1, {"weight": 2}], {}, _ev_all_true) == 0
+    assert condition_weight_product([{"weight": "bad"}], {}, _ev_all_true) == 1
+    assert condition_weight_product([{"weight": None}], {}, _ev_all_true) == 1
+
+
+def test_condition_weight_product_evaluate_raises_is_gate_fail() -> None:
+    """注入式求值器抛异常 → 该项按不成立处理（门控失败返回 0）。"""
+    def boom(cond, ctx):
+        raise RuntimeError("boom")
+
+    assert condition_weight_product([{"weight": 5}], {}, boom) == 0
+
+
+def test_condition_weight_product_default_evaluator() -> None:
+    """缺省求值器 = eval_condition；cond 传入前剔除 weight 键。"""
+    seen = []
+
+    def spy(cond, ctx):
+        seen.append(dict(cond))
+        return True
+
+    assert condition_weight_product(
+        [{"var": "level", "op": "ge", "value": 10, "weight": 2.0}], _ctx(), spy) == 2
+    assert seen == [{"var": "level", "op": "ge", "value": 10}]
+    assert condition_weight_product(
+        [{"var": "level", "op": "ge", "value": 10, "weight": 3.0},
+         {"var": "level", "op": "lt", "value": 20, "weight": 2.0}], _ctx()) == 6
+    assert condition_weight_product(
+        [{"var": "level", "op": "ge", "value": 99, "weight": 9.0}], _ctx()) == 0

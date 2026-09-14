@@ -1,7 +1,7 @@
 """存档结构版本迁移：db_schema_version 检测 + 字段级迁移 + 迁移前 .bak。
 
 依据：细化_4a_存储层契约 §六 存档兼容迁移（MIG-1~5 / D-06）——
-  - 两层版本模型 §6.1：meta.db_schema_version（存档结构版本，初始 1）
+  - 两层版本模型 §6.1：meta.db_schema_version（存档结构版本，当前 2）
   - 迁移管线 F5 §6.2：检测（启动 + 首次访问懒迁移）→ 迁移前强制 .bak
     （VACUUM INTO）→ 逐级迁移（每级单事务）→ round-trip 校验 → 写
     meta.migration_log → 提交；失败整体回滚，服务携带旧版 schema 继续运行。
@@ -23,18 +23,19 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from qbot_rpg.storage.connection import Database, StorageError, Transaction
-from qbot_rpg.storage.schema import CREATE_INDEXES, CREATE_TABLE_META, SCHEMA_TABLES
+from qbot_rpg.storage.schema import (
+    CREATE_INDEXES,
+    CREATE_TABLE_META,
+    CREATE_TABLE_PLAYER_PACK_STATE,
+    PLAYER_PACK_STATE_INDEXES,
+    SCHEMA_TABLES,
+)
 
 # ---------------------------------------------------------------------------
-# 存档结构版本常量（初始 1；未来结构变更时递增并追加 MIGRATION_STEPS）
+# 存档结构版本常量（当前 2：批 D 增补 player_pack_state；结构变更递增并追加迁移步）
 # ---------------------------------------------------------------------------
-DB_SCHEMA_VERSION: int = 1
+DB_SCHEMA_VERSION: int = 2
 META_KEY: str = "global"
-
-# 迁移步注册表：[(from_version, to_version, coro_fn)]，from < to。
-# v1 为初始版本，无迁移步；后续结构变更（如新增列）在此追加步，形如：
-#   (1, 2, migrate_v1_to_v2)
-MIGRATION_STEPS: List[Tuple[int, int, Callable[..., Any]]] = []
 
 BACKUP_DIR_MODE: int = 0o700
 
@@ -53,6 +54,31 @@ class MigrationResult:
     state: str = "up_to_date"          # up_to_date | migrated | failed
     backup_id: Optional[str] = None
     note: str = ""
+
+
+# ---------------------------------------------------------------------------
+# 迁移步注册表：[(from_version, to_version, coro_fn)]，from < to 且相邻步必须衔接
+# （migrate_database P1-2 完整性校验）。当前链：1→2（批 D）。
+# 后续结构变更在此追加步，形如 (2, 3, migrate_v2_to_v3)。
+# ---------------------------------------------------------------------------
+async def migrate_v1_to_v2(
+    tx: "Transaction", db: Database, *, now: Optional[str] = None
+) -> None:
+    """v1→v2：幂等补建内容包通用状态格子表 player_pack_state（及其索引）。
+
+    新库**不经此步**——SCHEMA_DDL 建库即含该表（新库直接具备，防「新库漏结构」）；
+    旧库升级走本步：``CREATE TABLE IF NOT EXISTS`` / ``CREATE INDEX IF NOT EXISTS``
+    对已存在对象为 no-op，**不触碰 players 等既有表与任何既有数据**（MIG-1 字段级
+    迁移语义）。每级单事务由 migrate_database 包裹，失败自动回滚（MIG-5）。
+    """
+    await tx.execute(CREATE_TABLE_PLAYER_PACK_STATE)
+    for index_ddl in PLAYER_PACK_STATE_INDEXES:
+        await tx.execute(index_ddl)
+
+
+MIGRATION_STEPS: List[Tuple[int, int, Callable[..., Any]]] = [
+    (1, 2, migrate_v1_to_v2),
+]
 
 
 # ---------------------------------------------------------------------------
@@ -307,6 +333,7 @@ __all__ = [
     "DB_SCHEMA_VERSION",
     "META_KEY",
     "MIGRATION_STEPS",
+    "migrate_v1_to_v2",
     "MigrationError",
     "MigrationResult",
     "ensure_meta",

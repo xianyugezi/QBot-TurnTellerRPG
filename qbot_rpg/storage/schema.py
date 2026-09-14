@@ -1,11 +1,12 @@
-"""存储层 Schema 唯一数据源：9 表 + 8 组索引 + CHECK 约束。
+"""存储层 Schema 唯一数据源：10 表 + 8 组索引 + CHECK 约束。
 
 依据：细化_4a_存储层契约 §1.1 表总表（7 表 → 五类持久化语义）、§1.2 players
 字段级 schema（唯一数据源）、§1.3 其余 6 表（sessions/idempotency_keys/meta/
 world_state/recycle_bin/backups）、§1.4 索引与 PRAGMA（7 组索引）、SCHEMA-8
 版本元信息必填；M12 批2 路2B 增补 2 表（细化_5b_GM指令契约 §1.2 L52-62
 admin_users 权限主表、§4.2 L236-251 audit_log 审计表，9 表 → 六类持久化
-语义 + 权限审计域），SCHEMA_TABLES 元组追加到末尾。
+语义 + 权限审计域）；批 D 增补 player_pack_state（10 表），SCHEMA_TABLES 元组
+追加到末尾。
 
 说明：
 - 全部 JSON 列 NOT NULL + DEFAULT（'{}'/'[]'），字段缺省 = 默认值不拦截加载
@@ -21,6 +22,12 @@ admin_users 权限主表、§4.2 L236-251 audit_log 审计表，9 表 → 六类
 - audit_log 为 GM 操作审计（5b §4.2 L236-251：id UUID/ts/qq/group_id/command/
   params/target_qq/result/detail/ref/audit_ts_hmac），追加写不可删（§4.3 L260）；
   result CHECK 三态 success/failed/rejected（L247）。
+- player_pack_state 为「内容包通用状态格子」（批 D，2026-09-14；每 玩家×内容包
+  一格）：复合主键 (player_id, pack_id) + state JSON 默认 '{}'；框架层**零内容包名、
+  零业务键**，pack_id 由运行时传入。反面教材（云海分支审计 R2）：给核心 players 表
+  硬加内容包列 + 新库直写版本 2 导致迁移步不执行、新库反而没有该列——本表两条都
+  绕开。DB_SCHEMA_VERSION 1→2，经 migrations v1→v2 幂等补表；新库经 SCHEMA_DDL 直接
+  具备（读写 API 见 storage/pack_state.py；10 表）。
 - 索引 8 组：6 个显式索引 +「PK 索引自动隐含」+ admin_users.role + audit_log.ts
   （2 表追加 2 组显式索引）合为 8 组。
 """
@@ -35,7 +42,7 @@ RECYCLE_OBJECT_TYPES: Final[Tuple[str, ...]] = ("pack_entry", "session", "player
 BACKUP_TYPES: Final[Tuple[str, ...]] = ("auto", "manual", "pre_update", "pre_migration")
 
 # ---------------------------------------------------------------------------
-# CREATE TABLE（9 表：4a 7 表 + M12 批2 路2B admin_users/audit_log 2 表）
+# CREATE TABLE（10 表：4a 7 表 + M12 批2 路2B 2 表 + 批 D player_pack_state 1 表）
 # ---------------------------------------------------------------------------
 CREATE_TABLE_PLAYERS: Final[str] = """
 CREATE TABLE IF NOT EXISTS players (
@@ -164,8 +171,33 @@ CREATE TABLE IF NOT EXISTS audit_log (
 )
 """
 
-# 9 表（4a §1.1 + 5b §1.2/§4.2）；顺序无依赖（players 先建便于 FK 引用；
-# admin_users/audit_log 追加到末尾，不插中间防历史建库脚本行序漂移）
+# ---------------------------------------------------------------------------
+# 批 D（2026-09-14）：内容包通用状态格子 player_pack_state
+# 每（玩家 × 内容包）一格；框架不认任何具体 pack_id（运行时传入），零包名/零业务键。
+# 反面教材（云海分支审计 R2）：给核心 players 表硬加内容包列 + 新库直写版本 2 导致
+# 迁移步不执行、新库反而没有该列；本表在 SCHEMA_DDL（新库直接具备）+ v1→v2 迁移步
+# 幂等补建（旧库升级具备），两条都绕开。
+# player_id / pack_id 显式 NOT NULL：SQLite 非 INTEGER 主键列历史允许 NULL，显式声明
+# 防「主键含 NULL 的幽灵格子」（PRIMARY KEY(player_id, pack_id) 仍为唯一约束）。
+# ---------------------------------------------------------------------------
+CREATE_TABLE_PLAYER_PACK_STATE: Final[str] = """\
+CREATE TABLE IF NOT EXISTS player_pack_state (
+    player_id   TEXT NOT NULL,
+    pack_id     TEXT NOT NULL,
+    state       TEXT NOT NULL DEFAULT '{}',
+    updated_at  TEXT,
+    PRIMARY KEY (player_id, pack_id)
+)
+"""
+
+# 建表后随迁移步一并执行（幂等 CREATE INDEX IF NOT EXISTS）。
+# 当前为空：查询模式只有「按玩家列举」「按玩家+包取单格」，复合主键 (player_id,
+# pack_id) 的隐含索引已覆盖；若后续新增按 updated_at 的清理查询，在此追加索引即
+# 随 v1→v2 迁移步生效（同源 CREATE_INDEXES，见下）。
+PLAYER_PACK_STATE_INDEXES: Final[Tuple[str, ...]] = ()
+
+# 10 表（4a §1.1 + 5b §1.2/§4.2 + 批 D）；顺序无依赖（players 先建便于 FK 引用；
+# admin_users/audit_log/player_pack_state 追加到末尾，不插中间防历史建库脚本行序漂移）
 SCHEMA_TABLES: Final[Tuple[str, ...]] = (
     CREATE_TABLE_PLAYERS,
     CREATE_TABLE_SESSIONS,
@@ -176,6 +208,7 @@ SCHEMA_TABLES: Final[Tuple[str, ...]] = (
     CREATE_TABLE_BACKUPS,
     CREATE_TABLE_ADMIN_USERS,
     CREATE_TABLE_AUDIT_LOG,
+    CREATE_TABLE_PLAYER_PACK_STATE,
 )
 
 # ---------------------------------------------------------------------------
@@ -191,6 +224,7 @@ CREATE_INDEXES: Final[Tuple[str, ...]] = (
     "CREATE INDEX IF NOT EXISTS idx_backup_created ON backups(created_at)",
     "CREATE INDEX IF NOT EXISTS idx_admin_users_role ON admin_users(role)",
     "CREATE INDEX IF NOT EXISTS idx_audit_log_ts ON audit_log(ts)",
+    *PLAYER_PACK_STATE_INDEXES,
 )
 
 # 建库一次性执行的全部 DDL（建表 + 索引；每条以分号结尾供 executescript 拆分）
@@ -218,6 +252,8 @@ __all__ = [
     "CREATE_TABLE_BACKUPS",
     "CREATE_TABLE_ADMIN_USERS",
     "CREATE_TABLE_AUDIT_LOG",
+    "CREATE_TABLE_PLAYER_PACK_STATE",
+    "PLAYER_PACK_STATE_INDEXES",
     "SCHEMA_TABLES",
     "CREATE_INDEXES",
     "SCHEMA_DDL",

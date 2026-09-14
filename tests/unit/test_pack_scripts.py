@@ -56,6 +56,27 @@ async def test_command_via_pack_app():
     assert "乙" in out
 """
 
+_GENERIC_BUILD_SRC = """\
+import argparse
+import json
+from pathlib import Path
+
+PACK = Path(__file__).resolve().parents[1]
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--check", action="store_true")
+    parser.parse_args()
+    manifest = json.loads((PACK / "manifest.json").read_text(encoding="utf-8"))
+    print("GENERIC_BUILD_OK:" + str(manifest.get("name")))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+"""
+
 
 def _run(script: Path, *args: str) -> subprocess.CompletedProcess:
     """以当前解释器跑入口脚本（真实退出码/输出）。"""
@@ -73,10 +94,12 @@ def _write_failing_pack(root: Path, pack: str) -> Path:
 
 
 def _write_generic_pack(root: Path, pack: str) -> Path:
-    """落一个与探针包同结构、但完全不同名的最小包（证明与包名无关）。"""
+    """落一个与探针包同结构（tests/ + scripts/）、但完全不同名的最小包。"""
     pd = root / pack
     (pd / "ext").mkdir(parents=True)
     (pd / "tests").mkdir(parents=True)
+    (pd / "scripts").mkdir(parents=True)
+    (pd / "scripts" / "build.py").write_text(_GENERIC_BUILD_SRC, encoding="utf-8")
     (pd / "manifest.json").write_text(
         json.dumps(
             {"name": "通用最小包", "version": "0.1.0", "schema_version": 1,
@@ -219,13 +242,17 @@ def test_default_collect_only_excludes_content() -> None:
 # 通用性：另一个最小包同结构 → 同样跑通
 # =============================================================================
 def test_second_generic_pack_runs_same_way(tmp_path: Path) -> None:
-    """另造一个完全不同名的 tmp 包（含 tests/ 与 ext/）→ 入口同样跑通。"""
+    """另造一个完全不同名的 tmp 包（同结构 tests/ + scripts/）→ 两个入口同样跑通。"""
     _write_generic_pack(tmp_path, "zz_alt")
-    proc = _run(RUN_TESTS, "--pack", "zz_alt", "--content-root", str(tmp_path))
-    assert proc.returncode == 0, proc.stdout + proc.stderr
-    match = re.search(r"收集到 (\d+) 个测试", proc.stdout)
+    tests_proc = _run(RUN_TESTS, "--pack", "zz_alt", "--content-root", str(tmp_path))
+    assert tests_proc.returncode == 0, tests_proc.stdout + tests_proc.stderr
+    match = re.search(r"收集到 (\d+) 个测试", tests_proc.stdout)
     assert match is not None and int(match.group(1)) >= 3
-    assert "✓ 通过" in proc.stdout
+    assert "✓ 通过" in tests_proc.stdout
+
+    build_proc = _run(RUN_BUILD, "--pack", "zz_alt", "--content-root", str(tmp_path), "--check")
+    assert build_proc.returncode == 0, build_proc.stdout + build_proc.stderr
+    assert "GENERIC_BUILD_OK" in build_proc.stdout
 
 
 # =============================================================================

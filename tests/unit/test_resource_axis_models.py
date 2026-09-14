@@ -2,7 +2,7 @@
 
 覆盖细化_6c §1.1/§1.5：
   - ResourceAxisDef 10 字段默认值兜底 / 两型判别（D-01）
-  - resource_axis_fields() 10 键登记表
+  - resource_axis_fields() 10 键＋云海九期（cloudsea-pack）212 扩展 3 键登记表
   - validate_resource_axes V1~V4（红黄分级）
   - stats.json 扩展（rage 数值型 + element_energy 子池型）
 
@@ -98,13 +98,29 @@ def test_def_type_normalize_resource_custom() -> None:
     assert d.is_pooled is True
 
 
-def test_def_fields_table_10_keys() -> None:
-    """resource_axis_fields() 恰好 10 键（M1 注册段）。"""
+def test_def_fields_table_13_keys() -> None:
+    """resource_axis_fields() 恰好 13 键
+    （M1 注册段 10 键＋云海九期（cloudsea-pack）212 扩展 3 键 opt-in）。"""
     f = resource_axis_fields()
     assert set(f.keys()) == {
         "name", "type", "icon", "base", "max", "reset",
         "display", "max_per_pool", "pools", "pool_icons",
+        # 云海九期（cloudsea-pack）212 扩展（tick 自然增长 / 衰减下限 / 满槽 proc 引用）
+        "tick_per_round", "tick_floor", "on_full",
     }
+    assert f["tick_per_round"].default == 0
+    assert f["tick_floor"].default == 0
+    assert f["on_full"].soft_label is True
+
+
+def test_def_extension_fields_default_and_raw() -> None:
+    """扩展字段缺省 0/0/""；raw 携带即读；类型不符回落缺省（bool 不算 int）。"""
+    d = ResourceAxisDef({})
+    assert d.tick_per_round == 0 and d.tick_floor == 0 and d.on_full == ""
+    d2 = ResourceAxisDef({"tick_per_round": -2, "tick_floor": -5, "on_full": "proc_hold"})
+    assert d2.tick_per_round == -2 and d2.tick_floor == -5 and d2.on_full == "proc_hold"
+    d3 = ResourceAxisDef({"tick_per_round": True, "tick_floor": "3", "on_full": 7})
+    assert d3.tick_per_round == 0 and d3.tick_floor == 0 and d3.on_full == ""
 
 
 def test_def_fields_enum_consistency() -> None:

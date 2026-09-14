@@ -150,6 +150,8 @@ TRANSFORM_STATE_FIELDS_EXPECTED: Tuple[str, ...] = (
 RESOURCE_AXIS_FIELDS_EXPECTED: Tuple[str, ...] = (
     "name", "type", "icon", "base", "max", "reset", "display",
     "max_per_pool", "pools", "pool_icons",
+    # 云海九期（cloudsea-pack）212 扩展（opt-in，不计入 6c 契约 24 字段）
+    "tick_per_round", "tick_floor", "on_full",
 )
 
 
@@ -408,13 +410,14 @@ def test_6b_tc_18_groups() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_6c_resource_axis_fields_10() -> None:
-    """§1.1 注册段 10 键（name/type/icon/base/max/reset/display/max_per_pool/pools/pool_icons）。
+def test_6c_resource_axis_fields_13() -> None:
+    """§1.1 注册段 10 键（name/type/icon/base/max/reset/display/max_per_pool/pools/pool_icons）
+    ＋云海九期（cloudsea-pack）212 扩展 3 键（tick_per_round/tick_floor/on_full，opt-in）。
 
-    任务书口径：注册段 10 字段。直连 resource_axis_fields() 逐键。
+    任务书口径：注册段契约 10 字段；扩展 3 键为新增 opt-in 字段。直连 resource_axis_fields() 逐键。
     """
     fields = resource_axis_fields()
-    assert len(fields) == 10
+    assert len(fields) == 13
     assert set(fields) == set(RESOURCE_AXIS_FIELDS_EXPECTED)
     assert tuple(fields) == RESOURCE_AXIS_FIELDS_EXPECTED  # 键序与契约字段表一致
 
@@ -496,10 +499,11 @@ def test_docs_overview_counts_reconcile() -> None:
     chain_hook_1 = {"job_scope"}
     assert len(skill_hooks_4) == 4 and len(chain_hook_1) == 1
     assert 34 + 4 + 1 == 39
-    # 6c 24 字段 = 注册段 10 + 技能扩展 4 + 组合行 7 + 快照 3
+    # 6c 24 字段 = 注册段 10（契约）+ 技能扩展 4 + 组合行 7 + 快照 3；
+    # 注册段另有云海九期（cloudsea-pack）212 扩展 3 键（opt-in，不计入契约 24）
     combo_row_7 = {"combo", "name", "kind", "power", "element", "hits", "effects"}
     snapshot_3 = {"player", "enemy", "subpool_expand"}
-    assert len(RESOURCE_AXIS_FIELDS_EXPECTED) == 10
+    assert len(RESOURCE_AXIS_FIELDS_EXPECTED) == 13
     assert len(combo_row_7) == 7 and len(snapshot_3) == 3
     assert 10 + 4 + 7 + 3 == 24
     # 规则/用例计数与实现直连常量一致

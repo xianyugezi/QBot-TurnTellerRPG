@@ -105,7 +105,7 @@ def test_theme_panel_is_radio_list_with_hints() -> None:
     # 单选列表由 themeChoiceHtml 生成，三套主题各带一句说明（CHOICES.hint）
     src = _fn("themeChoiceHtml")
     for token in ('type="radio"', 'name="theme-choice"', "data-theme-choice",
-                  "data-modal-row", "当前", "选择", "c.hint"):
+                  "data-modal-row", "当前", "可选", "c.hint"):
         assert token in src, token
     panel = _fn("renderThemePanel")
     assert "EditorTheme.CHOICES" in panel and "themeChoiceHtml" in panel
@@ -177,7 +177,7 @@ console.log(JSON.stringify(out));
     assert out["stored"] == "contrast"          # 单选 → 写 localStorage（键 qbot.editor.theme）
     assert out["attr"] == "contrast"            # 立即生效：只改 data-theme
     assert out["checked"] == ["dark:false", "light:false", "contrast:true"]
-    assert out["status"] == ["选择", "选择", "当前"]
+    assert out["status"] == ["可选", "可选", "当前"]
 
 
 def test_setTheme_keeps_draft_and_only_touches_theme() -> None:
@@ -549,3 +549,14 @@ def test_theme_panel_section_uses_tokens_only() -> None:
         seg = html[start:html.index("}", start) + 1]
         assert "var(--" in seg, begin
         assert not re.search(r"#[0-9a-fA-F]{3,6}", seg), begin
+
+
+def test_theme_list_not_shrunk_by_panel_maxheight() -> None:
+    """批10 补（实测 bug）：配色列表 3 项曾被面板 84vh 限高挤压成只显 1 项。
+
+    断言：配色列表不许作为可收缩 flex 子项（flex:0 0 auto + 无 max-height），
+    面板在矮视口下靠自身滚动兜底。
+    """
+    html = _html()
+    assert "#tp-list { flex: 0 0 auto; max-height: none; }" in html
+    assert ".mp { overflow: auto; }" in html

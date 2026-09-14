@@ -640,6 +640,10 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
 
 /* ---------- 批10 · 🎨 配色面板：主题单选 + 自定义背景图（令牌驱动） ---------- */
 .mp-sec { border-top: var(--bw) solid var(--line-soft); padding: var(--sp-5) var(--sp-8); }
+/* 批10 补（实测 bug）：配色列表只有 3 项，作为 flex 子项曾被面板限高挤压 → 只显示 1 项。
+   修：列表不许收缩；面板整体在矮视口下滚动（长列表仍是 .mp-list 自己滚）。 */
+.mp { overflow: auto; }
+#tp-list { flex: 0 0 auto; max-height: none; }
 .mp-sec-t { color: var(--text-strong); margin-bottom: var(--sp-3); }
 .mp-sub { color: var(--text-5); font-size: var(--fs-11); line-height: var(--lh-ex);
   margin-bottom: var(--sp-4); }
@@ -785,7 +789,7 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
 <div id="themepanel" class="mp-overlay" data-modal="themepanel" hidden>
   <div class="mp" role="dialog" aria-modal="true" aria-label="配色与背景图">
     <div class="mp-hd">
-      <span class="mp-t">🎨 配色</span>
+      <span class="mp-t">🎨 配色与背景图</span>
       <button class="mp-x" id="tp-close" data-modal-close type="button"
         aria-label="关闭配色面板">×</button>
     </div>
@@ -793,8 +797,7 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
     <div class="mp-list" id="tp-list" role="radiogroup" aria-label="配色主题（单选）"></div>
     <div class="mp-sec" id="bg-sec">
       <div class="mp-sec-t">背景图（可调透明度）</div>
-      <div class="mp-sub">支持本地图片或图片 URL；只保存在你自己的浏览器里，不上传服务器，
-        也不写入任何内容包文件。清除后恢复默认底色。</div>
+      <div class="mp-sub">支持本地图片或图片 URL；只保存在你自己的浏览器里，不上传服务器，也不写入任何内容包文件。清除后恢复默认底色。</div>
       <div class="bg-row">
         <input class="bg-file" id="bg-file" type="file" accept="image/*"
           aria-label="选择本地图片">
@@ -2217,7 +2220,7 @@ function themeChoiceHtml(c, current) {
     + esc(c.theme) + '"' + (on ? " checked" : "") + ' aria-label="配色：' + esc(c.label) + '">'
     + '<span class="nm">' + esc(c.label) + "</span>"
     + '<span class="key">' + esc(c.theme) + "</span>"
-    + '<span class="st">' + (on ? "当前" : "选择") + "</span>"
+    + '<span class="st">' + (on ? "当前" : "可选") + "</span>"
     + '<span class="purpose">' + esc(c.hint || "") + "</span>"
     + "</label>";
 }
@@ -2232,7 +2235,7 @@ function syncThemeChoices() {
     if (!row) { return; }
     row.className = "mp-row tp-row" + (on ? " on" : "");
     var st = row.querySelector(".st");
-    if (st) { st.textContent = on ? "当前" : "选择"; }
+    if (st) { st.textContent = on ? "当前" : "可选"; }
   });
 }
 function renderThemeSeg() {

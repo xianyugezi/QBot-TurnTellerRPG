@@ -14,6 +14,10 @@
 
 ### Added
 
+- **批 D（2026-09-14）**：存档「内容包通用状态格子」——新表 `player_pack_state`（每
+  玩家×内容包 一格，`pack_id` 运行时传入，框架零包名/零业务键）+ `db_schema_version`
+  1→2 迁移步（新库经 SCHEMA_DDL 直接具备、旧库幂等补表且既有数据无损）+ 纯存储层读写
+  API `qbot_rpg/storage/pack_state.py`（get/set/patch/clear/list + 64 KiB 单格上限）。
 - **M0-M5 归档欠账回填说明**（D8 ACC-03）：M0-M5 历史 verify（verify_m0~m5）全部只 print
   到 stdout、无文件写出——欠账原因 = G1「verify 输出留档于仓库 docs/」自 G1 成文起未落地
   （【批3A】P0-2/P1-5）。处置：M0-M5 不补历史报告文件，仅登记；**自 M6 起 verify_m6 按

@@ -25,7 +25,13 @@
     "forge",
     "proficiency",
     "templates",
-    "checkin"
+    "checkin",
+    "traits",
+    "recipe",
+    "slots",
+    "dungeon",
+    "achievements",
+    "conditional"
   ],
   "module_labels": {
     "settings": "设置",

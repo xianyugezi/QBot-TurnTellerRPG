@@ -19,8 +19,6 @@ import subprocess
 from pathlib import Path
 from typing import Any, Dict
 
-import pytest
-
 from qbot_rpg.web import api
 
 NODE = shutil.which("node")

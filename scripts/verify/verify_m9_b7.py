@@ -57,8 +57,8 @@ from qbot_rpg.core.forge_augments import (  # noqa: E402
 )
 from qbot_rpg.core.forge_job import configure_proficiency  # noqa: E402
 from qbot_rpg.core.forge_sets import (  # noqa: E402
-    FULL_SET_PIECES,
-    MIN_ACTIVATE_PIECES,
+    derive_set_max_pieces,
+    min_activate_pieces,
     parse_sets,
     set_effects_contract,
     set_lookup,
@@ -248,12 +248,24 @@ def t_sets_synthetic() -> None:
     assert alpha.pieces == ("node_helm_1", "node_helm_2", "node_helm_3",
                             "node_helm_4", "node_helm_5")
 
-    # validate_sets（合成 fixture）：批0 V1~V3 全过 → ok=True；W1 件数不足黄（beta 2 件 <5）
-    v = validate_sets({"forge": forge_raw})
+    # validate_sets（合成 fixture）：批0 V1~V3 全过 → ok=True；W1 件数不足黄
+    # （beta 2 件 < 满套上限；上限由 settings.slot_defs 防具 5 部位派生，不写死）
+    armor_slot_defs = {
+        "weapon": {"name": "武器", "max": 1, "kind": "weapon"},
+        "head": {"name": "头部", "max": 1, "kind": "armor"},
+        "body": {"name": "躯干", "max": 1, "kind": "armor"},
+        "hand": {"name": "手部", "max": 1, "kind": "armor"},
+        "leg": {"name": "护腿", "max": 1, "kind": "armor"},
+        "foot": {"name": "鞋子", "max": 1, "kind": "armor"},
+        "accessory": {"name": "饰品", "max": 1, "kind": "accessory"},
+    }
+    mods_for_v = {"forge": forge_raw, "settings": {"slot_defs": armor_slot_defs}}
+    v = validate_sets(mods_for_v)
     assert v["ok"] is True, f"合成防具套装应通过 V1~V3：{v['errors']}"
     assert v["sets_count"] == 2 and v["families"] == ["guard_set"]
+    assert v["set_max_pieces"] == 5, v
     w_rules = {w.get("rule") for w in cast(list, v["warnings"]) if isinstance(w, Mapping)}
-    assert "set_pieces_under_5" in w_rules, f"件数不足应有 W1 黄：{v['warnings']}"
+    assert "set_pieces_under_max" in w_rules, f"件数不足应有 W1 黄：{v['warnings']}"
 
     # set_lookup：装配 2 件（族级件数 ≥2）→ ready True（ACT-02）
     player2 = make_player(forge_level=1, equipped=["node_helm_1", "node_helm_2"])
@@ -266,7 +278,7 @@ def t_sets_synthetic() -> None:
     assert alpha_row["family_pieces_total"] == 5          # α(5)∪β(2)=5 件
     assert alpha_row["name"] == "守卫套装"
 
-    # set_lookup：仅 1 件 → 未达 MIN_ACTIVATE_PIECES → ready False
+    # set_lookup：仅 1 件 → 未达 min(配置档位集合) → ready False
     player1 = make_player(forge_level=1, equipped=["node_helm_1"])
     rows1 = set_lookup(player1, sets)
     assert all(r.get("ready") is False for r in rows1), rows1
@@ -280,8 +292,11 @@ def t_sets_synthetic() -> None:
     assert "穿 2 件激活" in skills[0]["trigger"]
     assert "效果接线：fx_guard_1" in skills[0]["desc"]
 
-    # 常量对齐（ACT-02：2 件最低激活 / 5 件满配）
-    assert MIN_ACTIVATE_PIECES == 2 and FULL_SET_PIECES == 5
+    # 派生值对齐（ACT-02：缺省档位 {2,3,5} → 最低 2；防具 5 部位 → 上限 5，均不写死常量）
+    assert min_activate_pieces(None) == 2
+    assert min_activate_pieces([3, 5]) == 3
+    assert derive_set_max_pieces(mods_for_v) == 5
+    assert derive_set_max_pieces({"forge": forge_raw}) is None  # 缺 slot_defs → 不设上限
 
 
 def t_augments() -> None:

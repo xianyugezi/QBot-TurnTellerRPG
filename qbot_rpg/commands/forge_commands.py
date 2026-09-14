@@ -1775,7 +1775,8 @@ def cmd_forge_tree(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 #   —— 消费 sibling 7A/7B（forge_sets.parse_sets/set_lookup + forge_augments.parse_augments
 #       只读委托不重写）；SP 解锁判定消费 forge_sp.sp_locked（只读）。
 #   —— /套装 渲染：`N. 套装名（2/3 件）：铁剑Ⅰ + 炎剑Ⅱ + 炎剑Ⅲ`；ready 套（族级件数
-#       ≥2，ACT-02 最低激活档）标记 ✅；无套装数据 → 空态 SETS_EMPTY。
+#       ≥ min(settings.forge.set_piece_counts)，ACT-02 最低激活档，不硬编码 2）标记 ✅；
+#       无套装数据 → 空态 SETS_EMPTY。
 #   —— /客制 渲染：`N. 客制名（类型/效果摘要）`；disabled/trace 项不出面板（AUG-11/12）；
 #       无可用项 → 空态 AUGMENTS_EMPTY。仅查询展示不执行（P1 预留）。
 # ---------------------------------------------------------------------------
@@ -1787,7 +1788,8 @@ def cmd_sets(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
       ① 引擎加载（load_trees 空 → `❌ 锻造系统未启用`，模板化）；
       ② 解析 sets 段（forge_sets.parse_sets，无 sets 数据 → 空态 SETS_EMPTY）；
       ③ 无参：全量列表（forge_sets.set_lookup 逐套 `N. 套装名（have/total 件）：件名...`，
-         ready 套（族级件数 ≥2，ACT-02）行首 ✅）——保持既有兼容；
+         ready 套（族级件数 ≥ min(配置档位集合)，ACT-02，派生见 forge_sets F-8）行首 ✅）
+         ——保持既有兼容；
          带参：单套明细（§1.5 样例：名称（variant）/ 部位 / 套装技能档位 / 穿戴逐件 ✓ +
          生效技能 / 缺件 / α/β 对照），匹配算法 精确 → 唯一前缀 → 歧义列表；
          未命中 → 既有 forge_not_found 文案；歧义 → 候选套餐名列表。
@@ -1810,6 +1812,9 @@ def cmd_sets(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 
     args = list(getattr(parsed, "args", None) or [])
     key = "".join(str(a) for a in args).strip()
+    # 档位集合/满套上限配置化（settings.forge.set_piece_counts / settings.slot_defs；
+    # 缺省档位 {2,3,5}）——ready 阈值与激活判定同源（forge_sets F-8）
+    piece_counts = {"settings": ctx.get("settings")}
     if key:
         status, _fid, recs, cands = _match_set_family(sets, key)
         if status == "not_found":
@@ -1818,11 +1823,9 @@ def cmd_sets(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
             families = group_families(sets)
             names = [(_pick_set_record(families[f]).name or f) for f in cands]
             return tpl_of(ctx, "forge_sets_ambiguous", {"candidates": "\n".join(names)})
-        # 档位集合配置化（settings.forge.set_piece_counts，缺省 {2,3,5}）
-        piece_counts = {"settings": ctx.get("settings")}
         return _render_set_detail(ctx, eng, recs, player, piece_counts, match_name(key))
 
-    rows = set_lookup(player, sets)
+    rows = set_lookup(player, sets, piece_counts=piece_counts)
     # 2026-09-09 全员可看（用户拍板）：玩家无持有件也列出全套装目录（含效果/件名）
     if not rows:
         return SETS_EMPTY

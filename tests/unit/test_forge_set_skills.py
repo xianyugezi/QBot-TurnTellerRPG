@@ -192,6 +192,36 @@ def test_custom_piece_counts_enable_four_tier() -> None:
         "settings": {"forge": {"set_piece_counts": [2, 3, 4]}}}) == {"a": 3}
 
 
+def test_min_activate_follows_configured_tiers() -> None:
+    """换档位数量：配置 {3,5} → 2 件不激活、3 件激活 3 件档（level 按数据）。"""
+    sets = _sets()
+    cfg = {"settings": {"forge": {"set_piece_counts": [3, 5]}}}
+    parts = [p[1] for p in _ALPHA_PARTS]
+    assert resolve_set_skills({"equipped": parts[:2]}, sets, piece_counts=cfg) == {}
+    assert resolve_set_skills({"equipped": parts[:3]}, sets, piece_counts=cfg) == {
+        "dragon_guard": 2}
+    assert resolve_set_skills({"equipped": parts[:5]}, sets, piece_counts=cfg) == {
+        "dragon_guard": 3}
+
+
+def test_single_tier_two_activates_at_two() -> None:
+    """换档位数量：单档 {2} → 2 件即激活该档（阈值随配置为 2），1 件不激活。"""
+    sets = _sets()
+    parts = [p[1] for p in _ALPHA_PARTS]
+    cfg = {"settings": {"forge": {"set_piece_counts": [2]}}}
+    assert resolve_set_skills({"equipped": parts[:2]}, sets, piece_counts=cfg) == {
+        "dragon_guard": 1}
+    assert resolve_set_skills({"equipped": parts[:1]}, sets, piece_counts=cfg) == {}
+
+
+def test_empty_tiers_no_activation() -> None:
+    """空档位集合 → 无档位/不激活任何技能（即使满 5 件）。"""
+    sets = _sets()
+    parts = [p[1] for p in _ALPHA_PARTS]
+    assert resolve_piece_counts([]) == ()
+    assert resolve_set_skills({"equipped": parts}, sets, piece_counts=[]) == {}
+
+
 def test_resolve_piece_counts_normalization() -> None:
     """档位集合归一：None→{2,3,5}；配置 Mapping 委托；序列清洗；非法→缺省。"""
     assert resolve_piece_counts() == (2, 3, 5)

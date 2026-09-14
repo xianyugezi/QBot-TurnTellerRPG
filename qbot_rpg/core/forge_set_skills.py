@@ -8,13 +8,14 @@
 
 功能描述：套装档位激活结算（2c2d §1.3 ACT-01~06 执行层，纯函数零副作用）：
   1) resolve_piece_counts(piece_counts)  档位集合归一：None → SET_PIECE_COUNTS 缺省
-     {2,3,5}；传入 modules（含 settings）→ 委托既有 _configured_piece_counts；传入
-     int 列表 → 清洗去重升序。配置化口径复用既有实现，不另造。
+     {2,3,5}；传入 modules（含 settings）→ 读 settings.forge.set_piece_counts；传入
+     int 列表 → 清洗去重升序。实现委托 forge_sets.resolve_piece_counts（F-8 单一来源）。
   2) family_piece_counts(player, sets)  族级件数（ACT-01）：set_tracker 优先（4b EQP-03），
      回退装配节点集 ∩ 同族 pieces 并集（VAR-03 α/β 混穿合并计数）——复用既有
      _set_tracker / _equipped_node_ids 口径，不得另造第二套。
   3) resolve_set_skills(player, sets, *, piece_counts=None)  技能 id → 等级（1/2/3）：
-     ACT-02 取该 skill 全部档位中 piece_count ≤ N 的最大档 → 对应 level；N < 2 不激活；
+     ACT-02 取该 skill 全部档位中 piece_count ≤ N 的最大档 → 对应 level；
+     N < min(配置档位集合) 不激活（forge_sets.min_activate_pieces，与 set_lookup.ready 同源）；
      ACT-03 无 4 件档（穿 4 件取 3 件档）；ACT-04 同套装多技能各自判定并行、同一 skill
      多档命中只取最高档不叠加。档位集合经 resolve_piece_counts（缺省 {2,3,5}）。
   4) recompute_set_tracker(player, sets)  穿/脱/换装重算（ACT-05）：重算族级件数写回
@@ -33,14 +34,15 @@
 
 【工程补白 · 显式标注】（契约/细化未显式定义处的实现口径，标 P-x；不新增定稿外行为）：
   P-1  档位集合注入：resolve_set_skills 只接收显式 piece_counts（None → SET_PIECE_COUNTS
-       {2,3,5}）；配置化由调用方传 _configured_piece_counts(modules) 或直接传 modules
-       Mapping（本模块 resolve_piece_counts 委托既有 _configured_piece_counts）。这样保持
+       {2,3,5}）；配置化由调用方传 modules Mapping 或 settings.forge.set_piece_counts
+       序列（本模块 resolve_piece_counts 委托 forge_sets.resolve_piece_counts）。这样保持
        纯函数无 IO，同时满足「档位集合取 settings.forge.set_piece_counts」配置化要求。
   P-2  件数源口径：family_piece_counts 与既有 set_lookup / F-4 完全同源——player
        ["set_tracker"]（族 id→件数）优先，回退 equipped/equip_nodes/equip_snapshot 装配
        节点集 ∩ 同族全部记录 pieces 并集（α/β 混穿归族，VAR-03）。不做第二套统计。
-  P-3  最低激活件数：N < MIN_ACTIVATE_PIECES(=2) 恒不激活（ACT-02/ACT-03 硬口径），即使
-       配置档位集合含 1 也不破例（档位集合只决定「哪些档位数据有效」，不改变最低激活件数）。
+  P-3  最低激活件数：N < min(配置档位集合) 恒不激活（ACT-02/ACT-03）；该值由
+       forge_sets.min_activate_pieces(piece_counts) 派生，与 set_lookup.ready 同一实现，
+       不写死常量；配置档位集合为空 → 无档位 → 不激活任何技能。
   P-4  档位有效性：只有 piece_count ∈ 配置档位集合的档位参与判定（档位集合外的档位按
        V3 属非法数据，结算层忽略，不误激活）；level 非法（非 int/≤0）的档位忽略。
   P-5  同 skill 跨族命中：结果以 skill id 为键；同族多档取最高档（ACT-04），跨族同 id
@@ -69,14 +71,13 @@ from __future__ import annotations
 
 from typing import Dict, Mapping, MutableMapping, Sequence, Tuple, Union
 
-from qbot_rpg.content.forge_models import SET_PIECE_COUNTS
 from qbot_rpg.core.forge_sets import (
-    MIN_ACTIVATE_PIECES,
     _EQUIPPED_KEYS,
-    _configured_piece_counts,
     _coerce_set,
     _equipped_node_ids,
     _set_tracker,
+    min_activate_pieces,
+    resolve_piece_counts as _resolve_piece_counts,
 )
 
 __all__ = [
@@ -113,24 +114,12 @@ def _is_int(value: object) -> bool:
 def resolve_piece_counts(piece_counts: PieceCountsInput = None) -> Tuple[int, ...]:
     """档位集合归一 → 升序去重正整数元组（缺省 SET_PIECE_COUNTS {2,3,5}）。
 
-    入参 piece_counts:
-      - None              → SET_PIECE_COUNTS（内容包未配置档位集合）；
-      - Mapping（modules）→ 委托既有 _configured_piece_counts（读
-        settings.forge.set_piece_counts，缺省/非法回落 SET_PIECE_COUNTS）；
-      - int 序列          → 仅收 ≥1 的非 bool int，去重升序；清洗后为空 → 缺省。
-    纯函数确定性。
+    本函数**委托** forge_sets.resolve_piece_counts（F-8 唯一档位来源实现，不另写
+    第二套）：入参 None/缺省 → SET_PIECE_COUNTS；Mapping（modules）→ 读
+    settings.forge.set_piece_counts（键缺失/非法回落；显式空列表 → 空元组）；
+    int 序列 → 清洗去重升序（显式空/全非法 → 空元组 = 无档位/不激活）。纯函数确定性。
     """
-    if piece_counts is None:
-        return SET_PIECE_COUNTS
-    if isinstance(piece_counts, Mapping):
-        return _configured_piece_counts(piece_counts)
-    if isinstance(piece_counts, (list, tuple)):
-        cleaned = tuple(sorted({
-            x for x in piece_counts if _is_int(x) and x >= 1
-        }))
-        if cleaned:
-            return cleaned
-    return SET_PIECE_COUNTS
+    return _resolve_piece_counts(piece_counts)
 
 
 # =====================================================================================
@@ -203,21 +192,24 @@ def resolve_set_skills(
     出参 dict: 已激活技能 id → 等级。规则：
       ACT-01  件数按族归并（family_piece_counts，α/β 混穿合并）；
       ACT-02  族件数 N：取该 skill 档位中 piece_count ≤ N 的最大档 → 该行 level
-              （2→Lv1 / 3→Lv2 / 5→Lv3，等级以数据 level 为准不硬编码）；N < 2 不激活（P-3）；
+              （等级以数据 level 为准不硬编码）；N < min(配置档位集合) 不激活（P-3）；
       ACT-03  无 4 件档：穿 4 件命中的仍是 ≤4 的最大档（即 3 件档 level=2）；
       ACT-04  同套装多技能各自判定并行；同 skill 多档命中只取最高档不叠加（P-5）。
     档位集合外的 piece_count 视为非法数据忽略（P-4）。技能 id 非空、level 合法才登记。
     出参按技能 id 升序，纯函数确定性。
     """
     allowed = resolve_piece_counts(piece_counts)
+    min_pieces = min_activate_pieces(piece_counts)
+    if min_pieces is None:
+        return {}  # 无档位（集合为空）→ 不激活
     counts = family_piece_counts(player, sets)
     families = group_families(sets)
 
     best: Dict[str, Tuple[int, int]] = {}
     for fid, recs in families.items():
         n = counts.get(fid, 0)
-        if n < MIN_ACTIVATE_PIECES:
-            continue  # ACT-02/03：N<2 不激活
+        if n < min_pieces:
+            continue  # ACT-02/03：N < min(配置档位集合) 不激活
         for fs in recs:
             for sk in fs.skill_defs():
                 sid = sk.skill

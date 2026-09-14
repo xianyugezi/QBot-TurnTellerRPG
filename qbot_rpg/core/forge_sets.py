@@ -11,14 +11,16 @@
      beta 引用 variant：beta 缺 skills 时继承同族 alpha 档位，VAR-01「两记录 skills
      默认共享」；对齐批0 ForgeSet/SetSkill Def 解析，返回批0 ForgeSet）。
   2) validate_sets(modules)：套装校验 → dict {ok, errors, warnings, rule_counts}：
-     硬 V1 集合查重 (family_id,variant) / V2 件数范围（pieces 1~5）/ V3 技能引用存在
-     （skills≥1、skill 非空、piece_count∈{2,3,5}、level∈{1,2,3}）；黄 W1 件数不足建议 /
+     硬 V1 集合查重 (family_id,variant) / V2 件数范围（pieces 1~满套上限，上限由包
+     派生，见 F-8；推导不出=不设上限）/ V3 技能引用存在
+     （skills≥1、skill 非空、piece_count∈配置档位集合、level∈{1,2,3}）；黄 W1 件数不足建议 /
      W2 技能描述缺（effect_ref 空=占位）/ W3 无套装数（段空但 sets_enabled=true）/
      W4 同族单记录（缺 α 或 β 对照）——V1~V3 委托/包装批0 validate_forge 的 2c2d
      sets 段（trees 合法时含节点引用/部位/αβ 孔位交叉校验），本路仅补纯结构兜底
      （无树也可验）与 W1~W4 结构黄（批0 未覆盖项）。
-  3) set_lookup(player, sets)：玩家当前装配可组成套装查询（只查已有装配件可组成哪几套；
-     标 {set_id, family_id, pieces_have, pieces_total, ready}；ready=False 不激活；
+  3) set_lookup(player, sets, *, piece_counts=None)：玩家当前装配可组成套装查询（只查已有
+     装配件可组成哪几套；标 {set_id, family_id, pieces_have, pieces_total, ready}；
+     ready=False 不激活；ready 阈值 = 配置档位集合最小值，与激活判定同源，见 F-8；
      族级合并件数按 VAR-03 α/β 混穿口径）。**技能激活结算**（ACT-01~06 执行）见
      qbot_rpg/core/forge_set_skills.py（2026-09-14 套装档位批补齐；本模块只做件数级查询）。
   4) set_effects_contract(set)：套装技能契约（SetSkill 展开：skill_id/描述/触发段；
@@ -50,14 +52,15 @@
       当 forge 无 trees（批0 短路直接 return）时本路纯结构 V1~V3 兜底（source=route7a）。
       结果按 (rule, field) 去重合并，避免同一条双报。
   F-3  W1~W4 为本路补充结构黄（批0 2c2d W1~W4 语义不同：αβ 孔位/trace/settings 关/
-      level 超封顶——委托结果以 source=batch0 保留编号，不与之混编）：W1 pieces<5 件数
-      不足建议（SET-04 ≤5 可配，ACT-02 需 5 件满配档）/ W2 skill 行 effect_ref 空=占位
+      level 超封顶——委托结果以 source=batch0 保留编号，不与之混编）：W1 pieces<满套上限
+      件数不足建议（上限由包派生，见 F-8；无上限则不出 W1；rule=set_pieces_under_max）/
+      W2 skill 行 effect_ref 空=占位
       （SK-04：占位技能只显示不结算）/ W3 sets 段空但 settings.sets_enabled=true 配置
       意图存疑（对仗批0 客制 V8 空段提示）/ W4 同族仅单记录缺变体对照（VAR-01 两条）。
   F-4  set_lookup 装配源：player["set_tracker"]（4b EQP-03，族id→件数）优先；否则从
       player["equipped"]/["equip_nodes"]/["equip_snapshot"] 提取装配节点 id（str 或
-      含 node_id/id 键的条目）求与 pieces 交集。ready=族级件数≥2（ACT-02 最低 2 件，
-      VAR-03 混穿合并）；P1 不读技能库，只做件数级可组成查询。
+      含 node_id/id 键的条目）求与 pieces 交集。ready=族级件数≥配置档位集合最小值
+      （与激活判定同源，见 F-8；VAR-03 混穿合并）；P1 不读技能库，只做件数级可组成查询。
   F-5  set_effects_contract 描述来源：SetSkill 无 desc 字段（SK-01~04 无 desc 键），
       desc 取 effect_ref 效果接线（非空）或占位文案；skill 中文名需 6a 技能库，
       P1 无技能库依赖 → skill_id 即展示键（文档 SK-02 对齐 6a 契约，接线归后续）。
@@ -66,6 +69,19 @@
   F-7  validate_sets 委托基于「解析后有效视图」：先 parse_sets（beta 继承 alpha skills
       补全），把解析后 sets 回填 modules 再委托批0 validate_forge——VAR-01 允许 beta
       缺 skills 继承共享档位，若按原始 raw 校验会把合法 beta 继承误红拦（V3）。
+  F-8  档位/件数上限来源（2026-09-14 用户拍板「套装档位之类的东西不要硬编码数量」）：
+      · 最低激活件数 min_activate_pieces(modules) = min(配置档位集合)；配置档位集合 =
+        settings.forge.set_piece_counts（正整数列表，去重升序），缺省/非法回落内容层
+        SET_PIECE_COUNTS=(2,3,5)。集合为空 → 返回 None = 无档位/不激活
+        （set_lookup.ready=False，resolve_set_skills 不激活任何技能）。
+        ready 判定与技能激活判定共用本函数，不两处各写一份。
+      · 满套/件数上限 derive_set_max_pieces(modules)：① settings.forge.set_max_pieces
+        显式正整数优先；② 否则数 settings.slot_defs 中「防具部位」的条目数——条目
+        kind/type（armor / 防具 / 部位名，大小写不敏感）表达防具，缺 kind/type 时按
+        部位键名与部位数据注册表（forge_models.ARMOR_TYPES，含 armor_head/head 两写法）
+        比对；③ 两路都推不出（缺 settings/slot_defs 或 0 个防具部位）→ None = 不设上限
+        （绝不再回退写死 5），validate_sets 在结果说明中标注。
+      · 纯函数确定性、零 IO；上限只读包声明，换内容包零改动。
 
 铁律：零 NoneBot import；纯函数确定性（同刻同参必同值）；不写定时器/睡眠调用
       （M43 零定时器探针）；平台无关；不引入随机；每功能可追溯（文件头标注依据）。
@@ -76,6 +92,7 @@ from __future__ import annotations
 from typing import Dict, List, Mapping, Optional, Sequence, Tuple, cast
 
 from qbot_rpg.content.forge_models import (
+    ARMOR_TYPES,
     ForgeSet,
     SET_LEVEL_MAX,
     SET_PIECE_COUNTS,
@@ -83,22 +100,34 @@ from qbot_rpg.content.forge_models import (
 )
 
 __all__ = [
-    "MIN_ACTIVATE_PIECES",
-    "FULL_SET_PIECES",
+    "resolve_piece_counts",
+    "min_activate_pieces",
+    "derive_set_max_pieces",
+    "set_max_pieces_source",
     "parse_sets",
     "validate_sets",
     "set_lookup",
     "set_effects_contract",
 ]
 
-# ACT-02：2 件最低档激活（SET-04 / 2c2d §1.3）
-MIN_ACTIVATE_PIECES: int = 2
-# SET-04：5 件满配（ACT-02 5 件→Lv3 满配档）
-FULL_SET_PIECES: int = 5
-
 # set_lookup 装配读取键（F-4：set_tracker 优先，其次装配节点集）
 _EQUIPPED_KEYS: Tuple[str, ...] = ("equipped", "equip_nodes", "equip_snapshot")
 _NODE_REF_KEYS: Tuple[str, ...] = ("node_id", "id")
+
+# 防具部位标识（推导满套/件数上限的唯一数据源：包 settings.slot_defs 声明）。
+# 由 forge_models.ARMOR_TYPES（部位数据注册表）派生，不写死数量 5；同时接受
+# 全名（armor_head）与短名（head）两种部位键/kind 写法。
+_ARMOR_PART_NAMES: frozenset = frozenset(
+    {t for t in ARMOR_TYPES}
+    | {t[len("armor_"):] for t in ARMOR_TYPES if t.startswith("armor_")}
+)
+# 部位 kind/type 表达「防具」的取值（英文 armor / 中文 防具 / 部位名，大小写不敏感）
+_ARMOR_KIND_VALUES: frozenset = frozenset({"armor", "防具"}) | _ARMOR_PART_NAMES
+
+
+def _is_int(value: object) -> bool:
+    """非 bool 的 int 判定（件数/上限清洗，防 bool 混入）。"""
+    return isinstance(value, int) and not isinstance(value, bool)
 
 
 # =====================================================================================
@@ -196,6 +225,14 @@ def _collector_item_field(item: Mapping[str, object]) -> str:
     return ""
 
 
+def _collector_item_rule(item: Mapping[str, object]) -> str:
+    """dict 形态收集器条目取 rule（批0 放 kwargs['rule']，本路放顶层 'rule'）。"""
+    kwargs = item.get("kwargs")
+    if isinstance(kwargs, Mapping) and kwargs.get("rule") is not None:
+        return str(kwargs["rule"])
+    return str(item.get("rule", ""))
+
+
 def _norm_collector_item(item: Mapping[str, object], source: str) -> Dict[str, object]:
     """收集器条目 → 结构化 {level, rule, field, msg, detail, source}。"""
     kwargs = item.get("kwargs")
@@ -267,20 +304,117 @@ def _resolved_modules(
 
 def _configured_piece_counts(modules: Mapping[str, object]) -> Tuple[int, ...]:
     """配置档位集合（P1-1 裁决 2026-08-30 配置化）：读 settings.forge.set_piece_counts
-    正整数列表去重升序；缺省/非合法 → SET_PIECE_COUNTS 默认 (2, 3, 5)。"""
+    正整数列表去重升序；键缺失/非序列/全非法 → SET_PIECE_COUNTS 默认 (2, 3, 5)。
+
+    显式声明但清洗后为空（如 []）→ 返回空元组 = 无档位（不激活），不回退缺省
+    （F-8：空集合语义 = 不激活/无档位）。"""
     settings_v = modules.get("settings")
     if isinstance(settings_v, Mapping):
         forge_v = settings_v.get("forge")
         if isinstance(forge_v, Mapping):
             spc = forge_v.get("set_piece_counts")
             if isinstance(spc, (list, tuple)):
-                cleaned = tuple(sorted({
+                return tuple(sorted({
                     x for x in spc
                     if isinstance(x, int) and not isinstance(x, bool) and x >= 1
                 }))
-                if cleaned:
-                    return cleaned
     return SET_PIECE_COUNTS
+
+
+def resolve_piece_counts(piece_counts: object = None) -> Tuple[int, ...]:
+    """档位集合归一 → 升序去重正整数元组（缺省 SET_PIECE_COUNTS=(2, 3, 5)）。
+
+    入参 piece_counts（F-8 唯一档位来源，forge_set_skills.resolve_piece_counts 委托本函数）：
+      - None                      → SET_PIECE_COUNTS（内容包未配置档位集合）；
+      - Mapping（modules/data）   → _configured_piece_counts（读 settings.forge.
+                                    set_piece_counts；键缺失/非法回落 SET_PIECE_COUNTS，
+                                    显式空列表 → 空元组）；
+      - int 序列（list/tuple）    → 仅收 ≥1 的非 bool int，去重升序（显式空/全非法 → ())；
+      - 其它                      → 缺省。
+    返回空元组时语义 = 无档位（由 min_activate_pieces 判为不激活/无档位）。纯函数确定性。
+    """
+    if piece_counts is None:
+        return SET_PIECE_COUNTS
+    if isinstance(piece_counts, Mapping):
+        return _configured_piece_counts(piece_counts)
+    if isinstance(piece_counts, (list, tuple)):
+        return tuple(sorted({x for x in piece_counts if _is_int(x) and x >= 1}))
+    return SET_PIECE_COUNTS
+
+
+def min_activate_pieces(piece_counts: object = None) -> Optional[int]:
+    """最低激活件数（F-8 派生，替代写死常量 2）= 配置档位集合的最小值。
+
+    入参同 resolve_piece_counts（None/Mapping(modules)/int 序列）。
+    返回 min(配置档位集合)；集合为空 → None = 无档位/不激活（set_lookup 的 ready
+    判 False，forge_set_skills.resolve_set_skills 不激活任何技能）。纯函数确定性。
+    """
+    allowed = resolve_piece_counts(piece_counts)
+    return min(allowed) if allowed else None
+
+
+def _configured_set_max_pieces(modules: Mapping[str, object]) -> Optional[int]:
+    """显式配置 settings.forge.set_max_pieces（正整数）；缺省/非法 → None（交推导）。"""
+    settings_v = modules.get("settings")
+    if isinstance(settings_v, Mapping):
+        forge_v = settings_v.get("forge")
+        if isinstance(forge_v, Mapping):
+            v = forge_v.get("set_max_pieces")
+            if _is_int(v) and v >= 1:
+                return v
+    return None
+
+
+def _slot_is_armor(slot_key: object, entry: object) -> bool:
+    """部位条目是否防具（kind/type 优先表达；缺声明时按部位键名比对部位数据）。
+
+    - 条目 Mapping 且 kind/type 为非空 str → 该值（小写去空白）∈ _ARMOR_KIND_VALUES
+      才算防具（显式声明优先，写 weapon/accessory 等即非防具）；
+    - 无 kind/type 声明 → 部位键名（全名 armor_head 或短名 head）∈ _ARMOR_PART_NAMES。
+    """
+    if isinstance(entry, Mapping):
+        for kind_key in ("kind", "type"):
+            kv = entry.get(kind_key)
+            if isinstance(kv, str) and kv.strip():
+                return kv.strip().lower() in _ARMOR_KIND_VALUES
+    if isinstance(slot_key, str):
+        return slot_key.strip().lower() in _ARMOR_PART_NAMES
+    return False
+
+
+def _armor_slot_count(modules: Mapping[str, object]) -> Optional[int]:
+    """settings.slot_defs 中防具部位条目数；缺段/空段/0 个 → None（推导失败）。"""
+    settings_v = modules.get("settings")
+    if not isinstance(settings_v, Mapping):
+        return None
+    slot_defs = settings_v.get("slot_defs")
+    if not isinstance(slot_defs, Mapping) or not slot_defs:
+        return None
+    count = sum(1 for k, v in slot_defs.items() if _slot_is_armor(k, v))
+    return count if count > 0 else None
+
+
+def derive_set_max_pieces(modules: Mapping[str, object]) -> Optional[int]:
+    """满套/件数上限（F-8 派生，替代写死常量 5）。
+
+    优先级：① settings.forge.set_max_pieces 显式正整数；
+            ② settings.slot_defs 中防具部位条目数（kind/type 或部位键名表达防具）；
+            ③ 均推不出 → None = 不设上限（绝不再回退写死 5）。
+    入参 modules 为内容模块映射（settings 段含 slot_defs / forge 段）。
+    """
+    explicit = _configured_set_max_pieces(modules)
+    if explicit is not None:
+        return explicit
+    return _armor_slot_count(modules)
+
+
+def set_max_pieces_source(modules: Mapping[str, object]) -> str:
+    """满套上限来源标注（供 validate_sets 报告说明）：配置键 / 部位推导 / 不设上限。"""
+    if _configured_set_max_pieces(modules) is not None:
+        return "settings.forge.set_max_pieces"
+    if _armor_slot_count(modules) is not None:
+        return "settings.slot_defs"
+    return "unbounded"
 
 
 def _check_structure_v(
@@ -288,11 +422,13 @@ def _check_structure_v(
 ) -> List[Dict[str, object]]:
     """本路纯结构 V1~V3 兜底（F-2：无树时批0 短路，本路保证 sets 可独立验）。
 
-    V1 集合查重 (family_id,variant) / V2 件数范围（pieces 1~5，每件非空 str）/
-    V3 技能引用存在（skills≥1、skill 非空、piece_count∈配置档位集合（缺省 {2,3,5}）、
+    V1 集合查重 (family_id,variant) / V2 件数范围（pieces 1~满套上限，每件非空 str；
+    上限由 derive_set_max_pieces 派生，推导不出=不设上限）/ V3 技能引用存在
+    （skills≥1、skill 非空、piece_count∈配置档位集合（缺省 {2,3,5}）、
     level∈{1,2,3}）。档位集合读 settings.forge.set_piece_counts（P1-1 裁决配置化）。
     """
     allowed_pc: Tuple[int, ...] = _configured_piece_counts(modules)
+    max_pieces: Optional[int] = derive_set_max_pieces(modules)
     errors: List[Dict[str, object]] = []
     seen_combo: set = set()
     for si, s in enumerate(sets):
@@ -315,12 +451,13 @@ def _check_structure_v(
                 "msg": "pieces 必填（≥1 个 forge 树节点 id，V2）",
                 "detail": {}, "source": "route7a",
             })
-        elif len(pieces) > FULL_SET_PIECES:
+        elif max_pieces is not None and len(pieces) > max_pieces:
             errors.append({
                 "level": "V2", "rule": "set_pieces_too_many",
                 "field": "%s.pieces" % base,
-                "msg": "pieces ≤%d 项（V2）" % FULL_SET_PIECES,
-                "detail": {"count": len(pieces)}, "source": "route7a",
+                "msg": "pieces ≤%d 项（V2；上限 = %s）"
+                       % (max_pieces, set_max_pieces_source(modules)),
+                "detail": {"count": len(pieces), "max": max_pieces}, "source": "route7a",
             })
         skill_defs = s.skill_defs()
         if not skill_defs:
@@ -363,10 +500,12 @@ def _check_supplement_w(
 ) -> List[Dict[str, object]]:
     """本路补充结构黄 W1~W4（F-3：批0 未覆盖的 sets 结构层建议）。
 
-    W1 件数不足建议（pieces<5 无法达成 5 件满配档）/ W2 技能描述缺（effect_ref 空=占位）/
+    W1 件数不足建议（pieces<满套上限，上限由包派生；无上限不出 W1；rule=set_pieces_under_max）/
+    W2 技能描述缺（effect_ref 空=占位）/
     W3 无套装数（段空但 sets_enabled=true 配置意图存疑）/ W4 同族单记录（缺 α/β 对照）。
     """
     warnings: List[Dict[str, object]] = []
+    max_pieces: Optional[int] = derive_set_max_pieces(modules)
     forge = modules.get("forge")
     settings = forge.get("settings") if isinstance(forge, Mapping) else None
     sets_enabled = True
@@ -399,14 +538,16 @@ def _check_supplement_w(
                        % (s.id, s.variant),
                 "detail": {"id": s.id, "variant": s.variant}, "source": "route7a",
             })
-        # W1：件数不足建议（pieces<5 无法达成 5 件满配档，ACT-02）
-        if s.pieces and len(s.pieces) < FULL_SET_PIECES:
+        # W1：件数不足建议（pieces<满套上限；上限由包派生，无上限则不出 W1，ACT-02）
+        if (max_pieces is not None and s.pieces
+                and len(s.pieces) < max_pieces):
             warnings.append({
-                "level": "W1", "rule": "set_pieces_under_5",
+                "level": "W1", "rule": "set_pieces_under_max",
                 "field": "%s.pieces" % base,
-                "msg": "套装 %r 仅 %d 件，无法达成 %d 件满配档（Lv3）；建议补齐（W1 黄）"
-                       % (s.id, len(s.pieces), FULL_SET_PIECES),
-                "detail": {"id": s.id, "count": len(s.pieces)}, "source": "route7a",
+                "msg": "套装 %r 仅 %d 件，无法达成 %d 件满配档；建议补齐（W1 黄）"
+                       % (s.id, len(s.pieces), max_pieces),
+                "detail": {"id": s.id, "count": len(s.pieces), "max": max_pieces},
+                "source": "route7a",
             })
         # W2：技能描述缺（effect_ref 空=占位技能只显示不结算，SK-04）
         for ki, sk in enumerate(s.skill_defs()):
@@ -429,12 +570,17 @@ def validate_sets(
     """套装校验（V1 集合查重 / V2 件数范围 / V3 技能引用存在；W1 件数不足建议 /
     W2 技能描述缺 / W3 无套装数 / W4 同族单记录）→ dict。
 
-    入参 modules: dict（含 "forge" 键；可选 "items"/"enemies" 供批0 交叉校验）。
-    出参 dict: {ok, sets_count, families, errors, warnings, rule_counts}。
+    入参 modules: dict（含 "forge" 键；可选 "settings" 供档位/上限派生与
+      "items"/"enemies" 供批0 交叉校验）。
+    出参 dict: {ok, sets_count, families, errors, warnings, rule_counts,
+      set_max_pieces, set_max_pieces_source}。
       - errors:  硬错误列表（V1/V2/V3），source=batch0（委托批0 validate_forge 2c2d
         sets 段）或 route7a（本路纯结构兜底，F-2）；(rule, field) 去重合并。
       - warnings: 黄提示列表（委托批0 sets 黄 + 本路 W1~W4）。
       - ok:       errors 为空。
+      - set_max_pieces / set_max_pieces_source: 满套/件数上限派生值（F-8）与来源；
+        推导不出时 None + "unbounded" = 不设上限（报告说明，绝不回退写死 5）。
+        V2 件数上限以本路派生值为准（批0 sets 段写死的条数上限不参与，避免抢先）。
     委托说明: 批0 validate_forge(modules, report) 以 dict 形态收集器调用，筛 field
       前缀 forge.sets 的 sets 段结果（含 trees 合法时的节点引用/部位/αβ 孔位交叉校验）；
       forge 无 trees 时批0 短路，本路 _check_structure_v 兜底保证 V1~V3 仍可验。
@@ -451,10 +597,14 @@ def validate_sets(
     errors: List[Dict[str, object]] = []
     warnings: List[Dict[str, object]] = []
 
-    # 批0 委托结果：筛 forge.sets 前缀
+    # 批0 委托结果：筛 forge.sets 前缀。件数上限 set_pieces_too_many 归本路派生值
+    # （F-8：批0 该规则条数写死，丢弃，由 _check_structure_v 按派生上限重报）。
     for e in collector["errors"]:
-        if _collector_item_field(e).startswith("forge.sets"):
-            errors.append(_norm_collector_item(e, "batch0"))
+        if not _collector_item_field(e).startswith("forge.sets"):
+            continue
+        if str(_collector_item_rule(e)) == "set_pieces_too_many":
+            continue
+        errors.append(_norm_collector_item(e, "batch0"))
     for w in collector["warnings"]:
         if _collector_item_field(w).startswith("forge.sets"):
             warnings.append(_norm_collector_item(w, "batch0"))
@@ -472,6 +622,7 @@ def validate_sets(
         rule = str(it.get("rule", ""))
         rule_counts[rule] = rule_counts.get(rule, 0) + 1
 
+    max_pieces = derive_set_max_pieces(modules)
     result: Dict[str, object] = {
         "ok": not errors,
         "sets_count": len(sets),
@@ -479,6 +630,8 @@ def validate_sets(
         "errors": errors,
         "warnings": warnings,
         "rule_counts": rule_counts,
+        "set_max_pieces": max_pieces,
+        "set_max_pieces_source": set_max_pieces_source(modules),
     }
     if report is not None:
         _forward(report, errors, warnings)
@@ -559,18 +712,26 @@ def _set_tracker(player: Mapping[str, object]) -> Dict[str, int]:
     return out
 
 
-def set_lookup(player: object, sets: Sequence[object]) -> List[Dict[str, object]]:
+def set_lookup(
+    player: object,
+    sets: Sequence[object],
+    *,
+    piece_counts: object = None,
+) -> List[Dict[str, object]]:
     """玩家当前装配可组成套装查询（只查已有装配件可组成哪几套，不激活）。
 
     入参 player: 玩家状态（Mapping：set_tracker 优先，回退 equipped/equip_nodes/
       equip_snapshot 装配节点集；非 Mapping → 空装配确定性兜底）；
-             sets: 套装列表（ForgeSet 或 raw dict 双形态，F-6）。
+             sets: 套装列表（ForgeSet 或 raw dict 双形态，F-6）；
+             piece_counts: 档位集合（None/Mapping(modules)/int 序列，见
+      resolve_piece_counts）——ready 阈值取 min_activate_pieces(piece_counts)，
+      与技能激活判定同源（F-8）。
     出参 list[dict]: 每条套装记录一个查询结果——
       {set_id, family_id, pieces_have, pieces_total, ready, variant, name,
        family_pieces_have, family_pieces_total}。
       - pieces_have / pieces_total: 记录级（仅本 variant 装配件数 / 该记录件数）。
       - family_pieces_have / family_pieces_total: 族级（VAR-03 α/β 混穿合并计数）。
-      - ready: 族级件数 ≥2（ACT-02 最低 2 件激活档）。
+      - ready: 族级件数 ≥ min(配置档位集合)（ACT-02；无档位/推不出 → False，不激活）。
     核心逻辑: 记录级件数 = |pieces ∩ 装配节点|（或 set_tracker[族id]）；族级件数 =
       同族全部记录 pieces 并集 ∩ 装配节点（混穿合并）。技能激活/结算（ACT-01~06）
       在 forge_set_skills.resolve_set_skills（本函数只做件数级查询）。
@@ -580,6 +741,7 @@ def set_lookup(player: object, sets: Sequence[object]) -> List[Dict[str, object]
     p = cast(Mapping[str, object], player)
     equipped = _equipped_node_ids(p)
     tracker = _set_tracker(p)
+    min_pieces = min_activate_pieces(piece_counts)
 
     fam_pieces: Dict[str, set] = {}
     for s in sets:
@@ -608,7 +770,7 @@ def set_lookup(player: object, sets: Sequence[object]) -> List[Dict[str, object]
             "pieces_total": len(fs.pieces),
             "family_pieces_have": fam_have,
             "family_pieces_total": len(fam_pieces.get(fs.id, set())),
-            "ready": bool(fam_have >= MIN_ACTIVATE_PIECES),
+            "ready": bool(min_pieces is not None and fam_have >= min_pieces),
         })
     return out
 

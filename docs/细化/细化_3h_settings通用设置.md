@@ -555,3 +555,81 @@
 | TC-16 | 保护中活动延后 | 保护开启；活动到点 | apscheduler 到点触发 | 活动不启动（不激活半成品）；保护解除后补触发判定一次并启动 | L1128；10.2-C |
 | TC-17 | 红拦聚合 | settings 含 3 处错误（mode 非法/currencies 空数组/override 引用不存在） | loader 校验 | 一次抛 3 条聚合红拦，整包拒绝挂载，无部分生效 | 3e §1.4（阻断式）；V1/V2/V8 |
 | TC-18 | 旧局旧配置 | 战斗/决斗进行中热重载 pvp 与 sell_ratio | 重载后结算 | 对局按开局 config_ref 快照结算（掉落比率/PVP 参数不变）；新对局用新配置 | 3e2 OLD；4e TC-13；§12-2 |
+
+---
+
+## 十四、settings.battle 扩展段（引擎战斗参数 · 2026-09-14 用户拍板新增 min_damage）
+
+> 性质：**实现层补充登记**。`settings.battle` 不在 §1.2 原六大分段的 15 段项之列，而是后续
+> 战斗系统实装（怪猎对照批④/⑦）引入的**引擎战斗参数扩展段**，由
+> `qbot_rpg/core/battle_config.resolve_battle_settings` 按**白名单键**透传进
+> `BattleEngine` 构造 config（键值语义源 = `qbot_rpg/core/battle.py` `_BATTLE_DEFAULT_CONFIG`）。
+> 已有键（背击/逆境会心/气绝 KO/咆哮/怒·三态）此前只在代码注释登记，本节随 `min_damage`
+> 一并补文档口径。
+
+### 14.1 装配路径（settings → 引擎）
+
+```
+content/<包>/settings.json  "battle": { "min_damage": 0, ... }
+  → core/battle_config.resolve_battle_settings(settings)   # 白名单 + 区间校验；坏值忽略
+  → commands/battle_launch_commands.launch_pve_battle / commands/dummy_commands
+  → BattleEngine(config=...)   # _BATTLE_DEFAULT_CONFIG 覆盖
+  → BattleEngine._resolve_damage_action   # 命中段把 min_damage 注入拦截链 ctx.variables
+  → DamagePipeline._stage_mitigation 尾部 # ①减伤 之后、②护盾 之前取保底
+```
+
+- 常驻模块 settings 的读取/校验/热重载口径沿用 §1.1/§11/§12（对局按开局 config 快照结算）。
+- 通用性：框架侧只认 `min_damage` 这一个**通用键名**，不写死任何内容包专属键。
+
+### 14.2 字段 schema
+
+```jsonc
+"battle": {
+  // 最低伤害保底（int ≥ 0，默认 0 = 关闭）
+  // 0 = 零行为变化；>0 = 单次「命中并产生伤害」实例的最终伤害下限。
+  "min_damage": 0
+}
+```
+
+- 类型 int；范围 ≥ 0；缺省 0（关闭）。非整数 / 布尔 / 负数 → `resolve_battle_settings` 忽略
+  （回落引擎默认 0），**绝不因配置失误改变玩法**（同 backstab_bonus 的口径）。
+- 框架展示元数据：`qbot_rpg/content/field_meta.py` `SETTINGS_FIELDS["battle"].children["min_damage"]`
+  （type=int、default=0、soft_label=True 软标注 → 泛型校验短路永不红拦）；中文名/说明由包
+  `content/<包>/field_meta.json` 的 `field_labels.settings.battle` / `field_help.settings.battle`
+  声明（展示元数据下放约定，见《编辑器重写_数据包展示元数据下放方案》§二）。
+
+### 14.3 语义边界（2026-09-14 用户拍板原文口径）
+
+**适用清单**
+
+1. 一次**命中并产生伤害**的实例（含玩家→怪、怪→玩家双向；多段行动逐段各自结算）。
+2. 最终伤害若 **< min_damage** → 抬到 min_damage；若 **≥ min_damage** → 不变。
+3. **floor 而非 set**：只抬不压，绝不把高于保底的伤害压低；不改暴击/命中/格挡/方位/部位等
+   任何既有判定（保底发生在它们全部结算之后）。
+
+**不适用清单（断言口径）**
+
+1. 闪避 / 未命中 / `position_miss`（没有伤害对象 → 不进入拦截链）。
+2. 0 倍率段等**无伤害实例**（不产生伤害对象）。
+3. 拦截链入口 raw=0 的调用（保底不为其凭空造伤）。
+4. DoT（回合开始持续伤害）与反弹等**派生伤害**（非「命中」实例、独立链入口，不注入保底变量）。
+
+**顺序：保底 vs 增伤/减伤/防御/护盾/吸收**
+
+```
+命中→会心→格挡→双通道→防御率（全部增伤/减伤/防御，含格挡/防御指令/乱数）
+  → 拦截链 ①减伤/减免（status mitigation）
+  → ★保底（final = max(final, min_damage)，仅当入链伤害对象 > 0）
+  → ②护盾先扣（护盾可先吃掉保底后的伤害）
+  → ③反弹 → ④吸收 → ⑤免疫 → ⑥续行 → ⑦扣血 → ⑧死亡判定
+```
+
+- **保底在所有增伤/减伤/防御结算之后**：①减伤把伤害压到 0 时保底仍抬到 min_damage。
+- **保底在护盾/吸收之前**（先取保底、再走护盾吸收）：护盾可以吃掉保底伤害——因此
+  「保底」保证的是**进入防御拦截链的伤害值**，不保证扣除护盾/免疫后的 HP 净损失。
+
+### 14.4 验收
+
+- 本地单测：`tests/unit/test_min_damage_floor.py`（0=零行为 / 低于抬起 / 等于高于不变 /
+  未命中与无伤害实例不生效 / 双向 / 与减伤和护盾的先后 / 不改变会心命中 / 设置装配与校验）。
+- 引擎消费点 `file:line` 见实现批报（battle.py 命中段注入 + effects.py `_stage_mitigation` 取保底）。

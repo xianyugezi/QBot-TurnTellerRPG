@@ -543,21 +543,61 @@ def _battle_ctx(sender, *, engine) -> dict:
     }
 
 
-# 引擎快照里的 per-instance 身份字段（uuid4；与结算数值无关，两局必然不同）
-_IDENTITY_KEYS = ("battle_id", "snapshot_id")
+# 引擎快照里与结算无关、两局必然不同/可能不同的字段（精确路径）：
+# - battle_id / snapshot_id：per-instance uuid4（每局新建）
+# - saved_at / snapshot_at / timestamps.*：wall-clock 记账时间戳（秒级，跨秒即不同）
+_NON_SETTLEMENT_EXACT = frozenset({
+    "battle_id", "snapshot_id", "saved_at", "snapshot_at",
+    "timestamps.created_at", "timestamps.updated_at", "timestamps.snapshot_at",
+})
+
+
+def _is_non_settlement(path: str) -> bool:
+    """该快照叶子路径是否属于「非结算字段」（对拍排除项，逐条可指认）。"""
+    if path in _NON_SETTLEMENT_EXACT:
+        return True
+    # action_record[*].ts = 行动记录的 wall-clock 时间戳（非结算数值/状态）
+    return path.rsplit(".", 1)[-1] == "ts" and path.startswith("action_record[")
+
+
+def _diff_paths(a, b, prefix: str = "") -> list:
+    """递归列出两棵 JSON 结构里值不同的**叶子路径**（逐字段对拍的证据）。"""
+    if isinstance(a, dict) and isinstance(b, dict):
+        out: list = []
+        for key in set(a) | set(b):
+            out += _diff_paths(a.get(key), b.get(key), f"{prefix}.{key}" if prefix else key)
+        return out
+    if isinstance(a, list) and isinstance(b, list):
+        if len(a) != len(b):
+            return [prefix + "[len]"]
+        out = []
+        for i, (x, y) in enumerate(zip(a, b)):
+            out += _diff_paths(x, y, f"{prefix}[{i}]")
+        return out
+    return [] if a == b else [prefix]
+
+
+def _normalize_snapshot(value, prefix: str = ""):
+    """把非结算字段（见 :func:`_is_non_settlement`）归一为占位符，其余原样。"""
+    if prefix and _is_non_settlement(prefix):
+        return "<non-settlement>"
+    if isinstance(value, dict):
+        return {k: _normalize_snapshot(v, f"{prefix}.{k}" if prefix else k)
+                for k, v in value.items()}
+    if isinstance(value, list):
+        return [_normalize_snapshot(v, f"{prefix}[{i}]") for i, v in enumerate(value)]
+    return value
 
 
 def _settle_snapshot(ctx: dict, engine) -> dict:
     """结算状态快照（逐字段）：引擎快照 + 玩家 hp/mp + 战斗 ctx 结算字段。
 
-    剔除 ``battle_id`` / ``snapshot_id`` 两个 per-instance 身份字段（见
-    :data:`_IDENTITY_KEYS`）——它们是每局新建的 uuid，不承载结算数值。
+    引擎快照先按 :func:`_is_non_settlement` 归一（per-instance uuid + wall-clock
+    记账时间戳），这些字段不承载任何结算数值/状态。
     """
     snap = json.loads(json.dumps(engine.to_snapshot(), ensure_ascii=False, sort_keys=True))
-    for key in _IDENTITY_KEYS:
-        snap.pop(key, None)
     return {
-        "engine": snap,
+        "engine": _normalize_snapshot(snap),
         "hp": ctx.get("hp"), "mp": ctx.get("mp"),
         "player": dict(ctx.get("player") or {}),
         "battle_status_changes": [dict(x) if isinstance(x, dict) else str(x)
@@ -567,14 +607,40 @@ def _settle_snapshot(ctx: dict, engine) -> dict:
 
 
 def _assert_identical_settlement(ctx_a: dict, eng_a, ctx_b: dict, eng_b) -> None:
-    """逐字段断言两局结算 0 差异；唯一允许不同的是 per-instance 身份字段。"""
+    """逐字段断言两局结算 0 差异；唯一允许不同的是 non-settlement 字段（见常量）。"""
     raw_a, raw_b = eng_a.to_snapshot(), eng_b.to_snapshot()
-    diff_keys = {k for k in set(raw_a) | set(raw_b) if raw_a.get(k) != raw_b.get(k)}
-    assert diff_keys <= set(_IDENTITY_KEYS), f"引擎快照出现结算字段差异：{sorted(diff_keys)}"
+    diff = _diff_paths(raw_a, raw_b)
+    assert all(_is_non_settlement(p) for p in diff), (
+        f"引擎快照出现结算字段差异：{sorted(p for p in diff if not _is_non_settlement(p))}")
     snap_a, snap_b = _settle_snapshot(ctx_a, eng_a), _settle_snapshot(ctx_b, eng_b)
     assert snap_b == snap_a
     for key in snap_a:
         assert snap_b[key] == snap_a[key], f"字段 {key} 出现差异"
+
+
+def test_settlement_normalizer_ignores_non_settlement_fields() -> None:
+    """对拍排除项自证：uuid / wall-clock 记账字段不同不算结算差异（其余字段照比）。"""
+    a = {
+        "battle_id": "id-a", "snapshot_id": "sid-a", "saved_at": "T1", "snapshot_at": None,
+        "timestamps": {"created_at": "T1", "updated_at": "T1", "snapshot_at": None},
+        "action_record": [{"actor": "player", "ts": "T1", "action": "normal"}],
+        "turn": 3, "player": {"hp": 10},
+    }
+    b = {
+        "battle_id": "id-b", "snapshot_id": "sid-b", "saved_at": "T2", "snapshot_at": "T2",
+        "timestamps": {"created_at": "T2", "updated_at": "T2", "snapshot_at": "T2"},
+        "action_record": [{"actor": "player", "ts": "T2", "action": "normal"}],
+        "turn": 3, "player": {"hp": 10},
+    }
+    diff = _diff_paths(a, b)
+    assert diff and all(_is_non_settlement(p) for p in diff), diff
+    assert _normalize_snapshot(a) == _normalize_snapshot(b)
+
+    c = dict(b, turn=4)  # 真结算字段不同 → 必须被检出
+    assert any(p == "turn" for p in _diff_paths(a, c))
+    assert _normalize_snapshot(a) != _normalize_snapshot(c)
+    d = dict(b, action_record=[{"actor": "player", "ts": "T2", "action": "crit"}])
+    assert any(p.endswith(".action") for p in _diff_paths(a, d))  # ts 之外的行动字段照比
 
 
 def _run_attack(ctx: dict) -> dict:

@@ -23,6 +23,7 @@ from typing import Any, Dict, Optional, Tuple
 import pytest
 
 from qbot_rpg.content import field_meta as fm_mod
+from qbot_rpg.content import field_meta_pack as fmp
 from qbot_rpg.content.models import FieldMeta
 from qbot_rpg.web import api
 
@@ -31,16 +32,25 @@ CONTENT = REPO / "content"
 
 # 批4.5 覆盖的模块（顶层字段全中文）
 COVERED_MODULES = (
-    "manifest", "effects", "statuses", "marks", "skill_chains", "action", "skills", "jobs",
+    # 批B：展示文案已按包下放。下列为 veinborn/test_demo 两包声明并集覆盖的模块
+    # （manifest/conditional 不在任何内容包 manifest 里声明，不再是「内容模块」，
+    #  故不再要求包声明覆盖）。
+    "effects", "statuses", "marks", "skill_chains", "action", "skills", "jobs",
     "formula", "items", "equipment", "traits", "recipe", "proficiency", "slots", "forge",
     "fishing", "enhance", "enemies", "maps", "dungeon", "stats", "npc", "shop", "quest",
-    "checkin", "achievements", "conditional", "settings", "ai", "hidden", "env_event",
+    "checkin", "achievements", "settings", "ai", "hidden", "env_event",
     "log_card", "editor",
 )
 
 
 def _table():
-    return api.field_meta_table()
+    """批B：展示文案已下放到包；把两个真实包的声明并成「schema 覆盖面」表。"""
+    table = api.field_meta_table()
+    for pack in ("veinborn", "test_demo"):
+        decl = fmp.load_field_meta(CONTENT / pack)
+        if decl is not None:
+            table = fmp.merge_field_meta_table(table, decl)
+    return table
 
 
 def _container_children(fm: FieldMeta) -> Dict[str, FieldMeta]:
@@ -156,7 +166,6 @@ REAL_NESTED_SAMPLES: Tuple[Tuple[str, str, str, Tuple[Any, ...]], ...] = (
     ("veinborn", "settings", "", ("battle", "stamina_max")),
     ("veinborn", "settings", "", ("quest_board", "tiers", 0, "id")),
     ("veinborn", "settings", "", ("assistant", "helpers", 0, "name")),
-    ("veinborn", "manifest", "", ("module_tree", 0, "module")),
     ("test_demo", "dungeon", "mist_dungeon_explore", ("drops", "normal", 0, "item")),
     ("test_demo", "achievements", "ach_codex_25", ("conditions", 0, "var")),
     ("test_demo", "forge", "", ("trees", 0, "nodes", 0, "materials", 0, "count")),

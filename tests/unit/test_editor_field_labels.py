@@ -22,6 +22,7 @@ from typing import Any, Dict
 import pytest
 
 from qbot_rpg.content import field_meta as fm_mod
+from qbot_rpg.content import field_meta_pack as fmp
 from qbot_rpg.content.models import FieldMeta
 from qbot_rpg.web import api
 
@@ -30,30 +31,28 @@ REPO = Path(api.repo_root())
 CONTENT = REPO / "content"
 HTML = REPO / "qbot_rpg" / "web" / "static" / "index.html"
 
-# 本批必做的 5 个模块 + 余量补全的 6 个模块（模块 → 字段中文名表）
-REQUIRED_TABLES = {
-    "enemies": fm_mod.ENEMIES_FIELD_LABELS,
-    "items": fm_mod.ITEMS_FIELD_LABELS,
-    "equipment": fm_mod.EQUIPMENT_FIELD_LABELS,
-    "maps": fm_mod.MAPS_FIELD_LABELS,
-    "quest": fm_mod.QUEST_FIELD_LABELS,
-}
-EXTRA_TABLES = {
-    "effects": fm_mod.EFFECTS_FIELD_LABELS,
-    "statuses": fm_mod.STATUSES_FIELD_LABELS,
-    "marks": fm_mod.MARKS_FIELD_LABELS,
-    "skill_chains": fm_mod.SKILL_CHAINS_FIELD_LABELS,
-    "action": fm_mod.ACTION_FIELD_LABELS,
-    "jobs": fm_mod.JOBS_FIELD_LABELS,
-}
+
+def _schema_table():
+    """批B：展示文案已下放到包；把两个真实包的声明并成「schema 覆盖面」表。"""
+    table = api.field_meta_table()
+    for pack in ("veinborn", "test_demo"):
+        decl = fmp.load_field_meta(CONTENT / pack)
+        if decl is not None:
+            table = fmp.merge_field_meta_table(table, decl)
+    return table
+
+
+# 本位批必做的 5 个模块 + 余量补全的 6 个模块
+REQUIRED_MODULES = ("enemies", "items", "equipment", "maps", "quest")
+EXTRA_MODULES = ("effects", "statuses", "marks", "skill_chains", "action", "jobs")
 
 
 # ---------------------------------------------------------------------------
 # 一、元数据：字段中文名表补全
 # ---------------------------------------------------------------------------
-@pytest.mark.parametrize("mod", list(REQUIRED_TABLES) + list(EXTRA_TABLES))
+@pytest.mark.parametrize("mod", list(REQUIRED_MODULES) + list(EXTRA_MODULES))
 def test_module_fields_all_have_chinese_labels(mod: str) -> None:
-    meta = api.field_meta_table().module(mod)
+    meta = _schema_table().module(mod)
     assert meta is not None and meta.fields, mod
     missing = [k for k, f in meta.fields.items() if not f.label]
     assert not missing, (mod, missing)
@@ -63,27 +62,33 @@ def test_module_fields_all_have_chinese_labels(mod: str) -> None:
 
 def test_required_label_tables_cover_declared_keys() -> None:
     """本批必做模块：字段名表要覆盖字段表里出现过的键（漏键 → 界面只能显示原始键）。"""
-    table = api.field_meta_table()
-    for mod, labels in REQUIRED_TABLES.items():
+    table = _schema_table()
+    for mod in REQUIRED_MODULES:
         meta = table.module(mod)
-        keys = set(meta.fields)
-        uncovered = {k for k in keys if k not in labels and meta.fields[k].label == k}
+        assert meta is not None
+        uncovered = {k for k, f in meta.fields.items() if f.label == k}
         assert not uncovered, (mod, uncovered)
 
 
 def test_equipment_reuses_items_labels_plus_excludes() -> None:
-    assert fm_mod.EQUIPMENT_FIELD_LABELS["excludes"] == "互斥部位"
-    for key, label in fm_mod.ITEMS_FIELD_LABELS.items():
-        assert fm_mod.EQUIPMENT_FIELD_LABELS.get(key) == label, key
+    table = _schema_table()
+    items = table.module("items")
+    equipment = table.module("equipment")
+    assert items is not None and equipment is not None
+    assert equipment.fields["excludes"].label == "互斥部位"
+    # 装备与物品共享字段表：物品有中文名的公共键，装备也有中文名（文案可因旧键标注而不同）。
+    for key in set(items.fields) & set(equipment.fields):
+        if items.fields[key].label:
+            assert equipment.fields[key].label, key
 
 
 def test_group_display_names_are_not_reused_as_field_labels() -> None:
     """批3 曾把「组显示名」误当「字段中文名」传参；本批起字段名必须是字段级术语。"""
-    meta = api.field_meta_table().module("enemies")
+    meta = _schema_table().module("enemies")
     assert meta is not None
-    assert meta.fields["stats"].label != fm_mod.ENEMIES_GROUP_LABELS["stats"]
-    assert meta.fields["actions"].label != fm_mod.ENEMIES_GROUP_LABELS["actions"]
-    assert meta.fields["drops"].label != fm_mod.ENEMIES_GROUP_LABELS["drops"]
+    assert meta.fields["stats"].label != meta.group_labels["stats"]
+    assert meta.fields["actions"].label != meta.group_labels["actions"]
+    assert meta.fields["drops"].label != meta.group_labels["drops"]
 
 
 def test_decoration_is_label_only_and_keeps_validation_contract() -> None:

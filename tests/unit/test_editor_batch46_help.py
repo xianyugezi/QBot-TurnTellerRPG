@@ -19,12 +19,14 @@ import json
 import re
 import shutil
 import subprocess
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, Dict
 
 import pytest
 
 from qbot_rpg.content import field_meta as fm_mod
+from qbot_rpg.content import field_meta_pack as fmp
 from qbot_rpg.content.models import FieldMeta
 from qbot_rpg.web import api
 
@@ -33,38 +35,31 @@ REPO = Path(api.repo_root())
 CONTENT = REPO / "content"
 HTML = REPO / "qbot_rpg" / "web" / "static" / "index.html"
 
-# 本批必做的 10 个模块 → 顶层人工说明表；批4.6 补追加 maps/quest/jobs/npc/shop
-HELP_TABLES = {
-    "skills": fm_mod.SKILLS_FIELD_HELP,
-    "enemies": fm_mod.ENEMIES_FIELD_HELP,
-    "items": fm_mod.ITEMS_FIELD_HELP,
-    "equipment": fm_mod.EQUIPMENT_FIELD_HELP,
-    "effects": fm_mod.EFFECTS_FIELD_HELP,
-    "statuses": fm_mod.STATUSES_FIELD_HELP,
-    "marks": fm_mod.MARKS_FIELD_HELP,
-    "skill_chains": fm_mod.SKILL_CHAINS_FIELD_HELP,
-    "action": fm_mod.ACTION_FIELD_HELP,
-    "settings": fm_mod.SETTINGS_FIELD_HELP,
-    "maps": fm_mod.MAPS_FIELD_HELP,
-    "quest": fm_mod.QUEST_FIELD_HELP,
-    "jobs": fm_mod.JOBS_FIELD_HELP,
-    "npc": fm_mod.NPC_FIELD_HELP,
-    "shop": fm_mod.SHOP_FIELD_HELP,
-}
-CHILD_HELP_TABLES = {
-    "skills": fm_mod.SKILLS_CHILD_HELP,
-    "enemies": fm_mod.ENEMIES_CHILD_HELP,
-    "items": fm_mod.ITEMS_CHILD_HELP,
-    "statuses": fm_mod.STATUSES_CHILD_HELP,
-    "effects": fm_mod.EFFECTS_CHILD_HELP,
-    "skill_chains": fm_mod.SKILL_CHAINS_CHILD_HELP,
-    "settings": fm_mod.SETTINGS_CHILD_HELP,
-    "maps": fm_mod.MAPS_CHILD_HELP,
-    "quest": fm_mod.QUEST_CHILD_HELP,
-    "jobs": fm_mod.JOBS_CHILD_HELP,
-    "npc": fm_mod.NPC_CHILD_HELP,
-    "shop": fm_mod.SHOP_CHILD_HELP,
-}
+
+def _schema_table():
+    """批B：说明文案已下放到包；把两个真实包的声明并成「schema 覆盖面」表。"""
+    table = api.field_meta_table()
+    for pack in ("veinborn", "test_demo"):
+        decl = fmp.load_field_meta(CONTENT / pack)
+        if decl is not None:
+            table = fmp.merge_field_meta_table(table, decl)
+    return table
+
+
+def _declared_help(pack: str) -> Dict[str, Any]:
+    decl = fmp.load_field_meta(CONTENT / pack)
+    return dict(decl.field_help) if decl is not None else {}
+
+
+# 本批必做的 10 个模块 → 顶层人工说明；批4.6 补追加 maps/quest/jobs/npc/shop
+HELP_MODULES = (
+    "skills", "enemies", "items", "equipment", "effects", "statuses", "marks",
+    "skill_chains", "action", "settings", "maps", "quest", "jobs", "npc", "shop",
+)
+CHILD_HELP_MODULES = (
+    "skills", "enemies", "items", "statuses", "effects", "skill_chains", "settings",
+    "maps", "quest", "jobs", "npc", "shop",
+)
 
 
 # =====================================================================================
@@ -78,44 +73,65 @@ def test_field_meta_help_and_unit_default_empty() -> None:
     assert named.help == "说明" and named.unit == "点"
 
 
-@pytest.mark.parametrize("mod", list(HELP_TABLES))
+@pytest.mark.parametrize("mod", list(HELP_MODULES))
 def test_help_tables_cover_every_declared_field(mod: str) -> None:
     """必做模块的每个顶层字段都有中文说明（覆盖统计见批报）。"""
-    meta = api.field_meta_table().module(mod)
+    meta = _schema_table().module(mod)
     assert meta is not None and meta.fields, mod
-    covered = HELP_TABLES[mod]
     missing = [k for k, f in meta.fields.items() if not f.help]
     assert not missing, (mod, missing)
-    # 表本身要有覆盖（不是空表靠字段自带 help 蒙混）
-    assert len(covered) >= 10, (mod, len(covered))
+    # 声明本身要有覆盖（不是空表靠字段自带 help 蒙混）
+    assert sum(1 for f in meta.fields.values() if f.help) >= 10, mod
 
 
-@pytest.mark.parametrize("mod", [m for m in HELP_TABLES if m != "equipment"])
+def _assert_no_phantom(fields: Mapping[str, FieldMeta], spec: Mapping[str, Any],
+                       where: str) -> None:
+    for key, sub in spec.items():
+        if key == "_help":
+            continue
+        assert key in fields, (where, key)
+        if isinstance(sub, Mapping):
+            fm = fields[key]
+            kids = fm.children or (fm.element.children if fm.element is not None else {})
+            _assert_no_phantom(kids, sub, f"{where}.{key}")
+
+
+@pytest.mark.parametrize("mod", [m for m in HELP_MODULES if m != "equipment"])
 def test_help_tables_have_no_phantom_keys(mod: str) -> None:
-    """说明表的键必须是本模块真实字段（不臆造字段名）；equipment 复用 items 表，单独放行。"""
-    meta = api.field_meta_table().module(mod)
-    extra = set(HELP_TABLES[mod]) - set(meta.fields)
-    assert not extra, (mod, sorted(extra))
+    """说明声明的键必须是本模块真实字段（不臆造字段名）；equipment 复用 items 表，单独放行。"""
+    meta = _schema_table().module(mod)
+    assert meta is not None
+    for pack in ("veinborn", "test_demo"):
+        spec = _declared_help(pack).get(mod)
+        if spec:
+            _assert_no_phantom(meta.fields, spec, f"{pack}/{mod}")
 
 
 def test_equipment_help_reuses_items_plus_excludes() -> None:
-    assert fm_mod.EQUIPMENT_FIELD_HELP["excludes"] == (
+    table = _schema_table()
+    items = table.module("items")
+    equipment = table.module("equipment")
+    assert items is not None and equipment is not None
+    assert equipment.fields["excludes"].help == (
         "互斥部位：装备这些部位时不能同时装备本件（成环会被校验拦下）。")
-    for key, text in fm_mod.ITEMS_FIELD_HELP.items():
-        assert fm_mod.EQUIPMENT_FIELD_HELP.get(key) == text, key
+    # 装备与物品共享字段表：物品有说明的公共键，装备也有说明（文案可因旧键标注而不同）。
+    for key in set(items.fields) & set(equipment.fields):
+        if items.fields[key].help:
+            assert equipment.fields[key].help, key
 
 
 def test_help_text_is_nonempty_single_line() -> None:
     """说明是「一句话」：非空、无换行（避免卡片排版被撑成段落）。"""
-    for mod, table in HELP_TABLES.items():
-        for key, text in table.items():
-            assert isinstance(text, str) and text.strip(), (mod, key)
-            assert "\n" not in text and "\r" not in text, (mod, key)
+    for pack in ("veinborn", "test_demo"):
+        for mod, spec in _declared_help(pack).items():
+            for text in _walk_help_table(spec):
+                assert isinstance(text, str) and text.strip(), (pack, mod, text)
+                assert "\n" not in text and "\r" not in text, (pack, mod, text)
 
 
 def test_child_help_only_targets_declared_children() -> None:
     """嵌套说明只作用于已声明的子字段（不新增字段节点、不越界）。"""
-    skills = api.field_meta_table().module("skills")
+    skills = _schema_table().module("skills")
     assert skills is not None
     level = skills.fields["level"]
     assert level.children["max"].help and level.children["growth"].help
@@ -124,28 +140,32 @@ def test_child_help_only_targets_declared_children() -> None:
 
 
 def _walk_help_table(spec: Any) -> Any:
-    """展平嵌套说明表，产出所有 (键, 文案)（含 `_help` 节点说明）。"""
+    """展平嵌套说明声明，产出所有说明文案（含 `_help` 节点说明）。"""
     if isinstance(spec, str):
         yield spec
-    elif isinstance(spec, dict):
+    elif isinstance(spec, Mapping):
         for key, sub in spec.items():
-            yield key
-            yield from _walk_help_table(sub)
+            if key == "_help":
+                yield sub
+            else:
+                yield from _walk_help_table(sub)
 
 
-@pytest.mark.parametrize("mod", list(CHILD_HELP_TABLES))
+@pytest.mark.parametrize("mod", list(CHILD_HELP_MODULES))
 def test_child_help_tables_are_wellformed(mod: str) -> None:
-    """嵌套说明表：文案非空单行；`_help` 是节点说明而非子键。"""
-    for item in _walk_help_table(CHILD_HELP_TABLES[mod]):
-        if item == "_help":
+    """嵌套说明声明：文案非空单行；`_help` 是节点说明而非子键。"""
+    for pack in ("veinborn", "test_demo"):
+        spec = _declared_help(pack).get(mod)
+        if not spec:
             continue
-        assert isinstance(item, str) and item.strip(), (mod, item)
-        assert "\n" not in item and "\r" not in item, (mod, item)
+        for text in _walk_help_table(spec):
+            assert isinstance(text, str) and text.strip(), (pack, mod, text)
+            assert "\n" not in text and "\r" not in text, (pack, mod, text)
 
 
 def test_settings_child_help_covers_key_segments() -> None:
     """settings 各段（战斗/任务板/炼金/经济/行动条）的高频键都有中文说明。"""
-    table = api.field_meta_table().module("settings")
+    table = _schema_table().module("settings")
     assert table is not None
     battle = table.fields["battle"].children
     for key in ("enrage_damage_mult", "fatigue_stagger_chance", "stun_enabled",
@@ -172,7 +192,7 @@ def test_new_module_help_reaches_descriptors() -> None:
         ("npc", "interactions", "action"),
         ("shop", "refresh", "mode"),
     ):
-        fm = api.field_meta_table().module(mod).fields[entry_key]
+        fm = _schema_table().module(mod).fields[entry_key]
         assert fm.help, (mod, entry_key)
         kids = fm.children or {}
         if not kids and fm.element is not None:
@@ -209,7 +229,7 @@ def test_decoration_adds_help_but_keeps_validation_contract() -> None:
 
 def test_missing_help_falls_back_silently() -> None:
     """help 可选：未撰写说明的模块/字段照常可用、无异常（缺省回退）。"""
-    table = api.field_meta_table()
+    table = _schema_table()
     dungeon = table.module("dungeon")
     assert dungeon is not None
     assert any(f.help == "" for f in dungeon.fields.values())  # dungeon 本批未写说明

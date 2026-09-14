@@ -1,0 +1,1911 @@
+{
+  "field_help": {
+    "action": {
+      "air_drop": "对空击落规则（如 knockdown = 击中空中目标即击落）。",
+      "air_policy": "对空中目标的处理策略（能否命中、是否击落等）。",
+      "apply_mark": "命中后施加的印记。",
+      "apply_status": "命中后施加的状态。",
+      "armor": "开启后发动期间霸体，不被打断。",
+      "attack_type": "攻击类型（斩 / 打 / 突 / 魔 / 无）。",
+      "break_power": "破坏力固有值，参与部位破坏计算（建议 0~500）。",
+      "chain": "连锁行动：后续衔接的行动标识列表（旧写法）。",
+      "charge_armor": "蓄力期间是否霸体。",
+      "charge_turns": "蓄力回合数。",
+      "condition": "触发/选择条件（对象或字符串，深结构由专项校验）。",
+      "cool": "冷却（旧键）；现行请用 cooldown。",
+      "cooldown": "行动冷却回合数；0 表示无冷却。",
+      "cost": "消耗（旧键）；现行请用技能的 mp_cost。",
+      "effects": "行动附带的效果列表。",
+      "element": "元素标识（八元素之一）。",
+      "hungry": "饥饿值消耗。",
+      "id": "行动唯一标识；怪物行动表、连招与技能都用它引用。",
+      "intent": "意图类型（伤害 / 防御 / 蓄力 / 治疗 / 控制 / buff / debuff / 印记 / 功能），用于意图预告。",
+      "interrupt": "开启后命中可打断对方行动。",
+      "kind": "行动类别：basic 基础 / active 主动 / …（按行动库约定）。",
+      "name": "行动显示名。",
+      "position_rule": "方位命中规则：从哪个方位打才命中、有没有方位加成。",
+      "power": "行动威力。",
+      "preview": "意图预告的内容。",
+      "preview_chain": "链预告的内容。",
+      "probability": "入池开关/概率（0~1 的比例）：0 = 不选，1 = 必选。",
+      "recovery": "行动结束后的行动条恢复量。",
+      "require_status": "发动需要自身已有的状态。",
+      "reveal_condition": "预告在什么条件下揭示。",
+      "roar": "咆哮等级：1 轻 / 2 大；对应耳栓反制。",
+      "skill": "关联的技能引用（可指向任意技能）。",
+      "tags": "行动标签列表。",
+      "trigger_limit": "触发上限配置。",
+      "type": "行动类型（旧键，兼容旧内容包）。",
+      "weight": "入池权重：越大越容易被选到。"
+    },
+    "effects": {
+      "actions": {
+        "_help": "效果附属行动表。",
+        "count": "层数或数量。",
+        "mark": "关联的印记。",
+        "target": "作用对象。",
+        "type": "原子动作类型。"
+      },
+      "apply_mark": "命中后施加的印记（引用印记注册表）。",
+      "apply_status": "命中后施加的状态（引用状态注册表）。",
+      "class": "效果分类。",
+      "control_type": "控制类型（眩晕 / 沉默 / 击退等）。",
+      "count": "层数或次数。",
+      "desc": "说明文字。",
+      "duration": "效果持续回合数；0 或留空表示即时生效或不限制。",
+      "filter": "效果的筛选条件。",
+      "id": "效果唯一标识；技能与状态用它引用这个效果。",
+      "mark": "关联的印记标识。",
+      "marks_on": "需要目标身上已有的印记。",
+      "max_stack": "最大叠加层数；0 = 不限。",
+      "name": "效果显示名。",
+      "part_break_per_tick": "每个回合积累的部位破坏值。",
+      "patch": {
+        "_help": "数值补丁：target 目标属性 / value 数值 / pct 是否按百分比。",
+        "pct": "是否按百分比修改。",
+        "target": "要修改的属性。",
+        "value": "修改数值。"
+      },
+      "pct": "数值是否按百分比解释。",
+      "polarity": "效果极性（正面 / 负面）。",
+      "power": "效果强度数值（伤害量、治疗量或加成量，含义随类型而定）。",
+      "probability": "触发概率（0~1 的比例，按百分比表示）。",
+      "require_mark": "生效需要目标已有的印记（引用印记注册表）。",
+      "require_status": "生效需要目标已有的状态（引用状态注册表）。",
+      "skip_turn": "是否让目标跳过回合。",
+      "stat": "作用的属性标识。",
+      "status": "关联的状态标识。",
+      "target": "作用对象（self 自身 / enemy 敌方）。",
+      "tick": "效果的触发时点（每回合 / 进入时 / 失效时）。",
+      "trigger": "触发条件。",
+      "turns": "持续回合数。",
+      "type": "效果类别：damage 伤害 / heal 治疗 / status 状态 / control 控制 / utility 功能等。",
+      "value": "数值。"
+    },
+    "enemies": {
+      "actions": {
+        "_help": "普通行动表：每项包含行动引用、权重、概率、条件与冷却。",
+        "action": "行动引用（action 注册表）。",
+        "condition": "选择条件。",
+        "cooldown": "该行动的冷却回合数。",
+        "hungry": "饥饿值消耗。",
+        "probability": "选择概率（0~1 的比例）。",
+        "weight": "入池权重：越大越容易被选到。"
+      },
+      "ai": {
+        "_help": "AI 行为配置：状态机与状态转移条件。",
+        "transitions": "AI 状态转移的一条。"
+      },
+      "area": "所属区域名（用于图鉴/叙事分组，不决定刷怪地图）。",
+      "atk": "旧格式的攻击值，保留兼容旧内容包；新内容请写在 stats 段里。",
+      "chains": {
+        "_help": "连招表：一段行动后按概率衔接的后续行动。",
+        "actions": {
+          "action": "衔接的行动。",
+          "armor": "衔接期间是否霸体。",
+          "chance": "衔接概率（0~1 的比例）。",
+          "role": "衔接角色。"
+        },
+        "id": "连招标识。"
+      },
+      "def": "旧格式的防御值，保留兼容旧内容包；新内容请写在 stats 段里。",
+      "def_base": "基础防御值（木桩向字段）。",
+      "desc": "图鉴里的一句话说明。",
+      "drop_rate": "掉落率系数（0~1 的比例，按百分比表示），作为掉落表的整体调整值。",
+      "drops": {
+        "_help": "掉落表：battle 战斗掉落 / special 特殊掉落 / death 死亡掉落。",
+        "battle": {
+          "_help": "战斗胜利掉落。",
+          "chance": "掉落概率（0~1 的比例）。",
+          "condition": "掉落条件。",
+          "count": "掉落数量或数量区间。",
+          "item": "掉落物品。"
+        },
+        "death": {
+          "_help": "死亡掉落。",
+          "chance": "掉落概率（0~1 的比例）。",
+          "condition": "掉落条件。",
+          "count": "掉落数量或数量区间。",
+          "item": "掉落物品。"
+        },
+        "special": {
+          "_help": "特殊掉落。",
+          "chance": "掉落概率（0~1 的比例）。",
+          "condition": "掉落条件。",
+          "count": "掉落数量或数量区间。",
+          "item": "掉落物品。"
+        }
+      },
+      "effects": "怪物自带效果列表（引用效果注册表）。",
+      "elem_res": "元素抗性表：元素标识 → 正数减伤 / 负数增伤。",
+      "hp": "旧格式的生命值，保留兼容旧内容包；新内容请写在 stats 段里。",
+      "id": "怪物唯一标识；地图刷怪、掉落与 AI 都用它引用。",
+      "lore": {
+        "_help": "图鉴条目：解锁进度与说明文字。",
+        "desc": "图鉴说明文字。",
+        "unlock": "图鉴解锁进度。"
+      },
+      "monster_def_rate": "怪物防御率：1.0 = 与玩家同档；越高越抗打，可填负数（运行时按 0 兜底）。",
+      "name": "怪物显示名。",
+      "parts": {
+        "_help": "部位破坏表：每个部位的破坏阈值、可达方位、命中优先级与破位行为。",
+        "break_threshold": "破坏阈值（建议 0~99999）。",
+        "id": "部位标识。",
+        "name": "部位名。",
+        "on_break": {
+          "effects": "破位触发的效果。",
+          "knockdown": "破位后倒地时长（次行动）。",
+          "marks": "破位施加的印记。"
+        },
+        "positions": {
+          "height": "可达高度。",
+          "side": "可达方位。"
+        },
+        "target_priority": "被命中优先级。"
+      },
+      "phases": {
+        "_help": "阶段表：按血量阈值切换行动与播报。",
+        "actions": "阶段行动表。",
+        "broadcast": "进入阶段时的播报文案。",
+        "enter_action": "进入阶段时执行的行动。",
+        "threshold": "进入本阶段的血量阈值。"
+      },
+      "pv": "防护值（0~500）：击破前本体减伤；训练木桩强制为 0。",
+      "pv_recover": "防护值恢复时机：battle_end 战斗结束时回满 / none 不恢复。",
+      "resistance": {
+        "_help": "抗性：immune 免疫的效果 / stun 气绝抗性。",
+        "immune": "免疫的效果列表。",
+        "stun": "气绝抗性。"
+      },
+      "rewards": {
+        "_help": "讨伐奖励（经验等）。",
+        "exp": "讨伐获得的经验值。"
+      },
+      "skills": "怪物技能表（技能标识列表）。",
+      "special_actions": {
+        "_help": "特殊行动表：条件触发型行动（触发类型/阈值/时机/触发后状态等）。",
+        "action": "引用的行动。",
+        "chain_ref": "触发的连招引用。",
+        "desc": "说明文字。",
+        "id": "特殊行动标识。",
+        "max_triggers": "最多触发次数。",
+        "once": "是否整场只触发一次。",
+        "post_state": {
+          "state": "触发后进入的状态。",
+          "turns": "状态持续回合数。"
+        },
+        "priority": "多个特殊行动的判定优先级。",
+        "trigger": {
+          "absent": "是否需要印记不存在。",
+          "action": "参照的行动。",
+          "chance": "触发概率（0~1 的比例）。",
+          "height": "高度条件。",
+          "mark": "参照的印记。",
+          "min": "印记最少层数。",
+          "side": "方位条件。",
+          "timing": "判定时机。",
+          "type": "触发类型。",
+          "value": "触发阈值。",
+          "which": "作用对象。"
+        },
+        "trigger_cooldown": "触发冷却回合数。"
+      },
+      "stats": {
+        "_help": "怪物九属性基础值（生命/法力/力量/智力/体质/精神/专注/敏捷/幸运）；留空的属性按默认值处理。",
+        "agi": "敏捷基础值。",
+        "con": "体质基础值。",
+        "foc": "专注基础值。",
+        "hp": "生命基础值。",
+        "int": "智力基础值。",
+        "luk": "幸运基础值。",
+        "mp": "法力基础值。",
+        "spr": "精神基础值。",
+        "str": "力量基础值。"
+      },
+      "tier": "怪物档位：normal 普通 / elite 精英 / boss 首领 / training 训练木桩。",
+      "traits": "怪物特性列表（引用特性注册表）。",
+      "type": "怪物类型标记（dummy = 训练木桩）；旧包的 type:monster 仍兼容。",
+      "weakness": {
+        "_help": "弱点：types 弱点类型 / elements 弱点元素；命中弱点有额外收益。",
+        "elements": "弱点元素列表。",
+        "types": "弱点类型列表。"
+      },
+      "zone_change": {
+        "_help": "换区行为：残血到阈值时切换目标怪物。",
+        "enabled": "是否启用换区。",
+        "hp_threshold": "触发换区的残血阈值。",
+        "targets": "换区目标怪物。",
+        "timing": "切换时机。"
+      }
+    },
+    "equipment": {
+      "agi": "敏捷加成（白值，单位：点）。",
+      "atk": "攻击加成（白值，单位：点）。",
+      "atk_pct": "百分比加成（单位：百分点，5 = +5%）。",
+      "bind": "开启后装备或使用即绑定。",
+      "con": "属性加成（白值加算，单位：点）。",
+      "crit": "会心加成（百分点，可填负数；战斗直读）。",
+      "def": "防御加成（旧键，单位：点）；现行键请用 dfn。",
+      "desc": "说明文字。",
+      "dfn": "防御加成（白值，单位：点）。",
+      "dfn_pct": "百分比加成（单位：百分点，5 = +5%）。",
+      "earplug": "耳栓等级（上限 2；用于反制咆哮）。",
+      "effects": "附加效果列表（引用效果注册表）。",
+      "elem_crit_lv": "属性会心等级（上限 3）。",
+      "excludes": "互斥部位：装备这些部位时不能同时装备本件（成环会被校验拦下）。",
+      "foc": "专注加成（白值，单位：点）。",
+      "hp": "生命加成（白值，单位：点）。",
+      "hp_pct": "百分比加成（单位：百分点，5 = +5%）。",
+      "id": "物品唯一标识；商店、掉落、配方都用它引用。",
+      "lck": "属性加成（白值加算，单位：点）。",
+      "mag": "属性加成（白值加算，单位：点）。",
+      "mp": "属性加成（白值加算，单位：点）。",
+      "mp_pct": "百分比加成（单位：百分点，5 = +5%）。",
+      "name": "物品显示名。",
+      "price": "基础售价（以默认货币计的数量）。",
+      "slot": "装备部位（如 weapon / armor）；普通物品留空。",
+      "spd": "属性加成（白值加算，单位：点）。",
+      "spr": "属性加成（白值加算，单位：点）。",
+      "str": "属性加成（白值加算，单位：点）。",
+      "super_crit_lv": "超会心等级（上限 3）。",
+      "type": "物品类别（武器 / 防具 / 消耗品 / 素材…）；装备类物品会进入装备模块。",
+      "usable": "开启后可以在背包里直接使用。"
+    },
+    "items": {
+      "agi": "敏捷加成（白值，单位：点）。",
+      "atk": "攻击加成（白值，单位：点）。",
+      "atk_pct": "百分比加成（单位：百分点，5 = +5%）。",
+      "awaken": "觉醒标记：开启表示可作为觉醒素材。",
+      "base_effects": "基础效果（固定数值，引用效果注册表）；标准珠只有这一套。",
+      "bind": "开启后装备或使用即绑定。",
+      "con": "属性加成（白值加算，单位：点）。",
+      "crit": "会心加成（百分点，可填负数；战斗直读）。",
+      "def": "防御加成（旧键，单位：点）；现行键请用 dfn。",
+      "desc": "说明文字。",
+      "dfn": "防御加成（白值，单位：点）。",
+      "dfn_pct": "百分比加成（单位：百分点，5 = +5%）。",
+      "earplug": "耳栓等级（上限 2；用于反制咆哮）。",
+      "effects": "附加效果列表（引用效果注册表）。",
+      "elem_crit_lv": "属性会心等级（上限 3）。",
+      "elements": {
+        "_help": "元素属性值：八元素（地/水/火/风/雷/晶/月/无）的投料累计值。",
+        "地": "地元素累计值。",
+        "无": "无元素累计值。",
+        "晶": "晶元素累计值。",
+        "月": "月元素累计值。",
+        "水": "水元素累计值。",
+        "火": "火元素累计值。",
+        "雷": "雷元素累计值。",
+        "风": "风元素累计值。"
+      },
+      "foc": "专注加成（白值，单位：点）。",
+      "hp": "生命加成（白值，单位：点）。",
+      "hp_pct": "百分比加成（单位：百分点，5 = +5%）。",
+      "id": "物品唯一标识；商店、掉落、配方都用它引用。",
+      "lck": "属性加成（白值加算，单位：点）。",
+      "mag": "属性加成（白值加算，单位：点）。",
+      "material_tier": "素材档位（锻造与炼金使用）。",
+      "mp": "属性加成（白值加算，单位：点）。",
+      "mp_pct": "百分比加成（单位：百分点，5 = +5%）。",
+      "name": "物品显示名。",
+      "price": "基础售价（以默认货币计的数量）。",
+      "quality": "品质档：common 普通 / uncommon 精良 / rare 史诗 / legendary 传说。",
+      "rarity": "素材稀有度：普通 / 稀有 / 金色。",
+      "seed": "种植标记：开启或写收获表表示可种植。",
+      "slot": "装备部位（如 weapon / armor）；普通物品留空。",
+      "source": "来源说明（掉落 / 商店 / 合成等）。",
+      "spd": "属性加成（白值加算，单位：点）。",
+      "spr": "属性加成（白值加算，单位：点）。",
+      "str": "属性加成（白值加算，单位：点）。",
+      "super_crit_lv": "超会心等级（上限 3）。",
+      "traits": "特性列表（引用特性注册表）。",
+      "type": "物品类别（武器 / 防具 / 消耗品 / 素材…）；装备类物品会进入装备模块。",
+      "usable": "开启后可以在背包里直接使用。"
+    },
+    "jobs": {
+      "description": "职业介绍文案。",
+      "difficulty": "上手难度建议：simple 简单 / advanced 进阶 / complex 复杂（仅建议不拦截）。",
+      "growth": {
+        "_help": "九属性职业成长率（白值增量 = 白值×成长×职业成长率）。",
+        "agi": "敏捷成长率。",
+        "con": "体质成长率。",
+        "foc": "专注成长率。",
+        "hp": "生命成长率。",
+        "int": "智力成长率。",
+        "lck": "幸运成长率。",
+        "mp": "法力成长率。",
+        "spr": "精神成长率。",
+        "str": "力量成长率。"
+      },
+      "id": "职业唯一标识（禁空格）。",
+      "mechanic_tags": "机制标签（用于检索/展示）。",
+      "name": "职业显示名。",
+      "playstyle": "玩法一句话（≤20 字）。",
+      "recommended_newbie": "是否推荐新手（注册缺省职业取推荐标记）。",
+      "resource_axes": "资源轴引用列表（取自 stats.json 注册表）。",
+      "transform": {
+        "_help": "形态切换段（缺省 = 无形态切换职业）。",
+        "cooldown": "形态冷却回合数。",
+        "derive_chains": "形态专属派生链列表。",
+        "dispel_reverts": "被驱散时是否还原。",
+        "duration": "持续方式：turns 按回合 / battle 整场。",
+        "equip_restrict": "形态装备限制列表。",
+        "revert": "结束后是否还原。",
+        "skill_set": "形态技能组 ID。",
+        "state_policy": {
+          "_help": "切换时状态处理。",
+          "buff": "增益保留或清零。",
+          "combo": "连段保留或清零。",
+          "marks": "印记保留或清零。"
+        },
+        "transform_skill": "触发技能 ID。",
+        "transform_to": "目标形态 ID。",
+        "turns": "持续回合数（duration=turns 时）。"
+      },
+      "weapon_types": "可用武器类型列表。"
+    },
+    "maps": {
+      "battle": "本地图是否触发战斗（false = 不遇敌）。",
+      "camp": {
+        "_help": "营地配置（名称/是否安全/解锁方式）。",
+        "name": "营地名称。",
+        "safe": "是否安全区。",
+        "unlock": "解锁方式。"
+      },
+      "camp_name": "营地的显示名。",
+      "desc": "地图说明文案。",
+      "dungeon_entrances": {
+        "_help": "副本入口列表（副本引用/名称）。",
+        "dungeon": "副本引用。",
+        "name": "入口名称。"
+      },
+      "enemy_pool": "本地图可刷新的怪物引用列表。",
+      "exits": {
+        "_help": "四向通道出口（目标图/通行模式/解锁条件）。",
+        "down": "下向出口。",
+        "left": "左向出口。",
+        "right": "右向出口。",
+        "up": "上向出口。"
+      },
+      "gate_guard": "门卫判定（未满足条件不放行）。",
+      "gather_points": {
+        "_help": "采集点列表（物品/稀有度/概率）。",
+        "id": "采集点标识。",
+        "item": "产出物品引用。",
+        "rarity": "稀有度。",
+        "rate": "出现概率。"
+      },
+      "id": "地图唯一标识（出口/复活点/副本入口用它引用）。",
+      "lower": "区间下限（与 min 同义，按内容形态择一）。",
+      "max": "战斗等级/难度区间上限。",
+      "mechanics": {
+        "_help": "地图机制列表（如每步触发的伤害）。",
+        "desc": "机制说明。",
+        "id": "机制标识。",
+        "on_step": "每步触发。"
+      },
+      "min": "战斗等级/难度区间下限。",
+      "monsters": {
+        "_help": "刷怪行列表（怪物引用/同场数量/刷新间隔）。",
+        "count": "同时在场上限。",
+        "enemy": "刷新的怪物引用。",
+        "hidden_boss": "是否为隐藏首领。",
+        "intro": "出场台词。",
+        "name": "展示名。",
+        "respawn_minutes": "刷新间隔分钟数。",
+        "signal": "信号词。"
+      },
+      "name": "地图显示名。",
+      "npcs": "常驻 NPC 引用列表。",
+      "reset": "地图重置规则（刷新周期等）。",
+      "respawn_point": "死亡后复活指向的地图标识。",
+      "revert": "回退标记（需要原地回退的地图段）。",
+      "safe_zone": "是否安全区（安全区内不触发战斗、精力恢复更快）。",
+      "upper": "区间上限（与 max 同义，按内容形态择一）。"
+    },
+    "marks": {
+      "appliable_to": "可施加对象，取 self（自身）/ enemy（敌方）的子集。",
+      "desc": "说明文字。",
+      "description": "描述文字（旧键，兼容旧内容包）。",
+      "duration": "持续写「battle」= 整场战斗 /「turns:N」= 持续 N 回合。",
+      "element": "可选元素引用（八元素之一）；留空表示无元素。",
+      "icon": "印记图标。",
+      "id": "印记唯一标识；技能和效果用它引用这个印记。",
+      "max_stack": "最大层数；0 = 不限。",
+      "name": "印记显示名。",
+      "polarity": "极性：positive 正面 / negative 负面。",
+      "probability": "施加概率（0~1 的比例，按百分比表示）。",
+      "type": "固定为 mark（印记）。"
+    },
+    "npc": {
+      "dealer": "发牌员配置（轮转/随机/条件三策略）。",
+      "desc": "NPC 说明文案。",
+      "dialogues": {
+        "_help": "对话配置（问候语与选项）。",
+        "greeting": "进入对话时的问候语。",
+        "options": {
+          "_help": "对话选项。",
+          "action": "选项动作。",
+          "cost": "消耗。",
+          "heal": "治疗。",
+          "intel_refs": "查看情报。",
+          "next": "下一段对话。",
+          "quests": "可接取任务。",
+          "shop_refs": "打开商店。",
+          "text": "选项文本。",
+          "tutorials": "查看教学。"
+        }
+      },
+      "icon": "NPC 图标标识。",
+      "id": "NPC 唯一标识。",
+      "intel_refs": "情报引用列表。",
+      "interactions": {
+        "_help": "交互动作列表（对话/商店/治疗/修理/传送/情报/教学等）。",
+        "action": "动作类型。",
+        "condition": "触发条件。",
+        "cost": "消耗。",
+        "effects": "附加效果。",
+        "heal": "治疗。",
+        "items": "涉及物品。",
+        "map": "地图挂点。",
+        "quests": "关联任务。",
+        "repeat": "是否可重复。",
+        "text": "展示文本。",
+        "turns": "持续回合数。"
+      },
+      "map": "地图挂点（所在地图与坐标）。",
+      "name": "NPC 显示名。",
+      "quests": {
+        "_help": "关联任务列表。",
+        "quest_id": "任务 ID。"
+      },
+      "repair": "修理配置（可修理的装备范围与费用）。",
+      "shop_refs": "关联商店引用列表。",
+      "tutorials": "教学条目列表。",
+      "type": "NPC 类型：merchant 商人 / blacksmith 铁匠 / quest 任务 / inn 旅店 / alchemist 炼金 / fisher 渔夫 / quest_giver 任务发布 / tutor 导师。",
+      "visible": "是否在场景中可见。"
+    },
+    "quest": {
+      "board": "任务板配置（槽位/刷新频率/上限）。",
+      "bonus": "条件倍率奖励（满足加分项时奖励 ×N）。",
+      "conditions": {
+        "_help": "完成条件数组（统一条件引擎 {var,op,value,param}）。",
+        "op": "运算符。",
+        "param": "附加参数。",
+        "value": "目标值。",
+        "var": "判定变量。"
+      },
+      "consume": "交付是否消耗物品（true = 交付扣物 / false = 计数）。",
+      "daily": "每日任务规则。",
+      "desc": "任务说明文案。",
+      "filter": "交付过滤（品质/特性/数量要求）。",
+      "id": "任务唯一标识。",
+      "main": "是否为主线任务（沿 unlock_chain 推进章节序号）。",
+      "name": "任务显示名。",
+      "npc": {
+        "_help": "任务发布/交付关联的 NPC。",
+        "id": "NPC 标识。"
+      },
+      "repeatable": "是否可重复接取。",
+      "reward": {
+        "_help": "奖励条目数组（物品/货币/经验/声望；也支持内联键值串）。",
+        "coins": "金币。",
+        "count": "数量。",
+        "exp": "经验。",
+        "gem": "宝石。",
+        "item": "物品引用。",
+        "prof": "熟练度。",
+        "rep": "声望。"
+      },
+      "timed": "限时修饰（截止时间，现实时间懒计算）。",
+      "type": "展示标签（collect/deliver/slay/explore/intel 等）；判定由 conditions 驱动。",
+      "unlock_chain": "前置任务 ID（链式任务）。",
+      "zone": "所属区域（用于任务分类与展示）。"
+    },
+    "settings": {
+      "alchemy": {
+        "_help": "炼金段：模式、品质档位、精力、宝石分解/复制、战斗调合等全局参数。",
+        "catalyst_consume": "合成时是否消耗触媒。",
+        "catalyst_unlock_tier": "触媒解锁所需职业档位。",
+        "chain_map": "连锁映射：连锁数 → 1~6 的档位整数。",
+        "decompose_rate": "分解回收率（按品质/档位配置）。",
+        "energy_enabled": "是否启用炼金精力条。",
+        "energy_max": "精力上限（按职业档位配置）。",
+        "energy_regen_sec": "精力恢复间隔秒数。",
+        "energy_regen_sec_safe": "安全区内精力恢复间隔秒数。",
+        "farming": "种植规则。",
+        "gem.分解": "宝石分解回收的宝石数量。",
+        "gem.复制": "宝石复制消耗系数（可小数）。",
+        "gem.复制额外": "复制额外追加的消耗。",
+        "gem.成品合成": "成品合成消耗的宝石数。",
+        "gem.特性合成": "特性合成消耗的宝石数。",
+        "gem.珠升阶": "珠升阶消耗的宝石数。",
+        "gem.配方合成": "配方合成消耗的宝石数。",
+        "gem_diminish": {
+          "_help": "珠同名递减规则表。",
+          "mult": "该次数起的递减倍率（0~1）。",
+          "n": "同名次数阈值（≥2）。"
+        },
+        "job_tier_map": "职业档位映射表。",
+        "max_qty": "单次合成数量上限。",
+        "mode": "炼金模式：full 完整 / simple 简化 / off 关闭。",
+        "pp_cost": {
+          "_help": "调合点数消耗。",
+          "normal": "普通调合消耗点数。",
+          "super": "超级调合消耗点数。"
+        },
+        "pp_refresh": "点数刷新时机（如「会话重置」）。",
+        "quality_coef": "品质系数：各档位对应的产出倍率（>0）。",
+        "quality_tiers": "品质档位区间表：档位 → [下限, 上限]，须单调且共同覆盖 0~100。",
+        "sp_panel": "技能面板条目表。",
+        "sp_per_level": "每级获得的技能点。",
+        "synth_exp": "合成经验公式（如「配方等级×1」）。",
+        "战斗即时调合": {
+          "_help": "战斗即时调合规则。",
+          "auto_use": "是否自动使用。",
+          "per_battle_limit": "每场使用上限（≥1）。",
+          "proficiency_multiplier": {
+            "_help": "熟练度乘区。",
+            "curve": "乘区曲线形态。",
+            "max": "乘区上限。",
+            "min": "乘区下限。"
+          }
+        },
+        "战斗道具": {
+          "_help": "战斗道具强度规则。",
+          "强度公式": "战斗道具强度公式。",
+          "珠触发上限": "珠触发次数上限（≥1）。"
+        }
+      },
+      "assistant": {
+        "_help": "助手段配置。",
+        "enabled": "是否启用助手。",
+        "energy_items": "恢复精力的道具引用列表。",
+        "helpers": "助手列表（每条含采集/品质/特性加成）。",
+        "queue": "助手队列配置。",
+        "unlock_tier": "助手解锁所需职业档位。"
+      },
+      "battle": {
+        "_help": "战斗参数段。",
+        "backstab_bonus": "背击加成比例（0~1，0 = 关闭）。",
+        "crit_cond_low_hp": "「逆境」会心触发的血量比例阈值（0~1）。",
+        "enrage_damage_mult": "怒态敌方伤害倍率（>1 增伤）。",
+        "enrage_recovery_mult": "怒态敌方行动恢复倍率（<1 提速）。",
+        "fatigue_recovery_mult": "疲劳敌方行动恢复倍率（>1 拖慢）。",
+        "fatigue_stagger_chance": "疲劳敌方行动自摔概率（0~1，0 = 关闭）。",
+        "rage_cool_actions": "怒态持续的行动次数。",
+        "rage_per_damage": "每 1 点伤害积累的怒气值。",
+        "roar_combo_clear": "咆哮是否震散玩家在途连势。",
+        "roar_heavy_delay": "大咆哮的行动条后推量。",
+        "roar_light_delay": "轻咆哮的行动条后推量。",
+        "stamina_drain_blunt": "玩家打击命中一次削减的耐力。",
+        "stamina_max": "敌人耐力上限（一次 BOSS 战约 1~2 次疲劳）。",
+        "stamina_regen_per_action": "每次行动边界恢复的耐力。",
+        "stun_back_mult": "背位命中积累倍率（0 = 不积累）。",
+        "stun_base_threshold": "气绝基础阈值（敌 resistance.stun 为百分比加成）。",
+        "stun_decay_per_action": "每次行动收尾的气绝衰减比例（0 = 不衰减）。",
+        "stun_enabled": "是否启用气绝 KO 机制。",
+        "stun_escalation": "每次 KO 后阈值的倍率递增（防无限控场）。",
+        "stun_hint_at": "气绝软提示阈值（进度比例；0 = 关闭）。",
+        "stun_ko_skip": "KO 是否吞掉怪物下一次行动（起身演出）。",
+        "stun_ko_window": "KO 倒地窗口（持有者行动次数）。",
+        "stun_side_mult": "侧位命中积累倍率（0 = 仅正方位）。"
+      },
+      "command_aliases": "指令别名表。",
+      "contest": {
+        "_help": "竞技段配置（排期等）。",
+        "enabled": "是否启用竞技。",
+        "reward": "竞技奖励。",
+        "score_weights": "评分权重（各维度占比）。"
+      },
+      "ctb": {
+        "_help": "行动条（CTB）参数：时间尺度、默认行动时间与恢复值等。",
+        "default_recovery": "默认行动恢复值（基准速度）。",
+        "enabled": "是否启用行动条时间制。"
+      },
+      "currencies": {
+        "_help": "货币定义表：每种货币的标识、名称、图标与上限。",
+        "cap": "该货币的持有上限。",
+        "icon": "货币图标标识。",
+        "id": "货币标识（存档与引用用它，如 coins/diamond）。",
+        "name": "货币显示名。",
+        "note": "备注（仅展示）。"
+      },
+      "death_penalty": {
+        "_help": "死亡惩罚：虚弱时长与掉落货币/经验/物品的比例。",
+        "drop_currency": {
+          "_help": "死亡掉落的货币规则。",
+          "currency": "掉落的货币标识。",
+          "ratio": "掉落比例（0~1，1 = 全部掉落）。"
+        },
+        "drop_exp": {
+          "_help": "死亡掉落的经验规则。",
+          "enabled": "是否启用经验掉落。",
+          "percent": "掉落百分比。"
+        },
+        "drop_items": {
+          "_help": "死亡掉落的物品规则。",
+          "count": "掉落物品件数。",
+          "enabled": "是否启用物品掉落。"
+        },
+        "weak_duration_sec": "死亡后虚弱状态的持续秒数。"
+      },
+      "default_map": "新存档默认进入的地图标识。",
+      "env_event": "环境事件段。",
+      "events": "事件文案段。",
+      "exp_curve": "经验曲线：等级 → 升级所需经验。",
+      "fishing": {
+        "_help": "钓鱼段：鱼种、鱼王、钓点、鱼饵与尺寸/重量区间。",
+        "bait_bonus": {
+          "_help": "鱼饵加成。",
+          "gold": "金色鱼饵加成倍率。",
+          "rare": "稀有鱼饵加成倍率。"
+        },
+        "bait_ids": "可用鱼饵引用列表。",
+        "crown_thresholds": {
+          "_help": "冠级尺寸阈值。",
+          "gold": "金冠阈值。",
+          "reverse": "倒扣阈值。",
+          "silver": "银冠阈值。"
+        },
+        "daily_limit": "每日钓鱼次数上限。",
+        "energy": {
+          "_help": "钓鱼精力配置。",
+          "enabled": "是否消耗精力。"
+        },
+        "king_event": {
+          "_help": "鱼王事件窗口。",
+          "chance": "出现概率。",
+          "enabled": "是否启用鱼王事件。",
+          "window_daily": "每日出现窗口。"
+        },
+        "mode": "钓鱼模式（开启/简化/关闭三态）。",
+        "rod_full_bonus": {
+          "_help": "满竿加成。",
+          "gold": "金色满竿加成。",
+          "rare": "稀有满竿加成。"
+        },
+        "wait_sec": {
+          "_help": "等待时间区间（秒）。",
+          "max": "最长等待秒数。",
+          "min": "最短等待秒数。"
+        }
+      },
+      "forge": {
+        "_help": "锻造段：费用、合成比例、分解回收率、套装开关与套装部件数。",
+        "augments_enabled": "是否启用客制强化。",
+        "decompose_rate": "分解回收率。",
+        "exp_per_forge": "每次锻造获得的经验（整数或公式文本）。",
+        "forge_fee": "锻造费用（金币整数或按节点等级计算的公式文本）。",
+        "set_piece_counts": "各套装的部件数要求。",
+        "set_tier_exact": "套装档位是否要求精确匹配。",
+        "sets_enabled": "是否启用套装效果。",
+        "straight_forge": "是否允许直接锻造（不走上游节点）。",
+        "synth_ratio_3to1": "三合一合成比例。"
+      },
+      "level_cap": "等级上限。",
+      "log_card": "日志卡片文案段。",
+      "quest_board": {
+        "_help": "任务板段。",
+        "active_limit": "同时可接取的任务上限。",
+        "daily_limit": "每日可接取任务上限。",
+        "enabled": "是否启用任务板。",
+        "grade_bonus": "各评级对应的奖励倍率。",
+        "penalty": "超时未交付的声望惩罚比例。",
+        "refresh_days": "任务板刷新间隔天数。",
+        "rep_levels": "声望等级门槛表（等级名 → 所需声望）。",
+        "tiers": "任务板档位/委托条目表。"
+      },
+      "slot_defs": "装备部位定义表：键为部位标识，值为名称、最大件数与占用关系。",
+      "world_name": "世界/服务器显示名。"
+    },
+    "shop": {
+      "currency": "默认结算货币标识。",
+      "desc": "商店说明文案。",
+      "icon": "商店图标标识。",
+      "id": "商店唯一标识。",
+      "items": {
+        "_help": "商品列表（物品/价格/库存/限购/时段）。",
+        "sold_out_once": "售罄后是否永久下架。"
+      },
+      "level_required": "进入/购买所需的等级门槛。",
+      "listing_count": "黑市每次上架的商品数。",
+      "name": "商店显示名。",
+      "open_condition": "开放条件（未满足时不出现在场景）。",
+      "pool": "黑市池（黑市候选商品）。",
+      "price_fluctuation": "价格波动配置。",
+      "refresh": {
+        "_help": "刷新规则（模式/时间/间隔）。",
+        "end": "结束时间。",
+        "hour": "刷新小时。",
+        "interval": "间隔天数。",
+        "mode": "刷新模式：daily 每日 / weekly 每周 / manual 手动 / fixed 固定。",
+        "start": "开始时间。"
+      },
+      "reputation_required": "购买所需的声望门槛。",
+      "type": "商店类型：normal 普通 / general 通用 / black 黑市 / reputation 声望 / event 活动 / quest 任务。",
+      "visible": "是否可见。"
+    },
+    "skill_chains": {
+      "actions": "链节点引用的行动（action 注册表）。",
+      "effects": "链上的效果列表（引用效果注册表）。",
+      "id": "派生链唯一标识；技能的 chain_refs 用它引用。",
+      "max_combo": "最大连段数。",
+      "max_combo_behavior": "达到满连段后的行为（继续 / 中断等）。",
+      "name": "派生链显示名。",
+      "next": "链上的后继节点标识列表；互相成环会被校验拦下。",
+      "steps": {
+        "_help": "派生步骤：from 源技能 → to 目标技能；可带触发条件、优先级、消耗与数值覆盖。",
+        "armor": "派生期间是否霸体。",
+        "condition": {
+          "_help": "触发条件。",
+          "count": "触发所需的计数。"
+        },
+        "consume": "派生消耗。",
+        "from": "源技能标识。",
+        "mode": "派生模式。",
+        "priority": "多个步骤的判定优先级。",
+        "tag": "步骤标签。",
+        "to": "目标技能标识。",
+        "variant_override": {
+          "_help": "数值覆盖。",
+          "power": "覆盖后的威力。"
+        }
+      },
+      "trigger_skill": "触发这条派生链的技能标识。",
+      "type": "派生链类别。"
+    },
+    "skills": {
+      "action_time": "发动后占据的行动条时长（反应窗口）；缺省取 ctb 默认值。",
+      "air_extend": "跃空窗口延长的行动条数量；缺省取 ctb 配置。",
+      "air_policy": "对空中目标的处理策略（能否命中、是否击落等）。",
+      "armor": "开启后发动期间霸体，不被打断。",
+      "attack_type": "攻击类型（斩 / 打 / 突 / 魔 / 无）；留空表示按武器决定。",
+      "block_mode": "格挡模式：auto 按默认规则 / normal 正常被格挡 / ignore 无视格挡。",
+      "break_power": "破坏力固有值，参与部位破坏计算（建议 0~500）。",
+      "brief": "简述：可自由写标签文字，也可留空（留空 = 列表里不显示简述行）。",
+      "chain_refs": "本技能可转入的派生链引用（skill_chains 的标识）。",
+      "combo_table": "组合表达表：按条件切换不同效果行的配置。",
+      "consume_marks": "施放时消耗的印记与层数，形如 {印记标识: 层数}；留空表示不消耗。",
+      "cooldown": "施放后的冷却回合数；0 表示无冷却。",
+      "counter_skill": "姿态成功时派生反击的技能标识。",
+      "counter_type": "防反 / 闪反姿态标记：parry 防反 / dodge 闪反。",
+      "crit_mod": "会心判定乘数修正（1 = 不变；大于 1 更容易会心）。",
+      "derive_only": "开启后该技能只能由派生链进入，不直接出现在可用技能列表里。",
+      "desc": "一句话说明，显示在技能卡、战报与悬浮说明里。",
+      "detail": "详情长文本，编辑器里用大输入框填写。",
+      "effects": {
+        "_help": "技能附加效果：可引用已有效果（effect），也可写原子动作（type/…）；可留空。",
+        "count": "施加层数或数量。",
+        "effect": "引用的效果标识（effects 注册表）。",
+        "mark": "关联的印记标识。",
+        "marks_on": "需要目标身上已有的印记。",
+        "overrides": "对引用效果的数值覆盖。",
+        "pct": "数值是否按百分比解释。",
+        "polarity": "效果极性（正面 / 负面）。",
+        "status_id": "关联的状态标识。",
+        "target": "效果作用对象（self 自身 / enemy 敌方）。",
+        "type": "原子动作类型（damage / mark_add / status_add…）。"
+      },
+      "element": "技能元素（八元素之一）；留空或 null 表示按武器元素。",
+      "energy_cost": "资源轴（能量）的消耗配置；键为资源轴名、值为消耗量。",
+      "energy_gain": "资源轴（能量）的增减配置；键为资源轴名、值为增减量。",
+      "hit_mod": "命中率乘数修正（1 = 不变；大于 1 更容易命中）。",
+      "hits": "一段行动内独立结算的段数；1 表示只打一下。",
+      "id": "技能的唯一标识；派生链、反击技、怪物技能表都用它引用这个技能。",
+      "interrupt": "开启后该技能命中可打断对方行动。",
+      "job_form": "形态技绑定的形态名（对应职业 transform 的目标形态）；留空 = 非形态技。",
+      "job_restrict": "允许使用本技能的职业列表；留空表示所有职业可用。",
+      "kind": "技能类别：damage 伤害 / heal 治疗 / status 状态 / control 控制 / utility 功能。",
+      "level": {
+        "_help": "升级配置：max 最高等级 / growth 每级倍率列表；留空表示该技能不升级。",
+        "growth": "每级倍率列表，长度应与最高等级一致。",
+        "max": "技能最高等级（1~99）。"
+      },
+      "mp_cost": "每次施放消耗的法力点数；普攻通常为 0。",
+      "name": "技能显示名，出现在技能卡、战报与列表中。",
+      "position_rule": "方位命中规则：从哪个方位打才命中、有没有方位加成；由方位系统判定。",
+      "power": "技能倍率，按百分比算（100 = 一倍威力；常见 10~500）。",
+      "recovery": "行动结束后的行动条恢复量；缺省取 ctb.default_recovery。",
+      "revert_form": "还原技标记：处于形态时用它切回原形态。",
+      "season": "季节技能组：只在指定季节可用。",
+      "skill": "旧格式的技能引用（兼容旧内容包）；新内容请用 chain_refs。",
+      "stun": "命中积累的气绝值；气绝满会使目标硬直。",
+      "tag": "连段标签：none 连段外 / combo 可接 / combo_preserve 保持连段 / combo_push 推进连段 / interrupt 打断 / armor 霸体。",
+      "trigger_limit": {
+        "_help": "触发上限：per_round 每回合最多几次 / per_battle 每场最多几次；0 = 不限。",
+        "per_battle": "每场战斗最多触发次数；0 = 不限。",
+        "per_round": "每回合最多触发次数；0 = 不限。"
+      },
+      "type": "技能时机：basic 普攻 / active 主动 / passive 被动 / trigger 触发。"
+    },
+    "statuses": {
+      "damage_mult": "受击增伤倍率（例如破位/倒地时提高受到的伤害）。",
+      "decay": "衰减方式（如 per_turn 每回合递减）。",
+      "desc": "说明文字。",
+      "description": "描述文字（旧键，兼容旧内容包）。",
+      "duration": {
+        "_help": "持续配置：turns 持续回合数 / charges 可消耗次数；-1 = 该维永不自然结束（引擎哨兵）。",
+        "charges": "可消耗次数（-1 = 该维永不自然结束）。",
+        "turns": "持续回合数（-1 = 该维永不自然结束）。"
+      },
+      "effects": "状态附带的效果列表。",
+      "id": "状态唯一标识；技能和效果用它引用这个状态。",
+      "max_stack": "最大叠加层数；0 = 不限。",
+      "name": "状态显示名。",
+      "on_dodge_effects": "闪避成功时触发的效果列表。",
+      "on_enter": "进入状态时触发的效果引用。",
+      "on_expire": "状态失效时触发的效果引用。",
+      "on_tick": "每回合结算时触发的效果引用。",
+      "type": "状态类别。"
+    }
+  },
+  "field_labels": {
+    "action": {
+      "apply_status": "施加状态",
+      "armor": "霸体",
+      "attack_type": "攻击类型",
+      "chain": "连锁行动",
+      "cool": "冷却（旧键）",
+      "cooldown": "冷却",
+      "cost": "消耗",
+      "effects": "效果列表",
+      "element": "元素",
+      "hungry": "饥饿值",
+      "id": "标识",
+      "intent": "意图",
+      "interrupt": "打断",
+      "kind": "类别",
+      "name": "名称",
+      "position_rule": "方位命中规则",
+      "power": "威力",
+      "preview": "意图预告",
+      "preview_chain": "链预告",
+      "probability": "概率",
+      "recovery": "行动恢复",
+      "require_status": "需求状态",
+      "reveal_condition": "揭示条件",
+      "roar": "咆哮等级",
+      "skill": "技能引用",
+      "tags": "标签",
+      "type": "类型",
+      "weight": "权重"
+    },
+    "checkin": {
+      "rewards": {
+        "daily": {
+          "items": {
+            "count": "数量",
+            "id": "物品 ID"
+          }
+        },
+        "monthly_total": {
+          "items": {
+            "count": "数量",
+            "id": "物品 ID"
+          }
+        },
+        "streak": {
+          "items": {
+            "count": "数量",
+            "id": "物品 ID"
+          }
+        }
+      }
+    },
+    "effects": {
+      "actions": {
+        "count": "层数",
+        "mark": "印记",
+        "target": "目标",
+        "type": "类型"
+      },
+      "apply_mark": "施加印记",
+      "apply_status": "施加状态",
+      "duration": "持续",
+      "id": "标识",
+      "max_stack": "最大层数",
+      "name": "名称",
+      "patch": {
+        "_label": "数值补丁",
+        "pct": "百分比",
+        "target": "目标",
+        "value": "数值"
+      },
+      "power": "威力",
+      "probability": "概率",
+      "require_mark": "需求印记",
+      "require_status": "需求状态",
+      "type": "类型"
+    },
+    "enemies": {
+      "actions": "行动表",
+      "ai": {
+        "transitions": {
+          "_label": "状态转移",
+          "condition": "切换条件",
+          "from": "源状态",
+          "to": "目标状态"
+        }
+      },
+      "area": "区域",
+      "atk": "攻击",
+      "chains": "连招",
+      "def": "防御",
+      "def_base": "基础防御",
+      "desc": "说明",
+      "drop_rate": "掉落率",
+      "drops": {
+        "_label": "掉落",
+        "battle": {
+          "_label": "战斗掉落",
+          "chance": "掉落概率",
+          "condition": "掉落条件",
+          "count": "数量",
+          "item": "掉落物品"
+        },
+        "death": {
+          "_label": "死亡掉落",
+          "chance": "掉落概率",
+          "condition": "掉落条件",
+          "count": "数量",
+          "item": "掉落物品"
+        },
+        "special": {
+          "_label": "特殊掉落",
+          "chance": "掉落概率",
+          "condition": "掉落条件",
+          "count": "数量",
+          "item": "掉落物品"
+        }
+      },
+      "effects": "效果",
+      "elem_res": "元素抗性",
+      "hp": "生命",
+      "id": "标识",
+      "lore": {
+        "_label": "图鉴",
+        "desc": "说明",
+        "unlock": "解锁进度"
+      },
+      "monster_def_rate": "怪物防御率",
+      "name": "名称",
+      "phases": {
+        "actions": {
+          "_label": "行动表",
+          "action": "行动",
+          "probability": "概率",
+          "weight": "权重"
+        },
+        "broadcast": "播报",
+        "enter_action": "进入行动",
+        "threshold": "触发阈值"
+      },
+      "pv": "防护值",
+      "pv_recover": "防护值恢复",
+      "resistance": {
+        "_label": "抗性",
+        "immune": "免疫效果",
+        "stun": "气绝抗性"
+      },
+      "rewards": {
+        "exp": "经验"
+      },
+      "skills": "技能",
+      "special_actions": {
+        "_label": "特殊行动",
+        "trigger": {
+          "absent": "印记不存在",
+          "mark": "印记",
+          "min": "最小层数"
+        }
+      },
+      "stats": {
+        "_label": "属性",
+        "agi": "敏捷",
+        "con": "体质",
+        "foc": "专注",
+        "hp": "生命",
+        "int": "智力",
+        "luk": "幸运",
+        "mp": "法力",
+        "spr": "精神",
+        "str": "力量"
+      },
+      "tier": "怪物档位",
+      "traits": "特性",
+      "type": "类型",
+      "weakness": {
+        "_label": "弱点",
+        "elements": "弱点元素",
+        "types": "弱点类型"
+      },
+      "zone_change": {
+        "enabled": "启用",
+        "hp_threshold": "残血阈值",
+        "targets": "目标怪物",
+        "timing": "切换时机"
+      }
+    },
+    "equipment": {
+      "atk": "攻击",
+      "bind": "绑定",
+      "effects": "效果",
+      "excludes": "互斥部位",
+      "id": "标识",
+      "name": "名称",
+      "price": "价格",
+      "slot": "部位",
+      "type": "类型",
+      "usable": "可使用"
+    },
+    "fishing": {
+      "king": {
+        "chance": "概率",
+        "enabled": "启用",
+        "enemy_id": "怪物引用",
+        "hint": "提示",
+        "id": "标识",
+        "species_id": "鱼种引用",
+        "window_daily": "每日窗口"
+      },
+      "species": {
+        "codex_text": {
+          "best_mask": "最佳尺寸掩码",
+          "desc": "说明",
+          "unit": "单位"
+        },
+        "hours": "出没钟点",
+        "id": "标识",
+        "king": "鱼王",
+        "name": "名称",
+        "periods": "时段",
+        "preferred_bait": "偏好鱼饵",
+        "rarity": "稀有度",
+        "seasons": "季节",
+        "size_max": "最大尺寸",
+        "size_min": "最小尺寸",
+        "spots": "钓点",
+        "weight_max": "最大重量",
+        "weight_min": "最小重量"
+      }
+    },
+    "forge": {
+      "augments": {
+        "augments": {
+          "cost": {
+            "count": "数量",
+            "item": "物品"
+          },
+          "disabled": "禁用",
+          "effect": "效果",
+          "id": "标识",
+          "kind": "类别",
+          "max_repeat": "最大次数",
+          "name": "名称",
+          "repeatable": "可重复",
+          "slot_level": "槽位等级",
+          "stat_key": "属性键",
+          "trace": "追溯",
+          "value": "数值"
+        },
+        "limit_by_rarity": {
+          "final_only": "仅终段",
+          "quality": "品质",
+          "times": "次数"
+        }
+      },
+      "sets": {
+        "codex_group": "图鉴分组",
+        "desc": "说明",
+        "enabled": "启用",
+        "id": "标识",
+        "name": "名称",
+        "pieces": "部件",
+        "skills": {
+          "effect_ref": "效果引用",
+          "level": "等级",
+          "piece_count": "部件数",
+          "skill": "技能"
+        },
+        "variant": "变体"
+      },
+      "trees": {
+        "id": "标识",
+        "name": "名称",
+        "nodes": {
+          "augmentable": "可强化",
+          "branch": "分支",
+          "final": "终点",
+          "final_tier": "终段",
+          "id": "标识",
+          "item": "物品",
+          "king_only": "王级专属",
+          "level": "等级",
+          "materials": {
+            "count": "数量",
+            "item": "物品",
+            "source_override": "来源覆盖",
+            "tier": "档位"
+          },
+          "monster_source": "怪物来源",
+          "name": "名称",
+          "output_item": "产出物品",
+          "parent": "前置节点",
+          "rarity": "稀有度",
+          "slots": {
+            "level": "等级"
+          },
+          "stats": "属性",
+          "type": "类型"
+        },
+        "roots": "根节点",
+        "type": "类型"
+      }
+    },
+    "items": {
+      "atk": "攻击",
+      "awaken": "觉醒",
+      "base_effects": "基础效果",
+      "bind": "绑定",
+      "def": "防御",
+      "effects": "效果",
+      "elements": "元素",
+      "id": "标识",
+      "material_tier": "素材档位",
+      "name": "名称",
+      "price": "价格",
+      "quality": "品质",
+      "rarity": "稀有度",
+      "seed": "种子",
+      "slot": "部位",
+      "source": "来源",
+      "traits": "特性",
+      "type": "类型",
+      "usable": "可使用"
+    },
+    "jobs": {
+      "description": "职业介绍",
+      "difficulty": "难度",
+      "growth": {
+        "_label": "成长率",
+        "agi": "敏捷",
+        "con": "体质",
+        "foc": "专注",
+        "hp": "生命",
+        "int": "智力",
+        "lck": "幸运",
+        "mp": "法力",
+        "spr": "精神",
+        "str": "力量"
+      },
+      "id": "标识",
+      "mechanic_tags": "机制标签",
+      "name": "名称",
+      "playstyle": "玩法",
+      "recommended_newbie": "推荐新手",
+      "resource_axes": "资源轴",
+      "transform": {
+        "_label": "形态切换",
+        "cooldown": "形态冷却",
+        "derive_chains": "形态派生链",
+        "dispel_reverts": "被驱散还原",
+        "duration": "持续类型",
+        "equip_restrict": "形态装备限制",
+        "revert": "结束后还原",
+        "skill_set": "形态技能组",
+        "state_policy": {
+          "_label": "状态策略",
+          "buff": "增益",
+          "combo": "连段",
+          "marks": "印记"
+        },
+        "transform_skill": "触发技能",
+        "transform_to": "目标形态",
+        "turns": "持续回合"
+      },
+      "weapon_types": "可用武器类型"
+    },
+    "maps": {
+      "battle": "战斗地图",
+      "camp": {
+        "name": "名称",
+        "safe": "安全区",
+        "unlock": "解锁方式"
+      },
+      "dungeon_entrances": {
+        "dungeon": "副本引用",
+        "name": "名称"
+      },
+      "enemy_pool": "敌人池",
+      "exits": {
+        "down": {
+          "condition": "解锁条件",
+          "mode": "通行模式",
+          "to": "目标地图"
+        },
+        "left": {
+          "condition": "解锁条件",
+          "mode": "通行模式",
+          "to": "目标地图"
+        },
+        "right": {
+          "condition": "解锁条件",
+          "mode": "通行模式",
+          "to": "目标地图"
+        },
+        "up": {
+          "condition": "解锁条件",
+          "mode": "通行模式",
+          "to": "目标地图"
+        }
+      },
+      "gather_points": {
+        "id": "标识",
+        "item": "物品引用",
+        "rarity": "稀有度",
+        "rate": "概率"
+      },
+      "id": "标识",
+      "lower": "下限",
+      "max": "最大值",
+      "mechanics": {
+        "desc": "说明",
+        "id": "标识",
+        "on_step": {
+          "damage": "伤害",
+          "type": "类型"
+        }
+      },
+      "min": "最小值",
+      "monsters": {
+        "count": "同时在场上限",
+        "enemy": "怪物引用",
+        "hidden_boss": "隐藏首领",
+        "intro": "出场台词",
+        "name": "展示名",
+        "respawn_minutes": "刷新间隔(分钟)",
+        "signal": "信号词"
+      },
+      "name": "名称",
+      "reset": "重置",
+      "respawn_point": "复活点",
+      "revert": "回退标记",
+      "safe_zone": "安全区",
+      "upper": "上限"
+    },
+    "marks": {
+      "appliable_to": "可施加对象",
+      "desc": "说明",
+      "duration": "持续",
+      "element": "元素",
+      "icon": "图标",
+      "id": "标识",
+      "max_stack": "最大层数",
+      "name": "名称",
+      "polarity": "极性",
+      "probability": "概率",
+      "type": "类型"
+    },
+    "npc": {
+      "dialogues": {
+        "options": {
+          "cost": "消耗",
+          "heal": "治疗",
+          "intel_refs": "情报引用",
+          "quests": "任务",
+          "shop_refs": "商店引用",
+          "tutorials": "教学"
+        }
+      },
+      "interactions": {
+        "action": "交互动作",
+        "condition": {
+          "op": "运算符",
+          "param": "参数",
+          "value": "数值",
+          "var": "变量"
+        },
+        "cost": {
+          "coins": "金币"
+        },
+        "effects": "效果",
+        "heal": {
+          "hp": "生命",
+          "mp": "法力"
+        },
+        "items": "物品",
+        "map": "地图挂点",
+        "quests": {
+          "quest_id": "任务 ID"
+        },
+        "repeat": "可重复",
+        "text": "文本",
+        "turns": "持续回合"
+      },
+      "quests": {
+        "quest_id": "任务 ID"
+      }
+    },
+    "proficiency": {
+      "energy": {
+        "_label": "精力",
+        "enabled": "启用",
+        "max_by_tier": "各档上限",
+        "regen_sec": "恢复秒数"
+      },
+      "exp_sources": "经验来源",
+      "id": "标识",
+      "job_rank_levels": "职业等级门槛",
+      "job_tier_map": "职业档位映射",
+      "sp_panel": {
+        "_label": "技能面板",
+        "cost": "消耗",
+        "desc": "说明",
+        "id": "标识",
+        "max_repeat": "最大次数",
+        "name": "名称",
+        "repeatable": "可重复"
+      },
+      "sp_per_level": "每级技能点",
+      "tier_names": "档位名称",
+      "titles": {
+        "_label": "称号",
+        "desc": "说明",
+        "icon": "图标",
+        "id": "标识",
+        "name": "名称",
+        "source": "来源"
+      }
+    },
+    "quest": {
+      "conditions": {
+        "op": "运算符",
+        "param": "参数",
+        "value": "目标值",
+        "var": "变量"
+      },
+      "npc": {
+        "id": "标识"
+      },
+      "reward": {
+        "coins": "金币",
+        "count": "数量",
+        "exp": "经验",
+        "gem": "宝石",
+        "item": "物品引用",
+        "prof": "熟练度",
+        "rep": "声望"
+      }
+    },
+    "recipe": {
+      "catalyst": "触媒",
+      "combine_from": "合成来源",
+      "cost": {
+        "_label": "消耗",
+        "coins": "金币",
+        "gem": "宝石"
+      },
+      "effects": "效果列表",
+      "element_req": "元素需求",
+      "evolve_to": {
+        "_label": "进化线",
+        "condition": {
+          "_label": "进化条件",
+          "count": "数量",
+          "source": "来源"
+        },
+        "id": "目标物品"
+      },
+      "id": "标识",
+      "inputs": {
+        "_label": "投入材料",
+        "count": "数量",
+        "item": "物品引用"
+      },
+      "kind": "配方类别",
+      "level": "准入等级",
+      "master_only": "大师独占",
+      "materials": {
+        "_label": "材料",
+        "count": "数量",
+        "id": "物品 ID",
+        "item": "物品引用"
+      },
+      "name": "名称",
+      "output": {
+        "_label": "产出",
+        "count": "数量",
+        "item": "物品引用"
+      },
+      "pp_budget": "熟练点预算",
+      "slots": "槽位数",
+      "synth_allowed": "允许合成",
+      "traits_inherit": "可继承特性数"
+    },
+    "settings": {
+      "alchemy": {
+        "_label": "炼金",
+        "catalyst_consume": "消耗触媒",
+        "catalyst_unlock_tier": "触媒解锁档位",
+        "chain_map": "连锁映射",
+        "copy_extra_cost": "复制额外消耗(别名)",
+        "decompose_rate": "分解回收率",
+        "energy_enabled": "启用精力",
+        "energy_max": "精力上限",
+        "energy_regen_sec": "精力恢复秒数",
+        "energy_regen_sec_safe": "安全区精力恢复秒数",
+        "farming": {
+          "_label": "种植",
+          "enabled": "启用种植",
+          "greenhouse": {
+            "_label": "温室",
+            "copy_cost": {
+              "_label": "复制消耗",
+              "coins": "金币",
+              "gem": "宝石"
+            },
+            "copy_slot": "复制槽位",
+            "unlock_tier": "解锁档位"
+          },
+          "harvest_sec": "收获秒数",
+          "plots_max": "最大田块数",
+          "trait_inherit": "特性继承"
+        },
+        "gem.decompose_formula": "宝石分解公式",
+        "gem.分解": "宝石分解",
+        "gem.复制": "宝石复制",
+        "gem.复制额外": "复制额外消耗",
+        "gem.成品合成": "成品合成",
+        "gem.特性合成": "特性合成",
+        "gem.珠升阶": "珠升阶",
+        "gem.配方合成": "配方合成",
+        "gem_diminish": {
+          "_label": "珠同名递减",
+          "mult": "递减倍率",
+          "n": "同名次数"
+        },
+        "job_tier_map": "职业档位映射",
+        "max_qty": "数量上限",
+        "mode": "模式",
+        "pp_cost": {
+          "_label": "点数消耗",
+          "normal": "普通消耗",
+          "super": "超级消耗"
+        },
+        "pp_refresh": "点数刷新时机",
+        "quality_coef": "品质系数",
+        "quality_tiers": "品质档位数",
+        "sp_panel": {
+          "_label": "技能面板",
+          "cost": "消耗",
+          "desc": "说明",
+          "id": "标识",
+          "max_repeat": "最大次数",
+          "name": "名称",
+          "repeatable": "可重复"
+        },
+        "sp_per_level": "每级技能点",
+        "synth_exp": "合成经验",
+        "战斗即时调合": {
+          "_label": "战斗即时调合",
+          "auto_use": "自动使用",
+          "per_battle_limit": "每场上限",
+          "proficiency_multiplier": "熟练度乘区"
+        },
+        "战斗道具": {
+          "_label": "战斗道具",
+          "强度公式": "强度公式",
+          "珠触发上限": "珠触发上限"
+        }
+      },
+      "assistant": {
+        "enabled": "启用",
+        "energy_items": "精力道具",
+        "helpers": {
+          "_label": "助手列表",
+          "desc": "说明",
+          "gather_rate": "采集速率",
+          "id": "标识",
+          "name": "名称",
+          "quality_bonus": "品质加成",
+          "tier": "档位",
+          "trait_bonus": "特性加成"
+        },
+        "queue": {
+          "_label": "队列",
+          "max_slots": "最大槽位",
+          "tick_sec": "结算秒数"
+        },
+        "unlock_tier": "解锁档位"
+      },
+      "battle": {
+        "backstab_bonus": "背击加成",
+        "crit_cond_low_hp": "逆境会心阈值",
+        "enrage_damage_mult": "狂暴伤害倍率",
+        "enrage_recovery_mult": "狂暴恢复倍率",
+        "fatigue_recovery_mult": "疲劳恢复倍率",
+        "fatigue_stagger_chance": "疲劳踉跄概率",
+        "rage_cool_actions": "怒气冷却行动数",
+        "rage_per_damage": "每次受伤怒气",
+        "roar_combo_clear": "咆哮清连段",
+        "roar_heavy_delay": "重咆哮延迟",
+        "roar_light_delay": "轻咆哮延迟",
+        "stamina_drain_blunt": "打击精力消耗",
+        "stamina_max": "精力上限",
+        "stamina_regen_per_action": "每行动精力恢复",
+        "stun_back_mult": "气绝反制倍率",
+        "stun_base_threshold": "气绝基础阈值",
+        "stun_decay_per_action": "每行动气绝衰减",
+        "stun_enabled": "启用气绝",
+        "stun_escalation": "气绝递增",
+        "stun_hint_at": "气绝提示阈值",
+        "stun_ko_skip": "气绝跳过回合",
+        "stun_ko_window": "气绝窗口",
+        "stun_side_mult": "方位气绝倍率"
+      },
+      "contest": {
+        "enabled": "启用",
+        "reward": {
+          "_label": "奖励",
+          "gem": "宝石",
+          "reputation": {
+            "_label": "声望",
+            "submit": "提交",
+            "win": "获胜"
+          },
+          "title": "称号"
+        },
+        "score_weights": {
+          "_label": "评分权重",
+          "awaken": "觉醒",
+          "potential": "潜力",
+          "quality": "品质",
+          "trait": "特性"
+        }
+      },
+      "ctb": {
+        "default_recovery": "默认行动恢复",
+        "enabled": "启用"
+      },
+      "currencies": {
+        "cap": "上限",
+        "icon": "图标",
+        "id": "标识",
+        "name": "名称",
+        "note": "备注"
+      },
+      "death_penalty": {
+        "drop_currency": {
+          "_label": "掉落货币",
+          "currency": "货币",
+          "ratio": "比例"
+        },
+        "drop_exp": {
+          "_label": "掉落经验",
+          "enabled": "启用",
+          "percent": "百分比"
+        },
+        "drop_items": {
+          "_label": "掉落物品",
+          "count": "数量",
+          "enabled": "启用"
+        },
+        "weak_duration_sec": "虚弱时长(秒)"
+      },
+      "fishing": {
+        "_label": "钓鱼",
+        "bait_bonus": {
+          "_label": "鱼饵加成",
+          "gold": "金色鱼饵加成",
+          "rare": "稀有鱼饵加成"
+        },
+        "bait_ids": "鱼饵引用",
+        "crown_thresholds": {
+          "_label": "冠级阈值",
+          "gold": "金冠阈值",
+          "reverse": "倒扣阈值",
+          "silver": "银冠阈值"
+        },
+        "daily_limit": "每日上限",
+        "energy": {
+          "_label": "精力",
+          "enabled": "启用精力"
+        },
+        "king_event": {
+          "_label": "鱼王事件",
+          "chance": "概率",
+          "enabled": "启用鱼王事件",
+          "window_daily": "每日窗口"
+        },
+        "mode": "模式",
+        "rod_full_bonus": {
+          "_label": "满竿加成",
+          "gold": "金色满竿加成",
+          "rare": "稀有满竿加成"
+        },
+        "wait_sec": {
+          "_label": "等待秒数",
+          "max": "最大等待秒数",
+          "min": "最小等待秒数"
+        }
+      },
+      "forge": {
+        "_label": "锻造",
+        "augments_enabled": "启用客制强化",
+        "decompose_rate": "分解回收率",
+        "exp_per_forge": "每次锻造经验",
+        "forge_fee": "锻造费",
+        "set_piece_counts": "套装部件数",
+        "set_tier_exact": "套装档位精确匹配",
+        "sets_enabled": "启用套装",
+        "straight_forge": "直接锻造",
+        "synth_ratio_3to1": "三合一合成比例"
+      },
+      "quest_board": {
+        "active_limit": "同时接取上限",
+        "daily_limit": "每日上限",
+        "enabled": "启用",
+        "grade_bonus": {
+          "A": "A 级",
+          "B": "B 级",
+          "S": "S 级",
+          "_label": "评级加成"
+        },
+        "penalty": "惩罚",
+        "refresh_days": "刷新天数",
+        "rep_levels": "声望等级",
+        "tiers": {
+          "_label": "任务板档位",
+          "desc": "说明",
+          "id": "标识",
+          "job_level": "职业等级",
+          "name": "名称",
+          "rep_base": "基础声望",
+          "rep_min": "最低声望",
+          "require": {
+            "_label": "需求",
+            "count": "数量",
+            "item": "物品",
+            "quality": "品质"
+          },
+          "reward": "奖励",
+          "star": "星级"
+        }
+      }
+    },
+    "shop": {
+      "items": {
+        "sold_out_once": "售罄后下架"
+      }
+    },
+    "skill_chains": {
+      "actions": "行动引用",
+      "effects": "效果列表",
+      "id": "标识",
+      "name": "名称",
+      "next": "下一节点",
+      "steps": {
+        "condition": {
+          "count": "计数"
+        },
+        "variant_override": {
+          "power": "威力"
+        }
+      },
+      "type": "类型"
+    },
+    "skills": {
+      "action_time": "行动时间",
+      "air_extend": "空中延长",
+      "armor": "霸体",
+      "attack_type": "攻击类型",
+      "block_mode": "格挡模式",
+      "brief": "简述",
+      "chain_refs": "派生链引用",
+      "combo_table": "组合表达",
+      "cooldown": "冷却",
+      "counter_skill": "反击技能",
+      "counter_type": "反击类型",
+      "crit_mod": "会心修正",
+      "derive_only": "仅派生可用",
+      "desc": "说明",
+      "detail": "详情",
+      "effects": {
+        "_label": "附加效果",
+        "count": "层数",
+        "effect": "效果引用",
+        "mark": "印记",
+        "marks_on": "所需印记",
+        "overrides": "数值覆盖",
+        "pct": "百分比",
+        "polarity": "极性",
+        "status_id": "状态 ID",
+        "target": "目标",
+        "type": "效果类型"
+      },
+      "element": "元素",
+      "energy_cost": "资源轴消耗",
+      "energy_gain": "资源轴增减",
+      "hit_mod": "命中修正",
+      "hits": "段数",
+      "id": "标识",
+      "interrupt": "打断",
+      "job_form": "形态",
+      "job_restrict": "职业限制",
+      "kind": "类别",
+      "level": {
+        "_label": "等级",
+        "growth": "成长曲线",
+        "max": "最大等级"
+      },
+      "mp_cost": "消耗量",
+      "name": "名称",
+      "position_rule": "方位命中规则",
+      "power": "威力",
+      "recovery": "行动恢复",
+      "revert_form": "还原形态",
+      "season": "季节",
+      "skill": "技能引用",
+      "stun": "气绝值",
+      "tag": "标签",
+      "trigger_limit": {
+        "_label": "触发上限",
+        "per_battle": "每场上限",
+        "per_round": "每回合上限"
+      },
+      "type": "类型"
+    },
+    "slots": {
+      "equip_id": "装备引用",
+      "slots": {
+        "_label": "插槽",
+        "slot_level": "槽位等级"
+      }
+    },
+    "stats": {
+      "base": "基础值",
+      "display": "显示方式",
+      "growth": "成长值",
+      "max": "上限",
+      "min": "下限",
+      "name": "名称",
+      "type": "属性类型"
+    },
+    "statuses": {
+      "decay": "衰减",
+      "duration": {
+        "_label": "持续",
+        "charges": "层数",
+        "turns": "持续回合"
+      },
+      "effects": "效果列表",
+      "id": "标识",
+      "max_stack": "最大层数",
+      "name": "名称",
+      "on_enter": "进入时",
+      "on_expire": "失效时",
+      "on_tick": "每回合",
+      "type": "类型"
+    },
+    "traits": {
+      "apply_status": "施加状态",
+      "effects": "效果列表",
+      "group": "互斥组",
+      "id": "标识",
+      "max_stack": "最大层数",
+      "name": "名称",
+      "probability": "概率",
+      "rarity": "稀有度",
+      "repeatable": "可重复继承",
+      "require_status": "需求状态",
+      "source": "可继承池分类",
+      "type": "类型"
+    }
+  },
+  "group_labels": {
+    "enemies": {
+      "actions": "行动与效果",
+      "base": "基本",
+      "drops": "掉落与图鉴",
+      "stats": "数值与抗性"
+    },
+    "equipment": {
+      "base": "基本",
+      "effects": "效果",
+      "stats": "数值与属性",
+      "text": "文本"
+    },
+    "items": {
+      "base": "基本",
+      "effects": "效果",
+      "stats": "数值与属性",
+      "text": "文本"
+    },
+    "maps": {
+      "base": "基本",
+      "ranges": "数值与区间",
+      "refs": "关联",
+      "text": "文本"
+    },
+    "quest": {
+      "base": "基本",
+      "conditions": "条件",
+      "refs": "关联",
+      "reward": "奖励"
+    }
+  },
+  "module_labels": {
+    "achievements": "成就",
+    "action": "行动",
+    "checkin": "签到",
+    "dungeon": "副本",
+    "effects": "效果",
+    "enemies": "怪物",
+    "equipment": "装备",
+    "fishing": "钓鱼",
+    "forge": "锻造",
+    "formula": "公式",
+    "items": "物品",
+    "jobs": "职业",
+    "maps": "地图",
+    "marks": "印记",
+    "npc": "NPC",
+    "proficiency": "熟练度",
+    "quest": "任务",
+    "recipe": "配方",
+    "settings": "设置",
+    "shop": "商店",
+    "skill_chains": "派生链",
+    "skills": "技能",
+    "slots": "插槽",
+    "stats": "属性",
+    "statuses": "状态",
+    "templates": "模板",
+    "traits": "特性"
+  },
+  "module_tree": [
+    {
+      "children": [
+        "effects",
+        "statuses",
+        "marks",
+        "skill_chains"
+      ],
+      "module": "skills"
+    },
+    {
+      "children": [
+        "equipment"
+      ],
+      "module": "items"
+    },
+    {
+      "children": [
+        "action"
+      ],
+      "module": "enemies"
+    }
+  ],
+  "schema_version": 1
+}

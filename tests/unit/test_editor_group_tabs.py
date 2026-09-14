@@ -19,6 +19,7 @@ from typing import Any, Dict
 
 import pytest
 
+from qbot_rpg.content import field_meta_pack as fmp
 from qbot_rpg.content.models import ModuleMeta
 from qbot_rpg.web import api
 
@@ -26,6 +27,20 @@ NODE = shutil.which("node")
 REPO = Path(api.repo_root())
 CONTENT = REPO / "content"
 HTML = REPO / "qbot_rpg" / "web" / "static" / "index.html"
+
+
+def _schema_table():
+    """批B：组显示名已下放到包；把两个真实包的声明并成「schema 覆盖面」表。"""
+    table = api.field_meta_table()
+    for pack in ("veinborn", "test_demo"):
+        decl = fmp.load_field_meta(CONTENT / pack)
+        if decl is not None:
+            table = fmp.merge_field_meta_table(table, decl)
+    return table
+
+
+def _pack_table(pack: str = "veinborn"):
+    return api._pack_meta_table(CONTENT / pack)
 
 # 批3 起声明分组的模块（至少这几个；只加元数据、不加业务字段）
 GROUPED_MODULES = ("skills", "enemies", "items", "equipment", "maps", "quest")
@@ -35,7 +50,7 @@ GROUPED_MODULES = ("skills", "enemies", "items", "equipment", "maps", "quest")
 # 一、元数据声明：顺序 + 显示名
 # ---------------------------------------------------------------------------
 def test_named_modules_declare_ordered_groups_with_labels() -> None:
-    table = api.field_meta_table()
+    table = _schema_table()
     for mod in GROUPED_MODULES:
         meta = table.module(mod)
         assert meta is not None, mod
@@ -96,7 +111,7 @@ def test_declared_empty_group_kept_with_zero_count() -> None:
 
 def test_default_single_group_fallback_unchanged() -> None:
     """无分组声明的模块仍只有单一默认分组（现状保持）。"""
-    table = api.field_meta_table()
+    table = _schema_table()
     meta = table.module("effects")
     assert meta is not None and not meta.field_groups and not meta.group_order
     groups = api._group_summary([{"group": api.DEFAULT_GROUP}], meta)
@@ -108,7 +123,7 @@ def test_default_single_group_fallback_unchanged() -> None:
 # ---------------------------------------------------------------------------
 @pytest.mark.parametrize("mod", GROUPED_MODULES)
 def test_entry_groups_match_declared_order_and_labels(mod: str) -> None:
-    meta = api.field_meta_table().module(mod)
+    meta = _pack_table().module(mod)
     assert meta is not None
     eid = api.list_entries("veinborn", mod, root=CONTENT)["entries"][0]["id"]
     detail = api.entry_detail("veinborn", mod, eid, root=CONTENT)

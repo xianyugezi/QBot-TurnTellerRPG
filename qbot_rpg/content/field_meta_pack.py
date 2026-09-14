@@ -2,8 +2,8 @@
 
 依据：`docs/编辑器重写_数据包展示元数据下放方案.md`
   · §三 目标结构：包内 `field_meta.json`（纯 JSON）承载**包专属展示元数据**；
-  · §四 批 A：本文件是「读包声明 → 与框架 `field_meta.py` 表合并」的通用入口，
-    框架侧现有声明**不动**，未声明该文件的包行为零变化；
+  · §四 批 A：本文件是「读包声明 → 与框架 `field_meta.py` 表合并」的通用入口；
+  · §四 批 B：展示文案已真正下放——框架只保留结构，包声明承载 label/help/组显示名；
   · §二 优先级：**包声明 > 框架兜底**——`field_labels` / `field_help` / `group_labels`
     覆盖框架同键值，未声明键保持框架现状。
 
@@ -13,10 +13,15 @@
       "schema_version": 1,
       "module_labels": {"skills": "技能"},
       "module_tree":   [{"module": "items", "children": ["equipment"]}],
-      "field_labels":  {"skills": {"power": "威力"}},
-      "field_help":    {"skills": {"power": "技能倍率，按百分比算。"}},
+      "field_labels":  {"skills": {"power": "威力",
+                                   "level": {"_label": "等级", "max": "最大等级"}}},
+      "field_help":    {"skills": {"power": "技能倍率，按百分比算。",
+                                   "effects": {"_help": "效果表", "type": "类型"}}},
       "group_labels":  {"enemies": {"base": "基本"}}
     }
+
+`field_labels` / `field_help` 的值可为**非空字符串**（叶子）或**嵌套对象**（含 `_label`/`_help`
+节点文案 + 子键递归）；这是批A「扁平键表」的严格超集（旧包只写字符串仍合法）。
 
 优先级细则（与文档同步）：
   · `module_labels` / `module_tree` 属**包级**声明：manifest 里已有同名字段（现状由包声明），
@@ -66,8 +71,8 @@ class PackFieldMeta:
     pack: str
     module_labels: Mapping[str, str]
     module_tree: Any  # None（未声明）| list | Mapping（与 manifest module_tree 同形态）
-    field_labels: Mapping[str, Mapping[str, str]]
-    field_help: Mapping[str, Mapping[str, str]]
+    field_labels: Mapping[str, Any]   # 值 = str | 嵌套对象（含 _label / 子键）
+    field_help: Mapping[str, Any]     # 值 = str | 嵌套对象（含 _help / 子键）
     group_labels: Mapping[str, Mapping[str, str]]
 
 
@@ -114,13 +119,51 @@ def _str_map(value: object, pack: str, key: str) -> Dict[str, str]:
 
 
 def _nested_str_map(value: object, pack: str, key: str) -> Dict[str, Dict[str, str]]:
-    """校验「对象<模块名, 对象<字段键, 非空字符串>>」形态。"""
+    """校验「对象<模块名, 对象<字段键, 非空字符串>>」形态（group_labels 用）。"""
     raw = _require_map(value, pack, key)
     out: Dict[str, Dict[str, str]] = {}
     for mod, body in raw.items():
         if not isinstance(mod, str) or not mod:
             raise _fail(pack, key, f"含非法模块名（应为非空字符串）：{mod!r}")
         out[mod] = _str_map(body, pack, f"{key}.{mod}")
+    return out
+
+
+def _display_map(value: object, pack: str, key: str) -> Dict[str, Any]:
+    """校验「对象<模块名, 展示表>」形态；展示表支持**嵌套 children**。
+
+    展示表的一项 = 非空字符串（叶子中文名/说明）| 嵌套对象；嵌套对象里保留键
+    `_label`（本节点中文名）/`_help`（本节点说明），其余键递归同形态。这是批A
+    「扁平键表」的严格超集（旧包只写字符串仍然合法）。
+    """
+    raw = _require_map(value, pack, key)
+    out: Dict[str, Any] = {}
+    for mod, body in raw.items():
+        if not isinstance(mod, str) or not mod:
+            raise _fail(pack, key, f"含非法模块名（应为非空字符串）：{mod!r}")
+        out[mod] = _display_node_map(body, pack, f"{key}.{mod}")
+    return out
+
+
+def _display_node_map(value: object, pack: str, key: str) -> Dict[str, Any]:
+    raw = _require_map(value, pack, key)
+    out: Dict[str, Any] = {}
+    for k, v in raw.items():
+        if not isinstance(k, str) or not k:
+            raise _fail(pack, key, f"含非法键（键应为非空字符串）：{k!r}")
+        if k in ("_label", "_help"):
+            if not isinstance(v, str) or not v:
+                raise _fail(pack, key, f"保留键 {k} 的值应为非空字符串，实际是{_type_name(v)}")
+            out[k] = v
+        elif isinstance(v, str):
+            if not v:
+                raise _fail(pack, key, f"键 {k} 的值应为非空字符串，实际是空串")
+            out[k] = v
+        elif isinstance(v, Mapping):
+            out[k] = _display_node_map(v, pack, f"{key}.{k}")
+        else:
+            raise _fail(pack, key,
+                        f"键 {k} 的值应为非空字符串或嵌套对象，实际是{_type_name(v)}")
     return out
 
 
@@ -192,9 +235,9 @@ def parse_field_meta(raw: object, pack: str) -> PackFieldMeta:
                      if "module_labels" in raw else {})
     module_tree = (_validate_module_tree(raw["module_tree"], pack, "module_tree")
                    if "module_tree" in raw else None)
-    field_labels = (_nested_str_map(raw["field_labels"], pack, "field_labels")
+    field_labels = (_display_map(raw["field_labels"], pack, "field_labels")
                     if "field_labels" in raw else {})
-    field_help = (_nested_str_map(raw["field_help"], pack, "field_help")
+    field_help = (_display_map(raw["field_help"], pack, "field_help")
                   if "field_help" in raw else {})
     group_labels = (_nested_str_map(raw["group_labels"], pack, "group_labels")
                     if "group_labels" in raw else {})
@@ -247,46 +290,85 @@ def _display_field(label: str, help_text: str) -> FieldMeta:
     return FieldMeta(type="", soft_label=True, label=label, help=help_text)
 
 
+def _display_node(spec: object, hspec: object) -> FieldMeta:
+    """从嵌套声明造「纯展示节点」（obj 容器或叶子）。
+
+    纯 JSON 无法区分 obj 与 list 形态；仅用于框架未登记、包也没给结构的新键——
+    已有结构（框架结构表）一律走 `_apply_display` 覆盖，不发生形态变化。
+    """
+    label = (spec if isinstance(spec, str) else
+             (str(spec.get("_label", "")) if isinstance(spec, Mapping) else ""))
+    help_text = (hspec if isinstance(hspec, str) else
+                 (str(hspec.get("_help", "")) if isinstance(hspec, Mapping) else ""))
+    children: Dict[str, FieldMeta] = {}
+    if isinstance(spec, Mapping):
+        for key, sub in spec.items():
+            if key in ("_label", "_help"):
+                continue
+            hs = hspec.get(key) if isinstance(hspec, Mapping) else None
+            children[str(key)] = _display_node(sub, hs)
+    return FieldMeta(type=("obj" if children else ""), soft_label=True,
+                     label=label, help=help_text, children=children)
+
+
 def _apply_display(fields: Mapping[str, FieldMeta],
-                   labels: Mapping[str, str], helps: Mapping[str, str],
+                   labels: Mapping[str, object], helps: Mapping[str, object],
                    add_unknown: bool) -> Dict[str, FieldMeta]:
     """把 labels/helps 叠加到一张字段表（同键覆盖，未声明键原样保留）。
 
-    已知键覆盖 label/help；`add_unknown=True` 时，包为框架未登记的键声明了标签/说明 →
-    补一个 `soft_label` 纯展示字段（校验短路）。对 obj 子字段递归下钻（同一顶层键
-    在外层与嵌套层都出现时都覆盖——包声明是「模块内扁平键表」）。
+    值可为字符串（叶子中文名/说明）或嵌套声明（`_label` 本节点 + 子键递归）。
+    已知键覆盖 label/help 并递归下钻 children / element.children；`add_unknown=True`
+    时，包为框架未登记的键声明了展示 → 补 `soft_label` 纯展示节点（校验短路）。
     """
     out: Dict[str, FieldMeta] = dict(fields)
     for key, fm in fields.items():
         kw: Dict[str, object] = {}
-        if key in labels:
-            kw["label"] = labels[key]
-        if key in helps:
-            kw["help"] = helps[key]
+        lspec = labels.get(key)
+        hspec = helps.get(key)
+        if isinstance(lspec, str):
+            kw["label"] = lspec
+        elif isinstance(lspec, Mapping) and lspec.get("_label"):
+            kw["label"] = str(lspec["_label"])
+        if isinstance(hspec, str):
+            kw["help"] = hspec
+        elif isinstance(hspec, Mapping) and hspec.get("_help"):
+            kw["help"] = str(hspec["_help"])
         new = replace(fm, **kw) if kw else fm
-        new = _apply_display_children(new, labels, helps)
+        new = _apply_display_children(new, lspec, hspec, add_unknown)
         if new is not fm:
             out[key] = new
     if add_unknown:
-        for key, label in labels.items():
-            if key not in out:
-                out[key] = _display_field(label, helps.get(key, ""))
-        for key, help_text in helps.items():
-            if key not in out:
-                out[key] = _display_field("", help_text)
+        for key, lspec in labels.items():
+            if key in out or key in ("_label", "_help"):
+                continue
+            out[str(key)] = _display_node(lspec, helps.get(key))
+        for key, hspec in helps.items():
+            if key in out or key in ("_label", "_help"):
+                continue
+            out[str(key)] = _display_node(None, hspec)
     return out
 
 
-def _apply_display_children(fm: FieldMeta,
-                            labels: Mapping[str, str],
-                            helps: Mapping[str, str]) -> FieldMeta:
-    """递归覆盖 obj 子字段 / list 元素对象子字段的 label/help（不新增嵌套键）。"""
+def _apply_display_children(fm: FieldMeta, lspec: object, hspec: object,
+                            add_unknown: bool) -> FieldMeta:
+    """递归覆盖 obj 子字段 / list 元素对象子字段的 label/help。"""
+    lmap = lspec if isinstance(lspec, Mapping) else None
+    hmap = hspec if isinstance(hspec, Mapping) else None
+    if lmap is None and hmap is None:
+        return fm
     new = fm
     if fm.children:
-        new = replace(new, children=_apply_display(fm.children, labels, helps, False))
-    if fm.element is not None and fm.element.children:
+        new = replace(new, children=_apply_display(
+            fm.children, lmap or {}, hmap or {}, add_unknown))
+    elif add_unknown and fm.type == "obj":
+        new = replace(new, children=_apply_display({}, lmap or {}, hmap or {}, True))
+    elem = new.element
+    if elem is not None and elem.children:
+        new = replace(new, element=replace(elem, children=_apply_display(
+            elem.children, lmap or {}, hmap or {}, add_unknown)))
+    elif add_unknown and elem is not None and elem.type == "obj":
         new = replace(new, element=replace(
-            fm.element, children=_apply_display(fm.element.children, labels, helps, False)))
+            elem, children=_apply_display({}, lmap or {}, hmap or {}, True)))
     return new
 
 
@@ -299,16 +381,23 @@ def _merge_module(base_mod: Optional[ModuleMeta], mod: str,
         # 行为与「无模块元数据」一致，仅多出包声明的中文名/说明/分组。
         fields: Dict[str, FieldMeta] = {}
         for key in labels:
-            fields[key] = _display_field(labels[key], helps.get(key, ""))
+            if key in ("_label", "_help"):
+                continue
+            fields[key] = _display_node(labels[key], helps.get(key))
         for key, help_text in helps.items():
-            if key not in fields:
-                fields[key] = _display_field("", help_text)
+            if key not in fields and key not in ("_label", "_help"):
+                fields[key] = _display_node(None, help_text)
         return ModuleMeta(entry_type="", fields=fields,
                           group_labels=dict(groups))
     merged_groups: Dict[str, str] = dict(base_mod.group_labels)
     merged_groups.update(groups)
+    # map 形态模块（如 stats）：展示表面在 value_meta.children——包声明不落在空顶层 fields，
+    # 避免多造幽灵顶层字段（对拍门禁）。
+    has_value_surface = (base_mod.value_meta is not None
+                         and base_mod.value_meta.type == "obj"
+                         and bool(base_mod.value_meta.children))
     kw: Dict[str, object] = {
-        "fields": _apply_display(base_mod.fields, labels, helps, True),
+        "fields": _apply_display(base_mod.fields, labels, helps, not has_value_surface),
         "group_labels": merged_groups,
     }
     if base_mod.value_meta is not None and base_mod.value_meta.type == "obj":

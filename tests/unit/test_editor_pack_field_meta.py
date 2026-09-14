@@ -78,19 +78,30 @@ def _snapshot(pack: str, root: Path) -> Dict[str, Any]:
 # A. 未声明零变化 + 回归对拍（veinborn / test_demo）
 # =====================================================================================
 @pytest.mark.parametrize("pack", PACKS)
-def test_real_packs_have_no_declaration(pack: str) -> None:
-    assert not (CONTENT / pack / fmp.FIELD_META_FILENAME).exists()
-    assert api._pack_meta_table(CONTENT / pack) is api.field_meta_table()
+def test_real_packs_declare_field_meta(pack: str) -> None:
+    """批B：两个真实包已下放展示元数据（严格解析通过；合并表带中文名）。"""
+    path = CONTENT / pack / fmp.FIELD_META_FILENAME
+    assert path.exists()
+    decl = fmp.load_field_meta(CONTENT / pack)
+    assert decl is not None and decl.pack == pack
+    table = api._pack_meta_table(CONTENT / pack)
+    assert table is not api.field_meta_table()
+    skills = table.module("skills")
+    assert skills is not None
+    assert skills.fields["power"].label
 
 
 @pytest.mark.parametrize("pack", PACKS)
-def test_read_layer_disabled_output_identical(pack: str, monkeypatch: pytest.MonkeyPatch) -> None:
-    """启用读取层 vs 关闭读取层（模拟批A之前）：无包声明 → 接口输出逐字节一致。"""
-    enabled = _snapshot(pack, CONTENT)
-    monkeypatch.setattr(api, "_pack_meta_table", lambda _pack_dir: api.field_meta_table())
-    monkeypatch.setattr(api, "_pack_declaration", lambda _pack_dir: None)
-    disabled = _snapshot(pack, CONTENT)
-    assert enabled == disabled
+def test_read_layer_provides_display_metadata(pack: str) -> None:
+    """框架结构表（无文案）+ 包声明 → 合并表恢复中文名/说明/分组。"""
+    framework = api.field_meta_table()
+    merged = api._pack_meta_table(CONTENT / pack)
+    fw_skills = framework.module("skills")
+    mg_skills = merged.module("skills")
+    assert fw_skills is not None and mg_skills is not None
+    assert not fw_skills.fields["power"].label          # 批B：框架已无展示文案
+    assert mg_skills.fields["power"].label == "威力"      # 包声明补齐
+    assert merged.module("enemies").group_labels          # 组显示名来自包声明
 
 
 def test_declaration_actually_changes_output_guard(tmp_path: Path) -> None:
@@ -130,21 +141,21 @@ def test_field_labels_help_group_labels_override_with_fallback(tmp_path: Path) -
     assert before_by_key["power"]["label"] == "威力"
     assert {g["name"]: g["label"] for g in before["groups"]}["数值"] == "数值"
 
-    _write_decl(pack_dir, {
-        "schema_version": 1,
-        "field_labels": {"skills": {"power": "威力X"}},
-        "field_help": {"skills": {"power": "说明X"}},
-        "group_labels": {"skills": {"数值": "数值X"}},
-    })
+    # 在真实包声明基础上做局部覆盖（未声明键仍来自原包声明）
+    raw = json.loads((pack_dir / fmp.FIELD_META_FILENAME).read_text(encoding="utf-8"))
+    raw["field_labels"]["skills"]["power"] = "威力X"
+    raw["field_help"]["skills"]["power"] = "说明X"
+    raw.setdefault("group_labels", {}).setdefault("skills", {})["数值"] = "数值X"
+    _write_decl(pack_dir, raw)
     after = api.entry_detail("test_demo", "skills", eid, root=pack_dir.parent)
     after_by_key = {f["key"]: f for f in after["fields"]}
     assert after_by_key["power"]["label"] == "威力X"
     assert after_by_key["power"]["help"] == "说明X"
-    # 未声明键保持框架现状（label/help 不被清空）
+    # 未声明键保持包声明现状（label/help 不被清空）
     assert after_by_key["name"]["label"] == before_by_key["name"]["label"]
     groups = {g["name"]: g["label"] for g in after["groups"]}
     assert groups["数值"] == "数值X"
-    assert groups["基本"] == "基本"  # 未声明组保持框架现状
+    assert groups["基本"] == "基本"  # 未声明组保持包声明现状
 
 
 def test_declared_unknown_field_becomes_soft_display(tmp_path: Path) -> None:
@@ -168,7 +179,7 @@ def test_declared_unknown_field_becomes_soft_display(tmp_path: Path) -> None:
 
 def test_map_module_value_meta_labels_override(tmp_path: Path) -> None:
     pack_dir = _copy_pack(tmp_path)
-    base = api.field_meta_table().module("stats")
+    base = api._pack_meta_table(pack_dir).module("stats")
     assert base is not None and base.value_meta is not None
     assert base.value_meta.children["name"].label == "名称"
     _write_decl(pack_dir, {
@@ -229,6 +240,7 @@ def test_invalid_declaration_reports_human_error(
 
 def test_load_field_meta_none_when_absent(tmp_path: Path) -> None:
     pack_dir = _copy_pack(tmp_path)
+    (pack_dir / fmp.FIELD_META_FILENAME).unlink()
     assert fmp.load_field_meta(pack_dir) is None
 
 
@@ -259,7 +271,11 @@ def test_merge_cache_invalidated_on_rewrite(tmp_path: Path) -> None:
     assert second is not None and second.fields["power"].label == "第二版更长的标签"
 
 
-def test_real_content_packs_untouched() -> None:
-    """只读护栏：跑完全部用例后真实内容包里不出现 field_meta.json。"""
+def test_real_content_packs_declaration_strict_parses() -> None:
+    """批B：真实内容包只新增 field_meta.json，且能被严格解析器接受。"""
     for pack in PACKS:
-        assert not (CONTENT / pack / fmp.FIELD_META_FILENAME).exists()
+        path = CONTENT / pack / fmp.FIELD_META_FILENAME
+        assert path.exists()
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        decl = fmp.parse_field_meta(raw, pack)
+        assert decl.field_labels and decl.group_labels

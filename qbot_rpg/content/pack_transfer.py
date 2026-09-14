@@ -90,7 +90,7 @@ DEFAULT_LIMITS = TransferLimits()
 # -------------------------------------------------------------------------------------
 # 人话报错
 # -------------------------------------------------------------------------------------
-def _human_bytes(n: int) -> str:
+def human_bytes(n: int) -> str:
     """字节数 → 人话（B / KB / MB / GB）。"""
     step = 1024.0
     val = float(n)
@@ -388,8 +388,8 @@ def _check_sizes(entries: List[zipfile.ZipInfo], limits: TransferLimits) -> None
         if size > limits.max_file_bytes:
             raise _Reject("file_too_large",
                           f"文件「{zi.filename}」解压后超过单文件上限"
-                          f"（上限 {_human_bytes(limits.max_file_bytes)}，"
-                          f"实际 {_human_bytes(size)}）。",
+                          f"（上限 {human_bytes(limits.max_file_bytes)}，"
+                          f"实际 {human_bytes(size)}）。",
                           "内容包文件不应这么大；请确认这是内容包而不是别的大文件。")
         if csize > 0 and size > csize * limits.max_ratio:
             raise _Reject("ratio_too_high",
@@ -400,7 +400,7 @@ def _check_sizes(entries: List[zipfile.ZipInfo], limits: TransferLimits) -> None
         if total > limits.max_total_bytes:
             raise _Reject("total_too_large",
                           f"解压后总大小超过上限"
-                          f"（上限 {_human_bytes(limits.max_total_bytes)}）。",
+                          f"（上限 {human_bytes(limits.max_total_bytes)}）。",
                           "请确认这是内容包文件；必要时联系分享者精简内容。")
     return None
 
@@ -584,8 +584,8 @@ def _extract_payload(buf: bytes, limits: TransferLimits
                       "请确认选择的是分享来的 .ttrpack 文件。")
     if len(buf) > limits.max_archive_bytes:
         raise _Reject("archive_too_large",
-                      f"压缩包体积超过上限（上限 {_human_bytes(limits.max_archive_bytes)}，"
-                      f"实际 {_human_bytes(len(buf))}）。",
+                      f"压缩包体积超过上限（上限 {human_bytes(limits.max_archive_bytes)}，"
+                      f"实际 {human_bytes(len(buf))}）。",
                       "请确认选择的是内容包文件。")
     try:
         zf = zipfile.ZipFile(io.BytesIO(buf))
@@ -629,7 +629,7 @@ def _extract_payload(buf: bytes, limits: TransferLimits
         if total > limits.max_total_bytes:
             raise _Reject("total_too_large",
                           f"解压后总大小超过上限"
-                          f"（上限 {_human_bytes(limits.max_total_bytes)}）。",
+                          f"（上限 {human_bytes(limits.max_total_bytes)}）。",
                           "请确认选择的是内容包文件。")
 
     meta_raw = _parse_json_payload(EXPORT_META_NAME, payload[EXPORT_META_NAME])
@@ -812,8 +812,8 @@ def import_file(file_path: object, content_root: object, *, on_conflict: str = "
                      "请确认文件可读。")
     if size > limits.max_archive_bytes:
         return _fail("archive_too_large",
-                     f"压缩包体积超过上限（上限 {_human_bytes(limits.max_archive_bytes)}，"
-                     f"实际 {_human_bytes(size)}）。",
+                     f"压缩包体积超过上限（上限 {human_bytes(limits.max_archive_bytes)}，"
+                     f"实际 {human_bytes(size)}）。",
                      "请确认选择的是内容包文件。")
     try:
         data = path.read_bytes()
@@ -838,6 +838,7 @@ __all__ = [
     "collect_export_files",
     "export_filename",
     "export_pack_dir",
+    "human_bytes",
     "import_archive",
     "import_file",
     "ttr_commit",

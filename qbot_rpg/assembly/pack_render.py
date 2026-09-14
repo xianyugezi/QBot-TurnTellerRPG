@@ -36,11 +36,12 @@
 from __future__ import annotations
 
 import dataclasses
-import threading
+import inspect
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import MappingProxyType
-from typing import Any, Callable, Dict, FrozenSet, List, Mapping, Optional, Sequence, Tuple
+from typing import Any, Callable, FrozenSet, List, Mapping, Optional, Sequence, Tuple
 
 from qbot_rpg.assembly.pack_ext import (
     EXT_DIR,
@@ -71,8 +72,11 @@ __all__ = [
 #: 包内渲染钩子实现文件（包目录相对路径；仅此一处，不扫描其它位置）。
 RENDER_FILE = "render.py"
 
-#: 渲染钩子同步调用超时（秒）。超时 → 记日志 + 落默认文本。
-#: 钩子契约是「同步纯函数、快速返回」；此值只是**兜底**，包作者不应依赖它做重活。
+#: 渲染钩子同步调用超时（秒）。超时 → 记日志 + 落默认文本（丢弃迟到结果）。
+#: 钩子契约是「同步纯函数、快速返回」；此值只是**软兜底**——调用返回后核对耗时，
+#: 超预算即丢弃改写。**不做线程抢占**（仓库铁律「零定时器」禁止线程计时用法，
+#: 见 tests/unit/test_m43_regression.py 全仓扫描）；因此钩子**必须**自己快速返回，
+#: 禁止 sleep / 网络 / 长任务。
 DEFAULT_RENDER_TIMEOUT = 0.5
 
 #: 框架稳定事件名（只增不减；包声明未知事件 → 警告 + 忽略）。
@@ -216,29 +220,22 @@ class RenderHook:
         return name in self._events
 
     def _invoke(self, event: str, data: Mapping[str, Any], default_text: str) -> Any:
-        """同步调用钩子；超时（>0 时）→ :class:`RenderTimeout`。"""
+        """同步调用钩子；耗时超预算（timeout>0）→ :class:`RenderTimeout`。
+
+        软超时：调用返回后核对 ``time.monotonic()`` 耗时，超预算即**丢弃结果**。这是
+        与仓库「零定时器」铁律兼容的兜底方式——不引入线程/计时器抢占；钩子须快速返回。
+        """
         if self._timeout <= 0:
             return self._fn(event, data, default_text)
-        box: Dict[str, Any] = {}
-
-        def _run() -> None:  # pragma: no cover - 线程体，由 join 结果断言覆盖
-            try:
-                box["value"] = self._fn(event, data, default_text)
-            except BaseException as exc:  # noqa: BLE001 —— 线程内异常带回主线程
-                box["error"] = exc
-
-        worker = threading.Thread(
-            target=_run, name=f"pack-render-{self._pack_id or 'pack'}", daemon=True
-        )
-        worker.start()
-        worker.join(self._timeout)
-        if worker.is_alive():
+        started = time.monotonic()
+        out = self._fn(event, data, default_text)
+        elapsed = time.monotonic() - started
+        if elapsed > self._timeout:
             raise RenderTimeout(
-                f"内容包渲染钩子超时（>{self._timeout}s，事件 {event}，包 {self._pack_id}）"
+                f"内容包渲染钩子超时（{elapsed:.3f}s > {self._timeout}s，"
+                f"事件 {event}，包 {self._pack_id}）"
             )
-        if "error" in box:
-            raise box["error"]
-        return box.get("value")
+        return out
 
     def apply(self, event: str, data: Mapping[str, Any], default_text: str) -> str:
         """调用钩子并归一返回值：**任何**异常/超时/非 str → 原样返回默认文本。
@@ -260,6 +257,8 @@ class RenderHook:
             return default
         if isinstance(out, str):
             return out
+        if inspect.iscoroutine(out):
+            out.close()  # 不支持 async 钩子：关掉协程，避免 "never awaited" 警告
         _logger.warning(
             "内容包渲染钩子（包 %s，事件 %s）返回非 str（%s），落默认文本",
             self._pack_id, event, type(out).__name__,

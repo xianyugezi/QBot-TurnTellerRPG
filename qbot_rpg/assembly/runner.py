@@ -568,7 +568,7 @@ def _make_handler(spec: Any, parsed: ParsedCommand, ctx: MutableMapping[str, Any
 # sender 闭包（RA-08 ⑤ / RA-09：前缀注入 → Sender.send）
 # =============================================================================
 def _make_sender(deps: Any, ctx: Mapping[str, Any], *, command: str = ""):
-    """构造发送出口闭包（E2 渲染钩子 → apply_message_prefix → Sender.send；记录已发送文本）。
+    """构造发送出口闭包（apply_message_prefix → E2 渲染钩子 → Sender.send；记录已发送文本）。
 
     入参 deps: AssemblyDeps（sender 传输层，缺省 Sender() 收集 delivered；
     ``pack_render_hook`` = E2 渲染钩子，缺省 None = 不装钩子，行为与修前**逐字节一致**）；

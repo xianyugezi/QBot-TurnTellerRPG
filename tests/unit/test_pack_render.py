@@ -139,6 +139,18 @@ def test_apply_non_str_uses_default_and_logs(caplog) -> None:
     assert any("非 str" in r.getMessage() for r in caplog.records), caplog.records
 
 
+def test_apply_async_hook_uses_default_and_logs(caplog) -> None:
+    """async 钩子不被支持：返回协程 = 非 str → 默认文本 + 日志，且协程被关闭。"""
+
+    async def _async_render(e, d, t):
+        return t + "X"
+
+    hook = _cmd_only_hook(_async_render)
+    with caplog.at_level(logging.WARNING, logger="qbot_rpg.assembly.pack_render"):
+        assert hook.apply(EVENT_COMMAND_REPLY, {}, "正文") == "正文"
+    assert any("非 str" in r.getMessage() for r in caplog.records), caplog.records
+
+
 def test_apply_exception_uses_default_and_logs(caplog) -> None:
     def _boom(e, d, t):
         raise RuntimeError("钩子炸了")

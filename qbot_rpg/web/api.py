@@ -3,9 +3,12 @@
 编辑器重写批1（docs/编辑器重写_实现方案.md §三）唯一实现点：
 
   · 模块列表        ← manifest.modules（包数据）
-  · 模块显示名      ← manifest.module_labels / module_tree 节点的 label（缺省用模块键名）
-  · 模块层级（父子）← manifest.module_tree（别名 module_groups）；**包不声明就平铺**
-  · 字段清单        ← default_field_meta_table() 的 ModuleMeta.fields
+  · 模块显示名      ← manifest.module_labels / module_tree 节点的 label（缺省用模块键名）；
+                       包内 field_meta.json 的 module_labels / module_tree 声明优先（批A）
+  · 模块层级（父子）← manifest.module_tree（别名 module_groups）；**包不声明就平铺**；
+                       包内 field_meta.json 若声明 module_tree 则以其为准
+  · 字段清单        ← default_field_meta_table() 的 ModuleMeta.fields，经包内 field_meta.json
+                       （field_labels / field_help / group_labels）合并（包声明优先，框架兜底）
                       （FieldMeta.type / label / required / enum / ref_target / range）
   · 字段分组        ← FieldMeta.group → ModuleMeta.field_groups[key] → 单一默认分组（兜底）
   · 分组页签        ← ModuleMeta.group_order（顺序）/ group_labels（显示名，缺省用组键）/
@@ -27,6 +30,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
+from qbot_rpg.content import field_meta_pack as pack_meta
 from qbot_rpg.content.field_meta import default_field_meta_table
 from qbot_rpg.content.models import FieldMeta, FieldMetaTable, ModuleMeta
 
@@ -142,8 +146,44 @@ def field_meta_table() -> FieldMetaTable:
     return _META_TABLE
 
 
-def _module_meta(module: str) -> Optional[ModuleMeta]:
-    return field_meta_table().module(module)
+# 包声明合并表缓存：键 = (field_meta.json 路径, mtime_ns, size, ino)（内容变化自动失效；
+# 与 _read_json 同一失效口径——原子写换 inode 也能识别）。
+_MERGED_TABLES: Dict[Tuple[str, int, int, int], FieldMetaTable] = {}
+
+
+def _pack_declaration(pack_dir: Path) -> Optional[pack_meta.PackFieldMeta]:
+    """读包展示元数据声明（无文件 → None；形态非法 → 人话 EditorError）。"""
+    try:
+        return pack_meta.load_field_meta(pack_dir)
+    except pack_meta.PackFieldMetaError as exc:
+        raise EditorError(str(exc)) from exc
+
+
+def _pack_meta_table(pack_dir: Path) -> FieldMetaTable:
+    """该包的字段元数据表：读包声明与框架表合并（包声明优先）；未声明 → 框架表单例。"""
+    decl_path = pack_dir / pack_meta.FIELD_META_FILENAME
+    try:
+        st = decl_path.stat()
+    except OSError:
+        return field_meta_table()
+    key = (str(decl_path), st.st_mtime_ns, st.st_size, st.st_ino)
+    cached = _MERGED_TABLES.get(key)
+    if cached is not None:
+        return cached
+    decl = _pack_declaration(pack_dir)
+    if decl is None:
+        return field_meta_table()
+    table = pack_meta.merge_field_meta_table(field_meta_table(), decl)
+    if len(_MERGED_TABLES) > 256:  # 只读进程内缓存，防长期运行累积（多包反复切换）
+        _MERGED_TABLES.clear()
+    _MERGED_TABLES[key] = table
+    return table
+
+
+def _module_meta(module: str, pack_dir: Optional[Path] = None) -> Optional[ModuleMeta]:
+    """模块元数据：给了包目录 → 包声明合并表；否则框架表单例。"""
+    table = _pack_meta_table(pack_dir) if pack_dir is not None else field_meta_table()
+    return table.module(module)
 
 
 # =====================================================================================
@@ -168,8 +208,19 @@ def _module_labels(manifest: Mapping[str, Any]) -> Dict[str, str]:
     return out
 
 
+# module_tree 取值哨兵：区分「调用方已给出有效声明」与「回落到 manifest」。
+_TREE_UNSET = object()
+
+
+def _declared_tree_spec(decl: Optional[pack_meta.PackFieldMeta]) -> object:
+    """包声明里的 module_tree（未声明 → 哨兵，回落到 manifest 的 module_tree/module_groups）。"""
+    if decl is not None and decl.module_tree is not None:
+        return decl.module_tree
+    return _TREE_UNSET
+
+
 def _resolve_tree(
-    manifest: Mapping[str, Any], declared: List[str]
+    manifest: Mapping[str, Any], declared: List[str], spec: object = _TREE_UNSET
 ) -> Tuple[Dict[str, List[str]], Dict[str, str], List[str]]:
     """读包的模块层级声明 → (children_map, node_labels, notes)。
 
@@ -178,15 +229,17 @@ def _resolve_tree(
       2) {"module": p, "label": "...", "children": ["c", {...}]}
       3) {"p": ["c1", "c2"]}    映射形态（父: 子列表）
     非法/未声明/自环/重复引用一律忽略并记 note（包声明有瑕疵也不让编辑器崩）。
+    `spec` 显式给出时以其为准（批A：包内 field_meta.json 的 module_tree 优先于 manifest）。
     """
     declared_set = set(declared)
     children: Dict[str, List[str]] = {}
     labels: Dict[str, str] = {}
     notes: List[str] = []
     seen_child: set = set()
-    spec = manifest.get("module_tree")
-    if spec is None:
-        spec = manifest.get("module_groups")
+    if spec is _TREE_UNSET:
+        spec = manifest.get("module_tree")
+        if spec is None:
+            spec = manifest.get("module_groups")
 
     def walk(node: object, path: List[str]) -> Optional[str]:
         if isinstance(node, str):
@@ -236,9 +289,14 @@ def _resolve_tree(
     return children, labels, notes
 
 
-def _display_labels(manifest: Mapping[str, Any], declared: List[str]) -> Dict[str, str]:
+def _display_labels(manifest: Mapping[str, Any], declared: List[str],
+                    pack_dir: Optional[Path] = None) -> Dict[str, str]:
+    """模块显示名（优先级：manifest → field_meta.json.module_labels → module_tree 节点 label）。"""
+    decl = _pack_declaration(pack_dir) if pack_dir is not None else None
     labels = _module_labels(manifest)
-    _children, tree_labels, _notes = _resolve_tree(manifest, declared)
+    if decl is not None:
+        labels.update(decl.module_labels)
+    _children, tree_labels, _notes = _resolve_tree(manifest, declared, _declared_tree_spec(decl))
     labels.update(tree_labels)
     return labels
 
@@ -291,8 +349,11 @@ def list_modules(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
     pack_dir = _pack_dir(pack, root)
     manifest = _manifest(pack_dir)
     declared = _declared_modules(manifest)
-    children_map, tree_labels, notes = _resolve_tree(manifest, declared)
+    decl = _pack_declaration(pack_dir)
+    children_map, tree_labels, notes = _resolve_tree(manifest, declared, _declared_tree_spec(decl))
     labels = _module_labels(manifest)
+    if decl is not None:
+        labels.update(decl.module_labels)
     labels.update(tree_labels)
     counts = {m: _entry_count(_read_json(pack_dir / f"{m}.json")) for m in declared}
     child_set = {c for kids in children_map.values() for c in kids}
@@ -365,10 +426,10 @@ def list_entries(pack: object, module: object, root: Optional[object] = None) ->
     if mod not in declared:
         raise NotFound(f"模块未在包 manifest 中声明：{mod}")
     data = _read_json(pack_dir / f"{mod}.json")
-    mmeta = _module_meta(mod)
+    mmeta = _module_meta(mod, pack_dir)
     rows = _entry_rows(data, mmeta)
-    etype = mmeta.entry_type if mmeta is not None else _infer_entry_type(data)
-    labels = _display_labels(manifest, declared)
+    etype = _entry_type(mmeta, data)
+    labels = _display_labels(manifest, declared, pack_dir)
     return {
         "pack": str(pack),
         "module": mod,
@@ -385,6 +446,13 @@ def _infer_entry_type(data: object) -> str:
     if isinstance(data, Mapping):
         return "map"
     return "scalar"
+
+
+def _entry_type(mmeta: Optional[ModuleMeta], data: object) -> str:
+    """条目形态：元数据声明优先；未登记 / 纯展示壳（entry_type 空）→ 按实际数据推断。"""
+    if mmeta is not None and mmeta.entry_type:
+        return mmeta.entry_type
+    return _infer_entry_type(data)
 
 
 # =====================================================================================
@@ -975,7 +1043,7 @@ def _association_sections(pack_dir: Path, manifest: Mapping[str, Any],
     """
     if mmeta is None or not mmeta.associations:
         return []
-    labels = _display_labels(manifest, declared)
+    labels = _display_labels(manifest, declared, pack_dir)
     sections: List[Dict[str, Any]] = []
     for idx, a in enumerate(mmeta.associations):
         if not isinstance(a.module, str) or not a.module or not a.field:
@@ -988,7 +1056,7 @@ def _association_sections(pack_dir: Path, manifest: Mapping[str, Any],
             "field": a.field,
             # 批5.2（V9）：副标题/命中行统一「中文（键）」——中文名来自字段元数据，
             # 查不到则留空，前端回退原始键（不凭空造词）。
-            "field_label": _path_field_label(_module_meta(a.module), a.field),
+            "field_label": _path_field_label(_module_meta(a.module, pack_dir), a.field),
             "local_field": a.local_field or _ID_FIELD,
             "local_field_label": _path_field_label(mmeta, a.local_field or _ID_FIELD),
             "editable": bool(a.editable),
@@ -1002,9 +1070,8 @@ def _association_sections(pack_dir: Path, manifest: Mapping[str, Any],
             sections.append(section)
             continue
         rel_data = _read_json(pack_dir / f"{a.module}.json")
-        rel_mmeta = _module_meta(a.module)
-        rel_etype = (rel_mmeta.entry_type if rel_mmeta is not None
-                     else _infer_entry_type(rel_data))
+        rel_mmeta = _module_meta(a.module, pack_dir)
+        rel_etype = _entry_type(rel_mmeta, rel_data)
         local_vals = _local_values(entry_subject, a.local_field or _ID_FIELD, entry_id)
         entries: List[Dict[str, Any]] = []
         for eid, name, subject in _entry_rows(rel_data, rel_mmeta):
@@ -1064,7 +1131,7 @@ class _PackView:
 
     def name_index(self) -> Dict[str, Dict[str, str]]:
         if self._names is None:
-            self._names = _build_name_index(self.dir, self.declared, field_meta_table())
+            self._names = _build_name_index(self.dir, self.declared, _pack_meta_table(self.dir))
         return self._names
 
     def resolve(self, ref_target: Optional[str], value: object) -> Optional[str]:
@@ -1450,20 +1517,20 @@ def entry_detail(pack: object, module: object, entry_id: object,
     if not isinstance(entry_id, str):
         raise BadRequest(f"非法条目标识：{entry_id!r}")
     data = _read_json(pack_dir / f"{mod}.json")
-    mmeta = _module_meta(mod)
+    mmeta = _module_meta(mod, pack_dir)
     rows = _entry_rows(data, mmeta)
     match = next((row for row in rows if row[0] == entry_id), None)
     if match is None:
         raise NotFound(f"条目不存在：{mod}/{entry_id}")
     _eid, entry_name, subject = match
-    etype = mmeta.entry_type if mmeta is not None else _infer_entry_type(data)
+    etype = _entry_type(mmeta, data)
     view = _PackView(pack_dir, manifest)
     base = _entry_base(mmeta, etype, entry_id, subject)
     fields = _build_fields(base, subject, mmeta, view, 0)
     groups = _group_summary(fields, mmeta)
     associations = _association_sections(pack_dir, manifest, declared, entry_id,
                                          subject, mmeta, view)
-    labels = _display_labels(manifest, declared)
+    labels = _display_labels(manifest, declared, pack_dir)
     return {
         "pack": str(pack),
         "pack_name": str(manifest.get("name", "") or pack),
@@ -1528,13 +1595,13 @@ def entry_slot(pack: object, module: object, entry_id: object,
     if not isinstance(entry_id, str):
         raise BadRequest(f"非法条目标识：{entry_id!r}")
     data = _read_json(pack_dir / f"{mod}.json")
-    mmeta = _module_meta(mod)
+    mmeta = _module_meta(mod, pack_dir)
     rows = _entry_rows(data, mmeta)
     pos = next((i for i, row in enumerate(rows) if row[0] == entry_id), None)
     if pos is None:
         raise NotFound(f"条目不存在：{mod}/{entry_id}")
     _eid, entry_name, subject = rows[pos]
-    etype = mmeta.entry_type if mmeta is not None else _infer_entry_type(data)
+    etype = _entry_type(mmeta, data)
     if isinstance(data, list):
         slot: object = pos
     elif isinstance(data, Mapping):
@@ -1692,7 +1759,7 @@ def suggest_id(pack: object, module: object, root: Optional[object] = None,
     pack_dir = _pack_dir(pack, root)
     manifest = _manifest(pack_dir)
     mod = declared_module(pack, module, root=root)
-    table = field_meta_table()
+    table = _pack_meta_table(pack_dir)
     mmeta = table.module(mod)
     existing = {eid for _m, eid, _n in _id_entries(pack_dir, manifest, mod, mmeta, table)}
     return {
@@ -1708,13 +1775,13 @@ def check_entry_id(pack: object, module: object, entry_id: object,
                    root: Optional[object] = None,
                    meta: Optional[FieldMetaTable] = None) -> Dict[str, Any]:
     """新增条目的 ID 即时校验（只读）：空/非法 → 红；同模块或同命名空间重复 → 红。"""
-    table = meta if meta is not None else field_meta_table()
     pack_dir = _pack_dir(pack, root)
     manifest = _manifest(pack_dir)
+    table = meta if meta is not None else _pack_meta_table(pack_dir)
     mod = declared_module(pack, module, root=root)
     mmeta = table.module(mod)
     eid = str(entry_id or "").strip()
-    labels = _display_labels(manifest, _declared_modules(manifest))
+    labels = _display_labels(manifest, _declared_modules(manifest), pack_dir)
 
     def _out(ok: bool, level: str, message: str, how: str,
              conflicts: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
@@ -1752,14 +1819,14 @@ def entry_index(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
     pack_dir = _pack_dir(pack, root)
     manifest = _manifest(pack_dir)
     declared = _declared_modules(manifest)
-    labels = _display_labels(manifest, declared)
-    table = field_meta_table()
+    labels = _display_labels(manifest, declared, pack_dir)
+    table = _pack_meta_table(pack_dir)
     modules: List[Dict[str, Any]] = []
     total = 0
     for mod in declared:
         data = _read_json(pack_dir / f"{mod}.json")
         mmeta = table.module(mod)
-        etype = mmeta.entry_type if mmeta is not None else _infer_entry_type(data)
+        etype = _entry_type(mmeta, data)
         ns = (mmeta.namespace if mmeta is not None and mmeta.namespace else mod)
         entries = [{"id": eid, "name": name} for eid, name, _v in _entry_rows(data, mmeta)]
         total += len(entries)
@@ -1814,9 +1881,9 @@ def new_entry_slot(pack: object, module: object, entry_id: object = "",
     manifest = _manifest(pack_dir)
     mod = declared_module(pack, module, root=root)
     data = _read_json(pack_dir / f"{mod}.json")
-    table = field_meta_table()
+    table = _pack_meta_table(pack_dir)
     mmeta = table.module(mod)
-    etype = mmeta.entry_type if mmeta is not None else _infer_entry_type(data)
+    etype = _entry_type(mmeta, data)
     id_field = (mmeta.id_field if mmeta is not None and mmeta.id_field else _ID_FIELD)
     eid = str(entry_id or "").strip()
     if not eid and etype == "object":
@@ -1848,7 +1915,7 @@ def new_entry_detail(pack: object, module: object, root: Optional[object] = None
     pack_dir = _pack_dir(pack, root)
     manifest = _manifest(pack_dir)
     declared = _declared_modules(manifest)
-    table = field_meta_table()
+    table = _pack_meta_table(pack_dir)
     info = new_entry_slot(pack, module, entry_id or "", root=root)
     mod = info["module"]
     mmeta: Optional[ModuleMeta] = info["mmeta"]
@@ -1864,7 +1931,7 @@ def new_entry_detail(pack: object, module: object, root: Optional[object] = None
     view = _PackView(pack_dir, manifest)
     fields = _build_fields(base, subject, mmeta, view, 0)
     groups = _group_summary(fields, mmeta)
-    labels = _display_labels(manifest, declared)
+    labels = _display_labels(manifest, declared, pack_dir)
     id_fm = None
     if mmeta is not None:
         id_fm = mmeta.fields.get(id_field)
@@ -1948,9 +2015,9 @@ def reference_scan(pack: object, module: object, entry_id: object,
       ① 各模块字段元数据里 type=ref 的字段（含列表/对象/映射内递归）；
       ② 各模块 ModuleMeta.associations 声明指向本模块的外键路径（含列表通配）。
     """
-    table = meta if meta is not None else field_meta_table()
     pack_dir = _pack_dir(pack, root)
     manifest = _manifest(pack_dir)
+    table = meta if meta is not None else _pack_meta_table(pack_dir)
     declared = _declared_modules(manifest)
     mod = declared_module(pack, module, root=root)
     target_mmeta = table.module(mod)
@@ -1960,7 +2027,7 @@ def reference_scan(pack: object, module: object, entry_id: object,
             kinds.add(str(target_mmeta.kind))
         if target_mmeta.namespace:
             kinds.add(str(target_mmeta.namespace))
-    labels = _display_labels(manifest, declared)
+    labels = _display_labels(manifest, declared, pack_dir)
     tgt = str(entry_id)
     out: List[Dict[str, Any]] = []
     seen: set = set()
@@ -1968,7 +2035,7 @@ def reference_scan(pack: object, module: object, entry_id: object,
     for rel_mod in declared:
         rel_mmeta = table.module(rel_mod)
         rel_data = _read_json(pack_dir / f"{rel_mod}.json")
-        rel_etype = rel_mmeta.entry_type if rel_mmeta is not None else _infer_entry_type(rel_data)
+        rel_etype = _entry_type(rel_mmeta, rel_data)
         for eid, ename, subject in _entry_rows(rel_data, rel_mmeta):
             local: List[Dict[str, Any]] = []
             base = _entry_base(rel_mmeta, rel_etype, eid, subject)

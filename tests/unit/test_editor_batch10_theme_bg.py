@@ -36,7 +36,7 @@ REPO = Path(api.repo_root())
 HTML = REPO / "qbot_rpg" / "web" / "static" / "index.html"
 TOKENS = REPO / "qbot_rpg" / "web" / "static" / "tokens.css"
 
-BATCH_NOTE = "批11 · 内容包导出/导入"
+BATCH_NOTE = "批12 · 结构/并入/字号"
 
 
 def _html() -> str:
@@ -115,6 +115,8 @@ def test_theme_panel_is_radio_list_with_hints() -> None:
 def test_theme_radio_selection_applies_and_persists() -> None:
     module = _marked("EDITOR_THEME")
     fns = (_ESC_STUB + "var EditorTheme = module.exports;\n"
+           # 批12 · #13：renderThemeSeg 的按钮 title 会带当前字号 —— 单测桩补 EditorFont
+           + "var EditorFont = { labelOf: function () { return '小'; } };\n"
            + _fn("themeStore") + "\n" + _fn("themeChoiceHtml") + "\n"
            + _fn("syncThemeChoices") + "\n" + _fn("renderThemeSeg") + "\n"
            + _fn("setTheme") + "\n" + _fn("initTheme") + "\n")
@@ -130,7 +132,7 @@ Store.prototype.setItem = function (k, v) { this.m[k] = String(v); };
 
 var store = new Store();
 global.window = { localStorage: store };
-global.state = { theme: 'dark' };
+global.state = { theme: 'dark', fontSize: 'small' };
 
 // 面板单选行（当前选中态更新走 syncThemeChoices）
 function Radio(theme) { this.dataset = { themeChoice: theme }; this.checked = false; }
@@ -203,7 +205,7 @@ def test_both_panels_share_the_same_modal_component() -> None:
         assert token in html
     # 共用关闭按钮（data-modal-close）与共用列表/底栏 class
     assert html.count("data-modal-close") >= 6
-    assert html.count('class="mp-list"') == 2
+    assert html.count('class="mp-list"') == 3
     assert html.count('class="mp-hd"') == 3
     assert html.count('class="mp-ft"') == 3
     # 两个面板都走同一个 EditorModal 实现 + 注册/绑定
@@ -526,14 +528,14 @@ Promise.resolve()
 def test_footer_batch_string_is_current() -> None:
     html = _html()
     assert BATCH_NOTE in html
-    assert "批10 · 配色按钮化 + 自定义背景图" not in html
+    assert "批11 · 内容包导出/导入" not in html
     assert "批9 · 配色切换" not in html
     assert "批6 · 新增/删除条目 + 检索" not in html
     assert "批5.2 · 视觉细则清零" not in html
     assert "批3 · 分区页签" not in html
     # 产品名不含批次（批9.2 约束不回退）
     comp = re.search(r'<div class="panel-ft">(.*?)</div>', html, re.S)
-    assert comp is not None and "批11" in comp.group(1)
+    assert comp is not None and "批12" in comp.group(1)
 
 
 def test_batch10_frontend_has_no_pack_business_names() -> None:

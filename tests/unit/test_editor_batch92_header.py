@@ -31,8 +31,8 @@ NODE = shutil.which("node")
 REPO = Path(api.repo_root())
 HTML = REPO / "qbot_rpg" / "web" / "static" / "index.html"
 
-# 页脚批次串 = 批次信息的唯一出处（批11 起）；旧批次字串不得残留。
-BATCH_NOTE = "批11 · 内容包导出/导入"
+# 页脚批次串 = 批次信息的唯一出处（批12 起）；旧批次字串不得残留。
+BATCH_NOTE = "批12 · 结构/并入/字号"
 
 
 def _html() -> str:
@@ -77,7 +77,8 @@ def test_footer_is_sole_batch_source() -> None:
     ft = re.search(r'<div class="panel-ft">(.*?)</div>', html, re.S)
     assert ft is not None and BATCH_NOTE in ft.group(1)
     # 页脚里的旧批次字样不得残留（全文档残留由 test_editor_batch4_ux 守）
-    for stale in ("批10 · 配色按钮化 + 自定义背景图", "批6 · 新增/删除条目 + 检索",
+    for stale in ("批11 · 内容包导出/导入", "批10 · 配色按钮化 + 自定义背景图",
+                  "批6 · 新增/删除条目 + 检索",
                   "批5.2 · 视觉细则清零", "批3 · 分区页签"):
         assert stale not in ft.group(1), stale
 

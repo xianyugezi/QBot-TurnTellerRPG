@@ -27,12 +27,26 @@ def test_list_packs_preferred_default() -> None:
     assert all(p["module_count"] > 0 and p["name"] for p in data["packs"])
 
 
+def _all_modules(tree: dict) -> set:
+    """模块树里的全部模块键（含子层级；批12 起生活模块挂到父模块下，不能再只看顶层）。"""
+    out: set = set()
+
+    def walk(nodes: object) -> None:
+        for n in nodes if isinstance(nodes, list) else []:
+            out.add(n["module"])
+            walk(n.get("children"))
+
+    walk(tree["modules"])
+    return out
+
+
 def test_pack_switch_changes_modules_and_entries() -> None:
     v = api.list_modules("veinborn", root=CONTENT)
     t = api.list_modules("test_demo", root=CONTENT)
-    vmods = {m["module"] for m in v["modules"]}
-    tmods = {m["module"] for m in t["modules"]}
-    assert "achievements" in tmods and "achievements" not in vmods
+    vmods = _all_modules(v)
+    tmods = _all_modules(t)
+    assert "fishing" in tmods and "fishing" not in vmods
+    assert "conditional" in vmods and "conditional" not in tmods
     assert "proficiency" in vmods and "proficiency" in tmods
     ve = api.list_entries("veinborn", "skills", root=CONTENT)
     te = api.list_entries("test_demo", "skills", root=CONTENT)

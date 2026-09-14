@@ -5,7 +5,7 @@
 「迁移前后接口对拍 diff=0（键集合、label、help、group、module_tree 逐项比对）」。
 
 做法：
-  1. 用 `git worktree` 检出基线（默认 `995e91b`），在基线树里跑
+  1. 用 `git worktree` 检出基线（默认 `112584d`；批12 重定），在基线树里跑
      `scripts/editor_readonly_snapshot.py`（`qbot_rpg` 走 PYTHONPATH 指向基线）；
   2. 在当前工作树跑同一脚本；
   3. 递归对拍两份 JSON，输出差异报告；**既有键的修改/删除 = 0 → 退出码 0**，否则 1。
@@ -26,6 +26,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import os
 import subprocess
@@ -36,7 +37,11 @@ from typing import Any, List, Optional
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SNAPSHOT = Path(__file__).resolve().with_name("editor_readonly_snapshot.py")
 DEFAULT_PACKS = ("veinborn", "test_demo")
-DEFAULT_BASELINE_REF = "995e91b"
+# 批12（2026-09-15）重定基线：995e91b → 112584d。原因：db7bb35 起内容包合法新增
+# traits/recipe/slots/dungeon/achievements/conditional 等模块，使 995e91b 基线在
+# 「模块目录/索引/包列表 module_count」上产生与迁移无关的硬差异。重定到本批父提交，
+# 使门禁继续只守「字段级元数据迁移不得改/删」。
+DEFAULT_BASELINE_REF = "112584d"
 
 
 def _env(root: Path) -> dict:
@@ -109,6 +114,40 @@ _DERIVED_COUNT_KEYS = frozenset({"field_count", "group_count", "association_coun
 _GROUP_KEYS = frozenset({"name", "label", "count"})
 
 
+def _strip_module_decl(snap: Any) -> Any:
+    """取出**模块级展示声明**（模块树 / 模块显示名），从硬对拍里剔除（另以 soft 报告）。
+
+    批12 起：模块显示名与模块层级属**包展示声明**，后续批次会刻意重组
+    （「属性/公式条目并入基础」「生活模块挂到既有父模块下」）。迁移门禁的硬约束是
+    「**字段级** key/label/help/group/type 不得被改/删」，故把下列内容从硬对拍移到 soft：
+      · `modules.modules`（模块树结构）；
+      · `index.modules[].label`（模块索引里的中文名）；
+      · `entries/<模块>.label` 与 `detail/<模块>.module_label`（模块显示名）。
+    其余（字段描述、计数、条目集合、引用候选）一律仍按 hard 对拍。
+    """
+    decl: dict = {}
+    hard = copy.deepcopy(snap)
+    if not isinstance(hard, dict):
+        return hard, decl
+    mods = hard.get("modules")
+    if isinstance(mods, dict) and "modules" in mods:
+        decl["modules"] = mods.pop("modules")
+    idx = hard.get("index")
+    if isinstance(idx, dict) and isinstance(idx.get("modules"), list):
+        decl["index.labels"] = [m.pop("label", None) for m in idx["modules"]
+                                if isinstance(m, dict)]
+    for key in list(hard):
+        if key.startswith("entries/"):
+            body = hard[key]
+            if isinstance(body, dict):
+                decl[f"{key}.label"] = body.pop("label", None)
+        elif key.startswith("detail/"):
+            body = hard[key]
+            if isinstance(body, dict):
+                decl[f"{key}.module_label"] = body.pop("module_label", None)
+    return hard, decl
+
+
 def _diff(a: Any, b: Any, path: str, hard: List[str], soft: List[str],
           cap: int = 200) -> None:
     """递归对拍：hard = 修改/删除（必须为 0）；soft = 合法新增（允许，仅报告）。
@@ -175,7 +214,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     diffs: List[str] = []
     added: List[str] = []
     for pack in packs:
-        _diff(after.get(pack), before.get(pack), pack, diffs, added, args.max_diffs)
+        # 硬对拍剔除模块级展示声明（模块树/模块显示名），其变化记入 soft（批12 起）
+        after_hard, after_decl = _strip_module_decl(after.get(pack))
+        before_hard, before_decl = _strip_module_decl(before.get(pack))
+        _diff(after_hard, before_hard, pack, diffs, added, args.max_diffs)
+        _diff(after_decl, before_decl, f"{pack}·模块声明", [], added, args.max_diffs)
 
     print("批B 等价性对拍（迁移前 ↔ 迁移后）")
     print(f"  基线：{args.baseline_root or args.baseline_ref} · 包：{', '.join(packs)}")
@@ -188,8 +231,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     if diffs:
         print("对拍失败：存在修改/删除差异")
         return 1
-    print("对拍通过：既有键集合 / label / help / group / module_tree 逐字段一致"
-          "（修改/删除 = 0；新增条目已列出、不算差异）")
+    print("对拍通过：**字段级**键集合 / label / help / group 逐字段一致"
+          "（修改/删除 = 0；模块目录/层级/显示名等展示声明演进与新增条目记 soft）")
     return 0
 
 

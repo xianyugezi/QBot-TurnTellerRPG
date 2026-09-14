@@ -452,8 +452,8 @@ def test_frontend_theme_wiring_is_live_and_keeps_draft() -> None:
 
 def test_footer_batch_string_is_current() -> None:
     html = _html()
-    assert "批11 · 内容包导出/导入" in html
-    assert "批10 · 配色按钮化 + 自定义背景图" not in html
+    assert "批12 · 结构/并入/字号" in html
+    assert "批11 · 内容包导出/导入" not in html
     assert "批9 · 配色切换" not in html
     assert "批6 · 新增/删除条目 + 检索" not in html
     assert "批3 分区页签" not in html

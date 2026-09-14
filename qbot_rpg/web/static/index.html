@@ -59,7 +59,55 @@
            clearTheme: clearTheme, applyTheme: applyTheme, labelOf: labelOf };
 });
 /* EDITOR_THEME_END */
-/* 首次绘制前应用初始主题（有存储用存储，无存储跟随系统），避免暗色闪一下再变浅色。 */
+/* 字号三档纯逻辑（批12 · #13 · 无 DOM 依赖；浏览器挂 globalThis.EditorFont，node 下走 module.exports）。
+ * 三档：small（默认·当前小号）/ medium（中号）/ large（大号）。
+ * 记忆：显式选择写 localStorage（键 qbot.editor.font）；无存储 → 默认 small（保持现状）。
+ * applySize 只改 <html data-fs>（CSS 只覆盖 --fs-* 字号令牌，不动间距/布局），不触碰草稿。
+ * 与配色主题正交：一个改 data-theme（颜色），一个改 data-fs（字号），互不覆盖。 */
+/* EDITOR_FONT_BEGIN */
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) { module.exports = factory(); }
+  else { root.EditorFont = factory(); }
+})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+  var STORE_KEY = "qbot.editor.font";
+  var DEFAULT_SIZE = "small";
+  var SIZES = ["small", "medium", "large"];
+  var LABELS = { small: "小", medium: "中", large: "大" };
+  var CHOICES = [
+    { size: "small", label: "小", hint: "当前默认字号（与样式稿一致）" },
+    { size: "medium", label: "中", hint: "整体放大一档，正文更省眼" },
+    { size: "large", label: "大", hint: "整体放大两档，小屏/远距离看着更清楚" }
+  ];
+  function isSize(s) { return SIZES.indexOf(String(s)) >= 0; }
+  function normalize(s) { return isSize(s) ? String(s) : DEFAULT_SIZE; }
+  function hasStored(storage) {
+    try { return isSize(storage && storage.getItem(STORE_KEY)); } catch (e) { return false; }
+  }
+  function loadSize(storage) {
+    var raw = null;
+    try { raw = storage && storage.getItem(STORE_KEY); } catch (e) { raw = null; }
+    return normalize(raw);
+  }
+  function saveSize(storage, size) {
+    try { storage && storage.setItem(STORE_KEY, normalize(size)); return true; }
+    catch (e) { return false; }
+  }
+  function clearSize(storage) {
+    try { storage && storage.removeItem(STORE_KEY); return true; } catch (e) { return false; }
+  }
+  function applySize(docEl, size) {
+    var s = normalize(size);
+    if (docEl && docEl.setAttribute) { docEl.setAttribute("data-fs", s); }
+    return s;
+  }
+  function labelOf(size) { return LABELS[normalize(size)] || LABELS[DEFAULT_SIZE]; }
+  return { STORE_KEY: STORE_KEY, DEFAULT_SIZE: DEFAULT_SIZE, SIZES: SIZES,
+           LABELS: LABELS, CHOICES: CHOICES, isSize: isSize, normalize: normalize,
+           hasStored: hasStored, loadSize: loadSize, saveSize: saveSize,
+           clearSize: clearSize, applySize: applySize, labelOf: labelOf };
+});
+/* EDITOR_FONT_END */
+/* 首次绘制前应用初始主题与字号（有存储用存储；字号无存储 → 默认小号），避免闪变。 */
 (function () {
   try {
     var mq = window.matchMedia ? window.matchMedia("(prefers-color-scheme: light)") : null;
@@ -67,8 +115,10 @@
     try { store = window.localStorage; } catch (e) { store = null; }
     EditorTheme.applyTheme(document.documentElement,
       EditorTheme.loadTheme(store, !!(mq && mq.matches)));
+    EditorFont.applySize(document.documentElement, EditorFont.loadSize(store));
   } catch (e) {
     try { document.documentElement.setAttribute("data-theme", "dark"); } catch (e2) {}
+    try { document.documentElement.setAttribute("data-fs", "small"); } catch (e3) {}
   }
 })();
 </script>
@@ -86,6 +136,23 @@ body {
 }
 .app { width: 100%; height: 100vh; display: flex; flex-direction: column; overflow: hidden;
   position: relative; z-index: 0; }
+
+/* ---------- 批12 · #13 字号三档（小/中/大） ----------
+   只覆盖字号令牌（--fs-*），**不动间距 / 行高 / 布局结构**；与三套配色主题正交
+   （主题改 data-theme 的颜色令牌，字号改 data-fs 的尺寸令牌，互不覆盖）。
+   默认（无 data-fs 或 small）= tokens.css 现行字号，保持现状；三档令牌必须齐备（测试断言）。 */
+html[data-fs="small"] {
+  --fs-10: 10px; --fs-11: 11px; --fs-12: 12px;
+  --fs-13: 13px; --fs-14: 14px; --fs-16: 16px;
+}
+html[data-fs="medium"] {
+  --fs-10: 11px; --fs-11: 12px; --fs-12: 13px;
+  --fs-13: 14px; --fs-14: 16px; --fs-16: 18px;
+}
+html[data-fs="large"] {
+  --fs-10: 12px; --fs-11: 14px; --fs-12: 15px;
+  --fs-13: 16px; --fs-14: 18px; --fs-16: 20px;
+}
 
 /* ---------- 批10 · 自定义背景图（页面底层 + 主题兜底层） ----------
    层序（由下到上）：body 底色(--bg) → .bgimg 背景图（用户透明度 0–100%）
@@ -804,6 +871,11 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
     </div>
     <div class="mp-hint" id="tp-hint"></div>
     <div class="mp-list" id="tp-list" role="radiogroup" aria-label="配色主题（单选）"></div>
+    <div class="mp-sec" id="fs-sec">
+      <div class="mp-sec-t">字号（小 / 中 / 大）</div>
+      <div class="mp-sub">只放大或缩小文字，间距与布局不变；立即生效并记住。与配色主题互不影响。</div>
+      <div class="mp-list" id="fs-list" role="radiogroup" aria-label="字号（小 / 中 / 大）"></div>
+    </div>
     <div class="mp-sec" id="bg-sec">
       <div class="mp-sec-t">背景图（可调透明度）</div>
       <div class="mp-sub">支持本地图片或图片 URL；只保存在你自己的浏览器里，不上传服务器，也不写入任何内容包文件。清除后恢复默认底色。</div>
@@ -2428,8 +2500,9 @@ function renderThemeSeg() {
     var name = EditorTheme.labelOf(state.theme);
     b.textContent = "🎨 配色：" + name;
     b.setAttribute("aria-label", "配色与背景图（当前：" + name + "）");
-    b.title = "配色与背景图：当前 " + name
-      + "。点开可换主题、设置自定义背景图（透明度可调）；只存在本机浏览器，不上传服务器。";
+    b.title = "配色 / 背景图 / 字号：当前 " + name + " · 字号 "
+      + EditorFont.labelOf(state.fontSize)
+      + "。点开可换主题、调字号、设置自定义背景图；都只存在本机浏览器，不上传服务器。";
   }
   syncThemeChoices();
   var tag = el("vtag");
@@ -2460,6 +2533,50 @@ function initTheme() {
   }
 }
 
+// --- 批12 · #13 字号三档（纯逻辑在 <head> 的 EditorFont；只覆盖 --fs-* 令牌） ---
+function fontChoiceHtml(c, current) {
+  var on = c.size === current;
+  return '<label class="mp-row tp-row' + (on ? " on" : "") + '" data-modal-row>'
+    + '<input type="radio" class="mp-cb" name="font-choice" data-font-choice="'
+    + esc(c.size) + '"' + (on ? " checked" : "") + ' aria-label="字号：' + esc(c.label) + '">'
+    + '<span class="nm">' + esc(c.label) + "</span>"
+    + '<span class="key">' + esc(c.size) + "</span>"
+    + '<span class="st">' + (on ? "当前" : "可选") + "</span>"
+    + '<span class="purpose">' + esc(c.hint || "") + "</span>"
+    + "</label>";
+}
+function syncFontChoices() {
+  var list = el("fs-list");
+  if (!list) { return; }
+  var cur = EditorFont.normalize(state.fontSize);
+  Array.prototype.forEach.call(list.querySelectorAll("[data-font-choice]"), function (r) {
+    var on = r.dataset.fontChoice === cur;
+    r.checked = on;
+    var row = r.closest ? r.closest(".mp-row") : null;
+    if (!row) { return; }
+    row.className = "mp-row tp-row" + (on ? " on" : "");
+    var st = row.querySelector(".st");
+    if (st) { st.textContent = on ? "当前" : "可选"; }
+  });
+}
+function setFont(size, persist) {
+  state.fontSize = EditorFont.applySize(document.documentElement, size);
+  renderThemeSeg();
+  if (persist) { EditorFont.saveSize(themeStore(), state.fontSize); }
+  return state.fontSize;
+}
+function initFont() {
+  state.fontSize = EditorFont.normalize(document.documentElement.getAttribute("data-fs"));
+  renderThemeSeg();
+  var list = el("fs-list");
+  if (list) {
+    list.addEventListener("change", function (e) {
+      var r = e.target && e.target.closest ? e.target.closest("[data-font-choice]") : null;
+      if (r) { setFont(r.dataset.fontChoice, true); }   // 立即生效并记忆；面板保留、不碰草稿
+    });
+  }
+}
+
 // --- 🎨 配色面板：主题单选列表 + 背景图区（与 ⚙ 共用 EditorModal 打开/关闭/筛选） ---
 function renderThemePanel() {
   var hint = el("tp-hint");
@@ -2473,10 +2590,18 @@ function renderThemePanel() {
       return themeChoiceHtml(c, EditorTheme.normalize(state.theme));
     }).join("");
   }
+  // 批12 · #13：字号三档单选（与主题正交；只改 --fs-* 令牌，不动间距与布局）
+  var flist = el("fs-list");
+  if (flist) {
+    flist.innerHTML = (EditorFont.CHOICES || []).map(function (c) {
+      return fontChoiceHtml(c, EditorFont.normalize(state.fontSize));
+    }).join("");
+  }
   var note = el("tp-note");
   if (note) {
     note.textContent = "当前配色：" + EditorTheme.labelOf(state.theme)
-      + "。换肤不改尺寸与字段，也不清空未保存的改动。";
+      + " · 字号：" + EditorFont.labelOf(state.fontSize)
+      + "。换肤/换字号都不改字段与布局结构，也不清空未保存的改动。";
   }
 }
 function openThemePanel() {
@@ -4824,6 +4949,7 @@ window.addEventListener("beforeunload", function (e) {
 
 // 批9/批10 · 配色（读 <html data-theme>，<head> 已按存储/系统设好）+ 背景图（本机存储）
 initTheme();
+initFont();
 initBg();
 loadSession()
   .then(loadPacks)

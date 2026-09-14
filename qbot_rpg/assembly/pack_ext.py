@@ -320,11 +320,12 @@ def parse_declarations(doc: Any) -> List[_Decl]:
 def _check_conflicts(
     decls: Sequence[_Decl],
     framework_names: Sequence[str],
-    framework_aliases: Mapping[str, Any],
+    framework_aliases: Mapping[str, str],
 ) -> None:
     """重名预检：框架既有名/别名、包内自冲突 → 聚合报错（谁与谁冲突）。
 
-    报错信息必须指认冲突双方；**不做 replace=True**，不做静默覆盖。
+    ``framework_aliases`` = {别名: 归属指令名}（含装配级 AliasTable 与各 CommandSpec
+    自带 aliases 两处）。报错信息必须指认冲突双方；**不做 replace=True**，不做静默覆盖。
     """
     errors: List[str] = []
     seen_names: Dict[str, str] = {}
@@ -338,8 +339,7 @@ def _check_conflicts(
                 "（内容包不得重名/覆盖框架指令）"
             )
         if decl.name in fw_alias_names:
-            entry = framework_aliases.get(decl.name)
-            target = getattr(entry, "command", None) or "框架指令"
+            target = framework_aliases.get(decl.name) or "框架指令"
             errors.append(
                 f"指令『{decl.name}』与框架既有别名『{decl.name}』（指向指令『{target}』）冲突，"
                 "拒绝注册"
@@ -358,8 +358,7 @@ def _check_conflicts(
                     "拒绝注册"
                 )
             if alias in fw_alias_names:
-                entry = framework_aliases.get(alias)
-                target = getattr(entry, "command", None) or "框架指令"
+                target = framework_aliases.get(alias) or "框架指令"
                 errors.append(
                     f"指令『{decl.name}』的别名『{alias}』与框架既有别名『{alias}』"
                     f"（指向指令『{target}』）冲突，拒绝注册"
@@ -512,11 +511,27 @@ def load_pack_extensions(
         )
 
 
-def _framework_aliases(router: Any) -> Mapping[str, Any]:
-    """框架既有别名表 {别名: AliasEntry}（router.aliases 缺失 → 空映射）。"""
+def _framework_names_and_aliases(router: Any) -> Tuple[List[str], Dict[str, str]]:
+    """框架既有指令名 + 别名（别名 → 归属指令名），供重名预检。
+
+    别名两处来源都要覆盖：① 装配级 ``router.aliases``（AliasTable，含 settings 配置）；
+    ② 各 ``CommandSpec.aliases``（如指令壳自带别名）。两处都不在 Router.register 的
+    重名检查范围内，故必须在装载前显式预检。
+    """
+    names = list(router.names())
+    aliases: Dict[str, str] = {}
     table = getattr(router, "aliases", None)
-    getter = getattr(table, "_by_alias", None)
-    return getter if isinstance(getter, Mapping) else {}
+    by_alias = getattr(table, "_by_alias", None)
+    if isinstance(by_alias, Mapping):
+        for alias, entry in by_alias.items():
+            aliases[str(alias)] = str(getattr(entry, "command", "") or "")
+    getter = getattr(router, "get", None)
+    if callable(getter):
+        for name in names:
+            spec = getter(name)
+            for alias in getattr(spec, "aliases", None) or []:
+                aliases.setdefault(str(alias), str(name))
+    return names, aliases
 
 
 def _load_enabled(router: Any, pack_path: Path, pack_id: str) -> PackExtResult:
@@ -546,7 +561,8 @@ def _load_enabled(router: Any, pack_path: Path, pack_id: str) -> PackExtResult:
         return PackExtResult(pack_id=pack_id, enabled=True, ok=True, warnings=("commands 为空",))
 
     # ② 重名预检（框架名 + 框架别名 + 包内自冲突）
-    _check_conflicts(decls, list(router.names()), _framework_aliases(router))
+    fw_names, fw_aliases = _framework_names_and_aliases(router)
+    _check_conflicts(decls, fw_names, fw_aliases)
 
     # ③ 实现文件（包内固定名 ext/commands.py，路径校验）
     impl_path = _resolve_within(pack_path, EXT_DIR, IMPL_FILE)

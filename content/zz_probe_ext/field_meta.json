@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "module_labels": {
+    "zz_probe_ext_data": "扩展探针数据"
+  },
+  "field_labels": {
+    "zz_probe_ext_data": {
+      "id": "编号",
+      "name": "名称",
+      "note": "说明"
+    }
+  },
+  "field_help": {
+    "zz_probe_ext_data": {
+      "note": "仅验证内容包扩展装载，无业务含义"
+    }
+  }
+}

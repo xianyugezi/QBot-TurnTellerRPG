@@ -251,6 +251,20 @@ def test_alias_collides_with_framework_command_rejected(tmp_path: Path) -> None:
     assert not r.has("潮汐")
 
 
+def test_alias_collides_with_framework_spec_alias_rejected(tmp_path: Path) -> None:
+    """框架指令自带 aliases（CommandSpec.aliases，不在 AliasTable 里）同样要检出。"""
+    root = _write_pack(
+        tmp_path / "zt_spec_alias",
+        commands=[_decl(name="潮汐", aliases=["领取任务"], handler="probe")],
+    )
+    r = Router()
+    r.register(CommandSpec("任务", aliases=["领取任务"]))
+    r.aliases = AliasTable.from_config({})  # type: ignore[attr-defined]
+    res = load_pack_extensions(r, pack_dir=root, settings={"ext": {"enabled": True}}, cli=True)
+    assert res.ok is False and not r.has("潮汐")
+    assert any("领取任务" in e and "任务" in e for e in res.errors), res.errors
+
+
 def test_intra_pack_conflict_rejected_atomically(tmp_path: Path) -> None:
     """包内一条合法 + 一条与框架重名 → 整包拒绝（不留半装）。"""
     root = _write_pack(

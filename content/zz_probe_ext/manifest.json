@@ -1,0 +1,17 @@
+{
+  "name": "内容包扩展探针（验证用）",
+  "version": "0.0.1",
+  "schema_version": 1,
+  "author": "e1-pack-ext",
+  "modules": [
+    "settings",
+    "stats",
+    "formula",
+    "effects",
+    "items",
+    "zz_probe_ext_data"
+  ],
+  "module_labels": {
+    "zz_probe_ext_data": "扩展探针数据"
+  }
+}

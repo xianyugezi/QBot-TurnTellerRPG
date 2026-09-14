@@ -1,0 +1,56 @@
+{
+  "hp": {
+    "name": "生命",
+    "type": "resource",
+    "base": 100,
+    "max": 9999
+  },
+  "mp": {
+    "name": "魔法",
+    "type": "resource",
+    "base": 50,
+    "max": 9999
+  },
+  "str": {
+    "name": "力量",
+    "type": "combat",
+    "base": 10,
+    "growth": 2
+  },
+  "int": {
+    "name": "智力",
+    "type": "combat",
+    "base": 10,
+    "growth": 2
+  },
+  "con": {
+    "name": "体质",
+    "type": "combat",
+    "base": 10,
+    "growth": 2
+  },
+  "spr": {
+    "name": "精神",
+    "type": "combat",
+    "base": 10,
+    "growth": 2
+  },
+  "foc": {
+    "name": "专注",
+    "type": "combat",
+    "base": 10,
+    "growth": 2
+  },
+  "agi": {
+    "name": "敏捷",
+    "type": "combat",
+    "base": 10,
+    "growth": 2
+  },
+  "lck": {
+    "name": "幸运",
+    "type": "combat",
+    "base": 10,
+    "growth": 1
+  }
+}

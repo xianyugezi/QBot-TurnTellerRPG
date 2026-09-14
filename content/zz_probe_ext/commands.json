@@ -1,0 +1,12 @@
+{
+  "commands": [
+    {
+      "name": "探针",
+      "aliases": ["zzprobe"],
+      "usage": "探针 [任意文字]",
+      "help": "内容包扩展装载探针（验证用，无业务含义）",
+      "handler": "probe",
+      "gm_only": false
+    }
+  ]
+}

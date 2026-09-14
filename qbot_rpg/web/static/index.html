@@ -2289,7 +2289,11 @@ function loadPacks() {
     state.pack = data.default || (data.packs[0] && data.packs[0].id) || null;
     if (state.pack) { sel.value = state.pack; }
     syncPackTitle();
-    sel.addEventListener("change", function () {
+    // 批11：导入成功后要重新拉包列表（loadPacks 会被再次调用）——change 监听只绑定一次，
+    // 否则每导入一次就多绑一个、换包时重复触发。
+    if (sel.dataset && !sel.dataset.packsBound) {
+      sel.dataset.packsBound = "1";
+      sel.addEventListener("change", function () {
       if (!canLeave()) { sel.value = state.pack; return; }
       discardDraft();
       state.pack = sel.value; state.module = null; state.entry = null;
@@ -2300,7 +2304,8 @@ function loadPacks() {
       if (!el("transferpanel").hidden) { renderTransferPanel(); }   // 批11：导出目标包名同步
       loadModules();
       loadEntryIndex();
-    });
+      });
+    }
   });
 }
 

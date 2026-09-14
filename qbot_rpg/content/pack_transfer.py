@@ -124,9 +124,21 @@ def _fail(code: str, message: str, how_to_fix: str = "", **extra: Any) -> Dict[s
 # 基本信息
 # -------------------------------------------------------------------------------------
 def ttr_version() -> str:
-    """TTR 版本号（qbot_rpg 包版本；导出元信息用）。"""
-    from qbot_rpg import __version__  # 延迟 import，避免无谓的包初始化
-    return str(__version__ or "")
+    """TTR 版本号（导出元信息用）。
+
+    不 `import qbot_rpg`（content 层只允许依赖 data —— 架构矩阵 §1.4）：直接读
+    `qbot_rpg/__init__.py` 的 `__version__` 字面量；可用环境变量 `TTR_VERSION` 覆盖。
+    """
+    env = str(os.environ.get("TTR_VERSION") or "").strip()
+    if env:
+        return env
+    init = Path(__file__).resolve().parents[1] / "__init__.py"
+    try:
+        text = init.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+    m = re.search(r'^__version__\s*=\s*["\']([^"\']+)["\']', text, re.M)
+    return m.group(1) if m else ""
 
 
 def ttr_commit(repo_root: Optional[object] = None) -> str:

@@ -229,6 +229,29 @@ def test_new_pack_undeclared_field_falls_back_to_raw_key_without_error() -> None
     assert found > 0, "应有「包内未声明 → 原始键兜底」的实例（本批探针包）"
 
 
+def test_new_pack_registered_type_without_label_uses_raw_key() -> None:
+    """框架登记了类型、包内未声明中文名 → label 仍为原始键（框架侧批B 已无文案），不报错。"""
+    framework = api.field_meta_table()
+    checked = 0
+    for pid, decl, _unknown in _new_packs():
+        for mod, spec in decl.field_labels.items():
+            mmeta = framework.module(mod)
+            if mmeta is None:  # 框架未登记模块 → 走「纯展示壳」，不在本用例口径
+                continue
+            declared = {str(k) for k in spec if str(k) not in ("_label", "_help")}
+            detail = _first_entry(pid, mod)
+            for f in detail["fields"]:
+                fm = mmeta.fields.get(str(f["key"]))
+                # 框架登记了类型但**自身也无中文名**（批B 已删展示表；个别内联 label 除外），
+                # 且包内未声明 → label 必须回落到原始键。
+                if fm is not None and not fm.label and str(f["key"]) not in declared:
+                    assert f["label"] == f["key"], (
+                        f"{pid}/{mod}.{f['key']}: 包内未声明中文名，label 应为原始键，"
+                        f"实际 {f['label']!r}")
+                    checked += 1
+    assert checked > 0, "应有「框架登记类型、包内未声明中文名」的实例"
+
+
 # =====================================================================================
 # D. 零改动 / 零耦合护栏：框架与验收脚本不含包名或新模块名
 # =====================================================================================

@@ -663,6 +663,12 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
   background-position: center center; background-size: cover; opacity: 0; }
 .bg-prev-note { color: var(--text-5); font-size: var(--fs-11); line-height: var(--lh-ex); }
 .bg-acts { display: flex; align-items: center; gap: var(--sp-5); flex-wrap: wrap; }
+/* 批11 · 导出/导入面板：文件选择 + 冲突三选 + 只读说明（令牌驱动） */
+.tf-file { max-width: 100%; color: var(--text-3); font-size: var(--fs-11); }
+.tf-conflict { display: flex; align-items: center; gap: var(--sp-5); flex-wrap: wrap;
+  margin-top: var(--sp-4); }
+.mp-note.ro { color: var(--warn); }
+#tf-import-result { white-space: pre-wrap; }
 </style>
 </head>
 <body>
@@ -687,6 +693,9 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
         title="配色与背景图：三套主题单选 + 自定义背景图（透明度可调）；只存在本机浏览器，不上传服务器">🎨 配色</button>
       <button class="btn gear" id="btn-settings" type="button"
         title="模块开关：勾选要做的内容类型（如角色、道具、场景…）；停用只移除声明，数据文件保留；落盘走校验 + 原子写 + 自动备份">⚙ 模块</button>
+      <button class="btn gear" id="btn-transfer" type="button" aria-haspopup="dialog"
+        aria-label="导出或导入内容包"
+        title="分享内容包：把当前内容包导出成一个 .ttrpack 文件发给别人，或导入别人发来的 .ttrpack（导入是新建一个包，失败不会留下半成品）">📦 导出/导入</button>
       <label class="rolesel">
         <span class="lb">身份=</span>
         <select id="role" aria-label="权限位切换"></select>
@@ -748,7 +757,7 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
       <div class="panel-body" id="p-body">
         <div class="empty">从左侧选择模块与条目。字段按内容包元数据渲染；改动先进草稿，保存时才校验并落盘。</div>
       </div>
-      <div class="panel-ft"><span>批10 · 配色按钮化 + 自定义背景图（🎨 配色面板：三套主题单选 · 本地图片/URL 背景图 · 透明度 0–100% · 只存浏览器本机不上传 · ⚙ 与 🎨 共用弹层组件）</span></div>
+      <div class="panel-ft"><span>批11 · 内容包导出/导入</span></div>
     </section>
 
   </div>
@@ -827,6 +836,49 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
       <span class="mp-note" id="tp-note"></span>
       <span class="sp"></span>
       <button class="btn" id="tp-done" data-modal-close type="button">完成</button>
+    </div>
+  </div>
+</div>
+
+<!-- 批11 · 顶栏 📦 导出/导入：分享内容包（导出此包 / 导入别人发来的 .ttrpack；导入=新建包） -->
+<div id="transferpanel" class="mp-overlay" data-modal="transferpanel" hidden>
+  <div class="mp" role="dialog" aria-modal="true" aria-label="分享内容包（导出 / 导入）">
+    <div class="mp-hd">
+      <span class="mp-t">📦 分享内容包</span>
+      <button class="mp-x" id="tf-close" data-modal-close type="button"
+        aria-label="关闭分享内容包面板">×</button>
+    </div>
+    <div class="mp-hint" id="tf-hint">导出 = 把当前内容包打成一个 <b>.ttrpack</b> 文件（就是一个压缩包），
+      通过 QQ / 网盘发给别人；导入 = 选择别人发来的 <b>.ttrpack</b>，检查通过后它会作为一个新内容包出现。</div>
+    <div class="mp-msg" id="tf-msg" hidden></div>
+    <div class="mp-sec">
+      <div class="mp-sec-t">导出此包</div>
+      <div class="mp-sub" id="tf-export-note">当前包：—</div>
+      <div class="mp-sub">下载文件名形如「包名-日期.ttrpack」。导出只是读取，不会改动内容包；
+        只读身份（GM）也可以导出。</div>
+      <div class="bg-acts">
+        <button class="btn primary" id="tf-export" type="button">导出此包（下载 .ttrpack）</button>
+      </div>
+    </div>
+    <div class="mp-sec">
+      <div class="mp-sec-t">导入包</div>
+      <div class="mp-sub">选择别人发来的 .ttrpack（从 QQ / 网盘下载到本机后选它）。
+        导入前会依次检查：压缩包结构安全 → 导出信息与包清单完整 → 内容能过校验器；
+        任何一步不过都<b>不会写入</b>。导入是<b>新建一个内容包</b>，不会动现有包；只有你明确选择「覆盖」时才会替换，
+        且替换前会自动备份原包。</div>
+      <div class="bg-acts">
+        <input class="tf-file" id="tf-file" type="file"
+          accept=".ttrpack,.zip,application/zip" aria-label="选择要导入的内容包文件">
+        <button class="btn" id="tf-import" type="button" disabled>导入包</button>
+      </div>
+      <div class="mp-note" id="tf-file-note"></div>
+      <div class="mp-note ro" id="tf-ro-note" hidden>当前身份为只读预览，不能导入（导出不受影响）；请切换为可编辑身份后再导入。</div>
+      <div class="mp-note" id="tf-import-result"></div>
+    </div>
+    <div class="mp-ft">
+      <span class="mp-note">多包 / 冲突时：导入会先问你「换个名字」还是「覆盖」（覆盖前自动备份原包）。</span>
+      <span class="sp"></span>
+      <button class="btn" id="tf-done" data-modal-close type="button">完成</button>
     </div>
   </div>
 </div>
@@ -1595,6 +1647,64 @@ function modalBind(id, opts) {
 }
 /* EDITOR_MODAL_END */
 
+/* EDITOR_TRANSFER_BEGIN */
+// 批11 · 导出/导入纯逻辑（无 DOM 依赖；浏览器挂 EditorTransfer，node 走 module.exports）。
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) { module.exports = factory(); }
+  else { root.EditorTransfer = factory(); }
+})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+  var EXT = ".ttrpack";
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  // 从 Content-Disposition 里取下载文件名（取不到 → 空串，调用方用 fallbackName）。
+  function dispFilename(cd) {
+    if (!cd) { return ""; }
+    var m = /filename\*?=(?:UTF-8''|")?([^";]+)"?/i.exec(String(cd));
+    if (!m) { return ""; }
+    try { return decodeURIComponent(m[1].replace(/"/g, "")); } catch (e) { return m[1]; }
+  }
+  // 兜底下载名：包名 + 日期（与后端 export_filename 同形态）。
+  function fallbackName(packId, date) {
+    var d = date || new Date();
+    var mm = ("0" + (d.getMonth() + 1)).slice(-2);
+    var dd = ("0" + d.getDate()).slice(-2);
+    return String(packId || "pack") + "-" + d.getFullYear() + mm + dd + EXT;
+  }
+  function canImport(editable, hasFile) { return !!editable && !!hasFile; }
+  function exportOutcome(res) {
+    if (res && res.ok) { return { level: "ok", text: res.message || ("已导出 " + (res.filename || "")) }; }
+    return { level: "red", text: (res && res.message) || "导出失败。" };
+  }
+  function importOutcome(res) {
+    if (!res) { return { level: "red", text: "导入失败：没有收到有效结果。" }; }
+    if (res.conflict) {
+      return { level: "yellow",
+               text: res.message || ("已存在同名内容包「" + (res.pack_id || "") + "」，请选择改名或覆盖。") };
+    }
+    if (res.ok) { return { level: "ok", text: res.message || "导入成功。" }; }
+    var first = (res.errors && res.errors[0]) || {};
+    var text = res.message || "导入失败。";
+    if (first.message && text.indexOf(first.message) < 0) { text += " " + first.message; }
+    if (first.how_to_fix) { text += " 怎么处理：" + first.how_to_fix; }
+    return { level: "red", text: text };
+  }
+  // 包名冲突时的三个选择（改名 / 覆盖 / 取消）——按钮走事件委托 [data-tf-act]。
+  function conflictHtml(packId) {
+    var id = esc(packId);
+    return '<div class="tf-conflict">'
+      + '<button class="btn" type="button" data-tf-act="rename" data-tf-id="' + id + '">换个名字导入</button>'
+      + '<button class="btn danger" type="button" data-tf-act="overwrite" data-tf-id="' + id + '">覆盖现有包</button>'
+      + '<button class="btn" type="button" data-tf-act="cancel">取消</button>'
+      + "</div>";
+  }
+  return { EXT: EXT, canImport: canImport, conflictHtml: conflictHtml, dispFilename: dispFilename,
+           exportOutcome: exportOutcome, fallbackName: fallbackName, importOutcome: importOutcome };
+});
+/* EDITOR_TRANSFER_END */
+
 /* EDITOR_BG_BEGIN */
 // 批10 · 自定义背景图纯逻辑（无 DOM 依赖；浏览器挂 EditorBg，node 走 module.exports）。
 // 存储策略：**浏览器本地，绝不上传服务器**（无鉴权面、零服务端改动，也不写任何内容包文件）。
@@ -2148,6 +2258,7 @@ function renderRoleTag() {
   tag.className = "role" + (state.editable ? "" : " ro");
   markDirty();
   refreshRollbackButton();   // V4：只读身份切换后回退按钮同步禁用
+  if (!el("transferpanel").hidden) { renderTransferPanel(); }   // 批11：只读身份同步禁用「导入包」
 }
 
 function switchRole(role) {
@@ -2186,6 +2297,7 @@ function loadPacks() {
       state.entryIndex = null; state.gquery = "";
       el("gfilter").value = "";   // 换包后全局检索结果作废
       syncPackTitle();
+      if (!el("transferpanel").hidden) { renderTransferPanel(); }   // 批11：导出目标包名同步
       loadModules();
       loadEntryIndex();
     });
@@ -4431,6 +4543,134 @@ modalBind("themepanel", {});
 el("btn-settings").addEventListener("click", openModulePanel);
 el("btn-theme").addEventListener("click", openThemePanel);
 el("mp-rollback").addEventListener("click", onModuleRollback);
+
+// ---------------------------------------------------------------------------
+// 批11 · 📦 导出/导入面板（分享内容包）：导出下载 + 导入上传 + 冲突改名/覆盖
+// 导出只读（GM 也可用）；导入必须可编辑身份（后端 require_edit 403，前端同时置灰）。
+// ---------------------------------------------------------------------------
+var TRANSFER = { busy: false };
+
+function tfMsg(level, text) {
+  var box = el("tf-msg");
+  if (!text) { box.hidden = true; box.textContent = ""; box.className = "mp-msg"; return; }
+  box.hidden = false; box.className = "mp-msg " + (level || ""); box.textContent = text;
+}
+function renderTransferPanel() {
+  var sel = el("packs");
+  var opt = sel && sel.options[sel.selectedIndex];
+  el("tf-export-note").textContent = "当前包：" + ((opt && opt.textContent) || state.pack || EMPTY_TEXT);
+  var f = el("tf-file").files && el("tf-file").files[0];
+  el("tf-export").disabled = !state.pack || TRANSFER.busy;
+  el("tf-import").disabled = !EditorTransfer.canImport(state.editable, !!f) || TRANSFER.busy;
+  el("tf-ro-note").hidden = !!state.editable;
+  el("tf-file-note").textContent = f
+    ? ("已选择：" + f.name + "（" + Math.max(1, Math.round(f.size / 1024)) + " KB）")
+    : "还没有选择文件。";
+}
+function setTransferBusy(on) { TRANSFER.busy = !!on; renderTransferPanel(); }
+function openTransferPanel() {
+  renderTransferPanel();
+  tfMsg("", "");
+  el("tf-import-result").innerHTML = "";
+  return modalOpen("transferpanel", el("btn-transfer"));
+}
+function downloadBlob(blob, name) {
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  window.setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+}
+function doExportPack() {
+  if (!state.pack || TRANSFER.busy) { return; }
+  setTransferBusy(true); tfMsg("", "");
+  fetch("/api/pack/" + enc(state.pack) + "/export", { headers: { "Accept": "application/zip" } })
+    .then(function (r) {
+      if (!r.ok) {
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          throw new Error((j && j.error) || ("HTTP " + r.status));
+        });
+      }
+      var name = EditorTransfer.dispFilename(r.headers.get("Content-Disposition"))
+        || EditorTransfer.fallbackName(state.pack);
+      return r.blob().then(function (blob) { downloadBlob(blob, name); return name; });
+    })
+    .then(function (name) { tfMsg("ok", "已导出并开始下载：" + name); })
+    .catch(function (err) { tfMsg("red", "导出失败：" + err.message); })
+    .then(function () { setTransferBusy(false); });
+}
+function refreshAfterImport(packId) {
+  return loadPacks().then(function () {
+    var sel = el("packs");
+    if (!packId) { return null; }
+    var hit = Array.prototype.filter.call(sel.options, function (o) { return o.value === packId; })[0];
+    if (!hit) { return null; }
+    sel.value = packId; state.pack = packId; state.module = null; state.entry = null;
+    state.refCache = {}; state.refKnown = {}; state.refQuery = {};
+    state.entryIndex = null; state.gquery = ""; el("gfilter").value = "";
+    syncPackTitle();
+    return loadModules().then(function () { return loadEntryIndex(); });
+  });
+}
+function doImportPack(onConflict, newId) {
+  var f = el("tf-file").files && el("tf-file").files[0];
+  if (!f || TRANSFER.busy) { tfMsg("red", "请先选择一个 .ttrpack 文件。"); return Promise.resolve(); }
+  var q = [];
+  if (onConflict) { q.push("on_conflict=" + encodeURIComponent(onConflict)); }
+  if (newId) { q.push("new_id=" + encodeURIComponent(newId)); }
+  var url = "/api/pack/import" + (q.length ? "?" + q.join("&") : "");
+  setTransferBusy(true); tfMsg("", ""); el("tf-import-result").innerHTML = "";
+  return fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/zip", "Accept": "application/json" },
+    body: f
+  }).then(function (r) {
+    return r.json().catch(function () { return { ok: false, message: "HTTP " + r.status }; })
+      .then(function (j) { return j; });
+  }).then(function (res) {
+    var out = EditorTransfer.importOutcome(res);
+    tfMsg(out.level, out.text);
+    if (res.conflict) {
+      el("tf-import-result").innerHTML = EditorTransfer.conflictHtml(res.pack_id);
+      return null;
+    }
+    if (res.ok) {
+      tfMsg("ok", out.text + " 内容包列表已刷新。");
+      return refreshAfterImport(res.pack_id);
+    }
+    if (res.errors && res.errors.length) {
+      el("tf-import-result").textContent = res.errors.map(function (e) {
+        return "· " + (e.message || e.code || "");
+      }).join("\n");
+    }
+    return null;
+  }).catch(function (err) {
+    tfMsg("red", "导入失败：" + err.message);
+  }).then(function () { setTransferBusy(false); });
+}
+
+modalBind("transferpanel", {});
+el("btn-transfer").addEventListener("click", openTransferPanel);
+el("tf-export").addEventListener("click", doExportPack);
+el("tf-import").addEventListener("click", function () { doImportPack("", ""); });
+el("tf-file").addEventListener("change", renderTransferPanel);
+el("transferpanel").addEventListener("click", function (ev) {
+  var b = ev.target.closest ? ev.target.closest("[data-tf-act]") : null;
+  if (!b) { return; }
+  var act = b.getAttribute("data-tf-act");
+  var pid = b.getAttribute("data-tf-id") || "";
+  if (act === "rename") {
+    var nid = window.prompt("给新内容包起一个名字（字母 / 数字 / 下划线）：", pid + "_copy");
+    if (nid && nid.trim()) { doImportPack("rename", nid.trim()); }
+  } else if (act === "overwrite") {
+    if (window.confirm("确定覆盖现有内容包「" + pid + "」吗？\n"
+        + "原包会先自动备份到内容目录的 .ttrpack_backups/ 下，可手动找回。")) {
+      doImportPack("overwrite", "");
+    }
+  } else if (act === "cancel") {
+    el("tf-import-result").innerHTML = "";
+  }
+});
 document.addEventListener("keydown", function (e) {
   if (modalEsc(e)) { return; }   // Esc 关闭当前弹层并把焦点还给触发按钮
   modalTrap(e);                  // Tab 在弹层内循环（不跑到底层页面）

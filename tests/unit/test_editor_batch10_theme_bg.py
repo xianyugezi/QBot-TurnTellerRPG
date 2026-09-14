@@ -36,7 +36,7 @@ REPO = Path(api.repo_root())
 HTML = REPO / "qbot_rpg" / "web" / "static" / "index.html"
 TOKENS = REPO / "qbot_rpg" / "web" / "static" / "tokens.css"
 
-BATCH_NOTE = "批10 · 配色按钮化 + 自定义背景图"
+BATCH_NOTE = "批11 · 内容包导出/导入"
 
 
 def _html() -> str:
@@ -194,16 +194,18 @@ def test_setTheme_keeps_draft_and_only_touches_theme() -> None:
 # =====================================================================================
 def test_both_panels_share_the_same_modal_component() -> None:
     html = _html()
-    # 两个面板都是同一套 .mp-overlay/.mp 结构，且都带 data-modal
-    assert html.count('class="mp-overlay" data-modal=') == 2
+    # 三个面板都是同一套 .mp-overlay/.mp 结构，且都带 data-modal
+    # （批10 起 ⚙/🎨 共用；批11 的 📦 导出/导入沿用同一组件，不另写一套）
+    assert html.count('class="mp-overlay" data-modal=') == 3
     assert 'data-modal="modpanel"' in html and 'data-modal="themepanel"' in html
-    for token in ('id="modpanel"', 'id="themepanel"'):
+    assert 'data-modal="transferpanel"' in html
+    for token in ('id="modpanel"', 'id="themepanel"', 'id="transferpanel"'):
         assert token in html
     # 共用关闭按钮（data-modal-close）与共用列表/底栏 class
-    assert html.count("data-modal-close") >= 4
+    assert html.count("data-modal-close") >= 6
     assert html.count('class="mp-list"') == 2
-    assert html.count('class="mp-hd"') == 2
-    assert html.count('class="mp-ft"') == 2
+    assert html.count('class="mp-hd"') == 3
+    assert html.count('class="mp-ft"') == 3
     # 两个面板都走同一个 EditorModal 实现 + 注册/绑定
     for fn in ("modalOpen", "modalClose", "modalActive", "modalEsc", "modalTrap",
                "modalFocusables", "modalOverlayClick", "modalFilter", "modalBind"):
@@ -211,6 +213,7 @@ def test_both_panels_share_the_same_modal_component() -> None:
     assert 'modalOpen("modpanel", el("btn-settings"))' in html
     assert 'modalOpen("themepanel", el("btn-theme"))' in html
     assert 'modalBind("modpanel"' in html and 'modalBind("themepanel"' in html
+    assert 'modalBind("transferpanel"' in html
     assert "modalEsc(e)" in html and "modalTrap(e)" in html
 
 
@@ -317,8 +320,8 @@ console.log(JSON.stringify(out));
 
 def test_modal_aria_and_keyboard_reachability() -> None:
     html = _html()
-    assert html.count('role="dialog"') == 2
-    assert html.count('aria-modal="true"') == 2
+    assert html.count('role="dialog"') == 3
+    assert html.count('aria-modal="true"') == 3
     assert "Esc 关闭" in html or "modalEsc" in html
     assert "data-modal-close" in html
     # 顶栏触发按钮键盘可达（原生 button），面板内焦点环走 --focus
@@ -523,13 +526,14 @@ Promise.resolve()
 def test_footer_batch_string_is_current() -> None:
     html = _html()
     assert BATCH_NOTE in html
+    assert "批10 · 配色按钮化 + 自定义背景图" not in html
     assert "批9 · 配色切换" not in html
     assert "批6 · 新增/删除条目 + 检索" not in html
     assert "批5.2 · 视觉细则清零" not in html
     assert "批3 · 分区页签" not in html
     # 产品名不含批次（批9.2 约束不回退）
     comp = re.search(r'<div class="panel-ft">(.*?)</div>', html, re.S)
-    assert comp is not None and "批10" in comp.group(1)
+    assert comp is not None and "批11" in comp.group(1)
 
 
 def test_batch10_frontend_has_no_pack_business_names() -> None:

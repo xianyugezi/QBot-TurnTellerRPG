@@ -8,13 +8,27 @@
   1. 用 `git worktree` 检出基线（默认 `46baff3`；批13.1 重定），在基线树里跑
      `scripts/editor_readonly_snapshot.py`（`qbot_rpg` 走 PYTHONPATH 指向基线）；
   2. 在当前工作树跑同一脚本；
-  3. 递归对拍两份 JSON，输出差异报告；**既有键的修改/删除 = 0 → 退出码 0**，否则 1。
+  3. 递归对拍两份 JSON，输出差异报告；**删除 = 0 且值变化 = 0（派生展示键除外）→ 退出码 0**，
+     否则 1；迁移相关字段（label/help/group/module_labels/module_tree）另做严格断言。
 
 增量容忍（2026-09-14，settings.battle.min_damage 实装）：
   批B 门禁的硬约束是「迁移不得修改/删除既有键」。后续批次**新增**字段（如
   settings.battle.min_damage）是合法演进，只应报告、不应冒充迁移差异。故对拍分两桶：
   hard=修改/删除（必须 0）、soft=新增（允许，列出）。列表元素带唯一 key/id/name 时逐键
   对齐，确保「既有元素被改」仍被 hard 抓住（不会因长度变化被整体跳过）。
+
+判定口径（批15 语义化定稿，2026-09-15；实现见 `_diff` / `_strip_module_decl`）：
+  ① **删除任一项 → 红**（hard）：`a`（迁移后）缺 `b`（迁移前）有的键 / 列表元素，一律硬差异；
+  ② **任一值变化 → 红**（hard）：标量/结构值不等即硬差异。唯一例外是**派生展示键**
+     （`control` / `widget` / `block_layout` / `number_step`）——它们由元数据 + 值形态推导，
+     是**呈现层**结果（如批15 #9 把动态键空间由 objform 表格化为 kvtable、#2 把曲线纠偏为
+     curve），改的只是呈现、不改迁移口径，故记 soft；**删除它们仍是 hard**（结构不能消失）；
+  ③ **新增项 → 允许**（soft），但必须显式计入输出：打印「新增 N 项（功能演化）」并逐条列出
+     （不得静默吞掉；列表逐 key 对齐后，既有元素被改/删仍被 ①/② 抓住）；
+  ④ **迁移相关字段严格相等**：`label` / `help` / `group` 三个描述符键，以及模块声明
+     （`module_labels` / `module_tree` → `modules.modules`、`index.modules[].label`、
+     `entries/*.label`、`detail/*.module_label`）整体——这组做**逐字段严格断言**：
+     **新增 / 删除 / 改值全红**，不受 ②/③ 的派生展示键与新增容忍影响。
 
 用法（仓库根执行）：
 
@@ -32,7 +46,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any, List, Mapping, Optional, Sequence, Tuple
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SNAPSHOT = Path(__file__).resolve().with_name("editor_readonly_snapshot.py")
@@ -124,15 +138,17 @@ _GROUP_KEYS = frozenset({"name", "label", "count"})
 
 
 def _strip_module_decl(snap: Any) -> Any:
-    """取出**模块级展示声明**（模块树 / 模块显示名），从硬对拍里剔除（另以 soft 报告）。
+    """取出**模块级展示声明**（模块树 / 模块显示名），单独成子树的严格对拍口径。
 
-    批12 起：模块显示名与模块层级属**包展示声明**，后续批次会刻意重组
-    （「属性/公式条目并入基础」「生活模块挂到既有父模块下」）。迁移门禁的硬约束是
-    「**字段级** key/label/help/group/type 不得被改/删」，故把下列内容从硬对拍移到 soft：
-      · `modules.modules`（模块树结构）；
-      · `index.modules[].label`（模块索引里的中文名）；
+    批12 起：模块显示名与模块层级属**包展示声明**，会随批次刻意重组（「属性/公式条目并入
+    基础」「生活模块挂到既有父模块下」）。迁移门禁的硬约束包含「**字段级** key/label/help/
+    group/type 不得被改/删」与「`module_labels` / `module_tree` 严格相等」，故把下列内容
+    从主对拍里**摘出**（避免与字段描述混在一条路径上），改为独立子树按 `strict=True` 对拍
+    ——新增 / 删除 / 改值全红：
+      · `modules.modules`（模块树结构，源自 `module_tree`）；
+      · `index.modules[].label`（模块索引里的中文名，源自 `module_labels`）；
       · `entries/<模块>.label` 与 `detail/<模块>.module_label`（模块显示名）。
-    其余（字段描述、计数、条目集合、引用候选）一律仍按 hard 对拍。
+    其余（字段描述、计数、条目集合、引用候选）一律仍按 ①②③ 口径对拍。
     """
     decl: dict = {}
     hard = copy.deepcopy(snap)
@@ -183,19 +199,28 @@ def _is_fallback_field(d: Any) -> bool:
     return d.get("key") == "" and ("widget" in d or "control" in d)
 
 
-#: 由列描述**派生**的展示键：列已逐键对齐，这两个值只随合法登记/新增而变 → 记 soft。
-_DERIVED_DISPLAY_KEYS = frozenset({"block_layout", "number_step"})
+#: 由列描述 / 元数据**派生**的展示键：其值只随呈现层演化而变（列已逐键对齐）→ 记 soft。
+#: 批15 增补 `control` / `widget`：它们是「元数据类型 × 值形态 → 控件形态」的推导结果
+#: （`_EDIT_BY_WIDGET` / `_effective_widget`），#9 表格化、#2 曲线化改的正是这两个值，
+#: 属呈现层演进；但**删除它们仍算硬差异**（结构不能消失）。
+_DERIVED_DISPLAY_KEYS = frozenset({"control", "widget", "block_layout", "number_step"})
+#: 迁移相关字段：这批键做**逐字段严格断言**（新增 / 删除 / 改值全红，且沿子树传播）。
+_STRICT_KEYS = frozenset({"label", "help", "group"})
 
 
 def _diff(a: Any, b: Any, path: str, hard: List[str], soft: List[str],
-          cap: int = 200) -> None:
-    """递归对拍：hard = 修改/删除（必须为 0）；soft = 合法新增（允许，仅报告）。
+          cap: int = 200, strict: bool = False) -> None:
+    """递归对拍：hard = 删除 / 值变化（必须为 0）；soft = 合法新增 / 派生展示键（允许，仅报告）。
 
-    对拍口径（2026-09-14 增量容忍修正；2026-09-15 批13 补登记容忍）：批B 硬门禁 =
-    迁移不得**修改或删除**既有键/字段/分组；后续批次**新增**字段（如
-    settings.battle.min_damage）或把**兜底软字段补登记为正式字段**（批13 能力可见性）
-    属合法演进 → 记入 soft。列表元素带唯一 key/id/name 时逐键对齐，因此「既有元素被改」
-    仍会被 hard 抓住，不会因长度变化被整体跳过。
+    口径（批15 语义化定稿，2026-09-15）：
+      ① 删除任一项 → hard（不因 strict 与否而放松）；
+      ② 值变化 → hard；例外：`_DERIVED_DISPLAY_KEYS` 的值变化记 soft（仅呈现层），
+         但**缺失**（删除）仍为 hard；
+      ③ 新增项 → soft（逐条列出，不得静默）；
+      ④ `strict=True`（或跨入 `_STRICT_KEYS` 子树）→ 新增 / 删除 / 改值全 red，
+         不受 ②/③ 容忍影响（用于 `label` / `help` / `group` 与模块声明子树）。
+    列表元素带唯一 key/id/name 时逐键对齐，因此「既有元素被改」仍会被 hard 抓住，
+    不会因长度变化被整体跳过。
     """
     if len(hard) >= cap:
         return
@@ -210,15 +235,20 @@ def _diff(a: Any, b: Any, path: str, hard: List[str], soft: List[str],
         for key in sorted(keys):
             if key in _DERIVED_COUNT_KEYS:
                 continue
-            if key in _DERIVED_DISPLAY_KEYS and a.get(key) != b.get(key):
-                soft.append(f"{path}.{key}: {a.get(key)!r} → {b.get(key)!r}（派生展示键）")
+            key_strict = strict or key in _STRICT_KEYS
+            if (not key_strict and key in _DERIVED_DISPLAY_KEYS
+                    and key in a and key in b and a.get(key) != b.get(key)):
+                soft.append(f"{path}.{key}: {b.get(key)!r} → {a.get(key)!r}（派生展示键）")
                 continue
             if key not in a:
                 hard.append(f"{path}.{key}: 仅迁移前有（删除）")
             elif key not in b:
-                soft.append(f"{path}.{key}: 仅迁移后有（新增）")
+                if key_strict:
+                    hard.append(f"{path}.{key}: 仅迁移后有（迁移相关字段，严格断言）")
+                else:
+                    soft.append(f"{path}.{key}: 仅迁移后有（新增）")
             else:
-                _diff(a[key], b[key], f"{path}.{key}", hard, soft, cap)
+                _diff(a[key], b[key], f"{path}.{key}", hard, soft, cap, key_strict)
         return
     if isinstance(a, list) and isinstance(b, list):
         ka, kb = _list_key(a), _list_key(b)
@@ -231,18 +261,39 @@ def _diff(a: Any, b: Any, path: str, hard: List[str], soft: List[str],
                     else:
                         hard.append(f"{path}[{key}]: 仅迁移前有（删除）")
                 elif key not in kb:
-                    soft.append(f"{path}[{key}]: 仅迁移后有（新增）")
+                    if strict:
+                        hard.append(f"{path}[{key}]: 仅迁移后有（迁移相关字段，严格断言）")
+                    else:
+                        soft.append(f"{path}[{key}]: 仅迁移后有（新增）")
                 else:
-                    _diff(ka[key], kb[key], f"{path}[{key}]", hard, soft, cap)
+                    _diff(ka[key], kb[key], f"{path}[{key}]", hard, soft, cap, strict)
             return
         if len(a) != len(b):
             hard.append(f"{path}: 数组长度 {len(b)} → {len(a)}")
             return
         for i, (x, y) in enumerate(zip(a, b)):
-            _diff(x, y, f"{path}[{i}]", hard, soft, cap)
+            _diff(x, y, f"{path}[{i}]", hard, soft, cap, strict)
         return
     if a != b:
         hard.append(f"{path}: {b!r} → {a!r}")
+
+
+def compare_snapshots(before: Mapping[str, Any], after: Mapping[str, Any],
+                      packs: Sequence[str], cap: int = 200) -> Tuple[List[str], List[str]]:
+    """对两份快照跑口径 ①~④，返回 `(hard, soft)`（纯函数，供自证测试直接调）。
+
+    · hard = 删除 / 值变化 / 迁移相关字段的严格变动 → 必须为空才算通过；
+    · soft = 新增项 / 派生展示键的值变化（逐条列出，不得静默）。
+    模块声明子树（module_labels / module_tree）以 `strict=True` 对拍（口径 ④）。
+    """
+    hard: List[str] = []
+    soft: List[str] = []
+    for pack in packs:
+        after_hard, after_decl = _strip_module_decl(after.get(pack))
+        before_hard, before_decl = _strip_module_decl(before.get(pack))
+        _diff(after_hard, before_hard, pack, hard, soft, cap)
+        _diff(after_decl, before_decl, f"{pack}·模块声明", hard, soft, cap, strict=True)
+    return hard, soft
 
 
 def main(argv: Optional[List[str]] = None) -> int:
@@ -262,28 +313,22 @@ def main(argv: Optional[List[str]] = None) -> int:
     finally:
         baseline.close()
 
-    diffs: List[str] = []
-    added: List[str] = []
-    for pack in packs:
-        # 硬对拍剔除模块级展示声明（模块树/模块显示名），其变化记入 soft（批12 起）
-        after_hard, after_decl = _strip_module_decl(after.get(pack))
-        before_hard, before_decl = _strip_module_decl(before.get(pack))
-        _diff(after_hard, before_hard, pack, diffs, added, args.max_diffs)
-        _diff(after_decl, before_decl, f"{pack}·模块声明", [], added, args.max_diffs)
+    diffs, added = compare_snapshots(before, after, packs, args.max_diffs)
 
     print("批B 等价性对拍（迁移前 ↔ 迁移后）")
     print(f"  基线：{args.baseline_root or args.baseline_ref} · 包：{', '.join(packs)}")
-    print(f"  差异条数：{len(diffs)}（修改/删除 = 硬差异，必须 0）")
-    print(f"  新增条目：{len(added)}（后续批次合法新增，允许）")
+    print(f"  差异条数：{len(diffs)}（删除/修改 = 硬差异，必须 0）")
+    print(f"  新增 {len(added)} 项（功能演化，允许，逐条列出）")
     for line in added[:args.max_diffs]:
         print("   +", line)
     for line in diffs:
         print("   -", line)
     if diffs:
-        print("对拍失败：存在修改/删除差异")
+        print("对拍失败：存在删除/修改差异（或迁移相关字段 label/help/group/"
+              "module_labels/module_tree 的严格变动）")
         return 1
-    print("对拍通过：**字段级**键集合 / label / help / group 逐字段一致"
-          "（修改/删除 = 0；模块目录/层级/显示名等展示声明演进与新增条目记 soft）")
+    print("对拍通过：删除/修改 = 0；迁移相关字段（label / help / group / "
+          "module_labels / module_tree）逐字段严格相等；新增项已逐条列出")
     return 0
 
 

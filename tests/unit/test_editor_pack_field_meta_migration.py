@@ -6,21 +6,28 @@
 `f7d9c25`（批14 重定；`46baff3` 因对象子字段 `readonly→objform` 与 `slot` 展示层下拉
 而产生与迁移无关的硬差异），在基线树与当前树各跑一遍 `scripts/editor_readonly_snapshot.py`（模块树 /
 条目列表 / 条目详情 / 条目索引 / 引用候选 / 包列表），递归对拍并输出差异报告。
-**既有键的修改/删除 = 0** 才算通过——这是本批「展示元数据下放」不改行为的硬门禁。
 
-增量容忍（2026-09-14，settings.battle.min_damage 实装）：后续批次**新增**字段属合法
-演进，只报告、不计入差异；门禁仍抓「既有字段被改/被删」（列表逐 key 对齐）。
+批15 语义化定稿（对拍口径，实现见 `compare_snapshots` / `_diff`）：
+  ① **删除任一项 → 红**（hard）；② **任一值变化 → 红**（hard），唯一例外是派生展示键
+  `control` / `widget` / `block_layout` / `number_step`（呈现层推导，删除它们仍红）；
+  ③ **新增项 → 允许**（soft），但必须显式打印「新增 N 项（功能演化）」且逐条列出；
+  ④ **迁移相关字段严格相等**：`label` / `help` / `group` 与模块声明（`module_labels` /
+  `module_tree` → `modules.modules`、`index.modules[].label`、`entries/*.label`、
+  `detail/*.module_label`）逐字段严格断言，**新增 / 删除 / 改值全红**。
 
-无 git / 无基线 ref 的环境自动跳过（脚本仍可手工执行）。
+`test_gate_semantics_*` 是**自证测试**：人为造删除 / 值变化 → 必须红；造新增 → 必须绿。
+无 git / 无基线 ref 的环境自动跳过集成对拍（`compare_snapshots` 自证测试不依赖 git）。
 """
 
 from __future__ import annotations
 
+import importlib.util
 import shutil
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from typing import Any, Dict, List, Tuple
 
 import pytest
 
@@ -28,6 +35,89 @@ REPO = Path(__file__).resolve().parents[2]
 SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
 BASELINE_REF = "f7d9c25"
 CONTENT = REPO / "content"
+
+
+def _load_gate() -> Any:
+    """按路径加载门禁脚本（scripts/ 不是包，不能 import）。"""
+    spec = importlib.util.spec_from_file_location("compare_field_meta_migration", SCRIPT)
+    assert spec and spec.loader
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _descriptor(**over: Any) -> Dict[str, Any]:
+    """一个最小字段描述符（对拍用的合成样本；不写死任何真实模块/字段名）。"""
+    d: Dict[str, Any] = {"key": "f", "label": "字段", "help": "说明", "group": "默认",
+                         "control": "objform", "widget": "obj", "type": "obj"}
+    d.update(over)
+    return d
+
+
+def _snap(fields: List[Dict[str, Any]], **module_over: Any) -> Dict[str, Any]:
+    body: Dict[str, Any] = {"fields": fields, "module_label": "模块"}
+    body.update(module_over)
+    return {"p": {"detail/m": body}}
+
+
+def _run(before: Dict[str, Any], after: Dict[str, Any]) -> Tuple[List[str], List[str]]:
+    return _load_gate().compare_snapshots(before, after, ["p"], cap=1000)
+
+
+# ---------------------------------------------------------------------------
+# 自证：删除 / 值变化 → 红；新增 → 绿（且必须列出）
+# ---------------------------------------------------------------------------
+def test_gate_semantics_deletion_is_red() -> None:
+    before = _snap([_descriptor(), _descriptor(key="g", label="另一个")])
+    after = _snap([_descriptor(key="g", label="另一个")])
+    hard, soft = _run(before, after)
+    assert hard, "删除字段必须判红"
+    assert any("仅迁移前有（删除）" in h for h in hard)
+
+
+def test_gate_semantics_value_change_is_red() -> None:
+    before = _snap([_descriptor()])
+    after = _snap([_descriptor(label="改了")])
+    hard, _ = _run(before, after)
+    assert hard, "既有值变化必须判红"
+    assert any(".label:" in h for h in hard)
+
+
+def test_gate_semantics_addition_is_green_and_listed() -> None:
+    before = _snap([_descriptor()])
+    after = _snap([_descriptor(), _descriptor(key="g", label="新字段")])
+    hard, soft = _run(before, after)
+    assert not hard, "新增字段必须判绿"
+    assert any("仅迁移后有（新增）" in s for s in soft), "新增必须逐条列出（不得静默）"
+
+
+def test_gate_semantics_strict_label_addition_is_red() -> None:
+    """口径 ④：迁移相关字段 `label` 在基线缺失、当前补上 → 也算红（严格断言）。"""
+    before = _snap([{k: v for k, v in _descriptor().items() if k != "label"}])
+    after = _snap([_descriptor()])
+    hard, _ = _run(before, after)
+    assert hard and any(".label:" in h and "严格断言" in h for h in hard)
+
+
+def test_gate_semantics_strict_module_decl_change_is_red() -> None:
+    """口径 ④：模块声明（module_labels / module_tree → modules.modules）严格相等。"""
+    before = {"p": {"modules": {"modules": [{"module": "a", "label": "甲"}]}}}
+    after = {"p": {"modules": {"modules": [{"module": "a", "label": "乙"}]}}}
+    hard, _ = _run(before, after)
+    assert hard, "模块显示名变化必须判红"
+
+
+def test_gate_semantics_derived_control_change_is_green_but_deletion_is_red() -> None:
+    """派生展示键（control）值变化记 soft（呈现层）；**删除**它仍判红。"""
+    before = _snap([_descriptor()])
+    changed = _snap([_descriptor(control="kvtable")])
+    hard, soft = _run(before, changed)
+    assert not hard, "control 值变化属呈现层，应记 soft"
+    assert any("派生展示键" in s for s in soft)
+    dropped = _snap([{k: v for k, v in _descriptor().items() if k != "control"}])
+    hard2, _ = _run(before, dropped)
+    assert hard2 and any(".control:" in h and "删除" in h for h in hard2)
+
 
 
 def _git(*args: str) -> subprocess.CompletedProcess:
@@ -84,3 +174,5 @@ def test_field_meta_migration_is_behaviour_preserving() -> None:
     assert proc.returncode == 0, (
         "批B 迁移对拍存在差异（应 0）：\n" + proc.stdout[-4000:] + "\n" + proc.stderr[-2000:])
     assert "差异条数：0" in proc.stdout, proc.stdout[-4000:]
+    # 口径 ③：新增项必须显式计入输出（不得静默）。
+    assert "新增 " in proc.stdout and "项（功能演化" in proc.stdout, proc.stdout[-2000:]

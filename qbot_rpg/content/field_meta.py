@@ -708,6 +708,11 @@ def _formula_sections() -> Dict[str, FieldMeta]:
                 "lv2": FieldMeta(type="number", range_min=0, label="Lv2 加成"),
                 "lv3": FieldMeta(type="number", range_min=0, label="Lv3 加成"),
             }),
+            # 批19 #9：按 formula_loader 实际消费面补齐（E19/E21，此前未登记）。
+            "negative_crit": FieldMeta(type="number", label="负会心倍率",
+                                       help="会心系数为负（负会心）时的伤害倍率修正（E19）。"),
+            "elem_crit_step": FieldMeta(type="number", range_min=0, label="元素会心步进",
+                                        help="元素会心逐档步进值（E21）。"),
         }),
         "block": FieldMeta(type="obj", label="格挡", children={
             "k": FieldMeta(type="number", range_min=0, label="格挡系数"),
@@ -790,6 +795,37 @@ FORMULA_FIELDS: Dict[str, FieldMeta] = {
             "dfn_base": FieldMeta(type="str", label="效果防御基值属性"),
         },
     ),
+    # 批19 #9（审计 A12 / ①-4-23）：formula.json 里包实际存在、此前框架侧无中文名的键，
+    # 按 `core/formula_loader.py` 的**实际消费面**逐键登记（不臆造）。
+    #   · damage_base / heal_rate：既有包普遍存在的「JS 公式风格」兼容键；当前 Python 侧
+    #     `load_formula_params` **未消费**（读取器只消费段参数与 stat_map），保留为兼容键。
+    #   · battle_position 段：`BattlePositionParams`（方位战斗 v0.6）三参数，真实消费。
+    #   · monster_def_rate：O1 怪物防御率，真实消费（`load_formula_params` L164）。
+    "damage_base": FieldMeta(
+        type="formula", label="伤害基础公式",
+        help="兼容保留键（JS 公式风格）。当前 Python 侧 formula_loader 不消费它——"
+             "战斗数值以 damage/hit/crit/... 段参数与 stat_map 为准；保留以免旧包报错。"),
+    "heal_rate": FieldMeta(
+        type="formula", label="治疗量公式",
+        help="兼容保留键（JS 公式风格）。当前 Python 侧 formula_loader 不消费它；"
+             "治疗效果以 effects 的数值口径与公式引擎表达式为准。"),
+    "monster_def_rate": FieldMeta(
+        type="number", range_min=0, label="怪物防御率",
+        help="怪物防御率（O1，待策划裁决；工程默认 1.0）。真实消费点 = "
+             "core/formula_loader.py 装配 DamageFormulaParams.monster_def_rate。"),
+    "battle_position": FieldMeta(
+        type="obj", label="方位战斗参数",
+        children={
+            "break_base_damage": FieldMeta(
+                type="number", range_min=0, label="基准伤害",
+                help="破坏力公式 √ 括号内的减项（N1 数值阶段）。"),
+            "break_sqrt_coef": FieldMeta(
+                type="number", range_min=0, label="根号系数",
+                help="破坏力公式 break_delta = break_power + 系数 × √(max(0, basis − 基准伤害))。"),
+            "broken_part_mult": FieldMeta(
+                type="number", range_min=0, label="已破部位增伤乘区",
+                help="已破部位常驻增伤乘区（方位战斗 v0.6 §二.3），缺省 1.0。"),
+        }),
     **_formula_sections(),
 }
 

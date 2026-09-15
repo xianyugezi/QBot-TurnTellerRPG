@@ -3,8 +3,9 @@
 依据：`docs/编辑器重写_数据包展示元数据下放方案.md` §四 批B/C。
 
 本用例**调用** `scripts/compare_field_meta_migration.py`：它用 `git worktree` 检出基线
-`5e908bb`（批19 重定；`f7d9c25` 因 #4 模板全量显示 / #8 entry_tree 条目改归父节点 /
-#9 formula 中文名 / #5 模块提示键 / #6 模块名回落目录中文名而产生与字段级迁移无关的
+`a2fe3c5`（批20 重定；`5e908bb` 因 #2 对象内嵌映射改键值表格（control objform → kvtable +
+typed 行模式）、#3 `entry_merge_filtered` 使装备页条目列表 = 自身 ∪ 并入、#1 长模块二级
+分组（subgroup / block 由「主块 + 隐式更多字段」→ 命名子分组）而产生与字段级迁移无关的
 展示层差异），在基线树与当前树各跑一遍 `scripts/editor_readonly_snapshot.py`（模块树 /
 条目列表 / 条目详情 / 条目索引 / 引用候选 / 包列表），递归对拍并输出差异报告。
 
@@ -34,7 +35,7 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
-BASELINE_REF = "5e908bb"
+BASELINE_REF = "a2fe3c5"
 CONTENT = REPO / "content"
 
 

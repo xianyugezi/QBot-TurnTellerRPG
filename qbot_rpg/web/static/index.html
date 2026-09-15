@@ -396,6 +396,33 @@ html[data-theme="contrast"] .asave:disabled { border-style: dotted; opacity: .6;
 .gpane[hidden] { display: none; }
 .gempty { color: var(--text-5); padding: var(--sp-8) var(--sp-6); line-height: var(--lh-ex); }
 
+/* ---------- 批20 C：二级页签（分组之下的子分组）----------
+   只有「一个分组」的长模块按框架元数据的子分组出二级页签（模块名与子分组名都来自元数据，
+   代码里不写死任何模块）：一次只看一个子页 → 首屏不铺满；字段仍在 DOM 里（hidden），
+   不因分页消失。没有子分组声明的模块不出现 .gtabs2（行为与现状一致）。 */
+.gtabs2 { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2);
+  margin: 0 0 var(--sp-5); padding-bottom: var(--sp-3);
+  border-bottom: var(--bw) dashed var(--line-soft); }
+.gtab2 { display: inline-flex; align-items: center; height: var(--h-ctl-sm);
+  padding: 0 var(--sp-3); font-family: inherit; font-size: var(--fs-11); cursor: pointer;
+  background: transparent; border: var(--bw) solid var(--line-soft); color: var(--text-4); }
+.gtab2 b { margin-left: var(--sp-2); color: var(--text-6); font-weight: 400; }
+.gtab2:hover { border-color: var(--line-strong); color: var(--text-value); }
+.gtab2.on { color: var(--accent); border-color: var(--accent); }
+.gtab2.on b { color: var(--accent); }
+.gpane2[hidden] { display: none; }
+
+/* ---------- 批20 C：中栏条目分组（可折叠小节）---------- */
+.lgrp { border-bottom: var(--bw) solid var(--line-soft); }
+.lgrp-head { display: flex; align-items: center; gap: var(--sp-2); width: 100%;
+  padding: var(--sp-3) var(--sp-6); font-family: inherit; font-size: var(--fs-11);
+  text-align: left; cursor: pointer; background: var(--bg); color: var(--text-5);
+  border: 0; border-bottom: var(--bw) solid var(--line-soft); }
+.lgrp-head:hover { background: var(--surface-hover); color: var(--text-3); }
+.lgrp-head .gt { color: var(--text-3); }
+.lgrp-head .lgrp-hint { margin-left: auto; color: var(--text-6); }
+.lgrp-body[hidden] { display: none; }
+
 /* ---------- 二级结构（批15 #8）：分组页签之下的可折叠子块 ----------
    长模块（如战斗参数 20+ 字段）不再一屏铺满：主块常驻，命名子块 / 隐式「更多字段」默认
    收起（.sbbody[hidden] = display:none，不占 scrollHeight），点块头展开。字段不因折叠消失。 */
@@ -700,6 +727,15 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
 .keyadd:hover { background: var(--surface-hover); }
 .opkhint { color: var(--text-5); font-size: var(--fs-11); }
 
+/* ---------- 批20 A：对象内嵌「数组 / 映射」（沿用 .ltable 样式，再给紧凑外壳） ---------- */
+.objlist, .objkv { display: flex; flex-direction: column; gap: var(--sp-3); width: 100%; }
+.objlist .lmeta, .objkv .lmeta { font-size: var(--fs-11); color: var(--text-5); }
+.objlist .objlblocks { display: flex; flex-direction: column; gap: var(--sp-4); }
+.objlist .objlblock { border: var(--bw) solid var(--line-faint); padding: var(--sp-3); }
+.objlist .objlblock .objform { border-left: 0; padding-left: 0; }
+.objkv .ltable, .objlist .ltable { font-size: var(--fs-11); }
+.objkv .kvtable td, .objkv .kvtable th { padding: var(--sp-1) var(--sp-2); }
+
 /* ---------- 键值对表格（批5 数值覆盖 / 印记消耗）：键值行 + 增删 ---------- */
 .map-edit { width: 100%; }
 .mrows { display: flex; flex-direction: column; gap: var(--sp-3); }
@@ -942,7 +978,7 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
       <div class="panel-body" id="p-body">
         <div class="empty">从左侧选择模块与条目。字段按内容包元数据渲染；改动先进草稿，保存时才校验并落盘。</div>
       </div>
-      <div class="panel-ft"><span>批19.1 · 测试防污染门禁</span></div>
+      <div class="panel-ft"><span>批20 · 可编辑性与聚合</span></div>
     </section>
 
   </div>
@@ -1790,6 +1826,16 @@ var EMPTY_TEXT = "（空）";
 var INPUT_EMPTY = "未填写";
 // 批14 #4：元数据未登记子字段的兜底标注（与后端 api.META_UNREGISTERED_NOTE 同文案）。
 var META_UNREGISTERED_HINT = "元数据未登记，按实际值推断";
+// 批20 A：键值表格行模式（与后端 api.KV_MODE_TYPED 同值）——值类型混杂 → 逐行按实际类型出控件。
+var KV_MODE_TYPED = "typed";
+// 批20 A：对象内嵌「键值表格」的键/值表头兜底文案（后端 kv.key_label/value_label 优先）。
+var KV_KEY_LABEL = "键";
+var KV_VALUE_LABEL = "值";
+// 批20 C：右栏二级页签里「主块」的界面兜底名（后端块计划里主块 label 为空串）。
+var BLOCK_MAIN_LABEL = "主要字段";
+// 批20 C：隐式「更多字段」块的稳定机器键（与后端 api.AUTO_MORE_BLOCK 同值）——
+// 它不算「声明了子分组」，故不触发二级页签（无子分组声明时行为与现状一致）。
+var AUTO_MORE_BLOCK = "@more";
 
 var state = {
   pack: null, modules: [], module: null, entries: [], entry: null, detail: null,
@@ -1798,7 +1844,7 @@ var state = {
   pendingDrafts: {}, entryIndex: null, newEntry: null, newDraft: null, newIdTouched: false,
   theme: null,
   // 批12 #1：中栏聚合展示（被并入模块的条目按来源分小节）+ 当前条目所属模块（保存路由）
-  mergeSections: [], entryModule: null, listLabel: "", fontSize: null,
+  mergeSections: [], mergeFiltered: [], entryGroups: [], entryModule: null, listLabel: "", fontSize: null,
   // 批13 A/D：左栏 = 框架能力集 ∪ 包声明——views（虚拟聚合视图，如「生活」）+
   // available（框架有而包未启用的模块，未启用态 + 一键启用）
   views: [], available: [],
@@ -3355,16 +3401,25 @@ function loadEntries() {  if (!state.pack || !state.module) { return Promise.res
       state.pages = data.pages || [];
       // 批12 #1：聚合视图（被并入模块的条目按来源分小节；无声明时为 []）
       state.mergeSections = data.merge_sections || [];
+      // 批20 B：按条件过滤的并入小节（条目已在中栏 entries 里，带 merged_from 来源标注）
+      state.mergeFiltered = data.merge_filtered_sections || [];
+      // 批20 C：中栏条目分组计划（无声明 = []；条目上带 group/group_label）
+      state.entryGroups = data.entry_groups || [];
       // 批19 #8：显示挂载小节（keep_top_level / 虚拟视图父节点；不进计数）
       state.mountedSections = data.mounted_sections || [];
       state.listLabel = data.label || state.module;
       var mc = data.merged_count || 0;
+      var mfc = data.merge_filtered_count || 0;
       var uc = data.unconfigured_count || 0;
       var total = (data.total_count == null) ? state.entries.length : data.total_count;
       // 批13.1 计数口径写清：总条数（含框架未配置段）+ 未配置段数 + 并入数。
       var note = total + " 条";
       var extra = [];
       if (mc) { extra.push("含并入 " + mc); }
+      if (mfc) {
+        var mfl = state.mergeFiltered.map(function (s) { return s.label || s.module; }).join("、");
+        extra.push("含并入 " + mfc + (mfl ? "（来自 " + mfl + "）" : ""));
+      }
       if (uc) { extra.push("另有 " + uc + " 个框架段未配置"); }
       if (extra.length) { note += "（" + extra.join("；") + "）"; }
       setHdrNote("list-count", note);
@@ -3438,13 +3493,32 @@ function renderEntries() {
     box.appendChild(d);
     (pg.segments || []).forEach(function (s) { covered[s] = true; });
   });
-  var ownEntries = (state.entries || []).filter(function (e) { return !covered[e.id]; });
+  var ownEntries = (state.entries || []).filter(function (e) {
+    return !covered[e.id] && !e.merged_from;
+  });
+  // 批20 B：按条件过滤并入的条目按「来源模块」分小节（条目标注 merged_from，编辑路由回来源）。
+  var mfSections = (state.mergeFiltered || []).map(function (sec) {
+    var items = (state.entries || []).filter(function (e) {
+      return e.merged_from === sec.module;
+    });
+    var cond = (sec.has && sec.has.length ? "有 " + sec.has.join("、") : "");
+    if (sec.eq) {
+      var eqs = Object.keys(sec.eq).map(function (k) { return k + "=" + sec.eq[k]; });
+      cond = cond ? cond + " 且 " + eqs.join("、") : eqs.join("、");
+    }
+    return { module: sec.module,
+             label: "来自 " + (sec.label || sec.module) + (cond ? "（" + cond + "）" : ""),
+             count: sec.count, entries: items, keep_top_level: false };
+  });
   // 中栏过滤作用域写清：当前模块内，按名称或 ID 过滤（EditorEntry 纯逻辑）
   // 批12 #1：聚合视图按「来源模块」分小节（本模块 + 各并入来源），过滤在小节内生效。
   var grouped = (state.mergeSections || []).length > 0
+    || mfSections.length > 0
     || (state.mountedSections || []).length > 0;
   var plan = EditorMerge.filterPlan(
-    EditorMerge.sectionPlan(ownEntries, state.mergeSections, state.module, state.listLabel),
+    EditorMerge.sectionPlan(ownEntries,
+                            (state.mergeSections || []).concat(mfSections),
+                            state.module, state.listLabel),
     state.filter, EditorEntry.match);
   var cur = state.entryModule || state.module;
   plan.forEach(function (s) {
@@ -3456,48 +3530,13 @@ function renderEntries() {
         + (s.keep_top_level ? ' <span class="idtag">也单列</span>' : "");
       box.appendChild(h);
     }
+    // 批20 C：本模块自身条目按「包声明分组」折成可折叠小节（并入/挂载小节保持来源分节）。
+    if (s.own && (state.entryGroups || []).length) {
+      renderGroupedItems(box, s.entries, s.module, cur);
+      return;
+    }
     s.entries.forEach(function (e) {
-      var d = document.createElement("div");
-      // 批19 #8：挂载条目的编辑归属是**来源模块**（mounted_from），不是当前父节点。
-      var emod = e.mounted_from || s.module;
-      d.className = "item" + ((e.id === state.entry && emod === cur) ? " on" : "");
-      d.dataset.id = e.id;
-      d.dataset.mod = emod;
-      d.textContent = e.name;
-      // 批13.1：框架已登记、包数据尚无的段 → 标「未配置 · 框架支持」（仍可点开填写）。
-      if (e.unconfigured) {
-        var tag = document.createElement("span");
-        tag.className = "unc";
-        tag.textContent = "未配置 · 框架支持";
-        d.appendChild(tag);
-      } else if (e.framework_default) {
-        // 批19 #4：框架键全集里包未覆盖的键 → 标「默认（框架）」（可直接编辑后写入包覆盖）。
-        var ftag = document.createElement("span");
-        ftag.className = "unc";
-        ftag.textContent = "默认（框架）";
-        d.appendChild(ftag);
-      } else if (e.covered) {
-        // 批19 #4：包数据已覆盖的框架键。
-        var ctag = document.createElement("span");
-        ctag.className = "idtag";
-        ctag.textContent = "已覆盖（包）";
-        d.appendChild(ctag);
-      }
-      if (e.mounted_from) {
-        // 批19 #8：从其他模块移入本节点的条目 → 标出来源（点击仍按来源模块打开/保存）。
-        var mtag = document.createElement("span");
-        mtag.className = "idtag";
-        mtag.textContent = "移入自 " + (e.mounted_from_label || e.mounted_from);
-        d.appendChild(mtag);
-      }
-      d.title = e.name + "  [" + e.id + "]"
-        + (e.unconfigured ? "（框架已支持，本包尚未配置）" : "")
-        + (e.framework_default ? "（框架默认；保存后写入本包覆盖）" : "")
-        + (e.covered ? "（本包已覆盖框架默认）" : "")
-        + (e.mounted_from ? "（挂载条目；数据与保存仍在 " + (e.mounted_from_label || e.mounted_from) + "）" : "")
-        + (grouped ? "（来源：" + s.label + "）" : "");
-      d.addEventListener("click", function () { selectEntry(e.id, emod); });
-      box.appendChild(d);
+      box.appendChild(entryItemEl(e, s.module, cur, grouped, s.label));
     });
   });
   // 批19 #8：显示挂载小节（keep_top_level / 虚拟视图父节点）——纯展示，不进计数。
@@ -3531,6 +3570,121 @@ function renderEntries() {
   }
   el("list-ft").textContent = "共 " + shown + " 条"
     + (shown !== all ? "（已过滤 / 全部 " + all + "）" : "");
+  bindListGroups();   // 批20 C：分组小节的展开 / 收起接线
+}
+
+// 批20 C · 中栏条目分组：把「本模块自身条目」按包声明分组折成可折叠小节。
+// 分组名/显示名/顺序/默认折叠全部来自后端 `entry_groups` 计划（不写死任何模块名 / 字段名）。
+// 折叠只是 <div hidden>：条目仍在 DOM 里，检索/计数/点击切换不受影响。
+function entryItemEl(e, srcModule, cur, grouped, srcLabel) {
+  var d = document.createElement("div");
+  // 批19 #8 / 批20 B：挂载条目 / 过滤并入条目的编辑归属是**来源模块**，不是当前模块。
+  var emod = e.mounted_from || e.merged_from || srcModule;
+  d.className = "item" + ((e.id === state.entry && emod === cur) ? " on" : "");
+  d.dataset.id = e.id;
+  d.dataset.mod = emod;
+  d.textContent = e.name;
+  // 批13.1：框架已登记、包数据尚无的段 → 标「未配置 · 框架支持」（仍可点开填写）。
+  if (e.unconfigured) {
+    var tag = document.createElement("span");
+    tag.className = "unc";
+    tag.textContent = "未配置 · 框架支持";
+    d.appendChild(tag);
+  } else if (e.framework_default) {
+    // 批19 #4：框架键全集里包未覆盖的键 → 标「默认（框架）」（可直接编辑后写入包覆盖）。
+    var ftag = document.createElement("span");
+    ftag.className = "unc";
+    ftag.textContent = "默认（框架）";
+    d.appendChild(ftag);
+  } else if (e.covered) {
+    // 批19 #4：包数据已覆盖的框架键。
+    var ctag = document.createElement("span");
+    ctag.className = "idtag";
+    ctag.textContent = "已覆盖（包）";
+    d.appendChild(ctag);
+  }
+  if (e.mounted_from) {
+    // 批19 #8：从其他模块移入本节点的条目 → 标出来源（点击仍按来源模块打开/保存）。
+    var mtag = document.createElement("span");
+    mtag.className = "idtag";
+    mtag.textContent = "移入自 " + (e.mounted_from_label || e.mounted_from);
+    d.appendChild(mtag);
+  }
+  if (e.merged_from) {
+    // 批20 B：按条件并入本模块的条目 → 标「来自 X」（点击仍按来源模块打开/保存）。
+    var gtag = document.createElement("span");
+    gtag.className = "idtag";
+    gtag.textContent = "来自 " + (e.merged_from_label || e.merged_from);
+    d.appendChild(gtag);
+  }
+  d.title = e.name + "  [" + e.id + "]"
+    + (e.unconfigured ? "（框架已支持，本包尚未配置）" : "")
+    + (e.framework_default ? "（框架默认；保存后写入本包覆盖）" : "")
+    + (e.covered ? "（本包已覆盖框架默认）" : "")
+    + (e.mounted_from ? "（挂载条目；数据与保存仍在 " + (e.mounted_from_label || e.mounted_from) + "）" : "")
+    + (e.merged_from ? "（按条件并入；数据与保存仍在 " + (e.merged_from_label || e.merged_from) + "）" : "")
+    + (grouped ? "（来源：" + srcLabel + "）" : "");
+  d.addEventListener("click", function () { selectEntry(e.id, emod); });
+  return d;
+}
+
+function renderGroupedItems(box, entries, srcModule, cur) {
+  var byName = {};
+  entries.forEach(function (e) {
+    var g = String(e.group || "@other");
+    (byName[g] = byName[g] || []).push(e);
+  });
+  var seen = {};
+  (state.entryGroups || []).forEach(function (g) {
+    seen[g.name] = true;
+    var items = byName[g.name] || [];
+    if (!items.length) { return; }
+    var sec = document.createElement("section");
+    sec.className = "lgrp";
+    sec.dataset.lgrp = g.name;
+    var head = document.createElement("button");
+    head.type = "button";
+    head.className = "lgrp-head";
+    head.dataset.lgrptoggle = g.name;
+    head.setAttribute("aria-expanded", g.collapsed ? "false" : "true");
+    head.title = "展开 / 收起「" + g.label + "」分组（" + items.length + " 条）";
+    head.innerHTML = '<span class="caret">' + (g.collapsed ? "\u25b8" : "\u25be") + "</span>"
+      + '<span class="gt">' + esc(g.label) + "</span> · " + items.length + " 条"
+      + '<span class="lgrp-hint">' + (g.collapsed ? "点开展开" : "点收起") + "</span>";
+    var body = document.createElement("div");
+    body.className = "lgrp-body";
+    body.hidden = !!g.collapsed;
+    items.forEach(function (e) {
+      body.appendChild(entryItemEl(e, srcModule, cur, false, g.label));
+    });
+    sec.appendChild(head);
+    sec.appendChild(body);
+    box.appendChild(sec);
+  });
+  // 计划里没有的组（理论上不会出现，防御性兜底）→ 不丢条目
+  entries.forEach(function (e) {
+    var g = String(e.group || "@other");
+    if (seen[g]) { return; }
+    seen[g] = true;
+    box.appendChild(entryItemEl(e, srcModule, cur, false, g));
+  });
+}
+
+function bindListGroups() {
+  Array.prototype.forEach.call(el("rows").querySelectorAll("[data-lgrptoggle]"), function (btn) {
+    btn.addEventListener("click", function () {
+      var sec = btn.closest(".lgrp");
+      if (!sec) { return; }
+      var body = sec.querySelector(".lgrp-body");
+      var open = body ? !!body.hidden : false;
+      if (body) { body.hidden = !open; }
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+      var caret = btn.querySelector(".caret");
+      if (caret) { caret.textContent = open ? "\u25be" : "\u25b8"; }
+      var hint = btn.querySelector(".lgrp-hint");
+      if (hint) { hint.textContent = open ? "点收起" : "点开展开"; }
+    });
+  });
 }
 
 // 全局检索结果（跨模块；结果按模块分组，点击跳转并切换模块）
@@ -3892,6 +4046,7 @@ function renderNewEntry(d) {
   el("p-body").dataset.fctx = "main";
   renderCtx = MAIN_CTX;
   bindTabs();
+  bindSubTabs();   // 批20 C：分组内的二级页签（子分组）
   bindControls();
   bindNewIdent();
   bindSubBlocks();
@@ -4140,8 +4295,20 @@ function groupPaneHtml(g, i, blocksMap) {
   }
   var byKey = {};
   g.fields.forEach(function (f) { byKey[f.key] = f; });
+  // 只保留「本条目真的有字段」的块（字段不因分页/折叠消失）
+  var blocks = EditorBlocks.blocksFor(g.name, blocksMap).filter(function (b) {
+    return (b.keys || []).some(function (k) { return !!byKey[k]; });
+  });
+  // 批20 C：声明了**命名子分组**（非隐式「更多字段」）→ 出二级页签（既有 gtab 机制扩展）；
+  // 没有子分组声明 → 保持既有的「主块 + 折叠子块」渲染（行为与现状一致）。
+  var declared = blocks.filter(function (b) {
+    return !EditorBlocks.isMain(b) && b.name !== AUTO_MORE_BLOCK;
+  });
+  if (declared.length >= 1 && blocks.length >= 2) {
+    return subTabPaneHtml(g, i, hidden, byKey, blocks);
+  }
   var body = "";
-  EditorBlocks.blocksFor(g.name, blocksMap).forEach(function (b) {
+  blocks.forEach(function (b) {
     var fields = (b.keys || []).map(function (k) { return byKey[k]; })
       .filter(function (f) { return !!f; });
     if (!fields.length) { return; }
@@ -4163,6 +4330,48 @@ function groupPaneHtml(g, i, blocksMap) {
       + "</div></section>";
   });
   return '<div class="gpane"' + hidden + ' data-g="' + i + '">' + body + "</div>";
+}
+
+// 批20 C：一个分组内的二级页签（子分组）——一次只显示一个子页，长模块不再一条长滚动；
+// 字段全部仍在 DOM 里（只是 hidden），保存/草稿按字段键持有，跨子页编辑不丢。
+function subTabPaneHtml(g, i, hidden, byKey, blocks) {
+  var bar = '<div class="gtabs2">';
+  var panes = "";
+  var shown = 0;
+  blocks.forEach(function (b) {
+    var fields = (b.keys || []).map(function (k) { return byKey[k]; })
+      .filter(function (f) { return !!f; });
+    if (!fields.length) { return; }
+    var label = EditorBlocks.isMain(b) ? BLOCK_MAIN_LABEL : EditorBlocks.labelOf(b);
+    var on = (shown === 0);
+    shown += 1;
+    bar += '<button type="button" class="gtab2' + (on ? " on" : "") + '" data-sb="'
+      + esc(b.name) + '" aria-expanded="' + (on ? "true" : "false") + '" title="'
+      + esc("子分组：" + label + "（" + fields.length + " 个字段）") + '">'
+      + esc(label) + " <b>" + fields.length + "</b></button>";
+    panes += '<div class="gpane2" data-sb="' + esc(b.name) + '"' + (on ? "" : " hidden") + '>'
+      + '<div class="rows2">' + fields.map(fieldRow).join("") + "</div></div>";
+  });
+  return '<div class="gpane"' + hidden + ' data-g="' + i + '">' + bar + panes + "</div>";
+}
+
+// 批20 C：二级页签切换（纯视图；不触碰草稿、不触发校验）。
+function bindSubTabs() {
+  Array.prototype.forEach.call(el("p-body").querySelectorAll(".gtab2"), function (btn) {
+    btn.addEventListener("click", function () {
+      var pane = btn.closest(".gpane");
+      if (!pane) { return; }
+      Array.prototype.forEach.call(pane.querySelectorAll(".gtab2"), function (b) {
+        b.classList.toggle("on", b === btn);
+        b.setAttribute("aria-expanded", b === btn ? "true" : "false");
+      });
+      Array.prototype.forEach.call(pane.querySelectorAll(".gpane2"), function (p) {
+        p.hidden = p.getAttribute("data-sb") !== btn.getAttribute("data-sb");
+      });
+      helpHideDom();   // 切子页后原字段可能不可见：关掉说明卡，避免悬空
+      markDirty();     // 跨子页编辑过的字段仍标脏、未保存计数不变
+    });
+  });
 }
 
 function renderDetail(d) {
@@ -4251,6 +4460,7 @@ function renderDetail(d) {
   bindSubBlocks();
   bindControls();
   bindObjSections(el("p-body"));
+  bindScopedSections(el("p-body"));   // 批20 A：对象内嵌数组/映射的增删接线
   bindOpenKeySections(el("p-body"));
   bindKvSections(el("p-body"));
   bindCurveSections(el("p-body"));
@@ -4557,8 +4767,9 @@ function bindControls(root) {
     var rootF = ctx.fieldIndex[rootKey];
     if (!rootF) { return; }
     var path = inp.dataset.opath ? inp.dataset.opath.split(".") : [];
-    var leaf = objLeafOf(rootF, path);
-    if (!leaf) { return; }
+    // 批20 A：动态键空间的嵌套子项可能没有元数据描述符（未登记键）→ 按控件形态兜底读取，
+    // 仍照常写回「根对象 + 路径」的整块草稿（结构不臆造，只决定读取口径）。
+    var leaf = objLeafOf(rootF, path) || leafFromNode(inp);
     var ev = (inp.type === "checkbox" || inp.tagName === "SELECT") ? "change" : "input";
     inp.addEventListener(ev, function () {
       var next = objPathSet(objCurrentValue(ctx, rootF), path, readControl(inp, leaf));
@@ -4798,6 +5009,7 @@ function rerenderListField(f, wrap) {
   bindListSections(wrap);
   bindConditionSections(wrap);
   bindMapSections(wrap);
+  bindScopedSections(wrap);
   markDirty();
 }
 
@@ -4861,33 +5073,57 @@ function kvTableBody(f) {
   var kv = f.kv_table || {};
   var cols = kv.columns || [];
   var objMode = kv.mode === "obj";
+  var typed = (kv.mode === KV_MODE_TYPED);
   var rows = EditorKv.rows(currentFieldValue(f), objMode);
   var openKeys = !!kv.open_keys;
   var html = '<div class="lmeta">键值表格 · ' + rows.length + " 项 · 列名与类型来自内容包元数据"
+    + (typed ? " · 值按实际类型出控件" : "")
     + (openKeys ? " · 动态键空间（可改键/增删行）" : " · 键来自元数据")
     + " · 改动先进草稿（不落盘）</div>";
   if (!rows.length) {
     html += '<div class="ex">（空表）暂无数据项，用下面的「+ 添加一项」新建。</div>';
   } else {
     html += '<div class="ltable-scroll"><table class="ltable ltable-edit kvtable"><thead><tr>'
-      + '<th class="kvkey">' + esc(kv.key_label || "键") + "</th>"
-      + cols.map(function (c) {
-        return '<th class="' + esc(scalarCssClass(c.control)) + '">'
-          + helpTriggerHtml(c, headerLabelHtml(c.label, c.key))
-          + ' <span class="ftype">' + esc(typeZh(c.type)) + "</span></th>";
-      }).join("")
+      + '<th class="kvkey">' + esc(kv.key_label || KV_KEY_LABEL) + "</th>"
+      + (typed
+        ? '<th>' + esc(kv.value_label || KV_VALUE_LABEL) + "（按实际类型）</th>"
+        : cols.map(function (c) {
+          return '<th class="' + esc(scalarCssClass(c.control)) + '">'
+            + helpTriggerHtml(c, headerLabelHtml(c.label, c.key))
+            + ' <span class="ftype">' + esc(typeZh(c.type)) + "</span></th>";
+        }).join(""))
       + '<th class="op">操作</th></tr></thead><tbody>';
     rows.forEach(function (row, i) {
-      html += '<tr><td class="kvkey">' + kvKeyCell(f, row, i, openKeys) + "</td>"
-        + cols.map(function (c) { return "<td>" + kvCell(f, row, c, i, objMode) + "</td>"; }).join("")
-        + '<td class="op"><button type="button" class="ldel" data-kvdel="' + i
+      html += '<tr><td class="kvkey">' + kvKeyCell(f, row, i, openKeys) + "</td>";
+      if (typed) {
+        // 批20 A：值类型混杂 → 逐行按实际类型出控件（数组/对象/嵌套映射都能编）。
+        html += "<td>" + kvTypedCell(f, row, i) + "</td>";
+      } else {
+        html += cols.map(function (c) {
+          return "<td>" + kvCell(f, row, c, i, objMode) + "</td>";
+        }).join("");
+      }
+      html += '<td class="op"><button type="button" class="ldel" data-kvdel="' + i
         + '" title="删除本项（只改草稿）">删除</button></td></tr>';
     });
     html += "</tbody></table></div>";
   }
   html += '<button type="button" class="ladd" data-kvadd="' + esc(f.key)
-    + '" title="新增一项（键名自定，值按列类型编辑；只改草稿）">+ 添加一项</button>';
+    + '" title="新增一项（键名自定，值按实际类型编辑；只改草稿）">+ 添加一项</button>';
   return html;
+}
+
+function kvTypedCell(f, row, i) {
+  // 顶层键值表格的 typed 行：行描述符来自后端 `kv_table.rows[i]`（字段描述符同款）。
+  var kv = f.kv_table || {};
+  var desc = (kv.rows || [])[i] || { key: row.key, control: "text" };
+  var rowScope = { rootKey: f.key, path: [String(row.key)] };
+  if (desc.control === "listtable" || desc.control === "reflist"
+      || desc.control === "kvtable" || desc.control === "objform") {
+    return objLeafInput(desc, row.value, objScopeAttrs(rowScope), rowScope);
+  }
+  return objScalarCell(desc, row.value,
+    ' data-kvcell="' + esc(f.key) + '" data-kvrow="' + i + '" data-kvcol="value"');
 }
 
 function kvTableEdit(f) {
@@ -4956,6 +5192,7 @@ function rerenderKvField(f, wrap) {
   wrap.innerHTML = kvTableBody(f);
   renderCtx = prev;
   bindKvSections(wrap);
+  bindScopedSections(wrap);   // 批20 A：typed 行里的对象内嵌数组/映射
   markDirty();
 }
 
@@ -5984,13 +6221,20 @@ function objPathGet(obj, path) {
 function objPathSet(obj, path, value) {
   var root = (obj && typeof obj === "object" && !Array.isArray(obj))
     ? JSON.parse(JSON.stringify(obj)) : {};
+  if (!path.length) { return root; }
   var cur = root;
   for (var i = 0; i < path.length - 1; i++) {
-    var k = path[i];
-    if (!cur[k] || typeof cur[k] !== "object" || Array.isArray(cur[k])) { cur[k] = {}; }
-    cur = cur[k];
+    var k = String(path[i]);
+    var existing = cur[k];
+    if (existing === null || typeof existing !== "object") {
+      // 批20 A：缺失的中间容器按**下一段**决定形态——下一段是数字下标 → 建数组
+      // （对象→数组→对象 等更深层结构）；否则建对象。已有容器原样保留（不把数组压成对象）。
+      existing = /^\d+$/.test(String(path[i + 1])) ? [] : {};
+      cur[k] = existing;
+    }
+    cur = existing;
   }
-  if (path.length) { cur[path[path.length - 1]] = value; }
+  cur[String(path[path.length - 1])] = value;
   return root;
 }
 
@@ -6009,6 +6253,12 @@ function objPathDel(obj, path) {
 function objLeafOf(rootF, path) {
   var node = rootF;
   for (var i = 0; i < path.length; i++) {
+    // 批20 A：路径段落在「数组」上时下钻到元素描述符（对象→数组→对象 等更深层结构）。
+    if (node && node.type === "list") {
+      if (!node.element) { return null; }
+      node = node.element;
+      continue;
+    }
     var kids = (node && node.children) || [];
     var hit = null;
     for (var j = 0; j < kids.length; j++) { if (kids[j].key === path[i]) { hit = kids[j]; break; } }
@@ -6016,6 +6266,16 @@ function objLeafOf(rootF, path) {
     node = hit;
   }
   return node;
+}
+
+// 批20 A：控件节点 → 描述符兜底（对象内动态键空间的子项没有元数据登记时，按控件形态推断
+// 读取口径；只影响「怎么读这个输入框」，不臆造任何结构）。
+function leafFromNode(inp) {
+  if (!inp) { return { control: "text" }; }
+  if (inp.type === "checkbox") { return { control: "bool" }; }
+  if (inp.tagName === "SELECT") { return { control: "select" }; }
+  if (inp.type === "number") { return { control: "number" }; }
+  return { control: "text" };
 }
 
 function objNodeAt(rootF, path) {
@@ -6027,7 +6287,7 @@ function objControlAttrs(rootF, path) {
   return ' data-okey="' + esc(rootF.key) + '" data-opath="' + esc(path.join(".")) + '"';
 }
 
-function objLeafInput(child, value, attrs) {
+function objLeafInput(child, value, attrs, sc) {
   switch (child.control) {
     case "number":
       return '<input class="cin" type="number" step="' + esc(child.number_step || "any") + '"'
@@ -6047,19 +6307,24 @@ function objLeafInput(child, value, attrs) {
     case "textarea":
       return '<textarea class="cta" rows="3"' + attrs + ' placeholder="' + esc(INPUT_EMPTY) + '">'
         + esc(value == null ? "" : value) + "</textarea>";
+    // 批20 A：**对象内的数组 / 映射**也走可编辑控件（不再是只读 JSON 块）——
+    // 数组 → 行内可增删的列表；映射 → 动态键值表格（值按实际类型出控件）。递归任意层。
+    case "listtable":
+    case "reflist":
+      return objListEdit(child, sc, value);
+    case "kvtable":
+      return objKvEdit(child, sc, value);
     case "readonly":
       return '<div class="inp mono">'
         + esc(value == null || value === "" ? EMPTY_TEXT : JSON.stringify(value)) + "</div>";
-    case "listtable":
-    case "reflist":
     case "condition":
     case "maptable":
-    case "kvtable":
     case "curve":
-      // 嵌套在对象里的列表/条件/键值结构：本批不内联编辑 → 有框只读外观（不臆造控件）。
+      // 条件行 / 键值对 / 曲线：这三类控件有自己的字段级接线（本批不内联进对象内），
+      // 仍给有框只读外观（不臆造控件），并在下方标注去向。
       return '<span class="ro-cell">' + esc(value == null || value === ""
         ? EMPTY_TEXT : (typeof value === "object" ? JSON.stringify(value) : String(value)))
-        + "</span>";
+        + '</span><span class="mnote">该控件在字段级编辑（对象内暂不内联）</span>';
     case "text":
     default:
       return '<input class="cin" type="text"' + attrs + ' placeholder="' + esc(INPUT_EMPTY)
@@ -6067,12 +6332,235 @@ function objLeafInput(child, value, attrs) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// 批20 A · 对象内的数组 / 映射（作用域 = 根字段 + 路径；改动仍只产出「根对象」一个顶层草稿）
+// 复用既有 EditorList / EditorKv 纯逻辑与 .ltable 样式；键名/列名全部来自元数据与值形态。
+// ---------------------------------------------------------------------------
+function objScopeAttrs(sc) {
+  return ' data-okey="' + esc(sc.rootKey) + '" data-opath="' + esc(sc.path.join(".")) + '"';
+}
+function objScopeKey(sc) {
+  return esc(sc.rootKey) + "|" + esc(sc.path.join("."));
+}
+function parseObjScope(text) {
+  var parts = String(text == null ? "" : text).split("|");
+  var rootKey = parts[0] || "";
+  var path = (parts[1] ? parts[1].split(".") : []).filter(function (s) { return s !== ""; });
+  return { rootKey: rootKey, path: path };
+}
+function objScopeValue(ctx, sc) {
+  var rootF = ctx.fieldIndex[sc.rootKey];
+  if (!rootF) { return undefined; }
+  return objPathGet(objCurrentValue(ctx, rootF), sc.path);
+}
+function objScopeWrite(ctx, sc, value) {
+  var rootF = ctx.fieldIndex[sc.rootKey];
+  if (!rootF) { return; }
+  EditorDraft.set(ctx.draft, sc.rootKey,
+    objPathSet(objCurrentValue(ctx, rootF), sc.path, value), rootF.value);
+}
+function objScopedRerender(node, sc) {
+  // 只重画该作用域容器（不整页重画 → 不丢其他草稿）。
+  var ctx = ctxFromNode(node);
+  var rootF = ctx.fieldIndex[sc.rootKey];
+  if (!rootF) { return; }
+  var host = node.parentNode;
+  if (!host) { return; }
+  var leaf = objLeafOf(rootF, sc.path);
+  if (!leaf) { return; }
+  var cur = objScopeValue(ctx, sc);
+  var fresh = document.createElement("div");
+  if (node.classList.contains("objkv")) {
+    fresh.innerHTML = objKvEdit(leaf, sc, cur);
+  } else {
+    fresh.innerHTML = objListEdit(leaf, sc, cur);
+  }
+  var newBox = fresh.firstChild;
+  if (!newBox) { return; }
+  host.replaceChild(newBox, node);
+  bindControls(host);
+  bindObjSections(host);
+  bindScopedSections(host);
+}
+
+function objListEdit(f, sc, value) {
+  var rows = Array.isArray(value) ? value : [];
+  var scalar = !!f.scalar_element;
+  var cols = f.columns || [];
+  var scope = objScopeKey(sc);
+  var html = '<div class="objlist" data-ols="' + scope + '">';
+  html += '<div class="lmeta">' + (scalar ? "数组" : "对象数组") + " · " + rows.length + " 行"
+    + " · " + esc(f.label || f.key) + "（对象内嵌列表，行内编辑；改动进外层字段草稿）</div>";
+  if (!rows.length) {
+    html += '<div class="ex">（空列表）用下面的「+ 添加一行」新建。</div>';
+  } else if (scalar) {
+    var col = cols[0] || { key: "value", label: KV_VALUE_LABEL, control: "text" };
+    html += '<div class="ltable-scroll"><table class="ltable ltable-edit"><thead><tr>'
+      + '<th class="' + esc(scalarCssClass(col.control)) + '">'
+      + esc(col.label || col.key) + ' <span class="ftype">' + esc(typeZh(col.type)) + "</span></th>"
+      + '<th class="op">操作</th></tr></thead><tbody>';
+    rows.forEach(function (row, i) {
+      var cellScope = { rootKey: sc.rootKey, path: sc.path.concat([String(i)]) };
+      var v = EditorList.cellValue(row, col.key, true);
+      // 元素是标量 → 行内可编（data-opath 走既有「根对象 + 路径」写回）。
+      html += "<tr><td>" + objScalarCell(col, v, objScopeAttrs(cellScope)) + "</td>"
+        + '<td class="op"><button type="button" class="ldel" data-oldsdel="' + scope + "|" + i
+        + '" title="删除本行（只改草稿）">删除</button></td></tr>';
+    });
+    html += "</tbody></table></div>";
+  } else if (f.element) {
+    // 元素是对象 → 每行一个嵌套对象表单（路径含行下标；objLeafOf 已支持下标下钻）。
+    var ctx0 = renderCtx || MAIN_CTX;
+    var rootF0 = (ctx0 && ctx0.fieldIndex) ? ctx0.fieldIndex[sc.rootKey] : null;
+    if (!rootF0) {
+      return '<span class="ro-cell">' + esc(EMPTY_TEXT) + "</span>";
+    }
+    var current0 = objCurrentValue(ctx0, rootF0);
+    html += '<div class="lblocks objlblocks">';
+    rows.forEach(function (row, i) {
+      var rowPath = sc.path.concat([String(i)]);
+      html += '<div class="lblock objlblock"><div class="lb-head">'
+        + '<span class="lb-no">#' + (i + 1) + "</span>"
+        + '<button type="button" class="ldel" data-oldsdel="' + scope + "|" + i
+        + '" title="删除本行（只改草稿）">删除</button></div>'
+        + objFormEdit(f.element, rowPath, rootF0, current0)
+        + "</div>";
+    });
+    html += "</div>";
+  } else {
+    html += '<div class="ex">该数组元素的字段未在元数据中声明，且没有数据行可推断列；'
+      + "请先补元数据。</div>";
+  }
+  html += '<button type="button" class="ladd" data-olsadd="' + scope
+    + '" title="按元素元数据的默认值新增一行（只改草稿）">+ 添加一行</button>';
+  return html + "</div>";
+}
+
+function objScalarCell(col, value, attrs) {
+  switch (col.control) {
+    case "number":
+      return '<input class="cin lcell" type="number" step="' + esc(col.number_step || "any")
+        + '" placeholder="' + esc(INPUT_EMPTY) + '"' + attrs
+        + ' value="' + esc(value == null ? "" : value) + '">';
+    case "bool":
+      return '<label class="ctl-bool"><input type="checkbox"' + attrs + (value ? " checked" : "")
+        + '> <span class="btxt">' + (value ? "是" : "否") + "</span></label>";
+    case "select":
+      return '<select class="cin lcell"' + attrs + ">"
+        + selectOptions(value, (col.enum && col.enum.length ? col.enum : (col.enum_options || [])), "（未选择）") + "</select>";
+    case "ref":
+      // data-ref：复用既有「异步填候选 + 黄提示」接线（框架唯一入口）。
+      return '<select class="cin lcell"' + attrs + ' data-ref="' + esc(col.ref_target || "")
+        + '" data-current="' + esc(value == null ? "" : value) + '">'
+        + selectOptions(value, [], "（未选择）") + "</select>"
+        + '<span class="refnote"></span>';
+    case "objform":
+    case "listtable":
+    case "reflist":
+    case "kvtable":
+      // 嵌套更深一层（对象/数组/映射）→ 由调用方给作用域，这里不额外包壳。
+      return '<span class="ro-cell">' + esc(value == null || value === ""
+        ? EMPTY_TEXT : (typeof value === "object" ? JSON.stringify(value) : String(value)))
+        + "</span>";
+    default:
+      return '<input class="cin lcell" type="text"' + attrs
+        + ' placeholder="' + esc(INPUT_EMPTY) + '" value="'
+        + esc(value == null ? "" : value) + '">';
+  }
+}
+
+// 批20 A：作用域里「单元格自身」的定位（rootKey|path）；嵌套映射的标量单元据此读写，
+// 空值 = 删该子键（与顶层键值表格同口径）。
+function objScopeMarker(sc) {
+  return esc(sc.rootKey) + "|" + esc(sc.path.join("."));
+}
+
+function objKvEdit(f, sc, value) {
+  var kv = f.kv_table || {};
+  var mode = kv.mode || "scalar";
+  var objMode = (mode === "obj");
+  var openKeys = !!kv.open_keys;
+  var scope = objScopeKey(sc);
+  var map = (value && typeof value === "object" && !Array.isArray(value)) ? value : {};
+  var keys = Object.keys(map);
+  var html = '<div class="objkv" data-okv="' + scope + '">';
+  html += '<div class="lmeta">键值表格 · ' + keys.length + " 项 · " + esc(f.label || f.key)
+    + (openKeys ? " · 动态键空间（可改键/增删行）" : " · 键来自元数据")
+    + "（对象内嵌映射；改动进外层字段草稿）</div>";
+  if (!keys.length) {
+    html += '<div class="ex">（空表）用下面的「+ 添加一项」新建。</div>';
+  } else {
+    html += '<div class="ltable-scroll"><table class="ltable ltable-edit kvtable"><thead><tr>'
+      + '<th class="kvkey">' + esc(kv.key_label || KV_KEY_LABEL) + "</th>";
+    if (mode === KV_MODE_TYPED) {
+      html += '<th>' + esc(kv.value_label || KV_VALUE_LABEL) + "（按实际类型）</th>";
+    } else {
+      (kv.columns || []).forEach(function (c) {
+        html += '<th class="' + esc(scalarCssClass(c.control)) + '">'
+          + esc(c.label || c.key) + ' <span class="ftype">' + esc(typeZh(c.type)) + "</span></th>";
+      });
+    }
+    html += '<th class="op">操作</th></tr></thead><tbody>';
+    keys.forEach(function (k, i) {
+      var rowScope = { rootKey: sc.rootKey, path: sc.path.concat([String(k)]) };
+      html += '<tr><td class="kvkey">' + objKvKeyCell(k, i, scope, openKeys) + "</td>";
+      if (mode === KV_MODE_TYPED) {
+        var row = (kv.rows || [])[i] || { key: k, value: map[k], control: "text" };
+        html += "<td>" + objKvTypedCell(row, map[k], rowScope) + "</td>";
+      } else if (objMode) {
+        (kv.columns || []).forEach(function (c) {
+          var cellScope = { rootKey: sc.rootKey, path: rowScope.path.concat([c.key]) };
+          var present = map[k] && typeof map[k] === "object" && (c.key in map[k]);
+          html += "<td>" + objKvScalarCell(c, present ? map[k][c.key] : null, cellScope)
+            + "</td>";
+        });
+      } else {
+        var col0 = (kv.columns || [])[0] || { key: "value", control: "text" };
+        html += "<td>" + objKvScalarCell(col0, map[k], rowScope) + "</td>";
+      }
+      html += '<td class="op"><button type="button" class="ldel" data-okvdel="' + scope + "|" + i
+        + '" title="删除本项（只改草稿）">删除</button></td></tr>';
+    });
+    html += "</tbody></table></div>";
+  }
+  html += '<button type="button" class="ladd" data-okvadd="' + scope
+    + '" title="新增一项（键名自定，值按实际类型编辑；只改草稿）">+ 添加一项</button>';
+  return html + "</div>";
+}
+
+function objKvKeyCell(key, i, scope, openKeys) {
+  if (!openKeys) { return '<span class="ro-cell">' + esc(key || EMPTY_TEXT) + "</span>"; }
+  return '<input class="cin kvkeyin" type="text" data-okvkey="' + scope + "|" + i
+    + '" placeholder="' + esc(INPUT_EMPTY) + '" value="' + esc(key) + '">';
+}
+
+function objKvTypedCell(row, value, rowScope) {
+  // typed 行描述符本身就是字段描述符 → 直接复用递归渲染（嵌套数组/映射/对象照常可编）。
+  if (row.control === "listtable" || row.control === "reflist" || row.control === "kvtable"
+      || row.control === "objform") {
+    return objLeafInput(row, value, objScopeAttrs(rowScope), rowScope);
+  }
+  return objScalarCell({ control: row.control, type: row.type, enum: row.enum,
+                         enum_options: row.enum_options, number_step: row.number_step,
+                         ref_target: row.ref_target, label: row.label }, value,
+                       ' data-okvc="' + objScopeMarker(rowScope) + '"');
+}
+
+function objKvScalarCell(col, value, cellScope) {
+  if (col.control === "objform" || col.control === "listtable" || col.control === "reflist"
+      || col.control === "kvtable") {
+    return objLeafInput(col, value, objScopeAttrs(cellScope), cellScope);
+  }
+  return objScalarCell(col, value, ' data-okvc="' + objScopeMarker(cellScope) + '"');
+}
+
 function objChildRow(child, path, rootF, current, allowDel) {
   var value = objPathGet(current, path);
+  var sc = { rootKey: rootF.key, path: path };
   var attrs = objControlAttrs(rootF, path);
   var body = (child.control === "objform")
     ? objFormEdit(child, path, rootF, current)
-    : objLeafInput(child, value, attrs);
+    : objLeafInput(child, value, attrs, sc);
   var note = child.meta_note
     ? ' <span class="mnote" title="' + esc(child.meta_note) + '">'
       + esc(child.meta_note) + "</span>" : "";
@@ -6148,6 +6636,7 @@ function rerenderObjForm(box) {
   renderCtx = prev;
   bindControls(host);
   bindObjSections(host);
+  bindScopedSections(host);   // 批20 A：对象内嵌数组/映射的增删接线
 }
 
 function bindObjSections(root) {
@@ -6192,6 +6681,118 @@ function bindObjSections(root) {
       var box = btn.closest(".objform");
       if (box) { box.dataset.oroot = rootKey; rerenderObjForm(box); }
       markDirty();
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// 批20 A · 对象内嵌数组 / 映射的接线（只改草稿；保存仍走既有校验与原子写链路）
+// 读写口径统一为「根字段 + 路径」：整块替换外层字段值 → 保存补丁仍是「字段 → 值」。
+// ---------------------------------------------------------------------------
+function scopedReadArray(ctx, sc, leaf) {
+  var v = objScopeValue(ctx, sc);
+  return Array.isArray(v) ? v : [];
+}
+function scopedDelete(ctx, sc) {
+  var rootF = ctx.fieldIndex[sc.rootKey];
+  if (!rootF) { return; }
+  EditorDraft.set(ctx.draft, sc.rootKey,
+    objPathDel(objCurrentValue(ctx, rootF), sc.path), rootF.value);
+}
+function readScopedKvCell(inp) {
+  // 与顶层键值表格同口径：空值 = 删该子键（保持「未配置」，不写 null）。
+  if (inp.type === "checkbox") { return !!inp.checked; }
+  if (inp.tagName === "SELECT") { return inp.value === "" ? null : inp.value; }
+  if (inp.type === "number") {
+    if (inp.value === "") { return null; }
+    var n = Number(inp.value);
+    return isNaN(n) ? inp.value : n;
+  }
+  return inp.value === "" ? null : inp.value;
+}
+function objScopeOfNode(node) {
+  return { rootKey: node.dataset.okey || "",
+           path: (node.dataset.opath ? String(node.dataset.opath).split(".") : [])
+             .filter(function (s) { return s !== ""; }) };
+}
+
+function bindScopedSections(root) {
+  Array.prototype.forEach.call(root.querySelectorAll("[data-olsadd]"), function (btn) {
+    btn.addEventListener("click", function () {
+      var sc = parseObjScope(btn.dataset.olsadd);
+      var ctx = ctxFromNode(btn);
+      var rootF = ctx.fieldIndex[sc.rootKey];
+      if (!rootF) { return; }
+      var leaf = objLeafOf(rootF, sc.path);
+      var rows = scopedReadArray(ctx, sc, leaf);
+      objScopeWrite(ctx, sc, EditorList.addRow(rows, leaf ? leaf.row_default : null,
+                                               !!(leaf && leaf.scalar_element)));
+      markDirty();
+      objScopedRerender(btn.closest(".objlist"), sc);
+    });
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-oldsdel]"), function (btn) {
+    btn.addEventListener("click", function () {
+      var parts = String(btn.dataset.oldsdel).split("|");
+      var sc = parseObjScope(parts[0] + "|" + (parts[1] || ""));
+      var ctx = ctxFromNode(btn);
+      objScopeWrite(ctx, sc, EditorList.delRow(scopedReadArray(ctx, sc, null), parts[2]));
+      markDirty();
+      objScopedRerender(btn.closest(".objlist"), sc);
+    });
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-okvkey]"), function (inp) {
+    inp.addEventListener("input", function () {
+      var parts = String(inp.dataset.okvkey).split("|");
+      var sc = parseObjScope(parts[0] + "|" + (parts[1] || ""));
+      var ctx = ctxFromNode(inp);
+      var rootF = ctx.fieldIndex[sc.rootKey];
+      if (!rootF) { return; }
+      var leaf = objLeafOf(rootF, sc.path);
+      var map = objScopeValue(ctx, sc);
+      var rows = EditorKv.rows(map, true);
+      var i = Number(parts[2]);
+      var newKey = String(inp.value || "");
+      if (!newKey || newKey === rows[i].key) { return; }
+      rows = EditorKv.setKey(rows, i, newKey);
+      objScopeWrite(ctx, sc, EditorKv.value(rows, true));
+      markDirty();
+    });
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-okvc]"), function (inp) {
+    var ev = (inp.type === "checkbox" || inp.tagName === "SELECT") ? "change" : "input";
+    inp.addEventListener(ev, function () {
+      var sc = parseObjScope(inp.dataset.okvc);
+      var ctx = ctxFromNode(inp);
+      var v = readScopedKvCell(inp);
+      if (v === null) { scopedDelete(ctx, sc); } else { objScopeWrite(ctx, sc, v); }
+      if (inp.type === "checkbox") {
+        var t = inp.parentNode.querySelector(".btxt");
+        if (t) { t.textContent = inp.checked ? "是" : "否"; }
+      }
+      markDirty();
+    });
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-okvadd]"), function (btn) {
+    btn.addEventListener("click", function () {
+      var sc = parseObjScope(btn.dataset.okvadd);
+      var ctx = ctxFromNode(btn);
+      var map = objScopeValue(ctx, sc);
+      objScopeWrite(ctx, sc, EditorKv.value(EditorKv.addRow(EditorKv.rows(map, true), true), true));
+      markDirty();
+      objScopedRerender(btn.closest(".objkv"), sc);
+    });
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-okvdel]"), function (btn) {
+    btn.addEventListener("click", function () {
+      var parts = String(btn.dataset.okvdel).split("|");
+      var sc = parseObjScope(parts[0] + "|" + (parts[1] || ""));
+      var ctx = ctxFromNode(btn);
+      var map = objScopeValue(ctx, sc);
+      objScopeWrite(ctx, sc, EditorKv.value(
+        EditorKv.delRow(EditorKv.rows(map, true), Number(parts[2])), true));
+      markDirty();
+      objScopedRerender(btn.closest(".objkv"), sc);
     });
   });
 }

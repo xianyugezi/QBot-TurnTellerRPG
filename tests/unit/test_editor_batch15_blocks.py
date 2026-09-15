@@ -8,11 +8,13 @@
   · 大段默认折叠（collapsed=True）、主块常驻展开；显式子块默认折叠、顺序/显示名来自元数据；
   · 前端折叠块纯逻辑（node 执行 EditorBlocks）+ 页面接线/CSS 断言；
   · DOM 实测（真 Chromium）：长模块「折叠前（全展开）vs 折叠后」右栏 scrollHeight 对比。
+
+批20 C 起：**声明了子分组**的模块（框架元数据 field_subgroups）改出「二级页签」，本测试对
+这两套呈现都做断言（页签制：可见字段 = 当前子页里能看见的字段，且首屏仍不滚动）。
 """
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import re
 import shutil
@@ -185,27 +187,39 @@ def test_frontend_wires_collapsible_blocks() -> None:
 # ---------------------------------------------------------------------------
 # 三、DOM 实测（真 Chromium）：折叠前（全展开）vs 折叠后
 # ---------------------------------------------------------------------------
-def _playwright_ready() -> bool:
-    if importlib.util.find_spec("playwright") is None:
-        return False
-    try:
-        from playwright.sync_api import sync_playwright  # noqa: PLC0415
-        with sync_playwright() as p:
-            browser = p.chromium.launch()
-            browser.close()
-        return True
-    except Exception:  # noqa: BLE001 - 无浏览器内核 → 跳过量测
-        return False
+def _playwright_python() -> str:
+    """找一个装了 playwright 的解释器（本机 playwright 与仓库 venv 可能不是同一个）。
+
+    量测脚本本身在有 playwright 的解释器下跑；被量的编辑器宿主用当前解释器（能 import
+    `qbot_rpg`）→ 由 `--host-python` 传下去。
+    """
+    for cand in (sys.executable, "/usr/bin/python3", shutil.which("python3") or ""):
+        if not cand:
+            continue
+        probe = subprocess.run([cand, "-c", "import playwright"], capture_output=True)
+        if probe.returncode != 0:
+            continue
+        check = subprocess.run(
+            [cand, "-c",
+             "from playwright.sync_api import sync_playwright\n"
+             "with sync_playwright() as p:\n"
+             "    b = p.chromium.launch()\n"
+             "    b.close()"],
+            capture_output=True)
+        if check.returncode == 0:
+            return cand
+    return ""
 
 
-PW_READY = _playwright_ready()
+PW_PY = _playwright_python()
+PW_READY = bool(PW_PY)
 
 
 @pytest.mark.skipif(not PW_READY, reason="本机无 playwright/chromium，跳过 DOM 量测")
 def test_dom_measure_scrolling_reduced(tmp_path: Path) -> None:
     out_json = tmp_path / "dom.json"
-    cmd = [sys.executable, str(REPO / "scripts" / "editor_dom_measure.py"),
-           "--pack", "veinborn", "--json", str(out_json)]
+    cmd = [PW_PY, str(REPO / "scripts" / "editor_dom_measure.py"),
+           "--pack", "veinborn", "--host-python", sys.executable, "--json", str(out_json)]
     for case in MEASURE_CASES:
         cmd += ["--case", case]
     proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
@@ -216,11 +230,19 @@ def test_dom_measure_scrolling_reduced(tmp_path: Path) -> None:
         after = case["after"]
         # 修前（全展开）：内容高于首屏 → 必须滚动
         assert before["scrollHeight"] > before["clientHeight"], case
-        # 修后（折叠）：主块常驻，且**首屏可看完**（内容不高于右栏可视高度）
+        # 修后（折叠 / 二级页签）：**首屏可看完**（内容不高于右栏可视高度）
         assert after["scrollHeight"] <= after["clientHeight"], case
         assert after["scrollHeight"] < before["scrollHeight"], case
-        # 主块字段（未折叠）全部首屏可见；折叠只是收起，字段总数不变
-        assert after["visibleRows"] == after["activeMain"], case
-        assert after["activeMain"] <= after["activeTotal"], case
+        # 折叠 / 分页只是收起，字段总数不变
         assert after["totalRows"] == before["totalRows"], case
         assert after["clientHeight"] == before["clientHeight"], case
+        if after.get("subTabs"):
+            # 批20 C：声明了子分组的模块 → 二级页签；一次只看一个子页
+            assert after["subPanes"] >= after["subTabs"], case
+            assert after["visibleRows"] == after["activeSubVisible"], case
+            assert 0 < after["activeSubVisible"] <= after["activeSubTotal"], case
+            assert after["activeSubTotal"] < after["totalRows"], case
+        else:
+            # 既有口径：折叠块收起后，首屏可见字段 = 主块（常驻）字段
+            assert after["visibleRows"] == after["activeMain"], case
+            assert after["activeMain"] <= after["activeTotal"], case

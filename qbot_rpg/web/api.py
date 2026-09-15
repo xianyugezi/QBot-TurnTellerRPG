@@ -28,7 +28,7 @@ import json
 import re
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Optional, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from qbot_rpg.content import entry_presets as entry_presets_mod
 from qbot_rpg.content import field_meta_pack as pack_meta
@@ -72,6 +72,9 @@ PACK_COVERED_TAG = "已覆盖（包）"
 KEY_IS_NAME_NOTE = "键 = 名称"
 # 批14 #4：元数据未登记子字段的兜底标注（前端字段行内展示；不改任何校验语义）。
 META_UNREGISTERED_NOTE = "元数据未登记，按实际值推断"
+# 批20 C：中栏条目分组的「取不到分组值」兜底分组（稳定机器键 + 中文兜底显示名；包可覆盖名）。
+ENTRY_GROUP_OTHER = "@other"
+ENTRY_GROUP_OTHER_LABEL = "其他"
 
 # 批15 #8：二级结构（分组页签之下的可折叠子块）——通用机制，不认任何模块/字段名。
 # · 子块名来自元数据：FieldMeta.subgroup / ModuleMeta.field_subgroups（键 → 子块）；
@@ -87,6 +90,10 @@ MORE_FIELDS_LABEL = "更多字段"     # 隐式块的中文兜底显示名（包
 KV_KEY_LABEL = "键"
 KV_VALUE_LABEL = "值"
 KV_MAX_STRUCT_KEYS = 8            # 「小结构」的子键上限（超出视为宽容器，不走键值表格）
+# 批20 A：键值表格的第三种行模式——值类型混杂（标量 / 数组 / 对象并存）时，**逐行按实际
+# 类型出控件**（数字/布尔/文本/枚举/引用/数组/对象/嵌套映射），可递归任意层。判定只看值
+# 形态与元数据，不认任何字段名；行描述符直接复用 `_descriptor`，与顶层字段同一套控件口径。
+KV_MODE_TYPED = "typed"
 # map 模块的「全表」合成条目标识（仅读列表/详情合成，不进数据、不进条目索引）。
 TABLE_ENTRY_ID = "@table"
 TABLE_ENTRY_TAG = "全表 · 表格"
@@ -513,6 +520,160 @@ def _entry_tree_plan(manifest: Mapping[str, Any], declared: List[str], pack_dir:
     return mounts, mounted, moved_out, notes
 
 
+# =====================================================================================
+# 批20 B：**按条件过滤的条目并入**（`field_meta.json.entry_merge_filtered`，通用、包声明驱动）
+# =====================================================================================
+def _entry_merge_filtered_specs(
+    manifest: Mapping[str, Any], declared: List[str], pack_dir: Path
+) -> Tuple[List[Dict[str, Any]], List[str]]:
+    """读包声明 `entry_merge_filtered` → (并入表, notes)；不写死任何模块名 / 键名。
+
+    每项 = `{"target": 目标模块, "from": 来源模块, "has": (键, …), "eq": {键: 值}}`。
+    只保留「目标与来源都在本包 manifest 声明」的项（否则记 note 忽略）；目标与来源相同者
+    由解析层拦下。**数据文件 / 条目 id / 校验路径全不动**——本表只驱动展示层聚合。
+    """
+    decl = _pack_declaration(pack_dir)
+    notes: List[str] = []
+    out: List[Dict[str, Any]] = []
+    if decl is None or not decl.entry_merge_filtered:
+        return out, notes
+    declared_set = set(declared)
+    for spec in decl.entry_merge_filtered:
+        target = str(spec["target"])
+        frm = str(spec["from"])
+        if target not in declared_set:
+            notes.append(f"entry_merge_filtered 目标模块未在 manifest 声明：{target}")
+            continue
+        if frm not in declared_set:
+            notes.append(f"entry_merge_filtered 来源模块未在 manifest 声明：{frm}")
+            continue
+        out.append({"target": target, "from": frm,
+                    "has": tuple(spec.get("has", ())),
+                    "eq": dict(spec.get("eq", {}))})
+    return out, notes
+
+
+def _entry_matches_where(value: object, has: Sequence[str],
+                         eq: Mapping[str, Any]) -> bool:
+    """条目是否满足并入条件（`has` 全中 AND `eq` 全等）——只看值形态，不认字段语义。
+
+    `has`：键存在且值不为 null（空串 / 空列表算「有」——声明口径就是「有某键」）；
+    `eq`：键的值与声明值相等（标量比较；类型不同即不等）。
+    """
+    if not isinstance(value, Mapping):
+        return False
+    for k in has:
+        if str(k) not in value or value[str(k)] is None:
+            return False
+    for k, want in eq.items():
+        if str(k) not in value or value[str(k)] != want:
+            return False
+    return True
+
+
+def _entry_merge_filtered_rows(
+    pack_dir: Path, declared: List[str], labels: Mapping[str, str],
+    target: str, specs: Sequence[Mapping[str, Any]],
+) -> Tuple[List[Tuple[str, str, object, str, Mapping[str, Any]]], List[Dict[str, Any]]]:
+    """目标模块的「过滤并入」条目 → ((id, 名称, 值, 来源模块, spec), 小节元数据)。
+
+    同一个来源模块可能有多条声明（不同条件）→ 各自成小节；同一条目被多条声明命中时**只取首个**
+    （不重复列出，也不重复计数）。
+    """
+    rows: List[Tuple[str, str, object, str, Mapping[str, Any]]] = []
+    sections: List[Dict[str, Any]] = []
+    seen: set = set()
+    for spec in specs:
+        if str(spec["target"]) != target:
+            continue
+        frm = str(spec["from"])
+        sdata = _read_json(pack_dir / f"{frm}.json")
+        smeta = _module_meta(frm, pack_dir)
+        hits: List[Tuple[str, str, object]] = []
+        for eid, name, val in _entry_rows(sdata, smeta):
+            if eid in seen:
+                continue
+            if _entry_matches_where(val, spec["has"], spec["eq"]):
+                seen.add(eid)
+                hits.append((eid, name, val))
+                rows.append((eid, name, val, frm, spec))
+        sections.append({
+            "module": frm,
+            "label": _module_display_label(frm, labels),
+            "has": list(spec["has"]),
+            "eq": dict(spec["eq"]),
+            "count": len(hits),
+        })
+    return rows, sections
+
+
+# =====================================================================================
+# 批20 C：**中栏条目分组**（`field_meta.json.entry_groups`，通用、包声明驱动）
+# =====================================================================================
+def _entry_group_spec(pack_dir: Path, module: str) -> Optional[Mapping[str, Any]]:
+    """读该模块的条目分组声明（无声明 → None = 行为与现状一致）。"""
+    decl = _pack_declaration(pack_dir)
+    if decl is None or not decl.entry_groups:
+        return None
+    return decl.entry_groups.get(module)
+
+
+def _entry_group_of(entry_id: str, value: object, spec: Mapping[str, Any]) -> str:
+    """条目 → 分组原始键：`by=id_prefix` 取 ID 首个下划线前缀；`by=field` 取该字段的标量值。
+
+    只看值形态 / 声明，不认任何具体字段语义；取不到（缺键 / 非标量 / 空值）→ 空串（其他）。
+    """
+    if str(spec.get("by")) == "id_prefix":
+        raw = str(entry_id).split("_")[0]
+        return raw or str(entry_id)
+    key = str(spec.get("field") or "")
+    if key and isinstance(value, Mapping):
+        v = value.get(key)
+        if isinstance(v, (str, int, float, bool)) and str(v) != "":
+            return str(v)
+    return ""
+
+
+def _entry_group_plan(mrows: Sequence[Tuple[str, str, object]],
+                      spec: Mapping[str, Any]) -> List[Dict[str, Any]]:
+    """条目行 → 分组计划 `[{name,label,count,collapsed}]`（顺序 = 首次出现顺序，「其他」置末）。
+
+    首节默认展开，其余按声明 `collapsed`（缺省 true）折叠；显示名 = 包声明 labels →
+    原始值；取不到值的条目归「其他」（`ENTRY_GROUP_OTHER`）。
+    """
+    labels = {str(k): str(v) for k, v in (spec.get("labels") or {}).items()}
+    other_label = str(spec.get("other_label") or ENTRY_GROUP_OTHER_LABEL)
+    collapsed = bool(spec.get("collapsed", True))
+    order: List[str] = []
+    counts: Dict[str, int] = {}
+    for eid, _name, val in mrows:
+        raw = _entry_group_of(str(eid), val, spec)
+        if raw and raw not in counts:
+            order.append(raw)
+        counts[raw] = counts.get(raw, 0) + 1
+    # 包声明 labels 的**键顺序优先**（作者可用它排定小节顺序）；未声明 labels 时按
+    # **条目数降序**（首屏先给最大的分组），同数按首次出现顺序。
+    declared_order = [k for k in labels if counts.get(k, 0) > 0]
+    if declared_order:
+        order = declared_order + [k for k in order if k not in set(declared_order)]
+    else:
+        order = sorted(order, key=lambda k: -counts.get(k, 0))
+    if "" in counts:
+        order.append("")
+    plan: List[Dict[str, Any]] = []
+    for i, raw in enumerate(order):
+        if counts.get(raw, 0) <= 0:
+            continue
+        name = raw or ENTRY_GROUP_OTHER
+        plan.append({
+            "name": name,
+            "label": labels.get(raw) or (other_label if not raw else raw),
+            "count": counts.get(raw, 0),
+            "collapsed": bool(collapsed and i > 0),
+        })
+    return plan
+
+
 def _segment_pages(manifest: Mapping[str, Any], declared: List[str],
                    pack_dir: Path) -> Dict[str, List[Dict[str, Any]]]:
     """读包声明 `segment_pages` → {对象模块: 页面数组}（批15 #2，通用、不写死段名）。
@@ -662,6 +823,18 @@ def list_modules(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
         _moved_in = [x for x in _items if not x["keep_top_level"]]
         if _moved_in and _parent in counts:
             counts[_parent] = counts.get(_parent, 0) + len(_moved_in)
+    # 批20 B：按条件过滤的并入 → 目标模块计数（与条目列表 / 全局索引同一口径）。
+    mf_specs, mf_notes = _entry_merge_filtered_specs(manifest, declared, pack_dir)
+    notes.extend(mf_notes)
+    mf_specs_by_target: Dict[str, List[Dict[str, Any]]] = {}
+    for _spec in mf_specs:
+        mf_specs_by_target.setdefault(str(_spec["target"]), []).append(_spec)
+    mf_sections_by_target: Dict[str, List[Dict[str, Any]]] = {}
+    for _target, _specs in mf_specs_by_target.items():
+        _mf_rows, _mf_secs = _entry_merge_filtered_rows(
+            pack_dir, declared, labels, _target, _specs)
+        counts[_target] = counts.get(_target, 0) + len(_mf_rows)
+        mf_sections_by_target[_target] = _mf_secs
     # 被并入的来源模块：标记 merged_into（前端默认不在左栏单列）；keep_top_level 的仍单列。
     merged_into: Dict[str, str] = {}
     merged_sources: Dict[str, List[Tuple[str, bool]]] = {}
@@ -704,6 +877,8 @@ def list_modules(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
         merged_count = sum(x["count"] for x in info)
         # 左栏/中栏统一口径：total_count = 本模块 + 子模块 + 并入条目（已是子模块的不重复计）。
         total_count = count + sum(x["count"] for x in info if not x["already_child"])
+        mf_secs = mf_sections_by_target.get(mod, [])
+        mf_count = sum(int(s.get("count") or 0) for s in mf_secs)
         return {
             "module": mod,
             "label": _module_display_label(mod, labels),
@@ -718,6 +893,10 @@ def list_modules(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
             # 批12 #1：聚合展示声明（通用；未声明 entry_merge 的包这些字段为空/0，行为与现状一致）
             "merged": info,
             "merged_count": merged_count,
+            # 批20 B：按条件过滤的并入（无声明 → 空列表 / 0）；**条目已计入 `count`**，
+            # 不再叠加到 `total_count`（避免双计）。
+            "merge_filtered": mf_secs,
+            "merge_filtered_count": mf_count,
             "total_count": total_count,
             "merged_into": merged_into.get(mod),
             "keep_top_level": (mod in merged_into) and (mod in keep_sources),
@@ -980,12 +1159,35 @@ def list_entries(pack: object, module: object, root: Optional[object] = None) ->
     # 页面是展示层聚合：段条目仍在 `entries` 里（计数/索引不变），前端按 `page` 归到页行下。
     pages: List[Dict[str, Any]] = []
     briefs = [_entry_brief(eid, name, _val) for eid, name, _val in rows]
+    # 批20 C：中栏条目分组（包声明驱动；本模块**自身条目**分组，并入/挂载条目另按来源分节）。
+    # 无声明 → 空计划 / 条目不带 group 键（前端行为与现状一致）。
+    group_spec = _entry_group_spec(pack_dir, mod)
+    group_plan: List[Dict[str, Any]] = []
+    if group_spec is not None:
+        group_plan = _entry_group_plan(rows, group_spec)
+        _glabel = {str(g["name"]): str(g["label"]) for g in group_plan}
+        for _i, (_eid, _nm, _val) in enumerate(rows):
+            _gname = _entry_group_of(str(_eid), _val, group_spec) or ENTRY_GROUP_OTHER
+            briefs[_i]["group"] = _gname
+            briefs[_i]["group_label"] = _glabel.get(_gname, _gname)
     # 批19 #8：移走类「挂载条目」计入父节点条目列表（`mounted_from` 标出来源模块，
     # 前端据此路由编辑/保存回来源模块；仍走来源模块的校验与原子写链路）。
     for _eid, _nm, _val, _frm in mounted_rows:
         _b = _entry_brief(_eid, _nm, _val)
         _b["mounted_from"] = _frm
         _b["mounted_from_label"] = _module_display_label(_frm, labels)
+        briefs.append(_b)
+    # 批20 B：**按条件过滤的并入**（目标模块条目 = 自身条目 ∪ 来源模块里满足条件的条目）。
+    # 并入条目直接进中栏列表（带 `merged_from` 来源标注），计数计入本模块；编辑/保存仍由
+    # 前端按 `merged_from` 路由回来源模块（数据文件 / 校验路径不动）。无声明 → 空表，行为同现状。
+    mf_specs, _mf_notes = _entry_merge_filtered_specs(manifest, declared, pack_dir)
+    merge_filtered_rows, merge_filtered_sections = _entry_merge_filtered_rows(
+        pack_dir, declared, labels, mod, mf_specs)
+    for _eid, _nm, _val, _frm, _spec in merge_filtered_rows:
+        _b = _entry_brief(_eid, _nm, _val)
+        _b["merged_from"] = _frm
+        _b["merged_from_label"] = _module_display_label(_frm, labels)
+        _b["merge_filtered"] = True
         briefs.append(_b)
     # 批19 #8：显示挂载类（keep_top_level / 虚拟视图）做纯展示小节，不进计数。
     mounted_sections: List[Dict[str, Any]] = []
@@ -1016,7 +1218,7 @@ def list_entries(pack: object, module: object, root: Optional[object] = None) ->
         for b in briefs:
             if b["id"] in page["segments"]:
                 b["page"] = pid
-    total_rows = len(rows) + len(mounted_rows)
+    total_rows = len(rows) + len(mounted_rows) + len(merge_filtered_rows)
     return {
         "pack": str(pack),
         "module": mod,
@@ -1038,9 +1240,15 @@ def list_entries(pack: object, module: object, root: Optional[object] = None) ->
         "table_entry": table_entry,
         # 批15 #2：合并页（对象模块；其余模块为 []）——每页列出被合并的段 id
         "pages": pages,
+        # 批20 C：中栏条目分组计划（无声明 = []；条目上的 group/group_label 同源）
+        "entry_groups": group_plan,
         # 批12 #1：聚合视图（无声明时 = 空列表 / total_count == count，行为与现状一致）
         "merge_sections": sections,
         "merged_count": merged_count,
+        # 批20 B：按条件过滤的并入（无声明时 = 空列表 / 0；条目已在中栏 `entries` 里，带
+        # `merged_from` 来源标注；计数口径 = count/total_count 均含并入条目）
+        "merge_filtered_sections": merge_filtered_sections,
+        "merge_filtered_count": len(merge_filtered_rows),
         "total_count": total_rows + merged_count,
         # 批19 #8：本模块被移走的段 / 挂到本模块下的显示挂载小节（计数与检索口径见文档）。
         "moved_out_ids": sorted(tree_moved_out.get(mod, set())),
@@ -1226,6 +1434,49 @@ _READONLY_CONTROLS: Tuple[str, ...] = ("readonly",)
 # 纯展示层：只影响是否给「+ 子项 / ✕ 删除」控件，不改 type/required/校验。
 def open_keys_of(fm: Optional[FieldMeta]) -> bool:
     return fm is None or (fm.type == "obj" and not fm.children)
+
+
+def _obj_unregistered_keys(fm: Optional[FieldMeta], value: object) -> bool:
+    """对象值里是否含**元数据未登记**的键（批20 A：动态键空间判定，通用、不认字段名）。
+
+    登记了子字段的对象若实际值里多出未登记键（如 `resistance` 的 `stun`、`ai` 的 `states`），
+    其键空间就是动态的——按映射表渲染并放开增删键，而不是按固定 schema 只出登记项。
+    """
+    if not isinstance(value, Mapping):
+        return False
+    declared = {str(k) for k in (fm.children if fm is not None and fm.children else {})}
+    return any(str(k) not in declared for k in value)
+
+
+def _obj_kv_tableable(fm: Optional[FieldMeta], value: object) -> bool:
+    """对象型字段的值是否按**映射表**（kvtable）渲染（批20 A，纯展示层判定）。
+
+    条件（任一，全部只看值形态 + 元数据，不认模块名/字段名）：
+      · 元数据声明为 `map`（键 → 值容器）；
+      · 动态键空间（未登记子字段，`open_keys_of`）；
+      · 值里含元数据未登记的键（登记了子字段但实际多出键）。
+    登记了子字段、键集合又完全吻合的对象（如 drop_exp / stats）仍是 objform 表单。
+    """
+    if not isinstance(value, Mapping):
+        return False
+    if fm is not None and fm.type == "map":
+        return True
+    if open_keys_of(fm):
+        return True
+    return _obj_unregistered_keys(fm, value)
+
+
+def _kv_open_keys(fm: Optional[FieldMeta], value: object) -> bool:
+    """键值表格是否「动态键空间」（键可改名、行可增删；批20 A）。
+
+    元数据显式声明 `editor="kvtable"` 的对象 = 映射语义（键空间由内容定义，如抗性是
+    「负面效果 ID → 0-100」）→ 放行增删；其余走既有判定（未登记子字段 / 值含未登记键）。
+    **只影响界面上是否给「+ 添加一项 / 改名」控件**——写入仍走原校验与原子写链路。
+    """
+    if fm is not None and fm.editor == "kvtable":
+        return True
+    return open_keys_of(fm) or _obj_unregistered_keys(fm, value)
+
 
 
 def is_editable_control(control: Optional[str]) -> bool:
@@ -2332,9 +2583,59 @@ def _kv_rows(value: Mapping[str, Any], cols: List[Dict[str, Any]], obj_mode: boo
     return out
 
 
+def _kv_mode(value: Mapping[str, Any]) -> str:
+    """键值表格行模式（判定只看值形态，不认字段名）：obj（值全为映射）/ scalar（值全为标量）
+    / typed（混杂或含数组 → 逐行按实际类型出控件）。空表 → scalar（与既有行为一致）。"""
+    vals = [v for v in value.values() if v is not None]
+    if vals and all(isinstance(v, Mapping) for v in vals):
+        return "obj"
+    if vals and not all(_is_scalarish(v) for v in vals):
+        return KV_MODE_TYPED
+    return "scalar"
+
+
+def _kv_typed_rows(value: Mapping[str, Any], fm: Optional[FieldMeta],
+                   mmeta: Optional[ModuleMeta], view: "_PackView",
+                   depth: int) -> List[Dict[str, Any]]:
+    """typed 模式的行：**每行一个字段描述符**（`_descriptor` 复用）——值按实际类型出控件
+    （数字/布尔/文本/枚举/引用/数组/对象/嵌套映射），可递归任意层。
+
+    子键有元数据登记时用登记元数据（中文名/枚举/引用目标/范围），未登记键走兜底控件 +
+    既有「元数据未登记，按实际值推断」标注。行的 `key` 即映射键，前端据此渲染键单元格。
+    """
+    child_meta: Mapping[str, FieldMeta] = (
+        dict(fm.children) if fm is not None and fm.children else {})
+    rows: List[Dict[str, Any]] = []
+    for k, v in value.items():
+        row = _descriptor(str(k), child_meta.get(str(k)), v, True, mmeta, view, depth + 1)
+        if not row.get("display") and isinstance(v, (Mapping, list)):
+            row["display"] = _json_text(v)
+        rows.append(row)
+    return rows
+
+
 def _kv_table_spec(value: Mapping[str, Any], fm: Optional[FieldMeta],
-                   view: "_PackView") -> Dict[str, Any]:
-    """键值表格描述（前端据 control=kvtable 渲染；列/行全来自值形态 + 元数据）。"""
+                   view: "_PackView", mmeta: Optional[ModuleMeta] = None,
+                   depth: int = 0) -> Dict[str, Any]:
+    """键值表格描述（前端据 control=kvtable 渲染；列/行全来自值形态 + 元数据）。
+
+    · `mode`：obj / scalar（批15 #9 既有）/ typed（批20 A：值类型混杂 → 逐行按实际类型出
+      控件，见 `_kv_typed_rows`）；
+    · `open_keys`：动态键空间（未登记子字段 / 值里含未登记键）→ 键可改名、可增删行；固定
+      schema → 键只读（不臆造键）。
+    """
+    mode = _kv_mode(value)
+    open_keys = _kv_open_keys(fm, value)
+    if mode == KV_MODE_TYPED:
+        return {
+            "mode": KV_MODE_TYPED,
+            "columns": [],
+            "rows": _kv_typed_rows(value, fm, mmeta, view, depth),
+            "row_count": len(value),
+            "key_label": KV_KEY_LABEL,
+            "value_label": KV_VALUE_LABEL,
+            "open_keys": open_keys,
+        }
     obj_mode, cols = _kv_columns(value, fm, view)
     return {
         "mode": "obj" if obj_mode else "scalar",
@@ -2343,8 +2644,8 @@ def _kv_table_spec(value: Mapping[str, Any], fm: Optional[FieldMeta],
         "row_count": len(value),
         "key_label": KV_KEY_LABEL,
         "value_label": KV_VALUE_LABEL,
-        # 动态键空间（元数据未登记子字段）→ 键可改名、可增删；固定 schema → 键只读。
-        "open_keys": open_keys_of(fm),
+        # 动态键空间（元数据未登记子字段 / 值含未登记键）→ 键可改名、可增删；固定 schema → 键只读。
+        "open_keys": open_keys,
     }
 
 
@@ -2407,9 +2708,9 @@ def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
     if not multiline and widget == "text":
         multiline = _is_long_text(value)  # 元数据未声明时的兜底（长文本仍给多行控件）
     control = control_for(fm, widget, multiline)
-    # 批15 #9：**动态键空间**的「键 → 标量/小结构」密集映射 → 键值表格（不再是每键一个大块表单）。
-    # 固定 schema（登记了 children）的对象保持 objform——不把已声明子字段的对象摊成表。
-    if control == "objform" and open_keys_of(fm) and _is_dense_map(value):
+    # 批15 #9 / 批20 A：**动态键空间 / 键值映射**的对象 → 键值表格（不再是每键一个大块表单）。
+    # 登记了子字段且键集合完全吻合的对象保持 objform（如 drop_exp / drop_items / stats）。
+    if control == "objform" and _obj_kv_tableable(fm, value):
         control = "kvtable"
     # 批15 #2/#9 回归修复：**对象型字段的结构（children / open_keys）与呈现控件解耦**——
     # 表格化 / 曲线化只改呈现，不删结构（一号原则：框架支持的子字段必须仍然可见可编）。
@@ -2499,6 +2800,14 @@ def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
                         invalid_cells.append(
                             {"row": i, "key": str(ck), "value": rv})
         desc["invalid_cells"] = invalid_cells
+        # 批20 A：列表元素的字段描述符（供前端在对象内递归渲染「数组 → 对象」等更深层结构；
+        # 判定与控件仍走同一套映射，不新增特例）。深度不额外 +1：element 是列表自身的元素，
+        # 不是树里多出来的一层（否则 `_MAX_DEPTH` 会把元素子字段截断成空）。
+        elem = fm.element if fm is not None else None
+        if elem is not None:
+            _sample = next((r for r in rows_val if isinstance(r, Mapping)), None)
+            desc["element"] = _descriptor("element", elem, _sample, bool(rows_val),
+                                          mmeta, view, depth)
     elif obj_like:
         # 批14 #4：对象子字段**始终**按元数据出（登记了但数据未配置 → 未配置态可填），
         # 再补实际值里多出的键（fm=None → 兜底控件 + 标注）。值缺失/非映射时按空对象渲染。
@@ -2509,9 +2818,10 @@ def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
         desc["open_keys"] = open_keys_of(fm)
     # 呈现层附加（与上面的结构输出**并列**，不是互斥分支）：表格 / 曲线各自带规格。
     if control == "kvtable":
-        # 批15 #9：键值表格（键 → 标量/小结构）——列/行来自值形态 + 元数据；前端行内编辑。
+        # 批15 #9 / 批20 A：键值表格（键 → 标量 / 小结构 / 混杂类型）——列/行来自值形态 +
+        # 元数据；前端行内编辑，typed 模式逐行按实际类型出控件（可递归）。
         desc["kv_table"] = _kv_table_spec(
-            value if isinstance(value, Mapping) else {}, fm, view)
+            value if isinstance(value, Mapping) else {}, fm, view, mmeta, depth)
     elif control == "curve":
         # 批15 #2：曲线控件（等级 → 数值）——默认公式/摘要行，双击展开明细表。
         desc["curve"] = _curve_spec(
@@ -3327,6 +3637,11 @@ def entry_index(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
     _merge_map, _merge_notes = _entry_merge_map(manifest, declared, pack_dir)
     _tree_mounts, tree_mounted, tree_moved_out, _tree_notes = _entry_tree_plan(
         manifest, declared, pack_dir, _merge_map, labels)
+    # 批20 B：按条件过滤的并入——索引与条目列表同口径（目标模块的 count 含并入条目）。
+    _mf_specs, _mf_notes = _entry_merge_filtered_specs(manifest, declared, pack_dir)
+    mf_specs_by_target: Dict[str, List[Dict[str, Any]]] = {}
+    for _spec in _mf_specs:
+        mf_specs_by_target.setdefault(str(_spec["target"]), []).append(_spec)
     modules: List[Dict[str, Any]] = []
     total = 0
     for mod in declared:
@@ -3350,6 +3665,15 @@ def entry_index(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
             _b = _entry_brief(_hit[0], _hit[1], _hit[2])
             _b["mounted_from"] = _frm
             _b["mounted_from_label"] = _module_display_label(_frm, labels)
+            entries.append(_b)
+        # 批20 B：按条件过滤的并入条目也进索引（count 与 list_entries 一致；带来源标注）。
+        _mf_rows, _mf_secs = _entry_merge_filtered_rows(
+            pack_dir, declared, labels, mod, mf_specs_by_target.get(mod, []))
+        for _eid, _nm, _val, _frm, _spec in _mf_rows:
+            _b = _entry_brief(_eid, _nm, _val)
+            _b["merged_from"] = _frm
+            _b["merged_from_label"] = _module_display_label(_frm, labels)
+            _b["merge_filtered"] = True
             entries.append(_b)
         # 批13.1：未配置段的计数口径与 `list_entries` 一致（全局检索也覆盖未配置段）。
         unc = sum(1 for e in entries if e.get("unconfigured"))

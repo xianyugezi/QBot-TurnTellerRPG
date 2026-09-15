@@ -71,7 +71,16 @@ DEFAULT_PACKS = ("veinborn", "test_demo")
 # 加 purpose/unused/overlap_hints 展示键；#6 模块名回落目录中文名。以上均为**展示层**
 # 演进（type/required/枚举/引用目标等校验口径零变化），与「字段级元数据迁移不得改/删」
 # 无冲突；重定到本批末提交后，门禁继续只守字段级改/删。
-DEFAULT_BASELINE_REF = "5e908bb"
+# 批20（2026-09-16）重定基线：5e908bb → a2fe3c5（本批 C 段末提交）。原因：
+#   · A 段把「对象型字段里的映射」由 objform 改渲染为**键值表格**（control 由 objform → kvtable，
+#     kv_table 新增 typed 行模式；control 属派生展示键，故记 soft），并新增 `element` 描述符；
+#   · B 段 `entry_merge_filtered` 使装备页条目列表 = 自身 ∪ 并入（条目计数 / 索引口径变化，
+#     已按 B 的计数契约三处自洽）；
+#   · C 段给 7 个长模块声明**二级分组**（`subgroup` 由空串 → 命名子分组、`block` 由「主块 /
+#     隐式更多字段」→ 命名子分组），并新增中栏分组展示键 `group` / `group_label`。
+# 以上均为**展示层**演进（type / required / 枚举 / 引用目标 / 必填等校验口径零变化），与
+# 「字段级元数据迁移不得改/删」无冲突；重定到本批末提交后，门禁继续只守字段级改/删。
+DEFAULT_BASELINE_REF = "a2fe3c5"
 
 
 def _env(root: Path) -> dict:

@@ -373,8 +373,9 @@ def verify_pack(pack: str, root: object = None) -> PackReport:
             if not isinstance(eid, str) or not eid:
                 report.errors.append(f"list_entries({mod})：条目 id 非法：{eid!r}")
                 continue
-            # 批19 #8：entry_tree 挂载条目在父节点条目列表里出现，但其详情属于**来源模块**。
-            detail_mod = str(ent.get("mounted_from") or mod)
+            # 批19 #8 / 批20 B：挂载条目 / 按条件并入的条目在父节点（目标模块）条目列表里
+            # 出现，但其详情属于**来源模块**（点击也按来源模块打开/保存）。
+            detail_mod = str(ent.get("mounted_from") or ent.get("merged_from") or mod)
             where = f"{detail_mod}/{eid}"
             try:
                 det = api.entry_detail(pack, detail_mod, eid, root=root)

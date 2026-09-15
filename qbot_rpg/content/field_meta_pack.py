@@ -72,7 +72,7 @@ import json
 from dataclasses import dataclass, field, replace
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, Mapping, Optional, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 from qbot_rpg.content.models import FieldMeta, FieldMetaTable, ModuleMeta
 
@@ -88,6 +88,9 @@ TOP_LEVEL_KEYS: Tuple[str, ...] = (
     "field_labels",
     "field_help",
     "group_labels",
+    # 批20 C：**二级分组显示名**（模块 → 子分组键 → 中文名）——覆盖框架默认子分组显示名
+    # （框架已声明结构：`ModuleMeta.field_subgroups` / `subgroup_order`）。纯展示层。
+    "subgroup_labels",
     "entry_merge",
     # 批15 #2：对象模块的「合并页」声明——把若干顶层段合成一个页面展示（纯展示层；
     # 数据文件 / 段 id / 校验路径不动；保存时补丁按键写回同一对象）。
@@ -102,6 +105,13 @@ TOP_LEVEL_KEYS: Tuple[str, ...] = (
     # 批19 #8：条目级层级声明——把某模块内的段/条目挂到另一个父节点之下（左栏从
     # 「模块级」扩展到「条目级」）；纯展示层，数据文件 / 段 id / 校验路径全不动。
     "entry_tree",
+    # 批20 B：**按条件过滤的条目并入**声明——把某模块里满足条件的条目标签式地并入目标模块
+    # 的条目列表展示（装备页 = 自身条目 ∪ items 里带 slot 的条目）。纯展示层：数据文件 /
+    # 条目 id / 校验路径全不动，编辑仍写回来源模块。
+    "entry_merge_filtered",
+    # 批20 C：**中栏条目分组**声明——按某字段取值（或 ID 前缀）把长列表折成可折叠小节；
+    # 纯展示层，不声明时行为与现状一致。
+    "entry_groups",
 )
 
 # 序号零填充宽度：缺省 3 位、上限 12 位（防声明出超长 ID；仅影响建议 ID，不参与校验）。
@@ -123,6 +133,8 @@ class PackFieldMeta:
     field_labels: Mapping[str, Any]   # 值 = str | 嵌套对象（含 _label / 子键）
     field_help: Mapping[str, Any]     # 值 = str | 嵌套对象（含 _help / 子键）
     group_labels: Mapping[str, Mapping[str, str]]
+    # 批20 C：二级分组显示名（模块 → 子分组键 → 中文名）——覆盖框架默认（结构归框架）。
+    subgroup_labels: Mapping[str, Mapping[str, str]] = field(default_factory=dict)
     # entry_merge（批12 #1，展示层聚合）：目标模块 → {"sources": [...], "keep_top_level": [...]}。
     # 语义 = 把 sources 的条目并入目标的条目列表展示；数据/模块 id/校验路径不变。
     entry_merge: Mapping[str, Mapping[str, Tuple[str, ...]]] = field(default_factory=dict)
@@ -146,6 +158,17 @@ class PackFieldMeta:
     # 或父节点是虚拟聚合视图时保留原位，做纯显示挂载）。编辑器读取层按包实际声明与
     # 框架登记过滤；数据文件 / 条目 id / 校验路径全不动（编辑仍写回来源模块）。
     entry_tree: Tuple[Mapping[str, Any], ...] = ()
+    # entry_merge_filtered（批20 B，按条件过滤的并入）：声明数组，每项 =
+    #   {"target": <目标模块>, "from": <来源模块>, "has": (<必须有值的键>, …),
+    #    "eq": {<键>: <值>, …}}
+    # 语义 = 把「来源模块」里满足全部条件（has 全中 + eq 全等）的条目并入**目标模块的条目
+    # 列表**展示；条目带来源标注，点开编辑仍写回来源模块。数据/条目 id/校验路径不动。
+    entry_merge_filtered: Tuple[Mapping[str, Any], ...] = ()
+    # entry_groups（批20 C，中栏条目分组）：模块 → 分组规则 =
+    #   {"by": "field" | "id_prefix", "field": <键>, "labels": {...},
+    #    "other_label": "其他", "collapsed": bool}
+    # 语义 = 中栏长列表按分组折成可折叠小节（默认展开首节）。纯展示层，不参与校验。
+    entry_groups: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
 
 
 # -------------------------------------------------------------------------------------
@@ -548,6 +571,121 @@ def _validate_entry_tree(value: object, pack: str, key: str
     return tuple(out)
 
 
+def _validate_entry_merge_filtered(value: object, pack: str, key: str
+                                   ) -> Tuple[Mapping[str, Any], ...]:
+    """`entry_merge_filtered` 形态校验并归一化（批20 B，按条件过滤的条目并入）。
+
+    形态：数组，每项 `{"target": "<目标模块>", "from": "<来源模块>",
+    "where": {"has": ["<键>", …], "eq": {"<键>": <标量>, …}}}`（`where` 可省略 = 全部并入）。
+    约束：
+      · 每项只允许 target / from / where 三个键（防写法漂移）；
+      · target / from 为非空字符串，且不得相同；
+      · `where` 只允许 has / eq 两个键；has 为非空字符串数组（不重复）；eq 为非空对象且
+        值必须是标量（字符串 / 数字 / 布尔）——「等值」条件不支持深结构比较，避免写法歧义；
+      · 条件可组合：has 与 eq 同时给出 = 全部满足（AND）。
+    这里只校验**形态**；「模块是否在 manifest 声明」由编辑器读取层按包实际声明过滤。
+    """
+    if not isinstance(value, list) or not value:
+        raise _fail(pack, key, f"应为非空数组，实际是{_type_name(value)}")
+    out: List[Mapping[str, Any]] = []
+    for i, spec in enumerate(value):
+        where = f"{key}[{i}]"
+        if not isinstance(spec, Mapping):
+            raise _fail(pack, where, f"应为对象，实际是{_type_name(spec)}")
+        unknown = [str(k) for k in spec if k not in ("target", "from", "where")]
+        if unknown:
+            raise _fail(pack, where,
+                        f"含未知键：{'、'.join(unknown)}；只允许 target / from / where")
+        target = spec.get("target")
+        frm = spec.get("from")
+        if not isinstance(target, str) or not target:
+            raise _fail(pack, where, f"target 应为非空字符串，实际是{target!r}")
+        if not isinstance(frm, str) or not frm:
+            raise _fail(pack, where, f"from 应为非空字符串，实际是{frm!r}")
+        if target == frm:
+            raise _fail(pack, where, "target 与 from 不能相同（不得并入自身）")
+        raw_where = spec.get("where", {})
+        if raw_where is None:
+            raw_where = {}
+        if not isinstance(raw_where, Mapping):
+            raise _fail(pack, f"{where}.where", f"应为对象，实际是{_type_name(raw_where)}")
+        unknown_w = [str(k) for k in raw_where if k not in ("has", "eq")]
+        if unknown_w:
+            raise _fail(pack, f"{where}.where",
+                        f"含未知键：{'、'.join(unknown_w)}；只允许 has / eq")
+        has = _str_list(raw_where.get("has", []), pack, f"{where}.where.has") \
+            if "has" in raw_where else ()
+        raw_eq = raw_where.get("eq", {})
+        if not isinstance(raw_eq, Mapping):
+            raise _fail(pack, f"{where}.where.eq", f"应为对象，实际是{_type_name(raw_eq)}")
+        eq: Dict[str, Any] = {}
+        for ek, ev in raw_eq.items():
+            if not isinstance(ek, str) or not ek:
+                raise _fail(pack, f"{where}.where.eq",
+                            f"含非法键（应为非空字符串）：{ek!r}")
+            if ev is None or isinstance(ev, (Mapping, list)):
+                raise _fail(pack, f"{where}.where.eq.{ek}",
+                            f"等值条件的值应为标量（字符串 / 数字 / 布尔），"
+                            f"实际是{_type_name(ev)}")
+            eq[ek] = ev
+        if not has and not eq:
+            raise _fail(pack, f"{where}.where",
+                        "至少要给出一个条件（has 非空 或 eq 非空）；"
+                        "无条件并入请用 entry_merge")
+        out.append({"target": target, "from": frm, "has": has, "eq": eq})
+    return tuple(out)
+
+
+def _validate_entry_groups(value: object, pack: str, key: str
+                           ) -> Dict[str, Mapping[str, Any]]:
+    """`entry_groups` 形态校验并归一化（批20 C，中栏条目分组）。
+
+    形态：`{"<模块>": {"by": "field" | "id_prefix", "field": "<键>", "labels": {…},
+    "other_label": "…", "collapsed": <bool>}}`。
+    约束：模块名为非空字符串；by 为 field / id_prefix；by=field 时 field 必填且非空；
+    labels 为「非空字符串 → 非空字符串」；other_label 为非空字符串；
+    `collapsed`（首节之后的小节是否默认折叠）为布尔；只允许上述五个键（防写法漂移）。
+    这里只校验**形态**；模块是否声明、字段是否登记由编辑器读取层处理（不悬空、不报错）。
+    """
+    raw = _require_map(value, pack, key)
+    out: Dict[str, Mapping[str, Any]] = {}
+    for mod, spec in raw.items():
+        if not isinstance(mod, str) or not mod:
+            raise _fail(pack, key, f"含非法模块名（应为非空字符串）：{mod!r}")
+        where = f"{key}.{mod}"
+        if not isinstance(spec, Mapping):
+            raise _fail(pack, where, f"应为对象，实际是{_type_name(spec)}")
+        allowed = ("by", "field", "labels", "other_label", "collapsed")
+        unknown = [str(k) for k in spec if k not in allowed]
+        if unknown:
+            raise _fail(pack, where,
+                        f"含未知键：{'、'.join(unknown)}；只允许 {' / '.join(allowed)}")
+        by = spec.get("by", "field")
+        if by not in ("field", "id_prefix"):
+            raise _fail(pack, where, f"by 应为 field 或 id_prefix，实际是{by!r}")
+        field_key = spec.get("field", "")
+        if by == "field" and (not isinstance(field_key, str) or not field_key):
+            raise _fail(pack, where, "by=field 时必须给出非空的 field（分组依据的字段键）")
+        labels = spec.get("labels", {})
+        if labels is None:
+            labels = {}
+        labels = _str_map(labels, pack, f"{where}.labels") if labels else {}
+        other = spec.get("other_label", "")
+        if other is None:
+            other = ""
+        if other and (not isinstance(other, str)):
+            raise _fail(pack, where, f"other_label 应为字符串，实际是{_type_name(other)}")
+        collapsed = spec.get("collapsed", True)
+        if not isinstance(collapsed, bool):
+            raise _fail(pack, where, f"collapsed 应为布尔，实际是{_type_name(collapsed)}")
+        out[mod] = {"by": str(by),
+                    "field": str(field_key) if by == "field" else "",
+                    "labels": labels,
+                    "other_label": str(other or ""),
+                    "collapsed": collapsed}
+    return out
+
+
 def _validate_schema_version(value: object, pack: str, key: str) -> int:
     if value is None:
         raise _fail(pack, key, f"缺失：应为整数 {SCHEMA_VERSION}")
@@ -582,6 +720,8 @@ def parse_field_meta(raw: object, pack: str) -> PackFieldMeta:
                   if "field_help" in raw else {})
     group_labels = (_nested_str_map(raw["group_labels"], pack, "group_labels")
                     if "group_labels" in raw else {})
+    subgroup_labels = (_nested_str_map(raw["subgroup_labels"], pack, "subgroup_labels")
+                       if "subgroup_labels" in raw else {})
     entry_merge = (_validate_entry_merge(raw["entry_merge"], pack, "entry_merge")
                    if "entry_merge" in raw else {})
     segment_pages = (_validate_segment_pages(raw["segment_pages"], pack, "segment_pages")
@@ -598,6 +738,12 @@ def parse_field_meta(raw: object, pack: str) -> PackFieldMeta:
         if "entry_presets_disable" in raw else {})
     entry_tree = (_validate_entry_tree(raw["entry_tree"], pack, "entry_tree")
                   if "entry_tree" in raw else ())
+    entry_merge_filtered = (
+        _validate_entry_merge_filtered(
+            raw["entry_merge_filtered"], pack, "entry_merge_filtered")
+        if "entry_merge_filtered" in raw else ())
+    entry_groups = (_validate_entry_groups(raw["entry_groups"], pack, "entry_groups")
+                    if "entry_groups" in raw else {})
     return PackFieldMeta(
         pack=pack,
         module_labels=module_labels,
@@ -605,6 +751,7 @@ def parse_field_meta(raw: object, pack: str) -> PackFieldMeta:
         field_labels=field_labels,
         field_help=field_help,
         group_labels=group_labels,
+        subgroup_labels=subgroup_labels,
         entry_merge=entry_merge,
         segment_pages=segment_pages,
         id_prefix=id_prefix,
@@ -612,6 +759,8 @@ def parse_field_meta(raw: object, pack: str) -> PackFieldMeta:
         entry_presets=entry_presets,
         entry_presets_disable=entry_presets_disable,
         entry_tree=entry_tree,
+        entry_merge_filtered=entry_merge_filtered,
+        entry_groups=entry_groups,
     )
 
 
@@ -738,8 +887,12 @@ def _apply_display_children(fm: FieldMeta, lspec: object, hspec: object,
 
 def _merge_module(base_mod: Optional[ModuleMeta], mod: str,
                   labels: Mapping[str, str], helps: Mapping[str, str],
-                  groups: Mapping[str, str]) -> ModuleMeta:
-    """单模块合并：labels/helps 逐键覆盖，groups 逐键覆盖（未声明键保持现状）。"""
+                  groups: Mapping[str, str],
+                  subgroups: Optional[Mapping[str, str]] = None) -> ModuleMeta:
+    """单模块合并：labels/helps 逐键覆盖，groups/subgroups 逐键覆盖（未声明键保持现状）。
+
+    `subgroups`（批20 C）= 二级分组显示名覆盖；**结构**（键→子分组）仍归框架元数据。
+    """
     if base_mod is None:
         # 框架未登记该模块：只造「纯展示壳」——entry_type 留空 = api 层按实际数据推断，
         # 行为与「无模块元数据」一致，仅多出包声明的中文名/说明/分组。
@@ -755,6 +908,8 @@ def _merge_module(base_mod: Optional[ModuleMeta], mod: str,
                           group_labels=dict(groups))
     merged_groups: Dict[str, str] = dict(base_mod.group_labels)
     merged_groups.update(groups)
+    merged_subgroups: Dict[str, str] = dict(base_mod.subgroup_labels)
+    merged_subgroups.update(subgroups or {})
     # map 形态模块（如 stats）：展示表面在 value_meta.children——包声明不落在空顶层 fields，
     # 避免多造幽灵顶层字段（对拍门禁）。
     has_value_surface = (base_mod.value_meta is not None
@@ -763,6 +918,7 @@ def _merge_module(base_mod: Optional[ModuleMeta], mod: str,
     kw: Dict[str, object] = {
         "fields": _apply_display(base_mod.fields, labels, helps, not has_value_surface),
         "group_labels": merged_groups,
+        "subgroup_labels": merged_subgroups,
     }
     if base_mod.value_meta is not None and base_mod.value_meta.type == "obj":
         # map 形态模块（如 stats）：字段表面在 value_meta.children——一并覆盖，
@@ -776,13 +932,15 @@ def merge_field_meta_table(base: FieldMetaTable,
                            decl: PackFieldMeta) -> FieldMetaTable:
     """把包声明叠加到框架表（**包声明优先，框架兜底**）；返回新表，不改 base。"""
     modules: Dict[str, ModuleMeta] = dict(base.modules)
-    mods = set(decl.field_labels) | set(decl.field_help) | set(decl.group_labels)
+    mods = (set(decl.field_labels) | set(decl.field_help) | set(decl.group_labels)
+            | set(decl.subgroup_labels))
     for mod in mods:
         modules[mod] = _merge_module(
             base.modules.get(mod), mod,
             decl.field_labels.get(mod, {}),
             decl.field_help.get(mod, {}),
             decl.group_labels.get(mod, {}),
+            decl.subgroup_labels.get(mod, {}),
         )
     return FieldMetaTable(modules=modules, namespaces=dict(base.namespaces))
 

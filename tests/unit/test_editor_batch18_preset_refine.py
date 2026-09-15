@@ -177,5 +177,5 @@ def test_editor_blank_pack_still_six(blank_root: Path) -> None:
 # ---------------------------------------------------------------------------
 def test_footer_batch_string_is_batch18() -> None:
     html = (REPO / "qbot_rpg" / "web" / "static" / "index.html").read_text(encoding="utf-8")
-    assert "批19 · 显示完整性与归口" in html
+    assert "批19.1 · 测试防污染门禁" in html
     assert "批17 · 通用预设" not in html

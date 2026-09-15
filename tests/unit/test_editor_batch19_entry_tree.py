@@ -279,5 +279,5 @@ def test_selfcheck_still_passes() -> None:
 
 def test_footer_batch_string_is_batch19() -> None:
     html = HTML.read_text(encoding="utf-8")
-    assert "批19 · 显示完整性与归口" in html
+    assert "批19.1 · 测试防污染门禁" in html
     assert "批18 · 预设细化与效果扩展" not in html

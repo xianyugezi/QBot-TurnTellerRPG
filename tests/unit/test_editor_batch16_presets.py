@@ -34,6 +34,9 @@ REPO = Path(api.repo_root())
 CONTENT = REPO / "content"
 HTML = REPO / "qbot_rpg" / "web" / "static" / "index.html"
 NODE = shutil.which("node")
+for _p in (str(REPO), str(REPO / "scripts")):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
 META = FieldMetaTable(
     modules={
@@ -272,6 +275,8 @@ def test_frontend_wires_preset_and_other_fields() -> None:
     assert "(d.fields || []).concat(otherFields)" in html  # 折叠区字段也进字段索引
     assert "bindSubBlocks();" in html
     assert 'id="new-preset"' in html and "newPresetHtml(d)" in html
+    # 创建请求必须带上 preset（否则服务端不会按预设 defaults 初始化写盘）
+    assert "{ entry_id: eid, patch: patch, preset: presetId }" in html
     assert 'preset=body.get("preset")' in (
         REPO / "scripts" / "editor_host.py").read_text(encoding="utf-8")
 
@@ -410,3 +415,35 @@ def test_dom_preset_new_entry_fields(tmp_path: Path) -> None:
     assert withp["otherDisabled"] == 0          # 折叠区控件不是 disabled → 可编辑
     assert withp["powerValue"] == 42            # 预设 defaults 生效
     assert withp["main"] and set(withp["main"]) <= set(pfields)
+
+
+# ---------------------------------------------------------------------------
+# 六、HTTP 写链路：POST /entry 带 preset → 服务端按预设 defaults 落盘
+# ---------------------------------------------------------------------------
+def test_http_create_with_preset_applies_defaults(
+        pack_root: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import qbot_rpg.content.validator as validator_mod
+    from fastapi.testclient import TestClient
+
+    from editor_host import create_app
+
+    monkeypatch.setattr(validator_mod, "default_field_meta_table", lambda: META)
+    with TestClient(create_app(pack="pack_p", root=str(pack_root),
+                               role="owner")) as client:
+        # 带预设 → defaults（type=material）由服务端落盘（前端不必提交该键）
+        r = client.post("/api/pack/pack_p/module/things/entry",
+                        json={"entry_id": "mat_002",
+                              "patch": {"name": "新条目", "desc": "说明"},
+                              "preset": "material"}).json()
+        assert r["ok"] is True, r
+        written = json.loads((pack_root / "pack_p" / "things.json").read_text(
+            encoding="utf-8"))
+        assert written[1]["type"] == "material"
+        # 不带预设 → 行为同修前（元数据默认 misc）
+        r2 = client.post("/api/pack/pack_p/module/things/entry",
+                         json={"entry_id": "things_001",
+                               "patch": {"name": "无预设"}}).json()
+        assert r2["ok"] is True, r2
+        written2 = json.loads((pack_root / "pack_p" / "things.json").read_text(
+            encoding="utf-8"))
+        assert written2[2]["type"] == "misc" and "preset" not in r2

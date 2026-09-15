@@ -1318,7 +1318,7 @@ def help_card(key: str, fm: Optional[FieldMeta],
             "hint": _hint(None),
         }
     default = _default_text(fm.default)
-    return {
+    out = {
         "key": key,
         "label": fm.label or key,
         "type": type_text,
@@ -1336,6 +1336,11 @@ def help_card(key: str, fm: Optional[FieldMeta],
         # 前端不再在字段值下方常驻渲染 `.hint`（行高与无提示字段一致）。
         "hint": _hint(fm),
     }
+    # 批16 #10：定义处默认值（引用处可覆盖）→ 说明卡标注（展示层）；仅标注字段才出键，
+    # 避免给所有字段加噪音键（对拍门禁的新增项最小化）。
+    if getattr(fm, "overridable_default", False):
+        out["default_note"] = "默认值（可被引用处覆盖）"
+    return out
 
 
 # =====================================================================================
@@ -2172,6 +2177,10 @@ def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
         "columns": [],
         "rows": [],
     }
+    # 批16 #10：定义处默认值（可被引用处覆盖）→ 前端可标注（展示层，不参与校验）。
+    # 仅标注字段才出键（不给所有字段加噪音键）。
+    if fm is not None and getattr(fm, "overridable_default", False):
+        desc["overridable_default"] = True
     # 批5：条件行 / 键值对表格字段的额外声明（主体/比较符/引用目标；前端据 control 渲染）
     if control == "condition":
         desc["condition"] = condition_spec(fm)
@@ -3409,6 +3418,9 @@ __all__ = [
     "ID_RULE_AUTO",
     "ID_RULE_PREFIX_SEQ",
     "ID_RULE_SLUG",
+    "ID_MODE_PINYIN",
+    "ID_MODE_PREFIX_SEQ",
+    "ID_WIDTH_DEFAULT",
     "META_SOURCE",
     "BadRequest",
     "EditorError",
@@ -3445,5 +3457,7 @@ __all__ = [
     "repo_root",
     "slugify",
     "suggest_entry_id",
+    "suggest_pinyin_id",
+    "pinyin_available",
     "suggest_id",
 ]

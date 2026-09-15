@@ -13,10 +13,12 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 from typing import Any, Dict
 
 from qbot_rpg.core.monster_ai import IDLE, NORMAL, MonsterAI
+from qbot_rpg.web import api
 
 # ------------------------------------------------------------------ 合成行动库 / 敌人
 # 定义处（action.json 语义）：
@@ -167,3 +169,46 @@ def test_marks_json_has_no_probability_keys() -> None:
                 continue
             hits = [k for k in row if any(s in str(k).lower() for s in prob_like)]
             assert not hits, f"{path.name} 出现概率类键 {hits}：印记侧需补「使用处覆盖」实现"
+
+
+# ------------------------------------------------------------------ 四、编辑器标注（展示层）
+def test_definition_side_fields_marked_overridable() -> None:
+    """定义处（action 模块）probability/weight 标「默认值（可被引用处覆盖）」。"""
+    from qbot_rpg.content.field_meta import default_field_meta_table
+
+    table = default_field_meta_table()
+    for key in ("probability", "weight"):
+        fm = table.module("action").fields[key]
+        assert getattr(fm, "overridable_default", False) is True, key
+        card = api.help_card(key, fm, 1)
+        assert card["default_note"] == "默认值（可被引用处覆盖）", card
+        desc = api._descriptor(key, fm, 1, True, None, None, 0)
+        assert desc["overridable_default"] is True
+
+
+def test_use_site_fields_documented_as_override() -> None:
+    """使用处（怪物行动表条目）probability/weight 的说明：留空 = 用定义处默认值。"""
+    from qbot_rpg.content.field_meta import default_field_meta_table
+
+    table = default_field_meta_table()
+    elem = table.module("enemies").fields["actions"].element
+    for key in ("probability", "weight"):
+        assert "留空 = 用行动定义处的默认值" in elem.children[key].help
+
+
+def test_frontend_renders_default_note_line() -> None:
+    html = (Path(api.repo_root()) / "qbot_rpg" / "web" / "static" / "index.html"
+            ).read_text(encoding="utf-8")
+    assert "if (card.default_note)" in html and "取值来源" in html
+    node = shutil.which("node")
+    if node is None:
+        return
+    start = html.index("function helpLines(")
+    end = html.index("function helpTitle(")
+    import subprocess  # noqa: PLC0415
+    script = (start and html[start:end]
+              + "\nprocess.stdout.write(JSON.stringify(helpLines("
+                "{default_note: '默认值（可被引用处覆盖）', help: 'h'})));")
+    proc = subprocess.run([node, "-e", script], capture_output=True, text=True)
+    assert proc.returncode == 0, proc.stderr
+    assert "取值来源" in proc.stdout and "默认值（可被引用处覆盖）" in proc.stdout

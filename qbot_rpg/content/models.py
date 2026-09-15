@@ -224,6 +224,11 @@ class FieldMeta:
     # 不影响校验器判定；缺省空 = 由所属模块的 ModuleMeta.field_subgroups 兜底，
     # 仍无声明 → 归入该分组的主块（不折叠）。尾部默认值，既有 FieldMeta 构造零改动。
     subgroup: str = ""
+    # 批16 #10：本字段是「定义处默认值」——引用处（使用处）可声明同名字段覆盖。
+    # 编辑器据此在说明卡里标注「默认值（可被引用处覆盖）」（**展示层**：不影响校验，
+    # 也不改取值逻辑——取值顺序由消费端实现：使用处 > 定义处 > 缺省）。
+    # 尾部默认值，既有 FieldMeta 构造零改动。
+    overridable_default: bool = False
 
 
 @dataclass(frozen=True)

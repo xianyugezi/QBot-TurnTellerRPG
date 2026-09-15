@@ -144,10 +144,13 @@ RESISTANCE_CHILDREN: Dict[str, FieldMeta] = {
 }
 # actions[] 条目（1.4 A01-A03d；probability 纯入池开关 0/1 → 不挂 probability 旗标防 Y-2 噪音）
 # 批4 UX：补展示层中文名（label 只影响编辑器列头/表单显示，不参与任何校验判定）。
+# 批16 #10：本表是**使用处**（引用处）——probability/weight 留空 = 用行动定义处的默认值。
 ACTION_ENTRY_CHILDREN: Dict[str, FieldMeta] = {
     "action": FieldMeta(type="ref", ref_target="action", required=True, label="行动"),
-    "probability": FieldMeta(type="number", range_min=0, range_max=1, label="概率"),
-    "weight": FieldMeta(type="number", range_min=0, range_max=100, label="权重"),
+    "probability": FieldMeta(type="number", range_min=0, range_max=1, label="概率",
+                             help="使用处覆盖：留空 = 用行动定义处的默认值。"),
+    "weight": FieldMeta(type="number", range_min=0, range_max=100, label="权重",
+                        help="使用处覆盖：留空 = 用行动定义处的默认值。"),
     "condition": FieldMeta(type="str", label="条件"),  # 条件权重修正（obj 形态 A2 放宽）
     "cooldown": FieldMeta(type="number", range_min=0, range_max=999, label="冷却"),
     "hungry": FieldMeta(type="number", range_min=0, range_max=999, label="饥饿值"),
@@ -1438,10 +1441,14 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "cost": FieldMeta(type="number", range_min=0, range_max=9999, unit="点"),  # 旧键
         "cool": FieldMeta(type="number", range_min=0, range_max=9999, unit="回合"),  # 旧键（cooldown 规范名）
         # ---- AI 字段（怪物侧扩展，T26 / m2 §四；缺省兜底不报错）----
-        "weight": FieldMeta(type="number", range_min=0, range_max=100),
+        # 批16 #10：weight/probability 是**定义处默认值**——引用处（怪物行动表等）可覆盖；
+        # 说明卡标注「默认值（可被引用处覆盖）」（展示层，取值顺序由消费端实现）。
+        "weight": FieldMeta(type="number", range_min=0, range_max=100,
+                            overridable_default=True),
         # P2-4 修复：不挂 probability 旗标（Y-2 极值误报——0/1 是入池开关非概率值，
         # 与 enemies.actions[].probability 口径一致，1e S1 语义）
-        "probability": FieldMeta(type="number", range_min=0, range_max=1),
+        "probability": FieldMeta(type="number", range_min=0, range_max=1,
+                                 overridable_default=True),
         "intent": FieldMeta(type="str"),  # 伤害/防御/蓄力/治疗/控制/buff/debuff/印记/功能（枚举 A2）
         "roar": FieldMeta(type="number", range_min=0, range_max=2, unit="级"),  # 批⑦A 咆哮等级（1 轻 / 2 大；耳栓反制）
         "cooldown": FieldMeta(type="number", range_min=0, range_max=999, unit="回合"),

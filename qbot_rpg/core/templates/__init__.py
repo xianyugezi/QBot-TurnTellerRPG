@@ -29,6 +29,7 @@ __all__ = [
     "DEFAULT_TEMPLATES",
     "PLACEHOLDER_WHITELIST",
     "TABLE_TEMPLATES",
+    "TABLE_META",
     "resolve_templates",
     "render_template",
     "tpl_of",
@@ -60,9 +61,23 @@ def _load_table(path: Path) -> Dict[str, str]:
     return {}
 
 
+def _load_meta(path: Path) -> Dict[str, Any]:
+    """读取模板表顶层 `meta`（供编辑器批19 #4 展示每个键的框架侧说明；不可读 → 空 dict）。"""
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        meta = doc.get("meta") if isinstance(doc, dict) else None
+        if isinstance(meta, dict):
+            return {str(k): v for k, v in meta.items()}
+    except (OSError, ValueError) as exc:
+        _LOGGER.warning("模板表 meta 不可读（按空处理）：%s（%s）", path, exc)
+    return {}
+
+
 # —— 全量模板表（唯一存储）——
 _TABLE_PATH = Path(__file__).with_name("template_table.json")
 TABLE_TEMPLATES: Dict[str, str] = _load_table(_TABLE_PATH)
+# 表顶层 meta（note / prose_keys / prose_placeholders）；编辑器只读展示，不参与渲染。
+TABLE_META: Dict[str, Any] = _load_meta(_TABLE_PATH)
 DEFAULT_TEMPLATES.update(TABLE_TEMPLATES)
 
 # 表内 key 的占位符白名单自动派生（与旧分区手工登记同语义；测试锚定同款）。

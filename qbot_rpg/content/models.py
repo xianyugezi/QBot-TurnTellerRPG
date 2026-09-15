@@ -288,6 +288,12 @@ class ModuleMeta:
     # 折叠子块的「显示名」表（子块键 → 界面显示名）；缺省空 → 显示名即子块键本身。
     # 编辑器不写死任何子块词（如「更多字段」由声明给出，框架只提供兜底文案）。
     subgroup_labels: Mapping[str, str] = field(default_factory=dict)
+    # 编辑器重写批19 #4：map 形态模块的**框架侧键全集来源名**（如 "templates"）。
+    # 声明非空 → 条目列表 = 包数据键 ∪ 该来源的键（未覆盖的标「默认（框架）」、可直接编辑
+    # 后写入包覆盖）；缺省空 = 无框架键全集，行为与现状一致。来源由
+    # `qbot_rpg/content/framework_keys.py` 注册表提供（编辑器读取层不写死任何来源/键名）。
+    # 只影响**展示与入口**，不参与校验（校验器不读本项）。
+    key_source: str = ""
 
 
 @dataclass(frozen=True)

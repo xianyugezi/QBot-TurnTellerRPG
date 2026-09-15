@@ -33,6 +33,7 @@ from typing import Any, Dict, List, Mapping, Optional, Tuple
 from qbot_rpg.content import entry_presets as entry_presets_mod
 from qbot_rpg.content import field_meta_pack as pack_meta
 from qbot_rpg.content.field_meta import default_field_meta_table
+from qbot_rpg.content.framework_keys import framework_key_notes, framework_key_source
 from qbot_rpg.content.models import FieldMeta, FieldMetaTable, ModuleMeta
 from qbot_rpg.content.module_catalog import (
     FRAMEWORK_MODULE_CATALOG,
@@ -57,8 +58,18 @@ _MAX_TABLE_ROWS = 200  # 列表字段只读表格最多渲染行数（超出截�
 # （已有子字段登记 → 从空对象起建；否则整段一值），而绝不把哨兵本身写进任何数据文件。
 # 用独立哨兵而非 None，是为了把「框架段未配置」与「包数据里真的写了 null」区分开。
 _UNCONFIGURED = object()
+# 批19 #4：map 形态模块「框架有全量键、包尚未覆盖」的条目哨兵（与 _UNCONFIGURED 同族，
+# 语义不同：这是「键存在、值用框架默认」，不是「段未配置」）。读写两处把它当「空槽位」，
+# 绝不把哨兵写进任何数据文件；保存时写入包覆盖（走既有校验/备份/原子写/回退）。
+_FRAMEWORK_DEFAULT = object()
 # 未配置段的界面文案（前端按需取；后端只给稳定标记 unconfigured）。
 UNCONFIGURED_TAG = "未配置 · 框架支持"
+# 批19 #4：框架默认键的界面文案（前端按需取；后端只给稳定标记 framework_default）。
+FRAMEWORK_DEFAULT_TAG = "默认（框架）"
+# 包已覆盖框架键的界面文案。
+PACK_COVERED_TAG = "已覆盖（包）"
+# 框架键没有人类可读名/说明时的兜底提示（提示作者「键即名字」）。
+KEY_IS_NAME_NOTE = "键 = 名称"
 # 批14 #4：元数据未登记子字段的兜底标注（前端字段行内展示；不改任何校验语义）。
 META_UNREGISTERED_NOTE = "元数据未登记，按实际值推断"
 
@@ -652,6 +663,16 @@ def list_modules(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
 # =====================================================================================
 # 只读 API ③：模块条目列表（id + 名称，只名字）
 # =====================================================================================
+def _key_source_of(mmeta: Optional[ModuleMeta]) -> str:
+    """模块声明的框架侧键全集来源名（未声明 → 空串）。"""
+    return str(mmeta.key_source) if mmeta is not None and mmeta.key_source else ""
+
+
+def _framework_keys_of(mmeta: Optional[ModuleMeta]) -> Mapping[str, Any]:
+    """模块的框架键全集（无声明 / 未注册 / 提供器异常 → 空表）。"""
+    return framework_key_source(_key_source_of(mmeta))
+
+
 def _entry_rows(data: object, mmeta: Optional[ModuleMeta]) -> List[Tuple[str, str, object]]:
     """条目三元组 (id, 名称, 原始值)。
 
@@ -662,6 +683,11 @@ def _entry_rows(data: object, mmeta: Optional[ModuleMeta]) -> List[Tuple[str, st
     也补一条（值 = `_UNCONFIGURED` 哨兵）——段不因包缺数据而从编辑器消失。本函数是
     条目列表 / 全局索引 / 左栏计数 / 条目详情 / 写链路**共用**的唯一条目口径，故四处自洽。
     机制完全不认模块名/段名：任何 object 模块只要登记了顶层字段即享有。
+
+    批19 #4「框架键全集」（一号原则续）：map 模块声明了框架侧键全集来源（`key_source`）时，
+    **包数据键 ∪ 来源键**都要在列——包数据已有的标「已覆盖（包）」，来源里包没有的补一条
+    （值 = `_FRAMEWORK_DEFAULT` 哨兵）标「默认（框架）」、可直接编辑后写入包覆盖。
+    来源名/键名都不写死：来源来自模块元数据，键来自 `framework_keys` 注册表。
     """
     id_field = (mmeta.id_field if mmeta is not None and mmeta.id_field else _ID_FIELD)
     etype = mmeta.entry_type if mmeta is not None else None
@@ -698,14 +724,27 @@ def _entry_rows(data: object, mmeta: Optional[ModuleMeta]) -> List[Tuple[str, st
                     continue
                 name = fm.label if fm is not None and fm.label else k
                 out.append((k, name, _UNCONFIGURED))
+        # 批19 #4：补齐框架键全集里包数据尚未覆盖的键（键 = 名称；说明由详情给）。
+        if etype == "map" and mmeta is not None:
+            present = {str(k) for k in data}
+            for key in _framework_keys_of(mmeta):
+                k = str(key)
+                if k in present:
+                    continue
+                out.append((k, k, _FRAMEWORK_DEFAULT))
     return out
 
 
 def _entry_brief(eid: str, name: str, val: object) -> Dict[str, Any]:
-    """条目列表项 {id, name}；未配置段额外带 `unconfigured=True`（其余条目键集不变）。"""
+    """条目列表项 {id, name}；未配置段额外带 `unconfigured=True`（其余条目键集不变）。
+
+    批19 #4：框架键全集里「包未覆盖」的键额外带 `framework_default=True`（展示层标记）。
+    """
     out: Dict[str, Any] = {"id": eid, "name": name}
     if val is _UNCONFIGURED:
         out["unconfigured"] = True
+    if val is _FRAMEWORK_DEFAULT:
+        out["framework_default"] = True
     return out
 
 
@@ -747,6 +786,14 @@ def list_entries(pack: object, module: object, root: Optional[object] = None) ->
     #   count = 全部条目（含未配置段）；configured_count = 包数据里真有的；
     #   unconfigured_count = 框架已登记但本包未配置的段。
     unconfigured_count = sum(1 for _e, _n, val in rows if val is _UNCONFIGURED)
+    # 批19 #4：框架键全集的覆盖口径——covered_count = 包数据已覆盖的框架键；
+    # framework_default_count = 框架有、包未覆盖（可直接编辑后写入包覆盖）的键。
+    key_source = _key_source_of(mmeta)
+    framework_keys = set(_framework_keys_of(mmeta))
+    framework_default_count = sum(1 for _e, _n, val in rows if val is _FRAMEWORK_DEFAULT)
+    covered_count = sum(
+        1 for eid, _n, val in rows
+        if val is not _UNCONFIGURED and val is not _FRAMEWORK_DEFAULT and eid in framework_keys)
     # 批15 #9：map 模块（键 → 值）另给一个「全表」合成入口（只读展示，不进计数/索引）——
     # 一把看全 / 编辑整张「键 → 标量/小结构」表，而不是逐个键点开表单。
     table_entry = None
@@ -758,6 +805,11 @@ def list_entries(pack: object, module: object, root: Optional[object] = None) ->
     # 页面是展示层聚合：段条目仍在 `entries` 里（计数/索引不变），前端按 `page` 归到页行下。
     pages: List[Dict[str, Any]] = []
     briefs = [_entry_brief(eid, name, _val) for eid, name, _val in rows]
+    # 批19 #4：框架键里「包数据已覆盖」的条目标 covered（前端标「已覆盖（包）」；
+    # 包自有、框架键集里没有的键不打标——不冒充「覆盖框架」）。
+    for _b in briefs:
+        if _b["id"] in framework_keys and not _b.get("framework_default"):
+            _b["covered"] = True
     for page in _segment_pages(manifest, declared, pack_dir).get(mod, []):
         pid = PAGE_PREFIX + page["id"]
         pages.append({"id": pid, "name": page["label"], "label": page["label"],
@@ -775,6 +827,13 @@ def list_entries(pack: object, module: object, root: Optional[object] = None) ->
         "configured_count": len(rows) - unconfigured_count,
         "unconfigured_count": unconfigured_count,
         "unconfigured_tag": UNCONFIGURED_TAG,
+        # 批19 #4：框架键全集口径（无 key_source 声明时 = 空串 / 0 / 0，键集与现状一致）。
+        "key_source": key_source,
+        "framework_default_count": framework_default_count,
+        "covered_count": covered_count,
+        "framework_default_tag": FRAMEWORK_DEFAULT_TAG,
+        "pack_covered_tag": PACK_COVERED_TAG,
+        "key_is_name_note": KEY_IS_NAME_NOTE,
         "entries": briefs,
         # 批15 #9：整表入口（map 模块；其余模块为 null → 前端不渲染）
         "table_entry": table_entry,
@@ -2265,9 +2324,10 @@ def _build_fields(base: Mapping[str, FieldMeta], subject: object,
     """按声明顺序出字段（缺失也出，标 present=False）；再补实际值里多出的键。
 
     未配置段（subject = `_UNCONFIGURED` 哨兵）按**空对象**处理：登记字段全部出、present=False，
-    既让作者看得见能填，也不把哨兵当成真值展示。
+    既让作者看得见能填，也不把哨兵当成真值展示。批19 #4 的 `_FRAMEWORK_DEFAULT`（框架键
+    包未覆盖）同口径处理。
     """
-    if subject is _UNCONFIGURED:
+    if subject is _UNCONFIGURED or subject is _FRAMEWORK_DEFAULT:
         subject = {}
     if not isinstance(subject, Mapping):
         if base:
@@ -2294,12 +2354,18 @@ def _entry_base(mmeta: Optional[ModuleMeta], etype: str, entry_id: str,
     """条目值的「字段元数据基表」：list 模块=条目顶层字段，map/object=值字段或段子字段。"""
     if mmeta is None:
         return {}
-    if subject is _UNCONFIGURED:
+    if subject is _UNCONFIGURED or subject is _FRAMEWORK_DEFAULT:
         # 批13.1 未配置段：有登记子字段 → 用子字段出表单（patch 键 = 子字段名）；
         # 否则整段作一个字段（标量 / 宽容器），与「新建段」路径（`_new_entry_base`）同口径。
         fm = mmeta.fields.get(entry_id)
         if fm is not None and fm.type == "obj" and fm.children:
             return fm.children
+        if etype == "map":
+            # 批19 #4：map 模块的框架默认键（包未覆盖）→ 以 value_meta（或该键的逐键
+            # 登记）出「整键一值」控件，作者可直接填写并保存为包覆盖。
+            vm = mmeta.value_meta
+            chosen = fm if fm is not None else vm
+            return {entry_id: chosen} if chosen is not None else {}
         return {entry_id: fm} if fm is not None else {}
     if etype == "list":
         return mmeta.fields
@@ -2312,6 +2378,10 @@ def _entry_base(mmeta: Optional[ModuleMeta], etype: str, entry_id: str,
         vm = mmeta.value_meta
         if vm is not None and vm.type == "obj" and vm.children:
             return vm.children
+        # 批19 #9：逐键登记为非 obj（标量 / 公式）→ 用该键自身的元数据（中文名/说明），
+        # 缺登记才回落统一 value_meta。纯展示层，不改校验。
+        if keyed is not None:
+            return {entry_id: keyed}
         return {entry_id: vm} if vm is not None else {}
     fm = mmeta.fields.get(entry_id)
     if fm is not None and fm.type == "obj" and fm.children:
@@ -2367,7 +2437,8 @@ def _entry_open_keys(mmeta: Optional[ModuleMeta], entry_id: object,
     **未登记子字段** + 段已配置（未配置段走「整段一值」路径，本身已是可编对象）。
     纯展示层：只影响是否给「+ 子项 / ✕ 删除」，不改 type/required/校验。
     """
-    if mmeta is None or subject is _UNCONFIGURED or not isinstance(subject, Mapping):
+    if mmeta is None or subject is _UNCONFIGURED or subject is _FRAMEWORK_DEFAULT \
+            or not isinstance(subject, Mapping):
         return False
     fm = mmeta.fields.get(str(entry_id))
     if fm is None or fm.type != "obj" or fm.children:
@@ -2388,7 +2459,8 @@ def _entry_whole_table(mmeta: Optional[ModuleMeta], etype: str,
     """
     if entry_id == TABLE_ENTRY_ID and etype == "map":
         return True
-    if subject is _UNCONFIGURED or not isinstance(subject, Mapping):
+    if subject is _UNCONFIGURED or subject is _FRAMEWORK_DEFAULT \
+            or not isinstance(subject, Mapping):
         return False
     fm = mmeta.fields.get(str(entry_id)) if mmeta is not None else None
     if fm is None or fm.type != "obj" or fm.children:
@@ -2413,6 +2485,9 @@ def entry_detail(pack: object, module: object, entry_id: object,
     view = _PackView(pack_dir, manifest)
     labels = _display_labels(manifest, declared, pack_dir)
     associations: List[Dict[str, Any]] = []
+    # 批19 #4：仅「框架默认键」条目为真；其余路径保持 False（展示层标记，键集不变语义）。
+    framework_default = False
+    default_note = ""
     page_spec = _find_page(pack_dir, manifest, declared, mod, entry_id)
     if page_spec is not None:
         # 批15 #2：包声明的「合并页」——同一栏里呈现多个顶层段（各自成一个展开子块）。
@@ -2454,7 +2529,14 @@ def entry_detail(pack: object, module: object, entry_id: object,
         if match is None:
             raise NotFound(f"条目不存在：{mod}/{entry_id}")
         _eid, entry_name, subject = match
-        unconfigured = subject is _UNCONFIGURED
+        unconfigured = subject is _UNCONFIGURED or subject is _FRAMEWORK_DEFAULT
+        framework_default = subject is _FRAMEWORK_DEFAULT
+        if framework_default:
+            # 批19 #4：框架默认键——条目名用键，附框架侧说明（有则用，无则「键 = 名称」提示）。
+            _notes = framework_key_notes(_key_source_of(mmeta))
+            default_note = _notes.get(entry_id) or KEY_IS_NAME_NOTE
+        else:
+            default_note = ""
         if _entry_whole_table(mmeta, etype, entry_id, subject):
             fm = mmeta.fields.get(entry_id) if mmeta is not None else None
             if fm is None:
@@ -2485,6 +2567,11 @@ def entry_detail(pack: object, module: object, entry_id: object,
         # 批13.1：本段框架已登记、包数据尚无 → 前端标「未配置 · 框架支持」，字段全为空待填。
         "unconfigured": unconfigured,
         "unconfigured_tag": UNCONFIGURED_TAG,
+        # 批19 #4：框架键全集里「包未覆盖」的键 → 前端标「默认（框架）」，保存即写入包覆盖。
+        "framework_default": framework_default,
+        "framework_default_tag": FRAMEWORK_DEFAULT_TAG,
+        "pack_covered_tag": PACK_COVERED_TAG,
+        "default_note": default_note,
         # 批14 #6①：动态键空间（如 object 段的 obj 字段未登记子字段）→ 前端给「+ 子项 / ✕」。
         "open_keys": open_keys,
         # 批15 #9：整条目键值表格（保存时按「整值键」写回，见 editor_ops._plan）。
@@ -2617,11 +2704,17 @@ def entry_slot(pack: object, module: object, entry_id: object,
     # 批13.1：未配置段写链路——有登记子字段的 object → 从空对象起建（patch 键 = 子字段名）；
     # 其余（标量/列表/无子字段宽容器/引用）→ 整段一值（subject=None，patch 键 = 段名）。
     # 展示口径（base）仍由 `_entry_base` 按哨兵给出，读写两处键集一致。
-    unconfigured = subject is _UNCONFIGURED
+    unconfigured = subject is _UNCONFIGURED or subject is _FRAMEWORK_DEFAULT
+    framework_default = subject is _FRAMEWORK_DEFAULT
     fm = mmeta.fields.get(entry_id) if mmeta is not None else None
     write_subject = subject
     if unconfigured:
-        write_subject = {} if (fm is not None and fm.type == "obj" and fm.children) else None
+        # 批19 #4：map 模块的框架默认键 → 整键一值（subject=None，patch 键 = 键名），
+        # 保存后写入包覆盖；object 未配置段沿用「有子字段 → 空对象，否则整段一值」。
+        if framework_default and etype == "map":
+            write_subject = None
+        else:
+            write_subject = {} if (fm is not None and fm.type == "obj" and fm.children) else None
     whole = _entry_whole_table(mmeta, etype, entry_id, subject)
     base = _entry_base(mmeta, etype, entry_id, subject)
     open_keys = _entry_open_keys(mmeta, entry_id, subject)
@@ -2640,6 +2733,8 @@ def entry_slot(pack: object, module: object, entry_id: object,
         "name": entry_name,
         "subject": write_subject,
         "unconfigured": unconfigured,
+        # 批19 #4：框架默认键（包未覆盖）→ 写链路仍按既有「整值键」补丁落盘为包覆盖。
+        "framework_default": framework_default,
         # 批14 #6①：动态键空间 → 写链路放行新键（合法性仍由校验器判定；
         # 见 editor_ops._apply_patch 的 open_keys 参数）。
         "open_keys": open_keys,

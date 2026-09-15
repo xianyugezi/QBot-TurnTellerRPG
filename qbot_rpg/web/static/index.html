@@ -3377,9 +3377,23 @@ function renderEntries() {
         tag.className = "unc";
         tag.textContent = "未配置 · 框架支持";
         d.appendChild(tag);
+      } else if (e.framework_default) {
+        // 批19 #4：框架键全集里包未覆盖的键 → 标「默认（框架）」（可直接编辑后写入包覆盖）。
+        var ftag = document.createElement("span");
+        ftag.className = "unc";
+        ftag.textContent = "默认（框架）";
+        d.appendChild(ftag);
+      } else if (e.covered) {
+        // 批19 #4：包数据已覆盖的框架键。
+        var ctag = document.createElement("span");
+        ctag.className = "idtag";
+        ctag.textContent = "已覆盖（包）";
+        d.appendChild(ctag);
       }
       d.title = e.name + "  [" + e.id + "]"
         + (e.unconfigured ? "（框架已支持，本包尚未配置）" : "")
+        + (e.framework_default ? "（框架默认；保存后写入本包覆盖）" : "")
+        + (e.covered ? "（本包已覆盖框架默认）" : "")
         + (grouped ? "（来源：" + s.label + "）" : "");
       d.addEventListener("click", function () { selectEntry(e.id, s.module); });
       box.appendChild(d);
@@ -4021,6 +4035,10 @@ function renderDetail(d) {
   var html = '<div class="meta"><span class="mk">元数据驱动</span>'
     + (d.unconfigured
       ? '<span class="mi unc">未配置 · 框架支持（填写后保存即写入本包）</span>' : "")
+    + (d.framework_default
+      ? '<span class="mi unc">默认（框架）'
+        + (d.default_note ? "：" + esc(d.default_note) : "")
+        + '（保存后写入本包覆盖）</span>' : "")
     + '<span class="mi">' + d.field_count + " 个字段</span>"
     + '<span class="mi">' + d.group_count + " 个分组</span>"
     + '<span class="mi">' + (state.editable ? "可编辑" : "只读预览") + "</span>"

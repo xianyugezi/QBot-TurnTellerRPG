@@ -230,8 +230,12 @@ def test_templates_module_registered_as_map() -> None:
     mmeta = api.default_field_meta_table().module("templates")
     assert mmeta is not None and mmeta.entry_type == "map"
     assert mmeta.value_meta is not None and mmeta.value_meta.type == "str"
+    # 批19 #4：条目列表 = 包覆盖键 ∪ 框架全量模板表键（全量展示，一号原则）。
     le = api.list_entries("veinborn", "templates", root=CONTENT)
-    assert le["entry_type"] == "map" and le["count"] == 2
+    assert le["entry_type"] == "map"
+    assert le["key_source"] == "templates"
+    assert le["count"] == le["covered_count"] + le["framework_default_count"]
+    assert le["framework_default_count"] > 0 and le["covered_count"] == 2
     d = api.entry_detail("veinborn", "templates", "register_success_next", root=CONTENT)
     assert d["fields"][0]["control"] == "textarea"
 

@@ -2255,7 +2255,10 @@ def _module_table() -> Dict[str, ModuleMeta]:
         # 覆盖 DEFAULT_TEMPLATES）。此前包已声明但框架无登记 → 补 ModuleMeta（entry_type=map）。
         "templates": ModuleMeta(entry_type="map", fields={}, kind="templates",
                                 namespace="template_lib",
-                                value_meta=FieldMeta(type="str", multiline=True)),
+                                value_meta=FieldMeta(type="str", multiline=True),
+                                # 批19 #4：条目列表 = 包数据键 ∪ 框架全量模板表键
+                                # （来源在 `content/framework_keys.py` 注册；不写死模板键名）。
+                                key_source="templates"),
         # 通用设置（细化_1g4 §6.1 death_penalty + currencies 段；其余段由 3h 路登记缺省放行）。
         # 注意：settings.json 为常驻模块（3h D-01），本表仅登记字段口径；loader 常驻加载归 3h/M 接线。
         "settings": ModuleMeta(entry_type="object",

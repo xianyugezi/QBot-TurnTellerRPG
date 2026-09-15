@@ -48,6 +48,9 @@ if str(_REPO) not in sys.path:
 
 from qbot_rpg.web import api  # noqa: E402  （路径注入后导入，避免 E402）
 
+# 框架能力全集（批13 一号原则：左栏显示集 ⊇ 本集合）。
+_FRAMEWORK_CATALOG = frozenset(e.module for e in api.FRAMEWORK_MODULE_CATALOG)
+
 # 可渲染控件形态（api.EDIT_CONTROLS 是「字段类型 → 控件」映射表的唯一产物）。
 RENDERABLE_WIDGETS = frozenset({
     "text", "textarea", "number", "bool", "enum", "ref", "list", "obj", "map", "formula",
@@ -273,6 +276,29 @@ def verify_pack(pack: str, root: object = None) -> PackReport:
             report.errors.append(
                 f"包列表 module_count（{meta['module_count']}）"
                 f"!= 模块树模块数（{len(tree_modules)}）")
+        # 批13 A（一号原则）：左栏显示集 = 框架能力集 ∪ 包声明——modules ∪ views ∪
+        # available 必须覆盖框架目录全集；三组模块键互不重复；未启用候选结构完整。
+        views = mods.get("views")
+        avail = mods.get("available")
+        if not isinstance(views, list) or not isinstance(avail, list):
+            report.errors.append("list_modules 缺 views / available（批13 能力可见性）")
+        else:
+            view_keys = {str(v.get("module")) for v in views if isinstance(v, Mapping)}
+            avail_keys = {str(a.get("module")) for a in avail if isinstance(a, Mapping)}
+            shown = set(tree_modules) | view_keys | avail_keys
+            missing_cat = sorted(_FRAMEWORK_CATALOG - shown)
+            if missing_cat:
+                report.errors.append(f"左栏未显示框架能力：{missing_cat}")
+            if (set(tree_modules) & view_keys) or (set(tree_modules) & avail_keys) \
+                    or (view_keys & avail_keys):
+                report.errors.append("modules / views / available 三组模块键存在重复")
+            for a in avail:
+                if not _need(report, a, ("module", "label", "enabled", "in_catalog",
+                                          "implemented", "count"), "list_modules.available[]"):
+                    continue
+                if a.get("enabled") is not False or a.get("in_catalog") is not True:
+                    report.errors.append(
+                        f"未启用候选 {a.get('module')} 的 enabled/in_catalog 非法")
     report.modules = len(tree_modules)
 
     # —— ③ 条目索引（全包口径） ——
@@ -298,6 +324,9 @@ def verify_pack(pack: str, root: object = None) -> PackReport:
                 report.errors.append(
                     f"entry_index total（{idx_total}）"
                     f"!= Σ模块 count（{sum(idx_by_module.values())}）")
+            # 批13 A：未启用模块也进检索候选（保留数据可搜到）；不改变 total 口径。
+            if not isinstance(idx.get("available"), list):
+                report.errors.append("entry_index 缺 available（批13 检索覆盖）")
         if set(idx_by_module) != tree_modules:
             report.errors.append(
                 f"entry_index 模块集合与模块树不一致：树多 {tree_modules - set(idx_by_module)}，"

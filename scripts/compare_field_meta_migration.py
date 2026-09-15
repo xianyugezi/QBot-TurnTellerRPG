@@ -132,10 +132,15 @@ def _strip_module_decl(snap: Any) -> Any:
     mods = hard.get("modules")
     if isinstance(mods, dict) and "modules" in mods:
         decl["modules"] = mods.pop("modules")
+        decl["modules.notes"] = mods.pop("notes", None)   # 批13：聚合视图声明 note（模块级）
     idx = hard.get("index")
     if isinstance(idx, dict) and isinstance(idx.get("modules"), list):
         decl["index.labels"] = [m.pop("label", None) for m in idx["modules"]
                                 if isinstance(m, dict)]
+        # 批13：模块 namespace 属**模块级注册**（templates 由未登记 → 登记为 template_lib），
+        # 非字段级迁移差异 → 记 soft。
+        decl["index.namespaces"] = [m.pop("namespace", None) for m in idx["modules"]
+                                    if isinstance(m, dict)]
     for key in list(hard):
         if key.startswith("entries/"):
             body = hard[key]
@@ -148,23 +153,56 @@ def _strip_module_decl(snap: Any) -> Any:
     return hard, decl
 
 
+def _is_fallback_field(d: Any) -> bool:
+    """字段描述符是否来自「元数据未登记 → 按实际值兜底」的旧形态（批13 容忍用）。
+
+    批13 把这些**软展示字段**补成正式登记（type/widget/control/help_card 由兜底推断
+    变成显式登记）——这是展示层补登记，不是迁移改键；对拍里计入 soft。
+    """
+    if not isinstance(d, dict):
+        return False
+    card = d.get("help_card")
+    if isinstance(card, dict):
+        if card.get("unregistered") is True:
+            return True
+        src = str(card.get("type_source") or "")
+        if "未登记" in src or "实际值" in src:
+            return True
+        if card.get("type") == "未标注" and card.get("range") == "未标注":
+            return True
+    # 兜底标量字段（map 值不是对象）：key 为空但带 widget/control。
+    return d.get("key") == "" and ("widget" in d or "control" in d)
+
+
+#: 由列描述**派生**的展示键：列已逐键对齐，这两个值只随合法登记/新增而变 → 记 soft。
+_DERIVED_DISPLAY_KEYS = frozenset({"block_layout", "number_step"})
+
+
 def _diff(a: Any, b: Any, path: str, hard: List[str], soft: List[str],
           cap: int = 200) -> None:
     """递归对拍：hard = 修改/删除（必须为 0）；soft = 合法新增（允许，仅报告）。
 
-    对拍口径（2026-09-14 增量容忍修正）：批B 硬门禁 = 迁移不得**修改或删除**既有
-    键/字段/分组；后续战斗/设置批次**新增**字段（如 settings.battle.min_damage）属
-    合法演进 → 记入 soft，不再冒充迁移差异。列表元素带唯一 key/id/name 时逐键对齐，
-    因此「既有元素被改」仍会被 hard 抓住，不会因长度变化被整体跳过。
+    对拍口径（2026-09-14 增量容忍修正；2026-09-15 批13 补登记容忍）：批B 硬门禁 =
+    迁移不得**修改或删除**既有键/字段/分组；后续批次**新增**字段（如
+    settings.battle.min_damage）或把**兜底软字段补登记为正式字段**（批13 能力可见性）
+    属合法演进 → 记入 soft。列表元素带唯一 key/id/name 时逐键对齐，因此「既有元素被改」
+    仍会被 hard 抓住，不会因长度变化被整体跳过。
     """
     if len(hard) >= cap:
         return
     if isinstance(a, dict) and isinstance(b, dict):
+        # 批13：基线（b）是兜底软字段、当前（a）补成正式登记 → 描述符差异记 soft。
+        if _is_fallback_field(b) and not _is_fallback_field(a):
+            soft.append(f"{path}: 兜底软字段 → 正式登记（批13 展示层补登记）")
+            return
         keys = set(a) | set(b)
         if keys and keys <= _GROUP_KEYS:
             keys = keys - {"count"}
         for key in sorted(keys):
             if key in _DERIVED_COUNT_KEYS:
+                continue
+            if key in _DERIVED_DISPLAY_KEYS and a.get(key) != b.get(key):
+                soft.append(f"{path}.{key}: {a.get(key)!r} → {b.get(key)!r}（派生展示键）")
                 continue
             if key not in a:
                 hard.append(f"{path}.{key}: 仅迁移前有（删除）")
@@ -178,7 +216,11 @@ def _diff(a: Any, b: Any, path: str, hard: List[str], soft: List[str],
         if ka is not None and kb is not None:
             for key in sorted(set(ka) | set(kb)):
                 if key not in ka:
-                    hard.append(f"{path}[{key}]: 仅迁移前有（删除）")
+                    # 批13：基线兜底空键字段被正式登记替代（模板等 map 模块）→ soft。
+                    if _is_fallback_field(kb[key]):
+                        soft.append(f"{path}[{key}]: 兜底软字段被正式登记替代（批13）")
+                    else:
+                        hard.append(f"{path}[{key}]: 仅迁移前有（删除）")
                 elif key not in kb:
                     soft.append(f"{path}[{key}]: 仅迁移后有（新增）")
                 else:

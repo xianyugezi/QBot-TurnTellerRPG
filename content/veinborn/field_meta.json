@@ -3,6 +3,12 @@
     "settings": [
       "stats",
       "formula"
+    ],
+    "life": [
+      "proficiency",
+      "enhance",
+      "forge",
+      "recipe"
     ]
   },
   "field_help": {
@@ -1822,6 +1828,7 @@
     "formula": "公式",
     "items": "物品",
     "jobs": "职业",
+    "life": "生活",
     "maps": "地图",
     "marks": "印记",
     "npc": "NPC",
@@ -1859,15 +1866,6 @@
         "action"
       ],
       "module": "enemies"
-    },
-    {
-      "children": [
-        "proficiency",
-        "enhance",
-        "forge",
-        "recipe"
-      ],
-      "module": "jobs"
     }
   ],
   "schema_version": 1

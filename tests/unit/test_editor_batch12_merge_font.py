@@ -222,20 +222,30 @@ def test_veinborn_entry_merge_declaration_and_label() -> None:
 
 
 # =====================================================================================
-# B · #12 生活模块层级（挂到包内既有父模块，不凭空造模块）
+# B · #12 生活归口（批13 D 起：改由 entry_merge 虚拟聚合视图承载，不再挂 jobs 下）
 # =====================================================================================
-def test_veinborn_life_modules_grouped_under_existing_parent() -> None:
+def test_veinborn_life_modules_aggregated_into_life_view() -> None:
+    """批13 D：#12 定案——真正的「生活」归口（entry_merge 虚拟视图），不再挂「职业」下。"""
     mods = api.list_modules("veinborn", root=CONTENT)
     jobs = _node_of(mods, "jobs")
-    kids = [c["module"] for c in jobs["children"]]
-    assert kids == ["proficiency", "enhance", "forge", "recipe"]
-    # 计数自洽：count = own + Σ子
-    assert jobs["count"] == jobs["own_count"] + sum(c["count"] for c in jobs["children"])
-    # 父模块中文名仍是「职业」（不把父模块改名成生活）；生活子模块各自有中文名
-    assert jobs["label"] == "职业"
-    tree_mods = {n["module"] for n in mods["modules"]}
-    for child in kids:
-        assert child not in tree_mods, "生活子模块不应再顶层单列"
+    assert [c["module"] for c in jobs["children"]] == []   # 批12 的 jobs 挂靠已取消
+    views = {v["module"]: v for v in mods["views"]}
+    assert "life" in views and views["life"]["label"] == "生活"
+    assert [m["module"] for m in views["life"]["merged"]] == [
+        "proficiency", "enhance", "forge", "recipe"]
+    # 四个生活模块被并入视图 → 左栏默认不再单列（前端按 merged_into 判定）
+    for child in ("proficiency", "enhance", "forge", "recipe"):
+        assert _node_of(mods, child)["merged_into"] == "life"
+
+
+def test_life_view_entries_grouped_by_source() -> None:
+    mods = api.list_modules("veinborn", root=CONTENT)
+    view = next(v for v in mods["views"] if v["module"] == "life")
+    assert view["count"] == 0 and view["total_count"] == view["merged_count"]
+    le = api.list_entries("veinborn", "life", root=CONTENT)
+    assert le["count"] == 0 and le["total_count"] == view["total_count"]
+    assert [s["module"] for s in le["merge_sections"]] == [
+        "proficiency", "enhance", "forge", "recipe"]
 
 
 def test_life_modules_have_chinese_labels() -> None:
@@ -359,8 +369,8 @@ def test_font_panel_and_wiring() -> None:
     assert 'setAttribute("data-fs"' in fn and "data-theme" not in fn
 
 
-def test_batch_footer_note_is_batch12() -> None:
+def test_batch_footer_note_is_batch13() -> None:
     html = _html()
     m = re.search(r'<div class="panel-ft">(.*?)</div>', html, re.S)
-    assert m and "批12 · 结构/并入/字号" in m.group(1)
-    assert "批11 · 内容包导出/导入" not in html
+    assert m and "批13 · 能力可见性" in m.group(1)
+    assert "批12 · 结构/并入/字号" not in html

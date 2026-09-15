@@ -47,6 +47,7 @@ def create_app(pack: Optional[str] = None, root: Optional[str] = None,
     from qbot_rpg.web import api  # noqa: E402  （路径注入后导入，避免 E402）
     from qbot_rpg.web import editor_ops  # noqa: E402
     from qbot_rpg.content import pack_transfer  # noqa: E402  （导入体积上限的单一出处）
+    from qbot_rpg.assembly import editor_aliases  # noqa: E402  （批19 #7：别名视图在装配层）
 
     static_dir = Path(api.__file__).resolve().parent / "static"
     content_root = str(root) if root else str(api.content_root())
@@ -172,12 +173,16 @@ def create_app(pack: Optional[str] = None, root: Optional[str] = None,
     # -------- 批8 模块开关：可启用清单 / 启用停用 / manifest 回退 --------
     @app.get("/api/pack/{pack_id}/module-catalog")
     def api_module_catalog(pack_id: str):  # type: ignore[no-untyped-def]
-        return api.module_catalog(pack_id, root=content_root)
+        data = api.module_catalog(pack_id, root=content_root)
+        # 批19 #7：别名视图在装配层组装（web 读取层不得依赖 commands/assembly），注入响应。
+        data["aliases"] = editor_aliases.list_aliases(
+            api._pack_dir(pack_id, content_root))
+        return data
 
     # 批19 #7：指令别名视图（框架内置 ∪ 包声明）
     @app.get("/api/pack/{pack_id}/aliases")
     def api_aliases(pack_id: str):  # type: ignore[no-untyped-def]
-        return api.list_aliases(pack_id, root=content_root)
+        return editor_aliases.list_aliases(api._pack_dir(pack_id, content_root))
 
     @app.post("/api/pack/{pack_id}/module/{module}/toggle")
     def api_toggle_module(pack_id: str, module: str,

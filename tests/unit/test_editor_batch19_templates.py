@@ -7,7 +7,7 @@
   · `ModuleMeta.key_source` 声明「框架侧键全集来源名」→ 条目列表 = 包数据键 ∪ 来源键；
   · 包数据已有的框架键标「已覆盖（包）」；来源里包没有的补一条（`framework_default`）
     标「默认（框架）」，可直接编辑并在保存时写入包覆盖（既有校验 / 备份 / 原子写 / 回退）；
-  · 来源表由 `qbot_rpg/content/framework_keys.py` 注册表提供；编辑器读取层零写死。
+  · 来源表由 `qbot_rpg/web/framework_keys.py` 注册表提供；编辑器读取层零写死。
 
 覆盖：A. 全量结构断言；B. 覆盖/默认标记；C. 通用性（合成模块 + 注入来源）；
 D. 端到端真写盘 → 回退逐字节复原；E. 负向（无 key_source 的 map 模块行为不变）；
@@ -23,7 +23,7 @@ from typing import Any, Mapping
 
 import pytest
 
-from qbot_rpg.content import framework_keys
+from qbot_rpg.web import framework_keys
 from qbot_rpg.web import api, editor_ops
 
 REPO = Path(api.repo_root())

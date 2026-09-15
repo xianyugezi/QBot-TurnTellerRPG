@@ -64,7 +64,14 @@ DEFAULT_PACKS = ("veinborn", "test_demo")
 # `slot` 由纯文本 → 展示层引用下拉（options_ref）。均为**展示层控件形态**演进（type /
 # required / 枚举 / 引用目标等校验口径零变化），与「字段级元数据迁移不得改/删」无冲突；
 # 重定到本批末提交后，门禁继续只守字段级改/删。
-DEFAULT_BASELINE_REF = "f7d9c25"
+# 批19（2026-09-16）重定基线：f7d9c25 → 5e908bb（本批 F 段末提交）。原因：#4 把消息模板
+# 条目列表由「包覆盖 2 条」扩为「包覆盖 ∪ 框架全量模板表键」（条目计数 / 索引 / 详情形态
+# 变化）；#8 `entry_tree` 把 settings 的 env_event/time_cycle 条目改归 maps（条目列表 /
+# 计数 / 索引口径变化）；#9 补 formula 中文名（label 由键名变中文）；#5 给条目列表/模块树
+# 加 purpose/unused/overlap_hints 展示键；#6 模块名回落目录中文名。以上均为**展示层**
+# 演进（type/required/枚举/引用目标等校验口径零变化），与「字段级元数据迁移不得改/删」
+# 无冲突；重定到本批末提交后，门禁继续只守字段级改/删。
+DEFAULT_BASELINE_REF = "5e908bb"
 
 
 def _env(root: Path) -> dict:

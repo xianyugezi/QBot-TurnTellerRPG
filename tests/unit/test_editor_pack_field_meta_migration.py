@@ -3,8 +3,9 @@
 依据：`docs/编辑器重写_数据包展示元数据下放方案.md` §四 批B/C。
 
 本用例**调用** `scripts/compare_field_meta_migration.py`：它用 `git worktree` 检出基线
-`f7d9c25`（批14 重定；`46baff3` 因对象子字段 `readonly→objform` 与 `slot` 展示层下拉
-而产生与迁移无关的硬差异），在基线树与当前树各跑一遍 `scripts/editor_readonly_snapshot.py`（模块树 /
+`5e908bb`（批19 重定；`f7d9c25` 因 #4 模板全量显示 / #8 entry_tree 条目改归父节点 /
+#9 formula 中文名 / #5 模块提示键 / #6 模块名回落目录中文名而产生与字段级迁移无关的
+展示层差异），在基线树与当前树各跑一遍 `scripts/editor_readonly_snapshot.py`（模块树 /
 条目列表 / 条目详情 / 条目索引 / 引用候选 / 包列表），递归对拍并输出差异报告。
 
 批15 语义化定稿（对拍口径，实现见 `compare_snapshots` / `_diff`）：
@@ -33,7 +34,7 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
-BASELINE_REF = "f7d9c25"
+BASELINE_REF = "5e908bb"
 CONTENT = REPO / "content"
 
 

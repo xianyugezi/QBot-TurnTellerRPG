@@ -354,6 +354,23 @@ def _display_labels(manifest: Mapping[str, Any], declared: List[str],
     return labels
 
 
+def _module_display_label(module: str, labels: Mapping[str, str]) -> str:
+    """模块显示名的**统一回落链**（批19 #6）：包声明 → 框架目录 label → 模块键。
+
+    包声明的 `module_labels` / `manifest.module_labels` / `module_tree` 节点 label 优先；
+    包未声明时**不再回落到英文模块键**，而是回落到框架目录 `module_catalog` 的中文默认名
+    （一号原则：框架支持的能力，启用后也要有中文名）。目录也没有该模块（包自定义模块）→
+    才回落到模块键。纯展示层，不参与校验。
+    """
+    declared = labels.get(module)
+    if declared:
+        return declared
+    ce = catalog_entry(module)
+    if ce is not None and ce.label:
+        return ce.label
+    return module or ""
+
+
 # =====================================================================================
 # 批12 #1：条目聚合展示声明（`field_meta.json.entry_merge`，通用、包声明驱动）
 # =====================================================================================
@@ -551,7 +568,7 @@ def list_modules(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
             already = in_subtree(mod, src, [mod])
             info.append({
                 "module": src,
-                "label": labels.get(src) or src,
+                "label": _module_display_label(src, labels),
                 "count": agg(src, [src]),
                 "keep_top_level": keep,
                 "already_child": already,
@@ -561,7 +578,7 @@ def list_modules(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
         total_count = count + sum(x["count"] for x in info if not x["already_child"])
         return {
             "module": mod,
-            "label": labels.get(mod) or mod,
+            "label": _module_display_label(mod, labels),
             "count": count,
             "own_count": own,
             "children": kids,
@@ -589,7 +606,7 @@ def list_modules(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
         for src in spec["sources"]:
             info.append({
                 "module": src,
-                "label": labels.get(src) or src,
+                "label": _module_display_label(src, labels),
                 "count": agg(src, [src]),
                 "keep_top_level": src in spec["keep_top_level"],
                 "already_child": in_subtree(target, src, [target]),
@@ -598,7 +615,7 @@ def list_modules(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
         total_count = sum(x["count"] for x in info if not x["already_child"])
         return {
             "module": target,
-            "label": labels.get(target) or target,
+            "label": _module_display_label(target, labels),
             "count": 0,
             "own_count": 0,
             "children": [],
@@ -775,7 +792,7 @@ def list_entries(pack: object, module: object, root: Optional[object] = None) ->
             srows = _entry_rows(sdata, smeta)
             sections.append({
                 "module": src,
-                "label": labels.get(src) or src,
+                "label": _module_display_label(src, labels),
                 "entry_type": _entry_type(smeta, sdata),
                 "count": len(srows),
                 "keep_top_level": src in spec["keep_top_level"],
@@ -799,7 +816,7 @@ def list_entries(pack: object, module: object, root: Optional[object] = None) ->
     table_entry = None
     if etype == "map":
         table_entry = {"id": TABLE_ENTRY_ID,
-                       "name": f"{labels.get(mod) or mod} · {TABLE_ENTRY_TAG}",
+                       "name": f"{_module_display_label(mod, labels)} · {TABLE_ENTRY_TAG}",
                        "table": True}
     # 批15 #2：包声明的「合并页」——对象模块的若干段合成一个页面（中栏一条、右栏同栏多子块）。
     # 页面是展示层聚合：段条目仍在 `entries` 里（计数/索引不变），前端按 `page` 归到页行下。
@@ -821,7 +838,7 @@ def list_entries(pack: object, module: object, root: Optional[object] = None) ->
     return {
         "pack": str(pack),
         "module": mod,
-        "label": labels.get(mod) or mod,
+        "label": _module_display_label(mod, labels),
         "entry_type": etype,
         "count": len(rows),
         "configured_count": len(rows) - unconfigured_count,
@@ -1595,9 +1612,9 @@ def _association_sections(pack_dir: Path, manifest: Mapping[str, Any],
             continue
         section: Dict[str, Any] = {
             "key": f"assoc:{idx}:{a.module}:{a.field}",
-            "label": a.label or (labels.get(a.module) or a.module),
+            "label": a.label or (_module_display_label(a.module, labels)),
             "module": a.module,
-            "module_label": labels.get(a.module) or a.module,
+            "module_label": _module_display_label(a.module, labels),
             "field": a.field,
             # 批5.2（V9）：副标题/命中行统一「中文（键）」——中文名来自字段元数据，
             # 查不到则留空，前端回退原始键（不凭空造词）。
@@ -2516,7 +2533,7 @@ def entry_detail(pack: object, module: object, entry_id: object,
         children = (dict(vm.children) if vm is not None and vm.type == "obj"
                     and vm.children else {})
         fm = FieldMeta(type="map", label=TABLE_ENTRY_TAG, children=children)
-        entry_name = f"{labels.get(mod) or mod} · {TABLE_ENTRY_TAG}"
+        entry_name = f"{_module_display_label(mod, labels)} · {TABLE_ENTRY_TAG}"
         subject = mapdata
         unconfigured = False
         fields = [_descriptor(TABLE_ENTRY_ID, fm, mapdata, True, mmeta, view, 0)]
@@ -2560,7 +2577,7 @@ def entry_detail(pack: object, module: object, entry_id: object,
         "pack": str(pack),
         "pack_name": str(manifest.get("name", "") or pack),
         "module": mod,
-        "module_label": labels.get(mod) or mod,
+        "module_label": _module_display_label(mod, labels),
         "entry_type": etype,
         "id": entry_id,
         "name": entry_name,
@@ -3089,7 +3106,7 @@ def check_entry_id(pack: object, module: object, entry_id: object,
         return _out(False, "red", f"ID「{eid}」含空格、斜杠或超长字符，不能用作条目标识。",
                     "请改用不含空格与斜杠的短标识（建议英文小写 + 下划线）。")
     conflicts = [
-        {"module": m, "module_label": labels.get(m) or m, "id": e, "name": n}
+        {"module": m, "module_label": _module_display_label(m, labels), "id": e, "name": n}
         for m, e, n in _id_entries(pack_dir, manifest, mod, mmeta, table) if e == eid
     ]
     if conflicts:
@@ -3126,7 +3143,7 @@ def entry_index(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
         unc = sum(1 for _e, _n, val in rows if val is _UNCONFIGURED)
         total += len(entries)
         modules.append({
-            "module": mod, "label": labels.get(mod) or mod, "entry_type": etype,
+            "module": mod, "label": _module_display_label(mod, labels), "entry_type": etype,
             "namespace": ns, "count": len(entries),
             "configured_count": len(entries) - unc, "unconfigured_count": unc,
             "entries": entries,
@@ -3317,7 +3334,7 @@ def new_entry_detail(pack: object, module: object, root: Optional[object] = None
         "pack": str(pack),
         "pack_name": str(manifest.get("name", "") or pack),
         "module": mod,
-        "module_label": labels.get(mod) or mod,
+        "module_label": _module_display_label(mod, labels),
         "entry_type": etype,
         "is_new": True,
         "id_field": id_field,
@@ -3451,7 +3468,7 @@ def reference_scan(pack: object, module: object, entry_id: object,
                 seen.add(key)
                 out.append({
                     "module": rel_mod,
-                    "module_label": labels.get(rel_mod) or rel_mod,
+                    "module_label": _module_display_label(rel_mod, labels),
                     "entry_id": eid,
                     "entry_name": ename,
                     "field": path,
@@ -3524,7 +3541,7 @@ def ref_holders(pack: object, target: object, keys: Optional[object] = None,
                     continue
                 out.append({
                     "module": rel_mod,
-                    "module_label": labels.get(rel_mod) or rel_mod,
+                    "module_label": _module_display_label(rel_mod, labels),
                     "entry_id": eid,
                     "entry_name": ename,
                     "field": str(h.get("path") or ""),

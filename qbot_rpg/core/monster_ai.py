@@ -21,6 +21,13 @@ P=(w×c×s)/Σ 归一化 / hungry 保底先查 / cooldown 过滤）、L7 兜底�
 行动 tick（tick 由 battle 行动收尾单点调用）、intent 意图预告（委托 monster_intent）、
 phases 阶段表写端（委托 monster_phases，套间更新 ai_state.phase 驱动 phase_changed 联动）。
 
+批16 #10 · 概率/权重来源（使用处 > 定义处，向后兼容）：
+  L6 入池闸门 `probability` 与权重基准 `weight` 的取值顺序 = **使用处 > 定义处 > 缺省**：
+  使用处 = 怪物行动表条目（`enemies.json` 的 `actions[]`，可声明 `{action, probability, weight}`）；
+  定义处 = `action.json` 行动定义（`probability` / `weight`，**保留为默认值**）。
+  使用处未声明时回落到定义处默认值；两处都未声明时与修前逐字段一致（probability→0 不入池、
+  weight→1.0）。印记（`marks.json`）无概率类键（本批已核查）→ **印记侧无需改动**。
+
 工程收敛（设计文档未显式定义处，显式标注供审查）：
   1. 条件表达式形态：与条件行动同构的 trigger dict `{type, value?, ...}`（1f ①「与条件行动
      同一套表达式体系」）；本路内建最小求值集 hp_below/pv_broken/turn_count/phase_changed，
@@ -434,11 +441,31 @@ class MonsterAI:
 
     # ================================================================ 随机池/权重/选择
 
+    def _param(self, entry: Mapping[str, Any], key: str,
+               default: Any = None) -> Any:
+        """行动参数解析（批16 #10）：**使用处 > 定义处 > 缺省**。
+
+        使用处 = 怪物行动表条目（`enemies.json` 的 `actions[]`）；
+        定义处 = `action.json` 行动定义（经 `action_lib` 解析）。
+        · 使用处声明了该键（存在且非 None，**含显式 0**）→ 用使用处值（覆盖定义处）；
+        · 否则定义处同键非 None → 用定义处值（**向后兼容**：定义处保留为默认值）；
+        · 都未声明 → `default`（与修前逐字段一致）。
+        """
+        if key in entry and entry.get(key) is not None:
+            return entry.get(key)
+        action_def = self._resolve_action(entry.get("action"))
+        if isinstance(action_def, Mapping) and action_def.get(key) is not None:
+            return action_def.get(key)
+        return default
+
     def _random_pool(self, ai: Dict[str, Any], battle_state: dict) -> List[Dict[str, Any]]:
-        """L6 池构造：probability>0（1 入池，其他正值等价 1，contract §一）且不在冷却。"""
+        """L6 池构造：probability>0（1 入池，其他正值等价 1，contract §一）且不在冷却。
+
+        probability 取值（批16 #10）：使用处声明优先；未声明 → 定义处默认；都没有 → 0。
+        """
         pool = []
         for e in self._actions:
-            if float(e.get("probability", 0)) <= 0:
+            if float(self._param(e, "probability", 0) or 0) <= 0:
                 continue  # 锚点（只被链/条件/状态机触发，核心规则4）
             aid = e.get("action")
             if int(ai["action_cooldowns"].get(aid, 0)) > 0:
@@ -450,10 +477,10 @@ class MonsterAI:
                     battle_state: dict) -> float:
         """行动权重 w×c×s（1f ④4.2 概率公式分子）：
 
-        w = weight 基准权重（缺省 1.0，权重档位建议见 1f ④4.2-7）；
+        w = weight 基准权重（**使用处 > 定义处**；均缺省 → 1.0，档位建议见 1f ④4.2-7）；
         c = condition 条件修正（命中 → cond.mod，缺省 1.0；未命中 → 1.0）；
         s = 状态修正 weight_mod[tag] 乘积（无匹配 tag → 1.0）。"""
-        w_raw = entry.get("weight")
+        w_raw = self._param(entry, "weight", None)
         w = float(w_raw) if w_raw is not None else 1.0
         c = 1.0
         cond = entry.get("condition")

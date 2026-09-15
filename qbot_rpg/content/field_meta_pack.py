@@ -24,7 +24,8 @@
       "entry_presets": {"items": [{"id": "material", "label": "材料",
                                    "fields": ["name", "desc"],
                                    "defaults": {"type": "material"},
-                                   "id_prefix": "material"}]}
+                                   "id_prefix": "material"}]},
+      "entry_presets_disable": {"items": ["gift_box"]}
     }
 
 `field_labels` / `field_help` 的值可为**非空字符串**（叶子）或**嵌套对象**（含 `_label`/`_help`
@@ -54,6 +55,12 @@
       `fields` = 关心的字段键（其余字段进「其他字段」折叠区仍可编辑）、
       `defaults` = 初始值、`id_prefix`/`id_width` = 该预设下的 ID 生成口径。
       **纯新建界面/生成声明**：不改数据文件、不改校验语义；不声明 → 行为与现状完全一致。
+      批17 起框架自带**通用默认预设**（`qbot_rpg/content/entry_presets.py`，本次 = 物品六种），
+      生效预设 = **框架默认 ∪ 包声明**：同 id 包声明整体覆盖框架默认、包可追加、包可关闭；
+      空白包也自带框架默认（合并与关闭口径的权威说明见 `entry_presets.py` docstring）。
+    - `entry_presets_disable`（对象<模块名, 非空字符串数组>，批17）：**关闭**该模块下
+      指定 id 的预设（框架默认或包自己的），被点名的 id 从生效表移除；这里只校验形态，
+      「id 是否真的存在」由合并层按实际预设表过滤（关闭不存在的 id = 无害空操作）。
 
 本模块只依赖 `qbot_rpg.content.models`（零 web 依赖，框架可独立使用）；解析严格、
 合并纯函数（不改动传入的框架表），读取按文件 mtime/size/inode 缓存。
@@ -90,6 +97,8 @@ TOP_LEVEL_KEYS: Tuple[str, ...] = (
     "id_prefix",
     "id_width",
     "entry_presets",
+    # 批17：关闭框架默认（或包自己的）条目预设——`{"<模块>": ["<预设 id>", ...]}`。
+    "entry_presets_disable",
 )
 
 # 序号零填充宽度：缺省 3 位、上限 12 位（防声明出超长 ID；仅影响建议 ID，不参与校验）。
@@ -124,6 +133,9 @@ class PackFieldMeta:
     # entry_presets（批16 #11）：模块 → 预设数组；每项 = {id,label,help,fields,defaults,
     # id_prefix,id_width}（新建按模板初始化 + 收窄显示面；不改数据/校验）。
     entry_presets: Mapping[str, Tuple[Mapping[str, Any], ...]] = field(default_factory=dict)
+    # entry_presets_disable（批17）：模块 → 要关闭的预设 id 元组（框架默认或包自己的）；
+    # 生效预设由 entry_presets.merge_entry_presets 计算（框架默认 ∪ 包声明 − 关闭）。
+    entry_presets_disable: Mapping[str, Tuple[str, ...]] = field(default_factory=dict)
 
 
 # -------------------------------------------------------------------------------------
@@ -447,6 +459,23 @@ def _validate_entry_presets(value: object, pack: str, key: str
     return out
 
 
+def _validate_entry_presets_disable(value: object, pack: str, key: str
+                                    ) -> Dict[str, Tuple[str, ...]]:
+    """`entry_presets_disable` 形态校验并归一化（批17，关闭指定预设）。
+
+    形态：`{"<模块>": ["<预设 id>", ...]}`；模块名非空；数组元素为非空字符串且不重复。
+    这里只校验**形态**；「被关闭的 id 是否真的存在」由合并层按实际预设表过滤（关闭
+    不存在的 id = 无害空操作，不报错）。
+    """
+    raw = _require_map(value, pack, key)
+    out: Dict[str, Tuple[str, ...]] = {}
+    for mod, ids in raw.items():
+        if not isinstance(mod, str) or not mod:
+            raise _fail(pack, key, f"含非法模块名（应为非空字符串）：{mod!r}")
+        out[mod] = _str_list(ids, pack, f"{key}.{mod}")
+    return out
+
+
 def _validate_schema_version(value: object, pack: str, key: str) -> int:
     if value is None:
         raise _fail(pack, key, f"缺失：应为整数 {SCHEMA_VERSION}")
@@ -491,6 +520,10 @@ def parse_field_meta(raw: object, pack: str) -> PackFieldMeta:
                 if "id_width" in raw else {})
     entry_presets = (_validate_entry_presets(raw["entry_presets"], pack, "entry_presets")
                      if "entry_presets" in raw else {})
+    entry_presets_disable = (
+        _validate_entry_presets_disable(
+            raw["entry_presets_disable"], pack, "entry_presets_disable")
+        if "entry_presets_disable" in raw else {})
     return PackFieldMeta(
         pack=pack,
         module_labels=module_labels,
@@ -503,6 +536,7 @@ def parse_field_meta(raw: object, pack: str) -> PackFieldMeta:
         id_prefix=id_prefix,
         id_width=id_width,
         entry_presets=entry_presets,
+        entry_presets_disable=entry_presets_disable,
     )
 
 

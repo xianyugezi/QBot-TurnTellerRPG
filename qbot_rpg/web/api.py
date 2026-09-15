@@ -61,6 +61,15 @@ UNCONFIGURED_TAG = "未配置 · 框架支持"
 # 批14 #4：元数据未登记子字段的兜底标注（前端字段行内展示；不改任何校验语义）。
 META_UNREGISTERED_NOTE = "元数据未登记，按实际值推断"
 
+# 批15 #8：二级结构（分组页签之下的可折叠子块）——通用机制，不认任何模块/字段名。
+# · 子块名来自元数据：FieldMeta.subgroup / ModuleMeta.field_subgroups（键 → 子块）；
+# · 分组内既无子块声明、字段数又超过 AUTO_MORE_AFTER 时，按**元数据声明顺序**把超出部分
+#   收进一个隐式的「更多字段」折叠块（规则只看 order/数量，**不硬编码字段名**）；
+# · 子块默认折叠（主块展开）——首屏先给主要字段，次要/进阶字段点开再看。
+AUTO_MORE_AFTER = 8               # 主块最多常驻展示的字段数（其余进「更多字段」折叠块）
+AUTO_MORE_BLOCK = "@more"         # 隐式「更多字段」块的稳定机器键（不写进任何数据）
+MORE_FIELDS_LABEL = "更多字段"     # 隐式块的中文兜底显示名（包可用 subgroup_labels 覆盖）
+
 
 class EditorError(Exception):
     """编辑器读取层领域异常基类（宿主 scripts/editor_host.py 映射为 HTTP JSON）。"""
@@ -1491,6 +1500,100 @@ def _resolve_group(key: str, fm: Optional[FieldMeta], mmeta: Optional[ModuleMeta
     return DEFAULT_GROUP
 
 
+def _resolve_subgroup(key: str, fm: Optional[FieldMeta], mmeta: Optional[ModuleMeta]) -> str:
+    """二级分组（折叠子块）解析：FieldMeta.subgroup → 模块二级分组表 → 主块（空串）。
+
+    纯展示层：只决定字段落在哪个折叠块，不改任何校验判定。
+    """
+    if fm is not None and fm.subgroup:
+        return str(fm.subgroup)
+    if mmeta is not None and str(key) in mmeta.field_subgroups:
+        return str(mmeta.field_subgroups[str(key)])
+    return ""
+
+
+def _block_plan(fields: List[Dict[str, Any]], mmeta: Optional[ModuleMeta],
+                collapse_named: bool = True) -> Dict[str, List[Dict[str, Any]]]:
+    """分组 → 折叠子块计划（二级结构；元数据/顺序驱动，**不认模块名/字段名**）。
+
+    · 子块顺序：ModuleMeta.subgroup_order → 字段首次落入顺序；
+    · 主块（无子块声明）平铺、默认展开；命名子块默认折叠（`collapse_named=False` 时全展开，
+      供「合并页」这类需要一次看全的场景复用）；
+    · 主块字段数 > AUTO_MORE_AFTER 时，按字段声明顺序把超出部分收进隐式「更多字段」块
+      （块键 = AUTO_MORE_BLOCK，显示名 = 包 subgroup_labels 覆盖 → 兜底 MORE_FIELDS_LABEL）。
+    只为展示服务：字段不会因折叠而消失（全部仍在 DOM 里，只是默认收起）。
+    """
+    order: List[str] = []
+    by_group: Dict[str, List[Dict[str, Any]]] = {}
+    for f in fields:
+        g = str(f.get("group") or DEFAULT_GROUP)
+        if g not in by_group:
+            by_group[g] = []
+            order.append(g)
+        by_group[g].append(f)
+    out: Dict[str, List[Dict[str, Any]]] = {}
+    labels: Mapping[str, str] = mmeta.subgroup_labels if mmeta is not None else {}
+    for g in order:
+        fs = by_group[g]
+        declared: List[str] = []
+
+        def _declare(s: str) -> None:
+            if s and s not in declared:
+                declared.append(s)
+
+        if mmeta is not None:
+            for s in mmeta.subgroup_order:
+                _declare(str(s))
+        for f in fs:
+            _declare(str(f.get("subgroup") or ""))
+        # 隐式「更多字段」块只在**没有任何命名子块时**参与排序（有命名子块时主块通常很小）
+        if not declared and len(fs) > AUTO_MORE_AFTER:
+            _declare(AUTO_MORE_BLOCK)
+        declared = [s for s in declared if s != ""]
+
+        def _mk(name: str, items: List[Dict[str, Any]],
+                label: str, collapsed: bool) -> Dict[str, Any]:
+            keys = [str(it.get("key") or "") for it in items]
+            for it in items:
+                it["block"] = name
+            return {"name": name, "label": label, "count": len(items),
+                    "collapsed": bool(collapsed), "keys": keys}
+
+        blocks: List[Dict[str, Any]] = []
+        main = [f for f in fs if not (f.get("subgroup") or "")]
+        if not declared and len(fs) > AUTO_MORE_AFTER:
+            # 全平铺且字段多 → 前 AUTO_MORE_AFTER 常驻，其余进隐式「更多字段」
+            blocks.append(_mk("", fs[:AUTO_MORE_AFTER], "", False))
+            more = fs[AUTO_MORE_AFTER:]
+            for f in more:
+                f["subgroup"] = AUTO_MORE_BLOCK
+            blocks.append(_mk(AUTO_MORE_BLOCK, more,
+                              str(labels.get(AUTO_MORE_BLOCK) or MORE_FIELDS_LABEL), True))
+        elif not declared:
+            if main:
+                blocks.append(_mk("", main, "", False))
+        else:
+            if len(main) > AUTO_MORE_AFTER:
+                blocks.append(_mk("", main[:AUTO_MORE_AFTER], "", False))
+                more = main[AUTO_MORE_AFTER:]
+                for f in more:
+                    f["subgroup"] = AUTO_MORE_BLOCK
+                blocks.append(_mk(AUTO_MORE_BLOCK, more,
+                                  str(labels.get(AUTO_MORE_BLOCK) or MORE_FIELDS_LABEL), True))
+            elif main:
+                blocks.append(_mk("", main, "", False))
+            for s in declared:
+                if s == AUTO_MORE_BLOCK:
+                    continue
+                sfs = [f for f in fs if str(f.get("subgroup") or "") == s]
+                if not sfs:
+                    continue
+                blocks.append(_mk(s, sfs,
+                                  str(labels.get(s) or s), bool(collapse_named)))
+        out[g] = blocks
+    return out
+
+
 def _json_text(value: object) -> str:
     try:
         return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
@@ -1768,6 +1871,8 @@ def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
         "editable": is_editable_control(control),
         "multiline": multiline,
         "group": _resolve_group(key, fm, mmeta),
+        # 批15 #8：二级分组（折叠子块）——页签之下再分块，长模块首屏只留主要字段。
+        "subgroup": _resolve_subgroup(key, fm, mmeta),
         "required": bool(fm.required) if fm is not None else False,
         "present": present,
         "value": value,
@@ -1992,6 +2097,8 @@ def entry_detail(pack: object, module: object, entry_id: object,
         for f in fields:
             f["deletable"] = True
     groups = _group_summary(fields, mmeta)
+    # 批15 #8：二级结构——每个分组下的折叠子块计划（大段默认折叠；字段不消失）。
+    blocks = _block_plan(fields, mmeta)
     associations = _association_sections(pack_dir, manifest, declared, entry_id,
                                          subject, mmeta, view)
     labels = _display_labels(manifest, declared, pack_dir)
@@ -2010,6 +2117,7 @@ def entry_detail(pack: object, module: object, entry_id: object,
         "open_keys": open_keys,
         "fields": fields,
         "groups": groups,
+        "blocks": blocks,
         "associations": associations,
         "association_count": len(associations),
         "field_count": len(fields),
@@ -2439,6 +2547,7 @@ def new_entry_detail(pack: object, module: object, root: Optional[object] = None
     view = _PackView(pack_dir, manifest)
     fields = _build_fields(base, subject, mmeta, view, 0)
     groups = _group_summary(fields, mmeta)
+    blocks = _block_plan(fields, mmeta)
     labels = _display_labels(manifest, declared, pack_dir)
     id_fm = None
     if mmeta is not None:
@@ -2459,6 +2568,7 @@ def new_entry_detail(pack: object, module: object, root: Optional[object] = None
         "name_field": _NAME_FIELD,
         "fields": fields,
         "groups": groups,
+        "blocks": blocks,
         "field_count": len(fields),
         "group_count": len(groups),
         "associations": [],

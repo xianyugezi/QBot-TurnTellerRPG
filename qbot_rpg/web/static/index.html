@@ -390,6 +390,20 @@ html[data-theme="contrast"] .asave:disabled { border-style: dotted; opacity: .6;
 .gpane[hidden] { display: none; }
 .gempty { color: var(--text-5); padding: var(--sp-8) var(--sp-6); line-height: var(--lh-ex); }
 
+/* ---------- 二级结构（批15 #8）：分组页签之下的可折叠子块 ----------
+   长模块（如战斗参数 20+ 字段）不再一屏铺满：主块常驻，命名子块 / 隐式「更多字段」默认
+   收起（.sbbody[hidden] = display:none，不占 scrollHeight），点块头展开。字段不因折叠消失。 */
+.subblk { border: var(--bw) solid var(--line-faint); margin: 0 0 var(--sp-5); }
+.sbhead { display: flex; align-items: center; gap: var(--sp-3); width: 100%; text-align: left;
+  font-family: inherit; font-size: var(--fs-12); cursor: pointer; color: var(--text-3);
+  background: transparent; border: 0; padding: var(--sp-4) var(--sp-5); }
+.sbhead:hover { color: var(--text-value); background: var(--bg-soft, transparent); }
+.sbhead .caret { color: var(--line-mute); width: 1em; }
+.sbhead b { color: var(--text-5); font-weight: 400; }
+.sbhead .sbhint { color: var(--text-6); font-size: var(--fs-11); margin-left: auto; }
+.sbbody { padding: 0 var(--sp-5); border-top: var(--bw) solid var(--line-faint); }
+.sbbody[hidden] { display: none; }
+
 /* 双列字段网格：同一行的两列基线对齐。要点：
    · .row 内容顶部对齐（align-items:start），标签固定为「单行控件高度」的盒子并居中，
      因此两列的标签与首行控件始终落在同一条线上；长提示只向下撑高本行 .rval，
@@ -1094,6 +1108,63 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
   return { view: view, switchGroup: switchGroup, activeFields: activeFields };
 });
 /* EDITOR_GROUPS_END */
+
+/* 二级折叠块纯逻辑（批15 #8 · 无 DOM 依赖；浏览器挂 globalThis.EditorBlocks，node 走 module.exports）。
+ * 输入 = 后端 entry_detail 的 `blocks`（{分组名: [{name,label,count,collapsed,keys}]}）与
+ * EditorGroups.view 的分组字段列表。语义：把每个分组视图拆成「主块 + 命名折叠块」，
+ * 只改视图的展开状态，**绝不触碰草稿**（字段键仍由 EditorDraft 按 key 持有）。
+ * 通用性：框架不认任何模块/字段名——块名/标签全部来自后端元数据计划。 */
+/* EDITOR_BLOCKS_BEGIN */
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) { module.exports = factory(); }
+  else { root.EditorBlocks = factory(); }
+})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+  function labelOf(b) {
+    var name = b && b.name != null ? String(b.name) : "";
+    var label = b && b.label ? String(b.label) : "";
+    return label || name;
+  }
+  function isMain(b) { return !(b && b.name); }
+  // 分组名 → 该分组的块列表（后端未给计划时：整组一个展开主块，行为与不折叠一致）。
+  function blocksFor(groupName, blocks) {
+    var plan = blocks || {};
+    var raw = plan[String(groupName || "")];
+    if (!raw || !raw.length) {
+      return [{ name: "", label: "", count: 0, collapsed: false, keys: [] }];
+    }
+    return raw.slice();
+  }
+  // 视图状态：{ name: {collapsed: bool} }（只存展开状态，字段仍按 key 在草稿里）。
+  function initState(blocks) {
+    var st = {};
+    (blocks || []).forEach(function (b) {
+      if (!isMain(b)) { st[String(b.name)] = !!b.collapsed; }
+    });
+    return st;
+  }
+  function collapsed(state, b) {
+    if (isMain(b)) { return false; }
+    var s = String(b.name);
+    if (state && Object.prototype.hasOwnProperty.call(state, s)) { return !!state[s]; }
+    return !!b.collapsed;
+  }
+  function toggle(state, b) {
+    var s = String(b.name);
+    state[s] = !collapsed(state, b);
+    return state;
+  }
+  // 主块字段常驻；命名块按折叠状态给 body 是否 hidden（字段仍全部返回，便于按需渲染/统计）。
+  function view(blocks, state) {
+    return (blocks || []).map(function (b) {
+      return { name: String(b.name || ""), label: labelOf(b), count: Number(b.count || 0),
+               keys: (b.keys || []).slice(), main: isMain(b),
+               collapsed: collapsed(state, b) };
+    });
+  }
+  return { blocksFor: blocksFor, initState: initState, collapsed: collapsed,
+           toggle: toggle, view: view, isMain: isMain, labelOf: labelOf };
+});
+/* EDITOR_BLOCKS_END */
 
 /* 列表字段纯逻辑（批4 · 可增删行表格；无 DOM 依赖，node 下走 module.exports）。
  * 语义：行 = 元素元数据的实例；增行用元数据 default 初始化；删行/改值都只产出新数组，
@@ -3594,6 +3665,41 @@ function refreshRollbackButton() {
   el("btn-rollback").disabled = rollbackDisabled(state.backup, state.editable, state.busy);
 }
 
+// 批15 #8：单个分组页签的内容——按后端「折叠块计划」出主块（常驻）+ 命名折叠块。
+// 通用机制：块名/标签/键全部来自 `blocks`（元数据计划），框架不认任何模块/字段名；
+// 折叠只是 <div hidden>，字段仍在 DOM 里（保存/草稿按字段键持有，跨块编辑不丢）。
+function groupPaneHtml(g, i, blocksMap) {
+  var hidden = (i === 0) ? "" : " hidden";
+  if (g.empty) {
+    return '<div class="gpane"' + hidden + ' data-g="' + i + '">'
+      + '<div class="gempty">该分组暂无字段（元数据声明了此分组，本条目里没有字段落在其中）。</div>'
+      + "</div>";
+  }
+  var byKey = {};
+  g.fields.forEach(function (f) { byKey[f.key] = f; });
+  var body = "";
+  EditorBlocks.blocksFor(g.name, blocksMap).forEach(function (b) {
+    var fields = (b.keys || []).map(function (k) { return byKey[k]; })
+      .filter(function (f) { return !!f; });
+    if (!fields.length) { return; }
+    if (EditorBlocks.isMain(b)) {
+      body += '<div class="rows2">' + fields.map(fieldRow).join("") + "</div>";
+      return;
+    }
+    body += '<section class="subblk" data-sb="' + esc(b.name) + '">'
+      + '<button type="button" class="sbhead" data-sbtoggle="' + esc(b.name)
+      + '" aria-expanded="false" title="'
+      + esc("展开 / 收起「" + b.label + "」子块（" + fields.length + " 个字段）") + '">'
+      + '<span class="caret">\u25b8</span>' + esc(b.label)
+      + " <b>" + fields.length + "</b>"
+      + '<span class="sbhint">点开展开</span></button>'
+      + '<div class="sbbody" hidden>'
+      + '<div class="rows2">' + fields.map(fieldRow).join("") + "</div>"
+      + "</div></section>";
+  });
+  return '<div class="gpane"' + hidden + ' data-g="' + i + '">' + body + "</div>";
+}
+
 function renderDetail(d) {
   // 退出新建态：主表单草稿指针还原（新建草稿由 discardDraft 负责清空）
   state.newEntry = null; state.newDraft = null; state.newIdTouched = false;
@@ -3653,11 +3759,7 @@ function renderDetail(d) {
   html += tbar;
 
   groupTabs.forEach(function (g, i) {
-    html += '<div class="gpane"' + (i === 0 ? "" : " hidden") + ' data-g="' + i + '">'
-      + (g.empty
-        ? '<div class="gempty">该分组暂无字段（元数据声明了此分组，本条目里没有字段落在其中）。</div>'
-        : '<div class="rows2">' + g.fields.map(fieldRow).join("") + "</div>")
-      + "</div>";
+    html += groupPaneHtml(g, i, d.blocks || {});
   });
   assoc.forEach(function (a, ai) {
     var gi = groupTabs.length + ai;
@@ -3677,6 +3779,7 @@ function renderDetail(d) {
   el("p-body").dataset.fctx = "main";
   renderCtx = MAIN_CTX;
   bindTabs();
+  bindSubBlocks();
   bindControls();
   bindObjSections(el("p-body"));
   bindOpenKeySections(el("p-body"));
@@ -3795,6 +3898,24 @@ function bindTabs() {
       });
       helpHideDom();  // 切组后原字段可能不可见：关掉说明卡，避免悬空
       markDirty();  // 跨组编辑过的字段仍标脏、未保存计数不变
+    });
+  });
+}
+
+// 批15 #8：折叠块展开/收起（纯视图；不触碰草稿、不触发校验）。展开状态只活在当次渲染。
+function bindSubBlocks() {
+  Array.prototype.forEach.call(el("p-body").querySelectorAll(".sbhead"), function (btn) {
+    btn.addEventListener("click", function () {
+      var blk = btn.closest(".subblk");
+      if (!blk) { return; }
+      var body = blk.querySelector(".sbbody");
+      var carets = btn.querySelector(".caret");
+      var open = body ? !!body.hidden : false;   // 当前是收起 → 本次点开
+      if (body) { body.hidden = !open; }
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+      if (carets) { carets.textContent = open ? "\u25be" : "\u25b8"; }
+      helpHideDom();   // 收起后原字段可能不可见：关掉说明卡，避免悬空
+      markDirty();
     });
   });
 }

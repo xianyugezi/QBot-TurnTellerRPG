@@ -219,6 +219,11 @@ class FieldMeta:
     #   此时字段本身的 type/required/校验口径**完全不变**（避免未注册 kind 被泛型 R-4 误拦）。
     # 缺省空 = 不用（行为与既有完全一致）；尾部默认值，既有 FieldMeta 构造零改动。
     options_ref: str = ""
+    # 编辑器重写批15 #8：字段「二级分组 / 折叠块」声明（页签 group 之下再分可折叠子块，
+    # 减少长模块滚动）。与 group/multiline 同属「编辑器显示维度」：只影响界面折叠块，
+    # 不影响校验器判定；缺省空 = 由所属模块的 ModuleMeta.field_subgroups 兜底，
+    # 仍无声明 → 归入该分组的主块（不折叠）。尾部默认值，既有 FieldMeta 构造零改动。
+    subgroup: str = ""
 
 
 @dataclass(frozen=True)
@@ -261,6 +266,16 @@ class ModuleMeta:
     # 仍由既有校验器（R-5 命名空间唯一 + key_regex）裁定，本层不新写规则。
     id_rule: str = ""
     id_prefix: str = ""
+    # 编辑器重写批15 #8：模块级「二级分组表」——字段键 → 折叠子块名（页签 group 之下再分组）。
+    # 可覆盖 fields 里未登记的键（真实内容包常见：键未登记但条目里存在 → 仍能落进正确子块，
+    # 而不是掉进主块）。缺省空表 = 本模块无二级分组声明 → 全字段归主块（行为同现状）。
+    # 与 group_order/group_labels 同属「编辑器显示维度」，不影响校验（校验器不读本项）。
+    field_subgroups: Mapping[str, str] = field(default_factory=dict)
+    # 折叠子块的显示顺序（元数据决定；缺省空 → 按字段首次落入子块的顺序）。仅影响界面。
+    subgroup_order: Tuple[str, ...] = ()
+    # 折叠子块的「显示名」表（子块键 → 界面显示名）；缺省空 → 显示名即子块键本身。
+    # 编辑器不写死任何子块词（如「更多字段」由声明给出，框架只提供兜底文案）。
+    subgroup_labels: Mapping[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

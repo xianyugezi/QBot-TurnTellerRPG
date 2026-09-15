@@ -107,12 +107,16 @@ def create_app(pack: Optional[str] = None, root: Optional[str] = None,
         return api.entry_index(pack_id, root=content_root)
 
     @app.get("/api/pack/{pack_id}/module/{module}/new")
-    def api_new_entry(pack_id: str, module: str, name: Optional[str] = None):  # type: ignore[no-untyped-def]
-        return api.new_entry_detail(pack_id, module, root=content_root, name=name)
+    def api_new_entry(pack_id: str, module: str, name: Optional[str] = None,  # type: ignore[no-untyped-def]
+                      preset: Optional[str] = None):
+        return api.new_entry_detail(pack_id, module, root=content_root, name=name,
+                                    preset=preset)
 
     @app.get("/api/pack/{pack_id}/module/{module}/suggest_id")
-    def api_suggest_id(pack_id: str, module: str, name: Optional[str] = None):  # type: ignore[no-untyped-def]
-        return api.suggest_id(pack_id, module, root=content_root, name=name)
+    def api_suggest_id(pack_id: str, module: str, name: Optional[str] = None,  # type: ignore[no-untyped-def]
+                       mode: Optional[str] = None, preset: Optional[str] = None):
+        return api.suggest_id(pack_id, module, root=content_root, name=name,
+                              mode=mode, preset=preset)
 
     @app.get("/api/pack/{pack_id}/entry/{module}/{entry_id}/refs")
     def api_entry_refs(pack_id: str, module: str, entry_id: str):  # type: ignore[no-untyped-def]
@@ -143,7 +147,7 @@ def create_app(pack: Optional[str] = None, root: Optional[str] = None,
         body = payload or {}
         return editor_ops.create_entry(
             pack_id, module, body.get("entry_id"), body.get("patch") or {},
-            root=content_root, role=app.state.role)
+            root=content_root, role=app.state.role, preset=body.get("preset"))
 
     @app.post("/api/pack/{pack_id}/module/{module}/id_check")
     def api_check_id(pack_id: str, module: str,

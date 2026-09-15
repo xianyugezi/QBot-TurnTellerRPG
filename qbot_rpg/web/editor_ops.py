@@ -490,11 +490,12 @@ def save_entry(pack: object, module: object, entry_id: object, patch: object, *,
 # 批6：新增条目（模块级）——建议 ID 唯一性 → 元数据默认值 → 批2 同一落盘链路
 # =====================================================================================
 def _plan_create(pack: object, module: object, entry_id: str, patch: object,
-                 root: Optional[object], meta: Optional[FieldMetaTable]) -> Any:
-    """新增条目的纯计算规划：定位模块 → 补默认值/补丁 → 生成整包视图 → 跑校验器。"""
+                 root: Optional[object], meta: Optional[FieldMetaTable],
+                 preset: object = "") -> Any:
+    """新增条目的纯计算规划：定位模块 → 补默认值（含预设）/补丁 → 生成整包视图 → 跑校验器。"""
     if not isinstance(patch, Mapping):
         raise api.BadRequest("改动内容形态非法（应为「字段 → 值」对象）。")
-    info = api.new_entry_slot(pack, module, entry_id, root=root)
+    info = api.new_entry_slot(pack, module, entry_id, root=root, preset=preset)
     etype = str(info["entry_type"])
     id_field = str(info["id_field"])
     allowed = [str(k) for k in info["base"]]
@@ -522,7 +523,8 @@ def _plan_create(pack: object, module: object, entry_id: str, patch: object,
 
 def create_entry(pack: object, module: object, entry_id: object, patch: object, *,
                  root: Optional[object] = None, role: object = ROLE_OWNER,
-                 meta: Optional[FieldMetaTable] = None) -> Dict[str, Any]:
+                 meta: Optional[FieldMetaTable] = None,
+                 preset: object = "") -> Dict[str, Any]:
     """新增条目唯一入口：ID 唯一性红拦 → 校验 → 备份 → 原子写 → 回读复核（同批2 链路）。
 
     · ID 为空/非法/同模块或同命名空间重复 → ok=false 且零文件改动（红拦）；
@@ -545,7 +547,7 @@ def create_entry(pack: object, module: object, entry_id: object, patch: object, 
         env["id_check"] = check
         return env
 
-    info, content, report = _plan_create(pack, module, eid, patch, root, meta)
+    info, content, report = _plan_create(pack, module, eid, patch, root, meta, preset)
     reds, yellows = _split_report(report, info)
     # 黄提示只留新条目自身（同模块其他条目的黄提示与本次新增无关）
     yellows = _related_to_slot(yellows, info, str(info["module"]))

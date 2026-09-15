@@ -725,6 +725,8 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
 .newid .nid-st.ok { color: var(--text-4); }
 .newid .nid-hint { flex-basis: 100%; color: var(--text-4); font-size: var(--fs-11);
   line-height: var(--lh-ex); }
+.newid .nid-note { flex-basis: 100%; color: var(--warn); font-size: var(--fs-11);
+  line-height: var(--lh-ex); }
 .newfoot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3);
   margin: var(--sp-4) var(--sp-6); }
 .newfoot .nfn { color: var(--text-5); font-size: var(--fs-11); }
@@ -1729,8 +1731,8 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
     var r = norm(rule);
     var p = prefix || "前缀";
     if (r === "slug") { return "名称转 slug（英文小写 + 下划线）"; }
-    if (r === "prefix_seq") { return "前缀 + 递增序号（如 " + p + "_1）"; }
-    return "自动：名称转 slug；取不出英文则「" + p + " + 序号」";
+    if (r === "prefix_seq") { return "前缀 + 递增序号（如 " + p + "_001）"; }
+    return "默认：前缀 + 递增序号（如 " + p + "_001）；可在名称填好后点「拼音 id」按中文名生成";
   }
   // 引用者人话：「<模块显示名>「<条目名>」的「<字段中文名>」引用了它」
   function referrerText(r) {
@@ -3597,15 +3599,24 @@ function openNewEntry() {
 
 function newIdentHtml(d) {
   var rule = EditorEntry.ruleText((d.id_rule || {}).rule, (d.id_rule || {}).prefix);
+  // 批16 #7：拼音是**可选附加**（默认仍「前缀 + 序号」）；环境未装库时不显示按钮（不报错）。
+  var pin = d.pinyin_available
+    ? '<button type="button" class="ladd" id="btn-suggest-pinyin"'
+      + ' title="按当前名称的拼音生成一个不重复的 ID；多音字或取不出拼音时会自动回落'
+      + '「前缀 + 序号」并在下方说明">拼音 id</button>'
+    : "";
   return '<div class="newid">'
     + '<span class="nidlab">条目 ' + esc(d.id_field_label || d.id_field) + "（ID）</span>"
     + '<input class="cin" id="new-id" type="text" autocomplete="off" spellcheck="false"'
-    + ' value="' + esc(d.suggested_id || "") + '" placeholder="英文小写 + 下划线（如 sword_aura）">'
+    + ' value="' + esc(d.suggested_id || "") + '" placeholder="英文小写 + 下划线（如 item_001）">'
     + '<button type="button" class="ladd" id="btn-suggest"'
-    + ' title="按元数据的 ID 规则，用当前名称生成一个不重复的建议 ID">按名称生成</button>'
+    + ' title="按内容包声明的 ID 规则，用当前名称生成一个不重复的建议 ID">按名称生成</button>'
+    + pin
     + '<span class="nid-st" id="new-id-st"></span>'
     + '<div class="nid-hint">' + esc(d.id_hint || "") + " 当前规则：" + esc(rule)
-    + "（建议 ID 可自由修改）。</div></div>";
+    + "（建议 ID 可自由修改）。</div>"
+    + '<div class="nid-note" id="new-id-note" hidden></div>'
+    + "</div>";
 }
 
 function renderNewEntry(d) {
@@ -3678,11 +3689,14 @@ function bindNewIdent() {
   if (inp) {
     inp.addEventListener("input", function () {
       state.newIdTouched = true;   // 用户手动改过 ID：不再自动跟随名称
+      showNewIdNote("");
       updateNewIdStatus();
     });
   }
   var sg = el("btn-suggest");
   if (sg) { sg.addEventListener("click", function () { suggestIdFromName(); }); }
+  var pg = el("btn-suggest-pinyin");
+  if (pg) { pg.addEventListener("click", function () { suggestIdFromName("pinyin"); }); }
   var cancel = el("btn-new-cancel");
   if (cancel) {
     cancel.addEventListener("click", function () {
@@ -3734,17 +3748,29 @@ function refreshCreateButton() {
   btn.disabled = !state.editable || state.busy || !st.ok;
 }
 
-function suggestIdFromName() {
+function showNewIdNote(note) {
+  var box = el("new-id-note");
+  if (!box) { return; }
+  box.textContent = note || "";
+  box.hidden = !note;
+}
+
+function suggestIdFromName(mode) {
   if (!state.newEntry) { return Promise.resolve(); }
   var nameField = state.newEntry.name_field;
   var nf = nameField ? el("p-body").querySelector('[data-key="' + nameField + '"]') : null;
   var name = nf ? nf.value : "";
-  return api("/api/pack/" + enc(state.pack) + "/module/" + enc(state.module)
-    + "/suggest_id?name=" + enc(name))
+  var url = "/api/pack/" + enc(state.pack) + "/module/" + enc(state.module)
+    + "/suggest_id?name=" + enc(name);
+  var presetId = String(state.newEntry.preset || "");
+  if (presetId) { url += "&preset=" + enc(presetId); }
+  if (mode === "pinyin") { url += "&mode=pinyin"; }
+  return api(url)
     .then(function (d) {
       var inp = el("new-id");
       if (inp) { inp.value = d.suggested_id || ""; }
       state.newIdTouched = false;
+      showNewIdNote(d.note || "");
       updateNewIdStatus();
     }).catch(function () { /* 建议失败不阻断：用户可手填 ID */ });
 }

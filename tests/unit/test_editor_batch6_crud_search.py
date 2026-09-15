@@ -146,27 +146,46 @@ def test_slugify_only_ascii_no_pinyin() -> None:
 
 def test_suggest_entry_id_auto_and_declared_rules() -> None:
     mm = META.module("widgets")
-    assert api.suggest_entry_id("widgets", mm, "Sword Aura", set()) == "sword_aura"
-    assert api.suggest_entry_id("widgets", mm, "御剑", set()) == "widget_1"   # 前缀=kind
-    assert api.suggest_entry_id("widgets", mm, "御剑", {"widget_1", "widget_2"}) == "widget_3"
-    # 重复 slug → 追加序号
-    assert api.suggest_entry_id("widgets", mm, "Sword Aura", {"sword_aura"}) == "sword_aura_2"
+    # 批16 #7 默认 =「前缀 + 序号」（零填充 3 位；前缀=kind）；名称不再默认走 slug
+    assert api.suggest_entry_id("widgets", mm, "Sword Aura", set()) == "widget_001"
+    assert api.suggest_entry_id("widgets", mm, "御剑", set()) == "widget_001"
+    # 取同前缀现有最大序号 + 1（识别零填充与非零填充两种写法）
+    assert api.suggest_entry_id("widgets", mm, "御剑", {"widget_001", "widget_002"}) == "widget_003"
+    assert api.suggest_entry_id("widgets", mm, "御剑", {"widget_0007"}) == "widget_008"
+    # 包声明前缀优先 + 自定义宽度；非法字符归一（小写 + 下划线）
+    assert api.suggest_entry_id("widgets", mm, "X", set(), id_prefix="mat", id_width=2) == "mat_01"
+    assert api.suggest_entry_id(
+        "widgets", mm, "X", set(), id_prefix="My Prefix!") == "my_prefix_001"
     # 声明 prefix_seq → 一律前缀+序号（即使名称能出 slug）
     seq = ModuleMeta(entry_type="list", id_rule="prefix_seq", id_prefix="fx")
-    assert api.suggest_entry_id("m", seq, "Sword Aura", set()) == "fx_1"
-    # 声明 slug → 名称优先；取不出 slug 仍回退序号
+    assert api.suggest_entry_id("m", seq, "Sword Aura", set()) == "fx_001"
+    # 声明 slug → 名称优先（重复追加序号）；取不出 slug 仍回退前缀+序号
     slug = ModuleMeta(entry_type="list", id_rule="slug", id_prefix="fx")
     assert api.suggest_entry_id("m", slug, "Sword Aura", set()) == "sword_aura"
-    assert api.suggest_entry_id("m", slug, "御剑", set()) == "fx_1"
+    assert api.suggest_entry_id("m", slug, "Sword Aura", {"sword_aura"}) == "sword_aura_2"
+    assert api.suggest_entry_id("m", slug, "御剑", set()) == "fx_001"
+
+
+def test_suggest_entry_id_module_derived_prefix_when_nothing_declared() -> None:
+    # 无任何前缀声明（无 id_prefix/kind）→ 由模块 id 归一推导
+    assert api.suggest_entry_id("My-Module", None, "x", set()) == "my_module_001"
+    # 同前缀冲突 → 继续递增直到唯一
+    assert api.suggest_entry_id("m", None, "x", {"m_001", "m_002"}) == "m_003"
+    assert api.suggest_entry_id("m", None, "x", {"entry_003"}) == "m_001"
 
 
 def test_id_rule_spec_declared_vs_auto() -> None:
     auto = api.id_rule_spec("widgets", META.module("widgets"))
     assert auto["rule"] == api.ID_RULE_AUTO and auto["declared"] is False
     assert auto["prefix"] == "widget"
+    assert auto["width"] == api.ID_WIDTH_DEFAULT
     dec = api.id_rule_spec("m", ModuleMeta(id_rule="slug", id_prefix="FX"))
     assert dec["rule"] == "slug" and dec["declared"] is True
     assert dec["prefix"] == "fx"   # 前缀 slug 归一
+    # 包声明前缀/宽度覆盖框架兜底
+    ov = api.id_rule_spec("m", ModuleMeta(id_rule="slug", id_prefix="FX"),
+                          id_prefix="Mat", id_width=4)
+    assert ov["prefix"] == "mat" and ov["width"] == 4
     # 不认识的规则 → 自动（不臆造行为）
     bad = api.id_rule_spec("m", ModuleMeta(id_rule="nope"))
     assert bad["rule"] == api.ID_RULE_AUTO
@@ -177,7 +196,8 @@ def test_id_rule_spec_declared_vs_auto() -> None:
 # =====================================================================================
 def test_new_entry_detail_defaults_and_id_separate(pack_root: Path) -> None:
     d = api.new_entry_detail("pack_u", "widgets", root=pack_root, name="Sword Aura")
-    assert d["is_new"] is True and d["suggested_id"] == "sword_aura"
+    assert d["is_new"] is True and d["suggested_id"] == "widget_001"
+    assert "pinyin_available" in d and d["presets"] == []
     assert d["id_field"] == "id" and d["id_field_label"] == "标识"
     # ID 单独渲染：字段网格里不重复出 id
     assert all(f["key"] != "id" for f in d["fields"])
@@ -197,7 +217,7 @@ def test_new_entry_detail_defaults_and_id_separate(pack_root: Path) -> None:
 
 def test_new_entry_detail_chinese_name_falls_back_to_seq(pack_root: Path) -> None:
     d = api.new_entry_detail("pack_u", "widgets", root=pack_root, name="御剑")
-    assert d["suggested_id"] == "widget_1"
+    assert d["suggested_id"] == "widget_001"
 
 
 def test_check_entry_id_paths(pack_root: Path) -> None:
@@ -378,9 +398,10 @@ def test_entry_index_groups_by_module(pack_root: Path) -> None:
 
 def test_suggest_id_endpoint_data(pack_root: Path) -> None:
     out = api.suggest_id("pack_u", "widgets", root=pack_root, name="Sword Aura")
-    assert out["suggested_id"] == "sword_aura" and out["id_hint"]
+    assert out["suggested_id"] == "widget_001" and out["id_hint"]
+    assert out["id_rule"]["width"] == 3 and out["mode"] == api.ID_MODE_PREFIX_SEQ
     out2 = api.suggest_id("pack_u", "widgets", root=pack_root, name="Sword Aura")
-    assert out2["suggested_id"] == "sword_aura"   # 只读，不落盘、不占用
+    assert out2["suggested_id"] == "widget_001"   # 只读，不落盘、不占用
 
 
 # =====================================================================================
@@ -474,8 +495,8 @@ def test_js_id_status_instant_uniqueness(entry_js: Dict[str, Any]) -> None:
 
 
 def test_js_human_wording(entry_js: Dict[str, Any]) -> None:
-    assert "slug" in entry_js["ruleAuto"] and "widget" in entry_js["ruleAuto"]
-    assert "widget_1" in entry_js["ruleSeq"]
+    assert "widget_001" in entry_js["ruleAuto"]
+    assert "widget_001" in entry_js["ruleSeq"]
     assert entry_js["refText"] == "其他「归属者」的「归属」引用了它"
 
 
@@ -608,10 +629,10 @@ def test_http_entry_index_and_new_and_suggest(http_client: Any) -> None:
     idx = http_client.get("/api/pack/http_pack/entry-index").json()
     assert idx["total"] == 6
     new = http_client.get("/api/pack/http_pack/module/widgets/new?name=Sword%20Aura").json()
-    assert new["suggested_id"] == "sword_aura" and new["is_new"] is True
+    assert new["suggested_id"] == "widget_001" and new["is_new"] is True
     assert all(f["key"] != "id" for f in new["fields"])
     sug = http_client.get("/api/pack/http_pack/module/widgets/suggest_id?name=Sword%20Aura").json()
-    assert sug["suggested_id"] == "sword_aura"
+    assert sug["suggested_id"] == "widget_001"
 
 
 def test_http_id_check_and_create_and_refs_and_delete(http_client: Any, tmp_path: Path) -> None:

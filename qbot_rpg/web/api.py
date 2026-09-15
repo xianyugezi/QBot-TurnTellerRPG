@@ -2668,13 +2668,22 @@ def ref_options(pack: object, target: object, root: Optional[object] = None,
 # 批6：新增/删除条目 + ID 生成 + 检索（通用：规则/默认值/引用全部来自元数据）
 # =====================================================================================
 # ID 建议规则的元数据词表（ModuleMeta.id_rule）：缺省自动，声明了就依声明。
-ID_RULE_AUTO = ""              # 自动：名称 slug 优先；取不出 slug → 前缀 + 递增序号
-ID_RULE_SLUG = "slug"          # 名称 → 英文小写 + 下划线
+# 批16 #7 口径（用户拍板）：**默认 =「前缀 + 序号」（前缀_001，序号零填充）**；
+# 名称能出英文 slug 时不再是默认（包声明 id_rule="slug" 才走 slug）；
+# 拼音为**可选附加**（前端「按中文名生成拼音 id」按钮），默认仍前缀 + 序号。
+ID_RULE_AUTO = ""              # 自动：默认「前缀 + 递增序号」（与 prefix_seq 同实现）
+ID_RULE_SLUG = "slug"          # 名称 → 英文小写 + 下划线（取不出 slug 才回退前缀+序号）
 ID_RULE_PREFIX_SEQ = "prefix_seq"  # 前缀 + 递增序号
 ID_RULES: Tuple[str, ...] = (ID_RULE_AUTO, ID_RULE_SLUG, ID_RULE_PREFIX_SEQ)
+# 生成模式（`suggest_id?mode=`）：缺省前缀+序号；pinyin=按名称拼音（可选附加）。
+ID_MODE_PREFIX_SEQ = "prefix_seq"
+ID_MODE_PINYIN = "pinyin"
+# 序号零填充宽度：与包声明层同一口径（缺省 3 位）。
+ID_WIDTH_DEFAULT = pack_meta.ID_WIDTH_DEFAULT
 # 新建条目时给非技术用户的人话说明（框架级文案，不含任何业务字段名）。
-ID_HINT = ("ID 是内容之间互相引用的名字，建议用英文小写 + 下划线（如 sword_aura）；"
-           "它在同模块内必须唯一，建好后尽量不要改。")
+ID_HINT = ("ID 是内容之间互相引用的名字；默认按「前缀 + 序号」生成（如 item_001），"
+           "也可以在名称填好后点「按中文名生成拼音 id」。它在同模块内必须唯一，"
+           "生成结果会直接填进输入框，可自由修改，建好后尽量不要改。")
 # ID 形态底线（建议而非硬规则）：非空、无空白、无路径分隔符、长度可控。
 _ID_SAFE = re.compile(r"^[^\s/\\]{1,128}$")
 
@@ -2694,50 +2703,162 @@ def _module_prefix(module: str, mmeta: Optional[ModuleMeta]) -> str:
     return slugify(module) or str(module)
 
 
-def id_rule_spec(module: str, mmeta: Optional[ModuleMeta]) -> Dict[str, Any]:
-    """ID 建议规则（界面展示 + 生成用；未声明/不识别 → 自动规则）。"""
+def _id_width_of(value: object) -> Optional[int]:
+    """序号零填充宽度归一：1..12 的整数；非法/缺省 → None（由调用方走下一级兜底）。"""
+    if isinstance(value, bool) or not isinstance(value, int):
+        return None
+    return value if 1 <= value <= pack_meta.ID_WIDTH_MAX else None
+
+
+def id_rule_spec(module: str, mmeta: Optional[ModuleMeta], *,
+                 id_prefix: object = "", id_width: object = None) -> Dict[str, Any]:
+    """ID 建议规则（界面展示 + 生成用；未声明/不识别 → 自动规则）。
+
+    前缀来源优先级（批16 #7，**包声明优先**）：
+      调用方传入（预设声明）> 包 `field_meta.json.id_prefix[模块]` >
+      框架 `ModuleMeta.id_prefix` > `ModuleMeta.kind` > 模块名；
+    未声明任何一项时由**模块 id 归一推导**（小写 + 非字母数字转下划线）。
+    宽度：预设声明 > 包 `id_width[模块]` > 缺省 3 位。
+    """
     raw = str(mmeta.id_rule).strip() if mmeta is not None else ""
     rule = raw if raw in ID_RULES else ID_RULE_AUTO
+    prefix = slugify(id_prefix) or _module_prefix(module, mmeta)
+    width = _id_width_of(id_width)
     return {
         "rule": rule,
         "declared": bool(raw),
-        "prefix": _module_prefix(module, mmeta),
+        "prefix": prefix,
+        "width": width if width is not None else ID_WIDTH_DEFAULT,
         "rules": list(ID_RULES),
     }
 
 
+def _unique_slug(base: str, used: set) -> str:
+    """slug 查重：重复 → `base_2`、`base_3`…（与既有 ID 规则一致）。"""
+    if base and base not in used:
+        return base
+    n = 2
+    while f"{base}_{n}" in used:
+        n += 1
+    return f"{base}_{n}"
+
+
+def _sequential_id(prefix: str, used: set, width: int) -> str:
+    """「前缀 + 递增序号」：取**同前缀现有 id 的最大序号 + 1**，零填充 `width` 位。
+
+    · 序号识别不区分是否零填充（`mat_1` 与 `mat_001` 都算序号 1）；
+    · 生成的候选一旦与既有 id 相同 → 继续递增直到唯一（冲突递增）；
+    · 序号超过宽度位数时按实际位数输出（不截断）。
+    """
+    pat = re.compile(r"^" + re.escape(prefix) + r"_(\d+)$")
+    mx = 0
+    for eid in used:
+        m = pat.match(eid)
+        if m:
+            mx = max(mx, int(m.group(1)))
+    n = mx + 1
+    while True:
+        cand = f"{prefix}_{n:0{width}d}"
+        if cand not in used:
+            return cand
+        n += 1
+
+
 def suggest_entry_id(module: str, mmeta: Optional[ModuleMeta], name: object,
-                     existing_ids: object = ()) -> str:
+                     existing_ids: object = (), *, id_prefix: object = "",
+                     id_width: object = None) -> str:
     """按规则生成建议 ID（同模块/同命名空间内保证不重复）。
 
-    · rule=prefix_seq（或名称取不出 slug）→ `<前缀>_<递增序号>`；
-    · rule=slug / auto 且名称有 slug → `<slug>`；重复则追加 `_2`、`_3`…
-    生成只依赖元数据与「现有 ID 集合」，不写死任何业务模块/字段名。
+    · 缺省（auto）与 `prefix_seq` → `<前缀>_<递增序号>`（**包声明前缀优先**，零填充 3 位）；
+    · `slug` → 名称转英文 slug；重复 → 追加 `_2`、`_3`…；取不出 slug → 回退前缀+序号。
+    生成只依赖元数据/包声明与「现有 ID 集合」，不写死任何业务模块/字段名；
+    用户仍可在输入框手改——本函数只给**建议值**，不参与校验。
     """
-    spec = id_rule_spec(module, mmeta)
+    spec = id_rule_spec(module, mmeta, id_prefix=id_prefix, id_width=id_width)
     used = {str(x) for x in (existing_ids or ()) if str(x)}
     prefix = spec["prefix"] or "entry"
+    if spec["rule"] == ID_RULE_SLUG:
+        slug = slugify(name)
+        if slug:
+            return _unique_slug(slug, used)
+    return _sequential_id(prefix, used, spec["width"])
 
-    def seq() -> str:
-        n = 1
-        while f"{prefix}_{n}" in used:
-            n += 1
-        return f"{prefix}_{n}"
 
-    def uniq(base: str) -> str:
-        if base and base not in used:
-            return base
-        n = 2
-        while f"{base}_{n}" in used:
-            n += 1
-        return f"{base}_{n}"
+def pinyin_available() -> bool:
+    """拼音附加能力是否可用（`pypinyin` 可导入）；不可用不算错误，默认路径照常。"""
+    try:
+        import importlib.util
+        return importlib.util.find_spec("pypinyin") is not None
+    except Exception:
+        return False
 
-    if spec["rule"] == ID_RULE_PREFIX_SEQ:
-        return seq()
-    slug = slugify(name)
-    if not slug:
-        return seq()
-    return uniq(slug)
+
+def suggest_pinyin_id(module: str, mmeta: Optional[ModuleMeta], name: object,
+                      existing_ids: object = (), *, id_prefix: object = "",
+                      id_width: object = None) -> Dict[str, Any]:
+    """可选附加：按中文名生成拼音 ID（全拼 + 下划线，重复追加 `_2`…）。
+
+    **失败/多音字/无拼音字符/未装库 → 一律回落「前缀 + 序号」并带明确 note**（不报错、
+    不静默）。返回 {suggested_id, used_pinyin, note}；默认路径永不走这里。
+    """
+    spec = id_rule_spec(module, mmeta, id_prefix=id_prefix, id_width=id_width)
+    used = {str(x) for x in (existing_ids or ()) if str(x)}
+    prefix = spec["prefix"] or "entry"
+    fallback = _sequential_id(prefix, used, spec["width"])
+
+    def _fallback(note: str) -> Dict[str, Any]:
+        return {"suggested_id": fallback, "used_pinyin": False, "note": note}
+
+    text = str(name or "").strip()
+    if not text:
+        return _fallback("名称为空，已用「前缀 + 序号」。")
+    try:
+        from pypinyin import Style, pinyin as _pinyin
+    except Exception:
+        return _fallback("当前环境未安装拼音库（pypinyin），已用「前缀 + 序号」。")
+    try:
+        # heteronym=True：逐字给出全部读音 → 多于一个即视为多音字（回落并提示）。
+        syllables = _pinyin(text, style=Style.NORMAL, heteronym=True)
+    except Exception as exc:  # 转换异常 → 回落，不抛给调用方
+        return _fallback(f"拼音转换失败（{exc}），已用「前缀 + 序号」。")
+    picked: List[str] = []
+    for item in syllables:
+        opts = [str(x) for x in (item if isinstance(item, list) else [item]) if str(x).strip()]
+        if not opts:
+            continue
+        if len(opts) > 1:  # 多音字：读音不唯一 → 回落并提示
+            return _fallback("名称含多音字（读音不唯一），已用「前缀 + 序号」。")
+        picked.append(opts[0])
+    base = slugify("_".join(picked))
+    if not base:
+        return _fallback("名称没有可转成拼音的字符，已用「前缀 + 序号」。")
+    return {"suggested_id": _unique_slug(base, used), "used_pinyin": True,
+            "note": f"按名称拼音生成：{base}"}
+
+
+def _preset_of(decl: Optional[pack_meta.PackFieldMeta], module: str,
+               preset: object) -> Optional[Mapping[str, Any]]:
+    """按 id 取包声明的条目预设（无声明/未命中 → None）；机制通用，不写死任何模块名。"""
+    pid = str(preset or "").strip()
+    if decl is None or not pid:
+        return None
+    for item in decl.entry_presets.get(module, ()):
+        if str(item.get("id") or "") == pid:
+            return item
+    return None
+
+
+def _pack_id_policy(decl: Optional[pack_meta.PackFieldMeta], module: str,
+                    preset: object = "") -> Dict[str, Any]:
+    """从包声明解析某模块（或某预设）的 ID 前缀/宽度口径；未声明 → 空/None。"""
+    item = _preset_of(decl, module, preset)
+    if item is not None:
+        return {"id_prefix": str(item.get("id_prefix") or ""),
+                "id_width": _id_width_of(item.get("id_width"))}
+    if decl is None:
+        return {"id_prefix": "", "id_width": None}
+    return {"id_prefix": decl.id_prefix.get(module, ""),
+            "id_width": _id_width_of(decl.id_width.get(module))}
 
 
 def _id_scope_modules(module: str, mmeta: Optional[ModuleMeta],
@@ -2766,20 +2887,45 @@ def _id_entries(pack_dir: Path, manifest: Mapping[str, Any], module: str,
 
 
 def suggest_id(pack: object, module: object, root: Optional[object] = None,
-               name: object = None) -> Dict[str, Any]:
-    """建议 ID（`/…/suggest_id?name=…`）：名称 → 规则 → 不重复的建议 ID。"""
+               name: object = None, mode: object = None,
+               preset: object = None) -> Dict[str, Any]:
+    """建议 ID（`/…/suggest_id?name=…&mode=…&preset=…`）：名称 → 规则 → 不重复的建议 ID。
+
+    · 默认（`mode` 缺省 / prefix_seq）→ 包声明前缀 + 序号（零填充；见 `suggest_entry_id`）；
+    · `mode=pinyin` → **可选附加**：按中文名生成拼音 id；未装库/多音字/失败 → 回落
+      前缀+序号并在 `note` 里**明确提示**（不报错）；
+    · `preset` 指定时用该预设声明的 id_prefix/id_width（包声明优先）。
+    """
     pack_dir = _pack_dir(pack, root)
     manifest = _manifest(pack_dir)
     mod = declared_module(pack, module, root=root)
     table = _pack_meta_table(pack_dir)
     mmeta = table.module(mod)
+    decl = _pack_declaration(pack_dir)
+    policy = _pack_id_policy(decl, mod, preset)
     existing = {eid for _m, eid, _n in _id_entries(pack_dir, manifest, mod, mmeta, table)}
+    requested = str(mode or "").strip()
+    used_pinyin = False
+    note = ""
+    if requested == ID_MODE_PINYIN:
+        picked = suggest_pinyin_id(mod, mmeta, name, existing, **policy)
+        suggested = str(picked["suggested_id"])
+        used_pinyin = bool(picked["used_pinyin"])
+        note = str(picked["note"])
+    else:
+        suggested = suggest_entry_id(mod, mmeta, name, existing, **policy)
+        requested = ID_MODE_PREFIX_SEQ
     return {
         "pack": str(pack), "module": mod,
-        "suggested_id": suggest_entry_id(mod, mmeta, name, existing),
-        "id_rule": id_rule_spec(mod, mmeta),
+        "suggested_id": suggested,
+        "id_rule": id_rule_spec(mod, mmeta, **policy),
         "id_hint": ID_HINT,
         "existing_count": len(existing),
+        "mode": requested,
+        "pinyin_available": pinyin_available(),
+        "used_pinyin": used_pinyin,
+        "note": note,
+        "preset": str(preset or ""),
     }
 
 
@@ -2887,8 +3033,13 @@ def _new_entry_base(mmeta: Optional[ModuleMeta], etype: str, entry_id: str,
 
 
 def _new_entry_defaults(mmeta: Optional[ModuleMeta], etype: str, entry_id: str,
-                        id_field: str) -> Dict[str, Any]:
-    """新条目初始值：其余字段按元数据 default 初始化（缺省无 default → 不写该键）。"""
+                        id_field: str,
+                        preset_defaults: Optional[Mapping[str, Any]] = None) -> Dict[str, Any]:
+    """新条目初始值：其余字段按元数据 default 初始化（缺省无 default → 不写该键）。
+
+    批16 #11：`preset_defaults` = 所选预设声明的初始值，叠加在元数据默认值之上
+    （预设 > 字段元数据默认值）；ID 键一律以本次新建的 entry_id 为准。
+    """
     out: Dict[str, Any] = {}
     if mmeta is None:
         return out
@@ -2898,6 +3049,9 @@ def _new_entry_defaults(mmeta: Optional[ModuleMeta], etype: str, entry_id: str,
                 continue
             if fm.default is not None:
                 out[str(k)] = copy.deepcopy(fm.default)
+        for k, v in (preset_defaults or {}).items():
+            if str(k) != id_field:
+                out[str(k)] = copy.deepcopy(v)
         out[id_field] = entry_id
     else:
         kids: Mapping[str, FieldMeta] = {}
@@ -2910,18 +3064,27 @@ def _new_entry_defaults(mmeta: Optional[ModuleMeta], etype: str, entry_id: str,
         for k, cfm in kids.items():
             if cfm.default is not None:
                 out[str(k)] = copy.deepcopy(cfm.default)
+        for k, v in (preset_defaults or {}).items():
+            out[str(k)] = copy.deepcopy(v)
     return out
 
 
 def new_entry_slot(pack: object, module: object, entry_id: object = "",
-                   root: Optional[object] = None) -> Dict[str, Any]:
-    """新建条目的定位/默认值/字段基表（写链路与新建界面共用；只读）。"""
+                   root: Optional[object] = None,
+                   preset: object = "") -> Dict[str, Any]:
+    """新建条目的定位/默认值/字段基表（写链路与新建界面共用；只读）。
+
+    `preset` = 包声明的条目预设 id（缺省/未命中 → 行为与现状完全一致）：
+    命中时把该预设的 `defaults` 叠加到初始值上（写链路与新建界面同源，保证落盘一致）。
+    """
     pack_dir = _pack_dir(pack, root)
     manifest = _manifest(pack_dir)
     mod = declared_module(pack, module, root=root)
     data = _read_json(pack_dir / f"{mod}.json")
     table = _pack_meta_table(pack_dir)
     mmeta = table.module(mod)
+    decl = _pack_declaration(pack_dir)
+    preset_item = _preset_of(decl, mod, preset)
     etype = _entry_type(mmeta, data)
     id_field = (mmeta.id_field if mmeta is not None and mmeta.id_field else _ID_FIELD)
     eid = str(entry_id or "").strip()
@@ -2944,26 +3107,38 @@ def new_entry_slot(pack: object, module: object, entry_id: object = "",
         "pack_dir": pack_dir, "manifest": manifest, "module": mod,
         "entry_type": etype, "data": data, "mmeta": mmeta,
         "id_field": id_field, "entry_id": eid, "base": base, "slot": slot,
-        "subject": _new_entry_defaults(mmeta, etype, eid, id_field),
+        "preset_item": preset_item,
+        "subject": _new_entry_defaults(
+            mmeta, etype, eid, id_field,
+            (preset_item or {}).get("defaults") if preset_item else None),
     }
 
 
 def new_entry_detail(pack: object, module: object, root: Optional[object] = None,
-                     name: object = None, entry_id: object = None) -> Dict[str, Any]:
-    """新建条目界面数据（`/…/module/{m}/new`）：建议 ID + 默认值字段 + 分组。"""
+                     name: object = None, entry_id: object = None,
+                     preset: object = None) -> Dict[str, Any]:
+    """新建条目界面数据（`/…/module/{m}/new`）：建议 ID + 默认值字段 + 分组 + 预设。
+
+    `preset` = 包声明的条目预设 id（批16 #11；缺省/未命中 → 与现状完全一致）：
+    · 建议 ID 用该预设声明的 id_prefix/id_width；
+    · 初始值叠加该预设 `defaults`；
+    · `presets` 列出本模块可选预设（无声明 → 空数组，前端不出现预设栏）。
+    """
     pack_dir = _pack_dir(pack, root)
     manifest = _manifest(pack_dir)
     declared = _declared_modules(manifest)
     table = _pack_meta_table(pack_dir)
-    info = new_entry_slot(pack, module, entry_id or "", root=root)
+    decl = _pack_declaration(pack_dir)
+    info = new_entry_slot(pack, module, entry_id or "", root=root, preset=preset)
     mod = info["module"]
     mmeta: Optional[ModuleMeta] = info["mmeta"]
     etype = info["entry_type"]
     id_field = info["id_field"]
     prefill = str(info["entry_id"] or "")
     existing = {eid for _m, eid, _n in _id_entries(pack_dir, manifest, mod, mmeta, table)}
+    policy = _pack_id_policy(decl, mod, preset)
     suggested = str(entry_id or "").strip() or prefill or suggest_entry_id(
-        mod, mmeta, name, existing)
+        mod, mmeta, name, existing, **policy)
     base = info["base"]
     subject = dict(info["subject"])
     subject.pop(id_field, None)  # ID 单独渲染，不混进字段网格
@@ -2972,6 +3147,7 @@ def new_entry_detail(pack: object, module: object, root: Optional[object] = None
     groups = _group_summary(fields, mmeta)
     blocks = _block_plan(fields, mmeta)
     labels = _display_labels(manifest, declared, pack_dir)
+    preset_items = decl.entry_presets.get(mod, ()) if decl is not None else ()
     id_fm = None
     if mmeta is not None:
         id_fm = mmeta.fields.get(id_field)
@@ -2985,7 +3161,7 @@ def new_entry_detail(pack: object, module: object, root: Optional[object] = None
         "id_field": id_field,
         "id_field_label": (id_fm.label if id_fm is not None and id_fm.label else id_field),
         "suggested_id": suggested,
-        "id_rule": id_rule_spec(mod, mmeta),
+        "id_rule": id_rule_spec(mod, mmeta, **policy),
         "id_hint": ID_HINT,
         "can_create": bool(suggested) or etype in ("list", "map"),
         "name_field": _NAME_FIELD,
@@ -2994,6 +3170,14 @@ def new_entry_detail(pack: object, module: object, root: Optional[object] = None
         "blocks": blocks,
         "field_count": len(fields),
         "group_count": len(groups),
+        # 批16 #7/#11：拼音附加能力 + 预设清单（不声明预设 → 空数组，界面与现状一致）。
+        "pinyin_available": pinyin_available(),
+        "preset": str(preset or ""),
+        "presets": [
+            {"id": str(p["id"]), "label": str(p["label"]),
+             "help": str(p.get("help") or ""), "field_count": len(p["fields"])}
+            for p in preset_items
+        ],
         "associations": [],
         "association_count": 0,
         "meta_source": META_SOURCE,

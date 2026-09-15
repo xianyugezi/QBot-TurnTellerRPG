@@ -20,3 +20,6 @@ htmlcov/
 coverage.xml
 .hermes/
 .venv
+
+# dsh agent 工作目录（不得入库）
+.jspace/

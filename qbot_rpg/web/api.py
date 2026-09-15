@@ -58,6 +58,8 @@ _MAX_TABLE_ROWS = 200  # 列表字段只读表格最多渲染行数（超出截�
 _UNCONFIGURED = object()
 # 未配置段的界面文案（前端按需取；后端只给稳定标记 unconfigured）。
 UNCONFIGURED_TAG = "未配置 · 框架支持"
+# 批14 #4：元数据未登记子字段的兜底标注（前端字段行内展示；不改任何校验语义）。
+META_UNREGISTERED_NOTE = "元数据未登记，按实际值推断"
 
 
 class EditorError(Exception):
@@ -828,9 +830,14 @@ def readonly_form(field_type: Optional[str]) -> str:
 # 控件形态 → (编辑控件, 是否可编辑)：§三 映射表第二级（唯一实现点）。
 # control 取值（前端只认这个，不认字段类型）：
 #   text / textarea / number / bool / select / ref / listtable / reflist / readonly
-#   condition（条件行编辑器）/ maptable（键值对表格）
+#   condition（条件行编辑器）/ maptable（键值对表格）/ objform（对象子字段表单）
 # 批4 范围：list 升级为可编辑（元素为 obj/标量 → 可增删行表格 listtable；
-# 元素为 ref → 引用多选 reflist）；obj（除列表内联对象）与 map 仍只读展示。
+# 元素为 ref → 引用多选 reflist）。
+# 批14 #4：**对象型子字段可编辑**（`obj` → `objform`）——按框架元数据递归渲染子字段控件
+# （布尔→开关 / 数字→数字框 / 文本→输入框 / 枚举→下拉 / 引用→引用选择器）；元数据未登记
+# 的子字段走兜底控件（按实际值推断 + 标注）。是否「可增删键」只看元数据：登记了子字段的
+# 对象 = 固定 schema（不增删键）；未登记子字段的对象 = 动态键空间（可增删，`open_keys`）。
+# map 仍只读展示（宽容器，键→值混合形态，不在本批范围）。
 # 批5：字段可用 FieldMeta.editor 显式声明控件（condition / maptable），覆盖默认映射；
 # 未声明时行为与批4 完全一致（type → widget → control）。
 _EDIT_BY_WIDGET: Dict[str, Tuple[str, bool]] = {
@@ -839,17 +846,22 @@ _EDIT_BY_WIDGET: Dict[str, Tuple[str, bool]] = {
     "bool": ("bool", True),
     "enum": ("select", True),
     "ref": ("ref", True),
-    "formula": ("text", True),  # 表达式文本；值实为对象时按值形态纠偏为 obj → 只读
+    "formula": ("text", True),  # 表达式文本；值实为对象时按值形态纠偏为 objform
     "list": ("listtable", True),
-    "obj": ("readonly", False),
+    "obj": ("objform", True),
     "map": ("readonly", False),
 }
 EDIT_CONTROLS: Tuple[str, ...] = (
     "text", "textarea", "number", "bool", "select", "ref",
-    "listtable", "reflist", "readonly", "condition", "maptable",
+    "listtable", "reflist", "readonly", "condition", "maptable", "objform",
 )
-# 批次可编辑控件集：显式声明的 condition / maptable 归为可编辑（前端按 control 渲染）。
+# 批次可编辑控件集：显式声明的 condition / maptable / objform 归为可编辑（前端按 control 渲染）。
 _READONLY_CONTROLS: Tuple[str, ...] = ("readonly",)
+# 批14 #4：对象「动态键空间」判定（唯一实现点）——登记了子字段 = 固定 schema（不增删键）；
+# 未登记子字段（fm 缺失或 children 为空）= 开放键空间（可新增/删除子项，走兜底控件）。
+# 纯展示层：只影响是否给「+ 子项 / ✕ 删除」控件，不改 type/required/校验。
+def open_keys_of(fm: Optional[FieldMeta]) -> bool:
+    return fm is None or (fm.type == "obj" and not fm.children)
 
 
 def is_editable_control(control: Optional[str]) -> bool:
@@ -861,7 +873,8 @@ def is_editable_control(control: Optional[str]) -> bool:
 # 列表元素只要含这类子字段，前端就改「块状换行」布局：标量列横排成块首行，嵌套字段各自
 # 成块、占满容器宽度（不再把条件编辑器/键值表格塞进单元格、不再横向滚动 9 列宽表）。
 # 判定只依据 control（§三 映射表的产物），不认任何业务字段名——换包/换模块零改动。
-_NESTED_CONTROLS: Tuple[str, ...] = ("condition", "maptable", "readonly", "listtable")
+_NESTED_CONTROLS: Tuple[str, ...] = ("condition", "maptable", "readonly", "listtable",
+                                     "objform")
 
 
 def is_nested_control(control: Optional[str]) -> bool:
@@ -984,6 +997,7 @@ def _effective_widget(fm: Optional[FieldMeta], value: object) -> str:
     if fm is not None and fm.options_ref:
         return "ref"
     base = _widget_for_type(fm.type if fm is not None else None)
+    unregistered = fm is None or not fm.type
     if value is None:
         return base
     if isinstance(value, bool):
@@ -995,7 +1009,14 @@ def _effective_widget(fm: Optional[FieldMeta], value: object) -> str:
     if isinstance(value, list):
         return "list"
     if isinstance(value, Mapping):
-        return "obj" if base == "obj" else "map"
+        if base == "obj":
+            return "obj"
+        # 批14 #4：元数据未登记类型的映射 → 按对象（objform）渲染，子字段走兜底控件
+        # （按实际值类型推断 + 标注）——一号原则：能编就编，不因缺元数据退化成只读块。
+        # 显式声明 map 的字段（base == "map"）仍按键值映射只读展示，不受影响。
+        if unregistered:
+            return "obj"
+        return "map"
     return base
 
 
@@ -1542,7 +1563,7 @@ def _build_name_index(pack_dir: Path, declared: List[str],
         if not isinstance(data, Mapping):
             continue
         for fkey, fm in mm.fields.items():
-            if fm is None or fm.type not in ("list", "map"):
+            if fm is None or fm.type not in ("list", "map", "obj"):
                 continue
             table = _nested_entry_index(data.get(str(fkey)))
             if table:
@@ -1759,6 +1780,10 @@ def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
         "unit": fm.unit if fm is not None else "",
         "help": fm.help if fm is not None else "",
         "help_card": help_card(key, fm, value),
+        # 批14 #4：元数据未登记子字段 → 兜底控件（按实际值推断）+ 显式标注（一号原则：
+        # 框架登记过就按元数据渲染；数据里多出来、框架没登记的键走兜底也不静默）。
+        "meta_unregistered": fm is None,
+        "meta_note": META_UNREGISTERED_NOTE if fm is None else "",
         "columns": [],
         "rows": [],
     }
@@ -1806,8 +1831,14 @@ def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
                         invalid_cells.append(
                             {"row": i, "key": str(ck), "value": rv})
         desc["invalid_cells"] = invalid_cells
-    elif widget == "obj" and isinstance(value, Mapping):
-        desc["children"] = _object_children(fm, value, mmeta, view, depth + 1)
+    elif widget == "obj":
+        # 批14 #4：对象子字段**始终**按元数据出（登记了但数据未配置 → 未配置态可填），
+        # 再补实际值里多出的键（fm=None → 兜底控件 + 标注）。值缺失/非映射时按空对象渲染。
+        child_value = value if isinstance(value, Mapping) else {}
+        desc["children"] = _object_children(fm, child_value, mmeta, view, depth + 1)
+        # 动态键空间（元数据未登记子字段）→ 前端给「+ 子项 / ✕ 删除」，可增删键；
+        # 登记了子字段 → 固定 schema，只渲染登记项，不增删键（不臆造键）。
+        desc["open_keys"] = open_keys_of(fm)
     elif widget == "map" and isinstance(value, Mapping):
         desc["rows"] = [
             {"key": str(k), "value": v,
@@ -1918,6 +1949,20 @@ def _group_summary(fields: List[Dict[str, Any]],
     ]
 
 
+def _entry_open_keys(mmeta: Optional[ModuleMeta], entry_id: object,
+                     subject: object) -> bool:
+    """条目是否为「动态键空间」（前端给新增/删除子项控件）。
+
+    条件（通用、不认模块名/段名）：对象型模块 + 该段在框架元数据里登记为 `obj` 且
+    **未登记子字段** + 段已配置（未配置段走「整段一值」路径，本身已是可编对象）。
+    纯展示层：只影响是否给「+ 子项 / ✕ 删除」，不改 type/required/校验。
+    """
+    if mmeta is None or subject is _UNCONFIGURED or not isinstance(subject, Mapping):
+        return False
+    fm = mmeta.fields.get(str(entry_id))
+    return bool(fm is not None and fm.type == "obj" and not fm.children)
+
+
 def entry_detail(pack: object, module: object, entry_id: object,
                  root: Optional[object] = None) -> Dict[str, Any]:
     """条目只读详情（`/api/pack/{pack}/entry/{mod}/{id}`）：全字段 + 分组 + 每字段类型。"""
@@ -1941,6 +1986,11 @@ def entry_detail(pack: object, module: object, entry_id: object,
     view = _PackView(pack_dir, manifest)
     base = _entry_base(mmeta, etype, entry_id, subject)
     fields = _build_fields(base, subject, mmeta, view, 0)
+    open_keys = _entry_open_keys(mmeta, entry_id, subject)
+    if open_keys:
+        # 动态键空间的每个子项都可删除（前端给「✕」；删除只改草稿，保存走既有链路）。
+        for f in fields:
+            f["deletable"] = True
     groups = _group_summary(fields, mmeta)
     associations = _association_sections(pack_dir, manifest, declared, entry_id,
                                          subject, mmeta, view)
@@ -1956,6 +2006,8 @@ def entry_detail(pack: object, module: object, entry_id: object,
         # 批13.1：本段框架已登记、包数据尚无 → 前端标「未配置 · 框架支持」，字段全为空待填。
         "unconfigured": unconfigured,
         "unconfigured_tag": UNCONFIGURED_TAG,
+        # 批14 #6①：动态键空间（如 object 段的 obj 字段未登记子字段）→ 前端给「+ 子项 / ✕」。
+        "open_keys": open_keys,
         "fields": fields,
         "groups": groups,
         "associations": associations,
@@ -2045,6 +2097,9 @@ def entry_slot(pack: object, module: object, entry_id: object,
         "name": entry_name,
         "subject": write_subject,
         "unconfigured": unconfigured,
+        # 批14 #6①：动态键空间 → 写链路放行新键（合法性仍由校验器判定；
+        # 见 editor_ops._apply_patch 的 open_keys 参数）。
+        "open_keys": _entry_open_keys(mmeta, entry_id, subject),
         "base": _entry_base(mmeta, etype, entry_id, subject),
         "mmeta": mmeta,
     }
@@ -2523,6 +2578,79 @@ def reference_scan(pack: object, module: object, entry_id: object,
     return out
 
 
+def _collect_target_hits(value: object, fm: Optional[FieldMeta], path: str,
+                         target: str, out: List[Dict[str, Any]]) -> None:
+    """沿字段元数据递归找「引用目标 == target 的字段值」（含 options_ref 展示层引用）。
+
+    与 `_collect_ref_hits` 同源但按**目标命名空间**匹配（不要求 type=ref）——批14 #6 的
+    `items.slot`（type=str + options_ref="settings.slot_defs"）据此纳入引用扫描。
+    """
+    if fm is None:
+        return
+    tgt = _ref_target_of(fm)
+    if tgt == target and fm.type not in ("obj", "list", "map"):
+        if isinstance(value, str) and value:
+            out.append({"path": path, "value": value})
+        return
+    if fm.type == "list" and isinstance(value, list):
+        for i, v in enumerate(value):
+            _collect_target_hits(v, fm.element, f"{path}[{i}]", target, out)
+    elif fm.type == "obj" and isinstance(value, Mapping):
+        for k, v in value.items():
+            child = fm.children.get(str(k)) if fm.children else None
+            _collect_target_hits(v, child, f"{path}.{k}" if path else str(k), target, out)
+    elif fm.type == "map" and isinstance(value, Mapping):
+        for k, v in value.items():
+            _collect_target_hits(v, fm.element, f"{path}.{k}" if path else str(k), target, out)
+
+
+def ref_holders(pack: object, target: object, keys: Optional[object] = None,
+                root: Optional[object] = None,
+                meta: Optional[FieldMetaTable] = None) -> List[Dict[str, Any]]:
+    """列出全包中「引用了命名空间 `target`」的字段（只读；批14 #6③ 删除部位后提示引用者）。
+
+    数据源 = 各模块字段元数据的展示层引用目标（`_ref_target_of`：options_ref 优先于
+    ref_target），递归下钻列表/对象/映射。`keys` 非空时只收值命中这些键的引用者。
+    返回按模块/条目排序的 [{module, module_label, entry_id, entry_name, field,
+    field_label, value}]，供保存/校验链路的黄提示（不硬拦）。
+    """
+    pack_dir = _pack_dir(pack, root)
+    manifest = _manifest(pack_dir)
+    table = meta if meta is not None else _pack_meta_table(pack_dir)
+    declared = _declared_modules(manifest)
+    tgt = str(target or "")
+    wanted = {str(k) for k in keys} if keys else None
+    labels = _display_labels(manifest, declared, pack_dir)
+    out: List[Dict[str, Any]] = []
+    for rel_mod in declared:
+        rel_mmeta = table.module(rel_mod)
+        if rel_mmeta is None:
+            continue
+        rel_data = _read_json(pack_dir / f"{rel_mod}.json")
+        rel_etype = _entry_type(rel_mmeta, rel_data)
+        for eid, ename, subject in _entry_rows(rel_data, rel_mmeta):
+            local: List[Dict[str, Any]] = []
+            base = _entry_base(rel_mmeta, rel_etype, eid, subject)
+            if isinstance(subject, Mapping):
+                for k, v in subject.items():
+                    _collect_target_hits(v, base.get(str(k)), str(k), tgt, local)
+            for h in local:
+                if wanted is not None and str(h.get("value")) not in wanted:
+                    continue
+                out.append({
+                    "module": rel_mod,
+                    "module_label": labels.get(rel_mod) or rel_mod,
+                    "entry_id": eid,
+                    "entry_name": ename,
+                    "field": str(h.get("path") or ""),
+                    "field_label": _path_field_label(rel_mmeta, str(h.get("path") or "")),
+                    "value": str(h.get("value")),
+                })
+    out.sort(key=lambda r: (str(r["module"]), str(r["entry_name"]), str(r["entry_id"]),
+                            str(r["field"])))
+    return out
+
+
 __all__ = [
     "DEFAULT_GROUP",
     "EDIT_CONTROLS",
@@ -2559,7 +2687,9 @@ __all__ = [
     "load_pack_modules",
     "new_entry_detail",
     "new_entry_slot",
+    "open_keys_of",
     "readonly_form",
+    "ref_holders",
     "ref_options",
     "reference_scan",
     "repo_root",

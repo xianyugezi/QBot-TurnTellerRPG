@@ -2,7 +2,8 @@
 
 覆盖任务书「可编辑控件：按 FieldMeta.type 渲染编辑控件」与不变量「映射集中一处」：
   · str/int/float/number/bool/enum/ref → 可编辑控件；批次推进后 list → 可增删行表格
-    （listtable；元素为 ref 时升级为 reflist 引用多选），obj/map → 本批只读；
+    （listtable；元素为 ref 时升级为 reflist 引用多选）；批14 #4 起 obj → objform
+    （对象子字段递归可编辑），map 仍只读；
   · multiline 声明/长文本启发式 → textarea；
   · 描述符（entry_detail）逐字段携带 control/editable（前端只认 control）；
   · editor_ops.py 等编辑器代码不得出现任何内容包业务名（换包零改动）。
@@ -31,7 +32,7 @@ EXPECTED_CONTROL = {
     "enum": "select",
     "ref": "ref",
     "list": "listtable",
-    "obj": "readonly",
+    "obj": "objform",  # 批14 #4：对象子字段可编辑
     "map": "readonly",
     "formula": "text",
 }
@@ -107,7 +108,7 @@ def test_entry_detail_control_per_field(widgets_pack: Path) -> None:
     assert controls["b"] == "bool"
     assert controls["e"] == "select"
     assert controls["r"] == "ref"
-    assert controls["l"] == "listtable" and controls["o"] == "readonly"
+    assert controls["l"] == "listtable" and controls["o"] == "objform"
     assert controls["m"] == "readonly"
     assert controls["t"] == "textarea"  # 元数据 multiline 声明
 

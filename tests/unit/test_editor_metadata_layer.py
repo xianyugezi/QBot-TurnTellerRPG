@@ -229,7 +229,7 @@ def test_unregistered_keys_are_inferred_not_dropped(tmp_path: Path) -> None:
     widgets = {f["key"]: f["widget"] for f in d["fields"]}
     assert widgets["label"] == "text" and widgets["n"] == "number"
     assert widgets["on"] == "bool" and widgets["kids"] == "list"
-    assert widgets["deep"] == "map"
+    assert widgets["deep"] == "obj"  # 批14 #4：未登记映射 → 对象（子字段可编）
     assert d["group_count"] == 1
 
 

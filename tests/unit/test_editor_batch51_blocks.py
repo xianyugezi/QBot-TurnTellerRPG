@@ -131,7 +131,7 @@ def test_scalar_only_list_keeps_table_layout() -> None:
     sp = _list_field("veinborn", "enemies", enemy["id"], "special_actions")
     assert sp["block_layout"] is True
     by = {c["key"]: c for c in sp["columns"]}
-    assert by["trigger"]["nested"] is True and by["trigger"]["control"] == "readonly"
+    assert by["trigger"]["nested"] is True and by["trigger"]["control"] == "objform"
     assert by["post_state"]["nested"] is True
     # 嵌套列表（chains[].actions）→ 也判嵌套
     ch = _list_field("veinborn", "enemies", enemy["id"], "chains")

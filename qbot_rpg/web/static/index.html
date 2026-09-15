@@ -621,6 +621,31 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
 .cadd:hover { background: var(--surface-hover); }
 .cdel:hover { border-color: var(--danger); color: var(--danger); }
 
+/* ---------- 批14 #4/#6：对象子字段编辑（objform）+ 动态键空间增删子项 ---------- */
+.objform { display: flex; flex-direction: column; gap: var(--sp-3); width: 100%;
+  border-left: 2px solid var(--line-accent-dash); padding-left: var(--sp-5); }
+.objform .row.nest { border: 0; padding: 0; }
+.objform .row.nest .rlab { min-width: 120px; }
+.objform .objadd { align-self: flex-start; display: inline-flex; align-items: center;
+  height: var(--h-ctl-sm); padding: 0 var(--sp-4); font-family: inherit;
+  font-size: var(--fs-11); cursor: pointer; background: transparent;
+  border: var(--bw) dashed var(--line-strong); color: var(--accent); }
+.objform .objadd:hover { background: var(--surface-hover); }
+.objdel, .keydel { margin-left: var(--sp-3); padding: 0 var(--sp-3); height: var(--h-ctl-sm);
+  font-family: inherit; font-size: var(--fs-11); cursor: pointer; background: transparent;
+  border: var(--bw) solid var(--line-strong); color: var(--text-5); }
+.objdel:hover, .keydel:hover { border-color: var(--danger); color: var(--danger); }
+.mnote { color: var(--text-5); font-size: var(--fs-11); font-style: italic; }
+.row.deleted { opacity: 0.45; }
+.row.deleted .rval { text-decoration: line-through; }
+.opkeys { display: flex; align-items: center; gap: var(--sp-4); flex-wrap: wrap;
+  margin-top: var(--sp-5); padding-top: var(--sp-4); border-top: var(--bw) dashed var(--line-strong); }
+.keyadd { display: inline-flex; align-items: center; height: var(--h-ctl-sm);
+  padding: 0 var(--sp-4); font-family: inherit; font-size: var(--fs-11); cursor: pointer;
+  background: transparent; border: var(--bw) dashed var(--line-strong); color: var(--accent); }
+.keyadd:hover { background: var(--surface-hover); }
+.opkhint { color: var(--text-5); font-size: var(--fs-11); }
+
 /* ---------- 键值对表格（批5 数值覆盖 / 印记消耗）：键值行 + 增删 ---------- */
 .map-edit { width: 100%; }
 .mrows { display: flex; flex-direction: column; gap: var(--sp-3); }
@@ -1487,6 +1512,8 @@ var EMPTY_TEXT = "（空）";
 // **只读/列表类**统一 `EMPTY_TEXT`；下拉未选另用「（未选择）」。
 // 此前输入框纯空白、只读文案各写各的，全编辑器口径不一。
 var INPUT_EMPTY = "未填写";
+// 批14 #4：元数据未登记子字段的兜底标注（与后端 api.META_UNREGISTERED_NOTE 同文案）。
+var META_UNREGISTERED_HINT = "元数据未登记，按实际值推断";
 
 var state = {
   pack: null, modules: [], module: null, entries: [], entry: null, detail: null,
@@ -1498,7 +1525,9 @@ var state = {
   mergeSections: [], entryModule: null, listLabel: "", fontSize: null,
   // 批13 A/D：左栏 = 框架能力集 ∪ 包声明——views（虚拟聚合视图，如「生活」）+
   // available（框架有而包未启用的模块，未启用态 + 一键启用）
-  views: [], available: []
+  views: [], available: [],
+  // 批14 #6①：当前条目是否为「动态键空间」（可新增/删除子项，如 settings.slot_defs）
+  openKeys: false
 };
 var draft = EditorDraft.newDraft();
 
@@ -3564,6 +3593,8 @@ function renderDetail(d) {
   el("p-id").textContent = d.id; el("p-id").title = d.id;
   resetHelpCards();   // 说明卡注册表随渲染重建（字段行构建时注册 help id）
   syncMainCtx(d);
+  // 批14 #6①：动态键空间（对象型段的 obj 字段未登记子字段）→ 每条子项给删除、底部给新增。
+  state.openKeys = !!d.open_keys;
   state.forms = {};   // 关联分区各条目的草稿随条目详情重建（切换条目已有 canLeave 守卫）
   renderCtx = MAIN_CTX;
 
@@ -3575,6 +3606,7 @@ function renderDetail(d) {
     + '<span class="mi">' + d.field_count + " 个字段</span>"
     + '<span class="mi">' + d.group_count + " 个分组</span>"
     + '<span class="mi">' + (state.editable ? "可编辑" : "只读预览") + "</span>"
+    + (state.openKeys ? '<span class="mi unc">可增删子项</span>' : "")
     + '<span class="src" title="元数据来源：' + esc(d.meta_source) + '">'
     + esc(d.meta_source) + "</span></div>";
   html += '<div id="result" hidden></div>';
@@ -3622,12 +3654,22 @@ function renderDetail(d) {
     html += '<div class="gpane"' + (gi === 0 ? "" : " hidden") + ' data-g="' + gi + '">'
       + assocPaneHtml(a) + "</div>";
   });
+  // 批14 #6①：动态键空间 → 底部「+ 添加子项」（键名 + 兜底控件；只改草稿）。
+  if (state.openKeys && state.editable) {
+    html += '<div class="opkeys"><button type="button" class="keyadd" data-openadd="1"'
+      + ' title="新增一个子项（键名自定；元数据未登记的子字段按实际值推断控件）">'
+      + "+ 添加子项</button>"
+      + '<span class="opkhint">该段是动态键空间（键名由内容定义）：可新增 / 删除子项，'
+      + "保存时仍走同一校验与原子写链路。</span></div>";
+  }
 
   el("p-body").innerHTML = html;
   el("p-body").dataset.fctx = "main";
   renderCtx = MAIN_CTX;
   bindTabs();
   bindControls();
+  bindObjSections(el("p-body"));
+  bindOpenKeySections(el("p-body"));
   bindAssocSections();
   bindHelp();
   state.pendingDrafts = {};   // 已消费（registerForm 回填完毕）
@@ -3748,10 +3790,11 @@ function bindTabs() {
 }
 
 function fieldRow(f) {
-  // 列表型控件（可增删行表格 / 引用列表）标记为跨列：宽字段独占整行，避免多列表格
-  // 被挤在双列网格的右缘（批4 UX）。只按后端 control 判定，框架不认业务字段名。
+  // 列表型控件（可增删行表格 / 引用列表）与对象子字段表单标记为跨列：宽字段独占整行，
+  // 避免多列表格被挤在双列网格的右缘（批4 UX）。只按后端 control 判定，框架不认业务字段名。
   var wide = (f.control === "listtable" || f.control === "reflist"
-    || f.control === "condition" || f.control === "maptable") ? " wide" : "";
+    || f.control === "condition" || f.control === "maptable"
+    || f.control === "objform") ? " wide" : "";
   // 批5.2（V1）：行内提示不再常驻渲染（旧 `.hint` 撑高整行 → 纵向节奏忽松忽紧）。
   // `f.hint` 由后端并入说明卡；只读视图说明经 `view_note` 一并进卡。
   var note = (typeof state !== "undefined" && state.editable && f.editable === false)
@@ -3759,10 +3802,14 @@ function fieldRow(f) {
   var trig = note
     ? { label: f.label, key: f.key, help_card: f.help_card, view_note: note }
     : f;
+  // 批14 #6①：动态键空间 → 每条子项给「✕ 删除」（只改草稿，保存时走既有校验/原子写链路）。
+  var del = (f.deletable && state.editable)
+    ? '<button type="button" class="keydel" data-keydel="' + esc(f.key)
+      + '" title="删除这个子项（只改草稿，保存后生效）">✕</button>' : "";
   return '<div class="row' + wide + '" data-field="' + esc(f.key) + '" data-present="'
     + (f.present ? "true" : "false") + '"><div class="rlab">'
     + helpTriggerHtml(trig, fieldLabelHtml(f.label, f.key))
-    + ' <span class="ftype">' + esc(typeZh(f.type)) + "</span></div>"
+    + ' <span class="ftype">' + esc(typeZh(f.type)) + "</span>" + del + "</div>"
     + '<div class="rval">' + fieldBody(f) + "</div></div>";
 }
 
@@ -3815,6 +3862,8 @@ function editControl(f) {
       return listTableEdit(f);
     case "reflist":
       return refListEdit(f);
+    case "objform":
+      return objFormEdit(f, [], f);
     case "condition":
       return '<div class="cond-edit" data-condfield="' + esc(f.key) + '">'
         + condFieldInner(f, v) + "</div>";
@@ -3862,8 +3911,8 @@ function selectHtml(key, value, options, placeholder, extraAttrs) {
     + selectOptions(value, options, placeholder) + "</select>";
 }
 
-function bindControls() {
-  var body = el("p-body");
+function bindControls(root) {
+  var body = root || el("p-body");
   Array.prototype.forEach.call(body.querySelectorAll("[data-key]"), function (inp) {
     var key = inp.dataset.key;
     var ctx = ctxFromNode(inp);
@@ -3873,6 +3922,28 @@ function bindControls() {
     inp.addEventListener(ev, function () {
       var val = readControl(inp, f);
       EditorDraft.set(ctx.draft, key, val, f.value);
+      if (inp.type === "checkbox") {
+        var t = inp.parentNode.querySelector(".btxt");
+        if (t) { t.textContent = inp.checked ? "是" : "否"; }
+      }
+      if (inp.dataset && inp.dataset.ref) { applyScalarRefWarning(inp); }
+      markDirty();
+    });
+  });
+  // 批14 #4：对象子字段（objform）——嵌套/多层的子控件按「路径」写回整块对象草稿。
+  // 只产生一个顶层改动（整个对象），保存链路与既有字段一致（校验 → 原子写 → 可回退）。
+  Array.prototype.forEach.call(body.querySelectorAll("[data-opath]"), function (inp) {
+    var rootKey = inp.dataset.okey;
+    var ctx = ctxFromNode(inp);
+    var rootF = ctx.fieldIndex[rootKey];
+    if (!rootF) { return; }
+    var path = inp.dataset.opath ? inp.dataset.opath.split(".") : [];
+    var leaf = objLeafOf(rootF, path);
+    if (!leaf) { return; }
+    var ev = (inp.type === "checkbox" || inp.tagName === "SELECT") ? "change" : "input";
+    inp.addEventListener(ev, function () {
+      var next = objPathSet(objCurrentValue(ctx, rootF), path, readControl(inp, leaf));
+      EditorDraft.set(ctx.draft, rootKey, next, rootF.value);
       if (inp.type === "checkbox") {
         var t = inp.parentNode.querySelector(".btxt");
         if (t) { t.textContent = inp.checked ? "是" : "否"; }
@@ -4063,8 +4134,9 @@ function listCell(f, row, col, i, scalar) {
         + selectOptions(v, [], "（未选择）") + "</select>";
     case "readonly":
     case "listtable":
-      // 对象/映射子字段与嵌套列表：本批不在单元格里内联编辑 → 给统一的有框只读外观，
-      // 空值同样走 EMPTY_TEXT（不再裸露无边框 JSON 深色块）。
+    case "objform":
+      // 对象/映射子字段与嵌套列表：本批不在单元格里内联编辑（对象子字段编辑走字段级
+      // objform 表单）→ 给统一的有框只读外观，空值同样走 EMPTY_TEXT（不裸露 JSON 深色块）。
       return '<span class="ro-cell">' + esc(
         (v == null || v === "") ? EMPTY_TEXT
           : (typeof v === "object" ? JSON.stringify(v) : String(v))
@@ -4903,6 +4975,285 @@ function kvTable(f) {
   }).join("");
   return '<table class="ltable"><thead><tr><th>键</th><th>值</th></tr></thead>'
     + "<tbody>" + body + "</tbody></table>";
+}
+
+// ---------------------------------------------------------------------------
+// 批14 #4 · 对象子字段编辑（objform）
+// 按元数据递归渲染子字段控件（布尔→开关 / 数字→数字框 / 文本→输入框 / 枚举→下拉 /
+// 引用→引用选择器）；元数据未登记的子字段走兜底控件（按实际值推断）并标注；
+// 动态键空间（元数据未登记子字段）可新增/删除子项。嵌套任意层。
+// 草稿口径：整块对象作为「顶层字段值」写回草稿（EditorDraft.set(rootKey, 新对象, 原值)），
+// 故嵌套再深也只产生一个顶层改动，保存链路与既有字段完全一致。
+// ---------------------------------------------------------------------------
+function objCurrentValue(ctx, rootF) {
+  var c = ctx || renderCtx || MAIN_CTX;
+  var v = hasOwn(c.draft.changes, rootF.key) ? c.draft.changes[rootF.key] : rootF.value;
+  return (v && typeof v === "object" && !Array.isArray(v)) ? v : {};
+}
+
+function objPathGet(obj, path) {
+  var cur = obj;
+  for (var i = 0; i < path.length; i++) {
+    if (!cur || typeof cur !== "object") { return undefined; }
+    cur = cur[path[i]];
+  }
+  return cur;
+}
+
+function objPathSet(obj, path, value) {
+  var root = (obj && typeof obj === "object" && !Array.isArray(obj))
+    ? JSON.parse(JSON.stringify(obj)) : {};
+  var cur = root;
+  for (var i = 0; i < path.length - 1; i++) {
+    var k = path[i];
+    if (!cur[k] || typeof cur[k] !== "object" || Array.isArray(cur[k])) { cur[k] = {}; }
+    cur = cur[k];
+  }
+  if (path.length) { cur[path[path.length - 1]] = value; }
+  return root;
+}
+
+function objPathDel(obj, path) {
+  var root = (obj && typeof obj === "object" && !Array.isArray(obj))
+    ? JSON.parse(JSON.stringify(obj)) : {};
+  var cur = root;
+  for (var i = 0; i < path.length - 1; i++) {
+    if (!cur || typeof cur !== "object") { return root; }
+    cur = cur[path[i]];
+  }
+  if (path.length && cur && typeof cur === "object") { delete cur[path[path.length - 1]]; }
+  return root;
+}
+
+function objLeafOf(rootF, path) {
+  var node = rootF;
+  for (var i = 0; i < path.length; i++) {
+    var kids = (node && node.children) || [];
+    var hit = null;
+    for (var j = 0; j < kids.length; j++) { if (kids[j].key === path[i]) { hit = kids[j]; break; } }
+    if (!hit) { return null; }
+    node = hit;
+  }
+  return node;
+}
+
+function objNodeAt(rootF, path) {
+  // 顶层对象自身用空路径；否则沿 children 下钻（与 objLeafOf 同口径）。
+  return path.length ? objLeafOf(rootF, path) : rootF;
+}
+
+function objControlAttrs(rootF, path) {
+  return ' data-okey="' + esc(rootF.key) + '" data-opath="' + esc(path.join(".")) + '"';
+}
+
+function objLeafInput(child, value, attrs) {
+  switch (child.control) {
+    case "number":
+      return '<input class="cin" type="number" step="' + esc(child.number_step || "any") + '"'
+        + attrs + ' placeholder="' + esc(INPUT_EMPTY) + '" value="'
+        + esc(value == null ? "" : value) + '">';
+    case "bool":
+      return '<label class="ctl-bool"><input type="checkbox"' + attrs + (value ? " checked" : "")
+        + '> <span class="btxt">' + (value ? "是" : "否") + "</span></label>";
+    case "select":
+      return '<select class="cin"' + attrs + ">"
+        + selectOptions(value, child.enum || [], "（未选择）") + "</select>";
+    case "ref":
+      return '<select class="cin"' + attrs + ' data-ref="' + esc(child.ref_target || "")
+        + '" data-current="' + esc(value == null ? "" : value) + '">'
+        + selectOptions(value, [], "（未选择）") + "</select>"
+        + '<span class="refnote"></span>';
+    case "textarea":
+      return '<textarea class="cta" rows="3"' + attrs + ' placeholder="' + esc(INPUT_EMPTY) + '">'
+        + esc(value == null ? "" : value) + "</textarea>";
+    case "readonly":
+      return '<div class="inp mono">'
+        + esc(value == null || value === "" ? EMPTY_TEXT : JSON.stringify(value)) + "</div>";
+    case "listtable":
+    case "reflist":
+    case "condition":
+    case "maptable":
+      // 嵌套在对象里的列表/条件/键值结构：本批不内联编辑 → 有框只读外观（不臆造控件）。
+      return '<span class="ro-cell">' + esc(value == null || value === ""
+        ? EMPTY_TEXT : (typeof value === "object" ? JSON.stringify(value) : String(value)))
+        + "</span>";
+    case "text":
+    default:
+      return '<input class="cin" type="text"' + attrs + ' placeholder="' + esc(INPUT_EMPTY)
+        + '" value="' + esc(value == null ? "" : value) + '">';
+  }
+}
+
+function objChildRow(child, path, rootF, current, allowDel) {
+  var value = objPathGet(current, path);
+  var attrs = objControlAttrs(rootF, path);
+  var body = (child.control === "objform")
+    ? objFormEdit(child, path, rootF, current)
+    : objLeafInput(child, value, attrs);
+  var note = child.meta_note
+    ? ' <span class="mnote" title="' + esc(child.meta_note) + '">'
+      + esc(child.meta_note) + "</span>" : "";
+  var del = allowDel
+    ? '<button type="button" class="objdel" data-objdel="' + esc(rootF.key) + "|"
+      + esc(path.join(".")) + '" title="删除这个子项（只改草稿，保存后生效）">✕</button>' : "";
+  return '<div class="row nest" data-opath="' + esc(path.join(".")) + '"><div class="rlab">'
+    + helpTriggerHtml(child, fieldLabelHtml(child.label, child.key))
+    + ' <span class="ftype">' + esc(typeZh(child.type)) + "</span>" + note + del + '</div>'
+    + '<div class="rval">' + body + "</div></div>";
+}
+
+function objFormEdit(f, path, rootF, currentVal) {
+  var current = currentVal || objCurrentValue(renderCtx || MAIN_CTX, rootF);
+  var nodes = f.children || [];
+  var html = '<div class="objform" data-oroot="' + esc(rootF.key)
+    + '" data-opath="' + esc(path.join(".")) + '">';
+  nodes.forEach(function (c) {
+    html += objChildRow(c, path.concat([c.key]), rootF, current, !!f.open_keys);
+  });
+  // 动态键空间（元数据未登记子字段）→ 允许新增子项（兜底控件按实际值推断）。
+  if (f.open_keys) {
+    html += '<button type="button" class="objadd" data-objadd="' + esc(rootF.key) + "|"
+      + esc(path.join(".")) + '" title="新增一个元数据未登记的子项（控件按实际值推断）">'
+      + "+ 子项</button>";
+    if (!nodes.length) {
+      html += '<div class="ex">还没有子项；点「+ 子项」添加（元数据未登记子字段，'
+        + "控件按实际值推断）。</div>";
+    }
+  }
+  return html + "</div>";
+}
+
+function objSetDynamicChild(f, path, key, value) {
+  // 在对象（path 指向的节点）下新增一个元数据未登记的子项（客户端描述符，仅渲染用）。
+  var node = objNodeAt(f, path);
+  if (!node) { return; }
+  node.children = node.children || [];
+  node.children.push({
+    key: key, label: key, type: _inferClientType(value), widget: "obj",
+    control: "objform", editable: true, present: false, value: {}, display: "",
+    multiline: false, group: "", required: false, ref_target: "", enum: [],
+    number_step: "any", hint: "", unit: "", help: "", help_card: {},
+    meta_unregistered: true, meta_note: META_UNREGISTERED_HINT,
+    children: [], rows: [], open_keys: true
+  });
+}
+
+function _inferClientType(v) {
+  if (typeof v === "boolean") { return "bool"; }
+  if (typeof v === "number") { return "number"; }
+  if (v && typeof v === "object") { return Array.isArray(v) ? "list" : "obj"; }
+  return "str";
+}
+
+function rerenderObjForm(box) {
+  // 只重画该对象容器并重新绑定（不整页重画 → 不丢其他草稿/关联分区草稿）。
+  if (!box) { return; }
+  var ctx = ctxFromNode(box);
+  var prev = renderCtx;
+  renderCtx = ctx;
+  var rootKey = box.dataset.oroot;
+  var rootF = rootKey ? ctx.fieldIndex[rootKey] : null;
+  var path = box.dataset.opath ? box.dataset.opath.split(".") : [];
+  if (!rootF) { renderCtx = prev; return; }
+  var node = objNodeAt(rootF, path);
+  var current = objCurrentValue(ctx, rootF);
+  var fresh = document.createElement("div");
+  fresh.innerHTML = objFormEdit(node, path, rootF, current);
+  var newBox = fresh.firstChild;
+  var host = box.parentNode;
+  host.replaceChild(newBox, box);
+  renderCtx = prev;
+  bindControls(host);
+  bindObjSections(host);
+}
+
+function bindObjSections(root) {
+  // 批14 #4/#6：对象子字段的「+ 子项 / ✕ 删除」（只改草稿，不落盘）。
+  Array.prototype.forEach.call(root.querySelectorAll("[data-objadd]"), function (btn) {
+    btn.addEventListener("click", function () {
+      var parts = String(btn.dataset.objadd || "").split("|");
+      var rootKey = parts[0];
+      var path = parts[1] ? parts[1].split(".") : [];
+      var ctx = ctxFromNode(btn);
+      var rootF = ctx.fieldIndex[rootKey];
+      if (!rootF) { return; }
+      var node = objNodeAt(rootF, path);
+      var cur = objCurrentValue(ctx, rootF);
+      var container = objPathGet(cur, path);
+      var existing = (container && typeof container === "object") ? Object.keys(container) : [];
+      var key = window.prompt("新增子项的键名（英文小写 + 下划线）");
+      if (key == null) { return; }
+      key = String(key).trim();
+      if (!key) { return; }
+      if (existing.indexOf(key) >= 0 || (node.children || []).some(function (c) { return c.key === key; })) {
+        window.alert("键名已存在：" + key);
+        return;
+      }
+      objSetDynamicChild(rootF, path, key, "");
+      EditorDraft.set(ctx.draft, rootKey, objPathSet(cur, path.concat([key]), ""), rootF.value);
+      var box = btn.closest(".objform");
+      if (box) { box.dataset.oroot = rootKey; rerenderObjForm(box); }
+      markDirty();
+    });
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-objdel]"), function (btn) {
+    btn.addEventListener("click", function () {
+      var parts = String(btn.dataset.objdel || "").split("|");
+      var rootKey = parts[0];
+      var path = parts[1] ? parts[1].split(".") : [];
+      var ctx = ctxFromNode(btn);
+      var rootF = ctx.fieldIndex[rootKey];
+      if (!rootF) { return; }
+      if (!window.confirm("删除这个子项（只改草稿，保存后生效）？")) { return; }
+      EditorDraft.set(ctx.draft, rootKey, objPathDel(objCurrentValue(ctx, rootF), path), rootF.value);
+      var box = btn.closest(".objform");
+      if (box) { box.dataset.oroot = rootKey; rerenderObjForm(box); }
+      markDirty();
+    });
+  });
+}
+
+function bindOpenKeySections(root) {
+  // 批14 #6①：条目级动态键空间（对象型段的 obj 字段未登记子字段，如 settings.slot_defs）
+  // 的「✕ 删除子项 / + 添加子项」——只改草稿，保存走既有校验与原子写链路。
+  Array.prototype.forEach.call(root.querySelectorAll("[data-keydel]"), function (btn) {
+    btn.addEventListener("click", function () {
+      var key = btn.dataset.keydel;
+      var ctx = ctxFromNode(btn);
+      var f = ctx.fieldIndex[key];
+      if (!f) { return; }
+      if (!window.confirm("删除子项「" + (f.label || key) + "」（只改草稿，保存后生效）？")) { return; }
+      EditorDraft.set(ctx.draft, key, null, f.value);
+      var row = btn.closest(".row");
+      if (row) { row.classList.add("deleted"); }
+      markDirty();
+    });
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-openadd]"), function (btn) {
+    btn.addEventListener("click", function () {
+      var key = window.prompt("新增子项的键名（英文小写 + 下划线，如 belt）");
+      if (key == null) { return; }
+      key = String(key).trim();
+      if (!key) { return; }
+      var ctx = ctxFromNode(btn);
+      if (ctx.fieldIndex[key] || hasOwn(ctx.draft.changes, key)) {
+        window.alert("子项键名已存在：" + key);
+        return;
+      }
+      var first = (ctx.fields || [])[0];
+      var fd = { key: key, label: key, type: "obj", widget: "obj", control: "objform",
+        editable: true, present: false, value: {}, display: "", multiline: false,
+        group: first ? (first.group || "") : "", required: false, ref_target: "",
+        enum: [], number_step: "any", hint: "", unit: "", help: "", help_card: {},
+        meta_unregistered: true, meta_note: META_UNREGISTERED_HINT,
+        children: [], rows: [], open_keys: true, deletable: true };
+      ctx.fields.push(fd);
+      ctx.fieldIndex[key] = fd;
+      EditorDraft.set(ctx.draft, key, {}, undefined);
+      renderDetail(state.detail);
+      markDirty();
+    });
+  });
 }
 
 function objTable(f) {

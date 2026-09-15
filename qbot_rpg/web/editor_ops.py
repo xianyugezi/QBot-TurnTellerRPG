@@ -184,16 +184,18 @@ def _decorate(items: Sequence[Mapping[str, Any]], slot: Mapping[str, Any],
 # 补丁应用（只改「现有条目的字段值」；批6 才做增删条目）
 # =====================================================================================
 def _apply_patch(subject: object, patch: Mapping[str, Any],
-                 allowed: Sequence[str]) -> object:
+                 allowed: Sequence[str], open_keys: bool = False) -> object:
     """把字段补丁应用到条目副本（纯逻辑，绝不改原数据）。
 
     · patch 值非 None → 覆盖该字段；值为 None → 删除该字段（回到「未声明」态）；
     · 补丁键必须在「元数据声明 ∪ 条目已有键」内，否则 BadRequest（不静默丢弃、不写脏键）；
     · 标量条目（object 模块的顶层标量键）：取补丁单值整体替换。
+    · 批14 #6：`open_keys=True`（动态键空间，如对象型段 `slot_defs`）放行新键——
+      是否合法仍由**校验器**判定（未知键该红拦仍红拦），编辑器只负责「允许提交」。
     """
     allow = set(allowed)
     unknown = sorted(str(k) for k in patch if k not in allow)
-    if unknown:
+    if unknown and not open_keys:
         raise api.BadRequest("补丁含未登记字段（已拒绝写入）：" + "、".join(unknown))
     if isinstance(subject, Mapping):
         new = copy.deepcopy(dict(subject))
@@ -247,11 +249,17 @@ def _plan(pack: object, module: object, entry_id: object, patch: object,
     if not isinstance(patch, Mapping):
         raise api.BadRequest("改动内容形态非法（应为「字段 → 值」对象）。")
     slot = api.entry_slot(pack, module, entry_id, root=root)
+    slot["_root"] = root
+    slot["_pack"] = pack
     subject = slot["subject"]
     allowed: List[str] = [str(k) for k in slot["base"]]
     if isinstance(subject, Mapping):
         allowed += [str(k) for k in subject]
-    new_subject = _apply_patch(subject, patch, allowed)
+    open_keys = bool(slot.get("open_keys"))
+    new_subject = _apply_patch(subject, patch, allowed, open_keys=open_keys)
+    # 批14 #6③：动态键空间删键 → 记录被删键，供「引用者黄提示」（沿用既有 refs 机制）。
+    if open_keys and isinstance(subject, Mapping) and isinstance(new_subject, Mapping):
+        slot["removed_keys"] = sorted(set(subject) - set(new_subject))
     new_content = _build_new_content(slot, new_subject)
     _pack_dir, modules_raw = api.load_pack_modules(pack, root=root)
     new_modules = _modules_with(modules_raw, slot["module"], new_content)
@@ -265,7 +273,47 @@ def _split_report(report: Any, slot: Mapping[str, Any]) -> Any:
                      related_only=False)
     yellows = _decorate(atomic_store.humanize_warnings(report.warnings), slot, prefix,
                         related_only=True)
+    yellows += _orphan_key_warnings(slot)
     return reds, yellows
+
+
+def _orphan_key_warnings(slot: Mapping[str, Any]) -> List[Dict[str, Any]]:
+    """批14 #6③：动态键空间删键 → 列出「还引用着被删键」的条目（黄提示，不硬拦）。
+
+    沿用既有 refs 机制（`api.ref_holders`，只按元数据下钻），不写死模块/字段名；
+    没有引用者 → 空列表（不噪音）。展示层提示，绝不改校验判定与门禁强度。
+    """
+    removed = [str(k) for k in (slot.get("removed_keys") or [])]
+    if not removed:
+        return []
+    module = str(slot.get("module") or "")
+    entry_id = str(slot.get("entry_id") or "")
+    try:
+        holders = api.ref_holders(str(slot.get("_pack") or ""), f"{module}.{entry_id}", removed,
+                                  root=slot.get("_root"))
+    except Exception:  # 扫描失败不阻断保存（只是少一条提示）
+        return []
+    if not holders:
+        return []
+    where = "、".join(
+        f"{h['module_label']}「{h['entry_name']}」的 {h.get('field_label') or h['field']}"
+        for h in holders[:8])
+    more = f" 等 {len(holders)} 处" if len(holders) > 8 else ""
+    return [{
+        "level": "yellow",
+        "code": "orphan_ref_after_key_removed",
+        "module": module,
+        "field": entry_id,
+        "entry_id": entry_id,
+        "field_key": entry_id,
+        "field_label": entry_id,
+        "related": True,
+        "removed_keys": removed,
+        "referrers": holders,
+        "message": f"已删掉的子项（{'、'.join(removed)}）还有内容在引用：{where}{more}。"
+                   "保存后这些引用会指向不存在的子项，运行时会退化或忽略；本提示不阻断保存。",
+        "how_to_fix": "如需保持引用完整，请先修改或删除这些引用者；确认无碍可直接保存。",
+    }]
 
 
 def _related_to_slot(items: Sequence[Mapping[str, Any]], slot: Mapping[str, Any],

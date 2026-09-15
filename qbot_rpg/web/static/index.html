@@ -270,6 +270,19 @@ html[data-theme="contrast"] .asave:disabled { border-style: dotted; opacity: .6;
 .mod.sub.on::before { content: "\2514 "; color: var(--accent); }
 .mod .ct { margin-left: auto; color: var(--text-4); }
 .mod.on .ct { color: var(--accent); }
+/* 批13 A/D：左栏 = 框架能力集 ∪ 包声明 —— 聚合视图置顶；未启用候选灰显（一键启用）；
+   未实现候选更淡且不可点。 */
+.mod-sep { padding: var(--sp-2) var(--sp-6); margin-top: var(--sp-2);
+  border-top: var(--bw) solid var(--line-soft); color: var(--text-6);
+  font-size: var(--fs-10); letter-spacing: 0; }
+.mod.view::before { content: "\25c6 "; color: var(--accent); }
+.mod .tag { color: var(--text-5); border: var(--bw) solid var(--line-soft);
+  border-radius: var(--sp-1); padding: 0 var(--sp-2); font-size: var(--fs-10); }
+.mod.off { color: var(--text-5); }
+.mod.off::before { content: "\00b7 "; color: var(--text-6); }
+.mod.off .ct { color: var(--text-6); }
+.mod.unimplemented { opacity: .55; cursor: default; }
+.mod.unimplemented:hover { background: transparent; }
 
 .list-hd { border-bottom: var(--bw) solid var(--line-soft); }
 .list-title { color: var(--text-strong); font-weight: 700; }
@@ -824,7 +837,7 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
       <div class="panel-body" id="p-body">
         <div class="empty">从左侧选择模块与条目。字段按内容包元数据渲染；改动先进草稿，保存时才校验并落盘。</div>
       </div>
-      <div class="panel-ft"><span>批12 · 结构/并入/字号</span></div>
+      <div class="panel-ft"><span>批13 · 能力可见性</span></div>
     </section>
 
   </div>
@@ -1387,11 +1400,17 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
     return rows.filter(function (e) { return match(e, q); });
   }
   // 跨模块检索：结果按模块分组（空查询 / 无索引 → 空）
+  // 批13 A：候选 = 已声明模块 ∪ 未启用模块（`index.available`，保留数据也可搜到）；
+  // 无 available 字段时与现状完全一致。
+  function groupsOf(index) {
+    var idx = index || {};
+    return ((idx.modules) || []).slice().concat((idx.available) || []);
+  }
   function searchIndex(index, query) {
     var q = norm(query).trim().toLowerCase();
     if (!q) { return []; }
     var out = [];
-    (((index || {}).modules) || []).forEach(function (m) {
+    groupsOf(index).forEach(function (m) {
       var hits = (m.entries || []).filter(function (e) { return match(e, q); });
       if (hits.length) { out.push({ module: m.module, label: m.label || m.module, entries: hits }); }
     });
@@ -1401,7 +1420,7 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
     return (groups || []).reduce(function (n, g) { return n + ((g.entries || []).length); }, 0);
   }
   function namespaceOf(index, module) {
-    var hit = ((((index || {}).modules) || []).filter(function (m) {
+    var hit = (groupsOf(index).filter(function (m) {
       return m.module === module; })[0]);
     return hit ? hit.namespace : null;
   }
@@ -1414,7 +1433,7 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
     }
     var ns = namespaceOf(index, module);
     var conflicts = [];
-    (((index || {}).modules) || []).forEach(function (m) {
+    groupsOf(index).forEach(function (m) {
       (m.entries || []).forEach(function (e) {
         if (norm(e.id) !== id) { return; }
         if (m.module === module || (ns != null && m.namespace === ns)) {
@@ -1471,7 +1490,10 @@ var state = {
   pendingDrafts: {}, entryIndex: null, newEntry: null, newDraft: null, newIdTouched: false,
   theme: null,
   // 批12 #1：中栏聚合展示（被并入模块的条目按来源分小节）+ 当前条目所属模块（保存路由）
-  mergeSections: [], entryModule: null, listLabel: "", fontSize: null
+  mergeSections: [], entryModule: null, listLabel: "", fontSize: null,
+  // 批13 A/D：左栏 = 框架能力集 ∪ 包声明——views（虚拟聚合视图，如「生活」）+
+  // available（框架有而包未启用的模块，未启用态 + 一键启用）
+  views: [], available: []
 };
 var draft = EditorDraft.newDraft();
 
@@ -1634,6 +1656,29 @@ function moduleCountLabel(n) {
 });
 /* EDITOR_MERGE_END */
 
+/* EDITOR_CAPABILITY_BEGIN */
+// 批13 A（一号原则）：**左栏显示集 = 框架能力集 ∪ 包声明** 的纯逻辑。
+// 后端 `list_modules` 给三组：modules（已启用/声明树）、views（虚拟聚合视图，如「生活」）、
+// available（框架目录里包未启用的模块）。本块只按这些字段判定，不认任何业务模块名。
+function capsState(row) {
+  var r = row || {};
+  if (r.implemented === false) { return "unimplemented"; }  // 引擎未实装
+  if (r.available || r.enabled === false) { return "available"; }  // 框架有、包未启用
+  return "enabled";
+}
+function capsTag(row) {
+  var s = capsState(row);
+  return s === "unimplemented" ? "未实现" : (s === "available" ? "未启用" : "");
+}
+function capsEnableable(row) { return capsState(row) === "available"; }
+// 全局检索的候选组 = 已声明模块 ∪ 未启用（保留数据）模块；无 available 时与现状完全一致。
+function indexGroups(index) {
+  var idx = index || {};
+  var out = ((idx.modules) || []).slice();
+  return out.concat((idx.available) || []);
+}
+/* EDITOR_CAPABILITY_END */
+
 /* EDITOR_HDR_NOTE_BEGIN */
 // 栏头第二层说明（批9.2）：来源/计数/副标题的文本与悬停 title 同源，避免「显示的」与
 // 「悬停看到的」两处漂移；是否折行/省略交给 CSS（.hd-n）。通用：不认任何业务字段名。
@@ -1659,15 +1704,20 @@ function moduleRowHtml(row, editable) {
   var r = row || {};
   var label = r.label || r.module || "";
   var dep = moduleDepHint(r);
-  var dis = editable ? "" : " disabled";
-  var st = r.enabled ? "已启用" : "未启用";
-  return '<label class="mp-row' + (r.enabled ? " on" : "") + (editable ? "" : " ro") + '" data-modal-row>'
+  var impl = r.implemented !== false;   // 批13：引擎未实装 → 列出但不可启用
+  var canEdit = editable && impl;
+  var dis = canEdit ? "" : " disabled";
+  var st = !impl ? "未实现" : (r.enabled ? "已启用" : "未启用");
+  var conf = r.settings_section
+    ? '<span class="key">配置：' + esc(r.settings_section) + "</span>" : "";
+  return '<label class="mp-row' + (r.enabled ? " on" : "") + (canEdit ? "" : " ro") + '" data-modal-row>'
     + '<input type="checkbox" class="mp-cb" data-module="' + esc(r.module || "") + '"'
     + (r.enabled ? " checked" : "") + dis + ' aria-label="' + esc(label) + '">'
     + '<span class="nm">' + esc(label) + "</span>"
     + '<span class="key">' + esc(r.module || "") + "</span>"
     + '<span class="st">' + esc(st) + "</span>"
     + '<span class="purpose">' + esc(r.purpose || "") + "</span>"
+    + conf
     + (dep ? '<span class="dep">⚠ ' + esc(dep) + "</span>" : "")
     + "</label>";
 }
@@ -2800,27 +2850,85 @@ function renderModules() {
     (n.children || []).filter(function (c) { return !EditorMerge.hidden(c); })
       .forEach(function (c) { node(c, depth + 1); });
   }
+  // 批13 A/D：① 虚拟聚合视图（entry_merge 目标，如「生活」）置顶——点开即聚合视图。
+  (state.views || []).forEach(function (v) {
+    var d = document.createElement("div");
+    d.className = "mod view" + (v.module === state.module ? " on" : "");
+    d.dataset.module = v.module;
+    d.dataset.view = "1";
+    var cl = moduleCountLabel(v);
+    d.title = "聚合视图：" + (v.label || v.module);
+    d.innerHTML = esc(v.label) + '<span class="tag">视图</span>'
+      + '<span class="ct" title="' + esc(cl.title) + '">' + esc(cl.text) + "</span>";
+    d.addEventListener("click", function () { selectModule(v.module); });
+    nav.appendChild(d);
+  });
   // 批12 #1：被并入的模块默认不在左栏单列（有 entry_merge 声明的包）；无声明 → 原样。
   EditorMerge.visibleModules(state.modules).forEach(function (m) { node(m, 0); });
+  // 批13 A（一号原则）：框架有而包未启用的模块 → 「未启用」态（灰显 + 一键启用）。
+  var avail = state.available || [];
+  if (avail.length) {
+    var sep = document.createElement("div");
+    sep.className = "mod-sep";
+    sep.textContent = "未启用 · 框架能力 " + avail.length + " 项";
+    sep.title = "框架已实现、当前包未启用的模块；点击可一键启用（复用 ⚙ 模块开关同一链路）。";
+    nav.appendChild(sep);
+    avail.forEach(function (a) {
+      var d = document.createElement("div");
+      var impl = a.implemented !== false;
+      d.className = "mod off" + (impl ? "" : " unimplemented");
+      d.dataset.module = a.module;
+      d.dataset.available = "1";
+      d.title = (a.purpose || "") + (a.settings_section ? "（配置在：" + a.settings_section + "）" : "")
+        + (impl ? "｜点击启用" : "｜引擎尚未实装");
+      d.innerHTML = esc(a.label) + '<span class="tag">' + esc(capsTag(a)) + "</span>"
+        + '<span class="ct">' + esc(impl ? "未启用" : "—") + "</span>";
+      if (impl) {
+        d.addEventListener("click", function () { enableAvailableModule(a.module); });
+      }
+      nav.appendChild(d);
+    });
+  }
+}
+
+// 批13 A：左栏「未启用」条目一键启用（复用 ⚙ 模块开关的写入链路与刷新）。
+function enableAvailableModule(mod) {
+  if (!state.editable) { return; }
+  if (!canLeave()) { return; }
+  discardDraft();
+  postJSON("/api/pack/" + enc(state.pack) + "/module/" + enc(mod) + "/toggle",
+           { enabled: true })
+    .then(function (res) {
+      panelMessage(res.ok ? ((res.warnings || []).length ? "yellow" : "ok") : "red",
+                   toggleResultText(res));
+      if (res && res.ok) { return fetchModulePanel().then(refreshAfterModuleChange); }
+      return null;
+    })
+    .catch(function (err) { panelMessage("red", "启用失败：" + err.message); });
 }
 
 function loadModules() {
   if (!state.pack) { return Promise.resolve(); }
   return api("/api/pack/" + enc(state.pack) + "/modules").then(function (data) {
     state.modules = data.modules || [];
+    // 批13 A/D：左栏显示集 = 框架能力集 ∪ 包声明（views = 聚合视图；available = 未启用）。
+    state.views = data.views || [];
+    state.available = data.available || [];
     var flat = data.flat ? "平铺" : "层级声明";
     // V6：层级包在栏头第二层明示计数口径；平铺包每个模块计数即本模块条数，无需标注。
     // 批9.2：说明走第二层小字（可省略），文本与 title 同源，不与「模块」标题挤同一行。
     setHdrNote("mod-src", "manifest.modules · " + state.modules.length + " · " + flat
-      + (data.flat ? "" : " · 计数含子项"));
+      + (data.flat ? "" : " · 计数含子项")
+      + (state.available.length ? " · 未启用 " + state.available.length : ""));
     // 批8：该包未启用任何模块 → 空态引导（点右上角 ⚙ 选择内容类型），不给用户空白迷茫。
-    if (!state.modules.length) {
+    // 批13：包未启用任何模块、但框架有可启用候选时，左栏仍列出「未启用」候选（一号原则）。
+    if (!state.modules.length && !state.views.length) {
       state.module = null; state.entry = null;
       renderModules();
       renderEmptyPack();
       return;
     }
-    var first = state.modules[0];
+    var first = (state.views[0] || state.modules[0]);
     if (!state.module && first) { return selectModule(first.module); }
     renderModules();
   });
@@ -2850,6 +2958,8 @@ function selectModule(mod) {
 
 function findModule(mod) {
   var found = null;
+  // 批13：虚拟聚合视图也是左栏可选项（label 取 views 声明）。
+  (state.views || []).forEach(function (v) { if (v.module === mod) { found = v; } });
   (function walk(list) {
     (list || []).forEach(function (n) {
       if (n.module === mod) { found = n; }
@@ -3015,9 +3125,13 @@ function renderEmptyPack() {
 
 function refreshAfterModuleChange() {
   return loadModules().then(function () {
-    if (!(state.modules || []).length) { return loadEntryIndex(); }   // 空包：空态已渲染
+    if (!(state.modules || []).length && !(state.views || []).length) {
+      return loadEntryIndex();   // 空包：空态已渲染
+    }
     if (!state.module || !findModule(state.module)) {
-      return selectModule(state.modules[0].module);   // 当前模块刚被停用 → 回落到第一个
+      var first = state.views[0] || state.modules[0];
+      if (first) { return selectModule(first.module); }   // 当前模块刚被停用 → 回落到第一个
+      return loadEntryIndex();
     }
     return loadEntries().then(function () { return loadEntryIndex(); });
   }).then(function () {
@@ -3576,16 +3690,19 @@ function jumpTo(mod, entry) {
 }
 
 // 批12 #1：被并入模块 → 聚合它的父模块（按后端 merged 声明；未声明/未隐藏返回 null）
+// 批13 D：虚拟聚合视图（state.views）也算「父」——生活视图里的条目跳转落在 life 视图上。
 function mergeParent(mod) {
   var found = null;
-  (function walk(list) {
+  function scan(list) {
     (list || []).forEach(function (n) {
       (n.merged || []).forEach(function (m) {
         if (m.module === mod && !m.keep_top_level) { found = n.module; }
       });
-      if (n.children) { walk(n.children); }
+      if (n.children) { scan(n.children); }
     });
-  })(state.modules);
+  }
+  scan(state.modules);
+  scan(state.views);
   return found;
 }
 

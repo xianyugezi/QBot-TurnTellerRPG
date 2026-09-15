@@ -330,8 +330,10 @@ def _entry_merge_map(
     claimed: Dict[str, str] = {}
     for target, spec in decl.entry_merge.items():
         if target not in declared_set:
-            notes.append(f"entry_merge 目标模块未在 manifest 声明：{target}")
-            continue
+            # 批13 D：目标未在 manifest 声明 → 按「虚拟聚合视图」处理（如「生活」把
+            # proficiency/enhance/forge/recipe 聚到一个视图节点）。视图不落数据文件、
+            # 不参与写入；来源仍必须真实声明（下面逐个过滤）。记 note 让作者知情。
+            notes.append(f"entry_merge 目标为虚拟聚合视图（未在 manifest 声明）：{target}")
         srcs: List[str] = []
         for src in spec.get("sources", ()):  # 解析层已归一为元组
             if src not in declared_set:
@@ -468,6 +470,8 @@ def list_modules(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
             "count": count,
             "own_count": own,
             "children": kids,
+            # 批13 A：已启用/声明模块带 enabled=True（未启用候选在 `available` 里 enabled=False）。
+            "enabled": True,
             # 批12 #1：聚合展示声明（通用；未声明 entry_merge 的包这些字段为空/0，行为与现状一致）
             "merged": info,
             "merged_count": merged_count,
@@ -477,10 +481,85 @@ def list_modules(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
         }
 
     modules = [node(m, [m]) for m in declared if m not in child_set]
+    declared_set_all = set(declared)
+
+    # 批13 A（一号原则）：左栏显示集 = 框架能力集 ∪ 包声明。
+    #   ① views     = entry_merge 声明的虚拟聚合视图（如「生活」；非 manifest 模块，无数据文件）；
+    #   ② available = 框架目录里包尚未启用的模块（「未启用」态；条目数取真实数据文件，
+    #                 无文件 = 0；引擎未实装的条目带 implemented=False → 前端标「未实现」）。
+    # 二者都只驱动展示，不参与写入 / 校验，也不进 `modules` / 包列表 `module_count`；
+    # 检索覆盖另由 `entry_index.available` 提供（不改该接口的 modules / total 口径）。
+    def view_node(target: str, spec: Dict[str, Any]) -> Dict[str, Any]:
+        info: List[Dict[str, Any]] = []
+        for src in spec["sources"]:
+            info.append({
+                "module": src,
+                "label": labels.get(src) or src,
+                "count": agg(src, [src]),
+                "keep_top_level": src in spec["keep_top_level"],
+                "already_child": in_subtree(target, src, [target]),
+            })
+        merged_count = sum(x["count"] for x in info)
+        total_count = sum(x["count"] for x in info if not x["already_child"])
+        return {
+            "module": target,
+            "label": labels.get(target) or target,
+            "count": 0,
+            "own_count": 0,
+            "children": [],
+            "merged": info,
+            "merged_count": merged_count,
+            "total_count": total_count,
+            "merged_into": None,
+            "keep_top_level": False,
+            "view": True,
+            "enabled": True,
+        }
+
+    views = [view_node(t, spec) for t, spec in merge_map.items()
+             if t not in declared_set_all]
+
+    view_keys = {v["module"] for v in views}
+    top_level_keys = {m["module"] for m in modules}
+    available: List[Dict[str, Any]] = []
+    for entry in FRAMEWORK_MODULE_CATALOG:
+        mod = entry.module
+        if mod in declared or mod in view_keys or mod in top_level_keys:
+            continue
+        data = _read_json(pack_dir / f"{mod}.json")
+        cnt = _entry_count(data)
+        available.append({
+            "module": mod,
+            "label": labels.get(mod) or entry.label,
+            "purpose": entry.purpose,
+            "entry_type": _entry_type_for_module(pack_dir, mod),
+            "enabled": False,
+            "in_catalog": True,
+            "implemented": bool(entry.implemented),
+            "settings_section": entry.settings_section,
+            "requires": list(entry.requires),
+            "requires_labels": [labels.get(r) or (
+                catalog_entry(r).label if catalog_entry(r) is not None else r)
+                for r in entry.requires],
+            "missing_requires": [r for r in entry.requires if r not in declared],
+            "count": cnt,
+            "own_count": cnt,
+            "children": [],
+            "merged": [],
+            "merged_count": 0,
+            "total_count": cnt,
+            "merged_into": None,
+            "keep_top_level": False,
+            "available": True,
+        })
+
     return {
         "pack": str(pack),
         "pack_name": str(manifest.get("name", "") or pack),
         "modules": modules,
+        "views": views,
+        "available": available,
+        "available_count": len(available),
         "flat": not children_map,
         "notes": notes,
     }
@@ -530,7 +609,10 @@ def list_entries(pack: object, module: object, root: Optional[object] = None) ->
     manifest = _manifest(pack_dir)
     declared = _declared_modules(manifest)
     mod = _check_component(module, "模块名")
-    if mod not in declared:
+    # 批13 A/D：模块声明的**虚拟聚合视图**（entry_merge 目标但未在 manifest 声明，如「生活」）
+    # 也允许读取（只读展示；写入仍走 api.declared_module → 严格按 manifest）。
+    merge_map, _merge_notes = _entry_merge_map(manifest, declared, pack_dir)
+    if mod not in declared and mod not in merge_map:
         raise NotFound(f"模块未在包 manifest 中声明：{mod}")
     data = _read_json(pack_dir / f"{mod}.json")
     mmeta = _module_meta(mod, pack_dir)
@@ -539,7 +621,6 @@ def list_entries(pack: object, module: object, root: Optional[object] = None) ->
     labels = _display_labels(manifest, declared, pack_dir)
     # 批12 #1：若本模块声明为「聚合目标」，把来源模块的条目按来源分小节一并返回（只读；
     # 编辑/保存仍由前端按 section.module 路由回各自模块，数据文件与校验路径不变）。
-    merge_map, _merge_notes = _entry_merge_map(manifest, declared, pack_dir)
     spec = merge_map.get(mod)
     sections: List[Dict[str, Any]] = []
     if spec:
@@ -612,8 +693,13 @@ def catalog_module_names() -> List[str]:
 
 
 def is_enableable_module(module: object) -> bool:
-    """模块键是否在框架「可启用模块」通用目录内（写入层用它做白名单）。"""
-    return catalog_entry(module) is not None
+    """模块键是否在框架「可启用模块」通用目录内（写入层用它做白名单）。
+
+    批13：目录里 `implemented=False` 的条目（引擎尚未实装）**不可启用**——仍会在
+    左栏/⚙ 面板以「未实现」态显示（一号原则：能力可见，但不产生无法消费的空数据文件）。
+    """
+    ce = catalog_entry(module)
+    return ce is not None and ce.implemented
 
 
 def module_catalog(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
@@ -655,6 +741,9 @@ def module_catalog(pack: object, root: Optional[object] = None) -> Dict[str, Any
             "requires": requires,
             "requires_labels": [label_of(r) for r in requires],
             "missing_requires": [r for r in requires if r not in enabled],
+            # 批13：能力可见性（一号原则）——引擎未实装 / 配置实际落点，供面板如实展示。
+            "implemented": bool(ce.implemented) if ce is not None else True,
+            "settings_section": (ce.settings_section if ce is not None else ""),
         })
 
     bak = pack_dir / "manifest.json.bak"
@@ -1720,6 +1809,11 @@ def _entry_base(mmeta: Optional[ModuleMeta], etype: str, entry_id: str,
     if etype == "list":
         return mmeta.fields
     if etype == "map":
+        # 批13 C：map 模块的**逐键 schema**（如 formula.json 的 damage/hit/crit 公式段）
+        # 优先于统一 value_meta——按 key 命中的 obj 字段登记渲染子字段（展示层）。
+        keyed = mmeta.fields.get(entry_id)
+        if keyed is not None and keyed.type == "obj" and keyed.children:
+            return keyed.children
         vm = mmeta.value_meta
         if vm is not None and vm.type == "obj" and vm.children:
             return vm.children
@@ -2099,8 +2193,29 @@ def entry_index(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
             "module": mod, "label": labels.get(mod) or mod, "entry_type": etype,
             "namespace": ns, "count": len(entries), "entries": entries,
         })
+    # 批13 A（一号原则）：包未启用的框架模块也纳入全局检索候选（若有保留数据 → 可搜到；
+    # 无数据 → 空组不影响结果）。**不改 `modules`/`total`**：换包验收与 ID 口径按声明集，
+    # 未启用模块另置 available 键（前端检索时一并扫描；写入仍走各自模块链路）。
+    available: List[Dict[str, Any]] = []
+    declared_set = set(declared)
+    for entry in FRAMEWORK_MODULE_CATALOG:
+        mod = entry.module
+        if mod in declared_set:
+            continue
+        data = _read_json(pack_dir / f"{mod}.json")
+        mmeta = table.module(mod)
+        etype = _entry_type(mmeta, data)
+        ns = (mmeta.namespace if mmeta is not None and mmeta.namespace else mod)
+        entries = [{"id": eid, "name": name} for eid, name, _v in _entry_rows(data, mmeta)]
+        available.append({
+            "module": mod, "label": labels.get(mod) or entry.label,
+            "entry_type": etype, "namespace": ns,
+            "count": len(entries), "entries": entries,
+            "enabled": False, "implemented": bool(entry.implemented),
+        })
     return {"pack": str(pack), "pack_name": str(manifest.get("name", "") or pack),
-            "modules": modules, "total": total, "meta_source": META_SOURCE}
+            "modules": modules, "available": available, "total": total,
+            "meta_source": META_SOURCE}
 
 
 def _new_entry_base(mmeta: Optional[ModuleMeta], etype: str, entry_id: str,

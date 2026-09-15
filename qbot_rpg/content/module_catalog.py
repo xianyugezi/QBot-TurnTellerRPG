@@ -36,6 +36,10 @@ class ModuleCatalogEntry:
     purpose    ：一句话用途（面板里给非技术用户看的说明）
     entry_type ：骨架形态（list → `[]`；map / object → `{}`）；与框架 ModuleMeta 一致
     requires   ：前置模块键（勾选本模块时若前置未启用 → 黄提示「建议同时启用」，不硬拦）
+    implemented：引擎是否已实现（False = 目录条目仍列出但标「未实现」，不可启用；
+                 一号原则：框架设计了但尚未实装的能力也让作者看得见，而不是消失）
+    settings_section：配置当前实际落点（settings.json 的段路径）；非空 = 该「模块」目前
+                 是能力标记，运行时配置读的是该 settings 段（编辑器据此提示作者去哪配）
     """
 
     module: str
@@ -43,6 +47,8 @@ class ModuleCatalogEntry:
     purpose: str
     entry_type: str = "list"
     requires: Tuple[str, ...] = ()
+    implemented: bool = True
+    settings_section: str = ""
 
 
 # 面板顶部的人话引导（面向非技术用户；不静默）。
@@ -77,6 +83,27 @@ FRAMEWORK_MODULE_CATALOG: Tuple[ModuleCatalogEntry, ...] = (
     ModuleCatalogEntry("enhance", "强化", "装备强化的规则与等级效果。",
                        "object", requires=("equipment",)),
     ModuleCatalogEntry("fishing", "钓鱼", "钓鱼系统配置（鱼池、产出、难度）。", "object"),
+    # ---- 框架已实现的生活/生产系统（编辑器批13 · 审计 ①-6）----
+    # 说明：这些系统的运行时配置目前多落在 settings.<段>（settings_section 标注），
+    # 文件型模块条目用于让作者在左栏/⚙ 面板看到「框架支持这项能力」；启用会创建空骨架。
+    ModuleCatalogEntry("farming", "种植", "种植 / 温室：定时收获、田块与特性继承配置。",
+                       "object", requires=("items",),
+                       settings_section="settings.alchemy.farming"),
+    ModuleCatalogEntry("contest", "品评会", "品评会：评分维度权重、周赛排期与冠军奖励。",
+                       "object", requires=("proficiency",),
+                       settings_section="settings.contest"),
+    ModuleCatalogEntry("assistant", "代工助手", "代工助手：后台代采/代调、助手解锁与收取队列。",
+                       "object", requires=("items",),
+                       settings_section="settings.assistant"),
+    ModuleCatalogEntry("quest_board", "委托板", "委托板：委托池档位、刷新与声望门槛配置。",
+                       "object", requires=("quest",),
+                       settings_section="settings.quest_board"),
+    ModuleCatalogEntry("codex", "图鉴", "图鉴：四册（怪物/鱼/物品/制造）完成度加权。",
+                       "object", settings_section="settings.codex"),
+    # 采集/挖掘：策划书有独立 /采集 指令与地图采集点，但引擎未实装（审计 ②-1/②-2）。
+    # 一号原则：仍列条目并标「未实现」，让作者知道框架方向；不可启用（不产生死文件）。
+    ModuleCatalogEntry("gathering", "采集/挖掘", "在地图采集点获取素材（引擎尚未实装）。",
+                       "object", requires=("maps",), implemented=False),
     # ---- 内容主体：世界与交互 ----
     ModuleCatalogEntry("enemies", "怪物", "敌人条目：属性、行动、掉落、阶段。", "list"),
     ModuleCatalogEntry("maps", "地图", "地图与场景：区域、出口、怪物、机关。", "list"),
@@ -90,6 +117,8 @@ FRAMEWORK_MODULE_CATALOG: Tuple[ModuleCatalogEntry, ...] = (
     ModuleCatalogEntry("conditional", "条件加成", "条件触发的属性加成规则。", "object"),
     ModuleCatalogEntry("stats", "属性表", "游戏属性定义（属性键 → 属性值对象）。", "map"),
     ModuleCatalogEntry("formula", "公式库", "可复用公式与数值表达式。", "map"),
+    ModuleCatalogEntry("templates", "消息模板", "消息文案的模板覆盖（键 = 模板名，值 = 文案）。",
+                       "map"),
     ModuleCatalogEntry("settings", "通用设置", "全局设置：经济、惩罚、面板、指令别名等。",
                        "object"),
 )

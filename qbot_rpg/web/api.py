@@ -87,6 +87,10 @@ MORE_FIELDS_LABEL = "更多字段"     # 隐式块的中文兜底显示名（包
 KV_KEY_LABEL = "键"
 KV_VALUE_LABEL = "值"
 KV_MAX_STRUCT_KEYS = 8            # 「小结构」的子键上限（超出视为宽容器，不走键值表格）
+# 批20 A：键值表格的第三种行模式——值类型混杂（标量 / 数组 / 对象并存）时，**逐行按实际
+# 类型出控件**（数字/布尔/文本/枚举/引用/数组/对象/嵌套映射），可递归任意层。判定只看值
+# 形态与元数据，不认任何字段名；行描述符直接复用 `_descriptor`，与顶层字段同一套控件口径。
+KV_MODE_TYPED = "typed"
 # map 模块的「全表」合成条目标识（仅读列表/详情合成，不进数据、不进条目索引）。
 TABLE_ENTRY_ID = "@table"
 TABLE_ENTRY_TAG = "全表 · 表格"
@@ -1228,6 +1232,49 @@ def open_keys_of(fm: Optional[FieldMeta]) -> bool:
     return fm is None or (fm.type == "obj" and not fm.children)
 
 
+def _obj_unregistered_keys(fm: Optional[FieldMeta], value: object) -> bool:
+    """对象值里是否含**元数据未登记**的键（批20 A：动态键空间判定，通用、不认字段名）。
+
+    登记了子字段的对象若实际值里多出未登记键（如 `resistance` 的 `stun`、`ai` 的 `states`），
+    其键空间就是动态的——按映射表渲染并放开增删键，而不是按固定 schema 只出登记项。
+    """
+    if not isinstance(value, Mapping):
+        return False
+    declared = {str(k) for k in (fm.children if fm is not None and fm.children else {})}
+    return any(str(k) not in declared for k in value)
+
+
+def _obj_kv_tableable(fm: Optional[FieldMeta], value: object) -> bool:
+    """对象型字段的值是否按**映射表**（kvtable）渲染（批20 A，纯展示层判定）。
+
+    条件（任一，全部只看值形态 + 元数据，不认模块名/字段名）：
+      · 元数据声明为 `map`（键 → 值容器）；
+      · 动态键空间（未登记子字段，`open_keys_of`）；
+      · 值里含元数据未登记的键（登记了子字段但实际多出键）。
+    登记了子字段、键集合又完全吻合的对象（如 drop_exp / stats）仍是 objform 表单。
+    """
+    if not isinstance(value, Mapping):
+        return False
+    if fm is not None and fm.type == "map":
+        return True
+    if open_keys_of(fm):
+        return True
+    return _obj_unregistered_keys(fm, value)
+
+
+def _kv_open_keys(fm: Optional[FieldMeta], value: object) -> bool:
+    """键值表格是否「动态键空间」（键可改名、行可增删；批20 A）。
+
+    元数据显式声明 `editor="kvtable"` 的对象 = 映射语义（键空间由内容定义，如抗性是
+    「负面效果 ID → 0-100」）→ 放行增删；其余走既有判定（未登记子字段 / 值含未登记键）。
+    **只影响界面上是否给「+ 添加一项 / 改名」控件**——写入仍走原校验与原子写链路。
+    """
+    if fm is not None and fm.editor == "kvtable":
+        return True
+    return open_keys_of(fm) or _obj_unregistered_keys(fm, value)
+
+
+
 def is_editable_control(control: Optional[str]) -> bool:
     """控件形态是否可编辑（只读形态 = readonly；批5 起按最终 control 判定）。"""
     return (control or "") not in _READONLY_CONTROLS
@@ -2332,9 +2379,59 @@ def _kv_rows(value: Mapping[str, Any], cols: List[Dict[str, Any]], obj_mode: boo
     return out
 
 
+def _kv_mode(value: Mapping[str, Any]) -> str:
+    """键值表格行模式（判定只看值形态，不认字段名）：obj（值全为映射）/ scalar（值全为标量）
+    / typed（混杂或含数组 → 逐行按实际类型出控件）。空表 → scalar（与既有行为一致）。"""
+    vals = [v for v in value.values() if v is not None]
+    if vals and all(isinstance(v, Mapping) for v in vals):
+        return "obj"
+    if vals and not all(_is_scalarish(v) for v in vals):
+        return KV_MODE_TYPED
+    return "scalar"
+
+
+def _kv_typed_rows(value: Mapping[str, Any], fm: Optional[FieldMeta],
+                   mmeta: Optional[ModuleMeta], view: "_PackView",
+                   depth: int) -> List[Dict[str, Any]]:
+    """typed 模式的行：**每行一个字段描述符**（`_descriptor` 复用）——值按实际类型出控件
+    （数字/布尔/文本/枚举/引用/数组/对象/嵌套映射），可递归任意层。
+
+    子键有元数据登记时用登记元数据（中文名/枚举/引用目标/范围），未登记键走兜底控件 +
+    既有「元数据未登记，按实际值推断」标注。行的 `key` 即映射键，前端据此渲染键单元格。
+    """
+    child_meta: Mapping[str, FieldMeta] = (
+        dict(fm.children) if fm is not None and fm.children else {})
+    rows: List[Dict[str, Any]] = []
+    for k, v in value.items():
+        row = _descriptor(str(k), child_meta.get(str(k)), v, True, mmeta, view, depth + 1)
+        if not row.get("display") and isinstance(v, (Mapping, list)):
+            row["display"] = _json_text(v)
+        rows.append(row)
+    return rows
+
+
 def _kv_table_spec(value: Mapping[str, Any], fm: Optional[FieldMeta],
-                   view: "_PackView") -> Dict[str, Any]:
-    """键值表格描述（前端据 control=kvtable 渲染；列/行全来自值形态 + 元数据）。"""
+                   view: "_PackView", mmeta: Optional[ModuleMeta] = None,
+                   depth: int = 0) -> Dict[str, Any]:
+    """键值表格描述（前端据 control=kvtable 渲染；列/行全来自值形态 + 元数据）。
+
+    · `mode`：obj / scalar（批15 #9 既有）/ typed（批20 A：值类型混杂 → 逐行按实际类型出
+      控件，见 `_kv_typed_rows`）；
+    · `open_keys`：动态键空间（未登记子字段 / 值里含未登记键）→ 键可改名、可增删行；固定
+      schema → 键只读（不臆造键）。
+    """
+    mode = _kv_mode(value)
+    open_keys = _kv_open_keys(fm, value)
+    if mode == KV_MODE_TYPED:
+        return {
+            "mode": KV_MODE_TYPED,
+            "columns": [],
+            "rows": _kv_typed_rows(value, fm, mmeta, view, depth),
+            "row_count": len(value),
+            "key_label": KV_KEY_LABEL,
+            "value_label": KV_VALUE_LABEL,
+            "open_keys": open_keys,
+        }
     obj_mode, cols = _kv_columns(value, fm, view)
     return {
         "mode": "obj" if obj_mode else "scalar",
@@ -2343,8 +2440,8 @@ def _kv_table_spec(value: Mapping[str, Any], fm: Optional[FieldMeta],
         "row_count": len(value),
         "key_label": KV_KEY_LABEL,
         "value_label": KV_VALUE_LABEL,
-        # 动态键空间（元数据未登记子字段）→ 键可改名、可增删；固定 schema → 键只读。
-        "open_keys": open_keys_of(fm),
+        # 动态键空间（元数据未登记子字段 / 值含未登记键）→ 键可改名、可增删；固定 schema → 键只读。
+        "open_keys": open_keys,
     }
 
 
@@ -2407,9 +2504,9 @@ def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
     if not multiline and widget == "text":
         multiline = _is_long_text(value)  # 元数据未声明时的兜底（长文本仍给多行控件）
     control = control_for(fm, widget, multiline)
-    # 批15 #9：**动态键空间**的「键 → 标量/小结构」密集映射 → 键值表格（不再是每键一个大块表单）。
-    # 固定 schema（登记了 children）的对象保持 objform——不把已声明子字段的对象摊成表。
-    if control == "objform" and open_keys_of(fm) and _is_dense_map(value):
+    # 批15 #9 / 批20 A：**动态键空间 / 键值映射**的对象 → 键值表格（不再是每键一个大块表单）。
+    # 登记了子字段且键集合完全吻合的对象保持 objform（如 drop_exp / drop_items / stats）。
+    if control == "objform" and _obj_kv_tableable(fm, value):
         control = "kvtable"
     # 批15 #2/#9 回归修复：**对象型字段的结构（children / open_keys）与呈现控件解耦**——
     # 表格化 / 曲线化只改呈现，不删结构（一号原则：框架支持的子字段必须仍然可见可编）。
@@ -2499,6 +2596,14 @@ def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
                         invalid_cells.append(
                             {"row": i, "key": str(ck), "value": rv})
         desc["invalid_cells"] = invalid_cells
+        # 批20 A：列表元素的字段描述符（供前端在对象内递归渲染「数组 → 对象」等更深层结构；
+        # 判定与控件仍走同一套映射，不新增特例）。深度不额外 +1：element 是列表自身的元素，
+        # 不是树里多出来的一层（否则 `_MAX_DEPTH` 会把元素子字段截断成空）。
+        elem = fm.element if fm is not None else None
+        if elem is not None:
+            _sample = next((r for r in rows_val if isinstance(r, Mapping)), None)
+            desc["element"] = _descriptor("element", elem, _sample, bool(rows_val),
+                                          mmeta, view, depth)
     elif obj_like:
         # 批14 #4：对象子字段**始终**按元数据出（登记了但数据未配置 → 未配置态可填），
         # 再补实际值里多出的键（fm=None → 兜底控件 + 标注）。值缺失/非映射时按空对象渲染。
@@ -2509,9 +2614,10 @@ def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
         desc["open_keys"] = open_keys_of(fm)
     # 呈现层附加（与上面的结构输出**并列**，不是互斥分支）：表格 / 曲线各自带规格。
     if control == "kvtable":
-        # 批15 #9：键值表格（键 → 标量/小结构）——列/行来自值形态 + 元数据；前端行内编辑。
+        # 批15 #9 / 批20 A：键值表格（键 → 标量 / 小结构 / 混杂类型）——列/行来自值形态 +
+        # 元数据；前端行内编辑，typed 模式逐行按实际类型出控件（可递归）。
         desc["kv_table"] = _kv_table_spec(
-            value if isinstance(value, Mapping) else {}, fm, view)
+            value if isinstance(value, Mapping) else {}, fm, view, mmeta, depth)
     elif control == "curve":
         # 批15 #2：曲线控件（等级 → 数值）——默认公式/摘要行，双击展开明细表。
         desc["curve"] = _curve_spec(

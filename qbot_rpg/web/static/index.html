@@ -700,6 +700,15 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
 .keyadd:hover { background: var(--surface-hover); }
 .opkhint { color: var(--text-5); font-size: var(--fs-11); }
 
+/* ---------- 批20 A：对象内嵌「数组 / 映射」（沿用 .ltable 样式，再给紧凑外壳） ---------- */
+.objlist, .objkv { display: flex; flex-direction: column; gap: var(--sp-3); width: 100%; }
+.objlist .lmeta, .objkv .lmeta { font-size: var(--fs-11); color: var(--text-5); }
+.objlist .objlblocks { display: flex; flex-direction: column; gap: var(--sp-4); }
+.objlist .objlblock { border: var(--bw) solid var(--line-faint); padding: var(--sp-3); }
+.objlist .objlblock .objform { border-left: 0; padding-left: 0; }
+.objkv .ltable, .objlist .ltable { font-size: var(--fs-11); }
+.objkv .kvtable td, .objkv .kvtable th { padding: var(--sp-1) var(--sp-2); }
+
 /* ---------- 键值对表格（批5 数值覆盖 / 印记消耗）：键值行 + 增删 ---------- */
 .map-edit { width: 100%; }
 .mrows { display: flex; flex-direction: column; gap: var(--sp-3); }
@@ -1790,6 +1799,13 @@ var EMPTY_TEXT = "（空）";
 var INPUT_EMPTY = "未填写";
 // 批14 #4：元数据未登记子字段的兜底标注（与后端 api.META_UNREGISTERED_NOTE 同文案）。
 var META_UNREGISTERED_HINT = "元数据未登记，按实际值推断";
+// 批20 A：键值表格行模式（与后端 api.KV_MODE_TYPED 同值）——值类型混杂 → 逐行按实际类型出控件。
+var KV_MODE_TYPED = "typed";
+// 批20 A：对象内嵌「键值表格」的键/值表头兜底文案（后端 kv.key_label/value_label 优先）。
+var KV_KEY_LABEL = "键";
+var KV_VALUE_LABEL = "值";
+// 批20 C：右栏二级页签里「主块」的界面兜底名（后端块计划里主块 label 为空串）。
+var BLOCK_MAIN_LABEL = "主要字段";
 
 var state = {
   pack: null, modules: [], module: null, entries: [], entry: null, detail: null,
@@ -4251,6 +4267,7 @@ function renderDetail(d) {
   bindSubBlocks();
   bindControls();
   bindObjSections(el("p-body"));
+  bindScopedSections(el("p-body"));   // 批20 A：对象内嵌数组/映射的增删接线
   bindOpenKeySections(el("p-body"));
   bindKvSections(el("p-body"));
   bindCurveSections(el("p-body"));
@@ -4557,8 +4574,9 @@ function bindControls(root) {
     var rootF = ctx.fieldIndex[rootKey];
     if (!rootF) { return; }
     var path = inp.dataset.opath ? inp.dataset.opath.split(".") : [];
-    var leaf = objLeafOf(rootF, path);
-    if (!leaf) { return; }
+    // 批20 A：动态键空间的嵌套子项可能没有元数据描述符（未登记键）→ 按控件形态兜底读取，
+    // 仍照常写回「根对象 + 路径」的整块草稿（结构不臆造，只决定读取口径）。
+    var leaf = objLeafOf(rootF, path) || leafFromNode(inp);
     var ev = (inp.type === "checkbox" || inp.tagName === "SELECT") ? "change" : "input";
     inp.addEventListener(ev, function () {
       var next = objPathSet(objCurrentValue(ctx, rootF), path, readControl(inp, leaf));
@@ -4798,6 +4816,7 @@ function rerenderListField(f, wrap) {
   bindListSections(wrap);
   bindConditionSections(wrap);
   bindMapSections(wrap);
+  bindScopedSections(wrap);
   markDirty();
 }
 
@@ -4861,33 +4880,57 @@ function kvTableBody(f) {
   var kv = f.kv_table || {};
   var cols = kv.columns || [];
   var objMode = kv.mode === "obj";
+  var typed = (kv.mode === KV_MODE_TYPED);
   var rows = EditorKv.rows(currentFieldValue(f), objMode);
   var openKeys = !!kv.open_keys;
   var html = '<div class="lmeta">键值表格 · ' + rows.length + " 项 · 列名与类型来自内容包元数据"
+    + (typed ? " · 值按实际类型出控件" : "")
     + (openKeys ? " · 动态键空间（可改键/增删行）" : " · 键来自元数据")
     + " · 改动先进草稿（不落盘）</div>";
   if (!rows.length) {
     html += '<div class="ex">（空表）暂无数据项，用下面的「+ 添加一项」新建。</div>';
   } else {
     html += '<div class="ltable-scroll"><table class="ltable ltable-edit kvtable"><thead><tr>'
-      + '<th class="kvkey">' + esc(kv.key_label || "键") + "</th>"
-      + cols.map(function (c) {
-        return '<th class="' + esc(scalarCssClass(c.control)) + '">'
-          + helpTriggerHtml(c, headerLabelHtml(c.label, c.key))
-          + ' <span class="ftype">' + esc(typeZh(c.type)) + "</span></th>";
-      }).join("")
+      + '<th class="kvkey">' + esc(kv.key_label || KV_KEY_LABEL) + "</th>"
+      + (typed
+        ? '<th>' + esc(kv.value_label || KV_VALUE_LABEL) + "（按实际类型）</th>"
+        : cols.map(function (c) {
+          return '<th class="' + esc(scalarCssClass(c.control)) + '">'
+            + helpTriggerHtml(c, headerLabelHtml(c.label, c.key))
+            + ' <span class="ftype">' + esc(typeZh(c.type)) + "</span></th>";
+        }).join(""))
       + '<th class="op">操作</th></tr></thead><tbody>';
     rows.forEach(function (row, i) {
-      html += '<tr><td class="kvkey">' + kvKeyCell(f, row, i, openKeys) + "</td>"
-        + cols.map(function (c) { return "<td>" + kvCell(f, row, c, i, objMode) + "</td>"; }).join("")
-        + '<td class="op"><button type="button" class="ldel" data-kvdel="' + i
+      html += '<tr><td class="kvkey">' + kvKeyCell(f, row, i, openKeys) + "</td>";
+      if (typed) {
+        // 批20 A：值类型混杂 → 逐行按实际类型出控件（数组/对象/嵌套映射都能编）。
+        html += "<td>" + kvTypedCell(f, row, i) + "</td>";
+      } else {
+        html += cols.map(function (c) {
+          return "<td>" + kvCell(f, row, c, i, objMode) + "</td>";
+        }).join("");
+      }
+      html += '<td class="op"><button type="button" class="ldel" data-kvdel="' + i
         + '" title="删除本项（只改草稿）">删除</button></td></tr>';
     });
     html += "</tbody></table></div>";
   }
   html += '<button type="button" class="ladd" data-kvadd="' + esc(f.key)
-    + '" title="新增一项（键名自定，值按列类型编辑；只改草稿）">+ 添加一项</button>';
+    + '" title="新增一项（键名自定，值按实际类型编辑；只改草稿）">+ 添加一项</button>';
   return html;
+}
+
+function kvTypedCell(f, row, i) {
+  // 顶层键值表格的 typed 行：行描述符来自后端 `kv_table.rows[i]`（字段描述符同款）。
+  var kv = f.kv_table || {};
+  var desc = (kv.rows || [])[i] || { key: row.key, control: "text" };
+  var rowScope = { rootKey: f.key, path: [String(row.key)] };
+  if (desc.control === "listtable" || desc.control === "reflist"
+      || desc.control === "kvtable" || desc.control === "objform") {
+    return objLeafInput(desc, row.value, objScopeAttrs(rowScope), rowScope);
+  }
+  return objScalarCell(desc, row.value,
+    ' data-kvcell="' + esc(f.key) + '" data-kvrow="' + i + '" data-kvcol="value"');
 }
 
 function kvTableEdit(f) {
@@ -4956,6 +4999,7 @@ function rerenderKvField(f, wrap) {
   wrap.innerHTML = kvTableBody(f);
   renderCtx = prev;
   bindKvSections(wrap);
+  bindScopedSections(wrap);   // 批20 A：typed 行里的对象内嵌数组/映射
   markDirty();
 }
 
@@ -5984,13 +6028,20 @@ function objPathGet(obj, path) {
 function objPathSet(obj, path, value) {
   var root = (obj && typeof obj === "object" && !Array.isArray(obj))
     ? JSON.parse(JSON.stringify(obj)) : {};
+  if (!path.length) { return root; }
   var cur = root;
   for (var i = 0; i < path.length - 1; i++) {
-    var k = path[i];
-    if (!cur[k] || typeof cur[k] !== "object" || Array.isArray(cur[k])) { cur[k] = {}; }
-    cur = cur[k];
+    var k = String(path[i]);
+    var existing = cur[k];
+    if (existing === null || typeof existing !== "object") {
+      // 批20 A：缺失的中间容器按**下一段**决定形态——下一段是数字下标 → 建数组
+      // （对象→数组→对象 等更深层结构）；否则建对象。已有容器原样保留（不把数组压成对象）。
+      existing = /^\d+$/.test(String(path[i + 1])) ? [] : {};
+      cur[k] = existing;
+    }
+    cur = existing;
   }
-  if (path.length) { cur[path[path.length - 1]] = value; }
+  cur[String(path[path.length - 1])] = value;
   return root;
 }
 
@@ -6009,6 +6060,12 @@ function objPathDel(obj, path) {
 function objLeafOf(rootF, path) {
   var node = rootF;
   for (var i = 0; i < path.length; i++) {
+    // 批20 A：路径段落在「数组」上时下钻到元素描述符（对象→数组→对象 等更深层结构）。
+    if (node && node.type === "list") {
+      if (!node.element) { return null; }
+      node = node.element;
+      continue;
+    }
     var kids = (node && node.children) || [];
     var hit = null;
     for (var j = 0; j < kids.length; j++) { if (kids[j].key === path[i]) { hit = kids[j]; break; } }
@@ -6016,6 +6073,16 @@ function objLeafOf(rootF, path) {
     node = hit;
   }
   return node;
+}
+
+// 批20 A：控件节点 → 描述符兜底（对象内动态键空间的子项没有元数据登记时，按控件形态推断
+// 读取口径；只影响「怎么读这个输入框」，不臆造任何结构）。
+function leafFromNode(inp) {
+  if (!inp) { return { control: "text" }; }
+  if (inp.type === "checkbox") { return { control: "bool" }; }
+  if (inp.tagName === "SELECT") { return { control: "select" }; }
+  if (inp.type === "number") { return { control: "number" }; }
+  return { control: "text" };
 }
 
 function objNodeAt(rootF, path) {
@@ -6027,7 +6094,7 @@ function objControlAttrs(rootF, path) {
   return ' data-okey="' + esc(rootF.key) + '" data-opath="' + esc(path.join(".")) + '"';
 }
 
-function objLeafInput(child, value, attrs) {
+function objLeafInput(child, value, attrs, sc) {
   switch (child.control) {
     case "number":
       return '<input class="cin" type="number" step="' + esc(child.number_step || "any") + '"'
@@ -6047,19 +6114,24 @@ function objLeafInput(child, value, attrs) {
     case "textarea":
       return '<textarea class="cta" rows="3"' + attrs + ' placeholder="' + esc(INPUT_EMPTY) + '">'
         + esc(value == null ? "" : value) + "</textarea>";
+    // 批20 A：**对象内的数组 / 映射**也走可编辑控件（不再是只读 JSON 块）——
+    // 数组 → 行内可增删的列表；映射 → 动态键值表格（值按实际类型出控件）。递归任意层。
+    case "listtable":
+    case "reflist":
+      return objListEdit(child, sc, value);
+    case "kvtable":
+      return objKvEdit(child, sc, value);
     case "readonly":
       return '<div class="inp mono">'
         + esc(value == null || value === "" ? EMPTY_TEXT : JSON.stringify(value)) + "</div>";
-    case "listtable":
-    case "reflist":
     case "condition":
     case "maptable":
-    case "kvtable":
     case "curve":
-      // 嵌套在对象里的列表/条件/键值结构：本批不内联编辑 → 有框只读外观（不臆造控件）。
+      // 条件行 / 键值对 / 曲线：这三类控件有自己的字段级接线（本批不内联进对象内），
+      // 仍给有框只读外观（不臆造控件），并在下方标注去向。
       return '<span class="ro-cell">' + esc(value == null || value === ""
         ? EMPTY_TEXT : (typeof value === "object" ? JSON.stringify(value) : String(value)))
-        + "</span>";
+        + '</span><span class="mnote">该控件在字段级编辑（对象内暂不内联）</span>';
     case "text":
     default:
       return '<input class="cin" type="text"' + attrs + ' placeholder="' + esc(INPUT_EMPTY)
@@ -6067,12 +6139,235 @@ function objLeafInput(child, value, attrs) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// 批20 A · 对象内的数组 / 映射（作用域 = 根字段 + 路径；改动仍只产出「根对象」一个顶层草稿）
+// 复用既有 EditorList / EditorKv 纯逻辑与 .ltable 样式；键名/列名全部来自元数据与值形态。
+// ---------------------------------------------------------------------------
+function objScopeAttrs(sc) {
+  return ' data-okey="' + esc(sc.rootKey) + '" data-opath="' + esc(sc.path.join(".")) + '"';
+}
+function objScopeKey(sc) {
+  return esc(sc.rootKey) + "|" + esc(sc.path.join("."));
+}
+function parseObjScope(text) {
+  var parts = String(text == null ? "" : text).split("|");
+  var rootKey = parts[0] || "";
+  var path = (parts[1] ? parts[1].split(".") : []).filter(function (s) { return s !== ""; });
+  return { rootKey: rootKey, path: path };
+}
+function objScopeValue(ctx, sc) {
+  var rootF = ctx.fieldIndex[sc.rootKey];
+  if (!rootF) { return undefined; }
+  return objPathGet(objCurrentValue(ctx, rootF), sc.path);
+}
+function objScopeWrite(ctx, sc, value) {
+  var rootF = ctx.fieldIndex[sc.rootKey];
+  if (!rootF) { return; }
+  EditorDraft.set(ctx.draft, sc.rootKey,
+    objPathSet(objCurrentValue(ctx, rootF), sc.path, value), rootF.value);
+}
+function objScopedRerender(node, sc) {
+  // 只重画该作用域容器（不整页重画 → 不丢其他草稿）。
+  var ctx = ctxFromNode(node);
+  var rootF = ctx.fieldIndex[sc.rootKey];
+  if (!rootF) { return; }
+  var host = node.parentNode;
+  if (!host) { return; }
+  var leaf = objLeafOf(rootF, sc.path);
+  if (!leaf) { return; }
+  var cur = objScopeValue(ctx, sc);
+  var fresh = document.createElement("div");
+  if (node.classList.contains("objkv")) {
+    fresh.innerHTML = objKvEdit(leaf, sc, cur);
+  } else {
+    fresh.innerHTML = objListEdit(leaf, sc, cur);
+  }
+  var newBox = fresh.firstChild;
+  if (!newBox) { return; }
+  host.replaceChild(newBox, node);
+  bindControls(host);
+  bindObjSections(host);
+  bindScopedSections(host);
+}
+
+function objListEdit(f, sc, value) {
+  var rows = Array.isArray(value) ? value : [];
+  var scalar = !!f.scalar_element;
+  var cols = f.columns || [];
+  var scope = objScopeKey(sc);
+  var html = '<div class="objlist" data-ols="' + scope + '">';
+  html += '<div class="lmeta">' + (scalar ? "数组" : "对象数组") + " · " + rows.length + " 行"
+    + " · " + esc(f.label || f.key) + "（对象内嵌列表，行内编辑；改动进外层字段草稿）</div>";
+  if (!rows.length) {
+    html += '<div class="ex">（空列表）用下面的「+ 添加一行」新建。</div>';
+  } else if (scalar) {
+    var col = cols[0] || { key: "value", label: KV_VALUE_LABEL, control: "text" };
+    html += '<div class="ltable-scroll"><table class="ltable ltable-edit"><thead><tr>'
+      + '<th class="' + esc(scalarCssClass(col.control)) + '">'
+      + esc(col.label || col.key) + ' <span class="ftype">' + esc(typeZh(col.type)) + "</span></th>"
+      + '<th class="op">操作</th></tr></thead><tbody>';
+    rows.forEach(function (row, i) {
+      var cellScope = { rootKey: sc.rootKey, path: sc.path.concat([String(i)]) };
+      var v = EditorList.cellValue(row, col.key, true);
+      // 元素是标量 → 行内可编（data-opath 走既有「根对象 + 路径」写回）。
+      html += "<tr><td>" + objScalarCell(col, v, objScopeAttrs(cellScope)) + "</td>"
+        + '<td class="op"><button type="button" class="ldel" data-oldsdel="' + scope + "|" + i
+        + '" title="删除本行（只改草稿）">删除</button></td></tr>';
+    });
+    html += "</tbody></table></div>";
+  } else if (f.element) {
+    // 元素是对象 → 每行一个嵌套对象表单（路径含行下标；objLeafOf 已支持下标下钻）。
+    var ctx0 = renderCtx || MAIN_CTX;
+    var rootF0 = (ctx0 && ctx0.fieldIndex) ? ctx0.fieldIndex[sc.rootKey] : null;
+    if (!rootF0) {
+      return '<span class="ro-cell">' + esc(EMPTY_TEXT) + "</span>";
+    }
+    var current0 = objCurrentValue(ctx0, rootF0);
+    html += '<div class="lblocks objlblocks">';
+    rows.forEach(function (row, i) {
+      var rowPath = sc.path.concat([String(i)]);
+      html += '<div class="lblock objlblock"><div class="lb-head">'
+        + '<span class="lb-no">#' + (i + 1) + "</span>"
+        + '<button type="button" class="ldel" data-oldsdel="' + scope + "|" + i
+        + '" title="删除本行（只改草稿）">删除</button></div>'
+        + objFormEdit(f.element, rowPath, rootF0, current0)
+        + "</div>";
+    });
+    html += "</div>";
+  } else {
+    html += '<div class="ex">该数组元素的字段未在元数据中声明，且没有数据行可推断列；'
+      + "请先补元数据。</div>";
+  }
+  html += '<button type="button" class="ladd" data-olsadd="' + scope
+    + '" title="按元素元数据的默认值新增一行（只改草稿）">+ 添加一行</button>';
+  return html + "</div>";
+}
+
+function objScalarCell(col, value, attrs) {
+  switch (col.control) {
+    case "number":
+      return '<input class="cin lcell" type="number" step="' + esc(col.number_step || "any")
+        + '" placeholder="' + esc(INPUT_EMPTY) + '"' + attrs
+        + ' value="' + esc(value == null ? "" : value) + '">';
+    case "bool":
+      return '<label class="ctl-bool"><input type="checkbox"' + attrs + (value ? " checked" : "")
+        + '> <span class="btxt">' + (value ? "是" : "否") + "</span></label>";
+    case "select":
+      return '<select class="cin lcell"' + attrs + ">"
+        + selectOptions(value, (col.enum && col.enum.length ? col.enum : (col.enum_options || [])), "（未选择）") + "</select>";
+    case "ref":
+      // data-ref：复用既有「异步填候选 + 黄提示」接线（框架唯一入口）。
+      return '<select class="cin lcell"' + attrs + ' data-ref="' + esc(col.ref_target || "")
+        + '" data-current="' + esc(value == null ? "" : value) + '">'
+        + selectOptions(value, [], "（未选择）") + "</select>"
+        + '<span class="refnote"></span>';
+    case "objform":
+    case "listtable":
+    case "reflist":
+    case "kvtable":
+      // 嵌套更深一层（对象/数组/映射）→ 由调用方给作用域，这里不额外包壳。
+      return '<span class="ro-cell">' + esc(value == null || value === ""
+        ? EMPTY_TEXT : (typeof value === "object" ? JSON.stringify(value) : String(value)))
+        + "</span>";
+    default:
+      return '<input class="cin lcell" type="text"' + attrs
+        + ' placeholder="' + esc(INPUT_EMPTY) + '" value="'
+        + esc(value == null ? "" : value) + '">';
+  }
+}
+
+// 批20 A：作用域里「单元格自身」的定位（rootKey|path）；嵌套映射的标量单元据此读写，
+// 空值 = 删该子键（与顶层键值表格同口径）。
+function objScopeMarker(sc) {
+  return esc(sc.rootKey) + "|" + esc(sc.path.join("."));
+}
+
+function objKvEdit(f, sc, value) {
+  var kv = f.kv_table || {};
+  var mode = kv.mode || "scalar";
+  var objMode = (mode === "obj");
+  var openKeys = !!kv.open_keys;
+  var scope = objScopeKey(sc);
+  var map = (value && typeof value === "object" && !Array.isArray(value)) ? value : {};
+  var keys = Object.keys(map);
+  var html = '<div class="objkv" data-okv="' + scope + '">';
+  html += '<div class="lmeta">键值表格 · ' + keys.length + " 项 · " + esc(f.label || f.key)
+    + (openKeys ? " · 动态键空间（可改键/增删行）" : " · 键来自元数据")
+    + "（对象内嵌映射；改动进外层字段草稿）</div>";
+  if (!keys.length) {
+    html += '<div class="ex">（空表）用下面的「+ 添加一项」新建。</div>';
+  } else {
+    html += '<div class="ltable-scroll"><table class="ltable ltable-edit kvtable"><thead><tr>'
+      + '<th class="kvkey">' + esc(kv.key_label || KV_KEY_LABEL) + "</th>";
+    if (mode === KV_MODE_TYPED) {
+      html += '<th>' + esc(kv.value_label || KV_VALUE_LABEL) + "（按实际类型）</th>";
+    } else {
+      (kv.columns || []).forEach(function (c) {
+        html += '<th class="' + esc(scalarCssClass(c.control)) + '">'
+          + esc(c.label || c.key) + ' <span class="ftype">' + esc(typeZh(c.type)) + "</span></th>";
+      });
+    }
+    html += '<th class="op">操作</th></tr></thead><tbody>';
+    keys.forEach(function (k, i) {
+      var rowScope = { rootKey: sc.rootKey, path: sc.path.concat([String(k)]) };
+      html += '<tr><td class="kvkey">' + objKvKeyCell(k, i, scope, openKeys) + "</td>";
+      if (mode === KV_MODE_TYPED) {
+        var row = (kv.rows || [])[i] || { key: k, value: map[k], control: "text" };
+        html += "<td>" + objKvTypedCell(row, map[k], rowScope) + "</td>";
+      } else if (objMode) {
+        (kv.columns || []).forEach(function (c) {
+          var cellScope = { rootKey: sc.rootKey, path: rowScope.path.concat([c.key]) };
+          var present = map[k] && typeof map[k] === "object" && (c.key in map[k]);
+          html += "<td>" + objKvScalarCell(c, present ? map[k][c.key] : null, cellScope)
+            + "</td>";
+        });
+      } else {
+        var col0 = (kv.columns || [])[0] || { key: "value", control: "text" };
+        html += "<td>" + objKvScalarCell(col0, map[k], rowScope) + "</td>";
+      }
+      html += '<td class="op"><button type="button" class="ldel" data-okvdel="' + scope + "|" + i
+        + '" title="删除本项（只改草稿）">删除</button></td></tr>';
+    });
+    html += "</tbody></table></div>";
+  }
+  html += '<button type="button" class="ladd" data-okvadd="' + scope
+    + '" title="新增一项（键名自定，值按实际类型编辑；只改草稿）">+ 添加一项</button>';
+  return html + "</div>";
+}
+
+function objKvKeyCell(key, i, scope, openKeys) {
+  if (!openKeys) { return '<span class="ro-cell">' + esc(key || EMPTY_TEXT) + "</span>"; }
+  return '<input class="cin kvkeyin" type="text" data-okvkey="' + scope + "|" + i
+    + '" placeholder="' + esc(INPUT_EMPTY) + '" value="' + esc(key) + '">';
+}
+
+function objKvTypedCell(row, value, rowScope) {
+  // typed 行描述符本身就是字段描述符 → 直接复用递归渲染（嵌套数组/映射/对象照常可编）。
+  if (row.control === "listtable" || row.control === "reflist" || row.control === "kvtable"
+      || row.control === "objform") {
+    return objLeafInput(row, value, objScopeAttrs(rowScope), rowScope);
+  }
+  return objScalarCell({ control: row.control, type: row.type, enum: row.enum,
+                         enum_options: row.enum_options, number_step: row.number_step,
+                         ref_target: row.ref_target, label: row.label }, value,
+                       ' data-okvc="' + objScopeMarker(rowScope) + '"');
+}
+
+function objKvScalarCell(col, value, cellScope) {
+  if (col.control === "objform" || col.control === "listtable" || col.control === "reflist"
+      || col.control === "kvtable") {
+    return objLeafInput(col, value, objScopeAttrs(cellScope), cellScope);
+  }
+  return objScalarCell(col, value, ' data-okvc="' + objScopeMarker(cellScope) + '"');
+}
+
 function objChildRow(child, path, rootF, current, allowDel) {
   var value = objPathGet(current, path);
+  var sc = { rootKey: rootF.key, path: path };
   var attrs = objControlAttrs(rootF, path);
   var body = (child.control === "objform")
     ? objFormEdit(child, path, rootF, current)
-    : objLeafInput(child, value, attrs);
+    : objLeafInput(child, value, attrs, sc);
   var note = child.meta_note
     ? ' <span class="mnote" title="' + esc(child.meta_note) + '">'
       + esc(child.meta_note) + "</span>" : "";
@@ -6148,6 +6443,7 @@ function rerenderObjForm(box) {
   renderCtx = prev;
   bindControls(host);
   bindObjSections(host);
+  bindScopedSections(host);   // 批20 A：对象内嵌数组/映射的增删接线
 }
 
 function bindObjSections(root) {
@@ -6192,6 +6488,118 @@ function bindObjSections(root) {
       var box = btn.closest(".objform");
       if (box) { box.dataset.oroot = rootKey; rerenderObjForm(box); }
       markDirty();
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// 批20 A · 对象内嵌数组 / 映射的接线（只改草稿；保存仍走既有校验与原子写链路）
+// 读写口径统一为「根字段 + 路径」：整块替换外层字段值 → 保存补丁仍是「字段 → 值」。
+// ---------------------------------------------------------------------------
+function scopedReadArray(ctx, sc, leaf) {
+  var v = objScopeValue(ctx, sc);
+  return Array.isArray(v) ? v : [];
+}
+function scopedDelete(ctx, sc) {
+  var rootF = ctx.fieldIndex[sc.rootKey];
+  if (!rootF) { return; }
+  EditorDraft.set(ctx.draft, sc.rootKey,
+    objPathDel(objCurrentValue(ctx, rootF), sc.path), rootF.value);
+}
+function readScopedKvCell(inp) {
+  // 与顶层键值表格同口径：空值 = 删该子键（保持「未配置」，不写 null）。
+  if (inp.type === "checkbox") { return !!inp.checked; }
+  if (inp.tagName === "SELECT") { return inp.value === "" ? null : inp.value; }
+  if (inp.type === "number") {
+    if (inp.value === "") { return null; }
+    var n = Number(inp.value);
+    return isNaN(n) ? inp.value : n;
+  }
+  return inp.value === "" ? null : inp.value;
+}
+function objScopeOfNode(node) {
+  return { rootKey: node.dataset.okey || "",
+           path: (node.dataset.opath ? String(node.dataset.opath).split(".") : [])
+             .filter(function (s) { return s !== ""; }) };
+}
+
+function bindScopedSections(root) {
+  Array.prototype.forEach.call(root.querySelectorAll("[data-olsadd]"), function (btn) {
+    btn.addEventListener("click", function () {
+      var sc = parseObjScope(btn.dataset.olsadd);
+      var ctx = ctxFromNode(btn);
+      var rootF = ctx.fieldIndex[sc.rootKey];
+      if (!rootF) { return; }
+      var leaf = objLeafOf(rootF, sc.path);
+      var rows = scopedReadArray(ctx, sc, leaf);
+      objScopeWrite(ctx, sc, EditorList.addRow(rows, leaf ? leaf.row_default : null,
+                                               !!(leaf && leaf.scalar_element)));
+      markDirty();
+      objScopedRerender(btn.closest(".objlist"), sc);
+    });
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-oldsdel]"), function (btn) {
+    btn.addEventListener("click", function () {
+      var parts = String(btn.dataset.oldsdel).split("|");
+      var sc = parseObjScope(parts[0] + "|" + (parts[1] || ""));
+      var ctx = ctxFromNode(btn);
+      objScopeWrite(ctx, sc, EditorList.delRow(scopedReadArray(ctx, sc, null), parts[2]));
+      markDirty();
+      objScopedRerender(btn.closest(".objlist"), sc);
+    });
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-okvkey]"), function (inp) {
+    inp.addEventListener("input", function () {
+      var parts = String(inp.dataset.okvkey).split("|");
+      var sc = parseObjScope(parts[0] + "|" + (parts[1] || ""));
+      var ctx = ctxFromNode(inp);
+      var rootF = ctx.fieldIndex[sc.rootKey];
+      if (!rootF) { return; }
+      var leaf = objLeafOf(rootF, sc.path);
+      var map = objScopeValue(ctx, sc);
+      var rows = EditorKv.rows(map, true);
+      var i = Number(parts[2]);
+      var newKey = String(inp.value || "");
+      if (!newKey || newKey === rows[i].key) { return; }
+      rows = EditorKv.setKey(rows, i, newKey);
+      objScopeWrite(ctx, sc, EditorKv.value(rows, true));
+      markDirty();
+    });
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-okvc]"), function (inp) {
+    var ev = (inp.type === "checkbox" || inp.tagName === "SELECT") ? "change" : "input";
+    inp.addEventListener(ev, function () {
+      var sc = parseObjScope(inp.dataset.okvc);
+      var ctx = ctxFromNode(inp);
+      var v = readScopedKvCell(inp);
+      if (v === null) { scopedDelete(ctx, sc); } else { objScopeWrite(ctx, sc, v); }
+      if (inp.type === "checkbox") {
+        var t = inp.parentNode.querySelector(".btxt");
+        if (t) { t.textContent = inp.checked ? "是" : "否"; }
+      }
+      markDirty();
+    });
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-okvadd]"), function (btn) {
+    btn.addEventListener("click", function () {
+      var sc = parseObjScope(btn.dataset.okvadd);
+      var ctx = ctxFromNode(btn);
+      var map = objScopeValue(ctx, sc);
+      objScopeWrite(ctx, sc, EditorKv.value(EditorKv.addRow(EditorKv.rows(map, true), true), true));
+      markDirty();
+      objScopedRerender(btn.closest(".objkv"), sc);
+    });
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-okvdel]"), function (btn) {
+    btn.addEventListener("click", function () {
+      var parts = String(btn.dataset.okvdel).split("|");
+      var sc = parseObjScope(parts[0] + "|" + (parts[1] || ""));
+      var ctx = ctxFromNode(btn);
+      var map = objScopeValue(ctx, sc);
+      objScopeWrite(ctx, sc, EditorKv.value(
+        EditorKv.delRow(EditorKv.rows(map, true), Number(parts[2])), true));
+      markDirty();
+      objScopedRerender(btn.closest(".objkv"), sc);
     });
   });
 }

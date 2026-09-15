@@ -1763,7 +1763,11 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "weakness": FieldMeta(type="obj", children=WEAKNESS_CHILDREN),
         "pv": FieldMeta(type="number", range_min=0, range_max=500, unit="点"),  # F09（档区间仅提示；木桩强制 0 A2）
         "pv_recover": FieldMeta(type="enum", enum=("battle_end", "none")),  # F10
-        "resistance": FieldMeta(type="obj", children=RESISTANCE_CHILDREN),  # F11
+        # F11：抗性 = 「负面效果 ID → 0-100」映射（框架登记 immune 为正式字段，stun 为 soft
+        # 展示键；其余键由内容定义）→ 展示层显式声明为**键值表格**（批20 A：动态键空间，键可
+        # 改名、行可增删；type / 校验口径不变，只换控件）。
+        "resistance": FieldMeta(type="obj", children=RESISTANCE_CHILDREN,
+                                editor="kvtable"),
         # ---- 行动表 / 特殊行动 / 连招（F12-F14 / 1.4）----
         "actions": FieldMeta(type="list", element=FieldMeta(type="obj", children=ACTION_ENTRY_CHILDREN)),  # F12
         "special_actions": FieldMeta(type="list", element=FieldMeta(type="obj", children=SPECIAL_ACTION_CHILDREN)),  # F13

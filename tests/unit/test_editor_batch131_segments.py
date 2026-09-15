@@ -290,6 +290,17 @@ def test_selfcheck_segment_diff_only_config_status() -> None:
     assert any("settings" in ln and "段集合差 无" in ln for ln in lines)
 
 
+def test_selfcheck_segment_diff_tolerates_pack_specific_key() -> None:
+    """包自有数据键（框架未登记的段，如 zz_probe_ext 的 `ext`）属合法增补，不判差异。"""
+    rows = [selfcheck.check_pack(p, CONTENT) for p in ("demo_blank", "zz_probe_ext")]
+    lines, errors = selfcheck._segment_diff(rows)
+    assert errors == [], errors
+    extras = {e for r in rows
+              for e in r["segments"].get("settings", {}).get("extra", [])}
+    assert "ext" in extras
+    assert any("包自有数据键" in ln for ln in lines)
+
+
 def test_footer_batch_string_is_131() -> None:
     html = HTML.read_text(encoding="utf-8")
     assert "批13.1 · 段入口" in html

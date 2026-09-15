@@ -21,7 +21,7 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, List, Set, Tuple
 
 _REPO = Path(__file__).resolve().parent.parent
 if str(_REPO) not in sys.path:
@@ -95,8 +95,11 @@ def check_pack(pack: str, root: Path) -> Dict[str, Any]:
         missing = sorted(set(base.fields) - set(ids))
         if missing:
             res["errors"].append(f"段入口缺失：模块 {module} 条目列表未含框架段 {missing}")
+        # 跨包可比的是**框架登记段**集合（包自己多出来的数据键不是「框架段」，不参与相等判定）。
         res["segments"][module] = {
             "ids": ids,
+            "registered": [i for i in ids if i in base.fields],
+            "extra": [i for i in ids if i not in base.fields],
             "configured": [str(e.get("id")) for e in entries if not e.get("unconfigured")],
             "unconfigured": [str(e.get("id")) for e in entries if e.get("unconfigured")],
         }
@@ -120,11 +123,12 @@ def _print_table(rows: List[Dict[str, Any]]) -> None:
         print("  ".join(c.ljust(widths[i]) for i, c in enumerate(p)))
 
 
-def _segment_diff(rows: List[Dict[str, Any]]) -> List[str]:
+def _segment_diff(rows: List[Dict[str, Any]]) -> Tuple[List[str], List[str]]:
     """跨包段集合差集：输出人话行 + 返回差集型错误（应只有「是否已配置」差别）。
 
-    段集合（对象型模块的条目 id 集）是「框架登记段 ∪ 包数据键」，同一框架下**必须一致**；
-    各包之间只允许「已配置 / 未配置」的差别（即同一个 id 在一包有值、在另一包是空槽）。
+    比较的是**框架登记段**集合（对象型模块的条目 id ∩ 框架字段），同一框架下**必须一致**；
+    各包自己多出来的数据键（框架未登记的段）属合法增补，只附注、不判差异。
+    各包之间只允许「已配置 / 未配置」的差别（同一个 id 在一包有值、在另一包是空槽）。
     """
     lines: List[str] = []
     errors: List[str] = []
@@ -137,18 +141,24 @@ def _segment_diff(rows: List[Dict[str, Any]]) -> List[str]:
         if len(packs) < 2:
             continue
         ref = packs[0]
-        ref_ids = set(ref["segments"][module]["ids"])
+        ref_ids = set(ref["segments"][module].get("registered") or ref["segments"][module]["ids"])
         for r in packs[1:]:
-            ids = set(r["segments"][module]["ids"])
+            ids = set(r["segments"][module].get("registered") or r["segments"][module]["ids"])
             diff = sorted(ref_ids ^ ids)
             ca = len(ref["segments"][module]["configured"])
             ua = len(ref["segments"][module]["unconfigured"])
             cb = len(r["segments"][module]["configured"])
             ub = len(r["segments"][module]["unconfigured"])
+            extra_a = ref["segments"][module].get("extra") or []
+            extra_b = r["segments"][module].get("extra") or []
+            extra_note = ""
+            if extra_a or extra_b:
+                extra_note = (f"；包自有数据键 {ref['pack']}={extra_a} "
+                              f"{r['pack']}={extra_b}（合法增补，不判差异）")
             lines.append(
-                f"  {module}: 段集合差 {diff if diff else '无'}；"
+                f"  {module}: 框架段集合差 {diff if diff else '无'}；"
                 f"{ref['pack']} 已配置 {ca} / 未配置 {ua}，"
-                f"{r['pack']} 已配置 {cb} / 未配置 {ub}")
+                f"{r['pack']} 已配置 {cb} / 未配置 {ub}{extra_note}")
             if diff:
                 errors.append(
                     f"段集合跨包不一致：{module}（{ref['pack']} vs {r['pack']}）差 {diff}")

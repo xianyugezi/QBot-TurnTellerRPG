@@ -2807,8 +2807,11 @@ def suggest_pinyin_id(module: str, mmeta: Optional[ModuleMeta], name: object,
                       id_width: object = None) -> Dict[str, Any]:
     """可选附加：按中文名生成拼音 ID（全拼 + 下划线，重复追加 `_2`…）。
 
-    **失败/多音字/无拼音字符/未装库 → 一律回落「前缀 + 序号」并带明确 note**（不报错、
-    不静默）。返回 {suggested_id, used_pinyin, note}；默认路径永不走这里。
+    **多音字取常用读音**（pypinyin 列表首项）继续生成，仅在 note 里提示「含多音字，已取
+    常用读音；如不对可直接改 ID」——**不整名回落**（ID 透明可改，落回序号会让该功能形同虚设；
+    2026-09-15 主 agent 实测修正：此前「精铁锭/重剑/蚀脉猎师」等常见名均被拒）。
+    **真正失败**（名称为空 / 未装库 / 转换异常 / 无可转字符）→ 回落「前缀 + 序号」并带明确
+    note（不报错、不静默）。返回 {suggested_id, used_pinyin, note}；默认路径永不走这里。
     """
     spec = id_rule_spec(module, mmeta, id_prefix=id_prefix, id_width=id_width)
     used = {str(x) for x in (existing_ids or ()) if str(x)}
@@ -2831,18 +2834,22 @@ def suggest_pinyin_id(module: str, mmeta: Optional[ModuleMeta], name: object,
     except Exception as exc:  # 转换异常 → 回落，不抛给调用方
         return _fallback(f"拼音转换失败（{exc}），已用「前缀 + 序号」。")
     picked: List[str] = []
+    polyphonic = False
     for item in syllables:
         opts = [str(x) for x in (item if isinstance(item, list) else [item]) if str(x).strip()]
         if not opts:
             continue
-        if len(opts) > 1:  # 多音字：读音不唯一 → 回落并提示
-            return _fallback("名称含多音字（读音不唯一），已用「前缀 + 序号」。")
+        if len(opts) > 1:
+            # 多音字：取**常用读音**（首项）继续生成，只在 note 里提示，不整名回落。
+            polyphonic = True
         picked.append(opts[0])
     base = slugify("_".join(picked))
     if not base:
         return _fallback("名称没有可转成拼音的字符，已用「前缀 + 序号」。")
-    return {"suggested_id": _unique_slug(base, used), "used_pinyin": True,
-            "note": f"按名称拼音生成：{base}"}
+    note = f"按名称拼音生成：{base}"
+    if polyphonic:
+        note += "（含多音字，已取常用读音；如不对可直接改 ID）"
+    return {"suggested_id": _unique_slug(base, used), "used_pinyin": True, "note": note}
 
 
 def _preset_of(decl: Optional[pack_meta.PackFieldMeta], module: str,

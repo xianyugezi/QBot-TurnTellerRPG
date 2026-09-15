@@ -202,11 +202,19 @@ def test_pinyin_available_path_generates_pinyin_id(monkeypatch: pytest.MonkeyPat
     assert out2["suggested_id"] == "long_lin_jia_2"
 
 
-def test_pinyin_multi_reading_falls_back_with_note(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_pinyin_multi_reading_uses_common_reading_with_note(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """多音字 → **取常用读音**（首项）生成 id，仅在 note 提示（2026-09-15 口径修正）。
+
+    原行为「含多音字即整名回落」实测导致常见名（精铁锭/重剑/蚀脉猎师）全部用不上拼音，
+    故改为取常用读音；ID 透明可改，用户可自行修正。
+    """
     _stub_pypinyin(monkeypatch, result=[["xing", "hang"]])
     out = api.suggest_pinyin_id("m", None, "行", set(), id_prefix="item")
-    assert out["used_pinyin"] is False
-    assert out["suggested_id"] == "item_001" and "多音字" in out["note"]
+    assert out["used_pinyin"] is True
+    assert out["suggested_id"] == "xing"
+    assert "多音字" in out["note"] and "常用读音" in out["note"]
 
 
 def test_pinyin_conversion_error_falls_back(monkeypatch: pytest.MonkeyPatch) -> None:

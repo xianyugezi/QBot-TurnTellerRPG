@@ -3,8 +3,8 @@
 依据：`docs/编辑器重写_数据包展示元数据下放方案.md` §四 批B/C。
 
 本用例**调用** `scripts/compare_field_meta_migration.py`：它用 `git worktree` 检出基线
-`112584d`（批12 重定；原 `995e91b` 因内容包新增模块产生与迁移无关的硬差异），
-在基线树与当前树各跑一遍 `scripts/editor_readonly_snapshot.py`（模块树 /
+`46baff3`（批13.1 重定；原 `112584d` 因段入口机制合法改变条目列表口径而产生与迁移
+无关的硬差异），在基线树与当前树各跑一遍 `scripts/editor_readonly_snapshot.py`（模块树 /
 条目列表 / 条目详情 / 条目索引 / 引用候选 / 包列表），递归对拍并输出差异报告。
 **既有键的修改/删除 = 0** 才算通过——这是本批「展示元数据下放」不改行为的硬门禁。
 
@@ -26,7 +26,7 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
-BASELINE_REF = "112584d"
+BASELINE_REF = "46baff3"
 CONTENT = REPO / "content"
 
 

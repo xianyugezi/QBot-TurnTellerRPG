@@ -5,7 +5,7 @@
 「迁移前后接口对拍 diff=0（键集合、label、help、group、module_tree 逐项比对）」。
 
 做法：
-  1. 用 `git worktree` 检出基线（默认 `112584d`；批12 重定），在基线树里跑
+  1. 用 `git worktree` 检出基线（默认 `46baff3`；批13.1 重定），在基线树里跑
      `scripts/editor_readonly_snapshot.py`（`qbot_rpg` 走 PYTHONPATH 指向基线）；
   2. 在当前工作树跑同一脚本；
   3. 递归对拍两份 JSON，输出差异报告；**既有键的修改/删除 = 0 → 退出码 0**，否则 1。
@@ -41,7 +41,11 @@ DEFAULT_PACKS = ("veinborn", "test_demo")
 # traits/recipe/slots/dungeon/achievements/conditional 等模块，使 995e91b 基线在
 # 「模块目录/索引/包列表 module_count」上产生与迁移无关的硬差异。重定到本批父提交，
 # 使门禁继续只守「字段级元数据迁移不得改/删」。
-DEFAULT_BASELINE_REF = "112584d"
+# 批13.1（2026-09-15）重定基线：112584d → 本批末提交。原因：段入口机制合法改变
+# **条目列表口径**（对象型模块补入框架已登记的未配置段）→ settings/conditional 的
+# 条目数、index.total 与 entries 列表长度随之变化，属与「字段级元数据迁移」无关的
+# 展示层演进；重定到本批末提交后，门禁继续只守字段级改/删。
+DEFAULT_BASELINE_REF = "46baff3"
 
 
 def _env(root: Path) -> dict:

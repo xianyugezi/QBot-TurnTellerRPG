@@ -366,6 +366,16 @@ html[data-theme="contrast"] .asave:disabled { border-style: dotted; opacity: .6;
 .vrow b { color: var(--danger); font-weight: 700; }
 .vrow.yellow b { color: var(--warn); }
 .vrow .vfix { color: var(--text-5); display: block; }
+/* 批14 #5：三段式人话（哪里 / 为什么 / 怎么办）+ 折叠的排查信息（规则码/原始消息/位置） */
+.vrow .vseg { display: block; margin-top: var(--sp-1); }
+.vrow .vk { display: inline-block; min-width: 3.4em; color: var(--text-5); }
+.vrow .vwhy { color: var(--text-2); }
+.vrow .vhow { color: var(--accent); }
+.vrow .vraw { margin-top: var(--sp-2); }
+.vrow .vraw summary { cursor: pointer; color: var(--text-5); font-size: var(--fs-11);
+  white-space: normal; }
+.vrow .vraw > div { color: var(--text-5); font-size: var(--fs-11); font-family: var(--font-mono);
+  white-space: pre-wrap; overflow-wrap: anywhere; }
 
 /* 分组页签（终端极简风 06 组件）：名称 + 字段计数徽标；名称来自元数据 group_labels */
 .gtabs { display: flex; align-items: center; gap: var(--sp-3); margin: 0 0 var(--sp-6);
@@ -4859,11 +4869,31 @@ function renderResult(res) {
 }
 
 function vrow(e, cls) {
-  var where = [e.module, e.entry_id, e.field_label].filter(function (x) { return !!x; }).join(" · ");
-  return '<div class="vrow ' + cls + '"><b>[' + (cls === "red" ? "红拦" : "黄提示") + "]</b> "
-    + esc(where) + "：" + esc(e.message || e.code || "")
-    + (e.how_to_fix ? '<span class="vfix">怎么改：' + esc(e.how_to_fix) + "</span>" : "")
-    + "</div>";
+  // 批14 #5：三段式人话——哪里（模块/条目/字段中文名）+ 为什么（依据哪条要求、期望什么）
+  // + 怎么办（具体动作）。规则码 / 原始消息 / 位置 收进折叠的「排查信息」，不干扰作者。
+  var tag = cls === "red" ? "红拦" : "黄提示";
+  var where = e.where
+    || [e.module_label || e.module, e.entry_name || e.entry_id,
+        e.field_label].filter(function (x) { return !!x; }).join(" · ");
+  var why = e.why || e.message || e.code || "";
+  var how = e.how || e.how_to_fix || "";
+  var raw = e.raw || e.message || "";
+  var code = e.code || "";
+  var path = e.field_path || e.field || "";
+  var html = '<div class="vrow ' + cls + '"><b>[' + tag + "]</b>"
+    + '<div class="vseg"><span class="vk">哪里</span>' + esc(where || "（未指明）") + "</div>"
+    + '<div class="vseg"><span class="vk">为什么</span><span class="vwhy">'
+    + esc(why) + "</span></div>";
+  if (how) {
+    html += '<div class="vseg"><span class="vk">怎么办</span><span class="vhow">'
+      + esc(how) + "</span></div>";
+  }
+  html += '<details class="vraw"><summary>排查信息（规则码 / 原始消息 / 位置）</summary>'
+    + "<div>规则码：" + esc(code) + (e.rule ? "（" + esc(e.rule) + "）" : "") + "</div>"
+    + "<div>原始消息：" + esc(raw) + "</div>"
+    + (path ? "<div>位置：" + esc(path) + "</div>" : "")
+    + "</details></div>";
+  return html;
 }
 
 // ---------------------------------------------------------------------------

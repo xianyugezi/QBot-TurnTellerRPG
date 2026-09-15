@@ -129,18 +129,27 @@ def _scope_prefix(slot: Mapping[str, Any]) -> str:
     return f"{slot.get('module')}.{s}"
 
 
-def _field_key(field: str, prefix: str, module: str) -> str:
-    """从校验器字段路径里取「条目内字段键」（首段；无则空串）。"""
+def _field_key(field: str, prefix: str, module: str,
+               slot: object = None) -> str:
+    """从校验器字段路径里取「条目内字段键」（首段；无则空串）。
+
+    兼容三种形态：`模块.<下标>.<字段…>`（list 模块）、`模块.<键>.<字段…>`（map 模块）
+    与 `模块.<对象下标>.<段>.<字段…>`（object 模块的段条目）。只做路径归一，不改任何判定。
+    """
     f = str(field or "")
     if f == prefix or f in ("", module):
         return ""
-    for head in (prefix + ".", module + "."):
-        if f.startswith(head):
-            rest = f[len(head):]
-            if head == module + "." and "." in rest:
-                rest = rest.split(".", 1)[1]  # 去掉槽位段
-            return rest
-    return f
+    if f.startswith(prefix + "."):
+        return f[len(prefix) + 1:]
+    if not f.startswith(module + "."):
+        return f
+    parts = f[len(module) + 1:].split(".")
+    while parts and str(parts[0]).isdigit():   # 条目下标段（list 的 0/1… / object 的 0）
+        parts = parts[1:]
+    slot_s = str(slot) if slot is not None else ""
+    if parts and (not slot_s or str(parts[0]) == slot_s):
+        parts = parts[1:]                      # 槽位/段键段本身
+    return ".".join(parts)
 
 
 def _decorate(items: Sequence[Mapping[str, Any]], slot: Mapping[str, Any],
@@ -149,14 +158,24 @@ def _decorate(items: Sequence[Mapping[str, Any]], slot: Mapping[str, Any],
 
     · related：字段路径落在本次改动条目内（或为模块级提示）；
     · how_to_fix：优先用字段元数据自带提示（类型/必填/枚举/引用/范围），不新写规则。
+    批14 #5：补三段式展示字段 `where`（哪里，模块/条目/字段中文名，路径只在折叠详情）；
+    `why`（为什么）/ `how`（怎么办）由 atomic_store 规则库给出，未命中回退原文。
     """
     module = str(slot.get("module") or "")
     base = slot.get("base")
     base = base if isinstance(base, Mapping) else {}
+    try:
+        labels = api._display_labels(slot.get("manifest") or {},
+                                     list(slot.get("declared") or []),
+                                     slot.get("pack_dir"))
+    except Exception:  # 展示标签取不到不影响错误上报
+        labels = {}
+    module_label = str(labels.get(module) or module)
+    entry_name = str(slot.get("name") or slot.get("entry_id") or "")
     out: List[Dict[str, Any]] = []
     for it in items:
         field = str(it.get("field") or "")
-        fk = _field_key(field, prefix, module)
+        fk = _field_key(field, prefix, module, slot.get("slot"))
         root_key = fk.split(".", 1)[0] if fk else ""
         fm = base.get(root_key) if root_key else None
         entry_related = field == prefix or field.startswith(prefix + ".")
@@ -165,17 +184,27 @@ def _decorate(items: Sequence[Mapping[str, Any]], slot: Mapping[str, Any],
         if related_only and not related:
             continue
         label = (fm.label if isinstance(fm, FieldMeta) and fm.label else root_key) or "（条目级）"
+        if fk:
+            where = f"{module_label}「{entry_name}」的「{label}」"
+        elif field == module:
+            where = f"{module_label}（整个文件）"
+        else:
+            where = f"{module_label}「{entry_name}」（整条）"
         item = dict(it)
         item.update({
             "module": module,
+            "module_label": module_label,
             "entry_id": str(slot.get("entry_id") or ""),
+            "entry_name": entry_name,
             "field_key": fk,
             "field_label": label,
+            "where": where,
+            "field_path": field,
             "related": related,
             "how_to_fix": api._hint(fm) if isinstance(fm, FieldMeta) else "",
         })
         if not item["how_to_fix"]:
-            item["how_to_fix"] = "请按该字段的类型与取值要求修正后重试。"
+            item["how_to_fix"] = str(item.get("how") or "请按该字段的类型与取值要求修正后重试。")
         out.append(item)
     return out
 

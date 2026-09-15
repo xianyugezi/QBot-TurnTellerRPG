@@ -552,12 +552,164 @@ def _rollback_result(
     )
 
 
+# =====================================================================================
+# 批14 #5：校验错误的「三段式人话」规则库（为什么 / 怎么办）
+# -------------------------------------------------------------------------------------
+# 纯展示层翻译：规则码 + 结构化参数 → 面向非技术作者的解释与动作，**不改任何校验判定**
+# （errors/warnings 的条数、kind、field 一律不变，只多带展示字段）。
+# 覆盖最常见的通用规则（类型 / 枚举 / 必填 / 引用 / 重复 ID / 范围 / 未知键 / 区间倒置…）；
+# 未命中的规则回退用校验器自带的 `msg`/原文，绝不臆造判定。
+# =====================================================================================
+_TYPE_ZH = {
+    "str": "文本", "text": "文本", "int": "整数", "float": "数字", "number": "数字",
+    "bool": "开关（是/否）", "list": "列表", "obj": "对象", "map": "键值表",
+    "formula": "公式（文本）", "NoneType": "空", "none": "空", "dict": "对象",
+    "list[str]": "文本列表",
+}
+
+
+def _zh_type(name: object) -> str:
+    raw = str(name or "").strip()
+    if not raw:
+        return "内容"
+    return _TYPE_ZH.get(raw, raw)
+
+
+def _fmt_value(value: object) -> str:
+    if value is None:
+        return "空"
+    if isinstance(value, bool):
+        return "是" if value else "否"
+    if isinstance(value, float) and float(value).is_integer():
+        return str(int(value))
+    return str(value)
+
+
+def _fmt_list(values: object, limit: int = 12) -> str:
+    rows = [_fmt_value(v) for v in (values or [])]  # type: ignore[union-attr]
+    if len(rows) > limit:
+        rows = rows[:limit] + ["…"]
+    return "、".join(rows) if rows else "（空）"
+
+
+def _range_text(detail: Mapping[str, object]) -> str:
+    lo, hi = detail.get("range_min"), detail.get("range_max")
+    if lo is not None and hi is not None:
+        return f"{_fmt_value(lo)} ~ {_fmt_value(hi)}"
+    if lo is not None:
+        return f"不小于 {_fmt_value(lo)}"
+    if hi is not None:
+        return f"不大于 {_fmt_value(hi)}"
+    return "要求的范围"
+
+
+def _guide_unknown_key(detail: Mapping[str, object]) -> Tuple[str, str]:
+    keys = detail.get("keys") or detail.get("key") or []
+    allowed = detail.get("allowed") or []
+    if not isinstance(keys, list):
+        keys = [keys]
+    why = f"这里多出了这个内容不认识的键：{_fmt_list(keys)}。"
+    if allowed:
+        why += f"此处允许的键是：{_fmt_list(allowed)}。"
+    return why, ("删掉多余的键，或改成上面允许的键名；键名要与内容里的其它地方对应。")
+
+
+# rule 码 → (为什么, 怎么办)。每条都只描述「期望什么 + 具体动作」，不出现技术术语。
+RULE_GUIDE: Dict[str, Any] = {
+    "type": lambda d: (
+        f"这里应该填{_zh_type(d.get('expect'))}，现在填的是{_zh_type(d.get('got'))}。",
+        f"把它改成{_zh_type(d.get('expect'))}再保存。"),
+    "enum": lambda d: (
+        f"这里只能选固定的几个值，现在填的是「{_fmt_value(d.get('got'))}」，不在可选范围内。",
+        f"改成下面之一：{_fmt_list(d.get('enum'))}。"),
+    "required_missing": lambda d: (
+        f"必填的「{_fmt_value(d.get('name'))}」还没有填。",
+        f"补上「{_fmt_value(d.get('name'))}」再保存。"),
+    "ref_missing": lambda d: (
+        f"这里指向的「{_fmt_value(d.get('ref'))}」在内容里找不到"
+        + (f"（它应该指向：{_fmt_value(d.get('ref_target'))}）" if d.get("ref_target") else "")
+        + "。",
+        "先到对应的地方把这项建出来，或改选一个已经存在的目标。"),
+    "ref_not_str": lambda d: (
+        f"这里应该填一个目标的名字（文本），现在填的是{_zh_type(d.get('got'))}。",
+        "改成一个已存在的目标名字。"),
+    "id_duplicate": lambda d: (
+        f"标识「{_fmt_value(d.get('id'))}」重复了：同一类内容里必须唯一"
+        + (f"（另一处已用在 {_fmt_value(d.get('previous_module'))}）"
+           if d.get("previous_module") else "") + "。",
+        "把其中一个改成不重复的标识（建议英文小写 + 下划线）。"),
+    "negative": lambda d: (
+        f"这个数不能是负数，现在填的是 {_fmt_value(d.get('value'))}。",
+        "改成 0 或正整数。"),
+    "not_a_number": lambda d: (
+        f"这里需要能参与运算的数字，现在填的是 {_fmt_value(d.get('value'))}。",
+        "改成一个正常的数字（不要是无穷大或非数字）。"),
+    "out_of_common_range": lambda d: (
+        f"{_fmt_value(d.get('value'))} 超出了一般的取值范围（{_range_text(d)}）。"
+        "这只是提醒，不会拦住保存。",
+        "确认是有意为之可以忽略；若想保险，改成范围内的数。"),
+    "dead_range": lambda d: (
+        f"下限「{_fmt_value(d.get('lo_key'))}」= {_fmt_value(d.get('lo'))} 比"
+        f"上限「{_fmt_value(d.get('hi_key'))}」= {_fmt_value(d.get('hi'))} 还大，这样区间是空的。",
+        "把下限调小，或把上限调大。"),
+    "module_structure": lambda d: (
+        f"这个文件的整体结构不对：应该是{_zh_type(d.get('expect'))}。",
+        "把这个文件改成要求的整体结构后重试（可参考同类的其它文件）。"),
+    "entry_not_object": lambda d: (
+        f"这一条内容应该是一组「名称: 值」，现在却是{_zh_type(d.get('got'))}。",
+        "把这一条改成一组「名称: 值」的写法。"),
+    "key_invalid": lambda d: (
+        f"键名「{_fmt_value(d.get('key'))}」不符合命名要求"
+        + (f"（要求：{_fmt_value(d.get('key_regex'))}）" if d.get("key_regex") else "") + "。",
+        "把键名改成允许的写法（通常为英文小写 + 下划线）。"),
+    "formula_safety": lambda d: (
+        "这段公式里含有不允许的写法，出于安全考虑不能保存。",
+        "只用普通的加减乘除、括号和已登记的名字，不要调用外部函数。"),
+    "zero_unlimited": lambda d: (
+        "这里填了 0，它的含义是「不限制」。",
+        "确认这是想要的效果；若要限制数量，请填一个大于 0 的数。"),
+    "probability_extreme": lambda d: (
+        f"概率 {_fmt_value(d.get('value'))} 偏极端"
+        + ("（偏高）" if d.get("hint") == "high" else "（偏低）") + "，实际效果可能和预期差很多。",
+        "确认无误可以忽略；否则调整到更常见的概率区间。"),
+    "stat_key_unregistered": lambda d: (
+        f"属性名「{_fmt_value(d.get('ref'))}」当前没有登记过，可能不会被识别。",
+        "改成已登记的属性名，或先在属性表里把它登记好。"),
+    "reset_eq_mismatch": lambda d: (
+        f"重置方式选了「等于」，但重置值 {_fmt_value(d.get('value'))} 和上限 "
+        f"{_fmt_value(d.get('max'))} 对不上。",
+        "把重置值改成与上限一致，或换一种重置方式。"),
+    "battle_revert_conflict": lambda d: (
+        "「战斗中」与「结束后还原」这两个选项不能同时选。",
+        "取消其中一个。"),
+}
+
+
+def _why_how(rule: str, kind: str, detail: Mapping[str, object],
+             raw: str) -> Tuple[str, str]:
+    """规则码 + 结构化参数 → (为什么, 怎么办)；未命中的规则回退校验器自带说明。"""
+    if rule in RULE_GUIDE:
+        try:
+            why, how = RULE_GUIDE[rule](detail)
+            return str(why), str(how)
+        except Exception:  # 参数形态意外 → 回退，不因翻译失败丢错误
+            pass
+    if rule.endswith("unknown_key") or rule.endswith("_unknown_field") or rule == "unknown_key":
+        return _guide_unknown_key(detail)
+    # 兜底：校验器自带的 msg 通常是中文人话；退而用原文。
+    why = str(detail.get("msg") or detail.get("message") or raw or "这项内容不符合要求。")
+    return why, "按上面的说明改成符合要求的内容后重试。"
+
+
 def _humanize(items: Sequence[Any], *, level: str, verb: str) -> List[dict]:
     """PackError/PackWarning 结构化 detail → 人话条目（细化_5a L183 包络 errors[] 形态）。
 
     人话模板对齐细化_5a SV-05（报错含模块/条目名可读信息；规则 ⑤ 模板 L165-168）；
     校验器 PackError.detail 为结构化参数（D-06：validator 不拼用户体验文案，翻译归本层）。
     红拦（PackError）与黄提示（PackWarning）结构同形，仅 level/verb 不同，故共用本函数。
+
+    批14 #5：每条额外给**三段式**展示字段 `why`（为什么）/ `how`（怎么办）与 `rule` 规则码；
+    面板层再补 `where`（哪里）。`message` / `code` / `module` / `field` 原样保留（排查用）。
     """
     out: List[dict] = []
     for e in items:
@@ -566,11 +718,17 @@ def _humanize(items: Sequence[Any], *, level: str, verb: str) -> List[dict]:
         detail = dict(getattr(e, "detail", {}) or {})
         message = str(detail.get("message") or detail.get("error") or detail.get("msg")
                       or detail.get("rule") or getattr(e, "kind", "") or "配置不合法")
+        rule = str(detail.get("rule") or "")
+        why, how = _why_how(rule, str(getattr(e, "kind", "") or ""), detail, message)
         out.append({
             "level": level,
             "code": str(getattr(e, "kind", "") or "validation"),
+            "rule": rule,
             "module": str(module),
             "field": str(field),
+            "raw": message,
+            "why": why,
+            "how": how,
             "message": f"模块「{module}」{verb}：{message}"
                       + (f"（位置：{field}）" if field else ""),
         })

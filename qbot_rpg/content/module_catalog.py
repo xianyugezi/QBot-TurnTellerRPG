@@ -49,6 +49,11 @@ class ModuleCatalogEntry:
     requires: Tuple[str, ...] = ()
     implemented: bool = True
     settings_section: str = ""
+    # 编辑器批19 #5：与其他落点的**功能重叠**声明（通用、包无关的框架知识）。
+    # `overlap_with` = 另一处落点（如 settings.json 的段路径）；非空 → 编辑器在模块页给
+    # **黄提示**（不硬拦）：建议归口一处，并展示 `overlap_note` 说明各自定位（如实核查）。
+    overlap_with: str = ""
+    overlap_note: str = ""
 
 
 # 面板顶部的人话引导（面向非技术用户；不静默）。
@@ -78,7 +83,18 @@ FRAMEWORK_MODULE_CATALOG: Tuple[ModuleCatalogEntry, ...] = (
     ModuleCatalogEntry("recipe", "配方", "合成配方：材料与产出。", "list", requires=("items",)),
     ModuleCatalogEntry("proficiency", "熟练度", "熟练度等级与对应效果。", "list"),
     ModuleCatalogEntry("slots", "装备槽", "装备槽位定义（部位与可装备范围）。",
-                       "list", requires=("items",)),
+                       "list", requires=("items",),
+                       # 批19 #5：与「基础 ▸ 装备槽位（settings.slot_defs）」功能重叠——实测
+                       # 两个内容包的 slot_defs 各有 8 部位，而 slots.json 为空。编辑器给黄提示
+                       # （不硬拦）：建议归口一处，并说明二者定位（不猜：见下方 overlap_note）。
+                       overlap_with="settings.slot_defs",
+                       overlap_note=(
+                           "两处都在表达「装备部位定义」：settings.slot_defs 是运行时消费的"
+                           "部位表（编辑器「基础 ▸ 装备槽位」可增删改，装备/物品的「部位」"
+                           "引用它）；slots 模块（slots.json）是条目化的部位 / 可装备范围"
+                           "定义。当前内容包把数据放在 settings.slot_defs（8 部位），"
+                           "slots.json 为空。建议归口一处，避免两边同改不同步；"
+                           "本提示不阻断保存。")),
     ModuleCatalogEntry("forge", "锻造", "锻造系统配置（词条、套装、强化目标）。", "object"),
     ModuleCatalogEntry("enhance", "强化", "装备强化的规则与等级效果。",
                        "object", requires=("equipment",)),

@@ -287,6 +287,12 @@ html[data-theme="contrast"] .asave:disabled { border-style: dotted; opacity: .6;
 .list-hd { border-bottom: var(--bw) solid var(--line-soft); }
 .list-title { color: var(--text-strong); font-weight: 700; }
 .list-count { font-weight: 400; }
+/* 批19 #5：模块用途 / 未使用态 / 功能重叠黄提示 */
+.list-hint { padding: var(--sp-3) var(--sp-6); border-bottom: var(--bw) solid var(--line-soft);
+  font-size: var(--fs-11); line-height: var(--lh-ex); }
+.list-hint .lh-p { color: var(--text-4); }
+.list-hint .lh-unused { color: var(--text-5); }
+.list-hint .lh-ov { color: var(--warn); margin-top: var(--sp-2); }
 .list-tools { display: flex; align-items: center; padding: var(--sp-3) var(--sp-6); border-bottom: var(--bw) solid var(--line-soft); }
 .search { display: flex; align-items: center; border: var(--bw) solid var(--line-strong); padding: 2px var(--sp-4); width: 100%; }
 .search input { border: 0; background: transparent; outline: none; color: var(--text-value);
@@ -898,6 +904,8 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
         <div class="hd-t"><span class="list-title ttl" id="list-title">条目</span></div>
         <div class="hd-n list-count" id="list-count"></div>
       </div>
+      <!-- 批19 #5：模块用途 / 当前包未使用 / 功能重叠黄提示（内容来自 module_catalog） -->
+      <div class="list-hint" id="list-hint" hidden></div>
       <div class="list-tools lt-new">
         <button class="ladd newbtn" id="btn-new" type="button"
           title="在当前模块新建一个条目：先给一个可编辑的建议 ID（即时校验唯一性），其余字段按元数据默认值初始化；创建走校验 + 原子写 + 自动备份">+ 新建条目</button>
@@ -3276,8 +3284,24 @@ function findModule(mod) {
   return found;
 }
 
-function loadEntries() {
-  if (!state.pack || !state.module) { return Promise.resolve(); }
+// 批19 #5：模块页提示区——用途（module_catalog 一行）、「当前包未使用」态、功能重叠黄提示。
+function renderListHints(d) {
+  var box = el("list-hint");
+  if (!box) { return; }
+  var parts = [];
+  if (d.purpose) { parts.push('<div class="lh-p">' + esc(d.purpose) + "</div>"); }
+  if (d.unused) {
+    parts.push('<div class="lh-unused">当前包未使用（框架支持该项能力，'
+      + "可在此填写或从 ⚙ 模块开关启用相关模块）。</div>");
+  }
+  (d.overlap_hints || []).forEach(function (h) {
+    parts.push('<div class="lh-ov">⚠ ' + esc(h.message || "") + "</div>");
+  });
+  box.innerHTML = parts.join("");
+  box.hidden = !parts.length;
+}
+
+function loadEntries() {  if (!state.pack || !state.module) { return Promise.resolve(); }
   return api("/api/pack/" + enc(state.pack) + "/module/" + enc(state.module) + "/entries")
     .then(function (data) {
       state.entries = data.entries || [];
@@ -3298,6 +3322,7 @@ function loadEntries() {
       if (uc) { extra.push("另有 " + uc + " 个框架段未配置"); }
       if (extra.length) { note += "（" + extra.join("；") + "）"; }
       setHdrNote("list-count", note);
+      renderListHints(data);
       renderEntries();
       if (state.entries.length) {
         state.entryModule = state.module;

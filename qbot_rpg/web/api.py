@@ -515,6 +515,38 @@ def _entry_count(data: object, mmeta: Optional[ModuleMeta] = None) -> int:
     return len(_entry_rows(data, mmeta))
 
 
+def _module_in_use(data: object) -> bool:
+    """模块在当前包是否「已使用」（有实际数据）。批19 #5：空 list / 空 dict / 缺文件 → 未使用。"""
+    return bool(data)
+
+
+def _module_overlap_hints(module: str, pack_dir: Path) -> List[Dict[str, Any]]:
+    """模块的功能重叠黄提示（批19 #5，通用：声明来自 `module_catalog` 目录）。
+
+    目录条目声明 `overlap_with`（另一处落点，形如 `模块.段.子键`）时不硬拦，只提示
+    「建议归口一处」+ `overlap_note`（各自定位，如实核查）；并如实给出另一处是否已有数据。
+    """
+    ce = catalog_entry(module)
+    if ce is None or not ce.overlap_with:
+        return []
+    parts = [p for p in str(ce.overlap_with).split(".") if p]
+    present = False
+    if parts:
+        other: object = _read_json(pack_dir / f"{parts[0]}.json")
+        for seg in parts[1:]:
+            other = other.get(seg) if isinstance(other, Mapping) else None
+        present = bool(other)
+    return [{
+        "level": "yellow",
+        "code": "module_overlap",
+        "module": module,
+        "target": str(ce.overlap_with),
+        "target_present": present,
+        "message": str(ce.overlap_note or
+                       f"该模块与「{ce.overlap_with}」功能重叠，建议归口一处。"),
+    }]
+
+
 def list_modules(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
     """模块分类树（`/api/pack/{pack}/modules`）。
 
@@ -533,8 +565,8 @@ def list_modules(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
     # 批13.1：计数与条目列表同一口径（对象型模块的未配置段计入 own_count），
     # 供验收脚本断言「左栏计数 = 条目列表 = 全局索引」。
     meta_table = _pack_meta_table(pack_dir)
-    counts = {m: _entry_count(_read_json(pack_dir / f"{m}.json"), meta_table.module(m))
-              for m in declared}
+    datas = {m: _read_json(pack_dir / f"{m}.json") for m in declared}
+    counts = {m: _entry_count(datas[m], meta_table.module(m)) for m in declared}
     child_set = {c for kids in children_map.values() for c in kids}
     merge_map, merge_notes = _entry_merge_map(manifest, declared, pack_dir)
     notes.extend(merge_notes)
@@ -588,6 +620,9 @@ def list_modules(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
             "children": kids,
             # 批13 A：已启用/声明模块带 enabled=True（未启用候选在 `available` 里 enabled=False）。
             "enabled": True,
+            # 批19 #5：用途一句话 + 「当前包未使用」态（目录知识；无目录条目 → 空/False）。
+            "purpose": (catalog_entry(mod).purpose if catalog_entry(mod) is not None else ""),
+            "unused": not _module_in_use(datas.get(mod)),
             # 批12 #1：聚合展示声明（通用；未声明 entry_merge 的包这些字段为空/0，行为与现状一致）
             "merged": info,
             "merged_count": merged_count,
@@ -864,6 +899,10 @@ def list_entries(pack: object, module: object, root: Optional[object] = None) ->
         "merge_sections": sections,
         "merged_count": merged_count,
         "total_count": len(rows) + merged_count,
+        # 批19 #5：模块用途一句话 + 「当前包未使用」态 + 功能重叠黄提示（通用；无声明 → 空）。
+        "purpose": (catalog_entry(mod).purpose if catalog_entry(mod) is not None else ""),
+        "unused": not _module_in_use(data),
+        "overlap_hints": _module_overlap_hints(mod, pack_dir),
     }
 
 
@@ -1042,6 +1081,9 @@ def module_catalog(pack: object, root: Optional[object] = None) -> Dict[str, Any
             # 批13：能力可见性（一号原则）——引擎未实装 / 配置实际落点，供面板如实展示。
             "implemented": bool(ce.implemented) if ce is not None else True,
             "settings_section": (ce.settings_section if ce is not None else ""),
+            # 批19 #5：功能重叠声明（黄提示；无声明 → 空串，面板不渲染）。
+            "overlap_with": (ce.overlap_with if ce is not None else ""),
+            "overlap_note": (ce.overlap_note if ce is not None else ""),
         })
 
     bak = pack_dir / "manifest.json.bak"

@@ -97,6 +97,26 @@ F_ID = FieldMeta(type="str", required=True)
 F_NAME = FieldMeta(type="str")
 F_TYPE = FieldMeta(type="str")  # type 枚举由正式元数据表注入（细化_1b/1e）；缺省不设枚举防误阻断
 
+# 批18 · effects.type 的**展示层候选值**（编辑器下拉可选；不改校验判定）。
+# 依据：effects.type 是**开放词汇**（框架 L0 动作 + 内容包泛化类别 + `x_` 自定义通道），
+# 故校验仍按 `type=str` 放行（不设 enum，防误拦 x_ 与包内新词）；这里只给作者一个
+# 「常见类型」候选下拉，批18 起加入 gain_currency（给货币）/ learn_skill（学技能）。
+# 与 effects.py 的 execute_action L0 词汇 + 现有内容包实测取值对齐（新增词随专项追加）。
+EFFECT_TYPE_CHOICES: Tuple[str, ...] = (
+    # 直行/修正器/容器 L0 词汇（core/effects.execute_action）
+    "damage", "heal", "stat_modifier", "dot", "control", "status_apply", "dispel",
+    "shield", "mark_add", "mark_remove", "clear_marks", "summon", "convert",
+    "interrupt", "aoe", "lifesteal", "pierce", "mitigation", "proc",
+    "reposition", "reposition_all", "element_modifier",
+    # 内容包既有泛化类别（历史取值，保留可选）
+    "attack", "buff", "status", "utility",
+    # 批18 新增效果类型（背包内使用消费：见 commands/use_commands.py）
+    "gain_currency", "learn_skill",
+)
+# effects.type 专用字段元数据：type=str（校验口径不变）+ editor=select（展示层下拉）+
+# enum_options（候选值）。既有 enum/hint/help/label/校验语义全部不变——只多一个下拉候选。
+F_EFFECT_TYPE = FieldMeta(type="str", editor="select", enum_options=EFFECT_TYPE_CHOICES)
+
 # 效果引用列表（items/equipment/traits/enemies 通用）
 F_EFFECTS = FieldMeta(type="list", element=FieldMeta(type="ref", ref_target="effect"))
 
@@ -1307,9 +1327,26 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "module_labels": FieldMeta(type="obj", children={}, soft_label=True, label="模块显示名"),
     }
     effects_fields: Dict[str, FieldMeta] = {
-        "id": F_ID, "name": F_NAME, "type": F_TYPE,
+        # 批18：type 用 F_EFFECT_TYPE（type=str 校验口径不变 + 展示层下拉候选，
+        # 含 gain_currency / learn_skill；既有 enum/hint/help 不变）。
+        "id": F_ID, "name": F_NAME, "type": F_EFFECT_TYPE,
         "power": F_POWER, "duration": F_DURATION,
         "probability": F_PROBABILITY, "max_stack": F_MAX_STACK,
+        # ---- 批18 新效果类型字段（gain_currency 给货币 / learn_skill 学技能）----
+        # 校验：currency 存在性 + amount 区间/缺省 + skill 存在性/等级 由 validator
+        # 专项 `_check_effects_18` 判定（本表只做字段口径 + 泛型 R-1/R-2/R-4）。
+        # currency 用展示层引用（options_ref）出货币下拉（候选 = settings.currencies[].id），
+        # 字段 type 仍为 str，存在性硬拦在专项钩子（对齐 settings.death_penalty.drop_currency 先例）。
+        "currency": FieldMeta(type="str", options_ref="settings.currencies",
+                              label="货币", help="给货币引用的货币 id（settings.currencies[].id）。"),
+        "amount_min": FieldMeta(type="int", range_min=0, label="最小金额",
+                                help="获得货币的下限（含）；与最大金额相等 = 固定金额。"),
+        "amount_max": FieldMeta(type="int", range_min=0, label="最大金额",
+                                help="获得货币的上限（含）；留空 = 等于最小金额。"),
+        "skill": FieldMeta(type="ref", ref_target="skill", label="技能",
+                           help="学技能引用的技能 id（skills.json）。"),
+        "level": FieldMeta(type="int", range_min=1, label="技能等级",
+                           help="授予该技能的等级（≥1；留空 = 1 级）。"),
         # 引用的 status/mark ID（细化_1b；引用缺失 R-4）
         "require_status": FieldMeta(type="ref", ref_target="status"),
         "apply_status": FieldMeta(type="ref", ref_target="status"),

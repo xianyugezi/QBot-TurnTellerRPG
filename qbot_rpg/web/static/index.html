@@ -924,7 +924,7 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
       <div class="panel-body" id="p-body">
         <div class="empty">从左侧选择模块与条目。字段按内容包元数据渲染；改动先进草稿，保存时才校验并落盘。</div>
       </div>
-      <div class="panel-ft"><span>批17 · 通用预设</span></div>
+      <div class="panel-ft"><span>批18 · 预设细化与效果扩展</span></div>
     </section>
 
   </div>
@@ -4300,7 +4300,7 @@ function editControl(f) {
       return '<label class="ctl-bool"><input type="checkbox" data-key="' + esc(f.key) + '"'
         + (v ? " checked" : "") + '> <span class="btxt">' + (v ? "是" : "否") + "</span></label>";
     case "select":
-      return selectHtml(f.key, v, f.enum || [], "（未选择）", "");
+      return selectHtml(f.key, v, (f.enum && f.enum.length ? f.enum : (f.enum_options || [])), "（未选择）", "");
     case "ref":
       return selectHtml(f.key, v, [], "（未选择）",
         ' data-ref="' + esc(f.ref_target || "") + '" data-current="'
@@ -4579,7 +4579,7 @@ function listCell(f, row, col, i, scalar) {
         + '> <span class="btxt">' + (v ? "是" : "否") + "</span></label>";
     case "select":
       return '<select class="cin lcell"' + attrs + ">"
-        + selectOptions(v, col.enum || [], "（未选择）") + "</select>";
+        + selectOptions(v, (col.enum && col.enum.length ? col.enum : (col.enum_options || [])), "（未选择）") + "</select>";
     case "ref":
       return '<select class="cin lcell"' + attrs + ' data-lref="' + esc(col.ref_target || "")
         + '" data-current="' + esc(v == null ? "" : v) + '">'
@@ -4751,7 +4751,7 @@ function kvCell(f, row, col, i, objMode) {
         + '> <span class="btxt">' + (v ? "是" : "否") + "</span></label>";
     case "select":
       return '<select class="cin lcell"' + attrs + ">"
-        + selectOptions(v, col.enum || [], "（未选择）") + "</select>";
+        + selectOptions(v, (col.enum && col.enum.length ? col.enum : (col.enum_options || [])), "（未选择）") + "</select>";
     case "ref":
       return '<select class="cin lcell"' + attrs + ' data-kvref="' + esc(col.ref_target || "")
         + '" data-current="' + esc(v == null ? "" : v) + '">'
@@ -5871,7 +5871,7 @@ function objLeafInput(child, value, attrs) {
         + '> <span class="btxt">' + (value ? "是" : "否") + "</span></label>";
     case "select":
       return '<select class="cin"' + attrs + ">"
-        + selectOptions(value, child.enum || [], "（未选择）") + "</select>";
+        + selectOptions(value, (child.enum && child.enum.length ? child.enum : (child.enum_options || [])), "（未选择）") + "</select>";
     case "ref":
       return '<select class="cin"' + attrs + ' data-ref="' + esc(child.ref_target || "")
         + '" data-current="' + esc(value == null ? "" : value) + '">'

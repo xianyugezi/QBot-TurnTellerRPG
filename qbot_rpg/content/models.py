@@ -229,6 +229,13 @@ class FieldMeta:
     # 也不改取值逻辑——取值顺序由消费端实现：使用处 > 定义处 > 缺省）。
     # 尾部默认值，既有 FieldMeta 构造零改动。
     overridable_default: bool = False
+    # 批18：**展示层候选值**（编辑器下拉可选，不改校验判定）。
+    #   与 enum 的区别：enum 是**校验枚举**（type=="enum" 时越界红拦 R-1）；enum_options
+    #   只给编辑器一个可选候选列表，字段 type/required/校验口径完全不变——供
+    #   「类别是开放词汇、但希望作者从常见值里选」的字段（如 effects.type：既保留
+    #   `x_` 自定义通道，又让常见效果类型可下拉）。缺省空 = 行为与既有完全一致；
+    #   尾部默认值，既有 FieldMeta 构造零改动零行为变化。
+    enum_options: Tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

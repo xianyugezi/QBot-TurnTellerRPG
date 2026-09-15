@@ -452,7 +452,7 @@ def test_frontend_theme_wiring_is_live_and_keeps_draft() -> None:
 
 def test_footer_batch_string_is_current() -> None:
     html = _html()
-    assert "批17 · 通用预设" in html
+    assert "批18 · 预设细化与效果扩展" in html
     assert "批13.1 · 段入口" not in html
     assert "批11 · 内容包导出/导入" not in html
     assert "批9 · 配色切换" not in html

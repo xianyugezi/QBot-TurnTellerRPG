@@ -620,6 +620,10 @@ class _Checker:
                 validate_resource_axes = None  # type: ignore[assignment]
             if validate_resource_axes is not None:
                 validate_resource_axes(self._modules, self)
+        # 批18 效果扩展（gain_currency / learn_skill）：类型相关必填/范围/引用存在性
+        # 专项（泛型 R-1/R-2/R-4 仍在下方逐条目跑；本钩子补「仅在该 type 下才要求」的键）。
+        if module_name == "effects":
+            self._check_effects_18(module_name, data)
         # 逐条目校验
         for idx, entry in self._iter_entries(module_name, data, mmeta):
             self._check_entry(module_name, idx, entry, mmeta)
@@ -1665,6 +1669,79 @@ class _Checker:
                                          and (not isinstance(cnt, int) or cnt < 1)):
                 self._err(module_name, f"{base}.drop_items.count", "R-1",
                           rule="drop_item_count_invalid", count=cnt)
+
+    # ---- 批18 效果扩展专项：gain_currency / learn_skill ----
+    def _check_effects_18(self, module_name: str, data: object) -> None:
+        """effects 段批18 新类型专项（类型相关必填/范围/引用存在性）。
+
+        分级依据（与既有口径对齐）：
+          · **红拦 R-5 required_missing**：`gain_currency` 缺 `currency` / 两个金额键都缺
+            （用了却不生效 = 死配置，对齐 §2.1 R-5「死配置红拦」）；`learn_skill` 缺 `skill`；
+          · **红拦 R-5 dead_range**：`amount_min > amount_max`（区间倒置，死配置）；
+          · **红拦 R-4 currency_ref_missing**：`currency` 不在 `settings.currencies[].id`
+            键空间（对齐 1g4 `_check_death_penalty_1g4` 的 F-02 货币引用硬拦口径；settings
+            缺省 → DEFAULT_CURRENCY_IDS）；
+          · **红拦 R-1 skill_level_invalid**：`level` 给了但非 ≥1 整数（负数由泛型 R-2 拦，
+            0 不在泛型判定内，此处补齐；缺省 = 1 级，不报错）；
+          · **不在此处**：`amount_*` 负数/非整数 → 泛型 R-2/R-1（字段元数据 int + allow_negative
+            False）；`skill` 引用存在性 → 泛型 ref R-4（字段元数据 ref_target="skill"）。
+        """
+        if not isinstance(data, list):
+            return
+        settings = self._modules.get("settings")
+        currency_ids = (
+            self._settings_currency_ids(settings)
+            if isinstance(settings, Mapping) else DEFAULT_CURRENCY_IDS
+        )
+        for idx, entry in enumerate(data):
+            emap = self._as_mapping(entry)
+            if emap is None:
+                continue
+            etype = emap.get("type")
+            base = f"{module_name}.{idx}"
+            if etype == "gain_currency":
+                self._check_gain_currency(module_name, base, emap, currency_ids)
+            elif etype == "learn_skill":
+                self._check_learn_skill(module_name, base, emap)
+
+    def _check_gain_currency(
+        self, module_name: str, base: str, entry: Mapping[str, object],
+        currency_ids: Tuple[str, ...],
+    ) -> None:
+        """`gain_currency` 必填/范围/货币引用存在性（批18）。"""
+        currency = entry.get("currency")
+        if not isinstance(currency, str) or not currency:
+            self._err(module_name, f"{base}.currency", "R-5",
+                      rule="required_missing", name="currency", effect_type="gain_currency")
+        elif currency not in currency_ids:
+            self._err(module_name, f"{base}.currency", "R-4",
+                      rule="currency_ref_missing", currency=currency,
+                      currency_space=sorted(currency_ids))
+        lo = entry.get("amount_min")
+        hi = entry.get("amount_max")
+        if lo is None and hi is None:
+            self._err(module_name, f"{base}.amount_min/amount_max", "R-5",
+                      rule="gain_currency_amount_missing", effect_type="gain_currency")
+        elif (isinstance(lo, int) and not isinstance(lo, bool)
+              and isinstance(hi, int) and not isinstance(hi, bool) and lo > hi):
+            self._err(module_name, f"{base}.amount_min/amount_max", "R-5",
+                      rule="dead_range", lo_key="amount_min", hi_key="amount_max",
+                      lo=lo, hi=hi)
+
+    def _check_learn_skill(
+        self, module_name: str, base: str, entry: Mapping[str, object],
+    ) -> None:
+        """`learn_skill` 必填技能 + 等级范围（批18）。"""
+        skill = entry.get("skill")
+        if not isinstance(skill, str) or not skill:
+            self._err(module_name, f"{base}.skill", "R-5",
+                      rule="required_missing", name="skill", effect_type="learn_skill")
+        level = entry.get("level")
+        # 缺省 = 1 级（不报错）；0 由本条红拦（泛型 range_min 只黄提示、且 0 非负数）；
+        # 负数 → 泛型 R-2；非整数 → 泛型 R-1（同键会叠加两条红，属如实并列，不静默）。
+        if isinstance(level, int) and not isinstance(level, bool) and level == 0:
+            self._err(module_name, f"{base}.level", "R-1",
+                      rule="skill_level_invalid", level=level)
 
     def _check_message_prefix(self, module_name: str, data: object) -> None:
         """settings.message_prefix 段校验（M5-02，【前缀】§九 L112-121 + 细化_3d 附·校验器行 L358）。

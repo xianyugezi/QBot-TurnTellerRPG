@@ -2182,6 +2182,10 @@ def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
     # 仅标注字段才出键（不给所有字段加噪音键）。
     if fm is not None and getattr(fm, "overridable_default", False):
         desc["overridable_default"] = True
+    # 批18：展示层候选值（enum_options）→ 前端把该字段渲染成下拉（可自由填写的开放词汇
+    # 也保留「当前值不在候选内」选项）。仅声明了候选的字段才出键，不参与任何校验判定。
+    if fm is not None and getattr(fm, "enum_options", ()):
+        desc["enum_options"] = [str(x) for x in fm.enum_options]
     # 批5：条件行 / 键值对表格字段的额外声明（主体/比较符/引用目标；前端据 control 渲染）
     if control == "condition":
         desc["condition"] = condition_spec(fm)

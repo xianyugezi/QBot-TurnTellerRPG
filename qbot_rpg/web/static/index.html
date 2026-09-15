@@ -299,6 +299,9 @@ html[data-theme="contrast"] .asave:disabled { border-style: dotted; opacity: .6;
 .item.on { background: var(--surface-sel); color: var(--text-strong); border-left: var(--bw) solid var(--accent); }
 .item.on::before { content: "> "; color: var(--accent); }
 .item.dirty::after { content: " *"; color: var(--warn); }
+/* 批13.1：未配置段标记（框架已登记、包尚无数据）；仍可点开填写与保存。 */
+.item .unc { margin-left: var(--sp-3); padding: 0 var(--sp-2); border: var(--bw) solid var(--line-strong);
+  border-radius: var(--radius-sb); color: var(--text-4); font-size: var(--fs-10); }
 .list-ft { margin-top: auto; padding: var(--sp-4) var(--sp-6); border-top: var(--bw) solid var(--line-strong);
   color: var(--text-4); display: flex; align-items: center; gap: var(--sp-5); }
 .sp { margin-left: auto; }
@@ -345,6 +348,8 @@ html[data-theme="contrast"] .asave:disabled { border-style: dotted; opacity: .6;
 /* 批5.2（V5）：主信息分段固定，来源路径可收缩 + 省略号，窄屏不折行（悬停 title 看全文）。 */
 .meta .mi { color: var(--text-3); flex: 0 0 auto; white-space: nowrap; }
 .meta .mi + .mi::before { content: "· "; color: var(--text-6); }
+/* 批13.1：条目详情里的「未配置 · 框架支持」提示（与左栏标记同源，配色醒目但不报警）。 */
+.meta .mi.unc { color: var(--warn); }
 .meta .src { margin-left: auto; min-width: 0; color: var(--text-4);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
@@ -837,7 +842,7 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
       <div class="panel-body" id="p-body">
         <div class="empty">从左侧选择模块与条目。字段按内容包元数据渲染；改动先进草稿，保存时才校验并落盘。</div>
       </div>
-      <div class="panel-ft"><span>批13 · 能力可见性</span></div>
+      <div class="panel-ft"><span>批13.1 · 段入口</span></div>
     </section>
 
   </div>
@@ -2978,8 +2983,15 @@ function loadEntries() {
       state.mergeSections = data.merge_sections || [];
       state.listLabel = data.label || state.module;
       var mc = data.merged_count || 0;
+      var uc = data.unconfigured_count || 0;
       var total = (data.total_count == null) ? state.entries.length : data.total_count;
-      setHdrNote("list-count", total + " 条" + (mc ? "（含并入 " + mc + "）" : ""));
+      // 批13.1 计数口径写清：总条数（含框架未配置段）+ 未配置段数 + 并入数。
+      var note = total + " 条";
+      var extra = [];
+      if (mc) { extra.push("含并入 " + mc); }
+      if (uc) { extra.push("另有 " + uc + " 个框架段未配置"); }
+      if (extra.length) { note += "（" + extra.join("；") + "）"; }
+      setHdrNote("list-count", note);
       renderEntries();
       if (state.entries.length) {
         state.entryModule = state.module;
@@ -3032,7 +3044,16 @@ function renderEntries() {
       d.dataset.id = e.id;
       d.dataset.mod = s.module;
       d.textContent = e.name;
-      d.title = e.name + "  [" + e.id + "]" + (grouped ? "（来源：" + s.label + "）" : "");
+      // 批13.1：框架已登记、包数据尚无的段 → 标「未配置 · 框架支持」（仍可点开填写）。
+      if (e.unconfigured) {
+        var tag = document.createElement("span");
+        tag.className = "unc";
+        tag.textContent = "未配置 · 框架支持";
+        d.appendChild(tag);
+      }
+      d.title = e.name + "  [" + e.id + "]"
+        + (e.unconfigured ? "（框架已支持，本包尚未配置）" : "")
+        + (grouped ? "（来源：" + s.label + "）" : "");
       d.addEventListener("click", function () { selectEntry(e.id, s.module); });
       box.appendChild(d);
     });
@@ -3549,6 +3570,8 @@ function renderDetail(d) {
   // 批5.2（V5）：元数据横幅分段——主信息一行（字数/分组数/可编辑），来源路径收进
   // 右侧小字并挂 title（悬停可见全文），窄屏以省略号收尾而不是折成三行。
   var html = '<div class="meta"><span class="mk">元数据驱动</span>'
+    + (d.unconfigured
+      ? '<span class="mi unc">未配置 · 框架支持（填写后保存即写入本包）</span>' : "")
     + '<span class="mi">' + d.field_count + " 个字段</span>"
     + '<span class="mi">' + d.group_count + " 个分组</span>"
     + '<span class="mi">' + (state.editable ? "可编辑" : "只读预览") + "</span>"

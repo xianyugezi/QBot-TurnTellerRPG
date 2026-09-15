@@ -1277,6 +1277,118 @@ QUEST_FIELD_GROUPS, QUEST_GROUP_ORDER = \
     _group_declaration(QUEST_GROUP_DEFS, {})
 
 
+# =====================================================================================
+# 批20 C：**二级分组（子页签）**结构声明——只有「一个分组」的长模块（效果 / 状态 / 派生链 /
+# 行动 / 职业 / NPC / 商店）在这里把字段再分一层；编辑器把子分组渲染成**二级页签**（既有
+# `button.gtab` 机制扩展），长模块首屏不再一条长滚动。
+#   · 结构（键 → 子分组 + 顺序）归框架；**显示名归框架默认 + 包覆盖**（`subgroup_labels`，
+#     与 `module_catalog.label` / 模块 `module_labels` 同一「框架默认 + 包声明覆盖」口径）。
+#   · 与 group_order/group_labels 同属「编辑器显示维度」，不影响校验（校验器只读 fields）。
+# =====================================================================================
+def _subgroup_declaration(
+    defs: Tuple[Tuple[str, Tuple[str, ...]], ...],
+) -> Tuple[Dict[str, str], Tuple[str, ...]]:
+    """(字段键→子分组, 子分组顺序) 二元组（与 `_group_declaration` 同形态）。"""
+    return _group_declaration(defs, {})
+
+
+# 效果：标识 / 数值 / 引用 / 行为 / 文本（字段键取自框架 `effects_fields` 登记）。
+EFFECTS_SUBGROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
+    ("base", ("id", "name", "type")),
+    ("numeric", ("power", "duration", "probability", "max_stack", "value", "pct",
+                 "turns", "count", "skip_turn", "part_break_per_tick",
+                 "amount_min", "amount_max")),
+    ("refs", ("currency", "skill", "level", "require_status", "apply_status",
+              "require_mark", "apply_mark", "status", "stat", "mark", "marks_on",
+              "target")),
+    ("behavior", ("actions", "patch", "tick", "trigger", "filter", "class",
+                  "control_type", "polarity")),
+    ("text", ("desc",)),
+)
+EFFECTS_SUBGROUP_LABELS: Dict[str, str] = {
+    "base": "标识", "numeric": "数值与持续", "refs": "引用与目标",
+    "behavior": "行为与触发", "text": "文本",
+}
+# 状态：标识 / 持续 / 效果 / 文本。
+STATUSES_SUBGROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
+    ("base", ("id", "name", "type", "decay", "max_stack")),
+    ("duration", ("duration",)),
+    ("effects", ("effects", "on_enter", "on_tick", "on_expire", "on_dodge_effects",
+                 "damage_mult")),
+    ("text", ("desc", "description")),
+)
+STATUSES_SUBGROUP_LABELS: Dict[str, str] = {
+    "base": "标识", "duration": "持续", "effects": "效果与触发", "text": "文本",
+}
+# 派生链：标识 / 链结构（连段数、后继、步骤、行动与效果）。
+SKILL_CHAINS_SUBGROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
+    ("base", ("id", "name", "type", "trigger_skill", "max_combo",
+              "max_combo_behavior", "job_scope")),
+    ("chain", ("next", "steps", "actions", "effects")),
+)
+SKILL_CHAINS_SUBGROUP_LABELS: Dict[str, str] = {
+    "base": "标识", "chain": "连段结构",
+}
+# 行动：标识 / 数值 / 行为 / 引用。
+ACTION_SUBGROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
+    ("base", ("id", "name", "kind", "type", "attack_type", "element", "intent", "tags")),
+    ("numeric", ("power", "break_power", "cost", "cool", "cooldown", "recovery",
+                 "weight", "probability", "roar", "charge_turns", "hungry")),
+    ("behavior", ("position_rule", "air_policy", "air_drop", "chain", "armor",
+                  "interrupt", "condition", "trigger_limit", "charge_armor",
+                  "reveal_condition", "preview", "preview_chain")),
+    ("refs", ("effects", "skill", "require_status", "apply_status", "apply_mark")),
+)
+ACTION_SUBGROUP_LABELS: Dict[str, str] = {
+    "base": "标识与类型", "numeric": "数值", "behavior": "行为", "refs": "引用",
+}
+# 职业：标识 / 成长 / 形态变换。
+JOBS_SUBGROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
+    ("base", ("id", "name", "difficulty", "playstyle", "recommended_newbie")),
+    ("tags", ("mechanic_tags", "weapon_types", "resource_axes")),
+    ("growth", ("growth",)),
+    ("transform", ("transform",)),
+    ("text", ("description",)),
+)
+JOBS_SUBGROUP_LABELS: Dict[str, str] = {
+    "base": "标识与定位", "tags": "标签与武器", "growth": "成长率",
+    "transform": "形态变换", "text": "文本",
+}
+# NPC：标识 / 对话与交互 / 关联引用。
+NPC_SUBGROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
+    ("base", ("id", "name", "icon", "map", "type", "desc", "visible")),
+    ("dialog", ("dialogues", "interactions", "tutorials")),
+    ("refs", ("quests", "shop_refs", "intel_refs", "dealer", "repair")),
+)
+NPC_SUBGROUP_LABELS: Dict[str, str] = {
+    "base": "标识", "dialog": "对话与交互", "refs": "关联引用",
+}
+# 商店：标识 / 规则 / 货架。
+SHOP_SUBGROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
+    ("base", ("id", "name", "icon", "type", "currency", "visible", "desc")),
+    ("rules", ("level_required", "reputation_required", "open_condition", "refresh",
+               "price_fluctuation", "listing_count")),
+    ("items", ("items", "pool")),
+)
+SHOP_SUBGROUP_LABELS: Dict[str, str] = {
+    "base": "标识", "rules": "门槛与刷新", "items": "货架",
+}
+EFFECTS_FIELD_SUBGROUPS, EFFECTS_SUBGROUP_ORDER = \
+    _subgroup_declaration(EFFECTS_SUBGROUP_DEFS)
+STATUSES_FIELD_SUBGROUPS, STATUSES_SUBGROUP_ORDER = \
+    _subgroup_declaration(STATUSES_SUBGROUP_DEFS)
+SKILL_CHAINS_FIELD_SUBGROUPS, SKILL_CHAINS_SUBGROUP_ORDER = \
+    _subgroup_declaration(SKILL_CHAINS_SUBGROUP_DEFS)
+ACTION_FIELD_SUBGROUPS, ACTION_SUBGROUP_ORDER = \
+    _subgroup_declaration(ACTION_SUBGROUP_DEFS)
+JOBS_FIELD_SUBGROUPS, JOBS_SUBGROUP_ORDER = \
+    _subgroup_declaration(JOBS_SUBGROUP_DEFS)
+NPC_FIELD_SUBGROUPS, NPC_SUBGROUP_ORDER = \
+    _subgroup_declaration(NPC_SUBGROUP_DEFS)
+SHOP_FIELD_SUBGROUPS, SHOP_SUBGROUP_ORDER = \
+    _subgroup_declaration(SHOP_SUBGROUP_DEFS)
+
+
 # ---- 派生条件的主体声明（批5 条件行编辑器；键名不写死，缺省按实际值推断）----
 # 条件结构 = {主体: {比较符: 值}} 或 {主体: {二级键: {比较符: 值}}}；and/or 为逻辑组合主体。
 CHAIN_CONDITION_SUBJECTS: Dict[str, ConditionSubject] = {
@@ -2141,13 +2253,20 @@ def _module_table() -> Dict[str, ModuleMeta]:
                                                           _child_spec("effects"),
                                                           None,
                                                           None),
-                              kind="effect", namespace="effect_family"),
+                              kind="effect", namespace="effect_family",
+                              # 批20 C：二级分组（子页签）——长模块首屏不铺开
+                              field_subgroups=dict(EFFECTS_FIELD_SUBGROUPS),
+                              subgroup_order=EFFECTS_SUBGROUP_ORDER,
+                              subgroup_labels=dict(EFFECTS_SUBGROUP_LABELS)),
         "statuses": ModuleMeta(entry_type="list",
                                fields=_decorate_field_meta(statuses_fields, {}, {},
                                                            _child_spec("statuses"),
                                                            None,
                                                            None),
-                               kind="status", namespace="effect_family"),
+                               kind="status", namespace="effect_family",
+                               field_subgroups=dict(STATUSES_FIELD_SUBGROUPS),
+                               subgroup_order=STATUSES_SUBGROUP_ORDER,
+                               subgroup_labels=dict(STATUSES_SUBGROUP_LABELS)),
         "marks": ModuleMeta(entry_type="list",
                             fields=_decorate_field_meta(marks_fields, {}, {},
                                                         _child_spec("marks"),
@@ -2160,12 +2279,18 @@ def _module_table() -> Dict[str, ModuleMeta]:
                                                                None,
                                                                None),
                                    kind="skill_chain",
-                                   namespace="chain_lib", chain_field="next"),
+                                   namespace="chain_lib", chain_field="next",
+                                   field_subgroups=dict(SKILL_CHAINS_FIELD_SUBGROUPS),
+                                   subgroup_order=SKILL_CHAINS_SUBGROUP_ORDER,
+                                   subgroup_labels=dict(SKILL_CHAINS_SUBGROUP_LABELS)),
         "action": ModuleMeta(entry_type="list",
                              fields=_decorate_field_meta(action_fields, {}, {},
                                                          _child_spec("action"),
                                                          None),
-                             kind="action", namespace="action_lib"),
+                             kind="action", namespace="action_lib",
+                             field_subgroups=dict(ACTION_FIELD_SUBGROUPS),
+                             subgroup_order=ACTION_SUBGROUP_ORDER,
+                             subgroup_labels=dict(ACTION_SUBGROUP_LABELS)),
         # M13 技能库（细化_6a_技能库契约 §1：skills.json 玩家技能库；F01-F24 全字段登记；
         # kind="skill" 与 loader _KIND_FOR_MODULE + DEF_CLASSES 对齐（路1A SkillDef）；
         # 命名空间 skill_lib 独立于 action_lib——V-10 跨库重名仅黄提示）
@@ -2194,7 +2319,10 @@ def _module_table() -> Dict[str, ModuleMeta]:
                            fields=_decorate_field_meta(jobs_fields, {}, {},
                                                        _child_spec("jobs"), None,
                                                        None),
-                           kind="job", namespace="job_lib"),
+                           kind="job", namespace="job_lib",
+                           field_subgroups=dict(JOBS_FIELD_SUBGROUPS),
+                           subgroup_order=JOBS_SUBGROUP_ORDER,
+                           subgroup_labels=dict(JOBS_SUBGROUP_LABELS)),
         "formula": ModuleMeta(entry_type="map", fields=formula_fields, kind="formula", namespace="formula_lib"),
         "items": ModuleMeta(entry_type="list",
                             fields=_decorate_field_meta(items_fields, ITEMS_FIELD_GROUPS, {},
@@ -2269,11 +2397,17 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "npc": ModuleMeta(entry_type="list",
                           fields=_decorate_field_meta(NPC_FIELDS, {}, {}, _child_spec("npc"),
                                                       None, None),
-                          kind="npc", namespace="npc_lib"),
+                          kind="npc", namespace="npc_lib",
+                          field_subgroups=dict(NPC_FIELD_SUBGROUPS),
+                          subgroup_order=NPC_SUBGROUP_ORDER,
+                          subgroup_labels=dict(NPC_SUBGROUP_LABELS)),
         "shop": ModuleMeta(entry_type="list",
                            fields=_decorate_field_meta(SHOP_FIELDS, {}, {}, _child_spec("shop"),
                                                        None, None),
-                           kind="shop", namespace="shop_lib"),
+                           kind="shop", namespace="shop_lib",
+                           field_subgroups=dict(SHOP_FIELD_SUBGROUPS),
+                           subgroup_order=SHOP_SUBGROUP_ORDER,
+                           subgroup_labels=dict(SHOP_SUBGROUP_LABELS)),
         "quest": ModuleMeta(entry_type="list",
                             fields=_decorate_field_meta(QUEST_FIELDS, QUEST_FIELD_GROUPS,
                                                         {}, _child_spec("quest"),

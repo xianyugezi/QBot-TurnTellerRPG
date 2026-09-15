@@ -18,6 +18,43 @@
       "where": { "has": ["slot"] }
     }
   ],
+  "entry_groups": {
+    "effects": {
+      "by": "field",
+      "field": "type",
+      "labels": {
+        "mark_add": "施加印记",
+        "mark_remove": "移除印记",
+        "clear_marks": "清空印记",
+        "mitigation": "减伤",
+        "dot": "持续伤害",
+        "heal": "治疗",
+        "shield": "护盾",
+        "lifesteal": "吸血",
+        "pierce": "穿透",
+        "dispel": "驱散",
+        "interrupt": "打断",
+        "control": "控制"
+      }
+    },
+    "statuses": { "by": "id_prefix" },
+    "skill_chains": {
+      "by": "field",
+      "field": "max_combo",
+      "labels": { "1": "1 连段", "2": "2 连段", "3": "3 连段" }
+    },
+    "action": { "by": "field", "field": "intent" },
+    "jobs": {
+      "by": "field",
+      "field": "difficulty",
+      "labels": { "simple": "简单", "medium": "中等", "hard": "困难" }
+    },
+    "npc": { "by": "field", "field": "map" },
+    "shop": { "by": "id_prefix" }
+  },
+  "subgroup_labels": {
+    "npc": { "base": "标识与类型" }
+  },
   "entry_tree": [
     {
       "parent": "life",

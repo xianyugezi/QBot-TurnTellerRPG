@@ -79,6 +79,10 @@ _MEASURE_JS = r"""
       activeCollapsed += b.querySelectorAll('.row[data-field]').length;
     });
   }
+  const subtabs = Array.from(body.querySelectorAll('.gtabs2 .gtab2'));
+  const subpanes = Array.from(body.querySelectorAll('.gpane2'));
+  const activeSub = active
+    ? (Array.from(active.querySelectorAll('.gpane2')).find(p => !p.hidden) || null) : null;
   const blocks = Array.from(body.querySelectorAll('.subblk'));
   const kv = Array.from(body.querySelectorAll('.kvtable tbody tr'));
   const kvVis = kv.filter(el => {
@@ -97,6 +101,20 @@ _MEASURE_JS = r"""
     activeTotal: activeTotal,
     activeCollapsed: activeCollapsed,
     activeMain: activeTotal - activeCollapsed,
+    // 批20 C：二级页签（子分组）——声明了子分组的模块一次只看一个子页
+    subTabs: subtabs.length,
+    subPanes: subpanes.length,
+    subTabLabels: subtabs.map(t => (t.textContent || '').trim().slice(0, 24)),
+    activeSubTotal: activeSub ? activeSub.querySelectorAll('.row[data-field]').length : 0,
+    activeSubVisible: (function () {
+      if (!activeSub) { return 0; }
+      let n = 0;
+      activeSub.querySelectorAll('.row[data-field]').forEach(el => {
+        const r = el.getBoundingClientRect();
+        if (r.height > 0 && r.top < br.bottom && r.bottom > br.top) { n += 1; }
+      });
+      return n;
+    })(),
     blocks: blocks.map(b => {
       const bd = b.querySelector('.sbbody');
       return {
@@ -111,7 +129,9 @@ _MEASURE_JS = r"""
 
 _EXPAND_ALL_JS = r"""
 () => {
+  // 「修前（不分区 / 全展开）」对照：展开折叠子块 + 显示全部二级子页（= 旧的一条长滚动）。
   document.querySelectorAll('#p-body .subblk .sbbody').forEach(b => { b.hidden = false; });
+  document.querySelectorAll('#p-body .gpane2').forEach(b => { b.hidden = false; });
   document.querySelectorAll('#p-body .gtab').forEach((t, i) => {
     if (i === 0) { t.click(); }
   });
@@ -166,7 +186,7 @@ def _measure_case(page: Any, module: str, entry: str) -> Dict[str, Any]:
 
 
 def run(repo: Path, content_root: Path, pack: str, cases: List[str],
-        port: int, out: Optional[Path]) -> Dict[str, Any]:
+        port: int, out: Optional[Path], host_python: Optional[str] = None) -> Dict[str, Any]:
     try:
         from playwright.sync_api import sync_playwright
     except Exception as exc:  # noqa: BLE001
@@ -185,7 +205,7 @@ def run(repo: Path, content_root: Path, pack: str, cases: List[str],
     env = dict(os.environ)
     env["PYTHONPATH"] = str(repo)
     proc = subprocess.Popen(
-        [sys.executable, str(repo / "scripts" / "editor_host.py"),
+        [host_python or sys.executable, str(repo / "scripts" / "editor_host.py"),
          "--pack", pack, "--content-root", str(tmp), "--port", str(port),
          "--host", "127.0.0.1"],
         cwd=str(repo), env=env,
@@ -226,6 +246,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--pack", required=True)
     ap.add_argument("--case", action="append", default=[],
                     help="module[:entry]，可重复")
+    ap.add_argument("--host-python", default=sys.executable,
+                    help="跑 editor_host.py 的解释器（须能 import qbot_rpg；"
+                         "本机 playwright 与仓库 venv 不同解释器时用它）")
     ap.add_argument("--port", type=int, default=0)
     ap.add_argument("--json", default=None, help="结果写入的 JSON 路径")
     args = ap.parse_args(argv)
@@ -234,7 +257,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     cases = args.case or ["settings:battle"]
     port = args.port or _free_port()
     out = Path(args.json).resolve() if args.json else None
-    result = run(repo, content_root, args.pack, cases, port, out)
+    result = run(repo, content_root, args.pack, cases, port, out,
+                 host_python=args.host_python)
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
 

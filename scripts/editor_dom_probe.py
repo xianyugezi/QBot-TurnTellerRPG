@@ -142,7 +142,9 @@ _GROUPS_JS = r"""
   }
   const subtabs = Array.from(body.querySelectorAll('.gtabs2 .gtab2'));
   const subpanes = Array.from(body.querySelectorAll('.gpane2'));
-  const activeSub = subpanes.find(p => !p.hidden) || null;
+  const activePane = panes.find(p => !p.hidden) || null;
+  const activeSub = activePane
+    ? (Array.from(activePane.querySelectorAll('.gpane2')).find(p => !p.hidden) || null) : null;
   const rowsBox = document.getElementById('rows');
   const groups = Array.from(rowsBox ? rowsBox.querySelectorAll('.lgrp') : []);
   const gitems = Array.from(rowsBox ? rowsBox.querySelectorAll('.item') : []);
@@ -163,6 +165,15 @@ _GROUPS_JS = r"""
     subTabLabels: subtabs.map(t => (t.textContent || '').trim().slice(0, 24)),
     subPanes: subpanes.length,
     activeSubTotal: activeSub ? activeSub.querySelectorAll('.row[data-field]').length : 0,
+    activeSubVisible: (function () {
+      if (!activeSub) { return 0; }
+      let n = 0;
+      activeSub.querySelectorAll('.row[data-field]').forEach(el => {
+        const r = el.getBoundingClientRect();
+        if (r.height > 0 && r.top < br.bottom && r.bottom > br.top) { n += 1; }
+      });
+      return n;
+    })(),
     activePane: active ? active.getAttribute('data-g') : null,
     activeTotal: activeTotal,
     activeCollapsed: activeCollapsed,
@@ -181,7 +192,9 @@ _GROUPS_JS = r"""
 
 _EXPAND_ALL_JS = r"""
 () => {
+  // 「修前（不分区 / 全展开）」对照：展开折叠子块、并显示全部二级子页（= 旧的一条长滚动）。
   document.querySelectorAll('#p-body .subblk .sbbody').forEach(b => { b.hidden = false; });
+  document.querySelectorAll('#p-body .gpane2').forEach(b => { b.hidden = false; });
   document.querySelectorAll('#p-body .gtabs .gtab')
     .forEach((t, i) => { if (i === 0) { t.click(); } });
   return true;

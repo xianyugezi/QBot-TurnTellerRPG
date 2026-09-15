@@ -72,6 +72,9 @@ PACK_COVERED_TAG = "已覆盖（包）"
 KEY_IS_NAME_NOTE = "键 = 名称"
 # 批14 #4：元数据未登记子字段的兜底标注（前端字段行内展示；不改任何校验语义）。
 META_UNREGISTERED_NOTE = "元数据未登记，按实际值推断"
+# 批20 C：中栏条目分组的「取不到分组值」兜底分组（稳定机器键 + 中文兜底显示名；包可覆盖名）。
+ENTRY_GROUP_OTHER = "@other"
+ENTRY_GROUP_OTHER_LABEL = "其他"
 
 # 批15 #8：二级结构（分组页签之下的可折叠子块）——通用机制，不认任何模块/字段名。
 # · 子块名来自元数据：FieldMeta.subgroup / ModuleMeta.field_subgroups（键 → 子块）；
@@ -604,6 +607,73 @@ def _entry_merge_filtered_rows(
     return rows, sections
 
 
+# =====================================================================================
+# 批20 C：**中栏条目分组**（`field_meta.json.entry_groups`，通用、包声明驱动）
+# =====================================================================================
+def _entry_group_spec(pack_dir: Path, module: str) -> Optional[Mapping[str, Any]]:
+    """读该模块的条目分组声明（无声明 → None = 行为与现状一致）。"""
+    decl = _pack_declaration(pack_dir)
+    if decl is None or not decl.entry_groups:
+        return None
+    return decl.entry_groups.get(module)
+
+
+def _entry_group_of(entry_id: str, value: object, spec: Mapping[str, Any]) -> str:
+    """条目 → 分组原始键：`by=id_prefix` 取 ID 首个下划线前缀；`by=field` 取该字段的标量值。
+
+    只看值形态 / 声明，不认任何具体字段语义；取不到（缺键 / 非标量 / 空值）→ 空串（其他）。
+    """
+    if str(spec.get("by")) == "id_prefix":
+        raw = str(entry_id).split("_")[0]
+        return raw or str(entry_id)
+    key = str(spec.get("field") or "")
+    if key and isinstance(value, Mapping):
+        v = value.get(key)
+        if isinstance(v, (str, int, float, bool)) and str(v) != "":
+            return str(v)
+    return ""
+
+
+def _entry_group_plan(mrows: Sequence[Tuple[str, str, object]],
+                      spec: Mapping[str, Any]) -> List[Dict[str, Any]]:
+    """条目行 → 分组计划 `[{name,label,count,collapsed}]`（顺序 = 首次出现顺序，「其他」置末）。
+
+    首节默认展开，其余按声明 `collapsed`（缺省 true）折叠；显示名 = 包声明 labels →
+    原始值；取不到值的条目归「其他」（`ENTRY_GROUP_OTHER`）。
+    """
+    labels = {str(k): str(v) for k, v in (spec.get("labels") or {}).items()}
+    other_label = str(spec.get("other_label") or ENTRY_GROUP_OTHER_LABEL)
+    collapsed = bool(spec.get("collapsed", True))
+    order: List[str] = []
+    counts: Dict[str, int] = {}
+    for eid, _name, val in mrows:
+        raw = _entry_group_of(str(eid), val, spec)
+        if raw and raw not in counts:
+            order.append(raw)
+        counts[raw] = counts.get(raw, 0) + 1
+    # 包声明 labels 的**键顺序优先**（作者可用它排定小节顺序）；未声明 labels 时按
+    # **条目数降序**（首屏先给最大的分组），同数按首次出现顺序。
+    declared_order = [k for k in labels if counts.get(k, 0) > 0]
+    if declared_order:
+        order = declared_order + [k for k in order if k not in set(declared_order)]
+    else:
+        order = sorted(order, key=lambda k: -counts.get(k, 0))
+    if "" in counts:
+        order.append("")
+    plan: List[Dict[str, Any]] = []
+    for i, raw in enumerate(order):
+        if counts.get(raw, 0) <= 0:
+            continue
+        name = raw or ENTRY_GROUP_OTHER
+        plan.append({
+            "name": name,
+            "label": labels.get(raw) or (other_label if not raw else raw),
+            "count": counts.get(raw, 0),
+            "collapsed": bool(collapsed and i > 0),
+        })
+    return plan
+
+
 def _segment_pages(manifest: Mapping[str, Any], declared: List[str],
                    pack_dir: Path) -> Dict[str, List[Dict[str, Any]]]:
     """读包声明 `segment_pages` → {对象模块: 页面数组}（批15 #2，通用、不写死段名）。
@@ -1089,6 +1159,17 @@ def list_entries(pack: object, module: object, root: Optional[object] = None) ->
     # 页面是展示层聚合：段条目仍在 `entries` 里（计数/索引不变），前端按 `page` 归到页行下。
     pages: List[Dict[str, Any]] = []
     briefs = [_entry_brief(eid, name, _val) for eid, name, _val in rows]
+    # 批20 C：中栏条目分组（包声明驱动；本模块**自身条目**分组，并入/挂载条目另按来源分节）。
+    # 无声明 → 空计划 / 条目不带 group 键（前端行为与现状一致）。
+    group_spec = _entry_group_spec(pack_dir, mod)
+    group_plan: List[Dict[str, Any]] = []
+    if group_spec is not None:
+        group_plan = _entry_group_plan(rows, group_spec)
+        _glabel = {str(g["name"]): str(g["label"]) for g in group_plan}
+        for _i, (_eid, _nm, _val) in enumerate(rows):
+            _gname = _entry_group_of(str(_eid), _val, group_spec) or ENTRY_GROUP_OTHER
+            briefs[_i]["group"] = _gname
+            briefs[_i]["group_label"] = _glabel.get(_gname, _gname)
     # 批19 #8：移走类「挂载条目」计入父节点条目列表（`mounted_from` 标出来源模块，
     # 前端据此路由编辑/保存回来源模块；仍走来源模块的校验与原子写链路）。
     for _eid, _nm, _val, _frm in mounted_rows:
@@ -1159,6 +1240,8 @@ def list_entries(pack: object, module: object, root: Optional[object] = None) ->
         "table_entry": table_entry,
         # 批15 #2：合并页（对象模块；其余模块为 []）——每页列出被合并的段 id
         "pages": pages,
+        # 批20 C：中栏条目分组计划（无声明 = []；条目上的 group/group_label 同源）
+        "entry_groups": group_plan,
         # 批12 #1：聚合视图（无声明时 = 空列表 / total_count == count，行为与现状一致）
         "merge_sections": sections,
         "merged_count": merged_count,

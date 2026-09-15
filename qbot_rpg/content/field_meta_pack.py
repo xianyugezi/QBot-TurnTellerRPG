@@ -88,6 +88,9 @@ TOP_LEVEL_KEYS: Tuple[str, ...] = (
     "field_labels",
     "field_help",
     "group_labels",
+    # 批20 C：**二级分组显示名**（模块 → 子分组键 → 中文名）——覆盖框架默认子分组显示名
+    # （框架已声明结构：`ModuleMeta.field_subgroups` / `subgroup_order`）。纯展示层。
+    "subgroup_labels",
     "entry_merge",
     # 批15 #2：对象模块的「合并页」声明——把若干顶层段合成一个页面展示（纯展示层；
     # 数据文件 / 段 id / 校验路径不动；保存时补丁按键写回同一对象）。
@@ -130,6 +133,8 @@ class PackFieldMeta:
     field_labels: Mapping[str, Any]   # 值 = str | 嵌套对象（含 _label / 子键）
     field_help: Mapping[str, Any]     # 值 = str | 嵌套对象（含 _help / 子键）
     group_labels: Mapping[str, Mapping[str, str]]
+    # 批20 C：二级分组显示名（模块 → 子分组键 → 中文名）——覆盖框架默认（结构归框架）。
+    subgroup_labels: Mapping[str, Mapping[str, str]] = field(default_factory=dict)
     # entry_merge（批12 #1，展示层聚合）：目标模块 → {"sources": [...], "keep_top_level": [...]}。
     # 语义 = 把 sources 的条目并入目标的条目列表展示；数据/模块 id/校验路径不变。
     entry_merge: Mapping[str, Mapping[str, Tuple[str, ...]]] = field(default_factory=dict)
@@ -715,6 +720,8 @@ def parse_field_meta(raw: object, pack: str) -> PackFieldMeta:
                   if "field_help" in raw else {})
     group_labels = (_nested_str_map(raw["group_labels"], pack, "group_labels")
                     if "group_labels" in raw else {})
+    subgroup_labels = (_nested_str_map(raw["subgroup_labels"], pack, "subgroup_labels")
+                       if "subgroup_labels" in raw else {})
     entry_merge = (_validate_entry_merge(raw["entry_merge"], pack, "entry_merge")
                    if "entry_merge" in raw else {})
     segment_pages = (_validate_segment_pages(raw["segment_pages"], pack, "segment_pages")
@@ -744,6 +751,7 @@ def parse_field_meta(raw: object, pack: str) -> PackFieldMeta:
         field_labels=field_labels,
         field_help=field_help,
         group_labels=group_labels,
+        subgroup_labels=subgroup_labels,
         entry_merge=entry_merge,
         segment_pages=segment_pages,
         id_prefix=id_prefix,
@@ -879,8 +887,12 @@ def _apply_display_children(fm: FieldMeta, lspec: object, hspec: object,
 
 def _merge_module(base_mod: Optional[ModuleMeta], mod: str,
                   labels: Mapping[str, str], helps: Mapping[str, str],
-                  groups: Mapping[str, str]) -> ModuleMeta:
-    """单模块合并：labels/helps 逐键覆盖，groups 逐键覆盖（未声明键保持现状）。"""
+                  groups: Mapping[str, str],
+                  subgroups: Optional[Mapping[str, str]] = None) -> ModuleMeta:
+    """单模块合并：labels/helps 逐键覆盖，groups/subgroups 逐键覆盖（未声明键保持现状）。
+
+    `subgroups`（批20 C）= 二级分组显示名覆盖；**结构**（键→子分组）仍归框架元数据。
+    """
     if base_mod is None:
         # 框架未登记该模块：只造「纯展示壳」——entry_type 留空 = api 层按实际数据推断，
         # 行为与「无模块元数据」一致，仅多出包声明的中文名/说明/分组。
@@ -896,6 +908,8 @@ def _merge_module(base_mod: Optional[ModuleMeta], mod: str,
                           group_labels=dict(groups))
     merged_groups: Dict[str, str] = dict(base_mod.group_labels)
     merged_groups.update(groups)
+    merged_subgroups: Dict[str, str] = dict(base_mod.subgroup_labels)
+    merged_subgroups.update(subgroups or {})
     # map 形态模块（如 stats）：展示表面在 value_meta.children——包声明不落在空顶层 fields，
     # 避免多造幽灵顶层字段（对拍门禁）。
     has_value_surface = (base_mod.value_meta is not None
@@ -904,6 +918,7 @@ def _merge_module(base_mod: Optional[ModuleMeta], mod: str,
     kw: Dict[str, object] = {
         "fields": _apply_display(base_mod.fields, labels, helps, not has_value_surface),
         "group_labels": merged_groups,
+        "subgroup_labels": merged_subgroups,
     }
     if base_mod.value_meta is not None and base_mod.value_meta.type == "obj":
         # map 形态模块（如 stats）：字段表面在 value_meta.children——一并覆盖，
@@ -917,13 +932,15 @@ def merge_field_meta_table(base: FieldMetaTable,
                            decl: PackFieldMeta) -> FieldMetaTable:
     """把包声明叠加到框架表（**包声明优先，框架兜底**）；返回新表，不改 base。"""
     modules: Dict[str, ModuleMeta] = dict(base.modules)
-    mods = set(decl.field_labels) | set(decl.field_help) | set(decl.group_labels)
+    mods = (set(decl.field_labels) | set(decl.field_help) | set(decl.group_labels)
+            | set(decl.subgroup_labels))
     for mod in mods:
         modules[mod] = _merge_module(
             base.modules.get(mod), mod,
             decl.field_labels.get(mod, {}),
             decl.field_help.get(mod, {}),
             decl.group_labels.get(mod, {}),
+            decl.subgroup_labels.get(mod, {}),
         )
     return FieldMetaTable(modules=modules, namespaces=dict(base.namespaces))
 

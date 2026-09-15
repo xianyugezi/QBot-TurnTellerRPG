@@ -51,6 +51,14 @@ _SAFE_COMPONENT = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.\-]*$")
 _MAX_DEPTH = 3  # 只读视图嵌套深度上限（防递归爆栈/响应过大）
 _MAX_TABLE_ROWS = 200  # 列表字段只读表格最多渲染行数（超出截断并标注 row_count）
 
+# 批13.1「段入口」：对象型模块里「框架已登记、包数据尚无」的顶层段，在只读视图里用本
+# 哨兵占位。它是**展示层与写链路之间的唯一信号**：读写两处据此把该段当「空槽位」处理
+# （已有子字段登记 → 从空对象起建；否则整段一值），而绝不把哨兵本身写进任何数据文件。
+# 用独立哨兵而非 None，是为了把「框架段未配置」与「包数据里真的写了 null」区分开。
+_UNCONFIGURED = object()
+# 未配置段的界面文案（前端按需取；后端只给稳定标记 unconfigured）。
+UNCONFIGURED_TAG = "未配置 · 框架支持"
+
 
 class EditorError(Exception):
     """编辑器读取层领域异常基类（宿主 scripts/editor_host.py 映射为 HTTP JSON）。"""
@@ -395,12 +403,12 @@ def list_packs(root: Optional[object] = None, preferred: Optional[str] = None) -
 # =====================================================================================
 # 只读 API ②：模块层级（父子；包不声明即平铺）
 # =====================================================================================
-def _entry_count(data: object) -> int:
-    if isinstance(data, list):
-        return len(data)
-    if isinstance(data, Mapping):
-        return len(data)
-    return 0
+def _entry_count(data: object, mmeta: Optional[ModuleMeta] = None) -> int:
+    """条目计数（与 `_entry_rows` **同一口径**：对象型模块含框架已登记的未配置段）。
+
+    与条目列表 / 全局索引共用同一函数，保证「左栏计数 = 条目列表 count = 全局检索」三处自洽。
+    """
+    return len(_entry_rows(data, mmeta))
 
 
 def list_modules(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
@@ -418,7 +426,11 @@ def list_modules(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
     if decl is not None:
         labels.update(decl.module_labels)
     labels.update(tree_labels)
-    counts = {m: _entry_count(_read_json(pack_dir / f"{m}.json")) for m in declared}
+    # 批13.1：计数与条目列表同一口径（对象型模块的未配置段计入 own_count），
+    # 供验收脚本断言「左栏计数 = 条目列表 = 全局索引」。
+    meta_table = _pack_meta_table(pack_dir)
+    counts = {m: _entry_count(_read_json(pack_dir / f"{m}.json"), meta_table.module(m))
+              for m in declared}
     child_set = {c for kids in children_map.values() for c in kids}
     merge_map, merge_notes = _entry_merge_map(manifest, declared, pack_dir)
     notes.extend(merge_notes)
@@ -527,7 +539,7 @@ def list_modules(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
         if mod in declared or mod in view_keys or mod in top_level_keys:
             continue
         data = _read_json(pack_dir / f"{mod}.json")
-        cnt = _entry_count(data)
+        cnt = _entry_count(data, meta_table.module(mod))
         available.append({
             "module": mod,
             "label": labels.get(mod) or entry.label,
@@ -573,6 +585,11 @@ def _entry_rows(data: object, mmeta: Optional[ModuleMeta]) -> List[Tuple[str, st
 
     list 模块 → 每个元素一条；map 模块 → 每个键一条；object 模块 → 每个顶层段一条
     （名取字段元数据 label，缺省用键名）。无 id 的元素回退 `#i`（不因缺键丢条目）。
+
+    批13.1「段入口」（一号原则）：object 模块的**框架已登记顶层段**里，包数据尚未出现的
+    也补一条（值 = `_UNCONFIGURED` 哨兵）——段不因包缺数据而从编辑器消失。本函数是
+    条目列表 / 全局索引 / 左栏计数 / 条目详情 / 写链路**共用**的唯一条目口径，故四处自洽。
+    机制完全不认模块名/段名：任何 object 模块只要登记了顶层字段即享有。
     """
     id_field = (mmeta.id_field if mmeta is not None and mmeta.id_field else _ID_FIELD)
     etype = mmeta.entry_type if mmeta is not None else None
@@ -600,6 +617,23 @@ def _entry_rows(data: object, mmeta: Optional[ModuleMeta]) -> List[Tuple[str, st
                 nm = val.get(_NAME_FIELD) if isinstance(val, Mapping) else None
                 name = nm if isinstance(nm, str) and nm else k
             out.append((k, name, val))
+        # 批13.1：补齐框架已登记、包数据尚无的顶层段（顺序 = 字段登记顺序；配置过的在前）。
+        if etype == "object" and mmeta is not None:
+            present = {str(k) for k in data}
+            for key, fm in mmeta.fields.items():
+                k = str(key)
+                if k in present:
+                    continue
+                name = fm.label if fm is not None and fm.label else k
+                out.append((k, name, _UNCONFIGURED))
+    return out
+
+
+def _entry_brief(eid: str, name: str, val: object) -> Dict[str, Any]:
+    """条目列表项 {id, name}；未配置段额外带 `unconfigured=True`（其余条目键集不变）。"""
+    out: Dict[str, Any] = {"id": eid, "name": name}
+    if val is _UNCONFIGURED:
+        out["unconfigured"] = True
     return out
 
 
@@ -634,16 +668,23 @@ def list_entries(pack: object, module: object, root: Optional[object] = None) ->
                 "entry_type": _entry_type(smeta, sdata),
                 "count": len(srows),
                 "keep_top_level": src in spec["keep_top_level"],
-                "entries": [{"id": eid, "name": name} for eid, name, _v in srows],
+                "entries": [_entry_brief(eid, name, _v) for eid, name, _v in srows],
             })
     merged_count = sum(s["count"] for s in sections)
+    # 批13.1：计数口径（与条目列表 / 左栏 / 全局索引一致）——
+    #   count = 全部条目（含未配置段）；configured_count = 包数据里真有的；
+    #   unconfigured_count = 框架已登记但本包未配置的段。
+    unconfigured_count = sum(1 for _e, _n, val in rows if val is _UNCONFIGURED)
     return {
         "pack": str(pack),
         "module": mod,
         "label": labels.get(mod) or mod,
         "entry_type": etype,
         "count": len(rows),
-        "entries": [{"id": eid, "name": name} for eid, name, _val in rows],
+        "configured_count": len(rows) - unconfigured_count,
+        "unconfigured_count": unconfigured_count,
+        "unconfigured_tag": UNCONFIGURED_TAG,
+        "entries": [_entry_brief(eid, name, _val) for eid, name, _val in rows],
         # 批12 #1：聚合视图（无声明时 = 空列表 / total_count == count，行为与现状一致）
         "merge_sections": sections,
         "merged_count": merged_count,
@@ -1780,7 +1821,13 @@ def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
 def _build_fields(base: Mapping[str, FieldMeta], subject: object,
                   mmeta: Optional[ModuleMeta], view: "_PackView",
                   depth: int) -> List[Dict[str, Any]]:
-    """按声明顺序出字段（缺失也出，标 present=False）；再补实际值里多出的键。"""
+    """按声明顺序出字段（缺失也出，标 present=False）；再补实际值里多出的键。
+
+    未配置段（subject = `_UNCONFIGURED` 哨兵）按**空对象**处理：登记字段全部出、present=False，
+    既让作者看得见能填，也不把哨兵当成真值展示。
+    """
+    if subject is _UNCONFIGURED:
+        subject = {}
     if not isinstance(subject, Mapping):
         if base:
             key, fm = next(iter(base.items()))
@@ -1806,6 +1853,13 @@ def _entry_base(mmeta: Optional[ModuleMeta], etype: str, entry_id: str,
     """条目值的「字段元数据基表」：list 模块=条目顶层字段，map/object=值字段或段子字段。"""
     if mmeta is None:
         return {}
+    if subject is _UNCONFIGURED:
+        # 批13.1 未配置段：有登记子字段 → 用子字段出表单（patch 键 = 子字段名）；
+        # 否则整段作一个字段（标量 / 宽容器），与「新建段」路径（`_new_entry_base`）同口径。
+        fm = mmeta.fields.get(entry_id)
+        if fm is not None and fm.type == "obj" and fm.children:
+            return fm.children
+        return {entry_id: fm} if fm is not None else {}
     if etype == "list":
         return mmeta.fields
     if etype == "map":
@@ -1882,6 +1936,7 @@ def entry_detail(pack: object, module: object, entry_id: object,
     if match is None:
         raise NotFound(f"条目不存在：{mod}/{entry_id}")
     _eid, entry_name, subject = match
+    unconfigured = subject is _UNCONFIGURED
     etype = _entry_type(mmeta, data)
     view = _PackView(pack_dir, manifest)
     base = _entry_base(mmeta, etype, entry_id, subject)
@@ -1898,6 +1953,9 @@ def entry_detail(pack: object, module: object, entry_id: object,
         "entry_type": etype,
         "id": entry_id,
         "name": entry_name,
+        # 批13.1：本段框架已登记、包数据尚无 → 前端标「未配置 · 框架支持」，字段全为空待填。
+        "unconfigured": unconfigured,
+        "unconfigured_tag": UNCONFIGURED_TAG,
         "fields": fields,
         "groups": groups,
         "associations": associations,
@@ -1967,6 +2025,14 @@ def entry_slot(pack: object, module: object, entry_id: object,
         slot = entry_id
     else:
         slot = None
+    # 批13.1：未配置段写链路——有登记子字段的 object → 从空对象起建（patch 键 = 子字段名）；
+    # 其余（标量/列表/无子字段宽容器/引用）→ 整段一值（subject=None，patch 键 = 段名）。
+    # 展示口径（base）仍由 `_entry_base` 按哨兵给出，读写两处键集一致。
+    unconfigured = subject is _UNCONFIGURED
+    fm = mmeta.fields.get(entry_id) if mmeta is not None else None
+    write_subject = subject
+    if unconfigured:
+        write_subject = {} if (fm is not None and fm.type == "obj" and fm.children) else None
     return {
         "pack_dir": pack_dir,
         "manifest": manifest,
@@ -1977,7 +2043,8 @@ def entry_slot(pack: object, module: object, entry_id: object,
         "slot": slot,
         "entry_id": entry_id,
         "name": entry_name,
-        "subject": subject,
+        "subject": write_subject,
+        "unconfigured": unconfigured,
         "base": _entry_base(mmeta, etype, entry_id, subject),
         "mmeta": mmeta,
     }
@@ -2187,11 +2254,16 @@ def entry_index(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
         mmeta = table.module(mod)
         etype = _entry_type(mmeta, data)
         ns = (mmeta.namespace if mmeta is not None and mmeta.namespace else mod)
-        entries = [{"id": eid, "name": name} for eid, name, _v in _entry_rows(data, mmeta)]
+        rows = _entry_rows(data, mmeta)
+        entries = [_entry_brief(eid, name, val) for eid, name, val in rows]
+        # 批13.1：未配置段的计数口径与 `list_entries` 一致（全局检索也覆盖未配置段）。
+        unc = sum(1 for _e, _n, val in rows if val is _UNCONFIGURED)
         total += len(entries)
         modules.append({
             "module": mod, "label": labels.get(mod) or mod, "entry_type": etype,
-            "namespace": ns, "count": len(entries), "entries": entries,
+            "namespace": ns, "count": len(entries),
+            "configured_count": len(entries) - unc, "unconfigured_count": unc,
+            "entries": entries,
         })
     # 批13 A（一号原则）：包未启用的框架模块也纳入全局检索候选（若有保留数据 → 可搜到；
     # 无数据 → 空组不影响结果）。**不改 `modules`/`total`**：换包验收与 ID 口径按声明集，
@@ -2206,7 +2278,8 @@ def entry_index(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
         mmeta = table.module(mod)
         etype = _entry_type(mmeta, data)
         ns = (mmeta.namespace if mmeta is not None and mmeta.namespace else mod)
-        entries = [{"id": eid, "name": name} for eid, name, _v in _entry_rows(data, mmeta)]
+        rows = _entry_rows(data, mmeta)
+        entries = [_entry_brief(eid, name, val) for eid, name, val in rows]
         available.append({
             "module": mod, "label": labels.get(mod) or entry.label,
             "entry_type": etype, "namespace": ns,

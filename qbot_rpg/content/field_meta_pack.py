@@ -99,6 +99,9 @@ TOP_LEVEL_KEYS: Tuple[str, ...] = (
     "entry_presets",
     # 批17：关闭框架默认（或包自己的）条目预设——`{"<模块>": ["<预设 id>", ...]}`。
     "entry_presets_disable",
+    # 批19 #8：条目级层级声明——把某模块内的段/条目挂到另一个父节点之下（左栏从
+    # 「模块级」扩展到「条目级」）；纯展示层，数据文件 / 段 id / 校验路径全不动。
+    "entry_tree",
 )
 
 # 序号零填充宽度：缺省 3 位、上限 12 位（防声明出超长 ID；仅影响建议 ID，不参与校验）。
@@ -136,6 +139,13 @@ class PackFieldMeta:
     # entry_presets_disable（批17）：模块 → 要关闭的预设 id 元组（框架默认或包自己的）；
     # 生效预设由 entry_presets.merge_entry_presets 计算（框架默认 ∪ 包声明 − 关闭）。
     entry_presets_disable: Mapping[str, Tuple[str, ...]] = field(default_factory=dict)
+    # entry_tree（批19 #8，展示层条目级层级）：挂载数组；每项 =
+    #   {"parent": <父节点>, "sections": ({"from": <来源模块>, "id": <条目 id>}, …),
+    #    "keep_top_level": bool}
+    # 语义 = 把「来源模块」的指定条目挂到父节点之下；默认从原处移走（`keep_top_level=True`
+    # 或父节点是虚拟聚合视图时保留原位，做纯显示挂载）。编辑器读取层按包实际声明与
+    # 框架登记过滤；数据文件 / 条目 id / 校验路径全不动（编辑仍写回来源模块）。
+    entry_tree: Tuple[Mapping[str, Any], ...] = ()
 
 
 # -------------------------------------------------------------------------------------
@@ -476,6 +486,68 @@ def _validate_entry_presets_disable(value: object, pack: str, key: str
     return out
 
 
+def _validate_entry_tree(value: object, pack: str, key: str
+                         ) -> Tuple[Mapping[str, Any], ...]:
+    """`entry_tree` 形态校验并归一化（批19 #8，条目级层级挂载）。
+
+    形态：数组，每项 `{"parent": "<父节点>", "sections": [{"from": "<来源模块>",
+    "id": "<条目 id>"}, …], "keep_top_level": <bool>?}`（简写：`sections` 项也接受
+    `"<来源模块>.<条目 id>"` 字符串）。约束：
+      · 每项只允许 parent / sections / keep_top_level 三个键（防写法漂移）；
+      · parent / from / id 均为非空字符串；sections 非空；
+      · 同一 (from, id) 不可在同一项内重复；
+    这里只校验**形态**；「父节点/来源模块是否在 manifest 声明、条目 id 是否真存在」
+    由编辑器读取层按包实际声明与框架登记过滤（不悬空、不报错）。
+    """
+    if not isinstance(value, list):
+        raise _fail(pack, key, f"应为数组，实际是{_type_name(value)}")
+    out: list = []
+    for i, mount in enumerate(value):
+        where = f"{key}[{i}]"
+        if not isinstance(mount, Mapping):
+            raise _fail(pack, where, f"应为对象，实际是{_type_name(mount)}")
+        unknown = [str(k) for k in mount
+                   if k not in ("parent", "sections", "keep_top_level")]
+        if unknown:
+            raise _fail(pack, where,
+                        f"含未知键：{'、'.join(unknown)}；"
+                        "只允许 parent / sections / keep_top_level")
+        parent = mount.get("parent")
+        if not isinstance(parent, str) or not parent:
+            raise _fail(pack, where, f"parent 应为非空字符串，实际是{parent!r}")
+        raw_sections = mount.get("sections")
+        if not isinstance(raw_sections, list) or not raw_sections:
+            raise _fail(pack, f"{where}.sections", "应为非空数组")
+        sections: list = []
+        seen: set = set()
+        for j, sec in enumerate(raw_sections):
+            swhere = f"{where}.sections[{j}]"
+            if isinstance(sec, str) and sec:
+                frm, _dot, eid = sec.partition(".")
+            elif isinstance(sec, Mapping):
+                unknown_s = [str(k) for k in sec if k not in ("from", "id")]
+                if unknown_s:
+                    raise _fail(pack, swhere,
+                                f"含未知键：{'、'.join(unknown_s)}；只允许 from / id")
+                frm, eid = sec.get("from"), sec.get("id")
+            else:
+                raise _fail(pack, swhere,
+                            f"应为对象（或 \"<来源>.<条目>\" 字符串），实际是{_type_name(sec)}")
+            if not isinstance(frm, str) or not frm:
+                raise _fail(pack, swhere, f"from 应为非空字符串，实际是{frm!r}")
+            if not isinstance(eid, str) or not eid:
+                raise _fail(pack, swhere, f"id 应为非空字符串，实际是{eid!r}")
+            if (frm, eid) in seen:
+                raise _fail(pack, swhere, f"重复挂载同一条目：{frm}.{eid}")
+            seen.add((frm, eid))
+            sections.append({"from": frm, "id": eid})
+        keep = mount.get("keep_top_level", False)
+        if not isinstance(keep, bool):
+            raise _fail(pack, where, f"keep_top_level 应为布尔，实际是{_type_name(keep)}")
+        out.append({"parent": parent, "sections": tuple(sections), "keep_top_level": keep})
+    return tuple(out)
+
+
 def _validate_schema_version(value: object, pack: str, key: str) -> int:
     if value is None:
         raise _fail(pack, key, f"缺失：应为整数 {SCHEMA_VERSION}")
@@ -524,6 +596,8 @@ def parse_field_meta(raw: object, pack: str) -> PackFieldMeta:
         _validate_entry_presets_disable(
             raw["entry_presets_disable"], pack, "entry_presets_disable")
         if "entry_presets_disable" in raw else {})
+    entry_tree = (_validate_entry_tree(raw["entry_tree"], pack, "entry_tree")
+                  if "entry_tree" in raw else ())
     return PackFieldMeta(
         pack=pack,
         module_labels=module_labels,
@@ -537,6 +611,7 @@ def parse_field_meta(raw: object, pack: str) -> PackFieldMeta:
         id_width=id_width,
         entry_presets=entry_presets,
         entry_presets_disable=entry_presets_disable,
+        entry_tree=entry_tree,
     )
 
 

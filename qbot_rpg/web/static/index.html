@@ -3164,6 +3164,27 @@ function renderModules() {
     // 批12 #1：被并入且未保留单列的子模块不再单列（聚合视图里按来源分小节展示）
     (n.children || []).filter(function (c) { return !EditorMerge.hidden(c); })
       .forEach(function (c) { node(c, depth + 1); });
+    // 批19 #8：挂到本节点下的条目（条目级层级；点击按来源模块路由编辑/保存）。
+    appendMountedLeaves(nav, n.mounted || [], depth + 1, n.module);
+  }
+  // 批19 #8：父节点下的条目叶子（模块树从「模块级」扩展到「条目级」）。
+  function appendMountedLeaves(host, items, depth, parentMod) {
+    items.forEach(function (item) {
+      var md = document.createElement("div");
+      var on = (state.entry === item.id && (state.entryModule || state.module) === item.from);
+      md.className = "mod leaf sub" + (on ? " on" : "");
+      md.dataset.module = item.from;
+      md.dataset.entry = item.id;
+      md.title = item.name + "  [" + item.from + "." + item.id + "]"
+        + (item.keep_top_level ? "（挂载显示；数据仍在「" + (item.source_label || item.from) + "」）"
+          : "（已移入本节点；编辑仍写回「" + (item.source_label || item.from) + "」）");
+      md.innerHTML = esc(item.name) + '<span class="tag">'
+        + (item.keep_top_level ? "挂载" : "移入") + "</span>";
+      md.addEventListener("click", function () {
+        selectMountedEntry(parentMod, item.from, item.id);
+      });
+      host.appendChild(md);
+    });
   }
   // 批13 A/D：① 虚拟聚合视图（entry_merge 目标，如「生活」）置顶——点开即聚合视图。
   (state.views || []).forEach(function (v) {
@@ -3177,6 +3198,7 @@ function renderModules() {
       + '<span class="ct" title="' + esc(cl.title) + '">' + esc(cl.text) + "</span>";
     d.addEventListener("click", function () { selectModule(v.module); });
     nav.appendChild(d);
+    appendMountedLeaves(nav, v.mounted || [], 1, v.module);
   });
   // 批12 #1：被并入的模块默认不在左栏单列（有 entry_merge 声明的包）；无声明 → 原样。
   EditorMerge.visibleModules(state.modules).forEach(function (m) { node(m, 0); });
@@ -3258,6 +3280,7 @@ function selectModule(mod) {
   state.result = null;
   state.module = mod; state.entry = null; state.entryModule = null;
   state.mergeSections = [];
+  state.mountedSections = [];
   state.filter = ""; el("filter").value = "";
   // 切模块 → 全局检索范围回到「当前模块」，本地过滤也清空（避免两处查询串味）
   state.gquery = ""; el("gfilter").value = "";
@@ -3282,6 +3305,27 @@ function findModule(mod) {
     });
   })(state.modules);
   return found;
+}
+
+// 批19 #8：点击左栏「挂载条目」叶子——中栏切到父节点（条目在其中按来源分组/移入展示），
+// 右栏直接打开该条目；编辑/保存按 `fromMod` 路由回来源模块（走来源模块校验与原子写链路）。
+function selectMountedEntry(parentMod, fromMod, eid) {
+  if (!canLeave()) { return Promise.resolve(); }
+  if (state.module === parentMod) { return selectEntry(eid, fromMod); }
+  discardDraft();
+  state.result = null;
+  state.module = parentMod; state.entry = eid; state.entryModule = fromMod;
+  state.mergeSections = []; state.mountedSections = [];
+  state.filter = ""; el("filter").value = "";
+  state.gquery = ""; el("gfilter").value = "";
+  state.backup = null; el("backup-note").textContent = "备份：—";
+  refreshRollbackButton();
+  renderModules();
+  var pos = findModule(parentMod);
+  el("list-title").textContent = pos ? pos.label : parentMod;
+  return loadEntries().then(function () {
+    return selectEntry(eid, fromMod);
+  });
 }
 
 // 批19 #5：模块页提示区——用途（module_catalog 一行）、「当前包未使用」态、功能重叠黄提示。
@@ -3311,6 +3355,8 @@ function loadEntries() {  if (!state.pack || !state.module) { return Promise.res
       state.pages = data.pages || [];
       // 批12 #1：聚合视图（被并入模块的条目按来源分小节；无声明时为 []）
       state.mergeSections = data.merge_sections || [];
+      // 批19 #8：显示挂载小节（keep_top_level / 虚拟视图父节点；不进计数）
+      state.mountedSections = data.mounted_sections || [];
       state.listLabel = data.label || state.module;
       var mc = data.merged_count || 0;
       var uc = data.unconfigured_count || 0;
@@ -3333,6 +3379,13 @@ function loadEntries() {  if (!state.pack || !state.module) { return Promise.res
         var s0 = state.mergeSections[0];
         state.entryModule = s0.module;
         selectEntry(s0.entries[0].id);
+      }
+      else if ((state.mountedSections.length)
+               && (state.mountedSections[0].entries || []).length) {
+        // 批19 #8：本模块暂无条目、但有条目挂载在它下面 → 默认选中挂载来源的第一条
+        var ms0 = state.mountedSections[0];
+        state.entryModule = ms0.module;
+        selectEntry(ms0.entries[0].id, ms0.module);
       }
       else {
         // 空模块没有条目 → 没有备份状态可读：回退按钮保持禁用（V4）。
@@ -3388,7 +3441,8 @@ function renderEntries() {
   var ownEntries = (state.entries || []).filter(function (e) { return !covered[e.id]; });
   // 中栏过滤作用域写清：当前模块内，按名称或 ID 过滤（EditorEntry 纯逻辑）
   // 批12 #1：聚合视图按「来源模块」分小节（本模块 + 各并入来源），过滤在小节内生效。
-  var grouped = (state.mergeSections || []).length > 0;
+  var grouped = (state.mergeSections || []).length > 0
+    || (state.mountedSections || []).length > 0;
   var plan = EditorMerge.filterPlan(
     EditorMerge.sectionPlan(ownEntries, state.mergeSections, state.module, state.listLabel),
     state.filter, EditorEntry.match);
@@ -3404,9 +3458,11 @@ function renderEntries() {
     }
     s.entries.forEach(function (e) {
       var d = document.createElement("div");
-      d.className = "item" + ((e.id === state.entry && s.module === cur) ? " on" : "");
+      // 批19 #8：挂载条目的编辑归属是**来源模块**（mounted_from），不是当前父节点。
+      var emod = e.mounted_from || s.module;
+      d.className = "item" + ((e.id === state.entry && emod === cur) ? " on" : "");
       d.dataset.id = e.id;
-      d.dataset.mod = s.module;
+      d.dataset.mod = emod;
       d.textContent = e.name;
       // 批13.1：框架已登记、包数据尚无的段 → 标「未配置 · 框架支持」（仍可点开填写）。
       if (e.unconfigured) {
@@ -3427,12 +3483,43 @@ function renderEntries() {
         ctag.textContent = "已覆盖（包）";
         d.appendChild(ctag);
       }
+      if (e.mounted_from) {
+        // 批19 #8：从其他模块移入本节点的条目 → 标出来源（点击仍按来源模块打开/保存）。
+        var mtag = document.createElement("span");
+        mtag.className = "idtag";
+        mtag.textContent = "移入自 " + (e.mounted_from_label || e.mounted_from);
+        d.appendChild(mtag);
+      }
       d.title = e.name + "  [" + e.id + "]"
         + (e.unconfigured ? "（框架已支持，本包尚未配置）" : "")
         + (e.framework_default ? "（框架默认；保存后写入本包覆盖）" : "")
         + (e.covered ? "（本包已覆盖框架默认）" : "")
+        + (e.mounted_from ? "（挂载条目；数据与保存仍在 " + (e.mounted_from_label || e.mounted_from) + "）" : "")
         + (grouped ? "（来源：" + s.label + "）" : "");
-      d.addEventListener("click", function () { selectEntry(e.id, s.module); });
+      d.addEventListener("click", function () { selectEntry(e.id, emod); });
+      box.appendChild(d);
+    });
+  });
+  // 批19 #8：显示挂载小节（keep_top_level / 虚拟视图父节点）——纯展示，不进计数。
+  (state.mountedSections || []).forEach(function (ms) {
+    var h = document.createElement("div");
+    h.className = "gsec";
+    h.innerHTML = '<span class="gt">' + esc(ms.label)
+      + "</span> · " + (ms.entries || []).length + " 条"
+      + ' <span class="idtag">挂载（数据仍在原模块）</span>';
+    box.appendChild(h);
+    (ms.entries || []).forEach(function (e) {
+      var d = document.createElement("div");
+      d.className = "item" + ((e.id === state.entry && ms.module === cur) ? " on" : "");
+      d.dataset.id = e.id;
+      d.dataset.mod = ms.module;
+      d.textContent = e.name;
+      var mtag = document.createElement("span");
+      mtag.className = "idtag";
+      mtag.textContent = "挂载自 " + ms.label;
+      d.appendChild(mtag);
+      d.title = e.name + "  [" + e.id + "]（挂载显示；数据与保存仍在 " + ms.label + "）";
+      d.addEventListener("click", function () { selectEntry(e.id, ms.module); });
       box.appendChild(d);
     });
   });

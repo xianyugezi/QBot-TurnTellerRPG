@@ -280,9 +280,31 @@ def test_field_sets_equal_across_blank_and_full_pack() -> None:
 
 
 def test_registered_child_set_independent_of_data() -> None:
-    """框架登记的 settings 顶层段集合跨包一致（批13.1 已立；本批续证对象子字段同源）。"""
-    blank = {e["id"] for e in api.list_entries("demo_blank", "settings", root=CONTENT)["entries"]}
-    full = {e["id"] for e in api.list_entries("veinborn", "settings", root=CONTENT)["entries"]}
+    """框架登记的 settings 顶层段集合跨包一致（批13.1 已立；本批续证对象子字段同源）。
+
+    批19 #8：被 entry_tree 挂到父节点的段不再出现在 settings 条目列表里，但仍在
+    「父节点挂载」里可见 → 跨包口径取「本模块条目 ∪ 从本模块挂出去的段」。
+    """
+    def visible(pack: str) -> set:
+        ids = {e["id"] for e in api.list_entries(pack, "settings", root=CONTENT)["entries"]}
+        mods = api.list_modules(pack, root=CONTENT)
+
+        def walk(nodes: list) -> None:
+            for n in nodes or []:
+                for item in n.get("mounted") or []:
+                    if item.get("from") == "settings":
+                        ids.add(item["id"])
+                walk(n.get("children") or [])
+
+        walk(mods["modules"])
+        for v in mods.get("views") or []:
+            for item in v.get("mounted") or []:
+                if item.get("from") == "settings":
+                    ids.add(item["id"])
+        return ids
+
+    blank = visible("demo_blank")
+    full = visible("veinborn")
     assert blank == full
     reg = set(SETTINGS_META.fields)
     assert reg <= blank

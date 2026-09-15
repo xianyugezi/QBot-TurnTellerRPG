@@ -432,6 +432,91 @@ def _entry_merge_map(
     return out, notes
 
 
+# =====================================================================================
+# 批19 #8：条目级层级挂载（`field_meta.json.entry_tree`，通用、包声明驱动）
+# =====================================================================================
+def _entry_tree_map(manifest: Mapping[str, Any], declared: List[str], pack_dir: Path,
+                    merge_map: Mapping[str, Any],
+                    ) -> Tuple[List[Dict[str, Any]], List[str]]:
+    """读包声明 `entry_tree` → (挂载表, notes)；不写死任何模块名/条目名。
+
+    父节点 = 本包 manifest 声明的模块，或 entry_merge 的虚拟聚合视图（如「生活」）——二者
+    都允许，其它一律忽略并记 note。来源模块必须在 manifest 声明；条目 id 必须在来源模块的
+    「条目全集」（`_entry_rows`：包数据 ∪ 框架登记）内，否则忽略（不悬空）。
+    同一条目只能挂到一处（首个声明生效，其余 note）。
+
+    `keep_top_level`：默认 False = **移走**（来源模块的条目列表不再列出，计数/检索改归父节点）；
+    True 或父节点是虚拟视图 = **保留原位**（纯显示挂载，计数/检索仍在来源模块）。
+    """
+    decl = _pack_declaration(pack_dir)
+    notes: List[str] = []
+    if decl is None or not decl.entry_tree:
+        return [], notes
+    declared_set = set(declared)
+    views = set(merge_map)
+    claimed: set = set()
+    out: List[Dict[str, Any]] = []
+    for mount in decl.entry_tree:
+        parent = str(mount["parent"])
+        if parent not in declared_set and parent not in views:
+            notes.append(f"entry_tree 父节点未声明（忽略）：{parent}")
+            continue
+        parent_is_view = parent not in declared_set
+        sections: List[Dict[str, str]] = []
+        for sec in mount["sections"]:
+            frm = str(sec["from"])
+            eid = str(sec["id"])
+            if frm not in declared_set:
+                notes.append(f"entry_tree 来源模块未在 manifest 声明：{frm}")
+                continue
+            fm = frm
+            rows = _entry_rows(_read_json(pack_dir / f"{fm}.json"), _module_meta(fm, pack_dir))
+            if eid not in {r[0] for r in rows}:
+                notes.append(f"entry_tree 条目不存在（忽略）：{frm}.{eid}")
+                continue
+            if (frm, eid) in claimed:
+                notes.append(f"entry_tree 重复挂载（忽略）：{frm}.{eid}")
+                continue
+            claimed.add((frm, eid))
+            sections.append({"from": frm, "id": eid})
+        if not sections:
+            continue
+        keep = bool(mount.get("keep_top_level")) or parent_is_view
+        out.append({"parent": parent, "sections": tuple(sections),
+                    "keep_top_level": keep, "parent_is_view": parent_is_view})
+    return out, notes
+
+
+def _entry_tree_plan(manifest: Mapping[str, Any], declared: List[str], pack_dir: Path,
+                     merge_map: Mapping[str, Any], labels: Mapping[str, str],
+                     ) -> Tuple[List[Dict[str, Any]], Dict[str, List[Dict[str, Any]]],
+                                Dict[str, set], List[str]]:
+    """`entry_tree` 挂载计划 → (mounts, mounted{父: [条目行]}, moved_out{来源: {id}}, notes)。
+
+    `mounted` 每行 = `{from, id, name, source_label, keep_top_level}`（供左栏/中栏展示）；
+    `moved_out` 只含「移走」类（keep_top_level=False）的来源条目——计数/检索据此改归父节点。
+    """
+    mounts, notes = _entry_tree_map(manifest, declared, pack_dir, merge_map)
+    mounted: Dict[str, List[Dict[str, Any]]] = {}
+    moved_out: Dict[str, set] = {}
+    for mount in mounts:
+        for sec in mount["sections"]:
+            frm = str(sec["from"])
+            eid = str(sec["id"])
+            rows = _entry_rows(_read_json(pack_dir / f"{frm}.json"), _module_meta(frm, pack_dir))
+            name = next((r[1] for r in rows if r[0] == eid), eid)
+            mounted.setdefault(str(mount["parent"]), []).append({
+                "from": frm,
+                "id": eid,
+                "name": name,
+                "source_label": _module_display_label(frm, labels),
+                "keep_top_level": bool(mount["keep_top_level"]),
+            })
+            if not mount["keep_top_level"]:
+                moved_out.setdefault(frm, set()).add(eid)
+    return mounts, mounted, moved_out, notes
+
+
 def _segment_pages(manifest: Mapping[str, Any], declared: List[str],
                    pack_dir: Path) -> Dict[str, List[Dict[str, Any]]]:
     """读包声明 `segment_pages` → {对象模块: 页面数组}（批15 #2，通用、不写死段名）。
@@ -570,6 +655,17 @@ def list_modules(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
     child_set = {c for kids in children_map.values() for c in kids}
     merge_map, merge_notes = _entry_merge_map(manifest, declared, pack_dir)
     notes.extend(merge_notes)
+    # 批19 #8：条目级层级挂载——「移走」类条目从来源模块计数改归父节点（与条目列表/索引
+    # 同一口径）；父节点是虚拟视图或声明 keep_top_level 的走纯显示挂载（计数不动）。
+    _tree_mounts, tree_mounted, tree_moved_out, tree_notes = _entry_tree_plan(
+        manifest, declared, pack_dir, merge_map, labels)
+    notes.extend(tree_notes)
+    for _src, _ids in tree_moved_out.items():
+        counts[_src] = max(0, counts.get(_src, 0) - len(_ids))
+    for _parent, _items in tree_mounted.items():
+        _moved_in = [x for x in _items if not x["keep_top_level"]]
+        if _moved_in and _parent in counts:
+            counts[_parent] = counts.get(_parent, 0) + len(_moved_in)
     # 被并入的来源模块：标记 merged_into（前端默认不在左栏单列）；keep_top_level 的仍单列。
     merged_into: Dict[str, str] = {}
     merged_sources: Dict[str, List[Tuple[str, bool]]] = {}
@@ -629,6 +725,11 @@ def list_modules(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
             "total_count": total_count,
             "merged_into": merged_into.get(mod),
             "keep_top_level": (mod in merged_into) and (mod in keep_sources),
+            # 批19 #8：挂到本节点下的条目（左栏条目级叶子）；moved_out_ids = 本模块被移走的段。
+            "mounted": list(tree_mounted.get(mod, [])),
+            "mounted_count": sum(1 for x in tree_mounted.get(mod, [])
+                                 if not x["keep_top_level"]),
+            "moved_out_ids": sorted(tree_moved_out.get(mod, set())),
         }
 
     modules = [node(m, [m]) for m in declared if m not in child_set]
@@ -665,6 +766,10 @@ def list_modules(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
             "keep_top_level": False,
             "view": True,
             "enabled": True,
+            # 批19 #8：挂到本视图下的条目（纯显示挂载，计数仍在来源模块）。
+            "mounted": list(tree_mounted.get(target, [])),
+            "mounted_count": 0,
+            "moved_out_ids": [],
         }
 
     views = [view_node(t, spec) for t, spec in merge_map.items()
@@ -820,6 +925,22 @@ def list_entries(pack: object, module: object, root: Optional[object] = None) ->
     rows = _entry_rows(data, mmeta)
     etype = _entry_type(mmeta, data)
     labels = _display_labels(manifest, declared, pack_dir)
+    # 批19 #8：条目级层级挂载——「移走」类条目从本模块条目列表移除（计数/检索改归父节点）；
+    # 「显示挂载」类（keep_top_level / 父节点是虚拟视图）保留原位。编辑仍按来源模块路由。
+    _tree_mounts, tree_mounted, tree_moved_out, _tree_notes = _entry_tree_plan(
+        manifest, declared, pack_dir, merge_map, labels)
+    rows = [r for r in rows if r[0] not in tree_moved_out.get(mod, set())]
+    mounted_here = tree_mounted.get(mod, [])
+    mounted_move = [x for x in mounted_here if not x["keep_top_level"]]
+    mounted_display = [x for x in mounted_here if x["keep_top_level"]]
+    mounted_rows: List[Tuple[str, str, object, str]] = []
+    for item in mounted_move:
+        _frm, _eid = str(item["from"]), str(item["id"])
+        _srows = _entry_rows(_read_json(pack_dir / f"{_frm}.json"),
+                             _module_meta(_frm, pack_dir))
+        _hit = next((r for r in _srows if r[0] == _eid), None)
+        if _hit is not None:
+            mounted_rows.append((_hit[0], _hit[1], _hit[2], _frm))
     # 批12 #1：若本模块声明为「聚合目标」，把来源模块的条目按来源分小节一并返回（只读；
     # 编辑/保存仍由前端按 section.module 路由回各自模块，数据文件与校验路径不变）。
     spec = merge_map.get(mod)
@@ -841,7 +962,9 @@ def list_entries(pack: object, module: object, root: Optional[object] = None) ->
     # 批13.1：计数口径（与条目列表 / 左栏 / 全局索引一致）——
     #   count = 全部条目（含未配置段）；configured_count = 包数据里真有的；
     #   unconfigured_count = 框架已登记但本包未配置的段。
-    unconfigured_count = sum(1 for _e, _n, val in rows if val is _UNCONFIGURED)
+    unconfigured_count = (sum(1 for _e, _n, val in rows if val is _UNCONFIGURED)
+                          + sum(1 for _e, _n, val, _f in mounted_rows
+                                if val is _UNCONFIGURED))
     # 批19 #4：框架键全集的覆盖口径——covered_count = 包数据已覆盖的框架键；
     # framework_default_count = 框架有、包未覆盖（可直接编辑后写入包覆盖）的键。
     key_source = _key_source_of(mmeta)
@@ -861,6 +984,29 @@ def list_entries(pack: object, module: object, root: Optional[object] = None) ->
     # 页面是展示层聚合：段条目仍在 `entries` 里（计数/索引不变），前端按 `page` 归到页行下。
     pages: List[Dict[str, Any]] = []
     briefs = [_entry_brief(eid, name, _val) for eid, name, _val in rows]
+    # 批19 #8：移走类「挂载条目」计入父节点条目列表（`mounted_from` 标出来源模块，
+    # 前端据此路由编辑/保存回来源模块；仍走来源模块的校验与原子写链路）。
+    for _eid, _nm, _val, _frm in mounted_rows:
+        _b = _entry_brief(_eid, _nm, _val)
+        _b["mounted_from"] = _frm
+        _b["mounted_from_label"] = _module_display_label(_frm, labels)
+        briefs.append(_b)
+    # 批19 #8：显示挂载类（keep_top_level / 虚拟视图）做纯展示小节，不进计数。
+    mounted_sections: List[Dict[str, Any]] = []
+    for _item in mounted_display:
+        _frm, _eid = str(_item["from"]), str(_item["id"])
+        _srows = _entry_rows(_read_json(pack_dir / f"{_frm}.json"),
+                             _module_meta(_frm, pack_dir))
+        _hit = next((r for r in _srows if r[0] == _eid), None)
+        entries = [_entry_brief(_hit[0], _hit[1], _hit[2])] if _hit is not None else []
+        mounted_sections.append({
+            "module": _frm,
+            "label": str(_item.get("source_label") or _frm),
+            "mounted": True,
+            "keep_top_level": True,
+            "count": len(entries),
+            "entries": entries,
+        })
     # 批19 #4：框架键里「包数据已覆盖」的条目标 covered（前端标「已覆盖（包）」；
     # 包自有、框架键集里没有的键不打标——不冒充「覆盖框架」）。
     for _b in briefs:
@@ -874,13 +1020,14 @@ def list_entries(pack: object, module: object, root: Optional[object] = None) ->
         for b in briefs:
             if b["id"] in page["segments"]:
                 b["page"] = pid
+    total_rows = len(rows) + len(mounted_rows)
     return {
         "pack": str(pack),
         "module": mod,
         "label": _module_display_label(mod, labels),
         "entry_type": etype,
-        "count": len(rows),
-        "configured_count": len(rows) - unconfigured_count,
+        "count": total_rows,
+        "configured_count": total_rows - unconfigured_count,
         "unconfigured_count": unconfigured_count,
         "unconfigured_tag": UNCONFIGURED_TAG,
         # 批19 #4：框架键全集口径（无 key_source 声明时 = 空串 / 0 / 0，键集与现状一致）。
@@ -898,7 +1045,11 @@ def list_entries(pack: object, module: object, root: Optional[object] = None) ->
         # 批12 #1：聚合视图（无声明时 = 空列表 / total_count == count，行为与现状一致）
         "merge_sections": sections,
         "merged_count": merged_count,
-        "total_count": len(rows) + merged_count,
+        "total_count": total_rows + merged_count,
+        # 批19 #8：本模块被移走的段 / 挂到本模块下的显示挂载小节（计数与检索口径见文档）。
+        "moved_out_ids": sorted(tree_moved_out.get(mod, set())),
+        "mounted_count": len(mounted_move),
+        "mounted_sections": mounted_sections,
         # 批19 #5：模块用途一句话 + 「当前包未使用」态 + 功能重叠黄提示（通用；无声明 → 空）。
         "purpose": (catalog_entry(mod).purpose if catalog_entry(mod) is not None else ""),
         "unused": not _module_in_use(data),
@@ -3260,6 +3411,10 @@ def entry_index(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
     declared = _declared_modules(manifest)
     labels = _display_labels(manifest, declared, pack_dir)
     table = _pack_meta_table(pack_dir)
+    # 批19 #8：条目级层级挂载——索引与条目列表同口径（移走类改归父节点，全局检索仍可命中）。
+    _merge_map, _merge_notes = _entry_merge_map(manifest, declared, pack_dir)
+    _tree_mounts, tree_mounted, tree_moved_out, _tree_notes = _entry_tree_plan(
+        manifest, declared, pack_dir, _merge_map, labels)
     modules: List[Dict[str, Any]] = []
     total = 0
     for mod in declared:
@@ -3267,10 +3422,25 @@ def entry_index(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
         mmeta = table.module(mod)
         etype = _entry_type(mmeta, data)
         ns = (mmeta.namespace if mmeta is not None and mmeta.namespace else mod)
-        rows = _entry_rows(data, mmeta)
+        rows = [r for r in _entry_rows(data, mmeta)
+                if r[0] not in tree_moved_out.get(mod, set())]
         entries = [_entry_brief(eid, name, val) for eid, name, val in rows]
+        # 批19 #8：移到本模块下的条目一并进索引（count 与 list_entries 一致）。
+        for item in tree_mounted.get(mod, []):
+            if item["keep_top_level"]:
+                continue
+            _frm, _eid = str(item["from"]), str(item["id"])
+            _srows = _entry_rows(_read_json(pack_dir / f"{_frm}.json"),
+                                 table.module(_frm))
+            _hit = next((r for r in _srows if r[0] == _eid), None)
+            if _hit is None:
+                continue
+            _b = _entry_brief(_hit[0], _hit[1], _hit[2])
+            _b["mounted_from"] = _frm
+            _b["mounted_from_label"] = _module_display_label(_frm, labels)
+            entries.append(_b)
         # 批13.1：未配置段的计数口径与 `list_entries` 一致（全局检索也覆盖未配置段）。
-        unc = sum(1 for _e, _n, val in rows if val is _UNCONFIGURED)
+        unc = sum(1 for e in entries if e.get("unconfigured"))
         total += len(entries)
         modules.append({
             "module": mod, "label": _module_display_label(mod, labels), "entry_type": etype,

@@ -49,13 +49,40 @@ def _seg_ids(le: Dict[str, Any]) -> set:
     return {e["id"] for e in le["entries"]}
 
 
+def _mounted_from(pack: str, module: str) -> set:
+    """批19 #8：从 `module` 被 entry_tree 挂到父节点的段 id（仍属「入口可见」）。"""
+    mods = api.list_modules(pack, root=CONTENT)
+    out: set = set()
+
+    def walk(nodes: list) -> None:
+        for n in nodes or []:
+            for item in n.get("mounted") or []:
+                if item.get("from") == module:
+                    out.add(item["id"])
+            walk(n.get("children") or [])
+
+    walk(mods["modules"])
+    for v in mods.get("views") or []:
+        for item in v.get("mounted") or []:
+            if item.get("from") == module:
+                out.add(item["id"])
+    return out
+
+
+def _visible_seg_ids(pack: str, module: str) -> set:
+    """模块条目列表 ∪ 从该模块挂出去的段（批19 #8 后「段入口可见」的统一口径）。"""
+    return _seg_ids(api.list_entries(pack, module, root=CONTENT)) | _mounted_from(pack, module)
+
+
 # =====================================================================================
 # A · 段集合可见性（一号原则：框架登记段必须在列，且跨包一致）
 # =====================================================================================
 @pytest.mark.parametrize("pack", ["demo_blank", "veinborn"])
 def test_object_module_entries_cover_registered_segments(pack: str) -> None:
     le = api.list_entries(pack, "settings", root=CONTENT)
-    assert SETTINGS_FIELDS <= _seg_ids(le), sorted(SETTINGS_FIELDS - _seg_ids(le))
+    # 批19 #8：被 entry_tree 挂到父节点的段仍属「入口可见」（在父节点下）。
+    assert SETTINGS_FIELDS <= _visible_seg_ids(pack, "settings"), \
+        sorted(SETTINGS_FIELDS - _visible_seg_ids(pack, "settings"))
     assert le["count"] == le["configured_count"] + le["unconfigured_count"]
     assert le["count"] == len(le["entries"])
     assert le["unconfigured_count"] == len(
@@ -66,24 +93,26 @@ def test_demo_blank_and_veinborn_segment_sets_equal() -> None:
     """最空白包与功能齐全包：段集合一致，差异只在「是否已配置」。"""
     blank = api.list_entries("demo_blank", "settings", root=CONTENT)
     full = api.list_entries("veinborn", "settings", root=CONTENT)
-    assert _seg_ids(blank) == _seg_ids(full)
+    assert _visible_seg_ids("demo_blank", "settings") == _visible_seg_ids("veinborn", "settings")
     assert blank["unconfigured_count"] > 0 and full["unconfigured_count"] > 0
     # 空白包未配置段 ⊇ 功能包未配置段（功能包多出来的都是已配置段）
     blank_unc = {e["id"] for e in blank["entries"] if e.get("unconfigured")}
     full_unc = {e["id"] for e in full["entries"] if e.get("unconfigured")}
     assert full_unc <= blank_unc
     # 功能包「已配置」的段，在空白包里要么已配置、要么以未配置态在场（不会消失）
-    assert set(e["id"] for e in full["entries"]) <= _seg_ids(blank)
+    assert set(e["id"] for e in full["entries"]) <= _visible_seg_ids("demo_blank", "settings")
 
 
 def test_registered_but_absent_segment_present_unconfigured() -> None:
-    """批13 审计点名的段：两个包都必须看得到（未配置态）。"""
+    """批13 审计点名的段：两个包都必须看得到（未配置态，或在父节点下挂载可见）。"""
     for pack in ("demo_blank", "veinborn"):
         le = api.list_entries(pack, "settings", root=CONTENT)
         by_id = {e["id"]: e for e in le["entries"]}
+        mounted = _mounted_from(pack, "settings")
         for key in ("time_cycle", "message_prefix", "pvp", "codex", "shortcut_max"):
-            assert key in by_id, (pack, key)
-            assert by_id[key]["unconfigured"] is True, (pack, key)
+            assert key in by_id or key in mounted, (pack, key)
+            if key in by_id:
+                assert by_id[key]["unconfigured"] is True, (pack, key)
 
 
 # =====================================================================================

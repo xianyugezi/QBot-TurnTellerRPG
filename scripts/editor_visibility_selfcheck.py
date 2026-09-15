@@ -81,7 +81,27 @@ def check_pack(pack: str, root: Path) -> Dict[str, Any]:
             res["errors"].append(f"模块 {module} 字段被包声明删减：{missing_keys}")
         res["fields_checked"] += len(base.fields)
 
+    mounted_from: Dict[str, List[str]] = {}
+
+    def _collect_mounted(nodes: object) -> None:
+        for n in nodes if isinstance(nodes, list) else []:
+            if not isinstance(n, dict):
+                continue
+            for item in n.get("mounted") or []:
+                if isinstance(item, dict):
+                    mounted_from.setdefault(str(item.get("from")), []).append(
+                        str(item.get("id")))
+            _collect_mounted(n.get("children"))
+
+    _collect_mounted(mods.get("modules"))
+    for v in mods.get("views") or []:
+        for item in (v.get("mounted") if isinstance(v, dict) else None) or []:
+            if isinstance(item, dict):
+                mounted_from.setdefault(str(item.get("from")), []).append(str(item.get("id")))
+
     # 段入口可见性（批13.1）：对象型模块的条目列表必须覆盖框架登记的全部顶层段。
+    # 批19 #8：被 entry_tree **挂到父节点**的段仍属「入口可见」（在父节点下），故断言口径
+    # = 本模块条目列表 ∪ 从本模块挂出去的段（读各节点 `mounted.from`）。
     # 未在本包声明 / 非对象型模块 → 跳过（换包行为与现状一致，不误报）。
     for module, base in framework.modules.items():
         if base.entry_type != "object":
@@ -92,6 +112,7 @@ def check_pack(pack: str, root: Path) -> Dict[str, Any]:
             continue
         entries = [e for e in (le.get("entries") or []) if isinstance(e, dict)]
         ids = [str(e.get("id")) for e in entries]
+        ids += [i for i in mounted_from.get(module, []) if i not in ids]
         missing = sorted(set(base.fields) - set(ids))
         if missing:
             res["errors"].append(f"段入口缺失：模块 {module} 条目列表未含框架段 {missing}")
@@ -100,6 +121,7 @@ def check_pack(pack: str, root: Path) -> Dict[str, Any]:
             "ids": ids,
             "registered": [i for i in ids if i in base.fields],
             "extra": [i for i in ids if i not in base.fields],
+            "mounted": sorted(mounted_from.get(module, [])),
             "configured": [str(e.get("id")) for e in entries if not e.get("unconfigured")],
             "unconfigured": [str(e.get("id")) for e in entries if e.get("unconfigured")],
         }

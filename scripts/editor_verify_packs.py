@@ -373,9 +373,11 @@ def verify_pack(pack: str, root: object = None) -> PackReport:
             if not isinstance(eid, str) or not eid:
                 report.errors.append(f"list_entries({mod})：条目 id 非法：{eid!r}")
                 continue
-            where = f"{mod}/{eid}"
+            # 批19 #8：entry_tree 挂载条目在父节点条目列表里出现，但其详情属于**来源模块**。
+            detail_mod = str(ent.get("mounted_from") or mod)
+            where = f"{detail_mod}/{eid}"
             try:
-                det = api.entry_detail(pack, mod, eid, root=root)
+                det = api.entry_detail(pack, detail_mod, eid, root=root)
             except Exception as exc:  # noqa: BLE001
                 report.errors.append(f"entry_detail({where}) 异常：{type(exc).__name__}: {exc}")
                 continue

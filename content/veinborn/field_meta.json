@@ -11,6 +11,23 @@
       "recipe"
     ]
   },
+  "entry_tree": [
+    {
+      "parent": "life",
+      "sections": [
+        { "from": "settings", "id": "alchemy" },
+        { "from": "settings", "id": "quest_board" },
+        { "from": "settings", "id": "forge" }
+      ]
+    },
+    {
+      "parent": "maps",
+      "sections": [
+        { "from": "settings", "id": "env_event" },
+        { "from": "settings", "id": "time_cycle" }
+      ]
+    }
+  ],
   "field_help": {
     "action": {
       "air_drop": "对空击落规则（如 knockdown = 击中空中目标即击落）。",

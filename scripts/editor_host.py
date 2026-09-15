@@ -174,6 +174,11 @@ def create_app(pack: Optional[str] = None, root: Optional[str] = None,
     def api_module_catalog(pack_id: str):  # type: ignore[no-untyped-def]
         return api.module_catalog(pack_id, root=content_root)
 
+    # 批19 #7：指令别名视图（框架内置 ∪ 包声明）
+    @app.get("/api/pack/{pack_id}/aliases")
+    def api_aliases(pack_id: str):  # type: ignore[no-untyped-def]
+        return api.list_aliases(pack_id, root=content_root)
+
     @app.post("/api/pack/{pack_id}/module/{module}/toggle")
     def api_toggle_module(pack_id: str, module: str,
                           payload: Optional[Dict[str, Any]] = Body(default=None)):  # type: ignore[no-untyped-def]

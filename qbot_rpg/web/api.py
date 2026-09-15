@@ -32,7 +32,11 @@ from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 from qbot_rpg.content import entry_presets as entry_presets_mod
 from qbot_rpg.content import field_meta_pack as pack_meta
-from qbot_rpg.content.field_meta import default_field_meta_table
+from qbot_rpg.content.field_meta import (
+    ALIAS_CONFIG_KEY,
+    ALIAS_CONFIG_MODULE,
+    default_field_meta_table,
+)
 from qbot_rpg.content.framework_keys import framework_key_notes, framework_key_source
 from qbot_rpg.content.models import FieldMeta, FieldMetaTable, ModuleMeta
 from qbot_rpg.content.module_catalog import (
@@ -904,6 +908,88 @@ def catalog_module_names() -> List[str]:
     return [entry.module for entry in FRAMEWORK_MODULE_CATALOG]
 
 
+# =====================================================================================
+# 批19 #7：指令别名视图（框架内置 ∪ 包声明）——通用只读，不写死任何别名文本
+# =====================================================================================
+# 包声明的别名配置落点由框架元数据给出（`field_meta.ALIAS_CONFIG_MODULE/KEY`）。
+# 框架侧现状说明（实测：框架没有独立的静态别名表，内置别名来自 CommandSpec.aliases）。
+FRAMEWORK_ALIAS_NOTE = (
+    "框架侧没有独立的静态别名表：内置别名来自各指令注册时自带的 CommandSpec.aliases"
+    "（本视图标「框架内置」）；包 settings.command_aliases 由装配层 AliasTable.from_config "
+    "装载（本视图标「包覆盖」）。运行时两处都生效（路由先查包别名表，再查指令自带别名）；"
+    "同一别名键以包声明为准。"
+)
+
+
+@lru_cache(maxsize=1)
+def _framework_builtin_aliases() -> Dict[str, str]:
+    """框架内置别名（别名 → 归属指令）。从既有装配实现读取；不可用 → 空表（绝不抛）。"""
+    try:
+        from qbot_rpg.assembly.router_setup import framework_builtin_aliases
+        return {str(k): str(v) for k, v in framework_builtin_aliases().items()}
+    except Exception:  # noqa: BLE001 —— 读取失败按「无内置别名」，不阻断编辑器
+        return {}
+
+
+def _pack_alias_rows(pack_dir: Path) -> Tuple[List[Dict[str, Any]], str]:
+    """读包 settings.command_aliases → 归一化行（复用既有 AliasTable.from_config）。"""
+    data = _read_json(pack_dir / "settings.json")
+    raw = data.get(ALIAS_CONFIG_KEY) if isinstance(data, Mapping) else None
+    if not isinstance(raw, Mapping) or not raw:
+        return [], ""
+    try:
+        from qbot_rpg.commands.router import AliasTable
+        table = AliasTable.from_config(raw)
+    except Exception as exc:  # noqa: BLE001 —— 形态非法只提示，不让编辑器崩
+        return [], f"包指令别名配置无法解析（{type(exc).__name__}）：{exc}"
+    rows: List[Dict[str, Any]] = []
+    for alias in sorted(table.alias_names()):
+        entry = table.alias_for(alias)
+        if entry is None:
+            continue
+        rows.append({
+            "alias": str(alias),
+            "command": str(getattr(entry, "command", "") or ""),
+            "keep_original": bool(getattr(entry, "keep_original", True)),
+            "source": "pack",
+        })
+    return rows, ""
+
+
+def list_aliases(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
+    """指令别名视图（`/api/pack/{pack}/aliases`）：框架内置 ∪ 包声明，两类来源分别列出。
+
+    出参：
+      · framework = 框架内置别名（`CommandSpec.aliases`，只读）；
+      · pack      = 包 settings.command_aliases（完整渲染；可覆盖同键）；
+      · merged    = 合并后视图（同键以包声明为准）；
+      · note / framework_note = 现状说明（如解析失败 / 框架侧无独立静态表）。
+    只读展示：不写任何文件，不改校验语义、不改路由。
+    """
+    pack_dir = _pack_dir(pack, root)
+    fw = _framework_builtin_aliases()
+    pack_rows, parse_note = _pack_alias_rows(pack_dir)
+    fw_rows = [{"alias": a, "command": c, "keep_original": True, "source": "framework"}
+               for a, c in sorted(fw.items())]
+    fw_alias = set(fw)
+    for row in pack_rows:
+        row["overrides_framework"] = row["alias"] in fw_alias
+    merged: Dict[str, Dict[str, Any]] = {r["alias"]: dict(r) for r in fw_rows}
+    for row in pack_rows:
+        merged[row["alias"]] = dict(row)
+    return {
+        "pack": str(pack),
+        "module": ALIAS_CONFIG_MODULE,
+        "entry_id": ALIAS_CONFIG_KEY,
+        "framework": fw_rows,
+        "pack_declared": pack_rows,
+        "merged": [merged[k] for k in sorted(merged)],
+        "sources": ["framework", "pack"],
+        "framework_note": FRAMEWORK_ALIAS_NOTE,
+        "note": parse_note,
+    }
+
+
 def is_enableable_module(module: object) -> bool:
     """模块键是否在框架「可启用模块」通用目录内（写入层用它做白名单）。
 
@@ -967,6 +1053,8 @@ def module_catalog(pack: object, root: Optional[object] = None) -> Dict[str, Any
         "total": len(rows),
         "enabled_count": sum(1 for r in rows if r["enabled"]),
         "manifest_backup": {"path": "manifest.json.bak", "exists": bak.is_file()},
+        # 批19 #7：指令别名视图（框架内置 ∪ 包声明）——⚙ 面板同一次拉取即可展示。
+        "aliases": list_aliases(pack, root),
     }
 
 

@@ -796,8 +796,18 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
 .mp-row.on .st { color: var(--accent); }
 .mp-row .purpose { grid-column: 2 / -1; color: var(--text-4); font-size: var(--fs-11);
   line-height: var(--lh-ex); }
-.mp-row .dep { grid-column: 2 / -1; color: var(--warn); font-size: var(--fs-11);
-  line-height: var(--lh-ex); }
+.mp-row .dep { grid-column: 2 / -1; color: var(--warn); font-size: var(--fs-11);  line-height: var(--lh-ex); }
+/* 批19 #7：⚙ 面板底部「指令别名」视图（框架内置 ∪ 包声明） */
+.mp-aliases { border-top: var(--bw) solid var(--line-strong); padding: var(--sp-5) var(--sp-8); }
+.mp-aliases .al-t { color: var(--text-strong); font-size: var(--fs-12); margin-bottom: var(--sp-3); }
+.mp-aliases .al-note { color: var(--text-5); font-size: var(--fs-11); line-height: var(--lh-ex);
+  margin-bottom: var(--sp-4); }
+.mp-aliases .al-grp { color: var(--text-4); font-size: var(--fs-11); margin: var(--sp-3) 0 var(--sp-2); }
+.mp-aliases .al-row { display: flex; gap: var(--sp-4); align-items: baseline;
+  font-size: var(--fs-12); line-height: var(--lh-ex); }
+.mp-aliases .al-row .al-a { color: var(--text-value); }
+.mp-aliases .al-row .al-c { color: var(--text-5); }
+.mp-aliases .al-row .tag { font-size: var(--fs-11); }
 .mp-ft { display: flex; align-items: center; gap: var(--sp-5);
   padding: var(--sp-5) var(--sp-8); border-top: var(--bw) solid var(--line-strong); }
 .mp-note { color: var(--text-5); font-size: var(--fs-11); line-height: var(--lh-ex); }
@@ -951,6 +961,8 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
         aria-label="筛选模块列表">
     </div>
     <div class="mp-list" id="mp-list"></div>
+    <!-- 批19 #7：指令别名视图（框架内置 ∪ 包声明，两类来源分别列出；只读） -->
+    <div id="mp-aliases" class="mp-aliases"></div>
     <div class="mp-ft">
       <span class="mp-note" id="mp-note"></span>
       <span class="sp"></span>
@@ -3536,6 +3548,31 @@ function renderModulePanel() {
   });
   var canRollback = state.editable && !!((d.manifest_backup || {}).exists) && !MODULE_PANEL.busy;
   el("mp-rollback").disabled = !canRollback;
+  renderAliasPanel(d.aliases || null);
+}
+
+// 批19 #7：指令别名视图（框架内置 / 包声明两类来源；只读展示，不写盘）。
+function renderAliasPanel(al) {
+  var box = el("mp-aliases");
+  if (!box) { return; }
+  if (!al) { box.hidden = true; box.innerHTML = ""; return; }
+  box.hidden = false;
+  function rows(list) {
+    return (list || []).map(function (r) {
+      return '<div class="al-row"><span class="al-a">' + esc(r.alias) + "</span>"
+        + '<span class="al-c">→ ' + esc(r.command || "") + "</span>"
+        + (r.keep_original === false ? '<span class="tag">隐藏原名</span>' : "")
+        + (r.overrides_framework ? '<span class="tag">覆盖同键</span>' : "")
+        + "</div>";
+    }).join("") || '<div class="al-note">（无）</div>';
+  }
+  box.innerHTML = '<div class="al-t">指令别名（框架内置 ∪ 包声明）</div>'
+    + (al.framework_note ? '<div class="al-note">' + esc(al.framework_note) + "</div>" : "")
+    + (al.note ? '<div class="al-note">⚠ ' + esc(al.note) + "</div>" : "")
+    + '<div class="al-grp">框架内置 · ' + (al.framework || []).length + " 条</div>"
+    + rows(al.framework)
+    + '<div class="al-grp">包声明 · ' + (al.pack_declared || []).length + " 条</div>"
+    + rows(al.pack_declared);
 }
 
 function panelMessage(level, msg) {

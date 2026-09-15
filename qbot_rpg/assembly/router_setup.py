@@ -35,6 +35,7 @@
 from __future__ import annotations
 
 import asyncio
+import functools
 from typing import Any, Callable, Dict, List, Mapping, cast
 
 from qbot_rpg.commands import (
@@ -77,6 +78,7 @@ __all__ = [
     "DEFAULT_COMMAND_MODE",
     "build_router",
     "check_consistency",
+    "framework_builtin_aliases",
 ]
 
 # 前缀模式缺省（parsers.MODE_GLOBAL_SHORTCUT，L86；Router 构造同缺省）
@@ -100,7 +102,8 @@ REGISTER_GROUPS: tuple = (
     shop_commands.register_shop_commands,          # /商店 /购买 /出售
     use_commands.register_use_commands,            # /使用（2026-08-28 接线：穿戴+道具）
     checkin_commands.register_checkin_commands,    # /签到
-    battle_commands.register_battle_commands,      # /攻击（防御/道具/逃跑入口 2026-08-31 用户拍板删除，引擎保留）
+    # /攻击（防御/道具/逃跑入口 2026-08-31 用户拍板删除，引擎保留）
+    battle_commands.register_battle_commands,
     explore_commands.register_explore_commands,    # /进入 /休息
     dialog_commands.register_dialog_commands,      # /对话（N-01，BCH-03）
     log_commands.register_log_commands,            # /日志（F-03/F-04，BCH-05，ADR-09）
@@ -284,3 +287,31 @@ def check_consistency(router: Any) -> Dict[str, Any]:
         "registered_not_whitelisted": registered_not_whitelisted,
         "whitelist_not_registered": whitelist_not_registered,
     }
+
+
+# ---------------------------------------------------------------------------
+# 框架内置指令别名（编辑器批19 #7 只读视图用）
+# ---------------------------------------------------------------------------
+@functools.lru_cache(maxsize=1)
+def framework_builtin_aliases() -> Dict[str, str]:
+    """框架内置指令别名（别名 → 归属指令名），从**既有实现**读取，不另造表。
+
+    来源 = 各框架指令注册时 `CommandSpec(..., aliases=[...])` 自带的别名（`Router.register`
+    会把它挂到 spec 上）；本函数复用 `REGISTER_GROUPS` 装配一个框架 Router 后逐个收集。
+    `settings.command_aliases`（内容包配置）不在此列——那是**包声明**，由编辑器读取层单独
+    合并（见 `qbot_rpg/web/api.py::list_aliases`）。
+
+    只读、纯内存；结果缓存（框架指令注册表是静态的）。注册组不可用时返回空表，绝不抛。
+    """
+    aliases: Dict[str, str] = {}
+    try:
+        router = Router()
+        for reg in REGISTER_GROUPS:
+            reg(router, make_context=None)
+        for name in router.names():
+            spec = router.get(name)
+            for alias in getattr(spec, "aliases", None) or []:
+                aliases.setdefault(str(alias), str(name))
+    except Exception:  # noqa: BLE001 —— 读取失败按「无内置别名」处理，不阻断编辑器
+        return {}
+    return aliases

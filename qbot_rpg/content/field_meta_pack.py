@@ -18,7 +18,13 @@
       "field_help":    {"skills": {"power": "技能倍率，按百分比算。",
                                    "effects": {"_help": "效果表", "type": "类型"}}},
       "group_labels":  {"enemies": {"base": "基本"}},
-      "entry_merge":   {"settings": ["stats", "formula"]}
+      "entry_merge":   {"settings": ["stats", "formula"]},
+      "id_prefix":     {"items": "material"},
+      "id_width":      {"items": 3},
+      "entry_presets": {"items": [{"id": "material", "label": "材料",
+                                   "fields": ["name", "desc"],
+                                   "defaults": {"type": "material"},
+                                   "id_prefix": "material"}]}
     }
 
 `field_labels` / `field_help` 的值可为**非空字符串**（叶子）或**嵌套对象**（含 `_label`/`_help`
@@ -39,6 +45,15 @@
     编辑与保存仍路由回其所属模块（校验 / 原子写 / 回备用各自的模块链路）。
     被并入模块仍出现在模块树（带 `merged_into` 标记），左栏是否单列由前端按 `keep_top_level`
     决定，`editor_verify_packs.py` 的「模块树 / 条目索引 / 包列表」三处口径保持不变。
+  · `id_prefix` / `id_width` / `entry_presets` 属**包级展示/生成声明**（批16 #7 / #11）：
+    - `id_prefix`（对象<模块名, 非空字符串>）：新建条目「前缀 + 序号」ID 的前缀来源
+      （**包声明优先**；未声明 → 框架 ModuleMeta.id_prefix / kind / 模块名逐级兜底）；
+    - `id_width`（对象<模块名, 正整数>）：序号零填充宽度（缺省 3；上限 12）；
+    - `entry_presets`（对象<模块名, 预设数组>）：新建条目的「预设（模板）」——
+      预设项 = `{id, label, help?, fields, defaults?, id_prefix?, id_width?}`，
+      `fields` = 关心的字段键（其余字段进「其他字段」折叠区仍可编辑）、
+      `defaults` = 初始值、`id_prefix`/`id_width` = 该预设下的 ID 生成口径。
+      **纯新建界面/生成声明**：不改数据文件、不改校验语义；不声明 → 行为与现状完全一致。
 
 本模块只依赖 `qbot_rpg.content.models`（零 web 依赖，框架可独立使用）；解析严格、
 合并纯函数（不改动传入的框架表），读取按文件 mtime/size/inode 缓存。
@@ -70,7 +85,16 @@ TOP_LEVEL_KEYS: Tuple[str, ...] = (
     # 批15 #2：对象模块的「合并页」声明——把若干顶层段合成一个页面展示（纯展示层；
     # 数据文件 / 段 id / 校验路径不动；保存时补丁按键写回同一对象）。
     "segment_pages",
+    # 批16 #7/#11：ID 前缀/宽度 + 条目预设（模板）——新建界面的生成与展示声明，
+    # 不改数据/校验；不声明 → 与现状完全一致。
+    "id_prefix",
+    "id_width",
+    "entry_presets",
 )
+
+# 序号零填充宽度：缺省 3 位、上限 12 位（防声明出超长 ID；仅影响建议 ID，不参与校验）。
+ID_WIDTH_DEFAULT = 3
+ID_WIDTH_MAX = 12
 
 
 class PackFieldMetaError(ValueError):
@@ -94,6 +118,12 @@ class PackFieldMeta:
     # 语义 = 把对象模块的若干顶层段合成一个「页面」展示（中栏一条、右栏同栏多子块）；
     # 数据/段 id/校验路径不变——保存仍按键写回该对象模块。
     segment_pages: Mapping[str, Tuple[Mapping[str, Any], ...]] = field(default_factory=dict)
+    # id_prefix / id_width（批16 #7）：模块 → ID 前缀 / 序号零填充宽度（仅影响建议 ID 生成）。
+    id_prefix: Mapping[str, str] = field(default_factory=dict)
+    id_width: Mapping[str, int] = field(default_factory=dict)
+    # entry_presets（批16 #11）：模块 → 预设数组；每项 = {id,label,help,fields,defaults,
+    # id_prefix,id_width}（新建按模板初始化 + 收窄显示面；不改数据/校验）。
+    entry_presets: Mapping[str, Tuple[Mapping[str, Any], ...]] = field(default_factory=dict)
 
 
 # -------------------------------------------------------------------------------------
@@ -326,6 +356,97 @@ def _validate_segment_pages(value: object, pack: str, key: str
     return out
 
 
+def _validate_id_prefix_map(value: object, pack: str, key: str) -> Dict[str, str]:
+    """`id_prefix` 形态：对象<模块名, 非空字符串>（批16 #7，仅影响建议 ID 生成）。"""
+    return _str_map(value, pack, key)
+
+
+def _validate_id_width_map(value: object, pack: str, key: str) -> Dict[str, int]:
+    """`id_width` 形态：对象<模块名, 正整数 1..ID_WIDTH_MAX>（序号零填充宽度）。"""
+    raw = _require_map(value, pack, key)
+    out: Dict[str, int] = {}
+    for mod, width in raw.items():
+        if not isinstance(mod, str) or not mod:
+            raise _fail(pack, key, f"含非法模块名（应为非空字符串）：{mod!r}")
+        if isinstance(width, bool) or not isinstance(width, int):
+            raise _fail(pack, key,
+                        f"模块 {mod} 的宽度应为整数，实际是{_type_name(width)}")
+        if not (1 <= width <= ID_WIDTH_MAX):
+            raise _fail(pack, key,
+                        f"模块 {mod} 的宽度应在 1..{ID_WIDTH_MAX}，实际是 {width}")
+        out[mod] = width
+    return out
+
+
+def _validate_entry_presets(value: object, pack: str, key: str
+                            ) -> Dict[str, Tuple[Mapping[str, Any], ...]]:
+    """`entry_presets` 形态校验并归一化（批16 #11，新建条目「预设 / 模板」）。
+
+    形态：`{"<模块>": [{"id": ..., "label": ..., "help": ..., "fields": [...],
+    "defaults": {...}, "id_prefix": ..., "id_width": ...}]}`。
+    约束：模块/预设 id/label 非空；同模块内预设 id 唯一；`fields` 非空字符串数组且不重复；
+    `defaults` 为对象；`id_prefix` 非空字符串；`id_width` 为 1..ID_WIDTH_MAX 的整数；
+    只允许上述七个键（防写法漂移）。这里只校验**形态**；「字段键是否真存在」由编辑器
+    读取层按模块实际字段过滤并如实标注（不静默）。
+    """
+    allowed = ("id", "label", "help", "fields", "defaults", "id_prefix", "id_width")
+    raw = _require_map(value, pack, key)
+    out: Dict[str, Tuple[Mapping[str, Any], ...]] = {}
+    for mod, presets in raw.items():
+        if not isinstance(mod, str) or not mod:
+            raise _fail(pack, key, f"含非法模块名（应为非空字符串）：{mod!r}")
+        if not isinstance(presets, list) or not presets:
+            raise _fail(pack, f"{key}.{mod}", "应为非空预设数组")
+        seen_ids: set = set()
+        norm: list = []
+        for i, preset in enumerate(presets):
+            where = f"{key}.{mod}[{i}]"
+            if not isinstance(preset, Mapping):
+                raise _fail(pack, where, f"应为对象，实际是{_type_name(preset)}")
+            unknown = [str(k) for k in preset if k not in allowed]
+            if unknown:
+                raise _fail(pack, where,
+                            f"含未知键：{'、'.join(unknown)}；只允许 {' / '.join(allowed)}")
+            pid = preset.get("id")
+            label = preset.get("label")
+            if not isinstance(pid, str) or not pid:
+                raise _fail(pack, where, f"id 应为非空字符串，实际是{pid!r}")
+            if pid in seen_ids:
+                raise _fail(pack, where, f"预设 id 重复：{pid}")
+            if not isinstance(label, str) or not label:
+                raise _fail(pack, where, f"label 应为非空字符串，实际是{label!r}")
+            help_text = preset.get("help", "")
+            if help_text is not None and not isinstance(help_text, str):
+                raise _fail(pack, where, "help 应为字符串")
+            fields = _str_list(preset.get("fields"), pack, f"{where}.fields")
+            if not fields:
+                raise _fail(pack, f"{where}.fields", "应为非空字段键数组（预设关心的字段）")
+            defaults = preset.get("defaults", {})
+            if not isinstance(defaults, Mapping):
+                raise _fail(pack, f"{where}.defaults",
+                            f"应为对象，实际是{_type_name(defaults)}")
+            id_prefix = preset.get("id_prefix", "")
+            if id_prefix is not None and not isinstance(id_prefix, str):
+                raise _fail(pack, f"{where}.id_prefix", "应为字符串")
+            id_width = preset.get("id_width")
+            if id_width is not None:
+                if isinstance(id_width, bool) or not isinstance(id_width, int):
+                    raise _fail(pack, f"{where}.id_width",
+                                f"应为整数，实际是{_type_name(id_width)}")
+                if not (1 <= id_width <= ID_WIDTH_MAX):
+                    raise _fail(pack, f"{where}.id_width",
+                                f"应在 1..{ID_WIDTH_MAX}，实际是 {id_width}")
+            seen_ids.add(pid)
+            norm.append({
+                "id": pid, "label": label, "help": str(help_text or ""),
+                "fields": fields, "defaults": dict(defaults),
+                "id_prefix": str(id_prefix or ""),
+                "id_width": id_width,
+            })
+        out[mod] = tuple(norm)
+    return out
+
+
 def _validate_schema_version(value: object, pack: str, key: str) -> int:
     if value is None:
         raise _fail(pack, key, f"缺失：应为整数 {SCHEMA_VERSION}")
@@ -364,6 +485,12 @@ def parse_field_meta(raw: object, pack: str) -> PackFieldMeta:
                    if "entry_merge" in raw else {})
     segment_pages = (_validate_segment_pages(raw["segment_pages"], pack, "segment_pages")
                      if "segment_pages" in raw else {})
+    id_prefix = (_validate_id_prefix_map(raw["id_prefix"], pack, "id_prefix")
+                 if "id_prefix" in raw else {})
+    id_width = (_validate_id_width_map(raw["id_width"], pack, "id_width")
+                if "id_width" in raw else {})
+    entry_presets = (_validate_entry_presets(raw["entry_presets"], pack, "entry_presets")
+                     if "entry_presets" in raw else {})
     return PackFieldMeta(
         pack=pack,
         module_labels=module_labels,
@@ -373,6 +500,9 @@ def parse_field_meta(raw: object, pack: str) -> PackFieldMeta:
         group_labels=group_labels,
         entry_merge=entry_merge,
         segment_pages=segment_pages,
+        id_prefix=id_prefix,
+        id_width=id_width,
+        entry_presets=entry_presets,
     )
 
 
@@ -552,6 +682,8 @@ __all__ = [
     "FIELD_META_FILENAME",
     "SCHEMA_VERSION",
     "TOP_LEVEL_KEYS",
+    "ID_WIDTH_DEFAULT",
+    "ID_WIDTH_MAX",
     "PackFieldMeta",
     "PackFieldMetaError",
     "load_field_meta",

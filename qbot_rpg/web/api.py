@@ -30,6 +30,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
+from qbot_rpg.content import entry_presets as entry_presets_mod
 from qbot_rpg.content import field_meta_pack as pack_meta
 from qbot_rpg.content.field_meta import default_field_meta_table
 from qbot_rpg.content.models import FieldMeta, FieldMetaTable, ModuleMeta
@@ -2852,13 +2853,30 @@ def suggest_pinyin_id(module: str, mmeta: Optional[ModuleMeta], name: object,
     return {"suggested_id": _unique_slug(base, used), "used_pinyin": True, "note": note}
 
 
+def _effective_presets(decl: Optional[pack_meta.PackFieldMeta], module: str
+                       ) -> Tuple[Mapping[str, Any], ...]:
+    """某模块的**生效预设表**（批17）：框架默认 ∪ 包声明，包关闭的 id 移除。
+
+    · 无包声明（`decl is None`，如空白包）→ 框架默认（条目六种通用品类）仍可用；
+    · 同 id → 包声明整体覆盖框架默认；包新 id 追加；`entry_presets_disable` 关闭。
+    合并口径见 `qbot_rpg/content/entry_presets.py` docstring（机制通用，不写死模块名）。
+    """
+    if decl is None:
+        return entry_presets_mod.merge_entry_presets(module)
+    return entry_presets_mod.merge_entry_presets(
+        module,
+        decl.entry_presets.get(module, ()),
+        decl.entry_presets_disable.get(module, ()),
+    )
+
+
 def _preset_of(decl: Optional[pack_meta.PackFieldMeta], module: str,
                preset: object) -> Optional[Mapping[str, Any]]:
-    """按 id 取包声明的条目预设（无声明/未命中 → None）；机制通用，不写死任何模块名。"""
+    """按 id 取**生效预设**（框架默认 ∪ 包声明；无/未命中 → None）；机制通用，不写死模块名。"""
     pid = str(preset or "").strip()
-    if decl is None or not pid:
+    if not pid:
         return None
-    for item in decl.entry_presets.get(module, ()):
+    for item in _effective_presets(decl, module):
         if str(item.get("id") or "") == pid:
             return item
     return None
@@ -2866,7 +2884,7 @@ def _preset_of(decl: Optional[pack_meta.PackFieldMeta], module: str,
 
 def _pack_id_policy(decl: Optional[pack_meta.PackFieldMeta], module: str,
                     preset: object = "") -> Dict[str, Any]:
-    """从包声明解析某模块（或某预设）的 ID 前缀/宽度口径；未声明 → 空/None。"""
+    """从**生效预设** / 包声明解析某模块（或某预设）的 ID 前缀/宽度口径；未声明 → 空/None。"""
     item = _preset_of(decl, module, preset)
     if item is not None:
         return {"id_prefix": str(item.get("id_prefix") or ""),
@@ -2910,7 +2928,8 @@ def suggest_id(pack: object, module: object, root: Optional[object] = None,
     · 默认（`mode` 缺省 / prefix_seq）→ 包声明前缀 + 序号（零填充；见 `suggest_entry_id`）；
     · `mode=pinyin` → **可选附加**：按中文名生成拼音 id；未装库/多音字/失败 → 回落
       前缀+序号并在 `note` 里**明确提示**（不报错）；
-    · `preset` 指定时用该预设声明的 id_prefix/id_width（包声明优先）。
+    · `preset` 指定时用该预设声明的 id_prefix/id_width（**生效预设** = 框架默认 ∪ 包声明，见
+      `qbot_rpg/content/entry_presets.py`；预设 > 包 `id_prefix` > 框架兜底）。
     """
     pack_dir = _pack_dir(pack, root)
     manifest = _manifest(pack_dir)
@@ -3090,7 +3109,7 @@ def new_entry_slot(pack: object, module: object, entry_id: object = "",
                    preset: object = "") -> Dict[str, Any]:
     """新建条目的定位/默认值/字段基表（写链路与新建界面共用；只读）。
 
-    `preset` = 包声明的条目预设 id（缺省/未命中 → 行为与现状完全一致）：
+    `preset` = **生效预设**（框架默认 ∪ 包声明，批17）的 id；缺省/未命中 → 与现状完全一致：
     命中时把该预设的 `defaults` 叠加到初始值上（写链路与新建界面同源，保证落盘一致）。
     """
     pack_dir = _pack_dir(pack, root)
@@ -3135,10 +3154,11 @@ def new_entry_detail(pack: object, module: object, root: Optional[object] = None
                      preset: object = None) -> Dict[str, Any]:
     """新建条目界面数据（`/…/module/{m}/new`）：建议 ID + 默认值字段 + 分组 + 预设。
 
-    `preset` = 包声明的条目预设 id（批16 #11；缺省/未命中 → 与现状完全一致）：
+    `preset` = **生效预设**（框架默认 ∪ 包声明；批16 #11 / 批17）的 id；缺省/未命中 → 与现状一致：
     · 建议 ID 用该预设声明的 id_prefix/id_width；
     · 初始值叠加该预设 `defaults`；
-    · `presets` 列出本模块可选预设（无声明 → 空数组，前端不出现预设栏）。
+    · `presets` 列出本模块**生效预设**（框架默认 ∪ 包声明 − 关闭；无 → 空数组，前端不出现预设栏）。
+      批17 起框架自带条目通用默认预设（`qbot_rpg/content/entry_presets.py`），空白包同样可用。
     """
     pack_dir = _pack_dir(pack, root)
     manifest = _manifest(pack_dir)
@@ -3161,14 +3181,14 @@ def new_entry_detail(pack: object, module: object, root: Optional[object] = None
     view = _PackView(pack_dir, manifest)
     # 批16 #11：选了预设 → 只把该预设关心的字段放主区；其余字段归「其他字段」折叠区
     # （**仍可编辑**，不永久隐藏——一号原则）。不选预设 → 行为与现状完全一致。
+    # 批17：主区字段顺序按预设声明的 `fields` 顺序（`preset_base` 按 wanted 顺序建）。
     preset_item = info.get("preset_item")
     missing: List[str] = []
     if preset_item is not None:
         wanted = [str(k) for k in preset_item.get("fields", ())]
         wanted_set = set(wanted)
         id_key = str(id_field)
-        preset_base = {k: v for k, v in base.items()
-                       if str(k) in wanted_set and str(k) != id_key}
+        preset_base = {k: base[k] for k in wanted if k in base and k != id_key}
         other_base = {k: v for k, v in base.items()
                       if str(k) not in wanted_set and str(k) != id_key}
         missing = [k for k in wanted if k != id_key and k not in base]
@@ -3190,7 +3210,7 @@ def new_entry_detail(pack: object, module: object, root: Optional[object] = None
     groups = _group_summary(fields, mmeta)
     blocks = _block_plan(fields, mmeta)
     labels = _display_labels(manifest, declared, pack_dir)
-    preset_items = decl.entry_presets.get(mod, ()) if decl is not None else ()
+    preset_items = _effective_presets(decl, mod)
     id_fm = None
     if mmeta is not None:
         id_fm = mmeta.fields.get(id_field)

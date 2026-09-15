@@ -11,6 +11,13 @@
       "recipe"
     ]
   },
+  "entry_merge_filtered": [
+    {
+      "target": "equipment",
+      "from": "items",
+      "where": { "has": ["slot"] }
+    }
+  ],
   "entry_tree": [
     {
       "parent": "life",

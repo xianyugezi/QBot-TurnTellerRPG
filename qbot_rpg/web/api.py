@@ -28,7 +28,7 @@ import json
 import re
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Optional, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from qbot_rpg.content import entry_presets as entry_presets_mod
 from qbot_rpg.content import field_meta_pack as pack_meta
@@ -517,6 +517,93 @@ def _entry_tree_plan(manifest: Mapping[str, Any], declared: List[str], pack_dir:
     return mounts, mounted, moved_out, notes
 
 
+# =====================================================================================
+# 批20 B：**按条件过滤的条目并入**（`field_meta.json.entry_merge_filtered`，通用、包声明驱动）
+# =====================================================================================
+def _entry_merge_filtered_specs(
+    manifest: Mapping[str, Any], declared: List[str], pack_dir: Path
+) -> Tuple[List[Dict[str, Any]], List[str]]:
+    """读包声明 `entry_merge_filtered` → (并入表, notes)；不写死任何模块名 / 键名。
+
+    每项 = `{"target": 目标模块, "from": 来源模块, "has": (键, …), "eq": {键: 值}}`。
+    只保留「目标与来源都在本包 manifest 声明」的项（否则记 note 忽略）；目标与来源相同者
+    由解析层拦下。**数据文件 / 条目 id / 校验路径全不动**——本表只驱动展示层聚合。
+    """
+    decl = _pack_declaration(pack_dir)
+    notes: List[str] = []
+    out: List[Dict[str, Any]] = []
+    if decl is None or not decl.entry_merge_filtered:
+        return out, notes
+    declared_set = set(declared)
+    for spec in decl.entry_merge_filtered:
+        target = str(spec["target"])
+        frm = str(spec["from"])
+        if target not in declared_set:
+            notes.append(f"entry_merge_filtered 目标模块未在 manifest 声明：{target}")
+            continue
+        if frm not in declared_set:
+            notes.append(f"entry_merge_filtered 来源模块未在 manifest 声明：{frm}")
+            continue
+        out.append({"target": target, "from": frm,
+                    "has": tuple(spec.get("has", ())),
+                    "eq": dict(spec.get("eq", {}))})
+    return out, notes
+
+
+def _entry_matches_where(value: object, has: Sequence[str],
+                         eq: Mapping[str, Any]) -> bool:
+    """条目是否满足并入条件（`has` 全中 AND `eq` 全等）——只看值形态，不认字段语义。
+
+    `has`：键存在且值不为 null（空串 / 空列表算「有」——声明口径就是「有某键」）；
+    `eq`：键的值与声明值相等（标量比较；类型不同即不等）。
+    """
+    if not isinstance(value, Mapping):
+        return False
+    for k in has:
+        if str(k) not in value or value[str(k)] is None:
+            return False
+    for k, want in eq.items():
+        if str(k) not in value or value[str(k)] != want:
+            return False
+    return True
+
+
+def _entry_merge_filtered_rows(
+    pack_dir: Path, declared: List[str], labels: Mapping[str, str],
+    target: str, specs: Sequence[Mapping[str, Any]],
+) -> Tuple[List[Tuple[str, str, object, str, Mapping[str, Any]]], List[Dict[str, Any]]]:
+    """目标模块的「过滤并入」条目 → ((id, 名称, 值, 来源模块, spec), 小节元数据)。
+
+    同一个来源模块可能有多条声明（不同条件）→ 各自成小节；同一条目被多条声明命中时**只取首个**
+    （不重复列出，也不重复计数）。
+    """
+    rows: List[Tuple[str, str, object, str, Mapping[str, Any]]] = []
+    sections: List[Dict[str, Any]] = []
+    seen: set = set()
+    for spec in specs:
+        if str(spec["target"]) != target:
+            continue
+        frm = str(spec["from"])
+        sdata = _read_json(pack_dir / f"{frm}.json")
+        smeta = _module_meta(frm, pack_dir)
+        hits: List[Tuple[str, str, object]] = []
+        for eid, name, val in _entry_rows(sdata, smeta):
+            if eid in seen:
+                continue
+            if _entry_matches_where(val, spec["has"], spec["eq"]):
+                seen.add(eid)
+                hits.append((eid, name, val))
+                rows.append((eid, name, val, frm, spec))
+        sections.append({
+            "module": frm,
+            "label": _module_display_label(frm, labels),
+            "has": list(spec["has"]),
+            "eq": dict(spec["eq"]),
+            "count": len(hits),
+        })
+    return rows, sections
+
+
 def _segment_pages(manifest: Mapping[str, Any], declared: List[str],
                    pack_dir: Path) -> Dict[str, List[Dict[str, Any]]]:
     """读包声明 `segment_pages` → {对象模块: 页面数组}（批15 #2，通用、不写死段名）。
@@ -666,6 +753,18 @@ def list_modules(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
         _moved_in = [x for x in _items if not x["keep_top_level"]]
         if _moved_in and _parent in counts:
             counts[_parent] = counts.get(_parent, 0) + len(_moved_in)
+    # 批20 B：按条件过滤的并入 → 目标模块计数（与条目列表 / 全局索引同一口径）。
+    mf_specs, mf_notes = _entry_merge_filtered_specs(manifest, declared, pack_dir)
+    notes.extend(mf_notes)
+    mf_specs_by_target: Dict[str, List[Dict[str, Any]]] = {}
+    for _spec in mf_specs:
+        mf_specs_by_target.setdefault(str(_spec["target"]), []).append(_spec)
+    mf_sections_by_target: Dict[str, List[Dict[str, Any]]] = {}
+    for _target, _specs in mf_specs_by_target.items():
+        _mf_rows, _mf_secs = _entry_merge_filtered_rows(
+            pack_dir, declared, labels, _target, _specs)
+        counts[_target] = counts.get(_target, 0) + len(_mf_rows)
+        mf_sections_by_target[_target] = _mf_secs
     # 被并入的来源模块：标记 merged_into（前端默认不在左栏单列）；keep_top_level 的仍单列。
     merged_into: Dict[str, str] = {}
     merged_sources: Dict[str, List[Tuple[str, bool]]] = {}
@@ -708,6 +807,8 @@ def list_modules(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
         merged_count = sum(x["count"] for x in info)
         # 左栏/中栏统一口径：total_count = 本模块 + 子模块 + 并入条目（已是子模块的不重复计）。
         total_count = count + sum(x["count"] for x in info if not x["already_child"])
+        mf_secs = mf_sections_by_target.get(mod, [])
+        mf_count = sum(int(s.get("count") or 0) for s in mf_secs)
         return {
             "module": mod,
             "label": _module_display_label(mod, labels),
@@ -722,6 +823,10 @@ def list_modules(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
             # 批12 #1：聚合展示声明（通用；未声明 entry_merge 的包这些字段为空/0，行为与现状一致）
             "merged": info,
             "merged_count": merged_count,
+            # 批20 B：按条件过滤的并入（无声明 → 空列表 / 0）；**条目已计入 `count`**，
+            # 不再叠加到 `total_count`（避免双计）。
+            "merge_filtered": mf_secs,
+            "merge_filtered_count": mf_count,
             "total_count": total_count,
             "merged_into": merged_into.get(mod),
             "keep_top_level": (mod in merged_into) and (mod in keep_sources),
@@ -991,6 +1096,18 @@ def list_entries(pack: object, module: object, root: Optional[object] = None) ->
         _b["mounted_from"] = _frm
         _b["mounted_from_label"] = _module_display_label(_frm, labels)
         briefs.append(_b)
+    # 批20 B：**按条件过滤的并入**（目标模块条目 = 自身条目 ∪ 来源模块里满足条件的条目）。
+    # 并入条目直接进中栏列表（带 `merged_from` 来源标注），计数计入本模块；编辑/保存仍由
+    # 前端按 `merged_from` 路由回来源模块（数据文件 / 校验路径不动）。无声明 → 空表，行为同现状。
+    mf_specs, _mf_notes = _entry_merge_filtered_specs(manifest, declared, pack_dir)
+    merge_filtered_rows, merge_filtered_sections = _entry_merge_filtered_rows(
+        pack_dir, declared, labels, mod, mf_specs)
+    for _eid, _nm, _val, _frm, _spec in merge_filtered_rows:
+        _b = _entry_brief(_eid, _nm, _val)
+        _b["merged_from"] = _frm
+        _b["merged_from_label"] = _module_display_label(_frm, labels)
+        _b["merge_filtered"] = True
+        briefs.append(_b)
     # 批19 #8：显示挂载类（keep_top_level / 虚拟视图）做纯展示小节，不进计数。
     mounted_sections: List[Dict[str, Any]] = []
     for _item in mounted_display:
@@ -1020,7 +1137,7 @@ def list_entries(pack: object, module: object, root: Optional[object] = None) ->
         for b in briefs:
             if b["id"] in page["segments"]:
                 b["page"] = pid
-    total_rows = len(rows) + len(mounted_rows)
+    total_rows = len(rows) + len(mounted_rows) + len(merge_filtered_rows)
     return {
         "pack": str(pack),
         "module": mod,
@@ -1045,6 +1162,10 @@ def list_entries(pack: object, module: object, root: Optional[object] = None) ->
         # 批12 #1：聚合视图（无声明时 = 空列表 / total_count == count，行为与现状一致）
         "merge_sections": sections,
         "merged_count": merged_count,
+        # 批20 B：按条件过滤的并入（无声明时 = 空列表 / 0；条目已在中栏 `entries` 里，带
+        # `merged_from` 来源标注；计数口径 = count/total_count 均含并入条目）
+        "merge_filtered_sections": merge_filtered_sections,
+        "merge_filtered_count": len(merge_filtered_rows),
         "total_count": total_rows + merged_count,
         # 批19 #8：本模块被移走的段 / 挂到本模块下的显示挂载小节（计数与检索口径见文档）。
         "moved_out_ids": sorted(tree_moved_out.get(mod, set())),
@@ -3433,6 +3554,11 @@ def entry_index(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
     _merge_map, _merge_notes = _entry_merge_map(manifest, declared, pack_dir)
     _tree_mounts, tree_mounted, tree_moved_out, _tree_notes = _entry_tree_plan(
         manifest, declared, pack_dir, _merge_map, labels)
+    # 批20 B：按条件过滤的并入——索引与条目列表同口径（目标模块的 count 含并入条目）。
+    _mf_specs, _mf_notes = _entry_merge_filtered_specs(manifest, declared, pack_dir)
+    mf_specs_by_target: Dict[str, List[Dict[str, Any]]] = {}
+    for _spec in _mf_specs:
+        mf_specs_by_target.setdefault(str(_spec["target"]), []).append(_spec)
     modules: List[Dict[str, Any]] = []
     total = 0
     for mod in declared:
@@ -3456,6 +3582,15 @@ def entry_index(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
             _b = _entry_brief(_hit[0], _hit[1], _hit[2])
             _b["mounted_from"] = _frm
             _b["mounted_from_label"] = _module_display_label(_frm, labels)
+            entries.append(_b)
+        # 批20 B：按条件过滤的并入条目也进索引（count 与 list_entries 一致；带来源标注）。
+        _mf_rows, _mf_secs = _entry_merge_filtered_rows(
+            pack_dir, declared, labels, mod, mf_specs_by_target.get(mod, []))
+        for _eid, _nm, _val, _frm, _spec in _mf_rows:
+            _b = _entry_brief(_eid, _nm, _val)
+            _b["merged_from"] = _frm
+            _b["merged_from_label"] = _module_display_label(_frm, labels)
+            _b["merge_filtered"] = True
             entries.append(_b)
         # 批13.1：未配置段的计数口径与 `list_entries` 一致（全局检索也覆盖未配置段）。
         unc = sum(1 for e in entries if e.get("unconfigured"))

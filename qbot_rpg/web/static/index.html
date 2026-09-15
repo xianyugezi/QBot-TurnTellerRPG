@@ -1814,7 +1814,7 @@ var state = {
   pendingDrafts: {}, entryIndex: null, newEntry: null, newDraft: null, newIdTouched: false,
   theme: null,
   // 批12 #1：中栏聚合展示（被并入模块的条目按来源分小节）+ 当前条目所属模块（保存路由）
-  mergeSections: [], entryModule: null, listLabel: "", fontSize: null,
+  mergeSections: [], mergeFiltered: [], entryModule: null, listLabel: "", fontSize: null,
   // 批13 A/D：左栏 = 框架能力集 ∪ 包声明——views（虚拟聚合视图，如「生活」）+
   // available（框架有而包未启用的模块，未启用态 + 一键启用）
   views: [], available: [],
@@ -3371,16 +3371,23 @@ function loadEntries() {  if (!state.pack || !state.module) { return Promise.res
       state.pages = data.pages || [];
       // 批12 #1：聚合视图（被并入模块的条目按来源分小节；无声明时为 []）
       state.mergeSections = data.merge_sections || [];
+      // 批20 B：按条件过滤的并入小节（条目已在中栏 entries 里，带 merged_from 来源标注）
+      state.mergeFiltered = data.merge_filtered_sections || [];
       // 批19 #8：显示挂载小节（keep_top_level / 虚拟视图父节点；不进计数）
       state.mountedSections = data.mounted_sections || [];
       state.listLabel = data.label || state.module;
       var mc = data.merged_count || 0;
+      var mfc = data.merge_filtered_count || 0;
       var uc = data.unconfigured_count || 0;
       var total = (data.total_count == null) ? state.entries.length : data.total_count;
       // 批13.1 计数口径写清：总条数（含框架未配置段）+ 未配置段数 + 并入数。
       var note = total + " 条";
       var extra = [];
       if (mc) { extra.push("含并入 " + mc); }
+      if (mfc) {
+        var mfl = state.mergeFiltered.map(function (s) { return s.label || s.module; }).join("、");
+        extra.push("含并入 " + mfc + (mfl ? "（来自 " + mfl + "）" : ""));
+      }
       if (uc) { extra.push("另有 " + uc + " 个框架段未配置"); }
       if (extra.length) { note += "（" + extra.join("；") + "）"; }
       setHdrNote("list-count", note);
@@ -3454,13 +3461,32 @@ function renderEntries() {
     box.appendChild(d);
     (pg.segments || []).forEach(function (s) { covered[s] = true; });
   });
-  var ownEntries = (state.entries || []).filter(function (e) { return !covered[e.id]; });
+  var ownEntries = (state.entries || []).filter(function (e) {
+    return !covered[e.id] && !e.merged_from;
+  });
+  // 批20 B：按条件过滤并入的条目按「来源模块」分小节（条目标注 merged_from，编辑路由回来源）。
+  var mfSections = (state.mergeFiltered || []).map(function (sec) {
+    var items = (state.entries || []).filter(function (e) {
+      return e.merged_from === sec.module;
+    });
+    var cond = (sec.has && sec.has.length ? "有 " + sec.has.join("、") : "");
+    if (sec.eq) {
+      var eqs = Object.keys(sec.eq).map(function (k) { return k + "=" + sec.eq[k]; });
+      cond = cond ? cond + " 且 " + eqs.join("、") : eqs.join("、");
+    }
+    return { module: sec.module,
+             label: "来自 " + (sec.label || sec.module) + (cond ? "（" + cond + "）" : ""),
+             count: sec.count, entries: items, keep_top_level: false };
+  });
   // 中栏过滤作用域写清：当前模块内，按名称或 ID 过滤（EditorEntry 纯逻辑）
   // 批12 #1：聚合视图按「来源模块」分小节（本模块 + 各并入来源），过滤在小节内生效。
   var grouped = (state.mergeSections || []).length > 0
+    || mfSections.length > 0
     || (state.mountedSections || []).length > 0;
   var plan = EditorMerge.filterPlan(
-    EditorMerge.sectionPlan(ownEntries, state.mergeSections, state.module, state.listLabel),
+    EditorMerge.sectionPlan(ownEntries,
+                            (state.mergeSections || []).concat(mfSections),
+                            state.module, state.listLabel),
     state.filter, EditorEntry.match);
   var cur = state.entryModule || state.module;
   plan.forEach(function (s) {
@@ -3474,8 +3500,8 @@ function renderEntries() {
     }
     s.entries.forEach(function (e) {
       var d = document.createElement("div");
-      // 批19 #8：挂载条目的编辑归属是**来源模块**（mounted_from），不是当前父节点。
-      var emod = e.mounted_from || s.module;
+      // 批19 #8 / 批20 B：挂载条目 / 过滤并入条目的编辑归属是**来源模块**，不是当前模块。
+      var emod = e.mounted_from || e.merged_from || s.module;
       d.className = "item" + ((e.id === state.entry && emod === cur) ? " on" : "");
       d.dataset.id = e.id;
       d.dataset.mod = emod;
@@ -3506,11 +3532,19 @@ function renderEntries() {
         mtag.textContent = "移入自 " + (e.mounted_from_label || e.mounted_from);
         d.appendChild(mtag);
       }
+      if (e.merged_from) {
+        // 批20 B：按条件并入本模块的条目 → 标「来自 X」（点击仍按来源模块打开/保存）。
+        var gtag = document.createElement("span");
+        gtag.className = "idtag";
+        gtag.textContent = "来自 " + (e.merged_from_label || e.merged_from);
+        d.appendChild(gtag);
+      }
       d.title = e.name + "  [" + e.id + "]"
         + (e.unconfigured ? "（框架已支持，本包尚未配置）" : "")
         + (e.framework_default ? "（框架默认；保存后写入本包覆盖）" : "")
         + (e.covered ? "（本包已覆盖框架默认）" : "")
         + (e.mounted_from ? "（挂载条目；数据与保存仍在 " + (e.mounted_from_label || e.mounted_from) + "）" : "")
+        + (e.merged_from ? "（按条件并入；数据与保存仍在 " + (e.merged_from_label || e.merged_from) + "）" : "")
         + (grouped ? "（来源：" + s.label + "）" : "");
       d.addEventListener("click", function () { selectEntry(e.id, emod); });
       box.appendChild(d);

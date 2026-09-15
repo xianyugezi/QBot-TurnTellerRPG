@@ -195,6 +195,58 @@ _EXPAND_LIST_JS = r"""
 }
 """
 
+# 批20 B：装备页「按条件并入」小节的 DOM + 点开并入条目 → 编辑 → 保存 / 回退。
+_MERGE_JS = r"""
+() => {
+  const items = Array.from(document.querySelectorAll('#rows .item'));
+  const merged = items.filter(el => (el.textContent || '').indexOf('来自 ') >= 0);
+  const pick = merged[0] || items[0] || null;
+  return {
+    total: items.length,
+    mergedCount: merged.length,
+    mergedTags: merged.slice(0, 3).map(el => (el.textContent || '').trim()),
+    pickId: pick ? pick.dataset.id : null,
+    pickMod: pick ? pick.dataset.mod : null,
+    listNote: (document.getElementById('list-count') || {}).textContent || '',
+  };
+}
+"""
+
+_MERGE_EDIT_JS = r"""
+(args) => {
+  const inp = document.querySelector('#p-body [data-key="' + args.field + '"]');
+  if (!inp) { return {ok: false, why: 'no [data-key=' + args.field + ']'}; }
+  const before = inp.value;
+  inp.value = args.value;
+  inp.dispatchEvent(new Event('input', {bubbles: true}));
+  return {ok: true, before: before, after: inp.value,
+          entryModule: state.entryModule,
+          draft: JSON.parse(JSON.stringify((MAIN_CTX.draft || {}).changes || {}))};
+}
+"""
+
+_WAIT_ENTRY_JS = r"""
+(arg) => !!(state.detail && state.detail.id === arg.id
+            && (state.entryModule || state.module) === arg.mod)
+"""
+
+
+def _api_json(port: int, path: str) -> Any:
+    """读宿主只读 API（探针自证用：保存后 / 回退后的条目字段值）。"""
+    with urllib.request.urlopen(f"http://127.0.0.1:{port}{path}", timeout=10) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def _entry_field(port: int, pack: str, module: str, entry: str, field: str) -> Any:
+    try:
+        data = _api_json(port, f"/api/pack/{pack}/entry/{module}/{entry}")
+    except Exception:  # noqa: BLE001 - 探针自证失败不阻断主流程
+        return None
+    for f in data.get("fields") or []:
+        if f.get("key") == field:
+            return f.get("value")
+    return None
+
 
 def _select(page: Any, module: str, entry: str) -> None:
     page.evaluate("async (m) => { await selectModule(m); }", module)
@@ -220,7 +272,9 @@ def _select(page: Any, module: str, entry: str) -> None:
 
 def run(repo: Path, content_root: Path, pack: str, module: str, entry: str,
         mode: str, edits: List[Dict[str, str]], port: int, host_python: str,
-        out: Optional[Path]) -> Dict[str, Any]:
+        out: Optional[Path], in_place: bool = False,
+        edit_field: str = "price", edit_value: str = "",
+        do_rollback: bool = False) -> Dict[str, Any]:
     try:
         from playwright.sync_api import sync_playwright
     except Exception as exc:  # noqa: BLE001
@@ -228,18 +282,23 @@ def run(repo: Path, content_root: Path, pack: str, module: str, entry: str,
               f"&& playwright install chromium", file=sys.stderr)
         raise SystemExit(2)
 
-    tmp = Path(tempfile.mkdtemp(prefix="editor-dom-probe-"))
-    try:
-        shutil.copytree(content_root / pack, tmp / pack)
-    except OSError as exc:
-        print(f"[dom-probe] 复制内容包失败：{exc}", file=sys.stderr)
-        raise SystemExit(2)
+    tmp: Optional[Path] = None
+    if in_place:
+        root = content_root
+    else:
+        tmp = Path(tempfile.mkdtemp(prefix="editor-dom-probe-"))
+        try:
+            shutil.copytree(content_root / pack, tmp / pack)
+        except OSError as exc:
+            print(f"[dom-probe] 复制内容包失败：{exc}", file=sys.stderr)
+            raise SystemExit(2)
+        root = tmp
 
     env = dict(os.environ)
     env["PYTHONPATH"] = str(repo)
     proc = subprocess.Popen(
         [host_python, str(repo / "scripts" / "editor_host.py"),
-         "--pack", pack, "--content-root", str(tmp), "--port", str(port),
+         "--pack", pack, "--content-root", str(root), "--port", str(port),
          "--host", "127.0.0.1"],
         cwd=str(repo), env=env,
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
@@ -269,6 +328,34 @@ def run(repo: Path, content_root: Path, pack: str, module: str, entry: str,
                 result["draftAfter"] = page.evaluate(
                     "() => JSON.parse(JSON.stringify((MAIN_CTX.draft || {}).changes || {}))")
                 result["after"] = page.evaluate(_NESTED_JS)
+            elif mode == "merge":
+                result["list"] = page.evaluate(_MERGE_JS)
+                if result["list"]["pickId"]:
+                    page.evaluate(
+                        "async ([e, m]) => { await selectEntry(e, m); }",
+                        [result["list"]["pickId"], result["list"]["pickMod"]])
+                    page.wait_for_function(
+                        _WAIT_ENTRY_JS,
+                        arg={"id": result["list"]["pickId"], "mod": result["list"]["pickMod"]},
+                        timeout=20000)
+                    # 字段可能在非首个分组页签里（hidden）→ 只等「已挂载」
+                    page.wait_for_selector('#p-body [data-key="' + edit_field + '"]',
+                                           state="attached", timeout=20000)
+                    result["edit"] = page.evaluate(
+                        _MERGE_EDIT_JS, {"field": edit_field, "value": edit_value})
+                    page.evaluate("async () => { await saveForm(); }")
+                    page.wait_for_timeout(1200)
+                    result["saved"] = True
+                    _mod = result["list"]["pickMod"] or module
+                    _eid = result["list"]["pickId"]
+                    result["afterSaveField"] = _entry_field(
+                        port, pack, _mod, _eid, edit_field)
+                    if do_rollback:
+                        page.evaluate("async () => { await runRollback(); }")
+                        page.wait_for_timeout(1200)
+                        result["rolledBack"] = True
+                        result["afterRollbackField"] = _entry_field(
+                            port, pack, _mod, _eid, edit_field)
             else:
                 result["after"] = page.evaluate(_GROUPS_JS)
                 page.evaluate(_EXPAND_ALL_JS)
@@ -286,7 +373,8 @@ def run(repo: Path, content_root: Path, pack: str, module: str, entry: str,
             proc.wait(timeout=10)
         except subprocess.TimeoutExpired:
             proc.kill()
-        shutil.rmtree(tmp, ignore_errors=True)
+        if tmp is not None:
+            shutil.rmtree(tmp, ignore_errors=True)
 
 
 def _parse_edit(text: str) -> Dict[str, str]:
@@ -305,9 +393,17 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--pack", required=True)
     ap.add_argument("--module", required=True)
     ap.add_argument("--entry", default="", help="条目 id（缺省用该模块第一个条目）")
-    ap.add_argument("--mode", choices=("nested", "groups"), default="nested")
+    ap.add_argument("--mode", choices=("nested", "groups", "merge"), default="nested")
     ap.add_argument("--edit", action="append", default=[],
-                    help="field|kind:locator|value（kind ∈ opath/kvcell/okvc），可重复")
+                     help="nested 模式：field|kind:locator|value（kind ∈ opath/kvcell/okvc）")
+    ap.add_argument("--edit-field", default="price",
+                    help="merge 模式：点开并入条目后要改的字段键（缺省 price）")
+    ap.add_argument("--edit-value", default="",
+                    help="merge 模式：写入的值（缺省加后缀以区分原值）")
+    ap.add_argument("--rollback", action="store_true",
+                    help="merge 模式：保存后再执行「回退到上一份备份」（写盘/回退 E2E）")
+    ap.add_argument("--in-place", action="store_true",
+                    help="直接用 --content-root（不复制到临时目录，供 E2E 写盘/回退断言）")
     ap.add_argument("--host-python", default=sys.executable,
                     help="跑 editor_host.py 的解释器（须能 import qbot_rpg）")
     ap.add_argument("--port", type=int, default=0)
@@ -318,7 +414,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     port = args.port or _free_port()
     out = Path(args.json).resolve() if args.json else None
     result = run(repo, content_root, args.pack, args.module, args.entry, args.mode,
-                 [_parse_edit(x) for x in args.edit], port, args.host_python, out)
+                 [_parse_edit(x) for x in args.edit], port, args.host_python, out,
+                 in_place=args.in_place, edit_field=args.edit_field,
+                 edit_value=args.edit_value, do_rollback=args.rollback)
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
 

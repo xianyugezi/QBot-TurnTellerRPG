@@ -1,4 +1,4 @@
-"""框架默认条目预设（批17 · 物品通用预设；用户 2026-09-15 拍板）。
+"""框架默认条目预设（批17 物品通用预设 + 批18 细化；用户 2026-09-15/16 拍板）。
 
 背景 / 依据
 -----------
@@ -55,7 +55,8 @@ FRAMEWORK_ENTRY_PRESETS: Mapping[str, Tuple[Mapping[str, Any], ...]] = {
         {
             "id": "currency_pouch",
             "label": "货币袋",
-            "help": "货币袋：默认可用；效果列表留空，填可开出的内容。",
+            "help": "货币袋：默认可用；效果列表留空，填可开出的内容——"
+                    "需要对应效果类型 gain_currency（给货币）或 learn_skill（学技能）。",
             "fields": ("name", "type", "desc", "usable", "effects"),
             "defaults": {"type": "currency", "usable": True, "effects": []},
             "id_prefix": "pouch",
@@ -64,7 +65,8 @@ FRAMEWORK_ENTRY_PRESETS: Mapping[str, Tuple[Mapping[str, Any], ...]] = {
         {
             "id": "potion",
             "label": "药剂",
-            "help": "药剂：默认可用；填效果列表与价格。",
+            "help": "药剂：默认可用；持续回合在引用的效果里设置"
+                    "（效果的「持续」/「turns」字段）；填效果列表与价格。",
             "fields": ("name", "type", "desc", "usable", "effects", "price"),
             "defaults": {"type": "consumable", "usable": True, "effects": []},
             "id_prefix": "potion",
@@ -82,9 +84,11 @@ FRAMEWORK_ENTRY_PRESETS: Mapping[str, Tuple[Mapping[str, Any], ...]] = {
         {
             "id": "equipment",
             "label": "装备",
-            "help": "装备：先选部位，再填攻防与百分比加成。",
-            "fields": ("name", "type", "desc", "slot", "price", "dfn", "atk",
-                       "atk_pct", "dfn_pct", "crit", "agi", "hp_pct"),
+            "help": "装备：先选部位，再填攻防、属性白值与百分比/会心加成。",
+            "fields": ("name", "type", "desc", "slot", "price",
+                       "dfn", "atk",
+                       "hp", "mp", "str", "con", "spr", "lck", "spd", "mag", "agi",
+                       "atk_pct", "dfn_pct", "hp_pct", "crit"),
             "defaults": {"type": "equipment"},
             "id_prefix": "eq",
             "id_width": None,
@@ -92,7 +96,8 @@ FRAMEWORK_ENTRY_PRESETS: Mapping[str, Tuple[Mapping[str, Any], ...]] = {
         {
             "id": "skill_book",
             "label": "技能书",
-            "help": "技能书：默认可用；填效果列表与价格。",
+            "help": "技能书：默认可用；填效果列表与价格——"
+                    "需要对应效果类型 learn_skill（学技能）或 gain_currency（给货币）。",
             "fields": ("name", "type", "desc", "usable", "effects", "price"),
             "defaults": {"type": "skill_book", "usable": True, "effects": []},
             "id_prefix": "book",

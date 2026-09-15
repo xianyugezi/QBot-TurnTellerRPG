@@ -710,12 +710,25 @@ def test_settlement_engine_untouched_when_hook_tries_to_mutate() -> None:
 # ---------------------------------------------------------------------------
 
 
-async def test_real_probe_pack_render_end_to_end(tmp_path: Path) -> None:
+@pytest.fixture()
+def probe_pack_copy(tmp_path: Path) -> Path:
+    """真实探针包的**临时副本**：渲染钩子装载会 import 包内 ext/render.py，直接把
+    真实 `content/zz_probe_ext` 交给装载器会在真实内容包内生成 __pycache__（写盘
+    污染）。副本目录名保持 `zz_probe_ext`（pack_id = 目录名，断言口径不变）。"""
+    import shutil
+
+    dst = tmp_path / "zz_probe_ext"
+    shutil.copytree(PROBE_PACK, dst)
+    return dst
+
+
+async def test_real_probe_pack_render_end_to_end(tmp_path: Path,
+                                                 probe_pack_copy: Path) -> None:
     from qbot_rpg.assembly.runner import run_command
     from qbot_rpg_bridge.assemble import build_app_deps
 
     deps = await build_app_deps(
-        pack_dir=str(PROBE_PACK),
+        pack_dir=str(probe_pack_copy),
         db_path=str(tmp_path / "e2e_render.db"),
         settings={"ext": {"enabled": True}},
         enable_pack_ext=True,
@@ -738,12 +751,13 @@ async def test_real_probe_pack_render_end_to_end(tmp_path: Path) -> None:
         await deps.repo.db.close()
 
 
-async def test_real_probe_pack_render_disabled_by_default(tmp_path: Path) -> None:
+async def test_real_probe_pack_render_disabled_by_default(tmp_path: Path,
+                                                          probe_pack_copy: Path) -> None:
     from qbot_rpg.assembly.runner import run_command
     from qbot_rpg_bridge.assemble import build_app_deps
 
     deps = await build_app_deps(
-        pack_dir=str(PROBE_PACK),
+        pack_dir=str(probe_pack_copy),
         db_path=str(tmp_path / "e2e_render_off.db"),
         enable_pack_ext=False,
     )

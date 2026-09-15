@@ -20,6 +20,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 import qbot_rpg.testing as pkt
 
 REPO = Path(__file__).resolve().parents[2]
@@ -266,9 +268,21 @@ def test_run_pack_tests_writes_nothing_into_real_pack() -> None:
     assert _snapshot(PROBE) == before
 
 
-async def test_testing_helpers_use_in_memory_db() -> None:
+@pytest.fixture()
+def probe_copy(tmp_path: Path) -> Path:
+    """真实探针包的**临时副本**：测试辅助装载会 import 包内 ext/*.py，直接在真实
+    `content/zz_probe_ext` 上装载会在真实内容包内生成 __pycache__（写盘污染）。
+    副本目录名保持 `zz_probe_ext`（pack_id = 目录名，断言口径不变）。"""
+    import shutil
+
+    dst = tmp_path / "zz_probe_ext"
+    shutil.copytree(PROBE, dst)
+    return dst
+
+
+async def test_testing_helpers_use_in_memory_db(probe_copy: Path) -> None:
     """测试辅助的装配以内存库为默认（不碰真实玩家库）。"""
-    deps = await pkt.build_pack_deps(PROBE)
+    deps = await pkt.build_pack_deps(probe_copy)
     try:
         assert deps.testing_db_owned is True
         assert deps.repo.db._is_memory is True
@@ -276,16 +290,16 @@ async def test_testing_helpers_use_in_memory_db() -> None:
         await pkt.close_pack_deps(deps)
 
 
-def test_testing_load_helpers_respect_gate_off() -> None:
+def test_testing_load_helpers_respect_gate_off(probe_copy: Path) -> None:
     """测试开关显式关闭时，装载层维持「双闸任一未开 = 不启用」。"""
-    result = pkt.load_pack_ext(PROBE, cli=False)
+    result = pkt.load_pack_ext(probe_copy, cli=False)
     assert result.enabled is False
     assert result.registered == ()
 
 
-def test_load_pack_render_probe() -> None:
+def test_load_pack_render_probe(probe_copy: Path) -> None:
     """渲染钩子辅助：探针包可装载且能改写 command.reply 文本。"""
-    result = pkt.load_pack_render(PROBE)
+    result = pkt.load_pack_render(probe_copy)
     assert result.ok is True and result.loaded is True
     assert result.hook is not None
     assert result.hook.apply("command.reply", {}, "正文") != "正文"

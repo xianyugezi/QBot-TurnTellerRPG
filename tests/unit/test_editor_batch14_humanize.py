@@ -204,10 +204,15 @@ def test_listed_categories_have_real_humanized_errors() -> None:
     mods = copy.deepcopy(modules)
     mods["skills"][0]["totally_unknown_key"] = 1
     rep3 = check_pack(mods, api.field_meta_table())
-    codes |= {r["rule"] for r in atomic_store.humanize_errors(rep3.errors)}
+    skill_rows = atomic_store.humanize_errors(rep3.errors)
+    codes |= {r["rule"] for r in skill_rows}
     for want in ("ref_missing", "enum", "required_missing", "out_of_common_range",
                  "id_duplicate", "skill_field_unregistered"):
         assert want in codes, (want, sorted(codes))
+    # 严格模块的未知键也要说人话（不把内部登记表名/V 编号端给作者）
+    unk = next(r for r in skill_rows if r["rule"] == "skill_field_unregistered")
+    assert "不认识的键" in unk["why"] and "totally_unknown_key" in unk["why"]
+    assert "V-11" not in unk["why"] and "skills_fields" not in unk["why"]
 
 
 # =====================================================================================

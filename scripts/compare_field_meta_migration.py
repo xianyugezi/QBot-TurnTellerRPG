@@ -41,11 +41,16 @@ DEFAULT_PACKS = ("veinborn", "test_demo")
 # traits/recipe/slots/dungeon/achievements/conditional 等模块，使 995e91b 基线在
 # 「模块目录/索引/包列表 module_count」上产生与迁移无关的硬差异。重定到本批父提交，
 # 使门禁继续只守「字段级元数据迁移不得改/删」。
-# 批13.1（2026-09-15）重定基线：112584d → 本批末提交。原因：段入口机制合法改变
+# 批13.1（2026-09-15）重定基线：112584d → 46baff3。原因：段入口机制合法改变
 # **条目列表口径**（对象型模块补入框架已登记的未配置段）→ settings/conditional 的
 # 条目数、index.total 与 entries 列表长度随之变化，属与「字段级元数据迁移」无关的
-# 展示层演进；重定到本批末提交后，门禁继续只守字段级改/删。
-DEFAULT_BASELINE_REF = "46baff3"
+# 展示层演进。
+# 批14（2026-09-15）重定基线：46baff3 → f7d9c25（本批 #6 末提交）。原因：对象子字段
+# 可编辑机制把 `obj` 控件由 `readonly` → `objform`，并使未登记映射按对象渲染；部位字段
+# `slot` 由纯文本 → 展示层引用下拉（options_ref）。均为**展示层控件形态**演进（type /
+# required / 枚举 / 引用目标等校验口径零变化），与「字段级元数据迁移不得改/删」无冲突；
+# 重定到本批末提交后，门禁继续只守字段级改/删。
+DEFAULT_BASELINE_REF = "f7d9c25"
 
 
 def _env(root: Path) -> dict:

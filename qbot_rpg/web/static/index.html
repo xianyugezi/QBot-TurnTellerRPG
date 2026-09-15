@@ -877,7 +877,7 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
       <div class="panel-body" id="p-body">
         <div class="empty">从左侧选择模块与条目。字段按内容包元数据渲染；改动先进草稿，保存时才校验并落盘。</div>
       </div>
-      <div class="panel-ft"><span>批13.1 · 段入口</span></div>
+      <div class="panel-ft"><span>批14 · 可编辑性与提示</span></div>
     </section>
 
   </div>
@@ -1536,7 +1536,7 @@ var state = {
   // 批13 A/D：左栏 = 框架能力集 ∪ 包声明——views（虚拟聚合视图，如「生活」）+
   // available（框架有而包未启用的模块，未启用态 + 一键启用）
   views: [], available: [],
-  // 批14 #6①：当前条目是否为「动态键空间」（可新增/删除子项，如 settings.slot_defs）
+  // 批14 #6①：当前条目是否为「动态键空间」（对象型段的 obj 字段未登记子字段 → 可增删子项）
   openKeys: false
 };
 var draft = EditorDraft.newDraft();
@@ -4831,9 +4831,8 @@ function postForm(ctx, suffix) {
     if (res.ok && suffix === "/save") {
       state.pendingDrafts = snapshotOtherDrafts(ctx.key);
       EditorDraft.discard(ctx.draft);
-      // 批14 #6②：保存可能改变「可被引用的键空间」（对象型段未登记子字段的键集合，
-      // 如装备槽位表）→ 引用候选缓存必须失效；同一会话内打开引用字段即重新拉取，
-      // 无需刷新页面/重启。
+      // 批14 #6②：保存可能改变「可被引用的键空间」（对象型段未登记子字段的键集合）
+      // → 引用候选缓存必须失效；同一会话内打开引用字段即重新拉取，无需刷新页面/重启。
       invalidateRefCache();
       return reloadDetail();
     }
@@ -5254,7 +5253,7 @@ function bindObjSections(root) {
 }
 
 function bindOpenKeySections(root) {
-  // 批14 #6①：条目级动态键空间（对象型段的 obj 字段未登记子字段，如 settings.slot_defs）
+  // 批14 #6①：条目级动态键空间（对象型段的 obj 字段未登记子字段 → 可增删子项）
   // 的「✕ 删除子项 / + 添加子项」——只改草稿，保存走既有校验与原子写链路。
   Array.prototype.forEach.call(root.querySelectorAll("[data-keydel]"), function (btn) {
     btn.addEventListener("click", function () {

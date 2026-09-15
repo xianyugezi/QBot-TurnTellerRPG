@@ -19,7 +19,7 @@ time_cycle / message_prefix / pvp / codex / shortcut_max 等「框架已登记�
   D. 未配置段写盘 → 回退复原（原始 JSON 证据）；
   E. 通用性 / 回归（map 模块与无登记模块不变；未声明模块仍 404）；
   F. 校验如实红拦（登记了类型校验的对象段，非法值必须红拦且零落盘；range 按既有 Y-1 黄提示）；
-  G. 自检脚本覆盖段入口 + 页脚批次串 = 批13.1 · 段入口。
+  G. 自检脚本覆盖段入口 + 页脚批次串 = 当前批次（批14 起由本用例末尾断言）。
 """
 
 from __future__ import annotations
@@ -301,9 +301,11 @@ def test_selfcheck_segment_diff_tolerates_pack_specific_key() -> None:
     assert any("包自有数据键" in ln for ln in lines)
 
 
-def test_footer_batch_string_is_131() -> None:
+def test_footer_batch_string_is_current() -> None:
+    """页脚批次串随批推进更新（旧批次串不得残留）。"""
     html = HTML.read_text(encoding="utf-8")
-    assert "批13.1 · 段入口" in html
+    assert "批14 · 可编辑性与提示" in html
+    assert "批13.1 · 段入口" not in html
     assert "批13 · 能力可见性" not in html
 
 

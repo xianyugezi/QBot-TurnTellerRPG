@@ -27,7 +27,7 @@ from __future__ import annotations
 import json
 import shutil
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Mapping
 
 import pytest
 
@@ -276,6 +276,34 @@ def test_registered_child_set_independent_of_data() -> None:
     assert blank == full
     reg = set(SETTINGS_META.fields)
     assert reg <= blank
+
+
+def test_one_principle_all_object_modules_children_cross_pack() -> None:
+    """一号原则（广义）：任一 object 模块的每个已登记对象的**子字段集合**，在两个包
+    （几乎空白 vs 功能齐全）里都按框架元数据出齐——差异只在有没有值，不在字段集合。"""
+    meta = api.default_field_meta_table()
+    checked = 0
+    for mod, mmeta in meta.modules.items():
+        if mmeta is None or mmeta.entry_type != "object":
+            continue
+        for seg, fm in mmeta.fields.items():
+            if not (fm.type == "obj" and fm.children):
+                continue
+            want = {str(k) for k in fm.children}
+            for pack in ("demo_blank", "veinborn"):
+                try:
+                    d = api.entry_detail(pack, mod, seg, root=CONTENT)
+                except api.NotFound:
+                    continue
+                # 数据形态不是对象（如该段实际是列表/标量）时不套用对象子字段口径
+                raw = json.loads((CONTENT / pack / f"{mod}.json").read_text(encoding="utf-8"))
+                val = raw.get(seg) if isinstance(raw, Mapping) else None
+                if val is not None and not isinstance(val, Mapping):
+                    continue
+                keys = {f["key"] for f in d["fields"]}
+                assert want <= keys, (mod, seg, pack, want - keys)
+                checked += 1
+    assert checked >= 4, checked
 
 
 # =====================================================================================

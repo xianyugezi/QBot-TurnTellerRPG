@@ -604,7 +604,8 @@ def _range_text(detail: Mapping[str, object]) -> str:
 
 
 def _guide_unknown_key(detail: Mapping[str, object]) -> Tuple[str, str]:
-    keys = detail.get("keys") or detail.get("key") or []
+    keys = (detail.get("keys") or detail.get("key") or detail.get("field_name")
+            or detail.get("name") or [])
     allowed = detail.get("allowed") or []
     if not isinstance(keys, list):
         keys = [keys]
@@ -694,7 +695,8 @@ def _why_how(rule: str, kind: str, detail: Mapping[str, object],
             return str(why), str(how)
         except Exception:  # 参数形态意外 → 回退，不因翻译失败丢错误
             pass
-    if rule.endswith("unknown_key") or rule.endswith("_unknown_field") or rule == "unknown_key":
+    if (rule.endswith("unknown_key") or rule.endswith("_unknown_field")
+            or rule == "unknown_key" or "unregistered" in rule):
         return _guide_unknown_key(detail)
     # 兜底：校验器自带的 msg 通常是中文人话；退而用原文。
     why = str(detail.get("msg") or detail.get("message") or raw or "这项内容不符合要求。")

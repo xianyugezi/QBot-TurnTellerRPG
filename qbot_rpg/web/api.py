@@ -3143,7 +3143,34 @@ def new_entry_detail(pack: object, module: object, root: Optional[object] = None
     subject = dict(info["subject"])
     subject.pop(id_field, None)  # ID 单独渲染，不混进字段网格
     view = _PackView(pack_dir, manifest)
-    fields = _build_fields(base, subject, mmeta, view, 0)
+    # 批16 #11：选了预设 → 只把该预设关心的字段放主区；其余字段归「其他字段」折叠区
+    # （**仍可编辑**，不永久隐藏——一号原则）。不选预设 → 行为与现状完全一致。
+    preset_item = info.get("preset_item")
+    missing: List[str] = []
+    if preset_item is not None:
+        wanted = [str(k) for k in preset_item.get("fields", ())]
+        wanted_set = set(wanted)
+        id_key = str(id_field)
+        preset_base = {k: v for k, v in base.items()
+                       if str(k) in wanted_set and str(k) != id_key}
+        other_base = {k: v for k, v in base.items()
+                      if str(k) not in wanted_set and str(k) != id_key}
+        missing = [k for k in wanted if k != id_key and k not in base]
+        # 各分区只喂自己那份值（否则 `_build_fields` 会把另一区的值当成「多出的键」重复渲染）。
+        fields = _build_fields(
+            preset_base, {k: subject[k] for k in preset_base if k in subject},
+            mmeta, view, 0)
+        other_fields = _build_fields(
+            other_base, {k: subject[k] for k in other_base if k in subject},
+            mmeta, view, 0)
+        # 预设 defaults 里模块未登记的键 → 兜底控件（如实呈现，不静默丢弃）。
+        stray = {k: v for k, v in subject.items()
+                 if k not in base and str(k) != id_key}
+        if stray:
+            other_fields += _build_fields({}, stray, mmeta, view, 0)
+    else:
+        fields = _build_fields(base, subject, mmeta, view, 0)
+        other_fields = []
     groups = _group_summary(fields, mmeta)
     blocks = _block_plan(fields, mmeta)
     labels = _display_labels(manifest, declared, pack_dir)
@@ -3168,7 +3195,7 @@ def new_entry_detail(pack: object, module: object, root: Optional[object] = None
         "fields": fields,
         "groups": groups,
         "blocks": blocks,
-        "field_count": len(fields),
+        "field_count": len(fields) + len(other_fields),
         "group_count": len(groups),
         # 批16 #7/#11：拼音附加能力 + 预设清单（不声明预设 → 空数组，界面与现状一致）。
         "pinyin_available": pinyin_available(),
@@ -3178,6 +3205,12 @@ def new_entry_detail(pack: object, module: object, root: Optional[object] = None
              "help": str(p.get("help") or ""), "field_count": len(p["fields"])}
             for p in preset_items
         ],
+        # 选了预设时：其余字段 + 未命中的声明字段（如实标注，不静默）。
+        "other_fields": other_fields,
+        "other_field_count": len(other_fields),
+        "preset_field_count": len(fields),
+        "preset_help": str((preset_item or {}).get("help") or "") if preset_item else "",
+        "preset_missing_fields": missing,
         "associations": [],
         "association_count": 0,
         "meta_source": META_SOURCE,

@@ -727,6 +727,13 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
   line-height: var(--lh-ex); }
 .newid .nid-note { flex-basis: 100%; color: var(--warn); font-size: var(--fs-11);
   line-height: var(--lh-ex); }
+.newpreset { border: var(--bw) solid var(--line-faint); background: var(--surface);
+  padding: var(--sp-4) var(--sp-5); margin: 0 var(--sp-6) var(--sp-4);
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); }
+.newpreset .nplab { color: var(--text-3); }
+.newpreset select { flex: 0 1 220px; }
+.newpreset .nphelp { flex-basis: 100%; color: var(--text-4); font-size: var(--fs-11);
+  line-height: var(--lh-ex); }
 .newfoot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3);
   margin: var(--sp-4) var(--sp-6); }
 .newfoot .nfn { color: var(--text-5); font-size: var(--fs-11); }
@@ -3583,7 +3590,7 @@ function onModuleRollback() {
 // 批6 · 新建条目（模块级）：建议 ID（可编辑）+ 即时唯一性 + 元数据默认值 + 创建
 // 只读身份不可用；创建走批2 同一落盘链路（校验 → 原子写 → 自动备份 → 回退）。
 // ---------------------------------------------------------------------------
-function openNewEntry() {
+function openNewEntry(preset) {
   if (!state.module) { return Promise.resolve(); }
   if (!state.editable) {
     window.alert("当前身份为只读预览，不能新增条目；请切换为可编辑身份后重试。");
@@ -3592,7 +3599,10 @@ function openNewEntry() {
   if (!canLeave()) { return Promise.resolve(); }
   discardDraft();
   state.result = null;
-  return api("/api/pack/" + enc(state.pack) + "/module/" + enc(state.module) + "/new")
+  var pid = (typeof preset === "string") ? preset : "";   // 事件对象不算预设
+  var url = "/api/pack/" + enc(state.pack) + "/module/" + enc(state.module) + "/new";
+  if (pid) { url += "?preset=" + enc(pid); }
+  return api(url)
     .then(function (d) { renderNewEntry(d); })
     .catch(function (err) { fail("读取新建表单", err); });
 }
@@ -3619,6 +3629,40 @@ function newIdentHtml(d) {
     + "</div>";
 }
 
+// 批16 #11：条目预设选择栏（声明了才出现；不声明 → 空串，界面与现状一致）。
+function newPresetHtml(d) {
+  var ps = d.presets || [];
+  if (!ps.length) { return ""; }
+  var cur = String(d.preset || "");
+  var opts = '<option value="">（不用预设 · 显示全部字段）</option>';
+  ps.forEach(function (p) {
+    opts += '<option value="' + esc(p.id) + '"' + (p.id === cur ? " selected" : "")
+      + ">" + esc(p.label) + "（" + p.field_count + " 个字段）</option>";
+  });
+  var hit = ps.filter(function (p) { return p.id === cur; })[0];
+  var help = (hit && hit.help) ? hit.help
+    : "选一个预设：只显示它关心的字段，其余字段收进「其他字段」（仍可编辑）。";
+  return '<div class="newpreset">'
+    + '<span class="nplab">条目预设</span>'
+    + '<select class="cin" id="new-preset" title="按模板新建：预设决定初始值与主要字段">'
+    + opts + "</select>"
+    + '<span class="nphelp" id="new-preset-help">' + esc(help) + "</span></div>";
+}
+
+// 批16 #11：预设未包含的字段 → 「其他字段」折叠区（**仍可编辑**，不永久隐藏）。
+function otherFieldsHtml(otherFields) {
+  var rows = otherFields || [];
+  if (!rows.length) { return ""; }
+  return '<section class="subblk" data-sb="__other__">'
+    + '<button type="button" class="sbhead" data-sbtoggle="__other__" aria-expanded="false"'
+    + ' title="展开 / 收起「其他字段」">'
+    + '<span class="caret">\u25b8</span>其他字段（预设未包含，仍可编辑） <b>'
+    + rows.length + "</b>"
+    + '<span class="sbhint">点开展开</span></button>'
+    + '<div class="sbbody" hidden><div class="rows2">'
+    + rows.map(fieldRow).join("") + "</div></div></section>";
+}
+
 function renderNewEntry(d) {
   state.newEntry = d;
   state.newDraft = EditorDraft.newDraft();
@@ -3630,14 +3674,17 @@ function renderNewEntry(d) {
   resetHelpCards();
   MAIN_CTX.isNew = true;
   MAIN_CTX.module = state.module; MAIN_CTX.entry = null;
-  MAIN_CTX.fields = d.fields || [];
+  // 预设未包含的「其他字段」也在 DOM 里（折叠区）→ 一并进字段索引，绑定与草稿照常生效。
+  var otherFields = d.other_fields || [];
+  MAIN_CTX.fields = (d.fields || []).concat(otherFields);
   MAIN_CTX.fieldIndex = {};
-  (d.fields || []).forEach(function (f) { MAIN_CTX.fieldIndex[f.key] = f; });
+  MAIN_CTX.fields.forEach(function (f) { MAIN_CTX.fieldIndex[f.key] = f; });
   MAIN_CTX.draft = state.newDraft; MAIN_CTX.detail = d;
   renderCtx = MAIN_CTX;
   state.forms = {};
 
   var html = '<div class="meta"><span class="mk">新建条目</span>'
+    + (d.preset ? '<span class="mi unc">预设 · ' + esc(d.preset) + "</span>" : "")
     + '<span class="mi">' + (d.field_count || 0) + " 个可初始化字段</span>"
     + '<span class="mi">' + (d.group_count || 0) + " 个分组</span>"
     + '<span class="mi">' + (state.editable ? "可编辑" : "只读预览") + "</span>"
@@ -3645,6 +3692,7 @@ function renderNewEntry(d) {
     + esc(d.meta_source) + "</span></div>"
     + '<div id="result" hidden></div>';
   html += newIdentHtml(d);
+  html += newPresetHtml(d);
   html += '<div class="newfoot"><button type="button" class="btn primary" id="btn-create">创建条目</button>'
     + '<button type="button" class="btn" id="btn-new-cancel">放弃并关闭</button>'
     + '<span class="nfn">创建后写入该模块文件；可随时用「回退到上一份备份」撤销。</span></div>';
@@ -3653,24 +3701,27 @@ function renderNewEntry(d) {
   state.tabs = groupTabs.map(function (g, i) {
     return { kind: "group", idx: i, label: g.label, count: g.count, group: g };
   });
-  if (!groupTabs.length) {
+  if (!groupTabs.length && !otherFields.length) {
     html += '<div class="empty">该模块没有额外字段需要初始化（按元数据只填 ID 即可创建）。</div>';
   } else {
-    var tbar = '<div class="gtabs">';
-    groupTabs.forEach(function (g, i) {
-      tbar += '<button class="gtab' + (i === 0 ? " on" : "") + '" data-g="' + i
-        + '" title="' + esc("分组键：" + g.name) + '">' + esc(g.label)
-        + " <b>" + g.count + "</b></button>";
-    });
-    tbar += "</div>";
-    html += tbar;
-    groupTabs.forEach(function (g, i) {
-      html += '<div class="gpane"' + (i === 0 ? "" : " hidden") + ' data-g="' + i + '">'
-        + (g.empty
-          ? '<div class="gempty">该分组暂无字段（元数据声明了此分组，新建条目里没有字段落在其中）。</div>'
-          : '<div class="rows2">' + g.fields.map(fieldRow).join("") + "</div>")
-        + "</div>";
-    });
+    if (groupTabs.length) {
+      var tbar = '<div class="gtabs">';
+      groupTabs.forEach(function (g, i) {
+        tbar += '<button class="gtab' + (i === 0 ? " on" : "") + '" data-g="' + i
+          + '" title="' + esc("分组键：" + g.name) + '">' + esc(g.label)
+          + " <b>" + g.count + "</b></button>";
+      });
+      tbar += "</div>";
+      html += tbar;
+      groupTabs.forEach(function (g, i) {
+        html += '<div class="gpane"' + (i === 0 ? "" : " hidden") + ' data-g="' + i + '">'
+          + (g.empty
+            ? '<div class="gempty">该分组暂无字段（元数据声明了此分组，新建条目里没有字段落在其中）。</div>'
+            : '<div class="rows2">' + g.fields.map(fieldRow).join("") + "</div>")
+          + "</div>";
+      });
+    }
+    html += otherFieldsHtml(otherFields);
   }
 
   el("p-body").innerHTML = html;
@@ -3679,6 +3730,7 @@ function renderNewEntry(d) {
   bindTabs();
   bindControls();
   bindNewIdent();
+  bindSubBlocks();
   bindHelp();
   state.pendingDrafts = {};
   markDirty();
@@ -3697,6 +3749,17 @@ function bindNewIdent() {
   if (sg) { sg.addEventListener("click", function () { suggestIdFromName(); }); }
   var pg = el("btn-suggest-pinyin");
   if (pg) { pg.addEventListener("click", function () { suggestIdFromName("pinyin"); }); }
+  // 批16 #11：切换预设 → 重新打开新建表单（有未保存内容先确认；取消则回退选择）。
+  var ps = el("new-preset");
+  if (ps) {
+    ps.addEventListener("change", function () {
+      var want = ps.value;
+      var cur = String((state.newEntry || {}).preset || "");
+      if (want === cur) { return; }
+      if (!canLeave()) { ps.value = cur; return; }
+      openNewEntry(want);
+    });
+  }
   var cancel = el("btn-new-cancel");
   if (cancel) {
     cancel.addEventListener("click", function () {

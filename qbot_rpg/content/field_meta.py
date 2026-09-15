@@ -1599,7 +1599,9 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "id": F_ID, "name": F_NAME, "type": F_TYPE,
         "price": F_PRICE, "atk": F_ATK, "def": F_DEF,
         "effects": F_EFFECTS,
-        "slot": FieldMeta(type="str"),  # 装备部位（正式表可注入 ref_target=slot）
+        # 批14 #6②：装备部位引用「基础 ▸ 装备槽位（settings.slot_defs）」——展示层下拉候选
+        # （字段 type 仍 str，校验语义不变；槽位表变更后候选即时联动）。
+        "slot": FieldMeta(type="str", options_ref="settings.slot_defs"),
         "bind": FieldMeta(type="bool"),
         "usable": FieldMeta(type="bool"),
         # 批4.5：items/equipment 实测顶层 desc（原表未登记 → 纯展示宽字段）
@@ -1607,7 +1609,7 @@ def _module_table() -> Dict[str, ModuleMeta]:
     }
     equipment_fields: Dict[str, FieldMeta] = dict(items_fields)
     # 部位互斥：entry.slot 与 entry.excludes 列表内部位互斥成环 → R-5（equipment 专项，§5.2 + L167）
-    equipment_fields["slot"] = FieldMeta(type="str")
+    equipment_fields["slot"] = FieldMeta(type="str", options_ref="settings.slot_defs")
     equipment_fields["excludes"] = FieldMeta(type="list", element=FieldMeta(type="str"))
     # M12.5/veinborn 属性键收口：装备词条键 atk/dfn/foc/hp/agi（stats.json 声明的
     # combat 键空间；items_fields 复制源仍登记 def 旧键 → 追加 dfn/foc/hp/agi，

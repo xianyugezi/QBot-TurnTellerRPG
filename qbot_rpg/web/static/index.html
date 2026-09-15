@@ -4768,6 +4768,12 @@ function bindRefPicks(box, f, wrap) {
 }
 
 
+function invalidateRefCache() {
+  // 批14 #6②：任何可能改变引用候选来源的写入（保存/回退/换包）都清空候选缓存。
+  // 下次打开引用字段即重新拉取 → 新增/删除的键在同一会话内立即反映，无需刷新页面。
+  state.refCache = {}; state.refKnown = {}; state.refQuery = {};
+}
+
 function loadRefOptions(target) {
   if (state.refCache[target]) { return Promise.resolve(state.refCache[target]); }
   return api("/api/pack/" + enc(state.pack) + "/refs/" + enc(target)).then(function (d) {
@@ -4825,6 +4831,10 @@ function postForm(ctx, suffix) {
     if (res.ok && suffix === "/save") {
       state.pendingDrafts = snapshotOtherDrafts(ctx.key);
       EditorDraft.discard(ctx.draft);
+      // 批14 #6②：保存可能改变「可被引用的键空间」（对象型段未登记子字段的键集合，
+      // 如装备槽位表）→ 引用候选缓存必须失效；同一会话内打开引用字段即重新拉取，
+      // 无需刷新页面/重启。
+      invalidateRefCache();
       return reloadDetail();
     }
   }).catch(function (err) {
@@ -4846,7 +4856,7 @@ function runRollback() {
   return postJSON("/api/pack/" + enc(state.pack) + "/module/" + enc(mod) + "/rollback", {})
     .then(function (res) {
       state.result = res; renderResult(res);
-      if (res.ok) { discardDraft(); return reloadDetail(); }
+      if (res.ok) { discardDraft(); invalidateRefCache(); return reloadDetail(); }
     }).catch(function (err) {
       state.result = { ok: false, message: "回退请求失败：" + err.message, errors: [] };
       renderResult(state.result);

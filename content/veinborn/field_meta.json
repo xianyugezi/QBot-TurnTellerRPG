@@ -1868,5 +1868,19 @@
       "module": "enemies"
     }
   ],
+  "segment_pages": {
+    "settings": [
+      {
+        "help": "默认地图 / 等级上限 / 经验曲线合并在一页；曲线默认显示公式，双击展开明细。",
+        "id": "world_growth",
+        "label": "世界与成长",
+        "segments": [
+          "default_map",
+          "level_cap",
+          "exp_curve"
+        ]
+      }
+    ]
+  },
   "schema_version": 1
 }

@@ -78,6 +78,8 @@ KV_MAX_STRUCT_KEYS = 8            # 「小结构」的子键上限（超出视�
 # map 模块的「全表」合成条目标识（仅读列表/详情合成，不进数据、不进条目索引）。
 TABLE_ENTRY_ID = "@table"
 TABLE_ENTRY_TAG = "全表 · 表格"
+# 批15 #2：对象模块「合并页」合成条目前缀（`@page:<包声明的页面 id>`；同样不进数据/索引）。
+PAGE_PREFIX = "@page:"
 # 批15 #2：曲线控件对「等级 → 数值」映射的约定键（与 id/name 同级的框架约定，不是业务字段名）：
 #   use_formula = 启用/禁用公式（缺省 true = 保持现状；关掉则以明细表的显式值为准）；
 #   formula     = 公式文本（可选；缺省时按明细推导摘要行）。
@@ -397,6 +399,50 @@ def _entry_merge_map(
     return out, notes
 
 
+def _segment_pages(manifest: Mapping[str, Any], declared: List[str],
+                   pack_dir: Path) -> Dict[str, List[Dict[str, Any]]]:
+    """读包声明 `segment_pages` → {对象模块: 页面数组}（批15 #2，通用、不写死段名）。
+
+    出参每页 = `{id, label, help, segments}`（segments 已过滤为「框架登记段 ∪ 包数据键」，
+    保证声明写错/段不存在时不产生悬空页面）。**纯展示层**：数据文件/段 id/校验路径不动。
+    """
+    decl = _pack_declaration(pack_dir)
+    out: Dict[str, List[Dict[str, Any]]] = {}
+    if decl is None or not decl.segment_pages:
+        return out
+    for mod, pages in decl.segment_pages.items():
+        if mod not in declared:
+            continue
+        mmeta = _module_meta(mod, pack_dir)
+        if mmeta is None or mmeta.entry_type != "object":
+            continue
+        data = _read_json(pack_dir / f"{mod}.json")
+        present = set(data) if isinstance(data, Mapping) else set()
+        known = set(mmeta.fields)
+        norm: List[Dict[str, Any]] = []
+        for page in pages:
+            segs = [str(s) for s in page["segments"] if str(s) in known or str(s) in present]
+            if not segs:
+                continue
+            norm.append({"id": str(page["id"]), "label": str(page["label"]),
+                         "help": str(page.get("help") or ""), "segments": tuple(segs)})
+        if norm:
+            out[mod] = norm
+    return out
+
+
+def _find_page(pack_dir: Path, manifest: Mapping[str, Any], declared: List[str],
+               mod: str, entry_id: str) -> Optional[Dict[str, Any]]:
+    """`@page:<id>` → 页面声明（找不到 → None）。"""
+    if not entry_id.startswith(PAGE_PREFIX):
+        return None
+    pid = entry_id[len(PAGE_PREFIX):]
+    for page in _segment_pages(manifest, declared, pack_dir).get(mod, []):
+        if page["id"] == pid:
+            return page
+    return None
+
+
 # =====================================================================================
 # 只读 API ①：内容包发现
 # =====================================================================================
@@ -707,6 +753,18 @@ def list_entries(pack: object, module: object, root: Optional[object] = None) ->
         table_entry = {"id": TABLE_ENTRY_ID,
                        "name": f"{labels.get(mod) or mod} · {TABLE_ENTRY_TAG}",
                        "table": True}
+    # 批15 #2：包声明的「合并页」——对象模块的若干段合成一个页面（中栏一条、右栏同栏多子块）。
+    # 页面是展示层聚合：段条目仍在 `entries` 里（计数/索引不变），前端按 `page` 归到页行下。
+    pages: List[Dict[str, Any]] = []
+    briefs = [_entry_brief(eid, name, _val) for eid, name, _val in rows]
+    for page in _segment_pages(manifest, declared, pack_dir).get(mod, []):
+        pid = PAGE_PREFIX + page["id"]
+        pages.append({"id": pid, "name": page["label"], "label": page["label"],
+                      "help": page["help"], "segments": list(page["segments"]),
+                      "page": True})
+        for b in briefs:
+            if b["id"] in page["segments"]:
+                b["page"] = pid
     return {
         "pack": str(pack),
         "module": mod,
@@ -716,9 +774,11 @@ def list_entries(pack: object, module: object, root: Optional[object] = None) ->
         "configured_count": len(rows) - unconfigured_count,
         "unconfigured_count": unconfigured_count,
         "unconfigured_tag": UNCONFIGURED_TAG,
-        "entries": [_entry_brief(eid, name, _val) for eid, name, _val in rows],
+        "entries": briefs,
         # 批15 #9：整表入口（map 模块；其余模块为 null → 前端不渲染）
         "table_entry": table_entry,
+        # 批15 #2：合并页（对象模块；其余模块为 []）——每页列出被合并的段 id
+        "pages": pages,
         # 批12 #1：聚合视图（无声明时 = 空列表 / total_count == count，行为与现状一致）
         "merge_sections": sections,
         "merged_count": merged_count,
@@ -882,6 +942,7 @@ _EDIT_BY_WIDGET: Dict[str, Tuple[str, bool]] = {
     "list": ("listtable", True),
     "obj": ("objform", True),
     "map": ("kvtable", True),   # 批15 #9：键值表格（键 → 标量/小结构，行内编辑 + 增删行）
+    "curve": ("curve", True),   # 批15 #2：曲线控件（等级 → 数值；公式/摘要 + 双击明细）
 }
 EDIT_CONTROLS: Tuple[str, ...] = (
     "text", "textarea", "number", "bool", "select", "ref",
@@ -1031,6 +1092,11 @@ def _effective_widget(fm: Optional[FieldMeta], value: object) -> str:
         return "ref"
     base = _widget_for_type(fm.type if fm is not None else None)
     unregistered = fm is None or not fm.type
+    # 批15 #2：曲线形态（键为整数序号、值为数字的映射）→ 曲线控件（默认公式/摘要行）。
+    # 通用识别，优先于 obj/map；不写死任何字段名。仅当元数据未声明别的编辑器时才生效。
+    if (isinstance(value, Mapping) and _is_curve_value(value)
+            and base in ("obj", "map", "text") and not (fm is not None and fm.editor)):
+        return "curve"
     if value is None:
         return base
     if isinstance(value, bool):
@@ -2007,6 +2073,54 @@ def _kv_table_spec(value: Mapping[str, Any], fm: Optional[FieldMeta],
     }
 
 
+def _curve_spec(value: Mapping[str, Any], fm: Optional[FieldMeta],
+                view: "_PackView") -> Dict[str, Any]:
+    """曲线控件描述（批15 #2，通用）：键为整数序号、值为数字的映射。
+
+    **单一来源规则（写死）**：曲线对象里的**整数键明细**是框架引擎读取的持久值；
+    `use_formula`（缺省 true）只决定编辑器把哪一方当权威——启用时以公式/摘要为准、明细
+    仅供查看；关闭后以明细的显式值为准、可直接编辑。编辑器**不会**在两者间互写（无双写打架）：
+    开启公式不重算明细，编辑明细前需先关开关。约定键名 `use_formula` / `formula` 属控件契约
+    （与 id/name 同级），不是业务字段名。
+    """
+    flag = value.get(CURVE_FLAG_KEY, True)
+    use_formula = flag if isinstance(flag, bool) else True
+    raw_formula = value.get(CURVE_FORMULA_KEY, "")
+    formula = raw_formula if isinstance(raw_formula, str) else ""
+    points: List[Dict[str, Any]] = []
+    for k, v in value.items():
+        ks = str(k)
+        if ks in (CURVE_FLAG_KEY, CURVE_FORMULA_KEY):
+            continue
+        try:
+            level = int(ks)
+        except (TypeError, ValueError):
+            continue
+        points.append({"level": level, "key": ks, "value": v})
+    points.sort(key=lambda p: int(p["level"]))
+    for p in points:
+        p["display"] = _scalar_display(p["value"], "number", view)
+    count = len(points)
+    if count:
+        summary = (f"共 {count} 级 · {points[0]['level']}→{points[0]['display']}"
+                   f" · {points[-1]['level']}→{points[-1]['display']}")
+    else:
+        summary = "暂无明细"
+    return {
+        "flag_key": CURVE_FLAG_KEY,
+        "formula_key": CURVE_FORMULA_KEY,
+        "use_formula": use_formula,
+        "formula": formula,
+        "entries": points,
+        "count": count,
+        "summary": summary,
+        # 公式启用时明细只读（单一来源：避免与公式双写）；关掉后明细可编。
+        "detail_editable": not use_formula,
+        "note": ("公式与明细单一来源：启用公式时以公式/摘要为准（明细仅供参考）；"
+                 "关闭「启用公式」后以明细的显式值为准，可编辑、可增删。"),
+    }
+
+
 def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
                 mmeta: Optional[ModuleMeta], view: "_PackView", depth: int) -> Dict[str, Any]:
     widget = _effective_widget(fm, value)
@@ -2096,7 +2210,7 @@ def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
                         invalid_cells.append(
                             {"row": i, "key": str(ck), "value": rv})
         desc["invalid_cells"] = invalid_cells
-    elif widget == "obj" and control != "kvtable":
+    elif widget == "obj" and control not in ("kvtable", "curve"):
         # 批14 #4：对象子字段**始终**按元数据出（登记了但数据未配置 → 未配置态可填），
         # 再补实际值里多出的键（fm=None → 兜底控件 + 标注）。值缺失/非映射时按空对象渲染。
         child_value = value if isinstance(value, Mapping) else {}
@@ -2107,6 +2221,10 @@ def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
     elif control == "kvtable":
         # 批15 #9：键值表格（键 → 标量/小结构）——列/行来自值形态 + 元数据；前端行内编辑。
         desc["kv_table"] = _kv_table_spec(
+            value if isinstance(value, Mapping) else {}, fm, view)
+    elif control == "curve":
+        # 批15 #2：曲线控件（等级 → 数值）——默认公式/摘要行，双击展开明细表。
+        desc["curve"] = _curve_spec(
             value if isinstance(value, Mapping) else {}, fm, view)
     elif widget == "map" and isinstance(value, Mapping):
         desc["rows"] = [
@@ -2229,21 +2347,30 @@ def _entry_open_keys(mmeta: Optional[ModuleMeta], entry_id: object,
     if mmeta is None or subject is _UNCONFIGURED or not isinstance(subject, Mapping):
         return False
     fm = mmeta.fields.get(str(entry_id))
-    return bool(fm is not None and fm.type == "obj" and not fm.children)
+    if fm is None or fm.type != "obj" or fm.children:
+        return False
+    # 批15 #2：曲线（整数序号 → 数值）走曲线控件，不算「动态键空间 + 子项增删」。
+    return not _is_curve_value(subject)
 
 
 def _entry_whole_table(mmeta: Optional[ModuleMeta], etype: str,
                        entry_id: str, subject: object) -> bool:
-    """条目是否**整体**渲染为键值表格（批15 #9，通用、不认模块/段名）。
+    """条目是否**整体**渲染为单一专门控件（批15 #9/#2，通用、不认模块/段名）。
 
     · map 模块的合成全表条目（`@table`）——一把看全模块的「键 → 小结构」；
     · 对象模块里「键 → 标量/小结构」的**动态键空间**条目（如 slot_defs / attr_types）——
-      当前是每键一个大块表单（objform），改一张紧凑表格。
-    固定 schema 的对象、宽容器、曲线不在此列，行为与既有完全一致。
+      当前是每键一个大块表单（objform），改一张紧凑表格；
+    · 对象模块里「整数序号 → 数值」的**曲线**条目（如 exp_curve）→ 曲线控件。
+    固定 schema 的对象、宽容器不在此列，行为与既有完全一致。
     """
     if entry_id == TABLE_ENTRY_ID and etype == "map":
         return True
-    return _entry_open_keys(mmeta, entry_id, subject) and _is_dense_map(subject)
+    if subject is _UNCONFIGURED or not isinstance(subject, Mapping):
+        return False
+    fm = mmeta.fields.get(str(entry_id)) if mmeta is not None else None
+    if fm is None or fm.type != "obj" or fm.children:
+        return False
+    return _is_dense_map(subject) or _is_curve_value(subject)
 
 
 def entry_detail(pack: object, module: object, entry_id: object,
@@ -2263,18 +2390,41 @@ def entry_detail(pack: object, module: object, entry_id: object,
     view = _PackView(pack_dir, manifest)
     labels = _display_labels(manifest, declared, pack_dir)
     associations: List[Dict[str, Any]] = []
-    # 批15 #9：整个条目就是一张键值表（map 模块全表 / 对象模块动态键空间）→ 单字段表格。
-    if entry_id == TABLE_ENTRY_ID and etype == "map":
+    page_spec = _find_page(pack_dir, manifest, declared, mod, entry_id)
+    if page_spec is not None:
+        # 批15 #2：包声明的「合并页」——同一栏里呈现多个顶层段（各自成一个展开子块）。
+        sroot: Mapping[str, Any] = data if isinstance(data, Mapping) else {}
+        page_label = str(page_spec["label"])
+        fields = []
+        for seg in page_spec["segments"]:
+            sfm = mmeta.fields.get(seg) if mmeta is not None else None
+            present = seg in sroot
+            d = _descriptor(seg, sfm, sroot.get(seg) if present else None,
+                            present, mmeta, view, 0)
+            d["group"] = page_label
+            d["subgroup"] = (sfm.label if sfm is not None and sfm.label else seg)
+            fields.append(d)
+        entry_name = page_label
+        subject = sroot
+        unconfigured = False
+        open_keys = False
+        groups = [{"name": page_label, "label": page_label, "count": len(fields)}]
+        # 合并页里的子块全部展开（一次看全三段）；折叠机制仍可复用（此处不折叠）。
+        blocks = _block_plan(fields, mmeta, collapse_named=False)
+    elif entry_id == TABLE_ENTRY_ID and etype == "map":
+        # 批15 #9：整个条目就是一张键值表（map 模块全表）→ 单字段表格。
         mapdata = data if isinstance(data, Mapping) else {}
         vm = mmeta.value_meta if mmeta is not None else None
         children = (dict(vm.children) if vm is not None and vm.type == "obj"
                     and vm.children else {})
         fm = FieldMeta(type="map", label=TABLE_ENTRY_TAG, children=children)
         entry_name = f"{labels.get(mod) or mod} · {TABLE_ENTRY_TAG}"
-        subject: object = mapdata
+        subject = mapdata
         unconfigured = False
         fields = [_descriptor(TABLE_ENTRY_ID, fm, mapdata, True, mmeta, view, 0)]
         open_keys = False
+        groups = _group_summary(fields, mmeta)
+        blocks = _block_plan(fields, mmeta)
     else:
         rows = _entry_rows(data, mmeta)
         match = next((row for row in rows if row[0] == entry_id), None)
@@ -2298,9 +2448,9 @@ def entry_detail(pack: object, module: object, entry_id: object,
                     f["deletable"] = True
         associations = _association_sections(pack_dir, manifest, declared, entry_id,
                                              subject, mmeta, view)
-    groups = _group_summary(fields, mmeta)
-    # 批15 #8：二级结构——每个分组下的折叠子块计划（大段默认折叠；字段不消失）。
-    blocks = _block_plan(fields, mmeta)
+        groups = _group_summary(fields, mmeta)
+        # 批15 #8：二级结构——每个分组下的折叠子块计划（大段默认折叠；字段不消失）。
+        blocks = _block_plan(fields, mmeta)
     return {
         "pack": str(pack),
         "pack_name": str(manifest.get("name", "") or pack),
@@ -2317,6 +2467,10 @@ def entry_detail(pack: object, module: object, entry_id: object,
         # 批15 #9：整条目键值表格（保存时按「整值键」写回，见 editor_ops._plan）。
         "whole_table": bool(_entry_whole_table(mmeta, etype, entry_id, subject)),
         "table_entry": entry_id == TABLE_ENTRY_ID,
+        # 批15 #2：合并页条目（包声明 segment_pages）——同栏呈现多个段。
+        "page": page_spec is not None,
+        "page_id": entry_id if page_spec is not None else "",
+        "page_segments": list(page_spec["segments"]) if page_spec is not None else [],
         "fields": fields,
         "groups": groups,
         "blocks": blocks,
@@ -2376,6 +2530,32 @@ def entry_slot(pack: object, module: object, entry_id: object,
     data = _read_json(pack_dir / f"{mod}.json")
     mmeta = _module_meta(mod, pack_dir)
     etype = _entry_type(mmeta, data)
+    # 批15 #2：包声明的「合并页」——subject = 整个对象模块数据，补丁键 = 各段名
+    # （`_plan` 用整包视图替换该模块；段 id / 数据文件 / 校验路径不变）。
+    page_spec = _find_page(pack_dir, manifest, declared, mod, entry_id)
+    if page_spec is not None:
+        sroot = data if isinstance(data, Mapping) else {}
+        base = {seg: (mmeta.fields.get(seg) if mmeta is not None else None)
+                or FieldMeta(type="obj") for seg in page_spec["segments"]}
+        return {
+            "pack_dir": pack_dir,
+            "manifest": manifest,
+            "declared": declared,
+            "module": mod,
+            "entry_type": etype,
+            "data": data,
+            "slot": None,
+            "entry_id": entry_id,
+            "name": str(page_spec["label"]),
+            "subject": sroot,
+            "unconfigured": False,
+            "open_keys": False,
+            "whole": False,
+            "page": True,
+            "page_segments": list(page_spec["segments"]),
+            "base": base,
+            "mmeta": mmeta,
+        }
     # 批15 #9：map 模块的合成「全表」条目（@table）→ 整模块一把编辑（键值表格）。
     if entry_id == TABLE_ENTRY_ID and etype == "map":
         mapdata = data if isinstance(data, Mapping) else {}

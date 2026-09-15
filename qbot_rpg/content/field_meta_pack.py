@@ -67,6 +67,9 @@ TOP_LEVEL_KEYS: Tuple[str, ...] = (
     "field_help",
     "group_labels",
     "entry_merge",
+    # 批15 #2：对象模块的「合并页」声明——把若干顶层段合成一个页面展示（纯展示层；
+    # 数据文件 / 段 id / 校验路径不动；保存时补丁按键写回同一对象）。
+    "segment_pages",
 )
 
 
@@ -87,6 +90,10 @@ class PackFieldMeta:
     # entry_merge（批12 #1，展示层聚合）：目标模块 → {"sources": [...], "keep_top_level": [...]}。
     # 语义 = 把 sources 的条目并入目标的条目列表展示；数据/模块 id/校验路径不变。
     entry_merge: Mapping[str, Mapping[str, Tuple[str, ...]]] = field(default_factory=dict)
+    # segment_pages（批15 #2，展示层合并页）：模块 → 页面数组；每页 = {id,label,segments,help}。
+    # 语义 = 把对象模块的若干顶层段合成一个「页面」展示（中栏一条、右栏同栏多子块）；
+    # 数据/段 id/校验路径不变——保存仍按键写回该对象模块。
+    segment_pages: Mapping[str, Tuple[Mapping[str, Any], ...]] = field(default_factory=dict)
 
 
 # -------------------------------------------------------------------------------------
@@ -273,6 +280,52 @@ def _validate_entry_merge(value: object, pack: str, key: str
     return out
 
 
+def _validate_segment_pages(value: object, pack: str, key: str
+                            ) -> Dict[str, Tuple[Mapping[str, Any], ...]]:
+    """`segment_pages` 形态校验并归一化（批15 #2）。
+
+    形态：`{"<模块>": [{"id": "...", "label": "...", "segments": ["<段>", ...], "help": "..."}]}`。
+    约束：模块/页面 id/label/段均为非空字符串；segments 非空且互不重复；同模块内页面 id 唯一；
+    只允许 id/label/segments/help 四个键（防写法漂移）。这里只校验**形态**；「模块/段是否真存在」
+    由编辑器读取层按框架登记与包实际数据过滤。
+    """
+    raw = _require_map(value, pack, key)
+    out: Dict[str, Tuple[Mapping[str, Any], ...]] = {}
+    for mod, pages in raw.items():
+        if not isinstance(mod, str) or not mod:
+            raise _fail(pack, key, f"含非法模块名（应为非空字符串）：{mod!r}")
+        if not isinstance(pages, list) or not pages:
+            raise _fail(pack, f"{key}.{mod}", "应为非空页面数组")
+        seen_ids: set = set()
+        norm: list = []
+        for i, page in enumerate(pages):
+            where = f"{key}.{mod}[{i}]"
+            if not isinstance(page, Mapping):
+                raise _fail(pack, where, f"应为对象，实际是{_type_name(page)}")
+            unknown = [str(k) for k in page
+                       if k not in ("id", "label", "segments", "help")]
+            if unknown:
+                raise _fail(pack, where,
+                            f"含未知键：{'、'.join(unknown)}；只允许 id / label / segments / help")
+            pid = page.get("id")
+            label = page.get("label")
+            if not isinstance(pid, str) or not pid:
+                raise _fail(pack, where, f"id 应为非空字符串，实际是{pid!r}")
+            if pid in seen_ids:
+                raise _fail(pack, where, f"页面 id 重复：{pid}")
+            if not isinstance(label, str) or not label:
+                raise _fail(pack, where, f"label 应为非空字符串，实际是{label!r}")
+            segs = _str_list(page.get("segments"), pack, f"{where}.segments")
+            help_text = page.get("help", "")
+            if help_text is not None and not isinstance(help_text, str):
+                raise _fail(pack, where, "help 应为字符串")
+            seen_ids.add(pid)
+            norm.append({"id": pid, "label": label, "segments": segs,
+                         "help": str(help_text or "")})
+        out[mod] = tuple(norm)
+    return out
+
+
 def _validate_schema_version(value: object, pack: str, key: str) -> int:
     if value is None:
         raise _fail(pack, key, f"缺失：应为整数 {SCHEMA_VERSION}")
@@ -309,6 +362,8 @@ def parse_field_meta(raw: object, pack: str) -> PackFieldMeta:
                     if "group_labels" in raw else {})
     entry_merge = (_validate_entry_merge(raw["entry_merge"], pack, "entry_merge")
                    if "entry_merge" in raw else {})
+    segment_pages = (_validate_segment_pages(raw["segment_pages"], pack, "segment_pages")
+                     if "segment_pages" in raw else {})
     return PackFieldMeta(
         pack=pack,
         module_labels=module_labels,
@@ -317,6 +372,7 @@ def parse_field_meta(raw: object, pack: str) -> PackFieldMeta:
         field_help=field_help,
         group_labels=group_labels,
         entry_merge=entry_merge,
+        segment_pages=segment_pages,
     )
 
 

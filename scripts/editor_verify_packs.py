@@ -54,6 +54,7 @@ _FRAMEWORK_CATALOG = frozenset(e.module for e in api.FRAMEWORK_MODULE_CATALOG)
 # 可渲染控件形态（api.EDIT_CONTROLS 是「字段类型 → 控件」映射表的唯一产物）。
 RENDERABLE_WIDGETS = frozenset({
     "text", "textarea", "number", "bool", "enum", "ref", "list", "obj", "map", "formula",
+    "curve",   # 批15 #2：整数序号 → 数值的曲线映射
 })
 RENDERABLE_CONTROLS = frozenset(api.EDIT_CONTROLS)
 # 模块条目形态（list 数组 / map 键值 / object 单对象分段）。

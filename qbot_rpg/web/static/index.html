@@ -506,6 +506,22 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
 .kvkeyin { width: 100%; }
 .kvtable td .ro-cell { max-width: none; }
 
+/* ---------- 曲线控件（批15 #2）：等级 → 数值的映射 ----------
+   默认只显示「公式/摘要行」（不铺开 35 行）；双击控件展开明细表（等级/数值，可增删）。
+   顶部开关「启用公式 / 使用明细」= 单一来源：公式启用时明细只读（仅供参考）。 */
+.curve { border: var(--bw) solid var(--line-faint); padding: var(--sp-4) var(--sp-5); }
+.curve-hd { display: flex; align-items: center; gap: var(--sp-6); flex-wrap: wrap; }
+.curve-sum { color: var(--accent); font-size: var(--fs-12); }
+.curve-cnt { color: var(--text-5); font-size: var(--fs-11); margin-left: auto; }
+.curve-formula { display: flex; align-items: center; gap: var(--sp-4); margin-top: var(--sp-4); }
+.curve-formula .cflab { color: var(--text-4); font-size: var(--fs-11); min-width: 2.5em; }
+.curve-formula .cin { flex: 1 1 auto; min-width: 0; }
+.curve-note { color: var(--text-5); font-size: var(--fs-11); margin-top: var(--sp-3); }
+.curvedetail { margin-top: var(--sp-4); border-top: var(--bw) solid var(--line-faint);
+  padding-top: var(--sp-4); }
+.curvedetail[hidden] { display: none; }
+.ro-tag { color: var(--text-5); font-size: var(--fs-11); }
+
 /* ---------- 块状换行布局（批5.1）：列表元素含嵌套结构化子字段时，逐条成块 ----------
    一张 N 列宽表在窄面板里必然横向滚动（V14），条件/键值编辑器塞进单元格又把行高撑高、
    同行其它列基线错位（V13）。规则：元素只要含嵌套子字段（列描述 nested=true，判定依据是
@@ -1558,6 +1574,84 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
 });
 /* EDITOR_KV_END */
 
+/* 曲线纯逻辑（批15 #2 · 无 DOM；浏览器挂 globalThis.EditorCurve，node 走 module.exports）。
+ * 模型：映射（整数序号 → 数值）⇄ {useFormula, formula, points:[{level,value}]}。
+ * 约定键名由后端 `curve.flag_key` / `curve.formula_key` 给出（前端不写死 use_formula）。
+ * 单一来源：useFormula 只决定「公式/摘要」与「明细」哪一方为权威；两者互不自动改写。 */
+/* EDITOR_CURVE_BEGIN */
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) { module.exports = factory(); }
+  else { root.EditorCurve = factory(); }
+})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+  function isMap(v) { return !!v && typeof v === "object" && !Array.isArray(v); }
+  function levelOf(k) {
+    var n = parseInt(String(k), 10);
+    return (isFinite(n) && String(n) === String(k)) ? n : null;
+  }
+  function fromValue(value, flagKey, formulaKey) {
+    var v = isMap(value) ? value : {};
+    var fk = flagKey || "use_formula";
+    var mk = formulaKey || "formula";
+    var flag = (typeof v[fk] === "boolean") ? v[fk] : true;   // 缺省 true = 保持现状
+    var formula = (typeof v[mk] === "string") ? v[mk] : "";
+    var points = [];
+    Object.keys(v).forEach(function (k) {
+      if (k === fk || k === mk) { return; }
+      var lv = levelOf(k);
+      if (lv === null) { return; }
+      points.push({ level: lv, value: v[k] });
+    });
+    points.sort(function (a, b) { return a.level - b.level; });
+    return { useFormula: flag, formula: formula, points: points };
+  }
+  function toValue(st, flagKey, formulaKey) {
+    var fk = flagKey || "use_formula";
+    var mk = formulaKey || "formula";
+    var state = st || {};
+    var out = {};
+    out[fk] = state.useFormula !== false;
+    if (state.formula) { out[mk] = String(state.formula); }
+    (state.points || []).forEach(function (p) {
+      if (!p || p.level === null || p.level === undefined || p.level === "") { return; }
+      var lv = parseInt(String(p.level), 10);
+      if (!isFinite(lv)) { return; }
+      out[String(lv)] = p.value;
+    });
+    return out;
+  }
+  function toggle(st) { st.useFormula = !st.useFormula; return st; }
+  function setPoint(st, i, value) {
+    if (st.points[i]) { st.points[i].value = value; }
+    return st;
+  }
+  function setLevel(st, i, lv) {
+    if (!st.points[i]) { return st; }
+    var n = parseInt(String(lv), 10);
+    st.points[i].level = isFinite(n) ? n : "";
+    st.points.sort(function (a, b) {
+      return (a.level === "" ? 1e9 : a.level) - (b.level === "" ? 1e9 : b.level);
+    });
+    return st;
+  }
+  function addPoint(st) {
+    var last = st.points.length ? st.points[st.points.length - 1].level : 0;
+    var lv = (typeof last === "number" && isFinite(last)) ? last + 1 : 1;
+    st.points.push({ level: lv, value: 0 });
+    return st;
+  }
+  function delPoint(st, i) { st.points.splice(i, 1); return st; }
+  function summary(st) {
+    var pts = st.points || [];
+    if (!pts.length) { return "暂无明细"; }
+    return "共 " + pts.length + " 级 · " + pts[0].level + "→" + pts[0].value
+      + " · " + pts[pts.length - 1].level + "→" + pts[pts.length - 1].value;
+  }
+  return { fromValue: fromValue, toValue: toValue, toggle: toggle,
+           setPoint: setPoint, setLevel: setLevel, addPoint: addPoint,
+           delPoint: delPoint, summary: summary, levelOf: levelOf };
+});
+/* EDITOR_CURVE_END */
+
 /* 批6 纯逻辑（无 DOM；浏览器挂 globalThis.EditorEntry，node 下走 module.exports）：
  *  · 检索：按名称/ID 过滤当前模块条目；跨模块检索按模块分组（全局检索的数据源是
  *    后端 entry-index，前端只在本地过滤，不逐键请求）。
@@ -1682,7 +1776,9 @@ var state = {
   // 批14 #6①：当前条目是否为「动态键空间」（对象型段的 obj 字段未登记子字段 → 可增删子项）
   openKeys: false,
   // 批15 #9：map 模块的「全表」合成入口（键值表格）；其余模块为 null
-  tableEntry: null
+  tableEntry: null,
+  // 批15 #2：包声明的「合并页」（对象模块的若干段合成一页）
+  pages: []
 };
 var draft = EditorDraft.newDraft();
 
@@ -3165,6 +3261,8 @@ function loadEntries() {
       state.entries = data.entries || [];
       // 批15 #9：map 模块的「全表」合成入口（键值表格）；其余模块为 null。
       state.tableEntry = data.table_entry || null;
+      // 批15 #2：包声明的「合并页」（对象模块的若干段合成一页；段条目仍在 entries 里）
+      state.pages = data.pages || [];
       // 批12 #1：聚合视图（被并入模块的条目按来源分小节；无声明时为 []）
       state.mergeSections = data.merge_sections || [];
       state.listLabel = data.label || state.module;
@@ -3220,11 +3318,32 @@ function renderEntries() {
     te.addEventListener("click", function () { selectEntry(state.tableEntry.id, state.module); });
     box.appendChild(te);
   }
+  // 批15 #2：合并页置顶（对应段从平铺列表里收进页行；详细仍可按段单独打开）——
+  // 页行点击 → 同一栏里呈现该页多个段（合并页详情）。
+  var covered = {};
+  (state.pages || []).forEach(function (pg) {
+    var d = document.createElement("div");
+    d.className = "item pageitem" + ((state.entry === pg.id
+      && (state.entryModule || state.module) === state.module) ? " on" : "");
+    d.dataset.id = pg.id;
+    d.dataset.mod = state.module;
+    d.textContent = pg.name;
+    var tag = document.createElement("span");
+    tag.className = "unc";
+    tag.textContent = "合并页 · " + (pg.segments || []).length + " 段";
+    d.appendChild(tag);
+    d.title = pg.name + (pg.help ? "：" + pg.help : "")
+      + "（点击在同一栏查看/编辑这些段）";
+    d.addEventListener("click", function () { selectEntry(pg.id, state.module); });
+    box.appendChild(d);
+    (pg.segments || []).forEach(function (s) { covered[s] = true; });
+  });
+  var ownEntries = (state.entries || []).filter(function (e) { return !covered[e.id]; });
   // 中栏过滤作用域写清：当前模块内，按名称或 ID 过滤（EditorEntry 纯逻辑）
   // 批12 #1：聚合视图按「来源模块」分小节（本模块 + 各并入来源），过滤在小节内生效。
   var grouped = (state.mergeSections || []).length > 0;
   var plan = EditorMerge.filterPlan(
-    EditorMerge.sectionPlan(state.entries, state.mergeSections, state.module, state.listLabel),
+    EditorMerge.sectionPlan(ownEntries, state.mergeSections, state.module, state.listLabel),
     state.filter, EditorEntry.match);
   var cur = state.entryModule || state.module;
   plan.forEach(function (s) {
@@ -3774,14 +3893,16 @@ function groupPaneHtml(g, i, blocksMap) {
       body += '<div class="rows2">' + fields.map(fieldRow).join("") + "</div>";
       return;
     }
+    var collapsed = EditorBlocks.collapsed({}, b);   // 后端块计划决定默认展开/折叠
     body += '<section class="subblk" data-sb="' + esc(b.name) + '">'
       + '<button type="button" class="sbhead" data-sbtoggle="' + esc(b.name)
-      + '" aria-expanded="false" title="'
+      + '" aria-expanded="' + (collapsed ? "false" : "true") + '" title="'
       + esc("展开 / 收起「" + b.label + "」子块（" + fields.length + " 个字段）") + '">'
-      + '<span class="caret">\u25b8</span>' + esc(b.label)
+      + '<span class="caret">' + (collapsed ? "\u25b8" : "\u25be") + "</span>"
+      + esc(b.label)
       + " <b>" + fields.length + "</b>"
-      + '<span class="sbhint">点开展开</span></button>'
-      + '<div class="sbbody" hidden>'
+      + '<span class="sbhint">' + (collapsed ? "点开展开" : "点收起") + "</span></button>"
+      + '<div class="sbbody"' + (collapsed ? " hidden" : "") + '>'
       + '<div class="rows2">' + fields.map(fieldRow).join("") + "</div>"
       + "</div></section>";
   });
@@ -3872,6 +3993,7 @@ function renderDetail(d) {
   bindObjSections(el("p-body"));
   bindOpenKeySections(el("p-body"));
   bindKvSections(el("p-body"));
+  bindCurveSections(el("p-body"));
   bindAssocSections();
   bindHelp();
   state.pendingDrafts = {};   // 已消费（registerForm 回填完毕）
@@ -3948,11 +4070,13 @@ function jumpTo(mod, entry) {
   var pos = findModule(dest);
   el("list-title").textContent = pos ? pos.label : dest;
   return loadEntries().then(function () {
+    // 批15 #2：目标段若属于某个合并页 → 落到页上（合并页详情同栏编辑这些段）
+    var target = pageOfEntry(mod, entry) || entry;
     var inOwn = (state.entries || []).some(function (e) { return e.id === entry; });
     var inMerged = (state.mergeSections || []).some(function (s) {
       return s.module === mod && (s.entries || []).some(function (e) { return e.id === entry; });
     });
-    if (inOwn || inMerged) { return selectEntry(entry, mod); }
+    if (inOwn || inMerged) { return selectEntry(target, mod); }
   });
 }
 
@@ -3970,6 +4094,16 @@ function mergeParent(mod) {
   }
   scan(state.modules);
   scan(state.views);
+  return found;
+}
+
+// 批15 #2：被合并页覆盖的段 → 该页 id（全局检索命中段时跳转落到页上；无则 null）
+function pageOfEntry(mod, entry) {
+  if (mod !== state.module) { return null; }
+  var found = null;
+  (state.pages || []).forEach(function (pg) {
+    if ((pg.segments || []).indexOf(entry) >= 0) { found = pg.id; }
+  });
   return found;
 }
 
@@ -4093,6 +4227,8 @@ function editControl(f) {
         + mapFieldInner(f, v) + "</div>";
     case "kvtable":
       return kvTableEdit(f);
+    case "curve":
+      return curveEdit(f);
     case "text":
     default:
       return '<input class="cin" type="text" data-key="' + esc(f.key)
@@ -4610,6 +4746,174 @@ function bindKvSections(root) {
       var rows = EditorKv.delRow(kvRowsForCtx(ctx, f), btn.dataset.kvdel);
       EditorDraft.set(ctx.draft, f.key, EditorKv.value(rows, kvObjMode(f)), f.value);
       rerenderKvField(f, wrap);
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// 批15 #2 · 曲线控件（curve）：整数序号 → 数值的映射；默认「公式/摘要行」，双击展开明细表。
+// 约定键名来自后端 `curve.flag_key` / `curve.formula_key`（前端不写死 use_formula）。
+// 单一来源：启用公式时明细只读（仅供参考）；关闭后可编辑明细（以明细显式值为准）。两者互不自动改写。
+// ---------------------------------------------------------------------------
+var CURVE_OPEN = {};   // fieldKey → 明细是否展开（纯视图状态，不触碰草稿）
+
+function curveKeys(f) {
+  var c = f.curve || {};
+  return { flag: c.flag_key || "use_formula", formula: c.formula_key || "formula" };
+}
+
+function curveStateOf(f) {
+  var k = curveKeys(f);
+  return EditorCurve.fromValue(currentFieldValue(f), k.flag, k.formula);
+}
+
+function curveEdit(f) {
+  return '<div class="lwrap curvewrap" data-curvewrap="' + esc(f.key) + '">'
+    + curveBodyHtml(f) + "</div>";
+}
+
+function curveBodyHtml(f) {
+  var c = f.curve || {};
+  var k = curveKeys(f);
+  var st = curveStateOf(f);
+  var useFormula = st.useFormula;
+  var open = !!CURVE_OPEN[f.key];
+  var readonlyPart = useFormula ? " readonly" : "";
+  var html = '<div class="curve" data-curve="' + esc(f.key)
+    + '" title="双击展开 / 收起各等级明细表">';
+  html += '<div class="curve-hd">'
+    + '<label class="ctl-bool" title="启用公式时以公式/摘要为准；关闭后以明细显式值为准">'
+    + '<input type="checkbox" data-curveflag="' + esc(f.key) + '"'
+    + (useFormula ? " checked" : "") + '> <span class="btxt">'
+    + (useFormula ? "启用公式" : "使用明细") + "</span></label>"
+    + '<span class="curve-sum">' + esc(st.formula ? st.formula : c.summary || "")
+    + "</span>"
+    + '<span class="curve-cnt">' + st.points.length + " 级</span></div>";
+  html += '<div class="curve-formula"><span class="cflab">公式</span>'
+    + '<input class="cin" type="text" data-curveformula="' + esc(f.key)
+    + '" placeholder="' + esc("（未声明公式，摘要按明细推导）") + '" value="'
+    + esc(st.formula) + '"></div>';
+  html += '<div class="curve-note">' + esc(c.note || "")
+    + "（双击本控件展开明细）</div>";
+  html += '<div class="curvedetail"' + (open ? "" : " hidden") + '>'
+    + '<div class="ltable-scroll"><table class="ltable ltable-edit"><thead><tr>'
+    + '<th class="num">等级</th><th class="num">数值</th><th class="op">操作</th></tr></thead><tbody>';
+  st.points.forEach(function (p, i) {
+    html += "<tr>"
+      + '<td><input class="cin lcell" type="number" step="1" data-curvelevel="' + esc(f.key)
+      + '" data-curverow="' + i + '" value="' + esc(p.level) + '"' + readonlyPart + "></td>"
+      + '<td><input class="cin lcell" type="number" step="any" data-curveval="' + esc(f.key)
+      + '" data-curverow="' + i + '" value="' + esc(p.value == null ? "" : p.value) + '"'
+      + readonlyPart + "></td>"
+      + '<td class="op">' + (useFormula ? '<span class="ro-tag">公式启用中</span>'
+        : '<button type="button" class="ldel" data-curvedel="' + i
+          + '" data-curvefield="' + esc(f.key)
+          + '" title="删除本级（只改草稿）">删除</button>') + "</td></tr>";
+  });
+  if (!st.points.length) {
+    html += '<tr><td colspan="3" class="ex">（暂无明细）</td></tr>';
+  }
+  html += "</tbody></table></div>";
+  if (!useFormula) {
+    html += '<button type="button" class="ladd" data-curveadd="' + esc(f.key)
+      + '" title="新增一级（只改草稿）">+ 添加一级</button>';
+  }
+  return html + "</div></div>";
+}
+
+function curveCommit(ctx, f, st) {
+  var k = curveKeys(f);
+  EditorDraft.set(ctx.draft, f.key, EditorCurve.toValue(st, k.flag, k.formula), f.value);
+}
+
+function rerenderCurveField(f, wrap) {
+  if (!wrap || !f) { return; }
+  var ctx = ctxFromNode(wrap);
+  var prev = renderCtx;
+  renderCtx = ctx;
+  wrap.innerHTML = curveBodyHtml(f);
+  renderCtx = prev;
+  bindCurveSections(wrap);
+  markDirty();
+}
+
+function bindCurveSections(root) {
+  Array.prototype.forEach.call(root.querySelectorAll("[data-curve]"), function (box) {
+    box.addEventListener("dblclick", function () {
+      var f = ctxFromNode(box).fieldIndex[box.dataset.curve];
+      if (!f) { return; }
+      CURVE_OPEN[f.key] = !CURVE_OPEN[f.key];
+      rerenderCurveField(f, box.closest(".curvewrap"));
+    });
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-curveflag]"), function (inp) {
+    inp.addEventListener("change", function () {
+      var ctx = ctxFromNode(inp);
+      var f = ctx.fieldIndex[inp.dataset.curveflag];
+      if (!f) { return; }
+      var st = EditorCurve.fromValue(ctxFieldValue(ctx, f), curveKeys(f).flag, curveKeys(f).formula);
+      st.useFormula = !!inp.checked;
+      curveCommit(ctx, f, st);
+      rerenderCurveField(f, inp.closest(".curvewrap"));
+    });
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-curveformula]"), function (inp) {
+    inp.addEventListener("input", function () {
+      var ctx = ctxFromNode(inp);
+      var f = ctx.fieldIndex[inp.dataset.curveformula];
+      if (!f) { return; }
+      var st = EditorCurve.fromValue(ctxFieldValue(ctx, f), curveKeys(f).flag, curveKeys(f).formula);
+      st.formula = inp.value;
+      curveCommit(ctx, f, st);
+      markDirty();
+    });
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-curvelevel]"), function (inp) {
+    inp.addEventListener("input", function () {
+      var ctx = ctxFromNode(inp);
+      var f = ctx.fieldIndex[inp.dataset.curvelevel];
+      if (!f) { return; }
+      var st = EditorCurve.fromValue(ctxFieldValue(ctx, f), curveKeys(f).flag, curveKeys(f).formula);
+      EditorCurve.setLevel(st, Number(inp.dataset.curverow), inp.value);
+      curveCommit(ctx, f, st);
+      markDirty();
+    });
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-curveval]"), function (inp) {
+    inp.addEventListener("input", function () {
+      var ctx = ctxFromNode(inp);
+      var f = ctx.fieldIndex[inp.dataset.curveval];
+      if (!f) { return; }
+      var st = EditorCurve.fromValue(ctxFieldValue(ctx, f), curveKeys(f).flag, curveKeys(f).formula);
+      var n = inp.value === "" ? null : Number(inp.value);
+      EditorCurve.setPoint(st, Number(inp.dataset.curverow), isNaN(n) ? inp.value : n);
+      curveCommit(ctx, f, st);
+      markDirty();
+    });
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-curveadd]"), function (btn) {
+    btn.addEventListener("click", function () {
+      var ctx = ctxFromNode(btn);
+      var f = ctx.fieldIndex[btn.dataset.curveadd];
+      if (!f) { return; }
+      var st = EditorCurve.fromValue(ctxFieldValue(ctx, f), curveKeys(f).flag, curveKeys(f).formula);
+      EditorCurve.addPoint(st);
+      CURVE_OPEN[f.key] = true;
+      curveCommit(ctx, f, st);
+      rerenderCurveField(f, btn.closest(".curvewrap"));
+    });
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-curvedel]"), function (btn) {
+    btn.addEventListener("click", function () {
+      var ctx = ctxFromNode(btn);
+      var wrap = btn.closest(".curvewrap");
+      var f = ctx.fieldIndex[btn.dataset.curvefield];
+      if (!f) { return; }
+      var st = EditorCurve.fromValue(ctxFieldValue(ctx, f), curveKeys(f).flag, curveKeys(f).formula);
+      EditorCurve.delPoint(st, Number(btn.dataset.curvedel));
+      CURVE_OPEN[f.key] = true;
+      curveCommit(ctx, f, st);
+      rerenderCurveField(f, wrap);
     });
   });
 }

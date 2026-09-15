@@ -2136,6 +2136,12 @@ def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
     # 固定 schema（登记了 children）的对象保持 objform——不把已声明子字段的对象摊成表。
     if control == "objform" and open_keys_of(fm) and _is_dense_map(value):
         control = "kvtable"
+    # 批15 #2/#9 回归修复：**对象型字段的结构（children / open_keys）与呈现控件解耦**——
+    # 表格化 / 曲线化只改呈现，不删结构（一号原则：框架支持的子字段必须仍然可见可编）。
+    # 曲线控件会把 widget 由 obj 纠偏为 curve，故按**元数据**判定对象性，保证 exp_curve
+    # 这类字段的嵌套 children / 动态键空间标记仍照常输出。
+    obj_like = (widget == "obj"
+                or (fm is not None and _widget_for_type(fm.type) == "obj"))
     desc: Dict[str, Any] = {
         "key": key,
         "label": label,
@@ -2210,7 +2216,7 @@ def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
                         invalid_cells.append(
                             {"row": i, "key": str(ck), "value": rv})
         desc["invalid_cells"] = invalid_cells
-    elif widget == "obj" and control not in ("kvtable", "curve"):
+    elif obj_like:
         # 批14 #4：对象子字段**始终**按元数据出（登记了但数据未配置 → 未配置态可填），
         # 再补实际值里多出的键（fm=None → 兜底控件 + 标注）。值缺失/非映射时按空对象渲染。
         child_value = value if isinstance(value, Mapping) else {}
@@ -2218,7 +2224,8 @@ def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
         # 动态键空间（元数据未登记子字段）→ 前端给「+ 子项 / ✕ 删除」，可增删键；
         # 登记了子字段 → 固定 schema，只渲染登记项，不增删键（不臆造键）。
         desc["open_keys"] = open_keys_of(fm)
-    elif control == "kvtable":
+    # 呈现层附加（与上面的结构输出**并列**，不是互斥分支）：表格 / 曲线各自带规格。
+    if control == "kvtable":
         # 批15 #9：键值表格（键 → 标量/小结构）——列/行来自值形态 + 元数据；前端行内编辑。
         desc["kv_table"] = _kv_table_spec(
             value if isinstance(value, Mapping) else {}, fm, view)
@@ -2226,7 +2233,9 @@ def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
         # 批15 #2：曲线控件（等级 → 数值）——默认公式/摘要行，双击展开明细表。
         desc["curve"] = _curve_spec(
             value if isinstance(value, Mapping) else {}, fm, view)
-    elif widget == "map" and isinstance(value, Mapping):
+    if widget == "map" and isinstance(value, Mapping):
+        # 批15 #9 回归修复：map 字段表格化（control → kvtable）后，**旧有的 rows 结构仍照常输出**
+        # ——表格化只加呈现，不删结构；前端按 control 渲染 kvtable，rows 供既有消费者/对拍口径。
         desc["rows"] = [
             {"key": str(k), "value": v,
              "display": _scalar_display(v, _effective_widget(None, v), view)}

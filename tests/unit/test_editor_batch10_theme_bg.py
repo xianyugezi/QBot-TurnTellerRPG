@@ -36,7 +36,7 @@ REPO = Path(api.repo_root())
 HTML = REPO / "qbot_rpg" / "web" / "static" / "index.html"
 TOKENS = REPO / "qbot_rpg" / "web" / "static" / "tokens.css"
 
-BATCH_NOTE = "批14 · 可编辑性与提示"
+BATCH_NOTE = "批15 · 页面化与曲线"
 
 
 def _html() -> str:
@@ -528,6 +528,7 @@ Promise.resolve()
 def test_footer_batch_string_is_current() -> None:
     html = _html()
     assert BATCH_NOTE in html
+    assert "批14 · 可编辑性与提示" not in html
     assert "批13.1 · 段入口" not in html
     assert "批11 · 内容包导出/导入" not in html
     assert "批9 · 配色切换" not in html
@@ -536,7 +537,7 @@ def test_footer_batch_string_is_current() -> None:
     assert "批3 · 分区页签" not in html
     # 产品名不含批次（批9.2 约束不回退）
     comp = re.search(r'<div class="panel-ft">(.*?)</div>', html, re.S)
-    assert comp is not None and "批14" in comp.group(1)
+    assert comp is not None and "批15" in comp.group(1)
 
 
 def test_batch10_frontend_has_no_pack_business_names() -> None:

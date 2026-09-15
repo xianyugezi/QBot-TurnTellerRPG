@@ -70,6 +70,20 @@ AUTO_MORE_AFTER = 8               # 主块最多常驻展示的字段数（其�
 AUTO_MORE_BLOCK = "@more"         # 隐式「更多字段」块的稳定机器键（不写进任何数据）
 MORE_FIELDS_LABEL = "更多字段"     # 隐式块的中文兜底显示名（包可用 subgroup_labels 覆盖）
 
+# 批15 #9：键值表格（kvtable）——「键 → 标量值/小结构」的密集映射用紧凑表格渲染
+# （行内编辑 + 增删行 + 表头），而不是一行一个大块表单。通用判定只看值形态，不认字段名。
+KV_KEY_LABEL = "键"
+KV_VALUE_LABEL = "值"
+KV_MAX_STRUCT_KEYS = 8            # 「小结构」的子键上限（超出视为宽容器，不走键值表格）
+# map 模块的「全表」合成条目标识（仅读列表/详情合成，不进数据、不进条目索引）。
+TABLE_ENTRY_ID = "@table"
+TABLE_ENTRY_TAG = "全表 · 表格"
+# 批15 #2：曲线控件对「等级 → 数值」映射的约定键（与 id/name 同级的框架约定，不是业务字段名）：
+#   use_formula = 启用/禁用公式（缺省 true = 保持现状；关掉则以明细表的显式值为准）；
+#   formula     = 公式文本（可选；缺省时按明细推导摘要行）。
+CURVE_FLAG_KEY = "use_formula"
+CURVE_FORMULA_KEY = "formula"
+
 
 class EditorError(Exception):
     """编辑器读取层领域异常基类（宿主 scripts/editor_host.py 映射为 HTTP JSON）。"""
@@ -686,6 +700,13 @@ def list_entries(pack: object, module: object, root: Optional[object] = None) ->
     #   count = 全部条目（含未配置段）；configured_count = 包数据里真有的；
     #   unconfigured_count = 框架已登记但本包未配置的段。
     unconfigured_count = sum(1 for _e, _n, val in rows if val is _UNCONFIGURED)
+    # 批15 #9：map 模块（键 → 值）另给一个「全表」合成入口（只读展示，不进计数/索引）——
+    # 一把看全 / 编辑整张「键 → 标量/小结构」表，而不是逐个键点开表单。
+    table_entry = None
+    if etype == "map":
+        table_entry = {"id": TABLE_ENTRY_ID,
+                       "name": f"{labels.get(mod) or mod} · {TABLE_ENTRY_TAG}",
+                       "table": True}
     return {
         "pack": str(pack),
         "module": mod,
@@ -696,6 +717,8 @@ def list_entries(pack: object, module: object, root: Optional[object] = None) ->
         "unconfigured_count": unconfigured_count,
         "unconfigured_tag": UNCONFIGURED_TAG,
         "entries": [_entry_brief(eid, name, _val) for eid, name, _val in rows],
+        # 批15 #9：整表入口（map 模块；其余模块为 null → 前端不渲染）
+        "table_entry": table_entry,
         # 批12 #1：聚合视图（无声明时 = 空列表 / total_count == count，行为与现状一致）
         "merge_sections": sections,
         "merged_count": merged_count,
@@ -858,11 +881,12 @@ _EDIT_BY_WIDGET: Dict[str, Tuple[str, bool]] = {
     "formula": ("text", True),  # 表达式文本；值实为对象时按值形态纠偏为 objform
     "list": ("listtable", True),
     "obj": ("objform", True),
-    "map": ("readonly", False),
+    "map": ("kvtable", True),   # 批15 #9：键值表格（键 → 标量/小结构，行内编辑 + 增删行）
 }
 EDIT_CONTROLS: Tuple[str, ...] = (
     "text", "textarea", "number", "bool", "select", "ref",
     "listtable", "reflist", "readonly", "condition", "maptable", "objform",
+    "kvtable", "curve",
 )
 # 批次可编辑控件集：显式声明的 condition / maptable / objform 归为可编辑（前端按 control 渲染）。
 _READONLY_CONTROLS: Tuple[str, ...] = ("readonly",)
@@ -883,7 +907,7 @@ def is_editable_control(control: Optional[str]) -> bool:
 # 成块、占满容器宽度（不再把条件编辑器/键值表格塞进单元格、不再横向滚动 9 列宽表）。
 # 判定只依据 control（§三 映射表的产物），不认任何业务字段名——换包/换模块零改动。
 _NESTED_CONTROLS: Tuple[str, ...] = ("condition", "maptable", "readonly", "listtable",
-                                     "objform")
+                                     "objform", "kvtable", "curve")
 
 
 def is_nested_control(control: Optional[str]) -> bool:
@@ -1739,6 +1763,9 @@ def _column(key: str, fm: Optional[FieldMeta], key_label: Optional[str] = None,
         "unit": fm.unit if fm is not None else "",
         "help": fm.help if fm is not None else "",
         "help_card": help_card(key, fm, value),
+        # 批15 #9：列元数据未登记（键值表格按值推断的列）→ 与主表单同口径的兜底标注。
+        "meta_unregistered": fm is None,
+        "meta_note": META_UNREGISTERED_NOTE if fm is None else "",
     }
     # 批5：条件行 / 键值对表格单元格的额外声明（主体/比较符/引用目标）
     if control == "condition":
@@ -1851,6 +1878,135 @@ def _object_children(fm: Optional[FieldMeta], value: Mapping[str, Any],
     return _build_fields(base, value, mmeta, view, depth)
 
 
+# -------------------------------------------------------------------------------------
+# 批15 #9：键值表格（kvtable）——「键 → 标量值 / 小结构」的密集映射。
+# 判定/列/行全部由**值形态 + 元数据**决定，不认任何字段名；只影响控件，不改校验语义。
+# -------------------------------------------------------------------------------------
+def _is_scalarish(value: object) -> bool:
+    """标量（含 None）：文本/数字/布尔——可放进一个单元格行内编辑。"""
+    return value is None or isinstance(value, (str, int, float, bool))
+
+
+def _is_small_struct(value: object) -> bool:
+    """小结构：键数 <= KV_MAX_STRUCT_KEYS 且叶子全为标量（值 → 一排列）。"""
+    if not isinstance(value, Mapping) or not value:
+        return False
+    if len(value) > KV_MAX_STRUCT_KEYS:
+        return False
+    return all(_is_scalarish(v) for v in value.values())
+
+
+def _is_curve_value(value: object) -> bool:
+    """曲线形态判定（通用）：键为整数序号、值为数字的映射（含可选约定标记键）。
+
+    `use_formula`（布尔）与 `formula`（文本）是曲线控件的-frame 约定键，不参与「整数键」判定；
+    其余键必须可解析为整数、值必须是数字（bool 不算数字）。空/单点/非数字 → 不是曲线。
+    """
+    if not isinstance(value, Mapping):
+        return False
+    points = 0
+    for k, v in value.items():
+        ks = str(k)
+        if ks in (CURVE_FLAG_KEY, CURVE_FORMULA_KEY):
+            if ks == CURVE_FLAG_KEY and not isinstance(v, bool):
+                return False
+            if ks == CURVE_FORMULA_KEY and not isinstance(v, str):
+                return False
+            continue
+        try:
+            int(ks)
+        except (TypeError, ValueError):
+            return False
+        if isinstance(v, bool) or not isinstance(v, (int, float)):
+            return False
+        points += 1
+    return points >= 2
+
+
+def _is_dense_map(value: object) -> bool:
+    """「键 → 标量 / 小结构」的密集映射（曲线除外）→ 走键值表格；否则保持既有控件。"""
+    if not isinstance(value, Mapping) or len(value) < 2:
+        return False
+    if _is_curve_value(value):
+        return False
+    return all(_is_scalarish(v) or _is_small_struct(v) for v in value.values())
+
+
+def _kv_columns(value: Mapping[str, Any], fm: Optional[FieldMeta],
+                view: "_PackView") -> Tuple[bool, List[Dict[str, Any]]]:
+    """键值表格的列：值全为映射 → 逐子键出列（元数据 children 优先，缺省按值推断）；
+    否则单列「值」（控件按样本值推断）。返回 (是否小结构模式, 列描述)。"""
+    vals = [v for v in value.values() if v is not None]
+    obj_mode = bool(vals) and all(isinstance(v, Mapping) for v in vals)
+    cols: List[Dict[str, Any]] = []
+    if obj_mode:
+        child_meta: Mapping[str, FieldMeta] = (
+            dict(fm.children) if fm is not None and fm.children else {})
+        keys: List[str] = [str(k) for k in child_meta]
+        for v in vals:
+            for k in v:
+                if str(k) not in keys:
+                    keys.append(str(k))
+        for k in keys:
+            sample = next((v[k] for v in vals if isinstance(v, Mapping) and k in v), None)
+            cols.append(_column(k, child_meta.get(k), value=sample))
+    else:
+        sample = vals[0] if vals else None
+        col = _column("value", None, key_label=KV_VALUE_LABEL, value=sample)
+        if isinstance(sample, (Mapping, list)):
+            # 宽容器（列表/嵌套映射）不做行内编辑，按 JSON 只读展示（不臆造可编辑形态）
+            col["control"] = "readonly"
+        cols.append(col)
+    return obj_mode, cols
+
+
+def _kv_rows(value: Mapping[str, Any], cols: List[Dict[str, Any]], obj_mode: bool,
+             view: "_PackView") -> List[Dict[str, Any]]:
+    """键值表格的行：键 + （小结构 → 各列 / 标量 → 单列）；同时给只读 display 与原始值。
+
+    **缺失的子键不进 cells**（只给 display 空串）：编辑后按 cells 重建整表时，缺失键保持
+    缺失（不写入 null）——避免把「可选字段未配置」保存成显式 null 触发类型校验。
+    """
+    out: List[Dict[str, Any]] = []
+    for k, v in value.items():
+        cells: Dict[str, Any] = {}
+        display: Dict[str, str] = {}
+        for col in cols:
+            if obj_mode:
+                present = isinstance(v, Mapping) and col["key"] in v
+                raw = v[col["key"]] if present else None
+                display[col["key"]] = (
+                    _json_text(raw) if isinstance(raw, (Mapping, list))
+                    else _scalar_display(raw, col["widget"], view, col["ref_target"]))
+                if present:
+                    cells[col["key"]] = raw
+                continue
+            raw = v
+            display[col["key"]] = (
+                _json_text(raw) if isinstance(raw, (Mapping, list))
+                else _scalar_display(raw, col["widget"], view, col["ref_target"]))
+            cells[col["key"]] = raw
+        out.append({"key": str(k), "cells": cells, "display": display,
+                    "value": None if obj_mode else v})
+    return out
+
+
+def _kv_table_spec(value: Mapping[str, Any], fm: Optional[FieldMeta],
+                   view: "_PackView") -> Dict[str, Any]:
+    """键值表格描述（前端据 control=kvtable 渲染；列/行全来自值形态 + 元数据）。"""
+    obj_mode, cols = _kv_columns(value, fm, view)
+    return {
+        "mode": "obj" if obj_mode else "scalar",
+        "columns": cols,
+        "rows": _kv_rows(value, cols, obj_mode, view),
+        "row_count": len(value),
+        "key_label": KV_KEY_LABEL,
+        "value_label": KV_VALUE_LABEL,
+        # 动态键空间（元数据未登记子字段）→ 键可改名、可增删；固定 schema → 键只读。
+        "open_keys": open_keys_of(fm),
+    }
+
+
 def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
                 mmeta: Optional[ModuleMeta], view: "_PackView", depth: int) -> Dict[str, Any]:
     widget = _effective_widget(fm, value)
@@ -1862,6 +2018,10 @@ def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
     if not multiline and widget == "text":
         multiline = _is_long_text(value)  # 元数据未声明时的兜底（长文本仍给多行控件）
     control = control_for(fm, widget, multiline)
+    # 批15 #9：**动态键空间**的「键 → 标量/小结构」密集映射 → 键值表格（不再是每键一个大块表单）。
+    # 固定 schema（登记了 children）的对象保持 objform——不把已声明子字段的对象摊成表。
+    if control == "objform" and open_keys_of(fm) and _is_dense_map(value):
+        control = "kvtable"
     desc: Dict[str, Any] = {
         "key": key,
         "label": label,
@@ -1936,7 +2096,7 @@ def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
                         invalid_cells.append(
                             {"row": i, "key": str(ck), "value": rv})
         desc["invalid_cells"] = invalid_cells
-    elif widget == "obj":
+    elif widget == "obj" and control != "kvtable":
         # 批14 #4：对象子字段**始终**按元数据出（登记了但数据未配置 → 未配置态可填），
         # 再补实际值里多出的键（fm=None → 兜底控件 + 标注）。值缺失/非映射时按空对象渲染。
         child_value = value if isinstance(value, Mapping) else {}
@@ -1944,6 +2104,10 @@ def _descriptor(key: str, fm: Optional[FieldMeta], value: object, present: bool,
         # 动态键空间（元数据未登记子字段）→ 前端给「+ 子项 / ✕ 删除」，可增删键；
         # 登记了子字段 → 固定 schema，只渲染登记项，不增删键（不臆造键）。
         desc["open_keys"] = open_keys_of(fm)
+    elif control == "kvtable":
+        # 批15 #9：键值表格（键 → 标量/小结构）——列/行来自值形态 + 元数据；前端行内编辑。
+        desc["kv_table"] = _kv_table_spec(
+            value if isinstance(value, Mapping) else {}, fm, view)
     elif widget == "map" and isinstance(value, Mapping):
         desc["rows"] = [
             {"key": str(k), "value": v,
@@ -2068,6 +2232,20 @@ def _entry_open_keys(mmeta: Optional[ModuleMeta], entry_id: object,
     return bool(fm is not None and fm.type == "obj" and not fm.children)
 
 
+def _entry_whole_table(mmeta: Optional[ModuleMeta], etype: str,
+                       entry_id: str, subject: object) -> bool:
+    """条目是否**整体**渲染为键值表格（批15 #9，通用、不认模块/段名）。
+
+    · map 模块的合成全表条目（`@table`）——一把看全模块的「键 → 小结构」；
+    · 对象模块里「键 → 标量/小结构」的**动态键空间**条目（如 slot_defs / attr_types）——
+      当前是每键一个大块表单（objform），改一张紧凑表格。
+    固定 schema 的对象、宽容器、曲线不在此列，行为与既有完全一致。
+    """
+    if entry_id == TABLE_ENTRY_ID and etype == "map":
+        return True
+    return _entry_open_keys(mmeta, entry_id, subject) and _is_dense_map(subject)
+
+
 def entry_detail(pack: object, module: object, entry_id: object,
                  root: Optional[object] = None) -> Dict[str, Any]:
     """条目只读详情（`/api/pack/{pack}/entry/{mod}/{id}`）：全字段 + 分组 + 每字段类型。"""
@@ -2081,27 +2259,48 @@ def entry_detail(pack: object, module: object, entry_id: object,
         raise BadRequest(f"非法条目标识：{entry_id!r}")
     data = _read_json(pack_dir / f"{mod}.json")
     mmeta = _module_meta(mod, pack_dir)
-    rows = _entry_rows(data, mmeta)
-    match = next((row for row in rows if row[0] == entry_id), None)
-    if match is None:
-        raise NotFound(f"条目不存在：{mod}/{entry_id}")
-    _eid, entry_name, subject = match
-    unconfigured = subject is _UNCONFIGURED
     etype = _entry_type(mmeta, data)
     view = _PackView(pack_dir, manifest)
-    base = _entry_base(mmeta, etype, entry_id, subject)
-    fields = _build_fields(base, subject, mmeta, view, 0)
-    open_keys = _entry_open_keys(mmeta, entry_id, subject)
-    if open_keys:
-        # 动态键空间的每个子项都可删除（前端给「✕」；删除只改草稿，保存走既有链路）。
-        for f in fields:
-            f["deletable"] = True
+    labels = _display_labels(manifest, declared, pack_dir)
+    associations: List[Dict[str, Any]] = []
+    # 批15 #9：整个条目就是一张键值表（map 模块全表 / 对象模块动态键空间）→ 单字段表格。
+    if entry_id == TABLE_ENTRY_ID and etype == "map":
+        mapdata = data if isinstance(data, Mapping) else {}
+        vm = mmeta.value_meta if mmeta is not None else None
+        children = (dict(vm.children) if vm is not None and vm.type == "obj"
+                    and vm.children else {})
+        fm = FieldMeta(type="map", label=TABLE_ENTRY_TAG, children=children)
+        entry_name = f"{labels.get(mod) or mod} · {TABLE_ENTRY_TAG}"
+        subject: object = mapdata
+        unconfigured = False
+        fields = [_descriptor(TABLE_ENTRY_ID, fm, mapdata, True, mmeta, view, 0)]
+        open_keys = False
+    else:
+        rows = _entry_rows(data, mmeta)
+        match = next((row for row in rows if row[0] == entry_id), None)
+        if match is None:
+            raise NotFound(f"条目不存在：{mod}/{entry_id}")
+        _eid, entry_name, subject = match
+        unconfigured = subject is _UNCONFIGURED
+        if _entry_whole_table(mmeta, etype, entry_id, subject):
+            fm = mmeta.fields.get(entry_id) if mmeta is not None else None
+            if fm is None:
+                fm = FieldMeta(type="obj")
+            fields = [_descriptor(entry_id, fm, subject, True, mmeta, view, 0)]
+            open_keys = False
+        else:
+            base = _entry_base(mmeta, etype, entry_id, subject)
+            fields = _build_fields(base, subject, mmeta, view, 0)
+            open_keys = _entry_open_keys(mmeta, entry_id, subject)
+            if open_keys:
+                # 动态键空间的每个子项都可删除（前端给「✕」；删除只改草稿，保存走既有链路）。
+                for f in fields:
+                    f["deletable"] = True
+        associations = _association_sections(pack_dir, manifest, declared, entry_id,
+                                             subject, mmeta, view)
     groups = _group_summary(fields, mmeta)
     # 批15 #8：二级结构——每个分组下的折叠子块计划（大段默认折叠；字段不消失）。
     blocks = _block_plan(fields, mmeta)
-    associations = _association_sections(pack_dir, manifest, declared, entry_id,
-                                         subject, mmeta, view)
-    labels = _display_labels(manifest, declared, pack_dir)
     return {
         "pack": str(pack),
         "pack_name": str(manifest.get("name", "") or pack),
@@ -2115,6 +2314,9 @@ def entry_detail(pack: object, module: object, entry_id: object,
         "unconfigured_tag": UNCONFIGURED_TAG,
         # 批14 #6①：动态键空间（如 object 段的 obj 字段未登记子字段）→ 前端给「+ 子项 / ✕」。
         "open_keys": open_keys,
+        # 批15 #9：整条目键值表格（保存时按「整值键」写回，见 editor_ops._plan）。
+        "whole_table": bool(_entry_whole_table(mmeta, etype, entry_id, subject)),
+        "table_entry": entry_id == TABLE_ENTRY_ID,
         "fields": fields,
         "groups": groups,
         "blocks": blocks,
@@ -2173,12 +2375,36 @@ def entry_slot(pack: object, module: object, entry_id: object,
         raise BadRequest(f"非法条目标识：{entry_id!r}")
     data = _read_json(pack_dir / f"{mod}.json")
     mmeta = _module_meta(mod, pack_dir)
+    etype = _entry_type(mmeta, data)
+    # 批15 #9：map 模块的合成「全表」条目（@table）→ 整模块一把编辑（键值表格）。
+    if entry_id == TABLE_ENTRY_ID and etype == "map":
+        mapdata = data if isinstance(data, Mapping) else {}
+        vm = mmeta.value_meta if mmeta is not None else None
+        children = (dict(vm.children) if vm is not None and vm.type == "obj"
+                    and vm.children else {})
+        fm = FieldMeta(type="map", label=TABLE_ENTRY_TAG, children=children)
+        return {
+            "pack_dir": pack_dir,
+            "manifest": manifest,
+            "declared": declared,
+            "module": mod,
+            "entry_type": etype,
+            "data": data,
+            "slot": None,
+            "entry_id": entry_id,
+            "name": TABLE_ENTRY_TAG,
+            "subject": mapdata,
+            "unconfigured": False,
+            "open_keys": False,
+            "whole": True,
+            "base": {TABLE_ENTRY_ID: fm},
+            "mmeta": mmeta,
+        }
     rows = _entry_rows(data, mmeta)
     pos = next((i for i, row in enumerate(rows) if row[0] == entry_id), None)
     if pos is None:
         raise NotFound(f"条目不存在：{mod}/{entry_id}")
     _eid, entry_name, subject = rows[pos]
-    etype = _entry_type(mmeta, data)
     if isinstance(data, list):
         slot: object = pos
     elif isinstance(data, Mapping):
@@ -2193,6 +2419,12 @@ def entry_slot(pack: object, module: object, entry_id: object,
     write_subject = subject
     if unconfigured:
         write_subject = {} if (fm is not None and fm.type == "obj" and fm.children) else None
+    whole = _entry_whole_table(mmeta, etype, entry_id, subject)
+    base = _entry_base(mmeta, etype, entry_id, subject)
+    open_keys = _entry_open_keys(mmeta, entry_id, subject)
+    if whole:
+        base = {entry_id: fm if fm is not None else FieldMeta(type="obj")}
+        open_keys = False
     return {
         "pack_dir": pack_dir,
         "manifest": manifest,
@@ -2207,8 +2439,10 @@ def entry_slot(pack: object, module: object, entry_id: object,
         "unconfigured": unconfigured,
         # 批14 #6①：动态键空间 → 写链路放行新键（合法性仍由校验器判定；
         # 见 editor_ops._apply_patch 的 open_keys 参数）。
-        "open_keys": _entry_open_keys(mmeta, entry_id, subject),
-        "base": _entry_base(mmeta, etype, entry_id, subject),
+        "open_keys": open_keys,
+        # 批15 #9：整条目键值表格 → patch 用「整值键」（见 editor_ops._plan）。
+        "whole": whole,
+        "base": base,
         "mmeta": mmeta,
     }
 

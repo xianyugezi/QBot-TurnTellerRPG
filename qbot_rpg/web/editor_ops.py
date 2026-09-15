@@ -250,7 +250,10 @@ def _build_new_content(slot: Mapping[str, Any], new_subject: object) -> object:
         return content
     if isinstance(data, Mapping) and isinstance(pos, str):
         content = copy.deepcopy(dict(data))
-        content[pos] = new_subject
+        if new_subject is None:
+            content.pop(pos, None)   # 整值键为 None = 删除该段/键（回到未配置态）
+        else:
+            content[pos] = new_subject
         return content
     return copy.deepcopy(new_subject)
 
@@ -284,10 +287,21 @@ def _plan(pack: object, module: object, entry_id: object, patch: object,
     allowed: List[str] = [str(k) for k in slot["base"]]
     if isinstance(subject, Mapping):
         allowed += [str(k) for k in subject]
-    open_keys = bool(slot.get("open_keys"))
-    new_subject = _apply_patch(subject, patch, allowed, open_keys=open_keys)
+    # 批14 #6：动态键空间放行新键；批15 #9：整条目键值表格（whole）同样是动态键空间。
+    open_keys = bool(slot.get("open_keys")) or bool(slot.get("whole"))
+    whole_value = False
+    if slot.get("whole") and slot["entry_id"] in patch:
+        # 批15 #9：整值键补丁 = 该条目的完整新值（键值表格一次提交整张表）。
+        value = patch[slot["entry_id"]]
+        if value is None and slot.get("slot") is None:
+            raise api.BadRequest("全表条目不能清空（请逐行删除或保留空对象）。")
+        new_subject = copy.deepcopy(value) if value is not None else None
+        whole_value = True
+    else:
+        new_subject = _apply_patch(subject, patch, allowed, open_keys=open_keys)
     # 批14 #6③：动态键空间删键 → 记录被删键，供「引用者黄提示」（沿用既有 refs 机制）。
-    if open_keys and isinstance(subject, Mapping) and isinstance(new_subject, Mapping):
+    if (open_keys and not whole_value and isinstance(subject, Mapping)
+            and isinstance(new_subject, Mapping)):
         slot["removed_keys"] = sorted(set(subject) - set(new_subject))
     new_content = _build_new_content(slot, new_subject)
     _pack_dir, modules_raw = api.load_pack_modules(pack, root=root)

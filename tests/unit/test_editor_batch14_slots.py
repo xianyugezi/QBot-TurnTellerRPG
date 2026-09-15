@@ -55,12 +55,19 @@ def _ref_ids(pack: str, root: Path) -> set:
 # A · 部位表可编 + 新增/删除写盘 → 回退
 # =====================================================================================
 def test_slot_defs_subfields_editable() -> None:
+    # 批15 #9：slot_defs（键 → 小结构）改为整条目「键值表格」——列 = 子结构字段（name/max），
+    # 行 = 各部位；仍可增删/改名（动态键空间），写盘链路不变。
     d = api.entry_detail("veinborn", "settings", "slot_defs", root=CONTENT)
-    assert d["open_keys"] is True
-    weapon = {f["key"]: f for f in d["fields"]}["weapon"]
-    kids = {c["key"]: c for c in weapon["children"]}
-    assert weapon["control"] == "objform" and weapon["editable"] is True
-    assert kids["name"]["control"] == "text" and kids["max"]["control"] == "number"
+    assert d["whole_table"] is True and d["open_keys"] is False
+    field = d["fields"][0]
+    assert field["control"] == "kvtable" and field["editable"] is True
+    kv = field["kv_table"]
+    assert kv["mode"] == "obj"
+    assert [c["key"] for c in kv["columns"]] == ["name", "max"]
+    assert kv["open_keys"] is True   # 动态键空间：键可改、行可增删
+    rows = {r["key"]: r for r in kv["rows"]}
+    assert rows["weapon"]["cells"] == {"name": "武器", "max": 1}
+    assert [c["control"] for c in kv["columns"]] == ["text", "number"]
 
 
 def test_add_slot_writes_and_rolls_back(pack_copy: Path) -> None:
@@ -131,7 +138,7 @@ def test_ref_candidates_drop_deleted_slot_immediately(pack_copy: Path) -> None:
 def test_slot_ref_field_rendered_as_picker() -> None:
     """物品/装备条目的「部位」字段：展示层按下拉候选渲染（type 仍 str，判定不变）。"""
     d = api.entry_detail("veinborn", "settings", "slot_defs", root=CONTENT)
-    assert d["open_keys"] is True
+    assert d["whole_table"] is True and d["fields"][0]["control"] == "kvtable"
     le = api.list_entries("veinborn", "items", root=CONTENT)
     eid = le["entries"][0]["id"]
     detail = api.entry_detail("veinborn", "items", eid, root=CONTENT)
@@ -183,8 +190,10 @@ def test_validate_reports_referrers_without_writing(pack_copy: Path) -> None:
 # =====================================================================================
 def test_slot_counts_consistent_across_views() -> None:
     detail = api.entry_detail("veinborn", "settings", "slot_defs", root=CONTENT)
-    slot_keys = {f["key"] for f in detail["fields"]}
-    assert detail["field_count"] == len(slot_keys)
+    # 批15 #9：整条目键值表格 → 部位键在表格行（columns 来自子结构，rows 来自数据）
+    kv = detail["fields"][0]["kv_table"]
+    slot_keys = {r["key"] for r in kv["rows"]}
+    assert detail["field_count"] == 1 and kv["row_count"] == len(slot_keys)
     assert _ref_ids("veinborn", CONTENT) == slot_keys
     # 命名空间索引（引用候选唯一来源）与方法同源
     idx = api._PackView(CONTENT / "veinborn",

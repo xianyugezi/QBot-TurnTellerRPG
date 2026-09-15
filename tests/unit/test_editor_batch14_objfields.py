@@ -162,14 +162,18 @@ def test_validate_does_not_write(pack_copy: Path) -> None:
 # C · 未注册子字段兜底控件 + 标注；动态键空间可增删
 # =====================================================================================
 def test_unregistered_subfield_fallback_control_and_note() -> None:
-    """数据里多出、元数据未登记的键 → 兜底控件（按实际值推断）+ 标注。"""
+    """数据里多出、元数据未登记的键 → 兜底控件（按实际值推断）+ 标注。
+
+    批15 #9：slot_defs 这类「键 → 小结构」的密集映射改键值表格渲染——子键不再逐个出
+    objform 字段，而是表格列（列按值推断）+ 每列标注「元数据未登记」。
+    """
     d = api.entry_detail("veinborn", "settings", "slot_defs", root=CONTENT)
-    weapon = _by_key(d["fields"])["weapon"]
-    assert weapon["meta_unregistered"] is True
-    assert weapon["meta_note"] and "未登记" in weapon["meta_note"]
-    kids = _by_key(weapon["children"])
-    assert kids["name"]["control"] == "text" and kids["name"]["meta_unregistered"] is True
-    assert kids["max"]["control"] == "number" and kids["max"]["meta_unregistered"] is True
+    field = d["fields"][0]
+    assert field["control"] == "kvtable"
+    cols = {c["key"]: c for c in field["kv_table"]["columns"]}
+    assert cols["name"]["control"] == "text" and cols["name"]["meta_unregistered"] is True
+    assert cols["max"]["control"] == "number" and cols["max"]["meta_unregistered"] is True
+    assert "未登记" in cols["name"]["meta_note"]
 
 
 def test_unconfigured_open_object_renders_one_field() -> None:
@@ -181,12 +185,18 @@ def test_unconfigured_open_object_renders_one_field() -> None:
 
 
 def test_entry_level_open_keys_add_delete_then_rollback(pack_copy: Path) -> None:
-    """动态键空间（已配置的 obj 段）可新增/删除子项；写盘 + 回退。"""
+    """动态键空间（已配置的 obj 段）可新增/删除子项；写盘 + 回退。
+
+    批15 #9：slot_defs 由「每键一个 objform 字段」升级为**整条目键值表格**（whole_table）：
+    新增/删除既可走整表提交（前端表格），也保留逐键补丁写路径（向后兼容）。
+    """
     sf = pack_copy / "veinborn" / "settings.json"
     before_text = sf.read_text(encoding="utf-8")
     d = api.entry_detail("veinborn", "settings", "slot_defs", root=pack_copy)
-    assert d["open_keys"] is True
-    assert all(f.get("deletable") for f in d["fields"])
+    assert d["whole_table"] is True and d["open_keys"] is False
+    kv = d["fields"][0]["kv_table"]
+    before_slots = set(json.loads(before_text)["slot_defs"])
+    assert kv["open_keys"] is True and {r["key"] for r in kv["rows"]} == before_slots
 
     add = editor_ops.save_entry("veinborn", "settings", "slot_defs",
                                 {"belt": {"name": "腰带", "max": 1}},

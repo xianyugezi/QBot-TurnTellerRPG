@@ -80,11 +80,19 @@ _MEASURE_JS = r"""
     });
   }
   const blocks = Array.from(body.querySelectorAll('.subblk'));
+  const kv = Array.from(body.querySelectorAll('.kvtable tbody tr'));
+  const kvVis = kv.filter(el => {
+    const r = el.getBoundingClientRect();
+    return r.height > 0 && r.top < br.bottom && r.bottom > br.top;
+  });
   return {
     clientHeight: body.clientHeight,
     scrollHeight: body.scrollHeight,
     totalRows: rows.length,
     visibleRows: vis.length,
+    kvRows: kv.length,
+    kvVisibleRows: kvVis.length,
+    hasKvTable: body.querySelectorAll('.kvtable').length > 0,
     activePane: active ? active.getAttribute('data-g') : null,
     activeTotal: activeTotal,
     activeCollapsed: activeCollapsed,
@@ -113,17 +121,40 @@ _EXPAND_ALL_JS = r"""
 
 
 def _measure_case(page: Any, module: str, entry: str) -> Dict[str, Any]:
-    page.evaluate(
-        """async ({m, e}) => {
-             await selectModule(m);
-             if (e) { await selectEntry(e, m); }
-             else {
-               const first = (state.entries || [])[0];
-               if (first) { await selectEntry(first.id, m); }
-             }
-           }""",
-        {"m": module, "e": entry},
-    )
+    # 先切模块并等「默认选中」稳定（loadEntries 的默认 selectEntry 未 await，直接并发会竞态），
+    # 再显式选目标条目，最后等详情确实停在目标 id 上。
+    page.evaluate("async (m) => { await selectModule(m); }", module)
+    page.wait_for_function("(m) => state.module === m", arg=module, timeout=15000)
+    try:
+        page.wait_for_function(
+            "() => state.entry && state.detail && state.detail.id === state.entry",
+            timeout=15000)
+    except Exception:  # noqa: BLE001 - 诊断后原样抛出
+        diag = page.evaluate(
+            "() => JSON.stringify({pack: state.pack, module: state.module, "
+            "entry: state.entry, entries: (state.entries || []).length, "
+            "detail: state.detail && state.detail.id, "
+            "views: (state.views || []).length, "
+            "mods: (state.modules || []).length, "
+            "title: (document.getElementById('p-title') || {}).textContent})")
+        print(f"[dom-measure] 等待详情超时：{diag}", file=sys.stderr)
+        raise
+    if entry:
+        page.evaluate(
+            "async ([m, e]) => { await selectEntry(e, m); }", [module, entry])
+        try:
+            page.wait_for_function(
+                "(e) => state.entry === e && state.detail && state.detail.id === e",
+                arg=entry, timeout=15000)
+        except Exception:  # noqa: BLE001 - 诊断后原样抛出
+            diag = page.evaluate(
+                "() => JSON.stringify({module: state.module, entry: state.entry, "
+                "entryModule: state.entryModule, "
+                "detail: state.detail && state.detail.id, "
+                "ids: (state.entries || []).map(function (x) { return x.id; }).slice(0, 20), "
+                "title: (document.getElementById('p-title') || {}).textContent})")
+            print(f"[dom-measure] 等待目标条目超时：{diag}", file=sys.stderr)
+            raise
     page.wait_for_selector("#p-body .row[data-field]", timeout=15000)
     page.wait_for_timeout(150)
     after = page.evaluate(_MEASURE_JS)
@@ -166,8 +197,11 @@ def run(repo: Path, content_root: Path, pack: str, cases: List[str],
         with sync_playwright() as p:
             browser = p.chromium.launch()
             page = browser.new_page(viewport={"width": 1280, "height": 800})
+            page.on("dialog", lambda d: d.accept())   # 离开确认等原生弹窗：自动确认
             page.goto(f"http://127.0.0.1:{port}/", wait_until="load")
             page.wait_for_function("() => !!(state && state.pack)", timeout=15000)
+            page.wait_for_function(
+                "() => !!(state.module && state.detail)", timeout=20000)
             for spec in cases:
                 mod, _, ent = spec.partition(":")
                 result["cases"].append(_measure_case(page, mod, ent))

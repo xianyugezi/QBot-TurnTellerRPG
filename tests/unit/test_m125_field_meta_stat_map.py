@@ -37,7 +37,9 @@ def test_formula_fields_constant_shallow_copied() -> None:
     # 两次 default 表调用互不影响
     t2 = default_field_meta_table()
     assert t2.modules["formula"].fields is not mm.fields
-    assert set(t2.modules["formula"].fields) == {"stat_map"}
+    # 批13 C：除 stat_map 外补登记战斗数值公式段（damage/hit/crit/...）——键集 = FORMULA_FIELDS。
+    assert set(t2.modules["formula"].fields) == set(FORMULA_FIELDS)
+    assert "stat_map" in FORMULA_FIELDS and "hit" in FORMULA_FIELDS
 
 
 def test_stat_map_field_meta_validates_pack_ok(legal_pack_dir) -> None:

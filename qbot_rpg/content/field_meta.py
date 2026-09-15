@@ -648,6 +648,105 @@ ALCHEMY_ELEMENTS: Tuple[str, ...] = ("地", "水", "火", "风", "雷", "晶", "
 # 段逐键中文表单化渲染；校验宽松不红拦）。formula.json 顶层 stat_map = {语义键:
 # combatant 键}——语义键固定 13 个，值 = combatant 键名字符串（内容包自定义 stat
 # 全量透传后任意键合法，stat_map 缺省 = 现值键名零破坏）。
+#
+# 批13 C（审计 ①-4-23 / 战斗数值层定稿 L189/L244/L366）：formula.json 为战斗数值唯一
+# 配置源；上述 `damage/hit/crit/block/...` 公式段此前只有 stat_map 登记 → 段落编辑无字段
+# 口径。本批按定稿逐段补登记（含 range/enum）；**仅展示层**：段值形态仍是 formula/obj，
+# 校验语义不变（数值超范围由战斗数值专项校验器提示，不在此红拦）。
+def _formula_sections() -> Dict[str, FieldMeta]:
+    """战斗数值公式段字段表（展示层；键名/层级照 战斗数值层设计定稿 §5.1）。"""
+    return {
+        # §5.1 伤害通道（L189）
+        "damage": FieldMeta(type="obj", label="伤害通道", children={
+            "base_attack_mult": FieldMeta(type="number", range_min=0, label="基础攻击倍率"),
+            "rng": FieldMeta(type="list", element=FieldMeta(type="number"),
+                             label="乱数区间[下,上]"),
+            "floor_mode": FieldMeta(type="enum", enum=("channel_end", "per_segment"),
+                                    label="取整时机"),
+            "deep_floor": FieldMeta(type="bool", label="深层向下取整"),
+        }),
+        "hit": FieldMeta(type="obj", label="命中", children={
+            "k": FieldMeta(type="number", range_min=0.05, range_max=1, label="K_HIT 系数"),
+            "cap_min": FieldMeta(type="int", range_min=0, range_max=100, label="命中率下限%"),
+            "cap_max": FieldMeta(type="int", range_min=0, range_max=100, label="命中率上限%"),
+        }),
+        "crit": FieldMeta(type="obj", label="会心", children={
+            "p_coef": FieldMeta(type="number", range_min=0, label="会心率系数"),
+            "cap": FieldMeta(type="int", range_min=0, range_max=100, label="会心率封顶%"),
+            "tiers": FieldMeta(type="obj", label="会心档倍率", children={
+                "high": FieldMeta(type="number", range_min=1.0, range_max=3.0, label="高会心倍率"),
+                "mid": FieldMeta(type="number", range_min=1.0, range_max=3.0, label="中会心倍率"),
+                "low": FieldMeta(type="number", range_min=1.0, range_max=3.0, label="低会心倍率"),
+            }),
+            "tier_p": FieldMeta(type="list", element=FieldMeta(type="number"),
+                                label="降档边界[a,b]"),
+            "crit_mult_up": FieldMeta(type="obj", label="超会心档位加成", children={
+                "lv1": FieldMeta(type="number", range_min=0, label="Lv1 加成"),
+                "lv2": FieldMeta(type="number", range_min=0, label="Lv2 加成"),
+                "lv3": FieldMeta(type="number", range_min=0, label="Lv3 加成"),
+            }),
+        }),
+        "block": FieldMeta(type="obj", label="格挡", children={
+            "k": FieldMeta(type="number", range_min=0, label="格挡系数"),
+            "cap": FieldMeta(type="int", range_min=0, range_max=100, label="格挡率封顶%"),
+            "magic_ignores": FieldMeta(type="bool", label="魔法无视格挡"),
+            "halve_after_block": FieldMeta(type="bool", label="格挡后减半"),
+        }),
+        "defense": FieldMeta(type="obj", label="防御减伤", children={
+            "mode": FieldMeta(type="enum", enum=("ratio", "subtract"), label="减伤模式"),
+            "k": FieldMeta(type="number", range_min=0, label="减伤系数"),
+            "pierce_types": FieldMeta(type="obj", soft_label=True, label="打类型破防"),
+        }),
+        "weakness": FieldMeta(type="obj", label="弱点", children={
+            "type_mult": FieldMeta(type="number", range_min=0, label="类型弱点倍率"),
+            "element_mult": FieldMeta(type="number", range_min=0, label="元素弱点倍率"),
+        }),
+        "weapon_type_mult": FieldMeta(type="obj", soft_label=True, label="武器类型倍率"),
+        "type_affinity": FieldMeta(type="obj", label="攻击类型倾向", children={
+            "enabled": FieldMeta(type="bool", label="启用倾向"),
+            "blunt_pierce": FieldMeta(type="number", range_min=0, range_max=1, label="打击破防"),
+            "thrust_hit": FieldMeta(type="number", range_min=0, label="突刺命中加成"),
+            "slash_crit": FieldMeta(type="number", range_min=0, label="斩击会心加成"),
+            "magic_ignore_block": FieldMeta(type="bool", label="魔法无视格挡"),
+        }),
+        "elements": FieldMeta(type="obj", soft_label=True, label="元素注册表"),
+        "luck": FieldMeta(type="obj", label="幸运修正", children={
+            "enhance_rate": FieldMeta(type="number", range_min=0, label="强化成功率修正"),
+            "effect_prob": FieldMeta(type="number", range_min=0, label="效果触发概率修正"),
+            "max_mod": FieldMeta(type="number", range_min=0, label="修正上限"),
+        }),
+        "derived": FieldMeta(type="obj", label="技能派生", children={
+            "max_total_mult": FieldMeta(type="number", range_min=0, label="派生倍率封顶"),
+        }),
+        "power": FieldMeta(type="obj", label="威力上限", children={
+            "max": FieldMeta(type="int", range_min=0, range_max=99999, label="威力滑条上限"),
+            "formula_max": FieldMeta(type="int", range_min=0, range_max=99999,
+                                     label="公式路径上限"),
+        }),
+        "effects_link": FieldMeta(type="obj", label="效果拦截链", children={
+            "intercept_order": FieldMeta(type="list", element=FieldMeta(type="str"),
+                                         label="拦截顺序"),
+            "pierce_cap": FieldMeta(type="number", range_min=0, range_max=1, label="穿透封顶"),
+        }),
+        "death_check": FieldMeta(type="obj", label="死亡判定", children={
+            "mutual_kill_result": FieldMeta(type="enum", enum=("draw", "player_loss"),
+                                            label="互杀结果"),
+            "mutual_kill_basis": FieldMeta(type="enum", enum=("order", "hp_ratio"),
+                                           label="互杀判定基准"),
+            "no_target_action": FieldMeta(type="enum", enum=("fallback", "skip"),
+                                          label="后手无目标处理"),
+            "boss_end_immediate": FieldMeta(type="bool", label="BOSS 死亡立刻结束"),
+        }),
+        # §八 伤害构成统计 / dummy_log（L366）
+        "stats_collector": FieldMeta(type="obj", label="伤害统计", children={
+            "enabled": FieldMeta(type="bool", label="启用收集"),
+            "dummy_log_size": FieldMeta(type="int", range_min=0, range_max=20,
+                                        label="木桩记录保留次数（0=关）"),
+            "dummy_realtime": FieldMeta(type="bool", label="木桩实时摘要"),
+        }),
+    }
+
+
 FORMULA_FIELDS: Dict[str, FieldMeta] = {
     "stat_map": FieldMeta(
         type="obj",
@@ -668,6 +767,7 @@ FORMULA_FIELDS: Dict[str, FieldMeta] = {
             "dfn_base": FieldMeta(type="str", label="效果防御基值属性"),
         },
     ),
+    **_formula_sections(),
 }
 
 # gem.* 中文键（ALC-14/ALC-23/ALC-15，键名照契约原样含点号）
@@ -1089,7 +1189,7 @@ MAPS_GROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
     ("base", ("id", "name", "battle", "revert", "safe_zone", "camp", "camp_name")),
     ("ranges", ("min", "max", "lower", "upper", "reset", "mechanics")),
     ("refs", ("enemy_pool", "monsters", "exits", "respawn_point", "npcs",
-              "gate_guard", "gather_points", "dungeon_entrances")),
+              "gate_guard", "gather_points", "dungeon_entrances", "weather_pool")),
     ("text", ("desc",)),
 )
 
@@ -1645,12 +1745,37 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "camp_name": _soft_display("营地名"),
         "npcs": FieldMeta(type="list", element=FieldMeta(type="str"),
                           soft_label=True, label="NPC 列表"),
-        "monsters": _soft_display("刷怪行", "list"),
+        # 批13 C（审计 ①-2-12/B6）：把 DUNGEON_MAP_ELEM_CHILDREN 的刷怪行结构接到 maps 模块
+        # ——此前 maps.monsters 走 CHILD_SPEC 只有 7 键，季节/时段/天气/钟点四键登记了却不生效。
+        "monsters": FieldMeta(
+            type="list", soft_label=True, label="刷怪行",
+            element=FieldMeta(type="obj", children=dict(
+                DUNGEON_MAP_ELEM_CHILDREN["monsters"].element.children))),
         "exits": _soft_display("通道出口", "obj"),
         "mechanics": _soft_display("地图机制", "list"),
         "gate_guard": _soft_display("门卫"),
-        "gather_points": _soft_display("采集点", "list"),
+        # 批13 C（审计 ①-2-14/B7/U1）：采集点补 name/weather_mods（时间天气定稿 L160/206）
+        "gather_points": FieldMeta(
+            type="list", soft_label=True, label="采集点",
+            element=FieldMeta(type="obj", children={
+                "id": FieldMeta(type="str", label="采集点 ID"),
+                "item": FieldMeta(type="str", label="产出物品"),
+                "rarity": FieldMeta(type="str", label="稀有度"),
+                "rate": FieldMeta(type="number", range_min=0, range_max=1, label="出现概率"),
+                "name": FieldMeta(type="str", label="展示名"),
+                "weather_mods": FieldMeta(
+                    type="list", soft_label=True, label="天气修正",
+                    element=FieldMeta(type="obj", children={
+                        "weather": FieldMeta(type="str", label="天气键"),
+                        "rate_mult": FieldMeta(type="number", range_min=0, label="概率倍率"),
+                        "rarity_shift": FieldMeta(type="int", label="稀有度偏移"),
+                    })),
+            })),
         "dungeon_entrances": _soft_display("副本入口", "list"),
+        # 批13 C（审计 ①-2-13/B5）：地图天气池覆盖（时间天气定稿 L141）
+        "weather_pool": FieldMeta(type="list", element=FieldMeta(type="str"),
+                                  soft_label=True, label="地图天气池覆盖",
+                                  help="本地图可选天气键（须已在默认池注册）；空/缺省 = 用默认池。"),
     }
     stats_fields: Dict[str, FieldMeta] = {}
     # M12.5 需求1 批D：formula 模块 stat_map 段字段口径（FORMULA_FIELDS 模块级常量，
@@ -1777,6 +1902,140 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "exp_curve": _soft_display("经验曲线", "obj"),
         "level_cap": _soft_display("等级上限", "int"),
         "quest_board": _soft_display("任务板", "obj"),
+        # ---- 批13 C（审计 ①-1/①-4）：框架已实现、但 settings 段此前无登记的全局配置 ----
+        # 一号原则：包没用也要在「基础」卡片里看得见（空值可填）。全部 soft_label——
+        # 泛型校验短路，既有内容零新增拦截（各专项校验器/引擎自带缺省兜底）。
+        # settings.time_cycle（时间天气定稿 L101-124；core/worldtime.py 消费面）
+        "time_cycle": _soft_display("时间天气", "obj", {
+            "enabled": FieldMeta(type="bool", default=True, label="启用时间天气"),
+            "season": FieldMeta(type="obj", label="季节周期", children={
+                "season_days": FieldMeta(type="int", range_min=1, default=7, label="季节天数"),
+                "enum": FieldMeta(type="list", element=FieldMeta(type="str"),
+                                  label="季节枚举"),
+            }),
+            "period": FieldMeta(type="obj", label="时段周期", children={
+                "period_minutes": FieldMeta(type="int", range_min=30, default=60,
+                                            label="时段分钟"),
+                "enum": FieldMeta(type="list", element=FieldMeta(type="str"),
+                                  label="时段枚举"),
+            }),
+            "weather": FieldMeta(type="obj", label="天气周期", children={
+                "weather_minutes": FieldMeta(type="int", range_min=30, default=60,
+                                             label="天气分钟"),
+                "default_pool": FieldMeta(
+                    type="list", label="默认天气池",
+                    element=FieldMeta(type="obj", children={
+                        "key": FieldMeta(type="str", label="天气键"),
+                        "name": FieldMeta(type="str", label="天气名"),
+                        "emoji": FieldMeta(type="str", label="图标"),
+                    })),
+            }),
+            "broadcast": FieldMeta(type="obj", label="变化广播", children={
+                "enabled": FieldMeta(type="bool", default=False, label="启用广播"),
+                "mode": FieldMeta(type="enum", enum=("lazy", "timer"), default="lazy",
+                                  label="广播模式"),
+                "template": FieldMeta(type="str", default="{emoji} {name}",
+                                      label="播报模板"),
+            }),
+            "combat": FieldMeta(type="obj", label="战斗天气修正", children={
+                "weather_mult": FieldMeta(type="obj", label="天气乘区", children={
+                    "enabled": FieldMeta(type="bool", default=False, label="启用战斗修正"),
+                    "mults": _soft_display("天气倍率", "obj"),
+                }),
+            }),
+        }, help="时间天气：季节/时段/天气三周期与变化广播（缺省全默认，零配置可玩）。"),
+        # settings.message_prefix（消息前缀定稿 L41-48；prefix_wiring 消费 7 字段）
+        "message_prefix": _soft_display("消息前缀", "obj", {
+            "enabled": FieldMeta(type="bool", default=True, label="启用前缀"),
+            "format": FieldMeta(type="str", label="格式模板",
+                                help="占位符：{level} 等级 / {name} 玩家名 / {title} 称号。"),
+            "show_on_system": FieldMeta(type="bool", default=False, label="系统消息也加前缀"),
+            "per_channel": FieldMeta(type="enum", enum=("all", "group", "private"),
+                                     default="all", label="生效渠道"),
+            "hide_when_empty": FieldMeta(type="bool", default=False, label="无称号时省略称号段"),
+            "empty_title_text": FieldMeta(type="str", default="-", label="无称号占位文本"),
+            "prefix_max_len": FieldMeta(type="int", range_min=0, default=40,
+                                        label="前缀最大长度（0=不限）"),
+        }, help="消息前缀：回复首行的玩家身份标识（等级/名字/称号）。"),
+        # settings.pvp（core/pvp.py PVP_SETTINGS_KEYS 8 键 + 3h §4.1）
+        "pvp": _soft_display("PVP", "obj", {
+            "enabled": FieldMeta(type="bool", default=False, label="启用 PVP"),
+            "mode": FieldMeta(type="enum", enum=("turn_based", "free"),
+                              default="turn_based", label="战斗模式"),
+            "level_gate": FieldMeta(type="int", range_min=0, default=10, label="等级门槛"),
+            "kill_penalty": FieldMeta(type="enum", enum=("none", "respawn"),
+                                      default="none", label="击杀惩罚"),
+            "loot": _soft_display("战斗掉落", "obj"),
+            "daily_reward_limit": FieldMeta(type="int", range_min=0, default=5,
+                                            label="每日奖励上限"),
+            "pair_daily_limit": FieldMeta(type="int", range_min=0, default=3,
+                                          label="同对每日上限"),
+            "exp_on_win": FieldMeta(type="bool", default=False, label="胜方获得经验"),
+        }, help="PVP（玩家当野怪）：开关、模式、等级门槛与击杀惩罚。"),
+        # settings.codex（core/codex.py:278 消费四册权重；单机向定稿 L43）
+        "codex": _soft_display("图鉴", "obj", {
+            "weights": FieldMeta(type="obj", label="四册完成度权重", children={
+                "monster": FieldMeta(type="number", range_min=0, default=1.0, label="怪物册"),
+                "fish": FieldMeta(type="number", range_min=0, default=1.0, label="鱼类册"),
+                "item": FieldMeta(type="number", range_min=0, default=1.0, label="物品册"),
+                "craft": FieldMeta(type="number", range_min=0, default=1.0, label="制造册"),
+            }),
+        }, help="图鉴：四册（怪物/鱼/物品/制造）完成度加权，默认等权。"),
+        # settings.event_log_cap / event_log_capacity（core/event_bus.py:18 双键兼容）
+        "event_log_cap": FieldMeta(type="int", range_min=0, default=300, soft_label=True,
+                                   label="冒险日志容量",
+                                   help="冒险日志环形缓冲保留条数（缺省 300）。"),
+        "event_log_capacity": FieldMeta(type="int", range_min=0, default=300, soft_label=True,
+                                        label="冒险日志容量（别名）",
+                                        help="与 event_log_cap 同义；二者同时存在时以本键优先。"),
+        # settings.command_mode / require_at / at_text（总纲 §7.2；parsers 三模式）
+        "command_mode": FieldMeta(
+            type="enum",
+            enum=("global_shortcut", "combat_shortcut", "prefix_only"),
+            default="global_shortcut", soft_label=True, label="指令触发模式",
+            help="global_shortcut 全局免前缀 / combat_shortcut 战斗内免前缀 / "
+                 "prefix_only 全部指令必须带前缀。"),
+        "require_at": FieldMeta(type="bool", default=False, soft_label=True,
+                                label="需 @机器人 触发",
+                                help="开启后指令需 @机器人 才识别（与触发模式叠加生效）。"),
+        "at_text": FieldMeta(type="str", default="@机器人", soft_label=True,
+                             label="@ 触发文本",
+                             help="识别 @触发 时匹配的文本（如 @机器人）。"),
+        # settings.attr_types / conditional_rules / imprints（玩家属性定稿 §八；context.py 消费）
+        "attr_types": _soft_display("属性类型映射", "obj",
+                                    help="属性键 → 类型（resource 资源轴 / combat 战斗属性）映射。"),
+        "conditional_rules": FieldMeta(
+            type="list", soft_label=True, label="条件加成规则",
+            help="条件触发的属性加成规则列表（source 每 per_point 点 → target 加成）。",
+            element=FieldMeta(type="obj", children={
+                "id": FieldMeta(type="str", label="标识"),
+                "name": FieldMeta(type="str", label="名称"),
+                "source": FieldMeta(type="str", label="触发属性"),
+                "target": FieldMeta(type="str", label="产出属性"),
+                "per_point": FieldMeta(type="number", label="每点产出"),
+                "note": FieldMeta(type="str", label="备注"),
+            })),
+        "imprints": FieldMeta(
+            type="list", soft_label=True, label="印记展示",
+            help="状态面板展示的印记行（名称/层数/来源）。",
+            element=FieldMeta(type="obj", children={
+                "name": FieldMeta(type="str", label="印记名"),
+                "count": FieldMeta(type="int", range_min=0, label="层数"),
+                "source": FieldMeta(type="str", label="来源"),
+            })),
+        # settings.shortcut_max / default_job_id / max_dialog_depth / resource_pct
+        "shortcut_max": FieldMeta(type="int", range_min=0, default=20, soft_label=True,
+                                  label="快捷指令上限",
+                                  help="玩家可绑定的快捷指令条数上限（缺省 20）。"),
+        "default_job_id": FieldMeta(type="ref", ref_target="jobs", soft_label=True,
+                                    label="默认职业",
+                                    help="新玩家注册时的缺省职业（引用职业库）。"),
+        "max_dialog_depth": FieldMeta(type="int", range_min=0, default=2, soft_label=True,
+                                      label="对话深度上限（0=不限）",
+                                      help="NPC 简单对话树的最大展开深度（0 = 不限）。"),
+        "resource_pct": FieldMeta(type="bool", default=False, soft_label=True,
+                                  label="资源轴按百分比显示",
+                                  help="状态面板把资源轴（剑气/怒气等）按百分比展示。"),
     })
 
     return {
@@ -1945,6 +2204,12 @@ def _module_table() -> Dict[str, ModuleMeta]:
                                                               {},
                                                               _child_spec("conditional")),
                                   kind="conditional", namespace="cond_lib"),
+        # 批13 C（审计 ①-4-22）：消息模板配置化（2026-08-31 用户拍板）——内容包
+        # templates.json 的键 = 模板名、值 = 文案字符串（core/templates.resolve_templates
+        # 覆盖 DEFAULT_TEMPLATES）。此前包已声明但框架无登记 → 补 ModuleMeta（entry_type=map）。
+        "templates": ModuleMeta(entry_type="map", fields={}, kind="templates",
+                                namespace="template_lib",
+                                value_meta=FieldMeta(type="str", multiline=True)),
         # 通用设置（细化_1g4 §6.1 death_penalty + currencies 段；其余段由 3h 路登记缺省放行）。
         # 注意：settings.json 为常驻模块（3h D-01），本表仅登记字段口径；loader 常驻加载归 3h/M 接线。
         "settings": ModuleMeta(entry_type="object",

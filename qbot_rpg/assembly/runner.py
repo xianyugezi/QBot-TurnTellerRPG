@@ -187,6 +187,105 @@ async def _routing_context(
 
 
 # =============================================================================
+# 批25 K2：按状态禁用指令（settings.command_gates）
+# =============================================================================
+def _is_weak(ctx: Mapping[str, Any]) -> bool:
+    """虚弱判定：`weak_remaining_sec > 0`（装配层镜像）或 `weakened is True`（副本镜像）。"""
+    remain = ctx.get("weak_remaining_sec")
+    if isinstance(remain, (int, float)) and not isinstance(remain, bool) and remain > 0:
+        return True
+    return ctx.get("weakened") is True
+
+
+def _current_map_entry(ctx: Mapping[str, Any]) -> Optional[Mapping[str, Any]]:
+    """当前地图条目：`map_id`/`location` → `maps` 表（list[{id,...}] 或 {id: {...}}）。"""
+    mid = ctx.get("map_id") or ctx.get("location")
+    if not mid:
+        p = ctx.get("player")
+        if isinstance(p, Mapping):
+            mid = p.get("map_id") or p.get("location")
+        else:
+            mid = getattr(p, "map_id", None) if p is not None else None
+    if not mid:
+        return None
+    maps = ctx.get("maps")
+    if isinstance(maps, Mapping):
+        e = maps.get(str(mid))
+        return e if isinstance(e, Mapping) else None
+    if isinstance(maps, (list, tuple)):
+        for e in maps:
+            if isinstance(e, Mapping) and str(e.get("id")) == str(mid):
+                return e
+    return None
+
+
+def _is_wild_map(ctx: Mapping[str, Any]) -> bool:
+    """野外地图判定（K2）：当前地图带非空 `monsters` 刷怪行（= 会发生野外战斗的地图）。
+
+    依据：我们无独立「野外」布尔；野外 = 该图有刷怪行（`Config_Map` 的怪组行）。
+    空/缺 monsters → 非野外（安全区/城镇），不触发 wild 门禁（行为与现状一致）。
+    """
+    entry = _current_map_entry(ctx)
+    if entry is None:
+        return False
+    rows = entry.get("monsters")
+    return isinstance(rows, (list, tuple)) and len(rows) > 0
+
+
+def _is_forced_battle(ctx: Mapping[str, Any]) -> bool:
+    """被强制战斗判定（K2）：战斗中且 `battle_type == "ambush"`（伏击=强制遭遇）。
+
+    我们既有的战斗态只有 `ctx["in_battle"]`（是否在战斗）；「被强制」以战斗快照的
+    `battle_type` 区分（`core/battle.py` 文档：ambush/dungeon/dummy）。非战斗 / 其它
+    类型 → False（不触发 forced_battle 门禁）。
+    """
+    if not ctx.get("in_battle"):
+        return False
+    snap = ctx.get("battle_snapshot")
+    bt = snap.get("battle_type") if isinstance(snap, Mapping) else None
+    if bt is None:
+        sess = ctx.get("battle_session")
+        payload = getattr(sess, "payload", None) if sess is not None else None
+        if isinstance(payload, Mapping):
+            bt = payload.get("battle_type")
+    return str(bt) == "ambush"
+
+
+def _gate_hit(cfg: Mapping[str, Any], key: str, names: Any) -> bool:
+    """命中判定：命令名 ∈ settings.command_gates[key]（列表；非法/缺省 → 不命中）。"""
+    raw = cfg.get(key)
+    if not isinstance(raw, (list, tuple)):
+        return False
+    return any(n for n in names if n and n in raw)
+
+
+def _state_command_gate(
+    ctx: Mapping[str, Any], command: str, display_name: Optional[str] = None,
+) -> Optional[str]:
+    """指令路由前置状态门禁（K2）：命中禁用 → 人话提示；未命中 → None（照常执行）。
+
+    **单一判定链**：与未注册 / GM 权限同处 `_run_command_inner`（路由后、handler 前），
+    不散落多套；`settings.command_gates` = {weak, wild, forced_battle: [指令名]}。
+    状态口径见 `_is_weak` / `_is_wild_map` / `_is_forced_battle` 各自 docstring。
+    """
+    settings = ctx.get("settings")
+    cfg = settings.get("command_gates") if isinstance(settings, Mapping) else None
+    if not isinstance(cfg, Mapping):
+        return None
+    names = [command, display_name or ""]
+    reason = None
+    if _gate_hit(cfg, "weak", names) and _is_weak(ctx):
+        reason = "虚弱状态"
+    elif _gate_hit(cfg, "wild", names) and _is_wild_map(ctx):
+        reason = "野外地图"
+    elif _gate_hit(cfg, "forced_battle", names) and _is_forced_battle(ctx):
+        reason = "被强制战斗中"
+    if reason is None:
+        return None
+    return f"当前{reason}，暂不能使用「{command}」"
+
+
+# =============================================================================
 # RouteResult → ParsedCommand（RA-08 ①；单次路由决策）
 # =============================================================================
 def _parsed_from_route(route: RouteResult, raw: str) -> ParsedCommand:
@@ -802,6 +901,14 @@ async def _run_command_inner(event: Mapping, deps: Any, raw: str) -> str:
     if _requires_gm(spec) and not _permission_store_is_gm(deps, qid):
         logger.info("GM 指令权限拦截（零出站零审计）: qid=%s command=%s", qid, spec.name)
         return ""
+
+    # -- 批25 K2：按状态禁用指令（settings.command_gates；与未注册/GM 同处判定链）----
+    # GM 指令不受玩家状态门禁影响（管理操作不被玩家虚弱/战斗卡住）。
+    if not getattr(spec, "is_gm", False):
+        gate_msg = _state_command_gate(ctx, spec.name, route.display_name)
+        if gate_msg is not None:
+            logger.info("状态门禁拦截: qid=%s command=%s", qid, spec.name)
+            return gate_msg
 
     # -- ③ ParsedCommand + handler 闭包（捕获 ctx + 事务内业务写） ---------------
     parsed = _parsed_from_route(route, raw)

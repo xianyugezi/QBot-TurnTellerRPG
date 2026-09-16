@@ -356,6 +356,21 @@ SETTINGS_FIELDS: Dict[str, FieldMeta] = {
     "register_level": FieldMeta(type="int", range_min=1, label="注册初始等级",
                                 help="新注册玩家的初始等级（≥1 整数）；缺省 1，"
                                      "超过 settings.level_cap 时按上限夹取。"),
+    # 批25 K2：按状态禁用指令（CakeGame `Global.md:143-145` `Limit_ins.ws/iw/fc`
+    # 「虚弱状态下禁用的指令 / 野外地图中禁用 / 被强制战斗中禁用（功能名，| 分隔）」）。
+    # 形态 = 三个指令名列表（按状态分键，可优化为对象——取「按状态命名、每态一列表」，
+    # 与既有 `command_aliases` 的「值列表」风格一致；空/缺省 = 该态不禁用）。
+    # 引擎落点：`assembly/runner._state_command_gate`（**沿用既有路由前置判定链**，
+    # 与未注册/战斗中/GM 权限同一处 `_run_command_inner`，不散落多套）。
+    "command_gates": FieldMeta(type="obj", children={
+        "weak": FieldMeta(type="list", element=FieldMeta(type="str"),
+                          label="虚弱禁用", help="虚弱状态下禁用的指令名列表。"),
+        "wild": FieldMeta(type="list", element=FieldMeta(type="str"),
+                          label="野外禁用", help="野外地图（有刷怪行的地图）中禁用的指令名列表。"),
+        "forced_battle": FieldMeta(type="list", element=FieldMeta(type="str"),
+                                   label="强战禁用",
+                                   help="被强制战斗（伏击战 battle_type=ambush）中禁用的指令名列表。"),
+    }, label="按状态禁用指令"),
 }
 
 # =============================================================================

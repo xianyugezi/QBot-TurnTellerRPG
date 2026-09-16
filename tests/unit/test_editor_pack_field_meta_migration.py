@@ -3,10 +3,9 @@
 依据：`docs/编辑器重写_数据包展示元数据下放方案.md` §四 批B/C。
 
 本用例**调用** `scripts/compare_field_meta_migration.py`：它用 `git worktree` 检出基线
-`f051348`（批26 重定；批25 的 `d6304ac` 因本批装备侧新增 items/equipment `grant_skills`/
-`max_hold`/`skill_amp`/`attack_override`/`job_override`，使展示块 `base[@more]`/`effects[]`
-的 `keys`/`count` 随新增字段增长——属新增引起的展示层位移，**无删除、无既有 help/group
-严格键改动**），在基线树与当前树各跑一遍
+`357ca16`（批27 重定；批26 的 `f051348` 之后，本批技能侧新增 skills `revive`/`message_key`，
+使展示块 `基本[@more]` 的 `keys`/`count` 随新增字段增长——属新增引起的展示层位移，
+**无删除、无既有 help/group 严格键改动**），在基线树与当前树各跑一遍
 `scripts/editor_readonly_snapshot.py`（模块树 / 条目列表 / 条目详情 / 条目索引 / 引用候选 /
 包列表），递归对拍并输出差异报告。
 
@@ -36,7 +35,7 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
-BASELINE_REF = "f051348"
+BASELINE_REF = "357ca16"
 CONTENT = REPO / "content"
 
 

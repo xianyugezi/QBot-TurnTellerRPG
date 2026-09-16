@@ -203,7 +203,12 @@ def resolve_job(ctx: Mapping[str, Any], arg: object) -> Optional[dict]:
 
 def default_job(ctx: Mapping[str, Any]) -> Optional[dict]:
     """缺省职业（B7 / REG-04 兜底链）：settings.default_job_id → 首个 recommended_newbie
-    职业 → jobs 首职业；jobs 表缺失 → None（由调用方兜底「?"」）。"""
+    职业 → **首个 is_basic（基础/初始职业，批23 C2）** → jobs 首职业；jobs 表缺失 →
+    None（由调用方兜底「?"」）。
+
+    批23 C2：is_basic 是**新增的中间兜底**——既有包不带该字段（全部视为非初始），
+    兜底链与现状逐字段一致；仅当包显式声明 is_basic 且无 default_job_id/推荐时生效。
+    """
     jobs = _job_entry(ctx)
     if jobs is None or not jobs:
         return None
@@ -216,6 +221,10 @@ def default_job(ctx: Mapping[str, Any]) -> Optional[dict]:
                 return d
     for jid, d in jobs.items():
         if isinstance(d, Mapping) and d.get("recommended_newbie"):
+            return {"id": str(jid), **d}
+    # 批23 C2：基础/初始职业标记（推荐缺省时的次选；仍无 → jobs 首条兜底）
+    for jid, d in jobs.items():
+        if isinstance(d, Mapping) and d.get("is_basic"):
             return {"id": str(jid), **d}
     first = next(iter(jobs))
     return _job_of_id(ctx, first)

@@ -234,13 +234,13 @@ def test_growth_keys_contract_nine() -> None:
 # 5. jobs_fields 登记表（顶层 11 + growth 9 + transform 4B 注册位）
 # ---------------------------------------------------------------------------
 def test_jobs_fields_top_level_eleven_keys() -> None:
-    """jobs_fields() 顶层键全量（§1.1 #1~#11 + 批23 C1 新增 advance）。"""
+    """jobs_fields() 顶层键全量（§1.1 #1~#11 + 批23 C1 advance / C2 is_basic）。"""
     fields = jobs_fields()
     top_keys = ["id", "name", "difficulty", "playstyle", "recommended_newbie",
-                "resource_axes", "mechanic_tags", "weapon_types", "growth",
-                "transform", "description", "advance"]
+                "is_basic", "resource_axes", "mechanic_tags", "weapon_types",
+                "growth", "transform", "description", "advance"]
     assert set(top_keys) <= set(fields.keys())
-    assert len(fields) == 12  # 11 契约 + 批23 C1 advance（转职前置合并子对象）
+    assert len(fields) == 13  # 11 契约 + C1 advance + C2 is_basic
 
 
 def test_jobs_fields_required_and_defaults() -> None:
@@ -288,7 +288,7 @@ def test_contract_field_count_top_level_plus_growth() -> None:
     """字段计数核对：顶层 11 + growth 9 = 20（transform 段 11 + state_policy 3
     归批4路4B；技能挂点 4 + 链挂点 1 随 6a 登记 skills/skill_chains）；
     批23 C1 另新增 advance（转职前置，+3 子键）。"""
-    assert len(jobs_fields()) == 12  # + advance（批23 C1）
+    assert len(jobs_fields()) == 13  # + advance（批23 C1）+ is_basic（批23 C2）
     assert len(jobs_fields()["growth"].children) == 9
     assert len(GROWTH_KEYS) == 9
     assert set(jobs_fields()["advance"].children) == {"from", "level", "items"}

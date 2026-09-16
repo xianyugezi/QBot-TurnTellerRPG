@@ -56,7 +56,9 @@ def _job_list_text(ctx: Mapping[str, Any]) -> str:
             continue
         name = str(d.get("name") or jid)
         rec = "（推荐）" if d.get("recommended_newbie") else ""
-        parts.append(f"{i}. {name}{rec}")
+        # 批23 C2：基础/初始职业标记（供初始职业选择辨识）
+        bas = "（初始）" if d.get("is_basic") else ""
+        parts.append(f"{i}. {name}{rec}{bas}")
     # 2026-09-07 zerc 实机反馈：职业列表换行显示（原「，」单行挤在一起）
     return "\n".join(parts)
 
@@ -86,7 +88,8 @@ def _job_list_render(ctx: Mapping[str, Any], page: int) -> str:
     for i, (jid, d) in enumerate(slice_items, start + 1):
         name = str(d.get("name") or jid)
         rec = "（推荐）" if d.get("recommended_newbie") else ""
-        lines.append(f"{i}. {name}{rec}")
+        bas = "（初始）" if d.get("is_basic") else ""  # 批23 C2
+        lines.append(f"{i}. {name}{rec}{bas}")
     lines.append(render_cake_tail(
         res.page, res.total_pages,
         tip=tpl_of(ctx, "job_list_tip", {}),

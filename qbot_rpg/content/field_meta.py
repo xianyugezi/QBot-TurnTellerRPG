@@ -1375,7 +1375,7 @@ ACTION_SUBGROUP_LABELS: Dict[str, str] = {
 }
 # 职业：标识 / 成长 / 形态变换 / 转职前置。
 JOBS_SUBGROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
-    ("base", ("id", "name", "difficulty", "playstyle", "recommended_newbie")),
+    ("base", ("id", "name", "difficulty", "playstyle", "recommended_newbie", "is_basic")),
     ("tags", ("mechanic_tags", "weapon_types", "resource_axes")),
     ("growth", ("growth",)),
     ("transform", ("transform",)),
@@ -1807,6 +1807,14 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "difficulty": FieldMeta(type="str", soft_label=True),  # 3 simple|advanced|complex（软标注：只建议不拦截）
         "playstyle": FieldMeta(type="str"),   # 4 玩法一句话（≤20 字，专项）
         "recommended_newbie": FieldMeta(type="bool"),  # 5 推荐新手？（注册缺省职业取推荐标记）
+        # 批23 · C2 基础/初始职业标记（CakeGame Config_Occupation.Basics；§三 C2）：
+        # bool；true = 可作为玩家初始职业。现状核查：注册流程只**自动**取一个缺省
+        # 职业（default_job 兜底链），**无「多起始职业选择」UX**——本批不做该系统级
+        # 改造，is_basic 作最小消费：兜底链在「推荐」之后取**首个 is_basic**，
+        # 并在职业列表标「（初始）」。既有包不带 is_basic → 行为与现状一致。
+        # 校验：仅 bool（泛型 R-1）；缺省 = false。
+        "is_basic": FieldMeta(type="bool", label="基础/初始职业",
+                              help="置真：该职业可作为玩家初始职业；缺省 = 不作为初始职业。"),
         "resource_axes": FieldMeta(type="list", element=FieldMeta(type="str")),  # 6 stats.json 注册表引用（4B 专项）
         "mechanic_tags": FieldMeta(type="list", element=FieldMeta(type="str")),  # 7 机制标签（软标注）
         "weapon_types": FieldMeta(type="list", element=FieldMeta(type="str")),   # 8 可用武器类型（4b 联动）

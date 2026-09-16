@@ -90,6 +90,9 @@ GROWTH_KEYS: Tuple[str, ...] = ("str", "int", "con", "spr", "foc", "agi", "lck",
 # REG-04 缺省职业链消费该标记，补白 4）
 DEFAULT_RECOMMENDED_NEWBIE: bool = False
 
+# 批23 · C2 顶层 is_basic 缺省（基础/初始职业标记；缺省 False = 不作为初始职业）
+DEFAULT_IS_BASIC: bool = False
+
 # growth 子字段 #12~#20 缺省（§1.2：缺省 0；狂战士示例仅配 6 项）
 DEFAULT_GROWTH: float = 0.0
 
@@ -311,6 +314,11 @@ def jobs_fields() -> Dict[str, FieldMeta]:
         ),
         "playstyle": FieldMeta(type="str", default=DEFAULT_PLAYSTYLE),
         "recommended_newbie": FieldMeta(type="bool", default=DEFAULT_RECOMMENDED_NEWBIE),
+        # 批23 · C2 基础/初始职业标记（CakeGame Config_Occupation.Basics；§三 C2）：
+        # bool；true = 该职业可作为玩家初始职业。引擎消费：注册流程缺省职业兜底链
+        # （commands/register_commands.default_job：default_job_id → 推荐 →
+        # **首个 is_basic** → jobs 首条）与职业列表「（初始）」标注。
+        "is_basic": FieldMeta(type="bool", default=DEFAULT_IS_BASIC),
         "resource_axes": FieldMeta(
             type="list", element=FieldMeta(type="str")
         ),  # stats.json 注册表引用校验归校验器专项

@@ -106,8 +106,9 @@ from qbot_rpg.core.transform_snapshot import TRANSFORM_STATE_FIELDS
 # 6a：§1.2 全字段 24 + 6b 技能挂点 2 + 6c 技能扩展 4 = 30（M13 合写产物）
 SKILLS_FIELDS_MIN: int = 30
 # 6b：顶层 11 + growth 9 + transform 11 + state_policy 3 = 34（M13 合写产物）
-# 批23 C1 新增 advance（转职前置合并子对象，+3 子键：from/level/items）→ 38。
-JOBS_FIELDS_MIN: int = 38
+# 批23 C1 新增 advance（转职前置合并子对象，+3 子键：from/level/items）
+# 批23 C2 新增 is_basic（基础/初始职业标记，顶层 +1）→ 39。
+JOBS_FIELDS_MIN: int = 39
 # 6a：定稿 10 + 细化增补 3 = 13 条（§3.1/§3.2）
 # V-1~V-13 + V-14/V-15（2026-09-08 方位 v0.6：F08 position_rule 形状、F10 air_policy 枚举红拦）
 SKILL_RULES: int = 15
@@ -301,15 +302,15 @@ def test_6a_skills_fields_contract_core_24() -> None:
 
 def test_6b_jobs_fields_ge_34() -> None:
     """契约 §1.1 顶层 11 + §1.2 growth 9 + §1.3 transform 11 + §1.4 state_policy 3 = 34；
-    批23 C1 另加 advance（转职前置合并子对象，+3 子键）。
+    批23 另加 advance（转职前置，+3 子键）/ is_basic（初始职业，+1 顶层）。
 
-    登记形态：jobs_fields() 平铺 12 键（growth/transform/advance/state_policy 为
-    children 嵌套）；并集口径 = 顶层 + children 展开 ≥ 38。
+    登记形态：jobs_fields() 平铺 13 键（growth/transform/advance/state_policy 为
+    children 嵌套）；并集口径 = 顶层 + children 展开 ≥ 39。
     """
     fields = jobs_fields()
-    assert len(fields) == 12, "jobs_fields 平铺应为顶层 12 键（11 契约 + advance）"
+    assert len(fields) == 13, "jobs_fields 平铺应为顶层 13 键（11 契约 + advance + is_basic）"
     for key in (
-        "id", "name", "difficulty", "playstyle", "recommended_newbie",
+        "id", "name", "difficulty", "playstyle", "recommended_newbie", "is_basic",
         "resource_axes", "mechanic_tags", "weapon_types", "growth", "transform",
         "description", "advance",
     ):
@@ -321,20 +322,20 @@ def test_6b_jobs_fields_ge_34() -> None:
         if isinstance(ch, dict):
             child_keys |= set(ch.keys())
     assert len(child_keys) >= 23, f"children 展开应 ≥ 23，got {len(child_keys)}"
-    # 四段并集 = 顶层 + children + state_policy ≥ 38
+    # 四段并集 = 顶层 + children + state_policy ≥ 39
     assert len(child_keys | set(fields) | set(state_policy_fields())) >= JOBS_FIELDS_MIN
 
 
-def test_6b_jobs_fields_exact_38() -> None:
-    """§1.1~§1.4 + 批23 C1 合写登记表恰 38 键
-    （顶层 12 + growth 9 + transform 11 + policy 3 + advance 3）。
+def test_6b_jobs_fields_exact_39() -> None:
+    """§1.1~§1.4 + 批23 C1/C2 合写登记表恰 39 键
+    （顶层 13 + growth 9 + transform 11 + policy 3 + advance 3）。
 
-    登记形态：顶层 12 平铺 + growth children 9 + transform children 11 +
+    登记形态：顶层 13 平铺 + growth children 9 + transform children 11 +
     state_policy children 3 + advance children 3（job_models 的 obj 子字段登记先例，
-    与 field_meta ENEMY_STATS_CHILDREN 同构）——五段键空间互斥并集 = 38。
+    与 field_meta ENEMY_STATS_CHILDREN 同构）——五段键空间互斥并集 = 39。
     """
     fields = jobs_fields()
-    assert len(fields) == 12  # 顶层 §1.1 #1~#11 + 批23 advance 平铺键
+    assert len(fields) == 13  # 顶层 §1.1 #1~#11 + 批23 advance + is_basic
     transform_children: Mapping[str, object] = fields["transform"].children
     growth_children: Mapping[str, object] = fields["growth"].children
     advance_children: Mapping[str, object] = fields["advance"].children
@@ -344,7 +345,7 @@ def test_6b_jobs_fields_exact_38() -> None:
     advance_keys = set(advance_children)
     policy_keys = set(state_policy_fields())
     union = top_keys | transform_keys | growth_keys | advance_keys | policy_keys
-    assert len(union) == 38  # 12+9+11+3+3 段间无重叠
+    assert len(union) == 39  # 13+9+11+3+3 段间无重叠
     assert len(union - top_keys) == 26  # children 段合计 9+11+3+3
     assert len(growth_children) == 9
     assert len(transform_children) == 11

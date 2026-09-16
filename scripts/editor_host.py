@@ -139,7 +139,9 @@ def create_app(pack: Optional[str] = None, root: Optional[str] = None,
         body = payload or {}
         return editor_ops.save_entry(
             pack_id, module, entry_id, body.get("patch") or {},
-            root=content_root, role=app.state.role)
+            root=content_root, role=app.state.role,
+            # 批21 · C：改 ID 有引用时需界面确认（confirm=true）才写入。
+            confirm=bool(body.get("confirm")))
 
     # -------- 批6 写入：新增条目 / 删除条目 / ID 即时校验 --------
     @app.post("/api/pack/{pack_id}/module/{module}/entry")

@@ -116,6 +116,12 @@ def _envelope(**kw: Any) -> Dict[str, Any]:
         "rolled_back": False,
         "message": "",
         "meta_source": api.META_SOURCE,
+        # 批21 · C：改条目标识（改 ID）时的引用检查（无改名 → 空/False，行为与现状一致）。
+        "rename": None,
+        "refs": [],
+        "ref_count": 0,
+        "breaking": False,
+        "needs_confirmation": False,
     }
     env.update(kw)
     return env
@@ -310,12 +316,28 @@ def _plan(pack: object, module: object, entry_id: object, patch: object,
     return slot, new_content, report
 
 
-def _split_report(report: Any, slot: Mapping[str, Any]) -> Any:
+def _split_report(report: Any, slot: Mapping[str, Any],
+                  tolerate: Optional[Callable[[Any], bool]] = None,
+                  tolerate_message: str = "",
+                  tolerate_code: str = "module_tolerated_") -> Any:
+    """校验报告 → (红拦, 黄提示)。
+
+    `tolerate`（可选）：命中的红拦不判失败，改以黄提示如实说明「为什么本次放行」。
+    默认 None = 一律不容忍（既有语义零变化）。仅供「删除被引用条目 / 改名被引用条目 /
+    模块开关」这类**产品明确允许**的场景使用（见 delete_entry / save_entry）。
+    """
     prefix = _scope_prefix(slot)
-    reds = _decorate(atomic_store.humanize_errors(report.errors), slot, prefix,
+    raw_errors = list(report.errors)
+    tolerated: List[Any] = []
+    if tolerate is not None:
+        tolerated = [e for e in raw_errors if tolerate(e)]
+        raw_errors = [e for e in raw_errors if not tolerate(e)]
+    reds = _decorate(atomic_store.humanize_errors(raw_errors), slot, prefix,
                      related_only=False)
     yellows = _decorate(atomic_store.humanize_warnings(report.warnings), slot, prefix,
                         related_only=True)
+    yellows += _humanize_tolerated(tolerated, message_prefix=tolerate_message,
+                                   code_prefix=tolerate_code)
     yellows += _orphan_key_warnings(slot)
     return reds, yellows
 
@@ -353,6 +375,10 @@ def _orphan_key_warnings(slot: Mapping[str, Any]) -> List[Dict[str, Any]]:
         "related": True,
         "removed_keys": removed,
         "referrers": holders,
+        # 批21 · C：动态键改名 / 删键也给出与「改 ID」同形的结构化引用信息。
+        "refs": holders,
+        "ref_count": len(holders),
+        "breaking": True,
         "message": f"已删掉的子项（{'、'.join(removed)}）还有内容在引用：{where}{more}。"
                    "保存后这些引用会指向不存在的子项，运行时会退化或忽略；本提示不阻断保存。",
         "how_to_fix": "如需保持引用完整，请先修改或删除这些引用者；确认无碍可直接保存。",
@@ -379,22 +405,106 @@ def _related_to_slot(items: Sequence[Mapping[str, Any]], slot: Mapping[str, Any]
 # =====================================================================================
 # 校验（不落盘）
 # =====================================================================================
+def _identity_rename(slot: Mapping[str, Any], patch: object) -> Optional[Dict[str, str]]:
+    """本次补丁是否改「条目标识」（改 ID / 改键）；是 → {id_field, from, to}，否 → None。
+
+    通用判定（不写死模块名 / 字段名）：只有 **list 模块**的条目身份落在条目值内
+    （`ModuleMeta.id_field`，缺省 `id`），可经字段补丁改名；**map / object 模块**的条目
+    身份 = 顶层键，字段补丁不承载「顶层键改名」；动态子键改名走另一条既有路径
+    （`_orphan_key_warnings` 已按引用扫描提示，见批14 #6）。
+    """
+    if not isinstance(patch, Mapping):
+        return None
+    if str(slot.get("entry_type") or "") != "list":
+        return None
+    mmeta = slot.get("mmeta")
+    id_field = str(getattr(mmeta, "id_field", "") or getattr(api, "_ID_FIELD", "id"))
+    if id_field not in patch:
+        return None
+    old = str(slot.get("entry_id") or "")
+    new = patch.get(id_field)
+    if not isinstance(new, str) or not new or new == old:
+        return None
+    return {"id_field": id_field, "from": old, "to": new}
+
+
+# 改名被引用条目：旧名悬空引用属「产品明确允许（确认后照常保存）」→ 复核容忍的说明前缀。
+_RENAME_TOLERATE_NOTE = "改名后旧名悬空（引用方保持旧名，校验如实报「引用目标不存在」）："
+
+# 「引用者清单」摘要里最多逐条列出的条数（其余只报总数）。
+REF_LIST_LIMIT = 10
+
+
+def reference_summary_warning(refs: Sequence[Mapping[str, Any]], *,
+                              module: object = "", entry_id: object = "",
+                              verb: str = "删除") -> List[Dict[str, Any]]:
+    """引用者清单的**强化呈现**：前若干条 + 总数 + 「操作后这些引用会失效」一句话。
+
+    展示层强化（不硬拦、不改写引用方），每条引用者仍由 `reference_warnings` 逐条给出；
+    本函数只补一条汇总条目（编号稳定 = `entry_referenced_summary`），供界面首屏提醒。
+    """
+    total = len(refs)
+    if not total:
+        return []
+    shown = "、".join(
+        f"{r.get('module_label') or r.get('module')}「{r.get('entry_name') or r.get('entry_id')}」"
+        f".{r.get('field_label') or r.get('field')}"
+        for r in refs[:REF_LIST_LIMIT])
+    more = f"（另有 {total - REF_LIST_LIMIT} 处，见下方逐条）" if total > REF_LIST_LIMIT else ""
+    return [{
+        "level": "yellow", "code": "entry_referenced_summary",
+        "module": str(module), "field": "", "entry_id": str(entry_id),
+        "field_key": "", "field_label": "（引用检查）", "related": True,
+        "ref_count": total, "breaking": True, "refs": list(refs),
+        "message": (f"有 {total} 处引用：{shown}{more}。{verb}后这些引用会失效"
+                    "（指向不存在的条目）。"),
+        "how_to_fix": ("如需保持引用完整，请先修改或删除这些引用者；"
+                       "确认无碍可继续（不会自动改写引用方）。"),
+    }]
+
+
+def _rename_warnings(rename: Mapping[str, str],
+                     refs: Sequence[Mapping[str, Any]]) -> List[Dict[str, Any]]:
+    """改名引用黄提示：汇总（前若干条 + 总数 + 「改名会断链」）+ 逐条引用者。"""
+    summary = reference_summary_warning(
+        refs, entry_id=rename.get("from"), verb="改名")
+    if summary:
+        summary[0]["message"] = (
+            f"「{rename.get('from')}」→「{rename.get('to')}」有 {len(refs)} 处引用，"
+            "改名会断链：" + str(summary[0]["message"]))
+    return summary + reference_warnings(refs)
+
+
 def validate_entry(pack: object, module: object, entry_id: object, patch: object, *,
                    root: Optional[object] = None, role: object = ROLE_OWNER,
                    meta: Optional[FieldMetaTable] = None) -> Dict[str, Any]:
     """保存前预检：跑现有校验器，返回红拦/黄提示（绝不写盘）。
 
     红拦非空 → ok=false（界面据此阻断保存）；黄提示 → 仍 ok=true，界面标出。
+    批21 · C：改条目标识（改 ID）时调用既有引用扫描，结构化返回 `refs` / `ref_count` /
+    `breaking`；引用导致的旧名悬空 R-4 不计红拦（改以黄提示如实说明），**需用户确认**
+    （`needs_confirmation`）才会真正写入。
     """
     slot, _content, report = _plan(pack, module, entry_id, patch, root, meta)
-    reds, yellows = _split_report(report, slot)
-    level = "red" if not report.ok else ("yellow" if yellows else "ok")
+    rename = _identity_rename(slot, patch)
+    refs = (api.reference_scan(pack, str(slot["module"]), rename["from"], root=root, meta=meta)
+            if rename else [])
+    breaking = bool(rename and refs)
+    tolerate = _is_dangling_to(rename["from"]) if breaking else None
+    reds, yellows = _split_report(report, slot, tolerate=tolerate,
+                                  tolerate_message=_RENAME_TOLERATE_NOTE,
+                                  tolerate_code="rename_tolerated_")
+    if breaking:
+        yellows = _rename_warnings(rename, refs) + yellows
+    level = "red" if reds else ("yellow" if yellows else "ok")
     return _envelope(
-        ok=bool(report.ok), phase="validate", pack=str(pack), module=str(slot["module"]),
+        ok=not reds, phase="validate", pack=str(pack), module=str(slot["module"]),
         entry_id=str(entry_id), level=level, errors=reds, warnings=yellows,
         changed_fields=sorted(str(k) for k in (patch or {})),
-        message=("校验通过。" if report.ok and not yellows
-                 else ("校验通过（有黄提示）。" if report.ok else "校验未通过（红拦）。")),
+        rename=rename, refs=refs, ref_count=len(refs),
+        breaking=breaking, needs_confirmation=breaking,
+        message=("校验通过。" if not reds and not yellows
+                 else ("校验通过（有黄提示）。" if not reds else "校验未通过（红拦）。")),
     )
 
 
@@ -408,7 +518,7 @@ def _verify_after_write(pack: object, ground_slot: Mapping[str, Any],
     """回读落盘结果 + 整包复校：通过 → None；不通过 → 人话红拦（用于触发自动回退）。
 
     `tolerate`：可选的「容忍判定」——返回 True 的红拦不计入复核失败。
-    仅供「删除被引用条目」这类**产品明确允许**的场景使用（见 delete_entry）；默认 None
+    仅供「删除被引用条目 / 改名被引用条目」这类**产品明确允许**的场景使用；默认 None
     = 一律不容忍，批2 保存链语义零变化。
     """
     try:
@@ -432,7 +542,8 @@ def _verify_after_write(pack: object, ground_slot: Mapping[str, Any],
 
 def save_entry(pack: object, module: object, entry_id: object, patch: object, *,
                root: Optional[object] = None, role: object = ROLE_OWNER,
-               meta: Optional[FieldMetaTable] = None) -> Dict[str, Any]:
+               meta: Optional[FieldMetaTable] = None,
+               confirm: bool = False) -> Dict[str, Any]:
     """编辑落盘唯一入口：红拦不落盘 → 备份 → 原子写 → 回读复核。
 
     任一环节失败都返回 ok=false 且**不假成功**：
@@ -440,20 +551,47 @@ def save_entry(pack: object, module: object, entry_id: object, patch: object, *,
       · 备份失败 → 取消写入（包未被改动）；
       · 写入失败 → 原子写未完成（文件未改动）；
       · 复核失败 → 自动回退到备份（rolled_back 标出，回退失败也如实上报）。
+
+    批21 · C（改 ID 前的引用检查接线）：补丁改了条目标识 → 先调既有引用扫描，返回
+    `refs` / `ref_count` / `breaking`；**有引用且未 `confirm` 时不写入**（`needs_confirmation`），
+    确认后照常保存（**不自动改写引用方**；旧名悬空引用由后续校验如实报「引用目标不存在」）。
+    无改名 / 改名但无引用 → 行为与既有完全一致。
     """
     require_edit(role)
     slot, new_content, report = _plan(pack, module, entry_id, patch, root, meta)
-    reds, yellows = _split_report(report, slot)
+    mod = str(slot["module"])
+    rename = _identity_rename(slot, patch)
+    refs = api.reference_scan(pack, mod, rename["from"], root=root, meta=meta) if rename else []
+    breaking = bool(rename and refs)
     env = _envelope(
-        phase="save", pack=str(pack), module=str(slot["module"]), entry_id=str(entry_id),
-        errors=reds, warnings=yellows, changed_fields=sorted(str(k) for k in (patch or {})),
+        phase="save", pack=str(pack), module=mod, entry_id=str(entry_id),
+        changed_fields=sorted(str(k) for k in (patch or {})),
+        rename=rename, refs=refs, ref_count=len(refs),
+        breaking=breaking, needs_confirmation=bool(breaking and not confirm),
     )
-    if not report.ok:
+    if breaking and not confirm:
+        # 有引用 + 用户尚未确认 → 不静默、不写入：结构化返回引用清单，等界面确认后重提。
+        env.update(
+            ok=False, level="yellow", errors=[],
+            warnings=_rename_warnings(rename, refs),
+            message=(f"「{rename['from']}」→「{rename['to']}」有 {len(refs)} 处引用，"
+                     "改名会断链（引用方不会自动改写）；确认后才会写入。"),
+        )
+        return env
+
+    # 已确认（或无引用）：引用导致的旧名悬空 R-4 容忍为黄提示，其余红拦照常阻断。
+    tolerate = _is_dangling_to(rename["from"]) if breaking else None
+    reds, yellows = _split_report(report, slot, tolerate=tolerate,
+                                  tolerate_message=_RENAME_TOLERATE_NOTE,
+                                  tolerate_code="rename_tolerated_")
+    if breaking:
+        yellows = _rename_warnings(rename, refs) + yellows
+    env.update(errors=reds, warnings=yellows)
+    if reds:
         env.update(level="red", message="校验未通过：本次未写入任何文件（红拦）。")
         return env
 
     pack_dir = slot["pack_dir"]
-    mod = str(slot["module"])
 
     backup = atomic_store.backup_modules(pack_dir, [mod])
     if not backup.get("ok"):
@@ -467,7 +605,7 @@ def save_entry(pack: object, module: object, entry_id: object, patch: object, *,
         env["errors"] = list(written.get("errors") or []) + env["errors"]
         return env
 
-    verify_errors = _verify_after_write(pack, slot, root, meta)
+    verify_errors = _verify_after_write(pack, slot, root, meta, tolerate=tolerate)
     if verify_errors is not None:
         rolled = atomic_store.restore_modules_from_backup(pack_dir, [mod])
         env.update(level="red", rolled_back=bool(rolled.get("ok")))
@@ -662,7 +800,9 @@ def delete_entry(pack: object, module: object, entry_id: object, *,
     tolerate = _is_dangling_to(entry_id)
     blocking = [e for e in report.errors if not tolerate(e)]
     prefix = _scope_prefix(slot)
-    ref_warnings = reference_warnings(referrers)
+    # 批21 · C：强化呈现——汇总（前若干条 + 总数 + 「删除后这些引用会失效」）置于逐条之前。
+    ref_warnings = reference_summary_warning(referrers, module=mod, entry_id=entry_id,
+                                             verb="删除") + reference_warnings(referrers)
     yellows = _decorate(atomic_store.humanize_warnings(report.warnings), slot, prefix,
                         related_only=True)
     yellows = _related_to_slot(yellows, slot, mod)
@@ -819,14 +959,17 @@ def _module_dependency_warnings(pack_dir: Path, manifest: Mapping[str, Any],
     return out
 
 
-def _humanize_tolerated(errors: Sequence[Any]) -> List[Dict[str, Any]]:
+def _humanize_tolerated(errors: Sequence[Any],
+                        message_prefix: str = "模块开关放行（空骨架 / 暂时摘下）：",
+                        code_prefix: str = "module_tolerated_"
+                        ) -> List[Dict[str, Any]]:
     """被容忍的红拦 → 界面黄提示（如实告诉用户「为什么这次放行」）。"""
     out: List[Dict[str, Any]] = []
     for item in atomic_store.humanize_errors(list(errors)):
         item = dict(item)
         item["level"] = "yellow"
-        item["code"] = "module_tolerated_" + str(item.get("code") or "")
-        item["message"] = "模块开关放行（空骨架 / 暂时摘下）：" + str(item.get("message") or "")
+        item["code"] = code_prefix + str(item.get("code") or "")
+        item["message"] = message_prefix + str(item.get("message") or "")
         out.append(item)
     return out
 
@@ -893,7 +1036,7 @@ def set_module_enabled(pack: object, module: object, enabled: object, *,
         tolerated = [e for e in blocked if tolerate(e)]
         blocked = [e for e in blocked if not tolerate(e)]
 
-    slot = {"module": mod, "entry_id": "", "base": {}}
+    slot = {"module": mod, "entry_id": "", "base": {}, "pack_dir": pack_dir}
     warnings = _module_dependency_warnings(pack_dir, manifest, declared, mod, bool(enabled))
     warnings += _humanize_tolerated(tolerated)
     warnings += _related_to_slot(

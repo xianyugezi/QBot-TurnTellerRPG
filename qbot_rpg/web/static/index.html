@@ -1803,9 +1803,21 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
     var who = norm(row.module_label || row.module) + "「" + norm(row.entry_name || row.entry_id) + "」";
     return who + "的「" + norm(row.field_label || row.field) + "」引用了它";
   }
+  // 批21 · C：改条目标识（改 ID）有引用 → 二次确认文案（列引用方 + 断链后果 + 不改写引用方）。
+  function renameConfirmText(res) {
+    var rn = (res && res.rename) || {};
+    var refs = (res && res.refs) || [];
+    var total = (res && res.ref_count) || refs.length;
+    var lines = refs.slice(0, 10).map(function (x) { return "· " + referrerText(x); });
+    return "把条目标识「" + norm(rn.from || "") + "」改成「" + norm(rn.to || "") + "」吗？\n\n"
+      + "有 " + total + " 处引用，改名会断链：\n" + lines.join("\n")
+      + (refs.length > 10 ? "\n… 其余 " + (refs.length - 10) + " 处见结果区" : "")
+      + "\n\n引用方不会被自动改写（保持旧名）；改名后校验会如实报「引用目标不存在」。"
+      + "确定继续改名吗？";
+  }
   return { match: match, filterEntries: filterEntries, searchIndex: searchIndex,
            searchCount: searchCount, idStatus: idStatus, ruleText: ruleText,
-           referrerText: referrerText };
+           referrerText: referrerText, renameConfirmText: renameConfirmText };
 });
 /* EDITOR_ENTRY_END */
 
@@ -6001,11 +6013,24 @@ function setBusy(on) {
   refreshRollbackButton();
 }
 
-function postForm(ctx, suffix) {
+function postForm(ctx, suffix, extra) {
   var patch = EditorDraft.patch(ctx.draft);
   if (!Object.keys(patch).length) { return Promise.resolve(); }
   setBusy(true);
-  return postJSON(formURL(ctx, suffix), { patch: patch }).then(function (res) {
+  var body = { patch: patch };
+  if (extra && extra.confirm) { body.confirm = true; }
+  return postJSON(formURL(ctx, suffix), body).then(function (res) {
+    // 批21 · C：改条目标识（改 ID）有引用 → 不静默写入：先弹确认（列引用方），
+    // 用户确认后带 confirm=true 重新提交；取消则原样展示引用清单，文件不动。
+    if (res && res.needs_confirmation && suffix === "/save"
+        && !(extra && extra.confirm)) {
+      var msg = EditorEntry.renameConfirmText(res);
+      if (!window.confirm(msg)) {
+        state.result = res; renderResult(res);
+        return null;
+      }
+      return postForm(ctx, suffix, { confirm: true });
+    }
     state.result = res; renderResult(res);
     if (res.ok && suffix === "/save") {
       state.pendingDrafts = snapshotOtherDrafts(ctx.key);

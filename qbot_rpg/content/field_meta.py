@@ -1233,7 +1233,7 @@ ENEMIES_GROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
 
 ITEMS_GROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
     ("base", (
-        "id", "name", "type", "slot", "bind", "usable", "job_restrict",
+        "id", "name", "type", "slot", "bind", "usable", "job_restrict", "use_level",
         "quality", "rarity", "material_tier", "source", "awaken", "seed",
     )),
     ("stats", (
@@ -1813,6 +1813,14 @@ def _module_table() -> Dict[str, ModuleMeta]:
             type="list", element=FieldMeta(type="ref", ref_target="job"),
             label="职业限制",
             help="仅这些职业可穿戴/使用（jobs.json 职业 id）；留空 = 不限职业。"),
+        # 批22 · A2 使用/穿戴等级门槛（CakeGame Config_Goods.UseLV；§三 A2）：
+        # int ≥ 1。校验口径：非整数 → 泛型 R-1；负数 → 泛型 R-2；0 → 泛型 Y-1 黄提示 +
+        # items/equipment 专项校验器 IV-1 红拦（int≥1 是硬口径，见 content/item_validator.py）。
+        # 与 settings/shop 的 level_required（商店门槛）语义不同，别混用（§三 A2 备注）。
+        # 引擎消费：玩家等级 < use_level → 阻止穿戴/使用（core/equipment.item_requirement_error）。
+        "use_level": FieldMeta(
+            type="int", range_min=1, range_max=999, unit="级", label="使用等级",
+            help="需达到的玩家等级（≥1）；留空 = 不限等级。"),
         # 批4.5：items/equipment 实测顶层 desc（原表未登记 → 纯展示宽字段）
         "desc": _soft_display("说明"),
     }

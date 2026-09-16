@@ -620,6 +620,14 @@ class _Checker:
                 validate_resource_axes = None  # type: ignore[assignment]
             if validate_resource_axes is not None:
                 validate_resource_axes(self._modules, self)
+        # 批22 · A2：items/equipment 使用等级硬口径（use_level ≥ 1 → IV-1 红拦；
+        # 引用类 job_restrict 走元数据 ref_target="job" 的泛型 R-4，此处不重复）。
+        if module_name in ("items", "equipment"):
+            from qbot_rpg.content.item_validator import validate_equipment, validate_items
+            if module_name == "items":
+                validate_items(self._modules, self)
+            else:
+                validate_equipment(self._modules, self)
         # 批18 效果扩展（gain_currency / learn_skill）：类型相关必填/范围/引用存在性
         # 专项（泛型 R-1/R-2/R-4 仍在下方逐条目跑；本钩子补「仅在该 type 下才要求」的键）。
         if module_name == "effects":

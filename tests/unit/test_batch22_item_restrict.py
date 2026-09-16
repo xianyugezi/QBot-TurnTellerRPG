@@ -164,3 +164,91 @@ def test_a1_e2e_temp_content_root(tmp_path: Path) -> None:
         pass
     else:  # pragma: no cover
         raise AssertionError("非法职业引用必须红拦")
+
+
+# ---------------------------------------------------------------------------
+# A2 元数据登记 + 编辑器可见
+# ---------------------------------------------------------------------------
+def test_a2_metadata_registered_items_and_equipment() -> None:
+    tbl = default_field_meta_table()
+    for mod in ("items", "equipment"):
+        fm = tbl.module(mod).fields.get("use_level")
+        assert fm is not None, f"{mod} 缺 use_level 登记"
+        assert fm.type == "int"
+        assert fm.range_min == 1 and fm.range_max == 999
+        assert fm.label and fm.unit == "级"
+        assert tbl.module(mod).field_groups.get("use_level") == "base"
+
+
+def test_a2_editor_visible(tmp_path: Path) -> None:
+    _temp_pack(tmp_path, "pack_a2", {
+        "equipment": [{"id": "sword", "name": "剑", "slot": "weapon", "use_level": 10}],
+    })
+    detail = api.entry_detail("pack_a2", "equipment", "sword", root=tmp_path)
+    f = next(x for x in detail["fields"] if x["key"] == "use_level")
+    assert f["present"] is True and f["type"] == "int"
+
+
+# ---------------------------------------------------------------------------
+# A2 校验：非法值口径（0/负数 → 红；缺失/合法 → 无）
+# ---------------------------------------------------------------------------
+def test_a2_validator_zero_hard_red() -> None:
+    report = check_pack({"equipment": [{"id": "s", "name": "剑", "use_level": 0}]})
+    hits = [e for e in report.errors if e.kind == "IV-1" and "use_level" in e.field]
+    assert hits and hits[0].detail.get("minimum") == 1
+
+
+def test_a2_validator_negative_red() -> None:
+    report = check_pack({"equipment": [{"id": "s", "name": "剑", "use_level": -3}]})
+    assert [e for e in report.errors if e.kind == "IV-1"]      # 专项
+    assert [e for e in report.errors if e.kind == "R-2"]       # 泛型负数（双红，门禁更严）
+
+
+def test_a2_validator_valid_and_missing_ok() -> None:
+    report = check_pack({"equipment": [
+        {"id": "s", "name": "剑", "use_level": 5},
+        {"id": "t", "name": "盾"},
+    ]})
+    assert not [e for e in report.errors if "use_level" in e.field]
+
+
+def test_a2_validator_non_int_red_via_generic() -> None:
+    report = check_pack({"equipment": [{"id": "s", "name": "剑", "use_level": "10"}]})
+    assert [e for e in report.errors if e.kind == "R-1" and "use_level" in e.field]
+    assert not [e for e in report.errors if e.kind == "IV-1"]  # 不重复报
+
+
+# ---------------------------------------------------------------------------
+# A2 引擎消费：等级不足 → 阻止（贴提示原文）；达标 → 正常穿戴
+# ---------------------------------------------------------------------------
+def test_a2_engine_blocks_low_level() -> None:
+    defs = {"sword": {"id": "sword", "name": "剑", "slot": "weapon", "use_level": 5}}
+    ctx = _ctx([_item_row("sword", "剑", "weapon")], defs, job_id="warrior", level=3)
+    r = ctx["equip_engine"].equip_wear(1, ctx)
+    assert r["ok"] is False
+    assert r["message"] == "❌ 等级不足：需要 5 级，当前 3 级"
+    assert ctx["player"]["equipment"] == {}
+
+
+def test_a2_engine_allows_enough_level() -> None:
+    defs = {"sword": {"id": "sword", "name": "剑", "slot": "weapon", "use_level": 5}}
+    ctx = _ctx([_item_row("sword", "剑", "weapon")], defs, job_id="warrior", level=5)
+    r = ctx["equip_engine"].equip_wear(1, ctx)
+    assert r["ok"] is True and ctx["player"]["equipment"]["weapon"].item_id == "sword"
+
+
+def test_a2_two_judgements_independent() -> None:
+    """A1 与 A2 两条独立判定：职业命中但等级不足 → 报等级；两者都不满足 → 先报职业。"""
+    defs = {"sword": {"id": "sword", "name": "剑", "slot": "weapon",
+                      "job_restrict": ["warrior"], "use_level": 5}}
+    c1 = _ctx([_item_row("sword", "剑", "weapon")], defs, job_id="warrior", level=1)
+    assert c1["equip_engine"].equip_wear(1, c1)["message"] == "❌ 等级不足：需要 5 级，当前 1 级"
+    c2 = _ctx([_item_row("sword", "剑", "weapon")], defs, job_id="mage", level=1)
+    assert c2["equip_engine"].equip_wear(1, c2)["message"] == "❌ 职业不符：需要 warrior，当前 mage"
+
+
+def test_a2_regression_no_field_behaves_identically() -> None:
+    generic = {"sword": {"id": "sword", "name": "剑", "slot": "weapon"}}
+    for lv in (1, 10, 99):
+        ctx = _ctx([_item_row("sword", "剑", "weapon")], generic, job_id="warrior", level=lv)
+        assert ctx["equip_engine"].equip_wear(1, ctx)["ok"] is True

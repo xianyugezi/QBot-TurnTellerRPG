@@ -110,14 +110,17 @@ DEFAULT_SLOT_ORDER: tuple = (
 def item_requirement_error(
     item_def: Any, *, job_id: str = "", level: int = 1
 ) -> Optional[str]:
-    """装备/物品资格门槛（框架字段 `job_restrict`）→ 不满足返回人话提示，满足返回 None。
+    """装备/物品资格门槛（框架字段 `job_restrict` / `use_level`）→ 不满足返回人话，满足 None。
 
-    口径（批22 · A1；纯函数、只读不改写）：
+    口径（批22 · A1/A2；纯函数、只读不改写，两条判定**相互独立**）：
       - `job_restrict`（list<str>，元素引用 jobs.json 职业 id，与 skills.job_restrict
         同名同形）：非空且当前 `job_id` 不在其中 → **阻止穿戴/使用**。
-      - 字段缺失 / 空列表 / 非列表 → 不限制（空 = 通用，与技能侧同口径）。
-      - 这是**功能限制**（按既有「不可穿戴」拒绝路径处理），不是「只建议不拦截」的
-        建议类字段——依据 §三 A1「职业专属装备」语义。
+        字段缺失 / 空列表 / 非列表 → 不限制（空 = 通用，与技能侧同口径）。
+      - `use_level`（int ≥ 1）：为正整数且 `level` < `use_level` → **阻止穿戴/使用**；
+        缺失 / 非正整数（0/负/非数值）→ 不限制（非法值由校验器 IV-1/R-2 拦截）。
+      - 判定顺序：职业先、等级后（同一件两条件都不满足时先报职业）。
+      - 两者都是**功能限制**（按既有「不可穿戴」拒绝路径处理），不是「只建议不拦截」的
+        建议类字段——依据 §三 A1/A2。
     人话提示风格对齐既有装备拒绝文案（❌ 前缀 + 需要/当前）。
     """
     d = getattr(item_def, "raw", item_def)
@@ -128,6 +131,10 @@ def item_requirement_error(
         need = [str(r) for r in restrict if str(r)]
         if need and str(job_id) not in need:
             return f"❌ 职业不符：需要 {'/'.join(need)}，当前 {job_id or '无职业'}"
+    use_level = d.get("use_level")
+    if isinstance(use_level, int) and not isinstance(use_level, bool) and use_level > 0:
+        if int(level) < use_level:
+            return f"❌ 等级不足：需要 {use_level} 级，当前 {int(level)} 级"
     return None
 
 

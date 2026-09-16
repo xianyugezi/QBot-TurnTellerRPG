@@ -69,9 +69,11 @@
 from __future__ import annotations
 
 import copy
+import time
 from typing import Any, List, Mapping, MutableMapping, MutableSet, Optional
 
-from qbot_rpg.core.dayroll import today_of
+from qbot_rpg.content.quest_models import RESET_COUNT_NEVER, parse_reset
+from qbot_rpg.core.dayroll import advance_cycles, days_elapsed, today_of, weeks_elapsed
 from qbot_rpg.core.reward import dispatch_reward, normalize_reward
 from qbot_rpg.core.condition_engine import (
     normalize_op,
@@ -121,7 +123,7 @@ _EVENT_PREFIX = "[事件:"
 # 快照-回滚覆盖的可变 ctx 子结构（工程补白 1）
 _SNAP_KEYS: tuple = (
     "currencies", "exp", "reputation_state", "quest_active", "quest_completed",
-    "quest_daily", "longline_counters", "inventory",
+    "quest_daily", "longline_counters", "inventory", "quest_completed_at",
 )
 
 
@@ -301,6 +303,101 @@ def _completed_set(ctx: Mapping[str, Any]) -> set:
 
 def _is_completed(ctx: Mapping[str, Any], quest_id: str) -> bool:
     return quest_id in _completed_set(ctx)
+
+
+# -------------------------------------------------------------------------------------
+# 批24 G1：任务重置周期（并入 quest.daily；CakeGame Config_Task.ResetTime/ResetType）
+# 完成时刻落 ctx["quest_completed_at"] = {quest_id: {"ts": epoch秒, "day": "YYYY-MM-DD"}}，
+# 周期到点 → 该任务视为「未完成」（可再接取）。日/周走 dayroll 日界/周界；月/季/年走自然月；
+# 时/分/秒按秒差。count=-1 = 永不重置（沿用他们口径）。未配置 → None（行为与现状一致）。
+# -------------------------------------------------------------------------------------
+_UNIT_SECONDS: dict = {"秒": 1, "分": 60, "时": 3600}
+_UNIT_MONTHS: dict = {"月": 1, "季": 3, "年": 12}
+
+
+def _reset_spec(quest: Mapping) -> Optional[tuple]:
+    """任务重置周期 (count, unit)：`quest.daily` 值解析（parse_reset 唯一源）；未配置 → None。"""
+    return parse_reset(quest.get("daily"))
+
+
+def _completion_record(ctx: Mapping[str, Any], quest_id: str) -> Optional[Mapping]:
+    table = ctx.get("quest_completed_at")
+    if not isinstance(table, Mapping):
+        return None
+    rec = table.get(quest_id)
+    return rec if isinstance(rec, Mapping) else None
+
+
+def _is_reset_due(ctx: Mapping[str, Any], quest_id: str, quest: Mapping) -> bool:
+    """重置周期是否已到点（到点 = 可再接取）。未配置/永不重置/无完成记录 → False。"""
+    spec = _reset_spec(quest)
+    if spec is None:
+        return False
+    count, unit = spec
+    if count == RESET_COUNT_NEVER or count < 1:
+        return False
+    rec = _completion_record(ctx, quest_id)
+    if rec is None:
+        return False
+    cfg = _cfg(ctx)
+    now = _now(ctx)
+    if unit in _UNIT_SECONDS:
+        ts = rec.get("ts")
+        if not isinstance(ts, (int, float)) or isinstance(ts, bool):
+            return False
+        cur = int(now) if now is not None else int(time.time())
+        return cur - int(ts) >= count * _UNIT_SECONDS[unit]
+    day = rec.get("day")
+    if not isinstance(day, str):
+        return False
+    if unit == "日":
+        return days_elapsed(day, now, cfg) >= count
+    if unit == "周":
+        return weeks_elapsed(day, now, cfg) >= count
+    months = _UNIT_MONTHS.get(unit)
+    if months is None:
+        return False
+    today = today_of(None, now, cfg)["today"]
+    target = advance_cycles(day, count * months, "month", cfg)
+    return isinstance(target, str) and today >= target
+
+
+def _is_completed_effective(ctx: Mapping[str, Any], quest_id: str, quest: Mapping) -> bool:
+    """生效完成态：已完成且未到重置点 → True；到重置点 → False（可再接取）。"""
+    if not _is_completed(ctx, quest_id):
+        return False
+    return not _is_reset_due(ctx, quest_id, quest)
+
+
+def _chain_done(ctx: Mapping[str, Any], chain_id: object) -> bool:
+    """unlock_chain 前置是否（生效）已完成：解析前置定义后按重置周期判定（解析不到回落原始态）。"""
+    cq = resolve_quest(ctx, chain_id)
+    if cq is None:
+        return _is_completed(ctx, str(chain_id))
+    return _is_completed_effective(ctx, str(chain_id), cq)
+
+
+def _mark_completed(ctx: MutableMapping[str, Any], quest: Mapping, quest_id: str) -> None:
+    """完成登记：quest_completed（非 repeatable）+ 重置周期任务的完成时刻。"""
+    completed = ctx.get("quest_completed")
+    if isinstance(completed, MutableSet):
+        completed.add(quest_id)
+    elif isinstance(completed, list):
+        if quest_id not in completed:
+            completed.append(quest_id)
+    spec = _reset_spec(quest)
+    if spec is None or spec[0] == RESET_COUNT_NEVER:
+        return  # 未配置 / 永不重置 → 不落完成时刻（无周期语义）
+    now = _now(ctx)
+    cfg = _cfg(ctx)
+    table = ctx.get("quest_completed_at")
+    if not isinstance(table, MutableMapping):
+        table = {}
+        ctx["quest_completed_at"] = table
+    table[quest_id] = {
+        "ts": int(now) if now is not None else int(time.time()),
+        "day": today_of(None, now, cfg)["today"],
+    }
 
 
 def _repeatable_flag(quest: Mapping) -> object:
@@ -501,7 +598,7 @@ def _row_progress(quest: Mapping, ctx: Mapping[str, Any]) -> dict:
 def _board_row(quest: Mapping, index: int, section: str, ctx: Mapping[str, Any]) -> dict:
     qid = quest["id"]
     active = _is_active(ctx, qid)
-    completed = _is_completed(ctx, qid)
+    completed = _is_completed_effective(ctx, qid, quest)
     prog = _row_progress(quest, ctx)
     return {
         "index": index,
@@ -541,10 +638,10 @@ def _is_acceptable(quest: Mapping, ctx: Mapping[str, Any]) -> bool:
     qid = quest["id"]
     if _is_active(ctx, qid):
         return False
-    if not _is_repeatable(quest) and _is_completed(ctx, qid):
+    if not _is_repeatable(quest) and _is_completed_effective(ctx, qid, quest):
         return False
     chain = quest.get("unlock_chain")
-    if chain is not None and not _is_completed(ctx, str(chain)):
+    if chain is not None and not _chain_done(ctx, chain):
         return False
     return _npc_condition_hit(quest, ctx)
 
@@ -678,11 +775,11 @@ def quest_accept(quest_id: str, ctx: MutableMapping[str, Any]) -> dict:
     if _is_active(ctx, quest_id):
         return {"ok": False, "reason": "already_active", "message": "❌ 该任务已在进行中"}
 
-    if not _is_repeatable(quest) and _is_completed(ctx, quest_id):
+    if not _is_repeatable(quest) and _is_completed_effective(ctx, quest_id, quest):
         return {"ok": False, "reason": "already_completed", "message": "❌ 任务已完成"}
 
     chain = quest.get("unlock_chain")
-    if chain is not None and not _is_completed(ctx, str(chain)):
+    if chain is not None and not _chain_done(ctx, chain):
         return {"ok": False, "reason": "chain_locked",
                 "message": f"❌ 前置任务未完成（{chain}）",
                 "detail": {"unlock_chain": chain}}
@@ -976,14 +1073,9 @@ def quest_complete(quest_id: str, ctx: MutableMapping[str, Any]) -> dict:
         if _is_repeatable(quest):
             decay = daily.setdefault("decay", {})
             decay[quest_id] = prior + 1
-        # ⑤ quest_completed 登记（非 repeatable 不可再接）
+        # ⑤ quest_completed 登记（非 repeatable 不可再接）+ 批24 G1 完成时刻（重置周期用）
         if not _is_repeatable(quest):
-            completed = ctx.get("quest_completed")
-            if isinstance(completed, MutableSet):
-                completed.add(quest_id)
-            elif isinstance(completed, list):
-                if quest_id not in completed:
-                    completed.append(quest_id)
+            _mark_completed(ctx, quest, quest_id)
     except _Rollback as exc:
         _restore(ctx, snap)
         if exc.reason == "item_add_failed":
@@ -1026,7 +1118,7 @@ def quest_complete(quest_id: str, ctx: MutableMapping[str, Any]) -> dict:
                 if _qd is None:
                     continue
                 if _qd.get("unlock_chain") == quest_id and _qd.get("main") is True \
-                        and not _is_completed(ctx, _qid2):
+                        and not _is_completed_effective(ctx, _qid2, _qd):
                     next_name = _quest_name(_qd)
                     break
         except Exception:  # noqa: BLE001 —— 引导提示失败不阻断结算

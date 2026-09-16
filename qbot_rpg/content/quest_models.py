@@ -56,7 +56,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Mapping, Optional, Set, Tuple, cast
 
 from qbot_rpg.content.field_meta import DEFAULT_CURRENCY_IDS
-from qbot_rpg.content.models import BaseDef
+from qbot_rpg.content.models import RESET_UNITS, BaseDef
 
 # =====================================================================================
 # 任务发放常量（m4_shared_contract §3.3 D1-D5 + 2b4 §1.2 + 任务定稿 L138/L183/L184）
@@ -88,6 +88,36 @@ TIMED_KEYS: Tuple[str, ...] = ("deadline", "penalty")
 
 # repeatable 重复衰减（2b4 §1.2#17：false=完成即移出；true=可重复；obj={decay,cap}；任务定稿 L185）
 REPEATABLE_KEYS: Tuple[str, ...] = ("decay", "cap")
+
+# 批24 G1：任务重置周期（CakeGame `Config_Task.md:25/26`「重置间隔数 + 重置间隔类型」）。
+# 形态 = 并入现有 `daily`（不新开平行字段）：`daily: true`（兼容，≡ {count:1, unit:"日"}）
+#       或 `daily: {count: N, unit: <RESET_UNITS>}`（也容 `daily.reset.{count,unit}` 嵌套）；
+# count = -1 → 永不重置；其余正整数 = 每 N 个周期重置一次。
+RESET_COUNT_NEVER: int = -1  # -1 = 永不重置（CakeGame 口径）
+
+
+def parse_reset(daily_value: object) -> Optional[Tuple[int, str]]:
+    """`daily` 值 → (count, unit)；非法/未配置 → None（唯一解析源，校验/引擎共读）。
+
+    接受：True（兼容 ≡ (1,"日")）/ {count,unit} / {reset:{count,unit}} / False/None → None。
+    """
+    if daily_value is True:
+        return (1, "日")
+    if not isinstance(daily_value, Mapping):
+        return None
+    node: object = daily_value
+    inner = daily_value.get("reset")
+    if isinstance(inner, Mapping):
+        node = inner
+    if not isinstance(node, Mapping):
+        return None
+    count = node.get("count")
+    unit = node.get("unit")
+    if not isinstance(count, int) or isinstance(count, bool):
+        return None
+    if not isinstance(unit, str):
+        return None
+    return (count, unit)
 
 # 条件引擎镜像常量（【工程补白】1：本地镜像 engine/condition_engine，不 import engine）
 COND_OPERATORS: Tuple[str, ...] = ("gt", "ge", "lt", "le", "eq", "ne", "between", "is", "not")
@@ -844,6 +874,44 @@ def _check_daily_conflict(report: object, daily_flag: object, board: object, nod
                   "显式配置并去掉 daily（P2-2 收敛，2b4 §1.2 row16）" % (slot,))
 
 
+def _check_daily_reset(report: object, daily_value: object, base: str, node_id: str) -> None:
+    """批24 G1：`daily` 重置周期值形态校验（并入 daily，不新开平行字段）。
+
+    · bool（True/False）→ 兼容直通（True ≡ {count:1, unit:"日"}）；
+    · Mapping → `{count,unit}` 或 `{reset:{count,unit}}`；count 须整数且（-1 或 ≥1）、
+      unit ∈ RESET_UNITS；缺 count/unit 或非法 → 红拦；
+    · 其它类型 → R-1 红拦。
+    """
+    if daily_value is None or isinstance(daily_value, bool):
+        return
+    if not isinstance(daily_value, Mapping):
+        return  # 非 bool/非对象 → 由 _check_daily_invalid（quest_daily_invalid）红拦
+    node: object = daily_value
+    inner = daily_value.get("reset")
+    if inner is not None:
+        if not isinstance(inner, Mapping):
+            _err(report, f"{base}.reset", "R-1", rule="quest_daily_reset_type",
+                 node_id=node_id, value=inner, msg="daily.reset 需对象 {count, unit}")
+            return
+        node = inner
+    count = node.get("count")
+    unit = node.get("unit")
+    if count is None and unit is None:
+        return  # 空对象 → 默认放行（细化_3e §2.3 缺失字段默认放行）
+    if not isinstance(count, int) or isinstance(count, bool):
+        _err(report, f"{base}.count", "R-2", rule="quest_daily_reset_count_invalid",
+             node_id=node_id, count=count,
+             msg="重置间隔数需整数（-1=永不重置；其余正整数）")
+    elif count == 0 or count < RESET_COUNT_NEVER:
+        _err(report, f"{base}.count", "R-2", rule="quest_daily_reset_count_range",
+             node_id=node_id, count=count, minimum=1, never=RESET_COUNT_NEVER,
+             msg="重置间隔数须为 -1（永不重置）或 ≥1 正整数")
+    if not isinstance(unit, str) or unit not in RESET_UNITS:
+        _err(report, f"{base}.unit", "R-1", rule="quest_daily_reset_unit_invalid",
+             node_id=node_id, unit=unit, allowed=list(RESET_UNITS),
+             msg="重置单位 %r 不认识（%s）" % (unit, "/".join(RESET_UNITS)))
+
+
 # -------------------------------------------------------------------------------------
 # timed / npc 子对象校验
 # -------------------------------------------------------------------------------------
@@ -993,6 +1061,8 @@ def _check_quest(report: object, quest: Mapping[str, object], idx: int, node_id:
     # board 任务板（5 key；漏配=每日默认板）
     _check_board(report, quest.get("board"), f"quest.{idx}.board", node_id,
                  quest.get("daily"))
+    # 批24 G1：daily 重置周期值形态（bool 兼容 / {count,unit} / {reset:{...}}）
+    _check_daily_reset(report, quest.get("daily"), f"quest.{idx}.daily", node_id)
 
     # timed 限时修饰符
     _check_timed(report, quest.get("timed"), f"quest.{idx}.timed", node_id)
@@ -1047,11 +1117,14 @@ def _check_quest(report: object, quest: Mapping[str, object], idx: int, node_id:
     # npc 差异化发任务子对象
     _check_npc_grant(report, quest.get("npc"), f"quest.{idx}.npc", node_id, refs)
 
-    # daily 每日板标记（board.slot 简写；P2-2：互斥黄提示在 _check_board 内处理）
-    if "daily" in quest and not isinstance(quest["daily"], bool):
+    # daily 每日板标记 / 重置周期（批24 G1：bool | {count,unit} 双态）
+    # —— P2-2 板槽简写互斥黄提示在 _check_board 内处理；对象形态的值校验归
+    #    _check_daily_reset（上方已跑），本处只拦「既非 bool 也非对象」的坏形态。
+    if "daily" in quest and not isinstance(quest["daily"], (bool, Mapping)):
         _err(report, f"quest.{idx}.daily", "R-1", rule="quest_daily_invalid", node_id=node_id,
              value=quest["daily"],
-             msg="daily 需 bool（board.slot 简写，P2-2：daily:true ≡ board:{slot:daily,refresh:daily}）")
+             msg="daily 需 bool 或重置周期对象 {count, unit}"
+                 "（board.slot 简写 / 批24 G1 重置周期）")
 
     # repeatable 重复/衰减开关
     _check_repeatable(report, quest.get("repeatable"), f"quest.{idx}.repeatable", node_id)

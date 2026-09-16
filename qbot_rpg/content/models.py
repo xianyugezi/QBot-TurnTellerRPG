@@ -37,6 +37,11 @@ from qbot_rpg.data.types import (
 # 校验报告三类（细化_3e §5.1，逐字段对齐）
 # =====================================================================================
 
+# 批24 G1：任务重置周期单位枚举（并入 quest.daily 的值形态，唯一源供
+# field_meta 编辑器枚举 + quest_models 校验 + core/quest 引擎共读，不写第二套）。
+# 取值 = 游戏内既有日历术语「年/季/月/周/日/时/分/秒」。
+RESET_UNITS: Tuple[str, ...] = ("年", "季", "月", "周", "日", "时", "分", "秒")
+
 
 @dataclass(frozen=True)
 class PackError:

@@ -30,6 +30,7 @@ from dataclasses import replace
 from typing import Any, Dict, Mapping, Optional, Tuple
 
 from qbot_rpg.content.models import (
+    RESET_UNITS,
     AssociationMeta,
     ConditionSubject,
     FieldMeta,
@@ -372,7 +373,18 @@ QUEST_FIELDS: Dict[str, FieldMeta] = {
     "filter": FieldMeta(type="obj", children={}, soft_label=True, label="筛选"),
     "bonus": FieldMeta(type="obj", children={}, soft_label=True, label="加成"),
     "npc": FieldMeta(type="obj", children={}, soft_label=True, label="NPC 关联"),
-    "daily": FieldMeta(type="obj", children={}, soft_label=True, label="每日"),
+    # 批24 G1：任务重置周期——**并入现有 daily**（不新开平行字段）。
+    # 值形态：bool（true ≡ {count:1, unit:"日"}，兼容旧包）| {count, unit} | {reset:{count,unit}}。
+    # 保留 soft_label=True（daily 可为 bool，泛型类型判定会误拦 → 值形态校验归 quest_models
+    # 专项校验器 `_check_daily_reset`）。子字段登记供编辑器表单渲染 + 说明卡。
+    "daily": FieldMeta(type="obj", children={
+        "count": FieldMeta(type="int", allow_negative=True, range_min=1,
+                           label="重置间隔数",
+                           help="每 N 个周期可再接取/重置；-1=永不重置；正整数值。"),
+        "unit": FieldMeta(type="str", enum=RESET_UNITS, label="重置单位",
+                          help="周期单位（年/季/月/周/日/时/分/秒）；缺省语义对齐 daily:true=每日。"),
+        "reset": FieldMeta(type="obj", children={}, soft_label=True, label="重置周期（嵌套）"),
+    }, soft_label=True, label="每日"),
 }
 
 # ---- shop（shop_models 顶层访问器 15；refresh 4 模式×5 key；条目 price 混合支付）----

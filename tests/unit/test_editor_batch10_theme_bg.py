@@ -537,7 +537,7 @@ def test_footer_batch_string_is_current() -> None:
     assert "批3 · 分区页签" not in html
     # 产品名不含批次（批9.2 约束不回退）
     comp = re.search(r'<div class="panel-ft">(.*?)</div>', html, re.S)
-    assert comp is not None and "批23" in comp.group(1)
+    assert comp is not None and "批24" in comp.group(1)
 
 
 def test_batch10_frontend_has_no_pack_business_names() -> None:

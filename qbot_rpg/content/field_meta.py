@@ -2076,7 +2076,9 @@ def _module_table() -> Dict[str, ModuleMeta]:
                                  "进入；不影响通道行走。隐藏区域不列 /地图 传送列表。"),
         # 批24 E3：进图消耗 / 门票信物（从本图进入副本时的校验/扣除；缺省无消耗）。
         "entry_cost": FieldMeta(type="obj", children=ENTRY_COST_CHILDREN,
-                                label="进图消耗/门票"),
+                                label="进图消耗/门票",
+                                help="从本地图进入副本时的门票/信物：items 列出所需物品与数量，"
+                                     "consume=true 进入时扣除（门票）/ false 仅校验持有。"),
         # 区域/副本区间（min>max 死配置 → R-5，min/max 由校验器泛化检测）
         "min": FieldMeta(type="int"), "max": FieldMeta(type="int"),
         "lower": FieldMeta(type="int"), "upper": FieldMeta(type="int"),

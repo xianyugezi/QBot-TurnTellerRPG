@@ -887,6 +887,7 @@ def _check_daily_reset(report: object, daily_value: object, base: str, node_id: 
     if not isinstance(daily_value, Mapping):
         return  # 非 bool/非对象 → 由 _check_daily_invalid（quest_daily_invalid）红拦
     node: object = daily_value
+    sub = base
     inner = daily_value.get("reset")
     if inner is not None:
         if not isinstance(inner, Mapping):
@@ -894,20 +895,21 @@ def _check_daily_reset(report: object, daily_value: object, base: str, node_id: 
                  node_id=node_id, value=inner, msg="daily.reset 需对象 {count, unit}")
             return
         node = inner
+        sub = f"{base}.reset"
     count = node.get("count")
     unit = node.get("unit")
     if count is None and unit is None:
         return  # 空对象 → 默认放行（细化_3e §2.3 缺失字段默认放行）
     if not isinstance(count, int) or isinstance(count, bool):
-        _err(report, f"{base}.count", "R-2", rule="quest_daily_reset_count_invalid",
+        _err(report, f"{sub}.count", "R-2", rule="quest_daily_reset_count_invalid",
              node_id=node_id, count=count,
              msg="重置间隔数需整数（-1=永不重置；其余正整数）")
     elif count == 0 or count < RESET_COUNT_NEVER:
-        _err(report, f"{base}.count", "R-2", rule="quest_daily_reset_count_range",
+        _err(report, f"{sub}.count", "R-2", rule="quest_daily_reset_count_range",
              node_id=node_id, count=count, minimum=1, never=RESET_COUNT_NEVER,
              msg="重置间隔数须为 -1（永不重置）或 ≥1 正整数")
     if not isinstance(unit, str) or unit not in RESET_UNITS:
-        _err(report, f"{base}.unit", "R-1", rule="quest_daily_reset_unit_invalid",
+        _err(report, f"{sub}.unit", "R-1", rule="quest_daily_reset_unit_invalid",
              node_id=node_id, unit=unit, allowed=list(RESET_UNITS),
              msg="重置单位 %r 不认识（%s）" % (unit, "/".join(RESET_UNITS)))
 

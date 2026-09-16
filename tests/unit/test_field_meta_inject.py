@@ -112,7 +112,8 @@ def test_existing_modules_counts_stable() -> None:
     # 编辑器重写批4.5：maps 补真实地图段 desc/camp/camp_name/npcs/monsters/exits/mechanics/
     # gate_guard/gather_points/dungeon_entrances（同上，纯展示宽字段）→ 12 + 10 = 22
     # 批13 C：补 weather_pool（地图天气池覆盖，时间天气定稿 L141）→ 22 + 1 = 23
-    assert len(t.modules["maps"].fields) == 23
+    # 批24 E1/E3：+ hidden（禁直接传送）/ entry_cost（进图消耗/门票）→ 23 + 2 = 25
+    assert len(t.modules["maps"].fields) == 25
 
 
 def test_test_demo_pack_still_loads() -> None:

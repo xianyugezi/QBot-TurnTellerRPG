@@ -14,6 +14,8 @@
 from __future__ import annotations
 
 import contextlib
+import json
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
@@ -26,6 +28,7 @@ from qbot_rpg.content.field_meta import default_field_meta_table
 from qbot_rpg.content.registry import Registry
 from qbot_rpg.content.validator import check_pack
 from qbot_rpg.data import Player, PlayerAttributes
+from qbot_rpg.web import api
 
 
 # ---------------------------------------------------------------------------
@@ -157,6 +160,21 @@ def test_k2_metadata_registered() -> None:
         assert k in cg.children, f"command_gates 缺 {k}"
         assert cg.children[k].type == "list"
         assert cg.children[k].element.type == "str"
+
+
+def test_k2_editor_visible(tmp_path: Path) -> None:
+    root = tmp_path / "pack_k2"
+    root.mkdir()
+    (root / "manifest.json").write_text(json.dumps(
+        {"name": "pack_k2", "version": "1", "schema_version": 1, "modules": ["settings"]},
+        ensure_ascii=False), encoding="utf-8")
+    (root / "settings.json").write_text(json.dumps(
+        {"command_gates": {"weak": ["锁定"], "wild": ["地图"],
+                           "forced_battle": ["回城"]}}, ensure_ascii=False), encoding="utf-8")
+    d = api.entry_detail("pack_k2", "settings", "command_gates", root=tmp_path)
+    assert d["name"] == "按状态禁用指令"
+    keys = {f["key"] for f in d["fields"]}
+    assert {"weak", "wild", "forced_battle"} <= keys
 
 
 def test_k2_validator_invalid_red() -> None:

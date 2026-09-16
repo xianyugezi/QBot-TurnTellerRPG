@@ -14,6 +14,8 @@
 from __future__ import annotations
 
 import contextlib
+import json
+from pathlib import Path
 from typing import Any, Dict
 
 from qbot_rpg.assembly.context import AssemblyDeps
@@ -25,6 +27,7 @@ from qbot_rpg.content.field_meta import default_field_meta_table
 from qbot_rpg.content.registry import Registry
 from qbot_rpg.content.validator import check_pack
 from qbot_rpg.data import Player, PlayerAttributes
+from qbot_rpg.web import api
 
 
 class FakeTx:
@@ -130,6 +133,22 @@ def test_k3_metadata_registered() -> None:
         assert k in rl.children, f"rate_limit 缺 {k}"
     assert rl.children["scope"].enum == ("player", "group")
     assert "0 = 不限流" in (rl.children["interval_sec"].help or "")
+
+
+def test_k3_editor_visible(tmp_path: Path) -> None:
+    root = tmp_path / "pack_k3"
+    root.mkdir()
+    (root / "manifest.json").write_text(json.dumps(
+        {"name": "pack_k3", "version": "1", "schema_version": 1, "modules": ["settings"]},
+        ensure_ascii=False), encoding="utf-8")
+    (root / "settings.json").write_text(json.dumps(
+        {"rate_limit": {"interval_sec": 10, "count": 3, "scope": "group"}},
+        ensure_ascii=False), encoding="utf-8")
+    d = api.entry_detail("pack_k3", "settings", "rate_limit", root=tmp_path)
+    assert d["name"] == "指令限流"
+    by = {f["key"]: f for f in d["fields"]}
+    assert {"interval_sec", "count", "scope"} <= set(by)
+    assert by["interval_sec"]["present"] is True and by["interval_sec"]["type"] == "int"
 
 
 def test_k3_validator_invalid_red() -> None:

@@ -12,6 +12,8 @@
 from __future__ import annotations
 
 import contextlib
+import json
+from pathlib import Path
 from typing import Any, Dict
 
 from qbot_rpg.assembly.context import AssemblyDeps
@@ -23,6 +25,7 @@ from qbot_rpg.content.field_meta import default_field_meta_table
 from qbot_rpg.content.registry import Registry
 from qbot_rpg.content.validator import check_pack
 from qbot_rpg.data import Player, PlayerAttributes
+from qbot_rpg.web import api
 
 LONG = "长" * 12
 
@@ -122,6 +125,20 @@ def test_k4_metadata_registered() -> None:
     assert fm.type == "int"
     assert fm.label == "消息分段长度上限"
     assert "运行时发送分段" in (fm.help or "")
+
+
+def test_k4_editor_visible(tmp_path: Path) -> None:
+    root = tmp_path / "pack_k4"
+    root.mkdir()
+    (root / "manifest.json").write_text(json.dumps(
+        {"name": "pack_k4", "version": "1", "schema_version": 1, "modules": ["settings"]},
+        ensure_ascii=False), encoding="utf-8")
+    (root / "settings.json").write_text(json.dumps(
+        {"message_chunk_len": 20}, ensure_ascii=False), encoding="utf-8")
+    d = api.entry_detail("pack_k4", "settings", "message_chunk_len", root=tmp_path)
+    assert d["name"] == "消息分段长度上限"
+    f = d["fields"][0]
+    assert f["key"] == "message_chunk_len" and f["type"] == "int" and f["present"] is True
 
 
 def test_k4_validator_invalid_red() -> None:

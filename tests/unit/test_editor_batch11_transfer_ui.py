@@ -24,7 +24,7 @@ from qbot_rpg.web import api
 NODE = shutil.which("node")
 REPO = Path(api.repo_root())
 HTML = REPO / "qbot_rpg" / "web" / "static" / "index.html"
-BATCH_NOTE = "批20 · 可编辑性与聚合"
+BATCH_NOTE = "批21 · 引用接线/回读/矛盾登记"
 STALE_BATCH = "批11 · 内容包导出/导入"
 
 

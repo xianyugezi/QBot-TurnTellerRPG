@@ -92,7 +92,7 @@ from __future__ import annotations
 import importlib
 from typing import Any, Callable, Dict, List, Mapping, MutableMapping, Optional, Sequence, Tuple
 
-from qbot_rpg.core.equipment import EquipmentEngine
+from qbot_rpg.core.equipment import EquipmentEngine, item_requirement_error
 from qbot_rpg.core.message_format import strip_icon_emoji
 from qbot_rpg.core.templates import tpl_of  # 消息模板配置化（2026-08-31 用户拍板）
 from qbot_rpg.core.message_format.list_render import (
@@ -1570,6 +1570,15 @@ class EquipmentEngineAdapter:
             return {"ok": False, "message": tpl_of(ctx, "basic_equip_not_equippable")}
         if not item.slot:
             return {"ok": False, "message": tpl_of(ctx, "basic_equip_no_slot")}
+        # 批22 · A1：职业限制（框架字段 job_restrict，引用 jobs.json）——不满足则按既有
+        # 「不可穿戴」拒绝路径直接返回人话（功能限制，非建议类；覆盖 /装备 与 /使用 装备类）。
+        _req = item_requirement_error(
+            _item_def(ctx, item.item_id),
+            job_id=str(player.get("job_id") or ctx.get("job_id") or ""),
+            level=int(player.get("level") or ctx.get("level") or 1),
+        )
+        if _req:
+            return {"ok": False, "message": _req}
         # dict 归一后写回 sorted 列表对应的背包实例，引擎 _inv 定位同一性需要
         # （引擎按 r is item or r == item 找背包行——asdict dict 与原 ItemInstance
         # 相等性成立但同一性失败；直接改背包列表对应位为归一实例）

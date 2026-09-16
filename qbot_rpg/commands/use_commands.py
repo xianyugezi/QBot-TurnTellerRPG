@@ -29,6 +29,7 @@ from typing import Any, Callable, List, Mapping, MutableMapping, Optional, Tuple
 
 from .basic_commands import _equip_engine
 from .router import CommandSpec
+from qbot_rpg.core.equipment import item_requirement_error
 from qbot_rpg.core.templates import tpl_of  # 消息模板配置化（2026-08-31 用户拍板）
 from qbot_rpg.data.player import Player
 
@@ -413,6 +414,15 @@ def cmd_use(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         return str(res.get("message") or tpl_of(ctx, "use_cannot_use"))
     usable = bool(item_def.get("usable"))
     if usable or str(item_def.get("type") or "") == "consumable":
+        # 批22 · A1：消耗类同样受职业限制（框架字段 job_restrict）——装备类已在
+        # equip_wear 内判（/使用 装备走同一路径，不重复判）。
+        _req = item_requirement_error(
+            item_def,
+            job_id=str(_field(player, "job_id") or ctx.get("job_id") or ""),
+            level=int(_field(player, "level") or ctx.get("level") or 1),
+        )
+        if _req:
+            return _req
         return _use_consumable(ctx, player, inst, item_def)
     return tpl_of(ctx, "use_cannot_use")
 

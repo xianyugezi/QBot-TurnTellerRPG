@@ -1233,7 +1233,7 @@ ENEMIES_GROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
 
 ITEMS_GROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
     ("base", (
-        "id", "name", "type", "slot", "bind", "usable",
+        "id", "name", "type", "slot", "bind", "usable", "job_restrict",
         "quality", "rarity", "material_tier", "source", "awaken", "seed",
     )),
     ("stats", (
@@ -1803,6 +1803,16 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "slot": FieldMeta(type="str", options_ref="settings.slot_defs"),
         "bind": FieldMeta(type="bool"),
         "usable": FieldMeta(type="bool"),
+        # 批22 · A1 装备/物品职业限制（CakeGame Config_Goods.Occupation；§三 A1）：
+        # 命名与形态复用既有 skills.job_restrict（本表 L1703）——list<str>，元素为 jobs.json
+        # 职业 id。与技能侧的唯一差异：元素声明 ref_target="job"（注册表 kind，本表 L2322）
+        # → 泛型 R-4 引用存在性校验**硬拦**（缺失职业即红）。技能侧因历史 P-1 由
+        # skill_validator V-5 宽松放行；装备侧按「能靠注册表解决就不写第二套」直接走
+        # 元数据，门禁只严不宽。空列表/缺失 = 不限职业（与技能同口径）。
+        "job_restrict": FieldMeta(
+            type="list", element=FieldMeta(type="ref", ref_target="job"),
+            label="职业限制",
+            help="仅这些职业可穿戴/使用（jobs.json 职业 id）；留空 = 不限职业。"),
         # 批4.5：items/equipment 实测顶层 desc（原表未登记 → 纯展示宽字段）
         "desc": _soft_display("说明"),
     }

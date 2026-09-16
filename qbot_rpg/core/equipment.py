@@ -61,7 +61,8 @@ from qbot_rpg.data.gear_stats import route_bonus_into
 from qbot_rpg.data.item import ItemInstance
 from qbot_rpg.data.player import EquipmentSlot, PlayerAttributes
 
-__all__ = ["EquipmentEngine", "validate_slot_exclusions", "DEFAULT_SLOT_NAMES", "DEFAULT_SLOT_ORDER"]
+__all__ = ["EquipmentEngine", "validate_slot_exclusions", "DEFAULT_SLOT_NAMES", "DEFAULT_SLOT_ORDER",
+           "item_requirement_error"]
 
 
 def _row_item_id(row: Any) -> str:
@@ -104,6 +105,30 @@ DEFAULT_SLOT_NAMES: Dict[str, str] = {
 DEFAULT_SLOT_ORDER: tuple = (
     "weapon", "armor_head", "armor_body", "armor_hand", "armor_leg", "armor_foot",
 )
+
+
+def item_requirement_error(
+    item_def: Any, *, job_id: str = "", level: int = 1
+) -> Optional[str]:
+    """装备/物品资格门槛（框架字段 `job_restrict`）→ 不满足返回人话提示，满足返回 None。
+
+    口径（批22 · A1；纯函数、只读不改写）：
+      - `job_restrict`（list<str>，元素引用 jobs.json 职业 id，与 skills.job_restrict
+        同名同形）：非空且当前 `job_id` 不在其中 → **阻止穿戴/使用**。
+      - 字段缺失 / 空列表 / 非列表 → 不限制（空 = 通用，与技能侧同口径）。
+      - 这是**功能限制**（按既有「不可穿戴」拒绝路径处理），不是「只建议不拦截」的
+        建议类字段——依据 §三 A1「职业专属装备」语义。
+    人话提示风格对齐既有装备拒绝文案（❌ 前缀 + 需要/当前）。
+    """
+    d = getattr(item_def, "raw", item_def)
+    if not isinstance(d, Mapping):
+        return None
+    restrict = d.get("job_restrict")
+    if isinstance(restrict, (list, tuple)) and restrict:
+        need = [str(r) for r in restrict if str(r)]
+        if need and str(job_id) not in need:
+            return f"❌ 职业不符：需要 {'/'.join(need)}，当前 {job_id or '无职业'}"
+    return None
 
 
 def validate_slot_exclusions(mutual_exclusions: Any) -> None:

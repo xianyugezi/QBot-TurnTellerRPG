@@ -130,15 +130,6 @@ def _player(item: Any) -> Mapping[str, Any]:
     return item if isinstance(item, Mapping) else {}
 
 
-def _ps(player: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
-    """persistent_state 节点（缺省惰性创建并挂回；非 MutableMapping → 重建）。"""
-    node = player.get("persistent_state")
-    if not isinstance(node, MutableMapping):
-        node = {}
-        player["persistent_state"] = node
-    return node
-
-
 def _int_or_none(value: Any) -> Optional[int]:
     """非 bool 整数读取（其余 → None）。"""
     if isinstance(value, bool) or not isinstance(value, int):
@@ -226,9 +217,17 @@ def recompute_equip_skills(
             if lv > levels.get(sid, 0):
                 levels[sid] = lv
             sources.setdefault(sid, []).append(slot_id)
-    ps = _ps(player)
-    ps[EQUIP_SKILLS_STATE_KEY] = dict(levels)
-    ps[EQUIP_SKILL_SOURCES_KEY] = {k: list(v) for k, v in sources.items()}
+    ps = player.get("persistent_state")
+    if levels:
+        if not isinstance(ps, MutableMapping):
+            ps = {}
+            player["persistent_state"] = ps
+        ps[EQUIP_SKILLS_STATE_KEY] = dict(levels)
+        ps[EQUIP_SKILL_SOURCES_KEY] = {k: list(v) for k, v in sources.items()}
+    elif isinstance(ps, MutableMapping):
+        # 无装备来源技能 → 不写空容器（不带新字段的既有行为逐字段一致，回归对拍）
+        ps.pop(EQUIP_SKILLS_STATE_KEY, None)
+        ps.pop(EQUIP_SKILL_SOURCES_KEY, None)
     return dict(levels)
 
 
@@ -425,8 +424,10 @@ def recompute_job_override(
         if ov is not None:
             chosen = ov
             break
-    ps = _ps(player)
-    node = ps.get(EQUIP_JOB_OVERRIDE_KEY)
+    ps = player.get("persistent_state")
+    if not isinstance(ps, MutableMapping):
+        ps = None
+    node = ps.get(EQUIP_JOB_OVERRIDE_KEY) if ps is not None else None
     base_job: Optional[str] = None
     base_level: Optional[int] = None
     if isinstance(node, Mapping):
@@ -435,13 +436,14 @@ def recompute_job_override(
         base_job = bj if isinstance(bj, str) and bj else None
         base_level = bl
     if chosen is None:
-        # 无覆盖：有 base 则还原并清理
+        # 无覆盖：有 base 则还原并清理（无 persistent_state 即无 base → 不动存档）
         if base_job is not None:
             player["job_id"] = base_job
         if base_level is not None:
             player["level"] = base_level
-        ps.pop(EQUIP_JOB_OVERRIDE_KEY, None)
-        ps.pop(JOB_NAME_OVERRIDE_KEY, None)
+        if ps is not None:
+            ps.pop(EQUIP_JOB_OVERRIDE_KEY, None)
+            ps.pop(JOB_NAME_OVERRIDE_KEY, None)
         _mirror_job_ctx(ctx, player, None)
         return {}
     # 首次覆盖：快照 base
@@ -464,6 +466,9 @@ def recompute_job_override(
         "base_job_id": base_job,
         "base_level": base_level,
     }
+    if ps is None:
+        ps = {}
+        player["persistent_state"] = ps
     ps[EQUIP_JOB_OVERRIDE_KEY] = dict(applied)
     if name_override:
         ps[JOB_NAME_OVERRIDE_KEY] = name_override
@@ -513,5 +518,8 @@ def sync_equip_mods(
     skills = recompute_equip_skills(player, ctx)
     job_override = recompute_job_override(player, ctx)
     if isinstance(ctx, MutableMapping):
-        ctx[EQUIP_SKILLS_STATE_KEY] = dict(skills)
+        if skills:
+            ctx[EQUIP_SKILLS_STATE_KEY] = dict(skills)
+        else:
+            ctx.pop(EQUIP_SKILLS_STATE_KEY, None)
     return {"equip_skills": skills, "job_override": job_override}

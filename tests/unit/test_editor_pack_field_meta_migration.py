@@ -3,7 +3,7 @@
 依据：`docs/编辑器重写_数据包展示元数据下放方案.md` §四 批B/C。
 
 本用例**调用** `scripts/compare_field_meta_migration.py`：它用 `git worktree` 检出基线
-`fa3e024`（批25 重定；批24 的 `1068f93` 因新增 maps `hidden`/`entry_cost`、
+`d6304ac`（批25 重定；批24 的 `1068f93` 因新增 maps `hidden`/`entry_cost`、
 maps.monsters 行 `encounter_chance`/`encounter_count_min`/`encounter_count_max`、
 dungeon `advance_on_kill_count`、quest `daily` 重置周期子字段而产生展示层位移；批25 又
 新增 npc `interactions[]` 的 `key`/`daily_limit`/`total_limit` 与 `cost` 多通道
@@ -40,7 +40,7 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
-BASELINE_REF = "fa3e024"
+BASELINE_REF = "d6304ac"
 CONTENT = REPO / "content"
 
 

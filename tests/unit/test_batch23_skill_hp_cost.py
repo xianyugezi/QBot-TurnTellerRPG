@@ -203,6 +203,25 @@ def test_b1_derived_variant_uses_derived_hp_cost() -> None:
     assert _hp(eng) == 70, f"应按派生技 hp_cost=30 扣血，got {_hp(eng)}"
 
 
+def test_b1_crit_does_not_change_hp_cost() -> None:
+    """暴击只影响伤害，不影响生命消耗：多种子（伤害会随会心浮动）扣血恒 = hp_cost。"""
+    defs = {"blood_rage": {"id": "blood_rage", "name": "血怒", "type": "active",
+                           "kind": "damage", "power": 100, "hp_cost": 20}}
+    for seed in range(6):
+        eng = BattleEngine(defs=defs)
+        eng.start(
+            {"hp": 500, "max_hp": 500, "mp": 100, "max_mp": 100,
+             "atk": 100, "def": 0, "spr": 0, "spd": 10, "foc": 500, "con": 0,
+             "lck": 500, "int": 0, "name": "玩家"},
+            {"hp": 5000, "max_hp": 5000, "mp": 0, "max_mp": 0,
+             "atk": 0, "def": 0, "spr": 0, "spd": 1, "foc": 0, "con": 0,
+             "lck": 0, "int": 0, "name": "砾冕"},
+            random_seed=seed,
+        )
+        assert eng.do_action("player", {"type": "skill", "skill_id": "blood_rage"}).ok is True
+        assert _hp(eng) == 480, f"seed={seed}：扣血恒为 20，got {500 - _hp(eng)}"
+
+
 # ---------------------------------------------------------------------------
 # B1 回归：不带 hp_cost 时既有行为逐字段一致
 # ---------------------------------------------------------------------------

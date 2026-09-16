@@ -283,11 +283,68 @@ def _initial_location(ctx: Mapping[str, Any]) -> str:
     return _DEFAULT_LOCATION
 
 
+def _register_level(ctx: Mapping[str, Any]) -> int:
+    """注册初始等级（批25 K1）：settings.register_level（int ≥1）→ 缺省 1，按 level_cap 夹取。
+
+    既有框架**无**初始等级配置（`build_initial_player` 原写死 1），故新增本键；
+    `level_cap` 是**等级上限**（另一件事），这里只用于把初始等级夹到 [1, cap] 防越界。
+    """
+    settings = ctx.get("settings")
+    level = 1
+    if isinstance(settings, Mapping):
+        raw = settings.get("register_level")
+        if isinstance(raw, int) and not isinstance(raw, bool) and raw >= 1:
+            level = raw
+        cap = settings.get("level_cap")
+        if isinstance(cap, int) and not isinstance(cap, bool) and cap >= 1:
+            level = min(level, cap)
+    return level
+
+
+def _register_gift_items(ctx: Mapping[str, Any]) -> List[dict]:
+    """注册初始礼包（批25 K1）：settings.register_gift（[{item/id,count}]）→ inventory 条目。
+
+    复用既有物品注册表（ctx["items"]）补名称冗余；非法行跳过（不阻断注册）；
+    缺省/非列表 → 空（不发，行为与现状逐字段一致）。数量按 int ≥1（非法回落 1）。
+    """
+    settings = ctx.get("settings")
+    if not isinstance(settings, Mapping):
+        return []
+    raw = settings.get("register_gift")
+    if not isinstance(raw, list):
+        return []
+    items_tbl = ctx.get("items")
+    out: List[dict] = []
+    for row in raw:
+        if not isinstance(row, Mapping):
+            continue
+        iid = row.get("item") if isinstance(row.get("item"), str) else row.get("id")
+        if not isinstance(iid, str) or not iid:
+            continue
+        cnt = row.get("count", 1)
+        if not isinstance(cnt, int) or isinstance(cnt, bool) or cnt < 1:
+            cnt = 1
+        name = iid
+        if isinstance(items_tbl, Mapping):
+            d = items_tbl.get(iid)
+            if isinstance(d, Mapping) and d.get("name"):
+                name = str(d["name"])
+            elif isinstance(d, str):
+                name = d
+        out.append({"item_id": iid, "name": name, "count": cnt,
+                    "quality": "normal", "bound": False})
+    return out
+
+
 def build_initial_player(ctx: Mapping[str, Any], name: str, job_id: str) -> dict:
     """构造初始 Player 状态（REG-04/RUL-05/06：可变 dict，装配层落档用）。
 
-    字段对齐 data/player.Player 语义（qid 由装配层补、inventory/equipment 初始为空、
+    字段对齐 data/player.Player 语义（qid 由装配层补、equipment 初始为空、
     attributes 按 stats 模板 base、hp/mp 取 base 整数值）。
+
+    批25 K1：`settings.register_gift` → 初始背包（物品×数量，复用既有 inventory 形态）；
+    `settings.register_level` → 初始等级（缺省 1，夹到 ≤ level_cap）。二者缺省时与
+    既有逐字段一致（level=1 / inventory=[]）。
     """
     base = _initial_base(ctx)
     hp = int(base.get("hp", 100))
@@ -295,12 +352,12 @@ def build_initial_player(ctx: Mapping[str, Any], name: str, job_id: str) -> dict
     return {
         "name": name,
         "job_id": job_id,
-        "level": 1,
+        "level": _register_level(ctx),
         "exp": 0,
         "hp": hp,
         "mp": mp,
         "currencies": {},
-        "inventory": [],
+        "inventory": _register_gift_items(ctx),
         "equipment": {},
         "attributes": PlayerAttributes(base=base),
         "schema_version": 4,
@@ -580,9 +637,13 @@ def cmd_register(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     ctx["registered"] = True
     ctx["location"] = location
     # 2026-09-06 zerc 反馈：注册后顶层 level/name 同步（原装配占位 level=None/
-    # name=「玩家」→ 统一前缀渲染 Lv0.玩家残影）。同步后前缀 = Lv1.{name}。
-    ctx["level"] = int(getattr(player, "level", 1) or 1)
-    ctx["name"] = str(getattr(player, "name", None) or name)
+    # name=「玩家」→ 统一前缀渲染 Lv0.玩家残影）。同步后前缀 = Lv{register_level}.{name}。
+    # 批25 K1：建号产物是 dict（非 Player 对象）——按 dict/对象双形态读取初始等级，
+    # 否则初始等级配置永远渲染成 Lv1。
+    _lvl = player.get("level") if isinstance(player, Mapping) else getattr(player, "level", 1)
+    _nm = player.get("name") if isinstance(player, Mapping) else getattr(player, "name", None)
+    ctx["level"] = int(_lvl or 1)
+    ctx["name"] = str(_nm or name)
 
     return render_register_success(ctx, name, job, player, location, hint=hint)
 

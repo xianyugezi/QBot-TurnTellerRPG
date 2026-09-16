@@ -340,6 +340,22 @@ SETTINGS_FIELDS: Dict[str, FieldMeta] = {
     # 注意：与 M8 slots.json 模块（装饰珠插槽 {equip_id, slots:[{slot_level}]}）是
     # 不同数据空间——这里是「装备部位定义」；字段 key 用 slot_defs 避免与既有撞名。
     "slot_defs": FieldMeta(type="obj", children={}, soft_label=True, label="装备槽位"),
+    # 批25 K1：注册初始礼包 + 初始等级（CakeGame `Global.md:60` `set.NovicesReward`
+    # 「注册新手礼包，物品名*数量」+ `:87-89` `OccupationSet.LV/Goods/GoodsNumber`
+    # 「注册/初始等级；开局物品；开局物品数量」）。
+    # 形态沿用既有 `currencies: []` 之类列表风格：`register_gift` = 列表条目 {item/id,count}；
+    # 初始等级单独一个整数键（我们**无既有初始等级配置**——`build_initial_player` 原写死 1，
+    # 故新增 `register_level`，不与 `level_cap`（上限）混用；超过上限按上限夹取）。
+    # 引擎落点：`commands/register_commands.build_initial_player`（新注册玩家发放 + 定级）。
+    "register_gift": FieldMeta(type="list", element=FieldMeta(type="obj", children={
+        "item": FieldMeta(type="str", ref_target="item", label="物品引用"),
+        "id": FieldMeta(type="str", label="物品 ID（等价别名）"),
+        "count": FieldMeta(type="int", range_min=1, label="数量"),
+    }), label="注册初始礼包",
+        help="新注册玩家发放的物品清单（item/count）；缺省 = 不发。"),
+    "register_level": FieldMeta(type="int", range_min=1, label="注册初始等级",
+                                help="新注册玩家的初始等级（≥1 整数）；缺省 1，"
+                                     "超过 settings.level_cap 时按上限夹取。"),
 }
 
 # =============================================================================

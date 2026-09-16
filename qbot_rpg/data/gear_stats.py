@@ -49,6 +49,7 @@ __all__ = [
     "GEAR_COMBAT_VALUE_KEYS",
     "GEAR_NUMERIC_KEYS",
     "GEAR_LABELS_ZH",
+    "GEAR_HELP_ZH",
     "PCT_SUFFIX",
     "COMBAT_TO_COMBATANT",
     "extract_bonus",
@@ -104,6 +105,17 @@ GEAR_LABELS_ZH: Dict[str, str] = {
     "absorb_hp": "吸血%", "immune_dmg": "免伤%",
     "pierce_val": "物穿值", "pierce_pct": "物穿%",
     "mag_pierce_val": "法穿值", "mag_pierce_pct": "法穿%",
+}
+
+# 中文 help（编辑器字段说明气泡；批22 · A3/D1 新增词条）。
+# 只登记新增键——既有键的说明由内容包声明提供（避免改动既有元数据值）。
+GEAR_HELP_ZH: Dict[str, str] = {
+    "absorb_hp": "造成伤害后按该比例回复自身生命（%）。",
+    "immune_dmg": "受到的伤害按该比例减免（%）。",
+    "pierce_val": "无视目标等量物理防御（点）。",
+    "pierce_pct": "按比例无视目标物理防御（%）。",
+    "mag_pierce_val": "魔法攻击无视目标等量防御（点）。",
+    "mag_pierce_pct": "魔法攻击按比例无视目标防御（%）。",
 }
 
 

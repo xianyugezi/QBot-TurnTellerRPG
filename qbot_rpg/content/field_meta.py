@@ -53,6 +53,7 @@ from qbot_rpg.data.gear_stats import (
     GEAR_COMBAT_PCT_KEYS,
     GEAR_COMBAT_VALUE_KEYS,
     GEAR_FLAT_KEYS,
+    GEAR_HELP_ZH,
     GEAR_LABELS_ZH,
     GEAR_PCT_KEYS,
 )
@@ -155,13 +156,16 @@ def _gear_combat_field(key: str) -> FieldMeta:
     怪物 stats 也用同一构建器，不新造第二套命名。
     """
     label = GEAR_LABELS_ZH.get(key, key)
+    help_ = GEAR_HELP_ZH.get(key, "")
     if key == "crit":
         return FieldMeta(type="number", range_min=-99, range_max=99, allow_negative=True,
                          label=label + "（可负）", unit="%")
     if key in GEAR_COMBAT_PCT_KEYS:
-        return FieldMeta(type="number", range_min=0, range_max=100, label=label, unit="%")
+        return FieldMeta(type="number", range_min=0, range_max=100, label=label, unit="%",
+                         help=help_)
     if key in GEAR_COMBAT_VALUE_KEYS:
-        return FieldMeta(type="number", range_min=0, range_max=99999, label=label, unit="点")
+        return FieldMeta(type="number", range_min=0, range_max=99999, label=label, unit="点",
+                         help=help_)
     return FieldMeta(type="number", range_min=0, range_max=2 if key == "earplug" else 3,
                      label=label, unit="级")
 

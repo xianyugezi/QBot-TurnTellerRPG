@@ -532,6 +532,21 @@ DUNGEON_MAP_ELEM_CHILDREN: Dict[str, FieldMeta] = {
                                                                     children={}),
                                     soft_label=True, label="副本入口"),
 }
+# 批24 E3：进图消耗/门票信物（maps[].entry_cost）——CakeGame `Config_Map.Consume`
+# 「进图消耗（INI 节式）：TRUE=进入时扣除（门票）/ FALSE=仅须持有」。形态取
+# `{items:[{item,count}], consume:bool}`：items 支持多件物品（旧 dungeon.entry_item
+# 只有单件且恒扣，无法表达「仅校验持有」）；consume 缺省 true（= 既有 entry_item 扣除语义）。
+ENTRY_COST_ITEM_CHILDREN: Dict[str, FieldMeta] = {
+    "item": FieldMeta(type="str", label="物品引用"),
+    "count": FieldMeta(type="int", range_min=1, label="数量"),
+}
+ENTRY_COST_CHILDREN: Dict[str, FieldMeta] = {
+    "items": FieldMeta(type="list",
+                       element=FieldMeta(type="obj", children=ENTRY_COST_ITEM_CHILDREN),
+                       label="所需物品"),
+    "consume": FieldMeta(type="bool", label="进入时扣除",
+                         help="true=进入时扣除（门票）；false=仅校验持有，不扣。缺省 true。"),
+}
 DUNGEON_DROP_ENTRY_CHILDREN: Dict[str, FieldMeta] = {
     # drops.normal/boss 普通掉落行（细化_2a1d §2.4 样例 {item,chance}）
     "item": FieldMeta(type="str", label="掉落物品"),
@@ -1286,7 +1301,8 @@ MAPS_GROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
     ("base", ("id", "name", "battle", "revert", "safe_zone", "hidden", "camp", "camp_name")),
     ("ranges", ("min", "max", "lower", "upper", "reset", "mechanics")),
     ("refs", ("enemy_pool", "monsters", "exits", "respawn_point", "npcs",
-              "gate_guard", "gather_points", "dungeon_entrances", "weather_pool")),
+              "gate_guard", "gather_points", "dungeon_entrances", "weather_pool",
+              "entry_cost")),
     ("text", ("desc",)),
 )
 
@@ -2030,6 +2046,9 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "hidden": FieldMeta(type="bool", label="隐藏（禁直接传送）",
                             help="置真 = 禁止直接传送进入该地图，只能从相邻地图的通道（或剧情）"
                                  "进入；不影响通道行走。隐藏区域不列 /地图 传送列表。"),
+        # 批24 E3：进图消耗 / 门票信物（从本图进入副本时的校验/扣除；缺省无消耗）。
+        "entry_cost": FieldMeta(type="obj", children=ENTRY_COST_CHILDREN,
+                                label="进图消耗/门票"),
         # 区域/副本区间（min>max 死配置 → R-5，min/max 由校验器泛化检测）
         "min": FieldMeta(type="int"), "max": FieldMeta(type="int"),
         "lower": FieldMeta(type="int"), "upper": FieldMeta(type="int"),

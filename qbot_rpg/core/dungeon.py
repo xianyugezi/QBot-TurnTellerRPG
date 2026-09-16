@@ -47,7 +47,18 @@ from __future__ import annotations
 
 import dataclasses
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple, cast
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Mapping,
+    MutableMapping,
+    Optional,
+    Sequence,
+    Tuple,
+    cast,
+)
 
 from qbot_rpg.content.dungeon_models import DungeonDef
 from qbot_rpg.content.map_models import MapDef, parse_maps
@@ -324,6 +335,155 @@ def _entries_map(player_ctx: dict) -> Dict[str, int]:
     return entries
 
 
+# -------------------------------------------------------------------------------------
+# 批24 E3：地图级进图消耗 / 门票信物（maps[].entry_cost）
+#
+# 语义（CakeGame Config_Map.Consume）：进入副本前校验**当前所在地图**的 entry_cost：
+#   · consume=true （缺省）→ 校验持有并**扣除**（门票）；
+#   · consume=false       → **仅校验持有**，不扣（通行证）。
+# 复用既有物品出入库链路（ctx["count_item"]/["remove_item"]/["add_item"] hook，
+# 与 core/quest.py 同口径；缺省回退 ctx["inventory"] count-map），校验先于消耗，
+# 多项扣除 all-or-nothing（失败回滚），不绕过原子性与入账口径。
+# -------------------------------------------------------------------------------------
+def _mutable_inventory(player_ctx: Mapping[str, Any]) -> Optional[MutableMapping[str, Any]]:
+    """可写背包 count-map（ctx["inventory"] → ctx["player"]["inventory"]；非可变 → None）。"""
+    for src in (player_ctx.get("inventory"),):
+        if isinstance(src, MutableMapping):
+            return src
+    player = player_ctx.get("player")
+    if isinstance(player, Mapping):
+        pinv = player.get("inventory")
+        if isinstance(pinv, MutableMapping):
+            return pinv
+    return None
+
+
+def _count_item(player_ctx: Mapping[str, Any], item_id: str) -> int:
+    """物品持有数：ctx["count_item"] hook 优先，回退 count-map（与 quest 同口径）。"""
+    hook = player_ctx.get("count_item")
+    if callable(hook):
+        try:
+            return int(hook(item_id))
+        except Exception:  # noqa: BLE001 - hook 异常 → 视为 0（不崩）
+            return 0
+    inv = _inventory_map(player_ctx)
+    if isinstance(inv, Mapping):
+        v = inv.get(item_id)
+        if isinstance(v, int) and not isinstance(v, bool):
+            return v
+    return 0
+
+
+def _remove_item(player_ctx: Mapping[str, Any], item_id: str, count: int) -> bool:
+    """扣物：ctx["remove_item"] hook 优先，回退 count-map（不足 → False，不改）。"""
+    hook = player_ctx.get("remove_item")
+    if callable(hook):
+        try:
+            return bool(hook(item_id, count))
+        except Exception:  # noqa: BLE001
+            return False
+    inv = _mutable_inventory(player_ctx)
+    if inv is None:
+        return False
+    cur = inv.get(item_id, 0)
+    cur = cur if isinstance(cur, int) and not isinstance(cur, bool) else 0
+    if cur < count:
+        return False
+    inv[item_id] = cur - count
+    return True
+
+
+def _restore_item(player_ctx: Mapping[str, Any], item_id: str, count: int) -> None:
+    """回滚扣物（best-effort）：ctx["add_item"] hook → 回退 count-map 补回。"""
+    hook = player_ctx.get("add_item")
+    if callable(hook):
+        try:
+            hook(item_id, count, True)
+            return
+        except Exception:  # noqa: BLE001
+            pass
+    inv = _mutable_inventory(player_ctx)
+    if inv is not None:
+        cur = inv.get(item_id, 0)
+        cur = cur if isinstance(cur, int) and not isinstance(cur, bool) else 0
+        inv[item_id] = cur + count
+
+
+def _entry_cost_of(player_ctx: Mapping[str, Any]) -> Optional[Mapping[str, Any]]:
+    """当前所在地图的 entry_cost（缺省/形态非法 → None）。"""
+    cur = _current_world_map(player_ctx)
+    if not cur:
+        return None
+    index = _maps_index(player_ctx.get("maps"))
+    md = index.get(cur)
+    if md is None:
+        return None
+    ec = md.raw.get("entry_cost")
+    return ec if isinstance(ec, Mapping) else None
+
+
+def _entry_cost_requirements(cost: Mapping[str, Any]) -> List[Tuple[str, int]]:
+    """entry_cost.items → [(item, count)]（同 id 合并；非法行跳过，count ≥1）。"""
+    raw_items = cost.get("items")
+    if not isinstance(raw_items, list):
+        return []
+    merged: Dict[str, int] = {}
+    for row in raw_items:
+        if not isinstance(row, Mapping):
+            continue
+        iid = row.get("item")
+        if not isinstance(iid, str) or not iid:
+            continue
+        cnt = row.get("count", 1)
+        if not isinstance(cnt, int) or isinstance(cnt, bool) or cnt < 1:
+            cnt = 1
+        merged[iid] = merged.get(iid, 0) + cnt
+    return list(merged.items())
+
+
+def _check_map_entry_cost(
+    player_ctx: Mapping[str, Any],
+) -> Tuple[Optional[str], dict, Optional[Callable[[], None]]]:
+    """地图级进图消耗校验/扣除（批24 E3）。
+
+    返回 (blocked_reason, effects, rollback)：blocked 非空 → 拦截（未扣任何物）；
+    effects = {"entry_cost_consumed": bool, "entry_cost_items": [[item, count], ...]}；
+    rollback 非 None → 调用方可回滚本次扣除（后续校验失败时用）。
+    """
+    cost = _entry_cost_of(player_ctx)
+    if not cost:
+        return None, {}, None
+    req = _entry_cost_requirements(cost)
+    if not req:
+        return None, {}, None
+    consume = cost.get("consume", True)
+    consume = consume if isinstance(consume, bool) else True
+    map_name = _current_world_map(player_ctx) or ""
+    for item_id, need in req:
+        have = _count_item(player_ctx, item_id)
+        if have < need:
+            tail = "" if consume else "（门票仅校验持有，不扣除）"
+            return (f"进入「{map_name}」需要 {item_id}×{need}，当前只有 {have} 个{tail}",
+                    {}, None)
+    if not consume:
+        return None, {"entry_cost_consumed": False,
+                      "entry_cost_items": [[i, n] for i, n in req]}, None
+    done: List[Tuple[str, int]] = []
+    for item_id, need in req:
+        if not _remove_item(player_ctx, item_id, need):
+            for done_id, done_n in done:
+                _restore_item(player_ctx, done_id, done_n)
+            return f"扣除进图消耗失败（{item_id}×{need}）", {}, None
+        done.append((item_id, need))
+
+    def _rollback() -> None:
+        for done_id, done_n in done:
+            _restore_item(player_ctx, done_id, done_n)
+
+    return None, {"entry_cost_consumed": True,
+                  "entry_cost_items": [[i, n] for i, n in req]}, _rollback
+
+
 def _validate_entry(player_ctx: dict, dungeon_def: DungeonDef) -> Tuple[Optional[str], dict]:
     """入场校验（2a1c R4 / 契约 §4.1：entry_item 消耗 + entry_limit 次数限制；0=不限）。
 
@@ -381,16 +541,27 @@ class DungeonStateMachine:
         """进入副本（M1）：入场校验（BOSS 版 entry_item/entry_limit 拦截，探索版宽松）
         → 落位 safe_zone（外部锚点记录）→ S0 会话。
 
+        批24 E3：进入前先校验**当前所在地图**的 `entry_cost`（门票/信物；consume=true 扣除、
+        false 仅校验持有）；副本入场校验失败 → 已扣门票回滚（不改 ctx 净效果）。
+
         成功：{"ok", "state":S0, "session", "external_anchor", "safe_zone",
-              "entry_item_consumed", "entry_count", "note"}（player_ctx 原地改：
-              位置→safe_zone；扣道具；入场次数 +1）。
+              "entry_item_consumed", "entry_count", "entry_cost_consumed",
+              "entry_cost_items", "note"}（player_ctx 原地改：位置→safe_zone；扣道具；入场次数 +1）。
         拦截：{"ok": False, "reason", "state": None, "session": None}（不改 ctx）。
         """
         ddef = _norm_dungeon_def(dungeon_def if dungeon_def is not None else self._dungeon_def)
         dtype = ddef.type if ddef.type in ("explore", "boss") else "explore"
 
+        # 批24 E3：地图级进图消耗 / 门票信物（maps[].entry_cost）——先校验/扣除，
+        # 后续副本入场校验失败 → 回滚（整体不改 ctx 净效果）。
+        ec_blocked, ec_effects, ec_rollback = _check_map_entry_cost(player_ctx)
+        if ec_blocked:
+            return {"ok": False, "reason": ec_blocked, "state": None, "session": None}
+
         blocked, effects = _validate_entry(player_ctx, ddef)
         if blocked:
+            if ec_rollback is not None:
+                ec_rollback()
             return {"ok": False, "reason": blocked, "state": None, "session": None}
 
         anchor = _current_world_map(player_ctx)
@@ -413,6 +584,8 @@ class DungeonStateMachine:
             "safe_zone": safe,
             "entry_item_consumed": effects["item_consumed"],
             "entry_count": effects["entry_count"],
+            "entry_cost_consumed": bool(ec_effects.get("entry_cost_consumed", False)),
+            "entry_cost_items": list(ec_effects.get("entry_cost_items", [])),
             "note": f"进入副本「{ddef.name or ddef.id}」（{dtype}）；战斗中断可续玩，离开副本将重置",
         }
 

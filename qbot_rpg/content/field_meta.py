@@ -1329,7 +1329,7 @@ EFFECTS_SUBGROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
               "require_mark", "apply_mark", "status", "stat", "mark", "marks_on",
               "target")),
     ("behavior", ("actions", "patch", "tick", "trigger", "filter", "class",
-                  "control_type", "polarity")),
+                  "control_type", "polarity", "ignore_shield", "ignore_immune")),
     ("text", ("desc",)),
 )
 EFFECTS_SUBGROUP_LABELS: Dict[str, str] = {
@@ -1514,6 +1514,16 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "id": F_ID, "name": F_NAME, "type": F_EFFECT_TYPE,
         "power": F_POWER, "duration": F_DURATION,
         "probability": F_PROBABILITY, "max_stack": F_MAX_STACK,
+        # 批22 · B2：定向压制开关（CakeGame Config_Skills.IgnoreShield/IgnoreIM；§三 B2）
+        # ——**并入 effects 参数**（不升为技能字段，遵循「能并入 effects 就不新增技能字段」）。
+        # 引擎：置真时对应结算环节整段跳过——ignore_shield → 管线②护盾吸收；
+        # ignore_immune → 管线⑤免疫判定（I2 伤害免疫 + fatal/non-fatal 免疫）。
+        # 与既有 pierce（effects.type="pierce"）**不重复**：pierce 削「防御系数」，
+        # 本开关跳「护盾/免疫」环节，二者正交，可同时存在。
+        "ignore_shield": FieldMeta(type="bool", label="无视护盾",
+                                   help="置真：本次伤害跳过护盾吸收（不消耗护盾）。"),
+        "ignore_immune": FieldMeta(type="bool", label="无视免疫",
+                                   help="置真：本次伤害跳过免疫判定（伤害/致命免疫）。"),
         # ---- 批18 新效果类型字段（gain_currency 给货币 / learn_skill 学技能）----
         # 校验：currency 存在性 + amount 区间/缺省 + skill 存在性/等级 由 validator
         # 专项 `_check_effects_18` 判定（本表只做字段口径 + 泛型 R-1/R-2/R-4）。

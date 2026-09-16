@@ -1110,7 +1110,14 @@ class DamagePipeline:
         return out
 
     def _stage_shield(self, ctx: DamageCtx, runtime: EffectRuntime, se: list, d: int) -> int:
-        """② 护盾先扣（细化_1b §2 阶段②，定稿 §3.4② / §7.2①）。"""
+        """② 护盾先扣（细化_1b §2 阶段②，定稿 §3.4② / §7.2①）。
+
+        批22 · B2：`ctx.variables["ignore_shield"]` 置真 → 本段**整段跳过**（护盾的
+        `remaining` 不被扣减、不产生 shield_absorbed 事件）。与 pierce 正交：pierce
+        削的是防御系数（① 之前/之内），本开关跳的是护盾吸收环节。
+        """
+        if ctx.variables.get("ignore_shield"):
+            return d
         defs = self._defense(ctx, ctx.target)
         shield = defs.get("shield")
         if not isinstance(shield, dict):
@@ -1169,8 +1176,13 @@ class DamagePipeline:
         """⑤ 致命/非致命免疫（细化_1b §2 阶段⑤ / 定稿 §3.4⑤，消耗 triggers 计数）。
 
         免疫维度 damage = 伤害免疫全额免伤（细化_1b §4.4 I2）；致命/非致命免疫效果同。
+
+        批22 · B2：`ctx.variables["ignore_immune"]` 置真 → 本段**整段跳过**（I2 伤害
+        免疫 + fatal/non-fatal 免疫均不判定）。不动 ③反弹/①减伤/⑥续行（各自独立开关）。
         """
         if d <= 0:
+            return d
+        if ctx.variables.get("ignore_immune"):
             return d
         hp = self._hp(ctx, ctx.target)
         lethal = d >= max(0, hp)
@@ -1822,13 +1834,22 @@ def execute_action(
         # M12.5 需求1 批B：stat_map 语义键取数（缺省 atk=现值，零破坏）
         base = int(ctx.snapshot.get(attacker, {}).get(_ctx_stat_key(ctx, "atk_base", "atk"), 0))
         raw = _resolve_value(action.get("value"), base, ctx, "damage")
+        # 批22 · B2：效果上的定向压制开关（ignore_shield / ignore_immune）→ 注入本次伤害
+        # 管线（复制 variables，不改调用方共享状态）；置真时管线②护盾 / ⑤免疫整段跳过。
+        _vars = ctx.variables
+        if action.get("ignore_shield") or action.get("ignore_immune"):
+            _vars = dict(ctx.variables)
+            if action.get("ignore_shield"):
+                _vars["ignore_shield"] = True
+            if action.get("ignore_immune"):
+                _vars["ignore_immune"] = True
         sub_ctx = DamageCtx(
             raw_damage=raw,
             attack_type="skill" if action.get("attack_type") is None else str(action.get("attack_type")),
             attacker=attacker,
             target=target,
             snapshot=ctx.snapshot,
-            variables=ctx.variables,
+            variables=_vars,
         )
         res = _get_pipeline(ctx).damage_pipeline(sub_ctx, runtime)
         side_effects.append({"type": "damage_dealt", "target": target, "damage": res.final_damage, "target_hp": res.target_hp})

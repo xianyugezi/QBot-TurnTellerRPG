@@ -4152,6 +4152,25 @@ class BattleEngine:
                              "low", False, 0, 0, int(self._combat(target).get("hp", 0)),
                              self._seal_side_effects(tuple(events)), "疲劳自摔")
 
+    @staticmethod
+    def _suppress_flags(action: Mapping[str, Any], seg: Mapping[str, Any]) -> Tuple[bool, bool]:
+        """行动/段/其 effects 上的定向压制开关（批22 · B2）：(ignore_shield, ignore_immune)。
+
+        载体 = effects 参数（不升为技能字段）：行动顶层、当前段、或 action["effects"][]
+        任一置真即生效（怪物侧 `_ai_action_dict` 已把行动定义的 effects 合并到顶层）。
+        """
+        def _flag(key: str) -> bool:
+            if action.get(key) or seg.get(key):
+                return True
+            for container in (action.get("effects"), seg.get("effects")):
+                if isinstance(container, (list, tuple)):
+                    for e in container:
+                        if isinstance(e, Mapping) and e.get(key):
+                            return True
+            return False
+
+        return _flag("ignore_shield"), _flag("ignore_immune")
+
     def _resolve_damage_action(self, attacker: str, action: Dict[str, Any]) -> ActionOutcome:
         """伤害行动闭环（核心）：命中→会心→格挡→双通道→总伤害→拦截链→扣血→
         死亡判定（每段后）→ 反射回注（F-22）→ 状态衰减（D5）。
@@ -4521,6 +4540,13 @@ class BattleEngine:
             # ---- ⑥⑦⑧ 拦截链（1b §2：减伤→护盾→反弹→吸收→免疫→续行→扣血→死亡判定）----
             vars_ = self._base_variables(attacker, target)
             vars_["damage_dealt"] = seg_total
+            # 批22 · B2/D2：效果上的定向压制开关（ignore_shield / ignore_immune）——行动 /
+            # 段 / 其 effects 携带即生效（怪物攻击无视玩家护盾 = 怪物行动 effects 带开关）。
+            _ig_shield, _ig_immune = self._suppress_flags(action, seg)
+            if _ig_shield:
+                vars_["ignore_shield"] = True
+            if _ig_immune:
+                vars_["ignore_immune"] = True
             # 保底伤害（2026-09-14 用户拍板）：本段是「命中并产生伤害」的实例——把
             # settings.battle.min_damage 注入拦截链，由 DamagePipeline 在 ①减伤 结算后、
             # ②护盾 之前取保底（先取保底、再走护盾吸收）。0 = 关闭、不注入（零行为变化）；

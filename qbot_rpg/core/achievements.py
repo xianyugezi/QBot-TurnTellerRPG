@@ -449,7 +449,10 @@ def _counted_of(entry: Mapping[str, Any]) -> bool:
     return v if isinstance(v, bool) else True
 
 
-def achievement_progress(ctx: Mapping[str, Any], entries: Optional[Sequence[Mapping[str, Any]]] = None) -> dict:
+def achievement_progress(
+    ctx: Mapping[str, Any],
+    entries: Optional[Sequence[Mapping[str, Any]]] = None,
+) -> dict:
     """成就完成度（批25 I1）：**分母只计 `counted=true` 的成就**（隐藏/彩蛋不拉低进度）。
 
     入参 ctx；entries 可选（已做展示层过滤——如 hide 未达成不占序号——的列表；
@@ -458,7 +461,8 @@ def achievement_progress(ctx: Mapping[str, Any], entries: Optional[Sequence[Mapp
       · done  = counted=true 且已达成条目数（**分子**，与分母同口径，避免 >100%）；
       · uncounted = 不计入完成度的条目数（counted=false，照常可达成/发奖）。
     """
-    rows = list_achievements(ctx) if entries is None else [e for e in entries if isinstance(e, Mapping)]
+    rows = (list_achievements(ctx) if entries is None
+            else [e for e in entries if isinstance(e, Mapping)])
     counted = [e for e in rows if e.get("counted", True) is not False]
     done = sum(1 for e in counted if e.get("unlocked"))
     return {"done": int(done), "total": len(counted), "uncounted": len(rows) - len(counted)}

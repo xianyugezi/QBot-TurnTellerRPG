@@ -1047,7 +1047,7 @@ SKILLS_GROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
         "skill",
     )),
     ("数值", (
-        "power", "break_power", "mp_cost", "cooldown", "hits", "level",
+        "power", "break_power", "mp_cost", "hp_cost", "cooldown", "hits", "level",
         "trigger_limit", "hit_mod", "crit_mod", "action_time", "air_extend",
         "recovery", "stun",
     )),
@@ -1734,6 +1734,16 @@ def _module_table() -> Dict[str, ModuleMeta]:
         # ---- B 玩家侧扩展 11 字段（F08-F18，细化_6a §1.2-B）----
         "type": FieldMeta(type="str"),   # F08 basic/active/passive/trigger 四类时机（枚举 A2 路）
         "mp_cost": FieldMeta(type="number", range_min=0, range_max=9999, unit="点"),   # F09 ≥0；basic=0
+        # 批23 · B1 技能生命消耗（CakeGame Config_Skills.ConsumeType=HP；§三 B1）：
+        # **不引入 consume_type 枚举**——单个数值直接表达「放这招要付血」（少而深）；
+        # 与 mp_cost 并列、资源各自独立扣。int ≥ 0，单位=点；缺省/0 = 不消耗生命。
+        # 引擎消费：core/battle.py::_apply_skill_hp_cost_gate——施放前置门禁，
+        # hp - hp_cost < 1 时阻止释放（被拒不消耗行动，同 energy/marks 语义），
+        # 可施放则立即扣血；派生技按最终 skill_id 解析（与 consume_marks 同口径）。
+        # 校验：非整数 → 泛型 R-1 红；负数 → 泛型 R-2 红；0 不触发 Y-1/Y-4。
+        "hp_cost": FieldMeta(
+            type="int", range_min=0, range_max=9999, unit="点", label="生命消耗",
+            help="释放自损的生命（点）；留空或填 0 = 不消耗生命。"),
         "cooldown": FieldMeta(type="number", range_min=0, range_max=999, unit="回合"),   # F10 ≥0 整数；basic=0
         "tag": FieldMeta(type="str"),    # F11 none/combo/combo_preserve/combo_push/interrupt/armor（枚举 A2）
         "armor": FieldMeta(type="bool"),         # F12 霸体开关（执行语义快键）

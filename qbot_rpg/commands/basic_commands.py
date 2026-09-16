@@ -2191,12 +2191,19 @@ def _render_skill_info(ctx: Mapping[str, Any], sid: str) -> str:
     brief = skill_brief(ctx, sid)
     if brief:
         lines.append(tpl_of(ctx, "skill_info_line", {"k": "标签", "v": brief}))
-    # 消耗（CTB：法力 / 精力 / 印记 / 冷却行动数）
+    # 消耗（CTB：法力 / 生命 / 精力 / 印记 / 冷却行动数）
     costs: List[str] = []
     try:
         mp = int(_skill_field(defn, "mp_cost", 0))
         if mp > 0:
             costs.append(f"{mp} 法力")
+    except (TypeError, ValueError):
+        pass
+    # 批23 · B1：生命消耗（hp_cost）——释放自损的生命；与法力并列、各自独立
+    try:
+        _hpc = int(_skill_field(defn, "hp_cost", 0))
+        if _hpc > 0:
+            costs.append(f"{_hpc} 生命")
     except (TypeError, ValueError):
         pass
     _energy = _skill_field(defn, "energy_cost", None)

@@ -1277,6 +1277,48 @@ class BattleEngine:
             return None
         return None
 
+    def _apply_skill_hp_cost_gate(
+        self, attacker: str, ca: Mapping[str, Any], sd: Mapping[str, Any], target: str
+    ) -> Optional[ActionOutcome]:
+        """批23 · B1：技能 hp_cost 门禁 + 扣血（CakeGame Config_Skills.ConsumeType=HP）。
+
+        - hp_cost 从技能 def 取（action 显式 hp_cost / skill_hp_cost 优先，缺失回退
+          def）；派生路径按最终 ca.skill_id 解析派生技 def（与 consume_marks 同口径，
+          派生=实际施放技能）。缺省/0 → 零操作（既有技能零变化）。
+        - **不得致死**（二选一，本框架选「阻止释放」）：hp - hp_cost < 1 → 返回被拒
+          ActionOutcome（不消耗行动、不改 hp、不进伤害结算）。依据：与 energy_cost /
+          consume_marks 同语义——资源不足即拒绝、零副作用可重试；「扣到 1 为止」会
+          静默打折代价、鼓励 1 血无限放招，与本框架「先扣血」的代价语义相悖。
+        - 通过 → 立即扣血（先于伤害/效果结算，「释放时先扣血」）。
+        - 与 mp_cost 并存：两者各自独立判定/扣减，互不折算。
+        """
+        _final_sid = str(ca.get("skill_id") or "")
+        hp_sd = sd
+        if _final_sid:
+            _d = self.combo_engine().resolve_skill(_final_sid) or {}
+            if isinstance(_d, Mapping) and _d:
+                hp_sd = _d
+        hp_cost = int(ca.get(
+            "skill_hp_cost", ca.get(
+                "hp_cost", hp_sd.get("hp_cost", 0))) or 0)
+        if hp_cost <= 0:
+            return None
+        _c = self._combat(attacker)
+        _hp = int(_c.get("hp", 0) or 0)
+        if _hp - hp_cost < 1:
+            seq = self._record_action(
+                attacker, str(ca.get("type", "skill")), target,
+                {"hit": False, "crit": "low", "blocked": False, "pierce": 0.0,
+                 "multi": 1.0, "combo_rejected": True, "combo_reason": "hp_insufficient"},
+                {"ch_phys": 0, "ch_elem": 0, "final": 0}, self._phase)
+            return ActionOutcome(
+                False, seq, attacker, str(ca.get("type", "skill")), target,
+                False, "low", False, 0, 0,
+                int(self._combat(target).get("hp", 0)), (),
+                f"生命不足（需消耗 {hp_cost} 点，当前 {_hp}），技能被拒（不消耗行动）")
+        _c["hp"] = _hp - hp_cost
+        return None
+
     def _resource_ctx(self, attacker: str, target: str, registry: Any) -> Dict[str, Any]:
         """资源轴引擎 ctx 构造（注册表 + 双方 resource_state 注入）。"""
         from qbot_rpg.core.resource_axis import RESOURCE_STATE_KEY  # noqa: PLC0415
@@ -3107,6 +3149,16 @@ class BattleEngine:
             if _consume_gate is not None:
                 # R-6：同 energy gate——被拒零时间成本、直接重试
                 return _consume_gate
+
+        # ---- 批23 · B1：技能 hp_cost 门禁 + 扣血（释放自损的生命）----
+        # 与 mp_cost 并列、资源各自独立扣。**不得致死**：hp - hp_cost < 1 → 阻止
+        # 释放（被拒不消耗行动，同 energy/marks 语义——本框架「资源不足即拒绝、
+        # 不静默打折」的既有口径）。派生路径按最终 skill_id 解析（与 consume_marks
+        # 同口径）；组合已结算（_combo_settled）不跳过本项——settle_combo 只结算
+        # MP/能量，hp_cost 是独立资源，须在此处扣，且不会重复扣。
+        _hp_gate = self._apply_skill_hp_cost_gate(attacker, ca, sd, target)
+        if _hp_gate is not None:
+            return _hp_gate
 
         # ---- M13 6a 路3C：技能 MP 消耗扣费（1a §2.2 mp_cost 语义；被拒不扣）----
         # should_reject 已做 MP 门槛检查（enforce_mp 开）；成功施放后实际扣费。

@@ -490,6 +490,7 @@ def cmd_enter(parsed: Any, ctx: Mapping[str, Any]) -> Any:
     pctx["dungeons"] = ctx.get("dungeons")
     pctx["time_state"] = ctx.get("time_state")
     pctx["move_hooks"] = ctx.get("move_hooks")
+    pctx["rng"] = ctx.get("rng")  # 批24 E2：主动遭遇 Roll 随机源透传（缺省 → 引擎自建）
     result = enter_context_route(
         pctx, arg,
         maps=ctx.get("maps"), dungeons=ctx.get("dungeons"),
@@ -518,6 +519,8 @@ def cmd_enter(parsed: Any, ctx: Mapping[str, Any]) -> Any:
                     result = {"ok": True, "to": target,
                               "name": moved.get("name"),
                               "desc": moved.get("desc"), "lore": moved.get("lore")}
+                    if "encounter" in moved:
+                        result["encounter"] = moved["encounter"]
                 else:
                     result = {"ok": False, "reason": moved.get("reason"),
                               "to": target, "hidden": bool(moved.get("hidden"))}

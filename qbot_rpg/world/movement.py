@@ -34,10 +34,12 @@ conditions callable 注入（未注入/求值失败 = 不可走，fail-safe，2a
 """
 from __future__ import annotations
 
+import random
 from typing import Any, Callable, Dict, List, Mapping, MutableMapping, Optional, Tuple, Union, cast
 
 from qbot_rpg.content.map_models import MapDef, parse_maps
 from qbot_rpg.data.world_time_persist import mark_map_seen
+from qbot_rpg.world.encounter import roll_encounter
 
 __all__ = [
     "DIRECTION_ALIASES",
@@ -339,11 +341,23 @@ def resolve_move(player_ctx: dict, direction: str,
         if not result.get("ok"):
             return {"ok": False, "reason": result.get("blocked_reason") or _REASON_BLOCKED}
     moved = move_to_map(player_ctx, result["to"], maps=maps_src)
-    return {"ok": True, "to": result["to"],
-            "name": moved.get("name"), "desc": moved.get("desc"), "lore": moved.get("lore")}
+    out = {"ok": True, "to": result["to"],
+           "name": moved.get("name"), "desc": moved.get("desc"), "lore": moved.get("lore")}
+    if "encounter" in moved:
+        out["encounter"] = moved["encounter"]
+    return out
 
 
-def move_to_map(player_ctx: dict, map_id: str, maps: Optional[object] = None) -> dict:
+def _rng_of(player_ctx: Mapping[str, Any], rng: Optional[object]) -> Optional[random.Random]:
+    """遭遇 Roll 随机源：显式 rng 参数 > ctx["rng"]（须具备 random/randint）→ 缺省 None。"""
+    for cand in (rng, player_ctx.get("rng")):
+        if cand is not None and hasattr(cand, "random") and hasattr(cand, "randint"):
+            return cast(random.Random, cand)
+    return None
+
+
+def move_to_map(player_ctx: dict, map_id: str, maps: Optional[object] = None,
+                rng: Optional[object] = None) -> dict:
     """地图切换钩子（2a1b R13 位置变更 / R22 双钩子 / IF11 map_weather_seen）。
 
     1. R22 离开钩子（ctx["move_hooks"]["on_leave"](old_map_id, ctx)——批次 4 刷怪接线【工程补白】）；
@@ -351,7 +365,9 @@ def move_to_map(player_ctx: dict, map_id: str, maps: Optional[object] = None) ->
     3. 记录 map_weather_seen：world_time_persist.mark_map_seen（惰性增长，
        ctx["time_state"] 落点；存储层 M4 路3 A4 接线【工程补白】）；
     4. R22 进入钩子（ctx["move_hooks"]["on_enter"](new_map_id, ctx)）；
-    5. 返回新图信息 {"ok", "map_id", "name", "desc"?, "lore"?}（供指令层拼文案）。
+    5. 批24 E2：目标图刷怪行 `encounter_chance` Roll → 命中时返回 `encounter` 信号
+       （参战数在 `encounter_count_min/max` 区间内随机；随机源 = rng 参数 / ctx["rng"]）；
+    6. 返回新图信息 {"ok", "map_id", "name", "desc"?, "lore"?, "encounter"?}（供指令层拼文案）。
 
     零 IO 纯数据：只改入参 ctx 的 player/map_id/time_state 三个键，不触任何存储。
     """
@@ -392,10 +408,16 @@ def move_to_map(player_ctx: dict, map_id: str, maps: Optional[object] = None) ->
 
     md = index.get(target)
     lore = _exit_lore(index, old_map, target)
-    return {"ok": True, "map_id": target,
-            "name": md.name if md is not None else None,
-            "desc": md.desc if md is not None else None,
-            "lore": lore}
+    out = {"ok": True, "map_id": target,
+           "name": md.name if md is not None else None,
+           "desc": md.desc if md is not None else None,
+           "lore": lore}
+    # 批24 E2：进入目标图 → 主动遭遇 Roll（无可触发行/chance=0 → None，不加键 = 行为一致）。
+    if md is not None:
+        enc = roll_encounter(md, _rng_of(player_ctx, rng))
+        if enc is not None:
+            out["encounter"] = enc
+    return out
 
 
 def map_is_hidden(entry: object) -> bool:
@@ -416,7 +438,8 @@ def map_is_hidden(entry: object) -> bool:
     return raw is True
 
 
-def direct_teleport(player_ctx: dict, map_id: object, maps: Optional[object] = None) -> dict:
+def direct_teleport(player_ctx: dict, map_id: object, maps: Optional[object] = None,
+                    rng: Optional[object] = None) -> dict:
     """直接传送入口（批24 E1）：目标地图 `hidden: true` → 拒绝 + 人话提示，不改 ctx。
 
     与通道移动（`resolve_move`）区分：隐藏只拦**直接传送**，通道进入照常。非隐藏/未知地图
@@ -430,7 +453,7 @@ def direct_teleport(player_ctx: dict, map_id: object, maps: Optional[object] = N
         name = getattr(entry, "name", None) or target
         return {"ok": False, "type": "move", "to": target, "hidden": True,
                 "reason": _REASON_HIDDEN_MAP.format(name)}
-    return move_to_map(player_ctx, target, maps=maps_src)
+    return move_to_map(player_ctx, target, maps=maps_src, rng=rng)
 
 
 def enter_context_route(player_ctx: dict, arg: Optional[str],

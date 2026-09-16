@@ -515,6 +515,29 @@ def _check_spawn(
                         _emit(report, "error", "maps", f"{base}.weather_weights.{wk}", "R-1",
                               rule="map_spawn_weather_key_not_registered", node_id=node_id,
                               key=wk, registered=sorted(weather_keys))
+        # 批24 E2：主动遭遇字段（刷怪行）——类型/范围校验（monsters 为软登记字段，
+        # 泛型遍历被 soft_label 短路，故在此显式校验；与既有 count/respawn_minutes 同口径）。
+        _check_spawn_int(report, row, base, "encounter_chance", node_id,
+                         minimum=0, value_rule="map_spawn_encounter_chance_invalid")
+        ec_chance = row.get("encounter_chance")
+        if (isinstance(ec_chance, int) and not isinstance(ec_chance, bool)
+                and ec_chance > 100):
+            _emit(report, "error", "maps", f"{base}.encounter_chance", "R-2",
+                  rule="map_spawn_encounter_chance_range", node_id=node_id,
+                  value=ec_chance, maximum=100)
+        _check_spawn_int(report, row, base, "encounter_count_min", node_id,
+                         minimum=1, value_rule="map_spawn_encounter_min_invalid")
+        _check_spawn_int(report, row, base, "encounter_count_max", node_id,
+                         minimum=1, value_rule="map_spawn_encounter_max_invalid")
+        # 主动遭遇参战数区间 min>max → 死配置红拦。
+        ec_min = row.get("encounter_count_min")
+        ec_max = row.get("encounter_count_max")
+        if (isinstance(ec_min, int) and not isinstance(ec_min, bool)
+                and isinstance(ec_max, int) and not isinstance(ec_max, bool)
+                and ec_min > ec_max):
+            _emit(report, "error", "maps", f"{base}.encounter_count_min", "R-5",
+                  rule="map_spawn_encounter_range_dead", node_id=node_id,
+                  min_value=ec_min, max_value=ec_max)
 
 
 def _check_bidirectional_symmetry(

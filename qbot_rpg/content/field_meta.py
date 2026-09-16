@@ -521,6 +521,17 @@ DUNGEON_MAP_ELEM_CHILDREN: Dict[str, FieldMeta] = {
                              label="时段限定"),
         "weather_weights": FieldMeta(type="obj", children={}, soft_label=True,
                                       label="天气出现率倍率"),
+        # 批24 E2：主动遭遇（CakeGame `Config_Map.md:68/69`「主动触发强制战斗的概率」
+        # +「触发后进攻数量随机区间」）。语义 = **进入/移动结算时按概率主动触发战斗**，
+        # 与 `count`（同场存量）/`signal`/`hidden_boss` 都不同。挂在刷怪行上（不新造层级）。
+        "encounter_chance": FieldMeta(type="int", range_min=0, range_max=100, unit="%",
+                                      label="主动遭遇概率",
+                                      help="该怪组在进入本图时主动触发强制战斗的概率（0-100）；"
+                                           "0/缺省 = 不主动触发。"),
+        "encounter_count_min": FieldMeta(type="int", range_min=1, label="主动遭遇最少参战数",
+                                          help="触发后参战怪数随机区间下限（缺省=行 count）。"),
+        "encounter_count_max": FieldMeta(type="int", range_min=1, label="主动遭遇最多参战数",
+                                          help="触发后参战怪数随机区间上限（缺省=下限；min>max 红拦）。"),
     }), label="刷怪行"),
     "exits": FieldMeta(type="obj", children={}, soft_label=True, label="通道出口"),
     "mechanics": FieldMeta(type="list", element=FieldMeta(type="obj", children={}),

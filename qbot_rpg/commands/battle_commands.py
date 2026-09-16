@@ -1520,6 +1520,17 @@ def _attack_action(parsed: Any, ctx: Mapping[str, Any]) -> Tuple[Optional[dict],
     参数 → 技能行动。"""
     args = list(getattr(parsed, "args", None) or [])
     if not args:
+        # 批26 α5：装备「替换普攻」——普攻入口按概率替换为指定技能（RNG 经 ctx["rng"]
+        # 注入，引擎既有单源）。不满足（未启用/概率未中/技能非本装备赋予）→ None，
+        # 后续走既有 basic 槽/兜底，行为与现状逐字段一致。
+        try:
+            from qbot_rpg.core.equip_mods import resolve_attack_override  # noqa: PLC0415
+
+            _ov_skill = resolve_attack_override(ctx)
+        except Exception:  # pragma: no cover - 防御兜底（模块缺失不崩）
+            _ov_skill = None
+        if _ov_skill:
+            return {"type": "skill", "skill_id": _ov_skill}, None
         # 普攻技能化：解析当前装配快照的 basic 槽技能（每职业恰 1 个 basic，
         # 由内容包定义——如脊剑士的「脊斩」即其普攻）；无装配/无 basic → 引擎 normal 兜底
         try:

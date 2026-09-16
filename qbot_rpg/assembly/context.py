@@ -1154,7 +1154,7 @@ def _inventory_hooks(ctx: MutableMapping[str, Any]) -> dict:
         try:
             from qbot_rpg.core.inventory import max_hold_rejection  # noqa: PLC0415
             _held = int(inv.get(key, 0)) + _equip_hold_count(ctx, key)
-            _denied = max_hold_rejection(_cfg, _held)
+            _denied = max_hold_rejection(_cfg, _held, c)
         except Exception:  # noqa: BLE001 —— 门禁异常不阻断既有入包（防御）
             _denied = None
         if _denied:

@@ -99,6 +99,9 @@ def test_a2_pure_decision_function() -> None:
     assert max_hold_rejection({"max_hold": 1}, 0) is None
     assert max_hold_rejection({"max_hold": 1}, 1) == MSG_UNIQUE
     assert max_hold_rejection({"max_hold": -1}, 0) == MSG_FORBIDDEN
+    # 唯一物品批量获取（held=0 + count>1）同样拦（硬上限）
+    assert max_hold_rejection({"max_hold": 1}, 0, 3) == \
+        "❌ 该物品最多持有 1 个（单次获取数量超限）"
     # 非法档位（校验器已红拦）→ 引擎防御性放行
     assert max_hold_rejection({"max_hold": 7}, 3) is None
 

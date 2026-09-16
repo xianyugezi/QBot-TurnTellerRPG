@@ -84,16 +84,27 @@ def _known_maps_for(ctx: Optional[Mapping[str, Any]], index: Mapping[str, Any]) 
     """可传送地图集（2026-09-06 zerc 反馈·三次修订：默认有怪=隐藏图）：
     default_map（驿站）+ camp_name 营地标记图 + 无怪安全图。规则 = 有怪物
     分布的地图默认隐藏（玩家不可直接传送进野外——探索靠通道行走）；
-    营地（camp_name）与安全图（无怪）常显。裸 ctx（纯函数测试）→ 全量零破坏。"""
+    营地（camp_name）与安全图（无怪）常显。裸 ctx（纯函数测试）→ 全量零破坏。
+
+    批24 E1：地图显式 `hidden: true` → **一律**不列入（禁直接传送）；该判定优先于
+    营地/无怪常显（隐藏语义压过可视规则）。通道进入不受影响（`_known_maps_for`
+    只服务 /地图 列表与 /进入 序号传送）。
+    """
     known: set = set()
     if not ctx:
         return known
-    if "discovered_maps" not in ctx and "player" not in ctx and "settings" not in ctx:
-        return set(index.keys())
+    try:
+        from qbot_rpg.world.movement import map_is_hidden  # noqa: PLC0415
+    except ImportError:  # pragma: no cover - 引擎未接线（轻量 ctx）
+        def map_is_hidden(_entry: object) -> bool:  # type: ignore[misc]
+            return False
+    bare = ("discovered_maps" not in ctx and "player" not in ctx and "settings" not in ctx)
+    if bare:
+        return {m for m in index.keys() if not map_is_hidden(index.get(m))}
     dm = ctx.get("settings")
     if isinstance(dm, Mapping):
         _dmap = dm.get("default_map")
-        if isinstance(_dmap, str) and _dmap:
+        if isinstance(_dmap, str) and _dmap and not map_is_hidden(index.get(_dmap)):
             known.add(_dmap)
     for mid in list(index.keys()):
         entry = index[mid]
@@ -101,6 +112,10 @@ def _known_maps_for(ctx: Optional[Mapping[str, Any]], index: Mapping[str, Any]) 
             continue
         raw = getattr(entry, "raw", None) if not isinstance(entry, Mapping) else entry
         raw = raw if isinstance(raw, Mapping) else {}
+        # 批24 E1：`hidden: true` → 不列入可传送地图集（禁直接传送；通道进入照常）。
+        # 优先于营地/无怪常显——隐藏语义压过一切可视规则。
+        if map_is_hidden(entry):
+            continue
         # 营地标记 → 常显（camp_name 纯配置字段，raw 透传）
         cn = raw.get("camp_name")
         if isinstance(cn, str) and cn:
@@ -495,13 +510,17 @@ def cmd_enter(parsed: Any, ctx: Mapping[str, Any]) -> Any:
         if 1 <= map_idx <= len(ordered):
             target = ordered[map_idx - 1]
             try:
-                from qbot_rpg.world.movement import move_to_map  # noqa: PLC0415
+                from qbot_rpg.world.movement import direct_teleport  # noqa: PLC0415
                 # P1-5 修复：同方向行走——复用共享 persistent_state 的 pctx（非 dict(player) 副本）
-                moved = move_to_map(pctx, target, maps=ctx.get("maps"))
+                # 批24 E1：传送类入口统一走 direct_teleport（hidden 地图 → 拒绝 + 人话提示）。
+                moved = direct_teleport(pctx, target, maps=ctx.get("maps"))
                 if moved.get("ok"):
                     result = {"ok": True, "to": target,
                               "name": moved.get("name"),
                               "desc": moved.get("desc"), "lore": moved.get("lore")}
+                else:
+                    result = {"ok": False, "reason": moved.get("reason"),
+                              "to": target, "hidden": bool(moved.get("hidden"))}
             except ImportError:
                 pass
     # 2026-09-06 发现记录：移动/传送成功 → 目标图写 ctx discovered_maps（就地

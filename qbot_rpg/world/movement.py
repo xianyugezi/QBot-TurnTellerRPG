@@ -43,6 +43,8 @@ __all__ = [
     "DIRECTION_ALIASES",
     "resolve_move",
     "move_to_map",
+    "direct_teleport",
+    "map_is_hidden",
     "enter_context_route",
 ]
 
@@ -62,6 +64,8 @@ _REASON_NO_ENTRANCE = "此处没有副本入口"     # 非入口节点（2a1c TC
 _REASON_INVALID_ENTRANCE = "入口序号无效"     # M3 审查 P1-3：Unicode 数字/越界序号
 _REASON_NOT_FOUND = "没有这个入口/方向"      # 名称/序号未命中（任务口径）
 _REASON_NO_ARG = "/进入 需要参数：方向 / 序号 / 入口名（便捷指令未开放）"  # 2a1c TC-23
+# 批24 E1：地图隐藏（`hidden`）——传送类入口过滤的人话提示（模板前缀 + 地图名）。
+_REASON_HIDDEN_MAP = "「{}」是隐藏区域，无法直接传送——请从相邻地图的通道走过去"
 
 
 # =====================================================================================
@@ -392,6 +396,41 @@ def move_to_map(player_ctx: dict, map_id: str, maps: Optional[object] = None) ->
             "name": md.name if md is not None else None,
             "desc": md.desc if md is not None else None,
             "lore": lore}
+
+
+def map_is_hidden(entry: object) -> bool:
+    """地图条目是否标记隐藏（`hidden: true`，批24 E1）。
+
+    接受 MapDef / 原始节点 dict / None（未知 → False）。语义 = **禁止直接传送进入**
+    （只能经通道/剧情进入）；与隐藏要素（hidden_boss/hidden_quest）不同层。
+    """
+    raw: object = None
+    if isinstance(entry, Mapping):
+        raw = entry.get("hidden")
+    elif entry is not None:
+        inner = getattr(entry, "raw", None)
+        if isinstance(inner, Mapping):
+            raw = inner.get("hidden")
+        else:
+            raw = getattr(entry, "hidden", None)
+    return raw is True
+
+
+def direct_teleport(player_ctx: dict, map_id: object, maps: Optional[object] = None) -> dict:
+    """直接传送入口（批24 E1）：目标地图 `hidden: true` → 拒绝 + 人话提示，不改 ctx。
+
+    与通道移动（`resolve_move`）区分：隐藏只拦**直接传送**，通道进入照常。非隐藏/未知地图
+    → 原样转调 `move_to_map`（既有行为逐字段一致）。
+    """
+    maps_src = maps if maps is not None else player_ctx.get("maps")
+    index = _maps_index(maps_src)
+    target = "" if map_id is None else str(map_id)
+    entry = index.get(target)
+    if map_is_hidden(entry):
+        name = getattr(entry, "name", None) or target
+        return {"ok": False, "type": "move", "to": target, "hidden": True,
+                "reason": _REASON_HIDDEN_MAP.format(name)}
+    return move_to_map(player_ctx, target, maps=maps_src)
 
 
 def enter_context_route(player_ctx: dict, arg: Optional[str],

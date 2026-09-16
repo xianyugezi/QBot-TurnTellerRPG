@@ -1283,7 +1283,7 @@ EQUIPMENT_FIELD_GROUPS["excludes"] = "base"
 EQUIPMENT_GROUP_ORDER: Tuple[str, ...] = tuple(_g for _g, _ in ITEMS_GROUP_DEFS)
 
 MAPS_GROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
-    ("base", ("id", "name", "battle", "revert", "safe_zone", "camp", "camp_name")),
+    ("base", ("id", "name", "battle", "revert", "safe_zone", "hidden", "camp", "camp_name")),
     ("ranges", ("min", "max", "lower", "upper", "reset", "mechanics")),
     ("refs", ("enemy_pool", "monsters", "exits", "respawn_point", "npcs",
               "gate_guard", "gather_points", "dungeon_entrances", "weather_pool")),
@@ -2023,6 +2023,13 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "id": F_ID, "name": F_NAME,
         "enemy_pool": FieldMeta(type="list", element=FieldMeta(type="ref", ref_target="enemy")),
         "battle": FieldMeta(type="bool"), "revert": FieldMeta(type="bool"),
+        # 批24 E1：地图隐藏（`hidden`）——CakeGame `Config_Map.Hid`「隐藏（禁直接传送）」。
+        # 语义 = 传送类入口过滤（世界地图序号直接传送被拒 + 人话提示）；通道移动不受影响
+        # （通道进入照常）。与隐藏**要素**视图（achievements.hidden / monsters.hidden_boss /
+        # hidden_quest）不同层，命名区分。
+        "hidden": FieldMeta(type="bool", label="隐藏（禁直接传送）",
+                            help="置真 = 禁止直接传送进入该地图，只能从相邻地图的通道（或剧情）"
+                                 "进入；不影响通道行走。隐藏区域不列 /地图 传送列表。"),
         # 区域/副本区间（min>max 死配置 → R-5，min/max 由校验器泛化检测）
         "min": FieldMeta(type="int"), "max": FieldMeta(type="int"),
         "lower": FieldMeta(type="int"), "upper": FieldMeta(type="int"),

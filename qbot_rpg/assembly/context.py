@@ -1074,6 +1074,34 @@ def _prof_engine_of_ctx(settings: Any) -> Any:
         return None
 
 
+def _equip_hold_count(ctx: Mapping[str, Any], item_id: str) -> int:
+    """批26 α2：已**穿戴**中、item_id 匹配的件数（持有计数的一部分）。
+
+    max_hold=1（唯一）要求「已持有」含穿戴中——只数背包计数会漏判「已穿上」的唯一物品。
+    双读 ctx["player"]（Player dataclass / dict）+ ctx["equipment"]（装配层 dict 镜像）；
+    任何缺失 → 0（防御，不误拦）。
+    """
+    equipment: Any = None
+    player = ctx.get("player")
+    if isinstance(player, Mapping):
+        equipment = player.get("equipment")
+    elif player is not None:
+        equipment = getattr(player, "equipment", None)
+    if not isinstance(equipment, Mapping):
+        equipment = ctx.get("equipment")
+    if not isinstance(equipment, Mapping):
+        return 0
+    n = 0
+    for slot_obj in equipment.values():
+        if isinstance(slot_obj, Mapping):
+            iid = slot_obj.get("item_id")
+        else:
+            iid = getattr(slot_obj, "item_id", None)
+        if isinstance(iid, str) and iid == item_id:
+            n += 1
+    return n
+
+
 def _inventory_hooks(ctx: MutableMapping[str, Any]) -> dict:
     """背包入包/扣物/计数 hook（add_item/remove_item/count_item，reward.py/shop.py 契约）。
 
@@ -1107,6 +1135,11 @@ def _inventory_hooks(ctx: MutableMapping[str, Any]) -> dict:
         实例化时把数值字段填 stats_bonus——原链路 def 数值字段从不转 stats_bonus，
         穿装后 aggregate_bonus 读空 → 装备零加成（demo 包 latent 断链，实测确认）。
         ctx["items"] 注册表（raw dict，含 resolve_item）在此闭包可见。
+
+        批26 α2：本 hook 是全部获取入口（掉落奖励 / 商店购买 / 合成 / 任务与签到 /
+        NPC 给予）的唯一入包落点，故 max_hold 门禁只在此拦一次（判定实现 =
+        core.inventory.max_hold_rejection，普通函数单一来源）；拒绝时返回 False
+        并在 ctx["add_item_denied"] 记人话（商店等直接交互入口据此透传）。
         """
         try:
             c = int(count)
@@ -1115,13 +1148,24 @@ def _inventory_hooks(ctx: MutableMapping[str, Any]) -> dict:
         if c < 1:
             return False
         key = str(item_id)
+        _item_cfg = ctx.get("items")
+        _cfg = _item_cfg.get(key) if isinstance(_item_cfg, Mapping) else None
+        # ---- 批26 α2：max_hold 获取门禁（唯一实现；含穿戴中持有计数）----
+        try:
+            from qbot_rpg.core.inventory import max_hold_rejection  # noqa: PLC0415
+            _held = int(inv.get(key, 0)) + _equip_hold_count(ctx, key)
+            _denied = max_hold_rejection(_cfg, _held)
+        except Exception:  # noqa: BLE001 —— 门禁异常不阻断既有入包（防御）
+            _denied = None
+        if _denied:
+            ctx["add_item_denied"] = {"item": key, "reason": "max_hold",
+                                      "message": _denied}
+            return False
         inv[key] = inv.get(key, 0) + c
         # 装备数值字段 → stats_bonus（批⑧ 键空间收口：统一取自 data.gear_stats——
         # 含 crit 会心 / dfn_pct 等百分比键 / earplug 耳栓 / 超会心·属性会心等级。
         # 历史：2026-09-06 加 dfn、2026-09-12 补 crit/_pct——原三处手写键表互相漂移
         # （context 13 键 / shop_tx·详情面板 12 键）是词条悬空的根因，此后单一来源。）
-        _item_cfg = ctx.get("items")
-        _cfg = _item_cfg.get(key) if isinstance(_item_cfg, Mapping) else None
         _bonus: Dict[str, float] = extract_bonus(_cfg) if isinstance(_cfg, Mapping) else {}
         # M8 炼金产出实例（quality/traits 关键字）→ 追加实例通道（保留品质/特性落档）
         if kw and (kw.get("quality") is not None or kw.get("traits")) or _bonus:
@@ -1323,7 +1367,10 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
                 "exp": player.exp,
                 "hp": player.hp,
                 "mp": player.mp,
-                "job_name": _job_name(deps.registry, player.job_id),
+                # 批26 α6：装备替换职业的显示名覆盖（core/equip_mods 写
+                # persistent_state.job_name_override）优先于注册表职业名。
+                "job_name": str(ps.get("job_name_override") or "")
+                or _job_name(deps.registry, player.job_id),
                 "location": location,
                 "title": _current_title(player.title_state),
                 "stats": _stats_table(deps.registry, settings),
@@ -1476,6 +1523,10 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
                 # ctx["set_skills"] 由 skill_slots_battle 并入战斗可用技能集（唯一路径）。
                 "set_tracker": _ps_init(ps, "set_tracker", {}),
                 "set_skills": _ps_init(ps, "set_skills", {}),
+                # 批26 α1：装备来源技能容器（core/equip_mods 落 persistent_state）；
+                # ctx["equip_skills"] 由 skill_slots_battle.with_source_skills 并入
+                # 战斗可用技能集（与 set_skills 同一并集口径，独立来源容器）。
+                "equip_skills": _ps_init(ps, "equip_skills", {}),
             }
         )
         # 2026-09-06 营地 heal 收口：max_hp/max_mp 装配补键（npc heal N% 解析依赖

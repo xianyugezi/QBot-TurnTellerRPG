@@ -1424,13 +1424,17 @@ ITEMS_GROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
     ("base", (
         "id", "name", "type", "slot", "bind", "usable", "job_restrict", "use_level",
         "quality", "rarity", "material_tier", "source", "awaken", "seed",
+        "max_hold",  # 批26 α2：获取数量上限（items∪equipment 同库）
     )),
     ("stats", (
         "price", "atk", "def", "dfn", "foc", "hp", "agi", "mp",
         "elements", "base_effects",
         *GEAR_FLAT_KEYS, *GEAR_PCT_KEYS, *GEAR_COMBAT_KEYS,
     )),
-    ("effects", ("effects", "traits")),
+    # 批26 α组（装备侧）：装备附加字段归「效果」分组（grant_skills/skill_amp/
+    # attack_override/job_override；沿既有分组，不开新分组键——组显示名归包声明）。
+    ("effects", ("effects", "traits", "grant_skills", "skill_amp",
+                 "attack_override", "job_override")),
     ("text", ("desc", "brief", "detail")),
 )
 
@@ -2063,6 +2067,55 @@ def _module_table() -> Dict[str, ModuleMeta]:
         # 批4.5：items/equipment 实测顶层 desc（原表未登记 → 纯展示宽字段）
         "desc": _soft_display("说明"),
     }
+    # 批26 · α组（装备侧，依据 `CakeGame字段差距_补漏.md` §一 组 α）：装备附加五字段。
+    # items∪equipment 同库（item_lib）——veinborn 武器/防具多在 items 模块，故登记在
+    # items_fields（equipment_fields 复制同一表），两处编辑器/校验同时可见。
+    #   α1 grant_skills   穿戴时获得、卸下收回（level<1 → 专项 IV-2 红拦；skill 缺失
+    #                     → 泛型 R-4；与 effects.type=learn_skill、set_skills 不同来源）
+    #   α2 max_hold       0=不限 / 1=唯一 / -1=禁止获取（取值仅此三档 → 专项 IV-3 红拦）
+    #   α3 skill_amp      伤害/冷却增幅（type 枚举 + 上下限 → 专项 IV-4；上下限在
+    #                     settings.forge.skill_amp_bounds，框架默认见 content/forge_settings）
+    #   α5 attack_override 普攻替换（skill 须由本件赋予 → 专项 Y-9 黄提示，不硬拦）
+    #   α6 job_override   穿戴期职业替换（job 引用 → 泛型 R-4）
+    items_fields.update({
+        "grant_skills": FieldMeta(
+            type="list", label="赋予技能",
+            element=FieldMeta(type="obj", children={
+                "skill": FieldMeta(type="ref", ref_target="skill", label="技能"),
+                "level": FieldMeta(type="int", range_min=1, range_max=99, unit="级", label="等级"),
+            }),
+            help="穿戴时获得这些技能、卸下时收回（skills 技能 id；等级 ≥1）。"),
+        "max_hold": FieldMeta(
+            type="int", range_min=-1, range_max=1, label="最大获取数量",
+            help="获取入口上限：0=不限 / 1=唯一（已持有则拒绝再获取）/ -1=禁止获取。"),
+        "skill_amp": FieldMeta(
+            type="list", label="增幅技能",
+            element=FieldMeta(type="obj", children={
+                "skill": FieldMeta(type="ref", ref_target="skill", label="技能"),
+                "type": FieldMeta(type="enum", enum=("damage", "cooldown"), label="增幅类型"),
+                "value": FieldMeta(type="int", label="增幅值"),
+            }),
+            help="按技能增幅：damage=伤害（1+总计/100 作伤害乘数）/ cooldown=冷却；"
+                 "上下限见 settings.forge.skill_amp_bounds。"),
+        "attack_override": FieldMeta(
+            type="obj", label="替换普攻",
+            children={
+                "enabled": FieldMeta(type="bool", label="启用"),
+                "skill": FieldMeta(type="ref", ref_target="skill", label="替换技能"),
+                "chance": FieldMeta(type="int", range_min=0, range_max=100, unit="%",
+                                    label="触发概率"),
+            },
+            help="普攻按概率替换为指定技能（0/缺省=不替换）；仅当该技能由本件"
+                 "grant_skills 赋予时生效。"),
+        "job_override": FieldMeta(
+            type="obj", label="替换职业",
+            children={
+                "job": FieldMeta(type="ref", ref_target="job", label="替换职业"),
+                "level_reset": FieldMeta(type="bool", label="等级重置"),
+                "name_override": FieldMeta(type="str", label="替换显示名"),
+            },
+            help="穿戴期间职业替换为该职业（可等级重置/显示名替换），卸下还原。"),
+    })
     equipment_fields: Dict[str, FieldMeta] = dict(items_fields)
     # 部位互斥：entry.slot 与 entry.excludes 列表内部位互斥成环 → R-5（equipment 专项，§5.2 + L167）
     equipment_fields["slot"] = FieldMeta(type="str", options_ref="settings.slot_defs")

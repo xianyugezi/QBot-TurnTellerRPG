@@ -1588,6 +1588,7 @@ class EquipmentEngineAdapter:
         res = self._engine.equip(player, item, item.slot)
         if res.get("ok"):
             _sync_set_activation(ctx, player)  # ACT-05：穿戴触发套装重算
+            _sync_equip_mods(ctx, player)      # 批26 α1/α6：装备来源技能 + 职业覆盖
             msg = tpl_of(ctx, "basic_equip_ok", {"name": item.name})
             if res.get("replaced"):
                 msg += tpl_of(ctx, "basic_equip_replaced")
@@ -1606,6 +1607,7 @@ class EquipmentEngineAdapter:
         res = self._engine.unequip(player, slot_id)
         if res.get("ok"):
             _sync_set_activation(ctx, player)  # ACT-05：脱卸触发套装重算
+            _sync_equip_mods(ctx, player)      # 批26 α1/α6：装备来源技能收回 + 职业还原
             old_name = ""
             if old is not None:
                 old_name = str(getattr(old, "name", "") or "")
@@ -1705,6 +1707,23 @@ def _sync_set_activation(ctx: Mapping[str, Any], player: MutableMapping[str, Any
             ctx[SET_SKILLS_KEY] = dict(skills)
     except Exception as exc:  # pragma: no cover - 结算失败不阻断穿脱
         _logger.exception("套装激活结算失败（穿脱已生效）: %s", exc)
+
+
+def _sync_equip_mods(ctx: Mapping[str, Any], player: MutableMapping[str, Any]) -> None:
+    """批26 α1/α6：穿/脱/换装后重算装备附加（装备来源技能 + 职业覆盖）。
+
+    委托 core.equip_mods.sync_equip_mods（重算 persistent_state.equip_skills 与
+    职业覆盖，镜像 ctx["equip_skills"]）；整体 try 兜底——装备附加结算失败不阻断
+    穿脱主流程（与 _sync_set_activation 同口径）。
+    """
+    try:
+        from qbot_rpg.core.equip_mods import sync_equip_mods  # noqa: PLC0415
+    except Exception:  # pragma: no cover - 模块缺失不阻断穿脱
+        return
+    try:
+        sync_equip_mods(ctx, player)
+    except Exception as exc:  # pragma: no cover - 结算失败不阻断穿脱
+        _logger.exception("装备附加结算失败（穿脱已生效）: %s", exc)
 
 
 def _equip_engine(ctx: Mapping[str, Any]) -> Any:

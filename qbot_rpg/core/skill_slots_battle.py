@@ -101,6 +101,13 @@ SLOT_TRIGGER: str = "trigger"
 # {技能 id: 等级}；本文件经 with_set_skills 并入装配快照 → 可用技能集，P-6）
 SET_SKILLS_STATE_KEY: str = "set_skills"
 
+# 装备来源技能结算键（批26 α1：core/equip_mods.recompute_equip_skills 产出的
+# {技能 id: 等级}，落 player.persistent_state["equip_skills"]，装配层镜像到
+# ctx["equip_skills"]；本文件经 with_source_skills 并入装配快照 → 可用技能集）。
+# 「各来源容器取并集」= 来源计数语义：卸下装备只清装备容器，消耗品学习
+# （skill_slots 快照）/ 锻造套装（set_skills）等其它来源不受影响，P-8。
+EQUIP_SKILLS_STATE_KEY: str = "equip_skills"
+
 # 套装激活技能缺省槽类型（§1.4：套装技能常驻生效，默认 passive 不占行动位；
 # 技能表给出 type 时以其为准，P-7）
 _SET_SKILL_DEFAULT_SLOT: str = SLOT_PASSIVE
@@ -134,28 +141,32 @@ _EMPTY_SNAPSHOT: Dict[str, Any] = {
 def _snapshot_of(ctx: Mapping[str, Any]) -> Mapping[str, Any]:
     """ctx 装配快照读取（P-5：缺省/畸形 → 空骨架，不抛异常）。
 
-    P-6：读取后并入 ctx[SET_SKILLS_STATE_KEY] 的套装激活技能（with_set_skills），
-    使 available_skills / battle_equipped_skills / is_slot_equipped / equipped_slot_kind
-    全部经同一路径消费套装技能（技能表 ctx["skills"] 提供 type 时用其时机，P-7）。
+    P-6：读取后并入 ctx[SET_SKILLS_STATE_KEY] 的套装激活技能（with_set_skills）；
+    P-8（批26 α1）：再并入 ctx[EQUIP_SKILLS_STATE_KEY] 的装备来源技能
+    （with_source_skills）——两者都是「独立来源容器」，装配快照之上取并集，
+    卸下装备只清装备容器，其它来源技能不被收走。available_skills /
+    battle_equipped_skills / is_slot_equipped / equipped_slot_kind 全部经同一
+    路径消费（技能表 ctx["skills"] 提供 type 时用其时机，P-7）。
     """
     raw = ctx.get(SKILL_SLOTS_STATE_KEY)
     snapshot = raw if isinstance(raw, Mapping) else _EMPTY_SNAPSHOT
-    return with_set_skills(snapshot, ctx.get(SET_SKILLS_STATE_KEY), ctx.get("skills"))
+    snap = with_set_skills(snapshot, ctx.get(SET_SKILLS_STATE_KEY), ctx.get("skills"))
+    return with_source_skills(snap, ctx.get(EQUIP_SKILLS_STATE_KEY), ctx.get("skills"))
 
 
-def set_skill_rows(set_skills: object, skill_table: object = None) -> List[Dict[str, Any]]:
-    """套装激活技能表 → 装配槽行（P-6/P-7）。
+def source_skill_rows(source_skills: object, skill_table: object = None) -> List[Dict[str, Any]]:
+    """来源技能表 → 装配槽行（P-6/P-7/P-8；套装/装备来源共用）。
 
-    入参 set_skills: {技能 id: 等级}（非 Mapping → []）；
+    入参 source_skills: {技能 id: 等级}（非 Mapping → []）；
               skill_table: ctx["skills"]（可选，提供技能的 6a type）；
     出参 list[dict]: {"slot": <basic|active|passive|trigger>, "skill_id": str,
     "level": int}；技能 id 非空、等级为 ≥1 的非 bool int 才收；按技能 id 升序确定。
     """
-    if not isinstance(set_skills, Mapping):
+    if not isinstance(source_skills, Mapping):
         return []
     rows: List[Dict[str, Any]] = []
-    for sid in sorted(k for k in set_skills if isinstance(k, str) and k):
-        lv = set_skills[sid]
+    for sid in sorted(k for k in source_skills if isinstance(k, str) and k):
+        lv = source_skills[sid]
         if not isinstance(lv, int) or isinstance(lv, bool) or lv < 1:
             continue
         rows.append({
@@ -164,6 +175,11 @@ def set_skill_rows(set_skills: object, skill_table: object = None) -> List[Dict[
             "level": lv,
         })
     return rows
+
+
+def set_skill_rows(set_skills: object, skill_table: object = None) -> List[Dict[str, Any]]:
+    """套装激活技能表 → 装配槽行（P-6/P-7；等价 source_skill_rows 的别名）。"""
+    return source_skill_rows(set_skills, skill_table)
 
 
 def _set_skill_slot(skill_id: str, skill_table: object) -> str:
@@ -180,27 +196,39 @@ def _set_skill_slot(skill_id: str, skill_table: object) -> str:
     return _SET_SKILL_DEFAULT_SLOT
 
 
-def with_set_skills(
+def with_source_skills(
     snapshot: Mapping[str, Any],
-    set_skills: object,
+    source_skills: object,
     skill_table: object = None,
 ) -> Dict[str, Any]:
-    """装配快照 + 套装激活技能 → 合并快照（P-6；不改入参，返回新 dict）。
+    """装配快照 + 某来源技能 → 合并快照（P-6/P-8；不改入参，返回新 dict）。
 
     基础槽行取 slots_from_snapshot(snapshot)（含 slots 优先 / active_order+passive+
-    trigger 老存档回退），套装技能行去重追加（同 skill_id 已在装配内 → 装配行优先），
-    结果统一写回 "slots"。set_skills 缺省/畸形 → 原快照确定性归一。
+    trigger 老存档回退），来源技能行去重追加（同 skill_id 已在装配内 → 装配行优先，
+    先并来源优先）。source_skills 缺省/畸形 → 原快照确定性归一。
     """
     base: Dict[str, Any] = dict(snapshot) if isinstance(snapshot, Mapping) else {}
     rows = slots_from_snapshot(base)
     have = {r.get("skill_id") for r in rows if r.get("skill_id")}
-    for row in set_skill_rows(set_skills, skill_table):
+    for row in source_skill_rows(source_skills, skill_table):
         if row["skill_id"] in have:
             continue
         rows.append(row)
         have.add(row["skill_id"])
     base["slots"] = rows
     return base
+
+
+def with_set_skills(
+    snapshot: Mapping[str, Any],
+    set_skills: object,
+    skill_table: object = None,
+) -> Dict[str, Any]:
+    """装配快照 + 套装激活技能 → 合并快照（P-6；with_source_skills 的具名别名）。
+
+    保留原名（既有消费方/测试）；实现统一走 with_source_skills（单一并集口径）。
+    """
+    return with_source_skills(snapshot, set_skills, skill_table)
 
 
 def set_skill_levels(ctx: Mapping[str, Any]) -> Dict[str, int]:
@@ -331,6 +359,7 @@ def equipped_slot_kind(ctx: Mapping[str, Any], skill_id: str) -> Optional[str]:
 __all__ = [
     "SKILL_SLOTS_STATE_KEY",
     "SET_SKILLS_STATE_KEY",
+    "EQUIP_SKILLS_STATE_KEY",
     "SLOT_BASIC",
     "SLOT_ACTIVE",
     "SLOT_PASSIVE",
@@ -338,7 +367,9 @@ __all__ = [
     "PASSIVE_PROC_HOOK",
     "TRIGGER_PROC_HOOK",
     "set_skill_rows",
+    "source_skill_rows",
     "with_set_skills",
+    "with_source_skills",
     "set_skill_levels",
     "slots_from_snapshot",
     "available_skills",

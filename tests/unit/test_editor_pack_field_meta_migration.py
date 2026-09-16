@@ -3,9 +3,10 @@
 依据：`docs/编辑器重写_数据包展示元数据下放方案.md` §四 批B/C。
 
 本用例**调用** `scripts/compare_field_meta_migration.py`：它用 `git worktree` 检出基线
-`357ca16`（批27 重定；批26 的 `f051348` 之后，本批技能侧新增 skills `revive`/`message_key`，
-使展示块 `基本[@more]` 的 `keys`/`count` 随新增字段增长——属新增引起的展示层位移，
-**无删除、无既有 help/group 严格键改动**），在基线树与当前树各跑一遍
+`4b9d82d`（批28 D-6 重定；批27 的 `357ca16` 之后，本批**有意删除**空壳键
+`transfer_allowed`，内容包 `veinborn` 的展示名把它回填为纯展示 soft 子字段，使
+`enhance.settings` 的 `keys` 顺序位移——属有意删除引起的展示层位移，
+**删除项 = 0、无既有 label/help/group 严格键改动**），在基线树与当前树各跑一遍
 `scripts/editor_readonly_snapshot.py`（模块树 / 条目列表 / 条目详情 / 条目索引 / 引用候选 /
 包列表），递归对拍并输出差异报告。
 
@@ -35,7 +36,7 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
-BASELINE_REF = "357ca16"
+BASELINE_REF = "4b9d82d"
 CONTENT = REPO / "content"
 
 

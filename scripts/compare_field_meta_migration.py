@@ -114,7 +114,14 @@ DEFAULT_PACKS = ("veinborn", "test_demo")
 # 属**新增引起的展示层位移**：对拍实证硬差异全部是这些派生块聚合 + 新字段描述符，
 # **无任何删除**（「仅迁移前有（删除）」= 0）与既有 `label`/`help`/`group` 严格键改动。
 # 重定到本批末提交后，门禁继续只守字段级改/删。
-DEFAULT_BASELINE_REF = "f051348"
+# 批28（2026-09-17）重定基线：357ca16 → 4b9d82d（本批 D-6 删除提交）。原因：**有意删除**
+# 空壳键 `transfer_allowed`（框架子结构 + V5 校验 + 缺省锚点），内容包 `veinborn`
+# 的展示名（field_meta.json）把该键回填为纯展示 soft 子字段，使 enhance.settings 的
+# `keys` 顺序由 [.., transfer_allowed, max_by_rarity] 位移为 [.., max_by_rarity,
+# transfer_allowed]。对拍实证硬差异**仅此两处顺序位移**（「仅迁移前有（删除）」= 0、
+# 既有 label/help/group 严格键改动 = 0）；属本批**有意**的字段删除引起的展示层位移。
+# 重定到本批 D-6 提交后，门禁继续只守字段级改/删。
+DEFAULT_BASELINE_REF = "4b9d82d"
 
 
 def _env(root: Path) -> dict:

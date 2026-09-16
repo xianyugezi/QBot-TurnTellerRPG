@@ -177,5 +177,5 @@ def test_editor_blank_pack_still_six(blank_root: Path) -> None:
 # ---------------------------------------------------------------------------
 def test_footer_batch_string_is_current() -> None:
     html = (REPO / "qbot_rpg" / "web" / "static" / "index.html").read_text(encoding="utf-8")
-    assert "批26 · α组（装备侧）" in html
+    assert "批27 · α组（技能侧）" in html
     assert "批17 · 通用预设" not in html

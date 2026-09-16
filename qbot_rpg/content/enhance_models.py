@@ -6,14 +6,14 @@
 功能描述：
   - enhance.json 顶层 obj（对齐 forge.json 形态：registry.modules_raw["enhance"]）。
     段：settings（max_by_rarity/fail_tier_split/shatter_mode/luck_affects/
-    transfer_allowed/level_gated）、cost（coin_per_level/stones_per_level/
+    level_gated）、cost（coin_per_level/stones_per_level/
     stone_tiers）、success_curve[]、values（weapon_atk_per_level/
     armor_def_per_level）、protect_stone。
   - validate_enhance(modules, report) 纯函数（(modules, report) 鸭子类型，
     对齐 alchemy_models.validate_recipes 口径）：
     V1 曲线单调不增（硬）；V2 曲线档位覆盖 1..MaxR（硬）；
     V4 石档位引用 items 存在性 + 覆盖连续（硬）；
-    V7 max_by_rarity 键品质枚举（硬）；V5 转移/门槛开关一致性（硬）；
+    V7 max_by_rarity 键品质枚举（硬）；V5 等级门槛开关一致性（硬）；
     V3 碎率超限软警告；结构异常（缺段/类型错）硬拦。
   - 缺失/未接线 enhance 模块 → 跳过（对齐既有校验器「默认放行」惯例）。
 
@@ -87,7 +87,6 @@ DEFAULT_ENHANCE: Dict[str, Any] = {
         "shatter_chance": 0,
         "shatter_max": 5,
         "luck_affects": True,
-        "transfer_allowed": False,
         "level_gated": False,
     },
     "cost": {
@@ -306,8 +305,9 @@ def validate_enhance(modules: Mapping[str, Any], report: Any) -> None:
         except (TypeError, ValueError):
             _warn(report, "enhance.settings.shatter_chance", "V3", msg="碎率非整数，按 0 处理")
 
-    # V5：转移/门槛开关一致性（transfer_allowed/level_gated 键存在即 true 语义）
-    for key in ("transfer_allowed", "level_gated"):
+    # V5：等级门槛开关一致性（level_gated 键存在即 true 语义；2026-09-16 批28 D-6
+    # 已删除空壳键 transfer_allowed——键在、校验在、core/ 无消费点，遵循奥卡姆直接删）
+    for key in ("level_gated",):
         if key in settings and not isinstance(settings.get(key), bool):
             _err(report, f"enhance.settings.{key}", "V5", msg=f"{key} 须布尔")
 

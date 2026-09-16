@@ -102,7 +102,6 @@ CHILD_SPEC: Dict[str, Dict[str, Any]] = {'achievement': {'conditions': {}, 'rewa
                           'level_gated': None,
                           'luck_affects': None,
                           'shatter_mode': None,
-                          'transfer_allowed': None,
                           'max_by_rarity': {'normal': None,
                                             'fine': None,
                                             'epic': None,

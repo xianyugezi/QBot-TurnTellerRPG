@@ -3,9 +3,11 @@
 依据：`docs/编辑器重写_数据包展示元数据下放方案.md` §四 批B/C。
 
 本用例**调用** `scripts/compare_field_meta_migration.py`：它用 `git worktree` 检出基线
-`7c90427`（批23 重定；批22 的 `8aa9c9d` 因一次性新增 job_restrict/use_level/战斗词条/
-effect 开关而产生展示层位移；批23 又新增 skills `hp_cost`、jobs `advance`/`is_basic`
-与 3 条 job_advance_* 模板键，使展示块 `keys`/`count`、条目计数、templates/index 计数
+`1068f93`（批24 重定；批23 的 `7c90427` 因一次性新增 skills `hp_cost`、jobs
+`advance`/`is_basic` 与 3 条 job_advance_* 模板键而产生展示层位移；批24 又新增
+maps `hidden`/`entry_cost`、maps.monsters 行 `encounter_chance`/`encounter_count_min`/
+`encounter_count_max`、dungeon `advance_on_kill_count`、quest `daily` 重置周期子字段，
+使展示块 `keys`/`count`、`fields[*].(block|subgroup)`、`daily.children` 与 index 计数
 增长，同属新增引起的展示层差异，**无删除、无 label/help/group 严格键改动**），在基线树
 与当前树各跑一遍
 `scripts/editor_readonly_snapshot.py`（模块树 / 条目列表 / 条目详情 / 条目索引 / 引用候选 /
@@ -37,7 +39,7 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
-BASELINE_REF = "7c90427"
+BASELINE_REF = "1068f93"
 CONTENT = REPO / "content"
 
 

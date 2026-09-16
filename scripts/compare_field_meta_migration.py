@@ -89,7 +89,17 @@ DEFAULT_PACKS = ("veinborn", "test_demo")
 #   逐条列出（hp_cost / advance / is_basic / job_advance_*）。重定到本批末提交后，
 #   门禁继续只守字段级改/删（后续批次再加字段会重新触发展示块位移并重定，
 #   流程同批14/19/20/22）。
-DEFAULT_BASELINE_REF = "7c90427"
+# 批24（2026-09-16）重定基线：7c90427 → 1068f93（本批新增字段末提交）。原因：
+#   本批一次性**新增**字段（maps `hidden`/`entry_cost`、maps.monsters 行
+#   `encounter_chance`/`encounter_count_min`/`encounter_count_max`、dungeon
+#   `advance_on_kill_count`、quest `daily` 重置周期子字段）使展示块
+#   `keys`/`count`、`fields[*].(block|subgroup)`、`daily.children` 与
+#   `index.total` 增长。对拍实证：硬差异全部是展示块位移 + `daily.children`/
+#   `open_keys` 形态变化，**无任何删除**（「仅迁移前有（删除）」= 0）与
+#   `label`/`help`/`group` 严格键改动；新增项逐条列出（hidden / entry_cost /
+#   encounter_* / advance_on_kill_count）。重定到本批末提交后，门禁继续只守
+#   字段级改/删。
+DEFAULT_BASELINE_REF = "1068f93"
 
 
 def _env(root: Path) -> dict:

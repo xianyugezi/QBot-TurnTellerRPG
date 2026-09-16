@@ -333,7 +333,7 @@ def test_selfcheck_segment_diff_tolerates_pack_specific_key() -> None:
 def test_footer_batch_string_is_current() -> None:
     """页脚批次串随批推进更新（旧批次串不得残留）。"""
     html = HTML.read_text(encoding="utf-8")
-    assert "批23 · 字段扩展（技能/职业）" in html
+    assert "批24 · 字段扩展（地图/副本/任务）" in html
     assert "批13.1 · 段入口" not in html
     assert "批13 · 能力可见性" not in html
 

@@ -36,7 +36,7 @@ REPO = Path(api.repo_root())
 HTML = REPO / "qbot_rpg" / "web" / "static" / "index.html"
 TOKENS = REPO / "qbot_rpg" / "web" / "static" / "tokens.css"
 
-BATCH_NOTE = "批23 · 字段扩展（技能/职业）"
+BATCH_NOTE = "批24 · 字段扩展（地图/副本/任务）"
 
 
 def _html() -> str:

@@ -371,6 +371,21 @@ SETTINGS_FIELDS: Dict[str, FieldMeta] = {
                                    label="强战禁用",
                                    help="被强制战斗（伏击战 battle_type=ambush）中禁用的指令名列表。"),
     }, label="按状态禁用指令"),
+    # 批25 K3：指令限流（CakeGame `Global.md:187` `rate_limit.interval/number/object`
+    # 「默认 0=不限流」）。形态 = `{interval_sec, count, scope}`；缺省/0 = 不限流。
+    # 引擎落点：`assembly/runner._rate_limit_blocked`（**消息层/路由层**前置判定；固定窗口
+    # 计数存 `deps` 运行时属性，**不落存档**；时间源 = ctx["now"]（由 deps.dayroll 注入，
+    # 可测可控）。scope 支持 player（按玩家，缺省）/ group（按群）。
+    # 超限行为：**人话提示**（对齐框架「不静默吞」纪律，玩家可懂；固定窗口防刷屏）。
+    "rate_limit": FieldMeta(type="obj", children={
+        "interval_sec": FieldMeta(type="int", range_min=0, zero_unlimited=True,
+                                  label="窗口秒数",
+                                  help="限流窗口长度（秒，≥1）；缺省/0 = 不限流。"),
+        "count": FieldMeta(type="int", range_min=0, zero_unlimited=True, label="窗口内次数",
+                           help="单个窗口内允许的指令条数（≥1）；缺省/0 = 不限流。"),
+        "scope": FieldMeta(type="enum", enum=("player", "group"), label="限流粒度",
+                           help="player=按玩家（缺省）；group=按群（全群共享额度）。"),
+    }, label="指令限流"),
 }
 
 # =============================================================================

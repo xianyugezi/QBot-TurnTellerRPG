@@ -187,6 +187,71 @@ async def _routing_context(
 
 
 # =============================================================================
+# 批25 K3：指令限流（settings.rate_limit）——消息层/路由层
+# =============================================================================
+RATE_LIMIT_MESSAGE = "操作太频繁，请稍后再试"
+
+
+def _rate_limit_cfg(settings: Any) -> Optional[tuple]:
+    """settings.rate_limit → (interval_sec, count, scope)；缺省/0/非法 → None（不限流）。"""
+    if not isinstance(settings, Mapping):
+        return None
+    rl = settings.get("rate_limit")
+    if not isinstance(rl, Mapping):
+        return None
+    interval = rl.get("interval_sec")
+    count = rl.get("count")
+    if not isinstance(interval, int) or isinstance(interval, bool) or interval < 1:
+        return None
+    if not isinstance(count, int) or isinstance(count, bool) or count < 1:
+        return None
+    scope = rl.get("scope")
+    return interval, count, ("group" if scope == "group" else "player")
+
+
+def _rate_limit_blocked(
+    deps: Any, ctx: Mapping[str, Any], qid: str, group_id: Any,
+) -> Optional[str]:
+    """固定窗口限流判定（K3）：未超限 → None；超限 → 人话提示（不落档、可注入时间）。
+
+    状态存 `deps` 的运行时属性（**不入存档**、不入 ctx→player 落档路径）；时间源 =
+    `ctx["now"]`（装配层由 deps.dayroll 注入的 UTC+8 秒戳，测试可注入）。缺时间源 →
+    fail-open 不限流（不因缺时钟把玩家锁死）。scope: player=按玩家 / group=按群。
+    """
+    settings = ctx.get("settings")
+    cfg = _rate_limit_cfg(settings)
+    if cfg is None:
+        return None
+    interval, count, scope = cfg
+    now = ctx.get("now")
+    if not isinstance(now, int) or isinstance(now, bool):
+        return None
+    if scope == "group":
+        key = f"group:{group_id}" if group_id not in (None, "") else f"player:{qid}"
+    else:
+        key = f"player:{qid}"
+    st = getattr(deps, "_rate_limit_state", None)
+    if not isinstance(st, dict):
+        st = {}
+        try:
+            setattr(deps, "_rate_limit_state", st)
+        except Exception:  # noqa: BLE001 —— 宿主对象不可挂属性 → 不限流（fail-open）
+            return None
+    node = st.get(key)
+    if not isinstance(node, Mapping) or not isinstance(node.get("start"), int):
+        st[key] = {"start": now, "count": 1}
+        return None
+    if now - int(node["start"]) >= interval or now < int(node["start"]):
+        st[key] = {"start": now, "count": 1}  # 窗口滚动（时间回拨也重置，防卡死）
+        return None
+    used = int(node.get("count", 0) or 0)
+    if used + 1 > count:
+        return RATE_LIMIT_MESSAGE
+    st[key] = {"start": int(node["start"]), "count": used + 1}
+    return None
+
+
+# =============================================================================
 # 批25 K2：按状态禁用指令（settings.command_gates）
 # =============================================================================
 def _is_weak(ctx: Mapping[str, Any]) -> bool:
@@ -896,6 +961,12 @@ async def _run_command_inner(event: Mapping, deps: Any, raw: str) -> str:
         ctx["permission_store"] = getattr(deps, "permission_store", None)
         ctx["audit_store"] = getattr(deps, "audit_store", None)
         ctx["audit_hmac_key"] = getattr(deps, "audit_hmac_key", None)
+
+    # -- 批25 K3：指令限流（消息层；超限 → 人话提示，不进入业务事务）------------
+    rate_msg = _rate_limit_blocked(deps, ctx, qid, event.get("group_id"))
+    if rate_msg is not None:
+        logger.info("指令限流拦截: qid=%s group=%s", qid, event.get("group_id"))
+        return rate_msg
 
     # -- RA-10 权限校验（process_message 前按 spec.permission 检查；GM 静默）-----
     if _requires_gm(spec) and not _permission_store_is_gm(deps, qid):

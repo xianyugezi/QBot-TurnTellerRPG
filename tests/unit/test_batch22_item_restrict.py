@@ -252,3 +252,32 @@ def test_a2_regression_no_field_behaves_identically() -> None:
     for lv in (1, 10, 99):
         ctx = _ctx([_item_row("sword", "剑", "weapon")], generic, job_id="warrior", level=lv)
         assert ctx["equip_engine"].equip_wear(1, ctx)["ok"] is True
+
+
+# ---------------------------------------------------------------------------
+# A1+A2 端到端：临时内容根 → loader 加载 → 引擎穿戴（不满足阻止 / 满足放行）
+# ---------------------------------------------------------------------------
+def test_a1_a2_e2e_loader_then_equip(tmp_path: Path) -> None:
+    """临时内容根造带 job_restrict/use_level 的装备：走 build_pack 加载，再用**加载结果**
+    驱动 equip_wear——不满足贴提示原文被阻止；满足则正常穿戴。"""
+    from qbot_rpg.content.loader import build_pack
+
+    root = _temp_pack(tmp_path, "pack_e2e_equip", {
+        "jobs": [{"id": "warrior", "name": "战士"}, {"id": "mage", "name": "法师"}],
+        "equipment": [{"id": "axe", "name": "战斧", "slot": "weapon",
+                       "job_restrict": ["warrior"], "use_level": 5}],
+    })
+    pack, _changed = build_pack(root)
+    defs = {e["id"]: e for e in pack.modules["equipment"]}
+
+    c_job = _ctx([_item_row("axe", "战斧", "weapon")], defs, job_id="mage", level=9)
+    assert c_job["equip_engine"].equip_wear(1, c_job) == {
+        "ok": False, "message": "❌ 职业不符：需要 warrior，当前 mage"}
+
+    c_lv = _ctx([_item_row("axe", "战斧", "weapon")], defs, job_id="warrior", level=4)
+    assert c_lv["equip_engine"].equip_wear(1, c_lv) == {
+        "ok": False, "message": "❌ 等级不足：需要 5 级，当前 4 级"}
+
+    c_ok = _ctx([_item_row("axe", "战斧", "weapon")], defs, job_id="warrior", level=5)
+    r = c_ok["equip_engine"].equip_wear(1, c_ok)
+    assert r["ok"] is True and c_ok["player"]["equipment"]["weapon"].item_id == "axe"

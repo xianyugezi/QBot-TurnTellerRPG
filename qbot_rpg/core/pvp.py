@@ -341,8 +341,20 @@ def pvp_attack(ctx: MutableMapping[str, Any], skill_id: str) -> dict:
 
     try:
         battle = BattleEngine()
+        # 批26 α3：装备增幅技能表随 PVP 开战注入（与 PvE battle_launch 同口径；
+        # 无增幅 → 表空/缺键 → 引擎零行为变化）。
+        _pvp_cfg = dict(ctx.get("battle_config") or {}) \
+            if isinstance(ctx.get("battle_config"), Mapping) else {}
+        try:
+            from qbot_rpg.core.equip_mods import skill_amp_table  # noqa: PLC0415
+
+            _amp = skill_amp_table(my_player, ctx)
+            if _amp:
+                _pvp_cfg["equip_skill_amp"] = _amp
+        except Exception:  # noqa: BLE001 - 增幅表装配失败不阻断开战
+            pass
         battle.start(attacker_comb, defender_comb, random_seed=ctx.get("rng"),
-                     battle_type="pvp", config=ctx.get("battle_config"))
+                     battle_type="pvp", config=_pvp_cfg)
     except Exception:
         return {"ok": False, "message": "开战失败"}
 
@@ -369,8 +381,20 @@ def pvp_attack(ctx: MutableMapping[str, Any], skill_id: str) -> dict:
 
 def _resolve_skill_action(ctx: Mapping[str, Any], skill_id: str,
                           combatant: dict) -> Any:
-    """技能序号 → BattleEngine action（skills 映射 / resolve_skill；缺省普攻）。"""
+    """技能序号 → BattleEngine action（skills 映射 / resolve_skill；缺省普攻）。
+
+    批26 α5：无技能参数（普攻）时先经装备「替换普攻」判定（core/equip_mods，
+    与 PvE 普攻入口同口径）；未命中 → 既有 `"normal"` 兜底，行为逐字段一致。
+    """
     if not isinstance(skill_id, str) or not skill_id:
+        try:
+            from qbot_rpg.core.equip_mods import resolve_attack_override  # noqa: PLC0415
+
+            _ov = resolve_attack_override(ctx)
+        except Exception:  # noqa: BLE001 - 防御兜底
+            _ov = None
+        if _ov:
+            return {"action": "skill", "skill_id": _ov, "target": "enemy"}
         return "normal"
     skills = ctx.get("skills")
     if isinstance(skills, Mapping):

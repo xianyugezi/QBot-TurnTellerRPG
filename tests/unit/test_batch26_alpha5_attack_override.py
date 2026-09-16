@@ -194,3 +194,13 @@ def test_a5_attack_entry_regression_without_field() -> None:
                                 "version": 1}
     action2, err2 = _attack_action(parsed, ctx)
     assert err2 is None and action2 == {"type": "normal"}, action2
+
+
+def test_a5_pvp_attack_entry_uses_override() -> None:
+    """PVP 普攻入口（无技能参数）与 PvE 同口径复用 resolve_attack_override。"""
+    from qbot_rpg.core.pvp import _resolve_skill_action  # noqa: PLC0415
+
+    hit = _resolve_skill_action(_make_ctx(OVERRIDE, roll=1), "", {})
+    assert hit == {"action": "skill", "skill_id": "ovr", "target": "enemy"}, hit
+    plain = {"id": "blade", "name": "普通刃", "slot": "weapon"}
+    assert _resolve_skill_action(_make_ctx(plain, roll=1), "", {}) == "normal"

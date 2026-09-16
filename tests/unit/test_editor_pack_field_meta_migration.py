@@ -3,11 +3,13 @@
 依据：`docs/编辑器重写_数据包展示元数据下放方案.md` §四 批B/C。
 
 本用例**调用** `scripts/compare_field_meta_migration.py`：它用 `git worktree` 检出基线
-`a2fe3c5`（批20 重定；`5e908bb` 因 #2 对象内嵌映射改键值表格（control objform → kvtable +
-typed 行模式）、#3 `entry_merge_filtered` 使装备页条目列表 = 自身 ∪ 并入、#1 长模块二级
-分组（subgroup / block 由「主块 + 隐式更多字段」→ 命名子分组）而产生与字段级迁移无关的
-展示层差异），在基线树与当前树各跑一遍 `scripts/editor_readonly_snapshot.py`（模块树 /
-条目列表 / 条目详情 / 条目索引 / 引用候选 / 包列表），递归对拍并输出差异报告。
+`8aa9c9d`（批22 重定；批20 的 `a2fe3c5` 因 #2 对象内嵌映射改键值表格（control objform →
+kvtable + typed 行模式）、#3 `entry_merge_filtered` 使装备页条目列表 = 自身 ∪ 并入、#1
+长模块二级分组（subgroup / block 由「主块 + 隐式更多字段」→ 命名子分组）而产生与字段级
+迁移无关的展示层差异；批22 又一次性新增 job_restrict/use_level/战斗词条/effect 开关，
+使展示块 `keys`/`count` 位移，同属新增引起的展示层差异），在基线树与当前树各跑一遍
+`scripts/editor_readonly_snapshot.py`（模块树 / 条目列表 / 条目详情 / 条目索引 / 引用候选 /
+包列表），递归对拍并输出差异报告。
 
 批15 语义化定稿（对拍口径，实现见 `compare_snapshots` / `_diff`）：
   ① **删除任一项 → 红**（hard）；② **任一值变化 → 红**（hard），唯一例外是派生展示键
@@ -35,7 +37,7 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
-BASELINE_REF = "a2fe3c5"
+BASELINE_REF = "8aa9c9d"
 CONTENT = REPO / "content"
 
 

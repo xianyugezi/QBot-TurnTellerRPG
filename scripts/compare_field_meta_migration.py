@@ -5,7 +5,7 @@
 「迁移前后接口对拍 diff=0（键集合、label、help、group、module_tree 逐项比对）」。
 
 做法：
-  1. 用 `git worktree` 检出基线（默认 `46baff3`；批13.1 重定），在基线树里跑
+  1. 用 `git worktree` 检出基线（默认 `DEFAULT_BASELINE_REF`；批22 重定），在基线树里跑
      `scripts/editor_readonly_snapshot.py`（`qbot_rpg` 走 PYTHONPATH 指向基线）；
   2. 在当前工作树跑同一脚本；
   3. 递归对拍两份 JSON，输出差异报告；**删除 = 0 且值变化 = 0（派生展示键除外）→ 退出码 0**，
@@ -80,7 +80,15 @@ DEFAULT_PACKS = ("veinborn", "test_demo")
 #     隐式更多字段」→ 命名子分组），并新增中栏分组展示键 `group` / `group_label`。
 # 以上均为**展示层**演进（type / required / 枚举 / 引用目标 / 必填等校验口径零变化），与
 # 「字段级元数据迁移不得改/删」无冲突；重定到本批末提交后，门禁继续只守字段级改/删。
-DEFAULT_BASELINE_REF = "a2fe3c5"
+# 批22（2026-09-16）重定基线：a2fe3c5 → 8aa9c9d（本批字段扩展末提交）。原因：
+#   本批一次性**新增**字段（items/equipment `job_restrict`/`use_level`、六条常驻战斗词条、
+#   effects `ignore_shield`/`ignore_immune`、enemies.stats 同键），使展示块的 `keys` 字符串
+#   数组增长 / `count` 递增 / 个别字段在「主块 ↔ @more 更多字段」间位移。这些均由**新增**
+#   引起（口径 ③ 允许），而本脚本对「无唯一键的字符串数组」按长度/下标比对 → 误判为修改。
+#   对拍实证：硬差异全部是 `blocks.*.keys`/`count` 与 `block`/`subgroup` 位移，**无任何**
+#   `label` / `help` / `group` 严格键或既有字段值删除/改动。重定到本批末提交后，门禁继续
+#   只守字段级改/删（后续批次再加字段会重新触发展示块位移并重定，流程同批14/19/20）。
+DEFAULT_BASELINE_REF = "8aa9c9d"
 
 
 def _env(root: Path) -> dict:

@@ -386,6 +386,17 @@ SETTINGS_FIELDS: Dict[str, FieldMeta] = {
         "scope": FieldMeta(type="enum", enum=("player", "group"), label="限流粒度",
                            help="player=按玩家（缺省）；group=按群（全群共享额度）。"),
     }, label="指令限流"),
+    # 批25 K4：消息分段长度上限（CakeGame `Global.md:46`「每段消息长度上限，超出自动
+    # 分段发送，0=不限制」）。**运行时发送分段**——与既有「结构化行 ≤14 全角」的
+    # **模板排版门禁**是两件事（那是模板文本规范/静态校验；本项是发送前按上限自动分段，
+    # 防 QQ 截断）。缺省/0 = 沿用框架既有单条预算（QQ 4000 字）。
+    # 引擎落点：`commands/sender.Sender.default_budget` + `assembly/runner._make_sender`
+    # （装配层按 settings 注入；所有经 Sender 出口的文本——含战斗正文——同一预算）。
+    "message_chunk_len": FieldMeta(type="int", range_min=0, zero_unlimited=True,
+                                   label="消息分段长度上限",
+                                   help="发送前每段文本的最大长度（字符，≥1）；超出自动分段发送。"
+                                        "缺省/0 = 沿用框架默认单条预算（QQ 4000 字）。"
+                                        "注意：这是**运行时发送分段**，与模板排版的行长规范无关。"),
 }
 
 # =============================================================================

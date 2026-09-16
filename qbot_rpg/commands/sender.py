@@ -129,6 +129,9 @@ class Sender:
     :param max_retries: 单条失败重试次数（默认 3，指数退避，不无限重发）。
     :param backoff_base: 退避基数（秒，默认 2.0 → 2/4/8…）。
     :param retry_sleep: 睡眠函数（默认系统 sleep；测试注入恒 0 避免真实等待）。
+    :param default_budget: 本条通道的**运行时分段长度上限**（字符；缺省 = QQ 4000）。
+        装配层可经 ``settings.message_chunk_len`` 覆盖（批25 K4）；显式 ``send(budget=…)``
+        优先。**注意**：这是运行时发送分段，与「结构化行 ≤14 全角」模板排版门禁无关。
 
     M4 接线：绑定 NoneBot bot 时把 ``bot.send`` 包成 ``send_text`` 注入；本类零 nonebot import。
     """
@@ -140,11 +143,14 @@ class Sender:
         max_retries: int = MAX_RETRIES,
         backoff_base: float = BACKOFF_BASE,
         retry_sleep: Optional[Callable[[float], None]] = None,
+        default_budget: int = DEFAULT_LENGTH_BUDGET,
     ) -> None:
         if max_retries < 0:
             raise ValueError(f"max_retries 必须 >= 0，got {max_retries}")
         if backoff_base <= 0:
             raise ValueError(f"backoff_base 必须 > 0，got {backoff_base}")
+        if not isinstance(default_budget, int) or isinstance(default_budget, bool) or default_budget <= 0:
+            raise ValueError(f"default_budget 必须 > 0，got {default_budget}")
         self._send_text = send_text
         self._max_retries = max_retries
         self._backoff_base = backoff_base
@@ -153,6 +159,9 @@ class Sender:
         )
         self._client: Any = None  # 兼容旧占位签名（M4 接线可绑定 NoneBot bot）
         self._delivered: List[str] = []
+        # 批25 K4：运行时分段预算（装配层按 settings.message_chunk_len 注入；
+        # 缺省=DEFAULT_LENGTH_BUDGET，保持既有 4000 字分片行为不变）。
+        self.default_budget: int = int(default_budget)
 
     @property
     def delivered(self) -> List[str]:
@@ -164,15 +173,17 @@ class Sender:
         text: str,
         *,
         to: Any = None,
-        budget: int = DEFAULT_LENGTH_BUDGET,
+        budget: Optional[int] = None,
     ) -> List[str]:
         """CQ 转义 → 长度分条 → 逐条发送（失败重试 + 指数退避）。
 
+        :param budget: 本次分段预算；缺省 None → 用 ``self.default_budget``（批25 K4）。
         :return: 实际发送成功的段列表（顺序不颠倒，S5 不吞内容）。
         :raises SenderSendError: 某段重试耗尽仍失败（不无限重发）。
         """
+        use_budget = self.default_budget if budget is None else budget
         escaped = cq_escape(text)
-        segments = segment_by_length(escaped, budget)
+        segments = segment_by_length(escaped, use_budget)
         delivered: List[str] = []
         for seg in segments:
             self._send_one(seg, to=to)

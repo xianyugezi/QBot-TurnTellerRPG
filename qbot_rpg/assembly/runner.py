@@ -187,6 +187,24 @@ async def _routing_context(
 
 
 # =============================================================================
+# 批25 K4：消息分段长度上限（settings.message_chunk_len）
+# =============================================================================
+def _message_chunk_len(ctx: Mapping[str, Any]) -> Optional[int]:
+    """settings.message_chunk_len → 分段预算；缺省/0/非法 → None（沿用默认 4000）。
+
+    与既有「结构化行 ≤14 全角」**模板排版门禁**是两件事：后者是模板文本规范（静态校验），
+    本项是**运行时发送分段**（防 QQ 截断）。仅 int ≥1 生效。
+    """
+    settings = ctx.get("settings")
+    if not isinstance(settings, Mapping):
+        return None
+    v = settings.get("message_chunk_len")
+    if isinstance(v, int) and not isinstance(v, bool) and v >= 1:
+        return v
+    return None
+
+
+# =============================================================================
 # 批25 K3：指令限流（settings.rate_limit）——消息层/路由层
 # =============================================================================
 RATE_LIMIT_MESSAGE = "操作太频繁，请稍后再试"
@@ -762,6 +780,15 @@ def _make_sender(deps: Any, ctx: Mapping[str, Any], *, command: str = ""):
             deps.sender = sender_obj
     except Exception:  # noqa: BLE001 - 挂载失败不影响（收集路径仍工作）
         pass
+    # -- 批25 K4：消息分段长度上限（settings.message_chunk_len；0/缺省=沿用默认 4000）--
+    # 只改 Sender 的**运行时分段预算**（与「结构化行 ≤14 全角」模板排版门禁无关）；
+    # 同一出口上的战斗正文（ctx["sender"] 直发）也走同一预算。
+    chunk = _message_chunk_len(ctx)
+    if chunk is not None:
+        try:
+            sender_obj.default_budget = chunk
+        except Exception:  # noqa: BLE001 —— 自定义 sender 对象不支持 → 不改（默认预算）
+            pass
     # E2 渲染钩子（双闸未开 / 包无 ext/render.py → None，本函数行为与修前一致）
     hook = getattr(deps, "pack_render_hook", None)
     # M5-08 战斗 ctx 契约：ctx["sender"] = Sender 统一出口（battle_commands._sender_of

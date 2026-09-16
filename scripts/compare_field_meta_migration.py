@@ -108,7 +108,13 @@ DEFAULT_PACKS = ("veinborn", "test_demo")
 #   删除**（「仅迁移前有（删除）」= 0）与既有 `help`/`group` 严格键改动；`cost`
 #   由纯键名变中文段名属本批**有意**的展示层补充。重定到本批末提交后，门禁继续
 #   只守字段级改/删（后续批次再加字段会重新触发展示块位移并重定，流程同批14/19/20/22/24）。
-DEFAULT_BASELINE_REF = "d6304ac"
+# 批26（2026-09-17）重定基线：d6304ac → f051348（本批装备侧字段末提交）。原因：α组新增
+# items/equipment `grant_skills`/`max_hold`/`skill_amp`/`attack_override`/`job_override`，
+# 使展示块 `base[@more]`/`effects[]` 的 `keys`/`count` 随新增字段增长（派生展示聚合），
+# 属**新增引起的展示层位移**：对拍实证硬差异全部是这些派生块聚合 + 新字段描述符，
+# **无任何删除**（「仅迁移前有（删除）」= 0）与既有 `label`/`help`/`group` 严格键改动。
+# 重定到本批末提交后，门禁继续只守字段级改/删。
+DEFAULT_BASELINE_REF = "f051348"
 
 
 def _env(root: Path) -> dict:

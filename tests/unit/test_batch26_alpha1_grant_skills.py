@@ -171,7 +171,7 @@ def test_a1_wear_grants_and_unequip_revokes() -> None:
     assert _remove(ctx, "weapon")["ok"] is True
     assert "granted" not in available_skills(ctx)
     assert equip_skills_of(ctx["player"]) == {}
-    assert ctx["equip_skills"] == {}
+    assert ctx.get("equip_skills") in (None, {})
 
 
 def test_a1_other_source_not_revoked() -> None:
@@ -212,5 +212,6 @@ def test_a1_regression_without_field_identical() -> None:
     assert _wear(ctx, 1)["ok"] is True
     assert available_skills(ctx) == before
     assert equip_skills_of(ctx["player"]) == {}
-    assert "equip_skills" in ctx["player"]["persistent_state"]
-    assert ctx["player"]["persistent_state"][EQUIP_SKILL_SOURCES_KEY] == {}
+    # 无装备来源技能 → 不写空容器（既有行为逐字段一致，回归对拍）
+    assert "equip_skills" not in ctx["player"]["persistent_state"]
+    assert EQUIP_SKILL_SOURCES_KEY not in ctx["player"]["persistent_state"]

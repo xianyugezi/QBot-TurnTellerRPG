@@ -3,14 +3,10 @@
 依据：`docs/编辑器重写_数据包展示元数据下放方案.md` §四 批B/C。
 
 本用例**调用** `scripts/compare_field_meta_migration.py`：它用 `git worktree` 检出基线
-`d6304ac`（批25 重定；批24 的 `1068f93` 因新增 maps `hidden`/`entry_cost`、
-maps.monsters 行 `encounter_chance`/`encounter_count_min`/`encounter_count_max`、
-dungeon `advance_on_kill_count`、quest `daily` 重置周期子字段而产生展示层位移；批25 又
-新增 npc `interactions[]` 的 `key`/`daily_limit`/`total_limit` 与 `cost` 多通道
-（gem/diamond/items）、achievements `counted`、settings `register_gift`/`register_level`/
-`command_gates`/`rate_limit`/`message_chunk_len`，使展示块 `keys`/`count`、
-`fields[*].(block|subgroup)`、`cost` 子块标签与 index 计数增长，同属新增引起的展示层差异，
-**无删除、无既有 help/group 严格键改动**），在基线树与当前树各跑一遍
+`f051348`（批26 重定；批25 的 `d6304ac` 因本批装备侧新增 items/equipment `grant_skills`/
+`max_hold`/`skill_amp`/`attack_override`/`job_override`，使展示块 `base[@more]`/`effects[]`
+的 `keys`/`count` 随新增字段增长——属新增引起的展示层位移，**无删除、无既有 help/group
+严格键改动**），在基线树与当前树各跑一遍
 `scripts/editor_readonly_snapshot.py`（模块树 / 条目列表 / 条目详情 / 条目索引 / 引用候选 /
 包列表），递归对拍并输出差异报告。
 
@@ -40,7 +36,7 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
-BASELINE_REF = "d6304ac"
+BASELINE_REF = "f051348"
 CONTENT = REPO / "content"
 
 

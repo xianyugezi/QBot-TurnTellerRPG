@@ -1432,7 +1432,8 @@ ITEMS_GROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
         *GEAR_FLAT_KEYS, *GEAR_PCT_KEYS, *GEAR_COMBAT_KEYS,
     )),
     # 批26 α组（装备侧）：装备附加字段归「效果」分组（grant_skills/skill_amp/
-    # attack_override/job_override；沿既有分组，不开新分组键——组显示名归包声明）。
+    # attack_override/job_override）——沿用既有分组（不开新分组键，模块分组数
+    # 仍守 2~4 不变式；组显示名归包声明）。
     ("effects", ("effects", "traits", "grant_skills", "skill_amp",
                  "attack_override", "job_override")),
     ("text", ("desc", "brief", "detail")),

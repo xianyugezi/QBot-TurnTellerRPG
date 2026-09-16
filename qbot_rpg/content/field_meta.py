@@ -593,6 +593,11 @@ DUNGEON_FIELDS: Dict[str, FieldMeta] = {
     # str 元组）——批1 list[obj] 与实测形态不符，改 list[str] 对齐真实内容；
     # children 细化走 DUNGEON_MAP_ELEM_CHILDREN（maps 页整图编辑，此处只引用 id）
     "maps": FieldMeta(type="list", element=FieldMeta(type="str"), label="地图序列"),
+    # 批24 E5：副本层间推进（CakeGame `ext_smallcopymap副本组.md:77`「击杀数量传送阈值」）。
+    # 语义 = 副本内累计击杀达阈值 → 按 dungeon.maps 顺序序列推进到下一层；缺省无此机制。
+    "advance_on_kill_count": FieldMeta(type="int", range_min=1, label="击杀推进阈值",
+                                       help="副本内累计击杀达到该数后，按 maps 顺序推进到下一层"
+                                            "（≥1 整数；缺省 = 不按击杀推进，维持通道走图）。"),
     "boss_room": FieldMeta(type="str", label="首领房地图"),
     "boss": FieldMeta(type="str", label="首领怪物"),
     "subquests": FieldMeta(type="list", element=FieldMeta(type="str"), label="子任务"),

@@ -68,6 +68,7 @@ __all__ = [
     "DungeonSession",
     "DungeonStateMachine",
     "explore_run",
+    "record_dungeon_kill",
 ]
 
 # -------------------------------------------------------------------------------------
@@ -132,6 +133,8 @@ class DungeonSession:
     subquest_progress: Dict[str, int] = field(default_factory=dict)
     boss_state: Dict[str, Any] = field(default_factory=dict)
     rest_count: int = 0
+    # 批24 E5：当前层击杀计数（达 dungeon.advance_on_kill_count 阈值 → 推进下一层；结转余量）
+    kill_count: int = 0
     external_anchor: Optional[str] = None
     content_pack_id: Optional[str] = None
     content_pack_version: Optional[str] = None
@@ -168,6 +171,10 @@ class DungeonSession:
     def with_rest_count(self, count: int) -> "DungeonSession":
         return dataclasses.replace(self, rest_count=count)
 
+    def with_kill_count(self, count: int) -> "DungeonSession":
+        """批24 E5：当前层击杀计数更新（返回新实例）。"""
+        return dataclasses.replace(self, kill_count=count)
+
     # ---- 持久化形态（批次 7 接线；set ↔ list）------------------------------------
     def to_dict(self) -> dict:
         return {
@@ -179,6 +186,7 @@ class DungeonSession:
             "subquest_progress": dict(self.subquest_progress),
             "boss_state": dict(self.boss_state),
             "rest_count": self.rest_count,
+            "kill_count": self.kill_count,
             "external_anchor": self.external_anchor,
             "chasing": self.chasing,
             "chase_target": self.chase_target,
@@ -212,6 +220,7 @@ class DungeonSession:
             subquest_progress=sp_norm,
             boss_state=dict(bs) if isinstance(bs, Mapping) else {},
             rest_count=int(data.get("rest_count", 0) or 0),
+            kill_count=int(data.get("kill_count", 0) or 0),
             external_anchor=data.get("external_anchor"),
             content_pack_id=data.get("content_pack_id"),
             chasing=bool(data.get("chasing", False)),
@@ -670,6 +679,50 @@ def _reward_hint(dungeon_def: DungeonDef) -> str:
             + "；掉落结算由批次 7 接线（奖励管线 P 路）")
 
 
+def record_dungeon_kill(player_ctx: dict, dungeon_def: object,
+                        session: object, count: object = 1) -> dict:
+    """副本内击杀登记 → 达阈值按 maps 顺序推进到下一层（批24 E5）。
+
+    `dungeon.advance_on_kill_count`（≥1 整数）为阈值：累计击杀达阈值 → `current_map`
+    推进到 `dungeon.maps` 顺序序列的**下一张**（沿用既有顺序序列口径），余量结转；
+    已在最后一层 → 不再推进（计数封顶于阈值）。缺省/非法阈值 → 不改变会话（行为与现状一致）。
+
+    返回 step 形态：{"ok", "event":"kill", "advanced", "from", "to", "kills",
+    "threshold", "state", "session"}；调用方用新 session 续跑（frozen 数据类）。
+    """
+    if not isinstance(session, DungeonSession):
+        return {"ok": False, "reason": "会话形态非法（须 DungeonSession）",
+                "state": None, "session": session}
+    ddef = _norm_dungeon_def(dungeon_def)
+    threshold = ddef.advance_on_kill_count
+    step = count if isinstance(count, int) and not isinstance(count, bool) and count > 0 else 1
+    if threshold is None:
+        return {"ok": True, "event": "kill", "advanced": False,
+                "from": session.current_map, "to": session.current_map,
+                "kills": session.kill_count, "threshold": None,
+                "state": session.state, "session": session}
+    kills = session.kill_count + step
+    order = [str(m) for m in ddef.maps]
+    cur = session.current_map
+    advanced = False
+    to_map = cur
+    if kills >= threshold:
+        idx = order.index(cur) if cur in order else -1
+        if 0 <= idx < len(order) - 1:
+            to_map = order[idx + 1]
+            kills -= threshold          # 余量结转下一层
+            advanced = True
+        else:
+            kills = threshold           # 已到最后一层 → 封顶，不再推进
+    sess2 = session.with_kill_count(kills)
+    if advanced:
+        sess2 = sess2.with_current_map(to_map).with_cleared(to_map)
+        _set_map_id(player_ctx, to_map)
+    return {"ok": True, "event": "kill", "advanced": advanced,
+            "from": cur, "to": to_map, "kills": kills, "threshold": threshold,
+            "state": sess2.state, "session": sess2}
+
+
 def explore_run(player_ctx: dict, dungeon_def: object, maps: object,
                 actions: Sequence[Any] = (),
                 conditions: Optional[Callable[[Mapping[str, object], dict], bool]] = None,
@@ -683,6 +736,7 @@ def explore_run(player_ctx: dict, dungeon_def: object, maps: object,
     actions（顺序执行；单步失败不中断后续，步骤记入 steps）：
       ("walk", <方向>)       走通道推进（S0→S1；S1 内继续走图；hidden 门经 conditions 注入）
       ("subquest", <id>, <delta>)   子任务进度登记（计数；完成判定/奖励=任务系统批次接线）
+      ("kill", <n>?)          副本内击杀登记（批24 E5：达 advance_on_kill_count 阈值 → 下一层）
       ("clear",)             探索目标完成 → S5 通关（结算信号）
       ("death",)             探索中死亡（S1/S2）→ S6（复活点=safe_zone）
       ("recover",)           虚弱结束 → S1（M11）
@@ -719,6 +773,10 @@ def explore_run(player_ctx: dict, dungeon_def: object, maps: object,
             qid = action[1] if len(action) > 1 else None
             delta = action[2] if len(action) > 2 else 1
             step = _step_subquest(session, qid, delta)
+        elif name == "kill":
+            # 批24 E5：副本内击杀登记 → 达 advance_on_kill_count 阈值推进下一层
+            cnt = action[1] if len(action) > 1 else 1
+            step = record_dungeon_kill(player_ctx, ddef, session, cnt)
         elif name == "clear":
             step = _step_clear(machine, ddef, session)
             if step["ok"] and cleared_signal is None:

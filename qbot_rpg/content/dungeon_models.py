@@ -91,6 +91,17 @@ class DungeonDef(BaseDef):
         return tuple(MapID(x) for x in self._str_list("maps"))
 
     @property
+    def advance_on_kill_count(self) -> Optional[int]:
+        """层间推进击杀阈值（批24 E5）：≥1 整数；缺省/非法 → None（不按击杀推进）。
+
+        达阈值 → 按 `maps` 顺序序列推进到下一层（core.dungeon.record_dungeon_kill 消费）。
+        """
+        v = self.raw.get("advance_on_kill_count")
+        if isinstance(v, int) and not isinstance(v, bool) and v >= 1:
+            return v
+        return None
+
+    @property
     def boss_room(self) -> Optional[str]:
         """BOSS 房地图 ID（m3 §4.1 boss 版；∈ dungeon.maps 或 maps 模块存在）。"""
         return self._str("boss_room")
@@ -309,6 +320,20 @@ def _check_dungeon_entry(
             errors.append(PackError(
                 module=module_name, field=f"{base}.entry_limit", kind="R-2",
                 detail={"rule": "entry_limit_negative", "value": el},
+            ))
+    # advance_on_kill_count（批24 E5）：≥1 整数（缺省 = 不按击杀推进；硬拦类型/下界）
+    if "advance_on_kill_count" in entry:
+        ak = entry["advance_on_kill_count"]
+        if not isinstance(ak, int) or isinstance(ak, bool):
+            errors.append(PackError(
+                module=module_name, field=f"{base}.advance_on_kill_count", kind="R-1",
+                detail={"rule": "advance_on_kill_count_type", "expect": "int",
+                        "got": type(ak).__name__},
+            ))
+        elif ak < 1:
+            errors.append(PackError(
+                module=module_name, field=f"{base}.advance_on_kill_count", kind="R-2",
+                detail={"rule": "advance_on_kill_count_range", "value": ak, "minimum": 1},
             ))
     # maps：非空 string[]（两型共用同一组地图 id，2a3 R4）
     maps = entry.get("maps")

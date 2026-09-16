@@ -177,5 +177,5 @@ def test_editor_blank_pack_still_six(blank_root: Path) -> None:
 # ---------------------------------------------------------------------------
 def test_footer_batch_string_is_current() -> None:
     html = (REPO / "qbot_rpg" / "web" / "static" / "index.html").read_text(encoding="utf-8")
-    assert "批24 · 字段扩展（地图/副本/任务）" in html
+    assert "批25 · 字段扩展（NPC/成就/全局）" in html
     assert "批17 · 通用预设" not in html

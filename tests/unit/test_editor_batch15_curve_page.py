@@ -297,8 +297,8 @@ def test_frontend_curve_page_wiring_and_no_layout_regression() -> None:
 
 
 def test_footer_batch_note_current_and_stale_note_absent() -> None:
-    """页脚批次串 →「批24 · 字段扩展（地图/副本/任务）」；旧批次串不得残留。"""
+    """页脚批次串 →「批25 · 字段扩展（NPC/成就/全局）」；旧批次串不得残留。"""
     html = HTML.read_text(encoding="utf-8")
     m = re.search(r'<div class="panel-ft"><span>(.*?)</span></div>', html)
-    assert m and m.group(1) == "批24 · 字段扩展（地图/副本/任务）", m and m.group(1)
+    assert m and m.group(1) == "批25 · 字段扩展（NPC/成就/全局）", m and m.group(1)
     assert "批14 · 可编辑性与提示" not in html

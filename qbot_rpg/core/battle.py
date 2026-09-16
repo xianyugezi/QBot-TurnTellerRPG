@@ -4324,10 +4324,20 @@ class BattleEngine:
             pierce = 0.0
             if p.type_affinity.enabled:
                 pierce += pierce_pct(atk_type, blunt_pierce=p.type_affinity.blunt_pierce)
-            pierce = min(0.6, pierce + float(seg.get("pierce", 0.0)))
+            # 批22 · A3：常驻穿透词条（物/法两套）——魔法攻击（atk_type=="magic"）走法穿，
+            # 其余走物穿。口径=先加算（穿值削防御）后乘算（穿透比并入既有 pierce）；
+            # 与 type_affinity/seg 的既有 pierce 加算后统一沿用 0.6 封顶（不放宽）。
+            # 键空间/分层/数值口径见 data.gear_stats 模块 docstring。
+            _pierce_val = float(ac.get("mag_pierce_val" if magic else "pierce_val", 0) or 0)
+            _pierce_pct_gear = float(
+                ac.get("mag_pierce_pct" if magic else "pierce_pct", 0) or 0)
+            pierce = min(0.6, pierce + float(seg.get("pierce", 0.0)) + _pierce_pct_gear / 100.0)
             rating["pierce"] = pierce
             # M12.5 需求1 批B：stat_map 语义键取数（缺省 con=现值，零破坏）
-            eff_con = effective_con(float(tc.get(p.stat_map.def_con, 50)), pierce)
+            _def_con = float(tc.get(p.stat_map.def_con, 50))
+            if _pierce_val > 0:
+                _def_con = max(0.0, _def_con - _pierce_val)
+            eff_con = effective_con(_def_con, pierce)
             df = defense_factor(eff_con, k=p.defense.k)
             # M2 技能倍率 = 基础 ×（1 + F-23 效果加成/100）→ F-23 消费点
             # M2-C1 修复（怪物 AI 蓄力/起身占行动槽 mult=0 语义）：原 `or 1.0` 把显式 0 吞成 1.0，
@@ -4429,6 +4439,14 @@ class BattleEngine:
                 _dmg_float = float(raw) * float(p.battle_position.broken_part_mult)
                 _dmg_float = _dmg_float * self._status_damage_mult(target)
                 raw = int(_dmg_float)
+            # 批22 · A3：常驻免伤词条（受击方 immune_dmg%）——按比例减伤，作用于防御/格挡/
+            # 乱数之后的 raw；上限 100（全免）。与管线 mitigation 阶段叠乘（互不替代）；
+            # 无该键 → 零行为变化。键空间/分层见 data.gear_stats。
+            _immune_dmg = float(tc.get("immune_dmg", 0) or 0)
+            if _immune_dmg > 0:
+                _imm_rate = min(100.0, max(0.0, _immune_dmg)) / 100.0
+                raw = max(0, int(round(raw * (1.0 - _imm_rate))))
+                rating["immune_dmg"] = round(_imm_rate * 100.0, 2)
             raw_total += raw
 
             # ---- 破坏力（每段一次，写死多段 N 次；命中部位且未破才累计）----
@@ -4515,6 +4533,18 @@ class BattleEngine:
                                       snapshot=self._snap, runtime=rt, variables=vars_)
             self._absorb_runtime(rt)
             seg_total += res.final_damage
+            # 批22 · A3：常驻吸血词条（攻击方 absorb_hp%）——按本段实际造成伤害回血，
+            # 上限 100%；回血封顶 max_hp。伤害为 0/无该键 → 零行为变化。与 effects 的
+            # 主动 lifesteal 不重复（那是技能主动效果，这是常驻词条）。
+            _absorb_hp = float(ac.get("absorb_hp", 0) or 0)
+            if _absorb_hp > 0 and res.final_damage > 0:
+                _heal = int(res.final_damage * min(100.0, max(0.0, _absorb_hp)) / 100.0)
+                if _heal > 0:
+                    _hp_before = int(ac.get("hp", 0))
+                    _hp_cap = int(ac.get("max_hp", _hp_before) or _hp_before)
+                    ac["hp"] = min(_hp_cap, _hp_before + _heal)
+                    all_effects.append({"type": "absorb_hp", "target": attacker,
+                                        "heal": _heal, "damage": res.final_damage})
             # 怒值积累（批⑦B）：玩家对敌实际伤害 → 敌方怒气（全隐性）
             if attacker == "player" and target == "enemy" and res.final_damage > 0:
                 self._add_enemy_rage(res.final_damage)

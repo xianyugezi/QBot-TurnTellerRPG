@@ -50,6 +50,8 @@ from qbot_rpg.content.fishing_models import fishing_module_meta, fishing_setting
 # 供 content/core/commands 全层引用）。
 from qbot_rpg.data.gear_stats import (
     GEAR_COMBAT_KEYS,
+    GEAR_COMBAT_PCT_KEYS,
+    GEAR_COMBAT_VALUE_KEYS,
     GEAR_FLAT_KEYS,
     GEAR_LABELS_ZH,
     GEAR_PCT_KEYS,
@@ -145,6 +147,25 @@ F_DROP_RATE = FieldMeta(type="number", probability=True, range_min=0.0, range_ma
 # -------------------------------------------------------------------------------------
 # enemies 八段子结构（细化_1e §1.1~1.6 / m2_shared_contract 第一节；M2 A1 路）
 # -------------------------------------------------------------------------------------
+def _gear_combat_field(key: str) -> FieldMeta:
+    """COMBAT 战斗直读键 → 字段元数据（items/equipment/enemies.stats 三处共用，单一源）。
+
+    显示口径随键分档（仅编辑器提示）：百分比（% 0-100）/ 穿值（点 ≥0）/ 会心（可负）/
+    其余档位键（级）。键与中文名来自 data.gear_stats 唯一注册表；批22 · A3/D1 起
+    怪物 stats 也用同一构建器，不新造第二套命名。
+    """
+    label = GEAR_LABELS_ZH.get(key, key)
+    if key == "crit":
+        return FieldMeta(type="number", range_min=-99, range_max=99, allow_negative=True,
+                         label=label + "（可负）", unit="%")
+    if key in GEAR_COMBAT_PCT_KEYS:
+        return FieldMeta(type="number", range_min=0, range_max=100, label=label, unit="%")
+    if key in GEAR_COMBAT_VALUE_KEYS:
+        return FieldMeta(type="number", range_min=0, range_max=99999, label=label, unit="点")
+    return FieldMeta(type="number", range_min=0, range_max=2 if key == "earplug" else 3,
+                     label=label, unit="级")
+
+
 # stats 九键（1.2 S01-S09；漏配键按难度模板补全 → 不设 required）
 ENEMY_STATS_CHILDREN: Dict[str, FieldMeta] = {
     "hp": FieldMeta(type="number", range_min=0, range_max=99999),
@@ -1857,16 +1878,7 @@ def _module_table() -> Dict[str, ModuleMeta]:
                 type="number", range_min=0, range_max=500,
                 label=GEAR_LABELS_ZH.get(_k, _k), unit="%")
         for _k in GEAR_COMBAT_KEYS:
-            if _k == "crit":
-                # 赌狗流负会心（批⑤ 引擎通道）→ 字段级放行负数（R-2 元数据开关）
-                _fm_target[_k] = FieldMeta(
-                    type="number", range_min=-99, range_max=99, allow_negative=True,
-                    label=GEAR_LABELS_ZH.get(_k, _k) + "（可负）", unit="%")
-            else:
-                _fm_target[_k] = FieldMeta(
-                    type="number", range_min=0,
-                    range_max=2 if _k == "earplug" else 3,
-                    label=GEAR_LABELS_ZH.get(_k, _k), unit="级")
+            _fm_target[_k] = _gear_combat_field(_k)
     traits_fields: Dict[str, FieldMeta] = {
         "id": F_ID, "name": F_NAME, "type": F_TYPE,
         "probability": F_PROBABILITY, "max_stack": F_MAX_STACK,

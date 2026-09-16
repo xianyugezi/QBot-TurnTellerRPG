@@ -3,11 +3,11 @@
 依据：`docs/编辑器重写_数据包展示元数据下放方案.md` §四 批B/C。
 
 本用例**调用** `scripts/compare_field_meta_migration.py`：它用 `git worktree` 检出基线
-`8aa9c9d`（批22 重定；批20 的 `a2fe3c5` 因 #2 对象内嵌映射改键值表格（control objform →
-kvtable + typed 行模式）、#3 `entry_merge_filtered` 使装备页条目列表 = 自身 ∪ 并入、#1
-长模块二级分组（subgroup / block 由「主块 + 隐式更多字段」→ 命名子分组）而产生与字段级
-迁移无关的展示层差异；批22 又一次性新增 job_restrict/use_level/战斗词条/effect 开关，
-使展示块 `keys`/`count` 位移，同属新增引起的展示层差异），在基线树与当前树各跑一遍
+`7c90427`（批23 重定；批22 的 `8aa9c9d` 因一次性新增 job_restrict/use_level/战斗词条/
+effect 开关而产生展示层位移；批23 又新增 skills `hp_cost`、jobs `advance`/`is_basic`
+与 3 条 job_advance_* 模板键，使展示块 `keys`/`count`、条目计数、templates/index 计数
+增长，同属新增引起的展示层差异，**无删除、无 label/help/group 严格键改动**），在基线树
+与当前树各跑一遍
 `scripts/editor_readonly_snapshot.py`（模块树 / 条目列表 / 条目详情 / 条目索引 / 引用候选 /
 包列表），递归对拍并输出差异报告。
 
@@ -37,7 +37,7 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
-BASELINE_REF = "8aa9c9d"
+BASELINE_REF = "7c90427"
 CONTENT = REPO / "content"
 
 

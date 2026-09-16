@@ -4,8 +4,9 @@
 批13 装配（ctx["jobs"] 注入）+ 批14C（core/job_slots.py 转职快照/重排）。
 
 功能：
-  - /转职：无参 → 职业列表（含推荐角标）；有参 → 职业名/序号解析 → 校验
-    ∈ ctx["jobs"] → 转职执行（player.job_id 更新 + 技能位重排落档）→ 成功消息。
+  - /转职：无参 → 职业列表（含推荐/初始角标）；有参 → 职业名/序号解析 → 校验
+    ∈ ctx["jobs"] → **转职前置（advance）逐项校验** → 转职执行
+    （player.job_id 更新 + 技能位重排落档）→ 成功消息。
   - 复用 register_commands.resolve_job（显示名/job_id 双形态）+ default_job。
   - 转职后技能位重排：core.job_slots.rearrange_job_slots + save_rearranged_slots
     （新职业视角装配 + job_restrict 过滤 + 存档迁移）。
@@ -15,7 +16,10 @@
        覆盖字段全仓 0 落点，契约文档实际未含；以工程补白记录待契约补全）。
   P-2  转职写 ctx["player"] 可变字典的 job_id + persistent_state 挂 job_slots
        段（14C 接口）；装配层落档由 make_context 完成（零 IO 本层）。
-  P-3  /转职 列表复用 jobs 表 recommended_newbie 标记（「（推荐）」角标）。
+  P-3  /转职 列表复用 jobs 表 recommended_newbie / is_basic 标记
+       （「（推荐）」「（初始）」角标）。
+  P-4  批23 C1 转职前置 `advance`（from/level/items，均可选）：_advance_block 逐项
+       校验后放行；不带 advance / advance 空对象 → 恒放行（既有行为零变化）。
 
 铁律：平台无关（零 NoneBot import）；文件头零定时器/零睡眠；不 git commit。
 """

@@ -116,12 +116,6 @@ DEGRADED_ACTIONS: tuple = ("repair",)
 # 结果构造（统一返回形态）
 # -------------------------------------------------------------------------------------
 
-def _coin_name(ctx: Mapping[str, Any]) -> str:
-    """金币显示名（2026-09-06 硬编码清理）。"""
-    from qbot_rpg.core.reward import currency_display_name  # noqa: PLC0415
-
-    return currency_display_name(ctx, "coins")
-
 def _res(action: str, ok: bool, kind: str = "functional", **kw: Any) -> dict:
     """动作结果：{ok, action, kind, reason?, message?, data?, granted?, skipped?, already?, delivered?}。
 
@@ -565,6 +559,184 @@ def _limit_record(entry: Mapping[str, Any], ctx: Mapping[str, Any],
         sub[f"limit_total:{fn}"] = int(sub.get(f"limit_total:{fn}", 0) or 0) + 1
 
 
+# -------------------------------------------------------------------------------------
+# 批25 H2：功能收费多通道（cost：金币 / 钻石等货币 / 物品）
+# -------------------------------------------------------------------------------------
+# 依据：CakeGame `Ext_NPC_Info与Function.md:93` `consume_gold / consume_diamond /
+# consume_goods`「选用该功能需支付的代价」。**沿用既有 `cost` 对象扩展子键**（不新开
+# 平行字段）：既有 `coins` 保留；任意 int > 0 的货币键（settings.currencies[].id，
+# 如 gem/diamond）走 `ctx["currencies"]` 扣除；`items:[{item/id,count}]` 走物品出入库。
+#
+# 原子性：`_check_cost` 先全量校验（货币余额 + 物品持有），不足 → 人话拒绝、**不扣任何一项**；
+# 校验通过后再 `_apply_cost` 一次扣除（物品删除异常时回滚已扣项）。复用既有
+# `ctx["currencies"]` 与 `remove_item`/`add_item`/`count_item` hook（实测缺 hook 时回退
+# `ctx["inventory"]` count-map），与 `core/dungeon` 的 entry_cost 同口径，不另造一套。
+_COST_ITEM_KEYS: tuple = ("item", "id")
+
+
+def _cost_verb(action: str) -> str:
+    """费用文案动词（heal/teleport 保持既有原文；其余动作走通用词）。"""
+    return {"heal": "治疗", "teleport": "传送"}.get(action, "办理")
+
+
+def _cost_of(entry: Mapping[str, Any]) -> Mapping[str, Any]:
+    c = entry.get("cost")
+    return c if isinstance(c, Mapping) else {}
+
+
+def _cost_items(cost: Mapping[str, Any]) -> list:
+    """cost.items → [(item_id, count)]（同 id 合并；非法行跳过，count ≥1）。"""
+    raw = cost.get("items")
+    merged: Dict[str, int] = {}
+    if isinstance(raw, list):
+        for row in raw:
+            if not isinstance(row, Mapping):
+                continue
+            iid = None
+            for k in _COST_ITEM_KEYS:
+                v = row.get(k)
+                if isinstance(v, str) and v:
+                    iid = v
+                    break
+            if iid is None:
+                continue
+            cnt = row.get("count", 1)
+            if not isinstance(cnt, int) or isinstance(cnt, bool) or cnt < 1:
+                cnt = 1
+            merged[iid] = merged.get(iid, 0) + cnt
+    return list(merged.items())
+
+
+def _cost_currencies(cost: Mapping[str, Any]) -> list:
+    """cost → [(currency_id, amount)]（任意 int > 0 的键；`items` 除外）。"""
+    out: list = []
+    for k, v in cost.items():
+        if k == "items":
+            continue
+        if isinstance(v, int) and not isinstance(v, bool) and v > 0:
+            out.append((str(k), v))
+    return out
+
+
+def _item_have(ctx: Mapping[str, Any], item_id: str) -> int:
+    """物品持有数：`count_item` hook → `inventory` count-map → 0。"""
+    hook = ctx.get("count_item")
+    if callable(hook):
+        try:
+            return int(hook(item_id))
+        except Exception:  # noqa: BLE001 —— hook 异常视为 0（不崩）
+            return 0
+    inv = ctx.get("inventory")
+    if isinstance(inv, Mapping):
+        v = inv.get(item_id)
+        if isinstance(v, int) and not isinstance(v, bool):
+            return v
+    return 0
+
+
+def _item_name(ctx: Mapping[str, Any], item_id: str) -> str:
+    tbl = ctx.get("items")
+    if isinstance(tbl, Mapping):
+        d = tbl.get(item_id)
+        if isinstance(d, Mapping) and d.get("name"):
+            return str(d["name"])
+        if isinstance(d, str):
+            return d
+    return item_id
+
+
+def _remove_item(ctx: Mapping[str, Any], item_id: str, count: int) -> bool:
+    """扣物：`remove_item` hook 优先，回退 `inventory` count-map（不足 → False，不改）。"""
+    hook = ctx.get("remove_item")
+    if callable(hook):
+        try:
+            return bool(hook(item_id, count))
+        except Exception:  # noqa: BLE001
+            return False
+    inv = ctx.get("inventory")
+    if not isinstance(inv, MutableMapping):
+        return False
+    cur = inv.get(item_id, 0)
+    cur = cur if isinstance(cur, int) and not isinstance(cur, bool) else 0
+    if cur < count:
+        return False
+    inv[item_id] = cur - count
+    return True
+
+
+def _restore_item(ctx: Mapping[str, Any], item_id: str, count: int) -> None:
+    """回滚扣物（best-effort）：`add_item` hook → 回退 count-map 补回。"""
+    hook = ctx.get("add_item")
+    if callable(hook):
+        try:
+            hook(item_id, count, True)
+            return
+        except Exception:  # noqa: BLE001
+            pass
+    inv = ctx.get("inventory")
+    if isinstance(inv, MutableMapping):
+        cur = inv.get(item_id, 0)
+        cur = cur if isinstance(cur, int) and not isinstance(cur, bool) else 0
+        inv[item_id] = cur + count
+
+
+def _check_cost(entry: Mapping[str, Any], ctx: Mapping[str, Any], action: str) -> Optional[dict]:
+    """费用校验（不扣）：不足/缺账户 → 人话拒绝结果；可支付 → None。
+
+    货币与物品**全量校验**（任一不足即拒），保证调用方在 `_apply_cost` 前可安全返回。
+    """
+    cost = _cost_of(entry)
+    cur_parts = _cost_currencies(cost)
+    item_parts = _cost_items(cost)
+    if not cur_parts and not item_parts:
+        return None
+    verb = _cost_verb(action)
+    currencies = ctx.get("currencies")
+    if cur_parts and not isinstance(currencies, MutableMapping):
+        return _res(action, False, reason="missing_bucket",
+                    message=(f"无法结算{verb}费" if action in ("heal", "teleport")
+                             else "无法结算费用"))
+    for key, amount in cur_parts:
+        have = currencies.get(key, 0) if isinstance(currencies, Mapping) else 0
+        have_i = int(have) if isinstance(have, (int, float)) and not isinstance(have, bool) else 0
+        if have_i < amount:
+            from qbot_rpg.core.reward import currency_display_name  # noqa: PLC0415
+
+            return _res(action, False, reason="insufficient_funds",
+                        data={"currency": key, "needed": amount, "have": have_i},
+                        message=f"{currency_display_name(ctx, key)}不足，无法{verb}")
+    for iid, count in item_parts:
+        have = _item_have(ctx, iid)
+        if have < count:
+            return _res(action, False, reason="insufficient_items",
+                        data={"item": iid, "needed": count, "have": have},
+                        message=f"物品不足，无法{verb}"
+                                f"（需要 {_item_name(ctx, iid)}×{count}，当前 {have}）")
+    return None
+
+
+def _apply_cost(entry: Mapping[str, Any], ctx: Mapping[str, Any]) -> bool:
+    """执行扣除（调用方已过 `_check_cost`）：先扣物品（可回滚），再扣货币。
+
+    出参 bool：True = 已扣；False = 物品扣除失败（校验后竞态/ hook 异常）→ 已回滚、未扣任何项。
+    """
+    cost = _cost_of(entry)
+    done: list = []
+    for iid, count in _cost_items(cost):
+        if _remove_item(ctx, iid, count):
+            done.append((iid, count))
+        else:  # 校验后仍失败（并发/hook 异常）→ 回滚已扣物品，不扣货币
+            for rid, rc in done:
+                _restore_item(ctx, rid, rc)
+            return False
+    currencies = ctx.get("currencies")
+    if isinstance(currencies, MutableMapping):
+        for key, amount in _cost_currencies(cost):
+            cur = currencies.get(key, 0)
+            cur_i = int(cur) if isinstance(cur, (int, float)) and not isinstance(cur, bool) else 0
+            currencies[key] = cur_i - amount
+    return True
+
 
 # -------------------------------------------------------------------------------------
 # heal 恢复量解析（AC03：int 或 "N%" 百分比串=按上限）
@@ -691,7 +863,11 @@ def _action_shop(entry: Mapping[str, Any], ctx: Mapping[str, Any], **kw: Any) ->
 
 
 def _action_heal(entry: Mapping[str, Any], ctx: Mapping[str, Any], **kw: Any) -> dict:
-    """AC03 heal：cost{coins} 治疗费（免费=省略）+ heal{hp,mp}（int 或 "N%" 按上限）。"""
+    """AC03 heal：cost 治疗费（免费=省略）+ heal{hp,mp}（int 或 "N%" 按上限）。
+
+    批25 H2：cost 支持多通道（coins / gem·diamond 等货币 / items 物品）——校验先行、
+    不足不执行不扣费，通过后一次扣除（all-or-nothing）。
+    """
     cost = entry.get("cost") if isinstance(entry.get("cost"), Mapping) else {}
     coins_cost = cost.get("coins", 0)  # type: ignore[union-attr]
     if not isinstance(coins_cost, int) or isinstance(coins_cost, bool) or coins_cost < 0:
@@ -699,13 +875,14 @@ def _action_heal(entry: Mapping[str, Any], ctx: Mapping[str, Any], **kw: Any) ->
     currencies = ctx.get("currencies")
     if not isinstance(currencies, MutableMapping):
         return _res("heal", False, reason="missing_bucket", message="无法结算治疗费")
-    if coins_cost and currencies.get("coins", 0) < coins_cost:
-        return _res("heal", False, reason="insufficient_funds", data={"needed": coins_cost,
-                                                                      "have": currencies.get("coins", 0)},
-                    message=f"{_coin_name(ctx)}不足，无法治疗")
+    err = _check_cost(entry, ctx, "heal")
+    if err is not None:
+        return err
     healed = resolve_heal(entry.get("heal"), ctx)
     if not healed:
         return _res("heal", False, reason="no_heal_amount", message="治疗配置为空")
+    if not _apply_cost(entry, ctx):
+        return _res("heal", False, reason="cost_failed", message="结算治疗费失败，请稍后再试")
     # 应用恢复（封顶 max_hp/max_mp，纯函数就地改写 ctx）
     # P2-3 配套修复（qa_report_20260907）：ctx 标量 hp/mp 同步回 ctx["player"]
     # （Player frozen → dataclasses.replace 重建；dict → 就地）——原只写 ctx
@@ -739,8 +916,6 @@ def _action_heal(entry: Mapping[str, Any], ctx: Mapping[str, Any], **kw: Any) ->
                 p[_s] = int(_v)
     except Exception:  # noqa: BLE001 - 同步失败不阻断疗伤（ctx 标量已改）
         pass
-    if coins_cost:
-        currencies["coins"] = currencies.get("coins", 0) - coins_cost
     return _res("heal", True, kind="functional", data={"cost": coins_cost, "heal": healed},
                 message=f"治疗完成（恢复 {_fmt_heal(healed)}）")
 
@@ -825,7 +1000,11 @@ def _action_repair(entry: Mapping[str, Any], ctx: Mapping[str, Any], **kw: Any) 
 
 
 def _action_teleport(entry: Mapping[str, Any], ctx: Mapping[str, Any], **kw: Any) -> dict:
-    """AC07 teleport：map 传送目标 + cost 传送费（免费=省略）；纯函数扣费+改写 ctx["map_id"]（补白⑦）。"""
+    """AC07 teleport：map 传送目标 + cost 传送费（免费=省略）；纯函数扣费+改写 ctx["map_id"]（补白⑦）。
+
+    批25 H2：cost 支持多通道（coins / gem·diamond 等货币 / items 物品）——目标校验先行，
+    费用校验通过后一次扣除，不足 → 人话拒绝、不移动。
+    """
     target = entry.get("map")
     if not isinstance(target, str) or not target:
         return _res("teleport", False, reason="no_target", message="没有传送目的地")
@@ -833,15 +1012,11 @@ def _action_teleport(entry: Mapping[str, Any], ctx: Mapping[str, Any], **kw: Any
     coins_cost = cost.get("coins", 0)  # type: ignore[union-attr]
     if not isinstance(coins_cost, int) or isinstance(coins_cost, bool) or coins_cost < 0:
         coins_cost = 0
-    currencies = ctx.get("currencies")
-    if coins_cost:
-        if not isinstance(currencies, MutableMapping):
-            return _res("teleport", False, reason="missing_bucket", message="无法结算传送费")
-        if currencies.get("coins", 0) < coins_cost:
-            return _res("teleport", False, reason="insufficient_funds", data={"needed": coins_cost,
-                                                                              "have": currencies.get("coins", 0)},
-                        message="金币不足，无法传送")
-        currencies["coins"] = currencies.get("coins", 0) - coins_cost
+    err = _check_cost(entry, ctx, "teleport")
+    if err is not None:
+        return err
+    if not _apply_cost(entry, ctx):
+        return _res("teleport", False, reason="cost_failed", message="结算传送费失败，请稍后再试")
     if isinstance(ctx, MutableMapping):
         ctx["map_id"] = target
     return _res("teleport", True, kind="functional", data={"map": target, "cost": coins_cost},

@@ -721,16 +721,48 @@ def _check_heal(report: object, heal: object, base: str, node_id: str) -> None:
 
 
 def _check_cost(report: object, cost: object, base: str, node_id: str) -> None:
-    """cost {coins}（settings 货币键：coins 数值 ≥0；heal/repair/teleport 共用，AC03/AC06/AC07）。"""
+    """cost（settings 货币键 + 物品通道；heal/repair/teleport 共用，AC03/AC06/AC07）。
+
+    批25 H2：**沿用同一 cost 对象扩展**——既有 `coins` 保留；`gem`/`diamond`（及任意
+    已配置货币键）按「int ≥0」校验；`items:[{item/id, count}]` 校验物品引用与数量。
+    值形态非法 → R-2/R-1 红；缺省/0 → 不红（该通道免费，行为与现状一致）。
+    """
     if cost is None:
         return
     if not isinstance(cost, Mapping):
         _err(report, base, "R-1", rule="npc_cost_not_object", node_id=node_id)
         return
-    coins = cost.get("coins")
-    if coins is not None and (not isinstance(coins, (int, float)) or isinstance(coins, bool) or coins < 0):
-        _err(report, f"{base}.coins", "R-2", rule="npc_cost_coins_invalid",
-             node_id=node_id, coins=coins)
+    for key in ("coins", "gem", "diamond"):
+        v = cost.get(key)
+        if v is None:
+            continue
+        if key == "coins":
+            # 既有口径保留：coins 允许 int/float 且 ≥0；rule 名不变（既有断言依赖）
+            if not isinstance(v, (int, float)) or isinstance(v, bool) or v < 0:
+                _err(report, f"{base}.coins", "R-2", rule="npc_cost_coins_invalid",
+                     node_id=node_id, coins=v)
+            continue
+        if not isinstance(v, int) or isinstance(v, bool) or v < 0:
+            _err(report, f"{base}.{key}", "R-2", rule="npc_cost_currency_invalid",
+                 node_id=node_id, key=key, value=v, expect="int ≥0")
+    items = cost.get("items")
+    if items is None:
+        return
+    if not isinstance(items, list):
+        _err(report, f"{base}.items", "R-1", rule="npc_cost_items_not_list", node_id=node_id)
+        return
+    for ii, row in enumerate(items):
+        rbase = f"{base}.items.{ii}"
+        if not isinstance(row, Mapping):
+            _err(report, rbase, "R-1", rule="npc_cost_item_not_object", node_id=node_id)
+            continue
+        iid = row.get("item") if isinstance(row.get("item"), str) else row.get("id")
+        if not isinstance(iid, str) or not iid:
+            _err(report, f"{rbase}.item", "R-5", rule="npc_cost_item_required", node_id=node_id)
+        cnt = row.get("count", 1)
+        if not isinstance(cnt, int) or isinstance(cnt, bool) or cnt < 1:
+            _err(report, f"{rbase}.count", "R-2", rule="npc_cost_item_count_invalid",
+                 node_id=node_id, count=cnt, expect="int ≥1")
 
 
 def _check_action_entry(

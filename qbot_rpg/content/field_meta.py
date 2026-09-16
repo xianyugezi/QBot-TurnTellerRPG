@@ -442,6 +442,29 @@ NPC_DIALOGUE_OPTION_CHILDREN: Dict[str, FieldMeta] = {
 # 口径（persistent_state 的 `npc_delivered` 域）存 `limit_day:<功能名>` / `limit_total:<功能名>`；
 # 每日以日期键（dayroll 日界，settings.refresh_time 缺省 05:00）重置（与 give_item daily 同刻）。
 # 与既有 `repeat`（give_item 行为级 once/daily）分工：`repeat` 管动作行为，本组管**额度**。
+#
+# 批25 H2：NPC 功能收费多通道（CakeGame `Ext_NPC_Info与Function.md:93`
+# `consume_gold / consume_diamond / consume_goods`「选用该功能需支付的代价」）。
+# **沿用既有 `interactions[].cost` 对象扩展子键**（不新开平行字段）：既有 `coins` 保留；
+# 新增 `gem`/`diamond` 两个常见货币通道（键=settings.currencies[].id，实际任意已配置
+# 货币键都按同一规则扣除）+ `items:[{item,count}]` 物品通道。
+# 引擎落点：`core/npc._check_cost`（校验先行、不足给人话）→ `_apply_cost`（复用既有
+# `ctx["currencies"]` 与物品出入库 hook `remove_item`/`add_item`/`count_item`，与
+# dungeon entry_cost 同口径，全量校验后一次扣除 = all-or-nothing）。
+NPC_INTERACTION_COST_CHILDREN: Dict[str, FieldMeta] = {
+    "coins": FieldMeta(type="int", range_min=0, label="金币",
+                       help="金币通道：需支付的数量（缺省/0 = 该通道免费）。"),
+    "gem": FieldMeta(type="int", range_min=0, label="宝石",
+                     help="宝石通道（货币键 `gem`）；需为已配置货币。缺省/0 = 不扣。"),
+    "diamond": FieldMeta(type="int", range_min=0, label="钻石",
+                         help="钻石通道（货币键 `diamond`）；需为已配置货币。缺省/0 = 不扣。"),
+    "items": FieldMeta(type="list", element=FieldMeta(type="obj", children={
+        "item": FieldMeta(type="str", label="物品引用"),
+        "id": FieldMeta(type="str", label="物品 ID（等价别名）"),
+        "count": FieldMeta(type="int", range_min=1, label="数量"),
+    }), label="物品通道",
+        help="需交付的物品清单（item/count）；不足则不执行、不扣任何一项。"),
+}
 NPC_INTERACTION_CHILDREN: Dict[str, FieldMeta] = {
     # 功能名（进度键身份）：显式声明则用；缺省由引擎按动作+菜单文案/物品指纹派生。
     "key": FieldMeta(type="str", label="功能标识",
@@ -452,6 +475,9 @@ NPC_INTERACTION_CHILDREN: Dict[str, FieldMeta] = {
                                   "按 dayroll 日界（settings.refresh_time，缺省 05:00）每日重置。"),
     "total_limit": FieldMeta(type="int", range_min=1, label="累计次数上限",
                              help="每玩家累计可调用该功能的次数（≥1 整数）；缺省 = 不限。"),
+    # 收费（多通道）：既有 coins + 新增 gem/diamond/items（同结构扩展，供编辑器表单）。
+    "cost": FieldMeta(type="obj", children=NPC_INTERACTION_COST_CHILDREN,
+                      label="功能费用"),
 }
 NPC_FIELDS: Dict[str, FieldMeta] = {
     "id": FieldMeta(type="str", required=True, label="NPC ID"),

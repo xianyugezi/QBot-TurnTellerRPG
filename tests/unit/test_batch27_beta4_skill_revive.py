@@ -174,3 +174,44 @@ def test_b4_regression_without_field_identical() -> None:
     ob = b.do_action("player", {"type": "skill", "skill_id": "plain_skill"})
     assert (oa.final_damage, oa.target_hp) == (ob.final_damage, ob.target_hp)
     assert [e.get("type") for e in oa.side_effects] == [e.get("type") for e in ob.side_effects]
+
+
+# ---------------------------------------------------------------------------
+# β4 端到端（临时内容根）：建包 → 加载 → 装引擎 → 释放 → 死亡目标复活（贴状态）
+# ---------------------------------------------------------------------------
+def test_b4_e2e_temp_content_root(tmp_path: Path) -> None:
+    from qbot_rpg.content.loader import build_pack
+
+    root = tmp_path / "pack_e2e_b4"
+    root.mkdir()
+    (root / "manifest.json").write_text(json.dumps(
+        {"name": "pack_e2e_b4", "version": "1", "schema_version": 1,
+         "modules": ["skills"]}, ensure_ascii=False), encoding="utf-8")
+    (root / "skills.json").write_text(json.dumps([
+        dict(_BASIC),
+        {"id": "soul_return", "name": "回魂术", "type": "active", "kind": "heal",
+         "power": 0, "revive": True,
+         "effects": [{"type": "heal", "target": "enemy", "stat": "hp", "value": 20}]},
+        {"id": "plain_heal", "name": "普通治疗", "type": "active", "kind": "heal",
+         "power": 0}],
+        ensure_ascii=False), encoding="utf-8")
+    pack, _changed = build_pack(root)
+    defs = {e["id"]: dict(e) for e in pack.modules["skills"]}
+    assert defs["soul_return"]["revive"] is True and "revive" not in defs["plain_heal"]
+
+    eng = BattleEngine(defs=defs, config={})
+    eng.start(
+        {"hp": 500, "max_hp": 500, "mp": 100, "max_mp": 100,
+         "atk": 100, "def": 0, "spr": 0, "spd": 10, "foc": 500, "con": 0,
+         "lck": 0, "int": 0, "name": "玩家"},
+        {"hp": 100, "max_hp": 100, "mp": 0, "max_mp": 0,
+         "atk": 0, "def": 0, "spr": 0, "spd": 1, "foc": 0, "con": 0,
+         "lck": 0, "int": 0, "name": "桩"},
+        random_seed=7)
+    eng._snap["enemy"]["dead_mark"] = True  # noqa: SLF001
+    eng._snap["enemy"]["hp"] = 0            # noqa: SLF001
+    out = eng.do_action("player", {"type": "skill", "skill_id": "soul_return"})
+    assert out.ok is True, out
+    assert eng._snap["enemy"]["dead_mark"] is False  # noqa: SLF001
+    assert int(eng._snap["enemy"]["hp"]) > 0, "E2E 复活后 HP 应 > 0"  # noqa: SLF001
+    assert "revive" in [e.get("type") for e in out.side_effects]

@@ -99,7 +99,16 @@ DEFAULT_PACKS = ("veinborn", "test_demo")
 #   `label`/`help`/`group` 严格键改动；新增项逐条列出（hidden / entry_cost /
 #   encounter_* / advance_on_kill_count）。重定到本批末提交后，门禁继续只守
 #   字段级改/删。
-DEFAULT_BASELINE_REF = "1068f93"
+# 批25（2026-09-17）重定基线：1068f93 → fa3e024（本批新增字段末提交）。原因：
+#   本批一次性**新增**字段（npc `interactions[].key/daily_limit/total_limit`、
+#   `interactions[].cost` 扩 gem/diamond/items、achievements `counted`、settings
+#   `register_gift`/`register_level`/`command_gates`/`rate_limit`/`message_chunk_len`）
+#   使展示块 `keys`/`count`、`fields[*].(block|subgroup)`、`cost` 子块标签与
+#   `index.total` 增长。对拍实证：硬差异全部是展示块位移 + 新字段标签，**无任何
+#   删除**（「仅迁移前有（删除）」= 0）与既有 `help`/`group` 严格键改动；`cost`
+#   由纯键名变中文段名属本批**有意**的展示层补充。重定到本批末提交后，门禁继续
+#   只守字段级改/删（后续批次再加字段会重新触发展示块位移并重定，流程同批14/19/20/22/24）。
+DEFAULT_BASELINE_REF = "fa3e024"
 
 
 def _env(root: Path) -> dict:

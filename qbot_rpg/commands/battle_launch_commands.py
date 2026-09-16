@@ -22,6 +22,7 @@ from typing import Any, Callable, Dict, List, Mapping, Optional
 
 from qbot_rpg.core.battle import BattleEngine
 from qbot_rpg.core.combo import ComboEngine
+from qbot_rpg.data.gear_stats import combatant_updates
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -180,6 +181,11 @@ def _enemy_combatant(enemy_entry: Mapping[str, Any]) -> dict:
             continue
         if key not in comb:
             comb[key] = val
+    # 批22 · D1：怪物常驻战斗词条（吸血/穿透/免伤等 COMBAT 键）走与玩家装备**同一注册表
+    # 桥** data.gear_stats.combatant_updates（同一封顶口径，不复刻第二套）；无这些键时
+    # 输出为空映射 → combatant 逐字段与旧行为一致。
+    for _ck, _cv in combatant_updates(st).items():
+        comb[_ck] = float(_cv) if _ck == "crit_bonus" else int(_cv)
     # 方位 v0.6（附录 A Step 2 装配缺口收口，Step 6 黑盒暴露）：enemies.json parts[]
     # （部位破坏配置）透传 combatant——引擎 start() 依 combatant.parts 实例化
     # parts_state（E3）；缺透传 → 真实战斗怪无部位机制（黑盒砾背龟只打本体）
@@ -314,7 +320,8 @@ async def launch_pve_battle(
         except Exception:  # noqa: BLE001
             cur = None
     if cur is not None:
-        stype = str(getattr(cur, "session_type", "") or (cur.get("session_type") if isinstance(cur, Mapping) else ""))
+        _stype_raw = getattr(cur, "session_type", "")
+        stype = str(_stype_raw or (cur.get("session_type") if isinstance(cur, Mapping) else ""))
         if "battle" in stype:
             # G3 收口（2026-09-02）：战斗结束释放受 handler 内事务限制（无法在
             # process_message 事务内再开 tx），session 可能残留——若残留会话的
@@ -323,7 +330,8 @@ async def launch_pve_battle(
                 payload = getattr(cur, "payload", None)
                 if isinstance(payload, Mapping):
                     _ad, _ch, _ce = _battle_defs(ctx.get("registry"))
-                    old = BattleEngine.from_snapshot(payload, registry=ctx.get("registry"), defs=_ad)
+                    old = BattleEngine.from_snapshot(
+                        payload, registry=ctx.get("registry"), defs=_ad)
                     if bool(getattr(old, "finished", False)):
                         await sm.release(qid)
                         cur = None
@@ -348,13 +356,16 @@ async def launch_pve_battle(
     if _weak_left > 0:
         return {"ok": False,
                 "message": _tpl(ctx, _TPL_WEAK_BLOCK_KEY,
-                                f"❌ 你还在虚弱中（剩余 {_weak_left} 秒）——先回营地休整（驿站药婆可免费疗伤）"),
+                                f"❌ 你还在虚弱中（剩余 {_weak_left} 秒）——先回营地休整"
+                                "（驿站药婆可免费疗伤）"),
                 "battle_engine": None}
 
     # 2. 解析怪物
     loc = str(ctx.get("location") or "")
     if not loc:
-        return {"ok": False, "message": _tpl(ctx, _TPL_NO_MAP, "❌ 当前不在任何地图"), "battle_engine": None}
+        return {"ok": False,
+                "message": _tpl(ctx, _TPL_NO_MAP, "❌ 当前不在任何地图"),
+                "battle_engine": None}
     row = _resolve_monster_ref(ctx, monster_ref)
     if row is None:
         return {"ok": False,

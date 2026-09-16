@@ -181,6 +181,12 @@ ENEMY_STATS_CHILDREN: Dict[str, FieldMeta] = {
 # 九属性单位统一为「点」（批4.6 展示维度；说明卡据此判「数值」而非「比例」）。
 ENEMY_STATS_CHILDREN = {
     k: replace(v, unit="点") for k, v in ENEMY_STATS_CHILDREN.items()}
+# 批22 · D1：怪物常驻吸血/穿透/免伤——**复用 A3 的键**（同注册表 data.gear_stats：
+# GEAR_COMBAT_PCT_KEYS + GEAR_COMBAT_VALUE_KEYS），走同一战斗桥（battle_launch_commands.
+# _enemy_combatant 应用 combatant_updates）；不新造第二套命名。取值语义与玩家装备词条
+# 完全一致（见 gear_stats 模块 docstring 的数值口径）。
+for _ck in (*GEAR_COMBAT_PCT_KEYS, *GEAR_COMBAT_VALUE_KEYS):
+    ENEMY_STATS_CHILDREN[_ck] = _gear_combat_field(_ck)
 # 双维弱点（1.3 W01-W02；elements 键=元素 ID → 增伤倍率，元素注册表引用检查归 A2 R3）
 WEAKNESS_CHILDREN: Dict[str, FieldMeta] = {
     "types": FieldMeta(type="list", element=FieldMeta(type="str")),

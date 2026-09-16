@@ -702,6 +702,15 @@ ACHIEVEMENT_FIELDS: Dict[str, FieldMeta] = {
     }), label="解锁条件"),
     "trigger": FieldMeta(type="str", enum=("check",), label="触发方式"),
     "once": FieldMeta(type="bool", label="仅一次"),
+    # 批25 I1：计入总数/完成度（CakeGame `成就系统.md:88` `AddTrue`「计入总数（默认 TRUE）」）。
+    # 语义 = 完成度统计的分母**只计 counted=true 的成就**（隐藏/彩蛋成就不拉低「全成就」进度）；
+    # `counted=false` 的成就照常可达成与发奖，仅不参与完成度。与 `hidden`（是否隐藏）**正交**
+    # ——他们两者是独立两列（`成就系统.md:88,89`），隐藏 ≠ 不计入。
+    # 引擎落点：`core/achievements.achievement_progress`（分母/分子均按 counted 过滤）+
+    # `commands/achievement_commands.cmd_achievements` 的列表头完成度。
+    "counted": FieldMeta(type="bool", label="计入总数",
+                         help="完成度统计是否计入该成就（缺省 true）；false 的成就照常可达成、"
+                              "照常发奖，只是不拉低「全成就」进度。"),
     "hidden": FieldMeta(type="obj", children={
         # hidden 实测段键（clue_ref/mode/reveal_text，8 条实测 1 条含段）
         "clue_ref": FieldMeta(type="str", label="线索引用"),

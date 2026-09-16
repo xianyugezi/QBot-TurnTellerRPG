@@ -124,7 +124,7 @@ def cmd_achievements(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         return g
     args = list(getattr(parsed, "args", None) or ())
     try:
-        from qbot_rpg.core.achievements import list_achievements
+        from qbot_rpg.core.achievements import achievement_progress, list_achievements
     except ImportError:
         return tpl_of(ctx, "ach_empty", {})
     entries = list_achievements(ctx)
@@ -132,14 +132,17 @@ def cmd_achievements(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     entries = [e for e in entries if not (e.get("mode") == "hide" and not e.get("unlocked"))]
     if not entries:
         return tpl_of(ctx, "ach_empty", {})
-    done = sum(1 for e in entries if e.get("unlocked"))
-    total = len(entries)
+    # 批25 I1：分页/序号口径 = 可见条目数（全部）；完成度口径 = **只计 counted=true**
+    # （隐藏/彩蛋成就不拉低进度）——分子分母同口径，避免 >100%。
+    all_total = len(entries)
+    prog = achievement_progress(ctx, entries)
+    done, total = prog["done"], prog["total"]
 
     page_raw = args[0] if args else 1
-    res: PageResolution = resolve_page(page_raw, total, DEFAULT_PAGE_SIZE)
+    res: PageResolution = resolve_page(page_raw, all_total, DEFAULT_PAGE_SIZE)
     if res.invalid:
         from qbot_rpg.commands.sender import page_error_tpl12
-        return page_error_tpl12("成就", CMD_ACH, res.total_pages, total)
+        return page_error_tpl12("成就", CMD_ACH, res.total_pages, all_total)
     page = res.page if res.page is not None else 1
     start = (page - 1) * DEFAULT_PAGE_SIZE
     slice_ = entries[start:start + DEFAULT_PAGE_SIZE]

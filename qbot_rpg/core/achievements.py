@@ -60,6 +60,7 @@ __all__ = [
     "check_achievements",
     "list_achievements",
     "achievement_view",
+    "achievement_progress",
     "get_achievement_state",
 ]
 
@@ -421,6 +422,7 @@ def list_achievements(ctx: Mapping[str, Any]) -> list:
             "repeat_count": int(repeat.get(aid, 0) or 0),
             "hidden": bool(mode),
             "mode": mode,
+            "counted": _counted_of(entry),
         }
         if is_unlocked and hidden.get("reveal_text"):
             item["reveal_text"] = str(hidden["reveal_text"])
@@ -436,9 +438,30 @@ def list_achievements(ctx: Mapping[str, Any]) -> list:
                 "id": str(aid), "name": "（配置已移除）", "desc": "",
                 "unlocked": True, "ts": str(unlocked.get(aid) or ""),
                 "repeat_count": 0, "hidden": False, "mode": "",
-                "removed": True,
+                "counted": False, "removed": True,
             })
     return out
+
+
+def _counted_of(entry: Mapping[str, Any]) -> bool:
+    """计入总数标记（批量 25 I1）：缺省 true；仅显式 false 排除；非法值 fail-safe 视为 true。"""
+    v = entry.get("counted", True)
+    return v if isinstance(v, bool) else True
+
+
+def achievement_progress(ctx: Mapping[str, Any], entries: Optional[Sequence[Mapping[str, Any]]] = None) -> dict:
+    """成就完成度（批25 I1）：**分母只计 `counted=true` 的成就**（隐藏/彩蛋不拉低进度）。
+
+    入参 ctx；entries 可选（已做展示层过滤——如 hide 未达成不占序号——的列表；
+    缺省 = `list_achievements(ctx)` 全量）。出参 `{done, total, uncounted}`：
+      · total = counted=true 条目数（**分母**）；
+      · done  = counted=true 且已达成条目数（**分子**，与分母同口径，避免 >100%）；
+      · uncounted = 不计入完成度的条目数（counted=false，照常可达成/发奖）。
+    """
+    rows = list_achievements(ctx) if entries is None else [e for e in entries if isinstance(e, Mapping)]
+    counted = [e for e in rows if e.get("counted", True) is not False]
+    done = sum(1 for e in counted if e.get("unlocked"))
+    return {"done": int(done), "total": len(counted), "uncounted": len(rows) - len(counted)}
 
 
 def achievement_view(ctx: Mapping[str, Any], aid: str) -> Optional[dict]:

@@ -57,6 +57,18 @@ DEFAULT_DECOMPOSE_RATE: Dict[str, float] = {
     "王": 0.65,
 }
 
+# 批26 α3：装备增幅技能（skill_amp）全局上下限默认值（CakeGame 装备附加Re《核心配置》
+# 的 最小/最大增幅 -90/90 与 最小/最大冷却 -50/100 做**框架默认值**，可经
+# settings.forge.skill_amp_bounds 覆盖）。判定逻辑（校验器/引擎）一律读本表或包声明，
+# 不硬编码数值——「不硬编码」的落点即此处 + FORGE_SETTINGS_FIELD_DEFS。
+DEFAULT_SKILL_AMP_BOUNDS: Dict[str, int] = {
+    "damage_min": -90,
+    "damage_max": 90,
+    "cooldown_min": -50,
+    "cooldown_max": 100,
+}
+_SKILL_AMP_BOUND_KEYS: tuple = ("damage_min", "damage_max", "cooldown_min", "cooldown_max")
+
 # settings.forge 段默认值（共享契约 §三 ForgeSettings：S-01~05 + 2c2d 补白键 + P1-1 裁决可配档位）
 FORGE_SETTINGS_DEFAULTS: Dict[str, object] = {
     "forge_fee": "节点等级×10",          # S-01（str|int）
@@ -66,6 +78,7 @@ FORGE_SETTINGS_DEFAULTS: Dict[str, object] = {
     "exp_per_forge": "节点等级×2",       # S-05（str|int）
     "sets_enabled": True,               # 2c2d 补白键（P1 套装开关）
     "augments_enabled": True,           # 2c2d 补白键（P2 客制开关）
+    "skill_amp_bounds": DEFAULT_SKILL_AMP_BOUNDS,  # 批26 α3：增幅技能上下限（可覆盖）
     "set_piece_counts": [2, 3, 5],  # P1-1 裁决：套装档位集合可配（默认 2/3/5）
     "set_tier_exact": True,         # P1-1 裁决：达到档位才激活；false=未达也可激活低档
     # 2026-09-14：满套/件数上限可选显式配置；None = 未配置（由 forge_sets.
@@ -88,6 +101,8 @@ FORGE_SETTINGS_KEYS: tuple = (
     # 默认 None（未配置）→ forge_sets.derive_set_max_pieces 从 settings.slot_defs
     # 防具部位推导（推导不出=不设上限）
     "set_max_pieces",
+    # 批26 α3：装备增幅技能上下限（obj；空/缺失 → DEFAULT_SKILL_AMP_BOUNDS）
+    "skill_amp_bounds",
 )
 
 # 素材档位两档（细化_2c2c TIER-03a：normal/rare；与装备品质四档 TIER-03b 不混用）
@@ -136,6 +151,14 @@ FORGE_SETTINGS_FIELD_DEFS: Dict[str, FieldMeta] = {
     # 2026-09-14 用户拍板：满套/件数上限可选显式配置（正整数；缺省由
     # forge_sets.derive_set_max_pieces 从 settings.slot_defs 防具部位推导）
     "set_max_pieces": FieldMeta(type="int", range_min=1),
+    # 批26 α3：装备增幅技能全局上下限（可经 settings.forge.skill_amp_bounds 覆盖；
+    # 默认值 = DEFAULT_SKILL_AMP_BOUNDS，判定逻辑不硬编码）
+    "skill_amp_bounds": FieldMeta(type="obj", children={
+        "damage_min": FieldMeta(type="int", default=-90, label="伤害增幅下限"),
+        "damage_max": FieldMeta(type="int", default=90, label="伤害增幅上限"),
+        "cooldown_min": FieldMeta(type="int", default=-50, label="冷却增幅下限"),
+        "cooldown_max": FieldMeta(type="int", default=100, label="冷却增幅上限"),
+    }),
 }
 
 
@@ -228,6 +251,36 @@ def read_forge_settings(settings_raw: object) -> Dict[str, object]:
     if _is_int(smp) and smp >= 1:
         out["set_max_pieces"] = smp
 
+    # ---- 批26 α3：skill_amp_bounds 上下限（obj；逐键仅 int 生效，缺省保留默认）----
+    sab = forge.get("skill_amp_bounds")
+    if isinstance(sab, Mapping):
+        bounds = dict(DEFAULT_SKILL_AMP_BOUNDS)
+        for k in _SKILL_AMP_BOUND_KEYS:
+            if _is_int(sab.get(k)):
+                bounds[k] = int(sab[k])
+        out["skill_amp_bounds"] = bounds
+
+    return out
+
+
+def read_skill_amp_bounds(settings_raw: object) -> Dict[str, int]:
+    """读取 settings.forge.skill_amp_bounds 上下限（批26 α3；缺省 → 框架默认）。
+
+    入参 settings_raw：settings 模块原始数据（Mapping，取 ["forge"]["skill_amp_bounds"]；
+    None/非 Mapping/段缺失 → DEFAULT_SKILL_AMP_BOUNDS）。逐键仅非 bool int 生效，
+    其余回退默认（运行期容错不炸；非法形态由校验器红拦）。纯函数、无副作用。
+    """
+    out = dict(DEFAULT_SKILL_AMP_BOUNDS)
+    if not isinstance(settings_raw, Mapping):
+        return out
+    forge = settings_raw.get("forge")
+    if not isinstance(forge, Mapping):
+        return out
+    sab = forge.get("skill_amp_bounds")
+    if isinstance(sab, Mapping):
+        for k in _SKILL_AMP_BOUND_KEYS:
+            if _is_int(sab.get(k)):
+                out[k] = int(sab[k])
     return out
 
 
@@ -269,6 +322,7 @@ def resolve_source_text(
 __all__ = [
     # 常量 / 默认值
     "DEFAULT_DECOMPOSE_RATE",
+    "DEFAULT_SKILL_AMP_BOUNDS",
     "FORGE_SETTINGS_DEFAULTS",
     "FORGE_SETTINGS_KEYS",
     "MATERIAL_TIER_VALUES",
@@ -279,5 +333,6 @@ __all__ = [
     "forge_settings_meta",
     # 读段 + 来源归一
     "read_forge_settings",
+    "read_skill_amp_bounds",
     "resolve_source_text",
 ]

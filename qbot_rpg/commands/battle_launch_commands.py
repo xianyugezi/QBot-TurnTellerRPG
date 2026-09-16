@@ -403,6 +403,16 @@ async def launch_pve_battle(
         # ctb 配置管道接通（2026-09-11 增补 v1）：settings.json 的 "ctb" 段（隐性标准
         # time_unit / air_time / air_extend / turn_cost 等）→ 引擎调度器规则（可调）。
         _start_cfg: Dict[str, Any] = {"battle_materials": _battle_materials_of(ctx)}
+        # 批26 α3：装备增幅技能表（穿戴期冻结——战斗内不可换装，EQP-09）→ 引擎
+        # 快照 equip_skill_amp；伤害乘数在 core.battle._resolve_combo_action 应用。
+        try:
+            from qbot_rpg.core.equip_mods import skill_amp_table  # noqa: PLC0415
+
+            _amp = skill_amp_table(ctx.get("player"), ctx)
+            if _amp:
+                _start_cfg["equip_skill_amp"] = _amp
+        except Exception:  # noqa: BLE001 - 增幅表装配失败不阻断开战
+            pass
         try:
             from qbot_rpg.core.ctb_config import resolve_ctb_settings  # noqa: PLC0415
 

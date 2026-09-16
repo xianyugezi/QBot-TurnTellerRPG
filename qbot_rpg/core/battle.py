@@ -2229,6 +2229,12 @@ class BattleEngine:
                 "battle_alchemy_used": 0,
             },
         }
+        # 批26 α3：装备增幅技能表（装配层经 start(config=...) 注入；仅非空时入快照
+        # ——无装备增幅时快照零新增键，行为逐字段一致）。战斗内不可换装（EQP-09），
+        # 故进战冻结；随 to_snapshot/from_snapshot 深拷贝往返。
+        _equip_amp = self._config.get("equip_skill_amp")
+        if isinstance(_equip_amp, Mapping) and _equip_amp:
+            self._snap["equip_skill_amp"] = copy.deepcopy(dict(_equip_amp))
         self._finished = False
         self._death_order = []
         self._guard_active = {"player": False, "enemy": False}
@@ -2908,6 +2914,21 @@ class BattleEngine:
                              0, 0, int(self._combat(target).get("hp", 0)), tuple(effects),
                              "道具使用成功")
 
+    def _equip_skill_amp(self, side: str, skill_id: str, amp_type: str) -> int:
+        """批26 α3：读装备增幅技能表（快照 equip_skill_amp）某侧/技能/类型的总计值。
+
+        表由装配层进战时注入（core/equip_mods.skill_amp_table）；缺表/缺键 → 0
+        （无装备增幅时零行为变化）。纯读，不改快照。
+        """
+        if not skill_id:
+            return 0
+        try:
+            from qbot_rpg.core.equip_mods import amp_value  # noqa: PLC0415
+
+            return amp_value(self._snap.get("equip_skill_amp"), side, skill_id, amp_type)
+        except Exception:  # noqa: BLE001 - 防御：读表异常按无增幅处理
+            return 0
+
     def _resolve_combo_action(self, attacker: str, action: Dict[str, Any]) -> ActionOutcome:
         """连段性行动（1c1a/b/c + 1c2）：combo 引擎判定 → 被拒短路 / 派生表单 → 伤害结算。
 
@@ -2962,6 +2983,15 @@ class BattleEngine:
         _sd_power = float(sd.get("power", 0) or 0)
         if "power" in sd and not _action_had_mult and ca.get("mult", 1.0) == 1.0:
             ca["mult"] = _sd_power / 100.0
+        # 批26 α3：装备增幅技能（damage 类）——按 `1 + 总计/100` 作伤害乘数
+        # （总计 = 已穿戴装备对该技能的 damage 增幅求和；上下限已由校验器按
+        # settings.forge.skill_amp_bounds 红拦，引擎不再钳制）。无增幅 → 0 →
+        # 乘数保持原值（行为逐字段一致）。
+        if attacker == "player":
+            _amp_dmg = self._equip_skill_amp("player", str(ca.get("skill_id") or ""),
+                                             "damage")
+            if _amp_dmg:
+                ca["mult"] = float(ca.get("mult", 1.0) or 0.0) * (1.0 + _amp_dmg / 100.0)
         # M13 批17 路17C：技能冷却接线（14B 缺口②）——技能 def cooldown 字段。
         # 冷却表 _snap["skill_cooldowns"] = {side: {skill_id: remaining}}；
         # 施放成功设 cooldown、end_turn 递减、此处注入 action.cooldown_remaining
@@ -3177,6 +3207,13 @@ class BattleEngine:
         # 语义：cooldown=N → 施放后 N 次行动不可用（含下次行动）——存储 N+1，
         # end_turn 逐行动递减（施放当次行动不减，下次行动施放检查仍 = N 拦）。
         _cd = int(sd.get("cooldown", 0) or 0)
+        # 批26 α3：装备增幅技能（cooldown 类）——冷却时长按 `1 + 总计/100` 缩放
+        # （负值 = 缩减；下限 -100 由配置兜底 → 恒 ≥ 0）。无增幅 → 0 → 原值。
+        if _cd > 0 and attacker == "player":
+            _amp_cd = self._equip_skill_amp("player", str(ca.get("skill_id") or ""),
+                                            "cooldown")
+            if _amp_cd:
+                _cd = max(0, int(round(_cd * (1.0 + _amp_cd / 100.0))))
         if _cd > 0:
             _cdm = self._snap.setdefault("skill_cooldowns", {})
             if not isinstance(_cdm, dict):

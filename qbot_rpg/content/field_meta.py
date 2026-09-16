@@ -1202,7 +1202,7 @@ SKILLS_GROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
         "id", "name", "kind", "type", "attack_type", "element", "tag", "armor",
         "interrupt", "position_rule", "air_policy", "block_mode", "job_restrict",
         "job_form", "counter_type", "counter_skill", "revert_form", "derive_only",
-        "revive", "skill",
+        "revive", "message_key", "skill",
     )),
     ("数值", (
         "power", "break_power", "mp_cost", "hp_cost", "cooldown", "hits", "level",
@@ -1921,6 +1921,14 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "revive": FieldMeta(
             type="bool", label="复活技能",
             help="置真：该技能可复活死亡态目标（清死亡标记并恢复生命）；缺省 = 普通技能。"),
+        # 批27 · β1 每技能战斗播报模板（CakeGame Config_Skills.AttackTips / 补漏 §一 β1）：
+        # 只存**模板键**（options_ref="templates" → 编辑器下拉 = 全量模板表 key），
+        # **不把整段文案存进技能数据**；缺省 "" = 既有全局模板（逐字段一致）。
+        # 引擎消费：core/message_format/battle_render 按最终 skill_id 取键渲染命中/未命中/
+        # 施放行（渲染回退默认键，未配置零变化）。校验：仅 str（泛型 R-1）。
+        "message_key": FieldMeta(
+            type="str", options_ref="templates", label="战斗播报模板",
+            help="该技能战报所用的模板键（core 模板表 key）；留空 = 用默认战报模板。"),
         "chain_refs": FieldMeta(type="list", element=FieldMeta(type="str")),  # F14 派生链引用 skill_chains.json（V-2）
         "consume_marks": FieldMeta(type="obj", label="消耗印记", editor="maptable",
                                    key_ref="mark"),  # F15 {mark_id: count} 消耗印记（V-3 键存在/上限 A2）

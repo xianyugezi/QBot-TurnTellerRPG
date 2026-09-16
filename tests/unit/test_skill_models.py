@@ -373,6 +373,8 @@ def test_skills_fields_keys_exact() -> None:
         "hp_cost",
         # 批27 β4 技能复活标记（revive=true 释放时可复活死亡态目标）
         "revive",
+        # 批27 β1 每技能战斗播报模板键（message_key，只存模板 key 不存文案）
+        "message_key",
     }
 
 

@@ -444,6 +444,10 @@ def skills_fields() -> Dict[str, FieldMeta]:
         # 批27 · β4 技能复活标记（CakeGame《技能附加与变量集表》:53 FHX）：
         # true = 释放时可复活死亡态目标；缺省 false。引擎消费 battle.revive_side。
         "revive": FieldMeta(type="bool", default=False),
+        # 批27 · β1 每技能战斗播报模板（CakeGame Config_Skills.AttackTips）：
+        # 只存**模板键**（core/templates/template_table.json 的 key），不存整段文案；
+        # 缺省 "" = 走既有 battle_player_hit/battle_player_miss/battle_skill_cast。
+        "message_key": FieldMeta(type="str", default=""),
         "chain_refs": FieldMeta(
             type="list", element=FieldMeta(type="ref", ref_target="skill_chain")
         ),

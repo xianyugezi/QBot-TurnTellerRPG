@@ -600,6 +600,17 @@ def _inject_display_outcomes(
             if str(getattr(oc, "action_type", "") or "") == "skill" and skill_name:
                 overrides["skill_name"] = skill_name
                 overrides["action_name"] = skill_name
+            # 批27 · β1：注入实际 skill_id（派生/组合后 combo_result.form_id 优先），
+            # 供渲染层按 skills[].message_key 取每技能战斗播报模板（无字段零变化）。
+            if str(getattr(oc, "action_type", "") or "") == "skill":
+                _sid = ""
+                _cr = getattr(oc, "combo_result", None)
+                if isinstance(_cr, Mapping):
+                    _sid = str(_cr.get("form_id") or "")
+                if not _sid:
+                    _sid = str((player_action or {}).get("skill_id") or "")
+                if _sid:
+                    overrides["skill_id"] = _sid
             if segments:
                 final_hp = getattr(oc, "target_hp", None)
                 overrides["segments"] = [

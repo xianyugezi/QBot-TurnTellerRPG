@@ -341,6 +341,7 @@ def render_skill_cast(
     resource_text: str = "",
     *,
     ctx: Any = None,
+    template_key: Optional[str] = None,
 ) -> str:
     """BREP-07 玩家技能释放行。
 
@@ -349,9 +350,12 @@ def render_skill_cast(
     示例：`✅ 你施放治疗术：回复 30 点 HP（MP 22/60）`（MP 消耗 8，落在小技 5-10）
     - resource_text：资源变化（当前/最大，如 `MP 22/60`），可用 format_resource_cur_max 拼装；
       空串时省略括号（无资源消耗的技能不输出空括号）。
+    - template_key（批27 · β1）：技能自定义播报模板键（skills[].message_key）；缺省 →
+      既有 battle_skill_cast（未配置零变化）。
     """
-    line = tpl_of(ctx, "battle_skill_cast",
-                  {"skill_name": skill_name, "effect_desc": effect_desc})
+    _key = template_key or "battle_skill_cast"
+    _data = {"skill_name": skill_name, "effect_desc": effect_desc}
+    line = str(tpl_of(ctx, _key, _data) or tpl_of(ctx, "battle_skill_cast", _data))
     if resource_text:
         line += tpl_of(ctx, "battle_skill_cast_suffix",
                        {"resource_text": resource_text})
@@ -665,6 +669,26 @@ def _default_action_phrase(outcome: Any) -> str:
     return atype
 
 
+def _skill_message_key(outcome: Any, ctx: Any, default_key: str) -> str:
+    """批27 · β1：按技能取战斗播报模板键（skills[].message_key）。
+
+    - 技能 id：接线层注入的 `outcome.skill_id`（派生/组合后实际技能）；
+    - 技能表：`ctx["skills"]`（assembly 注入 {id: raw}，见 context._tables）；
+    - 未配置/查无/非 str/空串 → `default_key`（既有全局模板，行为逐字段一致）；
+    - 只返回**键**：文案仍在 ctx["templates"]（不把整段文案存进技能数据）。
+    """
+    sid = str(getattr(outcome, "skill_id", "") or "")
+    if sid and isinstance(ctx, Mapping):
+        skills = ctx.get("skills")
+        if isinstance(skills, Mapping):
+            sdef = skills.get(sid)
+            if isinstance(sdef, Mapping):
+                mk = sdef.get("message_key")
+                if isinstance(mk, str) and mk:
+                    return mk
+    return default_key
+
+
 def _render_crit_block_note(
     outcome: Any,
     *,
@@ -729,9 +753,11 @@ def _render_player_hit(
         if _sk:
             phrase = str(tpl_of(ctx, "battle_action_skill_verb", {"name": _sk}) or _sk)
     note = _render_crit_block_note(outcome, include_low=include_low, ctx=ctx)  # BREP-04
-    return tpl_of(ctx, "battle_player_hit", {
+    _data = {
         "action": phrase, "damage": damage, "note": note,
-        "target": target, "hp": hp, "max_hp": max_hp})
+        "target": target, "hp": hp, "max_hp": max_hp}
+    _key = _skill_message_key(outcome, ctx, "battle_player_hit")
+    return str(tpl_of(ctx, _key, _data) or tpl_of(ctx, "battle_player_hit", _data))
 
 
 def _render_player_miss(
@@ -755,8 +781,9 @@ def _render_player_miss(
         else getattr(outcome, "target_max_hp", hp)
     )
     phrase = action_phrase if action_phrase is not None else _default_action_phrase(outcome)
-    return tpl_of(ctx, "battle_player_miss", {
-        "target": target, "action": phrase, "hp": hp, "max_hp": max_hp})
+    _data = {"target": target, "action": phrase, "hp": hp, "max_hp": max_hp}
+    _key = _skill_message_key(outcome, ctx, "battle_player_miss")
+    return str(tpl_of(ctx, _key, _data) or tpl_of(ctx, "battle_player_miss", _data))
 
 
 def _render_player_defend(outcome: Any, *, ctx: Any = None) -> str:
@@ -856,6 +883,7 @@ def _render_skill_cast_line(outcome: Any, *, ctx: Any = None) -> Optional[str]:
         str(getattr(outcome, "effect_desc", "") or ""),
         str(getattr(outcome, "resource_text", "") or ""),
         ctx=ctx,
+        template_key=_skill_message_key(outcome, ctx, "battle_skill_cast"),
     )
 
 

@@ -292,8 +292,9 @@ def test_6a_skills_fields_contract_core_24() -> None:
     # + 1 气绝 stun（2026-09-12 批⑦A 气绝 KO 实装）
     # + 2 展示文本 brief/detail（2026-09-12 用户拍板：编辑器两个文本框，技能列表简述行/详情）
     # + 1 生命消耗 hp_cost（2026-09-16 批23 B1：与 mp_cost 并列）
-    # + 1 复活标记 revive（批27 β4：CakeGame FHX 复活技能）= 43
-    assert len(fields) == 43
+    # + 1 复活标记 revive（批27 β4：CakeGame FHX 复活技能）
+    # + 1 播报模板键 message_key（批27 β1：CakeGame AttackTips，只存模板键）= 44
+    assert len(fields) == 44
 
 
 # ---------------------------------------------------------------------------

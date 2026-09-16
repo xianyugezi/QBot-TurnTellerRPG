@@ -1047,7 +1047,7 @@ SKILLS_GROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
         "skill",
     )),
     ("数值", (
-        "power", "break_power", "mp_cost", "cooldown", "hits", "level",
+        "power", "break_power", "mp_cost", "hp_cost", "cooldown", "hits", "level",
         "trigger_limit", "hit_mod", "crit_mod", "action_time", "air_extend",
         "recovery", "stun",
     )),
@@ -1373,17 +1373,18 @@ ACTION_SUBGROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
 ACTION_SUBGROUP_LABELS: Dict[str, str] = {
     "base": "标识与类型", "numeric": "数值", "behavior": "行为", "refs": "引用",
 }
-# 职业：标识 / 成长 / 形态变换。
+# 职业：标识 / 成长 / 形态变换 / 转职前置。
 JOBS_SUBGROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
-    ("base", ("id", "name", "difficulty", "playstyle", "recommended_newbie")),
+    ("base", ("id", "name", "difficulty", "playstyle", "recommended_newbie", "is_basic")),
     ("tags", ("mechanic_tags", "weapon_types", "resource_axes")),
     ("growth", ("growth",)),
     ("transform", ("transform",)),
+    ("advance", ("advance",)),
     ("text", ("description",)),
 )
 JOBS_SUBGROUP_LABELS: Dict[str, str] = {
     "base": "标识与定位", "tags": "标签与武器", "growth": "成长率",
-    "transform": "形态变换", "text": "文本",
+    "transform": "形态变换", "advance": "转职前置", "text": "文本",
 }
 # NPC：标识 / 对话与交互 / 关联引用。
 NPC_SUBGROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
@@ -1734,6 +1735,16 @@ def _module_table() -> Dict[str, ModuleMeta]:
         # ---- B 玩家侧扩展 11 字段（F08-F18，细化_6a §1.2-B）----
         "type": FieldMeta(type="str"),   # F08 basic/active/passive/trigger 四类时机（枚举 A2 路）
         "mp_cost": FieldMeta(type="number", range_min=0, range_max=9999, unit="点"),   # F09 ≥0；basic=0
+        # 批23 · B1 技能生命消耗（CakeGame Config_Skills.ConsumeType=HP；§三 B1）：
+        # **不引入 consume_type 枚举**——单个数值直接表达「放这招要付血」（少而深）；
+        # 与 mp_cost 并列、资源各自独立扣。int ≥ 0，单位=点；缺省/0 = 不消耗生命。
+        # 引擎消费：core/battle.py::_apply_skill_hp_cost_gate——施放前置门禁，
+        # hp - hp_cost < 1 时阻止释放（被拒不消耗行动，同 energy/marks 语义），
+        # 可施放则立即扣血；派生技按最终 skill_id 解析（与 consume_marks 同口径）。
+        # 校验：非整数 → 泛型 R-1 红；负数 → 泛型 R-2 红；0 不触发 Y-1/Y-4。
+        "hp_cost": FieldMeta(
+            type="int", range_min=0, range_max=9999, unit="点", label="生命消耗",
+            help="释放自损的生命（点）；留空或填 0 = 不消耗生命。"),
         "cooldown": FieldMeta(type="number", range_min=0, range_max=999, unit="回合"),   # F10 ≥0 整数；basic=0
         "tag": FieldMeta(type="str"),    # F11 none/combo/combo_preserve/combo_push/interrupt/armor（枚举 A2）
         "armor": FieldMeta(type="bool"),         # F12 霸体开关（执行语义快键）
@@ -1796,6 +1807,14 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "difficulty": FieldMeta(type="str", soft_label=True),  # 3 simple|advanced|complex（软标注：只建议不拦截）
         "playstyle": FieldMeta(type="str"),   # 4 玩法一句话（≤20 字，专项）
         "recommended_newbie": FieldMeta(type="bool"),  # 5 推荐新手？（注册缺省职业取推荐标记）
+        # 批23 · C2 基础/初始职业标记（CakeGame Config_Occupation.Basics；§三 C2）：
+        # bool；true = 可作为玩家初始职业。现状核查：注册流程只**自动**取一个缺省
+        # 职业（default_job 兜底链），**无「多起始职业选择」UX**——本批不做该系统级
+        # 改造，is_basic 作最小消费：兜底链在「推荐」之后取**首个 is_basic**，
+        # 并在职业列表标「（初始）」。既有包不带 is_basic → 行为与现状一致。
+        # 校验：仅 bool（泛型 R-1）；缺省 = false。
+        "is_basic": FieldMeta(type="bool", label="基础/初始职业",
+                              help="置真：该职业可作为玩家初始职业；缺省 = 不作为初始职业。"),
         "resource_axes": FieldMeta(type="list", element=FieldMeta(type="str")),  # 6 stats.json 注册表引用（4B 专项）
         "mechanic_tags": FieldMeta(type="list", element=FieldMeta(type="str")),  # 7 机制标签（软标注）
         "weapon_types": FieldMeta(type="list", element=FieldMeta(type="str")),   # 8 可用武器类型（4b 联动）
@@ -1831,6 +1850,26 @@ def _module_table() -> Dict[str, ModuleMeta]:
             "derive_chains": FieldMeta(type="list", element=FieldMeta(type="str")),   # 31 形态专属派生链（V8 4B）
         }),
         "description": FieldMeta(type="str"),  # 11 职业介绍文案（3d 注册表渲染）
+        # 批23 · C1 转职前置（CakeGame Config_Occupation
+        # TransferDemand/TransferLevel/FormerOccupation；§三 C1）：合并为一个
+        # `advance` 子对象（**不开三个顶层字段**，遵循「少而深」）。三项均可选、
+        # 缺省 = 无该条件；既有职业数据不带 advance → 行为与现状一致（对拍）。
+        # 校验：from 引用 jobs / items 元素引用 items → 泛型 R-4 硬拦；
+        #       level 非整数 R-1 红、负数 R-2 红、0 → Y-1 黄提示。
+        # 引擎：commands/job_commands.py::_advance_block——转职判定逐项校验，
+        # 不满足给人话（要求值 vs 当前值）。
+        "advance": FieldMeta(type="obj", label="转职前置",
+                             help="转职需满足的前置条件（原职业/等级/物品，均可选）。",
+                             children={
+            "from": FieldMeta(type="ref", ref_target="job", label="原职业前置",
+                              help="当前必须正处于该职业（jobs 职业 id）；留空 = 不限原职业。"),
+            "level": FieldMeta(type="int", range_min=1, unit="级", label="转职等级门槛",
+                               help="转职所需玩家等级（≥1）；留空 = 不限等级。"),
+            "items": FieldMeta(
+                type="list", element=FieldMeta(type="ref", ref_target="item"),
+                label="转职需求物品",
+                help="转职须持有的物品（items 物品 id，全部须持有）；留空 = 无物品门槛。"),
+        }),
     }
     # 技能/链侧挂点字段（细化_6b §1.5/§1.6）：revert_form（37）与 derive_only（38）为
     # skills.json 字段、job_scope（39）为 skill_chains.json 字段——随 6a 技能库全量字段

@@ -102,8 +102,10 @@ def test_existing_modules_counts_stable() -> None:
     # 编辑器重写批1：补齐 skills.json 真实在用、原缺登记的 8 键
     # （brief/detail/revert_form/derive_only/energy_gain/energy_cost/season/combo_table，
     #  与 skill_models.skills_fields() 对齐；软标注零新增拦截）→ 34 + 8 = 42
-    assert len(t.modules["skills"].fields) == 42
-    assert len(t.modules["jobs"].fields) == 11
+    # 批23 B1：+ hp_cost（技能生命消耗）→ 43
+    assert len(t.modules["skills"].fields) == 43
+    # 批23 C1/C2：jobs 11 + advance + is_basic = 13（契约 §1.1 顶层 11）
+    assert len(t.modules["jobs"].fields) == 13
     # 编辑器重写批4.5：enemies 补 AI 引擎依赖段 ai/phases/rewards/zone_change（真实内容包
     # 实有、原缺登记；soft_label=True 纯展示宽字段，泛型校验零新增拦截）→ 27 + 4 = 31
     assert len(t.modules["enemies"].fields) == 31

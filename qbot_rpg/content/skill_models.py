@@ -128,6 +128,8 @@ DEFAULT_POWER: float = 100.0
 # F09/F10 缺省（§1.2-B F09/F10：0；basic=0 不消耗/无冷却 [L62]）
 DEFAULT_MP_COST: float = 0.0
 DEFAULT_COOLDOWN: float = 0.0
+# 批23 · B1 HP 消耗缺省（与 mp_cost 并列、资源各自独立扣；0 = 不消耗生命）
+DEFAULT_HP_COST: int = 0
 
 # F19 hits 缺省（§1.2-C F19：默认 1 段；每段独立结算 [规 T25]）
 DEFAULT_HITS: int = 1
@@ -431,6 +433,10 @@ def skills_fields() -> Dict[str, FieldMeta]:
         # ---- B. 玩家侧扩展 11（§1.2-B）----
         "type": FieldMeta(type="enum", enum=SKILL_TYPES, default=DEFAULT_TYPE),
         "mp_cost": FieldMeta(type="number", range_min=0, default=DEFAULT_MP_COST),
+        # 批23 · B1 生命消耗（CakeGame Config_Skills.ConsumeType=HP）：int ≥ 0，
+        # 单位=点；与 mp_cost 并列、各自独立扣。0/缺省 = 不消耗生命。
+        # 引擎：battle._apply_skill_hp_cost_gate（hp - hp_cost < 1 → 阻止释放）。
+        "hp_cost": FieldMeta(type="int", range_min=0, default=DEFAULT_HP_COST),
         "cooldown": FieldMeta(type="number", range_min=0, default=DEFAULT_COOLDOWN),
         "tag": FieldMeta(type="enum", enum=SKILL_TAGS, default="none"),
         "armor": FieldMeta(type="bool", default=False),

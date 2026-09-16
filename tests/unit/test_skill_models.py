@@ -369,6 +369,8 @@ def test_skills_fields_keys_exact() -> None:
         # 展示文本 2（2026-09-12 用户拍板：编辑器「简述」「详情」两个文本框 →
         # 技能列表简述行 / 详情面板）
         "brief", "detail",
+        # 批23 B1 生命消耗（hp_cost，CakeGame ConsumeType=HP；与 mp_cost 并列）
+        "hp_cost",
     }
 
 

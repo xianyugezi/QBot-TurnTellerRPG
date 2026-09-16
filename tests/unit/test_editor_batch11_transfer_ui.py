@@ -24,7 +24,7 @@ from qbot_rpg.web import api
 NODE = shutil.which("node")
 REPO = Path(api.repo_root())
 HTML = REPO / "qbot_rpg" / "web" / "static" / "index.html"
-BATCH_NOTE = "批22 · 字段扩展（装备/词条/怪物）"
+BATCH_NOTE = "批23 · 字段扩展（技能/职业）"
 STALE_BATCH = "批11 · 内容包导出/导入"
 
 

@@ -511,16 +511,39 @@ def validate_entry(pack: object, module: object, entry_id: object, patch: object
 # =====================================================================================
 # 落盘（备份 → 原子写 → 回读复核）
 # =====================================================================================
+def _readback_error(item: Mapping[str, Any], ground_slot: Mapping[str, Any]
+                    ) -> Dict[str, Any]:
+    """`atomic_store.read_back_modules` 的失败项 → 界面人话红拦（哪里/为什么/怎么办）。"""
+    mod = str(item.get("module") or ground_slot.get("module") or "")
+    return {
+        "level": "red", "code": str(item.get("code") or "read_back_failed"),
+        "module": mod, "field": "", "entry_id": str(ground_slot.get("entry_id") or ""),
+        "field_key": "", "field_label": "（写后回读）", "related": True,
+        "message": str(item.get("message") or "写入后回读校验未通过。"),
+        "how_to_fix": str(item.get("how_to_fix")
+                          or "请检查磁盘/备份后重试；必要时用「回退」恢复备份。"),
+    }
+
+
 def _verify_after_write(pack: object, ground_slot: Mapping[str, Any],
                         root: Optional[object], meta: Optional[FieldMetaTable],
-                        tolerate: Optional[Callable[[Any], bool]] = None
+                        tolerate: Optional[Callable[[Any], bool]] = None,
+                        expected: Optional[Mapping[str, Any]] = None
                         ) -> Optional[List[Dict[str, Any]]]:
-    """回读落盘结果 + 整包复校：通过 → None；不通过 → 人话红拦（用于触发自动回退）。
+    """回读落盘结果（逐模块内容比对 + 整包复校）：通过 → None；不通过 → 人话红拦。
 
+    `expected`（可选）：本次写入的 `{模块: 应写入内容}`。给出时先做**写后回读比对**
+    （`atomic_store.read_back_modules`，只读被写模块文件；解析失败 / 内容不一致 → 失败；
+    批21 · F），再做既有整包复校。不给（如回退 / manifest 回退路径）→ 与现状一致。
     `tolerate`：可选的「容忍判定」——返回 True 的红拦不计入复核失败。
     仅供「删除被引用条目 / 改名被引用条目」这类**产品明确允许**的场景使用；默认 None
     = 一律不容忍，批2 保存链语义零变化。
     """
+    if expected:
+        readback = atomic_store.read_back_modules(ground_slot["pack_dir"], expected)
+        if not readback.get("ok"):
+            return [_readback_error(it, ground_slot)
+                    for it in list(readback.get("errors") or [])]
     try:
         _pack_dir, modules = api.load_pack_modules(pack, root=root)
         report = check_pack(modules, meta)
@@ -605,7 +628,8 @@ def save_entry(pack: object, module: object, entry_id: object, patch: object, *,
         env["errors"] = list(written.get("errors") or []) + env["errors"]
         return env
 
-    verify_errors = _verify_after_write(pack, slot, root, meta, tolerate=tolerate)
+    verify_errors = _verify_after_write(pack, slot, root, meta, tolerate=tolerate,
+                                        expected={mod: new_content})
     if verify_errors is not None:
         rolled = atomic_store.restore_modules_from_backup(pack_dir, [mod])
         env.update(level="red", rolled_back=bool(rolled.get("ok")))
@@ -710,7 +734,8 @@ def create_entry(pack: object, module: object, entry_id: object, patch: object, 
         env["errors"] = list(written.get("errors") or []) + env["errors"]
         return env
 
-    verify_errors = _verify_after_write(pack, info, root, meta)
+    verify_errors = _verify_after_write(pack, info, root, meta,
+                                        expected={mod: content})
     if verify_errors is not None:
         rolled = atomic_store.restore_modules_from_backup(pack_dir, [mod])
         env.update(level="red", rolled_back=bool(rolled.get("ok")))
@@ -827,7 +852,8 @@ def delete_entry(pack: object, module: object, entry_id: object, *,
         env["errors"] = list(written.get("errors") or []) + env["errors"]
         return env
 
-    verify_errors = _verify_after_write(pack, slot, root, meta, tolerate=tolerate)
+    verify_errors = _verify_after_write(pack, slot, root, meta, tolerate=tolerate,
+                                        expected={mod: new_content})
     if verify_errors is not None:
         rolled = atomic_store.restore_modules_from_backup(pack_dir, [mod])
         env.update(level="red", rolled_back=bool(rolled.get("ok")))
@@ -1068,7 +1094,8 @@ def set_module_enabled(pack: object, module: object, enabled: object, *,
         env["errors"] = list(written.get("errors") or []) + env["errors"]
         return env
 
-    verify_errors = _verify_after_write(pack, slot, root, meta, tolerate=tolerate)
+    verify_errors = _verify_after_write(pack, slot, root, meta, tolerate=tolerate,
+                                        expected=dict(files))
     if verify_errors is not None:
         rolled = atomic_store.restore_modules_from_backup(pack_dir, ["manifest"])
         env.update(level="red", rolled_back=bool(rolled.get("ok")))

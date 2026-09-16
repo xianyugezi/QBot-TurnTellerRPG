@@ -49,7 +49,7 @@ import zipfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
-from typing import Any, Dict, List, Mapping, Optional, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from qbot_rpg.content import atomic_store
 from qbot_rpg.content import field_meta_pack as pack_meta
@@ -118,6 +118,26 @@ def _fail(code: str, message: str, how_to_fix: str = "", **extra: Any) -> Dict[s
     }
     env.update(extra)
     return env
+
+
+def _read_back_mismatches(target: Path, payload: Mapping[str, bytes],
+                          written: Sequence[str]) -> List[str]:
+    """批21 · F：导入写入后回读校验——逐文件重新读取并与压缩包应写入字节比对。
+
+    只读**被写文件**（不整包重载）；返回「回读失败的文件名」列表（空 = 全部一致）。
+    失败口径 = 文件丢失 / 读取异常 / 字节与压缩包内容不一致（截断、半写、篡改）。
+    """
+    bad: List[str] = []
+    for name in written:
+        path = target / name
+        try:
+            actual = path.read_bytes()
+        except OSError:
+            bad.append(name)
+            continue
+        if actual != bytes(payload.get(name) or b""):
+            bad.append(name)
+    return bad
 
 
 # -------------------------------------------------------------------------------------
@@ -790,6 +810,32 @@ def import_archive(data: object, content_root: object, *, on_conflict: str = "",
     finally:
         if not moved:
             shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    # 批21 · F：写入后回读校验（落盘 → 重新读取 → 与应写入字节比对；只读被写文件）。
+    # 依据 CakeGame 实测教训「落库必须 decode 回读校验」。失败 → 明确报错 + 复原旧包 / 删除新包，
+    # 绝不静默成功、绝不留半成品。
+    bad = _read_back_mismatches(target, payload, written)
+    if bad:
+        restored = False
+        if backup_dir is not None and backup_dir.exists():
+            try:
+                shutil.rmtree(target, ignore_errors=True)
+                os.replace(backup_dir, target)
+                restored = True
+            except OSError:
+                restored = False
+        else:
+            try:
+                shutil.rmtree(target, ignore_errors=True)
+                restored = True
+            except OSError:
+                restored = False
+        names = "、".join(bad[:5]) + ("…" if len(bad) > 5 else "")
+        return _fail(
+            "read_back_mismatch",
+            f"导入后回读校验未通过（{len(bad)} 个文件与压缩包内容不一致：{names}）"
+            f"；{'已复原原内容包。' if (overwritten and restored) else '未留下半成品内容包。'}",
+            "请重新选择分享来的 .ttrpack 文件；若反复出现请检查磁盘（可能是写入被截断）。")
 
     msg = f"已导入内容包「{meta.get('pack_name') or final_id}」（id={final_id}），" \
           f"共 {len(written)} 个文件；现在可以在顶部 pkg= 里选它。"

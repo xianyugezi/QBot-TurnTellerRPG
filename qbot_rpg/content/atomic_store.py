@@ -298,6 +298,81 @@ def write_modules(
     return {"ok": True, "written": written}
 
 
+def read_back_modules(content_dir: Path,
+                      expected: Mapping[str, Any]) -> Dict[str, Any]:
+    """写后回读校验（批21 · F）：只读**被写模块**文件 → 解析 → 与「应写入内容」比对。
+
+    依据：CakeGame 实测教训「落库必须 decode 回读校验」（曾出现「史莱姆行缺 1 字节」）。
+    本函数是回读比对的**唯一文件读取落点**（与 `write_modules` 的写落点对称）：
+
+      · 只读 `expected` 里的模块（不整包重载）——性能口径见 `editor_ops._verify_after_write`；
+      · 失败三态：文件缺失 / JSON 解析失败（半写、截断）/ 解析成功但与应写内容不一致（篡改）；
+      · 任一失败如实返回（绝不静默成功），由调用方决定报错 / 回滚。
+
+    出参：`{ok, verified: [模块...], errors: [{level, code, module, message, how_to_fix}]}`。
+    """
+    content_dir = Path(content_dir)
+    errors: List[dict] = []
+    verified: List[str] = []
+    for module, content in expected.items():
+        if not isinstance(module, str):
+            errors.append({"level": "red", "code": "read_back_invalid_module",
+                           "module": repr(module),
+                           "message": f"回读失败：模块名非法：{module!r}",
+                           "how_to_fix": "请重试；若反复出现请检查编辑器版本。"})
+            continue
+        try:
+            filename = _module_filename(_safe_module_name(module))
+        except ValueError as exc:
+            errors.append({"level": "red", "code": "read_back_invalid_module",
+                           "module": module,
+                           "message": f"回读失败：模块名非法：{exc}",
+                           "how_to_fix": "请重试；若反复出现请检查编辑器版本。"})
+            continue
+        path = content_dir / filename
+        try:
+            raw = path.read_text(encoding="utf-8")
+        except OSError as exc:
+            errors.append({
+                "level": "red", "code": "read_back_read_failed", "module": module,
+                "message": (f"回读失败：写入后读不到模块「{module}」"
+                            f"（{filename}）：{type(exc).__name__}。"),
+                "how_to_fix": "请检查磁盘/权限状态后重试；必要时用「回退」恢复备份。"})
+            continue
+        try:
+            want_text = _serialize_json(content)
+        except ValueError as exc:
+            errors.append({
+                "level": "red", "code": "read_back_expected_invalid", "module": module,
+                "message": f"回读失败：应写内容不是合法 JSON（{type(exc).__name__}）。",
+                "how_to_fix": "请检查本次改动内容后重试。"})
+            continue
+        # 快路径：write_modules 落盘的正是 _serialize_json(content)，逐字节相等即通过
+        # （不再二次解析，回读开销 ≈ 一次文件读取）。
+        if raw == want_text:
+            verified.append(module)
+            continue
+        # 不一致：再解析以区分「半写/截断（解析失败）」与「内容被篡改（解析成功但不等）」。
+        try:
+            actual = json.loads(raw)
+        except (ValueError, TypeError) as exc:
+            errors.append({
+                "level": "red", "code": "read_back_parse_failed", "module": module,
+                "message": (f"回读失败：模块「{module}」写盘后无法解析"
+                            f"（{type(exc).__name__}）——文件可能被截断 / 半写。"),
+                "how_to_fix": "请检查磁盘/备份后重试；必要时用「回退」恢复备份。"})
+            continue
+        if actual != json.loads(want_text):
+            errors.append({
+                "level": "red", "code": "read_back_mismatch", "module": module,
+                "message": (f"回读失败：模块「{module}」写盘内容与应写内容不一致"
+                            "（疑似被篡改 / 半写）。"),
+                "how_to_fix": "请检查磁盘/备份后重试；必要时用「回退」恢复备份。"})
+            continue
+        verified.append(module)
+    return {"ok": not errors, "verified": verified, "errors": errors}
+
+
 # =============================================================================
 # 写前备份 / 回退（编辑器重写批2：.bak + 原子恢复；仍属本层唯一文件 IO 落点）
 # =============================================================================
@@ -791,6 +866,7 @@ __all__ = [
     "check_pack_errors_human",
     "humanize_errors",
     "humanize_warnings",
+    "read_back_modules",
     "reload_and_rollback",
     "restore_modules_from_backup",
     "restore_registry",

@@ -1190,7 +1190,16 @@ def shop_buy(shop_id: str, ref: object, count: object, ctx: MutableMapping[str, 
             node["count"] = int(node.get("count", 0)) + n  # 仅买入成功 +1（D-04）
     except _Rollback as exc:
         _restore(ctx, snap)
-        return {"ok": False, "reason": exc.reason, "message": "❌ 结算失败，已回滚"}
+        # 批26 α2：入包被 max_hold 门禁拒绝 → 透传人话（ctx["add_item_denied"] 由
+        # 统一入包 hook 记录）；非门禁失败仍走既有「结算失败，已回滚」。
+        _denied = ctx.get("add_item_denied")
+        _denied_msg = None
+        if exc.reason == "item_add_failed" and isinstance(_denied, Mapping):
+            _m = _denied.get("message")
+            if isinstance(_m, str) and _m:
+                _denied_msg = _m
+        return {"ok": False, "reason": exc.reason,
+                "message": _denied_msg or "❌ 结算失败，已回滚"}
 
     if tx_id is not None and isinstance(ledger, MutableSet):
         ledger.add(tx_id)

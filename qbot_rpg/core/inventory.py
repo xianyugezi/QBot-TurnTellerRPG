@@ -46,10 +46,43 @@ from qbot_rpg.core.player_attributes import calc_all_final_attributes
 from qbot_rpg.data.item import ItemInstance
 from qbot_rpg.data.player import PlayerAttributes
 
-__all__ = ["InventoryEngine", "POTION_USE_COUNTS_KEY"]
+__all__ = ["InventoryEngine", "POTION_USE_COUNTS_KEY",
+           "MAX_HOLD_UNLIMITED", "MAX_HOLD_UNIQUE", "MAX_HOLD_FORBIDDEN",
+           "max_hold_rejection"]
 
 _SINGLE_ADD_CAP: int = 99   # 单次入包数量上限默认（INV-08/4b INV-R04）
 _TRUNCATE_MSG: str = "最多一次购买 99 个"
+
+# 批26 α2：物品最大获取数量 `max_hold` 语义常量（CakeGame 装备附加Re《品质部位筛选》
+# `_itemMax`：0=不限制 / 1=最多持有 1 个 / -1=不允许获取）。
+MAX_HOLD_UNLIMITED: int = 0
+MAX_HOLD_UNIQUE: int = 1
+MAX_HOLD_FORBIDDEN: int = -1
+
+
+def max_hold_rejection(item_def: Any, held: int) -> Optional[str]:
+    """α2 获取入口门禁（纯函数）→ 拒绝人话；放行 None。
+
+    唯一判定实现（获取入口在装配层 `ctx["add_item"]` hook 调用一次；不散落多处）。
+    口径（`field_meta` max_hold）：
+      · 缺省 / 0（MAX_HOLD_UNLIMITED）→ 放行（不限）；
+      · 1（MAX_HOLD_UNIQUE）且 held ≥ 1（已持有，含穿戴中）→ 拒绝；
+      · -1（MAX_HOLD_FORBIDDEN）→ 恒拒绝（我们无既有「自动丢弃」语义，取「拒绝获取」；
+        既有语义盘点见报告：全仓无 auto-discard 分支）；
+      · 其它取值（校验器 IV-3 已红拦）→ 放行（引擎防御性不越权）。
+    入参 item_def：物品定义（Mapping 或 Def；取 .raw）；held：当前持有总数。
+    """
+    d = item_def if isinstance(item_def, Mapping) else getattr(item_def, "raw", None)
+    if not isinstance(d, Mapping):
+        return None
+    v = d.get("max_hold")
+    if isinstance(v, bool) or not isinstance(v, int):
+        return None
+    if v == MAX_HOLD_FORBIDDEN:
+        return "❌ 该物品禁止获取"
+    if v == MAX_HOLD_UNIQUE and int(held) >= 1:
+        return "❌ 该物品最多持有 1 个（已持有，无法再获取）"
+    return None
 
 # 战斗内同类型药剂一行动限 1 次的计数落点键（INV-11/LIF-R05：回血+回蓝可各 1 次，
 # 回血不能 2 次；行动推进重置、中断恢复不重置——判定归战斗/使用入口，引擎只提供落点）

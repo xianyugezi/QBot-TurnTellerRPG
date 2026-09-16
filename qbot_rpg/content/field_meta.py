@@ -2086,14 +2086,14 @@ def _module_table() -> Dict[str, ModuleMeta]:
             }),
             help="穿戴时获得这些技能、卸下时收回（skills 技能 id；等级 ≥1）。"),
         "max_hold": FieldMeta(
-            type="int", range_min=-1, range_max=1, label="最大获取数量",
+            type="int", range_min=-1, range_max=1, allow_negative=True, label="最大获取数量",
             help="获取入口上限：0=不限 / 1=唯一（已持有则拒绝再获取）/ -1=禁止获取。"),
         "skill_amp": FieldMeta(
             type="list", label="增幅技能",
             element=FieldMeta(type="obj", children={
                 "skill": FieldMeta(type="ref", ref_target="skill", label="技能"),
                 "type": FieldMeta(type="enum", enum=("damage", "cooldown"), label="增幅类型"),
-                "value": FieldMeta(type="int", label="增幅值"),
+                "value": FieldMeta(type="int", allow_negative=True, label="增幅值"),
             }),
             help="按技能增幅：damage=伤害（1+总计/100 作伤害乘数）/ cooldown=冷却；"
                  "上下限见 settings.forge.skill_amp_bounds。"),

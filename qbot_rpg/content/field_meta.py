@@ -370,7 +370,8 @@ SETTINGS_FIELDS: Dict[str, FieldMeta] = {
         "forced_battle": FieldMeta(type="list", element=FieldMeta(type="str"),
                                    label="强战禁用",
                                    help="被强制战斗（伏击战 battle_type=ambush）中禁用的指令名列表。"),
-    }, label="按状态禁用指令"),
+    }, label="按状态禁用指令",
+        help="按玩家当前状态禁用指定指令：虚弱 / 野外地图 / 被强制战斗中各一列表；空=该态不禁用。"),
     # 批25 K3：指令限流（CakeGame `Global.md:187` `rate_limit.interval/number/object`
     # 「默认 0=不限流」）。形态 = `{interval_sec, count, scope}`；缺省/0 = 不限流。
     # 引擎落点：`assembly/runner._rate_limit_blocked`（**消息层/路由层**前置判定；固定窗口
@@ -385,7 +386,8 @@ SETTINGS_FIELDS: Dict[str, FieldMeta] = {
                            help="单个窗口内允许的指令条数（≥1）；缺省/0 = 不限流。"),
         "scope": FieldMeta(type="enum", enum=("player", "group"), label="限流粒度",
                            help="player=按玩家（缺省）；group=按群（全群共享额度）。"),
-    }, label="指令限流"),
+    }, label="指令限流",
+        help="指令级限流：窗口秒数 + 窗口内允许条数 + 粒度（按玩家/按群）；缺省/0 = 不限流。"),
     # 批25 K4：消息分段长度上限（CakeGame `Global.md:46`「每段消息长度上限，超出自动
     # 分段发送，0=不限制」）。**运行时发送分段**——与既有「结构化行 ≤14 全角」的
     # **模板排版门禁**是两件事（那是模板文本规范/静态校验；本项是发送前按上限自动分段，

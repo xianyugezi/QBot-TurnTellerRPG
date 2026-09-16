@@ -434,6 +434,139 @@ def _today_key(ctx: Mapping[str, Any]) -> str:
 
 
 # -------------------------------------------------------------------------------------
+# 批25 H1：功能次数上限（daily_limit / total_limit）
+# -------------------------------------------------------------------------------------
+# 依据：CakeGame `Ext_NPC_Info与Function.md:150-151` `Day_number`（每玩家每日上限，
+# 进度存 UserData 区段 `NPC_Day_number.Function.<功能名>`，按日期键）/ `User_number`
+# （每玩家累计上限）；0/空 = 不限。
+#
+# 进度存哪（先核查后选，依据写进本注释）：
+#   · 复用**既有玩家态口径** `ctx["npc_delivered"]`（NPC 模块既有的一次一物存档域，
+#     装配层 `_ps_init(ps, "npc_delivered", {})` 挂回 `player.persistent_state`，
+#     随 `_plain_handler` 的 `tx.upsert_player` 落档）——与 give_item `repeat=daily`
+#     的「最后领取日」同一存储域、同一落档通路；
+#   · **不用** 批 D 的 `player_pack_state`：那是内容包私有状态的独立异步 DB 表
+#     （`storage/pack_state.py`，需 `await db`），而 `dispatch_action` 是纯函数
+#     （ctx 进 / 就地改写 / 无 IO），在此引入 DB 读写会破坏纯函数契约与事务边界；
+#   · 键：`limit_day:<功能名>`（值=最后计数日期键 "YYYY-MM-DD"）+ `limit_day_n:<功能名>`
+#     （值=该日已用次数）+ `limit_total:<功能名>`（值=累计已用次数）。
+#
+# 每日重置口径：日期键取 `_today_key(ctx)`（A3 dayroll 日界，settings.refresh_time
+# 缺省 05:00，与 quest/商店/签到/give_item daily 同刻）——仅当存档里的 `limit_day`
+# 等于当前日期键时，当日计数才延续；否则视为新的一天从 0 起（**按日期键重置**）。
+def _limits_of(entry: Mapping[str, Any]) -> tuple:
+    """interactions 条目 → (daily_limit, total_limit)（int ≥1；缺省/非法 → None=不限）。"""
+    out = []
+    for k in ("daily_limit", "total_limit"):
+        v = entry.get(k)
+        out.append(v if isinstance(v, int) and not isinstance(v, bool) and v >= 1 else None)
+    return out[0], out[1]
+
+
+def _entry_label(entry: Mapping[str, Any], fallback: str) -> str:
+    """功能名（人话）：菜单文案 `text`（str 直取 / 列表取首条）→ `label` → 派生标识。"""
+    t = entry.get("text")
+    if isinstance(t, str) and t:
+        return t
+    if isinstance(t, (list, tuple)) and t:
+        first = t[0]
+        if isinstance(first, str) and first:
+            return first
+    lb = entry.get("label")
+    if isinstance(lb, str) and lb:
+        return lb
+    return fallback
+
+
+def _func_name(entry: Mapping[str, Any]) -> str:
+    """功能名（进度键身份）：显式 `key`/`id` 优先；否则 action+菜单文案(+物品/目标指纹)派生。
+
+    与 `_items_fingerprint` 同口径（give_item 用物品指纹防「同动作多条 give_item」串号；
+    teleport 用目标图）。改文案/标识即视为新功能（额度从 0 起，行为可预期）。
+    """
+    for k in ("key", "id"):
+        v = entry.get(k)
+        if isinstance(v, str) and v:
+            return v
+    action = str(entry.get("action") or "")
+    text = _entry_label(entry, "")
+    extra = ""
+    if action == "give_item":
+        extra = _items_fingerprint(entry)
+    elif action == "teleport":
+        extra = str(entry.get("map") or "")
+    return f"{action}|{text}|{extra}"
+
+
+def _limit_bucket(ctx: Mapping[str, Any], npc_id: str) -> Optional[MutableMapping[str, Any]]:
+    """`ctx["npc_delivered"][npc_id]` 可变子表（缺省创建；域缺失 → None，fail-safe 不限）。"""
+    if not isinstance(npc_id, str) or not npc_id:
+        return None
+    node = ctx.get("npc_delivered")
+    if not isinstance(node, MutableMapping):
+        return None
+    sub = node.get(npc_id)
+    if not isinstance(sub, MutableMapping):
+        sub = {}
+        node[npc_id] = sub
+    return sub
+
+
+def _limit_block(entry: Mapping[str, Any], ctx: Mapping[str, Any],
+                 npc_id: Optional[str]) -> Optional[dict]:
+    """调用前额度判定：超限 → 人话拒绝结果；未超限 → None（不改状态）。
+
+    无 npc_id / 无 npc_delivered 域 / 未声明额度 → None（不限，行为与现状一致）。
+    """
+    daily, total = _limits_of(entry)
+    if daily is None and total is None:
+        return None
+    if not isinstance(npc_id, str) or not npc_id:
+        return None  # 无归属 NPC 无法按玩家记账（对齐 mark_delivered 口径）
+    node = ctx.get("npc_delivered")
+    sub = node.get(npc_id) if isinstance(node, Mapping) else None
+    sub_m = sub if isinstance(sub, Mapping) else {}
+    fn = _func_name(entry)
+    action = str(entry.get("action") or "")
+    label = _entry_label(entry, fn)
+    if daily is not None:
+        today = _today_key(ctx)
+        used = int(sub_m.get(f"limit_day_n:{fn}", 0) or 0) if sub_m.get(f"limit_day:{fn}") == today else 0
+        if used >= daily:
+            return _res(action, False, reason="daily_limit_reached",
+                        data={"limit": daily, "used": used, "func": fn},
+                        message=f"{label}今日已达上限，明天再来")
+    if total is not None:
+        used_t = int(sub_m.get(f"limit_total:{fn}", 0) or 0)
+        if used_t >= total:
+            return _res(action, False, reason="total_limit_reached",
+                        data={"limit": total, "used": used_t, "func": fn},
+                        message=f"{label}累计已达上限")
+    return None
+
+
+def _limit_record(entry: Mapping[str, Any], ctx: Mapping[str, Any],
+                  npc_id: Optional[str]) -> None:
+    """成功后记账（daily 写当日计数 + 日期键；total 写累计计数）。"""
+
+    daily, total = _limits_of(entry)
+    if daily is None and total is None:
+        return
+    sub = _limit_bucket(ctx, npc_id) if isinstance(npc_id, str) else None
+    if sub is None:
+        return
+    fn = _func_name(entry)
+    if daily is not None:
+        today = _today_key(ctx)
+        used = int(sub.get(f"limit_day_n:{fn}", 0) or 0) if sub.get(f"limit_day:{fn}") == today else 0
+        sub[f"limit_day:{fn}"] = today
+        sub[f"limit_day_n:{fn}"] = used + 1
+    if total is not None:
+        sub[f"limit_total:{fn}"] = int(sub.get(f"limit_total:{fn}", 0) or 0) + 1
+
+
+
+# -------------------------------------------------------------------------------------
 # heal 恢复量解析（AC03：int 或 "N%" 百分比串=按上限）
 # -------------------------------------------------------------------------------------
 def _heal_amount(v: object, ctx: Mapping[str, Any], stat: str) -> int:
@@ -810,7 +943,15 @@ def dispatch_action(entry: object, ctx: Mapping[str, Any], rng: object = None,
     if cond is not None and not eval_condition(cond, ctx):
         return _res(action, False, reason="condition_not_met",  # type: ignore[arg-type]
                     message="需要先满足条件")
-    return _HANDLERS[action](entry, ctx, rng=rng, npc_id=npc_id, state=state)
+    # 批25 H1：功能次数上限——**调用前**判定（超限 → 人话拒绝、不执行不扣费）；
+    # 成功后（ok=True）记账（失败/条件不满足不消耗额度）。
+    blocked = _limit_block(entry, ctx, npc_id)
+    if blocked is not None:
+        return blocked
+    res = _HANDLERS[action](entry, ctx, rng=rng, npc_id=npc_id, state=state)
+    if isinstance(res, Mapping) and res.get("ok"):
+        _limit_record(entry, ctx, npc_id)
+    return res
 
 
 # -------------------------------------------------------------------------------------

@@ -933,8 +933,30 @@ def _check_interactions(
                  node_id=node_id, text=text)
         if "condition" in item:
             _check_condition(report, item["condition"], f"{ibase}.condition", node_id)
+        _check_limits(report, item, ibase, node_id)
         _check_action_entry(report, item, ibase, node_id, action, refs,
                             is_dialog=False, is_deliver=False)
+
+
+def _check_limits(report: object, item: Mapping[str, object], base: str, node_id: str) -> None:
+    """批25 H1：interactions[] 功能次数上限 `daily_limit`/`total_limit`（int ≥1；缺省=不限）。
+
+    依据 CakeGame `Ext_NPC_Info与Function.md:150-151` `Day_number`/`User_number`。
+    只做「值形态」硬校验（非整数 / <1 → R-2 红）；缺省不红（= 不限，行为与现状逐字段一致）。
+    引擎消费见 `qbot_rpg/core/npc.py::dispatch_action`（调用前判定、成功后记账）。
+    """
+    for key, rule in (("daily_limit", "npc_daily_limit_invalid"),
+                      ("total_limit", "npc_total_limit_invalid")):
+        v = item.get(key)
+        if v is None:
+            continue
+        if not isinstance(v, int) or isinstance(v, bool) or v < 1:
+            _err(report, f"{base}.{key}", "R-2", rule=rule, node_id=node_id,
+                 key=key, value=v, expect="int ≥1（缺省=不限）")
+    key = item.get("key")
+    if key is not None and (not isinstance(key, str) or not key):
+        _err(report, f"{base}.key", "R-1", rule="npc_interaction_key_invalid",
+             node_id=node_id, key=key, expect="非空字符串")
 
 
 def _check_dealer(

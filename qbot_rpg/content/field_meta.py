@@ -434,6 +434,25 @@ NPC_DIALOGUE_OPTION_CHILDREN: Dict[str, FieldMeta] = {
     "next": FieldMeta(type="str", label="下一对话"),
     "action": FieldMeta(type="obj", children={}, soft_label=True, label="选项动作"),
 }
+# 批25 H1：NPC 功能次数上限（CakeGame `Ext_NPC_Info与Function.md:150-151`
+# `Day_number`/`User_number`「每玩家每日 / 累计触发上限（进度存 UserData 区段
+# `NPC_Day_number.Function.<功能名>`，按日期键；0/空=不限）」）。
+# 形态 = `interactions[]` 条目上的两个可选整数（**沿用既有条目结构，不新开层级**）。
+# 引擎落点：`core/npc.dispatch_action` 调该功能前判定、成功后记账；进度按既有玩家态
+# 口径（persistent_state 的 `npc_delivered` 域）存 `limit_day:<功能名>` / `limit_total:<功能名>`；
+# 每日以日期键（dayroll 日界，settings.refresh_time 缺省 05:00）重置（与 give_item daily 同刻）。
+# 与既有 `repeat`（give_item 行为级 once/daily）分工：`repeat` 管动作行为，本组管**额度**。
+NPC_INTERACTION_CHILDREN: Dict[str, FieldMeta] = {
+    # 功能名（进度键身份）：显式声明则用；缺省由引擎按动作+菜单文案/物品指纹派生。
+    "key": FieldMeta(type="str", label="功能标识",
+                     help="该功能在玩家进度里的稳定标识；缺省按动作+菜单文案派生。"
+                          "改动文案/标识会重置该功能的额度计数。"),
+    "daily_limit": FieldMeta(type="int", range_min=1, label="每日次数上限",
+                             help="每玩家每日可调用该功能的次数（≥1 整数）；缺省 = 不限。"
+                                  "按 dayroll 日界（settings.refresh_time，缺省 05:00）每日重置。"),
+    "total_limit": FieldMeta(type="int", range_min=1, label="累计次数上限",
+                             help="每玩家累计可调用该功能的次数（≥1 整数）；缺省 = 不限。"),
+}
 NPC_FIELDS: Dict[str, FieldMeta] = {
     "id": FieldMeta(type="str", required=True, label="NPC ID"),
     "name": FieldMeta(type="str", required=True, label="名称"),
@@ -450,7 +469,9 @@ NPC_FIELDS: Dict[str, FieldMeta] = {
                              element=FieldMeta(type="obj", children=NPC_DIALOGUE_OPTION_CHILDREN),
                              label="对话选项"),
     }, label="对话"),
-    "interactions": FieldMeta(type="list", element=FieldMeta(type="obj", children={}),
+    "interactions": FieldMeta(type="list",
+                              element=FieldMeta(type="obj",
+                                                children=NPC_INTERACTION_CHILDREN),
                               soft_label=True, label="交互"),
     "quests": FieldMeta(type="list", element=FieldMeta(type="obj", children={}),
                         soft_label=True, label="任务"),

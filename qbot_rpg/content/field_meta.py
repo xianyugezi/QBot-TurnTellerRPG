@@ -1373,17 +1373,18 @@ ACTION_SUBGROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
 ACTION_SUBGROUP_LABELS: Dict[str, str] = {
     "base": "标识与类型", "numeric": "数值", "behavior": "行为", "refs": "引用",
 }
-# 职业：标识 / 成长 / 形态变换。
+# 职业：标识 / 成长 / 形态变换 / 转职前置。
 JOBS_SUBGROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
     ("base", ("id", "name", "difficulty", "playstyle", "recommended_newbie")),
     ("tags", ("mechanic_tags", "weapon_types", "resource_axes")),
     ("growth", ("growth",)),
     ("transform", ("transform",)),
+    ("advance", ("advance",)),
     ("text", ("description",)),
 )
 JOBS_SUBGROUP_LABELS: Dict[str, str] = {
     "base": "标识与定位", "tags": "标签与武器", "growth": "成长率",
-    "transform": "形态变换", "text": "文本",
+    "transform": "形态变换", "advance": "转职前置", "text": "文本",
 }
 # NPC：标识 / 对话与交互 / 关联引用。
 NPC_SUBGROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
@@ -1841,6 +1842,26 @@ def _module_table() -> Dict[str, ModuleMeta]:
             "derive_chains": FieldMeta(type="list", element=FieldMeta(type="str")),   # 31 形态专属派生链（V8 4B）
         }),
         "description": FieldMeta(type="str"),  # 11 职业介绍文案（3d 注册表渲染）
+        # 批23 · C1 转职前置（CakeGame Config_Occupation
+        # TransferDemand/TransferLevel/FormerOccupation；§三 C1）：合并为一个
+        # `advance` 子对象（**不开三个顶层字段**，遵循「少而深」）。三项均可选、
+        # 缺省 = 无该条件；既有职业数据不带 advance → 行为与现状一致（对拍）。
+        # 校验：from 引用 jobs / items 元素引用 items → 泛型 R-4 硬拦；
+        #       level 非整数 R-1 红、负数 R-2 红、0 → Y-1 黄提示。
+        # 引擎：commands/job_commands.py::_advance_block——转职判定逐项校验，
+        # 不满足给人话（要求值 vs 当前值）。
+        "advance": FieldMeta(type="obj", label="转职前置",
+                             help="转职需满足的前置条件（原职业/等级/物品，均可选）。",
+                             children={
+            "from": FieldMeta(type="ref", ref_target="job", label="原职业前置",
+                              help="当前必须正处于该职业（jobs 职业 id）；留空 = 不限原职业。"),
+            "level": FieldMeta(type="int", range_min=1, unit="级", label="转职等级门槛",
+                               help="转职所需玩家等级（≥1）；留空 = 不限等级。"),
+            "items": FieldMeta(
+                type="list", element=FieldMeta(type="ref", ref_target="item"),
+                label="转职需求物品",
+                help="转职须持有的物品（items 物品 id，全部须持有）；留空 = 无物品门槛。"),
+        }),
     }
     # 技能/链侧挂点字段（细化_6b §1.5/§1.6）：revert_form（37）与 derive_only（38）为
     # skills.json 字段、job_scope（39）为 skill_chains.json 字段——随 6a 技能库全量字段

@@ -115,8 +115,8 @@ def _job_detail_text(ctx: Mapping[str, Any], job: Mapping[str, Any]) -> str:
     # 武器类型（显示层翻译，未知类型原文兜底）
     wts = job.get("weapon_types")
     if isinstance(wts, list) and wts:
-        lines.append(tpl_of(ctx, "job_detail_line",
-                            {"k": "武器", "v": "、".join(_WEAPON_TYPE_CN.get(str(w), str(w)) for w in wts)}))
+        _wv = "、".join(_WEAPON_TYPE_CN.get(str(w), str(w)) for w in wts)
+        lines.append(tpl_of(ctx, "job_detail_line", {"k": "武器", "v": _wv}))
     # 资源轴：stats 表中文翻译（name 字段），无 → 原文
     ra = job.get("resource_axes")
     if isinstance(ra, list) and ra:
@@ -169,6 +169,136 @@ def _find_job_by_index(ctx: Mapping[str, Any], arg: str) -> Optional[dict]:
     return None
 
 
+def _player_field(ctx: Mapping[str, Any], key: str) -> Any:
+    """读玩家字段（ctx["player"] 为 Mapping / 对象双形态；缺省回落 ctx[key]）。"""
+    player = ctx.get("player")
+    if isinstance(player, Mapping):
+        val = player.get(key)
+    elif player is not None:
+        val = getattr(player, key, None)
+    else:
+        val = None
+    return val if val is not None else ctx.get(key)
+
+
+def _current_job_id(ctx: Mapping[str, Any]) -> str:
+    """当前职业 id（player.job_id → ctx.job_id 兜底）。"""
+    return str(_player_field(ctx, "job_id") or "")
+
+
+def _current_level(ctx: Mapping[str, Any]) -> int:
+    """当前玩家等级（缺省 1；非数值防御归 1）。"""
+    raw = _player_field(ctx, "level")
+    try:
+        return int(raw) if raw is not None else 1
+    except (TypeError, ValueError):
+        return 1
+
+
+def _count_items(ctx: Mapping[str, Any], item_id: str) -> int:
+    """持有物品数量（批23 · C1；不写死存储形态）。
+
+    优先 ctx["count_item"] 钩子（装配层可注入自建背包）；否则依次读
+    ctx["inventory"] / player.inventory（{id: 数量} 映射 或 ItemInstance 序列）。
+    查无 → 0（保守：不满足门槛）。
+    """
+    hook = ctx.get("count_item")
+    if callable(hook):
+        try:
+            return int(hook(item_id))
+        except Exception:  # noqa: BLE001 - 钩子异常不阻断判定
+            return 0
+    inv = ctx.get("inventory")
+    if isinstance(inv, Mapping):
+        try:
+            return int(inv.get(item_id, 0) or 0)
+        except (TypeError, ValueError):
+            return 0
+    p = ctx.get("player")
+    rows = p.get("inventory") if isinstance(p, Mapping) else getattr(p, "inventory", None)
+    if isinstance(rows, Mapping):
+        try:
+            return int(rows.get(item_id, 0) or 0)
+        except (TypeError, ValueError):
+            return 0
+    if isinstance(rows, (list, tuple)):
+        total = 0
+        for r in rows:
+            rid = r.get("item_id") if isinstance(r, Mapping) else getattr(r, "item_id", None)
+            if str(rid or "") != str(item_id):
+                continue
+            cnt = r.get("count") if isinstance(r, Mapping) else getattr(r, "count", 1)
+            try:
+                total += int(cnt or 1)
+            except (TypeError, ValueError):
+                total += 1
+        return total
+    return 0
+
+
+def _table_entry_name(table: Any, eid: str) -> str:
+    """从 ctx 表（映射 / 条目序列）取条目显示名；查无 → 原 id（展示层兜底）。"""
+    if isinstance(table, Mapping):
+        d = table.get(eid)
+        if isinstance(d, Mapping):
+            return str(d.get("name") or eid)
+        return str(d) if d else eid
+    if isinstance(table, (list, tuple)):
+        for e in table:
+            if isinstance(e, Mapping) and str(e.get("id") or "") == eid:
+                return str(e.get("name") or eid)
+    return eid
+
+
+def _advance_block(ctx: Mapping[str, Any], job: Mapping[str, Any]) -> str:
+    """批23 · C1：转职前置（`advance` 子对象）逐项校验 → 人话拒绝原因。
+
+    结构与语义（三项均可选，缺省 = 无该条件）：
+      · advance.from  ：当前必须正处于该职业（jobs id）；
+      · advance.level ：玩家等级 ≥ 要求（int ≥1）；
+      · advance.items ：须持有全部列出物品（items id，每个 ≥1）。
+    返回 "" = 全部满足（放行）；否则返回可回给玩家的提示（含缺哪一项 +
+    要求值 vs 当前值）。**不带 advance / 空对象 → 恒 ""（行为与现状一致）**。
+    """
+    from qbot_rpg.core.templates import tpl_of  # noqa: PLC0415
+
+    adv = job.get("advance")
+    if not isinstance(adv, Mapping) or not adv:
+        return ""
+    # ① 原职业前置
+    need_from = adv.get("from")
+    if need_from:
+        cur_id = _current_job_id(ctx)
+        if str(need_from) != cur_id:
+            jobs_tbl = _jobs_table(ctx)
+            return tpl_of(ctx, "job_advance_from", {
+                "job": _table_entry_name(jobs_tbl, str(need_from)),
+                "cur": _table_entry_name(jobs_tbl, cur_id) if cur_id else "无职业",
+            })
+    # ② 等级门槛
+    need_level = adv.get("level")
+    if isinstance(need_level, int) and not isinstance(need_level, bool) and need_level > 0:
+        cur_lv = _current_level(ctx)
+        if cur_lv < need_level:
+            return tpl_of(ctx, "job_advance_level", {
+                "level": str(need_level), "cur": str(cur_lv),
+            })
+    # ③ 物品门槛（全部须持有）
+    need_items = adv.get("items")
+    if isinstance(need_items, list):
+        items_tbl = ctx.get("items")
+        for iid in need_items:
+            if not isinstance(iid, str) or not iid:
+                continue
+            have = _count_items(ctx, iid)
+            if have < 1:
+                return tpl_of(ctx, "job_advance_item", {
+                    "item": _table_entry_name(items_tbl, iid),
+                    "need": "1", "have": str(have),
+                })
+    return ""
+
+
 def _persistent_state_of(ctx: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
     """persistent_state 定位（对齐 investigate_commands 先例三级链）。"""
     ps = ctx.get("persistent_state")
@@ -193,7 +323,8 @@ def _apply_job_switch(
     if isinstance(_old_player, MutableMapping):
         _old_job_id = str(_old_player.get("job_id") or "")
     else:
-        _old_job_id = str(getattr(_old_player, "job_id", "") or "") if _old_player is not None else ""
+        _old_job_id = str(getattr(_old_player, "job_id", "") or "") \
+            if _old_player is not None else ""
     player = ctx.get("player")
     if isinstance(player, MutableMapping):
         player["job_id"] = job_id
@@ -297,6 +428,10 @@ def cmd_job(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     job = resolve_job(ctx, arg) or _find_job_by_index(ctx, arg)
     if job is None:
         return tpl_of(ctx, "job_not_found", {"job": arg, "list": _job_list_text(ctx)})
+    # 批23 · C1：转职前置（advance）逐项校验——不满足 → 人话提示，不执行转职。
+    _block = _advance_block(ctx, job)
+    if _block:
+        return _block
     _apply_job_switch(ctx, job)
     rec = "（推荐）" if job.get("recommended_newbie") else ""
     return tpl_of(ctx, "job_switch_success", {
@@ -326,7 +461,6 @@ def register_job_commands(
 
     # 2026-09-05 独立指令：职业（列表）/ 职业详情 <序号|名称>
     def _job_list_cmd(parsed: Any, *a: Any, **k: Any) -> str:
-        from qbot_rpg.core.templates import tpl_of  # noqa: PLC0415
         injected = k.get("ctx") if isinstance(k, dict) else None
         ctx2 = injected if isinstance(injected, MutableMapping) else _ctx(parsed)
         page = 1

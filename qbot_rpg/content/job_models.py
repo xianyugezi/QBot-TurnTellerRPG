@@ -319,6 +319,14 @@ def jobs_fields() -> Dict[str, FieldMeta]:
             type="list", element=FieldMeta(type="str")
         ),  # 联动 4b 穿戴校验 weapon_types×slot
         "growth": FieldMeta(type="obj", children=GROWTH_CHILDREN),
+        # 批23 · C1 转职前置三件套（CakeGame Config_Occupation
+        # TransferDemand/TransferLevel/FormerOccupation；§三 C1）：合并为**一个**
+        # advance 子对象（不开三个顶层字段）——
+        #   from  : 原职业前置（当前必须正处于该职业；ref jobs 注册表 kind="job"）
+        #   level : 本职业独立的转职等级门槛（int ≥1）
+        #   items : 转职需持有的物品（list<ref items>；全部须持有）
+        # 三项均可选、缺省 = 无该条件；既有职业数据不带 advance → 行为与现状一致。
+        "advance": FieldMeta(type="obj", children=ADVANCE_CHILDREN),
         # transform 段注册位（§1.1 #10）：11 字段 #21~#31 + state_policy 3
         # 字段 #32~#34 已由批4路4B 合写追加 children（TRANSFORM_CHILDREN 经
         # _job_transform_children() 惰性挂载，见文末 4B 落点小节）；
@@ -340,6 +348,16 @@ GROWTH_CHILDREN: Mapping[str, FieldMeta] = {
     "lck": FieldMeta(type="number", range_min=0, default=DEFAULT_GROWTH),
     "hp": FieldMeta(type="number", range_min=0, default=DEFAULT_GROWTH),
     "mp": FieldMeta(type="number", range_min=0, default=DEFAULT_GROWTH),
+}
+
+
+# advance 子字段（§三 C1：转职前置三件套；三项均可选、缺省 = 无该条件）。
+# from/items 走 ref（泛型 R-4 引用存在性硬拦：from ∈ jobs、items 元素 ∈ items）；
+# level 走 int ≥1（非整数 R-1 红 / 负数 R-2 红 / 0 → Y-1 黄提示）。
+ADVANCE_CHILDREN: Mapping[str, FieldMeta] = {
+    "from": FieldMeta(type="ref", ref_target="job"),
+    "level": FieldMeta(type="int", range_min=1),
+    "items": FieldMeta(type="list", element=FieldMeta(type="ref", ref_target="item")),
 }
 
 

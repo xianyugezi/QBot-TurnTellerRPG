@@ -371,6 +371,8 @@ def test_skills_fields_keys_exact() -> None:
         "brief", "detail",
         # 批23 B1 生命消耗（hp_cost，CakeGame ConsumeType=HP；与 mp_cost 并列）
         "hp_cost",
+        # 批27 β4 技能复活标记（revive=true 释放时可复活死亡态目标）
+        "revive",
     }
 
 

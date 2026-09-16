@@ -441,6 +441,9 @@ def skills_fields() -> Dict[str, FieldMeta]:
         "tag": FieldMeta(type="enum", enum=SKILL_TAGS, default="none"),
         "armor": FieldMeta(type="bool", default=False),
         "interrupt": FieldMeta(type="bool", default=False),
+        # 批27 · β4 技能复活标记（CakeGame《技能附加与变量集表》:53 FHX）：
+        # true = 释放时可复活死亡态目标；缺省 false。引擎消费 battle.revive_side。
+        "revive": FieldMeta(type="bool", default=False),
         "chain_refs": FieldMeta(
             type="list", element=FieldMeta(type="ref", ref_target="skill_chain")
         ),

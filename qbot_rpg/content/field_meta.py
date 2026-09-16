@@ -1202,7 +1202,7 @@ SKILLS_GROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
         "id", "name", "kind", "type", "attack_type", "element", "tag", "armor",
         "interrupt", "position_rule", "air_policy", "block_mode", "job_restrict",
         "job_form", "counter_type", "counter_skill", "revert_form", "derive_only",
-        "skill",
+        "revive", "skill",
     )),
     ("数值", (
         "power", "break_power", "mp_cost", "hp_cost", "cooldown", "hits", "level",
@@ -1913,6 +1913,14 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "tag": FieldMeta(type="str"),    # F11 none/combo/combo_preserve/combo_push/interrupt/armor（枚举 A2）
         "armor": FieldMeta(type="bool"),         # F12 霸体开关（执行语义快键）
         "interrupt": FieldMeta(type="bool"),     # F13 打断快键（唯一归口 = 效果系统 L0 interrupt，T19）
+        # 批27 · β4 技能复活标记（CakeGame《技能附加与变量集表》:53 FHX 复活技能；补漏 §一 β4）：
+        # bool；true = 该技能可复活死亡态目标（清死亡标记 + 恢复 HP + 去虚弱），缺省 false。
+        # 引擎消费：core/battle.py::revive_side（沿用既有 `revive` 事件链路，见 event_dispatcher）；
+        # 释放路径：_resolve_combo_action 按最终 skill_id 判 revive（派生/组合口径同 hp_cost）。
+        # 校验：仅 bool（泛型 R-1 红拦）；缺省 = 非复活技（既有包零变化，对拍）。
+        "revive": FieldMeta(
+            type="bool", label="复活技能",
+            help="置真：该技能可复活死亡态目标（清死亡标记并恢复生命）；缺省 = 普通技能。"),
         "chain_refs": FieldMeta(type="list", element=FieldMeta(type="str")),  # F14 派生链引用 skill_chains.json（V-2）
         "consume_marks": FieldMeta(type="obj", label="消耗印记", editor="maptable",
                                    key_ref="mark"),  # F15 {mark_id: count} 消耗印记（V-3 键存在/上限 A2）

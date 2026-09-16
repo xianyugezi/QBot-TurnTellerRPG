@@ -1089,6 +1089,47 @@ class BattleEngine:
             return True
         return False
 
+    def revive_side(self, side: str, *, hp: int = 1) -> bool:
+        """批27 · β4：复活一侧（技能 `revive` 标记的唯一引擎消费点）。
+
+        - 仅对 `dead_mark=True` 的侧生效（未死亡/非法侧 → False，零副作用）；
+        - 清死亡标记 + 恢复生命（缺省 1 点；下限 1、上限 max_hp）；
+        - 去除该侧 `category=="weak"` 的弱体/虚弱状态（对齐他们「去除对方虚弱」）；
+        - 回收 `result` 的 `mark_lose`/`mark_win` 与 `_death_order` 登记；
+        - **沿用既有 `revive` 事件链路**：`_dispatch_event("revive", side)`
+          （`core/event_dispatcher.EVENT_POINTS` 早已包含 `revive`，此前无人派发）。
+
+        CTB 调度：本框架 CTB 的 `mark_dead` 无反向接口（死者退队、generation 已 bump），
+        本方法只做**战斗态复活**、不强行回插调度队列（避免与 generation 机冲突；
+        作为已登记缺口见批报）。纯状态变更，不含随机/时间。
+        """
+        if side not in BATTLE_SIDES:
+            return False
+        c = self._combat(side)
+        if not c or not bool(c.get("dead_mark", False)):
+            return False
+        c["dead_mark"] = False
+        cap = int(c.get("max_hp", 0) or 0)
+        new_hp = max(1, int(hp))
+        if cap > 0:
+            new_hp = min(new_hp, cap)
+        c["hp"] = new_hp
+        # 去虚弱：移除该侧 category=="weak" 的状态（弱体/虚弱；其余状态保留）
+        rt = self._new_runtime()
+        rt.status_state[side] = [
+            inst for inst in rt.status_instances(side)
+            if str(inst.get("category") or "") != "weak"
+        ]
+        self._absorb_runtime(rt)
+        # 结果标记回收（复活后不应仍判负/胜）
+        result = self._snap.get("result")
+        if isinstance(result, dict):
+            result.pop("mark_lose" if side == "player" else "mark_win", None)
+        self._death_order = [s for s in self._death_order if s != side]
+        # 沿用既有 revive 事件链路（effects trigger=revive / status on_*）
+        self._dispatch_event("revive", side)
+        return True
+
     def _boss_immediate_win(self) -> bool:
         """A5 BOSS/最后目标死亡→战斗立刻结束（不鞭尸；1g1b 辅助迁移 A5 / L53/L65/L239）。"""
         ec = self._combat("enemy")
@@ -3292,6 +3333,18 @@ class BattleEngine:
             self._armor_active[attacker] = True        # 霸体：本行动阶段期间免疫打断（1c2 §2.2）
         rt = self._new_runtime()
         hit_effects: List[Mapping[str, Any]] = []
+        # ---- 批27 · β4：技能 revive 标记 → 复活死亡态目标（沿用既有 revive 事件链路）----
+        # 按最终 skill_id 解析（派生/组合口径同 hp_cost/consume_marks）；无 revive 字段
+        # 或目标未死亡 → 零操作（既有包行为逐字段一致）。复活细节归 revive_side。
+        _revive_sid = str(ca.get("skill_id") or "")
+        _revive_sd: Any = sd
+        if _revive_sid:
+            _rd = self.combo_engine().resolve_skill(_revive_sid) or {}
+            if isinstance(_rd, Mapping) and _rd:
+                _revive_sd = _rd
+        if bool(_revive_sd.get("revive", False)) and self.revive_side(target):
+            hit_effects.append({"type": "revive", "target": target,
+                                "skill_id": _revive_sid})
         if eff_list:
             ctx = DamageCtx(
                 raw_damage=0, attack_type="skill", attacker=attacker, target=target,

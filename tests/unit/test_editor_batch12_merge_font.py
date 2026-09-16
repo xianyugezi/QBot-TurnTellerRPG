@@ -372,5 +372,5 @@ def test_font_panel_and_wiring() -> None:
 def test_batch_footer_note_is_current() -> None:
     html = _html()
     m = re.search(r'<div class="panel-ft">(.*?)</div>', html, re.S)
-    assert m and "批27 · α组（技能侧）" in m.group(1)
+    assert m and "批28 · D组收尾" in m.group(1)
     assert "批12 · 结构/并入/字号" not in html

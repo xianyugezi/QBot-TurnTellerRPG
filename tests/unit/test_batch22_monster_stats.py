@@ -91,3 +91,23 @@ def test_d1_enemy_absorb_hp_and_immune_dmg_effective() -> None:
     base_eng._resolve_damage_action("player", {"type": "normal", "mult": 1.0})
     assert _rec(engm, "player")["damage"]["final"] == max(
         0, round(_rec(base_eng, "player")["damage"]["final"] * 0.75))
+
+
+def test_d1_editor_visible(tmp_path) -> None:
+    """编辑器接口：怪物 stats 子字段可见（同一注册表键）。"""
+    import json
+
+    from qbot_rpg.web import api
+    root = tmp_path / "pack_d1"
+    root.mkdir()
+    (root / "manifest.json").write_text(json.dumps(
+        {"name": "pack_d1", "version": "1", "schema_version": 1, "modules": ["enemies"]},
+        ensure_ascii=False), encoding="utf-8")
+    (root / "enemies.json").write_text(json.dumps(
+        [{"id": "m", "name": "怪", "stats": {"hp": 100, "absorb_hp": 20, "pierce_pct": 15}}],
+        ensure_ascii=False), encoding="utf-8")
+    detail = api.entry_detail("pack_d1", "enemies", "m", root=tmp_path)
+    stats = next(f for f in detail["fields"] if f["key"] == "stats")
+    children = {c["key"]: c for c in stats.get("children") or []}
+    assert children["absorb_hp"]["label"] == "吸血%"
+    assert children["pierce_pct"]["label"] == "物穿%"

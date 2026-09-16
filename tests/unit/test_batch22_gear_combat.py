@@ -246,3 +246,22 @@ def test_a3_regression_battle_numbers_identical_when_absent() -> None:
                 {k: rec["rating"].get(k) for k in ("crit", "blocked", "pierce", "multi")})
 
     assert _run({}) == _run({k: 0 for k in A3_ALL})
+
+
+def test_a3_editor_visible(tmp_path) -> None:
+    """编辑器接口：items 条目带战斗词条 → entry_detail 字段可见。"""
+    import json
+
+    from qbot_rpg.web import api
+    root = tmp_path / "pack_a3"
+    root.mkdir()
+    (root / "manifest.json").write_text(json.dumps(
+        {"name": "pack_a3", "version": "1", "schema_version": 1, "modules": ["items"]},
+        ensure_ascii=False), encoding="utf-8")
+    (root / "items.json").write_text(json.dumps(
+        [{"id": "fang", "name": "獠牙", "type": "material", "atk": 10,
+          "absorb_hp": 5, "pierce_val": 8}], ensure_ascii=False), encoding="utf-8")
+    detail = api.entry_detail("pack_a3", "items", "fang", root=tmp_path)
+    by = {f["key"]: f for f in detail["fields"]}
+    assert by["absorb_hp"]["present"] is True and by["absorb_hp"]["unit"] == "%"
+    assert by["pierce_val"]["present"] is True and by["pierce_val"]["unit"] == "点"

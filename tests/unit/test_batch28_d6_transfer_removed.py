@@ -9,8 +9,10 @@
   ③ `validate_enhance` 不再对该键做 V5 布尔校验（未知键按「默认放行」不误伤）；
   ④ `level_gated` 的 V5 布尔校验保留（证明只删空壳、未误伤同模块真字段）。
 
-合成样本（不写任何真实内容包）；真实内容包里的残留数据按纪律**不擅自删**，
-登记为「需用户确认后清理」（见批28 报告与 `docs/矛盾与待裁决登记.md` D-6 行）。
+合成样本（不写任何真实内容包）。批28 当时对真实内容包残留数据按纪律**不擅自删**，
+登记为「需用户确认后清理」；**批29 用户拍板「12 做」后已清理**（`content/veinborn/`
+的 `enhance.json` 数据键 + `field_meta.json` 展示名），现状回归见
+`tests/unit/test_batch29_transfer_residue_cleaned.py`。
 """
 
 from __future__ import annotations

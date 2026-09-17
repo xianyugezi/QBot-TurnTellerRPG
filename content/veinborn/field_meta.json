@@ -1142,8 +1142,7 @@
           "legendary": "传说",
           "normal": "普通"
         },
-        "shatter_mode": "碎裂模式",
-        "transfer_allowed": "允许转移"
+        "shatter_mode": "碎裂模式"
       },
       "success_curve": {
         "rate": "成功率",

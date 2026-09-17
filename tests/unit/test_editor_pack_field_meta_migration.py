@@ -3,9 +3,9 @@
 依据：`docs/编辑器重写_数据包展示元数据下放方案.md` §四 批B/C。
 
 本用例**调用** `scripts/compare_field_meta_migration.py`：它用 `git worktree` 检出基线
-`4b9d82d`（批28 D-6 重定；批27 的 `357ca16` 之后，本批**有意删除**空壳键
-`transfer_allowed`，内容包 `veinborn` 的展示名把它回填为纯展示 soft 子字段，使
-`enhance.settings` 的 `keys` 顺序位移——属有意删除引起的展示层位移，
+（批29 重定；批28 已把空壳键 `transfer_allowed` 从框架侧删除，批29 用户拍板后再把内容包
+`veinborn` 的两处残留——`enhance.json` 数据键 + `field_meta.json` 展示名——**一并清理**，
+使 `enhance.settings` 的展示子字段不再出现该键；此后基线树与当前树**逐字段 diff=0**，
 **删除项 = 0、无既有 label/help/group 严格键改动**），在基线树与当前树各跑一遍
 `scripts/editor_readonly_snapshot.py`（模块树 / 条目列表 / 条目详情 / 条目索引 / 引用候选 /
 包列表），递归对拍并输出差异报告。

@@ -9,7 +9,6 @@
     "fail_tier_split": 3,
     "shatter_mode": false,
     "luck_affects": true,
-    "transfer_allowed": false,
     "level_gated": false
   },
   "cost": {

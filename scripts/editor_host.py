@@ -107,6 +107,11 @@ def create_app(pack: Optional[str] = None, root: Optional[str] = None,
     def api_entry_index(pack_id: str):  # type: ignore[no-untyped-def]
         return api.entry_index(pack_id, root=content_root)
 
+    # 批32 C1（框架 §6.12-08）：全包条目级「未使用」标记——一次算完，前端一次取。
+    @app.get("/api/pack/{pack_id}/unused")
+    def api_pack_unused(pack_id: str):  # type: ignore[no-untyped-def]
+        return api.pack_unused(pack_id, root=content_root)
+
     @app.get("/api/pack/{pack_id}/module/{module}/new")
     def api_new_entry(pack_id: str, module: str, name: Optional[str] = None,  # type: ignore[no-untyped-def]
                       preset: Optional[str] = None):

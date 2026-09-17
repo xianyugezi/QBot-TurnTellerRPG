@@ -488,7 +488,8 @@ SHOP_REFRESH_CHILDREN: Dict[str, FieldMeta] = {
                      help="once 时间窗结束（格式 2026-09-07 23:59）"),
 }
 SHOP_ITEM_ENTRY_CHILDREN: Dict[str, FieldMeta] = {
-    "item": FieldMeta(type="str", label="物品引用",
+    # 批32 C1：展示层引用标注（既有引用扫描覆盖「商店商品 → 物品」；type 仍 str，校验不变）。
+    "item": FieldMeta(type="str", ref_target="item", label="物品引用",
                       help="items.json 物品 ID（显示按名字、存储按 ID）"),
     "price": FieldMeta(type="obj", children={}, soft_label=True, label="价格（混合支付）",
                        help="整数覆盖价，或 {货币键:数量} 混合支付对象；缺省=物品基准价"),
@@ -678,7 +679,9 @@ DUNGEON_MAP_ELEM_CHILDREN: Dict[str, FieldMeta] = {
         # monsters 刷怪行并集键（9 包实测 enemy/count/respawn_minutes；veinborn 扩展
         # name/hidden_boss/intro/signal；细化_2a1b §2.1 另含 active_time/seasons/
         # periods/weather_weights 时段天气键——宽松登记，专项刷怪校验 R24-26 全权）
-        "enemy": FieldMeta(type="str", label="怪物引用"),
+        # 批32 C1：展示层引用标注——使既有引用扫描覆盖「地图刷怪行 → 怪物」，
+        # 条目级「📍未使用」角标据此不再把已放入地图的怪物误标（type 仍 str，校验不变）。
+        "enemy": FieldMeta(type="str", ref_target="enemy", label="怪物引用"),
         "count": FieldMeta(type="int", label="同时在场上限"),
         "respawn_minutes": FieldMeta(type="int", label="刷新间隔(分钟)"),
         "name": FieldMeta(type="str", label="展示名"),
@@ -732,7 +735,8 @@ ENTRY_COST_CHILDREN: Dict[str, FieldMeta] = {
 }
 DUNGEON_DROP_ENTRY_CHILDREN: Dict[str, FieldMeta] = {
     # drops.normal/boss 普通掉落行（细化_2a1d §2.4 样例 {item,chance}）
-    "item": FieldMeta(type="str", label="掉落物品"),
+    # 批32 C1：展示层引用标注（既有引用扫描覆盖「副本掉落 → 物品」；type 仍 str，校验不变）。
+    "item": FieldMeta(type="str", ref_target="item", label="掉落物品"),
     "chance": FieldMeta(type="number", label="掉落概率"),
 }
 DUNGEON_FIRST_CLEAR_CHILDREN: Dict[str, FieldMeta] = {
@@ -2362,7 +2366,8 @@ def _module_table() -> Dict[str, ModuleMeta]:
             type="list", soft_label=True, label="采集点",
             element=FieldMeta(type="obj", children={
                 "id": FieldMeta(type="str", label="采集点 ID"),
-                "item": FieldMeta(type="str", label="产出物品"),
+                # 批32 C1：展示层引用标注（既有引用扫描覆盖「采集点产出 → 物品」；type 仍 str）。
+                "item": FieldMeta(type="str", ref_target="item", label="产出物品"),
                 "rarity": FieldMeta(type="str", label="稀有度"),
                 "rate": FieldMeta(type="number", range_min=0, range_max=1, label="出现概率"),
                 "name": FieldMeta(type="str", label="展示名"),

@@ -755,6 +755,8 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
   background: var(--bg); z-index: 1; }
 .gsec .gt { color: var(--text-3); }
 .item .idtag { color: var(--text-5); font-size: var(--fs-11); margin-left: var(--sp-4); }
+/* 批32 C1：条目级「未使用」角标（提示不拦截；不改列表布局与计数/翻页口径） */
+.item .idtag.unused { color: var(--warn); }
 /* 新建条目的 ID 区：人话说明 + 建议 ID + 按名称生成 + 即时唯一性状态 */
 .newid { border: var(--bw) solid var(--line-strong); background: var(--surface);
   padding: var(--sp-4) var(--sp-5); margin: var(--sp-4) var(--sp-6);
@@ -1866,7 +1868,9 @@ var state = {
   // 批15 #9：map 模块的「全表」合成入口（键值表格）；其余模块为 null
   tableEntry: null,
   // 批15 #2：包声明的「合并页」（对象模块的若干段合成一页）
-  pages: []
+  pages: [],
+  // 批32 C1：条目级「未使用」角标——整包一次算完（按模块缓存 id→true），避免逐条请求
+  unusedPack: null, unusedByMod: {}
 };
 var draft = EditorDraft.newDraft();
 
@@ -3404,9 +3408,30 @@ function renderListHints(d) {
   box.hidden = !parts.length;
 }
 
+// 批32 C1（框架 §6.12-08）：条目级「未使用」角标数据——整包批量一次算完（不逐条请求）。
+// 复用后端既有引用扫描（/unused）；失败不阻断列表（只是不出角标）；切换内容包后重新取。
+function ensureUnused() {
+  if (!state.pack) { return Promise.resolve(); }
+  if (state.unusedPack === state.pack) { return Promise.resolve(); }
+  return api("/api/pack/" + enc(state.pack) + "/unused").then(function (u) {
+    var by = {};
+    var mods = (u && u.modules) || {};
+    Object.keys(mods).forEach(function (m) {
+      var set = {};
+      (((mods[m] || {}).unused) || []).forEach(function (id) { set[id] = true; });
+      by[m] = set;
+    });
+    state.unusedPack = state.pack; state.unusedByMod = by;
+  }).catch(function () { state.unusedPack = state.pack; state.unusedByMod = {}; });
+}
+
 function loadEntries() {  if (!state.pack || !state.module) { return Promise.resolve(); }
-  return api("/api/pack/" + enc(state.pack) + "/module/" + enc(state.module) + "/entries")
-    .then(function (data) {
+  // 批32 C1：与条目列表并行取「未使用」角标（整包一次算完；同包再切模块走缓存）。
+  return Promise.all([
+    api("/api/pack/" + enc(state.pack) + "/module/" + enc(state.module) + "/entries"),
+    ensureUnused()
+  ]).then(function (pair) {
+    var data = pair[0];
       state.entries = data.entries || [];
       // 批15 #9：map 模块的「全表」合成入口（键值表格）；其余模块为 null。
       state.tableEntry = data.table_entry || null;
@@ -3630,9 +3655,18 @@ function entryItemEl(e, srcModule, cur, grouped, srcLabel) {
     gtag.textContent = "来自 " + (e.merged_from_label || e.merged_from);
     d.appendChild(gtag);
   }
+  // 批32 C1（框架 §6.12-08）：条目级「未使用」角标（提示不拦截；按整包引用扫描结果）。
+  var _umod = state.unusedByMod || {};
+  if (_umod[emod] && _umod[emod][e.id]) {
+    var utag = document.createElement("span");
+    utag.className = "idtag unused";
+    utag.textContent = "📍未使用";
+    utag.title = "按框架登记的引用关系未找到引用方（提示，不拦截；打开条目可查看/建立引用）。";
+    d.appendChild(utag);
+  }
   d.title = e.name + "  [" + e.id + "]"
     + (e.unconfigured ? "（框架已支持，本包尚未配置）" : "")
-    + (e.framework_default ? "（框架默认；保存后写入本包覆盖）" : "")
+    + (e.framework_default ? "（框架关键模板 · 只读；用「复制为包覆盖」后可编辑）" : "")
     + (e.covered ? "（本包已覆盖框架默认）" : "")
     + (e.mounted_from ? "（挂载条目；数据与保存仍在 " + (e.mounted_from_label || e.mounted_from) + "）" : "")
     + (e.merged_from ? "（按条件并入；数据与保存仍在 " + (e.merged_from_label || e.merged_from) + "）" : "")

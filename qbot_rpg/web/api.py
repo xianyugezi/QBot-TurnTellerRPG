@@ -3935,37 +3935,47 @@ def _ref_kind_matches(ref_target: object, kinds: set) -> bool:
 
 def _collect_ref_hits(value: object, fm: Optional[FieldMeta], path: str,
                       target_id: str, kinds: set,
-                      out: List[Dict[str, Any]]) -> None:
-    """沿字段元数据递归找「值 == target_id 的引用字段」（键名不写死，全按元数据下钻）。"""
+                      out: List[Dict[str, Any]], *, match_all: bool = False) -> None:
+    """沿字段元数据递归找「引用字段命中」（键名不写死，全按元数据下钻）。
+
+    · `target_id`：要匹配的条目标识；`match_all=True` → 不按值过滤，收集**全部**引用命中
+      （批32 C1：未使用批量判定一次算完，复用同一条元数据遍历，不另造扫描）；
+    · 引用字段口径：`type=ref`，或**非容器字段但声明了 `ref_target`**（既有展示层引用
+      标注，如 str + ref_target；与 `_collect_target_hits` 同源）。
+    """
     if fm is None:
         if isinstance(value, Mapping):
             for k, v in value.items():
-                _collect_ref_hits(v, None, f"{path}.{k}" if path else str(k), target_id, kinds, out)
+                _collect_ref_hits(v, None, f"{path}.{k}" if path else str(k), target_id,
+                                  kinds, out, match_all=match_all)
         elif isinstance(value, list):
             for i, v in enumerate(value):
-                _collect_ref_hits(v, None, f"{path}[{i}]", target_id, kinds, out)
+                _collect_ref_hits(v, None, f"{path}[{i}]", target_id, kinds, out,
+                                  match_all=match_all)
         return
-    if fm.type == "ref":
-        if str(value) == target_id and _ref_kind_matches(_ref_target_of(fm) or "", kinds):
+    if fm.type == "ref" or (fm.type not in ("obj", "list", "map") and _ref_target_of(fm)):
+        if (match_all or str(value) == target_id) \
+                and (match_all or _ref_kind_matches(_ref_target_of(fm) or "", kinds)):
             out.append({"path": path, "value": value, "ref_target": _ref_target_of(fm) or ""})
         return
     if fm.type == "list":
         if isinstance(value, list):
             for i, v in enumerate(value):
-                _collect_ref_hits(v, fm.element, f"{path}[{i}]", target_id, kinds, out)
+                _collect_ref_hits(v, fm.element, f"{path}[{i}]", target_id, kinds, out,
+                                  match_all=match_all)
         return
     if fm.type == "obj":
         if isinstance(value, Mapping):
             for k, v in value.items():
                 child = fm.children.get(str(k)) if fm.children else None
                 _collect_ref_hits(v, child, f"{path}.{k}" if path else str(k),
-                                  target_id, kinds, out)
+                                  target_id, kinds, out, match_all=match_all)
         return
     if fm.type == "map":
         if isinstance(value, Mapping):
             for k, v in value.items():
                 _collect_ref_hits(v, fm.element, f"{path}.{k}" if path else str(k),
-                                  target_id, kinds, out)
+                                  target_id, kinds, out, match_all=match_all)
 
 
 def reference_scan(pack: object, module: object, entry_id: object,
@@ -4105,6 +4115,125 @@ def ref_holders(pack: object, target: object, keys: Optional[object] = None,
     return out
 
 
+# =====================================================================================
+# 批32 C1（框架 §6.12-08）：条目级「📍未使用」角标——批量一次算完（不新增扫描机制）
+# =====================================================================================
+#: 条目级未使用角标文案（前端按稳定标记取；后端只给标记与 id 集合）。
+UNUSED_TAG = "📍未使用"
+
+
+def _collect_ref_targets(fm: Optional[FieldMeta], out: set) -> None:
+    """递归收集字段元数据里声明的引用目标（`_ref_target_of`：options_ref 优先 ref_target）。"""
+    if fm is None:
+        return
+    if fm.type == "ref" or (fm.type not in ("obj", "list", "map") and _ref_target_of(fm)):
+        t = _ref_target_of(fm)
+        if t:
+            out.add(str(t))
+    if fm.type == "list":
+        _collect_ref_targets(fm.element, out)
+    elif fm.type == "obj":
+        for child in (fm.children or {}).values():
+            _collect_ref_targets(child, out)
+    elif fm.type == "map":
+        _collect_ref_targets(fm.element, out)
+
+
+def pack_unused(pack: object, root: Optional[object] = None,
+                meta: Optional[FieldMetaTable] = None) -> Dict[str, Any]:
+    """全包条目级未使用标记（`/api/pack/{pack}/unused`；只读）。
+
+    **复用既有引用扫描**（`_collect_ref_hits`，与 `/entry/{m}/{id}/refs` 的
+    `reference_scan` 同一元数据遍历；`match_all` 一次收集全包引用），不另造扫描。
+    返回 ``{pack, modules: {mod: {unused:[id...], count, total}}, total, unused_tag}``：
+      · 只给**有声明引用目标且数据里至少有 1 条声明引用命中**的模块出角标
+        （引用面多由未登记即席字符串引用构成的模块整体不出，避免误标「全部未使用」）；
+      · 框架默认键 / 未配置段 / map 合成全表条目不算条目内容，跳过；
+      · **提示不拦截**：仅展示层标记，不改任何校验/保存判定。
+    """
+    pack_dir = _pack_dir(pack, root)
+    manifest = _manifest(pack_dir)
+    declared = _declared_modules(manifest)
+    table = meta if meta is not None else _pack_meta_table(pack_dir)
+    ref_targets: set = set()
+    assoc_targets: set = set()
+    for rel_mod in declared:
+        rm = table.module(rel_mod)
+        if rm is None:
+            continue
+        for fm in (rm.fields or {}).values():
+            _collect_ref_targets(fm, ref_targets)
+        if rm.value_meta is not None:
+            _collect_ref_targets(rm.value_meta, ref_targets)
+        for a in rm.associations:
+            if a.module:
+                assoc_targets.add(str(a.module))
+    # 一次遍历：全包引用命中（ref_target, value）；associations 记为 @assoc:<目标模块>。
+    hits: List[Tuple[str, str]] = []
+    for rel_mod in declared:
+        rm = table.module(rel_mod)
+        rd = _read_json(pack_dir / f"{rel_mod}.json")
+        re = _entry_type(rm, rd)
+        for eid, _name, subject in _entry_rows(rd, rm):
+            if not isinstance(subject, Mapping):
+                continue
+            base = _entry_base(rm, re, eid, subject)
+            for k, v in subject.items():
+                local: List[Dict[str, Any]] = []
+                _collect_ref_hits(v, base.get(str(k)), str(k), "", set(), local,
+                                  match_all=True)
+                for h in local:
+                    val = str(h.get("value"))
+                    if val:
+                        hits.append((str(h.get("ref_target") or ""), val))
+            if rm is not None:
+                for a in rm.associations:
+                    if not a.field or not a.module:
+                        continue
+                    for _p, v in _walk_path(subject, a.field):
+                        if isinstance(v, str) and v:
+                            hits.append((f"@assoc:{a.module}", v))
+    modules_out: Dict[str, Any] = {}
+    for mod in declared:
+        mm = table.module(mod)
+        kinds = {mod}
+        if mm is not None:
+            if mm.kind:
+                kinds.add(str(mm.kind))
+            if mm.namespace:
+                kinds.add(str(mm.namespace))
+        if mod not in assoc_targets and not any(
+                _ref_kind_matches(t, kinds) for t in ref_targets):
+            continue
+        data = _read_json(pack_dir / f"{mod}.json")
+        etype = _entry_type(mm, data)
+        rows = [(eid, name, subj) for eid, name, subj in _entry_rows(data, mm)
+                if subj is not _UNCONFIGURED and subj is not _FRAMEWORK_DEFAULT
+                and not (eid == TABLE_ENTRY_ID and etype == "map")]
+        if not rows:
+            continue
+        used: set = set()
+        for t, val in hits:
+            if t.startswith("@assoc:"):
+                if t[len("@assoc:"):] == mod:
+                    used.add(val)
+            elif _ref_kind_matches(t, kinds):
+                used.add(val)
+        # 保守显示口径：该模块**至少有 1 条声明引用在数据里真实命中**才出角标。
+        # 若一条都没命中，说明该模块的引用面多由未登记的即席字符串引用构成（框架只对
+        # 声明面负责）→ 整体不出角标，宁可不提示也不误标「全部未使用」。
+        if not used:
+            continue
+        unused = sorted(eid for eid, _n, _s in rows if eid not in used)
+        modules_out[mod] = {"unused": unused, "count": len(unused), "total": len(rows)}
+    return {
+        "pack": str(pack),
+        "modules": modules_out,
+        "total": sum(int(m["count"]) for m in modules_out.values()),
+        "unused_tag": UNUSED_TAG,
+    }
+
+
 __all__ = [
     "DEFAULT_GROUP",
     "EDIT_CONTROLS",
@@ -4149,6 +4278,8 @@ __all__ = [
     "ref_holders",
     "ref_options",
     "reference_scan",
+    "pack_unused",
+    "UNUSED_TAG",
     "repo_root",
     "slugify",
     "suggest_entry_id",

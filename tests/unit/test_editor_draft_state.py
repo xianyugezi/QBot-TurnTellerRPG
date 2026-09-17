@@ -98,5 +98,5 @@ def test_frontend_renders_every_edit_control() -> None:
 
 def test_frontend_cancel_button_restores_base() -> None:
     html = HTML.read_text(encoding="utf-8")
-    # 取消 = 清空草稿 + 重画条目（回到落盘值）
-    assert "discardDraft(); reloadDetail();" in html
+    # 取消 = 清空草稿 + 清本机草稿（批32 D1：用户明确放弃）+ 重画条目（回到落盘值）
+    assert "discardDraft(); clearLocalDraft(); reloadDetail();" in html

@@ -39,7 +39,15 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
-BASELINE_REF = "8e56cc3"
+# 批32 重定基线：8e56cc3 → cad91df（本批四项末提交）。原因（对拍实证，非 shop 命名空间）：
+#   · 新增框架 settings 字段 `pack_protection`（数据包保护开关）→ settings 条目 list 多 1 条
+#     （count/total_count/unconfigured_count、index.total、模块声明计数各 +1，纯新增）；
+#   · 4 处既有 **字符串引用字段**补 `ref_target` 展示层标注（maps.monsters[].enemy=enemy；
+#     shop.items[].item / dungeon.drops.*[].item / maps.gather_points[].item=item）→ 对应
+#     `ref_target` 与派生 `hint`/`help_card.*` 由空变「引用：X」（新增面，无删除）。
+#   · 删除项 = 0（输出无「仅迁移前有」）；label/help/group/module_labels/module_tree 严格键零改动。
+#   重定后基线树与当前树逐字段 diff=0（同批13.1/批23/批30 先例）。
+BASELINE_REF = "cad91df"
 CONTENT = REPO / "content"
 
 

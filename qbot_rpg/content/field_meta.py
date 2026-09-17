@@ -447,26 +447,65 @@ QUEST_FIELDS: Dict[str, FieldMeta] = {
 }
 
 # ---- shop（shop_models 顶层访问器 15；refresh 4 模式×5 key；条目 price 混合支付）----
-SHOP_ITEM_ENTRY_CHILDREN: Dict[str, FieldMeta] = {
-    "item": FieldMeta(type="str", label="物品引用"),
-    "price": FieldMeta(type="obj", children={}, soft_label=True, label="价格（混合支付）"),
-    "stock": FieldMeta(type="int", label="库存"),
-    "limit": FieldMeta(type="int", label="限购"),
-    "period": FieldMeta(type="obj", children={}, soft_label=True, label="上架时段"),
-}
+# 批30（U8 · 2026-09-16）：条目字段元数据按**定稿权威键**收敛——定稿字段表
+# `scope/limit/period`（商店定稿 :173-177）为准，旧键 `per_player`/`per_player_period`
+# 仅兼容读取（`content/shop_models.py:108-110` + `core/shop.py:536-549`），**不进入编辑器
+# 可写字段**（避免写入旧键）。枚举与 `shop_models.SHOP_*` 同源（此处不 import 以免
+# 反向依赖：field_meta 被 shop_models 依赖）。宽度/类型对齐 shop_models 访问器。
+SCOPES: Tuple[str, ...] = ("global", "personal")            # shop_models.SCOPES
+LIMIT_PERIODS: Tuple[str, ...] = ("day", "week", "month")   # shop_models.LIMIT_PERIODS
+SHOP_TYPES: Tuple[str, ...] = ("normal", "npc", "reputation", "event", "blackmarket")
+REFRESH_MODES: Tuple[str, ...] = ("daily", "weekly", "once", "none")
+SHOP_MIGRATION_HELP = (
+    "旧字段 per_player 自动映射为 scope=personal + limit，per_player_period 映射为 period；"
+    "本编辑器只写定稿键 scope/limit/period（保存时按定稿键落盘）"
+)
 SHOP_REFRESH_CHILDREN: Dict[str, FieldMeta] = {
-    "mode": FieldMeta(type="str", enum=("daily", "weekly", "manual", "fixed"), label="刷新模式"),
-    "start": FieldMeta(type="str", label="开始时间"),
-    "end": FieldMeta(type="str", label="结束时间"),
-    "hour": FieldMeta(type="int", label="刷新小时"),
-    "interval": FieldMeta(type="int", label="间隔天数"),
+    "mode": FieldMeta(type="str", enum=REFRESH_MODES, label="刷新模式",
+                      help="daily 每日 / weekly 每周 / once 时间窗内一次 / none 永不刷新（缺省）"),
+    "hour": FieldMeta(type="int", label="刷新小时", unit="时",
+                      help="daily/weekly 的刷新时刻 0~23（缺省 5=05:00）"),
+    "weekday": FieldMeta(type="int", label="刷新星期",
+                         help="weekly 的星期 1~7（1=周一，缺省 1）"),
+    "start": FieldMeta(type="str", label="开始时间",
+                       help="once 时间窗开始（格式 2026-09-01 00:00）"),
+    "end": FieldMeta(type="str", label="结束时间",
+                     help="once 时间窗结束（格式 2026-09-07 23:59）"),
+}
+SHOP_ITEM_ENTRY_CHILDREN: Dict[str, FieldMeta] = {
+    "item": FieldMeta(type="str", label="物品引用",
+                      help="items.json 物品 ID（显示按名字、存储按 ID）"),
+    "price": FieldMeta(type="obj", children={}, soft_label=True, label="价格（混合支付）",
+                       help="整数覆盖价，或 {货币键:数量} 混合支付对象；缺省=物品基准价"),
+    "currency": FieldMeta(type="str", label="货币覆盖",
+                          help="条目级货币（settings.currencies 键）；缺省=商店默认货币"),
+    "scope": FieldMeta(type="str", enum=SCOPES, label="商品范围",
+                       help="global=全服共享库存（默认）/ personal=每人独立限购。" + SHOP_MIGRATION_HELP),
+    "stock": FieldMeta(type="int", label="全服库存",
+                       help="global 侧库存，0=无限；仅 scope=global 生效"),
+    "refresh": FieldMeta(type="obj", children=SHOP_REFRESH_CHILDREN, soft_label=True,
+                         label="库存刷新",
+                         help="条目级刷新覆盖商店级；仅 global 侧"),
+    "limit": FieldMeta(type="int", label="个人限购",
+                       help="personal 侧每周期可买上限，0=不限；仅 scope=personal 生效。"
+                            "旧键 per_player 映射到此"),
+    "period": FieldMeta(type="str", enum=LIMIT_PERIODS, label="限购周期",
+                        help="个人限购清零周期 day/week/month；旧键 per_player_period 映射到此"),
+    "reputation_required": FieldMeta(type="obj", children={}, soft_label=True, label="声望门槛",
+                                     help="{level:N} 条目级声望门槛（更严于商店级）"),
+    "min_level": FieldMeta(type="int", label="等级门槛",
+                           help="条目级等级门槛，0=不限"),
+    "discount": FieldMeta(type="int", label="折扣",
+                          help="0~100 减价百分比；原价划线展示"),
+    "sold_out_once": FieldMeta(type="bool", label="售罄后下架",
+                               help="true=售出后永久下架，刷新不恢复（仅 global）"),
 }
 SHOP_FIELDS: Dict[str, FieldMeta] = {
     "id": FieldMeta(type="str", required=True, label="商店 ID"),
     "name": FieldMeta(type="str", required=True, label="名称"),
     "icon": FieldMeta(type="str", label="图标"),
-    "type": FieldMeta(type="str", enum=("normal", "general", "black", "reputation",
-                                        "event", "quest"), label="类型"),
+    "type": FieldMeta(type="str", enum=SHOP_TYPES, label="类型",
+                      help="normal 普通 / npc NPC 店 / reputation 声望 / event 活动 / blackmarket 黑市"),
     "currency": FieldMeta(type="str", label="默认货币"),
     "level_required": FieldMeta(type="int", label="等级门槛"),
     "reputation_required": FieldMeta(type="obj", children={}, soft_label=True,
@@ -480,8 +519,8 @@ SHOP_FIELDS: Dict[str, FieldMeta] = {
                        label="商品列表"),
     "pool": FieldMeta(type="list", element=FieldMeta(type="obj", children={}),
                       soft_label=True, label="黑市池"),
-    "price_fluctuation": FieldMeta(type="obj", children={}, soft_label=True,
-                                   label="价格波动"),
+    "price_fluctuation": FieldMeta(type="int", label="价格波动", unit="%",
+                                   help="黑市价格随机浮动 ±%（0~50，0=固定价）"),
     "visible": FieldMeta(type="bool", label="可见"),
     "desc": FieldMeta(type="str", label="描述"),
     "listing_count": FieldMeta(type="int", label="上架数（黑市）"),

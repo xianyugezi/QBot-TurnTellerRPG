@@ -725,7 +725,7 @@
       "icon": "商店图标标识。",
       "id": "商店唯一标识。",
       "items": {
-        "_help": "商品列表（物品/价格/库存/限购/时段）。",
+        "_help": "商品列表（物品/价格/货币/范围/库存/刷新/限购/周期/折扣 等定稿字段）。",
         "sold_out_once": "售罄后是否永久下架。"
       },
       "level_required": "进入/购买所需的等级门槛。",
@@ -733,17 +733,17 @@
       "name": "商店显示名。",
       "open_condition": "开放条件（未满足时不出现在场景）。",
       "pool": "黑市池（黑市候选商品）。",
-      "price_fluctuation": "价格波动配置。",
+      "price_fluctuation": "价格波动配置（±%，0~50）。",
       "refresh": {
-        "_help": "刷新规则（模式/时间/间隔）。",
+        "_help": "刷新规则（模式/时间/星期）。",
         "end": "结束时间。",
         "hour": "刷新小时。",
-        "interval": "间隔天数。",
-        "mode": "刷新模式：daily 每日 / weekly 每周 / manual 手动 / fixed 固定。",
-        "start": "开始时间。"
+        "mode": "刷新模式：daily 每日 / weekly 每周 / once 时间窗内一次 / none 永不刷新。",
+        "start": "开始时间。",
+        "weekday": "刷新星期（1=周一…7=周日，缺省 1）。"
       },
       "reputation_required": "购买所需的声望门槛。",
-      "type": "商店类型：normal 普通 / general 通用 / black 黑市 / reputation 声望 / event 活动 / quest 任务。",
+      "type": "商店类型：normal 普通 / npc NPC 店 / reputation 声望 / event 活动 / blackmarket 黑市。",
       "visible": "是否可见。"
     },
     "skill_chains": {

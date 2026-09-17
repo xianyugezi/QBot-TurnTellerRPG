@@ -1587,12 +1587,22 @@ SHOP_FIELD_SUBGROUPS, SHOP_SUBGROUP_ORDER = \
 
 # ---- 派生条件的主体声明（批5 条件行编辑器；键名不写死，缺省按实际值推断）----
 # 条件结构 = {主体: {比较符: 值}} 或 {主体: {二级键: {比较符: 值}}}；and/or 为逻辑组合主体。
+# 批29 α4：任务状态枚举（镜像 core/combo.QUEST_STATES——G0 单向依赖：content 层不 import
+# core；语义实现单点在 core/combo.evaluate_condition，此处只供编辑器枚举与校验白名单）。
+CHAIN_QUEST_STATES: Tuple[str, ...] = ("in_progress", "completed", "not_started")
+
 CHAIN_CONDITION_SUBJECTS: Dict[str, ConditionSubject] = {
     "count": ConditionSubject(label="连段计数", ops=("eq", "min", "max")),
     "self_marks": ConditionSubject(label="自身印记", key_ref="mark", ops=("eq", "min", "max")),
     "target_marks": ConditionSubject(label="目标印记", key_ref="mark", ops=("eq", "min", "max")),
     "self_status": ConditionSubject(label="自身状态", value_ref="status", ops=("has",)),
     "target_hp_pct": ConditionSubject(label="目标生命百分比", ops=("min", "max")),
+    # 批29 α4：补齐 level/job/quest 三类——形态同族（值/集合/两级键），
+    # 求值单点在 core/combo.evaluate_condition，此处只声明展示与控件。
+    "level": ConditionSubject(label="玩家等级", ops=("eq", "min", "max")),
+    "job": ConditionSubject(label="职业", value_ref="job", ops=("in", "not_in")),
+    "quest": ConditionSubject(label="任务进度", key_ref="quest",
+                              ops=("state",), value_enum=(CHAIN_QUEST_STATES)),
     "and": ConditionSubject(label="且（全部满足）", combine=True),
     "or": ConditionSubject(label="或（任一满足）", combine=True),
 }

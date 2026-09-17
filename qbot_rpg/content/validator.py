@@ -591,6 +591,11 @@ class _Checker:
         if module_name == "skills":
             from qbot_rpg.content.skill_validator import validate_skills
             validate_skills(self._modules, self)
+        # 批29 α4：skill_chains 条件专项（新增 level/job/quest 三类红拦；未使用三新键的
+        # 既有链零影响）。形态机制同 skills 专项（validate_xxx(modules, report) 鸭子类型）。
+        if module_name == "skill_chains":
+            from qbot_rpg.content.skill_validator import validate_skill_chains
+            validate_skill_chains(self._modules, self)
         # M13 职业库（细化_6b_职业库与变换引擎契约 §五：jobs 专项校验器 V1~V8 全权，
         # 批5 路5A/5B 落盘 job_validator.py——validate_jobs(modules, report) 鸭子类型口径
         # 同 npc/shop/quest/checkin；随后继续泛型 _check_entry：jobs_fields 39 键登记表

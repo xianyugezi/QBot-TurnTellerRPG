@@ -978,7 +978,7 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
       <div class="panel-body" id="p-body">
         <div class="empty">从左侧选择模块与条目。字段按内容包元数据渲染；改动先进草稿，保存时才校验并落盘。</div>
       </div>
-      <div class="panel-ft"><span>批28 · D组收尾</span></div>
+      <div class="panel-ft"><span>批29 · 残留清理与条件补全</span></div>
     </section>
 
   </div>
@@ -1512,6 +1512,7 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
     return declared.map(function (s) {
       return { key: String(s.key), label: s.label || String(s.key),
                key_ref: s.key_ref || "", value_ref: s.value_ref || "",
+               value_enum: s.value_enum || [],
                ops: s.ops || [], combine: !!s.combine };
     });
   }
@@ -5522,6 +5523,12 @@ function condValueHtml(r, info, path) {
   if (target) {
     return '<select class="cin cvalue"' + attrs + ' data-lref="' + esc(target)
       + '" data-current="' + esc(cur) + '">' + selectOptions(cur, [], "（选择值）") + "</select>";
+  }
+  // 批29 α4：值域枚举主体（如任务三态）→ 固定下拉（元数据声明，键名不写死）
+  var valueEnum = (info && info.value_enum) || [];
+  if (valueEnum.length) {
+    return '<select class="cin cvalue"' + attrs + ">"
+      + selectOptions(cur, valueEnum, "（选择值）") + "</select>";
   }
   if (typeof v === "number" && !isList) {
     return '<input class="cin cvalue" type="number" step="any"' + attrs

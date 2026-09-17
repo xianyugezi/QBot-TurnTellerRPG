@@ -1477,8 +1477,10 @@ def _cond_ctx_for(snapshot: Mapping[str, Any], actor: str, target: str) -> Any:
 
     self_statuses/target_statuses 从 snapshot[side].status_state 实例收集 status_id；
     target_hp_pct = target.hp/max_hp*100；round_ = snapshot["turn"]；count=0。
+    批29 α4：level/job/quest 与 combo.condition_ctx 同源读 actor 侧快照字段
+    （level / job / quest_active / quest_completed），保持两处条件上下文口径一致。
     """
-    from qbot_rpg.core.combo import ConditionCtx  # lazy：combo 无 core 依赖，防环
+    from qbot_rpg.core.combo import ConditionCtx, _id_pool  # lazy：combo 无 core 依赖，防环
 
     def _ids(side: str) -> frozenset:
         ss = snapshot.get("status_state")
@@ -1489,16 +1491,25 @@ def _cond_ctx_for(snapshot: Mapping[str, Any], actor: str, target: str) -> Any:
             return frozenset()
         return frozenset(str(i.get("status_id", "")) for i in insts if isinstance(i, Mapping))
 
+    def _side(side: str) -> Mapping:
+        node = snapshot.get(side)
+        return node if isinstance(node, Mapping) else {}
+
     c = snapshot.get(target)
     max_hp = int(c.get("max_hp", 0)) if isinstance(c, dict) else 0
     hp = int(c.get("hp", 0)) if isinstance(c, dict) else 0
     pct = (hp / max_hp * 100.0) if max_hp > 0 else 100.0
+    a = _side(actor)
     return ConditionCtx(
         count=0,
         target_hp_pct=round(pct, 6),
         self_statuses=_ids(actor),
         target_statuses=_ids(target),
         round_=int(snapshot.get("turn", 1) or 1),
+        level=int(a.get("level", 0) or 0),
+        job=str(a.get("job") or ""),
+        quest_active=frozenset(_id_pool(a.get("quest_active"))),
+        quest_completed=frozenset(_id_pool(a.get("quest_completed"))),
     )
 
 

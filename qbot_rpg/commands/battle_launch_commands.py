@@ -196,13 +196,27 @@ def _enemy_combatant(enemy_entry: Mapping[str, Any]) -> dict:
 
 
 def _player_combatant(ctx: Mapping[str, Any]) -> dict:
-    """ctx 玩家档案 → combatant（对齐 core/pvp._combatant_of 鸭子读法）。"""
+    """ctx 玩家档案 → combatant（对齐 core/pvp._combatant_of 鸭子读法）。
+
+    批29 α4：追加条件求值数据源（combo.ConditionCtx 读 action 侧快照字段）——
+    当前职业 id 与任务两表（进行中/已完成）。只在 ctx 提供时追加、不改既有键，
+    也不在 `_combatant_of`（其键集有精确断言）里新增：
+      - job（缺省由 ctx["job_id"] 提供，装配层已注入）；
+      - quest_active / quest_completed（装配层 player_persistent 口径）。
+    """
     from qbot_rpg.core.pvp import _combatant_of  # noqa: PLC0415
 
     player = ctx.get("player")
     if player is None:
         return {}
-    return _combatant_of(player)
+    comb = _combatant_of(player)
+    job_id = str(ctx.get("job_id") or "")
+    if job_id and not comb.get("job"):
+        comb["job"] = job_id
+    for key in ("quest_active", "quest_completed"):
+        if key in ctx and key not in comb:
+            comb[key] = ctx[key]
+    return comb
 
 
 # ---------------------------------------------------------------------------

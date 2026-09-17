@@ -91,18 +91,20 @@ X_PREFIX: str = "x_"
 # =====================================================================================
 
 
-def _emit(report: object, level: str, field: str, kind: str, **detail: object) -> None:
+def _emit_at(
+    report: object, module: str, level: str, field: str, kind: str, **detail: object
+) -> None:
     """向收集器发一条校验记录（error/warning 两态，三形态收集器兼容）。
 
     优先级：_Checker._err/_warn（module 首参）→ dict/list 形态（rec 直接
-    append）→ 鸭子类型 error/warning（带 module 首参）兜底。module 恒为
-    "skills"（与 validate_actions 的 "action" 同口径）。
+    append）→ 鸭子类型 error/warning（带 module 首参）兜底。module 由调用方给
+    （技能库 "skills" / 派生链 "skill_chains"，同 validate_actions 的 "action" 口径）。
     """
     if hasattr(report, "_err") and level == "error":
-        report._err("skills", field, kind, **detail)
+        report._err(module, field, kind, **detail)
         return
     if hasattr(report, "_warn") and level == "warning":
-        report._warn("skills", field, kind, **detail)
+        report._warn(module, field, kind, **detail)
         return
     if isinstance(report, dict):
         rec = {"field": field, "kind": kind, "level": level, **detail}
@@ -114,15 +116,19 @@ def _emit(report: object, level: str, field: str, kind: str, **detail: object) -
         report.append(rec)
         return
     if hasattr(report, "error") and level == "error":
-        report.error("skills", field, kind, **detail)
+        report.error(module, field, kind, **detail)
         return
     if hasattr(report, "warning") and level == "warning":
-        report.warning("skills", field, kind, **detail)
+        report.warning(module, field, kind, **detail)
         return
     rec = {"field": field, "kind": kind, "level": level, **detail}
     if isinstance(report, Mapping) and hasattr(report, "setdefault"):
         bucket = report.setdefault("errors" if level == "error" else "warnings", [])
         bucket.append(rec)
+
+
+def _emit(report: object, level: str, field: str, kind: str, **detail: object) -> None:
+    _emit_at(report, "skills", level, field, kind, **detail)
 
 
 def _err(report: object, field: str, kind: str, **detail: object) -> None:
@@ -131,6 +137,11 @@ def _err(report: object, field: str, kind: str, **detail: object) -> None:
 
 def _warn(report: object, field: str, kind: str, **detail: object) -> None:
     _emit(report, "warning", field, kind, **detail)
+
+
+def _err_chain(report: object, field: str, kind: str, **detail: object) -> None:
+    """skill_chains 专项的红拦发射（module="skill_chains"；批29 α4 条件校验）。"""
+    _emit_at(report, "skill_chains", "error", field, kind, **detail)
 
 
 # =====================================================================================
@@ -764,6 +775,169 @@ def validate_skills(modules: Mapping[str, object], report: object) -> None:
     _check_v7_basic_per_job(report, [e for e in data if isinstance(e, Mapping)], jobs_data)
 
 
+# =====================================================================================
+# 批29 α4：skill_chains 条件专项校验（新增 level/job/quest 三类，红拦）
+# =====================================================================================
+# 依据：批27 α4 结论的缺口（combo 条件集缺 level/job/quest）；本批补齐后，条件对象
+# 的**求值单点**仍在 core/combo.evaluate_condition（content 层不 import core——G0），
+# 此处按同一形态做内容侧结构/引用红拦（更严不放松，未使用三新键的既有链零影响）：
+#   level：{eq|min|max: int≥1}（裸整数 = eq 简写，同 combo._slot_bound）；
+#   job：{in|not_in: [job_id...]}（∈ jobs 表）；
+#   quest：{quest_id: {state: in_progress|completed|not_started}}（∈ quest 表）。
+
+#: level 条件合法比较符（沿用既有数值界写法；裸整数 = eq 简写）
+CHAIN_LEVEL_OPS: Tuple[str, ...] = ("eq", "min", "max")
+#: job 条件合法操作（集合命中 / 集合外；语义由 core/combo._job_match_ok 单点实现）
+CHAIN_JOB_OPS: Tuple[str, ...] = ("in", "not_in")
+
+
+def _is_int_value(value: object) -> bool:
+    """严格整数判定（bool 不算整数——对齐全仓数值口径）。"""
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def _check_level_condition(report: object, base: str, spec: object) -> None:
+    """level 条件：比较符合法 + 阈值 int ≥ 1。"""
+    if _is_int_value(spec):
+        if spec < 1:  # type: ignore[operator]
+            _err_chain(report, base, "V-9", rule="level_threshold_invalid", got=spec,
+                       msg="等级阈值须为 int ≥ 1")
+        return
+    if not isinstance(spec, Mapping) or not spec:
+        _err_chain(report, base, "V-9", rule="level_shape", got=type(spec).__name__,
+                   msg="等级条件须为 {eq|min|max: int≥1} 或裸整数（eq 简写）")
+        return
+    for op, val in spec.items():
+        if op not in CHAIN_LEVEL_OPS:
+            _err_chain(report, base, "V-9", rule="level_op_invalid", got=op,
+                       msg="等级条件比较符仅支持 %s" % (list(CHAIN_LEVEL_OPS),))
+            continue
+        if not _is_int_value(val) or val < 1:  # type: ignore[operator]
+            _err_chain(report, base, "V-9", rule="level_threshold_invalid", op=op,
+                       got=val, msg="等级阈值须为 int ≥ 1")
+
+
+def _check_job_condition(report: object, base: str, spec: object, jobs_ids: Set[str]) -> None:
+    """job 条件：操作合法 + 集合为字符串 id 列表 + 每个 id ∈ jobs 表。"""
+    if not isinstance(spec, Mapping) or not spec:
+        _err_chain(report, base, "V-9", rule="job_shape", got=type(spec).__name__,
+                   msg="职业条件须为 {in|not_in: [job_id...]}")
+        return
+    if not any(op in CHAIN_JOB_OPS for op in spec):
+        _err_chain(report, base, "V-9", rule="job_op_invalid", got=sorted(spec),
+                   msg="职业条件仅支持 %s" % (list(CHAIN_JOB_OPS),))
+        return
+    for op, val in spec.items():
+        if op not in CHAIN_JOB_OPS:
+            _err_chain(report, base, "V-9", rule="job_op_invalid", got=op,
+                       msg="职业条件仅支持 %s" % (list(CHAIN_JOB_OPS),))
+            continue
+        if not isinstance(val, (list, tuple)) or not val or not all(
+                isinstance(x, str) and x for x in val):
+            _err_chain(report, base, "V-9", rule="job_set_invalid", op=op, got=val,
+                       msg="职业集合须为非空字符串 id 列表")
+            continue
+        for jid in val:
+            if jid not in jobs_ids:
+                _err_chain(report, base, "V-9", rule="job_ref_missing", ref=jid,
+                           ref_target="job",
+                           msg="职业引用 %r 不存在（job ∈ jobs 表）" % (jid,))
+
+
+def _check_quest_condition(
+    report: object, base: str, spec: object,
+    quest_ids: Set[str], states: Tuple[str, ...],
+) -> None:
+    """quest 条件：任务 id 引用 ∈ quest 表 + state 枚举合法。"""
+    if not isinstance(spec, Mapping) or not spec:
+        _err_chain(report, base, "V-9", rule="quest_shape", got=type(spec).__name__,
+                   msg="任务条件须为 {quest_id: {state: %s}}" % (list(states),))
+        return
+    for qid, leaf in spec.items():
+        if not isinstance(qid, str) or not qid:
+            _err_chain(report, base, "V-9", rule="quest_id_invalid", got=qid,
+                       msg="任务 id 须为非空字符串")
+            continue
+        if qid not in quest_ids:
+            _err_chain(report, base, "V-9", rule="quest_ref_missing", ref=qid,
+                       ref_target="quest",
+                       msg="任务引用 %r 不存在（quest_id ∈ quest 表）" % (qid,))
+        if not isinstance(leaf, Mapping) or not leaf:
+            _err_chain(report, base, "V-9", rule="quest_state_shape", quest=qid,
+                       got=type(leaf).__name__, msg="任务条件叶子须为 {state: <态>}")
+            continue
+        for key, val in leaf.items():
+            if key != "state":
+                _err_chain(report, base, "V-9", rule="quest_state_key_invalid",
+                           quest=qid, got=key, msg="任务条件叶子仅支持 state 键")
+                continue
+            if not isinstance(val, str) or val not in states:
+                _err_chain(report, base, "V-9", rule="quest_state_invalid", quest=qid,
+                           got=val, expect=list(states),
+                           msg="任务状态须为 %s 之一" % (list(states),))
+
+
+def _check_chain_condition(
+    report: object, cond: object, base: str,
+    jobs_ids: Set[str], quest_ids: Set[str], states: Tuple[str, ...],
+) -> None:
+    """递归遍历条件对象，校验 level/job/quest 三类（and/or/not 任意拓扑）。"""
+    if not isinstance(cond, Mapping):
+        return
+    if "level" in cond:
+        _check_level_condition(report, f"{base}.level", cond["level"])
+    if "job" in cond:
+        _check_job_condition(report, f"{base}.job", cond["job"], jobs_ids)
+    if "quest" in cond:
+        _check_quest_condition(report, f"{base}.quest", cond["quest"], quest_ids, states)
+    for comb in ("and", "or"):
+        subs = cond.get(comb)
+        if isinstance(subs, Mapping):
+            subs = [subs]
+        if isinstance(subs, list):
+            for i, sub in enumerate(subs):
+                _check_chain_condition(report, sub, f"{base}.{comb}.{i}",
+                                       jobs_ids, quest_ids, states)
+    nxt = cond.get("not")
+    if isinstance(nxt, Mapping):
+        _check_chain_condition(report, nxt, f"{base}.not", jobs_ids, quest_ids, states)
+
+
+def validate_skill_chains(modules: Mapping[str, object], report: object) -> None:
+    """派生链专项校验主入口（批29 α4：level/job/quest 条件红拦）。
+
+    入参:
+      modules: 全量内容模块（skill_chains 键为链条目数组；缺失 → 跳过，对齐既有
+               校验器「模块未接线默认放行」惯例；jobs/quest 为条件引用靶模块）。
+      report:  收集器（_Checker / dict / list 三形态兼容）。
+    出参: 无（红拦全部经 report 收集，红拦由 loader 聚合拒绝加载）。
+    """
+    data = modules.get("skill_chains")
+    if data is None:
+        return
+    if not isinstance(data, list):
+        _err_chain(report, "skill_chains", "R-5", rule="skill_chain_not_list",
+                   got=type(data).__name__, msg="skill_chains.json 需顶层数组")
+        return
+    # 延迟导入：状态枚举单点声明在 field_meta（本文件其余依赖仍仅 skill_models）
+    from qbot_rpg.content.field_meta import CHAIN_QUEST_STATES  # noqa: PLC0415
+
+    jobs_ids = _id_set(modules.get("jobs"))
+    quest_ids = _id_set(modules.get("quest"))
+    for idx, entry in enumerate(data):
+        if not isinstance(entry, Mapping):
+            continue
+        steps = entry.get("steps")
+        if not isinstance(steps, list):
+            continue
+        for si, step in enumerate(steps):
+            if not isinstance(step, Mapping):
+                continue
+            _check_chain_condition(
+                report, step.get("condition"), f"skill_chains.{idx}.steps.{si}",
+                jobs_ids, quest_ids, CHAIN_QUEST_STATES)
+
+
 __all__ = [
     "ELEMENT_VALUES",
     "DEFAULT_POWER",
@@ -771,5 +945,8 @@ __all__ = [
     "EFFECT_REF_KEY",
     "EFFECT_ATOMIC_KEY",
     "X_PREFIX",
+    "CHAIN_LEVEL_OPS",
+    "CHAIN_JOB_OPS",
     "validate_skills",
+    "validate_skill_chains",
 ]

@@ -1885,6 +1885,7 @@ def condition_spec(fm: Optional[FieldMeta]) -> Dict[str, Any]:
             "label": sub.label or str(key),
             "key_ref": sub.key_ref or "",
             "value_ref": sub.value_ref or "",
+            "value_enum": [str(v) for v in (sub.value_enum or ())],
             "ops": [str(o) for o in sub.ops],
             "combine": bool(sub.combine),
         })

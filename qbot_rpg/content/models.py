@@ -134,6 +134,9 @@ class ConditionSubject:
     value_ref: Optional[str] = None        # 值的引用目标 kind（如状态 ID）
     ops: Tuple[str, ...] = ()              # 该主体支持的比较符（缺省由全表/实际值推断）
     combine: bool = False                  # 该主体是逻辑组合（值为子条件列表，如 and/or）
+    # 批29 α4：值域的**枚举**声明（值不是引用、而是固定枚举时用，如任务三态；
+    # value_ref 与 value_enum 互斥使用）。只影响编辑控件（下拉），不参与校验。
+    value_enum: Tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

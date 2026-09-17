@@ -58,7 +58,7 @@ combo_state 始终以战斗快照为权威（同 effects.EffectRuntime 哲学）
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 __all__ = [
@@ -304,9 +304,15 @@ class ChainConfig:
 
 
 # ---------------------------------------------------------------------------
-# 条件对象（1c2 §1.4 六字段）：count / target_hp_pct / self_status /
-# target_status / round / and·or·not 复合
+# 条件对象（1c2 §1.4 六字段 + 批29 α4 补 level/job/quest）：
+# count / target_hp_pct / self_status / target_status / round / 印记 / 方位 /
+# level / job / quest / and·or·not 复合
 # ---------------------------------------------------------------------------
+
+#: 任务条件三态（批29 α4）：进行中 / 已完成 / 未接取（引用 quest 模块 id）。
+#: 判定源 = 玩家侧快照 quest_active（映射）/ quest_completed（列表），沿用任务
+#: 引擎既有两表口径（`core/quest.py` §quest_active/§quest_completed），不新造状态表。
+QUEST_STATES: Tuple[str, ...] = ("in_progress", "completed", "not_started")
 
 
 @dataclass(frozen=True)
@@ -315,6 +321,12 @@ class ConditionCtx:
 
     statuses 为 {self: set[str], target: set[str]} 状态 ID 集合（求值失败默认
     「条件不满足」安全失败，L328-329）。
+
+    批29 α4 补齐三个「玩家进度」维度（与既有维度同一次快照求值、安全失败口径一致）：
+      - level：玩家等级（阈值 int ≥ 1；快照侧缺省 0 → min/eq 类条件不满足）；
+      - job：当前职业 id（快照侧 player.job；空串 = 未设置 → in/not_in 均不满足）；
+      - quest_active / quest_completed：进行中 / 已完成任务 id 集合（第三态
+        not_started = 两表都不含）。命名沿用任务引擎既有两表，不新造状态表。
     """
 
     count: int = 0
@@ -323,6 +335,10 @@ class ConditionCtx:
     target_statuses: frozenset = frozenset()
     round_: int = 1
     positions: Mapping = field(default_factory=dict)
+    level: int = 0
+    job: str = ""
+    quest_active: frozenset = frozenset()
+    quest_completed: frozenset = frozenset()
 
 
 def _cond_bound(cond: Mapping[str, Any], key: str, value: float) -> bool:
@@ -420,6 +436,75 @@ def _position_match_ok(spec: object, ctx: ConditionCtx) -> bool:
         spec, str(cell.get("side", "")), str(cell.get("height", "")))
 
 
+def _id_pool(raw: object) -> list:
+    """字符串 id 集合归一（批29 α4：job 集合 / 任务两表的共同读取口径）。
+
+    接受 str（单元素）/ list·tuple·set·frozenset（逐元素取非空 str）/ Mapping
+    （取键）；其余 → 空表。**不猜测**：非法元素静默跳过（求值端安全失败）。
+    """
+    if isinstance(raw, str):
+        return [raw] if raw else []
+    if isinstance(raw, Mapping):
+        return [str(k) for k in raw if isinstance(k, str) and k]
+    if isinstance(raw, (list, tuple, set, frozenset)):
+        return [x for x in raw if isinstance(x, str) and x]
+    return []
+
+
+def _job_match_ok(spec: object, ctx: ConditionCtx) -> bool:
+    """job 条件求值（批29 α4）：当前职业 ∈ / ∉ 声明集合（引用 jobs 模块 id）。
+
+    - `{in: [job_id, ...]}`     当前职业命中集合（任一）→ 满足；
+    - `{not_in: [job_id, ...]}` 当前职业不命中集合 → 满足（集合外的显式表达）；
+    - 两键同现 → 两子句都须成立（in 与 not_in 的与）；
+    - 当前职业未设置（空串，快照缺数据）→ 恒不满足（安全失败，非「集合外也满足」）；
+    - spec 非对象 / 无 in·not_in / 集合非字符串列表 → 不满足。
+    """
+    if not isinstance(spec, Mapping):
+        return False
+    cur = str(ctx.job or "")
+    ok = True
+    if "in" in spec:
+        ok = ok and bool(cur) and cur in _id_pool(spec["in"])
+    if "not_in" in spec:
+        ok = ok and bool(cur) and cur not in _id_pool(spec["not_in"])
+    if "in" not in spec and "not_in" not in spec:
+        return False
+    return bool(ok)
+
+
+def _quest_state_of(ctx: ConditionCtx, quest_id: str) -> str:
+    """单任务当前态（第三态 not_started = 两表都不含）。"""
+    if quest_id in ctx.quest_completed:
+        return "completed"
+    if quest_id in ctx.quest_active:
+        return "in_progress"
+    return "not_started"
+
+
+def _quest_match_ok(spec: object, ctx: ConditionCtx) -> bool:
+    """quest 条件求值（批29 α4）：`{quest_id: {state: <态>}}` 逐条断言（全部满足）。
+
+    - quest_id 引用 quest 模块 id（校验端红拦缺失引用）；
+    - state ∈ QUEST_STATES（in_progress / completed / not_started），其余/缺失 → 不满足；
+    - 多条任务 → **全部满足**（AND；同 self_status.has 的「齐备」语义）；
+    - spec 非对象 / 条目非对象 → 不满足（安全失败）。
+    """
+    if not isinstance(spec, Mapping) or not spec:
+        return False
+    for quest_id, leaf in spec.items():
+        if not isinstance(quest_id, str) or not quest_id:
+            return False
+        if not isinstance(leaf, Mapping):
+            return False
+        state = leaf.get("state")
+        if not isinstance(state, str) or state not in QUEST_STATES:
+            return False
+        if _quest_state_of(ctx, quest_id) != state:
+            return False
+    return True
+
+
 def evaluate_condition(
     cond: Optional[Mapping[str, Any]],
     ctx: ConditionCtx,
@@ -435,6 +520,12 @@ def evaluate_condition(
       - {self_marks/target_marks/marks_total/marks_set/marks_any: ...} 印记条件
         （1d §3.1 C-1..C-5，需 marks_lookup 接线；无接线或求值失败 → 不满足）
       - 复合 {and: [...]}/{or: [...]}/{not: {...}} 任意拓扑（TC-09/L91）
+      - **批29 α4 补三类「玩家进度」条件**（与上文同族形态、同一求值入口）：
+        - {level: {eq|min|max}} 玩家等级与阈值比较（阈值 int ≥ 1，校验端红拦）；
+        - {job: {in: [job_id...]}} / {job: {not_in: [job_id...]}} 职业集合命中/外
+          （引用 jobs；当前职业未设置 → 不满足）；
+        - {quest: {quest_id: {state: in_progress|completed|not_started}}} 任务三态
+          （引用 quest；多任务全部满足；第三态 not_started = 既不进行中也未完成）。
     **未知键 → 条件不满足**（1c3 TC-13「未注册字段/求值异常 → 安全失败」；P0-1 修复：
     原实现静默忽略未知键恒 True，含印记条件的派生无条件触发——反安全）。
     未配置 condition（{}）+ 恒可用：返回 True（1c2 §1.2 字段 10「缺省=无条件」）。
@@ -462,6 +553,7 @@ def evaluate_condition(
         ("count", (ctx.count, "eq")),
         ("target_hp_pct", (ctx.target_hp_pct, "min")),
         ("round", (ctx.round_, "eq")),
+        ("level", (ctx.level, "eq")),
     ):
         if key in c and not _slot_bound(c[key], spec[0], spec[1]):
             result = False
@@ -470,6 +562,13 @@ def evaluate_condition(
         if isinstance(sc, Mapping) and "has" in sc:
             if not _status_has({skey: sc}, ctx):
                 result = False
+
+    # 批29 α4：职业集合（in/not_in，引用 jobs）/ 任务三态（引用 quest）——
+    # 与上文同一次快照求值，安全失败口径一致。
+    if "job" in c and not _job_match_ok(c["job"], ctx):
+        result = False
+    if "quest" in c and not _quest_match_ok(c["quest"], ctx):
+        result = False
 
     # 复合操作符（任意拓扑）
     if "and" in c:
@@ -504,7 +603,9 @@ def evaluate_condition(
     _KNOWN = {"count", "target_hp_pct", "round", "self_status", "target_status",
               "and", "or", "not",
               "self_marks", "target_marks", "marks_total", "marks_set", "marks_any",
-              "position_match"}
+              "position_match",
+              # 批29 α4 补三类（与求值分支同源；未知键仍安全失败）
+              "level", "job", "quest"}
     for k in c:
         if not isinstance(k, str) or k not in _KNOWN:
             result = False
@@ -820,7 +921,12 @@ class ComboEngine:
         return frozenset(ids)
 
     def condition_ctx(self, side: str, snap: Mapping[str, Any], chain: Optional[ChainConfig] = None) -> ConditionCtx:
-        """组装条件求值上下文（声明时快照，1c1a L92 施放后不重评）。"""
+        """组装条件求值上下文（声明时快照，1c1a L92 施放后不重评）。
+
+        批29 α4：level 取 action 侧快照 level（缺省 0）；job 取 action 侧 job（缺省空串）；
+        quest_active/quest_completed 取 action 侧同名两表（映射键 / 列表元素；缺省空集）。
+        读取**不猜**：缺失/非法一律退化到安全失败口径（求值端不满足）。
+        """
         target = "enemy" if side == "player" else "player"
         _self = snap.get(side)
         _tgt = snap.get(target)
@@ -843,6 +949,10 @@ class ComboEngine:
             round_=int(snap.get("turn", 1)),
             positions={"self": {"side": _ps, "height": _ph},
                        "target": {"side": _ts, "height": _th}},
+            level=int(c_self.get("level", 0) or 0),
+            job=str(c_self.get("job") or ""),
+            quest_active=frozenset(_id_pool(c_self.get("quest_active"))),
+            quest_completed=frozenset(_id_pool(c_self.get("quest_completed"))),
         )
 
     def pending_derivations(self, side: str, snap: Mapping[str, Any]) -> Tuple[DerivationRef, ...]:
@@ -1352,13 +1462,9 @@ class ComboEngine:
         仅在 count==max 的 replace 步 → 返回该步（每条来自基技能、条件达顶可用）。
         无则 None（本次为纯达顶，下回连段技归零重打）。
         """
-        ctx = ConditionCtx(
-            count=post_state.count,
-            target_hp_pct=self.condition_ctx(side, snap).target_hp_pct,
-            self_statuses=self._status_ids(snap, side),
-            target_statuses=self._status_ids(snap, self._target_of(side)),
-            round_=int(snap.get("turn", 1)),
-        )
+        # 批29 α4：不再手抄字段——复用 condition_ctx 的**同一份**上下文，仅把 count
+        # 覆盖为达顶后新快照的段数（保证 level/job/quest 等新维度不漏接、口径单一）。
+        ctx = replace(self.condition_ctx(side, snap), count=post_state.count)
 
         def _avail(s: StepConfig) -> bool:
             return evaluate_condition(s.condition, ctx, self._marks_lookup)

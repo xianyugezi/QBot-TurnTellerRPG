@@ -56,6 +56,40 @@ _OUT_TO_ROLE: Dict[str, str] = {
     ROLE_MANAGER_OUT: ROLE_GM,
 }
 
+# 批32 B1（框架 §6.12-06）：框架关键模板（`_FRAMEWORK_DEFAULT` 哨兵 = 框架键全集里包未覆盖）
+# 在编辑器只读；直接保存被拒，须先「复制为包覆盖」。文案面向作者，不暴露内部键名。
+FRAMEWORK_LOCK_MESSAGE = (
+    "「{entry}」是框架关键模板（默认（框架）·只读）：不能直接改框架默认内容。"
+    "请先点「复制为包覆盖」生成本包覆盖条目，再编辑该覆盖。"
+)
+FRAMEWORK_LOCK_HOW = ("点条目页的「复制为包覆盖」生成包内覆盖条目；之后即可自由编辑，"
+                     "框架默认保持干净。")
+
+
+def _framework_locked(slot: Mapping[str, Any]) -> bool:
+    """条目是否为「框架默认键」→ 只读。
+
+    `entry_slot` 对框架默认 map 键把写链路 subject 归 None（patch 键 = 键名），并显式带
+    `framework_default=True`；两处任一命中即视为框架关键模板。
+    """
+    return bool(slot.get("framework_default")) or slot.get("subject") is api._FRAMEWORK_DEFAULT
+
+
+def _framework_lock_error(slot: Mapping[str, Any], entry_id: object) -> Dict[str, Any]:
+    """框架关键模板只读的人话红拦（结构化；前端在结果框展示）。"""
+    return {
+        "level": "red",
+        "code": "framework_locked",
+        "module": str(slot.get("module") or ""),
+        "field": str(entry_id),
+        "entry_id": str(entry_id),
+        "field_key": str(entry_id),
+        "field_label": "框架关键模板（只读）",
+        "related": True,
+        "message": FRAMEWORK_LOCK_MESSAGE.format(entry=str(entry_id)),
+        "how_to_fix": FRAMEWORK_LOCK_HOW,
+    }
+
 
 # =====================================================================================
 # 权限位（机主可编辑 / GM 只读预览）
@@ -486,6 +520,16 @@ def validate_entry(pack: object, module: object, entry_id: object, patch: object
     （`needs_confirmation`）才会真正写入。
     """
     slot, _content, report = _plan(pack, module, entry_id, patch, root, meta)
+    # 批32 B1：框架关键模板只读 → 预检直接判红（提示「复制为包覆盖」），不进入常规校验。
+    if _framework_locked(slot):
+        return _envelope(
+            ok=False, phase="validate", pack=str(pack), module=str(slot["module"]),
+            entry_id=str(entry_id), level="red",
+            errors=[_framework_lock_error(slot, entry_id)], warnings=[],
+            changed_fields=sorted(str(k) for k in (patch or {})),
+            rename=None, refs=[], ref_count=0, breaking=False, needs_confirmation=False,
+            message="框架关键模板只读：请先「复制为包覆盖」再编辑。",
+        )
     rename = _identity_rename(slot, patch)
     refs = (api.reference_scan(pack, str(slot["module"]), rename["from"], root=root, meta=meta)
             if rename else [])
@@ -566,7 +610,8 @@ def _verify_after_write(pack: object, ground_slot: Mapping[str, Any],
 def save_entry(pack: object, module: object, entry_id: object, patch: object, *,
                root: Optional[object] = None, role: object = ROLE_OWNER,
                meta: Optional[FieldMetaTable] = None,
-               confirm: bool = False) -> Dict[str, Any]:
+               confirm: bool = False,
+               copy_override: bool = False) -> Dict[str, Any]:
     """编辑落盘唯一入口：红拦不落盘 → 备份 → 原子写 → 回读复核。
 
     任一环节失败都返回 ok=false 且**不假成功**：
@@ -579,10 +624,23 @@ def save_entry(pack: object, module: object, entry_id: object, patch: object, *,
     `refs` / `ref_count` / `breaking`；**有引用且未 `confirm` 时不写入**（`needs_confirmation`），
     确认后照常保存（**不自动改写引用方**；旧名悬空引用由后续校验如实报「引用目标不存在」）。
     无改名 / 改名但无引用 → 行为与既有完全一致。
+
+    批32 B1（框架 §6.12-06）：框架关键模板（`_FRAMEWORK_DEFAULT`）只读——直接保存被拒；
+    仅 `copy_override=True`（由 `copy_framework_override` 内部调用）放行，把框架默认文本
+    复制成包覆盖条目。普通条目 / 包覆盖条目行为不变。
     """
     require_edit(role)
     slot, new_content, report = _plan(pack, module, entry_id, patch, root, meta)
     mod = str(slot["module"])
+    if _framework_locked(slot) and not copy_override:
+        env = _envelope(
+            phase="save", pack=str(pack), module=mod, entry_id=str(entry_id),
+            changed_fields=sorted(str(k) for k in (patch or {})),
+            rename=None, refs=[], ref_count=0, breaking=False, needs_confirmation=False,
+        )
+        env.update(ok=False, level="red", errors=[_framework_lock_error(slot, entry_id)],
+                   warnings=[], message="框架关键模板只读：请先「复制为包覆盖」再编辑。")
+        return env
     rename = _identity_rename(slot, patch)
     refs = api.reference_scan(pack, mod, rename["from"], root=root, meta=meta) if rename else []
     breaking = bool(rename and refs)
@@ -645,6 +703,34 @@ def save_entry(pack: object, module: object, entry_id: object, patch: object, *,
         backup=atomic_store.backup_status(pack_dir, mod),
         message=("已保存（含黄提示，可继续修改）。" if yellows else "已保存。"),
     )
+    return env
+
+
+def copy_framework_override(pack: object, module: object, entry_id: object, *,
+                            root: Optional[object] = None, role: object = ROLE_OWNER,
+                            meta: Optional[FieldMetaTable] = None) -> Dict[str, Any]:
+    """批32 B1：把「框架默认键」的当前框架文本复制成包覆盖条目（之后可自由编辑）。
+
+    复用既有落盘链路（`save_entry` 的 `copy_override=True` 分支：既有校验 / 备份 / 原子写 /
+    回读复核 / 回退全部不变），**不新增写路径**。仅对框架默认键生效：
+      · 已是包覆盖 / 包自有键 → BadRequest（无需复制）；
+      · 框架来源里没有该键 → BadRequest。
+    返回值 = `save_entry` 包络，额外带 `copied_from_framework=True`。
+    """
+    require_edit(role)
+    slot = api.entry_slot(pack, module, entry_id, root=root)
+    if not _framework_locked(slot):
+        raise api.BadRequest(f"「{entry_id}」不是框架默认键（已是包覆盖或包自有键），无需复制。")
+    mmeta = slot.get("mmeta")
+    fw = api.framework_key_source(api._key_source_of(mmeta))
+    if str(entry_id) not in fw:
+        raise api.BadRequest(f"框架来源里没有键「{entry_id}」，无法复制为包覆盖。")
+    # 通用：框架默认键的表单键 = 条目 id（`_entry_base` 对 `_FRAMEWORK_DEFAULT` 的口径）。
+    patch = {str(entry_id): fw[str(entry_id)]}
+    env = save_entry(pack, module, entry_id, patch, root=root, role=role, meta=meta,
+                     copy_override=True)
+    if isinstance(env, dict):
+        env["copied_from_framework"] = True
     return env
 
 

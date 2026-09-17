@@ -70,6 +70,10 @@ FRAMEWORK_DEFAULT_TAG = "默认（框架）"
 PACK_COVERED_TAG = "已覆盖（包）"
 # 框架键没有人类可读名/说明时的兜底提示（提示作者「键即名字」）。
 KEY_IS_NAME_NOTE = "键 = 名称"
+# 批32 B1（框架 §6.12-06）：框架关键模板（框架键全集里包未覆盖的键）在编辑器**只读**——
+# 不可直接改框架默认内容；须先「复制为包覆盖」生成包内覆盖条目，之后自由编辑覆盖。
+FRAMEWORK_LOCK_NOTE = ("框架关键模板 · 只读：请点「复制为包覆盖」生成本包覆盖条目后再编辑；"
+                       "复制后即可自由改动，框架默认内容保持干净。")
 # 批14 #4：元数据未登记子字段的兜底标注（前端字段行内展示；不改任何校验语义）。
 META_UNREGISTERED_NOTE = "元数据未登记，按实际值推断"
 # 批20 C：中栏条目分组的「取不到分组值」兜底分组（稳定机器键 + 中文兜底显示名；包可覆盖名）。
@@ -3077,6 +3081,14 @@ def entry_detail(pack: object, module: object, entry_id: object,
         groups = _group_summary(fields, mmeta)
         # 批15 #8：二级结构——每个分组下的折叠子块计划（大段默认折叠；字段不消失）。
         blocks = _block_plan(fields, mmeta)
+    # 批32 B1：框架关键模板只读——`_FRAMEWORK_DEFAULT`（框架键全集里包未覆盖）条目不可
+    # 直接编辑；字段标 `editable=False`，条目带 `framework_locked` 供前端渲染「复制为包覆盖」。
+    # 通用机制：只认哨兵，不认任何模块名/模板键名；包覆盖条目（普通数据）不受影响。
+    framework_locked = bool(framework_default)
+    if framework_locked:
+        for f in fields:
+            f["editable"] = False
+            f["framework_locked"] = True
     return {
         "pack": str(pack),
         "pack_name": str(manifest.get("name", "") or pack),
@@ -3092,6 +3104,9 @@ def entry_detail(pack: object, module: object, entry_id: object,
         "framework_default": framework_default,
         "framework_default_tag": FRAMEWORK_DEFAULT_TAG,
         "pack_covered_tag": PACK_COVERED_TAG,
+        # 批32 B1：框架关键模板只读（仅锁定条目出键；普通条目键集与现状一致）。
+        "framework_locked": framework_locked,
+        "framework_lock_note": FRAMEWORK_LOCK_NOTE if framework_locked else "",
         "default_note": default_note,
         # 批14 #6①：动态键空间（如 object 段的 obj 字段未登记子字段）→ 前端给「+ 子项 / ✕」。
         "open_keys": open_keys,

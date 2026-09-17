@@ -62,13 +62,16 @@ def test_templates_default_entries_flagged_and_named_by_key() -> None:
     assert by_id["register_gate"]["name"] == "register_gate"
 
 
-def test_templates_default_entry_detail_editable_with_note() -> None:
+def test_templates_default_entry_detail_readonly_with_note() -> None:
+    """批32 B1：框架关键模板（包未覆盖的框架键）= 只读；附框架侧说明与复制入口标记。"""
     d = api.entry_detail("veinborn", "templates", "register_gate", root=CONTENT)
     assert d["framework_default"] is True and d["unconfigured"] is True
+    assert d["framework_locked"] is True
+    assert d["framework_lock_note"]              # 「复制为包覆盖」提示
     assert d["default_note"]              # 有框架说明用说明，无则「键 = 名称」
     assert d["field_count"] == 1
     f = d["fields"][0]
-    assert f["key"] == "register_gate" and f["editable"] is True
+    assert f["key"] == "register_gate" and f["editable"] is False
     assert f["present"] is False
 
 
@@ -136,7 +139,7 @@ def test_unknown_key_source_is_safe(tmp_path: Path, monkeypatch: pytest.MonkeyPa
 
 
 # =====================================================================================
-# C · 端到端：默认（框架）模板真写进包 templates.json → 回退逐字节复原
+# C · 端到端：默认（框架）模板经「复制为包覆盖」真写进包 templates.json → 回退逐字节复原
 # =====================================================================================
 @pytest.fixture()
 def veinborn_copy(tmp_path: Path) -> Path:
@@ -144,26 +147,47 @@ def veinborn_copy(tmp_path: Path) -> Path:
     return tmp_path
 
 
-def test_default_template_write_then_rollback(veinborn_copy: Path) -> None:
+def test_default_template_direct_save_rejected_then_copy_override(veinborn_copy: Path) -> None:
     sf = veinborn_copy / "veinborn" / "templates.json"
     before = sf.read_text(encoding="utf-8")
-    res = editor_ops.save_entry(
+
+    # 批32 B1：直接改框架默认键 → 被拒（红拦，零文件改动）。
+    denied = editor_ops.save_entry(
         "veinborn", "templates", "register_gate",
         {"register_gate": "❌ 自定义进场 {name}"},
         root=veinborn_copy, role="owner")
-    assert res["ok"] is True, res
-    after = json.loads(sf.read_text(encoding="utf-8"))
-    assert after["register_gate"] == "❌ 自定义进场 {name}"
-    assert set(after) == set(json.loads(before)) | {"register_gate"}
+    assert denied["ok"] is False
+    assert [e for e in denied["errors"] if e.get("code") == "framework_locked"]
+    assert "复制为包覆盖" in denied["message"]
+    assert sf.read_text(encoding="utf-8") == before          # 未写盘
 
-    # 保存后该键在编辑器里由「默认（框架）」变「已覆盖（包）」
+    # 「复制为包覆盖」→ 生成包覆盖条目（内容 = 当前框架文本），走既有落盘/备份链路。
+    res = editor_ops.copy_framework_override(
+        "veinborn", "templates", "register_gate", root=veinborn_copy, role="owner")
+    assert res["ok"] is True, res
+    assert res.get("copied_from_framework") is True
+    after = json.loads(sf.read_text(encoding="utf-8"))
+    assert isinstance(after["register_gate"], str) and after["register_gate"]
+    assert set(after) == set(json.loads(before)) | {"register_gate"}
+    after_copy = sf.read_text(encoding="utf-8")
+
+    # 复制后该键在编辑器里由「只读框架默认」变「已覆盖（包）」→ 再改自由（既有写链路）。
     le = api.list_entries("veinborn", "templates", root=veinborn_copy)
     row = {e["id"]: e for e in le["entries"]}["register_gate"]
     assert row.get("covered") is True and not row.get("framework_default")
+    d = api.entry_detail("veinborn", "templates", "register_gate", root=veinborn_copy)
+    assert d["framework_locked"] is False and d["fields"][0]["editable"] is True
+    again = editor_ops.save_entry(
+        "veinborn", "templates", "register_gate",
+        {"register_gate": "❌ 自定义进场 {name}"},
+        root=veinborn_copy, role="owner")
+    assert again["ok"] is True, again
+    assert json.loads(sf.read_text(encoding="utf-8"))["register_gate"] == "❌ 自定义进场 {name}"
 
+    # 回退 = 既有一份备份语义：回到上一次写入前（= 复制出的包覆盖态）。
     rb = editor_ops.rollback_module("veinborn", "templates", root=veinborn_copy, role="owner")
     assert rb["ok"] is True, rb
-    assert sf.read_text(encoding="utf-8") == before
+    assert sf.read_text(encoding="utf-8") == after_copy
 
 
 def test_default_template_empty_value_saved_as_pack_value(veinborn_copy: Path) -> None:
@@ -184,5 +208,7 @@ def test_default_template_empty_value_saved_as_pack_value(veinborn_copy: Path) -
 def test_frontend_exposes_framework_default_markers() -> None:
     html = HTML.read_text(encoding="utf-8")
     for token in ("默认（框架）", "已覆盖（包）", "e.framework_default", "e.covered",
-                  "d.framework_default", "d.default_note"):
+                  "d.framework_default", "d.default_note",
+                  # 批32 B1：框架关键模板只读 + 「复制为包覆盖」入口
+                  "d.framework_locked", "复制为包覆盖", "btn-copy-override", "copy_override"):
         assert token in html, token

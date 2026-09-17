@@ -3604,10 +3604,10 @@ function entryItemEl(e, srcModule, cur, grouped, srcLabel) {
     tag.textContent = "未配置 · 框架支持";
     d.appendChild(tag);
   } else if (e.framework_default) {
-    // 批19 #4：框架键全集里包未覆盖的键 → 标「默认（框架）」（可直接编辑后写入包覆盖）。
+    // 批19 #4 / 批32 B1：框架键全集里包未覆盖的键 → 只读，须「复制为包覆盖」后编辑。
     var ftag = document.createElement("span");
     ftag.className = "unc";
-    ftag.textContent = "默认（框架）";
+    ftag.textContent = "默认（框架）·只读";
     d.appendChild(ftag);
   } else if (e.covered) {
     // 批19 #4：包数据已覆盖的框架键。
@@ -4406,10 +4406,15 @@ function renderDetail(d) {
   var html = '<div class="meta"><span class="mk">元数据驱动</span>'
     + (d.unconfigured
       ? '<span class="mi unc">未配置 · 框架支持（填写后保存即写入本包）</span>' : "")
-    + (d.framework_default
-      ? '<span class="mi unc">默认（框架）'
-        + (d.default_note ? "：" + esc(d.default_note) : "")
-        + '（保存后写入本包覆盖）</span>' : "")
+    + (d.framework_locked
+      ? '<span class="mi unc">框架关键模板 · 只读</span>'
+        + '<button type="button" class="btn copy-override" id="btn-copy-override"'
+        + ' title="' + esc(d.framework_lock_note || "复制为包覆盖") + '">'
+        + "复制为包覆盖</button>"
+      : (d.framework_default
+        ? '<span class="mi unc">默认（框架）'
+          + (d.default_note ? "：" + esc(d.default_note) : "")
+          + '（保存后写入本包覆盖）</span>' : ""))
     + '<span class="mi">' + d.field_count + " 个字段</span>"
     + '<span class="mi">' + d.group_count + " 个分组</span>"
     + '<span class="mi">' + (state.editable ? "可编辑" : "只读预览") + "</span>"
@@ -4480,8 +4485,40 @@ function renderDetail(d) {
   bindAssocSections();
   bindHelp();
   state.pendingDrafts = {};   // 已消费（registerForm 回填完毕）
+  var copyBtn = el("btn-copy-override");
+  if (copyBtn) { copyBtn.addEventListener("click", copyFrameworkOverride); }
+  applyFrameworkLock(d);
   if (state.result) { renderResult(state.result); }
   markDirty();
+}
+
+// 批32 B1（框架 §6.12-06）：框架关键模板只读——禁用该条目页所有编辑控件（保留
+// 「复制为包覆盖」按钮）；保存按钮因无脏改动自然禁用。包覆盖条目不受影响。
+function applyFrameworkLock(d) {
+  if (!d || !d.framework_locked) { return; }
+  Array.prototype.forEach.call(
+    el("p-body").querySelectorAll("input,select,textarea,button"),
+    function (node) {
+      if (node.classList.contains("copy-override")) { return; }
+      node.disabled = true;
+    });
+}
+
+// 批32 B1：把框架默认文本复制成包内覆盖条目（复用既有落盘链路；之后即可编辑）。
+function copyFrameworkOverride() {
+  if (!state.editable || state.busy) { return Promise.resolve(); }
+  var mod = state.entryModule || state.module;
+  if (!state.pack || !mod || !state.entry) { return Promise.resolve(); }
+  setBusy(true);
+  return postJSON("/api/pack/" + enc(state.pack) + "/entry/" + enc(mod) + "/"
+                  + enc(state.entry) + "/copy_override", {})
+    .then(function (res) {
+      state.result = res; renderResult(res);
+      if (res && res.ok) { invalidateRefCache(); return reloadDetail(); }
+    }).catch(function (err) {
+      state.result = { ok: false, message: "复制为包覆盖失败：" + err.message, errors: [] };
+      renderResult(state.result);
+    }).then(function () { setBusy(false); });
 }
 
 // ---------------------------------------------------------------------------

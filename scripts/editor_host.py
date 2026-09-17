@@ -143,6 +143,12 @@ def create_app(pack: Optional[str] = None, root: Optional[str] = None,
             # 批21 · C：改 ID 有引用时需界面确认（confirm=true）才写入。
             confirm=bool(body.get("confirm")))
 
+    # 批32 B1（框架 §6.12-06）：框架关键模板只读 → 「复制为包覆盖」生成包内覆盖条目。
+    @app.post("/api/pack/{pack_id}/entry/{module}/{entry_id}/copy_override")
+    def api_copy_override(pack_id: str, module: str, entry_id: str):  # type: ignore[no-untyped-def]
+        return editor_ops.copy_framework_override(
+            pack_id, module, entry_id, root=content_root, role=app.state.role)
+
     # -------- 批6 写入：新增条目 / 删除条目 / ID 即时校验 --------
     @app.post("/api/pack/{pack_id}/module/{module}/entry")
     def api_create_entry(pack_id: str, module: str,

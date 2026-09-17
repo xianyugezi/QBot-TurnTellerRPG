@@ -757,6 +757,12 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
 .item .idtag { color: var(--text-5); font-size: var(--fs-11); margin-left: var(--sp-4); }
 /* 批32 C1：条目级「未使用」角标（提示不拦截；不改列表布局与计数/翻页口径） */
 .item .idtag.unused { color: var(--warn); }
+/* 批32 D1：本地草稿恢复横条（保存失败/崩溃后重开可恢复；只存浏览器，不上传） */
+.draft-restore { margin: 0 var(--sp-6); padding: var(--sp-3) var(--sp-4);
+  border: var(--bw) solid var(--line-strong); border-radius: var(--r-2);
+  background: var(--surface); color: var(--text-2); font-size: var(--fs-12);
+  display: flex; align-items: center; gap: var(--sp-4); }
+.draft-restore .btn { flex: none; }
 /* 新建条目的 ID 区：人话说明 + 建议 ID + 按名称生成 + 即时唯一性状态 */
 .newid { border: var(--bw) solid var(--line-strong); background: var(--surface);
   padding: var(--sp-4) var(--sp-5); margin: var(--sp-4) var(--sp-6);
@@ -907,6 +913,9 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
       <span class="from">manifest.json</span>
     </label>
     <span class="saved" id="dirty">已保存</span>
+    <!-- 批32 D1：本地草稿开关（保存在浏览器本机；关闭后行为与现状一致，不写任何本地草稿） -->
+    <button class="btn gear" id="btn-autosave" type="button"
+      title="本地草稿：编辑中的未提交内容会定期存到本机浏览器（不上传服务器、不写内容包文件）；保存成功后自动清除。点击可关闭/开启">💾 本地草稿：开</button>
     <div class="topright">
       <!-- 批10 · 配色按钮（与 ⚙ 模块同款位置/交互）：点开面板 = 三套主题单选 + 自定义背景图 -->
       <button class="btn gear" id="btn-theme" type="button" aria-haspopup="dialog"
@@ -924,6 +933,9 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
       <span class="role" id="roleTag">可编辑</span>
     </div>
   </header>
+
+  <!-- 批32 D1（框架 §6.12-22）：保存失败兜底——检测到浏览器本地草稿时的恢复横条（不上传服务器） -->
+  <div class="draft-restore" id="draft-restore" hidden></div>
 
   <div class="body">
 
@@ -1148,6 +1160,73 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
            patch: patch, discard: discard, deepSame: deepSame };
 });
 /* EDITOR_DRAFT_END */
+
+/* 批32 D1（框架 §6.12-22）：浏览器本地草稿（保存失败/崩溃兜底）。
+ * 纯逻辑模块（无 DOM 依赖；浏览器挂 globalThis.EditorLocalDraft，node 下走 module.exports）。
+ * 语义：编辑中内容定期/改动时存 localStorage（**不上传服务器、不写内容包文件**）；
+ *       保存成功后清除；开关关闭（qbot.editor.autosave=0）→ 完全不动作（行为与现状一致）；
+ *       超过 TTL（7 天）视为过期自动清理。与服务端 .pending（存档写失败）互补。 */
+/* EDITOR_LOCAL_DRAFT_BEGIN */
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) { module.exports = factory(); }
+  else { root.EditorLocalDraft = factory(); }
+})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+  var KEY = "qbot.editor.draft";
+  var ENABLED_KEY = "qbot.editor.autosave";
+  var TTL_MS = 7 * 24 * 3600 * 1000;
+  function enabled(store) {
+    if (!store) { return false; }
+    try { var v = store.getItem(ENABLED_KEY); return v === null ? true : v !== "0"; }
+    catch (e) { return false; }
+  }
+  function setEnabled(store, on) {
+    if (!store) { return false; }
+    try { store.setItem(ENABLED_KEY, on ? "1" : "0"); return true; }
+    catch (e) { return false; }
+  }
+  function build(info) {
+    var patch = (info && info.patch) || {};
+    var keys = Object.keys(patch);
+    if (!keys.length || !info || !info.pack || !info.module || !info.entry) { return null; }
+    return { v: 1, pack: String(info.pack), module: String(info.module),
+             entryModule: String(info.entryModule || info.module),
+             entry: String(info.entry), name: String(info.name || info.entry),
+             count: keys.length, patch: patch, at: String(info.at || "") };
+  }
+  function save(store, payload) {
+    if (!store || !payload) { return false; }
+    try { store.setItem(KEY, JSON.stringify(payload)); return true; }
+    catch (e) { return false; }
+  }
+  function load(store, now) {
+    if (!store) { return null; }
+    var raw;
+    try { raw = store.getItem(KEY); } catch (e) { return null; }
+    if (!raw) { return null; }
+    var p;
+    try { p = JSON.parse(raw); } catch (e) { clear(store); return null; }
+    if (!p || typeof p !== "object" || !p.patch || !p.pack || !p.entry
+        || !Object.keys(p.patch).length) { clear(store); return null; }
+    if (now != null) {
+      var t = p.at ? Date.parse(p.at) : NaN;
+      if (isFinite(t) && now - t > TTL_MS) { clear(store); return null; }
+    }
+    return p;
+  }
+  function clear(store) {
+    if (!store) { return; }
+    try { store.removeItem(KEY); } catch (e) { /* 隐私模式/配额：忽略 */ }
+  }
+  function describe(p) {
+    if (!p) { return ""; }
+    return "内容包「" + p.pack + "」· 模块「" + p.module + "」· 条目「"
+      + (p.name || p.entry) + "」（" + p.count + " 项未提交改动）";
+  }
+  return { KEY: KEY, ENABLED_KEY: ENABLED_KEY, TTL_MS: TTL_MS, enabled: enabled,
+           setEnabled: setEnabled, build: build, save: save, load: load, clear: clear,
+           describe: describe };
+});
+/* EDITOR_LOCAL_DRAFT_END */
 
 /* 分组页签纯逻辑（无 DOM 依赖；浏览器挂 globalThis.EditorGroups，node 下走 module.exports）。
  * 语义：页签 = 后端元数据声明的分组（顺序/显示名/计数都来自元数据，
@@ -2783,6 +2862,8 @@ function markDirty() {
   Array.prototype.forEach.call(document.querySelectorAll(".item[data-id]"), function (it) {
     it.classList.toggle("dirty", n > 0 && it.dataset.id === state.entry);
   });
+  // 批32 D1：每次草稿变化即写浏览器本地草稿（保存失败/崩溃兜底；无改动 → 清除）。
+  autosaveLocalDraft();
 }
 
 function discardDraft() {
@@ -2799,6 +2880,97 @@ function canLeave() {
   var n = draftCount();
   if (!n) { return true; }
   return window.confirm("当前有 " + n + " 项未保存改动；离开将丢弃这些改动。确定离开吗？");
+}
+
+// ---------------------------------------------------------------------------
+// 批32 D1（框架 §6.12-22）：浏览器本地草稿——保存失败/崩溃兜底
+//   · 只存 localStorage（不上传服务器、不写内容包文件）；与服务端 .pending 互补；
+//   · 唯一写入口 autosaveLocalDraft（markDirty 末尾调用）：有未提交改动 → 存，无 → 清；
+//   · 保存成功清除；开关关闭（qbot.editor.autosave=0）→ 完全不动作（行为与现状一致）。
+// ---------------------------------------------------------------------------
+function localDraftStore() { return themeStore(); }
+
+function autosaveLocalDraft() {
+  var store = localDraftStore();
+  if (!store || !EditorLocalDraft.enabled(store)) { return; }
+  // 只兜底「已存在条目的主表单」；新建条目草稿不进本地（恢复路径不同，最小可行版）。
+  if (!state.editable || !state.pack || !state.entry || MAIN_CTX.isNew) { return; }
+  var mod = MAIN_CTX.module || state.entryModule || state.module;
+  if (!mod) { return; }
+  var payload;
+  try {
+    payload = EditorLocalDraft.build({
+      pack: state.pack, module: mod, entryModule: state.entryModule || mod,
+      entry: state.entry, name: MAIN_CTX.detail && MAIN_CTX.detail.name,
+      patch: EditorDraft.patch(MAIN_CTX.draft), at: new Date().toISOString()
+    });
+  } catch (err) { return; }
+  if (payload) { EditorLocalDraft.save(store, payload); }
+  else { EditorLocalDraft.clear(store); }
+}
+
+function clearLocalDraft() { EditorLocalDraft.clear(localDraftStore()); }
+
+function checkLocalDraft() {
+  var store = localDraftStore();
+  var box = el("draft-restore");
+  if (!store || !box) { return; }
+  var p = EditorLocalDraft.enabled(store) ? EditorLocalDraft.load(store, Date.now()) : null;
+  if (!p) { box.hidden = true; return; }
+  box.innerHTML = '<span>检测到本机未提交草稿：' + esc(EditorLocalDraft.describe(p))
+    + "（保存失败或页面关闭前自动保存；只在本机浏览器，未上传服务器）</span>"
+    + '<button type="button" class="btn" id="draft-restore-yes">恢复</button>'
+    + '<button type="button" class="btn" id="draft-restore-no">丢弃</button>';
+  box.hidden = false;
+  el("draft-restore-yes").addEventListener("click", function () { restoreLocalDraft(p); });
+  el("draft-restore-no").addEventListener("click", function () {
+    EditorLocalDraft.clear(store); box.hidden = true;
+  });
+}
+
+function restoreLocalDraft(p) {
+  var box = el("draft-restore");
+  if (box) { box.hidden = true; }
+  var sel = el("packs");
+  if (p.pack && sel && sel.value !== p.pack) {
+    var found = Array.prototype.some.call(sel.options, function (o) { return o.value === p.pack; });
+    if (!found) {
+      EditorLocalDraft.clear(localDraftStore());
+      fail("恢复草稿", new Error("草稿指向的内容包已不存在：" + p.pack));
+      return Promise.resolve();
+    }
+    sel.value = p.pack; state.pack = p.pack;
+    state.module = null; state.entry = null; state.refCache = {}; state.refKnown = {};
+    state.refQuery = {}; state.entryIndex = null;
+    syncPackTitle();
+  }
+  state.restoreDraft = p;
+  return loadModules().then(function () {
+    return selectModule(p.module);
+  }).then(function () {
+    state.restoreDraft = p;   // 目标条目在 selectEntry 的 reloadDetail 里消费并灌回表单
+    return selectEntry(p.entry, p.entryModule || p.module);
+  });
+}
+
+// 本地草稿开关（本机记忆）：关闭 → 清掉现存草稿且不再写（行为与现状一致）。
+function initAutosaveToggle() {
+  var btn = el("btn-autosave");
+  var store = localDraftStore();
+  if (!btn) { return; }
+  function paint() {
+    var on = EditorLocalDraft.enabled(store);
+    btn.textContent = "💾 本地草稿：" + (on ? "开" : "关");
+  }
+  paint();
+  btn.addEventListener("click", function () {
+    if (!store) { return; }
+    EditorLocalDraft.setEnabled(store, !EditorLocalDraft.enabled(store));
+    if (!EditorLocalDraft.enabled(store)) { EditorLocalDraft.clear(store); }
+    paint();
+    markDirty();
+    checkLocalDraft();
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -4300,6 +4472,27 @@ function reloadDetail() {
   if (!state.pack || !mod || !state.entry) { return Promise.resolve(); }
   return api("/api/pack/" + enc(state.pack) + "/entry/" + enc(mod) + "/" + enc(state.entry))
     .then(function (data) {
+      // 批32 D1：本地草稿恢复——目标条目匹配时，把草稿值灌回表单并把「差异」写进主草稿
+      // （显示 = 草稿值，保存基准 = 服务器值，保存仍走既有校验/落盘链路）。
+      var restore = state.restoreDraft;
+      if (restore && String(restore.entry) === String(state.entry)) {
+        state.restoreDraft = null;
+        var base = {};
+        (data.fields || []).forEach(function (f) { base[f.key] = f.value; });
+        (data.fields || []).forEach(function (f) {
+          if (hasOwn(restore.patch, f.key)) { f.value = restore.patch[f.key]; f.present = true; }
+        });
+        state.detail = data;
+        state.entryModule = data.module || mod;
+        state.fieldIndex = {};
+        (data.fields || []).forEach(function (f) { state.fieldIndex[f.key] = f; });
+        renderDetail(data);
+        Object.keys(restore.patch).forEach(function (k) {
+          EditorDraft.set(draft, k, restore.patch[k], base[k]);
+        });
+        markDirty();
+        return refreshBackup();
+      }
       state.detail = data;
       state.entryModule = data.module || mod;
       state.fieldIndex = {};
@@ -6113,13 +6306,18 @@ function postForm(ctx, suffix, extra) {
     if (res.ok && suffix === "/save") {
       state.pendingDrafts = snapshotOtherDrafts(ctx.key);
       EditorDraft.discard(ctx.draft);
+      // 批32 D1：保存成功 → 本机草稿使命完成，清除（既有保存语义/成功判定不变）。
+      clearLocalDraft();
       // 批14 #6②：保存可能改变「可被引用的键空间」（对象型段未登记子字段的键集合）
       // → 引用候选缓存必须失效；同一会话内打开引用字段即重新拉取，无需刷新页面/重启。
       invalidateRefCache();
       return reloadDetail();
     }
   }).catch(function (err) {
-    state.result = { ok: false, message: "请求失败：" + err.message, errors: [] };
+    // 批32 D1：保存失败绝不静默丢数据——草稿已在本机（markDirty 时写入），这里只如实提示。
+    state.result = { ok: false,
+      message: "请求失败：" + err.message + "（未提交改动已保存在本机浏览器，刷新后可恢复）",
+      errors: [] };
     renderResult(state.result);
   }).then(function () { setBusy(false); });
 }
@@ -7129,10 +7327,12 @@ window.addEventListener("beforeunload", function (e) {
 initTheme();
 initFont();
 initBg();
+initAutosaveToggle();
 loadSession()
   .then(loadPacks)
   .then(function () { return loadModules(); })
   .then(function () { return loadEntryIndex(); })
+  .then(function () { checkLocalDraft(); })   // 批32 D1：重开后提示可恢复的本机草稿
   .catch(function (err) { fail("初始化", err); });
 </script>
 </body>

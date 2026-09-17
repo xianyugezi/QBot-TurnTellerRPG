@@ -3,12 +3,13 @@
 依据：`docs/编辑器重写_数据包展示元数据下放方案.md` §四 批B/C。
 
 本用例**调用** `scripts/compare_field_meta_migration.py`：它用 `git worktree` 检出基线
-（批29 重定到本批末提交；批28 已把空壳键 `transfer_allowed` 从框架侧删除，批29 用户拍板后
-再把内容包 `veinborn` 的两处残留——`enhance.json` 数据键 + `field_meta.json` 展示名——
-**一并清理**；同批 ② 给 `skill_chains.steps[].condition` 新增 level/job/quest 三个主体与
-`value_enum` 描述符、条件字段新增 `help` 说明、条件 `ops` 集合 4 → 7）。以上均属**本批有意**
-的字段删除与展示层可选项/说明扩充；重定到本批末提交后，基线树与当前树**逐字段 diff=0**，
-**删除项 = 0、无既有 label/help/group 严格键改动**），在基线树与当前树各跑一遍
+（批30 重定到本批 U8 商店字段收敛提交 8e56cc3；批29 曾重定清理内容包 `transfer_allowed` 残留
+与条件集补齐；批28 已把空壳键 `transfer_allowed` 从框架侧删除。批30 把商店条目字段元数据由
+M4 旧口径收敛到定稿 `scope/limit/period`：新增 currency/scope/refresh/… 9 字段（soft）、
+`period` obj→str、`price_fluctuation` obj→int、`refresh.mode` manual/fixed→once/none、
+`type` general/black/quest→npc/blackmarket、label/help 更新——均为**本批有意**的字段收敛；
+对拍实证硬差异全部在 shop 命名空间内、非 shop 硬差异 = 0。重定到本批末提交后，基线树与当前树
+**逐字段 diff=0**，**删除项 = 0、无既有 label/help/group 严格键改动**），在基线树与当前树各跑一遍
 `scripts/editor_readonly_snapshot.py`（模块树 / 条目列表 / 条目详情 / 条目索引 / 引用候选 /
 包列表），递归对拍并输出差异报告。
 
@@ -38,7 +39,7 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
-BASELINE_REF = "9777ed5"
+BASELINE_REF = "8e56cc3"
 CONTENT = REPO / "content"
 
 

@@ -134,7 +134,22 @@ DEFAULT_PACKS = ("veinborn", "test_demo")
 #      仅编辑器主体/比较符可选项与说明扩充）。
 # 两处均属「本批有意的字段删除 + 展示层控件可选项/说明扩充」，重定到本批末提交后，
 # 门禁继续只守「字段级元数据迁移不得改/删」。
-DEFAULT_BASELINE_REF = "9777ed5"
+# 批30（2026-09-16）重定基线：9777ed5 → 8e56cc3（本批 U8 商店字段定稿收敛提交）。
+# 原因（本批**有意**变更，非迁移回归）：
+#   U8 把商店条目字段元数据从 M4 期的旧口径收敛到定稿 `scope/limit/period`：
+#   ① 新增 9 个条目字段（currency/scope/refresh/reputation_required/min_level/
+#      discount/sold_out_once 等）= soft 新增（对拍「新增 202 项」全部来自 items 列的
+#      新字段展开）；
+#   ② 修正既有描述符：`period` obj→str（连带 `period.children`/`period.open_keys`
+#      各 1 处「仅迁移前有（删除）」）、`price_fluctuation` obj→int（连带 children/
+#      open_keys 删除）、`refresh.mode` 枚举 manual/fixed→once/none、`type` 枚举
+#      general/black/quest→npc/blackmarket、`stock`/`limit`/`period` label 与 help
+#      更新（口径④严格键：label/help 变动 = 红）。
+#   对拍实证：全部 153 条硬差异**均在 shop 命名空间内**（非 shop 硬差异 = 0）；
+#   10 处「仅迁移前有（删除）」全部是上述 obj→基础类型收敛时消失的 `children`/
+#   `open_keys`/`interval` 派生描述符，无任何字段被无意删除。重定到本批末提交后，
+#   门禁继续只守「字段级元数据迁移不得改/删」。
+DEFAULT_BASELINE_REF = "8e56cc3"
 
 
 def _env(root: Path) -> dict:

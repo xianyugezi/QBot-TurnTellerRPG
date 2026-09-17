@@ -4,13 +4,15 @@
   - m4_shared_contract.md §2.3（GM 指令：/gm 权限三级 + 静默 + 留痕 + 禁绑；**GM 指令清单以
     分隔符规范 L160 长清单为准（+设置）**）+ §2.2（列表 5 条/页上限、页脚固定 TPL-08、
     页码越界夹取 +「已到最后一页」2026-08-27 用户裁决②、0/负数/非数字 → TPL-12、
-    错误模板统一、emoji 纪律：M5 裁决不用 emoji——GM 结果前缀（日志/编辑/设置等
+    错误模板统一、emoji 纪律：M5 裁决不用 emoji——GM 结果前缀（日志/设置等
     数据型功能图标）一律降级纯文本，仅 ✅/❌ 功能性标记 + 排版符号）
   - docs/细化/细化_5b_GM指令契约.md（§1 权限模型：三级权限 机主/GM/普通玩家、判定优先级、
     静默语义（无权限→直接无视不报错不提示不写审计）、权限存储不进玩家存档、绑定层+执行层
     双检查；§2 GM 指令集 G1-G14 逐条契约；§3.1 /日志 双分支（权限 ≥ GM → 系统日志）；
     §3.2 快捷禁绑（C02，防权限绕过）；§4 审计：E1-E6 事件类、字段、成败皆痕、无权限不写）
-  - docs/审查参考/指令分隔符统一规范.md L160（**GM 指令清单：重载/封禁/日志/编辑/设置**，
+  - docs/审查参考/指令分隔符统一规范.md L160（**GM 指令清单：重载/封禁/日志/编辑/设置**；
+    **批30（2026-09-16）删除其中 G13 `/编辑`**——旧编辑器与 `settings.editor_url` 均已删，
+    指令成空壳，见登记表 X9），
     绑定目标为 GM 指令 → 拒绝）+ L120-121/L128（GM 永不快捷、强制 / 前缀）+ L169-171
     （执行层权限二次检查，GM 指令即使被意外绑定也不执行）
   - 2026-08-27 用户裁决②（页码超总页数 → 夹取最后一页 +「已到最后一页」；0/负数/非数字 →
@@ -21,7 +23,7 @@
     强制前缀位、check_shortcut_binding GM 禁绑 C02、is_gm_command 判定）
 
 职责（细化_3a §1.3 壳层职责 · 唯一 GM 指令执行壳）：把 /gm 指令集（L160 长清单 =
-重载/封禁/日志/编辑/设置）从 Router 接到 GM 后端引擎——权限三级检查（admin/manager/player，
+重载/封禁/日志/设置，批30 删 /编辑 后 4 条 + M12 批3 4 条 = 8 条）从 Router 接到 GM 后端引擎——权限三级检查（admin/manager/player，
 一一对应 机主/GM/普通玩家，5b §1.1）、静默执行（成功不回显群聊，成功摘要进审计留痕）、
 留痕（操作日志 audit_log 追加写，成败皆写；无权限不写）、GM 禁绑（禁止快捷绑定 GM 指令
 防权限绕过）、GM 强制 / 前缀（is_gm=True → 路由层 W07/L128 拦截裸发）、/日志 列表
@@ -33,7 +35,7 @@
 【工程补白】标注；装饰性 emoji 全局禁用（M5 裁决不用 emoji：仅 ✅/❌ 功能性标记 +
 排版符号 | → × / 「」【】；GM 结果前缀等数据型功能图标一律降级纯文本）。
 本模块只做「装配接线 + 权限 + 渲染 + 留痕」，
-业务执行（重载内容包/封禁玩家/读系统日志/编辑器链接/改设置）全部委托 GM 后端引擎。
+业务执行（重载内容包/封禁玩家/读系统日志/改设置）全部委托 GM 后端引擎。
 
 --------------------------------------------------------------------------------
 消费接口（GM 后端引擎，批次6/7 装配注入 ctx["gm_backend"]；本层按以下契约签名消费，
@@ -45,8 +47,6 @@
       {ok: True, expires: str|None, message: str}    封禁确认 + 到期时间（5b G10）
       {ok: False, message: str}                      封禁失败
   recent_audit(count, ctx) -> list[dict]             最近系统日志事件（5b G8；count ≤ 50）
-  editor_link(role_level, ctx) -> dict
-      {url: str, hint: str}                          编辑器链接 + 权限级提示（5b G13）
   apply_setting(key, value, ctx) -> dict
       {ok: True, current: str, message: str}         设置切换结果（5b G14）
       {ok: False, message: str}                      设置失败
@@ -59,7 +59,8 @@
 
 --------------------------------------------------------------------------------
 【工程补白 · 显式标注】
-  1) **GM 指令清单 = L160 长清单（5 条）**：重载/封禁/日志/编辑/设置。5b §2.1 另有 G2-G7/G9/G11/
+  1) **GM 指令清单 = L160 长清单（5 条 → 批30 删 /编辑 后 4 条）**：重载/封禁/日志/设置
+     （原 5 条含 `/编辑` G13，2026-09-16 批30 删除）。5b §2.1 另有 G2-G7/G9/G11/
      G12（备份/恢复/存档导出/调试/测试/广播/玩家查询/解封/封禁列表）等 9 条不在本批范围——
      m4 §2.3 明令「GM 指令清单以分隔符规范 L160 长清单为准（+设置）」，本模块只实现 L160
      清单内 5 条；其余留待批次6/7 其它路或后续批次（按 5b §2.1 总表登记）。
@@ -127,7 +128,7 @@ from .sender import format_tpl12
 
 __all__ = [
     # L160 长清单指令名 / GM 清单
-    "GM_CMD_RELOAD", "GM_CMD_BAN", "GM_CMD_LOG", "GM_CMD_EDIT", "GM_CMD_SETTINGS",
+    "GM_CMD_RELOAD", "GM_CMD_BAN", "GM_CMD_LOG", "GM_CMD_SETTINGS",
     "GM_COMMANDS", "GM_COMMAND_LEVEL", "GM_COMMAND_INDEX", "GM_DEFAULT_GRANT",
     "GM_PREFIX_REQUIRED",
     # 权限三级（admin/manager/player ↔ 机主/GM/普通玩家）
@@ -138,7 +139,7 @@ __all__ = [
     # 留痕（操作日志）
     "AUDIT_HMAC_FIELDS", "build_audit_record", "audit_hmac", "record_audit",
     # 指令处理器
-    "cmd_gm_reload", "cmd_gm_ban", "cmd_gm_log", "cmd_gm_edit", "cmd_gm_settings",
+    "cmd_gm_reload", "cmd_gm_ban", "cmd_gm_log", "cmd_gm_settings",
     "handle_gm_command",
     # GM 后端引擎（WIR-07/08：/重载 真实后端 + /备份 /恢复 已声明未接线）
     "GmBackend", "backup_content", "restore_content",
@@ -152,7 +153,8 @@ __all__ = [
 ]
 
 # ---------------------------------------------------------------------------
-# L160 长清单（指令分隔符统一规范 L160：绑定目标为 GM 指令（重载/封禁/日志/编辑/设置）→ 拒绝）
+# L160 长清单（指令分隔符统一规范 L160：绑定目标为 GM 指令（重载/封禁/日志/设置）→ 拒绝）
+# 批30（2026-09-16）：G13 `/编辑` 已删除（空壳；登记表 X9），本清单 8 条。
 # ---------------------------------------------------------------------------
 
 # GM 指令常量（单一事实源下沉 data/gm_constants.py，M7 BCH-01 收口：
@@ -161,7 +163,6 @@ from qbot_rpg.data.gm_constants import (
     GM_CMD_RELOAD,
     GM_CMD_BAN,
     GM_CMD_LOG,
-    GM_CMD_EDIT,
     GM_CMD_SETTINGS,
     GM_CMD_BACKUP,
     GM_CMD_RESTORE,
@@ -188,14 +189,13 @@ _ROLE_ALIASES: Mapping[str, str] = {
 }
 
 # 每指令最低权限（5b §2.1 权限列；L160 清单内）：
-#   重载 G1 = GM / 封禁 G10 = GM / 日志 G8 = GM / 编辑 G13 = 机主·GM / 设置 G14 = 机主
+#   重载 G1 = GM / 封禁 G10 = GM / 日志 G8 = GM / 设置 G14 = 机主
 #   M12 批3 路3A：备份 G2 = GM / 恢复 G3 = GM / 存档导出 G4 = 机主(可下授) /
-#   封禁列表 G12 = GM
+#   封禁列表 G12 = GM；批30 G13 编辑已删（不在此表）
 GM_COMMAND_LEVEL: Mapping[str, str] = {
     GM_CMD_RELOAD: ROLE_MANAGER,
     GM_CMD_BAN: ROLE_MANAGER,
     GM_CMD_LOG: ROLE_MANAGER,
-    GM_CMD_EDIT: ROLE_MANAGER,
     GM_CMD_SETTINGS: ROLE_ADMIN,
     GM_CMD_BACKUP: ROLE_MANAGER,
     GM_CMD_RESTORE: ROLE_MANAGER,
@@ -330,7 +330,7 @@ class GmResult:
     ok:      业务是否成功（False + message=TPL-12 → 应报错出站）；
     silent:  无权限静默（True → 调用方**零出站零审计**，5b 静默语义 / TC-01/04/05/24）；
     message: 应回复正文——成功动作 → None（静默执行不回显成功，工程补白 2）；
-             查询类（/日志 /编辑）→ 请求数据正文；失败 → TPL-12 统一报错；
+             查询类（/日志）→ 请求数据正文；失败 → TPL-12 统一报错；
     audit:   留痕记录（有权限执行时生成，成败皆写；无权限 → None，防探测）。
     """
 
@@ -594,19 +594,8 @@ class GmBackend:
         return {"ok": True, "message": restored, "backup_id": backup_id,
                 "pre_backup": pre.get("backup_id") if isinstance(pre, dict) else None}
 
-    def editor_link(self, role_level: str, ctx: Any = None) -> dict:
-        """/编辑（5b G13）：编辑器链接 + 权限级提示。
-
-        2026-09-11 接线（编辑器恢复随附）：契约声明（模块头 L48-49）实装——
-        URL 配置源 = ctx["settings"]["editor_url"]（内容包 settings.json 可配；
-        缺省 "" → 指令层显示「暂未配置链接」，不崩）。hint 为 5b L167-168
-        契约原文（权限级说明：机主=全功能，GM=只读预览）。
-        """
-        settings = ctx.get("settings") if isinstance(ctx, Mapping) else None
-        url = ""
-        if isinstance(settings, Mapping):
-            url = str(settings.get("editor_url") or "")
-        return {"url": url, "hint": "机主=全功能，GM=只读预览"}
+    # `editor_link`（5b G13 /编辑）批30（2026-09-16）删除：旧编辑器已删、editor_url 已清空，
+    # 该后端接口只剩空壳（登记表 X9）。5b 契约 G13 条目同步删除。
 
 
 def _run_watcher_reload(watcher: HotReloadWatcher) -> Optional[ReloadResult]:
@@ -697,7 +686,7 @@ def _backend(ctx: Mapping[str, Any]) -> Any:
     if backend is None:
         raise RuntimeError(
             "【待接线】ctx['gm_backend'] 未注入（GM 后端引擎，批次6/7 装配；消费接口："
-            "reload_content/ban_player/recent_audit/editor_link/apply_setting/audit_store）"
+            "reload_content/ban_player/recent_audit/apply_setting/audit_store）"
         )
     return backend
 
@@ -836,21 +825,9 @@ def cmd_gm_log(parsed: Any, ctx: MutableMapping[str, Any],
                               parsed=parsed, params=f"条数={count}", message=body)
 
 
-def cmd_gm_edit(parsed: Any, ctx: MutableMapping[str, Any],
-                perm: GmPermResult) -> GmResult:
-    """/编辑（5b G13，机主/GM）：返回编辑器链接 + 权限级提示（机主=全功能，GM=只读预览）。
-    返回链接为请求数据（非成功回显）；留痕 result=success。"""
-    if getattr(parsed, "args", None):
-        return _record_and_return(ctx, command=GM_CMD_EDIT, result="failed",
-                                  detail="超参：/编辑 无参数", parsed=parsed)
-    res = _backend(ctx).editor_link(perm.level, ctx)
-    url = str(res.get("url") or "")
-    hint = str(res.get("hint") or "")
-    line = f"编辑器：{url}" if url else "编辑器：暂未配置链接"
-    if hint:
-        line += f"（{hint}）"
-    return _record_and_return(ctx, command=GM_CMD_EDIT, result="success", detail=line,
-                              parsed=parsed, message=line)
+# `cmd_gm_edit`（/编辑 · 5b G13）批30（2026-09-16）删除：旧编辑器与 editor_url 均已删，
+# 指令只剩「暂未配置链接」空壳（登记表 X9）。5b 契约 G13 条目同步删除。
+# 回归断言见 `tests/unit/test_batch30_gm_edit_removed.py`。
 
 
 def cmd_gm_settings(parsed: Any, ctx: MutableMapping[str, Any],
@@ -1021,7 +998,6 @@ _HANDLERS: Mapping[str, Callable[..., GmResult]] = {
     GM_CMD_RELOAD: cmd_gm_reload,
     GM_CMD_BAN: cmd_gm_ban,
     GM_CMD_LOG: cmd_gm_log,
-    GM_CMD_EDIT: cmd_gm_edit,
     GM_CMD_SETTINGS: cmd_gm_settings,
     # M12 批3 路3A：/备份 G2 /恢复 G3 /存档导出 G4 /封禁列表 G12
     GM_CMD_BACKUP: cmd_gm_backup,

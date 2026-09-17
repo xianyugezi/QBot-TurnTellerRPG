@@ -3,22 +3,24 @@
 依据：m4_shared_contract.md §2.3（GM 指令：/gm 权限三级 + 静默 + 留痕 + 禁绑；GM 指令清单以
 分隔符规范 L160 长清单为准（+设置））+ §2.2（列表 5 条/页上限、页脚固定 TPL-08、页码越界夹取
 +「已到最后一页」2026-08-27 用户裁决②、0/负数/非数字 → TPL-12）+ docs/细化/细化_5b_GM指令契约.md
-（§1 权限模型三级/静默语义/存档标记；§2 GM 指令集 G1/G8/G10/G13/G14 逐条；§3 权限分支 /日志
-双分支 + 快捷禁绑 C02；§4 审计 字段/成败皆痕/无权限不写）+ docs/审查参考/指令分隔符统一规范.md
-L160（GM 指令清单：重载/封禁/日志/编辑/设置）+ L128/L169-171（强制 / 前缀 + 执行层二次检查）+
-2026-08-27 用户裁决②（超页夹取最后一页；0/负数/非数字 → TPL-12）。
+（§1 权限模型三级/静默语义/存档标记；§2 GM 指令集 G1/G8/G10/G14 逐条〔G13 编辑已删，批30〕；
+§3 权限分支 /日志 双分支 + 快捷禁绑 C02；§4 审计 字段/成败皆痕/无权限不写）+
+docs/审查参考/指令分隔符统一规范.md L160（GM 指令清单：重载/封禁/日志/设置〔原含编辑，批30 删〕）+
+L128/L169-171（强制 / 前缀 + 执行层二次检查）+ 2026-08-27 用户裁决②（超页夹取最后一页；
+0/负数/非数字 → TPL-12）。
 
 集成口径：GM 后端引擎（批次6/7）尚未落盘，本测试以**契约忠实替身**驱动——注入
 ctx["gm_backend"] = FakeGmBackend（实现本层文件头声明的消费接口 reload_content / ban_player /
-recent_audit / editor_link / apply_setting / audit_store），断言命令层权限/静默/留痕/禁绑/
+recent_audit / apply_setting / audit_store），断言命令层权限/静默/留痕/禁绑/
 前缀/渲染/错误全链路输出。批次7 落盘后替身可整体替换为真实后端，断言不破。
 
-覆盖：L160 清单常量（重载/封禁/日志/编辑/设置 + 强制前缀接线）· 权限三级（admin/manager/player
+覆盖：L160 清单常量（重载/封禁/日志/设置〔G13 编辑批30 已删〕+ 强制前缀接线）·
+权限三级（admin/manager/player
 ↔ 机主/GM/普通玩家 归一；判定优先级；per-command 下授）· 静默（无权限零出站零审计 TC-01/04/24；
 成功静默不回显、摘要入 audit.detail）· 留痕（build_audit_record 字段 / 成败皆写 / 无权限不写 /
 audit_ts_hmac / 不可删语义）· 重载（成功/缺参/超参/包不存在/失败项清单）· 封禁（成功 E4 四要素
 /缺参/QQ 非法/默认永久/后端失败）· 日志（GM 版系统日志 / 5 条每页 + TPL-08 页脚 / 条数=N 窗口
-上限 50 / 超页夹取裁决② / 非法页码 TPL-12）· 编辑（链接 + 权限级提示）· 设置（键值切换/缺参/
+上限 50 / 超页夹取裁决② / 非法页码 TPL-12）· 设置（键值切换/缺参/
 超参/未知键）· GM 禁绑（C02：『重载』是 GM 指令，不可绑定为快捷）· GM 强制前缀（路由层裸发拦截
 + 带前缀放行 + is_gm 二次检查位）· 注册与解析接线 · 待接线防御。
 """
@@ -33,7 +35,6 @@ from qbot_rpg.commands.gm_commands import (
     GM_CMD_BAN,
     GM_CMD_BACKUP,
     GM_CMD_BANLIST,
-    GM_CMD_EDIT,
     GM_CMD_EXPORT,
     GM_CMD_LOG,
     GM_CMD_RELOAD,
@@ -58,7 +59,6 @@ from qbot_rpg.commands.gm_commands import (
     cmd_gm_ban,
     cmd_gm_backup,
     cmd_gm_banlist,
-    cmd_gm_edit,
     cmd_gm_export,
     cmd_gm_log,
     cmd_gm_reload,
@@ -113,7 +113,6 @@ class FakeGmBackend:
         self.ban_calls: list = []
         self.audit_calls: list = []
         self.settings_calls: list = []
-        self.editor_calls: list = []
         self.audit_store_calls: list = []  # append() 落库收集
         self.log_events: list = list(log_events if log_events is not None else _events(12))
         self.settings: dict = {}
@@ -141,12 +140,6 @@ class FakeGmBackend:
     def recent_audit(self, count: int, ctx: dict) -> list:
         self.audit_calls.append((count, ctx))
         return self.log_events[:count]
-
-    # -- G13 编辑 --
-    def editor_link(self, level: str, ctx: dict) -> dict:
-        self.editor_calls.append((level, ctx))
-        hint = "机主=全功能" if level == ROLE_ADMIN else "GM=只读预览"
-        return {"url": "https://editor.example.com", "hint": hint}
 
     # -- G14 设置 --
     def apply_setting(self, key: str, value: str, ctx: dict) -> dict:
@@ -204,16 +197,16 @@ def last_audit(ctx: dict) -> dict:
 # ===========================================================================
 
 def test_gm_commands_long_list():
-    """GM 指令清单 = L160 长清单 5 条 + M12 批3 路3A 扩展 4 条（备份/恢复/存档导出/封禁列表）。"""
+    """GM 指令清单 = L160 长清单 4 条（批30 删 G13 编辑）+ M12 批3 路3A 扩展 4 条
+    （备份/恢复/存档导出/封禁列表）。"""
     assert GM_COMMANDS == frozenset({GM_CMD_RELOAD, GM_CMD_BAN, GM_CMD_LOG,
-                                     GM_CMD_EDIT, GM_CMD_SETTINGS,
+                                     GM_CMD_SETTINGS,
                                      GM_CMD_BACKUP, GM_CMD_RESTORE,
                                      GM_CMD_EXPORT, GM_CMD_BANLIST})
     assert set(GM_COMMAND_INDEX) == set(GM_COMMANDS)
     assert GM_COMMAND_INDEX[GM_CMD_RELOAD] == "G1"
     assert GM_COMMAND_INDEX[GM_CMD_BAN] == "G10"
     assert GM_COMMAND_INDEX[GM_CMD_LOG] == "G8"
-    assert GM_COMMAND_INDEX[GM_CMD_EDIT] == "G13"
     assert GM_COMMAND_INDEX[GM_CMD_SETTINGS] == "G14"
     assert GM_COMMAND_INDEX[GM_CMD_BACKUP] == "G2"
     assert GM_COMMAND_INDEX[GM_CMD_RESTORE] == "G3"
@@ -222,19 +215,18 @@ def test_gm_commands_long_list():
 
 
 def test_gm_command_level_default_grant():
-    """每指令最低权限：重载/封禁/日志/编辑/备份/恢复/封禁列表=manager（默认授予集）；
-    设置/存档导出=admin（机主专属，per-command 下授）。"""
+    """每指令最低权限：重载/封禁/日志/备份/恢复/封禁列表=manager（默认授予集）；
+    设置/存档导出=admin（机主专属，per-command 下授）；G13 编辑批30 已删。"""
     assert GM_COMMAND_LEVEL[GM_CMD_RELOAD] == ROLE_MANAGER
     assert GM_COMMAND_LEVEL[GM_CMD_BAN] == ROLE_MANAGER
     assert GM_COMMAND_LEVEL[GM_CMD_LOG] == ROLE_MANAGER
-    assert GM_COMMAND_LEVEL[GM_CMD_EDIT] == ROLE_MANAGER
     assert GM_COMMAND_LEVEL[GM_CMD_SETTINGS] == ROLE_ADMIN
     assert GM_COMMAND_LEVEL[GM_CMD_BACKUP] == ROLE_MANAGER
     assert GM_COMMAND_LEVEL[GM_CMD_RESTORE] == ROLE_MANAGER
     assert GM_COMMAND_LEVEL[GM_CMD_EXPORT] == ROLE_ADMIN
     assert GM_COMMAND_LEVEL[GM_CMD_BANLIST] == ROLE_MANAGER
     assert GM_DEFAULT_GRANT == frozenset({GM_CMD_RELOAD, GM_CMD_BAN, GM_CMD_LOG,
-                                          GM_CMD_EDIT, GM_CMD_BACKUP,
+                                          GM_CMD_BACKUP,
                                           GM_CMD_RESTORE, GM_CMD_BANLIST})
 
 
@@ -274,10 +266,10 @@ def test_permission_admin_all():
 
 
 def test_permission_manager_default_grant():
-    """manager（GM）：默认授予集（重载/封禁/日志/编辑）放行；设置（机主专属）未下授 → 静默
+    """manager（GM）：默认授予集（重载/封禁/日志）放行；设置（机主专属）未下授 → 静默
     （5b §1.1.1 / TC-04）。"""
     u = GmUser("10002", role="gm")
-    for cmd in (GM_CMD_RELOAD, GM_CMD_BAN, GM_CMD_LOG, GM_CMD_EDIT):
+    for cmd in (GM_CMD_RELOAD, GM_CMD_BAN, GM_CMD_LOG):
         res = check_gm_permission(u, cmd)
         assert res.ok and res.level == ROLE_MANAGER
     res = check_gm_permission(u, GM_CMD_SETTINGS)
@@ -599,25 +591,17 @@ def test_render_log_line_format():
 
 
 # ===========================================================================
-# 八、G13 编辑 / G14 设置
+# 八、G13 编辑（批30 已删）/ G14 设置
 # ===========================================================================
 
-def test_edit_returns_link_with_role_hint():
-    """/编辑 → 编辑器链接 + 权限级提示（5b G13：机主=全功能，GM=只读预览）。"""
-    ctx = make_ctx()
-    res = handle_gm_command(p("/编辑"), ctx)
-    assert res.ok and "editor.example.com" in res.message
-    assert "机主=全功能" in res.message
-    assert res.audit["result"] == "success"
-    ctx_gm = make_ctx(role="gm")
-    res2 = handle_gm_command(p("/编辑"), ctx_gm)
-    assert "GM=只读预览" in res2.message
-
-
-def test_edit_extra_args_tpl12():
-    ctx = make_ctx()
-    res = handle_gm_command(p("/编辑 3"), ctx)
-    assert not res.ok and "超参" in res.audit["detail"]
+def test_gm_edit_removed():
+    """批30（2026-09-16）：`/编辑`（5b G13）已删除——清单/序号/权限/后端接口均无。"""
+    assert not is_gm_command_name("编辑")
+    assert "编辑" not in GM_COMMANDS
+    assert "编辑" not in GM_COMMAND_INDEX
+    assert "编辑" not in GM_COMMAND_LEVEL
+    assert not hasattr(gc, "cmd_gm_edit")
+    assert not hasattr(make_ctx()["gm_backend"], "editor_link")
 
 
 def test_settings_admin_switch():
@@ -800,7 +784,7 @@ def test_log_page_footer_exact():
 
 def test_no_decorative_emoji():
     """M5 裁决不用 emoji：列表行/页脚/错误纯文本（仅 ✅/❌ 功能性标记 + 排版符号）；
-    GM 结果前缀（🚫/⚙️/📝 等数据型功能图标）已降级——封禁行用 ❌，日志/编辑/设置无前缀。"""
+    GM 结果前缀（🚫/⚙️/📝 等数据型功能图标）已降级——封禁行用 ❌，日志/设置无前缀。"""
     ctx = make_ctx(role="gm", gm_backend=_backend(_events(12)))
     body = handle_gm_command(p("/日志"), ctx).message
     assert "✅" not in body and "❌" not in body  # 列表骨架为纯文本（功能性标记不属列表）

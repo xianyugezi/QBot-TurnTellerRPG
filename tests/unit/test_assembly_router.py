@@ -59,8 +59,8 @@ ALL_REGISTERED = {
     "对话",
     # log（F-03/F-04，BCH-05；is_gm=True）
     "日志",
-    # M12 GM 运维组（2026-09-06 挂载；日志已在上）
-    "重载", "封禁", "编辑", "设置", "备份", "恢复", "存档导出", "封禁列表",
+    # M12 GM 运维组（2026-09-06 挂载；日志已在上）；批30（2026-09-16）删 G13「编辑」
+    "重载", "封禁", "设置", "备份", "恢复", "存档导出", "封禁列表",
     # investigate（F-05/F-06，BCH-06）
     "调查",
     # codex（F-11/F-12，BCH-08）
@@ -333,11 +333,12 @@ def test_build_router_gm_commands_loaded() -> None:
     """RA-07 GM 权限：GM_COMMANDS 装载为 gm_commands_set（快捷绑定校验注入快照）。"""
     router = build_router(_deps(make_context=_stub_ctx))
     assert router.gm_commands_set == set(GM_COMMANDS)  # type: ignore[attr-defined]
-    assert {"重载", "封禁", "日志", "编辑", "设置"} <= router.gm_commands_set  # type: ignore[attr-defined]
+    assert {"重载", "封禁", "日志", "设置"} <= router.gm_commands_set  # type: ignore[attr-defined]
     # 2026-09-06：GM 组挂载后 gm_commands() 返回注册的 GM 词（日志 由 log_commands
-    # 注册跳过——玩家可用冒险日志，handler 按 ctx["is_gm"] 分支；ADR-09 修正）
+    # 注册跳过——玩家可用冒险日志，handler 按 ctx["is_gm"] 分支；ADR-09 修正）；
+    # 批30（2026-09-16）删 G13「编辑」
     gm_reg = set(router.gm_commands())
-    assert {"重载", "封禁", "备份", "恢复", "存档导出", "封禁列表", "编辑", "设置"} <= gm_reg
+    assert {"重载", "封禁", "备份", "恢复", "存档导出", "封禁列表", "设置"} <= gm_reg
     assert "日志" not in gm_reg  # 日志走 log_commands（玩家可用的冒险日志入口）
 
 

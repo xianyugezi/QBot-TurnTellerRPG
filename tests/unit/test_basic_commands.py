@@ -595,9 +595,9 @@ def test_help_directory_gm_two_pages():
     out = cmd_help(parse("/帮助"), make_ctx(is_gm=True))
     # 工程补白 2：目录页脚归一为 TPL-08（m4 §2.2 固定页脚，4f「共 N 组」表述不采用）
     assert "当前页：1/2" in out
-    assert "GM — 重载/封禁/日志/编辑/设置" not in out  # GM 组在页 2
+    assert "GM — 重载/封禁/日志/设置" not in out  # GM 组在页 2（批30 删「编辑」）
     out2 = cmd_help(parse("/帮助 2"), make_ctx(is_gm=True))
-    assert "GM — 重载/封禁/日志/编辑/设置" in out2
+    assert "GM — 重载/封禁/日志/设置" in out2
     assert "当前页：2/2" in out2
 
 

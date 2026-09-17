@@ -58,7 +58,7 @@ COVERAGE: Dict[str, str] = {
     "5b-TC-08": "pytest:tests/unit/test_gm_commands.py",         # G1 重载
     "5b-TC-09": "pytest:tests/unit/test_gm_commands.py",         # G10 封禁
     "5b-TC-10": "pytest:tests/unit/test_gm_commands.py",         # G8 日志
-    "5b-TC-11": "pytest:tests/unit/test_gm_commands.py",         # G13 编辑
+    "5b-TC-11": "DELAYED:G13 编辑已删除（2026-09-16 批30 · 用户授权；5b 契约条目已删）",
     "5b-TC-12": "pytest:tests/unit/test_gm_commands.py",         # G14 设置
     "5b-TC-13": "pytest:tests/unit/test_gm_commands_extra.py",   # G2 备份
     "5b-TC-14": "pytest:tests/unit/test_gm_commands_extra.py",   # G3 恢复

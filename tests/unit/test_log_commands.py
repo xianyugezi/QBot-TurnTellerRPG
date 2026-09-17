@@ -177,10 +177,10 @@ def test_player_explicit_gm_view_denied() -> None:
 
 def test_gm_explicit_sys_view_allowed() -> None:
     """GM 显式 /日志 系统 → 系统日志视图（与默认 /日志 同视图）。"""
-    ctx = _ctx(is_gm=True, audit_log=[_audit("2026-08-28T12:00:00", "编辑")])
+    ctx = _ctx(is_gm=True, audit_log=[_audit("2026-08-28T12:00:00", "备份")])
     out = cmd_log(_pc("系统"), ctx)
     assert "【系统日志】" in out
-    assert "/编辑 success by 10001" in out
+    assert "/备份 success by 10001" in out
 
 
 # ---------------------------------------------------------------------------
@@ -380,11 +380,11 @@ def test_sys_log_newest_first() -> None:
     ctx = _ctx(is_gm=True, audit_log=[
         _audit("2026-08-28T10:00:00", "重载", "pack_a"),
         _audit("2026-08-28T11:00:00", "日志"),
-        _audit("2026-08-28T12:00:00", "编辑"),
+        _audit("2026-08-28T12:00:00", "备份"),
     ])
     out = cmd_log(_pc(), ctx)
     assert "【系统日志】第1/1页" in out
-    assert out.index("/编辑") < out.index("/日志") < out.index("/重载")
+    assert out.index("/备份") < out.index("/日志") < out.index("/重载")
 
 
 def test_sys_log_default_show_and_page_size() -> None:

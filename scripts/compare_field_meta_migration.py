@@ -121,7 +121,18 @@ DEFAULT_PACKS = ("veinborn", "test_demo")
 # transfer_allowed]。对拍实证硬差异**仅此两处顺序位移**（「仅迁移前有（删除）」= 0、
 # 既有 label/help/group 严格键改动 = 0）；属本批**有意**的字段删除引起的展示层位移。
 # 重定到本批 D-6 提交后，门禁继续只守字段级改/删。
-DEFAULT_BASELINE_REF = "4b9d82d"
+# 批29（2026-09-17）重定基线：4b9d82d → 6acb167（本批 ① 残留清理 + ② 条件集补齐的末提交）。
+# 原因（两处均为本批**有意**变更，非迁移回归）：
+#   ① ① 清理内容包残留：删 `content/veinborn/enhance.json` 数据键 +
+#      `content/veinborn/field_meta.json` 展示名 → enhance.settings 少一个纯展示 soft
+#      子字段，对拍出现 1 处「仅迁移前有（删除）」硬差异（门禁口径①：删除任一项 → 红）；
+#   ② ② 条件集补齐：`skill_chains.steps[].condition` 新增 level/job/quest 三个主体
+#      （subjects 新增项 = soft）+ `ConditionSubject.value_enum` 新描述符（各主体新增项
+#      = soft）+ 条件 `ops` 集合由 4 → 7（数组长度变化 = 硬差异，命名/引用/枚举等
+#      **校验口径零变化**，仅编辑器主体/比较符可选项扩充）。
+# 两处均属「本批有意的字段删除 + 展示层控件可选项扩充」，重定到本批末提交后，
+# 门禁继续只守「字段级元数据迁移不得改/删」。
+DEFAULT_BASELINE_REF = "6acb167"
 
 
 def _env(root: Path) -> dict:

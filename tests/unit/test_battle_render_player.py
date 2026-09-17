@@ -160,7 +160,8 @@ def test_tc10_defend_enter_exact() -> None:
 
 
 def test_tc10_defend_hit_exact() -> None:
-    """TC-10：防御受击逐字 `✅ 你防御了史莱姆的撞击\n受到 2 伤害`（BREP-06；批4：血量只留 HUD 行）。"""
+    """TC-10：防御受击逐字 `✅ 你防御了史莱姆的撞击\n受到 2 伤害`
+    （BREP-06；批4：血量只留 HUD 行）。"""
     oc = _outcome(actor="enemy", action_type="normal", target="player",
                   raw_damage=4, final_damage=2, target_hp=19)   # ×0.5 生效后 2 伤
     line = _render_player_defend_hit(oc, attacker_name="史莱姆", action_phrase="撞击",

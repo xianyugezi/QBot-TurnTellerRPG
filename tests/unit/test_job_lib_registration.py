@@ -148,7 +148,8 @@ def test_jobs_39_contract_field_count() -> None:
     assert "job_form" in sf and "job_restrict" in sf, "6a skills_fields 应已登记 F16/F17"
     # 2026-09-13（编辑器重写·批1）：原断言「revert_form/derive_only 未登记属预期缺口」已过时——
     # 两者早已在 skill_models.skills_fields() 登记（F16/F17 同批），且真实内容包普遍出现；
-    # 批1 为编辑器/校验器补齐元数据时一并登记（soft_label=True → 永不红拦）。改为断言「已登记且不红拦」。
+    # 批1 为编辑器/校验器补齐元数据时一并登记（soft_label=True → 永不红拦）。
+    # 改为断言「已登记且不红拦」。
     assert "revert_form" in sf and "derive_only" in sf, (
         "revert_form/derive_only 应已登记（skill_models 与真实内容包均出现）"
     )

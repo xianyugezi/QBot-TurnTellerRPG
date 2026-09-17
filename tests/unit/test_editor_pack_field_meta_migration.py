@@ -3,9 +3,11 @@
 依据：`docs/编辑器重写_数据包展示元数据下放方案.md` §四 批B/C。
 
 本用例**调用** `scripts/compare_field_meta_migration.py`：它用 `git worktree` 检出基线
-（批29 重定；批28 已把空壳键 `transfer_allowed` 从框架侧删除，批29 用户拍板后再把内容包
-`veinborn` 的两处残留——`enhance.json` 数据键 + `field_meta.json` 展示名——**一并清理**，
-使 `enhance.settings` 的展示子字段不再出现该键；此后基线树与当前树**逐字段 diff=0**，
+（批29 重定到本批末提交；批28 已把空壳键 `transfer_allowed` 从框架侧删除，批29 用户拍板后
+再把内容包 `veinborn` 的两处残留——`enhance.json` 数据键 + `field_meta.json` 展示名——
+**一并清理**；同批 ② 给 `skill_chains.steps[].condition` 新增 level/job/quest 三个主体与
+`value_enum` 描述符、条件 `ops` 集合 4 → 7）。以上均属**本批有意**的字段删除与展示层
+可选项扩充；重定到本批末提交后，基线树与当前树**逐字段 diff=0**，
 **删除项 = 0、无既有 label/help/group 严格键改动**），在基线树与当前树各跑一遍
 `scripts/editor_readonly_snapshot.py`（模块树 / 条目列表 / 条目详情 / 条目索引 / 引用候选 /
 包列表），递归对拍并输出差异报告。
@@ -36,7 +38,7 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
-BASELINE_REF = "4b9d82d"
+BASELINE_REF = "6acb167"
 CONTENT = REPO / "content"
 
 

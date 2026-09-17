@@ -32,7 +32,7 @@ REPO = Path(api.repo_root())
 HTML = REPO / "qbot_rpg" / "web" / "static" / "index.html"
 
 # 页脚批次串 = 批次信息的唯一出处（批13 起）；旧批次字串不得残留。
-BATCH_NOTE = "批29 · 残留清理与条件补全"
+BATCH_NOTE = "批30 · 对账清账"
 
 
 def _html() -> str:

@@ -214,7 +214,8 @@ def test_saved_segment_then_listed_as_configured(blank_copy: Path) -> None:
     assert le["configured_count"] == 3
     # 批25：settings 框架登记段 +5（register_gift/register_level/command_gates/
     # rate_limit/message_chunk_len）→ 未配置 32 + 5 = 37
-    assert le["unconfigured_count"] == 37
+    # 批32 A1：settings 再 +1（pack_protection）→ 38
+    assert le["unconfigured_count"] == 38
 
 
 # =====================================================================================

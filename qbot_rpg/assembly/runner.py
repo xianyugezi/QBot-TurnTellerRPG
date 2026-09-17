@@ -67,6 +67,7 @@ from qbot_rpg.commands.gm_commands import (
 from qbot_rpg.commands.parsers import ParsedCommand
 from qbot_rpg.commands.prefix_wiring import CHANNEL_GROUP, apply_message_prefix
 from qbot_rpg.commands.processing import PerPlayerQueue, process_message
+from qbot_rpg.content.pack_protection import player_notice
 from qbot_rpg.commands.router import (
     PERM_GM,
     PERM_OWNER,
@@ -366,6 +367,16 @@ def _state_command_gate(
     if reason is None:
         return None
     return f"当前{reason}，暂不能使用「{command}」"
+
+
+def _pack_protection_gate(ctx: Mapping[str, Any]) -> Optional[str]:
+    """数据包保护（批32 A1 / 框架 §6.12-25）：开启期间玩家指令 → 「作者更新中」人话提示。
+
+    与未注册 / GM 权限 / 状态门禁同处 `_run_command_inner` 单一判定链；GM 不受影响
+    （作者/管理员仍可用 GM 指令运维）。缺省/未配置 → None（行为与现状逐字段一致）。
+    """
+    settings = ctx.get("settings")
+    return player_notice(settings)
 
 
 # =============================================================================
@@ -999,6 +1010,14 @@ async def _run_command_inner(event: Mapping, deps: Any, raw: str) -> str:
     if _requires_gm(spec) and not _permission_store_is_gm(deps, qid):
         logger.info("GM 指令权限拦截（零出站零审计）: qid=%s command=%s", qid, spec.name)
         return ""
+
+    # -- 批32 A1：数据包保护（settings.pack_protection.enabled）玩家指令拦截 ----------
+    # 与未注册/GM/状态门禁同处单一判定链；GM 不受影响；缺省关闭 → 行为与现状一致。
+    if not _requires_gm(spec):
+        protection_msg = _pack_protection_gate(ctx)
+        if protection_msg is not None:
+            logger.info("数据包保护拦截: qid=%s command=%s", qid, spec.name)
+            return protection_msg
 
     # -- 批25 K2：按状态禁用指令（settings.command_gates；与未注册/GM 同处判定链）----
     # GM 指令不受玩家状态门禁影响（管理操作不被玩家虚弱/战斗卡住）。

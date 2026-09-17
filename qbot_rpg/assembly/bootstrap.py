@@ -10,11 +10,13 @@ qbot_rpg.storage（repo 鸭子类型）/ qbot_rpg.data。纯装配零引擎改�
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Mapping, Optional
 
 from qbot_rpg.content.loader import load_pack
+from qbot_rpg.content.pack_protection import enforce_play_gate
 from qbot_rpg.content.registry import Registry, RegistrySnapshot
 from qbot_rpg.world.game_world import GameWorld
 from qbot_rpg.world.session import SessionManager
@@ -44,12 +46,19 @@ async def bootstrap(deps: Mapping[str, Any]) -> AssembledApp:
       queue      可选 —— per-player 队列（未接 → None）
       settings   可选 —— settings.json 装载（M7 其它路消费，本骨架透传不使用）
 
-    流程（RA-12）：loader 装载（红拦校验）→ registry 快照 → GameWorld 注入装载
-    （maps=pack.modules；npc_registry=registry 供 get_npcs）→ world_state 持久化接线
-    （repo.load_world_state() → GameWorld.load）→ SessionManager 初始化 →
+    流程（RA-12）：**数据包保护门禁**（批32 A1：未开启零额外校验直接放行；开启时复用既有
+    包校验，半成品 → 拒绝进入游玩）→ loader 装载（红拦校验）→ registry 快照 → GameWorld
+    注入装载（maps=pack.modules；npc_registry=registry 供 get_npcs）→ world_state 持久化
+    接线（repo.load_world_state() → GameWorld.load）→ SessionManager 初始化 →
     返回 AssembledApp。零 NoneBot import。
     """
-    pack = await load_pack(Path(deps["pack_dir"]))
+    pack_dir = Path(deps["pack_dir"])
+    # 批32 A1：数据包保护门禁（`settings.pack_protection.enabled`，读包内 settings.json）。
+    # 未开启（缺省）→ 直接返回 allowed、不跑任何校验（现状逐字段一致）；开启且半成品 →
+    # 抛 PackProtectionError（人话含哪个包/什么问题/去哪改）。不经过 `deps["settings"]`，
+    # 也不影响编辑器（编辑器走 web 层，不经过本入口）。
+    await asyncio.to_thread(enforce_play_gate, pack_dir)
+    pack = await load_pack(pack_dir)
     registry = pack.registry
     snap = registry.snapshot()
     world = GameWorld(maps=pack.modules, npc_registry=registry)

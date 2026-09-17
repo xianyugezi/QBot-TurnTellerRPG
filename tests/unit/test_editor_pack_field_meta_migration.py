@@ -6,8 +6,8 @@
 （批29 重定到本批末提交；批28 已把空壳键 `transfer_allowed` 从框架侧删除，批29 用户拍板后
 再把内容包 `veinborn` 的两处残留——`enhance.json` 数据键 + `field_meta.json` 展示名——
 **一并清理**；同批 ② 给 `skill_chains.steps[].condition` 新增 level/job/quest 三个主体与
-`value_enum` 描述符、条件 `ops` 集合 4 → 7）。以上均属**本批有意**的字段删除与展示层
-可选项扩充；重定到本批末提交后，基线树与当前树**逐字段 diff=0**，
+`value_enum` 描述符、条件字段新增 `help` 说明、条件 `ops` 集合 4 → 7）。以上均属**本批有意**
+的字段删除与展示层可选项/说明扩充；重定到本批末提交后，基线树与当前树**逐字段 diff=0**，
 **删除项 = 0、无既有 label/help/group 严格键改动**），在基线树与当前树各跑一遍
 `scripts/editor_readonly_snapshot.py`（模块树 / 条目列表 / 条目详情 / 条目索引 / 引用候选 /
 包列表），递归对拍并输出差异报告。
@@ -38,7 +38,7 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
-BASELINE_REF = "6acb167"
+BASELINE_REF = "9777ed5"
 CONTENT = REPO / "content"
 
 

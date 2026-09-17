@@ -1817,6 +1817,10 @@ def _module_table() -> Dict[str, ModuleMeta]:
                                "tag": FieldMeta(type="str", label="标签"),
                                "condition": FieldMeta(type="obj", children={},
                                                       soft_label=True, label="触发条件",
+                                                      help="满足才可用（或自动替换为派生技）。"
+                                                           "主体：连段计数、目标生命百分比、自身/目标状态、"
+                                                           "战斗轮次、印记、方位，以及玩家等级（eq/min/max）、"
+                                                           "职业（in/not_in 集合）、任务进度（进行中/已完成/未接取）。",
                                                       editor="condition",
                                                       condition_subjects=dict(
                                                           CHAIN_CONDITION_SUBJECTS)),

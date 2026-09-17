@@ -49,7 +49,8 @@ def test_map_placed_enemy_not_unused_unplaced_is(tmp_path: Path) -> None:
         "maps": [{"id": "m1", "name": "林", "monsters": [{"enemy": "e1", "count": 1}]}],
     })
     out = api.pack_unused("p", root=tmp_path)
-    assert out["unused_tag"] == "📍未使用"
+    # 后端只给纯文本标记（📍 由前端按定稿角标渲染，遵守 M5 emoji 纪律）
+    assert out["unused_tag"] == "未使用"
     assert _unused_set(out, "enemies") == {"e2"}          # e1 已放入地图 → 不标
     assert "e2" not in _unused_set(out, "enemies") or True
     # 既有单条引用扫描与批量口径一致（同一遍历）

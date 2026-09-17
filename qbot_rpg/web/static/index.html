@@ -2906,7 +2906,8 @@ function autosaveLocalDraft() {
     });
   } catch (err) { return; }
   if (payload) { EditorLocalDraft.save(store, payload); }
-  else { EditorLocalDraft.clear(store); }
+  // 无改动时**不清**：初始化渲染 / 默认选中条目都会 markDirty，若在此清除会把待恢复的
+  // 草稿误删；清除只发生在「保存成功 / 用户取消 / 恢复时选择丢弃 / 关闭开关」。
 }
 
 function clearLocalDraft() { EditorLocalDraft.clear(localDraftStore()); }
@@ -7162,10 +7163,10 @@ el("btn-save").addEventListener("click", runSave);
 el("btn-cancel").addEventListener("click", function () {
   if (state.newEntry) {   // 新建态：取消 = 放弃并关闭（有未保存内容时二次确认）
     if (draftCount() && !window.confirm("放弃这次新建的未保存内容并关闭吗？")) { return; }
-    discardDraft(); closeNewEntry(); return;
+    discardDraft(); closeNewEntry(); clearLocalDraft(); return;   // 批32 D1：明确放弃 → 清本机草稿
   }
   if (!draftCount()) { return; }
-  state.result = null; renderResult(null); discardDraft(); reloadDetail();
+  state.result = null; renderResult(null); discardDraft(); clearLocalDraft(); reloadDetail();
 });
 el("btn-rollback").addEventListener("click", runRollback);
 el("btn-delete").addEventListener("click", deleteEntry);

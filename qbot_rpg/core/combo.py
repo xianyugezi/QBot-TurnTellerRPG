@@ -1464,7 +1464,9 @@ class ComboEngine:
         """
         # 批29 α4：不再手抄字段——复用 condition_ctx 的**同一份**上下文，仅把 count
         # 覆盖为达顶后新快照的段数（保证 level/job/quest 等新维度不漏接、口径单一）。
-        ctx = replace(self.condition_ctx(side, snap), count=post_state.count)
+        # 历史口径保持：本路径**不注入 positions**（原实现未给 positions → 缺省 {}），
+        # 故 `position_match` 在此路径的既有判定结果零变化（不得改变既有条件判定）。
+        ctx = replace(self.condition_ctx(side, snap), count=post_state.count, positions={})
 
         def _avail(s: StepConfig) -> bool:
             return evaluate_condition(s.condition, ctx, self._marks_lookup)

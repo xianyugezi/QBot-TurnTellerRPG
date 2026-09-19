@@ -33,6 +33,7 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 from qbot_rpg.content import entry_presets as entry_presets_mod
 from qbot_rpg.content import field_meta_pack as pack_meta
 from qbot_rpg.content.field_meta import default_field_meta_table
+from qbot_rpg.core import job_slots as job_slots_core
 from qbot_rpg.web.framework_keys import framework_key_notes, framework_key_source
 from qbot_rpg.content.models import FieldMeta, FieldMetaTable, ModuleMeta
 from qbot_rpg.content.module_catalog import (
@@ -1373,6 +1374,38 @@ def module_catalog(pack: object, root: Optional[object] = None) -> Dict[str, Any
         "enabled_count": sum(1 for r in rows if r["enabled"]),
         "manifest_backup": {"path": "manifest.json.bak", "exists": bak.is_file()},
     }
+
+
+def _module_by_kind(pack_dir: Path, declared: Sequence[str], kind: str) -> Optional[str]:
+    """按 `ModuleMeta.kind` 在包声明模块中定位模块键（不写死模块名；缺省 None）。"""
+    for mod in declared:
+        mmeta = _module_meta(mod, pack_dir)
+        if mmeta is not None and getattr(mmeta, "kind", None) == kind:
+            return str(mod)
+    return None
+
+
+def job_tree(pack: object, root: Optional[object] = None) -> Dict[str, Any]:
+    """job 树（【进阶继承卡片】）只读接口：每个 job 从哪些 job 进阶 + 继承什么。
+
+    批35 · §6.12-12。模块名不写死：按 `ModuleMeta.kind == "job"` / `"skill"`
+    在包声明模块中定位；计算消费纯函数 `core/job_slots.job_inherit_summary`
+    （core 层不 import content，数据经注入）。只读，不落盘。
+    """
+    pack_dir = _pack_dir(pack, root)
+    manifest = _manifest(pack_dir)
+    declared = _declared_modules(manifest)
+    job_mod = _module_by_kind(pack_dir, declared, "job")
+    skill_mod = _module_by_kind(pack_dir, declared, "skill")
+
+    def _entries(mod: Optional[str]) -> Any:
+        return _read_json(pack_dir / f"{mod}.json") if mod else None
+
+    tree = job_slots_core.job_inherit_summary(_entries(job_mod), _entries(skill_mod))
+    tree["pack"] = str(pack)
+    tree["job_module"] = job_mod or ""
+    tree["skill_module"] = skill_mod or ""
+    return tree
 
 
 

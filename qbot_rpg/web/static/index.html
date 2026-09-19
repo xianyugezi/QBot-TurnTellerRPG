@@ -968,6 +968,9 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
           title="把当前模块导出成 CSV：列头 = 字段中文名(键)；列表/对象字段用 JSON 文本；UTF-8 带 BOM，Excel 双击不乱码；危险公式前缀会被中和。导出只读，不改内容包。">导出 CSV</button>
         <button class="btn" id="btn-csv-import" type="button" disabled
           title="从 CSV 批量导入当前模块：保持 CSV 行序（追加到末尾 / 插入到指定位置）；引用字段逐行校验，有错整批不写入；同 id 默认跳过（可显式选覆盖）。导入前自动备份。">导入 CSV</button>
+        <!-- 批35（框架 §6.12-12）：进阶继承树（进阶继承卡片）只读查看 -->
+        <button class="btn" id="btn-job-tree" type="button" disabled
+          title="查看进阶继承树：每个进阶节点从哪个节点进阶、下级节点有哪些、转职后继承哪些能力。只读展示，规则由内容包声明驱动。">进阶树</button>
       </div>
       <div class="list-tools">
         <div class="search"><input id="filter" placeholder="过滤当前模块（按名称/ID）" aria-label="过滤当前模块（本地，按名称或 ID）"></div>
@@ -1006,7 +1009,7 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
       <div class="panel-body" id="p-body">
         <div class="empty">从左侧选择模块与条目。字段按内容包元数据渲染；改动先进草稿，保存时才校验并落盘。</div>
       </div>
-      <div class="panel-ft"><span>批34 · 通用 CSV</span></div>
+      <div class="panel-ft"><span>批35 · 进阶职业继承</span></div>
     </section>
 
   </div>
@@ -1180,6 +1183,27 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
       <span class="sp"></span>
       <button class="btn primary" id="csv-run" type="button" disabled>导入</button>
       <button class="btn" id="csv-done" data-modal-close type="button">完成</button>
+    </div>
+  </div>
+</div>
+
+<!-- 批35（框架 §6.12-12）· 进阶继承树：从哪个节点进阶 + 继承什么，只读展示 -->
+<div id="jobtreepanel" class="mp-overlay" data-modal="jobtreepanel" hidden>
+  <div class="mp" role="dialog" aria-modal="true" aria-label="进阶继承树">
+    <div class="mp-hd">
+      <span class="mp-t">🌳 进阶继承树</span>
+      <button class="mp-x" id="jt-close" data-modal-close type="button"
+        aria-label="关闭进阶继承树面板">×</button>
+    </div>
+    <div class="mp-hint">每个进阶节点显示：它从哪个节点进阶、它下面挂着哪些进阶节点、
+      转职后会继承到哪些内容。规则完全由内容包声明驱动（挂在谁下面就继承谁），
+      改内容即改树。</div>
+    <div class="mp-msg" id="jt-msg" hidden></div>
+    <div class="mp-list" id="jt-list"></div>
+    <div class="mp-ft">
+      <span class="mp-note" id="jt-note">只读展示，不改内容包。</span>
+      <span class="sp"></span>
+      <button class="btn" id="jt-done" data-modal-close type="button">完成</button>
     </div>
   </div>
 </div>
@@ -2511,6 +2535,37 @@ function modalBind(id, opts) {
 });
 /* EDITOR_CSV_END */
 
+/* EDITOR_JOBTREE_BEGIN */
+// 批35 · 进阶继承树（进阶继承卡片 §6.12-12）纯逻辑（无 DOM 依赖；浏览器挂 EditorJobTree，
+// node 下走 module.exports 供单测）。
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) { module.exports = factory(); }
+  else { root.EditorJobTree = factory(); }
+})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+  // 有包即可查看（只读能力，GM 只读身份也能看）。
+  function canOpen(pack) { return !!pack; }
+  // 树数据 → 纯文本（无 DOM；人话：从哪个节点进阶 + 继承什么 + 下级节点）。
+  function treeText(tree) {
+    var rows = (tree && tree.jobs) || [];
+    if (!rows.length) { return "当前内容包没有进阶节点（job 模块为空或未启用）。"; }
+    var lines = [];
+    rows.forEach(function (j) {
+      var head = j.name || j.id;
+      lines.push(head + (j.id ? "（" + j.id + "）" : ""));
+      lines.push(j.parent
+        ? ("  ⤴ 进阶自：" + (j.parent_name || j.parent))
+        : "  ⤴ 进阶自：（无进阶来源）");
+      var adv = (j.advanced_jobs || []).map(function (c) { return c.name || c.id; });
+      lines.push("  ▸ 下级节点：" + (adv.length ? adv.join("、") : "—"));
+      var inh = (j.inherited_skills || []).map(function (s) { return s.name || s.id; });
+      lines.push("  ▸ 继承内容：" + (inh.length ? inh.join("、") : "—"));
+    });
+    return lines.join("\n");
+  }
+  return { canOpen: canOpen, treeText: treeText };
+});
+/* EDITOR_JOBTREE_END */
+
 /* EDITOR_BG_BEGIN */
 // 批10 · 自定义背景图纯逻辑（无 DOM 依赖；浏览器挂 EditorBg，node 走 module.exports）。
 // 存储策略：**浏览器本地，绝不上传服务器**（无鉴权面、零服务端改动，也不写任何内容包文件）。
@@ -3014,6 +3069,8 @@ function markDirty() {
   // 批34：模块级 CSV —— 导出只读可用；导入必须可编辑（与后端 require_edit 一致）
   el("btn-csv-export").disabled = !state.module || state.busy;
   el("btn-csv-import").disabled = !state.module || !state.editable || state.busy;
+  // 批35：进阶继承树只读查看 —— 有包即可（GM 只读身份也能看）
+  el("btn-job-tree").disabled = !state.pack || state.busy;
   refreshCreateButton();
   // 每个表单上下文各自标脏（主表单 + 关联分区条目；字段键只在各自上下文里比对）
   allForms().forEach(function (ctx) {
@@ -7719,6 +7776,63 @@ el("btn-csv-export").addEventListener("click", doExportCsv);
 el("btn-csv-import").addEventListener("click", openCsvPanel);
 el("csv-file").addEventListener("change", renderCsvPanel);
 el("csv-run").addEventListener("click", doImportCsv);
+
+// 批35 · §6.12-12 进阶继承树（【进阶继承卡片】）：只读拉 /api/pack/<包>/job-tree 并用纯逻辑渲染。
+var JobTree = { busy: false };
+function jobTreeMsg(level, text) {
+  var box = el("jt-msg");
+  if (!text) { box.hidden = true; box.textContent = ""; box.className = "mp-msg"; return; }
+  box.hidden = false; box.className = "mp-msg " + (level || ""); box.textContent = text;
+}
+function renderJobTree(tree) {
+  var box = el("jt-list");
+  box.textContent = "";
+  var rows = (tree && tree.jobs) || [];
+  if (!rows.length) {
+    box.textContent = EditorJobTree.treeText(tree);
+    return;
+  }
+  rows.forEach(function (j) {
+    var card = document.createElement("div");
+    card.className = "mp-row";
+    var t = document.createElement("div");
+    t.className = "mp-t2";
+    t.textContent = String(j.name || j.id) + (j.id ? "（" + j.id + "）" : "");
+    card.appendChild(t);
+    var s = document.createElement("div");
+    s.className = "mp-sub";
+    var bits = [j.parent ? ("进阶自：" + (j.parent_name || j.parent))
+                         : "无进阶来源"];
+    var adv = (j.advanced_jobs || []).map(function (c) { return c.name || c.id; });
+    bits.push("下级：" + (adv.length ? adv.join("、") : "—"));
+    var inh = (j.inherited_skills || []).map(function (x) { return x.name || x.id; });
+    bits.push("继承：" + (inh.length ? inh.join("、") : "—"));
+    s.textContent = bits.join(" ｜ ");
+    card.appendChild(s);
+    box.appendChild(card);
+  });
+}
+function openJobTree() {
+  if (!EditorJobTree.canOpen(state.pack) || JobTree.busy) { return; }
+  modalOpen("jobtreepanel", el("btn-job-tree"));
+  jobTreeMsg("", "");
+  el("jt-note").textContent = "包：" + (state.pack || EMPTY_TEXT) + " · 只读展示，不改内容包。";
+  el("jt-list").textContent = "加载中…";
+  JobTree.busy = true;
+  fetch("/api/pack/" + enc(state.pack) + "/job-tree")
+    .then(function (r) {
+      if (!r.ok) { throw new Error("HTTP " + r.status); }
+      return r.json();
+    })
+    .then(function (tree) { renderJobTree(tree); JobTree.busy = false; })
+    .catch(function (err) {
+      jobTreeMsg("red", "进阶继承树加载失败：" + err.message);
+      el("jt-list").textContent = "";
+      JobTree.busy = false;
+    });
+}
+modalBind("jobtreepanel", {});
+el("btn-job-tree").addEventListener("click", openJobTree);
 
 document.addEventListener("keydown", function (e) {
   if (modalEsc(e)) { return; }   // Esc 关闭当前弹层并把焦点还给触发按钮

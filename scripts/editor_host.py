@@ -113,6 +113,11 @@ def create_app(pack: Optional[str] = None, root: Optional[str] = None,
     def api_pack_unused(pack_id: str):  # type: ignore[no-untyped-def]
         return api.pack_unused(pack_id, root=content_root)
 
+    # 批35（框架 §6.12-12）：进阶继承树只读接口（job 树：从哪些 job 进阶 + 继承什么）。
+    @app.get("/api/pack/{pack_id}/job-tree")
+    def api_job_tree(pack_id: str):  # type: ignore[no-untyped-def]
+        return api.job_tree(pack_id, root=content_root)
+
     @app.get("/api/pack/{pack_id}/module/{module}/new")
     def api_new_entry(pack_id: str, module: str, name: Optional[str] = None,  # type: ignore[no-untyped-def]
                       preset: Optional[str] = None):

@@ -319,6 +319,118 @@ def rearrange_job_slots(
 
 
 # =====================================================================================
+# 职业树展示数据（纯函数 · 批35 §6.12-12 编辑器卡片/指令复用）
+# =====================================================================================
+
+
+def job_inherit_summary(
+    jobs_table: Any,
+    skills: Any = None,
+) -> Dict[str, Any]:
+    """职业树展示数据（纯函数，可 JSON 序列化；编辑器【进阶职业卡片】后端口径）。
+
+    入参：
+      jobs_table: 职业表（Mapping{job_id: 条目} 或条目序列；条目为 Mapping）。
+      skills:     整库技能条目序列（raw Mapping 或协议对象；缺省 → 名称兜底 id）。
+    出参：
+      {
+        "jobs": [                     # 保持传入职业表顺序
+          {"id", "name",
+           "parent": <母职 id | None>,       # inherit.from：从哪个职业进阶
+           "parent_name": <母职名 | None>,
+           "ancestors": [<祖辈 id>...],      # 继承链（传递闭包）
+           "advanced_jobs": [{"id","name"}], # 下级职业（谁挂在它下面，反向索引）
+           "inherit_skills": [{"id","name"}...] | None,  # 声明白名单（None = 全部）
+           "inherited_skills": [{"id","name"}...]},      # 实际继承到的技能
+        ],
+        "count": <职业数>,
+      }
+    规则：**配置驱动、不写死**——只读 `jobs.inherit`；无 `inherit` 的职业
+    parent=None、inherited_skills=[]。「挂在谁下面就继承谁」= advanced_jobs 反向索引。
+    """
+    rows = _normalize_entries(jobs_table)
+    by_id = {jid: entry for jid, entry in rows}
+    skill_rows = _normalize_entries(skills) if skills is not None else []
+    skill_list = [entry for _sid, entry in skill_rows]
+    skill_name = {sid: str(e.get("name") or sid) for sid, e in skill_rows}
+    # 反向索引：母职 → 下级职业（按职业表顺序，确定性）
+    advanced: Dict[str, List[str]] = {}
+    for jid, entry in rows:
+        parent = _inherit_from(entry)
+        if parent:
+            advanced.setdefault(parent, []).append(jid)
+
+    jobs_out: List[Dict[str, Any]] = []
+    for jid, entry in rows:
+        parent = _inherit_from(entry)
+        chain = resolve_inherit_chain(jid, by_id)
+        declared = _inherit_skill_ids_declared(entry)
+        inherited = inherited_skill_ids(jid, by_id, skill_list)
+        jobs_out.append({
+            "id": jid,
+            "name": str(entry.get("name") or jid),
+            "parent": parent,
+            "parent_name": (str(by_id[parent].get("name") or parent)
+                            if parent in by_id else None),
+            "ancestors": list(chain),
+            "advanced_jobs": [
+                {"id": c, "name": str(by_id[c].get("name") or c)}
+                for c in advanced.get(jid, []) if c in by_id
+            ],
+            "inherit_skills": (
+                None if declared is None
+                else [{"id": s, "name": skill_name.get(s, s)} for s in declared]
+            ),
+            "inherited_skills": [
+                {"id": s, "name": skill_name.get(s, s)} for s in inherited
+            ],
+        })
+    return {"jobs": jobs_out, "count": len(jobs_out)}
+
+
+def _normalize_entries(table: Any) -> List[Tuple[str, Mapping[str, Any]]]:
+    """条目表归一为 [(id, Mapping)]（Mapping{id: entry} / 序列双形态；保序、去重）。"""
+    out: List[Tuple[str, Mapping[str, Any]]] = []
+    seen: set = set()
+    if isinstance(table, Mapping):
+        for k, v in table.items():
+            jid = str(k)
+            if jid and jid not in seen and isinstance(v, Mapping):
+                out.append((jid, v))
+                seen.add(jid)
+    elif isinstance(table, (list, tuple)):
+        for v in table:
+            if not isinstance(v, Mapping):
+                continue
+            jid = v.get("id")
+            if isinstance(jid, str) and jid and jid not in seen:
+                out.append((jid, v))
+                seen.add(jid)
+    return out
+
+
+def _inherit_from(entry: Mapping[str, Any]) -> Optional[str]:
+    """职业条目的 inherit.from（非空 str → 该值；否则 None）。"""
+    inherit = entry.get(INHERIT_KEY)
+    if not isinstance(inherit, Mapping):
+        return None
+    parent = inherit.get("from")
+    return parent if isinstance(parent, str) and parent else None
+
+
+def _inherit_skill_ids_declared(entry: Mapping[str, Any]) -> Optional[List[str]]:
+    """职业条目 inherit.skills 声明白名单（list[str] → 列表；否则 None = 全部）。"""
+    inherit = entry.get(INHERIT_KEY)
+    if not isinstance(inherit, Mapping):
+        return None
+    raw = inherit.get("skills")
+    if not isinstance(raw, list):
+        return None
+    ids = [x for x in raw if isinstance(x, str) and x]
+    return ids or None
+
+
+# =====================================================================================
 # 存档迁移（save/load 转职快照段）
 # =====================================================================================
 
@@ -419,6 +531,7 @@ __all__ = [
     "snapshot_job_context",
     "resolve_inherit_chain",
     "inherited_skill_ids",
+    "job_inherit_summary",
     "rearrange_job_slots",
     "save_rearranged_slots",
     "load_job_slots_state",

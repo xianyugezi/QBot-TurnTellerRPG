@@ -107,7 +107,8 @@ def test_existing_modules_counts_stable() -> None:
     # 批27 β1：+ message_key（每技能战斗播报模板键）→ 45
     assert len(t.modules["skills"].fields) == 45
     # 批23 C1/C2：jobs 11 + advance + is_basic = 13（契约 §1.1 顶层 11）
-    assert len(t.modules["jobs"].fields) == 13
+    # 批35：+ inherit（进阶继承）→ 14
+    assert len(t.modules["jobs"].fields) == 14
     # 编辑器重写批4.5：enemies 补 AI 引擎依赖段 ai/phases/rewards/zone_change（真实内容包
     # 实有、原缺登记；soft_label=True 纯展示宽字段，泛型校验零新增拦截）→ 27 + 4 = 31
     assert len(t.modules["enemies"].fields) == 31

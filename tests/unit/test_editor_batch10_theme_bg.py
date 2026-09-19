@@ -36,7 +36,7 @@ REPO = Path(api.repo_root())
 HTML = REPO / "qbot_rpg" / "web" / "static" / "index.html"
 TOKENS = REPO / "qbot_rpg" / "web" / "static" / "tokens.css"
 
-BATCH_NOTE = "批34 · 通用 CSV"
+BATCH_NOTE = "批35 · 进阶职业继承"
 
 
 def _html() -> str:
@@ -196,18 +196,20 @@ def test_setTheme_keeps_draft_and_only_touches_theme() -> None:
 # =====================================================================================
 def test_both_panels_share_the_same_modal_component() -> None:
     html = _html()
-    # 四个面板都是同一套 .mp-overlay/.mp 结构，且都带 data-modal
-    # （批10 起 ⚙/🎨 共用；批11 的 📦 导出/导入、批34 的 CSV 导入沿用同一组件，不另写一套）
-    assert html.count('class="mp-overlay" data-modal=') == 4
+    # 五个面板都是同一套 .mp-overlay/.mp 结构，且都带 data-modal
+    # （批10 起 ⚙/🎨 共用；批11 的 📦 导出/导入、批34 的 CSV 导入、批35 的职业树沿用同一组件）
+    assert html.count('class="mp-overlay" data-modal=') == 5
     assert 'data-modal="modpanel"' in html and 'data-modal="themepanel"' in html
     assert 'data-modal="transferpanel"' in html and 'data-modal="csvpanel"' in html
-    for token in ('id="modpanel"', 'id="themepanel"', 'id="transferpanel"', 'id="csvpanel"'):
+    assert 'data-modal="jobtreepanel"' in html
+    for token in ('id="modpanel"', 'id="themepanel"', 'id="transferpanel"', 'id="csvpanel"',
+                  'id="jobtreepanel"'):
         assert token in html
     # 共用关闭按钮（data-modal-close）与共用列表/底栏 class
     assert html.count("data-modal-close") >= 6
-    assert html.count('class="mp-list"') == 3
-    assert html.count('class="mp-hd"') == 4
-    assert html.count('class="mp-ft"') == 4
+    assert html.count('class="mp-list"') == 4
+    assert html.count('class="mp-hd"') == 5
+    assert html.count('class="mp-ft"') == 5
     # 两个面板都走同一个 EditorModal 实现 + 注册/绑定
     for fn in ("modalOpen", "modalClose", "modalActive", "modalEsc", "modalTrap",
                "modalFocusables", "modalOverlayClick", "modalFilter", "modalBind"):
@@ -323,8 +325,8 @@ console.log(JSON.stringify(out));
 
 def test_modal_aria_and_keyboard_reachability() -> None:
     html = _html()
-    assert html.count('role="dialog"') == 4
-    assert html.count('aria-modal="true"') == 4
+    assert html.count('role="dialog"') == 5
+    assert html.count('aria-modal="true"') == 5
     assert "Esc 关闭" in html or "modalEsc" in html
     assert "data-modal-close" in html
     # 顶栏触发按钮键盘可达（原生 button），面板内焦点环走 --focus
@@ -538,7 +540,7 @@ def test_footer_batch_string_is_current() -> None:
     assert "批3 · 分区页签" not in html
     # 产品名不含批次（批9.2 约束不回退）
     comp = re.search(r'<div class="panel-ft">(.*?)</div>', html, re.S)
-    assert comp is not None and "批34" in comp.group(1)
+    assert comp is not None and "批35" in comp.group(1)
 
 
 def test_batch10_frontend_has_no_pack_business_names() -> None:

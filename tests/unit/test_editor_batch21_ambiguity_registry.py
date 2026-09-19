@@ -16,7 +16,7 @@ REGISTRY = REPO / "docs" / "矛盾与待裁决登记.md"
 LEDGER = REPO / "docs" / "编辑器修改意见0915_台账与方案.md"
 INDEX = REPO / "qbot_rpg" / "web" / "static" / "index.html"
 
-BATCH_NOTE = "批40 · 实例uid与随机流"
+BATCH_NOTE = "批41 · 打造主流程"
 STATUS_PREFIXES = ("待实测", "待用户裁决", "已裁决-", "已实现-")
 MIN_ITEMS = 20
 
@@ -81,6 +81,6 @@ def test_footer_batch_note_synced() -> None:
     m = re.search(r'<div class="panel-ft"><span>(.*?)</span>', html)
     assert m and m.group(1) == BATCH_NOTE, m and m.group(1)
     # 批40 页脚：上一批串（批39 · 合成公用层）不得残留
-    assert "批39 · 合成公用层" not in html
+    assert "批40 · 实例uid与随机流" not in html
     assert "批36 · 采集/挖掘" not in html
     assert "批37 · 战后恢复" not in html

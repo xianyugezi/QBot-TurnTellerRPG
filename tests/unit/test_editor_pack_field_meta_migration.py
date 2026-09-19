@@ -74,7 +74,16 @@ SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
 # 批39 二次重定（同批）：00b65f5 → 0e1d7b4（settings.alchemy.mode 补中文名 + 说明卡；
 #   mode 字段级 label/help 属口径④严格键，新增 → 重定后 0 差异）。
 # 批39 三次重定（同批）：0e1d7b4 → b812891（alchemy 段级 label/help 新增，口径④严格键）。
-BASELINE_REF = "b812891"
+# 批41（2026-09-19 深度打造主流程）重定：b812891 → de0cb85（本批 A/B 字段与模板提交）。
+#   原因 = 本批**有意**变更（非迁移回归）：
+#     · items 新增材料打造字段 material_level / material_quality / craft_cost
+#       （stats 分组 23→26）+ 图纸字段 blueprint_* 12 条（effects 分组 6→8，模板槽位）；
+#     · settings.deep_craft 段补 craft_rules / quality_colors / quality_exp_by_color /
+#       blueprint_grades / quality_draw_table 五个子字段（既有 enabled 原样保留）；
+#     · 模板全量表 +16 条 deep_craft_* 键（templates 计数 838→854，framework 836→852）。
+#   对拍实证：删除项 = 0，硬差异全部为上述计数/新增列变动；重定后 0 差异。
+#   与 scripts/compare_field_meta_migration.py 的 DEFAULT_BASELINE_REF 同基线。
+BASELINE_REF = "de0cb85"
 CONTENT = REPO / "content"
 
 

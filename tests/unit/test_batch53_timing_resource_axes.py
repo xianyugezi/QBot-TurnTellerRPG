@@ -26,6 +26,15 @@ from __future__ import annotations
 from typing import Any, Dict, Mapping
 
 from qbot_rpg.core.battle import BattleEngine
+from qbot_rpg.core.effects import (
+    STATUS_CHANCE_AXIS,
+    STATUS_RESIST_AXIS,
+    STACK_CAP_AXIS,
+    STACK_GAIN_AXIS,
+    DamageCtx,
+    EffectRuntime,
+    status_stat_modifier_sum,
+)
 from qbot_rpg.core.equipment import EquipmentEngine
 from qbot_rpg.core.player_attributes import PlayerAttributes
 from qbot_rpg.core.pvp import _combatant_of
@@ -156,6 +165,171 @@ def test_a7_cooldown_absent_is_identical() -> None:
     amp = {"player": {"s1": {"cooldown": -50}}}
     assert _run_cd({}, amp=amp) == {"s1": 5}
     assert _run_cd({"cooldown_pct": 0}, amp=amp) == {"s1": 5}
+
+
+# ===========================================================================
+# B · 状态概率（X21 status_chance_pct + 归并 debuff/buff_chance_pct）＋ 状态抵抗（X22）
+# ===========================================================================
+class _Def:
+    def __init__(self, raw: Dict[str, Any]) -> None:
+        self.id = raw["id"]
+        self.name = raw.get("name", raw["id"])
+        self.raw = raw
+
+
+def _status_def(sid: str, *, frame: str = "stack", max_stack: int = 5,
+                hit_rate: int = 100) -> _Def:
+    return _Def({
+        "id": sid, "name": sid, "class": "status", "category": "weak",
+        "stack_frame": frame, "max_stack": max_stack, "hit_rate": hit_rate,
+        "duration": {"turns": 3, "charges": 0},
+        "actions": [{"type": "stat_modifier", "stat": "atk", "value": 10}],
+    })
+
+
+def _rt(defs: Mapping[str, Any], *, axes: Any = None, resist: Any = None) -> EffectRuntime:
+    return EffectRuntime(
+        status_state={BP: [], BN: []},
+        resist_table=resist if resist is not None else {BP: {}, BN: {}},
+        defs=dict(defs),
+        config=({EFFECT_AXES_KEY: axes} if axes is not None else None),
+    )
+
+
+def _ctx(*, bp_extra: Any = None, bn_extra: Any = None, rng: float = 0.5,
+         source: str = BP, target: str = BN) -> DamageCtx:
+    snap = {
+        BP: {"max_hp": 1000, "hp": 1000},
+        BN: {"max_hp": 1000, "hp": 1000},
+    }
+    snap[source] = {**snap.get(source, {}), **dict(bp_extra or {})}
+    snap[target] = {**snap.get(target, {}), **dict(bn_extra or {})}
+    return DamageCtx(raw_damage=0, attack_type="skill", attacker=source,
+                     target=target, snapshot=snap,
+                     variables={"rng": _QueueRNG([rng, rng, rng, rng])})
+
+
+def _apply(rt: EffectRuntime, sid: str, ctx: DamageCtx) -> Any:
+    return rt.apply_status(sid, ctx.target, source=ctx.attacker,
+                           attacker=ctx.attacker, ctx=ctx)
+
+
+def test_b1_status_chance_bidirectional() -> None:
+    """`+100` 更易挂上 / 负向更难挂上（基准 25%）；`0` 与接线前同值。"""
+    d = {"s_x": _status_def("s_x", hit_rate=25)}
+    # +100 → 有效 50%：rnd 0.4 → 命中；rnd 0.6 → miss
+    assert _apply(_rt(d), "s_x", _ctx(bp_extra={STATUS_CHANCE_AXIS: 100}, rng=0.4)).applied
+    assert not _apply(_rt(d), "s_x", _ctx(bp_extra={STATUS_CHANCE_AXIS: 100}, rng=0.6)).applied
+    # −100 → 有效 0%（必 miss，rnd 0.5）；0 → 基线 25%（rnd 0.5 miss / rnd 0.1 hit）
+    assert not _apply(_rt(d), "s_x", _ctx(bp_extra={STATUS_CHANCE_AXIS: -100}, rng=0.5)).applied
+    assert not _apply(_rt(d), "s_x", _ctx(rng=0.5)).applied
+    assert _apply(_rt(d), "s_x", _ctx(rng=0.1)).applied
+
+
+def test_b2_status_chance_overflow_to_extra_stacks() -> None:
+    """X21 溢出转层：基准 100% + （+100 / +200 / +50）→ 首层 2 / 3 / 1 层。"""
+    d = {"s_x": _status_def("s_x", max_stack=5)}
+    r1 = _apply(_rt(d), "s_x", _ctx(bp_extra={STATUS_CHANCE_AXIS: 100}, rng=0.99))
+    assert r1.applied and r1.instance["stacks"] == 2
+    r2 = _apply(_rt(d), "s_x", _ctx(bp_extra={STATUS_CHANCE_AXIS: 200}, rng=0.99))
+    assert r2.instance["stacks"] == 3
+    r3 = _apply(_rt(d), "s_x", _ctx(bp_extra={STATUS_CHANCE_AXIS: 50}, rng=0.99))
+    assert r3.instance["stacks"] == 1
+    # 未配置轴 → 首层 1（零变化）
+    assert _apply(_rt(d), "s_x", _ctx(rng=0.99)).instance["stacks"] == 1
+
+
+def test_b3_legacy_debuff_buff_chance_merge_into_status_domain() -> None:
+    """归并证据：`debuff_chance_pct` / `buff_chance_pct` 经 pct 层 → 同一轴（不双计）。"""
+    flat: Dict[str, float] = {}
+    pct: Dict[str, float] = {}
+    route_bonus_into({"debuff_chance_pct": 25, "buff_chance_pct": 25}, flat, pct)
+    assert flat == {} and pct == {"debuff_chance": 25.0, "buff_chance": 25.0}
+    # 战斗桥把两旧键各折一次进同一轴（各一份贡献 = 50，不是某键算两遍）
+    assert combatant_updates(flat, pct) == {STATUS_CHANCE_AXIS: 50.0}
+    # 端到端：归并后的轴值确实抬高命中概率（基准 25 + 50 → 37.5%，rnd 0.3 命中）
+    d = {"s_x": _status_def("s_x", hit_rate=25)}
+    assert _apply(_rt(d), "s_x", _ctx(bp_extra={STATUS_CHANCE_AXIS: 50}, rng=0.3)).applied
+    assert not _apply(_rt(d), "s_x", _ctx(bp_extra={STATUS_CHANCE_AXIS: 50}, rng=0.4)).applied
+
+
+def test_b4_status_resist_bidirectional_and_extends_resist_table() -> None:
+    """X22：target 侧 `+50` → 抵抗 +50 点（更难挂）；`−50` → 归零（更易挂）；
+    并**扩展既有 resist_table**（20 + 30 = 50）。"""
+    d = {"s_x": _status_def("s_x")}
+    # +50：resist 0→50 → 有效 50%，rnd 0.6 miss / rnd 0.4 hit
+    assert not _apply(_rt(d), "s_x",
+                      _ctx(bn_extra={STATUS_RESIST_AXIS: 50}, rng=0.6)).applied
+    assert _apply(_rt(d), "s_x",
+                  _ctx(bn_extra={STATUS_RESIST_AXIS: 50}, rng=0.4)).applied
+    # 扩展既有 resist_table：基础 20 + 轴 30 = 50
+    rt = _rt(d, resist={BP: {}, BN: {"s_x": 20}})
+    assert not _apply(rt, "s_x",
+                      _ctx(bn_extra={STATUS_RESIST_AXIS: 30}, rng=0.6)).applied
+    # −50：resist 归零 → 恢复必中
+    assert _apply(_rt(d), "s_x",
+                  _ctx(bn_extra={STATUS_RESIST_AXIS: -50}, rng=0.99)).applied
+    # 未配置 → 原值（rnd 0.99 必中）
+    assert _apply(_rt(d), "s_x", _ctx(rng=0.99)).applied
+
+
+def test_b5_attack_and_defense_sides_are_independent() -> None:
+    """X21 与 X22 是攻/防两侧，**不合并**：高命中 + 高抗性可同时存在。"""
+    d = {"s_x": _status_def("s_x")}
+    ctx = _ctx(bp_extra={STATUS_CHANCE_AXIS: 100},
+               bn_extra={STATUS_RESIST_AXIS: 50}, rng=0.7)
+    # 基准 100% → 命中 ±100 = 200；抗性 +50 → 有效 100% → 命中
+    assert _apply(_rt(d), "s_x", ctx).applied
+
+
+# ===========================================================================
+# C · 层数获取（X23）＋ 层数上限（X24），与批48 stacks 乘算对齐
+# ===========================================================================
+def test_c1_stack_gain_bidirectional() -> None:
+    """`+100` → 每次 +2 层；`0` → +1 层；负值下钳 0 层（状态仍成立）。"""
+    d = {"s_x": _status_def("s_x", max_stack=9)}
+    rt = _rt(d)
+    _apply(rt, "s_x", _ctx(source="p1", bp_extra={STACK_GAIN_AXIS: 100}, rng=0.99))
+    inst = rt.status_instances(BN)[0]
+    assert inst["stacks"] == 2
+    _apply(rt, "s_x", _ctx(source="p2", bp_extra={STACK_GAIN_AXIS: 100}, rng=0.99))
+    assert inst["stacks"] == 4
+    # 负向：−100 → 增量 0（不涨层），但施加仍成功
+    rt2 = _rt(d)
+    r = _apply(rt2, "s_x", _ctx(bp_extra={STACK_GAIN_AXIS: -100}, rng=0.99))
+    assert r.applied and rt2.status_instances(BN)[0]["stacks"] == 1
+
+
+def test_c2_stack_cap_delta_raises_limit() -> None:
+    """X24 上限加算：max_stack=1 的状态 + target 侧 +2 → 可叠到 3 层。"""
+    d = {"s_x": _status_def("s_x", max_stack=1)}
+    rt = _rt(d)
+    for i in range(4):
+        _apply(rt, "s_x", _ctx(source=f"p{i}",
+                               bn_extra={STACK_CAP_AXIS: 2}, rng=0.99))
+    inst = rt.status_instances(BN)[0]
+    assert inst["stacks"] == 3            # 1 + 2，封顶后不再涨
+    # 负向：−1 → 上限钳到 ≥1 → 保持 1 层
+    rt2 = _rt(d)
+    for i in range(3):
+        _apply(rt2, "s_x", _ctx(source=f"q{i}",
+                                bn_extra={STACK_CAP_AXIS: -1}, rng=0.99))
+    assert rt2.status_instances(BN)[0]["stacks"] == 1
+
+
+def test_c3_stack_axes_align_with_batch48_stacks_multiplier() -> None:
+    """与批48 对齐：层数轴改的是 stacks，`status_stat_modifier_sum` 按 stacks 乘算。"""
+    d = {"s_x": _status_def("s_x", max_stack=5)}
+    rt = _rt(d)
+    _apply(rt, "s_x", _ctx(bp_extra={STACK_GAIN_AXIS: 100}, rng=0.99))
+    inst = rt.status_instances(BN)[0]
+    assert inst["stacks"] == 2
+    # stat_modifier atk=10 按 stacks=2 乘算 → 20
+    assert status_stat_modifier_sum(rt, BN, "atk") == 20.0
+    # 未配置 → stacks=1 → 10（零变化）
+    rt2 = _rt(d)
+    _apply(rt2, "s_x", _ctx(rng=0.99))
+    assert status_stat_modifier_sum(rt2, BN, "atk") == 10.0
 
 
 def test_g1_battle_snapshot_zero_change_no_axis_keys() -> None:

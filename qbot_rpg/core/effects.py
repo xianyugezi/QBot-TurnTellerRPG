@@ -110,6 +110,13 @@ HEAL_TAKEN_STAT: str = "heal_taken"
 HEAL_RECEIVED_AXIS: str = "healing_received_pct"
 HEAL_DONE_AXIS: str = "healing_done_pct"
 
+# 批53 · 状态 / 层数轴（X21/X22/X23/X24）消费点引用的轴键常量——键名唯一源仍是
+# `data.gear_stats.EFFECT_AXIS_SPECS`；此处只取登记名，不另立键空间。
+STATUS_CHANCE_AXIS: str = "status_chance_pct"    # 施加概率（source 侧）
+STATUS_RESIST_AXIS: str = "status_resist_pct"    # 状态抵抗（target 侧；扩展 resist_table）
+STACK_GAIN_AXIS: str = "stack_gain_pct"          # 层数获取（source 侧）
+STACK_CAP_AXIS: str = "stack_cap_delta"          # 层数上限加算（target 侧）
+
 # 方位 v0.6 §三.1：方位格 side 四向（reposition 原子枚举，core 层常量；content 校验
 # 同源内联镜像不 cross-import）
 POSITION_SIDES: Tuple[str, ...] = ("front", "back", "left", "right")
@@ -509,7 +516,21 @@ class EffectRuntime:
         category = str(raw.get("category", "other"))
         negative = category in {"weak", "seal", "harm"}  # 弱体/封锁/伤害（定稿 §4.3）
         frame = str(raw.get("stack_frame", "single"))
+        # 批53 · 状态/层数轴取值（X21/X22/X23/X24）：
+        #   · 施加概率 / 层数获取 取 **source 侧**（施加者 build）；
+        #   · 状态抵抗 / 层数上限 取 **target 侧**（承受者/持有者 build）。
+        # 未配置（combatant 无该键 / ctx 缺侧）→ 0.0 → 各消费点走原路径（逐字段零变化）。
+        _axes_cfg = _runtime_axes_cfg(self)
+        _source_c = _side_combatant(ctx, str(source))
+        _target_c = _side_combatant(ctx, target)
+        _chance_pct = _axis_pct(_source_c, STATUS_CHANCE_AXIS, _axes_cfg)
+        _resist_pct = _axis_pct(_target_c, STATUS_RESIST_AXIS, _axes_cfg)
+        _stack_gain = _axis_pct(_source_c, STACK_GAIN_AXIS, _axes_cfg)
+        _stack_cap_delta = _axis_pct(_target_c, STACK_CAP_AXIS, _axes_cfg)
         max_stack = int(raw.get("max_stack") or self.config["stack_default_max"])
+        if _stack_cap_delta:
+            # X24 加算轴：上限 +Δ（整数阈值语义；下钳 ≥1 → 状态仍可存在）
+            max_stack = max(1, max_stack + int(round(_stack_cap_delta)))
         level_based = bool(raw.get("level_based", False))
         max_level = int(raw.get("max_level") or self.config["level_default_max"])
         hit_rate = int((raw.get("hit_rate", 100) or 100))
@@ -561,13 +582,34 @@ class EffectRuntime:
                         )
 
         # ---- R1-R4 命中判定（细化_1b §4.3，default 100=必中） ----
+        # 批53 · X22 状态抵抗（扩展既有 resist_table：**加算百分点**，0..100 钳制）——
+        # 与 X21 攻/防两侧各自独立（不合并）。轴值为 0 → resist 原值（零变化）。
+        overflow_stacks = 0
         if not force:
             resist = self.resist(target, status_id)
-            effective = hit_rate * max(0, 100 - resist) / 100.0
+            if _resist_pct:
+                resist = int(max(0, min(100, resist + _resist_pct)))
+            base_effective = hit_rate * max(0, 100 - resist) / 100.0
+            effective = base_effective
+            if _chance_pct:
+                # X21：施加概率 ×(1 + pct/100)；>100 的溢出按「每满 100% 折 1 层」
+                # 转额外层数（溢出转层，走 stack 框架的 `stacks`）。
+                effective = base_effective * (1.0 + _chance_pct / 100.0)
+                overflow_stacks = int(
+                    max(0.0, effective - max(100.0, base_effective)) // 100.0)
             rng = ctx.variables.get("rng") if ctx is not None else None
             rnd = rng.random() if rng is not None else random.random()
             if rnd > effective / 100.0:
                 return StatusApplyResult(False, status_id, {}, "miss", side_effects)
+
+        def _stack_delta(base: int = 1) -> int:
+            """本次施加写入的层数增量（X23 层数获取 ×(1+pct/100) + X21 溢出层）。
+
+            仅 **stack 框架** 使用；轴值 0 且无溢出 → 原 `+1`（逐字段零变化）。
+            """
+            if _stack_gain:
+                base = int(round(base * (1.0 + _stack_gain / 100.0)))
+            return max(0, base) + overflow_stacks
 
         # 定位既有实例
         existing = self.find_status(target, status_id)
@@ -649,20 +691,22 @@ class EffectRuntime:
 
         if existing is not None and frame == "stack":
             # S3 累积叠层至 max_stack（细化_1b §4.1 S3，默认 2-3）
+            # 批53：增量 = X23 层数获取 + X21 溢出层，一次写入并钳到上限。
             if int(existing.get("stacks", 1)) >= max_stack:
                 self._reset_duration(existing, turns, charges)
                 return StatusApplyResult(False, status_id, existing, "at_max_stack", side_effects)
-            existing["stacks"] = int(existing.get("stacks", 1)) + 1
+            existing["stacks"] = min(
+                max_stack, int(existing.get("stacks", 1)) + _stack_delta())
             self._reset_duration(existing, turns, charges)
             side_effects.append({"type": "status_stacked", "target": target, "status_id": status_id, "stacks": existing["stacks"]})
             self._after_apply(existing, raw, negative, target, status_id)
             self._r3_resist(target, status_id, raw, negative)
             return StatusApplyResult(True, status_id, existing, "stacked", side_effects)
 
-        # 无既有实例 → 新建
+        # 无既有实例 → 新建（stack 框架首层吃 X23 层数获取 + X21 溢出层）
         inst = self._new_instance(status_id, name, first_action_value, turns, charges, decay, decay_subject, source, category=category)
         inst["level"] = 1
-        inst["stacks"] = 1
+        inst["stacks"] = max(1, min(max_stack, _stack_delta())) if frame == "stack" else 1
         self.status_instances(target).append(inst)
         side_effects.append({"type": "status_applied", "target": target, "status_id": status_id})
         self._after_apply(inst, raw, negative, target, status_id)
@@ -1749,12 +1793,30 @@ def _stacks_of(inst: Any) -> int:
     return n if n > 0 else 1
 
 
-def _heal_axes_cfg(runtime: Any) -> Any:
+def _runtime_axes_cfg(runtime: Any) -> Any:
     """运行时携带的 `settings.effect_axes` 声明段（无 → None = 登记表缺省区间）。"""
     cfg = getattr(runtime, "config", None)
     if isinstance(cfg, Mapping):
         return cfg.get("effect_axes")
     return None
+
+
+def _heal_axes_cfg(runtime: Any) -> Any:
+    """`heal_apply` 语义别名（同一读点；键名/区间唯一源见 `_runtime_axes_cfg`）。"""
+    return _runtime_axes_cfg(runtime)
+
+
+def _side_combatant(ctx: Any, side: str) -> Any:
+    """从 DamageCtx 快照取某侧 combatant（缺失/异常 → None）。
+
+    批53：状态/层数轴按「source 侧 = 施加者 / target 侧 = 承受者」取值；
+    ctx 缺 / 快照缺该侧 / side 为空 → None → 消费点视为 0（缺省零变化）。
+    """
+    snap = getattr(ctx, "snapshot", None) if ctx is not None else None
+    if not isinstance(snap, Mapping) or not side:
+        return None
+    got = snap.get(str(side))
+    return got if isinstance(got, Mapping) else None
 
 
 def heal_apply(

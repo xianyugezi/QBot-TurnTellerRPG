@@ -248,9 +248,10 @@ EFFECT_AXIS_SPECS: Tuple[Mapping[str, Any], ...] = (
                             "> 基准溢出的部分转层数（溢出转层）。"},
         "legacy_alias": (("debuff_chance_pct", 1.0), ("buff_chance_pct", 1.0)),
         "consumer": "effects.status_apply_chance",
-        "consumer_note": "唯一收口 = apply_status 的概率判定处；同批归并两个悬空旧键"
-                         " debuff_chance_pct / buff_chance_pct（分治需求改为同一轴 + "
-                         "scope，旧键保留为 scope 别名）。",
+        "consumer_note": "批53 已接线：唯一收口 = `apply_status` 命中判定处（source 侧取值）；"
+                         "同批归并两个悬空旧键 debuff_chance_pct / buff_chance_pct（经 pct 层"
+                         "→ 同一轴，各折一次）；`>100%` 溢出按每满 100% 折 1 层（溢出转层，"
+                         "仅 stack 框架）。",
     },
     {
         "axis": "stack_gain_pct", "doc_id": "X23", "priority": "P0",
@@ -260,8 +261,9 @@ EFFECT_AXIS_SPECS: Tuple[Mapping[str, Any], ...] = (
                             "向上取整与否由包声明控制。"},
         "legacy_alias": (),
         "consumer": "effects.stack_gain",
-        "consumer_note": "唯一收口 = apply_status 里「累积至 max_stack」的 `+1` 处（乘"
-                         "(1+pct/100)）。",
+        "consumer_note": "批53 已接线：唯一收口 = `apply_status` 里「累积至 max_stack」的"
+                         "增量处（source 侧；×(1+pct/100) 后四舍五入）。与批48 的"
+                         " `status_stat_modifier_sum` stacks 乘算对齐（本轴只改 stacks 数量）。",
     },
     {
         "axis": "stack_cap_delta", "doc_id": "X24", "priority": "P0",
@@ -271,8 +273,9 @@ EFFECT_AXIS_SPECS: Tuple[Mapping[str, Any], ...] = (
                             "-1 = 上限降低 1 层。上限是整数阈值语义，故用差值不用倍率。"},
         "legacy_alias": (),
         "consumer": "effects.stack_cap",
-        "consumer_note": "唯一收口 = 既有 max_stack / stack_default_max（per-status 配置）"
-                         "与 marks.max_stack_of；本轴把它们升级为可修正。",
+        "consumer_note": "批53 已接线：唯一收口 = `apply_status` 的 max_stack 计算处"
+                         "（target 侧；加算 + 下钳 ≥1）。marks.max_stack_of 半边**未接**"
+                         "（印记与状态两套容器，登记待裁决）。",
     },
     # ---- P1（轴全集 §3 P1 表）----
     {
@@ -305,8 +308,9 @@ EFFECT_AXIS_SPECS: Tuple[Mapping[str, Any], ...] = (
                             "与「状态命中修正」是攻/防两侧，**不可合并**。"},
         "legacy_alias": (),
         "consumer": "effects.resist_roll",
-        "consumer_note": "唯一收口 = 既有 resist_table / resist_gain 的**装备常驻化**入口"
-                         "（该机制现默认关，接线时须保持默认关闭 = 零变化）。",
+        "consumer_note": "批53 已接线：唯一收口 = `apply_status` 抵抗判定处（target 侧；"
+                         "**加算百分点**到既有 resist_table，0..100 钳制）。resist_gain"
+                         "（施加后抗性）仍默认关；本轴只扩展 resist 值。",
     },
     {
         "axis": "action_bar_shift", "doc_id": "X30", "priority": "P1",

@@ -169,6 +169,10 @@ _KIND_FOR_MODULE: Mapping[str, str] = {
     "recipe": "recipe",
     "proficiency": "proficiency",
     "slots": "slots",
+    # 批46 · 符文地基（43-A）：runes.json list → 注册表 kind="rune"（DEF_CLASSES 无专属
+    # Def → 缺省 BaseDef 回退，同 recipe/proficiency/slots 口径；运行期解析由
+    # core/runes.py 经 ctx["runes"] 读 BaseDef.raw）。
+    "runes": "rune",
     # M9 锻造（m9_shared_contract）：forge.json 顶层 obj——DEF_CLASSES 无专属 Def →
     # 缺省 BaseDef 回退；运行期 Def 解析由 forge 指令壳经 parse_* 读 modules_raw
     "forge": "forge",

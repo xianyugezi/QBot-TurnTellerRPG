@@ -29,6 +29,7 @@
     "traits",
     "recipe",
     "slots",
+    "runes",
     "dungeon",
     "achievements",
     "conditional"
@@ -55,7 +56,8 @@
     "forge": "锻造",
     "proficiency": "熟练度",
     "templates": "模板",
-    "checkin": "签到"
+    "checkin": "签到",
+    "runes": "符文"
   },
   "module_tree": [
     {

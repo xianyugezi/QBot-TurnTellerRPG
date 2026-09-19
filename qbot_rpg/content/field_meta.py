@@ -102,6 +102,9 @@ NAMESPACES: Dict[str, Tuple[str, ...]] = {
     # （slots 无 id 收集不登记 namespace；equip_id 引用 item 走 item_lib）
     "recipe_lib": ("recipe",),
     "proficiency_lib": ("proficiency",),
+    # 批46 · 符文地基（43-A）：runes.json 独立注册表（符文 id 命名空间独立于 items.id；
+    # 孔位/镶嵌共用 slots 数组，但符文定义含跨装备类型差异表，独立成册）。
+    "rune_lib": ("runes",),
     # M11 成就（m11 启动包 §2.1）：achievements 独立注册表（顶层 list）
     "achievement_lib": ("achievements",),
     # M13 技能库（细化_6a_技能库契约 §1：skills.json 玩家技能库独立注册表；
@@ -436,6 +439,18 @@ SETTINGS_FIELDS: Dict[str, FieldMeta] = {
         help="打造路径开关（默认关闭）。三条启用路径：① 只启用合成（settings.alchemy.mode"
              "=simple）；② 合成 + 炼金（mode=full）；③ 合成 + 打造（本开关开启）。"
              "合成是打造与炼金的公用层；关闭打造不影响合成与炼金。"),
+    # 批46 · 符文地基（43-A）：符文孔位缺省段（口径 §二.2a；原案 §9「所有装备固定三个孔位」）。
+    # 落点 = settings.rune_sockets（obj）；引擎消费点 = core/jewel.JewelSystem.rune_socket_defs
+    # （已登记 slots.json 的装备用登记数组，未登记 → 按本段 default_count 开孔，与装饰珠
+    # 共用同一孔位数组）。符文总闸复用 settings.deep_craft.enabled（口径 §二.5，不新增总闸）。
+    "rune_sockets": FieldMeta(type="obj", children={
+        "default_count": FieldMeta(
+            type="int", range_min=1, range_max=3, default=3, label="缺省孔位数",
+            help="未在 slots.json 登记的装备按此孔位数开孔（1-3；默认 3=原案「固定三个孔位」）。"
+                 "已登记装备仍用登记数组（向后兼容），符文与装饰珠共用同一孔位数组。"),
+    }, label="符文孔位",
+        help="符文孔位缺省配置。符文与既有装饰珠共用 slots.json 的孔位数组（一槽一物、互斥）；"
+             "本段只管「未登记装备的缺省开孔数」。符文系统总闸 = 深度打造开关。"),
     # 批38 · ④ 相性通用层（打造与深度炼金共用；settings 顶层四段，非打造私有）。
     # 引擎 = core/affinity.py（纯函数）；对外单一查询 resolve_available_entries()。
     "affinities": FieldMeta(
@@ -2663,6 +2678,34 @@ def _module_table() -> Dict[str, ModuleMeta]:
     # + items 扩展字段 + settings.alchemy 段。recipe/proficiency 字段宽松登记防泛型误拦
     # （深结构校验由 alchemy_models 专项全权）；items/slots/settings.alchemy 定义来自
     # alchemy_settings 模块（0B 路产出，收口接线）——延迟导入防 field_meta↔alchemy_settings 循环依赖。
+    # 批46 · 符文地基（43-A）：runes.json 条目字段（口径 §二.1 形状草案）。
+    # 三阶 = 独立刻度（tier 1..3，非 quality 四档，H2）；by_equip_type = default+覆盖
+    # 差异表（类型键 = items.type）；effects 引用 effects 注册表（可带 overrides）；
+    # bias（3 阶偏向性，Q7）暂为宽容器——机制未裁决前不深描。
+    # 深校验由 content/rune_models.validate_runes 专项全权（RUNE-01~07）。
+    runes_fields: Dict[str, FieldMeta] = {
+        "id": F_ID, "name": F_NAME,
+        # 三阶独立刻度（R3）；泛型 R-2 拦越界，专项 RUNE-02 另给规则号。
+        "tier": FieldMeta(type="int", range_min=1, range_max=3, label="符文阶"),
+        # 同族判定（3 合 1 输入族，R5）；同族才允许互为输入。
+        "family": FieldMeta(type="str", label="符文族"),
+        "icon": FieldMeta(type="str", label="图标"),
+        "desc": FieldMeta(type="str", label="说明"),
+        # R2：跨装备类型差异表（键 = items.type；default 兜底必须存在；soft_label=动态键空间）。
+        "by_equip_type": FieldMeta(
+            type="obj", soft_label=True, label="跨装备类型差异表",
+            help="default=兜底条目（必须）；其余键 = items.type（weapon/armor_head/…），"
+                 "命中类型优先、未命中回落 default；条目内 stats 走 gear_stats 键空间。"),
+        # R6：特殊效果声明（引用 effects 注册表，可带 overrides 覆盖参数）。
+        "effects": FieldMeta(
+            type="list", label="特殊效果",
+            element=FieldMeta(type="obj", children={
+                "effect": FieldMeta(type="ref", ref_target="effect", label="效果引用"),
+                "overrides": FieldMeta(type="obj", soft_label=True, label="参数覆盖"),
+            })),
+        # R7：3 阶偏向性——机制未裁决（Q7）→ 宽容器只登记不解释。
+        "bias": FieldMeta(type="obj", soft_label=True, label="偏向性（待裁决）"),
+    }
     recipe_fields: Dict[str, FieldMeta] = {
         "id": F_ID, "name": F_NAME,
         # kind 三类：craft 合成标准版 / combine 素材合成 / upgrade N 入→1 出（定稿 L354/L370）
@@ -3023,6 +3066,12 @@ def _module_table() -> Dict[str, ModuleMeta]:
                              fields=_decorate_field_meta(recipe_fields, {}, {},
                                                          _child_spec("recipe")),
                              kind="recipe", namespace="recipe_lib"),
+        # 批46 · 符文地基（43-A）：runes.json list 模块（kind="rune"，
+        # 与 loader._KIND_FOR_MODULE / NAMESPACES["rune_lib"] 对齐）。
+        "runes": ModuleMeta(entry_type="list",
+                            fields=_decorate_field_meta(runes_fields, {}, {},
+                                                        _child_spec("runes")),
+                            kind="rune", namespace="rune_lib"),
         "proficiency": ModuleMeta(entry_type="list",
                                   fields=_decorate_field_meta(proficiency_fields, {},
                                                               {},

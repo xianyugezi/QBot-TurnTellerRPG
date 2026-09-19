@@ -97,6 +97,13 @@ FRAMEWORK_MODULE_CATALOG: Tuple[ModuleCatalogEntry, ...] = (
                            "定义。当前内容包把数据放在 settings.slot_defs（8 部位），"
                            "slots.json 为空。建议归口一处，避免两边同改不同步；"
                            "本提示不阻断保存。")),
+    # 批46 · 符文地基（43-A）：符文附魔定义（三阶 / 跨装备类型差异表 / 效果声明）。
+    # 落点 = runes.json list 模块；孔位/镶嵌复用 slots 的孔位数组（core/jewel.py），
+    # 镶嵌状态挂 ItemInstance.uid（player.persistent_state.rune_sockets）。
+    ModuleCatalogEntry("runes", "符文",
+                       "符文附魔定义：三阶刻度、跨装备类型效果差异表、特殊效果声明。",
+                       "list", requires=("items", "effects"),
+                       settings_section="settings.deep_craft.enabled"),
     ModuleCatalogEntry("forge", "锻造", "锻造系统配置（词条、套装、强化目标）。", "object"),
     ModuleCatalogEntry("enhance", "强化", "装备强化的规则与等级效果。",
                        "object", requires=("equipment",)),

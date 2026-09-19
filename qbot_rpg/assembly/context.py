@@ -1320,6 +1320,9 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
         "items": _table_from_registry(deps.registry, "item"),
         "recipe": _table_from_registry(deps.registry, "recipe"),
         "traits": _table_from_registry(deps.registry, "trait"),
+        # 批46 · 符文地基（43-A）：ctx["runes"] 注入 runes.json 定义表（kind="rune"，
+        # {id: raw dict}）——core/runes.py 解析层与符文指令壳消费。
+        "runes": _table_from_registry(deps.registry, "rune"),
         # M9 锻造（批C 审查 P0-1 收口 2026-08-30）：ctx["forge"] 注入 forge.json 顶层
         # raw dict（含 trees/sets/augments/settings 四段）——forge 指令壳 _forge_raw
         # 消费；forge 非条目表（顶层 obj），不能走 _table_from_registry（Def→dict
@@ -1533,6 +1536,10 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
                 # ctx["equip_skills"] 由 skill_slots_battle.with_source_skills 并入
                 # 战斗可用技能集（与 set_skills 同一并集口径，独立来源容器）。
                 "equip_skills": _ps_init(ps, "equip_skills", {}),
+                # 批46 · 符文地基（43-A）：符文镶嵌状态容器（键 = ItemInstance.uid，
+                # 值 = [rune_id|null, ...] 变长数组）。挂 persistent_state → 随存档往返，
+                # 卸装不丢（对比 EquipmentSlot.gems 的 P1-2 潜伏缺陷）。写 ctx 键即落档。
+                "rune_sockets": _ps_init(ps, "rune_sockets", {}),
             }
         )
         # 2026-09-06 营地 heal 收口：max_hp/max_mp 装配补键（npc heal N% 解析依赖

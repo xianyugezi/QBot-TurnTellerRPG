@@ -219,7 +219,8 @@ def test_saved_segment_then_listed_as_configured(blank_copy: Path) -> None:
     # affinity_linkage/affinity_reactions）→ +5 = 44
     # 批39：打造路径开关 deep_craft → +1 = 45
     # 批45：面板预算 panel_budget + 怪物数值倍率 monster_scaling → +2 = 47
-    assert le["unconfigured_count"] == 47
+    # 批46：符文孔位 rune_sockets → +1 = 48
+    assert le["unconfigured_count"] == 48
 
 
 # =====================================================================================

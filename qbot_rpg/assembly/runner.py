@@ -736,6 +736,9 @@ def _make_handler(spec: Any, parsed: ParsedCommand, ctx: MutableMapping[str, Any
                                 if isinstance(_aff, Mapping) else {},
                                 set_affixes=tuple(it.get("set_affixes") or ()),
                                 passives=tuple(it.get("passives") or ()),
+                                # 批43：品质等级 + 强化特殊词条载荷原样带过（打造/强化产物不丢字段）
+                                quality_level=int(it.get("quality_level", 0) or 0),
+                                enhance_affixes=tuple(it.get("enhance_affixes") or ()),
                             ),)
                         except (TypeError, ValueError):
                             continue

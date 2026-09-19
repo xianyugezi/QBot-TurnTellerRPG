@@ -273,6 +273,9 @@ def _land(ctx: MutableMapping[str, Any], plan: Mapping[str, Any], bp: Mapping[st
                        if isinstance(v, (int, float)) and not isinstance(v, bool)},
         "set_affixes": [str(x) for x in (plan.get("set_affixes") or [])],
         "passives": [str(x) for x in (plan.get("passives") or [])],
+        # ---- 批43：品质等级（强化上限按它取）+ 强化特殊词条载荷（新造为空）----
+        "quality_level": int(plan.get("quality_level") or 0),
+        "enhance_affixes": [],
     }
     _instances(ctx).append(inst)
     ctx["_m8_dirty_inventory"] = True

@@ -21,9 +21,10 @@ from __future__ import annotations
 # 批37 · 战后恢复：新增 mp_max（battle_settle_recovery 模板键）。
 # 批41 · 深度打造：新增 fixed / floor / free / grade / kinds / min / qlevel
 #   （deep_craft_* 模板键）。
+# 批43 · 强化六档与特殊词条：新增 affix（enhance_affix_gain 模板键）。
 FROZEN_PLACEHOLDERS = frozenset("""
-a action actor aid amount amt ann assistant atk attacker attr attr_name b base blocks bonus boss
-brief budget candidates cap card caught chain change child cmd cn cnt coin_text coins_have
+a action actor affix aid amount amt ann assistant atk attacker attr attr_name b base blocks bonus
+boss brief budget candidates cap card caught chain change child cmd cn cnt coin_text coins_have
 coins_need command cond core_text cost count cr crits cur cur_rank currency current damage day
 days deficit deficits desc dfn diff dir discount dist done down effect effect_desc effect_level
 effects elapsed elem_cn element element_cn elems endpoint enemy enhance example exp exp_next

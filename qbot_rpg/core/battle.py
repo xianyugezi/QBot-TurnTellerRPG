@@ -129,8 +129,8 @@ from qbot_rpg.core.ctb_scheduler import CTBScheduler
 # 批51 · 触发归属：combatant 侧「本侧拥有的效果 id 集合」键名唯一源（data 层常量，
 # core 层只读；键缺省 = 不启用归属过滤 = 全库扫描旧行为）。
 from qbot_rpg.data.gear_stats import OWNED_EFFECT_IDS_KEY
-# 批52 · 特效轴消费口径：settings 段键名（唯一源，core 只读）。
-from qbot_rpg.data.gear_stats import EFFECT_AXES_KEY
+# 批52 · 特效轴消费口径：settings 段键名 + 读时钳制取值（唯一源，core 只读）。
+from qbot_rpg.data.gear_stats import EFFECT_AXES_KEY, effect_axis_value
 
 #: 模块日志器（NPC 行动执行等兜底路径留痕；不可达路径不静默吞错）
 _logger = logging.getLogger("qbot_rpg.core.battle")
@@ -4117,6 +4117,45 @@ class BattleEngine:
                             mult *= float(dm)
         return mult
 
+    def _damage_taken_mult(
+        self, target: str, *, include_status: bool = False,
+    ) -> Tuple[float, Dict[str, Any]]:
+        """**承伤乘区唯一求值处**（批52 · 收敛口径 `特效整理设计_1` §5-D3 建议 (b)）。
+
+        在同一处求值本轴相关的三路来源：
+          ① **主乘区** `damage_taken_pct`（combatant 取值，按 `settings.effect_axes` 声明区间
+             钳制）—— `<0` 减伤 / `>0` 易伤，双向一轴；
+          ② **别名** `immune_dmg`（免伤旧键）：`pct = −immune_dmg` **并入主乘区、只乘一次**
+             （不双计）；沿用既有 [0,100] 封顶（负数不反向变易伤，与批22 口径一致）；
+          ③ **条件实例** status `damage_mult`（倒地/破位增伤）：`include_status=True` 时并入。
+
+        返回 `(mult, detail)`；`detail` 供 `rating` 记录（既有 `immune_dmg` 键保留，
+        新增 `damage_taken_pct`）。缺省（无轴/无免疫/无状态）→ `1.0` + 全零 detail。
+
+        **对既有行为的影响（如实登记）**：`include_status=True` 的分支把 status `damage_mult`
+        与主乘区合入**同一次整型截断**——当目标同时具备「破位」与「非零 immune_dmg」时，与
+        「先破位截断、再免疫四舍五入」的旧两步序可能相差 ≤1 点。为守住本批一号红线
+        （**不配置轴时逐字段零变化**），**当前调用点不使用该分支**：破位路径沿用旧两步序
+        （status 就地、承伤轴随后），故 immune_dmg 旧链路逐值一致。本形参保留给后续「三处
+        叠乘 → 单一乘区」的显式收敛批（需先拍板是否接受该 ≤1 偏差）。
+        """
+        tc = self._combat(target)
+        cfg = self._config.get(EFFECT_AXES_KEY)
+        axis = float(effect_axis_value(tc, "damage_taken_pct", cfg))
+        _raw_immune = tc.get("immune_dmg", 0) if isinstance(tc, Mapping) else 0
+        try:
+            immune = min(100.0, max(0.0, float(_raw_immune or 0)))
+        except (TypeError, ValueError):
+            immune = 0.0
+        mult = 1.0 + (axis - immune) / 100.0
+        if include_status:
+            mult *= self._status_damage_mult(target)
+        detail: Dict[str, Any] = {
+            "damage_taken_pct": round(axis, 2),
+            "immune_dmg": round(immune, 2),
+        }
+        return mult, detail
+
     def _fire_part_break(
         self, attacker: str, target: str, part_def: Mapping[str, Any],
         events: List[Mapping[str, Any]],
@@ -4698,14 +4737,17 @@ class BattleEngine:
                 _dmg_float = float(raw) * float(p.battle_position.broken_part_mult)
                 _dmg_float = _dmg_float * self._status_damage_mult(target)
                 raw = int(_dmg_float)
-            # 批22 · A3：常驻免伤词条（受击方 immune_dmg%）——按比例减伤，作用于防御/格挡/
-            # 乱数之后的 raw；上限 100（全免）。与管线 mitigation 阶段叠乘（互不替代）；
-            # 无该键 → 零行为变化。键空间/分层见 data.gear_stats。
-            _immune_dmg = float(tc.get("immune_dmg", 0) or 0)
-            if _immune_dmg > 0:
-                _imm_rate = min(100.0, max(0.0, _immune_dmg)) / 100.0
-                raw = max(0, int(round(raw * (1.0 - _imm_rate))))
-                rating["immune_dmg"] = round(_imm_rate * 100.0, 2)
+            # 批52 · 承伤双向轴（收敛口径）：主乘区 damage_taken_pct + 免伤旧键 immune_dmg
+            # 归并到**唯一求值处** `_damage_taken_mult`（不双计），作用于防御/格挡/乱数之后的
+            # raw；无轴且无免伤 → mult=1.0 → 零行为变化。status damage_mult 的破位门控保持
+            # 既有位置（上式），不作为第二乘区重复计入。键空间/分层见 data.gear_stats。
+            _taken_mult, _taken_detail = self._damage_taken_mult(target)
+            if _taken_mult != 1.0:
+                raw = max(0, int(round(raw * _taken_mult)))
+                if _taken_detail["immune_dmg"]:
+                    rating["immune_dmg"] = _taken_detail["immune_dmg"]
+                if _taken_detail["damage_taken_pct"]:
+                    rating["damage_taken_pct"] = _taken_detail["damage_taken_pct"]
             raw_total += raw
 
             # ---- 破坏力（每段一次，写死多段 N 次；命中部位且未破才累计）----

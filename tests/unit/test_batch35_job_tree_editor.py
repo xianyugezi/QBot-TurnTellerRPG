@@ -35,7 +35,7 @@ from qbot_rpg.web import api  # noqa: E402
 
 NODE = shutil.which("node")
 HTML = Path(api.repo_root()) / "qbot_rpg" / "web" / "static" / "index.html"
-BATCH_NOTE = "批39 · 合成公用层"
+BATCH_NOTE = "批40 · 实例uid与随机流"
 STALE_BATCH = "批36 · 采集/挖掘"
 
 
@@ -167,7 +167,7 @@ def test_footer_batch_string_is_current() -> None:
     html = _html()
     assert BATCH_NOTE in html
     assert STALE_BATCH not in html
-    assert "批38 · 深度打造地基" not in html
+    assert "批39 · 合成公用层" not in html
     comp = re.search(r'<div class="panel-ft">(.*?)</div>', html, re.S)
     assert comp is not None and BATCH_NOTE in comp.group(1)
 

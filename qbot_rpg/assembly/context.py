@@ -59,6 +59,7 @@ from qbot_rpg.core.player_attributes import (
     ConditionalRule,
     calc_all_final_attributes,
 )
+from qbot_rpg.core.rng_state import player_rng, snapshot_rng_state
 from qbot_rpg.data import Player, PlayerAttributes
 from qbot_rpg.data.gear_stats import extract_bonus
 
@@ -1711,7 +1712,19 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
     # start_battle hook（investigate hunt 开战消费；/锁定 走指令注册）
     ctx["start_battle"] = None
 
-    ctx["rng"] = _rng(deps.rng_factory, qid)
+    # 批40 · H5：玩家级随机流可推进——persistent_state.rng_state 存在则续流（跨指令/
+    # 跨重登推进），否则用注入工厂初种（测试注入确定性 RNG 的既有路径保持可用）。
+    # 逐指令推进由 runner 落档前回写状态（assembly/runner._plain_handler）。
+    # 依据：决策记录 §一 H5 + 打造系统_C Q6/R1（E2）；机制照 core/battle.py:5316,5409-5424。
+    _ps_for_rng = (
+        player.persistent_state
+        if registered and player is not None
+        and isinstance(getattr(player, "persistent_state", None), MutableMapping)
+        else None
+    )
+    ctx["rng"] = player_rng(_ps_for_rng, _rng(deps.rng_factory, qid))
+    # 消费门控落档基准：runner 落档时仅当状态相对此快照已推进才写回（未消费不写）。
+    ctx["_rng_initial_state"] = snapshot_rng_state(ctx["rng"])
     _now, _today = _now_today(deps.dayroll)
     ctx["now"] = _as_utc8_timestamp(_now)
     ctx["today"] = _today

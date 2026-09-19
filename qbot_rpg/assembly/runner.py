@@ -58,6 +58,7 @@ from qbot_rpg.assembly.pack_render import (
     RenderSender,
     build_render_data,
 )
+from qbot_rpg.core.rng_state import persist_player_rng_if_advanced
 from qbot_rpg.commands.gm_commands import (
     ROLE_ADMIN,
     ROLE_MANAGER,
@@ -749,11 +750,22 @@ def _make_handler(spec: Any, parsed: ParsedCommand, ctx: MutableMapping[str, Any
                 else:
                     _nps.pop("dialog_session", None)
                 p = _dcr(p, persistent_state=_nps)
+            # 批40 · H5：玩家级随机流逐指令推进——ctx["rng"] **消费后**（相对 make_context
+            # 初态已推进）把状态写回 persistent_state，下条指令恢复续流；未消费的指令
+            # 零写入（不给每位玩家每条指令平白加 ~7KB 状态）。与 battle rng_state 同一
+            # 快照形态；非 Random/不可写 → no-op，不阻断落档。
+            persist_player_rng_if_advanced(
+                p.persistent_state, ctx.get("rng"), ctx.get("_rng_initial_state"))
             await tx.upsert_player(p)
         elif isinstance(p, dict):
             qid = str(ctx.get("qq_id") or ctx.get("user_id") or "")
             if qid:
-                await tx.upsert_player(_player_from_dict(p, qid))
+                _p_obj = _player_from_dict(p, qid)
+                _ps = getattr(_p_obj, "persistent_state", None)
+                if isinstance(_ps, MutableMapping):
+                    persist_player_rng_if_advanced(
+                        _ps, ctx.get("rng"), ctx.get("_rng_initial_state"))
+                await tx.upsert_player(_p_obj)
         return _normalize_plain(out)
 
     return _plain_handler

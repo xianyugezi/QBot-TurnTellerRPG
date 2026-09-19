@@ -81,6 +81,7 @@ def _iter_candidates(
     event: str,
     registry: Any,
     status_id: Optional[str] = None,
+    owner_effect_ids: Optional[Sequence[str]] = None,
 ) -> List[Tuple[str, Mapping[str, Any], str]]:
     """扫描注册表产出候选（effect_id, raw, kind）。
 
@@ -89,6 +90,14 @@ def _iter_candidates(
     - event ∈ status_gain/status_lose：若给了 status_id，取该 status 定义对应
       on_gain/on_lose/on_expire 字段（值 = 效果引用列表）；未给 status_id →
       遍历全部 status 定义，收集 on_xxx 字段（供批 2 接线方按需过滤）。
+
+    批51 · **归属过滤**（`owner_effect_ids`，纯效果事件分支）：
+      · `None`（缺省）→ 全库扫描 = 本机制引入前的旧行为，逐字段一致（零变化基线）；
+      · 非 `None`（含空集）→ 只保留 **id 在该集合内** 的 effects 定义——即
+        「谁装备/谁施加的 effect 只能由其宿主触发」，不再全局误触发。
+      判定用 effects 定义的注册 id（`all_ids("effect")` 的键），与 `_run_candidate`
+      取 `raw["id"] or eid` 的计数口径无关；状态事件分支不受本参数影响
+      （status on_xxx 由 `status_id` 精确定位，本已归属到状态持有侧）。
     """
     out: List[Tuple[str, Mapping[str, Any], str]] = []
     resolve = getattr(registry, "resolve", None)
@@ -125,7 +134,12 @@ def _iter_candidates(
         return out
 
     # 纯效果事件：effects 定义 trigger 字段匹配
+    # 批51 · 归属过滤：owner_effect_ids 非 None → 只认本侧拥有的 effect id
+    # （None = 全库扫描的旧行为；空集 = 本侧不拥有任何效果 → 零候选）。
+    owner = None if owner_effect_ids is None else {str(x) for x in owner_effect_ids}
     for eid in all_ids("effect"):
+        if owner is not None and str(eid) not in owner:
+            continue
         raw = _def_raw(resolve(eid, "effect"))
         if not raw:
             continue
@@ -232,6 +246,7 @@ def dispatch_event(
     runtime: Any = None,
     depth: int = 0,
     extra_candidates: Optional[Sequence[Tuple[str, Mapping[str, Any], str]]] = None,
+    owner_effect_ids: Optional[Sequence[str]] = None,
 ) -> List[Dict[str, Any]]:
     """在战斗时点 fire 匹配事件的效果/proc/状态 on_xxx 动作（功能三 §2.3）。
 
@@ -248,6 +263,12 @@ def dispatch_event(
       extra_candidates：批48 · 调用方追加的候选（同 `_iter_candidates` 三元组形态
                  `(effect_id, raw_like, kind)`）——用于**只对特定持侧生效**的效果源
                 （符文声明效果）；缺省 None → 与既有行为逐字段一致（零新增）。
+      owner_effect_ids：批51 · **归属作用域**（纯效果事件分支的候选白名单）：
+                 None（缺省）→ 全库扫描（本机制引入前旧行为，逐字段一致）；
+                 非 None → 只有 id 在该序列内的 effects 定义才是候选——调用方
+                 按「本侧拥有的效果集」传入（装配层展开的装备被动效果），
+                 避免带 `trigger` 的效果对所有单位全局误触发。
+                 对 `extra_candidates` 不生效（后者已由调用方按持侧自过滤）。
 
     返回：合并的 side_effects 列表（无候选/未配置 → []，零行为变化）。
     """
@@ -255,7 +276,8 @@ def dispatch_event(
         return []
     if not isinstance(snapshot, Mapping):
         return []
-    cands = _iter_candidates(event, registry, status_id=status_id)
+    cands = _iter_candidates(event, registry, status_id=status_id,
+                             owner_effect_ids=owner_effect_ids)
     if extra_candidates:
         cands = list(cands) + [
             c for c in extra_candidates

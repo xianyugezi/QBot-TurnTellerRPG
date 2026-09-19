@@ -108,6 +108,8 @@ __all__ = [
     "EFFECT_LEGACY_ALIASES",
     "DEFAULT_EFFECT_AXES",
     "PANEL_AXIS_STEMS",
+    # 批51 · 触发归属（owner）战斗桥键名
+    "OWNED_EFFECT_IDS_KEY",
     "effect_axis_spec",
     "effect_axis_stem",
     "normalize_effect_axes",
@@ -352,6 +354,20 @@ GEAR_EFFECT_KEYS: Tuple[str, ...] = tuple(str(_s["axis"]) for _s in EFFECT_AXIS_
 #: 缺省 0 → combatant 不新增任何字段 → 全量回归逐字段零变化）。
 #: 封顶一律 `None`：钳制归内容包 `settings.effect_axes` 声明 + 消费点读取，引擎不写死。
 EFFECT_TO_COMBATANT: Tuple[str, ...] = GEAR_EFFECT_KEYS
+
+# ---------------------------------------------------------------------------
+# 批51 · 触发归属（owner）战斗桥键名 —— **唯一源**
+# ---------------------------------------------------------------------------
+#: combatant 侧「本侧拥有的 trigger 效果 id 集合」键名（值为 str 列表）。
+#:
+#: 口径（`core/event_dispatcher.dispatch_event` 的 `owner_effect_ids`）：
+#:   · 装配层（装备被动/效果归属展开）在本键写入该侧拥有的效果 id；
+#:   · `core/battle._dispatch_event` 读到本键 → 作为归属作用域传给分派器
+#:     （带 `trigger` 的效果只在其宿主侧触发，不再全局误触发）；
+#:   · **键缺省 = 不启用归属过滤**（全库扫描旧行为，逐字段零变化）。
+#: 键名登记在本模块（与 `COMBAT_TO_COMBATANT` / `EFFECT_TO_COMBATANT` 同为战斗桥
+#: 键名的唯一源），使 core 层与 commands 层共用同一常量、不各自写死字面量。
+OWNED_EFFECT_IDS_KEY: str = "owned_effect_ids"
 
 # 数值键全集（实例化转换 / 展示 / 编辑器遍历用；批50 起含特效轴键族）
 GEAR_NUMERIC_KEYS: Tuple[str, ...] = (

@@ -21,7 +21,8 @@
 ------------------------------------
 * `settings.panel_budget = {white, equip, buff, equip_stat_mult}`；
   占比(装备) = equip×equip_stat_mult / (white + equip×equip_stat_mult + buff)。
-* `settings.monster_scaling = {hp_mult, atk_mult, con_mult}`。
+* `settings.monster_scaling = {hp_mult, atk_mult, def_factor, def_k?}`
+  （`con' = (con+K)×def_factor − K`，与引擎 `core.panel_budget.scale_monster_con` 同源）。
 * 缺省/未配置 → equip_stat_mult=1.0 / 三个 mult=1.0（与本批引入前逐字段一致）。
 
 用法：``python3 scripts/batch45_measure.py [--json]``
@@ -49,6 +50,7 @@ from qbot_rpg.core.damage import (  # noqa: E402
     hit_rate,
 )
 from qbot_rpg.core.equipment import EquipmentEngine  # noqa: E402
+from qbot_rpg.core.panel_budget import scale_monster_con  # noqa: E402
 from qbot_rpg.core.player_attributes import calc_all_final_attributes  # noqa: E402
 from qbot_rpg.data.gear_stats import extract_bonus  # noqa: E402
 from qbot_rpg.data.item import ItemInstance  # noqa: E402
@@ -76,7 +78,7 @@ MONSTERS: Tuple[str, ...] = ("vein_black_bear", "black_crystal_troll", "mountain
 DEFAULT_PANEL_BUDGET: Dict[str, float] = {"white": 7.0, "equip": 8.0, "buff": 5.0,
                                           "equip_stat_mult": 1.0}
 DEFAULT_MONSTER_SCALING: Dict[str, float] = {"hp_mult": 1.0, "atk_mult": 1.0,
-                                             "con_mult": 1.0}
+                                             "def_factor": 1.0, "def_k": 100.0}
 
 
 def _load(name: str) -> Any:
@@ -191,13 +193,18 @@ def monster_scaling() -> Dict[str, float]:
     return {k: float(v) for k, v in out.items()}
 
 
+def _scaled_con(mon: Mapping[str, Any], scaling: Mapping[str, float]) -> float:
+    return scale_monster_con(mon["stats"]["con"], scaling["def_factor"],
+                             scaling.get("def_k", 100.0))
+
+
 def monster_row(enemies: Mapping[str, Any], mid: str) -> Dict[str, Any]:
     return enemies[mid]
 
 
 def deterministic_turns(atk: float, mon: Mapping[str, Any], scaling: Mapping[str, float]) -> int:
     hp = float(mon["stats"]["hp"]) * scaling["hp_mult"]
-    con = float(mon["stats"]["con"]) * scaling["con_mult"]
+    con = _scaled_con(mon, scaling)
     d = max(1, math.floor(atk * defense_factor(con)))
     return math.ceil(hp / d)
 
@@ -206,7 +213,7 @@ def mc_turns(atk: float, lck: float, foc: float, crit_bonus: float,
              mon: Mapping[str, Any], scaling: Mapping[str, float],
              rng: random.Random, n: int = 20000) -> float:
     hp0 = float(mon["stats"]["hp"]) * scaling["hp_mult"]
-    con = float(mon["stats"]["con"]) * scaling["con_mult"]
+    con = _scaled_con(mon, scaling)
     spd = float(mon["stats"].get("agi", 10))
     mon_foc = float(mon["stats"].get("foc", 10))
     hr = hit_rate(foc, spd)
@@ -268,12 +275,11 @@ def main() -> int:
 
     for mid in MONSTERS:
         mon = enemies[mid]
-        rng = random.Random(SEED)
         rec: Dict[str, Any] = {
             "id": mid, "name": mon.get("name"), "tier": mon.get("tier"),
             "hp_raw": mon["stats"]["hp"], "con_raw": mon["stats"]["con"],
             "hp_scaled": mon["stats"]["hp"] * scaling["hp_mult"],
-            "con_scaled": mon["stats"]["con"] * scaling["con_mult"],
+            "con_scaled": _scaled_con(mon, scaling),
         }
         for tier, buff in tiers.items():
             a = PlayerAttributes(base=dict(panel.white))
@@ -287,7 +293,7 @@ def main() -> int:
             mc = mc_turns(atk, float(f.get("lck", 10)), float(f.get("foc", 10)),
                           float(panel.equip_flat.get("crit", 0.0)), mon, scaling,
                           random.Random(SEED))
-            d = max(1, math.floor(atk * defense_factor(mon["stats"]["con"] * scaling["con_mult"])))
+            d = max(1, math.floor(atk * defense_factor(_scaled_con(mon, scaling))))
             rec[tier] = {"atk": atk, "dmg_det": d, "turns_det": det,
                          "turns_mc": round(mc, 3)}
         out["monsters"].append(rec)

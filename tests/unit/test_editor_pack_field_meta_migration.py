@@ -101,7 +101,14 @@ SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
 #     · 模板全量表 +1 条 deep_craft_crit_gain（templates 计数 856→857）。
 #   对拍实证：删除项 = 0、无 label/help/group 无意改动；重定后基线树与当前树 diff=0。
 #   与 scripts/compare_field_meta_migration.py 的 DEFAULT_BASELINE_REF 同基线。
-BASELINE_REF = "1b76ab4"
+# 批45（2026-09-20 装备占比校准）重定：1b76ab4 → 1e2f68c（本批字段/引擎提交）。
+#   原因 = 本批**有意**变更（非迁移回归），全部为**新增**（无删除/无严格键改值）：
+#     · settings 新增 panel_budget（白值/装备/buff 份 + 装备面板倍率，5 子字段）
+#       + monster_scaling（hp/atk 倍率 + 防御补偿 + def_k，4 子字段）→ settings 条目 +2；
+#     · 编辑器 settings 页字段数 +2（unconfigured_count 45→47，见 test_editor_batch131_segments）。
+#   对拍实证：删除项 = 0、无既有 label/help/group 改动；重定后基线树与当前树 diff=0。
+#   与 scripts/compare_field_meta_migration.py 的 DEFAULT_BASELINE_REF 同基线。
+BASELINE_REF = "1e2f68c"
 CONTENT = REPO / "content"
 
 

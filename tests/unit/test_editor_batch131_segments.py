@@ -218,7 +218,8 @@ def test_saved_segment_then_listed_as_configured(blank_copy: Path) -> None:
     # 批38：副手开关 equipment_offhand + 相性四段（affinities/affinity_pools/
     # affinity_linkage/affinity_reactions）→ +5 = 44
     # 批39：打造路径开关 deep_craft → +1 = 45
-    assert le["unconfigured_count"] == 45
+    # 批45：面板预算 panel_budget + 怪物数值倍率 monster_scaling → +2 = 47
+    assert le["unconfigured_count"] == 47
 
 
 # =====================================================================================
@@ -339,7 +340,7 @@ def test_selfcheck_segment_diff_tolerates_pack_specific_key() -> None:
 def test_footer_batch_string_is_current() -> None:
     """页脚批次串随批推进更新（旧批次串不得残留）。"""
     html = HTML.read_text(encoding="utf-8")
-    assert "批44 · 投入暴击" in html
+    assert "批45 · 装备占比校准" in html
     assert "批13.1 · 段入口" not in html
     assert "批13 · 能力可见性" not in html
 

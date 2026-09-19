@@ -695,3 +695,28 @@ async def test_battle_restore_ai_rng_equals_engine_rng() -> None:
         "恢复段 AI rng 应等于引擎 rng（rng_state 持久化推进）；"
         "if 按 qid 定种随机源 → 每指令重放、选招恒定（回归）"
     )
+
+
+# ---------------------------------------------------------------------------
+# 批45 · 装备占比校准注入（settings.panel_budget / settings.monster_scaling）
+# ---------------------------------------------------------------------------
+async def test_panel_budget_and_monster_scaling_injected() -> None:
+    """包声明 panel_budget / monster_scaling → ctx 注入 + 装备引擎倍率生效。"""
+    pb = {"white": 7, "equip": 8, "buff": 5, "equip_stat_mult": 2.25}
+    ms = {"hp_mult": 1.5, "atk_mult": 1.5, "def_factor": 1.0828}
+    ctx = await make_context(_event(), _deps(_player(), settings=_settings(
+        slot_defs={"weapon": {"name": "武器"}}, panel_budget=pb, monster_scaling=ms)))
+    assert ctx["panel_budget"] == pb
+    assert ctx["monster_scaling"] == ms
+    eng = ctx.get("equip_engine")
+    assert eng is not None and eng._engine.equip_stat_mult() == 2.25
+
+
+async def test_panel_budget_absent_not_injected() -> None:
+    """未声明 → 不注入 ctx；装备引擎倍率 1.0、怪物倍率缺省（零行为变化）。"""
+    ctx = await make_context(_event(), _deps(_player(), settings=_settings(
+        slot_defs={"weapon": {"name": "武器"}})))
+    assert ctx.get("panel_budget") is None
+    assert ctx.get("monster_scaling") is None
+    eng = ctx.get("equip_engine")
+    assert eng is not None and eng._engine.equip_stat_mult() == 1.0

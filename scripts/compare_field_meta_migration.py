@@ -227,7 +227,7 @@ DEFAULT_PACKS = ("veinborn", "test_demo")
 #      （中文名/说明卡；既有 craft_rules 子字段与 enabled 原样保留）；
 #   ② 模板全量表 +1 条 deep_craft_crit_gain（templates 计数 856→857）。
 #   对拍实证：删除项 = 0、无 label/help/group 严格键的无意改动；重定后 0 差异。
-DEFAULT_BASELINE_REF = "1b76ab4"
+DEFAULT_BASELINE_REF = "1e2f68c"
 
 
 def _env(root: Path) -> dict:

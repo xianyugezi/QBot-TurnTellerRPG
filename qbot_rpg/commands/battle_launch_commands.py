@@ -170,8 +170,11 @@ def _enemy_combatant(enemy_entry: Mapping[str, Any],
     _atk = int(st.get("str", st.get("atk", 10)))
     if atk_mult != 1.0:
         _atk = max(0, int(round(_atk * atk_mult)))
-    _con_raw = int(st.get("con", st.get("dfn", 10)))
-    _con = int(round(scale_monster_con(_con_raw, sc["def_factor"], sc["def_k"])))
+    _con = int(st.get("con", 10))
+    _dfn = int(st.get("con", st.get("dfn", 10)))
+    if sc["def_factor"] != 1.0:
+        _con = max(0, int(round(scale_monster_con(_con, sc["def_factor"], sc["def_k"]))))
+        _dfn = max(0, int(round(scale_monster_con(_dfn, sc["def_factor"], sc["def_k"]))))
     comb: Dict[str, Any] = {
         # 2026-09-03 奖励结算：enemy id 随快照携带（击杀查 rewards）
         "id": str(enemy_entry.get("id") or ""),
@@ -179,7 +182,7 @@ def _enemy_combatant(enemy_entry: Mapping[str, Any],
         "max_hp": hp,
         "mp": int(st.get("mp", 0)),
         "atk": _atk,
-        "dfn": _con,
+        "dfn": _dfn,
         "mag": int(st.get("spr", st.get("mag", 10))),
         "spd": int(st.get("agi", st.get("spd", 10))),
         "foc": int(st.get("foc", 10)),

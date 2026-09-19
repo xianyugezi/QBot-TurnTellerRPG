@@ -279,5 +279,5 @@ def test_selfcheck_still_passes() -> None:
 
 def test_footer_batch_string_is_batch20() -> None:
     html = HTML.read_text(encoding="utf-8")
-    assert "批45 · 装备占比校准" in html
+    assert "批46 · 符文地基" in html
     assert "批18 · 预设细化与效果扩展" not in html

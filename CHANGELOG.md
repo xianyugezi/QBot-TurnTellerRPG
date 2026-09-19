@@ -14,6 +14,19 @@
 
 ### Added
 
+- **批46（2026-09-20）**：**符文地基**（口径文档 43-A；原案 §9）——新增符文数据模块
+  `runes.json`（三阶独立刻度 `tier ∈ {1,2,3}`，**不复用** quality 四档）与纯解析引擎
+  `core/runes.py`（`rune_tier_of` / `by_equip_type` default+覆盖 / 3 合 1 纯函数
+  `resolve_rune_upgrade`）；孔位/镶嵌**复用** `core/jewel.py`（`mount_rune`/`unmount_rune`/
+  `active_rune_sockets`，绕过珠的槽级门票，与装饰珠**共用同一孔位数组**、一槽一物互斥）；
+  镶嵌状态挂 `ItemInstance.uid` 的落档容器 `persistent_state["rune_sockets"]`
+  （**不挂 EquipmentSlot**——卸装不丢；自由 dict 缺补，无需 DB schema 升级）；
+  3 合 1 执行器 `UpgradeEngine` 新增 `rune_upgrade` 子类型（3×同阶同 id → +1 阶、**必成**、
+  **禁跳级**、`_commit` 原子提交，档位走独立三阶解析）；`settings.rune_sockets.default_count`
+  缺省三孔全开（可配）；总闸复用 `settings.deep_craft.enabled`（默认关）。专项校验
+  `content/rune_models.validate_runes`（阶枚举 / default / stats 键空间 / effects 引用 / family）。
+  编辑器可见 + 页脚批次串同步。**本批不接战斗效果**（1 阶数值上板 / 2·3 阶战斗接线留后续批）。
+
 - **批45（2026-09-20）**：**数值校准 · 装备占比 40% → 60%**（决策记录 §三 补充 1，用户 2026-09-19）
   —— 面板预算参数化 `settings.panel_budget`（`white:equip:buff` 设计份 + **装备面板倍率**
   `equip_stat_mult`，**缺省 1.0 = 现状**）；veinborn 校准 `equip_stat_mult=2.25` → 装备份 8→18、

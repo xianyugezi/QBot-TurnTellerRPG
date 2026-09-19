@@ -28,10 +28,12 @@
        （既有 quality 四档 common/uncommon/rare/legendary，H2 正交）。`quality` 出现在
        符文定义里一律忽略。
   R-2  跨装备类型差异表：`by_equip_type` 为 `{类型键: 覆盖条目}`，**必须含 `default`**
-       （兜底）；已登记的 `items.type` 键优先，未登记 → default。解析 = default 深拷贝后
-       逐顶层键覆盖；`stats` 键做**逐键合并**（覆盖条目的 stats 键覆盖 default 同键）。
-       类型键口径 = `items.type`（口径 §二.1 R2 默认项①，可改；`slot` 取值可由配置切换，
-       本解析层不写死具体键集合 → 校验层按运行时 `items.type` 值域判）。
+       （兜底）；已登记的 `items.type` 键优先，未登记 → default。解析 = default 与命中类型
+       条目**顶层浅覆盖**（命中条目的键整键替换 default 同键：`stats`/`effects`/`bias` 均
+       整块覆盖，不做 stats 逐键合并——口径 §二.1 示例的 armor_body 只给 dfn、不带 default
+       的 atk，即「按类型给一份完整效果」语义）。类型键口径 = `items.type`（口径 §二.1 R2
+       默认项①，可改；`slot` 取值可由配置切换，本解析层不写死具体键集合 → 校验层按运行时
+       `items.type` 值域判）。
   R-3  3 合 1 的档位推进是**纯函数**：3×同阶同 id → +1 阶；越阶/跳级/满阶一律拒绝
        （`resolve_rune_upgrade`）。执行器（扣料/产出/原子提交）复用 `core/upgrade.py`
        `_exec_jewel` 形状，新增 `_exec_rune`（档位走本模块的阶位解析，不走 quality 序号）。
@@ -166,15 +168,9 @@ def rune_effects_of(rune_def: Any) -> List[Mapping[str, Any]]:
 # R-2 跨装备类型差异表解析（default + 覆盖）
 # ---------------------------------------------------------------------------
 def _merge_over(base: Mapping[str, Any], override: Mapping[str, Any]) -> Dict[str, Any]:
-    """default 深拷贝 + 覆盖：逐顶层键覆盖；`stats` 键做逐键合并（R-2）。"""
+    """default + 覆盖：**顶层浅覆盖**（命中条目的键整键替换 default 同键，含 `stats`）。"""
     out: Dict[str, Any] = {k: v for k, v in base.items()}
-    for key, val in override.items():
-        if key == "stats" and isinstance(val, Mapping) and isinstance(out.get(key), Mapping):
-            merged = dict(out[key])
-            merged.update(val)
-            out[key] = merged
-        else:
-            out[key] = val
+    out.update(override)
     return out
 
 
@@ -186,10 +182,10 @@ def resolve_by_equip_type(
     入参：
       - rune_def：符文定义。
       - equip_type：装备类型键（`items.type` 取值；None/空 → 仅 default）。
-    出参：解析后的效果条目 dict（default 与命中类型覆盖合并）；无 default 且无命中 →
+    出参：解析后的效果条目 dict（命中类型条目与 default 顶层浅覆盖）；无 default 且无命中 →
           空 dict（校验层红拦「by_equip_type 必须含 default」）。
-    核心：`by_equip_type[equip_type]` 命中 → default 深拷贝后覆盖；未命中 → default；
-          `stats` 逐键合并（覆盖条目只写差异键，未写键沿用 default）。
+    核心：`by_equip_type[equip_type]` 命中 → 该条目覆盖 default（顶层键整键替换，含
+          `stats` 整块覆盖；未在覆盖条目出现的键沿用 default）。
     """
     d = _as_mapping(rune_def)
     table = _as_mapping(d.get("by_equip_type"))

@@ -60,7 +60,13 @@ SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
 #   （settings 条目 +1）+ 模板表 battle_settle_recovery（templates 计数 837→838）。
 #   对拍实证：删除项 = 0、36 条硬差异全部为上述两类计数变动；重定后 0 差异。
 #   与 scripts/compare_field_meta_migration.py 的 DEFAULT_BASELINE_REF 同基线。
-BASELINE_REF = "d324e92"
+# 批38（2026-09-19 深度打造地基）重定：d324e92 → c7fe678（本批字段/引擎/测试提交）。
+#   原因 = 本批**有意**变更（非迁移回归）：新增 settings.equipment_offhand + 相性四段
+#   （settings 条目 +5）、slot_defs 值结构子字段 role（整体成表新增一列）、
+#   items/equipment 新增 handedness/affinities 两字段。
+#   对拍实证：删除项 = 0、硬差异全部为上述计数/新增列变动；重定后 0 差异。
+#   与 scripts/compare_field_meta_migration.py 的 DEFAULT_BASELINE_REF 同基线。
+BASELINE_REF = "fa675ce"
 CONTENT = REPO / "content"
 
 

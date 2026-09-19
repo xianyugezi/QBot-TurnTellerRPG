@@ -173,7 +173,19 @@ DEFAULT_PACKS = ("veinborn", "test_demo")
 #   ② 模板全量表新增 `battle_settle_recovery` 键（templates 计数 837 → 838）；
 #   对拍实证：删除项 = 0（无「仅迁移前有」）；36 条硬差异全部为上述两类的计数变动，
 #   8 条新增项逐条列出。重定到本批末提交后，基线树与当前树逐字段 diff=0。
-DEFAULT_BASELINE_REF = "d324e92"
+# 批38（2026-09-19 深度打造地基）：d324e92 → c7fe678（本批字段/引擎/测试提交）。
+# 原因（本批**有意**变更，非迁移回归；删除项 = 0，全部为新增）：
+#   ① 新增框架 settings 段 `equipment_offhand`（副手开关两字段）；
+#   ② `slot_defs` 登记值结构子字段 `role`（部位角色 main/offhand；整体成表条目新增一列）；
+#   ③ items/equipment 新增 `handedness`（手数）与 `affinities`（相性声明）两字段；
+#   ④ 新增相性通用层 settings 四段（affinities/affinity_pools/affinity_linkage/
+#      affinity_reactions）；
+#   → settings 条目列表 +5 条（count/total_count/unconfigured_count、index.total、
+#      模块声明计数各 +5）；items/equipment 条目字段各 +2。
+#   对拍实证：删除项 = 0（无「仅迁移前有」）；硬差异全部为上述计数/新增列变动，
+#   新增项逐条列出（test_gate_semantics_addition_is_green_and_listed 口径）。
+#   重定到本批末提交后，基线树与当前树逐字段 diff=0。
+DEFAULT_BASELINE_REF = "fa675ce"
 
 
 def _env(root: Path) -> dict:

@@ -16,7 +16,7 @@ REGISTRY = REPO / "docs" / "矛盾与待裁决登记.md"
 LEDGER = REPO / "docs" / "编辑器修改意见0915_台账与方案.md"
 INDEX = REPO / "qbot_rpg" / "web" / "static" / "index.html"
 
-BATCH_NOTE = "批37 · 战后恢复"
+BATCH_NOTE = "批38 · 深度打造地基"
 STATUS_PREFIXES = ("待实测", "待用户裁决", "已裁决-", "已实现-")
 MIN_ITEMS = 20
 
@@ -80,5 +80,6 @@ def test_footer_batch_note_synced() -> None:
     assert BATCH_NOTE in html
     m = re.search(r'<div class="panel-ft"><span>(.*?)</span>', html)
     assert m and m.group(1) == BATCH_NOTE, m and m.group(1)
-    # 批37 · 战后恢复：上一批串不得残留
+    # 批38 · 深度打造地基：上一批串不得残留
     assert "批36 · 采集/挖掘" not in html
+    assert "批37 · 战后恢复" not in html

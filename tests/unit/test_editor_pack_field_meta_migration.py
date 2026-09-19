@@ -73,7 +73,8 @@ SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
 #   与 scripts/compare_field_meta_migration.py 的 DEFAULT_BASELINE_REF 同基线。
 # 批39 二次重定（同批）：00b65f5 → 0e1d7b4（settings.alchemy.mode 补中文名 + 说明卡；
 #   mode 字段级 label/help 属口径④严格键，新增 → 重定后 0 差异）。
-BASELINE_REF = "0e1d7b4"
+# 批39 三次重定（同批）：0e1d7b4 → b812891（alchemy 段级 label/help 新增，口径④严格键）。
+BASELINE_REF = "b812891"
 CONTENT = REPO / "content"
 
 

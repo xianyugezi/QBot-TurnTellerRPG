@@ -198,7 +198,10 @@ DEFAULT_PACKS = ("veinborn", "test_demo")
 # 批39 二次重定（同批）：00b65f5 → 0e1d7b4（settings.alchemy.mode 补中文名 + 说明卡）。
 #   原因 = 本批**有意**变更（非迁移回归）：mode 字段级 label/help（口径④严格键）新增。
 #   对拍实证：删除项 = 0；重定后基线树与当前树逐字段 diff=0。
-DEFAULT_BASELINE_REF = "0e1d7b4"
+# 批39 三次重定（同批）：0e1d7b4 → b812891（settings.alchemy 段补中文段名 + 说明卡）。
+#   原因 = 本批**有意**变更（非迁移回归）：alchemy 段级 label/help（口径④严格键）新增。
+#   对拍实证：删除项 = 0；重定后基线树与当前树逐字段 diff=0。
+DEFAULT_BASELINE_REF = "b812891"
 
 
 def _env(root: Path) -> dict:

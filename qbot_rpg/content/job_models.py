@@ -335,6 +335,12 @@ def jobs_fields() -> Dict[str, FieldMeta]:
         #   items : 转职需持有的物品（list<ref items>；全部须持有）
         # 三项均可选、缺省 = 无该条件；既有职业数据不带 advance → 行为与现状一致。
         "advance": FieldMeta(type="obj", children=ADVANCE_CHILDREN),
+        # 批35 · §6.12-12 进阶职业卡片（职业树继承）：进阶职一侧声明继承来源
+        # 与技能白名单——与批23 C1 `advance`（前置条件，能不能转）同侧、互补；
+        # `inherit` 决定「转过去继承什么」。只影响技能位装配，不碰属性成长
+        # （2026-09-09 拍板：职业成长跟随职业，见 core/levelup.rebase_white_for_job_change）。
+        # 缺省 = 无继承（既有职业数据行为零变化，对拍）。
+        "inherit": FieldMeta(type="obj", children=INHERIT_CHILDREN),
         # transform 段注册位（§1.1 #10）：11 字段 #21~#31 + state_policy 3
         # 字段 #32~#34 已由批4路4B 合写追加 children（TRANSFORM_CHILDREN 经
         # _job_transform_children() 惰性挂载，见文末 4B 落点小节）；
@@ -366,6 +372,17 @@ ADVANCE_CHILDREN: Mapping[str, FieldMeta] = {
     "from": FieldMeta(type="ref", ref_target="job"),
     "level": FieldMeta(type="int", range_min=1),
     "items": FieldMeta(type="list", element=FieldMeta(type="ref", ref_target="item")),
+}
+
+
+# inherit 子字段（批35 · §6.12-12 职业树继承）。进阶职声明：
+#   from   : 母职（ref jobs；R-4 引用存在性硬拦）——转职到本职业时继承该职业技能；
+#   skills : 可选技能白名单（list<ref skills>；R-4 元素引用存在性）；
+#            非空 = 只继承列出的技能 id；空/缺省 = 继承母职全部职业专属技能。
+# from 必填（写了 inherit 就必须有来源；缺省 inherit 键 = 无继承，行为与现状一致）。
+INHERIT_CHILDREN: Mapping[str, FieldMeta] = {
+    "from": FieldMeta(type="ref", ref_target="job", required=True),
+    "skills": FieldMeta(type="list", element=FieldMeta(type="ref", ref_target="skill")),
 }
 
 

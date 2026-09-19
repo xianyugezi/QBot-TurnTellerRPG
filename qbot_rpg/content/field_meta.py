@@ -1595,18 +1595,19 @@ ACTION_SUBGROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
 ACTION_SUBGROUP_LABELS: Dict[str, str] = {
     "base": "标识与类型", "numeric": "数值", "behavior": "行为", "refs": "引用",
 }
-# 职业：标识 / 成长 / 形态变换 / 转职前置。
+# 职业：标识 / 成长 / 形态变换 / 转职前置 / 进阶继承。
 JOBS_SUBGROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
     ("base", ("id", "name", "difficulty", "playstyle", "recommended_newbie", "is_basic")),
     ("tags", ("mechanic_tags", "weapon_types", "resource_axes")),
     ("growth", ("growth",)),
     ("transform", ("transform",)),
     ("advance", ("advance",)),
+    ("inherit", ("inherit",)),
     ("text", ("description",)),
 )
 JOBS_SUBGROUP_LABELS: Dict[str, str] = {
     "base": "标识与定位", "tags": "标签与武器", "growth": "成长率",
-    "transform": "形态变换", "advance": "转职前置", "text": "文本",
+    "transform": "形态变换", "advance": "转职前置", "inherit": "进阶继承", "text": "文本",
 }
 # NPC：标识 / 对话与交互 / 关联引用。
 NPC_SUBGROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
@@ -2121,6 +2122,24 @@ def _module_table() -> Dict[str, ModuleMeta]:
                 type="list", element=FieldMeta(type="ref", ref_target="item"),
                 label="转职需求物品",
                 help="转职须持有的物品（items 物品 id，全部须持有）；留空 = 无物品门槛。"),
+        }),
+        # 批35 · §6.12-12 进阶职业卡片（职业树继承）：写在**进阶职**一侧，声明母职
+        # 与可选技能白名单。与批23 `advance`（前置门槛，能不能转）互补：`inherit`
+        # 决定「转过去继承什么」。引擎 = core/job_slots.resolve_inherit_chain +
+        # core/skill_slots 装配可见集的额外可见集合（复用既有装配入口，不新开一套）；
+        # **只影响技能位装配，不碰属性成长**（2026-09-09 拍板：职业成长跟随职业）。
+        # 校验：from 引用 jobs / skills 元素引用 skills → 泛型 R-4 硬拦；from 必填（R-5）。
+        # 缺省 = 无继承（既有职业数据行为零变化）。
+        "inherit": FieldMeta(type="obj", label="进阶继承",
+                             help="转职到本职业时继承哪个职业的技能；留空 = 不继承。",
+                             children={
+            "from": FieldMeta(type="ref", ref_target="job", required=True,
+                              label="继承来源职业",
+                              help="母职的 jobs 职业 id；转职到本职业时继承该职业的职业专属技能。"),
+            "skills": FieldMeta(
+                type="list", element=FieldMeta(type="ref", ref_target="skill"),
+                label="继承技能白名单",
+                help="skills 技能 id 列表；非空 = 只继承列出的技能；留空 = 继承母职全部职业专属技能。"),
         }),
     }
     # 技能/链侧挂点字段（细化_6b §1.5/§1.6）：revert_form（37）与 derive_only（38）为

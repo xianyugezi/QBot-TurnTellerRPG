@@ -304,54 +304,62 @@ def test_6a_skills_fields_contract_core_24() -> None:
 
 def test_6b_jobs_fields_ge_34() -> None:
     """契约 §1.1 顶层 11 + §1.2 growth 9 + §1.3 transform 11 + §1.4 state_policy 3 = 34；
-    批23 另加 advance（转职前置，+3 子键）/ is_basic（初始职业，+1 顶层）。
+    批23 另加 advance（转职前置，+3 子键）/ is_basic（初始职业，+1 顶层）；
+    批35 另加 inherit（进阶继承，+1 顶层 +2 子键）。
 
-    登记形态：jobs_fields() 平铺 13 键（growth/transform/advance/state_policy 为
+    登记形态：jobs_fields() 平铺 14 键（growth/transform/advance/inherit/state_policy 为
     children 嵌套）；并集口径 = 顶层 + children 展开 ≥ 39。
     """
     fields = jobs_fields()
-    assert len(fields) == 13, "jobs_fields 平铺应为顶层 13 键（11 契约 + advance + is_basic）"
+    assert len(fields) == 14, (
+        "jobs_fields 平铺应为顶层 14 键（11 契约 + advance + is_basic + inherit）")
     for key in (
         "id", "name", "difficulty", "playstyle", "recommended_newbie", "is_basic",
         "resource_axes", "mechanic_tags", "weapon_types", "growth", "transform",
-        "description", "advance",
+        "description", "advance", "inherit",
     ):
         assert key in fields, f"jobs_fields 缺顶层契约键 {key}"
-    # children 并集展开（growth 9 + transform 11 + advance 3；state_policy 独立字段 3）
+    # children 并集展开（growth 9 + transform 11 + advance 3 + inherit 2；state_policy 独立字段 3）
+    # 注：advance.from 与 inherit.from 共用键名 "from" → 去重后 children 并集 = 24
     child_keys: set = set()
     for key, meta in fields.items():
         ch = getattr(meta, "children", None) or {}
         if isinstance(ch, dict):
             child_keys |= set(ch.keys())
-    assert len(child_keys) >= 23, f"children 展开应 ≥ 23，got {len(child_keys)}"
+    assert len(child_keys) >= 24, f"children 展开应 ≥ 24，got {len(child_keys)}"
     # 四段并集 = 顶层 + children + state_policy ≥ 39
     assert len(child_keys | set(fields) | set(state_policy_fields())) >= JOBS_FIELDS_MIN
 
 
-def test_6b_jobs_fields_exact_39() -> None:
-    """§1.1~§1.4 + 批23 C1/C2 合写登记表恰 39 键
-    （顶层 13 + growth 9 + transform 11 + policy 3 + advance 3）。
+def test_6b_jobs_fields_exact_count() -> None:
+    """§1.1~§1.4 + 批23 C1/C2 + 批35 合写登记表并集恰 41 键
+    （顶层 14 + growth 9 + transform 11 + policy 3 + advance 3 + inherit 2 − 1 重叠）。
 
-    登记形态：顶层 13 平铺 + growth children 9 + transform children 11 +
-    state_policy children 3 + advance children 3（job_models 的 obj 子字段登记先例，
-    与 field_meta ENEMY_STATS_CHILDREN 同构）——五段键空间互斥并集 = 39。
+    登记形态：顶层 14 平铺 + growth children 9 + transform children 11 +
+    state_policy children 3 + advance children 3 + inherit children 2（job_models 的
+    obj 子字段登记先例，与 field_meta ENEMY_STATS_CHILDREN 同构）。
+    注：`advance.from` 与 `inherit.from` 同键名 → 并集去重后 41（children 段 27）。
     """
     fields = jobs_fields()
-    assert len(fields) == 13  # 顶层 §1.1 #1~#11 + 批23 advance + is_basic
+    assert len(fields) == 14  # 顶层 §1.1 #1~#11 + 批23 advance + is_basic + 批35 inherit
     transform_children: Mapping[str, object] = fields["transform"].children
     growth_children: Mapping[str, object] = fields["growth"].children
     advance_children: Mapping[str, object] = fields["advance"].children
+    inherit_children: Mapping[str, object] = fields["inherit"].children
     top_keys = set(fields)
     transform_keys = set(transform_children)
     growth_keys = set(growth_children)
     advance_keys = set(advance_children)
     policy_keys = set(state_policy_fields())
-    union = top_keys | transform_keys | growth_keys | advance_keys | policy_keys
-    assert len(union) == 39  # 13+9+11+3+3 段间无重叠
-    assert len(union - top_keys) == 26  # children 段合计 9+11+3+3
+    inherit_keys = set(inherit_children)
+    union = (top_keys | transform_keys | growth_keys | advance_keys | policy_keys
+             | inherit_keys)
+    assert len(union) == 41  # 14+9+11+3+3+2 − "from" 重叠 1
+    assert len(union - top_keys) == 27  # children 段合计 9+11+3+3+2 − 1
     assert len(growth_children) == 9
     assert len(transform_children) == 11
     assert len(advance_children) == 3
+    assert len(inherit_children) == 2
     assert len(policy_keys) == 3
     assert len(state_policy_fields()) == 3
     # state_policy children 经 transform 段 children 挂载（§1.4 嵌套）

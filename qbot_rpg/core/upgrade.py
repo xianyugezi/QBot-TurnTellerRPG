@@ -129,6 +129,24 @@ def _as_int(value: object) -> Optional[int]:
     return None
 
 
+def _rune_switch_allows(ctx: Any) -> bool:
+    """符文 3 合 1 总闸（批48 · 43-C）：`settings.deep_craft.enabled`。
+
+    - ctx 带 `settings.deep_craft` 段 → `enabled is True` 才放行（口径 §二.5）；
+    - ctx 无 settings / 无 deep_craft（旧档、精简单测上下文）→ **不额外收紧**（True），
+      保持批46 已验收行为逐字段一致（工程补白：无配置上下文时不臆断关闭）。
+    """
+    if not isinstance(ctx, Mapping):
+        return True
+    settings = ctx.get("settings")
+    if not isinstance(settings, Mapping):
+        return True
+    dc = settings.get("deep_craft")
+    if not isinstance(dc, Mapping):
+        return True
+    return dc.get("enabled") is True
+
+
 class UpgradeEngine:
     """升级合成引擎（kind=upgrade 通用执行器 + 4 配置实例）。
 
@@ -236,6 +254,11 @@ class UpgradeEngine:
         _raw_rt = _as_int(recipe_def.get("rune_tier"))
         rune_tier: Optional[int] = _raw_rt if _raw_rt in (1, 2, 3) else None
 
+        # 批48 · 43-C：`synth_allowed` 显式解析（对齐 core/synthesis CASC-04 语义：
+        # false = 深度未解锁 → 拒绝；true/缺省 = 放行）。非布尔 → None（按缺省放行）。
+        _raw_sa = recipe_def.get("synth_allowed")
+        synth_allowed: Optional[bool] = _raw_sa if isinstance(_raw_sa, bool) else None
+
         return {
             "kind": "upgrade",
             "id": str(recipe_def.get("id", "")),
@@ -248,6 +271,7 @@ class UpgradeEngine:
             "combine_from": combine_from,
             "jewel_tier": jewel_tier,
             "rune_tier": rune_tier,
+            "synth_allowed": synth_allowed,
         }
 
     def _infer_subtype(self, recipe_def: Mapping) -> str:
@@ -747,7 +771,25 @@ class UpgradeEngine:
               对齐既有 `_exec_jewel` 拍板）。档位解析走独立三阶刻度（`_rune_tier_of`），
               **不**走珠的 quality 四档序号（口径 §〇 结论 4）。
         原子：复用 `_commit`（扣货币→扣输入→出货，失败进程内 best-effort 回滚）。
+
+        批48 · 43-C 端到端补全：新增两道**系统级闸**（均在扣料前，拒绝零副作用）——
+          ① `synth_allowed is False` → 深度未解锁（对齐 synthesis CASC-04 语义）；
+          ② `settings.deep_craft.enabled` 非 True（且 ctx **带**该段时）→ 符文系统未启用
+             （口径 §二.5；ctx 无 settings/deep_craft 段的旧/精简上下文**不额外收紧**，
+             保持批46 行为逐字段一致）。
         """
+        # 闸①：synth_allowed=false → 深度未解锁（配方显式声明；缺省/true 放行）
+        if cfg.get("synth_allowed") is False:
+            return self._reject(
+                "runes_deep_locked",
+                "❌ 该符文配方未解锁（synth_allowed=false，需深度打造解锁）",
+            )
+        # 闸②：符文系统总闸（settings.deep_craft.enabled；ctx 无该段 → 不收紧）
+        if not _rune_switch_allows(ctx):
+            return self._reject(
+                "runes_disabled",
+                "❌ 符文系统未启用（settings.deep_craft.enabled 关闭）",
+            )
         inputs = cfg.get("inputs") or []
         if len(inputs) != 1:
             return self._reject("rune_input_shape", "❌ 符文 3 合 1 必须 3 个同阶同 id 符文")

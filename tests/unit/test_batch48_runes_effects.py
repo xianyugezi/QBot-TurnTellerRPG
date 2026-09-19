@@ -666,3 +666,123 @@ def test_validator_bias_shape() -> None:
            "bias": {"affinity": "ice", "bonus_pct": 25}}
     rep3 = check_pack(_pack(low), default_field_meta_table())
     assert "bias_only_tier3" in [w.detail.get("rule") for w in rep3.warnings]
+
+
+# ===========================================================================
+# E. 3 合 1 端到端（1→2→3 逐阶 / 禁跳级 / 失败原子性 / synth_allowed+总闸交互）
+# ===========================================================================
+RUNES_CHAIN: Dict[str, Any] = {
+    "r_t1": {"id": "r_t1", "name": "r_t1", "tier": 1, "family": "f",
+             "by_equip_type": {"default": {"stats": {"atk": 1}}}},
+    "r_t2": {"id": "r_t2", "name": "r_t2", "tier": 2, "family": "f",
+             "by_equip_type": {"default": {"stats": {"atk": 2}}},
+             "effects": [{"effect": "fx_atk_stack", "trigger": "action_start"}]},
+    "r_t3": {"id": "r_t3", "name": "r_t3", "tier": 3, "family": "f",
+             "by_equip_type": {"default": {"stats": {"atk": 4}}},
+             "bias": {"affinity": "fire", "bonus_pct": 50}},
+}
+
+
+def _chain_ctx(held: Dict[str, int], *, gem: int = 20,
+               deep_craft: Any = "enabled", add_ok: bool = True) -> Any:
+    inv = dict(held)
+
+    def remove_item(i: Any, c: int) -> bool:
+        key = str(i)
+        if inv.get(key, 0) < int(c):
+            return False
+        inv[key] -= int(c)
+        return True
+
+    def add_item(i: Any, c: int, bound: bool) -> bool:
+        if not add_ok:
+            return False
+        inv[str(i)] = inv.get(str(i), 0) + int(c)
+        return True
+
+    ctx: Dict[str, Any] = {
+        "runes": dict(RUNES_CHAIN), "items": {}, "inventory": inv,
+        "count_item": lambda i: int(inv.get(str(i), 0)),
+        "remove_item": remove_item, "add_item": add_item,
+        "currencies": {"coins": 0, "gem": gem},
+    }
+    if deep_craft != "absent":
+        ctx["settings"] = {"deep_craft": {"enabled": deep_craft == "enabled"}}
+    return ctx, inv
+
+
+def _chain_recipe(inp: str, out: str, **over: Any) -> Dict[str, Any]:
+    d = {"kind": "upgrade", "subtype": "rune_upgrade", "id": "rcp",
+         "inputs": [{"item": inp, "count": 3}], "output": {"item": out, "count": 1},
+         "cost": {"gem": 10}}
+    d.update(over)
+    return d
+
+
+def _upg() -> Any:
+    from qbot_rpg.core.upgrade import UpgradeEngine
+
+    return UpgradeEngine(settings={})
+
+
+def test_rune_3in1_end_to_end_tier1_to_2_to_3() -> None:
+    """端到端：3×1 阶 → 2 阶 → 3×2 阶 → 3 阶（逐阶贴产物）。"""
+    eng = _upg()
+    ctx, inv = _chain_ctx({"r_t1": 3, "r_t2": 3})
+    # 第一阶：3×r_t1 → r_t2
+    r1 = eng.execute(ctx, _chain_recipe("r_t1", "r_t2"))
+    assert r1["ok"] and (r1["tier_in"], r1["tier_out"]) == (1, 2), r1
+    assert inv == {"r_t1": 0, "r_t2": 4}, inv            # 3 消耗 + 1 产出
+    # 第二阶：3×r_t2 → r_t3
+    r2 = eng.execute(ctx, _chain_recipe("r_t2", "r_t3"))
+    assert r2["ok"] and (r2["tier_in"], r2["tier_out"]) == (2, 3), r2
+    assert inv == {"r_t1": 0, "r_t2": 1, "r_t3": 1}, inv
+    assert ctx["currencies"]["gem"] == 0                 # 2×10
+
+
+def test_rune_3in1_rejects_skip_and_max() -> None:
+    """禁跳级/满阶：1→3 越阶拒；3 阶输入无更高阶可升 → 拒（零副作用）。"""
+    eng = _upg()
+    ctx, inv = _chain_ctx({"r_t1": 3, "r_t3": 3})
+    res = eng.execute(ctx, _chain_recipe("r_t1", "r_t3"))
+    assert res["ok"] is False and res["reason"] == "rune_skip_tier"
+    assert inv == {"r_t1": 3, "r_t3": 3} and ctx["currencies"]["gem"] == 20
+    res2 = eng.execute(ctx, _chain_recipe("r_t3", "r_t3", rune_tier=4))
+    assert res2["ok"] is False and res2["reason"] == "rune_max_tier"
+    assert inv == {"r_t1": 3, "r_t3": 3} and ctx["currencies"]["gem"] == 20
+
+
+def test_rune_3in1_atomic_add_failure_leaves_no_half_product() -> None:
+    """失败原子性：产出 hook 失败 → 货币/背包 best-effort 回滚（不留半成品）。"""
+    eng = _upg()
+    ctx, inv = _chain_ctx({"r_t1": 3}, add_ok=False)
+    res = eng.execute(ctx, _chain_recipe("r_t1", "r_t2"))
+    assert res["ok"] is False and res["reason"] == "add_item_failed"
+    assert inv == {"r_t1": 3}, inv                       # 输入未被扣
+    assert ctx["currencies"]["gem"] == 20               # 宝石未扣
+
+
+def test_rune_3in1_deep_craft_switch_interaction() -> None:
+    """总闸交互：deep_craft 关 → runes_disabled 零副作用；开 → 通过；ctx 无该段 → 不收紧。"""
+    eng = _upg()
+    ctx, inv = _chain_ctx({"r_t1": 3}, deep_craft="disabled")
+    res = eng.execute(ctx, _chain_recipe("r_t1", "r_t2"))
+    assert res["ok"] is False and res["reason"] == "runes_disabled"
+    assert inv == {"r_t1": 3} and ctx["currencies"]["gem"] == 20
+    ctx2, _ = _chain_ctx({"r_t1": 3}, deep_craft="enabled")
+    assert eng.execute(ctx2, _chain_recipe("r_t1", "r_t2"))["ok"] is True
+    ctx3, _ = _chain_ctx({"r_t1": 3}, deep_craft="absent")
+    assert eng.execute(ctx3, _chain_recipe("r_t1", "r_t2"))["ok"] is True
+
+
+def test_rune_3in1_synth_allowed_interaction() -> None:
+    """synth_allowed 交互：显式 false → 深度未解锁拒（零副作用）；true/缺省 → 放行。"""
+    eng = _upg()
+    ctx, inv = _chain_ctx({"r_t1": 3})
+    res = eng.execute(ctx, _chain_recipe("r_t1", "r_t2", synth_allowed=False))
+    assert res["ok"] is False and res["reason"] == "runes_deep_locked"
+    assert inv == {"r_t1": 3} and ctx["currencies"]["gem"] == 20
+    ctx2, _ = _chain_ctx({"r_t1": 3})
+    assert eng.execute(ctx2, _chain_recipe("r_t1", "r_t2", synth_allowed=True))["ok"] is True
+    ctx3, _ = _chain_ctx({"r_t1": 3})
+    assert eng.execute(ctx3, _chain_recipe("r_t1", "r_t2"))["ok"] is True

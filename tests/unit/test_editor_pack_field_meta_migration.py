@@ -55,7 +55,12 @@ SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
 #   与 scripts/compare_field_meta_migration.py 的 DEFAULT_BASELINE_REF 同基线。
 #   二次重定（同批）c6d33c4 → 9cdaa04：rarity.help 去 ✨（emoji 纪律门禁要求；
 #   help 属口径④严格键）→ 重定到含该修正的收尾提交，对拍回到 0 差异。
-BASELINE_REF = "9cdaa04"
+# 批37（2026-09-19 战后恢复引擎）重定：9cdaa04 → d324e92（本批字段/模板/测试提交）。
+#   原因 = 本批**有意**变更（非迁移回归）：新增 settings.post_battle_recovery 段
+#   （settings 条目 +1）+ 模板表 battle_settle_recovery（templates 计数 837→838）。
+#   对拍实证：删除项 = 0、36 条硬差异全部为上述两类计数变动；重定后 0 差异。
+#   与 scripts/compare_field_meta_migration.py 的 DEFAULT_BASELINE_REF 同基线。
+BASELINE_REF = "d324e92"
 CONTENT = REPO / "content"
 
 

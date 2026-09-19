@@ -165,7 +165,15 @@ DEFAULT_PACKS = ("veinborn", "test_demo")
 # 二次重定（同批）：c6d33c4 → 9cdaa04。原因：emoji 纪律门禁要求 field_meta 的
 #   `gather_points[].rarity.help` 去掉 ✨（改为「上限觉醒档」）——help 属口径④严格键，
 #   与 c6d33c4 基线不一致；重定到含该修正的本批测试/收尾提交后，对拍回到 0 差异。
-DEFAULT_BASELINE_REF = "9cdaa04"
+# 批37（2026-09-19 战后恢复引擎）：9cdaa04 → d324e92（本批字段/模板/测试提交）。
+# 原因（本批**有意**变更，非迁移回归）：
+#   ① 新增框架 settings 段 `post_battle_recovery`（战后恢复三字段）→ settings 条目列表
+#      多 1 条（count/total_count/unconfigured_count、index.total、模块声明计数各 +1，
+#      纯新增）；
+#   ② 模板全量表新增 `battle_settle_recovery` 键（templates 计数 837 → 838）；
+#   对拍实证：删除项 = 0（无「仅迁移前有」）；36 条硬差异全部为上述两类的计数变动，
+#   8 条新增项逐条列出。重定到本批末提交后，基线树与当前树逐字段 diff=0。
+DEFAULT_BASELINE_REF = "d324e92"
 
 
 def _env(root: Path) -> dict:

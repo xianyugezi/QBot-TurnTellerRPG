@@ -305,3 +305,32 @@ def test_e2e_lose_does_not_recover() -> None:
     assert ctx["battle_engine"].battle_state().get("status") == "lose"
     assert ctx["player"]["hp"] == 0
     assert all("战后恢复" not in seg for seg in ctx["sender"].calls)
+
+
+# ===========================================================================
+# 四、渲染层零行为变化（recovery 缺省 None 与不传等价；非 None 只多恢复块）
+# ===========================================================================
+def test_render_recovery_line_optional() -> None:
+    """渲染层对拍：不传/传 None 逐行一致；传入只多恢复块；lose 不渲染。"""
+    from types import SimpleNamespace
+
+    from qbot_rpg.core.message_format.battle_render import render_battle_end
+
+    enemy = SimpleNamespace(name="史莱姆", turn=1)
+    base = render_battle_end(SimpleNamespace(), enemy, "win", status="win",
+                             enemy_name="史莱姆", exp=10, gold=5)
+    none = render_battle_end(SimpleNamespace(), enemy, "win", status="win",
+                             enemy_name="史莱姆", exp=10, gold=5, recovery=None)
+    assert base == none, "recovery=None 必须与不传逐行一致（零行为变化）"
+    assert "战后恢复" not in base
+    rec = render_battle_end(
+        SimpleNamespace(), enemy, "win", status="win", enemy_name="史莱姆",
+        exp=10, gold=5,
+        recovery={"hp": 150, "hp_max": 500, "mp": 30, "mp_max": 100})
+    assert "战后恢复\n生命 150/500\n法力 30/100" in rec
+    # lose 分支不渲染恢复行（恢复仅胜利后，定稿 L298）
+    lose = render_battle_end(
+        SimpleNamespace(), enemy, "lose", status="lose", enemy_name="史莱姆",
+        recovery={"hp": 1, "hp_max": 5, "mp": 1, "mp_max": 5})
+    assert "战后恢复" not in lose
+

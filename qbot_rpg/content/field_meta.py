@@ -1566,10 +1566,12 @@ ITEMS_GROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
         "id", "name", "type", "slot", "bind", "usable", "job_restrict", "use_level",
         "quality", "rarity", "material_tier", "source", "awaken", "seed",
         "max_hold",  # 批26 α2：获取数量上限（items∪equipment 同库）
+        "handedness",  # 批38 ③：手数（单手/双手；装备基本属性）
     )),
     ("stats", (
         "price", "atk", "def", "dfn", "foc", "hp", "agi", "mp",
         "elements", "base_effects",
+        "affinities",  # 批38 ④：材料/图纸相性值 {相性id: 数值}
         *GEAR_FLAT_KEYS, *GEAR_PCT_KEYS, *GEAR_COMBAT_KEYS,
     )),
     # 批26 α组（装备侧）：装备附加字段归「效果」分组（grant_skills/skill_amp/

@@ -73,6 +73,9 @@ from __future__ import annotations
 from typing import Any, Dict, List, Mapping, MutableMapping, Optional, Sequence, Tuple
 
 from qbot_rpg.core.quality import QualitySystem
+# 批46 · 符文地基（43-A）：符文三阶档位解析 + 3 合 1 纯函数（与珠四档 quality 序号不兼容，
+# 故 rune_upgrade 走独立解析，见 _exec_rune/_rune_tier_of）。
+from qbot_rpg.core.runes import RUNE_UPGRADE_COUNT, resolve_rune_upgrade
 
 __all__ = [
     "UPGRADE_SUBTYPES",
@@ -80,12 +83,13 @@ __all__ = [
     "UpgradeEngine",
 ]
 
-# 升级合成四个配置实例子类型（批2 路2B）
+# 升级合成配置实例子类型（批2 路2B + 批46 符文 3 合 1）
 UPGRADE_SUBTYPES: Tuple[str, ...] = (
-    "jewel_upgrade",  # 珠三合一升阶
-    "product_merge",  # 成品合成
-    "formula_merge",  # 配方合成
-    "trait_merge",    # 特性合成
+    "jewel_upgrade",   # 珠三合一升阶（品质四档序号）
+    "product_merge",   # 成品合成
+    "formula_merge",   # 配方合成
+    "trait_merge",     # 特性合成
+    "rune_upgrade",    # 批46 · 符文 3 合 1（三阶独立刻度；档位另给，禁跳级）
 )
 
 # 缺省 gem 费率（settings.alchemy.gem 段缺省，对齐批0 content/test_demo/settings.json）
@@ -199,6 +203,11 @@ class UpgradeEngine:
                 "item": raw_output["item"],
                 "count": count if count is not None and count > 0 else 1,
             }
+            # 批46 · 符文 3 合 1：产出端显式阶位标注（Q8 未裁决时产出可另立条目，
+            # 解析不到 runes 定义 → 用此显式值做禁跳级核验；缺省不写入，既有输出形状不变）。
+            _out_rt = _as_int(raw_output.get("rune_tier"))
+            if _out_rt is not None:
+                output["rune_tier"] = _out_rt
 
         raw_cost = recipe_def.get("cost")
         coins = _as_int(raw_cost.get("coins", 0)) if isinstance(raw_cost, Mapping) else None
@@ -223,6 +232,10 @@ class UpgradeEngine:
         raw_jt = recipe_def.get("jewel_tier")
         jewel_tier: Optional[str] = str(raw_jt) if isinstance(raw_jt, str) and raw_jt else None
 
+        # 符文 3 合 1 显式档位标注（批46：rune_tier ∈ 1/2/3；产出端回退，缺省 None）
+        _raw_rt = _as_int(recipe_def.get("rune_tier"))
+        rune_tier: Optional[int] = _raw_rt if _raw_rt in (1, 2, 3) else None
+
         return {
             "kind": "upgrade",
             "id": str(recipe_def.get("id", "")),
@@ -234,6 +247,7 @@ class UpgradeEngine:
             "condition": condition,
             "combine_from": combine_from,
             "jewel_tier": jewel_tier,
+            "rune_tier": rune_tier,
         }
 
     def _infer_subtype(self, recipe_def: Mapping) -> str:
@@ -628,6 +642,8 @@ class UpgradeEngine:
             return self._exec_formula(ctx, cfg)
         if subtype == "trait_merge":
             return self._exec_trait(ctx, cfg, input_ids)
+        if subtype == "rune_upgrade":
+            return self._exec_rune(ctx, cfg, input_ids)
         return self._reject("unknown_subtype", f"❌ 未知升级子类型：{subtype}")
 
     # ------------------------------------------------------------------
@@ -713,6 +729,137 @@ class UpgradeEngine:
         jt = cfg.get("jewel_tier")
         if isinstance(jt, str) and jt in _QUALITY_KEYS:
             return jt
+        return None
+
+    # ------------------------------------------------------------------
+    # 配置实例 5：符文 3 合 1（3×同阶同 id → 1×高一阶，必成，禁跳级）
+    # ------------------------------------------------------------------
+    def _exec_rune(
+        self,
+        ctx: MutableMapping[str, Any],
+        cfg: Mapping,
+        input_ids: Optional[Sequence[str]] = None,
+    ) -> dict:
+        """符文 3 合 1 进阶（批46 · 43-A / 原案 §9 R5+R8）。
+
+        校验：恰 1 输入条目且 count≥3（3× 同阶同 id）→ 持有全量 → 资源全量 → 档位联动
+              （产出阶 == 输入阶 + 1，**禁跳级**；满阶/越阶一律拒绝）。**必成**（无随机，
+              对齐既有 `_exec_jewel` 拍板）。档位解析走独立三阶刻度（`_rune_tier_of`），
+              **不**走珠的 quality 四档序号（口径 §〇 结论 4）。
+        原子：复用 `_commit`（扣货币→扣输入→出货，失败进程内 best-effort 回滚）。
+        """
+        inputs = cfg.get("inputs") or []
+        if len(inputs) != 1:
+            return self._reject("rune_input_shape", "❌ 符文 3 合 1 必须 3 个同阶同 id 符文")
+        entry = inputs[0]
+        item_id = entry["item"]
+        need = entry["count"]
+        if need < RUNE_UPGRADE_COUNT:
+            return self._reject("rune_input_count", "❌ 符文 3 合 1 需要 3 个同阶同 id 符文")
+        # U-J2 同形防御：input_ids 若传则必须全等于配方输入 item
+        if input_ids:
+            if any(x != item_id for x in input_ids):
+                return self._reject("rune_input_mismatch", "❌ 所选符文与配方输入不符")
+        # 持有全量（BATCH-06.3 差异）
+        diffs = self._input_diffs(ctx, cfg)
+        if diffs:
+            return self._reject("inputs_insufficient", "❌ 材料不足：" + "、".join(diffs))
+        # 资源全量
+        cdiff = self._cost_diff(ctx, cfg)
+        if cdiff is not None:
+            return self._reject("cost_insufficient", "❌ 资源不足：" + cdiff)
+        # 档位联动 + 禁跳级（三阶独立刻度；两端阶位必须可解析 → 否则拒绝，禁跳级不可绕过）
+        out_item = cfg["output"]["item"]
+        in_tier = self._rune_tier_of(item_id, ctx, cfg)
+        out_tier = self._rune_tier_of(out_item, ctx, cfg, output=True)
+        if in_tier is None:
+            return self._reject(
+                "rune_tier_missing",
+                f"❌ 输入符文 {self._item_name(item_id, ctx)} 阶位未知（tier ∈ 1/2/3 缺失）",
+            )
+        if out_tier is None:
+            return self._reject(
+                "rune_tier_missing",
+                f"❌ 产出符文 {self._item_name(out_item, ctx)} 阶位未知（需 runes 定义或"
+                f" recipe.rune_tier）",
+            )
+        res = resolve_rune_upgrade(
+            {"id": item_id, "tier": in_tier}, need, output_tier=out_tier
+        )
+        if not res.get("ok"):
+            reason = str(res.get("reason") or "rune_upgrade_reject")
+            if reason == "rune_max_tier":
+                msg = (f"❌ 禁越阶：{self._item_name(item_id, ctx)} 已是 {in_tier} 阶"
+                       f"（满阶，链终点）")
+            elif reason == "rune_skip_tier":
+                msg = (f"❌ 禁跳级：{self._item_name(item_id, ctx)} {in_tier} 阶只能升到"
+                       f" {res.get('expected_tier')} 阶（禁止跨阶）")
+            else:
+                msg = "❌ 符文 3 合 1 校验未通过（阶位/件数）"
+            return self._reject(reason, msg)
+        # 原子提交（U-A1；复用既有形状）
+        gem = cfg["cost"].get("gem", 0)
+        out_count = cfg["output"]["count"]
+        err = self._commit(
+            ctx,
+            removals=[(item_id, need)],
+            currency_delta={"gem": -gem},
+            add_item=(out_item, out_count, True),
+        )
+        if err is not None:
+            return err
+        return {
+            "ok": True,
+            "message": (
+                f"✅ {self._item_name(out_item, ctx)} 合成成功"
+                f"（{in_tier} 阶 → {out_tier} 阶，消耗 宝石×{gem}）"
+            ),
+            "consumed": {
+                "inputs": [{"item": item_id, "count": need}],
+                "cost": {"coins": 0, "gem": gem},
+                "traits": [],
+            },
+            "produced": {"item": out_item, "count": out_count},
+            "tier_in": in_tier,
+            "tier_out": out_tier,
+        }
+
+    def _resolve_rune_def(
+        self, rune_id: str, ctx: Mapping[str, Any]
+    ) -> Optional[Mapping[str, Any]]:
+        """符文定义解析：`ctx["runes"]` 注册表优先，兜底物品定义（rune item 在 items.json）。"""
+        rid = str(rune_id or "")
+        if not rid:
+            return None
+        runes = ctx.get("runes")
+        if isinstance(runes, Mapping):
+            hit = runes.get(rid)
+            if isinstance(hit, Mapping):
+                return hit
+        return self._resolve_item(rid, ctx)
+
+    def _rune_tier_of(
+        self, rune_id: str, ctx: Mapping[str, Any], cfg: Mapping, output: bool = False
+    ) -> Optional[int]:
+        """符文档位解析（三阶独立刻度）：① `ctx["runes"][id].tier` ② 物品定义 `tier`
+        ③ **仅产出端**配方显式 `output.rune_tier` / `rune_tier` ④ 均无 → None
+        （`_exec_rune` 据此拒绝，禁跳级不可绕过）。
+
+        输入端不走配方回退（否则 `rune_tier` 同时套到两端 → 同阶被当跳级拒）；产出端允许
+        显式声明（Q8 未裁决：产出可以是另立的符文条目，未必在 runes 注册表可解析）。
+        """
+        rune_def = self._resolve_rune_def(rune_id, ctx)
+        if rune_def is not None:
+            t = _as_int(rune_def.get("tier"))
+            if t is not None and 1 <= t <= 3:
+                return t
+        if output:
+            raw_out = cfg.get("output")
+            for v in (raw_out.get("rune_tier") if isinstance(raw_out, Mapping) else None,
+                      cfg.get("rune_tier")):
+                rt = _as_int(v)
+                if rt is not None and 1 <= rt <= 3:
+                    return rt
         return None
 
     # ------------------------------------------------------------------

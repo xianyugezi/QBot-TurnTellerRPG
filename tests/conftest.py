@@ -277,6 +277,19 @@ def formula_params(legal_pack_dir: Path) -> DamageFormulaParams:
     return load_formula_params(legal_pack_dir / "formula.json")
 
 
+@pytest.fixture
+def conftest_formula_loader() -> Callable[[Path], DamageFormulaParams]:
+    """conftest 侧 formula 读取器**本函数对象**（供「薄包装同源」用例注入）。
+
+    批49：用例不再在运行期 `import tests.conftest`——`tests/` 是 PEP 420 命名空间包，
+    环境 `sys.path` 上同名 regular package（实测宿主 /usr/local/lib/hermes-agent/tests，
+    DSH 宿主自带 `__init__.py`）会按「regular 优先于 namespace」抢占 `tests` 包名，
+    使运行期解析偶发落到宿主包 → `ImportError`（全量偶发红、隔离跑绿）。改由本 fixture
+    把 conftest 内同一个薄包装函数注入用例，语义不变、不再依赖 `tests.*` 运行期解析。
+    """
+    return load_formula_params
+
+
 def make_player(qid: str = "123456789", name: str = "阿伟") -> Player:
     """全字段 Player（细化_4a#TC-12 round-trip / 细化_3d panel 渲染基准）。"""
     attrs = PlayerAttributes(

@@ -127,6 +127,18 @@
 - **M0（2026-08-25）**：实现层框架骨架实装——data/storage/content/core 四层 + G0 架构检查 +
   测试体系 + verify_m0 门禁（M0 复查三批 P0×2 / P1×31 全部修复）。
 
+### Fixed
+
+- **批49（2026-09-20）**：**擦除 `test_conftest_wrapper_still_works` 全量偶发红**。根因：仓库
+  `tests/` 为 PEP 420 隐式命名空间包（无 `__init__.py`），当环境 `sys.path` 上存在同名 regular
+  package（实测宿主 `/usr/local/lib/hermes-agent/tests`，自带 `__init__.py`）时，import 按
+  「regular package 优先于 namespace package」解析，用例内
+  `from tests.conftest import load_formula_params` 落到宿主包 →
+  `ImportError: cannot import name 'load_formula_params' from 'tests.conftest'`（全量跑中间歇红、
+  隔离跑绿）。修法：conftest 增 `conftest_formula_loader` fixture 注入同一薄包装函数，用例不再
+  运行期 import `tests.conftest`（并新增同源对拍断言）；附静态回归用例
+  `test_no_runtime_import_of_tests_conftest` 禁该模式复发。页脚批次串 →「批49 · 测试 flake 根治」。
+
 ## [v0.1.0] - 待发布（版本段骨架）
 
 <!-- 首个版本发布时：将 [Unreleased] 条目归档至此，格式 `## [vX.Y.Z] - YYYY-MM-DD`

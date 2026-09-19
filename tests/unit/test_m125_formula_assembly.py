@@ -4,10 +4,13 @@
 验收：
   1. registry.modules_raw["formula"] 带 stat_map/段参数 → BattleEngine 自动装配实读；
   2. 无 formula 模块 / 无 registry → 全默认（零破坏）；
-  3. conftest.load_formula_params 薄包装 → 生产 formula_loader 同源（既有测试零破坏）。
+  3. conftest.load_formula_params 薄包装 → 生产 formula_loader 同源（既有测试零破坏）；
+  4. 批49：禁运行期 import `tests.conftest`（`tests` 为命名空间包，会被宿主同名 regular
+     package 抢占 → 全量偶发 ImportError）；conftest 薄包装经 fixture 注入，见下方回归用例。
 """
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Dict
 
 from qbot_rpg.core.formula_loader import (
@@ -115,11 +118,39 @@ def test_formula_loader_from_path_matches_production(tmp_path) -> None:
     assert p_path.stat_map.crit_luck == p_dict.stat_map.crit_luck == "fate"
 
 
-def test_conftest_wrapper_still_works(legal_pack_dir) -> None:
-    """conftest.load_formula_params 薄包装 → 生产同源（fixture 兼容零破坏）。"""
-    from tests.conftest import load_formula_params as conftest_loader
+def test_conftest_wrapper_still_works(legal_pack_dir, conftest_formula_loader) -> None:
+    """conftest.load_formula_params 薄包装 → 生产同源（fixture 兼容零破坏）。
 
-    p = conftest_loader(legal_pack_dir / "formula.json")
+    批49：薄包装经 fixture 注入，不再运行期 `import tests.conftest`——`tests/` 是
+    PEP 420 命名空间包，会被宿主同名 regular package 抢占包名 → 全量偶发 ImportError。
+    """
+    p = conftest_formula_loader(legal_pack_dir / "formula.json")
     assert isinstance(p, DamageFormulaParams)
+    # 薄包装与生产读取器同源同结果（同源断言，比单点断言更严）
+    assert p == load_formula_params_from_path(legal_pack_dir / "formula.json")
     # legal 包有默认段参数 → 装配一致
     assert p.hit.k == 1.0 and p.block.cap == 40.0
+
+
+def test_no_runtime_import_of_tests_conftest() -> None:
+    """批49 回归：测试树不得在运行期 import `tests.conftest`（防命名空间抢占复发）。
+
+    根因（批49 复现）：`tests/` 无 `__init__.py`，是 PEP 420 命名空间包；当环境
+    `sys.path` 上存在同名 regular package（实测宿主 `/usr/local/lib/hermes-agent/tests`，
+    自带 `__init__.py`）时，import 系统按「regular package 优先于 namespace package」
+    解析，运行期对 `tests.conftest` 的 import 会落到宿主包 →
+    `ImportError: cannot import name 'load_formula_params'`（全量跑中间歇红、隔离跑绿）。
+    所需符号请经 fixture 注入（如 `conftest_formula_loader`），本静态断言防回退。
+    """
+    import re
+
+    tests_dir = Path(__file__).resolve().parents[1]
+    pattern = re.compile(r"^\s*(?:from\s+tests\.conftest\s+import|import\s+tests\.conftest)\b")
+    offenders = [
+        f"{path.relative_to(tests_dir)}:{lineno}"
+        for path in tests_dir.rglob("*.py")
+        for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1)
+        if pattern.match(line)
+    ]
+    assert not offenders, f"禁运行期 import tests.conftest（宿主同名包抢占）：{offenders}"
+

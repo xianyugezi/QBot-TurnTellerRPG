@@ -254,6 +254,7 @@
     "deep_craft_disabled": "❌ 深度打造未开启",
     "deep_craft_preview": "【{name}】图纸档 {grade}\n等级带 {min}~{max}\ncost 上限 {cap}\n固定材料：{fixed}\n自由槽：{free}",
     "deep_craft_ok": "✅ 打造成功\n{name}\n品质 {quality} · {qlevel} 级\n等级 {level} · cost {cost}\n上限 {cap}",
+    "deep_craft_crit_gain": "品质经验暴击！本次 ×{crit}",
     "alchemy_catalyst_invalid": "❌ 触媒无效",
     "alchemy_panel": "{recipe_name}（配方Lv{level}）\n材料：{mats}\n属性刻度：{scales}\n特性位 {traits_used}/{traits_max}\nPP {pp_used}/{pp_budget}\n投入次数 {units}/{slots}",
     "alchemy_scale_item": "{cn}≥{th} 显现「{effect}」",

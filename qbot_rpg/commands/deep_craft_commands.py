@@ -297,6 +297,10 @@ def _land(ctx: MutableMapping[str, Any], plan: Mapping[str, Any], bp: Mapping[st
         "random_stats": list(plan.get("random_stats") or []),
         "random_set_affixes": list(plan.get("random_set_affixes") or []),
         "passives": list(plan.get("passives") or []),
+        # ---- 批44 · 投入概率暴击：快照留痕（是否命中 / 倍率 / 暴击前经验）----
+        "crit": bool(plan.get("crit")),
+        "crit_mult": plan.get("crit_mult"),
+        "quality_exp_base": plan.get("quality_exp_base"),
     }
     player = ctx.get("player")
     ps = getattr(player, "persistent_state", None) if player is not None else None
@@ -392,7 +396,7 @@ def cmd_deep_craft(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     if not _land(ctx, plan, bp, bp_id, base):
         return tpl_of(ctx, "deep_craft_no_materials", {"name": name})
     aff = plan.get("affinity") if isinstance(plan.get("affinity"), Mapping) else {}
-    return tpl_of(ctx, "deep_craft_ok", {
+    msg = tpl_of(ctx, "deep_craft_ok", {
         "name": str(base.get("item_name") or bp.get("blueprint_output") or bp_id),
         "quality": plan.get("quality"),
         "qlevel": plan.get("quality_level"),
@@ -406,6 +410,14 @@ def cmd_deep_craft(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         "affixes": "、".join(str(x) for x in (plan.get("set_affixes") or [])) or "（无）",
         "passives": "、".join(str(x) for x in (plan.get("passives") or [])) or "（无）",
     })
+    # 批44 · 投入暴击：命中时追加提示（**走模板表** deep_craft_crit_gain；未命中零变化）。
+    if plan.get("crit"):
+        try:
+            mult_text = f"{float(plan.get('crit_mult')):g}"
+        except (TypeError, ValueError):
+            mult_text = "2"
+        msg += "\n" + tpl_of(ctx, "deep_craft_crit_gain", {"crit": mult_text})
+    return msg
 
 
 # ---------------------------------------------------------------------------

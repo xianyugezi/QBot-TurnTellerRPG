@@ -4635,6 +4635,16 @@ class BattleEngine:
                 p_override=p_eff, negative_crit=p.crit.negative_crit,
             )
             rating["crit"] = crit_id
+            # 批53 · 会心倍率修正（X03 `crit_damage_pct`）：对**会心乘区**做连续等比
+            # 缩放（会心三档 high/mid/low 一视同仁；与离散档位超会心/属性会心叠乘）。
+            # 未配置 = 0 → crit_mult 原值（逐字段零变化）；属性会心（elem_crit）独立不并入。
+            try:
+                _crit_axis = effect_axis_value(
+                    ac, "crit_damage_pct", self._config.get(EFFECT_AXES_KEY))
+            except Exception:  # noqa: BLE001 —— 取轴异常不阻断伤害结算
+                _crit_axis = 0.0
+            if _crit_axis:
+                crit_mult = max(0.0, crit_mult * (1.0 + _crit_axis / 100.0))
             # 批⑥ 方案B：实际生效倍率透传（含超会心加成）→ ActionOutcome → 渲染动态化
             rating["crit_mult"] = crit_mult
 

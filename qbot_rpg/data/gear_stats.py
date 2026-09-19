@@ -356,8 +356,10 @@ EFFECT_AXIS_SPECS: Tuple[Mapping[str, Any], ...] = (
                             "叠乘顺序由接线批写明。"},
         "legacy_alias": (),
         "consumer": "damage.crit_multiplier",
-        "consumer_note": "唯一收口 = 会心倍率的连续乘区；既有 super_crit_lv / elem_crit_lv"
-                         "（0-3 档）视为本轴的离散取值，不另造轴。",
+        "consumer_note": "批53 已接线：唯一收口 = `battle._resolve_damage_action` 的会心乘区"
+                         "（crit_roll 之后、入 rating 之前等比缩放；会心三档一视同仁）。"
+                         "既有 super_crit_lv / elem_crit_lv（0-3 档）保持独立：前者已由"
+                         " crit_roll 离散档叠加，后者作用于元素通道、**不并入**本轴。",
     },
 )
 

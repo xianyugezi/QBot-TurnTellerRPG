@@ -454,6 +454,35 @@ def test_e3_scale_amount_map_default_identity_and_consumers() -> None:
     assert ctx[RESOURCE_STATE_KEY]["player"]["rage"] == 55
 
 
+def _run_crit(extra: Any, *, axes: Any = None) -> Any:
+    eng = BattleEngine(config=({EFFECT_AXES_KEY: axes} if axes is not None else None))
+    eng.start(dict(PLAYER, **dict(extra)), dict(ENEMY), random_seed=7)
+    return eng._resolve_damage_action("player", {"type": "normal", "mult": 1.0})  # noqa: SLF001
+
+
+def test_f1_crit_damage_axis_bidirectional() -> None:
+    """X03：`+100` → 会心倍率 ×2；`−50` → ×0.5；`0` → 原值（终伤同向）。"""
+    base = _run_crit({})
+    hi = _run_crit({"crit_damage_pct": 100})
+    lo = _run_crit({"crit_damage_pct": -50})
+    assert base.crit_mult > 0
+    assert hi.crit_mult == base.crit_mult * 2.0
+    assert lo.crit_mult == base.crit_mult * 0.5
+    assert hi.final_damage > base.final_damage
+    assert lo.final_damage < base.final_damage
+    # 未配置 / 显式 0 → 与基线逐值一致（红线 C1）
+    assert _run_crit({"crit_damage_pct": 0}).final_damage == base.final_damage
+    assert _run_crit({"crit_damage_pct": 0}).crit_mult == base.crit_mult
+
+
+def test_f2_crit_damage_range_declaration_driven() -> None:
+    """声明区间钳制（C11）：max=50 → `+9999` 被钳为 +50 → ×1.5。"""
+    base = _run_crit({})
+    got = _run_crit({"crit_damage_pct": 9999},
+                    axes={"crit_damage_pct": {"min": -100, "max": 50}})
+    assert got.crit_mult == base.crit_mult * 1.5
+
+
 def test_g1_battle_snapshot_zero_change_no_axis_keys() -> None:
     """红线 C1：未配置特效轴 → 战斗结算快照逐字段一致、且不含任何特效轴键。"""
     def _snap() -> Any:

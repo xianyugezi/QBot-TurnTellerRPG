@@ -3,8 +3,9 @@
 指令：
 - /进入 <方向|序号|名称>：通道行走 / 副本入口进入（引擎 enter_context_route / resolve_move）→ 结果 1 条
 - /休息：副本安全区休息（引擎 rest_in_dungeon）→ 结果 1 条
-- /采集：登记 DELAYED（采集引擎未接线——M3 地图批次未产出独立采集引擎，
-  采集点在地图/副本探索流程内处理；M5-09 壳层不阻断，后续批次接线）
+- /采集：**批36 · X2 已接线**——独立入口归 qbot_rpg/commands/gather_commands.py
+  （引擎 qbot_rpg/core/gathering.py；数据 maps.gather_points，细化_2a1d GP-01~GP-11）。
+  本文件（M5-09 探索壳）不再承载 /采集，无残留 DELAYED 占位。
 
 渲染纪律：单次操作最多 1-2 条消息（本壳一律 1 条返回文本）；emoji 仅 ✅/❌ + 排版符号
 （| → × / 「」【】）；前缀首行注入由装配层（M5-01 prefix_wiring）统一处理，本壳不拼前缀。

@@ -102,6 +102,7 @@ from qbot_rpg.core.effects import (
     EffectRuntime,
     PipelineResult,
     execute_action,
+    status_stat_modifier_sum,
     tick_after_action,
     tick_turn_end,
 )
@@ -942,39 +943,20 @@ class BattleEngine:
 
     # ------------------------- F-23：S6/S7 上限接线 -------------------------
 
-    def _status_raw(self, inst: Mapping[str, Any]) -> Dict[str, Any]:
-        """状态实例 → 配置 raw（经内容源解析；未注册返回空 dict）。"""
-        d = self._resolver(str(inst.get("status_id", "")), "status")
-        if d is None:
-            return {}
-        return d.raw if hasattr(d, "raw") else d
-
     def _aggregate_boost(self, side: str, stat: str) -> float:
         """F-23（contract_deviations P1-6）：聚合 stat_modifier 效果值并封顶。
 
         - S6 cap_boost：单属性攻防提升 ±100% 满值上限（1b §4.1 S6）；
         - S7 cap_combined：三维组合总加成上限（1b §4.1 S7）。
-        效果值聚合 = 遍历目标状态实例的 stat_modifier 动作按属性求和（百分比加
-        法叠乘前先封顶，1g1c §② 派生累计乘区「加法叠乘 + ≤1.5× 封顶」的 S6/S7
-        上限版），随后消费函数（_apply_boost_to_mult）再乘入技能倍率。
+        效果值聚合 = 目标状态实例的 stat_modifier 动作按属性求和（百分比加法叠乘前
+        先封顶，1g1c §② 派生累计乘区「加法叠乘 + ≤1.5× 封顶」的 S6/S7 上限版），
+        随后消费函数（_apply_boost_to_mult）再乘入技能倍率。
+
+        批48：聚合本身下沉 `effects.status_stat_modifier_sum`（**唯一收口**，与 heal 的
+        `HEAL_TAKEN_STAT` 消费同源）；本方法只保留 S6/S7 封顶（battle 侧口径）。
         """
         rt = self._new_runtime()
-        agg_pct = 0.0
-        for inst in rt.status_instances(side):
-            raw = self._status_raw(inst)
-            actions = raw.get("actions") or []
-            for a in actions:
-                if not isinstance(a, dict):
-                    continue
-                if a.get("type") == "stat_modifier" and a.get("stat") == stat:
-                    v = a.get("value")
-                    if isinstance(v, str) and v.strip().endswith("%"):
-                        try:
-                            agg_pct += float(v.strip().rstrip("%"))
-                        except ValueError:
-                            pass
-                    elif isinstance(v, (int, float)) and not isinstance(v, bool):
-                        agg_pct += float(v)  # 未带 % 视作百分点（F-23 收敛）
+        agg_pct = status_stat_modifier_sum(rt, side, stat)
         # S6 单属性封顶 → S7 三维组合再封顶
         boosted = rt.cap_boost(agg_pct)
         return rt.cap_combined(boosted)
@@ -1970,16 +1952,56 @@ class BattleEngine:
         在战斗时点 fire 匹配事件的效果/proc/状态 on_xxx 动作（effects 定义 trigger
         字段 / statuses on_gain/on_lose；未配置 → [] 零行为变化）。registry 注入
         self._registry（未注入/异常 → 安全失败返回 []，不阻断战斗主流程）。
+
+        批48 · 43-D：额外追加**符文声明效果**候选（`_rune_candidates`）——只对该侧
+        生效（符文挂穿戴者），与全局注册表候选合并同批执行；无符文 → 候选空 →
+        与既有行为逐字段一致。
         """
         try:
             from qbot_rpg.core.event_dispatcher import dispatch_event  # noqa: PLC0415
 
             return dispatch_event(
                 event, side, self._snap, self._registry,
-                runtime=self._new_runtime(), **kw,
+                runtime=self._new_runtime(),
+                extra_candidates=self._rune_candidates(event, side), **kw,
             )
         except Exception:  # noqa: BLE001 —— 事件分派异常不阻断战斗（安全失败）
             return []
+
+    def _rune_candidates(self, event: str, side: str) -> List[Any]:
+        """该侧战斗单位携带的**符文效果引用** → 事件候选（批48 · 43-D）。
+
+        数据源 = 快照 combatant 的 `rune_effects`（装配层经
+        `core/rune_battle.active_rune_effect_refs` 从激活孔位收集；键随快照往返，
+        续战不丢）。只取 `trigger == event` 的引用；动作语义仍由 effects 注册表
+        定义（本侧不内联）。
+
+        工程补白 R-7b（口径 §三.1 未写死来源区分）：符文施加来源按次区分
+        `"{side}@{action_seq}"`——既有 S5「同来源同侧只保留一个」下，让
+        「每次攻击获得物攻加成」的 S3 stack 框架真正逐次叠层（**不改
+        `apply_status` 行为**）；ref 自带 `source` 时以声明为准。
+        """
+        comb = self._snap.get(side)
+        refs = comb.get("rune_effects") if isinstance(comb, Mapping) else None
+        if not isinstance(refs, (list, tuple)) or not refs:
+            return []
+        seq = self.action_seq
+        out: List[Any] = []
+        for ref in refs:
+            if not isinstance(ref, Mapping):
+                continue
+            if str(ref.get("trigger") or "") != event:
+                continue
+            eid = str(ref.get("effect") or "")
+            if not eid:
+                continue
+            ov = dict(ref.get("overrides")) if isinstance(ref.get("overrides"), Mapping) else {}
+            for key in ("target",):
+                if key in ref and key not in ov:
+                    ov[key] = ref[key]
+            ov.setdefault("source", f"{side}@{seq}")
+            out.append((eid, {"id": eid, "overrides": ov, "trigger": event}, "effect"))
+        return out
 
     def _settle(
         self,

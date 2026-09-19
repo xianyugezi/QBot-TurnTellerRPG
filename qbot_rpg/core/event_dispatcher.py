@@ -231,6 +231,7 @@ def dispatch_event(
     variables: Optional[Mapping[str, Any]] = None,
     runtime: Any = None,
     depth: int = 0,
+    extra_candidates: Optional[Sequence[Tuple[str, Mapping[str, Any], str]]] = None,
 ) -> List[Dict[str, Any]]:
     """在战斗时点 fire 匹配事件的效果/proc/状态 on_xxx 动作（功能三 §2.3）。
 
@@ -244,6 +245,9 @@ def dispatch_event(
       variables: 执行 ctx 变量（可传 event 上下文，如本次伤害值）
       runtime:   EffectRuntime（计数/深度/chance config；None → 不计数直接执行）
       depth:     递归深度（防 on_hit→反伤→on_hit 无限）
+      extra_candidates：批48 · 调用方追加的候选（同 `_iter_candidates` 三元组形态
+                 `(effect_id, raw_like, kind)`）——用于**只对特定持侧生效**的效果源
+                （符文声明效果）；缺省 None → 与既有行为逐字段一致（零新增）。
 
     返回：合并的 side_effects 列表（无候选/未配置 → []，零行为变化）。
     """
@@ -252,6 +256,11 @@ def dispatch_event(
     if not isinstance(snapshot, Mapping):
         return []
     cands = _iter_candidates(event, registry, status_id=status_id)
+    if extra_candidates:
+        cands = list(cands) + [
+            c for c in extra_candidates
+            if isinstance(c, tuple) and len(c) == 3
+        ]
     if not cands:
         return []
     # runtime 查表指向 registry.resolve（resolver 形态 (id, kind) -> Def，供

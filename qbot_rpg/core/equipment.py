@@ -61,7 +61,7 @@ from qbot_rpg.core.panel_budget import (
     scale_panel_bonus,
 )
 from qbot_rpg.core.player_attributes import calc_all_final_attributes
-from qbot_rpg.core.runes import RUNES_STATE_KEY, sum_rune_stats
+from qbot_rpg.core.runes import RUNES_STATE_KEY, rune_effect_refs_of, sum_rune_stats
 from qbot_rpg.data.gear_stats import GEAR_COMBAT_KEYS, PCT_SUFFIX, route_bonus_into
 from qbot_rpg.data.item import ItemInstance
 from qbot_rpg.data.player import EquipmentSlot, PlayerAttributes
@@ -507,11 +507,24 @@ class EquipmentEngine:
                 return t
         return ""
 
+    def _equip_affinity_of(self, item_id: str) -> Mapping[str, Any]:
+        """宿主装备相性声明 `items.affinities`（批48 · R-8：3 阶偏向性判定输入）。
+
+        缺定义/非 Mapping → {}（不命中偏向；与批47 数值路径逐字段一致）。
+        """
+        d = self._items.get(item_id)
+        if isinstance(d, Mapping):
+            aff = d.get("affinities")
+            if isinstance(aff, Mapping):
+                return aff
+        return {}
+
     def _rune_bonus_of(self, ctx: Any, item_id: str, uid: str) -> Dict[str, float]:
         """单件已穿戴装备的符文数值贡献（经 `jewel.active_rune_sockets` 读激活孔位）。
 
         链路：总闸（`runes_enabled`）→ 孔位激活读取（**唯一入口**，副手失活自动继承）
         → 按 `items.type` 解析 `by_equip_type`（default + 覆盖）→ 同键合并。
+        批48 · R-8：3 阶偏向性按宿主装备主/副相性（`items.affinities`）判定加成。
         缺 runes/items/jewel/uid 或读取异常 → {}（防御性降级，不抛）。
         """
         if ctx is None or not self._runes or not uid or self._jewel is None:
@@ -526,7 +539,61 @@ class EquipmentEngine:
             active = reader(ctx, str(item_id), uid)
         except Exception:  # noqa: BLE001 - 读取失败按无符文贡献（不阻断装备聚合）
             return {}
-        return sum_rune_stats(active, self._runes, self._equip_type_of(str(item_id)))
+        return sum_rune_stats(
+            active, self._runes, self._equip_type_of(str(item_id)),
+            self._equip_affinity_of(str(item_id)),
+        )
+
+    def active_rune_effects(self, player: Any) -> List[Dict[str, Any]]:
+        """已穿戴件**激活符文**声明的效果引用（批48 · 43-D；战斗接线唯一取数处）。
+
+        与数值段（`_rune_bonus_of`）**同一** worn 枚举 + **同一**孔位读取入口
+        （`jewel.active_rune_sockets` → 副手失活自动继承），差异解析按 `items.type`
+        经 `core/runes.rune_effect_refs_of`。缺 runes/jewel/uid/总闸关/无符文 → []。
+        """
+        if not self._runes or self._jewel is None:
+            return []
+        if not isinstance(player, Mapping):
+            return []
+        ctx = self._rune_ctx(player)
+        enabled = getattr(self._jewel, "runes_enabled", None)
+        if callable(enabled) and not enabled(ctx):
+            return []
+        reader = getattr(self._jewel, "active_rune_sockets", None)
+        if not callable(reader):
+            return []
+        equipment = player.get("equipment") if isinstance(player, Mapping) else None
+        if not isinstance(equipment, Mapping):
+            return []
+        out: List[Dict[str, Any]] = []
+        for slot_id, slot_obj in equipment.items():
+            _iid = (
+                slot_obj.get("item_id") if isinstance(slot_obj, Mapping)
+                else getattr(slot_obj, "item_id", None)
+            )
+            item_id = str(_iid) if _iid else slot_id
+            worn = self._resolve_worn_row(
+                player, slot_id, str(item_id), _slot_uid(slot_obj))
+            if worn is None:
+                continue
+            uid = _row_uid(worn)
+            if not uid:
+                continue
+            try:
+                active = reader(ctx, str(item_id), uid)
+            except Exception:  # noqa: BLE001 - 读取失败按无符文（不阻断战斗装配）
+                continue
+            equip_type = self._equip_type_of(str(item_id))
+            if not isinstance(active, (list, tuple)):
+                continue
+            for rid in active:
+                if rid is None or rid == "":
+                    continue
+                d = self._runes.get(str(rid))
+                if not isinstance(d, Mapping):
+                    continue
+                out.extend(rune_effect_refs_of(d, equip_type))
+        return out
 
     # ------------------------------------------------------------------
     # 批38 · H7 副手语义（归一入口的只读读取面；跨模块复用同源判定）

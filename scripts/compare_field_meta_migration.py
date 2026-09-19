@@ -195,7 +195,10 @@ DEFAULT_PACKS = ("veinborn", "test_demo")
 #   对拍实证：删除项 = 0（无「仅迁移前有」）；硬差异全部为上述计数/purpose 变动，
 #   新增项逐条列出（test_gate_semantics_addition_is_green_and_listed 口径）。
 #   重定到本批字段提交后，基线树与当前树逐字段 diff=0。
-DEFAULT_BASELINE_REF = "00b65f5"
+# 批39 二次重定（同批）：00b65f5 → 0e1d7b4（settings.alchemy.mode 补中文名 + 说明卡）。
+#   原因 = 本批**有意**变更（非迁移回归）：mode 字段级 label/help（口径④严格键）新增。
+#   对拍实证：删除项 = 0；重定后基线树与当前树逐字段 diff=0。
+DEFAULT_BASELINE_REF = "0e1d7b4"
 
 
 def _env(root: Path) -> dict:

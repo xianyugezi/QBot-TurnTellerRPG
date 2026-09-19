@@ -71,7 +71,9 @@ SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
 #   + recipe 目录条目 purpose / settings_section 更新（模块级展示声明）。
 #   对拍实证：删除项 = 0、硬差异全部为上述计数/purpose 变动；重定后 0 差异。
 #   与 scripts/compare_field_meta_migration.py 的 DEFAULT_BASELINE_REF 同基线。
-BASELINE_REF = "00b65f5"
+# 批39 二次重定（同批）：00b65f5 → 0e1d7b4（settings.alchemy.mode 补中文名 + 说明卡；
+#   mode 字段级 label/help 属口径④严格键，新增 → 重定后 0 差异）。
+BASELINE_REF = "0e1d7b4"
 CONTENT = REPO / "content"
 
 

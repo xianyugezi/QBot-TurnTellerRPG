@@ -25,7 +25,7 @@ from qbot_rpg.web import api
 NODE = shutil.which("node")
 REPO = Path(api.repo_root())
 HTML = REPO / "qbot_rpg" / "web" / "static" / "index.html"
-BATCH_NOTE = "批35 · 进阶职业继承"
+BATCH_NOTE = "批36 · 采集/挖掘"
 STALE_BATCH = "批34 · 通用 CSV"
 
 

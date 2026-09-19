@@ -16,8 +16,8 @@ REGISTRY = REPO / "docs" / "矛盾与待裁决登记.md"
 LEDGER = REPO / "docs" / "编辑器修改意见0915_台账与方案.md"
 INDEX = REPO / "qbot_rpg" / "web" / "static" / "index.html"
 
-BATCH_NOTE = "批35 · 进阶职业继承"
-STATUS_PREFIXES = ("待实测", "待用户裁决", "已裁决-")
+BATCH_NOTE = "批36 · 采集/挖掘"
+STATUS_PREFIXES = ("待实测", "待用户裁决", "已裁决-", "已实现-")
 MIN_ITEMS = 20
 
 
@@ -58,8 +58,9 @@ def test_registry_includes_named_scattered_items() -> None:
     text = REGISTRY.read_text(encoding="utf-8")
     # #9 公式未登记键 → X1
     assert "X1" in text and "公式未登记" in text
-    # 采集 / 挖掘 归属（引擎未实现）
+    # 采集 / 挖掘 归属：批36 · X2 引擎已实现（争点原句 + 已实现状态 + 口径文档）
     assert "采集" in text and "挖掘" in text and "引擎未实现" in text
+    assert "已实现-批36" in text and "docs/采集挖掘_实现口径.md" in text
     # slots ↔ settings.slot_defs 重叠
     assert "slots" in text and "settings.slot_defs" in text
     # 怪物触发类型枚举双源

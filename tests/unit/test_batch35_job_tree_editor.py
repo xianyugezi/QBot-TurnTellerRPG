@@ -6,7 +6,7 @@
   · HTTP 入口 `/api/pack/{pack}/job-tree`（FastAPI TestClient + 临时内容根）；
   · 前端入口：按钮 + 复用 `.mp-*` 公共弹层 + 只读；
   · 纯 JS `EditorJobTree.treeText`（node 下执行标记块）；
-  · 页脚批次串 =「批35 · 进阶职业继承」。
+  · 页脚批次串 =「批36 · 采集/挖掘」。
 
 只写 tmp_path 的临时内容根；绝不触碰仓库 content/（批19.1 防污染门禁）。
 """
@@ -35,7 +35,7 @@ from qbot_rpg.web import api  # noqa: E402
 
 NODE = shutil.which("node")
 HTML = Path(api.repo_root()) / "qbot_rpg" / "web" / "static" / "index.html"
-BATCH_NOTE = "批35 · 进阶职业继承"
+BATCH_NOTE = "批36 · 采集/挖掘"
 STALE_BATCH = "批34 · 通用 CSV"
 
 

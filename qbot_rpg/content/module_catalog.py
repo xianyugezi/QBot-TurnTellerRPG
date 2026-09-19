@@ -116,10 +116,12 @@ FRAMEWORK_MODULE_CATALOG: Tuple[ModuleCatalogEntry, ...] = (
                        settings_section="settings.quest_board"),
     ModuleCatalogEntry("codex", "图鉴", "图鉴：四册（怪物/鱼/物品/制造）完成度加权。",
                        "object", settings_section="settings.codex"),
-    # 采集/挖掘：策划书有独立 /采集 指令与地图采集点，但引擎未实装（审计 ②-1/②-2）。
-    # 一号原则：仍列条目并标「未实现」，让作者知道框架方向；不可启用（不产生死文件）。
-    ModuleCatalogEntry("gathering", "采集/挖掘", "在地图采集点获取素材（引擎尚未实装）。",
-                       "object", requires=("maps",), implemented=False),
+    # 采集/挖掘（批36 · X2）：`/采集` 独立指令 + `maps.gather_points` 结算已实装
+    # （core/gathering.py + commands/gather_commands.py + map_models 校验 V-1Z~V-5Z）。
+    # 数据落点 = maps 子段（U1 已裁决），故无独立数据文件、无 settings 段——
+    # 启用本模块 = 声明「本包使用地图采集点」；实际配置在地图卡片【采集点】里。
+    ModuleCatalogEntry("gathering", "采集/挖掘", "在地图采集点采集素材（含天气出率修正）。",
+                       "object", requires=("maps",)),
     # ---- 内容主体：世界与交互 ----
     ModuleCatalogEntry("enemies", "怪物", "敌人条目：属性、行动、掉落、阶段。", "list"),
     ModuleCatalogEntry("maps", "地图", "地图与场景：区域、出口、怪物、机关。", "list"),

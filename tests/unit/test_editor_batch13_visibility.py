@@ -11,7 +11,8 @@
      未启用候选条目数如实；`entry_index.available` 扩展全局检索，但 modules/total 口径不变；
      已启用模块行为与计数回归不变（entry_merge / keep_top_level / 层级声明仍生效）。
   B. `FRAMEWORK_MODULE_CATALOG` 新增 farming/contest/assistant/quest_board/codex/gathering/
-     templates；gathering 标「未实现」且不可启用；time_cycle 依 U2 不新增一级模块。
+     templates；gathering 批13 标「未实现」→ **批36 · X2 引擎实装后翻转为可启用**；
+     time_cycle 依 U2 不新增一级模块。
   C. 13 条 settings 字段登记 + templates 模块（map）+ formula 公式段字段 +
      maps.gather_points/weather_pool/monsters 时间天气键（**只加展示层，不改校验语义**）。
   D. 「生活」视图：entry_merge 目标未在 manifest 声明 → 虚拟聚合视图；
@@ -173,25 +174,40 @@ def test_time_cycle_is_not_a_first_level_module_by_u2() -> None:
     assert "time_cycle" in fields
 
 
-def test_gathering_is_marked_unimplemented_and_not_enableable() -> None:
-    assert CATALOG_BY_MODULE["gathering"].implemented is False
-    assert api.is_enableable_module("gathering") is False
-    with pytest.raises(api.BadRequest):
-        editor_ops.set_module_enabled("veinborn", "gathering", True, root=CONTENT)
+def test_gathering_is_marked_unimplemented_and_not_enableable(tmp_path: Path) -> None:
+    """B（批36 · X2 更新）：gathering 引擎已实装 → implemented=True 且可启用。
+
+    批13 原断言为「未实现 / 不可启用」；批36 采集/挖掘引擎落地后本断言同步翻转为
+    「已实现 / 可启用」。写盘验收走 tmp 内容根（批19.1 防污染门禁：绝不触碰仓库 content/）。
+    """
+    assert CATALOG_BY_MODULE["gathering"].implemented is True
+    assert api.is_enableable_module("gathering") is True
+    # 在临时内容根启用（真实包零改动）
+    root = tmp_path / "content"
+    shutil.copytree(CONTENT / "demo_blank", root / "demo_blank")
+    env = editor_ops.set_module_enabled("demo_blank", "gathering", True, root=root)
+    assert env.get("errors") == [], env
+    manifest = json.loads(
+        (root / "demo_blank" / "manifest.json").read_text(encoding="utf-8"))
+    assert "gathering" in (manifest.get("modules") or [])
+    # object 骨架 = {}
+    assert (root / "demo_blank" / "gathering.json").read_text(
+        encoding="utf-8").strip() == "{}"
 
 
 def test_module_catalog_rows_expose_implemented_and_settings_section() -> None:
     rows = {r["module"]: r for r in api.module_catalog("demo_blank", root=CONTENT)["modules"]}
-    assert rows["gathering"]["implemented"] is False
+    assert rows["gathering"]["implemented"] is True   # 批36 · X2：引擎已实装
     assert rows["farming"]["implemented"] is True
     assert rows["farming"]["settings_section"] == "settings.alchemy.farming"
     assert rows["templates"]["settings_section"] == ""
 
 
 def test_gathering_visible_in_left_panel_as_unimplemented() -> None:
+    """B（批36 · X2 更新）：左栏候选里 gathering 仍在，且不再是「未实现」态。"""
     mods = api.list_modules("demo_blank", root=CONTENT)
     g = next(a for a in mods["available"] if a["module"] == "gathering")
-    assert g["implemented"] is False
+    assert g["implemented"] is True
 
 
 # =====================================================================================

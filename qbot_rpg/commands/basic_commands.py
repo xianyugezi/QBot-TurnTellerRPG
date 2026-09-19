@@ -1572,6 +1572,9 @@ class EquipmentEngineAdapter:
                     stats_bonus=dict(_sb) if isinstance(_sb, Mapping) else {},
                     traits=tuple(item.get("traits") or ()),
                     enhance_level=int(item.get("enhance_level", 0) or 0),
+                    # 批40 · H4：uid 原样带过（asdict dict 行 → 引擎实例；缺省由
+                    # __post_init__ 补发）——否则穿戴落档身份在归一转换处丢失
+                    uid=str(item.get("uid") or ""),
                 )
             except (TypeError, ValueError):
                 pass

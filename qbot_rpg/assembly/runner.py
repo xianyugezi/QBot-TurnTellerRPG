@@ -725,6 +725,8 @@ def _make_handler(spec: Any, parsed: ParsedCommand, ctx: MutableMapping[str, Any
                                 stats_bonus=dict(_sb) if isinstance(_sb, Mapping) else {},
                                 traits=tuple(it.get("traits") or ()),
                                 enhance_level=int(it.get("enhance_level", 0) or 0),
+                                # 批40 · H4：uid 原样带过（缺省由 __post_init__ 补发）
+                                uid=str(it.get("uid") or ""),
                             ),)
                         except (TypeError, ValueError):
                             continue

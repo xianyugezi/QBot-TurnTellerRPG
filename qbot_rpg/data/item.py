@@ -7,14 +7,33 @@ bound, quality, traits...}，ID+名称冗余 SCHEMA-5）；细化_4b_物品与�
 （物品实例语义：绑定不可赠送/掉落、品质、词条、冷却）。
 
 frozen=True：实例一经构造不可变，防战斗/结算中被误改（细化_3a §3.2，U3）。
+
+批40 · H4（实例唯一键）：`uid` = 落档实例身份，解「同 item_id 多件随机词条实例
+跨存档/重登后聚合错实例」（打造系统_C E1/Q1；equipment.py:43-46 登记的未解项）。
+生成口径见 `new_item_uid()`（唯一事实来源，勿在别处另生成）。
 """
 
+import uuid
 from dataclasses import dataclass, field
 from typing import Dict, Optional, Tuple
 
 from qbot_rpg.data.types import ItemID
 
-__all__ = ["ItemInstance"]
+__all__ = ["ItemInstance", "new_item_uid"]
+
+
+def new_item_uid() -> str:
+    """新物品实例唯一键（uid）生成器——**全仓唯一生成口径**。
+
+    入参：无。出参：32 位小写十六进制字符串。
+    核心逻辑：`uuid.uuid4().hex`——沿用仓库既有 id 生成风格
+    （`commands/gm_commands.py`、`content/audit_store.py`、`core/battle.py`
+    快照 id 同为 uuid4().hex）；不引入新依赖（uuid 为标准库）。
+    唯一性：uuid4 随机 122 bit 空间，单玩家/全局碰撞概率可忽略；**新增实例一律
+    经本函数取键**（`ItemInstance.__post_init__` 在 uid 为空时自动调用），不得在
+    调用点各自拼字符串。旧档补发走存档迁移（storage/migrations，幂等）。
+    """
+    return uuid.uuid4().hex
 
 
 @dataclass(frozen=True)
@@ -23,6 +42,12 @@ class ItemInstance:
 
     item_id+name 冗余存储（SCHEMA-5 / MIG-3：引用按 ID 存储、显示按名字，
     换包后旧条目仍可按旧名显示）。
+
+    uid（批40 · H4）：实例落档唯一键。装备槽/交易/使用/掉落等「哪一件」的精确
+    引用以 uid 为准（EquipmentSlot.uid 回指本字段）。`compare=False`——保持既有
+    `==` 的结构等价语义（同 item_id/品质/词条等），实例同一性判定走显式 uid 比较，
+    避免旧调用点/旧测试的相等性语义突变。旧档无 uid → 空串（读取兜底按 item_id，
+    迁移步补发后转精确）。
     """
 
     item_id: ItemID
@@ -37,3 +62,13 @@ class ItemInstance:
     cooldown_until: Optional[str] = None       # 冷却计时（ISO-8601 UTC）
     enhance_level: int = 0                     # 强化等级 +N（M12.5 强化接线：装备实例级
                                                # 持久化；穿装同步 EquipmentSlot.slot_level）
+    uid: str = field(default="", compare=False)  # 实例落档唯一键（批40 · H4；见类 docstring）
+
+    def __post_init__(self) -> None:
+        """uid 缺省自动补发（frozen=True → object.__setattr__）。
+
+        口径：显式传入（旧档读取/迁移/等价重建）→ 原样保留；空串 → `new_item_uid()`。
+        这保证「新库直接具备」（任何新建实例天然带 uid），旧档则经迁移步补发。
+        """
+        if not self.uid:
+            object.__setattr__(self, "uid", new_item_uid())

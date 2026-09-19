@@ -43,7 +43,7 @@ from dataclasses import replace
 from typing import Any, Callable, List, Mapping, MutableMapping, Optional
 
 from qbot_rpg.core.player_attributes import calc_all_final_attributes
-from qbot_rpg.data.item import ItemInstance
+from qbot_rpg.data.item import ItemInstance, new_item_uid
 from qbot_rpg.data.player import PlayerAttributes
 
 __all__ = ["InventoryEngine", "POTION_USE_COUNTS_KEY",
@@ -242,11 +242,12 @@ class InventoryEngine:
         plan: List[ItemInstance] = []
         remaining = count
         if item.stack_max <= 1:
-            # INV-03：不可堆叠实例（stack_max=1）→ 每件独立行、恒 count=1，永不合并且不计数叠加
+            # INV-03/批40 · H4：不可堆叠实例（stack_max=1）→ 每件独立行、恒 count=1，
+            # 永不合并且不计数叠加；**每行补发独立 uid**（同一次 add 多件不得共用身份）
             for _ in range(count):
-                plan.append(self._row_with(item, count=1))
+                plan.append(self._row_with(item, count=1, uid=new_item_uid()))
         else:
-            # INV-01：先并入既有可合并行（count ≤ stack_max 才合并）
+            # INV-01：先并入既有可合并行（count ≤ stack_max 才合并；保留行 uid）
             for idx, row in enumerate(working):
                 if remaining <= 0:
                     break
@@ -258,10 +259,10 @@ class InventoryEngine:
                 take = min(space, remaining)
                 working[idx] = self._row_with(row, count=row.count + take)
                 remaining -= take
-            # INV-02：余量按上限拆新行（满行 + 余量）
+            # INV-02：余量按上限拆新行（满行 + 余量；每行独立 uid，批40 · H4）
             while remaining > 0:
                 n = min(item.stack_max, remaining)
-                plan.append(self._row_with(item, count=n))
+                plan.append(self._row_with(item, count=n, uid=new_item_uid()))
                 remaining -= n
 
         # INV-09：格数上限校验（整单拒绝，INV-E2）
@@ -288,7 +289,30 @@ class InventoryEngine:
             result["message"] = _TRUNCATE_MSG
         return result
 
-    def remove_item(self, player: Any, item_id: str, count: int = 1) -> Any:
+    @staticmethod
+    def row_uid_of(row: Any) -> str:
+        """背包行 uid 双读（ItemInstance 实例 / dict 行；批40 · H4）。缺 → 空串。"""
+        if isinstance(row, Mapping):
+            return str(row.get("uid") or "")
+        return str(getattr(row, "uid", "") or "")
+
+    def find_by_uid(self, player: Any, uid: str) -> Any:
+        """按 uid 精确取背包行（批40 · H4）；无 uid/未命中 → None。
+
+        操作前做到期惰性移除（INV-10，与其余背包入口同口径）。只读、不改变背包集合。
+        """
+        if not isinstance(player, MutableMapping) or not uid:
+            return None
+        inv = self._as_list(player)
+        self._purge_expired(player, self._now())  # INV-10 惰性移除
+        for row in inv:
+            if self.row_uid_of(row) == str(uid):
+                return row
+        return None
+
+    def remove_item(
+        self, player: Any, item_id: str, count: int = 1, uid: str = ""
+    ) -> Any:
         """扣减与行清理（INV-04/INV-05/INV-07/INV-10）。
 
         - INV-05：目标不存在或合计数量不足 → 拒绝 {ok: False, reason: "not_enough"}，
@@ -296,6 +320,8 @@ class InventoryEngine:
         - INV-07/TC-INV-05：绑定行拒移——优先扣非绑定行，须动用绑定行 → 拒绝
           {ok: False, reason: "bound"}，背包数量不变。
         - INV-04：行级 count - N；count=0 整行清理（实例行删除）。
+        - 批40 · H4：`uid` 非空 → 只扣**该一件实例行**（同 item_id 多件不取错；
+          行不足/绑定 → 拒绝，不跨行兜底）；空串 → 既有 item_id 跨行语义（向后兼容）。
         """
         if not isinstance(player, MutableMapping):
             return {"ok": False, "reason": "invalid_player"}
@@ -306,6 +332,37 @@ class InventoryEngine:
 
         inv = self._as_list(player)
         self._purge_expired(player, self._now())  # INV-10 惰性移除
+
+        if uid:
+            # 批40 · H4：精确实例扣减——仅命中指定 uid（且 item_id 一致防串），不跨行。
+            row = next(
+                (r for r in inv
+                 if self.row_uid_of(r) == str(uid)
+                 and str(getattr(r, "item_id", "") or "") == item_id),
+                None,
+            )
+            if row is None or int(getattr(row, "count", 0) or 0) < count:
+                return {
+                    "ok": False, "reason": "not_enough",
+                    "message": f"背包里只有 {int(getattr(row, 'count', 0) or 0) if row else 0} 个{item_id}",
+                }
+            if getattr(row, "bound", False):
+                return {
+                    "ok": False, "reason": "bound",
+                    "message": f"{item_id} 是绑定物品，不可出售/赠送/丢弃",
+                }
+            left = int(row.count) - count
+            # **同一性**定位（不用 list.remove/index：uid compare=False，结构等价两件
+            # 会被 == 命中首件 → 误删错行）；row 由 uid 精确取得，此处必命中。
+            pos = next((i for i, r in enumerate(inv) if r is row), None)
+            if pos is None:
+                return {"ok": False, "reason": "not_enough",
+                        "message": f"背包里只有 {int(row.count)} 个{item_id}"}
+            if left <= 0:
+                del inv[pos]  # INV-04：count=0 整行清理
+            else:
+                inv[pos] = self._row_with(row, count=left)
+            return {"ok": True, "removed": count, "item_id": item_id, "uid": str(uid)}
 
         # 命中行按「非绑定优先」排序（INV-07：绑定行与未绑定行分开成行）
         hits = [r for r in inv if r.item_id == item_id]

@@ -65,7 +65,7 @@ def make_ctx(**over: Any) -> dict:
             equip_wear=lambda idx, ctx: {"ok": True, "message": "✅ 已装备：铁剑"},
         ),
         "inventory_engine": SimpleNamespace(
-            remove_item=lambda p, item_id, count=1: {"ok": True},
+            remove_item=lambda p, item_id, count=1, uid="": {"ok": True},
         ),
     }
     base.update(over)
@@ -142,7 +142,7 @@ def test_use_bound_item() -> None:
     """绑定拒移（remove_item reason=bound）→ use_bound。"""
     ctx = make_ctx()
     ctx["inventory_engine"] = SimpleNamespace(
-        remove_item=lambda p, item_id, count=1: {"ok": False, "reason": "bound"},
+        remove_item=lambda p, item_id, count=1, uid="": {"ok": False, "reason": "bound"},
     )
     assert cmd_use(parse("/使用 2"), ctx) == USE_TPL["use_bound"]
 

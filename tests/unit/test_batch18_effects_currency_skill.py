@@ -62,7 +62,7 @@ def make_ctx(item_def: Dict[str, Any], effect_def: Dict[str, Any], **over: Any) 
             equip_wear=lambda idx, ctx: {"ok": True, "message": "✅"},
         ),
         "inventory_engine": SimpleNamespace(
-            remove_item=lambda p, item_id, count=1: {"ok": True}),
+            remove_item=lambda p, item_id, count=1, uid="": {"ok": True}),
     }
     base.update(over)
     return base
@@ -379,7 +379,8 @@ def _ctx_from_pack(pack_dir: Path, item_id: str, rng: Any = None) -> dict:
             _sorted_inventory=lambda p: [_fake_item(item_id, str(
                 (items.get(item_id) or {}).get("name") or ""))],
             equip_wear=lambda idx, ctx: {"ok": True, "message": "✅"}),
-        "inventory_engine": SimpleNamespace(remove_item=lambda p, i, count=1: {"ok": True}),
+        "inventory_engine": SimpleNamespace(
+            remove_item=lambda p, i, count=1, uid="": {"ok": True}),
     }
     if rng is not None:
         ctx["rng"] = rng

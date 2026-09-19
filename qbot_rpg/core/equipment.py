@@ -79,6 +79,42 @@ def _row_item_id(row: Any) -> str:
     return str(getattr(row, "item_id", "") or "")
 
 
+def _row_uid(row: Any) -> str:
+    """背包行 uid 双读（ItemInstance 实例 / asdict dict 形态；批40 · H4）。
+
+    缺字段/旧档 → 空串（读取按 item_id 兜底，与迁移前一致）。
+    """
+    if isinstance(row, Mapping):
+        return str(row.get("uid") or "")
+    return str(getattr(row, "uid", "") or "")
+
+
+def _slot_uid(slot_obj: Any) -> str:
+    """装备槽实例 uid 双读（EquipmentSlot / asdict dict 形态；批40 · H4）。
+
+    uid = 回指背包 ItemInstance.uid 的穿戴身份；空串 = 旧档/无匹配行 → item_id 兜底。
+    """
+    if isinstance(slot_obj, Mapping):
+        return str(slot_obj.get("uid") or "")
+    return str(getattr(slot_obj, "uid", "") or "")
+
+
+def _same_worn_instance(old_slot: Any, row: Any) -> bool:
+    """旧槽实例与新穿背包行是否**同一件实例**（批40 · H4，纯函数）。
+
+    口径：item_id 不同 → 否；两侧均有 uid → 按 uid 相等判定（同 id 两件不串）；
+    任一侧无 uid（旧档未迁移/测试直接构造）→ 回落 item_id 相等（与既有行为一致）。
+    """
+    old_iid = (old_slot.get("item_id") if isinstance(old_slot, Mapping)
+               else getattr(old_slot, "item_id", None))
+    if str(old_iid or "") != _row_item_id(row):
+        return False
+    old_uid, row_uid = _slot_uid(old_slot), _row_uid(row)
+    if old_uid and row_uid:
+        return old_uid == row_uid
+    return True
+
+
 def _attrs_from_dict(attrs: Mapping[str, Any]) -> PlayerAttributes:
     """dict 形态 attributes → PlayerAttributes（M12.5/veinborn：适配层 asdict 链路
     兼容——引擎契约收 PlayerAttributes，装配层 asdict 后为 dict）。"""
@@ -174,11 +210,19 @@ def _row_equippable_slot(row: Any) -> str:
     return str(getattr(row, "slot", "") or "")
 
 
-def _first_worn_row(player: Any, item_id: str) -> Any:
-    """按 item_id 取首个背包行（判断件自身可装备槽用；空 → None）。"""
+def _first_worn_row(player: Any, item_id: str, uid: str = "") -> Any:
+    """取背包行（判断件自身可装备槽用；空 → None）。
+
+    批40 · H4：uid 非空时按 uid 精确命中（同 id 多件取对行）；无 uid / 未命中 →
+    回落 item_id 首个匹配行（旧档兜底，与迁移前一致）。
+    """
     inv = player.get("inventory") if isinstance(player, Mapping) else None
     if not isinstance(inv, (list, tuple)):
         return None
+    if uid:
+        for r in inv:
+            if _row_uid(r) == uid:
+                return r
     for r in inv:
         if _row_item_id(r) == item_id:
             return r
@@ -206,7 +250,10 @@ def offhand_penalized_slots(player: Any, slots: Any, offhand: Any = None) -> fro
         slot_obj = equipment.get(raw_slot)
         iid = (slot_obj.get("item_id") if isinstance(slot_obj, Mapping)
                else getattr(slot_obj, "item_id", None))
-        item_slot = _row_equippable_slot(_first_worn_row(player, str(iid or "")))
+        # 批40 · H4：槽 uid 优先精确取穿戴行（同 id 多件取对行）；空/未命中回落 item_id
+        item_slot = _row_equippable_slot(
+            _first_worn_row(player, str(iid or ""), _slot_uid(slot_obj))
+        )
         # 件自身可装备槽的 role 非 offhand（含未声明/空）→ 主手件挪作副手 → 折算失活。
         if slot_role_of(defs.get(item_slot)) != OFFHAND_ROLE_OFFHAND:
             out.add(raw_slot)
@@ -490,12 +537,24 @@ class EquipmentEngine:
         return refs
 
     def _resolve_worn_row(
-        self, player: MutableMapping[str, Any], slot_id: str, item_id: str
+        self, player: MutableMapping[str, Any], slot_id: str, item_id: str,
+        slot_uid: str = "",
     ) -> Optional[ItemInstance]:
-        """精确穿戴行解析：_worn_refs[slot] 行引用优先（同 id 多件/异词条取对行）；
-        无引用（旧档/直接构造）兜底 item_id 第一匹配行（P1-1 保守）。"""
-        ref = self._worn_refs(player).get(slot_id)
+        """精确穿戴行解析（批40 · H4 落档身份优先）：
+
+        ① 槽 uid（EquipmentSlot.uid，落档）命中 → 该背包行（同 id 多件取对行，**跨
+           存档/重登仍精确**）；uid 存在但行缺失 → None（宁可少聚合，**不**跨实例兜底，
+           防「聚合错实例的词条」——正是 E1 缺陷）；
+        ② uid 空（旧档未迁移/直接构造）→ `_worn_refs[slot]` 行引用（进程态缓存）；
+        ③ 再兜底 item_id 第一匹配行（P1-1 保守，与迁移前行为一致）。
+        """
         inv = self._inv(player)
+        if slot_uid:
+            for r in inv:
+                if _row_uid(r) == slot_uid:
+                    return r
+            return None
+        ref = self._worn_refs(player).get(slot_id)
         if ref is not None:
             for r in inv:
                 if r is ref:
@@ -609,30 +668,32 @@ class EquipmentEngine:
             # M12.5/veinborn：装配层 asdict 后槽位实例为 dict 形态——item_id 双读
             replaced = old.get("item_id") if isinstance(old, Mapping) else old.item_id
 
-        # B-3 双向一致：equipment[slot] 更新为槽实例（同件重穿保留既有强化/镶嵌）
-        old_iid = old.get("item_id") if isinstance(old, Mapping) else getattr(old, "item_id", None)
-        if old is not None and old_iid == item.item_id:
+        # B-3 双向一致：equipment[slot] 更新为槽实例（**同一件**重穿保留既有强化/
+        # 镶嵌；批40 · H4：同一件 = uid 相等——同 item_id 两件实例换穿即换槽身份）。
+        row_uid = _row_uid(row)
+        if old is not None and _same_worn_instance(old, row):
             # P1-2 修复（M12.5 强化接线）：同件重穿同步最新强化等级（背包实例可能
-            # 已被 /强化 提升过；槽位旧值过时 → 以实例为准刷新）
+            # 已被 /强化 提升过；槽位旧值过时 → 以实例为准刷新）；批40 · H4：同步
+            # 落档身份 uid（旧档空 uid 首次重穿即补上）。
             _slot_enh = int(getattr(item, "enhance_level", 0) or 0)
             if isinstance(old, Mapping):
-                _cur = int(old.get("slot_level", old.get("enhance", 0)) or 0)
-                if _slot_enh != _cur:
-                    old = dict(old)
-                    old["slot_level"] = _slot_enh
+                old = dict(old)
+                old["slot_level"] = _slot_enh
+                if row_uid:
+                    old["uid"] = row_uid
             else:
-                _cur = int(getattr(old, "slot_level", 0) or 0)
-                if _slot_enh != _cur:
-                    old = _dcreplace(old, slot_level=_slot_enh)
+                old = _dcreplace(old, slot_level=_slot_enh, uid=row_uid or _slot_uid(old))
             equipment[slot] = old
         else:
             # P1-2 修复（M12.5 强化接线）：新建槽位实例携带背包实例强化等级
-            # （原丢 slot_level → 强化后装备卡 +N 恒 0，P1-2 潜伏 bug）
+            # （原丢 slot_level → 强化后装备卡 +N 恒 0，P1-2 潜伏 bug）；批40 · H4：
+            # 槽位实例携带穿戴行 uid（落档身份，跨存档精确回指该实例）。
             equipment[slot] = EquipmentSlot(
                 item_id=item.item_id, name=item.name,
                 slot_level=int(getattr(item, "enhance_level", 0) or 0),
+                uid=row_uid,
             )
-        # P1-1/P1-2：登记穿戴行引用（精确聚合；覆盖时更新为新行）
+        # P1-1/P1-2：登记穿戴行引用（进程态缓存；落档身份以 EquipmentSlot.uid 为准）
         self._worn_refs(player)[slot] = row
 
         recalc = self._recalc(player)
@@ -676,30 +737,41 @@ class EquipmentEngine:
         _enh = (old.get("slot_level", old.get("enhance", 0))
                 if isinstance(old, Mapping) else getattr(old, "slot_level", 0))
         inv = self._inv(player)
-        _existing = next((r for r in inv if _row_item_id(r) == _oid), None)
+        # 批40 · H4：按槽 uid 精确回查**穿戴的那一件**背包行（同 item_id 多件不取错）；
+        # uid 空（旧档未迁移/直接构造）→ 回落 item_id 首匹配（与迁移前一致）。
+        _suid = _slot_uid(old)
+        if _suid:
+            _existing = next((r for r in inv if _row_uid(r) == _suid), None)
+        else:
+            _existing = next((r for r in inv if _row_item_id(r) == _oid), None)
+        # **同一性**定位（uid compare=False → list.index 的 == 可能命中结构等价的首件，
+        # 改写/删除错行）；_existing 已由 uid/item_id 取得，此处按对象身份取下标。
+        _pos = (next((i for i, r in enumerate(inv) if r is _existing), None)
+                if _existing is not None else None)
         if _existing is None:
+            # 回包行携带槽 uid（缺失则 __post_init__ 补发），保持实例身份连续
             try:
                 inv.append(ItemInstance(
                     item_id=_oid, name=_oname, count=1, quality="normal",
                     bound=False, stack_max=1,
-                    enhance_level=int(_enh or 0),
+                    enhance_level=int(_enh or 0), uid=_suid,
                 ))
             except TypeError:  # pragma: no cover —— 旧实例无字段兜底
                 inv.append(ItemInstance(
                     item_id=_oid, name=_oname, count=1, quality="normal",
                     bound=False, stack_max=1,
                 ))
-        elif isinstance(_existing, ItemInstance) and int(_enh or 0):
+        elif isinstance(_existing, ItemInstance) and int(_enh or 0) and _pos is not None:
             _cur = int(getattr(_existing, "enhance_level", 0) or 0)
             if int(_enh or 0) != _cur:
-                inv[inv.index(_existing)] = _dcreplace(
+                inv[_pos] = _dcreplace(
                     _existing, enhance_level=int(_enh or 0))
-        elif isinstance(_existing, Mapping) and int(_enh or 0):
+        elif isinstance(_existing, Mapping) and int(_enh or 0) and _pos is not None:
             if int(_existing.get("enhance_level", 0) or 0) != int(_enh or 0):
                 # M12.5/veinborn：inv 可混 dict 行（asdict 链路）——cast 绕 mypy
                 # list[ItemInstance] 索引检查（运行期 dict 行真实存在）
-                inv[inv.index(_existing)] = cast(ItemInstance,
-                                                 {**_existing, "enhance_level": int(_enh or 0)})
+                inv[_pos] = cast(ItemInstance,
+                                 {**_existing, "enhance_level": int(_enh or 0)})
         del equipment[slot]
         # P1-1/P1-2：移除穿戴行引用（卸下后不再聚合该行）
         self._worn_refs(player).pop(slot, None)
@@ -738,9 +810,11 @@ class EquipmentEngine:
                         else getattr(slot_obj, "item_id", None)
                     )
                     item_id = str(_iid) if _iid else slot_id
-                    # P1-1/P1-2 修复（M6 批1A/1B 审查）：精确穿戴行解析——_worn_refs
-                    # 行引用优先（同 item_id 多件/异词条只取穿戴行），兜底 item_id 首行。
-                    worn = self._resolve_worn_row(player, slot_id, str(item_id))
+                    # P1-1/P1-2 + 批40 · H4：精确穿戴行解析——槽 uid（落档身份）优先
+                    # （同 item_id 多件/异词条只取穿戴行、跨存档不串），uid 空回退
+                    # _worn_refs 行引用，再兜底 item_id 首行。
+                    worn = self._resolve_worn_row(
+                        player, slot_id, str(item_id), _slot_uid(slot_obj))
                     if worn is None:
                         continue
                     is_penalized = slot_id in penalized

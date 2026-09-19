@@ -330,7 +330,11 @@ def _use_consumable(
     if heal_total <= 0 and not currency_grants and not skill_grants:
         return tpl_of(ctx, "use_cannot_use")
     inv = _inventory_engine(ctx)
-    res = inv.remove_item(player, str(_field(inst, "item_id") or ""), 1)
+    # 批40 · H4：按实例 uid 精确扣减「被使用的这一件」（同 item_id 多件不误扣别件）
+    res = inv.remove_item(
+        player, str(_field(inst, "item_id") or ""), 1,
+        uid=str(_field(inst, "uid") or ""),
+    )
     if not res.get("ok"):
         reason = str(res.get("reason") or "")
         if reason == "bound":

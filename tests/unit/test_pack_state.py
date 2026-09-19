@@ -258,7 +258,7 @@ async def test_new_db_has_table_and_version_without_migration(db):
     result = await migrate_database(db)
     assert result.state == "up_to_date"
     meta = await db.fetchone_read("SELECT db_schema_version FROM meta WHERE key='global'")
-    assert int(meta["db_schema_version"]) == DB_SCHEMA_VERSION == 2
+    assert int(meta["db_schema_version"]) == DB_SCHEMA_VERSION == 3
 
 
 @pytest.mark.asyncio
@@ -354,15 +354,17 @@ async def test_migrate_v1_old_db_end_to_end(tmp_path):
         result = await migrate_database(database)
         assert result.state == "migrated"
         assert (1, 2) in result.applied_steps
-        assert result.to_version == DB_SCHEMA_VERSION == 2
+        assert result.to_version == DB_SCHEMA_VERSION == 3
         assert result.backup_id, "真实文件库迁移必须产生 .bak 快照"
 
         meta = await database.fetchone_read(
             "SELECT db_schema_version, migration_log FROM meta WHERE key='global'"
         )
-        assert int(meta["db_schema_version"]) == 2
+        assert int(meta["db_schema_version"]) == 3
         logs = json.loads(meta["migration_log"])
-        assert logs[-1]["from"] == 1 and logs[-1]["to"] == 2 and logs[-1]["result"] == "ok"
+        # 批40 起 v1 旧库走完整链 1→2→3：登记逐级留痕
+        assert any(e["from"] == 1 and e["to"] == 2 and e["result"] == "ok" for e in logs)
+        assert logs[-1]["from"] == 2 and logs[-1]["to"] == 3 and logs[-1]["result"] == "ok"
 
         cols = {
             r["name"]: r
@@ -406,7 +408,7 @@ async def test_repository_bootstrap_exposes_pack_state():
         meta = await repo.db.fetchone_read(
             "SELECT db_schema_version FROM meta WHERE key='global'"
         )
-        assert int(meta["db_schema_version"]) == DB_SCHEMA_VERSION == 2
+        assert int(meta["db_schema_version"]) == DB_SCHEMA_VERSION == 3
         await set_pack_state(repo.db, "p1", "packA", {"via": "repo.db"})
         assert await get_pack_state(repo.db, "p1", "packA") == {"via": "repo.db"}
     finally:

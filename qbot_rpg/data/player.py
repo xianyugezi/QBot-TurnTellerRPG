@@ -60,6 +60,11 @@ class EquipmentSlot:
     依据：细化_4a 存储层契约 §1.2 equipment（{item_id, name, slot_level,
     locked(强化锁定概率), gems...}）；slot_level = 强化等级；locked = 强化锁定
     概率随装备实例持久化（随存档，不另存）。
+
+    uid（批40 · H4）：**回指背包 ItemInstance.uid**（不是自生成 id）——落档的
+    「穿戴的是哪一件」身份。同 item_id 多件随机词条实例并存时，聚合/卸下/强化
+    以本字段精确定位穿戴行；空串 = 旧档未迁移/无对应行 → 回退 item_id 首匹配
+    （与既有行为一致）。`compare=False` 保持既有 `==` 结构等价语义。
     """
 
     item_id: ItemID
@@ -67,6 +72,7 @@ class EquipmentSlot:
     slot_level: int = 0                       # 强化等级
     locked: bool = False                      # 强化锁定概率持久化
     gems: Tuple[str, ...] = ()                # 镶嵌宝石 ID（tuple 冻结语义）
+    uid: str = field(default="", compare=False)  # 穿戴实例 uid（批40 · H4；回指 ItemInstance.uid）
 
 
 @dataclass(frozen=True)

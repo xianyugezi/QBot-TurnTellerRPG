@@ -183,7 +183,11 @@ def player_to_row(player: Player) -> Dict[str, Any]:
 
 
 def _item_from_dict(d: Dict[str, Any]) -> ItemInstance:
-    """inventory JSON 元素 → ItemInstance；缺省补默认、未知键多忽略（MIG-1）。"""
+    """inventory JSON 元素 → ItemInstance；缺省补默认、未知键多忽略（MIG-1）。
+
+    批40 · H4：uid 逐字段读回——显式存在则原样保留（编解码往返一致）；缺省空串
+    → ItemInstance.__post_init__ 补发（旧档惰性兜底；正式补发走 migrations v2→v3）。
+    """
     stats = d.get("stats_bonus")
     return ItemInstance(
         item_id=cast(ItemID, str(d.get("item_id") or "")),  # type: ignore[redundant-cast]
@@ -191,11 +195,16 @@ def _item_from_dict(d: Dict[str, Any]) -> ItemInstance:
         count=int(d.get("count", 1)),
         quality=str(d.get("quality") or "normal"),
         bound=bool(d.get("bound", False)),
+        # 批40 · H4（无损往返补白）：stack_max 原为读侧漏字段——实例行 stack_max=1
+        # 读回恒默认 99（装备实例读档后可堆叠，与「每件独立」语义相悖）；
+        # 此处按既有缺省口径补读（缺省 99，与 __init__ 默认一致）
+        stack_max=int(d.get("stack_max", 99) or 99),
         slot=d.get("slot"),
         stats_bonus=dict(stats) if isinstance(stats, dict) else {},
         traits=tuple(d.get("traits") or ()),
         cooldown_until=d.get("cooldown_until"),
         enhance_level=int(d.get("enhance_level", 0) or 0),
+        uid=str(d.get("uid") or ""),
     )
 
 
@@ -207,6 +216,7 @@ def _equip_from_dict(d: Dict[str, Any]) -> EquipmentSlot:
         slot_level=int(d.get("slot_level", 0)),
         locked=bool(d.get("locked", False)),
         gems=tuple(gems) if isinstance(gems, (list, tuple)) else (),
+        uid=str(d.get("uid") or ""),
     )
 
 

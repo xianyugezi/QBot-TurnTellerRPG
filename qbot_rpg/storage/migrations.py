@@ -22,6 +22,7 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from qbot_rpg.data.item import new_item_uid
 from qbot_rpg.storage.connection import Database, StorageError, Transaction
 from qbot_rpg.storage.schema import (
     CREATE_INDEXES,
@@ -32,9 +33,10 @@ from qbot_rpg.storage.schema import (
 )
 
 # ---------------------------------------------------------------------------
-# 存档结构版本常量（当前 2：批 D 增补 player_pack_state；结构变更递增并追加迁移步）
+# 存档结构版本常量（当前 3：批 D 增补 player_pack_state；批40 · H4 JSON 级
+# 补发实例 uid。结构变更递增并追加迁移步）
 # ---------------------------------------------------------------------------
-DB_SCHEMA_VERSION: int = 2
+DB_SCHEMA_VERSION: int = 3
 META_KEY: str = "global"
 
 BACKUP_DIR_MODE: int = 0o700
@@ -58,8 +60,8 @@ class MigrationResult:
 
 # ---------------------------------------------------------------------------
 # 迁移步注册表：[(from_version, to_version, coro_fn)]，from < to 且相邻步必须衔接
-# （migrate_database P1-2 完整性校验）。当前链：1→2（批 D）。
-# 后续结构变更在此追加步，形如 (2, 3, migrate_v2_to_v3)。
+# （migrate_database P1-2 完整性校验）。当前链：1→2（批 D）、2→3（批40 · H4）。
+# 后续结构变更在此追加步，形如 (3, 4, migrate_v3_to_v4)。
 # ---------------------------------------------------------------------------
 async def migrate_v1_to_v2(
     tx: "Transaction", db: Database, *, now: Optional[str] = None
@@ -76,8 +78,99 @@ async def migrate_v1_to_v2(
         await tx.execute(index_ddl)
 
 
+def _loads_or(raw: Any, default: Any) -> Any:
+    """JSON 列读解（缺/非法 → 深拷贝 default；迁移步内只读，不改写非法行）。"""
+    if not raw:
+        return default
+    try:
+        v = json.loads(raw)
+    except (TypeError, ValueError):
+        return default
+    return v if v is not None else default
+
+
+def backfill_instance_uids(inv: Any, equip: Any) -> Tuple[Any, Any, int]:
+    """**纯函数**：给 inventory 行补 `uid`、给 equipment 槽补回指行 uid（批40 · H4）。
+
+    幂等：已有非空 uid 的行/槽一律跳过 → 重复执行不再改写（第二次补发计数 = 0）。
+    无损：只在缺失时新增键，不改动/不删除任何既有键与值；`inv`/`equip` 形态非法
+    （非 list/dict）时原样返回、不触碰。
+    补发口径：
+      1) 每行缺失 uid → `new_item_uid()`（唯一生成口径单源，见 data/item.py）；
+      2) 每槽缺失 uid → 指向**首个未被其它槽消费**的同 item_id 背包行 uid（对齐
+         既有「item_id 首匹配」语义；同 id 多槽各绑一行、互不抢占）；无匹配行 →
+         留空（读取兜底 item_id，与迁移前行为一致）。
+    返回 (inv, equip, 本次补发键数)。
+    """
+    count = 0
+    if not isinstance(inv, list):
+        return inv, equip, count
+    for row in inv:
+        if isinstance(row, dict) and not row.get("uid"):
+            row["uid"] = new_item_uid()
+            count += 1
+    if not isinstance(equip, dict):
+        return inv, equip, count
+    used: set = set()
+    for slot_id in sorted(str(k) for k in equip.keys()):
+        slot = equip.get(slot_id)
+        if not isinstance(slot, dict) or slot.get("uid"):
+            continue
+        iid = str(slot.get("item_id") or "")
+        if not iid:
+            continue
+        hit: Optional[int] = None
+        for idx, row in enumerate(inv):
+            if idx in used or not isinstance(row, dict):
+                continue
+            if str(row.get("item_id") or "") == iid:
+                hit = idx
+                break
+        if hit is None:
+            continue
+        used.add(hit)
+        row_uid = str(inv[hit].get("uid") or "")
+        if row_uid:
+            slot["uid"] = row_uid
+            count += 1
+    return inv, equip, count
+
+
+async def migrate_v2_to_v3(
+    tx: "Transaction", db: Database, *, now: Optional[str] = None
+) -> None:
+    """v2→v3（批40 · H4）：JSON 级补发实例 uid——inventory 行 + equipment 槽。
+
+    - **新库不经此步**：`ensure_meta` 空库直写 DB_SCHEMA_VERSION（=3），新建实例
+      由 `ItemInstance.__post_init__`/构造点经 `new_item_uid()` 天然带 uid → 新库
+      直接具备（不重犯「新库漏结构」：本步只需处理存量 JSON，无 DDL 需补）。
+    - **旧库升级**：逐 players 行读 inventory/equipment JSON → `backfill_instance_uids`
+      幂等补发 → 仅在该行确有补发时整列回写（未变更行不写，避免无谓写放大）。
+    - **无损/可回退**：只加键不改值；非法 JSON/形态的行原样跳过（MIG-1 不拦截加载）；
+      失败由 migrate_database 单事务回滚 + 迁移前 .bak（pre_migration_backup）兜底。
+    """
+    rows = await tx.fetchall(
+        "SELECT player_qid, inventory, equipment FROM players"
+    )
+    for row in rows:
+        inv = _loads_or(row["inventory"], [])
+        equip = _loads_or(row["equipment"], {})
+        inv_out, equip_out, changed = backfill_instance_uids(inv, equip)
+        if not changed:
+            continue
+        await tx.execute(
+            "UPDATE players SET inventory = ?, equipment = ? WHERE player_qid = ?",
+            (
+                json.dumps(inv_out, ensure_ascii=False),
+                json.dumps(equip_out, ensure_ascii=False),
+                row["player_qid"],
+            ),
+        )
+
+
 MIGRATION_STEPS: List[Tuple[int, int, Callable[..., Any]]] = [
     (1, 2, migrate_v1_to_v2),
+    (2, 3, migrate_v2_to_v3),
 ]
 
 
@@ -334,6 +427,8 @@ __all__ = [
     "META_KEY",
     "MIGRATION_STEPS",
     "migrate_v1_to_v2",
+    "migrate_v2_to_v3",
+    "backfill_instance_uids",
     "MigrationError",
     "MigrationResult",
     "ensure_meta",

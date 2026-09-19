@@ -63,8 +63,13 @@ def _row_have(inv: List[ItemInstance], item_id: str) -> int:
     return sum(int(r.count) for r in inv if str(r.item_id) == item_id)
 
 
-def _take_items(player: Player, item_id: str, qty: int) -> Tuple[Player, bool, int]:
-    """A 扣 qty（count 减/行移除）。返回 (新 Player, ok, 剩余持有)。"""
+def _take_items(player: Player, item_id: str, qty: int,
+                uid: str = "") -> Tuple[Player, bool, int]:
+    """A 扣 qty（count 减/行移除）。返回 (新 Player, ok, 剩余持有)。
+
+    批40 · H4：`uid` 非空 → 只从**该一件实例行**扣（同 item_id 多件不误取别件）；
+    空串 → 既有 item_id 跨行语义（向后兼容）。
+    """
     inv = _inv_list(player)
     have = _row_have(inv, item_id)
     if have < qty:
@@ -72,7 +77,9 @@ def _take_items(player: Player, item_id: str, qty: int) -> Tuple[Player, bool, i
     remaining = qty
     out: List[ItemInstance] = []
     for r in inv:
-        if str(r.item_id) == item_id and remaining > 0:
+        match = (str(r.item_id) == item_id
+                 and (not uid or str(getattr(r, "uid", "") or "") == uid))
+        if match and remaining > 0:
             if r.count <= remaining:
                 remaining -= r.count
                 continue  # 整行移除
@@ -80,6 +87,9 @@ def _take_items(player: Player, item_id: str, qty: int) -> Tuple[Player, bool, i
             remaining = 0
         else:
             out.append(r)
+    if remaining > 0:
+        # uid 指定行数量不足 → 拒绝（不部分扣减、不跨行兜底）
+        return player, False, have
     new_p = dataclasses.replace(player, inventory=tuple(out))
     return new_p, True, have - qty
 
@@ -187,8 +197,9 @@ async def _gift_core(ctx: MutableMapping[str, Any], item_ref: str, qty: int,
             return tpl_of(ctx, "gift_no_item",
                           {"name": str(a_row.name or a_row.item_id), "have": have})
 
-        # A 扣 + B 加（原子：双 upsert 同事务）
-        a2, ok_a, remain = _take_items(a, str(a_row.item_id), qty)
+        # A 扣 + B 加（原子：双 upsert 同事务）；批40 · H4：按 a_row.uid 精确扣该一件
+        a2, ok_a, remain = _take_items(
+            a, str(a_row.item_id), qty, uid=str(getattr(a_row, "uid", "") or ""))
         if not ok_a:
             return tpl_of(ctx, "gift_no_item",
                           {"name": str(a_row.name or a_row.item_id), "have": have})

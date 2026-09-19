@@ -1487,15 +1487,20 @@ class EquipmentEngineAdapter:
         engine: Optional[EquipmentEngine] = None,
         offhand: Optional[Any] = None,
         panel_budget: Optional[Any] = None,
+        runes: Optional[Any] = None,
+        items: Optional[Any] = None,
+        jewel: Optional[Any] = None,
     ) -> None:
         """构造适配器（引擎可注入覆盖；否则以 slots/offhand 配置构造真实 EquipmentEngine）。
 
         offhand = `settings.equipment_offhand`（批38 · H7 副手开关；缺省 None → 关闭）。
         panel_budget = `settings.panel_budget`（批45 装备占比校准；缺省 None → 1.0）。
+        runes/items/jewel = 批47 · 43-B 符文数值贡献数据源（ctx["runes"]/ctx["items"] +
+        JewelSystem；缺省 None → 符文段零贡献，既有行为逐字段一致）。
         """
         self._engine = engine if engine is not None else EquipmentEngine(
             slots=slots, mutual_exclusions=mutual_exclusions, offhand=offhand,
-            panel_budget=panel_budget,
+            panel_budget=panel_budget, runes=runes, items=items, jewel=jewel,
         )
 
     def penalized_slots(self, player: Any) -> frozenset:
@@ -1761,14 +1766,25 @@ def _equip_engine(ctx: Mapping[str, Any]) -> Any:
 
     - ctx["equip_engine"] 注入优先（装配层/测试注入适配器或替身，equip_wear/equip_remove 消费接口）；
     - 未注入 → importlib 守卫导入 qbot_rpg.core.equipment（路A 已实装）后构造
-      EquipmentEngineAdapter（slots 配置取自 ctx["slots"]）——懒加载路径。
+      EquipmentEngineAdapter（slots 配置取自 ctx["slots"]；批47 · 43-B：一并注入
+      ctx["runes"]/ctx["items"] + JewelSystem，令符文数值贡献经此兜底路径同样生效）。
     """
     eng = ctx.get("equip_engine")
     if eng is not None:
         return eng
     try:
         importlib.import_module("qbot_rpg.core.equipment")
-        return EquipmentEngineAdapter(slots=ctx.get("slots"))
+        jewel = None
+        try:
+            from qbot_rpg.core.jewel import JewelSystem  # noqa: PLC0415
+
+            jewel = JewelSystem(settings=ctx.get("settings"))
+        except Exception:  # noqa: BLE001 - JewelSystem 不可用 → 符文段零贡献（防御降级）
+            jewel = None
+        return EquipmentEngineAdapter(
+            slots=ctx.get("slots"), runes=ctx.get("runes"), items=ctx.get("items"),
+            jewel=jewel,
+        )
     except Exception as exc:  # ModuleNotFoundError / ImportError / 构造失败
         raise RuntimeError(
             "【待接线】core/equipment.py（M6 批1 已实装 EquipmentEngine + 适配层）装备引擎不可用；"

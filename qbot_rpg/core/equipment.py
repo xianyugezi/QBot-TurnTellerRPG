@@ -61,6 +61,7 @@ from qbot_rpg.core.panel_budget import (
     scale_panel_bonus,
 )
 from qbot_rpg.core.player_attributes import calc_all_final_attributes
+from qbot_rpg.core.runes import RUNES_STATE_KEY, sum_rune_stats
 from qbot_rpg.data.gear_stats import GEAR_COMBAT_KEYS, PCT_SUFFIX, route_bonus_into
 from qbot_rpg.data.item import ItemInstance
 from qbot_rpg.data.player import EquipmentSlot, PlayerAttributes
@@ -405,6 +406,9 @@ class EquipmentEngine:
         mutual_exclusions: Optional[Sequence[Sequence[str]]] = None,
         offhand: Optional[Any] = None,
         panel_budget: Optional[Any] = None,
+        runes: Optional[Any] = None,
+        items: Optional[Any] = None,
+        jewel: Optional[Any] = None,
     ) -> None:
         """构造装备引擎（配置注入，缺省默认值兜底，D1 B-2/B-4）。
 
@@ -421,6 +425,12 @@ class EquipmentEngine:
         - panel_budget：`settings.panel_budget` 配置（批45 · 装备占比校准）——
           `equip_stat_mult` 乘在装备「面板轴」atk/dfn/hp 的加成上；缺省/非映射 → 1.0
           （装备数值不变，行为与本批引入前逐字段一致）。
+        - runes / items / jewel（批47 · 43-B 符文数值贡献，三者缺一即本段零贡献）：
+            · runes：`ctx["runes"]` 符文定义表 `{rune_id: def}`（by_equip_type 差异表）；
+            · items：`ctx["items"]` 物品定义表（取 `items.type` 作差异类型键）；
+            · jewel：`JewelSystem` 实例（**孔位激活读取唯一入口** `active_rune_sockets`
+              + 总闸 `runes_enabled`）——duck-typed 注入，避免 core.equipment ↔ core.jewel
+              模块级循环 import。缺省 None → 符文段整体跳过（既有行为逐字段一致）。
         """
         raw_slots: Mapping[str, Any]
         if slots is None:
@@ -462,6 +472,61 @@ class EquipmentEngine:
         self._offhand: Dict[str, Any] = normalize_offhand_config(offhand)
         # 批45 · 装备占比校准：面板预算（缺省 equip_stat_mult=1.0 → 装备数值不变）
         self._panel_budget: Dict[str, float] = normalize_panel_budget(panel_budget)
+        # 批47 · 43-B：符文数值贡献数据源（缺省空表/None → 符文段整体跳过，回归零影响）
+        self._runes: Mapping[str, Any] = runes if isinstance(runes, Mapping) else {}
+        self._items: Mapping[str, Any] = items if isinstance(items, Mapping) else {}
+        self._jewel: Any = jewel
+
+    # ------------------------------------------------------------------
+    # 批47 · 43-B 符文数值贡献（差异解析求值 + 孔位读取唯一入口转发）
+    # ------------------------------------------------------------------
+    def _rune_ctx(self, player: Any) -> Dict[str, Any]:
+        """`jewel.active_rune_sockets` 所需最小 ctx（player/slots/副手开关/符文容器）。
+
+        符文容器取 `player.persistent_state["rune_sockets"]`（落档源）；槽位定义用引擎
+        自身归一后的 `self._slots`（与副手判定同源），不另造第二套孔位判定。
+        """
+        sockets: Any = None
+        if isinstance(player, Mapping):
+            ps = player.get("persistent_state")
+            if isinstance(ps, Mapping):
+                sockets = ps.get(RUNES_STATE_KEY)
+        return {
+            "player": player,
+            "slots": self._slots,
+            OFFHAND_CONFIG_KEY: self._offhand,
+            RUNES_STATE_KEY: sockets if isinstance(sockets, MutableMapping) else {},
+        }
+
+    def _equip_type_of(self, item_id: str) -> str:
+        """装备类型键（`items.type`，R-2/Q5 本批口径；缺定义/非 str → 空=仅 default）。"""
+        d = self._items.get(item_id)
+        if isinstance(d, Mapping):
+            t = d.get("type")
+            if isinstance(t, str):
+                return t
+        return ""
+
+    def _rune_bonus_of(self, ctx: Any, item_id: str, uid: str) -> Dict[str, float]:
+        """单件已穿戴装备的符文数值贡献（经 `jewel.active_rune_sockets` 读激活孔位）。
+
+        链路：总闸（`runes_enabled`）→ 孔位激活读取（**唯一入口**，副手失活自动继承）
+        → 按 `items.type` 解析 `by_equip_type`（default + 覆盖）→ 同键合并。
+        缺 runes/items/jewel/uid 或读取异常 → {}（防御性降级，不抛）。
+        """
+        if ctx is None or not self._runes or not uid or self._jewel is None:
+            return {}
+        enabled = getattr(self._jewel, "runes_enabled", None)
+        if callable(enabled) and not enabled(ctx):
+            return {}
+        reader = getattr(self._jewel, "active_rune_sockets", None)
+        if not callable(reader):
+            return {}
+        try:
+            active = reader(ctx, str(item_id), uid)
+        except Exception:  # noqa: BLE001 - 读取失败按无符文贡献（不阻断装备聚合）
+            return {}
+        return sum_rune_stats(active, self._runes, self._equip_type_of(str(item_id)))
 
     # ------------------------------------------------------------------
     # 批38 · H7 副手语义（归一入口的只读读取面；跨模块复用同源判定）
@@ -816,6 +881,13 @@ class EquipmentEngine:
         批45 · 装备占比校准：聚合完成后按 `panel_budget.equip_stat_mult` 缩放**装备面板轴**
         （atk/dfn/hp，flat 与对应 pct stem）。缺省 1.0 → 不改动（回归零影响）；
         读时生效，不写回实例/内容数值（独立可回滚）。
+
+        批47 · 43-B **符文数值贡献段（唯一收口）**：每件已穿戴装备的激活符文（1 阶纯数值）
+        经同一 `route_bonus_into` 汇入**同一** flat/pct 层（**不新开第二套聚合/键**）。
+        激活孔位一律经 `core/jewel.JewelSystem.active_rune_sockets`（副手折算件 → 空，
+        失活零额外分支）；差异解析（default + `items.type` 覆盖）在
+        `core/runes.rune_stats_of` 求值处。缺 runes/items/jewel/uid 或总闸关闭 → 零贡献
+        （无符文时与基线逐字段一致）。
         """
         flat: Dict[str, float] = {}
         pct: Dict[str, float] = {}
@@ -824,6 +896,11 @@ class EquipmentEngine:
             equipment = player.get("equipment")
             if isinstance(equipment, Mapping):
                 inv = self._inv(player)
+                # 批47：符文贡献 ctx（缺数据源 → None，符文段整体跳过）
+                rune_ctx = (
+                    self._rune_ctx(player)
+                    if self._runes and self._jewel is not None else None
+                )
                 for slot_id, slot_obj in equipment.items():
                     # M12.5/veinborn：槽实例 dict 形态双读（asdict 链路——dict getattr
                     # 失效 → 原回落 slot_id 当 item_id 找背包行 → 全 miss 聚合丢词条）
@@ -852,6 +929,13 @@ class EquipmentEngine:
                         route_bonus_into(
                             _offhand_filtered_bonus(bonus, self.offhand_scale())
                             if is_penalized else bonus,
+                            flat, pct,
+                        )
+                    # 批47 · 43-B：符文数值贡献（唯一收口；孔位读取经 jewel.active_rune_sockets
+                    # → 副手失活自动继承；差异解析在 rune_stats_of；同层 flat/pct 路由）。
+                    if rune_ctx is not None:
+                        route_bonus_into(
+                            self._rune_bonus_of(rune_ctx, item_id, _row_uid(worn)),
                             flat, pct,
                         )
                     if is_penalized:

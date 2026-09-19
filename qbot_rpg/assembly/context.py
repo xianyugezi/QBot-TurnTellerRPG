@@ -1861,9 +1861,14 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
             ctx["slots"] = {"slots": _slot_defs}
         try:
             from qbot_rpg.commands.basic_commands import EquipmentEngineAdapter  # noqa: PLC0415
+            from qbot_rpg.core.jewel import JewelSystem  # noqa: PLC0415
 
+            # 批47 · 43-B：注入符文数值贡献数据源（runes/items + JewelSystem）——装备聚合
+            # 内经 active_rune_sockets 读激活孔位；缺 runes 内容/总闸关 → 零贡献。
             ctx["equip_engine"] = EquipmentEngineAdapter(
-                slots=_slot_defs, offhand=_offhand, panel_budget=_panel_budget)
+                slots=_slot_defs, offhand=_offhand, panel_budget=_panel_budget,
+                runes=ctx.get("runes"), items=ctx.get("items"),
+                jewel=JewelSystem(settings=settings))
         except Exception as exc:  # noqa: BLE001 - 注入失败降级默认（指令壳自兜底 6 槽）
             _LOGGER.warning("equip_engine slot_defs inject failed: %s", exc)
     # resolve_attr_final：status_commands 兜底取最终层（复用已算 attr_final）

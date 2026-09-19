@@ -60,11 +60,13 @@ from qbot_rpg.data.gear_stats import (
     GEAR_COMBAT_KEYS,
     GEAR_COMBAT_PCT_KEYS,
     GEAR_COMBAT_VALUE_KEYS,
+    GEAR_EFFECT_KEYS,
     GEAR_FLAT_KEYS,
     GEAR_HELP_ZH,
     GEAR_LABELS_ZH,
     GEAR_PCT_KEYS,
     GEAR_PLACEHOLDER_KEYS,
+    effect_axis_spec,
 )
 # 批B：包展示元数据下放——框架只保留子字段**结构**（无中文名/说明），展示文案在各包
 # `content/<包>/field_meta.json`。结构模块由 scripts/migrate_pack_field_meta.py 生成。
@@ -184,6 +186,31 @@ def _gear_combat_field(key: str) -> FieldMeta:
                          help=help_)
     return FieldMeta(type="number", range_min=0, range_max=2 if key == "earplug" else 3,
                      label=label, unit="级")
+
+
+def _gear_effect_field(key: str) -> FieldMeta:
+    """特效轴键 → 字段元数据（items/equipment 共用，单一源；批50 · 特效轴地基）。
+
+    范围 / 默认 / 中文名 / 双向说明**全部取自** `data.gear_stats.EFFECT_AXIS_SPECS`
+    登记表 —— 不在本文件写死任何轴名或数值。要点：
+      · 区间可负 → `allow_negative=True`（增量轴 `<1` 减 / `>1` 增，与 `crit` 同理）；
+      · 加算轴（`display.mode == "delta"`，无 `_pct` 后缀）单位=点，其余单位=百分点/%；
+      · `range_min/range_max` 为 `None` 时不填（= 该侧不限，Y-1 提示缺省）；
+      · help 即登记表的「双向提示」文案（如「<1 减疗 / >1 增疗」）。
+    """
+    spec = effect_axis_spec(key)
+    disp = spec.get("display") if isinstance(spec.get("display"), Mapping) else {}
+    mode = str(disp.get("mode", "mult")) if disp else "mult"
+    return FieldMeta(
+        type="number",
+        range_min=spec.get("min"),
+        range_max=spec.get("max"),
+        default=spec.get("default"),
+        allow_negative=True,
+        label=GEAR_LABELS_ZH.get(key, key),
+        unit="点" if mode == "delta" else "%",
+        help=GEAR_HELP_ZH.get(key, ""),
+    )
 
 
 # stats 九键（1.2 S01-S09；漏配键按难度模板补全 → 不设 required）
@@ -403,6 +430,48 @@ SETTINGS_FIELDS: Dict[str, FieldMeta] = {
     }, label="面板预算（装备占比）",
         help="面板数值预算：白值份 : 装备份 : buff份 的设计配比与装备倍率。"
              "用于把「装备占比」调到目标值（批45：40%→60%），同时保持白值与 buff 绝对数值不变。"),
+    # 批50 · 特效轴地基：`settings.effect_axes` —— 特效轴**逐轴声明段**。
+    # 形状 `{轴键: {min, max, default, display:{mode,label,help}, stack, legacy_alias}}`；
+    # 键 = 轴 id（动态键空间，注册表唯一源 = `data.gear_stats.GEAR_EFFECT_KEYS`
+    # / `EFFECT_AXIS_SPECS`），故容器 `soft_label=True`（键名不写死、不进泛型红拦），
+    # 区间/默认由专项校验器 `validator._check_effect_axes` 红拦。
+    # 缺省（不写该段）= 用框架登记表的建议缺省 → 引擎零变化；声明只覆盖，不写死消费点。
+    "effect_axes": FieldMeta(type="obj", children={
+        # 本 children 只描述「每个轴条目的字段形状」，不是具体轴（键由包声明）。
+        "min": FieldMeta(type="number", allow_negative=True, label="下限",
+                         help="该轴允许的最小值（百分点增量轴可负；留空 = 不限）。"
+                              "仅约束声明与内容取值，引擎消费点读声明、不写死。"),
+        "max": FieldMeta(type="number", allow_negative=True, label="上限",
+                         help="该轴允许的最大值（留空 = 不限）。"),
+        "default": FieldMeta(type="number", allow_negative=True, label="缺省值",
+                         help="未配置该轴时使用的值。增量轴缺省 0（= 原样 / ×1.0），"
+                              "保证「不配置 = 行为零变化」。"),
+        "display": FieldMeta(type="obj", children={
+            "mode": FieldMeta(type="enum", enum=("mult", "delta"), default="mult",
+                              label="显示口径",
+                              help="mult = 乘数显示（<1 减弱 / >1 增强，如 ×0.5 / ×1.5）；"
+                                   "delta = 加算差值（如 +2 层 / -1 格）。"),
+            "label": FieldMeta(type="str", label="中文名", help="编辑器与图鉴显示的中文名。"),
+            "help": FieldMeta(type="str", multiline=True, label="说明（双向提示）",
+                              help="面向作者的一句话说明，须写明两个方向，"
+                                   "如「<1 减疗 / >1 增疗」。"),
+        }, label="显示", help="该轴在编辑器里的显示口径与文案。"),
+        "stack": FieldMeta(type="enum", enum=("add", "mult"), default="add", label="聚合方式",
+                           help="多来源叠加口径：add = 加算（现状）；mult = 相乘。"
+                                "缺省 add，与既有战斗聚合口径一致。"),
+        "legacy_alias": FieldMeta(type="list", label="旧键别名",
+                                  element=FieldMeta(type="obj", children={
+                                      "key": FieldMeta(type="str", label="旧键名"),
+                                      "sign": FieldMeta(type="number", default=1, label="换算符号",
+                                                        help="本轴值 = sign × 旧键值"
+                                                             "（-1 表示旧键语义与本轴相反，"
+                                                             "如免伤比 vs 承伤比）。"),
+                                  }),
+                                  help="兼容旧键名的换算声明（旧键自身链路不动）。"),
+    }, soft_label=True, label="特效轴声明",
+        help="特效轴逐轴声明：范围（min/max）、缺省值、显示口径（乘数/差值 + 中文名 + "
+             "双向说明）与聚合方式。不写该段 = 用框架登记的建议缺省 → 与引入前逐字段一致。"
+             "本段只登记轴，轴的引擎消费由后续批次接线。"),
     # 批45 · 怪物数值倍率（settings.monster_scaling）——按面板总功率同比例重校，保斩杀回合。
     # 引擎消费点：commands/battle_launch_commands._enemy_combatant（读 enemies.json → combatant）。
     "monster_scaling": FieldMeta(type="obj", children={
@@ -1668,6 +1737,8 @@ ITEMS_GROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
         # 批41：材料打造字段（等级/品质/成本）——决定装备等级与品质经验。
         "material_level", "material_quality", "craft_cost",
         *GEAR_FLAT_KEYS, *GEAR_PCT_KEYS, *GEAR_COMBAT_KEYS,
+        # 批50：特效轴键族（EFFECT 档）——装备/物品词条同样可写特效轴。
+        *GEAR_EFFECT_KEYS,
         # 批43：占位词条（冷却缩减）——登记可见、不接引擎。
         *GEAR_PLACEHOLDER_KEYS,
     )),
@@ -2464,6 +2535,10 @@ def _module_table() -> Dict[str, ModuleMeta]:
                 help=GEAR_HELP_ZH.get(_k, ""))
         for _k in GEAR_COMBAT_KEYS:
             _fm_target[_k] = _gear_combat_field(_k)
+        # 批50：特效轴键族——范围/默认/中文名/双向说明取自 data.gear_stats 登记表
+        # （`EFFECT_AXIS_SPECS`），本文件不写死轴名或数值；区间仅 Y-1 提示、不拦截。
+        for _k in GEAR_EFFECT_KEYS:
+            _fm_target[_k] = _gear_effect_field(_k)
         # 批43：占位键（只登记/展示/可编辑，引擎不消费；help 说明承载口径）
         for _k in GEAR_PLACEHOLDER_KEYS:
             _fm_target[_k] = FieldMeta(

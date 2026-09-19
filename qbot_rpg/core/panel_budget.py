@@ -30,6 +30,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, Mapping, MutableMapping, Sequence, Tuple
 
+from qbot_rpg.data.gear_stats import PANEL_AXIS_STEMS
+
 __all__ = [
     "PANEL_BUDGET_KEY",
     "MONSTER_SCALING_KEY",
@@ -49,7 +51,10 @@ PANEL_BUDGET_KEY = "panel_budget"
 MONSTER_SCALING_KEY = "monster_scaling"
 
 #: 面板轴（装备倍率作用键；7:8:5 预算的数值轴）。
-PANEL_AXIS_KEYS: Tuple[str, ...] = ("atk", "dfn", "hp")
+#: 批50：唯一源上移到 `data/gear_stats.PANEL_AXIS_STEMS`（data 层）——使 content 层校验器
+#: 能红拦「特效轴键名撞面板轴 stem」**而不必** content→core 反向依赖；本处保持同名导出，
+#: 值与语义不变（`core/panel_budget.PANEL_AXIS_KEYS` 仍是既有调用方的唯一入口）。
+PANEL_AXIS_KEYS: Tuple[str, ...] = tuple(PANEL_AXIS_STEMS)
 
 #: 防御系数 K 缺省（`docs/审查参考/战斗数值层设计定稿.md` §5.1 defense.k = 100）。
 DEFAULT_DEF_K: float = 100.0

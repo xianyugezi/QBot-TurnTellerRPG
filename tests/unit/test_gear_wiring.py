@@ -15,6 +15,7 @@ from qbot_rpg.core.equipment import EquipmentEngine
 from qbot_rpg.core.pvp import _combatant_of
 from qbot_rpg.data.gear_stats import (
     GEAR_COMBAT_KEYS,
+    GEAR_EFFECT_KEYS,
     GEAR_FLAT_KEYS,
     GEAR_NUMERIC_KEYS,
     GEAR_PCT_KEYS,
@@ -52,7 +53,10 @@ def test_b8_registry_keyspace_shape():
     assert GEAR_FLAT_KEYS[:3] == ("atk", "def", "dfn")
     assert "dfn_pct" in GEAR_PCT_KEYS and "atk_pct" in GEAR_PCT_KEYS
     assert "crit" in GEAR_COMBAT_KEYS and "earplug" in GEAR_COMBAT_KEYS
-    assert GEAR_NUMERIC_KEYS == GEAR_FLAT_KEYS + GEAR_PCT_KEYS + GEAR_COMBAT_KEYS
+    # 批50：数值键全集纳入特效轴键族（EFFECT 档与 COMBAT 档同路由：留 flat → 战斗桥）。
+    assert GEAR_NUMERIC_KEYS == (
+        GEAR_FLAT_KEYS + GEAR_PCT_KEYS + GEAR_COMBAT_KEYS + GEAR_EFFECT_KEYS
+    )
 
 
 def test_b8_extract_bonus_keeps_crit_pct_drops_zero_bool():

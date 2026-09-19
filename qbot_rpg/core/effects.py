@@ -1686,7 +1686,10 @@ def status_stat_modifier_sum(runtime: Any, side: str, stat: str) -> float:
     """状态 `stat_modifier` 动作按属性求和（**唯一聚合收口**，批48 抽自 battle）。
 
     批48 背景（口径 §〇 结论 7）：
-      · 缺口① 重伤 = 受治疗量修正——由 `heal` L0 动作经本函数取 `HEAL_TAKEN_STAT` 聚合。
+      · 缺口① 重伤 = 受治疗量修正——由 `heal` L0 动作经本函数取 `HEAL_TAKEN_STAT` 聚合；
+      · 缺口② 层数型增益不生效——本函数按状态实例 `stacks` **乘算**（S3 stack 框架经
+        `apply_status` 累层至 `max_stack`，故上限由**状态包声明** `max_stack` 决定；
+        非 stack 框架 `stacks` 恒 1 → 乘子 1，既有路径逐字段不变）。
     入参：runtime（EffectRuntime；None/异常 → 0.0 防御降级）、side（"player"/"enemy"）、
           stat（语义键，如 "atk" / `HEAL_TAKEN_STAT`）。
     出参：float 百分点合计（**未封顶**；封顶由调用方按各自口径执行——
@@ -1706,6 +1709,7 @@ def status_stat_modifier_sum(runtime: Any, side: str, stat: str) -> float:
         actions = raw.get("actions") or []
         if not isinstance(actions, (list, tuple)):
             continue
+        stacks = _stacks_of(inst)
         for a in actions:
             if not isinstance(a, Mapping):
                 continue
@@ -1714,12 +1718,23 @@ def status_stat_modifier_sum(runtime: Any, side: str, stat: str) -> float:
             v = a.get("value")
             if isinstance(v, str) and v.strip().endswith("%"):
                 try:
-                    total += float(v.strip().rstrip("%"))
+                    total += float(v.strip().rstrip("%")) * stacks
                 except ValueError:
                     pass
             elif isinstance(v, (int, float)) and not isinstance(v, bool):
-                total += float(v)  # 未带 % 视作百分点（F-23 收敛）
+                total += float(v) * stacks  # 未带 % 视作百分点（F-23 收敛）
     return total
+
+
+def _stacks_of(inst: Any) -> int:
+    """状态实例层数（S3 stack 框架；缺失/非法/≤0 → 1 = 单层，既有行为不放大）。"""
+    if not isinstance(inst, Mapping):
+        return 1
+    try:
+        n = int(inst.get("stacks", 1))
+    except (TypeError, ValueError):
+        return 1
+    return n if n > 0 else 1
 
 
 def _apply_heal_taken(value: int, runtime: Any, target: str) -> int:

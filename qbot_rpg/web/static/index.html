@@ -983,6 +983,11 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
         <button class="btn" id="btn-validate" disabled>校验</button>
         <button class="btn primary" id="btn-save" disabled>保存</button>
         <button class="btn" id="btn-cancel" disabled>取消</button>
+        <!-- 批33（框架 §6.12-01）：草稿级撤销/重做（只改内存草稿；无可撤销时真禁用） -->
+        <button class="btn" id="btn-undo" disabled
+          title="撤销上一步草稿改动（Ctrl+Z）：只改内存草稿，不写盘；保存成功后清空历史">撤销</button>
+        <button class="btn" id="btn-redo" disabled
+          title="重做（Ctrl+Shift+Z / Ctrl+Y）：只改内存草稿，不写盘">重做</button>
         <button class="btn danger" id="btn-delete" disabled
           title="删除当前条目（二次确认；删除前自动备份，可用右侧「回退到上一份备份」恢复）">删除条目</button>
         <span class="sp"></span>
@@ -992,7 +997,7 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
       <div class="panel-body" id="p-body">
         <div class="empty">从左侧选择模块与条目。字段按内容包元数据渲染；改动先进草稿，保存时才校验并落盘。</div>
       </div>
-      <div class="panel-ft"><span>批32 · 进阶能力（保护/只读/角标/草稿）</span></div>
+      <div class="panel-ft"><span>批33 · 撤销/重做</span></div>
     </section>
 
   </div>
@@ -1160,6 +1165,60 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
            patch: patch, discard: discard, deepSame: deepSame };
 });
 /* EDITOR_DRAFT_END */
+
+/* 批33（框架 §6.12-01）· 草稿级撤销/重做历史栈（纯逻辑，无 DOM 依赖）。
+ * 语义：每步记「改动前的草稿快照」；undo 取出并压回 redo，redo 反向。
+ *   · 上限可配（不硬编码到判定逻辑）：newHistory(limit)，缺省 DEFAULT_LIMIT 步；
+ *   · 记一步 = push(hist, 快照)（清空 redo）；撤销 = undo(hist, 当前)；重做 = redo(hist, 当前)；
+ *   · 只存内存草稿状态，不含任何业务键名/模块名。
+ * 浏览器挂 globalThis.EditorHistory，node 下走 module.exports。 */
+/* EDITOR_HISTORY_BEGIN */
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) { module.exports = factory(); }
+  else { root.EditorHistory = factory(); }
+})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+  var DEFAULT_LIMIT = 50;
+  function normLimit(limit) {
+    var n = parseInt(limit, 10);
+    return (isFinite(n) && n > 0) ? n : DEFAULT_LIMIT;
+  }
+  function newHistory(limit) {
+    return { undo: [], redo: [], limit: normLimit(limit) };
+  }
+  function trim(hist) {
+    while (hist.undo.length > hist.limit) { hist.undo.shift(); }
+    return hist;
+  }
+  function setLimit(hist, limit) {
+    hist.limit = normLimit(limit);
+    return trim(hist);
+  }
+  function push(hist, snap) {
+    if (snap === undefined || snap === null) { return hist; }
+    hist.undo.push(snap);
+    hist.redo = [];
+    return trim(hist);
+  }
+  function canUndo(hist) { return hist.undo.length > 0; }
+  function canRedo(hist) { return hist.redo.length > 0; }
+  function undo(hist, current) {
+    if (!hist.undo.length) { return null; }
+    hist.redo.push(current);
+    return hist.undo.pop();
+  }
+  function redo(hist, current) {
+    if (!hist.redo.length) { return null; }
+    hist.undo.push(current);
+    return hist.redo.pop();
+  }
+  function clear(hist) { hist.undo = []; hist.redo = []; return hist; }
+  function depth(hist) { return hist.undo.length; }
+  function redoDepth(hist) { return hist.redo.length; }
+  return { DEFAULT_LIMIT: DEFAULT_LIMIT, newHistory: newHistory, setLimit: setLimit,
+           push: push, undo: undo, redo: redo, canUndo: canUndo, canRedo: canRedo,
+           clear: clear, depth: depth, redoDepth: redoDepth };
+});
+/* EDITOR_HISTORY_END */
 
 /* 批32 D1（框架 §6.12-22）：浏览器本地草稿（保存失败/崩溃兜底）。
  * 纯逻辑模块（无 DOM 依赖；浏览器挂 globalThis.EditorLocalDraft，node 下走 module.exports）。
@@ -1936,6 +1995,8 @@ var state = {
   filter: "", gquery: "", role: "owner", editable: true, backup: null, fieldIndex: {},
   refCache: {}, refKnown: {}, refQuery: {}, busy: false, tabs: [], forms: {},
   pendingDrafts: {}, entryIndex: null, newEntry: null, newDraft: null, newIdTouched: false,
+  // 批33（§6.12-01）：撤销/重做重画新建表单时灌回的新建草稿（常规打开为 null）。
+  pendingNewDraft: null,
   theme: null,
   // 批12 #1：中栏聚合展示（被并入模块的条目按来源分小节）+ 当前条目所属模块（保存路由）
   mergeSections: [], mergeFiltered: [], entryGroups: [], entryModule: null, listLabel: "", fontSize: null,
@@ -2864,6 +2925,9 @@ function markDirty() {
   });
   // 批32 D1：每次草稿变化即写浏览器本地草稿（保存失败/崩溃兜底；无改动 → 清除）。
   autosaveLocalDraft();
+  // 批33（§6.12-01）：草稿变化统一在此入历史栈（所有改动路径都经 EditorDraft.set + markDirty）。
+  historyCommit();
+  syncHistoryButtons();
 }
 
 function discardDraft() {
@@ -2874,6 +2938,158 @@ function discardDraft() {
   state.newEntry = null; state.newDraft = null; state.newIdTouched = false;
   state.pendingDrafts = {};
   markDirty();
+  // 批33（§6.12-01）：取消 / 还原 / 切条目 / 切模块 → 清历史栈（草稿已丢弃，栈无继续意义）。
+  historyReset();
+}
+
+// ---------------------------------------------------------------------------
+// 批33（框架 §6.12-01）· 草稿级撤销/重做（内存草稿历史栈）
+//   · 范围 = 未保存的草稿改动（字段编辑 / 列表增删行 / 键值表格改键改值 / 新建表单态）；
+//     **不是**「已保存版本的多版本回退」——多版本救错仍由 .bak +「回退到上一份备份」负责
+//     （版本 diff 视图已在《编辑器重写_实现方案》排除；"版本快照"部分已在
+//      docs/矛盾与待裁决登记.md 登记「已裁决-不做」，依据见该条）。
+//   · 每步 = 一次草稿状态快照（主表单 + 各关联分区一起），统一在 markDirty 末端捕获；
+//   · 上限可配（localStorage qbot.editor.undo_limit，缺省 EditorHistory.DEFAULT_LIMIT）；
+//   · 保存成功 / 取消 / 还原 / 切条目 → 清栈；撤销/重做只改内存草稿，绝不调用保存接口；
+//   · 历史栈不持久化（重开页面栈即空）：持久化只存「当前草稿值」（批32 §6.12-22），
+//     历史是会话内的操作轨迹，跨会话恢复它会与「草稿已变更」冲突。
+// ---------------------------------------------------------------------------
+var HIST_LIMIT_KEY = "qbot.editor.undo_limit";
+
+function historyLimit() {
+  var store = themeStore();
+  try {
+    if (store) {
+      var v = parseInt(store.getItem(HIST_LIMIT_KEY), 10);
+      if (isFinite(v) && v > 0) { return v; }
+    }
+  } catch (err) { /* 隐私模式 / 配额：用缺省 */ }
+  return EditorHistory.DEFAULT_LIMIT;
+}
+
+var hist = EditorHistory.newHistory(historyLimit());
+var histBaseline = null;   // 最近一次已入栈的草稿状态（不入栈则只是基线）
+var histSuppress = false;  // 重画/恢复期间抑制入栈（渲染不是一步改动）
+
+function historyClone(v) {
+  if (v === undefined) { return undefined; }
+  return JSON.parse(JSON.stringify(v));
+}
+
+// 当前草稿整体状态：主表单 + 各关联分区条目 + 新建表单（含 ID 输入）。纯内存，不含 DOM 控件值。
+function historySnapshot() {
+  var forms = {};
+  Object.keys(state.forms).forEach(function (k) {
+    forms[k] = historyClone(state.forms[k].draft.changes);
+  });
+  var idEl = el("new-id");
+  return {
+    main: historyClone(draft.changes),
+    forms: forms,
+    isNew: !!state.newEntry,
+    newDraft: state.newDraft ? historyClone(state.newDraft.changes) : null,
+    newId: (state.newEntry && idEl) ? String(idEl.value || "") : null,
+    newIdTouched: !!state.newIdTouched
+  };
+}
+
+// markDirty 末端调用：与基线不同 → 把「改动前」压栈；相同 → 不动（纯视图重画不产生步骤）。
+function historyCommit() {
+  var cur = historySnapshot();
+  if (histBaseline === null) { histBaseline = cur; return; }
+  if (EditorDraft.deepSame(cur, histBaseline)) { return; }
+  if (histSuppress) { histBaseline = cur; return; }
+  EditorHistory.push(hist, histBaseline);
+  histBaseline = cur;
+}
+
+function historyReset() {
+  EditorHistory.clear(hist);
+  EditorHistory.setLimit(hist, historyLimit());
+  histBaseline = historySnapshot();
+  syncHistoryButtons();
+}
+
+// V4 口径：撤销/重做按钮「无可操作 / 请求中」→ 真禁用（tokens .btn:disabled）。
+function syncHistoryButtons() {
+  var u = el("btn-undo"), r = el("btn-redo");
+  if (u) { u.disabled = !EditorHistory.canUndo(hist) || !!state.busy; }
+  if (r) { r.disabled = !EditorHistory.canRedo(hist) || !!state.busy; }
+}
+
+function historyActiveTab() {
+  var on = el("p-body").querySelector(".gtab.on");
+  return on ? on.getAttribute("data-g") : null;
+}
+
+function historyRestoreTab(idx) {
+  if (idx == null) { return; }
+  var btn = el("p-body").querySelector('.gtab[data-g="' + idx + '"]');
+  if (btn && !btn.classList.contains("on")) { btn.click(); }
+}
+
+// 把快照灌回内存草稿并重画（控件值 / 行数 / 键名由此同步）；无任何网络调用。
+function applyHistorySnapshot(snap) {
+  if (!snap) { return; }
+  histSuppress = true;
+  try {
+    var activeTab = historyActiveTab();
+    draft.changes = historyClone(snap.main) || {};
+    state.pendingDrafts = historyClone(snap.forms) || {};
+    if (snap.isNew && state.newEntry) {
+      state.pendingNewDraft = historyClone(snap.newDraft) || {};
+      renderNewEntry(state.newEntry);
+      var idEl = el("new-id");
+      if (idEl && snap.newId != null) { idEl.value = snap.newId; }
+      state.newIdTouched = !!snap.newIdTouched;
+      updateNewIdStatus();
+    } else if (state.detail) {
+      renderDetail(state.detail);
+    }
+    historyRestoreTab(activeTab);
+    histBaseline = historySnapshot();
+    markDirty();
+  } finally {
+    histSuppress = false;
+  }
+  syncHistoryButtons();
+}
+
+function historyUndo() {
+  if (state.busy) { return false; }
+  historyCommit();   // 兜底：markDirty 之后的最后一步若未及入栈，先补记
+  var prev = EditorHistory.undo(hist, historySnapshot());
+  if (prev === null) { return false; }
+  applyHistorySnapshot(prev);
+  return true;
+}
+
+function historyRedo() {
+  if (state.busy) { return false; }
+  historyCommit();
+  var next = EditorHistory.redo(hist, historySnapshot());
+  if (next === null) { return false; }
+  applyHistorySnapshot(next);
+  return true;
+}
+
+// 批33 · 快捷键：Ctrl/Cmd+Z 撤销；Ctrl/Cmd+Shift+Z 与 Ctrl/Cmd+Y 重做。
+// 输入控件内不抢键（沿用既有「document 级 keydown + 先判上下文」约定：与 modalEsc/modalTrap 同处）。
+function historyTypingTarget(t) {
+  if (!t) { return false; }
+  var tag = String(t.tagName || "").toUpperCase();
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") { return true; }
+  return !!t.isContentEditable;
+}
+
+function historyKey(e) {
+  if (!e || !(e.ctrlKey || e.metaKey) || e.altKey) { return false; }
+  if (historyTypingTarget(e.target)) { return false; }
+  if (modalActive()) { return false; }
+  var k = String(e.key || "").toLowerCase();
+  if (k === "z") { return e.shiftKey ? historyRedo() : historyUndo(); }
+  if (k === "y" && !e.shiftKey) { return historyRedo(); }
+  return false;
 }
 
 function canLeave() {
@@ -4203,7 +4419,12 @@ function otherFieldsHtml(otherFields) {
 
 function renderNewEntry(d) {
   state.newEntry = d;
+  // 批33（§6.12-01）：撤销/重做重画时保留当前新建草稿（快照恢复经 state.pendingNewDraft 灌回）；
+  // 常规打开新建面板时 pendingNewDraft 为空 → 空草稿，行为与现状一致。
+  var keepNew = state.pendingNewDraft;
   state.newDraft = EditorDraft.newDraft();
+  if (keepNew) { state.newDraft.changes = keepNew; }
+  state.pendingNewDraft = null;
   state.newIdTouched = false;
   el("p-title").textContent = "新建条目 · " + (d.module_label || d.module);
   setHdrNote("p-sub", "字段按元数据默认值初始化 · 保存写入 " + d.module
@@ -4282,6 +4503,7 @@ function bindNewIdent() {
       state.newIdTouched = true;   // 用户手动改过 ID：不再自动跟随名称
       showNewIdNote("");
       updateNewIdStatus();
+      markDirty();   // 批33：ID 输入也进历史快照（草稿整体状态的一部分）
     });
   }
   var sg = el("btn-suggest");
@@ -4376,6 +4598,7 @@ function suggestIdFromName(mode) {
       state.newIdTouched = false;
       showNewIdNote(d.note || "");
       updateNewIdStatus();
+      markDirty();   // 批33：建议 ID 落进输入框也记一步（与手输同一历史栈）
     }).catch(function () { /* 建议失败不阻断：用户可手填 ID */ });
 }
 
@@ -6309,10 +6532,13 @@ function postForm(ctx, suffix, extra) {
       EditorDraft.discard(ctx.draft);
       // 批32 D1：保存成功 → 本机草稿使命完成，清除（既有保存语义/成功判定不变）。
       clearLocalDraft();
+      // 批33（§6.12-01）：保存成功 → 清历史栈（撤销按钮回禁用态）；重画后再兜底清一次，
+      // 保证重画过程本身不被记成一步。
+      historyReset();
       // 批14 #6②：保存可能改变「可被引用的键空间」（对象型段未登记子字段的键集合）
       // → 引用候选缓存必须失效；同一会话内打开引用字段即重新拉取，无需刷新页面/重启。
       invalidateRefCache();
-      return reloadDetail();
+      return reloadDetail().then(function () { historyReset(); });
     }
   }).catch(function (err) {
     // 批32 D1：保存失败绝不静默丢数据——草稿已在本机（markDirty 时写入），这里只如实提示。
@@ -7171,6 +7397,9 @@ el("btn-cancel").addEventListener("click", function () {
 el("btn-rollback").addEventListener("click", runRollback);
 el("btn-delete").addEventListener("click", deleteEntry);
 el("btn-new").addEventListener("click", openNewEntry);
+// 批33（§6.12-01）：撤销/重做按钮（键盘走同一入口 historyKey）。
+el("btn-undo").addEventListener("click", function () { historyUndo(); });
+el("btn-redo").addEventListener("click", function () { historyRedo(); });
 el("role").addEventListener("change", function (e) { switchRole(e.target.value); });
 // 批10 · ⚙ 模块 与 🎨 配色**共用弹层组件** EditorModal：关闭按钮/点遮罩关闭/Esc/焦点环/筛选
 modalBind("modpanel", { searchInput: "mp-search", list: "mp-list", rowSel: "[data-modal-row]" });
@@ -7309,6 +7538,9 @@ el("transferpanel").addEventListener("click", function (ev) {
 document.addEventListener("keydown", function (e) {
   if (modalEsc(e)) { return; }   // Esc 关闭当前弹层并把焦点还给触发按钮
   modalTrap(e);                  // Tab 在弹层内循环（不跑到底层页面）
+  // 批33（§6.12-01）：Ctrl/Cmd+Z / Shift+Z / Y —— 与上面同一 document 约定；
+  // 输入控件内 historyKey 直接返回 false（不 preventDefault）→ 不抢输入框的原生撤销/重做。
+  if (historyKey(e)) { e.preventDefault(); }
 });
 document.addEventListener("click", function (e) {
   var btn = e.target && e.target.closest ? e.target.closest("[data-open-modules]") : null;

@@ -46,6 +46,12 @@ SPAWN_COUNT_DEFAULT: int = 1  # 【工程补白】contract §2.3：spawn count �
 SPAWN_RESPAWN_MIN: int = 1  # contract §2.3：respawn_minutes 必填 ≥1
 SPAWN_WEATHER_MIN: float = 0.0  # weather_weights 值非负（2a1b R26；0 = 该天气不刷）
 
+# 采集点（批36 · X2 采集/挖掘引擎；细化_2a1d §一 GP-01~GP-11）
+GATHER_RARITY_ENUM: Tuple[str, ...] = ("normal", "rare", "gold")  # GP-04 基础三档
+GATHER_RESPAWN_DEFAULT: int = 10  # GP-07：刷新间隔缺省 10 分钟
+GATHER_RESPAWN_MIN: int = 1  # GP-07：respawn_minutes ≥ 1
+GATHER_RATE_MIN_YELLOW: float = 0.01  # 2a1d L250：rate < 0.01 → 黄提示「几乎采不出」
+
 # 注册天气集缺省（2a1b R25 硬拦靶）：settings.time_cycle.weather.default_pool 缺省时回退
 # 引擎内建默认天气池。G0 架构修复：content 层仅允许依赖 data，不得反向依赖 engine —— 此处
 # 与 qbot_rpg/content/weather_validator.py 的 DEFAULT_POOL 同源镜像（收口对齐见其文件头补白 4）。
@@ -256,6 +262,151 @@ def _enemy_refs(enemies: object) -> Optional[set]:
         if isinstance(ename, str) and ename:
             refs.add(ename)
     return refs
+
+
+def _item_refs(items: object) -> Optional[set]:
+    """items 模块 → 可引用 id 集（采集点产出 GP-02 / V-2Z 引用靶）。
+
+    返回 None = items 模块未声明/形态异常 → 调用方跳过引用检查（细化_3e §2.3 默认放行）。
+    """
+    if not isinstance(items, list):
+        return None
+    refs: set = set()
+    for e in items:
+        if not isinstance(e, Mapping):
+            continue
+        iid = e.get("id")
+        if isinstance(iid, str) and iid:
+            refs.add(iid)
+    return refs
+
+
+def _check_gather_points(
+    report: object,
+    entry: Mapping[str, object],
+    idx: int,
+    node_id: object,
+    item_refs: Optional[set],
+    weather_keys: List[str],
+    seen_ids: set,
+) -> None:
+    """采集点校验（细化_2a1d §一 GP-01~GP-11 + §五 V-1Z/V-2Z/V-3Z/V-4Z/V-5Z）。
+
+    · V-1Z  id 必填且**全库唯一**（`seen_ids` 跨图累积）；
+    · V-2Z  item 必填且引用 items.json 存在；
+    · V-3Z  weather_mods[].weather ∈ 注册天气集（R27 硬拦）；
+    · V-4Z  seasons ∈ 四季、periods ∈ 五时段、rarity ∈ {normal,rare,gold}；
+    · V-5Z  rate ∈ [0,1]、respawn_minutes ≥ 1；rate_mult ≥ 0、rarity_shift 为整数；
+    · 黄提示（非硬）：rate < 0.01 → 「几乎采不出」（2a1d L250）。
+    本节点在字段元数据里为 soft_label（泛型短路），故深结构校验唯一落点在此。
+    """
+    gps = entry.get("gather_points")
+    if gps is None:
+        return  # 无采集点图：合法（同 spawn 可空口径）
+    if not isinstance(gps, list):
+        _emit(report, "error", "maps", f"maps.{idx}.gather_points", "R-1",
+              rule="map_gather_points_not_list", node_id=node_id)
+        return
+    for gi, gp in enumerate(gps):
+        base = f"maps.{idx}.gather_points.{gi}"
+        if not isinstance(gp, Mapping):
+            _emit(report, "error", "maps", base, "R-5",
+                  rule="map_gather_point_not_object", node_id=node_id)
+            continue
+        # GP-01：id 必填 + 全库唯一（V-1Z）
+        gid = gp.get("id")
+        if not isinstance(gid, str) or not gid:
+            _emit(report, "error", "maps", f"{base}.id", "R-5",
+                  rule="map_gather_point_id_required", node_id=node_id)
+        elif gid in seen_ids:
+            _emit(report, "error", "maps", f"{base}.id", "R-1",
+                  rule="map_gather_point_id_duplicate", node_id=node_id, gather_id=gid)
+        else:
+            seen_ids.add(gid)
+        # GP-02：item 必填 + 引用存在（V-2Z）
+        item = gp.get("item")
+        if item is None:
+            _emit(report, "error", "maps", f"{base}.item", "R-5",
+                  rule="map_gather_point_item_required", node_id=node_id)
+        elif not isinstance(item, str) or not item:
+            _emit(report, "error", "maps", f"{base}.item", "R-1",
+                  rule="map_gather_point_item_invalid", node_id=node_id, item=item)
+        elif item_refs is not None and item not in item_refs:
+            _emit(report, "error", "maps", f"{base}.item", "R-4",
+                  rule="map_gather_point_item_missing", node_id=node_id, ref=item)
+        # GP-03：rate 必填 + ∈[0,1]（V-5Z）+ 近零黄提示
+        rate = gp.get("rate")
+        if rate is None:
+            _emit(report, "error", "maps", f"{base}.rate", "R-5",
+                  rule="map_gather_point_rate_required", node_id=node_id)
+        elif (not isinstance(rate, (int, float)) or isinstance(rate, bool)
+              or rate < 0 or rate > 1):
+            _emit(report, "error", "maps", f"{base}.rate", "R-2",
+                  rule="map_gather_point_rate_range", node_id=node_id, value=rate)
+        elif rate < GATHER_RATE_MIN_YELLOW:
+            _emit(report, "warning", "maps", f"{base}.rate", "Y-9",
+                  rule="map_gather_point_rate_near_zero", node_id=node_id, value=rate)
+        # GP-04：rarity 枚举（缺省 normal 不拦）
+        rarity = gp.get("rarity")
+        if rarity is not None and (not isinstance(rarity, str)
+                                   or rarity not in GATHER_RARITY_ENUM):
+            _emit(report, "error", "maps", f"{base}.rarity", "R-1",
+                  rule="map_gather_point_rarity_invalid", node_id=node_id,
+                  value=rarity, allowed=list(GATHER_RARITY_ENUM))
+        # GP-05 / GP-06：季节 / 时段枚举（V-4Z）
+        seasons = gp.get("seasons")
+        if seasons is not None:
+            if (not isinstance(seasons, list)
+                    or any(not isinstance(s, str) or s not in SEASONS_ENUM for s in seasons)):
+                _emit(report, "error", "maps", f"{base}.seasons", "R-1",
+                      rule="map_gather_point_seasons_invalid", node_id=node_id,
+                      value=seasons, allowed=list(SEASONS_ENUM))
+        periods = gp.get("periods")
+        if periods is not None:
+            if (not isinstance(periods, list)
+                    or any(not isinstance(p, str) or p not in PERIODS_ENUM for p in periods)):
+                _emit(report, "error", "maps", f"{base}.periods", "R-1",
+                      rule="map_gather_point_periods_invalid", node_id=node_id,
+                      value=periods, allowed=list(PERIODS_ENUM))
+        # GP-07：respawn_minutes ≥ 1（缺省 10 不拦）
+        respawn = gp.get("respawn_minutes")
+        if respawn is not None and (not isinstance(respawn, (int, float))
+                                    or isinstance(respawn, bool)
+                                    or respawn < GATHER_RESPAWN_MIN):
+            _emit(report, "error", "maps", f"{base}.respawn_minutes", "R-2",
+                  rule="map_gather_point_respawn_invalid", node_id=node_id,
+                  value=respawn, minimum=GATHER_RESPAWN_MIN)
+        # GP-08~GP-11：weather_mods 结构 + 天气键注册（V-3Z）
+        wm = gp.get("weather_mods")
+        if wm is None:
+            continue
+        if not isinstance(wm, list):
+            _emit(report, "error", "maps", f"{base}.weather_mods", "R-1",
+                  rule="map_gather_point_weather_mods_not_list", node_id=node_id)
+            continue
+        for wi, mod in enumerate(wm):
+            wbase = f"{base}.weather_mods.{wi}"
+            if not isinstance(mod, Mapping):
+                _emit(report, "error", "maps", wbase, "R-5",
+                      rule="map_gather_point_weather_mod_not_object", node_id=node_id)
+                continue
+            wk = mod.get("weather")
+            if not isinstance(wk, str) or not wk:
+                _emit(report, "error", "maps", f"{wbase}.weather", "R-5",
+                      rule="map_gather_point_weather_required", node_id=node_id)
+            elif wk not in weather_keys:
+                _emit(report, "error", "maps", f"{wbase}.weather", "R-1",
+                      rule="map_gather_point_weather_key_not_registered",
+                      node_id=node_id, key=wk, registered=sorted(weather_keys))
+            rm = mod.get("rate_mult")
+            if rm is not None and (not isinstance(rm, (int, float))
+                                   or isinstance(rm, bool) or rm < 0):
+                _emit(report, "error", "maps", f"{wbase}.rate_mult", "R-2",
+                      rule="map_gather_point_rate_mult_invalid", node_id=node_id, value=rm)
+            rs = mod.get("rarity_shift")
+            if rs is not None and (not isinstance(rs, int) or isinstance(rs, bool)):
+                _emit(report, "error", "maps", f"{wbase}.rarity_shift", "R-1",
+                      rule="map_gather_point_rarity_shift_invalid", node_id=node_id, value=rs)
 
 
 def _registered_weather(modules: Mapping[str, object]) -> List[str]:
@@ -616,8 +767,10 @@ def validate_maps(modules: Mapping[str, object], report: object) -> None:
             if isinstance(eid, str) and eid:
                 map_ids.add(eid)
     enemy_refs = _enemy_refs(modules.get("enemies"))
+    item_refs = _item_refs(modules.get("items"))          # V-2Z 引用靶（批36 采集点产出）
     weather_keys = _registered_weather(modules)          # R25 键空间硬拦靶（批1 P1-2）
     dungeon_ids, interior_maps = _dungeon_refs(modules)  # R1/R2 引用靶（批1 P1-1）
+    gather_ids: set = set()                              # V-1Z：采集点 id 全库唯一累积集
     for idx, entry in enumerate(maps):
         if not isinstance(entry, Mapping):
             _emit(report, "error", "maps", f"maps.{idx}", "R-5",
@@ -641,6 +794,7 @@ def validate_maps(modules: Mapping[str, object], report: object) -> None:
         _check_dungeon_entrances(report, entry, idx, node_id, dungeon_ids, interior_maps)
         _check_exits(report, entry, idx, node_id, map_ids)
         _check_spawn(report, entry, idx, node_id, enemy_refs, weather_keys)
+        _check_gather_points(report, entry, idx, node_id, item_refs, weather_keys, gather_ids)
     _check_bidirectional_symmetry(report, maps, map_ids)
 
 
@@ -656,4 +810,8 @@ __all__ = [
     "PERIODS_ENUM",
     "SPAWN_COUNT_DEFAULT",
     "DEFAULT_WEATHER_POOL",
+    "GATHER_RARITY_ENUM",
+    "GATHER_RESPAWN_DEFAULT",
+    "GATHER_RESPAWN_MIN",
+    "GATHER_RATE_MIN_YELLOW",
 ]

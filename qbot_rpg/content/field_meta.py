@@ -61,6 +61,10 @@ from qbot_rpg.data.gear_stats import (
 # 批B：包展示元数据下放——框架只保留子字段**结构**（无中文名/说明），展示文案在各包
 # `content/<包>/field_meta.json`。结构模块由 scripts/migrate_pack_field_meta.py 生成。
 from qbot_rpg.content.field_meta_child_structure import CHILD_SPEC
+# 批36（采集/挖掘）：季节/时段枚举**单源**取地图专项校验器常量（细化_2a1d V-4Z：季节 ∈ 四季、
+# 时段 ∈ 五时段，固定写死枚举）——编辑器下拉与校验器共用同一元组，避免口径分裂。
+# map_models 只依赖 content.models（不反向 import 本模块），无循环。
+from qbot_rpg.content.map_models import PERIODS_ENUM, SEASONS_ENUM
 
 # -------------------------------------------------------------------------------------
 # 编辑器批19 #7：指令别名配置的框架落点（settings.json 的 command_aliases 段）。
@@ -2381,21 +2385,51 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "mechanics": _soft_display("地图机制", "list"),
         "gate_guard": _soft_display("门卫"),
         # 批13 C（审计 ①-2-14/B7/U1）：采集点补 name/weather_mods（时间天气定稿 L160/206）
+        # 批36（X2 采集/挖掘引擎）：按细化_2a1d §一 GP-01~GP-11 补全字段元数据——
+        #   · 补 GP-05 periods / GP-06 seasons / GP-07 respawn_minutes（此前未登记）；
+        #   · rarity 收敛为枚举 GP-04（normal/rare/gold，基础三档；天气 rarity_shift
+        #     clamp 到 4 档含 awakened，见 core/weather_consumers.RARITY_TIERS）；
+        #   · 逐字段补 help（一号原则：非技术作者看得懂）。
+        # 校验权威 = map_models.validate_maps 的 V-1Z~V-5Z（本节点 soft_label 短路泛型）。
         "gather_points": FieldMeta(
             type="list", soft_label=True, label="采集点",
+            help="地图采集点：产出物品 / 基础概率 / 稀有度（细化_2a1d GP-01~GP-11）。",
             element=FieldMeta(type="obj", children={
-                "id": FieldMeta(type="str", label="采集点 ID"),
+                "id": FieldMeta(type="str", label="采集点 ID",
+                                help="采集点唯一标识（全库唯一）；钓鱼点与子任务按此 id 引用。"),
                 # 批32 C1：展示层引用标注（既有引用扫描覆盖「采集点产出 → 物品」；type 仍 str）。
-                "item": FieldMeta(type="str", ref_target="item", label="产出物品"),
-                "rarity": FieldMeta(type="str", label="稀有度"),
-                "rate": FieldMeta(type="number", range_min=0, range_max=1, label="出现概率"),
+                "item": FieldMeta(type="str", ref_target="item", label="产出物品",
+                                  help="该点产出的物品 id（引用物品表材料类）。"),
+                "rarity": FieldMeta(type="enum", enum=("normal", "rare", "gold"),
+                                    label="稀有度",
+                                    help="基础稀有度：普通 normal / 稀有 rare / 金色 gold；"
+                                         "天气 rarity_shift 会在此基础上平移（上限 ✨觉醒）。"),
+                "rate": FieldMeta(type="number", range_min=0, range_max=1, label="出现概率",
+                                  help="基础采集概率（0-1）；与天气出率倍率相乘后判定。"),
+                "periods": FieldMeta(type="list", element=FieldMeta(type="enum",
+                                                                     enum=PERIODS_ENUM),
+                                     label="时段偏好",
+                                     help="可采集时段白名单（晨/午/昏/夜/午夜）；"
+                                          "留空 = 全天不限。"),
+                "seasons": FieldMeta(type="list", element=FieldMeta(type="enum",
+                                                                     enum=SEASONS_ENUM),
+                                     label="季节偏好",
+                                     help="可采集季节白名单（春夏秋冬）；留空 = 全年不限。"),
+                "respawn_minutes": FieldMeta(type="number", range_min=1,
+                                              label="刷新间隔(分钟)",
+                                              help="采空后经过多少分钟恢复为可采集；默认 10 分钟。"),
                 "name": FieldMeta(type="str", label="展示名"),
                 "weather_mods": FieldMeta(
                     type="list", soft_label=True, label="天气修正",
+                    help="按天气覆盖出率与稀有度；留空 = 不参与天气联动。",
                     element=FieldMeta(type="obj", children={
-                        "weather": FieldMeta(type="str", label="天气键"),
-                        "rate_mult": FieldMeta(type="number", range_min=0, label="概率倍率"),
-                        "rarity_shift": FieldMeta(type="int", label="稀有度偏移"),
+                        "weather": FieldMeta(type="str", label="天气键",
+                                             help="须是已注册的天气键（默认池）。"),
+                        "rate_mult": FieldMeta(type="number", range_min=0, label="概率倍率",
+                                               help="出率 = 基础概率 × 该倍率；0 = 该天气不出。"),
+                        "rarity_shift": FieldMeta(type="int", label="稀有度偏移",
+                                                  help="稀有度档位平移（正数上调/负数下调）；"
+                                                       "0 = 不改动。"),
                     })),
             })),
         "dungeon_entrances": _soft_display("副本入口", "list"),

@@ -298,5 +298,16 @@
       5
     ],
     "carry_sec": 90
+  },
+  "panel_budget": {
+    "white": 7,
+    "equip": 8,
+    "buff": 5,
+    "equip_stat_mult": 2.25
+  },
+  "monster_scaling": {
+    "hp_mult": 1.5,
+    "atk_mult": 1.5,
+    "def_factor": 1.0828
   }
 }

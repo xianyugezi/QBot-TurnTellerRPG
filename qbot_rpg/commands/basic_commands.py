@@ -1486,13 +1486,16 @@ class EquipmentEngineAdapter:
         mutual_exclusions: Optional[Sequence[Sequence[str]]] = None,
         engine: Optional[EquipmentEngine] = None,
         offhand: Optional[Any] = None,
+        panel_budget: Optional[Any] = None,
     ) -> None:
         """构造适配器（引擎可注入覆盖；否则以 slots/offhand 配置构造真实 EquipmentEngine）。
 
         offhand = `settings.equipment_offhand`（批38 · H7 副手开关；缺省 None → 关闭）。
+        panel_budget = `settings.panel_budget`（批45 装备占比校准；缺省 None → 1.0）。
         """
         self._engine = engine if engine is not None else EquipmentEngine(
             slots=slots, mutual_exclusions=mutual_exclusions, offhand=offhand,
+            panel_budget=panel_budget,
         )
 
     def penalized_slots(self, player: Any) -> frozenset:

@@ -56,6 +56,10 @@ from typing import Any, Dict, List, Mapping, MutableMapping, Optional, Sequence,
 
 from dataclasses import replace as _dcreplace
 
+from qbot_rpg.core.panel_budget import (
+    normalize_panel_budget,
+    scale_panel_bonus,
+)
 from qbot_rpg.core.player_attributes import calc_all_final_attributes
 from qbot_rpg.data.gear_stats import GEAR_COMBAT_KEYS, PCT_SUFFIX, route_bonus_into
 from qbot_rpg.data.item import ItemInstance
@@ -400,12 +404,13 @@ class EquipmentEngine:
         slots: Optional[Any] = None,
         mutual_exclusions: Optional[Sequence[Sequence[str]]] = None,
         offhand: Optional[Any] = None,
+        panel_budget: Optional[Any] = None,
     ) -> None:
         """构造装备引擎（配置注入，缺省默认值兜底，D1 B-2/B-4）。
 
         - slots：部位定义。形态：
             · None → 缺省六部位（DEFAULT_SLOT_NAMES，max=1，工程补白 3）；
-            · slots.json 形态 {"slots": {id: def}, "mutual_exclusions": [[...]]}；
+            · slots.json 形态 {"slots": {id: def}, "mutual_exclusions": [[slot_a, slot_b], ...]}；
             · 平铺形态 {id: {"name", "max", "occupies"}}。
           def 字段：name（中文名）、max（可装备数量，默认 1）、occupies（占多部位，默认 []）、
           **role**（槽位角色 main/offhand，默认 main；批38 · H7）。
@@ -413,6 +418,9 @@ class EquipmentEngine:
           再缺省为 []（框架 5.1 全局互斥表）。
         - offhand：`settings.equipment_offhand` 配置（{enabled, single_hand_scale}）；缺省/
           非映射 → 开关关闭（副手规则不生效，行为与本系统引入前逐字段一致；批38 · H7）。
+        - panel_budget：`settings.panel_budget` 配置（批45 · 装备占比校准）——
+          `equip_stat_mult` 乘在装备「面板轴」atk/dfn/hp 的加成上；缺省/非映射 → 1.0
+          （装备数值不变，行为与本批引入前逐字段一致）。
         """
         raw_slots: Mapping[str, Any]
         if slots is None:
@@ -452,6 +460,8 @@ class EquipmentEngine:
             }
         # 批38 · H7：副手开关配置（缺省关闭 → 所有副手判定返回空/原值，回归零影响）
         self._offhand: Dict[str, Any] = normalize_offhand_config(offhand)
+        # 批45 · 装备占比校准：面板预算（缺省 equip_stat_mult=1.0 → 装备数值不变）
+        self._panel_budget: Dict[str, float] = normalize_panel_budget(panel_budget)
 
     # ------------------------------------------------------------------
     # 批38 · H7 副手语义（归一入口的只读读取面；跨模块复用同源判定）
@@ -467,6 +477,14 @@ class EquipmentEngine:
     def offhand_scale(self) -> float:
         """单手武器作副手的数值类属性折算比例（默认 0.5，包声明可配）。"""
         return float(self._offhand.get("single_hand_scale", DEFAULT_OFFHAND_SCALE))
+
+    def equip_stat_mult(self) -> float:
+        """装备面板倍率（批45；`settings.panel_budget.equip_stat_mult`，缺省 1.0）。
+
+        作用于装备「面板轴」atk/dfn/hp 的加成（读时聚合），不改落档实例数值；
+        1.0 = 现状（回归零影响）。
+        """
+        return float(self._panel_budget.get("equip_stat_mult", 1.0))
 
     def penalized_slots(self, player: Any) -> frozenset:
         """玩家当前处于副手折算/失活的槽位集合（开关关闭 → 空集）。"""
@@ -794,6 +812,10 @@ class EquipmentEngine:
           · 数值类属性（非 `_pct`、非 GEAR_COMBAT_KEYS）**×offhand_scale**；
           · 百分比类属性（`_pct` 键）、战斗键（GEAR_COMBAT_KEYS）、stats_pct 钩子 **不激活**。
         开关关闭 → penalized 空集，逐字段与既有实现一致（回归零影响）。
+
+        批45 · 装备占比校准：聚合完成后按 `panel_budget.equip_stat_mult` 缩放**装备面板轴**
+        （atk/dfn/hp，flat 与对应 pct stem）。缺省 1.0 → 不改动（回归零影响）；
+        读时生效，不写回实例/内容数值（独立可回滚）。
         """
         flat: Dict[str, float] = {}
         pct: Dict[str, float] = {}
@@ -841,6 +863,10 @@ class EquipmentEngine:
                                 pct[str(k)] = pct.get(str(k), 0.0) + float(v)
                             except (TypeError, ValueError):
                                 continue
+        # 批45 · 装备占比校准：装备面板轴倍率（equip_stat_mult；1.0 = 原样）。
+        # 读时聚合——不改任何落档实例/内容数值，可独立回滚；只作用 atk/dfn/hp，
+        # 暴击/命中/格挡等战斗直读词条不触碰（决策记录：不得改暴击参数）。
+        scale_panel_bonus(flat, pct, self.equip_stat_mult())
         attributes = player.get("attributes")
         if isinstance(attributes, PlayerAttributes):
             attributes.bonus["flat"] = flat

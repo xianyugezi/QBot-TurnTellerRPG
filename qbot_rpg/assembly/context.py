@@ -1829,16 +1829,26 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
     _offhand = settings.get("equipment_offhand")
     if isinstance(_offhand, Mapping):
         ctx["equipment_offhand"] = dict(_offhand)
-    if isinstance(_slot_defs, Mapping) and _slot_defs:
+    # 批45 · 装备占比校准：settings.panel_budget（缺省不注入 → equip_stat_mult=1.0，
+    # 装备面板轴数值不变，行为与本批引入前逐字段一致）。
+    _panel_budget = settings.get("panel_budget")
+    if isinstance(_panel_budget, Mapping):
+        ctx["panel_budget"] = dict(_panel_budget)
+    # 批45 · 怪物数值倍率：settings.monster_scaling（缺省不注入 → 全 1.0，零影响）。
+    _monster_scaling = settings.get("monster_scaling")
+    if isinstance(_monster_scaling, Mapping):
+        ctx["monster_scaling"] = dict(_monster_scaling)
+    if (isinstance(_slot_defs, Mapping) and _slot_defs) or isinstance(_panel_budget, Mapping):
         # 包装形态注入（渲染层 _slot_order/_slot_name 兼容：_slot_order 认
         # {"slots": {...}} 取键序；_slot_name 认包装取内层 name；平铺形态
         # _slot_order 不认 → 统一包装）
-        ctx["slots"] = {"slots": _slot_defs}
+        if isinstance(_slot_defs, Mapping) and _slot_defs:
+            ctx["slots"] = {"slots": _slot_defs}
         try:
             from qbot_rpg.commands.basic_commands import EquipmentEngineAdapter  # noqa: PLC0415
 
             ctx["equip_engine"] = EquipmentEngineAdapter(
-                slots=_slot_defs, offhand=_offhand)
+                slots=_slot_defs, offhand=_offhand, panel_budget=_panel_budget)
         except Exception as exc:  # noqa: BLE001 - 注入失败降级默认（指令壳自兜底 6 槽）
             _LOGGER.warning("equip_engine slot_defs inject failed: %s", exc)
     # resolve_attr_final：status_commands 兜底取最终层（复用已算 attr_final）

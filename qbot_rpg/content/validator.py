@@ -671,6 +671,10 @@ class _Checker:
             # 批38 · H7 副手：settings.equipment_offhand 开关 + slot_defs.<部位>.role
             # （段结构/类型/区间红拦 + 「开关关闭却声明副手部位」黄提示，不硬拦）
             self._check_equipment_offhand(module_name, data)
+            # 批45 · 装备占比校准：settings.panel_budget（装备面板倍率/预算份）
+            # + settings.monster_scaling（怪物 hp/atk/防御补偿）——结构/类型/区间红拦
+            self._check_panel_budget(module_name, data)
+            self._check_monster_scaling(module_name, data)
             # 批38 · ④ 相性通用层（settings 四段结构/枚举/引用 + 材料相性引用存在性）
             self._check_affinity(module_name, data)
             # 批39 · 合成/炼金/打造启用矩阵：settings.deep_craft 打造路径开关
@@ -1827,6 +1831,103 @@ class _Checker:
                 self._warn(module_name, path, "Y-14", rule="offhand_role_without_switch",
                            msg="部位角色声明为 offhand（副手），但 settings.equipment_offhand"
                                ".enabled 未开启 → 副手规则当前不生效（不阻断；开启开关后生效）")
+
+    # ---- 批45 · 装备占比校准：settings.panel_budget / settings.monster_scaling 专项 ----
+    def _check_panel_budget(self, module_name: str, data: object) -> None:
+        """settings.panel_budget 段校验（批45 · 装备占比校准）。
+
+        依据：docs/深度打造_决策记录.md §三 补充 1（装备 8→18 ×2.25；白值 7/buff 5 不动）。
+        落点：qbot_rpg/core/panel_budget.normalize_panel_budget（引擎读时参数化）。
+
+        分级：
+          · 段结构错误（非对象）→ **红拦 R-1**（人话提示）；
+          · `white/equip/buff/equip_stat_mult` 非数值/布尔 → **红拦 R-1**；
+          · NaN/Inf → **红拦 R-3**；负值 → **红拦 R-2**（份/倍率 ≥0）；
+          · `white+equip+buff == 0` → **黄提示 Y-16**（占比无意义，不硬拦）。
+        缺段/缺键：默认放行（引擎缺省 7:8:5 / 倍率 1.0 = 现状）。
+        """
+        if not isinstance(data, Mapping):
+            return
+        base = "settings.panel_budget"
+        cfg = data.get("panel_budget")
+        if cfg is None:
+            return
+        if not isinstance(cfg, Mapping):
+            self._err(module_name, base, "R-1", rule="section_structure",
+                      got=type(cfg).__name__,
+                      msg="panel_budget 段要填对象（配置块 { ... }，如 {\"white\": 7, "
+                          "\"equip\": 8, \"buff\": 5, \"equip_stat_mult\": 2.25}）或删掉该段")
+            return
+        vals: Dict[str, float] = {}
+        for key in ("white", "equip", "buff", "equip_stat_mult"):
+            if key not in cfg:
+                continue
+            v = cfg.get(key)
+            path = f"{base}.{key}"
+            if isinstance(v, bool) or not isinstance(v, (int, float)):
+                self._err(module_name, path, "R-1", rule="type", expect="number",
+                          got=("bool" if isinstance(v, bool) else type(v).__name__))
+                continue
+            fv = float(v)
+            if math.isnan(fv) or math.isinf(fv):
+                self._err(module_name, path, "R-3", rule="not_a_number", value=v)
+                continue
+            if fv < 0.0:
+                self._err(module_name, path, "R-2", rule="value_below_min", value=v,
+                          range_min=0)
+                continue
+            vals[key] = fv
+        if vals.get("white", 7.0) + vals.get("equip", 8.0) + vals.get("buff", 5.0) <= 0.0:
+            self._warn(module_name, base, "Y-16", rule="panel_budget_all_zero",
+                       msg="panel_budget 的 white/equip/buff 全为 0，装备占比无意义"
+                           "（不阻断；请至少给一份 >0）")
+
+    def _check_monster_scaling(self, module_name: str, data: object) -> None:
+        """settings.monster_scaling 段校验（批45 · 怪物数值倍率）。
+
+        依据：docs/深度打造_决策记录.md §三 补充 1（怪物侧按面板总功率 +50% 同步，保斩杀回合）。
+        落点：qbot_rpg/commands/battle_launch_commands._enemy_combatant（combatant 构造）。
+
+        分级：
+          · 段结构错误（非对象）→ **红拦 R-1**；
+          · `hp_mult/atk_mult/def_factor/def_k` 非数值/布尔 → **红拦 R-1**；
+          · NaN/Inf → **红拦 R-3**；负值 → **红拦 R-2**；
+          · `def_factor` 极端（∉[0.5, 2.0]）→ **黄提示 Y-17**（可能破坏斩杀回合，不硬拦）。
+        缺段/缺键：默认放行（引擎缺省全 1.0 = 现状）。
+        """
+        if not isinstance(data, Mapping):
+            return
+        base = "settings.monster_scaling"
+        cfg = data.get("monster_scaling")
+        if cfg is None:
+            return
+        if not isinstance(cfg, Mapping):
+            self._err(module_name, base, "R-1", rule="section_structure",
+                      got=type(cfg).__name__,
+                      msg="monster_scaling 段要填对象（配置块 { ... }，如 {\"hp_mult\": 1.5, "
+                          "\"atk_mult\": 1.5, \"def_factor\": 1.0828}）或删掉该段")
+            return
+        for key in ("hp_mult", "atk_mult", "def_factor", "def_k"):
+            if key not in cfg:
+                continue
+            v = cfg.get(key)
+            path = f"{base}.{key}"
+            if isinstance(v, bool) or not isinstance(v, (int, float)):
+                self._err(module_name, path, "R-1", rule="type", expect="number",
+                          got=("bool" if isinstance(v, bool) else type(v).__name__))
+                continue
+            fv = float(v)
+            if math.isnan(fv) or math.isinf(fv):
+                self._err(module_name, path, "R-3", rule="not_a_number", value=v)
+                continue
+            if fv < 0.0:
+                self._err(module_name, path, "R-2", rule="value_below_min", value=v,
+                          range_min=0)
+                continue
+            if key == "def_factor" and not (0.5 <= fv <= 2.0):
+                self._warn(module_name, path, "Y-17", rule="def_factor_out_of_band",
+                           msg="def_factor 超出建议带 [0.5, 2.0] → 怪物防御补偿幅度异常，"
+                               "可能破坏「斩杀回合不变」（不阻断）")
 
     # ---- 批39 · 合成/炼金/打造启用矩阵：settings.deep_craft 打造路径开关 ----
     def _check_deep_craft(self, module_name: str, data: object) -> None:

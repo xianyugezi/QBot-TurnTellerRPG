@@ -22,6 +22,7 @@ from typing import Any, Callable, Dict, List, Mapping, Optional
 
 from qbot_rpg.core.battle import BattleEngine
 from qbot_rpg.core.combo import ComboEngine
+from qbot_rpg.core.panel_budget import normalize_monster_scaling, scale_monster_con
 from qbot_rpg.data.gear_stats import combatant_updates
 
 _LOGGER = logging.getLogger(__name__)
@@ -142,31 +143,48 @@ def _battle_materials_of(ctx: Mapping[str, Any]) -> Dict[str, int]:
 # combatant 构造
 # ---------------------------------------------------------------------------
 
-def _enemy_combatant(enemy_entry: Mapping[str, Any]) -> dict:
+def _enemy_combatant(enemy_entry: Mapping[str, Any],
+                     scaling: Optional[Mapping[str, Any]] = None) -> dict:
     """enemies.json 条目 → BattleEngine 敌方 combatant（stats 映射）。
 
     对齐 scripts/e2e_m6_smoke._enemy_combatant + 引擎字段体系（_DEFAULT_STATS：
     atk/dfn/mag/spd 实读键；spd 驱动命中闪避/先手——2026-09-02 实机修复：
     content stats agi→spd、spr→mag、str→atk、con→dfn 映射，否则敌方 spd 缺省 50
     → 玩家 foc 10 打命中率 17% 全 miss）。
+
+    批45 · 怪物数值倍率（`settings.monster_scaling`，缺省/非映射 → 全 1.0 = 现状）：
+      · `hp_mult` → hp/max_hp；`atk_mult` → atk（+str 镜像）；
+      · `def_factor` → con/dfn 仿射补偿 `(con+K)×factor−K`（K=`def_k`，默认 100）——
+        因防御系数 `K/(con+K)` 非线性，等比缩 con 会破坏「斩杀回合不变式」。
+      只缩放 hp/atk/防御三轴；mp/mag/spd/foc/lck/agi 与战斗词条**不动**（保手感/暴击/命中参数）。
     """
     st = enemy_entry.get("stats") or {}
     if not isinstance(st, Mapping):
         st = {}
+    sc = normalize_monster_scaling(scaling)
+    hp_mult = sc["hp_mult"]
+    atk_mult = sc["atk_mult"]
     hp = int(st.get("hp", 100))
+    if hp_mult != 1.0:
+        hp = max(0, int(round(hp * hp_mult)))
+    _atk = int(st.get("str", st.get("atk", 10)))
+    if atk_mult != 1.0:
+        _atk = max(0, int(round(_atk * atk_mult)))
+    _con_raw = int(st.get("con", st.get("dfn", 10)))
+    _con = int(round(scale_monster_con(_con_raw, sc["def_factor"], sc["def_k"])))
     comb: Dict[str, Any] = {
         # 2026-09-03 奖励结算：enemy id 随快照携带（击杀查 rewards）
         "id": str(enemy_entry.get("id") or ""),
         "hp": hp,
         "max_hp": hp,
         "mp": int(st.get("mp", 0)),
-        "atk": int(st.get("str", st.get("atk", 10))),
-        "dfn": int(st.get("con", st.get("dfn", 10))),
+        "atk": _atk,
+        "dfn": _con,
         "mag": int(st.get("spr", st.get("mag", 10))),
         "spd": int(st.get("agi", st.get("spd", 10))),
         "foc": int(st.get("foc", 10)),
         "lck": int(st.get("luk", st.get("lck", 10))),
-        "con": int(st.get("con", 10)),
+        "con": _con,
         "agi": int(st.get("agi", 10)),
         "name": str(enemy_entry.get("name") or enemy_entry.get("id") or "怪物"),
     }
@@ -397,7 +415,7 @@ async def launch_pve_battle(
     p_comb = _player_combatant(ctx)
     if not p_comb:
         return {"ok": False, "message": "❌ 玩家状态不可用", "battle_engine": None}
-    e_comb = _enemy_combatant(enemy_entry)
+    e_comb = _enemy_combatant(enemy_entry, ctx.get("monster_scaling"))
     try:
         eng = BattleEngine(
             defs=all_defs, registry=registry, combo_engine=ce, enemy_def=enemy_entry,

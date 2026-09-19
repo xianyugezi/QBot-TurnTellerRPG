@@ -379,6 +379,46 @@ SETTINGS_FIELDS: Dict[str, FieldMeta] = {
     }, label="副手装备",
         help="副手装备总开关（默认关闭）。在「装备槽位」里把某部位角色设为「副手」后，"
              "本开关控制副手规则是否生效。"),
+    # 批45 · 装备占比校准（settings.panel_budget）——决策记录 §三 补充 1（用户 2026-09-19）。
+    # 面板预算 white:equip:buff（上游模型 7:8:5，docs/veinborn_阶段一_数值模型_1-35_v2.md:32）；
+    # 装备面板倍率 equip_stat_mult 乘在装备这一份 → 占比 = equip×mult/(white+equip×mult+buff)。
+    # 引擎消费点：core/equipment.aggregate_bonus（只作用面板轴 atk/dfn/hp，读时生效可回滚）。
+    "panel_budget": FieldMeta(type="obj", children={
+        "white": FieldMeta(type="number", range_min=0.0, default=7, label="面板预算·白值份",
+                           help="面板预算中「白值（基础+职业成长）」占的份数（设计口径，冻结不动）。"
+                                "占比 = 装备份×倍率 ÷（白值份 + 装备份×倍率 + buff份）。"),
+        "equip": FieldMeta(type="number", range_min=0.0, default=8, label="面板预算·装备基准份",
+                           help="面板预算中「装备」占的基准份数（设计口径，冻结不动）。"
+                                "有效装备份 = 本值 × 装备面板倍率。"),
+        "buff": FieldMeta(type="number", range_min=0.0, default=5, label="面板预算·buff份",
+                          help="面板预算中「战斗临时加成（buff）」占的份数（设计口径，冻结不动）。"),
+        "equip_stat_mult": FieldMeta(
+            type="number", range_min=0.0, default=1.0, label="装备面板倍率",
+            help="装备加成的总额度倍率，乘在装备「面板轴」atk/dfn/hp 上（读时聚合，不改落档数值，"
+                 "改回 1.0 即完全回滚）。1.0=现状；2.25 → 装备份 8→18、装备占比 40%→60%、"
+                 "面板总功率 ×1.5（此为批45 校准值）。"),
+    }, label="面板预算（装备占比）",
+        help="面板数值预算：白值份 : 装备份 : buff份 的设计配比与装备倍率。"
+             "用于把「装备占比」调到目标值（批45：40%→60%），同时保持白值与 buff 绝对数值不变。"),
+    # 批45 · 怪物数值倍率（settings.monster_scaling）——按面板总功率同比例重校，保斩杀回合。
+    # 引擎消费点：commands/battle_launch_commands._enemy_combatant（读 enemies.json → combatant）。
+    "monster_scaling": FieldMeta(type="obj", children={
+        "hp_mult": FieldMeta(type="number", range_min=0.0, default=1.0, label="怪物生命倍率",
+                             help="怪物 hp/max_hp 的缩放倍率（1.0=现状）。批45 校准 1.5（+50%，"
+                                  "与面板总功率同比例）。"),
+        "atk_mult": FieldMeta(type="number", range_min=0.0, default=1.0, label="怪物攻击倍率",
+                              help="怪物攻击（str→atk）的缩放倍率（1.0=现状）。批45 校准 1.5。"),
+        "def_factor": FieldMeta(
+            type="number", range_min=0.0, default=1.0, label="怪物防御系数补偿",
+            help="怪物防御（体质 con）的仿射补偿：con' = (con+K)×本值 − K（K=def_k）。"
+                 "因防御系数 K/(con+K) 非线性，等比缩 con 会破坏「斩杀回合不变」；"
+                 "本值按中值档面板实测比值反解（批45 = 1.0828）。1.0=防御不变。"),
+        "def_k": FieldMeta(type="number", range_min=0.0, default=100.0, label="防御公式常数 K",
+                           help="防御系数 K/(con+K) 的常数 K（与战斗数值层 defense.k 同源，默认 100）。"
+                                "仅用于防御系数补偿的反解基准。"),
+    }, label="怪物数值倍率",
+        help="怪物侧数值重校（默认全 1.0 = 现状）。按面板总功率比例同步怪物生命/攻击；"
+             "防御按斩杀回合不变式做补偿，目标 = 保持既有斩杀回合数与手感。"),
     # 批39 · 「合成」提升为打造与炼金的公用系统——三条启用路径在编辑器可见可配：
     #   · 合成（公用层）+ 炼金（+深度炼金）：由 settings.alchemy.mode 三态声明推导
     #     （full 三层漏斗 / simple 仅合成层 / off 关闭；枚举单一事实源 MODE_VALUES，

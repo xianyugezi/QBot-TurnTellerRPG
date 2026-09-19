@@ -2183,12 +2183,29 @@ def check_pack(
     return _Checker(modules, meta).run()
 
 
+def collect_ref_id_space(
+    modules: Mapping[str, object], meta: Optional[FieldMetaTable] = None
+) -> Dict[str, Dict[str, str]]:
+    """引用目标 id 空间（kind → {id: 来源模块}）——与 R-4 引用判定**同一注册逻辑**。
+
+    批34（通用 CSV 导入逐行引用校验）复用：只调用 `_Checker._collect_ids()` 收集注册表，
+    不跑任何规则、不产生报告；返回的正是 `_check_ref` 查询的 `_id_space`。
+    纯函数，无副作用；不写盘。
+    """
+    if meta is None:
+        meta = default_field_meta_table()
+    checker = _Checker(modules, meta)
+    checker._collect_ids()
+    return checker._id_space
+
+
 __all__ = [
     "PackError",
     "PackNote",
     "PackWarning",
     "ValidationReport",
     "check_pack",
+    "collect_ref_id_space",
     "check_formula",
     "FORMULA_BLACKLIST",
     "FORMULA_MAX_LENGTH",

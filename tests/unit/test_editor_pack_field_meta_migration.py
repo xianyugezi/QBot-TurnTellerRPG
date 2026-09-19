@@ -93,7 +93,15 @@ SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
 #   对拍实证：29 条差异全部为上述四类（1 处有意删除 + 新增/派生计数位移），
 #   无 label/help/group 严格键的无意改动；重定后基线树与当前树逐字段 diff=0。
 #   与 scripts/compare_field_meta_migration.py 的 DEFAULT_BASELINE_REF 同基线。
-BASELINE_REF = "0d2011e"
+# 批44（2026-09-20 投入概率暴击）重定：0d2011e → 1b76ab4（本批字段/模板提交）。
+#   原因 = 本批**有意**变更（非迁移回归），全部为**新增**（无删除/无严格键改值）：
+#     · settings.deep_craft.craft_rules 新增 quality_exp_crit 子对象（12 子字段：
+#       enabled/grades/chance_by_grade/chance_default/mult_by_grade/mult_default/
+#       additive_exp/applies_to/affects_quality_level/rolls_per_craft/exp_cap/rng_stream）；
+#     · 模板全量表 +1 条 deep_craft_crit_gain（templates 计数 856→857）。
+#   对拍实证：删除项 = 0、无 label/help/group 无意改动；重定后基线树与当前树 diff=0。
+#   与 scripts/compare_field_meta_migration.py 的 DEFAULT_BASELINE_REF 同基线。
+BASELINE_REF = "1b76ab4"
 CONTENT = REPO / "content"
 
 

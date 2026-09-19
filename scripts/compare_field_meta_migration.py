@@ -221,7 +221,13 @@ DEFAULT_PACKS = ("veinborn", "test_demo")
 #   对拍实证：29 条差异**全部**为上述四类（1 处有意删除 + 26 项新增 + 派生展示计数位移）；
 #   无任何 label/help/group 严格键的**无意**改动。
 #   重定到本批末提交后，门禁继续只守「字段级元数据迁移不得改/删」。
-DEFAULT_BASELINE_REF = "0d2011e"
+# 批44（2026-09-20 投入概率暴击）重定：0d2011e → 1b76ab4（本批字段/模板/文档提交）。
+#   原因 = 本批**有意**变更（非迁移回归），全部为**新增**：
+#   ① settings.deep_craft.craft_rules 新增 quality_exp_crit 子对象 + 其 12 个子字段
+#      （中文名/说明卡；既有 craft_rules 子字段与 enabled 原样保留）；
+#   ② 模板全量表 +1 条 deep_craft_crit_gain（templates 计数 856→857）。
+#   对拍实证：删除项 = 0、无 label/help/group 严格键的无意改动；重定后 0 差异。
+DEFAULT_BASELINE_REF = "1b76ab4"
 
 
 def _env(root: Path) -> dict:

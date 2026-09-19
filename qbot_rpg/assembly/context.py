@@ -1356,6 +1356,14 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
     if registered:
         assert player is not None
         ps = player.persistent_state if isinstance(player.persistent_state, Mapping) else {}
+        # 批46 · 符文地基（43-A）：符文镶嵌状态容器缺补（旧档幂等补 / 新库直具备）。
+        # 挂 persistent_state（键 = ItemInstance.uid，自由 dict）——**不**动 ItemInstance/
+        # EquipmentSlot 字段，故无需 DB schema 升级（口径 §二.4）；补缺在**上下文装配**
+        # 路径（与 α 组 equip_skills 同法），不改 storage codec 读写 → codec/db round-trip
+        # 「逐字段一致」不变量零变化。backfill_rune_sockets 为唯一补缺口径（幂等/无损）。
+        if isinstance(ps, dict):
+            from qbot_rpg.storage.migrations import backfill_rune_sockets
+            backfill_rune_sockets(ps)
         attrs = (
             player.attributes
             if isinstance(player.attributes, PlayerAttributes)

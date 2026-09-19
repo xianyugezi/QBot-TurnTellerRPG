@@ -175,6 +175,32 @@ MIGRATION_STEPS: List[Tuple[int, int, Callable[..., Any]]] = [
 
 
 # ---------------------------------------------------------------------------
+# 批46 · 符文地基（43-A）：rune_sockets 容器缺补（纯函数）
+# ---------------------------------------------------------------------------
+def backfill_rune_sockets(ps: Any) -> Tuple[Any, int]:
+    """**纯函数**：给 persistent_state 补符文镶嵌容器 `rune_sockets`（批46 · 43-A）。
+
+    口径（`/root/deliverables/符文系统_实现口径.md` §二.4）：镶嵌状态挂
+    `player.persistent_state["rune_sockets"]`（键 = ItemInstance.uid）——`persistent_state`
+    本就是**自由 dict**，缺省空即无符文，故**无需** DB_SCHEMA_VERSION 3→4（口径明示）。
+    本函数即「旧档幂等补 / 新库直具备」的**唯一补缺口径**：
+      - **幂等**：键已存在（任意形态）→ 原样返回、计数 0（重复执行零改动）；
+      - **无损**：只在键**缺失**时新增空 dict `{}`，不改/不删任何既有键与值；
+      - 非 dict（None/list/…）→ 原样返回、计数 0（非法行不拦加载，MIG-1 口径）。
+    读侧由 `storage.repository._player_from_dict` 调用（旧档读入即补、下次落档写出）；
+    新建玩家的 `make_context` 经 `_ps_init(ps, "rune_sockets", {})` 惰性挂回 →
+    「新库直接具备」（不重犯「新库漏结构」：本函数与版本无关，对所有存档统一生效）。
+    返回 (ps, 本次新增键数 0/1)。
+    """
+    if not isinstance(ps, dict):
+        return ps, 0
+    if "rune_sockets" in ps:
+        return ps, 0
+    ps["rune_sockets"] = {}
+    return ps, 1
+
+
+# ---------------------------------------------------------------------------
 # meta 元信息行管理（单行 key='global'，§1.3 / SCHEMA-8）
 # ---------------------------------------------------------------------------
 async def ensure_meta(db: Database, now: Optional[str] = None) -> int:
@@ -429,6 +455,7 @@ __all__ = [
     "migrate_v1_to_v2",
     "migrate_v2_to_v3",
     "backfill_instance_uids",
+    "backfill_rune_sockets",
     "MigrationError",
     "MigrationResult",
     "ensure_meta",

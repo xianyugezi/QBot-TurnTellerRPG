@@ -71,17 +71,24 @@ from typing import Any, List, Mapping, MutableMapping, Optional, Sequence, Tuple
 
 from qbot_rpg.core.equipment import offhand_penalized_item_ids
 from qbot_rpg.core.quality import QualitySystem
+# 批46 · 符文地基（43-A）：符文定义解析层（阶位/缺省孔位；孔位执行仍在本文件）。
+from qbot_rpg.core.runes import RUNES_STATE_KEY, rune_tier_of, socket_count_of
 
 __all__ = [
     "DEFAULT_TRIGGER_LIMIT",
     "JEWEL_TYPE",
     "REASON_IN_BATTLE",
     "REASON_JEWEL_NOT_FOUND",
+    "REASON_RUNES_DISABLED",
+    "REASON_RUNE_NOT_FOUND",
+    "REASON_RUNE_TIER_INVALID",
     "REASON_SLOT_EMPTY",
     "REASON_SLOT_FULL",
     "REASON_SLOT_NOT_FOUND",
     "REASON_SLOT_TOO_LOW",
     "REASON_TRIGGER_LIMIT",
+    "REASON_UID_REQUIRED",
+    "RUNES_STATE_KEY",
     "JewelSystem",
 ]
 
@@ -106,6 +113,11 @@ REASON_REMOVE_FAILED: str = "remove_failed"
 REASON_ADD_FAILED: str = "add_failed"
 REASON_NO_BATTLE_SNAPSHOT: str = "no_battle_snapshot"
 REASON_TRIGGER_LIMIT: str = "trigger_limit"
+# 批46 · 符文地基（43-A）专用拒绝原因（符文镶嵌/拆卸；珠既有常量不动，回归对拍）。
+REASON_RUNES_DISABLED: str = "runes_disabled"
+REASON_RUNE_NOT_FOUND: str = "rune_not_found"
+REASON_RUNE_TIER_INVALID: str = "rune_tier_invalid"
+REASON_UID_REQUIRED: str = "uid_required"
 
 
 class JewelSystem:
@@ -371,6 +383,100 @@ class JewelSystem:
             return []
         slots = self._slot_defs(ctx, equip_id)
         return list(slots) if isinstance(slots, list) else []
+
+    # ------------------------------------------------------------------
+    # 批46 · 符文地基（43-A）：符文孔位与镶嵌状态（uid 落档容器）
+    # ------------------------------------------------------------------
+    def runes_enabled(self, ctx: Mapping[str, Any]) -> bool:
+        """符文系统总闸（口径 §二.5：挂 settings.deep_craft，缺省关闭 → 行为零变化）。
+
+        入参：ctx（保留：与既有 can_toggle_in_battle 同形，便于未来 ctx 级覆盖）。
+        出参：bool——`settings.deep_craft.enabled is True` 才放行；缺段/非 True → False。
+        """
+        dc = self._settings.get("deep_craft")
+        if isinstance(dc, Mapping):
+            return dc.get("enabled") is True
+        return False
+
+    def default_socket_count(self) -> int:
+        """符文缺省孔位数（R-4：`settings.rune_sockets.default_count`，1-3，默认 3）。"""
+        return socket_count_of(self._settings.get("rune_sockets"))
+
+    def rune_socket_defs(self, ctx: Mapping[str, Any], equip_id: str) -> list:
+        """符文孔位定义（R-4）：已登记 slots.json → **共用既有数组**；未登记 → 缺省 N 孔全开。
+
+        与装饰珠共用同一 `ctx["slot_defs"]` 数组（一槽一物、互斥）；仅未登记时符文走缺省
+        开孔（珠在未登记时仍按 equip_not_found 拒绝——既有珠行为零变化）。
+        """
+        slots = self._slot_defs(ctx, equip_id)
+        if slots:
+            return list(slots)
+        return [{"slot_level": 1} for _ in range(self.default_socket_count())]
+
+    @staticmethod
+    def _rune_bucket(
+        ctx: Mapping[str, Any], create: bool = False
+    ) -> Optional[MutableMapping]:
+        """符文镶嵌状态桶：ctx["rune_sockets"] = {uid: [rune_id|null, ...]}（口径 §二.2b）。
+
+        键 = `ItemInstance.uid`（卸装不改背包行 → 状态随实例走，不丢）；缺省且 create →
+        挂回可变空 dict（对齐 `_ps_init` 惰性挂回语义）；非 Mapping/未 create → None。
+        """
+        bucket = ctx.get(RUNES_STATE_KEY)
+        if isinstance(bucket, MutableMapping):
+            return bucket
+        if create and isinstance(ctx, MutableMapping):
+            node: MutableMapping = {}
+            ctx[RUNES_STATE_KEY] = node
+            return node
+        return None
+
+    def rune_sockets_of(self, ctx: Mapping[str, Any], uid: Any) -> list:
+        """该 uid 的符文行（原样副本；缺省/非法 → []）。"""
+        bucket = self._rune_bucket(ctx)
+        if not isinstance(bucket, Mapping):
+            return []
+        row = bucket.get(str(uid))
+        return list(row) if isinstance(row, (list, tuple)) else []
+
+    def active_rune_sockets(
+        self, ctx: Mapping[str, Any], equip_id: str, uid: Any
+    ) -> list:
+        """**符文孔位激活读取处**（批38 · H7 副手失活自动继承）。
+
+        副手折算件 → []（符文不激活）；否则返回该 uid 的符文行。与珠同源判定
+        （`offhand_inactive`，唯一判定点），符文零额外分支即「副手失活」。
+        """
+        if self.offhand_inactive(ctx, equip_id):
+            return []
+        return self.rune_sockets_of(ctx, uid)
+
+    @staticmethod
+    def _rune_row(
+        bucket: MutableMapping, uid: str, count: int, create: bool = False
+    ) -> Optional[list]:
+        """取 uid 符文行并补齐到 count 长（缺孔=None；create 缺行时新建）。"""
+        row = bucket.get(uid)
+        if not isinstance(row, list):
+            if not create:
+                return None
+            row = []
+            bucket[uid] = row
+        while len(row) < count:
+            row.append(None)
+        return row
+
+    def _resolve_rune(self, ctx: Mapping[str, Any], rune_id: Any) -> Optional[Mapping[str, Any]]:
+        """符文定义：ctx["runes"] 注册表优先，兜底物品解析器（ctx["items"]/resolve_item）。"""
+        rid = str(rune_id) if rune_id is not None else ""
+        if not rid:
+            return None
+        runes = ctx.get("runes")
+        if isinstance(runes, Mapping):
+            hit = runes.get(rid)
+            if isinstance(hit, Mapping):
+                return hit
+        return self._resolve_item(ctx, rid)
 
     @staticmethod
     def _jewels_bucket(ctx: Mapping[str, Any], equip_id: str) -> Optional[MutableMapping]:
@@ -714,6 +820,189 @@ class JewelSystem:
             "slot_index": si,
             "equip_id": equip_id,
             "bound_to": snap.get("bound_to"),
+        }
+
+    # ------------------------------------------------------------------
+    # 批46 · 符文地基（43-A）：符文镶嵌/拆卸（复用孔位骨架；绕过珠的槽级门票）
+    # ------------------------------------------------------------------
+    def mount_rune(
+        self,
+        ctx: MutableMapping[str, Any],
+        rune_id: str,
+        equip_id: str,
+        uid: str,
+        slot_index: int = 0,
+        player: Any = None,
+    ) -> dict:
+        """符文镶嵌（43-A；口径 §二.2c：复用 mount 骨架 + 独立校验，不走 slot_accepts）。
+
+        与装饰珠的差异（口径 §二.2c「必须绕开」）：
+          · **无「槽级≥珠档」门票**（`slot_accepts` 是装饰珠规则，符文三阶无槽级概念）；
+          · 状态落 **uid 容器** `ctx["rune_sockets"][uid]`（不是装备桶——卸装不丢）；
+          · 孔位数组与珠**共用**：已镶嵌珠的槽 → `slot_full`（一槽一物、互斥）。
+        入参：ctx（runes/slot_defs/equipment/count_item/remove_item/in_battle/settings）；
+              rune_id/equip_id/uid（穿戴实例唯一键）/slot_index（0 起）/player（绑定标识）。
+        出参：成功 {ok, message, rune_id, tier, uid, equip_id, slot_index}；拒绝
+              {ok, reason, message}；reason ∈ runes_disabled / in_battle / uid_required /
+              rune_not_found / rune_tier_invalid / slot_not_found / slot_full / remove_failed。
+        核心：总闸 → 战斗闸 → uid/定义/阶 → 孔位定义（登记数组或缺省 N 孔）→ 越界 →
+              珠占用互斥 → 符文槽占用 → 持有 → 扣符文 → 写 uid 容器。
+        """
+        if not self.runes_enabled(ctx):
+            return self._rune_reject(
+                REASON_RUNES_DISABLED, "❌ 符文系统未启用（settings.deep_craft.enabled 关闭）",
+                rune_id, equip_id, slot_index, uid)
+        if not self.can_toggle_in_battle(ctx):
+            return self._rune_reject(
+                REASON_IN_BATTLE, "❌ 战斗中不可插拔符文（沿用装饰珠 SOCK-05）",
+                rune_id, equip_id, slot_index, uid)
+        if not str(uid or ""):
+            return self._rune_reject(
+                REASON_UID_REQUIRED,
+                "❌ 符文镶嵌需实例唯一键 uid（镶嵌状态挂 uid 容器，口径 §二.2b）",
+                rune_id, equip_id, slot_index, uid)
+        rune_def = self._resolve_rune(ctx, rune_id)
+        if rune_def is None:
+            return self._rune_reject(
+                REASON_RUNE_NOT_FOUND, f"❌ 符文 {rune_id} 不存在（runes 注册表查无）",
+                rune_id, equip_id, slot_index, uid)
+        tier = rune_tier_of(rune_def)
+        if tier is None:
+            return self._rune_reject(
+                REASON_RUNE_TIER_INVALID,
+                f"❌ 符文 {rune_id} 阶位非法（tier 必须 ∈ 1/2/3，独立刻度）",
+                rune_id, equip_id, slot_index, uid)
+        slots = self.rune_socket_defs(ctx, equip_id)
+        si = self._to_int(slot_index)
+        if si is None or si < 0 or si >= len(slots):
+            return self._rune_reject(
+                REASON_SLOT_NOT_FOUND,
+                f"❌ 槽位 {slot_index} 不存在（{equip_id} 共 {len(slots)} 个孔，0 起）",
+                rune_id, equip_id, slot_index, uid)
+        # 与装饰珠共用孔位数组 → 珠占用的槽不可再嵌符文（一槽一物、互斥）
+        jewel_bucket = self._jewels_bucket(ctx, equip_id)
+        if isinstance(jewel_bucket, Mapping) and si in jewel_bucket:
+            return self._rune_reject(
+                REASON_SLOT_FULL,
+                f"❌ 孔位 {si} 已镶嵌装饰珠（一槽一物、互斥；需先 /拆珠）",
+                rune_id, equip_id, slot_index, uid)
+        bucket = self._rune_bucket(ctx, create=True)
+        if bucket is None:
+            return self._rune_reject(
+                REASON_EQUIP_NOT_FOUND, f"❌ 装备 {equip_id} 符文容器缺失（ctx 不可写）",
+                rune_id, equip_id, slot_index, uid)
+        row = self._rune_row(bucket, str(uid), len(slots), create=True)
+        if row is None:
+            return self._rune_reject(
+                REASON_EQUIP_NOT_FOUND, f"❌ 装备 {equip_id} 符文容器缺失",
+                rune_id, equip_id, slot_index, uid)
+        if row[si] is not None:
+            return self._rune_reject(
+                REASON_SLOT_FULL,
+                f"❌ 孔位 {si} 已镶嵌符文（{row[si]}）；需先拆卸",
+                rune_id, equip_id, slot_index, uid)
+        if self._held_count(rune_id, ctx) < 1:
+            return self._rune_reject(
+                REASON_RUNE_NOT_FOUND,
+                f"❌ 背包中没有 {self._item_name(rune_id, ctx)}（需 1 个）",
+                rune_id, equip_id, slot_index, uid)
+        if not self._remove_jewel(ctx, rune_id, 1):
+            return self._rune_reject(
+                REASON_REMOVE_FAILED,
+                f"❌ 背包扣除 {self._item_name(rune_id, ctx)} 失败（remove_item hook）",
+                rune_id, equip_id, slot_index, uid)
+        row[si] = rune_id
+        return {
+            "ok": True,
+            "message": (
+                f"✅ {self._item_name(rune_id, ctx)} 已镶嵌到 {equip_id} 孔位{si + 1}"
+                f"（{tier} 阶）"
+            ),
+            "rune_id": rune_id,
+            "tier": tier,
+            "uid": str(uid),
+            "equip_id": equip_id,
+            "slot_index": si,
+        }
+
+    def unmount_rune(
+        self,
+        ctx: MutableMapping[str, Any],
+        equip_id: str,
+        uid: str,
+        slot_index: int = 0,
+        player: Any = None,
+    ) -> dict:
+        """符文拆卸（43-A；无损返还，复用 unmount 骨架；孔位清空为 null）。
+
+        入参：ctx（rune_sockets/slot_defs/add_item/in_battle/settings）；equip_id/uid/
+              slot_index（0 起）/player（绑定标识）。
+        出参：成功 {ok, message, rune_id, tier, uid, equip_id, slot_index}；拒绝
+              {ok, reason, message}；reason ∈ runes_disabled / in_battle / uid_required /
+              slot_not_found / slot_empty / add_failed（返还失败已回滚空位）。
+        核心：总闸 → 战斗闸 → uid → 孔位 → 该孔有符文 → 置 null → add_item 无损返还；
+              返还失败 → 回滚原符文（不丢）。
+        """
+        if not self.runes_enabled(ctx):
+            return self._rune_reject(
+                REASON_RUNES_DISABLED, "❌ 符文系统未启用（settings.deep_craft.enabled 关闭）",
+                "", equip_id, slot_index, uid)
+        if not self.can_toggle_in_battle(ctx):
+            return self._rune_reject(
+                REASON_IN_BATTLE, "❌ 战斗中不可插拔符文（沿用装饰珠 SOCK-05）",
+                "", equip_id, slot_index, uid)
+        if not str(uid or ""):
+            return self._rune_reject(
+                REASON_UID_REQUIRED, "❌ 符文拆卸需实例唯一键 uid",
+                "", equip_id, slot_index, uid)
+        slots = self.rune_socket_defs(ctx, equip_id)
+        si = self._to_int(slot_index)
+        if si is None or si < 0 or si >= len(slots):
+            return self._rune_reject(
+                REASON_SLOT_NOT_FOUND,
+                f"❌ 槽位 {slot_index} 不存在（{equip_id} 共 {len(slots)} 个孔，0 起）",
+                "", equip_id, slot_index, uid)
+        bucket = self._rune_bucket(ctx)
+        row = self._rune_row(bucket, str(uid), len(slots)) if bucket is not None else None
+        if row is None or si >= len(row) or row[si] is None:
+            return self._rune_reject(
+                REASON_SLOT_EMPTY, f"❌ 孔位 {si} 未镶嵌符文，无可拆",
+                "", equip_id, slot_index, uid)
+        rid = str(row[si])
+        tier = rune_tier_of(self._resolve_rune(ctx, rid))
+        row[si] = None
+        if not self._add_jewel(ctx, rid, 1):
+            row[si] = rid  # 返还失败 → 回滚孔位，符文不丢
+            return self._rune_reject(
+                REASON_ADD_FAILED,
+                f"❌ 符文返还背包失败（add_item hook），已保留孔位 {si} 原状",
+                rid, equip_id, slot_index, uid)
+        return {
+            "ok": True,
+            "message": (
+                f"✅ 已从 {equip_id} 孔位{si + 1} 拆下 "
+                f"{self._item_name(rid, ctx)}（无损返还背包）"
+            ),
+            "rune_id": rid,
+            "tier": tier,
+            "uid": str(uid),
+            "equip_id": equip_id,
+            "slot_index": si,
+        }
+
+    @staticmethod
+    def _rune_reject(
+        reason: str, message: str, rune_id: str, equip_id: str, slot_index: Any, uid: Any
+    ) -> dict:
+        """符文拒绝结果（零副作用；对齐既有拒绝 dict 形状 + 携带 uid）。"""
+        return {
+            "ok": False,
+            "reason": reason,
+            "message": message,
+            "rune_id": rune_id,
+            "equip_id": equip_id,
+            "slot_index": slot_index,
+            "uid": str(uid or ""),
         }
 
     # ------------------------------------------------------------------

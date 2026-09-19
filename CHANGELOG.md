@@ -14,6 +14,27 @@
 
 ### Added
 
+- **批53（2026-09-20）**：**时序 / 资源 / 结算轴接线**（K，P0+P1）。
+  口径 `特效整理设计_3_落点与分期.md` §二「批 51」（旧编号 = 本批批53）+
+  `特效整理设计_1_修正轴全集.md` X27/X21/X22/X23/X24/X30/X34/X35/X03 +
+  `特效强度预算_设计.md` §四（红线守护）。**全部复用既有唯一消费点，不新开乘区**。
+  **① 冷却乘法轴 `cooldown_pct`**：接既有 α3 技能冷却管线（与 α3 **同乘区相加后一次缩放**，
+  结果 `max(0,…)`）；旧占位键 `cooldown_reduction_pct` **激活并归并**——`route_bonus_into`
+  契约不变（仍不进 flat/pct），新增 `data/gear_stats.route_legacy_aliases_into_flat` 在聚合入口
+  换算一次 `flat["cooldown_pct"] += −旧值`（旧键仍可用、**不双计**；与 §三 C-05 的偏差按用户
+  口径登记）。**② 状态概率 `status_chance_pct`**：接 `apply_status` R1 命中判定（source 侧），
+  `>100%` 溢出按每满 100% 折 1 层；归并悬空旧键 `debuff_chance_pct`/`buff_chance_pct`。
+  **③ 状态抵抗 `status_resist_pct`**：扩展既有 `resist_table`（加算百分点、0..100 钳制，target 侧）。
+  **④ 层数获取/上限 `stack_gain_pct`/`stack_cap_delta`**：接 `apply_status` 的 stack 框架增量与
+  `max_stack`（与批48 `stacks` 乘算对齐）。**⑤ 行动条推动 `action_bar_shift`**：接
+  `_after_actor_action` 收尾，复用 `hasten_actor`/`delay_actor` 双向原语。**⑥ 资源消耗/获取
+  `resource_cost_pct`/`resource_gain_pct`**：`resource_axis` 既有门禁/扣款/入账加 `mult` 形参
+  （唯一缩放处 `scale_amount_map`，下钳 0）。**⑦ 会心倍率 `crit_damage_pct`**：会心乘区等比缩放
+  （crit_roll 之后、入 rating 之前；与超会心/属性会心不合并）。
+  **缺省零变化**：不配置任一轴 → 战斗结算快照逐字段一致；红线复算 `batch45_measure.py`
+  修前/修后 `--json` **逐字节一致**（普通 8/7/7、精英 22/20/19、Boss 26/24/22），
+  `equip_share = 60.00%` 不变。**明确排除** `action_speed_mult`/`action_recovery_mult`
+  （数学互为倒数、必须二选一，待裁决 D2）。页脚批次串 →「批53 · 时序与资源轴」。
 - **批52（2026-09-20）**：**治疗 / 承伤双向轴接线**（M + K，P0 核心玩法）。
   口径 `特效整理设计_3_落点与分期.md` §二「批 50」（旧编号 = 本批批52）+ `特效整理设计_1_修正轴全集.md`
   §5-D2（X17/X16）/ §5-D3（X02）+ `特效强度预算_设计.md` §四（红线守护）。

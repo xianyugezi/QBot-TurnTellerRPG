@@ -152,7 +152,16 @@ DEFAULT_PACKS = ("veinborn", "test_demo")
 # 批33（2026-09-17）：本批未改 `field_meta.py`，但发现默认常量仍停在 8e56cc3——
 # 批32 已按台账 §二十一 重定到 cad91df（`tests/unit/test_editor_pack_field_meta_migration.py`
 # 亦用 cad91df），此处对齐默认值，使默认跑法与 pytest 门禁同基线；对拍 0 差异。
-DEFAULT_BASELINE_REF = "cad91df"
+# 批36（2026-09-19 采集/挖掘引擎）：cad91df → c6d33c4（本批编辑器侧提交）。原因（本批**有意**变更）：
+#   ① `maps.gather_points` 子字段按细化_2a1d GP-01~GP-11 补全——新增 periods/seasons/
+#      respawn_minutes 三键（新增项 = soft）、rarity 由 str 收敛为 enum(normal/rare/gold)、
+#      逐字段补 help（口径④严格键 label/help 变动 = 硬差异，故必须重定）；
+#   ② 模板全量表新增 13 条 `gather_*` 键 → templates 模块计数 824 → 837（计数变动 = 硬差异）；
+#   ③ 目录条目 `gathering` implemented False → True + purpose 更新。
+#   对拍实证：重定前 80 条硬差异**全部**为上述三类（无任何字段/条目被无意删除，
+#   删除项 = 0），加法项 76 条逐条列出。重定到本批末提交后，门禁继续只守
+#   「字段级元数据迁移不得改/删」。
+DEFAULT_BASELINE_REF = "c6d33c4"
 
 
 def _env(root: Path) -> dict:

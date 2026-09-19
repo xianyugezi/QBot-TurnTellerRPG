@@ -47,7 +47,13 @@ SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
 #     `ref_target` 与派生 `hint`/`help_card.*` 由空变「引用：X」（新增面，无删除）。
 #   · 删除项 = 0（输出无「仅迁移前有」）；label/help/group/module_labels/module_tree 严格键零改动。
 #   重定后基线树与当前树逐字段 diff=0（同批13.1/批23/批30 先例）。
-BASELINE_REF = "cad91df"
+# 批36（2026-09-19 采集/挖掘引擎）重定：cad91df → c6d33c4（本批编辑器侧提交）。
+#   原因 = 本批**有意**变更（非迁移回归）：maps.gather_points 按细化_2a1d GP-01~GP-11 补全
+#   三键（periods/seasons/respawn_minutes）+ rarity str→enum + 逐字段 help（严格键变动）；
+#   模板全量表 +13 条 gather_* 键（templates 计数 824→837）；gathering implemented→True。
+#   对拍实证：删除项 = 0、硬差异 80 条全部属上述三类；重定后 0 差异。
+#   与 scripts/compare_field_meta_migration.py 的 DEFAULT_BASELINE_REF 同基线。
+BASELINE_REF = "c6d33c4"
 CONTENT = REPO / "content"
 
 

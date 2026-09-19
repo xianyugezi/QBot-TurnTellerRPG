@@ -343,7 +343,86 @@ SETTINGS_FIELDS: Dict[str, FieldMeta] = {
     # + ctx["equip_engine"]（EquipmentEngineAdapter(slots=...)）；缺省无配置 → 默认 6 槽。
     # 注意：与 M8 slots.json 模块（装饰珠插槽 {equip_id, slots:[{slot_level}]}）是
     # 不同数据空间——这里是「装备部位定义」；字段 key 用 slot_defs 避免与既有撞名。
-    "slot_defs": FieldMeta(type="obj", children={}, soft_label=True, label="装备槽位"),
+    "slot_defs": FieldMeta(type="obj", children={
+        # 批38 · ③：部位定义子字段结构登记（含角色 role）——编辑器「装备槽位」键值表逐列出控件；
+        # 键 = 部位 id（动态键空间）；缺省 role=main。数值/失活消费见 core/equipment（H7）。
+        "name": FieldMeta(type="str", label="部位名"),
+        "max": FieldMeta(type="int", range_min=1, label="可装备数量"),
+        "role": FieldMeta(
+            type="enum", enum=("main", "offhand"), default="main", label="部位角色",
+            help="main=主装备位（缺省）；offhand=副手位——需 settings.equipment_offhand."
+                 "enabled 开启后按副手规则生效（单手武器作副手：数值类属性折算、"
+                 "百分比/强化特殊词条/装备被动/套装词条/符文附魔不激活）。"),
+    }, soft_label=True, label="装备槽位"),
+    # 批38 · H7 副手装备开关（settings.equipment_offhand；默认 false = 与本系统引入前一致）。
+    # 形态 {enabled, single_hand_scale}；消费点 core/equipment.EquipmentEngine（归一入口）
+    # + aggregate_bonus（数值折算/百分比与战斗键失活）+ equip_mods/forge_sets/jewel 读取点。
+    # 注：`slot_defs.<部位>.role` 的字段登记在批38 ③（部位角色 main/offhand）；本开关为总闸。
+    "equipment_offhand": FieldMeta(type="obj", children={
+        "enabled": FieldMeta(type="bool", default=False, label="是否启用副装备",
+                             help="开启后，settings.slot_defs 中 role=offhand 的部位按副手规则"
+                                  "生效（单手武器作副手：数值类属性按折算比例、其余加成不激活）。"
+                                  "关闭 = 行为与本系统引入前逐字段一致（默认关闭）。"),
+        "single_hand_scale": FieldMeta(type="number", range_min=0.0, range_max=1.0,
+                                       default=0.5, label="单手作副手折算",
+                                       help="单手武器放进副手部位时，数值类属性的折算比例"
+                                            "（0.5=50%）；百分比类属性、强化特殊词条、装备被动、"
+                                            "套装词条、符文附魔一律不激活。"),
+    }, label="副手装备",
+        help="副手装备总开关（默认关闭）。在「装备槽位」里把某部位角色设为「副手」后，"
+             "本开关控制副手规则是否生效。"),
+    # 批38 · ④ 相性通用层（打造与深度炼金共用；settings 顶层四段，非打造私有）。
+    # 引擎 = core/affinity.py（纯函数）；对外单一查询 resolve_available_entries()。
+    "affinities": FieldMeta(
+        type="list", label="相性定义",
+        element=FieldMeta(type="obj", children={
+            "id": FieldMeta(type="str", required=True, label="相性 ID"),
+            "name": FieldMeta(type="str", label="中文名"),
+            "desc": FieldMeta(type="str", label="说明"),
+            "exclusive_pool": FieldMeta(type="str", label="专属池引用"),
+        }),
+        help="相性注册表：id 为内容包自定义（框架不内置任何相性名）；专属池指向"
+             "「相性词条池」的池 id。打造/深度炼金共用同一定义。"),
+    "affinity_pools": FieldMeta(
+        type="list", label="相性词条池",
+        element=FieldMeta(type="obj", children={
+            "id": FieldMeta(type="str", required=True, label="池 ID"),
+            "kind": FieldMeta(type="enum", enum=("common", "exclusive", "linkage"),
+                              label="池类型"),
+            "desc": FieldMeta(type="str", label="说明"),
+            "entries": FieldMeta(type="list", label="词条行", element=FieldMeta(type="obj", children={
+                "stat": FieldMeta(type="str", label="属性键"),
+                "effect_ref": FieldMeta(type="str", label="效果引用"),
+                "weight": FieldMeta(type="number", range_min=0, label="权重"),
+                "min_level": FieldMeta(type="int", range_min=1, label="最低等级"),
+                "requires_affinity": FieldMeta(type="str", label="要求相性"),
+                "value_rule": FieldMeta(type="str", label="数值规则"),
+            })),
+        }),
+        help="一个池结构同时服务随机属性/套装词条/强化词条/相性专属池：kind=common 通用池"
+             "（任意相性可抽）；exclusive 专属池；linkage 联动覆盖池。"
+             "查询接口 = 「通用池 ∪ 主相性专属池（联动命中则被覆盖）」并按 requires_affinity 过滤。"),
+    "affinity_linkage": FieldMeta(
+        type="list", label="相性联动",
+        element=FieldMeta(type="obj", children={
+            "main": FieldMeta(type="str", label="主相性"),
+            "sub": FieldMeta(type="str", label="副相性"),
+            "override_pool": FieldMeta(type="str", label="覆盖池"),
+        }),
+        help="主+副相性配对的特殊联动：命中时专属池被「覆盖池」替换（原案 §12）。"),
+    "affinity_reactions": FieldMeta(
+        type="list", label="材料相性互动",
+        element=FieldMeta(type="obj", children={
+            "kind": FieldMeta(type="enum", enum=("conflict", "amplify", "reverse"),
+                              label="互动类型"),
+            "from": FieldMeta(type="str", label="源相性（反转）"),
+            "to": FieldMeta(type="str", label="目标相性（反转）"),
+            "pair": FieldMeta(type="list", element=FieldMeta(type="str"),
+                              label="相性对（冲突/增幅）"),
+            "value": FieldMeta(type="number", allow_negative=True, label="系数/加值"),
+        }),
+        help="材料间的相性互动：conflict=互相减少 / amplify=互相增加 / reverse=把 from 相性"
+             "转为 to；结算顺序 = 材料投入顺序（原案 §12）。"),
     # 批25 K1：注册初始礼包 + 初始等级（CakeGame `Global.md:60` `set.NovicesReward`
     # 「注册新手礼包，物品名*数量」+ `:87-89` `OccupationSet.LV/Goods/GoodsNumber`
     # 「注册/初始等级；开局物品；开局物品数量」）。
@@ -1487,10 +1566,12 @@ ITEMS_GROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
         "id", "name", "type", "slot", "bind", "usable", "job_restrict", "use_level",
         "quality", "rarity", "material_tier", "source", "awaken", "seed",
         "max_hold",  # 批26 α2：获取数量上限（items∪equipment 同库）
+        "handedness",  # 批38 ③：手数（单手/双手；装备基本属性）
     )),
     ("stats", (
         "price", "atk", "def", "dfn", "foc", "hp", "agi", "mp",
         "elements", "base_effects",
+        "affinities",  # 批38 ④：材料/图纸相性值 {相性id: 数值}
         *GEAR_FLAT_KEYS, *GEAR_PCT_KEYS, *GEAR_COMBAT_KEYS,
     )),
     # 批26 α组（装备侧）：装备附加字段归「效果」分组（grant_skills/skill_amp/
@@ -2227,6 +2308,22 @@ def _module_table() -> Dict[str, ModuleMeta]:
                 "name_override": FieldMeta(type="str", label="替换显示名"),
             },
             help="穿戴期间职业替换为该职业（可等级重置/显示名替换），卸下还原。"),
+    })
+    # 批38 · ③（H7 载体）：装备/物品手数 `handedness` 登记（包声明驱动；items∪equipment 同库）。
+    # 枚举两档；缺省未声明（不参与副手判定 → 与现状语义一致）。数值实装（双手占用/单手
+    # 副手判定收紧）归批39+（本批只登记，引擎不消费该字段）。
+    items_fields.update({
+        "handedness": FieldMeta(
+            type="enum", enum=("one_hand", "two_hand"), label="手数",
+            help="one_hand=单手（可作副手：数值类属性按 settings.equipment_offhand."
+                 "single_hand_scale 折算，百分比/强化特殊词条/装备被动/套装词条/符文附魔"
+                 "不激活）；two_hand=双手（不可作副手）；留空=未声明。"),
+        # 批38 · ④：材料/图纸的相性声明（词缀 → 相性值）；相性 id 需在 settings.affinities
+        # 声明（引用存在性由 validator._check_affinity 跨模块红拦）。
+        "affinities": FieldMeta(
+            type="obj", children={}, soft_label=True, label="相性",
+            help="携带的相性值 {相性id: 数值}（材料/图纸共用）；相性 id 需在"
+                 "settings.affinities 声明；打造时按材料投入顺序结算互动。"),
     })
     equipment_fields: Dict[str, FieldMeta] = dict(items_fields)
     # 部位互斥：entry.slot 与 entry.excludes 列表内部位互斥成环 → R-5（equipment 专项，§5.2 + L167）

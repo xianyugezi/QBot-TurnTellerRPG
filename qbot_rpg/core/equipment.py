@@ -57,12 +57,18 @@ from typing import Any, Dict, List, Mapping, MutableMapping, Optional, Sequence,
 from dataclasses import replace as _dcreplace
 
 from qbot_rpg.core.player_attributes import calc_all_final_attributes
-from qbot_rpg.data.gear_stats import route_bonus_into
+from qbot_rpg.data.gear_stats import GEAR_COMBAT_KEYS, PCT_SUFFIX, route_bonus_into
 from qbot_rpg.data.item import ItemInstance
 from qbot_rpg.data.player import EquipmentSlot, PlayerAttributes
 
 __all__ = ["EquipmentEngine", "validate_slot_exclusions", "DEFAULT_SLOT_NAMES", "DEFAULT_SLOT_ORDER",
-           "item_requirement_error"]
+           "item_requirement_error",
+           # 批38 · H7 副手语义（通用、包声明驱动）
+           "OFFHAND_ROLE_MAIN", "OFFHAND_ROLE_OFFHAND", "SLOT_ROLES",
+           "DEFAULT_OFFHAND_SCALE", "OFFHAND_CONFIG_KEY",
+           "normalize_offhand_config", "slot_role_of", "slot_defs_mapping",
+           "offhand_penalized_slots", "offhand_penalized_item_ids",
+           "offhand_penalized_slots_of_ctx"]
 
 
 def _row_item_id(row: Any) -> str:
@@ -105,6 +111,165 @@ DEFAULT_SLOT_NAMES: Dict[str, str] = {
 DEFAULT_SLOT_ORDER: tuple = (
     "weapon", "armor_head", "armor_body", "armor_hand", "armor_leg", "armor_foot",
 )
+
+# =====================================================================================
+# 批38 · H7 副手（槽位角色 / 开关 / 折算与失活）——**槽位语义唯一入口**的归一与判定
+#
+# 依据：docs/深度打造_决策记录.md §一 H7 + §五 5.2（开关落点/字段名/关闭语义）+ 「打造系统_C」
+#   Q3（归一放 slot_defs 解析处、数值折算与失活放 aggregate_bonus、其余失活在各自读取点）。
+# 口径（全部包声明驱动、不硬编码）：
+#   · settings.slot_defs.<部位>.role ∈ {main, offhand}（缺省 main）——槽位角色；
+#   · settings.equipment_offhand.enabled（bool，缺省 false）——副手总开关；关闭 = 本系统引入前
+#     行为**逐字段一致**（本模块所有判定返回空/原值）；
+#   · settings.equipment_offhand.single_hand_scale（number，缺省 0.5）——「单手武器作副手」的
+#     数值类属性折算比例（可配；数值口径裁定权归用户，见决策记录 §二）。
+# 判定（不引入手数字段即可自洽，手数实装见批39+）：
+#   某件「穿在 role=offhand 槽 + 该件自身可装备槽（ItemInstance.slot）的 role 非 offhand」→
+#   判为「主手武器挪作副手」→ 折算 + 失活。offhand 类装备（自身 slot 也是 offhand 槽）
+#   不折算（原案 §12「副手类装备可以享受本身的效果」）。
+# =====================================================================================
+OFFHAND_ROLE_MAIN = "main"
+OFFHAND_ROLE_OFFHAND = "offhand"
+SLOT_ROLES: tuple = (OFFHAND_ROLE_MAIN, OFFHAND_ROLE_OFFHAND)
+DEFAULT_OFFHAND_SCALE = 0.5
+OFFHAND_CONFIG_KEY = "equipment_offhand"
+
+
+def normalize_offhand_config(cfg: Any) -> Dict[str, Any]:
+    """`settings.equipment_offhand` → {enabled: bool, single_hand_scale: float}（缺省关闭/0.5）。
+
+    缺段/非映射 → 关闭（回归零影响）；scale 非数或越界 → 回落默认 0.5（非法值由校验器红拦，
+    引擎侧只做防御性回落，不静默改写作者数据）。纯函数、只读。
+    """
+    if not isinstance(cfg, Mapping):
+        return {"enabled": False, "single_hand_scale": DEFAULT_OFFHAND_SCALE}
+    scale = cfg.get("single_hand_scale")
+    try:
+        fscale = float(scale)
+    except (TypeError, ValueError):
+        fscale = DEFAULT_OFFHAND_SCALE
+    if not (0.0 <= fscale <= 1.0):
+        fscale = DEFAULT_OFFHAND_SCALE
+    return {"enabled": cfg.get("enabled") is True, "single_hand_scale": fscale}
+
+
+def slot_role_of(slot_def: Any) -> str:
+    """槽位定义 → 角色（`main`/`offhand`；缺省/非法 → main）。"""
+    if isinstance(slot_def, Mapping) and slot_def.get("role") == OFFHAND_ROLE_OFFHAND:
+        return OFFHAND_ROLE_OFFHAND
+    return OFFHAND_ROLE_MAIN
+
+
+def slot_defs_mapping(slots: Any) -> Mapping[str, Any]:
+    """槽位定义入参归一：包装形态 `{"slots": {...}}` 或平铺 `{id: def}` → 内层映射。"""
+    if isinstance(slots, Mapping) and isinstance(slots.get("slots"), Mapping):
+        return slots["slots"]
+    return slots if isinstance(slots, Mapping) else {}
+
+
+def _row_equippable_slot(row: Any) -> str:
+    """背包行可装备槽类型（ItemInstance.slot；dict/实例双形态）。"""
+    if isinstance(row, Mapping):
+        return str(row.get("slot") or "")
+    return str(getattr(row, "slot", "") or "")
+
+
+def _first_worn_row(player: Any, item_id: str) -> Any:
+    """按 item_id 取首个背包行（判断件自身可装备槽用；空 → None）。"""
+    inv = player.get("inventory") if isinstance(player, Mapping) else None
+    if not isinstance(inv, (list, tuple)):
+        return None
+    for r in inv:
+        if _row_item_id(r) == item_id:
+            return r
+    return None
+
+
+def offhand_penalized_slots(player: Any, slots: Any, offhand: Any = None) -> frozenset:
+    """处于副手折算/失活状态的**槽位 id** 集合（判定见模块段注释；开关关闭 → 空集）。
+
+    入参 slots 接受包装/平铺两种形态（见 slot_defs_mapping）；player 为玩家状态 dict。
+    纯函数、只读、确定性（槽序 sorted）。
+    """
+    if not normalize_offhand_config(offhand)["enabled"]:
+        return frozenset()
+    defs = slot_defs_mapping(slots)
+    if not defs:
+        return frozenset()
+    equipment = player.get("equipment") if isinstance(player, Mapping) else None
+    if not isinstance(equipment, Mapping):
+        return frozenset()
+    out = set()
+    for raw_slot in sorted(str(k) for k in equipment.keys()):
+        if slot_role_of(defs.get(raw_slot)) != OFFHAND_ROLE_OFFHAND:
+            continue
+        slot_obj = equipment.get(raw_slot)
+        iid = (slot_obj.get("item_id") if isinstance(slot_obj, Mapping)
+               else getattr(slot_obj, "item_id", None))
+        item_slot = _row_equippable_slot(_first_worn_row(player, str(iid or "")))
+        # 件自身可装备槽的 role 非 offhand（含未声明/空）→ 主手件挪作副手 → 折算失活。
+        if slot_role_of(defs.get(item_slot)) != OFFHAND_ROLE_OFFHAND:
+            out.add(raw_slot)
+    return frozenset(out)
+
+
+def offhand_penalized_item_ids(player: Any, slots: Any, offhand: Any = None) -> frozenset:
+    """副手折算/失活件的 **item_id** 集合（供孔位/符文等按装备 id 读取处过滤；关→空集）。"""
+    penalized = offhand_penalized_slots(player, slots, offhand)
+    if not penalized:
+        return frozenset()
+    equipment = player.get("equipment") if isinstance(player, Mapping) else None
+    out = set()
+    if isinstance(equipment, Mapping):
+        for slot_id in penalized:
+            slot_obj = equipment.get(slot_id)
+            iid = (slot_obj.get("item_id") if isinstance(slot_obj, Mapping)
+                   else getattr(slot_obj, "item_id", None))
+            if iid:
+                out.add(str(iid))
+    return frozenset(out)
+
+
+def offhand_penalized_slots_of_ctx(ctx: Any, player: Any) -> frozenset:
+    """从指令 ctx 取副手失活槽位（优先已装配引擎，其次 ctx 声明；缺省空集）。
+
+    供 equip_mods / forge_sets / jewel 等**已穿戴件读取点**统一过滤（一处判定，多处复用）。
+    """
+    if not isinstance(ctx, Mapping):
+        return frozenset()
+    engine = ctx.get("equip_engine")
+    for candidate in (engine, getattr(engine, "_engine", None)):
+        fn = getattr(candidate, "penalized_slots", None)
+        if callable(fn):
+            try:
+                return frozenset(fn(player))
+            except Exception:  # noqa: BLE001 - 判定失败按「无失活」保守处理，不阻断读取
+                return frozenset()
+    return offhand_penalized_slots(player, ctx.get("slots"), ctx.get(OFFHAND_CONFIG_KEY))
+
+
+def _offhand_filtered_bonus(bonus: Mapping[str, Any], scale: float) -> Dict[str, float]:
+    """副手折算：数值类键 ×scale；百分比键（`_pct`）与战斗键（GEAR_COMBAT_KEYS）丢弃。
+
+    分层口径与 `data.gear_stats.route_bonus_into` **同一规则**（否则会出现"聚合折算"
+    与"层路由"两套判定漂移）：`_pct` 结尾且非 COMBAT → 百分比层（丢弃）；COMBAT → 战斗
+    键（丢弃）；其余 → 数值类（×scale）。非数值/布尔项丢弃。
+    """
+    out: Dict[str, float] = {}
+    for k, v in bonus.items():
+        try:
+            fv = float(v)
+        except (TypeError, ValueError):
+            continue
+        if isinstance(v, bool):
+            continue
+        ks = str(k)
+        if ks in GEAR_COMBAT_KEYS:
+            continue
+        if ks.endswith(PCT_SUFFIX) and len(ks) > len(PCT_SUFFIX):
+            continue
+        out[ks] = fv * scale
+    return out
 
 
 def item_requirement_error(
@@ -187,6 +352,7 @@ class EquipmentEngine:
         self,
         slots: Optional[Any] = None,
         mutual_exclusions: Optional[Sequence[Sequence[str]]] = None,
+        offhand: Optional[Any] = None,
     ) -> None:
         """构造装备引擎（配置注入，缺省默认值兜底，D1 B-2/B-4）。
 
@@ -194,9 +360,12 @@ class EquipmentEngine:
             · None → 缺省六部位（DEFAULT_SLOT_NAMES，max=1，工程补白 3）；
             · slots.json 形态 {"slots": {id: def}, "mutual_exclusions": [[...]]}；
             · 平铺形态 {id: {"name", "max", "occupies"}}。
-          def 字段：name（中文名）、max（可装备数量，默认 1）、occupies（占多部位，默认 []）。
+          def 字段：name（中文名）、max（可装备数量，默认 1）、occupies（占多部位，默认 []）、
+          **role**（槽位角色 main/offhand，默认 main；批38 · H7）。
         - mutual_exclusions：互斥组列表 [[slot_a, slot_b], ...]；缺省从 slots 包装形态读取，
           再缺省为 []（框架 5.1 全局互斥表）。
+        - offhand：`settings.equipment_offhand` 配置（{enabled, single_hand_scale}）；缺省/
+          非映射 → 开关关闭（副手规则不生效，行为与本系统引入前逐字段一致；批38 · H7）。
         """
         raw_slots: Mapping[str, Any]
         if slots is None:
@@ -231,7 +400,40 @@ class EquipmentEngine:
                     str(o) for o in (d.get("occupies") or [])
                     if isinstance(o, str) and o
                 ],
+                # 批38 · H7：槽位角色（归一入口；缺省/非法 → main，非法值由校验器红拦）
+                "role": slot_role_of(d),
             }
+        # 批38 · H7：副手开关配置（缺省关闭 → 所有副手判定返回空/原值，回归零影响）
+        self._offhand: Dict[str, Any] = normalize_offhand_config(offhand)
+
+    # ------------------------------------------------------------------
+    # 批38 · H7 副手语义（归一入口的只读读取面；跨模块复用同源判定）
+    # ------------------------------------------------------------------
+    def slot_role(self, slot_id: str) -> str:
+        """槽位角色（main/offhand；未知槽 → main）。"""
+        return slot_role_of(self._slot_def(slot_id))
+
+    def offhand_active(self) -> bool:
+        """副手开关是否启用（`settings.equipment_offhand.enabled`）。"""
+        return bool(self._offhand.get("enabled"))
+
+    def offhand_scale(self) -> float:
+        """单手武器作副手的数值类属性折算比例（默认 0.5，包声明可配）。"""
+        return float(self._offhand.get("single_hand_scale", DEFAULT_OFFHAND_SCALE))
+
+    def penalized_slots(self, player: Any) -> frozenset:
+        """玩家当前处于副手折算/失活的槽位集合（开关关闭 → 空集）。"""
+        return offhand_penalized_slots(player, self._slots, self._offhand)
+
+    def _item_fits_slot(self, slot_id: str, item_slot: str) -> bool:
+        """部位匹配（EQP-02 + 批38 副手放宽）：同槽类型直接通过；副手启用时，
+        主手槽类型的件（如武器）可放进 role=offhand 的槽（「单手武器作副手」的载体）。"""
+        if item_slot == slot_id:
+            return True
+        if not self.offhand_active():
+            return False
+        return (self.slot_role(slot_id) == OFFHAND_ROLE_OFFHAND
+                and self.slot_role(item_slot) == OFFHAND_ROLE_MAIN)
 
     # ------------------------------------------------------------------
     # 工具
@@ -359,7 +561,8 @@ class EquipmentEngine:
         # EQP-02 部位匹配：item.type（装备子类，此处为 ItemInstance.slot）须 = 槽位键
         if not row.slot:
             return {"ok": False, "reason": "slot_mismatch", "message": "这个位置穿不上"}
-        if row.slot != slot:
+        # EQP-02 部位匹配 + 批38 副手放宽（主手件可进 role=offhand 槽；开关关闭时口径不变）
+        if not self._item_fits_slot(slot, row.slot):
             return {"ok": False, "reason": "slot_mismatch", "message": "这个位置穿不上"}
 
         # EQP-03 互斥检查（占用集合 → 互斥）
@@ -513,9 +716,16 @@ class EquipmentEngine:
 
     def aggregate_bonus(self, player: Any) -> Dict[str, Dict[str, float]]:
         """装备加成同层聚合（EQP-06）：各已穿戴件 stats_bonus flat / stats_pct pct
-        同层求和 → 写入 attributes.bonus.flat / pct（equip_snapshot 语义 = attributes.bonus）。"""
+        同层求和 → 写入 attributes.bonus.flat / pct（equip_snapshot 语义 = attributes.bonus）。
+
+        批38 · H7 副手：处于副手折算槽的件（penalized_slots）——
+          · 数值类属性（非 `_pct`、非 GEAR_COMBAT_KEYS）**×offhand_scale**；
+          · 百分比类属性（`_pct` 键）、战斗键（GEAR_COMBAT_KEYS）、stats_pct 钩子 **不激活**。
+        开关关闭 → penalized 空集，逐字段与既有实现一致（回归零影响）。
+        """
         flat: Dict[str, float] = {}
         pct: Dict[str, float] = {}
+        penalized = self.penalized_slots(player)
         if isinstance(player, MutableMapping):
             equipment = player.get("equipment")
             if isinstance(equipment, Mapping):
@@ -533,6 +743,7 @@ class EquipmentEngine:
                     worn = self._resolve_worn_row(player, slot_id, str(item_id))
                     if worn is None:
                         continue
+                    is_penalized = slot_id in penalized
                     # M12.5/veinborn：背包行 dict 形态 stats_bonus 双读
                     bonus = (
                         worn.get("stats_bonus") if isinstance(worn, Mapping)
@@ -542,7 +753,13 @@ class EquipmentEngine:
                         # 批⑧：键 "..._pct" 拆进 pct 层（单位=百分点），其余进 flat
                         # （data.gear_stats.route_bonus_into；旧实例无 _pct 键时与
                         # 原逐键求和行为一致）
-                        route_bonus_into(bonus, flat, pct)
+                        route_bonus_into(
+                            _offhand_filtered_bonus(bonus, self.offhand_scale())
+                            if is_penalized else bonus,
+                            flat, pct,
+                        )
+                    if is_penalized:
+                        continue  # 百分比钩子不激活（H7）
                     pct_map = getattr(worn, "stats_pct", None)  # 钩子（ItemInstance 暂无该字段）
                     if isinstance(pct_map, Mapping):
                         for k, v in pct_map.items():

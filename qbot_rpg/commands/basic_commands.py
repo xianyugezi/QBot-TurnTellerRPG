@@ -1482,11 +1482,19 @@ class EquipmentEngineAdapter:
         slots: Optional[Any] = None,
         mutual_exclusions: Optional[Sequence[Sequence[str]]] = None,
         engine: Optional[EquipmentEngine] = None,
+        offhand: Optional[Any] = None,
     ) -> None:
-        """构造适配器（引擎可注入覆盖；否则以 slots 配置构造真实 EquipmentEngine）。"""
+        """构造适配器（引擎可注入覆盖；否则以 slots/offhand 配置构造真实 EquipmentEngine）。
+
+        offhand = `settings.equipment_offhand`（批38 · H7 副手开关；缺省 None → 关闭）。
+        """
         self._engine = engine if engine is not None else EquipmentEngine(
-            slots=slots, mutual_exclusions=mutual_exclusions,
+            slots=slots, mutual_exclusions=mutual_exclusions, offhand=offhand,
         )
+
+    def penalized_slots(self, player: Any) -> frozenset:
+        """副手折算/失活槽位集合（批38 · H7；转发引擎同源判定，供 equip_mods 等读取点过滤）。"""
+        return self._engine.penalized_slots(player)
 
     @staticmethod
     def _player(ctx: Mapping[str, Any]) -> Optional[MutableMapping[str, Any]]:

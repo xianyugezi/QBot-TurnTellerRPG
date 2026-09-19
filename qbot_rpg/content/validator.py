@@ -35,6 +35,13 @@ import re
 from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 from qbot_rpg.content.field_meta import DEFAULT_CURRENCY_IDS, default_field_meta_table
+from qbot_rpg.data.affinity_keys import (
+    POOL_KINDS,
+    REACTION_AMPLIFY,
+    REACTION_CONFLICT,
+    REACTION_KINDS,
+    affinity_requires,
+)
 from qbot_rpg.content.models import (
     FieldMeta,
     FieldMetaTable,
@@ -658,6 +665,11 @@ class _Checker:
             # 批37 X12：settings.post_battle_recovery 战后恢复段专项
             # （【框架】L294/L298-300 + 3h §4.2/L234；容器 soft_label 泛型短路 → 显式区间红拦）
             self._check_post_battle_recovery(module_name, data)
+            # 批38 · H7 副手：settings.equipment_offhand 开关 + slot_defs.<部位>.role
+            # （段结构/类型/区间红拦 + 「开关关闭却声明副手部位」黄提示，不硬拦）
+            self._check_equipment_offhand(module_name, data)
+            # 批38 · ④ 相性通用层（settings 四段结构/枚举/引用 + 材料相性引用存在性）
+            self._check_affinity(module_name, data)
             # M8 settings.alchemy 段校验（m8_contract_数据与校验 §六 ALC-01~24 + §五）
             # 鸭子类型纯函数；段缺失/空段默认值兜底（alchemy_settings P-6）
             from qbot_rpg.content.alchemy_settings import check_settings_alchemy
@@ -1744,6 +1756,242 @@ class _Checker:
                 # V9（3h L234/L510）：回复过高会击穿「花钱治疗=资源循环」设计
                 self._warn(module_name, path, "Y-13", rule="recovery_ratio_high",
                            value=val, threshold=0.5)
+
+    # ---- 批38 · H7：settings.equipment_offhand 副手开关 + slot_defs.role 部位角色专项 ----
+    def _check_equipment_offhand(self, module_name: str, data: object) -> None:
+        """settings.equipment_offhand 段 + settings.slot_defs.<部位>.role 校验（批38 · H7）。
+
+        依据：docs/深度打造_决策记录.md §一 H7 + §五 5.2（开关默认 false / 关闭零变化）。
+
+        分级：
+          · 段结构错误（null / 非对象）→ **红拦 R-1**（人话提示）；
+          · `enabled` 非布尔 → **红拦 R-1**；
+          · `single_hand_scale` 非数值/布尔/NaN/Inf → **红拦 R-1/R-3**；∉[0,1] → **红拦 R-2**；
+          · `slot_defs.<部位>.role` 非 `main`/`offhand` → **红拦 R-1**（枚举）；
+          · `role=offhand` 但开关未开（缺段 / enabled≠true）→ **黄提示 Y-14**（不硬拦；
+            用户可按自己数据情况先声明部位再开开关，故只提示）。
+        未知键 / 缺键：默认放行（缺段走引擎默认「关闭」）。
+        """
+        if not isinstance(data, Mapping):
+            return
+        base = "settings.equipment_offhand"
+        enabled = False
+        cfg = data.get("equipment_offhand")
+        if cfg is not None:
+            if not isinstance(cfg, Mapping):
+                self._err(module_name, base, "R-1", rule="section_structure",
+                          got=type(cfg).__name__,
+                          msg="equipment_offhand 段要填对象（配置块 { ... }，如 "
+                              "{\"enabled\": true, \"single_hand_scale\": 0.5}）或删掉该段")
+            else:
+                en = cfg.get("enabled")
+                if en is not None and not isinstance(en, bool):
+                    self._err(module_name, f"{base}.enabled", "R-1", rule="type",
+                              expect="bool", got=type(en).__name__)
+                enabled = en is True
+                sc = cfg.get("single_hand_scale")
+                if sc is not None:
+                    scpath = f"{base}.single_hand_scale"
+                    if isinstance(sc, bool) or not isinstance(sc, (int, float)):
+                        self._err(module_name, scpath, "R-1", rule="type", expect="number",
+                                  got=("bool" if isinstance(sc, bool) else type(sc).__name__))
+                    elif math.isnan(float(sc)) or math.isinf(float(sc)):
+                        self._err(module_name, scpath, "R-3", rule="not_a_number", value=sc)
+                    elif not (0.0 <= float(sc) <= 1.0):
+                        self._err(module_name, scpath, "R-2", rule="ratio_out_of_range",
+                                  value=sc, range_min=0, range_max=1)
+        slot_defs = data.get("slot_defs")
+        if not isinstance(slot_defs, Mapping):
+            return
+        for part in sorted(str(k) for k in slot_defs.keys()):
+            sd = slot_defs.get(part)
+            if not isinstance(sd, Mapping) or "role" not in sd:
+                continue
+            role = sd.get("role")
+            path = f"settings.slot_defs.{part}.role"
+            if role not in ("main", "offhand"):
+                self._err(module_name, path, "R-1", rule="enum_invalid", got=role,
+                          allowed=["main", "offhand"])
+                continue
+            if role == "offhand" and not enabled:
+                self._warn(module_name, path, "Y-14", rule="offhand_role_without_switch",
+                           msg="部位角色声明为 offhand（副手），但 settings.equipment_offhand"
+                               ".enabled 未开启 → 副手规则当前不生效（不阻断；开启开关后生效）")
+
+    # ---- 批38 · ④：settings 相性通用层（定义/池/联动/互动 + 跨模块引用存在性）----
+    def _check_affinity(self, module_name: str, data: object) -> None:
+        """相性通用层校验（批38 · ④；打造与深度炼金共用，settings 顶层四段）。
+
+        依据：docs/深度打造_决策记录.md §三 补充 2；原案 §8/§12；引擎 core/affinity.py。
+
+        分级（红拦 = 引用缺失/枚举非法/ID 缺失重复 = 死配置；不硬拦其余）：
+          · `affinities[].id` 缺失/重复 → R-5；`exclusive_pool` 非空但不在池 id 空间 → R-4；
+          · `affinity_pools[].id` 缺失/重复 → R-5；`kind` ∉ {common,exclusive,linkage} → R-1；
+            `entries[].requires_affinity` 不在相性 id 空间 → R-4；
+          · `affinity_linkage[].main/sub/override_pool` 引用缺失 → R-4；
+          · `affinity_reactions[].kind` ∉ {conflict,amplify,reverse} → R-1；
+            conflict/amplify 缺 `pair`（2 个相性）或引用缺失 → R-4；reverse 缺 `from/to`
+            或引用缺失 → R-4；
+          · 材料/图纸（items/equipment 条目 `affinities` 的键）不在相性 id 空间 → R-4
+            （图纸是物品的一种，故同表覆盖「材料 + 图纸」相性声明）。
+        段缺失/空段：不报（无相性 = 通用池仍可查，非死配置）。
+        """
+        if not isinstance(data, Mapping):
+            return
+        base = "settings"
+        raw_aff = data.get("affinities")
+        aff_ids: List[str] = []
+        if raw_aff is not None:
+            if not isinstance(raw_aff, list):
+                self._err(module_name, f"{base}.affinities", "R-1", rule="type",
+                          expect="list", got=type(raw_aff).__name__)
+            else:
+                seen: set = set()
+                for i, e in enumerate(raw_aff):
+                    m = e if isinstance(e, Mapping) else None
+                    path = f"{base}.affinities.{i}"
+                    if m is None:
+                        self._err(module_name, path, "R-1", rule="entry_not_object",
+                                  got=type(e).__name__)
+                        continue
+                    aid = m.get("id")
+                    if not isinstance(aid, str) or not aid:
+                        self._err(module_name, path, "R-5", rule="required_missing", name="id")
+                        continue
+                    if aid in seen:
+                        self._err(module_name, path, "R-5", rule="duplicate_id", id=aid)
+                        continue
+                    seen.add(aid)
+                    aff_ids.append(aid)
+        aff_space = set(aff_ids)
+
+        pool_ids: List[str] = []
+        raw_pools = data.get("affinity_pools")
+        if raw_pools is not None and not isinstance(raw_pools, list):
+            self._err(module_name, f"{base}.affinity_pools", "R-1", rule="type",
+                      expect="list", got=type(raw_pools).__name__)
+        elif isinstance(raw_pools, list):
+            seen_pool: set = set()
+            for i, e in enumerate(raw_pools):
+                m = e if isinstance(e, Mapping) else None
+                path = f"{base}.affinity_pools.{i}"
+                if m is None:
+                    self._err(module_name, path, "R-1", rule="entry_not_object",
+                              got=type(e).__name__)
+                    continue
+                pid = m.get("id")
+                if not isinstance(pid, str) or not pid:
+                    self._err(module_name, path, "R-5", rule="required_missing", name="id")
+                elif pid in seen_pool:
+                    self._err(module_name, path, "R-5", rule="duplicate_id", id=pid)
+                else:
+                    seen_pool.add(pid)
+                    pool_ids.append(pid)
+                kind = m.get("kind")
+                if kind is not None and kind not in POOL_KINDS:
+                    self._err(module_name, f"{path}.kind", "R-1", rule="enum_invalid",
+                              got=kind, allowed=list(POOL_KINDS))
+                entries = m.get("entries")
+                if isinstance(entries, list):
+                    for j, ent in enumerate(entries):
+                        if not isinstance(ent, Mapping):
+                            continue
+                        for req in affinity_requires(ent):
+                            if req not in aff_space:
+                                self._err(module_name, f"{path}.entries.{j}.requires_affinity",
+                                          "R-4", rule="affinity_ref_missing", affinity=req,
+                                          affinity_space=sorted(aff_space))
+        pool_space = set(pool_ids)
+
+        # 专属池引用 / 联动引用
+        for i, e in enumerate(raw_aff if isinstance(raw_aff, list) else []):
+            m = e if isinstance(e, Mapping) else {}
+            ep = m.get("exclusive_pool")
+            if isinstance(ep, str) and ep and ep not in pool_space:
+                self._err(module_name, f"{base}.affinities.{i}.exclusive_pool", "R-4",
+                          rule="pool_ref_missing", pool=ep, pool_space=sorted(pool_space))
+        raw_link = data.get("affinity_linkage")
+        if raw_link is not None and not isinstance(raw_link, list):
+            self._err(module_name, f"{base}.affinity_linkage", "R-1", rule="type",
+                      expect="list", got=type(raw_link).__name__)
+        elif isinstance(raw_link, list):
+            for i, e in enumerate(raw_link):
+                m = e if isinstance(e, Mapping) else None
+                path = f"{base}.affinity_linkage.{i}"
+                if m is None:
+                    self._err(module_name, path, "R-1", rule="entry_not_object",
+                              got=type(e).__name__)
+                    continue
+                for key in ("main", "sub"):
+                    v = m.get(key)
+                    if isinstance(v, str) and v and v not in aff_space:
+                        self._err(module_name, f"{path}.{key}", "R-4",
+                                  rule="affinity_ref_missing", affinity=v,
+                                  affinity_space=sorted(aff_space))
+                op = m.get("override_pool")
+                if isinstance(op, str) and op and op not in pool_space:
+                    self._err(module_name, f"{path}.override_pool", "R-4",
+                              rule="pool_ref_missing", pool=op, pool_space=sorted(pool_space))
+
+        # 材料互动
+        raw_react = data.get("affinity_reactions")
+        if raw_react is not None and not isinstance(raw_react, list):
+            self._err(module_name, f"{base}.affinity_reactions", "R-1", rule="type",
+                      expect="list", got=type(raw_react).__name__)
+        elif isinstance(raw_react, list):
+            for i, e in enumerate(raw_react):
+                m = e if isinstance(e, Mapping) else None
+                path = f"{base}.affinity_reactions.{i}"
+                if m is None:
+                    self._err(module_name, path, "R-1", rule="entry_not_object",
+                              got=type(e).__name__)
+                    continue
+                kind = m.get("kind")
+                if kind not in REACTION_KINDS:
+                    self._err(module_name, f"{path}.kind", "R-1", rule="enum_invalid",
+                              got=kind, allowed=list(REACTION_KINDS))
+                    continue
+                if kind in (REACTION_CONFLICT, REACTION_AMPLIFY):
+                    pair = m.get("pair")
+                    if not (isinstance(pair, (list, tuple)) and len(pair) == 2):
+                        self._err(module_name, f"{path}.pair", "R-4", rule="pair_required",
+                                  kind=kind)
+                        continue
+                    for k, ref in enumerate(pair):
+                        if not isinstance(ref, str) or ref not in aff_space:
+                            self._err(module_name, f"{path}.pair.{k}", "R-4",
+                                      rule="affinity_ref_missing", affinity=ref,
+                                      affinity_space=sorted(aff_space))
+                else:  # reverse
+                    for key in ("from", "to"):
+                        v = m.get(key)
+                        if not isinstance(v, str) or not v:
+                            self._err(module_name, f"{path}.{key}", "R-5",
+                                      rule="required_missing", name=key)
+                        elif v not in aff_space:
+                            self._err(module_name, f"{path}.{key}", "R-4",
+                                      rule="affinity_ref_missing", affinity=v,
+                                      affinity_space=sorted(aff_space))
+
+        # 跨模块：材料/图纸相性声明（items/equipment 条目 affinities 的键）
+        for mod in ("items", "equipment"):
+            entries = self._modules.get(mod)
+            if not isinstance(entries, list):
+                continue
+            for i, e in enumerate(entries):
+                m = e if isinstance(e, Mapping) else None
+                if m is None:
+                    continue
+                aff = m.get("affinities")
+                if not isinstance(aff, Mapping):
+                    continue
+                for key in aff.keys():
+                    if not isinstance(key, str) or not key:
+                        continue
+                    if key not in aff_space:
+                        self._err(mod, f"{mod}.{i}.affinities.{key}", "R-4",
+                                  rule="affinity_ref_missing", affinity=key,
+                                  affinity_space=sorted(aff_space))
 
     # ---- 批18 效果扩展专项：gain_currency / learn_skill ----
     def _check_effects_18(self, module_name: str, data: object) -> None:

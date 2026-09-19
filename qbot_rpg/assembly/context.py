@@ -1806,6 +1806,11 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
     # ctx["equip_engine"] 注入优先，缺省再走默认 6 槽 EquipmentEngine）。
     # 缺省无 slot_defs 配置 → 两键 None，既有 demo 包 6 槽行为零变化。
     _slot_defs = settings.get("slot_defs")
+    # 批38 · H7 副手开关（settings.equipment_offhand；缺省不注入 → 引擎/读取点走「关闭」，
+    # 行为与本系统引入前逐字段一致）。仅当包声明存在才注入 ctx（不改既有 ctx 键集）。
+    _offhand = settings.get("equipment_offhand")
+    if isinstance(_offhand, Mapping):
+        ctx["equipment_offhand"] = dict(_offhand)
     if isinstance(_slot_defs, Mapping) and _slot_defs:
         # 包装形态注入（渲染层 _slot_order/_slot_name 兼容：_slot_order 认
         # {"slots": {...}} 取键序；_slot_name 认包装取内层 name；平铺形态
@@ -1814,7 +1819,8 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
         try:
             from qbot_rpg.commands.basic_commands import EquipmentEngineAdapter  # noqa: PLC0415
 
-            ctx["equip_engine"] = EquipmentEngineAdapter(slots=_slot_defs)
+            ctx["equip_engine"] = EquipmentEngineAdapter(
+                slots=_slot_defs, offhand=_offhand)
         except Exception as exc:  # noqa: BLE001 - 注入失败降级默认（指令壳自兜底 6 槽）
             _LOGGER.warning("equip_engine slot_defs inject failed: %s", exc)
     # resolve_attr_final：status_commands 兜底取最终层（复用已算 attr_final）

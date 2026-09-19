@@ -161,19 +161,32 @@ def test_validate_does_not_write(pack_copy: Path) -> None:
 # =====================================================================================
 # C · 未注册子字段兜底控件 + 标注；动态键空间可增删
 # =====================================================================================
-def test_unregistered_subfield_fallback_control_and_note() -> None:
-    """数据里多出、元数据未登记的键 → 兜底控件（按实际值推断）+ 标注。
+def test_unregistered_subfield_fallback_control_and_note(pack_copy: Path) -> None:
+    """数据里多出、元数据未登记的键 → 兜底控件（按实际值推断）+ 标注「元数据未登记」。
 
     批15 #9：slot_defs 这类「键 → 小结构」的密集映射改键值表格渲染——子键不再逐个出
-    objform 字段，而是表格列（列按值推断）+ 每列标注「元数据未登记」。
+    objform 字段，而是表格列。批38 ③：name/max/role 已登记（走元数据列）；数据里多出的
+    未登记列仍走兜底 + 标注（下列用临时包补一个 `custom` 键验证）。
     """
     d = api.entry_detail("veinborn", "settings", "slot_defs", root=CONTENT)
     field = d["fields"][0]
     assert field["control"] == "kvtable"
     cols = {c["key"]: c for c in field["kv_table"]["columns"]}
-    assert cols["name"]["control"] == "text" and cols["name"]["meta_unregistered"] is True
-    assert cols["max"]["control"] == "number" and cols["max"]["meta_unregistered"] is True
-    assert "未登记" in cols["name"]["meta_note"]
+    # 批38 ③：登记列走元数据（有中文名、不标未登记）
+    assert cols["name"]["control"] == "text" and cols["name"]["meta_unregistered"] is False
+    assert cols["max"]["control"] == "number" and cols["max"]["meta_unregistered"] is False
+    assert cols["role"]["meta_unregistered"] is False and cols["role"]["label"] == "部位角色"
+
+    # 未登记列兜底：临时包里给某部位补一个自定义键 → 该列出兜底控件 + 「未登记」标注
+    pack = pack_copy
+    sf = pack / "veinborn" / "settings.json"
+    data = json.loads(sf.read_text(encoding="utf-8"))
+    data["slot_defs"]["weapon"]["custom"] = 9
+    sf.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    d2 = api.entry_detail("veinborn", "settings", "slot_defs", root=pack)
+    cols2 = {c["key"]: c for c in d2["fields"][0]["kv_table"]["columns"]}
+    assert cols2["custom"]["meta_unregistered"] is True
+    assert "未登记" in cols2["custom"]["meta_note"]
 
 
 def test_unconfigured_open_object_renders_one_field() -> None:
@@ -333,6 +346,10 @@ def test_one_principle_all_object_modules_children_cross_pack() -> None:
                 if val is not None and not isinstance(val, Mapping):
                     continue
                 keys = {f["key"] for f in d["fields"]}
+                # 批38：整体成表条目（whole_table）登记子字段以**表格列**呈现（非 fields 键）
+                if d.get("whole_table") and d["fields"]:
+                    kv = d["fields"][0].get("kv_table") or {}
+                    keys |= {str(c["key"]) for c in kv.get("columns", [])}
                 assert want <= keys, (mod, seg, pack, want - keys)
                 checked += 1
     assert checked >= 4, checked

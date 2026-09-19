@@ -544,6 +544,35 @@ async def test_slot_defs_absent_keeps_default() -> None:
 
 
 # ---------------------------------------------------------------------------
+# 批38 · H7 副手开关注入（settings.equipment_offhand）
+# ---------------------------------------------------------------------------
+async def test_equipment_offhand_injected_and_engine_enabled() -> None:
+    """包声明 settings.equipment_offhand → ctx["equipment_offhand"] 注入 + 引擎启用副手。"""
+    slot_defs = {
+        "weapon": {"name": "武器", "max": 1},
+        "offhand": {"name": "副手", "max": 1, "role": "offhand"},
+    }
+    offhand = {"enabled": True, "single_hand_scale": 0.5}
+    ctx = await make_context(_event(), _deps(
+        _player(),
+        settings=_settings(slot_defs=slot_defs, equipment_offhand=offhand)))
+    assert ctx["equipment_offhand"] == offhand
+    eng = ctx.get("equip_engine")
+    assert eng is not None and eng._engine.offhand_active() is True
+    assert eng._engine.slot_role("offhand") == "offhand"
+
+
+async def test_equipment_offhand_absent_not_injected() -> None:
+    """未声明 → 不注入 ctx["equipment_offhand"]；引擎副手关闭（零行为变化）。"""
+    ctx = await make_context(_event(), _deps(
+        _player(),
+        settings=_settings(slot_defs={"weapon": {"name": "武器"}, "head": {"name": "头部"}})))
+    assert ctx.get("equipment_offhand") is None
+    eng = ctx.get("equip_engine")
+    assert eng is not None and eng._engine.offhand_active() is False
+
+
+# ---------------------------------------------------------------------------
 # M12.5/veinborn 收口：ctx["items"] 合并 equipment 表（item_lib 同库语义）
 # ---------------------------------------------------------------------------
 def _registry_with_equipment() -> Registry:

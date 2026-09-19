@@ -215,7 +215,9 @@ def test_saved_segment_then_listed_as_configured(blank_copy: Path) -> None:
     # 批25：settings 框架登记段 +5（register_gift/register_level/command_gates/
     # rate_limit/message_chunk_len）→ 未配置 32 + 5 = 37
     # 批32 A1：settings 再 +1（pack_protection）→ 38；批37 战后恢复段 → +1 = 39
-    assert le["unconfigured_count"] == 39
+    # 批38：副手开关 equipment_offhand + 相性四段（affinities/affinity_pools/
+    # affinity_linkage/affinity_reactions）→ +5 = 44
+    assert le["unconfigured_count"] == 44
 
 
 # =====================================================================================
@@ -336,7 +338,7 @@ def test_selfcheck_segment_diff_tolerates_pack_specific_key() -> None:
 def test_footer_batch_string_is_current() -> None:
     """页脚批次串随批推进更新（旧批次串不得残留）。"""
     html = HTML.read_text(encoding="utf-8")
-    assert "批37 · 战后恢复" in html
+    assert "批38 · 深度打造地基" in html
     assert "批13.1 · 段入口" not in html
     assert "批13 · 能力可见性" not in html
 

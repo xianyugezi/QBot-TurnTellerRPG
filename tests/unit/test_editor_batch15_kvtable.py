@@ -119,11 +119,12 @@ def test_map_module_exposes_whole_table_entry_and_all_keys() -> None:
 
 
 def test_unconfigured_map_field_still_visible() -> None:
-    """一号原则：框架登记的 map 字段即使包未配置也显示（kvtable 空表可新增）。"""
+    """一号原则：框架登记的字段即使包未配置也显示（kvtable 空表可新增）。"""
     # 用一个未配置的包：demo_blank 的 settings 段仍按框架登记显示
     d = api.entry_detail("demo_blank", "settings", "slot_defs", root=CONTENT)
     keys = {f["key"] for f in d["fields"]}
-    assert "slot_defs" in keys
+    # 批38 ③：slot_defs 登记了值结构子字段（name/max/role）→ 未配置段也按子字段出表单
+    assert {"name", "max", "role"} <= keys
 
 
 def test_kv_table_spec_omits_absent_cells() -> None:

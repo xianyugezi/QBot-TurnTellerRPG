@@ -2697,10 +2697,19 @@ def _module_table() -> Dict[str, ModuleMeta]:
             help="default=兜底条目（必须）；其余键 = items.type（weapon/armor_head/…），"
                  "命中类型优先、未命中回落 default；条目内 stats 走 gear_stats 键空间。"),
         # R6：特殊效果声明（引用 effects 注册表，可带 overrides 覆盖参数）。
+        # 批48 · 43-D：新增 `trigger`（战斗事件时点；只写在符文引用条目 → 不泄漏全局）
+        # 与 `target`（self/enemy，可按符文覆盖动作目标）。
         "effects": FieldMeta(
             type="list", label="特殊效果",
             element=FieldMeta(type="obj", children={
                 "effect": FieldMeta(type="ref", ref_target="effect", label="效果引用"),
+                "trigger": FieldMeta(
+                    type="str", label="触发时点",
+                    help="战斗事件时点（battle_start/action_start/on_hit/turn_end 等，"
+                         "见 core/event_dispatcher.EVENT_POINTS）；只在该符文穿戴者一侧、"
+                         "该时点触发。**被引用的 effects 条目不要写 trigger**（否则全局限触发）。"),
+                "target": FieldMeta(type="str", label="目标",
+                                    help="动作目标覆盖：self/enemy（缺省按被引用效果的动作）。"),
                 "overrides": FieldMeta(type="obj", soft_label=True, label="参数覆盖"),
             })),
         # R7（批48 已裁定 · R-8）：3 阶偏向性 = 偏向某相性（对接批38 相性层）。

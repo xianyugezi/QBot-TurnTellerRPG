@@ -14,6 +14,26 @@
 
 ### Added
 
+- **批51（2026-09-20）**：**触发归属与事件补点**（K，P0 缺口；**装备被动系统的前置**）。
+  口径 `特效整理设计_3_落点与分期.md` §二「批 49」（旧编号 = 本批）+ `特效整理设计_1_修正轴全集.md`
+  §3 P0 第 1 项（I01）+ `装备被动_实现口径.md` §3.3 方案 A。
+  **① 归属过滤**：`core/event_dispatcher` 的 `_iter_candidates`/`dispatch_event` 新增
+  `owner_effect_ids`（本侧拥有集）+ `claimed_effect_ids`（本场被任一持侧认领集，未认领 =
+  全局效果照常触发）——带 `trigger` 的效果只在其**宿主侧**触发；两者缺省 → 全库扫描旧行为。
+  **② 事件补点 `on_kill`**：`EVENT_POINTS` 补 `on_kill` = **我击杀敌**（派发给击杀者侧），
+  与 `death` = 任一侧死亡（派发给死者侧）语义分清；在唯一死亡判定点 `_death_check_side`
+  派发、`dead_mark` 门控恰好一次，覆盖「连段套中击杀」与「BOSS 死亡立即结束」两路径。
+  枚举**唯一源下沉 `data/event_points.py`**（content 层校验器按 `content → {data}` 校验
+  `trigger` 取值域，不反向 import core；`core.event_dispatcher.EVENT_POINTS` 原样再导出）。
+  **③ 校验器**：`trigger` 未登记时点 → **黄提示 Y-19**（分派器只认 EVENT_POINTS，
+  该效果永不触发）、非字符串 → 红拦 R-1（覆盖 effects 与 runes 两处声明面）。
+  **④ 装备触发型效果最小接线**：`data/gear_stats.OWNED_EFFECT_IDS_KEY`（键名唯一源）+
+  `core/equip_mods.worn_passive_effect_ids`（已穿戴件实例 `passives` 经批40 `uid` 定位 →
+  `traits.effects` → effect id 集；复用 `_worn_defs` 副手失活过滤；只读不落缓存）→
+  `_player_combatant` 有装备被动才写 combatant 归属集（无 → 不新增键）。
+  **缺省零变化**：两侧都无归属集 → 全库扫描（既有 16 时点逐字段对拍一致）；
+  未声明归属的旧内容行为不变；装备接线缺省不新增任何键。**不实现完整被动系统**
+  （被动声明字段/相性变体/生效集缓存/展示属后续批）。页脚批次串 →「批51 · 触发归属与事件补点」。
 - **批50（2026-09-20）**：**特效轴地基**（P + 小 K，**不含任何消费点**；口径文档
   `特效整理设计_1_修正轴全集.md` §2/§3 + `特效整理设计_3_落点与分期.md` §1.0/§1.2
   + §二「批48」（旧编号）+ 决策记录 §十三）。

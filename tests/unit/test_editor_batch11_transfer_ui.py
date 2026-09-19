@@ -24,7 +24,7 @@ from qbot_rpg.web import api
 NODE = shutil.which("node")
 REPO = Path(api.repo_root())
 HTML = REPO / "qbot_rpg" / "web" / "static" / "index.html"
-BATCH_NOTE = "批50 · 特效轴地基"
+BATCH_NOTE = "批51 · 触发归属与事件补点"
 STALE_BATCH = "批11 · 内容包导出/导入"
 
 

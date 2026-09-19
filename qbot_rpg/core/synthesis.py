@@ -80,6 +80,10 @@ __all__ = [
     "DEFAULT_MAX_QTY",
     "SynthesisEngine",
     "resolve_recipe",
+    # 批39 · 公用合成 API（给定投入 → 基础产出；供打造深度层调用）
+    "base_output",
+    "requirements_of",
+    "preview_base_output",
 ]
 
 # ---------------------------------------------------------------------------
@@ -673,3 +677,111 @@ class SynthesisEngine:
             "cost_paid": {"coins": need_coins, "gem": need_gem},
             "idempotent": False,
         }
+
+
+# =====================================================================================
+# 批39 · 公用合成 API（「合成」提升为打造与炼金的公用系统）
+#
+# 边界铁律（docs/深度打造_决策记录.md §六）：**打造只做深度层，基础合成走公用层**。
+# 深度打造调用 `preview_base_output`（只读预演）/ `base_output`（标准版产出定义）/
+# `synthesize`（事务落地）三者之一，**不得**另造第二套「投料 → 基础产出」。
+# =====================================================================================
+def base_output(recipe: Mapping[str, Any], ctx: Optional[Mapping[str, Any]] = None) -> dict:
+    """给定配方 → **标准版基础产出**定义（LAY-04a；无玩家状态亦可调用）。
+
+    出参：{ok, item_id, item_name, count（单份）, quality_fixed, quality, traits, awaken,
+      evolution, core, base_effects?, desc}——打造深度层在此之上追加深度层（图纸/相性/
+      随机词条/品质经验/强化/符文/淬炼），不改本函数语义。
+    """
+    return SynthesisEngine().standard_output(recipe, ctx)
+
+
+def requirements_of(recipe: Mapping[str, Any], count: object = 1) -> dict:
+    """给定配方 × 数量 → **投入需求总量**（材料 + cost 金币/宝石），不读玩家状态。
+
+    出参：{count, materials:[{item, count}], cost:{coins, gem}}——数量非法（非正整数）→
+    按 1 计（与 `synthesize` 的数量归一入口同口径）。数量上限**不在此处截断**
+    （上限由 `preview_base_output` / `synthesize` 按 settings.alchemy.max_qty 处理）。
+    """
+    n = _as_int(count)
+    if n is None or n < 1:
+        n = 1
+    materials: List[dict] = []
+    raw_mats = recipe.get("materials")
+    if isinstance(raw_mats, list):
+        for m in raw_mats:
+            if not isinstance(m, Mapping):
+                continue
+            mid = m.get("id")
+            if not isinstance(mid, str) or not mid:
+                continue
+            materials.append({"item": mid, "count": (_as_int(m.get("count")) or 0) * n})
+    raw_cost = recipe.get("cost") if isinstance(recipe.get("cost"), Mapping) else {}
+    return {
+        "count": n,
+        "materials": materials,
+        "cost": {"coins": (_as_int(raw_cost.get("coins")) or 0) * n,
+                 "gem": (_as_int(raw_cost.get("gem")) or 0) * n},
+    }
+
+
+def preview_base_output(
+    ctx: MutableMapping[str, Any],
+    recipe_id: object,
+    count: object = 1,
+    *,
+    settings: Optional[Mapping[str, Any]] = None,
+) -> dict:
+    """公用合成 API：**给定投入 → 基础产出**（只读预演，**不改玩家状态**）。
+
+    深度打造侧调用契约：拿 `base_output`（单份标准版）+ `requirements`（投入总量）+
+    `shortfall`（差额）决定是否进入打造深度层；真正落地仍走 `SynthesisEngine.synthesize`
+    （原子扣料 + 熟练，LAY-04a/LAY-05/CASC-01）。
+
+    校验链与 `synthesize` 一致（GU-01~04）：mode/配方存在/职业达标/synth_allowed →
+    数量归一 + 上限截断（提示不拦，拍板⑤）→ 材料+货币全量差额（不扣）。
+    出参：{ok, reason, message, recipe, recipe_level, job_id, count, advisory, hint,
+      requirements, shortfall, base_output}——`base_output.count` = 单份产出 × count。
+    拒绝场景 `ok=False` 且 `base_output/requirements` 为 None（配方不存在/等级不足/深度未解锁）。
+    """
+    eng = SynthesisEngine(settings=settings if settings is not None
+                          else (ctx.get("settings") if isinstance(ctx, Mapping) else None))
+    chk = eng.check_eligible(ctx, recipe_id)
+    if not chk.get("ok"):
+        return {**chk, "count": None, "advisory": None,
+                "requirements": None, "shortfall": None, "base_output": None}
+    recipe = chk["recipe"]
+    n = _as_int(count)
+    if n is None or n < 1:
+        return {**chk, "ok": False, "reason": "invalid_count", "message": "❌ 数量无效",
+                "count": None, "advisory": None,
+                "requirements": None, "shortfall": None, "base_output": None}
+    cap = eng._max_qty()  # noqa: SLF001 — 同模块公用入口，上限口径单源
+    advisory = None
+    if n > cap:
+        advisory = f"最多一次使用 {cap} 个"
+        n = cap
+    short = eng._material_shortfall(ctx, recipe, n)  # noqa: SLF001 — 同上
+    shortfall = None
+    message = None
+    if short is not None:
+        diff = eng._format_shortfall(ctx, short)  # noqa: SLF001 — 同上
+        shortfall = {"diff": diff, "raw": short}
+        message = f"❌ 材料不足：缺 {diff}"
+    base = eng.standard_output(recipe, ctx)
+    produced = dict(base)
+    produced["count"] = int(base.get("count") or 1) * n
+    return {
+        "ok": shortfall is None,
+        "reason": "materials" if shortfall is not None else None,
+        "message": message,
+        "recipe": recipe,
+        "recipe_level": chk.get("recipe_level"),
+        "job_id": chk.get("job_id"),
+        "count": n,
+        "advisory": advisory,
+        "hint": chk.get("hint"),
+        "requirements": requirements_of(recipe, n),
+        "shortfall": shortfall,
+        "base_output": produced,
+    }

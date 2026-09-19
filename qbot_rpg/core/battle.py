@@ -102,6 +102,7 @@ from qbot_rpg.core.effects import (
     EffectRuntime,
     PipelineResult,
     execute_action,
+    status_stat_modifier_sum,
     tick_after_action,
     tick_turn_end,
 )
@@ -942,39 +943,20 @@ class BattleEngine:
 
     # ------------------------- F-23：S6/S7 上限接线 -------------------------
 
-    def _status_raw(self, inst: Mapping[str, Any]) -> Dict[str, Any]:
-        """状态实例 → 配置 raw（经内容源解析；未注册返回空 dict）。"""
-        d = self._resolver(str(inst.get("status_id", "")), "status")
-        if d is None:
-            return {}
-        return d.raw if hasattr(d, "raw") else d
-
     def _aggregate_boost(self, side: str, stat: str) -> float:
         """F-23（contract_deviations P1-6）：聚合 stat_modifier 效果值并封顶。
 
         - S6 cap_boost：单属性攻防提升 ±100% 满值上限（1b §4.1 S6）；
         - S7 cap_combined：三维组合总加成上限（1b §4.1 S7）。
-        效果值聚合 = 遍历目标状态实例的 stat_modifier 动作按属性求和（百分比加
-        法叠乘前先封顶，1g1c §② 派生累计乘区「加法叠乘 + ≤1.5× 封顶」的 S6/S7
-        上限版），随后消费函数（_apply_boost_to_mult）再乘入技能倍率。
+        效果值聚合 = 目标状态实例的 stat_modifier 动作按属性求和（百分比加法叠乘前
+        先封顶，1g1c §② 派生累计乘区「加法叠乘 + ≤1.5× 封顶」的 S6/S7 上限版），
+        随后消费函数（_apply_boost_to_mult）再乘入技能倍率。
+
+        批48：聚合本身下沉 `effects.status_stat_modifier_sum`（**唯一收口**，与 heal 的
+        `HEAL_TAKEN_STAT` 消费同源）；本方法只保留 S6/S7 封顶（battle 侧口径）。
         """
         rt = self._new_runtime()
-        agg_pct = 0.0
-        for inst in rt.status_instances(side):
-            raw = self._status_raw(inst)
-            actions = raw.get("actions") or []
-            for a in actions:
-                if not isinstance(a, dict):
-                    continue
-                if a.get("type") == "stat_modifier" and a.get("stat") == stat:
-                    v = a.get("value")
-                    if isinstance(v, str) and v.strip().endswith("%"):
-                        try:
-                            agg_pct += float(v.strip().rstrip("%"))
-                        except ValueError:
-                            pass
-                    elif isinstance(v, (int, float)) and not isinstance(v, bool):
-                        agg_pct += float(v)  # 未带 % 视作百分点（F-23 收敛）
+        agg_pct = status_stat_modifier_sum(rt, side, stat)
         # S6 单属性封顶 → S7 三维组合再封顶
         boosted = rt.cap_boost(agg_pct)
         return rt.cap_combined(boosted)

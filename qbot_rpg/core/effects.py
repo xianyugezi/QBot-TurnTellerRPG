@@ -85,6 +85,8 @@ __all__ = [
     "tick_after_action",
     "DEFAULT_PIPELINE_ORDER",
     "BATTLE_SIDES",
+    "HEAL_TAKEN_STAT",
+    "status_stat_modifier_sum",
 ]
 
 # ---------------------------------------------------------------------------
@@ -92,6 +94,13 @@ __all__ = [
 # ---------------------------------------------------------------------------
 
 BATTLE_SIDES: Tuple[str, str] = ("player", "enemy")
+
+# 批48 · 重伤（治疗削减）承载（口径 §〇 结论 7 缺口① / 原案 §9 R6）：
+# 「受治疗量修正」复用**既有** `stat_modifier` 状态动作族（唯一源），stat 取本语义键——
+# 单位=百分点（负=削减、正=增幅），值由**内容包状态声明**（框架不写死数值/上限）；
+# 聚合收口 = `status_stat_modifier_sum`（与 `battle._aggregate_boost` 同源），
+# 由 `heal` L0 动作在**治疗计算处**消费（不新造第二套减益/治疗通道）。
+HEAL_TAKEN_STAT: str = "heal_taken"
 
 # 方位 v0.6 §三.1：方位格 side 四向（reposition 原子枚举，core 层常量；content 校验
 # 同源内联镜像不 cross-import）
@@ -1652,6 +1661,88 @@ def _default_eval_formula(expr: str, ctx: DamageCtx) -> float:
     return evaluate(expr, evaluator)
 
 
+def _status_raw_of(inst: Any, resolver: Any) -> Mapping[str, Any]:
+    """状态实例 → 配置 raw（经 resolver 解析；未注册/解析异常/非 Mapping → {}）。
+
+    批48：原 `battle.BattleEngine._status_raw` 的唯一源迁入此处（battle 经
+    `status_stat_modifier_sum` 复用，不再自持第二套读取）。
+    """
+    sid = ""
+    if isinstance(inst, Mapping):
+        sid = str(inst.get("status_id", ""))
+    if not sid or not callable(resolver):
+        return {}
+    try:
+        defn = resolver(sid, "status")
+    except Exception:  # noqa: BLE001 —— 解析异常按未注册降级
+        return {}
+    if defn is None:
+        return {}
+    raw = defn.raw if hasattr(defn, "raw") else defn
+    return raw if isinstance(raw, Mapping) else {}
+
+
+def status_stat_modifier_sum(runtime: Any, side: str, stat: str) -> float:
+    """状态 `stat_modifier` 动作按属性求和（**唯一聚合收口**，批48 抽自 battle）。
+
+    批48 背景（口径 §〇 结论 7）：
+      · 缺口① 重伤 = 受治疗量修正——由 `heal` L0 动作经本函数取 `HEAL_TAKEN_STAT` 聚合。
+    入参：runtime（EffectRuntime；None/异常 → 0.0 防御降级）、side（"player"/"enemy"）、
+          stat（语义键，如 "atk" / `HEAL_TAKEN_STAT`）。
+    出参：float 百分点合计（**未封顶**；封顶由调用方按各自口径执行——
+          battle 走 S6/S7 `cap_boost`/`cap_combined`，heal 走 `cap_boost`）。
+    值形态：带 `%` 串 → 数值百分点；int/float（非 bool）→ 百分点；其余忽略。
+    """
+    if runtime is None:
+        return 0.0
+    try:
+        instances = runtime.status_instances(side)
+    except Exception:  # noqa: BLE001 —— 运行时缺块/异常 → 零贡献（不阻断主流程）
+        return 0.0
+    resolver = getattr(runtime, "_resolver", None)
+    total = 0.0
+    for inst in instances:
+        raw = _status_raw_of(inst, resolver)
+        actions = raw.get("actions") or []
+        if not isinstance(actions, (list, tuple)):
+            continue
+        for a in actions:
+            if not isinstance(a, Mapping):
+                continue
+            if a.get("type") != "stat_modifier" or a.get("stat") != stat:
+                continue
+            v = a.get("value")
+            if isinstance(v, str) and v.strip().endswith("%"):
+                try:
+                    total += float(v.strip().rstrip("%"))
+                except ValueError:
+                    pass
+            elif isinstance(v, (int, float)) and not isinstance(v, bool):
+                total += float(v)  # 未带 % 视作百分点（F-23 收敛）
+    return total
+
+
+def _apply_heal_taken(value: int, runtime: Any, target: str) -> int:
+    """重伤（治疗削减）消费：受治疗量 ×(1 + heal_taken/100)，下限 0（不反向扣血）。
+
+    值由内容包状态声明（`stat_modifier{stat: HEAL_TAKEN_STAT}`）；封顶复用既有
+    S6 `cap_boost`（±max_boost_pct，可配）→ 削减至多 100%（治疗归零）。
+    runtime 缺/无状态/修正为 0 → 原值返回（未重伤路径逐字段一致）。
+    """
+    if runtime is None or not isinstance(value, int):
+        return value
+    total = status_stat_modifier_sum(runtime, target, HEAL_TAKEN_STAT)
+    if total == 0.0:
+        return value
+    cap = getattr(runtime, "cap_boost", None)
+    if callable(cap):
+        try:
+            total = cap(total)
+        except Exception:  # noqa: BLE001 —— 封顶异常不阻断（按未封顶值继续）
+            pass
+    return max(0, int(round(value * (1.0 + total / 100.0))))
+
+
 def _resolve_side(actor: str, which: str) -> str:
     """L0 动作 target/self/enemy 的相对侧解析（细化_1b §3.1：target 与技能伤害 target 独立）。"""
     if which in ("self", "player"):
@@ -1871,6 +1962,9 @@ def execute_action(
         when = str(action.get("when") or "instant")
         base = int(ctx.snapshot.get(attacker, {}).get("max_hp", 0))
         v = _resolve_value(action.get("value"), base, ctx, "heal")
+        # 批48 · 重伤（治疗削减）：受治疗量修正（状态 stat_modifier{stat: HEAL_TAKEN_STAT}
+        # 聚合，唯一收口 `status_stat_modifier_sum`）——在**治疗计算处**接入；未重伤 → 原值。
+        v = _apply_heal_taken(v, runtime, target)
         if when in ("instant", "on_skill"):
             c = ctx.snapshot.get(target)
             if isinstance(c, dict):

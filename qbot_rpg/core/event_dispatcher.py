@@ -26,8 +26,15 @@ config.chain_depth / _chance_roll）。效果动作执行复用 execute_action�
 事件时点枚举（EVENT_POINTS，模块级常量）：
   battle_start / battle_end / action_start / action_end / turn_start / turn_end /
   status_gain / status_lose / mark_gain / mark_lose / death / revive /
-  on_attack / on_hit / on_skill / season_change
+  on_attack / on_hit / on_skill / on_kill / season_change
 （与 1b §2.5 effects trigger 事件枚举对齐；on_tick 特例二期收编，本期不接）
+
+批51 补点 `on_kill` 的语义（**与 `death` 分清，不得混用**）：
+  · `death`   = **任一侧死亡**，派发给**死者自己**（副作用的 target 相对死者侧）；
+  · `on_kill` = **我击杀敌**，派发给**击杀者侧**（1v1 里的另一侧）——「击杀回血
+    /击杀叠层/击杀免冷却」这类特效写 `on_kill`；写 `death` 会挂到死者身上。
+  两者都在 `battle._death_check_side` 的唯一死亡判定点派发（`dead_mark` 门控，
+  每次击杀恰好一次；同归于尽/战斗已结束 → 不派发 on_kill）。
 """
 
 from __future__ import annotations
@@ -41,6 +48,7 @@ from qbot_rpg.core.effect_types import DamageCtx, chance_roll
 # 2026-09-10 环打破：本模块 → effects 为单向依赖（effects 已改为回调注入，不再
 # reverse import 本模块），故此处可由原「函数内 lazy import」提升为顶层 import。
 from qbot_rpg.core.effects import execute_action, register_event_dispatcher
+from qbot_rpg.data.event_points import EVENT_POINTS as EVENT_POINTS_SOURCE
 
 __all__ = [
     "EVENT_POINTS",
@@ -54,17 +62,10 @@ ON_LOSE_KEY: str = "on_lose"
 ON_EXPIRE_KEY: str = "on_expire"
 ACTIONS_KEY: str = "actions"
 
-# 事件时点权威枚举（1b §2.5 effects trigger 值域对齐 + 状态/印记/战斗扩展）
-EVENT_POINTS: Tuple[str, ...] = (
-    "battle_start", "battle_end",
-    "action_start", "action_end",
-    "turn_start", "turn_end",
-    "status_gain", "status_lose",
-    "mark_gain", "mark_lose",
-    "death", "revive",
-    "on_attack", "on_hit", "on_skill",
-    "season_change",
-)
+# 事件时点权威枚举（批51：唯一源迁至 data 层 `data/event_points.py`——使 content 层
+# 校验器可按分层契约 `content → {data}` 校验 trigger 取值域而无需反向 import core；
+# 本模块**原样再导出**，`from qbot_rpg.core.event_dispatcher import EVENT_POINTS` 不变）。
+EVENT_POINTS: Tuple[str, ...] = EVENT_POINTS_SOURCE
 
 # 状态定义 on_xxx 事件键 → 触发事件映射（status 条目声明在 on_gain/on_lose/on_expire）
 _STATUS_EVENT_KEYS: Dict[str, str] = {

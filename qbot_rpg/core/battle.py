@@ -1058,6 +1058,12 @@ class BattleEngine:
 
         CTB（ACTOR_DEATH 事件位点）：死亡同时同步给调度器（移出队列 + bump
         generation），使死者的在途票据作废、不再产出 ACTOR_READY。
+
+        批51 · `on_kill` 补点：本侧刚死 → **击杀者侧**（1v1 的另一侧）派发
+        `on_kill`（语义 = 「我击杀敌」）。与既有 `death`（= 任一侧死亡，派发给
+        死者自己）**语义相反、方向不同**，两者都在此唯一死亡判定点派发——
+        「连段套中击杀」与「BOSS 死亡立即结束」两种情形各恰好一次（`dead_mark`
+        门控，见 `_mark_dead`）。击杀者亦已死（同归于尽）/ 战斗已结束 → 不派发。
         """
         if self._dead(side) and not self._combat(side).get("dead_mark"):
             self._to_state(STATE_DTH, f"hit/{trigger}")
@@ -1070,6 +1076,12 @@ class BattleEngine:
                 _view = self._ctb.get_actor(side)
                 if _view is not None and _view.alive:
                     self._ctb.mark_dead(side)
+            # 批51：on_kill（击杀者侧）——死者侧已由上方 death 覆盖；此处只给
+            # 另一侧（1v1 唯一击杀者）。击杀者也死（同归于尽）→ 不派发（避免
+            # 给已死单位挂"击杀"触发）。
+            killer = self._opposite(side)
+            if killer in BATTLE_SIDES and not self._dead(killer):
+                self._dispatch_event("on_kill", killer)
             # A4/A5 由调用方按 BOSS 决定即时结束
             return True
         return False

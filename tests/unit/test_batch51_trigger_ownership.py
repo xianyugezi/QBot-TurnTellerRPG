@@ -200,3 +200,270 @@ def _legacy_dispatch(event: str, side: str, s: Mapping[str, Any], reg: Reg) -> L
     return out
 
 
+
+
+# ===========================================================================
+# C. 事件时点枚举（批51 补点）
+# ===========================================================================
+
+def test_event_points_contains_on_kill_and_legacy_16() -> None:
+    """枚举更新：新增 on_kill；既有 16 点一个不丢，且前 16 位顺序不变。"""
+    assert "on_kill" in ed.EVENT_POINTS
+    assert len(ed.EVENT_POINTS) == 17
+    for p in LEGACY_POINTS:
+        assert p in ed.EVENT_POINTS
+    assert ed.EVENT_POINTS[:16] == LEGACY_POINTS
+
+
+def test_event_points_single_source_data_layer() -> None:
+    """唯一源：`core.event_dispatcher.EVENT_POINTS` 即 `data.event_points` 的再导出。"""
+    from qbot_rpg.data.event_points import EVENT_POINTS as src
+
+    assert ed.EVENT_POINTS == src
+
+
+# ===========================================================================
+# D. on_kill（击杀者侧）· 战斗级触发证据
+# ===========================================================================
+PLAYER: Dict[str, Any] = {
+    "max_hp": 500, "hp": 500, "max_mp": 100, "mp": 100, "atk": 100, "dfn": 50,
+    "mag": 50, "spd": 50, "foc": 100, "con": 50, "str": 100, "int": 80,
+    "agi": 50, "spr": 50, "lck": 50, "elem_atk": 0, "name": "P",
+}
+ENEMY: Dict[str, Any] = {
+    "max_hp": 400, "hp": 400, "max_mp": 0, "mp": 0, "atk": 80, "dfn": 40,
+    "mag": 30, "spd": 40, "foc": 50, "con": 50, "str": 80, "int": 30,
+    "agi": 40, "spr": 40, "lck": 10, "elem_atk": 0, "name": "E",
+}
+SEQ = [0.5, 0.5, 0.5, 1.0]
+
+
+class QueueRNG:
+    """确定性随机源（对齐 test_event_dispatcher_battle 风格）。"""
+
+    def __init__(self, seq: List[float]) -> None:
+        self.seq = list(seq)
+        self.i = 0
+
+    def random(self) -> float:
+        v = self.seq[self.i]
+        self.i = (self.i + 1) % len(self.seq)
+        return v
+
+
+def _engine(effects: Optional[Dict[str, dict]] = None,
+            statuses: Optional[Dict[str, dict]] = None) -> Any:
+    from qbot_rpg.core.battle import BattleEngine
+
+    reg = Reg(effects, statuses)
+    eng = BattleEngine(registry=reg, config={})
+    eng._rng = QueueRNG(SEQ)  # noqa: SLF001
+    return eng
+
+
+def _tag_effects() -> Dict[str, dict]:
+    """on_kill（击杀者侧）/ death（死者侧）各挂一个可观测状态。"""
+    return {
+        "kill_tag": {"id": "kill_tag", "type": "special", "trigger": "on_kill",
+                     "actions": [{"type": "status_apply", "status": "s_kill",
+                                  "target": "self"}]},
+        "death_tag": {"id": "death_tag", "type": "special", "trigger": "death",
+                      "actions": [{"type": "status_apply", "status": "s_death",
+                                   "target": "self"}]},
+    }
+
+
+_S_TAGS = {"s_kill": {"id": "s_kill", "type": "buff"},
+           "s_death": {"id": "s_death", "type": "buff"}}
+
+
+def _status_ids(eng: Any, side: str) -> List[str]:
+    return [str(i.get("status_id")) for i in eng._snap["status_state"][side]]  # noqa: SLF001
+
+
+def _spy(eng: Any) -> List[Tuple[str, str, List[str]]]:
+    """包装 `_dispatch_event`，记录 (事件, 侧, side_effect 标识)。
+
+    battle_end 收尾会清 status_state（`_settle` 语义），故 on_kill/death 的触发证据
+    以**派发返回的 side_effects** 为准（先于收尾、不可被清理掩盖）。
+    """
+    calls: List[Tuple[str, str, List[str]]] = []
+    orig = eng._dispatch_event
+
+    def wrapped(event: str, side: str, **kw: Any) -> List[Dict[str, Any]]:
+        out = orig(event, side, **kw)
+        calls.append((event, side,
+                      [str(e.get("status_id") or e.get("type")) for e in out]))
+        return out
+
+    eng._dispatch_event = wrapped  # type: ignore[assignment]
+    return calls
+
+
+def _fired(calls: List[Tuple[str, str, List[str]]], event: str, side: str) -> List[List[str]]:
+    return [c[2] for c in calls if c[0] == event and c[1] == side and c[2]]
+
+
+def test_on_kill_fires_on_killer_side_after_combo_kill() -> None:
+    """player 连段套中击杀敌人 → on_kill 只在**击杀者（player）**侧触发；
+    death 只在**被击杀者（enemy）**侧触发（两侧语义分明、不互换）。"""
+    eng = _engine(_tag_effects(), _S_TAGS)
+    eng.start(PLAYER, ENEMY, random_seed=1)
+    calls = _spy(eng)
+    eng._snap["enemy"]["hp"] = 1  # noqa: SLF001 —— 一击必杀
+    eng._rng = QueueRNG(SEQ)     # noqa: SLF001
+    eng.player_act("normal")
+    assert eng._snap["enemy"]["hp"] <= 0, "enemy 应被击杀"  # noqa: SLF001
+    assert _fired(calls, "on_kill", "player") == [["s_kill"]], \
+        f"击杀者侧应触发 on_kill，实际 {calls}"
+    assert _fired(calls, "on_kill", "enemy") == [], "被击杀者侧不得触发 on_kill"
+    assert _fired(calls, "death", "enemy") == [["s_death"]], \
+        f"被击杀者侧应触发 death，实际 {calls}"
+    assert _fired(calls, "death", "player") == [], "击杀者侧不得触发 death"
+
+
+def test_on_kill_fires_once_per_kill() -> None:
+    """每次击杀恰好触发一次（dead_mark 门控；不因多段/收尾重复派发）。"""
+    eng = _engine(_tag_effects(), _S_TAGS)
+    eng.start(PLAYER, ENEMY, random_seed=1)
+    calls = _spy(eng)
+    eng._snap["enemy"]["hp"] = 1  # noqa: SLF001
+    eng._rng = QueueRNG(SEQ)     # noqa: SLF001
+    eng.player_act("normal")
+    assert len(_fired(calls, "on_kill", "player")) == 1, f"应恰好一次，实际 {calls}"
+
+
+def test_on_kill_boss_immediate_end_still_fires() -> None:
+    """BOSS 死亡立即结束（A5）路径：on_kill 仍在结束前触发（钩在死亡判定后、
+    `_resolve_battle_end` 之前）。"""
+    eng = _engine(_tag_effects(), _S_TAGS)
+    eng.start(PLAYER, ENEMY, random_seed=1)
+    calls = _spy(eng)
+    eng._snap["enemy"]["hp"] = 1  # noqa: SLF001
+    eng._snap["enemy"]["tier"] = "boss"  # noqa: SLF001
+    eng._rng = QueueRNG(SEQ)     # noqa: SLF001
+    eng.player_act("normal")
+    assert eng.finished, "BOSS 死亡应立即结束"
+    kill_at = [i for i, c in enumerate(calls) if c[0] == "on_kill" and c[1] == "player"]
+    end_at = [i for i, c in enumerate(calls) if c[0] == "battle_end"]
+    assert kill_at, f"应触发 on_kill，实际 {calls}"
+    assert end_at and kill_at[0] < end_at[0], f"on_kill 应在 battle_end 之前：{calls}"
+
+
+def test_on_kill_enemy_kills_player_fires_on_enemy() -> None:
+    """反向：敌人击杀玩家 → on_kill 触发在 enemy 侧（击杀者是哪侧就哪侧）。"""
+    eng = _engine(_tag_effects(), _S_TAGS)
+    eng.start(PLAYER, ENEMY, random_seed=1)
+    calls = _spy(eng)
+    eng._snap["player"]["hp"] = 1  # noqa: SLF001
+    eng._rng = QueueRNG(SEQ)     # noqa: SLF001
+    eng.do_action("enemy", {"type": "normal"})
+    assert eng._snap["player"]["hp"] <= 0, "player 应被击杀"  # noqa: SLF001
+    assert _fired(calls, "on_kill", "enemy") == [["s_kill"]], \
+        f"击杀者（enemy）侧应触发 on_kill，实际 {calls}"
+    assert _fired(calls, "death", "player") == [["s_death"]], "被击杀者侧应触发 death"
+
+
+def test_on_kill_respects_owner_scope_from_combatant() -> None:
+    """战斗级归属：combatant 带 `OWNED_EFFECT_IDS_KEY` 时按归属过滤——
+    未拥有 kill_tag 的一侧即使击杀也不触发（键存在（含空集）= 归属作用域生效）。"""
+    from qbot_rpg.data.gear_stats import OWNED_EFFECT_IDS_KEY
+
+    eng = _engine(_tag_effects(), _S_TAGS)
+    eng.start(PLAYER, ENEMY, random_seed=1)
+    calls = _spy(eng)
+    eng._snap["player"][OWNED_EFFECT_IDS_KEY] = ["kill_tag"]  # noqa: SLF001
+    eng._snap["enemy"][OWNED_EFFECT_IDS_KEY] = []             # noqa: SLF001 —— 不拥有
+    eng._snap["player"]["hp"] = 1  # noqa: SLF001
+    eng._rng = QueueRNG(SEQ)     # noqa: SLF001
+    eng.do_action("enemy", {"type": "normal"})
+    assert eng._snap["player"]["hp"] <= 0  # noqa: SLF001
+    assert _fired(calls, "on_kill", "enemy") == [], \
+        "enemy 归属集为空 → 不得触发 kill_tag（不串）"
+    assert _fired(calls, "death", "player") == [], \
+        "player 归属集不含 death_tag → 全局扫描已被归属过滤取代"
+    # 同一注册表下，若该侧拥有 → 照常触发（证明过滤的是归属、不是效果本身）
+    eng2 = _engine(_tag_effects(), _S_TAGS)
+    eng2.start(PLAYER, ENEMY, random_seed=1)
+    calls2 = _spy(eng2)
+    eng2._snap["player"][OWNED_EFFECT_IDS_KEY] = ["death_tag"]  # noqa: SLF001
+    eng2._snap["player"]["hp"] = 1  # noqa: SLF001
+    eng2._rng = QueueRNG(SEQ)     # noqa: SLF001
+    eng2.do_action("enemy", {"type": "normal"})
+    assert _fired(calls2, "death", "player") == [["s_death"]], f"实际 {calls2}"
+
+
+def test_owned_effect_ids_helper_absent_key_is_none() -> None:
+    """`_owned_effect_ids` 键缺省 / 畸形 → None（= 全库扫描旧行为）；键在 → 列表。"""
+    from qbot_rpg.data.gear_stats import OWNED_EFFECT_IDS_KEY
+
+    eng = _engine(_tag_effects(), _S_TAGS)
+    eng.start(PLAYER, ENEMY, random_seed=1)
+    assert eng._owned_effect_ids("player") is None            # noqa: SLF001
+    eng._snap["player"][OWNED_EFFECT_IDS_KEY] = []            # noqa: SLF001
+    assert eng._owned_effect_ids("player") == []              # noqa: SLF001
+    eng._snap["player"][OWNED_EFFECT_IDS_KEY] = ["a", "", "b"]  # noqa: SLF001
+    assert eng._owned_effect_ids("player") == ["a", "b"]      # noqa: SLF001
+    eng._snap["player"][OWNED_EFFECT_IDS_KEY] = "oops"        # noqa: SLF001
+    assert eng._owned_effect_ids("player") is None            # noqa: SLF001
+
+
+# ===========================================================================
+# E. 校验器（未知时点黄提示 / 非字符串红拦 / 缺省静默）
+# ===========================================================================
+
+def _rules(rep: Any) -> Tuple[List[str], List[str]]:
+    return ([str(e.detail.get("rule")) for e in rep.errors],
+            [str(w.detail.get("rule")) for w in rep.warnings])
+
+
+def test_validator_known_event_point_silent() -> None:
+    """已登记时点（含新补 on_kill）→ 零红零黄。"""
+    from qbot_rpg.content.validator import check_pack
+
+    for trig in ("on_kill", "death", "on_hit", "battle_start"):
+        rep = check_pack({"effects": [{"id": "a", "type": "special",
+                                       "trigger": trig, "actions": []}]})
+        assert _rules(rep) == ([], []), (trig, _rules(rep))
+
+
+def test_validator_unknown_event_point_yellow() -> None:
+    """未登记时点 → 黄提示 Y-19（不硬拦），且提示里带已知时点键空间。"""
+    from qbot_rpg.content.validator import check_pack
+
+    rep = check_pack({"effects": [{"id": "a", "type": "special",
+                                   "trigger": "on_kil", "actions": []}]})
+    errs, warns = _rules(rep)
+    assert errs == []
+    assert warns == ["trigger_event_unknown"]
+    assert "on_kill" in rep.warnings[0].detail.get("key_space", [])
+
+
+def test_validator_non_string_trigger_red() -> None:
+    """`trigger` 非字符串 → 红拦 R-1（soft 展示键的泛型校验补白）。"""
+    from qbot_rpg.content.validator import check_pack
+
+    rep = check_pack({"effects": [{"id": "a", "type": "special",
+                                   "trigger": 3, "actions": []}]})
+    assert _rules(rep) == (["type"], [])
+
+
+def test_validator_absent_trigger_silent() -> None:
+    """缺 `trigger` / 空串 → 放行（非事件型效果）。"""
+    from qbot_rpg.content.validator import check_pack
+
+    for entry in ({"id": "a", "type": "special", "actions": []},
+                  {"id": "a", "type": "special", "trigger": "", "actions": []}):
+        assert _rules(check_pack({"effects": [entry]})) == ([], [])
+
+
+def test_validator_rune_ref_trigger_checked() -> None:
+    """符文效果引用条目的 `trigger` 同样受校验（批48 声明面）。"""
+    from qbot_rpg.content.validator import check_pack
+
+    rep = check_pack({"runes": [{
+        "id": "r", "tier": 1, "family": "f",
+        "by_equip_type": {"default": {"stats": {"atk": 1}}},
+        "effects": [{"effect": "fx", "trigger": "on_kil"}],
+    }]})
+    assert _rules(rep)[1] == ["trigger_event_unknown"]

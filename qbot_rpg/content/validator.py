@@ -44,6 +44,7 @@ from qbot_rpg.data.affinity_keys import (
     REACTION_KINDS,
     affinity_requires,
 )
+from qbot_rpg.data.event_points import EVENT_POINTS
 from qbot_rpg.data.gear_stats import (
     GEAR_DISPLAY_KEYS,
     GEAR_EFFECT_KEYS,
@@ -663,6 +664,11 @@ class _Checker:
         # 专项（泛型 R-1/R-2/R-4 仍在下方逐条目跑；本钩子补「仅在该 type 下才要求」的键）。
         if module_name == "effects":
             self._check_effects_18(module_name, data)
+        # 批51 · 事件补点：`trigger` 时点取值域专项（effects 条目 + runes 效果引用条目）。
+        # 未知时点 → 黄提示 Y-19（分派器只认 EVENT_POINTS，未知值 = 永不触发）；
+        # 非字符串 → 红拦 R-1。唯一源 data/event_points.EVENT_POINTS（不反向 import core）。
+        if module_name in ("effects", "runes"):
+            self._check_effect_trigger_points(module_name, data)
         # 逐条目校验
         for idx, entry in self._iter_entries(module_name, data, mmeta):
             self._check_entry(module_name, idx, entry, mmeta)
@@ -2770,6 +2776,58 @@ class _Checker:
                 self._check_gain_currency(module_name, base, emap, currency_ids)
             elif etype == "learn_skill":
                 self._check_learn_skill(module_name, base, emap)
+
+    def _check_effect_trigger_points(self, module_name: str, data: object) -> None:
+        """`trigger` 事件时点取值域校验（批51 · 事件补点）。
+
+        依据：`特效整理设计_1_修正轴全集.md` §3 P0 第 1 项（I01 触发时点）；
+        唯一源 `data/event_points.EVENT_POINTS`（content 层按分层契约 `content → {data}`
+        只依赖 data 层，**不**反向 import core）。
+
+        分级：
+          · `trigger` 缺省 / 空串 → 放行（非事件型效果：主动作与状态 on_xxx 走各自链路）；
+          · 非字符串 → **红拦 R-1**（`effects.trigger` 在 field_meta 里是 soft 展示键，
+            泛型类型校验不覆盖，故在此补齐）；
+          · 值 ∉ EVENT_POINTS → **黄提示 Y-19**（拼错 / 自造 / 未来时点：分派器只认
+            EVENT_POINTS，该效果**永不触发**；不硬拦——允许内容包先行声明未来时点，
+            对齐批50「未知轴黄提示 Y-18」的既有口径）。
+
+        覆盖两处声明面（批48 起 `trigger` 实际被书写的两处）：
+          · `effects.<idx>.trigger`；
+          · `runes.<idx>.effects.<j>.trigger`（符文效果引用条目）。
+        """
+        if not isinstance(data, list):
+            return
+        known = tuple(EVENT_POINTS)
+        for idx, entry in enumerate(data):
+            emap = self._as_mapping(entry)
+            if emap is None:
+                continue
+            base = f"{module_name}.{idx}"
+            if module_name == "effects":
+                pairs: List[Tuple[str, Mapping[str, object]]] = [(f"{base}.trigger", emap)]
+            elif module_name == "runes":
+                rows = emap.get("effects")
+                rows = rows if isinstance(rows, list) else []
+                pairs = [
+                    (f"{base}.effects.{j}.trigger", r)
+                    for j, r in enumerate(rows) if isinstance(r, Mapping)
+                ]
+            else:  # pragma: no cover —— 调用点只传 effects/runes
+                pairs = []
+            for path, bag in pairs:
+                tv = bag.get("trigger")
+                if tv is None or tv == "":
+                    continue
+                if not isinstance(tv, str):
+                    self._err(module_name, path, "R-1", rule="type",
+                              expect="str", got=type(tv).__name__)
+                    continue
+                if tv not in known:
+                    self._warn(module_name, path, "Y-19", rule="trigger_event_unknown",
+                               event=tv, key_space=list(known),
+                               msg=f"未登记的触发时点「{tv}」：分派器只认 EVENT_POINTS，"
+                                   "该效果在当前框架下不会触发（拼写错误？或需先由框架登记该时点）")
 
     def _check_gain_currency(
         self, module_name: str, base: str, entry: Mapping[str, object],

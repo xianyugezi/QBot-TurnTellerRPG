@@ -650,10 +650,11 @@ async def test_register_combine_commands() -> None:
         assert router.has(name), name
         spec = router.get(name)
         assert spec is not None and spec.whitelisted, name
-    # 既有指令不因本批追加而丢失
-    for name in (SYNTH_CMD, ALCHEMY_CMD, FEED_CMD, INHERIT_CMD, INHERIT_SUPER_CMD,
+    # 既有指令不因本批追加而丢失（/合成 批39 归位 synth_commands，不在此列）
+    for name in (ALCHEMY_CMD, FEED_CMD, INHERIT_CMD, INHERIT_SUPER_CMD,
                  CONFIRM_CMD, ABANDON_CMD, RESUME_CMD, DECOMPOSE_CMD):
         assert router.has(name), name
+    assert not router.has(SYNTH_CMD)  # /合成 唯一注册方 = synth_commands
 
 
 async def test_register_copy_handler_injectable_ctx() -> None:

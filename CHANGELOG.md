@@ -22,7 +22,8 @@
   **缺口②层数型增益**：`_aggregate_boost` 改为按状态实例 `stacks` **乘算**（上限 = 状态包声明
   `max_stack`，缺省回落 `config.stack_default_max`）——聚合体下沉 `effects.status_stat_modifier_sum`
   （battle 只保留 S6/S7 封顶）；附**逐字段回归对拍**（批48 前算法逐字复制为基准，非 stack 路径全等）。
-  **战斗接线**：`core/runes.py` 新增 `rune_effect_refs_of` / `active_rune_effect_refs`，
+  **战斗接线**：`core/runes.py` 新增 `rune_effect_refs_of`；ctx 级取数 `active_rune_effect_refs`
+  落 **新模块 `core/rune_battle.py`**（组合层，避免 `runes ↔ equipment` 架构环），
   `EquipmentEngine.active_rune_effects`（同一 worn 枚举 + 同一 `active_rune_sockets`，副手失活继承），
   `dispatch_event` 新增 `extra_candidates`（缺省 None 零破坏），`BattleEngine._rune_candidates` 按侧/时点
   执行符文声明效果（`combatant.rune_effects` 随快照往返；无符文不新增键）；符文施加来源按次区分

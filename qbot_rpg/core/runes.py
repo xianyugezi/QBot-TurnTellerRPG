@@ -1,8 +1,9 @@
 """批46 · 符文地基（43-A）——符文定义解析层（qbot_rpg/core/runes.py）。
 
 定位：符文**定义/跨装备类型差异表/3 合 1 判定/1 阶数值求值**的纯解析层，批48（43-D）新增
-**2/3 阶效果引用解析**（`rune_effect_refs_of` / `active_rune_effect_refs`）——供战斗接线按侧、
-按时点执行；效果语义仍**一律引用 `effects` 注册表**（口径 §三.2），本层不内联执行语义。
+**2/3 阶效果引用解析**（`rune_effect_refs_of`；ctx 级取数入口
+`core/rune_battle.active_rune_effect_refs`）——供战斗接线按侧、按时点执行；
+效果语义仍**一律引用 `effects` 注册表**（口径 §三.2），本层不内联执行语义。
 批47（43-B）在此新增 **1 阶数值贡献求值**
 （`rune_stats_of` / `sum_rune_stats`）：差异表解析（default + 覆盖）**只在此求值处发生**，
 不在数据层展开成多份；输出键取自 `data/gear_stats.GEAR_NUMERIC_KEYS`（唯一源）。
@@ -46,10 +47,11 @@
        「差异解析 + 键白名单 + 数值清洗」；**孔位激活/副手失活/聚合路由都不在本层**——
        分别归 `core/jewel.active_rune_sockets`（唯一孔位读取入口）与
        `core/equipment.aggregate_bonus`（唯一聚合入口）。本层零 gear_stats 键新增。
-  R-7  **2/3 阶效果引用解析**（批48 · 43-D）：`rune_effect_refs_of` / `active_rune_effect_refs`
-       只做「差异解析 + 引用归一」；效果语义**一律引用 effects 注册表**（§三.2），触发
-       时点由符文引用条目的 `trigger` 声明（不写进注册表 → 不产生全局触发泄漏），
-       只对其**穿戴者**侧生效；真正执行在 `core/battle._rune_candidates`。
+  R-7  **2/3 阶效果引用解析**（批48 · 43-D）：`rune_effect_refs_of` 只做「差异解析 + 引用
+       归一」（ctx 级收集入口 = `core/rune_battle.active_rune_effect_refs`，避免
+       runes↔equipment 模块级环）；效果语义**一律引用 effects 注册表**（§三.2），触发时点
+       由符文引用条目的 `trigger` 声明（不写进注册表 → 不产生全局触发泄漏），只对其
+       **穿戴者**侧生效；真正执行在 `core/battle._rune_candidates`。
   R-8  **3 阶偏向性**（批48 · 43-D；口径 Q7 默认口径 = 偏向某相性）：`bias =
        {affinity, bonus_pct}`，宿主装备主/副相性（批38 `core/affinity.rank_affinities`）
        命中 → 该符文数值贡献 ×(1+bonus_pct/100)；未命中/无 bias → 原值（逐字段一致）。
@@ -89,7 +91,6 @@ __all__ = [
     "RUNE_TYPE",
     "RUNE_UPGRADE_COUNT",
     # 纯解析
-    "active_rune_effect_refs",
     "by_equip_type_of",
     "next_rune_tier",
     "resolve_by_equip_type",
@@ -441,35 +442,3 @@ def rune_effect_refs_of(rune_def: Any, equip_type: Any = None) -> List[Dict[str,
                 ref[key] = e[key]
         out.append(ref)
     return out
-
-
-def active_rune_effect_refs(ctx: Any, jewel: Any = None) -> List[Dict[str, Any]]:
-    """**已穿戴件激活符文的全部效果引用**（战斗接线取数唯一入口；孔位经
-    `jewel.active_rune_sockets`）。
-
-    链路：worn 枚举（复用 `EquipmentEngine` 唯一枚举）→ `active_rune_sockets`
-    （**唯一孔位读取入口**，副手失活自动继承）→ 每枚符文按 `items.type` 差异解析
-    → 汇总效果引用。缺 runes/jewel/数据源/总闸关 → []（零贡献，不抛）。
-    """
-    c = _as_mapping(ctx)
-    if not _as_mapping(c.get("runes")):
-        return []
-    try:  # lazy：core.equipment 顶层 import core.runes（避免模块级环）
-        from qbot_rpg.core.equipment import EquipmentEngine
-        from qbot_rpg.core.jewel import JewelSystem
-    except Exception:  # noqa: BLE001 —— 依赖不可用 → 零贡献（不阻断战斗装配）
-        return []
-    jw = jewel if jewel is not None else c.get("jewel")
-    if jw is None:
-        try:
-            jw = JewelSystem(settings=c.get("settings"))
-        except Exception:  # noqa: BLE001 —— 设置形态异常 → 零贡献
-            return []
-    engine = EquipmentEngine(
-        slots=c.get("slots"), offhand=c.get("equipment_offhand"),
-        runes=c.get("runes"), items=c.get("items"), jewel=jw,
-    )
-    try:
-        return engine.active_rune_effects(c.get("player"))
-    except Exception:  # noqa: BLE001 —— 读取失败按无符文效果（不阻断装配）
-        return []

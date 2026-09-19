@@ -1972,7 +1972,7 @@ class BattleEngine:
         """该侧战斗单位携带的**符文效果引用** → 事件候选（批48 · 43-D）。
 
         数据源 = 快照 combatant 的 `rune_effects`（装配层经
-        `core/runes.active_rune_effect_refs` 从激活孔位收集；键随快照往返，
+        `core/rune_battle.active_rune_effect_refs` 从激活孔位收集；键随快照往返，
         续战不丢）。只取 `trigger == event` 的引用；动作语义仍由 effects 注册表
         定义（本侧不内联）。
 

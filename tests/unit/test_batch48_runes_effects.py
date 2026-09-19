@@ -446,7 +446,7 @@ def _player_ctx(item_id: str, socket_row: list, slot: str = "weapon",
 
 def test_active_rune_effect_refs_uses_active_sockets() -> None:
     """取数经 jewel.active_rune_sockets：装符文 → 有 refs；空孔 → []。"""
-    from qbot_rpg.core.runes import active_rune_effect_refs
+    from qbot_rpg.core.rune_battle import active_rune_effect_refs
 
     ctx = _player_ctx("sword", ["r_stack", None, None])
     refs = active_rune_effect_refs(ctx)
@@ -456,7 +456,7 @@ def test_active_rune_effect_refs_uses_active_sockets() -> None:
 
 def test_active_rune_effect_refs_offhand_inactive() -> None:
     """副手失活继承：同件挪作副手 → 符文效果 refs 为空（active_rune_sockets → []）。"""
-    from qbot_rpg.core.runes import active_rune_effect_refs
+    from qbot_rpg.core.rune_battle import active_rune_effect_refs
 
     ctx = _player_ctx("sword", ["r_stack", None, None])
     ctx["player"]["equipment"] = {"offhand": ctx["player"]["equipment"]["weapon"]}
@@ -465,7 +465,7 @@ def test_active_rune_effect_refs_offhand_inactive() -> None:
 
 def test_active_rune_effect_refs_switch_off_and_missing_sources() -> None:
     """总闸关 / 缺 runes / 缺 player → 零 refs（防御降级，不抛）。"""
-    from qbot_rpg.core.runes import active_rune_effect_refs
+    from qbot_rpg.core.rune_battle import active_rune_effect_refs
 
     ctx = _player_ctx("sword", ["r_stack", None, None])
     ctx["settings"]["deep_craft"]["enabled"] = False

@@ -220,9 +220,11 @@ def test_settings_field_meta_exposes_forge_switch_and_mode_enum() -> None:
     assert fm.children["enabled"].type == "bool"
     assert fm.children["enabled"].label == "是否启用深度打造"
     assert fm.children["enabled"].help and fm.children["enabled"].default is False
-    # 合成 + 炼金路径开关 = 既有 alchemy.mode 枚举（三态可见可配；label/help 未被改动）
+    # 合成 + 炼金路径开关 = 既有 alchemy.mode 枚举（三态可见可配；批39 补中文名 + 说明卡）
     mode_fm = settings_meta.fields["alchemy"].children["mode"]
     assert mode_fm.type == "enum" and mode_fm.enum == MODE_VALUES
+    assert mode_fm.label and mode_fm.help
+    assert "simple" in mode_fm.help and "deep_craft" in mode_fm.help
 
 
 def test_recipe_module_is_enableable_with_chinese_label() -> None:

@@ -1254,7 +1254,11 @@ def slots_module_meta() -> ModuleMeta:
 # settings.alchemy 段 FieldMeta（契约 §五 全字段表）
 ALCHEMY_SETTINGS_FIELD_DEFS: Dict[str, FieldMeta] = {
     # ALC-01（L410）
-    "mode": FieldMeta(type="enum", enum=MODE_VALUES, default="full"),
+    "mode": FieldMeta(type="enum", enum=MODE_VALUES, default="full", label="模块模式",
+                      help="合成 / 炼金启用路径三态（批39）：full=三层漏斗（合成 + 炼金 + "
+                           "深度炼金）；simple=**仅合成层**（公用；无炼金层/深度炼金/职业等级/"
+                           "特性/能量条）；off=关闭（合成层亦拒绝）。打造路径另由 "
+                           "settings.deep_craft.enabled 控制。"),
     # ALC-02（L411/QLT-02/03/05）值形态 [lo,hi] 或 {min,max}【工程补白 P-1】
     "quality_tiers": FieldMeta(type="obj"),
     # ALC-03（L412/QLT-04）

@@ -205,8 +205,8 @@ def test_old_max_by_rarity_key_not_consumed() -> None:
 # ---------------------------------------------------------------------------
 # C. 每 N 级特殊词条
 # ---------------------------------------------------------------------------
-def test_one_affix_per_four_levels_4_then_8() -> None:
-    """达 4 级得 1 条；再达 8 级得第 2 条（跨度 4；确定性 RNG 可复现）。"""
+def test_one_affix_per_four_levels_4_8_12() -> None:
+    """达 4 级得 1 条、8 级 2 条、12 级 3 条（跨度 4；确定性 RNG 可复现）。"""
     ctx = make_ctx(quality_level=6, enhance=3, atk=27.0, affinities={"moon": 10.0},
                    rng=random.Random(7))
     out4 = cmd_enhance(parse_command("/强化 铁剑"), ctx)
@@ -220,6 +220,13 @@ def test_one_affix_per_four_levels_4_then_8() -> None:
     assert "获得特殊词条" in out8
     got8 = list(_row_of(ctx)["enhance_affixes"])
     assert len(got8) == 2 and got8[0] == got4[0] and got8[1] != got4[0]
+    # 直接推进到 +11 再强化到 +12 → 第 3 条（池 3 条候选齐抽）
+    ctx["player"]["equipment"]["weapon"]["slot_level"] = 11
+    _row_of(ctx)["enhance_level"] = 11
+    out12 = cmd_enhance(parse_command("/强化 铁剑+11"), ctx)
+    assert "获得特殊词条" in out12
+    got12 = list(_row_of(ctx)["enhance_affixes"])
+    assert len(got12) == 3 and got12[:2] == got8
 
 
 def test_info_shows_affix_status_row() -> None:

@@ -131,7 +131,7 @@
     "enhance_roll_line": "{name} → {name}+{to}\n成功率 {rate}%\n基础 {base} + 幸运 {luck}",
     "enhance_roll_line_luck_off": "{name} → {name}+{to}\n成功率 {rate}%\n（幸运修正已关）",
     "enhance_success": "✅ 强化成功\n{attr} {old} → {new}",
-    "enhance_affix_gain": "✨ 获得特殊词条：{affix}",
+    "enhance_affix_gain": "获得特殊词条：{affix}",
     "enhance_fail_low": "❌ 强化失败\n装备保持不变",
     "enhance_fail_high": "❌ 强化失败，等级 -1\n{name}+{cur} → {name}+{down}",
     "enhance_protect_saved": "❌ 强化失败\n保护石抵消掉级（消耗 1 颗）\n{name}+{cur} 保持不变",

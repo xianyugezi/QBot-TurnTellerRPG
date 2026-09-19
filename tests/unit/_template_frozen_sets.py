@@ -19,6 +19,8 @@ from __future__ import annotations
 # 全表占位符允许名（2026-09-12 定格；新增占位符名必须在此登记）。
 # 批36 · 采集/挖掘：新增 point / which / minutes（gather_* 模板键）。
 # 批37 · 战后恢复：新增 mp_max（battle_settle_recovery 模板键）。
+# 批41 · 深度打造：新增 fixed / floor / free / grade / kinds / min / qlevel
+#   （deep_craft_* 模板键）。
 FROZEN_PLACEHOLDERS = frozenset("""
 a action actor aid amount amt ann assistant atk attacker attr attr_name b base blocks bonus boss
 brief budget candidates cap card caught chain change child cmd cn cnt coin_text coins_have
@@ -38,7 +40,7 @@ result reveal_text round rumor scales score season secs seen seg segments seq sh
 skill skill_name slot slots source sp spot spot_name src state status statuses stone_have stones
 streak successes summary tail target tasks temp text th tier time title title_id tname to total
 total_pages traits traits_max traits_used ts turn turns turns_suffix type unit units usage used
-v val value var weak weather when which word world
+v val value var weak weather when which word world fixed floor free grade kinds min qlevel
 """.split())
 
 # 允许的宽度 WARN（key, 行号, 估算半角宽）——超出即新增 WARN，门禁失败。

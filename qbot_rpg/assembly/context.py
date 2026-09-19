@@ -1338,6 +1338,9 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
         "battle_snapshot": None,  # 战斗接线注入位（即时调合 battle_alchemy_used）
         "battle_alchemy_engine": None,  # 战斗接线注入位（BattleAlchemyEngine）
         "upgrade_unlocks": {},  # 玩家级解锁表（配方合成/进化持久化，装配层回填）
+        # 批41 · 深度打造：已学图纸表（{图纸id: true}，ps 持久化；引擎只读，
+        # 学习写入走 /精造 学习 → learned_blueprints）。
+        "learned_blueprints": {},
         # M8 批12 验收收口：wallet/prof_engine 实际构造注入（惰性 import 防环，
         # cmd_decompose/cmd_skill_panel 等真实引擎消费；settings 单源注入）
         "wallet": _gem_wallet_of(settings),
@@ -1514,6 +1517,8 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
                 # （配方合成/进化持久化，换包同 ID 保留 DUP-06）
                 **_inventory_hooks(ctx),
                 "upgrade_unlocks": _ps_init(ps, "upgrade_unlocks", {}),
+                # 批41 · 深度打造：已学图纸表（换包同 id 保留，对齐 upgrade_unlocks 口径）。
+                "learned_blueprints": _ps_init(ps, "learned_blueprints", {}),
                 # M13 批13 路13B：技能位装配接口（assemble + save/load 绑 ps）。
                 # ctx["skill_slots"] = 接口 dict：assemble（从 ctx["skills"] 装配）、
                 # save/load（persistent_state["skill_slots"] 惰性挂回 _ps_init）。

@@ -46,6 +46,7 @@ from qbot_rpg.commands import (
     battle_launch_commands,  # G3 2026-09-02：/锁定 /锁定怪物 PvE 开战
     checkin_commands,
     codex_commands,
+    deep_craft_commands,  # 批41 · 深度打造主入口：/精造（图纸/材料/打造主流程）
     dialog_commands,
     dummy_commands,  # M12.5 木桩（2026-09-06）：/木桩 /调整木桩
     enhance_commands,  # M12.5 强化（2026-09-06）：/强化 /强化信息 /强化保护
@@ -114,6 +115,9 @@ REGISTER_GROUPS: tuple = (
     # 批39 · 合成公用层归位：/合成 由 synth_commands 注册（打造与炼金共用的第 1 层）——
     # 先于炼金层注册；alchemy_commands 已移除 /合成 注册（防同名双注册）。
     synth_commands.register_synth_commands,
+    # 批41 · 深度打造主入口：/精造（基础合成走公用层 synth_commands/synthesis，
+    # 本组只做深度层；白名单已登记 精造，check_consistency 双向一致）。
+    deep_craft_commands.register_deep_craft_commands,
     alchemy_commands.register_alchemy_commands,    # M8 炼金 30+ 指令（/图鉴 并入 codex）
     forge_commands.register_forge_commands,        # M9 锻造 六指令（P0-1 收口 2026-08-30：
     #   /锻造 /确认 /图纸 /锻造树 /套装 /客制；/确认 状态分派器 replace 接管炼金同名）

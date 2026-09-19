@@ -102,7 +102,7 @@ from qbot_rpg.core.message_format.list_render import (
     resolve_page,
 )
 from qbot_rpg.core.player_attributes import calc_all_final_attributes
-from qbot_rpg.data.gear_stats import GEAR_LABELS_ZH, GEAR_NUMERIC_KEYS, PCT_SUFFIX
+from qbot_rpg.data.gear_stats import GEAR_DISPLAY_KEYS, GEAR_LABELS_ZH, PCT_SUFFIX
 from qbot_rpg.data.item import ItemInstance
 from qbot_rpg.data.logging_utils import get_logger
 from qbot_rpg.data.player import EquipmentSlot, Player, PlayerAttributes
@@ -1103,9 +1103,12 @@ def _stat_name_zh(key: str) -> str:
 
 def _item_stat_parts(d: Mapping[str, Any]) -> List[str]:
     """装备详情词条行（批⑧ 注册表驱动：会心带符号 %、百分比键 +N%、等级键 LvN；
-    0/非数值跳过——旧实现会把饰玉的 dfn:0 渲染成「防御 0」）。"""
+    0/非数值跳过——旧实现会把饰玉的 dfn:0 渲染成「防御 0」）。
+
+    批43：遍历 `GEAR_DISPLAY_KEYS`（数值键 + 占位键）——冷却缩减等占位词条要能展示。
+    """
     parts: List[str] = []
-    for k in GEAR_NUMERIC_KEYS:
+    for k in GEAR_DISPLAY_KEYS:
         v = d.get(k)
         if not isinstance(v, (int, float)) or isinstance(v, bool) or v == 0:
             continue

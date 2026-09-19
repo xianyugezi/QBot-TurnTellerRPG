@@ -64,6 +64,7 @@ from qbot_rpg.data.gear_stats import (
     GEAR_HELP_ZH,
     GEAR_LABELS_ZH,
     GEAR_PCT_KEYS,
+    GEAR_PLACEHOLDER_KEYS,
 )
 # 批B：包展示元数据下放——框架只保留子字段**结构**（无中文名/说明），展示文案在各包
 # `content/<包>/field_meta.json`。结构模块由 scripts/migrate_pack_field_meta.py 生成。
@@ -1612,6 +1613,8 @@ ITEMS_GROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
         # 批41：材料打造字段（等级/品质/成本）——决定装备等级与品质经验。
         "material_level", "material_quality", "craft_cost",
         *GEAR_FLAT_KEYS, *GEAR_PCT_KEYS, *GEAR_COMBAT_KEYS,
+        # 批43：占位词条（冷却缩减）——登记可见、不接引擎。
+        *GEAR_PLACEHOLDER_KEYS,
     )),
     # 批26 α组（装备侧）：装备附加字段归「效果」分组（grant_skills/skill_amp/
     # attack_override/job_override）——沿用既有分组（不开新分组键，模块分组数
@@ -2402,9 +2405,16 @@ def _module_table() -> Dict[str, ModuleMeta]:
         for _k in GEAR_PCT_KEYS:
             _fm_target[_k] = FieldMeta(
                 type="number", range_min=0, range_max=500,
-                label=GEAR_LABELS_ZH.get(_k, _k), unit="%")
+                label=GEAR_LABELS_ZH.get(_k, _k), unit="%",
+                help=GEAR_HELP_ZH.get(_k, ""))
         for _k in GEAR_COMBAT_KEYS:
             _fm_target[_k] = _gear_combat_field(_k)
+        # 批43：占位键（只登记/展示/可编辑，引擎不消费；help 说明承载口径）
+        for _k in GEAR_PLACEHOLDER_KEYS:
+            _fm_target[_k] = FieldMeta(
+                type="number", range_min=0, range_max=500,
+                label=GEAR_LABELS_ZH.get(_k, _k), unit="%",
+                help=GEAR_HELP_ZH.get(_k, ""))
     traits_fields: Dict[str, FieldMeta] = {
         "id": F_ID, "name": F_NAME, "type": F_TYPE,
         "probability": F_PROBABILITY, "max_stack": F_MAX_STACK,

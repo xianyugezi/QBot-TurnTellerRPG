@@ -655,6 +655,9 @@ class _Checker:
         # 超时类键不识别（load 警告+忽略）。泛型字段校验已在上方逐条目循环跑（R-1~R-5）。
         if module_name == "settings":
             self._check_settings_1g4(module_name, data)
+            # 批37 X12：settings.post_battle_recovery 战后恢复段专项
+            # （【框架】L294/L298-300 + 3h §4.2/L234；容器 soft_label 泛型短路 → 显式区间红拦）
+            self._check_post_battle_recovery(module_name, data)
             # M8 settings.alchemy 段校验（m8_contract_数据与校验 §六 ALC-01~24 + §五）
             # 鸭子类型纯函数；段缺失/空段默认值兜底（alchemy_settings P-6）
             from qbot_rpg.content.alchemy_settings import check_settings_alchemy
@@ -1682,6 +1685,65 @@ class _Checker:
                                          and (not isinstance(cnt, int) or cnt < 1)):
                 self._err(module_name, f"{base}.drop_items.count", "R-1",
                           rule="drop_item_count_invalid", count=cnt)
+
+    # ---- 批37 X12：settings.post_battle_recovery 战后恢复专项 ----
+    def _check_post_battle_recovery(self, module_name: str, data: object) -> None:
+        """settings.post_battle_recovery 段校验（批37 · X12）。
+
+        依据：【框架】L294/L298-300（口径：胜利后按比例回 HP/MP、默认关）；
+        3h §4.2（schema：enabled/heal_ratio/safe_zone_heal 三键）+ L234（V5 越界红拦 /
+        V9 ratio>0.5 黄提示）+ L510（V9 阈值清单）。
+
+        分级：
+          · 段结构错误（null / 非对象）→ **红拦 R-1**（人话提示）；
+          · `enabled` 非布尔 → **红拦 R-1**；
+          · ratio 类型错（非数值/布尔）/ NaN/Inf → **红拦 R-1/R-3**；
+          · ratio ∉ [0,1] → **红拦 V5**（3h L234；`_soft_display` 容器泛型短路，
+            故此处必须显式兜住区间）；
+          · ratio > 0.5 → **黄提示 V9**（补白：阈值 0.5 无定稿依据，见实现口径 §四 D7）。
+        未知键 / 缺键：默认放行（3h D-02 顶层平铺；缺键走引擎默认值）。
+        """
+        if not isinstance(data, Mapping):
+            return
+        if "post_battle_recovery" not in data:
+            return  # 段未配置 → 默认关闭（定稿 L299），无需校验
+        base = "settings.post_battle_recovery"
+        pbr = data["post_battle_recovery"]
+        if pbr is None:
+            self._err(module_name, base, "R-1", rule="section_structure", got="null",
+                      msg="post_battle_recovery 段是空值 null，请填对象 { ... }"
+                          "（如 {\"enabled\": true, \"heal_ratio\": 0.2}）或删掉该段")
+            return
+        if not isinstance(pbr, Mapping):
+            self._err(module_name, base, "R-1", rule="section_structure",
+                      got=type(pbr).__name__,
+                      msg="post_battle_recovery 段要填对象（配置块 { ... }），"
+                          "请检查 settings.json 该段的写法")
+            return
+        enabled = pbr.get("enabled")
+        if enabled is not None and not isinstance(enabled, bool):
+            self._err(module_name, f"{base}.enabled", "R-1", rule="type", expect="bool",
+                      got=type(enabled).__name__)
+        for key in ("heal_ratio", "safe_zone_heal"):
+            if key not in pbr:
+                continue
+            val = pbr[key]
+            path = f"{base}.{key}"
+            if isinstance(val, bool) or not isinstance(val, (int, float)):
+                self._err(module_name, path, "R-1", rule="type", expect="number",
+                          got=("bool" if isinstance(val, bool) else type(val).__name__))
+                continue
+            if math.isnan(val) or math.isinf(val):
+                self._err(module_name, path, "R-3", rule="not_a_number", value=val)
+                continue
+            if not (0.0 <= float(val) <= 1.0):
+                # V5（3h L234）：越界红拦
+                self._err(module_name, path, "R-2", rule="ratio_out_of_range",
+                          value=val, range_min=0, range_max=1)
+            elif float(val) > 0.5:
+                # V9（3h L234/L510）：回复过高会击穿「花钱治疗=资源循环」设计
+                self._warn(module_name, path, "Y-13", rule="recovery_ratio_high",
+                           value=val, threshold=0.5)
 
     # ---- 批18 效果扩展专项：gain_currency / learn_skill ----
     def _check_effects_18(self, module_name: str, data: object) -> None:

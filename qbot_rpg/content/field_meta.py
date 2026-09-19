@@ -2633,6 +2633,22 @@ def _module_table() -> Dict[str, ModuleMeta]:
                                           label="同对每日上限"),
             "exp_on_win": FieldMeta(type="bool", default=False, label="胜方获得经验"),
         }, help="PVP（玩家当野怪）：开关、模式、等级门槛与击杀惩罚。"),
+        # settings.post_battle_recovery（批37 · X12；【框架】L294/L298-300 + 3h §4.2）
+        # 战后恢复：胜利后按比例回复 HP/MP（默认关；定稿「花钱治疗本身是资源循环的一部分」）。
+        # 引擎 core/post_battle_recovery.py 消费；字段默认值 0.2/0.1 沿用 3h §4.2（无定稿依据，
+        # 见 docs/战后恢复_实现口径.md §四 D1），`enabled` 默认 false 为定稿 L299 口径。
+        "post_battle_recovery": _soft_display("战后恢复", "obj", {
+            "enabled": FieldMeta(type="bool", default=False, label="启用战后恢复",
+                                 help="胜利后是否按比例自动回复 HP/MP（默认关）。"),
+            "heal_ratio": FieldMeta(type="number", default=0.2, range_min=0, range_max=1,
+                                    label="战后治疗比例",
+                                    help="胜利后按 HP/MP 上限计算的回复比例（0~1，0=不回复）；"
+                                         "回复量封顶到上限。默认值与数值口径无定稿依据（待用户裁决）。"),
+            "safe_zone_heal": FieldMeta(type="number", default=0.1, range_min=0, range_max=1,
+                                        label="安全区停留回复比例",
+                                        help="在安全区停留时回复 HP/MP 的比例（0~1）；"
+                                             "本批仅登记字段，消费挂安全区判定（待用户裁决）。"),
+        }, help="战后恢复：胜利后按比例回复 HP/MP（默认关）。"),
         # settings.codex（core/codex.py:278 消费四册权重；单机向定稿 L43）
         "codex": _soft_display("图鉴", "obj", {
             "weights": FieldMeta(type="obj", label="四册完成度权重", children={

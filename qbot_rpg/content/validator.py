@@ -670,6 +670,9 @@ class _Checker:
             self._check_equipment_offhand(module_name, data)
             # 批38 · ④ 相性通用层（settings 四段结构/枚举/引用 + 材料相性引用存在性）
             self._check_affinity(module_name, data)
+            # 批39 · 合成/炼金/打造启用矩阵：settings.deep_craft 打造路径开关
+            # （段结构/类型红拦 + 「打造已开但合成层关」黄提示，不硬拦）
+            self._check_deep_craft(module_name, data)
             # M8 settings.alchemy 段校验（m8_contract_数据与校验 §六 ALC-01~24 + §五）
             # 鸭子类型纯函数；段缺失/空段默认值兜底（alchemy_settings P-6）
             from qbot_rpg.content.alchemy_settings import check_settings_alchemy
@@ -1817,6 +1820,47 @@ class _Checker:
                 self._warn(module_name, path, "Y-14", rule="offhand_role_without_switch",
                            msg="部位角色声明为 offhand（副手），但 settings.equipment_offhand"
                                ".enabled 未开启 → 副手规则当前不生效（不阻断；开启开关后生效）")
+
+    # ---- 批39 · 合成/炼金/打造启用矩阵：settings.deep_craft 打造路径开关 ----
+    def _check_deep_craft(self, module_name: str, data: object) -> None:
+        """settings.deep_craft 段校验（批39 · 打造路径开关）。
+
+        依据：docs/深度打造_决策记录.md §六（三条启用路径：合成 / 合成+炼金 / 合成+打造）；
+        推导唯一入口 core/craft_paths.py（obj + enabled，默认关，对齐批38 equipment_offhand）。
+
+        分级：
+          · 段结构错误（非对象）→ **红拦 R-1**；
+          · `enabled` 非布尔 → **红拦 R-1**；
+          · `enabled=true` 但 `settings.alchemy.mode=off`（公用合成层已关）→ **黄提示 Y-15**
+            （打造只做深度层，基础合成走公用层；合成关时打造不可用，只提示不拦，用户可先开
+            合成再开打造）。
+        未知键 / 缺段：默认放行（缺段 = 打造关闭 = 本系统引入前行为）。
+        """
+        if not isinstance(data, Mapping):
+            return
+        base = "settings.deep_craft"
+        cfg = data.get("deep_craft")
+        if cfg is None:
+            return
+        if not isinstance(cfg, Mapping):
+            self._err(module_name, base, "R-1", rule="section_structure",
+                      got=type(cfg).__name__,
+                      msg="deep_craft 段要填对象（配置块 { ... }，如 {\"enabled\": true}）"
+                          "或删掉该段")
+            return
+        en = cfg.get("enabled")
+        if en is not None and not isinstance(en, bool):
+            self._err(module_name, f"{base}.enabled", "R-1", rule="type",
+                      expect="bool", got=type(en).__name__)
+            return
+        if en is True:
+            alchemy = data.get("alchemy")
+            mode = alchemy.get("mode") if isinstance(alchemy, Mapping) else None
+            if mode == "off":
+                self._warn(module_name, base, "Y-15", rule="forge_without_synthesis",
+                           msg="深度打造已开启，但 settings.alchemy.mode=off（公用合成层已关闭）"
+                               "→ 打造路径当前不可用（深度打造的基础合成走公用合成层）；"
+                               "不阻断，开启合成层后生效")
 
     # ---- 批38 · ④：settings 相性通用层（定义/池/联动/互动 + 跨模块引用存在性）----
     def _check_affinity(self, module_name: str, data: object) -> None:

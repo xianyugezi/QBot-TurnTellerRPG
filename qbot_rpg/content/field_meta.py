@@ -371,6 +371,23 @@ SETTINGS_FIELDS: Dict[str, FieldMeta] = {
     }, label="副手装备",
         help="副手装备总开关（默认关闭）。在「装备槽位」里把某部位角色设为「副手」后，"
              "本开关控制副手规则是否生效。"),
+    # 批39 · 「合成」提升为打造与炼金的公用系统——三条启用路径在编辑器可见可配：
+    #   · 合成（公用层）+ 炼金（+深度炼金）：由 settings.alchemy.mode 三态声明推导
+    #     （full 三层漏斗 / simple 仅合成层 / off 关闭；枚举单一事实源 MODE_VALUES，
+    #      该字段既有登记见下方 alchemy 段，不改其 label/help——字段元数据对拍门禁）；
+    #   · 打造（深度打造）：settings.deep_craft.enabled（obj + enabled，默认关，与批38
+    #     settings.equipment_offhand 同风格）。推导唯一入口 = core/craft_paths.py。
+    # 键名刻意避开既有 M9 锻造配置段 settings.forge，防语义混淆。
+    "deep_craft": FieldMeta(type="obj", children={
+        "enabled": FieldMeta(type="bool", default=False, label="是否启用深度打造",
+                             help="开启后，「打造」路径可用：图纸 / 材料相性 / 随机属性与套装词条 / "
+                                  "品质经验 / 强化词条 / 符文 / 淬炼等**深度层**玩法。"
+                                  "深度打造的基础合成（配方+材料 → 标准版产出）走**公用合成层**，"
+                                  "不另造第二套合成。关闭 = 不启用打造（默认关闭）。"),
+    }, label="深度打造",
+        help="打造路径开关（默认关闭）。三条启用路径：① 只启用合成（settings.alchemy.mode"
+             "=simple）；② 合成 + 炼金（mode=full）；③ 合成 + 打造（本开关开启）。"
+             "合成是打造与炼金的公用层；关闭打造不影响合成与炼金。"),
     # 批38 · ④ 相性通用层（打造与深度炼金共用；settings 顶层四段，非打造私有）。
     # 引擎 = core/affinity.py（纯函数）；对外单一查询 resolve_available_entries()。
     "affinities": FieldMeta(

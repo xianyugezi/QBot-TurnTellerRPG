@@ -217,7 +217,8 @@ def test_saved_segment_then_listed_as_configured(blank_copy: Path) -> None:
     # 批32 A1：settings 再 +1（pack_protection）→ 38；批37 战后恢复段 → +1 = 39
     # 批38：副手开关 equipment_offhand + 相性四段（affinities/affinity_pools/
     # affinity_linkage/affinity_reactions）→ +5 = 44
-    assert le["unconfigured_count"] == 44
+    # 批39：打造路径开关 deep_craft → +1 = 45
+    assert le["unconfigured_count"] == 45
 
 
 # =====================================================================================

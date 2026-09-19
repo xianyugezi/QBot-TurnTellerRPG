@@ -112,6 +112,12 @@ from qbot_rpg.core.alchemy_session import (
     is_conflict,
 )
 from qbot_rpg.core.alchemy_settle import SettleEngine
+# 批39 · 合成/炼金/打造启用矩阵（炼金层门禁：mode=simple → 仅合成层）
+from qbot_rpg.core.craft_paths import (
+    PATH_ALCHEMY,
+    PATH_DEEP_ALCHEMY,
+    layer_denied_message,
+)
 from qbot_rpg.core.energy_bar import EnergyBar
 from qbot_rpg.core.proficiency import ProficiencyEngine
 from qbot_rpg.core.alchemy_register import AlchemyRegister
@@ -840,8 +846,14 @@ async def cmd_alchemy(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     )
     catalyst_name = _catalyst_kv(parsed)
 
-    player = _player_of(ctx)
+    # 批39 · 启用矩阵门禁（炼金层）：mode=simple → 仅合成层（拒绝炼金入口）；
+    # mode=off → 既有「炼金系统已关闭」口径。full/缺省 = 放行（行为与今天逐字段一致）。
     settings = _settings_of(ctx)
+    denied = layer_denied_message(settings, PATH_ALCHEMY)
+    if denied is not None:
+        return denied
+
+    player = _player_of(ctx)
     prof_engine = ProficiencyEngine(settings=settings)
     core = AlchemyCore(prof=prof_engine, settings=settings)
     energy = EnergyBar(settings=settings)
@@ -2494,6 +2506,10 @@ async def cmd_deep(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     target = _target_of(parsed)
     player = _player_of(ctx)
     settings = _settings_of(ctx)
+    # 批39 · 启用矩阵门禁（深度炼金层）：仅 mode=full 可达；simple=仅合成层 / off=已关闭。
+    denied = layer_denied_message(settings, PATH_DEEP_ALCHEMY)
+    if denied is not None:
+        return denied
     prof_engine = ProficiencyEngine(settings=settings)
     tier_index = prof_engine.tier_index_for_level(ALCHEMY_JOB_ID, _prof_level(player))
     deep = DeepEngine(settings=settings)
@@ -3011,6 +3027,11 @@ async def cmd_instant(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     target = _target_of(parsed)
     player = _player_of(ctx)
     settings = _settings_of(ctx)
+    # 批39 · 启用矩阵门禁（炼金层）：即时调合属炼金层（职业大师专属），
+    # mode=simple（仅合成层）/ off → 拒绝入口。
+    denied = layer_denied_message(settings, PATH_ALCHEMY)
+    if denied is not None:
+        return denied
     engine = _instant_engine(ctx)
     snap = _battle_snapshot_of(ctx)
 

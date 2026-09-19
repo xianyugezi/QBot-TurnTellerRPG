@@ -23,8 +23,8 @@ by_equip_type/effects/bias）登记在 `content/field_meta.py` 的 `_module_tabl
      先有数据、后补 items 条目合法；不硬拦作者）。
   3. `tier==1` 的 `stats` 下限：只要求 `default` 条目有非空 stats（其余类型覆盖条目可只写
      差异项；default+覆盖合并后仍有数值）。
-  4. `bias`（3 阶偏向性，Q7）机制未裁决 → 本批仅当 `tier==3` 且 `bias` 非空时给**信息级
-     note**，不红拦、不臆断其形状。
+  4. `bias`（3 阶偏向性）：批48 起机制已定（默认口径 = 偏向某相性，RUNE-07 校验
+     `{affinity, bonus_pct}` 形状；相性 id 引用靶 `settings.affinities` 未接线 → 只校验形状）。
   5. 符文条目 id 唯一性：模块内唯一（命名空间独立于 items.id，口径 §二.1）。
 """
 
@@ -87,6 +87,17 @@ def _id_set(modules: Mapping[str, object], name: str) -> Set[str]:
     return {str(e.get("id")) for e in mod if isinstance(e, Mapping) and e.get("id")}
 
 
+def _affinity_id_set(modules: Mapping[str, object]) -> Set[str]:
+    """`settings.affinities[]` 的相性 id 集合（bias.affinity 引用靶；未接线 → 空集）。"""
+    settings = modules.get("settings")
+    if not isinstance(settings, Mapping):
+        return set()
+    rows = settings.get("affinities")
+    if not isinstance(rows, list):
+        return set()
+    return {str(e.get("id")) for e in rows if isinstance(e, Mapping) and e.get("id")}
+
+
 def _item_type_set(modules: Mapping[str, object]) -> Set[str]:
     """items ∪ equipment 的 `type` 值集（by_equip_type 未知键黄提示用）。"""
     out: Set[str] = set()
@@ -117,6 +128,7 @@ def validate_runes(modules: Mapping[str, object], report: object) -> None:
     effect_ids = _id_set(modules, "effects")
     effects_wired = isinstance(modules.get("effects"), list)
     item_types = _item_type_set(modules)
+    affinity_ids = _affinity_id_set(modules)
     items_wired = isinstance(modules.get("items"), list) or isinstance(
         modules.get("equipment"), list
     )
@@ -156,12 +168,49 @@ def validate_runes(modules: Mapping[str, object], report: object) -> None:
 
         _check_by_equip_type(report, entry, node_id, tier, item_types, items_wired, gear_keys)
         _check_effects(report, entry, node_id, tier, effect_ids, effects_wired)
+        # RUNE-07：3 阶偏向性（批48 · R-8：默认口径 = 偏向某相性，对接批38 相性层）
+        _check_bias(report, entry, node_id, tier, affinity_ids)
 
-        # RUNE-07：3 阶偏向性（Q7 未裁决 → 信息级提示，不臆断形状）
-        if tier == MAX_RUNE_TIER and entry.get("bias") is not None:
-            _note(report, f"runes.{node_id}.bias", RUNE_BIAS, rule="bias_pending_ruling",
-                  node_id=node_id,
-                  msg="3 阶偏向性（Q7）机制未裁决：本批只登记不解释，勿据此实现")
+
+def _check_bias(
+    report: object,
+    entry: Mapping[str, Any],
+    node_id: str,
+    tier: Optional[int],
+    affinity_ids: Set[str],
+) -> None:
+    """RUNE-07：3 阶偏向性形状校验（`{affinity, bonus_pct}`；红拦形状/黄提示引用）。
+
+    口径：`docs/深度打造_决策记录.md` + 批48 任务默认口径「偏向某相性」（对接批38
+    `core/affinity.py` 相性通用层）。`bias` 为空 → 跳过。相性 id 引用靶未接线 →
+    只校验形状（不误拦先有数据后补 settings）。
+    """
+    bias = entry.get("bias")
+    if bias is None:
+        return
+    field = f"runes.{node_id}.bias"
+    if not isinstance(bias, Mapping):
+        _err(report, field, RUNE_BIAS, rule="bias_not_object", node_id=node_id,
+             got=type(bias).__name__)
+        return
+    if tier is not None and tier != MAX_RUNE_TIER:
+        _warn(report, field, RUNE_BIAS, rule="bias_only_tier3", node_id=node_id,
+              tier=tier, msg="偏向性为 3 阶符文专用；低阶声明将被引擎忽略")
+    aff = bias.get("affinity")
+    if not isinstance(aff, str) or not aff:
+        _err(report, f"{field}.affinity", RUNE_BIAS, rule="bias_affinity_required",
+             node_id=node_id, value=aff)
+    elif affinity_ids and aff not in affinity_ids:
+        _warn(report, f"{field}.affinity", RUNE_BIAS, rule="bias_affinity_unknown",
+              node_id=node_id, affinity=aff, ref_target="settings.affinities")
+    bonus = bias.get("bonus_pct")
+    if bonus is not None and (isinstance(bonus, bool) or not isinstance(bonus, (int, float))):
+        _err(report, f"{field}.bonus_pct", RUNE_BIAS, rule="bias_bonus_not_number",
+             node_id=node_id, got=type(bonus).__name__)
+    for key in bias.keys():
+        if str(key) not in ("affinity", "bonus_pct"):
+            _warn(report, f"{field}.{key}", RUNE_BIAS, rule="bias_key_unknown",
+                  node_id=node_id, key=str(key))
 
 
 def _check_by_equip_type(

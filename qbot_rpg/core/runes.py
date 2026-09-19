@@ -46,6 +46,13 @@
        「差异解析 + 键白名单 + 数值清洗」；**孔位激活/副手失活/聚合路由都不在本层**——
        分别归 `core/jewel.active_rune_sockets`（唯一孔位读取入口）与
        `core/equipment.aggregate_bonus`（唯一聚合入口）。本层零 gear_stats 键新增。
+  R-7  **2/3 阶效果引用解析**（批48 · 43-D）：`rune_effect_refs_of` / `active_rune_effect_refs`
+       只做「差异解析 + 引用归一」；效果语义**一律引用 effects 注册表**（§三.2），触发
+       时点由符文引用条目的 `trigger` 声明（不写进注册表 → 不产生全局触发泄漏），
+       只对其**穿戴者**侧生效；真正执行在 `core/battle._rune_candidates`。
+  R-8  **3 阶偏向性**（批48 · 43-D；口径 Q7 默认口径 = 偏向某相性）：`bias =
+       {affinity, bonus_pct}`，宿主装备主/副相性（批38 `core/affinity.rank_affinities`）
+       命中 → 该符文数值贡献 ×(1+bonus_pct/100)；未命中/无 bias → 原值（逐字段一致）。
 
 铁律：零 NoneBot import；纯函数（同刻同参必同值）；不抛异常（缺省兜底/防御降级）；
       工程补白显式标注；不新增口径外机制行为。
@@ -87,6 +94,7 @@ __all__ = [
     "next_rune_tier",
     "resolve_by_equip_type",
     "resolve_rune_upgrade",
+    "rune_bias_of",
     "rune_effect_refs_of",
     "rune_effects_of",
     "rune_family_of",
@@ -195,19 +203,66 @@ def by_equip_type_of(rune_def: Any, equip_type: Any = None) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 # R-2/R-4 1 阶数值贡献求值（批47 · 43-B；差异解析唯一发生处）
 # ---------------------------------------------------------------------------
-def rune_stats_of(rune_def: Any, equip_type: Any = None) -> Dict[str, float]:
+# R-8（批48 · 43-D）3 阶「偏向性」字段口径（工程补白：口径 Q7 未逐字写死，任务默认口径
+# = 偏向某相性、对接批38 相性层）：
+#   bias = {"affinity": <相性 id>, "bonus_pct": <数值>}
+#   语义：宿主装备的**主/副相性**（`core/affinity.rank_affinities` 判定）命中 `affinity`
+#   → 该符文数值贡献 ×(1 + bonus_pct/100)；不命中 → 不加成（default 语义）。
+RUNE_BIAS_AFFINITY_KEY: str = "affinity"
+RUNE_BIAS_BONUS_KEY: str = "bonus_pct"
+
+
+def rune_bias_of(rune_def: Any, equip_type: Any = None) -> Dict[str, Any]:
+    """3 阶偏向性解析（差异解析后；R-8）：`{affinity, bonus_pct}`；无效 → {}。
+
+    入参：rune_def 符文定义；equip_type 类型键（bias 亦可按类型覆盖，同差异表）。
+    出参：`{"affinity": str, "bonus_pct": float}`；`affinity` 缺/非法 → {}（校验层红拦）。
+    """
+    entry = resolve_by_equip_type(rune_def, equip_type)
+    bias = entry.get("bias")
+    if bias is None:
+        bias = _as_mapping(rune_def).get("bias")
+    b = _as_mapping(bias)
+    aff = b.get(RUNE_BIAS_AFFINITY_KEY)
+    if not isinstance(aff, str) or not aff:
+        return {}
+    bonus = _to_float(b.get(RUNE_BIAS_BONUS_KEY))
+    return {RUNE_BIAS_AFFINITY_KEY: aff, RUNE_BIAS_BONUS_KEY: bonus if bonus is not None else 0.0}
+
+
+def _affinity_matched(affinity: str, item_affinities: Any) -> bool:
+    """宿主装备主/副相性是否命中偏向相性（对接批38 相性层 `rank_affinities`）。"""
+    values = _as_mapping(item_affinities)
+    if not values:
+        return False
+    try:
+        from qbot_rpg.core.affinity import rank_affinities  # 同层引用（相性通用层）
+        ranked = rank_affinities(values)
+    except Exception:  # noqa: BLE001 —— 相性层不可用 → 不命中（不阻断数值求值）
+        return False
+    return affinity in (ranked.get("main"), ranked.get("sub"))
+
+
+def rune_stats_of(
+    rune_def: Any,
+    equip_type: Any = None,
+    item_affinities: Any = None,
+) -> Dict[str, float]:
     """符文数值贡献**求值处**（批47 · 43-B）：解析差异表后取 `stats` 数值键。
 
     入参：
       - rune_def：符文定义（by_equip_type default + 覆盖）。
       - equip_type：装备类型键 = **`items.type`**（R-2/Q5 本批口径）；None/空 → default。
+      - item_affinities（批48 · R-8）：宿主装备相性声明 `{相性id: 数值}`（`items.affinities`）；
+        主/副相性命中 `bias.affinity` → 数值 ×(1+bonus_pct/100)。缺省 None → 不加成。
     出参：{gear_stats 数值键: 数值}（同键只出现一次；缺/非法 → {}）。
     核心：
       · 差异解析**只在此处发生**（`resolve_by_equip_type` 的 default + 顶层浅覆盖），
         不在数据层把 by_equip_type 展开成多份；
       · 只保留 `GEAR_NUMERIC_KEYS`（唯一源 `data/gear_stats.py`）内的键——自造键由校验器
         RUNE-05 红拦，此处再防御性丢弃（占位/未知键不进引擎）；
-      · 布尔/非数值/0 丢弃（0 不改变聚合结果，且与既有 extract_bonus 口径一致）。
+      · 布尔/非数值/0 丢弃（0 不改变聚合结果，且与既有 extract_bonus 口径一致）；
+      · 偏向加成只放大**该符文自身**贡献（不触碰同件其它符文），未命中 → 原值逐字段一致。
     """
     entry = resolve_by_equip_type(rune_def, equip_type)
     stats = _as_mapping(entry.get("stats"))
@@ -220,6 +275,10 @@ def rune_stats_of(rune_def: Any, equip_type: Any = None) -> Dict[str, float]:
         if fv is None or fv == 0.0:
             continue
         out[ks] = fv
+    bias = rune_bias_of(rune_def, equip_type)
+    if out and bias and _affinity_matched(bias[RUNE_BIAS_AFFINITY_KEY], item_affinities):
+        factor = 1.0 + float(bias[RUNE_BIAS_BONUS_KEY]) / 100.0
+        out = {k: v * factor for k, v in out.items()}
     return out
 
 
@@ -227,6 +286,7 @@ def sum_rune_stats(
     rune_ids: Any,
     runes: Any,
     equip_type: Any = None,
+    item_affinities: Any = None,
 ) -> Dict[str, float]:
     """同件装备上多个**激活**符文的数值贡献合并（同键加算；缺定义/空槽跳过）。
 
@@ -234,6 +294,7 @@ def sum_rune_stats(
       - rune_ids：激活符文 id 序列（由 `jewel.active_rune_sockets` 读取；None/空槽元素跳过）。
       - runes：符文注册表 `{rune_id: 定义}`（缺表/非 Mapping → 空）。
       - equip_type：装备类型键（`items.type`；决定每枚符文的差异解析）。
+      - item_affinities（批48 · R-8）：宿主装备相性声明（决定 3 阶偏向是否命中）。
     出参：{gear_stats 数值键: 合计值}（纯函数；不读孔位、不判副手——那两件事归
           `jewel.active_rune_sockets`，本函数只做效果求值）。
     """
@@ -247,7 +308,7 @@ def sum_rune_stats(
         d = reg.get(str(rid))
         if not isinstance(d, Mapping):
             continue
-        for k, v in rune_stats_of(d, equip_type).items():
+        for k, v in rune_stats_of(d, equip_type, item_affinities).items():
             out[k] = out.get(k, 0.0) + v
     return out
 

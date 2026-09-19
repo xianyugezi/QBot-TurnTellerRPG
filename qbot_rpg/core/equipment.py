@@ -507,11 +507,24 @@ class EquipmentEngine:
                 return t
         return ""
 
+    def _equip_affinity_of(self, item_id: str) -> Mapping[str, Any]:
+        """宿主装备相性声明 `items.affinities`（批48 · R-8：3 阶偏向性判定输入）。
+
+        缺定义/非 Mapping → {}（不命中偏向；与批47 数值路径逐字段一致）。
+        """
+        d = self._items.get(item_id)
+        if isinstance(d, Mapping):
+            aff = d.get("affinities")
+            if isinstance(aff, Mapping):
+                return aff
+        return {}
+
     def _rune_bonus_of(self, ctx: Any, item_id: str, uid: str) -> Dict[str, float]:
         """单件已穿戴装备的符文数值贡献（经 `jewel.active_rune_sockets` 读激活孔位）。
 
         链路：总闸（`runes_enabled`）→ 孔位激活读取（**唯一入口**，副手失活自动继承）
         → 按 `items.type` 解析 `by_equip_type`（default + 覆盖）→ 同键合并。
+        批48 · R-8：3 阶偏向性按宿主装备主/副相性（`items.affinities`）判定加成。
         缺 runes/items/jewel/uid 或读取异常 → {}（防御性降级，不抛）。
         """
         if ctx is None or not self._runes or not uid or self._jewel is None:
@@ -526,7 +539,10 @@ class EquipmentEngine:
             active = reader(ctx, str(item_id), uid)
         except Exception:  # noqa: BLE001 - 读取失败按无符文贡献（不阻断装备聚合）
             return {}
-        return sum_rune_stats(active, self._runes, self._equip_type_of(str(item_id)))
+        return sum_rune_stats(
+            active, self._runes, self._equip_type_of(str(item_id)),
+            self._equip_affinity_of(str(item_id)),
+        )
 
     def active_rune_effects(self, player: Any) -> List[Dict[str, Any]]:
         """已穿戴件**激活符文**声明的效果引用（批48 · 43-D；战斗接线唯一取数处）。

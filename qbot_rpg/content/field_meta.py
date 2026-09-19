@@ -2703,8 +2703,15 @@ def _module_table() -> Dict[str, ModuleMeta]:
                 "effect": FieldMeta(type="ref", ref_target="effect", label="效果引用"),
                 "overrides": FieldMeta(type="obj", soft_label=True, label="参数覆盖"),
             })),
-        # R7：3 阶偏向性——机制未裁决（Q7）→ 宽容器只登记不解释。
-        "bias": FieldMeta(type="obj", soft_label=True, label="偏向性（待裁决）"),
+        # R7（批48 已裁定 · R-8）：3 阶偏向性 = 偏向某相性（对接批38 相性层）。
+        # 宿主装备主/副相性命中 affinity → 该符文数值贡献 ×(1+bonus_pct/100)。
+        "bias": FieldMeta(type="obj", label="偏向性", children={
+            "affinity": FieldMeta(type="str", label="偏向相性",
+                                  help="相性 id（settings.affinities 引用）；宿主装备主/副"
+                                       "相性命中该 id 时生效（批38 rank_affinities 判定）。"),
+            "bonus_pct": FieldMeta(type="number", label="偏向加成%",
+                                   help="命中时该符文数值贡献按此百分点放大（可负/可 0）。"),
+        }, help="3 阶偏向性符文：偏向某相性；命中宿主主/副相性 → 数值加成。"),
     }
     recipe_fields: Dict[str, FieldMeta] = {
         "id": F_ID, "name": F_NAME,

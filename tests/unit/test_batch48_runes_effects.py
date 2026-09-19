@@ -20,7 +20,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Mapping
+from typing import Any, Dict, List, Mapping, Optional
 
 from qbot_rpg.core.effects import (
     HEAL_TAKEN_STAT,
@@ -542,3 +542,127 @@ def test_player_combatant_carries_rune_effects_only_when_present() -> None:
     base = _player_combatant(plain)
     assert "rune_effects" not in base
     assert base == _player_combatant(_player_ctx("sword", [None, None, None]))
+
+
+# ===========================================================================
+# D. 3 阶偏向性符文（默认口径：偏向某相性，对接批38 相性层）
+# ===========================================================================
+AFF_ITEMS: Dict[str, Any] = {
+    "sword_fire": {"id": "sword_fire", "type": "weapon",
+                   "affinities": {"fire": 80, "ice": 20}},
+    "sword_ice": {"id": "sword_ice", "type": "weapon",
+                  "affinities": {"ice": 80, "fire": 20}},
+    "sword_plain": {"id": "sword_plain", "type": "weapon"},
+}
+RUNE_BIAS = {
+    "id": "r_bias_fire", "tier": 3, "family": "f",
+    "by_equip_type": {"default": {"stats": {"atk": 10}}},
+    "bias": {"affinity": "fire", "bonus_pct": 50},
+}
+
+
+def test_rune_bias_of_shape() -> None:
+    """bias 解析：`{affinity, bonus_pct}`；affinity 缺/非法 → {}（不臆断）。"""
+    from qbot_rpg.core.runes import rune_bias_of
+
+    assert rune_bias_of(RUNE_BIAS, "weapon") == {"affinity": "fire", "bonus_pct": 50.0}
+    assert rune_bias_of({"id": "r", "bias": {"bonus_pct": 10}}) == {}
+    assert rune_bias_of({"id": "r", "bias": {"affinity": "fire"}}) == {
+        "affinity": "fire", "bonus_pct": 0.0}
+    assert rune_bias_of({"id": "r"}) == {}
+
+
+def test_rune_stats_of_bias_main_and_sub_affinity() -> None:
+    """按相性生效：偏向相性 = 主相性 / 副相性 → ×1.5；不命中/无相性 → 原值。"""
+    from qbot_rpg.core.runes import rune_stats_of
+
+    assert rune_stats_of(RUNE_BIAS, "weapon", {"fire": 80, "ice": 20}) == {"atk": 15.0}
+    assert rune_stats_of(RUNE_BIAS, "weapon", {"ice": 80, "fire": 20}) == {"atk": 15.0}
+    assert rune_stats_of(RUNE_BIAS, "weapon", {"ice": 80, "wind": 20}) == {"atk": 10.0}
+    assert rune_stats_of(RUNE_BIAS, "weapon", None) == {"atk": 10.0}
+    assert rune_stats_of(RUNE_BIAS, "weapon", {}) == {"atk": 10.0}
+    # 非正相性值不参与排名（批38 rank_affinities 口径）
+    assert rune_stats_of(RUNE_BIAS, "weapon", {"fire": 0, "ice": 5}) == {"atk": 10.0}
+
+
+def test_rune_stats_bias_negative_and_zero() -> None:
+    """bonus_pct 可 0（契约等价）/可负（反向偏科）；0 → 数值逐字段等于未声明 bias。"""
+    from qbot_rpg.core.runes import rune_stats_of
+
+    zero = {"id": "r0", "tier": 3, "family": "f",
+            "by_equip_type": {"default": {"stats": {"atk": 10}}},
+            "bias": {"affinity": "fire", "bonus_pct": 0}}
+    neg = {"id": "rn", "tier": 3, "family": "f",
+           "by_equip_type": {"default": {"stats": {"atk": 10}}},
+           "bias": {"affinity": "fire", "bonus_pct": -20}}
+    assert rune_stats_of(zero, "weapon", {"fire": 9}) == {"atk": 10.0}
+    assert rune_stats_of(neg, "weapon", {"fire": 9}) == {"atk": 8.0}
+
+
+def test_aggregate_bonus_bias_per_host_item() -> None:
+    """战斗/面板证据：同符文装 fire 主相性件 → atk 15；装 ice 主相性件 → atk 15（副相性命中）。"""
+    from qbot_rpg.core.equipment import EquipmentEngine
+    from qbot_rpg.core.jewel import JewelSystem
+
+    eng = EquipmentEngine(slots=SLOTS_C, runes={RUNE_BIAS["id"]: RUNE_BIAS},
+                          items=AFF_ITEMS, jewel=JewelSystem(
+                              settings={"deep_craft": {"enabled": True}}))
+    rows = {}
+    for iid in ("sword_fire", "sword_plain"):
+        from qbot_rpg.data.item import ItemInstance
+        row = ItemInstance(item_id=iid, name=iid, count=1, quality="normal",
+                           bound=False, stack_max=1, slot="weapon")
+        p = {"inventory": [row], "equipment": {"weapon": {"item_id": iid, "uid": row.uid}},
+             "persistent_state": {"rune_sockets": {row.uid: ["r_bias_fire", None, None]}}}
+        rows[iid] = (eng.aggregate_bonus(p), row)
+    assert rows["sword_fire"][0] == {"flat": {"atk": 15.0}, "pct": {}}
+    assert rows["sword_plain"][0] == {"flat": {"atk": 10.0}, "pct": {}}
+
+
+def test_bias_regression_no_bias_field_identical() -> None:
+    """回归：无 bias（1/2 阶）→ 数值与批47 逐字段一致（有/无相性输入都一样）。"""
+    from qbot_rpg.core.runes import rune_stats_of, sum_rune_stats
+
+    plain = {"id": "r1", "tier": 1, "family": "f",
+             "by_equip_type": {"default": {"stats": {"atk": 6, "hp_pct": 5}}}}
+    for aff in (None, {}, {"fire": 9}):
+        assert rune_stats_of(plain, "weapon", aff) == {"atk": 6.0, "hp_pct": 5.0}
+    assert sum_rune_stats(["r1"], {"r1": plain}, "weapon", {"fire": 9}) == {
+        "atk": 6.0, "hp_pct": 5.0}
+
+
+def test_validator_bias_shape() -> None:
+    """RUNE-07：bias 形状红拦/黄提示（指向相性层引用）。"""
+    from qbot_rpg.content.field_meta import default_field_meta_table
+    from qbot_rpg.content.validator import check_pack
+
+    def _pack(rune: Dict[str, Any], settings: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        pack: Dict[str, Any] = {
+            "manifest": {"name": "t", "version": "1.0", "schema_version": 1,
+                         "author": "t", "modules": ["runes"]},
+            "runes": [rune],
+        }
+        if settings is not None:
+            pack["settings"] = settings
+        return pack
+
+    good = {"id": "r3", "tier": 3, "family": "f",
+            "by_equip_type": {"default": {"stats": {"atk": 1}}},
+            "bias": {"affinity": "fire", "bonus_pct": 25}}
+    assert check_pack(_pack(good), default_field_meta_table()).count_errors == 0
+    # affinity 缺失 → 红拦
+    bad = {"id": "r3", "tier": 3, "family": "f",
+           "by_equip_type": {"default": {"stats": {"atk": 1}}},
+           "bias": {"bonus_pct": 25}}
+    rep = check_pack(_pack(bad), default_field_meta_table())
+    assert "bias_affinity_required" in [e.detail.get("rule") for e in rep.errors]
+    # 相性引用靶已接线 + 未知相性 → 黄提示；低阶声明 bias → 黄提示
+    rep2 = check_pack(
+        _pack(good, {"affinities": [{"id": "ice"}]}), default_field_meta_table())
+    rules = [w.detail.get("rule") for w in rep2.warnings]
+    assert "bias_affinity_unknown" in rules
+    low = {"id": "r1", "tier": 1, "family": "f",
+           "by_equip_type": {"default": {"stats": {"atk": 1}}},
+           "bias": {"affinity": "ice", "bonus_pct": 25}}
+    rep3 = check_pack(_pack(low), default_field_meta_table())
+    assert "bias_only_tier3" in [w.detail.get("rule") for w in rep3.warnings]

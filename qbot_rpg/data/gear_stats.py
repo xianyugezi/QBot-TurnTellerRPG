@@ -108,6 +108,9 @@ __all__ = [
     "EFFECT_LEGACY_ALIASES",
     "DEFAULT_EFFECT_AXES",
     "PANEL_AXIS_STEMS",
+    # 批52 · 特效轴消费口径（settings 段键名 + 读时钳制取值）
+    "EFFECT_AXES_KEY",
+    "effect_axis_value",
     # 批51 · 触发归属（owner）战斗桥键名
     "OWNED_EFFECT_IDS_KEY",
     "effect_axis_spec",
@@ -355,6 +358,10 @@ GEAR_EFFECT_KEYS: Tuple[str, ...] = tuple(str(_s["axis"]) for _s in EFFECT_AXIS_
 #: 封顶一律 `None`：钳制归内容包 `settings.effect_axes` 声明 + 消费点读取，引擎不写死。
 EFFECT_TO_COMBATANT: Tuple[str, ...] = GEAR_EFFECT_KEYS
 
+#: `settings.effect_axes` 段键名（批52：battle/effects 消费点从引擎配置读该段做**读时钳制**）。
+#: 与 `normalize_effect_axes` 配套；未配置 = 缺省表 = 恒等（零变化）。
+EFFECT_AXES_KEY: str = "effect_axes"
+
 # ---------------------------------------------------------------------------
 # 批51 · 触发归属（owner）战斗桥键名 —— **唯一源**
 # ---------------------------------------------------------------------------
@@ -543,6 +550,29 @@ def normalize_effect_axes(cfg: Any) -> Dict[str, Dict[str, Any]]:
     return out
 
 
+def effect_axis_value(combatant: Any, axis: str, cfg: Any = None) -> float:
+    """combatant 上某特效轴的**有效取值**（读时按声明区间钳制；缺失/非法 → 0.0）。
+
+    批52 · 特效轴消费口径（唯一读点辅助）：
+      · 取值来源 = `combatant[axis]`（由 `combatant_updates` 桥接进战斗体；非数值/布尔 → 0）；
+      · 钳制 = `normalize_effect_axes(cfg)[axis]` 的 `min/max`（`None` = 该侧不限）——
+        **消费点只读声明、不写死区间**（`_3_落点与分期.md` §0.2 R-5）；
+      · 未配置 `cfg` → 登记表建议区间（默认增量轴 0.0 = ×1.0 恒等 → 缺省零变化）。
+    """
+    value = 0.0
+    if isinstance(combatant, Mapping):
+        raw = combatant.get(str(axis))
+        if isinstance(raw, (int, float)) and not isinstance(raw, bool):
+            value = float(raw)
+    entry = normalize_effect_axes(cfg).get(str(axis)) or {}
+    lo, hi = entry.get("min"), entry.get("max")
+    if lo is not None:
+        value = max(float(lo), value)
+    if hi is not None:
+        value = min(float(hi), value)
+    return value
+
+
 def extract_bonus(item_cfg: Mapping[str, Any]) -> Dict[str, float]:
     """def 数值字段 → stats_bonus（FLAT+PCT+COMBAT+占位 全取；0/布尔/非数值排除）。
 
@@ -591,7 +621,9 @@ def route_bonus_into(
             flat[ks] = flat.get(ks, 0.0) + fv
 
 
-def combatant_updates(flat: Mapping[str, Any]) -> Dict[str, float]:
+def combatant_updates(
+    flat: Mapping[str, Any], pct: Optional[Mapping[str, Any]] = None,
+) -> Dict[str, float]:
     """聚合 flat → combatant 战斗桥更新项（非零项；封顶按 COMBAT_TO_COMBATANT）。
 
     crit 保留浮点（百分点、可负=赌狗流）；耳栓/超会心/属性会心按整数档位封顶。
@@ -600,6 +632,13 @@ def combatant_updates(flat: Mapping[str, Any]) -> Dict[str, float]:
     本批**只桥接、不求值**：战斗侧无任何读取点，且只映射**非零项**，故缺省 0 / 未配置
     → 输出与引入前**逐字段一致**。封顶一律 `None`：钳制归内容包 `settings.effect_axes`
     声明 + 消费点读取，引擎不写死（§0.2 R-5）。
+
+    批52 · **旧键别名归并**（可选 `pct` 形参）：`EFFECT_LEGACY_ALIASES` 中**属性 pct 层来源**
+    的旧键（如 `heal_amp_pct` → `pct["heal_amp"]`，原悬空/无消费点）按
+    `axis += sign × 旧值` 并入对应特效轴（与 EFFECT 键**加算**，同轴 `stack=add` 口径）。
+    只处理 `GEAR_PCT_KEYS` 内的旧键——COMBAT 键（`immune_dmg`）由自身链路承接、在其
+    **消费点**换算（不在此重复并入，避免双计）；PLACEHOLDER（`cooldown_reduction_pct`）
+    仍不接引擎。`pct=None`（缺省）→ 行为与批51 及此前**逐字段一致**（本批零变化红线）。
     """
     out: Dict[str, float] = {}
     for src, dst, cap in COMBAT_TO_COMBATANT:
@@ -620,4 +659,16 @@ def combatant_updates(flat: Mapping[str, Any]) -> Dict[str, float]:
         if fv == 0.0:
             continue
         out[src] = fv
+    if isinstance(pct, Mapping):
+        for legacy, (axis, sign) in EFFECT_LEGACY_ALIASES.items():
+            if legacy not in GEAR_PCT_KEYS:
+                continue  # 非 pct 层旧键（COMBAT/占位）不走本换算
+            stem = legacy[: -len(PCT_SUFFIX)] if legacy.endswith(PCT_SUFFIX) else legacy
+            v = pct.get(stem)
+            if not isinstance(v, (int, float)) or isinstance(v, bool):
+                continue
+            fv = float(v)
+            if fv == 0.0:
+                continue
+            out[axis] = out.get(axis, 0.0) + float(sign) * fv
     return out

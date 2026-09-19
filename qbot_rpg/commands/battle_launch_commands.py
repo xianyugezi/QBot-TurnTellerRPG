@@ -496,6 +496,19 @@ async def launch_pve_battle(
                 ctx.get("settings") if isinstance(ctx, Mapping) else None))
         except Exception:  # noqa: BLE001 - 配置接通失败回落默认（不阻断开战）
             pass
+        # 批52 · 治疗/承伤双向轴：settings.effect_axes 声明段 → 引擎配置（治疗收口/承伤主乘区
+        # 读它做读时钳制）。缺省不注入 → 引擎读登记表缺省区间 = 恒等，零行为变化。
+        try:
+            from qbot_rpg.data.gear_stats import EFFECT_AXES_KEY  # noqa: PLC0415
+
+            _ea = ctx.get("effect_axes")
+            if not isinstance(_ea, Mapping):
+                _st = ctx.get("settings")
+                _ea = _st.get(EFFECT_AXES_KEY) if isinstance(_st, Mapping) else None
+            if isinstance(_ea, Mapping):
+                _start_cfg[EFFECT_AXES_KEY] = dict(_ea)
+        except Exception:  # noqa: BLE001 - 配置接通失败回落默认（不阻断开战）
+            pass
         eng.start(p_comb, e_comb, random_seed=None, config=_start_cfg)
         # 2026-09-09：MonsterAI 注入（装配缺口修复——怪行动 defs 自此启用：
         # 行动方位规则 position_rule 生效 + 蓄力/召唤/防御/范围技可被 AI 选用。

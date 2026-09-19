@@ -86,7 +86,10 @@ __all__ = [
     "DEFAULT_PIPELINE_ORDER",
     "BATTLE_SIDES",
     "HEAL_TAKEN_STAT",
+    "HEAL_RECEIVED_AXIS",
+    "HEAL_DONE_AXIS",
     "status_stat_modifier_sum",
+    "heal_apply",
 ]
 
 # ---------------------------------------------------------------------------
@@ -101,6 +104,11 @@ BATTLE_SIDES: Tuple[str, str] = ("player", "enemy")
 # 聚合收口 = `status_stat_modifier_sum`（与 `battle._aggregate_boost` 同源），
 # 由 `heal` L0 动作在**治疗计算处**消费（不新造第二套减益/治疗通道）。
 HEAL_TAKEN_STAT: str = "heal_taken"
+
+# 批52 · 治疗双向轴（收口 `heal_apply` 的两条轴键；键名唯一源仍是 `data.gear_stats`
+# `EFFECT_AXIS_SPECS`，此处仅取登记名常量便于消费点引用，不另立键空间）。
+HEAL_RECEIVED_AXIS: str = "healing_received_pct"
+HEAL_DONE_AXIS: str = "healing_done_pct"
 
 # 方位 v0.6 §三.1：方位格 side 四向（reposition 原子枚举，core 层常量；content 校验
 # 同源内联镜像不 cross-import）
@@ -1291,11 +1299,13 @@ def tick_turn_end(snapshot: Mapping[str, Any], runtime: EffectRuntime) -> List[D
             if isinstance(absb, dict) and absb.get("record"):
                 pct = float(absb.get("value", 0)) / 100.0 if absb.get("pct", True) else float(absb.get("value", 0))
                 heal = int(int(absb["record"]) * pct)
+                # 批52 · 受疗轴唯一收口（行动收尾回复：无明确施疗方 → 只吃受疗侧）
+                heal = heal_apply(heal, runtime, snapshot, side)
                 hp = int(c.get("hp", 0))
                 max_hp = int(c.get("max_hp", 0))
-                c["hp"] = min(max_hp, hp + heal)
+                c["hp"] = max(0, min(max_hp, hp + heal))
                 absb["record"] = 0
-                if heal > 0:
+                if heal != 0:
                     log.append({"type": "absorb_heal", "side": side, "heal": heal})
         # ② dot 持续伤害
         dots = c.get("dot_pool")
@@ -1336,9 +1346,11 @@ def tick_turn_end(snapshot: Mapping[str, Any], runtime: EffectRuntime) -> List[D
         regen = defs.get("regen") if isinstance(defs, dict) else None
         if isinstance(regen, dict):
             v = int(regen.get("value", 0))
+            # 批52 · 受疗轴唯一收口（再生：无明确施疗方 → 只吃受疗侧）
+            v = heal_apply(v, runtime, snapshot, side)
             hp = int(c.get("hp", 0))
             max_hp = int(c.get("max_hp", 0))
-            c["hp"] = min(max_hp, hp + v)
+            c["hp"] = max(0, min(max_hp, hp + v))
             log.append({"type": "regen", "side": side, "heal": v})
         # ④ 持续双维·回合扣减 + 限时印记扣减（细化_1d §2.2/§三：remaining_turns 统一
         #    tick 扣减、归零移除入快照 —— 委托 MarksManager.tick_turn 唯一实现）
@@ -1737,25 +1749,78 @@ def _stacks_of(inst: Any) -> int:
     return n if n > 0 else 1
 
 
-def _apply_heal_taken(value: int, runtime: Any, target: str) -> int:
-    """重伤（治疗削减）消费：受治疗量 ×(1 + heal_taken/100)，下限 0（不反向扣血）。
+def _heal_axes_cfg(runtime: Any) -> Any:
+    """运行时携带的 `settings.effect_axes` 声明段（无 → None = 登记表缺省区间）。"""
+    cfg = getattr(runtime, "config", None)
+    if isinstance(cfg, Mapping):
+        return cfg.get("effect_axes")
+    return None
 
-    值由内容包状态声明（`stat_modifier{stat: HEAL_TAKEN_STAT}`）；封顶复用既有
-    S6 `cap_boost`（±max_boost_pct，可配）→ 削减至多 100%（治疗归零）。
-    runtime 缺/无状态/修正为 0 → 原值返回（未重伤路径逐字段一致）。
+
+def heal_apply(
+    value: int,
+    runtime: Any,
+    snapshot: Any,
+    target: str,
+    source: Optional[str] = None,
+) -> int:
+    """治疗量**唯一收口**（批52 · 受疗/施疗双向轴 + 负治疗反转）。
+
+    步骤（同轴 `stack=add` 口径；未配置 → 原值返回，缺省零变化）：
+      ① **受疗侧**（target）：状态 `stat_modifier{stat: HEAL_TAKEN_STAT}` 聚合（批48 重伤通道，
+         先经既有 S6 `cap_boost` 封顶）+ 新轴 `healing_received_pct`（combatant 取值，
+         `effect_axis_value` 按 `settings.effect_axes` 声明区间钳制）→ 求和；
+      ② 求和结果再按 `healing_received_pct` 声明区间钳制（**受疗修正 = 单一乘区**，可配上下界）；
+      ③ `heal = round(value × (1 + 受疗/100))`；≤ −100 即**治疗转伤害**（返回负值，
+         反转与否由包声明的下界控制，默认下界 −200 允许反转）；
+      ④ **施疗侧**（source）：有 source 时 `heal = round(heal × (1 + healing_done_pct/100))`
+         （`heal_amp_pct` 旧键已由战斗桥归并进本轴，见 `combatant_updates`）。
+
+    runtime 缺/无状态/两轴皆 0 → **原值返回**（既有路径逐字段一致）。
+    `snapshot` = 战斗快照（读 combatant 轴值；None/缺侧 → 该侧 0）。
     """
     if runtime is None or not isinstance(value, int):
         return value
+    cfg = _heal_axes_cfg(runtime)
+    target_c = snapshot.get(target) if isinstance(snapshot, Mapping) else None
     total = status_stat_modifier_sum(runtime, target, HEAL_TAKEN_STAT)
-    if total == 0.0:
-        return value
-    cap = getattr(runtime, "cap_boost", None)
-    if callable(cap):
-        try:
-            total = cap(total)
-        except Exception:  # noqa: BLE001 —— 封顶异常不阻断（按未封顶值继续）
-            pass
-    return max(0, int(round(value * (1.0 + total / 100.0))))
+    if total != 0.0:
+        cap = getattr(runtime, "cap_boost", None)
+        if callable(cap):
+            try:
+                total = cap(total)
+            except Exception:  # noqa: BLE001 —— 封顶异常不阻断（按未封顶值继续）
+                pass
+    total += _axis_pct(target_c, HEAL_RECEIVED_AXIS, cfg)
+    total = _clamp_axis_total(total, HEAL_RECEIVED_AXIS, cfg)
+    if total != 0.0:
+        value = int(round(value * (1.0 + total / 100.0)))
+    if source is not None:
+        source_c = snapshot.get(source) if isinstance(snapshot, Mapping) else None
+        done = _axis_pct(source_c, HEAL_DONE_AXIS, cfg)
+        if done != 0.0:
+            value = int(round(value * (1.0 + done / 100.0)))
+    return value
+
+
+def _axis_pct(combatant: Any, axis: str, cfg: Any) -> float:
+    """combatant 轴取值（读时按声明区间钳制；唯一源 `data.gear_stats.effect_axis_value`）。"""
+    from qbot_rpg.data.gear_stats import effect_axis_value  # noqa: PLC0415 —— 避免 data↔core 顶层环
+
+    return float(effect_axis_value(combatant, axis, cfg))
+
+
+def _clamp_axis_total(total: float, axis: str, cfg: Any) -> float:
+    """把「轴 + 条件实例」合计按该轴声明区间钳制（下界放开 = 允许治疗转伤害）。"""
+    from qbot_rpg.data.gear_stats import normalize_effect_axes  # noqa: PLC0415
+
+    entry = normalize_effect_axes(cfg).get(str(axis)) or {}
+    lo, hi = entry.get("min"), entry.get("max")
+    if lo is not None:
+        total = max(float(lo), total)
+    if hi is not None:
+        total = min(float(hi), total)
+    return total
 
 
 def _resolve_side(actor: str, which: str) -> str:
@@ -1925,9 +1990,11 @@ def execute_action(
         v = _resolve_value(action.get("value", "0%"), ctx.snapshot.get(attacker, {}).get("max_hp", 0), ctx)
         base_damage = int(action.get("damage_dealt", 0) or ctx.variables.get("damage_dealt", 0))
         heal = int(round(base_damage * v / 100.0)) if action.get("pct", True) else v
+        # 批52 · 治疗双向轴唯一收口（吸血：施疗方 = 受疗方 = attacker）
+        heal = heal_apply(heal, runtime, ctx.snapshot, attacker, source=attacker)
         c = ctx.snapshot.get(attacker)
         if isinstance(c, dict):
-            c["hp"] = min(int(c.get("max_hp", 0)), int(c.get("hp", 0)) + heal)
+            c["hp"] = max(0, min(int(c.get("max_hp", 0)), int(c.get("hp", 0)) + heal))
         side_effects.append({"type": "lifesteal", "target": attacker, "heal": heal})
         return ActionResult(True, side_effects)
     if atype == "pierce":
@@ -1977,17 +2044,23 @@ def execute_action(
         when = str(action.get("when") or "instant")
         base = int(ctx.snapshot.get(attacker, {}).get("max_hp", 0))
         v = _resolve_value(action.get("value"), base, ctx, "heal")
-        # 批48 · 重伤（治疗削减）：受治疗量修正（状态 stat_modifier{stat: HEAL_TAKEN_STAT}
-        # 聚合，唯一收口 `status_stat_modifier_sum`）——在**治疗计算处**接入；未重伤 → 原值。
-        v = _apply_heal_taken(v, runtime, target)
+        # 批48 · 重伤（治疗削减）+ 批52 · 受疗/施疗双向轴：**唯一收口 heal_apply**
+        # （状态 stat_modifier 聚合 → 受疗轴 → 施疗轴；≤−100 治疗转伤害）。
+        # 未配置轴/未重伤 → 原值返回（既有路径逐字段一致）。
+        v = heal_apply(v, runtime, ctx.snapshot, target, source=attacker)
         if when in ("instant", "on_skill"):
             c = ctx.snapshot.get(target)
             if isinstance(c, dict):
                 key = "hp" if stat == "hp" else "mp"
                 cur = int(c.get(key, 0))
                 cap = int(c.get("max_hp" if stat == "hp" else "max_mp", cur))
-                c[key] = min(cap, cur + v)
-            side_effects.append({"type": "heal", "target": target, "stat": stat, "value": v})
+                # 批52：负治疗（反转）时扣血，下钳 0（不越界为负 HP）；正值路径与既有一致。
+                c[key] = max(0, min(cap, cur + v))
+            if v < 0:
+                side_effects.append({"type": "heal", "target": target, "stat": stat,
+                                     "value": v, "reversed": True})
+            else:
+                side_effects.append({"type": "heal", "target": target, "stat": stat, "value": v})
         else:
             # 行动收尾/on_turn_start/on_turn_end 登记
             c = ctx.snapshot.get(target)

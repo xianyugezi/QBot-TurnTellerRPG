@@ -194,8 +194,11 @@ def _combatant_of(player: Mapping[str, Any]) -> dict:
     # 耳栓封顶 2 / 超会心·属性会心封顶 3——键空间与封顶口径见 data.gear_stats）。
     _gbonus = attrs.get("bonus") if isinstance(attrs, Mapping) else None
     _gflat = _gbonus.get("flat") if isinstance(_gbonus, Mapping) else None
+    _gpct = _gbonus.get("pct") if isinstance(_gbonus, Mapping) else None
     if isinstance(_gflat, Mapping):
-        for _gk, _gv in combatant_updates(_gflat).items():
+        # 批52 · 旧键别名归并：pct 层旧键（heal_amp_pct → healing_done_pct 等）一并桥接；
+        # pct 缺省 None → 与批51 及此前逐字段一致（缺省零变化）。
+        for _gk, _gv in combatant_updates(_gflat, _gpct).items():
             result[_gk] = float(_gv) if _gk == "crit_bonus" else int(_gv)
     return result
 

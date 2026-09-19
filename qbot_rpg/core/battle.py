@@ -102,6 +102,7 @@ from qbot_rpg.core.effects import (
     EffectRuntime,
     PipelineResult,
     execute_action,
+    heal_apply,
     status_stat_modifier_sum,
     tick_after_action,
     tick_turn_end,
@@ -128,6 +129,8 @@ from qbot_rpg.core.ctb_scheduler import CTBScheduler
 # 批51 · 触发归属：combatant 侧「本侧拥有的效果 id 集合」键名唯一源（data 层常量，
 # core 层只读；键缺省 = 不启用归属过滤 = 全库扫描旧行为）。
 from qbot_rpg.data.gear_stats import OWNED_EFFECT_IDS_KEY
+# 批52 · 特效轴消费口径：settings 段键名（唯一源，core 只读）。
+from qbot_rpg.data.gear_stats import EFFECT_AXES_KEY
 
 #: 模块日志器（NPC 行动执行等兜底路径留痕；不可达路径不静默吞错）
 _logger = logging.getLogger("qbot_rpg.core.battle")
@@ -714,7 +717,15 @@ class BattleEngine:
     # ------------------------- 快照/运行时装配 -------------------------
 
     def _new_runtime(self) -> EffectRuntime:
-        """从当前快照五块构建 EffectRuntime（五块以快照为权威；1g1b §一状态变量）。"""
+        """从当前快照五块构建 EffectRuntime（五块以快照为权威；1g1b §一状态变量）。
+
+        批52：把 `settings.effect_axes` 声明段经引擎配置透传进 runtime.config（治疗轴消费点
+        读它做读时钳制）；未配置 → config=None → 与批51 及此前逐字段一致。
+        """
+        _axes = self._config.get(EFFECT_AXES_KEY)
+        _cfg: Optional[Dict[str, Any]] = (
+            {EFFECT_AXES_KEY: _axes} if isinstance(_axes, Mapping) else None
+        )
         return EffectRuntime(
             status_state=self._snap.get("status_state"),
             marks_state=self._snap.get("marks_state"),
@@ -722,7 +733,7 @@ class BattleEngine:
             effect_triggers=self._snap.get("effect_triggers"),
             effect_cooldowns=self._snap.get("effect_cooldowns"),
             resolver=self._resolver,
-            config=None,
+            config=_cfg,
         )
 
     def _absorb_runtime(self, rt: EffectRuntime) -> None:
@@ -4794,10 +4805,13 @@ class BattleEngine:
             _absorb_hp = float(ac.get("absorb_hp", 0) or 0)
             if _absorb_hp > 0 and res.final_damage > 0:
                 _heal = int(res.final_damage * min(100.0, max(0.0, _absorb_hp)) / 100.0)
-                if _heal > 0:
+                # 批52 · 治疗双向轴唯一收口（吸血：施疗方 = 受疗方 = attacker）；
+                # 未配置轴 → 原值 → 零行为变化。
+                _heal = heal_apply(_heal, rt, self._snap, attacker, source=attacker)
+                if _heal != 0:
                     _hp_before = int(ac.get("hp", 0))
                     _hp_cap = int(ac.get("max_hp", _hp_before) or _hp_before)
-                    ac["hp"] = min(_hp_cap, _hp_before + _heal)
+                    ac["hp"] = max(0, min(_hp_cap, _hp_before + _heal))
                     all_effects.append({"type": "absorb_hp", "target": attacker,
                                         "heal": _heal, "damage": res.final_damage})
             # 怒值积累（批⑦B）：玩家对敌实际伤害 → 敌方怒气（全隐性）

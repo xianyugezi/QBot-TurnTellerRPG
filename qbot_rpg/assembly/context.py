@@ -1853,6 +1853,11 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
     _monster_scaling = settings.get("monster_scaling")
     if isinstance(_monster_scaling, Mapping):
         ctx["monster_scaling"] = dict(_monster_scaling)
+    # 批52 · 治疗/承伤双向轴：settings.effect_axes 声明段（缺省不注入 → 引擎读登记表缺省
+    # 区间 = 恒等；仅当包声明存在才注入 ctx，不改既有 ctx 键集 → 零行为变化）。
+    _effect_axes = settings.get("effect_axes")
+    if isinstance(_effect_axes, Mapping):
+        ctx["effect_axes"] = dict(_effect_axes)
     if (isinstance(_slot_defs, Mapping) and _slot_defs) or isinstance(_panel_budget, Mapping):
         # 包装形态注入（渲染层 _slot_order/_slot_name 兼容：_slot_order 认
         # {"slots": {...}} 取键序；_slot_name 认包装取内层 name；平铺形态

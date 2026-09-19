@@ -15,11 +15,7 @@
     {
       "target": "equipment",
       "from": "items",
-      "where": {
-        "has": [
-          "slot"
-        ]
-      }
+      "where": { "has": ["slot"] }
     }
   ],
   "entry_groups": {
@@ -41,73 +37,38 @@
         "control": "控制"
       }
     },
-    "statuses": {
-      "by": "id_prefix"
-    },
+    "statuses": { "by": "id_prefix" },
     "skill_chains": {
       "by": "field",
       "field": "max_combo",
-      "labels": {
-        "1": "1 连段",
-        "2": "2 连段",
-        "3": "3 连段"
-      }
+      "labels": { "1": "1 连段", "2": "2 连段", "3": "3 连段" }
     },
-    "action": {
-      "by": "field",
-      "field": "intent"
-    },
+    "action": { "by": "field", "field": "intent" },
     "jobs": {
       "by": "field",
       "field": "difficulty",
-      "labels": {
-        "simple": "简单",
-        "medium": "中等",
-        "hard": "困难"
-      }
+      "labels": { "simple": "简单", "medium": "中等", "hard": "困难" }
     },
-    "npc": {
-      "by": "field",
-      "field": "map"
-    },
-    "shop": {
-      "by": "id_prefix"
-    }
+    "npc": { "by": "field", "field": "map" },
+    "shop": { "by": "id_prefix" }
   },
   "subgroup_labels": {
-    "npc": {
-      "base": "标识与类型"
-    }
+    "npc": { "base": "标识与类型" }
   },
   "entry_tree": [
     {
       "parent": "life",
       "sections": [
-        {
-          "from": "settings",
-          "id": "alchemy"
-        },
-        {
-          "from": "settings",
-          "id": "quest_board"
-        },
-        {
-          "from": "settings",
-          "id": "forge"
-        }
+        { "from": "settings", "id": "alchemy" },
+        { "from": "settings", "id": "quest_board" },
+        { "from": "settings", "id": "forge" }
       ]
     },
     {
       "parent": "maps",
       "sections": [
-        {
-          "from": "settings",
-          "id": "env_event"
-        },
-        {
-          "from": "settings",
-          "id": "time_cycle"
-        }
+        { "from": "settings", "id": "env_event" },
+        { "from": "settings", "id": "time_cycle" }
       ]
     }
   ],
@@ -1947,6 +1908,7 @@
     "proficiency": "熟练度",
     "quest": "任务",
     "recipe": "配方",
+    "runes": "符文",
     "settings": "基础",
     "shop": "商店",
     "skill_chains": "派生链",
@@ -1955,8 +1917,7 @@
     "stats": "属性",
     "statuses": "状态",
     "templates": "模板",
-    "traits": "特性",
-    "runes": "符文"
+    "traits": "特性"
   },
   "module_tree": [
     {

@@ -9,6 +9,10 @@
   1. `equipment_level`      —— 装备等级 = Σ(材料等级 × 占比)（完全同级 → 该级）；
   2. `quality_exp`          —— 品质经验 = Σ(品阶基数 × 相性系数 × 件数边际) × 种类奖励
                                × 互动乘子 × 全局衰减（**每次打造独立、不跨件累计**）；
+                               **批44 投入概率暴击**：生效档位按包声明概率掷 1 次（可配），
+                               命中给额外品质经验（倍率可配），使高档图纸有机会冲破常规
+                               经验上限达到品质 10（**替代拉高 cap / 扩材料表**；缺省关，
+                               不触发路径与既有逐字段一致、不消耗随机数）；
   3. `quality_level_of`     —— 满经验 → 品质等级（阈值表）；
   4. `draw_quality`         —— 品质等级 → 颜色（13 行共享阶梯；图纸档决定行偏移；
                                红仅第 10 行起）；
@@ -68,6 +72,14 @@ __all__ = [
 
 ROLE_MAIN: str = "main"
 ROLE_FREE: str = "free"
+
+# ---- 批44 · 投入概率暴击：参数子对象键与枚举值（包声明驱动，引擎不内置档名/数值）----
+# 落点 = `settings.deep_craft.craft_rules.quality_exp_crit`（与 `interaction` 同级；
+# 决策记录 §七「全部参数化」；草案 v2 §3.2 形状）。缺省 `enabled=false` → 与现状一致。
+CRIT_KEY: str = "quality_exp_crit"
+CRIT_SCOPE_QUALITY_EXP: str = "quality_exp"
+EXP_CAP_NONE: str = "none"
+EXP_CAP_LAST_THRESHOLD: str = "last_threshold"
 
 # 拒绝原因码（文案由指令层走模板表 deep_craft_<reason>；core 不含文案）
 REJECT_NO_BLUEPRINT = "no_blueprint"
@@ -180,6 +192,9 @@ def quality_exp(
     *,
     blueprint_affinities: Mapping[str, Any] = {},
     affinity_reactions: Sequence[Any] = (),
+    rng: Any = None,
+    grade: Any = None,
+    thresholds: Any = None,
 ) -> Dict[str, Any]:
     """单次打造品质经验（原案 §6/§12；**每次独立、不跨件累计**）。
 
@@ -192,8 +207,17 @@ def quality_exp(
         `materials[].same_affinity` 已给出，保持本函数签名稳定）。
       · affinity_reactions：`settings.affinity_reactions`（批38 通用层）——用于
         **互动乘子**：Σ(结算后相性值) / Σ(投入相性值)，clamp 到包声明区间。
-    出参：`{exp, base_sum, affinity_factor, interaction, type_factor, kinds}`。
-    纯函数、确定性（互动复用 `core/affinity.accumulate_affinity`）。
+      · rng：玩家级随机流（批40 H5）——**仅当 `quality_exp_crit` 生效档位且概率 >0
+        时**才消费；缺省/未启用 → 不掷、不消费（不暴击路径与现状逐字段一致）。
+      · grade：图纸档 id（用于逐档概率/倍率查表；不硬编码任何档名）。
+      · thresholds：品质等级阈值（`exp_cap=last_threshold` 时取最后一项作封顶）。
+    出参：`{exp, base_sum, affinity_factor, interaction, type_factor, kinds,
+      crit, crit_active, crit_chance, crit_mult, crit_rolls, exp_before_crit,
+      exp_for_level, exp_cap}`。
+      · `exp` = 暴击后（并封顶后）的最终经验；`exp_before_crit` = 暴击前；
+      · `exp_for_level` = 品质等级判定用经验（`affects_quality_level=false` → 暴击前）；
+      · 未启用/未命中 → `exp == exp_before_crit == exp_for_level`（逐字段等于现状）。
+    纯函数、确定性（互动复用 `core/affinity.accumulate_affinity`；随机经注入流）。
     """
     r = _as_map(rules)
     decay = _as_num(r.get("slot_decay"))
@@ -230,13 +254,126 @@ def quality_exp(
     type_factor = float(type_bonus) ** max(0, kinds - 1)
     interaction = _interaction_factor(rows, rules, affinity_reactions)
     exp = base_sum * type_factor * interaction * global_decay
+    crit = _resolve_quality_exp_crit(
+        _as_map(r).get(CRIT_KEY), grade, exp, rng, thresholds)
     return {
-        "exp": exp,
+        "exp": crit["exp"],
         "base_sum": base_sum,
         "type_factor": type_factor,
         "interaction": interaction,
         "kinds": kinds,
+        # ---- 批44 · 投入概率暴击（缺省/未命中时 exp 与 exp_before_crit 相等）----
+        "crit": crit["crit"],
+        "crit_active": crit["active"],
+        "crit_chance": crit["chance"],
+        "crit_mult": crit["mult"] if crit["crit"] else 1.0,
+        "crit_rolls": crit["rolls"],
+        "exp_before_crit": crit["exp_before"],
+        "exp_for_level": crit["exp_for_level"],
+        "exp_cap": crit["cap"],
     }
+
+
+# ---------------------------------------------------------------------------
+# 2b) 投入概率暴击（§七；包声明驱动 · 注入随机流 · 缺省关）
+# ---------------------------------------------------------------------------
+def _crit_number_map(raw: Any) -> Dict[str, float]:
+    """`{档id: 数值}` → 仅保留非空 str 键与合法数字（非法值由校验器红拦）。"""
+    out: Dict[str, float] = {}
+    for key, val in _as_map(raw).items():
+        n = _as_num(val)
+        if isinstance(key, str) and key and n is not None:
+            out[key] = n
+    return out
+
+
+def _apply_exp_cap(
+    cfg: Mapping[str, Any], value: float, thresholds: Any,
+) -> Tuple[float, Optional[float]]:
+    """品质经验封顶（`exp_cap`）：`none`（关）/ `last_threshold`（取阈值末项）/ 数值。
+
+    出参 `(封顶后经验, 实际封顶值或 None)`；未声明/非法/负值 → 不封顶。
+    """
+    raw = _as_map(cfg).get("exp_cap")
+    if raw is None or raw == EXP_CAP_NONE:
+        return value, None
+    cap: Optional[float]
+    if raw == EXP_CAP_LAST_THRESHOLD:
+        nums = [n for n in (_as_num(x) for x in _as_list(thresholds)) if n is not None]
+        cap = nums[-1] if nums else None
+    else:
+        cap = _as_num(raw)
+    if cap is None or cap < 0:
+        return value, None
+    return min(value, cap), cap
+
+
+def _resolve_quality_exp_crit(
+    cfg: Any,
+    grade: Any,
+    base_exp: float,
+    rng: Any,
+    thresholds: Any,
+) -> Dict[str, Any]:
+    """投入暴击判定（决策记录 §七；参数全部包声明）。
+
+    口径：
+      · `enabled=false`（缺省）/ `applies_to` 非 `quality_exp` / 档位不在 `grades`
+        （`grades` 空 = 全档）→ **不生效、不消费随机数**（不暴击路径 = 现状）；
+      · 概率 = `chance_by_grade[档]` 优先，缺省 `chance_default`（缺省 0.05，clamp [0,1]）；
+        概率 ≤0 → 不掷（不消费）；
+      · 倍率 = `mult_by_grade[档]` 优先，缺省 `mult_default`（缺省 1.0）；命中另加
+        `additive_exp`（缺省 0）；
+      · `rolls_per_craft`（缺省 1）次掷数**全部消费**（次数确定），任一命中即暴击；
+      · `exp_cap` 对**生效档位**的最终经验统一封顶（缺省 `last_threshold`）；
+      · `affects_quality_level=false` → 等级判定用暴击前经验（`exp_for_level`）。
+    出参：`{active, crit, chance, mult, rolls, exp, exp_for_level, exp_before, cap}`。
+    """
+    info: Dict[str, Any] = {
+        "active": False, "crit": False, "chance": 0.0, "mult": 1.0, "rolls": 0,
+        "exp": base_exp, "exp_for_level": base_exp, "exp_before": base_exp, "cap": None,
+    }
+    c = _as_map(cfg)
+    if not c.get("enabled"):
+        return info
+    scope = c.get("applies_to")
+    if isinstance(scope, str) and scope and scope != CRIT_SCOPE_QUALITY_EXP:
+        return info
+    grades = [g for g in _as_list(c.get("grades")) if isinstance(g, str) and g]
+    if grades and grade not in grades:
+        return info
+
+    chance = _crit_number_map(c.get("chance_by_grade")).get(str(grade))
+    if chance is None:
+        chance = _as_num(c.get("chance_default"))
+    chance = 0.05 if chance is None else min(max(chance, 0.0), 1.0)
+    mult = _crit_number_map(c.get("mult_by_grade")).get(str(grade))
+    if mult is None:
+        mult = _as_num(c.get("mult_default"))
+    mult = 1.0 if mult is None else max(0.0, mult)
+    additive = _as_num(c.get("additive_exp"))
+    additive = 0.0 if additive is None else additive
+
+    info["active"] = True
+    info["chance"] = chance
+    info["mult"] = mult
+    rolls = _as_int(c.get("rolls_per_craft"))
+    rolls = 1 if rolls is None or rolls < 1 else rolls
+    hit = False
+    if chance > 0 and rng is not None:
+        # 掷数全部消费（消费次数确定 → 同种子同结果）；任一命中即暴击。
+        for _ in range(rolls):
+            if _rand_unit(rng) < chance:
+                hit = True
+        info["rolls"] = rolls
+    boosted = base_exp * (mult if hit else 1.0) + (additive if hit else 0.0)
+    boosted, cap = _apply_exp_cap(c, boosted, thresholds)
+    affects = c.get("affects_quality_level") is not False
+    info["crit"] = hit
+    info["exp"] = boosted
+    info["cap"] = cap
+    info["exp_for_level"] = boosted if affects else base_exp
+    return info
 
 
 def _interaction_factor(
@@ -715,7 +852,8 @@ def plan_craft(
         `affinity.resolve_available_entries` 的入参（批42 · C）。
       · trait_defs：`ctx["traits"]`（装备被动定义表；缺省 → 被动 id 原样保留）。
       · affinity_reactions：`settings.affinity_reactions`（互动乘子/相性累计）。
-    出参：`{ok, reason, level, quality_exp, quality_level, quality, color_row, cost,
+    出参：`{ok, reason, level, quality_exp, quality_exp_base, quality_exp_breakdown,
+      quality_level, crit, crit_mult, crit_chance, quality, color_row, cost,
       cost_cap, kinds, materials[...], main_level, affinity, fixed_stats, random_stats,
       stats_bonus, fixed_set_affixes, random_set_affixes, set_affixes, passives, ...}`；
       拒绝 `{ok: False, reason, ...}`。
@@ -794,6 +932,8 @@ def plan_craft(
         return {"ok": False, "reason": REJECT_LEVEL_BAND, "level": lv_out, "band": band}
 
     # ---- 同相性判定 + 品质经验 ----
+    # 批44：图纸档先取出，供**投入暴击**逐档概率/倍率查表（档名由包声明，引擎不硬编码）。
+    grade_id = bp.get("blueprint_grade")
     bp_aff = {k for k in _as_map(bp.get("affinities")).keys() if isinstance(k, str) and k}
     q_parts: List[Dict[str, Any]] = []
     for r in rows:
@@ -802,11 +942,13 @@ def plan_craft(
                         "same_affinity": same, "affinities": r["affinities"]})
     qe = quality_exp(q_parts, rules, config.get("quality_exp_by_color") or {},
                      blueprint_affinities=_as_map(bp.get("affinities")),
-                     affinity_reactions=affinity_reactions)
-    q_level = quality_level_of(qe["exp"], rules.get("quality_level_thresholds"))
+                     affinity_reactions=affinity_reactions,
+                     rng=rng, grade=grade_id,
+                     thresholds=rules.get("quality_level_thresholds"))
+    q_level = quality_level_of(qe.get("exp_for_level", qe["exp"]),
+                               rules.get("quality_level_thresholds"))
 
     # ---- 品质抽取（图纸档 → 行偏移）----
-    grade_id = bp.get("blueprint_grade")
     grade = next((dict(g) for g in grades if _as_map(g).get("id") == grade_id), None)
     offset = _as_int(_as_map(grade).get("level_offset")) or 0
     color = draw_quality(rng, table, q_level, offset)
@@ -843,8 +985,13 @@ def plan_craft(
         "lesson": None,
         "level": lv_out,
         "quality_exp": qe["exp"],
+        "quality_exp_base": qe["exp_before_crit"],
         "quality_exp_breakdown": qe,
         "quality_level": q_level,
+        # ---- 批44 · 投入概率暴击（是否命中 / 倍率 / 本档概率；未启用时 crit=False, ×1）----
+        "crit": qe["crit"],
+        "crit_mult": qe["crit_mult"],
+        "crit_chance": qe["crit_chance"],
         "quality": color,
         "grade": grade_id,
         "color_row": q_level + offset,

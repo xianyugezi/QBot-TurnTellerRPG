@@ -1,4 +1,5 @@
 """批41 · 深度打造数据层：打造参数段默认值 + 图纸/材料字段定义 + 品质概率阶梯。
+批44 · 投入概率暴击：`craft_rules.quality_exp_crit` 默认值（缺省关）+ 字段元数据。
 
 文件：qbot_rpg/content/deep_craft_settings.py
 功能：深度打造（打造家族的「深度层」）的**包声明口径**与**编辑器字段元数据**：
@@ -122,6 +123,25 @@ DEFAULT_DEEP_CRAFT_RULES: Dict[str, Any] = {
     "cost_floor_ratio": 0.0,                   # 总 cost 下限 = cap × 本比例（0 = 不设下限）
     # 材料互动 → 品质经验乘子（原案 §12 互动；幅度未定 → 包声明系数，见工程补白 G-3）
     "interaction": {"conflict": -0.25, "amplify": 0.15},
+    # ---- 批44 · 投入概率暴击（决策记录 §七；草案 v2 §3.2 形状）----
+    # 设计意图：**用「投料时按概率暴击给额外品质经验」替代「拉高 cost cap」或「强制扩充
+    # 彩档材料表」**，使高档图纸有机会冲破常规经验上限达到品质 10（原案 §6 要求 1~10 级）。
+    # 全部可配、缺省保守：`enabled=false` → 不掷、不消费随机数，行为与既有逐字段一致；
+    # 逐档概率低档更高、高档更低（铜 15% / 银 10% / 金 7% / 彩 5%，§七建议值，待实测校准）。
+    "quality_exp_crit": {
+        "enabled": False,                      # 默认关（不声明 = 零变化）
+        "grades": [],                          # 适用图纸档；空 = 全档（可只开高档）
+        "chance_by_grade": {"铜": 0.15, "银": 0.10, "金": 0.07, "彩": 0.05},
+        "chance_default": 0.05,                # 档未声明时的概率（缺省保守）
+        "mult_by_grade": {"铜": 2.0, "银": 2.0, "金": 2.0, "彩": 2.0},
+        "mult_default": 1.0,                   # 档未声明时的倍率（1.0 = 不加成）
+        "additive_exp": 0.0,                   # 命中时的固定加经验（与倍率可叠加；默认关）
+        "applies_to": "quality_exp",           # 作用目标（当前仅品质经验）
+        "affects_quality_level": True,         # 是否参与品质等级判定（false = 仅展示经验）
+        "rolls_per_craft": 1,                  # 每次打造掷数（1~2；>1 显著抬高期望）
+        "exp_cap": "last_threshold",           # none / last_threshold（取阈值末项）/ 数值
+        "rng_stream": "player",                # 随机流标记（引擎只走注入的玩家级随机流）
+    },
     # 随机属性 / 随机套装词条条数缺省（图纸可各自覆盖）
     "random_stat_count": {"min": 0, "max": 2},
     "random_set_affix_count": {"min": 0, "max": 2},
@@ -175,6 +195,51 @@ DEEP_CRAFT_RULE_FIELDS: Dict[str, FieldMeta] = {
                                  label="增幅系数"),
         },
         help="材料相性冲突/增幅对品质经验的乘子系数（触发 1 对 ×(1+系数)）。"),
+    # ---- 批44 · 投入概率暴击（决策记录 §七；草案 v2 §3.2 形状）----
+    "quality_exp_crit": FieldMeta(
+        type="obj", label="投入暴击（品质经验）",
+        children={
+            "enabled": FieldMeta(type="bool", default=False, label="启用投入暴击",
+                                 help="缺省关闭：不声明 = 不掷、不消耗随机数，"
+                                      "行为与既有逐字段一致。"),
+            "grades": FieldMeta(
+                type="list", element=FieldMeta(type="str"), label="适用图纸档",
+                help="图纸档 id（需在 blueprint_grades 声明）；留空 = 全档，可只开高档。"),
+            "chance_by_grade": FieldMeta(
+                type="obj", soft_label=True, label="逐档暴击概率",
+                help="图纸档 id → 概率（0~1）；未声明的档回落到「缺省暴击概率」。"),
+            "chance_default": FieldMeta(
+                type="number", range_min=0.0, range_max=1.0, default=0.05,
+                label="缺省暴击概率"),
+            "mult_by_grade": FieldMeta(
+                type="obj", soft_label=True, label="逐档暴击倍率",
+                help="图纸档 id → 命中时的品质经验倍率；未声明的档回落到「缺省暴击倍率」。"),
+            "mult_default": FieldMeta(
+                type="number", range_min=0.0, default=1.0, label="缺省暴击倍率",
+                help="1.0 = 不加成（命中只记标记）；建议为自有档位显式声明倍率。"),
+            "additive_exp": FieldMeta(
+                type="number", allow_negative=True, default=0.0, label="暴击固定加经验",
+                help="命中时在倍率之外追加的固定品质经验（默认 0，与倍率可叠加）。"),
+            "applies_to": FieldMeta(
+                type="enum", enum=("quality_exp",), default="quality_exp", label="作用目标"),
+            "affects_quality_level": FieldMeta(
+                type="bool", default=True, label="影响品质等级判定",
+                help="false = 暴击经验只体现在展示，品质等级仍按暴击前经验判定。"),
+            "rolls_per_craft": FieldMeta(
+                type="int", range_min=1, range_max=2, default=1, label="每次打造掷数",
+                help="每次打造掷数（1~2）；任一命中即暴击，>1 会显著抬高期望。"),
+            "exp_cap": FieldMeta(
+                type="str", soft_label=True, label="经验封顶",
+                help="none = 不封顶；last_threshold = 封到品质等级阈值末项（保证可达品质 10 但"
+                     "不溢出）；也可填数值。"),
+            "rng_stream": FieldMeta(
+                type="enum", enum=("player",), default="player", label="随机流",
+                help="随机流标记；引擎只走批40 玩家级随机流（可注入确定性 RNG 复现）。"),
+        },
+        help="投料提交时按图纸档掷一次概率，命中给额外品质经验（倍率可配），使高档图纸有机会"
+             "冲破常规经验上限达到品质 10 —— **用「投入概率暴击」替代「拉高 cost cap / 强制"
+             "扩充材料表」**（决策记录 §七 用户裁定）。全部参数包声明、可调；缺省关闭（不声明"
+             "= 行为与既有逐字段一致，且不消耗随机数）。"),
     "random_stat_count": FieldMeta(
         type="obj", label="随机属性条数",
         children={

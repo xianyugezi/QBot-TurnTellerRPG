@@ -1221,6 +1221,17 @@ class BattleEngine:
         registry = getattr(self, "_resource_registry", None)
         if registry is None:
             return None
+        # 批53 · 资源消耗/获取轴（X34/X35）：读该 actor 的 combatant 轴值 → 倍率
+        # （1 + pct/100，按 settings.effect_axes 声明区间钳制）。未配置 = 1.0 →
+        # check/pay/gain 全部走原值（逐字段零变化）。两处消费点复用既有 resource_axis。
+        _axes_cfg = self._config.get(EFFECT_AXES_KEY)
+        try:
+            _cost_mult = 1.0 + effect_axis_value(
+                self._combat(attacker), "resource_cost_pct", _axes_cfg) / 100.0
+            _gain_mult = 1.0 + effect_axis_value(
+                self._combat(attacker), "resource_gain_pct", _axes_cfg) / 100.0
+        except Exception:  # noqa: BLE001 —— 取轴异常 → 按原值（不阻断资源结算）
+            _cost_mult, _gain_mult = 1.0, 1.0
         # energy_cost 门禁（技能 def 段；支持 {axis: {key: amt}} 与 {axis: amt}
         # 数值型简写两种形态——check_cost/pay_cost 内部归一（_cost_map_of））
         cost = sd.get("energy_cost")
@@ -1232,7 +1243,8 @@ class BattleEngine:
                 # 简写形态 {axis: int} → 归一 {axis: {axis: int}}（数值型 K1）
                 _norm_cost: Dict[str, Any] = dict(cost_map) if isinstance(cost_map, Mapping) \
                     else {axis_id: int(cost_map or 0)}
-                ok = resource_axis.check_cost(ctx, axis_id, _norm_cost, side=attacker)
+                ok = resource_axis.check_cost(ctx, axis_id, _norm_cost,
+                                              side=attacker, mult=_cost_mult)
                 if not ok.get("ok", True):
                     seq = self._record_action(
                         attacker, str(ca.get("type", "skill")), target,
@@ -1245,12 +1257,13 @@ class BattleEngine:
                         int(self._combat(target).get("hp", 0)), (),
                         f"能量不足（{axis_id}），技能被拒（不消耗行动）")
                 # 扣减
-                resource_axis.pay_cost(ctx, axis_id, _norm_cost, side=attacker)
+                resource_axis.pay_cost(ctx, axis_id, _norm_cost,
+                                       side=attacker, mult=_cost_mult)
         # energy_gain 结算（技能 def 段；成功施放后增加封顶）
         gain = sd.get("energy_gain")
         if isinstance(gain, Mapping) and gain:
             ctx = self._resource_ctx(attacker, target, registry)
-            resource_axis.apply_gain(ctx, dict(gain), side=attacker)
+            resource_axis.apply_gain(ctx, dict(gain), side=attacker, mult=_gain_mult)
         return None
 
     def _apply_consume_marks_gate(

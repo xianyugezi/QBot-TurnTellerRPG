@@ -558,11 +558,25 @@ def _cost_map_of(segment: Any) -> Dict[str, int]:
     return out
 
 
+def scale_amount_map(segment: Any, mult: float = 1.0) -> Dict[str, int]:
+    """按倍率缩放 energy_cost / energy_gain 段（批53 · X34/X35 唯一缩放处）。
+
+    `mult = 1.0`（缺省）→ 与既有 `_cost_map_of` **逐字段一致**（零变化）；
+    `mult < 1` 省耗/少回、`> 1` 更贵/多回。缩放后 `max(0, round(...))`——
+    下钳 0（禁止负消耗），子池 `any:` 键同样参与缩放（门禁与均摊同倍率）。
+    """
+    base = _cost_map_of(segment)
+    if not base or mult == 1.0:
+        return base
+    return {k: max(0, int(round(v * mult))) for k, v in base.items()}
+
+
 def check_cost(
     ctx: Mapping[str, Any],
     axis_id: str,
     cost: Mapping[str, int],
     side: str = "player",
+    mult: float = 1.0,
 ) -> Dict[str, Any]:
     """energy_cost 施放前检查（E2/K1-K3/D-02）：不足 → 被拒不消耗行动。
 
@@ -574,8 +588,10 @@ def check_cost(
       - 未注册资源 → 降级放行 ok（RS-5：注册缺失不报错；校验红拦归 V1）。
     返回 {ok, reason, missing: [{axis, key, need, have}]}（reason 语义键，
     文案模板化归接线方，B-8）。
+
+    批53：可选 `mult`（X34 资源消耗）按倍率缩放门禁需求（1.0 = 原样）。
     """
-    cost_map = _cost_map_of(cost)
+    cost_map = scale_amount_map(cost, mult)
     if not cost_map:
         return {"ok": True, "reason": "", "missing": []}
     axis = axis_of(ctx, axis_id)
@@ -619,6 +635,7 @@ def cost_breakdown(
     axis_id: str,
     cost: Mapping[str, int],
     side: str = "player",
+    mult: float = 1.0,
 ) -> Optional[List[Dict[str, Any]]]:
     """子池型消耗扣减方案（B-5，F-C2 按锁定组合行扣池复用）。
 
@@ -627,8 +644,10 @@ def cost_breakdown(
     已显式锁定的池不参与 any 均摊（防双扣同池：具名键锁定的池值已被扣减，
     不再作为 any 富余源）。返回 [{"pool": p, "amount": n}, ...]；总量不足 /
     数值型调用 / 无法满足 → None（调用方应走被拒路径，不半扣）。
+
+    批53：可选 `mult`（X34）与 check/pay 同倍率缩放（保证门禁与扣减一致）。
     """
-    cost_map = _cost_map_of(cost)
+    cost_map = scale_amount_map(cost, mult)
     if not cost_map:
         return []
     axis = axis_of(ctx, axis_id)
@@ -679,14 +698,17 @@ def pay_cost(
     axis_id: str,
     cost: Mapping[str, int],
     side: str = "player",
+    mult: float = 1.0,
 ) -> Dict[str, Any]:
     """施放成功扣减（原子：先 check 后 pay，不半扣；返回 {ok, paid, events}）。
 
     数值型：扣单值（不足 → 拒绝，调用方应已先 check）；子池型：按
     cost_breakdown 方案扣池（无方案 → 拒绝）。扣减后钳非负（防御）。
     返回结构化事件（B-8）供消息/审计。
+
+    批53：可选 `mult`（X34）与 check_cost / cost_breakdown 同倍率缩放。
     """
-    cost_map = _cost_map_of(cost)
+    cost_map = scale_amount_map(cost, mult)
     if not cost_map:
         return {"ok": True, "paid": [], "events": []}
     axis = axis_of(ctx, axis_id)
@@ -694,7 +716,7 @@ def pay_cost(
         return {"ok": False, "paid": [], "events": [], "reason": "axis_missing"}
     events: List[Dict[str, Any]] = []
     if axis.is_pooled:
-        plan = cost_breakdown(ctx, axis_id, cost, side)
+        plan = cost_breakdown(ctx, axis_id, cost, side, mult=mult)
         if plan is None:
             return {"ok": False, "paid": [], "events": [], "reason": "insufficient"}
         seg = _resource_state_of(ctx, side)
@@ -741,6 +763,7 @@ def gain_energy(
     gain: Mapping[str, int],
     side: str = "player",
     source: str = "skill",
+    mult: float = 1.0,
 ) -> Dict[str, Any]:
     """单资源轴 energy_gain 追加（E1/K6/B-6）：封顶后写回，返回 {ok, gained, events}。
 
@@ -750,8 +773,10 @@ def gain_energy(
     - 封顶（§1.3）：数值型 ≤ max（0=不限）；子池型每池 ≤ max_per_pool，超出
       部分不累计不回滚（TC-02③/TC-08②）；
     - 未注册资源 → 降级跳过不报错（RS-5；V1 红拦归批11）。
+
+    批53：可选 `mult`（X35 资源获取）按倍率缩放入账量（1.0 = 原样）。
     """
-    gain_map = _cost_map_of(gain)
+    gain_map = scale_amount_map(gain, mult)
     if not gain_map:
         return {"ok": True, "gained": [], "events": []}
     axis = axis_of(ctx, axis_id)
@@ -792,6 +817,7 @@ def apply_gain(
     energy_gain: Any,
     side: str = "player",
     source: str = "skill",
+    mult: float = 1.0,
 ) -> Dict[str, Any]:
     """技能/派生/proc 的 energy_gain 段批量结算（E1/K6：可同时多资源增减）。
 
@@ -807,10 +833,10 @@ def apply_gain(
         if not isinstance(axis_id, str) or not axis_id:
             continue
         if isinstance(value, Mapping):
-            r = gain_energy(ctx, axis_id, value, side=side, source=source)
+            r = gain_energy(ctx, axis_id, value, side=side, source=source, mult=mult)
         else:
             r = gain_energy(ctx, axis_id, {axis_id: _norm_nonneg(value, 0)},
-                            side=side, source=source)
+                            side=side, source=source, mult=mult)
         gained.extend(r.get("gained", []))
         events.extend(r.get("events", []))
     return {"ok": True, "gained": gained, "events": events}
@@ -825,6 +851,7 @@ def check_trigger_cost(
     ctx: Mapping[str, Any],
     energy_cost: Any,
     side: str = "player",
+    mult: float = 1.0,
 ) -> Dict[str, Any]:
     """触发类 energy_cost 检查（D-03）：不足 → 本次触发不生效、不耗、不计上限。
 
@@ -843,9 +870,10 @@ def check_trigger_cost(
         if not isinstance(axis_id, str) or not axis_id:
             continue
         if isinstance(value, Mapping):
-            r = check_cost(ctx, axis_id, value, side=side)
+            r = check_cost(ctx, axis_id, value, side=side, mult=mult)
         else:
-            r = check_cost(ctx, axis_id, {axis_id: _norm_nonneg(value, 0)}, side=side)
+            r = check_cost(ctx, axis_id, {axis_id: _norm_nonneg(value, 0)},
+                           side=side, mult=mult)
         if not r.get("ok"):
             missing.extend(r.get("missing", []))
     if missing:
@@ -929,11 +957,13 @@ def check_skill_cost(
     ctx: Mapping[str, Any],
     skill: Any,
     side: str = "player",
+    mult: float = 1.0,
 ) -> Dict[str, Any]:
     """技能施放前 energy_cost 总检查（skill def 段，K4 与 mp_cost 互补并存）。
 
     返回 {ok, reason, missing, axes}；axes = 本次涉及的资源轴 ID 列表（供
     接线方组合消息）。energy_cost 段缺省/空 → ok（无资源消耗）。
+    批53：可选 `mult`（X34）按倍率缩放需求（1.0 = 原样）。
     """
     seg = _segment_of(skill, "energy_cost")
     if not isinstance(seg, Mapping) or not seg:
@@ -945,9 +975,10 @@ def check_skill_cost(
             continue
         axes.append(axis_id)
         if isinstance(value, Mapping):
-            r = check_cost(ctx, axis_id, value, side=side)
+            r = check_cost(ctx, axis_id, value, side=side, mult=mult)
         else:
-            r = check_cost(ctx, axis_id, {axis_id: _norm_nonneg(value, 0)}, side=side)
+            r = check_cost(ctx, axis_id, {axis_id: _norm_nonneg(value, 0)},
+                           side=side, mult=mult)
         if not r.get("ok"):
             missing.extend(r.get("missing", []))
     if missing:
@@ -961,12 +992,16 @@ def pay_skill_cost(
     skill: Any,
     side: str = "player",
     source: str = "skill",
+    mult: float = 1.0,
 ) -> Dict[str, Any]:
-    """技能施放成功 energy_cost 扣减（先 check 后 pay 原子；返回 {ok, paid, events}）。"""
+    """技能施放成功 energy_cost 扣减（先 check 后 pay 原子；返回 {ok, paid, events}）。
+
+    批53：可选 `mult`（X34），check 与 pay 同倍率（不半扣）。
+    """
     seg = _segment_of(skill, "energy_cost")
     if not isinstance(seg, Mapping) or not seg:
         return {"ok": True, "paid": [], "events": []}
-    gate = check_skill_cost(ctx, skill, side=side)
+    gate = check_skill_cost(ctx, skill, side=side, mult=mult)
     if not gate.get("ok"):
         return {"ok": False, "paid": [], "events": [], "reason": "insufficient"}
     paid: List[Dict[str, Any]] = []
@@ -975,9 +1010,10 @@ def pay_skill_cost(
         if not isinstance(axis_id, str) or not axis_id:
             continue
         if isinstance(value, Mapping):
-            r = pay_cost(ctx, axis_id, value, side=side)
+            r = pay_cost(ctx, axis_id, value, side=side, mult=mult)
         else:
-            r = pay_cost(ctx, axis_id, {axis_id: _norm_nonneg(value, 0)}, side=side)
+            r = pay_cost(ctx, axis_id, {axis_id: _norm_nonneg(value, 0)},
+                         side=side, mult=mult)
         if not r.get("ok"):
             return {"ok": False, "paid": paid, "events": events, "reason": "insufficient"}
         paid.extend(r.get("paid", []))
@@ -990,16 +1026,18 @@ def gain_skill_energy(
     skill: Any,
     side: str = "player",
     source: str = "skill",
+    mult: float = 1.0,
 ) -> Dict[str, Any]:
     """技能成功结算 energy_gain 追加（与 mark_add 同拍：命中判定后/结算末尾）。
 
     skill def 的 energy_gain 段 = {axis_id: {key: amount}}（契约形态）或
     {axis_id: amount}（简写，B-9）；段缺省/空 → 无操作。返回 {ok, gained, events}。
+    批53：可选 `mult`（X35）按倍率缩放入账（1.0 = 原样）。
     """
     seg = _segment_of(skill, "energy_gain")
     if not isinstance(seg, Mapping) or not seg:
         return {"ok": True, "gained": [], "events": []}
-    return apply_gain(ctx, seg, side=side, source=source)
+    return apply_gain(ctx, seg, side=side, source=source, mult=mult)
 
 
 # =====================================================================================

@@ -333,7 +333,9 @@ EFFECT_AXIS_SPECS: Tuple[Mapping[str, Any], ...] = (
                             "-100 = 零耗（下钳，不可为负）。"},
         "legacy_alias": (),
         "consumer": "resource_axis.pay_cost",
-        "consumer_note": "唯一收口 = resource_axis 的消耗门禁/扣款（数值型与子池型共用）。",
+        "consumer_note": "批53 已接线：唯一收口 = `battle._apply_skill_energy` 读轴 →"
+                         " `resource_axis.check_cost/pay_cost` 的 `mult`（同一倍率，"
+                         "门禁与扣款一致；`scale_amount_map` 唯一缩放处，下钳 0）。",
     },
     {
         "axis": "resource_gain_pct", "doc_id": "X35", "priority": "P1",
@@ -342,7 +344,8 @@ EFFECT_AXIS_SPECS: Tuple[Mapping[str, Any], ...] = (
                     "help": "调整资源获取量：<1 回得慢 / >1 回得快。"},
         "legacy_alias": (),
         "consumer": "resource_axis.apply_gain",
-        "consumer_note": "唯一收口 = resource_axis 的获取入口（技能回能与通用入账共用）。",
+        "consumer_note": "批53 已接线：唯一收口 = `battle._apply_skill_energy` 读轴 →"
+                         " `resource_axis.apply_gain/gain_energy` 的 `mult`（唯一缩放处）。",
     },
     {
         "axis": "crit_damage_pct", "doc_id": "X03", "priority": "P1",

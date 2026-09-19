@@ -26,6 +26,7 @@ from __future__ import annotations
 from typing import Any, Dict, Mapping
 
 from qbot_rpg.core.battle import BattleEngine
+from qbot_rpg.core.resource_axis import RESOURCE_STATE_KEY, scale_amount_map
 from qbot_rpg.core.effects import (
     STATUS_CHANCE_AXIS,
     STATUS_RESIST_AXIS,
@@ -383,6 +384,74 @@ def test_d2_action_bar_shift_range_declaration_driven() -> None:
     assert ("delay", BP, 50.0) in c_lo, c_lo
     _bt0, r0, _ = _run_shift(0)
     assert r_hi == r0 - 50.0 and r_lo == r0 + 50.0
+
+
+_RAGE_REG = {"rage": {"name": "怒气", "type": "resource", "base": 0, "max": 100}}
+
+
+def _res_engine(*, cost: int = 10, gain: int = 5, state: int = 50,
+                player_extra: Any = None) -> Any:
+    defs = {"s1": {"id": "s1", "name": "技", "type": "active", "kind": "damage",
+                   "power": 100, "energy_cost": {"rage": cost},
+                   "energy_gain": {"rage": gain}}}
+    eng = BattleEngine(defs=defs)
+    p = {"hp": 500, "max_hp": 500, "mp": 100, "max_mp": 100, "atk": 50,
+         "def": 30, "spd": 10, "name": "P", **dict(player_extra or {})}
+    e = {"hp": 500, "max_hp": 500, "mp": 0, "max_mp": 0, "atk": 0, "def": 0,
+         "spd": 8, "name": "E"}
+    eng.start(p, e, random_seed=1)
+    eng._resource_registry = _RAGE_REG  # noqa: SLF001
+    eng._snap["resource_state"] = {"player": {"rage": state}, "enemy": {}}  # noqa: SLF001
+    out = eng.do_action("player", {"type": "skill", "skill_id": "s1"})
+    return out, int(eng._snap["resource_state"]["player"]["rage"])  # noqa: SLF001
+
+
+def test_e1_resource_axes_bidirectional() -> None:
+    """X34/X35 双向：−50% 消耗（10→5）/ +100% 获取（5→10）；基准 = 50−10+5。"""
+    out0, r0 = _res_engine()
+    assert out0.ok is True and r0 == 45
+    out_c, r_c = _res_engine(player_extra={"resource_cost_pct": -50})
+    assert out_c.ok is True and r_c == 50            # 50 − 5 + 5
+    out_g, r_g = _res_engine(player_extra={"resource_gain_pct": 100})
+    assert out_g.ok is True and r_g == 50            # 50 − 10 + 10
+    # 未配置 → 与基线逐字段一致
+    out_n, r_n = _res_engine(player_extra={"resource_cost_pct": 0,
+                                           "resource_gain_pct": 0})
+    assert out_n.ok is True and r_n == r0 == 45
+
+
+def test_e2_resource_cost_axis_gates_and_clamps() -> None:
+    """‑100% = 零耗（下钳，不可为负）；门禁用同一缩放（不足仍被拒）。"""
+    out_hi, r_hi = _res_engine(player_extra={"resource_cost_pct": -100})
+    assert out_hi.ok is True and r_hi == 55          # 只加不减
+    # 不足场景：起始 3，cost 10 → 被拒；cost 轴 −80% → 实际 cost 2 ≤ 3 → 放行
+    out_rej, r_rej = _res_engine(state=3)
+    assert out_rej.ok is False and r_rej == 3
+    out_ok, r_ok = _res_engine(state=3, player_extra={"resource_cost_pct": -80})
+    assert out_ok.ok is True and r_ok == 6           # 3 − 2 + 5
+    # 越界轴值按声明区间钳制（min −100）→ 仍是零耗，不出现负消耗
+    _out, r_cl = _res_engine(player_extra={"resource_cost_pct": -9999})
+    assert r_cl == 55
+
+
+def test_e3_scale_amount_map_default_identity_and_consumers() -> None:
+    """唯一缩放处：`mult=1.0` 与既有归一逐字段一致；check/pay/gain 三点同源。"""
+    assert scale_amount_map({"rage": 10, "hp": 0}, 1.0) == {"rage": 10, "hp": 0}
+    assert scale_amount_map({"rage": 10}, 0.5) == {"rage": 5}
+    assert scale_amount_map({"rage": 3}, 0.5) == {"rage": 2}      # round
+    assert scale_amount_map({"rage": 10}, -1.0) == {"rage": 0}    # 下钳 0
+    # 门禁与扣减同倍率（同一 ctx，先 check 后 pay）
+    from qbot_rpg.core import resource_axis as ra
+
+    ctx = {"stats": _RAGE_REG, RESOURCE_STATE_KEY: {"player": {"rage": 50}}}
+    assert ra.check_cost(ctx, "rage", {"rage": 10}, mult=0.5)["ok"] is True
+    ra.pay_cost(ctx, "rage", {"rage": 10}, mult=0.5)
+    assert ctx[RESOURCE_STATE_KEY]["player"]["rage"] == 45
+    ra.gain_energy(ctx, "rage", {"rage": 5}, mult=2.0)
+    assert ctx[RESOURCE_STATE_KEY]["player"]["rage"] == 55
+    # 获取轴负向：−100% → 不入账
+    ra.gain_energy(ctx, "rage", {"rage": 5}, mult=0.0)
+    assert ctx[RESOURCE_STATE_KEY]["player"]["rage"] == 55
 
 
 def test_g1_battle_snapshot_zero_change_no_axis_keys() -> None:

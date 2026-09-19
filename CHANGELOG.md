@@ -14,6 +14,19 @@
 
 ### Added
 
+- **批47（2026-09-20）**：**符文 1 阶数值 + 跨装备类型差异生效**（口径文档 43-B；原案 §9 R2/R4）
+  —— `core/runes.py` 新增 1 阶数值**求值层** `rune_stats_of` / `sum_rune_stats`（`by_equip_type`
+  的 default + **`items.type`** 覆盖差异解析**只在此处发生**；键白名单 = `GEAR_NUMERIC_KEYS`
+  唯一源，自造键由校验器红拦）；`core/equipment.aggregate_bonus` 新增**符文数值贡献段**
+  （**唯一收口**）——每件已穿戴装备经 `JewelSystem.active_rune_sockets`（**孔位读取唯一入口**，
+  副手失活自动继承）读激活符文，按装备类型解析后走**同一** `route_bonus_into` flat/pct 路由
+  （**不新开聚合/键**）；`EquipmentEngine`/`EquipmentEngineAdapter`/装配层注入
+  `runes`/`items`/`jewel`（缺省 → 零贡献，既有行为逐字段一致）。**孔位互斥补对向**：
+  `JewelSystem.mount` 新增「该孔位已被同件实例符文占用 → `slot_full`」，与 `mount_rune`
+  共用 `_rune_slot_taken`（一处判定）；解析不到穿戴 uid 不误拦。**本批不新增 gear_stats 词条键**
+  （1 阶符文复用既有 FLAT/PCT/COMBAT 键族，口径 §三.2）。`core/battle.py`/`core/effects.py`
+  零改动（2 阶重伤/层数缺口、2·3 阶战斗接线留 43-D）。页脚批次串同步。
+
 - **批46（2026-09-20）**：**符文地基**（口径文档 43-A；原案 §9）——新增符文数据模块
   `runes.json`（三阶独立刻度 `tier ∈ {1,2,3}`，**不复用** quality 四档）与纯解析引擎
   `core/runes.py`（`rune_tier_of` / `by_equip_type` default+覆盖 / 3 合 1 纯函数

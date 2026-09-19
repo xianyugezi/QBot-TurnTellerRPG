@@ -117,7 +117,6 @@ from qbot_rpg.core.proficiency import ProficiencyEngine
 from qbot_rpg.core.alchemy_register import AlchemyRegister
 from qbot_rpg.core.jewel import JEWEL_TYPE, JewelSystem
 from qbot_rpg.core.quality import QualitySystem
-from qbot_rpg.core.synthesis import SynthesisEngine
 from qbot_rpg.core.templates import tpl_of
 from qbot_rpg.core.trait_inherit import TraitInherit
 from qbot_rpg.core.upgrade import UpgradeEngine
@@ -126,6 +125,12 @@ from qbot_rpg.core.upgrade import UpgradeEngine
 # `qbot_rpg.commands` 前缀反向依赖边；同层兄弟引用架构合规，与 shop_commands.py 同口径）。
 from .router import CommandSpec
 from .sender import format_tpl12
+
+# 批39 · 合成公用层归位：第 1 层【合成】的指令名/处理器/注册迁移到
+# `commands/synth_commands.py`（合成是打造与炼金的公用层）。此处**仅再导出**，保持
+# `alchemy_commands.SYNTH_CMD` / `alchemy_commands.cmd_synthesis` 历史调用方零改动；
+# 本模块**不再注册** `/合成`（避免同名双注册，见 register_alchemy_commands）。
+from .synth_commands import SYNTH_CMD, cmd_synthesis
 
 __all__ = [
     # 指令名常量
@@ -162,7 +167,8 @@ __all__ = [
 # 常量
 # ---------------------------------------------------------------------------
 
-SYNTH_CMD = "合成"
+# 批39：SYNTH_CMD 已随「合成公用层归位」迁至 commands/synth_commands.py；
+# 本模块经顶部 `from .synth_commands import SYNTH_CMD, cmd_synthesis` 再导出（历史调用方零改动）。
 ALCHEMY_CMD = "炼金"
 FEED_CMD = "投料"
 INHERIT_CMD = "继承"
@@ -801,26 +807,6 @@ def _batch_material_scores(recipe: Mapping[str, Any], ctx: Mapping[str, Any],
             ci = 1
         scores.extend([score] * ci)
     return scores
-
-
-def cmd_synthesis(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
-    """`/合成 <配方>*<数量>`：配方解析（名称/序号）与守卫/原子校验/标准版产出/熟练经验全部委托引擎；
-    结果 `message` 透传（含缺材料差异、等级不足、深度未解锁、数量超限提示不拦截）。
-    缺参/解析错误 → TPL-12。
-
-    入参：parsed（ParsedCommand）、ctx（玩家表示 + 配方/物品注册表 + settings）。
-    出参：回复正文 str（引擎已按契约 M-01 合成 ✅/❌ 业务文案）。
-    """
-    if parsed.error:
-        return format_tpl12(_fragment(parsed))
-    if not parsed.args:
-        return format_tpl12(f"/{SYNTH_CMD}")
-    target = _target_of(parsed)
-    qty = parsed.qty if parsed.qty is not None else 1
-    settings = ctx.get("settings")
-    engine = SynthesisEngine(settings=settings if isinstance(settings, Mapping) else None)
-    res = engine.synthesize(ctx, target, qty)
-    return str(res.get("message") or tpl_of(ctx, "alchemy_synth_fail"))
 
 
 async def cmd_alchemy(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
@@ -3544,7 +3530,7 @@ def register_alchemy_commands(
     *,
     make_context: Optional[Callable[[Any], dict]] = None,
 ) -> Any:
-    """把 `/合成` `/炼金` `/投料` `/继承` `/继承超` `/确认` `/放弃` `/调合续` `/分解`
+    """把 `/炼金` `/投料` `/继承` `/继承超` `/确认` `/放弃` `/调合续` `/分解`
     `/镶嵌` `/拆珠` `/珠升阶` `/成品合成` `/配方合成` `/特性合成` `/登记` `/复制`
     `/深度炼金` `/进化` `/镶核心` `/加成` `/挑战` `/图鉴` `/技能面板` `/教学` `/即时调合`
     `/种植` `/收获` `/代工` `/收取` `/协力`
@@ -3565,12 +3551,6 @@ def register_alchemy_commands(
                 "（玩家上下文工厂，由装配层注入）"
             )
         return make_context(parsed)
-
-    def _synth(parsed: Any, *a: Any, **k: Any) -> str:
-        injected = k.get("ctx") if isinstance(k, dict) else None
-        if isinstance(injected, MutableMapping):
-            return cmd_synthesis(parsed, injected)
-        return cmd_synthesis(parsed, _ctx(parsed))
 
     def _alchemy(parsed: Any, *a: Any, **k: Any):
         injected = k.get("ctx") if isinstance(k, dict) else None
@@ -3756,7 +3736,8 @@ def register_alchemy_commands(
             return cmd_greenhouse(parsed, injected)
         return cmd_greenhouse(parsed, _ctx(parsed))
 
-    router.register(CommandSpec(SYNTH_CMD, handler=_synth))
+    # 批39：`/合成` 已归位公用层（synth_commands.register_synth_commands）——本函数不再注册，
+    # 避免同名双注册（Router.register 重名 ValueError）。
     router.register(CommandSpec(ALCHEMY_CMD, handler=_alchemy))
     router.register(CommandSpec(FEED_CMD, handler=_feed))
     router.register(CommandSpec(INHERIT_CMD, handler=_inherit))

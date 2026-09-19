@@ -32,6 +32,7 @@ from qbot_rpg.commands.alchemy_commands import (
 )
 from qbot_rpg.commands.parsers import parse_command
 from qbot_rpg.commands.router import Router
+from qbot_rpg.commands.synth_commands import register_synth_commands
 from qbot_rpg.core.synthesis import DEFAULT_MAX_QTY
 
 # ---------------------------------------------------------------------------
@@ -225,18 +226,26 @@ def test_synthesis_parse_error_tpl12():
 # 接线：Router 注册 / 无 make_context / 解析集成 / emoji 纪律
 # ---------------------------------------------------------------------------
 def test_register_alchemy_commands():
-    """批11 路11A 装配入口：注册 /合成 CommandSpec（本批仅此一条）。"""
+    """批39 归位：/合成 由公用层 synth_commands 注册；alchemy_commands 不再注册（防双注册）。"""
     router = Router()
-    register_alchemy_commands(router, make_context=lambda p: make_ctx())
+    register_synth_commands(router, make_context=lambda p: make_ctx())
     assert router.has(SYNTH_CMD)
     assert {SYNTH_CMD} <= set(router.names())
     assert router.get(SYNTH_CMD).whitelisted
+    # 炼金层注册函数不得再注册 /合成（同名双注册 → Router ValueError）
+    router2 = Router()
+    register_alchemy_commands(router2, make_context=lambda p: make_ctx())
+    assert not router2.has(SYNTH_CMD)
+    # 兼容性再导出：alchemy_commands.SYNTH_CMD / cmd_synthesis 仍可用（历史调用方零改动）
+    import qbot_rpg.commands.alchemy_commands as _ac
+    import qbot_rpg.commands.synth_commands as _sc
+    assert _ac.SYNTH_CMD == _sc.SYNTH_CMD and _ac.cmd_synthesis is _sc.cmd_synthesis
 
 
 def test_register_without_make_context_raises():
     """【待接线】无 make_context 时 handler 调用抛 RuntimeError（装配未注入的显式错误）。"""
     router = Router()
-    register_alchemy_commands(router)
+    register_synth_commands(router)
     with pytest.raises(RuntimeError):
         router.get(SYNTH_CMD).handler(parse("/合成 魔力药水配方"))
 

@@ -66,6 +66,7 @@ from qbot_rpg.commands import (
     shop_commands,
     shortcut_commands,
     status_commands,
+    synth_commands,  # 批39 · 合成公用层：/合成（打造与炼金共用第 1 层）
     unregister_commands,
     use_commands,
     job_commands,  # M13 批14 路14A：/转职
@@ -110,6 +111,9 @@ REGISTER_GROUPS: tuple = (
     log_commands.register_log_commands,            # /日志（F-03/F-04，BCH-05，ADR-09）
     investigate_commands.register_investigate_commands,  # /调查（F-05/F-06，BCH-06）
     codex_commands.register_codex_commands,        # /图鉴（BCH-08；M8 收口：含炼金分册）
+    # 批39 · 合成公用层归位：/合成 由 synth_commands 注册（打造与炼金共用的第 1 层）——
+    # 先于炼金层注册；alchemy_commands 已移除 /合成 注册（防同名双注册）。
+    synth_commands.register_synth_commands,
     alchemy_commands.register_alchemy_commands,    # M8 炼金 30+ 指令（/图鉴 并入 codex）
     forge_commands.register_forge_commands,        # M9 锻造 六指令（P0-1 收口 2026-08-30：
     #   /锻造 /确认 /图纸 /锻造树 /套装 /客制；/确认 状态分派器 replace 接管炼金同名）

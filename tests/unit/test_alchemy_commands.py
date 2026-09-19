@@ -508,13 +508,13 @@ async def test_feed_materials_insufficient_diff() -> None:
 # 装配：register_alchemy_commands（批11 接线前置）
 # ---------------------------------------------------------------------------
 async def test_register_alchemy_commands_feed_and_alchemy() -> None:
-    """装配：register_alchemy_commands 注册 合成/炼金/投料 三条 CommandSpec。"""
+    """装配：register_alchemy_commands 注册 炼金/投料 两条（/合成 批39 归位公用层）。"""
     router = Router()
     register_alchemy_commands(router, make_context=lambda p: make_ctx())
-    assert router.has(SYNTH_CMD)
+    assert not router.has(SYNTH_CMD)  # /合成 不再由炼金层注册（synth_commands 为唯一注册方）
     assert router.has(ALCHEMY_CMD)
     assert router.has(FEED_CMD)
-    assert {SYNTH_CMD, ALCHEMY_CMD, FEED_CMD} <= set(router.names())
+    assert {ALCHEMY_CMD, FEED_CMD} <= set(router.names())
     a_spec = router.get(ALCHEMY_CMD)
     f_spec = router.get(FEED_CMD)
     assert a_spec is not None and a_spec.whitelisted

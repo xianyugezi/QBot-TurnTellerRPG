@@ -222,6 +222,14 @@ def test_one_affix_per_four_levels_4_then_8() -> None:
     assert len(got8) == 2 and got8[0] == got4[0] and got8[1] != got4[0]
 
 
+def test_info_shows_affix_status_row() -> None:
+    """`/强化信息` 展示特殊词条进度（当前/满上限可得 + 中文名）。"""
+    ctx = make_ctx(quality_level=6, enhance=4, atk=32.0, affinities={"moon": 10.0})
+    _row_of(ctx)["enhance_affixes"] = ["heal_amp_pct"]
+    out = cmd_enhance_info(parse_command("/强化信息 铁剑"), ctx)
+    assert "特殊词条 1/4" in out and "回复强化" in out
+
+
 def test_span_configurable_to_three() -> None:
     """跨度改成 3 → 每 3 级一条（+2 → +3 即得）。"""
     ctx = make_ctx(enhance=2, atk=22.0, affinities={"moon": 10.0}, span=3,
@@ -315,6 +323,7 @@ def test_cooldown_reduction_is_placeholder_not_engine() -> None:
     route_bonus_into(sb, flat, pct)
     assert "cooldown_reduction" not in pct  # 不拆进 pct 层
     assert "cooldown_reduction_pct" not in flat
+    assert pct.get("atk") == 5.0  # 百分比加成族复用既有 _pct 路由
     # 展示可见
     from qbot_rpg.commands.basic_commands import _item_stat_parts
     assert any("冷却缩减" in x for x in _item_stat_parts(sb))
@@ -398,6 +407,22 @@ def test_defaults_preserve_legacy_instances() -> None:
     assert inst.enhance_affixes == ()
 
 
+def test_data_bearing_construction_sites_pass_new_fields() -> None:
+    """6 处构造点：**有实例来源**的三处逐一透传批43 新字段（静态守卫防漏）。"""
+    from pathlib import Path
+
+    repo = Path(__file__).resolve().parents[2]
+    for rel in ("qbot_rpg/storage/repository.py",
+                "qbot_rpg/assembly/runner.py",
+                "qbot_rpg/commands/basic_commands.py"):
+        src = (repo / rel).read_text(encoding="utf-8")
+        for key in ("quality_level=", "enhance_affixes="):
+            assert key in src, f"{rel} 的 ItemInstance 构造点未透传新字段：{key}"
+    # 无实例来源的三处（equipment unequip 兜底 / shop 新建）保留缺省（见实现说明 §九）
+    eq = (repo / "qbot_rpg/core/equipment.py").read_text(encoding="utf-8")
+    assert "ItemInstance(" in eq
+
+
 # ---------------------------------------------------------------------------
 # H. 校验器（更严）
 # ---------------------------------------------------------------------------
@@ -451,6 +476,28 @@ def test_editor_meta_replaces_cap_field() -> None:
     assert "max_by_rarity" not in kids
     assert {"max_by_quality_level", "legacy_quality_level_by_rarity",
             "special_affix_span"} <= set(kids)
+
+
+def test_validator_enhance_affix_key_space() -> None:
+    """池词条 `enhance_affix` 值须 ∈ gear_stats 唯一键空间（含占位键）；新造键红拦。"""
+    from qbot_rpg.content.validator import check_pack
+
+    def _errs(mods: Dict[str, Any]) -> List[Any]:
+        return [(e.field, e.detail.get("rule")) for e in check_pack(mods).errors]
+
+    good = {"settings": {"affinity_pools": [
+        {"id": "p1", "kind": "common",
+         "entries": [{"enhance_affix": "heal_amp_pct", "value": 1}]},
+        # 占位键（冷却缩减）允许登记/抽取
+        {"id": "p2", "kind": "common",
+         "entries": [{"enhance_affix": "cooldown_reduction_pct", "value": 1}]},
+    ]}}
+    assert _errs(good) == []
+    bad = {"settings": {"affinity_pools": [
+        {"id": "p1", "kind": "common",
+         "entries": [{"enhance_affix": "not_a_registered_key", "value": 1}]},
+    ]}}
+    assert any(r == "gear_key_missing" for _, r in _errs(bad))
 
 
 def test_validate_passes_default_schema() -> None:

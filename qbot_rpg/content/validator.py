@@ -44,7 +44,7 @@ from qbot_rpg.data.affinity_keys import (
     REACTION_KINDS,
     affinity_requires,
 )
-from qbot_rpg.data.gear_stats import GEAR_NUMERIC_KEYS
+from qbot_rpg.data.gear_stats import GEAR_DISPLAY_KEYS
 from qbot_rpg.content.models import (
     FieldMeta,
     FieldMetaTable,
@@ -2275,12 +2275,13 @@ class _Checker:
                             if v is not None and (not isinstance(v, str) or not v):
                                 self._err(module_name, f"{path}.entries.{j}.{key}", "R-1",
                                           rule="type", expect="str", got=type(v).__name__)
-                        # 批43：强化特殊词条键须落在 gear_stats 唯一键空间（红拦新造键）。
+                        # 批43：强化特殊词条键须落在 gear_stats 唯一键空间（含占位键；
+                        # 红拦新造键——占位键如冷却缩减可登记/可抽但引擎不消费）。
                         ea = ent.get(ENTRY_PAYLOAD_ENHANCE_AFFIX)
-                        if isinstance(ea, str) and ea and ea not in GEAR_NUMERIC_KEYS:
+                        if isinstance(ea, str) and ea and ea not in GEAR_DISPLAY_KEYS:
                             self._err(module_name, f"{path}.entries.{j}.{ENTRY_PAYLOAD_ENHANCE_AFFIX}",
                                       "R-4", rule="gear_key_missing", key=ea,
-                                      key_space=sorted(GEAR_NUMERIC_KEYS))
+                                      key_space=sorted(GEAR_DISPLAY_KEYS))
                         wv = ent.get("weight")
                         if wv is not None and (isinstance(wv, bool)
                                                or not isinstance(wv, (int, float)) or wv < 0):

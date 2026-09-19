@@ -234,23 +234,14 @@ def _reject(ctx: Mapping[str, Any], plan: Mapping[str, Any], name: str) -> str:
     return tpl_of(ctx, key, data)
 
 
-def _fixed_bonus(bp: Mapping[str, Any]) -> Dict[str, float]:
-    """图纸固定属性 → 实例 stats_bonus（照抄固定值；数值缩放规则见 §C 待裁决）。"""
-    bonus: Dict[str, float] = {}
-    for row in bp.get("blueprint_fixed_stats") or []:
-        if not isinstance(row, Mapping):
-            continue
-        stat = row.get("stat")
-        val = row.get("value")
-        if isinstance(stat, str) and stat and isinstance(val, (int, float)) \
-                and not isinstance(val, bool):
-            bonus[stat] = bonus.get(stat, 0.0) + float(val)
-    return bonus
-
-
 def _land(ctx: MutableMapping[str, Any], plan: Mapping[str, Any], bp: Mapping[str, Any],
           bp_id: str, base: Mapping[str, Any]) -> bool:
-    """落地：原子扣料 → 装备实例入包（带 uid）→ 快照落 persistent_state。"""
+    """落地：原子扣料 → 装备实例入包（带 uid + 固定/随机属性 + 套装词条 + 相性）→ 快照。
+
+    批42 · C：实例内容**全部来自 `plan_craft` 的纯计划**（固定项照抄 / 随机项走相性池），
+    本函数只做搬运与落档；实例字段含 `stats_bonus` / `set_affixes` / `passives` /
+    `affinities`（构造点透传清单见 `docs/深度打造_实现说明.md`）。
+    """
     rows = plan.get("materials") or []
     # 全量够数预检（含公用层未覆盖的自由材料），全通过再扣，避免部分扣减。
     for m in rows:
@@ -265,7 +256,7 @@ def _land(ctx: MutableMapping[str, Any], plan: Mapping[str, Any], bp: Mapping[st
     items = ctx.get("items")
     idef = items.get(item_id) if isinstance(items, Mapping) else None
     idef = idef if isinstance(idef, Mapping) else {}
-    bonus = _fixed_bonus(bp)
+    aff = plan.get("affinity") if isinstance(plan.get("affinity"), Mapping) else {}
     inst = {
         "item_id": item_id,
         "name": str(idef.get("name") or base.get("item_name") or item_id),
@@ -273,10 +264,15 @@ def _land(ctx: MutableMapping[str, Any], plan: Mapping[str, Any], bp: Mapping[st
         "quality": plan.get("quality") or "normal",
         "bound": False,
         "slot": str(bp.get("blueprint_slot") or idef.get("slot") or ""),
-        "stats_bonus": bonus,
+        "stats_bonus": dict(plan.get("stats_bonus") or {}),
         "traits": (),
         "enhance_level": 0,
         "uid": new_item_uid(),
+        # ---- 批42 · C：相性 / 套装词条 / 被动（打造时求值、冻进实例）----
+        "affinities": {str(k): float(v) for k, v in (aff.get("values") or {}).items()
+                       if isinstance(v, (int, float)) and not isinstance(v, bool)},
+        "set_affixes": [str(x) for x in (plan.get("set_affixes") or [])],
+        "passives": [str(x) for x in (plan.get("passives") or [])],
     }
     _instances(ctx).append(inst)
     ctx["_m8_dirty_inventory"] = True
@@ -292,6 +288,12 @@ def _land(ctx: MutableMapping[str, Any], plan: Mapping[str, Any], bp: Mapping[st
         "cost_cap": plan.get("cost_cap"),
         "kinds": plan.get("kinds"),
         "color_row": plan.get("color_row"),
+        # 批42 · C：主/副相性 + 词条摘要（便于对拍与展示）
+        "affinity_main": aff.get("main"),
+        "affinity_sub": aff.get("sub"),
+        "random_stats": list(plan.get("random_stats") or []),
+        "random_set_affixes": list(plan.get("random_set_affixes") or []),
+        "passives": list(plan.get("passives") or []),
     }
     player = ctx.get("player")
     ps = getattr(player, "persistent_state", None) if player is not None else None
@@ -377,12 +379,16 @@ def cmd_deep_craft(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         material_defs=ctx.get("items") or {},
         learned=bool(_learned(ctx).get(bp_id)),
         rng=ctx.get("rng"),
+        # 批42 · C：相性池查询入参 = settings（唯一入口 affinity.resolve_available_entries）
+        affinity_config=settings_map,
+        trait_defs=ctx.get("traits"),
         affinity_reactions=settings_map.get("affinity_reactions") or (),
     )
     if not plan.get("ok"):
         return _reject(ctx, plan, name)
     if not _land(ctx, plan, bp, bp_id, base):
         return tpl_of(ctx, "deep_craft_no_materials", {"name": name})
+    aff = plan.get("affinity") if isinstance(plan.get("affinity"), Mapping) else {}
     return tpl_of(ctx, "deep_craft_ok", {
         "name": str(base.get("item_name") or bp.get("blueprint_output") or bp_id),
         "quality": plan.get("quality"),
@@ -391,6 +397,11 @@ def cmd_deep_craft(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         "cost": int(plan.get("cost") or 0),
         "cap": plan.get("cost_cap"),
         "kinds": plan.get("kinds"),
+        # 批42 · C：成功文案携带相性与随机词条摘要（模板可选用占位符）
+        "main": aff.get("main") or "",
+        "sub": aff.get("sub") or "",
+        "affixes": "、".join(str(x) for x in (plan.get("set_affixes") or [])) or "（无）",
+        "passives": "、".join(str(x) for x in (plan.get("passives") or [])) or "（无）",
     })
 
 

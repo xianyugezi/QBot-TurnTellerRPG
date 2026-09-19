@@ -24,7 +24,7 @@ from qbot_rpg.web import api
 NODE = shutil.which("node")
 HTML = Path(api.repo_root()) / "qbot_rpg" / "web" / "static" / "index.html"
 REGISTRY = Path(api.repo_root()) / "docs" / "矛盾与待裁决登记.md"
-BATCH_NOTE = "批41 · 打造主流程"
+BATCH_NOTE = "批42 · 打造属性与相性池"
 
 _NODE_HARNESS = r"""
 const H = require(process.argv[1]);

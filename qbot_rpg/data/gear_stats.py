@@ -27,6 +27,18 @@
   器/展示可见，**明确不接引擎**（不进 pct 拆层、无任何消费点）。原案 §7 明文「冷却缩减
   留成占位属性」。
 
+批47 · 符文（43-B）1 阶数值贡献口径（键空间唯一源仍在本文件）：
+- 1 阶符文 = **纯数值加成**，**复用本表既有键族**（FLAT 白值 / PCT 百分比 / COMBAT 战斗直读），
+  **不新增符文专属键**（口径 §三.2：符文数值禁止自造键；校验器 `content/rune_models`
+  RUNE-05 对 `by_equip_type[*].stats` 的键做 `GEAR_NUMERIC_KEYS` 红拦）。
+- 承载（唯一聚合入口）：`core/equipment.aggregate_bonus` 的「符文贡献」段 → 走**同一**
+  `route_bonus_into` flat/pct 路由（不新开第二套聚合）；激活孔位一律经
+  `core/jewel.JewelSystem.active_rune_sockets`（副手折算件 → 空，失活零额外分支）。
+- 语义/上限：flat 档语义=数值加算（上限仅编辑器提示：hp 99999 / mp 9999 / 其余 5000，
+  见 `content/field_meta` 派生，非引擎钳制）；pct 档语义=百分点（5=+5%，提示 0-500，
+  同既有词条）；COMBAT 档按 `combatant_updates` 的既有封顶。**符文专属数值上限**若需另设
+  → 属口径未写，登记「待裁决」，不得在框架写死。
+
 批22 · A3 常驻战斗词条（全部归 COMBAT 档；逐条归属与数值口径）：
 - absorb_hp     ％    吸血比：造成伤害 × absorb_hp% 回血（上限 100），伤害扣除后由
                        battle 消费（不进属性管线、不属于 effects.lifesteal 主动效果）。

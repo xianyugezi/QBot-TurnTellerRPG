@@ -1,7 +1,10 @@
 """批46 · 符文地基（43-A）——符文定义解析层（qbot_rpg/core/runes.py）。
 
-定位：符文**定义/跨装备类型差异表/3 合 1 判定**的纯解析层，不接战斗效果
-（1 阶数值落 `gear_stats`、2/3 阶 effects 接线 = 后续批 43-B/D）。**孔位执行**
+定位：符文**定义/跨装备类型差异表/3 合 1 判定/1 阶数值求值**的纯解析层，不接 2/3 阶
+战斗效果（2/3 阶 effects 接线 = 后续批 43-D）。批47（43-B）在此新增 **1 阶数值贡献求值**
+（`rune_stats_of` / `sum_rune_stats`）：差异表解析（default + 覆盖）**只在此求值处发生**，
+不在数据层展开成多份；输出键取自 `data/gear_stats.GEAR_NUMERIC_KEYS`（唯一源）。
+**孔位执行**
 （镶嵌/拆卸/激活读取）仍在 `core/jewel.py`（口径 §二.5：孔位执行不新造）。
 基础刻度常量与阶位/缺省孔位纯解析在 `data/runes.py`（content 校验层同源引用，架构矩阵
 `content → {data}`）；本文件在其上叠加差异表解析与 3 合 1 纯函数。
@@ -37,6 +40,10 @@
        未登记 → 缺省 N 孔全开。见 `data/runes.socket_count_of`。
   R-5  符文系统总闸 = `settings.deep_craft.enabled`（口径 §二.5：符文挂在深度打造之下，
        无需新总闸；默认关）。关闭时镶嵌/拆卸/3 合 1 全部拒绝。
+  R-6  **1 阶数值贡献求值**（批47 · 43-B）：`rune_stats_of` / `sum_rune_stats` 只做
+       「差异解析 + 键白名单 + 数值清洗」；**孔位激活/副手失活/聚合路由都不在本层**——
+       分别归 `core/jewel.active_rune_sockets`（唯一孔位读取入口）与
+       `core/equipment.aggregate_bonus`（唯一聚合入口）。本层零 gear_stats 键新增。
 
 铁律：零 NoneBot import；纯函数（同刻同参必同值）；不抛异常（缺省兜底/防御降级）；
       工程补白显式标注；不新增口径外机制行为。
@@ -47,6 +54,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Mapping, Optional, Sequence
 
 # 基础刻度常量 + 阶位/缺省孔位纯解析（data 层：content 校验层同源引用，架构矩阵 content→{data}）
+from qbot_rpg.data.gear_stats import GEAR_NUMERIC_KEYS
 from qbot_rpg.data.runes import (
     DEFAULT_EQUIP_TYPE_KEY,
     DEFAULT_SOCKET_COUNT,
@@ -78,9 +86,14 @@ __all__ = [
     "resolve_rune_upgrade",
     "rune_effects_of",
     "rune_family_of",
+    "rune_stats_of",
     "rune_tier_of",
     "socket_count_of",
+    "sum_rune_stats",
 ]
+
+# 数值键白名单（唯一源 data/gear_stats.GEAR_NUMERIC_KEYS；求值处防御性过滤）。
+_NUMERIC_KEY_SET = frozenset(GEAR_NUMERIC_KEYS)
 
 
 # ---------------------------------------------------------------------------
@@ -105,6 +118,16 @@ def _to_int(value: Any) -> Optional[int]:
         except ValueError:
             return None
     return None
+
+
+def _to_float(value: Any) -> Optional[float]:
+    """float 归一（bool 除外）；非数值 → None（对齐 gear_stats 数值清洗口径）。"""
+    if isinstance(value, bool):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -163,6 +186,66 @@ def resolve_by_equip_type(rune_def: Any, equip_type: Any = None) -> Dict[str, An
 def by_equip_type_of(rune_def: Any, equip_type: Any = None) -> Dict[str, Any]:
     """`resolve_by_equip_type` 的别名（对外可读名，语义完全一致）。"""
     return resolve_by_equip_type(rune_def, equip_type)
+
+
+# ---------------------------------------------------------------------------
+# R-2/R-4 1 阶数值贡献求值（批47 · 43-B；差异解析唯一发生处）
+# ---------------------------------------------------------------------------
+def rune_stats_of(rune_def: Any, equip_type: Any = None) -> Dict[str, float]:
+    """符文数值贡献**求值处**（批47 · 43-B）：解析差异表后取 `stats` 数值键。
+
+    入参：
+      - rune_def：符文定义（by_equip_type default + 覆盖）。
+      - equip_type：装备类型键 = **`items.type`**（R-2/Q5 本批口径）；None/空 → default。
+    出参：{gear_stats 数值键: 数值}（同键只出现一次；缺/非法 → {}）。
+    核心：
+      · 差异解析**只在此处发生**（`resolve_by_equip_type` 的 default + 顶层浅覆盖），
+        不在数据层把 by_equip_type 展开成多份；
+      · 只保留 `GEAR_NUMERIC_KEYS`（唯一源 `data/gear_stats.py`）内的键——自造键由校验器
+        RUNE-05 红拦，此处再防御性丢弃（占位/未知键不进引擎）；
+      · 布尔/非数值/0 丢弃（0 不改变聚合结果，且与既有 extract_bonus 口径一致）。
+    """
+    entry = resolve_by_equip_type(rune_def, equip_type)
+    stats = _as_mapping(entry.get("stats"))
+    out: Dict[str, float] = {}
+    for k, v in stats.items():
+        ks = str(k)
+        if ks not in _NUMERIC_KEY_SET:
+            continue
+        fv = _to_float(v)
+        if fv is None or fv == 0.0:
+            continue
+        out[ks] = fv
+    return out
+
+
+def sum_rune_stats(
+    rune_ids: Any,
+    runes: Any,
+    equip_type: Any = None,
+) -> Dict[str, float]:
+    """同件装备上多个**激活**符文的数值贡献合并（同键加算；缺定义/空槽跳过）。
+
+    入参：
+      - rune_ids：激活符文 id 序列（由 `jewel.active_rune_sockets` 读取；None/空槽元素跳过）。
+      - runes：符文注册表 `{rune_id: 定义}`（缺表/非 Mapping → 空）。
+      - equip_type：装备类型键（`items.type`；决定每枚符文的差异解析）。
+    出参：{gear_stats 数值键: 合计值}（纯函数；不读孔位、不判副手——那两件事归
+          `jewel.active_rune_sockets`，本函数只做效果求值）。
+    """
+    out: Dict[str, float] = {}
+    reg = _as_mapping(runes)
+    if not isinstance(rune_ids, (list, tuple)):
+        return out
+    for rid in rune_ids:
+        if rid is None or rid == "":
+            continue
+        d = reg.get(str(rid))
+        if not isinstance(d, Mapping):
+            continue
+        for k, v in rune_stats_of(d, equip_type).items():
+            out[k] = out.get(k, 0.0) + v
+    return out
 
 
 # ---------------------------------------------------------------------------

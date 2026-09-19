@@ -23,7 +23,7 @@ from typing import Any, Callable, Dict, List, Mapping, Optional
 from qbot_rpg.core.battle import BattleEngine
 from qbot_rpg.core.combo import ComboEngine
 from qbot_rpg.core.panel_budget import normalize_monster_scaling, scale_monster_con
-from qbot_rpg.data.gear_stats import combatant_updates
+from qbot_rpg.data.gear_stats import OWNED_EFFECT_IDS_KEY, combatant_updates
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -243,7 +243,24 @@ def _player_combatant(ctx: Mapping[str, Any]) -> dict:
     rune_effects = _rune_effects_of(ctx)
     if rune_effects:
         comb["rune_effects"] = rune_effects
+    # 批51 · 触发归属（最小接线）：装备实例 passives → traits effects → 本侧拥有的
+    # effect id 集 → combatant[OWNED_EFFECT_IDS_KEY]。战斗引擎据此启用归属作用域
+    # （带 trigger 的效果只在其宿主侧触发）。**无装备被动 → 不新增键**（既有
+    # combatant 逐字段一致；不实现完整被动系统——见 docs/深度打造_实现说明.md）。
+    owned_effects = _owned_effect_ids_of(ctx, player)
+    if owned_effects:
+        comb[OWNED_EFFECT_IDS_KEY] = owned_effects
     return comb
+
+
+def _owned_effect_ids_of(ctx: Mapping[str, Any], player: Any) -> List[str]:
+    """玩家已穿戴装备的**效果归属集**（批51；缺数据源/异常 → []，不阻断开战）。"""
+    try:
+        from qbot_rpg.core.equip_mods import worn_passive_effect_ids  # noqa: PLC0415
+
+        return list(worn_passive_effect_ids(ctx, player))
+    except Exception:  # noqa: BLE001 —— 归属接线异常不阻断战斗装配
+        return []
 
 
 def _rune_effects_of(ctx: Mapping[str, Any]) -> List[Any]:

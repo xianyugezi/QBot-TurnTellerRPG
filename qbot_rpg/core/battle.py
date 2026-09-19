@@ -1972,22 +1972,49 @@ class BattleEngine:
         生效（符文挂穿戴者），与全局注册表候选合并同批执行；无符文 → 候选空 →
         与既有行为逐字段一致。
 
-        批51 · 触发归属：该侧 combatant 带 `OWNED_EFFECT_IDS_KEY`（装配层写入的
-        「本侧拥有的效果 id」）时，把它作为 `owner_effect_ids` 传给分派器——
-        带 `trigger` 的效果只在**其宿主侧**触发；**键缺省 → 传 None = 全库扫描
-        旧行为**（逐字段零变化，见 `_owned_effect_ids`）。
+        批51 · 触发归属：任一侧 combatant 带 `OWNED_EFFECT_IDS_KEY`（装配层写入的
+        「本侧拥有的效果 id」）时，本场战斗启用归属作用域——带 `trigger` 的效果只在
+        **其宿主侧**触发；**两侧都没有该键 → 传 None/None = 全库扫描旧行为**
+        （逐字段零变化，见 `_owner_scope`）。未被任何一侧认领的效果仍按全局效果
+        对任意侧触发（不静默吞掉既有全局触发）。
         """
         try:
             from qbot_rpg.core.event_dispatcher import dispatch_event  # noqa: PLC0415
 
+            owner, claimed = self._owner_scope(side)
+            opts: Dict[str, Any] = {"owner_effect_ids": owner,
+                                    "claimed_effect_ids": claimed}
+            opts.update(kw)   # 调用方显式传入优先（不覆盖）
             return dispatch_event(
                 event, side, self._snap, self._registry,
                 runtime=self._new_runtime(),
-                extra_candidates=self._rune_candidates(event, side),
-                owner_effect_ids=self._owned_effect_ids(side), **kw,
+                extra_candidates=self._rune_candidates(event, side), **opts,
             )
         except Exception:  # noqa: BLE001 —— 事件分派异常不阻断战斗（安全失败）
             return []
+
+    def _owner_scope(
+        self, side: str,
+    ) -> Tuple[Optional[List[str]], Optional[List[str]]]:
+        """本侧归属作用域 → `(owner_effect_ids, claimed_effect_ids)`（批51）。
+
+        - **两侧都未声明** `OWNED_EFFECT_IDS_KEY` → `(None, None)`：分派器全库扫描
+          = 本机制引入前的旧行为（逐字段一致，零变化基线）；
+        - **任一侧声明** → 本场启用归属：`owner` = 本侧集合（缺键 = 空集），
+          `claimed` = 两侧集合之并（供分派器豁免「未被任何人认领」的全局效果）。
+        """
+        raw = {s: self._owned_effect_ids(s) for s in BATTLE_SIDES}
+        if not any(v is not None for v in raw.values()):
+            return None, None
+        own = list(raw.get(side) or [])
+        claimed: List[str] = []
+        seen = set()
+        for val in raw.values():
+            for eid in (val or ()):
+                if eid not in seen:
+                    seen.add(eid)
+                    claimed.append(eid)
+        return own, claimed
 
     def _owned_effect_ids(self, side: str) -> Optional[List[str]]:
         """该侧拥有的**触发效果 id 集**（批51 · 归属作用域数据源）。

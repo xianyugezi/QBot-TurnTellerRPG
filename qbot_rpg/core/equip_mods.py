@@ -78,6 +78,11 @@ __all__ = [
     "attack_override_of",
     "recompute_equip_skills",
     "equip_skills_of",
+    # 批51 · 装备被动效果的归属集（触发归属最小接线）
+    "TRAITS_TABLE_KEY",
+    "passive_ids_of_instance",
+    "trait_effect_ids",
+    "worn_passive_effect_ids",
     "skill_amp_table",
     "amp_value",
     "resolve_attack_override",
@@ -255,6 +260,113 @@ def equip_skills_of(player: Any) -> Dict[str, int]:
         v = _int_or_none(lv)
         if isinstance(sid, str) and sid and v is not None and v >= 1:
             out[sid] = v
+    return out
+
+
+# ---------------------------------------------------------------------------
+# 批51 · 装备被动效果的**归属集**（触发归属的最小接线；不是完整被动系统）
+# ---------------------------------------------------------------------------
+#: 被动/特性定义表在 ctx 中的键名（装配层注入，见 `assembly/context.py` 的 trait 表）。
+TRAITS_TABLE_KEY: str = "traits"
+
+
+def _slot_uid_of(slot_obj: Any) -> str:
+    """装备槽对象 → 穿戴实例 uid（批40；缺省/畸形 → 空串）。"""
+    raw = slot_obj.get("uid") if isinstance(slot_obj, Mapping) else getattr(slot_obj, "uid", None)
+    return raw if isinstance(raw, str) and raw else ""
+
+
+def _slot_item_id_of(slot_obj: Any) -> str:
+    """装备槽对象 → item_id（缺省/畸形 → 空串）。"""
+    raw = (slot_obj.get("item_id") if isinstance(slot_obj, Mapping)
+           else getattr(slot_obj, "item_id", None))
+    return str(raw) if raw else ""
+
+
+def passive_ids_of_instance(item: Any) -> List[str]:
+    """物品实例 `passives`（trait id 元组；`data.item.ItemInstance.passives`）→ str 列表。
+
+    Mapping 行（存档 dict 形态）与领域对象（ItemInstance）双形态；缺省/畸形 → []。
+    """
+    raw = item.get("passives") if isinstance(item, Mapping) else getattr(item, "passives", None)
+    if isinstance(raw, str):
+        return [raw] if raw else []
+    if not isinstance(raw, (list, tuple)):
+        return []
+    return [str(x) for x in raw if isinstance(x, str) and x]
+
+
+def trait_effect_ids(trait_def: Any) -> List[str]:
+    """特性定义 `effects`（effect 引用列表）→ effect id 列表（缺省/畸形 → []）。
+
+    形态：list<str | obj{effect|id}>（对齐 `field_meta.traits_fields["effects"]`
+    = `F_EFFECTS` 的元素 ref 形态；对象形态容忍 `effect`/`id` 两种键）。
+    """
+    rows = raw_def(trait_def).get("effects")
+    if not isinstance(rows, (list, tuple)):
+        return []
+    out: List[str] = []
+    for row in rows:
+        if isinstance(row, str) and row:
+            out.append(row)
+        elif isinstance(row, Mapping):
+            eid = row.get("effect") or row.get("id")
+            if isinstance(eid, str) and eid:
+                out.append(eid)
+    return out
+
+
+def worn_passive_effect_ids(ctx: Mapping[str, Any], player: Any) -> List[str]:
+    """已穿戴装备 → 实例 `passives` → traits `effects` → **该侧拥有的 effect id 集**。
+
+    批51 · 触发归属的**最小接线**（本批**不**实现完整被动系统：不做被动身份解析、
+    相性变体求值、`persistent_state` 缓存、展示与校验——那些属后续批）：
+
+      · 唯一已穿戴件枚举点 = `_worn_defs`（复用 α 组；副手失活自动继承）；
+      · 实例定位按批40 `uid` 精确取件（回指 `player["inventory"]` 行），
+        uid 缺省/找不到 → 回退 item_id 首匹配（与既有行为一致）；
+      · trait 定义取 `ctx[TRAITS_TABLE_KEY]`（装配层注入的 traits 表）；
+      · 槽序稳定、结果按首次出现去重（确定性）。
+
+    出参：effect id 列表（无装备被动/无数据源 → []）。异常按无归属降级（不阻断开战）。
+    """
+    traits = ctx.get(TRAITS_TABLE_KEY) if isinstance(ctx, Mapping) else None
+    traits = traits if isinstance(traits, Mapping) else {}
+    if not traits:
+        return []
+    p = _player(player)
+    equipment = p.get("equipment")
+    if not isinstance(equipment, Mapping):
+        return []
+    # 实例索引：uid 优先，item_id 兜底（同 item_id 多件时取首件，对齐旧行为）
+    by_uid: Dict[str, Any] = {}
+    by_item: Dict[str, Any] = {}
+    inv = p.get("inventory")
+    for inst in (inv if isinstance(inv, (list, tuple)) else []):
+        uid = (inst.get("uid") if isinstance(inst, Mapping)
+               else getattr(inst, "uid", None))
+        iid = (inst.get("item_id") if isinstance(inst, Mapping)
+               else getattr(inst, "item_id", None))
+        if isinstance(uid, str) and uid:
+            by_uid.setdefault(uid, inst)
+        if isinstance(iid, str) and iid:
+            by_item.setdefault(iid, inst)
+    out: List[str] = []
+    seen = set()
+    for slot_id, item_id in _worn_defs(ctx, p):
+        slot_obj = equipment.get(slot_id)
+        uid = _slot_uid_of(slot_obj)
+        iid = _slot_item_id_of(slot_obj) or item_id
+        inst = by_uid.get(uid) if uid else None
+        if inst is None:
+            inst = by_item.get(iid)
+        if inst is None:
+            continue
+        for pid in passive_ids_of_instance(inst):
+            for eid in trait_effect_ids(traits.get(pid)):
+                if eid not in seen:
+                    seen.add(eid)
+                    out.append(eid)
     return out
 
 

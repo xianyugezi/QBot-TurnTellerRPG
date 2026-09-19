@@ -83,6 +83,7 @@ def _iter_candidates(
     registry: Any,
     status_id: Optional[str] = None,
     owner_effect_ids: Optional[Sequence[str]] = None,
+    claimed_effect_ids: Optional[Sequence[str]] = None,
 ) -> List[Tuple[str, Mapping[str, Any], str]]:
     """扫描注册表产出候选（effect_id, raw, kind）。
 
@@ -92,13 +93,16 @@ def _iter_candidates(
       on_gain/on_lose/on_expire 字段（值 = 效果引用列表）；未给 status_id →
       遍历全部 status 定义，收集 on_xxx 字段（供批 2 接线方按需过滤）。
 
-    批51 · **归属过滤**（`owner_effect_ids`，纯效果事件分支）：
-      · `None`（缺省）→ 全库扫描 = 本机制引入前的旧行为，逐字段一致（零变化基线）；
-      · 非 `None`（含空集）→ 只保留 **id 在该集合内** 的 effects 定义——即
-        「谁装备/谁施加的 effect 只能由其宿主触发」，不再全局误触发。
-      判定用 effects 定义的注册 id（`all_ids("effect")` 的键），与 `_run_candidate`
-      取 `raw["id"] or eid` 的计数口径无关；状态事件分支不受本参数影响
-      （status on_xxx 由 `status_id` 精确定位，本已归属到状态持有侧）。
+    批51 · **归属过滤**（`owner_effect_ids` / `claimed_effect_ids`，纯效果事件分支）：
+      · 两者皆 `None`（缺省）→ 全库扫描 = 本机制引入前的旧行为，逐字段一致（零变化基线）；
+      · `owner_effect_ids` 给出 → 本侧**拥有**的 effect id 集（谁装备/谁施加的
+        effect 只能由其宿主触发）；
+      · `claimed_effect_ids` 给出 → **本场战斗内被任一持侧认领**的 effect id 全集；
+        未被任何持侧认领的 effect 视为**全局效果**，对任何侧照常触发（避免归属
+        过滤把既有全局触发静默吞掉——「登记了不生效 = 陷阱」的同族风险）。
+      判定式：`eid ∈ owner` 或 `eid ∉ claimed`（claimed=None 视为无全局豁免）。
+      判定用 effects 定义的注册 id（`all_ids("effect")` 的键）；状态事件分支不受
+      本参数影响（status on_xxx 由 `status_id` 精确定位，本已归属到状态持有侧）。
     """
     out: List[Tuple[str, Mapping[str, Any], str]] = []
     resolve = getattr(registry, "resolve", None)
@@ -135,12 +139,16 @@ def _iter_candidates(
         return out
 
     # 纯效果事件：effects 定义 trigger 字段匹配
-    # 批51 · 归属过滤：owner_effect_ids 非 None → 只认本侧拥有的 effect id
-    # （None = 全库扫描的旧行为；空集 = 本侧不拥有任何效果 → 零候选）。
+    # 批51 · 归属过滤：owner=本侧拥有集；claimed=本场被任一持侧认领集
+    # （未认领 = 全局效果，对任何侧照常触发；两者皆 None = 全库扫描旧行为）。
     owner = None if owner_effect_ids is None else {str(x) for x in owner_effect_ids}
+    claimed = None if claimed_effect_ids is None else {str(x) for x in claimed_effect_ids}
     for eid in all_ids("effect"):
-        if owner is not None and str(eid) not in owner:
-            continue
+        if owner is not None or claimed is not None:
+            sid = str(eid)
+            if not ((owner is not None and sid in owner)
+                    or (claimed is not None and sid not in claimed)):
+                continue
         raw = _def_raw(resolve(eid, "effect"))
         if not raw:
             continue
@@ -248,6 +256,7 @@ def dispatch_event(
     depth: int = 0,
     extra_candidates: Optional[Sequence[Tuple[str, Mapping[str, Any], str]]] = None,
     owner_effect_ids: Optional[Sequence[str]] = None,
+    claimed_effect_ids: Optional[Sequence[str]] = None,
 ) -> List[Dict[str, Any]]:
     """在战斗时点 fire 匹配事件的效果/proc/状态 on_xxx 动作（功能三 §2.3）。
 
@@ -270,6 +279,10 @@ def dispatch_event(
                  按「本侧拥有的效果集」传入（装配层展开的装备被动效果），
                  避免带 `trigger` 的效果对所有单位全局误触发。
                  对 `extra_candidates` 不生效（后者已由调用方按持侧自过滤）。
+      claimed_effect_ids：批51 · **全局豁免集**：本场战斗内**被任一持侧认领**的
+                 effect id 全集。未在其中的 effect 视为全局效果，对任何侧照常触发
+                 （调用方两参数同时给出时 = 「自己的 ∪ 未被任何人认领的」）；
+                 两者皆 None → 与既有行为逐字段一致。
 
     返回：合并的 side_effects 列表（无候选/未配置 → []，零行为变化）。
     """
@@ -278,7 +291,8 @@ def dispatch_event(
     if not isinstance(snapshot, Mapping):
         return []
     cands = _iter_candidates(event, registry, status_id=status_id,
-                             owner_effect_ids=owner_effect_ids)
+                             owner_effect_ids=owner_effect_ids,
+                             claimed_effect_ids=claimed_effect_ids)
     if extra_candidates:
         cands = list(cands) + [
             c for c in extra_candidates

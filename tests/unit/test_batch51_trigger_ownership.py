@@ -131,6 +131,27 @@ def test_owner_scope_does_not_filter_extra_candidates() -> None:
     assert s["enemy"]["hp"] == 215, f"extra 候选应照常执行，实际 {s['enemy']['hp']}"
 
 
+def test_claimed_scope_exempts_unclaimed_global_effects() -> None:
+    """`claimed_effect_ids` 语义：本侧 owner=[] 时，**未被认领**的效果照常触发、
+    被认领的不触发（全局效果不被归属过滤静默吞掉）。"""
+    s = snap()
+    reg = Reg({"fx_own": ev("fx_own", "on_hit", 10),
+               "fx_glo": ev("fx_glo", "on_hit", 20)})
+    ed.dispatch_event("on_hit", "player", s, reg, runtime=rt(s),
+                      owner_effect_ids=[], claimed_effect_ids=["fx_own"])
+    assert s["player"]["hp"] == 420, f"只应触发未认领的 fx_glo(+20)，实际 {s['player']['hp']}"
+
+
+def test_claimed_scope_own_wins_over_claim() -> None:
+    """owner ∪ 未认领：本侧既触发自己认领的，也触发未被认领的。"""
+    s = snap()
+    reg = Reg({"fx_own": ev("fx_own", "on_hit", 10),
+               "fx_glo": ev("fx_glo", "on_hit", 20)})
+    ed.dispatch_event("on_hit", "player", s, reg, runtime=rt(s),
+                      owner_effect_ids=["fx_own"], claimed_effect_ids=["fx_own"])
+    assert s["player"]["hp"] == 430, f"自己认领 + 未认领都应触发，实际 {s['player']['hp']}"
+
+
 # ===========================================================================
 # B. 缺省无 owner 集 = 全库扫描旧行为（逐字段对拍）
 # ===========================================================================
@@ -364,33 +385,63 @@ def test_on_kill_enemy_kills_player_fires_on_enemy() -> None:
     assert _fired(calls, "death", "player") == [["s_death"]], "被击杀者侧应触发 death"
 
 
-def test_on_kill_respects_owner_scope_from_combatant() -> None:
-    """战斗级归属：combatant 带 `OWNED_EFFECT_IDS_KEY` 时按归属过滤——
-    未拥有 kill_tag 的一侧即使击杀也不触发（键存在（含空集）= 归属作用域生效）。"""
+def test_owned_effect_not_fired_on_other_side_but_global_is() -> None:
+    """战斗级归属（**不串**）：player 认领 `own_kill`、另有**未被认领**的
+    `global_kill`。敌人击杀 player → on_kill 派给 enemy：`own_kill` 不触发（非其
+    宿主），`global_kill` 照常触发（未认领 = 全局效果，不被归属过滤吞掉）。"""
     from qbot_rpg.data.gear_stats import OWNED_EFFECT_IDS_KEY
 
-    eng = _engine(_tag_effects(), _S_TAGS)
+    eff = {
+        "own_kill": {"id": "own_kill", "type": "special", "trigger": "on_kill",
+                     "actions": [{"type": "status_apply", "status": "s_own",
+                                  "target": "self"}]},
+        "global_kill": {"id": "global_kill", "type": "special", "trigger": "on_kill",
+                        "actions": [{"type": "status_apply", "status": "s_glo",
+                                     "target": "self"}]},
+    }
+    sts = {"s_own": {"id": "s_own", "type": "buff"},
+           "s_glo": {"id": "s_glo", "type": "buff"}}
+    eng = _engine(eff, sts)
     eng.start(PLAYER, ENEMY, random_seed=1)
     calls = _spy(eng)
-    eng._snap["player"][OWNED_EFFECT_IDS_KEY] = ["kill_tag"]  # noqa: SLF001
-    eng._snap["enemy"][OWNED_EFFECT_IDS_KEY] = []             # noqa: SLF001 —— 不拥有
+    eng._snap["player"][OWNED_EFFECT_IDS_KEY] = ["own_kill"]  # noqa: SLF001
     eng._snap["player"]["hp"] = 1  # noqa: SLF001
     eng._rng = QueueRNG(SEQ)     # noqa: SLF001
     eng.do_action("enemy", {"type": "normal"})
     assert eng._snap["player"]["hp"] <= 0  # noqa: SLF001
-    assert _fired(calls, "on_kill", "enemy") == [], \
-        "enemy 归属集为空 → 不得触发 kill_tag（不串）"
-    assert _fired(calls, "death", "player") == [], \
-        "player 归属集不含 death_tag → 全局扫描已被归属过滤取代"
-    # 同一注册表下，若该侧拥有 → 照常触发（证明过滤的是归属、不是效果本身）
-    eng2 = _engine(_tag_effects(), _S_TAGS)
-    eng2.start(PLAYER, ENEMY, random_seed=1)
-    calls2 = _spy(eng2)
-    eng2._snap["player"][OWNED_EFFECT_IDS_KEY] = ["death_tag"]  # noqa: SLF001
-    eng2._snap["player"]["hp"] = 1  # noqa: SLF001
-    eng2._rng = QueueRNG(SEQ)     # noqa: SLF001
-    eng2.do_action("enemy", {"type": "normal"})
-    assert _fired(calls2, "death", "player") == [["s_death"]], f"实际 {calls2}"
+    fired = [e for group in _fired(calls, "on_kill", "enemy") for e in group]
+    assert "s_own" not in fired, f"player 认领的效果不得在 enemy 侧触发：{calls}"
+    assert "s_glo" in fired, f"未认领的全局效果应照常触发：{calls}"
+
+
+def test_owned_effect_fires_on_owner_side() -> None:
+    """正向：player 认领 `own_kill` → player 击杀敌人时它触发（归属不误伤宿主）。"""
+    from qbot_rpg.data.gear_stats import OWNED_EFFECT_IDS_KEY
+
+    eff = {"own_kill": {"id": "own_kill", "type": "special", "trigger": "on_kill",
+                        "actions": [{"type": "status_apply", "status": "s_own",
+                                     "target": "self"}]}}
+    sts = {"s_own": {"id": "s_own", "type": "buff"}}
+    eng = _engine(eff, sts)
+    eng.start(PLAYER, ENEMY, random_seed=1)
+    calls = _spy(eng)
+    eng._snap["player"][OWNED_EFFECT_IDS_KEY] = ["own_kill"]  # noqa: SLF001
+    eng._snap["enemy"]["hp"] = 1  # noqa: SLF001
+    eng._rng = QueueRNG(SEQ)     # noqa: SLF001
+    eng.player_act("normal")
+    fired = [e for group in _fired(calls, "on_kill", "player") for e in group]
+    assert "s_own" in fired, f"宿主侧应触发自己认领的效果：{calls}"
+
+
+def test_no_owner_declared_legacy_global_scan_still_fires() -> None:
+    """对拍：两侧都未声明归属键 → 全库扫描旧行为（未认领效果对任意侧都触发）。"""
+    eng = _engine(_tag_effects(), _S_TAGS)
+    eng.start(PLAYER, ENEMY, random_seed=1)
+    calls = _spy(eng)
+    eng._snap["enemy"]["hp"] = 1  # noqa: SLF001
+    eng._rng = QueueRNG(SEQ)     # noqa: SLF001
+    eng.player_act("normal")
+    assert _fired(calls, "on_kill", "player") == [["s_kill"]], f"旧行为：全局触发 {calls}"
 
 
 def test_owned_effect_ids_helper_absent_key_is_none() -> None:
@@ -467,3 +518,158 @@ def test_validator_rune_ref_trigger_checked() -> None:
         "effects": [{"effect": "fx", "trigger": "on_kil"}],
     }]})
     assert _rules(rep)[1] == ["trigger_event_unknown"]
+
+
+# ===========================================================================
+# F. 装备接线（最小）：实例 passives → traits.effects → combatant 归属集 → 战斗触发
+# ===========================================================================
+
+def _gear_ctx(passives: List[str], effect_refs: List[Any], *,
+              item_id: str = "gear_x", slot: str = "weapon",
+              trait_id: str = "t_gear") -> Dict[str, Any]:
+    """内存 ctx：一件已穿戴装备实例（带 passives）+ 内存 traits 表。
+
+    **零真实内容包**（批19.1 门禁）：items / traits / effects 全为匿名内存表。
+    """
+    from qbot_rpg.data.item import ItemInstance
+
+    row = ItemInstance(item_id=item_id, name=item_id, count=1, quality="normal",
+                       bound=False, stack_max=1, slot=slot,
+                       passives=tuple(passives))
+    player: Dict[str, Any] = {
+        "inventory": [row],
+        "equipment": {slot: {"item_id": item_id, "uid": row.uid}},
+    }
+    return {
+        "player": player,
+        "items": {item_id: {"id": item_id, "type": "weapon"}},
+        "traits": {trait_id: {"id": trait_id, "name": trait_id,
+                              "effects": list(effect_refs)}},
+        "settings": {},
+    }
+
+
+def test_worn_passive_effect_ids_resolves_chain() -> None:
+    """装备实例 passives → traits.effects → effect id 列表（链路解析）。"""
+    from qbot_rpg.core.equip_mods import worn_passive_effect_ids
+
+    ctx = _gear_ctx(["t_gear"], ["fx_a", {"effect": "fx_b"}])
+    assert worn_passive_effect_ids(ctx, ctx["player"]) == ["fx_a", "fx_b"]
+
+
+def test_worn_passive_effect_ids_dedup_and_no_passives() -> None:
+    """去重（确定性、保序）；无 passives / 无 traits 表 → []（零新增）。"""
+    from qbot_rpg.core.equip_mods import worn_passive_effect_ids
+
+    ctx = _gear_ctx(["t_gear"], ["fx_a", "fx_a"])
+    assert worn_passive_effect_ids(ctx, ctx["player"]) == ["fx_a"]
+    ctx2 = _gear_ctx([], [])
+    assert worn_passive_effect_ids(ctx2, ctx2["player"]) == []
+    assert worn_passive_effect_ids({}, {}) == []
+
+
+def test_worn_passive_effect_ids_unknown_trait_skipped() -> None:
+    """passives 里引用未定义 trait → 跳过（框架不臆造，引用存在性归校验器）。"""
+    from qbot_rpg.core.equip_mods import worn_passive_effect_ids
+
+    ctx = _gear_ctx(["t_missing"], [])
+    assert worn_passive_effect_ids(ctx, ctx["player"]) == []
+
+
+def test_player_combatant_carries_owned_effects_only_when_present() -> None:
+    """装配：有装备被动 → combatant 带归属集；无 → 不新增键（既有 combatant 逐字段一致）。"""
+    from qbot_rpg.commands.battle_launch_commands import _player_combatant
+    from qbot_rpg.data.gear_stats import OWNED_EFFECT_IDS_KEY
+
+    ctx = _gear_ctx(["t_gear"], ["fx_a"])
+    comb = _player_combatant(ctx)
+    assert comb[OWNED_EFFECT_IDS_KEY] == ["fx_a"]
+    plain = _player_combatant(_gear_ctx([], []))
+    assert OWNED_EFFECT_IDS_KEY not in plain
+    assert plain == _player_combatant(_gear_ctx([], []))
+
+
+def test_gear_trigger_effect_end_to_end_host_only() -> None:
+    """端到端：一件装备的触发型效果只在其**宿主侧**触发（另一侧击杀时不串）。"""
+    from qbot_rpg.commands.battle_launch_commands import _player_combatant
+    from qbot_rpg.data.gear_stats import OWNED_EFFECT_IDS_KEY
+
+    ctx = _gear_ctx(["t_gear"], ["fx_gear_kill"])
+    comb_p = _player_combatant(ctx)
+    assert comb_p[OWNED_EFFECT_IDS_KEY] == ["fx_gear_kill"]
+
+    eff = {"fx_gear_kill": {"id": "fx_gear_kill", "type": "special",
+                           "trigger": "on_kill",
+                           "actions": [{"type": "status_apply", "status": "s_gear",
+                                        "target": "self"}]}}
+    sts = {"s_gear": {"id": "s_gear", "type": "buff"}}
+
+    # ① 宿主（player）击杀 → 装备效果触发
+    # 玩家侧战斗单位 = 常规数值块 + **装配产出的归属集**（键来自 `_player_combatant`）
+    eng = _engine(eff, sts)
+    player_comb = dict(PLAYER)
+    player_comb[OWNED_EFFECT_IDS_KEY] = comb_p[OWNED_EFFECT_IDS_KEY]
+    eng.start(player_comb, ENEMY, random_seed=1)
+    calls = _spy(eng)
+    eng._snap["enemy"]["hp"] = 1  # noqa: SLF001
+    eng._rng = QueueRNG(SEQ)     # noqa: SLF001
+    eng.player_act("normal")
+    fired = [e for g in _fired(calls, "on_kill", "player") for e in g]
+    assert "s_gear" in fired, f"宿主侧击杀应触发装备效果：{calls}"
+
+    # ② 敌人击杀宿主 → 装备效果不在敌人侧触发（不串）
+    eng2 = _engine(eff, sts)
+    player_comb2 = dict(PLAYER)
+    player_comb2[OWNED_EFFECT_IDS_KEY] = comb_p[OWNED_EFFECT_IDS_KEY]
+    player_comb2["hp"] = 1
+    eng2.start(player_comb2, ENEMY, random_seed=1)
+    calls2 = _spy(eng2)
+    eng2._rng = QueueRNG(SEQ)    # noqa: SLF001
+    eng2.do_action("enemy", {"type": "normal"})
+    assert eng2._snap["player"]["hp"] <= 0  # noqa: SLF001
+    fired2 = [e for g in _fired(calls2, "on_kill", "enemy") for e in g]
+    assert "s_gear" not in fired2, f"装备效果不得在非宿主侧触发：{calls2}"
+
+
+def test_gear_effects_on_both_sides_do_not_cross() -> None:
+    """**不串**（B 也有同类效果的场景）：两侧各有一件带 on_kill 触发的装备效果，
+    各自只在**自己宿主**侧触发，互不越界。"""
+    from qbot_rpg.commands.battle_launch_commands import _player_combatant
+    from qbot_rpg.data.gear_stats import OWNED_EFFECT_IDS_KEY
+
+    eff = {
+        "fx_p": {"id": "fx_p", "type": "special", "trigger": "on_kill",
+                 "actions": [{"type": "status_apply", "status": "s_p", "target": "self"}]},
+        "fx_e": {"id": "fx_e", "type": "special", "trigger": "on_kill",
+                 "actions": [{"type": "status_apply", "status": "s_e", "target": "self"}]},
+    }
+    sts = {"s_p": {"id": "s_p", "type": "buff"}, "s_e": {"id": "s_e", "type": "buff"}}
+    comb_p = _player_combatant(_gear_ctx(["t_gear"], ["fx_p"], trait_id="t_gear"))
+    assert comb_p[OWNED_EFFECT_IDS_KEY] == ["fx_p"]
+
+    def _mk(p_hp: int = 500, e_hp: int = 400) -> Any:
+        eng = _engine(eff, sts)
+        p = dict(PLAYER)
+        p[OWNED_EFFECT_IDS_KEY] = ["fx_p"]
+        p["hp"] = p_hp
+        e = dict(ENEMY)
+        e[OWNED_EFFECT_IDS_KEY] = ["fx_e"]   # B 侧也声明归属（同类效果场景）
+        e["hp"] = e_hp
+        eng.start(p, e, random_seed=1)
+        return eng
+
+    # ① player 击杀 enemy → 只有 fx_p 触发
+    eng = _mk(e_hp=1)
+    calls = _spy(eng)
+    eng._rng = QueueRNG(SEQ)      # noqa: SLF001
+    eng.player_act("normal")
+    fired = [x for g in _fired(calls, "on_kill", "player") for x in g]
+    assert fired == ["s_p"], f"player 侧只应触发自己的 fx_p：{calls}"
+
+    # ② enemy 击杀 player → 只有 fx_e 触发
+    eng2 = _mk(p_hp=1)
+    calls2 = _spy(eng2)
+    eng2._rng = QueueRNG(SEQ)     # noqa: SLF001
+    eng2.do_action("enemy", {"type": "normal"})
+    fired2 = [x for g in _fired(calls2, "on_kill", "enemy") for x in g]
+    assert fired2 == ["s_e"], f"enemy 侧只应触发自己的 fx_e：{calls2}"

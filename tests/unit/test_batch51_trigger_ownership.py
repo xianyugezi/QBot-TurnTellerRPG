@@ -673,3 +673,53 @@ def test_gear_effects_on_both_sides_do_not_cross() -> None:
     eng2.do_action("enemy", {"type": "normal"})
     fired2 = [x for g in _fired(calls2, "on_kill", "enemy") for x in g]
     assert fired2 == ["s_e"], f"enemy 侧只应触发自己的 fx_e：{calls2}"
+
+
+def _recursive_keys(obj: Any) -> List[str]:
+    out: List[str] = []
+    if isinstance(obj, Mapping):
+        for k, v in obj.items():
+            out.append(str(k))
+            out.extend(_recursive_keys(v))
+    elif isinstance(obj, (list, tuple)):
+        for it in obj:
+            out.extend(_recursive_keys(it))
+    return out
+
+
+def test_battle_settlement_snapshot_zero_change_no_owner_scope() -> None:
+    """零变化对拍（**一场战斗的结算快照**）：两侧 combatant 无归属键时，引擎行为
+    与引入前一致——同种子两次对拍逐字段相等，且快照里**不出现归属键**
+    （装备接线缺省不新增字段）。
+
+    跨版本强对拍另见批报：基线 worktree（`af840a6`）与本批跑同一探针，
+    仅归一化实例 uuid 与墙钟时间戳后**逐字段一致**。
+    """
+    import json
+    import re
+
+    from qbot_rpg.data.gear_stats import OWNED_EFFECT_IDS_KEY
+
+    uuid_re = re.compile(
+        r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
+    ts_re = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z")
+
+    def _stable(eng: Any) -> str:
+        text = json.dumps(eng.to_snapshot(), ensure_ascii=False, sort_keys=True, default=str)
+        return ts_re.sub("<ts>", uuid_re.sub("<uid>", text))
+
+    def _run() -> Any:
+        eng = _engine(None, None)
+        eng.start(dict(PLAYER), dict(ENEMY), random_seed=20260919)
+        for _ in range(20):
+            if eng.finished:
+                break
+            eng.player_act("normal")
+        return eng
+
+    eng_a, eng_b = _run(), _run()
+    snap = eng_a.to_snapshot()
+    assert _stable(eng_a) == _stable(eng_b), "同种子两场战斗结算快照应逐字段一致"
+    assert OWNED_EFFECT_IDS_KEY not in _recursive_keys(snap), \
+        "无装备被动时快照不得出现归属键（缺省零新增）"
+    assert _recursive_keys(snap), "快照为空，对拍无意义"

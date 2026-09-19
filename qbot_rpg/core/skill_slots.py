@@ -77,6 +77,11 @@
        按库序收集（槽位内容不排序，职业过滤同 P-5）；空槽不产出占位条目。
   P-7  job_form 占位：apply_job_form 当前原样返回快照（接口注释完整），
        实现归批7/批15（职业变换 transform 激活时替换对应技能位，TC-06）。
+  P-8  职业树继承额外可见集（批35 · §6.12-12）：assemble_slots 可选读
+       player_ctx["inherited_skill_ids"]（继承而来的技能 id）；job_visible 第三
+       入参放行这批 id。继承**只放宽**可见性（通用/本职业命中不受影响），
+       装配优先级 = 本职业命中 > 通用 > 继承而来 > 其他；缺省（无该键）时
+       与既有行为逐字节一致（回归对拍）。解析规则归 job_slots.inherited_skill_ids。
 
 铁律：零 NoneBot import（G0 门禁）；core 层只依赖 data（技能数据经 ctx 注入，
 零 import content）；纯函数确定性（同刻同参必同值）；完整类型标注（typing
@@ -244,18 +249,32 @@ def _as_skill(entry: Any) -> SlotKind:
 # =====================================================================================
 
 
-def job_visible(skill: SlotKind, job_id: Optional[str]) -> bool:
-    """技能对当前职业可见性（§4.3-3 装配过滤，P-5）。
+def job_visible(
+    skill: SlotKind,
+    job_id: Optional[str],
+    inherited_skill_ids: Sequence[str] = (),
+) -> bool:
+    """技能对当前职业可见性（§4.3-3 装配过滤，P-5；批35 继承扩展，P-8）。
 
     job_restrict 空 = 通用技能全职业可见；非空 → 须含当前职业；job_id 缺失
     （不确定职业）→ 通用口径放行（不误伤通用技能，确定性兜底）。
+
+    批35 · §6.12-12「职业树继承」（P-8，可选入参，缺省 = 与现状逐字节一致）：
+    `inherited_skill_ids` = 因继承而额外可见的技能 id 集合（由
+    `core/job_slots.inherited_skill_ids` 按 `jobs.inherit` 配置解析）。某技能
+    `job_restrict` 不含当前职业、但其 id 在继承集中 → 可见。通用技能与当前
+    职业命中技能不受影响（继承只**放宽**，不收紧）。
     """
     restrict = skill.job_restrict
     if not restrict:
         return True
     if job_id is None:
         return True
-    return job_id in restrict
+    if job_id in restrict:
+        return True
+    if inherited_skill_ids:
+        return skill.id in inherited_skill_ids
+    return False
 
 
 # =====================================================================================
@@ -273,8 +292,9 @@ def assemble_slots(
       skills:     技能条目序列（SkillDef / raw dict / 任意 SlotKind 协议对象，
                   P-1 注入；条目无 id 或 type 非法 → 跳过）。
       player_ctx: 玩家上下文 Mapping（读取 "job_id"；缺省 None → 通用口径
-                  P-5；本函数不写 ctx、不碰 persistent_state——落档走
-                  save_slots_to_state）。
+                  P-5；另读可选的 "inherited_skill_ids"（批35 继承额外可见集，
+                  P-8：缺省 = 无继承，与现状逐字节一致）；本函数不写 ctx、
+                  不碰 persistent_state——落档走 save_slots_to_state）。
     出参：装配快照 dict（可 JSON 序列化，P-2）：
       - "slots":        槽位列表 [{"slot": "basic", "skill_id": "..."}, ...]
         basic 固定第 1 位（恰 1 个，0 个 → skill_id=None 占位 P-3，多个 →
@@ -293,6 +313,7 @@ def assemble_slots(
       - job_form 形态替换本函数不处理（F17/[L88] → apply_job_form，归批7/批15）。
     """
     job_id = _ctx_job_id(player_ctx)
+    inherited = _ctx_inherited_skill_ids(player_ctx)
     skills_seq = tuple(_as_skill(s) for s in skills)
     # 按类型分组（防御性跳过：无 id 的条目不进任何槽）
     basic: List[SlotKind] = []
@@ -312,29 +333,36 @@ def assemble_slots(
         elif t == SLOT_TRIGGER:
             triggers.append(s)
         # 未知 type（防御性跳过；枚举校验归 V-13 校验器）
-    # 职业过滤（§4.3-3）
-    basic = [s for s in basic if job_visible(s, job_id)]
-    actives = [s for s in actives if job_visible(s, job_id)]
-    passives = [s for s in passives if job_visible(s, job_id)]
-    triggers = [s for s in triggers if job_visible(s, job_id)]
+    # 职业过滤（§4.3-3；批35 继承额外可见集 P-8）
+    basic = [s for s in basic if job_visible(s, job_id, inherited)]
+    actives = [s for s in actives if job_visible(s, job_id, inherited)]
+    passives = [s for s in passives if job_visible(s, job_id, inherited)]
+    triggers = [s for s in triggers if job_visible(s, job_id, inherited)]
+
+    def _visibility_rank(s: SlotKind) -> int:
+        """装配优先级（确定性）：本职业限定命中(0) → 通用(1) → 继承而来(2) → 其他(3)。
+
+        批35 P-8：无继承（inherited 空）时 2/3 不可达，排序与既有口径逐字段一致。
+        """
+        if s.job_restrict and (job_id is None or job_id in s.job_restrict):
+            return 0
+        if not s.job_restrict:
+            return 1
+        if inherited and s.id in inherited:
+            return 2
+        return 3
 
     # ---- basic 固定第 1 位（恰 1 个；0 个占位 None P-3；多个取命中者优先 P-3）----
     basic_id: Optional[str]
     if not basic:
         basic_id = None  # 缺普攻占位（V-7 红拦属校验器职责，引擎不重复拦截）
     else:
-        # 多个 basic 时：职业限定且命中当前职业者最优先 → 通用次之 → 库序兜底
-        # （确定性；§4.3-3 通用技能全职业可见 + V-7 口径下同职业多 basic 属
-        #  校验器红拦场景，引擎层只做确定性选择不拦截）
+        # 多个 basic 时：职业限定且命中当前职业者最优先 → 通用次之 →
+        # 继承而来再次之 → 库序兜底（确定性；§4.3-3 通用技能全职业可见 +
+        # V-7 口径下同职业多 basic 属校验器红拦场景，引擎层只做确定性选择
+        # 不拦截。批35 P-8：basic 槽恰 1，本职业 basic 优先于继承来的母职 basic）
         def _basic_key(s: SlotKind) -> Tuple[int, int]:
-            # 职业限定且命中当前职业最优先(0) → 通用(1) → 职业限定未命中(2)
-            if s.job_restrict and job_visible(s, job_id):
-                rank = 0
-            elif not s.job_restrict:
-                rank = 1
-            else:
-                rank = 2
-            return (rank, _seq_index(skills_seq, s.id))
+            return (_visibility_rank(s), _seq_index(skills_seq, s.id))
 
         chosen = min(basic, key=_basic_key)
         basic_id = chosen.id
@@ -356,11 +384,9 @@ def assemble_slots(
                 ordered.append(s)
         actives = ordered
     else:
-        # 缺省排序：job_restrict 命中当前职业者优先，其余按库序
-
+        # 缺省排序：本职业命中者优先 → 通用 → 继承而来，其余按库序
         def _default_key(s: SlotKind) -> Tuple[int, int]:
-            hit = 0 if (s.job_restrict and job_visible(s, job_id)) else 1
-            return (hit, _seq_index(skills_seq, s.id))
+            return (_visibility_rank(s), _seq_index(skills_seq, s.id))
 
         actives.sort(key=_default_key)
     active_order = [s.id for s in actives]
@@ -524,6 +550,18 @@ def _ctx_active_order(player_ctx: Mapping[str, Any]) -> Tuple[str, ...]:
     v = player_ctx.get("active_order")
     if isinstance(v, (list, tuple)):
         return tuple(x for x in v if isinstance(x, str))
+    return ()
+
+
+def _ctx_inherited_skill_ids(player_ctx: Mapping[str, Any]) -> Tuple[str, ...]:
+    """player_ctx 中因职业树继承而额外可见的技能 id 集（批35 P-8；缺省空）。
+
+    由 `core/job_slots.inherited_skill_ids` 按 `jobs.inherit` 配置解析后注入；
+    非 list/tuple 或元素非字符串 → 过滤（防御读取，确定性兜底）。缺省 = 无继承。
+    """
+    v = player_ctx.get("inherited_skill_ids")
+    if isinstance(v, (list, tuple)):
+        return tuple(x for x in v if isinstance(x, str) and x)
     return ()
 
 

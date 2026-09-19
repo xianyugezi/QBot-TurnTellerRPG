@@ -22,6 +22,11 @@
      REARRANGE_JOB_KEY 段（新 job_id / 时间 / 装配视角快照），旧存档无损
      迁移（缺 persistent_state / skill_slots 段 → 惰性创建，不抛异常）
   5) load_job_slots_state(player)  读转职快照段（缺省空 dict，防御读取）
+  6) resolve_inherit_chain(job_id, jobs_table)  批35 · §6.12-12 职业树继承解析
+     ——沿 jobs.inherit.from 向上收集祖辈（传递闭包，环安全），纯函数确定性；
+  7) inherited_skill_ids(job_id, jobs_table, skills)  按 inherit 链解析「继承
+     而来的技能 id」集（祖辈职业专属可见技能 + 目标职业 skills 白名单），
+     供 rearrange_job_slots 注入既有装配入口（只放宽技能位可见性）
 
 规则要点（契约逐条）：
   - 新职业技能组装配：assemble_slots 按新 job_id 过滤 job_restrict（§4.3-3
@@ -35,6 +40,10 @@
     与 assemble_slots 的 active_order 覆盖逻辑同构）
   - basic 恰 1 位：新职业 basic 可见集为空 → skill_id=None 占位（对齐
     skill_slots P-3，V-7 红拦属校验器职责，引擎不重复拦截）
+  - 职业树继承（批35 §6.12-12）：目标职业声明 `inherit.from`（母职）时，转职
+    装配额外纳入母职的职业专属技能（`job_restrict` 命中母职者）——只放宽技能位
+    可见性，**不碰属性成长**（2026-09-09 拍板：职业成长跟随职业，见 levelup）；
+    不带 `inherit` 的职业 → 装配结果与现状逐字段一致（对拍）
 
 【工程补白】（契约/细化未显式定义处的实现口径，显式标注供审查）：
   P-1  转职快照段：契约 §4.3-4 仅声明"职业变换时按新职业重算装配有效集
@@ -55,6 +64,13 @@
   P-5  skills 表缺省：rearrange_job_slots 的 skills 入参缺省 None → 读
       player_ctx["skills"]（M13 批13 ctx 注入的 {id: raw dict} 表）；两者
       都缺 → 空装配（basic 占位 None，确定性兜底）。
+  P-6  职业树继承（批35 §6.12-12）：定稿只说"继承母职全部技能 + 配置驱动、
+      不写死"，未定义字段形态与粒度——本文件定型为 jobs.inherit{from,skills}
+      （进阶职一侧，与批23 advance 同侧）：from = 母职（ref job），skills =
+      可选白名单（空/缺省 = 继承祖辈全部**职业专属**技能，通用技能不算继承）。
+      链解析 = 传递闭包（职业树 A→B→C 时 C 继承 B、A），环安全、悬空停链。
+      继承**只放宽技能位可见性**，不碰属性成长（2026-09-09 拍板：职业成长跟随
+      职业）。单级/替换 mode/等级继承等未定项见 docs/进阶职业继承_设计口径.md §5。
 
 铁律：零 NoneBot import（G0 门禁）；core 层只依赖 data（技能数据经 ctx 注入，
 零 import content）；纯函数确定性（同刻同参必同值）；完整类型标注（typing
@@ -78,6 +94,130 @@ from qbot_rpg.core.skill_slots import (
 
 # 转职快照段存档键（P-1：1g1c/1g3 存档承接，与 skill_slots 段平行）
 REARRANGE_JOB_KEY: str = "job_slots"
+
+# 职业条目上的继承声明键（批35 · §6.12-12：jobs.inherit{from, skills}）
+INHERIT_KEY: str = "inherit"
+
+
+# =====================================================================================
+# 职业树继承解析（纯函数 · 批35 §6.12-12）
+# =====================================================================================
+
+
+def resolve_inherit_chain(
+    job_id: Optional[str],
+    jobs_table: Optional[Mapping[str, Any]],
+) -> Tuple[str, ...]:
+    """沿 `jobs.inherit.from` 向上收集祖辈职业 id（纯函数，确定性）。
+
+    入参：
+      job_id:     目标职业 id（None/空 → 空链）。
+      jobs_table: 职业表 Mapping（{job_id: 条目 dict}；非 Mapping → 空链）。
+    出参：祖辈 id 元组——直接母职在前，祖辈依次在后；不含 job_id 自身。
+    规则（工程补白 P-6，配置驱动、不写死）：
+      · 每级读 `inherit.from`（非空 str 且 ∈ jobs_table 才纳入）；
+      · **传递闭包**（职业树：A→B→C 时 C 继承 B 且继承 A）；
+      · 环安全（seen 集合；自指/环 → 停链，不抛异常）；
+      · 引用不存在 → 停链（悬空引用由校验器 R-4 红拦，引擎侧不臆造）。
+    """
+    if not isinstance(job_id, str) or not job_id:
+        return ()
+    if not isinstance(jobs_table, Mapping):
+        return ()
+    chain: List[str] = []
+    seen = {job_id}
+    cur = job_id
+    while True:
+        job = jobs_table.get(cur)
+        if not isinstance(job, Mapping):
+            break
+        inherit = job.get(INHERIT_KEY)
+        if not isinstance(inherit, Mapping):
+            break
+        parent = inherit.get("from")
+        if not isinstance(parent, str) or not parent or parent in seen:
+            break
+        if not isinstance(jobs_table.get(parent), Mapping):
+            break
+        chain.append(parent)
+        seen.add(parent)
+        cur = parent
+    return tuple(chain)
+
+
+def inherited_skill_ids(
+    job_id: Optional[str],
+    jobs_table: Optional[Mapping[str, Any]],
+    skills: Optional[Sequence[Any]] = None,
+) -> Tuple[str, ...]:
+    """该职业按 `jobs.inherit` 配置应**额外可见**（继承而来）的技能 id 集。
+
+    入参：
+      job_id / jobs_table: 同 resolve_inherit_chain。
+      skills: 整库技能条目序列（Mapping raw dict 或含 .id/.job_restrict 的
+              协议对象；None/空 → 空集）。
+    出参：技能 id 元组（按传入库序去重，确定性）。
+    规则（工程补白 P-6）：
+      · 取链上每级祖辈的**职业专属技能**（`job_restrict` 非空且命中该祖辈）；
+        通用技能（`job_restrict` 空）本就全职业可见，**不算继承**；
+      · 目标职业 `inherit.skills` 白名单非空 → 只保留列出的 id（交集）；
+      · 白名单空/缺省 → 继承祖辈全部职业专属技能；
+      · 不读属性成长（2026-09-09 拍板：职业成长跟随职业，不保留旧成长）。
+    """
+    chain = resolve_inherit_chain(job_id, jobs_table)
+    if not chain:
+        return ()
+    assert isinstance(jobs_table, Mapping)
+    chain_set = set(chain)
+    whitelist = _inherit_whitelist(job_id, jobs_table)
+    out: List[str] = []
+    seen: set = set()
+    for entry in skills or ():
+        sid = _entry_skill_id(entry)
+        if not sid or sid in seen:
+            continue
+        restrict = _entry_job_restrict(entry)
+        if not restrict:
+            continue  # 通用技能：本就可见，不算继承（不重复计入）
+        if not (chain_set & set(restrict)):
+            continue  # 该技能不属于链上任何祖辈
+        if whitelist is not None and sid not in whitelist:
+            continue  # 白名单非空：只继承列出的技能
+        out.append(sid)
+        seen.add(sid)
+    return tuple(out)
+
+
+def _inherit_whitelist(
+    job_id: Optional[str], jobs_table: Mapping[str, Any]
+) -> Optional[frozenset]:
+    """目标职业 `inherit.skills` 白名单（非空 list[str] → frozenset；否则 None）。"""
+    job = jobs_table.get(job_id) if isinstance(job_id, str) else None
+    if not isinstance(job, Mapping):
+        return None
+    inherit = job.get(INHERIT_KEY)
+    if not isinstance(inherit, Mapping):
+        return None
+    raw = inherit.get("skills")
+    if not isinstance(raw, list):
+        return None
+    ids = tuple(x for x in raw if isinstance(x, str) and x)
+    return frozenset(ids) if ids else None
+
+
+def _entry_skill_id(entry: Any) -> Optional[str]:
+    """技能条目 id（raw Mapping / 协议对象双形态；缺省 None）。"""
+    v = entry.get("id") if isinstance(entry, Mapping) else getattr(entry, "id", None)
+    return v if isinstance(v, str) and v else None
+
+
+def _entry_job_restrict(entry: Any) -> Tuple[str, ...]:
+    """技能条目 job_restrict（raw Mapping / 协议对象；非序列 → 空 = 通用）。"""
+    v = (entry.get("job_restrict") if isinstance(entry, Mapping)
+         else getattr(entry, "job_restrict", None))
+    if isinstance(v, (list, tuple)):
+        return tuple(x for x in v if isinstance(x, str))
+    return ()
 
 
 # =====================================================================================
@@ -168,6 +308,13 @@ def rearrange_job_slots(
     ctx: Dict[str, Any] = {"job_id": job_id}
     if old_order:
         ctx["active_order"] = list(old_order)
+    # 批35 · §6.12-12 职业树继承：从 player_ctx["jobs"] 读职业表，按目标职业的
+    # inherit 链解析「继承而来的技能 id」→ 注入装配入口（不新开装配，P-6）。
+    jobs_table = player_ctx.get("jobs")
+    if isinstance(jobs_table, Mapping):
+        inherited = inherited_skill_ids(job_id, jobs_table, items)
+        if inherited:
+            ctx["inherited_skill_ids"] = list(inherited)
     return assemble_slots(items, ctx)
 
 
@@ -268,7 +415,10 @@ def _rearranged_active_order(snapshot: Mapping[str, Any]) -> Tuple[str, ...]:
 
 __all__ = [
     "REARRANGE_JOB_KEY",
+    "INHERIT_KEY",
     "snapshot_job_context",
+    "resolve_inherit_chain",
+    "inherited_skill_ids",
     "rearrange_job_slots",
     "save_rearranged_slots",
     "load_job_slots_state",

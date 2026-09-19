@@ -477,6 +477,7 @@
     "battle_settle_levelup": "✅ 等级提升至 {level}\nHP/MP 已回复",
     "battle_settle_levelup_multi": "✅ 等级提升至 {level}\n连升 {level_ups} 级\nHP/MP 已回复",
     "battle_settle_levelup_sp": "\n技能点 +{sp}",
+    "battle_settle_recovery": "战后恢复\n生命 {hp}/{hp_max}\n法力 {mp}/{mp_max}",
     "battle_settle_lose": "❌ 你倒下了…",
     "battle_settle_lose_fail": "❌ 战斗失败\n你被{enemy}击败了",
     "battle_settle_draw": "双方同归于尽\n战斗以平局结束",

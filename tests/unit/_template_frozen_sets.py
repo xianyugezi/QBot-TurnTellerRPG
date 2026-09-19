@@ -18,6 +18,7 @@ from __future__ import annotations
 
 # 全表占位符允许名（2026-09-12 定格；新增占位符名必须在此登记）。
 # 批36 · 采集/挖掘：新增 point / which / minutes（gather_* 模板键）。
+# 批37 · 战后恢复：新增 mp_max（battle_settle_recovery 模板键）。
 FROZEN_PLACEHOLDERS = frozenset("""
 a action actor aid amount amt ann assistant atk attacker attr attr_name b base blocks bonus boss
 brief budget candidates cap card caught chain change child cmd cn cnt coin_text coins_have
@@ -27,7 +28,7 @@ effects elapsed elem_cn element element_cn elems endpoint enemy enhance example 
 fields fragment g gap gem gold golden_line grants group have head heal_total hint hours hp
 hp_cur hp_max i idx imprints index item item_name items job k key kill kind kind_cn king label
 level level_ups limit list lit loc location luck main_score map_name mark marks mat mats
-mats_text max max_hit max_hp message minutes missing month_days mp msg mult n name names
+mats_text max max_hit max_hp message minutes missing month_days mp mp_max msg mult n name names
 need need_chain
 need_elem need_rank new nm normal_used note npc_name old op out output_name page pages paid_text
 param params part pct period periods point pos pp pp_budget pp_used prefix preview qq qty

@@ -279,5 +279,5 @@ def test_selfcheck_still_passes() -> None:
 
 def test_footer_batch_string_is_batch20() -> None:
     html = HTML.read_text(encoding="utf-8")
-    assert "批38 · 深度打造地基" in html
+    assert "批39 · 合成公用层" in html
     assert "批18 · 预设细化与效果扩展" not in html

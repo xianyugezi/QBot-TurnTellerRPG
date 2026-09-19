@@ -310,7 +310,7 @@ def test_frontend_op_column_has_inset_padding() -> None:
 def test_footer_status_bar_uses_current_batch_wording() -> None:
     html = _html()
     # 页脚标注「当前批次」（批13 起为能力可见性）；旧批次字串不得残留。
-    assert "批38 · 深度打造地基" in html
+    assert "批39 · 合成公用层" in html
     assert "批13.1 · 段入口" not in html
     assert "批11 · 内容包导出/导入" not in html
     assert "批9 · 配色切换" not in html

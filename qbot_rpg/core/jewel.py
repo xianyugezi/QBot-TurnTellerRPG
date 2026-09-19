@@ -451,6 +451,49 @@ class JewelSystem:
             return []
         return self.rune_sockets_of(ctx, uid)
 
+    # ------------------------------------------------------------------
+    # 批47 · 43-B：孔位互斥对向收口（一槽一物，珠/符文共用同一孔位数组）
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _worn_uid(ctx: Mapping[str, Any], equip_id: str) -> str:
+        """已穿戴件 uid（按 item_id 回查；用于互斥判定定位符文行；缺 → ""）。
+
+        符文行键 = `ItemInstance.uid`（口径 §二.2b），而 `/镶嵌` 只拿得到 equip_id
+        （物品 id）。本方法优先扫 `ctx["player"]["equipment"]` 各槽实例（item_id + uid
+        双读，兼容 EquipmentSlot / asdict dict 形态），再兜底 `ctx["equipment"][equip_id]`
+        自带的 uid（简化/测试 ctx 形态）。两者皆无 → ""（不误拦，保持既有珠行为）。
+        """
+        player = ctx.get("player")
+        eq = player.get("equipment") if isinstance(player, Mapping) else None
+        target = str(equip_id)
+        if isinstance(eq, Mapping):
+            for slot_obj in eq.values():
+                iid = (slot_obj.get("item_id") if isinstance(slot_obj, Mapping)
+                       else getattr(slot_obj, "item_id", None))
+                if str(iid or "") != target:
+                    continue
+                uid = (slot_obj.get("uid") if isinstance(slot_obj, Mapping)
+                       else getattr(slot_obj, "uid", None))
+                if uid:
+                    return str(uid)
+        entry = ctx.get("equipment")
+        if isinstance(entry, Mapping):
+            node = entry.get(equip_id)
+            if isinstance(node, Mapping) and node.get("uid"):
+                return str(node["uid"])
+        return ""
+
+    def _rune_slot_taken(self, ctx: Mapping[str, Any], uid: Any, slot_index: int) -> bool:
+        """孔位 `slot_index` 是否已被该 uid 的符文占用（**符文侧唯一判定点**）。
+
+        珠 `mount` 与符文 `mount_rune` 对「符文占用」的判定都经本方法（一处收口）；
+        uid 空/行缺失/越界 → False（不误拦）。
+        """
+        if not uid:
+            return False
+        row = self.rune_sockets_of(ctx, uid)
+        return 0 <= slot_index < len(row) and row[slot_index] is not None
+
     @staticmethod
     def _rune_row(
         bucket: MutableMapping, uid: str, count: int, create: bool = False
@@ -604,10 +647,10 @@ class JewelSystem:
           - 拒绝 → {ok: False, reason, message}；reason ∈
             in_battle（SOCK-05 战斗中不可插拔）/ jewel_not_found（珠定义缺失或背包未持有）/
             equip_not_found（装备无珠插槽）/ slot_not_found（槽位越界）/
-            slot_too_low（槽级<珠档，SOCK-02 门票）/ slot_full（槽位已占用）/
-            remove_failed（背包扣除失败）。
+            slot_too_low（槽级<珠档，SOCK-02 门票）/ slot_full（槽位已占用——珠或符文，
+            批47 互斥对向）/ remove_failed（背包扣除失败）。
         核心：战斗闸 → 珠定义/档位 → 槽位定义/槽级校验（slot_accepts）→ 持有校验 →
-              槽位空闲校验 → 扣珠 + 写入快照（含 stack_key，EDGE-01 档位联动基准）。
+              槽位空闲校验（珠 + **符文**占用，一槽一物互斥）→ 扣珠 + 写入快照。
         """
         # 1) 战斗闸（SOCK-05/BEL-09：战斗中不可插拔）
         if not self.can_toggle_in_battle(ctx):
@@ -694,6 +737,20 @@ class JewelSystem:
                 "ok": False,
                 "reason": REASON_SLOT_FULL,
                 "message": f"❌ 槽位 {si} 已镶嵌珠，需先 /拆珠（SOCK-03 无损拆珠）",
+                "jewel_id": jewel_id,
+                "equip_id": equip_id,
+                "slot_index": slot_index,
+                "slot_level": slot_level,
+            }
+        # 批47 · 43-B：互斥**对向**——同一孔位已被该件实例的符文占用 → 拒绝（一槽一物；
+        # 与符文共用 slots.json 孔位数组）。判定经 `_rune_slot_taken`（符文侧唯一判定点）；
+        # 解析不到穿戴 uid（旧档/简化 ctx）→ 不误拦，保持既有珠行为逐字段一致。
+        _rune_uid = self._worn_uid(ctx, equip_id)
+        if self._rune_slot_taken(ctx, _rune_uid, si):
+            return {
+                "ok": False,
+                "reason": REASON_SLOT_FULL,
+                "message": f"❌ 槽位 {si} 已镶嵌符文，需先 /拆符文（一槽一物、互斥）",
                 "jewel_id": jewel_id,
                 "equip_id": equip_id,
                 "slot_index": slot_index,
@@ -896,7 +953,8 @@ class JewelSystem:
             return self._rune_reject(
                 REASON_EQUIP_NOT_FOUND, f"❌ 装备 {equip_id} 符文容器缺失",
                 rune_id, equip_id, slot_index, uid)
-        if row[si] is not None:
+        # 符文侧占用判定与珠 mount 的互斥对向共用**同一**判定点（批47 · 43-B 一处收口）
+        if self._rune_slot_taken(ctx, str(uid), si):
             return self._rune_reject(
                 REASON_SLOT_FULL,
                 f"❌ 孔位 {si} 已镶嵌符文（{row[si]}）；需先拆卸",

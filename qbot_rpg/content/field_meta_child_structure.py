@@ -102,10 +102,16 @@ CHILD_SPEC: Dict[str, Dict[str, Any]] = {'achievement': {'conditions': {}, 'rewa
                           'level_gated': None,
                           'luck_affects': None,
                           'shatter_mode': None,
-                          'max_by_rarity': {'normal': None,
-                                            'fine': None,
-                                            'epic': None,
-                                            'legendary': None}},
+                          # 批43 H3：品质等级 → 强化上限（六档）替换 max_by_rarity
+                          'max_by_quality_level': {'1': None, '2': None, '3': None,
+                                                   '4': None, '5': None, '6': None},
+                          # 批43：旧品质枚举 → 品质等级（旧档兼容桥接）
+                          'legacy_quality_level_by_rarity': {'normal': None,
+                                                             'fine': None,
+                                                             'epic': None,
+                                                             'legendary': None},
+                          # 批43：特殊词条跨度（每 N 级一条）
+                          'special_affix_span': None},
              'success_curve': {'rate': None, 'to': None},
              'values': {'weapon_atk_per_level': {'stat_key': None, 'type': None, 'value': None},
                         'armor_def_per_level': {'stat_key': None, 'type': None, 'value': None}}},

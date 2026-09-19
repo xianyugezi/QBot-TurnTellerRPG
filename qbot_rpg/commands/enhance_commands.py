@@ -54,12 +54,19 @@ from typing import Any, Callable, Dict, List, Mapping, MutableMapping, Optional,
 
 from qbot_rpg.commands.basic_commands import _slot_info
 from qbot_rpg.commands.router import CommandSpec
-from qbot_rpg.core.templates import tpl_of
 from qbot_rpg.content.enhance_models import (
     DEFAULT_ENHANCE,
     QUALITY_LABELS_CN,
     parse_enhance_settings,
 )
+from qbot_rpg.core.enhance_affix import (
+    merge_affix_bonus,
+    plan_special_affixes,
+    resolve_cap,
+    special_affix_count,
+)
+from qbot_rpg.core.templates import tpl_of
+from qbot_rpg.data.gear_stats import GEAR_LABELS_ZH, PCT_SUFFIX
 
 __all__ = [
     "ENHANCE_CMD",
@@ -185,42 +192,70 @@ def _resolve_worn(ctx: MutableMapping[str, Any], player: MutableMapping[str, Any
         lines = []
         for e in cands:
             q = _quality_of_row(e["slot"], player)
-            mx = _max_for_quality(cfg, q)
+            ql = _quality_level_of_row(e["slot"], player)
+            cur_e = int(e["info"].get("enhance", 0) or 0)
+            mx = _max_for_quality(cfg, q, ql, cur_e)
             lines.append(tpl_of(ctx, "enhance_ambiguous_line", {
                 "name": e["name"], "level": e["info"].get("enhance", 0), "max": mx}))
         return None, "ambiguous", lines
     return None, "not_found", []
 
 
-def _quality_of_row(slot: Any, player: MutableMapping[str, Any]) -> str:
-    """槽位装备品质（从背包匹配行读 quality；无 → normal）。"""
+def _slot_row(slot: Any, player: MutableMapping[str, Any]) -> Optional[Any]:
+    """槽位 → 背包匹配行（item_id 命中首个；dict / 实例双形态可读）。"""
     info = _slot_info(slot)
     if info is None:
-        return "normal"
+        return None
     iid = info.get("item_id") or ""
     inv = player.get("inventory")
     if isinstance(inv, (list, tuple)):
         for r in inv:
             if _row_iid(r) == iid:
-                if isinstance(r, Mapping):
-                    return str(r.get("quality") or "normal")
-                return str(getattr(r, "quality", "normal") or "normal")
-    return "normal"
+                return r
+    return None
+
+
+def _quality_of_row(slot: Any, player: MutableMapping[str, Any]) -> str:
+    """槽位装备品质（从背包匹配行读 quality；无 → normal）。"""
+    r = _slot_row(slot, player)
+    if r is None:
+        return "normal"
+    if isinstance(r, Mapping):
+        return str(r.get("quality") or "normal")
+    return str(getattr(r, "quality", "normal") or "normal")
+
+
+def _quality_level_of_row(slot: Any, player: MutableMapping[str, Any]) -> int:
+    """槽位装备品质等级（批41/42 打造产物字段；旧档/普通物品无 → 0=走旧档桥接）。"""
+    r = _slot_row(slot, player)
+    if r is None:
+        return 0
+    v = r.get("quality_level") if isinstance(r, Mapping) else getattr(r, "quality_level", 0)
+    if isinstance(v, bool) or not isinstance(v, int) or v < 0:
+        return 0
+    return v
 
 
 # ---------------------------------------------------------------------------
 # 成功率 / 消耗 / 上限计算（2c3a §1-§3）
 # ---------------------------------------------------------------------------
 
-def _max_for_quality(cfg: Mapping[str, Any], quality: str) -> int:
-    mx = cfg.get("settings", {}).get("max_by_rarity") or {}
-    if quality in mx:
-        try:
-            return int(mx[quality] or 0)
-        except (TypeError, ValueError):  # pragma: no cover
-            return 0
-    # 品质缺键 → 内容包默认表回退
-    return int(DEFAULT_ENHANCE["settings"]["max_by_rarity"].get(quality, 0))
+def _max_for_quality(cfg: Mapping[str, Any], quality: str,
+                     quality_level: int = 0, cur: int = 0) -> int:
+    """实例强化上限（H3：品质等级 6 档表；旧档经桥接；绝不降至当前等级以下）。
+
+    参数化：上限表/旧档桥接表均来自包声明（`settings.max_by_quality_level` /
+    `settings.legacy_quality_level_by_rarity`）；本函数零硬编码档位与数值。
+    """
+    settings = cfg.get("settings") or {}
+    return resolve_cap(
+        cap_table=settings.get("max_by_quality_level"),
+        legacy_map=(settings.get("legacy_quality_level_by_rarity")
+                    or DEFAULT_ENHANCE["settings"]["legacy_quality_level_by_rarity"]),
+        quality_level=quality_level,
+        rarity=quality,
+        current=cur,
+    )
 
 
 def _base_rate(cfg: Mapping[str, Any], to_level: int) -> int:
@@ -487,14 +522,31 @@ def _spend_coins(player: MutableMapping[str, Any], amount: int) -> bool:
     return True
 
 
+def _roll_unit(ctx: Mapping[str, Any]) -> float:
+    """注入随机源 → [0,1)（**批40 H5 玩家级随机流**优先）。
+
+    支持两种既有注入形态：可调用 hook（`rng=lambda: 0.0`，测试用）与玩家级
+    `random.Random`（`ctx["rng"]`，装配层注入，具 `.random()`）。二者皆缺 → 全局
+    `random.random()` 兜底（对齐 _rand_unit 退化口径）。
+    """
+    rng = ctx.get("rng")
+    if rng is not None:
+        if callable(rng):
+            try:
+                return float(rng())
+            except Exception:  # noqa: BLE001
+                pass
+        fn = getattr(rng, "random", None)
+        if callable(fn):
+            try:
+                return float(fn())
+            except Exception:  # noqa: BLE001
+                pass
+    return random.random()
+
+
 def _roll_success(ctx: Mapping[str, Any], rate: int) -> bool:
-    fn = ctx.get("rng")
-    if callable(fn):
-        try:
-            return bool(fn() * 100 <= rate)
-        except Exception:  # noqa: BLE001
-            pass
-    return random.random() * 100 <= rate
+    return _roll_unit(ctx) * 100 <= rate
 
 
 def _fail_split(cfg: Mapping[str, Any]) -> int:
@@ -632,6 +684,71 @@ def _apply_enhance_stats(ctx: MutableMapping[str, Any], slot: Any, slot_id: str,
 
 
 # ---------------------------------------------------------------------------
+# 批43：特殊词条（每 N 级一条；相性池抽取 → 写实例载荷 + stats_bonus）
+# ---------------------------------------------------------------------------
+
+def _affix_display(key: str, value: float) -> str:
+    """词条键 + 数值 → 展示片段（`_pct` 键带 %，其余带点）。"""
+    label = GEAR_LABELS_ZH.get(key, key)
+    sign = "+" if value > 0 else ""
+    if key.endswith(PCT_SUFFIX):
+        return f"{label} {sign}{_fmt_num(value)}%"
+    return f"{label} {sign}{_fmt_num(value)}"
+
+
+def _apply_special_affixes(ctx: MutableMapping[str, Any], player: MutableMapping[str, Any],
+                           slot: Any, to_level: int) -> List[Dict[str, Any]]:
+    """成功强化后：按 `special_affix_span` 从相性池抽新词条并写入实例。
+
+    口径（批43）：
+      · 应得条数 = `to_level // span`（跨度包声明，不写死）；只补差额、不重复已持有键；
+      · 池查询唯一入口 `affinity.resolve_available_entries`（经 `plan_special_affixes`）；
+      · 无相性 → 要求相性的词条抽不出（负向口径与批42 一致）；
+      · 词条值并入 `stats_bonus`，键序写入实例 `enhance_affixes`（载荷落实例）；
+      · ctx 无 `settings`（未接相性）→ 池为空 → 零行为（既有强化回归不受影响）。
+    返回：本次新增词条行（`{affix, value, pool}`；无 → []）。
+    """
+    cfg = _cfg(ctx)
+    span = (cfg.get("settings") or {}).get("special_affix_span", 0)
+    if special_affix_count(to_level, span) <= 0:
+        return []
+    row = _slot_row(slot, player)
+    if row is None:
+        return []
+    if isinstance(row, Mapping):
+        aff_v = row.get("affinities")
+        owned = tuple(str(x) for x in (row.get("enhance_affixes") or ()))
+        sb = row.get("stats_bonus")
+    else:
+        aff_v = getattr(row, "affinities", None)
+        owned = tuple(str(x) for x in (getattr(row, "enhance_affixes", ()) or ()))
+        sb = getattr(row, "stats_bonus", None)
+    gained = plan_special_affixes(
+        affinity_config=ctx.get("settings"),
+        affinity_values=aff_v if isinstance(aff_v, Mapping) else {},
+        level=to_level, span=span, owned=owned, rng=ctx.get("rng"))
+    if not gained:
+        return []
+    new_sb, new_keys = merge_affix_bonus(sb if isinstance(sb, Mapping) else {}, gained)
+    all_keys = tuple(owned) + tuple(k for k in new_keys if k not in owned)
+    if isinstance(row, Mapping):
+        row_d = cast(Dict[str, Any], row)
+        row_d["stats_bonus"] = new_sb
+        row_d["enhance_affixes"] = list(all_keys)
+    else:
+        try:
+            from dataclasses import replace as _dcr
+            from qbot_rpg.data.item import ItemInstance
+            inv = player.get("inventory")
+            if isinstance(row, ItemInstance) and isinstance(inv, list):
+                idx = inv.index(row)
+                inv[idx] = _dcr(row, stats_bonus=new_sb, enhance_affixes=all_keys)
+        except Exception:  # noqa: BLE001
+            pass
+    return gained
+
+
+# ---------------------------------------------------------------------------
 # 结算核心（_enhance_settle：守卫 GU-01~06 → 成功/失败原子写）
 # ---------------------------------------------------------------------------
 
@@ -718,9 +835,10 @@ def _settle(ctx: MutableMapping[str, Any], name: str, declared: int,
     slot_id = _slot_id_of(player, slot)
     cur = int(info.get("enhance", 0) or 0)
 
-    # 品质/上限
+    # 品质/上限（H3：品质等级 6 档；旧档经桥接；不降至既有等级以下）
     quality = _quality_of_row(slot, player)
-    mx = _max_for_quality(cfg, quality)
+    q_level = _quality_level_of_row(slot, player)
+    mx = _max_for_quality(cfg, quality, q_level, cur)
     if mx <= 0:
         # 品质无上限键 → 该品质装备不可强化（内容包只对登记的品质开）
         return tpl_of(ctx, "enhance_not_equippable", {"name": info["name"]})
@@ -817,7 +935,14 @@ def _commit_success(ctx: MutableMapping[str, Any], player: MutableMapping[str, A
     attr_cn = _ATTR_CN.get(attr_key, attr_key)
     success_line = tpl_of(ctx, "enhance_success", {
         "attr": attr_cn, "old": _fmt_num(old_v), "new": _fmt_num(new_v)})
-    return roll_line + "\n" + success_line
+    lines = [roll_line, success_line]
+    # 批43：每满 `special_affix_span` 级 → 相性池抽特殊词条（文案走模板表）
+    gained = _apply_special_affixes(ctx, player, slot, to_level)
+    if gained:
+        names = "、".join(_affix_display(str(g["affix"]), float(g.get("value") or 0.0))
+                          for g in gained)
+        lines.append(tpl_of(ctx, "enhance_affix_gain", {"affix": names}))
+    return "\n".join(lines)
 
 
 def _commit_fail(ctx: MutableMapping[str, Any], player: MutableMapping[str, Any],
@@ -895,7 +1020,8 @@ def cmd_enhance_info(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         return tpl_of(ctx, "enhance_not_found", {"name": name})
     cur = int(info.get("enhance", 0) or 0)
     quality = _quality_of_row(slot, player)
-    mx = _max_for_quality(cfg, quality)
+    q_level = _quality_level_of_row(slot, player)
+    mx = _max_for_quality(cfg, quality, q_level, cur)
     if mx <= 0:
         return tpl_of(ctx, "enhance_not_equippable", {"name": info["name"]})
     q_cn = QUALITY_LABELS_CN.get(quality, quality)
@@ -906,8 +1032,13 @@ def cmd_enhance_info(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     else:
         head = tpl_of(ctx, "enhance_info_title_zero",
                       {"name": display, "quality": q_cn, "max": mx})
+    affix_row = _affix_info_row(ctx, slot, player, cfg, mx)
     if cur >= mx:
-        return head + "\n" + tpl_of(ctx, "enhance_info_at_max", {"max": mx})
+        lines = [head]
+        if affix_row:
+            lines.append(affix_row)
+        lines.append(tpl_of(ctx, "enhance_info_at_max", {"max": mx}))
+        return "\n".join(lines)
 
     to_level = cur + 1
     rate, base, luck_pp = _real_rate(ctx, player, cfg, to_level)
@@ -925,11 +1056,33 @@ def cmd_enhance_info(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         "stones": f"{_stone_cn(ctx, stone_item)} ×{stones_n} + {_cur_name(ctx)} ×{coin_n}",
         "stone_have": stone_have, "coins_have": _coins(player),
         "currency": _cur_name(ctx)})
-    lines = [head, rate_row, cost_row]
+    lines = [head]
+    if affix_row:
+        lines.append(affix_row)
+    lines.extend([rate_row, cost_row])
     dist = mx - cur
     if dist > 0:
         lines.append(tpl_of(ctx, "enhance_info_dist", {"dist": dist}))
     return "\n".join(lines)
+
+
+def _affix_info_row(ctx: Mapping[str, Any], slot: Any, player: MutableMapping[str, Any],
+                    cfg: Mapping[str, Any], cap: int) -> str:
+    """特殊词条状态行（当前持有数 / 满上限可得数 + 中文名列表；未启用 → 空串）。"""
+    span = (cfg.get("settings") or {}).get("special_affix_span", 0)
+    total = special_affix_count(cap, span)
+    if total <= 0:
+        return ""
+    row = _slot_row(slot, player)
+    if row is None:
+        owned: Tuple[str, ...] = ()
+    elif isinstance(row, Mapping):
+        owned = tuple(str(x) for x in (row.get("enhance_affixes") or ()))
+    else:
+        owned = tuple(str(x) for x in (getattr(row, "enhance_affixes", ()) or ()))
+    names = "、".join(GEAR_LABELS_ZH.get(k, k) for k in owned) or "（无）"
+    return tpl_of(ctx, "enhance_info_affix_row",
+                  {"cur": len(owned), "max": total, "list": names})
 
 
 # ---------------------------------------------------------------------------

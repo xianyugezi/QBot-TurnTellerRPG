@@ -1586,6 +1586,9 @@ class EquipmentEngineAdapter:
                     if isinstance(_aff, Mapping) else {},
                     set_affixes=tuple(item.get("set_affixes") or ()),
                     passives=tuple(item.get("passives") or ()),
+                    # 批43：品质等级 + 强化特殊词条载荷原样带过（asdict 行 → 引擎实例）
+                    quality_level=int(item.get("quality_level", 0) or 0),
+                    enhance_affixes=tuple(item.get("enhance_affixes") or ()),
                 )
             except (TypeError, ValueError):
                 pass

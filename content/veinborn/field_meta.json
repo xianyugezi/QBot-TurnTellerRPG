@@ -1136,12 +1136,25 @@
         "fail_tier_split": "失败档位拆分",
         "level_gated": "等级门槛",
         "luck_affects": "幸运影响",
-        "max_by_rarity": {
+        "max_by_quality_level": {
+          "_label": "强化上限表（品质等级）",
+          "_help": "品质等级 → 强化上限（六档 +3/+6/+9/+12/+15/+18）；替换旧 max_by_rarity。",
+          "1": "1级",
+          "2": "2级",
+          "3": "3级",
+          "4": "4级",
+          "5": "5级",
+          "6": "6级"
+        },
+        "legacy_quality_level_by_rarity": {
+          "_label": "旧档品质桥接",
+          "_help": "旧品质枚举 → 品质等级；旧装备按此读上限、既有等级原样保留（只升不降）。",
           "epic": "史诗",
           "fine": "精良",
           "legendary": "传说",
           "normal": "普通"
         },
+        "special_affix_span": "特殊词条跨度",
         "shatter_mode": "碎裂模式"
       },
       "success_curve": {

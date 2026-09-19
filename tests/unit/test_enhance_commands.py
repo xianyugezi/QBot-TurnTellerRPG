@@ -37,7 +37,12 @@ from qbot_rpg.commands.router import Router
 # 测试用 enhance raw（内容包形态；正常/精良/史诗/传说上限齐全）
 _TEST_ENHANCE = {
     "settings": {
-        "max_by_rarity": {"normal": 5, "fine": 8, "epic": 10, "legendary": 12},
+        # 批43 · H3：品质等级 6 档上限替换 max_by_rarity；旧档桥接（normal→2/fine→3/
+        # epic→4/legendary→4）保证旧装备上限只升不降。
+        "max_by_quality_level": {"1": 3, "2": 6, "3": 9, "4": 12},
+        "legacy_quality_level_by_rarity": {"normal": 2, "fine": 3, "epic": 4, "legendary": 4},
+        # 跨度 0 = 关闭特殊词条（本文件为既有强化纯回归对拍，不引入相性池随机）
+        "special_affix_span": 0,
         "fail_tier_split": 3,
         "shatter_mode": False,
         "luck_affects": False,
@@ -228,11 +233,11 @@ def test_enhance_fail_high_tier_tc04() -> None:
 # ---------- B /强化信息 ----------
 
 def test_enhance_info_readonly_tc07() -> None:
-    """TC-07：/强化信息 铁剑 → 结构完整、零扣除。"""
+    """TC-07：/强化信息 铁剑 → 结构完整、零扣除（旧档普通→桥接 2 级上限 +6）。"""
     ctx = make_ctx()
     before = (_inv_count(ctx, "stone_low"), ctx["player"]["currencies"]["coins"])
     out = cmd_enhance_info(parse("/强化信息 铁剑"), ctx)
-    assert "铁剑" in out and "强化上限 +5" in out
+    assert "铁剑" in out and "强化上限 +6" in out
     assert "+1 成功率" in out and "90%" in out
     assert "低级强化石 ×1" in out
     after = (_inv_count(ctx, "stone_low"), ctx["player"]["currencies"]["coins"])
@@ -240,13 +245,13 @@ def test_enhance_info_readonly_tc07() -> None:
 
 
 def test_enhance_info_at_max_tc08() -> None:
-    """TC-08：已达上限 → 成功率/消耗行替换为已达上限。"""
+    """TC-08：已达上限 → 成功率/消耗行替换为已达上限（旧档普通上限 +6）。"""
     ctx = make_ctx()
     p = ctx["player"]
-    p["equipment"]["weapon"]["slot_level"] = 5
-    p["inventory"][0]["enhance_level"] = 5
+    p["equipment"]["weapon"]["slot_level"] = 6
+    p["inventory"][0]["enhance_level"] = 6
     out = cmd_enhance_info(parse("/强化信息 铁剑"), ctx)
-    assert "已达强化上限（+5）" in out
+    assert "已达强化上限（+6）" in out
     assert "+1 成功率" not in out
 
 
@@ -310,14 +315,14 @@ def test_enhance_protect_no_stone_reject_tc13() -> None:
 # ---------- D 达顶 ----------
 
 def test_enhance_at_max_tc14() -> None:
-    """TC-14：已达上限强化 → 已达强化上限、零消耗。"""
+    """TC-14：已达上限强化 → 已达强化上限、零消耗（旧档普通上限 +6）。"""
     ctx = make_ctx()
     p = ctx["player"]
-    p["equipment"]["weapon"]["slot_level"] = 5
-    p["inventory"][0]["enhance_level"] = 5
+    p["equipment"]["weapon"]["slot_level"] = 6
+    p["inventory"][0]["enhance_level"] = 6
     before = (_inv_count(ctx, "stone_low"), ctx["player"]["currencies"]["coins"])
-    out = cmd_enhance(parse("/强化 铁剑+5"), ctx)
-    assert "已达强化上限（+5）" in out
+    out = cmd_enhance(parse("/强化 铁剑+6"), ctx)
+    assert "已达强化上限（+6）" in out
     after = (_inv_count(ctx, "stone_low"), ctx["player"]["currencies"]["coins"])
     assert before == after
 

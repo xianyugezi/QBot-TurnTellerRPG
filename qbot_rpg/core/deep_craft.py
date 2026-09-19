@@ -36,6 +36,10 @@ from qbot_rpg.core.affinity import (
     resolve_affinity_effect,
     resolve_available_entries,
 )
+from qbot_rpg.data.affinity_keys import (
+    ENTRY_PAYLOAD_SET_AFFIX,
+    ENTRY_PAYLOAD_STAT,
+)
 
 __all__ = [
     "equipment_level",
@@ -393,14 +397,15 @@ def craft_cost(
 # ---------------------------------------------------------------------------
 # 5b) 属性 / 套装词条 / 被动的相性池抽取（原案 §3/§4/§8/§11；批42 · C）
 # ---------------------------------------------------------------------------
-# 池词条行**载荷键**（框架 schema；内容包在 settings.affinity_pools[].entries[] 声明）：
+# 池词条行**载荷键**（框架 schema；唯一源 = `data/affinity_keys.py`，批43 收口）：
 #   · `stat`       → 随机属性候选（键 = 属性键；数值取同行 `value`）
 #   · `set_affix`  → 随机套装词条候选（值 = 套装词条 id）
+#   · `enhance_affix` → 强化特殊词条候选（批43；键 = data/gear_stats.py 登记词条键）
 # 池的构造 / 联动覆盖 / requires_affinity 过滤 **全部**由
 # `affinity.resolve_available_entries` 承担（唯一入口）——本模块只在**返回值**上按载荷键
 # 分流，不重算池、不本地匹配相性。
-ENTRY_STAT: str = "stat"
-ENTRY_SET_AFFIX: str = "set_affix"
+ENTRY_STAT: str = ENTRY_PAYLOAD_STAT
+ENTRY_SET_AFFIX: str = ENTRY_PAYLOAD_SET_AFFIX
 ENTRY_WEIGHT: str = "weight"
 
 

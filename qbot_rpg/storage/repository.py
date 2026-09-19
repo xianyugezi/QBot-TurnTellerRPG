@@ -212,6 +212,9 @@ def _item_from_dict(d: Dict[str, Any]) -> ItemInstance:
         if isinstance(aff, dict) else {},
         set_affixes=tuple(d.get("set_affixes") or ()),
         passives=tuple(d.get("passives") or ()),
+        # 批43：品质等级 + 强化特殊词条载荷逐字段读回（缺省 0/空 → 旧档零影响）。
+        quality_level=int(d.get("quality_level", 0) or 0),
+        enhance_affixes=tuple(d.get("enhance_affixes") or ()),
     )
 
 

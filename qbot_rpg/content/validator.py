@@ -36,12 +36,15 @@ from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 from qbot_rpg.content.field_meta import DEFAULT_CURRENCY_IDS, default_field_meta_table
 from qbot_rpg.data.affinity_keys import (
+    ENTRY_PAYLOAD_ENHANCE_AFFIX,
+    ENTRY_PAYLOAD_KEYS,
     POOL_KINDS,
     REACTION_AMPLIFY,
     REACTION_CONFLICT,
     REACTION_KINDS,
     affinity_requires,
 )
+from qbot_rpg.data.gear_stats import GEAR_NUMERIC_KEYS
 from qbot_rpg.content.models import (
     FieldMeta,
     FieldMetaTable,
@@ -2265,11 +2268,19 @@ class _Checker:
                                           "R-4", rule="affinity_ref_missing", affinity=req,
                                           affinity_space=sorted(aff_space))
                         # 批42 · C：词条行载荷键类型（stat/set_affix/effect_ref）+ 权重/数值。
-                        for key in ("stat", "set_affix", "effect_ref"):
+                        # 批43：载荷键唯一源 = data/affinity_keys.ENTRY_PAYLOAD_KEYS
+                        # （新增 enhance_affix）；受门禁覆盖。
+                        for key in ENTRY_PAYLOAD_KEYS:
                             v = ent.get(key)
                             if v is not None and (not isinstance(v, str) or not v):
                                 self._err(module_name, f"{path}.entries.{j}.{key}", "R-1",
                                           rule="type", expect="str", got=type(v).__name__)
+                        # 批43：强化特殊词条键须落在 gear_stats 唯一键空间（红拦新造键）。
+                        ea = ent.get(ENTRY_PAYLOAD_ENHANCE_AFFIX)
+                        if isinstance(ea, str) and ea and ea not in GEAR_NUMERIC_KEYS:
+                            self._err(module_name, f"{path}.entries.{j}.{ENTRY_PAYLOAD_ENHANCE_AFFIX}",
+                                      "R-4", rule="gear_key_missing", key=ea,
+                                      key_space=sorted(GEAR_NUMERIC_KEYS))
                         wv = ent.get("weight")
                         if wv is not None and (isinstance(wv, bool)
                                                or not isinstance(wv, (int, float)) or wv < 0):

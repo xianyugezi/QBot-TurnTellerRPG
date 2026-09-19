@@ -71,6 +71,12 @@ class ItemInstance:
     set_affixes: Tuple[str, ...] = ()
     # 装备被动（模板固定 + 相性变更后的最终 id；原案 §11）。
     passives: Tuple[str, ...] = ()
+    # ---- 批43：强化上限键与特殊词条载荷（原案 §7；H3 上限按品质等级取）----
+    # 品质等级（1~10；打造产物写入；旧档/普通物品 0 = 走旧档品质桥接读上限）。
+    quality_level: int = 0
+    # 强化特殊词条键序列（每满 `special_affix_span` 级一条；键 ∈ data/gear_stats.py
+    # 唯一源，数值已并入 stats_bonus；冷却缩减等占位键只登记不接引擎）。
+    enhance_affixes: Tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         """uid 缺省自动补发（frozen=True → object.__setattr__）。

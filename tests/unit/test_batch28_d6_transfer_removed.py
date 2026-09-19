@@ -37,8 +37,8 @@ class _Report:
 
 
 def _settings(extra: Dict[str, Any]) -> Dict[str, Any]:
-    """最小可进入 V5 段的 enhance raw（含合法 max_by_rarity 防提前 return）。"""
-    body: Dict[str, Any] = {"max_by_rarity": {"normal": 5}}
+    """最小可进入 V5 段的 enhance raw（含合法上限表防提前 return；批43 替换 max_by_rarity）。"""
+    body: Dict[str, Any] = {"max_by_quality_level": {"1": 3}}
     body.update(extra)
     return {"enhance": {"settings": body}}
 
@@ -49,8 +49,9 @@ def test_framework_meta_no_longer_registers_key() -> None:
 
     kids = default_field_meta_table().modules["enhance"].fields["settings"].children
     assert "transfer_allowed" not in kids
-    # 同段真字段仍在（防误删整段）
-    assert {"max_by_rarity", "fail_tier_split", "shatter_mode", "luck_affects",
+    # 同段真字段仍在（防误删整段；批43 H3：max_by_rarity → max_by_quality_level）
+    assert {"max_by_quality_level", "legacy_quality_level_by_rarity", "special_affix_span",
+            "fail_tier_split", "shatter_mode", "luck_affects",
             "level_gated"} <= set(kids)
 
 

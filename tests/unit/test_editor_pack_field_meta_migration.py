@@ -127,7 +127,12 @@ SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
 #      test_demo items 31→46）——**计数位移 = 硬差异**，故须重定基线（同批36 口径）。
 #   对拍实证：删除项 = 0；无既有 label/help/group/module_labels/module_tree 改值；
 #   重定后基线树与当前树逐字段 diff=0。
-BASELINE_REF = "e70edd2"
+# 批53（2026-09-20 时序与资源轴）重定：e70edd2 → b9df5c7（本批文档/说明提交）。
+#   原因 = 本批**有意**变更，仅 1 处既有严格键 help 改值：items/equipment 的
+#   `cooldown_reduction_pct` help 由「【占位】…不接引擎」改为「兼容别名已生效」；
+#   删除项 = 0、无新增；重定后基线树与当前树逐字段 diff=0。
+#   与 scripts/compare_field_meta_migration.py 的 DEFAULT_BASELINE_REF 同基线。
+BASELINE_REF = "b9df5c7"
 CONTENT = REPO / "content"
 
 

@@ -244,7 +244,14 @@ DEFAULT_PACKS = ("veinborn", "test_demo")
 #      test_demo items 31→46）——**计数位移 = 硬差异**，故须重定基线（同批36 口径）。
 #   对拍实证：删除项 = 0；无既有 label/help/group/module_labels/module_tree 改值；
 #   重定后基线树与当前树逐字段 diff=0。
-DEFAULT_BASELINE_REF = "e70edd2"
+# 批53（2026-09-20 时序与资源轴）重定：e70edd2 → b9df5c7（本批文档/说明提交）。
+#   原因 = 本批**有意**变更（非迁移回归），仅 **1 处既有严格键 help 改值**（无删除/无新增）：
+#   · items/equipment 的 `cooldown_reduction_pct` help：由「【占位】…明确不接任何引擎消费」
+#     改为「批53 起作为 cooldown_pct 的兼容别名生效（30 ⇔ −30，只换算一次、不双计）」——
+#     该键本批**真接线**，原文案已成为陷阱；label/range/group 均不变。
+#   对拍实证：删除项 = 0；硬差异 6 条全部为同一 help（×2 模块 ×2 派生键 ×2 包）；
+#   重定后基线树与当前树逐字段 diff=0。
+DEFAULT_BASELINE_REF = "b9df5c7"
 
 
 def _env(root: Path) -> dict:

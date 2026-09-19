@@ -237,7 +237,23 @@ def _player_combatant(ctx: Mapping[str, Any]) -> dict:
     for key in ("quest_active", "quest_completed"):
         if key in ctx and key not in comb:
             comb[key] = ctx[key]
+    # 批48 · 43-D：符文声明效果（2/3 阶）→ combatant.rune_effects（战斗引擎按侧/时点触发）。
+    # 经 core/runes.active_rune_effect_refs（孔位一律 active_rune_sockets，副手失活继承）；
+    # 无符文/总闸关 → 不新增键（既有 combatant 逐字段一致）。
+    rune_effects = _rune_effects_of(ctx)
+    if rune_effects:
+        comb["rune_effects"] = rune_effects
     return comb
+
+
+def _rune_effects_of(ctx: Mapping[str, Any]) -> List[Any]:
+    """玩家激活符文的效果引用（批48 · 43-D；缺数据源/异常 → []，不阻断开战）。"""
+    try:
+        from qbot_rpg.core.runes import active_rune_effect_refs  # noqa: PLC0415
+
+        return list(active_rune_effect_refs(ctx))
+    except Exception:  # noqa: BLE001 —— 符文接线异常不阻断战斗装配
+        return []
 
 
 # ---------------------------------------------------------------------------

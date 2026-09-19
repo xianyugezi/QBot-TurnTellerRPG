@@ -1,7 +1,9 @@
 """批46 · 符文地基（43-A）——符文定义解析层（qbot_rpg/core/runes.py）。
 
-定位：符文**定义/跨装备类型差异表/3 合 1 判定/1 阶数值求值**的纯解析层，不接 2/3 阶
-战斗效果（2/3 阶 effects 接线 = 后续批 43-D）。批47（43-B）在此新增 **1 阶数值贡献求值**
+定位：符文**定义/跨装备类型差异表/3 合 1 判定/1 阶数值求值**的纯解析层，批48（43-D）新增
+**2/3 阶效果引用解析**（`rune_effect_refs_of` / `active_rune_effect_refs`）——供战斗接线按侧、
+按时点执行；效果语义仍**一律引用 `effects` 注册表**（口径 §三.2），本层不内联执行语义。
+批47（43-B）在此新增 **1 阶数值贡献求值**
 （`rune_stats_of` / `sum_rune_stats`）：差异表解析（default + 覆盖）**只在此求值处发生**，
 不在数据层展开成多份；输出键取自 `data/gear_stats.GEAR_NUMERIC_KEYS`（唯一源）。
 **孔位执行**
@@ -80,10 +82,12 @@ __all__ = [
     "RUNE_TYPE",
     "RUNE_UPGRADE_COUNT",
     # 纯解析
+    "active_rune_effect_refs",
     "by_equip_type_of",
     "next_rune_tier",
     "resolve_by_equip_type",
     "resolve_rune_upgrade",
+    "rune_effect_refs_of",
     "rune_effects_of",
     "rune_family_of",
     "rune_stats_of",
@@ -331,3 +335,80 @@ def _iter_rune_entries(runes: Any) -> Sequence[Mapping[str, Any]]:
     if isinstance(runes, (list, tuple)):
         return [e for e in runes if isinstance(e, Mapping)]
     return []
+
+
+# ---------------------------------------------------------------------------
+# R-6 · 2/3 阶效果引用解析（批48 · 43-D；战斗接线侧取数）
+# ---------------------------------------------------------------------------
+# 符文效果引用条目键（工程补白 R-7：ref = {effect, trigger?, overrides?, target?}）
+RUNE_EFFECT_REF_KEY: str = "effect"
+RUNE_EFFECT_TRIGGER_KEY: str = "trigger"
+RUNE_EFFECT_OVERRIDES_KEY: str = "overrides"
+RUNE_EFFECT_TARGET_KEY: str = "target"
+
+
+def rune_effect_refs_of(rune_def: Any, equip_type: Any = None) -> List[Dict[str, Any]]:
+    """符文声明的**效果引用**列表（差异解析后；元素 = 归一化引用 dict）。
+
+    入参：rune_def 符文定义；equip_type 装备类型键（`items.type`，决定差异解析）。
+    出参：list[dict]，元素 `{effect, [trigger], [target], [overrides]}`；非法/空 → []。
+    核心（工程补白 R-7，口径 §二.1/R6 未写死触发行）：
+      · 效果条目取自差异解析结果（`by_equip_type.<type>` 覆盖条目优先），未声明 →
+        回落符文顶层 `effects`（口径 §二.1 形状草案的顶层字段）；
+      · `effect` 非空串才保留（悬空引用由校验器 RUNE-06 红拦）；
+      · `trigger` = 战斗事件时点（`core/event_dispatcher.EVENT_POINTS`；符文只在其
+        穿戴者侧、匹配该事件时触发——**不写进 effects 注册表** → 不产生全局泄漏）；
+      · `target`/`overrides` 原样透传（执行时并入子动作）。
+    """
+    entry = resolve_by_equip_type(rune_def, equip_type)
+    raw = entry.get("effects")
+    if raw is None:
+        raw = _as_mapping(rune_def).get("effects")
+    if not isinstance(raw, (list, tuple)):
+        return []
+    out: List[Dict[str, Any]] = []
+    for e in raw:
+        if not isinstance(e, Mapping):
+            continue
+        eid = e.get(RUNE_EFFECT_REF_KEY)
+        if not isinstance(eid, str) or not eid:
+            continue
+        ref: Dict[str, Any] = {RUNE_EFFECT_REF_KEY: eid}
+        for key in (RUNE_EFFECT_TRIGGER_KEY, RUNE_EFFECT_TARGET_KEY,
+                    RUNE_EFFECT_OVERRIDES_KEY):
+            if key in e:
+                ref[key] = e[key]
+        out.append(ref)
+    return out
+
+
+def active_rune_effect_refs(ctx: Any, jewel: Any = None) -> List[Dict[str, Any]]:
+    """**已穿戴件激活符文的全部效果引用**（战斗接线取数唯一入口；孔位经
+    `jewel.active_rune_sockets`）。
+
+    链路：worn 枚举（复用 `EquipmentEngine` 唯一枚举）→ `active_rune_sockets`
+    （**唯一孔位读取入口**，副手失活自动继承）→ 每枚符文按 `items.type` 差异解析
+    → 汇总效果引用。缺 runes/jewel/数据源/总闸关 → []（零贡献，不抛）。
+    """
+    c = _as_mapping(ctx)
+    if not _as_mapping(c.get("runes")):
+        return []
+    try:  # lazy：core.equipment 顶层 import core.runes（避免模块级环）
+        from qbot_rpg.core.equipment import EquipmentEngine
+        from qbot_rpg.core.jewel import JewelSystem
+    except Exception:  # noqa: BLE001 —— 依赖不可用 → 零贡献（不阻断战斗装配）
+        return []
+    jw = jewel if jewel is not None else c.get("jewel")
+    if jw is None:
+        try:
+            jw = JewelSystem(settings=c.get("settings"))
+        except Exception:  # noqa: BLE001 —— 设置形态异常 → 零贡献
+            return []
+    engine = EquipmentEngine(
+        slots=c.get("slots"), offhand=c.get("equipment_offhand"),
+        runes=c.get("runes"), items=c.get("items"), jewel=jw,
+    )
+    try:
+        return engine.active_rune_effects(c.get("player"))
+    except Exception:  # noqa: BLE001 —— 读取失败按无符文效果（不阻断装配）
+        return []

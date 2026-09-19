@@ -1952,16 +1952,56 @@ class BattleEngine:
         在战斗时点 fire 匹配事件的效果/proc/状态 on_xxx 动作（effects 定义 trigger
         字段 / statuses on_gain/on_lose；未配置 → [] 零行为变化）。registry 注入
         self._registry（未注入/异常 → 安全失败返回 []，不阻断战斗主流程）。
+
+        批48 · 43-D：额外追加**符文声明效果**候选（`_rune_candidates`）——只对该侧
+        生效（符文挂穿戴者），与全局注册表候选合并同批执行；无符文 → 候选空 →
+        与既有行为逐字段一致。
         """
         try:
             from qbot_rpg.core.event_dispatcher import dispatch_event  # noqa: PLC0415
 
             return dispatch_event(
                 event, side, self._snap, self._registry,
-                runtime=self._new_runtime(), **kw,
+                runtime=self._new_runtime(),
+                extra_candidates=self._rune_candidates(event, side), **kw,
             )
         except Exception:  # noqa: BLE001 —— 事件分派异常不阻断战斗（安全失败）
             return []
+
+    def _rune_candidates(self, event: str, side: str) -> List[Any]:
+        """该侧战斗单位携带的**符文效果引用** → 事件候选（批48 · 43-D）。
+
+        数据源 = 快照 combatant 的 `rune_effects`（装配层经
+        `core/runes.active_rune_effect_refs` 从激活孔位收集；键随快照往返，
+        续战不丢）。只取 `trigger == event` 的引用；动作语义仍由 effects 注册表
+        定义（本侧不内联）。
+
+        工程补白 R-7b（口径 §三.1 未写死来源区分）：符文施加来源按次区分
+        `"{side}@{action_seq}"`——既有 S5「同来源同侧只保留一个」下，让
+        「每次攻击获得物攻加成」的 S3 stack 框架真正逐次叠层（**不改
+        `apply_status` 行为**）；ref 自带 `source` 时以声明为准。
+        """
+        comb = self._snap.get(side)
+        refs = comb.get("rune_effects") if isinstance(comb, Mapping) else None
+        if not isinstance(refs, (list, tuple)) or not refs:
+            return []
+        seq = self.action_seq
+        out: List[Any] = []
+        for ref in refs:
+            if not isinstance(ref, Mapping):
+                continue
+            if str(ref.get("trigger") or "") != event:
+                continue
+            eid = str(ref.get("effect") or "")
+            if not eid:
+                continue
+            ov = dict(ref.get("overrides")) if isinstance(ref.get("overrides"), Mapping) else {}
+            for key in ("target",):
+                if key in ref and key not in ov:
+                    ov[key] = ref[key]
+            ov.setdefault("source", f"{side}@{seq}")
+            out.append((eid, {"id": eid, "overrides": ov, "trigger": event}, "effect"))
+        return out
 
     def _settle(
         self,

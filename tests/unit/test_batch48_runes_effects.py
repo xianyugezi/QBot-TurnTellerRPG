@@ -363,3 +363,182 @@ def test_s5_same_source_renews_distinct_source_stacks() -> None:
     assert _engine_with({STACK_ATK.id: STACK_ATK},
                         [dict(rt.find_status(BP, STACK_ATK.id))])._aggregate_boost(  # noqa: SLF001
         BP, "atk") == 10.0
+
+
+# ===========================================================================
+# C. 2 阶战斗接线：符文声明 effect + trigger → 按侧/时点触发（孔位经 active_rune_sockets）
+# ===========================================================================
+# 效果容器（**不带 trigger**：不进全局注册表扫描 → 不会对所有战斗单位泄漏）
+FX_ATK_STACK = _Def({
+    "id": "fx_atk_stack", "name": "fx_atk_stack", "class": "special",
+    "actions": [{"type": "status_apply", "status": "s_atk_stack", "target": "self"}],
+})
+FX_GRIEVOUS = _Def({
+    "id": "fx_grievous", "name": "fx_grievous", "class": "special",
+    "actions": [{"type": "status_apply", "status": GRIEVOUS.id, "target": "enemy"}],
+})
+DEFS = {FX_ATK_STACK.id: FX_ATK_STACK, FX_GRIEVOUS.id: FX_GRIEVOUS,
+        STACK_ATK.id: STACK_ATK, GRIEVOUS.id: GRIEVOUS}
+
+RUNE_STACK = {
+    "id": "r_stack", "name": "r_stack", "tier": 2, "family": "f",
+    "by_equip_type": {"default": {"effects": [
+        {"effect": FX_ATK_STACK.id, "trigger": "action_start"}]}},
+}
+RUNE_GRIEVOUS = {
+    "id": "r_grievous", "tier": 2, "family": "f",
+    "effects": [{"effect": FX_GRIEVOUS.id, "trigger": "on_hit"}],
+}
+SLOTS_C: Dict[str, Any] = {
+    "weapon": {"name": "武器", "max": 1},
+    "offhand": {"name": "副手", "max": 1, "role": "offhand"},
+}
+OFFHAND_C = {"enabled": True, "single_hand_scale": 0.5}
+ITEMS_C: Dict[str, Any] = {"sword": {"id": "sword", "type": "weapon"}}
+RUNES_C: Dict[str, Any] = {RUNE_STACK["id"]: RUNE_STACK, RUNE_GRIEVOUS["id"]: RUNE_GRIEVOUS}
+
+
+def test_rune_effect_refs_of_difference_table() -> None:
+    """差异解析：命中类型覆盖条目优先；未命中/无覆盖 → 回流符文顶层 effects。"""
+    d = {
+        "id": "r", "tier": 2, "family": "f",
+        "effects": [{"effect": "fx_top", "trigger": "battle_start"}],
+        "by_equip_type": {
+            "default": {"effects": [{"effect": "fx_default", "trigger": "on_hit"}]},
+            "weapon": {"effects": [{"effect": "fx_w", "trigger": "action_start"}]},
+        },
+    }
+    from qbot_rpg.core.runes import rune_effect_refs_of
+
+    assert [r["effect"] for r in rune_effect_refs_of(d, "weapon")] == ["fx_w"]
+    assert [r["effect"] for r in rune_effect_refs_of(d, "armor_body")] == ["fx_default"]
+    # 条目未声明 effects → 顶层 effects 兜底（口径 §二.1 顶层形状）
+    d2 = {"id": "r2", "tier": 2, "family": "f",
+          "effects": [{"effect": "fx_top", "trigger": "battle_start"}],
+          "by_equip_type": {"default": {"stats": {"atk": 1}}}}
+    refs = rune_effect_refs_of(d2, "weapon")
+    assert refs == [{"effect": "fx_top", "trigger": "battle_start"}], refs
+    # 非法元素/空 effect 丢弃
+    d3 = {"id": "r3", "tier": 2, "family": "f", "by_equip_type": {
+        "default": {"effects": ["x", {"trigger": "on_hit"}, {"effect": ""},
+                                {"effect": "ok", "overrides": {"value": 3}}]}}}
+    assert rune_effect_refs_of(d3, None) == [
+        {"effect": "ok", "overrides": {"value": 3}}]
+
+
+def _player_ctx(item_id: str, socket_row: list, slot: str = "weapon",
+                runes: Any = None) -> Dict[str, Any]:
+    from qbot_rpg.data.item import ItemInstance
+
+    row = ItemInstance(item_id=item_id, name=item_id, count=1, quality="normal",
+                       bound=False, stack_max=1, slot=slot)
+    player: Dict[str, Any] = {
+        "inventory": [row],
+        "equipment": {slot: {"item_id": item_id, "uid": row.uid}},
+        "persistent_state": {"rune_sockets": {row.uid: list(socket_row)}},
+    }
+    return {
+        "player": player, "slots": SLOTS_C, "equipment_offhand": dict(OFFHAND_C),
+        "runes": dict(runes if runes is not None else RUNES_C), "items": dict(ITEMS_C),
+        "settings": {"deep_craft": {"enabled": True}, "rune_sockets": {"default_count": 3}},
+    }
+
+
+def test_active_rune_effect_refs_uses_active_sockets() -> None:
+    """取数经 jewel.active_rune_sockets：装符文 → 有 refs；空孔 → []。"""
+    from qbot_rpg.core.runes import active_rune_effect_refs
+
+    ctx = _player_ctx("sword", ["r_stack", None, None])
+    refs = active_rune_effect_refs(ctx)
+    assert refs == [{"effect": FX_ATK_STACK.id, "trigger": "action_start"}], refs
+    assert active_rune_effect_refs(_player_ctx("sword", [None, None, None])) == []
+
+
+def test_active_rune_effect_refs_offhand_inactive() -> None:
+    """副手失活继承：同件挪作副手 → 符文效果 refs 为空（active_rune_sockets → []）。"""
+    from qbot_rpg.core.runes import active_rune_effect_refs
+
+    ctx = _player_ctx("sword", ["r_stack", None, None])
+    ctx["player"]["equipment"] = {"offhand": ctx["player"]["equipment"]["weapon"]}
+    assert active_rune_effect_refs(ctx) == []
+
+
+def test_active_rune_effect_refs_switch_off_and_missing_sources() -> None:
+    """总闸关 / 缺 runes / 缺 player → 零 refs（防御降级，不抛）。"""
+    from qbot_rpg.core.runes import active_rune_effect_refs
+
+    ctx = _player_ctx("sword", ["r_stack", None, None])
+    ctx["settings"]["deep_craft"]["enabled"] = False
+    assert active_rune_effect_refs(ctx) == []
+    ctx = _player_ctx("sword", ["r_stack", None, None])
+    ctx["runes"] = {}
+    assert active_rune_effect_refs(ctx) == []
+    assert active_rune_effect_refs({}) == []
+
+
+def _rune_engine(refs: List[Dict[str, Any]], side: str = BP) -> Any:
+    """BattleEngine（defs 直连）+ 该侧 combatant 携带 rune_effects。"""
+    from qbot_rpg.core.battle import BattleEngine
+
+    eng = BattleEngine(defs=dict(DEFS))
+    eng._snap = {"status_state": {BP: [], BN: []}, "action_seq": 0,  # noqa: SLF001
+                 "player": {"max_hp": 1000, "hp": 400, "atk": 100, "name": "p"},
+                 "enemy": {"max_hp": 1000, "hp": 400, "atk": 100, "name": "e"}}
+    if refs:
+        eng._snap[side]["rune_effects"] = list(refs)  # noqa: SLF001
+    return eng
+
+
+def test_rune_per_attack_stack_scales_in_battle() -> None:
+    """每次攻击（action_start）→ 层数增益逐次上升、达 max_stack=4 后不再增（逐次数值）。"""
+    eng = _rune_engine([{"effect": FX_ATK_STACK.id, "trigger": "action_start"}])
+    seen: List[float] = []
+    for i in range(1, 7):
+        eng._snap["action_seq"] = i                     # noqa: SLF001 —— 模拟第 i 次行动
+        # 达上限后 applied=False（at_max_stack）→ 容器传播失败、side_effects 为空
+        # （既有 execute_action 语义）——层数平台期由 boost 断言体现
+        eng._dispatch_event("action_start", BP)         # noqa: SLF001
+        seen.append(eng._aggregate_boost(BP, "atk"))    # noqa: SLF001
+    assert seen == [5.0, 10.0, 15.0, 20.0, 20.0, 20.0], seen
+    inst = eng._snap["status_state"][BP][0]             # noqa: SLF001
+    assert int(inst["stacks"]) == 4
+
+
+def test_rune_grievous_on_hit_end_to_end() -> None:
+    """2 阶重伤端到端：on_hit 给目标挂重伤 → 目标受治疗减少（战斗中 heal 实测）。"""
+    eng = _rune_engine([{"effect": FX_GRIEVOUS.id, "trigger": "on_hit"}])
+    eng._snap["action_seq"] = 1                         # noqa: SLF001
+    fx = eng._dispatch_event("on_hit", BP)              # noqa: SLF001
+    assert any(e.get("type") == "status_apply" and e.get("applied") for e in fx), fx
+    assert eng._snap["status_state"][BN][0]["status_id"] == GRIEVOUS.id  # noqa: SLF001
+    # 敌方（被重伤）受伤后治疗：不经战斗主循环，直接跑 heal 动作（同 ctx/hp 段）
+    rt = eng._new_runtime()                             # noqa: SLF001
+    before = eng._snap[BN]["hp"]                        # noqa: SLF001
+    execute_action({"type": "heal", "value": 100, "target": "self"},
+                   _ctx(eng._snap, attacker=BN, target=BP), rt)  # noqa: SLF001
+    assert eng._snap[BN]["hp"] - before == 60           # noqa: SLF001
+
+
+def test_rune_candidates_empty_without_runes_field() -> None:
+    """回归：无 rune_effects 字段 → 候选空 → dispatch 与既有（无符文）逐字段一致。"""
+    eng = _rune_engine([])
+    assert eng._rune_candidates("action_start", BP) == []   # noqa: SLF001
+    assert eng._dispatch_event("action_start", BP) == []    # noqa: SLF001
+    # 敌方没有符文 → 候选空（不误触发）
+    eng2 = _rune_engine([{"effect": FX_ATK_STACK.id, "trigger": "action_start"}])
+    assert eng2._rune_candidates("action_start", BN) == []  # noqa: SLF001
+    assert eng2._rune_candidates("battle_start", BP) == []  # noqa: SLF001
+
+
+def test_player_combatant_carries_rune_effects_only_when_present() -> None:
+    """指令壳装配：有符文 → combatant.rune_effects；无符文 → 不新增键（逐字段一致）。"""
+    from qbot_rpg.commands.battle_launch_commands import _player_combatant
+
+    ctx = _player_ctx("sword", ["r_stack", None, None])
+    comb = _player_combatant(ctx)
+    assert comb["rune_effects"] == [
+        {"effect": FX_ATK_STACK.id, "trigger": "action_start"}]
+    plain = _player_ctx("sword", [None, None, None])
+    base = _player_combatant(plain)
+    assert "rune_effects" not in base
+    assert base == _player_combatant(_player_ctx("sword", [None, None, None]))

@@ -332,6 +332,59 @@ def test_c3_stack_axes_align_with_batch48_stacks_multiplier() -> None:
     assert status_stat_modifier_sum(rt2, BN, "atk") == 10.0
 
 
+def _run_shift(shift: float, *, axes: Any = None) -> Any:
+    """跑一次普攻并返回 (battle_time, player.next_ready, 调度器原语调用记录)。"""
+    eng = BattleEngine(config=({EFFECT_AXES_KEY: axes} if axes is not None else None))
+    eng._rng = _QueueRNG([0.5] * 8)  # noqa: SLF001
+    p = {"max_hp": 900, "hp": 900, "atk": 100, "dfn": 50, "spd": 10,
+         "foc": 50, "con": 50, "lck": 50}
+    if shift:
+        p["action_bar_shift"] = shift
+    e = {"max_hp": 9000, "hp": 9000, "atk": 0, "dfn": 50, "spd": 8,
+         "foc": 0, "con": 50, "lck": 0}
+    eng.start(p, e, random_seed=1)
+    calls: Any = []
+    _h, _d = eng._ctb.hasten_actor, eng._ctb.delay_actor  # noqa: SLF001
+
+    def _spy_h(a: str, b: float = 0.0) -> Any:
+        calls.append(("hasten", str(a), float(b)))
+        return _h(a, b)
+
+    def _spy_d(a: str, b: float = 0.0) -> Any:
+        calls.append(("delay", str(a), float(b)))
+        return _d(a, b)
+
+    eng._ctb.hasten_actor = _spy_h  # noqa: SLF001
+    eng._ctb.delay_actor = _spy_d  # noqa: SLF001
+    eng.player_act("normal")
+    ready = float(eng._ctb.get_actor("player").next_ready)  # noqa: SLF001
+    return float(eng.battle_time), ready, calls
+
+
+def test_d1_action_bar_shift_bidirectional() -> None:
+    """X30：正 = 提前（hasten，next_ready −N）；负 = 延后（delay，+N）；0 = 零变化。"""
+    _bt0, r0, c0 = _run_shift(0)
+    _btp, rp, cp = _run_shift(100)
+    _btn, rn, cn = _run_shift(-100)
+    assert ("hasten", BP, 100.0) in cp, cp
+    assert ("delay", BP, 100.0) in cn, cn
+    assert not any(c[1] == BP for c in c0), c0            # 未配置 → 不调用原语
+    assert rp == r0 - 100.0
+    assert rn == r0 + 100.0
+    assert _btp == rp and _btn == rn                      # 收口 = 推动后的 ready
+
+
+def test_d2_action_bar_shift_range_declaration_driven() -> None:
+    """声明区间钳制（C11）：min/max=±50 → 越界轴值被钳后再推动。"""
+    axes = {"action_bar_shift": {"min": -50, "max": 50}}
+    _bt, r_hi, c_hi = _run_shift(999, axes=axes)
+    _bt2, r_lo, c_lo = _run_shift(-999, axes=axes)
+    assert ("hasten", BP, 50.0) in c_hi, c_hi
+    assert ("delay", BP, 50.0) in c_lo, c_lo
+    _bt0, r0, _ = _run_shift(0)
+    assert r_hi == r0 - 50.0 and r_lo == r0 + 50.0
+
+
 def test_g1_battle_snapshot_zero_change_no_axis_keys() -> None:
     """红线 C1：未配置特效轴 → 战斗结算快照逐字段一致、且不含任何特效轴键。"""
     def _snap() -> Any:

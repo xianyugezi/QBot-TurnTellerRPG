@@ -320,8 +320,10 @@ EFFECT_AXIS_SPECS: Tuple[Mapping[str, Any], ...] = (
                             "分两次行动插入会破坏调度不变量，故用推动而非额外行动。"},
         "legacy_alias": (),
         "consumer": "ctb_scheduler.action_bar_shift",
-        "consumer_note": "唯一收口 = 既有成对原语 delay_actor / hasten_actor；"
-                         "同批收编 counter_refund（现为单向硬编码实例）。",
+        "consumer_note": "批53 已接线：唯一收口 = `battle._after_actor_action` 收尾处，"
+                         "复用既有成对原语 hasten_actor（正）/ delay_actor（负）。"
+                         "counter_refund 仍走自身规则配置（收编为同一轴属口径变更，"
+                         "本批不动，登记待裁决）。",
     },
     {
         "axis": "resource_cost_pct", "doc_id": "X34", "priority": "P1",

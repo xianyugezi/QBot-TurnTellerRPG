@@ -5060,6 +5060,21 @@ class BattleEngine:
                 _view = self._ctb.get_actor(actor)
                 if _view is not None and _view.ticket is None and _view.alive:
                     self._ctb._enqueue(_view, base_time=self._ctb.battle_time, recovery=_rec)
+            # 批53 · 行动条推动（X30 `action_bar_shift`，加算轴）：本 actor 每次行动收尾
+            # 按轴值**双向原语**平移其下一次 ready —— 正 = 提前（hasten）、负 = 延后
+            # （delay）；复用既有 `ctb_scheduler.delay_actor / hasten_actor`（不新开管线）。
+            # 未配置 / 0 → 不调用（逐字段零变化）。
+            _bar_shift = 0.0
+            try:
+                _bar_shift = effect_axis_value(
+                    self._combat(actor), "action_bar_shift",
+                    self._config.get(EFFECT_AXES_KEY))
+            except Exception:  # noqa: BLE001 —— 取轴异常不阻断行动收尾
+                _bar_shift = 0.0
+            if _bar_shift > 0:
+                self._ctb.hasten_actor(actor, _bar_shift)
+            elif _bar_shift < 0:
+                self._ctb.delay_actor(actor, -_bar_shift)
         self._sync_counts()
         # 行动后把时间轴推到下一个 ready（NPC 连锁自动推进 / 玩家 ready 暂停）。
         # 收口态恒为 `act`（CTB 唯一「交还行动条」落点）：res→act 为正常结算收尾；

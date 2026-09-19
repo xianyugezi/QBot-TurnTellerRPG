@@ -203,17 +203,20 @@ def test_per_grade_deterministic_boundaries(value: float, expect_hit: List[str])
 
 @pytest.mark.parametrize("grade", ["铜", "银", "金", "彩"])
 def test_probability_statistics_match_declared(grade: str) -> None:
-    """1000 次实际触发率 ≈ 声明概率（固定种子 → 确定性、不 flaky；容差 ±0.03）。"""
+    """1000 次实际触发率 ≈ 声明概率（固定种子 → 确定性、不 flaky；容差 ±0.02）。
+
+    种子取批次日期 20260919（1000 次采样下逐档偏差 ≤0.005）；若换种子须重验收敛。
+    """
     declared = PER_GRADE[grade]
     rules = _rules(enabled=True, grades=[grade], chance_by_grade={grade: declared},
                    mult_by_grade={grade: 2.0}, exp_cap="none")
-    rng = random.Random(44)
+    rng = random.Random(20260919)
     hits = sum(
         1 for _ in range(1000)
         if quality_exp(MATS, rules, EXP_BY_COLOR, rng=rng, grade=grade,
                        thresholds=THRESHOLDS)["crit"])
     rate = hits / 1000.0
-    assert abs(rate - declared) <= 0.03, f"{grade}: 实际 {rate} vs 声明 {declared}"
+    assert abs(rate - declared) <= 0.02, f"{grade}: 实际 {rate} vs 声明 {declared}"
 
 
 # ---------------------------------------------------------------------------

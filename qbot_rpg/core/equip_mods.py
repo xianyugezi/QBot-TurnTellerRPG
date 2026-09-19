@@ -59,6 +59,8 @@ from __future__ import annotations
 import random
 from typing import Any, Dict, List, Mapping, MutableMapping, Optional, Tuple
 
+from qbot_rpg.core.equipment import offhand_penalized_slots_of_ctx
+
 __all__ = [
     "EQUIP_SKILLS_STATE_KEY",
     "EQUIP_SKILL_SOURCES_KEY",
@@ -160,10 +162,18 @@ def worn_slots(player: Any) -> List[Tuple[str, str]]:
 
 
 def _worn_defs(ctx: Mapping[str, Any], player: Any) -> List[Tuple[str, Mapping[str, Any]]]:
-    """已穿戴件 → [(slot_id, item_def)]（缺定义跳过；P-3）。"""
+    """已穿戴件 → [(slot_id, item_def)]（缺定义跳过；P-3）。
+
+    批38 · H7 副手：处于副手折算/失活槽的件**不参与** α 组四类（技能授予/增幅/普攻替换/
+    职业覆盖）——在此**唯一已穿戴件枚举点**过滤一次，四处同时失活。开关关闭 → 空集，
+    与既有实现逐字段一致（`core/equipment.offhand_penalized_slots_of_ctx` 同源判定）。
+    """
     items = items_table(ctx)
+    penalized = offhand_penalized_slots_of_ctx(ctx, player)
     out: List[Tuple[str, Mapping[str, Any]]] = []
     for slot_id, item_id in worn_slots(player):
+        if slot_id in penalized:
+            continue
         d = _item_def_of(items, item_id)
         if d:
             out.append((slot_id, d))

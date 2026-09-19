@@ -658,6 +658,9 @@ class _Checker:
             # 批37 X12：settings.post_battle_recovery 战后恢复段专项
             # （【框架】L294/L298-300 + 3h §4.2/L234；容器 soft_label 泛型短路 → 显式区间红拦）
             self._check_post_battle_recovery(module_name, data)
+            # 批38 · H7 副手：settings.equipment_offhand 开关 + slot_defs.<部位>.role
+            # （段结构/类型/区间红拦 + 「开关关闭却声明副手部位」黄提示，不硬拦）
+            self._check_equipment_offhand(module_name, data)
             # M8 settings.alchemy 段校验（m8_contract_数据与校验 §六 ALC-01~24 + §五）
             # 鸭子类型纯函数；段缺失/空段默认值兜底（alchemy_settings P-6）
             from qbot_rpg.content.alchemy_settings import check_settings_alchemy
@@ -1744,6 +1747,67 @@ class _Checker:
                 # V9（3h L234/L510）：回复过高会击穿「花钱治疗=资源循环」设计
                 self._warn(module_name, path, "Y-13", rule="recovery_ratio_high",
                            value=val, threshold=0.5)
+
+    # ---- 批38 · H7：settings.equipment_offhand 副手开关 + slot_defs.role 部位角色专项 ----
+    def _check_equipment_offhand(self, module_name: str, data: object) -> None:
+        """settings.equipment_offhand 段 + settings.slot_defs.<部位>.role 校验（批38 · H7）。
+
+        依据：docs/深度打造_决策记录.md §一 H7 + §五 5.2（开关默认 false / 关闭零变化）。
+
+        分级：
+          · 段结构错误（null / 非对象）→ **红拦 R-1**（人话提示）；
+          · `enabled` 非布尔 → **红拦 R-1**；
+          · `single_hand_scale` 非数值/布尔/NaN/Inf → **红拦 R-1/R-3**；∉[0,1] → **红拦 R-2**；
+          · `slot_defs.<部位>.role` 非 `main`/`offhand` → **红拦 R-1**（枚举）；
+          · `role=offhand` 但开关未开（缺段 / enabled≠true）→ **黄提示 Y-14**（不硬拦；
+            用户可按自己数据情况先声明部位再开开关，故只提示）。
+        未知键 / 缺键：默认放行（缺段走引擎默认「关闭」）。
+        """
+        if not isinstance(data, Mapping):
+            return
+        base = "settings.equipment_offhand"
+        enabled = False
+        cfg = data.get("equipment_offhand")
+        if cfg is not None:
+            if not isinstance(cfg, Mapping):
+                self._err(module_name, base, "R-1", rule="section_structure",
+                          got=type(cfg).__name__,
+                          msg="equipment_offhand 段要填对象（配置块 { ... }，如 "
+                              "{\"enabled\": true, \"single_hand_scale\": 0.5}）或删掉该段")
+            else:
+                en = cfg.get("enabled")
+                if en is not None and not isinstance(en, bool):
+                    self._err(module_name, f"{base}.enabled", "R-1", rule="type",
+                              expect="bool", got=type(en).__name__)
+                enabled = en is True
+                sc = cfg.get("single_hand_scale")
+                if sc is not None:
+                    scpath = f"{base}.single_hand_scale"
+                    if isinstance(sc, bool) or not isinstance(sc, (int, float)):
+                        self._err(module_name, scpath, "R-1", rule="type", expect="number",
+                                  got=("bool" if isinstance(sc, bool) else type(sc).__name__))
+                    elif math.isnan(float(sc)) or math.isinf(float(sc)):
+                        self._err(module_name, scpath, "R-3", rule="not_a_number", value=sc)
+                    elif not (0.0 <= float(sc) <= 1.0):
+                        self._err(module_name, scpath, "R-2", rule="ratio_out_of_range",
+                                  value=sc, range_min=0, range_max=1)
+        slot_defs = data.get("slot_defs")
+        if not isinstance(slot_defs, Mapping):
+            return
+        for part in sorted(str(k) for k in slot_defs.keys()):
+            sd = slot_defs.get(part)
+            if not isinstance(sd, Mapping) or "role" not in sd:
+                continue
+            role = sd.get("role")
+            path = f"settings.slot_defs.{part}.role"
+            if role not in ("main", "offhand"):
+                self._err(module_name, path, "R-1", rule="enum_invalid", got=role,
+                          allowed=["main", "offhand"])
+                continue
+            if role == "offhand" and not enabled:
+                self._warn(module_name, path, "Y-14", rule="offhand_role_without_switch",
+                           msg="部位角色声明为 offhand（副手），但 settings.equipment_offhand"
+                               ".enabled 未开启 → 副手规则当前不生效（不阻断；开启开关后生效）")
 
     # ---- 批18 效果扩展专项：gain_currency / learn_skill ----
     def _check_effects_18(self, module_name: str, data: object) -> None:

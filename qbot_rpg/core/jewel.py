@@ -69,6 +69,7 @@ from __future__ import annotations
 
 from typing import Any, List, Mapping, MutableMapping, Optional, Sequence, Tuple
 
+from qbot_rpg.core.equipment import offhand_penalized_item_ids
 from qbot_rpg.core.quality import QualitySystem
 
 __all__ = [
@@ -339,6 +340,37 @@ class JewelSystem:
         if not isinstance(slots, list):
             return None
         return slots
+
+    # ------------------------------------------------------------------
+    # 批38 · H7 副手：孔位读取处的失活闸（符文附魔失活）
+    # ------------------------------------------------------------------
+    @staticmethod
+    def offhand_inactive(ctx: Mapping[str, Any], equip_id: str) -> bool:
+        """该装备是否因穿在副手折算槽而**孔位失活**（批38 · H7）。
+
+        判定源 = `core.equipment.offhand_penalized_item_ids(ctx["player"], ctx["slots"],
+        ctx["equipment_offhand"])`（同源判定；缺 player/slots 或开关关闭 → False）。
+        `ctx["slots"]` 为**装备槽位**定义（装配层包装形态），与 `ctx["slot_defs"]`
+        （珠插槽定义 J-1）是不同数据空间，勿混。
+        """
+        player = ctx.get("player")
+        if not isinstance(player, Mapping):
+            return False
+        penalized = offhand_penalized_item_ids(
+            player, ctx.get("slots"), ctx.get("equipment_offhand"))
+        return str(equip_id) in penalized
+
+    def active_sockets(self, ctx: Mapping[str, Any], equip_id: str) -> list:
+        """**孔位读取处**（批38 · H7）：副手折算件 → 空列表（符文不激活）；否则原槽位定义。
+
+        说明：`_slot_defs` 仍返回**定义**（镶嵌/拆珠不受影响——副手件照样能管理孔位，
+        只是不激活）；符文效果消费方（批43）一律经本方法读取激活孔位，开关关闭 →
+        与 `_slot_defs` 等价（零行为变化）。
+        """
+        if self.offhand_inactive(ctx, equip_id):
+            return []
+        slots = self._slot_defs(ctx, equip_id)
+        return list(slots) if isinstance(slots, list) else []
 
     @staticmethod
     def _jewels_bucket(ctx: Mapping[str, Any], equip_id: str) -> Optional[MutableMapping]:

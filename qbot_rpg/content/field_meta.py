@@ -344,6 +344,23 @@ SETTINGS_FIELDS: Dict[str, FieldMeta] = {
     # 注意：与 M8 slots.json 模块（装饰珠插槽 {equip_id, slots:[{slot_level}]}）是
     # 不同数据空间——这里是「装备部位定义」；字段 key 用 slot_defs 避免与既有撞名。
     "slot_defs": FieldMeta(type="obj", children={}, soft_label=True, label="装备槽位"),
+    # 批38 · H7 副手装备开关（settings.equipment_offhand；默认 false = 与本系统引入前一致）。
+    # 形态 {enabled, single_hand_scale}；消费点 core/equipment.EquipmentEngine（归一入口）
+    # + aggregate_bonus（数值折算/百分比与战斗键失活）+ equip_mods/forge_sets/jewel 读取点。
+    # 注：`slot_defs.<部位>.role` 的字段登记在批38 ③（部位角色 main/offhand）；本开关为总闸。
+    "equipment_offhand": FieldMeta(type="obj", children={
+        "enabled": FieldMeta(type="bool", default=False, label="是否启用副装备",
+                             help="开启后，settings.slot_defs 中 role=offhand 的部位按副手规则"
+                                  "生效（单手武器作副手：数值类属性按折算比例、其余加成不激活）。"
+                                  "关闭 = 行为与本系统引入前逐字段一致（默认关闭）。"),
+        "single_hand_scale": FieldMeta(type="number", range_min=0.0, range_max=1.0,
+                                       default=0.5, label="单手作副手折算",
+                                       help="单手武器放进副手部位时，数值类属性的折算比例"
+                                            "（0.5=50%）；百分比类属性、强化特殊词条、装备被动、"
+                                            "套装词条、符文附魔一律不激活。"),
+    }, label="副手装备",
+        help="副手装备总开关（默认关闭）。在「装备槽位」里把某部位角色设为「副手」后，"
+             "本开关控制副手规则是否生效。"),
     # 批25 K1：注册初始礼包 + 初始等级（CakeGame `Global.md:60` `set.NovicesReward`
     # 「注册新手礼包，物品名*数量」+ `:87-89` `OccupationSet.LV/Goods/GoodsNumber`
     # 「注册/初始等级；开局物品；开局物品数量」）。

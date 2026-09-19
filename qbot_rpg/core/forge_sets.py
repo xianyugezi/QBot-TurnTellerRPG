@@ -98,6 +98,7 @@ from qbot_rpg.content.forge_models import (
     SET_PIECE_COUNTS,
     validate_forge,
 )
+from qbot_rpg.core.equipment import offhand_penalized_slots
 
 __all__ = [
     "resolve_piece_counts",
@@ -108,6 +109,7 @@ __all__ = [
     "validate_sets",
     "set_lookup",
     "set_effects_contract",
+    "penalized_set_slots",
 ]
 
 # set_lookup 装配读取键（F-4：set_tracker 优先，其次装配节点集）
@@ -682,14 +684,25 @@ def _emit_like(report: object, method: str, field: str, kind: str, **detail: obj
 # =====================================================================================
 # set_lookup：玩家当前装配可组成套装查询（F-4；技能结算见 forge_set_skills）
 # =====================================================================================
-def _equipped_node_ids(player: Mapping[str, object]) -> set:
-    """装配节点 id 集（F-4：equipped/equip_nodes/equip_snapshot，str 或含 node_id/id 条目）。"""
+def _equipped_node_ids(player: Mapping[str, object],
+                       excluded_slots: object = frozenset()) -> set:
+    """装配节点 id 集（F-4：equipped/equip_nodes/equip_snapshot，str 或含 node_id/id 条目）。
+
+    批38 · H7 副手：`excluded_slots` 内的槽位（副手折算/失活）条目**不计入套装件数**——
+    条目为映射且带 `slot` 键时按槽位过滤；纯 id 字符串条目无从判槽位，保持计入（写入口
+    应避免以纯字符串登记副手件，见 `set_lookup` 文档）。缺省空集 → 与既有实现逐字段一致。
+    """
+    excluded = {str(x) for x in excluded_slots} if excluded_slots else set()
     out: set = set()
     for key in _EQUIPPED_KEYS:
         v = player.get(key)
         if not _is_mapping_seq(v):
             continue
         for e in cast(Sequence[object], v):
+            if isinstance(e, Mapping) and excluded:
+                eslot = e.get("slot")
+                if isinstance(eslot, str) and eslot in excluded:
+                    continue
             if isinstance(e, str) and e:
                 out.add(e)
             elif isinstance(e, Mapping):
@@ -698,6 +711,20 @@ def _equipped_node_ids(player: Mapping[str, object]) -> set:
                     if isinstance(x, str) and x:
                         out.add(x)
     return out
+
+
+def penalized_set_slots(player: object, modules: object) -> frozenset:
+    """玩家副手折算/失活槽位集合（批38 · H7；modules 为内容模块映射时读 settings 段）。
+
+    非 Mapping / 无 settings / 开关关闭 → 空集（零行为变化）。供套件数统计处过滤。
+    """
+    if not isinstance(player, Mapping) or not isinstance(modules, Mapping):
+        return frozenset()
+    settings = modules.get("settings")
+    if not isinstance(settings, Mapping):
+        return frozenset()
+    return offhand_penalized_slots(
+        player, settings.get("slot_defs"), settings.get("equipment_offhand"))
 
 
 def _set_tracker(player: Mapping[str, object]) -> Dict[str, int]:
@@ -739,7 +766,9 @@ def set_lookup(
     if not isinstance(player, Mapping):
         player = {}
     p = cast(Mapping[str, object], player)
-    equipped = _equipped_node_ids(p)
+    # 批38 · H7 副手：副手折算/失活件的装配条目不计入件数（开关关闭 → 空集，零行为变化）。
+    excluded = penalized_set_slots(p, piece_counts)
+    equipped = _equipped_node_ids(p, excluded)
     tracker = _set_tracker(p)
     min_pieces = min_activate_pieces(piece_counts)
 

@@ -376,3 +376,37 @@ def test_item_from_dict_preserves_new_fields() -> None:
     plain = _item_from_dict({"item_id": "x", "name": "x", "count": 1,
                              "quality": "normal", "bound": False})
     assert plain.affinities == {} and plain.set_affixes == () and plain.passives == ()
+
+
+def test_serialization_includes_new_fields() -> None:
+    """`dataclasses.asdict`（repository 序列化侧）自动包含新字段（全字段往返）。"""
+    import dataclasses
+
+    inst = ItemInstance(item_id="g", name="g", count=1, quality="normal",
+                        bound=False, stack_max=1, slot="weapon",
+                        stats_bonus={"基础攻": 20.0},
+                        affinities={A_MAIN: 10.0}, set_affixes=("套·核心",),
+                        passives=("被动·联动",))
+    d = dataclasses.asdict(inst)
+    assert d["affinities"] == {A_MAIN: 10.0}
+    assert list(d["set_affixes"]) == ["套·核心"]
+    assert list(d["passives"]) == ["被动·联动"]
+
+
+def test_all_data_bearing_construction_sites_pass_new_fields() -> None:
+    """6 处非测试构造点：**有实例来源**的三处逐一透传新字段（静态守卫，防漏）。"""
+    from pathlib import Path
+
+    repo = Path(__file__).resolve().parents[2]
+    for rel in ("qbot_rpg/storage/repository.py",
+                "qbot_rpg/assembly/runner.py",
+                "qbot_rpg/commands/basic_commands.py"):
+        src = (repo / rel).read_text(encoding="utf-8")
+        for key in ("affinities=", "set_affixes=", "passives="):
+            assert key in src, f"{rel} 的 ItemInstance 构造点未透传新字段：{key}"
+
+    # 无实例来源的三处（equipment unequip 兜底 / shop 新建）保留缺省；dataclasses.replace
+    # 路径自动保留字段 —— 仅登记位置，勿误认为漏传。
+    eq = (repo / "qbot_rpg/core/equipment.py").read_text(encoding="utf-8")
+    assert "ItemInstance(" in eq        # 清点存在（口径见实现说明 §七）
+

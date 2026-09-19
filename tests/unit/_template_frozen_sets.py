@@ -17,6 +17,7 @@ T6/T7 复核修复（2026-09-12）：原门禁「表值占位符 ⊆ 自动派�
 from __future__ import annotations
 
 # 全表占位符允许名（2026-09-12 定格；新增占位符名必须在此登记）。
+# 批36 · 采集/挖掘：新增 point / which / minutes（gather_* 模板键）。
 FROZEN_PLACEHOLDERS = frozenset("""
 a action actor aid amount amt ann assistant atk attacker attr attr_name b base blocks bonus boss
 brief budget candidates cap card caught chain change child cmd cn cnt coin_text coins_have
@@ -26,15 +27,15 @@ effects elapsed elem_cn element element_cn elems endpoint enemy enhance example 
 fields fragment g gap gem gold golden_line grants group have head heal_total hint hours hp
 hp_cur hp_max i idx imprints index item item_name items job k key kill kind kind_cn king label
 level level_ups limit list lit loc location luck main_score map_name mark marks mat mats
-mats_text max max_hit max_hp message missing month_days mp msg mult n name names need need_chain
+mats_text max max_hit max_hp message minutes missing month_days mp msg mult n name names need need_chain
 need_elem need_rank new nm normal_used note npc_name old op out output_name page pages paid_text
-param params part pct period periods pos pp pp_budget pp_used prefix preview qq qty quality
+param params part pct period periods point pos pp pp_budget pp_used prefix preview qq qty quality
 rarity rarity_cn rate reason rec recipe_name recipes ref remain remark req resource_text rest
 result reveal_text round rumor scales score season secs seen seg segments seq shield signed
 skill skill_name slot slots source sp spot spot_name src state status statuses stone_have stones
 streak successes summary tail target tasks temp text th tier time title title_id tname to total
 total_pages traits traits_max traits_used ts turn turns turns_suffix type unit units usage used
-v val value var weak weather when word world
+v val value var weak weather when which word world
 """.split())
 
 # 允许的宽度 WARN（key, 行号, 估算半角宽）——超出即新增 WARN，门禁失败。

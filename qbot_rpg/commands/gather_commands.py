@@ -178,13 +178,22 @@ def _minutes(seconds: float) -> int:
     return max(1, int((float(seconds) + 59.0) // 60.0))
 
 
-def _gate_which(seasons: List[str], periods: List[str]) -> str:
-    """门控展示词：优先时段，其次季节，都无 → 「时节」。"""
-    if periods:
-        return "/".join(_PERIOD_CN.get(p, p) for p in periods)
-    if seasons:
-        return "/".join(_SEASON_CN.get(s, s) for s in seasons)
-    return "时节"
+def _gate_which(item: Mapping[str, Any]) -> str:
+    """门控展示词：如实指认不满足的那一维（时段优先展示；两者都不满足时并列）。
+
+    引擎在 gated 桶给出 season_blocked / period_blocked（缺失时按「有名单即展示」兜底）。
+    """
+    p_bad = bool(item.get("period_blocked"))
+    s_bad = bool(item.get("season_blocked"))
+    if not p_bad and not s_bad:  # 兜底（旧形态 / 手工构造）
+        p_bad = bool(item.get("periods"))
+        s_bad = bool(item.get("seasons")) and not p_bad
+    parts: List[str] = []
+    if p_bad:
+        parts.append("/".join(_PERIOD_CN.get(p, p) for p in item.get("periods") or []))
+    if s_bad:
+        parts.append("/".join(_SEASON_CN.get(s, s) for s in item.get("seasons") or []))
+    return "、".join(p for p in parts if p) or "时节"
 
 
 # ---------------------------------------------------------------------------
@@ -250,8 +259,7 @@ def cmd_gather(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
                               "minutes": _minutes(item["remaining_sec"])}))
     for item in result["gated"]:
         lines.append(_render(ctx, "gather_gated_line", _DEF_GATHER_GATED_LINE,
-                             {"point": item["name"],
-                              "which": _gate_which(item["seasons"], item["periods"])}))
+                             {"point": item["name"], "which": _gate_which(item)}))
     for item in result["blocked"]:
         weather = item.get("weather")
         lines.append(_render(ctx, "gather_blocked_line", _DEF_GATHER_BLOCKED_LINE,

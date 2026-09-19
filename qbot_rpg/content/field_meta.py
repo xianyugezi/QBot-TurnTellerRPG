@@ -2403,7 +2403,7 @@ def _module_table() -> Dict[str, ModuleMeta]:
                 "rarity": FieldMeta(type="enum", enum=("normal", "rare", "gold"),
                                     label="稀有度",
                                     help="基础稀有度：普通 normal / 稀有 rare / 金色 gold；"
-                                         "天气 rarity_shift 会在此基础上平移（上限 ✨觉醒）。"),
+                                         "天气 rarity_shift 会在此基础上平移（上限觉醒档）。"),
                 "rate": FieldMeta(type="number", range_min=0, range_max=1, label="出现概率",
                                   help="基础采集概率（0-1）；与天气出率倍率相乘后判定。"),
                 "periods": FieldMeta(type="list", element=FieldMeta(type="enum",

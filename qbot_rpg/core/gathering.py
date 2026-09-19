@@ -305,9 +305,13 @@ def gather(
 
     for point in points:
         # ① 季节 / 时段白名单（GP-05/GP-06；不命中 → 动作不可用，空态文案）
-        if not season_ok(point, season_key) or not period_ok(point, period_key):
+        bad_season = not season_ok(point, season_key)
+        bad_period = not period_ok(point, period_key)
+        if bad_season or bad_period:
+            # blocked_by 供指令壳如实指认是哪一维不满足（避免「时段命中却报时段」的误导）
             gated.append({"point_id": point.id, "name": point.name,
-                          "seasons": list(point.seasons), "periods": list(point.periods)})
+                          "seasons": list(point.seasons), "periods": list(point.periods),
+                          "season_blocked": bad_season, "period_blocked": bad_period})
             continue
         # ② 冷却（GP-07；无限资源图跳过）
         if not unlimited:

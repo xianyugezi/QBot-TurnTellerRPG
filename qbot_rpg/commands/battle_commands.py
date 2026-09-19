@@ -907,6 +907,7 @@ class BattlePipeline:
                  drops: Any = None, enemy_name: Optional[str] = None,
                  final_damage: int = 0,
                  leveled: Optional[Mapping[str, Any]] = None,
+                 recovery: Optional[Mapping[str, Any]] = None,
                  tail: Optional[str] = None,
                  prefix: bool = True) -> List[str]:
         """战斗结束独立 1 条（用户 2026-08-27 拍板结算模板 + BREP-24/25；TC-18/25，铁律 11）。
@@ -918,12 +919,15 @@ class BattlePipeline:
         BREP-24 汇总行。final_damage（最后行动伤害）由 dispatch_round 从 report 取末注入。
         leveled（2026-09-03 奖励结算：击杀经验触发升级信息）非 None 时战斗结束
         消息附升级行（模板 battle_settle_levelup*，全量模板表）。
+        recovery（批37 · X12 战后恢复）非 None 时附 `battle_settle_recovery` 行
+        （回复后 HP/MP；None = 未开启/无变化）。
         """
         body = render_battle_end(
             _prefix_free_ns(player), _enemy_ns(enemy), winner, summary=summary,
             status=status, exp=exp, gold=gold, drops=drops,
             enemy_name=enemy_name or (getattr(enemy, "name", "") if enemy else None),
-            final_damage=final_damage, leveled=leveled, tail=tail, ctx=self._ctx,
+            final_damage=final_damage, leveled=leveled, recovery=recovery,
+            tail=tail, ctx=self._ctx,
         )
         return self.send(body, to=to, prefix=prefix)
 
@@ -1198,6 +1202,7 @@ def _dispatch_battle_end(
     :return: 实际发送段列表。
     """
     winner = str(getattr(report, "status", "") or "draw")
+    recovery: Optional[Mapping[str, Any]] = None
     if winner == "win":
         try:
             from qbot_rpg.core.adventure_log import log_first_kill
@@ -1232,6 +1237,10 @@ def _dispatch_battle_end(
             check_milestones(cast(MutableMapping, ctx))
         except Exception:  # noqa: BLE001 - 里程碑异常不阻断结算
             _LOGGER.exception("里程碑检查失败（不阻断结算消息）")
+        # 批37 · X12：战后恢复（【框架】L294/L298「胜利后回复 HP/MP 比例」）。
+        # 落点 = 战斗结束分支（1g 结算链，3h L232）奖励结算之后；只写 ctx 玩家档，
+        # 不改引擎快照 → 战斗内数值零影响；enabled 非 true / 满血满蓝 → None（零行为变化）。
+        recovery = _apply_post_battle_recovery(ctx, engine)
     # 叙事句伤害 = 本次最后一个玩家行动 outcome 的 final_damage（用户结算模板回顾最后一击）
     last_pd = 0
     for _oc in reversed(tuple(getattr(report, "outcomes", ()) or ())):
@@ -1250,11 +1259,39 @@ def _dispatch_battle_end(
         final_damage=last_pd,
         enemy_name=e_name,          # _prefix_free_ns 剥离 dict name，显式注入
         leveled=ctx.get("battle_leveled"),  # 2026-09-03 击杀升级信息
+        recovery=recovery,                  # 批37 · X12 战后恢复行（None 省略）
         # 2026-09-13 用户拍板（L7）：战斗已结束 → 不再输出「→ 攻击 或 攻击 <技能名>」
         # （结束消息里该提示无可行行动，属冗余；行动段仍按 2026-09-12「置底」口径在
         #  HUD 块末尾输出——见 defer_tail 分支）
         prefix=not suppress_prefix,  # 与行动段合并为同一条消息 → 前缀只在最顶行
     )
+
+
+def _apply_post_battle_recovery(ctx: Mapping[str, Any], engine: Any) -> Optional[dict]:
+    """批37 · X12：战斗结束（win）后按 `settings.post_battle_recovery` 回复 HP/MP。
+
+    - **只写 `ctx["player"]`**（与 `_sync_battle_vitals` 同落点，存档链路不变）；
+      引擎快照不写回 → **战斗内数值零影响**（恢复只在战后结算处生效）。
+    - `enabled` 非 true / 满血满蓝 / 无恢复量 → None（缺省内容包行为与现状逐字段一致）。
+    - 同一 engine 重复派发（同一场战斗重复结束）→ 只应用一次（防重复结算 P-4）。
+    - 异常兜底：恢复失败不阻断战斗结束消息（返回 None）。
+    """
+    try:
+        if isinstance(ctx, MutableMapping) and ctx.get("_pbr_done_engine") is engine:
+            return None
+        from qbot_rpg.core.post_battle_recovery import recover_after_battle  # noqa: PLC0415
+
+        snapshot = engine.battle_state() if engine is not None else None
+        settings = ctx.get("settings") if isinstance(ctx, Mapping) else None
+        info = recover_after_battle(ctx, snapshot, settings)
+        if info is None:
+            return None
+        if isinstance(ctx, MutableMapping):
+            ctx["_pbr_done_engine"] = engine
+        return info
+    except Exception:  # noqa: BLE001 - 恢复异常不阻断战斗结束消息
+        _LOGGER.exception("战后恢复失败（不阻断结算消息）")
+        return None
 
 
 # ---------------------------------------------------------------------------

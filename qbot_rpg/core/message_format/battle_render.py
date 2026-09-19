@@ -238,11 +238,15 @@ def render_battle_end(
     enemy_name: Optional[str] = None,
     final_damage: int = 0,
     leveled: Optional[Mapping[str, Any]] = None,
+    recovery: Optional[Mapping[str, Any]] = None,
     tail: Optional[str] = None,
     ctx: Any = None,
 ) -> str:
     """BREP-17~20 结算 + BREP-24/25 汇总明细（5e §6.2/§6.3 / TC-18/25~27，铁律 11）。
 
+    :param recovery: 战后恢复明细（批37 · X12；`core/post_battle_recovery.recover_after_battle`
+        返回的 `{hp,hp_max,mp,mp_max,...}`）——非 None 时在 win 结算块追加
+        `battle_settle_recovery` 行（模板表；内容包可覆盖）。None = 关闭/无恢复，零行为变化。
     :param tail: 末行提示（`→ 攻击 或 攻击 <技能名>`）——战斗结束时该行**置底**
         （2026-09-12 用户拍板），由本入口追加在结算块之后。
 
@@ -276,6 +280,7 @@ def render_battle_end(
                 enemy_name=enemy_name or (getattr(enemy, "name", "") if enemy else "") or "敌人",
                 final_damage=final_damage,
                 leveled=leveled,
+                recovery=recovery,
             ), ctx=ctx)
             if settle:
                 lines.extend(settle.split("\n"))           # 结算块（用户模板 / BREP-16~19）
@@ -1541,6 +1546,16 @@ def _render_settlement(round_result: Any, *, ctx: Any = None) -> Optional[str]:
                 if sp > 0:
                     up_line += tpl_of(ctx, "battle_settle_levelup_sp", {"sp": sp})
                 lines.append(up_line)
+        # 批37 · X12：战后恢复行（胜利后按比例回 HP/MP；定稿 L294/L298）
+        # 行仅在接线层实际恢复（enabled=true 且确有回复量）时注入 → None 零行为变化。
+        recovery = getattr(round_result, "recovery", None)
+        if isinstance(recovery, Mapping):
+            lines.append(tpl_of(ctx, "battle_settle_recovery", {
+                "hp": int(recovery.get("hp", 0) or 0),
+                "hp_max": int(recovery.get("hp_max", 0) or 0),
+                "mp": int(recovery.get("mp", 0) or 0),
+                "mp_max": int(recovery.get("mp_max", 0) or 0),
+            }))
     elif status == "lose":
         lines.append(tpl_of(ctx, "battle_settle_lose"))            # BREP-16
         lines.append(tpl_of(ctx, "battle_settle_lose_fail", {

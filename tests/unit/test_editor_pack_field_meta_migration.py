@@ -53,7 +53,9 @@ SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
 #   模板全量表 +13 条 gather_* 键（templates 计数 824→837）；gathering implemented→True。
 #   对拍实证：删除项 = 0、硬差异 80 条全部属上述三类；重定后 0 差异。
 #   与 scripts/compare_field_meta_migration.py 的 DEFAULT_BASELINE_REF 同基线。
-BASELINE_REF = "c6d33c4"
+#   二次重定（同批）c6d33c4 → 9cdaa04：rarity.help 去 ✨（emoji 纪律门禁要求；
+#   help 属口径④严格键）→ 重定到含该修正的收尾提交，对拍回到 0 差异。
+BASELINE_REF = "9cdaa04"
 CONTENT = REPO / "content"
 
 

@@ -80,3 +80,5 @@ def test_footer_batch_note_synced() -> None:
     assert BATCH_NOTE in html
     m = re.search(r'<div class="panel-ft"><span>(.*?)</span>', html)
     assert m and m.group(1) == BATCH_NOTE, m and m.group(1)
+    # 批36 · 采集/挖掘：上一批串不得残留
+    assert "批35 · 进阶职业继承" not in html

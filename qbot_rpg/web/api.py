@@ -3014,6 +3014,11 @@ def _entry_whole_table(mmeta: Optional[ModuleMeta], etype: str,
       当前是每键一个大块表单（objform），改一张紧凑表格；
     · 对象模块里「整数序号 → 数值」的**曲线**条目（如 exp_curve）→ 曲线控件。
     固定 schema 的对象、宽容器不在此列，行为与既有完全一致。
+
+    批38：登记了子字段的对象，若子字段描述的是**值结构**（每行的键 ⊆ 登记子字段，
+    如 settings.slot_defs 的 {name,max,role}）而非**本对象的键**，仍整体成表——表格列
+    由该值 schema 提供（部位角色 role 出下拉/中文名）。键 = 子字段名的固定 schema
+    对象（如 death_penalty）不在此列，逐字段表单行为不变。
     """
     if entry_id == TABLE_ENTRY_ID and etype == "map":
         return True
@@ -3021,9 +3026,26 @@ def _entry_whole_table(mmeta: Optional[ModuleMeta], etype: str,
             or not isinstance(subject, Mapping):
         return False
     fm = mmeta.fields.get(str(entry_id)) if mmeta is not None else None
-    if fm is None or fm.type != "obj" or fm.children:
+    if fm is None or fm.type != "obj":
+        return False
+    if fm.children and not _children_describe_values(fm, subject):
         return False
     return _is_dense_map(subject) or _is_curve_value(subject)
+
+
+def _children_describe_values(fm: Optional[FieldMeta], subject: Mapping[Any, Any]) -> bool:
+    """登记子字段是否描述**值结构**：本对象的键与登记子字段**不重叠**（子字段是每行的键）。
+
+    slot_defs（键=部位 id，值={name,max,role}）→ True；death_penalty（键=子字段名）→ False。
+    值里多出的未登记键不影响判定（仍整体成表，多出的键走兜底列 + 未登记标注）。
+    """
+    if fm is None or not fm.children:
+        return False
+    declared = {str(k) for k in fm.children}
+    if {str(k) for k in subject.keys()} & declared:
+        return False
+    vals = [v for v in subject.values() if v is not None]
+    return bool(vals) and all(isinstance(v, Mapping) for v in vals)
 
 
 def entry_detail(pack: object, module: object, entry_id: object,

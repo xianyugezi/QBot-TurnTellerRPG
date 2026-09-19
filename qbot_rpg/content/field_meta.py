@@ -343,7 +343,17 @@ SETTINGS_FIELDS: Dict[str, FieldMeta] = {
     # + ctx["equip_engine"]（EquipmentEngineAdapter(slots=...)）；缺省无配置 → 默认 6 槽。
     # 注意：与 M8 slots.json 模块（装饰珠插槽 {equip_id, slots:[{slot_level}]}）是
     # 不同数据空间——这里是「装备部位定义」；字段 key 用 slot_defs 避免与既有撞名。
-    "slot_defs": FieldMeta(type="obj", children={}, soft_label=True, label="装备槽位"),
+    "slot_defs": FieldMeta(type="obj", children={
+        # 批38 · ③：部位定义子字段结构登记（含角色 role）——编辑器「装备槽位」键值表逐列出控件；
+        # 键 = 部位 id（动态键空间）；缺省 role=main。数值/失活消费见 core/equipment（H7）。
+        "name": FieldMeta(type="str", label="部位名"),
+        "max": FieldMeta(type="int", range_min=1, label="可装备数量"),
+        "role": FieldMeta(
+            type="enum", enum=("main", "offhand"), default="main", label="部位角色",
+            help="main=主装备位（缺省）；offhand=副手位——需 settings.equipment_offhand."
+                 "enabled 开启后按副手规则生效（单手武器作副手：数值类属性折算、"
+                 "百分比/强化特殊词条/装备被动/套装词条/符文附魔不激活）。"),
+    }, soft_label=True, label="装备槽位"),
     # 批38 · H7 副手装备开关（settings.equipment_offhand；默认 false = 与本系统引入前一致）。
     # 形态 {enabled, single_hand_scale}；消费点 core/equipment.EquipmentEngine（归一入口）
     # + aggregate_bonus（数值折算/百分比与战斗键失活）+ equip_mods/forge_sets/jewel 读取点。
@@ -2244,6 +2254,16 @@ def _module_table() -> Dict[str, ModuleMeta]:
                 "name_override": FieldMeta(type="str", label="替换显示名"),
             },
             help="穿戴期间职业替换为该职业（可等级重置/显示名替换），卸下还原。"),
+    })
+    # 批38 · ③（H7 载体）：装备/物品手数 `handedness` 登记（包声明驱动；items∪equipment 同库）。
+    # 枚举两档；缺省未声明（不参与副手判定 → 与现状语义一致）。数值实装（双手占用/单手
+    # 副手判定收紧）归批39+（本批只登记，引擎不消费该字段）。
+    items_fields.update({
+        "handedness": FieldMeta(
+            type="enum", enum=("one_hand", "two_hand"), label="手数",
+            help="one_hand=单手（可作副手：数值类属性按 settings.equipment_offhand."
+                 "single_hand_scale 折算，百分比/强化特殊词条/装备被动/套装词条/符文附魔"
+                 "不激活）；two_hand=双手（不可作副手）；留空=未声明。"),
     })
     equipment_fields: Dict[str, FieldMeta] = dict(items_fields)
     # 部位互斥：entry.slot 与 entry.excludes 列表内部位互斥成环 → R-5（equipment 专项，§5.2 + L167）

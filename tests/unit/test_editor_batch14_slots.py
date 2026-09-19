@@ -63,11 +63,13 @@ def test_slot_defs_subfields_editable() -> None:
     assert field["control"] == "kvtable" and field["editable"] is True
     kv = field["kv_table"]
     assert kv["mode"] == "obj"
-    assert [c["key"] for c in kv["columns"]] == ["name", "max"]
+    # 批38 ③：部位定义登记 role（部位角色，main/offhand 下拉）+ 中文名 → 表格列扩一列
+    assert [c["key"] for c in kv["columns"]] == ["name", "max", "role"]
     assert kv["open_keys"] is True   # 动态键空间：键可改、行可增删
     rows = {r["key"]: r for r in kv["rows"]}
     assert rows["weapon"]["cells"] == {"name": "武器", "max": 1}
-    assert [c["control"] for c in kv["columns"]] == ["text", "number"]
+    assert [c["control"] for c in kv["columns"]] == ["text", "number", "select"]
+    assert kv["columns"][2]["enum"] == ["main", "offhand"]
 
 
 def test_add_slot_writes_and_rolls_back(pack_copy: Path) -> None:

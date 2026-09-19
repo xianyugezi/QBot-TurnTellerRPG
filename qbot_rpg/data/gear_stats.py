@@ -23,9 +23,11 @@
 - **弱点伤害增加** `weakness_dmg_pct`   见下 help：语义=命中弱点时的伤害加成（百分点）。
   以上四键归 PCT 档（复用 `_pct` 拆层：聚合/展示自动跟进）；**引擎消费口径见批43 报告**
   （现状=聚合 + 展示均已承载，专属战斗消费点未接，属**如实登记的缺口**，非本文件可补）。
-- **冷却缩减**   `cooldown_reduction_pct` 归 PLACEHOLDER 档：**占位**——只登记键 + 编辑
-  器/展示可见，**明确不接引擎**（不进 pct 拆层、无任何消费点）。原案 §7 明文「冷却缩减
-  留成占位属性」。
+- **冷却缩减**   `cooldown_reduction_pct` 归 PLACEHOLDER 档：**只登记键 + 编辑器/展示可见**。
+  批50 登记为 `cooldown_pct` 的兼容别名（`sign = -1`）；**批53 起激活**：内容包声明该旧键
+  时经聚合入口 `route_legacy_aliases_into_flat` 换算为 `flat["cooldown_pct"] = −旧值`
+  （`reduction 30 ⇔ cooldown_pct −30`），再走特效轴既有战斗桥/消费点，**不再「登记了不
+  生效」**。该换算**只发生一次**（route_bonus_into 仍显式跳过占位键 → 不双计）。
 
 批47 · 符文（43-B）1 阶数值贡献口径（键空间唯一源仍在本文件）：
 - 1 阶符文 = **纯数值加成**，**复用本表既有键族**（FLAT 白值 / PCT 百分比 / COMBAT 战斗直读），
@@ -108,6 +110,8 @@ __all__ = [
     "EFFECT_LEGACY_ALIASES",
     "DEFAULT_EFFECT_AXES",
     "PANEL_AXIS_STEMS",
+    # 批53 · 占位旧键 → 特效轴 兼容换算（聚合入口唯一处）
+    "route_legacy_aliases_into_flat",
     # 批52 · 特效轴消费口径（settings 段键名 + 读时钳制取值）
     "EFFECT_AXES_KEY",
     "effect_axis_value",
@@ -145,10 +149,8 @@ GEAR_COMBAT_PCT_KEYS: Tuple[str, ...] = (
     "absorb_hp", "immune_dmg", "pierce_pct", "mag_pierce_pct",
 )
 GEAR_COMBAT_VALUE_KEYS: Tuple[str, ...] = ("pierce_val", "mag_pierce_val")
-# 批43：占位键——**只登记字段 + 展示**，明确**不接引擎**（route_bonus_into 显式跳过）。
-# 冷却缩减 `cooldown_reduction_pct`：原案 §7「冷却缩减留成占位属性」。
-# 批50：本键**降级为 `cooldown_pct` 的兼容别名**（见 EFFECT_AXIS_SPECS 的 legacy_alias，
-# sign=-1）；键本身保留在 PLACEHOLDER 档不动（本批零行为变化），接线批再显式 opt-in。
+# 批43：占位键——**只登记字段 + 展示**；批53 起作为 `cooldown_pct` 的兼容别名**激活**
+# （`route_bonus_into` 仍显式跳过；换算在聚合入口 `route_legacy_aliases_into_flat` 唯一处）。
 GEAR_PLACEHOLDER_KEYS: Tuple[str, ...] = ("cooldown_reduction_pct",)
 
 # ---------------------------------------------------------------------------
@@ -234,9 +236,9 @@ EFFECT_AXIS_SPECS: Tuple[Mapping[str, Any], ...] = (
                             "截断；负冷却不可达。"},
         "legacy_alias": (("cooldown_reduction_pct", -1.0),),
         "consumer": "battle.skill_cooldown",
-        "consumer_note": "统一三样：既有 α3 `1 + 总计/100` 冷却管线 + 占位键"
-                         " cooldown_reduction_pct（pct = −旧值）。兼容红线：旧包声明占位键"
-                         "时引擎**不生效**，接线后须显式 opt-in，不得突变。",
+        "consumer_note": "统一三样：既有 α3 `1 + 总计/100` 冷却管线（批53 已接线，结果"
+                         " max(0, …)）+ 占位键 cooldown_reduction_pct（pct = −旧值；"
+                         "经聚合入口换算为 flat['cooldown_pct']，只换算一次 → 不双计）。",
     },
     {
         "axis": "status_chance_pct", "doc_id": "X21", "priority": "P0",
@@ -619,6 +621,44 @@ def route_bonus_into(
             pct[stem] = pct.get(stem, 0.0) + fv
         else:
             flat[ks] = flat.get(ks, 0.0) + fv
+
+
+def route_legacy_aliases_into_flat(
+    bonus: Mapping[str, Any],
+    flat: MutableMapping[str, float],
+) -> None:
+    """占位旧键 → 特效轴 的**唯一兼容换算**（批53）：`flat[axis] += sign × 旧值`。
+
+    只在聚合入口（`core.equipment.aggregate_bonus` 的逐件 `route_bonus_into` 之后）调用，
+    与 `route_bonus_into` 的分层判定**互不重叠**：
+
+      · 只处理 `GEAR_PLACEHOLDER_KEYS` 中且已在 `EFFECT_LEGACY_ALIASES` 声明的旧键
+        （当前 = `cooldown_reduction_pct → ("cooldown_pct", -1)`）；`route_bonus_into`
+        对这些键仍显式 `continue`（不进 pct 层、**也不进 flat**）→ 本函数是**唯一**写入点
+        → 同一旧键不可能被两条路径各消费一次（**不双计**）；
+      · 属性 pct 层旧键（`heal_amp_pct` 等）由 `combatant_updates(flat, pct)` 归并，
+        COMBAT 旧键（`immune_dmg`）在各自消费点换算——本函数**不碰**它们；
+      · 非数值 / 布尔 / 未声明别名 → 跳过；未配置（内容包不带占位键）→ 不写任何键
+        （缺省逐字段零变化）。
+
+    语义：旧键 `cooldown_reduction_pct = 30`（= 冷却缩减 30%）→ `flat["cooldown_pct"] = -30`
+    → 消费点 `1 + (-30)/100 = 0.7` 倍冷却，与轴全集 §X27 `reduction_p ⇔ mult = 1 - p/100`
+    一致。
+    """
+    for k, v in bonus.items():
+        ks = str(k)
+        if ks not in GEAR_PLACEHOLDER_KEYS:
+            continue
+        legacy = EFFECT_LEGACY_ALIASES.get(ks)
+        if legacy is None:
+            continue
+        if isinstance(v, bool) or not isinstance(v, (int, float)):
+            continue
+        axis, sign = legacy
+        fv = float(v)
+        if fv == 0.0:
+            continue
+        flat[str(axis)] = flat.get(str(axis), 0.0) + float(sign) * fv
 
 
 def combatant_updates(

@@ -62,7 +62,12 @@ from qbot_rpg.core.panel_budget import (
 )
 from qbot_rpg.core.player_attributes import calc_all_final_attributes
 from qbot_rpg.core.runes import RUNES_STATE_KEY, rune_effect_refs_of, sum_rune_stats
-from qbot_rpg.data.gear_stats import GEAR_COMBAT_KEYS, PCT_SUFFIX, route_bonus_into
+from qbot_rpg.data.gear_stats import (
+    GEAR_COMBAT_KEYS,
+    PCT_SUFFIX,
+    route_bonus_into,
+    route_legacy_aliases_into_flat,
+)
 from qbot_rpg.data.item import ItemInstance
 from qbot_rpg.data.player import EquipmentSlot, PlayerAttributes
 
@@ -993,11 +998,14 @@ class EquipmentEngine:
                         # 批⑧：键 "..._pct" 拆进 pct 层（单位=百分点），其余进 flat
                         # （data.gear_stats.route_bonus_into；旧实例无 _pct 键时与
                         # 原逐键求和行为一致）
-                        route_bonus_into(
+                        _row_bonus = (
                             _offhand_filtered_bonus(bonus, self.offhand_scale())
-                            if is_penalized else bonus,
-                            flat, pct,
+                            if is_penalized else bonus
                         )
+                        route_bonus_into(_row_bonus, flat, pct)
+                        # 批53：占位旧键（cooldown_reduction_pct）→ 特效轴
+                        # flat["cooldown_pct"]（唯一兼容换算；未声明占位键 → 零写入）
+                        route_legacy_aliases_into_flat(_row_bonus, flat)
                     # 批47 · 43-B：符文数值贡献（唯一收口；孔位读取经 jewel.active_rune_sockets
                     # → 副手失活自动继承；差异解析在 rune_stats_of；同层 flat/pct 路由）。
                     if rune_ctx is not None:

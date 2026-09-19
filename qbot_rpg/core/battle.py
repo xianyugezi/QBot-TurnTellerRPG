@@ -3348,11 +3348,25 @@ class BattleEngine:
         _cd = int(sd.get("cooldown", 0) or 0)
         # 批26 α3：装备增幅技能（cooldown 类）——冷却时长按 `1 + 总计/100` 缩放
         # （负值 = 缩减；下限 -100 由配置兜底 → 恒 ≥ 0）。无增幅 → 0 → 原值。
-        if _cd > 0 and attacker == "player":
-            _amp_cd = self._equip_skill_amp("player", str(ca.get("skill_id") or ""),
-                                            "cooldown")
-            if _amp_cd:
-                _cd = max(0, int(round(_cd * (1.0 + _amp_cd / 100.0))))
+        # 批53 · 冷却乘法轴（X27 `cooldown_pct`）：与 α3 在**同一乘区相加后一次缩放**
+        # （不是两次乘 —— 双计），读时按 `settings.effect_axes` 声明区间钳制；
+        # 未配置 = 0 → 与接线前逐字段一致。旧占位键 `cooldown_reduction_pct` 已由聚合
+        # 入口换算为同一轴（pct = −旧值），故这里只有**一个**读取点。
+        if _cd > 0:
+            _cd_pct = 0.0
+            if attacker == "player":
+                _amp_cd = self._equip_skill_amp(
+                    "player", str(ca.get("skill_id") or ""), "cooldown")
+                if _amp_cd:
+                    _cd_pct += float(_amp_cd)
+            try:
+                _cd_pct += effect_axis_value(
+                    self._combat(attacker), "cooldown_pct",
+                    self._config.get(EFFECT_AXES_KEY))
+            except Exception:  # noqa: BLE001 —— 取轴异常不阻断冷却（按未加成继续）
+                pass
+            if _cd_pct:
+                _cd = max(0, int(round(_cd * (1.0 + _cd_pct / 100.0))))
         if _cd > 0:
             _cdm = self._snap.setdefault("skill_cooldowns", {})
             if not isinstance(_cdm, dict):

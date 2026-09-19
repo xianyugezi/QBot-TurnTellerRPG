@@ -32,7 +32,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping, Optional, Set
 
-from qbot_rpg.core.runes import (
+from qbot_rpg.data.runes import (
     DEFAULT_EQUIP_TYPE_KEY,
     MAX_RUNE_TIER,
     MIN_RUNE_TIER,

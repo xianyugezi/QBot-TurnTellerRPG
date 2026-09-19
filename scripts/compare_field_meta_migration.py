@@ -149,7 +149,10 @@ DEFAULT_PACKS = ("veinborn", "test_demo")
 #   10 处「仅迁移前有（删除）」全部是上述 obj→基础类型收敛时消失的 `children`/
 #   `open_keys`/`interval` 派生描述符，无任何字段被无意删除。重定到本批末提交后，
 #   门禁继续只守「字段级元数据迁移不得改/删」。
-DEFAULT_BASELINE_REF = "8e56cc3"
+# 批33（2026-09-17）：本批未改 `field_meta.py`，但发现默认常量仍停在 8e56cc3——
+# 批32 已按台账 §二十一 重定到 cad91df（`tests/unit/test_editor_pack_field_meta_migration.py`
+# 亦用 cad91df），此处对齐默认值，使默认跑法与 pytest 门禁同基线；对拍 0 差异。
+DEFAULT_BASELINE_REF = "cad91df"
 
 
 def _env(root: Path) -> dict:

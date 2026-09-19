@@ -14,6 +14,27 @@
 
 ### Added
 
+- **批52（2026-09-20）**：**治疗 / 承伤双向轴接线**（M + K，P0 核心玩法）。
+  口径 `特效整理设计_3_落点与分期.md` §二「批 50」（旧编号 = 本批批52）+ `特效整理设计_1_修正轴全集.md`
+  §5-D2（X17/X16）/ §5-D3（X02）+ `特效强度预算_设计.md` §四（红线守护）。
+  批50 只登记不接引擎；本批让三条轴**真生效**。
+  **① 受疗轴 `healing_received_pct`**：新增唯一收口 `core.effects.heal_apply`——
+  批48 重伤状态通道（`heal_taken`，经 S6 `cap_boost` 封顶）与新轴**同轴相加** → 按
+  `settings.effect_axes` 声明区间钳制 → `round(基础 × (1 + 受疗/100))`；**双向**
+  （<0 减疗 / >0 增疗）；**负治疗**：合计 ≤ −100 治疗转伤害（下界由包声明，默认 −200）。
+  **② 出疗轴 `healing_done_pct`**：同一收口按 **source（施疗侧）** 取值；旧悬空键
+  `heal_amp_pct` 经 `data.gear_stats.combatant_updates(flat, pct=None)` 按
+  `axis += sign × 旧值` 归并进本轴（旧键自身路由不动）。**③ 多源一次改全**：
+  `heal` 原子 / absorb_heal / regen / lifesteal / `battle.absorb_hp` 五处全接唯一收口。
+  **④ 承伤轴 `damage_taken_pct`**：`battle._damage_taken_mult` 为**承伤乘区唯一求值处**
+  （收敛口径 D3(b)）——**减伤/易伤一轴**，`immune_dmg` 作负半轴别名 `pct = −immune`
+  只乘一次、**不双计**；读时按声明区间钳制。为守一号红线，破位路径沿用旧两步序、
+  `effects` 的 `mitigation` 阶段按批50 `consumer_note` 不动（详见决策记录 §十八.2）。
+  **⑤ 声明段接线**：`settings.effect_axes` → 引擎配置 → `EffectRuntime.config`；
+  新增 `data/gear_stats.EFFECT_AXES_KEY` + `effect_axis_value`（读时钳制，不写死区间）。
+  **缺省零变化**：不配置轴 → 治疗原值 / 承伤乘区 1.0 / 战斗结算快照逐字段一致；
+  红线复算斩杀回合三档逐格 0 变化（普通 8/7/7、精英 22/20/19、Boss 26/24/22），
+  `equip_share = 60.00%` 不变。页脚批次串 →「批52 · 治疗与承伤双向轴」。
 - **批51（2026-09-20）**：**触发归属与事件补点**（K，P0 缺口；**装备被动系统的前置**）。
   口径 `特效整理设计_3_落点与分期.md` §二「批 49」（旧编号 = 本批）+ `特效整理设计_1_修正轴全集.md`
   §3 P0 第 1 项（I01）+ `装备被动_实现口径.md` §3.3 方案 A。

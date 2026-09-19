@@ -24,7 +24,7 @@ from qbot_rpg.web import api
 NODE = shutil.which("node")
 REPO = Path(api.repo_root())
 HTML = REPO / "qbot_rpg" / "web" / "static" / "index.html"
-BATCH_NOTE = "批49 · 测试 flake 根治"
+BATCH_NOTE = "批50 · 特效轴地基"
 STALE_BATCH = "批11 · 内容包导出/导入"
 
 
@@ -173,6 +173,7 @@ def test_footer_batch_string_is_current() -> None:
     assert "批9 · 配色切换" not in html
     comp = re.search(r'<div class="panel-ft">(.*?)</div>', html, re.S)
     assert comp is not None and BATCH_NOTE in comp.group(1)
+    assert "批49 · 测试 flake 根治" not in html
 
 
 def test_transfer_ui_has_no_pack_business_names() -> None:

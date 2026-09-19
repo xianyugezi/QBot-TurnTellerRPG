@@ -24,7 +24,7 @@ from qbot_rpg.web import api
 NODE = shutil.which("node")
 HTML = Path(api.repo_root()) / "qbot_rpg" / "web" / "static" / "index.html"
 REGISTRY = Path(api.repo_root()) / "docs" / "矛盾与待裁决登记.md"
-BATCH_NOTE = "批49 · 测试 flake 根治"
+BATCH_NOTE = "批50 · 特效轴地基"
 
 _NODE_HARNESS = r"""
 const H = require(process.argv[1]);
@@ -225,6 +225,7 @@ def test_footer_batch_note_synced_and_registry_item() -> None:
     html = _html()
     m = re.search(r'<div class="panel-ft"><span>(.*?)</span>', html)
     assert m and m.group(1) == BATCH_NOTE, m and m.group(1)
+    assert "批49 · 测试 flake 根治" not in html
     text = REGISTRY.read_text(encoding="utf-8")
     assert "X15" in text and "版本快照" in text
     row = next((ln for ln in text.splitlines() if ln.startswith("| X15 |")), None)

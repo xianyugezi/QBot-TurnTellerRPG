@@ -189,6 +189,8 @@ def _item_from_dict(d: Dict[str, Any]) -> ItemInstance:
     → ItemInstance.__post_init__ 补发（旧档惰性兜底；正式补发走 migrations v2→v3）。
     """
     stats = d.get("stats_bonus")
+    # 批42 · C：打造产物的相性 / 套装词条 / 被动逐字段读回（缺省空 → 旧档/普通物品零影响）。
+    aff = d.get("affinities")
     return ItemInstance(
         item_id=cast(ItemID, str(d.get("item_id") or "")),  # type: ignore[redundant-cast]
         name=str(d.get("name") or ""),
@@ -205,6 +207,11 @@ def _item_from_dict(d: Dict[str, Any]) -> ItemInstance:
         cooldown_until=d.get("cooldown_until"),
         enhance_level=int(d.get("enhance_level", 0) or 0),
         uid=str(d.get("uid") or ""),
+        affinities={str(k): float(v) for k, v in aff.items()
+                    if isinstance(v, (int, float)) and not isinstance(v, bool)}
+        if isinstance(aff, dict) else {},
+        set_affixes=tuple(d.get("set_affixes") or ()),
+        passives=tuple(d.get("passives") or ()),
     )
 
 

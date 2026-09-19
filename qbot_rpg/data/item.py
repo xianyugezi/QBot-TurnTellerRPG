@@ -63,6 +63,14 @@ class ItemInstance:
     enhance_level: int = 0                     # 强化等级 +N（M12.5 强化接线：装备实例级
                                                # 持久化；穿装同步 EquipmentSlot.slot_level）
     uid: str = field(default="", compare=False)  # 实例落档唯一键（批40 · H4；见类 docstring）
+    # ---- 批42 · C：打造产物的相性 / 套装词条 / 装备被动（打造时求值、冻进实例；原案
+    # §3/§4/§8/§11）。全部 default 空 → 既有实例/非打造物品零影响（对拍）。----
+    # 相性结算值 `{相性id: 数值}`（主/副相性从中判定；打造时写入，供后续强化/附魔复用）。
+    affinities: Dict[str, float] = field(default_factory=dict)
+    # 套装词条（固定 1 + 随机 0~2；同名词条件数用于套装激活，原案 §4）。
+    set_affixes: Tuple[str, ...] = ()
+    # 装备被动（模板固定 + 相性变更后的最终 id；原案 §11）。
+    passives: Tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         """uid 缺省自动补发（frozen=True → object.__setattr__）。

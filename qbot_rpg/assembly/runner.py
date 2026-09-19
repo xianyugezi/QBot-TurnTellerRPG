@@ -716,6 +716,7 @@ def _make_handler(spec: Any, parsed: ParsedCommand, ctx: MutableMapping[str, Any
                             continue
                         try:
                             _sb = it.get("stats_bonus")
+                            _aff = it.get("affinities")
                             new_inv = new_inv + (ItemInstance(
                                 item_id=str(it.get("item_id") or ""),
                                 name=str(it.get("name") or ""),
@@ -728,6 +729,13 @@ def _make_handler(spec: Any, parsed: ParsedCommand, ctx: MutableMapping[str, Any
                                 enhance_level=int(it.get("enhance_level", 0) or 0),
                                 # 批40 · H4：uid 原样带过（缺省由 __post_init__ 补发）
                                 uid=str(it.get("uid") or ""),
+                                # 批42 · C：相性 / 套装词条 / 被动原样带过（打造产物不丢字段）
+                                affinities={str(k): float(v) for k, v in _aff.items()
+                                            if isinstance(v, (int, float))
+                                            and not isinstance(v, bool)}
+                                if isinstance(_aff, Mapping) else {},
+                                set_affixes=tuple(it.get("set_affixes") or ()),
+                                passives=tuple(it.get("passives") or ()),
                             ),)
                         except (TypeError, ValueError):
                             continue

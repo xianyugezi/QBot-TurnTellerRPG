@@ -1562,6 +1562,7 @@ class EquipmentEngineAdapter:
         if isinstance(item, Mapping):
             try:
                 _sb = item.get("stats_bonus")
+                _aff = item.get("affinities")
                 item = ItemInstance(
                     item_id=str(item.get("item_id") or ""),
                     name=str(item.get("name") or ""),
@@ -1575,6 +1576,13 @@ class EquipmentEngineAdapter:
                     # 批40 · H4：uid 原样带过（asdict dict 行 → 引擎实例；缺省由
                     # __post_init__ 补发）——否则穿戴落档身份在归一转换处丢失
                     uid=str(item.get("uid") or ""),
+                    # 批42 · C：相性 / 套装词条 / 被动原样带过（asdict 行 → 引擎实例）
+                    affinities={str(k): float(v) for k, v in _aff.items()
+                                if isinstance(v, (int, float))
+                                and not isinstance(v, bool)}
+                    if isinstance(_aff, Mapping) else {},
+                    set_affixes=tuple(item.get("set_affixes") or ()),
+                    passives=tuple(item.get("passives") or ()),
                 )
             except (TypeError, ValueError):
                 pass

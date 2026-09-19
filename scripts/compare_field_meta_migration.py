@@ -185,7 +185,17 @@ DEFAULT_PACKS = ("veinborn", "test_demo")
 #   对拍实证：删除项 = 0（无「仅迁移前有」）；硬差异全部为上述计数/新增列变动，
 #   新增项逐条列出（test_gate_semantics_addition_is_green_and_listed 口径）。
 #   重定到本批末提交后，基线树与当前树逐字段 diff=0。
-DEFAULT_BASELINE_REF = "fa675ce"
+# 批39（2026-09-19 合成公用层）：c7fe678 → 00b65f5（本批字段/编辑器/测试提交）。
+# 原因（本批**有意**变更，非迁移回归；删除项 = 0，全部为新增）：
+#   ① 新增框架 settings 段 `deep_craft`（打造路径开关：enabled 一字段）；
+#   ② `recipe` 目录条目 purpose 补「第 1 层【合成】，打造与炼金公用」+ settings_section
+#      指向 settings.alchemy.mode（模块级展示声明，非字段级迁移回归）；
+#   → settings 条目列表 +1（count/total_count/unconfigured_count、index.total、
+#      模块声明计数各 +1）。
+#   对拍实证：删除项 = 0（无「仅迁移前有」）；硬差异全部为上述计数/purpose 变动，
+#   新增项逐条列出（test_gate_semantics_addition_is_green_and_listed 口径）。
+#   重定到本批字段提交后，基线树与当前树逐字段 diff=0。
+DEFAULT_BASELINE_REF = "00b65f5"
 
 
 def _env(root: Path) -> dict:

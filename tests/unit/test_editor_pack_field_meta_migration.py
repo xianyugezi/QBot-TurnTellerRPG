@@ -66,7 +66,12 @@ SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
 #   items/equipment 新增 handedness/affinities 两字段。
 #   对拍实证：删除项 = 0、硬差异全部为上述计数/新增列变动；重定后 0 差异。
 #   与 scripts/compare_field_meta_migration.py 的 DEFAULT_BASELINE_REF 同基线。
-BASELINE_REF = "fa675ce"
+# 批39（2026-09-19 合成公用层）重定：c7fe678 → 00b65f5（本批字段/编辑器提交）。
+#   原因 = 本批**有意**变更（非迁移回归）：新增 settings.deep_craft（打造路径开关，条目 +1）
+#   + recipe 目录条目 purpose / settings_section 更新（模块级展示声明）。
+#   对拍实证：删除项 = 0、硬差异全部为上述计数/purpose 变动；重定后 0 差异。
+#   与 scripts/compare_field_meta_migration.py 的 DEFAULT_BASELINE_REF 同基线。
+BASELINE_REF = "00b65f5"
 CONTENT = REPO / "content"
 
 

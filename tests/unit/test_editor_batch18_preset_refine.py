@@ -177,7 +177,7 @@ def test_editor_blank_pack_still_six(blank_root: Path) -> None:
 # ---------------------------------------------------------------------------
 def test_footer_batch_string_is_current() -> None:
     html = (REPO / "qbot_rpg" / "web" / "static" / "index.html").read_text(encoding="utf-8")
-    assert "批43 · 强化六档与特殊词条" in html
+    assert "批44 · 投入暴击" in html
     assert "批40 · 实例uid与随机流" not in html
     assert "批36 · 采集/挖掘" not in html
     assert "批17 · 通用预设" not in html

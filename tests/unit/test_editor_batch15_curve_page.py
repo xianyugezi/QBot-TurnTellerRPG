@@ -297,10 +297,10 @@ def test_frontend_curve_page_wiring_and_no_layout_regression() -> None:
 
 
 def test_footer_batch_note_current_and_stale_note_absent() -> None:
-    """页脚批次串 →「批43 · 强化六档与特殊词条」；旧批次串不得残留。"""
+    """页脚批次串 →「批44 · 投入暴击」；旧批次串不得残留。"""
     html = HTML.read_text(encoding="utf-8")
     m = re.search(r'<div class="panel-ft"><span>(.*?)</span></div>', html)
-    assert m and m.group(1) == "批43 · 强化六档与特殊词条", m and m.group(1)
+    assert m and m.group(1) == "批44 · 投入暴击", m and m.group(1)
     assert "批40 · 实例uid与随机流" not in html
     assert "批14 · 可编辑性与提示" not in html
     assert "批37 · 战后恢复" not in html

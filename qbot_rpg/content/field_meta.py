@@ -1342,7 +1342,12 @@ ALCHEMY_SETTINGS_FIELD_DEFS: Dict[str, FieldMeta] = {
 
 def alchemy_settings_meta() -> FieldMeta:
     """settings.alchemy 段 FieldMeta（type=obj + 全字段 children；合并进 SETTINGS_FIELDS）。"""
-    return FieldMeta(type="obj", children=ALCHEMY_SETTINGS_FIELD_DEFS)
+    return FieldMeta(
+        type="obj", children=ALCHEMY_SETTINGS_FIELD_DEFS, label="炼金 / 合成",
+        help="合成与炼金的启用路径（批39）：由「模块模式」三态声明推导——"
+             "full=三层漏斗（合成 + 炼金 + 深度炼金）；simple=仅合成层（公用；玩家可只启用合成）；"
+             "off=关闭。深度打造另由「深度打造 ▸ 是否启用深度打造」控制；"
+             "合成是打造与炼金的公用层。")
 
 
 # 默认模板货币键空间（F-02 引用存在性兜底：settings 未配 currencies 时按此默认，3h §5.1）

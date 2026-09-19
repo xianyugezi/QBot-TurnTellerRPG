@@ -217,6 +217,10 @@ def test_settings_field_meta_exposes_forge_switch_and_mode_enum() -> None:
     assert settings_meta is not None
     fm = settings_meta.fields[FORGE_CONFIG_KEY]
     assert fm.type == "obj" and fm.label == "深度打造" and fm.help
+    # 合成/炼金段：中文段名 + 说明卡（三条启用路径）
+    alchemy_section = settings_meta.fields["alchemy"]
+    assert alchemy_section.label == "炼金 / 合成" and alchemy_section.help
+    assert "simple" in alchemy_section.help and "合成" in alchemy_section.help
     assert fm.children["enabled"].type == "bool"
     assert fm.children["enabled"].label == "是否启用深度打造"
     assert fm.children["enabled"].help and fm.children["enabled"].default is False

@@ -264,6 +264,32 @@ def test_c4_effect_axis_value_clamps_and_defaults() -> None:
     assert effect_axis_value({"damage_taken_pct": True}, "damage_taken_pct") == 0.0
 
 
+_KD_DEF = {"id": "kd", "name": "kd", "class": "status", "category": "weak",
+           "max_stack": 1, "duration": {"turns": 1, "charges": 0},
+           "decay": "none", "damage_mult": 1.5}
+
+
+def _taken_with_status(*, axis: float = 0.0, include_status: bool) -> float:
+    """构造带倒地 status（damage_mult=1.5）的目标，读唯一承伤乘区求值结果。"""
+    eng = BattleEngine(defs={"kd": _KD_DEF}).start(
+        dict(PLAYER), dict(ENEMY), random_seed=1)
+    if axis:
+        eng._snap[BN]["damage_taken_pct"] = axis
+    eng._snap["status_state"][BN] = [
+        {"status_id": "kd", "stacks": 1, "turns": 1, "charges": 0}]
+    return eng._damage_taken_mult(BN, include_status=include_status)[0]
+
+
+def test_c6_status_damage_mult_evaluated_in_same_place() -> None:
+    """收敛：status `damage_mult` 在 `_damage_taken_mult` 内**与主乘区一同求值**
+    （`include_status` 门控沿用既有「破位窗口」语义）——非破位不并入 = 零行为变化。"""
+    assert _taken_with_status(include_status=False) == 1.0     # 非破位：不并入（既有门控）
+    assert _taken_with_status(include_status=True) == 1.5      # 破位：status 1.5 一次
+    assert _taken_with_status(axis=-25, include_status=True) == 0.75 * 1.5
+    eng = BattleEngine().start(dict(PLAYER), dict(ENEMY), random_seed=1)
+    assert eng._damage_taken_mult(BN, include_status=True)[0] == 1.0
+
+
 def test_c5_damage_taken_end_to_end_and_immune_equivalence() -> None:
     """战斗级证据：`−25` 受伤 ×0.75 / `+25` ×1.25；`immune_dmg=25` 与 `damage_taken_pct=−25`
     终伤逐值一致（归并等价），且两者并存时终伤 = ×0.5（同轴相加，不是 ×0.5625 叠乘）。"""

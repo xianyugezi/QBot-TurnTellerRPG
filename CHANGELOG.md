@@ -28,7 +28,9 @@
   `heal` 原子 / absorb_heal / regen / lifesteal / `battle.absorb_hp` 五处全接唯一收口。
   **④ 承伤轴 `damage_taken_pct`**：`battle._damage_taken_mult` 为**承伤乘区唯一求值处**
   （收敛口径 D3(b)）——**减伤/易伤一轴**，`immune_dmg` 作负半轴别名 `pct = −immune`
-  只乘一次、**不双计**；读时按声明区间钳制。为守一号红线，破位路径沿用旧两步序、
+  只乘一次、**不双计**；读时按声明区间钳制；status `damage_mult`（倒地增伤）在同一函数内
+  并入（破位窗口门控不变）→ 三路来源一处求值。**既有行为影响（如实登记）**：唯一受影响
+  组合 =「破位 + 非零 `immune_dmg`」截断序改变可能少 1 点；无 `immune_dmg` 且无轴时逐位一致、
   `effects` 的 `mitigation` 阶段按批50 `consumer_note` 不动（详见决策记录 §十八.2）。
   **⑤ 声明段接线**：`settings.effect_axes` → 引擎配置 → `EffectRuntime.config`；
   新增 `data/gear_stats.EFFECT_AXES_KEY` + `effect_axis_value`（读时钳制，不写死区间）。

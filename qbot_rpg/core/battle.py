@@ -4132,12 +4132,12 @@ class BattleEngine:
         返回 `(mult, detail)`；`detail` 供 `rating` 记录（既有 `immune_dmg` 键保留，
         新增 `damage_taken_pct`）。缺省（无轴/无免疫/无状态）→ `1.0` + 全零 detail。
 
-        **对既有行为的影响（如实登记）**：`include_status=True` 的分支把 status `damage_mult`
-        与主乘区合入**同一次整型截断**——当目标同时具备「破位」与「非零 immune_dmg」时，与
-        「先破位截断、再免疫四舍五入」的旧两步序可能相差 ≤1 点。为守住本批一号红线
-        （**不配置轴时逐字段零变化**），**当前调用点不使用该分支**：破位路径沿用旧两步序
-        （status 就地、承伤轴随后），故 immune_dmg 旧链路逐值一致。本形参保留给后续「三处
-        叠乘 → 单一乘区」的显式收敛批（需先拍板是否接受该 ≤1 偏差）。
+        **对既有行为的影响（如实登记）**：status `damage_mult` 在本函数内与主乘区**合入同一次
+        整型截断**（`int(raw × broken × mult)`）——当目标同时具备「破位」与「非零 `immune_dmg`」
+        时，与「先破位截断、再免疫四舍五入」的旧两步序可能相差 ≤1 点。**仅此一种组合**受影响
+        （`immune_dmg` 是本的负半轴别名，属「配置了承伤轴」的旧写法）；无 immune / 无轴时与旧
+        两步序**逐位一致**，全仓内容包对素材键使用量为 0 → 实机逐字段零变化（见
+        `docs/深度打造_决策记录.md` §十八.2 对拍表）。
         """
         tc = self._combat(target)
         cfg = self._config.get(EFFECT_AXES_KEY)
@@ -4732,22 +4732,21 @@ class BattleEngine:
             _part_state = self._part_state_of(part_id) if part_id else None
             broken_hit = bool(_part_state and _part_state.get("broken"))
             base_raw = raw
+            # 批52 · 承伤双向轴（收敛口径 D3(b)）：主乘区 damage_taken_pct + 免伤旧键
+            # immune_dmg + 条件实例 status damage_mult **全部在唯一求值处**
+            # `_damage_taken_mult` 内合并求值，作用于防御/格挡/乱数之后的 raw。
+            # 无轴且无免伤且 status=1.0 → mult=1.0 → 零行为变化；破位常驻增伤乘序不变。
+            _taken_mult, _taken_detail = self._damage_taken_mult(
+                target, include_status=broken_hit)
             if broken_hit:
-                # 常驻增伤 × 倒地叠加（status def damage_mult）；整型入账对齐既有伤害口径
-                _dmg_float = float(raw) * float(p.battle_position.broken_part_mult)
-                _dmg_float = _dmg_float * self._status_damage_mult(target)
-                raw = int(_dmg_float)
-            # 批52 · 承伤双向轴（收敛口径）：主乘区 damage_taken_pct + 免伤旧键 immune_dmg
-            # 归并到**唯一求值处** `_damage_taken_mult`（不双计），作用于防御/格挡/乱数之后的
-            # raw；无轴且无免伤 → mult=1.0 → 零行为变化。status damage_mult 的破位门控保持
-            # 既有位置（上式），不作为第二乘区重复计入。键空间/分层见 data.gear_stats。
-            _taken_mult, _taken_detail = self._damage_taken_mult(target)
-            if _taken_mult != 1.0:
+                # 破位常驻增伤 × 承伤乘区（status damage_mult 已并入唯一乘区 → 不双计）
+                raw = int(float(raw) * float(p.battle_position.broken_part_mult) * _taken_mult)
+            elif _taken_mult != 1.0:
                 raw = max(0, int(round(raw * _taken_mult)))
-                if _taken_detail["immune_dmg"]:
-                    rating["immune_dmg"] = _taken_detail["immune_dmg"]
-                if _taken_detail["damage_taken_pct"]:
-                    rating["damage_taken_pct"] = _taken_detail["damage_taken_pct"]
+            if _taken_detail["immune_dmg"]:
+                rating["immune_dmg"] = _taken_detail["immune_dmg"]
+            if _taken_detail["damage_taken_pct"]:
+                rating["damage_taken_pct"] = _taken_detail["damage_taken_pct"]
             raw_total += raw
 
             # ---- 破坏力（每段一次，写死多段 N 次；命中部位且未破才累计）----

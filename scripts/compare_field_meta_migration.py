@@ -205,7 +205,23 @@ DEFAULT_PACKS = ("veinborn", "test_demo")
 #   原因 = 本批**有意**变更（非迁移回归）：items 新增材料打造字段 3 条 + 图纸字段 12 条；
 #   settings.deep_craft 段补 5 个子字段；模板全量表 +16 条 deep_craft_* 键。
 #   对拍实证：删除项 = 0；重定后基线树与当前树逐字段 diff=0。
-DEFAULT_BASELINE_REF = "de0cb85"
+# 批43（2026-09-20 强化六档与特殊词条）重定：de0cb85 → 0d2011e。
+#   原因 = 本批**有意**变更（非迁移回归），含**一处有意删除**（H3 用户拍板「替换现在的」）：
+#   ① 删除 enhance.settings.max_by_rarity（四档 5/8/10/12，字段元数据 + 同名节点）——
+#      此行属门禁口径①「删除任一项 → 红」，为**有意替换**：改用 max_by_quality_level
+#      （品质等级 6 档 → +3/+6/+9/+12/+15/+18）+ legacy_quality_level_by_rarity（旧档兼容
+#      桥接：normal→2/fine→3/epic→4/legendary→4，旧装备上限**只升不降**、既有
+#      enhance_level 原样保留）。**旧档兼容证据**：旧档无 quality_level → 桥接读上限，
+#      旧上限 5/8/10/12 对应新上限 6/9/12/12（均 ≥ 旧值），且 resolve_cap = max(表值, 当前
+#      等级) 绝不降级/清零（tests/unit/test_batch43_enhance_tiers.py 逐档断言 + 旧档实证）。
+#   ② 新增 settings 行 special_affix_span（每 N 级特殊词条跨度）。
+#   ③ data/gear_stats 新增 5 个词条键（回复强化/减益概率/增益概率/弱点伤害 + 冷却缩减占位）
+#      → items/equipment 字段各 +5，`blocks.stats[@more]` 计数随之后移。
+#   ④ 模板全量表 +2 条 enhance_affix_gain / enhance_info_affix_row（templates 计数 854→856）。
+#   对拍实证：29 条差异**全部**为上述四类（1 处有意删除 + 26 项新增 + 派生展示计数位移）；
+#   无任何 label/help/group 严格键的**无意**改动。
+#   重定到本批末提交后，门禁继续只守「字段级元数据迁移不得改/删」。
+DEFAULT_BASELINE_REF = "0d2011e"
 
 
 def _env(root: Path) -> dict:

@@ -83,7 +83,17 @@ SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
 #     · 模板全量表 +16 条 deep_craft_* 键（templates 计数 838→854，framework 836→852）。
 #   对拍实证：删除项 = 0，硬差异全部为上述计数/新增列变动；重定后 0 差异。
 #   与 scripts/compare_field_meta_migration.py 的 DEFAULT_BASELINE_REF 同基线。
-BASELINE_REF = "de0cb85"
+# 批43（2026-09-20 强化六档与特殊词条）重定：de0cb85 → 0d2011e。
+#   原因 = 本批**有意**变更（非迁移回归），含**一处有意删除**（H3「替换现在的」）：
+#     · 删 enhance.settings.max_by_rarity（四档 5/8/10/12）→ 换 max_by_quality_level
+#       （品质等级 6 档 +3/+6/+9/+12/+15/+18）+ legacy_quality_level_by_rarity（旧档桥接，
+#       旧装备上限只升不降、既有 enhance_level 原样保留）→ settings 行 5→7；
+#     · data/gear_stats 新增 5 词条键（含冷却缩减占位）→ items/equipment 字段各 +5；
+#     · 模板全量表 +2 条 enhance_affix_gain / enhance_info_affix_row（854→856）。
+#   对拍实证：29 条差异全部为上述四类（1 处有意删除 + 新增/派生计数位移），
+#   无 label/help/group 严格键的无意改动；重定后基线树与当前树逐字段 diff=0。
+#   与 scripts/compare_field_meta_migration.py 的 DEFAULT_BASELINE_REF 同基线。
+BASELINE_REF = "0d2011e"
 CONTENT = REPO / "content"
 
 

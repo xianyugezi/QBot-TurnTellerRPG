@@ -695,6 +695,10 @@ class _Checker:
             # M3 天气校验（M41 · m3_shared_contract §6.2）：V5-V8 硬校验 + 黄提示（依赖 modules 消费方扫描）
             from qbot_rpg.content.weather_validator import validate_weather
             validate_weather(self._modules, data if isinstance(data, Mapping) else {}, self)
+        # 批41 · 深度打造：材料/图纸条目的引用与范围（图纸档/产出/部位/配方引用存在性，
+        # 材料等级/成本范围，材料品质 ∈ 品质颜色空间，等级带 min≤max，随机条数 ≤2）。
+        if module_name in ("items", "equipment"):
+            self._check_deep_craft_entries(module_name, data)
 
     # ---- M2 怪物八段专项（依据：细化_1e §⑤ R1-R15 / §② 模板 / §④ 木桩）----
     def _check_enemies(self, module_name: str, data: object, mmeta: Optional[ModuleMeta]) -> None:
@@ -1861,6 +1865,302 @@ class _Checker:
                            msg="深度打造已开启，但 settings.alchemy.mode=off（公用合成层已关闭）"
                                "→ 打造路径当前不可用（深度打造的基础合成走公用合成层）；"
                                "不阻断，开启合成层后生效")
+        # ---- 批41 · 打造参数段 / 品质颜色 / 图纸档位 / 品质概率阶梯 ----
+        # 分级：结构/类型/枚举/范围非法 → R-1；id 缺失/重复 → R-5；概率阶梯行权重和
+        # 非 100 → Y 提示（概率表允许按比例缩放，不硬拦）；顶档颜色出现在第 10 行之前
+        # → R-1（原案 §6「红色只有 10 级品质有 5% 的概率」）。
+        rules = cfg.get("craft_rules")
+        if rules is not None and not isinstance(rules, Mapping):
+            self._err(module_name, f"{base}.craft_rules", "R-1", rule="type",
+                      expect="obj", got=type(rules).__name__)
+        elif isinstance(rules, Mapping):
+            self._check_deep_craft_rules(module_name, f"{base}.craft_rules", rules)
+        raw_colors = cfg.get("quality_colors")
+        color_ids: List[str] = []
+        if raw_colors is not None:
+            if not isinstance(raw_colors, list):
+                self._err(module_name, f"{base}.quality_colors", "R-1", rule="type",
+                          expect="list", got=type(raw_colors).__name__)
+            else:
+                seen_c: set = set()
+                for i, e in enumerate(raw_colors):
+                    m = e if isinstance(e, Mapping) else None
+                    path = f"{base}.quality_colors.{i}"
+                    if m is None:
+                        self._err(module_name, path, "R-1", rule="entry_not_object",
+                                  got=type(e).__name__)
+                        continue
+                    cid = m.get("id")
+                    if not isinstance(cid, str) or not cid:
+                        self._err(module_name, path, "R-5", rule="required_missing", name="id")
+                    elif cid in seen_c:
+                        self._err(module_name, path, "R-5", rule="duplicate_id", id=cid)
+                    else:
+                        seen_c.add(cid)
+                        color_ids.append(cid)
+        raw_grades = cfg.get("blueprint_grades")
+        if raw_grades is not None:
+            if not isinstance(raw_grades, list):
+                self._err(module_name, f"{base}.blueprint_grades", "R-1", rule="type",
+                          expect="list", got=type(raw_grades).__name__)
+            else:
+                seen_g: set = set()
+                for i, e in enumerate(raw_grades):
+                    m = e if isinstance(e, Mapping) else None
+                    path = f"{base}.blueprint_grades.{i}"
+                    if m is None:
+                        self._err(module_name, path, "R-1", rule="entry_not_object",
+                                  got=type(e).__name__)
+                        continue
+                    gid = m.get("id")
+                    if not isinstance(gid, str) or not gid:
+                        self._err(module_name, path, "R-5", rule="required_missing", name="id")
+                    elif gid in seen_g:
+                        self._err(module_name, path, "R-5", rule="duplicate_id", id=gid)
+                    else:
+                        seen_g.add(gid)
+                    lo = m.get("level_offset")
+                    if lo is not None and (isinstance(lo, bool) or not isinstance(lo, int)
+                                           or lo < 0):
+                        self._err(module_name, f"{path}.level_offset", "R-2",
+                                  rule="range", got=lo, min=0)
+                    cc = m.get("cost_cap")
+                    if cc is not None and (isinstance(cc, bool) or not isinstance(cc, int)
+                                           or cc < 0):
+                        self._err(module_name, f"{path}.cost_cap", "R-2",
+                                  rule="range", got=cc, min=0)
+        table = cfg.get("quality_draw_table")
+        if table is not None:
+            if not isinstance(table, Mapping):
+                self._err(module_name, f"{base}.quality_draw_table", "R-1", rule="type",
+                          expect="obj", got=type(table).__name__)
+            else:
+                ladder = table.get("ladder")
+                if ladder is not None and not isinstance(ladder, Mapping):
+                    self._err(module_name, f"{base}.quality_draw_table.ladder", "R-1",
+                              rule="type", expect="obj", got=type(ladder).__name__)
+                elif isinstance(ladder, Mapping):
+                    top = color_ids[-1] if color_ids else None
+                    for row_key, row in ladder.items():
+                        path = f"{base}.quality_draw_table.ladder.{row_key}"
+                        if not isinstance(row, Mapping):
+                            self._err(module_name, path, "R-1", rule="entry_not_object",
+                                      got=type(row).__name__)
+                            continue
+                        row_no = None
+                        if isinstance(row_key, str) and row_key.isdigit():
+                            row_no = int(row_key)
+                        total = 0.0
+                        for ck, wv in row.items():
+                            if isinstance(wv, bool) or not isinstance(wv, (int, float)):
+                                self._err(module_name, f"{path}.{ck}", "R-1", rule="type",
+                                          expect="number", got=type(wv).__name__)
+                                continue
+                            if wv < 0:
+                                self._err(module_name, f"{path}.{ck}", "R-2", rule="range",
+                                          got=wv, min=0)
+                            total += float(wv)
+                            if color_ids and ck not in color_ids:
+                                self._err(module_name, f"{path}.{ck}", "R-4",
+                                          rule="color_ref_missing", color=ck,
+                                          color_space=sorted(color_ids))
+                        if total > 0 and abs(total - 100.0) > 1e-6:
+                            self._warn(module_name, path, "Y-16", rule="row_sum",
+                                       total=total,
+                                       msg=f"品质阶梯第 {row_no if row_no else row_key} 行"
+                                           "权重和不为 100（按比例抽取，仅提示）")
+                        if top and row_no is not None and row_no < 10 and top in row:
+                            self._err(module_name, f"{path}.{top}", "R-1",
+                                      rule="top_color_row", row=row_no,
+                                      msg="顶档品质只能出现在第 10 行及以后（原案 §6）")
+
+    def _check_deep_craft_rules(self, module_name: str, base: str,
+                                rules: Mapping[str, object]) -> None:
+        """settings.deep_craft.craft_rules 子字段校验（批41；范围/枚举/阈值单调）。"""
+        rng_keys = ("cost_base", "cost_per_kind", "max_per_kind", "max_kinds")
+        for key in rng_keys:
+            v = rules.get(key)
+            if v is not None and (isinstance(v, bool) or not isinstance(v, int) or v < 0):
+                self._err(module_name, f"{base}.{key}", "R-2", rule="range", got=v, min=0)
+        for key in ("slot_decay", "cost_floor_ratio", "global_decay"):
+            v = rules.get(key)
+            if v is not None and (isinstance(v, bool) or not isinstance(v, (int, float))
+                                  or v < 0):
+                self._err(module_name, f"{base}.{key}", "R-2", rule="range", got=v, min=0)
+        bonus = rules.get("quality_exp_affinity_bonus")
+        if bonus is not None and (isinstance(bonus, bool)
+                                  or not isinstance(bonus, (int, float)) or bonus < 0):
+            self._err(module_name, f"{base}.quality_exp_affinity_bonus", "R-2",
+                      rule="range", got=bonus, min=0)
+        tb = rules.get("type_bonus")
+        if tb is not None and (isinstance(tb, bool) or not isinstance(tb, (int, float))
+                               or tb < 0):
+            self._err(module_name, f"{base}.type_bonus", "R-2", rule="range", got=tb, min=0)
+        rnd = rules.get("level_rounding")
+        if rnd is not None and rnd not in ("floor", "round", "ceil"):
+            self._err(module_name, f"{base}.level_rounding", "R-1", rule="enum_invalid",
+                      got=rnd, allowed=["floor", "round", "ceil"])
+        w = rules.get("material_level_weight")
+        if w is not None and not isinstance(w, Mapping):
+            self._err(module_name, f"{base}.material_level_weight", "R-1", rule="type",
+                      expect="obj", got=type(w).__name__)
+        th = rules.get("quality_level_thresholds")
+        if th is not None:
+            if not isinstance(th, list) or not th:
+                self._err(module_name, f"{base}.quality_level_thresholds", "R-1",
+                          rule="type", expect="list", got=type(th).__name__)
+            else:
+                prev = None
+                for i, x in enumerate(th):
+                    if isinstance(x, bool) or not isinstance(x, int) or x < 0:
+                        self._err(module_name, f"{base}.quality_level_thresholds.{i}", "R-2",
+                                  rule="range", got=x, min=0)
+                        continue
+                    if prev is not None and x < prev:
+                        self._err(module_name, f"{base}.quality_level_thresholds.{i}", "R-1",
+                                  rule="not_monotonic", got=x, prev=prev)
+                    prev = x
+        for key in ("random_stat_count", "random_set_affix_count"):
+            v = rules.get(key)
+            if v is not None and not isinstance(v, Mapping):
+                self._err(module_name, f"{base}.{key}", "R-1", rule="type",
+                          expect="obj", got=type(v).__name__)
+
+    def _check_deep_craft_entries(self, module_name: str, data: object) -> None:
+        """items/equipment 条目：材料打造字段 + 图纸模板字段（批41 深度打造）。
+
+        分级：
+          · `material_level` int≥1 / `craft_cost` int≥0 / `blueprint_cost_cap` int≥0 → R-2；
+          · `material_quality` ∉ 品质颜色空间 → R-4；
+          · 图纸 `blueprint_grade` ∉ 图纸档位空间 → R-4；
+            `blueprint_output` ∉ 物品 id 空间 → R-4；`blueprint_slot` ∉ slot_defs → R-4；
+            `blueprint_recipe` 非空但不在 recipe id 空间 → R-4；
+          · `blueprint_level_band` min/max 非法或 min>max → R-1/R-2；
+          · `blueprint_material_slots[].role` ∉ {main,free} → R-1；`item` 引用缺失 → R-4；
+          · 随机属性/套装词条条数 min>max 或 >2 → R-2。
+        仅当条目带打造字段时校验（普通物品/材料零新增拦截）。
+        """
+        if not isinstance(data, list):
+            return
+        settings = self._modules.get("settings")
+        settings = settings if isinstance(settings, Mapping) else {}
+        dc = settings.get("deep_craft")
+        dc = dc if isinstance(dc, Mapping) else {}
+        color_space = {
+            str(r.get("id")) for r in dc.get("quality_colors") or []
+            if isinstance(r, Mapping) and isinstance(r.get("id"), str) and r.get("id")
+        }
+        grade_space = {
+            str(r.get("id")) for r in dc.get("blueprint_grades") or []
+            if isinstance(r, Mapping) and isinstance(r.get("id"), str) and r.get("id")
+        }
+        slot_defs = settings.get("slot_defs")
+        slot_space = set()
+        if isinstance(slot_defs, Mapping):
+            slot_space = {str(k) for k in slot_defs.keys()}
+        # items ∪ equipment 同库（namespace=item_lib）；未声明该 namespace 时回落两 kind 并集。
+        item_space = set(self._ns_registered.get("item_lib", {}))
+        if not item_space:
+            item_space = set(self._id_space.get("item", {})) | set(
+                self._id_space.get("equipment", {}))
+        recipe_space = set(self._id_space.get("recipe", {}))
+
+        for i, e in enumerate(data):
+            m = e if isinstance(e, Mapping) else None
+            if m is None:
+                continue
+            base = f"{module_name}.{i}"
+            # ---- 材料 ----
+            lv = m.get("material_level")
+            if lv is not None and (isinstance(lv, bool) or not isinstance(lv, int) or lv < 1):
+                self._err(module_name, f"{base}.material_level", "R-2", rule="range",
+                          got=lv, min=1)
+            mc = m.get("craft_cost")
+            if mc is not None and (isinstance(mc, bool) or not isinstance(mc, int) or mc < 0):
+                self._err(module_name, f"{base}.craft_cost", "R-2", rule="range", got=mc, min=0)
+            mq = m.get("material_quality")
+            if isinstance(mq, str) and mq and color_space and mq not in color_space:
+                self._err(module_name, f"{base}.material_quality", "R-4",
+                          rule="color_ref_missing", color=mq, color_space=sorted(color_space))
+            # ---- 图纸 ----
+            grade = m.get("blueprint_grade")
+            if grade is not None:
+                if not isinstance(grade, str) or not grade:
+                    self._err(module_name, f"{base}.blueprint_grade", "R-5",
+                              rule="required_missing", name="blueprint_grade")
+                elif grade_space and grade not in grade_space:
+                    self._err(module_name, f"{base}.blueprint_grade", "R-4",
+                              rule="grade_ref_missing", grade=grade,
+                              grade_space=sorted(grade_space))
+            for key, space, rule in (("blueprint_output", item_space, "item_ref_missing"),
+                                     ("blueprint_slot", slot_space, "slot_ref_missing"),
+                                     ("blueprint_recipe", recipe_space, "recipe_ref_missing")):
+                v = m.get(key)
+                if isinstance(v, str) and v and space and v not in space:
+                    self._err(module_name, f"{base}.{key}", "R-4", rule=rule, ref=v,
+                              ref_space=sorted(space))
+            cap = m.get("blueprint_cost_cap")
+            if cap is not None and (isinstance(cap, bool) or not isinstance(cap, int)
+                                    or cap < 0):
+                self._err(module_name, f"{base}.blueprint_cost_cap", "R-2", rule="range",
+                          got=cap, min=0)
+            band = m.get("blueprint_level_band")
+            if band is not None:
+                if not isinstance(band, Mapping):
+                    self._err(module_name, f"{base}.blueprint_level_band", "R-1",
+                              rule="type", expect="obj", got=type(band).__name__)
+                else:
+                    lo = band.get("min")
+                    hi = band.get("max")
+                    for k, v in (("min", lo), ("max", hi)):
+                        if v is not None and (isinstance(v, bool)
+                                              or not isinstance(v, int) or v < 1):
+                            self._err(module_name, f"{base}.blueprint_level_band.{k}", "R-2",
+                                      rule="range", got=v, min=1)
+                    if (isinstance(lo, int) and not isinstance(lo, bool)
+                            and isinstance(hi, int) and not isinstance(hi, bool) and lo > hi):
+                        self._err(module_name, f"{base}.blueprint_level_band", "R-1",
+                                  rule="band_reversed", min=lo, max=hi)
+            slots = m.get("blueprint_material_slots")
+            if slots is not None:
+                if not isinstance(slots, list):
+                    self._err(module_name, f"{base}.blueprint_material_slots", "R-1",
+                              rule="type", expect="list", got=type(slots).__name__)
+                else:
+                    for j, s in enumerate(slots):
+                        sp = f"{base}.blueprint_material_slots.{j}"
+                        if not isinstance(s, Mapping):
+                            self._err(module_name, sp, "R-1", rule="entry_not_object",
+                                      got=type(s).__name__)
+                            continue
+                        role = s.get("role")
+                        if role is not None and role not in ("main", "free"):
+                            self._err(module_name, f"{sp}.role", "R-1", rule="enum_invalid",
+                                      got=role, allowed=["main", "free"])
+                        sid = s.get("item")
+                        if isinstance(sid, str) and sid and item_space and sid not in item_space:
+                            self._err(module_name, f"{sp}.item", "R-4",
+                                      rule="item_ref_missing", ref=sid)
+            for key in ("blueprint_random_stat_count", "blueprint_random_set_affix_count"):
+                cnt = m.get(key)
+                if cnt is None:
+                    continue
+                if not isinstance(cnt, Mapping):
+                    self._err(module_name, f"{base}.{key}", "R-1", rule="type",
+                              expect="obj", got=type(cnt).__name__)
+                    continue
+                lo = cnt.get("min")
+                hi = cnt.get("max")
+                for k, v in (("min", lo), ("max", hi)):
+                    if v is not None and (isinstance(v, bool) or not isinstance(v, int)
+                                          or v < 0 or v > 2):
+                        self._err(module_name, f"{base}.{key}.{k}", "R-2", rule="range",
+                                  got=v, min=0, max=2)
+                if (isinstance(lo, int) and not isinstance(lo, bool)
+                        and isinstance(hi, int) and not isinstance(hi, bool) and lo > hi):
+                    self._err(module_name, f"{base}.{key}", "R-1", rule="count_reversed",
+                              min=lo, max=hi)
+
 
     # ---- 批38 · ④：settings 相性通用层（定义/池/联动/互动 + 跨模块引用存在性）----
     def _check_affinity(self, module_name: str, data: object) -> None:

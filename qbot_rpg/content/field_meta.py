@@ -43,6 +43,13 @@ from qbot_rpg.content.models import (
 from qbot_rpg.content.enhance_models import enhance_module_meta
 from qbot_rpg.content.forge_models import forge_module_meta
 from qbot_rpg.content.forge_settings import ITEMS_FORGE_FIELDS, forge_settings_meta
+# 批41 · 深度打造数据层（打造参数段默认值 + 图纸/材料字段 + 品质概率阶梯）：
+# 自包含持有（零 field_meta import，无循环依赖），与本文件「schema 之家」口径一致。
+from qbot_rpg.content.deep_craft_settings import (
+    DEEP_CRAFT_SEGMENT_FIELDS,
+    ITEMS_BLUEPRINT_FIELDS,
+    ITEMS_MATERIAL_CRAFT_FIELDS,
+)
 # M10 钓鱼（m10_shared_contract）：fishing 模块 ModuleMeta + settings.fishing 段。
 # fishing_models 仅依赖 content.models（零 field_meta import，无循环依赖）；
 # fishing_settings_meta 自包含持有（防 field_meta↔fishing 循环依赖）。
@@ -1598,13 +1605,22 @@ ITEMS_GROUP_DEFS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
         "price", "atk", "def", "dfn", "foc", "hp", "agi", "mp",
         "elements", "base_effects",
         "affinities",  # 批38 ④：材料/图纸相性值 {相性id: 数值}
+        # 批41：材料打造字段（等级/品质/成本）——决定装备等级与品质经验。
+        "material_level", "material_quality", "craft_cost",
         *GEAR_FLAT_KEYS, *GEAR_PCT_KEYS, *GEAR_COMBAT_KEYS,
     )),
     # 批26 α组（装备侧）：装备附加字段归「效果」分组（grant_skills/skill_amp/
     # attack_override/job_override）——沿用既有分组（不开新分组键，模块分组数
     # 仍守 2~4 不变式；组显示名归包声明）。
     ("effects", ("effects", "traits", "grant_skills", "skill_amp",
-                 "attack_override", "job_override")),
+                 "attack_override", "job_override",
+                 # 批41：图纸字段（深度打造模板；图纸是物品的一种）。
+                 "blueprint_grade", "blueprint_output", "blueprint_slot",
+                 "blueprint_recipe", "blueprint_level_band", "blueprint_material_slots",
+                 "blueprint_fixed_stats", "blueprint_random_stat_count",
+                 "blueprint_fixed_set_affix", "blueprint_random_set_affix_count",
+                 "blueprint_random_set_affix_pool", "blueprint_passive",
+                 "blueprint_learn", "blueprint_cost_cap")),
     ("text", ("desc", "brief", "detail")),
 )
 
@@ -2662,6 +2678,17 @@ def _module_table() -> Dict[str, ModuleMeta]:
     # M9 锻造（m9_shared_contract §八）：items 材料类 material_tier/source + settings.forge 段
     items_fields.update(ITEMS_FORGE_FIELDS)
     SETTINGS_FIELDS["forge"] = forge_settings_meta()
+    # 批41 · 深度打造：items 条目新增「材料打造字段」+「图纸字段」（图纸是物品的一种，
+    # 不新造平行物品体系）；settings.deep_craft 段补打造规则参数 / 品质颜色 / 图纸档位 /
+    # 品质概率阶梯（既有 enabled 字段定义**原样保留**——字段元数据对拍门禁严格键）。
+    items_fields.update(ITEMS_MATERIAL_CRAFT_FIELDS)
+    items_fields.update(ITEMS_BLUEPRINT_FIELDS)
+    SETTINGS_FIELDS["deep_craft"] = FieldMeta(
+        type="obj",
+        children={**DEEP_CRAFT_SEGMENT_FIELDS, **SETTINGS_FIELDS["deep_craft"].children},
+        label=SETTINGS_FIELDS["deep_craft"].label,
+        help=SETTINGS_FIELDS["deep_craft"].help,
+    )
     # M10 钓鱼（m10_shared_contract §一）：settings.fishing 段（fishing_settings_meta
     # 自包含持有，防 field_meta↔fishing 循环依赖）
     SETTINGS_FIELDS["fishing"] = fishing_settings_meta()

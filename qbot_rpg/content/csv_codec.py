@@ -48,6 +48,9 @@ CSV_BOM: str = "\ufeff"
 CELL_NULL: str = "\\N"
 # 显式空串哨兵（与「键缺失 = 空单元格」区分；字面 `\E` 文本同样经反斜杠转义区分）。
 CELL_EMPTY: str = "\\E"
+# 「字段声明类型 ≠ 实际取值类型」的文本列 JSON 标记（如 bool 字段里存对象、str 字段里存对象）。
+# 数字 / 布尔列不需要标记：解不出标量时回退 JSON 解析即可（见 decode_cell）。
+CELL_JSON_MARK: str = "\\J"
 # 公式注入危险前缀（§6.12-20）。
 DANGER_PREFIXES: str = "=+-@"
 # 需要 JSON 文本编码的字段类型。
@@ -207,6 +210,23 @@ def _escape_text(text: str) -> str:
     return _neutralize(text)
 
 
+def _json_text(value: object) -> str:
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+
+
+def _type_compatible(value: object, t: str) -> bool:
+    """值是否与列声明类型相符（不符 → 用 JSON 文本保真，见 `encode_cell`）。"""
+    if t in JSON_TYPES:
+        return isinstance(value, (list, Mapping))
+    if t == "bool":
+        return isinstance(value, bool)
+    if t == "int":
+        return isinstance(value, int) and not isinstance(value, bool)
+    if t in ("float", "number"):
+        return isinstance(value, (int, float)) and not isinstance(value, bool)
+    return isinstance(value, str)   # str / ref / enum / formula / 未登记
+
+
 def encode_cell(value: object, col: Column) -> str:
     """值 → 单元格文本；`_ABSENT` → 空。数字/布尔不做注入中和（负号是合法数值）。"""
     if value is _ABSENT:
@@ -214,18 +234,18 @@ def encode_cell(value: object, col: Column) -> str:
     if value is None:
         return CELL_NULL
     if col.json or col.type in JSON_TYPES:
-        return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+        return _json_text(value)
     t = col.type
+    if not _type_compatible(value, t):
+        # 声明类型与实际取值不符（真实数据存在，如 bool 字段写对象）：
+        # 文本列加 `\\J` 标记保真；数字/布尔列直接 JSON 文本，解码回退 JSON 解析。
+        if t in ("bool", "int", "float", "number"):
+            return _json_text(value)
+        return CELL_JSON_MARK + _json_text(value)
     if t == "bool":
-        if value is True:
-            return "true"
-        if value is False:
-            return "false"
-        return json.dumps(value, ensure_ascii=False)
+        return "true" if value is True else "false"
     if t in ("int", "float", "number"):
-        if isinstance(value, bool):
-            return "true" if value else "false"
-        return json.dumps(value, ensure_ascii=False)
+        return _json_text(value)
     text = value if isinstance(value, str) else str(value)
     if text == "":
         return CELL_EMPTY
@@ -240,6 +260,12 @@ def decode_cell(text: str, col: Column) -> object:
         return None
     if text == CELL_EMPTY:
         return ""
+    if text.startswith(CELL_JSON_MARK):
+        try:
+            return json.loads(text[len(CELL_JSON_MARK):])
+        except (ValueError, TypeError) as exc:
+            raise CsvCodecError(
+                f"列「{header_cell(col)}」的值形如 JSON 标记但解析失败：{exc}") from exc
     if col.json:
         try:
             return json.loads(text)
@@ -259,21 +285,31 @@ def decode_cell(text: str, col: Column) -> object:
             return True
         if low in ("false", "0", "no", "否"):
             return False
-        raise CsvCodecError(f"列「{header_cell(col)}」要求布尔（true/false），实际是「{text}」")
+        return _decode_json_fallback(text, col)
     if t == "int":
         s = text.strip()
         if _INT_RE.match(s):
             return int(s)
-        raise CsvCodecError(f"列「{header_cell(col)}」要求整数，实际是「{text}」")
+        return _decode_json_fallback(text, col)
     if t in ("float", "number"):
         s = text.strip()
         if _INT_RE.match(s):
             return int(s)   # 保真：JSON 整数不因列类型是 number 而变成浮点
         try:
             return float(s)
-        except ValueError as exc:
-            raise CsvCodecError(f"列「{header_cell(col)}」要求数字，实际是「{text}」") from exc
+        except ValueError:
+            return _decode_json_fallback(text, col)
     return _deescape_text(text)
+
+
+def _decode_json_fallback(text: str, col: Column) -> object:
+    """数字/布尔列解不出标量时，回退 JSON 解析（保真「声明类型 ≠ 实际取值」的字段）。"""
+    try:
+        return json.loads(text)
+    except (ValueError, TypeError) as exc:
+        raise CsvCodecError(
+            f"列「{header_cell(col)}」的取值既不是 {col.type} 也不是合法 JSON：{text!r}"
+        ) from exc
 
 
 # =====================================================================================
@@ -418,6 +454,7 @@ def decode_csv(schema: CsvSchema, text: str) -> DecodeResult:
 
 __all__ = [
     "CELL_EMPTY",
+    "CELL_JSON_MARK",
     "CELL_NULL",
     "CSV_BOM",
     "DANGER_PREFIXES",

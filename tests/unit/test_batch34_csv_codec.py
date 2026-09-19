@@ -257,6 +257,19 @@ def test_json_cell_parse_failure_is_row_issue() -> None:
     assert res.issues and res.issues[0].field == "tags"
 
 
+def test_declared_type_mismatch_is_preserved() -> None:
+    """真实内容包存在「声明类型 ≠ 实际取值」（如 bool 字段写对象）——必须可逆保真。"""
+    schema = cc.schema_for(LIST_META)
+    entries = [
+        ("m1", {"id": "m1", "enabled": {"output": "x", "count": 2}}),   # bool 列里存对象
+        ("m2", {"id": "m2", "note": {"nested": [1, 2]}}),               # str 列里存对象
+        ("m3", {"id": "m3", "count": "12"}),                            # int 列里存字符串
+    ]
+    text, res = _roundtrip(schema, entries)
+    assert [(r.key, r.entry(schema)) for r in res.rows] == entries
+    assert cc.CELL_JSON_MARK in text   # 文本列的类型不符走标记
+
+
 def test_no_business_names_hardcoded() -> None:
     """通用性护栏：编解码文件不得出现任何真实内容包业务模块/字段名。"""
     import inspect

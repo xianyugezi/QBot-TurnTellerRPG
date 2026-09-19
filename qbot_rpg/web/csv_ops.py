@@ -89,7 +89,7 @@ def export_filename(pack: object, module: object) -> str:
     return f"{safe}.csv"
 
 
-def _entry_extra_keys(etype: str, data: object, schema: CsvSchema) -> List[str]:
+def _entry_extra_keys(value_mode: str, data: object, schema: CsvSchema) -> List[str]:
     """包数据里出现、元数据未登记的键（决定 extra 列；导出/导入各算一次）。"""
     known = {c.key for c in schema.columns}
     out: List[str] = []
@@ -102,12 +102,12 @@ def _entry_extra_keys(etype: str, data: object, schema: CsvSchema) -> List[str]:
         seen.add(k)
         out.append(k)
 
-    if etype == "list" and isinstance(data, list):
+    if value_mode == "fields" and isinstance(data, list):
         for elem in data:
             if isinstance(elem, Mapping):
                 for k in elem:
                     _add(k)
-    elif etype == "map_obj" and isinstance(data, Mapping):
+    elif value_mode == "map_obj" and isinstance(data, Mapping):
         for val in data.values():
             if isinstance(val, Mapping):
                 for k in val:
@@ -149,7 +149,7 @@ def export_csv(pack: object, module: object, *,
         env["pack"] = str(pack)
         return env
     base_schema = csv_codec.schema_for(mmeta, entry_type=etype)
-    extras = _entry_extra_keys(etype, data, base_schema)
+    extras = _entry_extra_keys(base_schema.value_mode, data, base_schema)
     schema = csv_codec.schema_for(mmeta, entry_type=etype, extra_keys=extras)
 
     entries: List[Tuple[str, object]] = []
@@ -346,7 +346,7 @@ def import_csv(pack: object, module: object, raw: object, *,
 
     text, encoding = decode_bytes(raw)
     base_schema = csv_codec.schema_for(mmeta, entry_type=etype)
-    extras = _entry_extra_keys(etype, data, base_schema)
+    extras = _entry_extra_keys(base_schema.value_mode, data, base_schema)
     schema = csv_codec.schema_for(mmeta, entry_type=etype, extra_keys=extras)
     # 让 schema.module 参与人话提示
     schema = CsvSchema(module=mod, entry_type=schema.entry_type, key_field=schema.key_field,
@@ -455,14 +455,19 @@ def import_csv(pack: object, module: object, raw: object, *,
     # 既有整包校验门禁：红拦 → 零写入零备份
     report = check_pack(candidate_modules, table)
     if report.errors:
+        # 红拦全量上报（related_only=False：整包里任何一处红拦都阻断本批导入，
+        # 不能只报本模块——与 save_entry 的 _split_report 同一口径）。
         reds = editor_ops._decorate(
             atomic_store.humanize_errors(report.errors),
             {"module": mod, "entry_id": "", "base": {}, "manifest": manifest,
              "declared": declared, "name": label, "slot": None},
-            api._check_component(mod, "模块名"), related_only=True)
+            api._check_component(mod, "模块名"), related_only=False)
         env.update(ok=False, level="red", errors=reds,
-                   message=(f"整包校验未通过：本次未写入任何文件"
-                            f"（成功 0 条 / 跳过 {len(skipped)} 条 / 失败 {len(reds)} 条）。"))
+                   summary={"total": total, "success": 0,
+                            "skipped": len(skipped), "failed": len(reds)},
+                   message=(f"整包校验未通过：本次未写入任何文件（内容包未改动、未生成备份）"
+                            f"（成功 0 条 / 跳过 {len(skipped)} 条 / 失败 {len(reds)} 条，"
+                            f"共 {total} 行）。"))
         return env
 
     backup = atomic_store.backup_modules(pack_dir, [mod])

@@ -14,6 +14,24 @@
 
 ### Added
 
+- **批48（2026-09-20）**：**符文 2/3 阶特殊效果 + 战斗接线 + 3 合 1 端到端**（口径文档
+  43-C/43-D；原案 §9 R6/R7/R8），含口径 §〇 结论 7 两处**机制缺口**修复。
+  **缺口①重伤（治疗削减）**：`core/effects.py` 新增 `HEAL_TAKEN_STAT` 语义键 + 唯一聚合收口
+  `status_stat_modifier_sum`（**复用既有 `stat_modifier` 状态动作族**，不新造第二套减益通道），
+  `heal` L0 动作在**治疗计算处**按 `1+heal_taken/100` 消费（下限 0、S6 封顶可配）。
+  **缺口②层数型增益**：`_aggregate_boost` 改为按状态实例 `stacks` **乘算**（上限 = 状态包声明
+  `max_stack`，缺省回落 `config.stack_default_max`）——聚合体下沉 `effects.status_stat_modifier_sum`
+  （battle 只保留 S6/S7 封顶）；附**逐字段回归对拍**（批48 前算法逐字复制为基准，非 stack 路径全等）。
+  **战斗接线**：`core/runes.py` 新增 `rune_effect_refs_of` / `active_rune_effect_refs`，
+  `EquipmentEngine.active_rune_effects`（同一 worn 枚举 + 同一 `active_rune_sockets`，副手失活继承），
+  `dispatch_event` 新增 `extra_candidates`（缺省 None 零破坏），`BattleEngine._rune_candidates` 按侧/时点
+  执行符文声明效果（`combatant.rune_effects` 随快照往返；无符文不新增键）；符文施加来源按次区分
+  `侧@行动序号` → 既有 S3 stack 逐次叠层（**不改 `apply_status` 行为**）。
+  **3 阶偏向性**：`bias={affinity,bonus_pct}`，宿主主/副相性（批38 `core/affinity`）命中 → 数值
+  ×(1+bonus_pct/100)（RUNE-07 形状校验）。**3 合 1 端到端 + 闸**：`_exec_rune` 新增
+  `synth_allowed=false → runes_deep_locked`、`settings.deep_craft.enabled` 非 true → `runes_disabled`
+  （ctx 无该段不额外收紧）；1→2→3 逐阶、禁跳级、失败原子回滚。页脚批次串 + 文档同步。
+
 - **批47（2026-09-20）**：**符文 1 阶数值 + 跨装备类型差异生效**（口径文档 43-B；原案 §9 R2/R4）
   —— `core/runes.py` 新增 1 阶数值**求值层** `rune_stats_of` / `sum_rune_stats`（`by_equip_type`
   的 default + **`items.type`** 覆盖差异解析**只在此处发生**；键白名单 = `GEAR_NUMERIC_KEYS`

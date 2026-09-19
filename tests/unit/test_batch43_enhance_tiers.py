@@ -443,6 +443,16 @@ def test_validate_rejects_bad_span() -> None:
     assert any(k == "V6" for _, k, _ in rep.errors)
 
 
+def test_editor_meta_replaces_cap_field() -> None:
+    """编辑器上限表可配可见：旧键下线、新表 + 桥接 + 跨度登记。"""
+    from qbot_rpg.content.field_meta import default_field_meta_table
+
+    kids = default_field_meta_table().modules["enhance"].fields["settings"].children
+    assert "max_by_rarity" not in kids
+    assert {"max_by_quality_level", "legacy_quality_level_by_rarity",
+            "special_affix_span"} <= set(kids)
+
+
 def test_validate_passes_default_schema() -> None:
     rep = _Report()
     validate_enhance(_raw({}), rep)

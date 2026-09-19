@@ -46,6 +46,7 @@ def create_app(pack: Optional[str] = None, root: Optional[str] = None,
     _ensure_repo_on_path()
     from qbot_rpg.web import api  # noqa: E402  （路径注入后导入，避免 E402）
     from qbot_rpg.web import editor_ops  # noqa: E402
+    from qbot_rpg.web import csv_ops  # noqa: E402  （批34：通用 CSV 导入导出）
     from qbot_rpg.content import pack_transfer  # noqa: E402  （导入体积上限的单一出处）
     from qbot_rpg.assembly import editor_aliases  # noqa: E402  （批19 #7：别名视图在装配层）
 
@@ -249,10 +250,39 @@ def create_app(pack: Optional[str] = None, root: Optional[str] = None,
             body, root=content_root, role=app.state.role,
             on_conflict=str(on_conflict or ""), new_id=(new_id or None))
 
+    # -------- 批34 通用 CSV：模块级导出 / 导入（框架 §6.7/§6.11/§6.12-05/§6.12-20） --------
+    @app.get("/api/pack/{pack_id}/module/{module}/export_csv")
+    def api_export_csv(pack_id: str, module: str):  # type: ignore[no-untyped-def]
+        """导出该模块 → 浏览器下载 CSV（UTF-8 带 BOM）。只读；GM 只读身份也允许。"""
+        res = csv_ops.export_csv(pack_id, module, root=content_root)
+        if not res.get("ok"):
+            raise api.BadRequest(str(res.get("message") or "CSV 导出失败。"))
+        filename = str(res["filename"])
+        return Response(
+            content=str(res["text"]), media_type="text/csv; charset=utf-8",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+                "X-CSV-Filename": filename,
+            })
+
+    @app.post("/api/pack/{pack_id}/module/{module}/import_csv")
+    async def api_import_csv(pack_id: str, module: str, request: Request,
+                             mode: str = "append", position: int = 0,
+                             on_conflict: str = "skip"):  # type: ignore[no-untyped-def]
+        """导入模块 CSV（请求体 = 文件原始字节；UTF-8 / GBK 自动识别）。
+
+        逐行引用校验 → 默认整批拒绝（零写入零备份）；冲突默认跳过（可显式覆盖）；
+        写盘走既有「校验 → 备份 → 原子写 → 回读复核 / 回退」链路。
+        GM 只读身份 → 403（`editor_ops.require_edit`）。
+        """
+        body = await request.body()
+        return csv_ops.import_csv(
+            pack_id, module, body, mode=mode, position=position,
+            on_conflict=on_conflict, root=content_root, role=app.state.role)
+
     @app.get("/")
     def index():  # type: ignore[no-untyped-def]
         return FileResponse(str(static_dir / "index.html"))
-
     app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
     return app
 

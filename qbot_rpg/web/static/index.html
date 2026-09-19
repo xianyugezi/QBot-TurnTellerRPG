@@ -896,6 +896,10 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
   margin-top: var(--sp-4); }
 .mp-note.ro { color: var(--warn); }
 #tf-import-result { white-space: pre-wrap; }
+/* 批34 · CSV 导入面板：单选项横排 + 位置输入宽度 */
+#csvpanel .mp-sub label { margin-right: var(--sp-4); white-space: nowrap; }
+#csv-position { width: 5em; }
+#csv-result { white-space: pre-wrap; }
 </style>
 </head>
 <body>
@@ -959,6 +963,11 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
       <div class="list-tools lt-new">
         <button class="ladd newbtn" id="btn-new" type="button"
           title="在当前模块新建一个条目：先给一个可编辑的建议 ID（即时校验唯一性），其余字段按元数据默认值初始化；创建走校验 + 原子写 + 自动备份">+ 新建条目</button>
+        <!-- 批34（框架 §6.7/§6.11/§6.12-05/§6.12-20）：模块级通用 CSV 导入导出 -->
+        <button class="btn" id="btn-csv-export" type="button" disabled
+          title="把当前模块导出成 CSV：列头 = 字段中文名(键)；列表/对象字段用 JSON 文本；UTF-8 带 BOM，Excel 双击不乱码；危险公式前缀会被中和。导出只读，不改内容包。">导出 CSV</button>
+        <button class="btn" id="btn-csv-import" type="button" disabled
+          title="从 CSV 批量导入当前模块：保持 CSV 行序（追加到末尾 / 插入到指定位置）；引用字段逐行校验，有错整批不写入；同 id 默认跳过（可显式选覆盖）。导入前自动备份。">导入 CSV</button>
       </div>
       <div class="list-tools">
         <div class="search"><input id="filter" placeholder="过滤当前模块（按名称/ID）" aria-label="过滤当前模块（本地，按名称或 ID）"></div>
@@ -997,7 +1006,7 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
       <div class="panel-body" id="p-body">
         <div class="empty">从左侧选择模块与条目。字段按内容包元数据渲染；改动先进草稿，保存时才校验并落盘。</div>
       </div>
-      <div class="panel-ft"><span>批33 · 撤销/重做</span></div>
+      <div class="panel-ft"><span>批34 · 通用 CSV</span></div>
     </section>
 
   </div>
@@ -1126,6 +1135,51 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
       <span class="mp-note">多包 / 冲突时：导入会先问你「换个名字」还是「覆盖」（覆盖前自动备份原包）。</span>
       <span class="sp"></span>
       <button class="btn" id="tf-done" data-modal-close type="button">完成</button>
+    </div>
+  </div>
+</div>
+
+<!-- 批34 · 模块级 CSV 导入：行序（追加/插入）+ 冲突（跳过/覆盖）+ 人话结果 -->
+<div id="csvpanel" class="mp-overlay" data-modal="csvpanel" hidden>
+  <div class="mp" role="dialog" aria-modal="true" aria-label="导入 CSV（批量录入当前模块）">
+    <div class="mp-hd">
+      <span class="mp-t">导入 CSV · <span id="csv-module-label">—</span></span>
+      <button class="mp-x" id="csv-close" data-modal-close type="button"
+        aria-label="关闭导入 CSV 面板">×</button>
+    </div>
+    <div class="mp-hint">用表格软件（Excel / WPS）打开导出的 CSV 拉表填数，再从这里导回来。
+      列头要和导出的字段一致；列表/对象字段填 JSON 文本；同 id 默认跳过，不会静默覆盖。</div>
+    <div class="mp-msg" id="csv-msg" hidden></div>
+    <div class="mp-sec">
+      <div class="mp-sec-t">选择文件</div>
+      <div class="bg-acts">
+        <input class="tf-file" id="csv-file" type="file"
+          accept=".csv,text/csv" aria-label="选择要导入的 CSV 文件">
+      </div>
+      <div class="mp-note" id="csv-file-note">还没有选择文件。编码随意（UTF-8 / GBK 自动识别）。</div>
+    </div>
+    <div class="mp-sec">
+      <div class="mp-sec-t">行序</div>
+      <div class="mp-sub">
+        <label><input type="radio" name="csv-mode" value="append" checked> 追加到末尾（默认）</label>
+        <label><input type="radio" name="csv-mode" value="insert"> 插入到指定位置（从 0 开始）</label>
+        <input id="csv-position" type="number" min="0" value="0" aria-label="插入位置（0 = 最前）">
+      </div>
+    </div>
+    <div class="mp-sec">
+      <div class="mp-sec-t">同 id 已存在</div>
+      <div class="mp-sub">
+        <label><input type="radio" name="csv-conflict" value="skip" checked> 跳过（默认，报告里列出）</label>
+        <label><input type="radio" name="csv-conflict" value="overwrite"> 覆盖（原地替换该条目）</label>
+      </div>
+    </div>
+    <div class="mp-note ro" id="csv-ro-note" hidden>当前身份为只读预览，不能导入（导出不受影响）；请切换为可编辑身份后再导入。</div>
+    <div class="mp-note" id="csv-result"></div>
+    <div class="mp-ft">
+      <span class="mp-note">导入 = 校验 → 自动备份 → 原子写 → 回读复核；任何一行有错则整批不写入、不生成备份。</span>
+      <span class="sp"></span>
+      <button class="btn primary" id="csv-run" type="button" disabled>导入</button>
+      <button class="btn" id="csv-done" data-modal-close type="button">完成</button>
     </div>
   </div>
 </div>
@@ -2411,6 +2465,52 @@ function modalBind(id, opts) {
 });
 /* EDITOR_TRANSFER_END */
 
+/* EDITOR_CSV_BEGIN */
+// 批34 · 模块级 CSV 导入导出纯逻辑（无 DOM 依赖；浏览器挂 EditorCsv，node 走 module.exports）。
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) { module.exports = factory(); }
+  else { root.EditorCsv = factory(); }
+})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+  var EXT = ".csv";
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  // 导出：只读身份也能用；有模块即可。导入：必须可编辑 + 有模块 + 选了文件。
+  function canExport(moduleKey) { return !!moduleKey; }
+  function canImport(editable, moduleKey, hasFile) { return !!editable && !!moduleKey && !!hasFile; }
+  function summary(res) {
+    var s = (res && res.summary) || {};
+    var counts = "成功 " + (s.success || 0) + " 条 / 跳过 " + (s.skipped || 0)
+      + " 条 / 失败 " + (s.failed || 0) + " 条（共 " + (s.total || 0) + " 行）";
+    if (!res) { return { level: "red", text: "导入失败：没有收到有效结果。" }; }
+    if (!res.ok) { return { level: "red", text: (res.message || "导入失败。") }; }
+    return { level: res.level === "yellow" ? "yellow" : "ok",
+             text: (res.message || "导入完成。") + " " + counts };
+  }
+  function detailsText(res) {
+    if (!res) { return ""; }
+    var lines = [];
+    var s = (res.summary) || {};
+    lines.push("成功 " + (s.success || 0) + " 条 · 跳过 " + (s.skipped || 0)
+      + " 条 · 失败 " + (s.failed || 0) + " 条（共 " + (s.total || 0) + " 行）");
+    (res.errors || []).forEach(function (e) {
+      lines.push("· 失败：" + (e.message || e.code || ""));
+    });
+    (res.skipped || []).forEach(function (e) {
+      lines.push("· 跳过：第 " + (e.line || "?") + " 行 id「" + (e.entry_id || "")
+        + "」（" + (e.reason || "同 id 已存在") + "）");
+    });
+    ((res.notes) || []).forEach(function (n) { lines.push("· 提示：" + n); });
+    return lines.join("\n");
+  }
+  function fileName(moduleKey) { return String(moduleKey || "module") + EXT; }
+  return { EXT: EXT, canExport: canExport, canImport: canImport, summary: summary,
+           detailsText: detailsText, fileName: fileName, esc: esc };
+});
+/* EDITOR_CSV_END */
+
 /* EDITOR_BG_BEGIN */
 // 批10 · 自定义背景图纯逻辑（无 DOM 依赖；浏览器挂 EditorBg，node 走 module.exports）。
 // 存储策略：**浏览器本地，绝不上传服务器**（无鉴权面、零服务端改动，也不写任何内容包文件）。
@@ -2911,6 +3011,9 @@ function markDirty() {
   el("btn-delete").disabled = !state.entry || !state.editable || state.busy || isNew;
   // 新建入口：只读身份 / 未选模块 / 请求中不可用（与批2 权限位一致）
   el("btn-new").disabled = !state.module || !state.editable || state.busy;
+  // 批34：模块级 CSV —— 导出只读可用；导入必须可编辑（与后端 require_edit 一致）
+  el("btn-csv-export").disabled = !state.module || state.busy;
+  el("btn-csv-import").disabled = !state.module || !state.editable || state.busy;
   refreshCreateButton();
   // 每个表单上下文各自标脏（主表单 + 关联分区条目；字段键只在各自上下文里比对）
   allForms().forEach(function (ctx) {
@@ -7535,6 +7638,88 @@ el("transferpanel").addEventListener("click", function (ev) {
     el("tf-import-result").innerHTML = "";
   }
 });
+// ---------------------------------------------------------------------------
+// 批34（框架 §6.7 / §6.11 / §6.12-05 / §6.12-20）· 模块级 CSV 导出 / 导入
+// 导出只读（GM 也可用）；导入必须可编辑身份（后端 require_edit 403，前端同时置灰）。
+// ---------------------------------------------------------------------------
+var CSV = { busy: false };
+
+function csvMsg(level, text) {
+  var box = el("csv-msg");
+  if (!text) { box.hidden = true; box.textContent = ""; box.className = "mp-msg"; return; }
+  box.hidden = false; box.className = "mp-msg " + (level || ""); box.textContent = text;
+}
+function csvChecked(name, dflt) {
+  var hit = document.querySelector('input[name="' + name + '"]:checked');
+  return hit ? hit.value : dflt;
+}
+function renderCsvPanel() {
+  el("csv-module-label").textContent = state.module || EMPTY_TEXT;
+  var f = el("csv-file").files && el("csv-file").files[0];
+  el("csv-file-note").textContent = f
+    ? ("已选择：" + f.name + "（" + Math.max(1, Math.round(f.size / 1024)) + " KB）")
+    : "还没有选择文件。编码随意（UTF-8 / GBK 自动识别）。";
+  el("csv-ro-note").hidden = !!state.editable;
+  el("csv-run").disabled = !EditorCsv.canImport(state.editable, state.module, !!f) || CSV.busy;
+}
+function openCsvPanel() {
+  if (!state.module) { return; }
+  renderCsvPanel();
+  csvMsg("", "");
+  el("csv-result").textContent = "";
+  return modalOpen("csvpanel", el("btn-csv-import"));
+}
+function doExportCsv() {
+  var mod = state.module;
+  if (!mod || CSV.busy) { return; }
+  CSV.busy = true; markDirty();
+  fetch("/api/pack/" + enc(state.pack) + "/module/" + enc(mod) + "/export_csv",
+        { headers: { "Accept": "text/csv" } })
+    .then(function (r) {
+      if (!r.ok) {
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          throw new Error((j && j.error) || ("HTTP " + r.status));
+        });
+      }
+      var name = EditorTransfer.dispFilename(r.headers.get("Content-Disposition"))
+        || EditorCsv.fileName(mod);
+      return r.blob().then(function (blob) { downloadBlob(blob, name); return name; });
+    })
+    .then(function (name) { csvMsg("ok", "已导出并开始下载：" + name); })
+    .catch(function (err) { csvMsg("red", "导出失败：" + err.message); })
+    .then(function () { CSV.busy = false; markDirty(); });
+}
+function doImportCsv() {
+  var mod = state.module;
+  var f = el("csv-file").files && el("csv-file").files[0];
+  if (!mod || !f || CSV.busy) { csvMsg("red", "请先选择要导入的 CSV 文件。"); return; }
+  var q = "mode=" + encodeURIComponent(csvChecked("csv-mode", "append"))
+    + "&position=" + encodeURIComponent(el("csv-position").value || "0")
+    + "&on_conflict=" + encodeURIComponent(csvChecked("csv-conflict", "skip"));
+  var url = "/api/pack/" + enc(state.pack) + "/module/" + enc(mod) + "/import_csv?" + q;
+  CSV.busy = true; renderCsvPanel(); csvMsg("", "");
+  return f.arrayBuffer().then(function (buf) {
+    return fetch(url, { method: "POST",
+      headers: { "Content-Type": "text/csv", "Accept": "application/json" }, body: buf });
+  }).then(function (r) {
+    return r.json().catch(function () { return { ok: false, message: "HTTP " + r.status }; })
+      .then(function (j) { return j; });
+  }).then(function (res) {
+    var out = EditorCsv.summary(res);
+    csvMsg(out.level, out.text);
+    el("csv-result").textContent = EditorCsv.detailsText(res);
+    if (res && res.ok) { return loadEntries(); }
+    return null;
+  }).catch(function (err) { csvMsg("red", "导入失败：" + err.message); })
+    .then(function () { CSV.busy = false; renderCsvPanel(); });
+}
+
+modalBind("csvpanel", {});
+el("btn-csv-export").addEventListener("click", doExportCsv);
+el("btn-csv-import").addEventListener("click", openCsvPanel);
+el("csv-file").addEventListener("change", renderCsvPanel);
+el("csv-run").addEventListener("click", doImportCsv);
+
 document.addEventListener("keydown", function (e) {
   if (modalEsc(e)) { return; }   // Esc 关闭当前弹层并把焦点还给触发按钮
   modalTrap(e);                  // Tab 在弹层内循环（不跑到底层页面）

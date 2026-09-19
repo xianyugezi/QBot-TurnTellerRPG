@@ -473,12 +473,10 @@ def effect_axis_stem(axis: str) -> str:
 
 def _as_effect_number(value: Any) -> Optional[float]:
     """声明段数值清洗：布尔/非数值/NaN/Inf → None（交由校验器黄提示或回落缺省）。"""
-    import math as _math
-
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         return None
     fv = float(value)
-    if _math.isnan(fv) or _math.isinf(fv):
+    if math.isnan(fv) or math.isinf(fv):
         return None
     return fv
 

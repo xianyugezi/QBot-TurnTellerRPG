@@ -32,7 +32,7 @@ from __future__ import annotations
 
 import math
 import re
-from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 from qbot_rpg.content.field_meta import DEFAULT_CURRENCY_IDS, default_field_meta_table
 from qbot_rpg.data.affinity_keys import (

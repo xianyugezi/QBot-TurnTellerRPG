@@ -29,7 +29,13 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
-from qbot_rpg.core.affinity import accumulate_affinity
+from qbot_rpg.core.affinity import (
+    accumulate_affinity,
+    normalize_affinity_config,
+    rank_affinities,
+    resolve_affinity_effect,
+    resolve_available_entries,
+)
 
 __all__ = [
     "equipment_level",
@@ -37,6 +43,10 @@ __all__ = [
     "quality_level_of",
     "draw_quality",
     "craft_cost",
+    "resolve_main_sub",
+    "draw_count",
+    "plan_affixes",
+    "resolve_passives",
     "plan_craft",
     "ROLE_MAIN",
     "ROLE_FREE",
@@ -381,6 +391,277 @@ def craft_cost(
 
 
 # ---------------------------------------------------------------------------
+# 5b) 属性 / 套装词条 / 被动的相性池抽取（原案 §3/§4/§8/§11；批42 · C）
+# ---------------------------------------------------------------------------
+# 池词条行**载荷键**（框架 schema；内容包在 settings.affinity_pools[].entries[] 声明）：
+#   · `stat`       → 随机属性候选（键 = 属性键；数值取同行 `value`）
+#   · `set_affix`  → 随机套装词条候选（值 = 套装词条 id）
+# 池的构造 / 联动覆盖 / requires_affinity 过滤 **全部**由
+# `affinity.resolve_available_entries` 承担（唯一入口）——本模块只在**返回值**上按载荷键
+# 分流，不重算池、不本地匹配相性。
+ENTRY_STAT: str = "stat"
+ENTRY_SET_AFFIX: str = "set_affix"
+ENTRY_WEIGHT: str = "weight"
+
+
+def _entry_payload(row: Any, key: str) -> Optional[str]:
+    """池词条行 → 载荷值（非空 str 才算命中，否则 None）。"""
+    v = _as_map(row).get(key)
+    return v if isinstance(v, str) and v else None
+
+
+def resolve_main_sub(
+    blueprint: Mapping[str, Any],
+    materials: Sequence[Mapping[str, Any]],
+    *,
+    affinity_order: Sequence[Any] = (),
+    affinity_reactions: Sequence[Any] = (),
+) -> Dict[str, Any]:
+    """图纸 + 材料相性 → 主/副相性（原案 §8「最高=主、第二=副」）。
+
+    入参：
+      · blueprint：图纸条目（含 `affinities: {相性id: 数值}`）。
+      · materials：投料归一后的材料行（**按投入顺序**；每行含 `affinities`）。
+      · affinity_order：相性声明顺序（内容包 `settings.affinities[]`）——并列破平用。
+      · affinity_reactions：`settings.affinity_reactions`（冲突/增幅/反转）。
+    出参：`{main, sub, ranked, values}`；无正值 → main/sub 均 None。
+
+    口径（工程补白 C-1，原案未写图纸贡献的位置）：**图纸相性作为前置贡献**，其后按材料
+    投入顺序追加；结算复用 `affinity.accumulate_affinity`（唯一互动实现）。并列时由
+    `affinity.rank_affinities` 按 `affinity_order`（缺省 id 升序）确定性破平。
+    """
+    contribs: List[Mapping[str, Any]] = []
+    bp_aff = _as_map(_as_map(blueprint).get("affinities"))
+    if bp_aff:
+        contribs.append(bp_aff)
+    for m in materials:
+        aff = _as_map(_as_map(m).get("affinities"))
+        if aff:
+            contribs.append(aff)
+    values = accumulate_affinity(contribs, affinity_reactions)
+    ranked = rank_affinities(values, affinity_order)
+    return {
+        "main": ranked["main"],
+        "sub": ranked["sub"],
+        "ranked": ranked["ranked"],
+        "values": values,
+    }
+
+
+def _count_bounds(raw: Any, fallback: Any) -> Tuple[int, int]:
+    """条数声明 `{min,max}` → (lo, hi)；行缺省回落 fallback（craft_rules 默认）；
+    非法/负值截 0；hi<lo 归一为 lo（不外抛，校验器红拦非法声明）。"""
+    m = _as_map(raw)
+    d = _as_map(fallback)
+    lo = _as_int(m.get("min"))
+    if lo is None:
+        lo = _as_int(d.get("min"))
+    hi = _as_int(m.get("max"))
+    if hi is None:
+        hi = _as_int(d.get("max"))
+    lo = 0 if lo is None or lo < 0 else lo
+    hi = lo if hi is None or hi < lo else hi
+    return lo, hi
+
+
+def draw_count(rng: Any, raw: Any, fallback: Any = None) -> int:
+    """随机条数：包声明 `{min,max}` → 注入随机流均匀取整数。
+
+    min==max → 恒定该值；缺省/非法 → 回落 fallback；rng 不可用 → 取 min（确定性）。
+    **条数一律包声明**（图纸字段优先，缺省用 `craft_rules.random_*_count`）。
+    """
+    lo, hi = _count_bounds(raw, fallback)
+    if hi <= lo or rng is None:
+        return lo
+    return lo + int(_rand_unit(rng) * float(hi - lo + 1))
+
+
+def _pick_weighted(
+    rng: Any,
+    rows: Sequence[Mapping[str, Any]],
+    payload_key: str,
+    count: int,
+    exclude: Sequence[str] = (),
+) -> List[Mapping[str, Any]]:
+    """按 `weight` 权重**不放回**抽 count 行（同一载荷键至多 1 行）。
+
+    · 权重全 0/缺失 → 取候选首项（确定性，**不引入未声明概率**），仍逐项去重；
+    · 候选不足 → 抽满候选为止（实际条数 = min(声明条数, 候选数)，不补空）；
+    · exclude 内的载荷键不参与（随机套装词条不复抽固定词条）。
+    """
+    pool = list(rows)
+    picked: List[Mapping[str, Any]] = []
+    taken = {x for x in exclude if isinstance(x, str) and x}
+    while len(picked) < count:
+        avail = [r for r in pool if _entry_payload(r, payload_key) not in taken]
+        if not avail:
+            break
+        weights: List[float] = []
+        for r in avail:
+            w = _as_num(_as_map(r).get(ENTRY_WEIGHT))
+            weights.append(0.0 if w is None or w < 0 else w)
+        total = sum(weights)
+        if total <= 0:
+            idx = 0
+        else:
+            pick = _rand_unit(rng) * total
+            acc = 0.0
+            idx = len(avail) - 1
+            for i, w in enumerate(weights):
+                acc += w
+                if pick < acc:
+                    idx = i
+                    break
+        row = avail[idx]
+        picked.append(row)
+        taken.add(str(_entry_payload(row, payload_key)))
+        pool = [r for r in pool if r is not row]
+    return picked
+
+
+def resolve_passives(
+    blueprint: Mapping[str, Any],
+    trait_defs: Optional[Mapping[str, Any]],
+    main: Optional[str],
+    sub: Optional[str],
+) -> List[str]:
+    """模板固定被动 + 相性变更 → 本次实例的被动 id 序列（原案 §11；批42 · C）。
+
+    · 图纸 `blueprint_passive`（str 或 list）→ 逐条取 `traits.json` 定义；
+    · 定义带 `affinity_variants` → **确定性**替换：调 `affinity.resolve_affinity_effect`
+      （`"<main>|<sub>"` 优先、退 `"<main>"`；无命中 → 保留原被动）；
+    · 无 `traits` 定义/无变体 → 原被动 id 原样保留（框架不臆造）；
+    · 结果按出现顺序去重。**打造时求值、冻进实例**（同模板多件可不同）。
+    """
+    raw = _as_map(blueprint).get("blueprint_passive")
+    declared: List[str] = []
+    if isinstance(raw, str):
+        declared = [raw] if raw else []
+    else:
+        declared = [x for x in _as_list(raw) if isinstance(x, str) and x]
+    defs = _as_map(trait_defs)
+    out: List[str] = []
+    for pid in declared:
+        variants = _as_map(defs.get(pid)).get("affinity_variants")
+        target = resolve_affinity_effect(variants, main, sub) if variants else None
+        if not isinstance(target, str) or not target:
+            target = pid
+        if target not in out:
+            out.append(target)
+    return out
+
+
+def plan_affixes(
+    *,
+    blueprint: Mapping[str, Any],
+    materials: Sequence[Mapping[str, Any]],
+    config: Mapping[str, Any],
+    rng: Any = None,
+    affinity_config: Any = None,
+    affinity_reactions: Sequence[Any] = (),
+    level: Optional[int] = None,
+    trait_defs: Optional[Mapping[str, Any]] = None,
+) -> Dict[str, Any]:
+    """单次打造的完整词条计划：**固定照抄 + 随机从相性池抽**（原案 §3/§4/§8/§11）。
+
+    入参：
+      · blueprint：图纸条目（`blueprint_fixed_stats` / `blueprint_random_stat_count` /
+        `blueprint_fixed_set_affix` / `blueprint_random_set_affix_count` /
+        `blueprint_random_set_affix_pool` / `blueprint_passive` / `affinities`）。
+      · materials：投料归一后的材料行（按投入顺序，含 `affinities`）。
+      · config：`read_deep_craft_settings` 归一配置（缺省条数取 `craft_rules`）。
+      · rng：玩家级随机流（批40 H5）；缺省 → 条数取 min、抽取退化取首项。
+      · affinity_config：settings（或已归一相性配置）——池查询唯一入口
+        `affinity.resolve_available_entries` 的入参。
+      · level：装备等级（过滤池词条 `min_level`）。
+      · trait_defs：`ctx["traits"]`（被动定义表；缺省 → 被动 id 原样保留）。
+    出参（全部纯数据，可 JSON）：
+      `{affinity{main,sub,ranked,values}, fixed_stats, random_stats, stats_bonus,
+        fixed_set_affixes, random_set_affixes, set_affixes, passives,
+        random_stat_count, random_set_affix_count, stat_pool_size, set_affix_pool_size}`。
+
+    边界口径（原案 §12「本质一个池子，没有对应相性就抽不出来」）：
+      · **无相性 → 要求相性的词条抽不出**（`resolve_available_entries` 的
+        `requires_affinity ⊆ {main,sub}` 过滤；通用池中不要求相性的词条仍可抽）；
+      · 联动命中（main+sub）→ 主专属池被 `override_pool` 覆盖（affinity 层已实现）；
+      · 候选不足声明条数 → 实际条数 = min(声明, 候选)，**不补空**；
+      · 随机套装词条不复抽固定套装词条（exclude 固定项）。
+    """
+    bp = _as_map(blueprint)
+    rules = _as_map(_as_map(config).get("craft_rules"))
+    cfg = normalize_affinity_config(affinity_config)
+    aff = resolve_main_sub(
+        bp, materials,
+        affinity_order=cfg.get("affinity_list") or (),
+        affinity_reactions=affinity_reactions,
+    )
+    # 池查询唯一入口（通用池 ∪ 主专属池；联动命中 → 覆盖；requires_affinity 过滤）。
+    entries = resolve_available_entries(cfg, aff["main"], aff["sub"], level)
+
+    # ---- 固定项：按图纸声明**照抄**（不缩放、不改键；数值缩放规则见 §C 待裁决）----
+    fixed_stats: Dict[str, float] = {}
+    for row in _as_list(bp.get("blueprint_fixed_stats")):
+        m = _as_map(row)
+        stat = m.get("stat")
+        val = _as_num(m.get("value"))
+        if isinstance(stat, str) and stat and val is not None:
+            fixed_stats[stat] = fixed_stats.get(stat, 0.0) + val
+    fixed_sets: List[str] = []
+    _fs = bp.get("blueprint_fixed_set_affix")
+    if isinstance(_fs, str) and _fs:
+        fixed_sets.append(_fs)
+
+    # ---- 候选分流（只读 resolve_available_entries 的返回值，不重算池）----
+    stat_rows = [e for e in entries if _entry_payload(e, ENTRY_STAT)]
+    _pool_filter = bp.get("blueprint_random_set_affix_pool")
+    if isinstance(_pool_filter, str) and _pool_filter:
+        # 声明池 id → 在**已解析候选**中再按 `_pool` 收窄（工程补白 C-2：不外开第二条池查询；
+        # 声明池不在「通用 ∪ 专属/联动」可达集内 → 无候选 = 抽不出）。
+        set_rows = [e for e in entries if _entry_payload(e, ENTRY_SET_AFFIX)
+                    and str(_as_map(e).get("_pool") or "") == _pool_filter]
+    else:
+        set_rows = [e for e in entries if _entry_payload(e, ENTRY_SET_AFFIX)]
+
+    # ---- 条数（包声明；图纸优先，缺省回落 craft_rules）----
+    want_stat = draw_count(rng, bp.get("blueprint_random_stat_count"),
+                           rules.get("random_stat_count"))
+    want_set = draw_count(rng, bp.get("blueprint_random_set_affix_count"),
+                          rules.get("random_set_affix_count"))
+
+    # ---- 抽取（权重、不放回、同载荷键去重）----
+    picked_stats = _pick_weighted(rng, stat_rows, ENTRY_STAT, want_stat)
+    picked_sets = _pick_weighted(rng, set_rows, ENTRY_SET_AFFIX, want_set, fixed_sets)
+
+    bonus = dict(fixed_stats)
+    random_stats: List[Dict[str, Any]] = []
+    for row in picked_stats:
+        stat = _entry_payload(row, ENTRY_STAT)
+        val = _as_num(_as_map(row).get("value"))
+        val = 0.0 if val is None else val
+        random_stats.append({"stat": stat, "value": val,
+                             "pool": str(_as_map(row).get("_pool") or "")})
+        bonus[str(stat)] = bonus.get(str(stat), 0.0) + val
+
+    random_sets = [str(_entry_payload(row, ENTRY_SET_AFFIX)) for row in picked_sets]
+    set_affixes = fixed_sets + [s for s in random_sets if s not in fixed_sets]
+
+    return {
+        "affinity": aff,
+        "fixed_stats": fixed_stats,
+        "random_stats": random_stats,
+        "stats_bonus": bonus,
+        "fixed_set_affixes": fixed_sets,
+        "random_set_affixes": random_sets,
+        "set_affixes": set_affixes,
+        "passives": resolve_passives(bp, trait_defs, aff["main"], aff["sub"]),
+        "random_stat_count": want_stat,
+        "random_set_affix_count": want_set,
+        "stat_pool_size": len(stat_rows),
+        "set_affix_pool_size": len(set_rows),
+    }
+
+
+# ---------------------------------------------------------------------------
 # 6) 主流程计划（纯校验 + 计算；拒绝只给 reason）
 # ---------------------------------------------------------------------------
 def _slot_role_of(mat_id: str, mat: Mapping[str, Any], slots: Sequence[Any]) -> List[str]:
@@ -410,9 +691,12 @@ def plan_craft(
     material_defs: Mapping[str, Any],
     learned: bool = False,
     rng: Any = None,
+    affinity_config: Any = None,
+    trait_defs: Optional[Mapping[str, Any]] = None,
     affinity_reactions: Sequence[Any] = (),
 ) -> Dict[str, Any]:
-    """深度打造主流程（纯函数）：校验 → 等级 → 品质经验 → 品质等级 → 品质抽取 → cost。
+    """深度打造主流程（纯函数）：校验 → 等级 → 品质经验 → 品质等级 → 品质抽取 → cost
+    → **词条计划（固定照抄 + 随机相性池抽取 + 被动相性变体）**。
 
     入参：
       · blueprint：图纸条目（items 条目，含 blueprint_* 字段与 affinities）。
@@ -421,10 +705,15 @@ def plan_craft(
       · material_defs：`{材料id: 条目}`（material_level/material_quality/craft_cost/
         affinities/material_tags/price 读取源）。
       · learned：该图纸是否已学习（true 才可打造）。
-      · rng：玩家级随机流（批40 H5）；quality 抽取与随机属性用。
+      · rng：玩家级随机流（批40 H5）；quality 抽取与随机词条用。
+      · affinity_config：settings（或已归一相性配置）——相性池查询唯一入口
+        `affinity.resolve_available_entries` 的入参（批42 · C）。
+      · trait_defs：`ctx["traits"]`（装备被动定义表；缺省 → 被动 id 原样保留）。
       · affinity_reactions：`settings.affinity_reactions`（互动乘子/相性累计）。
     出参：`{ok, reason, level, quality_exp, quality_level, quality, color_row, cost,
-      cost_cap, kinds, materials[...], main_level}`；拒绝 `{ok: False, reason, ...}`。
+      cost_cap, kinds, materials[...], main_level, affinity, fixed_stats, random_stats,
+      stats_bonus, fixed_set_affixes, random_set_affixes, set_affixes, passives, ...}`；
+      拒绝 `{ok: False, reason, ...}`。
     """
     rules = _as_map(config.get("craft_rules"))
     grades = _as_list(config.get("blueprint_grades"))
@@ -532,6 +821,17 @@ def plan_craft(
     if floor > 0 and cc["cost"] < floor:
         return {"ok": False, "reason": REJECT_COST_UNDER, "cost": cc["cost"], "floor": floor}
 
+    # ---- 词条计划（批42 · C）：固定照抄 + 随机相性池 + 被动相性变体 ----
+    # 放在 quality/cost 之后：随机流的**前几次取值语义不变**（quality 抽取仍取首个随机数），
+    # 批41 既有结果对拍不受影响。异常不阻断主流程（退化为无随机词条）。
+    try:
+        affix_plan = plan_affixes(
+            blueprint=bp, materials=rows, config=config, rng=rng,
+            affinity_config=affinity_config, affinity_reactions=affinity_reactions,
+            level=lv_out, trait_defs=trait_defs)
+    except Exception:  # noqa: BLE001 —— 词条抽取异常不阻断主流程
+        affix_plan = {}
+
     return {
         "ok": True,
         "reason": None,
@@ -548,4 +848,16 @@ def plan_craft(
         "kinds": len(rows),
         "main_level": main_parts[0]["level"] if main_parts else None,
         "materials": rows,
+        # ---- 批42 · C：相性 / 固定+随机属性 / 套装词条 / 被动 ----
+        "affinity": affix_plan.get("affinity") or {
+            "main": None, "sub": None, "ranked": [], "values": {}},
+        "fixed_stats": affix_plan.get("fixed_stats") or {},
+        "random_stats": affix_plan.get("random_stats") or [],
+        "stats_bonus": affix_plan.get("stats_bonus") or {},
+        "fixed_set_affixes": affix_plan.get("fixed_set_affixes") or [],
+        "random_set_affixes": affix_plan.get("random_set_affixes") or [],
+        "set_affixes": affix_plan.get("set_affixes") or [],
+        "passives": affix_plan.get("passives") or [],
+        "random_stat_count": affix_plan.get("random_stat_count", 0),
+        "random_set_affix_count": affix_plan.get("random_set_affix_count", 0),
     }

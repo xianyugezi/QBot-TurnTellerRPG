@@ -103,12 +103,14 @@ def _clean(token: Any) -> str:
 def _material_tokens(parsed: Any) -> List[Tuple[str, int]]:
     """投入材料 token → [(名称, 件数)]（`名称*N`；缺数量按 1）。
 
-    来源：解析器结构化 `targets`（逗号列表）优先，缺省回落到 `args[1:]`（空格分隔）。
+    来源：解析器结构化 `targets`（逗号列表）**优先且互斥**，缺省回落到 `args[1:]`
+    （空格分隔）——两者不叠加（列表 token 已在 `targets` 逐项展开，再取 args 会重复计料）。
     """
     raw: List[Any] = []
     if getattr(parsed, "targets", None):
         raw.extend(parsed.targets)
-    raw.extend((getattr(parsed, "args", None) or [])[1:])
+    else:
+        raw.extend((getattr(parsed, "args", None) or [])[1:])
     out: List[Tuple[str, int]] = []
     for tok in raw:
         name, _, q = str(tok).partition("*")

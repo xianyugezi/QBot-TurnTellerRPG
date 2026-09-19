@@ -217,3 +217,22 @@ def test_preview_without_materials(tmp_path: Path) -> None:
     ctx = _ctx_from_pack(pack)
     msg = cmd_deep_craft(_parsed(BP_NAME), ctx)
     assert BP_NAME in msg and "等级带" in msg and "cost 上限" in msg
+
+
+def test_comma_list_syntax_through_real_parser(tmp_path: Path) -> None:
+    """逗号列表语法经**真实解析器**：`/精造 图纸 主矿*1,副矿*1` → targets 逐项（不重复计料）。"""
+    from qbot_rpg.commands.parsers import DEFAULT_FREE_ARG_COMMANDS, parse_command
+
+    pack, _ = build_pack(_write_pack(tmp_path), None, None, 1)
+    ctx = _ctx_from_pack(pack)
+    cmd_deep_craft(_parsed("学习", BP_NAME), ctx)
+
+    parsed = parse_command(f"/{DEEP_CRAFT_CMD} {BP_NAME} {MAIN_NAME}*1,{FREE_NAME}*1",
+                           free_arg_commands=DEFAULT_FREE_ARG_COMMANDS)
+    assert parsed.error is None
+    assert parsed.targets == [f"{MAIN_NAME}*1", f"{FREE_NAME}*1"]
+    msg = cmd_deep_craft(parsed, ctx)
+    assert "打造成功" in msg
+    assert ctx["inventory"]["ore_main"] == 39
+    assert ctx["inventory"]["ore_free"] == 39
+

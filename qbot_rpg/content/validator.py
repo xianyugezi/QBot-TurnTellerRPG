@@ -44,7 +44,13 @@ from qbot_rpg.data.affinity_keys import (
     REACTION_KINDS,
     affinity_requires,
 )
-from qbot_rpg.data.gear_stats import GEAR_DISPLAY_KEYS
+from qbot_rpg.data.gear_stats import (
+    GEAR_DISPLAY_KEYS,
+    GEAR_EFFECT_KEYS,
+    PANEL_AXIS_STEMS,
+    effect_axis_stem,
+    normalize_effect_axes,
+)
 from qbot_rpg.content.models import (
     FieldMeta,
     FieldMetaTable,
@@ -649,6 +655,10 @@ class _Checker:
                 validate_items(self._modules, self)
             else:
                 validate_equipment(self._modules, self)
+        # 批50 · 特效轴地基：内容侧轴取值越界红拦（items/equipment 词条 + runes 数值档；
+        # 范围取 settings.effect_axes 有效声明，缺省 = 登记表建议范围）。
+        if module_name in ("items", "equipment", "runes"):
+            self._check_effect_axis_values(module_name, data)
         # 批18 效果扩展（gain_currency / learn_skill）：类型相关必填/范围/引用存在性
         # 专项（泛型 R-1/R-2/R-4 仍在下方逐条目跑；本钩子补「仅在该 type 下才要求」的键）。
         if module_name == "effects":
@@ -681,6 +691,9 @@ class _Checker:
             # + settings.monster_scaling（怪物 hp/atk/防御补偿）——结构/类型/区间红拦
             self._check_panel_budget(module_name, data)
             self._check_monster_scaling(module_name, data)
+            # 批50 · 特效轴地基：settings.effect_axes 逐轴声明（越界红拦 / 未知轴黄提示 /
+            # 轴名不得与面板三轴 stem 冲突）+ 内容侧轴取值越界红拦。
+            self._check_effect_axes(module_name, data)
             # 批38 · ④ 相性通用层（settings 四段结构/枚举/引用 + 材料相性引用存在性）
             self._check_affinity(module_name, data)
             # 批39 · 合成/炼金/打造启用矩阵：settings.deep_craft 打造路径开关
@@ -1935,6 +1948,139 @@ class _Checker:
                            msg="def_factor 超出建议带 [0.5, 2.0] → 怪物防御补偿幅度异常，"
                                "可能破坏「斩杀回合不变」（不阻断）")
 
+    # ---- 批50 · 特效轴地基：settings.effect_axes 逐轴声明 + 内容侧取值越界 ----
+    def _check_effect_axes(self, module_name: str, data: object) -> None:
+        """`settings.effect_axes` 段 + 特效轴取值专项校验（批50 · 特效轴地基）。
+
+        依据：`特效整理设计_1_修正轴全集.md` §2/§3 + `特效整理设计_3_落点与分期.md`
+        §1.0（表示口径：百分点增量轴，默认 0）+ §二「批48」（= 本批，旧编号）。
+        登记表唯一源：`data.gear_stats.EFFECT_AXIS_SPECS` / `GEAR_EFFECT_KEYS`。
+
+        分级（三条按批次要求，另加两条卫生检查）：
+          · 段结构错误（非对象）→ **红拦 R-1**；
+          · 轴条目非对象 / min/max/default 非数值（含布尔）→ **红拦 R-1**；
+          · NaN/Inf → **红拦 R-3**；
+          · `min > max`、`default ∉ [min, max]` → **红拦 R-2**（越界红拦）；
+          · 轴名 stem ∈ 面板三轴 stem（`PANEL_AXIS_STEMS`）→ **红拦 R-4**（撞名会让
+            `route_bonus_into` 与面板属性 pct 层混淆）；
+          · 未登记轴（不在 `GEAR_EFFECT_KEYS`）→ **黄提示 Y-18**（自造轴，不硬拦）；
+          · `stack`/`display.mode` 取值不在册 → **黄提示 Y-18**（不硬拦）。
+        内容侧取值越界（**越界红拦**）：`items` / `equipment` 顶层词条键 + `runes` 的
+        `by_equip_type[*].stats`，凡命中特效轴且超出有效范围 → **红拦 R-2**。
+        缺段：默认放行（登记表建议缺省 = 恒等 → 引擎零变化）。
+        """
+        if not isinstance(data, Mapping):
+            return
+        base = "settings.effect_axes"
+        cfg = data.get("effect_axes")
+        if cfg is None:
+            return  # 未声明该段：登记表建议缺省 = 恒等 → 零红零黄（内容侧取值另钩子）
+        if not isinstance(cfg, Mapping):
+            self._err(module_name, base, "R-1", rule="section_structure",
+                      got=type(cfg).__name__,
+                      msg="effect_axes 段要填对象（{轴键: {min/max/default/display/stack}}）"
+                          "或删掉该段（删掉 = 用框架登记的建议缺省）")
+            return
+        known = set(GEAR_EFFECT_KEYS)
+        panel_stems = set(PANEL_AXIS_STEMS)
+        effective = normalize_effect_axes(cfg)
+        for raw_axis, raw_entry in cfg.items():
+            axis = str(raw_axis)
+            path = f"{base}.{axis}"
+            if axis not in known:
+                self._warn(module_name, path, "Y-18", rule="effect_axis_unknown",
+                           axis=axis, key_space=sorted(known),
+                           msg=f"未登记的特效轴「{axis}」：框架登记表里没有它，"
+                               "该声明不会被任何消费点读取（不阻断）")
+            stem = effect_axis_stem(axis)
+            if stem in panel_stems:
+                self._err(module_name, path, "R-4", rule="effect_axis_stem_conflict",
+                          axis=axis, stem=stem, key_space=sorted(panel_stems),
+                          msg=f"轴名「{axis}」的属性 stem「{stem}」与面板轴撞名——"
+                              "会与面板属性百分比层混淆，请换名")
+            if not isinstance(raw_entry, Mapping):
+                self._err(module_name, path, "R-1", rule="type", expect="obj",
+                          got=type(raw_entry).__name__)
+                continue
+            nums: Dict[str, float] = {}
+            for field in ("min", "max", "default"):
+                if field not in raw_entry:
+                    continue
+                val = raw_entry.get(field)
+                fpath = f"{path}.{field}"
+                if isinstance(val, bool) or not isinstance(val, (int, float)):
+                    self._err(module_name, fpath, "R-1", rule="type", expect="number",
+                              got=("bool" if isinstance(val, bool) else type(val).__name__))
+                    continue
+                fv = float(val)
+                if math.isnan(fv) or math.isinf(fv):
+                    self._err(module_name, fpath, "R-3", rule="not_a_number", value=val)
+                    continue
+                nums[field] = fv
+            lo = nums.get("min", effective.get(axis, {}).get("min"))
+            hi = nums.get("max", effective.get(axis, {}).get("max"))
+            if lo is not None and hi is not None and float(lo) > float(hi):
+                self._err(module_name, path, "R-2", rule="effect_axis_range_inverted",
+                          min=lo, max=hi, msg="下限大于上限，区间无效")
+            dflt = nums.get("default")
+            if dflt is not None:
+                if lo is not None and dflt < float(lo):
+                    self._err(module_name, f"{path}.default", "R-2",
+                              rule="effect_axis_default_out_of_range", value=dflt,
+                              range_min=lo, range_max=hi)
+                elif hi is not None and dflt > float(hi):
+                    self._err(module_name, f"{path}.default", "R-2",
+                              rule="effect_axis_default_out_of_range", value=dflt,
+                              range_min=lo, range_max=hi)
+            stack = raw_entry.get("stack")
+            if stack is not None and str(stack) not in ("add", "mult"):
+                self._warn(module_name, f"{path}.stack", "Y-18", rule="effect_axis_stack_unknown",
+                           got=str(stack), msg="聚合方式不在册（add/mult），消费点将按缺省 add")
+            disp = raw_entry.get("display")
+            if isinstance(disp, Mapping):
+                mode = disp.get("mode")
+                if mode is not None and str(mode) not in ("mult", "delta"):
+                    self._warn(module_name, f"{path}.display.mode", "Y-18",
+                               rule="effect_axis_display_mode_unknown", got=str(mode),
+                               msg="显示口径不在册（mult/delta），编辑器将按缺省 mult")
+
+    def _check_effect_axis_values(self, module_name: str, data: object) -> None:
+        """内容侧特效轴取值越界红拦（R-2）：装备/物品词条 + 符文数值档（批50）。
+
+        独立钩子（在 items/equipment/runes 分派处调用，**不依赖 settings 模块是否存在**）：
+        范围取 `settings.effect_axes` 有效声明（缺省 = 登记表建议范围），由
+        `normalize_effect_axes` 合并。只读遍历，不改任何数据；未命中特效轴 → 零检查零提示。
+        """
+        modules = self._modules
+        settings = modules.get("settings")
+        cfg = settings.get("effect_axes") if isinstance(settings, Mapping) else None
+        effective = normalize_effect_axes(cfg)
+        axes = set(GEAR_EFFECT_KEYS)
+        path_fn = _effect_rune_paths if module_name == "runes" else _effect_entry_paths
+        for path, bag in path_fn(module_name, data):
+            for key, val in bag.items():
+                axis = str(key)
+                if axis not in axes:
+                    continue
+                if isinstance(val, bool) or not isinstance(val, (int, float)):
+                    continue
+                fv = float(val)
+                if math.isnan(fv) or math.isinf(fv):
+                    continue
+                rng = effective.get(axis) or {}
+                lo, hi = rng.get("min"), rng.get("max")
+                fpath = f"{path}.{axis}"
+                if lo is not None and fv < float(lo):
+                    self._err(module_name, fpath, "R-2",
+                              rule="effect_axis_value_out_of_range",
+                              value=fv, range_min=lo, range_max=hi,
+                              msg="特效轴取值低于声明下限")
+                elif hi is not None and fv > float(hi):
+                    self._err(module_name, fpath, "R-2",
+                              rule="effect_axis_value_out_of_range",
+                              value=fv, range_min=lo, range_max=hi,
+                              msg="特效轴取值高于声明上限")
+
     # ---- 批39 · 合成/炼金/打造启用矩阵：settings.deep_craft 打造路径开关 ----
     def _check_deep_craft(self, module_name: str, data: object) -> None:
         """settings.deep_craft 段校验（批39 · 打造路径开关）。
@@ -3077,6 +3223,39 @@ class _Checker:
 # -------------------------------------------------------------------------------------
 # 公共入口（细化_3e §5.1 接口签名）
 # -------------------------------------------------------------------------------------
+
+
+def _effect_entry_paths(module: str, entries: object) -> Iterable[Tuple[str, Mapping[str, Any]]]:
+    """`items`/`equipment` 条目 → `(字段路径前缀, 条目映射)`（非映射条目跳过）。
+
+    批50：只用于**读**词条里的特效轴取值；不改任何数据。
+    """
+    if not isinstance(entries, list):
+        return
+    for idx, entry in enumerate(entries):
+        if isinstance(entry, Mapping):
+            yield f"{module}.{idx}", entry
+
+
+def _effect_rune_paths(module: str, entries: object) -> Iterable[Tuple[str, Mapping[str, Any]]]:
+    """`runes` 条目 → `(字段路径前缀, 数值映射)`：逐 `by_equip_type[*].stats`。
+
+    批50：符文数值档是特效轴取值的共用站点之一（口径 §4.1）；只读遍历。
+    """
+    if not isinstance(entries, list):
+        return
+    for idx, entry in enumerate(entries):
+        if not isinstance(entry, Mapping):
+            continue
+        by_type = entry.get("by_equip_type")
+        if not isinstance(by_type, Mapping):
+            continue
+        for equip_type, spec in by_type.items():
+            if not isinstance(spec, Mapping):
+                continue
+            stats = spec.get("stats")
+            if isinstance(stats, Mapping):
+                yield f"{module}.{idx}.by_equip_type.{equip_type}.stats", stats
 
 
 def check_pack(

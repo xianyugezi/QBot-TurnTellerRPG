@@ -2028,6 +2028,106 @@ class _Checker:
             if v is not None and not isinstance(v, Mapping):
                 self._err(module_name, f"{base}.{key}", "R-1", rule="type",
                           expect="obj", got=type(v).__name__)
+        # ---- 批44 · 投入概率暴击（§七；结构/类型/范围/枚举红拦，只增不减）----
+        crit = rules.get("quality_exp_crit")
+        if crit is not None and not isinstance(crit, Mapping):
+            self._err(module_name, f"{base}.quality_exp_crit", "R-1", rule="type",
+                      expect="obj", got=type(crit).__name__)
+        elif isinstance(crit, Mapping):
+            self._check_quality_exp_crit(module_name, f"{base}.quality_exp_crit", crit)
+
+    def _check_quality_exp_crit(self, module_name: str, base: str,
+                                crit: Mapping[str, object]) -> None:
+        """`craft_rules.quality_exp_crit`（批44 投入概率暴击）子字段校验。
+
+        分级：结构/类型/枚举非法 → R-1；范围越界 → R-2；`enabled=true` 但所有生效档位
+        概率 ≤0 → **黄提示 Y-17**（永不触发，仅提示不拦）。只增不减、不放宽既有门禁。
+        """
+        def _is_num(v: object) -> bool:
+            return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+        en = crit.get("enabled")
+        if en is not None and not isinstance(en, bool):
+            self._err(module_name, f"{base}.enabled", "R-1", rule="type",
+                      expect="bool", got=type(en).__name__)
+        grades = crit.get("grades")
+        if grades is not None:
+            if not isinstance(grades, list):
+                self._err(module_name, f"{base}.grades", "R-1", rule="type",
+                          expect="list", got=type(grades).__name__)
+            else:
+                for i, g in enumerate(grades):
+                    if not isinstance(g, str) or not g:
+                        self._err(module_name, f"{base}.grades.{i}", "R-1", rule="type",
+                                  expect="str", got=type(g).__name__)
+        for key, lo, hi in (("chance_by_grade", 0.0, 1.0), ("mult_by_grade", 0.0, None)):
+            m = crit.get(key)
+            if m is None:
+                continue
+            if not isinstance(m, Mapping):
+                self._err(module_name, f"{base}.{key}", "R-1", rule="type",
+                          expect="obj", got=type(m).__name__)
+                continue
+            for gk, gv in m.items():
+                path = f"{base}.{key}.{gk}"
+                if not isinstance(gk, str) or not gk:
+                    self._err(module_name, path, "R-1", rule="type",
+                              expect="str", got=type(gk).__name__)
+                    continue
+                if not _is_num(gv):
+                    self._err(module_name, path, "R-1", rule="type",
+                              expect="number", got=type(gv).__name__)
+                elif gv < lo or (hi is not None and gv > hi):
+                    self._err(module_name, path, "R-2", rule="range", got=gv,
+                              min=lo, max=hi)
+        cd = crit.get("chance_default")
+        if cd is not None and (_is_num(cd) is False or cd < 0 or cd > 1):
+            self._err(module_name, f"{base}.chance_default", "R-2", rule="range",
+                      got=cd, min=0, max=1)
+        md = crit.get("mult_default")
+        if md is not None and (_is_num(md) is False or md < 0):
+            self._err(module_name, f"{base}.mult_default", "R-2", rule="range",
+                      got=md, min=0)
+        ad = crit.get("additive_exp")
+        if ad is not None and not _is_num(ad):
+            self._err(module_name, f"{base}.additive_exp", "R-1", rule="type",
+                      expect="number", got=type(ad).__name__)
+        scope = crit.get("applies_to")
+        if scope is not None and scope != "quality_exp":
+            self._err(module_name, f"{base}.applies_to", "R-1", rule="enum_invalid",
+                      got=scope, allowed=["quality_exp"])
+        affects = crit.get("affects_quality_level")
+        if affects is not None and not isinstance(affects, bool):
+            self._err(module_name, f"{base}.affects_quality_level", "R-1", rule="type",
+                      expect="bool", got=type(affects).__name__)
+        rolls = crit.get("rolls_per_craft")
+        if rolls is not None and (isinstance(rolls, bool) or not isinstance(rolls, int)
+                                  or rolls < 1 or rolls > 2):
+            self._err(module_name, f"{base}.rolls_per_craft", "R-2", rule="range",
+                      got=rolls, min=1, max=2)
+        cap = crit.get("exp_cap")
+        if cap is not None and cap not in ("none", "last_threshold"):
+            if not _is_num(cap):
+                self._err(module_name, f"{base}.exp_cap", "R-1", rule="enum_invalid",
+                          got=cap, allowed=["none", "last_threshold", "number"])
+            elif cap < 0:
+                self._err(module_name, f"{base}.exp_cap", "R-2", rule="range", got=cap, min=0)
+        stream = crit.get("rng_stream")
+        if stream is not None and stream != "player":
+            self._err(module_name, f"{base}.rng_stream", "R-1", rule="enum_invalid",
+                      got=stream, allowed=["player"])
+        # 黄提示：启用但所有生效档位概率 ≤0 → 永不触发（不拦）。
+        if en is True:
+            chance_default = cd if _is_num(cd) else None
+            by_grade = crit.get("chance_by_grade")
+            vals: List[float] = []
+            if isinstance(by_grade, Mapping):
+                vals += [float(v) for v in by_grade.values() if _is_num(v)]
+            if chance_default is not None:
+                vals.append(float(chance_default))
+            if vals and max(vals) <= 0:
+                self._warn(module_name, base, "Y-17", rule="crit_never_triggers",
+                           msg="已启用投入暴击，但所有档位概率 ≤0 → 永不触发（仅提示，不拦）")
 
     def _check_deep_craft_entries(self, module_name: str, data: object) -> None:
         """items/equipment 条目：材料打造字段 + 图纸模板字段（批41 深度打造）。

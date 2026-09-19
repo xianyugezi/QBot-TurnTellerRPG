@@ -27,9 +27,11 @@ effects elapsed elem_cn element element_cn elems endpoint enemy enhance example 
 fields fragment g gap gem gold golden_line grants group have head heal_total hint hours hp
 hp_cur hp_max i idx imprints index item item_name items job k key kill kind kind_cn king label
 level level_ups limit list lit loc location luck main_score map_name mark marks mat mats
-mats_text max max_hit max_hp message minutes missing month_days mp msg mult n name names need need_chain
+mats_text max max_hit max_hp message minutes missing month_days mp msg mult n name names
+need need_chain
 need_elem need_rank new nm normal_used note npc_name old op out output_name page pages paid_text
-param params part pct period periods point pos pp pp_budget pp_used prefix preview qq qty quality
+param params part pct period periods point pos pp pp_budget pp_used prefix preview qq qty
+quality
 rarity rarity_cn rate reason rec recipe_name recipes ref remain remark req resource_text rest
 result reveal_text round rumor scales score season secs seen seg segments seq shield signed
 skill skill_name slot slots source sp spot spot_name src state status statuses stone_have stones

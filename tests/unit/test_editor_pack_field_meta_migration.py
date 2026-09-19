@@ -108,7 +108,17 @@ SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
 #     · 编辑器 settings 页字段数 +2（unconfigured_count 45→47，见 test_editor_batch131_segments）。
 #   对拍实证：删除项 = 0、无既有 label/help/group 改动；重定后基线树与当前树 diff=0。
 #   与 scripts/compare_field_meta_migration.py 的 DEFAULT_BASELINE_REF 同基线。
-BASELINE_REF = "1e2f68c"
+# 批46（2026-09-20 符文地基）重定：1e2f68c → 0d55330（本批字段/模块登记提交）。
+#   原因 = 本批**有意**变更（非迁移回归），全部为**新增**（无删除/无既有严格键改值）：
+#     · 新增 runes 模块（kind=rune；条目字段 tier/family/by_equip_type/effects/bias 等）
+#       → veinborn 模块声明 +1、index/modules 计数位移；
+#     · settings 新增 rune_sockets 段（default_count 1 子字段）→ settings 条目 +1
+#       （unconfigured_count 47→48，见 test_editor_batch131_segments）；
+#     · veinborn.field_meta.json 新增 module_labels["runes"]="符文"（严格键**新增**，非改值）。
+#   对拍实证（对旧基线 1e2f68c）：删除项 = 0；23 条差异全部为上述新增 + 派生展示计数位移
+#   （+4 soft 新增：runes 条目 + rune_sockets 段 ×2 包）；重定后基线树与当前树 diff=0。
+#   与 scripts/compare_field_meta_migration.py 的 DEFAULT_BASELINE_REF 同基线。
+BASELINE_REF = "0d55330"
 CONTENT = REPO / "content"
 
 

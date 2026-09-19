@@ -227,7 +227,15 @@ DEFAULT_PACKS = ("veinborn", "test_demo")
 #      （中文名/说明卡；既有 craft_rules 子字段与 enabled 原样保留）；
 #   ② 模板全量表 +1 条 deep_craft_crit_gain（templates 计数 856→857）。
 #   对拍实证：删除项 = 0、无 label/help/group 严格键的无意改动；重定后 0 差异。
-DEFAULT_BASELINE_REF = "1e2f68c"
+# 批46（2026-09-20 符文地基）重定：1e2f68c → 0d55330（本批字段/模块登记提交）。
+#   原因 = 本批**有意**变更（非迁移回归），全部为**新增**（无删除/无既有严格键改值）：
+#   ① 新增 runes 模块（kind=rune；tier/family/by_equip_type/effects/bias 字段）——
+#      veinborn 模块声明 +1、index/modules 计数位移；
+#   ② settings 新增 rune_sockets 段（default_count）→ settings 条目 +1（两包 unconfigured +1）；
+#   ③ veinborn.field_meta.json 新增 module_labels["runes"]="符文"（严格键**新增**）。
+#   对拍实证：删除项 = 0；23 条差异全部为上述新增 + 派生展示计数位移（+4 soft 新增）；
+#   重定后基线树与当前树逐字段 diff=0。
+DEFAULT_BASELINE_REF = "0d55330"
 
 
 def _env(root: Path) -> dict:

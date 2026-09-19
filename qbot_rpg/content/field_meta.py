@@ -421,6 +421,10 @@ SETTINGS_FIELDS: Dict[str, FieldMeta] = {
                 "min_level": FieldMeta(type="int", range_min=1, label="最低等级"),
                 "requires_affinity": FieldMeta(type="str", label="要求相性"),
                 "value_rule": FieldMeta(type="str", label="数值规则"),
+                # 批42 · C：随机属性值 + 随机套装词条载荷
+                # （`stat`+`value` = 随机属性候选；`set_affix` = 随机套装词条候选）。
+                "value": FieldMeta(type="number", allow_negative=True, label="固定值"),
+                "set_affix": FieldMeta(type="str", label="套装词条"),
             })),
         }),
         help="一个池结构同时服务随机属性/套装词条/强化词条/相性专属池：kind=common 通用池"

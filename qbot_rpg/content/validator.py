@@ -2064,6 +2064,12 @@ class _Checker:
             item_space = set(self._id_space.get("item", {})) | set(
                 self._id_space.get("equipment", {}))
         recipe_space = set(self._id_space.get("recipe", {}))
+        # 批42 · C：固定被动的 trait 引用空间 + 随机套装词条池引用空间（settings 相性段）。
+        trait_space = set(self._id_space.get("trait", {}))
+        pool_space = {
+            str(r.get("id")) for r in settings.get("affinity_pools") or []
+            if isinstance(r, Mapping) and isinstance(r.get("id"), str) and r.get("id")
+        }
 
         for i, e in enumerate(data):
             m = e if isinstance(e, Mapping) else None
@@ -2160,6 +2166,19 @@ class _Checker:
                         and isinstance(hi, int) and not isinstance(hi, bool) and lo > hi):
                     self._err(module_name, f"{base}.{key}", "R-1", rule="count_reversed",
                               min=lo, max=hi)
+            # ---- 批42 · C：固定被动 trait 引用 / 随机套装词条池引用 ----
+            passive = m.get("blueprint_passive")
+            passive_ids = [passive] if isinstance(passive, str) else (
+                passive if isinstance(passive, list) else [])
+            for pid in passive_ids:
+                if isinstance(pid, str) and pid and trait_space and pid not in trait_space:
+                    self._err(module_name, f"{base}.blueprint_passive", "R-4",
+                              rule="trait_ref_missing", ref=pid,
+                              ref_space=sorted(trait_space))
+            sp = m.get("blueprint_random_set_affix_pool")
+            if isinstance(sp, str) and sp and pool_space and sp not in pool_space:
+                self._err(module_name, f"{base}.blueprint_random_set_affix_pool", "R-4",
+                          rule="pool_ref_missing", pool=sp, pool_space=sorted(pool_space))
 
 
     # ---- 批38 · ④：settings 相性通用层（定义/池/联动/互动 + 跨模块引用存在性）----
@@ -2245,6 +2264,22 @@ class _Checker:
                                 self._err(module_name, f"{path}.entries.{j}.requires_affinity",
                                           "R-4", rule="affinity_ref_missing", affinity=req,
                                           affinity_space=sorted(aff_space))
+                        # 批42 · C：词条行载荷键类型（stat/set_affix/effect_ref）+ 权重/数值。
+                        for key in ("stat", "set_affix", "effect_ref"):
+                            v = ent.get(key)
+                            if v is not None and (not isinstance(v, str) or not v):
+                                self._err(module_name, f"{path}.entries.{j}.{key}", "R-1",
+                                          rule="type", expect="str", got=type(v).__name__)
+                        wv = ent.get("weight")
+                        if wv is not None and (isinstance(wv, bool)
+                                               or not isinstance(wv, (int, float)) or wv < 0):
+                            self._err(module_name, f"{path}.entries.{j}.weight", "R-2",
+                                      rule="range", got=wv, min=0)
+                        val = ent.get("value")
+                        if val is not None and (isinstance(val, bool)
+                                                or not isinstance(val, (int, float))):
+                            self._err(module_name, f"{path}.entries.{j}.value", "R-1",
+                                      rule="type", expect="number", got=type(val).__name__)
         pool_space = set(pool_ids)
 
         # 专属池引用 / 联动引用

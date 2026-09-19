@@ -235,7 +235,16 @@ DEFAULT_PACKS = ("veinborn", "test_demo")
 #   ③ veinborn.field_meta.json 新增 module_labels["runes"]="符文"（严格键**新增**）。
 #   对拍实证：删除项 = 0；23 条差异全部为上述新增 + 派生展示计数位移（+4 soft 新增）；
 #   重定后基线树与当前树逐字段 diff=0。
-DEFAULT_BASELINE_REF = "0d55330"
+# 批50（2026-09-20 特效轴地基）重定：0d55330 → e70edd2（本批字段/模板/测试提交）。
+#   原因 = 本批**有意**变更（非迁移回归），全部为**新增**（无删除/无既有严格键改值）：
+#   ① settings 新增 `effect_axes` 声明段（min/max/default/display/stack/legacy_alias）→
+#      settings 条目 +1（veinborn 49→50、test_demo 51→52，unconfigured 各 +1）；
+#   ② items/equipment 词条新增 15 个特效轴键（中文名 + 双向说明 + 可负区间）→
+#      stats 分组 `@more` 溢出展示计数位移（veinborn items 31→46 / equipment 26→41，
+#      test_demo items 31→46）——**计数位移 = 硬差异**，故须重定基线（同批36 口径）。
+#   对拍实证：删除项 = 0；无既有 label/help/group/module_labels/module_tree 改值；
+#   重定后基线树与当前树逐字段 diff=0。
+DEFAULT_BASELINE_REF = "e70edd2"
 
 
 def _env(root: Path) -> dict:

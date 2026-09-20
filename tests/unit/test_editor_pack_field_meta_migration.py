@@ -207,7 +207,19 @@ SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
 #   · 无 label/group/module_labels/module_tree 变动；无字段/键删除（forge.decompose_rate 删除
 #     不在本快照面内）。
 #   对拍实证：删除项 = 0；重定后基线树与当前树逐字段 diff=0。
-BASELINE_REF = "01bea48"
+# 批71（2026-09-23 包专属残留清理）重定：01bea48 → 07293ee（本批页脚/CHANGELOG 提交）。
+#   原因 = 本批**有意**变更（非迁移回归），删除项 = 0（输出无「仅迁移前有」），25 条硬差异
+#   全部为**纯新增 + 派生计数位移**：
+#   · 模板全量表 +6 键（battle_lock_no_monster/already_in_battle/has_other_session/
+#     no_map/weak_block + explore_rest_reason_not_safe）→ templates 计数 879→885、
+#     veinborn covered_count 2→4、index.total / 模块声明 count 位移；
+#   · `statuses` 模块登记 `stance` 字段（批71 · A1）+ veinborn 6 条状态声明 `"stance":"air"`
+#     → `detail/statuses.fields[stance]` 新增、`statuses.blocks.默认[]` 新增；
+#   · `marks` 模块登记 `role` 字段（批71 · E1）+ veinborn `sword_flow` 声明
+#     `"role":"combo_counter"` → `detail/marks.fields[role]` 新增、`blocks.默认[@more]` 4→5。
+#   无 label/help/group/module_labels/module_tree 严格键删除；无字段/键删除。
+#   对拍实证：删除项 = 0；重定后基线树与当前树逐字段 diff=0。
+BASELINE_REF = "07293ee"
 CONTENT = REPO / "content"
 
 

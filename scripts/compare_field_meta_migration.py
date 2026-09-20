@@ -311,7 +311,13 @@ DEFAULT_PACKS = ("veinborn", "test_demo")
 #   · 无 label/group/module_labels/module_tree 变动；无字段/键删除（forge.decompose_rate 删除
 #     不在本快照面内：forge settings 非 detail 模块）。
 #   对拍实证：删除项 = 0；重定后基线树与当前树逐字段 diff=0。
-DEFAULT_BASELINE_REF = "01bea48"
+# 批71（2026-09-23 包专属残留清理）重定：01bea48 → 07293ee（本批页脚/CHANGELOG 提交）。
+#   原因 = 本批有意变更（非迁移回归），删除项 = 0，25 条硬差异全部为纯新增 + 派生计数位移：
+#   模板表 +6 键（battle_lock_* / explore_rest_reason_not_safe）→ templates 计数 879→885；
+#   statuses 登记 `stance` 字段 + veinborn 6 条 stance=air 声明；marks 登记 `role` 字段 +
+#   veinborn sword_flow role=combo_counter 声明。
+#   详见 tests/unit/test_editor_pack_field_meta_migration.py 头注。
+DEFAULT_BASELINE_REF = "07293ee"
 
 
 def _env(root: Path) -> dict:

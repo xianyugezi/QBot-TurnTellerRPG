@@ -177,7 +177,7 @@ def test_editor_blank_pack_still_six(blank_root: Path) -> None:
 # ---------------------------------------------------------------------------
 def test_footer_batch_string_is_current() -> None:
     html = (REPO / "qbot_rpg" / "web" / "static" / "index.html").read_text(encoding="utf-8")
-    assert "批55 · 特效强度预算" in html
+    assert "批56 · 速度轴与过量治疗" in html
     assert "批49 · 测试 flake 根治" not in html
     assert "批40 · 实例uid与随机流" not in html
     assert "批36 · 采集/挖掘" not in html

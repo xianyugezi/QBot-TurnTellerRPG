@@ -372,7 +372,8 @@ def test_font_panel_and_wiring() -> None:
 def test_batch_footer_note_is_current() -> None:
     html = _html()
     m = re.search(r'<div class="panel-ft">(.*?)</div>', html, re.S)
-    assert m and "批55 · 特效强度预算" in m.group(1)
+    assert m and "批56 · 速度轴与过量治疗" in m.group(1)
+    assert "批55 · 特效强度预算" not in html
     assert "批50 · 特效轴地基" not in html
     assert "批49 · 测试 flake 根治" not in html
     assert "批48 · 符文特殊效果" not in html

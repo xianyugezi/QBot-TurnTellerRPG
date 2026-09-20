@@ -1168,8 +1168,16 @@ def _inventory_hooks(ctx: MutableMapping[str, Any]) -> dict:
         # 历史：2026-09-06 加 dfn、2026-09-12 补 crit/_pct——原三处手写键表互相漂移
         # （context 13 键 / shop_tx·详情面板 12 键）是词条悬空的根因，此后单一来源。）
         _bonus: Dict[str, float] = extract_bonus(_cfg) if isinstance(_cfg, Mapping) else {}
+        # 批60 · G3：相性值（炼金结算 `add_item(..., affinities=…)` 传入）→ 归一口径同
+        # runner 实例通道（非 Mapping → {}；值只收 int/float 非 bool）。空 dict 为假 →
+        # 不改变既有实例触发条件（缺省零变化）。
+        _aff_raw = kw.get("affinities")
+        _aff: Dict[str, float] = {}
+        if isinstance(_aff_raw, Mapping):
+            _aff = {str(_k): float(_v) for _k, _v in _aff_raw.items()
+                    if isinstance(_v, (int, float)) and not isinstance(_v, bool)}
         # M8 炼金产出实例（quality/traits 关键字）→ 追加实例通道（保留品质/特性落档）
-        if kw and (kw.get("quality") is not None or kw.get("traits")) or _bonus:
+        if kw and (kw.get("quality") is not None or kw.get("traits")) or _bonus or _aff:
             insts.append(
                 {
                     "item_id": key,
@@ -1184,6 +1192,8 @@ def _inventory_hooks(ctx: MutableMapping[str, Any]) -> dict:
                     "bound": bool(bound),
                     "traits": tuple(kw.get("traits") or ()),
                     "stats_bonus": _bonus,
+                    # 批60 · G3：相性随实例落档（runner/repository 批42 已透传）
+                    "affinities": _aff,
                 }
             )
         _mark()

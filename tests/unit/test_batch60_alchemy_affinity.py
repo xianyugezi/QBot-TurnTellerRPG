@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -27,6 +28,9 @@ from qbot_rpg.content.validator import check_pack
 from qbot_rpg.core.affinity import accumulate_affinity, rank_affinities
 from qbot_rpg.core.alchemy_affinity import axis_pct, main_sub_of
 from qbot_rpg.core.alchemy_core import AlchemyCore
+from qbot_rpg.data.item import ItemInstance
+from qbot_rpg.data.player import Player, PlayerAttributes
+from qbot_rpg.storage.repository import _item_from_dict
 
 REPO = Path(__file__).resolve().parents[2]
 #: 批60 前一个提交（main 最新）= G1 对拍基线（缺 ref / 无 git → 跳过集成对拍）。
@@ -258,7 +262,7 @@ def _use_ctx(settings: Any, *, power: int = 50, hp: int = 30) -> Dict[str, Any]:
         "registered": True,
         "player": {"name": "试", "level": 1, "job_id": "warrior", "hp": hp,
                    "inventory": [], "equipment": {},
-                   "attributes": {"base": {"hp": 1000.0, "mp": 30.0}}},
+                   "attributes": PlayerAttributes(base={"hp": 1000000.0, "mp": 30.0})},
         "items": {"heal_potion": {"id": "heal_potion", "name": "药", "type": "consumable",
                                   "usable": True, "effects": ["heal_small"]}},
         "effect_table": {"heal_small": {"id": "heal_small", "type": "heal", "power": power}},
@@ -379,3 +383,126 @@ def test_validator_affinity_effects_keyspace() -> None:
         "alchemy": {"affinity_effects": {_AFF: {_AXIS: "x"}}},
     }}
     assert any(r == "type" for _, r in _verrs(bad_val))
+
+
+# ===========================================================================
+# 端到端（只读夹具 `content/zz_craft_demo` 的**临时副本**）
+# ===========================================================================
+DEMO_PACK = REPO / "content" / "zz_craft_demo"
+_E2E_QID = "60001"
+_E2E_EFFECT = {"id": "eff_demo_draught_heal", "name": "示例回复", "type": "heal",
+               "power": 100, "desc": "示例：相性影响回复量的饮剂效果。"}
+_E2E_POTION = {"id": "demo_lunar_draught", "name": "月华饮剂", "type": "consumable",
+               "usable": True, "effects": ["eff_demo_draught_heal"],
+               "desc": "示例：相性影响回复量的饮剂。"}
+_E2E_RECIPE = {"id": "rcp_demo_lunar_draught", "name": "月华饮剂调和", "kind": "craft",
+               "level": 5, "synth_allowed": True, "master_only": False, "slots": 4,
+               "element_req": {}, "pp_budget": 5,
+               "materials": [{"id": "moonwell_dew", "count": 1}],
+               "output": {"item": "demo_lunar_draught", "count": 1},
+               "cost": {"coins": 0, "gem": 0}}
+_E2E_EFFECTS = {
+    "lunar": {_AXIS: 20}, "frost": {_AXIS: -10}, f"{_AFF}|{_SUB}": {_AXIS: 30},
+}
+
+
+def _e2e_patch(pack: Path) -> Dict[str, Any]:
+    """临时副本：补药剂/回复效果/炼金用配方 + settings.alchemy(mode=full + 相性效果表)。
+
+    说明：示例包 `alchemy.mode=simple`（炼金层未启用）且无炼金用配方；本端到端按红线
+    「只读真实包、写只在临时目录」在副本上补齐，不写 `content/zz_craft_demo` 一个字节。
+    """
+    for name, entry in (("effects.json", _E2E_EFFECT), ("items.json", _E2E_POTION),
+                        ("recipe.json", _E2E_RECIPE)):
+        p = pack / name
+        rows = json.loads(p.read_text(encoding="utf-8"))
+        rows.append(entry)
+        p.write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
+    s = json.loads((pack / "settings.json").read_text(encoding="utf-8"))
+    alch = dict(s.get("alchemy") or {})
+    alch["mode"] = "full"
+    alch["affinity_effects"] = dict(_E2E_EFFECTS)
+    s["alchemy"] = alch
+    (pack / "settings.json").write_text(json.dumps(s, ensure_ascii=False, indent=2),
+                                        encoding="utf-8")
+    return s
+
+
+def _e2e_player(mat: str) -> Any:
+    return Player(
+        qid=_E2E_QID, name="示例匠", job_id="warrior", level=35, hp=10, mp=999,
+        currencies={"coins": 0, "gem": 0},
+        inventory=(ItemInstance(item_id=mat, name=mat, count=90, quality="normal",
+                                bound=False),),
+        attributes=PlayerAttributes(base={"hp": 100000.0, "mp": 100.0}),
+        persistent_state={
+            "proficiency": {"alchemy": {"level": 60, "exp": 0, "sp_earned": 0,
+                                        "sp_used": 0, "unlocks": {}}},
+            "learned_blueprints": {},
+        },
+    )
+
+
+def _heal_via_use(inst: Any, settings: Any, power: int = 100) -> int:
+    """在受控 ctx 上走真实 `_use_consumable`（假背包引擎，隔离无关的 uid 路径）。"""
+    player: Dict[str, Any] = {"hp": 10,
+                              "attributes": PlayerAttributes(base={"hp": 1000000.0,
+                                                                    "mp": 100.0})}
+    ctx: Dict[str, Any] = {
+        "player": player,
+        "effect_table": {_E2E_EFFECT["id"]: _E2E_EFFECT},
+        "inventory_engine": SimpleNamespace(
+            remove_item=lambda p, iid, count=1, uid="": {"ok": True}),
+        "settings": settings,
+    }
+    _use_consumable(ctx, player, inst, _E2E_POTION)
+    return int(player["hp"]) - 10
+
+
+async def _run_e2e_case(mat: str, tmp_path: Path) -> Dict[str, Any]:
+    import dataclasses
+
+    from qbot_rpg.assembly.testing_support import pack_app, send_command
+
+    pack = Path(tempfile.mkdtemp(prefix=f"b60-pack-{mat}-", dir=str(tmp_path)))
+    shutil.copytree(DEMO_PACK, pack, dirs_exist_ok=True)
+    settings = _e2e_patch(pack)
+    async with pack_app(pack, settings={"alchemy": settings["alchemy"]}) as deps:
+        repo = deps.repo
+        await repo.save_player(_e2e_player(mat))
+        opened = await send_command(deps, "/炼金 月华饮剂调和", user_id=_E2E_QID)
+        assert "月华饮剂调和" in opened, opened
+        fed = await send_command(deps, f"/投料 {mat}", user_id=_E2E_QID)
+        assert "❌" not in fed, fed
+        done = await send_command(deps, "/确认", user_id=_E2E_QID)
+        assert "确认成功" in done, done
+        p = await repo.load_player(_E2E_QID)
+        rows = [r for r in p.inventory if r.item_id == "demo_lunar_draught"]
+        assert rows, [r.item_id for r in p.inventory]
+        inst = rows[-1]
+        heal = _heal_via_use(inst, settings)
+        # 落档读侧往返（C3/C4 **已支持**，本批仅验收）：asdict → _item_from_dict 不丢相性
+        carried = _item_from_dict(dataclasses.asdict(inst))
+        return {"affinities": dict(inst.affinities), "heal": heal,
+                "carried": dict(carried.affinities)}
+
+
+@pytest.mark.asyncio
+async def test_e2e_demo_pack_alchemy_affinity_flows_to_product_and_heal(tmp_path: Path) -> None:
+    """同配方、同材料品质、仅材料相性不同 → 产物实例相性不同 → 实际回血不同（A-V1）。"""
+    lunar = await _run_e2e_case("moonwell_dew", tmp_path)
+    frost = await _run_e2e_case("frost_marrow", tmp_path)
+    # G3：炼金产物实例带相性（此前实测为 False/缺键）
+    assert lunar["affinities"] == {"lunar": 16.0}
+    assert frost["affinities"] == {"frost": 11.0}
+    assert lunar["carried"] == lunar["affinities"]  # 实例字段往返不丢
+    # 口径 A：产物实际回血 = power × (1 + pct/100)（lunar=20 → 120；frost=-10 → 90）
+    assert (lunar["heal"], frost["heal"]) == (120, 90)
+    assert abs(lunar["heal"] / frost["heal"] - (1.20 / 0.90)) < 1e-9
+
+
+@pytest.mark.asyncio
+async def test_e2e_demo_pack_same_input_reproducible(tmp_path: Path) -> None:
+    a = await _run_e2e_case("moonwell_dew", tmp_path)
+    b = await _run_e2e_case("moonwell_dew", tmp_path)
+    assert a == b

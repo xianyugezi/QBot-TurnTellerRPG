@@ -123,12 +123,13 @@ def _make_remove(inv: Dict[str, int]):
 
 
 def _make_add(produced_list: List[dict]):
-    """add_item hook：记录入包条目（quality/traits 透传）并追加到 produced_list。"""
+    """add_item hook：记录入包条目（quality/traits/affinities 透传）并追加到 produced_list。"""
     def add(item_id: str, count: int, bound: bool, *, quality: Optional[str] = None,
-            traits: tuple = ()) -> dict:
+            traits: tuple = (), affinities: Optional[dict] = None) -> dict:
         produced_list.append({
             "item_id": item_id, "count": count, "bound": bound,
             "quality": quality, "traits": tuple(traits),
+            "affinities": dict(affinities or {}),
         })
         return {"ok": True, "added": count}
     return add

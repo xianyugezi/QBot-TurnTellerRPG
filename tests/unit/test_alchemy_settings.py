@@ -676,6 +676,7 @@ def test_alchemy_settings_field_defs_structure() -> None:
         "gem.复制额外", "copy_extra_cost", "gem.decompose_formula", "gem_diminish",
         "synth_exp", "sp_per_level", "sp_panel", "战斗道具", "战斗即时调合",
         "max_qty", "job_tier_map",
+        "affinity_effects",  # 批60 · 深炼金口径 A：相性 → 药剂效果表（动态键空间）
     }
     assert set(ALCHEMY_SETTINGS_FIELD_DEFS) == expect
     assert ALCHEMY_SETTINGS_FIELD_DEFS["mode"].enum == MODE_VALUES

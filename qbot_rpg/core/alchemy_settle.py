@@ -346,6 +346,10 @@ class SettleEngine:
         由壳层实现为构造 ItemInstance（quality=tier 键 + traits 冻结元组）入包；返回
         {ok,...} 或 False。产出信息 {item_id, name, count, quality, tier, tier_label,
         traits, effects, scaled_effects}；add_item hook 缺失/失败 → None。
+
+        批60 · G3：`snap["affinity_values"]`（G1 写入的相性累计值）随 `add_item` 同步写进
+        实例通道（`ItemInstance.affinities` 批42 已落、落档往返已通）；快照缺键 → 空 dict =
+        零行为变化（与「非打造物品」同形）。
         """
         add_item = ctx.get("add_item")
         if not callable(add_item):
@@ -364,7 +368,10 @@ class SettleEngine:
         except (TypeError, ValueError):
             count = 1
         traits = self._snap_traits(snap)  # Q-S9：traits 从快照写入 ItemInstance
-        result = add_item(item_id, count, True, quality=tier, traits=tuple(traits))
+        affinities_raw = snap.get("affinity_values")
+        affinities = dict(affinities_raw) if isinstance(affinities_raw, Mapping) else {}
+        result = add_item(item_id, count, True, quality=tier, traits=tuple(traits),
+                          affinities=affinities)
         if not self._hook_ok(result):
             return None
         idef = self._find_item(item_id, ctx)

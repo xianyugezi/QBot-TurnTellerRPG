@@ -772,6 +772,9 @@ class _Checker:
         if module_name == "forge":
             from qbot_rpg.content.forge_models import validate_forge
             validate_forge(self._modules, self)
+            # 批72 · 重复段收敛（审计3 §3-F1）：forge.json["settings"] 已废弃
+            # （唯一源 = settings.json["forge"]）→ 残留黄提示 Y-22，不阻断。
+            self._check_forge_deprecated_settings(module_name, data)
         # M12.5 强化（2c3a §5.2 V1~V7）：enhance 专项校验（同鸭子类型 validate_xxx 口径）
         if module_name == "enhance":
             from qbot_rpg.content.enhance_models import validate_enhance
@@ -2599,6 +2602,34 @@ class _Checker:
             msg="settings.forge.decompose_rate 已废弃（批70）：该键从未被引擎消费；"
                 "分解回收率的唯一源 = settings.alchemy.decompose_rate（中文档名 6 档，"
                 "消费点 core/gem_wallet.py）。请把该段迁移到 settings.alchemy 后删除本键。")
+
+    # ---- 批72 · forge.json["settings"] 已废弃 → 迁移黄提示（指向唯一源）----
+    def _check_forge_deprecated_settings(self, module_name: str, data: object) -> None:
+        """`forge.json` 顶层 `settings` 段残留 → **黄提示 Y-22**（不阻断）。
+
+        批72 重复段收敛（审计3 §3-F1）：`forge.json["settings"]` 与
+        `settings.json["forge"]` 表达同一件事，且已实测漂移（`content/veinborn`：前者缺
+        `carry_sec` / `set_piece_counts`；`content/test_demo`：两段当前逐键相同）。
+        唯一源定为 `settings.json["forge"]`（生产读取 `content/forge_settings.py:246,268`；
+        `commands/forge_commands.py:410-415`）。
+
+        为**不砸既有包**，读取侧兜底保留（`core/forge_tree.py:_resolve_settings` 第③步、
+        `core/forge_deadlock.py:_synth_ratio_on`——仅「只喂 forge.json、不喂 settings.json」
+        的离屏调用会走到）；本检查只提示把该段迁到 `settings.json` 的 `forge` 段后删除。
+        """
+        if not isinstance(data, Mapping):
+            return
+        seg = data.get("settings")
+        if not isinstance(seg, Mapping):
+            return
+        self._warn(
+            module_name, "forge.settings", "Y-22",
+            rule="moved_to_settings_forge",
+            msg="forge.json 的 settings 段已废弃（批72）：它与 settings.json 的 forge 段"
+                "表达同一件事且已出现漂移。唯一源 = settings.json.forge；请把本段各键"
+                "（forge_fee/synth_ratio_3to1/straight_forge/exp_per_forge/sets_enabled/"
+                "augments_enabled/carry_sec/set_piece_counts 等）并入 settings.json 的 forge "
+                "段，然后删除 forge.json 的 settings 段。读取兜底保留，不影响加载。")
 
     # ---- 批39 · 合成/炼金/打造启用矩阵：settings.deep_craft 打造路径开关 ----
     def _check_deep_craft(self, module_name: str, data: object) -> None:

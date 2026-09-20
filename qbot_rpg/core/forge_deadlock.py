@@ -386,7 +386,9 @@ def _synth_ratio_on(modules: Mapping[str, object]) -> bool:
     """3:1 合成开关（S-02 / CMB-03）：settings.synth_ratio_3to1（默认 true）。
 
     读段复用批0 read_forge_settings（settings 含 forge 段或缺段全默认兜底）；
-    forge 顶层 settings 段兜底。
+    forge 顶层 settings 段兜底——**批72 起该段废弃**（唯一源 = settings 的 forge 段，
+    审计3 §3-F1），此分支仅为「只喂 forge.json」的既有离屏调用保留，包内残留由校验器
+    黄提示 Y-22 指向唯一源。
     """
     settings_raw = modules.get("settings")
     if not isinstance(settings_raw, Mapping):

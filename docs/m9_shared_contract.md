@@ -12,9 +12,16 @@ forge.json = {
   trees: ForgeTree[] (必填,≥1),    # D-02 每部位一棵（weapon + 防具×5 = 6 棵）
   sets: Set[] (可选),              # D-03 P1 防具套装（2c2d §一 展开）
   augments: {augments:[], limit_by_rarity:[]} (可选),  # D-04 P2 客制（2c2d §二 展开）
-  settings: ForgeSettings (可选)   # D-05 全局可配（2c2a §1.4）
+  settings: ForgeSettings (可选)   # D-05 全局可配（2c2a §1.4）；**批72 起废弃**，见 §八·迁移
 }
 ```
+
+> **批72 · `forge.json["settings"]` 已废弃（审计3 §3-F1）**：该段与 `settings.json` 的
+> `forge` 段表达同一件事，且已实测漂移（`content/veinborn`：前者缺 `carry_sec` /
+> `set_piece_counts`；`content/test_demo`：两段当前逐键相同）。**唯一源 =
+> `settings.json` 的 `forge` 段**。读取侧仍保留兜底（仅「只喂 forge.json、不喂
+> settings.json」的离屏调用会走到），校验器对残留段给 **黄提示 Y-22**（不阻断）。
+> 迁移步骤见 §八·「`forge.json settings` 段迁移（批72）」。
 
 ## 一、ForgeTree（树级字段 T-01~05）
 
@@ -175,12 +182,38 @@ field_meta items_fields 需登记 material_tier（enum normal/rare）与 source�
   "forge_fee": "节点等级×10",          # 或 int
   "synth_ratio_3to1": true,
   "straight_forge": true,
-  "decompose_rate": {"正式": 0.4},     # 对齐 alchemy.decompose_rate 口径
   "exp_per_forge": "节点等级×2",       # 或 int
   "sets_enabled": true,
   "augments_enabled": true
 }
 ```
+
+> **批70 更正**：`settings.forge.decompose_rate` 已删除（与 `settings.alchemy.decompose_rate`
+> 重复且引擎从不读 forge 段）；分解回收率的唯一源 = `settings.alchemy.decompose_rate`
+> （`core/gem_wallet.py:190`）。包内残留时校验器给黄提示 Y-21 指向唯一源。
+
+### `forge.json settings` 段迁移（批72）
+
+**为什么**：`forge.json["settings"]` 与 `settings.json["forge"]` 是同一件事的两段，已实测
+漂移（`veinborn` 缺 `carry_sec` / `set_piece_counts`）。批72 定唯一源 = `settings.json`
+的 `forge` 段。
+
+**既有包怎么改**（三步）：
+1. 打开 `content/<包>/forge.json`，取出顶层 `settings` 段各键（`forge_fee` /
+   `synth_ratio_3to1` / `straight_forge` / `exp_per_forge` / `sets_enabled` /
+   `augments_enabled` / `carry_sec` / `set_piece_counts` 等）；
+2. 把这些键**并入** `content/<包>/settings.json` 的 `forge` 段：目标已有同名键 → 以
+   `settings.json` 的值为准（它就是唯一源）；目标缺键 → 补入；
+3. 删除 `forge.json` 顶层 `settings` 段。之后校验器不再出 Y-22。
+
+**兜底与提示**：读取侧兜底保留（`qbot_rpg/core/forge_tree.py` `_resolve_settings` 第③步、
+`qbot_rpg/core/forge_deadlock.py` `_synth_ratio_on`），未被迁移的旧包不会崩；但
+`forge.json` 里残留 `settings` 段会触发校验器**黄提示 Y-22**（不阻断加载）。
+
+**两态等价证据**：`tests/unit/test_batch72_dedup_convergence.py` 的
+`test_f1_shipped_packs_two_state_parity`——对 `test_demo` / `veinborn` 分别在
+「保留 / 删除」`forge.json.settings` 两态下构造 `ForgeTreeEngine`，归一 settings
+逐字段一致（主源恒为 `settings.json.forge`）。
 
 ### loader / field_meta 登记
 - `content/loader.py` `_KIND_FOR_MODULE` 加 `"forge": "forge"`

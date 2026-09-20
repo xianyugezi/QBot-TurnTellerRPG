@@ -864,6 +864,34 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
 .mempty { padding: var(--sp-10) var(--sp-8); color: var(--text-4); line-height: var(--lh-ex); }
 .mempty .me-t { color: var(--text-strong); font-size: var(--fs-14); margin-bottom: var(--sp-4); }
 .mempty .me-d { margin-bottom: var(--sp-6); }
+/* 批65 · 中栏「0 条」空态引导：两种情形分开说清（未启用任何模块 / 已启用但本模块无条目）。 */
+.lempty { padding: var(--sp-10) var(--sp-6); color: var(--text-4); line-height: var(--lh-ex); }
+.lempty .le-t { color: var(--text-strong); font-size: var(--fs-13); margin-bottom: var(--sp-4); }
+.lempty .le-d { margin-bottom: var(--sp-6); }
+/* 批65 · ⚙ 面板顶部「推荐组合」区（框架默认 ∪ 包声明；一键累加勾选 + 依赖自动补勾）。
+   纯令牌驱动，不硬编码颜色；卡片只是「快捷勾选」，不减少任何可见模块（一号原则）。 */
+.mp-presets { padding: var(--sp-5) var(--sp-8) var(--sp-3);
+  border-top: var(--bw) solid var(--line-soft); }
+.mp-presets[hidden] { display: none; }
+.mp-presets .ps-t { color: var(--text-strong); font-size: var(--fs-12); margin-bottom: var(--sp-2); }
+.mp-presets .ps-h { color: var(--text-5); font-size: var(--fs-11); line-height: var(--lh-ex);
+  margin-bottom: var(--sp-4); }
+.mp-presets .ps-row { display: flex; flex-wrap: wrap; gap: var(--sp-4); }
+.mp-preset { flex: 1 1 180px; min-width: 160px; text-align: left; font-family: inherit;
+  cursor: pointer; color: var(--text-2); background: var(--bg);
+  border: var(--bw) solid var(--line); padding: var(--sp-3) var(--sp-4); }
+.mp-preset:hover { border-color: var(--accent); color: var(--text-value); }
+.mp-preset:disabled { cursor: not-allowed; color: var(--text-disabled); border-color: var(--line-soft); }
+.mp-preset[hidden] { display: none; }
+.mp-preset .pr-t { display: block; color: var(--text-strong); }
+.mp-preset .pr-a { display: block; color: var(--text-5); font-size: var(--fs-11); }
+.mp-preset .pr-h { display: block; color: var(--text-4); font-size: var(--fs-11);
+  line-height: var(--lh-ex); }
+.mp-preset .pr-n { display: block; color: var(--text-5); font-size: var(--fs-11); }
+.mp-preset.on .pr-n { color: var(--accent); }
+/* 批65 · 左栏「未启用 · 框架能力 N 项」分组旁的一行引导（一行说清，不静默） */
+.mod-sep .sep-h { display: block; color: var(--text-6); font-size: var(--fs-10);
+  line-height: var(--lh-ex); }
 
 /* ---------- 批10 · 🎨 配色面板：主题单选 + 自定义背景图（令牌驱动） ---------- */
 .mp-sec { border-top: var(--bw) solid var(--line-soft); padding: var(--sp-5) var(--sp-8); }
@@ -1009,7 +1037,7 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
       <div class="panel-body" id="p-body">
         <div class="empty">从左侧选择模块与条目。字段按内容包元数据渲染；改动先进草稿，保存时才校验并落盘。</div>
       </div>
-      <div class="panel-ft"><span>批62 · 深炼金口径C与淬炼指令</span></div>
+      <div class="panel-ft"><span>批65 · 模块预设组合</span></div>
     </section>
 
   </div>
@@ -1030,6 +1058,8 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
     </div>
     <div class="mp-hint" id="mp-hint"></div>
     <div class="mp-msg" id="mp-msg" hidden></div>
+    <!-- 批65 · 「推荐组合」区：一键累加勾选（不覆盖已勾）+ 自动补勾依赖；内容来自框架 / 包声明 -->
+    <div class="mp-presets" id="mp-presets" hidden></div>
     <div class="mp-tools">
       <input class="mp-search" id="mp-search" data-modal-search type="text" autocomplete="off"
         spellcheck="false" placeholder="筛选模块（按名称 / 模块键 / 用途）"
@@ -3819,7 +3849,9 @@ function renderModules() {
   if (avail.length) {
     var sep = document.createElement("div");
     sep.className = "mod-sep";
-    sep.textContent = "未启用 · 框架能力 " + avail.length + " 项";
+    // 批65 · 分组旁一行引导（一行说清，不静默）：直接点启用，或去 ⚙ 面板一键「推荐组合」。
+    sep.innerHTML = '<span class="sep-t">未启用 · 框架能力 ' + avail.length + " 项</span>"
+      + '<span class="sep-h">点一项即可启用；也可点右上角 ⚙ 模块，在顶部「推荐组合」一键勾选一组。</span>';
     sep.title = "框架已实现、当前包未启用的模块；点击可一键启用（复用 ⚙ 模块开关同一链路）。";
     nav.appendChild(sep);
     avail.forEach(function (a) {
@@ -4154,6 +4186,9 @@ function renderEntries() {
   if (state.filter && !shown) {
     box.innerHTML = '<div class="ex" style="padding:var(--sp-5) var(--sp-6)">'
       + "本模块没有匹配「" + esc(state.filter) + "」的名称或 ID。</div>";
+  } else if (!state.filter && !box.children.length) {
+    // 批65 · 中栏 0 条 → 空态引导（区分「还没启用任何模块」与「已启用但还没条目」）。
+    box.innerHTML = listEmptyHtml();
   }
   el("list-ft").textContent = "共 " + shown + " 条"
     + (shown !== all ? "（已过滤 / 全部 " + all + "）" : "");
@@ -4344,8 +4379,27 @@ function refreshAfterMutation(newId, keepResult) {
 // ---------------------------------------------------------------------------
 var MODULE_PANEL = { data: null, busy: false };
 
+// 批65 · 中栏「0 条」空态引导：**两种情形分开说清**（不静默、不混为一谈）：
+//   ① 还没启用任何模块 → 引导去右上角 ⚙ 模块（面板顶部还有「推荐组合」一键勾选）；
+//   ② 已启用、但本模块还没条目 → 引导点「+ 新建条目」。
+// 判据只用 state.modules / state.views（来自后端），不认任何具体模块名。
+function listEmptyHtml() {
+  if (!(state.modules || []).length && !(state.views || []).length) {
+    return '<div class="lempty">'
+      + '<div class="le-t">这个包还没启用任何模块</div>'
+      + '<div class="le-d">点右上角 <b>⚙ 模块</b>，在面板顶部用「推荐组合」一键勾选一组'
+      + '常用模块，或逐项勾选。</div>'
+      + '<button class="btn primary" type="button" data-open-modules>打开模块开关</button>'
+      + "</div>";
+  }
+  return '<div class="lempty">'
+    + '<div class="le-t">这个模块还没有条目</div>'
+    + '<div class="le-d">点上方的 <b>+ 新建条目</b> 开始写第一条。</div>'
+    + "</div>";
+}
+
 function renderEmptyPack() {
-  el("rows").innerHTML = "";
+  el("rows").innerHTML = listEmptyHtml();
   el("list-title").textContent = "条目";
   setHdrNote("list-count", "0 条");
   el("list-ft").textContent = "共 0 条";
@@ -4410,7 +4464,79 @@ function renderModulePanel() {
   });
   var canRollback = state.editable && !!((d.manifest_backup || {}).exists) && !MODULE_PANEL.busy;
   el("mp-rollback").disabled = !canRollback;
+  renderModulePresets(d);
   renderAliasPanel(d.aliases || null);
+}
+
+// 批65 · 「推荐组合」区：卡片内容**全部**来自后端（框架默认 ∪ 包声明 − 关闭），
+// 前端不硬编码任何模块清单。点击 = 累加勾选（后端保证不覆盖已勾）+ 依赖自动补勾；
+// 成功后复用同一刷新链路，面板底部「回退最近一次模块变更」可一键撤销整个组合。
+function presetCardHtml(p) {
+  var r = p || {};
+  var mods = (r.modules || []).length;
+  var add = (r.add_modules || []).length;
+  var already = !!r.already;
+  var note;
+  if (already) {
+    note = "已全部启用 · " + mods + " 个模块";
+  } else if (add < mods) {
+    note = "将新增 " + add + " 个（另有 " + (mods - add) + " 个已启用）";
+  } else {
+    note = "将新增 " + add + " 个模块";
+  }
+  if ((r.auto_deps || []).length) {
+    note += " · 含自动补勾依赖 " + r.auto_deps.length + " 个";
+  }
+  return '<button class="mp-preset' + (already ? " on" : "") + '" type="button"'
+    + ' data-preset="' + esc(r.id || "") + '"' + (already ? " disabled" : "") + ">"
+    + '<span class="pr-t">' + esc(r.label || r.id || "") + "</span>"
+    + (r.audience ? '<span class="pr-a">' + esc(r.audience) + "</span>" : "")
+    + (r.help ? '<span class="pr-h">' + esc(r.help) + "</span>" : "")
+    + '<span class="pr-n">' + esc(note) + "</span>"
+    + "</button>";
+}
+
+function renderModulePresets(d) {
+  var box = el("mp-presets");
+  if (!box) { return; }
+  var list = (d && d.presets) || [];
+  if (!list.length) { box.hidden = true; box.innerHTML = ""; return; }
+  box.hidden = false;
+  box.innerHTML = '<div class="ps-t">' + esc((d && d.presets_title) || "推荐组合") + "</div>"
+    + ((d && d.presets_hint) ? '<div class="ps-h">' + esc(d.presets_hint) + "</div>" : "")
+    + '<div class="ps-row">' + list.map(presetCardHtml).join("") + "</div>";
+  Array.prototype.forEach.call(box.querySelectorAll("button[data-preset]"), function (b) {
+    b.addEventListener("click", function () { onApplyModulePreset(b.dataset.preset); });
+  });
+}
+
+function onApplyModulePreset(pid) {
+  if (!pid || !state.editable || MODULE_PANEL.busy) { return; }
+  if (!canLeave()) { return; }
+  discardDraft();
+  MODULE_PANEL.busy = true;
+  el("mp-rollback").disabled = true;
+  Array.prototype.forEach.call(el("mp-presets").querySelectorAll("button"), function (b) {
+    b.disabled = true;   // 防连点；apply 完成后整表重画
+  });
+  postJSON("/api/pack/" + enc(state.pack) + "/module-preset/" + enc(pid) + "/apply", {})
+    .then(function (res) {
+      var text = toggleResultText(res);
+      var deps = (res && res.dependency_added) || [];
+      if (res && res.ok && deps.length) {
+        var names = (res.dependency_added_labels && res.dependency_added_labels.length)
+          ? res.dependency_added_labels : deps;
+        text = "已自动带上：" + names.join("、") + "。\n" + text;
+      }
+      panelMessage(res.ok ? ((res.warnings || []).length ? "yellow" : "ok") : "red", text);
+      if (res && res.ok) { return fetchModulePanel().then(refreshAfterModuleChange); }
+      return null;
+    })
+    .catch(function (err) { panelMessage("red", "应用组合失败：" + err.message); })
+    .then(function () {
+      MODULE_PANEL.busy = false;
+      if (MODULE_PANEL.data) { renderModulePanel(); }
+    });
 }
 
 // 批19 #7：指令别名视图（框架内置 / 包声明两类来源；只读展示，不写盘）。

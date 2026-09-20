@@ -17,6 +17,9 @@
 from __future__ import annotations
 
 import json
+import re
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -355,3 +358,196 @@ def test_preset_source_has_no_real_pack_names_or_business_fields() -> None:
     src = PRESET_SRC.read_text(encoding="utf-8")
     for word in ("veinborn", "test_demo", "cloudsea"):
         assert word not in src, word
+
+
+# =====================================================================================
+# G. 前端（index.html）：推荐组合区 + 两处空态引导 + 页脚批次串（DOM 文本存在性）
+# =====================================================================================
+NODE = shutil.which("node")
+HTML = REPO / "qbot_rpg" / "web" / "static" / "index.html"
+
+
+def _html() -> str:
+    return HTML.read_text(encoding="utf-8")
+
+
+def _fn_src(name: str, next_name: str) -> str:
+    """截取 index.html 里 `function name(` 到下一个 `function next_name(` 的源码。"""
+    html = _html()
+    start = html.index(f"function {name}(")
+    end = html.index(f"function {next_name}(")
+    src = html[start:end].rstrip()
+    lines = src.split("\n")
+    while lines:
+        tail = lines[-1].strip()
+        if tail == "" or tail.startswith("//") or tail.startswith("/*") \
+                or tail.startswith("*") or tail.endswith("*/"):
+            lines.pop()
+            continue
+        break
+    src = "\n".join(lines)
+    assert src.endswith("}"), (name, src[-40:])
+    return src
+
+
+# 内联页面里的转义函数 esc（node 下补桩，与既有批次同一手法）。
+_ESC_STUB = (
+    "global.esc = function (v) { return String(v == null ? '' : v)"
+    ".replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')"
+    ".replace(/\"/g, '&quot;').replace(/'/g, '&#39;'); };\n"
+)
+
+
+def _run_node(script: str) -> Any:
+    assert NODE, "node 不可用"
+    proc = subprocess.run([NODE, "-e", script], capture_output=True, text=True,
+                          timeout=30)
+    assert proc.returncode == 0, proc.stderr
+    return json.loads(proc.stdout)
+
+
+def test_frontend_preset_section_markup_and_wiring() -> None:
+    html = _html()
+    for token in ('id="mp-presets"', "renderModulePresets(d)", "function presetCardHtml(",
+                  "function renderModulePresets(", "function onApplyModulePreset(",
+                  "data-preset=", "/module-preset/", "/apply", "已自动带上：",
+                  "dependency_added_labels", "回退最近一次模块变更"):
+        assert token in html, token
+
+
+def test_frontend_preset_card_renders_only_backend_data() -> None:
+    script = (_ESC_STUB + _fn_src("presetCardHtml", "renderModulePresets")
+              + "\nvar a = presetCardHtml({id:'zz',label:'组合甲',help:'一句话说明',"
+              + "audience:'面向新人',modules:['a','b'],add_modules:['a','b'],"
+              + "auto_deps:['b'],already:false});"
+              + "\nvar b = presetCardHtml({id:'yy',label:'组合乙',modules:['a'],"
+              + "add_modules:[],auto_deps:[],already:true});"
+              + "\nconsole.log(JSON.stringify({a:a,b:b}));")
+    out = _run_node(script)
+    assert 'data-preset="zz"' in out["a"] and "组合甲" in out["a"]
+    assert "一句话说明" in out["a"] and "面向新人" in out["a"]
+    assert "将新增 2 个模块" in out["a"] and "含自动补勾依赖 1 个" in out["a"]
+    assert "disabled" not in out["a"]
+    assert "disabled" in out["b"] and "mp-preset on" in out["b"]
+    assert "已全部启用" in out["b"]
+
+
+def test_frontend_preset_region_has_no_hardcoded_module_list() -> None:
+    src = (_fn_src("presetCardHtml", "renderModulePresets")
+           + _fn_src("renderModulePresets", "onApplyModulePreset")
+           + _fn_src("onApplyModulePreset", "renderAliasPanel"))
+    for word in ("basic_rpg", "life_adventure", "story_exploration",
+                 "skills", "equipment", "items", "veinborn"):
+        assert word not in src, word
+
+
+def test_frontend_two_empty_states_distinguish_cases() -> None:
+    script = (_ESC_STUB + _fn_src("listEmptyHtml", "renderEmptyPack")
+              + "\nglobal.state = {modules: [], views: []};"
+              + "\nvar none = listEmptyHtml();"
+              + "\nglobal.state = {modules: [{module:'skills'}], views: []};"
+              + "\nvar has = listEmptyHtml();"
+              + "\nconsole.log(JSON.stringify({none:none, has:has}));")
+    out = _run_node(script)
+    assert "还没启用任何模块" in out["none"]
+    assert "data-open-modules" in out["none"] and "⚙" in out["none"]
+    assert "推荐组合" in out["none"]
+    assert "还没启用任何模块" not in out["has"]
+    assert "这个模块还没有条目" in out["has"] and "+ 新建条目" in out["has"]
+
+
+def test_frontend_rows_use_empty_state_guide() -> None:
+    assert "listEmptyHtml()" in _fn_src("renderEmptyPack", "refreshAfterModuleChange")
+    assert "listEmptyHtml()" in _fn_src("renderEntries", "entryItemEl")
+
+
+def test_frontend_left_column_unavailable_guide_present() -> None:
+    src = _fn_src("renderModules", "enableAvailableModule")
+    assert "未启用 · 框架能力" in src
+    assert "sep-h" in src and "推荐组合" in src
+
+
+def test_frontend_batch65_css_uses_tokens_only() -> None:
+    html = _html()
+    for begin in (".mp-presets {", ".mp-preset {", ".lempty {"):
+        start = html.index(begin)
+        seg = html[start:html.index("}", start) + 1]
+        assert "var(--" in seg, begin
+        assert not re.search(r"#[0-9a-fA-F]{3,6}", seg), begin
+
+
+def test_frontend_footer_batch_string_is_current() -> None:
+    html = _html()
+    m = re.search(r'<div class="panel-ft"><span>(.*?)</span></div>', html)
+    assert m and m.group(1) == "批65 · 模块预设组合", m and m.group(1)
+    assert "批62 · 深炼金口径C与淬炼指令" not in html
+
+
+# =====================================================================================
+# H. 依赖闭包标签 + 零变化对拍 + 端到端（宿主 HTTP）
+# =====================================================================================
+def test_apply_preset_reports_dependency_labels(root: Path) -> None:
+    res = editor_ops.apply_module_preset("blank_pack", "life_adventure", root=root)
+    assert res["ok"] is True
+    assert set(res["dependency_added"]) == {"maps", "effects"}
+    assert res["dependency_added_labels"]
+    assert len(res["dependency_added_labels"]) == len(res["dependency_added"])
+    assert all(lbl for lbl in res["dependency_added_labels"])
+
+
+def test_dependency_labels_empty_when_already_enabled(root: Path) -> None:
+    editor_ops.apply_module_preset("blank_pack", "basic_rpg", root=root)
+    res = editor_ops.apply_module_preset("blank_pack", "basic_rpg", root=root)
+    assert res["ok"] is True
+    assert res["dependency_added"] == [] and res["dependency_added_labels"] == []
+
+
+def test_no_op_byte_for_byte_unchanged(root: Path) -> None:
+    """不做任何操作：反复读接口后整包逐字节不变（含 manifest.json 不被改写）。"""
+    pkg = root / "blank_pack"
+    before = {p.name: p.read_bytes() for p in sorted(pkg.iterdir())}
+    for _ in range(3):
+        api.module_catalog("blank_pack", root=root)
+        api.list_modules("blank_pack", root=root)
+    after = {p.name: p.read_bytes() for p in sorted(pkg.iterdir())}
+    assert after == before
+    assert not (pkg / "manifest.json.bak").exists()
+
+
+def test_apply_disabled_preset_is_bad_request(tmp_path: Path) -> None:
+    pkg = tmp_path / "dis"
+    pkg.mkdir()
+    _write(pkg / "manifest.json", {
+        "name": "关闭", "version": "1", "schema_version": 1, "modules": [],
+        "module_presets_disable": ["basic_rpg"],
+    })
+    cat = api.module_catalog("dis", root=tmp_path)
+    assert "basic_rpg" not in [p["id"] for p in cat["presets"]]
+    with pytest.raises(api.BadRequest):
+        editor_ops.apply_module_preset("dis", "basic_rpg", root=tmp_path)
+
+
+def test_e2e_blank_apply_preset_then_create_then_rollback(tmp_path: Path) -> None:
+    pkg = tmp_path / "e2e"
+    pkg.mkdir()
+    _write(pkg / "manifest.json",
+           {"name": "端到端", "version": "1", "schema_version": 1, "modules": []})
+    with _client(tmp_path, pack="e2e") as client:
+        cat = client.get("/api/pack/e2e/module-catalog").json()
+        assert [p["id"] for p in cat["presets"]] == [
+            "basic_rpg", "life_adventure", "story_exploration"]
+        applied = client.post("/api/pack/e2e/module-preset/basic_rpg/apply").json()
+        assert applied["ok"] is True
+        assert "skills" in _read(pkg / "manifest.json")["modules"]
+        # 能新建条目：先补一个普攻（V-7 要求），再新建物品
+        skill = client.post(
+            "/api/pack/e2e/module/skills/entry",
+            json={"entry_id": "zz_basic", "patch": {"name": "普攻", "type": "basic"}}).json()
+        assert skill["ok"] is True
+        item = client.post(
+            "/api/pack/e2e/module/items/entry",
+            json={"entry_id": "zz_item", "patch": {"name": "测试物品"}}).json()
+        assert item["ok"] is True
+        # 回退最近一次模块变更 → 整个组合一次撤销
+        assert client.post("/api/pack/e2e/manifest/rollback").json()["ok"] is True
+        assert _read(pkg / "manifest.json")["modules"] == []

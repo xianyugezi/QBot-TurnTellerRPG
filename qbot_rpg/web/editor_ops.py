@@ -1260,7 +1260,7 @@ def apply_module_preset(pack: object, preset_id: object, *,
             message=f"组合「{preset['label']}」的模块都已启用（无需改动）。",
             warnings=warnings, changed_fields=[],
             enabled=[], already=list(preset.get("modules") or []),
-            dependency_added=[],
+            dependency_added=[], dependency_added_labels=[],
         )
         return env
     if deps_added:
@@ -1339,6 +1339,7 @@ def apply_module_preset(pack: object, preset_id: object, *,
         backup=atomic_store.backup_status(pack_dir, "manifest"),
         enabled=list(add), already=[m for m in preset.get("modules") or [] if m not in add],
         dependency_added=deps_added,
+        dependency_added_labels=[_module_label(m, labels) for m in deps_added],
         message=f"已应用组合「{preset['label']}」：新启用 {len(add)} 个模块"
                 + ("（含自动补勾的前置）" if deps_added else "")
                 + "，你原来勾选的模块保持不变。",

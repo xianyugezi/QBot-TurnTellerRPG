@@ -187,6 +187,7 @@ global.loadModules = function () { return global.__loadModulesImpl(); };
 global.loadEntryIndex = function () { return global.__loadEntryIndexImpl(); };
 global.setTimeout = function (fn, ms) { timers.push(ms); return 1; };
 global.clearTimeout = function () {};
+global.savedFlashTimer = null;
 
 eval(fs.readFileSync(process.argv[2], "utf8"));
 
@@ -245,6 +246,42 @@ eval(fs.readFileSync(process.argv[2], "utf8"));
   out.catchClearedModules = state.modules.length;
   out.catchClearedModule = state.module;
   out.catchPBody = el("p-body").innerHTML;
+
+  // 卡点8：已启用但无内容 vs 未启用，两态可区分（按 moduleEnabled 分支）。
+  state = { module: "items", modules: [{ module: "items" }], views: [] };
+  out.moduleEnabledTrue = moduleEnabled("items");
+  renderListHints({ unused: true });
+  out.hintEnabled = el("list-hint").innerHTML;
+  state.modules = [];
+  out.moduleEnabledFalse = moduleEnabled("items");
+  renderListHints({ unused: true });
+  out.hintDisabled = el("list-hint").innerHTML;
+  out.hintDiffer = out.hintEnabled !== out.hintDisabled;
+
+  // 卡点5：必填可见标记 + required / aria-required。
+  state = { editable: true, detail: null };
+  out.rowRequired = fieldRow({ key: "name", label: "名称", type: "str",
+    required: true, control: "text", present: true, value: "x" });
+  out.rowOptional = fieldRow({ key: "desc", label: "说明", type: "str",
+    required: false, control: "text", present: true, value: "" });
+  out.ctrlRequired = editControl({ key: "name", required: true, control: "text", value: "" });
+  out.ctrlOptional = editControl({ key: "desc", required: false, control: "text", value: "" });
+  out.newIdent = newIdentHtml({ id_field: "id", id_field_label: "标识",
+    suggested_id: "x", id_rule: { rule: "auto", prefix: "item" }, id_hint: "h",
+    pinyin_available: false });
+
+  // 卡点6：保存/创建成功给一次显式状态位反馈（沿用既有 #dirty）。
+  state = { module: "items" };
+  el("dirty").textContent = "已保存";
+  el("dirty").className = "saved";
+  out.flashBefore = el("dirty").textContent;
+  timers.length = 0;
+  flashSaved(savedFlashText({ written: ["items"], backup: { exists: true } }));
+  out.flashAfter = el("dirty").textContent;
+  out.flashClass = el("dirty").className;
+  out.flashTimers = timers.slice();
+  out.textWithWrite = savedFlashText({ written: ["items"], backup: { exists: true } });
+  out.textNoBackup = savedFlashText({ written: ["skills"], backup: { exists: false } });
 
   process.stdout.write(JSON.stringify(out));
 })();
@@ -438,3 +475,72 @@ def test_card4_gear_and_deep_craft_helps_within_60() -> None:
         text = str(getattr(fm, "help", "") or "")
         assert 0 < len(text) <= 60, (key, len(text))
         assert "settings." not in text, key
+
+
+# =====================================================================================
+# §5 · 卡点5（锦上添花）：必填字段可见标记 + required/aria-required
+# =====================================================================================
+def test_card5_required_field_gets_visible_marker(js: Dict[str, Any]) -> None:
+    """元数据 required=true → 字段标签行出可见标记；选填不出。"""
+    assert 'class="freq"' in js["rowRequired"]
+    assert "必填" in js["rowRequired"]
+    assert 'class="freq"' not in js["rowOptional"]
+
+
+def test_card5_required_control_sets_required_and_aria(js: Dict[str, Any]) -> None:
+    """必填标量控件的输入属性 required + aria-required 与可见标记同源；选填不带。"""
+    assert 'required aria-required="true"' in js["ctrlRequired"]
+    assert "required" not in js["ctrlOptional"]
+    assert "aria-required" not in js["ctrlOptional"]
+
+
+def test_card5_new_entry_id_row_is_marked_required(js: Dict[str, Any]) -> None:
+    """新建条目的 ID 行同样标「必填」（行内标记 + required/aria-required）。"""
+    assert "必填" in js["newIdent"]
+    assert 'aria-required="true"' in js["newIdent"]
+
+
+# =====================================================================================
+# §6 · 卡点6（锦上添花）：保存/创建成功给一次显式状态位反馈
+# =====================================================================================
+def test_card6_success_sets_observable_status_bit(js: Dict[str, Any]) -> None:
+    """成功后既有状态位（#dirty）发生可观测变化，并安排一次「归位」计时。"""
+    assert js["flashAfter"] != js["flashBefore"]
+    assert js["flashAfter"].startswith("✓")
+    assert "saved just" in js["flashClass"]
+    assert js["flashTimers"] and js["flashTimers"][0] > 0
+
+
+def test_card6_flash_text_names_written_file(js: Dict[str, Any]) -> None:
+    """反馈文本点名实际写入的文件；有/无备份两种口径可区分（不比对整句）。"""
+    assert "items.json" in js["textWithWrite"]
+    assert "skills.json" in js["textNoBackup"]
+    assert js["textWithWrite"] != js["textNoBackup"]
+
+
+def test_card6_save_and_create_paths_call_flash_saved() -> None:
+    """save / create 两条成功链路各接一次显式反馈。"""
+    html = _html()
+    assert "function flashSaved(" in html and "function savedFlashText(" in html
+    assert html.count("flashSaved(savedFlashText(res))") >= 2
+
+
+# =====================================================================================
+# §8 · 卡点8（锦上添花）：中栏空态两种情形可区分（DOM 结构/分支，不比对整句）
+# =====================================================================================
+def test_card8_module_enabled_predicate(js: Dict[str, Any]) -> None:
+    """moduleEnabled 只读 state（后端给的已启用集），不认具体模块名。"""
+    assert js["moduleEnabledTrue"] is True
+    assert js["moduleEnabledFalse"] is False
+
+
+def test_card8_empty_state_two_cases_distinguishable(js: Dict[str, Any]) -> None:
+    """「已启用但无内容」与「未启用」渲染出可区分的空态（分支真的不同）。"""
+    assert js["hintEnabled"] and js["hintDisabled"]
+    assert js["hintDiffer"] is True
+    assert "lh-unused" in js["hintEnabled"] and "lh-unused" in js["hintDisabled"]
+
+
+def test_card8_frontend_hint_branch_uses_module_enabled() -> None:
+    """中栏空态分支由 moduleEnabled(state.module) 判定（结构层面）。"""
+    assert "moduleEnabled(state.module)" in _fn_src("renderListHints")

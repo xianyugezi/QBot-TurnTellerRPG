@@ -339,6 +339,19 @@ def test_a_v4_two_level_key_in_use_path() -> None:
     assert _use({_AFF: 5, _SUB: 2}, _use_ctx(settings)) == 95      # 50 × 1.30 = 65
 
 
+def test_a_v4_axis_parametrised_strength_and_duration() -> None:
+    """轴参数化：强度轴与**时长轴**同一取值机制（本批只接治疗消费点，时长消费待接）。"""
+    settings = _settings_effects(
+        {_AFF: {"healing_done_pct": 20, "status_duration_pct": 25}})
+    assert axis_pct({_AFF: 5}, settings, "healing_done_pct") == 20.0
+    assert axis_pct({_AFF: 5}, settings, "status_duration_pct") == 25.0
+    assert axis_pct({_AFF: 5}, settings, "damage_dealt_pct") == 0.0  # 未在该表声明 → 不生效
+    # 时长轴同样可被 K 侧钳制（-80~300 缺省；此处包声明 max=15）
+    clamped = _settings_effects({_AFF: {"status_duration_pct": 999}},
+                                effect_axes={"status_duration_pct": {"max": 15}})
+    assert axis_pct({_AFF: 5}, clamped, "status_duration_pct") == 15.0
+
+
 def test_a_round_matches_heal_apply_formula() -> None:
     """取整与 `effects.heal_apply` 同式：`int(round(heal × (1+pct/100)))`。"""
     settings = _settings_effects({_AFF: {_AXIS: 7}})

@@ -35,7 +35,7 @@ from qbot_rpg.web import api  # noqa: E402
 
 NODE = shutil.which("node")
 HTML = Path(api.repo_root()) / "qbot_rpg" / "web" / "static" / "index.html"
-BATCH_NOTE = "批57 · 淬炼与分解回收"
+BATCH_NOTE = "批58 · 示例包数据"
 STALE_BATCH = "批36 · 采集/挖掘"
 
 

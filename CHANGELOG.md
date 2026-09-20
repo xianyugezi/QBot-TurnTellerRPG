@@ -14,6 +14,24 @@
 
 ### Added
 
+- **批60（2026-09-22）**：**深炼金「相性 → 药剂效果」接入（第 1 步：G1 材料相性进快照 +
+  口径 A 强度型）**。依据 `/root/deliverables/深炼金接入_施工清单.md`（预检）+
+  `深炼金相性_玩法口径_可开工版.md` §三/§六/§七；决策记录 §二十五；实现说明 §二十二。
+  **① G1**：`core/alchemy_core._resolve_material` 出参追加 `affinities`；
+  `apply_feed` 复用 `core/affinity.accumulate_affinity` + `rank_affinities`（与打造
+  `resolve_main_sub` 同口径）；`new_snapshot`/写回各加 `affinity_values`/`affinity_main`/
+  `affinity_sub`（**零迁移**，缺省空 = 零行为变化）。**② 口径 A**：新增
+  `core/alchemy_affinity.py`（`main_sub_of` / `axis_pct`，复用相性四接口 + `GEAR_EFFECT_KEYS`
+  + `normalize_effect_axes` 钳制，**不新造 `effect_mult`/区间表**）；非战斗 `/道具` 治疗路径
+  按实例相性 `heal_total = int(round(heal_total × (1 + pct/100)))`（同 `effects.heal_apply`
+  同式同取整）。**③ G3/G4**：`alchemy_settle._produce` 传相性值 +
+  `assembly/context.add_item` 实例通道落 `affinities`（`runner`/`repository` 批42 已透传）；
+  `/道具` 读实例（不再只读物品定义）。**④ 配置**：`settings.alchemy.affinity_effects`
+  （field_meta ALC-26 + 校验器键空间红拦 V1~V3）。**端到端**（`content/zz_craft_demo`
+  只读临时副本）：同配方仅材料相性不同 → 产物实例 `{lunar:16}` / `{frost:11}` → 回血
+  **120 / 90**。**未做**：T1 冻结疗效 / 品质型 `quality_cap_delta` / 口径 B 词条抽取
+  （施工清单 C5、B4、B5-B 留后续批）；批量 `/炼金 *N` 不带相性（与丢特性同列）。
+  页脚批次串 →「批60 · 深炼金相性接入」。
 - **批59（2026-09-22）**：**特效体系小尾巴：奖励轴登记（D5）+ 过量治疗上限/去向（BV-1/2）+
   速度预算坐标（BV-3）+ m1 flake 根治**。依据 `docs/深度打造_决策记录.md` §十五 D5 +
   §二十一 批56 待裁决；实现说明 §二十一。**① D5 奖励轴**：登记第 17 条特效轴

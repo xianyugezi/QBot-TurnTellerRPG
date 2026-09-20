@@ -126,10 +126,14 @@ ITEMS_FORGE_FIELDS: Dict[str, FieldMeta] = {
     # material_tier 素材档位两档（TIER-03a：normal/rare，独立于装备品质四档 TIER-03b）
     # —— 新增键不设 required，既有内容包材料类无此字段 → 默认放行（§2.3 未知字段兜底）；
     #    缺省语义 normal（普通基础材料），行覆写 > items 元数据（M-03/AR-3 双源仲裁风格）
-    "material_tier": FieldMeta(type="enum", enum=MATERIAL_TIER_VALUES, default="normal"),
+    # 批68 · §4 字段中文名 + Tip：补中文名与一句话说明（修前界面裸露英文键、无说明）。
+    "material_tier": FieldMeta(type="enum", enum=MATERIAL_TIER_VALUES, default="normal",
+                               label="材料档位",
+                               help="素材档：普通(normal) / 稀有(rare)；缺省普通。"),
     # source 素材来源标签（SOUR-00：采集点/怪物/商店，显示文本）；str 结构校验不设枚举
     # 防误拦（既有 items 无此键 → 放行；来源文本由引擎消费，宽严归校验器 V10 引用层）
-    "source": FieldMeta(type="str"),
+    # 批68 · §4 Tip：补一句话说明。（中文名按门禁语义保留原始键兜底实例，见报告）
+    "source": FieldMeta(type="str", help="素材来源标签（采集点/怪物/商店等，自由文本）。"),
 }
 
 # =====================================================================================

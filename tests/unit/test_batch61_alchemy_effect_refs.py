@@ -349,3 +349,230 @@ def test_use_base_effects_unknown_type_still_ignored() -> None:
     assert out == tpl_of(ctx, "use_cannot_use")
     assert ctx["player"]["persistent_state"] == {}
     assert "active_effects" not in ctx
+
+
+# ===========================================================================
+# 7) 端到端（只读夹具 `content/zz_craft_demo` 的**临时副本**）
+#    /炼金 → /投料 → /确认 →（产物实例 effect_refs）→ /道具（状态实例）
+# ===========================================================================
+import json  # noqa: E402
+import shutil  # noqa: E402
+import tempfile  # noqa: E402
+from pathlib import Path  # noqa: E402
+
+from qbot_rpg.data.player import Player  # noqa: E402
+
+REPO = Path(__file__).resolve().parents[2]
+DEMO_PACK = REPO / "content" / "zz_craft_demo"
+_E2E_QID = "61001"
+_E2E_HEAL = {"id": "eff_b61_heal", "name": "示例回复", "type": "heal", "power": 100,
+             "desc": "示例：口径 B 端到端基础回复。"}
+_E2E_MOON = {"id": "eff_b61_status_moon", "name": "示例月减益", "type": "status_apply",
+             "duration": 3, "desc": "示例：月相性追加的减益状态。"}
+_E2E_FROST = {"id": "eff_b61_status_frost", "name": "示例霜减益", "type": "status_apply",
+              "duration": 5, "desc": "示例：霜相性追加的减益状态。"}
+_E2E_POTION = {"id": "demo_b61_draught", "name": "口径B饮剂", "type": "consumable",
+               "usable": True, "effects": ["eff_b61_heal"],
+               "desc": "示例：相性追加效果/状态的饮剂。"}
+_E2E_RECIPE = {"id": "rcp_demo_b61_draught", "name": "口径B饮剂调和", "kind": "craft",
+               "level": 5, "synth_allowed": True, "master_only": False, "slots": 4,
+               "element_req": {}, "pp_budget": 5,
+               "materials": [{"id": "moonwell_dew", "count": 1}],
+               "output": {"item": "demo_b61_draught", "count": 1},
+               "cost": {"coins": 0, "gem": 0}}
+#: 追加到示例包既有专属池（`pool_lunar` / `pool_frost`）的药剂通道条目。
+_E2E_POOL_ADD = {
+    "pool_lunar": {"effect_ref": "eff_b61_status_moon", "weight": 50},
+    "pool_frost": {"effect_ref": "eff_b61_status_frost", "weight": 50},
+}
+
+
+def _e2e_patch(pack: Path) -> Dict[str, Any]:
+    """临时副本：补效果/药剂/炼金用配方 + 相性池追加 effect_ref + mode=full。"""
+    for name, entry in (("effects.json", _E2E_HEAL), ("effects.json", _E2E_MOON),
+                        ("effects.json", _E2E_FROST), ("items.json", _E2E_POTION),
+                        ("recipe.json", _E2E_RECIPE)):
+        p = pack / name
+        rows = json.loads(p.read_text(encoding="utf-8"))
+        rows.append(entry)
+        p.write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
+    s = json.loads((pack / "settings.json").read_text(encoding="utf-8"))
+    alch = dict(s.get("alchemy") or {})
+    alch["mode"] = "full"
+    s["alchemy"] = alch
+    for pool in s.get("affinity_pools") or []:
+        add = _E2E_POOL_ADD.get(str(pool.get("id") or ""))
+        if add is not None:
+            pool.setdefault("entries", []).append(dict(add))
+    (pack / "settings.json").write_text(json.dumps(s, ensure_ascii=False, indent=2),
+                                        encoding="utf-8")
+    return s
+
+
+def _e2e_player(mat: str) -> Any:
+    return Player(
+        qid=_E2E_QID, name="示例匠", job_id="warrior", level=35, hp=10, mp=999,
+        currencies={"coins": 0, "gem": 0},
+        inventory=(ItemInstance(item_id=mat, name=mat, count=90, quality="normal",
+                                bound=False),),
+        attributes=PlayerAttributes(base={"hp": 100000.0, "mp": 100.0}),
+        persistent_state={
+            "proficiency": {"alchemy": {"level": 60, "exp": 0, "sp_earned": 0,
+                                        "sp_used": 0, "unlocks": {}}},
+            "learned_blueprints": {},
+        },
+    )
+
+
+def _use_produced(inst: Any, effect_table: Dict[str, Any]) -> Dict[str, Any]:
+    """在受控 ctx 上走真实 `_use_consumable`（假背包引擎，隔离无关 uid 路径）。"""
+    player: Dict[str, Any] = {
+        "hp": 10, "name": "示例匠", "persistent_state": {},
+        "attributes": PlayerAttributes(base={"hp": 1000000.0, "mp": 100.0}),
+    }
+    ctx: Dict[str, Any] = {
+        "player": player,
+        "effect_table": dict(effect_table),
+        "inventory_engine": SimpleNamespace(
+            remove_item=lambda p, iid, count=1, uid="": {"ok": True}),
+    }
+    _use_consumable(ctx, player, inst, _E2E_POTION)
+    return ctx
+
+
+async def _run_e2e(mat: str, tmp_path: Path) -> Dict[str, Any]:
+    from qbot_rpg.assembly.testing_support import pack_app, send_command
+
+    pack = Path(tempfile.mkdtemp(prefix=f"b61-pack-{mat}-", dir=str(tmp_path)))
+    shutil.copytree(DEMO_PACK, pack, dirs_exist_ok=True)
+    settings = _e2e_patch(pack)
+    effects = {r["id"]: r for r in json.loads(
+        (pack / "effects.json").read_text(encoding="utf-8"))}
+    async with pack_app(pack, settings={"alchemy": settings["alchemy"]}) as deps:
+        repo = deps.repo
+        await repo.save_player(_e2e_player(mat))
+        opened = await send_command(deps, "/炼金 口径B饮剂调和", user_id=_E2E_QID)
+        assert "口径B饮剂调和" in opened, opened
+        fed = await send_command(deps, f"/投料 {mat}", user_id=_E2E_QID)
+        assert "❌" not in fed, fed
+        done = await send_command(deps, "/确认", user_id=_E2E_QID)
+        assert "确认成功" in done, done
+        p = await repo.load_player(_E2E_QID)
+        rows = [r for r in p.inventory if r.item_id == "demo_b61_draught"]
+        assert rows, [r.item_id for r in p.inventory]
+        inst = rows[-1]
+        used = _use_produced(inst, effects)
+        # 落档读侧往返（effect_refs 不丢）
+        carried = _item_from_dict(dataclasses.asdict(inst))
+        return {
+            "effect_refs": tuple(inst.effect_refs),
+            "carried": tuple(carried.effect_refs),
+            "affinities": dict(inst.affinities),
+            "active": dict(used["player"]["persistent_state"].get("active_effects") or {}),
+            "hp": int(used["player"]["hp"]),
+        }
+
+
+@pytest.mark.asyncio
+async def test_e2e_demo_pack_affinity_additive_flows_to_product_and_use(
+        tmp_path: Path) -> None:
+    """同配方仅材料相性不同 → 产物 effect_refs 不同 → 使用后状态实例不同（两组）。"""
+    moon = await _run_e2e("moonwell_dew", tmp_path)
+    frost = await _run_e2e("frost_marrow", tmp_path)
+    # 产物字段：相性抽中的追加效果引用（口径 B 落地）
+    assert moon["effect_refs"] == ("eff_b61_status_moon",)
+    assert frost["effect_refs"] == ("eff_b61_status_frost",)
+    assert moon["carried"] == moon["effect_refs"]
+    assert frost["carried"] == frost["effect_refs"]
+    assert moon["effect_refs"] != frost["effect_refs"]
+    # 使用效果：状态实例（不同附加 → 不同状态）
+    assert moon["active"] == {"eff_b61_status_moon": {
+        "effect": "eff_b61_status_moon", "turns": 3, "refreshed": False}}
+    assert frost["active"] == {"eff_b61_status_frost": {
+        "effect": "eff_b61_status_frost", "turns": 5, "refreshed": False}}
+    # 基础回复仍生效（附加不干扰既有 heal 路径）
+    assert moon["hp"] == 110 and frost["hp"] == 110
+
+
+def test_active_effects_persist_via_player_writeback() -> None:
+    """状态实例随档往返：`_apply_active_effects` 写 `player.persistent_state`，装配层
+    `_player_from_dict` 逐字段落档（runner:782 的 dict 分支）。"""
+    from qbot_rpg.assembly.runner import _player_from_dict
+
+    entry = {"effect": _E_STATUS, "turns": 3, "refreshed": False}
+    p = _player_from_dict({"qid": "1", "name": "x", "hp": 1, "mp": 1,
+                           "persistent_state": {"active_effects": {_E_STATUS: entry}}}, "1")
+    assert p.persistent_state["active_effects"] == {_E_STATUS: entry}
+
+
+# ===========================================================================
+# 8) 缺省零变化对拍（基线 = 批60 末提交；池无 effect_ref → 逐字段一致）
+# ===========================================================================
+_BASELINE_REF = "6f858a1"
+_PROBE = r'''
+import json
+from qbot_rpg.core.alchemy_settle import SettleEngine
+
+bucket = []
+
+
+def add_item(item_id, count, bound=True, quality=None, traits=(), affinities=None, **kw):
+    bucket.append({
+        "item_id": item_id, "count": count, "bound": bound, "quality": quality,
+        "traits": list(traits), "affinities": dict(affinities or {}), "extra_keys": sorted(kw),
+    })
+    return {"ok": True}
+
+
+eng = SettleEngine(settings={})
+ctx = {"add_item": add_item, "items": {"potion": {"id": "potion", "name": "药"}}}
+snap = {"traits": ["t1"], "affinity_values": {"lunar": 16}}
+out = eng._produce(ctx, {"id": "r", "output": {"item": "potion", "count": 1}}, snap, "common", 0.8)
+print(json.dumps({"bucket": bucket, "out_keys": sorted(out), "out": out},
+                 sort_keys=True, default=list))
+'''
+
+
+def _run_probe(tree: Path) -> Dict[str, Any]:
+    import subprocess
+    import sys
+
+    with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False) as fh:
+        fh.write(_PROBE)
+        script = fh.name
+    proc = subprocess.run(
+        [sys.executable, script], cwd=str(tree),
+        env={"PYTHONPATH": str(tree), "PATH": "/usr/bin:/bin"},
+        capture_output=True, text=True, timeout=180,
+    )
+    assert proc.returncode == 0, proc.stderr[-2000:]
+    return json.loads(proc.stdout.strip().splitlines()[-1])
+
+
+def _have_git() -> bool:
+    import subprocess
+
+    if not (REPO / ".git").exists():
+        return False
+    r = subprocess.run(["git", "rev-parse", "--verify", f"{_BASELINE_REF}^{{commit}}"],
+                       cwd=str(REPO), capture_output=True, text=True)
+    return r.returncode == 0
+
+
+@pytest.mark.skipif(not _have_git(), reason="无 git 或基线 ref，跳过缺省对拍")
+def test_default_zero_change_against_baseline() -> None:
+    """池无 `effect_ref` / 无相性配置 → `_produce` 返回值与 add_item 逐字段一致。"""
+    import subprocess
+
+    with tempfile.TemporaryDirectory(prefix="b61-baseline-") as tmp:
+        wt = Path(tmp) / "base"
+        add = subprocess.run(["git", "worktree", "add", "--detach", str(wt), _BASELINE_REF],
+                             cwd=str(REPO), capture_output=True, text=True)
+        assert add.returncode == 0, add.stderr
+        try:
+            before = _run_probe(wt)
+            after = _run_probe(REPO)
+        finally:
+            subprocess.run(["git", "worktree", "remove", "--force", str(wt)],
+                           cwd=str(REPO), capture_output=True, text=True)
+    assert before == after

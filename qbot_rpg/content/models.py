@@ -527,7 +527,7 @@ class EnemyDef(BaseDef):
     依据：细化_1e §1.1~1.6（F01~F18 / stats 九键 / weakness / actions / special_actions /
     chains / drops / lore）+ m2_shared_contract 第一节。
     M0 旧键 hp/atk 保留顶层读兼容（旧包可继续解析）；八段 schema 下生命/攻击落在
-    stats.hp / stats.str 等九键（stats_hp / stats_str... 访问器）。
+    stats.hp / stats.str 等九键（按 stat(key) 读取）。
     """
 
     # ---- 数值/字符串/映射/列表辅助（与 EffectDef._f 同风格）----
@@ -550,12 +550,12 @@ class EnemyDef(BaseDef):
     # ---- M0 旧键兼容（顶层 hp/atk；废弃但保留解析——测试依赖 R-2/Y-1 行为）----
     @property
     def hp(self) -> Optional[float]:
-        """旧 schema 顶层 hp（M0）；八段 schema 请用 stats_hp / stats.hp。"""
+        """旧 schema 顶层 hp（M0）；八段 schema 请用 stats.hp。"""
         return self._num("hp")
 
     @property
     def atk(self) -> Optional[float]:
-        """旧 schema 顶层 atk（M0）；八段 schema 请用 stats_str / stats.str。"""
+        """旧 schema 顶层 atk（M0）；八段 schema 请用 stats.str。"""
         return self._num("atk")
 
     # ---- 八段：基础（F01-F06）----
@@ -590,41 +590,6 @@ class EnemyDef(BaseDef):
         v = self.stats.get(key)
         return v if isinstance(v, (int, float)) and not isinstance(v, bool) else None
 
-    @property
-    def stats_hp(self) -> Optional[float]:
-        return self.stat("hp")
-
-    @property
-    def stats_mp(self) -> Optional[float]:
-        return self.stat("mp")
-
-    @property
-    def stats_str(self) -> Optional[float]:
-        return self.stat("str")
-
-    @property
-    def stats_int(self) -> Optional[float]:
-        return self.stat("int")
-
-    @property
-    def stats_con(self) -> Optional[float]:
-        return self.stat("con")
-
-    @property
-    def stats_spr(self) -> Optional[float]:
-        return self.stat("spr")
-
-    @property
-    def stats_foc(self) -> Optional[float]:
-        return self.stat("foc")
-
-    @property
-    def stats_agi(self) -> Optional[float]:
-        return self.stat("agi")
-
-    @property
-    def stats_luk(self) -> Optional[float]:
-        return self.stat("luk")
 
     # ---- 弱点 / PV / 抗性（F08-F11 / 1.3）----
     @property

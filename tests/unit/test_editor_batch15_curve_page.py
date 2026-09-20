@@ -297,10 +297,10 @@ def test_frontend_curve_page_wiring_and_no_layout_regression() -> None:
 
 
 def test_footer_batch_note_current_and_stale_note_absent() -> None:
-    """页脚批次串 →「批73 · 死代码清理」；旧批次串不得残留。"""
+    """页脚批次串 →「批74 · 手册真bug修复」；旧批次串不得残留。"""
     html = HTML.read_text(encoding="utf-8")
     m = re.search(r'<div class="panel-ft"><span>(.*?)</span></div>', html)
-    assert m and m.group(1) == "批73 · 死代码清理", m and m.group(1)
+    assert m and m.group(1) == "批74 · 手册真bug修复", m and m.group(1)
     assert "批55 · 特效强度预算" not in html
     assert "批50 · 特效轴地基" not in html
     assert "批49 · 测试 flake 根治" not in html

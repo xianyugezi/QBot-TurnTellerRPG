@@ -479,7 +479,7 @@ def test_frontend_batch65_css_uses_tokens_only() -> None:
 def test_frontend_footer_batch_string_is_current() -> None:
     html = _html()
     m = re.search(r'<div class="panel-ft"><span>(.*?)</span></div>', html)
-    assert m and m.group(1) == "批73 · 死代码清理", m and m.group(1)
+    assert m and m.group(1) == "批74 · 手册真bug修复", m and m.group(1)
     assert "批62 · 深炼金口径C与淬炼指令" not in html
 
 

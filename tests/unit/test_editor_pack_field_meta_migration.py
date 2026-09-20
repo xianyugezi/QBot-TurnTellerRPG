@@ -140,7 +140,17 @@ SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
 #   对拍实证：删除项 = 0；无既有 label/help/group/module_labels/module_tree 改值；
 #   重定后基线树与当前树逐字段 diff=0。
 #   与 scripts/compare_field_meta_migration.py 的 DEFAULT_BASELINE_REF 同基线。
-BASELINE_REF = "f1e942e"
+# 批56（2026-09-21 行动速度轴 + 过量治疗）重定：f1e942e → 138f0d2（本批文档/页脚提交）。
+#   原因 = 本批**有意**变更（非迁移回归），全部为**新增**（无删除/无既有严格键改值）：
+#   · items/equipment 词条新增 1 个特效轴键 `action_speed_pct`（中文名 + 双向说明 +
+#     可负区间）→ items/equipment 的 stats `@more` 溢出展示计数各 +1
+#     （veinborn items 46→47 / equipment 41→42；test_demo items 46→47）；
+#   · settings 新增 `overheal` 段（enabled 1 子字段）→ settings 条目 +1
+#     （两包 count/unconfigured 各 +1，见 test_editor_batch131_segments 50→51）。
+#   对拍实证：删除项 = 0；无既有 label/help/group/module_labels/module_tree 改值；
+#   重定后基线树与当前树逐字段 diff=0。
+#   与 scripts/compare_field_meta_migration.py 的 DEFAULT_BASELINE_REF 同基线。
+BASELINE_REF = "138f0d2"
 CONTENT = REPO / "content"
 
 

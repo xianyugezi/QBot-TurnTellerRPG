@@ -257,7 +257,13 @@ DEFAULT_PACKS = ("veinborn", "test_demo")
 #     unconfigured 各 +1，派生的 index/modules 计数位移）。
 #   对拍实证：删除项 = 0；无既有 label/help/group/module_labels/module_tree 改值；
 #   重定后基线树与当前树逐字段 diff=0。
-DEFAULT_BASELINE_REF = "f1e942e"
+# 批56（2026-09-21 行动速度轴 + 过量治疗）重定：f1e942e → 138f0d2（本批文档/页脚提交）。
+#   原因 = 本批**有意**变更（非迁移回归），全部为**新增**（无删除/无既有严格键改值）：
+#   · items/equipment 词条新增 1 个特效轴键 `action_speed_pct` → stats `@more` 计数各 +1；
+#   · settings 新增 `overheal` 段（1 子字段）→ settings 条目 +1（派生计数位移）。
+#   对拍实证：删除项 = 0；无既有 label/help/group/module_labels/module_tree 改值；
+#   重定后基线树与当前树逐字段 diff=0。
+DEFAULT_BASELINE_REF = "138f0d2"
 
 
 def _env(root: Path) -> dict:

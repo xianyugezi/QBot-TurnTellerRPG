@@ -29,6 +29,8 @@ from typing import Any, Callable, List, Mapping, MutableMapping, Optional, Tuple
 
 from .basic_commands import _equip_engine
 from .router import CommandSpec
+from qbot_rpg.core.alchemy_affinity import axis_pct  # 批60 · 口径 A：相性 → 特效轴取值
+from qbot_rpg.core.effects import HEAL_DONE_AXIS  # 轴键常量（唯一源仍 data/gear_stats）
 from qbot_rpg.core.equipment import item_requirement_error
 from qbot_rpg.core.templates import tpl_of  # 消息模板配置化（2026-08-31 用户拍板）
 from qbot_rpg.data.player import Player
@@ -340,8 +342,15 @@ def _use_consumable(
         if reason == "bound":
             return tpl_of(ctx, "use_bound")
         return tpl_of(ctx, "use_no_item")
-    # ---- heal（既有路径，逐字节不变）----
+    # ---- heal（批60 · 口径 A：实例相性放大，仅非战斗 /道具 路径；无相性 → 逐字段不变）----
     if heal_total > 0:
+        # 相性值来自**实例**（`ItemInstance.affinities`，批42 已落档往返）；实例空 / 未配效果表
+        # / 轴未声明 → 0.0 → 不改 heal_total（缺省零变化兜底，R-G4-1）。
+        # 轴键/区间唯一源 = data/gear_stats（命中 effects.heal_apply 同式同取整）。
+        pct = axis_pct(_field(inst, "affinities") or {}, ctx.get("settings") or {},
+                       HEAL_DONE_AXIS)
+        if pct:
+            heal_total = int(round(heal_total * (1.0 + pct / 100.0)))
         attrs = player.get("attributes")
         max_hp = 100
         if attrs is not None:

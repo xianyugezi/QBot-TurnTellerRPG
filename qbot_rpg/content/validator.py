@@ -3048,6 +3048,41 @@ class _Checker:
                                   rule="affinity_ref_missing", affinity=key,
                                   affinity_space=sorted(aff_space))
 
+        # 批60 · 深炼金口径 A 强度型：settings.alchemy.affinity_effects 键空间红拦。
+        #   · V1 外层键 = 相性 id（支持 "主|副" 两档，两侧**分别**校验；对齐
+        #     core/affinity.resolve_affinity_effect 的查表序）；
+        #   · V2 内层键 ∈ GEAR_EFFECT_KEYS（特效轴唯一源 = data/gear_stats.EFFECT_AXIS_SPECS；
+        #     口径 C 的 quality_cap_delta 尚未接线，现按未登记键红拦——防「写了没人读」）；
+        #   · V3 内层值必须 number（排除 bool）。缺段 → 不报（零行为变化）。
+        alch = data.get("alchemy")
+        eff_table = alch.get("affinity_effects") if isinstance(alch, Mapping) else None
+        if eff_table is not None:
+            eff_path = f"{base}.alchemy.affinity_effects"
+            if not isinstance(eff_table, Mapping):
+                self._err(module_name, eff_path, "R-1", rule="type",
+                          expect="obj", got=type(eff_table).__name__)
+            else:
+                for okey, payload in eff_table.items():
+                    opath = f"{eff_path}.{okey}"
+                    if isinstance(okey, str) and okey:
+                        for part in okey.split("|"):
+                            if part and part not in aff_space:
+                                self._err(module_name, opath, "R-4",
+                                          rule="affinity_ref_missing", affinity=part,
+                                          affinity_space=sorted(aff_space))
+                    if not isinstance(payload, Mapping):
+                        self._err(module_name, opath, "R-1", rule="type",
+                                  expect="obj", got=type(payload).__name__)
+                        continue
+                    for ikey, ival in payload.items():
+                        ipath = f"{opath}.{ikey}"
+                        if not isinstance(ikey, str) or ikey not in GEAR_EFFECT_KEYS:
+                            self._err(module_name, ipath, "R-4", rule="gear_key_missing",
+                                      key=ikey, key_space=sorted(GEAR_EFFECT_KEYS))
+                        if isinstance(ival, bool) or not isinstance(ival, (int, float)):
+                            self._err(module_name, ipath, "R-1", rule="type",
+                                      expect="number", got=type(ival).__name__)
+
     # ---- 批18 效果扩展专项：gain_currency / learn_skill ----
     def _check_effects_18(self, module_name: str, data: object) -> None:
         """effects 段批18 新类型专项（类型相关必填/范围/引用存在性）。

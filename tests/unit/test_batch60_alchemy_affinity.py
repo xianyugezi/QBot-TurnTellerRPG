@@ -17,11 +17,15 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any, Dict, List
+from types import SimpleNamespace
+from typing import Any, Dict, List, Mapping, Tuple
 
 import pytest
 
+from qbot_rpg.commands.use_commands import _use_consumable
+from qbot_rpg.content.validator import check_pack
 from qbot_rpg.core.affinity import accumulate_affinity, rank_affinities
+from qbot_rpg.core.alchemy_affinity import axis_pct, main_sub_of
 from qbot_rpg.core.alchemy_core import AlchemyCore
 
 REPO = Path(__file__).resolve().parents[2]
@@ -234,3 +238,144 @@ def test_g1_default_zero_change_against_baseline() -> None:
             assert b[k] == a[k], k
     # apply_feed 返回体键集不变（口径 A 不新增返回键）
     assert before["return_keys"] == after["return_keys"]
+
+
+# ===========================================================================
+# 口径 A · 强度型：相性 → 特效轴（取值纯函数 + 使用链路消费）
+# ===========================================================================
+_AXIS = "healing_done_pct"
+
+
+def _settings_effects(table: Mapping[str, Any], **over: Any) -> Dict[str, Any]:
+    s: Dict[str, Any] = {"affinities": [{"id": _AFF, "name": "甲"}, {"id": _SUB, "name": "乙"}],
+                         "alchemy": {"affinity_effects": dict(table)}}
+    s.update(over)
+    return s
+
+
+def _use_ctx(settings: Any, *, power: int = 50, hp: int = 30) -> Dict[str, Any]:
+    return {
+        "registered": True,
+        "player": {"name": "试", "level": 1, "job_id": "warrior", "hp": hp,
+                   "inventory": [], "equipment": {},
+                   "attributes": {"base": {"hp": 1000.0, "mp": 30.0}}},
+        "items": {"heal_potion": {"id": "heal_potion", "name": "药", "type": "consumable",
+                                  "usable": True, "effects": ["heal_small"]}},
+        "effect_table": {"heal_small": {"id": "heal_small", "type": "heal", "power": power}},
+        "inventory_engine": SimpleNamespace(
+            remove_item=lambda p, iid, count=1, uid="": {"ok": True}),
+        "settings": settings,
+    }
+
+
+def _use(aff: Any, ctx: Dict[str, Any], *, with_field: bool = True) -> int:
+    inst = SimpleNamespace(item_id="heal_potion", name="药", uid="u1")
+    if with_field:
+        inst.affinities = aff
+    _use_consumable(ctx, ctx["player"], inst, ctx["items"]["heal_potion"])
+    return int(ctx["player"]["hp"])
+
+
+# ---- B1 · 纯函数取值 ----
+def test_b1_main_sub_of_matches_generic_rank() -> None:
+    settings = _SETTINGS_AFF
+    out = main_sub_of({"lunar": 5, "frost": 2}, settings)
+    assert out["main"] == _AFF and out["sub"] == _SUB
+    assert out["ranked"] == [(_AFF, 5.0), (_SUB, 2.0)]
+    assert main_sub_of({}, settings)["main"] is None
+
+
+def test_b1_axis_pct_two_level_key_and_defaults() -> None:
+    """A-V4：`"主|副"` 更具体，优先于 `"主"`；无相性/未知轴/表缺失 → 0.0。"""
+    settings = _settings_effects({_AFF: {_AXIS: 20}, f"{_AFF}|{_SUB}": {_AXIS: 30}})
+    assert axis_pct({_AFF: 5}, settings, _AXIS) == 20.0          # 单独主
+    assert axis_pct({_AFF: 5, _SUB: 2}, settings, _AXIS) == 30.0  # 主|副 更具体
+    assert axis_pct({}, settings, _AXIS) == 0.0                  # 无相性
+    assert axis_pct({_AFF: 5}, {}, _AXIS) == 0.0                 # 表缺失
+    assert axis_pct({_AFF: 5}, settings, "not_an_effect_axis") == 0.0  # 非登记轴
+
+
+def test_b1_axis_pct_clamped_by_declared_range() -> None:
+    """A-V3：超界声明按 `settings.effect_axes` 钳制（区间不由内容包自定）。"""
+    over = {"effect_axes": {_AXIS: {"min": -50, "max": 10}}}
+    settings = _settings_effects({_AFF: {_AXIS: 9999}}, **over)
+    assert axis_pct({_AFF: 5}, settings, _AXIS) == 10.0
+    settings2 = _settings_effects({_AFF: {_AXIS: -9999}}, **over)
+    assert axis_pct({_AFF: 5}, settings2, _AXIS) == -50.0
+
+
+# ---- B2 · 使用链路消费（非战斗 /道具）----
+def test_a_v2_no_affinity_instance_is_byte_identical() -> None:
+    """A-V2/V5：实例无相性（空 dict / 无字段）→ 回血 = 定义 power，逐字节一致。"""
+    assert _use({}, _use_ctx({})) == 80              # 30 + 50
+    assert _use({}, _use_ctx(_settings_effects({_AFF: {_AXIS: 20}}))) == 80
+    assert _use(None, _use_ctx(_settings_effects({_AFF: {_AXIS: 20}})),
+                with_field=False) == 80               # 商店药剂：实例根本无该字段
+
+
+def test_a_v1_only_affinity_differs_changes_heal_ratio() -> None:
+    """A-V1：同定义、仅实例相性不同 → 回血比值 = (1+pa/100)/(1+pb/100)（±1 取整）。"""
+    settings = _settings_effects({_AFF: {_AXIS: 20}, _SUB: {_AXIS: -10}})
+    hp_a = _use({_AFF: 5}, _use_ctx(settings))
+    hp_b = _use({_SUB: 5}, _use_ctx(settings))
+    heal_a, heal_b = hp_a - 30, hp_b - 30
+    assert (heal_a, heal_b) == (60, 45)
+    assert abs(heal_a / heal_b - (1.20 / 0.90)) < 1e-9
+
+
+def test_a_v3_clamp_applied_in_use_path() -> None:
+    settings = _settings_effects({_AFF: {_AXIS: 9999}},
+                                 effect_axes={_AXIS: {"max": 10}})
+    assert _use({_AFF: 5}, _use_ctx(settings)) == 85  # 50 × 1.10 = 55
+
+
+def test_a_v4_two_level_key_in_use_path() -> None:
+    settings = _settings_effects({_AFF: {_AXIS: 20}, f"{_AFF}|{_SUB}": {_AXIS: 30}})
+    assert _use({_AFF: 5}, _use_ctx(settings)) == 90               # 50 × 1.20 = 60
+    assert _use({_AFF: 5, _SUB: 2}, _use_ctx(settings)) == 95      # 50 × 1.30 = 65
+
+
+def test_a_round_matches_heal_apply_formula() -> None:
+    """取整与 `effects.heal_apply` 同式：`int(round(heal × (1+pct/100)))`。"""
+    settings = _settings_effects({_AFF: {_AXIS: 7}})
+    hp = _use({_AFF: 5}, _use_ctx(settings, power=50))  # 53.5 → 54
+    assert hp == 30 + int(round(50 * 1.07))
+
+
+def test_a_same_input_reproducible() -> None:
+    """同输入可复现（纯函数，无随机流消费）。"""
+    settings = _settings_effects({_AFF: {_AXIS: 20}})
+    first = [_use({_AFF: 5}, _use_ctx(settings)) for _ in range(3)]
+    assert first == [90, 90, 90]
+    assert axis_pct({_AFF: 5}, settings, _AXIS) == 20.0
+
+
+# ---- 校验器 V1~V3（配置键空间红拦）----
+def _verrs(mods: Dict[str, Any]) -> List[Tuple[str, Any]]:
+    return [(e.field, e.detail.get("rule")) for e in check_pack(mods).errors]
+
+
+def test_validator_affinity_effects_keyspace() -> None:
+    good = {"settings": {
+        "affinities": [{"id": _AFF}, {"id": _SUB}],
+        "alchemy": {"affinity_effects": {
+            _AFF: {_AXIS: 20},
+            f"{_AFF}|{_SUB}": {_AXIS: 30},
+        }},
+    }}
+    assert _verrs(good) == []
+    bad_axis = {"settings": {
+        "affinities": [{"id": _AFF}],
+        "alchemy": {"affinity_effects": {_AFF: {"not_a_registered_axis": 1}}},
+    }}
+    assert any(r == "gear_key_missing" for _, r in _verrs(bad_axis))
+    bad_aff = {"settings": {
+        "affinities": [{"id": _AFF}],
+        "alchemy": {"affinity_effects": {"ghost": {_AXIS: 1}}},
+    }}
+    assert any(r == "affinity_ref_missing" for _, r in _verrs(bad_aff))
+    bad_val = {"settings": {
+        "affinities": [{"id": _AFF}],
+        "alchemy": {"affinity_effects": {_AFF: {_AXIS: "x"}}},
+    }}
+    assert any(r == "type" for _, r in _verrs(bad_val))

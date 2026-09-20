@@ -452,7 +452,7 @@ def test_frontend_theme_wiring_is_live_and_keeps_draft() -> None:
 
 def test_footer_batch_string_is_current() -> None:
     html = _html()
-    assert "批66 · 新用户卡点修复" in html
+    assert "批67 · 卡点回归测试" in html
     assert "批49 · 测试 flake 根治" not in html
     assert "批13.1 · 段入口" not in html
     assert "批11 · 内容包导出/导入" not in html

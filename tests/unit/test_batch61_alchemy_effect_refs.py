@@ -351,6 +351,14 @@ def test_use_base_effects_unknown_type_still_ignored() -> None:
     assert "active_effects" not in ctx
 
 
+def test_use_dangling_effect_ref_ignored() -> None:
+    """悬空 `effect_ref`（效果表无定义，规格 R-B3 尚未红拦）→ 降级忽略，不落悬挂状态。"""
+    ctx = _use_refs(("eff_ghost",), _use_ctx_refs())
+    assert ctx["player"]["hp"] == 50                 # 基础回复照常
+    assert "active_effects" not in ctx
+    assert ctx["player"]["persistent_state"] == {}
+
+
 # ===========================================================================
 # 7) 端到端（只读夹具 `content/zz_craft_demo` 的**临时副本**）
 #    /炼金 → /投料 → /确认 →（产物实例 effect_refs）→ /道具（状态实例）

@@ -370,8 +370,9 @@ def _use_consumable(
             sgrant = _skill_grant_of(edef)
             if sgrant is not None:
                 skill_grants.append(sgrant)
-        elif str(eid) in extra_refs:
-            # 仅**实例附加**的引用落状态桶；基础定义段的未知类型照旧忽略（零行为变化）。
+        elif str(eid) in extra_refs and edef:
+            # 仅**实例附加**的引用落状态桶；基础定义段的未知类型照旧忽略（零行为变化）；
+            # 效果定义缺失（悬空 effect_ref，规格 R-B3 尚未红拦）→ 不落悬挂状态（降级忽略）。
             status_grants.append((str(eid), edef.get("duration")))
     if heal_total <= 0 and not currency_grants and not skill_grants:
         return tpl_of(ctx, "use_cannot_use")

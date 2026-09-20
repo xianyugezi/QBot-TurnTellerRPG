@@ -182,6 +182,17 @@ def player_to_row(player: Player) -> Dict[str, Any]:
     }
 
 
+def _effect_refs_of(raw: Any) -> List[str]:
+    """附加效果引用读侧归一（批61 · 口径 B）：只收非空 str、去重保序；非序列 → []。"""
+    if not isinstance(raw, (list, tuple)):
+        return []
+    out: List[str] = []
+    for x in raw:
+        if isinstance(x, str) and x and x not in out:
+            out.append(x)
+    return out
+
+
 def _item_from_dict(d: Dict[str, Any]) -> ItemInstance:
     """inventory JSON 元素 → ItemInstance；缺省补默认、未知键多忽略（MIG-1）。
 
@@ -226,6 +237,9 @@ def _item_from_dict(d: Dict[str, Any]) -> ItemInstance:
         # 批57：装备等级（淬炼上限输入）+ 淬炼分配（缺省 0/空 → 旧档零语义变化）。
         required_level=int(d.get("required_level", 0) or 0),
         temper_alloc=ta,
+        # 批61 · 口径 B：附加效果引用逐字段读回（缺省空 → 旧档/普通物品零影响；
+        # 只收非空 str，去重保序）。
+        effect_refs=tuple(_effect_refs_of(d.get("effect_refs"))),
     )
 
 

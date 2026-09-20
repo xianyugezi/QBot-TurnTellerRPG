@@ -86,6 +86,11 @@ class ItemInstance:
     # 规划展示的唯一事实源）。数值增量经 `core/temper.materialize_temper` **物化进
     # `stats_bonus`** → 面板聚合/战斗桥/展示零改动。默认空 → 既有实例零影响（对拍）。
     temper_alloc: Dict[str, int] = field(default_factory=dict)
+    # ---- 批61 · 口径 B 附加型：相性抽中的「追加效果/状态」引用（spec §4.4 B-2）----
+    # 值 = 炼金结算时由相性池 `effect_ref` 载荷抽中的效果 id 序列；使用时由
+    # `commands/use_commands._use_consumable` 分派（非战斗三类并入既有分支，其余落既有
+    # `active_effects` 状态桶）。**默认空元组** → 既有实例/商店药剂/非炼金产物零影响（对拍）。
+    effect_refs: Tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         """uid 缺省自动补发（frozen=True → object.__setattr__）。

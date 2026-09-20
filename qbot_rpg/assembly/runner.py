@@ -747,6 +747,10 @@ def _make_handler(spec: Any, parsed: ParsedCommand, ctx: MutableMapping[str, Any
                                               if isinstance(_v, int)
                                               and not isinstance(_v, bool) and _v > 0}
                                 if isinstance(it.get("temper_alloc"), Mapping) else {},
+                                # 批61 · 口径 B：附加效果引用原样带过（炼金产物不丢字段）
+                                effect_refs=tuple(
+                                    x for x in (it.get("effect_refs") or ())
+                                    if isinstance(x, str) and x),
                             ),)
                         except (TypeError, ValueError):
                             continue

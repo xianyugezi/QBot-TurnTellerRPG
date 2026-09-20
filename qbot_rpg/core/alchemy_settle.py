@@ -67,6 +67,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Dict, List, Mapping, MutableMapping, Optional
 
+from qbot_rpg.core.alchemy_affinity import plan_effect_refs
 from qbot_rpg.core.alchemy_core import ALCHEMY_JOB_ID, AlchemyCore
 from qbot_rpg.core.quality import ABSOLUTE_QUALITY_MAX, QualitySystem
 from qbot_rpg.core.templates import tpl_of
@@ -350,6 +351,11 @@ class SettleEngine:
         批60 · G3：`snap["affinity_values"]`（G1 写入的相性累计值）随 `add_item` 同步写进
         实例通道（`ItemInstance.affinities` 批42 已落、落档往返已通）；快照缺键 → 空 dict =
         零行为变化（与「非打造物品」同形）。
+
+        批61 · 口径 B 附加型：按快照相性查池（`plan_effect_refs` → `resolve_available_entries`
+        唯一入口 + `_pick_weighted`）抽 `effect_ref`，随 `add_item(effect_refs=…)` 冻进实例
+        （`ItemInstance.effect_refs`，默认空元组 → 既有实例零影响）。池无 `effect_ref` 行 /
+        无相性 → 空元组，且**不追加 kwargs、不消耗 rng**（缺省零变化）。
         """
         add_item = ctx.get("add_item")
         if not callable(add_item):
@@ -370,8 +376,15 @@ class SettleEngine:
         traits = self._snap_traits(snap)  # Q-S9：traits 从快照写入 ItemInstance
         affinities_raw = snap.get("affinity_values")
         affinities = dict(affinities_raw) if isinstance(affinities_raw, Mapping) else {}
-        result = add_item(item_id, count, True, quality=tier, traits=tuple(traits),
-                          affinities=affinities)
+        # 批61 · 口径 B：池查询唯一入口 → effect_ref 分流 → 加权抽取（rng=ctx["rng"] 玩家流）。
+        effect_refs = tuple(plan_effect_refs(
+            affinities, self._settings, rng=ctx.get("rng"),
+        ).get("picked") or ())
+        kwargs: Dict[str, Any] = {"quality": tier, "traits": tuple(traits),
+                                  "affinities": affinities}
+        if effect_refs:
+            kwargs["effect_refs"] = effect_refs
+        result = add_item(item_id, count, True, **kwargs)
         if not self._hook_ok(result):
             return None
         idef = self._find_item(item_id, ctx)

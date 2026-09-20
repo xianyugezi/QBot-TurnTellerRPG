@@ -1176,8 +1176,17 @@ def _inventory_hooks(ctx: MutableMapping[str, Any]) -> dict:
         if isinstance(_aff_raw, Mapping):
             _aff = {str(_k): float(_v) for _k, _v in _aff_raw.items()
                     if isinstance(_v, (int, float)) and not isinstance(_v, bool)}
+        # 批61 · 口径 B：附加效果引用（炼金结算 `add_item(..., effect_refs=…)` 传入）→
+        # 实例通道；只收非空 str、去重保序（归一口径同 runner）。空元组为假 → 既有触发
+        # 条件零变化（缺省零变化）。
+        _er_raw = kw.get("effect_refs")
+        _er: List[str] = []
+        if isinstance(_er_raw, (list, tuple)):
+            for _x in _er_raw:
+                if isinstance(_x, str) and _x and _x not in _er:
+                    _er.append(_x)
         # M8 炼金产出实例（quality/traits 关键字）→ 追加实例通道（保留品质/特性落档）
-        if kw and (kw.get("quality") is not None or kw.get("traits")) or _bonus or _aff:
+        if kw and (kw.get("quality") is not None or kw.get("traits")) or _bonus or _aff or _er:
             insts.append(
                 {
                     "item_id": key,
@@ -1194,6 +1203,8 @@ def _inventory_hooks(ctx: MutableMapping[str, Any]) -> dict:
                     "stats_bonus": _bonus,
                     # 批60 · G3：相性随实例落档（runner/repository 批42 已透传）
                     "affinities": _aff,
+                    # 批61 · 口径 B：附加效果引用随实例落档
+                    "effect_refs": tuple(_er),
                 }
             )
         _mark()

@@ -13,6 +13,7 @@
 """
 from __future__ import annotations
 
+import dataclasses
 import random
 from typing import Any, Dict, List
 
@@ -20,7 +21,10 @@ import pytest
 
 from qbot_rpg.core import alchemy_affinity as aa
 from qbot_rpg.core.alchemy_affinity import effect_refs_of, plan_effect_refs
+from qbot_rpg.core.alchemy_settle import SettleEngine
 from qbot_rpg.core.deep_craft import resolve_available_entries as craft_entries
+from qbot_rpg.data.item import ItemInstance
+from qbot_rpg.storage.repository import _item_from_dict
 
 # ---------------------------------------------------------------------------
 # 临时合成夹具（零真实内容包业务名）
@@ -185,3 +189,65 @@ def test_effect_refs_of_accepts_object_and_dict_dedupes() -> None:
     assert effect_refs_of(_Inst(None)) == ()
     assert effect_refs_of(_Inst("single")) == ()  # str 不是序列载荷
     assert effect_refs_of(None) == ()
+
+
+# ===========================================================================
+# 5) 写实例（G3′ · B-2）：结算 → add_item(effect_refs=…) → 实例落档往返
+# ===========================================================================
+def _produce_ctx(bucket: List[Dict[str, Any]], **over: Any) -> Dict[str, Any]:
+    def add_item(item_id: str, count: int, bound: bool = True, quality: Any = None,
+                 traits: Any = (), affinities: Any = None, **kw: Any) -> Dict[str, Any]:
+        bucket.append({"item_id": item_id, "count": count, "quality": quality,
+                       "affinities": dict(affinities or {}), "kw": dict(kw)})
+        return {"ok": True}
+
+    ctx: Dict[str, Any] = {
+        "add_item": add_item,
+        "rng": random.Random(20260919),
+        "items": {"potion": {"id": "potion", "name": "药"}},
+    }
+    ctx.update(over)
+    return ctx
+
+
+_RECIPE = {"id": "r", "output": {"item": "potion", "count": 1}}
+
+
+def test_produce_writes_effect_refs_from_pool() -> None:
+    """相性命中池 → `add_item(effect_refs=('eff_burn',))`（产物字段证据）。"""
+    bucket: List[Dict[str, Any]] = []
+    eng = SettleEngine(settings=_settings())
+    snap = {"affinity_values": {_A: 5}, "traits": []}
+    out = eng._produce(_produce_ctx(bucket), _RECIPE, snap, "common", 1.0)
+    assert out is not None
+    assert bucket[0]["kw"]["effect_refs"] == (_E_BURN,)
+    assert bucket[0]["affinities"] == {_A: 5.0}
+
+
+def test_produce_default_no_effect_refs_kwarg() -> None:
+    """B-V5 零变化：无相性 / 池无 `effect_ref` → **不传** `effect_refs` kwargs。"""
+    bucket: List[Dict[str, Any]] = []
+    eng = SettleEngine(settings=_settings())
+    out = eng._produce(_produce_ctx(bucket), _RECIPE, {"traits": []}, "common", 1.0)
+    assert out is not None
+    assert "effect_refs" not in bucket[0]["kw"]
+
+
+def test_instance_effect_refs_roundtrip_and_legacy_default() -> None:
+    """落档往返不丢字段；旧档缺键 → 空元组（无损缺省）。"""
+    inst = ItemInstance(item_id="potion", name="药", count=1, quality="common",
+                        bound=False, effect_refs=(_E_BURN, _E_SLOW))
+    d = dataclasses.asdict(inst)
+    assert _item_from_dict(d).effect_refs == (_E_BURN, _E_SLOW)
+    legacy = dict(d)
+    legacy.pop("effect_refs")
+    assert _item_from_dict(legacy).effect_refs == ()
+    # 非序列 / 非法值 → 空 / 过滤
+    bad = dict(d)
+    bad["effect_refs"] = "single"
+    assert _item_from_dict(bad).effect_refs == ()
+    bad["effect_refs"] = [1, "ok", "", "ok"]
+    assert _item_from_dict(bad).effect_refs == ("ok",)
+    # dataclass 默认值：既有构造点不传 → 空元组（零影响）
+    assert ItemInstance(item_id="x", name="x", count=1, quality="normal",
+                        bound=False).effect_refs == ()

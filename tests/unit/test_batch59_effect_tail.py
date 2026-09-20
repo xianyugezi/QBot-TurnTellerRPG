@@ -271,3 +271,58 @@ def test_d3_speed_weight_is_overridable() -> None:
 def test_d4_speed_weight_default_inert() -> None:
     """缺省（未启用闸）→ 速度轴不影响任何数值（缺省零变化）。"""
     assert effect_equiv({SPEED_AXIS: 20.0}, None)["equiv_pct"] == 0.0
+
+
+# =====================================================================================
+# E · m1 flake 根治：布尔字面量走 Python 快路径（不 spawn Node）+ watchdog 容差放宽
+# =====================================================================================
+def test_e1_boolean_literals_are_fast_path_deterministic() -> None:
+    """`evaluate("true"/"false")` 不再降级 Node：结果确定且无 `eval_failed` 警告。
+
+    修复前：`true`/`false` 被 Python 快路径拒（`ast.Name` 不在白名单）→ 每次 spawn Node；
+    Node vm watchdog 在 30ms 预算下 ~2%~12% 误报 `ERR_SCRIPT_EXECUTION_TIMEOUT` →
+    `eval_failed:runner_fatal` → 兜底 0.0 → `evaluate("true")==1.0` 全量偶发红。
+    大量重复执行即回归探针（修复前 200 次几乎必现，修复后 0 次）。
+    """
+    from qbot_rpg.core.formula_engine import EvaluatorCtx, evaluate, evaluate_detail
+
+    ctx = EvaluatorCtx(attacker={}, target={}, battle={}, rng_state=1)
+    for _ in range(200):
+        assert evaluate("true", ctx) == 1.0
+        assert evaluate("false", ctx) == 0.0
+    v, w = evaluate_detail("true", ctx)
+    assert v == 1.0 and not any(str(x).startswith("eval_failed") for x in w)
+    v2, w2 = evaluate_detail("false", ctx)
+    assert v2 == 0.0 and not any(str(x).startswith("eval_failed") for x in w2)
+
+
+def test_e2_boolean_fast_path_does_not_change_mixed_js_semantics() -> None:
+    """只接管**根节点**布尔字面量：参与运算仍走 Node，保 JS 数值强制转换语义。"""
+    from qbot_rpg.core.formula_engine import EvaluatorCtx, evaluate_detail
+
+    ctx = EvaluatorCtx(attacker={}, target={}, battle={}, rng_state=1)
+    # JS：true + 1 === 2；true == 1 === true。若快路径误接管会得 Python 语义（0）。
+    assert evaluate_detail("true + 1", ctx)[0] == 2.0
+    assert evaluate_detail("true == 1", ctx)[0] == 1.0
+
+
+def test_e3_vm_watchdog_slack_widened_for_scheduling_jitter() -> None:
+    """根因修复证据：有效 vm 预算 30ms → 100ms（10ms 执行契约字面值不变）。"""
+    from qbot_rpg.core import formula_engine as fe
+
+    assert fe.FORMULA_TIMEOUT_MS == 10                       # 执行预算契约不变
+    assert fe._VM_EFFECTIVE_TIMEOUT_MS == 100  # noqa: SLF001  # 抖动容差放宽
+    assert fe._VM_EFFECTIVE_TIMEOUT_MS == fe.FORMULA_TIMEOUT_MS + fe._VM_CTX_SLACK_MS  # noqa: SLF001
+
+
+def test_e4_boolean_path_does_not_invoke_node(monkeypatch: Any) -> None:
+    """机制证据：布尔字面量**根本不调用** Node 运行器（钉死 `_invoke_runner` 不被触发）。"""
+    from qbot_rpg.core import formula_engine as fe
+
+    def _boom(*_a: Any, **_k: Any) -> Any:
+        raise AssertionError("布尔字面量不应触发 Node 回退")
+
+    monkeypatch.setattr(fe, "_invoke_runner", _boom)
+    ctx = fe.EvaluatorCtx(attacker={}, target={}, battle={}, rng_state=1)
+    assert fe.evaluate("true", ctx) == 1.0
+    assert fe.evaluate("false", ctx) == 0.0

@@ -67,12 +67,16 @@ _LOGGER = logging.getLogger("qbot_rpg.formula")
 FORMULA_MAX_LENGTH = 4096
 # 单次求值超时（定稿 §1.2：vm timeout 10ms）—— JS 执行预算常量（契约字面值）。
 FORMULA_TIMEOUT_MS = 10
-# runInNewContext 冷启动补偿：Node v22 实测 vm 上下文/脚本创建耗时 ~15ms，该开销也被计入
-# timeout 命中的 watchdog 预算，10ms 字面值会使冷进程中任何公式都被误判超时。补偿后实际
-# 传入 vm 的有效预算 = 10 + 20 = 30ms：普通公式执行本身 <1ms 充足富余；`while(true){}` 类
-# 死循环仍被 watchdog 以 ≤30ms 真实中断（实证：budget=30/100 时死循环分别于 30/100ms 中断）——
-# F-3「超时 -> 0 + 不崩溃」成立。此为对「10ms」的工程化落地（定稿 §1.2 意图=防 CPU 死循环/ReDoS）。
-_VM_CTX_SLACK_MS = 20
+# runInNewContext 冷启动补偿 + **调度抖动容差**：Node v22 实测 vm 上下文/脚本创建耗时 ~15ms，
+# 且该开销与 watchdog 触发都计入 timeout 预算。批59 实测（本容器）：**30ms 有效预算下，连
+# `true` / `1+2*3` 这类平凡脚本都会以 ~2%~12% 的概率被误判超时**
+# （`ERR_SCRIPT_EXECUTION_TIMEOUT` → `runner_fatal` → 公式兜底 0，是 m1 用例全量偶发红的根因）；
+# 预编译 `vm.Script` 与复用 `vm.createContext` 均**不能**消除（实测 true 0/120、false 5/120），
+# 故属 30ms 预算对墙钟调度抖动的余量不足，而非编译/建上下文开销。
+# 放宽到 10 + 90 = 100ms 后同题实测 0/240；`while(true){}` 类死循环仍被 watchdog 真实中断
+# （≤100ms，进程不崩）—— F-3「超时 → 0 + 不崩溃」成立。10ms 仍是**执行预算**契约
+# （定稿 §1.2 意图=防 CPU 死循环/ReDoS），本常量是其工程化余量。
+_VM_CTX_SLACK_MS = 90
 _VM_EFFECTIVE_TIMEOUT_MS = FORMULA_TIMEOUT_MS + _VM_CTX_SLACK_MS
 # 整体子进程兜底超时（仅防 Node 启动/管道挂死/异常路径；JS 求值受上者 watchdog 约束）
 _SUBPROCESS_TIMEOUT_S = 20
@@ -875,7 +879,15 @@ def _evaluate_fast(js_expr: str, ctx: EvaluatorCtx) -> Optional[Tuple[float, Lis
     try:
         tree = ast.parse(js_expr, mode="eval")
     except (SyntaxError, ValueError):
-        return None  # e.g. `===` / `true` / 空串 → 降级 Node
+        return None  # e.g. `===` / 空串 → 降级 Node
+    # 批59 · m1 flake 根治：JS 布尔字面量 `true`/`false` 在 Python 里解析成 Name（不在白名单）
+    # → 以前**必然**降级 Node，而 Node vm watchdog 在本容器会以 ~2%~12% 概率误报超时
+    # （见 `_VM_CTX_SLACK_MS` 注释）→ 公式兜底 0，`evaluate("true")` 偶发 0.0。
+    # 根节点即布尔字面量时语义无歧义（JS `true` → 结果白名单 1/0），故在此直接求值；
+    # 参与混合运算（`true+1` / `true==1`）仍交 Node，保 JS 数值强制转换语义不被改写。
+    body = tree.body
+    if isinstance(body, ast.Name) and body.id in ("true", "false"):
+        return (1.0 if body.id == "true" else 0.0), []
     ev = _FastEvaluator(ctx)
     try:
         ev.maybe_expr(tree)          # 整树白名单预检

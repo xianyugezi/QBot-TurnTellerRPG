@@ -106,8 +106,9 @@ class ForgeTreeEngine:
           - forge：forge.json 顶层 raw dict（Mapping；含 trees / settings）。None/非 Mapping → {}。
           - items：items 表（id→条目 Mapping，或条目 list/tuple；供 item_of 解析 node.item）。
             None/空 → 空表（merge_forge_instance 的 items_def 由调用方显式传入，不依赖此表）。
-          - settings：settings dict（含 forge 段）或 forge 段本身；None → 回退 forge["settings"]，
-            再回退全部默认值。归一口径复用批0 read_forge_settings。
+          - settings：settings dict（含 forge 段）或 forge 段本身；None → 回退 forge["settings"]
+            （**批72 起该段废弃，仅既有包兜底**），再回退全部默认值。归一口径复用批0
+            read_forge_settings。
         """
         self._forge: Mapping[str, object] = forge if isinstance(forge, Mapping) else {}
         self._items: Dict[str, Mapping[str, object]] = self._norm_items(items)
@@ -142,8 +143,13 @@ class ForgeTreeEngine:
         """settings 归一（S-01~05 + 2c2d 补白键；缺省默认值兜底，复用 read_forge_settings）。
 
         优先级：① 显式 settings（含 forge 段）→ 取段；② 显式 settings 本身是 forge 段
-        （含 FORGE_SETTINGS_KEYS 任一键）→ 包层取段；③ forge raw["settings"] 段；
-        ④ 全默认值兜底（read_forge_settings(None)）。
+        （含 FORGE_SETTINGS_KEYS 任一键）→ 包层取段；③ forge raw["settings"] 段
+        （**批72 起废弃**，仅作既有包兜底，见下）；④ 全默认值兜底（read_forge_settings(None)）。
+
+        批72 · 重复段收敛（审计3 §3-F1）：`forge.json["settings"]` 与
+        `settings.json["forge"]` 是同一件事的两段且已漂移 → **唯一源 = settings 的 forge
+        段**。第③步降级为「只喂 forge.json」离屏调用的兼容兜底，生产路径（①）不再依赖它；
+        包内残留由校验器黄提示 Y-22（`validator._check_forge_deprecated_settings`）。
         """
         if isinstance(settings, Mapping):
             seg = settings.get("forge")

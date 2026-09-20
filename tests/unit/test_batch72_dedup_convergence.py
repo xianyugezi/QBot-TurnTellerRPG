@@ -131,3 +131,85 @@ def test_f2_pack_forge_json_has_no_decompose_rate() -> None:
         if isinstance(seg, Mapping) and "decompose_rate" in seg:
             hits.append(str(f))
     assert hits == []
+
+
+# ===========================================================================
+# F1 · forge.json["settings"] 废弃：兜底保留 + 黄提示
+# ===========================================================================
+def _empty_forge() -> dict:
+    return {"trees": [], "sets": [], "augments": []}
+
+
+def test_f1_fallback_still_reads_forge_json_settings() -> None:
+    """兜底：只喂 forge.json（settings 段在 forge 内）→ 仍被读取（既有包不崩）。"""
+    from qbot_rpg.core.forge_tree import ForgeTreeEngine
+
+    forge = _empty_forge()
+    forge["settings"] = {"sets_enabled": False, "augments_enabled": False}
+    eng = ForgeTreeEngine(forge=forge, items={}, settings=None)
+    assert eng.settings()["sets_enabled"] is False
+    assert eng.settings()["augments_enabled"] is False
+
+
+def test_f1_primary_source_wins_over_deprecated_segment() -> None:
+    """唯一源优先：settings.json.forge 存在时，forge.json.settings 不参与（两态一致）。"""
+    from qbot_rpg.core.forge_tree import ForgeTreeEngine
+
+    # 两态：forge.json.settings 存在（且与唯一源不同）vs 不存在 → 引擎结果必须一致
+    with_dep = _empty_forge()
+    with_dep["settings"] = {"sets_enabled": False, "augments_enabled": False}
+    without_dep = _empty_forge()
+
+    settings = {"forge": {"sets_enabled": True, "augments_enabled": True}}
+    eng_a = ForgeTreeEngine(forge=with_dep, items={}, settings=settings)
+    eng_b = ForgeTreeEngine(forge=without_dep, items={}, settings=settings)
+    assert eng_a.settings() == eng_b.settings()
+    assert eng_a.settings()["sets_enabled"] is True
+
+
+def test_f1_deprecated_segment_yellow_warning() -> None:
+    """校验器：forge.json 出现 `settings` 段 → 黄提示（不阻断）。"""
+    from qbot_rpg.content.validator import check_pack
+
+    modules = {
+        "forge": {"trees": [], "settings": {"sets_enabled": True}},
+        "settings": {},
+    }
+    report = check_pack(modules)
+    warns = [w for w in report.warnings if "forge.settings" in str(w.field)]
+    assert warns, [str(w) for w in report.warnings]
+    assert any("废弃" in str(w.detail.get("msg")) for w in warns)
+    # 黄提示不阻断：该段存在与否，红拦条数一致（只进 warnings）
+    base = check_pack({"forge": {"trees": []}, "settings": {}})
+    assert report.count_errors == base.count_errors
+
+
+def test_f1_no_yellow_when_segment_absent() -> None:
+    """收敛态：forge.json 无 `settings` 段 → 无该条黄提示。"""
+    from qbot_rpg.content.validator import check_pack
+
+    report = check_pack({"forge": {"trees": []}, "settings": {}})
+    assert not [w for w in report.warnings if "forge.settings" in str(w.field)]
+
+
+def test_f1_shipped_packs_two_state_parity() -> None:
+    """仓库内既有包两态对拍：删除 forge.json.settings 前后，引擎归一结果逐字段一致。"""
+    import copy
+    import json
+    from pathlib import Path
+
+    from qbot_rpg.core.forge_tree import ForgeTreeEngine
+
+    root = Path(__file__).resolve().parents[2] / "content"
+    for pack in ("test_demo", "veinborn"):
+        forge = json.loads((root / pack / "forge.json").read_text(encoding="utf-8"))
+        settings = json.loads((root / pack / "settings.json").read_text(encoding="utf-8"))
+        if "settings" not in forge:
+            continue
+        converged = copy.deepcopy(forge)
+        converged.pop("settings", None)
+        eng_a = ForgeTreeEngine(forge=forge, items={}, settings=settings)
+        eng_b = ForgeTreeEngine(forge=converged, items={}, settings=settings)
+        assert dict(eng_a.settings()) == dict(eng_b.settings()), pack
+        # 且归一结果 = 唯一源（settings.forge）的读取，不取废弃段
+        assert eng_a.settings() == eng_b.settings()

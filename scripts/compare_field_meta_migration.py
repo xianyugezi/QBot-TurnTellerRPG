@@ -270,7 +270,11 @@ DEFAULT_PACKS = ("veinborn", "test_demo")
 #   · `settings.forge` 新增 `essence_rate` 段（13 子字段）→ forge 字段表新增（纯新增）。
 #   对拍实证：删除项 = 0；无既有 label/help/group/module_labels/module_tree 改值；
 #   重定后基线树与当前树逐字段 diff=0。
-DEFAULT_BASELINE_REF = "427047e"
+# 批59（2026-09-22 特效小尾巴）重定：427047e → ee15c78（本批字段/元数据提交）。
+#   原因 = 本批**有意**变更（非迁移回归），全部为**新增**（删除 0 / 无既有严格键改值）：
+#   · items/equipment 新增特效轴键 `reward_mult_pct`（X43，`min:0`）→ stats `@more` 计数 +1；
+#   · settings.`overheal` 新增 mode/cap_pct/cap_flat 三子字段。
+DEFAULT_BASELINE_REF = "ee15c78"
 
 
 def _env(root: Path) -> dict:

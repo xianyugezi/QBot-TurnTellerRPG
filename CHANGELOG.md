@@ -14,6 +14,24 @@
 
 ### Added
 
+- **批59（2026-09-22）**：**特效体系小尾巴：奖励轴登记（D5）+ 过量治疗上限/去向（BV-1/2）+
+  速度预算坐标（BV-3）+ m1 flake 根治**。依据 `docs/深度打造_决策记录.md` §十五 D5 +
+  §二十一 批56 待裁决；实现说明 §二十一。**① D5 奖励轴**：登记第 17 条特效轴
+  `reward_mult_pct`（X43，D1 百分点口径，**`min: 0` 下钳 0**；`bridge="settlement"`
+  **不进战斗桥**）。**消费点待接**（`reward.dispatch_reward` / `battle_reward.
+  settle_battle_rewards` / `roll_death_drops` 三处分散、无唯一收口）→ 只登记轴 +
+  下钳语义，**不为交差硬造消费点**；编辑器可见（items/equipment 字段表）。
+  **② BV-1**：`overheal` 段新增 `cap_pct`/`cap_flat`（最多超出 max_hp 的 %/点，同给取
+  更小），**缺省都不给 = 无额外上限**（与批56 现状逐字段一致）。**③ BV-2**：
+  `overheal.mode ∈ keep|discard` 把去向选择点**显式表达**；`shield`（转护盾）为**未实现**
+  保留位（校验器 R-1 红拦 + Y-21 黄提示「未实现」）→ **不做半成品开关**。
+  **④ BV-3**：`EFFECT_AXIS_WEIGHTS` 登记 `action_speed_pct`（`calib=+20 ⇔ output=+20%`，
+  依据实现说明 §18.7；可配）→ 闸不再报 `unknown_axis`。**⑤ m1 flake 根治**：根因 =
+  `true`/`false` 降级 Node + 30ms vm watchdog 抖动误报（实测 2%~12%）→ 公式兜底 0；
+  修 `_VM_CTX_SLACK_MS` 20→90（有效 100ms；`FORMULA_TIMEOUT_MS=10` 执行预算契约不变）
+  + 布尔字面量走 Python 快路径（探针 400 次 0 失败）。**零变化**：不配置新键/新段 →
+  双尺子修前=修后（工具尺 7/20/24；档位尺 Boss 越档结论与批55/56 一致，非本批引入）。
+  页脚批次串 →「批59 · 特效小尾巴」。
 - **批58（2026-09-21）**：**深打造示例包 `content/zz_craft_demo`（内容数据落地）**。
   依据 `/root/deliverables/打造_材料表与图纸表_草案v2.md`（24 材料 / 6 图纸 / 暴击参数 /
   逐档手算）+ `深炼金相性_玩法口径_可开工版.md` §七（相性四段形状）+ 批54

@@ -157,7 +157,16 @@ SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
 #   · `settings.forge` 新增 `essence_rate` 段（13 子字段）→ forge 字段表纯新增。
 #   对拍实证：删除项 = 0；无既有 label/help/group/module_labels/module_tree 改值；
 #   重定后基线树与当前树逐字段 diff=0。
-BASELINE_REF = "427047e"
+# 批59（2026-09-22 特效小尾巴）重定：427047e → ee15c78（本批字段/元数据提交）。
+#   原因 = 本批**有意**变更（非迁移回归），全部为**新增**（删除 0 / 无既有严格键改值）：
+#   · items/equipment 词条新增 1 个特效轴键 `reward_mult_pct`（X43，中文名 + 双向说明 +
+#     `min:0` 区间）→ items/equipment 的 stats `@more` 溢出展示计数各 +1
+#     （veinborn items 47→48 / equipment 42→43；test_demo items 47→48）；
+#   · settings 的既有 `overheal` 段新增 `mode`/`cap_pct`/`cap_flat` 三子字段（纯新增，
+#     不改既有 `enabled` 的 label/help/range）。
+#   对拍实证：删除项 = 0；无既有 label/help/group/module_labels/module_tree 改值；
+#   重定后基线树与当前树逐字段 diff=0。
+BASELINE_REF = "ee15c78"
 CONTENT = REPO / "content"
 
 

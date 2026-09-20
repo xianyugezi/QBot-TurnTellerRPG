@@ -447,23 +447,27 @@ def validate_enhance(modules: Mapping[str, Any], report: Any) -> None:
     temper = cfg.get("temper")
     if not isinstance(temper, Mapping):
         return
-    if not temper.get("enabled"):
+    # **校验读 raw 段**：归一函数会把非法值回退默认，若校验归一结果则永不报错；
+    # 故对「显式给了非法值」的判定一律读原始 `raw["temper"]`（缺键 = 走默认 = 合法）。
+    raw_temper = raw.get("temper") if isinstance(raw.get("temper"), Mapping) else {}
+    if not raw_temper.get("enabled"):
         return  # 未启用不校验（缺省零变化）
 
     # V9：单项上限比例 ∈ (0,1]；=1.0 黄提示（规划空间归零），越界红拦。
-    ratio = temper.get("per_stat_cap_ratio")
-    if isinstance(ratio, bool) or not isinstance(ratio, (int, float)):
-        _err(report, "enhance.temper.per_stat_cap_ratio", "V9",
-             value=ratio, msg="per_stat_cap_ratio 须数值")
-    elif ratio <= 0 or ratio > 1:
-        _err(report, "enhance.temper.per_stat_cap_ratio", "V9",
-             value=ratio, msg="per_stat_cap_ratio 须 ∈ (0,1]")
-    elif float(ratio) == 1.0:
-        _warn(report, "enhance.temper.per_stat_cap_ratio", "V9",
-              msg="单项上限 = 总值 → 淬炼无「规划空间」（原案 §10 R5 退化）")
+    if "per_stat_cap_ratio" in raw_temper:
+        ratio = raw_temper.get("per_stat_cap_ratio")
+        if isinstance(ratio, bool) or not isinstance(ratio, (int, float)):
+            _err(report, "enhance.temper.per_stat_cap_ratio", "V9",
+                 value=ratio, msg="per_stat_cap_ratio 须数值")
+        elif ratio <= 0 or ratio > 1:
+            _err(report, "enhance.temper.per_stat_cap_ratio", "V9",
+                 value=ratio, msg="per_stat_cap_ratio 须 ∈ (0,1]")
+        elif float(ratio) == 1.0:
+            _warn(report, "enhance.temper.per_stat_cap_ratio", "V9",
+                  msg="单项上限 = 总值 → 淬炼无「规划空间」（原案 §10 R5 退化）")
 
     # V10：allowed_stats 必须全部属于 GEAR_NUMERIC_KEYS（否则物化后被聚合端静默丢弃）。
-    allowed = temper.get("allowed_stats")
+    allowed = raw_temper.get("allowed_stats")
     if isinstance(allowed, (list, tuple)):
         for s in allowed:
             if str(s) not in GEAR_NUMERIC_KEYS:
@@ -471,32 +475,28 @@ def validate_enhance(modules: Mapping[str, Any], report: Any) -> None:
                      key=s, msg=f"可淬炼属性「{s}」不在框架数值键空间")
 
     # V11：cost_per_point.essence ≥ 1 且为整数（0 → 无限淬炼；float → 不明）。
-    cpp = temper.get("cost_per_point")
+    cpp = raw_temper.get("cost_per_point")
     if isinstance(cpp, Mapping):
-        es = cpp.get("essence")
-        if isinstance(es, bool) or not isinstance(es, int) or es < 1:
-            _err(report, "enhance.temper.cost_per_point.essence", "V11",
-                 value=es, msg="每点精粹须为整数 ≥ 1（0 会无限淬炼）")
+        if "essence" in cpp:
+            es = cpp.get("essence")
+            if isinstance(es, bool) or not isinstance(es, int) or es < 1:
+                _err(report, "enhance.temper.cost_per_point.essence", "V11",
+                     value=es, msg="每点精粹须为整数 ≥ 1（0 会无限淬炼）")
         cur = cpp.get("currency")
         if cur is not None and (isinstance(cur, bool) or not isinstance(cur, int) or cur < 0):
             _err(report, "enhance.temper.cost_per_point.currency", "V11",
                  value=cur, msg="每点货币须为非负整数")
-    else:
+    elif "cost_per_point" in raw_temper:
         _err(report, "enhance.temper.cost_per_point", "V11", msg="cost_per_point 需对象")
 
-    # V12：cap_per_level / total_cap / total_cap_by_level 至少一个可解析且单调不减。
-    cap_per_level = temper.get("cap_per_level")
-    total_cap = temper.get("total_cap")
-    by_level = temper.get("total_cap_by_level")
-    has_cap = (
-        (isinstance(cap_per_level, int) and not isinstance(cap_per_level, bool)
-         and cap_per_level >= 0)
-        or (isinstance(total_cap, int) and not isinstance(total_cap, bool) and total_cap >= 0)
-        or (isinstance(by_level, Mapping) and bool(by_level))
-    )
-    if not has_cap:
-        _err(report, "enhance.temper", "V12",
-             msg="cap_per_level / total_cap / total_cap_by_level 至少一个可解析")
+    # V12：显式给出的 cap 键须合法且单调不减（缺键 = 走默认 = 合法）。
+    for ck in ("cap_per_level", "total_cap"):
+        if ck in raw_temper:
+            cv = raw_temper.get(ck)
+            if isinstance(cv, bool) or not isinstance(cv, int) or cv < 0:
+                _err(report, f"enhance.temper.{ck}", "V12",
+                     value=cv, msg=f"{ck} 须为非负整数（或删除该键走默认）")
+    by_level = raw_temper.get("total_cap_by_level")
     if isinstance(by_level, Mapping):
         prev = -1
         for lv in sorted((int(k) for k in by_level.keys()
@@ -510,26 +510,33 @@ def validate_enhance(modules: Mapping[str, Any], report: Any) -> None:
                 _err(report, f"enhance.temper.total_cap_by_level.{lv}", "V12",
                      value=val, prev=prev, msg="逐级上限须单调不减（等级↑上限↑）")
             prev = max(prev, val)
+    elif "total_cap_by_level" in raw_temper:
+        _err(report, "enhance.temper.total_cap_by_level", "V12", msg="逐级上限表需对象")
 
     # V13：cost_growth ∈ [0,1]（防后期免费淬炼）；value_type 枚举；points_per_action ≥ 1。
-    growth = temper.get("cost_growth")
-    if isinstance(growth, bool) or not isinstance(growth, (int, float)):
-        _err(report, "enhance.temper.cost_growth", "V13",
-             value=growth, msg="cost_growth 须数值")
-    elif growth < 0 or growth > 1:
-        _err(report, "enhance.temper.cost_growth", "V13",
-             value=growth, msg="cost_growth 须 ∈ [0,1]")
-    if temper.get("value_type") not in ("flat", "pct"):
+    if "cost_growth" in raw_temper:
+        growth = raw_temper.get("cost_growth")
+        if isinstance(growth, bool) or not isinstance(growth, (int, float)):
+            _err(report, "enhance.temper.cost_growth", "V13",
+                 value=growth, msg="cost_growth 须数值")
+        elif growth < 0 or growth > 1:
+            _err(report, "enhance.temper.cost_growth", "V13",
+                 value=growth, msg="cost_growth 须 ∈ [0,1]")
+    if "value_type" in raw_temper and raw_temper.get("value_type") not in ("flat", "pct"):
         _err(report, "enhance.temper.value_type", "V13",
-             value=temper.get("value_type"), msg="value_type 须 flat/pct")
-    ppa = temper.get("points_per_action")
-    if isinstance(ppa, bool) or not isinstance(ppa, int) or ppa < 1:
-        _err(report, "enhance.temper.points_per_action", "V13",
-             value=ppa, msg="points_per_action 须为正整数")
+             value=raw_temper.get("value_type"), msg="value_type 须 flat/pct")
+    if "points_per_action" in raw_temper:
+        ppa = raw_temper.get("points_per_action")
+        if isinstance(ppa, bool) or not isinstance(ppa, int) or ppa < 1:
+            _err(report, "enhance.temper.points_per_action", "V13",
+                 value=ppa, msg="points_per_action 须为正整数")
 
     # V8（**跨段硬闸**，报告 §3.4 G6）：已淬炼装备的分解返还必须 ≤ 每点淬炼消耗，
     # 否则「淬炼→分解→再淬炼」可无限套利（报告 §3.4A 已证明）。读 settings.forge.essence_rate。
-    unit = cpp.get("essence") if isinstance(cpp, Mapping) else None
+    unit = (cpp.get("essence") if isinstance(cpp, Mapping) else None)
+    if unit is None:
+        unit = (temper.get("cost_per_point") or {}).get("essence") if isinstance(
+            temper.get("cost_per_point"), Mapping) else None
     sets = modules.get("settings")
     forge = sets.get("forge") if isinstance(sets, Mapping) else None
     er = forge.get("essence_rate") if isinstance(forge, Mapping) else None
@@ -542,4 +549,5 @@ def validate_enhance(modules: Mapping[str, Any], report: Any) -> None:
             _err(report, "settings.forge.essence_rate.temper_refund", "V8",
                  refund=refund, cost=unit,
                  msg="淬炼返还须 ≤ 每点淬炼精粹消耗（否则可无限套利）")
+
 

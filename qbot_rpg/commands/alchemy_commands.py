@@ -126,6 +126,14 @@ from qbot_rpg.core.quality import QualitySystem
 from qbot_rpg.core.templates import tpl_of
 from qbot_rpg.core.trait_inherit import TraitInherit
 from qbot_rpg.core.upgrade import UpgradeEngine
+# 批57 · 实例级分解路径（报告 C-4/R-3）：按 uid 实例分解（材料 + 精粹）。
+from qbot_rpg.core.decompose import (
+    currency_space,
+    grant_currency,
+    plan_instance_decompose,
+)
+from qbot_rpg.content.enhance_models import parse_enhance_settings
+from qbot_rpg.content.forge_settings import read_forge_settings
 
 # 同包兄弟模块：相对导入（G0 架构门禁 test_commands_web_not_depended 不产生
 # `qbot_rpg.commands` 前缀反向依赖边；同层兄弟引用架构合规，与 shop_commands.py 同口径）。
@@ -1623,6 +1631,200 @@ def _star_qty(parsed: Any) -> Optional[int]:
     return max(1, n)
 
 
+# ---------------------------------------------------------------------------
+# 批57 · 实例级分解路径（uid 实例；报告 C-4/C-5 + 主 agent ②）
+#   现有 `/分解` 按 item_id 取物品定义、**分解不了独有 uid 实例**（报告 R-3）；
+#   下列纯壳函数按 uid/名称定位「打造装备实例」→ 走 core/decompose 计划 → 落账
+#   （扣实例 + 返材料 + 入精粹）。**仅当 `essence_rate.enabled` 时启用**，否则整段
+#   跳过 → 既有 item_id 路径逐字节不变（缺省零变化）。
+# ---------------------------------------------------------------------------
+def _inst_field(row: Any, key: str, default: Any = None) -> Any:
+    if isinstance(row, Mapping):
+        return row.get(key, default)
+    return getattr(row, key, default)
+
+
+def _decompose_target_parts(target: Any) -> tuple:
+    """分解目标 → (名称, uid 前缀)。支持 `名称` / `uid` / `名称#uid前缀`。"""
+    t = str(target or "").strip()
+    if "#" in t:
+        name, _, uid = t.partition("#")
+        return name.strip(), uid.strip()
+    if len(t) == 32 and all(c in "0123456789abcdef" for c in t.lower()):
+        return "", t
+    return t, ""
+
+
+def _match_instance(row: Any, name: str, uid: str) -> bool:
+    ruid = str(_inst_field(row, "uid", "") or "")
+    if not ruid:
+        return False
+    if uid:
+        if not ruid.lower().startswith(uid.lower()):
+            return False
+        if not name:
+            return True
+    rname = str(_inst_field(row, "name", "") or "")
+    rid = str(_inst_field(row, "item_id", "") or "")
+    return rname == name or rid == name
+
+
+def _find_crafted_instance(ctx: Mapping[str, Any], target: Any) -> Optional[dict]:
+    """按名称/uid 定位可分解的打造实例。返回 {kind,player/list,index,row} 或 None。"""
+    name, uid = _decompose_target_parts(target)
+    if not name and not uid:
+        return None
+    player = ctx.get("player")
+    if isinstance(player, MutableMapping):
+        inv = player.get("inventory")
+        if isinstance(inv, list):
+            for idx, row in enumerate(inv):
+                if _match_instance(row, name, uid):
+                    return {"kind": "player_dict", "player": player, "index": idx, "row": row}
+    elif player is not None and hasattr(player, "inventory"):
+        for idx, row in enumerate(tuple(player.inventory)):
+            if _match_instance(row, name, uid):
+                return {"kind": "player_obj", "player": player, "index": idx, "row": row}
+    insts = ctx.get("inventory_instances")
+    if isinstance(insts, list):
+        for idx, row in enumerate(insts):
+            if _match_instance(row, name, uid):
+                return {"kind": "session", "list": insts, "index": idx, "row": row}
+    return None
+
+
+def _remove_crafted_instance(ctx: MutableMapping[str, Any], hit: Mapping[str, Any]) -> None:
+    """从所在容器删除实例（uid 精确命中；in-session 列表标 dirty 供 runner 落档）。"""
+    kind = hit.get("kind")
+    if kind == "session":
+        lst = hit.get("list")
+        if isinstance(lst, list):
+            del lst[int(hit["index"])]
+        ctx["_m8_dirty_inventory"] = True
+        return
+    player = hit.get("player")
+    if isinstance(player, MutableMapping):
+        player["inventory"] = [r for i, r in enumerate(player.get("inventory") or [])
+                               if i != int(hit["index"])]
+        return
+    import dataclasses  # noqa: PLC0415
+    old = tuple(getattr(player, "inventory", ()) or ())
+    new_inv = tuple(r for i, r in enumerate(old) if i != int(hit["index"]))
+    ctx["player"] = dataclasses.replace(player, inventory=new_inv)
+
+
+def _forge_node_map(ctx: Mapping[str, Any]) -> dict:
+    """forge.json trees[].nodes[] → {产出 item_id: node}（供 V1 投入价值与材料回收）。"""
+    out: dict = {}
+    forge = ctx.get("forge")
+    trees = forge.get("trees") if isinstance(forge, Mapping) else None
+    if isinstance(trees, list):
+        for t in trees:
+            nodes = t.get("nodes") if isinstance(t, Mapping) else None
+            if isinstance(nodes, list):
+                for n in nodes:
+                    if isinstance(n, Mapping) and n.get("item"):
+                        out.setdefault(str(n["item"]), n)
+    return out
+
+
+def _item_price_map(ctx: Mapping[str, Any]) -> dict:
+    out: dict = {}
+    items = ctx.get("items")
+    if isinstance(items, Mapping):
+        for k, v in items.items():
+            if isinstance(v, Mapping) and v.get("price") is not None:
+                out[str(k)] = v.get("price")
+    return out
+
+
+def _currency_bucket(ctx: MutableMapping[str, Any]) -> Any:
+    cur = ctx.get("currencies")
+    if isinstance(cur, MutableMapping):
+        return cur
+    player = ctx.get("player")
+    if isinstance(player, MutableMapping):
+        c2 = player.get("currencies")
+        return c2 if isinstance(c2, MutableMapping) else None
+    c3 = getattr(player, "currencies", None) if player is not None else None
+    return c3 if isinstance(c3, MutableMapping) else None
+
+
+def _render_instance_decompose(plan: Mapping[str, Any], ctx: Mapping[str, Any],
+                               name: str = "", currency_name: str = "") -> str:
+    """实例分解结果 → 人话（材料行 + 精粹行）。"""
+    mats = plan.get("materials") or []
+    lines = []
+    if mats:
+        lines.append("、".join(f"{n}×{c}" for _i, n, c in mats))
+    ess = plan.get("essence") or {}
+    total = int(ess.get("total") or 0)
+    seg = f"🪨 {lines[0]}" if lines else "🪨 无材料返还"
+    if total > 0:
+        seg += f"　✨ {currency_name or '装备精粹'} +{total}"
+    return f"♻️ 分解 {name or plan.get('item_id') or ''}：{seg}"
+
+
+def _do_decompose_instance(ctx: MutableMapping[str, Any], hit: Mapping[str, Any],
+                           settings_raw: Any, ess_cfg: Mapping[str, Any],
+                           ) -> Optional[str]:
+    """实例分解落账：算计划 → 扣实例 → 返材料 → 入精粹。计划不成立 → None（回退既有路径）。"""
+    row = hit.get("row")
+    player = _player_of(ctx)
+    prof_engine = ProficiencyEngine(settings=settings_raw)
+    tier_index = prof_engine.tier_index_for_level(ALCHEMY_JOB_ID, _prof_level(player))
+    wallet = ctx.get("wallet")
+    rate: Optional[float] = None
+    dr = getattr(wallet, "decompose_rate", None) if wallet is not None else None
+    if callable(dr):
+        try:
+            rate = float(dr(tier_index))
+        except Exception:  # noqa: BLE001 —— 回收率解析失败按 0（只出精粹）
+            rate = None
+    item_id = str(_inst_field(row, "item_id", "") or "")
+    node = _forge_node_map(ctx).get(item_id)
+    node_materials = node.get("materials") if isinstance(node, Mapping) else None
+    cfg_temper = parse_enhance_settings(ctx.get("enhance")).get("temper")
+    declared = None
+    if isinstance(settings_raw, Mapping):
+        dc = settings_raw.get("deep_craft")
+        if isinstance(dc, Mapping) and isinstance(dc.get("quality_colors"), list):
+            declared = dc["quality_colors"]
+    plan = plan_instance_decompose(
+        row, cfg=ess_cfg, cfg_temper=cfg_temper,
+        node_materials=node_materials, prices=_item_price_map(ctx),
+        item_def=_find_item(ctx, item_id), material_rate=rate,
+        declared_colors=declared,
+    )
+    if not plan.get("ok"):
+        return None  # 不成立 → 交回既有 item_id 路径（不改其行为）
+    _remove_crafted_instance(ctx, hit)
+    am = ctx.get("add_item")
+    if callable(am):
+        for iid, _n, cnt in (plan.get("materials") or []):
+            try:
+                am(str(iid), int(cnt))
+            except (TypeError, ValueError):
+                continue
+    ess = plan.get("essence") or {}
+    total = int(ess.get("total") or 0)
+    cur_id = str(ess_cfg.get("essence_currency") or "essence")
+    cur_name = "装备精粹"
+    if isinstance(settings_raw, Mapping):
+        for e in (settings_raw.get("currencies") or []):
+            if isinstance(e, Mapping) and str(e.get("id") or "") == cur_id:
+                cur_name = str(e.get("name") or cur_id)
+                break
+    if total > 0:
+        bucket = _currency_bucket(ctx)
+        if bucket is not None:
+            space = currency_space(
+                settings_raw.get("currencies") if isinstance(settings_raw, Mapping) else None)
+            grant_currency(bucket, cur_id, total, space)
+    return _render_instance_decompose(plan, ctx, str(_inst_field(row, "name", "") or ""),
+                                      cur_name)
+
+
 async def cmd_decompose(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     """`/分解 <道具>*<数量>`（P-10/SEP-10，GU-32/33，批6 路6A）。
 
@@ -1643,6 +1845,16 @@ async def cmd_decompose(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     target = _target_of(parsed)
     qty = parsed.qty if parsed.qty is not None else _star_qty(parsed)
     qty = max(1, qty if qty is not None else 1)
+    # 批57 · 实例级路径优先：仅当精粹启用时尝试（未启用 → 整段跳过，既有 item_id 路径
+    # 逐字节不变 = 缺省零变化）。命中打造实例 → 按 uid 分解（材料 + 精粹）。
+    settings_raw = _settings_of(ctx)
+    ess_cfg = read_forge_settings(settings_raw).get("essence_rate") or {}
+    if ess_cfg.get("enabled"):
+        hit = _find_crafted_instance(ctx, target)
+        if hit is not None:
+            out = _do_decompose_instance(ctx, hit, settings_raw, ess_cfg)
+            if out is not None:
+                return out
     item_def = _find_item(ctx, target)
     if item_def is None:
         return tpl_of(ctx, "alchemy_item_not_found",

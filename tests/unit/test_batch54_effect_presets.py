@@ -247,6 +247,29 @@ def test_editor_preset_id_prefix(temp_pack: Path) -> None:
     assert out["suggested_id"] == "heal_001"
 
 
+def test_http_equipment_presets_visible_and_land(temp_pack: Path) -> None:
+    """HTTP 链路：预设可选（中文名 + help 齐备）；POST 创建按预设落档。"""
+    from fastapi.testclient import TestClient
+
+    from editor_host import create_app
+
+    with TestClient(create_app(pack="tp", root=str(temp_pack), role="owner")) as client:
+        got = client.get("/api/pack/tp/module/equipment/new").json()
+        by_id = {p["id"]: p for p in got["presets"]}
+        assert by_id["armor_heal_up"]["label"] == "强疗"
+        assert by_id["armor_heal_down"]["label"] == "重伤"
+        assert by_id["armor_heal_up"]["help"]
+        got2 = client.get("/api/pack/tp/module/equipment/new",
+                          params={"preset": "armor_heal_up"}).json()
+        assert "healing_received_pct" in [f["key"] for f in got2["fields"]]
+        r = client.post("/api/pack/tp/module/equipment/entry",
+                        json={"entry_id": "eq_009", "patch": {"name": "甲"},
+                              "preset": "armor_heal_up"}).json()
+        assert r["ok"] is True, r
+        defs = json.loads((temp_pack / "tp" / "equipment.json").read_text(encoding="utf-8"))
+        assert defs[0]["healing_received_pct"] == 15
+
+
 # ===========================================================================
 # F · 落进产物实例（def → 聚合 → 战斗桥）
 # ===========================================================================

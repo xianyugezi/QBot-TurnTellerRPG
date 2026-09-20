@@ -269,7 +269,7 @@ def read_forge_settings(settings_raw: object) -> Dict[str, object]:
     # ---- 批70 · S-04 `decompose_rate` **已删除**（登记却不生效的重复键）----
     # 真源 = `settings.alchemy.decompose_rate`（消费点 `core/gem_wallet.py:190`）。
     # 迁移：原 `settings.forge.decompose_rate` 的写法无效 → 改到 `settings.alchemy.decompose_rate`。
-    # 此处**不再合并/登记**该键；包内残留时由校验器黄提示（validator `_check_forge_settings_migration`）。
+    # 此处**不再合并/登记**该键；包内残留时由校验器黄提示（`_check_forge_settings_migration`）。
 
     # ---- S-05 exp_per_forge：非空 str 或非负 int ----
     v = forge.get("exp_per_forge")

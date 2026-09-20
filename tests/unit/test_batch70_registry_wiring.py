@@ -16,7 +16,7 @@
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Mapping
+from typing import Any, Dict, Mapping
 
 from qbot_rpg.core.battle import BattleEngine
 from qbot_rpg.core.effects import (

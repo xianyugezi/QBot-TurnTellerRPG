@@ -12,7 +12,7 @@
   - register_battle_launch_commands(router, make_context)：/锁定 /锁定怪物
     CommandSpec 注册（async handler，白名单 whitelisted=True）
 
-铁律：零 NoneBot import；模板文案走 core/templates/battle_tpl.py（key 注册）；
+铁律：零 NoneBot import；模板文案走 core/templates 全量表（key 注册）；
 零定时器/零睡眠；异常兜底不崩（返回友好提示）。
 """
 from __future__ import annotations
@@ -23,6 +23,7 @@ from typing import Any, Callable, Dict, List, Mapping, Optional
 from qbot_rpg.core.battle import BattleEngine
 from qbot_rpg.core.combo import ComboEngine
 from qbot_rpg.core.panel_budget import normalize_monster_scaling, scale_monster_con
+from qbot_rpg.core.templates import tpl_of as _tpl_of
 from qbot_rpg.data.gear_stats import OWNED_EFFECT_IDS_KEY, combatant_updates
 
 _LOGGER = logging.getLogger(__name__)
@@ -31,8 +32,7 @@ _LOGGER = logging.getLogger(__name__)
 LOCK_CMD = "锁定"
 LOCK_MONSTER_CMD = "锁定怪物"
 
-# 模板 key（注册到 core/templates/battle_tpl.py，见文件底部 key 注册表）
-_TPL_LOCK_OK = "battle_lock_ok"
+# 模板 key（全量表 = core/templates/template_table.json；内容包 templates.json 可覆盖）
 _TPL_NO_MONSTER = "battle_lock_no_monster"
 _TPL_ALREADY_IN_BATTLE = "battle_lock_already_in_battle"
 _TPL_HAS_OTHER_SESSION = "battle_lock_has_other_session"
@@ -345,17 +345,19 @@ def _enemy_entry_of(ctx: Mapping[str, Any], row: Mapping[str, Any]) -> Optional[
 
 
 # ---------------------------------------------------------------------------
-# 模板（battle_tpl 取词，key 缺省友好文案）
+# 模板（core/templates 全量表取词，key 缺省回落调用点 default）
 # ---------------------------------------------------------------------------
 
-def _tpl(ctx: Mapping[str, Any], key: str, default: str) -> str:
-    tpl_of = ctx.get("tpl_of")
-    if callable(tpl_of):
-        try:
-            return str(tpl_of(ctx, key) or default)
-        except Exception:  # noqa: BLE001 - 模板缺 key 兜底
-            return default
-    return default
+def _tpl(ctx: Mapping[str, Any], key: str, default: str, **data: Any) -> str:
+    """渲染模板：缺 key / 渲染为空 / 异常 → 回落调用点 default（零破坏）。
+
+    批71 · F1：原实现读 `ctx["tpl_of"]`（全仓从未写入 → 恒返回 default）已废弃，
+    改为直接走 `core.templates.tpl_of`（同仓其它模块的统一入口）。
+    """
+    try:
+        return _tpl_of(ctx, key, data) or default
+    except Exception:  # noqa: BLE001 - 模板缺 key 兜底
+        return default
 
 
 # ---------------------------------------------------------------------------
@@ -428,8 +430,8 @@ async def launch_pve_battle(
     if _weak_left > 0:
         return {"ok": False,
                 "message": _tpl(ctx, _TPL_WEAK_BLOCK_KEY,
-                                f"❌ 你还在虚弱中（剩余 {_weak_left} 秒）——先回营地休整"
-                                "（驿站药婆可免费疗伤）"),
+                                f"❌ 你还在虚弱中（剩余 {_weak_left} 秒）\n先回营地休整",
+                                weak_left=_weak_left),
                 "battle_engine": None}
 
     # 2. 解析怪物

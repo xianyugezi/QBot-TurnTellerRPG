@@ -36,7 +36,10 @@
       "battle_hud_enemy_hp": "有意豁免（L3）：HUD 数值行（怪物生命）允许超 28 半角（极端大数值），口径来源 2026-09-12 用户拍板；宽度门禁跳过",
       "job_advance_from": "有意豁免（批23 · C1）：转职前置拒绝提示——需容纳原职业要求值/当前值两个中文名，拆行会割裂「要求 vs 当前」对照；宽度门禁跳过",
       "job_advance_level": "有意豁免（批23 · C1）：转职前置拒绝提示——需容纳等级要求值/当前值，拆行会割裂对照；宽度门禁跳过",
-      "job_advance_item": "有意豁免（批23 · C1）：转职前置拒绝提示——需容纳物品中文名 + 持有/需求数量对照，拆行会割裂对照；宽度门禁跳过"
+      "job_advance_item": "有意豁免（批23 · C1）：转职前置拒绝提示——需容纳物品中文名 + 持有/需求数量对照，拆行会割裂对照；宽度门禁跳过",
+      "battle_lock_has_other_session": "有意豁免（批71 · F1）：逐字迁自既有 `_tpl` 默认串（单行 33 半角，含「，」标点），文案保真优先于拆行；宽度门禁跳过",
+      "battle_lock_weak_block": "有意豁免（批71 · F1）：虚弱期拦截提示——占位符按估算宽补入后超 28 半角（实测值域偏大），拆行会割裂「剩余 N 秒」与「休整」语义；宽度门禁跳过",
+      "explore_rest_reason_not_safe": "介绍类（批71 · F1）：休息地点说明文本，整条内嵌 `explore_rest_fail` 的 {reason}，允许自然折行"
     },
     "prose_placeholders": []
   },
@@ -748,6 +751,12 @@
     "explore_rest_extra_arg": "❌ 休息 不需要参数\n发 帮助 查看可用指令",
     "explore_rest_not_wired": "❌ 休息功能未接线\n引擎未加载",
     "explore_rest_engine_error": "❌ 休息失败\n引擎返回异常",
+    "explore_rest_reason_not_safe": "当前不在营地或副本安全区（驿站/营地可休息）",
+    "battle_lock_no_monster": "❌ 当前地图没有可战斗的怪物",
+    "battle_lock_already_in_battle": "❌ 你已经在战斗中了",
+    "battle_lock_has_other_session": "❌ 你还有未结束的会话，请先完成",
+    "battle_lock_no_map": "❌ 当前不在任何地图",
+    "battle_lock_weak_block": "❌ 你还在虚弱中（剩余 {weak_left} 秒）\n先回营地休整",
     "explore_map_title": "【地图】已发现区域",
     "explore_map_row": "{idx}.{name}",
     "explore_map_tail": "发 进入 <序号> 前往",

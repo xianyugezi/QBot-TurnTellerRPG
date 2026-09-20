@@ -609,7 +609,7 @@ def cmd_rest(parsed: Any, ctx: Mapping[str, Any]) -> str:
             _apply_rest_heal(ctx, result)
             return _render_rest(result, ctx)
         return tpl_of(ctx, "explore_rest_fail",
-                      {"reason": "当前不在营地或副本安全区（驿站/营地可休息，或找驿站药婆疗伤）"})
+                      {"reason": tpl_of(ctx, "explore_rest_reason_not_safe")})
     result = rest_in_dungeon(
         session, _player_ctx(ctx),
         cfg=ctx.get("rest_cfg"),

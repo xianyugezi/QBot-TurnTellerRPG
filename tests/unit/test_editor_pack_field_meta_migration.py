@@ -176,7 +176,15 @@ SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
 #   对拍实证：删除项 = 0；无既有 label/help/group/module_labels/module_tree 改值；
 #   重定后基线树与当前树逐字段 diff=0。
 #   与 scripts/compare_field_meta_migration.py 的 DEFAULT_BASELINE_REF 同基线。
-BASELINE_REF = "d06dd0b"
+# 批66（2026-09-23 新用户卡点修复）重定：d06dd0b → e757f59（本批字段说明收尾提交）。
+#   原因 = 本批**有意**变更（非迁移回归），删除项 = 0，全部为**新增/改值且仅在 `help`**：
+#   · 卡点4「Tip 补齐 + ≤60 字（忌长文）」：特效轴/词条说明缩短、去 Markdown `**` 与
+#     `settings.*` 英文键引用（严格键 help 改值）；F_NAME/F_TYPE/F_PRICE/F_ATK/F_DEF/
+#     F_EFFECTS 与 items 常用字段（slot/bind/usable/desc/quality/elements/traits/…）补
+#     一句话 help（严格键 help 新增）；基础词条 help 接入 GEAR_HELP_ZH；
+#   · 无 label/group/module_labels/module_tree 变动；无字段/键删除。
+#   对拍实证：删除项 = 0；重定后基线树与当前树逐字段 diff=0。
+BASELINE_REF = "e757f59"
 CONTENT = REPO / "content"
 
 

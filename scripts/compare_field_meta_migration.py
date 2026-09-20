@@ -279,7 +279,14 @@ DEFAULT_PACKS = ("veinborn", "test_demo")
 #   · 模板全量表 +22 条 `temper_*` 键（`/淬炼` 指令壳文案；templates 857→879，
 #     framework_default_count 855→877）→ entries/templates 与 index/modules 计数派生位移；
 #   · 本批不新增 settings 字段/键（`quality_cap_delta` 是既有 `affinity_effects` 内层动态键）。
-DEFAULT_BASELINE_REF = "d06dd0b"
+# 批66（2026-09-23 新用户卡点修复）重定：d06dd0b → e757f59（本批字段说明收尾提交）。
+#   原因 = 本批**有意**变更（非迁移回归），删除项 = 0，全部为**新增/改值且仅在 `help`**：
+#   · 卡点4「Tip 补齐 + ≤60 字」：特效轴/词条说明缩短并去 `**` 与 `settings.*` 英文键引用
+#     （口径④严格键 help 改值）；F_NAME/F_TYPE/F_PRICE/F_ATK/F_DEF/F_EFFECTS 与 items
+#     常用字段补一句话 `help`（口径④严格键 help 新增）；基础词条 help 接入 GEAR_HELP_ZH；
+#   · 无 label/group/module_labels/module_tree 变动；无字段/键删除。
+#   对拍实证：删除项 = 0；重定后基线树与当前树逐字段 diff=0。
+DEFAULT_BASELINE_REF = "e757f59"
 
 
 def _env(root: Path) -> dict:

@@ -1421,10 +1421,22 @@ FORMULA_FIELDS: Dict[str, FieldMeta] = {
     ),
     # 批19 #9（审计 A12 / ①-4-23）：formula.json 里包实际存在、此前框架侧无中文名的键，
     # 按 `core/formula_loader.py` 的**实际消费面**逐键登记（不臆造）。
-    #   · damage_base / heal_rate：既有包普遍存在的「JS 公式风格」兼容键；当前 Python 侧
-    #     `load_formula_params` **未消费**（读取器只消费段参数与 stat_map），保留为兼容键。
     #   · battle_position 段：`BattlePositionParams`（方位战斗 v0.6）三参数，真实消费。
     #   · monster_def_rate：O1 怪物防御率，真实消费（`load_formula_params` L164）。
+    # ── 批74 BUG-2 裁定：damage_base / heal_rate **保留**（不是死兼容键）─────────
+    #   查证（批74）：① JS 侧 `web/static/index.html` 不硬编码这两键——formula 表单按本
+    #   文件 FieldMeta 动态渲染，删登记=编辑器不显示但包内数据仍在（不一致）；
+    #   ② 既有内容包 formula.json 普遍实带这两键（8 个真实包均含）；
+    #   ③ 测试正面锁定：`tests/unit/test_content.py:66`、
+    #   `test_pack_fixtures_matrix.py:187` 断言 `registry.resolve("damage_base","formula")`
+    #   非 None；`test_editor_batch19_formula.py` 断言 help 含「不消费」；
+    #   ④ 属兼容承诺：`docs/编辑器重写_需求与约束.md:332` + 批19#9 均写明
+    #   「兼容保留 + help 注明当前 Python 侧不消费」。
+    #   何时可删（三条件同时满足）：(a) 全部包 formula.json 移除这两键 + 迁移说明；
+    #   (b) 撤销 test_editor_batch19_formula / test_content / test_editor_metadata_layer
+    #   的登记断言；(c) 同步 docs/编辑器重写_需求与约束.md 与手册 §六。当前不满足 → 保留。
+    #   注：审计3 原文引 `:1381-1391` 为行号漂移；批74 现状 = 下方两个 FieldMeta
+    #   （`damage_base` :1439 / `heal_rate` :1443）。见手册 §六与 API手册_3 §3.7.1。
     "damage_base": FieldMeta(
         type="formula", label="伤害基础公式",
         help="兼容保留键（JS 公式风格）。当前 Python 侧 formula_loader 不消费它——"

@@ -582,9 +582,9 @@
 | **T4** | **审计3 §7 D2：`settings.slot_defs` ↔ `slots.json`** | 两处注释**互相矛盾**：`module_catalog.py:87-99` 说"功能重叠、建议归口一处"；`field_meta.py:388-392` 说"是不同数据空间——这里是「装备部位定义」" (`fields key 用 slot_defs 避免撞名`) | **需要**：判定二者是否同一数据空间。若是 → 归口一处；若否 → **撤销 `overlap_with` 告警并更正 catalog 文案**。**在此之前不要删任一侧** |
 | **T5** | **审计3 §7 D3：`deep_craft.craft_rules.cost_*` ↔ `forge.forge_fee`** | 都表达打造成本但属两条流程，无文档裁定关系 | **需要**：是否要统一"打造费用"口径。若两系统长期并存 → **明确写"各系统自算成本"并登记** |
 | **T6** | **审计3 §7 D5：`debuff_chance_pct`/`buff_chance_pct` 是否 `scope={debuff,buff}` 分治** | `docs/深度打造_决策记录.md:1097`（D-new-5 待裁决） | **需要**：若要做分治 → 别名**不能简单删**；否则按 §3.4 C3"可删"处置。**裁决前保留** |
-| **T7** | **审计3 §7 D6：`data/status.py::StatusInstance` 死表示** | 自认与 `effects.py` dict 形态不一致、禁止灌入；但它是 `check_architecture.py:49-51` TC-04 **必需类型**之一 | **需要**：删 dataclass（契约以 effects 注释为准）**或**补互转并接线，二选一。**注意删它会碰 TC-04 必需类型清单**（属架构门禁范围，需评审） |
+| **T7** | **审计3 §7 D6：`data/status.py::StatusInstance` 死表示** | 自认与 `effects.py` dict 形态不一致、禁止灌入；但它是 `check_architecture.py:49-51` TC-04 **必需类型**之一 | ✅ **批74 裁定：保留**。`check_tc04` 对 `REQUIRED_TYPES` 中「未定义」直接判 fail→`exit 1`，故门禁要求其存在；删除须先做双轨收敛评审 + 同步门禁与测试（登记理由见 `data/status.py:16-24`）。原「删或补互转」二选一留给收敛批 |
 | **T8** | **审计3 §7 D7：`rune_sockets` / `alchemy.affinity_effects` 登记空档** | `content/field_meta.py` 已登记，但**无任何包声明**（`zz_craft_demo` 亦无） | **需要**：是否补示例包声明；否则属"登记了但内容从未用过"的准死段 |
-| **T9** | **审计3 §7 D8：`damage_base`/`heal_rate` 兼容保留键** | `qbot_rpg/content/field_meta.py:1424-1436`（兼容键说明 + 两个 `FieldMeta` 定义）；Python 侧 `formula_loader` **不消费** | **需要**：是否清理兼容保留键（广义"勿增实体"）。**这是少数"死兼容键"之一，倾向可清，但要先确认无 JS 侧消费** |
+| **T9** | **审计3 §7 D8：`damage_base`/`heal_rate` 兼容保留键** | `qbot_rpg/content/field_meta.py:1439`/`:1443`（两个 `FieldMeta`）+ 批74 裁决注释 `:1426-1438`；Python 侧 `formula_loader` **不消费**；审计原文 `:1381-1391` 为**行号漂移**（批74 前为 `:1424-1436`） | ✅ **批74 裁定：保留**。查证：① JS 侧 `web/static/index.html` 零硬编码（表单按 `FieldMeta` 动态渲染）；② 8 个既有包 `formula.json` 实带两键；③ 测试正面锁定；④ 属兼容承诺。删除三条件见代码注释 / 手册 §六 |
 | **T10** | **审计3 §7 D9：命名冲突 `craft_paths.PATH_FORGE` 实际指 deep_craft，而 `/锻造` 是 M9 forge** | `core/craft_paths.py`（`forge_enabled`/`forge_path_enabled` 读 `settings.deep_craft.enabled`）；`settings.json.forge` 与 `forge.json` 是 M9 forge | **需要**：在文档/字段 help 明确"打造路径（deep craft）"与"锻造系统（M9 forge）"。**后人极易误改**（也正是 §3.4 C9 的成因） |
 | **T11** | **审计3 §7 D10：`deep_craft.equipment_level`（算）vs `temper.resolve_equipment_level`（读）** | 同名异义，非重复但极易误用 | **需要**：二者之一改名（如 `derive_equipment_level`），消除同名 |
 | **T12** | **§3.3 B10 套装技能"多技能并存"** | schema 自然延伸但**未显式标"本文扩展"** | **需要**：确认是否只需**文档补注**（`docs/审查/幻觉审查_2c2d.md:80` 已提示）。**低置信度——不要据此改代码** |
@@ -612,9 +612,9 @@
 
 | # | 事项 | 证据 `file:line` | 处置状态 |
 |---|---|---|---|
-| BUG-1 | **`pvp.py` free 模式 `enemy_act` 真 bug + verify 脚本过期调用** | `CHANGELOG.md:33`（批 73 登记："§6 分支3（`pvp.py` free 模式 `enemy_act` 真 bug + verify 脚本过期调用）独立小批"） | **未修**，已登记为独立小批。这是真 bug，**修它不是"误修"** |
-| BUG-2 | **`damage_base` / `heal_rate` 死兼容键** | `qbot_rpg/content/field_meta.py:1424-1436`；审计3 D8（审计原文引 `:1381-1391`，当前 HEAD 漂移至 `:1424-1436`） | **待裁决**（见 §3.6 T9）。倾向可清，但需确认 JS 侧 |
-| BUG-3 | **`data/status.py::StatusInstance` 死表示** | 审计3 F6；`scripts/check_architecture.py:49-51`（TC-04 必需类型耦合） | **待裁决**（见 §3.6 T7） |
+| BUG-1 | **`pvp.py` free 模式 `enemy_act` 真 bug + verify 脚本过期调用** | `CHANGELOG.md` 批73 条目（登记为独立小批）；`qbot_rpg/core/pvp.py:367-378`；壳接口 `qbot_rpg/core/battle.py:5335`（`enemy_act`）/`:5354`（`end_turn`） | ✅ **已修（批74）**：free 模式移除已删的 `enemy_act` 调用——防守方「一直防御」由引擎 `_ai_action_dict()` 对 `battle_type=="pvp"` 恒返回 guard 保证（`battle.py:5238`）；`scripts/verify/verify_m1.py` 2 函数改 CTB 等价（`player_act`）；`scripts/verify_veinborn_smoke.py` 改 CTB（2 条独立缺口登记）；新增回归测试 2 条 |
+| BUG-2 | **`damage_base` / `heal_rate` 死兼容键** | `qbot_rpg/content/field_meta.py:1439`（`damage_base`）/ `:1443`（`heal_rate`），批74 裁决注释 `:1426-1438`；审计3 D8（审计原文引 `:1381-1391`，批74 前为 `:1424-1436`——**行号漂移本批顺带登记**） | ✅ **裁定：保留（批74）**（见 §3.6 T9）——查证：JS 侧零硬编码（表单按 `FieldMeta` 动态渲染）、8 个既有包公式实带、测试正面锁定、属兼容承诺；**删除三条件**见 `field_meta.py:1426-1438` / 手册 §六 |
+| BUG-3 | **`data/status.py::StatusInstance` 死表示** | 审计3 F6；`scripts/check_architecture.py:49-51`（TC-04 `REQUIRED_TYPES`）；批74 裁决注释 `qbot_rpg/data/status.py:16-24` | ✅ **裁定：保留（批74）**（见 §3.6 T7）——`check_tc04` 对「未定义」直接 `exit 1`，删它会碰架构门禁；属契约 spec 类型，删除须先做「双轨收敛」评审 + 同步门禁，**不是死码清理** |
 | BUG-4 | **`forge.decompose_rate` 死键** | 批 70 已删除（`CHANGELOG.md:99-102`；`qbot_rpg/content/forge_settings.py:30-31` 记载删除） | ✅ **已修**（批 70）；唯一源 = `settings.alchemy.decompose_rate` |
 | BUG-5 | **文档与实现不一致（覆盖率目录、旧分层名）** | §2.3 G-5/G-6 | **未修**（文档侧）；代码以脚本为准 |
 | BUG-6 | **批 71 两份依据文档缺失** | §2.3 G-7；`CHANGELOG.md:66` | **仓外存在**（`/root/deliverables/`）；建议回填仓库，否则 CHANGELOG 悬空 |

@@ -12,6 +12,17 @@ trigger/none + decay_subject/value 键，duration 扁平为 turns/charges）。
 类型）或提供互转函数，收敛前禁止把本类型直接灌入 effects 系统。
 
 frozen=True：状态实例不可变（细化_3a §3.2，U3）。
+
+【批74 BUG-3 裁定：保留，不是死代码（防后人再删）】
+  审计3 F6 记为「死表示」（运行时真身 = core/effects.py 的 dict 形态），但本类型
+  同时是架构门禁 **TC-04** 的必需类型之一（`scripts/check_architecture.py:49-51`
+  的 `REQUIRED_TYPES`；`check_tc04` 对「未定义」直接判 fail → `exit 1`）。
+  删除它会连带：① 门禁 `REQUIRED_TYPES` 需评审调整；② `tests/unit/test_data.py:19`
+  的 frozen 参数化；③ `qbot_rpg/data/__init__.py` 导出；④ 本文件 docstring 与
+  手册 §六。属**架构契约变更**，不是死码清理，故阈值内**保留**。
+  何时可删：先完成「契约 spec ↔ 运行期 dict」双轨收敛决策（接线为运行期真身，
+  或评审撤销该契约类型）→ 再删本类型 + 从 `REQUIRED_TYPES` 移除同名条目
+  （门禁不得留空条目空转）+ 同步测试/导出/本注释/手册 §六。
 """
 
 from dataclasses import dataclass

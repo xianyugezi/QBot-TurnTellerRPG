@@ -144,7 +144,7 @@ def _nonempty_str(v: object) -> TypeGuard[str]:
 
 
 def _merge_int_map(default: Mapping[str, object], explicit: object) -> Dict[str, object]:
-    """嵌套 int 值对象合并（通用嵌套值对象合并口径；原参照的 forge `decompose_rate` 已于批70 删除）。
+    """嵌套 int 值对象合并（通用嵌套值对象合并口径；原参照的 forge `decompose_rate` 批70 已删）。
 
     显式 Mapping → 与默认合并：键类型合法（非负 int）则覆盖，缺省/非法类型保留默认。
     非 Mapping / None → 默认深拷贝。键序照默认。

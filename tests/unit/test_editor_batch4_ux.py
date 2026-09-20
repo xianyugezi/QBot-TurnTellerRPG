@@ -310,7 +310,7 @@ def test_frontend_op_column_has_inset_padding() -> None:
 def test_footer_status_bar_uses_current_batch_wording() -> None:
     html = _html()
     # 页脚标注「当前批次」（批13 起为能力可见性）；旧批次字串不得残留。
-    assert "批70 · 登记失效清账" in html
+    assert "批71 · 包专属残留清理" in html
     assert "批49 · 测试 flake 根治" not in html  # 上一批串不得残留
     assert "批48 · 符文特殊效果" not in html
     assert "批13.1 · 段入口" not in html

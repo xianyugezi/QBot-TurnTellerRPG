@@ -14,6 +14,32 @@
 
 ### Added
 
+- **批71（2026-09-23）**：**包专属残留清理（审计1 V1/V2/V3 + 审计2 V1/V2/V3/V4；框架零包名红线）**。
+  依据 `批71_包专属残留_改造方案.md` + `框架体检报告.md` §二 P0-B。统一改法 = **包声明驱动 +
+  框架读取 + legacy 兜底**：包不声明 → 与现状逐字段一致（逐处附对拍证据）。
+  **① 文案**（F1/F2）：`battle_lock_no_monster|already_in_battle|has_other_session|no_map` 四条
+  开战拦截文案 + `battle_lock_weak_block` + `explore_rest_reason_not_safe` 注册进
+  `core/templates/template_table.json`；修 `battle_launch_commands._tpl`（原读全仓恒缺的
+  `ctx["tpl_of"]` → 无条件返回 default，改走 `core.templates.tpl_of`）；删死常量 `_TPL_LOCK_OK`；
+  跨包可见的单包 NPC「驿站药婆」移出框架默认串（veinborn 在 `templates.json` 覆盖回原文案）。
+  **② 跃空姿态**（A1）：`core/battle.py` 的 `_AIR_STATUS_IDS` 三处可执行引用改由
+  `statuses[].stance == "air"` 声明解析（`_declared_air_stance_ids`；无声明 → legacy 兜底）；
+  veinborn 6 条状态各加 `"stance": "air"`；`field_meta.statuses_fields` 登记 `stance`；
+  逐包集合等价对拍 0 差异。
+  **③ 炼金品质上限**（C1）：删 `SP_QUALITY_CAP_10` 硬编码面板 id，改由
+  `settings.alchemy.sp_effects.quality_cap = {panel_id, per_unlock}` 声明；test_demo 补声明；
+  `_extra_cap` 第①源逐位一致（双尺子复算零变化）。
+  **④ 连段计数印记**（E1）：两处逐字重复的 `sword_flow` 内联过滤合一为
+  `_is_combo_counter_cond`；印记角色由 `marks[].role == "combo_counter"` 声明；veinborn
+  `sword_flow` 补 `role`；两个渲染路径跳过集合完全一致（veinborn 5 段）。
+  **⑤ 校验扩展**（D1）：`content/validator.py` 删「云海 cls/break_behavior」硬编码白名单，改由
+  `settings.schema_ext.<module>.<path>.allow_keys` 包自持声明（严格解析，非法 → R-5 不放行）；
+  无声明时未知键报错逐字不变；云海包需在自己的 `settings.json` 声明后两键方放行。
+  验收：逐处对拍证据 + 双尺子（种子 20260919）零变化 + 换包验收 12 包全 PASS；全量 pytest 0 failed。
+  未完成：71-A2（删 legacy 兜底——框架单测无 registry 走 legacy 路径，且云海包在仓外无法确认
+  「全包已声明」，按方案保留兜底）与 71-B1/B2/B3（SP 面板目录改源）。
+  页脚批次串 →「批71 · 包专属残留清理」。
+
 - **批70（2026-09-23）**：**「登记了却不生效」清账（审计4 §2 无消费者登记表 33 条）**。
   依据 `审计4_勿增实体_死实体与空转.md` §2/§4 + `框架体检报告.md` §二 P0-A。
   **① 接线（X01/X20 特效轴 + 归并旧键 + 3 条框架预设转生效）**：`damage_dealt_pct` 新增唯一

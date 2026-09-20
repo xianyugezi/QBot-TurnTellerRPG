@@ -510,6 +510,31 @@ def _rename_warnings(rename: Mapping[str, str],
     return summary + reference_warnings(refs)
 
 
+def _rename_id_block(pack: object, module: object, rename: Mapping[str, str], *,
+                     root: Optional[object] = None,
+                     meta: Optional[FieldMetaTable] = None) -> Optional[Dict[str, Any]]:
+    """改 ID 的**合法性硬拦**（批66 · 卡点1）：复用既有 `id_check` 接口同一校验。
+
+    改条目标识的补丁若给出非法 ID（空 / 含空格或斜杠 / 超长 / 同命名空间重复）→
+    返回红拦条目，调用方据此**不写盘**；ID 合法 → None（行为与现状完全一致）。
+    提示沿用 id_check 的 `message` + `how_to_fix`（改回合法 ID），并补一条退路
+    （已写坏时可用「回退到上一份备份」恢复）。
+    """
+    check = api.check_entry_id(pack, module, rename.get("to"), root=root, meta=meta)
+    if check.get("ok"):
+        return None
+    how = str(check.get("how_to_fix") or "").strip()
+    tail = "若本条的标识已经被改坏，可用「回退到上一份备份」恢复本模块文件。"
+    return {
+        "level": "red", "code": "id_invalid", "module": str(module),
+        "field": "", "entry_id": str(rename.get("from") or ""),
+        "field_key": str(rename.get("id_field") or ""), "field_label": "（条目 ID）",
+        "related": True,
+        "message": str(check.get("message") or "ID 校验未通过。"),
+        "how_to_fix": (how + " " + tail).strip(),
+    }
+
+
 def validate_entry(pack: object, module: object, entry_id: object, patch: object, *,
                    root: Optional[object] = None, role: object = ROLE_OWNER,
                    meta: Optional[FieldMetaTable] = None) -> Dict[str, Any]:
@@ -532,6 +557,18 @@ def validate_entry(pack: object, module: object, entry_id: object, patch: object
             message="框架关键模板只读：请先「复制为包覆盖」再编辑。",
         )
     rename = _identity_rename(slot, patch)
+    # 批66 · 卡点1：改 ID 合法性硬拦（复用 id_check 同一校验）——非法 ID 绝不出现在
+    # 校验通过 / 落盘路径上（此前只在「新建」表单拦，改名可绕过）。
+    id_block = (_rename_id_block(pack, slot["module"], rename, root=root, meta=meta)
+                if rename else None)
+    if id_block is not None:
+        return _envelope(
+            ok=False, phase="validate", pack=str(pack), module=str(slot["module"]),
+            entry_id=str(entry_id), level="red", errors=[id_block], warnings=[],
+            changed_fields=sorted(str(k) for k in (patch or {})),
+            rename=rename, refs=[], ref_count=0, breaking=False, needs_confirmation=False,
+            message="校验未通过（红拦）：条目 ID 非法，不能保存。",
+        )
     refs = (api.reference_scan(pack, str(slot["module"]), rename["from"], root=root, meta=meta)
             if rename else [])
     breaking = bool(rename and refs)
@@ -643,6 +680,18 @@ def save_entry(pack: object, module: object, entry_id: object, patch: object, *,
                    warnings=[], message="框架关键模板只读：请先「复制为包覆盖」再编辑。")
         return env
     rename = _identity_rename(slot, patch)
+    # 批66 · 卡点1：改 ID 合法性硬拦——非法 ID 直接红拦、零文件改动（含零备份）。
+    id_block = (_rename_id_block(pack, mod, rename, root=root, meta=meta)
+                if rename else None)
+    if id_block is not None:
+        env = _envelope(
+            phase="save", pack=str(pack), module=mod, entry_id=str(entry_id),
+            changed_fields=sorted(str(k) for k in (patch or {})),
+            rename=rename, refs=[], ref_count=0, breaking=False, needs_confirmation=False,
+        )
+        env.update(ok=False, level="red", errors=[id_block], warnings=[],
+                   message="校验未通过：本次未写入任何文件（红拦）。条目 ID 非法。")
+        return env
     refs = api.reference_scan(pack, mod, rename["from"], root=root, meta=meta) if rename else []
     breaking = bool(rename and refs)
     env = _envelope(

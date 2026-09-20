@@ -458,6 +458,18 @@ html[data-theme="contrast"] .asave:disabled { border-style: dotted; opacity: .6;
 .ftype::after { content: ">"; color: var(--text-6); }
 /* 字段原始键名（批3.5）：中文名为主、键名为辅——弱化色 + 更小字号，不抢主标签 */
 .fkey { color: var(--text-5); font-size: var(--fs-11); font-weight: 400; }
+/* 批66 · 卡点1：编辑态条目 ID 行——即时校验状态 + 一句说明（复用 .nid-st / .nid-hint 口径） */
+.ident { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); }
+.ident input { flex: 1 1 220px; }
+.ident .nid-st { font-size: var(--fs-11); }
+.ident .nid-st.red { color: var(--danger); }
+.ident .nid-st.warn { color: var(--warn); }
+.ident .nid-st.ok { color: var(--text-4); }
+.ident .nid-hint { flex-basis: 100%; color: var(--text-4); font-size: var(--fs-11);
+  line-height: var(--lh-ex); }
+/* 批66 · 卡点1：读取失败时的可行动提示块（哪一步 / 为什么 / 怎么办） */
+.pfail-how { color: var(--text-3); font-size: var(--fs-11); line-height: var(--lh-ex);
+  margin-top: var(--sp-3); }
 .rval { min-width: 0; align-self: start; }
 .inp { color: var(--text-value); white-space: pre-wrap; overflow-wrap: anywhere; }
 .inp.mono { color: var(--accent); white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -2118,7 +2130,10 @@ var state = {
   // 批15 #2：包声明的「合并页」（对象模块的若干段合成一页）
   pages: [],
   // 批32 C1：条目级「未使用」角标——整包一次算完（按模块缓存 id→true），避免逐条请求
-  unusedPack: null, unusedByMod: {}
+  unusedPack: null, unusedByMod: {},
+  // 批66 · 卡点1：编辑态 ID 即时校验结果（复用既有 id_check 接口）——
+  // null = 未校验/未改动（按钮不受影响，行为与现状一致）。
+  idCheck: null
 };
 var draft = EditorDraft.newDraft();
 
@@ -3069,7 +3084,22 @@ function postJSON(path, body) {
   });
 }
 function fail(where, err) {
-  el("p-body").innerHTML = '<div class="empty">' + esc(where + " 失败：" + err.message) + "</div>";
+  var msg = where + " 失败：" + err.message;
+  // 批66 · 卡点1：错误必须可行动——「条目不存在」时不说死话，给出改回合法 ID /
+  // 用既有「回退到上一份备份」恢复两条退路（复用既有回退链路，不新造恢复机制）。
+  var notFound = /条目不存在/.test(String(err && err.message || ""));
+  if (where === "读取条目" && notFound) {
+    el("p-body").innerHTML = '<div class="empty">' + esc(msg)
+      + '<div class="pfail-how"><b>怎么办：</b>① 点下方或工具栏「回退到上一份备份」恢复本模块文件；'
+      + "② 或回到左侧列表重新选择条目，把 ID 改回合法值再保存。</div>"
+      + '<button class="btn primary" type="button" id="btn-fail-rollback">回退到上一份备份</button>'
+      + "</div>";
+    var rb = el("btn-fail-rollback");
+    if (rb) { rb.addEventListener("click", function () { runRollback(); }); }
+    refreshBackup();   // 让工具栏回退按钮同步到「有备份可用」
+    return;
+  }
+  el("p-body").innerHTML = '<div class="empty">' + esc(msg) + "</div>";
 }
 
 // ---------------------------------------------------------------------------
@@ -3089,7 +3119,8 @@ function markDirty() {
   var has = n > 0;
   var isNew = !!state.newEntry;
   // 新建态：主表单的校验/保存不适用（走新建面板的「创建」按钮），置灰避免误点
-  el("btn-save").disabled = !has || !state.editable || state.busy || isNew;
+  // 批66 · 卡点1：编辑态 ID 校验未通过 → 保存按钮同步置灰（硬拦不写盘）。
+  el("btn-save").disabled = !has || !state.editable || state.busy || isNew || editIdBlocked();
   el("btn-cancel").disabled = (!has && !isNew) || state.busy;
   el("btn-validate").disabled = !has || state.busy || isNew;
   // 删除入口：有选中条目 + 可编辑 + 非请求中 + 非新建态
@@ -4712,6 +4743,7 @@ function renderNewEntry(d) {
   if (keepNew) { state.newDraft.changes = keepNew; }
   state.pendingNewDraft = null;
   state.newIdTouched = false;
+  state.idCheck = null;   // 批66 · 卡点1：新建态不适用编辑 ID 校验（按钮回到现状判定）
   el("p-title").textContent = "新建条目 · " + (d.module_label || d.module);
   setHdrNote("p-sub", "字段按元数据默认值初始化 · 保存写入 " + d.module
     + ".json（校验 + 原子写 + 自动备份）");
@@ -4829,6 +4861,85 @@ function bindNewIdent() {
     }
   }
   updateNewIdStatus();
+}
+
+// 批66 · 卡点1：编辑态「条目 ID」即时校验（复用既有 id_check 接口，不新造第二套）。
+//   · 只在用户真的改了 ID 后才请求（不改动 → 无请求、无状态变化，行为与现状一致）；
+//   · 红/黄/绿三档沿用 .nid-st 既有口径；绿=可用，红=非法/占用，黄=保留（接口暂无黄档）；
+//   · 保存前再校验一次；非法 → 界面红拦 + 后端也硬拦（双保险，绝不出现在写盘路径）。
+var editIdentTimer = null;
+
+function editIdentKey() {
+  if (!state.detail || state.detail.entry_type !== "list") { return null; }
+  return state.detail.id_field || null;
+}
+
+function editIdentInput() {
+  var k = editIdentKey();
+  if (!k || !el("p-body")) { return null; }
+  return el("p-body").querySelector('[data-key="' + k + '"]');
+}
+
+function editIdValue() {
+  var inp = editIdentInput();
+  return inp ? String(inp.value || "").trim() : "";
+}
+
+function editIdChanged() {
+  if (!editIdentKey() || !state.entry) { return false; }
+  return editIdValue() !== String(state.entry);
+}
+
+function editIdBlocked() {
+  return !!(state.idCheck && !state.idCheck.ok);
+}
+
+function paintEditIdStatus(res) {
+  var box = el("edit-id-st");
+  if (!box) { return; }
+  if (!res) { box.textContent = ""; box.className = "nid-st"; return; }
+  box.textContent = res.message || "";
+  box.className = "nid-st " + (res.ok ? "ok" : (res.level === "yellow" ? "warn" : "red"));
+}
+
+function refreshEditIdCheck() {
+  var inp = editIdentInput();
+  if (!inp || !state.editable) { return Promise.resolve(null); }
+  if (!editIdChanged()) {   // 未改动：不请求、不误报「已被占用」（当前条目自身不算冲突）
+    state.idCheck = { ok: true, level: "ok", message: "ID 未改动。" };
+    paintEditIdStatus(null);
+    markDirty();
+    return Promise.resolve(state.idCheck);
+  }
+  var mod = state.entryModule || state.module;
+  return postJSON("/api/pack/" + enc(state.pack) + "/module/" + enc(mod) + "/id_check",
+                  { entry_id: editIdValue() })
+    .then(function (res) {
+      state.idCheck = res;
+      paintEditIdStatus(res);
+      markDirty();
+      return res;
+    })
+    .catch(function (err) {
+      state.idCheck = { ok: false, level: "red",
+                        message: "ID 校验请求失败：" + err.message + "（未确认合法前不会写入文件）",
+                        how_to_fix: "请检查编辑器宿主是否在运行，改回合法 ID 后重试。" };
+      paintEditIdStatus(state.idCheck);
+      markDirty();
+      return state.idCheck;
+    });
+}
+
+function bindEditIdent() {
+  var inp = editIdentInput();
+  if (!inp || !state.editable) { return; }
+  inp.addEventListener("input", function () {
+    state.idCheck = null;
+    paintEditIdStatus(null);
+    markDirty();
+    if (editIdentTimer) { clearTimeout(editIdentTimer); }
+    editIdentTimer = setTimeout(function () { refreshEditIdCheck(); }, 250);
+  });
 }
 
 function currentNewId() {
@@ -5127,6 +5238,7 @@ function bindSubTabs() {
 function renderDetail(d) {
   // 退出新建态：主表单草稿指针还原（新建草稿由 discardDraft 负责清空）
   state.newEntry = null; state.newDraft = null; state.newIdTouched = false;
+  state.idCheck = null;   // 批66 · 卡点1：换条目 → ID 校验态清空（按钮回到现状判定）
   MAIN_CTX.isNew = false; MAIN_CTX.draft = draft;
   el("p-title").textContent = d.name;
   setHdrNote("p-sub", (d.module_label || d.module) + " · 字段由元数据渲染");
@@ -5214,6 +5326,7 @@ function renderDetail(d) {
   bindTabs();
   bindSubBlocks();
   bindControls();
+  bindEditIdent();   // 批66 · 卡点1：编辑态 ID 即时校验（复用 id_check 接口）
   bindObjSections(el("p-body"));
   bindScopedSections(el("p-body"));   // 批20 A：对象内嵌数组/映射的增删接线
   bindOpenKeySections(el("p-body"));
@@ -5418,11 +5531,20 @@ function fieldRow(f) {
   var del = (f.deletable && state.editable)
     ? '<button type="button" class="keydel" data-keydel="' + esc(f.key)
       + '" title="删除这个子项（只改草稿，保存后生效）">✕</button>' : "";
+  // 批66 · 卡点1：条目 ID 行（仅 list 模块的身份字段）复用既有 id_check 接口做即时校验。
+  var isIdent = !!(state.detail && state.detail.entry_type === "list"
+    && state.detail.id_field === f.key);
+  var body = fieldBody(f);
+  if (isIdent && state.editable) {
+    body = '<div class="ident">' + body + '<span class="nid-st" id="edit-id-st"></span>'
+      + '<div class="nid-hint">改 ID = 改条目在文件里的标识；保存前会先校验，'
+      + "非法 ID 不会写入文件。</div></div>";
+  }
   return '<div class="row' + wide + '" data-field="' + esc(f.key) + '" data-present="'
     + (f.present ? "true" : "false") + '"><div class="rlab">'
     + helpTriggerHtml(trig, fieldLabelHtml(f.label, f.key))
     + ' <span class="ftype">' + esc(typeZh(f.type)) + "</span>" + del + "</div>"
-    + '<div class="rval">' + fieldBody(f) + "</div></div>";
+    + '<div class="rval">' + body + "</div></div>";
 }
 
 function fieldBody(f) {
@@ -6814,6 +6936,8 @@ function postForm(ctx, suffix, extra) {
     }
     state.result = res; renderResult(res);
     if (res.ok && suffix === "/save") {
+      // 批66 · 卡点1：改名成功 → 跟随新 ID 重新读详情（否则会拿旧 ID 去读 → 假「条目不存在」）。
+      if (ctx === MAIN_CTX && res.rename && res.rename.to) { state.entry = res.rename.to; }
       state.pendingDrafts = snapshotOtherDrafts(ctx.key);
       EditorDraft.discard(ctx.draft);
       // 批32 D1：保存成功 → 本机草稿使命完成，清除（既有保存语义/成功判定不变）。
@@ -6836,7 +6960,25 @@ function postForm(ctx, suffix, extra) {
 }
 
 function runValidate() { return postForm(MAIN_CTX, "/validate"); }
-function runSave() { return postForm(MAIN_CTX, "/save"); }
+// 批66 · 卡点1：保存前对编辑态 ID 硬拦——复用既有 id_check 接口；非法 → 红拦、绝不写盘。
+// 与后端 `save_entry` 的同一校验构成双保险（界面拦不住的后端也拦）。
+function runSave() {
+  var pre = Promise.resolve(null);
+  if (editIdChanged()) { pre = refreshEditIdCheck(); }
+  return pre.then(function (chk) {
+    if (chk && !chk.ok) {
+      state.result = {
+        ok: false, level: "red",
+        message: "保存已拦下：条目 ID 非法，本次未写入任何文件。",
+        errors: [{ level: "red", code: "id_invalid", field_label: "（条目 ID）",
+                   message: chk.message, how_to_fix: chk.how_to_fix || "" }]
+      };
+      renderResult(state.result);
+      return null;
+    }
+    return postForm(MAIN_CTX, "/save");
+  });
+}
 function validateForm(key) { return postForm(state.forms[key] || MAIN_CTX, "/validate"); }
 function saveForm(key) { return postForm(state.forms[key] || MAIN_CTX, "/save"); }
 

@@ -3163,6 +3163,9 @@ def entry_detail(pack: object, module: object, entry_id: object,
         "module_label": _module_display_label(mod, labels),
         "entry_type": etype,
         "id": entry_id,
+        # 批66 · 卡点1：本条目的「标识字段键」（元数据 id_field，缺省 id）——前端据此把
+        # 编辑态 ID 输入接到既有 id_check 接口做即时校验（通用，不写死任何业务字段名）。
+        "id_field": (mmeta.id_field if mmeta is not None and mmeta.id_field else _ID_FIELD),
         "name": entry_name,
         # 批13.1：本段框架已登记、包数据尚无 → 前端标「未配置 · 框架支持」，字段全为空待填。
         "unconfigured": unconfigured,

@@ -1664,23 +1664,6 @@ def _resolve_item(ctx: Mapping[str, Any], text: str) -> Optional[Tuple[str, Mapp
     return None
 
 
-def _item_action(parsed: Any, ctx: Mapping[str, Any]) -> Tuple[Optional[dict], Optional[str]]:
-    """/道具 <物品> → (action_dict, error|None)：经 items.json def 的
-    battle_actions/actions 字段构造 L0 动作（引擎 _resolve_item_action 消费）。"""
-    args = list(getattr(parsed, "args", None) or [])
-    if not args:
-        return None, tpl_of(ctx, _TPL_NO_ITEM_ARG_KEY)
-    if len(args) > 1:
-        return None, format_tpl12(_fragment(parsed))
-    resolved = _resolve_item(ctx, str(args[0]))
-    if resolved is None:
-        return None, tpl_of(ctx, _TPL_NO_ITEM_KEY)
-    item_id, item_def = resolved
-    actions = list(item_def.get("battle_actions") or item_def.get("actions") or [])
-    item_name = str(item_def.get("name") or item_id)
-    return {"type": "item", "item_id": item_id, "actions": actions, "item_name": item_name}, None
-
-
 async def cmd_battle_attack(parsed: Any, ctx: MutableMapping[str, Any]) -> dict:
     """/攻击 [技能]：普攻或技能攻击一轮（玩家行动+怪物反击合并 1 条；
     结束追加战斗结束汇总 1 条，单次操作 ≤2 条）。"""

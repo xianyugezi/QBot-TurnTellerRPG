@@ -398,13 +398,6 @@ def _transform_children() -> Mapping[str, FieldMeta]:
     return out if isinstance(out, Mapping) else {}
 
 
-def _state_policy_children() -> Mapping[str, FieldMeta]:
-    """state_policy 3 字段 children（细化_6b §1.4 #32~#34，与 state_policy_fields() 同源）。"""
-    fn = globals().get("state_policy_fields")
-    out = fn() if callable(fn) else {}
-    return out if isinstance(out, Mapping) else {}
-
-
 def _job_transform_children() -> Mapping[str, FieldMeta]:
     """jobs_fields()['transform'] 的 children 挂载（4B 追加位落点）。"""
     return dict(_transform_children())

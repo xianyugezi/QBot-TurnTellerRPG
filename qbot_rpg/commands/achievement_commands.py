@@ -77,14 +77,6 @@ def _player_of(ctx: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
     return ctx
 
 
-def _titles_of(ctx: MutableMapping[str, Any]):
-    """称号注册表（装配注入 ctx["titles"]；缺省空 dict）。"""
-    titles = ctx.get("titles")
-    if isinstance(titles, Mapping):
-        return titles
-    return {}
-
-
 def _owned_titles(ctx: MutableMapping[str, Any]) -> list:
     """已拥有称号列表（ProficiencyEngine.owned_titles）。"""
     player = _player_of(ctx)

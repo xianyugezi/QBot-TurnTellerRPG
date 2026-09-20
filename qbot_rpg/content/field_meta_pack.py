@@ -798,9 +798,6 @@ def load_field_meta(pack_dir: object) -> Optional[PackFieldMeta]:
 # -------------------------------------------------------------------------------------
 # 合并（包声明 > 框架兜底；纯函数，不改动传入的 base 表）
 # -------------------------------------------------------------------------------------
-def _display_field(label: str, help_text: str) -> FieldMeta:
-    """纯展示字段（soft_label=True → 泛型校验短路；type 留空 = 类型未登记，按实际值推断）。"""
-    return FieldMeta(type="", soft_label=True, label=label, help=help_text)
 
 
 def _display_node(spec: object, hspec: object) -> FieldMeta:

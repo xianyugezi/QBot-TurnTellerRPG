@@ -468,25 +468,6 @@ class QuestDef(BaseDef):
         v = r.get("cap")
         return v if isinstance(v, (int, float)) and not isinstance(v, bool) else None
 
-    def reward_entries(self) -> Tuple[Mapping[str, object], ...]:
-        """统一 reward 条目序列（本地镜像，不含内联串展开）：reward 优先，缺省取 rewards 别名；
-        str=内联串原样单条（展开归 core/reward 导入器）；dict=单条；list=逐条过滤对象条目。"""
-        raw = self.raw.get("reward")
-        if raw is None:
-            raw = self.raw.get("rewards")
-        if isinstance(raw, Mapping):
-            return (raw,)
-        if isinstance(raw, list):
-            return tuple(e for e in raw if isinstance(e, Mapping))
-        if isinstance(raw, str):
-            return ({"inline": raw},) if raw else ()
-        return ()
-
-    def has_reward_alias_conflict(self) -> bool:
-        """reward 与 rewards 同给且异值（D-01：黄提示「奖励字段重复」，同给同值不提示）。"""
-        return ("reward" in self.raw and "rewards" in self.raw
-                and self.raw.get("reward") != self.raw.get("rewards"))
-
 
 def parse_quests(modules: Mapping[str, object]) -> Tuple[QuestDef, ...]:
     """从 modules 提取 quest 模块 → QuestDef 元组（非 list / 非对象条目跳过；供运行期与测试复用）。"""

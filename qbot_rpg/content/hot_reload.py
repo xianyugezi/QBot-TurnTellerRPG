@@ -103,9 +103,6 @@ class ReloadResult:
     note: str = ""  # 技术性说明（非用户文案；日志/调试用）
     no_change: bool = False  # 轮询无新事件（WIR-04/TCP-03：no change 不重载；TPL-18 触发）
 
-    @property
-    def ok_and_clean(self) -> bool:
-        return self.ok and not self.warnings
 
     # 红/黄计数接入（WIR-11：ReloadResult 从校验报告带出计数，供翻译/日志复用）
     @property

@@ -162,11 +162,6 @@ def _row_iid(row: Any) -> str:
     return str(getattr(row, "item_id", "") or "")
 
 
-def _slot_quality(slot: Any) -> str:
-    """槽位实例品质（EquipmentSlot 无 quality——从背包行取；缺省 normal）。"""
-    return "normal"
-
-
 def _resolve_worn(ctx: MutableMapping[str, Any], player: MutableMapping[str, Any],
                   name: str) -> Tuple[Optional[Any], str, List[str]]:
     """按名解析已穿戴装备 → (槽位对象|None, err_key, 候选行文案列表)。

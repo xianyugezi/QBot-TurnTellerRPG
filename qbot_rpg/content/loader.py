@@ -57,10 +57,6 @@ class PackLoadError(Exception):
         self.errors: Tuple[PackError, ...] = report.errors
         super().__init__(f"pack load blocked by {len(report.errors)} red-block error(s)")
 
-    @property
-    def pack_errors(self) -> Tuple[PackError, ...]:
-        return self.errors
-
 
 def file_signature(path: Path) -> Optional[Tuple[int, int, str]]:
     """mtime(ns) + size + sha256 三重签名（细化_3e2 TRG-2：mtime 快筛 / 哈希防伪造/同秒覆盖）。

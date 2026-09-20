@@ -499,16 +499,6 @@ def _job_name(ctx: Mapping[str, Any], job_id: str) -> Optional[str]:
     return None
 
 
-def _base_header(ctx: Mapping[str, Any], label: str) -> str:
-    """LV 行固定头部基座：`【{label}】Lv3.阿伟（战士）`。"""
-    f = _player_fields(ctx)
-    job = str(ctx.get("job_name") or _job_name(ctx, f["job_id"]) or "")
-    # 2026-08-31：内容包无 jobs 表时 job_name 为空 → 默认职业兜底「新手」防显示（?）
-    if not job and f["job_id"] == "novice":
-        job = "新手"
-    return f"【{label}】Lv{f['level']}.{f['name']}（{job}）"
-
-
 def view_header(ctx: Mapping[str, Any]) -> str:
     """角色面板头部（2026-08-31 用户拍板 + 模板配置化：模板来自 ctx[templates]
     role_header/role_level/role_job/role_exp/role_max，内容包可覆盖）。"""

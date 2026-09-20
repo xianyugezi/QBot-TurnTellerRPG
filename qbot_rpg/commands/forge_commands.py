@@ -1371,14 +1371,6 @@ def cmd_confirm(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     return forge_atomic(ctx, node_id, preview=False)  # 复用原子执行（重跑守卫再扣素材发经验）
 
 
-def _join_node_args(args: List[str]) -> str:
-    """节点名多参数拼接（P-01：`/锻造 炎剑 Ⅱ` → args=[炎剑, Ⅱ] → 拼接 `炎剑Ⅱ`）。
-
-    非「预览」子词的多参数按紧凑拼接（节点名无空格，args 拆分来自空格输入）；
-    拼接后仍含空格 → 由调用方 P-01 校验拒绝（参数错误）。"""
-    return "".join(str(a) for a in args)
-
-
 def _target_of(parsed: Any) -> str:
     """节点名剥离（兼容保留：批4 路4C 后 cmd_forge 改走 parse_forge_target，本函数不再被调用）。
 

@@ -166,7 +166,17 @@ SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
 #     不改既有 `enabled` 的 label/help/range）。
 #   对拍实证：删除项 = 0；无既有 label/help/group/module_labels/module_tree 改值；
 #   重定后基线树与当前树逐字段 diff=0。
-BASELINE_REF = "ee15c78"
+# 批62（2026-09-22 深炼金口径 C + /淬炼 指令壳）重定：ee15c78 → d06dd0b（本批模板提交）。
+#   原因 = 本批**有意**变更（非迁移回归），全部为**新增**（删除 0 / 无既有严格键改值）：
+#   · 模板全量表 +22 条 `temper_*` 键（`/淬炼` 指令壳文案；templates 计数 857→879，
+#     framework_default_count 855→877）→ veinborn/test_demo 的 entries/templates 与
+#     index.modules 计数派生位移（**计数位移 = 硬差异**，故须重定基线，同批36 口径）。
+#   · 本批不新增 settings 字段/键（`quality_cap_delta` 是既有 `affinity_effects` 的**内层动态
+#     键**，field_meta children 留空）→ settings 条目计数不变。
+#   对拍实证：删除项 = 0；无既有 label/help/group/module_labels/module_tree 改值；
+#   重定后基线树与当前树逐字段 diff=0。
+#   与 scripts/compare_field_meta_migration.py 的 DEFAULT_BASELINE_REF 同基线。
+BASELINE_REF = "d06dd0b"
 CONTENT = REPO / "content"
 
 

@@ -274,7 +274,12 @@ DEFAULT_PACKS = ("veinborn", "test_demo")
 #   原因 = 本批**有意**变更（非迁移回归），全部为**新增**（删除 0 / 无既有严格键改值）：
 #   · items/equipment 新增特效轴键 `reward_mult_pct`（X43，`min:0`）→ stats `@more` 计数 +1；
 #   · settings.`overheal` 新增 mode/cap_pct/cap_flat 三子字段。
-DEFAULT_BASELINE_REF = "ee15c78"
+# 批62（2026-09-22 深炼金口径 C + /淬炼 指令壳）重定：ee15c78 → d06dd0b（本批模板提交）。
+#   原因 = 本批**有意**变更（非迁移回归），全部为**新增**（删除 0 / 无既有严格键改值）：
+#   · 模板全量表 +22 条 `temper_*` 键（`/淬炼` 指令壳文案；templates 857→879，
+#     framework_default_count 855→877）→ entries/templates 与 index/modules 计数派生位移；
+#   · 本批不新增 settings 字段/键（`quality_cap_delta` 是既有 `affinity_effects` 内层动态键）。
+DEFAULT_BASELINE_REF = "d06dd0b"
 
 
 def _env(root: Path) -> dict:

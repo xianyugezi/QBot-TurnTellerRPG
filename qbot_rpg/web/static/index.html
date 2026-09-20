@@ -189,6 +189,8 @@ html[data-fs="large"] {
 .saved::after { content: "]"; color: var(--text-6); }
 .saved.dirty { color: var(--warn); }
 .saved.err { color: var(--danger); }
+/* 批66 · 卡点6：保存/创建成功的一次性确认（复用同一状态位；4 秒后回到「已保存」） */
+.saved.just { color: var(--ok); font-weight: 700; }
 .topright { margin-left: auto; display: flex; align-items: center; gap: var(--sp-6); color: var(--text-3);
   flex: 0 0 auto; white-space: nowrap; }
 .who b { color: var(--text-value); font-weight: 700; }
@@ -3124,8 +3126,12 @@ function draftCount() {
 function markDirty() {
   var n = draftCount();
   var tag = el("dirty");
-  tag.textContent = n ? ("未保存改动 " + n + " 项") : "已保存";
-  tag.className = "saved" + (n ? " dirty" : "");
+  // 批66 · 卡点6：成功确认（flashSaved）展示期间，不被常规状态位覆盖；
+  // 计时结束由 flashSaved 复原后调用 markDirty，回到「已保存 / 未保存改动 N 项」。
+  if (!savedFlashTimer) {
+    tag.textContent = n ? ("未保存改动 " + n + " 项") : "已保存";
+    tag.className = "saved" + (n ? " dirty" : "");
+  }
   var has = n > 0;
   var isNew = !!state.newEntry;
   // 新建态：主表单的校验/保存不适用（走新建面板的「创建」按钮），置灰避免误点
@@ -3159,6 +3165,31 @@ function markDirty() {
   // 批33（§6.12-01）：草稿变化统一在此入历史栈（所有改动路径都经 EditorDraft.set + markDirty）。
   historyCommit();
   syncHistoryButtons();
+}
+
+// 批66 · 卡点6：保存/创建成功的显式、克制反馈——沿用顶栏既有 `[已保存]` 状态位（#dirty），
+// 短暂显示「✓ 已写入 items.json（已自动备份）」，随后回到常规状态位（不新造提示体系）。
+var savedFlashTimer = null;
+
+function flashSaved(msg) {
+  var tag = el("dirty");
+  if (!tag) { return; }
+  tag.textContent = "✓ " + msg;
+  tag.className = "saved just";
+  if (savedFlashTimer) { clearTimeout(savedFlashTimer); }
+  savedFlashTimer = setTimeout(function () {
+    savedFlashTimer = null;
+    markDirty();   // 归位到常规状态位（已保存 / 未保存改动 N 项）
+  }, 4000);
+}
+
+// 成功文案：写明写了哪个文件（res.written = 模块名列表）+ 是否自动备份。
+function savedFlashText(res) {
+  var files = ((res && res.written) || []).map(function (m) { return String(m) + ".json"; });
+  var name = files.length ? files.join("、")
+    : ((res && res.module ? String(res.module) : "文件") + ".json");
+  var backed = !(res && res.backup && res.backup.exists === false);
+  return "已写入 " + name + (backed ? "（已自动备份）" : "");
 }
 
 function discardDraft() {
@@ -5134,7 +5165,9 @@ function createEntry() {
         state.newEntry = null; state.newDraft = null;
         MAIN_CTX.isNew = false; MAIN_CTX.draft = draft;
         state.pendingDrafts = {};
-        return refreshAfterMutation(eid, res);
+        return refreshAfterMutation(eid, res).then(function () {
+          flashSaved(savedFlashText(res));   // 批66 · 卡点6：创建成功确认（既有状态位）
+        });
       }
       renderResult(res);
     }).catch(function (err) {
@@ -7064,7 +7097,10 @@ function postForm(ctx, suffix, extra) {
       // 批14 #6②：保存可能改变「可被引用的键空间」（对象型段未登记子字段的键集合）
       // → 引用候选缓存必须失效；同一会话内打开引用字段即重新拉取，无需刷新页面/重启。
       invalidateRefCache();
-      return reloadDetail().then(function () { historyReset(); });
+      return reloadDetail().then(function () {
+        historyReset();
+        flashSaved(savedFlashText(res));   // 批66 · 卡点6：成功确认（既有状态位）
+      });
     }
   }).catch(function (err) {
     // 批32 D1：保存失败绝不静默丢数据——草稿已在本机（markDirty 时写入），这里只如实提示。

@@ -113,9 +113,19 @@ CURVE_FORMULA_KEY = "formula"
 
 
 class EditorError(Exception):
-    """编辑器读取层领域异常基类（宿主 scripts/editor_host.py 映射为 HTTP JSON）。"""
+    """编辑器读取层领域异常基类（宿主 scripts/editor_host.py 映射为 HTTP JSON）。
+
+    批66 · 卡点3：`how_to_fix` = 面向用户的「怎么办」一句（可选）；宿主把它一并放进
+    错误 JSON，前端横幅据此给出可行动提示（不新造第二套错误体系）。
+    """
 
     status_code = 500
+    how_to_fix = ""
+
+    def __init__(self, *args: object, how_to_fix: str = "") -> None:
+        super().__init__(*args)
+        if how_to_fix:
+            self.how_to_fix = how_to_fix
 
 
 class BadRequest(EditorError):
@@ -174,7 +184,16 @@ def _read_json_cached(path_str: str, mtime_ns: int, size: int, ino: int) -> Opti
     except FileNotFoundError:
         return None
     except (OSError, ValueError) as exc:  # 坏 JSON 不炸宿主，转领域异常
-        raise EditorError(f"读取/解析 JSON 失败：{path_str}（{exc}）") from exc
+        # 批66 · 卡点3：错误必须可行动、且不泄露服务器绝对路径 / Python 英文异常
+        # （修前是「读取/解析 JSON 失败：/abs/path（Expecting value: line 1 column 1）」，
+        # 前端还完全不显示）。只点名文件 + 一句「怎么办」，技术细节不进用户文案。
+        name = Path(path_str).name
+        raise EditorError(
+            f"这个包读不了：{name} 是空文件或内容不是合法 JSON。",
+            how_to_fix=(f"请打开 {name} 修好内容（空文件就补上合法 JSON），"
+                        "修好后重新选择该内容包即可；若改坏了，可用该模块的"
+                        "「回退到上一份备份」恢复。"),
+        ) from exc
 
 
 def _read_json(path: Path) -> Optional[object]:

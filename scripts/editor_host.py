@@ -63,9 +63,12 @@ def create_app(pack: Optional[str] = None, root: Optional[str] = None,
 
     @app.exception_handler(api.EditorError)
     async def _editor_error(_request, exc):  # type: ignore[no-untyped-def]
+        # 批66 · 卡点3：错误包络带「怎么办」（`how_to_fix`，可为空串）——
+        # 前端据此给可行动横幅；既有 `error` / `kind` 字段不变（零变化）。
         return JSONResponse(
             status_code=getattr(exc, "status_code", 500),
-            content={"ok": False, "error": str(exc), "kind": type(exc).__name__},
+            content={"ok": False, "error": str(exc), "kind": type(exc).__name__,
+                     "how_to_fix": getattr(exc, "how_to_fix", "") or ""},
         )
 
     # -------- 权限位（机主可编辑 / GM 只读预览；批2 不做登录页） --------

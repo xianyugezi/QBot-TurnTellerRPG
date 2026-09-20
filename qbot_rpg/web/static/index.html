@@ -3066,10 +3066,18 @@ function bindHelp() {
 function api(path) {
   return fetch(path, { headers: { "Accept": "application/json" } }).then(function (r) {
     return r.json().then(function (data) {
-      if (!r.ok) { throw new Error((data && data.error) || ("HTTP " + r.status)); }
+      if (!r.ok) { throw apiError(data, r); }
       return data;
     });
   });
+}
+// 批66 · 卡点3：错误对象带上后端 `how_to_fix`（既有 `error`/`kind` 不变）——
+// 前端横幅据此给「怎么办」，不新造第二套错误体系。
+function apiError(data, r) {
+  var err = new Error((data && data.error) || ("HTTP " + r.status));
+  err.how_to_fix = (data && data.how_to_fix) || "";
+  err.status = r.status;
+  return err;
 }
 function postJSON(path, body) {
   return fetch(path, {
@@ -3078,7 +3086,7 @@ function postJSON(path, body) {
     body: JSON.stringify(body || {})
   }).then(function (r) {
     return r.json().then(function (data) {
-      if (!r.ok) { throw new Error((data && data.error) || ("HTTP " + r.status)); }
+      if (!r.ok) { throw apiError(data, r); }
       return data;
     });
   });
@@ -3479,8 +3487,8 @@ function loadPacks() {
       el("gfilter").value = "";   // 换包后全局检索结果作废
       syncPackTitle();
       if (!el("transferpanel").hidden) { renderTransferPanel(); }   // 批11：导出目标包名同步
-      loadModules();
-      loadEntryIndex();
+      // 批66 · 卡点3：读包失败必须显式报错 + 不残留上一个包的数据（走 loadPackView）。
+      loadPackView();
       });
     }
   });
@@ -4471,6 +4479,52 @@ function renderEmptyPack() {
   refreshRollbackButton();
   el("p-body").innerHTML = moduleEmptyHtml() + '<div id="result" hidden></div>';
   helpHideDom();
+}
+
+// 批66 · 卡点3：切包 / 读包失败 → 显式报错 + **不残留上一个包的数据**（宁可真空白 + 报错）。
+// 修前：loadModules/loadEntryIndex 的 500 被静默吞掉，界面继续显示上一个包的模块/计数/条目。
+function clearPackView() {
+  state.modules = []; state.views = []; state.available = [];
+  state.module = null; state.entry = null; state.entryModule = null;
+  state.entries = []; state.entryIndex = null; state.listLabel = "";
+  state.backup = null; state.mergeSections = []; state.mountedSections = [];
+  state.entryGroups = []; state.unusedPack = null; state.unusedByMod = {};
+  state.refCache = {}; state.refKnown = {}; state.refQuery = {}; state.gquery = "";
+  state.detail = null; state.tabs = []; state.forms = {}; state.pendingDrafts = {};
+}
+
+function packLoadFailed(err) {
+  clearPackView();
+  discardDraft();
+  renderModules();
+  setHdrNote("mod-src", "manifest.modules");
+  el("rows").innerHTML = "";
+  el("list-title").textContent = "条目";
+  setHdrNote("list-count", "");
+  el("list-ft").textContent = "共 0 条";
+  var hint = el("list-hint");
+  hint.innerHTML = '<div class="lh-unused">这个内容包读不了：已清空显示，'
+    + "不保留上一个包的内容。</div>";
+  hint.hidden = false;
+  el("p-title").textContent = "内容包读不了";
+  setHdrNote("p-sub", "");
+  el("p-id").textContent = ""; el("p-id").title = "";
+  el("backup-note").textContent = "备份：—";
+  refreshRollbackButton();
+  var how = (err && err.how_to_fix) ? String(err.how_to_fix) : "";
+  el("p-body").innerHTML = '<div class="empty">'
+    + esc((err && err.message) ? err.message : "读取内容包失败。")
+    + (how ? '<div class="pfail-how"><b>怎么办：</b>' + esc(how) + "</div>" : "")
+    + '<div class="pfail-how">修好后，用顶部 pkg= 选择器重新选择这个包（或刷新页面）即可。</div>'
+    + '<div id="result" hidden></div></div>';
+  helpHideDom();
+  markDirty();
+}
+
+// 读包视图（模块 + 条目索引）：任一失败 → 显式报错并清空（不静默、不残留）。
+function loadPackView() {
+  return loadModules().then(function () { return loadEntryIndex(); })
+    .catch(function (err) { packLoadFailed(err); });
 }
 
 // 批66 · 卡点2：`preferred` = 本次刚启用的模块（启用 / 应用推荐组合 / 一键启用未启用项）。
@@ -7950,7 +8004,7 @@ function refreshAfterImport(packId) {
     state.refCache = {}; state.refKnown = {}; state.refQuery = {};
     state.entryIndex = null; state.gquery = ""; el("gfilter").value = "";
     syncPackTitle();
-    return loadModules().then(function () { return loadEntryIndex(); });
+    return loadPackView();
   });
 }
 function doImportPack(onConflict, newId) {
@@ -8179,8 +8233,7 @@ initBg();
 initAutosaveToggle();
 loadSession()
   .then(loadPacks)
-  .then(function () { return loadModules(); })
-  .then(function () { return loadEntryIndex(); })
+  .then(function () { return loadPackView(); })
   .then(function () { checkLocalDraft(); })   // 批32 D1：重开后提示可恢复的本机草稿
   .catch(function (err) { fail("初始化", err); });
 </script>

@@ -46,11 +46,17 @@ from qbot_rpg.data.affinity_keys import (
 )
 from qbot_rpg.data.event_points import EVENT_POINTS
 from qbot_rpg.data.gear_stats import (
+    EFFECT_AGGREGATES,
+    EFFECT_GATE_MODES,
+    EFFECT_UNKNOWN_MODES,
     GEAR_DISPLAY_KEYS,
     GEAR_EFFECT_KEYS,
     PANEL_AXIS_STEMS,
+    check_effect_budget,
     effect_axis_stem,
+    effect_values_of,
     normalize_effect_axes,
+    normalize_effect_budget,
 )
 from qbot_rpg.content.models import (
     FieldMeta,
@@ -660,6 +666,9 @@ class _Checker:
         # 范围取 settings.effect_axes 有效声明，缺省 = 登记表建议范围）。
         if module_name in ("items", "equipment", "runes"):
             self._check_effect_axis_values(module_name, data)
+            # 批55 · 特效强度预算：条目级特效等效越界（仅 enabled=true 时；越界呈现按
+            # gate_mode：warn=黄提示 Y-20 / red=红拦 R-5 / off=静默）。
+            self._check_effect_budget_entries(module_name, data)
         # 批18 效果扩展（gain_currency / learn_skill）：类型相关必填/范围/引用存在性
         # 专项（泛型 R-1/R-2/R-4 仍在下方逐条目跑；本钩子补「仅在该 type 下才要求」的键）。
         if module_name == "effects":
@@ -697,6 +706,9 @@ class _Checker:
             # + settings.monster_scaling（怪物 hp/atk/防御补偿）——结构/类型/区间红拦
             self._check_panel_budget(module_name, data)
             self._check_monster_scaling(module_name, data)
+            # 批55 · 特效强度预算：settings.effect_budget 另立上限（结构/类型/枚举红拦 +
+            # 权表 calib=0 黄提示）；缺段 → enabled=false → 零行为。
+            self._check_effect_budget(module_name, data)
             # 批50 · 特效轴地基：settings.effect_axes 逐轴声明（越界红拦 / 未知轴黄提示 /
             # 轴名不得与面板三轴 stem 冲突）+ 内容侧轴取值越界红拦。
             self._check_effect_axes(module_name, data)
@@ -1932,7 +1944,8 @@ class _Checker:
                       msg="monster_scaling 段要填对象（配置块 { ... }，如 {\"hp_mult\": 1.5, "
                           "\"atk_mult\": 1.5, \"def_factor\": 1.0828}）或删掉该段")
             return
-        for key in ("hp_mult", "atk_mult", "def_factor", "def_k"):
+        for key in ("hp_mult", "atk_mult", "def_factor", "def_k",
+                    "effect_hp_mult", "effect_atk_mult"):
             if key not in cfg:
                 continue
             v = cfg.get(key)
@@ -1953,6 +1966,145 @@ class _Checker:
                 self._warn(module_name, path, "Y-17", rule="def_factor_out_of_band",
                            msg="def_factor 超出建议带 [0.5, 2.0] → 怪物防御补偿幅度异常，"
                                "可能破坏「斩杀回合不变」（不阻断）")
+
+    # ---- 批55 · 特效强度预算：settings.effect_budget 段 + 条目级越界两态 ----
+    def _check_effect_budget(self, module_name: str, data: object) -> None:
+        """`settings.effect_budget` 段校验（批55 · 特效强度预算）。
+
+        依据：`docs/特效强度预算_设计.md` §二方案 B（另立特效强度上限，主方案）
+        + §三.2 参数默认与范围 + §四 红线守护清单。
+        唯一源：`data/gear_stats`（`normalize_effect_budget` / `EFFECT_*` 枚举）。
+
+        分级：
+          · 段结构错误（非对象）→ **红拦 R-1**（人话提示）；
+          · `enabled` / `report_effective_share` 非布尔 → **红拦 R-1**；
+          · `cap_equiv_pct` 非数值 → R-1、NaN/Inf → R-3、负值 → R-2；
+          · `aggregate` / `gate_mode` / `unknown_axis` ∉ 登记枚举 → **红拦 R-1**（枚举）；
+          · `tier_mult` 非对象 → R-1；条目值非数值 → R-1、NaN/Inf → R-3、负值 → R-2；
+          · `axis_weights` 非对象 / 条目非对象 → R-1；`calib/output/survival` 非数值 → R-1、
+            NaN/Inf → R-3；`calib == 0` → **黄提示 Y-20**（该键永不参与折算，多半是笔误）。
+        缺段：默认放行（`enabled=false` → 聚合器返回 0 / gate 静默 = 零行为）。
+        """
+        if not isinstance(data, Mapping):
+            return
+        base = "settings.effect_budget"
+        cfg = data.get("effect_budget")
+        if cfg is None:
+            return
+        if not isinstance(cfg, Mapping):
+            self._err(module_name, base, "R-1", rule="section_structure",
+                      got=type(cfg).__name__,
+                      msg="effect_budget 段要填对象（配置块 { ... }，如 {\"enabled\": true, "
+                          "\"cap_equiv_pct\": 8, \"gate_mode\": \"warn\"}）或删掉该段"
+                          "（删掉 = 不启用特效预算闸）")
+            return
+        for key in ("enabled", "report_effective_share"):
+            if key in cfg and not isinstance(cfg.get(key), bool):
+                v = cfg.get(key)
+                self._err(module_name, f"{base}.{key}", "R-1", rule="type", expect="bool",
+                          got=("bool" if isinstance(v, bool) else type(v).__name__))
+        for key, allowed in (("aggregate", EFFECT_AGGREGATES),
+                             ("gate_mode", EFFECT_GATE_MODES),
+                             ("unknown_axis", EFFECT_UNKNOWN_MODES)):
+            if key not in cfg:
+                continue
+            v = cfg.get(key)
+            if not isinstance(v, str) or v not in allowed:
+                self._err(module_name, f"{base}.{key}", "R-1", rule="enum_invalid",
+                          got=v, allowed=list(allowed))
+        if "cap_equiv_pct" in cfg:
+            self._check_number_field(module_name, f"{base}.cap_equiv_pct",
+                                     cfg.get("cap_equiv_pct"), min_value=0.0)
+        tm = cfg.get("tier_mult")
+        if tm is not None:
+            if not isinstance(tm, Mapping):
+                self._err(module_name, f"{base}.tier_mult", "R-1", rule="type", expect="obj",
+                          got=type(tm).__name__)
+            else:
+                for raw_tier, raw_mult in tm.items():
+                    self._check_number_field(module_name,
+                                             f"{base}.tier_mult.{raw_tier}", raw_mult,
+                                             min_value=0.0)
+        aw = cfg.get("axis_weights")
+        if aw is not None:
+            if not isinstance(aw, Mapping):
+                self._err(module_name, f"{base}.axis_weights", "R-1", rule="type",
+                          expect="obj", got=type(aw).__name__)
+            else:
+                for raw_axis, raw_entry in aw.items():
+                    apath = f"{base}.axis_weights.{raw_axis}"
+                    if not isinstance(raw_entry, Mapping):
+                        self._err(module_name, apath, "R-1", rule="type", expect="obj",
+                                  got=type(raw_entry).__name__)
+                        continue
+                    for field in ("calib", "output", "survival"):
+                        if field not in raw_entry:
+                            continue
+                        self._check_number_field(module_name, f"{apath}.{field}",
+                                                 raw_entry.get(field))
+                    calib = raw_entry.get("calib")
+                    if (isinstance(calib, (int, float)) and not isinstance(calib, bool)
+                            and float(calib) == 0.0):
+                        self._warn(module_name, f"{apath}.calib", "Y-20",
+                                   rule="effect_weight_zero_calib",
+                                   msg="权表 calib=0 → 该键永不参与等效折算"
+                                       "（多半是笔误；不阻断）")
+
+    def _check_number_field(self, module_name: str, path: str, value: object,
+                            min_value: Optional[float] = None) -> None:
+        """通用「数值字段」红拦：非数值/布尔 → R-1；NaN/Inf → R-3；低于下界 → R-2。"""
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            self._err(module_name, path, "R-1", rule="type", expect="number",
+                      got=("bool" if isinstance(value, bool) else type(value).__name__))
+            return
+        fv = float(value)
+        if math.isnan(fv) or math.isinf(fv):
+            self._err(module_name, path, "R-3", rule="not_a_number", value=value)
+            return
+        if min_value is not None and fv < float(min_value):
+            self._err(module_name, path, "R-2", rule="value_below_min", value=value,
+                      range_min=min_value)
+
+    def _check_effect_budget_entries(self, module_name: str, data: object) -> None:
+        """条目级特效等效越界（`items`/`equipment` 词条 + `runes` 数值档；批55）。
+
+        独立钩子（不依赖 settings 模块是否先校验）：只有 `settings.effect_budget.enabled
+        == true` 时才生效；**条目配额 = `cap_equiv_pct`**（无档位语境，故不乘 `tier_mult`）。
+        越界 / 权表未登记轴的呈现方式由 `gate_mode` / `unknown_axis` 决定：
+          · `warn` → **黄提示 Y-20**（不阻断）；`red` → **红拦 R-5**（拒绝）；
+          · `off` / `ignore` → 静默（只判不报）。只读遍历，不改任何数据。
+        """
+        modules = self._modules
+        settings = modules.get("settings")
+        cfg = settings.get("effect_budget") if isinstance(settings, Mapping) else None
+        if not isinstance(cfg, Mapping):
+            return
+        if not bool(normalize_effect_budget(cfg)["enabled"]):
+            return
+        path_fn = _effect_rune_paths if module_name == "runes" else _effect_entry_paths
+        for path, bag in path_fn(module_name, data):
+            values = effect_values_of(bag, cfg)
+            if not values:
+                continue
+            res = check_effect_budget(values, None, cfg)
+            if res["action"] == "ok":
+                continue
+            if res["over"]:
+                msg = (f"条目特效等效 {res['equiv_pct']:.2f}% 超条目配额 "
+                       f"{res['cap_pct']:.2f}%（输出等效 {res['output_pct']:.2f}% / "
+                       f"生存等效 {res['survival_pct']:.2f}%）")
+            else:
+                msg = f"条目命中权表未登记的特效轴（等效 {res['equiv_pct']:.2f}%）"
+            if res["unknown"]:
+                msg += f"；未登记轴：{'、'.join(res['unknown'])}"
+            detail = {"value": res["equiv_pct"], "range_max": res["cap_pct"],
+                      "axis": res["unknown"], "msg": msg}
+            if res["action"] == "red":
+                self._err(module_name, path, "R-5",
+                          rule="effect_budget_entry_over_cap", **detail)
+            else:
+                self._warn(module_name, path, "Y-20",
+                           rule="effect_budget_entry_over_cap", **detail)
 
     # ---- 批50 · 特效轴地基：settings.effect_axes 逐轴声明 + 内容侧取值越界 ----
     def _check_effect_axes(self, module_name: str, data: object) -> None:

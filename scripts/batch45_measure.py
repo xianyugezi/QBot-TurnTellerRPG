@@ -25,7 +25,12 @@
   （`con' = (con+K)×def_factor − K`，与引擎 `core.panel_budget.scale_monster_con` 同源）。
 * 缺省/未配置 → equip_stat_mult=1.0 / 三个 mult=1.0（与本批引入前逐字段一致）。
 
-用法：``python3 scripts/batch45_measure.py [--json]``
+用法：``python3 scripts/batch45_measure.py [--json] [--effects]``
+
+* 缺省（不带 `--effects`）：输出与批45/批53 基线**逐字节一致**（特效夹具不参与计算）。
+* `--effects`：追加特效强度预算夹具（典型生存 build：减伤 25% + 吸血 15% + 冷却 ×0.8）→
+  A1 度量（`effect_equiv_pct` / `effective_equip_share`）+ 按档位闸（`effect_cap_pct` /
+  `effect_over`）+ 特效后的输出侧斩回（`turns_det_effects`）。**不改任何面板/怪物数值**。
 """
 from __future__ import annotations
 
@@ -50,7 +55,12 @@ from qbot_rpg.core.damage import (  # noqa: E402
     hit_rate,
 )
 from qbot_rpg.core.equipment import EquipmentEngine  # noqa: E402
-from qbot_rpg.core.panel_budget import scale_monster_con  # noqa: E402
+from qbot_rpg.core.panel_budget import (  # noqa: E402
+    check_effect_budget,
+    effect_equiv,
+    effective_equip_share,
+    scale_monster_con,
+)
 from qbot_rpg.core.player_attributes import calc_all_final_attributes  # noqa: E402
 from qbot_rpg.data.gear_stats import extract_bonus  # noqa: E402
 from qbot_rpg.data.item import ItemInstance  # noqa: E402
@@ -74,6 +84,16 @@ GEAR: Tuple[Tuple[str, str], ...] = (
 
 # 三只代表性怪物（真实内容包数据；普通 / 精英 / Boss，同区段 D 区终局）
 MONSTERS: Tuple[str, ...] = ("vein_black_bear", "black_crystal_troll", "mountain_howl_lord")
+
+# 批55 · 特效强度预算：`--effects` 夹具（**典型生存 build**，报告 §1 「减伤 25% + 吸血 15%
+# + 冷却 ×0.8」）。键/值由调用方显式给出（不是内容包数据）；缺省不传 `--effects` →
+# 输出与引入前**逐字节一致**（本夹具不参与任何计算）。
+EFFECT_FIXTURE: Dict[str, float] = {
+    "cooldown_pct": -20.0,       # X27：×0.8 冷却
+    "damage_taken_pct": -25.0,   # X02：减伤 25%（immune_dmg 25 的轴形态）
+    "absorb_hp": 15.0,           # X12：吸血 15%
+}
+EFFECT_CFG: Dict[str, Any] = {"enabled": True}
 
 DEFAULT_PANEL_BUDGET: Dict[str, float] = {"white": 7.0, "equip": 8.0, "buff": 5.0,
                                           "equip_stat_mult": 1.0}
@@ -240,6 +260,9 @@ def mc_turns(atk: float, lck: float, foc: float, crit_bonus: float,
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--effects", action="store_true",
+                    help="附加特效强度预算夹具（典型生存 build）：输出 effect_equiv_pct / "
+                         "effective_equip_share 列与特效后斩回；缺省不带 = 与引入前逐字节一致")
     args = ap.parse_args()
 
     panel = build_panel()
@@ -268,6 +291,31 @@ def main() -> int:
         "monsters": [],
     }
 
+    # 批55 · A1 度量 + 特效预算闸（仅 --effects；不改任何面板/怪物数值）。
+    eff_pct = 0.0
+    eff_out_rel = 1.0
+    eff_gate: Dict[str, Any] = {}
+    if args.effects:
+        eq = effect_equiv(EFFECT_FIXTURE, EFFECT_CFG)
+        eff_pct = float(eq["equiv_pct"])
+        eff_out_rel = 1.0 + float(eq["output_pct"]) / 100.0
+        gate = check_effect_budget(EFFECT_FIXTURE, None, EFFECT_CFG)
+        eff_gate = {
+            "fixture": dict(EFFECT_FIXTURE),
+            "equiv_pct": round(eff_pct, 4),
+            "output_pct": round(float(eq["output_pct"]), 4),
+            "survival_pct": round(float(eq["survival_pct"]), 4),
+            "unknown": list(eq["unknown"]),
+            "gate_mode": gate["gate_mode"],
+            "unknown_axis": gate["unknown_axis"],
+        }
+        out["panel"]["effect_output_pct"] = eff_gate["output_pct"]
+        out["panel"]["effect_survival_pct"] = eff_gate["survival_pct"]
+        out["panel"]["effect_equiv_pct"] = eff_gate["equiv_pct"]
+        out["panel"]["effective_equip_share"] = round(
+            effective_equip_share(panel.budget, eff_pct), 6)
+        out["effect_budget"] = eff_gate
+
     # 三档面板（buff 0 / 半 / 满）
     unit = float(panel.white["atk"]) / float(panel.budget["white"])
     buff_full = unit * float(panel.budget["buff"])
@@ -281,6 +329,11 @@ def main() -> int:
             "hp_scaled": mon["stats"]["hp"] * scaling["hp_mult"],
             "con_scaled": _scaled_con(mon, scaling),
         }
+        if args.effects:
+            gate_tier = check_effect_budget(EFFECT_FIXTURE, mon.get("tier"), EFFECT_CFG)
+            rec["effect_cap_pct"] = round(float(gate_tier["cap_pct"]), 4)
+            rec["effect_over"] = bool(gate_tier["over"])
+            rec["effect_action"] = str(gate_tier["action"])
         for tier, buff in tiers.items():
             a = PlayerAttributes(base=dict(panel.white))
             a.bonus["flat"] = dict(panel.equip_flat)
@@ -294,8 +347,15 @@ def main() -> int:
                           float(panel.equip_flat.get("crit", 0.0)), mon, scaling,
                           random.Random(SEED))
             d = max(1, math.floor(atk * defense_factor(_scaled_con(mon, scaling))))
-            rec[tier] = {"atk": atk, "dmg_det": d, "turns_det": det,
-                         "turns_mc": round(mc, 3)}
+            cell: Dict[str, Any] = {"atk": atk, "dmg_det": d, "turns_det": det,
+                                    "turns_mc": round(mc, 3)}
+            if args.effects:
+                # 报告 §1.5：特效的**输出侧等效**（冷却 ×0.8）折算进攻击后重算斩回；
+                # 生存侧不进本工具口径（斩回只看输出），留给定稿档位尺（scripts/batch55_*）。
+                cell["turns_det_effects"] = deterministic_turns(
+                    atk * eff_out_rel, mon, scaling)
+                cell["turns_det_delta"] = cell["turns_det_effects"] - det
+            rec[tier] = cell
         out["monsters"].append(rec)
 
     if args.json:
@@ -311,15 +371,28 @@ def main() -> int:
               f"（dfn {p['dfn_median']:.0f} / hp {p['hp_median']:.0f}）")
         print(f"预算占比(装备) = {p['equip_share_budget'] * 100:.2f}%  "
               f"budget={out['panel_budget']}")
+        if args.effects:
+            print(f"特效等效 = 输出 {p['effect_output_pct']:.2f}% / "
+                  f"生存 {p['effect_survival_pct']:.2f}% → 综合 "
+                  f"{p['effect_equiv_pct']:.2f}%；真实装备占比 = "
+                  f"{p['effective_equip_share'] * 100:.2f}%（A1，只报数）")
         print(f"怪物倍率 = {out['monster_scaling']}")
         print("=== 斩杀回合（确定性 / MC N=20000 种子 %d）===" % SEED)
         for r in out["monsters"]:
             print(f"{r['name']}（{r['tier']}） hp {r['hp_raw']}→{r['hp_scaled']:.0f} "
                   f"con {r['con_raw']}→{r['con_scaled']:.1f}")
+            if args.effects:
+                over = "超限" if r["effect_over"] else "合规"
+                print(f"   特效闸: 档位上限 {r['effect_cap_pct']:.2f}% → {over}"
+                      f"（action={r['effect_action']}）")
             for tier in tiers:
                 t = r[tier]
+                extra = ""
+                if args.effects:
+                    extra = (f" 特效后={t['turns_det_effects']}"
+                             f"（Δ{t['turns_det_delta']:+d}）")
                 print(f"   {tier}: atk={t['atk']:.0f} D={t['dmg_det']} "
-                      f"斩回={t['turns_det']} MC={t['turns_mc']}")
+                      f"斩回={t['turns_det']} MC={t['turns_mc']}{extra}")
     return 0
 
 

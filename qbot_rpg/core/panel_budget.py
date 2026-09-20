@@ -25,23 +25,63 @@
 
 缺省 / 未配置 / 非映射 → 全部 1.0，与本批引入前**逐字段一致**（回归零影响）。
 本模块属 core 层：零 NoneBot import、零 content import、纯函数、类型标注完整。
+
+- **特效强度预算**（`settings.effect_budget`，批55 · 特效强度预算；设计
+  `docs/特效强度预算_设计.md` §二方案 B + §三推荐）：
+  面板三轴（`PANEL_AXIS_KEYS`）只覆盖 `atk/dfn/hp`，特效轴（`data.gear_stats.GEAR_EFFECT_KEYS`
+  + COMBAT 档的吸血/免伤）**不进 60% 装备占比校准**，会抬高真实战力而不进 `equip_share`。
+  本段提供**另立上限**（不改任何战斗数值）：等价权表 `EFFECT_AXIS_WEIGHTS`（坐标表，
+  `等效% = 轴值 / 校准点 × 校准等效%`）→ 聚合器 `effect_equiv` → 按档位 `cap_equiv_pct ×
+  tier_mult[tier]` 判超限 → `gate_mode`（off/warn/red）决定**拒绝/黄提示/静默**；
+  外加 A1 度量 `effective_equip_share`（只报数不改数，与 `equip_share` 并列）。
+  **每轴上下钳**仍由 `settings.effect_axes`（批50/52）承担。缺省整段不存在 → `enabled=false`
+  → 聚合器返回 0、gate 静默 → 与引入前**逐字段一致**。
+
+- **怪物特效补偿**（`settings.monster_scaling.effect_hp_mult / effect_atk_mult`，方案 C 备用）：
+  缺省 **1.0 = 现状**；给「特效渗透率接近 100% / 出现失控 build」时留一条改回 1.0 即回滚的
+  应急杠杆，本批**不配置即不存在**。
 """
 from __future__ import annotations
 
 from typing import Any, Dict, Mapping, MutableMapping, Sequence, Tuple
 
-from qbot_rpg.data.gear_stats import PANEL_AXIS_STEMS
+from qbot_rpg.data.gear_stats import (
+    DEFAULT_EFFECT_BUDGET,
+    EFFECT_AGGREGATES,
+    EFFECT_AXIS_WEIGHTS,
+    EFFECT_BUDGET_KEY,
+    EFFECT_GATE_MODES,
+    EFFECT_UNKNOWN_MODES,
+    PANEL_AXIS_STEMS,
+    check_effect_budget,
+    effect_cap_pct,
+    effect_equiv,
+    effect_values_of,
+    normalize_effect_budget,
+)
 
 __all__ = [
     "PANEL_BUDGET_KEY",
     "MONSTER_SCALING_KEY",
+    "EFFECT_BUDGET_KEY",
     "DEFAULT_PANEL_BUDGET",
     "DEFAULT_MONSTER_SCALING",
+    "DEFAULT_EFFECT_BUDGET",
+    "EFFECT_AXIS_WEIGHTS",
+    "EFFECT_GATE_MODES",
+    "EFFECT_UNKNOWN_MODES",
+    "EFFECT_AGGREGATES",
     "PANEL_AXIS_KEYS",
     "DEFAULT_DEF_K",
     "normalize_panel_budget",
     "normalize_monster_scaling",
+    "normalize_effect_budget",
     "equip_share",
+    "effective_equip_share",
+    "effect_values_of",
+    "effect_equiv",
+    "effect_cap_pct",
+    "check_effect_budget",
     "scale_panel_bonus",
     "scale_monster_con",
 ]
@@ -71,7 +111,18 @@ DEFAULT_MONSTER_SCALING: Dict[str, float] = {
     "atk_mult": 1.0,
     "def_factor": 1.0,
     "def_k": DEFAULT_DEF_K,
+    # 批55 · 方案 C 备用杠杆（缺省 1.0 = 现状；不配置即不存在）。
+    "effect_hp_mult": 1.0,
+    "effect_atk_mult": 1.0,
 }
+
+#: 批55 · 特效强度预算（`settings.effect_budget`）：常量与纯函数**唯一源在
+#: `data/gear_stats`**（content 校验器需读本段，架构矩阵 `content → {data}` 禁 content→core；
+#: 对齐批50 把 `PANEL_AXIS_STEMS` 落 data 层的同一取舍）。本模块**再导出**同名符号
+#: （`EFFECT_BUDGET_KEY` / `EFFECT_AXIS_WEIGHTS` / `DEFAULT_EFFECT_BUDGET` /
+#: `normalize_effect_budget` / `effect_values_of` / `effect_equiv` / `effect_cap_pct` /
+#: `check_effect_budget`），使 core/commands 调用方入口不变；另在本层给出
+#: `effective_equip_share`（A1 度量，需读 `panel_budget` 面板份）。
 
 
 def _as_mapping(cfg: Any) -> Mapping[str, Any]:
@@ -111,7 +162,32 @@ def normalize_monster_scaling(cfg: Any) -> Dict[str, float]:
     out["def_factor"] = max(0.0, _num(
         m, "def_factor", DEFAULT_MONSTER_SCALING["def_factor"]))
     out["def_k"] = max(0.0, _num(m, "def_k", DEFAULT_MONSTER_SCALING["def_k"]))
+    out["effect_hp_mult"] = max(0.0, _num(
+        m, "effect_hp_mult", DEFAULT_MONSTER_SCALING["effect_hp_mult"]))
+    out["effect_atk_mult"] = max(0.0, _num(
+        m, "effect_atk_mult", DEFAULT_MONSTER_SCALING["effect_atk_mult"]))
     return out
+
+
+def effective_equip_share(budget: Any, effect_pct: float = 0.0) -> float:
+    """A1 · 度量式真实装备占比（**只报数、不改数**）：`e / (pool + u)`。
+
+    `pool = white + equip×mult + buff`（面板总功率份）；`u = 特效综合等效% / 100 × pool`
+    （`docs/特效强度预算_设计.md` §1.4：`u = (综合倍率 − 1) × pool`，`真实占比 = e/(pool+u)`）。
+    `effect_pct <= 0` / 非法 → 退化为 `equip_share`（两者口径一致）。
+    """
+    b = normalize_panel_budget(budget)
+    e = b["equip"] * b["equip_stat_mult"]
+    pool = b["white"] + e + b["buff"]
+    if pool <= 0.0:
+        return 0.0
+    pct = 0.0
+    if isinstance(effect_pct, (int, float)) and not isinstance(effect_pct, bool):
+        pct = max(0.0, float(effect_pct))
+    denom = pool + pct / 100.0 * pool
+    if denom <= 0.0:
+        return 0.0
+    return e / denom
 
 
 def equip_share(budget: Mapping[str, Any]) -> float:

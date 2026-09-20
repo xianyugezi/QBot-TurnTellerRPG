@@ -14,6 +14,8 @@
 | **可被包覆盖** | 内容包通过 `settings.json` / 同名 json 能改；引擎侧"只读声明、不写死" | 你能在包里调数值 / 开开关，而不是改框架 |
 | **有派发点 / 无派发点** | 事件时点在**生产代码里真的有一处会调用 `_dispatch_event(...)`** / 只在枚举里声明 | **无派发点 = 你照它写效果永远不会触发**（详见 §2.2 三态表） |
 
+**路径书写约定**：为省版面，本章正文里的 `battle.py` / `effects.py` / `event_dispatcher.py` / `validator.py` 等简写，均指 `qbot_rpg/` 下的对应文件。**唯一需要特别记住的一处歧义**：`battle.py` = `qbot_rpg/core/battle.py`（**不是** `qbot_rpg/data/battle.py`，后者是 `BattleSnapshot` 等契约 dataclass）。其余引用若省略目录，可在仓库里用 `grep -rn` 按文件名定位。
+
 ### 0.2 【稳定契约】标记说明
 
 凡标注 **【稳定契约】** 的条目 = **改动需评审**。含义是：该名称 / 值域 / 形状已被内容包、测试或存档数据依赖；单方面改它会**静默破坏**（不是编译报错，而是旧包效果永不触发、旧存档读不出、测试对拍崩）。改之前请：
@@ -26,12 +28,16 @@
 
 - **本次核对基线**：仓库 HEAD = `62cc299`（批73 死代码清理后）。
   上游盘点文档 `API手册_编撰前盘点.md` 基于 `d86d9dd`（2026-09-20），**行号已整体漂移**（`core/battle.py` 漂移 −3 ~ −5 行，`core/effects.py` 漂移 −3 ~ −9 行）。
-- **复核方式**：本章所有 `file:line` 均由本次**逐条重读源码**、`grep -rn` 全仓扫描、或 `python3` 导入取值核对，**不复制盘点文档的未复核结论**。
+- **复核方式（分两级，如实标注）**：
+  - **一级（逐条重读源码 / 运行核对）**——§1 两套事件体系、**§2 全部 17 个时点及其派发点**、§3 易混对、§4 归属规则、§5 E1/E2/E3 契约、§6 `ext_api`、§8 hooks：这些结论**均已逐行读源码**，或由 `grep -rn` 全仓扫描、`python3` 导入取值确认。
+  - **二级（机器校验行号存在性）**——§7 包声明段表（尤其 `settings.*` 的"谁读它"列）体量大，本次对全章 **462 处 `file:line`** 跑了一遍自动校验（解析每个引用 → 定位文件 → 核对行号在范围内）：**孤儿引用 2 处，已修正**（`ext/render.py` 的区间上界、`方案_E.md` 的路径写法）。**范围为"行号真实存在"，不等于"该行语义即所述"**；§7 的读取处若有疑，请按 `file:line` 复核后再引用。
+  - **未复制**盘点文档的未复核结论：凡与盘点不一致处，均以本次实测为准并在 §10.2 逐条列出。
 - **已发现并纠正的盘点文档说法**（详见 §10 复核记录）：
   1. 盘点把 `settings.*` 声明段记为 **41 条**；本次运行 `field_meta._module_table()` 实测框架 `settings` schema 有 **54 段**（41 是盘点选择性列出的行数）。
   2. 盘点把 `field_meta.json` 顶层段记为 **12 条**；本次读 `field_meta_pack.TOP_LEVEL_KEYS` 实测 **16 个顶层键**（12 是盘点把 4 组同族键合并成行后的行数）。
   3. 盘点称 `EVENT_POINTS` 17 点里 **11 点有派发点**；本次全仓 `grep -rn` 复核**结论一致**（§2.2 给了 11 条派发点原文证据）。
   4. 盘点"93 条"= **行数口径**（9+41+30+12+1），不是唯一键数口径；§7.1 说明两种口径的差别。
+  5. **本次新发现 3 条盘点未提的事实**：veinborn 的 `surge_tick` 静默死效果（§3.3）、`on_expire` 无派发路径（§3.2）、`action_end` 与 `action_start` 不对称（§2.4）——均**只报告、不改**，列入 §10.3 待查。
 - **标"待查"**：凡本章未亲手核到唯一源 / 未确认意图的，一律写"待查"，**不猜**。
 
 ### 0.4 本章结构
@@ -130,7 +136,7 @@ statuses.json 条目.on_gain/on_lose/on_expire ──┤
 | 状态事件子集 | `qbot_rpg/data/event_points.py:38` | `STATUS_EVENT_POINTS = ("status_gain", "status_lose")` |
 | 派发封装（唯一出口） | `qbot_rpg/core/battle.py:2035` | `Battle._dispatch_event` |
 | 归属作用域 | `qbot_rpg/core/battle.py:2067` | `Battle._owner_scope` |
-| 校验器（值域门禁） | `qbot_rpg/content/validator.py:3335-3380` | `trigger ∉ EVENT_POINTS` → **黄提示 Y-19**（允许先声明未来时点，但永不触发）；非字符串 → **红拦 R-1**；缺 `trigger` / 空串 → 放行 |
+| 校验器（值域门禁） | `qbot_rpg/content/validator.py:3335-3412` | `trigger ∉ EVENT_POINTS` → **黄提示 Y-19**（允许先声明未来时点，但永不触发）；非字符串 → **红拦 R-1**；缺 `trigger` / 空串 → 放行 |
 
 **为什么落在 `data` 层而不是 `core` 层**（`event_points.py:3-6`）：为了让 `content` 层校验器能按分层契约 `content → {data}` 校验 `trigger` 取值域，而**不必**反向 `import core`——与批50 把面板三轴 stem 落在 `data/gear_stats.py` 是同一取舍。**改这个文件的层位 = 改分层契约**，属【稳定契约】。
 
@@ -620,7 +626,7 @@ def render(event, data, default_text): ...  # 返回 None/"" = 用框架默认�
 
 #### 5.3.3 最小示例（仓库实测原文）
 
-`content/zz_probe_ext/ext/render.py:1-23`：
+`content/zz_probe_ext/ext/render.py:1-22`：
 ```python
 """内容包渲染钩子探针（E2 验证用）。"""
 from __future__ import annotations
@@ -708,7 +714,7 @@ E2a 是**用代码改写文本**；E2b 是**用数据替换模板串**。E2b 更
 
 **隔离保证**：主套件 `pytest.ini:3`（`testpaths = tests`）**不会自动收集**包测试；`run_pack_tests.py` 显式只收该包 `tests/`，并设 `PYTHONDONTWRITEBYTECODE=1` / 关 `cacheprovider`。
 
-**最小示例**：`content/zz_probe_ext/tests/test_probe_ext.py:1-45`。
+**最小示例**：`content/zz_probe_ext/tests/test_probe_ext.py:1-48`（48 行）。
 
 #### 5.5.2 E3b 包内构建 `content/<包>/scripts/build.py`
 
@@ -721,7 +727,7 @@ E2a 是**用代码改写文本**；E2b 是**用数据替换模板串**。E2b 更
 
 **最小示例**：`content/zz_probe_ext/scripts/build.py`（`--check` 只读校验 manifest / 数据模块 / `commands.json` handler 齐备 + 复用框架整包校验）。
 
-**⚠️ 文档精度差（勿当 bug 修）**：方案 E 文档只写"`build.py --check`"，**未写明在 `scripts/` 子目录**（`docs/游戏包扩展点_方案_E.md:50`）。**实现以 `scripts/build.py` 为准**——这是文档不全，不是代码错。
+**⚠️ 文档精度提示（勿当 bug 修）**：方案 E 文档在 `docs/游戏包扩展点_方案_E.md:49` **已**写明 `content/<pack>/scripts/` 这一层级；但紧接着的 `:50` 只说"框架只认**入口约定**（如 `build.py --check`）"，**未在该句里点明入口位于 `scripts/` 下**。**本次复核澄清**：入口 = `content/<包>/scripts/build.py`（`run_pack_build.py:39` + `:99`）——**以实现为准**；这是表述精度问题，不是代码错。
 
 ### 5.6 包自持校验扩展（`settings.schema_ext`）
 
@@ -786,9 +792,9 @@ E2a 是**用代码改写文本**；E2b 是**用数据替换模板串**。E2b 更
 | `EXT_API_VERSION` | 版本自检 | `:59` |
 | `ExtApiError` | 扩展层可预期错误基类（你可抛/可捕） | `:62` |
 | `ExtApiUnavailable` | 依赖不可用（未注入存档 / 玩家未注册 / 状态格子不可写） | `:66` |
-| `ExtContext` | handler 的 `ctx` 类型（`pack_id` / `player_id` / `args` / `tpl` / `log` / 状态格子…） | `:125` |
-| `log` | 扩展默认日志器（建议用 `ctx.log` 拿带包 id 的子日志器） | — |
-| `rng` | 随机源（**不要**自己 `import random`；用框架注入的保证可复现/可测） | — |
+| `ExtContext` | handler 的 `ctx` 类型（`pack_id` / `player_id` / `args` / `tpl` / `log` / 状态格子…） | `:125`；`ctx.tpl` `:257`；`ctx.rng` `:262` |
+| `log` | 扩展默认日志器（`content.ext`；建议用 `ctx.log` 拿带包 id 的子日志器） | `:71` |
+| `rng` | 确定性随机源（按 `包+玩家` 播种）——**不要**自己 `import random` | 模块级 `:103` |
 | `tpl` | 取模板文本（`tpl(key, data)`；缺 key 回落框架默认表） | `:113` |
 | `get_pack_state` | 读本包 × 本玩家的状态格子 | `:42-56` |
 | `set_pack_state` | 写 | 同上 |
@@ -814,6 +820,465 @@ E2a 是**用代码改写文本**；E2b 是**用数据替换模板串**。E2b 更
 **失败隔离承诺（给包作者的反向提醒）**（`ext_api.py:19-22`）：扩展代码抛出的异常由框架装载层兜底（记日志 + 返回"该功能暂不可用"人话提示，进程不崩）。**但扩展作者不应依赖异常静默**——请自行捕获可预期错误并返回人见文本。
 
 **包状态格子上下文**：`ExtContext.get_state/set_state/patch_state/clear_state` @ `ext_api.py:283/291/296/301`。
+
+---
+
+## 7. 包声明段全表
+
+### 7.1 先说清"93 条"是什么口径（重要）
+
+上游盘点给的 "93 条" = **盘点表格的行数**：`manifest 9 + settings 41 + 模块 json 30 + field_meta.json 12 + commands.json 1 = 93`。
+
+**但行数 ≠ 键数**。盘点为了表格紧凑，把若干同族键合并成一行（例如 `field_labels / field_help` 合成一行）。本次**逐条复核实测**：
+
+| 分组 | 盘点行数 | 本次实测 | 差异原因 |
+|---|---|---|---|
+| `manifest.json` | 9 | **8 个声明字段 + `raw`** = 9 | 一致（8 个 schema 字段见 `field_meta.py:2155-2166`，`raw` 见 `models.py:748`） |
+| `settings.json` | 41 | **框架 schema 54 段** | 盘点漏列 14 段（见 §7.3 标注"**＋本次补**"的行）；另盘点含 3 个**不在 schema 内**的段（`ext` / `schema_ext` / `worldtime`）与 1 个已废弃嵌套键（`forge.decompose_rate`） |
+| 各模块 json | 30 | 模块表 **36 条目** = **29 个数据模块** + 7 个非数据条目（`manifest`/`settings`/`ai`/`hidden`/`env_event`/`log_card`/`editor`）；再加**不在模块表里**的 `commands.json` → **30 行** | 非数据条目的 `ai`/`hidden`/`env_event`/`log_card` 见 `docs/死代码删除登记表.md` §5「空视图·保留」 |
+| `field_meta.json` | 12 | **16 个顶层键** | 盘点把 4 组同族键合并成行 |
+| `commands.json` | 1 | 1 | 一致 |
+
+**怎么用这张表**：按**段名**查（行数口径不影响你查段）。**要数总数时用"本次实测"列**。
+
+### 7.2 `manifest.json`（包清单，每包必有）
+
+**读取/校验链**：`loader.py:259`（文件定位）→ `:266`（JSON 解析）→ `:282`（`Manifest.from_dict`）→ `:286-311`（按 `modules` 声明加载）。校验时把 `manifest` 当受检模块（`validator.py:590-591`）。框架 schema 唯一源：`field_meta.py:2155-2166`（字段表）+ `:3239-3242`（`ModuleMeta`）。
+
+| # | 段名 | 用途 | 唯一源 file:line | 谁读它 | 可否被包覆盖 | 示例 |
+|---|---|---|---|---|---|---|
+| 1 | `name` | 包显示名 | `field_meta.py:2155`；`models.py:743` | `loader.py:282` → `models.py:737-749` | 包自声明（该文件即包） | `"name": "内容包扩展探针（验证用）"` |
+| 2 | `version` | 包版本（供 `ctx.pack_version`） | `field_meta.py:2156`；`models.py:744` | `models.py:737-749`；`pack_ext.py:467-475` | 包自声明 | `"version": "0.0.1"` |
+| 3 | `schema_version` | 数据 schema 版本 | `field_meta.py:2157`；`models.py:740-741` | `models.py:737-749`；`registry.py:209` | 包自声明 | `"schema_version": 1` |
+| 4 | `author` | 作者 | `field_meta.py:2158`；`models.py:746` | `models.py:737-749` | 包自声明 | `"author": "e1-pack-ext"` |
+| 5 | `modules` | **启用模块清单**（= `<module>.json` 文件名去后缀）**决定 loader 加载哪些文件** | `field_meta.py:2159`；`models.py:738-739` | `loader.py:286-311` | 包自声明（换包零改动） | `"modules": ["settings","stats","formula","effects","items","zz_probe_ext_data"]` |
+| 6 | `module_tree` | 模块层级（编辑器左栏父子关系） | `field_meta.py:2162` | `field_meta_pack.py:715`、`:287`；`web/api.py:300` | ✅ 可被 `field_meta.json.module_tree` **整体覆盖**（`field_meta_pack.py:35-37`） | `"module_tree": [{"module":"items","children":["equipment"]}]` |
+| 7 | `module_groups` | `module_tree` 的**别名**（兼容键） | `field_meta.py:2164` | 同上 | ✅ 同 `module_tree` | `"module_groups": [...]` |
+| 8 | `module_labels` | 模块中文名 | `field_meta.py:2166` | `field_meta_pack.py:713`；`web/api.py` | ✅ 可被 `field_meta.json.module_labels` **逐键覆盖** | `"module_labels": {"zz_probe_ext_data": "扩展探针数据"}` |
+| 9 | `raw`（扩展） | 原样保留整份 manifest | `models.py:734,748` | `registry.modules_raw["manifest"]`（`loader.py:314`） | 包自声明 | — |
+
+**⚠️ 关键约束**：`manifest.modules` 里**没写**的模块文件，loader **不会加载**（`loader.py:286-311`）。声明了但文件缺失 → **Y-6 黄提示**并继续。**这就是 `templates.json` 必须声明才生效的根因**（§5.4.3）。
+
+### 7.3 `settings.json`（包设置）
+
+#### 7.3.1 ⚠️ 双通道读取（本框架最需要知道的例外）
+
+| 通道 | file:line | 行为 |
+|---|---|---|
+| ① 作为**普通模块**被 loader 加载/校验 | `loader.py:286-311` | **前提**：`manifest.modules` 含 `settings`。含 → 受 `check_pack` 全量校验 |
+| ② **无视 manifest 直接读** | `qbot_rpg_bridge/assemble.py:89-98`（`_load_settings`） | **无条件**读 `settings.json` → 注入 `deps.settings` / `ctx["settings"]`，**不经校验** |
+
+**后果**：某包若 **没**在 `manifest.modules` 里声明 `settings`，`settings.json` **运行时仍生效，但绕过校验**。**这是"声明了才生效"这条规则的唯一例外**，属已知缺口（盘点归入"无单一源"）。**实测**：`content/zz_probe_packmeta` 就是这种包（3 个模块且无 `settings`）。
+
+#### 7.3.2 全段表（实测 54 段）
+
+**框架 schema 唯一源**：`SETTINGS_FIELDS` @ `field_meta.py:378-746`（基础段）+ `SETTINGS_FIELDS[...]=` / `SETTINGS_FIELDS.update({...})` @ `:3047-3236`（专项段与软段）。校验分派：`validator.py:864-898`（`_check_settings_1g4` @ `:1884` + 各专项）。
+
+> **"盘点"列**：✅ = 盘点 §4 已收录；**＋补** = 本次复核新补（盘点漏列）。
+
+| # | 段名 | 用途 | 唯一源 file:line | 谁读它（file:line） | 可否被包覆盖 | 示例 | 盘点 |
+|---|---|---|---|---|---|---|---|
+| 1 | `default_map` | 默认地图 | `field_meta.py:381` | `assembly/context.py:1396`；`register_commands.py:277` | 包配置 | `"default_map": "town"` | ✅ |
+| 2 | `world_name` | 世界名 | `field_meta.py:382` | `register_commands.py:371` | 包配置 | `"world_name": "云海"` | ✅ |
+| 3 | `currencies` | 货币定义表 | `field_meta.py:383` | `validator.py:1905`；`alchemy_commands.py:448` | 包配置 | `"currencies":[{"id":"coins","name":"金币","cap":999999}]` | ✅ |
+| 4 | `death_penalty` | 死亡惩罚 | `field_meta.py:384` | `world/battle_boundary.py:356`；`battle_commands.py:1370` | 包配置 | `"death_penalty":{"drop_exp":{"enabled":true,"percent":10}}` | ✅ |
+| 5 | `slot_defs` | 装备部位定义 | `field_meta.py:392` | `context.py:1862`；`alchemy_commands.py:2090`；`core/jewel.py` | 包配置 | `"slot_defs":{"weapon":{"name":"武器","max":1,"role":"main"}}` | ✅ |
+| 6 | `equipment_offhand` | 副手装备开关 | `field_meta.py:407` | `context.py:1865-1867`；`basic_commands.py:1496` | 包配置 | `"equipment_offhand":{"enabled":true,"single_hand_scale":0.5}` | ✅ |
+| 7 | `panel_budget` | 装备面板预算 | `field_meta.py:424` | `context.py:1870-1872`；`core/panel_budget.py:90` | 包配置（缺省不注入） | `"panel_budget":{"white":7,"equip":8,"buff":5,"equip_stat_mult":1.0}` | ✅ |
+| 8 | `effect_budget` | 特效强度预算 | `field_meta.py:447` | `data/gear_stats.py:152`；`validator.py:2167` | 包配置 | `"effect_budget":{"enabled":false,"gate_mode":"warn"}` | ✅ |
+| 9 | `overheal` | 过量治疗 | `field_meta.py:505` | `validator.py:2459`；`data/gear_stats.py` | 包配置 | `"overheal":{"enabled":true,"mode":"keep","cap_pct":50}` | ✅ |
+| 10 | `effect_axes` | 特效轴逐轴声明 | `field_meta.py:532` | `context.py:1879-1881`；`gear_stats.py:477` | 包配置（覆盖 min/max） | `"effect_axes":{"crit_damage_pct":{"min":-100,"max":300}}` | ✅ |
+| 11 | `monster_scaling` | 怪物数值倍率 | `field_meta.py:570` | `context.py:1874-1876`；`panel_budget.py:91` | 包配置 | `"monster_scaling":{"hp_mult":1.5,"atk_mult":1.5}` | ✅ |
+| 12 | `deep_craft` | 深度打造 | `field_meta.py:594` | `alchemy_commands.py:1788`；`core/upgrade.py:144` | 包配置 | `"deep_craft":{"craft_rules":{...}}` | ✅ |
+| 13 | `rune_sockets` | 符文孔位初值 | `field_meta.py:608` | `context.py:1571`；`data/runes.py:47`（`RUNES_STATE_KEY`） | 包配置 | `"rune_sockets":{"enabled":true}` | ＋补 |
+| 14 | `affinities` | 相性定义 | `field_meta.py:618`（type=list） | `core/affinity.py`；`validator.py:3061-` | 包配置 | `"affinities":[{"key":"fire","name":"火"}]` | ✅ |
+| 15 | `affinity_pools` | 相性池 | `field_meta.py:628` | `core/affinity.py:118`；`validator.py:2945` | 包配置 | `"affinity_pools":{...}` | ✅ |
+| 16 | `affinity_linkage` | 相性联动 | `field_meta.py:651` | `core/affinity.py:131`；`validator.py:3176` | 包配置 | `"affinity_linkage":[...]` | ✅ |
+| 17 | `affinity_reactions` | 相性反应 | `field_meta.py:659` | `core/affinity.py:133`；`alchemy_core.py:853` | 包配置 | `"affinity_reactions":[...]` | ✅ |
+| 18 | `register_gift` | 新玩家注册礼包 | `field_meta.py:679` | `register_commands.py:313` | 包配置 | `"register_gift":[{"item":"potion","count":3}]` | ＋补 |
+| 19 | `register_level` | 注册初始等级 | `field_meta.py:685` | `register_commands.py:295` | 包配置 | `"register_level": 1` | ＋补 |
+| 20 | `command_gates` | 指令开放门控 | `field_meta.py:694` | `assembly/runner.py:357` | 包配置 | `"command_gates":{"battle":{"min_level":5}}` | ＋补 |
+| 21 | `rate_limit` | 指令频率限制 | `field_meta.py:710` | `assembly/runner.py:219` | 包配置 | `"rate_limit":{"window":10,"max":5}` | ＋补 |
+| 22 | `message_chunk_len` | 消息分段字节预算 | `field_meta.py:726` | `commands/sender.py:133,162`；`runner.py:192` | 包配置 | `"message_chunk_len": 800` | ✅ |
+| 23 | `pack_protection` | 包防篡改/保护 | `field_meta.py:739` | `content/pack_protection.py:60` | 包配置 | `"pack_protection":{"enabled":false}` | ＋补 |
+| 24 | `env_event` | 环境事件（settings 侧） | `field_meta.py:1224`（`setdefault`） | **⚠️ 无读取点** | 包配置（**填了不起作用**） | — | ＋补 |
+| 25 | `log_card` | 日志卡片（settings 侧） | `field_meta.py:1228`（`setdefault`） | **⚠️ 无读取点** | 包配置（**填了不起作用**） | — | ＋补 |
+| 26 | `alchemy` | 炼金/合成设置 | `field_meta.py:3047`；`content/alchemy_settings.py` | `alchemy_commands.py:491,500`；`validator.py:897-898` | 包配置 | `"alchemy":{"mode":"full","decompose_rate":0.3}` | ✅ |
+| 27 | `forge` | 锻造设置 | `field_meta.py:3050`；`content/forge_settings.py` | `context.py`（`_forge_module_raw`→`ctx["forge"]`） | 包配置 | `"forge":{"mode":"full","temper":{...}}` | ✅ |
+| 28 | `fishing` | 钓鱼设置 | `field_meta.py:3064`；`content/fishing_settings.py` | `content/fishing_models.py:271`；`fishing_commands.py:229` | 包配置 | `"fishing":{"mode":"full"}` | ✅ |
+| 29 | `assistant` | 代工助手 | `field_meta.py:3069` | `core/alchemy_helper.py:212-217` | 包配置 | `"assistant":{"enabled":true}` | ✅ |
+| 30 | `battle` | 战斗参数（`min_damage` 等） | `field_meta.py:3073`（`min_damage` `:3074`） | `core/battle_config.py:70`；`battle_launch_commands.py:501` | 包配置（**白名单键**） | `"battle":{"min_damage":10}` | ✅ |
+| 31 | `command_aliases` | 指令别名 | `field_meta.py:3079`；`ALIAS_CONFIG_KEY` @ `:84` | `router_setup.py:274`；`runner.py:177`；`basic_commands.py:2499` | 包配置 | `"command_aliases":{"背包":["bag"]}` | ✅ |
+| 32 | `contest` | 品评会配置 | `field_meta.py:3080` | `context.py:1475,1625` | 包配置 | `"contest":{...}` | ✅ |
+| 33 | `ctb` | 行动条（CTB）参数 | `field_meta.py:3081` | `battle_launch_commands.py:491-493`；`core/ctb_config.resolve_ctb_settings` | 包配置 | `"ctb":{"base_speed":100}` | ✅ |
+| 34 | `events` | 事件文案 / 事件键 name 段 | `field_meta.py:3082` | `core/event_bus.py:83`（`_events_section`）；`resolve_event_key` @ `:100` | 包配置（**只可配 name 段**，外壳硬编码） | `"events":{"签到":"每日签到"}` | ✅ |
+| 35 | `exp_curve` | 经验曲线 | `field_meta.py:3083` | `context.py:468`；`core/battle_reward.py:372` | 包配置 | `"exp_curve":{"mode":"poly","base":100}` | ✅ |
+| 36 | `level_cap` | 等级上限 | `field_meta.py:3084` | `context.py:467,1416`；`register_commands.py:298` | 包配置 | `"level_cap": 60` | ✅ |
+| 37 | `quest_board` | 委托板配置 | `field_meta.py:3085` | `context.py:1473,1623`（`ctx["quest_board_cfg"]`） | 包配置 | `"quest_board":{"slots":5}` | ✅ |
+| 38 | `time_cycle` | 时间天气 | `field_meta.py:3090` | `qbot_rpg_bridge/assemble.py:164-166`；`core/worldtime.py` | 包配置（桥梁装配读取） | `"time_cycle":{"season":{"season_days":7}}` | ✅ |
+| 39 | `message_prefix` | 消息前缀 7 字段 | `field_meta.py:3129` | `commands/prefix_wiring.py:123`；`validator.py:3435` | 包配置 | `"message_prefix":{"enabled":true,"format":"[{level}]{name}"}` | ✅ |
+| 40 | `pvp` | PVP 8 键 | `field_meta.py:3142`；`core/pvp.py:32`（`PVP_SETTINGS_KEYS`） | `core/pvp.py:62` | 包配置 | `"pvp":{"enabled":false,"mode":"turn_based"}` | ✅ |
+| 41 | `post_battle_recovery` | 战后恢复 | `field_meta.py:3160` | `battle_commands.py:1270-1271`；`validator.py:1949` | 包配置 | `"post_battle_recovery":{"hp_pct":20}` | ✅ |
+| 42 | `codex` | 图鉴设置 | `field_meta.py:3173` | `core/environment_lore.py:295`（`ctx["codex"]`） | 包配置 | `"codex":{"enabled":true}` | ＋补 |
+| 43 | `event_log_cap` | 事件日志环形容量（**兼容键**） | `field_meta.py:3182` | `event_bus.py:182`（**兜底**，优先用 `event_log_capacity`）；`context.py:900` | 包配置 | `"event_log_cap": 300` | ＋补 |
+| 44 | `event_log_capacity` | 同上（**优先键**） | `field_meta.py:3185` | `event_bus.py:182`（`for k in ("event_log_capacity","event_log_cap")`） | 包配置 | `"event_log_capacity": 300` | ＋补 |
+| 45 | `command_mode` | 前缀模式 | `field_meta.py:3189` | `commands/parsers.py:83`；`router_setup.py:246-247` | 包配置 | `"command_mode": "prefix"` | ✅ |
+| 46 | `require_at` | 是否要求 @ 机器人 | `field_meta.py:3195` | `router_setup.py:246-247` | 包配置 | `"require_at": true` | ✅ |
+| 47 | `at_text` | @ 机器人的显示文本 | `field_meta.py:3198` | `commands/router.py:361`；`runner.py:187` | 包配置 | `"at_text": "@机器人"` | ＋补 |
+| 48 | `attr_types` | 属性类型声明 | `field_meta.py:3202` | `context.py:1393-1394,1417-1418` | 包配置 | `"attr_types":{"str":"力量"}` | ✅ |
+| 49 | `conditional_rules` | 条件加成规则 | `field_meta.py:3204` | `context.py:1393-1394` | 包配置 | `"conditional_rules":[...]` | ✅ |
+| 50 | `imprints` | 印记展示 | `field_meta.py:3215` | `context.py:1419`；`status_commands.py:354-372` | 包配置 | `"imprints":{"surge_mark":"困斗"}` | ✅ |
+| 51 | `shortcut_max` | 快捷上限 | `field_meta.py:3224` | `shortcut_commands.py:27,117`；`context.py:1470,1620` | 包配置 | `"shortcut_max": 20` | ✅ |
+| 52 | `default_job_id` | 默认职业 | `field_meta.py:3227` | `register_commands.py:217` | 包配置 | `"default_job_id": "warrior"` | ＋补 |
+| 53 | `max_dialog_depth` | NPC 对话最大深度 | `field_meta.py:3230` | `core/dialog.py:128`（`SETTINGS_MAX_DIALOG_DEPTH`）；`npc_models.py:610` | 包配置 | `"max_dialog_depth": 10` | ＋补 |
+| 54 | `resource_pct` | 资源按百分比显示 | `field_meta.py:3233` | `commands/status_commands.py:197-198` | 包配置 | `"resource_pct": false` | ✅ |
+
+#### 7.3.3 ⚠️ 三个**不在** schema 里、但真实生效/被引用的段（盘点把它们也列了）
+
+| 段名 | 用途 | 语义源 file:line | 读取处 | 可被包覆盖 | 说明 |
+|---|---|---|---|---|---|
+| `ext` | **E1/E2 扩展总开关** | **无 field_meta 登记**；语义源 `pack_ext.py:115` | `pack_ext.py:119`；`pack_render.py:349`（经 `pack_ext_enabled`） | 包配置（**缺省 false**） | **双闸第一闸**。因为无 schema 登记，写错键名**不会有任何提示**（§5.1） |
+| `schema_ext` | **包自持校验扩展** | `validator.py:390-402`（约束子集） | `validator.py:429`（`_parse_schema_ext`）、`:543-549` | 包配置 | 见 §5.6 |
+| `worldtime` | 世界时间快照兼容段 | **无 field_meta 登记** | `qbot_rpg_bridge/assemble.py:164`（`settings_map.get("worldtime")`） | 包配置 | 与 `time_cycle` 并存：`worldtime` 是**桥梁直读的兼容段**，`time_cycle` 才是已登记段 |
+
+#### 7.3.4 已废弃的嵌套键（保留兼容）
+
+| 键 | 状态 | 判据 | 说明 |
+|---|---|---|---|
+| `forge.decompose_rate` | **已废弃** | 迁移黄提示 `validator.py:2582-2601` | 唯一源已迁到 `settings.alchemy.decompose_rate`；**引擎从不读取**。黄提示 **Y-21 不阻断**。**勿当 bug 删**——删了旧包会失去迁移指引 |
+| `settings.alchemy.assistant` | 兼容双路 | `core/alchemy_helper.py:212-217` | 与顶层 `settings.assistant` 双路兜底，有 legacy 读取顺序 |
+
+### 7.4 各模块 json（`<module>.json`）
+
+**统一加载机制**：`manifest.modules` 每个名字 → `content/<包>/<name>.json`（`loader.py:286-311`）→ 进 `modules` 字典（键 = 模块名）→ `check_pack(modules)` 校验（`loader.py:315`）→ `_build_registry` 按 `_KIND_FOR_MODULE`（`loader.py:146`）登记（`:96-128`）→ 经 `ctx["..."]` 或 `registry.modules_raw` 消费。
+
+| # | 模块 / 文件 | 顶层形态 | 唯一源（field_meta） | 读取处 file:line | 可否被包覆盖 | 示例 |
+|---|---|---|---|---|---|---|
+| 1 | `effects.json` | `list` | `field_meta.py:3243`（`kind="effect"`, ns=`effect_family`） | `loader.py:288`；`context._table_from_registry` | 包数据 | `[{"id":"thorns","class":"special","trigger":"on_hit","actions":[...]}]` |
+| 2 | `statuses.json` | `list` | `field_meta.py:3253`（`kind="status"`） | 同上 | 包数据 | `[{"id":"shield_break","type":"buff","on_lose":[{"effect":"explode_damage"}]}]` |
+| 3 | `marks.json` | `list` | `field_meta.py:3262`（`kind="mark"`） | 同上 | 包数据 | `[{"id":"surge_mark","name":"困斗"}]` |
+| 4 | `skill_chains.json` | `list` | `field_meta.py:3267`（`chain_field="next"`） | 同上 | 包数据 | `[{"id":"combo1","next":"combo2"}]` |
+| 5 | `action.json` | `list` | `field_meta.py:3278` | 同上 | 包数据 | `[{"id":"slash","type":"damage"}]` |
+| 6 | `skills.json` | `list` | `field_meta.py:3289`（`kind="skill"`, ns=`skill_lib`） | `loader.py:159`；`ctx["skills"]` | 包数据 | `[{"id":"fireball","actions":[...]}]` |
+| 7 | `jobs.json` | `list` | `field_meta.py:3310`（`kind="job"`） | `loader.py:163`；`ctx["jobs"]` | 包数据 | `[{"id":"warrior","name":"战士"}]` |
+| 8 | `items.json` | `list` | `field_meta.py:3319`（+`ITEMS_ALCHEMY_FIELDS`/`ITEMS_FORGE_FIELDS`） | `loader.py:164`；`ctx["items"]` | 包数据 | `[{"id":"potion","name":"药水","price":10}]` |
+| 9 | `equipment.json` | `list` | `field_meta.py:3325` | 同上 | 包数据 | `[{"id":"sword","slot":"weapon","stats":{"atk":10}}]` |
+| 10 | `traits.json` | `list` | `field_meta.py:3332` | 同上 | 包数据 | `[{"id":"brave","effects":["thorns"]}]` |
+| 11 | `recipe.json` | `list` | `field_meta.py:3338` | `loader.py:169`；`ctx["recipe"]` | 包数据 | `[{"id":"r_potion","out":"potion"}]` |
+| 12 | `runes.json` | `list` | `field_meta.py:3344`（`kind="rune"`） | `loader.py:175`；`ctx["runes"]` | 包数据 | `[{"id":"rune_fire","effects":[{"effect":"burn","trigger":"on_hit"}]}]` |
+| 13 | `proficiency.json` | `list` | `field_meta.py:3348` | `loader.py:170` | 包数据 | `[{"id":"sword_mastery"}]` |
+| 14 | `slots.json` | `list` | `field_meta.py:1530`（`kind="slots"`） | `loader.py:171`；`validate_slots` @ `alchemy_settings.py` | 包数据 | `[{"equip_id":"sword","slots":[{"slot_level":1}]}]` |
+| 15 | `enemies.json` | `list` | `field_meta.py:3369` | `loader.py:189` | 包数据 | `[{"id":"slime","hp":50}]` |
+| 16 | `maps.json` | `list` | `field_meta.py:3376` | `loader.py:190`；`validate_maps` | 包数据 | `[{"id":"town","name":"城镇"}]` |
+| 17 | `dungeon.json` | `list` | `field_meta.py:3386` | `loader.py:191`；`validate_dungeons` | 包数据 | `[{"id":"cave","floors":3}]` |
+| 18 | `stats.json` | `map`（键=ID） | `field_meta.py:3390`（`kind="stat"`, ns=`stat_lib`） | `loader.py:117-120`；`ctx` 属性计算 | 包数据 | `{"str":{"name":"力量"}}` |
+| 19 | `formula.json` | `map`（键=ID） | `field_meta.py:3318`（`kind="formula"`, ns=`formula_lib`） | `loader.py:117-120`；`core/formula_loader.py` | 包数据 | `{"dmg":"atk*2-def"}` |
+| 20 | `npc.json` | `list` | `field_meta.py:3395` | `loader.py:193`；`validate_npcs` | 包数据 | `[{"id":"elder","name":"长老"}]` |
+| 21 | `shop.json` | `list` | `field_meta.py:3402` | `loader.py:199`；`validate_shops` | 包数据 | `[{"id":"shop1","items":["potion"]}]` |
+| 22 | `quest.json` | `list` | `field_meta.py:3409` | `loader.py:200`；`validate_quests` | 包数据 | `[{"id":"q1","cond":"[事件:怪物击杀]"}]` |
+| 23 | `checkin.json` | `list` | `field_meta.py:3416` | `loader.py:201`；`validate_checkins` | 包数据 | `[{"day":1,"reward":"coins"}]` |
+| 24 | `achievements.json` | `list` | `field_meta.py:3422` | `loader.py:188`；`validate_achievements` | 包数据 | `[{"id":"a1","cond":"[事件:首杀]"}]` |
+| 25 | `conditional.json` | `object`（`{}`） | `field_meta.py:3427`（`kind="conditional"`） | `loader.py:195`；`condition_engine` | 包数据 | `{"rules":[...]}` |
+| 26 | `templates.json` | `map`（key→模板串） | `field_meta.py:3435-3442`（`kind="templates"`, ns=`template_lib`） | **须在 manifest 声明**；`context.py:727-738` | ✅ **覆盖框架默认表** | `{"battle_win":"【{name}】胜了"}` |
+| 27 | `forge.json` | `object`：`schema_version`,`trees`,`sets?`,`augments?`,`settings?` | `field_meta.py:3050`（`forge_settings_meta`） | `loader.py:178`；`ctx["forge"]` | 包数据 | `{"schema_version":1,"trees":[...]}` |
+| 28 | `enhance.json` | `object`：`settings`,`cost`,`success_curve`/`temper`,`values`,`protect_stone` | `content/enhance_models.py` | `loader.py:182`；`ctx["enhance"]` | 包数据 | `{"settings":{"enabled":true}}` |
+| 29 | `fishing.json` | `object`：`schema_version`,`species`,`king` | `field_meta.py:3064`（`fishing_settings_meta`） | `loader.py:185`；`ctx["fishing"]`（`context.py:608/617`） | 包数据 | `{"species":[...],"king":{...}}` |
+| 30 | `commands.json` | `object`：`commands[]` | `pack_ext.py:81`（`_ALLOWED_KEYS`）+ `:304`（解析） | `pack_ext.py:570-582`（E1，**不走 loader/validator**） | 包扩展声明 | 见 §5.2.3 |
+
+**任意自定义模块（机制，不是特例）**：`content/<包>/<任意名>.json` 只要列进 `manifest.modules`，就按 list/object 泛型校验并进 registry（`loader.py:138` 缺省 `BaseDef` 回退）。**实测**：`zz_probe_ext_data.json`、`zz_probe_gadgets.json`。这是"包自定义数据段"的正式机制。
+
+### 7.5 `field_meta.json`（包展示元数据，**编辑器层**）
+
+**读取层**：`qbot_rpg/content/field_meta_pack.py`（`FIELD_META_FILENAME` @ `:80`，允许顶层键闭集 `TOP_LEVEL_KEYS` @ `:84-115`，`parse_field_meta` @ `:700`，`load_field_meta` @ `:783`）。**消费方**：`qbot_rpg/web/api.py:242`。**⚠️ 不参与运行时 loader/validator**——纯粹影响编辑器展示。
+
+| # | 段名 | 用途 | 唯一源 file:line | 谁读它 | 可否被包覆盖 | 示例 | 盘点 |
+|---|---|---|---|---|---|---|---|
+| 1 | `schema_version` | 声明版本（**须 = 1**） | `field_meta_pack.py:82`、`:689` | `:689-698` | 包声明 | `"schema_version": 1` | ✅ |
+| 2 | `module_labels` | 模块中文名（逐键覆盖 `manifest`） | `:86`、`:713` | `:713`；`web/api.py` | ✅ **覆盖 manifest** | `"module_labels":{"items":"物资"}` | ✅ |
+| 3 | `module_tree` | 模块层级（**整体替换** `manifest`） | `:87`、`:715` | `:715`、`:287` | ✅ **覆盖 manifest** | `"module_tree":[{"module":"items","children":["equipment"]}]` | ✅ |
+| 4 | `field_labels` | 字段 label（覆盖框架表同键） | `:88` | `:713-`；`web/api.py` | ✅ 覆盖框架默认 | `"field_labels":{"items":{"price":"售价"}}` | ✅（与 #5 合并行） |
+| 5 | `field_help` | 字段说明（覆盖框架表同键） | `:89` | 同上 | ✅ 覆盖框架默认 | `"field_help":{"items":{"note":"无业务含义"}}` | ✅（与 #4 合并行） |
+| 6 | `group_labels` | 字段分组显示名 | `:90` | 同上 | ✅ 覆盖框架默认 | `"group_labels":{"base":"基础"}` | ✅ |
+| 7 | `subgroup_labels` | 二级分组显示名（模块→子分组键→中文名） | `:93` | 同上 | ✅ 覆盖框架默认 | `"subgroup_labels":{...}` | ✅ |
+| 8 | `entry_merge` | 展示层条目聚合 | `:94` | `web/api.py` | 包声明（纯展示） | `"entry_merge":{...}` | ✅（与 #16 合并行） |
+| 9 | `segment_pages` | 对象模块合并页 | `:97` | `web/api.py` | 包声明（纯展示） | `"segment_pages":{...}` | ✅ |
+| 10 | `id_prefix` | 新建 ID 前缀 | `:100` | `web/api.py:3609` | 包声明 | `"id_prefix":"it_"` | ✅（与 #11 合并行） |
+| 11 | `id_width` | 新建 ID 宽度（缺省 3、上限 12） | `:101` | `web/api.py:3609` | 包声明 | `"id_width": 3` | ✅（与 #10 合并行） |
+| 12 | `entry_presets` | 条目预设模板 | `:102` | `web/api.py:3580` | 包声明 ∪ 框架默认（`entry_presets.py`） | `"entry_presets":{...}` | ✅（与 #13 合并行） |
+| 13 | `entry_presets_disable` | 关闭框架默认（或包自己的）条目预设 | `:104` | `web/api.py:3580` | 包声明 | `"entry_presets_disable":{"items":["p1"]}` | ✅（与 #12 合并行） |
+| 14 | `entry_tree` | 条目级层级（左栏从"模块级"扩到"条目级"） | `:107` | `web/api.py` | 包声明（纯展示） | `"entry_tree":[...]` | ✅ |
+| 15 | `entry_merge_filtered` | 按条件过滤的条目并入 | `:111` | `web/api.py` | 包声明（纯展示） | `"entry_merge_filtered":[...]` | ✅（与 #8 合并行） |
+| 16 | `entry_groups` | 中栏条目分组 | `:114` | `web/api.py` | 包声明（纯展示） | `"entry_groups":[...]` | ✅（与 #8 同行） |
+
+**计数校正**：实测 **16 个顶层键**（`TOP_LEVEL_KEYS` @ `field_meta_pack.py:84-115`）。盘点表是 **12 行**（把 #4/#5、#8/#15、#10/#11、#12/#13 四组合并成行）。
+
+**实证**：`content/zz_probe_packmeta/field_meta.json`（`module_labels` 覆盖 manifest 同名占位、`module_tree`、`field_labels`、`field_help`、`group_labels`）。
+
+**⚠️ 未知键一律报错**（`field_meta_pack.py:85` 注释明写"未知键一律报错，不静默吞掉——防各家包写法漂移"），非法 → `PackFieldMetaError`。
+
+### 7.6 `commands.json`（E1 唯一声明段）
+
+| # | 段名 | 用途 | 唯一源 file:line | 谁读它 | 可否被包覆盖 | 示例 |
+|---|---|---|---|---|---|---|
+| 1 | `commands` | 包自定义指令数组 | `pack_ext.py:81`（字段闭集）、`:304-328`（解析） | `pack_ext.py:570-582` | 包声明（**框架无默认**） | 见 §5.2.3 |
+
+### 7.7 声明校验位置（框架侧，改校验看这里）
+
+| 校验对象 | 入口 file:line |
+|---|---|
+| 整包校验入口 | `validator.py:3870`（`check_pack`）→ `_Checker.run` @ `:588-593` → `_check_module` @ `:671`（专项分派 @ `:711-898`） |
+| `manifest` 校验 | `validator.py:590-603`（`manifest` 作为受检模块）+ `field_meta.py:3239`（`ModuleMeta`） |
+| `settings` 校验 | `validator.py:864-898`（`_check_settings_1g4` @ `:1884` + `check_settings_alchemy` @ `:897` + 各专项） |
+| 模块登记一致性门禁 | `loader.py:205-233`（`check_register_table_consistency` / `check_manifest_modules_registered`） |
+| 包展示元数据校验 | `field_meta_pack.py:700`（`parse_field_meta`，非法 → `PackFieldMetaError`） |
+| E1 声明校验 | `pack_ext.py:304`（`parse_declarations`） |
+| E2 声明校验 | `pack_render.py:289`（`_parse_events`） |
+| `trigger` 值域校验 | `validator.py:3335-3412`（Y-19 黄提示 / R-1 红拦） |
+| 红拦总门禁 | `content/loader.py:239`（`build_pack()`，docstring 明写「任一红拦抛 `PackLoadError`」）+ `validator.py:1-30`（红拦 R-1~R-5 封闭清单） |
+
+### 7.8 已废弃 / legacy 兼容键（**勿当 bug 删**）
+
+| 键 | 是什么 | 判据 file:line | 删了的后果 |
+|---|---|---|---|
+| `manifest.module_groups` | `module_tree` 的**别名** | `field_meta.py:2164` | 用旧名的包编辑器左栏层级消失 |
+| `settings.forge.decompose_rate` | 已废弃，唯一源迁到 `settings.alchemy.decompose_rate` | `validator.py:2582-2601`（Y-21 黄提示） | 旧包失去迁移指引（提示消失） |
+| `settings.alchemy.assistant` | 与顶层 `settings.assistant` 双路兜底 | `core/alchemy_helper.py:212-217` | 写在 alchemy 里的助手配置失效 |
+| `settings.event_log_cap` | `event_log_capacity` 的**兼容兜底** | `event_bus.py:182`（优先 capacity，兜底 cap） | 旧包的事件日志容量回落 300 |
+| `settings.worldtime` | `time_cycle` 之外的**桥梁直读兼容段** | `qbot_rpg_bridge/assemble.py:164` | 用 worldtime 的包天气/季节失效 |
+| `settings` 软段（`soft_label=True`）一大批 | "包实有、原表未登记"的兼容放行（泛型校验短路） | `field_meta.py:3068-3236` | 包可自由声明这些段而**不被红拦**——删软标志会让大量既有包红拦 |
+| `content/veinborn/*.json.bak` | 非 `.json` 后缀，**不被 loader 读取** | — | 属遗留备份文件，**建议清理以免误认**（不是兼容键） |
+
+---
+
+## 8. hooks：哪些是给包的"扩展点"，哪些**不是**
+
+### 8.1 ⚠️ 先说结论（最容易被误当契约的一节）
+
+框架里有**两类** hook：
+
+| 类 | 面向谁 | 是扩展契约吗 | 包能注册吗 |
+|---|---|---|---|
+| **① 对外扩展钩子** | 内容包作者 | ✅ **是**（本章 §5） | ✅ 能（E1/E2/`schema_ext`/`field_meta.json`） |
+| **② 框架内部注入式回调** | 框架引擎之间 | ❌ **不是** | ❌ **不能**，也不该 |
+
+**给维护者**：第 ② 类 hook 的**名字、签名、是否存在**都是内部实现细节，**随时可改**——因为包代码本来就不许 `import qbot_rpg.*`（§6.1）。**不要**因为"怕破坏包"而给它们加兼容层。
+
+### 8.2 ① 对外扩展钩子（**是契约**）
+
+| hook / 注册点 | file:line | 用途 | 谁调用 |
+|---|---|---|---|
+| E1 `load_pack_extensions(router, …)` | `assembly/pack_ext.py:481` | 把包 `commands.json` 声明注册进 Router | `qbot_rpg_bridge/assemble.py:181`、`testing_support.py:218` |
+| E1 `Router.register(spec, replace=False)` | `commands/router.py:205` | 实际登记点；重名 `ValueError` | `pack_ext.py:630` |
+| E1 `Router.unregister(name)` | `commands/router.py:215` | 失败回滚 | `pack_ext.py:643` |
+| E1 `AliasTable.add/remove` | `commands/router.py:732` / `:741` | 包指令别名登记 / 回滚 | `pack_ext.py:634` / `:641` |
+| E1 **`qbot_rpg.ext_api` 稳定面** | `ext_api.py:42`（`__all__`）、`:59`（版本） | **包代码唯一允许 import 的面** | 包内 `ext/commands.py` |
+| E1 `ExtContext.get_state/set_state/patch_state/clear_state` | `ext_api.py:283/291/296/301` | 包 × 玩家状态格子读写 | 包 handler |
+| E2 `load_pack_render_hook(pack_dir, …)` | `assembly/pack_render.py:319` | 装载 `ext/render.py` | `assemble.py:185`、`testing_support.py:221` |
+| E2 `RenderHook.apply(event, data, default)` | `pack_render.py:240` | 单出口文本替换 + 隔离 | `runner.py:894`、`pack_render.py:441`（`RenderSender`） |
+| E2 `RenderSender`（`ctx["sender"]` 代理） | `pack_render.py:410` | 战斗正文直发也过钩子 | `runner.py:845-852` |
+| E2b `resolve_templates(overrides)` | `core/templates/__init__.py:101` | 包 `templates.json` 覆盖全量表 | `assembly/context.py:737` |
+| E2b `_templates_table(registry)` | `assembly/context.py:727` | 读 `registry.modules_raw["templates"]` → 合并 → 注入 `ctx["templates"]` @ `:1336` | `context.py:1336` |
+| 包自持校验 `settings.schema_ext` | `validator.py:429`（解析）、`:543-549`（接线 R-5） | 包声明 `allow_keys/type/enum/required` 扩展校验 | `_Checker.__init__` / `_check_module` 各字段点 |
+| 包展示元数据 `field_meta.json` | `field_meta_pack.py:783`（`load_field_meta`）、`:700`（`parse_field_meta`） | 包覆盖字段 label/help/模块树/分组等**展示层** | `web/api.py:242`（`_pack_declaration`） |
+| 包模板键来源 | `field_meta.py:3435`（`key_source="templates"`）、`web/framework_keys.py` | 编辑器列出包模板键 ∪ 框架全量键 | 编辑器 `/api/meta` |
+
+### 8.3 ② 框架内部 hook / 回调注入点（**明确"不是扩展点"**）
+
+> 下面每一条**都不是**内容包契约。**包不得依赖它们**；框架维护者可以随时改动/重命名/删除。
+
+| hook | file:line | 用途 | 谁调用 |
+|---|---|---|---|
+| `register_event_dispatcher(fn)`（effects 回调槽） | `core/effects.py:2022` | 注册状态事件分派回调（**破循环依赖**用） | `core/event_dispatcher.py:332`（模块加载末尾） |
+| `bump_event`（事件计数 / 环形日志） | `core/event_bus.py:196` | 事件打点：`longline_counters` + `event_counts` + `event_log` | `ctx["bump_event"]`（`context.py:1854`，`_resolve_bump_event` @ `:908`） |
+| `ctx["add_item"] / remove_item / count_item` | `context.py:1106`（`_inventory_hooks`），返回键 `:1239` | 背包增/删/计（reward/shop 契约） | `context.py:1560` 展开注入；各引擎 |
+| `ctx["resolve_item"] / resolve_shop / resolve_recipe / resolve_trait` | `context.py:1848-1851`（`_kind_resolver`）；`resolve_attr_final` @ `:1901` | registry 引用解析闭包 | 指令壳 / 引擎 |
+| `ctx["consume_bait"] / mode / king_event / king_victory_record` | `context.py:1510-1513`（薄委托） | 钓鱼引擎回调 | `core/fishing.py` |
+| `ctx["respawn_hook"]` | `context.py:1539`（`_respawn_hook_of`） | PVP 击杀惩罚回城 | `core/pvp.py` |
+| `ctx["npc_interactions"]` | `context.py:1663` | NPC 交互菜单解析 | `core/dialog.py` |
+| `ctx["start_battle"]` | `context.py:1754`（**当前 `None`**） | 调查遭遇开战 | `core/investigate.py` / `battle_launch_commands` |
+| `ctx["sender"]`（统一发送出口） | `runner.py:841-852` | 战斗管线直发正文 | `battle_commands` / `BattlePipeline` |
+| `ctx["resolve_player_name"] / same_group` | `context.py:1372-1373`（**当前 `None`**） | `/协力` 注入位 | 协力指令 |
+| `Router` 框架指令注册元组 `REGISTER_GROUPS` | `assembly/router_setup.py:94`（`build_router` @ `:225`） | 框架内置指令分组登记 | 装配 `build_router` |
+
+**⚠️ 文档缺口（盘点已列，本次复核确认）**：上面这些 `ctx[...]` 注入点**只在代码注释/docstring 里说明**，`docs/游戏包扩展点_方案_E.md` **未列**；`docs/内容包扩展_指令.md` 只面向 E1。**本节是它们的第一份成文清单**——但请记住 §8.1 的结论：**清单存在 ≠ 它们是契约**。
+
+### 8.4 包自持代码的边界（`ext/` + `tests/` + `scripts/`）
+
+| 目录 | 内容 | 触发方式 | 边界 |
+|---|---|---|---|
+| `content/<包>/ext/commands.py` | E1 指令实现 | 双闸 + 装配期装载 | 只 `import qbot_rpg.ext_api` |
+| `content/<包>/ext/render.py` | E2a 渲染钩子 | 双闸 + 装配期装载 | **不 import 任何 `qbot_rpg.*`**（只拿只读快照 + 最终文本） |
+| `content/<包>/tests/` | E3a 包内测试 | `scripts/run_pack_tests.py` | 主套件不自动收集 |
+| `content/<包>/scripts/build.py` | E3b 包内构建 | `scripts/run_pack_build.py` | cwd = 包目录；退出码如实转发 |
+
+**双闸默认关 + 重名拒 + 失败隔离**的完整口径见 §5.2.5 / §5.3.4。
+
+---
+
+## 9. 给扩展开发者的"怎么接"
+
+### 9.1 新增一个**事件时点**（框架侧改动，**必须走评审**）
+
+> ⚠️ **这不是内容包能做的事**。内容包只能**使用**已有时点。新增时点 = 改框架战斗流程。
+
+**前置判断**：你要的语义能不能用现有时点表达？先查 §2.2 三态表——**如果只是写错名字，不用新增时点**。
+
+**六步清单**（缺一步就会留下"登记了不生效"陷阱）：
+
+| 步 | 动作 | 落点 | 不做的后果 |
+|---|---|---|---|
+| 1 | **追加**枚举值到 `EVENT_POINTS` **末尾** | `qbot_rpg/data/event_points.py:25` | 插中间会位移既有断言（`:23-24` 明写保序要求） |
+| 2 | 加**生产派发点** `self._dispatch_event("<新时点>", side)` | 对应战斗流程处（参考 `battle.py` 现有 11 处） | **效果永不触发**（本框架最危险的坑，§3.5） |
+| 3 | 更新语义 docstring | `core/event_dispatcher.py:26-37`；`data/event_points.py` 模块 docstring | 下一个人不知道它派给谁 |
+| 4 | 确认**谁收**（`side` 语义）并写进注释 | 派发点处 | 效果挂错侧（§3.1 的 `death`/`on_kill` 教训） |
+| 5 | 评估**数值影响** + 加对拍测试 | `tests/` | 改变既有战斗数值而无人知 |
+| 6 | 登记裁决到 **`docs/深度打造_决策记录.md`** | 决策记录 | 下次"死代码清理"可能把它删掉（**批73 已有 47 条死代码删除登记表**：`docs/死代码删除登记表.md`） |
+
+**新增后自动获得的东西**（不需要额外改）：
+- `trigger` 值域校验自动放行（校验器读 `EVENT_POINTS`：`validator.py:3383` `known = tuple(EVENT_POINTS)`）；
+- Y-19 不再对新值报警。
+
+**新增后**仍需**手动**改的东西：
+- **`docs/深度打造_实现说明.md:728-752` 的 14.3 事件时点表**——它是**人工维护的**，不会自动同步。
+- `STATUS_EVENT_POINTS`（`data/event_points.py:38`）**只有**两个状态时点，别往里塞非状态时点。
+
+**复制模板（第 2 步的代码形状）**：
+```python
+# 在对应战斗流程处
+self._dispatch_event("<新时点>", "<side>")   # side ∈ {"player","enemy"}，或 attacker/actor
+```
+
+**🔴 反例警示（真实存在）**：`content/veinborn/effects.json:51-64` 的 `surge_tick` 用了 `trigger: "turn_end"`——**枚举里有、但没人派发**，所以**静默不触发**，校验器也不报警。**新增时点后请务必确认第 2 步真的做了**（§3.3 待查 P-2）。
+
+### 9.2 新增一个**指令**（包侧，5 步可复制）
+
+| 步 | 动作 | 落点 |
+|---|---|---|
+| 1 | 写声明 `commands.json` | `content/<包>/commands.json`，形状见 §5.2.3 |
+| 2 | 写实现 `ext/commands.py`，函数名 = `handler` | `content/<包>/ext/commands.py`；**只** `from qbot_rpg import ext_api` |
+| 3 | 开 `settings.ext.enabled = true` | `content/<包>/settings.json`：`{"ext":{"enabled":true}}` |
+| 4 | 启动时开第二闸 | CLI `--enable-pack-ext` **或** 环境变量 `QBotRPG_ENABLE_PACK_EXT=1` |
+| 5 | 写包内测试 | `content/<包>/tests/test_*.py`，跑 `python3 scripts/run_pack_tests.py --pack <包>` |
+
+**自查**：
+- 指令名/别名**不能**与框架指令重名——重名 → **整包扩展降级不生效**（`_check_conflicts:331`）。
+- handler **必须**在 `ext/commands.py` 里存在（`pack_ext.py:600-603` 会预检，缺 → 整包拒绝）。
+- 别写未知字段（`_ALLOWED_KEYS` 闭集，写错直接报错）。
+
+**验证**：`python3 scripts/run_pack_build.py --pack <包> --check`（复用框架整包校验）。
+
+### 9.3 新增**一段渲染**（包侧，两条路，**优先 E2b**）
+
+**路线选择**：
+
+| 你的需求 | 用哪条 | 为什么 |
+|---|---|---|
+| 只改**文案字符串**（措辞、后缀、格式） | **E2b `templates.json`** | 纯数据、不执行代码、最安全 |
+| 需要**按上下文计算**才决定文本 | **E2a `ext/render.py`** | 能拿到只读快照 |
+
+**E2b 步骤**：
+1. 在 `manifest.json` 的 `modules` 里**加 `"templates"`**（⚠️ **不加就是静默不生效**）；
+2. 写 `content/<包>/templates.json`：`{"模板键": "文案"}`；
+3. 键必须是**已存在**的框架模板键（未知 key 只 warn，不会新增）。
+
+**E2a 步骤**：
+1. 开双闸（同 §9.2 第 3、4 步）；
+2. 写 `content/<包>/ext/render.py`：`EVENTS`（可省）+ `render(event, data, default_text)`；
+3. **只返回 str 或 None/""**；异常/超时/非 str 会被兜底成默认文本；
+4. **禁止** sleep / 网络 / 长任务（软超时 0.5s，不做线程抢占）；
+5. 事件名只能用 `pack_render.py:85` 的 `KNOWN_EVENTS`（`command.reply` / `battle.round`）；未知事件**警告 + 忽略**。
+
+### 9.4 新增一个**包状态格子**（包侧）
+
+包可持久化的**唯一**东西就是"该包 × 该玩家"的状态格子：
+
+```python
+from qbot_rpg import ext_api
+
+async def my_handler(ctx, parsed):
+    st = await ctx.get_state()              # dict
+    st["counter"] = st.get("counter", 0) + 1
+    await ctx.set_state(st)
+    return f"计数={st['counter']}"
+```
+
+方法：`get_state` / `set_state` / `patch_state` / `clear_state`（`ext_api.py:283/291/296/301`）。**玩家维度隔离**——不同玩家互不可见（`ext_api.py:15-17`）。
+
+### 9.5 给未来的维护者：改框架前 checklist
+
+改任何"事件 / 扩展点 / 声明段"之前，按顺序过这 6 条：
+
+1. **它有三态表里的哪一态？** 查 §2.2。删一条"无派发点"的枚举**看似清死代码，实则可能删掉已登记的二期扩展位**（先看 `docs/死代码删除登记表.md`）。
+2. **它是"零变化口径"的一部分吗？** §4.3 的三态（`(None,None)` = 全库扫描）、§5.3.4 的"未装钩子零改动"——**改它们=打破向后兼容承诺**。
+3. **它在 §7.8 legacy 表里吗？** 在 → **勿删**，先读对应 `file:line` 的注释与裁决。
+4. **它在 `ext_api.__all__`（§6.3）里吗？** 在 → 破坏性变更**必须**递增 `EXT_API_VERSION`（`ext_api.py:59`）。
+5. **它有 `docs/深度打造_决策记录.md` 的落地登记吗？** 有 → 改动要同步那一条。
+6. **改完跑什么？** 至少 `python3 scripts/check_architecture.py`（架构门禁）+ `python3 scripts/compare_field_meta_migration.py`（字段迁移门禁）+ 相关 `tests/`。
+
+**本手册对维护者的核心价值**：§3.5 的"合法枚举 + 无派发点 = 静默死效果"、§4.3 的"零变化口径"、§7.8 的 legacy 表——**这三处一旦被当成 bug"修"掉，会静默破坏既有内容包**。
+
+---
+
+## 10. 复核记录
+
+### 10.1 本次复核做了什么
+
+| 手段 | 命令 / 方式 | 覆盖 |
+|---|---|---|
+| 读源码 | `read` / `sed` 逐段读 | `event_points.py` / `event_dispatcher.py` / `battle.py`（派发与归属段）/ `effects.py`（状态事件段）/ `pack_ext.py` / `pack_render.py` / `ext_api.py` |
+| 全仓扫描 | `grep -rn` 逐时点字面量 | 17 个 `EVENT_POINTS` 时点的派发点存在性 |
+| 逐函数归属 | `python3` 脚本把每个 `_dispatch_event(...)` 调用映射到所属函数 | 11 个已接时点 + `action_end` 的 5 条路径 |
+| 运行时枚举 | `python3 -c` 导入 `_module_table()` | `settings` 段 **54**、模块表 **36** 条目 |
+| 读常量 | 直接读 `TOP_LEVEL_KEYS` | `field_meta.json` **16** 键 |
+| 实测包 | 读 `content/zz_probe_ext/*`、`content/veinborn/*` | E1/E2/E3 最小示例、`surge_tick` 死效果 |
+
+### 10.2 本章纠正 / 补充了盘点文档的哪些结论
+
+| # | 盘点说法 | 本次实测 | 处置 |
+|---|---|---|---|
+| 1 | `settings.*` 声明段 **41 条** | 框架 `settings` schema 实测 **54 段** | §7.3.2 全 54 段列出，漏列的 14 段标"＋补" |
+| 2 | `field_meta.json` **12 段** | `TOP_LEVEL_KEYS` 实测 **16 键** | §7.5 全 16 键列出，标注盘点 12 行的合并关系 |
+| 3 | "93 条" | 是**行数口径**，非键数口径 | §7.1 明确两种口径并给对照表 |
+| 4 | `EVENT_POINTS` 17 点 / 11 点有派发点 | **复核一致**（给出 11 条原文证据） | §2.2 |
+| 5 | 行号（基于 `d86d9dd`） | HEAD `62cc299` 已漂移（`battle.py` −3~−5、`effects.py` −3~−9） | **本章所有行号已重核** |
+| 6 | `turn_end` "故意不派发" | 复核一致（`实现说明.md:735`） | §3.3 |
+| 7 | `status_lose` "部分：tick 过期待接" | **复核确认**：两条 tick 过期路径（`effects.py:824-825`、`:1418-1420`）只写 log、不派发 | §3.2 待查 P-1（给出精确行号） |
+| 8 | `content/veinborn` 是"真实大包" | ⚠️ **新发现**：其 `effects.json:51-64` `surge_tick` 用 `turn_end` → **静默死效果**，校验器与测试都不拦 | §3.3 / §9.1 待查 P-2 |
+| 9 | `action_start`/`action_end` 对称 | ⚠️ **新发现**：`_flee_actor` / `_skip_turn` **不派发 `action_end`** | §2.4 待查 P-4 |
+| 10 | 方案 E 文档"只写 `build.py --check`，未写明在 `scripts/` 子目录" | **复核部分不成立**：`docs/游戏包扩展点_方案_E.md:49` **已**写明 `content/<pack>/scripts/`；只是 `:50` 那句"入口约定"没在本句点明路径 | §5.5.2 改判为"**表述精度提示**"，非"文档缺项" |
+| 11 | "未启用时零文件访问"（`pack_ext.py:503` 注释） | **复核：表述宽松**——`pack_path = Path(pack_dir)` 在双闸判定**之前**执行（`:506`），但只构造 `Path` + `.name`，未 stat/read | §5.2.5 按实测口径写明，不称其为 bug |
+
+### 10.3 待查清单（**明写"未确认"，不猜**）
+
+| 编号 | 待查内容 | 已知事实（file:line） | 缺什么 |
+|---|---|---|---|
+| **P-1** | `status_lose` 的 **tick 过期**路径不派发，`on_expire` 效果是否会触发？ | `effects.py:824-825`、`:1418-1420` 只 log 不派发；`event_dispatcher.py:74` 把 `on_expire` 映射到 `status_lose` | **意图裁决**（是漏设计还是故意二期） |
+| **P-2** | `content/veinborn/effects.json:51-64` `surge_tick` 的 `trigger:"turn_end"` 是笔误还是预留？ | `turn_end` 无派发点；其 `desc` 写的是"每次行动结束时" | 原作者意图 / 是否应改为 `action_end` |
+| **P-3** | `resource_axis_validator.py:99` 的 `PROC_TRIGGER_EVENTS = ("on_turn_start","on_hit","on_season_change")` 与 `EVENT_POINTS` 是否是**同一套**？ | 命名风格近似但值不同（`on_turn_start` ≠ `turn_start`） | 两套是否有意统一 |
+| **P-4** | `action_start` / `action_end` 不对称（逃跑/跳过无 `action_end`）是设计还是遗漏？ | `battle.py:2959`（全类型）vs `:3018/3119/4058/4635/5044`（5 路径）；`_flee_actor:3044-3091`、`_skip_turn:3025-3043` 无派发 | 意图裁决 |
+| **P-5** | `settings.ext` / `settings.schema_ext` / `settings.worldtime` **无 field_meta 登记**，写错键名无任何提示 | `ext_api` 语义源 `pack_ext.py:115`；`schema_ext` @ `validator.py:390-402`；`worldtime` @ `assemble.py:164` | 是否应补 schema 登记（属改进项，非 bug） |
+| **P-6** | `core/templates/__init__.py:102` 注释写"深合并"，实现是**逐 key 整体替换** | `:102` vs `:113-119` | 哪个是意图（本次以**实现**为准） |
+| **P-7** | `settings.json` 双通道（loader 校验 vs `assemble.py:89-98` 无条件直读）是否应统一？ | `loader.py:286-311` vs `assemble.py:89-98`；`zz_probe_packmeta` 即无 `settings` 模块 | 是否有意保留"无校验也生效" |
+
+### 10.4 与上游盘点的对应关系（便于交叉查证）
+
+| 本章节 | 上游盘点对应 |
+|---|---|
+| §1 | §3.0（两套事件体系） |
+| §2 | §3.1（逐时点）+ §0 发现 1（三态） |
+| §3 | §3.1 易混表 + §6 C 组 |
+| §4 | §3.2（派发与归属规则） |
+| §5 | §4 §A（E1/E2/E3 契约） |
+| §6 | §4 A.1.2（`ext_api` 稳定面） |
+| §7 | §4 §B（包声明段总清单） |
+| §8 | §4 A.4（hooks 全清单） |
+| §9 | §8.2（第二路编撰建议） |
+
+---
+
+*第 2 章完。本章所有 `file:line` 基于 HEAD `62cc299`，均经本次逐条重读或运行核对。*
+
+
 
 
 

@@ -196,7 +196,18 @@ SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
 #   · 无 help 删除、无字段/键删除、无 group/module_labels/module_tree 变动；
 #     `source` 未补 label（保留「框架登记类型但无中文名 → 原始键兜底」用例实例）。
 #   对拍实证：删除项 = 0；重定后基线树与当前树逐字段 diff=0。
-BASELINE_REF = "526957f"
+# 批70（2026-09-23 「登记了却不生效」清账 · 33 条）重定：526957f → 01bea48（本批 R4 说明提交）。
+#   原因 = 本批**有意**变更（非迁移回归），删除项 = 0，全部为**改值且仅在 `help`**：
+#   · R4 `reward_mult_pct` 轴 `display.help` 追加「当前未实现，配置不生效。」（≤60 字、无
+#     Markdown/英文配置键，守批67 卡点4 护栏）；流入 equipment/items 字段描述符的
+#     `.help` / `.help_card.help` 共 6 处改值；
+#   · R10–R22 formula / R23 report_effective_share / R24–R25 settings.env_event|log_card /
+#     R26–R33 ai|hidden 视图补「【未实现】」help——不在本对拍快照面内（diff=0）；
+#   · R9 copy_slot：内容包 field_meta.json `field_help.settings.alchemy.farming` 转嵌套并补说明（soft）；
+#   · 无 label/group/module_labels/module_tree 变动；无字段/键删除（forge.decompose_rate 删除
+#     不在本快照面内）。
+#   对拍实证：删除项 = 0；重定后基线树与当前树逐字段 diff=0。
+BASELINE_REF = "01bea48"
 CONTENT = REPO / "content"
 
 

@@ -132,6 +132,11 @@ from qbot_rpg.data.gear_stats import OWNED_EFFECT_IDS_KEY
 # 批52 · 特效轴消费口径：settings 段键名 + 读时钳制取值（唯一源，core 只读）。
 from qbot_rpg.data.gear_stats import EFFECT_AXES_KEY, effect_axis_value
 
+#: 批56 · 行动速度轴（X28 `action_speed_pct`）键名——唯一源仍是 `data.gear_stats`
+#: `EFFECT_AXIS_SPECS`（本常量只取登记名便于消费点引用，不另立键空间）。
+#: 语义：CTB 有效速度 ×(1 + pct/100)；>0 提速 / <0 迟缓（范围由包声明）。
+ACTION_SPEED_AXIS: str = "action_speed_pct"
+
 #: 模块日志器（NPC 行动执行等兜底路径留痕；不可达路径不静默吞错）
 _logger = logging.getLogger("qbot_rpg.core.battle")
 
@@ -2458,13 +2463,13 @@ class BattleEngine:
         )
         ctb.push_actor(
             "player", side="player",
-            effective_speed=float(self._combat("player").get("spd", 0) or 0),
+            effective_speed=self._ctb_actor_speed("player"),
             is_player=True,
         )
         if not self._is_dummy_enemy_def():
             ctb.push_actor(
                 "enemy", side="enemy",
-                effective_speed=float(self._combat("enemy").get("spd", 0) or 0),
+                effective_speed=self._ctb_actor_speed("enemy"),
                 is_player=False,
             )
         ctb.start()
@@ -2516,8 +2521,23 @@ class BattleEngine:
             return None
 
     def _ctb_actor_speed(self, side: str) -> float:
-        """该侧当前有效速度（CTB 行动条入队/更新用）。"""
-        return float(self._combat(side).get("spd", 0) or 0)
+        """该侧当前有效速度（CTB 行动条入队/更新用）。
+
+        批56 · 行动速度轴（X28 `action_speed_pct`）：有效速度 ×(1 + pct/100)，
+        由既有 CTB 公式 `time_cost = recovery × speed_reference / max(speed, min_speed)
+        + delay` 的**分母**消费（复用 `ctb_rules.time_cost`，不新开管线；`min_speed`
+        下限保护沿用）。未配置 / 0 → 原值返回（逐字段零变化）。
+        """
+        base = float(self._combat(side).get("spd", 0) or 0)
+        try:
+            pct = float(effect_axis_value(
+                self._combat(side), ACTION_SPEED_AXIS,
+                self._config.get(EFFECT_AXES_KEY)))
+        except Exception:  # noqa: BLE001 —— 取轴异常不阻断入队（按 0 = 原值）
+            pct = 0.0
+        if pct == 0.0:
+            return base
+        return base * (1.0 + pct / 100.0)
 
     def _sync_scheduler_deaths(self) -> None:
         """死亡同步：把引擎侧死亡标记推给调度器（移出队列 + bump generation）。

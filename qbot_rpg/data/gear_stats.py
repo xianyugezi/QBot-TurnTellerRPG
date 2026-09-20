@@ -61,6 +61,14 @@
   `sign = -1` = 旧键语义与本轴相反，如 `immune_dmg` 免伤比 ⇔ 承伤比取负）。旧键自身
   链路本批**不动**。
 
+批56 · 行动速度轴 + 过量治疗开关（决策记录 §十五 D 组裁决 D2/D4）：
+- **D2 `action_speed_pct`（X28）**：登记为第 16 条特效轴（P1），消费点 = CTB 有效速度
+  （`battle._ctb_actor_speed`，由 `ctb_rules.time_cost` 分母消费）；双向、范围由
+  `settings.effect_axes` 声明。**`action_recovery_pct`（X29）按裁决不登记、不实现**——
+  归入 `DEPRECATED_EFFECT_AXES`（校验器黄提示，不硬拦）。
+- **D4 `overheal`**：**不是轴**（E5 = 布尔开关），故不在此登记表；另见 `OVERHEAL_KEY`
+  段与 `core/effects` 的 HP 落点收口。缺省 = 关闭 = 与现状一致（过量部分丢弃）。
+
 批22 · A3 常驻战斗词条（全部归 COMBAT 档；逐条归属与数值口径）：
 - absorb_hp     ％    吸血比：造成伤害 × absorb_hp% 回血（上限 100），伤害扣除后由
                        battle 消费（不进属性管线、不属于 effects.lifesteal 主动效果）。
@@ -108,6 +116,7 @@ __all__ = [
     "EFFECT_AXIS_SPECS",
     "EFFECT_TO_COMBATANT",
     "EFFECT_LEGACY_ALIASES",
+    "DEPRECATED_EFFECT_AXES",
     "DEFAULT_EFFECT_AXES",
     "PANEL_AXIS_STEMS",
     # 批53 · 占位旧键 → 特效轴 兼容换算（聚合入口唯一处）
@@ -373,7 +382,37 @@ EFFECT_AXIS_SPECS: Tuple[Mapping[str, Any], ...] = (
                          "既有 super_crit_lv / elem_crit_lv（0-3 档）保持独立：前者已由"
                          " crit_roll 离散档叠加，后者作用于元素通道、**不并入**本轴。",
     },
+    {
+        "axis": "action_speed_pct", "doc_id": "X28", "priority": "P1",
+        "min": -80.0, "max": 400.0, "default": 0.0, "stack": "add",
+        "display": {"mode": "mult", "label": "行动速度修正",
+                    "help": "调整行动条推进速度（CTB 有效速度方向）："
+                            "正 = 提速（行动更频繁）/ 负 = 迟缓；数值为百分点增量"
+                            "（+20 = 速度 ×1.2，−50 = ×0.5）。"
+                            "与「行动后摇」数学互为倒数，按 D2 裁决**只保留本轴**"
+                            "（后摇轴不登记、不实现，内容仍写后摇会被校验器黄提示）。"},
+        "legacy_alias": (),
+        "consumer": "ctb.effective_speed",
+        "consumer_note": "批56 已接线：唯一收口 = `battle._ctb_actor_speed`（CTB 入队有效速度），"
+                         "由既有 CTB 公式 `time_cost = recovery × speed_reference / "
+                         "max(effective_speed, min_speed) + delay` 的分母消费"
+                         "（复用 `ctb_rules.time_cost`，不新开管线；min_speed 下限保护沿用）。"
+                         "未配置 / 0 → 原值（逐字段零变化）。"
+                         "`enrage/fatigue_recovery_mult` 仍走自身规则配置（收编为条件实例属"
+                         "口径变更，本批不动，登记待裁决）。",
+    },
 )
+
+#: 已按 D 组裁决**废弃**的轴：键 → (替代轴, 裁决依据/原因)。
+#: **不得登记、不得实现**——校验器对内容声明/词条命中本表者给**黄提示**（不硬拦），
+#: 提示作者改用替代轴。唯一源落本文件（轴键空间的唯一源），validator 只读。
+DEPRECATED_EFFECT_AXES: Dict[str, Tuple[str, str]] = {
+    "action_recovery_pct": (
+        "action_speed_pct",
+        "行动速度与行动后摇数学互为倒数，二者并存会让作者叠加导致指数级加速；"
+        "D2 裁决只保留「行动速度」。",
+    ),
+}
 
 #: 特效轴键族（登记表派生的键名元组——**唯一源**，grep 可枚举）。
 GEAR_EFFECT_KEYS: Tuple[str, ...] = tuple(str(_s["axis"]) for _s in EFFECT_AXIS_SPECS)

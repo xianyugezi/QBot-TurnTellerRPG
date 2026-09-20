@@ -75,6 +75,7 @@ P1_AXES: Tuple[str, ...] = (
     "action_bar_shift",                                   # X30
     "resource_cost_pct", "resource_gain_pct",             # X34 / X35
     "crit_damage_pct",                                    # X03
+    "action_speed_pct",                                   # X28（批56 接线；D2 裁决二选一取速度）
 )
 #: **未登记**的 P0/P1 项及原因（不得与 `GEAR_EFFECT_KEYS` 相交——登记纪律）。
 DEFERRED: Tuple[Tuple[str, str], ...] = (
@@ -91,10 +92,9 @@ DEFERRED: Tuple[Tuple[str, str], ...] = (
      "**缺消费点**：异常累积段（buildup）尚不存在 → 按「无消费点的轴不得登记」不登记"),
     ("action_recovery_pct (A-2 / X29)",
      "轴全集 §3 定级 **P2**（超出本批 P0/P1 登记范围）；其消费点须归并 "
-     "enrage/fatigue_recovery_mult 状态硬编码倍率（改动既有行为）→ 随时序批登记"),
-    ("action_speed_pct (X28)",
-     "设计文档 §1.2/§1.4 裁定与 X29 二选一（并存 → 指数级速度），**只留 A-2** → "
-     "永不作为独立轴登记"),
+     "enrage/fatigue_recovery_mult 状态硬编码倍率（改动既有行为）→ 批56 已按 D2 裁决"
+     "**废弃**（收进 `DEPRECATED_EFFECT_AXES`，校验器黄提示改用 `action_speed_pct`），"
+     "**永不作为独立轴登记**"),
     ("roll_mode (X42) / pierce{target} (X06) / stack_mode (I03)",
      "聚合规则与方向参数，**不是数值轴**（轴全集 §4 E7）；穿透是既有键的扩展"),
     ("I01 触发归属 / I02 条件变量 / I04 套装阈值",

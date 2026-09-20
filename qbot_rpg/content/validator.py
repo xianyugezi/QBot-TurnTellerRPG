@@ -46,6 +46,7 @@ from qbot_rpg.data.affinity_keys import (
 )
 from qbot_rpg.data.event_points import EVENT_POINTS
 from qbot_rpg.data.gear_stats import (
+    DEPRECATED_EFFECT_AXES,
     EFFECT_AGGREGATES,
     EFFECT_GATE_MODES,
     EFFECT_UNKNOWN_MODES,
@@ -2121,6 +2122,9 @@ class _Checker:
           · `min > max`、`default ∉ [min, max]` → **红拦 R-2**（越界红拦）；
           · 轴名 stem ∈ 面板三轴 stem（`PANEL_AXIS_STEMS`）→ **红拦 R-4**（撞名会让
             `route_bonus_into` 与面板属性 pct 层混淆）；
+          · 已按 D 组裁决**废弃**的轴（`DEPRECATED_EFFECT_AXES`，如
+            `action_recovery_pct`）→ **黄提示 Y-18**（不硬拦；提示改用替代轴——D2 裁决
+            行动速度/后摇二选一，并存会指数级加速）；
           · 未登记轴（不在 `GEAR_EFFECT_KEYS`）→ **黄提示 Y-18**（自造轴，不硬拦）；
           · `stack`/`display.mode` 取值不在册 → **黄提示 Y-18**（不硬拦）。
         内容侧取值越界（**越界红拦**）：`items` / `equipment` 顶层词条键 + `runes` 的
@@ -2146,10 +2150,18 @@ class _Checker:
             axis = str(raw_axis)
             path = f"{base}.{axis}"
             if axis not in known:
-                self._warn(module_name, path, "Y-18", rule="effect_axis_unknown",
-                           axis=axis, key_space=sorted(known),
-                           msg=f"未登记的特效轴「{axis}」：框架登记表里没有它，"
-                               "该声明不会被任何消费点读取（不阻断）")
+                dep = DEPRECATED_EFFECT_AXES.get(axis)
+                if dep is not None:
+                    replacement, why = dep
+                    self._warn(module_name, path, "Y-18", rule="effect_axis_deprecated",
+                               axis=axis, replacement=replacement,
+                               msg=f"轴「{axis}」已按裁决废弃，请改用「{replacement}」"
+                                   f"（{why}）")
+                else:
+                    self._warn(module_name, path, "Y-18", rule="effect_axis_unknown",
+                               axis=axis, key_space=sorted(known),
+                               msg=f"未登记的特效轴「{axis}」：框架登记表里没有它，"
+                                   "该声明不会被任何消费点读取（不阻断）")
             stem = effect_axis_stem(axis)
             if stem in panel_stems:
                 self._err(module_name, path, "R-4", rule="effect_axis_stem_conflict",
@@ -2219,6 +2231,14 @@ class _Checker:
             for key, val in bag.items():
                 axis = str(key)
                 if axis not in axes:
+                    dep = DEPRECATED_EFFECT_AXES.get(axis)
+                    if dep is not None:
+                        replacement, why = dep
+                        self._warn(module_name, f"{path}.{axis}", "Y-18",
+                                   rule="effect_axis_deprecated", axis=axis,
+                                   replacement=replacement,
+                                   msg=f"词条「{axis}」已按裁决废弃，请改用"
+                                       f"「{replacement}」（{why}）")
                     continue
                 if isinstance(val, bool) or not isinstance(val, (int, float)):
                     continue

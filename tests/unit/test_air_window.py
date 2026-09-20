@@ -255,12 +255,24 @@ class TestAirExpiry:
 class TestAirStanceContentAudit:
     def test_every_air_vault_applies_stance(self) -> None:
         """所有跃空技（reposition height=air）必须挂空中姿态——否则行动收尾无姿态
-        → 被 R16 兜底静默落地（rb/vc/po 三处 2026-09-11 审计修复的回归守卫）。"""
+        → 被 R16 兜底静默落地（rb/vc/po 三处 2026-09-11 审计修复的回归守卫）。
+
+        批71 · A1：命中集合改由**包声明**解析（`statuses[].stance=="air"`），不再直读
+        框架 legacy 常量——保证「新增跃空状态只改包声明」这条路径被内容审计覆盖。
+        """
         import json  # noqa: PLC0415
         from pathlib import Path  # noqa: PLC0415
 
-        from qbot_rpg.core.battle import _AIR_STATUS_IDS  # noqa: PLC0415
+        from qbot_rpg.core.battle import _declared_air_stance_ids  # noqa: PLC0415
 
+        class _RegistryStub:
+            """最小 registry 桩：只暴露 modules_raw["statuses"]（引擎读取口径）。"""
+
+            modules_raw = {"statuses": json.loads(
+                Path("content/veinborn/statuses.json").read_text(encoding="utf-8"))}
+
+        air_ids = _declared_air_stance_ids(_RegistryStub())
+        assert air_ids, "veinborn statuses.json 未声明任何 stance=air（批71 · A1 声明缺失）"
         sk = json.loads(
             Path("content/veinborn/skills.json").read_text(encoding="utf-8"))
         missing = []
@@ -272,7 +284,7 @@ class TestAirStanceContentAudit:
                 continue
             stances = [str(e.get("status_id")) for e in effs
                        if e.get("type") == "status_apply"]
-            if not any(sid in _AIR_STATUS_IDS for sid in stances):
+            if not any(sid in air_ids for sid in stances):
                 missing.append(str(s.get("id")))
         assert missing == [], f"这些跃空技缺空中姿态挂载：{missing}"
 

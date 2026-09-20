@@ -2241,6 +2241,11 @@ def _module_table() -> Dict[str, ModuleMeta]:
                                  allow_negative=True),
         }),
         "decay": FieldMeta(type="str"),  # 枚举（per_turn…）由正式表注入
+        # 批71 · A1：状态玩法角色（框架语义枚举）。"air" = 跃空姿态（跃空窗口载体，
+        # 引擎据 `statuses[].stance` 声明集做窗口初始化/到期/落地清理——增补 v1 §四）。
+        # 字段非必填、缺省不影响泛型校验（未登记字段本就默认放行，此处仅为编辑器可见）。
+        "stance": FieldMeta(type="str", enum=("air",), label="玩法角色",
+                            help="框架语义角色（可选）：air = 跃空姿态。"),
         "effects": F_EFFECTS,
         "on_enter": FieldMeta(type="ref", ref_target="effect"),
         "on_tick": FieldMeta(type="ref", ref_target="effect"),

@@ -333,10 +333,41 @@ _FIVE_BLOCKS: Tuple[str, ...] = (
 #: 空中姿态状态 ID 全集（跃空窗口载体；窗口初始化/到期判定/落地清理共用——增补 v1 §四）。
 #: 2026-09-11 关联状态同步审计：补齐 rb/vc/po 系跃空姿态（此前三技缺挂载 → 跃起即被
 #: R16 兜底静默落地）。内容侧新增任何「跃空保持」状态须同步登记本表。
-_AIR_STATUS_IDS: Tuple[str, ...] = (
+#:
+#: @deprecated 批71 · A1：本常量已降级为**无任何包声明时的 legacy 兜底**。
+#: 权威来源 = 包 `statuses.json` 条目的 `"stance": "air"` 声明（`_declared_air_stance_ids`）。
+#: 新包新增跃空姿态只需在包内声明，**不要**再改本表；待所有包完成声明后删除（71-A2）。
+_LEGACY_AIR_STATUS_IDS: Tuple[str, ...] = (
     "sw_vault_air", "vs_air_window", "va_air_window",
     "rb_vault_air", "vc_vault_air", "po_vault_air",
 )
+
+
+def _declared_air_stance_ids(registry: Any) -> frozenset:
+    """扫描包声明：`statuses` 条目中 `stance == "air"` 的 id 集合（框架零包名）。
+
+    只读 `registry.modules_raw["statuses"]`（list 形态），逐条取 `id`/`stance`，
+    **不认识任何具体 id**。registry 不可用 / 无 statuses 模块 / 无任何声明 →
+    返回空 frozenset（调用方回落 legacy 兜底，行为与迁移前逐位一致）。
+    """
+    raw = getattr(registry, "modules_raw", None)
+    if not isinstance(raw, Mapping):
+        return frozenset()
+    entries = raw.get("statuses")
+    if isinstance(entries, Mapping):          # 容错：{"statuses": [...]} 包裹形态
+        entries = entries.get("statuses")
+    if not isinstance(entries, (list, tuple)):
+        return frozenset()
+    out = set()
+    for ent in entries:
+        if not isinstance(ent, Mapping):
+            continue
+        if str(ent.get("stance") or "") != "air":
+            continue
+        sid = str(ent.get("id") or "")
+        if sid:
+            out.add(sid)
+    return frozenset(out)
 
 
 class BattleStateError(Exception):
@@ -588,6 +619,12 @@ class BattleEngine:
             self._enemy_ai = MonsterAI(
                 enemy_def, lib, ai_rng if ai_rng is not None else random.Random()
             )
+        # 批71 · A1：跃空姿态 id 集合 = 包声明（statuses[].stance=="air"）；
+        # 无任何声明 / 无 registry → legacy 兜底（= 迁移前行为，逐位一致）。
+        # `or` 不是 union：一旦有声明就完全以声明为准，避免 legacy 泄漏进新包。
+        self._air_status_ids: frozenset = (
+            _declared_air_stance_ids(registry) or frozenset(_LEGACY_AIR_STATUS_IDS)
+        )
         self._reset_state()
 
     def _formula_params_from_registry(self, registry: Any = None) -> Optional[DamageFormulaParams]:
@@ -3664,7 +3701,7 @@ class BattleEngine:
     # ------------------------- 跃空窗口（增补 v1 §四，2026-09-11） -------------------------
 
     def _air_stance_instances(self, side: str = "player") -> List[Mapping[str, Any]]:
-        """该侧空中姿态状态实例列表（sw_vault_air / vs_air_window / va_air_window）。
+        """该侧空中姿态状态实例列表（命中集合 = 包声明 `stance=="air"`，见 `_air_status_ids`）。
 
         兼容实例的 dict / 对象两种形态（对齐旧 `_settle_air_landing` 扫描口径）。
         """
@@ -3679,7 +3716,7 @@ class BattleEngine:
             else:
                 sid = str(getattr(inst, "status_id", None)
                           or getattr(inst, "id", "") or "")
-            if sid in _AIR_STATUS_IDS:
+            if sid in self._air_status_ids:
                 out.append(inst)
         return out
 
@@ -3697,7 +3734,7 @@ class BattleEngine:
         st[side][:] = [
             inst for inst in insts
             if not (isinstance(inst, Mapping)
-                    and str(inst.get("status_id") or inst.get("id") or "") in _AIR_STATUS_IDS)
+                    and str(inst.get("status_id") or inst.get("id") or "") in self._air_status_ids)
         ]
 
     def _take_pending_air_events(self) -> List[Mapping[str, Any]]:

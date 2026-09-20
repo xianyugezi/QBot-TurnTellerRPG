@@ -196,6 +196,7 @@
    "charges": 0
   },
   "decay": "none",
+  "stance": "air",
   "effects": [],
   "desc": "空连之势：跃空后展开之势（落地后自然消散）"
  },
@@ -232,6 +233,7 @@
    "charges": 0
   },
   "decay": "none",
+  "stance": "air",
   "effects": [],
   "desc": "悬停之势：悬停后展开之势（落地后自然消散）"
  },
@@ -400,6 +402,7 @@
    "charges": 0
   },
   "decay": "none",
+  "stance": "air",
   "effects": [],
   "on_dodge_effects": [
    {
@@ -420,6 +423,7 @@
    "charges": 0
   },
   "decay": "none",
+  "stance": "air",
   "effects": [],
   "desc": "跃空之势：纵跃于空（跃空期间有效，落地后自然消散）"
  },
@@ -432,6 +436,7 @@
    "charges": 0
   },
   "decay": "none",
+  "stance": "air",
   "effects": [],
   "desc": "跃锤之势：举锤纵跃蓄势（跃空期间有效，落地后自然消散）"
  },
@@ -444,6 +449,7 @@
    "charges": 0
   },
   "decay": "none",
+  "stance": "air",
   "effects": [],
   "desc": "压测跃空之势：验证跃空后保持空中（跃空期间有效，落地后自然消散）"
  }

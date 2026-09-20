@@ -251,3 +251,101 @@ def test_instance_effect_refs_roundtrip_and_legacy_default() -> None:
     # dataclass 默认值：既有构造点不传 → 空元组（零影响）
     assert ItemInstance(item_id="x", name="x", count=1, quality="normal",
                         bound=False).effect_refs == ()
+
+
+# ===========================================================================
+# 6) 使用链路分派（G4′ · B-2）：附加效果/状态实例 + 无相性负向
+# ===========================================================================
+from types import SimpleNamespace  # noqa: E402
+
+from qbot_rpg.commands.use_commands import _use_consumable  # noqa: E402
+from qbot_rpg.core.templates import tpl_of  # noqa: E402
+from qbot_rpg.data.player import PlayerAttributes  # noqa: E402
+
+_E_HEAL_ADD = "eff_heal_add"
+_E_STATUS = "eff_status_debuff"
+_E_ALT = "eff_alt_status"
+_E_PASSIVE = "eff_passive_unknown"
+_BASE_HEAL = "eff_base_heal"
+
+_EFFECTS: Dict[str, Any] = {
+    _BASE_HEAL: {"id": _BASE_HEAL, "type": "heal", "power": 20},
+    _E_HEAL_ADD: {"id": _E_HEAL_ADD, "type": "heal", "power": 15},
+    _E_STATUS: {"id": _E_STATUS, "type": "status_apply", "duration": 3},
+    _E_ALT: {"id": _E_ALT, "type": "buff", "duration": 5},
+    _E_PASSIVE: {"id": _E_PASSIVE, "type": "buff", "duration": 9},
+}
+_POTION = {"id": "heal_potion", "name": "药", "type": "consumable", "usable": True,
+           "effects": [_BASE_HEAL]}
+
+
+def _use_ctx_refs() -> Dict[str, Any]:
+    player: Dict[str, Any] = {
+        "hp": 30, "name": "试", "persistent_state": {},
+        "attributes": PlayerAttributes(base={"hp": 1000000.0, "mp": 30.0}),
+    }
+    return {
+        "player": player,
+        "items": {"heal_potion": _POTION},
+        "effect_table": dict(_EFFECTS),
+        "inventory_engine": SimpleNamespace(
+            remove_item=lambda p, iid, count=1, uid="": {"ok": True}),
+    }
+
+
+def _use_refs(refs: Any, ctx: Dict[str, Any]) -> Dict[str, Any]:
+    inst = SimpleNamespace(item_id="heal_potion", name="药", uid="u1")
+    if refs is not None:
+        inst.effect_refs = refs
+    _use_consumable(ctx, ctx["player"], inst, _POTION)
+    return ctx
+
+
+def test_use_no_effect_refs_is_unchanged() -> None:
+    """B-V5 负向：实例无 `effect_refs`（字段缺失 / 空）→ 回血 = 定义 power、无状态实例。"""
+    for refs in (None, (), []):
+        ctx = _use_refs(refs, _use_ctx_refs())
+        assert ctx["player"]["hp"] == 50            # 30 + 20（基础定义段）
+        assert ctx["player"]["persistent_state"] == {}
+        assert "active_effects" not in ctx
+
+
+def test_use_extra_heal_effect_merges_into_heal_total() -> None:
+    """附加引用指向既有 heal 类型 → 并入既有分支（追加效果生效）。"""
+    ctx = _use_refs((_E_HEAL_ADD,), _use_ctx_refs())
+    assert ctx["player"]["hp"] == 65            # 30 + 20 + 15
+
+
+def test_use_different_refs_apply_different_status_instances() -> None:
+    """不同附加 → 不同状态实例（两组）；落 persistent_state（随档往返）+ ctx 同步。"""
+    a = _use_refs((_E_STATUS,), _use_ctx_refs())
+    b = _use_refs((_E_ALT,), _use_ctx_refs())
+    assert a["player"]["persistent_state"]["active_effects"] == {
+        _E_STATUS: {"effect": _E_STATUS, "turns": 3, "refreshed": False}}
+    assert b["player"]["persistent_state"]["active_effects"] == {
+        _E_ALT: {"effect": _E_ALT, "turns": 5, "refreshed": False}}
+    # 同拍 ctx 视图一致
+    assert a["active_effects"][_E_STATUS]["turns"] == 3
+    # 状态实例不额外改 HP（只有基础 heal）
+    assert a["player"]["hp"] == 50 and b["player"]["hp"] == 50
+
+
+def test_use_repeat_status_refreshes_turns() -> None:
+    """重复触发仅刷新时长（refreshed=True；同 `npc._action_buff` 口径）。"""
+    ctx = _use_ctx_refs()
+    _use_refs((_E_STATUS,), ctx)
+    _use_refs((_E_STATUS,), ctx)
+    e = ctx["player"]["persistent_state"]["active_effects"][_E_STATUS]
+    assert e["refreshed"] is True and e["turns"] == 3
+
+
+def test_use_base_effects_unknown_type_still_ignored() -> None:
+    """零变化：**基础定义段**未知类型（buff）照旧忽略 —— 不落状态桶。"""
+    potion = {"id": "passive_potion", "name": "符", "type": "consumable",
+              "usable": True, "effects": [_E_PASSIVE]}
+    ctx = _use_ctx_refs()
+    inst = SimpleNamespace(item_id="passive_potion", name="符", uid="u1")
+    out = _use_consumable(ctx, ctx["player"], inst, potion)
+    assert out == tpl_of(ctx, "use_cannot_use")
+    assert ctx["player"]["persistent_state"] == {}
+    assert "active_effects" not in ctx

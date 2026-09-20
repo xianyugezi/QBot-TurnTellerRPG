@@ -29,6 +29,7 @@ from typing import Any, Callable, List, Mapping, MutableMapping, Optional, Tuple
 
 from .basic_commands import _equip_engine
 from .router import CommandSpec
+from qbot_rpg.core.alchemy_affinity import effect_refs_of  # 批61 · 口径 B：实例附加效果引用
 from qbot_rpg.core.alchemy_affinity import axis_pct  # 批60 · 口径 A：相性 → 特效轴取值
 from qbot_rpg.core.effects import HEAL_DONE_AXIS  # 轴键常量（唯一源仍 data/gear_stats）
 from qbot_rpg.core.equipment import item_requirement_error
@@ -292,6 +293,39 @@ def _grant_skill(
     return True
 
 
+def _apply_active_effects(
+    ctx: MutableMapping[str, Any],
+    player: MutableMapping[str, Any],
+    grants: List[Tuple[str, Any]],
+) -> None:
+    """批61 · 口径 B：把附加效果引用落成**非战斗状态实例**（既有 `active_effects` 桶）。
+
+    落点 = `player["persistent_state"]["active_effects"]`（`_grant_skill` 同款 persistent_state
+    写入口径；随档往返）+ 同拍同步 `ctx["active_effects"]`（会话内视图一致）。条目形态照
+    `core/npc._action_buff`：`{effect, turns, refreshed}`；重复触发仅刷新时长（turns 可能
+    非 int/bool → None = 无时限）。**零新机制/零新 schema**：`active_effects` 是既有键
+    （`assembly/context._render_effects` 已渲染、`persistent_state` 自由 dict）。
+    """
+    ps = player.get("persistent_state")
+    if not isinstance(ps, MutableMapping):
+        ps = {}
+        player["persistent_state"] = ps
+    for container in (ps, ctx):
+        if not isinstance(container, MutableMapping):
+            continue
+        active = container.get("active_effects")
+        if not isinstance(active, MutableMapping):
+            active = {}
+            container["active_effects"] = active
+        for eid, turns in grants:
+            if not isinstance(eid, str) or not eid:
+                continue
+            prev = active.get(eid)
+            t = turns if isinstance(turns, int) and not isinstance(turns, bool) and turns >= 0 \
+                else None
+            active[eid] = {"effect": eid, "turns": t, "refreshed": prev is not None}
+
+
 def _use_consumable(
     ctx: MutableMapping[str, Any],
     player: MutableMapping[str, Any],
@@ -313,7 +347,14 @@ def _use_consumable(
     heal_total = 0
     currency_grants: List[Tuple[str, int, int]] = []
     skill_grants: List[Tuple[str, int]] = []
-    for eid in item_def.get("effects") or []:
+    # 批61 · 口径 B 附加型：实例 `effect_refs`（炼金结算按相性池抽中的追加效果引用）。
+    # 基础定义段（item_def.effects）**行为不变**；附加引用并入同一效果扫描：三类既有
+    # 消耗类型（heal/gain_currency/learn_skill）走同分支，其余落**既有** `active_effects`
+    # 状态桶（见 `_apply_active_effects`，同 `core/npc._action_buff` 口径）。
+    extra_refs = effect_refs_of(inst)
+    base_ids = [str(e) for e in (item_def.get("effects") or [])]
+    status_grants: List[Tuple[str, Any]] = []
+    for eid in base_ids + list(extra_refs):
         edef = _def_dict(effects_map.get(str(eid)))
         etype = str(edef.get("type") or "")
         if etype == _EFFECT_HEAL:
@@ -329,6 +370,9 @@ def _use_consumable(
             sgrant = _skill_grant_of(edef)
             if sgrant is not None:
                 skill_grants.append(sgrant)
+        elif str(eid) in extra_refs:
+            # 仅**实例附加**的引用落状态桶；基础定义段的未知类型照旧忽略（零行为变化）。
+            status_grants.append((str(eid), edef.get("duration")))
     if heal_total <= 0 and not currency_grants and not skill_grants:
         return tpl_of(ctx, "use_cannot_use")
     inv = _inventory_engine(ctx)
@@ -342,6 +386,9 @@ def _use_consumable(
         if reason == "bound":
             return tpl_of(ctx, "use_bound")
         return tpl_of(ctx, "use_no_item")
+    # 批61 · 口径 B：附加效果/状态在**扣物成功后**落状态实例（失败不落）。
+    if status_grants:
+        _apply_active_effects(ctx, player, status_grants)
     # ---- heal（批60 · 口径 A：实例相性放大，仅非战斗 /道具 路径；无相性 → 逐字段不变）----
     if heal_total > 0:
         # 相性值来自**实例**（`ItemInstance.affinities`，批42 已落档往返）；实例空 / 未配效果表

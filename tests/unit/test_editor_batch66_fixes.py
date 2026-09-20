@@ -377,3 +377,64 @@ def test_card3_frontend_three_read_chains_route_through_load_pack_view() -> None
     assert "function loadPackView(" in html
     assert "function clearPackView(" in html and "function packLoadFailed(" in html
     assert html.count("loadPackView()") >= 3
+
+
+# =====================================================================================
+# §4 · 卡点4（烦人）：关键字段 help 全部 ≤60 字（纯数据断言，价值最高）
+# =====================================================================================
+def _iter_field_meta_helps(fields: Mapping[str, Any],
+                           prefix: str = "") -> List[Any]:
+    """递归收集字段元数据里非空 help → [(路径, 文本)]（含 children 子字段）。"""
+    rows: List[Any] = []
+    for key, fm in (fields or {}).items():
+        text = str(getattr(fm, "help", "") or "")
+        if text:
+            rows.append((prefix + str(key), text))
+        children = getattr(fm, "children", None)
+        if isinstance(children, Mapping):
+            rows.extend(_iter_field_meta_helps(children, prefix + str(key) + "."))
+    return rows
+
+
+def test_card4_items_form_helps_all_within_60_chars() -> None:
+    """新建/编辑物品表单所用 items 模块：每条非空说明 ≤60 字（修前有 20 条超标）。"""
+    items = api.default_field_meta_table().module("items")
+    assert items is not None
+    helps = _iter_field_meta_helps(getattr(items, "fields", {}))
+    assert len(helps) >= 90, "items 说明覆盖数不应回落到修前（54 条）水平"
+    over = [(k, len(h)) for k, h in helps if len(h) > 60]
+    assert over == [], over
+
+
+def test_card4_items_form_helps_have_no_markdown_or_engine_key() -> None:
+    """面向用户的说明不得泄漏 Markdown `**` 或 `settings.*` 英文配置键。"""
+    items = api.default_field_meta_table().module("items")
+    helps = _iter_field_meta_helps(getattr(items, "fields", {}))
+    assert [k for k, h in helps if "**" in h] == []
+    assert [k for k, h in helps if "settings." in h] == []
+
+
+def test_card4_gear_and_deep_craft_helps_within_60() -> None:
+    """批66 同步收敛的 gear_stats 词条说明 + 深炼金指定字段说明同样 ≤60 字。"""
+    from qbot_rpg.content import deep_craft_settings as dcs
+    from qbot_rpg.data import gear_stats
+
+    gear = [(k, v) for k, v in gear_stats.GEAR_HELP_ZH.items()
+            if isinstance(v, str) and v]
+    assert gear and all(len(v) <= 60 for _, v in gear)
+    assert [k for k, v in gear if "settings." in v] == []
+
+    # 批66 逐条改短/去英文键的深炼金字段（只锁这批真正动过的键，不越界要求全量）。
+    dc_targets = [
+        (dcs.ITEMS_MATERIAL_CRAFT_FIELDS, "material_quality"),
+        (dcs.ITEMS_BLUEPRINT_FIELDS, "blueprint_grade"),
+        (dcs.ITEMS_BLUEPRINT_FIELDS, "blueprint_slot"),
+        (dcs.ITEMS_BLUEPRINT_FIELDS, "blueprint_recipe"),
+        (dcs.ITEMS_BLUEPRINT_FIELDS, "blueprint_material_slots"),
+    ]
+    for fields, key in dc_targets:
+        fm = fields.get(key)
+        assert fm is not None, key
+        text = str(getattr(fm, "help", "") or "")
+        assert 0 < len(text) <= 60, (key, len(text))
+        assert "settings." not in text, key

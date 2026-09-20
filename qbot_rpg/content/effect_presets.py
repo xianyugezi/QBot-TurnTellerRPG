@@ -129,7 +129,8 @@ FRAMEWORK_EFFECT_PRESETS: Tuple[Mapping[str, Any], ...] = (
         conflict_group="damage_dealt", id_prefix="dmg",
         help_="造成伤害提升：终伤乘区 ×(1+值/100)（>0 增伤）。",
         note="设计 §1.1 `weapon_dmg_phys/elem/skill/dot/weakpoint` 的**无条件**形态；"
-             "定向 scope（物理/元素/技能/DoT/弱点）走效果条目条件，登记待接线。",
+             "定向 scope（物理/元素/技能/DoT/弱点）走效果条目条件。批70 已接线：本轴消费点 ="
+             "`battle._damage_dealt_mult`（总伤末/双通道末），旧键 `weakness_dmg_pct` 归并入本轴。",
     ),
     _preset(
         "weapon_crit_up", label="会心锋刃", slot="weapon", family="crit_damage",

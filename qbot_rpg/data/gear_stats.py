@@ -270,10 +270,12 @@ EFFECT_AXIS_SPECS: Tuple[Mapping[str, Any], ...] = (
                     "help": "调整「我造成的伤害」（终伤乘区）：<1 削伤 / >1 增伤。"
                             "定向增伤（弱点/技能限定）用效果条目的条件表达，不另造键。"},
         "legacy_alias": (("weakness_dmg_pct", 1.0),),
-        "consumer": "damage.total_damage",
-        "consumer_note": "唯一收口 = 总伤末（双通道末）；同批收编弱点旧键 weakness_dmg_pct"
-                         "（= 本轴的条件实例，旧链路保留）；**不替代** atk_pct（属性乘区、"
-                         "受 S6/S7 封顶）。",
+        "consumer": "battle.damage_dealt_mult",
+        "consumer_note": "批70 已接线：唯一收口 = `battle._damage_dealt_mult`（总伤末 / 双通道末）"
+                         "——落于 `total_damage` 之后、承伤乘区之前，对攻击方 raw 施加一次；"
+                         "同批收编弱点旧键 weakness_dmg_pct（= 本轴的条件实例，经战斗桥 pct 层"
+                         "归并入本轴、只算一次，旧链路保留）；**不替代** atk_pct（属性乘区、"
+                         "受 S6/S7 封顶）。未配置（轴 0）→ ×1.0 不触碰 raw（逐字段零变化）。",
     },
     {
         "axis": "cooldown_pct", "doc_id": "X27", "priority": "P0",
@@ -331,8 +333,9 @@ EFFECT_AXIS_SPECS: Tuple[Mapping[str, Any], ...] = (
                     "help": "调整「我施加的」状态时长：<1 缩短 / >1 延长；只影响新施加的实例。"},
         "legacy_alias": (),
         "consumer": "effects.apply_status_duration",
-        "consumer_note": "唯一收口 = apply_status 建实例处（按 source 侧聚合）；"
-                         "Duration{turns,charges} 字段形状不变。",
+        "consumer_note": "批70 已接线：唯一收口 = `effects.apply_status` 建实例处（source 侧取值），"
+                         "对新施加实例的 `Duration{turns,charges}` 双维各缩放一次；"
+                         "字段形状不变、不追改存量实例。未配置（轴 0）→ 原值（逐字段零变化）。",
     },
     {
         "axis": "status_duration_taken_pct", "doc_id": "X20", "priority": "P1",
@@ -341,8 +344,9 @@ EFFECT_AXIS_SPECS: Tuple[Mapping[str, Any], ...] = (
                     "help": "调整「我承受的」状态时长：<1 抗控 / >1 更久；与状态抵抗互补。"},
         "legacy_alias": (),
         "consumer": "effects.apply_status_duration",
-        "consumer_note": "与「状态时长修正」共用同一收口 apply_status 建实例处，按 "
-                         "**target 侧**聚合（R-4：同一轴线、两个键实例）。",
+        "consumer_note": "批70 已接线：与「状态时长修正」共用同一收口 `apply_status` 建实例处，"
+                         "按 **target 侧**取值（R-4：同一轴线、两个键实例），两侧系数相乘一次。"
+                         "未配置（轴 0）→ 原值（逐字段零变化）。",
     },
     {
         "axis": "status_resist_pct", "doc_id": "X22", "priority": "P1",

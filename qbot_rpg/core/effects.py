@@ -117,6 +117,10 @@ STATUS_CHANCE_AXIS: str = "status_chance_pct"    # 施加概率（source 侧）
 STATUS_RESIST_AXIS: str = "status_resist_pct"    # 状态抵抗（target 侧；扩展 resist_table）
 STACK_GAIN_AXIS: str = "stack_gain_pct"          # 层数获取（source 侧）
 STACK_CAP_AXIS: str = "stack_cap_delta"          # 层数上限加算（target 侧）
+# 批70 · X20 状态时长（dealt / received 两个 scope 实例；同一轴线，键名唯一源仍是
+# `data.gear_stats.EFFECT_AXIS_SPECS`）。只影响新施加实例的 turns/charges，不追改存量。
+STATUS_DURATION_AXIS: str = "status_duration_pct"              # 我施加的时长（source 侧）
+STATUS_DURATION_TAKEN_AXIS: str = "status_duration_taken_pct"  # 我承受的时长（target 侧）
 
 # 方位 v0.6 §三.1：方位格 side 四向（reposition 原子枚举，core 层常量；content 校验
 # 同源内联镜像不 cross-import）
@@ -528,6 +532,10 @@ class EffectRuntime:
         _resist_pct = _axis_pct(_target_c, STATUS_RESIST_AXIS, _axes_cfg)
         _stack_gain = _axis_pct(_source_c, STACK_GAIN_AXIS, _axes_cfg)
         _stack_cap_delta = _axis_pct(_target_c, STACK_CAP_AXIS, _axes_cfg)
+        # 批70 · X20 状态时长（source 侧「我施加的」× target 侧「我承受的」两个 scope 实例，
+        # 同一轴线 R-4）：两者按 package 声明区间钳制后相乘；皆 0 → ×1.0（逐字段零变化）。
+        _dur_pct = _axis_pct(_source_c, STATUS_DURATION_AXIS, _axes_cfg)
+        _dur_taken_pct = _axis_pct(_target_c, STATUS_DURATION_TAKEN_AXIS, _axes_cfg)
         max_stack = int(raw.get("max_stack") or self.config["stack_default_max"])
         if _stack_cap_delta:
             # X24 加算轴：上限 +Δ（整数阈值语义；下钳 ≥1 → 状态仍可存在）
@@ -542,6 +550,16 @@ class EffectRuntime:
         charges = int(dur.get("charges", 0) if isinstance(dur, dict) else 0)
         if turns == 0 and charges == 0:
             turns, charges = 1, 0  # 防御：不存在双零持续
+        # 批70 · X20 状态时长接线：只改**新施加实例**的持续双维（turns/charges，形状不变）。
+        # 口径：mult = (1+dealt/100) × (1+received/100)；两轴皆 0 → 1.0 → 原值（零变化）。
+        # · turns < 0（-1 = 永久维）不缩放——「永久」乘任何系数仍是永久；
+        # · 正向维缩放下钳 1（不产生 0 时长状态），与 `_new_instance` 的防御口径一致。
+        _dur_mult = (1.0 + _dur_pct / 100.0) * (1.0 + _dur_taken_pct / 100.0)
+        if _dur_mult != 1.0:
+            if turns > 0:
+                turns = max(1, int(round(turns * _dur_mult)))
+            if charges > 0:
+                charges = max(1, int(round(charges * _dur_mult)))
 
         power = self._boost_of(sdef)
         first_action_value = 0

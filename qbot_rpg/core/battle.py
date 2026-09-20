@@ -4172,6 +4172,26 @@ class BattleEngine:
                             mult *= float(dm)
         return mult
 
+    def _damage_dealt_mult(self, attacker: str) -> Tuple[float, Dict[str, Any]]:
+        """**造成伤害乘区唯一求值处**（批70 · 接线 `damage_dealt_pct` X01）。
+
+        原状（批50 登记 → 批70）：本轴已定义（`data/gear_stats.py:267`）、已进战斗桥
+        （`EFFECT_TO_COMBATANT`）、框架预设 `weapon_dmg`（破甲锋刃）也把它发给作者，
+        但战斗侧**零读取** → 作者写「弱点增伤/定向增伤」伤害不变（对作者是欺骗）。
+        本批补消费点，落点 = `total_damage`（**总伤末 / 双通道末**，与登记口径一致）：
+        在防御/格挡/乱数之后、承伤乘区之前对 `raw` 施加一次。
+
+        取值 = `combatant[damage_dealt_pct]`（由 `combatant_updates` 桥接进战斗体；
+        旧键 `weakness_dmg_pct` 已在 `combatant_updates` 的 pct 层归并进本轴 → 只算一次、
+        不在此重复）。读时按 `settings.effect_axes` 声明区间钳制（`effect_axis_value`）。
+
+        返回 `(mult, detail)`；缺省（无轴）→ `1.0` + 全零 detail（逐字段零变化）。
+        """
+        ac = self._combat(attacker)
+        cfg = self._config.get(EFFECT_AXES_KEY)
+        axis = float(effect_axis_value(ac, "damage_dealt_pct", cfg))
+        return 1.0 + axis / 100.0, {"damage_dealt_pct": round(axis, 2)}
+
     def _damage_taken_mult(
         self, target: str, *, include_status: bool = False,
     ) -> Tuple[float, Dict[str, Any]]:
@@ -4797,6 +4817,15 @@ class BattleEngine:
             _part_state = self._part_state_of(part_id) if part_id else None
             broken_hit = bool(_part_state and _part_state.get("broken"))
             base_raw = raw
+            # 批70 · X01 造成伤害乘区（唯一收口见 `_damage_dealt_mult`）：落点 = 总伤末
+            # （双通道末、防御/格挡/乱数后），作用于**攻击方**轴的 raw；旧键
+            # `weakness_dmg_pct` 已由战斗桥 pct 层归并进本轴（只算一次、不重复）。
+            # 未配置（轴 0）→ mult=1.0 → 不触碰 raw（逐字段零变化）；破位增伤 basis
+            # 用的是 `base_raw`（不含本乘区，与 §三.4 口径一致）。
+            _dealt_mult, _dealt_detail = self._damage_dealt_mult(attacker)
+            if _dealt_mult != 1.0:
+                raw = max(0, int(round(raw * _dealt_mult)))
+                rating["damage_dealt_pct"] = _dealt_detail["damage_dealt_pct"]
             # 批52 · 承伤双向轴（收敛口径 D3(b)）：主乘区 damage_taken_pct + 免伤旧键
             # immune_dmg + 条件实例 status damage_mult **全部在唯一求值处**
             # `_damage_taken_mult` 内合并求值，作用于防御/格挡/乱数之后的 raw。

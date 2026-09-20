@@ -14,6 +14,23 @@
 
 ### Added
 
+- **批61（2026-09-22）**：**深炼金口径 B「相性 → 追加效果 / 状态」接入**。依据
+  `/root/deliverables/深炼金接入_施工清单.md`（预检 · G2/G5 已消解）+
+  `深炼金相性_玩法口径_可开工版.md` §四/§六/§七/§八；决策记录 §二十六；实现说明 §二十三。
+  **① 求值**：新增 `core/alchemy_affinity.plan_effect_refs`——**池查询唯一入口**
+  `core.affinity.resolve_available_entries` → 按既有载荷键 `effect_ref` 分流 → **复用**
+  `core.deep_craft._pick_weighted` 加权不放回抽取；不重算池、**不新增 schema / 配置键**。
+  **② 写实例**：`ItemInstance` 追加 `effect_refs`（默认空元组，零迁移）；`alchemy_settle._produce`
+  抽中才传 `add_item(effect_refs=…)`（空值不传 kwargs、不消耗 `ctx["rng"]`）；
+  `assembly/context` + `runner` + `repository` 逐字段透传。**③ 使用链路**：
+  `/道具` 把实例 `effect_refs` 并入既有效果扫描——heal/gain_currency/learn_skill 走同分支
+  （追加效果），其余落**既有** `active_effects` 状态桶（`{effect,turns,refreshed}`，同
+  `npc._action_buff`）。**端到端**（`content/zz_craft_demo` 只读临时副本 + 池追加 effect_ref）：
+  同配方仅材料相性不同 → 产物 `effect_refs` 分别命中 moon/frost 两条附加 → `/道具` 后落两条
+  状态实例（turns 3 / 5）。**缺省零变化**：池无 `effect_ref` → `picked=[]`、不消耗 rng、
+  逐字段与基线 `6f858a1` 一致。**未做/待裁决**：`effect_ref` 引用存在性校验、抽几条/谁抽
+  （规格 Q4，不写死数值）、非战斗状态衰减 ticker、战斗内口径（同批60）。
+  页脚批次串 →「批61 · 深炼金口径B」。
 - **批60（2026-09-22）**：**深炼金「相性 → 药剂效果」接入（第 1 步：G1 材料相性进快照 +
   口径 A 强度型）**。依据 `/root/deliverables/深炼金接入_施工清单.md`（预检）+
   `深炼金相性_玩法口径_可开工版.md` §三/§六/§七；决策记录 §二十五；实现说明 §二十二。

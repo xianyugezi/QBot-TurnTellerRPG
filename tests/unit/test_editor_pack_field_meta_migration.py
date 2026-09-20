@@ -203,7 +203,7 @@ SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
 #     `.help` / `.help_card.help` 共 6 处改值；
 #   · R10–R22 formula / R23 report_effective_share / R24–R25 settings.env_event|log_card /
 #     R26–R33 ai|hidden 视图补「【未实现】」help——不在本对拍快照面内（diff=0）；
-#   · R9 copy_slot：内容包 field_meta.json `field_help.settings.alchemy.farming` 转嵌套并补说明（soft）；
+#   · R9 copy_slot：内容包 field_meta.json `field_help...alchemy.farming` 转嵌套并补说明（soft）；
 #   · 无 label/group/module_labels/module_tree 变动；无字段/键删除（forge.decompose_rate 删除
 #     不在本快照面内）。
 #   对拍实证：删除项 = 0；重定后基线树与当前树逐字段 diff=0。

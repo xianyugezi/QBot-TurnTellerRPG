@@ -132,7 +132,15 @@ SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
 #   `cooldown_reduction_pct` help 由「【占位】…不接引擎」改为「兼容别名已生效」；
 #   删除项 = 0、无新增；重定后基线树与当前树逐字段 diff=0。
 #   与 scripts/compare_field_meta_migration.py 的 DEFAULT_BASELINE_REF 同基线。
-BASELINE_REF = "b9df5c7"
+# 批55（2026-09-20 特效强度预算）重定：b9df5c7 → f1e942e（本批字段/文档提交）。
+#   原因 = 本批**有意**变更（非迁移回归），全部为**新增**（无删除/无既有严格键改值）：
+#   · settings 新增 `effect_budget` 段（enabled/aggregate/cap_equiv_pct/tier_mult/
+#     gate_mode/unknown_axis/report_effective_share/axis_weights）→ settings 条目 +1
+#     （两包 count/unconfigured 各 +1，见 test_editor_batch131_segments 49→50）。
+#   对拍实证：删除项 = 0；无既有 label/help/group/module_labels/module_tree 改值；
+#   重定后基线树与当前树逐字段 diff=0。
+#   与 scripts/compare_field_meta_migration.py 的 DEFAULT_BASELINE_REF 同基线。
+BASELINE_REF = "f1e942e"
 CONTENT = REPO / "content"
 
 

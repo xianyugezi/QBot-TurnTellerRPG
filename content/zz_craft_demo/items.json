@@ -1,0 +1,270 @@
+[
+  { "id": "pulse_candy", "name": "脉糖", "type": "material", "material_level": 2, "material_quality": "白", "craft_cost": 15, "material_tags": ["herb"], "affinities": { "ember": 6 }, "desc": "甜腥脉糖，火气微温" },
+  { "id": "mossvein_herb", "name": "苔脉草", "type": "material", "material_level": 3, "material_quality": "绿", "craft_cost": 25, "material_tags": ["herb"], "affinities": { "lunar": 8 }, "desc": "夜采苔草，映月生辉" },
+  { "id": "vein_shard", "name": "脉晶碎片", "type": "material", "material_level": 4, "material_quality": "白", "craft_cost": 50, "material_tags": ["ore"], "affinities": { "frost": 6 }, "desc": "蚀脉结晶，触手生寒" },
+  { "id": "ridge_ore", "name": "脊脉矿", "type": "material", "material_level": 6, "material_quality": "绿", "craft_cost": 40, "material_tags": ["ore"], "affinities": { "ember": 10 }, "desc": "脊脉矿石，余烬未冷" },
+  { "id": "bone_ash", "name": "骸骨灰", "type": "material", "material_level": 5, "material_quality": "绿", "craft_cost": 30, "material_tags": ["bone"], "affinities": { "verdant": 7 }, "desc": "焚骸成灰，草木先萌" },
+  { "id": "wind_ridge_shell", "name": "风脊晶壳", "type": "material", "material_level": 8, "material_quality": "蓝", "craft_cost": 90, "material_tags": ["ore", "shell"], "affinities": { "frost": 12 }, "desc": "风脊晶壳，霜纹密布" },
+  { "id": "frost_marrow", "name": "霜髓", "type": "material", "material_level": 11, "material_quality": "绿", "craft_cost": 150, "material_tags": ["ore"], "affinities": { "frost": 11 }, "desc": "髓中凝霜，久握裂指" },
+  { "id": "lunar_eclipse_stone", "name": "月蚀石", "type": "material", "material_level": 12, "material_quality": "紫", "craft_cost": 200, "material_tags": ["ore"], "affinities": { "lunar": 10, "frost": 2 }, "desc": "月蚀之下，霜化月华" },
+  { "id": "ember_slag", "name": "烬渣", "type": "material", "material_level": 13, "material_quality": "绿", "craft_cost": 170, "material_tags": ["ore"], "affinities": { "ember": 12 }, "desc": "炉底余渣，触之烫手" },
+  { "id": "crystal_mane", "name": "晶鬃", "type": "material", "material_level": 14, "material_quality": "蓝", "craft_cost": 260, "material_tags": ["pelt"], "affinities": { "lunar": 14 }, "desc": "晶鬃映月，微光流转" },
+  { "id": "mire_root", "name": "沼根", "type": "material", "material_level": 15, "material_quality": "蓝", "craft_cost": 240, "material_tags": ["herb"], "affinities": { "verdant": 13 }, "desc": "淤泥盘根，青气不散" },
+  { "id": "nightsong_wing", "name": "夜嚎蝠翼", "type": "material", "material_level": 16, "material_quality": "紫", "craft_cost": 420, "material_tags": ["pelt"], "affinities": { "lunar": 18 }, "desc": "夜嚎蝠翼，月影缠身" },
+  { "id": "eroded_plate", "name": "蚀甲片", "type": "material", "material_level": 18, "material_quality": "紫", "craft_cost": 280, "material_tags": ["ore"], "affinities": { "ember": 16 }, "desc": "蚀甲残片，火痕犹存" },
+  { "id": "glacier_core", "name": "冰川之心", "type": "material", "material_level": 20, "material_quality": "紫", "craft_cost": 380, "material_tags": ["ore"], "affinities": { "frost": 18 }, "desc": "万载寒心，呼吸成霜" },
+  { "id": "moonwell_dew", "name": "月井露", "type": "material", "material_level": 19, "material_quality": "蓝", "craft_cost": 330, "material_tags": ["herb"], "affinities": { "lunar": 16 }, "desc": "月井一滴，夜深见光" },
+  { "id": "verdant_amber", "name": "翠生琥珀", "type": "material", "material_level": 22, "material_quality": "橙", "craft_cost": 520, "material_tags": ["crystal"], "affinities": { "verdant": 20 }, "desc": "琥珀封春，翠意不腐" },
+  { "id": "cinder_heart", "name": "烬心石", "type": "material", "material_level": 24, "material_quality": "橙", "craft_cost": 640, "material_tags": ["ore"], "affinities": { "ember": 22 }, "desc": "烬心未死，剖之见火" },
+  { "id": "frostbound_crown", "name": "霜缚冠片", "type": "material", "material_level": 26, "material_quality": "红", "craft_cost": 980, "material_tags": ["ore"], "affinities": { "frost": 26 }, "desc": "霜缚成冠，王骨不化" },
+  { "id": "abyss_lord_core", "name": "黯穴之核", "type": "material", "material_level": 28, "material_quality": "橙", "craft_cost": 1100, "material_tags": ["ore"], "affinities": { "ember": 22 }, "desc": "黯穴之核，烬心灼魂" },
+  { "id": "everfrost_shell", "name": "古兽岩壳", "type": "material", "material_level": 28, "material_quality": "橙", "craft_cost": 900, "material_tags": ["ore"], "affinities": { "frost": 20 }, "desc": "古兽岩壳，永冻不化" },
+  { "id": "night_king_crown", "name": "夜君冠晶", "type": "material", "material_level": 30, "material_quality": "红", "craft_cost": 1500, "material_tags": ["crystal"], "affinities": { "lunar": 24 }, "desc": "夜君冠晶，月华凝顶" },
+  { "id": "tideheart_pearl", "name": "潮心珍珠", "type": "material", "material_level": 31, "material_quality": "红", "craft_cost": 1400, "material_tags": ["crystal"], "affinities": { "verdant": 24 }, "desc": "潮心珍珠，生息不竭" },
+  { "id": "starfall_ingot", "name": "陨星锭", "type": "material", "material_level": 33, "material_quality": "橙", "craft_cost": 1800, "material_tags": ["ore"], "affinities": { "ember": 26 }, "desc": "陨星落锭，余温千年" },
+  { "id": "eclipse_sovereign", "name": "蚀日之冕", "type": "material", "material_level": 34, "material_quality": "红", "craft_cost": 2200, "material_tags": ["ore"], "affinities": { "frost": 24, "lunar": 6 }, "desc": "蚀日之冕，霜月同冕" },
+
+  {
+    "id": "bp_apprentice_vein_blade",
+    "name": "见习脉铁剑图纸",
+    "type": "blueprint",
+    "blueprint_grade": "copper",
+    "blueprint_output": "maifeng_blade_a_mid",
+    "blueprint_slot": "weapon",
+    "handedness": "one_hand",
+    "blueprint_recipe": "rcp_demo_apprentice_vein_blade",
+    "blueprint_level_band": { "min": 2, "max": 8 },
+    "blueprint_cost_cap": 900,
+    "blueprint_material_slots": [
+      { "role": "main", "tag": "ore" },
+      { "role": "free", "tag": "herb" },
+      { "role": "free", "tag": "bone" }
+    ],
+    "blueprint_fixed_stats": [
+      { "stat": "atk", "value_rule": "bp_fixed_atk_copper", "value": 12 },
+      { "stat": "damage_dealt_pct", "value": 10 },
+      { "stat": "crit_damage_pct", "value": 10 }
+    ],
+    "blueprint_random_stat_count": { "min": 0, "max": 2 },
+    "blueprint_fixed_set_affix": "set_vein_apprentice",
+    "blueprint_random_set_affix_pool": "pool_set_common",
+    "blueprint_random_set_affix_count": { "min": 0, "max": 2 },
+    "blueprint_passive": "passive_vein_edge",
+    "affinities": { "frost": 8 },
+    "desc": "铜档入门剑图：主槽矿石、自由槽草药/骸骨，图纸带霜晶相性。"
+  },
+  {
+    "id": "bp_mossvein_armor_plate",
+    "name": "苔脉护身铠图纸",
+    "type": "blueprint",
+    "blueprint_grade": "copper",
+    "blueprint_output": "mossvein_armor_a_mid",
+    "blueprint_slot": "body",
+    "blueprint_recipe": "rcp_demo_mossvein_armor_plate",
+    "blueprint_level_band": { "min": 2, "max": 8 },
+    "blueprint_cost_cap": 900,
+    "blueprint_material_slots": [
+      { "role": "main", "tag": "herb" },
+      { "role": "free", "tag": "ore" },
+      { "role": "free", "tag": "bone" }
+    ],
+    "blueprint_fixed_stats": [
+      { "stat": "dfn", "value_rule": "bp_fixed_dfn_copper", "value": 10 },
+      { "stat": "hp", "value_rule": "bp_fixed_hp_copper", "value": 30 },
+      { "stat": "healing_received_pct", "value": 15 }
+    ],
+    "blueprint_random_stat_count": { "min": 0, "max": 2 },
+    "blueprint_fixed_set_affix": "set_mossvein",
+    "blueprint_random_set_affix_pool": "pool_set_common",
+    "blueprint_random_set_affix_count": { "min": 0, "max": 2 },
+    "blueprint_passive": "passive_moss_skin",
+    "affinities": { "lunar": 10 },
+    "desc": "铜档护身铠图：主槽草药；固定受疗提升（批54「强疗」预设）。"
+  },
+  {
+    "id": "bp_hunter_vein_edge",
+    "name": "猎脉锋刃图纸",
+    "type": "blueprint",
+    "blueprint_grade": "silver",
+    "blueprint_output": "hunter_blade_a_mid",
+    "blueprint_slot": "weapon",
+    "handedness": "one_hand",
+    "blueprint_recipe": "rcp_demo_hunter_vein_edge",
+    "blueprint_level_band": { "min": 9, "max": 16 },
+    "blueprint_cost_cap": 2100,
+    "blueprint_material_slots": [
+      { "role": "main", "tag": "ore" },
+      { "role": "free", "tag": "pelt" }
+    ],
+    "blueprint_fixed_stats": [
+      { "stat": "atk", "value_rule": "bp_fixed_atk_silver", "value": 20 },
+      { "stat": "agi", "value_rule": "bp_fixed_agi_silver", "value": 6 },
+      { "stat": "crit_damage_pct", "value": -10 },
+      { "stat": "absorb_hp", "value": 3 }
+    ],
+    "blueprint_random_stat_count": { "min": 0, "max": 2 },
+    "blueprint_fixed_set_affix": "set_vein_hunter",
+    "blueprint_random_set_affix_pool": "pool_set_hunter",
+    "blueprint_random_set_affix_count": { "min": 0, "max": 2 },
+    "blueprint_passive": "passive_hunt_mark",
+    "affinities": { "lunar": 20 },
+    "desc": "银档猎刃图：主槽矿石、自由槽兽皮；与铜剑构成「会心正/负」两方向对。"
+  },
+  {
+    "id": "bp_eclipse_amulet",
+    "name": "月蚀护符图纸",
+    "type": "blueprint",
+    "blueprint_grade": "silver",
+    "blueprint_output": "eclipse_amulet_a_mid",
+    "blueprint_slot": "accessory",
+    "blueprint_recipe": "rcp_demo_eclipse_amulet",
+    "blueprint_level_band": { "min": 9, "max": 16 },
+    "blueprint_cost_cap": 2100,
+    "blueprint_material_slots": [
+      { "role": "main", "tag": "ore" },
+      { "role": "free", "tag": "crystal" }
+    ],
+    "blueprint_fixed_stats": [
+      { "stat": "foc", "value_rule": "bp_fixed_foc_silver", "value": 8 },
+      { "stat": "resource_cost_pct", "value": -10 },
+      { "stat": "action_bar_shift", "value": 3 }
+    ],
+    "blueprint_random_stat_count": { "min": 1, "max": 2 },
+    "blueprint_fixed_set_affix": "set_eclipse",
+    "blueprint_random_set_affix_pool": "pool_set_eclipse",
+    "blueprint_random_set_affix_count": { "min": 0, "max": 2 },
+    "blueprint_passive": "passive_moon_veil",
+    "affinities": { "lunar": 15, "frost": 5 },
+    "desc": "银档护符图：双相性图纸（月华+霜晶），可命中联动池。"
+  },
+  {
+    "id": "bp_glacier_warplate",
+    "name": "冰川战铠图纸",
+    "type": "blueprint",
+    "blueprint_grade": "gold",
+    "blueprint_output": "glacier_warplate_a_mid",
+    "blueprint_slot": "body",
+    "blueprint_recipe": "rcp_demo_glacier_warplate",
+    "blueprint_level_band": { "min": 17, "max": 26 },
+    "blueprint_cost_cap": 4200,
+    "blueprint_material_slots": [
+      { "role": "main", "tag": "ore" },
+      { "role": "free", "tag": "herb" }
+    ],
+    "blueprint_fixed_stats": [
+      { "stat": "dfn", "value_rule": "bp_fixed_dfn_gold", "value": 18 },
+      { "stat": "hp", "value_rule": "bp_fixed_hp_gold", "value": 60 },
+      { "stat": "con", "value_rule": "bp_fixed_con_gold", "value": 8 },
+      { "stat": "healing_received_pct", "value": -15 },
+      { "stat": "status_resist_pct", "value": 20 }
+    ],
+    "blueprint_random_stat_count": { "min": 0, "max": 2 },
+    "blueprint_fixed_set_affix": "set_glacier",
+    "blueprint_random_set_affix_pool": "pool_set_glacier",
+    "blueprint_random_set_affix_count": { "min": 0, "max": 2 },
+    "blueprint_passive": "passive_glacier_bulwark",
+    "affinities": { "frost": 30 },
+    "desc": "金档战铠图：固定「重伤」（受疗下降）与「定神」（状态抵抗）。"
+  },
+  {
+    "id": "bp_sovereign_eclipse_crown",
+    "name": "蚀日君冕图纸",
+    "type": "blueprint",
+    "blueprint_grade": "rainbow",
+    "blueprint_output": "sovereign_crown_a_mid",
+    "blueprint_slot": "head",
+    "blueprint_recipe": "rcp_demo_sovereign_eclipse_crown",
+    "blueprint_level_band": { "min": 27, "max": 35 },
+    "blueprint_cost_cap": 8600,
+    "blueprint_material_slots": [
+      { "role": "main", "tag": "ore" },
+      { "role": "free", "tag": "crystal" }
+    ],
+    "blueprint_fixed_stats": [
+      { "stat": "foc", "value_rule": "bp_fixed_foc_rainbow", "value": 14 },
+      { "stat": "hp", "value_rule": "bp_fixed_hp_rainbow", "value": 70 },
+      { "stat": "con", "value_rule": "bp_fixed_con_rainbow", "value": 10 },
+      { "stat": "status_chance_pct", "value": 15 },
+      { "stat": "stack_gain_pct", "value": 25 }
+    ],
+    "blueprint_random_stat_count": { "min": 0, "max": 2 },
+    "blueprint_fixed_set_affix": "set_eclipse_sovereign",
+    "blueprint_random_set_affix_pool": "pool_set_sovereign",
+    "blueprint_random_set_affix_count": { "min": 0, "max": 2 },
+    "blueprint_passive": "passive_moon_sovereign",
+    "affinities": { "lunar": 40, "frost": 10 },
+    "desc": "彩档君冕图：品质 10 需靠投入暴击（彩档 5%）冲破常规经验上限。"
+  },
+
+  {
+    "id": "maifeng_blade_a_mid",
+    "name": "脉锋剑",
+    "type": "weapon",
+    "slot": "weapon",
+    "price": 300,
+    "atk": 12,
+    "damage_dealt_pct": 10,
+    "crit_damage_pct": 10,
+    "desc": "示例装备（铜档武器）：固定「破甲锋刃」+「会心锋刃」（批54 预设 normal 档）。"
+  },
+  {
+    "id": "mossvein_armor_a_mid",
+    "name": "苔脉护身铠",
+    "type": "armor_body",
+    "slot": "body",
+    "price": 300,
+    "dfn": 10,
+    "hp": 30,
+    "healing_received_pct": 15,
+    "desc": "示例装备（铜档防具）：固定「强疗」（受疗提升）；与冰川战铠「重伤」成对。"
+  },
+  {
+    "id": "hunter_blade_a_mid",
+    "name": "猎脉锋刃",
+    "type": "weapon",
+    "slot": "weapon",
+    "price": 900,
+    "atk": 20,
+    "agi": 6,
+    "crit_damage_pct": -10,
+    "absorb_hp": 3,
+    "desc": "示例装备（银档武器）：固定「钝锋」（会心负向）+「汲血」；与铜剑会心正向成对。"
+  },
+  {
+    "id": "eclipse_amulet_a_mid",
+    "name": "月蚀护符",
+    "type": "accessory",
+    "slot": "accessory",
+    "price": 900,
+    "foc": 8,
+    "resource_cost_pct": -10,
+    "action_bar_shift": 3,
+    "desc": "示例装备（银档饰品）：固定「节流」+「先手符」。"
+  },
+  {
+    "id": "glacier_warplate_a_mid",
+    "name": "冰川战铠",
+    "type": "armor_body",
+    "slot": "body",
+    "price": 1800,
+    "dfn": 18,
+    "hp": 60,
+    "con": 8,
+    "healing_received_pct": -15,
+    "status_resist_pct": 20,
+    "desc": "示例装备（金档防具）：固定「重伤」+「定神」。"
+  },
+  {
+    "id": "sovereign_crown_a_mid",
+    "name": "蚀日君冕",
+    "type": "armor_head",
+    "slot": "head",
+    "price": 3600,
+    "foc": 14,
+    "hp": 70,
+    "con": 10,
+    "status_chance_pct": 15,
+    "stack_gain_pct": 25,
+    "desc": "示例装备（彩档头部）：固定「惑心」+「涌流」。"
+  }
+]

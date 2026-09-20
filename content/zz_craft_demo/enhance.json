@@ -1,0 +1,25 @@
+{
+  "cost": {
+    "stone_tiers": [
+      { "tier": "low", "item": "vein_shard", "levels": [1, 2, 3] },
+      { "tier": "mid", "item": "ridge_ore", "levels": [4, 5, 6] },
+      { "tier": "high", "item": "frost_marrow", "levels": [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18] }
+    ]
+  },
+  "temper": {
+    "enabled": true,
+    "cap_per_level": 6,
+    "total_cap_by_level": {},
+    "per_stat_cap_ratio": 0.5,
+    "per_stat_cap": {},
+    "allowed_stats": [],
+    "value_type": "flat",
+    "value_per_point": 1.0,
+    "cost_per_point": { "essence": 1593, "currency": 0 },
+    "cost_growth": 0.0,
+    "stat_weight": {},
+    "points_per_action": 1,
+    "default_level": 0,
+    "reset_allowed": true
+  }
+}

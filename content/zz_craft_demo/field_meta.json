@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "module_labels": {
+    "settings": "基础设置（相性 / 打造参数 / 淬炼）",
+    "effects": "被动效果",
+    "items": "材料与图纸",
+    "equipment": "示例装备",
+    "recipe": "基础合成配方",
+    "traits": "装备被动",
+    "forge": "锻造节点（分解取材）",
+    "enhance": "强化与淬炼"
+  },
+  "module_tree": [
+    {
+      "module": "items",
+      "children": [
+        "equipment",
+        "recipe"
+      ]
+    }
+  ],
+  "field_labels": {
+    "items": {
+      "id": "编号",
+      "name": "名称",
+      "type": "种类",
+      "desc": "风味说明",
+      "material_level": "材料等级",
+      "material_quality": "材料品质",
+      "craft_cost": "打造投入成本",
+      "material_tags": "材料标签",
+      "affinities": "相性值",
+      "blueprint_grade": "图纸档位",
+      "blueprint_output": "产出装备",
+      "blueprint_recipe": "基础合成配方",
+      "blueprint_level_band": "等级带",
+      "blueprint_material_slots": "材料槽",
+      "blueprint_fixed_stats": "固定属性",
+      "blueprint_random_stat_count": "随机属性条数",
+      "blueprint_fixed_set_affix": "固定套装词条",
+      "blueprint_random_set_affix_count": "随机套装词条条数",
+      "blueprint_random_set_affix_pool": "随机套装词条池",
+      "blueprint_passive": "固定被动",
+      "blueprint_cost_cap": "cost 上限"
+    }
+  },
+  "field_help": {
+    "items": {
+      "material_level": "打造时按占比参与装备等级计算（完全同级材料 → 该级装备）。",
+      "material_quality": "品质颜色 id（须在 settings.deep_craft.quality_colors 声明）：决定单件材料的品质经验基数。",
+      "craft_cost": "单件投入 cost；总 cost 超图纸档上限 → 拒绝。",
+      "blueprint_grade": "图纸档位 id（须在 settings.deep_craft.blueprint_grades 声明）。",
+      "blueprint_output": "打造产出的装备 id（须在 equipment 表登记）。",
+      "blueprint_recipe": "基础合成配方 id：投料 → 基础产出走公用合成层。"
+    }
+  }
+}

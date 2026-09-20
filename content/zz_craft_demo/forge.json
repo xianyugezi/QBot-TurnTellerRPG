@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0",
+  "trees": [
+    {
+      "id": "tree_zz_demo_weapon",
+      "name": "示例武器树",
+      "type": "weapon",
+      "roots": [
+        "node_maifeng_blade_a_mid",
+        "node_hunter_blade_a_mid"
+      ],
+      "nodes": [
+        {
+          "id": "node_maifeng_blade_a_mid",
+          "name": "脉锋剑",
+          "item": "maifeng_blade_a_mid",
+          "type": "weapon",
+          "level": 1,
+          "parent": null,
+          "branch": [],
+          "slots": [],
+          "materials": [
+            { "item": "wind_ridge_shell", "count": 4, "tier": "normal" },
+            { "item": "vein_shard", "count": 4, "tier": "normal" },
+            { "item": "mossvein_herb", "count": 4, "tier": "normal" },
+            { "item": "bone_ash", "count": 3, "tier": "normal" }
+          ],
+          "rarity": "normal",
+          "final": true
+        },
+        {
+          "id": "node_hunter_blade_a_mid",
+          "name": "猎脉锋刃",
+          "item": "hunter_blade_a_mid",
+          "type": "weapon",
+          "level": 1,
+          "parent": null,
+          "branch": [],
+          "slots": [],
+          "materials": [
+            { "item": "lunar_eclipse_stone", "count": 3, "tier": "normal" },
+            { "item": "nightsong_wing", "count": 3, "tier": "normal" }
+          ],
+          "rarity": "fine",
+          "final": true
+        }
+      ]
+    }
+  ]
+}

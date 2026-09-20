@@ -1,0 +1,35 @@
+{
+  "name": "深打造示例包（zz_craft_demo）",
+  "version": "1.0.0",
+  "schema_version": 1,
+  "author": "dsh-batch58",
+  "modules": [
+    "settings",
+    "effects",
+    "items",
+    "equipment",
+    "recipe",
+    "traits",
+    "forge",
+    "enhance"
+  ],
+  "module_labels": {
+    "settings": "基础设置（相性 / 打造参数 / 淬炼）",
+    "effects": "被动效果",
+    "items": "材料与图纸",
+    "equipment": "示例装备",
+    "recipe": "基础合成配方",
+    "traits": "装备被动",
+    "forge": "锻造节点（分解取材）",
+    "enhance": "强化与淬炼"
+  },
+  "module_tree": [
+    {
+      "module": "items",
+      "children": [
+        "equipment",
+        "recipe"
+      ]
+    }
+  ]
+}

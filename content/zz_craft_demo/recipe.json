@@ -1,0 +1,80 @@
+[
+  {
+    "id": "rcp_demo_apprentice_vein_blade",
+    "name": "见习脉铁剑基合成",
+    "kind": "craft",
+    "level": 1,
+    "synth_allowed": true,
+    "master_only": false,
+    "materials": [
+      { "id": "vein_shard", "count": 1 }
+    ],
+    "output": { "item": "maifeng_blade_a_mid", "count": 1 },
+    "cost": { "coins": 0, "gem": 0 }
+  },
+  {
+    "id": "rcp_demo_mossvein_armor_plate",
+    "name": "苔脉护身铠基合成",
+    "kind": "craft",
+    "level": 1,
+    "synth_allowed": true,
+    "master_only": false,
+    "materials": [
+      { "id": "mossvein_herb", "count": 1 }
+    ],
+    "output": { "item": "mossvein_armor_a_mid", "count": 1 },
+    "cost": { "coins": 0, "gem": 0 }
+  },
+  {
+    "id": "rcp_demo_hunter_vein_edge",
+    "name": "猎脉锋刃基合成",
+    "kind": "craft",
+    "level": 6,
+    "synth_allowed": true,
+    "master_only": false,
+    "materials": [
+      { "id": "frost_marrow", "count": 1 }
+    ],
+    "output": { "item": "hunter_blade_a_mid", "count": 1 },
+    "cost": { "coins": 0, "gem": 0 }
+  },
+  {
+    "id": "rcp_demo_eclipse_amulet",
+    "name": "月蚀护符基合成",
+    "kind": "craft",
+    "level": 6,
+    "synth_allowed": true,
+    "master_only": false,
+    "materials": [
+      { "id": "lunar_eclipse_stone", "count": 1 }
+    ],
+    "output": { "item": "eclipse_amulet_a_mid", "count": 1 },
+    "cost": { "coins": 0, "gem": 0 }
+  },
+  {
+    "id": "rcp_demo_glacier_warplate",
+    "name": "冰川战铠基合成",
+    "kind": "craft",
+    "level": 21,
+    "synth_allowed": true,
+    "master_only": false,
+    "materials": [
+      { "id": "glacier_core", "count": 1 }
+    ],
+    "output": { "item": "glacier_warplate_a_mid", "count": 1 },
+    "cost": { "coins": 0, "gem": 0 }
+  },
+  {
+    "id": "rcp_demo_sovereign_eclipse_crown",
+    "name": "蚀日君冕基合成",
+    "kind": "craft",
+    "level": 31,
+    "synth_allowed": true,
+    "master_only": false,
+    "materials": [
+      { "id": "everfrost_shell", "count": 1 }
+    ],
+    "output": { "item": "sovereign_crown_a_mid", "count": 1 },
+    "cost": { "coins": 0, "gem": 0 }
+  }
+]

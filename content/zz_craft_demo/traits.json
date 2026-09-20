@@ -1,0 +1,86 @@
+[
+  {
+    "id": "passive_vein_edge",
+    "name": "脉刃锋芒",
+    "type": "passive",
+    "rarity": "normal",
+    "group": "passive_weapon",
+    "repeatable": false,
+    "source": "素材",
+    "effects": ["eff_passive_vein_edge"],
+    "affinity_variants": {
+      "lunar|frost": "passive_vein_edge_moon",
+      "ember": "passive_vein_edge_ember"
+    }
+  },
+  {
+    "id": "passive_vein_edge_moon",
+    "name": "月蚀脉刃",
+    "type": "passive",
+    "rarity": "normal",
+    "group": "passive_weapon",
+    "repeatable": false,
+    "source": "素材",
+    "effects": ["eff_passive_vein_edge_moon"]
+  },
+  {
+    "id": "passive_vein_edge_ember",
+    "name": "炎脉锋芒",
+    "type": "passive",
+    "rarity": "normal",
+    "group": "passive_weapon",
+    "repeatable": false,
+    "source": "素材",
+    "effects": ["eff_passive_vein_edge_ember"]
+  },
+  {
+    "id": "passive_moss_skin",
+    "name": "苔肤",
+    "type": "passive",
+    "rarity": "normal",
+    "group": "passive_armor",
+    "repeatable": false,
+    "source": "素材",
+    "effects": ["eff_passive_moss_skin"]
+  },
+  {
+    "id": "passive_hunt_mark",
+    "name": "狩猎印记",
+    "type": "passive",
+    "rarity": "normal",
+    "group": "passive_weapon",
+    "repeatable": false,
+    "source": "素材",
+    "effects": ["eff_passive_hunt_mark"]
+  },
+  {
+    "id": "passive_moon_veil",
+    "name": "月纱",
+    "type": "passive",
+    "rarity": "normal",
+    "group": "passive_accessory",
+    "repeatable": false,
+    "source": "素材",
+    "effects": ["eff_passive_moon_veil"]
+  },
+  {
+    "id": "passive_glacier_bulwark",
+    "name": "冰川壁垒",
+    "type": "passive",
+    "rarity": "normal",
+    "group": "passive_armor",
+    "repeatable": false,
+    "source": "素材",
+    "effects": ["eff_passive_glacier_bulwark"]
+  },
+  {
+    "id": "passive_moon_sovereign",
+    "name": "月华君临",
+    "type": "passive",
+    "rarity": "super",
+    "group": "passive_head",
+    "repeatable": false,
+    "source": "成品",
+    "effects": ["eff_passive_moon_sovereign"]
+  }
+]

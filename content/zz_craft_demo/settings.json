@@ -1,0 +1,258 @@
+{
+  "world_name": "深打造示例世界（zz_craft_demo）",
+  "currencies": [
+    { "id": "coins", "name": "金币", "icon": "", "cap": 0 },
+    { "id": "gem", "name": "宝石", "icon": "", "cap": 0 },
+    { "id": "essence", "name": "装备精粹", "icon": "", "cap": 0 }
+  ],
+  "slot_defs": {
+    "weapon": { "name": "武器", "max": 1 },
+    "body": { "name": "躯干", "max": 1 },
+    "head": { "name": "头部", "max": 1 },
+    "accessory": { "name": "饰品", "max": 1 }
+  },
+  "alchemy": {
+    "mode": "simple",
+    "job_tier_map": {
+      "见习": [1, 5],
+      "正式": [6, 10],
+      "精通": [11, 20],
+      "专家": [21, 30],
+      "大师": [31, 40],
+      "宗师": [41, 50],
+      "王": [51, 99]
+    }
+  },
+
+  "affinities": [
+    { "id": "lunar", "name": "月华", "desc": "月照之华，柔和绵长", "exclusive_pool": "pool_lunar" },
+    { "id": "frost", "name": "霜晶", "desc": "凝寒之晶，锐而脆", "exclusive_pool": "pool_frost" },
+    { "id": "ember", "name": "炎火", "desc": "不熄之烬，烈而短", "exclusive_pool": "pool_ember" },
+    { "id": "verdant", "name": "翠生", "desc": "草木之息，生发不争", "exclusive_pool": "pool_verdant" }
+  ],
+  "affinity_pools": [
+    {
+      "id": "pool_common",
+      "kind": "common",
+      "desc": "通用词条池：不需要相性，任何主/副相性都可抽。",
+      "entries": [
+        { "stat": "atk", "value": 6, "weight": 20 },
+        { "stat": "dfn", "value": 5, "weight": 20 },
+        { "stat": "hp", "value": 20, "weight": 20 },
+        { "stat": "foc", "value": 4, "weight": 10 },
+        { "stat": "agi", "value": 4, "weight": 10 },
+        { "stat": "con", "value": 4, "weight": 10 }
+      ]
+    },
+    {
+      "id": "pool_lunar",
+      "kind": "exclusive",
+      "desc": "月华专属词条池（requires_affinity=lunar）。",
+      "entries": [
+        { "stat": "foc", "value": 12, "weight": 30, "requires_affinity": "lunar" },
+        { "stat": "hp", "value": 30, "weight": 20, "requires_affinity": "lunar" },
+        { "set_affix": "set_eclipse", "weight": 10, "requires_affinity": "lunar" }
+      ]
+    },
+    {
+      "id": "pool_frost",
+      "kind": "exclusive",
+      "desc": "霜晶专属词条池（requires_affinity=frost）。",
+      "entries": [
+        { "stat": "dfn", "value": 12, "weight": 30, "requires_affinity": "frost" },
+        { "stat": "hp", "value": 25, "weight": 20, "requires_affinity": "frost" },
+        { "set_affix": "set_glacier", "weight": 10, "requires_affinity": "frost" }
+      ]
+    },
+    {
+      "id": "pool_ember",
+      "kind": "exclusive",
+      "desc": "炎火专属词条池（requires_affinity=ember）。",
+      "entries": [
+        { "stat": "atk", "value": 14, "weight": 30, "requires_affinity": "ember" },
+        { "stat": "crit", "value": 5, "weight": 20, "requires_affinity": "ember" },
+        { "set_affix": "set_vein_hunter", "weight": 10, "requires_affinity": "ember" }
+      ]
+    },
+    {
+      "id": "pool_verdant",
+      "kind": "exclusive",
+      "desc": "翠生专属词条池（requires_affinity=verdant）。",
+      "entries": [
+        { "stat": "hp", "value": 40, "weight": 30, "requires_affinity": "verdant" },
+        { "stat": "spr", "value": 10, "weight": 20, "requires_affinity": "verdant" }
+      ]
+    },
+    {
+      "id": "pool_link_lunar_frost",
+      "kind": "linkage",
+      "desc": "月华×霜晶联动池：主=月华、副=霜晶时覆盖月华专属池。",
+      "entries": [
+        { "stat": "foc", "value": 20, "weight": 30 },
+        { "stat": "dfn", "value": 18, "weight": 30 },
+        { "set_affix": "set_eclipse_sovereign", "weight": 20 }
+      ]
+    },
+    {
+      "id": "pool_set_common",
+      "kind": "common",
+      "desc": "通用套装词条池（铜档图纸随机套装词条用）。",
+      "entries": [
+        { "set_affix": "set_vein_apprentice", "weight": 40 },
+        { "set_affix": "set_mossvein", "weight": 40 },
+        { "set_affix": "set_vein_hunter", "weight": 40 },
+        { "set_affix": "set_eclipse", "weight": 40 },
+        { "set_affix": "set_glacier", "weight": 40 },
+        { "set_affix": "set_eclipse_sovereign", "weight": 40 }
+      ]
+    },
+    {
+      "id": "pool_set_hunter",
+      "kind": "common",
+      "desc": "猎脉套装池（银档图纸随机套装词条用）。",
+      "entries": [
+        { "set_affix": "set_vein_hunter", "weight": 60 },
+        { "set_affix": "set_eclipse", "weight": 40 }
+      ]
+    },
+    {
+      "id": "pool_set_eclipse",
+      "kind": "common",
+      "desc": "月蚀套装池（银档月蚀护符随机套装词条用）。",
+      "entries": [
+        { "set_affix": "set_eclipse", "weight": 60 },
+        { "set_affix": "set_vein_hunter", "weight": 40 }
+      ]
+    },
+    {
+      "id": "pool_set_glacier",
+      "kind": "common",
+      "desc": "冰川套装池（金档图纸随机套装词条用）。",
+      "entries": [
+        { "set_affix": "set_glacier", "weight": 60 },
+        { "set_affix": "set_eclipse_sovereign", "weight": 40 }
+      ]
+    },
+    {
+      "id": "pool_set_sovereign",
+      "kind": "common",
+      "desc": "蚀日君冕套装池（彩档图纸随机套装词条用）。",
+      "entries": [
+        { "set_affix": "set_eclipse_sovereign", "weight": 100 }
+      ]
+    }
+  ],
+  "affinity_linkage": [
+    { "main": "lunar", "sub": "frost", "override_pool": "pool_link_lunar_frost" }
+  ],
+  "affinity_reactions": [
+    { "kind": "conflict", "pair": ["ember", "frost"], "value": 4 },
+    { "kind": "amplify", "pair": ["lunar", "frost"], "value": 3 },
+    { "kind": "reverse", "from": "frost", "to": "lunar", "value": 1.0 }
+  ],
+
+  "deep_craft": {
+    "enabled": true,
+    "craft_rules": {
+      "material_level_weight": { "main": 0.6, "free": 0.4 },
+      "level_rounding": "floor",
+      "quality_exp_affinity_bonus": 1.5,
+      "quality_level_thresholds": [0, 25, 60, 110, 180, 275, 400, 560, 780, 1080],
+      "slot_decay": 0.25,
+      "max_per_kind": 5,
+      "max_kinds": 10,
+      "type_bonus": 1.03,
+      "global_decay": 1.0,
+      "cost_base": 60,
+      "cost_per_kind": 20,
+      "cost_floor_ratio": 0.0,
+      "interaction": { "conflict": -0.25, "amplify": 0.15 },
+      "quality_exp_crit": {
+        "enabled": true,
+        "grades": ["copper", "silver", "gold", "rainbow"],
+        "chance_by_grade": { "copper": 0.15, "silver": 0.10, "gold": 0.07, "rainbow": 0.05 },
+        "chance_default": 0.05,
+        "mult_by_grade": { "copper": 2.0, "silver": 2.0, "gold": 2.0, "rainbow": 2.0 },
+        "mult_default": 1.0,
+        "additive_exp": 0.0,
+        "applies_to": "quality_exp",
+        "affects_quality_level": true,
+        "rolls_per_craft": 1,
+        "exp_cap": "last_threshold",
+        "rng_stream": "player"
+      },
+      "random_stat_count": { "min": 0, "max": 2 },
+      "random_set_affix_count": { "min": 0, "max": 2 }
+    },
+    "quality_colors": [
+      { "id": "白", "name": "普通" },
+      { "id": "绿", "name": "优秀" },
+      { "id": "蓝", "name": "精良" },
+      { "id": "紫", "name": "史诗" },
+      { "id": "橙", "name": "传说" },
+      { "id": "红", "name": "神话" }
+    ],
+    "quality_exp_by_color": {
+      "白": 10,
+      "绿": 16,
+      "蓝": 26,
+      "紫": 42,
+      "橙": 70,
+      "红": 110
+    },
+    "blueprint_grades": [
+      { "id": "copper", "name": "铜图纸", "level_offset": 0, "cost_cap": 900 },
+      { "id": "silver", "name": "银图纸", "level_offset": 1, "cost_cap": 2100 },
+      { "id": "gold", "name": "金图纸", "level_offset": 2, "cost_cap": 4200 },
+      { "id": "rainbow", "name": "彩图纸", "level_offset": 3, "cost_cap": 8600 }
+    ],
+    "quality_draw_table": {
+      "ladder": {
+        "1": { "白": 75, "绿": 25 },
+        "2": { "白": 55, "绿": 30, "蓝": 15 },
+        "3": { "白": 45, "绿": 33, "蓝": 20, "紫": 2 },
+        "4": { "白": 25, "绿": 40, "蓝": 30, "紫": 5 },
+        "5": { "白": 19, "绿": 30, "蓝": 35, "紫": 15, "橙": 1 },
+        "6": { "白": 16, "绿": 20, "蓝": 35, "紫": 25, "橙": 4 },
+        "7": { "白": 10, "绿": 15, "蓝": 30, "紫": 30, "橙": 15 },
+        "8": { "白": 4, "绿": 10, "蓝": 20, "紫": 40, "橙": 26 },
+        "9": { "绿": 2, "蓝": 12, "紫": 50, "橙": 36 },
+        "10": { "蓝": 5, "紫": 40, "橙": 50, "红": 5 },
+        "11": { "紫": 30, "橙": 60, "红": 10 },
+        "12": { "紫": 20, "橙": 60, "红": 20 },
+        "13": { "紫": 5, "橙": 55, "红": 40 }
+      }
+    }
+  },
+
+  "effect_axes": {
+    "damage_dealt_pct": { "min": -100, "max": 1000, "default": 0 },
+    "crit_damage_pct": { "min": -100, "max": 300, "default": 0 },
+    "healing_received_pct": { "min": -200, "max": 300, "default": 0 },
+    "damage_taken_pct": { "min": -100, "max": 300, "default": 0 },
+    "status_resist_pct": { "min": -100, "default": 0 },
+    "status_chance_pct": { "min": -100, "default": 0 },
+    "stack_gain_pct": { "min": -100, "default": 0 },
+    "resource_cost_pct": { "min": -100, "max": 200, "default": 0 },
+    "action_bar_shift": { "default": 0 }
+  },
+
+  "forge": {
+    "essence_rate": {
+      "enabled": true,
+      "v_basis": "node_materials",
+      "v_fixed": 0.0,
+      "v_per_level": 0.0,
+      "k1": 0.35,
+      "k2": 0.50,
+      "grade_of": {},
+      "beta": 1.2,
+      "color_order": {},
+      "rounding": "floor",
+      "temper_refund": 800,
+      "refund_decay": 0.5,
+      "scope": "crafted_equipment",
+      "essence_currency": "essence"
+    }
+  }
+}

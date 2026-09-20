@@ -1,0 +1,10 @@
+[
+  { "id": "eff_passive_vein_edge", "name": "脉刃锋芒", "type": "buff", "power": 10, "duration": 3, "desc": "示例被动效果：脉刃锋芒（占位原子动作）。" },
+  { "id": "eff_passive_vein_edge_moon", "name": "月蚀脉刃", "type": "buff", "power": 12, "duration": 3, "desc": "示例被动效果：月蚀脉刃（相性变体）。" },
+  { "id": "eff_passive_vein_edge_ember", "name": "炎脉锋芒", "type": "buff", "power": 14, "duration": 3, "desc": "示例被动效果：炎脉锋芒（相性变体）。" },
+  { "id": "eff_passive_moss_skin", "name": "苔肤", "type": "buff", "power": 8, "duration": 3, "desc": "示例被动效果：苔肤。" },
+  { "id": "eff_passive_hunt_mark", "name": "狩猎印记", "type": "buff", "power": 9, "duration": 3, "desc": "示例被动效果：狩猎印记。" },
+  { "id": "eff_passive_moon_veil", "name": "月纱", "type": "buff", "power": 11, "duration": 3, "desc": "示例被动效果：月纱。" },
+  { "id": "eff_passive_glacier_bulwark", "name": "冰川壁垒", "type": "buff", "power": 13, "duration": 3, "desc": "示例被动效果：冰川壁垒。" },
+  { "id": "eff_passive_moon_sovereign", "name": "月华君临", "type": "buff", "power": 16, "duration": 3, "desc": "示例被动效果：月华君临。" }
+]

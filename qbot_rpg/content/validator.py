@@ -387,6 +387,136 @@ def message_prefix_unknown_placeholders(format_str: str) -> List[str]:
 
 
 # -------------------------------------------------------------------------------------
+# 包自持校验扩展（批71 · D1）：settings.schema_ext → 允许键并集 + 最小约束子集
+#
+# 结构：`schema_ext.<module>.<field-path>.allow_keys = {key: constraint}`；
+# field-path 用点号 + `[]` 表示列表元素（与报错 field 路径同构，如 `parts`、`parts[].on_break`）。
+# 约束子集**刻意最小**：`type`(str/int/number/bool/list/obj) + `enum`(可选) + `required`(可选)。
+# 无声明 → 各校验点沿用现状闭集（逐字不变）；声明非法 → R-5（配置错误必须可见），
+# **不放行**该键（安全方向：宁可误拦，不可误放）。
+# -------------------------------------------------------------------------------------
+
+#: `schema_ext` 约束允许的 `type` 取值（表达式/引用/自定义算子属第二层 ext 算子，不在此）。
+_SCHEMA_EXT_TYPES: frozenset = frozenset({"str", "int", "number", "bool", "list", "obj"})
+#: 约束条目允许出现的键（其余键 → R-5，不静默忽略）。
+_SCHEMA_EXT_CONSTRAINT_KEYS: frozenset = frozenset({"type", "enum", "required"})
+
+
+def _schema_allow_suffix(allow: Mapping[str, object]) -> str:
+    """报错消息的「允许键」后缀：`/a/b`（无声明 → 空串，保持原文案逐字不变）。"""
+    if not allow:
+        return ""
+    return "".join("/" + str(k) for k in sorted(allow))
+
+
+def _schema_ext_type_ok(want: str, val: object) -> bool:
+    """声明 `type` 是否与值匹配（bool 不算 int/number；int 算 number）。"""
+    if want == "str":
+        return isinstance(val, str)
+    if want == "int":
+        return isinstance(val, int) and not isinstance(val, bool)
+    if want == "number":
+        return isinstance(val, (int, float)) and not isinstance(val, bool)
+    if want == "bool":
+        return isinstance(val, bool)
+    if want == "list":
+        return isinstance(val, list)
+    if want == "obj":
+        return isinstance(val, Mapping)
+    return False
+
+
+def _parse_schema_ext(
+    modules: Mapping[str, object],
+) -> Tuple[Dict[str, Dict[str, Mapping[str, Mapping[str, object]]]], List[Dict[str, object]]]:
+    """解析 `settings.schema_ext`（模块级纯函数；批71 · D1）。
+
+    返回 `(parsed, issues)`：`parsed[module][path]["allow_keys"] = {key: constraint}`；
+    `issues` 每条 = `{"field": ..., "rule": ..., "detail": {...}}`，由 `_Checker` 转 R-5。
+    形状/取值非法 → 记 issue 且跳过（不静默放行）；`schema_ext` 缺失/空 → `({}, [])`。
+    """
+    parsed: Dict[str, Dict[str, Mapping[str, Mapping[str, object]]]] = {}
+    issues: List[Dict[str, object]] = []
+    root = modules.get("settings")
+    if not isinstance(root, Mapping):
+        return parsed, issues
+    ext = root.get("schema_ext")
+    if ext is None:
+        return parsed, issues
+    if not isinstance(ext, Mapping):
+        issues.append({"field": "settings.schema_ext", "rule": "schema_ext_type",
+                       "detail": {"expect": "obj", "got": type(ext).__name__}})
+        return parsed, issues
+    for mod_name, mod_spec in ext.items():
+        f_mod = f"settings.schema_ext.{mod_name}"
+        if not isinstance(mod_name, str) or not mod_name:
+            issues.append({"field": f_mod, "rule": "schema_ext_module_key",
+                           "detail": {"value": mod_name}})
+            continue
+        if not isinstance(mod_spec, Mapping):
+            issues.append({"field": f_mod, "rule": "schema_ext_module_type",
+                           "detail": {"expect": "obj", "got": type(mod_spec).__name__}})
+            continue
+        for path, path_spec in mod_spec.items():
+            f_path = f"{f_mod}.{path}"
+            if not isinstance(path, str) or not path:
+                issues.append({"field": f_path, "rule": "schema_ext_path_key",
+                               "detail": {"value": path}})
+                continue
+            if not isinstance(path_spec, Mapping):
+                issues.append({"field": f_path, "rule": "schema_ext_path_type",
+                               "detail": {"expect": "obj", "got": type(path_spec).__name__}})
+                continue
+            allow = path_spec.get("allow_keys")
+            if not isinstance(allow, Mapping):
+                issues.append({"field": f"{f_path}.allow_keys", "rule": "schema_ext_allow_keys",
+                               "detail": {"expect": "obj", "got": type(allow).__name__}})
+                continue
+            clean: Dict[str, Mapping[str, object]] = {}
+            for key, spec in allow.items():
+                f_key = f"{f_path}.allow_keys.{key}"
+                if not isinstance(key, str) or not key:
+                    issues.append({"field": f_key, "rule": "schema_ext_key",
+                                   "detail": {"value": key}})
+                    continue
+                if "__" in key or key.startswith(".") or key.endswith("."):
+                    issues.append({"field": f_key, "rule": "schema_ext_key",
+                                   "detail": {"value": key}})
+                    continue
+                if not isinstance(spec, Mapping):
+                    issues.append({"field": f_key, "rule": "schema_ext_constraint_type",
+                                   "detail": {"expect": "obj", "got": type(spec).__name__}})
+                    continue
+                bad = [k for k in spec if str(k) not in _SCHEMA_EXT_CONSTRAINT_KEYS]
+                if bad:
+                    issues.append({"field": f_key, "rule": "schema_ext_constraint_key",
+                                   "detail": {"unknown": sorted(str(k) for k in bad)}})
+                    continue
+                want = spec.get("type")
+                if want is not None and (not isinstance(want, str)
+                                         or want not in _SCHEMA_EXT_TYPES):
+                    issues.append({"field": f_key, "rule": "schema_ext_constraint_type",
+                                   "detail": {"type": want,
+                                              "allowed": sorted(_SCHEMA_EXT_TYPES)}})
+                    continue
+                enum = spec.get("enum")
+                if enum is not None and not isinstance(enum, list):
+                    issues.append({"field": f_key, "rule": "schema_ext_constraint_enum",
+                                   "detail": {"expect": "list",
+                                              "got": type(enum).__name__}})
+                    continue
+                req = spec.get("required")
+                if req is not None and not isinstance(req, bool):
+                    issues.append({"field": f_key, "rule": "schema_ext_constraint_required",
+                                   "detail": {"expect": "bool", "got": type(req).__name__}})
+                    continue
+                clean[key] = spec
+            if clean:
+                parsed.setdefault(mod_name, {})[path] = {"allow_keys": clean}
+    return parsed, issues
+
+
+# -------------------------------------------------------------------------------------
 # 校验引擎
 # -------------------------------------------------------------------------------------
 
@@ -410,6 +540,38 @@ class _Checker:
         # 云海九期（cloudsea-pack）207 性能修复①：skill_or_any 引用校验并集惰性缓存
         # （注册即失效，见 _register_id / _check_ref；同 _element_reg 先例）。
         self._all_ref_ids_cache: Optional[set] = None
+        # 包自持校验扩展（批71 · D1）：settings.schema_ext（无声明 → {}，各校验点沿用现状）。
+        # 解析非法 → R-5 红拦（配置错误必须可见），该键不放行（安全方向）。
+        self._schema_ext, _ext_issues = _parse_schema_ext(modules)
+        for _iss in _ext_issues:
+            self._err("settings", str(_iss.get("field") or "schema_ext"), "R-5",
+                      rule=str(_iss.get("rule") or "schema_ext_invalid"),
+                      **dict(_iss.get("detail") or {}))  # type: ignore[arg-type]
+
+    # ---- 包自持校验扩展（批71 · D1） ----
+    def _schema_allow_keys(self, module_name: str, path: str) -> Mapping[str, Mapping[str, object]]:
+        """该 module 的字段路径声明的 `allow_keys`（无声明 → 空 Mapping）。"""
+        mod = self._schema_ext.get(module_name)
+        if not isinstance(mod, Mapping):
+            return {}
+        spec = mod.get(path)
+        if not isinstance(spec, Mapping):
+            return {}
+        allow = spec.get("allow_keys")
+        return allow if isinstance(allow, Mapping) else {}
+
+    def _check_schema_constraint(self, module_name: str, field: str, value: object,
+                                 spec: Mapping[str, object]) -> None:
+        """声明约束校验：`type` 不符 / `enum` 不符 → R-1。"""
+        want = spec.get("type") if isinstance(spec, Mapping) else None
+        if isinstance(want, str) and want in _SCHEMA_EXT_TYPES \
+                and not _schema_ext_type_ok(want, value):
+            self._err(module_name, field, "R-1", rule="schema_ext_type",
+                      expect=want, got=type(value).__name__)
+        enum = spec.get("enum") if isinstance(spec, Mapping) else None
+        if isinstance(enum, list) and value not in enum:
+            self._err(module_name, field, "R-1", rule="schema_ext_enum",
+                      enum=list(enum), got=value)
 
     # ---- 报告构建 ----
     def _err(self, module: str, field: str, kind: str, **detail: object) -> None:
@@ -951,23 +1113,43 @@ class _Checker:
                         self._err(module_name, f"{pth}.on_break.effects", "R-1",
                                   rule="R16_part_effects_type", expect="list",
                                   got=type(fx).__name__)
+                    ob_allow = self._schema_allow_keys("enemies", "parts[].on_break")
                     for k in ob:
+                        if k in ob_allow:
+                            self._check_schema_constraint(
+                                module_name, f"{pth}.on_break.{k}", ob[k], ob_allow[k])
+                            continue
                         if k not in ("knockdown", "marks", "effects"):
+                            _ob_extra = _schema_allow_suffix(ob_allow)
                             self._err(module_name, f"{pth}.on_break.{k}", "R-5",
                                       rule="R16_part_onbreak_unknown_key", key=k,
-                                      msg="on_break 未知键 %r（仅 knockdown/marks/effects）" % (k,))
+                                      msg="on_break 未知键 %r（仅 knockdown/marks/effects"
+                                          "%s）" % (k, _ob_extra))
+                    for _rk, _rspec in ob_allow.items():
+                        if isinstance(_rspec, Mapping) and _rspec.get("required") is True \
+                                and _rk not in ob:
+                            self._err(module_name, f"{pth}.on_break.{_rk}", "R-5",
+                                      rule="schema_ext_required", key=_rk)
+            part_allow = self._schema_allow_keys("enemies", "parts")
             for k in part:
-                # 云海九期（cloudsea-pack）238：白名单放行云海两键——cls（件型标注）与 break_behavior
-                # （03 §M3.1B 部位破坏绑定面，251–255/219 产出；破坏行为结算
-                # 走 cloudsea 增量 hook 面，非 combo/effects/marks 既有行为改动）
-                if k in ("cls", "break_behavior"):
+                # 批71 · D1：包自持扩展键（settings.schema_ext.enemies.parts.allow_keys）
+                # 取代原「云海两键硬编码白名单」——框架不再认识任何包内键。
+                if k in part_allow:
+                    self._check_schema_constraint(
+                        module_name, f"{pth}.{k}", part[k], part_allow[k])
                     continue
                 if k not in ("id", "name", "positions", "break_threshold",
                              "target_priority", "on_break"):
+                    _part_extra = _schema_allow_suffix(part_allow)
                     self._err(module_name, f"{pth}.{k}", "R-5",
                               rule="R16_part_unknown_key", key=k,
                               msg="part 未知键 %r（id/name/positions/break_threshold/"
-                                  "target_priority/on_break）" % (k,))
+                                  "target_priority/on_break%s）" % (k, _part_extra))
+            for _rk, _rspec in part_allow.items():
+                if isinstance(_rspec, Mapping) and _rspec.get("required") is True \
+                        and _rk not in part:
+                    self._err(module_name, f"{pth}.{_rk}", "R-5",
+                              rule="schema_ext_required", key=_rk)
 
     def _check_enemy_required(self, module_name: str, base: str, entry: Mapping[str, object],
                               dummy: bool) -> None:

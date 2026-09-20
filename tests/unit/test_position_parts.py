@@ -151,21 +151,45 @@ class TestPartsSchema:
                 "R16_part_threshold_negative", "R16_part_unknown_key",
                 "R16_part_onbreak_unknown_key"} <= rules
 
-    def test_extension_keys_cls_break_behavior_allowed(self) -> None:
-        """云海九期（cloudsea-pack）238：白名单放行 cls/break_behavior；
-        未列白名单的未知键仍红拦。"""
-        ok_part = dict(SHELL_PART, cls="hard", break_behavior="shatter")
-        rep = check_pack({"action": _load("action"), "effects": _load("effects"),
-                          "statuses": _load("statuses"), "items": _load("items"),
-                          "enemies": [_base_enemy(parts=[ok_part])]})
-        assert _errs(rep) == [], f"放行 cls/break_behavior 应零红，got {_errs(rep)}"
+    def test_extension_keys_require_pack_declaration(self) -> None:
+        """批71 · D1：cls/break_behavior 不再由框架硬编码白名单放行；改由包在
+        `settings.schema_ext.enemies.parts.allow_keys` 自持声明（框架零包内键）。
 
-        bad_part = dict(SHELL_PART, cls="hard", break_behavior="shatter", mystery=1)
-        rep2 = check_pack({"action": _load("action"), "effects": _load("effects"),
-                           "statuses": _load("statuses"), "items": _load("items"),
+        三态：① 无声明 → 未知键照旧红拦（与删除白名单前对**其它**包一致）；
+        ② 声明 → 放行，且 `type`/`enum` 约束生效；③ 未声明的其它键仍红拦。"""
+        part = dict(SHELL_PART, cls="hard", break_behavior="stagger")
+        base_modules = {"action": _load("action"), "effects": _load("effects"),
+                        "statuses": _load("statuses"), "items": _load("items")}
+
+        # ① 无声明 → cls/break_behavior 均红拦（R16_part_unknown_key）
+        rep0 = check_pack({**base_modules, "enemies": [_base_enemy(parts=[part])]})
+        assert sorted(e.detail.get("key") for e in _errs(rep0, "R16_part_unknown_key")) \
+            == ["break_behavior", "cls"], _errs(rep0)
+
+        # ② 包声明 schema_ext → 放行 + 约束生效
+        schema_ext = {"schema_ext": {"enemies": {"parts": {"allow_keys": {
+            "cls": {"type": "str"},
+            "break_behavior": {"type": "str", "enum": ["knockdown", "stagger", "none"]},
+        }}}}}
+        rep1 = check_pack({**base_modules, "settings": schema_ext,
+                           "enemies": [_base_enemy(parts=[part])]})
+        assert _errs(rep1) == [], f"声明后应零红，got {_errs(rep1)}"
+
+        # ②b 类型/枚举约束：cls 非 str、break_behavior 非法取值 → R-1
+        bad_val = dict(SHELL_PART, cls=1, break_behavior="shatter")
+        rep1b = check_pack({**base_modules, "settings": schema_ext,
+                            "enemies": [_base_enemy(parts=[bad_val])]})
+        assert {e.detail.get("rule") for e in _errs(rep1b)} >= {
+            "schema_ext_type", "schema_ext_enum"}, _errs(rep1b)
+
+        # ③ 未声明的其它键仍红拦
+        bad_part = dict(part, mystery=1)
+        rep2 = check_pack({**base_modules, "settings": schema_ext,
                            "enemies": [_base_enemy(parts=[bad_part])]})
         unknown = _errs(rep2, "R16_part_unknown_key")
         assert [e.detail.get("key") for e in unknown] == ["mystery"], unknown
+        # 消息里「允许键」列表反映包声明（编辑器/作者自洽）
+        assert "cls" in str(unknown[0].detail.get("msg")), unknown[0]
 
 
 # =====================================================================================

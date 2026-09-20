@@ -263,7 +263,14 @@ DEFAULT_PACKS = ("veinborn", "test_demo")
 #   · settings 新增 `overheal` 段（1 子字段）→ settings 条目 +1（派生计数位移）。
 #   对拍实证：删除项 = 0；无既有 label/help/group/module_labels/module_tree 改值；
 #   重定后基线树与当前树逐字段 diff=0。
-DEFAULT_BASELINE_REF = "138f0d2"
+# 批57（2026-09-21 淬炼与分解回收）重定：138f0d2 → 427047e（本批字段/引擎提交）。
+#   原因 = 本批**有意**变更（非迁移回归），全部为**新增**（无删除/无既有严格键改值）：
+#   · `enhance` 模块新增 `temper` 段（15 子字段）→ 该模块 own/count/total +1、
+#     entries/enhance 计数 5→6（unconfigured 0→1，派生的 index/modules 计数位移）；
+#   · `settings.forge` 新增 `essence_rate` 段（13 子字段）→ forge 字段表新增（纯新增）。
+#   对拍实证：删除项 = 0；无既有 label/help/group/module_labels/module_tree 改值；
+#   重定后基线树与当前树逐字段 diff=0。
+DEFAULT_BASELINE_REF = "427047e"
 
 
 def _env(root: Path) -> dict:

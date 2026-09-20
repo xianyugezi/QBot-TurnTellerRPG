@@ -42,7 +42,10 @@ _KEY = AFFINITY_EFFECT_QUALITY_CAP  # 键名唯一源 = data/affinity_keys（测
 def _settings_effects(table: Mapping[str, Any], **over: Any) -> Dict[str, Any]:
     s: Dict[str, Any] = {
         "affinities": [{"id": _A, "name": "甲"}, {"id": _B, "name": "乙"}],
-        "alchemy": {"affinity_effects": dict(table)},
+        # 批71 · C1：SP 品质上限源改由包声明引用（panel_id 由包给，框架零硬编码 id）
+        "alchemy": {"affinity_effects": dict(table),
+                    "sp_effects": {"quality_cap": {"panel_id": "quality_cap_10",
+                                                   "per_unlock": 10}}},
     }
     s.update(over)
     return s

@@ -160,6 +160,12 @@
         "desc": "连锁段数上限+1"
       }
     ],
+    "sp_effects": {
+      "quality_cap": {
+        "panel_id": "quality_cap_10",
+        "per_unlock": 10
+      }
+    },
     "战斗道具": {
       "强度公式": "技能×(1+0.4×冷却数)",
       "珠触发上限": 3

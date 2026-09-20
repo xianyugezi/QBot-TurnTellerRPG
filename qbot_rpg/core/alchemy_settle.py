@@ -79,7 +79,6 @@ if TYPE_CHECKING:  # 仅类型注解（proficiency 已落地，保持零运行�
 __all__ = [
     "SETTLE_CONFIRM",
     "SETTLE_ABANDON",
-    "SP_QUALITY_CAP_10",
     "DEFAULT_CATALYST_CONSUME",
     "SettleEngine",
 ]
@@ -88,8 +87,10 @@ __all__ = [
 SETTLE_CONFIRM: str = "confirm"    # /确认 品质结算
 SETTLE_ABANDON: str = "abandon"    # /放弃 会话退出终态
 
-# SP 面板「品质上限+10」项 id（test_demo proficiency.json sp_panel[0]；QLT-08①）
-SP_QUALITY_CAP_10: str = "quality_cap_10"
+# 批71 · C1：`SP_QUALITY_CAP_10 = "quality_cap_10"` 硬编码面板 id 已删除。
+# 权威来源 = 包 `settings.json` 的 `alchemy.sp_effects.quality_cap = {panel_id, per_unlock}`；
+# 框架只认语义键 `quality_cap`，面板 id 由包声明（`_sp_effect("quality_cap")`）。
+# 无声明 / 声明非法 → 该源贡献 0（无 quality_cap 面板项的包现状亦为 0，行为一致）。
 
 # 触媒消耗默认（CAT-04：每次调合确认结算消耗触媒 1 个；settings.alchemy.catalyst_consume 可配）
 DEFAULT_CATALYST_CONSUME: bool = True
@@ -138,6 +139,31 @@ class SettleEngine:
         """触媒是否消耗（CAT-04：settings.alchemy.catalyst_consume，默认 true）。"""
         v = self._alchemy_settings().get("catalyst_consume", DEFAULT_CATALYST_CONSUME)
         return bool(v)
+
+    def _sp_effect(self, name: str) -> Optional[Mapping[str, Any]]:
+        """`settings.alchemy.sp_effects.<name>` → 声明式引用（批71 · C1；框架零面板 id）。
+
+        形状：`{"panel_id": <str>, "per_unlock": <int>}`；框架只认语义键 `name`
+        （如 `quality_cap`），面板 id 由包声明。防御式：非 Mapping / `panel_id` 缺失或
+        非字符串 / `per_unlock` 非数值 → None（该效果记 0，**不猜 id**、不抛异常）。
+        """
+        sp = self._alchemy_settings().get("sp_effects")
+        if not isinstance(sp, Mapping):
+            return None
+        spec = sp.get(name)
+        if not isinstance(spec, Mapping):
+            return None
+        pid = spec.get("panel_id")
+        if not isinstance(pid, str) or not pid:
+            return None
+        per = spec.get("per_unlock")
+        if isinstance(per, bool) or per is None:
+            return None
+        try:
+            int(per)
+        except (TypeError, ValueError):
+            return None
+        return spec
 
     # ------------------------------------------------------------------
     # 注册表查找（复用 AlchemyCore._find_*，鸭子同一 ctx 口径）
@@ -201,7 +227,10 @@ class SettleEngine:
     def _extra_cap(self, ctx: Mapping[str, Any], snap: Mapping[str, Any]) -> int:
         """品质上限叠加（QLT-08，TC-05；批62 · 口径 C 加第 ④ 源）。
 
-        ① SP「品质上限+10」（可多次）：prof.unlock_count(player, alchemy, "quality_cap_10")×10；
+        ① SP 品质上限（可多次）：面板项由包声明
+           `settings.alchemy.sp_effects.quality_cap = {panel_id, per_unlock}` →
+           prof.unlock_count(player, alchemy, panel_id) × per_unlock（批71 · C1 改源，
+           框架不再硬编码面板 id）；无声明 / 声明非法 → 该源 0。
         ② 核心镶嵌「品质上限+X」（大师）：快照 core_cap / extra_cap 字段；
         ③ 挑战成功「品质上限+10」（可配）：快照 challenge_cap 字段；
         ④ **相性品质上限**（批62 · 口径 C 品质型）：快照 `affinity_values`（批60 G1 写入）→
@@ -211,13 +240,16 @@ class SettleEngine:
         """
         extra = 0
         prof = self._prof
-        if prof is not None and callable(getattr(prof, "unlock_count", None)):
+        spec = self._sp_effect("quality_cap")
+        if spec is not None and prof is not None \
+                and callable(getattr(prof, "unlock_count", None)):
             player = ctx.get("player")
             try:
-                n = max(0, int(prof.unlock_count(player, ALCHEMY_JOB_ID, SP_QUALITY_CAP_10)))
+                n = max(0, int(prof.unlock_count(
+                    player, ALCHEMY_JOB_ID, str(spec["panel_id"]))))
             except Exception:
                 n = 0
-            extra += n * 10  # QLT-08①
+            extra += n * int(spec["per_unlock"])  # QLT-08①
         for key in ("extra_cap", "core_cap", "challenge_cap"):
             v = snap.get(key)
             if isinstance(v, bool) or v is None:

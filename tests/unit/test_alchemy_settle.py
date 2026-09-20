@@ -37,10 +37,13 @@ from typing import Any, Dict, List, Optional
 from qbot_rpg.core.alchemy_settle import (
     SETTLE_ABANDON,
     SETTLE_CONFIRM,
-    SP_QUALITY_CAP_10,
     SettleEngine,
 )
 from qbot_rpg.core.proficiency import ProficiencyEngine
+
+#: 测试用 SP 面板项 id（批71 · C1：框架不再硬编码，改由 settings.alchemy.sp_effects
+#: 声明引用；本常量仅本测试内使用，不属于框架契约）。
+_SP_QUALITY_PANEL = "quality_cap_10"
 
 # ---------------------------------------------------------------------------
 # 测试数据（items/recipe 注册表，对齐 content/test_demo 形态）
@@ -86,8 +89,11 @@ def _recipes() -> Dict[str, dict]:
 
 
 def _settings(catalyst_consume: bool = True) -> Dict[str, Any]:
-    """settings dict（alchemy.catalyst_consume，CAT-04）。"""
-    return {"alchemy": {"catalyst_consume": catalyst_consume}}
+    """settings dict（alchemy.catalyst_consume + sp_effects；批71 · C1 声明式引用）。"""
+    return {"alchemy": {
+        "catalyst_consume": catalyst_consume,
+        "sp_effects": {"quality_cap": {"panel_id": _SP_QUALITY_PANEL, "per_unlock": 10}},
+    }}
 
 
 def _player_with_sp(sp_count: int = 2) -> Dict[str, Any]:
@@ -96,7 +102,7 @@ def _player_with_sp(sp_count: int = 2) -> Dict[str, Any]:
         "proficiency": {
             "alchemy": {
                 "level": 3, "exp": 0, "sp_earned": 5, "sp_used": sp_count,
-                "unlocks": {SP_QUALITY_CAP_10: sp_count},
+                "unlocks": {_SP_QUALITY_PANEL: sp_count},
             }
         }
     }
@@ -300,7 +306,7 @@ async def test_tc05_sp_extra_cap_relaxes_reachable_cap() -> None:
     """TC-05 正例：配方原上限 60 + SP 品质上限+10×2（+20）→ 均值 80 不被裁剪到 60
     （可达上限 80，仍 ≤100）。"""
     prof = ProficiencyEngine()
-    eng = SettleEngine(prof=prof)
+    eng = SettleEngine(prof=prof, settings=_settings())  # 批71 · C1：SP 源走 sp_effects 声明
     snap = _snap("r_cap60", [_mat("mat_q80"), _mat("mat_q80"), _mat("mat_q80")])  # 均值 80
     ctx, _ = _ctx({"mat_q80": 3}, player=_player_with_sp(sp_count=2))
     r = await eng.confirm(ctx, snap, qid="u1", job_tier_index=3)

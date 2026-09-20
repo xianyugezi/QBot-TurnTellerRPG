@@ -19,11 +19,20 @@ from typing import Any, Dict, Mapping, Optional, Tuple
 
 from qbot_rpg.content.validator import check_pack
 from qbot_rpg.core.battle import BattleEngine
+from qbot_rpg.core.effects import (
+    DamageCtx,
+    EffectRuntime,
+    apply_heal_to_hp,
+    execute_action,
+)
 from qbot_rpg.data.gear_stats import (
     DEPRECATED_EFFECT_AXES,
     EFFECT_AXES_KEY,
     GEAR_EFFECT_KEYS,
+    OVERHEAL_KEY,
     effect_axis_value,
+    normalize_overheal,
+    overheal_enabled,
 )
 
 # 行动速度轴（键名唯一源 = effect_axis_spec；此处仅取登记名便于本测试引用）
@@ -137,3 +146,102 @@ def test_a7_registered_speed_axis_value_out_of_range_still_red() -> None:
     """已登记轴仍受越界红拦保护（废弃表不放松既有门禁）。"""
     rep = check_pack({"settings": {"effect_axes": {SPEED_AXIS: {"min": 50, "max": -50}}}})
     assert "effect_axis_range_inverted" in _rules(rep)[0]
+
+
+# ===========================================================================
+# B · 过量治疗（D4 / §4-E5）
+# ===========================================================================
+def _snap(hp: int = 1000, mp: int = 50) -> Dict[str, Any]:
+    c = {"max_hp": 1000, "hp": hp, "max_mp": 100, "mp": mp, "atk": 100, "dfn": 50}
+    return {
+        "player": dict(c), "enemy": dict(c),
+        "status_state": {"player": [], "enemy": []},
+        "marks_state": {"player": [], "enemy": []},
+        "resist_table": {"player": {}, "enemy": {}},
+        "effect_triggers": {"player": {"per_turn": {}, "per_battle": {}},
+                            "enemy": {"per_turn": {}, "per_battle": {}}},
+        "effect_cooldowns": {"player": {}, "enemy": {}},
+    }
+
+
+def _runtime(snap: Mapping[str, Any], overheal: Any = None) -> EffectRuntime:
+    cfg = {OVERHEAL_KEY: overheal} if overheal is not None else None
+    return EffectRuntime(status_state=snap.get("status_state"), config=cfg)
+
+
+def _heal(snap: Mapping[str, Any], runtime: EffectRuntime, value: int = 100,
+          stat: str = "hp") -> Any:
+    ctx = DamageCtx(raw_damage=0, attack_type="skill", attacker="player",
+                    target="enemy", snapshot=snap, variables={})
+    return execute_action({"type": "heal", "value": value, "target": "self", "stat": stat},
+                          ctx, runtime)
+
+
+def test_b1_overheal_default_discards_excess() -> None:
+    """缺省（缺段 / 关闭）= 与现状一致：满血治疗 → 过量丢弃，HP 不超上限。"""
+    assert normalize_overheal(None) == {"enabled": False}
+    assert overheal_enabled(None) is False
+    c = {"max_hp": 1000, "hp": 1000}
+    assert apply_heal_to_hp(c, 200, cap=1000, cfg=None) == 1000
+    assert c["hp"] == 1000
+    snap = _snap(hp=1000)
+    _heal(snap, _runtime(snap))            # 未配置 overheal 段
+    assert snap["player"]["hp"] == 1000
+    _heal(snap, _runtime(snap, {"enabled": False}))
+    assert snap["player"]["hp"] == 1000
+
+
+def test_b2_overheal_enabled_retains_excess() -> None:
+    """开启 = 按 E5「可否超过最大 HP」= 保留：满血治疗 → HP 可超过 max_hp。"""
+    assert overheal_enabled({"enabled": True}) is True
+    c = {"max_hp": 1000, "hp": 1000}
+    assert apply_heal_to_hp(c, 200, cap=1000, cfg={"enabled": True}) == 1200
+    assert c["hp"] == 1200
+    snap = _snap(hp=1000)
+    _heal(snap, _runtime(snap, {"enabled": True}))
+    assert snap["player"]["hp"] == 1100   # 1000 + 100（未封顶 = 过量保留）
+
+
+def test_b3_overheal_normalize_defensive() -> None:
+    """归一：裸布尔兼容；非法（字符串/非布尔 enabled）回落关闭。"""
+    assert normalize_overheal(True) == {"enabled": True}
+    assert normalize_overheal(False) == {"enabled": False}
+    assert normalize_overheal({"enabled": 1}) == {"enabled": False}
+    assert normalize_overheal("yes") == {"enabled": False}
+    assert normalize_overheal({"enabled": True}) == {"enabled": True}
+
+
+def test_b4_overheal_is_hp_only_not_mp() -> None:
+    """E5 只讲「最大 HP」：MP 治疗即使开启也不超上限。"""
+    c = {"max_hp": 1000, "hp": 500, "max_mp": 100, "mp": 100}
+    assert apply_heal_to_hp(c, 50, key="mp", cap=100, cfg={"enabled": True}) == 100
+    assert c["mp"] == 100
+
+
+def test_b5_overheal_enabled_battle_absorb_hp_integration() -> None:
+    """引擎级证据：常驻吸血满血攻击 → 关闭不超上限 / 开启超上限（battle 落点）。"""
+    def _run(overheal: Any) -> int:
+        cfg = {OVERHEAL_KEY: overheal} if overheal is not None else None
+        eng = BattleEngine(config=cfg)
+        p = {"max_hp": 500, "hp": 500, "atk": 120, "dfn": 0, "spd": 10,
+             "foc": 50, "con": 0, "lck": 50, "absorb_hp": 100}
+        e = {"max_hp": 100000, "hp": 100000, "atk": 0, "dfn": 0, "spd": 1,
+             "foc": 0, "con": 0, "lck": 0}
+        eng.start(p, e, random_seed=7)
+        eng.player_act("normal")
+        return int(eng._combat("player")["hp"])  # noqa: SLF001
+
+    assert _run(None) == 500                       # 现状：封顶
+    assert _run({"enabled": False}) == 500
+    assert _run({"enabled": True}) > 500           # 保留：超过 max_hp
+
+
+def test_b6_validator_overheal_section() -> None:
+    """校验器：段结构非对象 / enabled 非布尔 → 红拦；合法/缺段 → 零红。"""
+    assert not check_pack({"settings": {}}).errors
+    assert not check_pack({"settings": {OVERHEAL_KEY: {"enabled": True}}}).errors
+    rep = check_pack({"settings": {OVERHEAL_KEY: [1, 2]}})
+    assert "section_structure" in _rules(rep)[0]
+    rep2 = check_pack({"settings": {OVERHEAL_KEY: {"enabled": 1}}})
+    assert "type" in _rules(rep2)[0]
+

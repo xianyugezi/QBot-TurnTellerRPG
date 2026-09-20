@@ -486,6 +486,18 @@ SETTINGS_FIELDS: Dict[str, FieldMeta] = {
         help="另立「特效强度上限」（不改任何战斗数值）：把特效轴折成「综合等效%」，按怪物档位"
              "判超限，越界动作由「越界处理」决定；同时输出折算后的真实装备占比。"
              "缺省不启用 = 与引入前逐字段一致。"),
+    # 批56 · 过量治疗（settings.overheal）—— 决策记录 §十五 D4 / 轴全集 §4-E5。
+    # E5 = 布尔开关（治疗可否超过最大 HP），**不是数值轴**。缺省关闭 = 与现状一致
+    # （过量部分丢弃）。引擎读点 = `core/effects.apply_heal_to_hp`；
+    # 校验器 = `validator._check_overheal`。上限/转护盾设计未写清 → 待裁决。
+    "overheal": FieldMeta(type="obj", children={
+        "enabled": FieldMeta(type="bool", default=False, label="是否允许过量治疗",
+                             help="关闭 / 不写该段 = 与现状一致：治疗按最大 HP 封顶，"
+                                  "过量部分丢弃。开启 = 允许治疗超过最大 HP（超出的部分保留）；"
+                                  "额外上限与「是否转护盾」设计未定，属待裁决。"),
+    }, label="过量治疗",
+        help="过量治疗开关（治疗可否超过最大 HP）：关闭 = 现状（丢弃）；开启 = 保留。"
+             "过量部分的上限、是否转护盾、与护盾的先后由后续裁决，本批不设上限、护盾不动。"),
     # 批50 · 特效轴地基：`settings.effect_axes` —— 特效轴**逐轴声明段**。
     # 形状 `{轴键: {min, max, default, display:{mode,label,help}, stack, legacy_alias}}`；
     # 键 = 轴 id（动态键空间，注册表唯一源 = `data.gear_stats.GEAR_EFFECT_KEYS`

@@ -52,6 +52,7 @@ from qbot_rpg.data.gear_stats import (
     EFFECT_UNKNOWN_MODES,
     GEAR_DISPLAY_KEYS,
     GEAR_EFFECT_KEYS,
+    OVERHEAL_KEY,
     PANEL_AXIS_STEMS,
     check_effect_budget,
     effect_axis_stem,
@@ -713,6 +714,8 @@ class _Checker:
             # 批50 · 特效轴地基：settings.effect_axes 逐轴声明（越界红拦 / 未知轴黄提示 /
             # 轴名不得与面板三轴 stem 冲突）+ 内容侧轴取值越界红拦。
             self._check_effect_axes(module_name, data)
+            # 批56 · 过量治疗开关：settings.overheal（结构/类型红拦；缺段 = 关闭 = 现状）
+            self._check_overheal(module_name, data)
             # 批38 · ④ 相性通用层（settings 四段结构/枚举/引用 + 材料相性引用存在性）
             self._check_affinity(module_name, data)
             # 批39 · 合成/炼金/打造启用矩阵：settings.deep_craft 打造路径开关
@@ -2258,6 +2261,33 @@ class _Checker:
                               rule="effect_axis_value_out_of_range",
                               value=fv, range_min=lo, range_max=hi,
                               msg="特效轴取值高于声明上限")
+
+    # ---- 批56 · 过量治疗：settings.overheal 开关（D4 / 轴全集 §4-E5）----
+    def _check_overheal(self, module_name: str, data: object) -> None:
+        """`settings.overheal` 段校验（批56 · D4 / `特效整理设计_1_修正轴全集.md` §4-E5）。
+
+        E5 口径 = **布尔开关**（治疗可否超过最大 HP），不是数值轴。分级：
+          · 段结构非对象（且非裸布尔）→ **红拦 R-1**；
+          · `enabled` 存在但非布尔 → **红拦 R-1**；
+          · 未知键 / 缺段 → 默认放行（缺段 = 关闭 = 与现状一致：过量部分**丢弃**）。
+        裸布尔（`overheal: true`）为宽松兼容形态，不拦。
+        """
+        if not isinstance(data, Mapping):
+            return
+        base = f"settings.{OVERHEAL_KEY}"
+        cfg = data.get(OVERHEAL_KEY)
+        if cfg is None or isinstance(cfg, bool):
+            return
+        if not isinstance(cfg, Mapping):
+            self._err(module_name, base, "R-1", rule="section_structure",
+                      got=type(cfg).__name__,
+                      msg="overheal 段要填对象（如 {\"enabled\": true}）或删掉该段"
+                          "（删掉 = 关闭 = 与现状一致：过量部分丢弃）")
+            return
+        enabled = cfg.get("enabled")
+        if enabled is not None and not isinstance(enabled, bool):
+            self._err(module_name, f"{base}.enabled", "R-1", rule="type", expect="bool",
+                      got=type(enabled).__name__)
 
     # ---- 批39 · 合成/炼金/打造启用矩阵：settings.deep_craft 打造路径开关 ----
     def _check_deep_craft(self, module_name: str, data: object) -> None:

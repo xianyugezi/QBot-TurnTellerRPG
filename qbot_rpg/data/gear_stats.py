@@ -136,6 +136,11 @@ __all__ = [
     "effect_equiv",
     "effect_cap_pct",
     "check_effect_budget",
+    # 批56 · 过量治疗开关（settings.overheal 段；D4 裁决 / E5）
+    "OVERHEAL_KEY",
+    "DEFAULT_OVERHEAL",
+    "normalize_overheal",
+    "overheal_enabled",
     # 批51 · 触发归属（owner）战斗桥键名
     "OWNED_EFFECT_IDS_KEY",
     "effect_axis_spec",
@@ -1025,3 +1030,50 @@ def check_effect_budget(values: Any, tier: Any = None, cfg: Any = None) -> Dict[
         "unknown_axis": str(cfg_n["unknown_axis"]),
         "action": action,
     }
+
+
+# ---------------------------------------------------------------------------
+# 批56 · 过量治疗开关（`settings.overheal`）—— D4 裁决 / 轴全集 §4-E5
+# ---------------------------------------------------------------------------
+# E5 口径（原文）：过量治疗 `overheal` = **布尔开关**（治疗可否超过最大 HP），无连续方向；
+# **不要**用 `healing_received_mult ≥ 0` 表达。它不是特效轴（故不登记进 EFFECT_AXIS_SPECS），
+# 而是另立一个内容包开关段，对齐 `settings.effect_budget` 的「包声明 + 框架登记」风格。
+#
+# **缺省口径 = 与现状一致（丢弃）**：`enabled=false` / 缺段 → 治疗量按 max_hp 封顶，
+# 过量部分丢弃（逐字段零变化）。`enabled=true` → 按 E5 字面「可否超过最大 HP」= **保留**：
+# HP 可超过 max_hp（不再封顶）。
+#
+# **待裁决（设计未写清，不得臆造）**：
+#   BV-1 过量部分**上限**：E5 只给布尔，未给「最多超多少」→ 本批不设额外上限（待裁决）。
+#   BV-2 过量部分**去向 / 与护盾先后**：是否应转护盾、护盾是否先于过量判定 → E5 未写，
+#        本批不转护盾、护盾阶段原样不动（待裁决）。
+#: `settings.overheal` 段键名。
+OVERHEAL_KEY: str = "overheal"
+
+#: 缺省声明：关闭 = 现状（过量丢弃）。**不配置 = 与引入前逐字段一致**。
+DEFAULT_OVERHEAL: Dict[str, Any] = {"enabled": False}
+
+
+def normalize_overheal(cfg: Any) -> Dict[str, Any]:
+    """`settings.overheal` → 有效声明（缺省 ⊕ 包覆盖）。
+
+    接受三种形态（非法一律回落缺省 = 关闭）：
+      · `{"enabled": true/false}`（推荐）；
+      · 裸布尔 `true/false`（宽松兼容）；
+      · 缺段 / None / 其它 → 关闭。
+    只做读时归一，**不改任何战斗数值**。
+    """
+    enabled = False
+    if isinstance(cfg, bool):
+        enabled = bool(cfg)
+    elif isinstance(cfg, Mapping):
+        raw = cfg.get("enabled", False)
+        if isinstance(raw, bool):
+            enabled = raw
+    return {"enabled": enabled}
+
+
+def overheal_enabled(cfg: Any = None) -> bool:
+    """`settings.overheal` 是否启用（缺省/非法 → False = 现状丢弃）。"""
+    return bool(normalize_overheal(cfg)["enabled"])
+

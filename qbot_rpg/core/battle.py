@@ -101,6 +101,7 @@ from qbot_rpg.core.effects import (
     DamagePipeline,
     EffectRuntime,
     PipelineResult,
+    apply_heal_to_hp,
     execute_action,
     heal_apply,
     status_stat_modifier_sum,
@@ -130,7 +131,7 @@ from qbot_rpg.core.ctb_scheduler import CTBScheduler
 # core 层只读；键缺省 = 不启用归属过滤 = 全库扫描旧行为）。
 from qbot_rpg.data.gear_stats import OWNED_EFFECT_IDS_KEY
 # 批52 · 特效轴消费口径：settings 段键名 + 读时钳制取值（唯一源，core 只读）。
-from qbot_rpg.data.gear_stats import EFFECT_AXES_KEY, effect_axis_value
+from qbot_rpg.data.gear_stats import EFFECT_AXES_KEY, OVERHEAL_KEY, effect_axis_value
 
 #: 批56 · 行动速度轴（X28 `action_speed_pct`）键名——唯一源仍是 `data.gear_stats`
 #: `EFFECT_AXIS_SPECS`（本常量只取登记名便于消费点引用，不另立键空间）。
@@ -726,11 +727,18 @@ class BattleEngine:
 
         批52：把 `settings.effect_axes` 声明段经引擎配置透传进 runtime.config（治疗轴消费点
         读它做读时钳制）；未配置 → config=None → 与批51 及此前逐字段一致。
+        批56：`settings.overheal` 段同样透传（HP 落点读它决定过量保留/丢弃）；未配置
+        → 不进 config → 缺省关闭 → 与现状逐字段一致。
         """
         _axes = self._config.get(EFFECT_AXES_KEY)
-        _cfg: Optional[Dict[str, Any]] = (
-            {EFFECT_AXES_KEY: _axes} if isinstance(_axes, Mapping) else None
-        )
+        _overheal = self._config.get(OVERHEAL_KEY)
+        _cfg: Optional[Dict[str, Any]] = None
+        if isinstance(_axes, Mapping) or isinstance(_overheal, (Mapping, bool)):
+            _cfg = {}
+            if isinstance(_axes, Mapping):
+                _cfg[EFFECT_AXES_KEY] = _axes
+            if isinstance(_overheal, (Mapping, bool)):
+                _cfg[OVERHEAL_KEY] = _overheal
         return EffectRuntime(
             status_state=self._snap.get("status_state"),
             marks_state=self._snap.get("marks_state"),
@@ -4909,7 +4917,9 @@ class BattleEngine:
                 if _heal != 0:
                     _hp_before = int(ac.get("hp", 0))
                     _hp_cap = int(ac.get("max_hp", _hp_before) or _hp_before)
-                    ac["hp"] = max(0, min(_hp_cap, _hp_before + _heal))
+                    # 批56 · HP 落点唯一收口（缺省 = 现状丢弃；overheal 开 = HP 保留）
+                    apply_heal_to_hp(ac, _heal, cap=_hp_cap,
+                                     cfg=self._config.get(OVERHEAL_KEY))
                     all_effects.append({"type": "absorb_hp", "target": attacker,
                                         "heal": _heal, "damage": res.final_damage})
             # 怒值积累（批⑦B）：玩家对敌实际伤害 → 敌方怒气（全隐性）

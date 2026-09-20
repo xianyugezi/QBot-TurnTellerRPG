@@ -90,6 +90,7 @@ __all__ = [
     "HEAL_DONE_AXIS",
     "status_stat_modifier_sum",
     "heal_apply",
+    "apply_heal_to_hp",
 ]
 
 # ---------------------------------------------------------------------------
@@ -1345,9 +1346,9 @@ def tick_turn_end(snapshot: Mapping[str, Any], runtime: EffectRuntime) -> List[D
                 heal = int(int(absb["record"]) * pct)
                 # 批52 · 受疗轴唯一收口（行动收尾回复：无明确施疗方 → 只吃受疗侧）
                 heal = heal_apply(heal, runtime, snapshot, side)
-                hp = int(c.get("hp", 0))
-                max_hp = int(c.get("max_hp", 0))
-                c["hp"] = max(0, min(max_hp, hp + heal))
+                # 批56 · HP 落点唯一收口（缺省 = 现状丢弃；overheal 开 = 保留）
+                apply_heal_to_hp(c, heal, cap=int(c.get("max_hp", 0)),
+                                 cfg=_runtime_overheal_cfg(runtime))
                 absb["record"] = 0
                 if heal != 0:
                     log.append({"type": "absorb_heal", "side": side, "heal": heal})
@@ -1392,9 +1393,9 @@ def tick_turn_end(snapshot: Mapping[str, Any], runtime: EffectRuntime) -> List[D
             v = int(regen.get("value", 0))
             # 批52 · 受疗轴唯一收口（再生：无明确施疗方 → 只吃受疗侧）
             v = heal_apply(v, runtime, snapshot, side)
-            hp = int(c.get("hp", 0))
-            max_hp = int(c.get("max_hp", 0))
-            c["hp"] = max(0, min(max_hp, hp + v))
+            # 批56 · HP 落点唯一收口（缺省 = 现状丢弃；overheal 开 = 保留）
+            apply_heal_to_hp(c, v, cap=int(c.get("max_hp", 0)),
+                             cfg=_runtime_overheal_cfg(runtime))
             log.append({"type": "regen", "side": side, "heal": v})
         # ④ 持续双维·回合扣减 + 限时印记扣减（细化_1d §2.2/§三：remaining_turns 统一
         #    tick 扣减、归零移除入快照 —— 委托 MarksManager.tick_turn 唯一实现）
@@ -1885,6 +1886,49 @@ def _clamp_axis_total(total: float, axis: str, cfg: Any) -> float:
     return total
 
 
+def _runtime_overheal_cfg(runtime: Any) -> Any:
+    """运行时携带的 `settings.overheal` 段（无 → None = 缺省关闭 = 现状丢弃）。"""
+    from qbot_rpg.data.gear_stats import OVERHEAL_KEY  # noqa: PLC0415
+
+    cfg = getattr(runtime, "config", None)
+    if isinstance(cfg, Mapping):
+        return cfg.get(OVERHEAL_KEY)
+    return None
+
+
+def apply_heal_to_hp(
+    combatant: Any,
+    heal: int,
+    *,
+    key: str = "hp",
+    cap: int,
+    cfg: Any = None,
+) -> int:
+    """把一份治疗量落进 combatant 的 HP/MP（**HP 落点唯一收口**；批56 · D4 / §4-E5）。
+
+    `cap` 由调用方按其既有口径算出（`max_hp` / `max_mp`）——**不在此重算**，保证
+    缺省路径与现状**逐字段一致**：`max(0, min(cap, cur + heal))`，过量部分**丢弃**。
+
+    `cfg` = `settings.overheal` 段（缺省 None = 关闭）。`enabled=true` 且 `key == "hp"`
+    且 `heal > 0` → 按 E5 字面「治疗可否超过最大 HP」= **保留**：`max(0, cur + heal)`
+    （HP 可超过 max_hp）。额外上限与「是否转护盾」设计未写清 → 属**待裁决**
+    （`docs/深度打造_实现说明.md` 批56 节 / 决策记录 §十五），本批不设上限、护盾阶段不动。
+
+    负治疗（治疗反转）路径两侧一致：下钳 0，不越界为负。返回落定后的值。
+    """
+    if not isinstance(combatant, dict):
+        return 0
+    cur = int(combatant.get(key, 0))
+    if heal > 0 and key == "hp":
+        from qbot_rpg.data.gear_stats import overheal_enabled  # noqa: PLC0415
+
+        if overheal_enabled(cfg):
+            combatant[key] = max(0, cur + heal)
+            return int(combatant[key])
+    combatant[key] = max(0, min(int(cap), cur + heal))
+    return int(combatant[key])
+
+
 def _resolve_side(actor: str, which: str) -> str:
     """L0 动作 target/self/enemy 的相对侧解析（细化_1b §3.1：target 与技能伤害 target 独立）。"""
     if which in ("self", "player"):
@@ -2056,7 +2100,9 @@ def execute_action(
         heal = heal_apply(heal, runtime, ctx.snapshot, attacker, source=attacker)
         c = ctx.snapshot.get(attacker)
         if isinstance(c, dict):
-            c["hp"] = max(0, min(int(c.get("max_hp", 0)), int(c.get("hp", 0)) + heal))
+            # 批56 · HP 落点唯一收口（缺省 = 现状丢弃；overheal 开 = 保留）
+            apply_heal_to_hp(c, heal, cap=int(c.get("max_hp", 0)),
+                             cfg=_runtime_overheal_cfg(runtime))
         side_effects.append({"type": "lifesteal", "target": attacker, "heal": heal})
         return ActionResult(True, side_effects)
     if atype == "pierce":
@@ -2116,8 +2162,9 @@ def execute_action(
                 key = "hp" if stat == "hp" else "mp"
                 cur = int(c.get(key, 0))
                 cap = int(c.get("max_hp" if stat == "hp" else "max_mp", cur))
-                # 批52：负治疗（反转）时扣血，下钳 0（不越界为负 HP）；正值路径与既有一致。
-                c[key] = max(0, min(cap, cur + v))
+                # 批56 · HP 落点唯一收口（缺省 = 现状丢弃、负治疗下钳 0；overheal 开 = HP 保留）
+                apply_heal_to_hp(c, v, key=key, cap=cap,
+                                 cfg=_runtime_overheal_cfg(runtime))
             if v < 0:
                 side_effects.append({"type": "heal", "target": target, "stat": stat,
                                      "value": v, "reversed": True})

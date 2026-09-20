@@ -115,6 +115,18 @@ __all__ = [
     # 批52 · 特效轴消费口径（settings 段键名 + 读时钳制取值）
     "EFFECT_AXES_KEY",
     "effect_axis_value",
+    # 批55 · 特效强度预算（settings.effect_budget 段；另立上限 + A1 度量 —— 纯函数）
+    "EFFECT_BUDGET_KEY",
+    "EFFECT_AXIS_WEIGHTS",
+    "DEFAULT_EFFECT_BUDGET",
+    "EFFECT_AGGREGATES",
+    "EFFECT_GATE_MODES",
+    "EFFECT_UNKNOWN_MODES",
+    "normalize_effect_budget",
+    "effect_values_of",
+    "effect_equiv",
+    "effect_cap_pct",
+    "check_effect_budget",
     # 批51 · 触发归属（owner）战斗桥键名
     "OWNED_EFFECT_IDS_KEY",
     "effect_axis_spec",
@@ -462,7 +474,6 @@ for _spec in EFFECT_AXIS_SPECS:
     GEAR_LABELS_ZH[_axis] = str(_disp["label"])
     GEAR_HELP_ZH[_axis] = str(_disp["help"])
 del _spec, _axis, _disp
-
 #: 旧键 → 特效轴 的别名反查表（`{旧键名: (轴键名, sign)}`；`pct = sign × 旧键值`）。
 #: **只作声明与后续接线的单一入口**：本批不消费、不改写任何既有链路。
 EFFECT_LEGACY_ALIASES: Dict[str, Tuple[str, float]] = {
@@ -724,3 +735,254 @@ def combatant_updates(
                 continue
             out[axis] = out.get(axis, 0.0) + float(sign) * fv
     return out
+
+
+# ---------------------------------------------------------------------------
+# 批55 · 特效强度预算（`settings.effect_budget`）—— 另立上限（方案 B）+ A1 度量（纯函数）
+# ---------------------------------------------------------------------------
+# 依据：`docs/特效强度预算_设计.md` §二方案 B + §三推荐（B 主 + A1 度量 + C 备用）。
+#
+# 问题：`PANEL_AXIS_KEYS` 只覆盖 atk/dfn/hp，特效轴（本文件 EFFECT + COMBAT 档吸血/免伤）
+# 会抬高真实战力却**不进 `equip_share`** → 实机口径把 Boss 压到 ≈39–41（贴死 40 下沿）。
+# 本段**不改任何战斗数值**：只做「度量」（`effect_equiv` / `effective_equip_share`）与
+# 「设上限」（`check_effect_budget`）。缺省整段不存在 / `enabled=false` → 全 0 / gate 静默。
+#
+# 数据层落点原因（对齐批50 `PANEL_AXIS_STEMS` 的同一取舍）：`content/validator` 需读本段做
+# 内容校验，而架构矩阵 `content → {data}` **禁止 content→core**；故纯函数放 data 层，
+# `core/panel_budget` 再导出（core→data 合法）。
+EFFECT_BUDGET_KEY: str = "effect_budget"
+
+#: 输出等效 × 生存等效的合成口径。
+EFFECT_AGGREGATES: Tuple[str, ...] = ("geometric", "product", "max")
+#: 超限处理：off = 静默 / warn = 黄提示（不阻断）/ red = 红拦（拒绝）。
+EFFECT_GATE_MODES: Tuple[str, ...] = ("off", "warn", "red")
+#: 权表未登记轴出现时的行为。
+EFFECT_UNKNOWN_MODES: Tuple[str, ...] = ("ignore", "warn", "red")
+
+#: **特效等效权表**（坐标表，不是加法定律）：`{键: {calib, output, survival}}`，
+#: 外推规则固定 `等效% = 轴值 / calib × 校准等效%`（线性、单向可负）。
+#:
+#: 校准点 = `docs/特效强度预算_设计.md` §2.2 实测点（`doc_id` 见各行）。整表可被内容包
+#: `settings.effect_budget.axis_weights` **逐键覆盖 / 追加**（不写死）；`calib` 为 0 的
+#: 条目按「不参与折算」处理。未登记的**已登记特效轴** = `unknown_axis` 行为。
+EFFECT_AXIS_WEIGHTS: Dict[str, Dict[str, Any]] = {
+    # X27 冷却：轮转模型 C=4 / k=0.4 → +6.8%（区间 +2.9%~+25%）；轴值负 = 缩短冷却 = 正收益。
+    "cooldown_pct": {"calib": -20.0, "output": 6.8, "survival": 0.0, "doc_id": "X27"},
+    # X02 承伤：1/(1−0.25) − 1 = +33.3%（精确）；轴值正 = 易伤 = 负收益。
+    "damage_taken_pct": {"calib": -25.0, "output": 0.0, "survival": 33.3, "doc_id": "X02"},
+    # X12 吸血：净损血率模型，中/高怪 ×1.43~×1.48，overheal 封顶后取下沿 +43%。
+    "absorb_hp": {"calib": 15.0, "output": 0.0, "survival": 43.0, "doc_id": "X12"},
+    # X17 受疗：治疗占比相关（+5%~+20%），取保守下沿 +5%。
+    "healing_received_pct": {"calib": 15.0, "output": 0.0, "survival": 5.0, "doc_id": "X17"},
+    # X01 造成伤害：终伤乘区线性 +10% ⇔ +10%。
+    "damage_dealt_pct": {"calib": 10.0, "output": 10.0, "survival": 0.0, "doc_id": "X01"},
+}
+
+#: 新增 `settings.effect_budget` 的缺省（**整段不存在 / enabled=false → 完全无行为**）。
+#: 缺省口径按 `docs/特效强度预算_设计.md` §三推荐：cap 8% × 档位 1.5/1.0/0.625
+#: = 普通 12% / 精英 8% / Boss 5%；合成 geometric；超限 warn（上线初期观察）。
+DEFAULT_EFFECT_BUDGET: Dict[str, Any] = {
+    "enabled": False,
+    "aggregate": "geometric",
+    "cap_equiv_pct": 8.0,
+    "tier_mult": {"normal": 1.5, "elite": 1.0, "boss": 0.625},
+    "gate_mode": "warn",
+    "unknown_axis": "warn",
+    "report_effective_share": True,
+    "axis_weights": {k: dict(v) for k, v in EFFECT_AXIS_WEIGHTS.items()},
+}
+
+
+def _effect_flag(cfg: Mapping[str, Any], key: str, default: bool) -> bool:
+    """严格布尔读键：缺键/非布尔 → `default`（不把 truthy 值当开关）。"""
+    v = cfg.get(key, default)
+    return v if isinstance(v, bool) else bool(default)
+
+
+def _effect_choice(cfg: Mapping[str, Any], key: str, allowed: Tuple[str, ...],
+                   default: str) -> str:
+    v = cfg.get(key, default)
+    return str(v) if isinstance(v, str) and v in allowed else default
+
+
+def normalize_effect_budget(cfg: Any) -> Dict[str, Any]:
+    """`settings.effect_budget` → 有效配置（缺省/非法逐项回落；缺段 → `enabled=false`）。
+
+    形状与缺省见 `DEFAULT_EFFECT_BUDGET`。整段不存在、非映射、`enabled != true` →
+    聚合器返回 0、gate 静默 → 与引入前**逐字段一致**。`axis_weights` 在缺省权表上
+    **逐键覆盖 / 追加**（数值非法则忽略该字段）；`tier_mult` 可增自定义档位键。
+    """
+    m: Mapping[str, Any] = cfg if isinstance(cfg, Mapping) else {}
+    out: Dict[str, Any] = dict(DEFAULT_EFFECT_BUDGET)
+    out["enabled"] = _effect_flag(m, "enabled", False)
+    out["aggregate"] = _effect_choice(m, "aggregate", EFFECT_AGGREGATES, "geometric")
+    out["gate_mode"] = _effect_choice(m, "gate_mode", EFFECT_GATE_MODES, "warn")
+    out["unknown_axis"] = _effect_choice(m, "unknown_axis", EFFECT_UNKNOWN_MODES, "warn")
+    out["report_effective_share"] = _effect_flag(m, "report_effective_share", True)
+    cap = _as_effect_number(m.get("cap_equiv_pct"))
+    out["cap_equiv_pct"] = max(0.0, cap) if cap is not None else 8.0
+    tier_mult: Dict[str, float] = {
+        str(k): max(0.0, float(v))
+        for k, v in dict(DEFAULT_EFFECT_BUDGET["tier_mult"]).items()
+    }
+    raw_tm = m.get("tier_mult")
+    if isinstance(raw_tm, Mapping):
+        for raw_key, raw_val in raw_tm.items():
+            num = _as_effect_number(raw_val)
+            if num is not None:
+                tier_mult[str(raw_key)] = max(0.0, num)
+    out["tier_mult"] = tier_mult
+    weights: Dict[str, Dict[str, Any]] = {
+        str(k): dict(v) for k, v in DEFAULT_EFFECT_BUDGET["axis_weights"].items()
+    }
+    raw_w = m.get("axis_weights")
+    if isinstance(raw_w, Mapping):
+        for raw_key, raw_entry in raw_w.items():
+            key = str(raw_key)
+            base = dict(weights.get(key) or {"calib": 0.0, "output": 0.0, "survival": 0.0})
+            if isinstance(raw_entry, Mapping):
+                for field in ("calib", "output", "survival"):
+                    if field not in raw_entry:
+                        continue
+                    num = _as_effect_number(raw_entry.get(field))
+                    if num is not None:
+                        base[field] = num
+                if raw_entry.get("doc_id") is not None:
+                    base["doc_id"] = str(raw_entry.get("doc_id"))
+            weights[key] = base
+    out["axis_weights"] = weights
+    return out
+
+
+def _combine_equiv(output_pct: float, survival_pct: float, aggregate: str) -> float:
+    """输出等效 × 生存等效 → 综合等效（%）；`max` 取两者较大者。"""
+    if aggregate == "max":
+        return max(float(output_pct), float(survival_pct))
+    rel_out = max(0.0, 1.0 + float(output_pct) / 100.0)
+    rel_surv = max(0.0, 1.0 + float(survival_pct) / 100.0)
+    if aggregate == "product":
+        return (rel_out * rel_surv - 1.0) * 100.0
+    return (math.sqrt(rel_out * rel_surv) - 1.0) * 100.0
+
+
+def effect_values_of(bonus: Any, cfg: Any = None) -> Dict[str, float]:
+    """从 `stats_bonus` / 聚合 flat 映射抽出**特效相关取值**（旧键经 `legacy_alias` 换算）。
+
+    只保留三类键：权表键（含 COMBAT 档的 `absorb_hp` 等）、登记特效轴
+    （`GEAR_EFFECT_KEYS`，进 unknown 判定）、旧键别名（换算为轴，如
+    `immune_dmg:25 → damage_taken_pct:-25`）。其余键（atk/crit/…）静默忽略。
+    同键多来源**加算**（与 EFFECT 轴 `stack=add` 口径一致）。
+    """
+    cfg_n = normalize_effect_budget(cfg)
+    recognized = set(str(k) for k in cfg_n["axis_weights"]) | set(GEAR_EFFECT_KEYS)
+    out: Dict[str, float] = {}
+    if not isinstance(bonus, Mapping):
+        return out
+    for raw_key, raw_val in bonus.items():
+        fv = _as_effect_number(raw_val)
+        if fv is None or fv == 0.0:
+            continue
+        key = str(raw_key)
+        alias = EFFECT_LEGACY_ALIASES.get(key)
+        if alias is not None:
+            axis, sign = alias
+            out[str(axis)] = out.get(str(axis), 0.0) + float(sign) * fv
+        elif key in recognized:
+            out[key] = out.get(key, 0.0) + fv
+    return out
+
+
+def effect_equiv(values: Any, cfg: Any = None) -> Dict[str, Any]:
+    """一个 build（`{键: 轴值}`）→ 特效等效（**只读、不改任何战斗数值**；方案 B 聚合器）。
+
+    返回 `{enabled, output_pct, survival_pct, equiv_pct, aggregate, unknown}`；
+    `unknown` = **已登记特效轴**（`GEAR_EFFECT_KEYS`）但权表未登记的键（排序去重）；
+    完全不属于特效键空间的键（如 atk/crit）**静默忽略**。`enabled != true` → 全 0。
+    """
+    cfg_n = normalize_effect_budget(cfg)
+    result: Dict[str, Any] = {
+        "enabled": bool(cfg_n["enabled"]),
+        "output_pct": 0.0,
+        "survival_pct": 0.0,
+        "equiv_pct": 0.0,
+        "aggregate": str(cfg_n["aggregate"]),
+        "unknown": [],
+    }
+    if not cfg_n["enabled"] or not isinstance(values, Mapping):
+        return result
+    weights: Mapping[str, Any] = cfg_n["axis_weights"]
+    registered = set(GEAR_EFFECT_KEYS)
+    output_pct = 0.0
+    survival_pct = 0.0
+    unknown = set()
+    for raw_key, raw_val in values.items():
+        fv = _as_effect_number(raw_val)
+        if fv is None or fv == 0.0:
+            continue
+        key = str(raw_key)
+        weight = weights.get(key)
+        if not isinstance(weight, Mapping):
+            if key in registered:
+                unknown.add(key)
+            continue
+        calib = _as_effect_number(weight.get("calib"))
+        if not calib:
+            continue
+        ratio = fv / float(calib)
+        output_pct += ratio * float(_as_effect_number(weight.get("output")) or 0.0)
+        survival_pct += ratio * float(_as_effect_number(weight.get("survival")) or 0.0)
+    result["output_pct"] = output_pct
+    result["survival_pct"] = survival_pct
+    result["equiv_pct"] = _combine_equiv(output_pct, survival_pct, str(cfg_n["aggregate"]))
+    result["unknown"] = sorted(unknown)
+    return result
+
+
+def effect_cap_pct(tier: Any = None, cfg: Any = None) -> float:
+    """按档位的特效综合等效上限 = `cap_equiv_pct × tier_mult[tier]`（未启用 → 0.0）。
+
+    档位缺省/未登记 → `tier_mult` 回落 1.0（不写死档位名，内容包可自行增键）。
+    """
+    cfg_n = normalize_effect_budget(cfg)
+    if not cfg_n["enabled"]:
+        return 0.0
+    tier_mult: Mapping[str, Any] = cfg_n["tier_mult"]
+    mult = 1.0
+    if tier is not None and str(tier) in tier_mult:
+        mult = float(tier_mult[str(tier)])
+    return max(0.0, float(cfg_n["cap_equiv_pct"]) * mult)
+
+
+def check_effect_budget(values: Any, tier: Any = None, cfg: Any = None) -> Dict[str, Any]:
+    """特效强度预算闸：按档位判超限（**只判不改**；越界动作由 `gate_mode` 决定）。
+
+    返回 `{enabled, equiv_pct, output_pct, survival_pct, cap_pct, over, gate_mode,
+    unknown, unknown_axis, action}`——`action` ∈ `ok/off/warn/red`：
+      · 未启用 / 未超限 → `ok`；超限 → `gate_mode`（off 静默 / warn 黄提示 / red 拒绝）；
+      · 权表未登记轴按 `unknown_axis` 取**更严**者（off/ignore < warn < red）。
+    本函数**不改任何战斗数值**；调用方（校验器 / 工具 / 内容包）自行决定呈现方式。
+    条目级校验（无档位）调用本次 `tier=None` → 上限 = `cap_equiv_pct`（条目配额）。
+    """
+    cfg_n = normalize_effect_budget(cfg)
+    equiv = effect_equiv(values, cfg)
+    cap = effect_cap_pct(tier, cfg)
+    over = bool(cfg_n["enabled"]) and float(equiv["equiv_pct"]) > cap
+    severity = {"off": 0, "ignore": 0, "ok": 0, "warn": 1, "red": 2}
+    action = str(cfg_n["gate_mode"]) if over else "off"
+    unknown = list(equiv["unknown"])
+    if unknown and severity.get(str(cfg_n["unknown_axis"]), 1) > severity.get(action, 0):
+        action = str(cfg_n["unknown_axis"])
+    if action in ("off", "ignore", ""):
+        action = "ok"
+    return {
+        "enabled": bool(cfg_n["enabled"]),
+        "equiv_pct": float(equiv["equiv_pct"]),
+        "output_pct": float(equiv["output_pct"]),
+        "survival_pct": float(equiv["survival_pct"]),
+        "cap_pct": float(cap),
+        "over": over,
+        "gate_mode": str(cfg_n["gate_mode"]),
+        "unknown": unknown,
+        "unknown_axis": str(cfg_n["unknown_axis"]),
+        "action": action,
+    }

@@ -430,6 +430,62 @@ SETTINGS_FIELDS: Dict[str, FieldMeta] = {
     }, label="面板预算（装备占比）",
         help="面板数值预算：白值份 : 装备份 : buff份 的设计配比与装备倍率。"
              "用于把「装备占比」调到目标值（批45：40%→60%），同时保持白值与 buff 绝对数值不变。"),
+    # 批55 · 特效强度预算（settings.effect_budget）——设计 `docs/特效强度预算_设计.md`
+    # §二方案 B（主方案）+ §三.2 参数默认。另立特效强度上限（**不改战斗数值**）：
+    # 等价权表 → 聚合器 → 按档位 `cap_equiv_pct × tier_mult` → `gate_mode`。
+    # 唯一源 = `data/gear_stats`（`normalize_effect_budget` / `EFFECT_*`）；
+    # 引擎读点 = `core/panel_budget`（再导出）；校验器 = `validator._check_effect_budget`。
+    # 缺省整段不存在 / enabled=false → 聚合器返回 0、gate 静默 → 零行为。
+    "effect_budget": FieldMeta(type="obj", children={
+        "enabled": FieldMeta(type="bool", default=False, label="是否启用特效预算闸",
+                             help="开启后按档位校验特效综合等效是否超限（**只判不改**战斗数值）；"
+                                  "关闭 / 不写该段 = 零行为（聚合器返回 0、不校验、不提示）。"),
+        "aggregate": FieldMeta(type="enum", enum=("geometric", "product", "max"),
+                               default="geometric", label="等效合成口径",
+                               help="输出等效与生存等效的合成方式：geometric=几何平均"
+                                    "（缺省，推荐）；product=乘积（更严）；max=取较大者。"),
+        "cap_equiv_pct": FieldMeta(
+            type="number", range_min=0.0, default=8.0, label="特效等效上限（%）",
+            help="特效综合等效的上限（百分点）：最终上限 = 本值 × 档位倍率。"
+                 "缺省 8% → 普通 12% / 精英 8% / Boss 5%（可把确定性口径最坏偏移锁在全档 ≤±1 回合）。"),
+        "tier_mult": FieldMeta(type="obj", children={
+            "normal": FieldMeta(type="number", range_min=0.0, default=1.5, label="普通档倍率"),
+            "elite": FieldMeta(type="number", range_min=0.0, default=1.0, label="精英档倍率"),
+            "boss": FieldMeta(type="number", range_min=0.0, default=0.625, label="Boss 档倍率",
+                              help="Boss 对输出等效最敏感（约 +1% 就掉一回合），故收紧到 0.625"
+                                   "（= 上限 5%）。可自行追加自定义档位键。"),
+        }, label="档位倍率", help="各怪物档位的上限倍率（键可自定义；未登记档位按 1.0）。"),
+        "gate_mode": FieldMeta(type="enum", enum=("off", "warn", "red"), default="warn",
+                               label="越界处理",
+                               help="超限时：off=静默（只判不报）；warn=黄提示（不阻断，缺省）；"
+                                    "red=红拦（拒绝该内容条目）。"),
+        "unknown_axis": FieldMeta(type="enum", enum=("ignore", "warn", "red"), default="warn",
+                                  label="未登记轴处理",
+                                  help="出现权表未登记的特效轴时：ignore=忽略；warn=黄提示（缺省）；"
+                                       "red=红拦。与越界处理取**更严**者。"),
+        "report_effective_share": FieldMeta(
+            type="bool", default=True, label="输出真实装备占比",
+            help="是否对外输出 effective_equip_share（把特效等效折算进预算池后的真实装备占比；"
+                 "**只报数不改数**，补足闸的诊断盲区）。"),
+        "axis_weights": FieldMeta(
+            type="obj", soft_label=True, children={
+                "calib": FieldMeta(type="number", allow_negative=True, label="校准点",
+                                   help="该键的实测校准点（等效% = 轴值/校准点 × 校准等效%）；"
+                                        "0 = 该键不参与折算。"),
+                "output": FieldMeta(type="number", allow_negative=True, default=0, label="输出等效%",
+                                    help="校准点处的输出侧等效（百分点；可负）。"),
+                "survival": FieldMeta(type="number", allow_negative=True, default=0,
+                                      label="生存等效%",
+                                      help="校准点处的生存侧等效（百分点；可负）。"),
+                "doc_id": FieldMeta(type="str", label="轴编号",
+                                    help="轴全集编号（如 X27），便于对账。"),
+            }, label="特效等效权表",
+            help="键 → 等效坐标（calib/output/survival）：等效% = 轴值 / calib × 校准等效%。"
+                 "不写 = 用框架缺省权表；可逐键覆盖或追加。"),
+    }, label="特效强度预算",
+        help="另立「特效强度上限」（不改任何战斗数值）：把特效轴折成「综合等效%」，按怪物档位"
+             "判超限，越界动作由「越界处理」决定；同时输出折算后的真实装备占比。"
+             "缺省不启用 = 与引入前逐字段一致。"),
     # 批50 · 特效轴地基：`settings.effect_axes` —— 特效轴**逐轴声明段**。
     # 形状 `{轴键: {min, max, default, display:{mode,label,help}, stack, legacy_alias}}`；
     # 键 = 轴 id（动态键空间，注册表唯一源 = `data.gear_stats.GEAR_EFFECT_KEYS`

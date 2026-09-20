@@ -251,7 +251,13 @@ DEFAULT_PACKS = ("veinborn", "test_demo")
 #     该键本批**真接线**，原文案已成为陷阱；label/range/group 均不变。
 #   对拍实证：删除项 = 0；硬差异 6 条全部为同一 help（×2 模块 ×2 派生键 ×2 包）；
 #   重定后基线树与当前树逐字段 diff=0。
-DEFAULT_BASELINE_REF = "b9df5c7"
+# 批55（2026-09-20 特效强度预算）重定：b9df5c7 → f1e942e（本批字段/文档提交）。
+#   原因 = 本批**有意**变更（非迁移回归），全部为**新增**（无删除/无既有严格键改值）：
+#   · settings 新增 `effect_budget` 段（8 子字段）→ settings 条目 +1（两包 count/
+#     unconfigured 各 +1，派生的 index/modules 计数位移）。
+#   对拍实证：删除项 = 0；无既有 label/help/group/module_labels/module_tree 改值；
+#   重定后基线树与当前树逐字段 diff=0。
+DEFAULT_BASELINE_REF = "f1e942e"
 
 
 def _env(root: Path) -> dict:

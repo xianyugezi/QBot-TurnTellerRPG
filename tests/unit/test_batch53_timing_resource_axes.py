@@ -493,10 +493,14 @@ def test_g1_battle_snapshot_zero_change_no_axis_keys() -> None:
     import json
     import re
 
-    text_a = json.dumps(_snap(), ensure_ascii=False, sort_keys=True, default=str)
-    text_b = json.dumps(_snap(), ensure_ascii=False, sort_keys=True, default=str)
-    text_a = re.sub(r"[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}", "<uid>", text_a)
-    text_b = re.sub(r"[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}", "<uid>", text_b)
+    def _normalize(text: str) -> str:
+        # 快照含真实墙钟时间戳（`…T00:47:30Z` 形态）；两次 `_snap()` 若跨秒边界会假阳性失败
+        # （批55 全量跑实测：`…:30Z` vs `…:29Z`）。与 uid 同属「非确定性字段」，一并归一。
+        text = re.sub(r"[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}", "<uid>", text)
+        return re.sub(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", "<ts>", text)
+
+    text_a = _normalize(json.dumps(_snap(), ensure_ascii=False, sort_keys=True, default=str))
+    text_b = _normalize(json.dumps(_snap(), ensure_ascii=False, sort_keys=True, default=str))
     assert text_a == text_b
 
     def _keys(obj: Any) -> Any:

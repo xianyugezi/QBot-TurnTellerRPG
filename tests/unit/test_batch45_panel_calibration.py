@@ -150,11 +150,15 @@ def test_monster_scaling_hp_atk_and_con_compensation() -> None:
 
 
 def test_monster_scaling_normalize_defaults() -> None:
-    """缺省 def_k=100；非法回落 1.0。"""
+    """缺省 def_k=100；非法回落 1.0（批55 追加方案 C 两键，缺省 1.0 = 现状）。"""
     d = normalize_monster_scaling(None)
-    assert d == {"hp_mult": 1.0, "atk_mult": 1.0, "def_factor": 1.0, "def_k": 100.0}
+    assert d == {"hp_mult": 1.0, "atk_mult": 1.0, "def_factor": 1.0, "def_k": 100.0,
+                 "effect_hp_mult": 1.0, "effect_atk_mult": 1.0}
     assert normalize_monster_scaling({"hp_mult": "x", "def_factor": -1})["hp_mult"] == 1.0
     assert normalize_monster_scaling({"def_factor": -1})["def_factor"] == 1.0
+    # 批55：方案 C 缺省 1.0（不配置即不存在）；非法同样回落 1.0。
+    assert normalize_monster_scaling({"effect_hp_mult": -2})["effect_hp_mult"] == 1.0
+    assert normalize_monster_scaling({"effect_atk_mult": "x"})["effect_atk_mult"] == 1.0
 
 
 # ---------------------------------------------------------------------------

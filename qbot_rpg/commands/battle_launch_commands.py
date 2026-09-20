@@ -157,13 +157,17 @@ def _enemy_combatant(enemy_entry: Mapping[str, Any],
       · `def_factor` → con/dfn 仿射补偿 `(con+K)×factor−K`（K=`def_k`，默认 100）——
         因防御系数 `K/(con+K)` 非线性，等比缩 con 会破坏「斩杀回合不变式」。
       只缩放 hp/atk/防御三轴；mp/mag/spd/foc/lck/agi 与战斗词条**不动**（保手感/暴击/命中参数）。
+
+    批55 · 方案 C 备用杠杆（`effect_hp_mult` / `effect_atk_mult`，缺省 **1.0 = 现状**）：
+      与 `hp_mult` / `atk_mult` **相乘**后再按既有取整口径落值；两键缺省不写 = 1.0 →
+      构造结果逐字段与引入前一致（应急补偿「特效渗透率接近 100%」；改回 1.0 即回滚）。
     """
     st = enemy_entry.get("stats") or {}
     if not isinstance(st, Mapping):
         st = {}
     sc = normalize_monster_scaling(scaling)
-    hp_mult = sc["hp_mult"]
-    atk_mult = sc["atk_mult"]
+    hp_mult = sc["hp_mult"] * sc["effect_hp_mult"]
+    atk_mult = sc["atk_mult"] * sc["effect_atk_mult"]
     hp = int(st.get("hp", 100))
     if hp_mult != 1.0:
         hp = max(0, int(round(hp * hp_mult)))

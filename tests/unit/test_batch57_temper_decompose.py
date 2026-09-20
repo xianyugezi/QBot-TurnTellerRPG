@@ -501,7 +501,7 @@ def test_i1_command_decomposes_uid_instance() -> None:
     ctx = _decompose_ctx(inst)
     parsed = types.SimpleNamespace(error=None, args=["X剑"], qty=None)
     out = _run(cmd_decompose(parsed, ctx))
-    assert "♻️" in out
+    assert "分解" in out and "无材料" not in out
     assert ctx["player"]["inventory"] == []                 # uid 实例被扣（UID 锚定）
     assert ctx["_added"] == [("a", 9), ("b", 5)]            # 材料返还
     assert ctx["player"]["currencies"]["essence"] == 101605  # 精粹入账

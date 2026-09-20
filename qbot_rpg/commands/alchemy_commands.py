@@ -1752,17 +1752,15 @@ def _currency_bucket(ctx: MutableMapping[str, Any]) -> Any:
 
 def _render_instance_decompose(plan: Mapping[str, Any], ctx: Mapping[str, Any],
                                name: str = "", currency_name: str = "") -> str:
-    """实例分解结果 → 人话（材料行 + 精粹行）。"""
+    """实例分解结果 → 人话（材料行 + 精粹行；纯文本，除功能性 ✅ 外无装饰 emoji）。"""
     mats = plan.get("materials") or []
-    lines = []
-    if mats:
-        lines.append("、".join(f"{n}×{c}" for _i, n, c in mats))
+    seg = "、".join(f"{n}×{c}" for _i, n, c in mats) if mats else "无材料返还"
     ess = plan.get("essence") or {}
     total = int(ess.get("total") or 0)
-    seg = f"🪨 {lines[0]}" if lines else "🪨 无材料返还"
+    body = f"✅ 分解 {name or plan.get('item_id') or ''}：{seg}"
     if total > 0:
-        seg += f"　✨ {currency_name or '装备精粹'} +{total}"
-    return f"♻️ 分解 {name or plan.get('item_id') or ''}：{seg}"
+        body += f"\n{currency_name or '装备精粹'}×{total}"
+    return body
 
 
 def _do_decompose_instance(ctx: MutableMapping[str, Any], hit: Mapping[str, Any],

@@ -150,7 +150,14 @@ SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
 #   对拍实证：删除项 = 0；无既有 label/help/group/module_labels/module_tree 改值；
 #   重定后基线树与当前树逐字段 diff=0。
 #   与 scripts/compare_field_meta_migration.py 的 DEFAULT_BASELINE_REF 同基线。
-BASELINE_REF = "138f0d2"
+# 批57（2026-09-21 淬炼与分解回收）重定：138f0d2 → 427047e（本批字段/引擎提交）。
+#   原因 = 本批**有意**变更（非迁移回归），全部为**新增**（无删除/无既有严格键改值）：
+#   · `enhance` 模块新增 `temper` 段（15 子字段）→ 该模块 own/count/total +1、
+#     entries/enhance 计数 5→6（unconfigured 0→1，派生 index/modules 计数位移）；
+#   · `settings.forge` 新增 `essence_rate` 段（13 子字段）→ forge 字段表纯新增。
+#   对拍实证：删除项 = 0；无既有 label/help/group/module_labels/module_tree 改值；
+#   重定后基线树与当前树逐字段 diff=0。
+BASELINE_REF = "427047e"
 CONTENT = REPO / "content"
 
 

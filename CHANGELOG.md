@@ -14,6 +14,41 @@
 
 ### Added
 
+- **批74（2026-09-23）**：**《框架扩展开发手册》§六 登记的真 bug 修复 + 两条待裁决项裁定**。
+  依据 `docs/框架扩展开发手册.md` §六 + `docs/审查/审计与方案/API手册_3_权责与勿当bug修.md`
+  §3.7.1（BUG-1~6 表 + §3.7.2 判定原则）+ `docs/审查/审计与方案/批73_死代码_风险分类.md` §6。
+  **① BUG-1（真 bug · 已修）· PVP free 模式必败**：`core/pvp.py` 的 `mode=="free"` 分支在
+  `player_act` 后追加 `battle.enemy_act({"type":"guard"})`，而该接口已随 CTB 改为
+  `NotImplementedError` 壳（`battle.py:5335`）→ 异常被 `except Exception` 吞成「战斗结算失败」，
+  **非回合制 PVP 每局必失败**（复现：turn_based `ok=True` / free `ok=False`）。修法：移除该过期调用
+  （`pvp.py:367-378`）——CTB 下防守方 guard 由引擎 `_ai_action_dict()` 对 `battle_type=="pvp"`
+  恒返回 guard（`battle.py:5238`，M11 A3 P1-3）自动保证，两条模式路径收敛为同一 `player_act` 入口；
+  新增回归测试 2 条（free 模式结算 ok + CTB 防守方恒 guard/不反击）。
+  **② BUG-1 伴随 · verify 脚本过期调用**：`scripts/verify/verify_m1.py` 的 1g2/1g3 两函数由旧三段式
+  `do_action→enemy_act→end_turn` 改 CTB 等价（`player_act`）；`scripts/verify_veinborn_smoke.py` 的
+  `enemy_act`→`do_action("enemy",…)`、`end_turn`→`start_turn`，并把 2 条因 CTB/内容漂移而失效的断言
+  改为显式 `SKIP` 登记（见下）。另更正 `battle.py` `enemy_act` docstring 过期的「已知 A1 级
+  `core/pvp.py:350`」引用（已修为「批74 已修复」）。
+  **③ BUG-2（先查后定 · 裁定保留）· `damage_base`/`heal_rate`**：查证 ① JS 侧
+  `web/static/index.html` 零硬编码（formula 表单按 `FieldMeta` 动态渲染，删登记=编辑器与包数据不一致）；
+  ② 8 个既有包 `formula.json` 实带两键；③ 测试正面锁定（`test_content.py:66`、
+  `test_pack_fixtures_matrix.py:187`、`test_editor_batch19_formula.py`、`test_editor_metadata_layer.py:207`）；
+  ④ 属兼容承诺（`docs/编辑器重写_需求与约束.md:332` + 批19#9）。**裁定：保留**，理由与删除三条件写入
+  `content/field_meta.py:1426-1438` + 手册 §六。顺带登记审计引文行号漂移（审计原 `:1381-1391` →
+  HEAD `:1439`/`:1443`）于 API手册_3 §3.7.1 / §3.6 T9 与审计3 §4.2/§7 D8。
+  **④ BUG-3（先查后定 · 裁定保留）· `data/status.py::StatusInstance`**：先读 TC-04 门禁
+  （`scripts/check_architecture.py:49-51` `REQUIRED_TYPES`；`check_tc04` 对「未定义」判 fail→`exit 1`）
+  ——**门禁要求该类型存在**；且 `tests/unit/test_data.py:19` 参数化断言其 `frozen`。**裁定：保留**
+  （与 `Player`/`BattleSnapshot`/`ItemInstance`/`WorldState` 同列契约 spec 类型），在
+  `data/status.py:16-24` 写明「为架构门禁 TC-04 保留，不是死代码」+ 何时可删（先做双轨收敛评审）。
+  **⑤ 页脚批次串** →「批74 · 手册真bug修复」（`qbot_rpg/web/static/index.html` + 16 个批次串断言测试同步）。
+  **登记不动手（批74 查证发现）**：`scripts/verify_veinborn_smoke.py` 两条独立缺口——CTB 战斗不再派发
+  `turn_end` 事件 → `surge_tick`（trigger=turn_end）失效（困斗蓄能恒 0）；`content/veinborn/skills.json`
+  的 `vb_core_breaker.consume_marks` 现为 `{}`（原 `{break_vein_core:120}`）→ 破技不清破坏值；另
+  `settings.pvp.mode` 在 CTB 下无分支消费（两模式均 guard，「非回合制连续输出」未实现）。
+  验收：全量 pytest **9034 passed / 0 failed**（12 skipped；基线 9032 + 本批新增回归测试 2 条）；双尺子（种子 20260919）零变化；换包验收 12 包全 PASS；
+  ruff 改动文件干净（全量错误数不变）；`git status --porcelain` 空。
+
 - **批73（2026-09-23）**：**死代码清理（`批73_死代码_风险分类.md` §2 绿清单 49 条）**。
   依据 `审计4_勿增实体_死实体与空转.md` §3。纪律：**只删 🟢 绿**，黄/红一律不碰；
   删前逐条独立复核「跨文件调用 0 + 无动态引用（`getattr`/`globals()`/`__all__`/注册表/

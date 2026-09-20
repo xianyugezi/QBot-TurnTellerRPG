@@ -22,8 +22,11 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import subprocess
 from pathlib import Path
-from typing import Any, List, Mapping
+from typing import Any, Dict, List, Mapping
+
+import pytest
 
 from qbot_rpg.web import api, editor_ops
 
@@ -111,3 +114,140 @@ def test_card1_frontend_edit_id_check_wired_and_hard_block() -> None:
     # 保存按钮的禁用判定必须并入 editIdBlocked()（硬拦：非法 ID 置灰保存）。
     assert re.search(r'btn-save"\)\.disabled[^;]*editIdBlocked\(\)', html), \
         "保存按钮禁用判定未接 editIdBlocked()"
+
+
+# =====================================================================================
+# §0 · 前端行为执行台（node 执行 index.html 内联函数；不起浏览器、不写盘）
+# =====================================================================================
+def _fn_src(name: str) -> str:
+    """从 index.html 截取 `function name(` 到下一个顶层 `function ` 的源码。
+
+    按函数名切片（不写死相邻函数名/顺序），并行批调整函数顺序也不影响。
+    """
+    html = _html()
+    start = html.index("function %s(" % name)
+    nxt = html.find("\nfunction ", start + 1)
+    assert nxt != -1, name
+    return html[start:nxt]
+
+
+_FRONTEND_FNS = ("findModule", "selectModule", "refreshAfterModuleChange",
+                 "moduleEnabled", "renderListHints", "fieldRow", "editControl",
+                 "newIdentHtml", "flashSaved", "savedFlashText", "clearPackView",
+                 "packLoadFailed", "loadPackView")
+
+# 统一桩：DOM（el 返回可断言对象）、网络（loadModules/loadEntries 可注入成败）、
+# markDirty（记录调用时 state.module —— 卡点2 的时序回归就靠它抓）。
+_DOM_RUNNER = r"""
+const fs = require("fs");
+const out = {};
+const els = {};
+const timers = [];
+const dirtyCalls = [];
+function mkEl(id) {
+  return { id: id, textContent: "", innerHTML: "", className: "", value: "",
+    hidden: false, title: "", disabled: false, dataset: {}, style: {},
+    classList: { add: function () {}, remove: function () {}, toggle: function () {} },
+    querySelector: function () { return null; },
+    querySelectorAll: function () { return []; },
+    addEventListener: function () {}, setAttribute: function () {},
+    closest: function () { return null; }, appendChild: function () {} };
+}
+global.el = function (id) { if (!els[id]) { els[id] = mkEl(id); } return els[id]; };
+global.esc = function (v) { return String(v == null ? "" : v); };
+global.INPUT_EMPTY = "未填写";
+global.typeZh = function (t) { return t || "文本"; };
+global.helpTriggerHtml = function (trig, label) { return "TRIG[" + label + "]"; };
+global.fieldLabelHtml = function (label, key) { return String(label || key || ""); };
+global.fieldBody = function (f) { return "BODY[" + f.key + "]"; };
+global.currentFieldValue = function (f) { return f.value; };
+global.selectHtml = function () { return "SEL"; };
+global.listTableEdit = function () { return "LT"; };
+global.refListEdit = function () { return "RL"; };
+global.objFormEdit = function () { return "OBJ"; };
+global.condFieldInner = function () { return "C"; };
+global.mapFieldInner = function () { return "M"; };
+global.kvTableEdit = function () { return "KV"; };
+global.curveEdit = function () { return "CV"; };
+global.EditorEntry = { ruleText: function () { return "RULE"; } };
+global.canLeave = function () { return true; };
+global.renderModules = function () {};
+global.setHdrNote = function () {};
+global.refreshRollbackButton = function () {};
+global.helpHideDom = function () {};
+global.renderGlobalResults = function () {};
+global.markDirty = function () {
+  dirtyCalls.push(global.state ? global.state.module : "__no_state__");
+};
+global.discardDraft = function () { global.markDirty(); };
+global.loadEntries = function () { return Promise.resolve(); };
+global.__loadModulesImpl = function () { return Promise.resolve(); };
+global.__loadEntryIndexImpl = function () { return Promise.resolve(); };
+global.loadModules = function () { return global.__loadModulesImpl(); };
+global.loadEntryIndex = function () { return global.__loadEntryIndexImpl(); };
+global.setTimeout = function (fn, ms) { timers.push(ms); return 1; };
+global.clearTimeout = function () {};
+
+eval(fs.readFileSync(process.argv[2], "utf8"));
+
+(async function () {
+  // 卡点2-A：启用/应用组合后应选中 preferred，而非回落第一个模块。
+  state = { module: null, modules: [{ module: "aaa" }, { module: "items" }], views: [],
+    entries: [], entryIndex: null, listLabel: "", backup: null, mergeSections: [],
+    mountedSections: [], entryGroups: [], unusedPack: null, unusedByMod: {},
+    refCache: {}, refKnown: {}, refQuery: {}, gquery: "", detail: null, tabs: [],
+    forms: {}, pendingDrafts: {} };
+  await refreshAfterModuleChange("items");
+  out.prefStateModule = state.module;
+
+  // 卡点2-B：selectModule 切换后必须再刷一次（discardDraft 的 markDirty 看的是旧模块）。
+  state = { module: null, modules: [{ module: "items" }], views: [], entries: [],
+    backup: null, mergeSections: [], mountedSections: [], gquery: "" };
+  dirtyCalls.length = 0;
+  selectModule("items");
+  out.selectModuleState = state.module;
+  out.selectModuleDirtyLast = dirtyCalls[dirtyCalls.length - 1];
+  out.selectModuleDirtySawModule = dirtyCalls.indexOf("items") >= 0;
+
+  process.stdout.write(JSON.stringify(out));
+})();
+"""
+
+
+@pytest.fixture(scope="module")
+def js(tmp_path_factory: pytest.TempPathFactory) -> Dict[str, Any]:
+    if NODE is None:
+        pytest.skip("本机无 node，跳过批67 前端行为回归")
+    snippet = "\n\n".join(_fn_src(n) for n in _FRONTEND_FNS)
+    d = tmp_path_factory.mktemp("batch67")
+    harness = d / "snippet.js"
+    harness.write_text(snippet, encoding="utf-8")
+    runner = d / "run.js"
+    runner.write_text(_DOM_RUNNER, encoding="utf-8")
+    proc = subprocess.run([NODE, str(runner), str(harness)],
+                          capture_output=True, text=True, timeout=60)
+    assert proc.returncode == 0, proc.stderr
+    return json.loads(proc.stdout)
+
+
+# =====================================================================================
+# §2 · 卡点2（烦人）：启用模块 / 应用推荐组合后自动选中该模块（state.module 被设置）
+# =====================================================================================
+def test_card2_apply_preset_selects_preferred_not_first(js: Dict[str, Any]) -> None:
+    """有 preferred 时必须选中它——修前 refreshAfterModuleChange 回落第一个模块。"""
+    assert js["prefStateModule"] == "items"
+
+
+def test_card2_select_module_refreshes_after_state_is_set(js: Dict[str, Any]) -> None:
+    """按钮刷新（markDirty）必须在 state.module 已切换之后发生——修前只看得到旧模块。"""
+    assert js["selectModuleState"] == "items"
+    assert js["selectModuleDirtyLast"] == "items"
+    assert js["selectModuleDirtySawModule"] is True
+
+
+def test_card2_frontend_enable_paths_pass_preferred() -> None:
+    """三条启用链路（一键启用 / 勾选 toggle / 推荐组合）都要把目标模块传给刷新函数。"""
+    html = _html()
+    assert "refreshAfterModuleChange(mod)" in html        # 左栏一键启用
+    assert "refreshAfterModuleChange(prefMod)" in html    # 应用推荐组合
+    assert "res.enabled" in html and "prefMod" in html

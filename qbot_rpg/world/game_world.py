@@ -253,8 +253,6 @@ class GameWorld:
             out.append(d)
         return out
 
-    def is_boss_alive(self, map_id: str) -> bool:
-        raise NotImplementedError(_NOT_IMPL_MSG)
 
     # -- 全体限购（world_stock） --------------------------------------------
     def world_stock(self, key: str) -> int:

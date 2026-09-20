@@ -1,4 +1,4 @@
-"""刷怪/补刷 Spawner（M3 实装 · 本里程碑仅签名）。
+"""刷怪/补刷 SpawnManager（M3 实装）。
 
 职责（细化_3a §2.1；/ 细化_2a1b_通道规则与刷怪）：地图点/通道刷新、野图 BOSS 刷新、
 全体限购补货；离线封顶 N 小时（【框架】L194-205：离线补刷按离线时长封顶，防挂机刷资源）。
@@ -17,35 +17,7 @@ from qbot_rpg.content.map_models import SPAWN_COUNT_DEFAULT, SpawnDef
 # 现实钟点层时区（对齐引擎 worldtime：UTC+8，细化_2a4c §1.0）
 _TZ_UTC8 = timezone(timedelta(hours=8))
 
-__all__ = ["Spawner", "SpawnManager"]
-
-_NOT_IMPL_MSG = "M3 实装：刷新/补刷（细化_2a1b / 细化_2a1d）"
-
-# 离线补刷封顶小时数（【框架】L194-205），M3 从 content 配置读取覆盖。
-DEFAULT_OFFLINE_CAP_HOURS: int = 12
-
-
-class Spawner:
-    """刷怪/补刷器（离线封顶 N 小时）。M3 实装，本里程碑仅签名。"""
-
-    def __init__(self) -> None:
-        self._registry = None
-
-    def refresh_map(self, map_id: str) -> Dict[str, Any]:
-        raise NotImplementedError(_NOT_IMPL_MSG)
-
-    def catch_up_offline(
-        self,
-        player: Any,
-        since_tick: int,
-        cap_hours: int = DEFAULT_OFFLINE_CAP_HOURS,
-    ) -> Dict[str, Any]:
-        """离线补刷：按离线时长补刷但封顶 cap_hours（防挂机）。M3 实装。"""
-        raise NotImplementedError(_NOT_IMPL_MSG)
-
-    def refill_world_stock(self, key: str) -> int:
-        raise NotImplementedError(_NOT_IMPL_MSG)
-
+__all__ = ["SpawnManager"]
 
 # =====================================================================================
 # SpawnManager —— M3 批次4·路L（M08 补刷懒计算 + M09 时段/季节出没边界）

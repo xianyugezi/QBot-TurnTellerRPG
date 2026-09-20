@@ -458,6 +458,8 @@ html[data-theme="contrast"] .asave:disabled { border-style: dotted; opacity: .6;
 .ftype::after { content: ">"; color: var(--text-6); }
 /* 字段原始键名（批3.5）：中文名为主、键名为辅——弱化色 + 更小字号，不抢主标签 */
 .fkey { color: var(--text-5); font-size: var(--fs-11); font-weight: 400; }
+/* 批66 · 卡点5：必填可见标记（行内，与字段类型徽标同一行、同一小字号；不破双列网格） */
+.freq { color: var(--danger); font-size: var(--fs-10); }
 /* 批66 · 卡点1：编辑态条目 ID 行——即时校验状态 + 一句说明（复用 .nid-st / .nid-hint 口径） */
 .ident { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); }
 .ident input { flex: 1 1 220px; }
@@ -4791,7 +4793,9 @@ function newIdentHtml(d) {
     : "";
   return '<div class="newid">'
     + '<span class="nidlab">条目 ' + esc(d.id_field_label || d.id_field) + "（ID）</span>"
+    + '<span class="freq">必填</span>'
     + '<input class="cin" id="new-id" type="text" autocomplete="off" spellcheck="false"'
+    + ' required aria-required="true"'
     + ' value="' + esc(d.suggested_id || "") + '" placeholder="英文小写 + 下划线（如 item_001）">'
     + '<button type="button" class="ladd" id="btn-suggest"'
     + ' title="按内容包声明的 ID 规则，用当前名称生成一个不重复的建议 ID">按名称生成</button>'
@@ -5634,6 +5638,8 @@ function fieldRow(f) {
   var del = (f.deletable && state.editable)
     ? '<button type="button" class="keydel" data-keydel="' + esc(f.key)
       + '" title="删除这个子项（只改草稿，保存后生效）">✕</button>' : "";
+  // 批66 · 卡点5：必填可见标记（元数据 required=true 才出；选填不出，布局与现状一致）。
+  var req = (f.required && state.editable) ? '<span class="freq">必填</span>' : "";
   // 批66 · 卡点1：条目 ID 行（仅 list 模块的身份字段）复用既有 id_check 接口做即时校验。
   var isIdent = !!(state.detail && state.detail.entry_type === "list"
     && state.detail.id_field === f.key);
@@ -5646,7 +5652,7 @@ function fieldRow(f) {
   return '<div class="row' + wide + '" data-field="' + esc(f.key) + '" data-present="'
     + (f.present ? "true" : "false") + '"><div class="rlab">'
     + helpTriggerHtml(trig, fieldLabelHtml(f.label, f.key))
-    + ' <span class="ftype">' + esc(typeZh(f.type)) + "</span>" + del + "</div>"
+    + ' <span class="ftype">' + esc(typeZh(f.type)) + "</span>" + req + del + "</div>"
     + '<div class="rval">' + body + "</div></div>";
 }
 
@@ -5674,22 +5680,29 @@ function ctxFieldValue(ctx, f) {
   return hasOwn(c.draft.changes, f.key) ? c.draft.changes[f.key] : f.value;
 }
 
+// 批66 · 卡点5：必填字段的输入控件补 `required` + `aria-required`（与可见标记同源）——
+// 无 <form> 提交、保存走既有校验链路，故此属性只做「必填」的可见/无障碍表达。
+function reqAttr(f) {
+  return f.required ? ' required aria-required="true"' : "";
+}
+
 function editControl(f) {
   var v = currentFieldValue(f);
   switch (f.control) {
     case "textarea":
-      return '<textarea class="cta" rows="4" data-key="' + esc(f.key)
-        + '" placeholder="' + esc(INPUT_EMPTY) + '">'
+      return '<textarea class="cta" rows="4" data-key="' + esc(f.key) + '"' + reqAttr(f)
+        + ' placeholder="' + esc(INPUT_EMPTY) + '">'
         + esc(v == null ? "" : v) + "</textarea>";
     case "number":
       return '<input class="cin" type="number" step="' + esc(f.number_step || "any")
-        + '" data-key="' + esc(f.key) + '" placeholder="' + esc(INPUT_EMPTY)
+        + '" data-key="' + esc(f.key) + '"' + reqAttr(f) + ' placeholder="' + esc(INPUT_EMPTY)
         + '" value="' + esc(v == null ? "" : v) + '">';
     case "bool":
       return '<label class="ctl-bool"><input type="checkbox" data-key="' + esc(f.key) + '"'
         + (v ? " checked" : "") + '> <span class="btxt">' + (v ? "是" : "否") + "</span></label>";
     case "select":
-      return selectHtml(f.key, v, (f.enum && f.enum.length ? f.enum : (f.enum_options || [])), "（未选择）", "");
+      return selectHtml(f.key, v, (f.enum && f.enum.length ? f.enum : (f.enum_options || [])),
+                        "（未选择）", reqAttr(f));
     case "ref":
       return selectHtml(f.key, v, [], "（未选择）",
         ' data-ref="' + esc(f.ref_target || "") + '" data-current="'
@@ -5713,8 +5726,8 @@ function editControl(f) {
       return curveEdit(f);
     case "text":
     default:
-      return '<input class="cin" type="text" data-key="' + esc(f.key)
-        + '" placeholder="' + esc(INPUT_EMPTY) + '" value="'
+      return '<input class="cin" type="text" data-key="' + esc(f.key) + '"' + reqAttr(f)
+        + ' placeholder="' + esc(INPUT_EMPTY) + '" value="'
         + esc(v == null ? "" : v) + '">';
   }
 }

@@ -32,7 +32,7 @@
        兜底不报错」+ 摸底 §八 ctx["fishing_cfg"] 注入形态。
   A-2  嵌套对象（bait_bonus/rod_full_bonus/crown_thresholds/wait_sec/energy/king_event）
        显式为 Mapping → 与默认合并（显式键类型合法则覆盖，缺省保留默认；非法类型回退
-       默认）——对齐 forge decompose_rate 合并口径。
+       默认）——嵌套值对象合并口径（原参照的 forge `decompose_rate` 合并已于批70 删除）。
   A-3  bait_ids 显式为 list/tuple → 过滤 str 元素（宽松容错）；过滤后非空则生效，
        空/非 list → 默认 5 档。
   A-4  mode 仅非空 str 生效（枚举合法性不判，V4 归路0C 校验器）。
@@ -144,7 +144,7 @@ def _nonempty_str(v: object) -> TypeGuard[str]:
 
 
 def _merge_int_map(default: Mapping[str, object], explicit: object) -> Dict[str, object]:
-    """嵌套 int 值对象合并（对齐 forge decompose_rate 合并口径）。
+    """嵌套 int 值对象合并（通用嵌套值对象合并口径；原参照的 forge `decompose_rate` 已于批70 删除）。
 
     显式 Mapping → 与默认合并：键类型合法（非负 int）则覆盖，缺省/非法类型保留默认。
     非 Mapping / None → 默认深拷贝。键序照默认。

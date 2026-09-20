@@ -544,3 +544,17 @@ def test_card8_empty_state_two_cases_distinguishable(js: Dict[str, Any]) -> None
 def test_card8_frontend_hint_branch_uses_module_enabled() -> None:
     """中栏空态分支由 moduleEnabled(state.module) 判定（结构层面）。"""
     assert "moduleEnabled(state.module)" in _fn_src("renderListHints")
+
+
+# =====================================================================================
+# §7 · 卡点7（锦上添花）：推荐组合存在（批65 已覆盖，此处只核对不重复）
+# =====================================================================================
+def test_card7_presets_present_and_owned_by_batch65_suite(tmp_path: Path) -> None:
+    """轻量存在性冒烟；深度机制回归由批65 测试守护，避免重复覆盖。"""
+    _make_pack(tmp_path, "blank", [])
+    cat = api.module_catalog("blank", root=tmp_path)
+    assert cat["presets"] and all(p["id"] and p["modules"] for p in cat["presets"])
+    owner = Path(__file__).with_name("test_editor_batch65_module_presets.py")
+    assert owner.is_file(), "批65 推荐组合深度测试文件缺失"
+    assert "test_apply_preset_enables_all_with_dependencies" in owner.read_text(
+        encoding="utf-8")

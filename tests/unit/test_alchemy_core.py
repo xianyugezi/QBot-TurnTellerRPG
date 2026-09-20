@@ -230,7 +230,10 @@ def test_chain_map_configurable() -> None:
 # 会话快照（§7.1 STO-03 形态）
 # ---------------------------------------------------------------------------
 def test_new_snapshot_shape_and_version() -> None:
-    """新会话快照形态：recipe_id/materials/chain/element_scores/pool/catalyst/pp/step/version=1。"""
+    """新会话快照形态：recipe_id/materials/chain/element_scores/pool/catalyst/pp/step/version=1。
+
+    批60 · G1：形态有意扩展 3 键（相性累计/主/副），缺省空 = 无相性 = 零行为变化。
+    """
     core = _engine()
     snap = core.new_snapshot(_recipes()["r_flame"], catalyst=None, job_tier="专家")
     assert snap["recipe_id"] == "r_flame"
@@ -243,6 +246,10 @@ def test_new_snapshot_shape_and_version() -> None:
     assert snap["step"] == "feed"
     assert core.snapshot_version(snap) == 1
     assert snap["job_tier_index"] == EXPERT_TIER_INDEX  # 专家=3
+    # 批60 · G1：相性 3 键（缺省空）
+    assert snap["affinity_values"] == {}
+    assert snap["affinity_main"] is None
+    assert snap["affinity_sub"] is None
 
 
 def test_new_snapshot_job_tier_index_variants() -> None:

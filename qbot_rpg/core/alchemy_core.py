@@ -65,6 +65,11 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
+from qbot_rpg.core.affinity import (
+    accumulate_affinity,
+    normalize_affinity_config,
+    rank_affinities,
+)
 from qbot_rpg.core.templates import tpl_of
 
 __all__ = [
@@ -222,6 +227,17 @@ class AlchemyCore:
         if isinstance(raw, str) and raw:
             return raw
         return "会话重置"
+
+    def _affinity_order(self) -> Tuple[Any, ...]:
+        """相性声明顺序（settings.affinities[] → `normalize_affinity_config` 的
+        `affinity_list`；并列破平用，缺省空 → `rank_affinities` 按 id 升序）。
+
+        批60 · G1：与打造侧 `deep_craft.resolve_main_sub` 的 `affinity_order` 同口径
+        （`core/affinity.py:93, 233`）；相性定义唯一源仍是 `core/affinity.py`，
+        炼金侧不持有任何相性定义。
+        """
+        cfg = normalize_affinity_config(self._settings)
+        return tuple(cfg.get("affinity_list") or ())
 
     def _tier_names(self) -> Tuple[str, ...]:
         """7 级称号名（用于 job_tier 称号名→索引归一；prof 注入则优先用其 tier_names）。"""
@@ -383,7 +399,7 @@ class AlchemyCore:
         入参：entry={item|id, count}（count 缺省 1，int 非负）。
         出参：材料记录 dict 或 None（条目非法 / 物品不存在）。记录字段：
           {item, count, name, elements, main_element, traits, rarity, quality, awaken,
-          is_finished}。
+          is_finished, affinities}。
         """
         if not isinstance(entry, Mapping):
             return None
@@ -401,6 +417,11 @@ class AlchemyCore:
         elements = idef.get("elements")
         if not isinstance(elements, Mapping):
             elements = {}
+        # 批60 · G1：材料相性声明 `{相性id: 数值}` 原样进材料记录（归一口径照抄 elements；
+        # 相性定义/池唯一源 = core/affinity.py + data/affinity_keys.py，此处只搬值不解释）。
+        affinities = idef.get("affinities")
+        if not isinstance(affinities, Mapping):
+            affinities = {}
         traits = idef.get("traits")
         if not isinstance(traits, (list, tuple)):
             traits = []
@@ -416,7 +437,12 @@ class AlchemyCore:
             "quality": idef.get("quality"),
             "awaken": bool(idef.get("awaken", False)),
             "is_finished": self._is_finished(idef),
+            # 非 Mapping → {}；键非空 str、值 int/float（排除 bool）——非法值静默丢弃不抛
+            "affinities": {str(k): float(v) for k, v in affinities.items()
+                           if isinstance(k, str) and k
+                           and not isinstance(v, bool) and isinstance(v, (int, float))},
         }
+
 
     def _snap_catalyst_def(self, snap: Mapping[str, Any], ctx: Mapping[str, Any]) -> Optional[dict]:
         """快照触媒 → 触媒 def（用于连锁/刻度重算的属性修饰，A-3）。
@@ -451,7 +477,8 @@ class AlchemyCore:
           - job_tier：职业档位（int=索引 或 str=称号名；用于全物入料/刻度显现门槛，记录进快照）。
         出参：快照 dict——
           {recipe_id, materials:[], chain, element_scores, pool:{normal,gold,awaken}, catalyst,
-           pp:{used,budget}, step, version:1, job_tier, job_tier_index}。
+           pp:{used,budget}, step, version:1, job_tier, job_tier_index,
+           affinity_values:{}, affinity_main:None, affinity_sub:None}。
         """
         recipe_id = str(recipe_def.get("id") or "")
         chain = self.compute_chain([], None)
@@ -467,7 +494,12 @@ class AlchemyCore:
             "version": 1,                                       # §7.2 version 幂等（默认 1）
             "job_tier": job_tier,
             "job_tier_index": self._norm_tier_index(job_tier),
+            # 批60 · G1：材料相性累计/主副（会话级；缺省空 = 无相性 = 零行为变化）
+            "affinity_values": {},                              # 累计相性值（互动结算后）
+            "affinity_main": None,                              # 主相性 id（无正值 → None）
+            "affinity_sub": None,                               # 副相性 id
         }
+
 
     @staticmethod
     def snapshot_version(snap: Mapping[str, Any]) -> int:
@@ -814,14 +846,24 @@ class AlchemyCore:
         chain = self.compute_chain(new_chain, catalyst_def)
         element_scores = self.compute_element_scores(new_chain, ctx, catalyst_def)
         pool = self.build_feature_pool(new_chain, ctx, job_tier_index=tier)
+        # 批60 · G1：材料链相性累计 → 主/副（与打造 resolve_main_sub 同口径：
+        # 材料按投入顺序贡献；炼金无图纸 → 无前置贡献项。互动/取值唯一实现 = core/affinity.py）
+        aff_contribs = [r["affinities"] for r in new_chain if r.get("affinities")]
+        aff_values = accumulate_affinity(
+            aff_contribs, (self._settings or {}).get("affinity_reactions") or ())
+        aff_rank = rank_affinities(aff_values, self._affinity_order())
 
         snap2 = dict(snap)
         snap2["materials"] = new_chain
         snap2["chain"] = chain
         snap2["element_scores"] = element_scores
         snap2["pool"] = pool
+        snap2["affinity_values"] = aff_values
+        snap2["affinity_main"] = aff_rank["main"]
+        snap2["affinity_sub"] = aff_rank["sub"]
         snap2["step"] = STEP_FEED
         snap2["version"] = self.snapshot_version(snap) + 1  # §7.1 行4：状态更新 version 递增
+
 
         return {
             "ok": True,

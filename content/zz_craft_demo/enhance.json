@@ -1,4 +1,13 @@
 {
+  "settings": {
+    "max_by_quality_level": { "1": 3, "2": 6, "3": 9, "4": 12, "5": 15, "6": 18 },
+    "legacy_quality_level_by_rarity": { "normal": 2, "fine": 3, "epic": 4, "legendary": 4 },
+    "special_affix_span": 4,
+    "fail_tier_split": 3,
+    "shatter_mode": false,
+    "luck_affects": true,
+    "level_gated": false
+  },
   "cost": {
     "stone_tiers": [
       { "tier": "low", "item": "vein_shard", "levels": [1, 2, 3] },

@@ -5338,7 +5338,9 @@ class BattleEngine:
         CTB 无先手/后手对——怪物与玩家由行动条公平竞争 ready，走**同一条**
         `ACTOR_READY → BEFORE_ACTION → ACTION_RESOLVE` 通道（Wave A M5 语义等价性
         论证）。按硬约束保留同名签名壳并抛 NotImplementedError，以暴露未迁移的
-        误用调用点（已知 A1 级：`core/pvp.py:350`）。
+        误用调用点（唯一 A1 级生产调用点 `core/pvp.py` free 模式分支已由批74 修复
+        移除——防守方 guard 由引擎 `_ai_action_dict()` 对 `battle_type=="pvp"`
+        恒返回 guard 自动保证，见 `pvp.py` 内注释）。
 
         替代：怪物行动由 `CTBScheduler` 在 NPC ready 时自动推进（`_auto_resolve_npc`），
         行动内容经 `_ai_action_dict()`（MonsterAI 决策，已平移）产出。

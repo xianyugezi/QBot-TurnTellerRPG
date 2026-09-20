@@ -186,3 +186,42 @@ def test_daily_reward_limit():
     assert r["result"]["reward_blocked"] is True
     # 胜负不被伪造（battle 无状态 → winner 保持 None 而非 defender）
     assert r["result"]["winner"] is None
+
+
+# ---------------------------------------------------------------------------
+# 批74 BUG-1：free 模式不再调用已随 CTB 删除的 enemy_act（NotImplementedError 壳）
+# ---------------------------------------------------------------------------
+def test_attack_free_mode_ok():
+    """free 模式回归：修复前恒返回「战斗结算失败」（enemy_act 壳抛错被吞），
+    修复后正常结算（防守方 guard 由引擎侧保证）。"""
+    ctx = _ctx()
+    ctx["pvp_target"] = "123456789"
+    ctx["settings"] = {"pvp": {"enabled": True, "level_gate": 10, "mode": "free"}}
+    ctx["rng"] = 20260919
+    r = pvp_attack(ctx, "1")
+    assert r["ok"] is True, r
+    assert "result" in r and "winner" in r["result"]
+
+
+def test_pvp_defender_auto_guards_in_ctb():
+    """机制锁定：`battle_type=="pvp"` 的防守方（enemy 侧）由 CTB 引擎
+    ``_ai_action_dict`` 恒返回 guard，并在 player_act 自动推进时结算——
+    这是 pvp.py 移除显式 `enemy_act({"type":"guard"})` 的依据。"""
+    from qbot_rpg.core.battle import BattleEngine
+
+    def _comb(name: str) -> dict:
+        return {"id": name, "name": name, "hp": 80, "max_hp": 80, "mp": 50, "max_mp": 50,
+                "atk": 12, "dfn": 8, "con": 8, "mag": 8, "spd": 10, "foc": 10, "lck": 10,
+                "int": 10}
+
+    eng = BattleEngine()
+    eng.start(_comb("me"), _comb("foe"), random_seed=1, battle_type="pvp")
+    player_hp_before = eng.battle_state()["player"]["hp"]
+    eng.player_act("normal")
+    enemy_actions = [rec.get("action")
+                     for rec in eng.battle_state()["action_record"]
+                     if rec.get("actor") == "enemy"]
+    assert enemy_actions, "防守方应有行动记录"
+    assert all(a == "guard" for a in enemy_actions), enemy_actions
+    # 防守方一直防御 → 未反击：玩家 HP 不变
+    assert eng.battle_state()["player"]["hp"] == player_hp_before

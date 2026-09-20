@@ -192,22 +192,25 @@ class _QR:
 
 
 def t_1g2_round_timeline():
+    # CTB 迁移（2026-09-10 · 批74 同步修）：旧三段式
+    # `do_action(player) → enemy_act() → end_turn()` 已删——`enemy_act`/`end_turn`
+    # 均为 `NotImplementedError` 壳（battle.py:5335/5352），照旧调用即炸。
+    # CTB 下一次 `player_act` 即承载「玩家一拍 + 调度器自动推进后续 actor」；
+    # `turn` 为 action_seq 镜像（不参与数值），故断言改为 action_seq 严格递增。
     eng = BattleEngine(); eng._rng = _QR()
     eng.start(_PLANNER, _EMON, random_seed=1)
     assert eng.state == "act" and eng.battle_state()["turn"] == 1
-    eng.do_action("player", {"type": "normal", "mult": 1.0})
-    eng.enemy_act()
-    eng.end_turn()                                   # ⑨ 自动进入下次行动
-    assert eng.battle_state()["turn"] == 2 and eng.state == "act"
-    assert not eng.finished
+    _before = eng.battle_state()["action_seq"]
+    eng.player_act("normal")
+    assert eng.battle_state()["action_seq"] > _before     # CTB 权威进度计量递增
+    assert eng.state == "act" and not eng.finished
 
 
 def t_1g3_snapshot_roundtrip():
+    # CTB 迁移（批74 同步修）：一次 `player_act` 替代旧三段式（见 t_1g2 注）。
     eng = BattleEngine(); eng._rng = _QR()
     eng.start(_PLANNER, _EMON, random_seed=5)
-    eng.do_action("player", {"type": "normal", "mult": 1.0})
-    eng.enemy_act()
-    eng.end_turn()
+    eng.player_act("normal")
     snap = eng.to_snapshot()
     eng2 = BattleEngine.from_snapshot(json.loads(json.dumps(snap, ensure_ascii=False)))
     assert eng2.battle_state()["enemy"]["hp"] == eng.battle_state()["enemy"]["hp"]

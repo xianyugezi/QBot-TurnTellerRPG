@@ -364,18 +364,16 @@ def pvp_attack(ctx: MutableMapping[str, Any], skill_id: str) -> dict:
     # 行动：技能解析（B-4 双形态兜底）
     action = _resolve_skill_action(ctx, skill_id, attacker_comb)
 
-    # 回合制：单回合结算；非回合制：防守方一直防御（B-5），连续输出一轮
-    # M11 批4 A3 P0-3 修复：行动字典键为 type（battle.py L1064 读 action_dict["type"]），
-    # 原 {"action":"guard"} 键错恒「回合结算失败」；且不先于 player_act 调用
-    # （player_act 内部会再触发一次防守方行动，避免双行动）
-    mode = cfg.get("mode", "turn_based")
+    # 批74 BUG-1 修复：free 模式原先在 `player_act` 之后追加
+    # `battle.enemy_act({"type": "guard"})` 以强制防守方防御（B-5）。但该接口已随 CTB
+    # 重写改为 `NotImplementedError` 壳（battle.py:5335）——调用恒抛异常，被下方
+    # `except Exception` 吞成「战斗结算失败」，**free 模式每局必失败**。
+    # CTB 下防守方（PVP enemy 侧）由引擎 `_ai_action_dict()` 对 `battle_type=="pvp"`
+    # **恒返回 guard**（battle.py:5238，M11 批4 A3 P1-3），并在 `player_act` 推进行动条
+    # 自动结算 NPC 行动时自动实现「防守方不操作则一直防御」——无需再显式注入该行动。
+    # 故两条模式路径在 CTB 下收敛为同一入口（`settings.pvp.mode` 现仅登记，不据此分支）。
     try:
-        if mode == "free":
-            # 非回合制：进攻方连续输出，防守方持续防御（在 player_act 之后注入）
-            r = battle.player_act(action, params=ctx.get("params"))
-            battle.enemy_act({"type": "guard"})
-        else:
-            r = battle.player_act(action, params=ctx.get("params"))
+        r = battle.player_act(action, params=ctx.get("params"))
     except Exception:
         return {"ok": False, "message": "战斗结算失败"}
 

@@ -33,6 +33,8 @@ from __future__ import annotations
 
 from typing import Any, List, Mapping, Sequence, Tuple
 
+from qbot_rpg.content import effect_presets as effect_presets_mod
+
 # 框架默认预设：`{"<模块>": (预设, ...)}`。本次只覆盖 `items`（物品）六种通用品类；
 # 将来其它模块的通用预设按同样结构追加即可（编辑器读取层通用，不写死模块名）。
 #
@@ -108,8 +110,25 @@ FRAMEWORK_ENTRY_PRESETS: Mapping[str, Tuple[Mapping[str, Any], ...]] = {
 
 
 def framework_presets(module: object) -> Tuple[Mapping[str, Any], ...]:
-    """某模块的框架默认预设（无 → 空元组）；只读。"""
-    return tuple(FRAMEWORK_ENTRY_PRESETS.get(str(module or ""), ()))
+    """某模块的框架默认预设（无 → 空元组）；只读。
+
+    批54：框架默认 = 本模块的**通用品类预设**（`FRAMEWORK_ENTRY_PRESETS`）
+    ∪ **特效预设集**（`content/effect_presets.entry_presets_for`，投影成同形条目）。
+    特效预设只声明在 `equipment` 模块 → 其它模块（含 `items` 六种）**逐字段不变**。
+    """
+    mod = str(module or "")
+    out: List[Mapping[str, Any]] = list(FRAMEWORK_ENTRY_PRESETS.get(mod, ()))
+    out.extend(effect_presets_mod.entry_presets_for(mod))
+    return tuple(out)
+
+
+def framework_preset_modules() -> Tuple[str, ...]:
+    """所有带框架默认预设的模块（通用品类 ∪ 特效预设；去重、保序）。"""
+    mods: List[str] = list(FRAMEWORK_ENTRY_PRESETS)
+    for m in effect_presets_mod.effect_preset_modules():
+        if m not in mods:
+            mods.append(m)
+    return tuple(mods)
 
 
 def _preset_id(item: Mapping[str, Any]) -> str:
@@ -153,7 +172,8 @@ def framework_preset_key_errors(table: object) -> List[str]:
       · `fields` 与 `defaults` 里的每个键都在该模块框架元数据的字段表里真实登记。
     """
     errors: List[str] = []
-    for module, presets in FRAMEWORK_ENTRY_PRESETS.items():
+    for module in framework_preset_modules():
+        presets = framework_presets(module)
         mmeta = table.module(str(module)) if table is not None else None
         known: set = set()
         if mmeta is not None:
@@ -180,6 +200,7 @@ def framework_preset_key_errors(table: object) -> List[str]:
 __all__ = [
     "FRAMEWORK_ENTRY_PRESETS",
     "framework_presets",
+    "framework_preset_modules",
     "merge_entry_presets",
     "framework_preset_key_errors",
 ]

@@ -168,8 +168,6 @@ class DungeonSession:
     def with_subquest_progress(self, progress: Mapping[str, int]) -> "DungeonSession":
         return dataclasses.replace(self, subquest_progress=dict(progress))
 
-    def with_rest_count(self, count: int) -> "DungeonSession":
-        return dataclasses.replace(self, rest_count=count)
 
     def with_kill_count(self, count: int) -> "DungeonSession":
         """批24 E5：当前层击杀计数更新（返回新实例）。"""

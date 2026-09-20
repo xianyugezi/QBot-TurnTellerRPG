@@ -90,13 +90,6 @@ def _as_int(v: Any) -> Optional[int]:
     return int(f)
 
 
-def _nonneg_int(v: Any, default: int = 0) -> int:
-    i = _as_int(v)
-    if i is None or i < 0:
-        return default
-    return i
-
-
 def _apply_rounding(raw: float, mode: Any) -> int:
     """整体取整一次（报告 §3.1D：不要逐材料/逐项 floor）。"""
     m = str(mode or "floor")

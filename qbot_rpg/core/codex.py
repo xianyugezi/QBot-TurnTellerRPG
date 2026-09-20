@@ -91,29 +91,6 @@ def _registry_of(ctx: Mapping[str, Any]):
     return reg if hasattr(reg, "all_ids") else None
 
 
-def _item_def_type(reg, iid: str) -> object:
-    """条目 type（items 表 Def.raw.get / Mapping.get，查无 → None）。"""
-    resolve = getattr(reg, "resolve", None)
-    if not callable(resolve):
-        return None
-    try:
-        d = resolve(iid, "item")
-    except Exception:
-        return None
-    if isinstance(d, Mapping):
-        return d.get("type")
-    raw = getattr(d, "raw", None)
-    if isinstance(raw, Mapping):
-        return raw.get("type")
-    get = getattr(d, "get", None)
-    if callable(get):
-        try:
-            return get("type")
-        except Exception:
-            return None
-    return None
-
-
 def _is_dummy_enemy(reg, iid: str) -> bool:
     """木桩判定（本地复刻 validator.is_dummy_enemy 语义：tier=training 或 type=dummy）。
 

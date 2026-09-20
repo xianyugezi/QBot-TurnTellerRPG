@@ -196,10 +196,6 @@ class MarksManager:
             return None
         return self._resolver(mark_id, "mark")
 
-    @staticmethod
-    def _def_is_obj(d: Any) -> bool:
-        """判别 Def 实例（.raw/.name）还是裸 dict。"""
-        return hasattr(d, "raw") or hasattr(d, "name")
 
     @staticmethod
     def _def_raw(d: Any) -> Mapping[str, Any]:

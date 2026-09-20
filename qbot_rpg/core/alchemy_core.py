@@ -220,13 +220,6 @@ class AlchemyCore:
             out = dict(DEFAULT_PP_COST)
         return out
 
-    def _pp_refresh(self) -> str:
-        """PP 重置时机（TSC-14/L415 pp_refresh="会话重置"：会话内累计、
-        /确认 结算后随会话重置）。"""
-        raw = self._alchemy_settings().get("pp_refresh")
-        if isinstance(raw, str) and raw:
-            return raw
-        return "会话重置"
 
     def _affinity_order(self) -> Tuple[Any, ...]:
         """相性声明顺序（settings.affinities[] → `normalize_affinity_config` 的

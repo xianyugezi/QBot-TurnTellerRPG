@@ -1600,9 +1600,6 @@ class BattleEngine:
         self._job_id = str(job_id or "")
         return self
 
-    def _transform_policy_report(self) -> List[Mapping[str, Any]]:
-        """transform 事件审计（触发/还原事件列表，供战报消息消费）。"""
-        return list(getattr(self, "_transform_events", []) or ())
 
     def _apply_transform_revert(
         self,
@@ -5881,9 +5878,3 @@ class BattleEngine:
     def result(self) -> Dict[str, Any]:
         """结果标记（1g1c §1.3 / §1.2 五）。"""
         return copy.deepcopy(self._snap.get("result") or {})
-
-    # ------------------------- 工具：JSON 往返测试辅助 -------------------------
-
-    @staticmethod
-    def _json_roundtrip(data: Mapping[str, Any]) -> Dict[str, Any]:
-        return json.loads(json.dumps(dict(data), ensure_ascii=False))

@@ -1129,9 +1129,6 @@ class DamagePipeline:
     def _hp(ctx: DamageCtx, side: str) -> int:
         return int(DamagePipeline._combat(ctx, side).get("hp", 0))
 
-    @staticmethod
-    def _max_hp(ctx: DamageCtx, side: str) -> int:
-        return int(DamagePipeline._combat(ctx, side).get("max_hp", 0))
 
     def _set_hp(self, ctx: DamageCtx, side: str, hp: int) -> None:
         self._combat(ctx, side)["hp"] = max(0, hp)

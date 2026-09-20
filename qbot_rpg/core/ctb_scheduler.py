@@ -252,9 +252,6 @@ class CTBScheduler:
             _logger.exception("drain_events 失败，返回空列表")
             return []
 
-    def peek_events(self) -> List[Dict[str, Any]]:
-        """查看（不清空）事件缓冲。"""
-        return [dict(e) for e in self._events]
 
     def _emit(self, event: str, actor_id: Optional[str] = None, **extra: Any) -> Dict[str, Any]:
         """派发事件：写缓冲 + 回调订阅者（回调异常不阻断主流程）。

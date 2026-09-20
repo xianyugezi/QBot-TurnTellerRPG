@@ -272,11 +272,6 @@ def _norm_int(v: Any, default: int = 0) -> int:
     return default
 
 
-def _norm_bool(v: Any, default: bool = False) -> bool:
-    """布尔归一：非 bool → default（防御读取）。"""
-    return v if isinstance(v, bool) else default
-
-
 def _norm_str_list(v: Any) -> Tuple[str, ...]:
     """字符串列表归一：非 list → 空元组（防御读取）。"""
     if not isinstance(v, list):

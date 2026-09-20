@@ -319,12 +319,6 @@ def _num(x: object) -> Optional[float]:
     return None
 
 
-def _num_of(x: object, default: float = 0.0) -> float:
-    """数值化兜底：_num 成功取之，失败取 default（计数器类缺失=0 语义，补白 4）。"""
-    v = _num(x)
-    return v if v is not None else default
-
-
 def _codex_category_pct(ctx: Mapping[str, Any], category: str) -> Optional[float]:
     """codex 分册完成度（M11 4c §2.2 / 摸底 G3）：param 分册维度读取。
 

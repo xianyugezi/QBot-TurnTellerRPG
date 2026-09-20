@@ -184,7 +184,19 @@ SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
 #     一句话 help（严格键 help 新增）；基础词条 help 接入 GEAR_HELP_ZH；
 #   · 无 label/group/module_labels/module_tree 变动；无字段/键删除。
 #   对拍实证：删除项 = 0；重定后基线树与当前树逐字段 diff=0。
-BASELINE_REF = "e757f59"
+# 批68（2026-09-23 新手上路打磨）重定：e757f59 → 526957f（本批字段说明收尾提交）。
+#   原因 = 本批**有意**变更（非迁移回归），删除项 = 0，全部为**新增/改值且仅在 `label`/`help`**：
+#   · §4「Tip 纪律」收尾：列表元素列「值」/嵌套对象子字段补一句话 help（effects/job_restrict/
+#     traits/grant_skills/skill_amp/attack_override/job_override/elements 八元素/
+#     blueprint_material_slots/blueprint_fixed_stats/blueprint_level_band/
+#     blueprint_random_stat_count/blueprint_random_set_affix_count/blueprint_learn），
+#     material_tier/source 补说明——对拍 `.help`/`.help_card.help` 新增 196 条（98 处）；
+#   · §4「字段中文名」：F_NAME/F_TYPE/F_PRICE/F_ATK/F_DEF/F_EFFECTS 与 items/equipment
+#     常用字段补 label；对拍 `label` 改值 4 条（conditional.name 'name' → '名称'）；
+#   · 无 help 删除、无字段/键删除、无 group/module_labels/module_tree 变动；
+#     `source` 未补 label（保留「框架登记类型但无中文名 → 原始键兜底」用例实例）。
+#   对拍实证：删除项 = 0；重定后基线树与当前树逐字段 diff=0。
+BASELINE_REF = "526957f"
 CONTENT = REPO / "content"
 
 

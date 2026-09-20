@@ -333,7 +333,7 @@ EFFECT_AXIS_SPECS: Tuple[Mapping[str, Any], ...] = (
                     "help": "调整「我施加的」状态时长：<1 缩短 / >1 延长；只影响新施加的实例。"},
         "legacy_alias": (),
         "consumer": "effects.apply_status_duration",
-        "consumer_note": "批70 已接线：唯一收口 = `effects.apply_status` 建实例处（source 侧取值），"
+        "consumer_note": "批70 已接线：唯一收口 = `effects.apply_status` 建实例处（source 侧），"
                          "对新施加实例的 `Duration{turns,charges}` 双维各缩放一次；"
                          "字段形状不变、不追改存量实例。未配置（轴 0）→ 原值（逐字段零变化）。",
     },
@@ -431,8 +431,7 @@ EFFECT_AXIS_SPECS: Tuple[Mapping[str, Any], ...] = (
                   "drop_chance", "drop_count", "drop_rarity"),
         "display": {"mode": "mult", "label": "奖励倍率修正",
                     "help": "调整结算奖励（经验/货币/掉落）：正 = 提升 / 负 = 减少（下钳 0）。"
-                            "【未实现】消费点尚未接线——当前登记值**不生效**；"
-                            "接线前请勿依赖该轴（详见 consumer_note）。"},
+                            "当前未实现，配置不生效。"},
         "legacy_alias": (),
         "consumer": EFFECT_CONSUMER_PENDING,
         "consumer_note": "D5 登记：奖励类别分散在**三处**、无唯一收口，故不硬造——"

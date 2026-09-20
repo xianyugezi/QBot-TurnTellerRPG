@@ -209,6 +209,43 @@ eval(fs.readFileSync(process.argv[2], "utf8"));
   out.selectModuleDirtyLast = dirtyCalls[dirtyCalls.length - 1];
   out.selectModuleDirtySawModule = dirtyCalls.indexOf("items") >= 0;
 
+  // 卡点3-前端：读包失败必须清空三栏 + 给可行动横幅（不残留上一个包的数据）。
+  state = { modules: [{ module: "old", count: 5 }], views: [{ module: "oldv" }],
+    available: ["x"], module: "old", entry: "e1", entryModule: "old",
+    entries: [{ id: "e1" }], entryIndex: { old: 1 }, listLabel: "上次",
+    backup: { exists: true }, mergeSections: [1], mountedSections: [1],
+    entryGroups: [1], unusedPack: "old", unusedByMod: { old: {} },
+    refCache: { a: 1 }, refKnown: { a: 1 }, refQuery: { a: 1 }, gquery: "q",
+    detail: { x: 1 }, tabs: [1], forms: { a: 1 }, pendingDrafts: { a: 1 } };
+  packLoadFailed({ message: "读取内容包失败（注入）",
+    how_to_fix: "测试注入：修好 quest.json 后重新选择该包" });
+  out.clearedModules = state.modules.length;
+  out.clearedViews = state.views.length;
+  out.clearedModule = state.module;
+  out.clearedEntries = state.entries.length;
+  out.clearedIndex = state.entryIndex;
+  out.clearedDetail = state.detail;
+  out.clearedRefCache = Object.keys(state.refCache).length;
+  out.clearedUnusedPack = state.unusedPack;
+  out.packHint = el("list-hint").innerHTML;
+  out.packHintHidden = el("list-hint").hidden;
+  out.packPBody = el("p-body").innerHTML;
+
+  // loadPackView：任一读包请求失败 → 走同一条清空 + 报错链路。
+  state = { modules: [{ module: "old" }], views: [], available: [], module: "old",
+    entry: null, entryModule: null, entries: [{ id: "e" }], entryIndex: {},
+    listLabel: "", backup: null, mergeSections: [], mountedSections: [],
+    entryGroups: [], unusedPack: null, unusedByMod: {}, refCache: {},
+    refKnown: {}, refQuery: {}, gquery: "", detail: null, tabs: [], forms: {},
+    pendingDrafts: {} };
+  global.__loadModulesImpl = function () {
+    return Promise.reject({ message: "注入读包失败", how_to_fix: "注入修法" });
+  };
+  await loadPackView();
+  out.catchClearedModules = state.modules.length;
+  out.catchClearedModule = state.module;
+  out.catchPBody = el("p-body").innerHTML;
+
   process.stdout.write(JSON.stringify(out));
 })();
 """
@@ -251,3 +288,92 @@ def test_card2_frontend_enable_paths_pass_preferred() -> None:
     assert "refreshAfterModuleChange(mod)" in html        # 左栏一键启用
     assert "refreshAfterModuleChange(prefMod)" in html    # 应用推荐组合
     assert "res.enabled" in html and "prefMod" in html
+
+
+# =====================================================================================
+# §3 · 卡点3（烦人）：残缺包切包显式报错 + 不残留上一个包数据
+# =====================================================================================
+def _make_broken_pack(root: Path, pack: str = "broken") -> Path:
+    """声明了模块但 quest.json 为空文件（走查复现场景）。"""
+    pkg = root / pack
+    pkg.mkdir()
+    _write(pkg / "manifest.json", {"name": "残缺", "version": "1", "schema_version": 1,
+                                   "modules": ["items", "quest"]})
+    (pkg / "items.json").write_text("[]", encoding="utf-8")
+    (pkg / "quest.json").write_text("", encoding="utf-8")   # 坏 JSON：空文件
+    return pkg
+
+
+def test_card3_broken_pack_raises_actionable_error_naming_file(tmp_path: Path) -> None:
+    """声明模块的文件空/坏 → EditorError 点名文件 + how_to_fix；不泄露绝对路径/Python 异常。"""
+    _make_pack(tmp_path, "good", ["items"], {"items.json": [{"id": "it1", "name": "甲"}]})
+    _make_broken_pack(tmp_path)
+    api.list_modules("good", root=tmp_path)      # 先读好包，再切残缺包（复现切包顺序）
+    with pytest.raises(api.EditorError) as ei:
+        api.list_modules("broken", root=tmp_path)
+    msg = str(ei.value)
+    assert "quest.json" in msg
+    assert str(tmp_path) not in msg              # 不泄露服务器绝对路径
+    assert "Expecting value" not in msg and "Traceback" not in msg
+    assert str(getattr(ei.value, "how_to_fix", "") or "").strip()
+
+
+def test_card3_entry_index_also_fails_explicitly(tmp_path: Path) -> None:
+    """条目索引是另一条读包链路，坏包同样必须显式抛错（不能静默 0 条）。"""
+    _make_broken_pack(tmp_path)
+    with pytest.raises(api.EditorError) as ei:
+        api.entry_index("broken", root=tmp_path)
+    assert "quest.json" in str(ei.value)
+    assert str(getattr(ei.value, "how_to_fix", "") or "").strip()
+
+
+def _client(root: Path, pack: str, role: str = "owner") -> Any:
+    import sys
+    if str(REPO) not in sys.path:
+        sys.path.insert(0, str(REPO))
+    if str(REPO / "scripts") not in sys.path:
+        sys.path.insert(0, str(REPO / "scripts"))
+    from editor_host import create_app  # noqa: E402
+    from fastapi.testclient import TestClient  # noqa: E402
+    return TestClient(create_app(pack=pack, root=str(root), role=role))
+
+
+def test_card3_host_error_json_carries_how_to_fix(tmp_path: Path) -> None:
+    """宿主错误包络：既保留 error/kind，又带 how_to_fix；文案不含绝对路径。"""
+    _make_broken_pack(tmp_path)
+    with _client(tmp_path, "broken") as client:
+        r = client.get("/api/pack/broken/modules")
+    assert r.status_code == 500
+    body = r.json()
+    assert body.get("ok") is False and body.get("error") and body.get("kind")
+    assert str(body.get("how_to_fix") or "").strip()
+    assert str(tmp_path) not in json.dumps(body, ensure_ascii=False)
+
+
+def test_card3_frontend_pack_load_failure_clears_all_panes(js: Dict[str, Any]) -> None:
+    """前端：读包失败 → 清空左/中/右三栏状态 + 可行动横幅（不残留上一个包数据）。"""
+    assert js["clearedModules"] == 0
+    assert js["clearedViews"] == 0
+    assert js["clearedModule"] is None
+    assert js["clearedEntries"] == 0
+    assert js["clearedIndex"] is None
+    assert js["clearedDetail"] is None
+    assert js["clearedRefCache"] == 0
+    assert js["clearedUnusedPack"] is None
+    assert js["packHint"] and js["packHintHidden"] is False
+    assert "测试注入" in js["packPBody"]          # 「怎么办」进了横幅
+
+
+def test_card3_frontend_load_pack_view_catches_and_reports(js: Dict[str, Any]) -> None:
+    """读包 Promise 任一失败 → 统一走失败链路（不是静默不 catch）。"""
+    assert js["catchClearedModules"] == 0
+    assert js["catchClearedModule"] is None
+    assert "注入读包失败" in js["catchPBody"]
+
+
+def test_card3_frontend_three_read_chains_route_through_load_pack_view() -> None:
+    """换包 / 导入后刷新 / 启动三条读包链路统一走 loadPackView。"""
+    html = _html()
+    assert "function loadPackView(" in html
+    assert "function clearPackView(" in html and "function packLoadFailed(" in html
+    assert html.count("loadPackView()") >= 3

@@ -739,6 +739,14 @@ def _make_handler(spec: Any, parsed: ParsedCommand, ctx: MutableMapping[str, Any
                                 # 批43：品质等级 + 强化特殊词条载荷原样带过（打造/强化产物不丢字段）
                                 quality_level=int(it.get("quality_level", 0) or 0),
                                 enhance_affixes=tuple(it.get("enhance_affixes") or ()),
+                                # 批57：装备等级 + 淬炼分配原样带过（打造/淬炼产物不丢字段）
+                                required_level=int(it.get("required_level", 0) or 0),
+                                temper_alloc={str(_k): int(_v)
+                                              for _k, _v in
+                                              (it.get("temper_alloc") or {}).items()
+                                              if isinstance(_v, int)
+                                              and not isinstance(_v, bool) and _v > 0}
+                                if isinstance(it.get("temper_alloc"), Mapping) else {},
                             ),)
                         except (TypeError, ValueError):
                             continue

@@ -201,6 +201,37 @@ def backfill_rune_sockets(ps: Any) -> Tuple[Any, int]:
 
 
 # ---------------------------------------------------------------------------
+# 批57 · 淬炼地基：temper_alloc / required_level 缺补（纯函数，版本无关）
+# ---------------------------------------------------------------------------
+def backfill_instance_temper(rows: Any) -> Tuple[Any, int]:
+    """**纯函数**：给 inventory 行缺补 `temper_alloc` / `required_level`（批57）。
+
+    口径（`/root/deliverables/淬炼与分解回收_实现口径.md` §2.2E）：两字段 default 为空
+    （`{}` / `0`），旧档缺键在**读取时**补默认即可——`temper_alloc` 不参与任何既有语义，
+    故**无需** DB_SCHEMA_VERSION 升级（对齐批46 `backfill_rune_sockets` 的版本无关口径）。
+    本函数是「旧档幂等补 / 新库直具备」的**唯一补缺口径**：
+      - **幂等**：键已存在（任意形态）→ 原样跳过、计数 0（重复执行零改动）；
+      - **无损**：只在键**缺失**时新增空 dict `{}` / `0`，不改/不删任何既有键与值；
+      - 非 list 或行非 dict → 原样返回、不触碰（非法行不拦加载，MIG-1 口径）。
+    读侧由 `storage.repository.row_to_player` 调用（旧档读入即补、下次落档写出）。
+    返回 (rows, 本次新增键数)。
+    """
+    count = 0
+    if not isinstance(rows, list):
+        return rows, count
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        if "temper_alloc" not in row:
+            row["temper_alloc"] = {}
+            count += 1
+        if "required_level" not in row:
+            row["required_level"] = 0
+            count += 1
+    return rows, count
+
+
+# ---------------------------------------------------------------------------
 # meta 元信息行管理（单行 key='global'，§1.3 / SCHEMA-8）
 # ---------------------------------------------------------------------------
 async def ensure_meta(db: Database, now: Optional[str] = None) -> int:
@@ -456,6 +487,7 @@ __all__ = [
     "migrate_v2_to_v3",
     "backfill_instance_uids",
     "backfill_rune_sockets",
+    "backfill_instance_temper",
     "MigrationError",
     "MigrationResult",
     "ensure_meta",

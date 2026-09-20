@@ -276,6 +276,9 @@ def _land(ctx: MutableMapping[str, Any], plan: Mapping[str, Any], bp: Mapping[st
         # ---- 批43：品质等级（强化上限按它取）+ 强化特殊词条载荷（新造为空）----
         "quality_level": int(plan.get("quality_level") or 0),
         "enhance_affixes": [],
+        # ---- 批57：装备等级（淬炼上限输入，原案 §5/§10；D12 实例级落点）+ 淬炼分配（新造为空）----
+        "required_level": int(plan.get("level") or 0),
+        "temper_alloc": {},
     }
     _instances(ctx).append(inst)
     ctx["_m8_dirty_inventory"] = True

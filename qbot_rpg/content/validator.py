@@ -716,6 +716,9 @@ class _Checker:
             self._check_effect_axes(module_name, data)
             # 批56 · 过量治疗开关：settings.overheal（结构/类型红拦；缺段 = 关闭 = 现状）
             self._check_overheal(module_name, data)
+            # 批57 · 精粹产出率：settings.forge.essence_rate（结构/类型/枚举红拦 +
+            # 「enabled 但精粹货币未登记」红拦；缺段 = 未启用 = 现状）
+            self._check_essence_rate(module_name, data)
             # 批38 · ④ 相性通用层（settings 四段结构/枚举/引用 + 材料相性引用存在性）
             self._check_affinity(module_name, data)
             # 批39 · 合成/炼金/打造启用矩阵：settings.deep_craft 打造路径开关
@@ -2288,6 +2291,79 @@ class _Checker:
         if enabled is not None and not isinstance(enabled, bool):
             self._err(module_name, f"{base}.enabled", "R-1", rule="type", expect="bool",
                       got=type(enabled).__name__)
+
+    # ---- 批57 · 精粹产出率：settings.forge.essence_rate ----
+    def _check_essence_rate(self, module_name: str, data: object) -> None:
+        """`settings.forge.essence_rate` 段校验（批57 · 报告 §3.1/§3.4 + 主 agent ①/②）。
+
+        分级：
+          · 段结构非对象 → **红拦 R-1**；
+          · `enabled`/数值/枚举/区间非法 → **红拦 R-1**；
+          · `enabled=true` 但 `essence_currency` 不在 `settings.currencies`（也不在
+            `items`）注册表 → **红拦 R-4**（报告 V8：否则运行时入账被静默拒绝）；
+          · 缺段 / enabled=false / 未知键 → 默认放行（未启用 = 现状逐字段一致）。
+        """
+        if not isinstance(data, Mapping):
+            return
+        base = "settings.forge.essence_rate"
+        forge = data.get("forge")
+        if not isinstance(forge, Mapping):
+            return
+        cfg = forge.get("essence_rate")
+        if cfg is None:
+            return
+        if not isinstance(cfg, Mapping):
+            self._err(module_name, base, "R-1", rule="section_structure",
+                      got=type(cfg).__name__,
+                      msg="essence_rate 段要填对象（删掉该段 = 未启用精粹 = 与现状一致）")
+            return
+        en = cfg.get("enabled")
+        if en is not None and not isinstance(en, bool):
+            self._err(module_name, f"{base}.enabled", "R-1", rule="type", expect="bool",
+                      got=type(en).__name__)
+        _NUM = {"k1": (0.0, None), "k2": (0.0, None), "beta": (0.0, None),
+                "v_fixed": (0.0, None), "v_per_level": (0.0, None),
+                "refund_decay": (0.0, 1.0)}
+        for k, (lo, hi) in _NUM.items():
+            if k not in cfg:
+                continue
+            v = cfg.get(k)
+            if isinstance(v, bool) or not isinstance(v, (int, float)):
+                self._err(module_name, f"{base}.{k}", "R-1", rule="type", expect="number",
+                          got=type(v).__name__)
+                continue
+            if v < lo or (hi is not None and v > hi):
+                self._err(module_name, f"{base}.{k}", "R-1", rule="range",
+                          value=v, msg=f"{k} 须在 [{lo},{hi if hi is not None else '∞'}]")
+        tr = cfg.get("temper_refund")
+        if tr is not None and (isinstance(tr, bool) or not isinstance(tr, int) or tr < 0):
+            self._err(module_name, f"{base}.temper_refund", "R-1", rule="type",
+                      msg="temper_refund 须为非负整数")
+        rnd = cfg.get("rounding")
+        if rnd is not None and rnd not in ("floor", "round", "ceil"):
+            self._err(module_name, f"{base}.rounding", "R-1", rule="enum",
+                      got=rnd, msg="rounding 须 floor/round/ceil")
+        sc = cfg.get("scope")
+        if sc is not None and sc not in ("crafted_equipment", "all_equipment"):
+            self._err(module_name, f"{base}.scope", "R-1", rule="enum", got=sc,
+                      msg="scope 须 crafted_equipment/all_equipment")
+        # V8（报告）：启用精粹时，精粹货币须登记在 currencies（或 items）注册表。
+        if en is True:
+            cur = cfg.get("essence_currency")
+            if not isinstance(cur, str) or not cur:
+                self._err(module_name, f"{base}.essence_currency", "R-4", rule="required",
+                          msg="启用精粹必须声明 essence_currency")
+            else:
+                ids = self._settings_currency_ids(data)
+                items = data.get("items")
+                in_items = isinstance(items, list) and any(
+                    isinstance(e, Mapping) and str(e.get("id") or "") == cur for e in items
+                )
+                if cur not in ids and not in_items:
+                    self._err(module_name, f"{base}.essence_currency", "R-4",
+                              rule="currency_ref_missing", currency=cur,
+                              msg=f"精粹货币「{cur}」未登记在 settings.currencies（或 items）"
+                                  "——运行时入账会被拒绝")
 
     # ---- 批39 · 合成/炼金/打造启用矩阵：settings.deep_craft 打造路径开关 ----
     def _check_deep_craft(self, module_name: str, data: object) -> None:

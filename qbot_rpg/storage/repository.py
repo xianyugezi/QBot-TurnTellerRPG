@@ -191,6 +191,14 @@ def _item_from_dict(d: Dict[str, Any]) -> ItemInstance:
     stats = d.get("stats_bonus")
     # 批42 · C：打造产物的相性 / 套装词条 / 被动逐字段读回（缺省空 → 旧档/普通物品零影响）。
     aff = d.get("affinities")
+    # 批57：淬炼分配逐字段读回（缺省空 → 旧档零语义变化）；非 int/负值过滤。
+    _ta = d.get("temper_alloc")
+    ta: Dict[str, int] = {}
+    if isinstance(_ta, dict):
+        for _k, _v in _ta.items():
+            if isinstance(_v, bool) or not isinstance(_v, int) or _v <= 0:
+                continue
+            ta[str(_k)] = int(_v)
     return ItemInstance(
         item_id=cast(ItemID, str(d.get("item_id") or "")),  # type: ignore[redundant-cast]
         name=str(d.get("name") or ""),
@@ -215,6 +223,9 @@ def _item_from_dict(d: Dict[str, Any]) -> ItemInstance:
         # 批43：品质等级 + 强化特殊词条载荷逐字段读回（缺省 0/空 → 旧档零影响）。
         quality_level=int(d.get("quality_level", 0) or 0),
         enhance_affixes=tuple(d.get("enhance_affixes") or ()),
+        # 批57：装备等级（淬炼上限输入）+ 淬炼分配（缺省 0/空 → 旧档零语义变化）。
+        required_level=int(d.get("required_level", 0) or 0),
+        temper_alloc=ta,
     )
 
 
@@ -272,6 +283,10 @@ def row_to_player(row: Any) -> Player:
         return row[k] if k in row.keys() else None
 
     inv_raw = _jloads(col("inventory"), [])
+    # 批57：旧档缺补淬炼字段（幂等/无损/版本无关；`backfill_instance_temper` 唯一补缺口径）。
+    from qbot_rpg.storage.migrations import backfill_instance_temper  # noqa: PLC0415
+    if isinstance(inv_raw, list):
+        backfill_instance_temper(inv_raw)
     inv_items: List[ItemInstance] = [
         _item_from_dict(d) for d in inv_raw if isinstance(d, dict)
     ]

@@ -1597,6 +1597,13 @@ class EquipmentEngineAdapter:
                     # 批43：品质等级 + 强化特殊词条载荷原样带过（asdict 行 → 引擎实例）
                     quality_level=int(item.get("quality_level", 0) or 0),
                     enhance_affixes=tuple(item.get("enhance_affixes") or ()),
+                    # 批57：装备等级（淬炼上限输入）+ 淬炼分配原样带过（缺省 0/空）
+                    required_level=int(item.get("required_level", 0) or 0),
+                    temper_alloc={str(_k): int(_v)
+                                  for _k, _v in (item.get("temper_alloc") or {}).items()
+                                  if isinstance(_v, int) and not isinstance(_v, bool)
+                                  and _v > 0}
+                    if isinstance(item.get("temper_alloc"), Mapping) else {},
                 )
             except (TypeError, ValueError):
                 pass

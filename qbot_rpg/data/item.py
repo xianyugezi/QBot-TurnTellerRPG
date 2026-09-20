@@ -77,6 +77,15 @@ class ItemInstance:
     # 强化特殊词条键序列（每满 `special_affix_span` 级一条；键 ∈ data/gear_stats.py
     # 唯一源，数值已并入 stats_bonus；冷却缩减等占位键只登记不接引擎）。
     enhance_affixes: Tuple[str, ...] = ()
+    # ---- 批57 · 装备淬炼 + 打造档案（原案 §5/§10；决策记录 §5 D12）----
+    # 装备等级（打造时 = Σ(材料等级×占比)，由 deep_craft.plan_craft 的 `level` 写入；
+    # 淬炼上限 `total_cap = 等级 × cap_per_level` 的唯一输入。旧档/非打造 0 = 无等级，
+    # 缺省不可淬炼（`temper.default_level` 可配兜底））。
+    required_level: int = 0
+    # 淬炼分配（属性键 → 已投点数；**分账**于 `enhance_level`，是上限判定/分解返还/
+    # 规划展示的唯一事实源）。数值增量经 `core/temper.materialize_temper` **物化进
+    # `stats_bonus`** → 面板聚合/战斗桥/展示零改动。默认空 → 既有实例零影响（对拍）。
+    temper_alloc: Dict[str, int] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         """uid 缺省自动补发（frozen=True → object.__setattr__）。

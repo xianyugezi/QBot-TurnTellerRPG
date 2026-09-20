@@ -42,6 +42,7 @@ import copy
 from typing import Dict, Mapping, Optional, TypeGuard
 
 from qbot_rpg.content.models import FieldMeta
+from qbot_rpg.data.temper_stats import DEFAULT_ESSENCE_RATE, normalize_essence_config
 
 # =====================================================================================
 # 常量：settings.forge 段默认值（共享契约 §三 ForgeSettings 表 + 定稿 §12.4）
@@ -84,6 +85,10 @@ FORGE_SETTINGS_DEFAULTS: Dict[str, object] = {
     # 2026-09-14：满套/件数上限可选显式配置；None = 未配置（由 forge_sets.
     # derive_set_max_pieces 从 settings.slot_defs 防具部位推导），正整数 = 显式上限
     "set_max_pieces": None,
+    # 批57 · 精粹产出率 `essence_rate`（原案 §12/§14；报告 §3.1 公式 + 主 agent ①/② 裁定）。
+    # 缺省 enabled=False → 不启用精粹，与现状逐字段一致。**与 `decompose_rate`（材料回收）
+    # 分键、语义相反不可合键**（报告 C-5：材料回收随生产等级递增 / 精粹随品质正向）。
+    "essence_rate": dict(DEFAULT_ESSENCE_RATE),
 }
 
 # settings.forge 段可解析键（read_forge_settings 遍历顺序，照共享契约 §八 settings.json 形态）
@@ -103,6 +108,8 @@ FORGE_SETTINGS_KEYS: tuple = (
     "set_max_pieces",
     # 批26 α3：装备增幅技能上下限（obj；空/缺失 → DEFAULT_SKILL_AMP_BOUNDS）
     "skill_amp_bounds",
+    # 批57：精粹产出率段（obj；缺省 enabled=False → 不启用）
+    "essence_rate",
 )
 
 # 素材档位两档（细化_2c2c TIER-03a：normal/rare；与装备品质四档 TIER-03b 不混用）
@@ -158,6 +165,53 @@ FORGE_SETTINGS_FIELD_DEFS: Dict[str, FieldMeta] = {
         "damage_max": FieldMeta(type="int", default=90, label="伤害增幅上限"),
         "cooldown_min": FieldMeta(type="int", default=-50, label="冷却增幅下限"),
         "cooldown_max": FieldMeta(type="int", default=100, label="冷却增幅上限"),
+    }),
+    # 批57 · 精粹产出率（原案 §12/§14；报告 §3.1）。**与 decompose_rate 分键**：
+    # decompose_rate = 材料回收（随生产等级递增）；essence_rate = 精粹产出（随品质正向）。
+    "essence_rate": FieldMeta(type="obj", label="精粹产出率", help=(
+        "分解打造装备产出的「装备精粹」：投入价值 V × k1 × k2 × β^色序。"
+        "与「分解回收率 decompose_rate」（材料回收）**必须是两个键**——"
+        "前者随生产等级递增、后者随品质正向，语义相反不可合并。"
+        "缺省 enabled=false → 不启用精粹，与现状逐字段一致。"), children={
+        "enabled": FieldMeta(type="bool", default=False, label="启用精粹",
+                             help="关闭（缺省）= 不产出精粹，与现状逐字段一致。"),
+        "v_basis": FieldMeta(type="enum",
+                             enum=("node_materials", "item_price", "fixed", "level_scaled"),
+                             label="投入价值口径",
+                             help="node_materials（缺省）= 蓝图节点固定材料价值（报告 V1）；"
+                                  "item_price = 物品定义 price；fixed / level_scaled 见下。"),
+        "v_fixed": FieldMeta(type="number", default=0.0, label="固定投入价值",
+                             help="v_basis=fixed 时的常量。"),
+        "v_per_level": FieldMeta(type="number", default=0.0, label="每级投入价值",
+                                 help="v_basis=level_scaled 时：装备等级 × 本值。"),
+        "k1": FieldMeta(type="number", default=0.35, label="材料价值基准系数",
+                        help="报告 N5 区间 0.30–0.40，缺省 0.35。"),
+        "k2": FieldMeta(type="number", default=0.50, label="图纸档基准系数",
+                        help="报告 N5 区间 0.40–0.60，缺省 0.50；逐档可用 grade_of 覆盖。"),
+        "grade_of": FieldMeta(type="obj", label="图纸档系数覆盖",
+                              help="{图纸档 id: k2 值}；留空 = 统一用 k2。"),
+        "beta": FieldMeta(type="number", default=1.2, label="色序系数",
+                          help="品质越高单件回收价值越高的**正向**系数（主 agent C-7 裁定，"
+                               "缺省 1.2；原 β=0.6 的「衰减闸门」已判定无效）。"),
+        "color_order": FieldMeta(type="obj", label="色序映射覆盖",
+                                 help="{品质色 id: 序}；留空 = 按 deep_craft.quality_colors "
+                                      "声明顺序派生。"),
+        "rounding": FieldMeta(type="enum", enum=("floor", "round", "ceil"), label="取整",
+                              help="整体取整一次（不逐材料 floor）。"),
+        "temper_refund": FieldMeta(type="int", range_min=0, default=800, label="每点淬炼返还",
+                                   help="已淬炼件分解时每点返还的精粹（绝对）；"
+                                        "必须 < temper.cost_per_point.essence（否则可套利）。"),
+        "refund_decay": FieldMeta(type="number", label="返还衰减系数",
+                                  help="每点实际返还 = 本值 × 衰减^(已投点/总上限)；"
+                                       "随淬炼量下降，堵死「淬炼→分解→再淬炼」循环。"),
+        "scope": FieldMeta(type="enum", enum=("crafted_equipment", "all_equipment"),
+                           label="分解对象范围",
+                           help="crafted_equipment（缺省）= 仅打造装备可出精粹"
+                                "（防商店/掉落廉价装刷精粹）。"),
+        "cap_per_item": FieldMeta(type="int", range_min=0, label="单件产出上限",
+                                  help="软闸门；留空 = 不设。"),
+        "essence_currency": FieldMeta(type="str", label="精粹货币键",
+                                      help="须登记进 settings.currencies（否则入账被拒）。"),
     }),
 }
 
@@ -259,6 +313,9 @@ def read_forge_settings(settings_raw: object) -> Dict[str, object]:
             if _is_int(sab.get(k)):
                 bounds[k] = int(sab[k])
         out["skill_amp_bounds"] = bounds
+
+    # ---- 批57：essence_rate 精粹产出率（走 data 层唯一归一逻辑；缺省 enabled=false）----
+    out["essence_rate"] = normalize_essence_config(forge.get("essence_rate"))
 
     return out
 

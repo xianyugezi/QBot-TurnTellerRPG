@@ -4013,6 +4013,20 @@ function selectMountedEntry(parentMod, fromMod, eid) {
   });
 }
 
+// 批66 · 卡点8：当前中栏模块是否**已在 manifest 声明（已启用）**——只读 state（后端给），
+// 不认任何具体模块名；据此把「当前包未使用（…或从 ⚙ 启用）」与「已启用但无内容」分开说。
+function moduleEnabled(mod) {
+  var hit = false;
+  (state.views || []).forEach(function (v) { if (v.module === mod) { hit = true; } });
+  (function walk(list) {
+    (list || []).forEach(function (n) {
+      if (n.module === mod) { hit = true; }
+      if (n.children) { walk(n.children); }
+    });
+  })(state.modules);
+  return hit;
+}
+
 // 批19 #5：模块页提示区——用途（module_catalog 一行）、「当前包未使用」态、功能重叠黄提示。
 function renderListHints(d) {
   var box = el("list-hint");
@@ -4020,8 +4034,13 @@ function renderListHints(d) {
   var parts = [];
   if (d.purpose) { parts.push('<div class="lh-p">' + esc(d.purpose) + "</div>"); }
   if (d.unused) {
-    parts.push('<div class="lh-unused">当前包未使用（框架支持该项能力，'
-      + "可在此填写或从 ⚙ 模块开关启用相关模块）。</div>");
+    // 批66 · 卡点8：修前只有一句「当前包未使用（…或从 ⚙ 模块开关启用相关模块）」，对
+    // **已启用但还没条目**的模块自相矛盾（用户会以为没启用）；此处按是否已启用分两种文案。
+    parts.push(moduleEnabled(state.module)
+      ? '<div class="lh-unused">这个模块已启用，还没有内容——点「+ 新建条目」'
+        + "开始写第一条。</div>"
+      : '<div class="lh-unused">当前包未使用（框架支持该项能力，'
+        + "可在此填写或从 ⚙ 模块开关启用相关模块）。</div>");
   }
   (d.overlap_hints || []).forEach(function (h) {
     parts.push('<div class="lh-ov">⚠ ' + esc(h.message || "") + "</div>");

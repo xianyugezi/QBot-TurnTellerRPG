@@ -16,7 +16,7 @@ REGISTRY = REPO / "docs" / "矛盾与待裁决登记.md"
 LEDGER = REPO / "docs" / "编辑器修改意见0915_台账与方案.md"
 INDEX = REPO / "qbot_rpg" / "web" / "static" / "index.html"
 
-BATCH_NOTE = "批68 · 新手上路打磨"
+BATCH_NOTE = "批69 · 新手上路收尾"
 STATUS_PREFIXES = ("待实测", "待用户裁决", "已裁决-", "已实现-")
 MIN_ITEMS = 20
 

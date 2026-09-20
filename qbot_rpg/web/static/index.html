@@ -5680,9 +5680,8 @@ function fieldRow(f) {
     && state.detail.entry_type === "list" && state.detail.id_field === f.key;
   var body = fieldBody(f);
   if (isIdent && canEdit) {
-    body = '<div class="ident">' + body + '<span class="nid-st" id="edit-id-st"></span>'
-      + '<div class="nid-hint">改 ID = 改条目在文件里的标识；保存前会先校验，'
-      + "非法 ID 不会写入文件。</div></div>";
+    // 注：不加常驻说明行——字段行高须与现状一致（DOM 量测门禁）；状态位为空时不占位。
+    body = '<div class="ident">' + body + '<span class="nid-st" id="edit-id-st"></span></div>';
   }
   return '<div class="row' + wide + '" data-field="' + esc(f.key) + '" data-present="'
     + (f.present ? "true" : "false") + '"><div class="rlab">'
@@ -5715,29 +5714,26 @@ function ctxFieldValue(ctx, f) {
   return hasOwn(c.draft.changes, f.key) ? c.draft.changes[f.key] : f.value;
 }
 
-// 批66 · 卡点5：必填字段的输入控件补 `required` + `aria-required`（与可见标记同源）——
-// 无 <form> 提交、保存走既有校验链路，故此属性只做「必填」的可见/无障碍表达。
-function reqAttr(f) {
-  return f.required ? ' required aria-required="true"' : "";
-}
-
 function editControl(f) {
   var v = currentFieldValue(f);
+  // 批66 · 卡点5：必填字段的输入控件补 `required` + `aria-required`（与可见标记同源）——
+  // 无 <form> 提交、保存走既有校验链路，故此属性只做「必填」的可见/无障碍表达。
+  var rq = f.required ? ' required aria-required="true"' : "";
   switch (f.control) {
     case "textarea":
-      return '<textarea class="cta" rows="4" data-key="' + esc(f.key) + '"' + reqAttr(f)
+      return '<textarea class="cta" rows="4" data-key="' + esc(f.key) + '"' + rq
         + ' placeholder="' + esc(INPUT_EMPTY) + '">'
         + esc(v == null ? "" : v) + "</textarea>";
     case "number":
       return '<input class="cin" type="number" step="' + esc(f.number_step || "any")
-        + '" data-key="' + esc(f.key) + '"' + reqAttr(f) + ' placeholder="' + esc(INPUT_EMPTY)
+        + '" data-key="' + esc(f.key) + '"' + rq + ' placeholder="' + esc(INPUT_EMPTY)
         + '" value="' + esc(v == null ? "" : v) + '">';
     case "bool":
       return '<label class="ctl-bool"><input type="checkbox" data-key="' + esc(f.key) + '"'
         + (v ? " checked" : "") + '> <span class="btxt">' + (v ? "是" : "否") + "</span></label>";
     case "select":
       return selectHtml(f.key, v, (f.enum && f.enum.length ? f.enum : (f.enum_options || [])),
-                        "（未选择）", reqAttr(f));
+                        "（未选择）", rq);
     case "ref":
       return selectHtml(f.key, v, [], "（未选择）",
         ' data-ref="' + esc(f.ref_target || "") + '" data-current="'
@@ -5761,7 +5757,7 @@ function editControl(f) {
       return curveEdit(f);
     case "text":
     default:
-      return '<input class="cin" type="text" data-key="' + esc(f.key) + '"' + reqAttr(f)
+      return '<input class="cin" type="text" data-key="' + esc(f.key) + '"' + rq
         + ' placeholder="' + esc(INPUT_EMPTY) + '" value="'
         + esc(v == null ? "" : v) + '">';
   }

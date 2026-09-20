@@ -351,6 +351,7 @@
   ],
   "polarity": "positive",
   "duration": "battle",
+  "role": "combo_counter",
   "desc": "突剑连用计数：每用一次 +1，伤害阶梯 +10%/连；2/4/6 连整百回馈剑势"
  },
  {

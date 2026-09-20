@@ -1935,6 +1935,53 @@ def _chain_def(ctx: Mapping[str, Any], cid: str) -> Any:
     return None
 
 
+#: @deprecated 批71 · E1：连段计数印记集合的 **legacy 兜底**（无任何包 role 声明时使用）。
+#: 权威来源 = 包 `marks.json` 条目的 `"role": "combo_counter"` 声明。新包新增此类印记
+#: 只需声明 role，**不要**再改本集合；待所有包完成声明后删除（71-A2 同族收口）。
+_LEGACY_COUNTER_MARKS: frozenset = frozenset({"sword_flow"})
+
+
+def _combo_counter_mark_ids(ctx: Mapping[str, Any]) -> frozenset:
+    """包声明：`ctx["marks"]` 中 `role == "combo_counter"` 的印记 id 集合（框架零 id）。
+
+    「用计数驱动阶梯、非派生分支」的印记角色由包在 `marks.json` 条目上声明；框架只认
+    `role` 语义值。无任何声明（或 ctx["marks"] 缺失/形状坏）→ 回落 legacy 集合
+    `_LEGACY_COUNTER_MARKS`（= 迁移前行为，fail-safe）。
+    """
+    marks = ctx.get("marks") if isinstance(ctx, Mapping) else None
+    if isinstance(marks, Mapping):
+        out = set()
+        for mid, d in marks.items():
+            role = d.get("role") if isinstance(d, Mapping) else getattr(d, "role", None)
+            if str(role or "") == "combo_counter":
+                out.add(str(mid))
+        if out:
+            return frozenset(out)
+    return _LEGACY_COUNTER_MARKS
+
+
+def _is_combo_counter_cond(ctx: Mapping[str, Any], cond: Any) -> bool:
+    """条件是否「某个 combo_counter 印记的恰等 N 计数」形态（派生面板不列连段段）。
+
+    唯一源：`_derived_names` / `_render_skill_chain` 两处共用（批71 · E1 去重）。
+    判定 = self_marks 是 Mapping ∧ 某声明印记的值是 Mapping 且 min 非空且
+    max(缺省=min)==min。**不按形状一刀切**（未声明 role 的 `min==max` step 照列）。
+    """
+    if not isinstance(cond, Mapping):
+        return False
+    sm = cond.get("self_marks")
+    if not isinstance(sm, Mapping):
+        return False
+    ids = _combo_counter_mark_ids(ctx)
+    for mid, v in sm.items():
+        if str(mid) not in ids:
+            continue
+        if isinstance(v, Mapping) and v.get("min") is not None \
+                and int(v.get("max", v["min"])) == int(v["min"]):
+            return True
+    return False
+
+
 def _derived_names(ctx: Mapping[str, Any], sid: str, chain_refs: Sequence[Any]) -> List[str]:
     """派生指向（1c2 派生链 + 6a F14 chain_refs）：链 steps[].from == sid → steps[].to 技能名。"""
     out: List[str] = []
@@ -1952,15 +1999,9 @@ def _derived_names(ctx: Mapping[str, Any], sid: str, chain_refs: Sequence[Any]) 
                 continue
             if str(step.get("from") or "") != sid:
                 continue
-            # 连段计数段过滤（2026-09-09：sword_flow 恰等=连用第 N 连形态，非派生）
-            _c0 = step.get("condition")
-            if isinstance(_c0, Mapping):
-                _sm0 = _c0.get("self_marks")
-                if isinstance(_sm0, Mapping) and "sword_flow" in _sm0:
-                    _v0 = _sm0["sword_flow"]
-                    if isinstance(_v0, Mapping) and _v0.get("min") is not None \
-                            and int(_v0.get("max", _v0["min"])) == int(_v0["min"]):
-                        continue
+            # 连段计数段过滤（2026-09-09：恰等=连用第 N 连形态，非派生；批71 · E1 去重）
+            if _is_combo_counter_cond(ctx, step.get("condition")):
+                continue
             to_id = step.get("to")
             if not to_id:
                 continue
@@ -2417,14 +2458,10 @@ def _render_skill_chain(ctx: Mapping[str, Any], sid: str) -> str:
                     return parts
 
                 if isinstance(cond, Mapping):
-                    # 连段计数段过滤（2026-09-09 实机：sword_flow 恰等 = 连用第 N 连
-                    # 自动化形态，非印派生——派生面板不列连段段）
-                    _sm0 = cond.get("self_marks")
-                    if isinstance(_sm0, Mapping) and "sword_flow" in _sm0:
-                        _v0 = _sm0["sword_flow"]
-                        if isinstance(_v0, Mapping) and _v0.get("min") is not None \
-                                and int(_v0.get("max", _v0["min"])) == int(_v0["min"]):
-                            continue
+                    # 连段计数段过滤（2026-09-09 实机：恰等 = 连用第 N 连自动化形态，
+                    # 非印派生——派生面板不列连段段；批71 · E1 与 _derived_names 同源）
+                    if _is_combo_counter_cond(ctx, cond):
+                        continue
                     cond_parts.extend(_cond_cn(cond))
                 tag = step.get("tag")
                 if tag and str(tag) != "none":

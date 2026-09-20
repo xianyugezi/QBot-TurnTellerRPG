@@ -2275,6 +2275,10 @@ def _module_table() -> Dict[str, ModuleMeta]:
         # —— 不再用 F_DURATION(number)；枚举校验由正式表注入（turns:N 为动态值无法静态枚举）
         "duration": FieldMeta(type="str"),
         "desc": FieldMeta(type="str"),
+        # 批71 · E1：印记玩法角色（框架语义枚举）。"combo_counter" = 用计数驱动阶梯、
+        # 非派生分支的印记（派生面板不列其「恰等 N」连段段）。非必填、缺省不影响泛型校验。
+        "role": FieldMeta(type="str", enum=("combo_counter",), label="玩法角色",
+                          help="框架语义角色（可选）：combo_counter = 连用计数印记。"),
         "probability": F_PROBABILITY,            # mark_add 概率 proc（AT-10）
         "description": _soft_display("描述"),     # 批4.5 实测顶层键（纯展示）
     }

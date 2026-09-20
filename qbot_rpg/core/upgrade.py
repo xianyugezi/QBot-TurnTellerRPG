@@ -76,6 +76,9 @@ from qbot_rpg.core.quality import QualitySystem
 # 批46 · 符文地基（43-A）：符文三阶档位解析 + 3 合 1 纯函数（与珠四档 quality 序号不兼容，
 # 故 rune_upgrade 走独立解析，见 _exec_rune/_rune_tier_of）。
 from qbot_rpg.core.runes import RUNE_UPGRADE_COUNT, resolve_rune_upgrade
+# 批72 · 重复机制收敛（审计3 §3-F3）：符文档位解析的唯一源 = data/runes.rune_tier_of
+# （边界用 MIN_RUNE_TIER/MAX_RUNE_TIER 封在唯一源内部，本模块不再硬编码 1..3）。
+from qbot_rpg.data.runes import rune_tier_of
 
 __all__ = [
     "UPGRADE_SUBTYPES",
@@ -127,6 +130,18 @@ def _as_int(value: object) -> Optional[int]:
         except ValueError:
             return None
     return None
+
+
+def _rune_tier_int(value: object) -> Optional[int]:
+    """符文档位归一（**唯一源** `data/runes.rune_tier_of`；批72 · 审计3 §3-F3）。
+
+    与批前 `_rune_tier_of` 所用的 `_as_int` **严格 int 口径逐位一致**：float（含 `2.0`
+    这类整值 float）一律 None。唯一源经 `_to_int` 会接受整值 float，故此处保留一个类型
+    守卫，确保收敛前后行为零变化；合法值/边界判定**全部委托唯一源**（不在本模块写 `1..3`）。
+    """
+    if isinstance(value, float):
+        return None
+    return rune_tier_of({"tier": value})
 
 
 def _rune_switch_allows(ctx: Any) -> bool:
@@ -889,18 +904,22 @@ class UpgradeEngine:
 
         输入端不走配方回退（否则 `rune_tier` 同时套到两端 → 同阶被当跳级拒）；产出端允许
         显式声明（Q8 未裁决：产出可以是另立的符文条目，未必在 runes 注册表可解析）。
+
+        批72 · 审计3 §3-F3：档位值解析**委托唯一源** `data/runes.rune_tier_of`
+        （`_rune_tier_int` 适配），本方法不再自写解析、也不再硬编码 `1..3`；本方法仅保留
+        唯一源没有的两层语义——「rune_id 解析顺序」与「产出端配方回退」。
         """
         rune_def = self._resolve_rune_def(rune_id, ctx)
         if rune_def is not None:
-            t = _as_int(rune_def.get("tier"))
-            if t is not None and 1 <= t <= 3:
+            t = _rune_tier_int(rune_def.get("tier"))
+            if t is not None:
                 return t
         if output:
             raw_out = cfg.get("output")
             for v in (raw_out.get("rune_tier") if isinstance(raw_out, Mapping) else None,
                       cfg.get("rune_tier")):
-                rt = _as_int(v)
-                if rt is not None and 1 <= rt <= 3:
+                rt = _rune_tier_int(v)
+                if rt is not None:
                     return rt
         return None
 

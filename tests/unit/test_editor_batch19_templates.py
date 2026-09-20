@@ -46,8 +46,8 @@ def test_templates_entries_cover_framework_table() -> None:
     assert fw <= ids, sorted(fw - ids)[:5]
     assert le["count"] == le["covered_count"] + le["framework_default_count"]
     assert le["count"] == len(le["entries"])
-    assert le["covered_count"] == 2           # 包 templates.json 两条覆盖
-    assert le["framework_default_count"] == len(fw) - 2
+    assert le["covered_count"] == 4           # 包 templates.json 四条覆盖（批71 · F2 +2）
+    assert le["framework_default_count"] == len(fw) - 4
 
 
 def test_templates_default_entries_flagged_and_named_by_key() -> None:

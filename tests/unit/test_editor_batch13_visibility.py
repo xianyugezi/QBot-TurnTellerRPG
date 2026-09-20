@@ -251,7 +251,7 @@ def test_templates_module_registered_as_map() -> None:
     assert le["entry_type"] == "map"
     assert le["key_source"] == "templates"
     assert le["count"] == le["covered_count"] + le["framework_default_count"]
-    assert le["framework_default_count"] > 0 and le["covered_count"] == 2
+    assert le["framework_default_count"] > 0 and le["covered_count"] == 4  # 批71 · F2：2 → 4
     d = api.entry_detail("veinborn", "templates", "register_success_next", root=CONTENT)
     assert d["fields"][0]["control"] == "textarea"
 

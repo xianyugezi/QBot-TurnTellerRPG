@@ -36,6 +36,7 @@ from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 from qbot_rpg.content.field_meta import DEFAULT_CURRENCY_IDS, default_field_meta_table
 from qbot_rpg.data.affinity_keys import (
+    AFFINITY_EFFECT_QUALITY_CAP,
     ENTRY_PAYLOAD_ENHANCE_AFFIX,
     ENTRY_PAYLOAD_KEYS,
     POOL_KINDS,
@@ -3051,13 +3052,16 @@ class _Checker:
         # 批60 · 深炼金口径 A 强度型：settings.alchemy.affinity_effects 键空间红拦。
         #   · V1 外层键 = 相性 id（支持 "主|副" 两档，两侧**分别**校验；对齐
         #     core/affinity.resolve_affinity_effect 的查表序）；
-        #   · V2 内层键 ∈ GEAR_EFFECT_KEYS（特效轴唯一源 = data/gear_stats.EFFECT_AXIS_SPECS；
-        #     口径 C 的 quality_cap_delta 尚未接线，现按未登记键红拦——防「写了没人读」）；
+        #   · V2 内层键 ∈ GEAR_EFFECT_KEYS ∪ {AFFINITY_EFFECT_QUALITY_CAP}
+        #     （特效轴唯一源 = data/gear_stats.EFFECT_AXIS_SPECS；批62 · 口径 C 品质型
+        #     新增 `quality_cap_delta`，键常量唯一源 = data/affinity_keys，
+        #     消费点已接线 = core/alchemy_settle._extra_cap 第 ④ 源）；
         #   · V3 内层值必须 number（排除 bool）。缺段 → 不报（零行为变化）。
         alch = data.get("alchemy")
         eff_table = alch.get("affinity_effects") if isinstance(alch, Mapping) else None
         if eff_table is not None:
             eff_path = f"{base}.alchemy.affinity_effects"
+            allowed_inner = set(GEAR_EFFECT_KEYS) | {AFFINITY_EFFECT_QUALITY_CAP}
             if not isinstance(eff_table, Mapping):
                 self._err(module_name, eff_path, "R-1", rule="type",
                           expect="obj", got=type(eff_table).__name__)
@@ -3076,9 +3080,9 @@ class _Checker:
                         continue
                     for ikey, ival in payload.items():
                         ipath = f"{opath}.{ikey}"
-                        if not isinstance(ikey, str) or ikey not in GEAR_EFFECT_KEYS:
+                        if not isinstance(ikey, str) or ikey not in allowed_inner:
                             self._err(module_name, ipath, "R-4", rule="gear_key_missing",
-                                      key=ikey, key_space=sorted(GEAR_EFFECT_KEYS))
+                                      key=ikey, key_space=sorted(allowed_inner))
                         if isinstance(ival, bool) or not isinstance(ival, (int, float)):
                             self._err(module_name, ipath, "R-1", rule="type",
                                       expect="number", got=type(ival).__name__)

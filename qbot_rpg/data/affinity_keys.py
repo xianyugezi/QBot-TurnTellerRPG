@@ -27,6 +27,7 @@ __all__ = [
     "ENTRY_PAYLOAD_EFFECT_REF",
     "ENTRY_PAYLOAD_ENHANCE_AFFIX",
     "ENTRY_PAYLOAD_KEYS",
+    "AFFINITY_EFFECT_QUALITY_CAP",
 ]
 
 # 池类型（内容包声明 kind；框架只认这三类结构语义）
@@ -62,6 +63,14 @@ ENTRY_PAYLOAD_KEYS: Tuple[str, ...] = (
     ENTRY_PAYLOAD_STAT, ENTRY_PAYLOAD_SET_AFFIX,
     ENTRY_PAYLOAD_EFFECT_REF, ENTRY_PAYLOAD_ENHANCE_AFFIX,
 )
+
+# 炼金侧「相性 → 药剂效果」表（`settings.alchemy.affinity_effects`）内层键 —— **品质上限加值**
+# （批62 · 口径 C 品质型，规格 §五/§7.2）。它**不属**特效轴空间（`data/gear_stats.
+# EFFECT_AXIS_SPECS`）：不参与面板聚合/战斗桥，只并入炼金结算的 `_extra_cap`（与 SP/核心/
+# 挑战**同一机制、同一单位、可叠加**），故在此单列而非混进 GEAR_EFFECT_KEYS。
+# 唯一源落 data 层：`core/alchemy_affinity.py`（取值）与 `content/validator.py`（校验）共用，
+# 避免两处各写字符串（G0：content→data / core→data 合法，content -/-> core）。
+AFFINITY_EFFECT_QUALITY_CAP: str = "quality_cap_delta"
 
 
 def affinity_requires(entry: Any) -> Tuple[str, ...]:

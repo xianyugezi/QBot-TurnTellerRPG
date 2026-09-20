@@ -1556,16 +1556,19 @@ ALCHEMY_SETTINGS_FIELD_DEFS: Dict[str, FieldMeta] = {
     "max_qty": FieldMeta(type="int", range_min=1, default=MAX_QTY_DEFAULT),
     # ALC-24（L34/LVL-06）
     "job_tier_map": FieldMeta(type="obj"),
-    # ALC-26（批60 · 深炼金口径 A 强度型）：相性 → 药剂效果表（落 settings.alchemy 段内，
-    #   「炼金怎么解释相性」属炼金侧；相性定义/池仍在顶层四段，唯一源不变）。
-    #   内层键是**动态键空间**（∈ data/gear_stats.EFFECT_AXIS_SPECS 的轴键）——沿用仓库既有
-    #   「动态键不猜键名」口径，故 children 留空、只给 label/help；
-    #   键空间红拦交给 content/validator._check_affinity 专项（V1~V3）。
+    # ALC-26（批60 · 深炼金口径 A 强度型 / 批62 · 口径 C 品质型）：相性 → 药剂效果表
+    #   （落 settings.alchemy 段内，「炼金怎么解释相性」属炼金侧；相性定义/池仍在顶层四段，
+    #   唯一源不变）。内层键是**动态键空间**（∈ data/gear_stats.EFFECT_AXIS_SPECS 的轴键
+    #   ∪ data/affinity_keys.AFFINITY_EFFECT_QUALITY_CAP）——沿用仓库既有「动态键不猜键名」
+    #   口径，故 children 留空、只给 label/help；键空间红拦交给
+    #   content/validator._check_affinity 专项（V1~V3）。
     "affinity_effects": FieldMeta(
         type="obj",
         label="相性 → 药剂效果",
         help="键 = 相性 id（settings.affinities 引用；支持 \"主|副\" 两档，更具体优先）；"
-             "值 = 效果载荷，内层键只能是特效轴键（data/gear_stats.EFFECT_AXIS_SPECS）。"
+             "值 = 效果载荷，内层键只能是特效轴键（data/gear_stats.EFFECT_AXIS_SPECS）"
+             "或 quality_cap_delta（品质上限加值，非负整数；与 SP/核心/挑战**同一 extra_cap "
+             "机制**，只放宽品质可达上限、品质分仍 ≤100）。"
              "数值单位为百分点，有效区间读 settings.effect_axes（不由内容包自定）。"
              "缺省整段不存在 = 零行为变化。",
     ),

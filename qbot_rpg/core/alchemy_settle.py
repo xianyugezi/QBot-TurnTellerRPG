@@ -11,7 +11,8 @@
   经 ctx hook 就地改写背包/产出，存储与事务由壳层完成）。承载 9 步结算管线：
   ① 全量复核（GU-19/FEED-10：材料链+触媒在背包，不足全拒+差异「缺 X×N」，防过期快照）→
   ② 品质聚合（QLT-06：投料材料品质分均值四舍五入）→ ③ 品质上限叠加（QLT-08：SP 品质上限
-  +10×N + 核心/挑战可配 extra_cap，≤100）→ ④ 刻度未达标降级（QLT-10：check_element_req 差
+  +10×N + 核心/挑战可配 extra_cap + 相性 quality_cap_delta，≤100）→ ④ 刻度未达标降级
+  （QLT-10：check_element_req 差
   N 档降 N 档，最低普通封底不吞材料）→ ⑤ 档位+系数（QLT-02/04：score_to_tier + effect_value
   只放大数值）→ ⑥ 触媒消耗（CAT-04：catalyst_consume=true 扣 1 个，同事务）→ ⑦ 产出入包
   （成品 add_item，quality=tier 键 + traits 从快照写入 ItemInstance）→ ⑧ 熟练经验=配方等级×1
@@ -67,7 +68,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Dict, List, Mapping, MutableMapping, Optional
 
-from qbot_rpg.core.alchemy_affinity import plan_effect_refs
+from qbot_rpg.core.alchemy_affinity import plan_effect_refs, quality_cap_delta
 from qbot_rpg.core.alchemy_core import ALCHEMY_JOB_ID, AlchemyCore
 from qbot_rpg.core.quality import ABSOLUTE_QUALITY_MAX, QualitySystem
 from qbot_rpg.core.templates import tpl_of
@@ -198,12 +199,15 @@ class SettleEngine:
     # 品质上限叠加（QLT-08；Q-S5）
     # ------------------------------------------------------------------
     def _extra_cap(self, ctx: Mapping[str, Any], snap: Mapping[str, Any]) -> int:
-        """品质上限三处叠加（QLT-08，TC-05）。
+        """品质上限叠加（QLT-08，TC-05；批62 · 口径 C 加第 ④ 源）。
 
         ① SP「品质上限+10」（可多次）：prof.unlock_count(player, alchemy, "quality_cap_10")×10；
         ② 核心镶嵌「品质上限+X」（大师）：快照 core_cap / extra_cap 字段；
-        ③ 挑战成功「品质上限+10」（可配）：快照 challenge_cap 字段。
-        只放宽可达上限，品质分仍 ≤100（cap_quality Q-2 忠实语义）。
+        ③ 挑战成功「品质上限+10」（可配）：快照 challenge_cap 字段；
+        ④ **相性品质上限**（批62 · 口径 C 品质型）：快照 `affinity_values`（批60 G1 写入）→
+           `alchemy_affinity.quality_cap_delta`（读 `settings.alchemy.affinity_effects`，
+           `"主|副"` 优先）→ 与①②③**同机制、同单位、可叠加**。
+        只放宽可达上限，品质分仍 ≤100（cap_quality Q-2 忠实语义）；④ 不改快照、不新增乘区。
         """
         extra = 0
         prof = self._prof
@@ -222,6 +226,8 @@ class SettleEngine:
                 extra += max(0, int(v))  # QLT-08②③
             except (TypeError, ValueError):
                 pass
+        # QLT-08④（批62 · 口径 C）：相性 → 品质上限加值。无相性 / 未声明 → 0（缺省零变化）。
+        extra += quality_cap_delta(snap.get("affinity_values"), self._settings)
         return extra
 
     @staticmethod

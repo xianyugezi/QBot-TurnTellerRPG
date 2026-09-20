@@ -7,6 +7,9 @@
   · `main_sub_of(aff_values, settings)` —— 相性累计值 → 主/副（`rank_affinities` 同口径）；
   · `axis_pct(aff_values, settings, axis)` —— 相性 → 某特效轴的**百分点**（查
     `settings.alchemy.affinity_effects`，经 `normalize_effect_axes` 按声明区间钳制）；
+  · `quality_cap_delta(aff_values, settings)` —— 批62 · 口径 C 品质型求值：相性 →
+    品质**上限加值**（`affinity_effects[*].quality_cap_delta`），并入炼金结算 `_extra_cap`
+    第 ④ 源（与 SP/核心/挑战**同一机制**；不新增乘区、不改品质分本体）；
   · `plan_effect_refs(aff_values, settings, ...)` —— 批61 · 口径 B 附加型求值：**池查询
     唯一入口** `core.affinity.resolve_available_entries` → 按载荷键 `effect_ref` 分流 →
     `core.deep_craft._pick_weighted` 加权抽取（与打造/强化同一实现）。
@@ -39,10 +42,14 @@ from qbot_rpg.core.affinity import (
     resolve_available_entries,
 )
 from qbot_rpg.core.deep_craft import _entry_payload, _pick_weighted
-from qbot_rpg.data.affinity_keys import ENTRY_PAYLOAD_EFFECT_REF
+from qbot_rpg.data.affinity_keys import (
+    AFFINITY_EFFECT_QUALITY_CAP,
+    ENTRY_PAYLOAD_EFFECT_REF,
+)
 from qbot_rpg.data.gear_stats import GEAR_EFFECT_KEYS, normalize_effect_axes
 
-__all__ = ["main_sub_of", "axis_pct", "plan_effect_refs", "effect_refs_of"]
+__all__ = ["main_sub_of", "axis_pct", "quality_cap_delta", "plan_effect_refs",
+           "effect_refs_of"]
 
 
 def _settings_of(settings: Any) -> Mapping[str, Any]:
@@ -99,6 +106,34 @@ def axis_pct(aff_values: Any, settings: Any, axis: str) -> float:
     if isinstance(hi, (int, float)) and not isinstance(hi, bool):
         value = min(float(hi), value)
     return value
+
+
+def quality_cap_delta(aff_values: Any, settings: Any) -> int:
+    """相性 → 品质**上限加值**（口径 C 品质型；规格 §五 5.2；纯函数、确定性）。
+
+    取值链（全部复用既有接口，不自己算池/不新增乘区）：
+      `aff_values` → `rank_affinities` 主/副 → `resolve_affinity_effect`（`"主|副"` 优先 →
+      `"主"`）→ 取 `AFFINITY_EFFECT_QUALITY_CAP`（`quality_cap_delta`）数值。
+
+    语义：只放宽可达上限（由调用方 `_extra_cap` 与 SP/核心/挑战**求和**后交
+    `quality.cap_quality`，仍 ≤100），**不改品质分**、**不乘档位系数**。
+
+    缺省/非法（无相性 / 表缺失 / 键未声明 / 值非数 / 负值）→ `0`（= 不生效，零变化兜底）。
+    浮点声明按 `int()` 截断（规格 §5.2 参数类型为 int；负值下钳 0，防越权放宽）。
+    """
+    src = _settings_of(settings)
+    ms = main_sub_of(aff_values, src)
+    payload = resolve_affinity_effect(_effect_table(src), ms["main"], ms["sub"])
+    if not isinstance(payload, Mapping):
+        return 0
+    raw = payload.get(AFFINITY_EFFECT_QUALITY_CAP)
+    if isinstance(raw, bool) or not isinstance(raw, (int, float)):
+        return 0
+    try:
+        value = int(raw)
+    except (TypeError, ValueError, OverflowError):
+        return 0
+    return max(0, value)
 
 
 def _as_count(count: Any, fallback: int) -> int:

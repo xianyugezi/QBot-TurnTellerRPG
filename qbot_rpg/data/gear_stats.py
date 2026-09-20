@@ -155,6 +155,10 @@ __all__ = [
     "DEFAULT_OVERHEAL",
     "normalize_overheal",
     "overheal_enabled",
+    # 批59 · BV-1 可配上限 + BV-2 去向枚举（keep/discard；shield 保留未实现）
+    "OVERHEAL_MODES",
+    "OVERHEAL_MODE_RESERVED",
+    "overheal_cap",
     # 批51 · 触发归属（owner）战斗桥键名
     "OWNED_EFFECT_IDS_KEY",
     "effect_axis_spec",
@@ -873,6 +877,11 @@ EFFECT_AXIS_WEIGHTS: Dict[str, Dict[str, Any]] = {
     "healing_received_pct": {"calib": 15.0, "output": 0.0, "survival": 5.0, "doc_id": "X17"},
     # X01 造成伤害：终伤乘区线性 +10% ⇔ +10%。
     "damage_dealt_pct": {"calib": 10.0, "output": 10.0, "survival": 0.0, "doc_id": "X01"},
+    # X28 行动速度（批59 · BV-3 登记）：速度 = 出手频率 = **乘性输出杠杆**。
+    # 依据 = 实现说明 §18.7「把 +20% 速度当作输出侧 ×1.2」；同节实测档位尺下
+    # +20% 速度 → 普通 5.5→5.04 / 精英 12.5→11.46 / Boss 48→44（≈输出 +8.3%）。
+    # 本表取更严的**设计口径**（+20 ⇔ +20%）→ 闸偏保守；可被包声明逐键覆盖。
+    "action_speed_pct": {"calib": 20.0, "output": 20.0, "survival": 0.0, "doc_id": "X28"},
 }
 
 #: 新增 `settings.effect_budget` 的缺省（**整段不存在 / enabled=false → 完全无行为**）。
@@ -1087,46 +1096,107 @@ def check_effect_budget(values: Any, tier: Any = None, cfg: Any = None) -> Dict[
 
 # ---------------------------------------------------------------------------
 # 批56 · 过量治疗开关（`settings.overheal`）—— D4 裁决 / 轴全集 §4-E5
+# 批59 · BV-1（上限可配）/ BV-2（去向选择点显式化）
 # ---------------------------------------------------------------------------
 # E5 口径（原文）：过量治疗 `overheal` = **布尔开关**（治疗可否超过最大 HP），无连续方向；
 # **不要**用 `healing_received_mult ≥ 0` 表达。它不是特效轴（故不登记进 EFFECT_AXIS_SPECS），
 # 而是另立一个内容包开关段，对齐 `settings.effect_budget` 的「包声明 + 框架登记」风格。
 #
 # **缺省口径 = 与现状一致（丢弃）**：`enabled=false` / 缺段 → 治疗量按 max_hp 封顶，
-# 过量部分丢弃（逐字段零变化）。`enabled=true` → 按 E5 字面「可否超过最大 HP」= **保留**：
-# HP 可超过 max_hp（不再封顶）。
+# 过量部分丢弃（逐字段零变化）。`enabled=true`（或 `mode="keep"`）→ 按 E5 字面
+# 「可否超过最大 HP」= **保留**：HP 可超过 max_hp。
 #
-# **待裁决（设计未写清，不得臆造）**：
-#   BV-1 过量部分**上限**：E5 只给布尔，未给「最多超多少」→ 本批不设额外上限（待裁决）。
-#   BV-2 过量部分**去向 / 与护盾先后**：是否应转护盾、护盾是否先于过量判定 → E5 未写，
-#        本批不转护盾、护盾阶段原样不动（待裁决）。
+# 批59 落地的两个待裁决（BV-1 / BV-2）：
+#   · **BV-1 上限**：E5 只给布尔、未写「最多超多少」→ 实现为**可配上限**（`cap_pct` =
+#     最多超出 max_hp 的百分比；`cap_flat` = 最多超出的点数；同给取**更小**）。
+#     **缺省都不给 = 无额外上限**（与批56 现状一致）。
+#   · **BV-2 去向**：设计未写清是否转护盾、与既有护盾阶段（伤害链②）先后 →
+#     用 `mode` 把选择点**显式化**：本批只实现 `keep`（保留 HP 超额）/ `discard`
+#     （丢弃 = 现状）；`shield`（转护盾）是**保留扩展位、未实现**（校验器黄提示）——
+#     **不做半成品开关**，护盾阶段原样不动。
 #: `settings.overheal` 段键名。
 OVERHEAL_KEY: str = "overheal"
 
-#: 缺省声明：关闭 = 现状（过量丢弃）。**不配置 = 与引入前逐字段一致**。
-DEFAULT_OVERHEAL: Dict[str, Any] = {"enabled": False}
+#: BV-2 去向枚举（**本批实现**）：keep = 保留 HP 超额；discard = 丢弃（= 现状）。
+OVERHEAL_MODES: Tuple[str, ...] = ("keep", "discard")
+
+#: BV-2 **保留未实现**的去向：`shield`（转护盾）。设计未写清 → 不实现、不接受其生效，
+#: 校验器只给黄提示（点名「未实现」），避免把半成品开关伪装成可用。
+OVERHEAL_MODE_RESERVED: Dict[str, str] = {
+    "shield": "转护盾（BV-2）未实现：过量部分去向 / 与既有护盾阶段的先后设计未写清，"
+              "本批只支持 mode=keep|discard",
+}
+
+#: 缺省声明：discard = 现状（过量丢弃）。**不配置 = 与引入前逐字段一致**。
+#: `cap_pct` / `cap_flat` 缺省 None = 无额外上限（BV-1，与批56 现状一致）。
+DEFAULT_OVERHEAL: Dict[str, Any] = {
+    "enabled": False,
+    "mode": "discard",
+    "cap_pct": None,
+    "cap_flat": None,
+}
 
 
 def normalize_overheal(cfg: Any) -> Dict[str, Any]:
-    """`settings.overheal` → 有效声明（缺省 ⊕ 包覆盖）。
+    """`settings.overheal` → 有效声明（缺省 ⊕ 包覆盖；读时归一，不改战斗数值）。
 
-    接受三种形态（非法一律回落缺省 = 关闭）：
-      · `{"enabled": true/false}`（推荐）；
+    接受形态（非法一律回落缺省 = discard）：
+      · `{"enabled": true/false}`（批56 兼容）；
+      · `{"mode": "keep"|"discard"}`（批59 显式去向；给出且合法时以 mode 为准）；
       · 裸布尔 `true/false`（宽松兼容）；
-      · 缺段 / None / 其它 → 关闭。
-    只做读时归一，**不改任何战斗数值**。
+      · 缺段 / None / 其它 → discard。
+
+    `cap_pct` / `cap_flat`（BV-1）：非负数值；缺省 / 非法 / 负 → None（= 无额外上限）。
+    返回 `{enabled, mode, cap_pct, cap_flat}`；`mode == "keep"` ⇔ `enabled is True`。
     """
     enabled = False
+    mode = "discard"
+    mapping = cfg if isinstance(cfg, Mapping) else None
     if isinstance(cfg, bool):
         enabled = bool(cfg)
-    elif isinstance(cfg, Mapping):
-        raw = cfg.get("enabled", False)
-        if isinstance(raw, bool):
-            enabled = raw
-    return {"enabled": enabled}
+        mode = "keep" if enabled else "discard"
+    elif mapping is not None:
+        raw_mode = mapping.get("mode")
+        if isinstance(raw_mode, str) and raw_mode in OVERHEAL_MODES:
+            mode = raw_mode
+            enabled = mode == "keep"
+        else:
+            raw = mapping.get("enabled", False)
+            if isinstance(raw, bool):
+                enabled = raw
+                mode = "keep" if enabled else "discard"
+    cap_pct = _as_effect_number(mapping.get("cap_pct")) if mapping is not None else None
+    cap_flat = _as_effect_number(mapping.get("cap_flat")) if mapping is not None else None
+    return {
+        "enabled": enabled,
+        "mode": mode,
+        "cap_pct": max(0.0, cap_pct) if cap_pct is not None else None,
+        "cap_flat": max(0.0, cap_flat) if cap_flat is not None else None,
+    }
 
 
 def overheal_enabled(cfg: Any = None) -> bool:
-    """`settings.overheal` 是否启用（缺省/非法 → False = 现状丢弃）。"""
+    """`settings.overheal` 是否启用保留（缺省/非法 → False = 现状丢弃）。"""
     return bool(normalize_overheal(cfg)["enabled"])
+
+
+def overheal_cap(max_hp: Any, cfg: Any = None) -> Optional[float]:
+    """BV-1：过量治疗下允许的 **HP 上限**（`max_hp` = 不过量时的既有封顶）。
+
+    · 未启用 → 返回 `max_hp`（调用方照旧封顶 → 缺省零变化）；
+    · 启用且**未给** `cap_pct/cap_flat` → `None` = **无额外上限**（批56 现状）；
+    · 给了 → `max_hp × (1 + cap_pct/100)` 与 `max_hp + cap_flat` 取**更小**者。
+    纯读声明、**不写死数值**；非法 `max_hp` 按 0 计。
+    """
+    base = (float(max_hp)
+            if isinstance(max_hp, (int, float)) and not isinstance(max_hp, bool) else 0.0)
+    n = normalize_overheal(cfg)
+    if not n["enabled"]:
+        return base
+    ceilings = []
+    if n["cap_pct"] is not None:
+        ceilings.append(base * (1.0 + float(n["cap_pct"]) / 100.0))
+    if n["cap_flat"] is not None:
+        ceilings.append(base + float(n["cap_flat"]))
+    return min(ceilings) if ceilings else None
 

@@ -177,9 +177,15 @@ def _heal(snap: Mapping[str, Any], runtime: EffectRuntime, value: int = 100,
                           ctx, runtime)
 
 
+def _overheal(enabled: bool = False, mode: str = "discard",
+              cap_pct: Any = None, cap_flat: Any = None) -> Dict[str, Any]:
+    """批59：`normalize_overheal` 的完整期望形状（BV-1 上限 + BV-2 去向）。"""
+    return {"enabled": enabled, "mode": mode, "cap_pct": cap_pct, "cap_flat": cap_flat}
+
+
 def test_b1_overheal_default_discards_excess() -> None:
     """缺省（缺段 / 关闭）= 与现状一致：满血治疗 → 过量丢弃，HP 不超上限。"""
-    assert normalize_overheal(None) == {"enabled": False}
+    assert normalize_overheal(None) == _overheal()
     assert overheal_enabled(None) is False
     c = {"max_hp": 1000, "hp": 1000}
     assert apply_heal_to_hp(c, 200, cap=1000, cfg=None) == 1000
@@ -203,12 +209,12 @@ def test_b2_overheal_enabled_retains_excess() -> None:
 
 
 def test_b3_overheal_normalize_defensive() -> None:
-    """归一：裸布尔兼容；非法（字符串/非布尔 enabled）回落关闭。"""
-    assert normalize_overheal(True) == {"enabled": True}
-    assert normalize_overheal(False) == {"enabled": False}
-    assert normalize_overheal({"enabled": 1}) == {"enabled": False}
-    assert normalize_overheal("yes") == {"enabled": False}
-    assert normalize_overheal({"enabled": True}) == {"enabled": True}
+    """归一：裸布尔兼容；非法（字符串/非布尔 enabled）回落关闭；批59 mode 显式化。"""
+    assert normalize_overheal(True) == _overheal(enabled=True, mode="keep")
+    assert normalize_overheal(False) == _overheal()
+    assert normalize_overheal({"enabled": 1}) == _overheal()
+    assert normalize_overheal("yes") == _overheal()
+    assert normalize_overheal({"enabled": True}) == _overheal(enabled=True, mode="keep")
 
 
 def test_b4_overheal_is_hp_only_not_mp() -> None:

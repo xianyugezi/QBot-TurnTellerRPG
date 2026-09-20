@@ -53,6 +53,8 @@ from qbot_rpg.data.gear_stats import (
     GEAR_DISPLAY_KEYS,
     GEAR_EFFECT_KEYS,
     OVERHEAL_KEY,
+    OVERHEAL_MODES,
+    OVERHEAL_MODE_RESERVED,
     PANEL_AXIS_STEMS,
     check_effect_budget,
     effect_axis_stem,
@@ -2265,13 +2267,17 @@ class _Checker:
                               value=fv, range_min=lo, range_max=hi,
                               msg="特效轴取值高于声明上限")
 
-    # ---- 批56 · 过量治疗：settings.overheal 开关（D4 / 轴全集 §4-E5）----
+    # ---- 批56 · 过量治疗：settings.overheal 开关（D4 / 轴全集 §4-E5）
+    #      批59 · BV-1 上限（cap_pct/cap_flat）+ BV-2 去向（mode）校验 ----
     def _check_overheal(self, module_name: str, data: object) -> None:
-        """`settings.overheal` 段校验（批56 · D4 / `特效整理设计_1_修正轴全集.md` §4-E5）。
+        """`settings.overheal` 段校验（批56 · D4；批59 · BV-1/BV-2）。
 
         E5 口径 = **布尔开关**（治疗可否超过最大 HP），不是数值轴。分级：
           · 段结构非对象（且非裸布尔）→ **红拦 R-1**；
           · `enabled` 存在但非布尔 → **红拦 R-1**；
+          · `mode` 存在：合法值 `keep|discard` 放行；保留位 `shield`（BV-2 **未实现**）→
+            **黄提示 Y-21**（不生效，避免半成品开关被误当可用）；其它 → **红拦 R-1**；
+          · `cap_pct` / `cap_flat`（BV-1 上限）存在但非数值 / 布尔 / 负数 → **红拦 R-1**；
           · 未知键 / 缺段 → 默认放行（缺段 = 关闭 = 与现状一致：过量部分**丢弃**）。
         裸布尔（`overheal: true`）为宽松兼容形态，不拦。
         """
@@ -2291,6 +2297,27 @@ class _Checker:
         if enabled is not None and not isinstance(enabled, bool):
             self._err(module_name, f"{base}.enabled", "R-1", rule="type", expect="bool",
                       got=type(enabled).__name__)
+        mode = cfg.get("mode")
+        if mode is not None:
+            if isinstance(mode, str) and mode in OVERHEAL_MODES:
+                pass
+            elif isinstance(mode, str) and mode in OVERHEAL_MODE_RESERVED:
+                self._warn(module_name, f"{base}.mode", "Y-21",
+                           rule="overheal_mode_reserved", value=mode,
+                           msg=OVERHEAL_MODE_RESERVED[mode])
+            else:
+                self._err(module_name, f"{base}.mode", "R-1", rule="enum",
+                          expect=list(OVERHEAL_MODES), got=mode)
+        for cap_key in ("cap_pct", "cap_flat"):
+            if cap_key not in cfg:
+                continue
+            val = cfg.get(cap_key)
+            if isinstance(val, bool) or not isinstance(val, (int, float)):
+                self._err(module_name, f"{base}.{cap_key}", "R-1", rule="type",
+                          expect="number", got=type(val).__name__)
+            elif float(val) < 0:
+                self._err(module_name, f"{base}.{cap_key}", "R-1", rule="range",
+                          expect=">= 0", got=val)
 
     # ---- 批57 · 精粹产出率：settings.forge.essence_rate ----
     def _check_essence_rate(self, module_name: str, data: object) -> None:

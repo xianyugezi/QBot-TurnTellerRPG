@@ -489,15 +489,30 @@ SETTINGS_FIELDS: Dict[str, FieldMeta] = {
     # 批56 · 过量治疗（settings.overheal）—— 决策记录 §十五 D4 / 轴全集 §4-E5。
     # E5 = 布尔开关（治疗可否超过最大 HP），**不是数值轴**。缺省关闭 = 与现状一致
     # （过量部分丢弃）。引擎读点 = `core/effects.apply_heal_to_hp`；
-    # 校验器 = `validator._check_overheal`。上限/转护盾设计未写清 → 待裁决。
+    # 校验器 = `validator._check_overheal`。
+    # 批59 · BV-1/BV-2：上限可配（cap_pct/cap_flat）+ 去向选择点显式化（mode）；
+    # `shield`（转护盾）为**未实现**保留位（校验器黄提示），护盾阶段不动。
     "overheal": FieldMeta(type="obj", children={
         "enabled": FieldMeta(type="bool", default=False, label="是否允许过量治疗",
                              help="关闭 / 不写该段 = 与现状一致：治疗按最大 HP 封顶，"
                                   "过量部分丢弃。开启 = 允许治疗超过最大 HP（超出的部分保留）；"
-                                  "额外上限与「是否转护盾」设计未定，属待裁决。"),
+                                  "亦可用「过量去向」显式表达（两者取其一即可）。"),
+        "mode": FieldMeta(type="enum", enum=("keep", "discard"), default="discard",
+                          label="过量去向",
+                          help="keep = 保留 HP 超额（等价于开启）；discard = 丢弃（缺省 = 现状）。"
+                               "「转护盾」设计未写清 → 本批**未实现**（写 shield 会被黄提示，"
+                               "不生效）；与既有护盾阶段的先后也按现状不动。"),
+        "cap_pct": FieldMeta(type="number", range_min=0.0, default=None, label="上限：超出%",
+                             help="过量治疗最多超出最大 HP 的百分比（如 50 = 上限 max_hp×1.5）。"
+                                  "留空 = 无额外上限（缺省，与批56 现状一致）；"
+                                  "与「上限：超出点」同时给时取**更小**者。"),
+        "cap_flat": FieldMeta(type="number", range_min=0.0, default=None, label="上限：超出点",
+                              help="过量治疗最多超出的点数（如 200 = 上限 max_hp+200）。"
+                                   "留空 = 无额外上限（缺省）；与「上限：超出%」取更小者。"),
     }, label="过量治疗",
         help="过量治疗开关（治疗可否超过最大 HP）：关闭 = 现状（丢弃）；开启 = 保留。"
-             "过量部分的上限、是否转护盾、与护盾的先后由后续裁决，本批不设上限、护盾不动。"),
+             "「过量去向」把选择点显式化（keep/discard；shield 未实现）；"
+             "上限可配（超出% 或 超出点，留空 = 不设上限）。"),
     # 批50 · 特效轴地基：`settings.effect_axes` —— 特效轴**逐轴声明段**。
     # 形状 `{轴键: {min, max, default, display:{mode,label,help}, stack, legacy_alias}}`；
     # 键 = 轴 id（动态键空间，注册表唯一源 = `data.gear_stats.GEAR_EFFECT_KEYS`

@@ -1911,8 +1911,9 @@ def apply_heal_to_hp(
 
     `cfg` = `settings.overheal` 段（缺省 None = 关闭）。`enabled=true` 且 `key == "hp"`
     且 `heal > 0` → 按 E5 字面「治疗可否超过最大 HP」= **保留**：`max(0, cur + heal)`
-    （HP 可超过 max_hp）。额外上限与「是否转护盾」设计未写清 → 属**待裁决**
-    （`docs/深度打造_实现说明.md` 批56 节 / 决策记录 §十五），本批不设上限、护盾阶段不动。
+    （HP 可超过 max_hp），再按 **BV-1 可配上限**（`cap_pct` / `cap_flat`）取更小者封顶；
+    **缺省不给上限 = 无额外上限**（与批56 现状一致）。「是否转护盾」仍属**未实现**
+    （BV-2：`overheal.mode` 只支持 keep/discard，shield 为保留位）——护盾阶段不动。
 
     负治疗（治疗反转）路径两侧一致：下钳 0，不越界为负。返回落定后的值。
     """
@@ -1920,10 +1921,14 @@ def apply_heal_to_hp(
         return 0
     cur = int(combatant.get(key, 0))
     if heal > 0 and key == "hp":
-        from qbot_rpg.data.gear_stats import overheal_enabled  # noqa: PLC0415
+        from qbot_rpg.data.gear_stats import overheal_cap, overheal_enabled  # noqa: PLC0415
 
         if overheal_enabled(cfg):
-            combatant[key] = max(0, cur + heal)
+            new_hp = max(0, cur + heal)
+            ceiling = overheal_cap(cap, cfg)  # BV-1；None = 无额外上限（批56 现状）
+            if ceiling is not None:
+                new_hp = min(int(ceiling), new_hp)
+            combatant[key] = new_hp
             return int(combatant[key])
     combatant[key] = max(0, min(int(cap), cur + heal))
     return int(combatant[key])

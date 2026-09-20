@@ -14,6 +14,25 @@
 
 ### Added
 
+- **批70（2026-09-23）**：**「登记了却不生效」清账（审计4 §2 无消费者登记表 33 条）**。
+  依据 `审计4_勿增实体_死实体与空转.md` §2/§4 + `框架体检报告.md` §二 P0-A。
+  **① 接线（X01/X20 特效轴 + 归并旧键 + 3 条框架预设转生效）**：`damage_dealt_pct` 新增唯一
+  收口 `battle._damage_dealt_mult`（总伤末/双通道末，落于 `total_damage` 后、承伤乘区前），旧键
+  `weakness_dmg_pct` 经战斗桥 pct 层归并入本轴（只算一次）；`status_duration_pct`（source）/
+  `status_duration_taken_pct`（target）在 `effects.apply_status` 建实例处对 `turns`/`charges`
+  双维各缩放一次（永久维 −1 不动、存量不追改）。框架预设 `weapon_dmg`（破甲锋刃）/
+  `armor_dur_down`（涤净之躯）/`armor_dur_up`（缠身之甲）随之**由「无消费」转为生效**；未配置
+  （轴 0）→ ×1.0 → 逐字段零变化。**② 删除 `settings.forge.decompose_rate`**（与
+  `settings.alchemy.decompose_rate` 重复且引擎从不读 forge 段）：删默认表/FieldMeta/合并逻辑/
+  包声明；**迁移**＝分解回收率唯一源改用 `settings.alchemy.decompose_rate`，校验器新增黄提示
+  `Y-21 moved_to_alchemy` 指向新位置。**③ 标注未实现**（保留键、编辑器 help 明写「未实现」、
+  预设不发售）：`reward_mult_pct`（待接哨兵）/ `copy_slot`（引擎不读复制位）/ formula 展示层
+  13 字段（floor_mode/deep_floor/luck.*/power.*/effects_link.*/stats_collector.*/
+  weapon_type_mult）/ `report_effective_share` / `settings.env_event|log_card` /
+  ai|hidden 视图 8 字段（视图键名与真实键 `ai.states`/`ai.transitions`/顶层 `phases` 不符）。
+  验收：新增批70 接线/清账回归测试（24 条）；全量 pytest 0 failed；双尺子复算零变化。
+  页脚批次串 →「批70 · 登记失效清账」。
+
 - **批65（2026-09-22）**：**编辑器「模块预设组合」（推荐组合）**。依据用户 2026-09-22 诉求 +
   一号原则（编辑器显示 = 框架能力全集）；决策记录 §二十八；使用说明 §一·5 / §十·10。
   **① 框架默认组合**（`content/module_presets.py`）：`basic_rpg` / `life_adventure` /

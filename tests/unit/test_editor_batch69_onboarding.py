@@ -1,4 +1,4 @@
-"""批69 · 新手上路收尾（走查 §3 左栏 / 中栏可见引导 + 「空骨架模块」容忍复用）回归测试。
+"""批70 · 登记失效清账（走查 §3 左栏 / 中栏可见引导 + 「空骨架模块」容忍复用）回归测试。
 
 依据：`/root/deliverables/编辑器_新用户走查.md`
   §3 左栏：未启用行要有**可见**的启用引导（不能只藏在 hover title 里）；
@@ -23,7 +23,7 @@ from qbot_rpg.web import api, editor_ops
 
 REPO = Path(api.repo_root())
 HTML = REPO / "qbot_rpg" / "web" / "static" / "index.html"
-NEW_NOTE = "批69 · 新手上路收尾"
+NEW_NOTE = "批70 · 登记失效清账"
 OLD_NOTE = "批68 · 新手上路打磨"
 
 

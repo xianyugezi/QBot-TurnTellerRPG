@@ -1053,7 +1053,7 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
       <div class="panel-body" id="p-body">
         <div class="empty">从左侧选择模块与条目。字段按内容包元数据渲染；改动先进草稿，保存时才校验并落盘。</div>
       </div>
-      <div class="panel-ft"><span>批65 · 模块预设组合</span></div>
+      <div class="panel-ft"><span>批66 · 新用户卡点修复</span></div>
     </section>
 
   </div>
@@ -5672,12 +5672,14 @@ function fieldRow(f) {
     ? '<button type="button" class="keydel" data-keydel="' + esc(f.key)
       + '" title="删除这个子项（只改草稿，保存后生效）">✕</button>' : "";
   // 批66 · 卡点5：必填可见标记（元数据 required=true 才出；选填不出，布局与现状一致）。
-  var req = (f.required && state.editable) ? '<span class="freq">必填</span>' : "";
+  // 注意：`state` 在部分纯逻辑 node 测试里不存在 → 与上方 `note` 同口径做存在性判断。
+  var canEdit = (typeof state !== "undefined") && state.editable;
+  var req = (f.required && canEdit) ? '<span class="freq">必填</span>' : "";
   // 批66 · 卡点1：条目 ID 行（仅 list 模块的身份字段）复用既有 id_check 接口做即时校验。
-  var isIdent = !!(state.detail && state.detail.entry_type === "list"
-    && state.detail.id_field === f.key);
+  var isIdent = (typeof state !== "undefined") && !!state.detail
+    && state.detail.entry_type === "list" && state.detail.id_field === f.key;
   var body = fieldBody(f);
-  if (isIdent && state.editable) {
+  if (isIdent && canEdit) {
     body = '<div class="ident">' + body + '<span class="nid-st" id="edit-id-st"></span>'
       + '<div class="nid-hint">改 ID = 改条目在文件里的标识；保存前会先校验，'
       + "非法 ID 不会写入文件。</div></div>";

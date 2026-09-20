@@ -69,6 +69,18 @@
 - **D4 `overheal`**：**不是轴**（E5 = 布尔开关），故不在此登记表；另见 `OVERHEAL_KEY`
   段与 `core/effects` 的 HP 落点收口。缺省 = 关闭 = 与现状一致（过量部分丢弃）。
 
+批59 · 特效小尾巴（决策记录 §十五 D5 + §二十一 批56 的 BV-1/2/3）：
+- **D5 奖励轴登记**：登记第 17 条特效轴 `reward_mult_pct`（X43，P1，D1 百分点口径 =
+  `×mult` 换算 `pct=(mult-1)×100`），**`min: 0` 下钳 0**（负掉率无意义）。**消费点待接**：
+  奖励类别分散在 `reward.dispatch_reward`（coins/gem/rep，被任务/签到/NPC/钓鱼/成就/PvP 共用）、
+  `battle_reward.settle_battle_rewards`（exp 经 `LevelUpEngine.gain_exp`）与
+  `battle_reward.roll_death_drops`（掉落 chance）三处 → **无唯一收口，不为交差硬造**。
+  该轴 `bridge="settlement"`：**不进战斗桥**（奖励不是 combatant 字段）。
+- **BV-1 过量上限 / BV-2 去向**：`overheal` 段扩展 `mode`（keep/discard；`shield` 为**未实现**
+  的保留位）+ `cap_pct`/`cap_flat`（上限，默认 `None` = 无额外上限 = 批56 现状）。
+- **BV-3 速度轴权表坐标**：`action_speed_pct` 登记进 `EFFECT_AXIS_WEIGHTS`（不再
+  `unknown_axis` 黄提示）。
+
 批22 · A3 常驻战斗词条（全部归 COMBAT 档；逐条归属与数值口径）：
 - absorb_hp     ％    吸血比：造成伤害 × absorb_hp% 回血（上限 100），伤害扣除后由
                        battle 消费（不进属性管线、不属于 effects.lifesteal 主动效果）。
@@ -124,6 +136,8 @@ __all__ = [
     # 批52 · 特效轴消费口径（settings 段键名 + 读时钳制取值）
     "EFFECT_AXES_KEY",
     "effect_axis_value",
+    # 批59 · 奖励轴登记（X43，D5 下钳 0；消费点待接）
+    "EFFECT_CONSUMER_PENDING",
     # 批55 · 特效强度预算（settings.effect_budget 段；另立上限 + A1 度量 —— 纯函数）
     "EFFECT_BUDGET_KEY",
     "EFFECT_AXIS_WEIGHTS",
@@ -185,6 +199,12 @@ GEAR_PLACEHOLDER_KEYS: Tuple[str, ...] = ("cooldown_reduction_pct",)
 # 面板三轴 stem（唯一源落在 data 层，使 content 层校验器可红拦「特效轴键名撞面板轴」
 # **而不必** content→core 反向依赖；core/panel_budget.PANEL_AXIS_KEYS 由本常量派生）。
 PANEL_AXIS_STEMS: Tuple[str, ...] = ("atk", "dfn", "hp")
+
+#: 登记纪律的**待接哨兵**（批59 · D5）：某轴有明确落点方向、但框架尚无**唯一**消费点时，
+#: `consumer` 写本哨兵并在 `consumer_note` 写明「候选点有哪些、为何无唯一收口」——
+#: **不得**为交差把候选点之一伪造成「唯一消费点」，也不得静默留空绕过登记纪律。
+#: 与「空 consumer 视为违反登记纪律」互补：哨兵 = 如实登记的待办，空 = 陷阱。
+EFFECT_CONSUMER_PENDING: str = "（消费点待接）"
 
 #: 特效轴逐轴登记表（**唯一源**：键名 / 范围 / 默认 / 显示 / 聚合 / 别名 / 唯一消费点）。
 #
@@ -406,6 +426,32 @@ EFFECT_AXIS_SPECS: Tuple[Mapping[str, Any], ...] = (
                          "`enrage/fatigue_recovery_mult` 仍走自身规则配置（收编为条件实例属"
                          "口径变更，本批不动，登记待裁决）。",
     },
+    # ---- 批59 · D5 奖励轴（X43；**登记 + 下钳 0，消费点待接**）----
+    {
+        "axis": "reward_mult_pct", "doc_id": "X43", "priority": "P1",
+        "min": 0.0, "max": 400.0, "default": 0.0, "stack": "add",
+        # 奖励是**结算期**轴，不是 combatant 字段 → 不进战斗桥（见 EFFECT_TO_COMBATANT）。
+        "bridge": "settlement",
+        # 设计 X43 的 `scope` 声明形状待裁决（多键 vs 对象型轴）→ 原样登记、不承载。
+        "scope": ("exp", "coins", "gem", "rep",
+                  "drop_chance", "drop_count", "drop_rarity"),
+        "display": {"mode": "mult", "label": "奖励倍率修正",
+                    "help": "调整结算奖励（经验 / 货币 / 掉落率与品质等）：×1.0 = 原样；"
+                            "正向(+X)提升奖励；负向(-X)按 D5 声明**下钳 0**"
+                            "（负掉率无意义）。scope（experience/coins/drop 分类）"
+                            "声明形状待裁决 → 本轴先登记为扁平标量、消费点待接。"},
+        "legacy_alias": (),
+        "consumer": EFFECT_CONSUMER_PENDING,
+        "consumer_note": "D5 登记：奖励类别分散在**三处**、无唯一收口，故不硬造——"
+                         "① 标量 coins/gem/rep 在 `core/reward.dispatch_reward`"
+                         "（被任务/签到/NPC/钓鱼/成就/PvP **共用**）；"
+                         "② 战斗 exp 在 `core/battle_reward.settle_battle_rewards`"
+                         "（经 `LevelUpEngine.gain_exp`，**不走** dispatch_reward）；"
+                         "③ 掉落在其 `roll_death_drops` 的 chance roll。"
+                         "接线须先裁决 `scope` 承载形状（多键 vs 对象型轴）与是否只作用于"
+                         "战斗结算；届时消费点读 `settings.effect_axes` 声明做读时钳制"
+                         "（`min: 0` 即 D5）。本批只登记、声明下钳语义，**未接任何消费点**。",
+    },
 )
 
 #: 已按 D 组裁决**废弃**的轴：键 → (替代轴, 裁决依据/原因)。
@@ -425,7 +471,14 @@ GEAR_EFFECT_KEYS: Tuple[str, ...] = tuple(str(_s["axis"]) for _s in EFFECT_AXIS_
 #: 特效轴 → 战斗桥目标键（**本批只桥接、不求值**：`combatant_updates` 只映射非零项，
 #: 缺省 0 → combatant 不新增任何字段 → 全量回归逐字段零变化）。
 #: 封顶一律 `None`：钳制归内容包 `settings.effect_axes` 声明 + 消费点读取，引擎不写死。
-EFFECT_TO_COMBATANT: Tuple[str, ...] = GEAR_EFFECT_KEYS
+#:
+#: 批59：桥接受轴条目的 `bridge` 字段控制——缺省 `"combatant"`（进战斗桥）；
+#: `"settlement"`（如奖励轴 `reward_mult_pct`）是**结算期**轴，**不进 combatant**
+#: （奖励不是战斗体字段，桥进去只会污染快照且无人读）。
+EFFECT_TO_COMBATANT: Tuple[str, ...] = tuple(
+    str(_s["axis"]) for _s in EFFECT_AXIS_SPECS
+    if str(_s.get("bridge", "combatant")) == "combatant"
+)
 
 #: `settings.effect_axes` 段键名（批52：battle/effects 消费点从引擎配置读该段做**读时钳制**）。
 #: 与 `normalize_effect_axes` 配套；未配置 = 缺省表 = 恒等（零变化）。

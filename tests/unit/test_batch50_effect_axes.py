@@ -76,15 +76,13 @@ P1_AXES: Tuple[str, ...] = (
     "resource_cost_pct", "resource_gain_pct",             # X34 / X35
     "crit_damage_pct",                                    # X03
     "action_speed_pct",                                   # X28（批56 接线；D2 裁决二选一取速度）
+    "reward_mult_pct",                                    # X43（批59 · D5 下钳 0，消费点待接）
 )
 #: **未登记**的 P0/P1 项及原因（不得与 `GEAR_EFFECT_KEYS` 相交——登记纪律）。
 DEFERRED: Tuple[Tuple[str, str], ...] = (
     ("lifesteal_pct / drain_to_resource (X12 / D-5, P1)",
      "无**唯一**消费点：吸血有两条并存路径（battle.absorb_hp + effects.lifesteal），"
      "须先归并；归并即改动既有吸血行为 → 违反本批零行为变化"),
-    ("reward_mult{scope} (X43 / L-1, P1)",
-     "一条轴多 scope 实例，声明形状待裁决；消费点分散在 settle_battle_rewards / "
-     "roll_death_drops / reward._SCALAR_KEYS 三处 → 无唯一收口"),
     ("stack_potency_pct (X25 / S-7, P1)",
      "消费点 `_aggregate_boost` 现按状态实例求和、**不乘 stacks**；接轴须先改聚合本身"
      "（M），且与符文 2 阶共用改造 → 非纯登记可承载"),
@@ -284,7 +282,12 @@ def test_b3_effect_keys_absent_or_zero_add_nothing() -> None:
     assert pct == {}
     assert combatant_updates({}) == {}
     assert combatant_updates(flat) == {}  # 全 0 → 桥接不输出任何键
-    assert set(EFFECT_TO_COMBATANT) == set(GEAR_EFFECT_KEYS)
+    # 批59：桥接受轴条目 `bridge` 控制（`reward_mult_pct` = settlement → **不进战斗桥**）。
+    assert set(EFFECT_TO_COMBATANT) == {
+        str(s["axis"]) for s in EFFECT_AXIS_SPECS
+        if str(s.get("bridge", "combatant")) == "combatant"}
+    assert "reward_mult_pct" not in EFFECT_TO_COMBATANT
+    assert set(EFFECT_TO_COMBATANT) | {"reward_mult_pct"} == set(GEAR_EFFECT_KEYS)
 
 
 def test_b4_effect_keys_stay_flat_and_never_enter_pct_layer() -> None:

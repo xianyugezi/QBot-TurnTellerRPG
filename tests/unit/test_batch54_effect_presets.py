@@ -18,7 +18,8 @@
   F. **落进产物实例**：临时内容根上按预设新建 → 装备 def 带轴值 → `extract_bonus` →
      `route_bonus_into` → `combatant_updates` 桥接链路。
   G. **零变化**：不启用预设 → 逐轴 0.0（框架预设不泄漏）；`items` 六种预设不变。
-  H. **结算/奖励轴核查结论**（如实报告，不硬造）：`reward_mult{scope}` 无唯一收口 → 不登记。
+  H. **结算/奖励轴**：批54 核查无唯一收口 → 批59（D5）**登记轴 + `min:0` + 消费点待接**
+     （`reward_mult_pct`，哨兵 `EFFECT_CONSUMER_PENDING`，不硬造消费点、不写预设）。
 
 纪律：测试只写**临时目录**（`tmp_path`），不碰任何真实内容包；不写死内容包业务名/数值平衡。
 """
@@ -318,23 +319,27 @@ def test_no_preset_creation_keeps_zero_axes(temp_pack: Path) -> None:
 # ===========================================================================
 # H · 结算/奖励轴核查结论（如实报告，不硬造）
 # ===========================================================================
-def test_reward_axis_not_registered_no_single_consumer() -> None:
-    """批54 核查：`reward_mult{scope}` 无**可复用的唯一消费点** → 不登记（如实报告）。
+def test_reward_axis_registered_with_pending_consumer_min_zero() -> None:
+    """批54 核查 + 批59（D5）落地：`reward_mult_pct`（X43）**已登记**、`min: 0`、消费点**待接**。
 
-    证据（三处分散，且标量口径被非战斗系统共用）：
-      · `core/reward.dispatch_reward`（`_SCALAR_KEYS = coins/gem/exp/rep`）是
-        任务/签到/NPC/钓鱼/成就/PvP **共用**发放器 → 在此加装备倍率会外溢到非战斗奖励；
-      · `core/battle_reward.settle_battle_rewards` 中 **exp 走 `LevelUpEngine.gain_exp`**，
-        与币的 `dispatch_reward` 路径**不是同一点**；
-      · 掉率在 `core/battle_reward.roll_death_drops` 的 `chance` roll。
-    验收红线「一条轴多 scope，勿造三键」：框架扁平数值键空间无法在不造多键 /
-    不新造对象型轴形状的前提下承载 scope → 本批**只报告，不登记、不接线**。
+    批54 的证据面（三处分散、无唯一收口）**未变**，故批59 **不硬造消费点**：
+    登记轴 + 哨兵 `EFFECT_CONSUMER_PENDING` + 在 `consumer_note` 写明候选点。本用例钉死：
+      · 轴在 `GEAR_EFFECT_KEYS`、`doc_id=X43`、`min==0`（D5 下钳）、`bridge="settlement"`；
+      · `consumer` = 待接哨兵（不是伪造的唯一收口）；
+      · **无内容预设引用该轴**（登记 ≠ 已可用），三处候选消费点原样未迁移。
     """
     from qbot_rpg.core import battle_reward, reward
+    from qbot_rpg.data.gear_stats import EFFECT_AXIS_SPECS, EFFECT_CONSUMER_PENDING
+
+    spec = next(s for s in EFFECT_AXIS_SPECS if str(s["axis"]) == "reward_mult_pct")
+    assert spec["doc_id"] == "X43" and str(spec["priority"]) == "P1"
+    assert float(spec["min"]) == 0.0                    # D5：下钳 0
+    assert spec["consumer"] == EFFECT_CONSUMER_PENDING   # 消费点待接（不硬造）
+    assert str(spec["consumer_note"]).strip()
+    assert spec.get("bridge") == "settlement"            # 结算期轴，不进战斗桥
+    assert "reward_mult_pct" in GEAR_EFFECT_KEYS
 
     assert set(reward._SCALAR_KEYS) >= {"coins", "gem", "exp", "rep"}
-    assert not [k for k in GEAR_EFFECT_KEYS if any(
-        t in k for t in ("reward", "loot", "drop", "exp_gain", "coin"))]
     assert not [p for p in fx.framework_effect_presets()
                 if any(t in str(p["axis"]) for t in ("reward", "loot", "drop"))]
     settle_src = inspect.getsource(battle_reward.settle_battle_rewards)

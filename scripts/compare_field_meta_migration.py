@@ -298,7 +298,20 @@ DEFAULT_PACKS = ("veinborn", "test_demo")
 #   · 无 help 删除、无字段/键删除、无 group/module_labels/module_tree 变动；
 #     `source` 未补 label（保留「框架登记类型但无中文名 → 原始键兜底」用例实例）。
 #   对拍实证：删除项 = 0；重定后基线树与当前树逐字段 diff=0。
-DEFAULT_BASELINE_REF = "526957f"
+# 批70（2026-09-23 「登记了却不生效」清账 · 33 条）重定：526957f → fce4cff（本批字段说明提交）。
+#   原因 = 本批**有意**变更（非迁移回归），删除项 = 0，全部为**改值且仅在 `help`**：
+#   · R4 `reward_mult_pct` 轴 `display.help` 追加「【未实现】消费点尚未接线——当前登记值不生效」
+#     （审计4 §4：该轴是待接哨兵，help 原只写语义未写未接 → 对作者是欺骗）；流入
+#     equipment/items 字段描述符的 `.help` / `.help_card.help` 各 2~4 处改值（本批硬差异 6 条）；
+#   · R10–R22 formula 展示层 13 字段、R23 report_effective_share、R24/R25 settings.env_event|
+#     log_card、R26–R33 ai/hidden 视图 8 字段补「【未实现】」help——这些不在本对拍快照面内
+#     （无 detail 覆盖），对拍 diff=0；
+#   · R9 `copy_slot`：内容包 `field_meta.json` `field_help.settings.alchemy.farming` 由 str
+#     转嵌套 obj 并补 copy_slot「未实现」说明（纯新增展示键，soft）。
+#   · 无 label/group/module_labels/module_tree 变动；无字段/键删除（forge.decompose_rate 删除
+#     不在本快照面内：forge settings 非 detail 模块）。
+#   对拍实证：删除项 = 0；重定后基线树与当前树逐字段 diff=0。
+DEFAULT_BASELINE_REF = "fce4cff"
 
 
 def _env(root: Path) -> dict:

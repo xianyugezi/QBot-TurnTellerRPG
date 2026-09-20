@@ -333,33 +333,45 @@ ITEMS_BLUEPRINT_FIELDS: Dict[str, FieldMeta] = {
     "blueprint_level_band": FieldMeta(
         type="obj", label="等级带",
         children={
-            "min": FieldMeta(type="int", range_min=1, label="最低等级"),
-            "max": FieldMeta(type="int", range_min=1, label="最高等级"),
+            "min": FieldMeta(type="int", range_min=1, label="最低等级",
+                             help="成品等级下限（低于则拒绝打造）。"),
+            "max": FieldMeta(type="int", range_min=1, label="最高等级",
+                             help="成品等级上限（高于则拒绝打造）。"),
         },
         help="防退化约束①：计算出的装备等级必须落在该区间，否则拒绝（防低阶材料堆预算）。"),
     "blueprint_material_slots": FieldMeta(
         type="list", label="材料槽",
         element=FieldMeta(type="obj", children={
-            "role": FieldMeta(type="enum", enum=("main", "free"), label="槽角色"),
-            "item": FieldMeta(type="str", ref_target="item", label="指定材料"),
-            "tag": FieldMeta(type="str", label="材料标签"),
-            "count": FieldMeta(type="int", range_min=1, label="需求件数"),
-            "weight": FieldMeta(type="number", range_min=0.0, label="等级占比"),
+            "role": FieldMeta(type="enum", enum=("main", "free"), label="槽角色",
+                              help="main=主槽（指定材料）/ free=自由槽（按标签筛）。"),
+            "item": FieldMeta(type="str", ref_target="item", label="指定材料",
+                              help="主槽指定的物品 id（items∪equipment 同库）。"),
+            "tag": FieldMeta(type="str", label="材料标签",
+                             help="自由槽可用的材料标签（按标签筛选）。"),
+            "count": FieldMeta(type="int", range_min=1, label="需求件数",
+                               help="该槽投入的材料件数。"),
+            "weight": FieldMeta(type="number", range_min=0.0, label="等级占比",
+                                help="该槽对成品等级的占比系数。"),
         }),
         help="固定材料槽（指定物品）+ 自由材料槽（按标签过滤）；主槽占大等级比。"),
     "blueprint_fixed_stats": FieldMeta(
         type="list", label="固定属性",
         element=FieldMeta(type="obj", children={
-            "stat": FieldMeta(type="str", label="属性键"),
-            "value_rule": FieldMeta(type="str", label="数值规则"),
-            "value": FieldMeta(type="number", allow_negative=True, label="固定值"),
+            "stat": FieldMeta(type="str", label="属性键",
+                              help="要固定的属性键（stats 词条键空间）。"),
+            "value_rule": FieldMeta(type="str", label="数值规则",
+                                    help="数值缩放规则（可按品质/等级系数缩放）。"),
+            "value": FieldMeta(type="number", allow_negative=True, label="固定值",
+                               help="该属性的固定基础值（可负）。"),
         }),
         help="图纸固定 1~3 条属性（原案 §3）；数值可由品质/等级系数缩放（value_rule）。"),
     "blueprint_random_stat_count": FieldMeta(
         type="obj", label="随机属性条数",
         children={
-            "min": FieldMeta(type="int", range_min=0, range_max=2, label="最少"),
-            "max": FieldMeta(type="int", range_min=0, range_max=2, label="最多"),
+            "min": FieldMeta(type="int", range_min=0, range_max=2, label="最少",
+                             help="随机属性条数下限（0~2）。"),
+            "max": FieldMeta(type="int", range_min=0, range_max=2, label="最多",
+                             help="随机属性条数上限（0~2）。"),
         },
         help="随机属性 0~2 条（原案 §3），从相性池抽取。"),
     "blueprint_fixed_set_affix": FieldMeta(
@@ -368,8 +380,10 @@ ITEMS_BLUEPRINT_FIELDS: Dict[str, FieldMeta] = {
     "blueprint_random_set_affix_count": FieldMeta(
         type="obj", label="随机套装词条条数",
         children={
-            "min": FieldMeta(type="int", range_min=0, range_max=2, label="最少"),
-            "max": FieldMeta(type="int", range_min=0, range_max=2, label="最多"),
+            "min": FieldMeta(type="int", range_min=0, range_max=2, label="最少",
+                             help="随机套装词条条数下限（0~2）。"),
+            "max": FieldMeta(type="int", range_min=0, range_max=2, label="最多",
+                             help="随机套装词条条数上限（0~2）。"),
         },
         help="随机套装词条 0~2 条（原案 §4），从相性池抽取。"),
     "blueprint_random_set_affix_pool": FieldMeta(
@@ -381,9 +395,12 @@ ITEMS_BLUEPRINT_FIELDS: Dict[str, FieldMeta] = {
     "blueprint_learn": FieldMeta(
         type="obj", label="学习条件",
         children={
-            "item": FieldMeta(type="str", ref_target="item", label="学习所需图纸物品"),
-            "job": FieldMeta(type="str", ref_target="job", label="职业要求"),
-            "level": FieldMeta(type="int", range_min=1, label="等级要求"),
+            "item": FieldMeta(type="str", ref_target="item", label="学习所需图纸物品",
+                              help="学习该图纸需要消耗的物品 id。"),
+            "job": FieldMeta(type="str", ref_target="job", label="职业要求",
+                             help="限定的 jobs 职业 id（留空不限）。"),
+            "level": FieldMeta(type="int", range_min=1, label="等级要求",
+                               help="学习所需的玩家等级（≥1）。"),
         },
         help="学习该图纸的条件；学习后持久化到玩家 learned_blueprints（换包同 id 保留）。"),
     "blueprint_cost_cap": FieldMeta(

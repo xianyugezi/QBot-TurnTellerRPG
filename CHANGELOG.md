@@ -14,6 +14,27 @@
 
 ### Added
 
+- **批73（2026-09-23）**：**死代码清理（`批73_死代码_风险分类.md` §2 绿清单 49 条）**。
+  依据 `审计4_勿增实体_死实体与空转.md` §3。纪律：**只删 🟢 绿**，黄/红一律不碰；
+  删前逐条独立复核「跨文件调用 0 + 无动态引用（`getattr`/`globals()`/`__all__`/注册表/
+  字符串方法名/测试/脚本/文档/内容包）」。
+  **① 直删 47 条**（分 5 批，每批全量 pytest 0 failed）：§2.1 未导出零引用私有辅助 23 条；
+  §2.2 未导出「公共形态」方法 11 条（含 R1 `GameWorld.move_to_map` 桩——**只删类内桩**，
+  `world/movement.py` 活跃同名函数未动）；§2.3 `EnemyDef.stats_*` 整族 9 条（方案①，禁删半族，
+  同步 3 处同文件 docstring）；§2.4 `GameWorld.is_boss_alive` 桩 1 条。
+  §5#1 `Spawner` 死类整壳（含 `__all__` 条目、`_NOT_IMPL_MSG`、`DEFAULT_OFFLINE_CAP_HOURS`）
+  随 §2.4 三条桩方法一并删；同步模块 docstring 与 `world/__init__` 清单改指 `SpawnManager`。
+  **② 改判为黄 2 条（保守不删）**：`GameWorld.try_consume_world_stock`、
+  `GameWorld.list_stores` —— 复核发现 `docs/细化/细化_M7_装配层契约.md:63/168` 把二者写成
+  M7 装配「真实 API / ctx 来源」，删 = 契约悬空（分类文档 §0.3 漏此落点），按「宁留勿删」保留。
+  **③ 未做（登记不动手）**：§5#3–6 四空视图（`ai`/`hidden`/`env_event`/`log_card`）按处置建议
+  保留（未加注释，避免超出「只删」范围）；§6 分支1（`spawn_manager.alive_monsters` 空转分支）
+  处置建议为「接 or 删」二选一，属玩法语义，不在死代码批内顺手做；§6 分支2 保留销号；
+  §6 分支3（`pvp.py` free 模式 `enemy_act` 真 bug + verify 脚本过期调用）独立小批。
+  验收：全量 pytest **9034 passed / 0 failed**；双尺子（种子 20260919）零变化；
+  换包验收 12 包全 PASS；ruff 改动文件干净；`git status --porcelain` 空。
+  页脚批次串 →「批73 · 死代码清理」。
+
 - **批72（2026-09-23）**：**重复机制收敛（审计3 §3 真重复清单；`框架体检报告.md` §二 P0-C + §三 P1）**。
   依据 `审计3_勿增实体_重复机制.md`。纪律：**只收敛「同一概念多实现/多源」**，
   §6「合理并存清单」一律不动；每项带改前/改后逐位对拍。

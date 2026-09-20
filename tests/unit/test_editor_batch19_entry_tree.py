@@ -279,6 +279,6 @@ def test_selfcheck_still_passes() -> None:
 
 def test_footer_batch_string_is_batch20() -> None:
     html = HTML.read_text(encoding="utf-8")
-    assert "批72 · 重复机制收敛" in html
+    assert "批73 · 死代码清理" in html
     assert "批49 · 测试 flake 根治" not in html
     assert "批18 · 预设细化与效果扩展" not in html

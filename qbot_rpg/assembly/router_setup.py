@@ -68,6 +68,7 @@ from qbot_rpg.commands import (
     shortcut_commands,
     status_commands,
     synth_commands,  # 批39 · 合成公用层：/合成（打造与炼金共用第 1 层）
+    temper_commands,  # 批62 · 装备淬炼独立指令壳：/淬炼（批57 引擎之上补指令）
     unregister_commands,
     use_commands,
     job_commands,  # M13 批14 路14A：/转职
@@ -131,6 +132,9 @@ REGISTER_GROUPS: tuple = (
     # M12.5 强化（2026-09-06 指令缺口补全批1路1）：/强化 /强化信息 /强化保护
     # 三指令（2c3b；白名单已登记 强化，本批补 强化信息/强化保护）
     enhance_commands.register_enhance_commands,
+    # 批62 · 装备淬炼独立指令壳：/淬炼（批57 core/temper 引擎/状态/配置/校验之上补指令；
+    # 白名单已登记 淬炼 → check_consistency 双向一致）。
+    temper_commands.register_temper_commands,
     # M12.5 木桩（2026-09-06 批1路2）：/木桩 /调整木桩（怪物模块 §十五）
     dummy_commands.register_dummy_commands,
     # M11 成就（m11 启动包 §2.1）：/成就 /成就信息 /称号 三指令

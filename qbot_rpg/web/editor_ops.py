@@ -348,18 +348,27 @@ def _plan(pack: object, module: object, entry_id: object, patch: object,
     _pack_dir, modules_raw = api.load_pack_modules(pack, root=root)
     new_modules = _modules_with(modules_raw, slot["module"], new_content)
     report = check_pack(new_modules, meta)
-    return slot, new_content, report
+    # 批69：一并回传「改后整包视图」，供条目级写路径复用 `_tolerate_empty_modules`
+    # （空骨架模块先启用后填写，只提示不阻断）——不改既有三元素语义（新增第 4 元素）。
+    return slot, new_content, report, new_modules
 
 
 def _split_report(report: Any, slot: Mapping[str, Any],
                   tolerate: Optional[Callable[[Any], bool]] = None,
                   tolerate_message: str = "",
-                  tolerate_code: str = "module_tolerated_") -> Any:
+                  tolerate_code: str = "module_tolerated_",
+                  extra_tolerate: Optional[Callable[[Any], bool]] = None,
+                  extra_tolerate_message: str = "",
+                  extra_tolerate_code: str = "module_tolerated_") -> Any:
     """校验报告 → (红拦, 黄提示)。
 
     `tolerate`（可选）：命中的红拦不判失败，改以黄提示如实说明「为什么本次放行」。
     默认 None = 一律不容忍（既有语义零变化）。仅供「删除被引用条目 / 改名被引用条目 /
     模块开关」这类**产品明确允许**的场景使用（见 delete_entry / save_entry）。
+
+    批69：`extra_tolerate` 提供**第二条独立**容忍判定（各自带 message/code），供条目级写路径
+    复用「空骨架模块先启用后填写」同一机制（`_tolerate_empty_modules`）；只增不改，缺省行为
+    与既有完全一致。
     """
     prefix = _scope_prefix(slot)
     raw_errors = list(report.errors)
@@ -367,12 +376,19 @@ def _split_report(report: Any, slot: Mapping[str, Any],
     if tolerate is not None:
         tolerated = [e for e in raw_errors if tolerate(e)]
         raw_errors = [e for e in raw_errors if not tolerate(e)]
+    extra_tolerated: List[Any] = []
+    if extra_tolerate is not None:
+        extra_tolerated = [e for e in raw_errors if extra_tolerate(e)]
+        raw_errors = [e for e in raw_errors if not extra_tolerate(e)]
     reds = _decorate(atomic_store.humanize_errors(raw_errors), slot, prefix,
                      related_only=False)
     yellows = _decorate(atomic_store.humanize_warnings(report.warnings), slot, prefix,
                         related_only=True)
-    yellows += _humanize_tolerated(tolerated, message_prefix=tolerate_message,
-                                   code_prefix=tolerate_code)
+    yellows += _label_module_notes(
+        _humanize_tolerated(tolerated, message_prefix=tolerate_message,
+                            code_prefix=tolerate_code)
+        + _humanize_tolerated(extra_tolerated, message_prefix=extra_tolerate_message,
+                              code_prefix=extra_tolerate_code), slot)
     yellows += _orphan_key_warnings(slot)
     return reds, yellows
 
@@ -466,6 +482,10 @@ def _identity_rename(slot: Mapping[str, Any], patch: object) -> Optional[Dict[st
 # 改名被引用条目：旧名悬空引用属「产品明确允许（确认后照常保存）」→ 复核容忍的说明前缀。
 _RENAME_TOLERATE_NOTE = "改名后旧名悬空（引用方保持旧名，校验如实报「引用目标不存在」）："
 
+# 批69 · 空骨架模块容忍文案：与模块开关同一「先启用、后填写」语义，条目级写路径沿用，
+# 只提示不阻断本次新增 / 保存（复用 `_tolerate_empty_modules`，不新增判定规则）。
+_EMPTY_MODULE_TOLERATE_NOTE = "另有模块还是空的（先启用、后填写，只提示不阻断本次操作）："
+
 # 「引用者清单」摘要里最多逐条列出的条数（其余只报总数）。
 REF_LIST_LIMIT = 10
 
@@ -545,7 +565,7 @@ def validate_entry(pack: object, module: object, entry_id: object, patch: object
     `breaking`；引用导致的旧名悬空 R-4 不计红拦（改以黄提示如实说明），**需用户确认**
     （`needs_confirmation`）才会真正写入。
     """
-    slot, _content, report = _plan(pack, module, entry_id, patch, root, meta)
+    slot, _content, report, modules_view = _plan(pack, module, entry_id, patch, root, meta)
     # 批32 B1：框架关键模板只读 → 预检直接判红（提示「复制为包覆盖」），不进入常规校验。
     if _framework_locked(slot):
         return _envelope(
@@ -575,7 +595,10 @@ def validate_entry(pack: object, module: object, entry_id: object, patch: object
     tolerate = _is_dangling_to(rename["from"]) if breaking else None
     reds, yellows = _split_report(report, slot, tolerate=tolerate,
                                   tolerate_message=_RENAME_TOLERATE_NOTE,
-                                  tolerate_code="rename_tolerated_")
+                                  tolerate_code="rename_tolerated_",
+                                  extra_tolerate=_tolerate_empty_modules(modules_view),
+                                  extra_tolerate_message=_EMPTY_MODULE_TOLERATE_NOTE,
+                                  extra_tolerate_code="empty_module_tolerated_")
     if breaking:
         yellows = _rename_warnings(rename, refs) + yellows
     level = "red" if reds else ("yellow" if yellows else "ok")
@@ -668,7 +691,7 @@ def save_entry(pack: object, module: object, entry_id: object, patch: object, *,
     复制成包覆盖条目。普通条目 / 包覆盖条目行为不变。
     """
     require_edit(role)
-    slot, new_content, report = _plan(pack, module, entry_id, patch, root, meta)
+    slot, new_content, report, modules_view = _plan(pack, module, entry_id, patch, root, meta)
     mod = str(slot["module"])
     if _framework_locked(slot) and not copy_override:
         env = _envelope(
@@ -712,9 +735,13 @@ def save_entry(pack: object, module: object, entry_id: object, patch: object, *,
 
     # 已确认（或无引用）：引用导致的旧名悬空 R-4 容忍为黄提示，其余红拦照常阻断。
     tolerate = _is_dangling_to(rename["from"]) if breaking else None
+    empty_tol = _tolerate_empty_modules(modules_view)
     reds, yellows = _split_report(report, slot, tolerate=tolerate,
                                   tolerate_message=_RENAME_TOLERATE_NOTE,
-                                  tolerate_code="rename_tolerated_")
+                                  tolerate_code="rename_tolerated_",
+                                  extra_tolerate=empty_tol,
+                                  extra_tolerate_message=_EMPTY_MODULE_TOLERATE_NOTE,
+                                  extra_tolerate_code="empty_module_tolerated_")
     if breaking:
         yellows = _rename_warnings(rename, refs) + yellows
     env.update(errors=reds, warnings=yellows)
@@ -736,7 +763,8 @@ def save_entry(pack: object, module: object, entry_id: object, patch: object, *,
         env["errors"] = list(written.get("errors") or []) + env["errors"]
         return env
 
-    verify_errors = _verify_after_write(pack, slot, root, meta, tolerate=tolerate,
+    verify_errors = _verify_after_write(pack, slot, root, meta,
+                                        tolerate=_any_of(tolerate, empty_tol),
                                         expected={mod: new_content})
     if verify_errors is not None:
         rolled = atomic_store.restore_modules_from_backup(pack_dir, [mod])
@@ -816,7 +844,8 @@ def _plan_create(pack: object, module: object, entry_id: str, patch: object,
     _pack_dir, modules_raw = api.load_pack_modules(pack, root=root)
     new_modules = _modules_with(modules_raw, str(info["module"]), content)
     report = check_pack(new_modules, meta)
-    return info, content, report
+    # 批69：同 `_plan`，回传整包视图供空骨架模块容忍复用。
+    return info, content, report, new_modules
 
 
 def create_entry(pack: object, module: object, entry_id: object, patch: object, *,
@@ -845,14 +874,22 @@ def create_entry(pack: object, module: object, entry_id: object, patch: object, 
         env["id_check"] = check
         return env
 
-    info, content, report = _plan_create(pack, module, eid, patch, root, meta, preset)
-    reds, yellows = _split_report(report, info)
-    # 黄提示只留新条目自身（同模块其他条目的黄提示与本次新增无关）
-    yellows = _related_to_slot(yellows, info, str(info["module"]))
+    info, content, report, modules_view = _plan_create(pack, module, eid, patch, root, meta, preset)
+    # 批69：复用「空骨架模块先启用后填写」同一容忍机制——其它模块还是空的，不该阻断本模块新增。
+    empty_tol = _tolerate_empty_modules(modules_view)
+    reds, yellows = _split_report(report, info,
+                                  extra_tolerate=empty_tol,
+                                  extra_tolerate_message=_EMPTY_MODULE_TOLERATE_NOTE,
+                                  extra_tolerate_code="empty_module_tolerated_")
+    # 黄提示只留新条目自身（同模块其他条目的黄提示与本次新增无关）；
+    # 被容忍的「其它模块还是空的」黄提示保留（跨模块、如实说明本次为何放行）。
+    yellows = (_related_to_slot([y for y in yellows if not y.get("tolerated")],
+                                info, str(info["module"]))
+               + [y for y in yellows if y.get("tolerated")])
     env = _envelope(phase="create", pack=str(pack), module=str(info["module"]),
                     entry_id=eid, errors=reds, warnings=yellows,
                     changed_fields=sorted(str(k) for k in (patch or {})))
-    if not report.ok:
+    if reds:
         env.update(level="red", message="校验未通过：本次未新增任何内容（红拦）。")
         return env
 
@@ -871,6 +908,7 @@ def create_entry(pack: object, module: object, entry_id: object, patch: object, 
         return env
 
     verify_errors = _verify_after_write(pack, info, root, meta,
+                                        tolerate=empty_tol,
                                         expected={mod: content})
     if verify_errors is not None:
         rolled = atomic_store.restore_modules_from_backup(pack_dir, [mod])
@@ -1087,6 +1125,31 @@ def _module_label(module: str, labels: Mapping[str, str]) -> str:
     return labels.get(module) or (ce.label if ce is not None else module)
 
 
+def _label_module_notes(items: Sequence[Mapping[str, Any]],
+                        slot: Mapping[str, Any]) -> List[Dict[str, Any]]:
+    """批69 · 给「未装饰」的容忍黄提示补**模块中文名**（只补展示名，不改判定 / 不改 message）。
+
+    以错误自身 `module` 为准（跨模块提示不能借用当前槽位模块名）；取不到中文名 → 回落原键名。
+    仅用于「哪里」一行，避免把英文模块键裸露给作者（§4 英文术语漏出）。
+    """
+    if not items:
+        return []
+    try:
+        labels = api._display_labels(slot.get("manifest") or {},
+                                     list(slot.get("declared") or []),
+                                     slot.get("pack_dir"))
+    except Exception:   # 展示名取不到不影响提示本身
+        labels = {}
+    out: List[Dict[str, Any]] = []
+    for it in items:
+        d = dict(it)
+        mod = str(d.get("module") or "")
+        if mod and not d.get("module_label"):
+            d["module_label"] = _module_label(mod, labels)
+        out.append(d)
+    return out
+
+
 def _dep_warning(module: str, message: str) -> Dict[str, Any]:
     return {
         "level": "yellow", "code": "module_dependency", "module": module, "field": "",
@@ -1131,6 +1194,7 @@ def _humanize_tolerated(errors: Sequence[Any],
         item = dict(item)
         item["level"] = "yellow"
         item["code"] = code_prefix + str(item.get("code") or "")
+        item["tolerated"] = True   # 批69：标记「被容忍」，条目级收敛时保留（如实说明为何放行）
         item["message"] = message_prefix + str(item.get("message") or "")
         out.append(item)
     return out

@@ -908,6 +908,8 @@ select.cin { padding: 1px var(--sp-9) 1px var(--sp-2); }
 /* 批65 · 左栏「未启用 · 框架能力 N 项」分组旁的一行引导（一行说清，不静默） */
 .mod-sep .sep-h { display: block; color: var(--text-6); font-size: var(--fs-10);
   line-height: var(--lh-ex); }
+/* 批69 · §3 左栏：未启用行的「点击启用」是可点动作，用强调色与其它灰标签区分（可见引导） */
+.mod.off .tag.act { color: var(--accent); border-color: var(--accent); }
 
 /* ---------- 批10 · 🎨 配色面板：主题单选 + 自定义背景图（令牌驱动） ---------- */
 .mp-sec { border-top: var(--bw) solid var(--line-soft); padding: var(--sp-5) var(--sp-8); }
@@ -3934,7 +3936,11 @@ function renderModules() {
       d.dataset.available = "1";
       d.title = (a.purpose || "") + (a.settings_section ? "（配置在：" + a.settings_section + "）" : "")
         + (impl ? "｜点击启用" : "｜引擎尚未实装");
-      d.innerHTML = esc(a.label) + '<span class="tag">' + esc(capsTag(a)) + "</span>"
+      // 批69 · §3 左栏：未启用行给**可见**的「点击启用」动作字样（此前只藏在 hover title 里），
+      // 同时消除「未启用」标签 + 状态格重复两遍的冗余；未实装仍按 capsTag 显示「未实现」。
+      d.innerHTML = esc(a.label)
+        + '<span class="tag' + (impl ? " act" : "") + '">'
+        + esc(impl ? "点击启用" : capsTag(a)) + "</span>"
         + '<span class="ct">' + esc(impl ? "未启用" : "—") + "</span>";
       if (impl) {
         d.addEventListener("click", function () { enableAvailableModule(a.module); });

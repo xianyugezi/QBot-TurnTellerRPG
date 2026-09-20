@@ -14,6 +14,26 @@
 
 ### Added
 
+- **批55（2026-09-20）**：**特效强度预算 `effect_budget`（另立上限）+ A1 度量 + 方案 C 备用**。
+  口径 `特效强度预算_设计.md` §二方案 B + §三推荐（B 主 + A1 度量 + C 备用）+ §四 红线守护。
+  背景：批45 的 60% 只覆盖 `atk/dfn/hp`（`PANEL_AXIS_KEYS` 冻结），批50~53 接线的特效轴
+  **不进 `equip_share`** → 实机口径会把 Boss 压到 ≈39–41（贴死 40 下沿）。
+  **① 主闸（方案 B）**：`data/gear_stats` 新增坐标权表 `EFFECT_AXIS_WEIGHTS`
+  （`等效% = 轴值/calib × 校准等效%`）→ 聚合器 `effect_equiv`（geometric/product/max）→
+  按档位 `cap_equiv_pct × tier_mult` 判超限 → `gate_mode`（off/warn/red）决定 静默/黄提示/拒绝；
+  缺省 `cap 8% × 1.5/1.0/0.625 = 普通12%/精英8%/Boss5%`，`enabled=false`（不配置即零行为）。
+  **② A1 度量**：`core/panel_budget.effective_equip_share`（只报数不改数）常驻输出
+  —— 典型生存 build 真实装备占比 **43.73%**（显式登记，红线 C3）。
+  **③ 方案 C 备用**：`monster_scaling.effect_hp_mult/effect_atk_mult`（缺省 **1.0**，
+  与 hp/atk 倍率相乘；改回 1.0 即回滚）——**本批不配置**。
+  **④ 校验器**：`_check_effect_budget`（段结构/类型/枚举/负值红拦 + `calib=0` 黄提示 Y-20）
+  + `_check_effect_budget_entries`（条目级越界两态：warn=Y-20 / red=R-5 / off=静默）；
+  **⑤ 编辑器**：`settings.effect_budget` 中文名 + 8 子字段说明卡。
+  **⑥ 双尺子复算**：`scripts/batch55_dual_ruler.py` —— 工具尺（batch45 口径 7/20/24，
+  公差 ±1）对拍**本批缺省零变化**；典型生存 build 后 Boss **Δ−2 超公差**；定稿档位尺
+  （红线 3-8/10-15/40-60）**Boss 38.69~40.52 越档**（跌破 40），闸上限 5% 守约后回到
+  **≥45.77 ∈ 档**。缺省零变化：不配置 → `--json` 逐字节一致、`equip_share = 60%` 不变。
+  页脚批次串 →「批55 · 特效强度预算」。
 - **批53（2026-09-20）**：**时序 / 资源 / 结算轴接线**（K，P0+P1）。
   口径 `特效整理设计_3_落点与分期.md` §二「批 51」（旧编号 = 本批批53）+
   `特效整理设计_1_修正轴全集.md` X27/X21/X22/X23/X24/X30/X34/X35/X03 +

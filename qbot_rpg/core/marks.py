@@ -417,9 +417,6 @@ class MarksManager:
                 out[name] = int(inst.get("count", 0))
         return out
 
-    def resolve_ids(self, side: str) -> Dict[str, int]:
-        """{mark_id: 层数}（按引用键；条件/消除寻址）。"""
-        return {str(inst.get("mark_id", "")): int(inst.get("count", 0)) for inst in self.instances(side)}
 
     def formula_view(self, side: str) -> Dict[str, object]:
         """战斗层 EvaluatorCtx 侧映射补充：marks（按名）+ marks_total（总层数）。"""

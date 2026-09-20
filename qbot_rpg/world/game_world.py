@@ -190,8 +190,6 @@ class GameWorld:
         """全部地图定义列表（M7 收口落地）。"""
         return list(self._maps.values())
 
-    def move_to_map(self, player: Any, map_id: str) -> Any:
-        raise NotImplementedError(_NOT_IMPL_MSG)
 
     # -- 怪物池 / 野图 BOSS（批次4·路M 实装） ----------------------------------
     def monster_pool(self, map_id: str) -> List[Any]:

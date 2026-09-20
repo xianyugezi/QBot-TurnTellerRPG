@@ -50,7 +50,6 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple
 
 from qbot_rpg.core.ctb_rules import (
-    CTB_TIEBREAK_RULE,
     ActionBatchReport,
     CtbEvent,
     CtbRuleConfig,
@@ -217,10 +216,6 @@ class CTBScheduler:
         """被丢弃的旧 generation 票据计数（审计/测试断言用）。"""
         return self._stale_dropped
 
-    @property
-    def tiebreak_rule(self) -> str:
-        """冻结的 tie-break 规则文本（供审计引用）。"""
-        return CTB_TIEBREAK_RULE
 
     # ------------------------------------------------------------------
     # 事件订阅 / 消费

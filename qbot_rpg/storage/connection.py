@@ -172,9 +172,6 @@ class Database:
     def is_memory(self) -> bool:
         return self._is_memory
 
-    @property
-    def integrity_ok(self) -> Optional[bool]:
-        return self._integrity_ok
 
     # ------------------------------------------------------------------
     # 连接生命期

@@ -218,15 +218,6 @@ class ForgeTreeEngine:
         """按节点 id 查 ForgeNode（无 → None）。"""
         return self._nodes.get(node_id)
 
-    def tree_of(self, node_id: str) -> Optional[ForgeTree]:
-        """节点所属树（ForgeTree；无 → None）。"""
-        tid = self._node_tree.get(node_id)
-        if tid is None:
-            return None
-        for t in self._trees:
-            if t.id == tid:
-                return t
-        return None
 
     def children_of(self, node_id: str) -> List[str]:
         """父→子反向索引：parent == node_id 的全部子节点 id（文件序；无 → []）。"""

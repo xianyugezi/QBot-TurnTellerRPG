@@ -515,16 +515,6 @@ def _entries_to_raw(skills: Optional[Sequence[Any]]) -> List[Dict[str, Any]]:
     return out
 
 
-# 转职上下文段的展示辅助：从存档转职段读出重排后的 active_order（供
-# 战斗/展示层直接消费，与 skill_slots 快照口径一致）
-def _rearranged_active_order(snapshot: Mapping[str, Any]) -> Tuple[str, ...]:
-    """新装配快照的 active 顺序（缺省空元组；防御读取）。"""
-    order = snapshot.get("active_order")
-    if isinstance(order, (list, tuple)):
-        return tuple(x for x in order if isinstance(x, str))
-    return ()
-
-
 __all__ = [
     "REARRANGE_JOB_KEY",
     "INHERIT_KEY",

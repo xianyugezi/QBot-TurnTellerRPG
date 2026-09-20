@@ -1322,11 +1322,6 @@ def _entry_type_for_module(pack_dir: Path, module: str) -> str:
     return "list"
 
 
-def catalog_module_names() -> List[str]:
-    """框架通用目录里的模块键（面板基础清单；包声明只做增补与中文名覆盖）。"""
-    return [entry.module for entry in FRAMEWORK_MODULE_CATALOG]
-
-
 def is_enableable_module(module: object) -> bool:
     """模块键是否在框架「可启用模块」通用目录内（写入层用它做白名单）。
 

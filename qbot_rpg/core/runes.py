@@ -62,7 +62,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Mapping, Optional, Sequence
+from typing import Any, Dict, List, Mapping, Optional
 
 # 基础刻度常量 + 阶位/缺省孔位纯解析（data 层：content 校验层同源引用，架构矩阵 content→{data}）
 from qbot_rpg.data.gear_stats import GEAR_NUMERIC_KEYS
@@ -388,15 +388,6 @@ def resolve_rune_upgrade(
         "tier_out": out,
         "count": n,
     }
-
-
-def _iter_rune_entries(runes: Any) -> Sequence[Mapping[str, Any]]:
-    """符文注册表条目迭代（list/dict 两形态归一；供上层/测试复用）。"""
-    if isinstance(runes, Mapping):
-        return [v for v in runes.values() if isinstance(v, Mapping)]
-    if isinstance(runes, (list, tuple)):
-        return [e for e in runes if isinstance(e, Mapping)]
-    return []
 
 
 # ---------------------------------------------------------------------------

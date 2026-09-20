@@ -286,11 +286,6 @@ class ChainConfig:
 
     # ---- 查询 ----
 
-    def step_from(self, skill_id: str) -> Tuple[StepConfig, ...]:
-        return tuple(s for s in self.steps if s.from_ == skill_id)
-
-    def step_to(self, skill_id: str) -> Tuple[StepConfig, ...]:
-        return tuple(s for s in self.steps if s.to == skill_id)
 
     def involves(self, skill_id: str) -> bool:
         return any(s.from_ == skill_id or s.to == skill_id for s in self.steps)

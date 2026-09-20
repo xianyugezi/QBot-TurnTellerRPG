@@ -341,10 +341,6 @@ class DeathPenaltyConfig:
     drop_exp: ExpDropCfg = field(default_factory=ExpDropCfg)
     drop_items: ItemDropCfg = field(default_factory=ItemDropCfg)
 
-    @property
-    def has_any_loss(self) -> bool:
-        """是否有任一掉落项（DEATH-01：默认全关 = 无惩罚，仅复活+虚弱）。"""
-        return bool(self.drop_currency) or self.drop_exp.enabled or self.drop_items.enabled
 
     @classmethod
     def from_settings(cls, settings: object) -> "DeathPenaltyConfig":

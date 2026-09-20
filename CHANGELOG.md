@@ -14,6 +14,33 @@
 
 ### Added
 
+- **批72（2026-09-23）**：**重复机制收敛（审计3 §3 真重复清单；`框架体检报告.md` §二 P0-C + §三 P1）**。
+  依据 `审计3_勿增实体_重复机制.md`。纪律：**只收敛「同一概念多实现/多源」**，
+  §6「合理并存清单」一律不动；每项带改前/改后逐位对拍。
+  **① F1 · `forge.json["settings"]` ↔ `settings.json["forge"]` 两段重复且已漂移**
+  （复核：`test_demo` 两段逐键相同、`veinborn` 已漂移——前者缺 `carry_sec`/`set_piece_counts`）：
+  定**唯一源 = `settings.json` 的 `forge` 段**；`forge.json["settings"]` **废弃**——
+  读取侧兜底**保留**（`core/forge_tree._resolve_settings` 第③步、`core/forge_deadlock._synth_ratio_on`，
+  仅「只喂 forge.json」的既有离屏调用会走到，旧包不崩）+ 校验器**黄提示 Y-22**
+  （`validator._check_forge_deprecated_settings`，不阻断）；迁移说明写进
+  `docs/m9_shared_contract.md` §〇/§八。**两态对拍**：对 `test_demo`/`veinborn`
+  在「保留/删除」`forge.json.settings` 下构造 `ForgeTreeEngine`，归一 settings 逐字段一致。
+  **② F2 · `forge.decompose_rate` ↔ `alchemy.decompose_rate`**：**批70 已删净**（本批仅核实，
+  不重复劳动）——`FORGE_SETTINGS_KEYS`/默认表/字段表/合并逻辑/包声明均无该键；
+  全仓包 `forge.json` 零残留；唯一源 = `settings.alchemy.decompose_rate`（黄提示 Y-21 仍在）。
+  **③ F3 · `core/upgrade._rune_tier_of` 第二实现 + 硬编码 `1..3`**：值解析改**委托唯一源**
+  `data/runes.rune_tier_of`（适配层 `_rune_tier_int`；float 整值守卫保批前严格 int 口径），
+  去掉硬编码；**90 例对拍**（合法/边界/非法/数字串/float/bool/None × runes 注册表 /
+  物品定义 / 产出端配方回退）逐位一致。本模块只保留唯一源没有的两层语义
+  （rune_id 解析顺序 + 产出端配方回退）。
+  **未完成（登记不动手，建议后续批）**：F5 珠档位第二解析（语义分歧：宽松回退 `common` +
+  Mapping/int-quality 分支 vs 严格 `None`，收敛会改行为或需模式位）；F4 材料回收公式两写
+  （审计明示「不要为清理单独重构」）；F6 `StatusInstance` 死表示（与
+  `check_architecture` TC-04 必需类型耦合，属批73 死实体清理）；F7 `damage_dealt_pct`
+  死轴/假 consumer（需 D1 裁决：接线 or 撤登记）；F8 RNG 适配器小重复（收益边际）。
+  验收：全量 pytest **0 failed**；双尺子（种子 20260919）零变化；换包验收全 PASS；ruff 改动文件干净。
+  页脚批次串 →「批72 · 重复机制收敛」。
+
 - **批71（2026-09-23）**：**包专属残留清理（审计1 V1/V2/V3 + 审计2 V1/V2/V3/V4；框架零包名红线）**。
   依据 `批71_包专属残留_改造方案.md` + `框架体检报告.md` §二 P0-B。统一改法 = **包声明驱动 +
   框架读取 + legacy 兜底**：包不声明 → 与现状逐字段一致（逐处附对拍证据）。

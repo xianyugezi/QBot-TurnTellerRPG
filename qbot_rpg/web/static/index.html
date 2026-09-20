@@ -3913,7 +3913,12 @@ function enableAvailableModule(mod) {
     .then(function (res) {
       panelMessage(res.ok ? ((res.warnings || []).length ? "yellow" : "ok") : "red",
                    toggleResultText(res));
-      if (res && res.ok) { return fetchModulePanel().then(refreshAfterModuleChange); }
+      // 批66 · 卡点2：一键启用后自动选中该模块——启用即可直接「+ 新建条目」。
+      if (res && res.ok) {
+        return fetchModulePanel().then(function () {
+          return refreshAfterModuleChange(mod);
+        });
+      }
       return null;
     })
     .catch(function (err) { panelMessage("red", "启用失败：" + err.message); });
@@ -3966,6 +3971,10 @@ function selectModule(mod) {
   renderModules();
   var pos = findModule(mod);
   el("list-title").textContent = pos ? pos.label : mod;
+  // 批66 · 卡点2：`discardDraft()` 在上方**先于** `state.module = mod` 调用了 markDirty，
+  // 工具栏/「+ 新建条目」当时仍按旧模块（空包时 = null）判定 → 自动选中新启用模块后
+  // 按钮仍是灰的（中栏却已显示选中）。此处补一次刷新，让按钮与中栏选中态一致。
+  markDirty();
   return loadEntries();
 }
 
@@ -3998,6 +4007,7 @@ function selectMountedEntry(parentMod, fromMod, eid) {
   renderModules();
   var pos = findModule(parentMod);
   el("list-title").textContent = pos ? pos.label : parentMod;
+  markDirty();   // 批66 · 卡点2：同 selectModule——状态已切换，按钮随即同步
   return loadEntries().then(function () {
     return selectEntry(eid, fromMod);
   });
@@ -4444,10 +4454,17 @@ function renderEmptyPack() {
   helpHideDom();
 }
 
-function refreshAfterModuleChange() {
+// 批66 · 卡点2：`preferred` = 本次刚启用的模块（启用 / 应用推荐组合 / 一键启用未启用项）。
+// 有它 → 主动选中该模块，保证「勾完就能直接新建」；没有 → 保持既有回落逻辑（行为不变）。
+function refreshAfterModuleChange(preferred) {
   return loadModules().then(function () {
     if (!(state.modules || []).length && !(state.views || []).length) {
       return loadEntryIndex();   // 空包：空态已渲染
+    }
+    var want = (preferred && findModule(preferred)) ? preferred : null;
+    if (want) {
+      if (state.module !== want) { return selectModule(want); }
+      return loadEntries().then(function () { return loadEntryIndex(); });
     }
     if (!state.module || !findModule(state.module)) {
       var first = state.views[0] || state.modules[0];
@@ -4560,7 +4577,13 @@ function onApplyModulePreset(pid) {
         text = "已自动带上：" + names.join("、") + "。\n" + text;
       }
       panelMessage(res.ok ? ((res.warnings || []).length ? "yellow" : "ok") : "red", text);
-      if (res && res.ok) { return fetchModulePanel().then(refreshAfterModuleChange); }
+      // 批66 · 卡点2：应用组合后自动选中该组合的第一个新启用模块。
+      if (res && res.ok) {
+        var prefMod = ((res.enabled || [])[0]) || null;
+        return fetchModulePanel().then(function () {
+          return refreshAfterModuleChange(prefMod);
+        });
+      }
       return null;
     })
     .catch(function (err) { panelMessage("red", "应用组合失败：" + err.message); })
@@ -4626,7 +4649,12 @@ function onModuleToggle(cb) {
     .then(function (res) {
       panelMessage(res.ok ? ((res.warnings || []).length ? "yellow" : "ok") : "red",
                    toggleResultText(res));
-      if (res && res.ok) { return fetchModulePanel().then(refreshAfterModuleChange); }
+      // 批66 · 卡点2：启用（不是停用）后自动选中该模块——勾完即可直接「+ 新建条目」。
+      if (res && res.ok) {
+        return fetchModulePanel().then(function () {
+          return refreshAfterModuleChange(want ? module : null);
+        });
+      }
       cb.checked = !want;   // 未成功 → 勾选状态回滚到实际
       return null;
     })
@@ -4647,7 +4675,9 @@ function onModuleRollback() {
   MODULE_PANEL.busy = true;
   postJSON("/api/pack/" + enc(state.pack) + "/manifest/rollback", {}).then(function (res) {
     panelMessage(res.ok ? "ok" : "red", toggleResultText(res));
-    if (res && res.ok) { return fetchModulePanel().then(refreshAfterModuleChange); }
+    if (res && res.ok) {
+      return fetchModulePanel().then(function () { return refreshAfterModuleChange(); });
+    }
     return null;
   }).catch(function (err) {
     panelMessage("red", "回退失败：" + err.message);

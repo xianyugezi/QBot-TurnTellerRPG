@@ -233,9 +233,7 @@ EFFECT_AXIS_SPECS: Tuple[Mapping[str, Any], ...] = (
         "axis": "healing_received_pct", "doc_id": "X17", "priority": "P0",
         "min": -200.0, "max": 300.0, "default": 0.0, "stack": "add",
         "display": {"mode": "mult", "label": "受疗修正",
-                    "help": "调整「我受到的治疗」：<1 减疗 / =1 原样 / >1 增疗；"
-                            "-100 = 禁疗（治疗归零）。是否开放「< -100 治疗反转成伤害」"
-                            "属待裁决（默认关，不得默认开启）。"},
+                    "help": "调整「我受到的治疗」：<1 减疗 / >1 增疗；-100 = 禁疗。"},
         "legacy_alias": (),
         "consumer": "effects.heal_apply",
         "consumer_note": "新增唯一收口 heal_apply(ctx, target, ...) 按 **target（受疗侧）**"
@@ -246,8 +244,7 @@ EFFECT_AXIS_SPECS: Tuple[Mapping[str, Any], ...] = (
         "axis": "healing_done_pct", "doc_id": "X16", "priority": "P0",
         "min": -100.0, "max": 300.0, "default": 0.0, "stack": "add",
         "display": {"mode": "mult", "label": "施疗修正",
-                    "help": "调整「我造成的治疗」：<1 削弱自身治疗的输出 / >1 强化；"
-                            "与「受疗修正」是**两个实体上的字段，不合并**（施疗方与受疗方）。"},
+                    "help": "调整「我造成的治疗」：<1 削弱 / >1 强化；与受疗修正是两侧字段。"},
         "legacy_alias": (("heal_amp_pct", 1.0),),
         "consumer": "effects.heal_apply",
         "consumer_note": "与受疗修正是同一收口 heal_apply 的 **source（施疗侧）** 取值；"
@@ -319,8 +316,7 @@ EFFECT_AXIS_SPECS: Tuple[Mapping[str, Any], ...] = (
         "axis": "stack_cap_delta", "doc_id": "X24", "priority": "P0",
         "min": None, "max": None, "default": 0.0, "stack": "add",
         "display": {"mode": "delta", "label": "层数上限修正",
-                    "help": "**加算**层数上限（不是百分比）：+2 = 上限提高 2 层，"
-                            "-1 = 上限降低 1 层。上限是整数阈值语义，故用差值不用倍率。"},
+                    "help": "加算层数上限（不是百分比）：正 = 提高 / 负 = 降低，如 +2 / -1。"},
         "legacy_alias": (),
         "consumer": "effects.stack_cap",
         "consumer_note": "批53 已接线：唯一收口 = `apply_status` 的 max_stack 计算处"
@@ -332,8 +328,7 @@ EFFECT_AXIS_SPECS: Tuple[Mapping[str, Any], ...] = (
         "axis": "status_duration_pct", "doc_id": "X20", "priority": "P1",
         "min": -80.0, "max": 300.0, "default": 0.0, "stack": "add",
         "display": {"mode": "mult", "label": "状态时长修正",
-                    "help": "调整**我施加的**状态持续时长：<1 缩短 / >1 延长。"
-                            "只影响新施加的实例，不追改存量。"},
+                    "help": "调整「我施加的」状态时长：<1 缩短 / >1 延长；只影响新施加的实例。"},
         "legacy_alias": (),
         "consumer": "effects.apply_status_duration",
         "consumer_note": "唯一收口 = apply_status 建实例处（按 source 侧聚合）；"
@@ -343,8 +338,7 @@ EFFECT_AXIS_SPECS: Tuple[Mapping[str, Any], ...] = (
         "axis": "status_duration_taken_pct", "doc_id": "X20", "priority": "P1",
         "min": -100.0, "max": 300.0, "default": 0.0, "stack": "add",
         "display": {"mode": "mult", "label": "受状态时长修正",
-                    "help": "调整**我承受的**状态持续时长：<1 抗控（挂上但很快结束）/ "
-                            ">1 更久。与「状态抵抗」互补——那是「挂不上」，这是「挂上后多久」。"},
+                    "help": "调整「我承受的」状态时长：<1 抗控 / >1 更久；与状态抵抗互补。"},
         "legacy_alias": (),
         "consumer": "effects.apply_status_duration",
         "consumer_note": "与「状态时长修正」共用同一收口 apply_status 建实例处，按 "
@@ -354,8 +348,7 @@ EFFECT_AXIS_SPECS: Tuple[Mapping[str, Any], ...] = (
         "axis": "status_resist_pct", "doc_id": "X22", "priority": "P1",
         "min": -100.0, "max": None, "default": 0.0, "stack": "add",
         "display": {"mode": "mult", "label": "状态抵抗修正",
-                    "help": "调整我对状态的抵抗：<1 更易被挂上 / >1 更抗。"
-                            "与「状态命中修正」是攻/防两侧，**不可合并**。"},
+                    "help": "调整我对状态的抵抗：<1 更易挂上 / >1 更抗；与状态命中是攻防两侧。"},
         "legacy_alias": (),
         "consumer": "effects.resist_roll",
         "consumer_note": "批53 已接线：唯一收口 = `apply_status` 抵抗判定处（target 侧；"
@@ -366,8 +359,7 @@ EFFECT_AXIS_SPECS: Tuple[Mapping[str, Any], ...] = (
         "axis": "action_bar_shift", "doc_id": "X30", "priority": "P1",
         "min": None, "max": None, "default": 0.0, "stack": "add",
         "display": {"mode": "delta", "label": "行动条推动",
-                    "help": "**加算**行动条值（不是百分比）：正 = 提前行动，负 = 延后。"
-                            "分两次行动插入会破坏调度不变量，故用推动而非额外行动。"},
+                    "help": "加算行动条值（不是百分比）：正 = 提前 / 负 = 延后，如 +2 / -1。"},
         "legacy_alias": (),
         "consumer": "ctb_scheduler.action_bar_shift",
         "consumer_note": "批53 已接线：唯一收口 = `battle._after_actor_action` 收尾处，"
@@ -401,9 +393,7 @@ EFFECT_AXIS_SPECS: Tuple[Mapping[str, Any], ...] = (
         "axis": "crit_damage_pct", "doc_id": "X03", "priority": "P1",
         "min": -100.0, "max": 300.0, "default": 0.0, "stack": "add",
         "display": {"mode": "mult", "label": "会心倍率修正",
-                    "help": "调整会心（暴击）伤害倍率：<1 削弱暴伤 / >1 提升。"
-                            "与既有离散档位（超会心/属性会心 0-3 级）**并存**，"
-                            "叠乘顺序由接线批写明。"},
+                    "help": "调整会心（暴击）伤害倍率：<1 削弱 / >1 提升；与超会心档位并存。"},
         "legacy_alias": (),
         "consumer": "damage.crit_multiplier",
         "consumer_note": "批53 已接线：唯一收口 = `battle._resolve_damage_action` 的会心乘区"
@@ -415,11 +405,7 @@ EFFECT_AXIS_SPECS: Tuple[Mapping[str, Any], ...] = (
         "axis": "action_speed_pct", "doc_id": "X28", "priority": "P1",
         "min": -80.0, "max": 400.0, "default": 0.0, "stack": "add",
         "display": {"mode": "mult", "label": "行动速度修正",
-                    "help": "调整行动条推进速度（CTB 有效速度方向）："
-                            "正 = 提速（行动更频繁）/ 负 = 迟缓；数值为百分点增量"
-                            "（+20 = 速度 ×1.2，−50 = ×0.5）。"
-                            "与「行动后摇」数学互为倒数，按 D2 裁决**只保留本轴**"
-                            "（后摇轴不登记、不实现，内容仍写后摇会被校验器黄提示）。"},
+                    "help": "调整行动速度：正 = 提速 / 负 = 迟缓（+20 = ×1.2）；只保留本轴。"},
         "legacy_alias": (),
         "consumer": "ctb.effective_speed",
         "consumer_note": "批56 已接线：唯一收口 = `battle._ctb_actor_speed`（CTB 入队有效速度），"
@@ -440,10 +426,7 @@ EFFECT_AXIS_SPECS: Tuple[Mapping[str, Any], ...] = (
         "scope": ("exp", "coins", "gem", "rep",
                   "drop_chance", "drop_count", "drop_rarity"),
         "display": {"mode": "mult", "label": "奖励倍率修正",
-                    "help": "调整结算奖励（经验 / 货币 / 掉落率与品质等）：×1.0 = 原样；"
-                            "正向(+X)提升奖励；负向(-X)按 D5 声明**下钳 0**"
-                            "（负掉率无意义）。scope（experience/coins/drop 分类）"
-                            "声明形状待裁决 → 本轴先登记为扁平标量、消费点待接。"},
+                    "help": "调整结算奖励（经验/货币/掉落）：正 = 提升 / 负 = 减少（下钳 0）。"},
         "legacy_alias": (),
         "consumer": EFFECT_CONSUMER_PENDING,
         "consumer_note": "D5 登记：奖励类别分散在**三处**、无唯一收口，故不硬造——"
@@ -553,18 +536,34 @@ GEAR_HELP_ZH: Dict[str, str] = {
     "mag_pierce_val": "魔法攻击无视目标等量防御（点）。",
     "mag_pierce_pct": "魔法攻击按比例无视目标防御（%）。",
     # 批43 强化特殊词条族（语义/上限/承载口径；上限=0-500 百分点，同既有 _pct 档）。
-    "heal_amp_pct": "回复强化：治疗/回复效果按该比例提升（百分点，0-500）。"
-                    "承载=属性 pct 层聚合 + 展示；专属战斗消费点未接（批43 缺口登记）。",
-    "debuff_chance_pct": "减益概率提升：对敌方施加减益效果的基础概率上浮（百分点，0-500）。"
-                         "承载=属性 pct 层聚合 + 展示；专属消费点未接（批43 缺口登记）。",
-    "buff_chance_pct": "增益概率提升：对己方施加增益效果的基础概率上浮（百分点，0-500）。"
-                       "承载=属性 pct 层聚合 + 展示；专属消费点未接（批43 缺口登记）。",
-    "weakness_dmg_pct": "弱点伤害增加：命中目标弱点时的伤害按该比例提升（百分点，0-500）。"
-                        "承载=属性 pct 层聚合 + 展示；专属伤害乘区未接（批43 缺口登记）。",
+    "heal_amp_pct": "回复强化：治疗/回复效果按该比例提升（百分点，0-500）。",
+    "debuff_chance_pct": "减益概率提升：对敌方施加减益的基础概率上浮（百分点，0-500）。",
+    "buff_chance_pct": "增益概率提升：对己方施加增益的基础概率上浮（百分点，0-500）。",
+    "weakness_dmg_pct": "弱点伤害增加：命中目标弱点时伤害按该比例提升（百分点，0-500）。",
     # 占位键（原案 §7；批53 起作为 cooldown_pct 的兼容别名**生效**）
-    "cooldown_reduction_pct": "冷却缩减（百分点，0-500）：批53 起作为「冷却时长修正」"
-                              "（cooldown_pct）的兼容别名生效（30 ⇔ cooldown_pct −30，"
-                              "只换算一次、不双计）；新内容建议直接写 cooldown_pct。",
+    "cooldown_reduction_pct": "冷却缩减（百分点）：作为「冷却时长修正」的兼容别名，只换算一次。",
+    # 批66 · 卡点4：基础词条一句话说明（编辑器字段说明卡；≤60 字，忌长文）。
+    "atk": "攻击加成（点）。",
+    "def": "防御加成（点；旧键，建议改用 dfn）。",
+    "dfn": "防御加成（点）。",
+    "hp": "生命上限加成（点）。",
+    "mp": "法力上限加成（点）。",
+    "str": "力量属性加成（点）。",
+    "con": "体质属性加成（点）。",
+    "agi": "敏捷属性加成（点）。",
+    "foc": "专注属性加成（点）。",
+    "spr": "精神属性加成（点）。",
+    "lck": "幸运属性加成（点）。",
+    "spd": "速度属性加成（点）。",
+    "mag": "法强属性加成（点）。",
+    "atk_pct": "攻击加成（百分点）。",
+    "dfn_pct": "防御加成（百分点）。",
+    "hp_pct": "生命上限加成（百分点）。",
+    "mp_pct": "法力上限加成（百分点）。",
+    "crit": "会心（暴击）率加成（百分点，可负）。",
+    "earplug": "耳栓档（0-2 级；抵消音波类效果）。",
+    "super_crit_lv": "超会心档（0-3 级；提高会心伤害）。",
+    "elem_crit_lv": "属性会心档（0-3 级；提高属性会心伤害）。",
 }
 
 # 批50：特效轴的中文名 / 说明由 `EFFECT_AXIS_SPECS` 唯一源派生（**不重复手写**）——

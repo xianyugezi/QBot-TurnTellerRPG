@@ -311,8 +311,7 @@ ITEMS_MATERIAL_CRAFT_FIELDS: Dict[str, FieldMeta] = {
         help="打造时按占比参与装备等级计算（完全同级材料 → 该级装备）；缺省视为 1。"),
     "material_quality": FieldMeta(
         type="str", soft_label=True, label="材料品质",
-        help="品质颜色 id（需在 settings.deep_craft.quality_colors 声明）：决定单件材料的"
-             "品质经验基数。缺省视为最低档。"),
+        help="品质颜色 id（需先声明档位）：决定单件材料的品质经验基数；缺省最低档。"),
     "craft_cost": FieldMeta(
         type="int", range_min=0, label="材料 cost",
         help="单件投入 cost；缺省回落到 price。总 cost 超图纸档上限 → 拒绝。"),
@@ -321,18 +320,16 @@ ITEMS_MATERIAL_CRAFT_FIELDS: Dict[str, FieldMeta] = {
 ITEMS_BLUEPRINT_FIELDS: Dict[str, FieldMeta] = {
     "blueprint_grade": FieldMeta(
         type="str", soft_label=True, label="图纸档位",
-        help="铜/银/金/彩（需在 settings.deep_craft.blueprint_grades 声明）：决定品质概率"
-             "阶梯行偏移与 cost 上限。"),
+        help="图纸档 id（需先声明档位）：决定品质概率行偏移与费用上限。"),
     "blueprint_output": FieldMeta(
         type="str", ref_target="item", label="产出物品",
         help="打造产出的装备/物品（items∪equipment 同库）。"),
     "blueprint_slot": FieldMeta(
         type="str", options_ref="settings.slot_defs", label="装备部位",
-        help="产出装备的部位（需在 settings.slot_defs 声明）。"),
+        help="产出装备的部位（需先在装备槽位里声明）。"),
     "blueprint_recipe": FieldMeta(
         type="str", ref_target="recipe", label="基础合成配方",
-        help="投料 → 基础产出走公用合成层：该配方（recipe 模块）声明固定材料需求与"
-             "标准版产出，打造深度层在其之上追加品质/等级/相性。"),
+        help="图纸引用的配方 id：声明材料需求与标准产出，打造层再加品质/等级。"),
     "blueprint_level_band": FieldMeta(
         type="obj", label="等级带",
         children={
@@ -349,8 +346,7 @@ ITEMS_BLUEPRINT_FIELDS: Dict[str, FieldMeta] = {
             "count": FieldMeta(type="int", range_min=1, label="需求件数"),
             "weight": FieldMeta(type="number", range_min=0.0, label="等级占比"),
         }),
-        help="固定材料槽（role=main/free + item 指定）+ 自由材料槽（role=free + tag 过滤）；"
-             "主材料槽提供大等级占比。"),
+        help="固定材料槽（指定物品）+ 自由材料槽（按标签过滤）；主槽占大等级比。"),
     "blueprint_fixed_stats": FieldMeta(
         type="list", label="固定属性",
         element=FieldMeta(type="obj", children={

@@ -122,8 +122,8 @@ NAMESPACES: Dict[str, Tuple[str, ...]] = {
 # 常用字段（供各模块复用）
 # -------------------------------------------------------------------------------------
 F_ID = FieldMeta(type="str", required=True)
-F_NAME = FieldMeta(type="str")
-F_TYPE = FieldMeta(type="str")  # type 枚举由正式元数据表注入（细化_1b/1e）；缺省不设枚举防误阻断
+F_NAME = FieldMeta(type="str", help="条目显示名（给玩家看的中文名）。")
+F_TYPE = FieldMeta(type="str", help="类型（按包声明取值，如武器/防具/消耗品）。")  # type 枚举由正式元数据表注入（细化_1b/1e）；缺省不设枚举防误阻断
 
 # 批18 · effects.type 的**展示层候选值**（编辑器下拉可选；不改校验判定）。
 # 依据：effects.type 是**开放词汇**（框架 L0 动作 + 内容包泛化类别 + `x_` 自定义通道），
@@ -146,13 +146,14 @@ EFFECT_TYPE_CHOICES: Tuple[str, ...] = (
 F_EFFECT_TYPE = FieldMeta(type="str", editor="select", enum_options=EFFECT_TYPE_CHOICES)
 
 # 效果引用列表（items/equipment/traits/enemies 通用）
-F_EFFECTS = FieldMeta(type="list", element=FieldMeta(type="ref", ref_target="effect"))
+F_EFFECTS = FieldMeta(type="list", element=FieldMeta(type="ref", ref_target="effect"),
+                      help="引用的效果条目（可多条）。")
 
 # 常见数值字段（range 仅 Y-1 提示用）。批4.6：unit = 说明卡「数值 / 比例」判定
 # 用的展示单位（只影响说明文案，不参与任何校验判定）。
-F_PRICE = FieldMeta(type="number", range_min=0, range_max=50000)
-F_ATK = FieldMeta(type="number", range_min=0, range_max=5000, unit="点")
-F_DEF = FieldMeta(type="number", range_min=0, range_max=5000, unit="点")
+F_PRICE = FieldMeta(type="number", range_min=0, range_max=50000, help="基础售价（货币单位）。")
+F_ATK = FieldMeta(type="number", range_min=0, range_max=5000, unit="点", help="攻击加成（点）。")
+F_DEF = FieldMeta(type="number", range_min=0, range_max=5000, unit="点", help="防御加成（点）。")
 F_HP = FieldMeta(type="number", range_min=0, range_max=99999, unit="点")
 F_POWER = FieldMeta(type="number", range_min=0, range_max=500)
 # 技能倍率（skills.power；按百分比算，100 = 一倍威力）——与 action/effects 的 power 不同，
@@ -177,7 +178,7 @@ def _gear_combat_field(key: str) -> FieldMeta:
     help_ = GEAR_HELP_ZH.get(key, "")
     if key == "crit":
         return FieldMeta(type="number", range_min=-99, range_max=99, allow_negative=True,
-                         label=label + "（可负）", unit="%")
+                         label=label + "（可负）", unit="%", help=help_)
     if key in GEAR_COMBAT_PCT_KEYS:
         return FieldMeta(type="number", range_min=0, range_max=100, label=label, unit="%",
                          help=help_)
@@ -185,7 +186,7 @@ def _gear_combat_field(key: str) -> FieldMeta:
         return FieldMeta(type="number", range_min=0, range_max=99999, label=label, unit="点",
                          help=help_)
     return FieldMeta(type="number", range_min=0, range_max=2 if key == "earplug" else 3,
-                     label=label, unit="级")
+                     label=label, unit="级", help=help_)
 
 
 def _gear_effect_field(key: str) -> FieldMeta:
@@ -1422,29 +1423,32 @@ ITEM_RARITY_KEYS: Tuple[str, ...] = ("普通", "稀有", "金色")
 ITEMS_ALCHEMY_FIELDS: Dict[str, FieldMeta] = {
     # type 补 装饰珠 值（另 触媒 type=触媒 供 catalyst 过滤下拉）；seed 可种植标记（定稿 L381/L492）
     # —— 既有 items_fields 的 type 为 str 不设枚举（防误拦既有内容包），此处同口径
-    "type": FieldMeta(type="str"),
+    "type": FieldMeta(type="str", help="类型（按包声明取值，如材料/成品/装饰珠）。"),
     # quality 珠等级=品质档（拍板②：common/uncommon/rare/legendary ↔ 普通/精良/史诗/传说，L257/L380）
-    "quality": FieldMeta(type="enum", enum=QUALITY_KEYS, default="common"),
+    "quality": FieldMeta(type="enum", enum=QUALITY_KEYS, default="common",
+                         help="品质档（普通/精良/史诗/传说）。"),
     # elements 元素属性值（8 元素 地水火风雷晶月无，投料累计判定 element_req，L380/L152）
     "elements": FieldMeta(type="obj", children={
         el: FieldMeta(type="number", range_min=0) for el in ALCHEMY_ELEMENTS
-    }),
+    }, help="元素值 {元素: 数值}；键为地/水/火/风/雷/晶/月/无。"),
     # traits 继承特性 ID 集（炼金珠/成品独有；标准版恒空 TSC-03，L380/L117）。
     # —— 只用 str 结构校验，不设 ref_target：既有 M2 内容包 items.traits 为旧语义
     #    （未知字段放行），登记 ref 会引发泛型 R-4 强校验存量 → 大量误拦；
     #    深引用存在性校验归批7 装饰珠/镶嵌引擎运行时（收口裁决 2026-08-29）。
-    "traits": FieldMeta(type="list", element=FieldMeta(type="str")),
+    "traits": FieldMeta(type="list", element=FieldMeta(type="str"),
+                        help="继承特性 id 列表（可多条）。"),
     # awaken 觉醒标记（✨素材投料，宗师；并入 traits 效果表，L380/L204）
-    "awaken": FieldMeta(type="bool", default=False),
+    "awaken": FieldMeta(type="bool", default=False, help="觉醒标记（素材投料用）。"),
     # rarity 普通/稀有/金色（素材用；3 档默认，契约 §4.1 中文）
-    "rarity": FieldMeta(type="enum", enum=ITEM_RARITY_KEYS),
+    "rarity": FieldMeta(type="enum", enum=ITEM_RARITY_KEYS, help="稀有度档（普通/稀有/金色）。"),
     # base_effects 珠基础效果，固定数值（标准珠=只有这个；炼金珠 base_effects+traits 两套词条，L265/L381）
-    "base_effects": FieldMeta(type="obj"),
+    "base_effects": FieldMeta(type="obj", help="基础效果（标准珠只有这一层）。"),
     # seed 可种植标记（/种植 种子，批10A，L381/L392）
     # M8 批14 收口：软标注（soft_label=永不红拦）——引擎 HarvesterEngine._seed_info
     # 支持两形态（true 简单形态 / {output,quality_floor,traits,...} 收获表形态 L392），
     # 校验器不重复硬拦（「只建议不限制」哲学；非法形态引擎返回 None 安全拒绝）。
-    "seed": FieldMeta(type="bool", default=False, soft_label=True),
+    "seed": FieldMeta(type="bool", default=False, soft_label=True,
+                      help="可种植标记（种子用）。"),
 }
 
 # slots.json 模块字段（契约 §四 4.2）
@@ -2150,7 +2154,7 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "class": _soft_display("类别"),
         "control_type": _soft_display("控制类型"),
         "count": _soft_display("层数", "int"),
-        "desc": _soft_display("说明"),
+        "desc": _soft_display("说明", help="面向玩家的说明文字。"),
         "filter": _soft_display("筛选"),
         "mark": _soft_display("印记"),
         "marks_on": _soft_display("所需印记"),
@@ -2189,7 +2193,7 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "damage_mult": FieldMeta(type="number", range_min=0, range_max=10,
                                  label="受击增伤倍率"),
         # 批4.5：实测顶层键（原表未登记 → 纯展示宽字段，soft_label 零校验变化）
-        "desc": _soft_display("说明"),
+        "desc": _soft_display("说明", help="面向玩家的说明文字。"),
         "description": _soft_display("描述"),
         "on_dodge_effects": _soft_display("闪避时效果", "list"),
     }
@@ -2510,9 +2514,10 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "effects": F_EFFECTS,
         # 批14 #6②：装备部位引用「基础 ▸ 装备槽位（settings.slot_defs）」——展示层下拉候选
         # （字段 type 仍 str，校验语义不变；槽位表变更后候选即时联动）。
-        "slot": FieldMeta(type="str", options_ref="settings.slot_defs"),
-        "bind": FieldMeta(type="bool"),
-        "usable": FieldMeta(type="bool"),
+        "slot": FieldMeta(type="str", options_ref="settings.slot_defs",
+                          help="装备部位（引用装备槽位声明）。"),
+        "bind": FieldMeta(type="bool", help="绑定：开启后不可交易/转移。"),
+        "usable": FieldMeta(type="bool", help="可使用：开启后可在战斗或背包里使用。"),
         # 批22 · A1 装备/物品职业限制（CakeGame Config_Goods.Occupation；§三 A1）：
         # 命名与形态复用既有 skills.job_restrict（本表 L1703）——list<str>，元素为 jobs.json
         # 职业 id。与技能侧的唯一差异：元素声明 ref_target="job"（注册表 kind，本表 L2322）
@@ -2522,7 +2527,7 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "job_restrict": FieldMeta(
             type="list", element=FieldMeta(type="ref", ref_target="job"),
             label="职业限制",
-            help="仅这些职业可穿戴/使用（jobs.json 职业 id）；留空 = 不限职业。"),
+            help="仅这些职业可穿戴/使用（填职业 id）；留空 = 不限职业。"),
         # 批22 · A2 使用/穿戴等级门槛（CakeGame Config_Goods.UseLV；§三 A2）：
         # int ≥ 1。校验口径：非整数 → 泛型 R-1；负数 → 泛型 R-2；0 → 泛型 Y-1 黄提示 +
         # items/equipment 专项校验器 IV-1 红拦（int≥1 是硬口径，见 content/item_validator.py）。
@@ -2532,7 +2537,7 @@ def _module_table() -> Dict[str, ModuleMeta]:
             type="int", range_min=1, range_max=999, unit="级", label="使用等级",
             help="需达到的玩家等级（≥1）；留空 = 不限等级。"),
         # 批4.5：items/equipment 实测顶层 desc（原表未登记 → 纯展示宽字段）
-        "desc": _soft_display("说明"),
+        "desc": _soft_display("说明", help="面向玩家的说明文字。"),
     }
     # 批26 · α组（装备侧，依据 `CakeGame字段差距_补漏.md` §一 组 α）：装备附加五字段。
     # items∪equipment 同库（item_lib）——veinborn 武器/防具多在 items 模块，故登记在
@@ -2562,8 +2567,7 @@ def _module_table() -> Dict[str, ModuleMeta]:
                 "type": FieldMeta(type="enum", enum=("damage", "cooldown"), label="增幅类型"),
                 "value": FieldMeta(type="int", allow_negative=True, label="增幅值"),
             }),
-            help="按技能增幅：damage=伤害（1+总计/100 作伤害乘数）/ cooldown=冷却；"
-                 "上下限见 settings.forge.skill_amp_bounds。"),
+            help="按技能增幅：damage=伤害倍率 / cooldown=冷却缩短；上下限由包内配置。"),
         "attack_override": FieldMeta(
             type="obj", label="替换普攻",
             children={
@@ -2589,15 +2593,13 @@ def _module_table() -> Dict[str, ModuleMeta]:
     items_fields.update({
         "handedness": FieldMeta(
             type="enum", enum=("one_hand", "two_hand"), label="手数",
-            help="one_hand=单手（可作副手：数值类属性按 settings.equipment_offhand."
-                 "single_hand_scale 折算，百分比/强化特殊词条/装备被动/套装词条/符文附魔"
-                 "不激活）；two_hand=双手（不可作副手）；留空=未声明。"),
+            help="单手可作副手（数值类属性折算，特殊词条/被动/套装/符文不激活）；"
+                 "双手不可作副手。"),
         # 批38 · ④：材料/图纸的相性声明（词缀 → 相性值）；相性 id 需在 settings.affinities
         # 声明（引用存在性由 validator._check_affinity 跨模块红拦）。
         "affinities": FieldMeta(
             type="obj", children={}, soft_label=True, label="相性",
-            help="携带的相性值 {相性id: 数值}（材料/图纸共用）；相性 id 需在"
-                 "settings.affinities 声明；打造时按材料投入顺序结算互动。"),
+            help="携带的相性值 {相性id: 数值}；相性 id 需先声明，打造时按投入顺序结算。"),
     })
     equipment_fields: Dict[str, FieldMeta] = dict(items_fields)
     # 部位互斥：entry.slot 与 entry.excludes 列表内部位互斥成环 → R-5（equipment 专项，§5.2 + L167）
@@ -2626,7 +2628,8 @@ def _module_table() -> Dict[str, ModuleMeta]:
             _fm_target[_k] = FieldMeta(
                 type="number", range_min=0,
                 range_max=99999 if _k == "hp" else (9999 if _k == "mp" else 5000),
-                label=GEAR_LABELS_ZH.get(_k, _k), unit="点")
+                label=GEAR_LABELS_ZH.get(_k, _k), unit="点",
+                help=GEAR_HELP_ZH.get(_k, ""))
         for _k in GEAR_PCT_KEYS:
             _fm_target[_k] = FieldMeta(
                 type="number", range_min=0, range_max=500,
@@ -2752,7 +2755,7 @@ def _module_table() -> Dict[str, ModuleMeta]:
         # 批4.5：真实包 maps.json 实有、原表未登记的地图段（→ 纯展示宽字段，soft_label
         # 短路泛型校验；children 由 CHILD_SPEC 递归补结构）。DUNGEON_MAP_ELEM_CHILDREN
         # 早已为「maps 页整图编辑」预留这些键，本批把它接到 maps 模块。
-        "desc": _soft_display("说明"),
+        "desc": _soft_display("说明", help="面向玩家的说明文字。"),
         "camp": _soft_display("营地", "obj"),
         "camp_name": _soft_display("营地名"),
         "npcs": FieldMeta(type="list", element=FieldMeta(type="str"),

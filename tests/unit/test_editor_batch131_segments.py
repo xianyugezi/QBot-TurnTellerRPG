@@ -221,7 +221,8 @@ def test_saved_segment_then_listed_as_configured(blank_copy: Path) -> None:
     # 批45：面板预算 panel_budget + 怪物数值倍率 monster_scaling → +2 = 47
     # 批46：符文孔位 rune_sockets → +1 = 48
     # 批50：特效轴声明 effect_axes → +1 = 49
-    assert le["unconfigured_count"] == 49
+    # 批55：特效强度预算 effect_budget → +1 = 50
+    assert le["unconfigured_count"] == 50
 
 
 # =====================================================================================

@@ -29,6 +29,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence
 
 from qbot_rpg.content import atomic_store
+from qbot_rpg.content import module_presets as module_presets_mod
 from qbot_rpg.content import pack_transfer
 from qbot_rpg.content.models import FieldMeta, FieldMetaTable
 from qbot_rpg.content.permission_store import (
@@ -1198,6 +1199,149 @@ def set_module_enabled(pack: object, module: object, enabled: object, *,
         backup=atomic_store.backup_status(pack_dir, "manifest"),
         message=(f"已{verb}模块「{mod}」。"
                  + ("" if enabled else " 数据文件已保留，重新勾选即可恢复。")),
+    )
+    return env
+
+
+def apply_module_preset(pack: object, preset_id: object, *,
+                        root: Optional[object] = None, role: object = ROLE_OWNER,
+                        meta: Optional[FieldMetaTable] = None) -> Dict[str, Any]:
+    """一键应用一个模块推荐组合（批65；⚙ 模块开关面板顶部「推荐组合」的写入入口）。
+
+    · **累加**：新声明 = 现有 `manifest.modules` ∪ 组合模块（**不取消**用户已勾选的模块）；
+    · **依赖闭包**：组合声明的模块若有前置（`module_catalog.requires`）→ 自动补勾（不写死依赖名）；
+    · **单次落盘**：整套组合走**一次** manifest 备份 + 原子写 + 复核——因此「回退最近一次
+      模块变更」能**一键撤销整个组合**（而不是只撤销最后一个模块）；
+    · 新建模块按 entry_type 建最小骨架（已存在的数据文件不覆盖）；只读身份拒绝；
+    · 未登记 / 引擎未实装的模块键：丢弃并如实黄提示（不静默、不臆造）。
+    """
+    require_edit(role)
+    pack_dir = api._pack_dir(pack, root)
+    manifest = api._manifest(pack_dir)
+    declared = api._declared_modules(manifest)
+    # 组合 id 只用于查表，不参与文件路径 → 不做 `_check_component`（包可声明任意可读 id）。
+    pid = str(preset_id or "").strip()
+    env = _envelope(phase="module_preset", pack=str(pack), module=pid)
+    raw = manifest.get("module_presets")
+    raw_disabled = manifest.get("module_presets_disable")
+    presets = module_presets_mod.resolve_module_presets(
+        raw if isinstance(raw, (list, tuple)) else (),
+        raw_disabled if isinstance(raw_disabled, (list, tuple)) else (),
+        declared=declared)
+    preset = module_presets_mod.find_module_preset(presets, pid)
+    if preset is None:
+        raise api.BadRequest(f"未知模块组合：{pid or '（空）'}")
+
+    add = [m for m in (preset.get("add_modules") or [])]
+    auto_deps = list(preset.get("auto_deps") or [])
+    # 只在「依赖确实是本次新启用的」时提示自动补勾（已启用的依赖无需再说一遍）。
+    deps_added = [m for m in auto_deps if m in add]
+    labels = api._display_labels(manifest, list(declared), pack_dir)
+    warnings: List[Dict[str, Any]] = []
+    for mod in list(preset.get("unknown") or []):
+        warnings.append({
+            "level": "yellow", "code": "preset_unknown_module", "module": mod, "field": "",
+            "entry_id": "", "field_key": "", "field_label": "（推荐组合）", "related": True,
+            "message": f"组合「{preset['label']}」里的模块「{mod}」不在框架目录、"
+                       f"也未在本包声明 → 已跳过（不影响其它模块）。",
+            "how_to_fix": "在 manifest.modules 声明该模块，或从组合声明里移除它。",
+        })
+    for mod in list(preset.get("unavailable") or []):
+        warnings.append({
+            "level": "yellow", "code": "preset_unimplemented_module", "module": mod,
+            "field": "", "entry_id": "", "field_key": "",
+            "field_label": "（推荐组合）", "related": True,
+            "message": f"组合「{preset['label']}」里的模块「{mod}」引擎尚未实装 → 已跳过。",
+            "how_to_fix": "该能力框架已登记但暂不可启用；先做其余模块。",
+        })
+    if not add:
+        env.update(
+            ok=True, level=("yellow" if warnings else "ok"),
+            message=f"组合「{preset['label']}」的模块都已启用（无需改动）。",
+            warnings=warnings, changed_fields=[],
+            enabled=[], already=list(preset.get("modules") or []),
+            dependency_added=[],
+        )
+        return env
+    if deps_added:
+        warnings.append({
+            "level": "yellow", "code": "module_dependency", "module": deps_added[0],
+            "field": "", "entry_id": "", "field_key": "",
+            "field_label": "（模块依赖）", "related": True,
+            "message": "组合已自动补勾前置模块："
+                       + "、".join(f"「{_module_label(m, labels)}」" for m in deps_added) + "。",
+            "how_to_fix": "前置模块一并启用后组合才能正常工作；本提示不阻断操作。",
+        })
+
+    new_manifest = copy.deepcopy(manifest)
+    new_manifest["modules"] = list(declared) + add
+    _pack_dir, modules_raw = api.load_pack_modules(pack, root=root)
+    new_modules = copy.deepcopy(modules_raw)
+    skeletons: Dict[str, Any] = {}
+    for mod in add:
+        existing = api._read_json(pack_dir / f"{mod}.json")
+        if existing is None:
+            skeletons[mod] = _skeleton_for(api._entry_type_for_module(pack_dir, mod))
+            new_modules[mod] = skeletons[mod]
+        else:
+            new_modules[mod] = existing
+
+    tolerate = _tolerate_empty_modules(new_modules)
+    report = check_pack(new_modules, meta)
+    blocked = [e for e in report.errors if not (tolerate is not None and tolerate(e))]
+    tolerated = [e for e in report.errors if tolerate is not None and tolerate(e)]
+    warnings += _humanize_tolerated(tolerated)
+    slot = {"module": add[0], "entry_id": "", "base": {}, "pack_dir": pack_dir}
+    warnings += _related_to_slot(
+        _decorate(atomic_store.humanize_warnings(report.warnings), slot, add[0],
+                  related_only=False),
+        slot, add[0])
+    env.update(
+        warnings=warnings,
+        errors=_decorate(atomic_store.humanize_errors(blocked), slot, add[0],
+                         related_only=False),
+        changed_fields=list(add),
+    )
+    if blocked:
+        env.update(level="red",
+                   message="模块组合未通过整包校验：本次未写入任何文件（红拦）。")
+        return env
+
+    backup = atomic_store.backup_modules(pack_dir, ["manifest"])
+    if not backup.get("ok"):
+        env.update(level="red", message="备份失败，已取消本次模块组合变更（内容包未被改动）。")
+        env["errors"] = list(backup.get("errors") or []) + env["errors"]
+        return env
+
+    files: Dict[str, Any] = {"manifest": new_manifest}
+    files.update(skeletons)
+    written = atomic_store.write_modules(pack_dir, files)
+    if not written.get("ok"):
+        atomic_store.restore_modules_from_backup(pack_dir, ["manifest"])
+        env.update(level="red", message="写入失败：已复原 manifest（原子写未完成）。")
+        env["errors"] = list(written.get("errors") or []) + env["errors"]
+        return env
+
+    verify_errors = _verify_after_write(pack, slot, root, meta, tolerate=tolerate,
+                                        expected=dict(files))
+    if verify_errors is not None:
+        rolled = atomic_store.restore_modules_from_backup(pack_dir, ["manifest"])
+        env.update(level="red", rolled_back=bool(rolled.get("ok")))
+        env["errors"] = verify_errors + env["errors"]
+        env["message"] = ("写入后复核未通过，已自动回退 manifest（本次模块组合未生效）。"
+                          if rolled.get("ok") else
+                          "写入后复核未通过，且自动回退失败：请检查备份后重试。")
+        return env
+
+    env.update(
+        ok=True, level=("yellow" if warnings else "ok"),
+        written=list(written.get("written") or []),
+        backup=atomic_store.backup_status(pack_dir, "manifest"),
+        enabled=list(add), already=[m for m in preset.get("modules") or [] if m not in add],
+        dependency_added=deps_added,
+        message=f"已应用组合「{preset['label']}」：新启用 {len(add)} 个模块"
+                + ("（含自动补勾的前置）" if deps_added else "")
+                + "，你原来勾选的模块保持不变。",
     )
     return env
 

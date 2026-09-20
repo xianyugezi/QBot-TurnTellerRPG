@@ -211,6 +211,12 @@ def create_app(pack: Optional[str] = None, root: Optional[str] = None,
             pack_id, module, bool(body.get("enabled")),
             root=content_root, role=app.state.role)
 
+    @app.post("/api/pack/{pack_id}/module-preset/{preset_id}/apply")
+    def api_apply_module_preset(pack_id: str, preset_id: str):  # type: ignore[no-untyped-def]
+        """批65 · 一键应用「推荐组合」：累加启用 + 依赖闭包 + 单次备份（可一键回退）。"""
+        return editor_ops.apply_module_preset(
+            pack_id, preset_id, root=content_root, role=app.state.role)
+
     @app.get("/api/pack/{pack_id}/manifest/backup")
     def api_manifest_backup(pack_id: str):  # type: ignore[no-untyped-def]
         return editor_ops.module_config_backup(pack_id, root=content_root)

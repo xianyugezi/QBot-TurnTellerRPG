@@ -32,6 +32,7 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from qbot_rpg.content import entry_presets as entry_presets_mod
 from qbot_rpg.content import field_meta_pack as pack_meta
+from qbot_rpg.content import module_presets as module_presets_mod
 from qbot_rpg.content.field_meta import default_field_meta_table
 from qbot_rpg.core import job_slots as job_slots_core
 from qbot_rpg.web.framework_keys import framework_key_notes, framework_key_source
@@ -1365,6 +1366,14 @@ def module_catalog(pack: object, root: Optional[object] = None) -> Dict[str, Any
         })
 
     bak = pack_dir / "manifest.json.bak"
+    # 批65：模块推荐组合（框架默认 ∪ 包声明 − 关闭）。纯展示 + 一键启用快捷勾选；
+    # 组合内容/说明全部来自框架目录或包声明，前端不硬编码任何模块清单（一号原则）。
+    raw_presets = manifest.get("module_presets")
+    raw_disabled = manifest.get("module_presets_disable")
+    presets = module_presets_mod.resolve_module_presets(
+        raw_presets if isinstance(raw_presets, (list, tuple)) else (),
+        raw_disabled if isinstance(raw_disabled, (list, tuple)) else (),
+        declared=declared)
     return {
         "pack": str(pack),
         "pack_name": str(manifest.get("name", "") or pack),
@@ -1372,6 +1381,9 @@ def module_catalog(pack: object, root: Optional[object] = None) -> Dict[str, Any
         "modules": rows,
         "total": len(rows),
         "enabled_count": sum(1 for r in rows if r["enabled"]),
+        "presets": presets,
+        "presets_title": module_presets_mod.MODULE_PRESET_TITLE,
+        "presets_hint": module_presets_mod.MODULE_PRESET_HINT,
         "manifest_backup": {"path": "manifest.json.bak", "exists": bak.is_file()},
     }
 

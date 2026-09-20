@@ -35,7 +35,7 @@
   `test_pack_fixtures_matrix.py:187`、`test_editor_batch19_formula.py`、`test_editor_metadata_layer.py:207`）；
   ④ 属兼容承诺（`docs/编辑器重写_需求与约束.md:332` + 批19#9）。**裁定：保留**，理由与删除三条件写入
   `content/field_meta.py:1426-1438` + 手册 §六。顺带登记审计引文行号漂移（审计原 `:1381-1391` →
-  HEAD `:1439`/`:1443`）于 API手册_3 §3.7.1 / §3.6 T9 与审计3 §4.2/§7 D8。
+  HEAD `:1440`/`:1444`）于 API手册_3 §3.7.1 / §3.6 T9 与审计3 §4.2/§7 D8。
   **④ BUG-3（先查后定 · 裁定保留）· `data/status.py::StatusInstance`**：先读 TC-04 门禁
   （`scripts/check_architecture.py:49-51` `REQUIRED_TYPES`；`check_tc04` 对「未定义」判 fail→`exit 1`）
   ——**门禁要求该类型存在**；且 `tests/unit/test_data.py:19` 参数化断言其 `frozen`。**裁定：保留**

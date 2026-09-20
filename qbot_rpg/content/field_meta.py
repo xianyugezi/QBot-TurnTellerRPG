@@ -1436,7 +1436,7 @@ FORMULA_FIELDS: Dict[str, FieldMeta] = {
     #   (b) 撤销 test_editor_batch19_formula / test_content / test_editor_metadata_layer
     #   的登记断言；(c) 同步 docs/编辑器重写_需求与约束.md 与手册 §六。当前不满足 → 保留。
     #   注：审计3 原文引 `:1381-1391` 为行号漂移；批74 现状 = 下方两个 FieldMeta
-    #   （`damage_base` :1439 / `heal_rate` :1443）。见手册 §六与 API手册_3 §3.7.1。
+    #   （`damage_base` :1440 / `heal_rate` :1444）。见手册 §六与 API手册_3 §3.7.1。
     "damage_base": FieldMeta(
         type="formula", label="伤害基础公式",
         help="兼容保留键（JS 公式风格）。当前 Python 侧 formula_loader 不消费它——"

@@ -430,7 +430,9 @@ EFFECT_AXIS_SPECS: Tuple[Mapping[str, Any], ...] = (
         "scope": ("exp", "coins", "gem", "rep",
                   "drop_chance", "drop_count", "drop_rarity"),
         "display": {"mode": "mult", "label": "奖励倍率修正",
-                    "help": "调整结算奖励（经验/货币/掉落）：正 = 提升 / 负 = 减少（下钳 0）。"},
+                    "help": "调整结算奖励（经验/货币/掉落）：正 = 提升 / 负 = 减少（下钳 0）。"
+                            "【未实现】消费点尚未接线——当前登记值**不生效**；"
+                            "接线前请勿依赖该轴（详见 consumer_note）。"},
         "legacy_alias": (),
         "consumer": EFFECT_CONSUMER_PENDING,
         "consumer_note": "D5 登记：奖励类别分散在**三处**、无唯一收口，故不硬造——"

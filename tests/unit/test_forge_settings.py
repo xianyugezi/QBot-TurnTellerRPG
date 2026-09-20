@@ -6,7 +6,7 @@
 功能描述：qbot_rpg.content.forge_settings 纯函数直测（零 NoneBot、确定性）：
   - read_forge_settings 缺省合并：settings 无 forge 段 / 段空 / 非 Mapping / None → 全默认值
   - 显式覆盖：各键显式值生效；类型不合法回退默认（运行期兜底不炸）
-  - decompose_rate 表：默认 6 档中文档名键；显式 Mapping 合并（覆盖同名、保留缺省档位）
+  - decompose_rate **已删除**（批70 清账）：forge 段不再识别该键 → 迁移到 settings.alchemy
   - ITEMS_FORGE_FIELDS / FORGE_SETTINGS_FIELD_DEFS 字段扩展定义结构
   - resolve_source_text 来源归一优先级（source_override > items.source > fallback）
 
@@ -16,7 +16,7 @@
   - docs/细化/细化_2c2a_锻造派生树schema.md §1.4（S-01~S-05）
   - docs/细化/细化_2c2c_锻造素材经济.md §2.1（TIER-03a）/ SOUR-00（来源标签总则）
   - 锻造系统设计定稿 v1.0.1 §12.4（L351-358）
-  - 炼金系统设计定稿 v2.3 L418（decompose_rate 默认 6 档表，forge 复用）
+  - 批70 清账：`settings.forge.decompose_rate` 重复键删除，真源 = settings.alchemy.decompose_rate
 """
 
 from __future__ import annotations
@@ -24,7 +24,6 @@ from __future__ import annotations
 from typing import Any, Dict
 
 from qbot_rpg.content.forge_settings import (
-    DEFAULT_DECOMPOSE_RATE,
     DEFAULT_UNKNOWN_SOURCE,
     FORGE_SETTINGS_DEFAULTS,
     FORGE_SETTINGS_FIELD_DEFS,
@@ -51,9 +50,8 @@ def test_defaults_when_no_forge_section() -> None:
         assert set(got) == set(FORGE_SETTINGS_KEYS)
         for key in FORGE_SETTINGS_KEYS:
             assert got[key] == FORGE_SETTINGS_DEFAULTS[key], key
-        # 默认表对象不被调用方改动污染（深拷贝隔离）
-        assert got["decompose_rate"] == DEFAULT_DECOMPOSE_RATE
-        assert got["decompose_rate"] is not DEFAULT_DECOMPOSE_RATE
+        # 批70：decompose_rate 已不在键集（重复键清账，真源 = settings.alchemy）
+        assert "decompose_rate" not in got
 
 
 def test_defaults_values() -> None:
@@ -65,9 +63,7 @@ def test_defaults_values() -> None:
     assert got["exp_per_forge"] == "节点等级×2"
     assert got["sets_enabled"] is True
     assert got["augments_enabled"] is True
-    assert got["decompose_rate"] == {
-        "正式": 0.4, "精通": 0.45, "专家": 0.5, "大师": 0.55, "宗师": 0.6, "王": 0.65,
-    }
+    assert "decompose_rate" not in got          # 批70：已删（真源 alchemy）
 
 
 # ---------------------------------------------------------------------------
@@ -92,8 +88,8 @@ def test_explicit_overrides() -> None:
     assert got["exp_per_forge"] == 4
     assert got["sets_enabled"] is False
     assert got["augments_enabled"] is False
-    # 未显式键保留默认
-    assert got["decompose_rate"] == DEFAULT_DECOMPOSE_RATE
+    # 未显式键保留默认（批70：decompose_rate 已不在键集）
+    assert "decompose_rate" not in got
 
 
 def test_str_or_int_forge_fee_exp() -> None:
@@ -113,7 +109,6 @@ def test_invalid_type_falls_back_to_default() -> None:
             "exp_per_forge": -3,          # 负 int 非法
             "sets_enabled": None,
             "augments_enabled": [],
-            "decompose_rate": "0.4",      # 非 Mapping
         },
     })
     for key in FORGE_SETTINGS_KEYS:
@@ -127,29 +122,23 @@ def test_bool_is_not_int_for_fee() -> None:
 
 
 # ---------------------------------------------------------------------------
-# decompose_rate 表（中文档名键）
+# decompose_rate 重复键已删除（批70 清账）——迁移到 settings.alchemy.decompose_rate
 # ---------------------------------------------------------------------------
-def test_decompose_rate_merge_overrides_same_keys() -> None:
-    """显式 decompose_rate 与默认表合并：覆盖同名中文档名键，缺省档位保留默认。"""
+def test_forge_decompose_rate_no_longer_recognized() -> None:
+    """批70：`settings.forge.decompose_rate` 不再被 forge 段识别（残留值不产生任何输出键）。
+
+    迁移：分解回收率的唯一源 = `settings.alchemy.decompose_rate`（`core/gem_wallet.py:190`）。
+    """
     got = read_forge_settings({"forge": {"decompose_rate": {"正式": 0.5, "王": 0.7}}})
-    assert got["decompose_rate"] == {
-        "正式": 0.5, "精通": 0.45, "专家": 0.5, "大师": 0.55, "宗师": 0.6, "王": 0.7,
-    }
-
-
-def test_decompose_rate_extra_keys_kept() -> None:
-    """显式表含默认表外新键 → 保留（宽松合并，校验器负责档位完整性）。"""
-    got = read_forge_settings({"forge": {"decompose_rate": {"见习": 0.3}}})
-    dr = got["decompose_rate"]
-    assert isinstance(dr, dict)
-    assert dr["见习"] == 0.3
-    assert dr["正式"] == 0.4  # 默认档位仍在
-
-
-def test_decompose_rate_default_unchanged() -> None:
-    """多次调用相互独立：默认表常量不被合并污染。"""
-    read_forge_settings({"forge": {"decompose_rate": {"正式": 0.9}}})
-    assert DEFAULT_DECOMPOSE_RATE["正式"] == 0.4
+    assert "decompose_rate" not in got
+    # 键集 / 字段表同步删除（编辑器不再显示该键）
+    assert "decompose_rate" not in FORGE_SETTINGS_KEYS
+    assert "decompose_rate" not in FORGE_SETTINGS_DEFAULTS
+    assert "decompose_rate" not in FORGE_SETTINGS_FIELD_DEFS
+    # forge.json 的 settings 段同样不再登记该键
+    from qbot_rpg.content import forge_models
+    settings_meta = forge_models.FORGE_TOP_FIELD_DEFS["settings"]
+    assert "decompose_rate" not in dict(settings_meta.children)
 
 
 # ---------------------------------------------------------------------------
@@ -179,7 +168,7 @@ def test_forge_settings_field_defs_structure() -> None:
     assert FORGE_SETTINGS_FIELD_DEFS["straight_forge"].type == "bool"
     assert FORGE_SETTINGS_FIELD_DEFS["sets_enabled"].type == "bool"
     assert FORGE_SETTINGS_FIELD_DEFS["augments_enabled"].type == "bool"
-    assert FORGE_SETTINGS_FIELD_DEFS["decompose_rate"].type == "obj"
+    # 批70：decompose_rate 已从字段表删除（编辑器不再显示该键）
     # str|int 联合 → soft_label 永不红拦（【工程补白 F-2】，防 R-1 误拦）
     assert FORGE_SETTINGS_FIELD_DEFS["forge_fee"].soft_label is True
     assert FORGE_SETTINGS_FIELD_DEFS["exp_per_forge"].soft_label is True

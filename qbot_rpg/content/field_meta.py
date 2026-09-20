@@ -474,7 +474,9 @@ SETTINGS_FIELDS: Dict[str, FieldMeta] = {
         "report_effective_share": FieldMeta(
             type="bool", default=True, label="输出真实装备占比",
             help="是否对外输出 effective_equip_share（把特效等效折算进预算池后的真实装备占比；"
-                 "**只报数不改数**，补足闸的诊断盲区）。"),
+                 "**只报数不改数**，补足闸的诊断盲区）。"
+                 "【未实现】当前无任何消费点读取该布尔开关——开关不动"
+                 "（`effective_equip_share` 是无条件纯函数）；接线前请勿依赖此开关。"),
         "axis_weights": FieldMeta(
             type="obj", soft_label=True, children={
                 "calib": FieldMeta(type="number", allow_negative=True, label="校准点",
@@ -1168,41 +1170,64 @@ ACHIEVEMENT_FIELDS: Dict[str, FieldMeta] = {
 
 # ---- AI 视图（5a2 PA-01~06，extends=monster——enemies.json 条目内嵌 AI 键视图；
 #      无真实 json 独立模块，按契约最小登记宽容器；表字段语义 = 敌人条目 AI 配置区）----
+# 批70 清账（审计4 §2.7 R26~R33）：以下视图键名**任何包、任何代码都不存在**；引擎真实
+# 读取的是 `ai.states` / `ai.transitions`（core/monster_ai.py）与 enemies 条目**顶层
+# `phases`**。视图键名不符即对作者是陷阱 → 保留视图但 help 显式写「未实现 + 真实键」。
+_VIEW_UNIMPLEMENTED: str = "【未实现】该视图键名引擎不读取（无任何包/代码使用）；请改用引擎真实键。"
+_AI_REAL_KEYS: str = ("【未实现】该视图键名引擎不读取；enemies 条目真实键 = `ai.states` / "
+                      "`ai.transitions`（core/monster_ai.py），阶段为顶层 `phases`。")
 AI_FIELDS: Dict[str, FieldMeta] = {
-    "ai_actions": FieldMeta(type="obj", children={}, soft_label=True, label="行动表"),
+    "ai_actions": FieldMeta(type="obj", children={}, soft_label=True, label="行动表",
+                            help=_AI_REAL_KEYS),
     "ai_cond_actions": FieldMeta(type="obj", children={}, soft_label=True,
-                                 label="条件行动"),
+                                 label="条件行动", help=_AI_REAL_KEYS),
     "ai_state_machine": FieldMeta(type="obj", children={}, soft_label=True,
-                                  label="状态机"),
-    "ai_phases": FieldMeta(type="obj", children={}, soft_label=True, label="阶段"),
-    "ai_combo": FieldMeta(type="obj", children={}, soft_label=True, label="连招链"),
-    "ai_zone_switch": FieldMeta(type="obj", children={}, soft_label=True, label="换区"),
+                                  label="状态机", help=_AI_REAL_KEYS),
+    "ai_phases": FieldMeta(type="obj", children={}, soft_label=True, label="阶段",
+                           help=_AI_REAL_KEYS),
+    "ai_combo": FieldMeta(type="obj", children={}, soft_label=True, label="连招链",
+                          help=_VIEW_UNIMPLEMENTED),
+    "ai_zone_switch": FieldMeta(type="obj", children={}, soft_label=True, label="换区",
+                                help=_VIEW_UNIMPLEMENTED),
 }
 
 # ---- 隐藏要素视图（5a2 PH-01~04：隐藏BOSS/隐藏任务/彩蛋；可达性黄提示由专项管）----
 HIDDEN_FIELDS: Dict[str, FieldMeta] = {
+    # hidden_boss 在本视图登记为 obj，与 field_meta.py:1015 的 bool 同键异型（真实消费在
+    # monsters 模块 bool，investigate_commands.py）；属重复登记，列审计4 §6 待裁决——不在此动。
     "hidden_boss": FieldMeta(type="obj", children={}, soft_label=True, label="隐藏 BOSS"),
-    "hidden_quest": FieldMeta(type="obj", children={}, soft_label=True, label="隐藏任务"),
-    "easter_egg": FieldMeta(type="obj", children={}, soft_label=True, label="彩蛋"),
+    "hidden_quest": FieldMeta(type="obj", children={}, soft_label=True, label="隐藏任务",
+                              help="【未实现】引擎隐藏任务触发走 core/hidden_trigger "
+                                   "（npc/quest 声明），不读本视图键。"),
+    "easter_egg": FieldMeta(type="obj", children={}, soft_label=True, label="彩蛋",
+                            help=_VIEW_UNIMPLEMENTED),
 }
 
 # ---- 环境事件视图（5a2 PE-01~04：settings.json env_event 段——窗口条件+效果引用）----
 ENV_EVENT_FIELDS: Dict[str, FieldMeta] = {
     "env_event": FieldMeta(type="obj", children={}, soft_label=True,
-                           label="环境事件（settings.env_event 段）"),
+                           label="环境事件（settings.env_event 段）",
+                           help="【未实现】引擎不读取 settings.env_event（环境事件实际走 "
+                                "`env_event_registry` / `environment_events` 模块键）；"
+                                "配了不起作用。"),
 }
 
 # ---- 日志卡片视图（5a2 PL-01~04：settings.json log_card 段——记录类型/快照/容量）----
 LOG_CARD_FIELDS: Dict[str, FieldMeta] = {
     "log_card": FieldMeta(type="obj", children={}, soft_label=True,
-                          label="日志卡片（settings.log_card 段）"),
+                          label="日志卡片（settings.log_card 段）",
+                          help="【未实现】引擎不读取 settings.log_card（日志卡片读取封装另有"
+                               "实现）；配了不起作用。"),
 }
 
 # settings 段扩展（5a2 环境事件/日志卡片挂 settings.json；缺省零影响——无配置段不触发）
-SETTINGS_FIELDS.setdefault("env_event", FieldMeta(type="obj", children={}, soft_label=True,
-                                                  label="环境事件"))
-SETTINGS_FIELDS.setdefault("log_card", FieldMeta(type="obj", children={}, soft_label=True,
-                                                 label="日志卡片"))
+SETTINGS_FIELDS.setdefault("env_event", FieldMeta(
+    type="obj", children={}, soft_label=True, label="环境事件",
+    help="【未实现】引擎无读取点（环境事件走 env_event_registry/environment_events 模块键）"
+         "——填了不起作用；预留待接线。"))
+SETTINGS_FIELDS.setdefault("log_card", FieldMeta(
+    type="obj", children={}, soft_label=True, label="日志卡片",
+    help="【未实现】引擎无读取点——填了不起作用；预留待接线。"))
 
 # =============================================================================
 # M8 炼金字段扩展（m8_contract_数据与校验 §四/§五）：items 扩展 / slots 模块 / settings.alchemy 段。
@@ -1257,6 +1282,14 @@ ALCHEMY_ELEMENTS: Tuple[str, ...] = ("地", "水", "火", "风", "雷", "晶", "
 # 配置源；上述 `damage/hit/crit/block/...` 公式段此前只有 stat_map 登记 → 段落编辑无字段
 # 口径。本批按定稿逐段补登记（含 range/enum）；**仅展示层**：段值形态仍是 formula/obj，
 # 校验语义不变（数值超范围由战斗数值专项校验器提示，不在此红拦）。
+#
+# 批70 清账（审计4 §2.5 R10–R22）：「按定稿补登记」≠「引擎已消费」——以下字段被
+# `core/formula_loader.load_formula_params()` 明确排除（其 docstring 自述 floor_mode/
+# deep_floor 等纯配置字段不在 DamageFormulaParams 内），生产侧**无读取点**。按「登记即
+# 承诺」口径，字段保留（后续接线用）但 help 必须显式写「未实现」，避免作者配了不起作用。
+_UNIMPLEMENTED: str = "【未实现】当前仅编辑器登记，引擎（core/formula_loader）不读取该字段——改了不生效。"
+
+
 def _formula_sections() -> Dict[str, FieldMeta]:
     """战斗数值公式段字段表（展示层；键名/层级照 战斗数值层设计定稿 §5.1）。"""
     return {
@@ -1266,8 +1299,8 @@ def _formula_sections() -> Dict[str, FieldMeta]:
             "rng": FieldMeta(type="list", element=FieldMeta(type="number"),
                              label="乱数区间[下,上]"),
             "floor_mode": FieldMeta(type="enum", enum=("channel_end", "per_segment"),
-                                    label="取整时机"),
-            "deep_floor": FieldMeta(type="bool", label="深层向下取整"),
+                                    label="取整时机", help=_UNIMPLEMENTED),
+            "deep_floor": FieldMeta(type="bool", label="深层向下取整", help=_UNIMPLEMENTED),
         }),
         "hit": FieldMeta(type="obj", label="命中", children={
             "k": FieldMeta(type="number", range_min=0.05, range_max=1, label="K_HIT 系数"),
@@ -1310,7 +1343,8 @@ def _formula_sections() -> Dict[str, FieldMeta]:
             "type_mult": FieldMeta(type="number", range_min=0, label="类型弱点倍率"),
             "element_mult": FieldMeta(type="number", range_min=0, label="元素弱点倍率"),
         }),
-        "weapon_type_mult": FieldMeta(type="obj", soft_label=True, label="武器类型倍率"),
+        "weapon_type_mult": FieldMeta(type="obj", soft_label=True, label="武器类型倍率",
+                                      help=_UNIMPLEMENTED),
         "type_affinity": FieldMeta(type="obj", label="攻击类型倾向", children={
             "enabled": FieldMeta(type="bool", label="启用倾向"),
             "blunt_pierce": FieldMeta(type="number", range_min=0, range_max=1, label="打击破防"),
@@ -1320,22 +1354,28 @@ def _formula_sections() -> Dict[str, FieldMeta]:
         }),
         "elements": FieldMeta(type="obj", soft_label=True, label="元素注册表"),
         "luck": FieldMeta(type="obj", label="幸运修正", children={
-            "enhance_rate": FieldMeta(type="number", range_min=0, label="强化成功率修正"),
-            "effect_prob": FieldMeta(type="number", range_min=0, label="效果触发概率修正"),
-            "max_mod": FieldMeta(type="number", range_min=0, label="修正上限"),
+            "enhance_rate": FieldMeta(type="number", range_min=0, label="强化成功率修正",
+                                      help=_UNIMPLEMENTED),
+            "effect_prob": FieldMeta(type="number", range_min=0, label="效果触发概率修正",
+                                     help=_UNIMPLEMENTED),
+            "max_mod": FieldMeta(type="number", range_min=0, label="修正上限",
+                                 help=_UNIMPLEMENTED),
         }),
         "derived": FieldMeta(type="obj", label="技能派生", children={
             "max_total_mult": FieldMeta(type="number", range_min=0, label="派生倍率封顶"),
         }),
         "power": FieldMeta(type="obj", label="威力上限", children={
-            "max": FieldMeta(type="int", range_min=0, range_max=99999, label="威力滑条上限"),
+            "max": FieldMeta(type="int", range_min=0, range_max=99999, label="威力滑条上限",
+                             help=_UNIMPLEMENTED),
             "formula_max": FieldMeta(type="int", range_min=0, range_max=99999,
-                                     label="公式路径上限"),
+                                     label="公式路径上限", help=_UNIMPLEMENTED),
         }),
         "effects_link": FieldMeta(type="obj", label="效果拦截链", children={
             "intercept_order": FieldMeta(type="list", element=FieldMeta(type="str"),
-                                         label="拦截顺序"),
-            "pierce_cap": FieldMeta(type="number", range_min=0, range_max=1, label="穿透封顶"),
+                                         label="拦截顺序", help=_UNIMPLEMENTED),
+            "pierce_cap": FieldMeta(type="number", range_min=0, range_max=1, label="穿透封顶",
+                                    help="【未实现】当前仅注释提及；实际 0.6 在 "
+                                         "core/damage.py 硬编码——配了不改数。"),
         }),
         "death_check": FieldMeta(type="obj", label="死亡判定", children={
             "mutual_kill_result": FieldMeta(type="enum", enum=("draw", "player_loss"),
@@ -1348,10 +1388,13 @@ def _formula_sections() -> Dict[str, FieldMeta]:
         }),
         # §八 伤害构成统计 / dummy_log（L366）
         "stats_collector": FieldMeta(type="obj", label="伤害统计", children={
-            "enabled": FieldMeta(type="bool", label="启用收集"),
+            "enabled": FieldMeta(type="bool", label="启用收集",
+                                 help="【未实现】引擎快照自带硬编码统计键（battle 层），"
+                                      "本配置段无读取点——开关不改变输出。"),
             "dummy_log_size": FieldMeta(type="int", range_min=0, range_max=20,
-                                        label="木桩记录保留次数（0=关）"),
-            "dummy_realtime": FieldMeta(type="bool", label="木桩实时摘要"),
+                                        label="木桩记录保留次数（0=关）", help=_UNIMPLEMENTED),
+            "dummy_realtime": FieldMeta(type="bool", label="木桩实时摘要",
+                                        help=_UNIMPLEMENTED),
         }),
     }
 

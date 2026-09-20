@@ -722,6 +722,9 @@ class _Checker:
             # 批57 · 精粹产出率：settings.forge.essence_rate（结构/类型/枚举红拦 +
             # 「enabled 但精粹货币未登记」红拦；缺段 = 未启用 = 现状）
             self._check_essence_rate(module_name, data)
+            # 批70 · 清账：settings.forge.decompose_rate 已删除（重复键）→ 残留黄提示
+            # 指向唯一源 settings.alchemy.decompose_rate（不阻断）。
+            self._check_forge_settings_migration(module_name, data)
             # 批38 · ④ 相性通用层（settings 四段结构/枚举/引用 + 材料相性引用存在性）
             self._check_affinity(module_name, data)
             # 批39 · 合成/炼金/打造启用矩阵：settings.deep_craft 打造路径开关
@@ -2392,6 +2395,28 @@ class _Checker:
                               rule="currency_ref_missing", currency=cur,
                               msg=f"精粹货币「{cur}」未登记在 settings.currencies（或 items）"
                                   "——运行时入账会被拒绝")
+
+    # ---- 批70 · settings.forge.decompose_rate 已删除 → 迁移黄提示（指向唯一源）----
+    def _check_forge_settings_migration(self, module_name: str, data: object) -> None:
+        """`settings.forge.decompose_rate` 残留 → **黄提示 Y-21**（不阻断）。
+
+        批70 清账：该键与 `settings.alchemy.decompose_rate` 重复，且引擎从来不读 forge 段
+        （唯一真源 = alchemy 段，消费点 `core/gem_wallet.py:190`）→ 已从登记表/默认表/
+        合并逻辑/包声明删除。为防既有内容包「改了没效果还找不到原因」，此处给黄提示指路。
+        """
+        if not isinstance(data, Mapping):
+            return
+        forge = data.get("forge")
+        if not isinstance(forge, Mapping):
+            return
+        if "decompose_rate" not in forge:
+            return
+        self._warn(
+            module_name, "settings.forge.decompose_rate", "Y-21",
+            rule="moved_to_alchemy",
+            msg="settings.forge.decompose_rate 已废弃（批70）：该键从未被引擎消费；"
+                "分解回收率的唯一源 = settings.alchemy.decompose_rate（中文档名 6 档，"
+                "消费点 core/gem_wallet.py）。请把该段迁移到 settings.alchemy 后删除本键。")
 
     # ---- 批39 · 合成/炼金/打造启用矩阵：settings.deep_craft 打造路径开关 ----
     def _check_deep_craft(self, module_name: str, data: object) -> None:

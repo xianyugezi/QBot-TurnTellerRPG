@@ -493,11 +493,6 @@ class ForgeSettings:
         return v if isinstance(v, bool) else True  # 默认 true（S-03）
 
     @property
-    def decompose_rate(self) -> Mapping[str, object]:
-        v = self._val("decompose_rate")
-        return v if isinstance(v, Mapping) else {}
-
-    @property
     def exp_per_forge(self) -> object:
         return self._val("exp_per_forge")
 
@@ -748,7 +743,6 @@ FORGE_TOP_FIELD_DEFS: Dict[str, FieldMeta] = {
         "forge_fee": FieldMeta(type="str"),
         "synth_ratio_3to1": FieldMeta(type="bool"),
         "straight_forge": FieldMeta(type="bool"),
-        "decompose_rate": FieldMeta(type="obj"),
         "exp_per_forge": FieldMeta(type="str"),
         "sets_enabled": FieldMeta(type="bool"),
         "augments_enabled": FieldMeta(type="bool"),

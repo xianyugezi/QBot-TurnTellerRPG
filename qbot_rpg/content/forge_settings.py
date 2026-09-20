@@ -10,7 +10,7 @@
 
 依据：细化_2c2a §1.4（S-01~S-05 settings 段）+ 细化_2c2c §2.1（TIER-03a material_tier
       两档元数据 / SOUR-00 来源标签总则）+ 定稿 §12.4（forge_fee/synth_ratio_3to1/
-      straight_forge/decompose_rate/exp_per_forge 默认与可配语义）
+      straight_forge/exp_per_forge 默认与可配语义）
       + docs/m9_shared_contract.md §三（ForgeSettings 全字段表）/ §八（items/settings
       扩展契约：material_tier enum normal/rare + source str + settings.forge 段形态）。
 模式参考：
@@ -27,8 +27,8 @@
       由主 agent 收口接线，本文件不改动任何既有文件。
 
 【工程补白】清单（契约/细化未显式定义处的实现口径，标 F-x）：
-  F-1  decompose_rate 默认表 = 炼金定稿 L418 完整 6 档（正式 0.4 → 王 0.65，复用炼金
-       分解规则，定稿 L356「复用炼金分解规则」；键自正式起无见习，对齐 DEC-01/05）。
+  F-1  （已删除）原 `decompose_rate` 默认表（炼金定稿 L418 六档）随批70 清账移除——
+       真源 = `settings.alchemy.decompose_rate`（`core/gem_wallet.py:190`），forge 段不再重复。
   F-2  forge_fee / exp_per_forge 为 str|int 联合形态（定稿 L353/L357：字符串公式或整数），
        FieldMeta 无联合类型 → 登记 type="str" + soft_label=True（永不红拦，防 int 合法值
        被 R-1 误拦；多形态由引擎运行期处理，对齐 seed 字段 soft_label 口径）。
@@ -48,16 +48,6 @@ from qbot_rpg.data.temper_stats import DEFAULT_ESSENCE_RATE, normalize_essence_c
 # 常量：settings.forge 段默认值（共享契约 §三 ForgeSettings 表 + 定稿 §12.4）
 # =====================================================================================
 
-# 分解回收率默认表（【工程补白 F-1】炼金定稿 L418 完整 6 档；键=中文档名，自正式起无见习）
-DEFAULT_DECOMPOSE_RATE: Dict[str, float] = {
-    "正式": 0.4,
-    "精通": 0.45,
-    "专家": 0.5,
-    "大师": 0.55,
-    "宗师": 0.6,
-    "王": 0.65,
-}
-
 # 批26 α3：装备增幅技能（skill_amp）全局上下限默认值（CakeGame 装备附加Re《核心配置》
 # 的 最小/最大增幅 -90/90 与 最小/最大冷却 -50/100 做**框架默认值**，可经
 # settings.forge.skill_amp_bounds 覆盖）。判定逻辑（校验器/引擎）一律读本表或包声明，
@@ -75,7 +65,6 @@ FORGE_SETTINGS_DEFAULTS: Dict[str, object] = {
     "forge_fee": "节点等级×10",          # S-01（str|int）
     "synth_ratio_3to1": True,           # S-02（P1 3:1 合成开关）
     "straight_forge": True,             # S-03（直锻模式）
-    "decompose_rate": DEFAULT_DECOMPOSE_RATE,  # S-04（复用炼金分解规则）
     "exp_per_forge": "节点等级×2",       # S-05（str|int）
     "sets_enabled": True,               # 2c2d 补白键（P1 套装开关）
     "augments_enabled": True,           # 2c2d 补白键（P2 客制开关）
@@ -86,8 +75,9 @@ FORGE_SETTINGS_DEFAULTS: Dict[str, object] = {
     # derive_set_max_pieces 从 settings.slot_defs 防具部位推导），正整数 = 显式上限
     "set_max_pieces": None,
     # 批57 · 精粹产出率 `essence_rate`（原案 §12/§14；报告 §3.1 公式 + 主 agent ①/② 裁定）。
-    # 缺省 enabled=False → 不启用精粹，与现状逐字段一致。**与 `decompose_rate`（材料回收）
-    # 分键、语义相反不可合键**（报告 C-5：材料回收随生产等级递增 / 精粹随品质正向）。
+    # 缺省 enabled=False → 不启用精粹，与现状逐字段一致。**与「材料回收分解率」**
+    # 分键、语义相反不可合键**（报告 C-5：材料回收随生产等级递增 / 精粹随品质正向）；
+    # 材料回收的真源 = `settings.alchemy.decompose_rate`（批70 已删 forge 段重复键）。
     "essence_rate": dict(DEFAULT_ESSENCE_RATE),
 }
 
@@ -96,7 +86,6 @@ FORGE_SETTINGS_KEYS: tuple = (
     "forge_fee",
     "synth_ratio_3to1",
     "straight_forge",
-    "decompose_rate",
     "exp_per_forge",
     "sets_enabled",
     "augments_enabled",
@@ -148,8 +137,6 @@ FORGE_SETTINGS_FIELD_DEFS: Dict[str, FieldMeta] = {
     "synth_ratio_3to1": FieldMeta(type="bool", default=True),
     # S-03 straight_forge（定稿 L355）：直锻模式（小白 1 步 / 深度预览 2 步）
     "straight_forge": FieldMeta(type="bool", default=True),
-    # S-04 decompose_rate（定稿 L356）：分解回收率，中文档名键（正式..王），复用炼金分解规则
-    "decompose_rate": FieldMeta(type="obj"),
     # S-05 exp_per_forge（定稿 L357）：str|int 联合（"节点等级×2" 或整数）——soft_label 永不红拦
     "exp_per_forge": FieldMeta(type="str", soft_label=True),
     # 2c2d 补白键：P1 套装开关 / P2 客制开关（共享契约 §三 sets_enabled/augments_enabled）
@@ -251,13 +238,13 @@ def read_forge_settings(settings_raw: object) -> Dict[str, object]:
                       /段缺失/段为空 → 全默认值兜底，对齐 alchemy_settings P-6 口径）。
     出参：
       合并后的 dict（键序照 FORGE_SETTINGS_KEYS）：forge_fee / synth_ratio_3to1 /
-      straight_forge / decompose_rate / exp_per_forge / sets_enabled / augments_enabled。
+      straight_forge / exp_per_forge / sets_enabled / augments_enabled。
     核心逻辑（纯函数、确定性、无副作用）：
       - 段缺失/非对象 → FORGE_SETTINGS_DEFAULTS 深拷贝全量返回（不报错，对齐炼金读段模式）。
       - 段存在 → 逐键取值：显式键覆盖默认；类型不合法回退默认（运行期兜底不炸，
         越界/引用问题由校验器硬拦——对齐 battle_boundary from_settings 容错口径）。
-      - decompose_rate：显式为 Mapping → 与默认表合并（显式键覆盖同名中文档名键，缺省
-        档位保留默认值）；非 Mapping → 默认表。
+      - decompose_rate：**批70 起不再识别**（重复键清账）——真源 =
+        `settings.alchemy.decompose_rate`；包内残留由校验器黄提示指向新位置。
       - forge_fee / exp_per_forge：非空 str 或非负 int 生效，其余回退默认。
       - 布尔键（synth_ratio_3to1/straight_forge/sets_enabled/augments_enabled）：
         仅 bool 生效，其余回退默认。
@@ -279,13 +266,10 @@ def read_forge_settings(settings_raw: object) -> Dict[str, object]:
         if isinstance(forge.get(key), bool):
             out[key] = forge[key]
 
-    # ---- S-04 decompose_rate：Mapping → 与默认表合并（显式键覆盖同名中文档名键）----
-    dr = forge.get("decompose_rate")
-    if isinstance(dr, Mapping):
-        merged: Dict[str, object] = dict(DEFAULT_DECOMPOSE_RATE)
-        for k, val in dr.items():
-            merged[str(k)] = val
-        out["decompose_rate"] = merged
+    # ---- 批70 · S-04 `decompose_rate` **已删除**（登记却不生效的重复键）----
+    # 真源 = `settings.alchemy.decompose_rate`（消费点 `core/gem_wallet.py:190`）。
+    # 迁移：原 `settings.forge.decompose_rate` 的写法无效 → 改到 `settings.alchemy.decompose_rate`。
+    # 此处**不再合并/登记**该键；包内残留时由校验器黄提示（validator `_check_forge_settings_migration`）。
 
     # ---- S-05 exp_per_forge：非空 str 或非负 int ----
     v = forge.get("exp_per_forge")
@@ -382,7 +366,6 @@ def resolve_source_text(
 
 __all__ = [
     # 常量 / 默认值
-    "DEFAULT_DECOMPOSE_RATE",
     "DEFAULT_SKILL_AMP_BOUNDS",
     "FORGE_SETTINGS_DEFAULTS",
     "FORGE_SETTINGS_KEYS",

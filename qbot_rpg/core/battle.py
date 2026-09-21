@@ -132,6 +132,8 @@ from qbot_rpg.core.ctb_scheduler import CTBScheduler
 from qbot_rpg.data.gear_stats import OWNED_EFFECT_IDS_KEY
 # 批52 · 特效轴消费口径：settings 段键名 + 读时钳制取值（唯一源，core 只读）。
 from qbot_rpg.data.gear_stats import EFFECT_AXES_KEY, OVERHEAL_KEY, effect_axis_value
+# 批78 · U4：伤害构成聚合 + stats_collector 配置归一（定稿 §八；纯函数，无状态）。
+from qbot_rpg.core.damage_stats import aggregate_per_action, load_stats_collector_cfg
 
 #: 批56 · 行动速度轴（X28 `action_speed_pct`）键名——唯一源仍是 `data.gear_stats`
 #: `EFFECT_AXIS_SPECS`（本常量只取登记名便于消费点引用，不另立键空间）。
@@ -581,6 +583,11 @@ class BattleEngine:
         # 生产侧落点 = core/formula_loader（原 conftest 读取器同源提权）。
         _loaded_params = self._formula_params_from_registry(registry) if params is None else params
         self._params: DamageFormulaParams = _loaded_params or DamageFormulaParams()
+        # 批78 · U4（定稿 §8.4 L362-372）：formula.json `stats_collector` 段归一配置
+        # （缺省段 → 默认 enabled=true/size=5/realtime=false）。**只读配置源**，不改
+        # 数值；聚合/展示/dummy_log 均以此为准（可配，不写死）。
+        self._stats_cfg: Dict[str, Any] = load_stats_collector_cfg(
+            self._formula_raw_from_registry(registry))
         # FIX-6 决策登记（细化_M6 测试体系强化 D6 §三 FIX-5/FIX-6 二选一 + §八）：
         # M12.5 需求1 批C 已落地：battle 从内容包 formula.json 装配段参数（JSON 段 →
         # DamageFormulaParams 共享加载函数生产侧 = core/formula_loader，conftest
@@ -627,6 +634,18 @@ class BattleEngine:
         )
         self._reset_state()
 
+    def _formula_raw_from_registry(self, registry: Any = None) -> Optional[Mapping[str, Any]]:
+        """registry.modules_raw["formula"] 原样段（批78 · U4）。
+
+        无 registry / 无 formula 模块 → None。`stats_collector` 配置与段参数装配共用
+        本取数（唯一源；避免两处各自 dig registry）。
+        """
+        raw = getattr(registry, "modules_raw", None)
+        if not isinstance(raw, Mapping):
+            return None
+        formula = raw.get("formula")
+        return formula if isinstance(formula, Mapping) else None
+
     def _formula_params_from_registry(self, registry: Any = None) -> Optional[DamageFormulaParams]:
         """registry.modules_raw["formula"] → DamageFormulaParams（M12.5 需求1 批C）。
 
@@ -636,11 +655,8 @@ class BattleEngine:
         注意：只在 __init__ 早期被调用（self._registry 尚未赋值），故只读入参
         registry，不读 self._registry（from_snapshot 重建时显式传 registry）。
         """
-        raw = getattr(registry, "modules_raw", None)
-        if not isinstance(raw, Mapping):
-            return None
-        formula = raw.get("formula")
-        if not isinstance(formula, Mapping):
+        formula = self._formula_raw_from_registry(registry)
+        if formula is None:
             return None
         try:
             from qbot_rpg.core.formula_loader import load_formula_params
@@ -1069,17 +1085,37 @@ class BattleEngine:
         if damage.get("final", 0) >= 0:
             self._snap.setdefault("stats_collector", {}).setdefault("per_action", []).append({
                 "source": atype,
+                # 批78 · U4：展示名（定稿 §8.2 示例「火球术/普攻」= 展示名而非 id）；
+                # 聚合层 name 优先、缺省回落 source（纯新增键，旧读方零影响）。
+                "name": (name or atype),
                 "seg": len(self._snap["action_record"]),
                 "ch_phys": damage.get("ch_phys", 0),
                 "ch_elem": damage.get("ch_elem", 0),
                 "crit": rating.get("crit", "low"),
                 "blocked": bool(rating.get("blocked", False)),
                 "pierce": rating.get("pierce", 0.0),
+                # 批78 · U4：定稿 §8.1 L325 schema 补全 `penetrate`。引擎当前无该量
+                # 生产点（effects_link.pierce_cap 未实装，穿透走 `pierce`）→ 恒 0.0，
+                # 只为 schema 完整；绝不臆造数值（见 docs/矛盾与待裁决登记）。
+                "penetrate": rating.get("penetrate", 0.0),
                 "weak_type": rating.get("weak_type", 1.0),   # G3（定稿 §8.1 L326）：类型弱点倍率
                 "weak_elem": rating.get("weak_elem", 1.0),   # G3（定稿 §8.1 L327）：元素弱点倍率
                 "final": damage.get("final", 0),
             })
         return self._seq
+
+    # ------------------------- 伤害构成统计（批78 · U4） -------------------------
+
+    def stats_collector_cfg(self) -> Dict[str, Any]:
+        """stats_collector 配置副本（定稿 §8.4；供指令壳层读 enabled/size/realtime）。"""
+        return dict(getattr(self, "_stats_cfg", None)
+                    or load_stats_collector_cfg(None))
+
+    def stats_summary(self) -> Dict[str, Any]:
+        """既有 per-action 收集器下游聚合（定稿 §8.1 L332；不改数值、不回写快照）。"""
+        sc = self._snap.get("stats_collector")
+        per_action = sc.get("per_action") if isinstance(sc, Mapping) else None
+        return aggregate_per_action(per_action)
 
     # ------------------------- 死亡判定（1g1b §三 T3/T4/T5 + A1/A4/A5） -------------------------
 

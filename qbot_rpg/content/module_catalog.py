@@ -84,19 +84,21 @@ FRAMEWORK_MODULE_CATALOG: Tuple[ModuleCatalogEntry, ...] = (
                        "合成配方：材料与产出（第 1 层【合成】，打造与炼金公用）。",
                        "list", requires=("items",), settings_section="settings.alchemy.mode"),
     ModuleCatalogEntry("proficiency", "熟练度", "熟练度等级与对应效果。", "list"),
-    ModuleCatalogEntry("slots", "装备槽", "装备槽位定义（部位与可装备范围）。",
+    # 批78 · X3（登记表 X3 重核）：批19 #5 的「两处都在表达装备部位定义」描述**与实现
+    # 冲突**并已纠正——slots.json 条目形态 = {equip_id, slots:[{slot_level}]}（契约 §四
+    # SLOTS_FIELD_DEFS，core/jewel.py 消费）= **珠插槽 / 镶嵌孔位**；settings.slot_defs
+    # （EQP-04）才是运行时**部位表**（部位→可装备范围）。二者是不同数据空间、非重复落点，
+    # 但名字相近易误写 → 仍给黄提示（不硬拦）说明关系与「改哪里」。
+    ModuleCatalogEntry("slots", "珠插槽", "装备镶嵌孔位（珠插槽）条目，非装备部位表。",
                        "list", requires=("items",),
-                       # 批19 #5：与「基础 ▸ 装备槽位（settings.slot_defs）」功能重叠——实测
-                       # 两个内容包的 slot_defs 各有 8 部位，而 slots.json 为空。编辑器给黄提示
-                       # （不硬拦）：建议归口一处，并说明二者定位（不猜：见下方 overlap_note）。
                        overlap_with="settings.slot_defs",
                        overlap_note=(
-                           "两处都在表达「装备部位定义」：settings.slot_defs 是运行时消费的"
-                           "部位表（编辑器「基础 ▸ 装备槽位」可增删改，装备/物品的「部位」"
-                           "引用它）；slots 模块（slots.json）是条目化的部位 / 可装备范围"
-                           "定义。当前内容包把数据放在 settings.slot_defs（8 部位），"
-                           "slots.json 为空。建议归口一处，避免两边同改不同步；"
-                           "本提示不阻断保存。")),
+                           "两者名字相近但语义不同，请勿混用：settings.slot_defs 是运行时"
+                           "装备**部位表**（编辑器「基础 ▸ 装备槽位」，装备/物品的「部位」"
+                           "引用它）；slots 模块（slots.json）是**珠插槽**条目"
+                           "（{equip_id, slots:[{slot_level}]}，core/jewel.py 镶嵌消费）。"
+                           "改部位定义去 settings.slot_defs，改镶嵌孔位才来这里；"
+                           "建议按此归口一处，避免两边同改不同步。本提示不阻断保存。")),
     # 批46 · 符文地基（43-A）：符文附魔定义（三阶 / 跨装备类型差异表 / 效果声明）。
     # 落点 = runes.json list 模块；孔位/镶嵌复用 slots 的孔位数组（core/jewel.py），
     # 镶嵌状态挂 ItemInstance.uid（player.persistent_state.rune_sockets）。

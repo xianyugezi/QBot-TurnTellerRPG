@@ -287,7 +287,7 @@ def test_g7_push_ok_multiword() -> None:
 
 def test_g7_oversize_blocked() -> None:
     """超 200 字被拦（领域错误模板 + 审计 failed + 零推送）。"""
-    from qbot_rpg.commands.gm_commands import BROADCAST_MAX_CHARS, GM_CMD_BROADCAST
+    from qbot_rpg.commands.gm_commands import BROADCAST_MAX_CHARS
 
     calls: list = []
     ctx = _ctx(ROLE_ADMIN, backend=GmBackend(),
@@ -397,8 +397,6 @@ def test_g9_masked_summary() -> None:
 
 def test_g9_not_found_error_template() -> None:
     """不存在玩家 → 人话错误模板（非静默）+ 审计 failed + target_qq 留痕。"""
-    from qbot_rpg.commands.gm_commands import GM_CMD_PLAYER_QUERY
-
     ctx = _ctx(ROLE_ADMIN, backend=GmBackend(), player_lookup=lambda qq: None)
     r = handle_gm_command(_parsed("/玩家查询 123456789"), ctx)
     assert not r.ok and not r.silent

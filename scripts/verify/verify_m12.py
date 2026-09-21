@@ -15,9 +15,10 @@
   字段元数据 → PASS（4A field_meta 注入）；事件写入（5 结算点 bump_event + event_log
   环形 300）→ PASS（3B）；前端标签渲染/日历预览断签模拟 → DELAYED（前端迭代）。
   5b GM 34 TC：权限三级/静默/审计/禁绑/前缀 → PASS（gm_commands + test_gm_commands*）；
-  G2 备份/G3 恢复/G4 存档导出/G12 封禁列表 → PASS（3A）；G5 调试/G6 测试/G7 广播/
-  G9 玩家查询/G11 解封 → DELAYED（无常量无处理器，未接线）；/商店 列表 SM-04 余额行
-  SM-06 紧凑 → PARTIAL。
+  G2 备份/G3 恢复/G4 存档导出/G12 封禁列表 → PASS（3A）；
+  G5 调试/G6 测试/G7 广播/G9 玩家查询/G11 解封 → PASS（批75 接线，
+  tests/unit/test_batch75_gm_ops.py；G7 定时=HH:MM 为登记缺口，只做即时广播）；
+  /商店 列表 SM-04 余额行 SM-06 紧凑 → PARTIAL。
 
 核心断言（脚本内直接断言，不依赖 pytest）：
   a. GM 9 条清单：GM_COMMANDS 含备份/恢复/存档导出/封禁列表（3A 接线）
@@ -63,21 +64,21 @@ COVERAGE: Dict[str, str] = {
     "5b-TC-13": "pytest:tests/unit/test_gm_commands_extra.py",   # G2 备份
     "5b-TC-14": "pytest:tests/unit/test_gm_commands_extra.py",   # G3 恢复
     "5b-TC-15": "pytest:tests/unit/test_gm_commands_extra.py",   # G4 存档导出
-    "5b-TC-16": "DELAYED:G5 调试（无常量无处理器，未接线）",
-    "5b-TC-17": "DELAYED:G6 测试（只读冒烟，未接线）",
-    "5b-TC-18": "DELAYED:G7 广播（群+私聊+定时，未接线）",
+    "5b-TC-16": "pytest:tests/unit/test_batch75_gm_ops.py",      # G5 调试（批75）
+    "5b-TC-17": "pytest:tests/unit/test_batch75_gm_ops.py",      # G6 测试（只读冒烟，批75）
+    "5b-TC-18": "pytest:tests/unit/test_batch75_gm_ops.py",      # G7 广播（批75；定时缺口登记）
     "5b-TC-19": "pytest:tests/unit/test_gm_commands_extra.py",   # G12 封禁列表
     "5b-TC-20": "pytest:tests/unit/test_permission_store.py",    # admin_users 表
     "5b-TC-21": "pytest:tests/unit/test_permission_store.py",    # grant/revoke（P0 修复）
     "5b-TC-22": "pytest:tests/unit/test_permission_store.py",    # 权限缓存失效
-    "5b-TC-23": "DELAYED:G9 玩家查询（脱敏，未接线）",
+    "5b-TC-23": "pytest:tests/unit/test_batch75_gm_ops.py",      # G9 玩家查询（脱敏，批75）
     "5b-TC-24": "pytest:tests/unit/test_gm_commands.py",         # 执行层二次检查
     "5b-TC-25": "pytest:tests/unit/test_audit_store.py",         # audit_log 追加写
     "5b-TC-26": "pytest:tests/unit/test_audit_store.py",         # 不可删
     "5b-TC-27": "pytest:tests/unit/test_audit_store.py",         # E1-E6 分类
     "5b-TC-28": "pytest:tests/unit/test_audit_store.py",         # 轮转
     "5b-TC-29": "pytest:tests/unit/test_gm_commands.py",         # GM 默认授予集
-    "5b-TC-30": "DELAYED:G11 解封（未接线）",
+    "5b-TC-30": "pytest:tests/unit/test_batch75_gm_ops.py",      # G11 解封（批75）
     "5b-TC-31": "pytest:tests/unit/test_permission_store.py",    # 机主初始写入
     "5b-TC-32": "pytest:tests/unit/test_permission_store.py",    # per-command 下授
     "5b-TC-33": "pytest:tests/unit/test_gm_commands_extra.py",   # 无后端降级不崩
@@ -126,22 +127,32 @@ def t_coverage_self_consistent() -> bool:
 # 脚本断言（直接 import 验证，不依赖 pytest）
 # ---------------------------------------------------------------------------
 def t_gm_commands_wired() -> bool:
-    """GM 指令集含 3A 接线的 4 条（备份/恢复/存档导出/封禁列表）。"""
+    """GM 指令集含 3A 接线 4 条 + 批75 运维 5 条（备份/恢复/导出/封禁列表/运维 5 条）。"""
     from qbot_rpg.commands.gm_commands import (
-        GM_CMD_BACKUP, GM_CMD_BANLIST, GM_CMD_EXPORT, GM_CMD_RESTORE,
-        GM_COMMANDS, GM_COMMAND_INDEX, _HANDLERS,
+        GM_CMD_BACKUP, GM_CMD_BANLIST, GM_CMD_BROADCAST, GM_CMD_DEBUG,
+        GM_CMD_EXPORT, GM_CMD_PLAYER_QUERY, GM_CMD_RESTORE, GM_CMD_TEST,
+        GM_CMD_UNBAN, GM_COMMANDS, GM_COMMAND_INDEX, _HANDLERS,
     )
     need = {GM_CMD_BACKUP, GM_CMD_RESTORE, GM_CMD_EXPORT, GM_CMD_BANLIST}
-    if not need <= GM_COMMANDS:
-        print(f"  FAIL GM_COMMANDS 缺 3A 指令：{need - GM_COMMANDS}")
+    need75 = {GM_CMD_DEBUG, GM_CMD_TEST, GM_CMD_BROADCAST,
+              GM_CMD_PLAYER_QUERY, GM_CMD_UNBAN}
+    need_all = need | need75
+    if not need_all <= GM_COMMANDS:
+        print(f"  FAIL GM_COMMANDS 缺指令：{need_all - GM_COMMANDS}")
         return False
-    if not need <= set(_HANDLERS):
-        print("  FAIL _HANDLERS 缺 3A 处理器")
+    if not need_all <= set(_HANDLERS):
+        print(f"  FAIL _HANDLERS 缺处理器：{need_all - set(_HANDLERS)}")
         return False
     if GM_COMMAND_INDEX[GM_CMD_BACKUP] != "G2":
         print("  FAIL GM_COMMAND_INDEX 备份 != G2")
         return False
-    print("  PASS GM 9 条清单（3A 4 条接线 + 索引）")
+    for cmd, idx in ((GM_CMD_DEBUG, "G5"), (GM_CMD_TEST, "G6"),
+                     (GM_CMD_BROADCAST, "G7"), (GM_CMD_PLAYER_QUERY, "G9"),
+                     (GM_CMD_UNBAN, "G11")):
+        if GM_COMMAND_INDEX.get(cmd) != idx:
+            print(f"  FAIL GM_COMMAND_INDEX {cmd} != {idx}")
+            return False
+    print("  PASS GM 13 条清单（3A 4 条 + 批75 运维 5 条接线 + 索引）")
     return True
 
 

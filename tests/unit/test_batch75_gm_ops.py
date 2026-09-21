@@ -440,4 +440,98 @@ def test_g9_mask_and_ago_pure() -> None:
     assert humanize_ago(None, "bad", "2026-09-23T12:00:00Z") == "未知"
 
 
+# =============================================================================
+# /解封 G11：与 /封禁 /封禁列表 成对
+# =============================================================================
+
+class _FakeBanStore:
+    """封禁名单鸭子存储（unban(qq) -> bool；True=确有并移除）。"""
+
+    def __init__(self, banned: set) -> None:
+        self.banned = set(banned)
+
+    def is_banned(self, qq: str) -> bool:
+        return str(qq) in self.banned
+
+    def unban(self, qq: str) -> bool:
+        qq = str(qq)
+        if qq in self.banned:
+            self.banned.discard(qq)
+            return True
+        return False
+
+
+def test_g11_constants_and_registry() -> None:
+    """/解封 G11 = GM 默认授予集（与 /封禁 同档）。"""
+    from qbot_rpg.commands.gm_commands import GM_CMD_UNBAN, GM_DEFAULT_GRANT
+
+    assert GM_CMD_UNBAN in GM_COMMANDS
+    assert GM_COMMAND_INDEX[GM_CMD_UNBAN] == "G11"
+    assert GM_COMMAND_LEVEL[GM_CMD_UNBAN] == ROLE_MANAGER
+    assert GM_CMD_UNBAN in GM_DEFAULT_GRANT
+    assert GM_CMD_UNBAN in DEFAULT_WHITELIST
+    assert GM_CMD_UNBAN in DEFAULT_GM_COMMANDS
+    assert gc._HANDLERS[GM_CMD_UNBAN] is gc.cmd_gm_unban
+    assert _parsed("/解封 123456789").command == GM_CMD_UNBAN
+
+
+def test_g11_manager_default_grant() -> None:
+    """GM（manager）默认授予集即可解封（无需下授）。"""
+    gm = GmUser("10002", role=ROLE_MANAGER)
+    res = check_gm_permission(gm, "解封")
+    assert res.ok and not res.granted
+
+
+def test_g11_unban_success() -> None:
+    """在名单 → 解封成功 + 名单确实移除 + 审计 success（target_qq 留痕）。"""
+    from qbot_rpg.commands.gm_commands import GM_CMD_UNBAN
+
+    store = _FakeBanStore({"123456789"})
+    ctx = _ctx(ROLE_ADMIN, backend=GmBackend(), ban_store=store)
+    r = handle_gm_command(_parsed("/解封 123456789"), ctx)
+    assert r.ok, r
+    assert "已解封 123456789" in r.message
+    assert store.banned == set()
+    assert _last(ctx)["command"] == GM_CMD_UNBAN
+    assert _last(ctx)["result"] == "success"
+    assert _last(ctx)["target_qq"] == "123456789"
+
+
+def test_g11_not_in_list_error_template() -> None:
+    """不在名单 → 错误模板（含 /封禁列表 指引）+ 审计 failed + 名单不变。"""
+    from qbot_rpg.commands.gm_commands import GM_CMD_UNBAN
+
+    store = _FakeBanStore(set())
+    ctx = _ctx(ROLE_ADMIN, backend=GmBackend(), ban_store=store)
+    r = handle_gm_command(_parsed("/解封 123456789"), ctx)
+    assert not r.ok and not r.silent
+    assert "不在封禁名单" in r.message and "/封禁列表" in r.message
+    assert store.banned == set()
+    assert _last(ctx)["command"] == GM_CMD_UNBAN
+    assert _last(ctx)["result"] == "failed"
+    assert _last(ctx)["target_qq"] == "123456789"
+
+
+def test_g11_invalid_and_missing_args() -> None:
+    """QQ 非纯数字 / 缺参 → TPL-12（不触后端）。"""
+    store = _FakeBanStore({"123456789"})
+    ctx = _ctx(ROLE_ADMIN, backend=GmBackend(), ban_store=store)
+    for raw in ("/解封 abc", "/解封"):
+        r = handle_gm_command(_parsed(raw), ctx)
+        assert not r.ok and "指令不正确" in r.message, raw
+    assert store.banned == {"123456789"}
+
+
+def test_g11_player_silent_and_no_backend() -> None:
+    """普通玩家静默零审计；机主 + 无后端 → 降级 failed（不解封）。"""
+    store = _FakeBanStore({"123456789"})
+    ctx_p = _ctx(ROLE_PLAYER, backend=GmBackend(), ban_store=store)
+    rp = handle_gm_command(_parsed("/解封 123456789"), ctx_p)
+    assert rp.silent and ctx_p["audit_log"] == [] and store.banned == {"123456789"}
+    ctx_o = _ctx(ROLE_ADMIN, backend=None, ban_store=store)
+    ro = handle_gm_command(_parsed("/解封 123456789"), ctx_o)
+    assert not ro.ok and _last(ctx_o)["result"] == "failed"
+
+
+
 

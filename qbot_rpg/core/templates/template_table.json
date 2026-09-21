@@ -943,6 +943,8 @@
     "gm_ago_minute": "{count} 分钟前",
     "gm_ago_hour": "{count} 小时前",
     "gm_ago_day": "{count} 天前",
-    "gm_ago_unknown": "未知"
+    "gm_ago_unknown": "未知",
+    "gm_unban_done": "已解封 {qq}",
+    "gm_unban_not_found": "该玩家不在封禁名单\n可发 /封禁列表 确认"
   }
 }

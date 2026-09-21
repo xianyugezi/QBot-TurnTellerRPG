@@ -135,6 +135,7 @@ __all__ = [
     "GM_CMD_TEST",
     "GM_CMD_BROADCAST",
     "GM_CMD_PLAYER_QUERY",
+    "GM_CMD_UNBAN",
     "GM_COMMANDS", "GM_COMMAND_LEVEL", "GM_COMMAND_INDEX", "GM_DEFAULT_GRANT",
     "GM_PREFIX_REQUIRED",
     # 权限三级（admin/manager/player ↔ 机主/GM/普通玩家）
@@ -150,6 +151,7 @@ __all__ = [
     "cmd_gm_test",
     "cmd_gm_broadcast",
     "cmd_gm_player_query",
+    "cmd_gm_unban",
     "handle_gm_command",
     # GM 后端引擎（WIR-07/08：/重载 真实后端 + /备份 /恢复 已声明未接线）
     "GmBackend", "backup_content", "restore_content",
@@ -182,6 +184,7 @@ from qbot_rpg.data.gm_constants import (
     GM_CMD_TEST,
     GM_CMD_BROADCAST,
     GM_CMD_PLAYER_QUERY,
+    GM_CMD_UNBAN,
     GM_COMMANDS,
     GM_COMMAND_INDEX,
     GM_PREFIX_REQUIRED,
@@ -220,6 +223,8 @@ GM_COMMAND_LEVEL: Mapping[str, str] = {
     GM_CMD_TEST: ROLE_ADMIN,
     GM_CMD_BROADCAST: ROLE_ADMIN,
     GM_CMD_PLAYER_QUERY: ROLE_ADMIN,
+    # 批75 · GM 运维：G11 解封 = GM（默认授予集，与 /封禁 G10 同档）
+    GM_CMD_UNBAN: ROLE_MANAGER,
 }
 
 # 默认授予集（5b §1.1.1 裁决：默认授予集 = 全部指令表标注 GM 的指令）；
@@ -775,6 +780,26 @@ class GmBackend:
             "last_active": humanize_ago(ctx, data.get("last_active_at"), ctx_map.get("now")),
             "banned": banned,
         }}
+
+    def unban_player(self, qq: Any, ctx: Any = None) -> dict:
+        """/解封 后端（5b G11）：从封禁名单移除目标 QQ（与 /封禁 G10 同一存储）。
+
+        封禁名单经 ctx["ban_store"] 注入（鸭子接口：unban(qq) -> bool，True=确有并
+        移除 / False=不在名单）；未装配 → {ok: False, message: 人话}（降级不崩）。
+        未在名单 → {ok: False, not_found: True}（指令层转错误模板，非静默）。
+        """
+        ctx_map = ctx if isinstance(ctx, Mapping) else {}
+        store = ctx_map.get("ban_store")
+        unban = getattr(store, "unban", None) if store is not None else None
+        if not callable(unban):
+            return {"ok": False, "message": "封禁名单未装配（/解封 需装配层注入 ban_store）"}
+        try:
+            removed = bool(unban(str(qq)))
+        except Exception as exc:  # noqa: BLE001 - 解封异常降级不崩
+            return {"ok": False, "message": f"解封失败：{exc}"}
+        if not removed:
+            return {"ok": False, "not_found": True, "message": "该玩家不在封禁名单"}
+        return {"ok": True, "message": f"已解封 {qq}"}
 
     # `editor_link`（5b G13 /编辑）批30（2026-09-16）删除：旧编辑器已删、editor_url 已清空，
     # 该后端接口只剩空壳（登记表 X9）。5b 契约 G13 条目同步删除。
@@ -1409,6 +1434,52 @@ def cmd_gm_player_query(parsed: Any, ctx: MutableMapping[str, Any],
                               parsed=parsed, params=qq, target_qq=qq, message=body)
 
 
+def cmd_gm_unban(parsed: Any, ctx: MutableMapping[str, Any],
+                 perm: GmPermResult) -> GmResult:
+    """/解封 <QQ号>（5b G11，权限 GM=默认授予集）：移除封禁 + 解封确认。
+
+    QQ 纯数字校验；未在名单 → 领域错误模板（含 /封禁列表 指引，非静默）；成功 →
+    解封确认正文 + 审计 E4（target_qq 全号留痕，与 /封禁 G10 成对闭环）。缺参/超参/
+    非数字 → TPL-12。
+    """
+    args = list(getattr(parsed, "args", None) or [])
+    if not args:
+        return _record_and_return(ctx, command=GM_CMD_UNBAN, result="failed",
+                                  detail="缺参：/解封 <QQ号>", parsed=parsed)
+    if len(args) > 1:
+        return _record_and_return(ctx, command=GM_CMD_UNBAN, result="failed",
+                                  detail="超参：/解封 <QQ号>", parsed=parsed)
+    qq = str(args[0])
+    if not qq.isdigit():
+        return _record_and_return(ctx, command=GM_CMD_UNBAN, result="failed",
+                                  detail="QQ 号必须为纯数字", parsed=parsed, params=qq,
+                                  target_qq=qq)
+    fn = _safe_backend(ctx, "unban_player")
+    if fn is None:
+        return _record_and_return(ctx, command=GM_CMD_UNBAN, result="failed",
+                                  detail="GM 后端未装配（/解封 需装配层注入 gm_backend）",
+                                  parsed=parsed, params=qq, target_qq=qq)
+    try:
+        res = fn(qq, ctx) or {}
+    except Exception as exc:  # noqa: BLE001 - 解封异常降级不崩
+        return _record_and_return(ctx, command=GM_CMD_UNBAN, result="failed",
+                                  detail=f"解封失败：{exc}", parsed=parsed, params=qq,
+                                  target_qq=qq)
+    if not res.get("ok"):
+        if res.get("not_found"):
+            body = _tpl_of(ctx, "gm_unban_not_found", {})
+            return _record_and_return(ctx, command=GM_CMD_UNBAN, result="failed",
+                                      detail=f"{qq} 不在封禁名单", parsed=parsed,
+                                      params=qq, target_qq=qq, message=body)
+        return _record_and_return(ctx, command=GM_CMD_UNBAN, result="failed",
+                                  detail=str(res.get("message") or "解封失败"),
+                                  parsed=parsed, params=qq, target_qq=qq)
+    body = _tpl_of(ctx, "gm_unban_done", {"qq": qq})
+    return _record_and_return(ctx, command=GM_CMD_UNBAN, result="success",
+                              detail=f"已解封 {qq}", parsed=parsed, params=qq,
+                              target_qq=qq, message=body)
+
+
 _HANDLERS: Mapping[str, Callable[..., GmResult]] = {
     GM_CMD_RELOAD: cmd_gm_reload,
     GM_CMD_BAN: cmd_gm_ban,
@@ -1424,6 +1495,7 @@ _HANDLERS: Mapping[str, Callable[..., GmResult]] = {
     GM_CMD_TEST: cmd_gm_test,
     GM_CMD_BROADCAST: cmd_gm_broadcast,
     GM_CMD_PLAYER_QUERY: cmd_gm_player_query,
+    GM_CMD_UNBAN: cmd_gm_unban,
 }
 
 

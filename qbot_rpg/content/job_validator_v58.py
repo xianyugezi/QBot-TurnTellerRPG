@@ -111,6 +111,12 @@ KEY_DERIVE_ONLY: str = "derive_only"
 # 链侧挂点字段键（§1.6 #39 job_scope；登记位在 6a 收口，P-1）
 KEY_JOB_SCOPE: str = "job_scope"
 
+# 批79 · X18 进阶继承 mode/replace 键与取值域（jobs.inherit 子字段）
+KEY_INHERIT: str = "inherit"
+KEY_INHERIT_MODE: str = "mode"
+KEY_INHERIT_REPLACE: str = "replace"
+INHERIT_MODES: Tuple[str, ...] = ("append", "replace")
+
 # #23 duration 两枚举（§1.3 #23：turns=回合制持续（配 turns）/ battle=整场不还原）
 # V8 battle+revert 矛盾判定键（契约 V4 [L332] + ADR D-04 [L58]）
 V8_DURATION: str = "battle"
@@ -496,13 +502,63 @@ def _check_v7_dead_config(
 # =====================================================================================
 
 
+def _check_v9_inherit_mode_replace(
+    report: object,
+    base: str,
+    jid: str,
+    entry: Mapping[str, object],
+    skills_ids: Optional[Set[str]],
+) -> None:
+    """V9（批79 · X18）：`jobs.inherit.mode` / `jobs.inherit.replace` 专项校验。
+
+    判定（与用户 2026-09-23 裁决一致）：
+      · `inherit.mode` 为**未知字符串** → 黄提示 Y-23（不硬拦；引擎按 append 安全默认）。
+        非字符串由泛型 R-1（field_meta type=str）红拦，这里不重复；
+      · `inherit.replace` 存在且为对象时：键/值须各为**存在的 skills id**——
+        悬空 → 红拦 R-4（rule=replace_ref_missing，detail 带 role=key|value）；
+        键/值非字符串 → 红拦 R-1；`replace` 非对象由泛型 R-1 红拦（这里跳过）。
+      · 缺 `inherit` / 缺 mode / 缺 replace → 不产生任何红黄（既有数据零变化）。
+    """
+    inherit = entry.get(KEY_INHERIT)
+    if not isinstance(inherit, Mapping):
+        return  # 缺省合法 / 非对象由泛型 R-1 红拦
+    mode = inherit.get(KEY_INHERIT_MODE)
+    if isinstance(mode, str) and mode not in INHERIT_MODES:
+        _warn(report, f"{base}.inherit.mode", "Y-23", rule="inherit_mode_unknown",
+              node_id=jid, value=mode, allowed=list(INHERIT_MODES),
+              msg=(
+                  f"inherit.mode 取值 {mode!r} 未登记（仅 append/replace；"
+                  "按 append 处理，不阻断）"
+              ))
+    replace = inherit.get(KEY_INHERIT_REPLACE)
+    if replace is None or not isinstance(replace, Mapping):
+        return  # 缺省 = 等价 append；非对象 → 泛型 R-1
+    ids = skills_ids if isinstance(skills_ids, set) else set()
+    for src, dst in replace.items():
+        for role, ref in (("key", src), ("value", dst)):
+            if not isinstance(ref, str) or not ref:
+                _err(report, f"{base}.inherit.replace.{role}", "R-1",
+                     rule="replace_not_str", node_id=jid, role=role,
+                     got=type(ref).__name__,
+                     msg=f"inherit.replace 的{role}需技能 id 字符串（V9）")
+                continue
+            if ref not in ids:
+                _err(report, f"{base}.inherit.replace", "R-4",
+                     rule="replace_ref_missing", node_id=jid, role=role,
+                     ref=ref, ref_target="skill",
+                     msg=(
+                         f"inherit.replace 的{role} {ref!r} 不在 skills 表"
+                         "（V9：替换技能 id 两侧都须存在）"
+                     ))
+
+
 def _check_job_entry(
     report: object,
     entry: object,
     idx: int,
     ctx: Mapping[str, object],
 ) -> None:
-    """单条职业条目校验（V5 / V6 / V8 全量；V7 为库级单独跑）。"""
+    """单条职业条目校验（V5 / V6 / V8 / V9 全量；V7 为库级单独跑）。"""
     base = f"[{idx}]"
     if not isinstance(entry, Mapping):
         _err(report, base, "R-5", rule="job_not_object",
@@ -521,6 +577,8 @@ def _check_job_entry(
     _check_v5_transform_refs(report, base, sid, entry, skills_ids_set, forms_set)
     _check_v6_derive_chains(report, base, sid, entry, chains_ids_set, chains_map)
     _check_v8_battle_revert(report, base, sid, entry)
+    # 批79 · X18：inherit.mode 未知 → 黄提示；inherit.replace 悬空技能 id → 红拦
+    _check_v9_inherit_mode_replace(report, base, sid, entry, skills_ids_set)
 
 
 def validate_jobs_v58(modules: Mapping[str, object], report: object) -> None:
@@ -533,7 +591,7 @@ def validate_jobs_v58(modules: Mapping[str, object], report: object) -> None:
       report:  收集器（_err/_warn 三形态兼容：_Checker / dict
                {"errors":[],"warnings":[]} / list）。
     出参: 无（红拦全部经 report 收集，红拦由 loader 聚合拒绝加载；
-          V5~V8 全红拦，本路无黄提示）。
+          V5~V8 全红拦；批79 V9 另有 mode 未知黄提示 Y-23）。
 
     实现要点（V5~V8 后半段，主 agent 收口时并入 job_validator.py）：
       - V5 技能挂点引用（红拦）：transform.transform_skill / skill_set →
@@ -547,6 +605,9 @@ def validate_jobs_v58(modules: Mapping[str, object], report: object) -> None:
         _check_dead_config 模式；挂点字段缺登记宽松放行 P-1，库级单跑）。
       - V8 battle+revert 红拦（红拦）：transform.duration == "battle" 且
         transform.revert is True → 红拦（ADR D-04）。
+      - V9 进阶继承 mode/replace（批79 · X18）：inherit.mode 未知字符串 →
+        黄提示 Y-23（不阻断，引擎按 append）；inherit.replace 的键/值须为
+        存在的 skills id，悬空 → 红拦 R-4（role=key|value），非字符串 → R-1。
     """
     data = modules.get("jobs")
     if data is None:
@@ -601,6 +662,10 @@ __all__ = [
     "KEY_REVERT_FORM",
     "KEY_DERIVE_ONLY",
     "KEY_JOB_SCOPE",
+    "KEY_INHERIT",
+    "KEY_INHERIT_MODE",
+    "KEY_INHERIT_REPLACE",
+    "INHERIT_MODES",
     "V8_DURATION",
     "EFFECT_REF_KEY",
     "EFFECT_ATOMIC_KEY",

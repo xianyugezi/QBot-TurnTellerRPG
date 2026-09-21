@@ -317,7 +317,14 @@ DEFAULT_PACKS = ("veinborn", "test_demo")
 #   statuses 登记 `stance` 字段 + veinborn 6 条 stance=air 声明；marks 登记 `role` 字段 +
 #   veinborn sword_flow role=combo_counter 声明。
 #   详见 tests/unit/test_editor_pack_field_meta_migration.py 头注。
-DEFAULT_BASELINE_REF = "07293ee"
+# 批75（2026-09-23 GM 运维 5 指令）重定：07293ee → 47f443f（本批模板末提交）。
+#   原因 = 本批**有意**变更（非迁移回归），删除项 = 0，全部为纯新增：
+#   模板表 +16 键（gm_debug_status / gm_test_pass|fail / gm_broadcast_done|too_long|
+#   schedule_gap / gm_player_query(_not_found|_banned|_clean) / gm_ago_now|minute|hour|day|
+#   unknown / gm_unban_done|not_found）→ templates 计数 885→901；
+#   无 label/help/group/module_labels/module_tree 变动；无字段/键删除。
+#   对拍实证：删除项 = 0；重定后基线树与当前树逐字段 diff=0。
+DEFAULT_BASELINE_REF = "47f443f"
 
 
 def _env(root: Path) -> dict:

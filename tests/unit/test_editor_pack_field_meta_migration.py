@@ -219,7 +219,15 @@ SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
 #     `"role":"combo_counter"` → `detail/marks.fields[role]` 新增、`blocks.默认[@more]` 4→5。
 #   无 label/help/group/module_labels/module_tree 严格键删除；无字段/键删除。
 #   对拍实证：删除项 = 0；重定后基线树与当前树逐字段 diff=0。
-BASELINE_REF = "07293ee"
+# 批75（2026-09-23 GM 运维 5 指令）重定：07293ee → 47f443f（本批模板末提交）。
+#   原因 = 本批**有意**变更（非迁移回归），删除项 = 0，全部为**纯新增**：
+#   · 模板全量表 +16 键（gm_debug_status / gm_test_pass|fail / gm_broadcast_done|too_long|
+#     schedule_gap / gm_player_query(_not_found|_banned|_clean) / gm_ago_now|minute|hour|
+#     day|unknown / gm_unban_done|not_found）→ templates 计数 885→901、index.total /
+#     模块声明 count 位移；
+#   · 无 label/help/group/module_labels/module_tree 严格键删除；无字段/键删除。
+#   对拍实证：删除项 = 0；重定后基线树与当前树逐字段 diff=0。
+BASELINE_REF = "47f443f"
 CONTENT = REPO / "content"
 
 

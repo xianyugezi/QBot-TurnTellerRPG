@@ -345,7 +345,13 @@ DEFAULT_PACKS = ("veinborn", "test_demo")
 #     + overlap_note 重写（模块声明，严格键**改值**，有意）；
 #   · formula `stats_collector` 三字段 help 由「【未实现】」改为已实现说明（严格键**改值**，有意）。
 #   对拍实证：删除项 = 0；重定后基线树与当前树逐字段 diff=0。
-DEFAULT_BASELINE_REF = "c7b5b25"
+# 批79（2026-09-23 X18 职业继承 mode）重定：c7b5b25 → fffbcab（本批**字段面变更**提交）。
+#   原因 = 本批**有意**变更（非迁移回归），删除项 = 0，全部为**纯新增**：
+#   · jobs `inherit` 子字段 +2（`mode` / `replace`；`replace` 派生控件 kvtable 属呈现层 soft）
+#     → 字段计数 / index.total / 模块声明 count 位移（计数位移 = 硬差异，故须重定基线）；
+#   · 无既有 label/help/group/module_labels/module_tree 改值；无字段/键删除。
+#   对拍实证：删除项 = 0；重定后基线树与当前树逐字段 diff=0。
+DEFAULT_BASELINE_REF = "fffbcab"
 
 
 def _env(root: Path) -> dict:

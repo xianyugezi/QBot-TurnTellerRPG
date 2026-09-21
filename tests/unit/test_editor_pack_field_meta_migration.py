@@ -249,7 +249,13 @@ SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
 #     （严格键改值，有意）；
 #   · formula `stats_collector` 三字段 help 由「【未实现】」改为已实现说明（严格键改值，有意）。
 #   对拍实证（对旧基线 1d1fa91）：删除项 = 0；重定后基线树与当前树 diff=0。
-BASELINE_REF = "c7b5b25"
+# 批79（2026-09-23 X18 职业继承 mode）重定：c7b5b25 → fffbcab（本批**字段面变更**提交）。
+#   原因 = 本批**有意**变更（非迁移回归），删除项 = 0，全部为**纯新增**：
+#   · jobs `inherit` 子字段 +2（`mode` select+enum_options / `replace` kvtable；
+#     `control` 属派生展示键，新增记 soft）→ 字段计数 / index.total 位移（硬差异，须重定）；
+#   · 无 label/help/group/module_labels/module_tree 删除或改值；无字段/键删除。
+#   对拍实证（对旧基线 c7b5b25）：删除项 = 0；重定后基线树与当前树 diff=0。
+BASELINE_REF = "fffbcab"
 CONTENT = REPO / "content"
 
 

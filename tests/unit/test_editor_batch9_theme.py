@@ -452,7 +452,7 @@ def test_frontend_theme_wiring_is_live_and_keeps_draft() -> None:
 
 def test_footer_batch_string_is_current() -> None:
     html = _html()
-    assert "批75 · GM 运维指令" in html
+    assert "批77 · 引擎文案迁表" in html
     assert "批49 · 测试 flake 根治" not in html
     assert "批13.1 · 段入口" not in html
     assert "批11 · 内容包导出/导入" not in html

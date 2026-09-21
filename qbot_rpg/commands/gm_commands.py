@@ -278,8 +278,8 @@ AGO_MINUTE_SECONDS: int = 60
 AGO_HOUR_SECONDS: int = 3600
 AGO_DAY_SECONDS: int = 86400
 
-# 空日志文案（纯文本无装饰 emoji）
-_EMPTY_LOG: str = "（暂无系统日志）"
+# 空日志文案：批77 · X6 迁表 → 复用既有表键 `log_sys_empty`（与 /日志 同源，内容包可覆盖；
+# 原 `_EMPTY_LOG = "（暂无系统日志）"` 常量删除，唯一消费点 = render_log_page）。
 
 # 审计 HMAC 参与字段（5b §4.2 audit_ts_hmac 校验值；不含 hmac 本身防自证）
 AUDIT_HMAC_FIELDS: tuple = (
@@ -1025,7 +1025,7 @@ def cmd_gm_log(parsed: Any, ctx: MutableMapping[str, Any],
                                   detail="页码非法（0/负数/非数字）", parsed=parsed)
     assert res.page is not None
     # 传原始页码 → render_list_page_text 内部裁决② 夹取最后一页 +「已到最后一页」提示
-    body = render_log_page(events, page, command=GM_CMD_LOG)
+    body = render_log_page(events, page, command=GM_CMD_LOG, ctx=ctx)
     # 日志查询本身也写审计（5b §2：所有 GM 指令成败皆写）
     detail = f"系统日志 {count} 条窗口 第 {res.page}/{res.total_pages} 页" \
         if res.total_pages > 1 else f"系统日志 {count} 条窗口"
@@ -1522,16 +1522,17 @@ def render_log_line(record: Mapping[str, Any]) -> str:
 
 def render_log_page(events: List[Mapping[str, Any]], page: int, *,
                     command: str = GM_CMD_LOG,
-                    per_page: int = LOG_PAGE_SIZE) -> str:
+                    per_page: int = LOG_PAGE_SIZE,
+                    ctx: Optional[Mapping[str, Any]] = None) -> str:
     """/日志 列表正文（5b G8 + m4 §2.2 + 裁决②）：
 
     - 事件行 5 条/页横切；页码超总页数 → 夹取最后一页 + LAST_PAGE_HINT（裁决②）；
-    - TPL-08 页脚（render_footer，禁止自造页脚）；空日志 → 空文案；
+    - TPL-08 页脚（render_footer，禁止自造页脚）；空日志 → 空文案（表键 `log_sys_empty`，批77 迁表）；
     - 页码非法（0/负数/非数字）由调用方经 resolve_page 判定转 TPL-12（裁决②）。
     """
     items = [render_log_line(e) for e in events]
     if not items:
-        return _EMPTY_LOG
+        return _tpl_of(ctx, "log_sys_empty")
     return render_list_page_text(items, page, command, per_page=per_page)
 
 

@@ -351,8 +351,8 @@
 | G-2 | **`check_m7_content.py` 缺省只查一个包** | 缺省 `content/demo_lv15`（`scripts/check_m7_content.py:21`），`check_all.py:134` 默认也只跑该缺省，**并未遍历全部内容包** | 多包项目要显式 `--path`，否则"可达性/条件键/占位符"三类问题漏检 |
 | G-3 | **门禁命令的"唯一权威清单"分散** | `docs/检查工具指南.md`（工具清单）、`docs/细化/细化_M6_质量门禁.md`（LNT/COV/CI）、`scripts/check_all.py`（调度）、`scripts/run_all_tests.py`（阶段）各自维护一份 | 以 `scripts/check_all.py` 为准；文档清单可能与它对不上 |
 | G-4 | **三个脚本只有 docstring 自述依据** | `scripts/check_m8_fixtures.py`、`check_template_width.py`、`verify_ctb.py` 在 `docs/检查工具指南.md:28-35` 的工具清单里**未被登记** | 不是失效，只是缺文档条目；不要因为"清单里没有"就删脚本 |
-| G-5 | **文档与实现不一致（覆盖率目录）** | `docs/细化/细化_M6_质量门禁.md:73` 写"`core + engine + content` 三目录各 ≥80%"，但 `qbot_rpg/engine/` 已撤销并入 `core/`；实现侧 `scripts/run_all_tests.py:117` 明确"收敛为 core + content 两目录" | 文档未同步。以脚本为准："core + content 各 ≥80%" |
-| G-6 | **分层/目录名旧文档未同步** | `docs/审查参考/RPG回合制框架设计文档.md:48-76` 与 `docs/审查参考/开发规则文档.md:36-48` 仍写旧目录 `engine/`、`state/`、`editor/`、`utils/`；实际落点见 `docs/细化/细化_3a_架构分层契约.md:42`（D-01） | 实际分层以 `scripts/check_architecture.py:31-47` 的依赖矩阵为准 |
+| G-5 | **文档与实现不一致（覆盖率目录）** | `docs/细化/细化_M6_质量门禁.md:73` 写"`core + engine + content` 三目录各 ≥80%"，但 `qbot_rpg/engine/` 已撤销并入 `core/`；实现侧 `scripts/run_all_tests.py:117` 明确"收敛为 core + content 两目录" | ✅ **已修（批81，文档侧）**：口径表 / COV-02·03·04·06 / TC-COV-* / §六 D5 已同步为"core + content 各 ≥80%"，并在档首加批81 同步说明；`engine/` 行保留为历史盘点并标注已撤销。代码未动（以脚本为准） |
+| G-6 | **分层/目录名旧文档未同步** | `docs/审查参考/RPG回合制框架设计文档.md:48-76` 与 `docs/审查参考/开发规则文档.md:36-48` 仍写旧目录 `engine/`、`state/`、`editor/`、`utils/`；实际落点见 `docs/细化/细化_3a_架构分层契约.md:42`（D-01） | ✅ **已修（批81，文档侧）**：两份文档的目录树/模块表已改为 `qbot_rpg/{commands,core,world,storage,content,data,web}`（+ `assembly/`），并加批81 同步说明；实际分层以 `scripts/check_architecture.py:31-47` 的依赖矩阵为准，代码未动 |
 | G-7 | **批 71 引用的两份依据文档在仓库内不存在** | `CHANGELOG.md:66` 引用 `批71_包专属残留_改造方案.md` 与 `框架体检报告.md`，`find`/`ls docs/` 均未找到；"未完成：71-A2…与 71-B1/B2/B3"的收尾状态仅存于 `CHANGELOG.md:87-88` | 两份原始裁决在仓外 `/root/deliverables/`。**写"legacy 兜底勿删"时必须引 §3.5 D1**，不要引不存在的那份 |
 
 ---
@@ -616,7 +616,7 @@
 | BUG-2 | **`damage_base` / `heal_rate` 死兼容键** | `qbot_rpg/content/field_meta.py:1440`（`damage_base`）/ `:1444`（`heal_rate`），批74 裁决注释 `:1426-1438`；审计3 D8（审计原文引 `:1381-1391`，批74 前为 `:1424-1436`——**行号漂移本批顺带登记**） | ✅ **裁定：保留（批74）**（见 §3.6 T9）——查证：JS 侧零硬编码（表单按 `FieldMeta` 动态渲染）、8 个既有包公式实带、测试正面锁定、属兼容承诺；**删除三条件**见 `field_meta.py:1426-1438` / 手册 §六 |
 | BUG-3 | **`data/status.py::StatusInstance` 死表示** | 审计3 F6；`scripts/check_architecture.py:49-51`（TC-04 `REQUIRED_TYPES`）；批74 裁决注释 `qbot_rpg/data/status.py:16-24` | ✅ **裁定：保留（批74）**（见 §3.6 T7）——`check_tc04` 对「未定义」直接 `exit 1`，删它会碰架构门禁；属契约 spec 类型，删除须先做「双轨收敛」评审 + 同步门禁，**不是死码清理** |
 | BUG-4 | **`forge.decompose_rate` 死键** | 批 70 已删除（`CHANGELOG.md:99-102`；`qbot_rpg/content/forge_settings.py:30-31` 记载删除） | ✅ **已修**（批 70）；唯一源 = `settings.alchemy.decompose_rate` |
-| BUG-5 | **文档与实现不一致（覆盖率目录、旧分层名）** | §2.3 G-5/G-6 | **未修**（文档侧）；代码以脚本为准 |
+| BUG-5 | **文档与实现不一致（覆盖率目录、旧分层名）** | §2.3 G-5/G-6 | ✅ **已修（批81，文档侧）**：G-5 覆盖率 → core + content 两目录；G-6 旧分层名 → 实际 `qbot_rpg/{commands,core,world,storage,content,data,web}`；代码以脚本为准，未动代码逻辑（见 §2.3 G-5/G-6 行 + 手册 §六） |
 | BUG-6 | **批 71 两份依据文档缺失** | §2.3 G-7；`CHANGELOG.md:66` | **仓外存在**（`/root/deliverables/`）；建议回填仓库，否则 CHANGELOG 悬空 |
 
 ### 3.7.2 判定原则（写进本章，供后人复用）

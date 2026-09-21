@@ -46,34 +46,39 @@
 ## 2. 系统架构
 
 ### 2.1 分层
+
+> **批81 同步（G-6 · 旧分层名，2026-09-23）**：本节原写 `commands.py / engine/ / state/ / content/ / editor/`（【框架】L1564-1598 第 14 章旧目录）。实际落点已按《细化_3a_架构分层契约》D-01 收敛为平台无关包 `qbot_rpg/{commands,core,world,storage,content,data,web}`；**实际分层以 `scripts/check_architecture.py:31-47` 的依赖矩阵为准**（`engine/`→`core/`、`state/`→`data/`+`world/`+`storage/`、`editor/`→`web/`、`utils/render.py`→`core/message_format/`）。下方框图/表已按落点同步。
+
 ```
 ┌─────────────────────────────────────────────┐
-│ 指令层 commands.py      /指令路由/权限/解析   │
+│ 指令层 qbot_rpg/commands/   /指令路由/权限/解析│
 ├─────────────────────────────────────────────┤
-│ 引擎层 engine/          battle/levelup/      │
-│                         inventory/equipment/ │
-│                         worldtime（时间系统） │
+│ 核心层 qbot_rpg/core/       battle/levelup/  │
+│                             inventory/equipment/ │
+│                             worldtime（时间系统） │
+│                             message_format/（渲染）│
 ├─────────────────────────────────────────────┤
-│ 状态层 state/           角色/存档（自动保存）  │
+│ 数据/世界/存档 qbot_rpg/data/ world/ storage/ │
+│                             角色/存档（自动保存）│
 ├─────────────────────────────────────────────┤
-│ 内容层 content/         加载/校验/热重载      │
+│ 内容层 qbot_rpg/content/    加载/校验/热重载   │
 ├─────────────────────────────────────────────┤
-│ 编辑器 editor/          Web 可视化编辑器      │
-│  （插件内嵌，随插件启动，直接读写 content/）  │
+│ 编辑器 qbot_rpg/web/        Web 可视化编辑器   │
+│  （独立子进程，随插件启动，直接读写 content/）  │
 └─────────────────────────────────────────────┘
 ```
 
 ### 2.2 模块职责
 | 模块 | 职责 |
 |---|---|
-| engine/battle.py | **1v1 回合状态机**（玩家行动+怪物反击一轮一条消息） |
-| engine/levelup.py | 成长（曲线内容包配置） |
-| engine/inventory.py | 背包/物品使用（**局内使用道具不消耗回合**） |
-| engine/equipment.py | 部位系统（定义/占用/互斥/数量校验） |
-| engine/worldtime.py | 现实时间驱动：怪物刷新间隔/出没时段 |
-| content/loader.py + validator.py | 内容包加载/校验/热重载 |
-| editor/web/ | 可视化编辑器（固定视口 UI） |
-| state/storage.py | SQLite 自动保存（碎片化续玩） |
+| qbot_rpg/core/battle.py | **1v1 战斗引擎**（玩家行动+怪物行动） |
+| qbot_rpg/core/levelup.py | 成长（曲线内容包配置） |
+| qbot_rpg/core/inventory.py | 背包/物品使用 |
+| qbot_rpg/core/equipment.py | 部位系统（定义/占用/互斥/数量校验） |
+| qbot_rpg/core/worldtime.py | 现实时间驱动：怪物刷新间隔/出没时段 |
+| qbot_rpg/content/loader.py + validator.py | 内容包加载/校验/热重载 |
+| qbot_rpg/web/ | 可视化编辑器（固定视口 UI） |
+| qbot_rpg/storage/ | SQLite 自动保存（碎片化续玩） |
 
 ---
 

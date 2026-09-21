@@ -14,6 +14,24 @@
 
 ### Added
 
+- **批79（2026-09-23）**：**X18 销项 · 职业继承 `inherit.mode`（替换/追加）**。
+  用户 2026-09-23 对 `docs/进阶职业继承_设计口径.md` §5 四问 Q1~Q4 拍板：①继承粒度**保持传递闭包**、
+  ②`skills` 白名单**保持**（空=全部）、③**新增 `mode`**（`append` 默认=现状 / `replace` 按映射替换）、
+  ④**技能等级继承不做**（另立设计）。**实现**：`qbot_rpg/core/job_slots.py` 新增
+  `INHERIT_MODE_KEY`/`INHERIT_REPLACE_KEY`/`INHERIT_MODES` 与 `_apply_inherit_replace`/
+  `_inherit_mode`/`_inherit_replace_map`——`inherit.replace = {母职技能id: 本职业技能id}`：
+  键命中继承集者移除、值（本职业替代技能）并入，**只影响继承来的技能**、未声明者照旧继承、
+  空/缺省 = 等价 append；`mode` 缺省/append/未知 → 结果与批35 **逐字段一致**（零行为变化）。
+  **校验**：`qbot_rpg/content/job_validator_v58.py` V9——`mode` 未知字符串 → **黄提示 Y-23**
+  （不硬拦），`replace` 键/值悬空 skills id → **红拦 R-4**（`role=key|value`），非对象/非字符串 →
+  泛型/V9 红拦 R-1。**字段**：`inherit.mode`（`type=str`+`editor=select`+`enum_options`）与
+  `inherit.replace`（`type=obj`+`editor=kvtable`）登记进 `field_meta.py` 与 `job_models.py` 两表，
+  中文名/说明齐备（≤60 字）。**文档**：`docs/矛盾与待裁决登记.md` X18 销项（§B 清零）、
+  《进阶职业继承_设计口径》§5 回填 Q1~Q4、新增 `docs/职业继承mode批79_实现口径.md`。
+  **页脚批次串** →「批79 · 职业继承 mode」（`web/static/index.html` + 全部批次串断言同步）；
+  迁移对拍基线重定。回归 `tests/unit/test_batch79_inherit_mode.py` **17 passed**。
+  验收：全量 `pytest tests/ -q -o addopts=""` 0 failed；`ruff` 干净；换包验收
+  `scripts/editor_verify_packs.py` 全 PASS；`git status --porcelain` 空。
 - **批78（2026-09-24）**：**U4 伤害构成统计聚合 + `dummy_log`；X3 slots 归口提示纠正**。
   **① U4（定稿《战斗数值层设计定稿》§八）**：新增 `qbot_rpg/core/damage_stats.py`——
   `formula.json` `stats_collector` 段归一（`enabled`/`dummy_log_size`/`dummy_realtime`，可配不写死）、

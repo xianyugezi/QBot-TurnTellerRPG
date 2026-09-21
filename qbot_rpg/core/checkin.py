@@ -68,6 +68,9 @@ from typing import Any, List, Mapping, MutableMapping, MutableSet, Optional
 
 from qbot_rpg.core.dayroll import WINDOW_OPEN, is_window_open, today_of
 from qbot_rpg.core.reward import dispatch_reward
+# 批77 · X6 引擎文案迁表：引擎侧渲染串统一走全量表（tpl_of），内容包可覆盖同键；
+# 文案逐字保持（零行为变化），见 docs/消息模板重构/02_遗留登记.md §A #1。
+from qbot_rpg.core.templates import tpl_of
 
 __all__ = [
     "DEFAULT_CYCLE_DAYS",
@@ -726,7 +729,7 @@ def _settle_table(table: Mapping, today: str, ctx: MutableMapping[str, Any]) -> 
             granted.extend(rw["granted"])
             skipped.extend(rw["skipped"])
             if fallback is not None:
-                notes.append(f"第 {fallback} 天未配置，已按第 1 天奖励补全")
+                notes.append(tpl_of(ctx, "checkin_notes_day_fallback", {"day": fallback}))
         # ③ streak 里程碑（恰好命中 days 阈值 → 额外发奖；每连签段至多一次，工程补白 4）
         for m in _milestones(table, "streak"):
             d = _as_int(m.get("days"))
@@ -776,7 +779,7 @@ def _settle_table(table: Mapping, today: str, ctx: MutableMapping[str, Any]) -> 
         _restore(ctx, snap)
         base.update({
             "failed": True, "reason": exc.reason,
-            "message": "❌ 该表结算失败，已回滚",
+            "message": tpl_of(ctx, "checkin_settle_failed"),
             "streak": _as_int(node.get("streak")) if isinstance(node, Mapping) else 0,
             "today_signed": 0, "granted": [], "skipped": [], "notes": [],
             "daily_granted": [], "daily_skipped": [], "streak_hits": [], "month_hits": [],
@@ -805,13 +808,16 @@ def _grant_label(grant: Mapping, ctx: Optional[Mapping[str, Any]] = None) -> str
     """
     typ = grant.get("type")
     if typ == "item":
-        return f"{_item_name(ctx, grant.get('item'))}×{grant.get('count')}"
+        return tpl_of(ctx, "checkin_grant_item",
+                      {"item": _item_name(ctx, grant.get("item")), "count": grant.get("count")})
     if typ == "currency":
-        return f"{_currency_name(ctx, grant.get('currency'))}×{grant.get('amount')}"
+        return tpl_of(ctx, "checkin_grant_currency",
+                      {"currency": _currency_name(ctx, grant.get("currency")),
+                       "amount": grant.get("amount")})
     if typ == "exp":
-        return f"经验×{grant.get('amount')}"
+        return tpl_of(ctx, "checkin_grant_exp", {"amount": grant.get("amount")})
     if typ == "rep":
-        return f"声望×{grant.get('amount')}"
+        return tpl_of(ctx, "checkin_grant_rep", {"amount": grant.get("amount")})
     return str(grant)
 
 
@@ -847,34 +853,42 @@ def _summary_lines(results: List[dict], today: str,
     """汇总单条消息（定稿 L25/L210 防刷屏：一次 /签到 汇总所有生效表单条消息输出；2.4 模板口径）。
     纯文本渲染（3d D-01：去除 ┌─📅 表框 / ⚠ 装饰 emoji——审查_M4实现_批次2_jspace.md 后续衔接提醒
     L221；指令层仍按 tables 重建正文，本 message 仅作引擎侧兜底/测试口径）。"""
-    lines = ["签到汇总"]
+    lines = [tpl_of(ctx, "checkin_summary_header")]
     for r in results:
         if not r.get("active", True):
             continue
-        lines.append(f"═══ {r.get('name')}（{_TYPE_CN.get(r.get('type'), r.get('type'))}）═══")
+        lines.append(tpl_of(ctx, "checkin_summary_section", {
+            "name": r.get("name"),
+            "type": _TYPE_CN.get(r.get("type"), r.get("type")),
+        }))
         if r.get("already_signed"):
-            lines.append("今天已签到（不重复发奖）")
+            lines.append(tpl_of(ctx, "checkin_already_signed_row"))
             pc, pt = r.get("progress_current"), r.get("progress_total")
-            lines.append(f"连签天数：{r.get('streak', 0)} 天 ｜ 进度 {pc}/{pt}")
+            lines.append(tpl_of(ctx, "checkin_summary_progress", {
+                "streak": r.get("streak", 0), "cur": pc, "total": pt}))
             continue
         if r.get("failed"):
-            lines.append(r.get("message", "结算失败，已回滚"))
+            lines.append(r.get("message", tpl_of(ctx, "checkin_summary_fail")))
             continue
         daily = r.get("daily_granted") or []
         if daily:
-            lines.append("今日奖励：" + "、".join(_grant_label(g, ctx) for g in daily[:4]))
+            lines.append(tpl_of(ctx, "checkin_daily_reward", {
+                "grants": "、".join(_grant_label(g, ctx) for g in daily[:4])}))
         else:
-            lines.append("今日奖励：无")
+            lines.append(tpl_of(ctx, "checkin_summary_daily_none"))
         for n in r.get("notes") or []:
             lines.append(str(n))
         pc, pt = r.get("progress_current"), r.get("progress_total")
-        lines.append(f"连签天数：{r.get('streak', 0)} 天 ｜ 进度 {pc}/{pt}")
+        lines.append(tpl_of(ctx, "checkin_summary_progress", {
+            "streak": r.get("streak", 0), "cur": pc, "total": pt}))
         for h in r.get("streak_hits") or []:
             labs = "、".join(_grant_label(g, ctx) for g in h["granted"][:4])
-            lines.append(f"[连签里程碑达成] {labs}（连签 {h['days']} 天）")
+            lines.append(tpl_of(ctx, "checkin_summary_streak_hit",
+                                {"grants": labs, "days": h["days"]}))
         for h in r.get("month_hits") or []:
             labs = "、".join(_grant_label(g, ctx) for g in h["granted"][:4])
-            lines.append(f"[月度累计达成] {labs}（本月签满 {h['days']} 天）")
+            lines.append(tpl_of(ctx, "checkin_summary_month_hit",
+                                {"grants": labs, "days": h["days"]}))
     return lines
 
 
@@ -886,11 +900,11 @@ def checkin_do(ctx: MutableMapping[str, Any]) -> dict:
     同日重复 → 幂等「今天已签到」不重复发奖（D-02 仍附进度）；version 幂等（tx_id/ledger）。
     """
     if not isinstance(ctx, MutableMapping):
-        return {"ok": False, "reason": "invalid_ctx", "message": "❌ 结算上下文非法"}
+        return {"ok": False, "reason": "invalid_ctx", "message": tpl_of(ctx, "checkin_engine_invalid_ctx")}
     if _idempotent_hit(ctx):
         st = checkin_state(ctx)
         return {"ok": True, "idempotent": True, "already_signed": True,
-                "message": "今天已签到（重复指令，未重复发放）",
+                "message": tpl_of(ctx, "checkin_engine_do_idempotent"),
                 "today": st["today"], "tables": st["tables"]}
     t = today_of(None, _now(ctx), _cfg(ctx))
     today = t["today"]
@@ -929,26 +943,28 @@ def checkin_makeup(ctx: MutableMapping[str, Any], table_id: Optional[str] = None
     makeup_used +1；**不补发所补日期 daily 奖励、不触发任何里程碑**；longline 只增不减。
     """
     if not isinstance(ctx, MutableMapping):
-        return {"ok": False, "reason": "invalid_ctx", "message": "❌ 结算上下文非法"}
+        return {"ok": False, "reason": "invalid_ctx", "message": tpl_of(ctx, "checkin_engine_invalid_ctx")}
     if _idempotent_hit(ctx):
         return {"ok": True, "idempotent": True,
-                "message": "已补签（重复指令，未重复扣费）"}
+                "message": tpl_of(ctx, "checkin_makeup_idempotent")}
     t = today_of(None, _now(ctx), _cfg(ctx))
     today = t["today"]
 
     if table_id is None:
         table_id = _primary_table_id(ctx)      # 缺省目标表 = 主表 loop（裁决⑧ 口径）
     if table_id is None:
-        return {"ok": False, "reason": "no_table", "message": "❌ 未配置签到表"}
+        return {"ok": False, "reason": "no_table", "message": tpl_of(ctx, "checkin_no_config_table")}
     table = resolve_checkin_table(ctx, table_id)
     if table is None:
-        return {"ok": False, "reason": "no_table", "message": "❌ 签到表不存在"}
+        return {"ok": False, "reason": "no_table", "message": tpl_of(ctx, "checkin_table_missing")}
     if not table_active(table, _now(ctx)):
-        return {"ok": False, "reason": "table_inactive", "message": "❌ 该签到表当前未生效",
+        return {"ok": False, "reason": "table_inactive",
+                "message": tpl_of(ctx, "checkin_table_inactive"),
                 "table_id": table_id}
     makeup = table.get("makeup")
     if not isinstance(makeup, Mapping) or makeup.get("enabled") is not True:
-        return {"ok": False, "reason": "makeup_disabled", "message": "❌ 当前未开启补签",
+        return {"ok": False, "reason": "makeup_disabled",
+                "message": tpl_of(ctx, "checkin_makeup_disabled"),
                 "table_id": table_id}
 
     node = _peek_state(ctx, table_id)          # 守卫期只读，不落档（工程补白 5）
@@ -958,7 +974,7 @@ def checkin_makeup(ctx: MutableMapping[str, Any], table_id: Optional[str] = None
     if today in sd:
         # 同日幂等（D-03 / TC-24）：今日已签或已补 → 不重复扣费、makeup_used 不 +1
         return {"ok": True, "idempotent": True, "already_signed": True,
-                "message": "今日已补过/已签到，无需重复补签", "table_id": table_id,
+                "message": tpl_of(ctx, "checkin_makeup_already"), "table_id": table_id,
                 "streak": _as_int(node.get("streak")) if isinstance(node, Mapping) else 0,
                 "month_days": len(sd),
                 "makeup_used": _monthly_makeup_used(node, today)}
@@ -969,7 +985,8 @@ def checkin_makeup(ctx: MutableMapping[str, Any], table_id: Optional[str] = None
     used = _monthly_makeup_used(node, today)
     if max_per_month > 0 and used >= max_per_month:
         return {"ok": False, "reason": "makeup_limit",
-                "message": f"❌ 本月补签已达上限 {max_per_month} 次", "table_id": table_id,
+                "message": tpl_of(ctx, "checkin_makeup_limit", {"max": max_per_month}),
+                "table_id": table_id,
                 "makeup_used": used, "max_per_month": max_per_month}
 
     snap = _snapshot(ctx)
@@ -988,7 +1005,7 @@ def checkin_makeup(ctx: MutableMapping[str, Any], table_id: Optional[str] = None
             if shortage:
                 _restore(ctx, snap)
                 return {"ok": False, "reason": "insufficient_currency",
-                        "message": "❌ 货币不足，补签失败", "table_id": table_id,
+                        "message": tpl_of(ctx, "checkin_makeup_insufficient"), "table_id": table_id,
                         "detail": shortage}
             _deduct_currency(ctx, cost)
             channel = "currency"
@@ -1017,13 +1034,13 @@ def checkin_makeup(ctx: MutableMapping[str, Any], table_id: Optional[str] = None
         _restore(ctx, snap)
         if exc.reason == "no_payment_channel":
             return {"ok": False, "reason": "no_payment_channel",
-                    "message": "❌ 补签需要补签卡或货币，当前无可用通道", "table_id": table_id}
-        return {"ok": False, "reason": exc.reason, "message": "❌ 补签失败，已回滚",
+                    "message": tpl_of(ctx, "checkin_makeup_no_channel"), "table_id": table_id}
+        return {"ok": False, "reason": exc.reason, "message": tpl_of(ctx, "checkin_makeup_rollback"),
                 "table_id": table_id}
 
     checkin_condition_ctx(ctx)          # 刷新三键投影
     _mark_idempotent(ctx)
     return {"ok": True, "channel": channel, "table_id": table_id,
-            "message": "✅ 补签成功（" + channel + "）· 只计不补发",
+            "message": tpl_of(ctx, "checkin_makeup_ok", {"channel": channel}),
             "streak": _as_int(node.get("streak")), "month_days": len(sd),
             "makeup_used": _as_int(node.get("makeup_used")), "max_per_month": max_per_month}

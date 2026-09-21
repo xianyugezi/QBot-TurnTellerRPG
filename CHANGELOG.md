@@ -34,7 +34,30 @@
   「批75 · GM 运维指令」（本批不改 UI；门禁 `test_editor_batch21` / `test_editor_batch33`
   断言页脚 == 批75，故 **不动 index.html**）。验收：全量 pytest **9067 passed / 0 failed / 10 skipped**；
   `git status --porcelain` 空。
-
+- **批77（2026-09-21）**：**X6 引擎/跨模块渲染文案迁表专批**（`docs/消息模板重构/02_遗留登记.md`
+  §A #1/#2；`docs/矛盾与待裁决登记.md` §A X6 销项）。
+  **① 迁表 · `core/checkin.py` 引擎侧 22 键**：累签/里程碑/补签族/结算失败/漏配兜底/汇总块逐字
+  迁入全量表（`checkin_engine_invalid_ctx`、`checkin_engine_do_idempotent`、`checkin_makeup_idempotent`、
+  `checkin_no_config_table`、`checkin_table_missing`、`checkin_table_inactive`、`checkin_makeup_disabled`、
+  `checkin_makeup_already`、`checkin_makeup_limit`、`checkin_makeup_insufficient`、`checkin_makeup_no_channel`、
+  `checkin_makeup_rollback`、`checkin_makeup_ok`、`checkin_settle_failed`、`checkin_notes_day_fallback`、
+  `checkin_summary_header`、`checkin_summary_section`、`checkin_summary_progress`、`checkin_summary_fail`、
+  `checkin_summary_daily_none`、`checkin_summary_streak_hit`、`checkin_summary_month_hit`）；
+  另**复用同文字段** `checkin_grant_item|currency|exp|rep`、`checkin_already_signed_row`、
+  `checkin_daily_reward`。引擎全部改走 `tpl_of(ctx, …)` → 内容包可覆盖。
+  **② 迁表 · `gm_commands._EMPTY_LOG`**：常量删除 → `render_log_page(..., ctx=None)` 复用既有表键
+  `log_sys_empty`（与 `/日志` 同源）；`render_log_line` 族按规范 §三 L50（GM/管理类可保留 `/`）+
+  §一.3 登记**豁免**。§A #3/#4/#5/#6 复核：`format_tpl12` 已走 `err_bad_command`、尾行 Tip 已收口、
+  world reason/数据标签按豁免口径。
+  **③ 零行为变化对拍**：14 组场景探针（`checkin_do` 首签/幂等/非法 ctx、补签 8 分支、`_summary_lines`
+  全分支、`_grant_label` 五类）迁表前/后输出 **diff 为空**；新增回归
+  `tests/unit/test_batch77_engine_template_migration.py`（6 条）。
+  **④ 宽度**：11 键超 28 半角按既有「逐字保真」口径登记 `meta.prose_keys`（对齐批71 先例），
+  `scripts/check_template_width.py` **FAIL 0 / WARN 14**（冻结集未改）；新增占位符名 `channel`。
+  **⑤ 登记不动手**：全仓引擎硬编码 `❌/✅` 玩可见串 ≈288 处转「引擎文案专项·第三批」。
+  **文档同步**：`02_遗留登记.md`「批77 专批」节 + §A 逐项状态；`矛盾与待裁决登记.md` X6 销项
+  （汇总：已裁决 20 / 待实测 1）；新增收口报告 `docs/消息模板重构/批77_引擎文案迁表_收口报告.md`。
+  页脚批次串 →「批77 · 引擎文案迁表」（`web/static/index.html` + 16 个批次串断言测试同步）。
 - **批75（2026-09-23）**：**GM 运维 5 指令落地**（`docs/指令清单_全量.md` G 节 +
   `docs/细化/细化_5b_GM指令契约.md` §2.1 G5/G6/G7/G9/G11 + X11 唯一真缺口）。
   5b 契约 13 条（G1~G12+G14）至此**全部接线**；权限门/审计码沿用既有，未新增事件码。

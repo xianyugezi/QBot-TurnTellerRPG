@@ -521,7 +521,7 @@ def test_checkin_tpl_placeholder_whitelist_coverage():
     )
     pat = re.compile(r"\{([a-zA-Z0-9_]+)\}")
     keys = [k for k in _ALL_TPL if k.startswith("checkin_")]
-    assert len(keys) == 23  # 批2·路E：23 键全部迁全量表
+    assert len(keys) == 45  # 批2·路E：23 键迁全量表；批77·X6：+22 引擎侧渲染串迁表
     for key in keys:
         used = set(pat.findall(str(_ALL_TPL[key])))
         assert used <= _WH.get(key, set()), f"{key}: 占位符 {used} 超出白名单"

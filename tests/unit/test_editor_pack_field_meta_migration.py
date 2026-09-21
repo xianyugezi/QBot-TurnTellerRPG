@@ -227,7 +227,21 @@ SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
 #     模块声明 count 位移；
 #   · 无 label/help/group/module_labels/module_tree 严格键删除；无字段/键删除。
 #   对拍实证：删除项 = 0；重定后基线树与当前树逐字段 diff=0。
-BASELINE_REF = "47f443f"
+# 批77（2026-09-21 引擎文案迁表）重定：47f443f → 1d1fa91（本批模板末提交）。
+#   原因 = 本批**有意**变更（非迁移回归），删除项 = 0（输出无「仅迁移前有」），20 条硬差异
+#   全部为**纯新增 + 派生计数位移**：
+#   · 模板全量表 +22 键（checkin_engine_invalid_ctx / checkin_engine_do_idempotent /
+#     checkin_makeup_idempotent / checkin_no_config_table / checkin_table_missing /
+#     checkin_table_inactive / checkin_makeup_disabled / checkin_makeup_already /
+#     checkin_makeup_limit / checkin_makeup_insufficient / checkin_makeup_no_channel /
+#     checkin_makeup_rollback / checkin_makeup_ok / checkin_settle_failed /
+#     checkin_notes_day_fallback / checkin_summary_header / checkin_summary_section /
+#     checkin_summary_progress / checkin_summary_fail / checkin_summary_daily_none /
+#     checkin_summary_streak_hit / checkin_summary_month_hit）→ templates 计数 902→924、
+#     index.total / 模块声明 count 位移；
+#   · 无 label/help/group/module_labels/module_tree 严格键删除；无字段/键删除。
+#   对拍实证：删除项 = 0；重定后基线树与当前树逐字段 diff=0。
+BASELINE_REF = "1d1fa91"
 CONTENT = REPO / "content"
 
 

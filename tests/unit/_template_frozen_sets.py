@@ -25,6 +25,7 @@ from __future__ import annotations
 # 批44 · 投入暴击：新增 crit（deep_craft_crit_gain 模板键，暴击倍率）。
 # 批62 · 装备淬炼指令壳 `/淬炼`：新增 stat（属性中文名/键，temper_* 模板键）。
 # 批71 · F1 · 开战拦截文案迁表：新增 weak_left（battle_lock_weak_block 剩余虚弱秒数）。
+# 批77 · X6 · 引擎文案迁表：新增 channel（checkin_makeup_ok 补签通道 card/currency）。
 FROZEN_PLACEHOLDERS = frozenset("""
 a action actor affix aid amount amt ann assistant atk attacker attr attr_name b base blocks bonus
 boss brief budget candidates cap card caught chain change child cmd cn cnt coin_text coins_have
@@ -45,7 +46,7 @@ skill skill_name slot slots source sp spot spot_name src state status statuses s
 streak successes summary tail target tasks temp text th tier time title title_id tname to total
 total_pages traits traits_max traits_used ts turn turns turns_suffix type unit units usage used
 v val value var weak weak_left weather when which word world fixed floor free grade kinds min qlevel
-crit stat
+crit stat channel
 """.split())
 
 # 允许的宽度 WARN（key, 行号, 估算半角宽）——超出即新增 WARN，门禁失败。

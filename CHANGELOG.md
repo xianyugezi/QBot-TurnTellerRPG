@@ -14,6 +14,25 @@
 
 ### Added
 
+- **批78（2026-09-24）**：**U4 伤害构成统计聚合 + `dummy_log`；X3 slots 归口提示纠正**。
+  **① U4（定稿《战斗数值层设计定稿》§八）**：新增 `qbot_rpg/core/damage_stats.py`——
+  `formula.json` `stats_collector` 段归一（`enabled`/`dummy_log_size`/`dummy_realtime`，可配不写死）、
+  per-action 按来源聚合（总伤害/占比降序/物理·元素通道占比/最大连段/会心·格挡次数）、
+  `dummy_log` 环形缓冲（最新在前，最近 N 次，0=关）。接线：`core/battle.py` per-action 记录
+  enabled 时补 `name`/`penetrate`（定稿 §8.1 schema），`stats_summary()` 在既有收集器下游聚合
+  （不回写快照、**数值口径零改动**）；`commands/battle_commands.py` 木桩战后注入
+  `ctx["battle_summary"]` → 既有 `render_battle_end`/BREP-25 明细块，`dummy_realtime` 行动末一行
+  累计摘要；`commands/dummy_commands.py` `/木桩 记录` 分页查询；新增模板键
+  `battle_stats_realtime`、`dummy_log_header/row/empty`（展示走模板表，无硬编码）。
+  **零行为变化**：`enabled=false` 时 per-action 记录字段集与批77 基线逐字段一致、不注入
+  summary、不写 `dummy_log`（测试内对拍断言）。**② X3**：`content/module_catalog.py` slots 条目
+  label/purpose 纠正为「珠插槽」、`overlap_note` 如实说明与 `settings.slot_defs`（EQP-04 部位表）
+  是**不同数据空间**及「改哪处/归口/不阻断」；既有 `overlap_with` 黄提示机制不变。
+  **③ 页脚批次串** →「批78 · 伤害统计与归口提示」（`web/static/index.html` + 16 个批次串断言同步）。
+  **待裁决登记**：U11（`enabled=false` 是否停既有收集，定稿 §8.4 vs 零行为变化）/ U12
+  （`dummy_realtime`「本回合」口径受 `seg` 语义偏差所限、普通战斗战后明细开关键名未定）。
+  验收：全量 pytest **0 failed**；双尺子（`scripts/batch45_measure.py` + `scripts/batch55_dual_ruler.py`，
+  种子 20260919）**斩回不变**；`git status --porcelain` 空。
 - **批76（2026-09-21）**：**《矛盾与待裁决登记》按 26→28 条重核结果重写（纯文档）**。
   依据 `对账清单_26条重核.md` 逐条重核结论：
   **销项 3 条**——**U9**（`/root/deliverables/U9_编辑器进阶能力_逐条核对.md` 769 行已交付，

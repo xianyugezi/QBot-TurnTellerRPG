@@ -23,7 +23,7 @@ from qbot_rpg.web import api, editor_ops
 
 REPO = Path(api.repo_root())
 HTML = REPO / "qbot_rpg" / "web" / "static" / "index.html"
-NEW_NOTE = "批77 · 引擎文案迁表"
+NEW_NOTE = "批78 · 伤害统计与归口提示"
 OLD_NOTE = "批68 · 新手上路打磨"
 
 

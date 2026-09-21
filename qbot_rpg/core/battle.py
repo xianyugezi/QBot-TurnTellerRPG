@@ -1083,28 +1083,40 @@ class BattleEngine:
         }
         self._snap.setdefault("action_record", []).append(entry)
         if damage.get("final", 0) >= 0:
-            self._snap.setdefault("stats_collector", {}).setdefault("per_action", []).append({
+            rec = {
                 "source": atype,
-                # 批78 · U4：展示名（定稿 §8.2 示例「火球术/普攻」= 展示名而非 id）；
-                # 聚合层 name 优先、缺省回落 source（纯新增键，旧读方零影响）。
-                "name": (name or atype),
                 "seg": len(self._snap["action_record"]),
                 "ch_phys": damage.get("ch_phys", 0),
                 "ch_elem": damage.get("ch_elem", 0),
                 "crit": rating.get("crit", "low"),
                 "blocked": bool(rating.get("blocked", False)),
                 "pierce": rating.get("pierce", 0.0),
-                # 批78 · U4：定稿 §8.1 L325 schema 补全 `penetrate`。引擎当前无该量
-                # 生产点（effects_link.pierce_cap 未实装，穿透走 `pierce`）→ 恒 0.0，
-                # 只为 schema 完整；绝不臆造数值（见 docs/矛盾与待裁决登记）。
-                "penetrate": rating.get("penetrate", 0.0),
                 "weak_type": rating.get("weak_type", 1.0),   # G3（定稿 §8.1 L326）：类型弱点倍率
                 "weak_elem": rating.get("weak_elem", 1.0),   # G3（定稿 §8.1 L327）：元素弱点倍率
                 "final": damage.get("final", 0),
-            })
+            }
+            # 批78 · U4：新增键只在 enabled 时写入——关闭时 per_action 记录与批77 基线
+            # 逐字段一致（「不启用零变化」对拍面），开启时才带展示名/schema 补全键。
+            if self._stats_enabled():
+                # 展示名（定稿 §8.2 示例「火球术/普攻」= 展示名而非 id）；聚合层 name 优先。
+                rec["name"] = (name or atype)
+                # 定稿 §8.1 L325 schema 补全 `penetrate`。引擎当前无该量生产点
+                # （effects_link.pierce_cap 未实装，穿透走 `pierce`）→ 恒 0.0，只为
+                # schema 完整；绝不臆造数值（见 docs/矛盾与待裁决登记）。
+                rec["penetrate"] = rating.get("penetrate", 0.0)
+            self._snap.setdefault("stats_collector", {}).setdefault(
+                "per_action", []).append(rec)
         return self._seq
 
     # ------------------------- 伤害构成统计（批78 · U4） -------------------------
+
+    def _stats_enabled(self) -> bool:
+        """stats_collector.enabled（缺省 true；坏配置回落 true = 既有收集不动）。"""
+        cfg = getattr(self, "_stats_cfg", None)
+        if not isinstance(cfg, Mapping):
+            return True
+        v = cfg.get("enabled", True)
+        return bool(v) if isinstance(v, bool) else True
 
     def stats_collector_cfg(self) -> Dict[str, Any]:
         """stats_collector 配置副本（定稿 §8.4；供指令壳层读 enabled/size/realtime）。"""

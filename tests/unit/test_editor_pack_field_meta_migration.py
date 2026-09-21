@@ -241,7 +241,15 @@ SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
 #     index.total / 模块声明 count 位移；
 #   · 无 label/help/group/module_labels/module_tree 严格键删除；无字段/键删除。
 #   对拍实证：删除项 = 0；重定后基线树与当前树逐字段 diff=0。
-BASELINE_REF = "1d1fa91"
+# 批78（2026-09-24 U4 伤害统计 + X3 slots 归口）重定：1d1fa91 → c7b5b25（本批面变更末提交）。
+#   原因 = 本批**有意**变更（非迁移回归），删除项 = 0：
+#   · 模板全量表 +4 键（battle_stats_realtime / dummy_log_header / dummy_log_row /
+#     dummy_log_empty）→ templates 计数 924→928、index.total / 模块声明 count 位移；
+#   · module_catalog `slots` label/purpose 纠正为「珠插槽…」+ overlap_note 重写
+#     （严格键改值，有意）；
+#   · formula `stats_collector` 三字段 help 由「【未实现】」改为已实现说明（严格键改值，有意）。
+#   对拍实证（对旧基线 1d1fa91）：删除项 = 0；重定后基线树与当前树 diff=0。
+BASELINE_REF = "c7b5b25"
 CONTENT = REPO / "content"
 
 

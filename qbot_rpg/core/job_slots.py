@@ -25,8 +25,9 @@
   6) resolve_inherit_chain(job_id, jobs_table)  批35 · §6.12-12 职业树继承解析
      ——沿 jobs.inherit.from 向上收集祖辈（传递闭包，环安全），纯函数确定性；
   7) inherited_skill_ids(job_id, jobs_table, skills)  按 inherit 链解析「继承
-     而来的技能 id」集（祖辈职业专属可见技能 + 目标职业 skills 白名单），
-     供 rearrange_job_slots 注入既有装配入口（只放宽技能位可见性）
+     而来的技能 id」集（祖辈职业专属可见技能 + 目标职业 skills 白名单 +
+     批79 `mode=replace` 的替换映射），供 rearrange_job_slots 注入既有装配入口
+     （只放宽技能位可见性）
 
 规则要点（契约逐条）：
   - 新职业技能组装配：assemble_slots 按新 job_id 过滤 job_restrict（§4.3-3
@@ -70,7 +71,10 @@
       可选白名单（空/缺省 = 继承祖辈全部**职业专属**技能，通用技能不算继承）。
       链解析 = 传递闭包（职业树 A→B→C 时 C 继承 B、A），环安全、悬空停链。
       继承**只放宽技能位可见性**，不碰属性成长（2026-09-09 拍板：职业成长跟随
-      职业）。单级/替换 mode/等级继承等未定项见 docs/进阶职业继承_设计口径.md §5。
+      职业）。P-7（批79 · X18 用户裁决）：`inherit.mode` 支持 "append"（缺省=现状，
+      母职+本职业累加）与 "replace"（按 `inherit.replace` 把继承来的指定技能换成
+      本职业技能；空/缺省 replace = 等价 append）；不实现技能等级继承（技能无等级
+      维度，另立设计）。口径回填见 docs/进阶职业继承_设计口径.md §5。
 
 铁律：零 NoneBot import（G0 门禁）；core 层只依赖 data（技能数据经 ctx 注入，
 零 import content）；纯函数确定性（同刻同参必同值）；完整类型标注（typing
@@ -97,6 +101,16 @@ REARRANGE_JOB_KEY: str = "job_slots"
 
 # 职业条目上的继承声明键（批35 · §6.12-12：jobs.inherit{from, skills}）
 INHERIT_KEY: str = "inherit"
+
+# 批79 · X18：inherit.mode（继承模式）与 inherit.replace（替换映射）。
+#   mode = "append"（缺省/未知）= 现状：母职继承技能 + 本职业自身技能**累加**；
+#   mode = "replace"             = 按 `replace` 把「继承来的指定技能」换成「本职业技能」。
+# 缺省/未知 mode 一律按 append（未知值由校验器黄提示，引擎侧取安全默认 → 零行为变化）。
+INHERIT_MODE_KEY: str = "mode"
+INHERIT_REPLACE_KEY: str = "replace"
+INHERIT_MODE_APPEND: str = "append"
+INHERIT_MODE_REPLACE: str = "replace"
+INHERIT_MODES: Tuple[str, ...] = (INHERIT_MODE_APPEND, INHERIT_MODE_REPLACE)
 
 
 # =====================================================================================
@@ -162,6 +176,11 @@ def inherited_skill_ids(
         通用技能（`job_restrict` 空）本就全职业可见，**不算继承**；
       · 目标职业 `inherit.skills` 白名单非空 → 只保留列出的 id（交集）；
       · 白名单空/缺省 → 继承祖辈全部职业专属技能；
+      · **批79 · X18 mode=replace**：对上一步得到的继承集套 `inherit.replace`
+        （`{母职技能id: 本职业技能id}`）——键命中继承集者从结果中移除，对应值
+        作为替代技能并入（去重；未声明的技能照旧继承）。键未落在继承集 → 该项
+        不生效（替换**只影响继承来的技能**）。`mode` 缺省/append/未知 → 结果与
+        批35 逐字段一致（零行为变化）。
       · 不读属性成长（2026-09-09 拍板：职业成长跟随职业，不保留旧成长）。
     """
     chain = resolve_inherit_chain(job_id, jobs_table)
@@ -185,7 +204,75 @@ def inherited_skill_ids(
             continue  # 白名单非空：只继承列出的技能
         out.append(sid)
         seen.add(sid)
+    return _apply_inherit_replace(job_id, jobs_table, tuple(out))
+
+
+def _apply_inherit_replace(
+    job_id: Optional[str],
+    jobs_table: Mapping[str, Any],
+    inherited: Tuple[str, ...],
+) -> Tuple[str, ...]:
+    """把 `inherit.replace` 套用到继承技能 id 元组（批79 · X18；纯函数，确定性）。
+
+    规则：
+      · `mode != "replace"` 或 `replace` 空/非 Mapping → 原样返回（逐字段零变化）；
+      · 键命中 `inherited` → 该继承技能从结果移除；
+      · 值（本职业替代技能 id）并入结果末尾（按 replace 声明顺序，去重）；
+      · 键不在 `inherited` → 忽略（替换只影响继承来的技能，不动其余继承技能、
+        也不动全局技能注册表）。
+    """
+    if _inherit_mode(job_id, jobs_table) != INHERIT_MODE_REPLACE:
+        return inherited
+    replace_map = _inherit_replace_map(job_id, jobs_table)
+    if not replace_map:
+        return inherited  # 空/缺省 replace = 等价 append
+    inherited_set = set(inherited)
+    base = [sid for sid in inherited if sid not in replace_map]
+    out = list(base)
+    seen = set(base)
+    for parent_sid, own_sid in replace_map.items():
+        if parent_sid not in inherited_set:
+            continue  # 未实际继承 → 不生效
+        if own_sid in seen:
+            continue
+        out.append(own_sid)
+        seen.add(own_sid)
     return tuple(out)
+
+
+def _inherit_mode(job_id: Optional[str], jobs_table: Mapping[str, Any]) -> str:
+    """目标职业 `inherit.mode`（非 "replace" → "append" 缺省；未知值引擎侧取安全默认）。"""
+    job = jobs_table.get(job_id) if isinstance(job_id, str) else None
+    if not isinstance(job, Mapping):
+        return INHERIT_MODE_APPEND
+    inherit = job.get(INHERIT_KEY)
+    if not isinstance(inherit, Mapping):
+        return INHERIT_MODE_APPEND
+    return INHERIT_MODE_REPLACE if inherit.get(INHERIT_MODE_KEY) == INHERIT_MODE_REPLACE \
+        else INHERIT_MODE_APPEND
+
+
+def _inherit_replace_map(
+    job_id: Optional[str], jobs_table: Mapping[str, Any]
+) -> Dict[str, str]:
+    """目标职业 `inherit.replace` 映射（{母职技能id: 本职业技能id}；非 Mapping → {}）。
+
+    只收「两侧均为非空字符串」的键值对（畸形项忽略，校验器 K-1/K-2 负责红拦）。
+    """
+    job = jobs_table.get(job_id) if isinstance(job_id, str) else None
+    if not isinstance(job, Mapping):
+        return {}
+    inherit = job.get(INHERIT_KEY)
+    if not isinstance(inherit, Mapping):
+        return {}
+    raw = inherit.get(INHERIT_REPLACE_KEY)
+    if not isinstance(raw, Mapping):
+        return {}
+    out: Dict[str, str] = {}
+    for src, dst in raw.items():
+        if isinstance(src, str) and src and isinstance(dst, str) and dst:
+            out[src] = dst
+    return out
 
 
 def _inherit_whitelist(
@@ -518,6 +605,11 @@ def _entries_to_raw(skills: Optional[Sequence[Any]]) -> List[Dict[str, Any]]:
 __all__ = [
     "REARRANGE_JOB_KEY",
     "INHERIT_KEY",
+    "INHERIT_MODE_KEY",
+    "INHERIT_REPLACE_KEY",
+    "INHERIT_MODE_APPEND",
+    "INHERIT_MODE_REPLACE",
+    "INHERIT_MODES",
     "snapshot_job_context",
     "resolve_inherit_chain",
     "inherited_skill_ids",

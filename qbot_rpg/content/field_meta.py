@@ -1386,15 +1386,20 @@ def _formula_sections() -> Dict[str, FieldMeta]:
                                           label="后手无目标处理"),
             "boss_end_immediate": FieldMeta(type="bool", label="BOSS 死亡立刻结束"),
         }),
-        # §八 伤害构成统计 / dummy_log（L366）
+        # §八 伤害构成统计 / dummy_log（L366）——批78 · U4 已实装（core/damage_stats.py
+        # 聚合 + 指令层木桩明细/dummy_log；per-action 收集为既有能力，开关只门控新增
+        # 聚合/展示/木桩记录 → 缺省 true 时逐字段零变化，口径差异见待裁决登记）。
         "stats_collector": FieldMeta(type="obj", label="伤害统计", children={
             "enabled": FieldMeta(type="bool", label="启用收集",
-                                 help="【未实现】引擎快照自带硬编码统计键（battle 层），"
-                                      "本配置段无读取点——开关不改变输出。"),
+                                 help="总开关：聚合/木桩明细/木桩记录；关闭只留既有"
+                                      " per-action 收集（不展示）。"),
             "dummy_log_size": FieldMeta(type="int", range_min=0, range_max=20,
-                                        label="木桩记录保留次数（0=关）", help=_UNIMPLEMENTED),
+                                        label="木桩记录保留次数（0=关）",
+                                        help="玩家存档环形缓冲保留最近 N 次木桩记录"
+                                             "（0=关，越界夹取 0-20）。"),
             "dummy_realtime": FieldMeta(type="bool", label="木桩实时摘要",
-                                        help=_UNIMPLEMENTED),
+                                        help="木桩战每次行动末追加一行累计摘要"
+                                             "（总伤害/最大单段/会心数）。"),
         }),
     }
 

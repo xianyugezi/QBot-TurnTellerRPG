@@ -80,6 +80,7 @@ CTB 变更（2026-09-10）：
 from __future__ import annotations
 
 import logging
+import time
 from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import Any, Callable, List, Mapping, MutableMapping, Optional, Sequence, Tuple, cast
@@ -104,6 +105,8 @@ from qbot_rpg.core.message_format.battle_render import (
 # 全量表（迁移期聚合入口）+ tpl_of：批4 路J 起 mock 目标面板/基础交互文案已入表，
 # 兼容导出常量改读聚合表（对齐 checkin/forge 已迁键口径）。
 from qbot_rpg.core.templates import DEFAULT_TEMPLATES as _ALL_TPL, tpl_of  # 消息模板配置化
+# 批78 · U4：伤害构成聚合展示 + dummy_log 环形缓冲（定稿 §八；纯函数读写，无副作用）。
+from qbot_rpg.core.damage_stats import append_dummy_log, build_dummy_log_record
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -231,6 +234,9 @@ class EnrichedTurnReport:
     enemy_air: bool = False                        # 怪物跃空（「怪物状态：跃空丨…」首项）
     enemy_broken_parts: Tuple[str, ...] = ()        # 已破坏部位中文名序列
     effect_events: Tuple[Mapping[str, Any], ...] = ()   # 本行动持续效果事件（DOT 生效/失效）
+    # 批78 · U4（定稿 §8.2 L346 木桩实时摘要）：木桩模式 dummy_realtime=true 时
+    # 一次玩家行动末追加的一行摘要；空串 = 不输出（缺省 → 渲染层零变化）。
+    stats_line: str = ""
 
 
 def enrich_round_report(
@@ -505,6 +511,7 @@ def _without_player_outcomes(report: EnrichedTurnReport, *,
         enemy_shield=report.enemy_shield, enemy_shield_turns=report.enemy_shield_turns,
         enemy_air=report.enemy_air, enemy_broken_parts=report.enemy_broken_parts,
         effect_events=report.effect_events,
+        stats_line=report.stats_line,      # 批78 · U4：实时摘要行随投影透传
     )
 
 
@@ -539,6 +546,7 @@ def _without_npc_outcomes(report: EnrichedTurnReport, *, suppress_prefix: bool =
         enemy_shield=report.enemy_shield, enemy_shield_turns=report.enemy_shield_turns,
         enemy_air=report.enemy_air, enemy_broken_parts=report.enemy_broken_parts,
         effect_events=report.effect_events,
+        stats_line=report.stats_line,      # 批78 · U4：实时摘要行随投影透传
         suppress_prefix=suppress_prefix,   # 末段合并进同一条消息 → 前缀只在最顶行
         defer_tail=defer_tail,             # 终局时尾提示改由结算消息末尾输出（置底）
     )
@@ -1120,6 +1128,12 @@ def dispatch_round(
             enemy_action_name=enemy_action_name,
             hud=battle_hud_payload(snap),      # 战斗 HUD v2 分项资源行取数
         )
+        # 批78 · U4（定稿 §8.2 L346）：木桩模式 dummy_realtime=true → 行动末一行
+        # 摘要（终局行动不出，结束消息出全量明细）。缺省 false → 不加行（零变化）。
+        if (not getattr(report, "ended", False)
+                and bool(_stats_cfg_of(engine).get("dummy_realtime", False))
+                and _is_dummy_engine(engine)):
+            enriched.stats_line = _realtime_stats_line(engine, ctx)
         player_outcome = _first_player_outcome(report)
         atype = str(getattr(player_outcome, "action_type", "") or "") if player_outcome else ""
 
@@ -1174,6 +1188,132 @@ def _hud_tail_line(ctx: Mapping[str, Any]) -> str:
     if not inner:
         return ""
     return str(tpl_of(ctx, "battle_hud_tail", {"tail": str(inner)}) or "")
+
+
+# ---------------------------------------------------------------------------
+# 批78 · U4（定稿 §八）：伤害构成聚合展示 + dummy_log（接线层；引擎只产 per-action）
+# ---------------------------------------------------------------------------
+
+def _stats_cfg_of(engine: Any) -> Mapping[str, Any]:
+    """引擎 stats_collector 配置（定稿 §8.4）；异常/旧引擎 → 缺省（enabled=true）。"""
+    try:
+        cfg = engine.stats_collector_cfg()
+    except Exception:  # noqa: BLE001 - 配置取数异常不阻断战斗收尾
+        return {"enabled": True, "dummy_log_size": 5, "dummy_realtime": False}
+    return cfg if isinstance(cfg, Mapping) else {}
+
+
+def _is_dummy_engine(engine: Any) -> bool:
+    """木桩战判定（M12.5；判定源 = 引擎既有 `_is_dummy_enemy_def`，不另立口径）。"""
+    try:
+        return bool(engine._is_dummy_enemy_def())
+    except Exception:  # noqa: BLE001 - 旧引擎/stub 无该判定 → 按普通战斗
+        return False
+
+
+def _ctx_persistent_state(ctx: Mapping[str, Any]) -> Optional[MutableMapping[str, Any]]:
+    """ctx 玩家 persistent_state 可写视图（dict 就地写；dataclass → asdict 回写）。
+
+    与 dummy_commands._player_ps 同口径（玩家档持久键 dummy_log）。写不进 → None
+    （不阻断结算）。
+    """
+    p = ctx.get("player")
+    if isinstance(p, MutableMapping):
+        ps = p.get("persistent_state")
+        if isinstance(ps, MutableMapping):
+            return ps
+        ps = {}
+        p["persistent_state"] = ps
+        return ps
+    if p is not None and hasattr(p, "persistent_state"):
+        try:
+            import dataclasses  # noqa: PLC0415
+
+            d = dataclasses.asdict(p)
+        except Exception:  # noqa: BLE001 - 非常规玩家对象 → 不写
+            return None
+        if isinstance(ctx, MutableMapping):
+            ctx["player"] = d
+        ps = d.get("persistent_state")
+        if isinstance(ps, MutableMapping):
+            return ps
+    return None
+
+
+def _realtime_stats_line(engine: Any, ctx: Mapping[str, Any]) -> str:
+    """木桩实时摘要行（定稿 §8.2 L346）：一行 = 总伤害/最大单段/会心次数。
+
+    数据源 = 引擎既有 per-action 聚合（`stats_summary`），**不含本回合增量拆分**——
+    per-action `seg` 现记录的是全局流水号（非连段段数），「本回合会心数」无法可靠
+    拆分；该口径差异登记待裁决，此处按累计值输出（模板 `battle_stats_realtime`）。
+    """
+    try:
+        summary = engine.stats_summary()
+    except Exception:  # noqa: BLE001 - 聚合异常 → 不输出实时行
+        return ""
+    if not summary or not summary.get("records"):
+        return ""
+    return str(tpl_of(ctx, "battle_stats_realtime", {
+        "total": int(summary.get("total", 0) or 0),
+        "max_hit": int(summary.get("max_hit", 0) or 0),
+        "crits": int(summary.get("crits", 0) or 0),
+    }) or "")
+
+
+def _battle_composition_summary(engine: Any, ctx: Mapping[str, Any]) -> Optional[dict]:
+    """木桩战后伤害构成摘要（定稿 §8.2 L344-350）。
+
+    enabled=true 且本场为木桩战 → 引擎聚合摘要（渲染层 render_battle_end 消费）；
+    普通战斗默认不展示（只收集），enabled=false → 不聚合不展示。异常 → None。
+    """
+    cfg = _stats_cfg_of(engine)
+    if not bool(cfg.get("enabled", True)):
+        return None
+    if not _is_dummy_engine(engine):
+        return None
+    try:
+        summary = engine.stats_summary()
+    except Exception:  # noqa: BLE001 - 聚合异常不阻断终局消息
+        return None
+    return summary if isinstance(summary, dict) else None
+
+
+def _record_dummy_log(
+    engine: Any,
+    ctx: Mapping[str, Any],
+    summary: Optional[Mapping[str, Any]],
+    e: Mapping[str, Any],
+    report: Any,
+) -> None:
+    """木桩战后写 dummy_log 环形缓冲（定稿 §8.3 L353-358）。
+
+    仅木桩战 + enabled=true + dummy_log_size>0 + 聚合非空时写；其余路径零操作
+    （普通战斗不写、关闭不写，逐字段零变化）。异常不外抛。
+    """
+    if summary is None or not _is_dummy_engine(engine):
+        return
+    cfg = _stats_cfg_of(engine)
+    if not bool(cfg.get("enabled", True)):
+        return
+    try:
+        size = int(cfg.get("dummy_log_size", 0) or 0)
+    except (TypeError, ValueError):
+        size = 0
+    if size <= 0:
+        return
+    ps = _ctx_persistent_state(ctx)
+    if ps is None:
+        return
+    try:
+        record = build_dummy_log_record(
+            summary,
+            at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            dummy_id=str(e.get("id") or e.get("name") or ""),
+            turns=int(getattr(report, "action_seq", 0) or 0),
+        )
+        append_dummy_log(ps, record, size)
+    except Exception:  # noqa: BLE001 - 木桩日志异常不阻断终局消息
+        _LOGGER.exception("dummy_log 写入失败（不阻断战斗结算）")
 
 
 def _dispatch_battle_end(
@@ -1241,6 +1381,15 @@ def _dispatch_battle_end(
         # 落点 = 战斗结束分支（1g 结算链，3h L232）奖励结算之后；只写 ctx 玩家档，
         # 不改引擎快照 → 战斗内数值零影响；enabled 非 true / 满血满蓝 → None（零行为变化）。
         recovery = _apply_post_battle_recovery(ctx, engine)
+    # 批78 · U4（定稿 §8.2 L344-350）：木桩战后伤害构成摘要（普通战斗默认 None →
+    # 只收集不展示）。既有 ctx["battle_summary"] 注入优先（兼容旧接线）。
+    summary = ctx.get("battle_summary")
+    if summary is None:
+        summary = _battle_composition_summary(engine, ctx)
+        if summary is not None and isinstance(ctx, MutableMapping):
+            ctx["battle_summary"] = summary
+    # 批78 · U4（定稿 §8.3）：木桩记录写档（仅木桩 + enabled + size>0；其余零操作）。
+    _record_dummy_log(engine, ctx, summary, e, report)
     # 叙事句伤害 = 本次最后一个玩家行动 outcome 的 final_damage（用户结算模板回顾最后一击）
     last_pd = 0
     for _oc in reversed(tuple(getattr(report, "outcomes", ()) or ())):
@@ -1251,7 +1400,7 @@ def _dispatch_battle_end(
         SimpleNamespace(),
         _enemy_ns(e, turn=int(getattr(report, "action_seq", 0) or 0)),
         winner,
-        summary=ctx.get("battle_summary"),
+        summary=summary,
         status=getattr(report, "status", None),
         exp=reward.get("exp", 0),
         gold=reward.get("gold", 0),

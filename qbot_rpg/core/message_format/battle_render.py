@@ -215,6 +215,11 @@ def render_battle_round(round_result: Any, *, ctx: Any = None) -> str:
         hint = _render_action_hint_from_report(round_result, ctx=ctx)
         if hint:
             lines.append(hint)
+        # 批78 · U4（定稿 §8.2 L346 木桩实时摘要）：dummy_realtime=true 时行动末一行
+        # 摘要；空串/缺省 → 不输出（既有渲染逐字节零变化）。
+        stats_line = str(getattr(round_result, "stats_line", "") or "")
+        if stats_line:
+            lines.append(stats_line)
 
         # 2026-09-09：空模板行统一过滤（miss 播报移除等——模板置空即行消失）
         lines = [ln for ln in lines if isinstance(ln, str) and ln.strip()]

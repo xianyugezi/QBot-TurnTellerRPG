@@ -42,6 +42,9 @@ from qbot_rpg.commands.battle_launch_commands import (
     _player_combatant,
 )
 from qbot_rpg.core.templates import tpl_of
+# 批78 · U4（定稿 §8.3）：dummy_log 读取 + 列表分页（5 条/页 + TPL-08 页脚）。
+from qbot_rpg.core.damage_stats import dummy_log_of
+from qbot_rpg.core.message_format.list_render import page_items, render_footer, resolve_page
 
 __all__ = [
     "DUMMY_CMD",
@@ -55,6 +58,9 @@ __all__ = [
 DUMMY_CMD = "木桩"
 ADJUST_DUMMY_CMD = "调整木桩"
 _EXIT_SUBWORD = "退出"
+#: 批78 · U4（定稿 §8.3 L359）：`/木桩 记录` 查询子命令。
+_LOG_SUBWORD = "记录"
+_DUMMY_LOG_PAGE_SIZE = 5
 
 _DUMMY_OVERRIDE_KEY = "dummy_override"
 
@@ -315,6 +321,8 @@ def cmd_dummy(parsed: Any, ctx: MutableMapping[str, Any]) -> Any:
         return tpl_of(ctx, "dummy_list_empty")
     if args and str(args[0]).strip() == _EXIT_SUBWORD:
         return _exit_dummy_battle(ctx)
+    if args and str(args[0]).strip() == _LOG_SUBWORD:
+        return _dummy_log_text(ctx, args)
     if not args:
         lines = [tpl_of(ctx, "dummy_list_header")]
         for i, de in enumerate(dummies, 1):
@@ -365,6 +373,51 @@ def _exit_dummy_battle(ctx: MutableMapping[str, Any]) -> Any:
     except Exception:  # noqa: BLE001 —— 无 sender（轻量测试 ctx）→ 回落默认发送
         return {"ok": True, "message": msg,
                 "_battle_persist": ("release", qid)}
+
+
+def _dummy_log_row_text(ctx: Mapping[str, Any], idx: int, rec: Any) -> str:
+    """单条 dummy_log → 展示行（定稿 §8.3；来源摘要逐行复用 battle_summary_item）。"""
+    r: Mapping[str, Any] = rec if isinstance(rec, Mapping) else {}
+    top = r.get("top")
+    parts: List[str] = []
+    for item in (top if isinstance(top, (list, tuple)) else ()):
+        if isinstance(item, (list, tuple)) and len(item) >= 3:
+            parts.append(str(tpl_of(ctx, "battle_summary_item", {
+                "index": len(parts) + 1, "source": str(item[0]),
+                "damage": int(item[1] or 0), "pct": int(item[2] or 0)})))
+    return str(tpl_of(ctx, "dummy_log_row", {
+        "idx": idx, "at": str(r.get("at") or ""), "name": str(r.get("dummy_id") or ""),
+        "turns": int(r.get("turns") or 0), "total": int(r.get("total") or 0),
+        "max_hit": int(r.get("max_hit") or 0), "crits": int(r.get("crits") or 0),
+        "blocks": int(r.get("blocks") or 0),
+        "summary": "｜".join(parts) if parts else "—",
+    }))
+
+
+def _dummy_log_text(ctx: MutableMapping[str, Any], args: List[Any]) -> str:
+    """`/木桩 记录 [页码]`：木桩记录列表（定稿 §8.3 L359；5 条/页 + TPL-08 页脚）。
+
+    空记录 → `dummy_log_empty`（不臆造条目）；页码非法 → TPL-12（唯一源 sender）。
+    """
+    log = dummy_log_of(_player_ps(ctx))
+    if not log:
+        return str(tpl_of(ctx, "dummy_log_empty"))
+    page_raw = args[1] if len(args) > 1 else 1
+    res = resolve_page(page_raw, len(log), _DUMMY_LOG_PAGE_SIZE)
+    if res.invalid:
+        from qbot_rpg.commands.sender import page_error_tpl12  # noqa: PLC0415
+
+        return page_error_tpl12(f"木桩 记录 {page_raw}", "木桩 记录",
+                                res.total_pages, res.total)
+    page = res.page or 1
+    lines: List[str] = [str(tpl_of(ctx, "dummy_log_header", {"n": len(log)}))]
+    start = (page - 1) * _DUMMY_LOG_PAGE_SIZE + 1
+    for i, rec in enumerate(page_items(log, page, _DUMMY_LOG_PAGE_SIZE), start=start):
+        lines.append(_dummy_log_row_text(ctx, i, rec))
+    footer = render_footer(page, res.total_pages, len(log), "木桩 记录")
+    if footer:
+        lines.append(footer)
+    return "\n".join(lines)
 
 
 def cmd_adjust_dummy(parsed: Any, ctx: MutableMapping[str, Any]) -> str:

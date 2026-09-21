@@ -26,8 +26,9 @@ from __future__ import annotations
 # 批62 · 装备淬炼指令壳 `/淬炼`：新增 stat（属性中文名/键，temper_* 模板键）。
 # 批71 · F1 · 开战拦截文案迁表：新增 weak_left（battle_lock_weak_block 剩余虚弱秒数）。
 # 批77 · X6 · 引擎文案迁表：新增 channel（checkin_makeup_ok 补签通道 card/currency）。
+# 批78 · U4 · 木桩记录：新增 at（dummy_log_row 记录时间）。
 FROZEN_PLACEHOLDERS = frozenset("""
-a action actor affix aid amount amt ann assistant atk attacker attr attr_name b base blocks bonus
+a action actor affix aid amount amt ann assistant at atk attacker attr attr_name b base blocks bonus
 boss brief budget candidates cap card caught chain change child cmd cn cnt coin_text coins_have
 coins_need command cond core_text cost count cr crits cur cur_rank currency current damage day
 days deficit deficits desc dfn diff dir discount dist done down effect effect_desc effect_level

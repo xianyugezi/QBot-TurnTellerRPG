@@ -122,9 +122,9 @@ def test_r10_r22_formula_display_fields_marked_unimplemented() -> None:
         (fields["power"].children, "formula_max"),
         (fields["effects_link"].children, "intercept_order"),
         (fields["effects_link"].children, "pierce_cap"),
-        (fields["stats_collector"].children, "enabled"),
-        (fields["stats_collector"].children, "dummy_log_size"),
-        (fields["stats_collector"].children, "dummy_realtime"),
+        # 批78 · U4：stats_collector 三字段已实装（聚合/dummy_log/dummy_realtime），
+        # 从「无 reader → 标未实现」清单移除；改由 tests/unit/test_batch78_u4_stats.py
+        # 正向断言其读取点与行为。
         (fields, "weapon_type_mult"),
     ]
     for children, key in cases:

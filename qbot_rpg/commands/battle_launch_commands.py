@@ -487,6 +487,18 @@ async def launch_pve_battle(
                 _start_cfg["equip_skill_amp"] = _amp
         except Exception:  # noqa: BLE001 - 增幅表装配失败不阻断开战
             pass
+        # 批80 · 技能等级变量：三源并集 ∩ F18 声明（skill_slots_battle.leveled_skill_levels）
+        # → 引擎 config.skill_levels{"player": {skill_id: level}}，公式占位符
+        # [技能等级:<技能ID>] 消费（框架只提供变量，不定义等级→数值映射）。
+        # 无等级来源 → 表空不注入 → 引擎逐字段零变化。
+        try:
+            from qbot_rpg.core.skill_slots_battle import leveled_skill_levels  # noqa: PLC0415
+
+            _slv = leveled_skill_levels(ctx)
+            if _slv:
+                _start_cfg["skill_levels"] = {"player": _slv}
+        except Exception:  # noqa: BLE001 - 技能等级表装配失败不阻断开战
+            pass
         try:
             from qbot_rpg.core.ctb_config import resolve_ctb_settings  # noqa: PLC0415
 

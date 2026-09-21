@@ -479,7 +479,7 @@
   "basic_equip_reason_unknown_slot": "没有这个装备槽位",
   "basic_equip_reason_max_reached": "该槽位已达可装备数量上限",
   "basic_skill_header": "【技能列表】",
-  "basic_skill_row": "{idx}. {name}（{type}）",
+  "basic_skill_row": "{idx}. {name}（{type}）{level}",
   "basic_register_guide": "【新手引导】\n发 注册 名字 职业\n注册：创建角色（必需）\n状态：查看角色状态面板\n背包：查看背包物品\n装备 技能 等指令注册后可用\n发 帮助 查看完整列表",
   "basic_help_group_header": "【{group}】",
   "register_name_too_long": "❌ 角色名太长（最多 20 字）",

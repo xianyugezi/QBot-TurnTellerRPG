@@ -111,7 +111,7 @@ SKILLS_FIELDS_MIN: int = 30
 JOBS_FIELDS_MIN: int = 39
 # 6a：定稿 10 + 细化增补 3 = 13 条（§3.1/§3.2）
 # V-1~V-13 + V-14/V-15（2026-09-08 方位 v0.6：F08 position_rule 形状、F10 air_policy 枚举红拦）
-SKILL_RULES: int = 15
+SKILL_RULES: int = 16  # 批80 新增 V-14（技能等级声明校验）
 # 6b：V1~V8（§五）恰 8 条
 JOB_RULES: int = 8
 # 6c：V1~V11（§五）恰 11 条
@@ -526,7 +526,7 @@ def test_docs_overview_counts_reconcile() -> None:
     assert len(combo_row_7) == 7 and len(snapshot_3) == 3
     assert 10 + 4 + 7 + 3 == 24
     # 规则/用例计数与实现直连常量一致
-    assert SKILL_RULES == 15 and JOB_RULES == 8 and RESOURCE_RULES == 11
+    assert SKILL_RULES == 16 and JOB_RULES == 8 and RESOURCE_RULES == 11
     assert SKILL_TC == 23 and JOB_TC == 18 and RESOURCE_TC == 20
 
 

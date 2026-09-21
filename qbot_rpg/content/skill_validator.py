@@ -20,6 +20,9 @@
         契约 [L206] / TC-11）。
   - 红黄分级：红拦 = V-1/2/3/4/5；黄提示 = V-6（三铁律③：不做数值预警，
     power 999 是作者自由，V-6 仅「注意数值膨胀」提示）。
+  - 批80 · 技能等级维度（F18）：新增 `_check_v16_skill_level`（红拦）——`level`
+    为对象时校验 `max ∈ 1..99`、`growth` 数值列表且长度 = `max`、`growth[0] = 1.0`；
+    缺省/null/标量 `level: 1` 兼容不拦（不进等级线）。
   - 引用查表仿 validator._check_action_ref 先例（表未声明 → 按引用不存在红拦）；
     仅 V-5 jobs 特例宽松（批4 落表，P-1）。
 
@@ -524,6 +527,52 @@ def _check_v15_air_policy(
              msg="技能 air_policy %r 不在三枚举（F10：preserve/land/preserve_height）" % (ap,))
 
 
+def _check_v16_skill_level(
+    report: object, base: str, sid: str, entry: Mapping[str, object]
+) -> None:
+    """F18 技能等级声明闭合（批80 · 技能等级维度第二步；红拦）。
+
+    形态（`content/field_meta.py` F18）：`level: {max, growth}`，`max` = 等级上限（1~99），
+    `growth` 长度 = `max` 且 `growth[0] == 1.0`（1 级基准系数）。判定：
+      - `level` **缺省 / null / 标量**（既有 `level: 1`，veinborn 11 条）→ 零红零黄（兼容；
+        该技能不进等级线，`skill_slots_battle.skill_level_axis` 返回 False）；
+      - `level` 为对象 → `max` 须为 1~99 非 bool int；`growth` 须为数值列表、长度 = `max`、
+        首项 = 1.0，否则红拦（`skill_level_max_invalid` / `skill_level_growth_invalid` /
+        `skill_level_growth_length` / `skill_level_growth_base`）。
+    只校验 F18 自身形状，不校验「来源等级 ≤ max」（来源归装备/套装/学技能三表各自校验）。
+    """
+    node = entry.get("level")
+    if node is None or not isinstance(node, Mapping):
+        return  # 缺省/null/标量：不进等级线，兼容既有数据（零变化）
+    mx = node.get("max")
+    if not isinstance(mx, int) or isinstance(mx, bool) or not (1 <= mx <= 99):
+        _err(report, f"{base}.level.max", "F18", rule="skill_level_max_invalid",
+             node_id=sid, got=type(mx).__name__,
+             msg="技能等级上限 max 须为 1~99 的整数（F18 {max, growth}）")
+        return
+    growth = node.get("growth")
+    if not isinstance(growth, list):
+        _err(report, f"{base}.level.growth", "F18", rule="skill_level_growth_invalid",
+             node_id=sid, got=type(growth).__name__,
+             msg="技能等级 growth 须为数值列表（长度 = max，growth[0] = 1.0）")
+        return
+    for i, v in enumerate(growth):
+        if isinstance(v, bool) or not isinstance(v, (int, float)):
+            _err(report, f"{base}.level.growth[{i}]", "F18",
+                 rule="skill_level_growth_invalid", node_id=sid, index=i,
+                 got=type(v).__name__, msg="技能等级 growth 各项须为数值（F18）")
+            return
+    if len(growth) != mx:
+        _err(report, f"{base}.level.growth", "F18", rule="skill_level_growth_length",
+             node_id=sid, length=len(growth), max=mx,
+             msg="技能等级 growth 长度须等于 max（F18：%d != %d）" % (len(growth), mx))
+        return
+    if float(growth[0]) != 1.0:
+        _err(report, f"{base}.level.growth[0]", "F18", rule="skill_level_growth_base",
+             node_id=sid, value=growth[0],
+             msg="技能等级 growth[0] 须为 1.0（1 级基准系数，F18）")
+
+
 def _check_v12_kind_inference(
     report: object, base: str, sid: str, entry: Mapping[str, object]
 ) -> None:
@@ -680,7 +729,7 @@ def _check_skill_entry(
     idx: int,
     ctx: Mapping[str, object],
 ) -> None:
-    """单条技能条目校验（V-1 ~ V-6 + V-8 ~ V-13 全量；V-7 为库级单独跑）。"""
+    """单条技能条目校验（V-1 ~ V-6 + V-8 ~ V-16 全量；V-7 为库级单独跑）。"""
     base = f"[{idx}]"
     if not isinstance(entry, Mapping):
         _err(report, base, "R-5", rule="skill_not_object",
@@ -713,6 +762,7 @@ def _check_skill_entry(
     _check_v11_field_registry(report, base, sid, entry)
     _check_v14_position_rule(report, base, sid, entry)
     _check_v15_air_policy(report, base, sid, entry)
+    _check_v16_skill_level(report, base, sid, entry)
     _check_v12_kind_inference(report, base, sid, entry)
     _check_v13_basic_gate(report, base, sid, entry)
 

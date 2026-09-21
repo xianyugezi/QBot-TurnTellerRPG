@@ -102,6 +102,7 @@ from qbot_rpg.core.message_format.list_render import (
     resolve_page,
 )
 from qbot_rpg.core.player_attributes import calc_all_final_attributes
+from qbot_rpg.core.skill_slots_battle import leveled_skill_levels
 from qbot_rpg.data.gear_stats import GEAR_DISPLAY_KEYS, GEAR_LABELS_ZH, PCT_SUFFIX
 from qbot_rpg.data.item import ItemInstance
 from qbot_rpg.data.logging_utils import get_logger
@@ -2073,12 +2074,19 @@ def skill_line(index: int, sid: str, ctx: Mapping[str, Any]) -> str:
         ————
     简述 = 内容包 `brief`（自由文本）；缺省按机制兜底标签。模板：
     basic_skill_row / basic_skill_brief / basic_skill_sep（内容包可覆盖）。
+    批80：技能等级 >1 时 `basic_skill_row` 的 `{level}` 渲染「 LvN」（等级缺省 1 → 空串，
+    `{level}` 为空 → 逐字节等价现状；模板未用 `{level}` 的内容包不受影响）。
     """
     defn = _skill_def(ctx, sid)
     name = _skill_name(ctx, sid)
     type_label = TYPE_LABELS.get(str(_skill_field(defn, "type", "active")), "主动")
+    # 批80 · 技能等级展示：三源并集 ∩ F18 声明（skill_slots_battle.leveled_skill_levels）。
+    # 缺省 1 / 无来源 / 未进等级线 → level 传空串 → 模板 {level} 渲染为空，逐字节等价现状。
+    _lvs = leveled_skill_levels(ctx)
+    _lv = int(_lvs.get(sid, 1) or 1)
     parts: List[str] = [tpl_of(ctx, "basic_skill_row",
-                               {"idx": index, "name": name, "type": type_label})]
+                               {"idx": index, "name": name, "type": type_label,
+                                "level": (f" Lv{_lv}" if _lv > 1 else "")})]
     brief = skill_brief(ctx, sid)
     if brief:
         parts.append(tpl_of(ctx, "basic_skill_brief", {"brief": brief}))

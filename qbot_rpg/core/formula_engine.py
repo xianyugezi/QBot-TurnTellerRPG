@@ -44,6 +44,8 @@ EvaluatorCtx(attacker: Mapping, target: Mapping, battle: Mapping, rng_state: Opt
 
 ctx 键空间（占位符 → slot.key）：slot ∈ {attacker(我方), target(对方), battle(事件/全局)}。
 变量大全全清单映射见 _FIXED_PLACEHOLDERS 与 _PARAM_RULES；未知占位符 → 0 + warning。
+批80 · 技能等级：参数化占位符 `[技能等级:<技能ID>]` → attacker.skill_level[ID]（值由调用方
+注入 = 该技能的当前等级；框架不定义等级→数值映射，作者自行引用）。
 额外兼容：定稿 §1.1 示例 v1 的裸标识符 this_battle_round（= battle.round），在 JS 侧作为全局注入。
 └────────────────────────────────────────
 """
@@ -246,6 +248,11 @@ _PARAM_RULES: Tuple[Tuple[str, str, str], ...] = (
     ("技能冷却:", "attacker", "skill_cooldown"),
     ("技能就绪:", "attacker", "skill_ready"),
     ("技能连段:", "attacker", "chain"),
+    # 批80 · 技能等级变量：`[技能等级:<技能ID>] → attacker.skill_level[<技能ID>]`
+    # （值 = 施放时该技能的当前等级，来自 skill_slots_battle.leveled_skill_levels：
+    # 装备/套装/学技能三源并集 ∩ F18 声明 level{max≥2}，取最大并夹取到 max）。
+    # 仅提供变量，不定义任何「等级 → 数值」映射，由公式作者自行引用。
+    ("技能等级:", "attacker", "skill_level"),
     ("货币:", "attacker", "currency"),
     ("熟练度:", "attacker", "prof"),
     ("背包:", "attacker", "bag"),

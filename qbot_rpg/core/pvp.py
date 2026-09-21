@@ -356,6 +356,16 @@ def pvp_attack(ctx: MutableMapping[str, Any], skill_id: str) -> dict:
                 _pvp_cfg["equip_skill_amp"] = _amp
         except Exception:  # noqa: BLE001 - 增幅表装配失败不阻断开战
             pass
+        # 批80 · 技能等级变量（与 PvE battle_launch 同口径）：三源并集 ∩ F18 声明 →
+        # config.skill_levels{"player": {skill_id: level}}，公式 [技能等级:<技能ID>] 消费。
+        try:
+            from qbot_rpg.core.skill_slots_battle import leveled_skill_levels  # noqa: PLC0415
+
+            _slv = leveled_skill_levels(ctx)
+            if _slv:
+                _pvp_cfg["skill_levels"] = {"player": _slv}
+        except Exception:  # noqa: BLE001 - 技能等级表装配失败不阻断开战
+            pass
         battle.start(attacker_comb, defender_comb, random_seed=ctx.get("rng"),
                      battle_type="pvp", config=_pvp_cfg)
     except Exception:

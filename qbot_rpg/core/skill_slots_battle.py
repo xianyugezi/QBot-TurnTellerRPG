@@ -23,6 +23,11 @@
   7) passive/trigger 槽挂点登记：PASSIVE_PROC_HOOK / TRIGGER_PROC_HOOK
      （proc 容器执行位——被动常驻/触发条件命中由战斗/效果层经 hook 注入执行；
      本文件登记接口，不臆造条件判定）
+  8) 技能等级读表（批80 · 技能等级维度数据侧）：set_skill_levels(ctx) 三源并集
+     （equip_skills ① / set_skills ② / skill_slots 行 level ③，同技能取最大，纯读）；
+     skill_level_cap / skill_level_axis 为 F18「进等级线」判定（level 为对象且 max≥2）；
+     leveled_skill_levels(ctx) = 并集 ∩ 等级线（等级夹取到 F18 max），是「技能等级」
+     作为**公式变量** [技能等级:ID] 与 /技能 展示的取值口径。
 
 依据：
   - docs/细化/细化_6a_技能库契约.md（349 行 v1.0）：
@@ -231,19 +236,96 @@ def with_set_skills(
     return with_source_skills(snapshot, set_skills, skill_table)
 
 
-def set_skill_levels(ctx: Mapping[str, Any]) -> Dict[str, int]:
-    """ctx[SET_SKILLS_STATE_KEY] → {技能 id: 等级}（清洗后的套装激活等级表）。
-
-    展示/审计用（六级战斗结算读 level 消费此表）；缺省/畸形 → {}（确定性兜底）。
-    """
-    raw = ctx.get(SET_SKILLS_STATE_KEY)
-    if not isinstance(raw, Mapping):
-        return {}
+def _level_rows(source: object) -> Dict[str, int]:
+    """{技能 id: 等级} 容器清洗（纯读）：id 非空 str、等级 ≥1 非 bool int 才收。"""
     out: Dict[str, int] = {}
-    for sid, lv in raw.items():
+    if not isinstance(source, Mapping):
+        return out
+    for sid, lv in source.items():
         if isinstance(sid, str) and sid and isinstance(lv, int) \
                 and not isinstance(lv, bool) and lv >= 1:
             out[sid] = lv
+    return out
+
+
+def set_skill_levels(ctx: Mapping[str, Any]) -> Dict[str, int]:
+    """三源并集读表 → {技能 id: 等级}（批80 · 技能等级维度第一步；**纯读、不写存档**）。
+
+    三源（各占独立来源容器，来源计数语义，P-8）：
+      ① 装备赋予 `ctx["equip_skills"]`（{skill_id: level}，`equip_mods.recompute_equip_skills` 产出）；
+      ② 套装档位 `ctx["set_skills"]`（{skill_id: level}，`forge_set_skills` 产出）；
+      ③ 学技能行 `ctx["skill_slots_state"]` 的 slots[].{skill_id, level}（`_grant_skill` 写入的
+         行上等级；经 `slots_from_snapshot` 解析）。
+    合并规则：**同技能多源取最大**（沿用来源①内部 `equip_mods` 的既有「取最大」口径；
+    跨来源无既有规则 → 缺省取最大，plan §2.1 N1）。缺省/畸形 → 该项跳过；全缺 → {}
+    （确定性兜底）。本函数只读 ctx，不落档、不产生副作用。
+
+    说明：本表是「现在几级」的原始并集（含未声明 F18 的技能）；「进等级线」的技能级别见
+    `leveled_skill_levels`（在并集之上按 F18 声明过滤 + 上限夹取）。
+    """
+    out: Dict[str, int] = {}
+    for source in (ctx.get(EQUIP_SKILLS_STATE_KEY), ctx.get(SET_SKILLS_STATE_KEY)):
+        for sid, lv in _level_rows(source).items():
+            if lv > out.get(sid, 0):
+                out[sid] = lv
+    for row in slots_from_snapshot(ctx.get(SKILL_SLOTS_STATE_KEY)):
+        sid = row.get("skill_id")
+        lv = row.get("level")
+        if isinstance(sid, str) and sid and isinstance(lv, int) \
+                and not isinstance(lv, bool) and lv >= 1 and lv > out.get(sid, 0):
+            out[sid] = lv
+    return out
+
+
+def _skill_level_node(skill_def: object) -> object:
+    """技能 def 的 F18 `level` 原始值（Mapping / 属性两种读取；缺省 → None）。"""
+    if isinstance(skill_def, Mapping):
+        return skill_def.get("level")
+    return getattr(skill_def, "level", None)
+
+
+def skill_level_cap(skill_def: object) -> Optional[int]:
+    """F18 「进等级线」判定 + 上限：`level` 为对象且 `max ≥ 2` → max；否则 None。
+
+    口径来源（plan §2.2(1)，field_meta.py F18 注释）：`{max, growth}`，`max≥2` 才进等级线；
+    缺省/null/**标量** `level: 1`（veinborn 11 条）→ None（不进线、不报错，零行为变化）。
+    纯读，不改技能数据。
+    """
+    node = _skill_level_node(skill_def)
+    if not isinstance(node, Mapping):
+        return None
+    mx = node.get("max")
+    if isinstance(mx, int) and not isinstance(mx, bool) and 2 <= mx <= 99:
+        return mx
+    return None
+
+
+def skill_level_axis(skill_def: object) -> bool:
+    """技能是否进等级线（F18 `level` 为对象且 `max ≥ 2`；等价 `skill_level_cap(...) is not None`）。"""
+    return skill_level_cap(skill_def) is not None
+
+
+def leveled_skill_levels(ctx: Mapping[str, Any]) -> Dict[str, int]:
+    """进等级线技能的当前等级表 → {技能 id: 等级}（批80 变量/展示消费口径）。
+
+    在 `set_skill_levels`（三源并集「现在几级」）之上按 **F18 声明**过滤：
+      - `ctx["skills"][skill_id]` 的 `level` 为对象且 `max ≥ 2` → 收录，等级夹取到 `max`；
+      - 其余（缺省/null/标量 `level: 1`）→ 不收（不进等级线）；
+      - `ctx["skills"]` 缺失/非 Mapping → {}（无声明可判，不臆造等级线）。
+    纯读、确定性；上限取 F18 声明（既有源），不写死任何等级阈值。
+    """
+    table = set_skill_levels(ctx)
+    if not table:
+        return {}
+    skills = ctx.get("skills")
+    if not isinstance(skills, Mapping):
+        return {}
+    out: Dict[str, int] = {}
+    for sid, lv in table.items():
+        cap = skill_level_cap(skills.get(sid))
+        if cap is None:
+            continue
+        out[sid] = min(lv, cap)
     return out
 
 
@@ -371,6 +453,9 @@ __all__ = [
     "with_set_skills",
     "with_source_skills",
     "set_skill_levels",
+    "skill_level_cap",
+    "skill_level_axis",
+    "leveled_skill_levels",
     "slots_from_snapshot",
     "available_skills",
     "is_slot_equipped",

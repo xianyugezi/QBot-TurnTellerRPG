@@ -960,6 +960,15 @@ class BattleEngine:
         # 我方印记:/对方印记: → slot["marks"][名]）与 [印记总数]（marks_total）经
         # MarksManager 取同一 marks_state 双向表，不另存状态（1d §0.2 单一数据源）。
         c.update(self.marks_manager().formula_view(side))
+        # 批80 · 技能等级变量（[技能等级:<技能ID>] → attacker.skill_level[ID]）：
+        # 表由装配层进战时注入 self._config["skill_levels"] = {side: {skill_id: level}}
+        # （skill_slots_battle.leveled_skill_levels：三源并集 ∩ F18 声明、夹取 max）。
+        # 仅非空时补键 → 无等级来源 = 逐字段零变化；absent 时占位符按未知 → 0 + warning。
+        _lvt = self._config.get("skill_levels")
+        if isinstance(_lvt, Mapping):
+            _side_lv = _lvt.get(side)
+            if isinstance(_side_lv, Mapping) and _side_lv:
+                c["skill_level"] = dict(_side_lv)
         return c
 
     def _make_eval_formula(self, attacker: str = "player", target: str = "enemy") -> Callable[[str], float]:

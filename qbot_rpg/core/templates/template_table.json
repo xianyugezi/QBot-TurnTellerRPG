@@ -376,7 +376,7 @@
     "basic_equip_name_hint": "❌ 穿戴请用 使用 <序号>\n序号见 背包 列表\n示例：发 使用 1",
     "unequip_usage": "卸下装备\n发 卸下 <部位 或 序号>\n示例：发 卸下 武器",
     "basic_skill_header": "【技能列表】",
-    "basic_skill_row": "{idx}. {name}（{type}）",
+    "basic_skill_row": "{idx}. {name}（{type}）{level}",
     "skill_info_usage": "查看技能详情\n发 技能详情 <序号>\n或 <技能名>\n示例：发 技能详情 1",
     "skill_info_header": "【{name}】",
     "skill_info_line": "{k}：{v}",

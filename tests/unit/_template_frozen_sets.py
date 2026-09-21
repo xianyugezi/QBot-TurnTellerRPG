@@ -68,4 +68,6 @@ WIDTH_WARN_ALLOWLIST = frozenset({
     ("battle_parry_success", 1, 29),
     ("battle_counter_hit", 1, 31),
     ("battle_summary_item", 1, 31),
+    # 批80 · 技能等级变量：basic_skill_row 追加 {level}（Lv 后缀；缺省空串不渲染）。
+    ("basic_skill_row", 1, 29),
 })

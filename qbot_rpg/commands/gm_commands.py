@@ -107,6 +107,7 @@ from qbot_rpg.core.message_format.list_render import (
     render_list_page_text,
     resolve_page,
 )
+from qbot_rpg.core.templates import tpl_of as _tpl_of
 
 # 同包兄弟模块：相对导入（G0 架构门禁 test_commands_web_not_depended 不产生
 # `qbot_rpg.commands` 前缀反向依赖边；同层兄弟引用架构合规，与 sender.py 同口径）。
@@ -129,6 +130,7 @@ from .sender import format_tpl12
 __all__ = [
     # L160 长清单指令名 / GM 清单
     "GM_CMD_RELOAD", "GM_CMD_BAN", "GM_CMD_LOG", "GM_CMD_SETTINGS",
+    "GM_CMD_DEBUG",
     "GM_COMMANDS", "GM_COMMAND_LEVEL", "GM_COMMAND_INDEX", "GM_DEFAULT_GRANT",
     "GM_PREFIX_REQUIRED",
     # 权限三级（admin/manager/player ↔ 机主/GM/普通玩家）
@@ -140,6 +142,7 @@ __all__ = [
     "AUDIT_HMAC_FIELDS", "build_audit_record", "audit_hmac", "record_audit",
     # 指令处理器
     "cmd_gm_reload", "cmd_gm_ban", "cmd_gm_log", "cmd_gm_settings",
+    "cmd_gm_debug",
     "handle_gm_command",
     # GM 后端引擎（WIR-07/08：/重载 真实后端 + /备份 /恢复 已声明未接线）
     "GmBackend", "backup_content", "restore_content",
@@ -168,6 +171,7 @@ from qbot_rpg.data.gm_constants import (
     GM_CMD_RESTORE,
     GM_CMD_EXPORT,
     GM_CMD_BANLIST,
+    GM_CMD_DEBUG,
     GM_COMMANDS,
     GM_COMMAND_INDEX,
     GM_PREFIX_REQUIRED,
@@ -201,6 +205,8 @@ GM_COMMAND_LEVEL: Mapping[str, str] = {
     GM_CMD_RESTORE: ROLE_MANAGER,
     GM_CMD_EXPORT: ROLE_ADMIN,
     GM_CMD_BANLIST: ROLE_MANAGER,
+    # 批75 · GM 运维：G5 调试 = 机主专属（可下授，5b §2.1 权限列「机主→GM」）
+    GM_CMD_DEBUG: ROLE_ADMIN,
 }
 
 # 默认授予集（5b §1.1.1 裁决：默认授予集 = 全部指令表标注 GM 的指令）；
@@ -231,6 +237,10 @@ LOG_MAX_ENTRIES: int = 50
 
 # 封禁默认时长（5b G10：时长默认永久）
 BAN_DEFAULT_DURATION: str = "永久"
+
+# 批75 · G5 /调试：调试模式两态对应日志级别（可配常量，不写死在处理器）
+DEBUG_LEVEL_ON: str = "DEBUG"
+DEBUG_LEVEL_OFF: str = "INFO"
 
 # 空日志文案（纯文本无装饰 emoji）
 _EMPTY_LOG: str = "（暂无系统日志）"
@@ -453,6 +463,9 @@ class GmBackend:
 
     def __init__(self, watcher: Optional[HotReloadWatcher] = None) -> None:
         self._watcher = watcher
+        # 批75 · G5 /调试：调试模式运行时开关（仅影响日志详略/性能计时，不改游玩数据）。
+        # 状态存「运行时态」= 后端实例属性（与 _watcher 同风格；进程重启归零，不落存档）。
+        self._debug_enabled: bool = False
 
     @property
     def watcher(self) -> Optional[HotReloadWatcher]:
@@ -593,6 +606,25 @@ class GmBackend:
         restored = f"已从 {zip_path.name} 恢复内容包"
         return {"ok": True, "message": restored, "backup_id": backup_id,
                 "pre_backup": pre.get("backup_id") if isinstance(pre, dict) else None}
+
+    # ---- 批75 · GM 运维后端（G5 调试；只切换运行时开关，不改游玩数据）----
+
+    def toggle_debug(self, ctx: Any = None) -> dict:
+        """/调试 后端（5b G5）：调试模式开关 + 当前状态（无参，开关语义）。
+
+        状态 = 本实例运行时属性（进程级，重启归零；不落存档、不写盘）。返回
+        {ok, enabled, level, timing, message}：enabled=切换后开关；level 随开关取
+        DEBUG/INFO；timing = 性能计时开关（与调试模式同开同关）。
+        """
+        self._debug_enabled = not self._debug_enabled
+        enabled = bool(self._debug_enabled)
+        return {
+            "ok": True,
+            "enabled": enabled,
+            "level": DEBUG_LEVEL_ON if enabled else DEBUG_LEVEL_OFF,
+            "timing": enabled,
+            "message": f"调试模式 {'开' if enabled else '关'}",
+        }
 
     # `editor_link`（5b G13 /编辑）批30（2026-09-16）删除：旧编辑器已删、editor_url 已清空，
     # 该后端接口只剩空壳（登记表 X9）。5b 契约 G13 条目同步删除。
@@ -994,6 +1026,45 @@ def cmd_gm_banlist(parsed: Any, ctx: MutableMapping[str, Any],
                               parsed=parsed, message=f"{body}\n{footer}")
 
 
+# ---------------------------------------------------------------------------
+# 批75 · GM 运维指令（细化_5b §2.1 G5 调试；权限=机主专属可下授）
+# ---------------------------------------------------------------------------
+
+def cmd_gm_debug(parsed: Any, ctx: MutableMapping[str, Any],
+                 perm: GmPermResult) -> GmResult:
+    """/调试（5b G5，权限「机主→GM」可下授）：调试模式开/关切换 + 当前状态。
+
+    无参（开关语义）：有参/键值 → TPL-12 超参；成功 → 回显两态状态行（查询类文案，
+    非动作静默），摘要入 audit.detail。仅切换日志详略/性能计时，不改游玩数据。
+    """
+    if getattr(parsed, "args", None) or getattr(parsed, "kv", None):
+        return _record_and_return(ctx, command=GM_CMD_DEBUG, result="failed",
+                                  detail="超参：/调试（无参，开关）", parsed=parsed)
+    fn = _safe_backend(ctx, "toggle_debug")
+    if fn is None:
+        return _record_and_return(ctx, command=GM_CMD_DEBUG, result="failed",
+                                  detail="GM 后端未装配（/调试 需装配层注入 gm_backend）",
+                                  parsed=parsed)
+    try:
+        res = fn(ctx) or {}
+    except Exception as exc:  # noqa: BLE001 - 调试开关异常降级不崩
+        return _record_and_return(ctx, command=GM_CMD_DEBUG, result="failed",
+                                  detail=f"调试开关失败：{exc}", parsed=parsed)
+    if not res.get("ok"):
+        return _record_and_return(ctx, command=GM_CMD_DEBUG, result="failed",
+                                  detail=str(res.get("message") or "调试开关失败"),
+                                  parsed=parsed)
+    enabled = bool(res.get("enabled"))
+    level = str(res.get("level") or (DEBUG_LEVEL_ON if enabled else DEBUG_LEVEL_OFF))
+    timing = "开" if res.get("timing") else "关"
+    body = _tpl_of(ctx, "gm_debug_status",
+                   {"state": "开" if enabled else "关", "level": level, "result": timing})
+    return _record_and_return(ctx, command=GM_CMD_DEBUG, result="success",
+                              detail=f"调试模式：{'开' if enabled else '关'}（日志级别={level}，"
+                                     f"性能计时={timing}）",
+                              parsed=parsed, message=body)
+
+
 _HANDLERS: Mapping[str, Callable[..., GmResult]] = {
     GM_CMD_RELOAD: cmd_gm_reload,
     GM_CMD_BAN: cmd_gm_ban,
@@ -1004,6 +1075,8 @@ _HANDLERS: Mapping[str, Callable[..., GmResult]] = {
     GM_CMD_RESTORE: cmd_gm_restore,
     GM_CMD_EXPORT: cmd_gm_export,
     GM_CMD_BANLIST: cmd_gm_banlist,
+    # 批75 · GM 运维：G5 调试
+    GM_CMD_DEBUG: cmd_gm_debug,
 }
 
 

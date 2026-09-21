@@ -2585,6 +2585,18 @@ def _module_table() -> Dict[str, ModuleMeta]:
                 type="list", element=FieldMeta(type="ref", ref_target="skill"),
                 label="继承技能白名单",
                 help="skills 技能 id 列表；非空 = 只继承列出的技能；留空 = 继承母职全部职业专属技能。"),
+            # 批79 · X18：mode 追加/替换（用户 2026-09-23 裁决）。type=str（开放词汇）
+            # + editor=select（候选下拉）；未知值由 job_validator_v58 V9 黄提示 Y-23，
+            # 不做泛型 enum 红拦（不阻断）。缺省 = append（现状，逐字段零变化）。
+            "mode": FieldMeta(type="str", editor="select",
+                              enum_options=("append", "replace"),
+                              label="继承模式",
+                              help="追加=母职与本职业技能都装（默认）；替换=按下方映射换掉指定的继承技能。"),
+            # 批79 · X18：replace {母职技能id: 本职业技能id}；键值两侧都须存在于 skills
+            # （V9 悬空红拦 R-4）。editor=kvtable → 对象内联可编辑键值表；留空 = 等同追加。
+            "replace": FieldMeta(type="obj", editor="kvtable",
+                                 label="继承技能替换",
+                                 help="替换模式下：键填母职技能 id，值填本职业替代技能 id；留空等同追加。"),
         }),
     }
     # 技能/链侧挂点字段（细化_6b §1.5/§1.6）：revert_form（37）与 derive_only（38）为

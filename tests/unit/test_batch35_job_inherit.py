@@ -78,14 +78,19 @@ def test_a1_field_meta_registered() -> None:
     assert fm is not None, "jobs 缺 inherit 登记"
     assert fm.type == "obj"
     kids = fm.children or {}
-    assert set(kids) == {"from", "skills"}
+    assert set(kids) == {"from", "skills", "mode", "replace"}
     assert kids["from"].type == "ref" and kids["from"].ref_target == "job"
     assert kids["from"].required is True
     assert kids["skills"].type == "list"
     assert kids["skills"].element is not None
     assert kids["skills"].element.ref_target == "skill"
-    for k in ("from", "skills"):
+    assert kids["mode"].type == "str"
+    assert set(kids["mode"].enum_options) == {"append", "replace"}
+    assert kids["replace"].type == "obj"
+    assert kids["replace"].editor == "kvtable"
+    for k in ("from", "skills", "mode", "replace"):
         assert kids[k].label and kids[k].help, f"inherit.{k} 缺中文名/说明"
+        assert len(kids[k].help) <= 60, f"inherit.{k} help 超 60 字"
     assert m.field_subgroups.get("inherit") == "inherit"
     assert m.subgroup_labels.get("inherit") == JOBS_SUBGROUP_LABELS["inherit"]
 
@@ -94,7 +99,7 @@ def test_a2_job_models_registered() -> None:
     fields = jobs_fields()
     assert "inherit" in fields
     kids = fields["inherit"].children
-    assert set(kids) == {"from", "skills"}
+    assert set(kids) == {"from", "skills", "mode", "replace"}
     assert kids["from"].ref_target == "job" and kids["from"].required is True
     assert kids["skills"].element is not None
     assert kids["skills"].element.ref_target == "skill"
@@ -114,9 +119,14 @@ def test_a3_editor_visible(tmp_path: Path) -> None:
     assert f["present"] is True
     assert f["type"] == "obj"
     kids = {c["key"]: c for c in (f.get("children") or [])}
-    assert set(kids) == {"from", "skills"}
+    assert set(kids) == {"from", "skills", "mode", "replace"}
     assert kids["from"]["label"] == "继承来源职业"
     assert kids["skills"]["label"] == "继承技能白名单"
+    assert kids["mode"]["label"] == "继承模式"
+    assert kids["mode"]["control"] == "select"
+    assert kids["mode"]["enum_options"] == ["append", "replace"]
+    assert kids["replace"]["label"] == "继承技能替换"
+    assert kids["replace"]["control"] == "kvtable"
 
 
 # ---------------------------------------------------------------------------

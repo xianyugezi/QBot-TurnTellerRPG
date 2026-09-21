@@ -287,12 +287,13 @@ def test_transform_placeholder_registered_for_4b() -> None:
 def test_contract_field_count_top_level_plus_growth() -> None:
     """字段计数核对：顶层 11 + growth 9 = 20（transform 段 11 + state_policy 3
     归批4路4B；技能挂点 4 + 链挂点 1 随 6a 登记 skills/skill_chains）；
-    批23 C1 另新增 advance（转职前置，+3 子键）；批35 新增 inherit（进阶继承，+2 子键）。"""
+    批23 C1 另新增 advance（转职前置，+3 子键）；批35 新增 inherit（进阶继承，+2 子键）；
+    批79 X18 为 inherit 补 mode/replace（+2 子键 → 4）。"""
     assert len(jobs_fields()) == 14  # advance（批23 C1）+ is_basic（批23 C2）+ inherit（批35）
     assert len(jobs_fields()["growth"].children) == 9
     assert len(GROWTH_KEYS) == 9
     assert set(jobs_fields()["advance"].children) == {"from", "level", "items"}
-    assert set(jobs_fields()["inherit"].children) == {"from", "skills"}
+    assert set(jobs_fields()["inherit"].children) == {"from", "skills", "mode", "replace"}
 
 
 def test_transform_obj_structural_passthrough() -> None:

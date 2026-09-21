@@ -375,14 +375,21 @@ ADVANCE_CHILDREN: Mapping[str, FieldMeta] = {
 }
 
 
-# inherit 子字段（批35 · §6.12-12 职业树继承）。进阶职声明：
+# inherit 子字段（批35 · §6.12-12 职业树继承；批79 · X18 补 mode/replace）。进阶职声明：
 #   from   : 母职（ref jobs；R-4 引用存在性硬拦）——转职到本职业时继承该职业技能；
 #   skills : 可选技能白名单（list<ref skills>；R-4 元素引用存在性）；
 #            非空 = 只继承列出的技能 id；空/缺省 = 继承母职全部职业专属技能。
+#   mode   : 继承模式 "append"（缺省=现状：母职+本职业累加）/"replace"（按 replace 替换）；
+#            未知值 → 黄提示 Y-23（job_validator_v58 V9），非字符串 → 泛型 R-1。
+#   replace: {母职技能id: 本职业技能id}（obj；editor=kvtable 对象内联可编辑）；
+#            键/值两侧都须存在于 skills，悬空 → V9 红拦 R-4；空/缺省 = 等价 append。
 # from 必填（写了 inherit 就必须有来源；缺省 inherit 键 = 无继承，行为与现状一致）。
 INHERIT_CHILDREN: Mapping[str, FieldMeta] = {
     "from": FieldMeta(type="ref", ref_target="job", required=True),
     "skills": FieldMeta(type="list", element=FieldMeta(type="ref", ref_target="skill")),
+    "mode": FieldMeta(type="str", editor="select",
+                      enum_options=("append", "replace")),
+    "replace": FieldMeta(type="obj", editor="kvtable"),
 }
 
 

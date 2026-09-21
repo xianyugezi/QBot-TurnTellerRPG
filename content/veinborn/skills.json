@@ -1076,7 +1076,9 @@
   "armor": true,
   "interrupt": false,
   "chain_refs": [],
-  "consume_marks": {},
+  "consume_marks": {
+   "break_vein_core": 120
+  },
   "job_restrict": [
    "ridge_blade"
   ],
